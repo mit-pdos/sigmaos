@@ -47,7 +47,7 @@ func newTstateRPC(t *test.Tstate) (*TstateRPC, error) {
 
 func (ts *TstateRPC) cleanup() {
 	ts.RmDir(imgresizesrv.IMG)
-	imgresizesrv.Cleanup(ts.FsLib, filepath.Join(sp.S3, "~local/9ps3/img-save"))
+	imgresizesrv.Cleanup(ts.FsLib, filepath.Join(sp.S3, sp.LOCAL, "9ps3/img-save"))
 }
 
 func (ts *TstateRPC) shutdown() {
@@ -77,7 +77,7 @@ func TestImgdRPC(t *testing.T) {
 	err = ts.BootNode(1)
 	assert.Nil(t, err, "BootProcd 2")
 
-	in := filepath.Join(sp.S3, "~local/9ps3/img-save/6.jpg")
+	in := filepath.Join(sp.S3, sp.LOCAL, "9ps3/img-save/6.jpg")
 	err = ts.rpcc.Resize("resize-rpc-test", in)
 	assert.Nil(ts.T, err)
 	ts.shutdown()

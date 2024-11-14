@@ -40,7 +40,7 @@ raft:
 `
 
 // AWS params
-var aws = `
+var remote = `
 apparmor:
   enabled: true
 
@@ -110,10 +110,12 @@ var Conf *Config
 
 func init() {
 	switch Target {
-	case "aws":
-		Conf = ReadConfig(aws)
-	default:
+	case "remote":
+		Conf = ReadConfig(remote)
+	case "local":
 		Conf = ReadConfig(local)
+	default:
+		log.Fatalf("Built for unknown target %s", Target)
 	}
 }
 

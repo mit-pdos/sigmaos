@@ -17,11 +17,11 @@ import (
 	"sigmaos/test"
 )
 
-var pathname string // e.g., --path "name/ux/~local/fslibtest"
+var pathname string // e.g., --path "name/ux/sp.LOCAL/fslibtest"
 
 func init() {
 	// use a memfs file system
-	flag.StringVar(&pathname, "path", "name/memfs/~local/", "path for file system")
+	flag.StringVar(&pathname, "path", filepath.Join("name/memfs", sp.LOCAL)+"/", "path for file system")
 }
 
 func TestCompile(t *testing.T) {

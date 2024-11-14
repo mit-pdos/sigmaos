@@ -56,9 +56,8 @@ func TestResizeProc(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	in := filepath.Join(sp.S3, "~local/9ps3/img-save/6.jpg")
-	//	in := filepath.Join(sp.S3, "~local/9ps3/img-save/6.jpg")
-	out := filepath.Join(sp.S3, "~local/9ps3/img/6-thumb-xxx.jpg")
+	in := filepath.Join(sp.S3, sp.LOCAL, "9ps3/img-save/6.jpg")
+	out := filepath.Join(sp.S3, sp.LOCAL, "9ps3/img/6-thumb-xxx.jpg")
 	ts.Remove(out)
 	p := proc.NewProc("imgresize", []string{in, out, "1"})
 	err := ts.Spawn(p)
@@ -106,7 +105,7 @@ func (ts *Tstate) restartTstate() {
 
 func (ts *Tstate) cleanup() {
 	ts.RmDir(imgresizesrv.IMG)
-	imgresizesrv.Cleanup(ts.FsLib, filepath.Join(sp.S3, "~local/9ps3/img-save"))
+	imgresizesrv.Cleanup(ts.FsLib, filepath.Join(sp.S3, sp.LOCAL, "9ps3/img-save"))
 }
 
 func (ts *Tstate) shutdown() {
@@ -142,7 +141,7 @@ func TestImgdFatal(t *testing.T) {
 
 	imgd := imgresizesrv.StartImgd(ts.SigmaClnt, ts.job, IMG_RESIZE_MCPU, IMG_RESIZE_MEM, false, 1, 0)
 
-	fn := filepath.Join(sp.S3, "~local/9ps3/img-save/", "yyy.jpg")
+	fn := filepath.Join(sp.S3, sp.LOCAL, "9ps3/img-save/", "yyy.jpg")
 
 	err := ts.ft.SubmitTask(0, imgresizesrv.NewTask(fn))
 	assert.Nil(ts.T, err)
@@ -187,7 +186,7 @@ func TestImgdOne(t *testing.T) {
 		return
 	}
 
-	fn := filepath.Join(sp.S3, "~local/9ps3/img-save/1.jpg")
+	fn := filepath.Join(sp.S3, sp.LOCAL, "9ps3/img-save/1.jpg")
 	ts.imgdJob([]string{fn})
 	ts.shutdown()
 }
@@ -209,12 +208,12 @@ func TestImgdMany(t *testing.T) {
 	err = ts.BootNode(1)
 	assert.Nil(t, err, "BootProcd 2")
 
-	sts, err1 := ts.GetDir(filepath.Join(sp.S3, "~local/9ps3/img-save"))
+	sts, err1 := ts.GetDir(filepath.Join(sp.S3, sp.LOCAL, "9ps3/img-save"))
 	assert.Nil(t, err)
 
 	paths := make([]string, 0, len(sts))
 	for _, st := range sts {
-		fn := filepath.Join(sp.S3, "~local/9ps3/img-save/", st.Name)
+		fn := filepath.Join(sp.S3, sp.LOCAL, "9ps3/img-save/", st.Name)
 		paths = append(paths, fn)
 	}
 
@@ -233,7 +232,7 @@ func TestImgdRestart(t *testing.T) {
 		return
 	}
 
-	fn := filepath.Join(sp.S3, "~local/9ps3/img-save/1.jpg")
+	fn := filepath.Join(sp.S3, sp.LOCAL, "9ps3/img-save/1.jpg")
 
 	err := ts.ft.SubmitTask(0, imgresizesrv.NewTask(fn))
 	assert.Nil(t, err)

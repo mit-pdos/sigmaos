@@ -40,7 +40,7 @@ func (f *Fence) Read(ctx fs.CtxI, off sp.Toffset, sz sp.Tsize, fence sp.Tfence) 
 }
 
 func newInode(ctx fs.CtxI, p sp.Tperm, lid sp.TleaseId, mode sp.Tmode, parent fs.Dir, new fs.MkDirF) (fs.FsObj, *serr.Err) {
-	db.DPrintf(db.FENCEFS, "newInode %v dir %v\n", p, parent)
+	db.DPrintf(db.FENCEFS, "newInode %v dir %v", p, parent)
 	i := inode.NewInode(ctx, p, lid, parent)
 	if p.IsDir() {
 		return dir.MkDir(i, newInode), nil
@@ -65,7 +65,7 @@ func allocFence(root fs.Dir, name string) (*Fence, *serr.Err) {
 		return f, nil
 	}
 	if err != nil && err.Code() != serr.TErrExists {
-		db.DPrintf(db.ERROR, "allocFence create %v err %v\n", name, err)
+		db.DPrintf(db.ERROR, "allocFence create %v err %v", name, err)
 		return nil, err
 	}
 	f := i.(*Fence)
@@ -87,9 +87,9 @@ func CheckFence(root fs.Dir, new sp.Tfence) (*Fence, *serr.Err) {
 	if f == nil {
 		return nil, err
 	}
-	db.DPrintf(db.FENCEFS, "CheckFence f %v new %v\n", f.fence, new)
+	db.DPrintf(db.FENCEFS, "CheckFence f %v new %v err %v", f.fence, new, err)
 	if new.LessThan(&f.fence) {
-		db.DPrintf(db.FENCEFS_ERR, "Stale fence %v\n", new)
+		db.DPrintf(db.FENCEFS_ERR, "Stale fence %v", new)
 		f.RUnlock()
 		return nil, serr.NewErr(serr.TErrStale, new)
 	}
@@ -101,7 +101,7 @@ func CheckFence(root fs.Dir, new sp.Tfence) (*Fence, *serr.Err) {
 	f.RUnlock()
 	f.Lock()
 
-	db.DPrintf(db.FENCEFS, "New epoch %v\n", new)
+	db.DPrintf(db.FENCEFS, "New epoch %v", new)
 	f.fence.Upgrade(&new)
 
 	// Now f == new. If after down grading this is still true, then we
@@ -112,6 +112,6 @@ func CheckFence(root fs.Dir, new sp.Tfence) (*Fence, *serr.Err) {
 	if f.fence.Eq(&new) {
 		return f, nil
 	}
-	db.DPrintf(db.FENCEFS_ERR, "Stale fence %v\n", new)
+	db.DPrintf(db.FENCEFS_ERR, "Stale fence %v", new)
 	return nil, serr.NewErr(serr.TErrStale, new)
 }

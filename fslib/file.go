@@ -4,13 +4,9 @@ import (
 	"bufio"
 	"fmt"
 	"io"
-	// "strings"
-
+	"sync"
 	//	"time"
 
-	"github.com/klauspost/readahead"
-
-	"sigmaos/awriter"
 	db "sigmaos/debug"
 	"sigmaos/fslib/reader"
 	"sigmaos/fslib/writer"
@@ -135,41 +131,60 @@ func (fl *FsLib) OpenBufReader(path string) (*BufFileReader, error) {
 	return &BufFileReader{rdr, brdr}, nil
 }
 
-type AsyncFileReader struct {
-	*FileReader
-	ardr io.ReadCloser
+type ParallelFileReader struct {
+	fd  int
+	sof sos.FileAPI
+	end sp.Toffset
+
+	mu  sync.Mutex
+	err error
+	off sp.Toffset // next offset to consume
 }
 
-func (rdr *AsyncFileReader) Close() error {
-	if rdr.ardr != nil {
-		if err := rdr.ardr.Close(); err != nil {
-			return err
-		}
-	}
-	if err := rdr.rdr.Close(); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (rdr *AsyncFileReader) Read(p []byte) (n int, err error) {
-	if rdr.ardr != nil {
-		return rdr.ardr.Read(p)
-	}
-	return rdr.FileReader.Read(p)
-}
-
-func (fl *FsLib) OpenAsyncReader(path string, offset sp.Toffset) (*AsyncFileReader, error) {
-	rdr, err := fl.OpenReaderRegion(path, offset, 0)
+func (fl *FsLib) OpenParallelFileReader(path string, offset sp.Toffset, l sp.Tlength) (*ParallelFileReader, error) {
+	fd, err := fl.Open(path, sp.OREAD)
 	if err != nil {
 		return nil, err
 	}
-	r := &AsyncFileReader{FileReader: rdr}
-	r.ardr, err = readahead.NewReaderSize(rdr, 4, sp.BUFSZ)
-	if err != nil {
-		return nil, err
+	r := &ParallelFileReader{
+		fd:  fd,
+		sof: fl.FileAPI,
+		end: offset + sp.Toffset(l),
+		off: offset,
 	}
 	return r, nil
+}
+
+// caller can use offinc to arrange for some overlap between two chunks
+func (pfr *ParallelFileReader) getChunk(sz, offinc int) (sp.Toffset, sp.Toffset, error) {
+	pfr.mu.Lock()
+	defer pfr.mu.Unlock()
+
+	if pfr.off >= pfr.end {
+		return pfr.end, pfr.end, io.EOF
+	}
+
+	off := pfr.off
+	e := off + sp.Toffset(sz)
+	if pfr.end < e {
+		e = pfr.end
+	}
+	pfr.off += sp.Toffset(offinc)
+	return off, e, nil
+}
+
+func (pfr *ParallelFileReader) GetChunkReader(sz, offinc int) (io.ReadCloser, sp.Toffset, error) {
+	o, e, err := pfr.getChunk(sz, offinc)
+	if err != nil {
+		return nil, 0, err
+	}
+	db.DPrintf(db.PREADER, "GetChunkReader: %v %v", o, e)
+	r, err := pfr.sof.PreadRdr(pfr.fd, o, sp.Tsize(e-o))
+	return r, o, err
+}
+
+func (pfr *ParallelFileReader) Close() error {
+	return pfr.sof.CloseFd(pfr.fd)
 }
 
 func (fl *FsLib) OpenWaitReader(path string) (int, error) {
@@ -221,36 +236,23 @@ func (rd *fdReader) Read(off sp.Toffset, b []byte) (int, error) {
 
 type FileWriter struct {
 	wrt  *writer.Writer
-	awrt *awriter.Writer
 	bwrt *bufio.Writer
 }
 
 func (fl *FsLib) newFileWriter(fd int) *FileWriter {
 	w := writer.NewWriter(fl.FileAPI, fd)
-	return &FileWriter{w, nil, nil}
+	return &FileWriter{w, nil}
 }
 
 func (fl *FsLib) newBufFileWriter(fd int) *FileWriter {
 	w := writer.NewWriter(fl.FileAPI, fd)
 	bw := bufio.NewWriterSize(w, sp.BUFSZ)
-	return &FileWriter{w, nil, bw}
-}
-
-func (fl *FsLib) newBufAsyncFileWriter(fd int) *FileWriter {
-	w := writer.NewWriter(fl.FileAPI, fd)
-	aw := awriter.NewWriterSize(w, 4, sp.BUFSZ)
-	bw := bufio.NewWriterSize(aw, sp.BUFSZ)
-	return &FileWriter{w, aw, bw}
+	return &FileWriter{w, bw}
 }
 
 func (wrt *FileWriter) Close() error {
 	if wrt.bwrt != nil {
 		if err := wrt.bwrt.Flush(); err != nil {
-			return err
-		}
-	}
-	if wrt.awrt != nil {
-		if err := wrt.awrt.Close(); err != nil {
 			return err
 		}
 	}
@@ -301,14 +303,6 @@ func (fl *FsLib) OpenBufWriter(fname string, mode sp.Tmode) (*FileWriter, error)
 		return nil, err
 	}
 	return fl.newBufFileWriter(fd), nil
-}
-
-func (fl *FsLib) CreateAsyncWriter(fname string, perm sp.Tperm, mode sp.Tmode) (*FileWriter, error) {
-	fd, err := fl.Create(fname, perm, mode)
-	if err != nil {
-		return nil, err
-	}
-	return fl.newBufAsyncFileWriter(fd), nil
 }
 
 //

@@ -1,16 +1,14 @@
+// The electclnt package allows procs to elect a leader using [leaderetcd] and
+// ask for fence to fence the leader's write operations.
 package electclnt
 
 import (
 	db "sigmaos/debug"
-	"sigmaos/namesrv/fsetcd"
 	"sigmaos/fslib"
-	"sigmaos/leaderetcd"
+	"sigmaos/namesrv/fsetcd"
+	"sigmaos/namesrv/leaderetcd"
 	sp "sigmaos/sigmap"
 )
-
-//
-// Library to acquire leadership
-//
 
 type ElectClnt struct {
 	*fslib.FsLib

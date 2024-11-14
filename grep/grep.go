@@ -10,7 +10,7 @@ import (
 
 	"github.com/fmstephe/unsafeutil"
 
-	"sigmaos/mr"
+	"sigmaos/mr/mr"
 )
 
 var words = []string{"JavaScript", "Java", "PHP", "Python", "C#", "C++",

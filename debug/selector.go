@@ -39,6 +39,7 @@ const (
 const (
 	TEST     Tselector = "TEST"
 	TEST1              = "TEST1"
+	STAT               = "STAT"
 	TEST_LAT           = "TEST_LAT"
 	DELAY              = "DELAY"
 	CRASH              = "CRASH"
@@ -120,10 +121,10 @@ const (
 	LCSCHEDCLNT_ERR           = "LCSCHEDCLNT" + ERR
 	LCSCHED                   = "LCSCHED"
 	LCSCHED_ERR               = "LCSCHED" + ERR
-	PROCQ                     = "PROCQ"
-	PROCQ_ERR                 = "PROCQ" + ERR
-	PROCQCLNT                 = "PROCQCLNT"
-	PROCQCLNT_ERR             = "PROCQCLNT" + ERR
+	BESCHED                   = "BESCHED"
+	BESCHED_ERR               = "BESCHED" + ERR
+	BESCHEDCLNT               = "BESCHEDCLNT"
+	BESCHEDCLNT_ERR           = "BESCHEDCLNT" + ERR
 	KEYCLNT                   = "KEYCLNT"
 	KEYCLNT_ERR               = "KEYCLNT" + ERR
 	KEYD                      = "KEYD"
@@ -175,6 +176,7 @@ const (
 	WRITER_ERR    Tselector = "WRITER" + ERR
 	READER_ERR              = "READER" + ERR
 	AWRITER                 = "AWRITER"
+	PREADER                 = "PREADER"
 	FSLIB                   = "FSLIB"
 	FSLIB_ERR               = "FSLIB" + ERR
 	SEMCLNT                 = "SEMCLNT"

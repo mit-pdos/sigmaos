@@ -5,7 +5,6 @@ import (
 	"sync/atomic"
 
 	db "sigmaos/debug"
-	"sigmaos/path"
 	sp "sigmaos/sigmap"
 	"sigmaos/syncmap"
 )
@@ -22,7 +21,7 @@ type proxyPath struct {
 	nfid int
 }
 
-func newProxyPath(k string) *proxyPath {
+func newProxyPath(k sp.Tfid) *proxyPath {
 	return &proxyPath{
 		nfid: 1,
 		path: sp.Tpath(nextPath.Add(1)),
@@ -43,11 +42,11 @@ func (pp *proxyPath) Dec() int {
 }
 
 type pathMap struct {
-	pm *syncmap.SyncMap[string, *proxyPath]
+	pm *syncmap.SyncMap[sp.Tfid, *proxyPath]
 }
 
 func newPathMap(p sp.Tpath) *pathMap {
-	return &pathMap{pm: syncmap.NewSyncMap[string, *proxyPath]()}
+	return &pathMap{pm: syncmap.NewSyncMap[sp.Tfid, *proxyPath]()}
 }
 
 type qidMap struct {
@@ -58,13 +57,13 @@ func newQidMap() *qidMap {
 	return &qidMap{qm: syncmap.NewSyncMap[sp.Tpath, *pathMap]()}
 }
 
-func (qm *qidMap) Insert(pn path.Tpathname, qids []*sp.Tqid) []*sp.TqidProto {
-	db.DPrintf(db.NPPROXY, "Insert: pn %v qids %v\n", pn, qids)
+func (qm *qidMap) Insert(fid sp.Tfid, qids []*sp.Tqid) []*sp.TqidProto {
+	db.DPrintf(db.NPPROXY, "Insert: %v qids %v\n", fid, qids)
 	pqids := make([]*sp.Tqid, len(qids))
 	for i, q := range qids {
 		pm, _ := qm.qm.AllocNew(sp.Tpath(q.Path), newPathMap)
-		pp, ok := pm.pm.AllocNew(pn.String(), newProxyPath)
-		db.DPrintf(db.NPPROXY, "Insert: ok %t pmap %v %v %v\n", ok, pn, sp.Tpath(q.Path), pp)
+		pp, ok := pm.pm.AllocNew(fid, newProxyPath)
+		db.DPrintf(db.NPPROXY, "Insert: ok %t pmap %v %v %v\n", ok, fid, sp.Tpath(q.Path), pp)
 		if pm.pm.Len() > 1 {
 			db.DPrintf(db.NPPROXY, "Insert: collision %v", pm.pm)
 		}
@@ -76,18 +75,18 @@ func (qm *qidMap) Insert(pn path.Tpathname, qids []*sp.Tqid) []*sp.TqidProto {
 	return sp.NewSliceProto(pqids)
 }
 
-func (qm *qidMap) Clunk(pn path.Tpathname, qid *sp.Tqid) {
+func (qm *qidMap) Clunk(fid sp.Tfid, qid *sp.Tqid) {
 	pm, ok := qm.qm.Lookup(sp.Tpath(qid.Path))
 	if ok {
-		pp, ok := pm.pm.Lookup(pn.String())
+		pp, ok := pm.pm.Lookup(fid)
 		if ok {
 			if n := pp.Dec(); n <= 0 {
-				db.DPrintf(db.NPPROXY, "Clunk: pn %v qid %v del %v\n", pn, qid, pp)
-				pm.pm.Delete(pn.String())
+				db.DPrintf(db.NPPROXY, "Clunk: %v qid %v del %v\n", fid, qid, pp)
+				pm.pm.Delete(fid)
 			}
 		}
 	}
 	if !ok {
-		db.DPrintf(db.ERROR, "Clunk: pn %v qid %v not present\n", pn, qid)
+		db.DPrintf(db.ERROR, "Clunk: %v qid %v not present\n", fid, qid)
 	}
 }

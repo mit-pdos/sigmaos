@@ -26,9 +26,9 @@ def scrape_stats(path, inner, is_corral, mapper):
   if is_corral:
     expected_line_contents = "ninvoc"
   if mapper:
-    exclude = "mr-m-"
-  else:
     exclude = "mr-r-"
+  else:
+    exclude = "mr-m-"
   lines = x.split("\n")
   lines = [ lines[idx].strip() for idx in range(len(lines)) if expected_line_contents in lines[idx] and exclude not in lines[idx-1] ]
   if len(lines) == 0:
@@ -51,7 +51,7 @@ def get_start_latencies(path):
   lats = [ get_outer_lat(l) - get_inner_lat(l) for l in lines ]
   return lats
 
-def print_stats(path, tpt, verbose, mapper, start_lat):
+def print_stats(path, tpt, inner, verbose, mapper, start_lat):
   if verbose:
     for l in tpt:
       print("{:.3f}MB/s".format(l))
@@ -77,8 +77,12 @@ def print_stats(path, tpt, verbose, mapper, start_lat):
       np.median(tpt),
     ))
   else:
-    print("{} stats for path[{}]:\n\tdata points: {}\n\tsum: {:.2f}MB/s\n\tmin: {:.3f}MB/s\n\tmax: {:.3f}MB/s\n\tmean: {:.3f}MB/s\n\tstd: {:.3f}MB/s\n\tp50: {:.3f}MB/s\n\tp90: {:.3f}MB/s\n\tp99: {:.3f}MB/s".format(
+    t = "outer"
+    if inner:
+      t = "inner"
+    print("{} {} stats for path[{}]:\n\tdata points: {}\n\tsum: {:.2f}MB/s\n\tmin: {:.3f}MB/s\n\tmax: {:.3f}MB/s\n\tmean: {:.3f}MB/s\n\tstd: {:.3f}MB/s\n\tp50: {:.3f}MB/s\n\tp90: {:.3f}MB/s\n\tp99: {:.3f}MB/s".format(
       pfx,
+      t,
       path,
       len(tpt),
       sum(tpt),
@@ -105,13 +109,13 @@ if __name__ == "__main__":
   tpt = []
   for t in mapper_tpts:
     tpt = tpt + t
-  print_stats(path=args.path, tpt=tpt, verbose=args.v, mapper=True, start_lat=False)
+  print_stats(path=args.path, tpt=tpt, inner=args.inner, verbose=args.v, mapper=True, start_lat=False)
 
   reducer_tpts = [ scrape_stats(path=pn, inner=args.inner, is_corral=args.is_corral, mapper=False) for pn in paths ]
   tpt = []
   for t in reducer_tpts:
     tpt = tpt + t
-  print_stats(path=args.path, tpt=tpt, verbose=args.v, mapper=False, start_lat=False)
+  print_stats(path=args.path, tpt=tpt, inner=args.inner, verbose=args.v, mapper=False, start_lat=False)
 
   start_latencies = [get_start_latencies(pn) for pn in paths][0]
-  print_stats(args.path, start_latencies, args.v, False, True)
+  print_stats(path=args.path, tpt=start_latencies, inner=args.inner, verbose=args.v, mapper=False, start_lat=True)

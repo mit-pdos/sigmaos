@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"sync"
 
+	beproto "sigmaos/beschedsrv/proto"
 	"sigmaos/chunk"
 	"sigmaos/chunkclnt"
 	"sigmaos/chunksrv"
@@ -14,7 +15,6 @@ import (
 	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/procfs"
-	pqproto "sigmaos/procqsrv/proto"
 	"sigmaos/scheddclnt"
 	"sigmaos/schedqueue"
 	"sigmaos/sigmaclnt"
@@ -90,7 +90,7 @@ func (qd *QDir) Len() int {
 	return qd.lcs.lenL()
 }
 
-func (lcs *LCSched) Enqueue(ctx fs.CtxI, req pqproto.EnqueueRequest, res *pqproto.EnqueueResponse) error {
+func (lcs *LCSched) Enqueue(ctx fs.CtxI, req beproto.EnqueueRequest, res *beproto.EnqueueResponse) error {
 	p := proc.NewProcFromProto(req.ProcProto)
 	if p.GetRealm() != ctx.Principal().GetRealm() {
 		return fmt.Errorf("Proc realm %v doesn't match principal realm %v", p.GetRealm(), ctx.Principal().GetRealm())

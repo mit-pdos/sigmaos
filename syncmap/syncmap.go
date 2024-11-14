@@ -73,6 +73,14 @@ func (sm *SyncMap[K, T]) InsertBlind(k K, t T) bool {
 	return ok
 }
 
+func (sm *SyncMap[K, T]) UpdateL(k K, t T) bool {
+	if _, ok := sm.tbl[k]; !ok {
+		return false
+	}
+	sm.tbl[k] = t
+	return true
+}
+
 func (sm *SyncMap[K, T]) Update(k K, t T) bool {
 	sm.Lock()
 	defer sm.Unlock()
@@ -128,11 +136,13 @@ func (sm *SyncMap[K, T]) Values() []T {
 	return vals
 }
 
-func (sm *SyncMap[K, V]) Iter(f func(key K, val V)) {
+func (sm *SyncMap[K, V]) Iter(f func(key K, val V) bool) {
 	sm.Lock()
 	defer sm.Unlock()
 
 	for k, v := range sm.tbl {
-		f(k, v)
+		if !f(k, v) {
+			break
+		}
 	}
 }

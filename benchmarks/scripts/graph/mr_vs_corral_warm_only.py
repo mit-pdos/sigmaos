@@ -64,7 +64,7 @@ def graph_data(input_dir, app, datasize, granular, noux, out):
     sigmaplot = plt.bar(sigmax, sigma_times, width=width, label="σOS-mr (UX)")
     for i, v in enumerate(sigma_times):
       plt.text(sigmax[i], v + .25, str(round(v, 2)), ha="center")
-  sigmas3plot = plt.bar(sigmas3x, sigmas3_times, width=width, label="σOS-mr (S3)")
+  sigmas3plot = plt.bar(sigmas3x, sigmas3_times, width=width, label="σOS-mr")
   for i, v in enumerate(sigmas3_times):
     plt.text(sigmas3x[i], v + .25, str(round(v, 2)), ha="center")
   corralplot = plt.bar(corralx, corral_times, width=width, label="λ-mr")

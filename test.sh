@@ -105,7 +105,7 @@ if [[ $COMPILE == "--compile" ]]; then
     # test if test packages compile
     #
 
-    for T in path intervals serr linuxsched perf sigmap netproxy sessclnt npproxysrv reader writer stats fslib semclnt chunksrv electclnt dircache memfs namesrv procclnt ux s3 bootkernelclnt leaderclnt leadertest kvgrp cachedsvcclnt www sigmapsrv realmclnt mr imgresizesrv kv hotel socialnetwork benchmarks benchmarks/remote example example_echo_server netperf; do
+    for T in path intervals serr linuxsched perf sigmap netproxy sessclnt npproxysrv fslib/reader fslib/writer stats fslib semclnt chunksrv electclnt dircache memfs namesrv procclnt ux s3 bootkernelclnt leaderclnt leadertest kvgrp cachedsvcclnt www sigmapsrv realmclnt mr imgresizesrv kv hotel socialnetwork benchmarks benchmarks/remote example example_echo_server netperf; do
         if ! [ -z "$SKIPTO" ]; then
           if [[ "$SKIPTO" == "$T" ]]; then
             # Stop skipping
@@ -161,7 +161,7 @@ if [[ $BASIC == "--basic" ]]; then
     # test with a kernel with just named
     #
 
-    for T in reader writer stats netproxy fslib electclnt dircache; do
+    for T in fslib/reader fslib/writer stats netproxy fslib electclnt dircache; do
         if ! [ -z "$SKIPTO" ]; then
           if [[ "$SKIPTO" == "$T" ]]; then
             # Stop skipping

@@ -22,17 +22,12 @@ import (
 	"sigmaos/tracing"
 )
 
-const (
-	maxSearchRadius  = 10
-	maxSearchResults = 5
-)
-
 type GeoIndexes struct {
 	mu      sync.Mutex
 	indexes chan *geoindex.ClusteringIndex
 }
 
-func newGeoIndexes(n int, path string) *GeoIndexes {
+func NewGeoIndexes(n int, path string) *GeoIndexes {
 	idxs := &GeoIndexes{
 		indexes: make(chan *geoindex.ClusteringIndex, n),
 	}
@@ -42,8 +37,9 @@ func newGeoIndexes(n int, path string) *GeoIndexes {
 	return idxs
 }
 
-func (gi GeoIndexes) KNN(center *geoindex.GeoPoint) []geoindex.Point {
+func (gi GeoIndexes) KNN(center *geoindex.GeoPoint, maxSearchRadius float64, maxSearchResults int) []geoindex.Point {
 	idx := <-gi.indexes
+	start := time.Now()
 	points := idx.KNearest(
 		center,
 		maxSearchResults,
@@ -51,6 +47,7 @@ func (gi GeoIndexes) KNN(center *geoindex.GeoPoint) []geoindex.Point {
 			return true
 		},
 	)
+	db.DPrintf(db.ALWAYS, "Time KNN (%v): %v", center, time.Since(start))
 	gi.indexes <- idx
 	return points
 }
@@ -69,20 +66,33 @@ func (p *point) Id() string   { return p.Pid }
 
 // Server implements the geo service
 type Geo struct {
-	tracer *tracing.Tracer
-	idxs   *GeoIndexes
+	tracer           *tracing.Tracer
+	idxs             *GeoIndexes
+	maxSearchRadius  float64
+	maxSearchResults int
 }
 
 // Run starts the server
-func RunGeoSrv(job string, nidxStr string) error {
+func RunGeoSrv(job string, nidxStr string, maxSearchRadiusStr string, maxSearchResultsStr string) error {
 	nidx, err := strconv.Atoi(nidxStr)
 	if err != nil {
 		db.DFatalf("Invalid nidx: %v", err)
 	}
-	geo := &Geo{}
+	maxSearchRadius, err := strconv.Atoi(maxSearchRadiusStr)
+	if err != nil {
+		db.DFatalf("Invalid maxSearchRadiusStr: %v", err)
+	}
+	maxSearchResults, err := strconv.Atoi(maxSearchResultsStr)
+	if err != nil {
+		db.DFatalf("Invalid maxSearchResults: %v", err)
+	}
+	geo := &Geo{
+		maxSearchRadius:  float64(maxSearchRadius),
+		maxSearchResults: maxSearchResults,
+	}
 	start := time.Now()
-	geo.idxs = newGeoIndexes(nidx, "data/geo.json")
-	db.DPrintf(db.ALWAYS, "Geo srv done building %v indexes after: %v", nidx, time.Since(start))
+	geo.idxs = NewGeoIndexes(nidx, "data/geo.json")
+	db.DPrintf(db.ALWAYS, "Geo srv done building %v indexes, radius %v nresults %v,  after: %v", nidx, geo.maxSearchRadius, geo.maxSearchResults, time.Since(start))
 	pe := proc.GetProcEnv()
 	ssrv, err := sigmasrv.NewSigmaSrv(filepath.Join(HOTELGEODIR, pe.GetPID().String()), geo, pe)
 	if err != nil {
@@ -124,8 +134,7 @@ func (s *Geo) getNearbyPoints(lat, lon float64) []geoindex.Point {
 		Plat: lat,
 		Plon: lon,
 	}
-
-	return s.idxs.KNN(center)
+	return s.idxs.KNN(center, s.maxSearchRadius, s.maxSearchResults)
 }
 
 // newGeoIndex returns a geo index with points loaded

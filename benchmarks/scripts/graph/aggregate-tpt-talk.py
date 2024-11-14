@@ -133,7 +133,10 @@ def bucketize_latency(tpts, time_range, xmin, xmax, step_size=1000):
       if xmin != -1 and xmax != -1:
         if t[0] < xmin or t[0] > xmax:
           continue
-      buckets[find_bucket(t[0] - sub, step_size)].append(t[1])
+      b = find_bucket(t[0] - sub, step_size)
+      if b not in buckets.keys():
+        buckets[b] = []
+      buckets[b].append(t[1])
   return buckets
 
 def buckets_to_percentile(buckets, percentile):
@@ -174,7 +177,7 @@ def finalize_graph(fig, ax, plots, title, out, maxval, ymax, legend_on_right):
     ax[0].legend(lns, labels, bbox_to_anchor=(.5, 1.02), loc="lower center", ncol=min(len(labels), 3))
   for idx in range(len(ax)):
     ax[idx].set_xlim(left=0)
-    if idx < len(ax) - 1:
+    if idx != 0:
       ax[idx].set_ylim(bottom=0, top=ymax)
     else:
       ax[idx].set_ylim(bottom=0)
@@ -261,6 +264,7 @@ def graph_data(input_dir_sigmaos, input_dir_k8s, title, out, hotel_realm, be_rea
   hotel_tpts_k8s = read_tpts(input_dir_k8s, "hotel")
   hotel_range_k8s = get_time_range(hotel_tpts_k8s)
   time_range_k8s = get_overall_time_range([hotel_range_k8s, hotel_lat_k8s_range])
+  time_range_k8s = (time_range_k8s[0] + 370000, time_range_k8s[1] + 370000)
   extend_tpts_to_range(procd_tpts, time_range)
   procd_tpts = truncate_tpts_to_range(procd_tpts, time_range)
   be_tpts = fit_times_to_range(be_tpts, time_range)
@@ -268,6 +272,7 @@ def graph_data(input_dir_sigmaos, input_dir_k8s, title, out, hotel_realm, be_rea
   procd_tpts = fit_times_to_range(procd_tpts, time_range)
   hotel_lats = fit_times_to_range(hotel_lats, time_range)
   hotel_lats_k8s = fit_times_to_range(hotel_lats_k8s, time_range_k8s)
+  hotel_lats_k8s = truncate_to_min_max(hotel_lats_k8s, 354500, 390000)
   procd_tpts = truncate_to_min_max(procd_tpts, xmin, xmax)
   # Convert range ms -> sec
   time_range = ((time_range[0] - time_range[0]) / 1000.0, (time_range[1] - time_range[0]) / 1000.0)
@@ -288,11 +293,11 @@ def graph_data(input_dir_sigmaos, input_dir_k8s, title, out, hotel_realm, be_rea
   if len(hotel_lats) > 0:
     x1, y1 = buckets_to_lists(hotel_tail_lat_buckets)
     ymax = max(ymax, max(y1))
-    p_tail_lat = add_data_to_graph(tptax[tptax_idx], x1, y1, "σOS-hotel " + str(int(percentile)) + "% lat", "red", "-", "")
+    p_tail_lat = add_data_to_graph(tptax[tptax_idx + 1], x1, y1, str(int(percentile)) + "% tail latency", "red", "-", "")
     plots.append(p_tail_lat)
     x2, y2 = buckets_to_lists(hotel_avg_lat_buckets)
-    p_avg_lat = add_data_to_graph(tptax[tptax_idx], x2, y2, "σOS-hotel avg lat", "purple", "-", "")
-    plots.append(p_avg_lat)
+#    p_avg_lat = add_data_to_graph(tptax[tptax_idx + 1], x2, y2, "σOS-hotel avg lat", "purple", "-", "")
+#    plots.append(p_avg_lat)
     tptax_idx = tptax_idx + 1
   hotel_lat_k8s_buckets = bucketize_latency(hotel_lats_k8s, time_range, xmin, xmax, step_size=50)
   hotel_tail_lat_k8s_buckets = buckets_to_percentile(hotel_lat_k8s_buckets, percentile)
@@ -300,15 +305,15 @@ def graph_data(input_dir_sigmaos, input_dir_k8s, title, out, hotel_realm, be_rea
   if len(hotel_lats_k8s) > 0:
     x1, y1 = buckets_to_lists(hotel_tail_lat_k8s_buckets)
     ymax = max(ymax, max(y1))
-    p_tail_lat = add_data_to_graph(tptax[tptax_idx], x1, y1, "k8s-hotel " + str(int(percentile)) + "% lat", "red", "-", "")
+    p_tail_lat = add_data_to_graph(tptax[tptax_idx + 1], x1, y1, None, "red", "-", "")
     plots.append(p_tail_lat)
     x2, y2 = buckets_to_lists(hotel_avg_lat_k8s_buckets)
-    p_avg_lat = add_data_to_graph(tptax[tptax_idx], x2, y2, "k8s-hotel avg lat", "purple", "-", "")
-    plots.append(p_avg_lat)
+#    p_avg_lat = add_data_to_graph(tptax[tptax_idx + 1], x2, y2, "k8s-hotel avg lat", "purple", "-", "")
+#    plots.append(p_avg_lat)
     tptax_idx = tptax_idx + 1
   if len(hotel_tpts) > 0:
     x, y = buckets_to_lists(hotel_buckets)
-    p = add_data_to_graph(tptax[tptax_idx], x, y, "Client request rate", "blue", "-", "")
+    p = add_data_to_graph(tptax[0], x, y, "Client request rate", "blue", "-", "")
     plots.append(p)
     tptax_idx = tptax_idx + 1
   be_buckets = bucketize(be_tpts, time_range, xmin, xmax, step_size=1000)
@@ -346,6 +351,7 @@ def graph_data(input_dir_sigmaos, input_dir_k8s, title, out, hotel_realm, be_rea
       ta = [ ax for ax in tptax ]
 #      ta.append(coresax[0])
       tptax = ta
+  ymax = int(ymax * 1.1)
   finalize_graph(fig, tptax, plots, title, out, (xmax - xmin) / 1000.0, ymax, legend_on_right)
 
 if __name__ == "__main__":

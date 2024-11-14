@@ -1,10 +1,10 @@
 package lcschedclnt
 
 import (
+	pqproto "sigmaos/beschedsrv/proto"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/proc"
-	pqproto "sigmaos/procqsrv/proto"
 	"sigmaos/rpcdirclnt"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"

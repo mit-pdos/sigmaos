@@ -211,9 +211,9 @@ func (pe *ProcEnvProto) SetInnerContainerIP(ip sp.Tip) {
 
 func (pe *ProcEnvProto) SetSigmaPath(buildTag string) {
 	if buildTag == sp.LOCAL_BUILD {
-		pe.SigmaPath = append(pe.SigmaPath, filepath.Join(sp.UX, "~local", "bin/user/common"))
+		pe.SigmaPath = append(pe.SigmaPath, filepath.Join(sp.UX, sp.LOCAL, "bin/user/common"))
 	} else {
-		pe.SigmaPath = append(pe.SigmaPath, filepath.Join(sp.S3, "~local", buildTag, "bin"))
+		pe.SigmaPath = append(pe.SigmaPath, filepath.Join(sp.S3, sp.LOCAL, buildTag, "bin"))
 	}
 }
 

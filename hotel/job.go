@@ -35,14 +35,14 @@ const (
 )
 
 var HOTELSVC = []string{
-	HOTELGEODIR + "~any/",
+	HOTELGEODIR + sp.ANY + "/",
 	HOTELRATE,
 	HOTELSEARCH,
 	HOTELREC,
 	HOTELRESERVE,
 	HOTELUSER,
 	HOTELPROF,
-	sp.DB + "~any/",
+	sp.DB + sp.ANY + "/",
 }
 
 var (
@@ -154,11 +154,11 @@ type HotelJob struct {
 	job             string
 }
 
-func NewHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []*Srv, nhotel int, cache string, cacheMcpu proc.Tmcpu, ncache int, gc bool, imgSizeMB int, ngeo int, ngeoidx int) (*HotelJob, error) {
+func NewHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []*Srv, nhotel int, cache string, cacheMcpu proc.Tmcpu, ncache int, gc bool, imgSizeMB int, ngeo int, ngeoidx int, geoSearchRadius int, geoNResults int) (*HotelJob, error) {
 	// Set number of hotels before doing anything.
 	setNHotel(nhotel)
 	// Set the number of indexes to be used in each geo server
-	geo.Args = []string{strconv.Itoa(ngeoidx)}
+	geo.Args = []string{strconv.Itoa(ngeoidx), strconv.Itoa(geoSearchRadius), strconv.Itoa(geoNResults)}
 
 	var cc *cachedsvcclnt.CachedSvcClnt
 	var cm *cachedsvc.CacheMgr

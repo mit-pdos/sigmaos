@@ -22,7 +22,6 @@ RUN git clone https://github.com/ArielSzekely/go.git go-custom && \
   ./make.bash && \
   /go-custom/bin/go version
 
-
 WORKDIR /home/sigmaos
 
 CMD [ "/bin/bash", "-l" ]

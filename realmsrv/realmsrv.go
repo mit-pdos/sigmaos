@@ -9,12 +9,12 @@ import (
 	"sync"
 	"time"
 
+	"sigmaos/beschedclnt"
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/kernelclnt"
 	"sigmaos/netproxyclnt"
 	"sigmaos/proc"
-	"sigmaos/procqclnt"
 	"sigmaos/protsrv"
 	"sigmaos/realmsrv/proto"
 	"sigmaos/rpc"
@@ -72,7 +72,7 @@ type RealmSrv struct {
 	netproxy   bool
 	realms     map[sp.Trealm]*Realm
 	sc         *sigmaclnt.SigmaClntKernel
-	pq         *procqclnt.ProcQClnt
+	be         *beschedclnt.BESchedClnt
 	sd         *scheddclnt.ScheddClnt
 	mkc        *kernelclnt.MultiKernelClnt
 	lastNDPort int
@@ -110,7 +110,7 @@ func RunRealmSrv(netproxy bool) error {
 	db.DPrintf(db.REALMD, "newsrv ok")
 	rs.sc = sigmaclnt.NewSigmaClntKernel(ssrv.MemFs.SigmaClnt())
 	rs.mkc = kernelclnt.NewMultiKernelClnt(ssrv.MemFs.SigmaClnt().FsLib, db.REALMD, db.REALMD_ERR)
-	rs.pq = procqclnt.NewProcQClnt(rs.sc.FsLib)
+	rs.be = beschedclnt.NewBESchedClnt(rs.sc.FsLib)
 	rs.sd = scheddclnt.NewScheddClnt(rs.sc.FsLib, pe.GetKernelID())
 	go rs.enforceResourcePolicy()
 	err = ssrv.RunServer()
@@ -419,7 +419,7 @@ func (rm *RealmSrv) enforceResourcePolicy() {
 			db.DPrintf(db.FAIRNESS, "No starved realms. Fairness achieved.")
 			continue
 		}
-		realmQLens, err := rm.pq.GetQueueStats(N_SAMPLE)
+		realmQLens, err := rm.be.GetQueueStats(N_SAMPLE)
 		if err != nil {
 			db.DFatalf("Err getting queue stats: %v", err)
 		}

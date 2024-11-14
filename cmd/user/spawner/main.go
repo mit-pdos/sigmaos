@@ -63,10 +63,10 @@ func (s *Spawner) Work() {
 		db.DFatalf("Error spawn: %v", err)
 	}
 	s.Started()
-	crash.Failer(crash.SPAWNER_CRASH, func(e crash.Event) {
+	crash.Failer(crash.SPAWNER_CRASH, func(e crash.Tevent) {
 		crash.Crash()
 	})
-	crash.Failer(crash.SPAWNER_PARTITION, func(e crash.Event) {
+	crash.Failer(crash.SPAWNER_PARTITION, func(e crash.Tevent) {
 		crash.PartitionNamed(s.FsLib)
 	})
 	if s.shouldWaitExit {

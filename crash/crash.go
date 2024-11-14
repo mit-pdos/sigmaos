@@ -64,6 +64,7 @@ func init() {
 	if err := parseTevents(labelstr, labels); err != nil {
 		db.DFatalf("parseLabels %v err %v", labelstr, err)
 	}
+	// db.DPrintf(db.CRASH, "Events %v", labels)
 	db.DPrintf(db.SPAWN_LAT, "[%v] crash init pkg: %v", proc.GetSigmaDebugPid(), time.Since(s))
 }
 

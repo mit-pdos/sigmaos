@@ -55,10 +55,20 @@ var nmap int
 var job *mr.Job
 var timeout time.Duration
 
+var coordev []crash.Tevent
+var taskev []crash.Tevent
+
 func init() {
 	flag.StringVar(&app, "app", "mr-wc.yml", "application")
 	flag.IntVar(&nmap, "nmap", 1, "number of mapper threads")
 	flag.DurationVar(&timeout, "mr-timeout", 0, "timeout")
+
+	e0 := crash.Tevent{crash.MRTASK_CRASH, 100, CRASHTASK, 0.33, 0}
+	e1 := crash.Tevent{crash.MRTASK_PARTITION, 100, CRASHTASK, 0.33, 0}
+	taskev = []crash.Tevent{e0, e1}
+	e0 = crash.Tevent{crash.MRCOORD_CRASH, 100, CRASHTASK, 0.33, 0}
+	e1 = crash.Tevent{crash.MRCOORD_PARTITION, 100, CRASHTASK, 0.33, 0}
+	coordev = []crash.Tevent{e0, e1}
 }
 
 func TestCompile(t *testing.T) {
@@ -491,23 +501,13 @@ func TestMaliciousMapper(t *testing.T) {
 	runN(t, 0, 0, 0, 0, 0, 500, true)
 }
 
-var taskev []crash.Tevent
-
 func TestCrashTaskOnly(t *testing.T) {
-	e0 := crash.Tevent{crash.MRTASK_CRASH, 100, CRASHTASK, 0.33, 0}
-	e1 := crash.Tevent{crash.MRTASK_PARTITION, 100, CRASHTASK, 0.33, 0}
-	taskev = []crash.Tevent{e0, e1}
 	err := crash.AppendSigmaFail(taskev)
 	assert.Nil(t, err)
 	runN(t, CRASHTASK, 0, 0, 0, 0, 0, false)
 }
 
-var coordev []crash.Tevent
-
 func TestCrashCoordOnly(t *testing.T) {
-	e0 := crash.Tevent{crash.MRCOORD_CRASH, 100, CRASHTASK, 0.33, 0}
-	e1 := crash.Tevent{crash.MRCOORD_PARTITION, 100, CRASHTASK, 0.33, 0}
-	coordev = []crash.Tevent{e0, e1}
 	err := crash.AppendSigmaFail(coordev)
 	assert.Nil(t, err)
 	runN(t, 0, CRASHCOORD, 0, 0, 0, 0, false)
@@ -516,6 +516,7 @@ func TestCrashCoordOnly(t *testing.T) {
 func TestCrashTaskAndCoord(t *testing.T) {
 	evs := append([]crash.Tevent{}, taskev...)
 	evs = append(evs, coordev...)
+	db.DPrintf(db.TEST, "evs %v", evs)
 	err := crash.AppendSigmaFail(evs)
 	assert.Nil(t, err)
 	runN(t, CRASHTASK, CRASHCOORD, 0, 0, 0, 0, false)

@@ -63,7 +63,7 @@ func (fm *FidMap) disconnect(fid0 sp.Tfid) {
 	}
 	db.DPrintf(db.CRASH, "fid disconnect fid %v ch0 %v\n", fid0, ch0)
 	fm.fids.Iter(func(fid sp.Tfid, ch *Channel) bool {
-		if fid != fid0 && ch.pc == ch0.pc {
+		if fid != fid0 && ch != nil && ch0 != nil && ch.pc == ch0.pc {
 			db.DPrintf(db.CRASH, "fid disconnect fid %v ch %v\n", fid, ch)
 			fm.fids.UpdateL(fid, nil)
 		}

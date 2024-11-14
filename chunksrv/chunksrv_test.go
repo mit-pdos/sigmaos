@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	PROG = "sleeper"
+	PROG = "sleeper-v1.0"
 	PATH = "name/ux/" + sp.LOCAL + "/bin/user/common/"
 )
 
@@ -80,7 +80,7 @@ func (ts *Tstate) fetch(srv string, paths []string, expect []string) {
 	pid := ts.ProcEnv().GetPID()
 	secrets := ts.ProcEnv().GetSecrets()["s3"]
 	st, path, err := ts.ckclnt.GetFileStat(srv, PROG, pid, sp.ROOTREALM, secrets, paths, nil)
-	if !assert.Nil(ts.T, err) {
+	if !assert.Nil(ts.T, err, "Err GetFileStat: %v", err) {
 		return
 	}
 	assert.True(ts.T, isExpected(path, expect))

@@ -27,6 +27,7 @@
 #include <err.h>
 #include <dlfcn.h>
 #include <stdlib.h>
+#include <Python.h>
 #include <mach-o/dyld.h>
 
 

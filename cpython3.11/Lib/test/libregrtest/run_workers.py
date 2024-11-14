@@ -22,7 +22,7 @@ from .runtests import RunTests, WorkerRunTests, JsonFile, JsonFileType
 from .single import PROGRESS_MIN_TIME
 from .utils import (
     StrPath, TestName,
-    format_duration, print_warning, count, plural)
+    format_duration, print_warning, count, plural, get_signal_name)
 from .worker import create_worker_process, USE_PROCESS_GROUP
 
 if MS_WINDOWS:
@@ -79,12 +79,8 @@ class MultiprocessResult:
     err_msg: str | None = None
 
 
-class WorkerThreadExited:
-    """Indicates that a worker thread has exited"""
-
 ExcStr = str
 QueueOutput = tuple[Literal[False], MultiprocessResult] | tuple[Literal[True], ExcStr]
-QueueContent = QueueOutput | WorkerThreadExited
 
 
 class ExitThread(Exception):
@@ -142,20 +138,14 @@ class WorkerThread(threading.Thread):
             return
         self._killed = True
 
-        use_killpg = USE_PROCESS_GROUP
-        if use_killpg:
-            parent_sid = os.getsid(0)
-            sid = os.getsid(popen.pid)
-            use_killpg = (sid != parent_sid)
-
-        if use_killpg:
+        if USE_PROCESS_GROUP:
             what = f"{self} process group"
         else:
             what = f"{self} process"
 
         print(f"Kill {what}", file=sys.stderr, flush=True)
         try:
-            if use_killpg:
+            if USE_PROCESS_GROUP:
                 os.killpg(popen.pid, signal.SIGKILL)
             else:
                 popen.kill()
@@ -287,7 +277,7 @@ class WorkerThread(threading.Thread):
         # Python finalization: too late for libregrtest.
         if not support.is_wasi:
             # Don't check for leaked temporary files and directories if Python is
-            # run on WASI. WASI doesn't pass environment variables like TMPDIR to
+            # run on WASI. WASI don't pass environment variables like TMPDIR to
             # worker processes.
             tmp_dir = tempfile.mkdtemp(prefix="test_python_")
             tmp_dir = os.path.abspath(tmp_dir)
@@ -366,7 +356,7 @@ class WorkerThread(threading.Thread):
                                   err_msg=None,
                                   state=State.TIMEOUT)
             if retcode != 0:
-                name = support.get_signal_name(retcode)
+                name = get_signal_name(retcode)
                 if name:
                     retcode = f"{retcode} ({name})"
                 raise WorkerError(self.test_name, f"Exit code {retcode}", stdout,
@@ -386,8 +376,8 @@ class WorkerThread(threading.Thread):
     def run(self) -> None:
         fail_fast = self.runtests.fail_fast
         fail_env_changed = self.runtests.fail_env_changed
-        try:
-            while not self._stopped:
+        while not self._stopped:
+            try:
                 try:
                     test_name = next(self.pending)
                 except StopIteration:
@@ -406,12 +396,11 @@ class WorkerThread(threading.Thread):
 
                 if mp_result.result.must_stop(fail_fast, fail_env_changed):
                     break
-        except ExitThread:
-            pass
-        except BaseException:
-            self.output.put((True, traceback.format_exc()))
-        finally:
-            self.output.put(WorkerThreadExited())
+            except ExitThread:
+                break
+            except BaseException:
+                self.output.put((True, traceback.format_exc()))
+                break
 
     def _wait_completed(self) -> None:
         popen = self._popen
@@ -469,9 +458,8 @@ class RunWorkers:
         self.log = logger.log
         self.display_progress = logger.display_progress
         self.results: TestResults = results
-        self.live_worker_count = 0
 
-        self.output: queue.Queue[QueueContent] = queue.Queue()
+        self.output: queue.Queue[QueueOutput] = queue.Queue()
         tests_iter = runtests.iter_tests()
         self.pending = MultiprocessIterator(tests_iter)
         self.timeout = runtests.timeout
@@ -509,7 +497,6 @@ class RunWorkers:
         self.log(msg)
         for worker in self.workers:
             worker.start()
-            self.live_worker_count += 1
 
     def stop_workers(self) -> None:
         start_time = time.monotonic()
@@ -524,18 +511,14 @@ class RunWorkers:
 
         # bpo-46205: check the status of workers every iteration to avoid
         # waiting forever on an empty queue.
-        while self.live_worker_count > 0:
+        while any(worker.is_alive() for worker in self.workers):
             if use_faulthandler:
                 faulthandler.dump_traceback_later(MAIN_PROCESS_TIMEOUT,
                                                   exit=True)
 
             # wait for a thread
             try:
-                result = self.output.get(timeout=PROGRESS_UPDATE)
-                if isinstance(result, WorkerThreadExited):
-                    self.live_worker_count -= 1
-                    continue
-                return result
+                return self.output.get(timeout=PROGRESS_UPDATE)
             except queue.Empty:
                 pass
 
@@ -544,6 +527,12 @@ class RunWorkers:
                 running = get_running(self.workers)
                 if running:
                     self.log(running)
+
+        # all worker threads are done: consume pending results
+        try:
+            return self.output.get(timeout=0)
+        except queue.Empty:
+            return None
 
     def display_result(self, mp_result: MultiprocessResult) -> None:
         result = mp_result.result

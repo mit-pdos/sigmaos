@@ -1,5 +1,5 @@
-:mod:`!logging.handlers` --- Logging handlers
-=============================================
+:mod:`logging.handlers` --- Logging handlers
+============================================
 
 .. module:: logging.handlers
    :synopsis: Handlers for the logging module.
@@ -66,7 +66,7 @@ and :meth:`flush` methods).
 
       :param stream: The stream that the handler should use.
 
-      :return: the old stream, if the stream was changed, or ``None`` if it wasn't.
+      :return: the old stream, if the stream was changed, or *None* if it wasn't.
 
       .. versionadded:: 3.7
 
@@ -1090,13 +1090,7 @@ possible, while any potentially slow operations (such as sending an email via
       want to override this if you want to use blocking behaviour, or a
       timeout, or a customized queue implementation.
 
-   .. attribute:: listener
 
-      When created via configuration using :func:`~logging.config.dictConfig`, this
-      attribute will contain a :class:`QueueListener` instance for use with this
-      handler. Otherwise, it will be ``None``.
-
-      .. versionadded:: 3.12
 
 .. _queue-listener:
 

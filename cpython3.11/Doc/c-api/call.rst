@@ -57,15 +57,6 @@ This bears repeating:
    A class supporting vectorcall **must** also implement
    :c:member:`~PyTypeObject.tp_call` with the same semantics.
 
-.. versionchanged:: 3.12
-
-   The :c:macro:`Py_TPFLAGS_HAVE_VECTORCALL` flag is now removed from a class
-   when the class's :py:meth:`~object.__call__` method is reassigned.
-   (This internally sets :c:member:`~PyTypeObject.tp_call` only, and thus
-   may make it behave differently than the vectorcall function.)
-   In earlier Python versions, vectorcall should only be used with
-   :c:macro:`immutable <Py_TPFLAGS_IMMUTABLETYPE>` or static types.
-
 A class should not implement vectorcall if that would be slower
 than *tp_call*. For example, if the callee needs to convert
 the arguments to an args tuple and kwargs dict anyway, then there is no point
@@ -113,6 +104,19 @@ This is a pointer to a function with the following signature:
 To call an object that implements vectorcall, use a :ref:`call API <capi-call>`
 function as with any other callable.
 :c:func:`PyObject_Vectorcall` will usually be most efficient.
+
+
+.. note::
+
+   In CPython 3.8, the vectorcall API and related functions were available
+   provisionally under names with a leading underscore:
+   ``_PyObject_Vectorcall``, ``_Py_TPFLAGS_HAVE_VECTORCALL``,
+   ``_PyObject_VectorcallMethod``, ``_PyVectorcall_Function``,
+   ``_PyObject_CallOneArg``, ``_PyObject_CallMethodNoArgs``,
+   ``_PyObject_CallMethodOneArg``.
+   Additionally, ``PyObject_VectorcallDict`` was available as
+   ``_PyObject_FastCallDict``.
+   The old names are still defined as aliases of the new, non-underscored names.
 
 
 Recursion Control

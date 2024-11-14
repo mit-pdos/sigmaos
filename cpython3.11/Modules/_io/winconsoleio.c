@@ -6,14 +6,14 @@
     Written by Steve Dower
 */
 
+#define PY_SSIZE_T_CLEAN
 #include "Python.h"
 #include "pycore_fileutils.h"     // _Py_BEGIN_SUPPRESS_IPH
 #include "pycore_object.h"        // _PyObject_GC_UNTRACK()
-#include "pycore_pyerrors.h"      // _PyErr_ChainExceptions1()
 
-#ifdef HAVE_WINDOWS_CONSOLE_IO
+#ifdef MS_WINDOWS
 
-
+#include "structmember.h"         // PyMemberDef
 #ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
 #endif
@@ -22,9 +22,7 @@
 #endif
 #include <stddef.h> /* For offsetof */
 
-#ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
-#endif
 #include <windows.h>
 #include <fcntl.h>
 
@@ -154,9 +152,9 @@ _find_last_utf8_boundary(const char *buf, DWORD len)
 
 /*[clinic input]
 module _io
-class _io._WindowsConsoleIO "winconsoleio *" "clinic_state()->PyWindowsConsoleIO_Type"
+class _io._WindowsConsoleIO "winconsoleio *" "&PyWindowsConsoleIO_Type"
 [clinic start generated code]*/
-/*[clinic end generated code: output=da39a3ee5e6b4b0d input=05526e723011ab36]*/
+/*[clinic end generated code: output=da39a3ee5e6b4b0d input=e897fdc1fba4e131]*/
 
 typedef struct {
     PyObject_HEAD
@@ -172,6 +170,8 @@ typedef struct {
     char buf[SMALLBUF];
     wchar_t wbuf;
 } winconsoleio;
+
+PyTypeObject PyWindowsConsoleIO_Type;
 
 int
 _PyWindowsConsoleIO_closed(PyObject *self)
@@ -197,8 +197,6 @@ internal_close(winconsoleio *self)
 
 /*[clinic input]
 _io._WindowsConsoleIO.close
-    cls: defining_class
-    /
 
 Close the console object.
 
@@ -207,30 +205,25 @@ close() may be called more than once without error.
 [clinic start generated code]*/
 
 static PyObject *
-_io__WindowsConsoleIO_close_impl(winconsoleio *self, PyTypeObject *cls)
-/*[clinic end generated code: output=e50c1808c063e1e2 input=161001bd2a649a4b]*/
+_io__WindowsConsoleIO_close_impl(winconsoleio *self)
+/*[clinic end generated code: output=27ef95b66c29057b input=68c4e5754f8136c2]*/
 {
     PyObject *res;
-    PyObject *exc;
+    PyObject *exc, *val, *tb;
     int rc;
-
-    _PyIO_State *state = get_io_state_by_cls(cls);
-    res = PyObject_CallMethodOneArg((PyObject*)state->PyRawIOBase_Type,
+    res = PyObject_CallMethodOneArg((PyObject*)&PyRawIOBase_Type,
                                     &_Py_ID(close), (PyObject*)self);
     if (!self->closefd) {
         self->fd = -1;
         return res;
     }
-    if (res == NULL) {
-        exc = PyErr_GetRaisedException();
-    }
+    if (res == NULL)
+        PyErr_Fetch(&exc, &val, &tb);
     rc = internal_close(self);
-    if (res == NULL) {
-        _PyErr_ChainExceptions1(exc);
-    }
-    if (rc < 0) {
+    if (res == NULL)
+        _PyErr_ChainExceptions(exc, val, tb);
+    if (rc < 0)
         Py_CLEAR(res);
-    }
     return res;
 }
 
@@ -259,7 +252,7 @@ winconsoleio_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 _io._WindowsConsoleIO.__init__
     file as nameobj: object
     mode: str = "r"
-    closefd: bool = True
+    closefd: bool(accept={int}) = True
     opener: object = None
 
 Open a console buffer by file descriptor.
@@ -273,7 +266,7 @@ static int
 _io__WindowsConsoleIO___init___impl(winconsoleio *self, PyObject *nameobj,
                                     const char *mode, int closefd,
                                     PyObject *opener)
-/*[clinic end generated code: output=3fd9cbcdd8d95429 input=7a3eed6bbe998fd9]*/
+/*[clinic end generated code: output=3fd9cbcdd8d95429 input=06ae4b863c63244b]*/
 {
     const char *s;
     wchar_t *name = NULL;
@@ -284,10 +277,7 @@ _io__WindowsConsoleIO___init___impl(winconsoleio *self, PyObject *nameobj,
     int fd_is_own = 0;
     HANDLE handle = NULL;
 
-#ifndef NDEBUG
-    _PyIO_State *state = find_io_state_by_def(Py_TYPE(self));
-    assert(PyObject_TypeCheck(self, state->PyWindowsConsoleIO_Type));
-#endif
+    assert(PyWindowsConsoleIO_Check(self));
     if (self->fd >= 0) {
         if (self->closefd) {
             /* Have to close the existing file first. */
@@ -298,14 +288,7 @@ _io__WindowsConsoleIO___init___impl(winconsoleio *self, PyObject *nameobj,
             self->fd = -1;
     }
 
-    if (PyBool_Check(nameobj)) {
-        if (PyErr_WarnEx(PyExc_RuntimeWarning,
-                "bool is used as a file descriptor", 1))
-        {
-            return -1;
-        }
-    }
-    fd = PyLong_AsInt(nameobj);
+    fd = _PyLong_AsInt(nameobj);
     if (fd < 0) {
         if (!PyErr_Occurred()) {
             PyErr_SetString(PyExc_ValueError,
@@ -398,9 +381,9 @@ _io__WindowsConsoleIO___init___impl(winconsoleio *self, PyObject *nameobj,
         }
 
         if (self->writable)
-            self->fd = _Py_open_osfhandle_noraise(handle, _O_WRONLY | _O_BINARY | _O_NOINHERIT);
+            self->fd = _Py_open_osfhandle_noraise(handle, _O_WRONLY | _O_BINARY);
         else
-            self->fd = _Py_open_osfhandle_noraise(handle, _O_RDONLY | _O_BINARY | _O_NOINHERIT);
+            self->fd = _Py_open_osfhandle_noraise(handle, _O_RDONLY | _O_BINARY);
         if (self->fd < 0) {
             PyErr_SetFromErrnoWithFilenameObject(PyExc_OSError, nameobj);
             CloseHandle(handle);
@@ -446,7 +429,6 @@ done:
 static int
 winconsoleio_traverse(winconsoleio *self, visitproc visit, void *arg)
 {
-    Py_VISIT(Py_TYPE(self));
     Py_VISIT(self->dict);
     return 0;
 }
@@ -461,7 +443,6 @@ winconsoleio_clear(winconsoleio *self)
 static void
 winconsoleio_dealloc(winconsoleio *self)
 {
-    PyTypeObject *tp = Py_TYPE(self);
     self->finalizing = 1;
     if (_PyIOBase_finalize((PyObject *) self) < 0)
         return;
@@ -469,8 +450,7 @@ winconsoleio_dealloc(winconsoleio *self)
     if (self->weakreflist != NULL)
         PyObject_ClearWeakRefs((PyObject *) self);
     Py_CLEAR(self->dict);
-    tp->tp_free((PyObject *)self);
-    Py_DECREF(tp);
+    Py_TYPE(self)->tp_free((PyObject *)self);
 }
 
 static PyObject *
@@ -481,10 +461,13 @@ err_closed(void)
 }
 
 static PyObject *
-err_mode(_PyIO_State *state, const char *action)
+err_mode(const char *action)
 {
-    return PyErr_Format(state->unsupported_operation,
-                        "Console buffer does not support %s", action);
+    _PyIO_State *state = IO_STATE();
+    if (state != NULL)
+        PyErr_Format(state->unsupported_operation,
+                     "Console buffer does not support %s", action);
+    return NULL;
 }
 
 /*[clinic input]
@@ -661,14 +644,14 @@ error:
 
 
 static Py_ssize_t
-readinto(_PyIO_State *state, winconsoleio *self, char *buf, Py_ssize_t len)
+readinto(winconsoleio *self, char *buf, Py_ssize_t len)
 {
     if (self->fd == -1) {
         err_closed();
         return -1;
     }
     if (!self->readable) {
-        err_mode(state, "reading");
+        err_mode("reading");
         return -1;
     }
     if (len == 0)
@@ -758,7 +741,6 @@ readinto(_PyIO_State *state, winconsoleio *self, char *buf, Py_ssize_t len)
 
 /*[clinic input]
 _io._WindowsConsoleIO.readinto
-    cls: defining_class
     buffer: Py_buffer(accept={rwbuffer})
     /
 
@@ -766,12 +748,10 @@ Same as RawIOBase.readinto().
 [clinic start generated code]*/
 
 static PyObject *
-_io__WindowsConsoleIO_readinto_impl(winconsoleio *self, PyTypeObject *cls,
-                                    Py_buffer *buffer)
-/*[clinic end generated code: output=96717c74f6204b79 input=4b0627c3b1645f78]*/
+_io__WindowsConsoleIO_readinto_impl(winconsoleio *self, Py_buffer *buffer)
+/*[clinic end generated code: output=66d1bdfa3f20af39 input=4ed68da48a6baffe]*/
 {
-    _PyIO_State *state = get_io_state_by_cls(cls);
-    Py_ssize_t len = readinto(state, self, buffer->buf, buffer->len);
+    Py_ssize_t len = readinto(self, buffer->buf, buffer->len);
     if (len < 0)
         return NULL;
 
@@ -925,7 +905,6 @@ _io__WindowsConsoleIO_readall_impl(winconsoleio *self)
 
 /*[clinic input]
 _io._WindowsConsoleIO.read
-    cls: defining_class
     size: Py_ssize_t(accept={int, NoneType}) = -1
     /
 
@@ -937,19 +916,16 @@ Return an empty bytes object at EOF.
 [clinic start generated code]*/
 
 static PyObject *
-_io__WindowsConsoleIO_read_impl(winconsoleio *self, PyTypeObject *cls,
-                                Py_ssize_t size)
-/*[clinic end generated code: output=7e569a586537c0ae input=a14570a5da273365]*/
+_io__WindowsConsoleIO_read_impl(winconsoleio *self, Py_ssize_t size)
+/*[clinic end generated code: output=57df68af9f4b22d0 input=8bc73bc15d0fa072]*/
 {
     PyObject *bytes;
     Py_ssize_t bytes_size;
 
     if (self->fd == -1)
         return err_closed();
-    if (!self->readable) {
-        _PyIO_State *state = get_io_state_by_cls(cls);
-        return err_mode(state, "reading");
-    }
+    if (!self->readable)
+        return err_mode("reading");
 
     if (size < 0)
         return _io__WindowsConsoleIO_readall_impl(self);
@@ -962,9 +938,7 @@ _io__WindowsConsoleIO_read_impl(winconsoleio *self, PyTypeObject *cls,
     if (bytes == NULL)
         return NULL;
 
-    _PyIO_State *state = get_io_state_by_cls(cls);
-    bytes_size = readinto(state, self, PyBytes_AS_STRING(bytes),
-                          PyBytes_GET_SIZE(bytes));
+    bytes_size = readinto(self, PyBytes_AS_STRING(bytes), PyBytes_GET_SIZE(bytes));
     if (bytes_size < 0) {
         Py_CLEAR(bytes);
         return NULL;
@@ -982,7 +956,6 @@ _io__WindowsConsoleIO_read_impl(winconsoleio *self, PyTypeObject *cls,
 
 /*[clinic input]
 _io._WindowsConsoleIO.write
-    cls: defining_class
     b: Py_buffer
     /
 
@@ -993,9 +966,8 @@ The number of bytes actually written is returned.
 [clinic start generated code]*/
 
 static PyObject *
-_io__WindowsConsoleIO_write_impl(winconsoleio *self, PyTypeObject *cls,
-                                 Py_buffer *b)
-/*[clinic end generated code: output=e8019f480243cb29 input=10ac37c19339dfbe]*/
+_io__WindowsConsoleIO_write_impl(winconsoleio *self, Py_buffer *b)
+/*[clinic end generated code: output=775bdb16fbf9137b input=be35fb624f97c941]*/
 {
     BOOL res = TRUE;
     wchar_t *wbuf;
@@ -1004,10 +976,8 @@ _io__WindowsConsoleIO_write_impl(winconsoleio *self, PyTypeObject *cls,
 
     if (self->fd == -1)
         return err_closed();
-    if (!self->writable) {
-        _PyIO_State *state = get_io_state_by_cls(cls);
-        return err_mode(state, "writing");
-    }
+    if (!self->writable)
+        return err_mode("writing");
 
     handle = _Py_get_osfhandle(self->fd);
     if (handle == INVALID_HANDLE_VALUE)
@@ -1077,22 +1047,15 @@ _io__WindowsConsoleIO_write_impl(winconsoleio *self, PyTypeObject *cls,
 static PyObject *
 winconsoleio_repr(winconsoleio *self)
 {
-    const char *type_name = (Py_TYPE((PyObject *)self)->tp_name);
+    if (self->fd == -1)
+        return PyUnicode_FromFormat("<_io._WindowsConsoleIO [closed]>");
 
-    if (self->fd == -1) {
-        return PyUnicode_FromFormat("<%.100s [closed]>", type_name);
-    }
-
-    if (self->readable) {
-        return PyUnicode_FromFormat("<%.100s mode='rb' closefd=%s>",
-                                    type_name,
-                                    self->closefd ? "True" : "False");
-    }
-    if (self->writable) {
-        return PyUnicode_FromFormat("<%.100s mode='wb' closefd=%s>",
-                                    type_name,
-                                    self->closefd ? "True" : "False");
-    }
+    if (self->readable)
+        return PyUnicode_FromFormat("<_io._WindowsConsoleIO mode='rb' closefd=%s>",
+            self->closefd ? "True" : "False");
+    if (self->writable)
+        return PyUnicode_FromFormat("<_io._WindowsConsoleIO mode='wb' closefd=%s>",
+            self->closefd ? "True" : "False");
 
     PyErr_SetString(PyExc_SystemError, "_WindowsConsoleIO has invalid mode");
     return NULL;
@@ -1114,9 +1077,7 @@ _io__WindowsConsoleIO_isatty_impl(winconsoleio *self)
     Py_RETURN_TRUE;
 }
 
-#define clinic_state() (find_io_state_by_def(Py_TYPE(self)))
 #include "clinic/winconsoleio.c.h"
-#undef clinic_state
 
 static PyMethodDef winconsoleio_methods[] = {
     _IO__WINDOWSCONSOLEIO_READ_METHODDEF
@@ -1128,7 +1089,6 @@ static PyMethodDef winconsoleio_methods[] = {
     _IO__WINDOWSCONSOLEIO_WRITABLE_METHODDEF
     _IO__WINDOWSCONSOLEIO_FILENO_METHODDEF
     _IO__WINDOWSCONSOLEIO_ISATTY_METHODDEF
-    {"_isatty_open_only", (PyCFunction)_io__WindowsConsoleIO_isatty, METH_NOARGS},
     {NULL,           NULL}             /* sentinel */
 };
 
@@ -1161,34 +1121,63 @@ static PyGetSetDef winconsoleio_getsetlist[] = {
 };
 
 static PyMemberDef winconsoleio_members[] = {
-    {"_blksize", Py_T_UINT, offsetof(winconsoleio, blksize), 0},
-    {"_finalizing", Py_T_BOOL, offsetof(winconsoleio, finalizing), 0},
-    {"__weaklistoffset__", Py_T_PYSSIZET, offsetof(winconsoleio, weakreflist), Py_READONLY},
-    {"__dictoffset__", Py_T_PYSSIZET, offsetof(winconsoleio, dict), Py_READONLY},
+    {"_blksize", T_UINT, offsetof(winconsoleio, blksize), 0},
+    {"_finalizing", T_BOOL, offsetof(winconsoleio, finalizing), 0},
     {NULL}
 };
 
-static PyType_Slot winconsoleio_slots[] = {
-    {Py_tp_dealloc, winconsoleio_dealloc},
-    {Py_tp_repr, winconsoleio_repr},
-    {Py_tp_getattro, PyObject_GenericGetAttr},
-    {Py_tp_doc, (void *)_io__WindowsConsoleIO___init____doc__},
-    {Py_tp_traverse, winconsoleio_traverse},
-    {Py_tp_clear, winconsoleio_clear},
-    {Py_tp_methods, winconsoleio_methods},
-    {Py_tp_members, winconsoleio_members},
-    {Py_tp_getset, winconsoleio_getsetlist},
-    {Py_tp_init, _io__WindowsConsoleIO___init__},
-    {Py_tp_new, winconsoleio_new},
-    {0, NULL},
+PyTypeObject PyWindowsConsoleIO_Type = {
+    PyVarObject_HEAD_INIT(NULL, 0)
+    "_io._WindowsConsoleIO",
+    sizeof(winconsoleio),
+    0,
+    (destructor)winconsoleio_dealloc,           /* tp_dealloc */
+    0,                                          /* tp_vectorcall_offset */
+    0,                                          /* tp_getattr */
+    0,                                          /* tp_setattr */
+    0,                                          /* tp_as_async */
+    (reprfunc)winconsoleio_repr,                /* tp_repr */
+    0,                                          /* tp_as_number */
+    0,                                          /* tp_as_sequence */
+    0,                                          /* tp_as_mapping */
+    0,                                          /* tp_hash */
+    0,                                          /* tp_call */
+    0,                                          /* tp_str */
+    PyObject_GenericGetAttr,                    /* tp_getattro */
+    0,                                          /* tp_setattro */
+    0,                                          /* tp_as_buffer */
+    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE
+        | Py_TPFLAGS_HAVE_GC,                   /* tp_flags */
+    _io__WindowsConsoleIO___init____doc__,      /* tp_doc */
+    (traverseproc)winconsoleio_traverse,        /* tp_traverse */
+    (inquiry)winconsoleio_clear,                /* tp_clear */
+    0,                                          /* tp_richcompare */
+    offsetof(winconsoleio, weakreflist),        /* tp_weaklistoffset */
+    0,                                          /* tp_iter */
+    0,                                          /* tp_iternext */
+    winconsoleio_methods,                       /* tp_methods */
+    winconsoleio_members,                       /* tp_members */
+    winconsoleio_getsetlist,                    /* tp_getset */
+    0,                                          /* tp_base */
+    0,                                          /* tp_dict */
+    0,                                          /* tp_descr_get */
+    0,                                          /* tp_descr_set */
+    offsetof(winconsoleio, dict),               /* tp_dictoffset */
+    _io__WindowsConsoleIO___init__,             /* tp_init */
+    PyType_GenericAlloc,                        /* tp_alloc */
+    winconsoleio_new,                           /* tp_new */
+    PyObject_GC_Del,                            /* tp_free */
+    0,                                          /* tp_is_gc */
+    0,                                          /* tp_bases */
+    0,                                          /* tp_mro */
+    0,                                          /* tp_cache */
+    0,                                          /* tp_subclasses */
+    0,                                          /* tp_weaklist */
+    0,                                          /* tp_del */
+    0,                                          /* tp_version_tag */
+    0,                                          /* tp_finalize */
 };
 
-PyType_Spec winconsoleio_spec = {
-    .name = "_io._WindowsConsoleIO",
-    .basicsize = sizeof(winconsoleio),
-    .flags = (Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE | Py_TPFLAGS_HAVE_GC |
-              Py_TPFLAGS_IMMUTABLETYPE),
-    .slots = winconsoleio_slots,
-};
+PyObject * _PyWindowsConsoleIO_Type = (PyObject*)&PyWindowsConsoleIO_Type;
 
-#endif /* HAVE_WINDOWS_CONSOLE_IO */
+#endif /* MS_WINDOWS */

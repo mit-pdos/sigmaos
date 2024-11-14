@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+# -*- coding: koi8-r -*-
 
 import unittest
 from test.support import script_helper, captured_stdout, requires_subprocess, requires_resource
@@ -12,14 +12,15 @@ import tempfile
 
 class MiscSourceEncodingTest(unittest.TestCase):
 
-    def test_import_encoded_module(self):
-        from test.encoded_modules import test_strings
-        # Make sure we're actually testing something
-        self.assertGreaterEqual(len(test_strings), 1)
-        for modname, encoding, teststr in test_strings:
-            mod = importlib.import_module('test.encoded_modules.'
-                                          'module_' + modname)
-            self.assertEqual(teststr, mod.test)
+    def test_pep263(self):
+        self.assertEqual(
+            "Питон".encode("utf-8"),
+            b'\xd0\x9f\xd0\xb8\xd1\x82\xd0\xbe\xd0\xbd'
+        )
+        self.assertEqual(
+            "\П".encode("utf-8"),
+            b'\\\xd0\x9f'
+        )
 
     def test_compilestring(self):
         # see #1882
@@ -255,7 +256,7 @@ class UTF8ValidatorTest(unittest.TestCase):
     def test_invalid_utf8(self):
         # This is a port of test_utf8_decode_invalid_sequences in
         # test_unicode.py to exercise the separate utf8 validator in
-        # Parser/tokenizer/helpers.c used when reading source files.
+        # Parser/tokenizer.c used when reading source files.
 
         # That file is written using low-level C file I/O, so the only way to
         # test it is to write actual files to disk.

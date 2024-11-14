@@ -22,6 +22,7 @@ IMPORT_MAPPING = {
     'tkMessageBox': 'tkinter.messagebox',
     'ScrolledText': 'tkinter.scrolledtext',
     'Tkconstants': 'tkinter.constants',
+    'Tix': 'tkinter.tix',
     'ttk': 'tkinter.ttk',
     'Tkinter': 'tkinter',
     'markupbase': '_markupbase',

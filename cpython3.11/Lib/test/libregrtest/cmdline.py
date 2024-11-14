@@ -2,7 +2,7 @@ import argparse
 import os.path
 import shlex
 import sys
-from test.support import os_helper, Py_DEBUG
+from test.support import os_helper
 from .utils import ALL_RESOURCES, RESOURCE_NAMES, TestFilter
 
 
@@ -164,7 +164,6 @@ class Namespace(argparse.Namespace):
         self.match_tests: TestFilter = []
         self.pgo = False
         self.pgo_extended = False
-        self.tsan = False
         self.worker_json = None
         self.start = None
         self.timeout = None
@@ -174,7 +173,6 @@ class Namespace(argparse.Namespace):
         self.tempdir = None
         self._add_python_opts = True
         self.xmlpath = None
-        self.single_process = False
 
         super().__init__(**kwargs)
 
@@ -308,12 +306,6 @@ def _create_parser():
     group.add_argument('-j', '--multiprocess', metavar='PROCESSES',
                        dest='use_mp', type=int,
                        help='run PROCESSES processes at once')
-    group.add_argument('--single-process', action='store_true',
-                       dest='single_process',
-                       help='always run all tests sequentially in '
-                            'a single process, ignore -jN option, '
-                            'and failed tests are also rerun sequentially '
-                            'in the same process')
     group.add_argument('-T', '--coverage', action='store_true',
                        dest='trace',
                        help='turn on code coverage tracing using the trace '
@@ -342,8 +334,6 @@ def _create_parser():
                        help='enable Profile Guided Optimization (PGO) training')
     group.add_argument('--pgo-extended', action='store_true',
                        help='enable extended PGO training (slower training)')
-    group.add_argument('--tsan', dest='tsan', action='store_true',
-                       help='run a subset of test cases that are proper for the TSAN test')
     group.add_argument('--fail-env-changed', action='store_true',
                        help='if a test file alters the environment, mark '
                             'the test as failed')
@@ -428,21 +418,20 @@ def _parse_args(args, **kwargs):
     # Continuous Integration (CI): common options for fast/slow CI modes
     if ns.slow_ci or ns.fast_ci:
         # Similar to options:
-        #   -j0 --randomize --fail-env-changed --rerun --slowest --verbose3
+        #
+        #     -j0 --randomize --fail-env-changed --fail-rerun --rerun
+        #     --slowest --verbose3
         if ns.use_mp is None:
             ns.use_mp = 0
         ns.randomize = True
         ns.fail_env_changed = True
+        ns.fail_rerun = True
         if ns.python is None:
             ns.rerun = True
         ns.print_slow = True
         ns.verbose3 = True
     else:
         ns._add_python_opts = False
-
-    # --singleprocess overrides -jN option
-    if ns.single_process:
-        ns.use_mp = None
 
     # When both --slow-ci and --fast-ci options are present,
     # --slow-ci has the priority
@@ -463,16 +452,8 @@ def _parse_args(args, **kwargs):
 
     if ns.single and ns.fromfile:
         parser.error("-s and -f don't go together!")
-    if ns.trace:
-        if ns.use_mp is not None:
-            if not Py_DEBUG:
-                parser.error("need --with-pydebug to use -T and -j together")
-        else:
-            print(
-                "Warning: collecting coverage without -j is imprecise. Configure"
-                " --with-pydebug and run -m test -T -j for best results.",
-                file=sys.stderr
-            )
+    if ns.use_mp is not None and ns.trace:
+        parser.error("-T and -j don't go together!")
     if ns.python is not None:
         if ns.use_mp is None:
             parser.error("-p requires -j!")
@@ -527,6 +508,15 @@ def _parse_args(args, **kwargs):
         ns.verbose3 = False
         print("WARNING: Disable --verbose3 because it's incompatible with "
               "--huntrleaks without -jN option",
+              file=sys.stderr)
+
+    if ns.huntrleaks and ns.xmlpath:
+        # The XML data is written into a file outside runtest_refleak(), so
+        # it looks like a leak but it's not. Simply disable XML output when
+        # hunting for reference leaks (gh-83434).
+        ns.xmlpath = None
+        print("WARNING: Disable --junit-xml because it's incompatible "
+              "with --huntrleaks",
               file=sys.stderr)
 
     if ns.forever:

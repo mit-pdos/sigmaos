@@ -78,8 +78,7 @@ class PyclbrTest(TestCase):
 
             objname = obj.__name__
             if objname.startswith("__") and not objname.endswith("__"):
-                if stripped_typename := oclass.__name__.lstrip('_'):
-                    objname = f"_{stripped_typename}{objname}"
+                objname = "_%s%s" % (oclass.__name__, objname)
             return objname == name
 
         # Make sure the toplevel functions and classes are the same.
@@ -110,20 +109,14 @@ class PyclbrTest(TestCase):
 
                 actualMethods = []
                 for m in py_item.__dict__.keys():
-                    if m == "__annotate__":
-                        continue
                     if ismethod(py_item, getattr(py_item, m), m):
                         actualMethods.append(m)
-
-                if stripped_typename := name.lstrip('_'):
-                    foundMethods = []
-                    for m in value.methods.keys():
-                        if m.startswith('__') and not m.endswith('__'):
-                            foundMethods.append(f"_{stripped_typename}{m}")
-                        else:
-                            foundMethods.append(m)
-                else:
-                    foundMethods = list(value.methods.keys())
+                foundMethods = []
+                for m in value.methods.keys():
+                    if m[:2] == '__' and m[-2:] != '__':
+                        foundMethods.append('_'+name+m)
+                    else:
+                        foundMethods.append(m)
 
                 try:
                     self.assertListEq(foundMethods, actualMethods, ignore)
@@ -157,9 +150,8 @@ class PyclbrTest(TestCase):
                                             "DocTestCase", '_DocTestSuite'))
         self.checkModule('difflib', ignore=("Match",))
 
-    def test_cases(self):
-        # see test.pyclbr_input for the rationale behind the ignored symbols
-        self.checkModule('test.pyclbr_input', ignore=['om', 'f'])
+    def test_decorators(self):
+        self.checkModule('test.pyclbr_input', ignore=['om'])
 
     def test_nested(self):
         mb = pyclbr
@@ -227,6 +219,9 @@ class PyclbrTest(TestCase):
 
         # These were once some of the longest modules.
         cm('random', ignore=('Random',))  # from _random import Random as CoreGenerator
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore', DeprecationWarning)
+            cm('cgi', ignore=('log',))      # set with = in module
         cm('pickle', ignore=('partial', 'PickleBuffer'))
         with warnings.catch_warnings():
             warnings.simplefilter('ignore', DeprecationWarning)
@@ -234,7 +229,7 @@ class PyclbrTest(TestCase):
         cm(
             'pdb',
             # pyclbr does not handle elegantly `typing` or properties
-            ignore=('Union', '_ModuleTarget', '_ScriptTarget', '_ZipTarget'),
+            ignore=('Union', '_ModuleTarget', '_ScriptTarget'),
         )
         cm('pydoc', ignore=('input', 'output',)) # properties
 

@@ -2,6 +2,7 @@
 # handler, are obscure and unhelpful.
 
 import os
+import platform
 import sys
 import sysconfig
 import unittest
@@ -13,7 +14,7 @@ from test.support import os_helper
 from xml.parsers import expat
 from xml.parsers.expat import errors
 
-from test.support import sortdict
+from test.support import sortdict, is_emscripten, is_wasi
 
 
 class SetAttributeTest(unittest.TestCase):
@@ -282,10 +283,12 @@ class NamespaceSeparatorTest(unittest.TestCase):
         expat.ParserCreate(namespace_separator=' ')
 
     def test_illegal(self):
-        with self.assertRaisesRegex(TypeError,
-                r"ParserCreate\(\) argument (2|'namespace_separator') "
-                r"must be str or None, not int"):
+        try:
             expat.ParserCreate(namespace_separator=42)
+            self.fail()
+        except TypeError as e:
+            self.assertEqual(str(e),
+                "ParserCreate() argument 'namespace_separator' must be str or None, not int")
 
         try:
             expat.ParserCreate(namespace_separator='too long')
@@ -529,7 +532,7 @@ class PositionTest(unittest.TestCase):
 
 class sf1296433Test(unittest.TestCase):
     def test_parse_only_xml_data(self):
-        # https://bugs.python.org/issue1296433
+        # http://python.org/sf/1296433
         #
         xml = "<?xml version='1.0' encoding='iso8859'?><s>%s</s>" % ('a' * 1025)
         # this one doesn't crash
@@ -544,7 +547,7 @@ class sf1296433Test(unittest.TestCase):
         parser = expat.ParserCreate()
         parser.CharacterDataHandler = handler
 
-        self.assertRaises(SpecificException, parser.Parse, xml.encode('iso8859'))
+        self.assertRaises(Exception, parser.Parse, xml.encode('iso8859'))
 
 class ChardataBufferTest(unittest.TestCase):
     """

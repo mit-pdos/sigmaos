@@ -1,5 +1,5 @@
-:mod:`!multiprocessing` --- Process-based parallelism
-=====================================================
+:mod:`multiprocessing` --- Process-based parallelism
+====================================================
 
 .. module:: multiprocessing
    :synopsis: Process-based parallelism.
@@ -8,7 +8,7 @@
 
 --------------
 
-.. include:: ../includes/wasm-mobile-notavail.rst
+.. include:: ../includes/wasm-notavail.rst
 
 Introduction
 ------------
@@ -19,7 +19,7 @@ offers both local and remote concurrency, effectively side-stepping the
 :term:`Global Interpreter Lock <global interpreter lock>` by using
 subprocesses instead of threads.  Due
 to this, the :mod:`multiprocessing` module allows the programmer to fully
-leverage multiple processors on a given machine.  It runs on both POSIX and
+leverage multiple processors on a given machine.  It runs on both Unix and
 Windows.
 
 The :mod:`multiprocessing` module also introduces APIs which do not have
@@ -99,10 +99,10 @@ necessary, see :ref:`multiprocessing-programming`.
 
 
 
-.. _multiprocessing-start-methods:
-
 Contexts and start methods
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. _multiprocessing-start-methods:
 
 Depending on the platform, :mod:`multiprocessing` supports three ways
 to start a process.  These *start methods* are
@@ -115,7 +115,7 @@ to start a process.  These *start methods* are
     will not be inherited.  Starting a process using this method is
     rather slow compared to using *fork* or *forkserver*.
 
-    Available on POSIX and Windows platforms.  The default on Windows and macOS.
+    Available on Unix and Windows.  The default on Windows and macOS.
 
   *fork*
     The parent process uses :func:`os.fork` to fork the Python
@@ -124,37 +124,22 @@ to start a process.  These *start methods* are
     inherited by the child process.  Note that safely forking a
     multithreaded process is problematic.
 
-    Available on POSIX systems.
-
-    .. versionchanged:: 3.14
-       This is no longer the default start method on any platform.
-       Code that requires *fork* must explicitly specify that via
-       :func:`get_context` or :func:`set_start_method`.
-
-    .. versionchanged:: 3.12
-       If Python is able to detect that your process has multiple threads, the
-       :func:`os.fork` function that this start method calls internally will
-       raise a :exc:`DeprecationWarning`. Use a different start method.
-       See the :func:`os.fork` documentation for further explanation.
+    Available on Unix only.  The default on Unix.
 
   *forkserver*
     When the program starts and selects the *forkserver* start method,
-    a server process is spawned.  From then on, whenever a new process
+    a server process is started.  From then on, whenever a new process
     is needed, the parent process connects to the server and requests
-    that it fork a new process.  The fork server process is single threaded
-    unless system libraries or preloaded imports spawn threads as a
-    side-effect so it is generally safe for it to use :func:`os.fork`.
-    No unnecessary resources are inherited.
+    that it fork a new process.  The fork server process is single
+    threaded so it is safe for it to use :func:`os.fork`.  No
+    unnecessary resources are inherited.
 
-    Available on POSIX platforms which support passing file descriptors over
-    Unix pipes such as Linux.  The default on those.
-
-    .. versionchanged:: 3.14
-       This became the default start method on POSIX platforms.
+    Available on Unix platforms which support passing file descriptors
+    over Unix pipes.
 
 .. versionchanged:: 3.4
-   *spawn* added on all POSIX platforms, and *forkserver* added for
-   some POSIX platforms.
+   *spawn* added on all Unix platforms, and *forkserver* added for
+   some Unix platforms.
    Child processes no longer inherit all of the parents inheritable
    handles on Windows.
 
@@ -163,13 +148,6 @@ to start a process.  These *start methods* are
    On macOS, the *spawn* start method is now the default.  The *fork* start
    method should be considered unsafe as it can lead to crashes of the
    subprocess as macOS system libraries may start threads. See :issue:`33725`.
-
-.. versionchanged:: 3.14
-
-   On POSIX platforms the default start method was changed from *fork* to
-   *forkserver* to retain the performance but avoid common multithreaded
-   process incompatibilities. See :gh:`84559`.
-
 
 On POSIX using the *spawn* or *forkserver* start methods will also
 start a *resource tracker* process which tracks the unlinked named
@@ -233,10 +211,10 @@ library user.
 
 .. warning::
 
-   The ``'spawn'`` and ``'forkserver'`` start methods generally cannot
+   The ``'spawn'`` and ``'forkserver'`` start methods cannot currently
    be used with "frozen" executables (i.e., binaries produced by
-   packages like **PyInstaller** and **cx_Freeze**) on POSIX systems.
-   The ``'fork'`` start method may work if code does not use threads.
+   packages like **PyInstaller** and **cx_Freeze**) on Unix.
+   The ``'fork'`` start method does work.
 
 
 Exchanging objects between processes
@@ -263,7 +241,6 @@ processes:
           p.join()
 
    Queues are thread and process safe.
-   Any object put into a :mod:`~multiprocessing` queue will be serialized.
 
 **Pipes**
 
@@ -291,8 +268,6 @@ processes:
    of corruption from processes using different ends of the pipe at the same
    time.
 
-   The :meth:`~Connection.send` method serializes the the object and
-   :meth:`~Connection.recv` re-creates the object.
 
 Synchronization between processes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -485,9 +460,9 @@ process which created it.
       Traceback (most recent call last):
       Traceback (most recent call last):
       Traceback (most recent call last):
-      AttributeError: Can't get attribute 'f' on <module '__main__' (<class '_frozen_importlib.BuiltinImporter'>)>
-      AttributeError: Can't get attribute 'f' on <module '__main__' (<class '_frozen_importlib.BuiltinImporter'>)>
-      AttributeError: Can't get attribute 'f' on <module '__main__' (<class '_frozen_importlib.BuiltinImporter'>)>
+      AttributeError: Can't get attribute 'f' on <module '__main__' (built-in)>
+      AttributeError: Can't get attribute 'f' on <module '__main__' (built-in)>
+      AttributeError: Can't get attribute 'f' on <module '__main__' (built-in)>
 
    (If you try this it will actually output three full tracebacks
    interleaved in a semi-random fashion, and then you may have to
@@ -514,7 +489,7 @@ The :mod:`multiprocessing` package mostly replicates the API of the
    The constructor should always be called with keyword arguments. *group*
    should always be ``None``; it exists solely for compatibility with
    :class:`threading.Thread`.  *target* is the callable object to be invoked by
-   the :meth:`run` method.  It defaults to ``None``, meaning nothing is
+   the :meth:`run()` method.  It defaults to ``None``, meaning nothing is
    called. *name* is the process name (see :attr:`name` for more details).
    *args* is the argument tuple for the target invocation.  *kwargs* is a
    dictionary of keyword arguments for the target invocation.  If provided,
@@ -651,10 +626,10 @@ The :mod:`multiprocessing` package mostly replicates the API of the
 
       You can use this value if you want to wait on several events at
       once using :func:`multiprocessing.connection.wait`.  Otherwise
-      calling :meth:`join` is simpler.
+      calling :meth:`join()` is simpler.
 
       On Windows, this is an OS handle usable with the ``WaitForSingleObject``
-      and ``WaitForMultipleObjects`` family of API calls.  On POSIX, this is
+      and ``WaitForMultipleObjects`` family of API calls.  On Unix, this is
       a file descriptor usable with primitives from the :mod:`select` module.
 
       .. versionadded:: 3.3
@@ -678,7 +653,7 @@ The :mod:`multiprocessing` package mostly replicates the API of the
 
    .. method:: kill()
 
-      Same as :meth:`terminate` but using the ``SIGKILL`` signal on POSIX.
+      Same as :meth:`terminate()` but using the ``SIGKILL`` signal on Unix.
 
       .. versionadded:: 3.7
 
@@ -701,17 +676,16 @@ The :mod:`multiprocessing` package mostly replicates the API of the
    .. doctest::
 
        >>> import multiprocessing, time, signal
-       >>> mp_context = multiprocessing.get_context('spawn')
-       >>> p = mp_context.Process(target=time.sleep, args=(1000,))
+       >>> p = multiprocessing.Process(target=time.sleep, args=(1000,))
        >>> print(p, p.is_alive())
-       <...Process ... initial> False
+       <Process ... initial> False
        >>> p.start()
        >>> print(p, p.is_alive())
-       <...Process ... started> True
+       <Process ... started> True
        >>> p.terminate()
        >>> time.sleep(0.1)
        >>> print(p, p.is_alive())
-       <...Process ... stopped exitcode=-SIGTERM> False
+       <Process ... stopped exitcode=-SIGTERM> False
        >>> p.exitcode == -signal.SIGTERM
        True
 
@@ -721,7 +695,7 @@ The :mod:`multiprocessing` package mostly replicates the API of the
 
 .. exception:: BufferTooShort
 
-   Exception raised by :meth:`Connection.recv_bytes_into` when the supplied
+   Exception raised by :meth:`Connection.recv_bytes_into()` when the supplied
    buffer object is too small for the message read.
 
    If ``e`` is an instance of :exc:`BufferTooShort` then ``e.args[0]`` will give
@@ -756,11 +730,6 @@ If you use :class:`JoinableQueue` then you **must** call
 :meth:`JoinableQueue.task_done` for each task removed from the queue or else the
 semaphore used to count the number of unfinished tasks may eventually overflow,
 raising an exception.
-
-One difference from other Python queue implementations, is that :mod:`multiprocessing`
-queues serializes all objects that are put into them using :mod:`pickle`.
-The object return by the get method is a re-created object that does not share memory
-with the original object.
 
 Note that one can also create a shared queue by using a manager object -- see
 :ref:`multiprocessing-managers`.
@@ -828,8 +797,6 @@ For an example of the usage of queues for interprocess communication see
    used for receiving messages and ``conn2`` can only be used for sending
    messages.
 
-   The :meth:`~multiprocessing.Connection.send` method serializes the the object using
-   :mod:`pickle` and the :meth:`~multiprocessing.Connection.recv` re-creates the object.
 
 .. class:: Queue([maxsize])
 
@@ -848,15 +815,13 @@ For an example of the usage of queues for interprocess communication see
       Return the approximate size of the queue.  Because of
       multithreading/multiprocessing semantics, this number is not reliable.
 
-      Note that this may raise :exc:`NotImplementedError` on platforms like
+      Note that this may raise :exc:`NotImplementedError` on Unix platforms like
       macOS where ``sem_getvalue()`` is not implemented.
 
    .. method:: empty()
 
       Return ``True`` if the queue is empty, ``False`` otherwise.  Because of
       multithreading/multiprocessing semantics, this is not reliable.
-
-      May raise an :exc:`OSError` on closed queues. (not guaranteed)
 
    .. method:: full()
 
@@ -961,8 +926,6 @@ For an example of the usage of queues for interprocess communication see
 
       Return ``True`` if the queue is empty, ``False`` otherwise.
 
-      Always raises an :exc:`OSError` if the SimpleQueue is closed.
-
    .. method:: get()
 
       Remove and return an item from the queue.
@@ -1019,20 +982,13 @@ Miscellaneous
 
    This number is not equivalent to the number of CPUs the current process can
    use.  The number of usable CPUs can be obtained with
-   :func:`os.process_cpu_count` (or ``len(os.sched_getaffinity(0))``).
+   ``len(os.sched_getaffinity(0))``
 
    When the number of CPUs cannot be determined a :exc:`NotImplementedError`
    is raised.
 
    .. seealso::
       :func:`os.cpu_count`
-      :func:`os.process_cpu_count`
-
-   .. versionchanged:: 3.13
-
-      The return value can also be overridden using the
-      :option:`-X cpu_count <-X>` flag or :envvar:`PYTHON_CPU_COUNT` as this is
-      merely a wrapper around the :mod:`os` cpu count APIs.
 
 .. function:: current_process()
 
@@ -1078,8 +1034,9 @@ Miscellaneous
 
    Returns a list of the supported start methods, the first of which
    is the default.  The possible start methods are ``'fork'``,
-   ``'spawn'`` and ``'forkserver'``.  Not all platforms support all
-   methods.  See :ref:`multiprocessing-start-methods`.
+   ``'spawn'`` and ``'forkserver'``.  On Windows only ``'spawn'`` is
+   available.  On Unix ``'fork'`` and ``'spawn'`` are always
+   supported, with ``'fork'`` being the default.
 
    .. versionadded:: 3.4
 
@@ -1091,7 +1048,7 @@ Miscellaneous
    If *method* is ``None`` then the default context is returned.
    Otherwise *method* should be ``'fork'``, ``'spawn'``,
    ``'forkserver'``.  :exc:`ValueError` is raised if the specified
-   start method is not available.  See :ref:`multiprocessing-start-methods`.
+   start method is not available.
 
    .. versionadded:: 3.4
 
@@ -1105,7 +1062,8 @@ Miscellaneous
    is true then ``None`` is returned.
 
    The return value can be ``'fork'``, ``'spawn'``, ``'forkserver'``
-   or ``None``.  See :ref:`multiprocessing-start-methods`.
+   or ``None``.  ``'fork'`` is the default on Unix, while ``'spawn'`` is
+   the default on Windows and macOS.
 
    .. versionadded:: 3.4
 
@@ -1126,26 +1084,10 @@ Miscellaneous
    before they can create child processes.
 
    .. versionchanged:: 3.4
-      Now supported on POSIX when the ``'spawn'`` start method is used.
+      Now supported on Unix when the ``'spawn'`` start method is used.
 
    .. versionchanged:: 3.11
       Accepts a :term:`path-like object`.
-
-.. function:: set_forkserver_preload(module_names)
-
-   Set a list of module names for the forkserver main process to attempt to
-   import so that their already imported state is inherited by forked
-   processes. Any :exc:`ImportError` when doing so is silently ignored.
-   This can be used as a performance enhancement to avoid repeated work
-   in every process.
-
-   For this to work, it must be called before the forkserver process has been
-   launched (before creating a :class:`Pool` or starting a :class:`Process`).
-
-   Only meaningful when using the ``'forkserver'`` start method.
-   See :ref:`multiprocessing-start-methods`.
-
-   .. versionadded:: 3.4
 
 .. function:: set_start_method(method, force=False)
 
@@ -1159,8 +1101,6 @@ Miscellaneous
    Note that this should be called at most once, and it should be
    protected inside the ``if __name__ == '__main__'`` clause of the
    main module.
-
-   See :ref:`multiprocessing-start-methods`.
 
    .. versionadded:: 3.4
 
@@ -1481,6 +1421,17 @@ object -- see :ref:`multiprocessing-managers`.
 
    On macOS, ``sem_timedwait`` is unsupported, so calling ``acquire()`` with
    a timeout will emulate that function's behavior using a sleeping loop.
+
+.. note::
+
+   If the SIGINT signal generated by :kbd:`Ctrl-C` arrives while the main thread is
+   blocked by a call to :meth:`BoundedSemaphore.acquire`, :meth:`Lock.acquire`,
+   :meth:`RLock.acquire`, :meth:`Semaphore.acquire`, :meth:`Condition.acquire`
+   or :meth:`Condition.wait` then the call will be immediately interrupted and
+   :exc:`KeyboardInterrupt` will be raised.
+
+   This differs from the behaviour of :mod:`threading` where SIGINT will be
+   ignored while the equivalent blocking calls are in progress.
 
 .. note::
 
@@ -1954,8 +1905,7 @@ their parent process exits.  The manager classes are defined in the
 
    .. doctest::
 
-    >>> mp_context = multiprocessing.get_context('spawn')
-    >>> manager = mp_context.Manager()
+    >>> manager = multiprocessing.Manager()
     >>> Global = manager.Namespace()
     >>> Global.x = 10
     >>> Global.y = 'hello'
@@ -2067,8 +2017,8 @@ the proxy).  In this way, a proxy can be used just like its referent can:
 
 .. doctest::
 
-   >>> mp_context = multiprocessing.get_context('spawn')
-   >>> manager = mp_context.Manager()
+   >>> from multiprocessing import Manager
+   >>> manager = Manager()
    >>> l = manager.list([i*i for i in range(10)])
    >>> print(l)
    [0, 1, 4, 9, 16, 25, 36, 49, 64, 81]
@@ -2232,7 +2182,7 @@ with the :class:`Pool` class.
    callbacks and has a parallel map implementation.
 
    *processes* is the number of worker processes to use.  If *processes* is
-   ``None`` then the number returned by :func:`os.process_cpu_count` is used.
+   ``None`` then the number returned by :func:`os.cpu_count` is used.
 
    If *initializer* is not ``None`` then each worker process will call
    ``initializer(*initargs)`` when it starts.
@@ -2266,10 +2216,6 @@ with the :class:`Pool` class.
 
    .. versionchanged:: 3.4
       Added the *context* parameter.
-
-   .. versionchanged:: 3.13
-      *processes* uses :func:`os.process_cpu_count` by default, instead of
-      :func:`os.cpu_count`.
 
    .. note::
 
@@ -2495,9 +2441,9 @@ multiple connections at the same time.
    generally be omitted since it can usually be inferred from the format of
    *address*. (See :ref:`multiprocessing-address-formats`)
 
-   If *authkey* is given and not ``None``, it should be a byte string and will be
+   If *authkey* is given and not None, it should be a byte string and will be
    used as the secret key for an HMAC-based authentication challenge. No
-   authentication is done if *authkey* is ``None``.
+   authentication is done if *authkey* is None.
    :exc:`~multiprocessing.AuthenticationError` is raised if authentication fails.
    See :ref:`multiprocessing-auth-keys`.
 
@@ -2530,9 +2476,9 @@ multiple connections at the same time.
    to the :meth:`~socket.socket.listen` method of the socket once it has been
    bound.
 
-   If *authkey* is given and not ``None``, it should be a byte string and will be
+   If *authkey* is given and not None, it should be a byte string and will be
    used as the secret key for an HMAC-based authentication challenge. No
-   authentication is done if *authkey* is ``None``.
+   authentication is done if *authkey* is None.
    :exc:`~multiprocessing.AuthenticationError` is raised if authentication fails.
    See :ref:`multiprocessing-auth-keys`.
 
@@ -2573,7 +2519,7 @@ multiple connections at the same time.
    *timeout* is ``None`` then it will block for an unlimited period.
    A negative timeout is equivalent to a zero timeout.
 
-   For both POSIX and Windows, an object can appear in *object_list* if
+   For both Unix and Windows, an object can appear in *object_list* if
    it is
 
    * a readable :class:`~multiprocessing.connection.Connection` object;
@@ -2584,7 +2530,7 @@ multiple connections at the same time.
    A connection or socket object is ready when there is data available
    to be read from it, or the other end has been closed.
 
-   **POSIX**: ``wait(object_list, timeout)`` almost equivalent
+   **Unix**: ``wait(object_list, timeout)`` almost equivalent
    ``select.select(object_list, [], [], timeout)``.  The difference is
    that, if :func:`select.select` is interrupted by a signal, it can
    raise :exc:`OSError` with an error number of ``EINTR``, whereas
@@ -2641,6 +2587,7 @@ server::
 The following code uses :func:`~multiprocessing.connection.wait` to
 wait for messages from multiple processes at once::
 
+   import time, random
    from multiprocessing import Process, Pipe, current_process
    from multiprocessing.connection import wait
 
@@ -2796,7 +2743,7 @@ worker threads rather than worker processes.
    :meth:`~multiprocessing.pool.Pool.terminate` manually.
 
    *processes* is the number of worker threads to use.  If *processes* is
-   ``None`` then the number returned by :func:`os.process_cpu_count` is used.
+   ``None`` then the number returned by :func:`os.cpu_count` is used.
 
    If *initializer* is not ``None`` then each worker process will call
    ``initializer(*initargs)`` when it starts.
@@ -2855,7 +2802,7 @@ Thread safety of proxies
 
 Joining zombie processes
 
-    On POSIX when a process finishes but has not been joined it becomes a zombie.
+    On Unix when a process finishes but has not been joined it becomes a zombie.
     There should never be very many because each time a new process starts (or
     :func:`~multiprocessing.active_children` is called) all completed processes
     which have not yet been joined will be joined.  Also calling a finished
@@ -2918,7 +2865,7 @@ Joining processes that use queues
 
 Explicitly pass resources to child processes
 
-    On POSIX using the *fork* start method, a child process can make
+    On Unix using the *fork* start method, a child process can make
     use of a shared resource created in a parent process using a
     global resource.  However, it is better to pass the object as an
     argument to the constructor for the child process.
@@ -2970,7 +2917,7 @@ Beware of replacing :data:`sys.stdin` with a "file like object"
     resulting in a bad file descriptor error, but introduces a potential danger
     to applications which replace :func:`sys.stdin` with a "file-like object"
     with output buffering.  This danger is that if multiple processes call
-    :meth:`~io.IOBase.close` on this file-like object, it could result in the same
+    :meth:`~io.IOBase.close()` on this file-like object, it could result in the same
     data being flushed to the object multiple times, resulting in corruption.
 
     If you write a file-like object and implement your own caching, you can

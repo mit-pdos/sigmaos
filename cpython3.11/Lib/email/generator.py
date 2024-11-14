@@ -1,4 +1,4 @@
-# Copyright (C) 2001 Python Software Foundation
+# Copyright (C) 2001-2010 Python Software Foundation
 # Author: Barry Warsaw
 # Contact: email-sig@python.org
 
@@ -43,7 +43,7 @@ class Generator:
 
         Optional mangle_from_ is a flag that, when True (the default if policy
         is not set), escapes From_ lines in the body of the message by putting
-        a '>' in front of them.
+        a `>' in front of them.
 
         Optional maxheaderlen specifies the longest length for a non-continued
         header.  When a header line is longer (in characters, with tabs
@@ -76,7 +76,7 @@ class Generator:
 
         unixfrom is a flag that forces the printing of a Unix From_ delimiter
         before the first object in the message tree.  If the original message
-        has no From_ delimiter, a 'standard' one is crafted.  By default, this
+        has no From_ delimiter, a `standard' one is crafted.  By default, this
         is False to inhibit the printing of any From_ delimiter.
 
         Note that for subobjects, no From_ line is printed.
@@ -171,7 +171,7 @@ class Generator:
         # parameter.
         #
         # The way we do this, so as to make the _handle_*() methods simpler,
-        # is to cache any subpart writes into a buffer.  Then we write the
+        # is to cache any subpart writes into a buffer.  The we write the
         # headers and the buffer contents.  That way, subpart handlers can
         # Do The Right Thing, and can still modify the Content-Type: header if
         # necessary.
@@ -227,7 +227,7 @@ class Generator:
             folded = self.policy.fold(h, v)
             if self.policy.verify_generated_headers:
                 linesep = self.policy.linesep
-                if not folded.endswith(linesep):
+                if not folded.endswith(self.policy.linesep):
                     raise HeaderWriteError(
                         f'folded header does not end with {linesep!r}: {folded!r}')
                 if NEWLINE_WITHOUT_FWSP.search(folded.removesuffix(linesep)):
@@ -467,7 +467,7 @@ class DecodedGenerator(Generator):
         argument is allowed.
 
         Walks through all subparts of a message.  If the subpart is of main
-        type 'text', then it prints the decoded payload of the subpart.
+        type `text', then it prints the decoded payload of the subpart.
 
         Otherwise, fmt is a format string that is used instead of the message
         payload.  fmt is expanded with the following keywords (in

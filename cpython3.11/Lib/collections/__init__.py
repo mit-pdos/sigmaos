@@ -29,9 +29,6 @@ __all__ = [
 import _collections_abc
 import sys as _sys
 
-_sys.modules['collections.abc'] = _collections_abc
-abc = _collections_abc
-
 from itertools import chain as _chain
 from itertools import repeat as _repeat
 from itertools import starmap as _starmap
@@ -47,12 +44,6 @@ except ImportError:
     pass
 else:
     _collections_abc.MutableSequence.register(deque)
-
-try:
-    # Expose _deque_iterator to support pickling deque iterators
-    from _collections import _deque_iterator  # noqa: F401
-except ImportError:
-    pass
 
 try:
     from _collections import defaultdict
@@ -278,7 +269,7 @@ class OrderedDict(dict):
         'od.__repr__() <==> repr(od)'
         if not self:
             return '%s()' % (self.__class__.__name__,)
-        return '%s(%r)' % (self.__class__.__name__, dict(self.items()))
+        return '%s(%r)' % (self.__class__.__name__, list(self.items()))
 
     def __reduce__(self):
         'Return state information for pickling'
@@ -461,7 +452,7 @@ def namedtuple(typename, field_names, *, rename=False, defaults=None, module=Non
     def _replace(self, /, **kwds):
         result = self._make(_map(kwds.pop, field_names, self))
         if kwds:
-            raise TypeError(f'Got unexpected field names: {list(kwds)!r}')
+            raise ValueError(f'Got unexpected field names: {list(kwds)!r}')
         return result
 
     _replace.__doc__ = (f'Return a new {typename} object replacing specified '
@@ -499,7 +490,6 @@ def namedtuple(typename, field_names, *, rename=False, defaults=None, module=Non
         '_field_defaults': field_defaults,
         '__new__': __new__,
         '_make': _make,
-        '__replace__': _replace,
         '_replace': _replace,
         '__repr__': __repr__,
         '_asdict': _asdict,
@@ -519,12 +509,9 @@ def namedtuple(typename, field_names, *, rename=False, defaults=None, module=Non
     # specified a particular module.
     if module is None:
         try:
-            module = _sys._getframemodulename(1) or '__main__'
-        except AttributeError:
-            try:
-                module = _sys._getframe(1).f_globals.get('__name__', '__main__')
-            except (AttributeError, ValueError):
-                pass
+            module = _sys._getframe(1).f_globals.get('__name__', '__main__')
+        except (AttributeError, ValueError):
+            pass
     if module is not None:
         result.__module__ = module
 
@@ -643,8 +630,7 @@ class Counter(dict):
         >>> sorted(c.elements())
         ['A', 'A', 'B', 'B', 'C', 'C']
 
-        Knuth's example for prime factors of 1836:  2**2 * 3**3 * 17**1
-
+        # Knuth's example for prime factors of 1836:  2**2 * 3**3 * 17**1
         >>> import math
         >>> prime_factors = Counter({2: 2, 3: 3, 17: 1})
         >>> math.prod(prime_factors.elements())
@@ -1020,22 +1006,19 @@ class ChainMap(_collections_abc.MutableMapping):
         return self.__missing__(key)            # support subclasses that define __missing__
 
     def get(self, key, default=None):
-        return self[key] if key in self else default    # needs to make use of __contains__
+        return self[key] if key in self else default
 
     def __len__(self):
         return len(set().union(*self.maps))     # reuses stored hash values if possible
 
     def __iter__(self):
         d = {}
-        for mapping in map(dict.fromkeys, reversed(self.maps)):
-            d |= mapping                        # reuses stored hash values if possible
+        for mapping in reversed(self.maps):
+            d.update(dict.fromkeys(mapping))    # reuses stored hash values if possible
         return iter(d)
 
     def __contains__(self, key):
-        for mapping in self.maps:
-            if key in mapping:
-                return True
-        return False
+        return any(key in m for m in self.maps)
 
     def __bool__(self):
         return any(self.maps)
@@ -1045,9 +1028,9 @@ class ChainMap(_collections_abc.MutableMapping):
         return f'{self.__class__.__name__}({", ".join(map(repr, self.maps))})'
 
     @classmethod
-    def fromkeys(cls, iterable, value=None, /):
-        'Create a new ChainMap with keys from iterable and values set to value.'
-        return cls(dict.fromkeys(iterable, value))
+    def fromkeys(cls, iterable, *args):
+        'Create a ChainMap with a single dict created from the iterable.'
+        return cls(dict.fromkeys(iterable, *args))
 
     def copy(self):
         'New ChainMap or subclass with a new copy of maps[0] and refs to maps[1:]'
@@ -1151,16 +1134,9 @@ class UserDict(_collections_abc.MutableMapping):
     def __iter__(self):
         return iter(self.data)
 
-    # Modify __contains__ and get() to work like dict
-    # does when __missing__ is present.
+    # Modify __contains__ to work correctly when __missing__ is present
     def __contains__(self, key):
         return key in self.data
-
-    def get(self, key, default=None):
-        if key in self:
-            return self[key]
-        return default
-
 
     # Now, add the methods in dicts but not in MutableMapping
     def __repr__(self):

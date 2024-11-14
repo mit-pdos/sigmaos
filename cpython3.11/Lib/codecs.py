@@ -111,9 +111,6 @@ class CodecInfo(tuple):
                 (self.__class__.__module__, self.__class__.__qualname__,
                  self.name, id(self))
 
-    def __getnewargs__(self):
-        return tuple(self)
-
 class Codec:
 
     """ Defines the interface for stateless encoders/decoders.
@@ -1109,15 +1106,34 @@ def make_encoding_map(decoding_map):
 
 ### error handlers
 
-strict_errors = lookup_error("strict")
-ignore_errors = lookup_error("ignore")
-replace_errors = lookup_error("replace")
-xmlcharrefreplace_errors = lookup_error("xmlcharrefreplace")
-backslashreplace_errors = lookup_error("backslashreplace")
-namereplace_errors = lookup_error("namereplace")
+try:
+    strict_errors = lookup_error("strict")
+    ignore_errors = lookup_error("ignore")
+    replace_errors = lookup_error("replace")
+    xmlcharrefreplace_errors = lookup_error("xmlcharrefreplace")
+    backslashreplace_errors = lookup_error("backslashreplace")
+    namereplace_errors = lookup_error("namereplace")
+except LookupError:
+    # In --disable-unicode builds, these error handler are missing
+    strict_errors = None
+    ignore_errors = None
+    replace_errors = None
+    xmlcharrefreplace_errors = None
+    backslashreplace_errors = None
+    namereplace_errors = None
 
 # Tell modulefinder that using codecs probably needs the encodings
 # package
 _false = 0
 if _false:
-    import encodings  # noqa: F401
+    import encodings
+
+### Tests
+
+if __name__ == '__main__':
+
+    # Make stdout translate Latin-1 output into UTF-8 output
+    sys.stdout = EncodedFile(sys.stdout, 'latin-1', 'utf-8')
+
+    # Have stdin translate Latin-1 input into UTF-8 input
+    sys.stdin = EncodedFile(sys.stdin, 'utf-8', 'latin-1')

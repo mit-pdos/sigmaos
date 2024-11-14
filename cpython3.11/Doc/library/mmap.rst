@@ -1,5 +1,5 @@
-:mod:`!mmap` --- Memory-mapped file support
-===========================================
+:mod:`mmap` --- Memory-mapped file support
+==========================================
 
 .. module:: mmap
    :synopsis: Interface to memory-mapped files for Unix and Windows.
@@ -48,7 +48,7 @@ update the underlying file.
 
 To map anonymous memory, -1 should be passed as the fileno along with the length.
 
-.. class:: mmap(fileno, length, tagname=None, access=ACCESS_DEFAULT, offset=0)
+.. class:: mmap(fileno, length, tagname=None, access=ACCESS_DEFAULT[, offset])
 
    **(Windows version)** Maps *length* bytes from the file specified by the
    file handle *fileno*, and creates a mmap object.  If *length* is larger
@@ -71,8 +71,7 @@ To map anonymous memory, -1 should be passed as the fileno along with the length
 
    .. audit-event:: mmap.__new__ fileno,length,access,offset mmap.mmap
 
-.. class:: mmap(fileno, length, flags=MAP_SHARED, prot=PROT_WRITE|PROT_READ, \
-                access=ACCESS_DEFAULT, offset=0, *, trackfd=True)
+.. class:: mmap(fileno, length, flags=MAP_SHARED, prot=PROT_WRITE|PROT_READ, access=ACCESS_DEFAULT[, offset])
    :noindex:
 
    **(Unix version)** Maps *length* bytes from the file specified by the file
@@ -103,19 +102,9 @@ To map anonymous memory, -1 should be passed as the fileno along with the length
    defaults to 0. *offset* must be a multiple of :const:`ALLOCATIONGRANULARITY`
    which is equal to :const:`PAGESIZE` on Unix systems.
 
-   If *trackfd* is ``False``, the file descriptor specified by *fileno* will
-   not be duplicated, and the resulting :class:`!mmap` object will not
-   be associated with the map's underlying file.
-   This means that the :meth:`~mmap.mmap.size` and :meth:`~mmap.mmap.resize`
-   methods will fail.
-   This mode is useful to limit the number of open file descriptors.
-
    To ensure validity of the created memory mapping the file specified
    by the descriptor *fileno* is internally automatically synchronized
    with the physical backing store on macOS.
-
-   .. versionchanged:: 3.13
-      The *trackfd* parameter was added.
 
    This example shows a simple way of using :class:`~mmap.mmap`::
 
@@ -265,12 +254,9 @@ To map anonymous memory, -1 should be passed as the fileno along with the length
 
    .. method:: resize(newsize)
 
-      Resizes the map and the underlying file, if any.
-
-      Resizing a map created with *access* of :const:`ACCESS_READ` or
-      :const:`ACCESS_COPY`, will raise a :exc:`TypeError` exception.
-      Resizing a map created with with *trackfd* set to ``False``,
-      will raise a :exc:`ValueError` exception.
+      Resizes the map and the underlying file, if any. If the mmap was created
+      with :const:`ACCESS_READ` or :const:`ACCESS_COPY`, resizing the map will
+      raise a :exc:`TypeError` exception.
 
       **On Windows**: Resizing the map will raise an :exc:`OSError` if there are other
       maps against the same named file. Resizing an anonymous map (ie against the
@@ -299,14 +285,6 @@ To map anonymous memory, -1 should be passed as the fileno along with the length
       values are ``os.SEEK_CUR`` or ``1`` (seek relative to the current
       position) and ``os.SEEK_END`` or ``2`` (seek relative to the file's end).
 
-      .. versionchanged:: 3.13
-         Return the new absolute position instead of ``None``.
-
-   .. method:: seekable()
-
-      Return whether the file supports seeking, and the return value is always ``True``.
-
-      .. versionadded:: 3.13
 
    .. method:: size()
 
@@ -386,43 +364,17 @@ MAP_* Constants
 
 .. data:: MAP_SHARED
           MAP_PRIVATE
-          MAP_32BIT
-          MAP_ALIGNED_SUPER
-          MAP_ANON
-          MAP_ANONYMOUS
-          MAP_CONCEAL
           MAP_DENYWRITE
           MAP_EXECUTABLE
-          MAP_HASSEMAPHORE
-          MAP_JIT
-          MAP_NOCACHE
-          MAP_NOEXTEND
-          MAP_NORESERVE
+          MAP_ANON
+          MAP_ANONYMOUS
           MAP_POPULATE
-          MAP_RESILIENT_CODESIGN
-          MAP_RESILIENT_MEDIA
           MAP_STACK
-          MAP_TPRO
-          MAP_TRANSLATED_ALLOW_EXECUTE
-          MAP_UNIX03
 
-    These are the various flags that can be passed to :meth:`mmap.mmap`.  :data:`MAP_ALIGNED_SUPER`
-    is only available at FreeBSD and :data:`MAP_CONCEAL` is only available at OpenBSD.  Note
-    that some options might not be present on some systems.
+    These are the various flags that can be passed to :meth:`mmap.mmap`. Note that some options might not be present on some systems.
 
     .. versionchanged:: 3.10
-       Added :data:`MAP_POPULATE` constant.
+       Added MAP_POPULATE constant.
 
     .. versionadded:: 3.11
-       Added :data:`MAP_STACK` constant.
-
-    .. versionadded:: 3.12
-       Added :data:`MAP_ALIGNED_SUPER` and :data:`MAP_CONCEAL` constants.
-
-    .. versionadded:: 3.13
-       Added :data:`MAP_32BIT`, :data:`MAP_HASSEMAPHORE`, :data:`MAP_JIT`,
-       :data:`MAP_NOCACHE`, :data:`MAP_NOEXTEND`, :data:`MAP_NORESERVE`,
-       :data:`MAP_RESILIENT_CODESIGN`, :data:`MAP_RESILIENT_MEDIA`,
-       :data:`MAP_TPRO`, :data:`MAP_TRANSLATED_ALLOW_EXECUTE`, and
-       :data:`MAP_UNIX03` constants.
-
+       Added MAP_STACK constant.

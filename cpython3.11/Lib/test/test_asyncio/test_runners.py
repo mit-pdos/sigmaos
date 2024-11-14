@@ -1,9 +1,9 @@
 import _thread
 import asyncio
 import contextvars
+import gc
 import re
 import signal
-import sys
 import threading
 import unittest
 from test.test_asyncio import utils as test_utils
@@ -93,8 +93,8 @@ class RunTests(BaseTest):
     def test_asyncio_run_only_coro(self):
         for o in {1, lambda: None}:
             with self.subTest(obj=o), \
-                    self.assertRaisesRegex(TypeError,
-                                           'an awaitable is required'):
+                    self.assertRaisesRegex(ValueError,
+                                           'a coroutine was expected'):
                 asyncio.run(o)
 
     def test_asyncio_run_debug(self):
@@ -247,8 +247,6 @@ class RunTests(BaseTest):
             def get_loop(self, *args, **kwargs):
                 return self._task.get_loop(*args, **kwargs)
 
-            def set_name(self, *args, **kwargs):
-                return self._task.set_name(*args, **kwargs)
 
         async def main():
             interrupt_self()
@@ -262,26 +260,6 @@ class RunTests(BaseTest):
         asyncio.set_event_loop_policy(TestPolicy(new_event_loop))
         with self.assertRaises(asyncio.CancelledError):
             asyncio.run(main())
-
-    def test_asyncio_run_loop_factory(self):
-        factory = mock.Mock()
-        loop = factory.return_value = self.new_loop()
-
-        async def main():
-            self.assertEqual(asyncio.get_running_loop(), loop)
-
-        asyncio.run(main(), loop_factory=factory)
-        factory.assert_called_once_with()
-
-    def test_loop_factory_default_event_loop(self):
-        async def main():
-            if sys.platform == "win32":
-                self.assertIsInstance(asyncio.get_running_loop(), asyncio.ProactorEventLoop)
-            else:
-                self.assertIsInstance(asyncio.get_running_loop(), asyncio.SelectorEventLoop)
-
-
-        asyncio.run(main(), loop_factory=asyncio.EventLoop)
 
 
 class RunnerTests(BaseTest):
@@ -319,28 +297,19 @@ class RunnerTests(BaseTest):
     def test_run_non_coro(self):
         with asyncio.Runner() as runner:
             with self.assertRaisesRegex(
-                TypeError,
-                "an awaitable is required"
+                ValueError,
+                "a coroutine was expected"
             ):
                 runner.run(123)
 
     def test_run_future(self):
         with asyncio.Runner() as runner:
-            fut = runner.get_loop().create_future()
-            fut.set_result('done')
-            self.assertEqual('done', runner.run(fut))
-
-    def test_run_awaitable(self):
-        class MyAwaitable:
-            def __await__(self):
-                return self.run().__await__()
-
-            @staticmethod
-            async def run():
-                return 'done'
-
-        with asyncio.Runner() as runner:
-            self.assertEqual('done', runner.run(MyAwaitable()))
+            with self.assertRaisesRegex(
+                ValueError,
+                "a coroutine was expected"
+            ):
+                fut = runner.get_loop().create_future()
+                runner.run(fut)
 
     def test_explicit_close(self):
         runner = asyncio.Runner()
@@ -474,7 +443,7 @@ class RunnerTests(BaseTest):
                 runner.run(coro())
 
     def test_signal_install_not_supported_ok(self):
-        # signal.signal() can throw if the "main thread" doesn't have signals enabled
+        # signal.signal() can throw if the "main thread" doensn't have signals enabled
         assert threading.current_thread() is threading.main_thread()
 
         async def coro():

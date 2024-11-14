@@ -6,8 +6,7 @@ contains:
 
 - a stripped down, pyc-only stdlib zip file, e.g. {PREFIX}/lib/python311.zip
 - os.py as marker module {PREFIX}/lib/python3.11/os.py
-- empty lib-dynload directory, to make sure it is copied into the bundle:
-    {PREFIX}/lib/python3.11/lib-dynload/.empty
+- empty lib-dynload directory, to make sure it is copied into the bundle {PREFIX}/lib/python3.11/lib-dynload/.empty
 """
 
 import argparse
@@ -16,7 +15,6 @@ import shutil
 import sys
 import sysconfig
 import zipfile
-from typing import Dict
 
 # source directory
 SRCDIR = pathlib.Path(__file__).parent.parent.parent.absolute()
@@ -42,8 +40,17 @@ OMIT_FILES = (
     # package management
     "ensurepip/",
     "venv/",
+    # build system
+    "distutils/",
+    "lib2to3/",
+    # deprecated
+    "asyncore.py",
+    "asynchat.py",
+    "uu.py",
+    "xdrlib.py",
     # other platforms
     "_aix_support.py",
+    "_bootsubprocess.py",
     "_osx_support.py",
     # webbrowser
     "antigravity.py",
@@ -55,20 +62,27 @@ OMIT_FILES = (
     "concurrent/futures/thread.py",
     # Misc unused or large files
     "pydoc_data/",
+    "msilib/",
 )
 
 # Synchronous network I/O and protocols are not supported; for example,
 # socket.create_connection() raises an exception:
 # "BlockingIOError: [Errno 26] Operation in progress".
 OMIT_NETWORKING_FILES = (
+    "cgi.py",
+    "cgitb.py",
     "email/",
     "ftplib.py",
     "http/",
     "imaplib.py",
     "mailbox.py",
+    "mailcap.py",
+    "nntplib.py",
     "poplib.py",
+    "smtpd.py",
     "smtplib.py",
     "socketserver.py",
+    "telnetlib.py",
     # keep urllib.parse for pydoc
     "urllib/error.py",
     "urllib/request.py",
@@ -79,6 +93,8 @@ OMIT_NETWORKING_FILES = (
 
 OMIT_MODULE_FILES = {
     "_asyncio": ["asyncio/"],
+    "audioop": ["aifc.py", "sunau.py", "wave.py"],
+    "_crypt": ["crypt.py"],
     "_curses": ["curses/"],
     "_ctypes": ["ctypes/"],
     "_decimal": ["decimal.py"],
@@ -93,6 +109,13 @@ OMIT_MODULE_FILES = {
     "_tkinter": ["idlelib/", "tkinter/", "turtle.py", "turtledemo/"],
     "_zoneinfo": ["zoneinfo/"],
 }
+
+# regression test sub directories
+OMIT_SUBDIRS = (
+    "ctypes/test/",
+    "tkinter/test/",
+    "unittest/test/",
+)
 
 SYSCONFIG_NAMES = (
     "_sysconfigdata__emscripten_wasm32-emscripten",
@@ -111,8 +134,7 @@ def get_builddir(args: argparse.Namespace) -> pathlib.Path:
 
 def get_sysconfigdata(args: argparse.Namespace) -> pathlib.Path:
     """Get path to sysconfigdata relative to build root"""
-    assert isinstance(args.builddir, pathlib.Path)
-    data_name: str = sysconfig._get_sysconfigdata_name()  # type: ignore[attr-defined]
+    data_name = sysconfig._get_sysconfigdata_name()
     if not data_name.startswith(SYSCONFIG_NAMES):
         raise ValueError(
             f"Invalid sysconfig data name '{data_name}'.", SYSCONFIG_NAMES
@@ -148,7 +170,7 @@ def create_stdlib_zip(
                 pzf.writepy(entry, filterfunc=filterfunc)
 
 
-def detect_extension_modules(args: argparse.Namespace) -> Dict[str, bool]:
+def detect_extension_modules(args: argparse.Namespace):
     modules = {}
 
     # disabled by Modules/Setup.local ?
@@ -163,7 +185,7 @@ def detect_extension_modules(args: argparse.Namespace) -> Dict[str, bool]:
     # disabled by configure?
     with open(args.sysconfig_data) as f:
         data = f.read()
-    loc: Dict[str, Dict[str, str]] = {}
+    loc = {}
     exec(data, globals(), loc)
 
     for key, value in loc["build_time_vars"].items():
@@ -197,7 +219,7 @@ parser.add_argument(
 )
 
 
-def main() -> None:
+def main():
     args = parser.parse_args()
 
     relative_prefix = args.prefix.relative_to(pathlib.Path("/"))

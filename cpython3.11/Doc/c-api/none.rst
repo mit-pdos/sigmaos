@@ -15,12 +15,12 @@ same reason.
 
 .. c:var:: PyObject* Py_None
 
-   The Python ``None`` object, denoting lack of value.  This object has no methods
-   and is :term:`immortal`.
+   The Python ``None`` object, denoting lack of value.  This object has no methods.
+   It needs to be treated just like any other object with respect to reference
+   counts.
 
-   .. versionchanged:: 3.12
-      :c:data:`Py_None` is :term:`immortal`.
 
 .. c:macro:: Py_RETURN_NONE
 
-   Return :c:data:`Py_None` from a function.
+   Properly handle returning :c:data:`Py_None` from within a C function (that is,
+   increment the reference count of ``None`` and return it.)

@@ -5,7 +5,7 @@
 #include <errno.h>
 
 #include "Python.h"
-#include "pycore_importdl.h"
+#include "importdl.h"
 
 #if defined(__hp9000s300)
 #define FUNCNAME_PATTERN "_%.20s_%.200s"

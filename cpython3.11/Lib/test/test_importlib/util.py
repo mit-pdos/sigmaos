@@ -8,14 +8,11 @@ import os
 import os.path
 from test import support
 from test.support import import_helper
-from test.support import is_apple_mobile
 from test.support import os_helper
 import unittest
 import sys
 import tempfile
 import types
-
-_testsinglephase = import_helper.import_module("_testsinglephase")
 
 
 BUILTINS = types.SimpleNamespace()
@@ -40,17 +37,12 @@ else:
     EXTENSIONS.ext = None
     EXTENSIONS.filename = None
     EXTENSIONS.file_path = None
-    EXTENSIONS.name = '_testsinglephase'
+    EXTENSIONS.name = '_testcapi'
 
     def _extension_details():
         global EXTENSIONS
         for path in sys.path:
             for ext in machinery.EXTENSION_SUFFIXES:
-                # Apple mobile platforms mechanically load .so files,
-                # but the findable files are labelled .fwork
-                if is_apple_mobile:
-                    ext = ext.replace(".so", ".fwork")
-
                 filename = EXTENSIONS.name + ext
                 file_path = os.path.join(path, filename)
                 if os.path.exists(file_path):
@@ -149,8 +141,9 @@ def uncache(*names):
 
     """
     for name in names:
-        if name in ('sys', 'marshal'):
-            raise ValueError("cannot uncache {}".format(name))
+        if name in ('sys', 'marshal', 'imp'):
+            raise ValueError(
+                "cannot uncache {0}".format(name))
         try:
             del sys.modules[name]
         except KeyError:
@@ -212,7 +205,8 @@ def import_state(**kwargs):
                 new_value = default
             setattr(sys, attr, new_value)
         if len(kwargs):
-            raise ValueError('unrecognized arguments: {}'.format(kwargs))
+            raise ValueError(
+                    'unrecognized arguments: {0}'.format(kwargs.keys()))
         yield
     finally:
         for attr, value in originals.items():
@@ -258,6 +252,30 @@ class _ImporterMock:
 
     def __exit__(self, *exc_info):
         self._uncache.__exit__(None, None, None)
+
+
+class mock_modules(_ImporterMock):
+
+    """Importer mock using PEP 302 APIs."""
+
+    def find_module(self, fullname, path=None):
+        if fullname not in self.modules:
+            return None
+        else:
+            return self
+
+    def load_module(self, fullname):
+        if fullname not in self.modules:
+            raise ImportError
+        else:
+            sys.modules[fullname] = self.modules[fullname]
+            if fullname in self.module_code:
+                try:
+                    self.module_code[fullname]()
+                except Exception:
+                    del sys.modules[fullname]
+                    raise
+            return self.modules[fullname]
 
 
 class mock_spec(_ImporterMock):

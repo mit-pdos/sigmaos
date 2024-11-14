@@ -2,8 +2,6 @@
 preserve
 [clinic start generated code]*/
 
-#include "pycore_modsupport.h"    // _PyArg_CheckPositional()
-
 PyDoc_STRVAR(_abc__reset_registry__doc__,
 "_reset_registry($module, self, /)\n"
 "--\n"
@@ -161,4 +159,4 @@ _abc_get_cache_token(PyObject *module, PyObject *Py_UNUSED(ignored))
 {
     return _abc_get_cache_token_impl(module);
 }
-/*[clinic end generated code: output=1989b6716c950e17 input=a9049054013a1b77]*/
+/*[clinic end generated code: output=babb3ce445fa9b21 input=a9049054013a1b77]*/

@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 """
   ----------------------------------------------
       turtleDemo - Help
@@ -90,15 +92,13 @@ from tkinter import *
 from idlelib.colorizer import ColorDelegator, color_config
 from idlelib.percolator import Percolator
 from idlelib.textview import view_text
-import turtle
 from turtledemo import __doc__ as about_turtledemo
 
-if sys.platform == 'win32':
-    from idlelib.util import fix_win_hidpi
-    fix_win_hidpi()
+import turtle
 
 demo_dir = os.path.dirname(os.path.abspath(__file__))
 darwin = sys.platform == 'darwin'
+
 STARTUP = 1
 READY = 2
 RUNNING = 3
@@ -216,7 +216,7 @@ class DemoWindow(object):
 
         self.vbar = vbar = Scrollbar(text_frame, name='vbar')
         vbar['command'] = text.yview
-        vbar.pack(side=RIGHT, fill=Y)
+        vbar.pack(side=LEFT, fill=Y)
         self.hbar = hbar = Scrollbar(text_frame, name='hbar', orient=HORIZONTAL)
         hbar['command'] = text.xview
         hbar.pack(side=BOTTOM, fill=X)
@@ -292,7 +292,7 @@ class DemoWindow(object):
         self.output_lbl.config(text=txt, fg=color)
 
     def makeLoadDemoMenu(self, master):
-        menu = Menu(master, tearoff=1)  # TJR: leave this one.
+        menu = Menu(master)
 
         for entry in getExampleEntries():
             def load(entry=entry):
@@ -302,7 +302,7 @@ class DemoWindow(object):
         return menu
 
     def makeFontMenu(self, master):
-        menu = Menu(master, tearoff=0)
+        menu = Menu(master)
         menu.add_command(label="Decrease (C-'-')", command=self.decrease_size,
                          font=menufont)
         menu.add_command(label="Increase (C-'+')", command=self.increase_size,
@@ -317,7 +317,7 @@ class DemoWindow(object):
         return menu
 
     def makeHelpMenu(self, master):
-        menu = Menu(master, tearoff=0)
+        menu = Menu(master)
 
         for help_label, help_file in help_entries:
             def show(help_label=help_label, help_file=help_file):

@@ -11,9 +11,15 @@ except ImportError:
           "Your Python may not be configured for Tk. **", file=sys.__stderr__)
     raise SystemExit(1)
 
+# Valid arguments for the ...Awareness call below are defined in the following.
+# https://msdn.microsoft.com/en-us/library/windows/desktop/dn280512(v=vs.85).aspx
 if sys.platform == 'win32':
-    from idlelib.util import fix_win_hidpi
-    fix_win_hidpi()
+    try:
+        import ctypes
+        PROCESS_SYSTEM_DPI_AWARE = 1  # Int required.
+        ctypes.OleDLL('shcore').SetProcessDpiAwareness(PROCESS_SYSTEM_DPI_AWARE)
+    except (ImportError, AttributeError, OSError):
+        pass
 
 from tkinter import messagebox
 
@@ -706,7 +712,7 @@ class ModifiedInterpreter(InteractiveInterpreter):
             del _filename, _sys, _dirname, _dir
             \n""".format(filename))
 
-    def showsyntaxerror(self, filename=None, **kwargs):
+    def showsyntaxerror(self, filename=None):
         """Override Interactive Interpreter method: Use Colorizing
 
         Color the offending position instead of printing it and pointing at it
@@ -1364,11 +1370,11 @@ class PyShell(OutputWindow):
 
         from idlelib.stackviewer import StackBrowser
         try:
-            StackBrowser(self.root, sys.last_exc, self.flist)
+            StackBrowser(self.root, sys.last_value, self.flist)
         except:
             messagebox.showerror("No stack trace",
                 "There is no stack trace yet.\n"
-                "(sys.last_exc is not defined)",
+                "(sys.last_value is not defined)",
                 parent=self.text)
         return None
 

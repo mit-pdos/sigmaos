@@ -138,9 +138,9 @@ class ModuleTest(unittest.TestCase):
     def test_sanity(self):
         # Import sanity.
 
-        from xml.etree import ElementTree     # noqa: F401
-        from xml.etree import ElementInclude  # noqa: F401
-        from xml.etree import ElementPath     # noqa: F401
+        from xml.etree import ElementTree
+        from xml.etree import ElementInclude
+        from xml.etree import ElementPath
 
     def test_all(self):
         names = ("xml.etree.ElementTree", "_elementtree")
@@ -556,17 +556,6 @@ class ElementTreeTest(unittest.TestCase):
                 ('end', '{namespace}root'),
             ])
 
-        with open(SIMPLE_XMLFILE, 'rb') as source:
-            context = iterparse(source)
-            action, elem = next(context)
-            self.assertEqual((action, elem.tag), ('end', 'element'))
-            self.assertEqual([(action, elem.tag) for action, elem in context], [
-                    ('end', 'element'),
-                    ('end', 'empty-element'),
-                    ('end', 'root'),
-                ])
-            self.assertEqual(context.root.tag, 'root')
-
         events = ()
         context = iterparse(SIMPLE_XMLFILE, events)
         self.assertEqual([(action, elem.tag) for action, elem in context], [])
@@ -658,80 +647,11 @@ class ElementTreeTest(unittest.TestCase):
 
         # Not exhausting the iterator still closes the resource (bpo-43292)
         with warnings_helper.check_no_resource_warning(self):
-            it = iterparse(SIMPLE_XMLFILE)
+            it = iterparse(TESTFN)
             del it
-
-        with warnings_helper.check_no_resource_warning(self):
-            it = iterparse(SIMPLE_XMLFILE)
-            it.close()
-            del it
-
-        with warnings_helper.check_no_resource_warning(self):
-            it = iterparse(SIMPLE_XMLFILE)
-            action, elem = next(it)
-            self.assertEqual((action, elem.tag), ('end', 'element'))
-            del it, elem
-
-        with warnings_helper.check_no_resource_warning(self):
-            it = iterparse(SIMPLE_XMLFILE)
-            action, elem = next(it)
-            it.close()
-            self.assertEqual((action, elem.tag), ('end', 'element'))
-            del it, elem
 
         with self.assertRaises(FileNotFoundError):
             iterparse("nonexistent")
-
-    def test_iterparse_close(self):
-        iterparse = ET.iterparse
-
-        it = iterparse(SIMPLE_XMLFILE)
-        it.close()
-        with self.assertRaises(StopIteration):
-            next(it)
-        it.close()  # idempotent
-
-        with open(SIMPLE_XMLFILE, 'rb') as source:
-            it = iterparse(source)
-            it.close()
-            self.assertFalse(source.closed)
-            with self.assertRaises(StopIteration):
-                next(it)
-            it.close()  # idempotent
-
-        it = iterparse(SIMPLE_XMLFILE)
-        action, elem = next(it)
-        self.assertEqual((action, elem.tag), ('end', 'element'))
-        it.close()
-        with self.assertRaises(StopIteration):
-            next(it)
-        it.close()  # idempotent
-
-        with open(SIMPLE_XMLFILE, 'rb') as source:
-            it = iterparse(source)
-            action, elem = next(it)
-            self.assertEqual((action, elem.tag), ('end', 'element'))
-            it.close()
-            self.assertFalse(source.closed)
-            with self.assertRaises(StopIteration):
-                next(it)
-            it.close()  # idempotent
-
-        it = iterparse(SIMPLE_XMLFILE)
-        list(it)
-        it.close()
-        with self.assertRaises(StopIteration):
-            next(it)
-        it.close()  # idempotent
-
-        with open(SIMPLE_XMLFILE, 'rb') as source:
-            it = iterparse(source)
-            list(it)
-            it.close()
-            self.assertFalse(source.closed)
-            with self.assertRaises(StopIteration):
-                next(it)
-            it.close()  # idempotent
 
     def test_writefile(self):
         elem = ET.Element("tag")
@@ -2423,22 +2343,6 @@ class BugsTest(unittest.TestCase):
         self.assertRaises(TypeError, ET.TreeBuilder().start, "tag")
         self.assertRaises(TypeError, ET.TreeBuilder().start, "tag", None)
 
-    def test_issue123213_correct_extend_exception(self):
-        # Does not hide the internal exception when extending the element
-        self.assertRaises(ZeroDivisionError, ET.Element('tag').extend,
-                          (1/0 for i in range(2)))
-
-        # Still raises the TypeError when extending with a non-iterable
-        self.assertRaises(TypeError, ET.Element('tag').extend, None)
-
-        # Preserves the TypeError message when extending with a generator
-        def f():
-            raise TypeError("mymessage")
-
-        self.assertRaisesRegex(
-            TypeError, 'mymessage',
-            ET.Element('tag').extend, (f() for i in range(2)))
-
 
 
 # --------------------------------------------------------------------
@@ -2472,6 +2376,35 @@ class BasicElementTest(ElementTestCase, unittest.TestCase):
         attrib["bar"] = "baz"
         self.assertIsNot(element_foo.attrib, attrib)
         self.assertNotEqual(element_foo.attrib, attrib)
+
+    def test_copy(self):
+        # Only run this test if Element.copy() is defined.
+        if "copy" not in dir(ET.Element):
+            raise unittest.SkipTest("Element.copy() not present")
+
+        element_foo = ET.Element("foo", { "zix": "wyp" })
+        element_foo.append(ET.Element("bar", { "baz": "qix" }))
+
+        with self.assertWarns(DeprecationWarning):
+            element_foo2 = element_foo.copy()
+
+        # elements are not the same
+        self.assertIsNot(element_foo2, element_foo)
+
+        # string attributes are equal
+        self.assertEqual(element_foo2.tag, element_foo.tag)
+        self.assertEqual(element_foo2.text, element_foo.text)
+        self.assertEqual(element_foo2.tail, element_foo.tail)
+
+        # number of children is the same
+        self.assertEqual(len(element_foo2), len(element_foo))
+
+        # children are the same
+        for (child1, child2) in itertools.zip_longest(element_foo, element_foo2):
+            self.assertIs(child1, child2)
+
+        # attrib is a copy
+        self.assertEqual(element_foo2.attrib, element_foo.attrib)
 
     def test___copy__(self):
         element_foo = ET.Element("foo", { "zix": "wyp" })
@@ -3200,7 +3133,8 @@ class ElementIterTest(unittest.TestCase):
         # With an explicit parser too (issue #9708)
         sourcefile = serialize(doc, to_string=False)
         parser = ET.XMLParser(target=ET.TreeBuilder())
-        self.assertEqual(next(ET.iterparse(sourcefile, parser=parser))[0], 'end')
+        self.assertEqual(next(ET.iterparse(sourcefile, parser=parser))[0],
+                         'end')
 
         tree = ET.ElementTree(None)
         self.assertRaises(AttributeError, tree.iter)
@@ -3764,22 +3698,6 @@ class ElementSlicingTest(unittest.TestCase):
         e[1::-sys.maxsize<<64] = [ET.Element('d')]
         self.assertEqual(self._subelem_tags(e), ['a0', 'd', 'a2', 'a3'])
 
-    def test_issue123213_setslice_exception(self):
-        e = ET.Element('tag')
-        # Does not hide the internal exception when assigning to the element
-        with self.assertRaises(ZeroDivisionError):
-            e[:1] = (1/0 for i in range(2))
-
-        # Still raises the TypeError when assigning with a non-iterable
-        with self.assertRaises(TypeError):
-            e[:1] = None
-
-        # Preserve the original TypeError message when assigning.
-        def f():
-            raise TypeError("mymessage")
-
-        with self.assertRaisesRegex(TypeError, 'mymessage'):
-            e[:1] = (f() for i in range(2))
 
 class IOTest(unittest.TestCase):
     def test_encoding(self):
@@ -4114,25 +4032,6 @@ class NoAcceleratorTest(unittest.TestCase):
         self.assertIsInstance(pyET.Element.__init__, types.FunctionType)
         self.assertIsInstance(pyET.XMLParser.__init__, types.FunctionType)
 
-# --------------------------------------------------------------------
-
-class BoolTest(unittest.TestCase):
-    def test_warning(self):
-        e = ET.fromstring('<a style="new"></a>')
-        msg = (
-            r"Testing an element's truth value will always return True in "
-            r"future versions.  "
-            r"Use specific 'len\(elem\)' or 'elem is not None' test instead.")
-        with self.assertWarnsRegex(DeprecationWarning, msg):
-            result = bool(e)
-        # Emulate prior behavior for now
-        self.assertIs(result, False)
-
-        # Element with children
-        ET.SubElement(e, 'b')
-        with self.assertWarnsRegex(DeprecationWarning, msg):
-            new_result = bool(e)
-        self.assertIs(new_result, True)
 
 # --------------------------------------------------------------------
 

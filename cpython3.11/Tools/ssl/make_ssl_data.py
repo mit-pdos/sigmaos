@@ -15,6 +15,7 @@ import datetime
 import operator
 import os
 import re
+import sys
 
 
 parser = argparse.ArgumentParser(
@@ -22,7 +23,7 @@ parser = argparse.ArgumentParser(
 )
 parser.add_argument("srcdir", help="OpenSSL source directory")
 parser.add_argument(
-    "output", nargs="?", default=None
+    "output", nargs="?", type=argparse.FileType("w"), default=sys.stdout
 )
 
 
@@ -125,13 +126,8 @@ def main():
     lines.append("")
     lines.extend(gen_error_codes(args))
 
-    if args.output is None:
-        for line in lines:
-            print(line)
-    else:
-        with open(args.output, 'w') as output:
-            for line in lines:
-                print(line, file=output)
+    for line in lines:
+        args.output.write(line + "\n")
 
 
 if __name__ == "__main__":

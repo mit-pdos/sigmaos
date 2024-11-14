@@ -14,10 +14,17 @@
    installing/index.rst
    howto/index.rst
    faq/index.rst
-   deprecations/index.rst
    glossary.rst
 
    about.rst
    bugs.rst
    copyright.rst
    license.rst
+
+.. to include legacy packaging docs in build
+
+.. toctree::
+   :hidden:
+
+   distutils/index.rst
+   install/index.rst

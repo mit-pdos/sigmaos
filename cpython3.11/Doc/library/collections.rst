@@ -1,5 +1,5 @@
-:mod:`!collections` --- Container datatypes
-===========================================
+:mod:`collections` --- Container datatypes
+==========================================
 
 .. module:: collections
     :synopsis: Container datatypes
@@ -99,7 +99,7 @@ The class can be used to simulate nested scopes and is useful in templating.
         :func:`super` function.  A reference to ``d.parents`` is equivalent to:
         ``ChainMap(*d.maps[1:])``.
 
-    Note, the iteration order of a :class:`ChainMap` is determined by
+    Note, the iteration order of a :class:`ChainMap()` is determined by
     scanning the mappings last to first::
 
         >>> baseline = {'music': 'bach', 'art': 'rembrandt'}
@@ -134,7 +134,7 @@ The class can be used to simulate nested scopes and is useful in templating.
      :attr:`~collections.ChainMap.parents` property.
 
    * The `Nested Contexts recipe
-     <https://code.activestate.com/recipes/577434-nested-contexts-a-chain-of-mapping-objects/>`_ has options to control
+     <https://code.activestate.com/recipes/577434/>`_ has options to control
      whether writes and other mutations apply only to the first mapping or to
      any mapping in the chain.
 
@@ -229,7 +229,6 @@ For example::
     >>> cnt = Counter()
     >>> for word in ['red', 'blue', 'red', 'green', 'blue', 'blue']:
     ...     cnt[word] += 1
-    ...
     >>> cnt
     Counter({'blue': 3, 'red': 2, 'green': 1})
 
@@ -358,7 +357,7 @@ Common patterns for working with :class:`Counter` objects::
     list(c)                         # list unique elements
     set(c)                          # convert to a set
     dict(c)                         # convert to a regular dictionary
-    c.items()                       # access the (elem, cnt) pairs
+    c.items()                       # convert to a list of (elem, cnt) pairs
     Counter(dict(list_of_pairs))    # convert from a list of (elem, cnt) pairs
     c.most_common()[:-n-1:-1]       # n least common elements
     +c                              # remove zero and negative counts
@@ -819,7 +818,6 @@ zero):
 
     >>> def constant_factory(value):
     ...     return lambda: value
-    ...
     >>> d = defaultdict(constant_factory('<missing>'))
     >>> d.update(name='John', action='ran')
     >>> '%(name)s %(action)s to %(object)s' % d
@@ -874,8 +872,8 @@ they add the ability to access fields by name instead of position index.
     ``(1, 2)``, then ``x`` will be a required argument, ``y`` will default to
     ``1``, and ``z`` will default to ``2``.
 
-    If *module* is defined, the :attr:`~type.__module__` attribute of the
-    named tuple is set to that value.
+    If *module* is defined, the ``__module__`` attribute of the named tuple is
+    set to that value.
 
     Named tuple instances do not have per-instance dictionaries, so they are
     lightweight and require no more memory than regular tuples.
@@ -978,12 +976,6 @@ field names, the method and attribute names start with an underscore.
 
         >>> for partnum, record in inventory.items():
         ...     inventory[partnum] = record._replace(price=newprices[partnum], timestamp=time.now())
-
-    Named tuples are also supported by generic function :func:`copy.replace`.
-
-    .. versionchanged:: 3.13
-       Raise :exc:`TypeError` instead of :exc:`ValueError` for invalid
-       keyword arguments.
 
 .. attribute:: somenamedtuple._fields
 
@@ -1169,11 +1161,8 @@ Some differences from :class:`dict` still remain:
 In addition to the usual mapping methods, ordered dictionaries also support
 reverse iteration using :func:`reversed`.
 
-.. _collections_OrderedDict__eq__:
-
 Equality tests between :class:`OrderedDict` objects are order-sensitive
-and are roughly equivalent to ``list(od1.items())==list(od2.items())``.
-
+and are implemented as ``list(od1.items())==list(od2.items())``.
 Equality tests between :class:`OrderedDict` objects and other
 :class:`~collections.abc.Mapping` objects are order-insensitive like regular
 dictionaries.  This allows :class:`OrderedDict` objects to be substituted
@@ -1189,7 +1178,7 @@ anywhere a regular dictionary is used.
    method.
 
 .. versionchanged:: 3.9
-   Added merge (``|``) and update (``|=``) operators, specified in :pep:`584`.
+    Added merge (``|``) and update (``|=``) operators, specified in :pep:`584`.
 
 
 :class:`OrderedDict` Examples and Recipes
@@ -1212,7 +1201,6 @@ variants of :func:`functools.lru_cache`:
 
 .. testcode::
 
-    from collections import OrderedDict
     from time import time
 
     class TimeBoundedLRU:
@@ -1233,7 +1221,7 @@ variants of :func:`functools.lru_cache`:
             result = self.func(*args)
             self.cache[args] = time(), result
             if len(self.cache) > self.maxsize:
-                self.cache.popitem(last=False)
+                self.cache.popitem(0)
             return result
 
 
@@ -1265,12 +1253,12 @@ variants of :func:`functools.lru_cache`:
             if self.requests[args] <= self.cache_after:
                 self.requests.move_to_end(args)
                 if len(self.requests) > self.maxrequests:
-                    self.requests.popitem(last=False)
+                    self.requests.popitem(0)
             else:
                 self.requests.pop(args, None)
                 self.cache[args] = result
                 if len(self.cache) > self.maxsize:
-                    self.cache.popitem(last=False)
+                    self.cache.popitem(0)
             return result
 
 .. doctest::

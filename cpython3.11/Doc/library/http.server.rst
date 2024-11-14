@@ -1,5 +1,5 @@
-:mod:`!http.server` --- HTTP servers
-====================================
+:mod:`http.server` --- HTTP servers
+===================================
 
 .. module:: http.server
    :synopsis: HTTP server and request handlers.
@@ -263,7 +263,7 @@ provides three different variants:
 
       Adds a blank line
       (indicating the end of the HTTP headers in the response)
-      to the headers buffer and calls :meth:`flush_headers`.
+      to the headers buffer and calls :meth:`flush_headers()`.
 
       .. versionchanged:: 3.2
          The buffered headers are written to the output stream.
@@ -378,7 +378,7 @@ provides three different variants:
 
       If the request was mapped to a file, it is opened. Any :exc:`OSError`
       exception in opening the requested file is mapped to a ``404``,
-      ``'File not found'`` error. If there was an ``'If-Modified-Since'``
+      ``'File not found'`` error. If there was a ``'If-Modified-Since'``
       header in the request, and the file was not modified after this time,
       a ``304``, ``'Not Modified'`` response is sent. Otherwise, the content
       type is guessed by calling the :meth:`guess_type` method, which in turn
@@ -412,11 +412,6 @@ the current directory::
    with socketserver.TCPServer(("", PORT), Handler) as httpd:
        print("serving at port", PORT)
        httpd.serve_forever()
-
-
-:class:`SimpleHTTPRequestHandler` can also be subclassed to enhance behavior,
-such as using different index file names by overriding the class attribute
-:attr:`index_pages`.
 
 .. _http-server-cli:
 
@@ -502,23 +497,10 @@ following command runs an HTTP/1.1 conformant server::
    Note that CGI scripts will be run with UID of user nobody, for security
    reasons.  Problems with the CGI script will be translated to error 403.
 
-   .. deprecated-removed:: 3.13 3.15
-
-      :class:`CGIHTTPRequestHandler` is being removed in 3.15.  CGI has not
-      been considered a good way to do things for well over a decade. This code
-      has been unmaintained for a while now and sees very little practical use.
-      Retaining it could lead to further :ref:`security considerations
-      <http.server-security>`.
-
 :class:`CGIHTTPRequestHandler` can be enabled in the command line by passing
 the ``--cgi`` option::
 
         python -m http.server --cgi
-
-.. deprecated-removed:: 3.13 3.15
-
-   :mod:`http.server` command line ``--cgi`` support is being removed
-   because :class:`CGIHTTPRequestHandler` is being removed.
 
 .. warning::
 
@@ -543,5 +525,5 @@ default :class:`BaseHTTPRequestHandler` ``.log_message``
 implementation. This could allow remote clients connecting to your
 server to send nefarious control codes to your terminal.
 
-.. versionchanged:: 3.12
+.. versionchanged:: 3.11.1
    Control characters are scrubbed in stderr logs.

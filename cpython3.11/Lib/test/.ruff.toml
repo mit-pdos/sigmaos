@@ -1,12 +1,11 @@
 fix = true
 extend-exclude = [
-    # Excluded (run with the other AC files in its own separate ruff job in pre-commit)
-    "test_clinic.py",
     # Excluded (these aren't actually executed, they're just "data files")
     "tokenizedata/*.py",
     # Failed to lint
     "encoded_modules/module_iso_8859_1.py",
     "encoded_modules/module_koi8_r.py",
+    "test_source_encoding.py",
     # TODO Fix: F811 Redefinition of unused name
     "test_buffer.py",
     "test_dataclasses/__init__.py",
@@ -16,7 +15,9 @@ extend-exclude = [
     "test_grammar.py",
     "test_import/__init__.py",
     "test_pkg.py",
+    "test_tokenize.py",
     "test_yield_from.py",
+    "time_hashlib.py",
 ]
 
 [lint]

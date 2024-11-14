@@ -2,14 +2,6 @@
 preserve
 [clinic start generated code]*/
 
-#if defined(Py_BUILD_CORE) && !defined(Py_BUILD_CORE_MODULE)
-#  include "pycore_gc.h"          // PyGC_Head
-#  include "pycore_runtime.h"     // _Py_ID()
-#endif
-#include "pycore_abstract.h"      // _PyNumber_Index()
-#include "pycore_critical_section.h"// Py_BEGIN_CRITICAL_SECTION()
-#include "pycore_modsupport.h"    // _PyArg_CheckPositional()
-
 PyDoc_STRVAR(list_insert__doc__,
 "insert($self, index, object, /)\n"
 "--\n"
@@ -45,36 +37,28 @@ list_insert(PyListObject *self, PyObject *const *args, Py_ssize_t nargs)
         index = ival;
     }
     object = args[1];
-    Py_BEGIN_CRITICAL_SECTION(self);
     return_value = list_insert_impl(self, index, object);
-    Py_END_CRITICAL_SECTION();
 
 exit:
     return return_value;
 }
 
-PyDoc_STRVAR(py_list_clear__doc__,
+PyDoc_STRVAR(list_clear__doc__,
 "clear($self, /)\n"
 "--\n"
 "\n"
 "Remove all items from list.");
 
-#define PY_LIST_CLEAR_METHODDEF    \
-    {"clear", (PyCFunction)py_list_clear, METH_NOARGS, py_list_clear__doc__},
+#define LIST_CLEAR_METHODDEF    \
+    {"clear", (PyCFunction)list_clear, METH_NOARGS, list_clear__doc__},
 
 static PyObject *
-py_list_clear_impl(PyListObject *self);
+list_clear_impl(PyListObject *self);
 
 static PyObject *
-py_list_clear(PyListObject *self, PyObject *Py_UNUSED(ignored))
+list_clear(PyListObject *self, PyObject *Py_UNUSED(ignored))
 {
-    PyObject *return_value = NULL;
-
-    Py_BEGIN_CRITICAL_SECTION(self);
-    return_value = py_list_clear_impl(self);
-    Py_END_CRITICAL_SECTION();
-
-    return return_value;
+    return list_clear_impl(self);
 }
 
 PyDoc_STRVAR(list_copy__doc__,
@@ -92,13 +76,7 @@ list_copy_impl(PyListObject *self);
 static PyObject *
 list_copy(PyListObject *self, PyObject *Py_UNUSED(ignored))
 {
-    PyObject *return_value = NULL;
-
-    Py_BEGIN_CRITICAL_SECTION(self);
-    return_value = list_copy_impl(self);
-    Py_END_CRITICAL_SECTION();
-
-    return return_value;
+    return list_copy_impl(self);
 }
 
 PyDoc_STRVAR(list_append__doc__,
@@ -109,21 +87,6 @@ PyDoc_STRVAR(list_append__doc__,
 
 #define LIST_APPEND_METHODDEF    \
     {"append", (PyCFunction)list_append, METH_O, list_append__doc__},
-
-static PyObject *
-list_append_impl(PyListObject *self, PyObject *object);
-
-static PyObject *
-list_append(PyListObject *self, PyObject *object)
-{
-    PyObject *return_value = NULL;
-
-    Py_BEGIN_CRITICAL_SECTION(self);
-    return_value = list_append_impl(self, object);
-    Py_END_CRITICAL_SECTION();
-
-    return return_value;
-}
 
 PyDoc_STRVAR(list_extend__doc__,
 "extend($self, iterable, /)\n"
@@ -173,9 +136,7 @@ list_pop(PyListObject *self, PyObject *const *args, Py_ssize_t nargs)
         index = ival;
     }
 skip_optional:
-    Py_BEGIN_CRITICAL_SECTION(self);
     return_value = list_pop_impl(self, index);
-    Py_END_CRITICAL_SECTION();
 
 exit:
     return return_value;
@@ -205,38 +166,14 @@ static PyObject *
 list_sort(PyListObject *self, PyObject *const *args, Py_ssize_t nargs, PyObject *kwnames)
 {
     PyObject *return_value = NULL;
-    #if defined(Py_BUILD_CORE) && !defined(Py_BUILD_CORE_MODULE)
-
-    #define NUM_KEYWORDS 2
-    static struct {
-        PyGC_Head _this_is_not_used;
-        PyObject_VAR_HEAD
-        PyObject *ob_item[NUM_KEYWORDS];
-    } _kwtuple = {
-        .ob_base = PyVarObject_HEAD_INIT(&PyTuple_Type, NUM_KEYWORDS)
-        .ob_item = { &_Py_ID(key), &_Py_ID(reverse), },
-    };
-    #undef NUM_KEYWORDS
-    #define KWTUPLE (&_kwtuple.ob_base.ob_base)
-
-    #else  // !Py_BUILD_CORE
-    #  define KWTUPLE NULL
-    #endif  // !Py_BUILD_CORE
-
     static const char * const _keywords[] = {"key", "reverse", NULL};
-    static _PyArg_Parser _parser = {
-        .keywords = _keywords,
-        .fname = "sort",
-        .kwtuple = KWTUPLE,
-    };
-    #undef KWTUPLE
+    static _PyArg_Parser _parser = {NULL, _keywords, "sort", 0};
     PyObject *argsbuf[2];
     Py_ssize_t noptargs = nargs + (kwnames ? PyTuple_GET_SIZE(kwnames) : 0) - 0;
     PyObject *keyfunc = Py_None;
     int reverse = 0;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 0, /*maxpos*/ 0, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser, 0, 0, 0, argsbuf);
     if (!args) {
         goto exit;
     }
@@ -249,14 +186,12 @@ list_sort(PyListObject *self, PyObject *const *args, Py_ssize_t nargs, PyObject 
             goto skip_optional_kwonly;
         }
     }
-    reverse = PyObject_IsTrue(args[1]);
-    if (reverse < 0) {
+    reverse = _PyLong_AsInt(args[1]);
+    if (reverse == -1 && PyErr_Occurred()) {
         goto exit;
     }
 skip_optional_kwonly:
-    Py_BEGIN_CRITICAL_SECTION(self);
     return_value = list_sort_impl(self, keyfunc, reverse);
-    Py_END_CRITICAL_SECTION();
 
 exit:
     return return_value;
@@ -277,13 +212,7 @@ list_reverse_impl(PyListObject *self);
 static PyObject *
 list_reverse(PyListObject *self, PyObject *Py_UNUSED(ignored))
 {
-    PyObject *return_value = NULL;
-
-    Py_BEGIN_CRITICAL_SECTION(self);
-    return_value = list_reverse_impl(self);
-    Py_END_CRITICAL_SECTION();
-
-    return return_value;
+    return list_reverse_impl(self);
 }
 
 PyDoc_STRVAR(list_index__doc__,
@@ -352,21 +281,6 @@ PyDoc_STRVAR(list_remove__doc__,
 #define LIST_REMOVE_METHODDEF    \
     {"remove", (PyCFunction)list_remove, METH_O, list_remove__doc__},
 
-static PyObject *
-list_remove_impl(PyListObject *self, PyObject *value);
-
-static PyObject *
-list_remove(PyListObject *self, PyObject *value)
-{
-    PyObject *return_value = NULL;
-
-    Py_BEGIN_CRITICAL_SECTION(self);
-    return_value = list_remove_impl(self, value);
-    Py_END_CRITICAL_SECTION();
-
-    return return_value;
-}
-
 PyDoc_STRVAR(list___init____doc__,
 "list(iterable=(), /)\n"
 "--\n"
@@ -383,11 +297,10 @@ static int
 list___init__(PyObject *self, PyObject *args, PyObject *kwargs)
 {
     int return_value = -1;
-    PyTypeObject *base_tp = &PyList_Type;
     PyObject *iterable = NULL;
 
-    if ((Py_IS_TYPE(self, base_tp) ||
-         Py_TYPE(self)->tp_new == base_tp->tp_new) &&
+    if ((Py_IS_TYPE(self, &PyList_Type) ||
+         Py_TYPE(self)->tp_new == PyList_Type.tp_new) &&
         !_PyArg_NoKeywords("list", kwargs)) {
         goto exit;
     }
@@ -440,4 +353,4 @@ list___reversed__(PyListObject *self, PyObject *Py_UNUSED(ignored))
 {
     return list___reversed___impl(self);
 }
-/*[clinic end generated code: output=9357151278d77ea1 input=a9049054013a1b77]*/
+/*[clinic end generated code: output=eab97a76b1568a03 input=a9049054013a1b77]*/

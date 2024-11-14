@@ -12,7 +12,8 @@ _build_return_object(mod_ty module, int mode, PyObject *filename_ob, PyArena *ar
     } else if (mode == 1) {
         result = PyAST_mod2obj(module);
     } else {
-        result = Py_NewRef(Py_None);
+        result = Py_None;
+        Py_INCREF(result);
     }
 
     return result;
@@ -52,7 +53,7 @@ parse_file(PyObject *self, PyObject *args, PyObject *kwds)
     PyCompilerFlags flags = _PyCompilerFlags_INIT;
     mod_ty res = _PyPegen_run_parser_from_file_pointer(
                         fp, Py_file_input, filename_ob,
-                        NULL, NULL, NULL, &flags, NULL, NULL, arena);
+                        NULL, NULL, NULL, &flags, NULL, arena);
     fclose(fp);
     if (res == NULL) {
         goto error;
@@ -108,7 +109,7 @@ error:
 static PyObject *
 clear_memo_stats(PyObject *Py_UNUSED(self), PyObject *Py_UNUSED(ignored))
 {
-#if defined(Py_DEBUG)
+#if defined(PY_DEBUG)
     _PyPegen_clear_memo_statistics();
 #endif
     Py_RETURN_NONE;
@@ -117,7 +118,7 @@ clear_memo_stats(PyObject *Py_UNUSED(self), PyObject *Py_UNUSED(ignored))
 static PyObject *
 get_memo_stats(PyObject *Py_UNUSED(self), PyObject *Py_UNUSED(ignored))
 {
-#if defined(Py_DEBUG)
+#if defined(PY_DEBUG)
     return _PyPegen_get_memo_statistics();
 #else
     Py_RETURN_NONE;
@@ -128,7 +129,7 @@ get_memo_stats(PyObject *Py_UNUSED(self), PyObject *Py_UNUSED(ignored))
 static PyObject *
 dump_memo_stats(PyObject *Py_UNUSED(self), PyObject *Py_UNUSED(ignored))
 {
-#if defined(Py_DEBUG)
+#if defined(PY_DEBUG)
     PyObject *list = _PyPegen_get_memo_statistics();
     if (list == NULL) {
         return NULL;

@@ -8,14 +8,11 @@ from test.support.script_helper import (assert_python_ok, assert_python_failure,
                                         interpreter_requires_environment)
 from test import support
 from test.support import os_helper
-from test.support import force_not_colorized
 
 try:
     import _testcapi
-    import _testinternalcapi
 except ImportError:
     _testcapi = None
-    _testinternalcapi = None
 
 
 EMPTY_STRING_SIZE = sys.getsizeof(b'')
@@ -174,11 +171,9 @@ class TestTracemallocEnabled(unittest.TestCase):
         self.assertEqual(len(traceback), 1)
         self.assertEqual(traceback, obj_traceback)
 
-    def find_trace(self, traces, traceback, size):
-        # filter also by size to ignore the memory allocated by
-        # _PyRefchain_Trace() if Python is built with Py_TRACE_REFS.
+    def find_trace(self, traces, traceback):
         for trace in traces:
-            if trace[2] == traceback._frames and trace[1] == size:
+            if trace[2] == traceback._frames:
                 return trace
 
         self.fail("trace not found")
@@ -189,10 +184,11 @@ class TestTracemallocEnabled(unittest.TestCase):
         obj, obj_traceback = allocate_bytes(obj_size)
 
         traces = tracemalloc._get_traces()
-        trace = self.find_trace(traces, obj_traceback, obj_size)
+        trace = self.find_trace(traces, obj_traceback)
 
         self.assertIsInstance(trace, tuple)
         domain, size, traceback, length = trace
+        self.assertEqual(size, obj_size)
         self.assertEqual(traceback, obj_traceback._frames)
 
         tracemalloc.stop()
@@ -210,18 +206,17 @@ class TestTracemallocEnabled(unittest.TestCase):
         # Ensure that two identical tracebacks are not duplicated
         tracemalloc.stop()
         tracemalloc.start(4)
-        obj1_size = 123
-        obj2_size = 125
-        obj1, obj1_traceback = allocate_bytes4(obj1_size)
-        obj2, obj2_traceback = allocate_bytes4(obj2_size)
+        obj_size = 123
+        obj1, obj1_traceback = allocate_bytes4(obj_size)
+        obj2, obj2_traceback = allocate_bytes4(obj_size)
 
         traces = tracemalloc._get_traces()
 
         obj1_traceback._frames = tuple(reversed(obj1_traceback._frames))
         obj2_traceback._frames = tuple(reversed(obj2_traceback._frames))
 
-        trace1 = self.find_trace(traces, obj1_traceback, obj1_size)
-        trace2 = self.find_trace(traces, obj2_traceback, obj2_size)
+        trace1 = self.find_trace(traces, obj1_traceback)
+        trace2 = self.find_trace(traces, obj2_traceback)
         domain1, size1, traceback1, length1 = trace1
         domain2, size2, traceback2, length2 = trace2
         self.assertIs(traceback2, traceback1)
@@ -939,7 +934,6 @@ class TestCommandLine(unittest.TestCase):
         stdout = stdout.rstrip()
         self.assertEqual(stdout, b'10')
 
-    @force_not_colorized
     def check_env_var_invalid(self, nframe):
         with support.SuppressCrashReport():
             ok, stdout, stderr = assert_python_failure(
@@ -1014,7 +1008,7 @@ class TestCAPI(unittest.TestCase):
         tracemalloc.stop()
 
     def get_traceback(self):
-        frames = _testinternalcapi._PyTraceMalloc_GetTraceback(self.domain, self.ptr)
+        frames = _testcapi.tracemalloc_get_traceback(self.domain, self.ptr)
         if frames is not None:
             return tracemalloc.Traceback(frames)
         else:

@@ -1,4 +1,9 @@
-"""turtledemo/round_dance.py
+"""      turtle-example-suite:
+
+         tdemo_round_dance.py
+
+(Needs version 1.1 of the turtle module that
+comes with Python 3.1)
 
 Dancing turtles have a compound shape
 consisting of a series of triangles of

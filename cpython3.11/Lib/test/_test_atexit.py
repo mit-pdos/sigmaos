@@ -19,9 +19,7 @@ class GeneralTest(unittest.TestCase):
             atexit.register(func, *args)
             atexit._run_exitfuncs()
 
-            self.assertIsNone(cm.unraisable.object)
-            self.assertEqual(cm.unraisable.err_msg,
-                    f'Exception ignored in atexit callback {func!r}')
+            self.assertEqual(cm.unraisable.object, func)
             self.assertEqual(cm.unraisable.exc_type, exc_type)
             self.assertEqual(type(cm.unraisable.exc_value), exc_type)
 
@@ -127,9 +125,7 @@ class GeneralTest(unittest.TestCase):
         try:
             with support.catch_unraisable_exception() as cm:
                 atexit._run_exitfuncs()
-                self.assertIsNone(cm.unraisable.object)
-                self.assertEqual(cm.unraisable.err_msg,
-                        f'Exception ignored in atexit callback {func!r}')
+                self.assertEqual(cm.unraisable.object, func)
                 self.assertEqual(cm.unraisable.exc_type, ZeroDivisionError)
                 self.assertEqual(type(cm.unraisable.exc_value), ZeroDivisionError)
         finally:

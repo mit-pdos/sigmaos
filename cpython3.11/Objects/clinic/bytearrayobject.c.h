@@ -2,13 +2,6 @@
 preserve
 [clinic start generated code]*/
 
-#if defined(Py_BUILD_CORE) && !defined(Py_BUILD_CORE_MODULE)
-#  include "pycore_gc.h"          // PyGC_Head
-#  include "pycore_runtime.h"     // _Py_ID()
-#endif
-#include "pycore_abstract.h"      // _PyNumber_Index()
-#include "pycore_modsupport.h"    // _PyArg_UnpackKeywords()
-
 static int
 bytearray___init___impl(PyByteArrayObject *self, PyObject *arg,
                         const char *encoding, const char *errors);
@@ -17,31 +10,8 @@ static int
 bytearray___init__(PyObject *self, PyObject *args, PyObject *kwargs)
 {
     int return_value = -1;
-    #if defined(Py_BUILD_CORE) && !defined(Py_BUILD_CORE_MODULE)
-
-    #define NUM_KEYWORDS 3
-    static struct {
-        PyGC_Head _this_is_not_used;
-        PyObject_VAR_HEAD
-        PyObject *ob_item[NUM_KEYWORDS];
-    } _kwtuple = {
-        .ob_base = PyVarObject_HEAD_INIT(&PyTuple_Type, NUM_KEYWORDS)
-        .ob_item = { &_Py_ID(source), &_Py_ID(encoding), &_Py_ID(errors), },
-    };
-    #undef NUM_KEYWORDS
-    #define KWTUPLE (&_kwtuple.ob_base.ob_base)
-
-    #else  // !Py_BUILD_CORE
-    #  define KWTUPLE NULL
-    #endif  // !Py_BUILD_CORE
-
     static const char * const _keywords[] = {"source", "encoding", "errors", NULL};
-    static _PyArg_Parser _parser = {
-        .keywords = _keywords,
-        .fname = "bytearray",
-        .kwtuple = KWTUPLE,
-    };
-    #undef KWTUPLE
+    static _PyArg_Parser _parser = {NULL, _keywords, "bytearray", 0};
     PyObject *argsbuf[3];
     PyObject * const *fastargs;
     Py_ssize_t nargs = PyTuple_GET_SIZE(args);
@@ -50,8 +20,7 @@ bytearray___init__(PyObject *self, PyObject *args, PyObject *kwargs)
     const char *encoding = NULL;
     const char *errors = NULL;
 
-    fastargs = _PyArg_UnpackKeywords(_PyTuple_CAST(args)->ob_item, nargs, kwargs, NULL, &_parser,
-            /*minpos*/ 0, /*maxpos*/ 3, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+    fastargs = _PyArg_UnpackKeywords(_PyTuple_CAST(args)->ob_item, nargs, kwargs, NULL, &_parser, 0, 3, 0, argsbuf);
     if (!fastargs) {
         goto exit;
     }
@@ -102,106 +71,6 @@ exit:
     return return_value;
 }
 
-PyDoc_STRVAR(bytearray_find__doc__,
-"find($self, sub[, start[, end]], /)\n"
-"--\n"
-"\n"
-"Return the lowest index in B where subsection \'sub\' is found, such that \'sub\' is contained within B[start:end].\n"
-"\n"
-"  start\n"
-"    Optional start position. Default: start of the bytes.\n"
-"  end\n"
-"    Optional stop position. Default: end of the bytes.\n"
-"\n"
-"Return -1 on failure.");
-
-#define BYTEARRAY_FIND_METHODDEF    \
-    {"find", _PyCFunction_CAST(bytearray_find), METH_FASTCALL, bytearray_find__doc__},
-
-static PyObject *
-bytearray_find_impl(PyByteArrayObject *self, PyObject *sub, Py_ssize_t start,
-                    Py_ssize_t end);
-
-static PyObject *
-bytearray_find(PyByteArrayObject *self, PyObject *const *args, Py_ssize_t nargs)
-{
-    PyObject *return_value = NULL;
-    PyObject *sub;
-    Py_ssize_t start = 0;
-    Py_ssize_t end = PY_SSIZE_T_MAX;
-
-    if (!_PyArg_CheckPositional("find", nargs, 1, 3)) {
-        goto exit;
-    }
-    sub = args[0];
-    if (nargs < 2) {
-        goto skip_optional;
-    }
-    if (!_PyEval_SliceIndex(args[1], &start)) {
-        goto exit;
-    }
-    if (nargs < 3) {
-        goto skip_optional;
-    }
-    if (!_PyEval_SliceIndex(args[2], &end)) {
-        goto exit;
-    }
-skip_optional:
-    return_value = bytearray_find_impl(self, sub, start, end);
-
-exit:
-    return return_value;
-}
-
-PyDoc_STRVAR(bytearray_count__doc__,
-"count($self, sub[, start[, end]], /)\n"
-"--\n"
-"\n"
-"Return the number of non-overlapping occurrences of subsection \'sub\' in bytes B[start:end].\n"
-"\n"
-"  start\n"
-"    Optional start position. Default: start of the bytes.\n"
-"  end\n"
-"    Optional stop position. Default: end of the bytes.");
-
-#define BYTEARRAY_COUNT_METHODDEF    \
-    {"count", _PyCFunction_CAST(bytearray_count), METH_FASTCALL, bytearray_count__doc__},
-
-static PyObject *
-bytearray_count_impl(PyByteArrayObject *self, PyObject *sub,
-                     Py_ssize_t start, Py_ssize_t end);
-
-static PyObject *
-bytearray_count(PyByteArrayObject *self, PyObject *const *args, Py_ssize_t nargs)
-{
-    PyObject *return_value = NULL;
-    PyObject *sub;
-    Py_ssize_t start = 0;
-    Py_ssize_t end = PY_SSIZE_T_MAX;
-
-    if (!_PyArg_CheckPositional("count", nargs, 1, 3)) {
-        goto exit;
-    }
-    sub = args[0];
-    if (nargs < 2) {
-        goto skip_optional;
-    }
-    if (!_PyEval_SliceIndex(args[1], &start)) {
-        goto exit;
-    }
-    if (nargs < 3) {
-        goto skip_optional;
-    }
-    if (!_PyEval_SliceIndex(args[2], &end)) {
-        goto exit;
-    }
-skip_optional:
-    return_value = bytearray_count_impl(self, sub, start, end);
-
-exit:
-    return return_value;
-}
-
 PyDoc_STRVAR(bytearray_clear__doc__,
 "clear($self, /)\n"
 "--\n"
@@ -238,261 +107,6 @@ bytearray_copy(PyByteArrayObject *self, PyObject *Py_UNUSED(ignored))
     return bytearray_copy_impl(self);
 }
 
-PyDoc_STRVAR(bytearray_index__doc__,
-"index($self, sub[, start[, end]], /)\n"
-"--\n"
-"\n"
-"Return the lowest index in B where subsection \'sub\' is found, such that \'sub\' is contained within B[start:end].\n"
-"\n"
-"  start\n"
-"    Optional start position. Default: start of the bytes.\n"
-"  end\n"
-"    Optional stop position. Default: end of the bytes.\n"
-"\n"
-"Raise ValueError if the subsection is not found.");
-
-#define BYTEARRAY_INDEX_METHODDEF    \
-    {"index", _PyCFunction_CAST(bytearray_index), METH_FASTCALL, bytearray_index__doc__},
-
-static PyObject *
-bytearray_index_impl(PyByteArrayObject *self, PyObject *sub,
-                     Py_ssize_t start, Py_ssize_t end);
-
-static PyObject *
-bytearray_index(PyByteArrayObject *self, PyObject *const *args, Py_ssize_t nargs)
-{
-    PyObject *return_value = NULL;
-    PyObject *sub;
-    Py_ssize_t start = 0;
-    Py_ssize_t end = PY_SSIZE_T_MAX;
-
-    if (!_PyArg_CheckPositional("index", nargs, 1, 3)) {
-        goto exit;
-    }
-    sub = args[0];
-    if (nargs < 2) {
-        goto skip_optional;
-    }
-    if (!_PyEval_SliceIndex(args[1], &start)) {
-        goto exit;
-    }
-    if (nargs < 3) {
-        goto skip_optional;
-    }
-    if (!_PyEval_SliceIndex(args[2], &end)) {
-        goto exit;
-    }
-skip_optional:
-    return_value = bytearray_index_impl(self, sub, start, end);
-
-exit:
-    return return_value;
-}
-
-PyDoc_STRVAR(bytearray_rfind__doc__,
-"rfind($self, sub[, start[, end]], /)\n"
-"--\n"
-"\n"
-"Return the highest index in B where subsection \'sub\' is found, such that \'sub\' is contained within B[start:end].\n"
-"\n"
-"  start\n"
-"    Optional start position. Default: start of the bytes.\n"
-"  end\n"
-"    Optional stop position. Default: end of the bytes.\n"
-"\n"
-"Return -1 on failure.");
-
-#define BYTEARRAY_RFIND_METHODDEF    \
-    {"rfind", _PyCFunction_CAST(bytearray_rfind), METH_FASTCALL, bytearray_rfind__doc__},
-
-static PyObject *
-bytearray_rfind_impl(PyByteArrayObject *self, PyObject *sub,
-                     Py_ssize_t start, Py_ssize_t end);
-
-static PyObject *
-bytearray_rfind(PyByteArrayObject *self, PyObject *const *args, Py_ssize_t nargs)
-{
-    PyObject *return_value = NULL;
-    PyObject *sub;
-    Py_ssize_t start = 0;
-    Py_ssize_t end = PY_SSIZE_T_MAX;
-
-    if (!_PyArg_CheckPositional("rfind", nargs, 1, 3)) {
-        goto exit;
-    }
-    sub = args[0];
-    if (nargs < 2) {
-        goto skip_optional;
-    }
-    if (!_PyEval_SliceIndex(args[1], &start)) {
-        goto exit;
-    }
-    if (nargs < 3) {
-        goto skip_optional;
-    }
-    if (!_PyEval_SliceIndex(args[2], &end)) {
-        goto exit;
-    }
-skip_optional:
-    return_value = bytearray_rfind_impl(self, sub, start, end);
-
-exit:
-    return return_value;
-}
-
-PyDoc_STRVAR(bytearray_rindex__doc__,
-"rindex($self, sub[, start[, end]], /)\n"
-"--\n"
-"\n"
-"Return the highest index in B where subsection \'sub\' is found, such that \'sub\' is contained within B[start:end].\n"
-"\n"
-"  start\n"
-"    Optional start position. Default: start of the bytes.\n"
-"  end\n"
-"    Optional stop position. Default: end of the bytes.\n"
-"\n"
-"Raise ValueError if the subsection is not found.");
-
-#define BYTEARRAY_RINDEX_METHODDEF    \
-    {"rindex", _PyCFunction_CAST(bytearray_rindex), METH_FASTCALL, bytearray_rindex__doc__},
-
-static PyObject *
-bytearray_rindex_impl(PyByteArrayObject *self, PyObject *sub,
-                      Py_ssize_t start, Py_ssize_t end);
-
-static PyObject *
-bytearray_rindex(PyByteArrayObject *self, PyObject *const *args, Py_ssize_t nargs)
-{
-    PyObject *return_value = NULL;
-    PyObject *sub;
-    Py_ssize_t start = 0;
-    Py_ssize_t end = PY_SSIZE_T_MAX;
-
-    if (!_PyArg_CheckPositional("rindex", nargs, 1, 3)) {
-        goto exit;
-    }
-    sub = args[0];
-    if (nargs < 2) {
-        goto skip_optional;
-    }
-    if (!_PyEval_SliceIndex(args[1], &start)) {
-        goto exit;
-    }
-    if (nargs < 3) {
-        goto skip_optional;
-    }
-    if (!_PyEval_SliceIndex(args[2], &end)) {
-        goto exit;
-    }
-skip_optional:
-    return_value = bytearray_rindex_impl(self, sub, start, end);
-
-exit:
-    return return_value;
-}
-
-PyDoc_STRVAR(bytearray_startswith__doc__,
-"startswith($self, prefix[, start[, end]], /)\n"
-"--\n"
-"\n"
-"Return True if the bytearray starts with the specified prefix, False otherwise.\n"
-"\n"
-"  prefix\n"
-"    A bytes or a tuple of bytes to try.\n"
-"  start\n"
-"    Optional start position. Default: start of the bytearray.\n"
-"  end\n"
-"    Optional stop position. Default: end of the bytearray.");
-
-#define BYTEARRAY_STARTSWITH_METHODDEF    \
-    {"startswith", _PyCFunction_CAST(bytearray_startswith), METH_FASTCALL, bytearray_startswith__doc__},
-
-static PyObject *
-bytearray_startswith_impl(PyByteArrayObject *self, PyObject *subobj,
-                          Py_ssize_t start, Py_ssize_t end);
-
-static PyObject *
-bytearray_startswith(PyByteArrayObject *self, PyObject *const *args, Py_ssize_t nargs)
-{
-    PyObject *return_value = NULL;
-    PyObject *subobj;
-    Py_ssize_t start = 0;
-    Py_ssize_t end = PY_SSIZE_T_MAX;
-
-    if (!_PyArg_CheckPositional("startswith", nargs, 1, 3)) {
-        goto exit;
-    }
-    subobj = args[0];
-    if (nargs < 2) {
-        goto skip_optional;
-    }
-    if (!_PyEval_SliceIndex(args[1], &start)) {
-        goto exit;
-    }
-    if (nargs < 3) {
-        goto skip_optional;
-    }
-    if (!_PyEval_SliceIndex(args[2], &end)) {
-        goto exit;
-    }
-skip_optional:
-    return_value = bytearray_startswith_impl(self, subobj, start, end);
-
-exit:
-    return return_value;
-}
-
-PyDoc_STRVAR(bytearray_endswith__doc__,
-"endswith($self, suffix[, start[, end]], /)\n"
-"--\n"
-"\n"
-"Return True if the bytearray ends with the specified suffix, False otherwise.\n"
-"\n"
-"  suffix\n"
-"    A bytes or a tuple of bytes to try.\n"
-"  start\n"
-"    Optional start position. Default: start of the bytearray.\n"
-"  end\n"
-"    Optional stop position. Default: end of the bytearray.");
-
-#define BYTEARRAY_ENDSWITH_METHODDEF    \
-    {"endswith", _PyCFunction_CAST(bytearray_endswith), METH_FASTCALL, bytearray_endswith__doc__},
-
-static PyObject *
-bytearray_endswith_impl(PyByteArrayObject *self, PyObject *subobj,
-                        Py_ssize_t start, Py_ssize_t end);
-
-static PyObject *
-bytearray_endswith(PyByteArrayObject *self, PyObject *const *args, Py_ssize_t nargs)
-{
-    PyObject *return_value = NULL;
-    PyObject *subobj;
-    Py_ssize_t start = 0;
-    Py_ssize_t end = PY_SSIZE_T_MAX;
-
-    if (!_PyArg_CheckPositional("endswith", nargs, 1, 3)) {
-        goto exit;
-    }
-    subobj = args[0];
-    if (nargs < 2) {
-        goto skip_optional;
-    }
-    if (!_PyEval_SliceIndex(args[1], &start)) {
-        goto exit;
-    }
-    if (nargs < 3) {
-        goto skip_optional;
-    }
-    if (!_PyEval_SliceIndex(args[2], &end)) {
-        goto exit;
-    }
-skip_optional:
-    return_value = bytearray_endswith_impl(self, subobj, start, end);
-
-exit:
-    return return_value;
-}
-
 PyDoc_STRVAR(bytearray_removeprefix__doc__,
 "removeprefix($self, prefix, /)\n"
 "--\n"
@@ -516,6 +130,10 @@ bytearray_removeprefix(PyByteArrayObject *self, PyObject *arg)
     Py_buffer prefix = {NULL, NULL};
 
     if (PyObject_GetBuffer(arg, &prefix, PyBUF_SIMPLE) != 0) {
+        goto exit;
+    }
+    if (!PyBuffer_IsContiguous(&prefix, 'C')) {
+        _PyArg_BadArgument("removeprefix", "argument", "contiguous buffer", arg);
         goto exit;
     }
     return_value = bytearray_removeprefix_impl(self, &prefix);
@@ -554,6 +172,10 @@ bytearray_removesuffix(PyByteArrayObject *self, PyObject *arg)
     if (PyObject_GetBuffer(arg, &suffix, PyBUF_SIMPLE) != 0) {
         goto exit;
     }
+    if (!PyBuffer_IsContiguous(&suffix, 'C')) {
+        _PyArg_BadArgument("removesuffix", "argument", "contiguous buffer", arg);
+        goto exit;
+    }
     return_value = bytearray_removesuffix_impl(self, &suffix);
 
 exit:
@@ -588,38 +210,14 @@ static PyObject *
 bytearray_translate(PyByteArrayObject *self, PyObject *const *args, Py_ssize_t nargs, PyObject *kwnames)
 {
     PyObject *return_value = NULL;
-    #if defined(Py_BUILD_CORE) && !defined(Py_BUILD_CORE_MODULE)
-
-    #define NUM_KEYWORDS 1
-    static struct {
-        PyGC_Head _this_is_not_used;
-        PyObject_VAR_HEAD
-        PyObject *ob_item[NUM_KEYWORDS];
-    } _kwtuple = {
-        .ob_base = PyVarObject_HEAD_INIT(&PyTuple_Type, NUM_KEYWORDS)
-        .ob_item = { &_Py_ID(delete), },
-    };
-    #undef NUM_KEYWORDS
-    #define KWTUPLE (&_kwtuple.ob_base.ob_base)
-
-    #else  // !Py_BUILD_CORE
-    #  define KWTUPLE NULL
-    #endif  // !Py_BUILD_CORE
-
     static const char * const _keywords[] = {"", "delete", NULL};
-    static _PyArg_Parser _parser = {
-        .keywords = _keywords,
-        .fname = "translate",
-        .kwtuple = KWTUPLE,
-    };
-    #undef KWTUPLE
+    static _PyArg_Parser _parser = {NULL, _keywords, "translate", 0};
     PyObject *argsbuf[2];
     Py_ssize_t noptargs = nargs + (kwnames ? PyTuple_GET_SIZE(kwnames) : 0) - 1;
     PyObject *table;
     PyObject *deletechars = NULL;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 2, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser, 1, 2, 0, argsbuf);
     if (!args) {
         goto exit;
     }
@@ -639,7 +237,7 @@ PyDoc_STRVAR(bytearray_maketrans__doc__,
 "maketrans(frm, to, /)\n"
 "--\n"
 "\n"
-"Return a translation table usable for the bytes or bytearray translate method.\n"
+"Return a translation table useable for the bytes or bytearray translate method.\n"
 "\n"
 "The returned table will be one where each byte in frm is mapped to the byte at\n"
 "the same position in to.\n"
@@ -665,7 +263,15 @@ bytearray_maketrans(void *null, PyObject *const *args, Py_ssize_t nargs)
     if (PyObject_GetBuffer(args[0], &frm, PyBUF_SIMPLE) != 0) {
         goto exit;
     }
+    if (!PyBuffer_IsContiguous(&frm, 'C')) {
+        _PyArg_BadArgument("maketrans", "argument 1", "contiguous buffer", args[0]);
+        goto exit;
+    }
     if (PyObject_GetBuffer(args[1], &to, PyBUF_SIMPLE) != 0) {
+        goto exit;
+    }
+    if (!PyBuffer_IsContiguous(&to, 'C')) {
+        _PyArg_BadArgument("maketrans", "argument 2", "contiguous buffer", args[1]);
         goto exit;
     }
     return_value = bytearray_maketrans_impl(&frm, &to);
@@ -717,7 +323,15 @@ bytearray_replace(PyByteArrayObject *self, PyObject *const *args, Py_ssize_t nar
     if (PyObject_GetBuffer(args[0], &old, PyBUF_SIMPLE) != 0) {
         goto exit;
     }
+    if (!PyBuffer_IsContiguous(&old, 'C')) {
+        _PyArg_BadArgument("replace", "argument 1", "contiguous buffer", args[0]);
+        goto exit;
+    }
     if (PyObject_GetBuffer(args[1], &new, PyBUF_SIMPLE) != 0) {
+        goto exit;
+    }
+    if (!PyBuffer_IsContiguous(&new, 'C')) {
+        _PyArg_BadArgument("replace", "argument 2", "contiguous buffer", args[1]);
         goto exit;
     }
     if (nargs < 3) {
@@ -776,38 +390,14 @@ static PyObject *
 bytearray_split(PyByteArrayObject *self, PyObject *const *args, Py_ssize_t nargs, PyObject *kwnames)
 {
     PyObject *return_value = NULL;
-    #if defined(Py_BUILD_CORE) && !defined(Py_BUILD_CORE_MODULE)
-
-    #define NUM_KEYWORDS 2
-    static struct {
-        PyGC_Head _this_is_not_used;
-        PyObject_VAR_HEAD
-        PyObject *ob_item[NUM_KEYWORDS];
-    } _kwtuple = {
-        .ob_base = PyVarObject_HEAD_INIT(&PyTuple_Type, NUM_KEYWORDS)
-        .ob_item = { &_Py_ID(sep), &_Py_ID(maxsplit), },
-    };
-    #undef NUM_KEYWORDS
-    #define KWTUPLE (&_kwtuple.ob_base.ob_base)
-
-    #else  // !Py_BUILD_CORE
-    #  define KWTUPLE NULL
-    #endif  // !Py_BUILD_CORE
-
     static const char * const _keywords[] = {"sep", "maxsplit", NULL};
-    static _PyArg_Parser _parser = {
-        .keywords = _keywords,
-        .fname = "split",
-        .kwtuple = KWTUPLE,
-    };
-    #undef KWTUPLE
+    static _PyArg_Parser _parser = {NULL, _keywords, "split", 0};
     PyObject *argsbuf[2];
     Py_ssize_t noptargs = nargs + (kwnames ? PyTuple_GET_SIZE(kwnames) : 0) - 0;
     PyObject *sep = Py_None;
     Py_ssize_t maxsplit = -1;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 0, /*maxpos*/ 2, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser, 0, 2, 0, argsbuf);
     if (!args) {
         goto exit;
     }
@@ -899,38 +489,14 @@ static PyObject *
 bytearray_rsplit(PyByteArrayObject *self, PyObject *const *args, Py_ssize_t nargs, PyObject *kwnames)
 {
     PyObject *return_value = NULL;
-    #if defined(Py_BUILD_CORE) && !defined(Py_BUILD_CORE_MODULE)
-
-    #define NUM_KEYWORDS 2
-    static struct {
-        PyGC_Head _this_is_not_used;
-        PyObject_VAR_HEAD
-        PyObject *ob_item[NUM_KEYWORDS];
-    } _kwtuple = {
-        .ob_base = PyVarObject_HEAD_INIT(&PyTuple_Type, NUM_KEYWORDS)
-        .ob_item = { &_Py_ID(sep), &_Py_ID(maxsplit), },
-    };
-    #undef NUM_KEYWORDS
-    #define KWTUPLE (&_kwtuple.ob_base.ob_base)
-
-    #else  // !Py_BUILD_CORE
-    #  define KWTUPLE NULL
-    #endif  // !Py_BUILD_CORE
-
     static const char * const _keywords[] = {"sep", "maxsplit", NULL};
-    static _PyArg_Parser _parser = {
-        .keywords = _keywords,
-        .fname = "rsplit",
-        .kwtuple = KWTUPLE,
-    };
-    #undef KWTUPLE
+    static _PyArg_Parser _parser = {NULL, _keywords, "rsplit", 0};
     PyObject *argsbuf[2];
     Py_ssize_t noptargs = nargs + (kwnames ? PyTuple_GET_SIZE(kwnames) : 0) - 0;
     PyObject *sep = Py_None;
     Py_ssize_t maxsplit = -1;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 0, /*maxpos*/ 2, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser, 0, 2, 0, argsbuf);
     if (!args) {
         goto exit;
     }
@@ -1277,38 +843,14 @@ static PyObject *
 bytearray_decode(PyByteArrayObject *self, PyObject *const *args, Py_ssize_t nargs, PyObject *kwnames)
 {
     PyObject *return_value = NULL;
-    #if defined(Py_BUILD_CORE) && !defined(Py_BUILD_CORE_MODULE)
-
-    #define NUM_KEYWORDS 2
-    static struct {
-        PyGC_Head _this_is_not_used;
-        PyObject_VAR_HEAD
-        PyObject *ob_item[NUM_KEYWORDS];
-    } _kwtuple = {
-        .ob_base = PyVarObject_HEAD_INIT(&PyTuple_Type, NUM_KEYWORDS)
-        .ob_item = { &_Py_ID(encoding), &_Py_ID(errors), },
-    };
-    #undef NUM_KEYWORDS
-    #define KWTUPLE (&_kwtuple.ob_base.ob_base)
-
-    #else  // !Py_BUILD_CORE
-    #  define KWTUPLE NULL
-    #endif  // !Py_BUILD_CORE
-
     static const char * const _keywords[] = {"encoding", "errors", NULL};
-    static _PyArg_Parser _parser = {
-        .keywords = _keywords,
-        .fname = "decode",
-        .kwtuple = KWTUPLE,
-    };
-    #undef KWTUPLE
+    static _PyArg_Parser _parser = {NULL, _keywords, "decode", 0};
     PyObject *argsbuf[2];
     Py_ssize_t noptargs = nargs + (kwnames ? PyTuple_GET_SIZE(kwnames) : 0) - 0;
     const char *encoding = NULL;
     const char *errors = NULL;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 0, /*maxpos*/ 2, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser, 0, 2, 0, argsbuf);
     if (!args) {
         goto exit;
     }
@@ -1385,45 +927,21 @@ static PyObject *
 bytearray_splitlines(PyByteArrayObject *self, PyObject *const *args, Py_ssize_t nargs, PyObject *kwnames)
 {
     PyObject *return_value = NULL;
-    #if defined(Py_BUILD_CORE) && !defined(Py_BUILD_CORE_MODULE)
-
-    #define NUM_KEYWORDS 1
-    static struct {
-        PyGC_Head _this_is_not_used;
-        PyObject_VAR_HEAD
-        PyObject *ob_item[NUM_KEYWORDS];
-    } _kwtuple = {
-        .ob_base = PyVarObject_HEAD_INIT(&PyTuple_Type, NUM_KEYWORDS)
-        .ob_item = { &_Py_ID(keepends), },
-    };
-    #undef NUM_KEYWORDS
-    #define KWTUPLE (&_kwtuple.ob_base.ob_base)
-
-    #else  // !Py_BUILD_CORE
-    #  define KWTUPLE NULL
-    #endif  // !Py_BUILD_CORE
-
     static const char * const _keywords[] = {"keepends", NULL};
-    static _PyArg_Parser _parser = {
-        .keywords = _keywords,
-        .fname = "splitlines",
-        .kwtuple = KWTUPLE,
-    };
-    #undef KWTUPLE
+    static _PyArg_Parser _parser = {NULL, _keywords, "splitlines", 0};
     PyObject *argsbuf[1];
     Py_ssize_t noptargs = nargs + (kwnames ? PyTuple_GET_SIZE(kwnames) : 0) - 0;
     int keepends = 0;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 0, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser, 0, 1, 0, argsbuf);
     if (!args) {
         goto exit;
     }
     if (!noptargs) {
         goto skip_optional_pos;
     }
-    keepends = PyObject_IsTrue(args[0]);
-    if (keepends < 0) {
+    keepends = _PyLong_AsInt(args[0]);
+    if (keepends == -1 && PyErr_Occurred()) {
         goto exit;
     }
 skip_optional_pos:
@@ -1456,6 +974,9 @@ bytearray_fromhex(PyTypeObject *type, PyObject *arg)
 
     if (!PyUnicode_Check(arg)) {
         _PyArg_BadArgument("fromhex", "argument", "str", arg);
+        goto exit;
+    }
+    if (PyUnicode_READY(arg) == -1) {
         goto exit;
     }
     string = arg;
@@ -1498,38 +1019,14 @@ static PyObject *
 bytearray_hex(PyByteArrayObject *self, PyObject *const *args, Py_ssize_t nargs, PyObject *kwnames)
 {
     PyObject *return_value = NULL;
-    #if defined(Py_BUILD_CORE) && !defined(Py_BUILD_CORE_MODULE)
-
-    #define NUM_KEYWORDS 2
-    static struct {
-        PyGC_Head _this_is_not_used;
-        PyObject_VAR_HEAD
-        PyObject *ob_item[NUM_KEYWORDS];
-    } _kwtuple = {
-        .ob_base = PyVarObject_HEAD_INIT(&PyTuple_Type, NUM_KEYWORDS)
-        .ob_item = { &_Py_ID(sep), &_Py_ID(bytes_per_sep), },
-    };
-    #undef NUM_KEYWORDS
-    #define KWTUPLE (&_kwtuple.ob_base.ob_base)
-
-    #else  // !Py_BUILD_CORE
-    #  define KWTUPLE NULL
-    #endif  // !Py_BUILD_CORE
-
     static const char * const _keywords[] = {"sep", "bytes_per_sep", NULL};
-    static _PyArg_Parser _parser = {
-        .keywords = _keywords,
-        .fname = "hex",
-        .kwtuple = KWTUPLE,
-    };
-    #undef KWTUPLE
+    static _PyArg_Parser _parser = {NULL, _keywords, "hex", 0};
     PyObject *argsbuf[2];
     Py_ssize_t noptargs = nargs + (kwnames ? PyTuple_GET_SIZE(kwnames) : 0) - 0;
     PyObject *sep = NULL;
     int bytes_per_sep = 1;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 0, /*maxpos*/ 2, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser, 0, 2, 0, argsbuf);
     if (!args) {
         goto exit;
     }
@@ -1542,7 +1039,7 @@ bytearray_hex(PyByteArrayObject *self, PyObject *const *args, Py_ssize_t nargs, 
             goto skip_optional_pos;
         }
     }
-    bytes_per_sep = PyLong_AsInt(args[1]);
+    bytes_per_sep = _PyLong_AsInt(args[1]);
     if (bytes_per_sep == -1 && PyErr_Occurred()) {
         goto exit;
     }
@@ -1595,7 +1092,7 @@ bytearray_reduce_ex(PyByteArrayObject *self, PyObject *const *args, Py_ssize_t n
     if (nargs < 1) {
         goto skip_optional;
     }
-    proto = PyLong_AsInt(args[0]);
+    proto = _PyLong_AsInt(args[0]);
     if (proto == -1 && PyErr_Occurred()) {
         goto exit;
     }
@@ -1623,4 +1120,4 @@ bytearray_sizeof(PyByteArrayObject *self, PyObject *Py_UNUSED(ignored))
 {
     return bytearray_sizeof_impl(self);
 }
-/*[clinic end generated code: output=4488e38e7ffcc6ec input=a9049054013a1b77]*/
+/*[clinic end generated code: output=033e9eb5f2bb0139 input=a9049054013a1b77]*/

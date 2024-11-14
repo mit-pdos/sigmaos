@@ -544,7 +544,8 @@ Other CPython Implementation Changes
   (binary), 4, 8 (octal), 16 (hexadecimal), or 32 such as base 10 (decimal)
   now raises a :exc:`ValueError` if the number of digits in string form is
   above a limit to avoid potential denial of service attacks due to the
-  algorithmic complexity. This is a mitigation for :cve:`2020-10735`.
+  algorithmic complexity. This is a mitigation for `CVE-2020-10735
+  <https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2020-10735>`_.
   This limit can be configured or disabled by environment variable, command
   line flag, or :mod:`sys` APIs. See the :ref:`integer string conversion
   length limitation <int_max_str_digits>` documentation.  The default limit
@@ -913,6 +914,13 @@ os
   instead of ``CryptGenRandom()`` which is deprecated.
   (Contributed by Donghee Na in :issue:`44611`.)
 
+* As of 3.11.10, :func:`os.mkdir` and :func:`os.makedirs` on Windows
+  now support passing a *mode* value of ``0o700`` to apply access
+  control to the new directory. This implicitly affects
+  :func:`tempfile.mkdtemp` and is a mitigation for CVE-2024-4030.
+  Other values for *mode* continue to be ignored.
+  (Contributed by Steve Dower in :gh:`118486`.)
+
 
 .. _whatsnew311-pathlib:
 
@@ -1072,6 +1080,11 @@ tempfile
   This lets them work correctly with APIs that expect file-like objects,
   such as compression modules.
   (Contributed by Carey Metcalfe in :gh:`70363`.)
+
+* As of 3.11.10 on Windows, the default mode ``0o700`` used by
+  :func:`tempfile.mkdtemp` now limits access to the new directory due to
+  changes to :func:`os.mkdir`. This is a mitigation for CVE-2024-4030.
+  (Contributed by Steve Dower in :gh:`118486`.)
 
 
 .. _whatsnew311-threading:
@@ -1618,7 +1631,7 @@ raw, adaptive bytecode containing quickened data.
 New opcodes
 -----------
 
-* :opcode:`!ASYNC_GEN_WRAP`, :opcode:`RETURN_GENERATOR` and :opcode:`SEND`,
+* :opcode:`ASYNC_GEN_WRAP`, :opcode:`RETURN_GENERATOR` and :opcode:`SEND`,
   used in generators and co-routines.
 
 * :opcode:`COPY_FREE_VARS`,
@@ -1629,7 +1642,7 @@ New opcodes
 
 * :opcode:`MAKE_CELL`, to create :ref:`cell-objects`.
 
-* :opcode:`CHECK_EG_MATCH`  and  :opcode:`!PREP_RERAISE_STAR`,
+* :opcode:`CHECK_EG_MATCH`  and  :opcode:`PREP_RERAISE_STAR`,
   to handle the :ref:`new exception groups and except* <whatsnew311-pep654>`
   added in :pep:`654`.
 
@@ -1644,38 +1657,38 @@ New opcodes
 Replaced opcodes
 ----------------
 
-+------------------------------------+------------------------------------+-----------------------------------------+
-| Replaced Opcode(s)                 | New Opcode(s)                      | Notes                                   |
-+====================================+====================================+=========================================+
-| | :opcode:`!BINARY_*`              | :opcode:`BINARY_OP`                | Replaced all numeric binary/in-place    |
-| | :opcode:`!INPLACE_*`             |                                    | opcodes with a single opcode            |
-+------------------------------------+------------------------------------+-----------------------------------------+
-| | :opcode:`!CALL_FUNCTION`         | | :opcode:`CALL`                   | Decouples argument shifting for methods |
-| | :opcode:`!CALL_FUNCTION_KW`      | | :opcode:`!KW_NAMES`              | from handling of keyword arguments;     |
-| | :opcode:`!CALL_METHOD`           | | :opcode:`!PRECALL`               | allows better specialization of calls   |
-|                                    | | :opcode:`PUSH_NULL`              |                                         |
-+------------------------------------+------------------------------------+-----------------------------------------+
-| | :opcode:`!DUP_TOP`               | | :opcode:`COPY`                   | Stack manipulation instructions         |
-| | :opcode:`!DUP_TOP_TWO`           | | :opcode:`SWAP`                   |                                         |
-| | :opcode:`!ROT_TWO`               |                                    |                                         |
-| | :opcode:`!ROT_THREE`             |                                    |                                         |
-| | :opcode:`!ROT_FOUR`              |                                    |                                         |
-| | :opcode:`!ROT_N`                 |                                    |                                         |
-+------------------------------------+------------------------------------+-----------------------------------------+
-| | :opcode:`!JUMP_IF_NOT_EXC_MATCH` | | :opcode:`CHECK_EXC_MATCH`        | Now performs check but doesn't jump     |
-+------------------------------------+------------------------------------+-----------------------------------------+
-| | :opcode:`!JUMP_ABSOLUTE`         | | :opcode:`JUMP_BACKWARD`          | See [#bytecode-jump]_;                  |
-| | :opcode:`!POP_JUMP_IF_FALSE`     | | :opcode:`!POP_JUMP_BACKWARD_IF_*`| ``TRUE``, ``FALSE``,                    |
-| | :opcode:`!POP_JUMP_IF_TRUE`      | | :opcode:`!POP_JUMP_FORWARD_IF_*` | ``NONE`` and ``NOT_NONE`` variants      |
-|                                    |                                    | for each direction                      |
-|                                    |                                    |                                         |
-+------------------------------------+------------------------------------+-----------------------------------------+
-| | :opcode:`!SETUP_WITH`            | :opcode:`BEFORE_WITH`              | :keyword:`with` block setup             |
-| | :opcode:`!SETUP_ASYNC_WITH`      |                                    |                                         |
-+------------------------------------+------------------------------------+-----------------------------------------+
++------------------------------------+-----------------------------------+-----------------------------------------+
+| Replaced Opcode(s)                 | New Opcode(s)                     | Notes                                   |
++====================================+===================================+=========================================+
+| | :opcode:`!BINARY_*`              | :opcode:`BINARY_OP`               | Replaced all numeric binary/in-place    |
+| | :opcode:`!INPLACE_*`             |                                   | opcodes with a single opcode            |
++------------------------------------+-----------------------------------+-----------------------------------------+
+| | :opcode:`!CALL_FUNCTION`         | | :opcode:`CALL`                  | Decouples argument shifting for methods |
+| | :opcode:`!CALL_FUNCTION_KW`      | | :opcode:`KW_NAMES`              | from handling of keyword arguments;     |
+| | :opcode:`!CALL_METHOD`           | | :opcode:`PRECALL`               | allows better specialization of calls   |
+|                                    | | :opcode:`PUSH_NULL`             |                                         |
++------------------------------------+-----------------------------------+-----------------------------------------+
+| | :opcode:`!DUP_TOP`               | | :opcode:`COPY`                  | Stack manipulation instructions         |
+| | :opcode:`!DUP_TOP_TWO`           | | :opcode:`SWAP`                  |                                         |
+| | :opcode:`!ROT_TWO`               |                                   |                                         |
+| | :opcode:`!ROT_THREE`             |                                   |                                         |
+| | :opcode:`!ROT_FOUR`              |                                   |                                         |
+| | :opcode:`!ROT_N`                 |                                   |                                         |
++------------------------------------+-----------------------------------+-----------------------------------------+
+| | :opcode:`!JUMP_IF_NOT_EXC_MATCH` | | :opcode:`CHECK_EXC_MATCH`       | Now performs check but doesn't jump     |
++------------------------------------+-----------------------------------+-----------------------------------------+
+| | :opcode:`!JUMP_ABSOLUTE`         | | :opcode:`JUMP_BACKWARD`         | See [#bytecode-jump]_;                  |
+| | :opcode:`!POP_JUMP_IF_FALSE`     | | :opcode:`POP_JUMP_BACKWARD_IF_* | ``TRUE``, ``FALSE``,                    |
+| | :opcode:`!POP_JUMP_IF_TRUE`      |   <POP_JUMP_BACKWARD_IF_TRUE>`    | ``NONE`` and ``NOT_NONE`` variants      |
+|                                    | | :opcode:`POP_JUMP_FORWARD_IF_*  | for each direction                      |
+|                                    |   <POP_JUMP_FORWARD_IF_TRUE>`     |                                         |
++------------------------------------+-----------------------------------+-----------------------------------------+
+| | :opcode:`!SETUP_WITH`            | :opcode:`BEFORE_WITH`             | :keyword:`with` block setup             |
+| | :opcode:`!SETUP_ASYNC_WITH`      |                                   |                                         |
++------------------------------------+-----------------------------------+-----------------------------------------+
 
 .. [#bytecode-jump] All jump opcodes are now relative, including the
-   existing :opcode:`!JUMP_IF_TRUE_OR_POP` and :opcode:`!JUMP_IF_FALSE_OR_POP`.
+   existing :opcode:`JUMP_IF_TRUE_OR_POP` and :opcode:`JUMP_IF_FALSE_OR_POP`.
    The argument is now an offset from the current instruction
    rather than an absolute location.
 
@@ -1749,24 +1762,24 @@ Modules
   slated for removal in Python 3.13:
 
   +---------------------+---------------------+---------------------+---------------------+---------------------+
-  | :mod:`!aifc`        | :mod:`!chunk`       | :mod:`!msilib`      | :mod:`!pipes`       | :mod:`!telnetlib`   |
+  | :mod:`aifc`         | :mod:`chunk`        | :mod:`msilib`       | :mod:`pipes`        | :mod:`telnetlib`    |
   +---------------------+---------------------+---------------------+---------------------+---------------------+
-  | :mod:`!audioop`     | :mod:`!crypt`       | :mod:`!nis`         | :mod:`!sndhdr`      | :mod:`!uu`          |
+  | :mod:`audioop`      | :mod:`crypt`        | :mod:`nis`          | :mod:`sndhdr`       | :mod:`uu`           |
   +---------------------+---------------------+---------------------+---------------------+---------------------+
-  | :mod:`!cgi`         | :mod:`!imghdr`      | :mod:`!nntplib`     | :mod:`!spwd`        | :mod:`!xdrlib`      |
+  | :mod:`cgi`          | :mod:`imghdr`       | :mod:`nntplib`      | :mod:`spwd`         | :mod:`xdrlib`       |
   +---------------------+---------------------+---------------------+---------------------+---------------------+
-  | :mod:`!cgitb`       | :mod:`!mailcap`     | :mod:`!ossaudiodev` | :mod:`!sunau`       |                     |
+  | :mod:`cgitb`        | :mod:`mailcap`      | :mod:`ossaudiodev`  | :mod:`sunau`        |                     |
   +---------------------+---------------------+---------------------+---------------------+---------------------+
 
   (Contributed by Brett Cannon in :issue:`47061` and Victor Stinner in
   :gh:`68966`.)
 
-* The :mod:`!asynchat`, :mod:`!asyncore` and  :mod:`!smtpd` modules have been
+* The :mod:`asynchat`, :mod:`asyncore` and  :mod:`smtpd` modules have been
   deprecated since at least Python 3.6. Their documentation and deprecation
   warnings have now been updated to note they will be removed in Python 3.12.
   (Contributed by Hugo van Kemenade in :issue:`47022`.)
 
-* The :mod:`!lib2to3` package and ``2to3`` tool
+* The :mod:`lib2to3` package and :ref:`2to3 <2to3-reference>` tool
   are now deprecated and may not be able to parse Python 3.10 or newer.
   See :pep:`617`, introducing the new PEG parser, for details.
   (Contributed by Victor Stinner in :issue:`40360`.)
@@ -1803,13 +1816,13 @@ Standard Library
   and will be removed in a future Python version,
   due to not supporting resources located within package subdirectories:
 
-  * :func:`!importlib.resources.contents`
-  * :func:`!importlib.resources.is_resource`
-  * :func:`!importlib.resources.open_binary`
-  * :func:`!importlib.resources.open_text`
-  * :func:`!importlib.resources.read_binary`
-  * :func:`!importlib.resources.read_text`
-  * :func:`!importlib.resources.path`
+  * :func:`importlib.resources.contents`
+  * :func:`importlib.resources.is_resource`
+  * :func:`importlib.resources.open_binary`
+  * :func:`importlib.resources.open_text`
+  * :func:`importlib.resources.read_binary`
+  * :func:`importlib.resources.read_text`
+  * :func:`importlib.resources.path`
 
 * The :func:`locale.getdefaultlocale` function is deprecated and will be
   removed in Python 3.15. Use :func:`locale.setlocale`,
@@ -1817,7 +1830,7 @@ Standard Library
   :func:`locale.getlocale` functions instead.
   (Contributed by Victor Stinner in :gh:`90817`.)
 
-* The :func:`!locale.resetlocale` function is deprecated and will be
+* The :func:`locale.resetlocale` function is deprecated and will be
   removed in Python 3.13. Use ``locale.setlocale(locale.LC_ALL, "")`` instead.
   (Contributed by Victor Stinner in :gh:`90817`.)
 
@@ -1835,7 +1848,7 @@ Standard Library
   They will be removed in Python 3.13.
   (Contributed by Serhiy Storchaka and Miro Hrončok in :gh:`92728`.)
 
-* :func:`!turtle.settiltangle` has been deprecated since Python 3.1;
+* :func:`turtle.settiltangle` has been deprecated since Python 3.1;
   it now emits a deprecation warning and will be removed in Python 3.13. Use
   :func:`turtle.tiltangle` instead (it was earlier incorrectly marked
   as deprecated, and its docstring is now corrected).
@@ -1891,35 +1904,35 @@ and will be removed in Python 3.12.
 C APIs pending removal are
 :ref:`listed separately <whatsnew311-c-api-pending-removal>`.
 
-* The :mod:`!asynchat` module
-* The :mod:`!asyncore` module
+* The :mod:`asynchat` module
+* The :mod:`asyncore` module
 * The :ref:`entire distutils package <distutils-deprecated>`
-* The :mod:`!imp` module
+* The :mod:`imp` module
 * The :class:`typing.io <typing.IO>` namespace
 * The :class:`typing.re <typing.Pattern>` namespace
 * :func:`!cgi.log`
-* :func:`!importlib.find_loader`
-* :meth:`!importlib.abc.Loader.module_repr`
-* :meth:`!importlib.abc.MetaPathFinder.find_module`
-* :meth:`!importlib.abc.PathEntryFinder.find_loader`
-* :meth:`!importlib.abc.PathEntryFinder.find_module`
+* :func:`importlib.find_loader`
+* :meth:`importlib.abc.Loader.module_repr`
+* :meth:`importlib.abc.MetaPathFinder.find_module`
+* :meth:`importlib.abc.PathEntryFinder.find_loader`
+* :meth:`importlib.abc.PathEntryFinder.find_module`
 * :meth:`!importlib.machinery.BuiltinImporter.find_module`
 * :meth:`!importlib.machinery.BuiltinLoader.module_repr`
 * :meth:`!importlib.machinery.FileFinder.find_loader`
 * :meth:`!importlib.machinery.FileFinder.find_module`
 * :meth:`!importlib.machinery.FrozenImporter.find_module`
 * :meth:`!importlib.machinery.FrozenLoader.module_repr`
-* :meth:`!importlib.machinery.PathFinder.find_module`
+* :meth:`importlib.machinery.PathFinder.find_module`
 * :meth:`!importlib.machinery.WindowsRegistryFinder.find_module`
-* :func:`!importlib.util.module_for_loader`
+* :func:`importlib.util.module_for_loader`
 * :func:`!importlib.util.set_loader_wrapper`
 * :func:`!importlib.util.set_package_wrapper`
-* :class:`!pkgutil.ImpImporter`
-* :class:`!pkgutil.ImpLoader`
-* :meth:`!pathlib.Path.link_to`
+* :class:`pkgutil.ImpImporter`
+* :class:`pkgutil.ImpLoader`
+* :meth:`pathlib.Path.link_to`
 * :func:`!sqlite3.enable_shared_cache`
 * :func:`!sqlite3.OptimizedUnicode`
-* :envvar:`!PYTHONTHREADDEBUG` environment variable
+* :envvar:`PYTHONTHREADDEBUG` environment variable
 * The following deprecated aliases in :mod:`unittest`:
 
     ============================ =============================== ===============
@@ -1981,7 +1994,7 @@ Removed C APIs are :ref:`listed separately <whatsnew311-c-api-removed>`.
 
   (Contributed by Victor Stinner in :issue:`45085`.)
 
-* Removed the :mod:`!distutils` ``bdist_msi`` command deprecated in Python 3.9.
+* Removed the :mod:`distutils` ``bdist_msi`` command deprecated in Python 3.9.
   Use ``bdist_wheel`` (wheel packages) instead.
   (Contributed by Hugo van Kemenade in :issue:`45124`.)
 
@@ -2021,7 +2034,7 @@ Removed C APIs are :ref:`listed separately <whatsnew311-c-api-removed>`.
   because it was not used and added by mistake in previous versions.
   (Contributed by Nikita Sobolev in :issue:`46483`.)
 
-* Removed the :class:`!MailmanProxy` class in the :mod:`!smtpd` module,
+* Removed the :class:`!MailmanProxy` class in the :mod:`smtpd` module,
   as it is unusable without the external :mod:`!mailman` package.
   (Contributed by Donghee Na in :issue:`35800`.)
 
@@ -2032,8 +2045,8 @@ Removed C APIs are :ref:`listed separately <whatsnew311-c-api-removed>`.
   It was introduced in Python 3.4 but has been broken since Python 3.7.
   (Contributed by Inada Naoki in :issue:`23882`.)
 
-* Removed the undocumented private :meth:`!float.__set_format__` method,
-  previously known as :meth:`!float.__setformat__` in Python 3.7.
+* Removed the undocumented private :meth:`!float.__set_format__()` method,
+  previously known as :meth:`!float.__setformat__()` in Python 3.7.
   Its docstring said: "You probably don't want to use this function.
   It exists mainly to be used in Python's test suite."
   (Contributed by Victor Stinner in :issue:`46852`.)
@@ -2042,7 +2055,7 @@ Removed C APIs are :ref:`listed separately <whatsnew311-c-api-removed>`.
   (and corresponding :c:macro:`!EXPERIMENTAL_ISOLATED_SUBINTERPRETERS` macro)
   have been removed.
 
-* :pypi:`Pynche`
+* `Pynche <https://pypi.org/project/pynche/>`_
   --- The Pythonically Natural Color and Hue Editor --- has been moved out
   of ``Tools/scripts`` and is `being developed independently
   <https://gitlab.com/warsaw/pynche/-/tree/main>`_ from the Python source tree.
@@ -2138,7 +2151,7 @@ Build Changes
     :issue:`45440` and :issue:`46640`.)
 
   * Support for `IEEE 754 <https://en.wikipedia.org/wiki/IEEE_754>`_
-    floating-point numbers.
+    floating point numbers.
     (Contributed by Victor Stinner in :issue:`46917`.)
 
 * The :c:macro:`!Py_NO_NAN` macro has been removed.
@@ -2168,7 +2181,7 @@ Build Changes
   (Contributed by Donghee Na and Brett Holman in :issue:`44340`.)
 
 * Freelists for object structs can now be disabled. A new :program:`configure`
-  option ``--without-freelists`` can be used to disable all freelists
+  option :option:`!--without-freelists` can be used to disable all freelists
   except empty tuple singleton.
   (Contributed by Christian Heimes in :issue:`45522`.)
 
@@ -2309,7 +2322,7 @@ Porting to Python 3.11
   as its second parameter, instead of ``PyFrameObject*``.
   See :pep:`523` for more details of how to use this function pointer type.
 
-* :c:func:`!PyCode_New` and :c:func:`!PyCode_NewWithPosOnlyArgs` now take
+* :c:func:`PyCode_New` and :c:func:`PyCode_NewWithPosOnlyArgs` now take
   an additional ``exception_table`` argument.
   Using these functions should be avoided, if at all possible.
   To get a custom code object: create a code object using the compiler,
@@ -2416,7 +2429,7 @@ Porting to Python 3.11
   been included directly, consider including ``Python.h`` instead.
   (Contributed by Victor Stinner in :issue:`35134`.)
 
-* The :c:func:`!PyUnicode_CHECK_INTERNED` macro has been excluded from the
+* The :c:func:`PyUnicode_CHECK_INTERNED` macro has been excluded from the
   limited C API. It was never usable there, because it used internal structures
   which are not available in the limited C API.
   (Contributed by Victor Stinner in :issue:`46007`.)
@@ -2715,7 +2728,7 @@ Removed
   (Contributed by Inada Naoki in :issue:`44029`.)
 
 
-Notable changes in 3.11.4
+Notable Changes in 3.11.4
 =========================
 
 tarfile
@@ -2732,7 +2745,7 @@ tarfile
   (Contributed by Petr Viktorin in :pep:`706`.)
 
 
-Notable changes in 3.11.5
+Notable Changes in 3.11.5
 =========================
 
 OpenSSL
@@ -2740,5 +2753,36 @@ OpenSSL
 
 * Windows builds and macOS installers from python.org now use OpenSSL 3.0.
 
-
 .. _libb2: https://www.blake2.net/
+
+
+Notable changes in 3.11.10
+==========================
+
+ipaddress
+---------
+
+* Fixed ``is_global`` and ``is_private`` behavior in ``IPv4Address``,
+  ``IPv6Address``, ``IPv4Network`` and ``IPv6Network``.
+
+email
+-----
+
+* Headers with embedded newlines are now quoted on output.
+
+  The :mod:`~email.generator` will now refuse to serialize (write) headers
+  that are improperly folded or delimited, such that they would be parsed as
+  multiple headers or joined with adjacent data.
+  If you need to turn this safety feature off,
+  set :attr:`~email.policy.Policy.verify_generated_headers`.
+  (Contributed by Bas Bloemsaat and Petr Viktorin in :gh:`121650`.)
+
+* :func:`email.utils.getaddresses` and :func:`email.utils.parseaddr` now return
+  ``('', '')`` 2-tuples in more situations where invalid email addresses are
+  encountered, instead of potentially inaccurate values.
+  An optional *strict* parameter was added to these two functions:
+  use ``strict=False`` to get the old behavior, accepting malformed inputs.
+  ``getattr(email.utils, 'supports_strict_parsing', False)`` can be used to
+  check if the *strict* paramater is available.
+  (Contributed by Thomas Dwyer and Victor Stinner for :gh:`102988` to improve
+  the CVE-2023-27043 fix.)

@@ -72,7 +72,6 @@
   <Import Project="python.props" />
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Label="Configuration">
-    <TargetName>$(PyExeName)</TargetName>
     <ConfigurationType>Application</ConfigurationType>
     <UseOfMfc>false</UseOfMfc>
     <CharacterSet>MultiByte</CharacterSet>
@@ -95,11 +94,8 @@
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
-      <StackReserveSize>2000000</StackReserveSize>
-      <StackReserveSize Condition="$(Configuration) == 'Debug'">12000000</StackReserveSize>
-      <StackReserveSize Condition="$(Configuration) == 'PGInstrument'">12000000</StackReserveSize>
-      <!-- HACK: Need additional memory to avoid crashing until gh-113655 is fixed -->
-      <StackReserveSize Condition="$(Configuration) == 'PGUpdate' and $(UseExtraStackReserve) == 'true'">3000000</StackReserveSize>
+      <StackReserveSize Condition="$(Configuration) != 'Debug'">2000000</StackReserveSize>
+      <StackReserveSize Condition="$(Configuration) == 'Debug'">8000000</StackReserveSize>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -133,7 +129,7 @@
     </PropertyGroup>
     <Exec Command='setlocal
 set PYTHONPATH=$(PySourcePath)Lib
-"$(OutDir)$(PyExeName)$(PyDebugExt).exe" "$(PySourcePath)PC\validate_ucrtbase.py" $(UcrtName)' ContinueOnError="true" />
+"$(OutDir)python$(PyDebugExt).exe" "$(PySourcePath)PC\validate_ucrtbase.py" $(UcrtName)' ContinueOnError="true" />
   </Target>
   <Target Name="GeneratePythonBat" AfterTargets="AfterBuild">
     <PropertyGroup>
@@ -146,7 +142,7 @@ set PYTHONPATH=$(PySourcePath)Lib
 @echo Running $(Configuration)^|$(Platform) interpreter...
 @setlocal
 @set PYTHONHOME=$(PySourcePath)
-@"$(OutDir)$(PyExeName)$(PyDebugExt).exe" %*
+@"$(OutDir)python$(PyDebugExt).exe" %*
 </_Content>
       <_ExistingContent Condition="Exists('$(PySourcePath)python.bat')">$([System.IO.File]::ReadAllText('$(PySourcePath)python.bat'))</_ExistingContent>
     </PropertyGroup>

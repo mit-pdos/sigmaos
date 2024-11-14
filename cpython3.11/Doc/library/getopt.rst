@@ -1,5 +1,5 @@
-:mod:`!getopt` --- C-style parser for command line options
-==========================================================
+:mod:`getopt` --- C-style parser for command line options
+=========================================================
 
 .. module:: getopt
    :synopsis: Portable parser for command line options; support both short and
@@ -7,23 +7,18 @@
 
 **Source code:** :source:`Lib/getopt.py`
 
-.. deprecated:: 3.13
-   The :mod:`getopt` module is :term:`soft deprecated` and will not be
-   developed further; development will continue with the :mod:`argparse`
-   module.
-
 .. note::
 
    The :mod:`getopt` module is a parser for command line options whose API is
-   designed to be familiar to users of the C :c:func:`!getopt` function. Users who
-   are unfamiliar with the C :c:func:`!getopt` function or who would like to write
+   designed to be familiar to users of the C :c:func:`getopt` function. Users who
+   are unfamiliar with the C :c:func:`getopt` function or who would like to write
    less code and get better help and error messages should consider using the
    :mod:`argparse` module instead.
 
 --------------
 
 This module helps scripts to parse the command line arguments in ``sys.argv``.
-It supports the same conventions as the Unix :c:func:`!getopt` function (including
+It supports the same conventions as the Unix :c:func:`getopt` function (including
 the special meanings of arguments of the form '``-``' and '``--``').  Long
 options similar to those supported by GNU software may be used as well via an
 optional third argument.
@@ -38,22 +33,19 @@ exception:
    be parsed, without the leading reference to the running program. Typically, this
    means ``sys.argv[1:]``. *shortopts* is the string of option letters that the
    script wants to recognize, with options that require an argument followed by a
-   colon (``':'``) and options that accept an optional argument followed by
-   two colons (``'::'``); i.e., the same format that Unix :c:func:`!getopt` uses.
+   colon (``':'``; i.e., the same format that Unix :c:func:`getopt` uses).
 
    .. note::
 
-      Unlike GNU :c:func:`!getopt`, after a non-option argument, all further
+      Unlike GNU :c:func:`getopt`, after a non-option argument, all further
       arguments are considered also non-options. This is similar to the way
       non-GNU Unix systems work.
 
    *longopts*, if specified, must be a list of strings with the names of the
    long options which should be supported.  The leading ``'--'`` characters
    should not be included in the option name.  Long options which require an
-   argument should be followed by an equal sign (``'='``).
-   Long options which accept an optional argument should be followed by
-   an equal sign and question mark (``'=?'``).
-   To accept only long options, *shortopts* should be an
+   argument should be followed by an equal sign (``'='``).  Optional arguments
+   are not supported.  To accept only long options, *shortopts* should be an
    empty string.  Long options on the command line can be recognized so long as
    they provide a prefix of the option name that matches exactly one of the
    accepted options.  For example, if *longopts* is ``['foo', 'frob']``, the
@@ -70,9 +62,6 @@ exception:
    options occur in the list in the same order in which they were found, thus
    allowing multiple occurrences.  Long and short options may be mixed.
 
-   .. versionchanged:: 3.14
-      Optional arguments are supported.
-
 
 .. function:: gnu_getopt(args, shortopts, longopts=[])
 
@@ -82,7 +71,7 @@ exception:
    non-option argument is encountered.
 
    If the first character of the option string is ``'+'``, or if the environment
-   variable :envvar:`!POSIXLY_CORRECT` is set, then option processing stops as
+   variable :envvar:`POSIXLY_CORRECT` is set, then option processing stops as
    soon as a non-option argument is encountered.
 
 
@@ -92,9 +81,9 @@ exception:
    an option requiring an argument is given none. The argument to the exception is
    a string indicating the cause of the error.  For long options, an argument given
    to an option which does not require one will also cause this exception to be
-   raised.  The attributes :attr:`!msg` and :attr:`!opt` give the error message and
+   raised.  The attributes :attr:`msg` and :attr:`opt` give the error message and
    related option; if there is no specific option to which the exception relates,
-   :attr:`!opt` is an empty string.
+   :attr:`opt` is an empty string.
 
 .. XXX deprecated?
 .. exception:: error
@@ -102,8 +91,6 @@ exception:
    Alias for :exc:`GetoptError`; for backward compatibility.
 
 An example using only Unix style options:
-
-.. doctest::
 
    >>> import getopt
    >>> args = '-a -b -cfoo -d bar a1 a2'.split()
@@ -117,8 +104,6 @@ An example using only Unix style options:
 
 Using long option names is equally easy:
 
-.. doctest::
-
    >>> s = '--condition=foo --testing --output-file abc.def -x a1 a2'
    >>> args = s.split()
    >>> args
@@ -130,23 +115,7 @@ Using long option names is equally easy:
    >>> args
    ['a1', 'a2']
 
-Optional arguments should be specified explicitly:
-
-.. doctest::
-
-   >>> s = '-Con -C --color=off --color a1 a2'
-   >>> args = s.split()
-   >>> args
-   ['-Con', '-C', '--color=off', '--color', 'a1', 'a2']
-   >>> optlist, args = getopt.getopt(args, 'C::', ['color=?'])
-   >>> optlist
-   [('-C', 'on'), ('-C', ''), ('--color', 'off'), ('--color', '')]
-   >>> args
-   ['a1', 'a2']
-
-In a script, typical usage is something like this:
-
-.. testcode::
+In a script, typical usage is something like this::
 
    import getopt, sys
 
@@ -176,9 +145,7 @@ In a script, typical usage is something like this:
        main()
 
 Note that an equivalent command line interface could be produced with less code
-and more informative help and error messages by using the :mod:`argparse` module:
-
-.. testcode::
+and more informative help and error messages by using the :mod:`argparse` module::
 
    import argparse
 

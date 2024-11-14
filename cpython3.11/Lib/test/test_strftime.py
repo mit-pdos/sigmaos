@@ -54,10 +54,14 @@ class StrftimeTest(unittest.TestCase):
         self.now = now
 
     def setUp(self):
-        from locale import setlocale, LC_TIME
-        saved_locale = setlocale(LC_TIME)
-        setlocale(LC_TIME, 'C')
-        self.addCleanup(setlocale, LC_TIME, saved_locale)
+        try:
+            import java
+            java.util.Locale.setDefault(java.util.Locale.US)
+        except ImportError:
+            from locale import setlocale, LC_TIME
+            saved_locale = setlocale(LC_TIME)
+            setlocale(LC_TIME, 'C')
+            self.addCleanup(setlocale, LC_TIME, saved_locale)
 
     def test_strftime(self):
         now = time.time()
@@ -183,7 +187,8 @@ class Y1900Tests(unittest.TestCase):
     def test_y_before_1900(self):
         # Issue #13674, #19634
         t = (1899, 1, 1, 0, 0, 0, 0, 0, 0)
-        if sys.platform.startswith(("aix", "sunos", "solaris")):
+        if (sys.platform == "win32"
+        or sys.platform.startswith(("aix", "sunos", "solaris"))):
             with self.assertRaises(ValueError):
                 time.strftime("%y", t)
         else:

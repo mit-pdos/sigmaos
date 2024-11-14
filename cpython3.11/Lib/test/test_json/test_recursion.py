@@ -12,8 +12,8 @@ class TestRecursion:
         x.append(x)
         try:
             self.dumps(x)
-        except ValueError as exc:
-            self.assertEqual(exc.__notes__, ["when serializing list item 0"])
+        except ValueError:
+            pass
         else:
             self.fail("didn't raise ValueError on list recursion")
         x = []
@@ -21,8 +21,8 @@ class TestRecursion:
         x.append(y)
         try:
             self.dumps(x)
-        except ValueError as exc:
-            self.assertEqual(exc.__notes__, ["when serializing list item 0"]*2)
+        except ValueError:
+            pass
         else:
             self.fail("didn't raise ValueError on alternating list recursion")
         y = []
@@ -35,8 +35,8 @@ class TestRecursion:
         x["test"] = x
         try:
             self.dumps(x)
-        except ValueError as exc:
-            self.assertEqual(exc.__notes__, ["when serializing dict item 'test'"])
+        except ValueError:
+            pass
         else:
             self.fail("didn't raise ValueError on dict recursion")
         x = {}
@@ -60,10 +60,8 @@ class TestRecursion:
         enc.recurse = True
         try:
             enc.encode(JSONTestObject)
-        except ValueError as exc:
-            self.assertEqual(exc.__notes__,
-                             ["when serializing list item 0",
-                              "when serializing type object"])
+        except ValueError:
+            pass
         else:
             self.fail("didn't raise ValueError on default recursion")
 
@@ -87,10 +85,10 @@ class TestRecursion:
         for x in range(100000):
             l, d = [l], {'k':d}
         with self.assertRaises(RecursionError):
-            with support.infinite_recursion(5000):
+            with support.infinite_recursion():
                 self.dumps(l)
         with self.assertRaises(RecursionError):
-            with support.infinite_recursion(5000):
+            with support.infinite_recursion():
                 self.dumps(d)
 
     def test_endless_recursion(self):
@@ -101,7 +99,7 @@ class TestRecursion:
                 return [o]
 
         with self.assertRaises(RecursionError):
-            with support.infinite_recursion(1000):
+            with support.infinite_recursion():
                 EndlessJSONEncoder(check_circular=False).encode(5j)
 
 

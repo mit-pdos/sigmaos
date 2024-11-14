@@ -8,8 +8,10 @@
 
 #include "Python.h"
 
-#ifndef MODULE_NAME
-#  error "MODULE_NAME macro must be defined"
+#if __cplusplus >= 201103
+#  define NAME _testcpp11ext
+#else
+#  define NAME _testcpp03ext
 #endif
 
 #define _STR(NAME) #NAME
@@ -86,7 +88,7 @@ test_api_casts(PyObject *Py_UNUSED(module), PyObject *Py_UNUSED(args))
     // gh-93442: Pass 0 as NULL for PyObject*
     Py_XINCREF(0);
     Py_XDECREF(0);
-#if __cplusplus >= 201103
+#if _cplusplus >= 201103
     // Test nullptr passed as PyObject*
     Py_XINCREF(nullptr);
     Py_XDECREF(nullptr);
@@ -158,7 +160,7 @@ PyType_Slot VirtualPyObject_Slots[] = {
 };
 
 PyType_Spec VirtualPyObject_Spec = {
-    /* .name */ STR(MODULE_NAME) ".VirtualPyObject",
+    /* .name */ STR(NAME) ".VirtualPyObject",
     /* .basicsize */ sizeof(VirtualPyObject),
     /* .itemsize */ 0,
     /* .flags */ Py_TPFLAGS_DEFAULT,
@@ -225,10 +227,6 @@ _testcppext_exec(PyObject *module)
     if (!result) return -1;
     Py_DECREF(result);
 
-    // test Py_BUILD_ASSERT() and Py_BUILD_ASSERT_EXPR()
-    Py_BUILD_ASSERT(sizeof(int) == sizeof(unsigned int));
-    assert(Py_BUILD_ASSERT_EXPR(sizeof(int) == sizeof(unsigned int)) == 0);
-
     return 0;
 }
 
@@ -242,7 +240,7 @@ PyDoc_STRVAR(_testcppext_doc, "C++ test extension.");
 
 static struct PyModuleDef _testcppext_module = {
     PyModuleDef_HEAD_INIT,  // m_base
-    STR(MODULE_NAME),  // m_name
+    STR(NAME),  // m_name
     _testcppext_doc,  // m_doc
     0,  // m_size
     _testcppext_methods,  // m_methods
@@ -256,7 +254,7 @@ static struct PyModuleDef _testcppext_module = {
 #define FUNC_NAME(NAME) _FUNC_NAME(NAME)
 
 PyMODINIT_FUNC
-FUNC_NAME(MODULE_NAME)(void)
+FUNC_NAME(NAME)(void)
 {
     return PyModuleDef_Init(&_testcppext_module);
 }

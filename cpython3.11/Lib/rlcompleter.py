@@ -35,7 +35,6 @@ import inspect
 import keyword
 import re
 import __main__
-import warnings
 
 __all__ = ["Completer"]
 
@@ -89,11 +88,10 @@ class Completer:
                 return None
 
         if state == 0:
-            with warnings.catch_warnings(action="ignore"):
-                if "." in text:
-                    self.matches = self.attr_matches(text)
-                else:
-                    self.matches = self.global_matches(text)
+            if "." in text:
+                self.matches = self.attr_matches(text)
+            else:
+                self.matches = self.global_matches(text)
         try:
             return self.matches[state]
         except IndexError:

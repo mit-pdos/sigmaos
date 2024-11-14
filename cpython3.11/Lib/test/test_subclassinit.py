@@ -134,28 +134,30 @@ class Test(unittest.TestCase):
             def __set_name__(self, owner, name):
                 1/0
 
-        with self.assertRaises(ZeroDivisionError) as cm:
+        with self.assertRaises(RuntimeError) as cm:
             class NotGoingToWork:
                 attr = Descriptor()
 
-        notes = cm.exception.__notes__
-        self.assertRegex(str(notes), r'\bNotGoingToWork\b')
-        self.assertRegex(str(notes), r'\battr\b')
-        self.assertRegex(str(notes), r'\bDescriptor\b')
+        exc = cm.exception
+        self.assertRegex(str(exc), r'\bNotGoingToWork\b')
+        self.assertRegex(str(exc), r'\battr\b')
+        self.assertRegex(str(exc), r'\bDescriptor\b')
+        self.assertIsInstance(exc.__cause__, ZeroDivisionError)
 
     def test_set_name_wrong(self):
         class Descriptor:
             def __set_name__(self):
                 pass
 
-        with self.assertRaises(TypeError) as cm:
+        with self.assertRaises(RuntimeError) as cm:
             class NotGoingToWork:
                 attr = Descriptor()
 
-        notes = cm.exception.__notes__
-        self.assertRegex(str(notes), r'\bNotGoingToWork\b')
-        self.assertRegex(str(notes), r'\battr\b')
-        self.assertRegex(str(notes), r'\bDescriptor\b')
+        exc = cm.exception
+        self.assertRegex(str(exc), r'\bNotGoingToWork\b')
+        self.assertRegex(str(exc), r'\battr\b')
+        self.assertRegex(str(exc), r'\bDescriptor\b')
+        self.assertIsInstance(exc.__cause__, TypeError)
 
     def test_set_name_lookup(self):
         resolved = []

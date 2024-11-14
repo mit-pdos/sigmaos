@@ -16,7 +16,7 @@ else:
     _setmode = None
 
 import io
-from io import (__all__, SEEK_SET, SEEK_CUR, SEEK_END)  # noqa: F401
+from io import (__all__, SEEK_SET, SEEK_CUR, SEEK_END)
 
 valid_seek_flags = {0, 1, 2}  # Hardwired values
 if hasattr(os, 'SEEK_HOLE') :
@@ -33,8 +33,11 @@ DEFAULT_BUFFER_SIZE = 8 * 1024  # bytes
 # Rebind for compatibility
 BlockingIOError = BlockingIOError
 
+# Does io.IOBase finalizer log the exception if the close() method fails?
+# The exception is ignored silently by default in release build.
+_IOBASE_EMITS_UNRAISABLE = (hasattr(sys, "gettotalrefcount") or sys.flags.dev_mode)
 # Does open() check its 'errors' argument?
-_CHECK_ERRORS = (hasattr(sys, "gettotalrefcount") or sys.flags.dev_mode)
+_CHECK_ERRORS = _IOBASE_EMITS_UNRAISABLE
 
 
 def text_encoding(encoding, stacklevel=2):
@@ -238,11 +241,18 @@ def open(file, mode="r", buffering=-1, encoding=None, errors=None,
     result = raw
     try:
         line_buffering = False
-        if buffering == 1 or buffering < 0 and raw._isatty_open_only():
+        if buffering == 1 or buffering < 0 and raw.isatty():
             buffering = -1
             line_buffering = True
         if buffering < 0:
-            buffering = raw._blksize
+            buffering = DEFAULT_BUFFER_SIZE
+            try:
+                bs = os.fstat(raw.fileno()).st_blksize
+            except (OSError, AttributeError):
+                pass
+            else:
+                if bs > 1:
+                    buffering = bs
         if buffering < 0:
             raise ValueError("invalid buffering size")
         if buffering == 0:
@@ -291,6 +301,22 @@ try:
     open_code = io.open_code
 except AttributeError:
     open_code = _open_code_with_warning
+
+
+def __getattr__(name):
+    if name == "OpenWrapper":
+        # bpo-43680: Until Python 3.9, _pyio.open was not a static method and
+        # builtins.open was set to OpenWrapper to not become a bound method
+        # when set to a class variable. _io.open is a built-in function whereas
+        # _pyio.open is a Python function. In Python 3.10, _pyio.open() is now
+        # a static method, and builtins.open() is now io.open().
+        import warnings
+        warnings.warn('OpenWrapper is deprecated, use open instead',
+                      DeprecationWarning, stacklevel=2)
+        global OpenWrapper
+        OpenWrapper = open
+        return OpenWrapper
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
 # In normal operation, both `UnsupportedOperation`s should be bound to the
@@ -406,9 +432,18 @@ class IOBase(metaclass=abc.ABCMeta):
         if closed:
             return
 
-        # If close() fails, the caller logs the exception with
-        # sys.unraisablehook. close() must be called at the end at __del__().
-        self.close()
+        if _IOBASE_EMITS_UNRAISABLE:
+            self.close()
+        else:
+            # The try/except block is in case this is called at program
+            # exit time, when it's possible that globals have already been
+            # deleted, and then the close() call might fail.  Since
+            # there's nothing we can do about such failures and they annoy
+            # the end users, we suppress the traceback.
+            try:
+                self.close()
+            except:
+                pass
 
     ### Inquiries ###
 
@@ -619,7 +654,10 @@ class RawIOBase(IOBase):
     def readall(self):
         """Read until EOF, using multiple read() call."""
         res = bytearray()
-        while data := self.read(DEFAULT_BUFFER_SIZE):
+        while True:
+            data = self.read(DEFAULT_BUFFER_SIZE)
+            if not data:
+                break
             res += data
         if res:
             return bytes(res)
@@ -1107,7 +1145,6 @@ class BufferedReader(_BufferedIOMixin):
         do at most one raw read to satisfy it.  We never return more
         than self.buffer_size.
         """
-        self._checkClosed("peek of closed file")
         with self._read_lock:
             return self._peek_unlocked(size)
 
@@ -1126,7 +1163,6 @@ class BufferedReader(_BufferedIOMixin):
         """Reads up to size bytes, with at most one read() system call."""
         # Returns up to size bytes.  If at least one byte is buffered, we
         # only return buffered bytes.  Otherwise, we do one raw read.
-        self._checkClosed("read of closed file")
         if size < 0:
             size = self.buffer_size
         if size == 0:
@@ -1143,8 +1179,6 @@ class BufferedReader(_BufferedIOMixin):
     # performance reasons).
     def _readinto(self, buf, read1):
         """Read data into *buf* with at most one system call."""
-
-        self._checkClosed("readinto of closed file")
 
         # Need to create a memoryview object of type 'b', otherwise
         # we may not be able to assign bytes to it, and slicing it
@@ -1196,7 +1230,6 @@ class BufferedReader(_BufferedIOMixin):
     def seek(self, pos, whence=0):
         if whence not in valid_seek_flags:
             raise ValueError("invalid whence value")
-        self._checkClosed("seek of closed file")
         with self._read_lock:
             if whence == 1:
                 pos -= len(self._read_buf) - self._read_pos
@@ -1480,7 +1513,6 @@ class FileIO(RawIOBase):
         """
         if self._fd >= 0:
             # Have to close the existing file first.
-            self._stat_atopen = None
             try:
                 if self._closefd:
                     os.close(self._fd)
@@ -1490,11 +1522,6 @@ class FileIO(RawIOBase):
         if isinstance(file, float):
             raise TypeError('integer argument expected, got float')
         if isinstance(file, int):
-            if isinstance(file, bool):
-                import warnings
-                warnings.warn("bool is used as a file descriptor",
-                              RuntimeWarning, stacklevel=2)
-                file = int(file)
             fd = file
             if fd < 0:
                 raise ValueError('negative file descriptor')
@@ -1559,15 +1586,18 @@ class FileIO(RawIOBase):
                     os.set_inheritable(fd, False)
 
             self._closefd = closefd
-            self._stat_atopen = os.fstat(fd)
+            fdfstat = os.fstat(fd)
             try:
-                if stat.S_ISDIR(self._stat_atopen.st_mode):
+                if stat.S_ISDIR(fdfstat.st_mode):
                     raise IsADirectoryError(errno.EISDIR,
                                             os.strerror(errno.EISDIR), file)
             except AttributeError:
                 # Ignore the AttributeError if stat.S_ISDIR or errno.EISDIR
                 # don't exist.
                 pass
+            self._blksize = getattr(fdfstat, 'st_blksize', 0)
+            if self._blksize <= 1:
+                self._blksize = DEFAULT_BUFFER_SIZE
 
             if _setmode:
                 # don't translate newlines (\r\n <=> \n)
@@ -1584,7 +1614,6 @@ class FileIO(RawIOBase):
                     if e.errno != errno.ESPIPE:
                         raise
         except:
-            self._stat_atopen = None
             if owned_fd is not None:
                 os.close(owned_fd)
             raise
@@ -1613,17 +1642,6 @@ class FileIO(RawIOBase):
         else:
             return ('<%s name=%r mode=%r closefd=%r>' %
                     (class_name, name, self.mode, self._closefd))
-
-    @property
-    def _blksize(self):
-        if self._stat_atopen is None:
-            return DEFAULT_BUFFER_SIZE
-
-        blksize = getattr(self._stat_atopen, "st_blksize", 0)
-        # WASI sets blsize to 0
-        if not blksize:
-            return DEFAULT_BUFFER_SIZE
-        return blksize
 
     def _checkReadable(self):
         if not self._readable:
@@ -1657,22 +1675,14 @@ class FileIO(RawIOBase):
         """
         self._checkClosed()
         self._checkReadable()
-        if self._stat_atopen is None or self._stat_atopen.st_size <= 0:
-            bufsize = DEFAULT_BUFFER_SIZE
-        else:
-            # In order to detect end of file, need a read() of at least 1
-            # byte which returns size 0. Oversize the buffer by 1 byte so the
-            # I/O can be completed with two read() calls (one for all data, one
-            # for EOF) without needing to resize the buffer.
-            bufsize = self._stat_atopen.st_size + 1
-
-            if self._stat_atopen.st_size > 65536:
-                try:
-                    pos = os.lseek(self._fd, 0, SEEK_CUR)
-                    if self._stat_atopen.st_size >= pos:
-                        bufsize = self._stat_atopen.st_size - pos + 1
-                except OSError:
-                    pass
+        bufsize = DEFAULT_BUFFER_SIZE
+        try:
+            pos = os.lseek(self._fd, 0, SEEK_CUR)
+            end = os.fstat(self._fd).st_size
+            if end >= pos:
+                bufsize = end - pos + 1
+        except OSError:
+            pass
 
         result = bytearray()
         while True:
@@ -1748,7 +1758,6 @@ class FileIO(RawIOBase):
         if size is None:
             size = self.tell()
         os.ftruncate(self._fd, size)
-        self._stat_atopen = None
         return size
 
     def close(self):
@@ -1758,7 +1767,6 @@ class FileIO(RawIOBase):
         called more than once without error.
         """
         if not self.closed:
-            self._stat_atopen = None
             try:
                 if self._closefd:
                     os.close(self._fd)
@@ -1795,21 +1803,6 @@ class FileIO(RawIOBase):
     def isatty(self):
         """True if the file is connected to a TTY device."""
         self._checkClosed()
-        return os.isatty(self._fd)
-
-    def _isatty_open_only(self):
-        """Checks whether the file is a TTY using an open-only optimization.
-
-        TTYs are always character devices. If the interpreter knows a file is
-        not a character device when it would call ``isatty``, can skip that
-        call. Inside ``open()``  there is a fresh stat result that contains that
-        information. Use the stat result to skip a system call. Outside of that
-        context TOCTOU issues (the fd could be arbitrarily modified by
-        surrounding code).
-        """
-        if (self._stat_atopen is not None
-            and not stat.S_ISCHR(self._stat_atopen.st_mode)):
-            return False
         return os.isatty(self._fd)
 
     @property

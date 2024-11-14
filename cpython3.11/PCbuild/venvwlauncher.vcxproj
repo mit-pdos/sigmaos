@@ -69,13 +69,12 @@
   <PropertyGroup Label="Globals">
     <ProjectGuid>{FDB84CBB-2FB6-47C8-A2D6-091E0833239D}</ProjectGuid>
     <RootNamespace>venvwlauncher</RootNamespace>
+    <TargetName>venvwlauncher</TargetName>
     <SupportPGO>false</SupportPGO>
   </PropertyGroup>
   <Import Project="python.props" />
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Label="Configuration">
-    <TargetName>venvwlauncher</TargetName>
-    <TargetName Condition="$(DisableGil) == 'true'">$(TargetName)t</TargetName>
     <ConfigurationType>Application</ConfigurationType>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
@@ -92,19 +91,19 @@
   <PropertyGroup Label="UserMacros" />
   <ItemDefinitionGroup>
     <ClCompile>
-      <PreprocessorDefinitions>EXENAME=L"$(PyWExeName)$(PyDebugExt).exe";_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_WINDOWS;VENV_REDIRECT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>PYW_ICON;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ResourceCompile>
     <Link>
-      <AdditionalDependencies>pathcch.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>version.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <SubSystem>Windows</SubSystem>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\PC\venvlauncher.c" />
+    <ClCompile Include="..\PC\launcher.c" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\PC\launcher.ico" />

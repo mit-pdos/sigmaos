@@ -91,28 +91,21 @@ def capture_warnings(capture):
             _warnings_showwarning = None
 
 capture_warnings(True)
+tcl = tkinter.Tcl()
 
-if idlelib.testing:
-    # gh-121008: When testing IDLE, don't create a Tk object to avoid side
-    # effects such as installing a PyOS_InputHook hook.
-    def handle_tk_events():
-        pass
-else:
-    tcl = tkinter.Tcl()
-
-    def handle_tk_events(tcl=tcl):
-        """Process any tk events that are ready to be dispatched if tkinter
-        has been imported, a tcl interpreter has been created and tk has been
-        loaded."""
-        tcl.eval("update")
+def handle_tk_events(tcl=tcl):
+    """Process any tk events that are ready to be dispatched if tkinter
+    has been imported, a tcl interpreter has been created and tk has been
+    loaded."""
+    tcl.eval("update")
 
 # Thread shared globals: Establish a queue between a subthread (which handles
 # the socket) and the main thread (which runs user code), plus global
-# completion, exit and interruptible (the main thread) flags:
+# completion, exit and interruptable (the main thread) flags:
 
 exit_now = False
 quitting = False
-interruptible = False
+interruptable = False
 
 def main(del_exitfunc=False):
     """Start the Python execution server in a subprocess
@@ -247,7 +240,6 @@ def print_exception():
     efile = sys.stderr
     typ, val, tb = excinfo = sys.exc_info()
     sys.last_type, sys.last_value, sys.last_traceback = excinfo
-    sys.last_exc = val
     seen = set()
 
     def print_exc(typ, exc, tb):
@@ -443,9 +435,6 @@ class StdioFile(io.TextIOBase):
 
     def __init__(self, shell, tags, encoding='utf-8', errors='strict'):
         self.shell = shell
-        # GH-78889: accessing unpickleable attributes freezes Shell.
-        # IDLE only needs methods; allow 'width' for possible use.
-        self.shell._RPCProxy__attributes = {'width': 1}
         self.tags = tags
         self._encoding = encoding
         self._errors = errors
@@ -582,14 +571,14 @@ class Executive:
             self.locals = {}
 
     def runcode(self, code):
-        global interruptible
+        global interruptable
         try:
             self.user_exc_info = None
-            interruptible = True
+            interruptable = True
             try:
                 exec(code, self.locals)
             finally:
-                interruptible = False
+                interruptable = False
         except SystemExit as e:
             if e.args:  # SystemExit called with an argument.
                 ob = e.args[0]
@@ -615,7 +604,7 @@ class Executive:
             flush_stdout()
 
     def interrupt_the_server(self):
-        if interruptible:
+        if interruptable:
             thread.interrupt_main()
 
     def start_the_debugger(self, gui_adap_oid):

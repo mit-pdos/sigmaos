@@ -1,5 +1,3 @@
-.. _enum-howto:
-
 ==========
 Enum HOWTO
 ==========
@@ -9,7 +7,7 @@ Enum HOWTO
 .. currentmodule:: enum
 
 An :class:`Enum` is a set of symbolic names bound to unique values.  They are
-similar to global variables, but they offer a more useful :func:`repr`,
+similar to global variables, but they offer a more useful :func:`repr()`,
 grouping, type-safety, and a few other features.
 
 They are most useful when you have a variable that can take one of a limited
@@ -38,10 +36,8 @@ inherits from :class:`Enum` itself.
 
 .. note:: Case of Enum Members
 
-    Because Enums are used to represent constants, and to help avoid issues
-    with name clashes between mixin-class methods/attributes and enum names,
-    we strongly recommend using UPPER_CASE names for members, and will be using
-    that style in our examples.
+    Because Enums are used to represent constants we recommend using
+    UPPER_CASE names for members, and will be using that style in our examples.
 
 Depending on the nature of the enum a member's value may or may not be
 important, but either way that value can be used to get the corresponding
@@ -162,12 +158,11 @@ And a function to display the chores for a given day::
     ...     for chore, days in chores.items():
     ...         if day in days:
     ...             print(chore)
-    ...
     >>> show_chores(chores_for_ethan, Weekday.SATURDAY)
     answer SO questions
 
 In cases where the actual values of the members do not matter, you can save
-yourself some work and use :func:`auto` for the values::
+yourself some work and use :func:`auto()` for the values::
 
     >>> from enum import auto
     >>> class Weekday(Flag):
@@ -288,7 +283,6 @@ The values are chosen by :func:`_generate_next_value_`, which can be
 overridden::
 
     >>> class AutoName(Enum):
-    ...     @staticmethod
     ...     def _generate_next_value_(name, start, count, last_values):
     ...         return name
     ...
@@ -477,53 +471,6 @@ sense to allow sharing some common behavior between a group of enumerations.
 (See `OrderedEnum`_ for an example.)
 
 
-.. _enum-dataclass-support:
-
-Dataclass support
------------------
-
-When inheriting from a :class:`~dataclasses.dataclass`,
-the :meth:`~Enum.__repr__` omits the inherited class' name.  For example::
-
-    >>> from dataclasses import dataclass, field
-    >>> @dataclass
-    ... class CreatureDataMixin:
-    ...     size: str
-    ...     legs: int
-    ...     tail: bool = field(repr=False, default=True)
-    ...
-    >>> class Creature(CreatureDataMixin, Enum):
-    ...     BEETLE = 'small', 6
-    ...     DOG = 'medium', 4
-    ...
-    >>> Creature.DOG
-    <Creature.DOG: size='medium', legs=4>
-
-Use the :func:`~dataclasses.dataclass` argument ``repr=False``
-to use the standard :func:`repr`.
-
-.. versionchanged:: 3.12
-   Only the dataclass fields are shown in the value area, not the dataclass'
-   name.
-
-.. note::
-
-   Adding :func:`~dataclasses.dataclass` decorator to :class:`Enum`
-   and its subclasses is not supported. It will not raise any errors,
-   but it will produce very strange results at runtime, such as members
-   being equal to each other::
-
-      >>> @dataclass               # don't do this: it does not make any sense
-      ... class Color(Enum):
-      ...    RED = 1
-      ...    BLUE = 2
-      ...
-      >>> Color.RED is Color.BLUE
-      False
-      >>> Color.RED == Color.BLUE  # problem is here: they should not be equal
-      True
-
-
 Pickling
 --------
 
@@ -608,7 +555,7 @@ The solution is to specify the module name explicitly as follows::
     the source, pickling will be disabled.
 
 The new pickle protocol 4 also, in some circumstances, relies on
-:attr:`~type.__qualname__` being set to the location where pickle will be able
+:attr:`~definition.__qualname__` being set to the location where pickle will be able
 to find the class.  For example, if the class was made available in class
 SomeData in the global scope::
 
@@ -762,7 +709,6 @@ It is also possible to name the combinations::
     ...     W = 2
     ...     X = 1
     ...     RWX = 7
-    ...
     >>> Perm.RWX
     <Perm.RWX: 7>
     >>> ~Perm.RWX
@@ -887,7 +833,7 @@ Others
 While :class:`IntEnum` is part of the :mod:`enum` module, it would be very
 simple to implement independently::
 
-    class IntEnum(int, ReprEnum):   # or Enum instead of ReprEnum
+    class IntEnum(int, Enum):
         pass
 
 This demonstrates how similar derived enumerations can be defined; for example
@@ -895,8 +841,8 @@ a :class:`FloatEnum` that mixes in :class:`float` instead of :class:`int`.
 
 Some rules:
 
-1. When subclassing :class:`Enum`, mix-in types must appear before the
-   :class:`Enum` class itself in the sequence of bases, as in the :class:`IntEnum`
+1. When subclassing :class:`Enum`, mix-in types must appear before
+   :class:`Enum` itself in the sequence of bases, as in the :class:`IntEnum`
    example above.
 2. Mix-in types must be subclassable. For example, :class:`bool` and
    :class:`range` are not subclassable and will throw an error during Enum
@@ -908,8 +854,7 @@ Some rules:
 4. When another data type is mixed in, the :attr:`value` attribute is *not the
    same* as the enum member itself, although it is equivalent and will compare
    equal.
-5. A ``data type`` is a mixin that defines :meth:`__new__`, or a
-   :class:`~dataclasses.dataclass`
+5. A ``data type`` is a mixin that defines :meth:`__new__`.
 6. %-style formatting:  ``%s`` and ``%r`` call the :class:`Enum` class's
    :meth:`__str__` and :meth:`__repr__` respectively; other codes (such as
    ``%i`` or ``%h`` for IntEnum) treat the enum member as its mixed-in type.
@@ -980,34 +925,30 @@ all the members are created it is no longer used.
 Supported ``_sunder_`` names
 """"""""""""""""""""""""""""
 
-- :attr:`~Enum._name_` -- name of the member
-- :attr:`~Enum._value_` -- value of the member; can be set in ``__new__``
-- :meth:`~Enum._missing_` -- a lookup function used when a value is not found;
-  may be overridden
-- :attr:`~Enum._ignore_` -- a list of names, either as a :class:`list` or a
-  :class:`str`, that will not be transformed into members, and will be removed
-  from the final class
-- :meth:`~Enum._generate_next_value_` -- used to get an appropriate value for
-  an enum member; may be overridden
-- :meth:`~Enum._add_alias_` -- adds a new name as an alias to an existing
-  member.
-- :meth:`~Enum._add_value_alias_` -- adds a new value as an alias to an
-  existing member.  See `MultiValueEnum`_ for an example.
+- ``_name_`` -- name of the member
+- ``_value_`` -- value of the member; can be set / modified in ``__new__``
 
-  .. note::
+- ``_missing_`` -- a lookup function used when a value is not found; may be
+  overridden
+- ``_ignore_`` -- a list of names, either as a :class:`list` or a :class:`str`,
+  that will not be transformed into members, and will be removed from the final
+  class
+- ``_order_`` -- used in Python 2/3 code to ensure member order is consistent
+  (class attribute, removed during class creation)
+- ``_generate_next_value_`` -- used by the `Functional API`_ and by
+  :class:`auto` to get an appropriate value for an enum member; may be
+  overridden
 
-     For standard :class:`Enum` classes the next value chosen is the highest
-     value seen incremented by one.
+.. note::
 
-     For :class:`Flag` classes the next value chosen will be the next highest
-     power-of-two.
+    For standard :class:`Enum` classes the next value chosen is the last value seen
+    incremented by one.
 
-  .. versionchanged:: 3.13
-     Prior versions would use the last seen value instead of the highest value.
+    For :class:`Flag` classes the next value chosen will be the next highest
+    power-of-two, regardless of the last value seen.
 
 .. versionadded:: 3.6 ``_missing_``, ``_order_``, ``_generate_next_value_``
 .. versionadded:: 3.7 ``_ignore_``
-.. versionadded:: 3.13 ``_add_alias_``, ``_add_value_alias_``
 
 To help keep Python 2 / Python 3 code in sync an :attr:`_order_` attribute can
 be provided.  It will be checked against the actual order of the enumeration
@@ -1046,9 +987,7 @@ but remain normal attributes.
 Enum members are instances of their enum class, and are normally accessed as
 ``EnumClass.member``.  In certain situations, such as writing custom enum
 behavior, being able to access one member directly from another is useful,
-and is supported; however, in order to avoid name clashes between member names
-and attributes/methods from mixed-in classes, upper-case names are strongly
-recommended.
+and is supported.
 
 .. versionchanged:: 3.5
 
@@ -1151,14 +1090,6 @@ the following are true:
 
     >>> (Color.RED | Color.GREEN).name
     'RED|GREEN'
-
-    >>> class Perm(IntFlag):
-    ...     R = 4
-    ...     W = 2
-    ...     X = 1
-    ...
-    >>> (Perm.R & Perm.W).name is None  # effectively Perm(0)
-    True
 
 - multi-bit flags, aka aliases, can be returned from operations::
 
@@ -1476,29 +1407,6 @@ alias::
     This is a useful example for subclassing Enum to add or change other
     behaviors as well as disallowing aliases.  If the only desired change is
     disallowing aliases, the :func:`unique` decorator can be used instead.
-
-
-MultiValueEnum
-^^^^^^^^^^^^^^^^^
-
-Supports having more than one value per member::
-
-    >>> class MultiValueEnum(Enum):
-    ...     def __new__(cls, value, *values):
-    ...         self = object.__new__(cls)
-    ...         self._value_ = value
-    ...         for v in values:
-    ...             self._add_value_alias_(v)
-    ...         return self
-    ...
-    >>> class DType(MultiValueEnum):
-    ...     float32 = 'f', 8
-    ...     double64 = 'd', 9
-    ...
-    >>> DType('f')
-    <DType.float32: 'f'>
-    >>> DType(9)
-    <DType.double64: 'd'>
 
 
 Planet

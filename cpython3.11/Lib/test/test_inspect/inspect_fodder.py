@@ -1,7 +1,7 @@
 # line 1
 'A module docstring.'
 
-import inspect
+import sys, inspect
 # line 5
 
 # line 7
@@ -41,8 +41,8 @@ class StupidGit:
     def argue(self, a, b, c):
         try:
             spam(a, b, c)
-        except BaseException as e:
-            self.ex = e
+        except:
+            self.ex = sys.exc_info()
             self.tr = inspect.trace()
 
     @property
@@ -68,9 +68,9 @@ class FesteringGob(MalodorousPervert, ParrotDroppings):
     def abuse(self, a, b, c):
         pass
 
-    def _getter(self):
+    @property
+    def contradiction(self):
         pass
-    contradiction = property(_getter)
 
 async def lobbest(grenade):
     pass
@@ -78,8 +78,8 @@ async def lobbest(grenade):
 currentframe = inspect.currentframe()
 try:
     raise Exception()
-except BaseException as e:
-    tb = e.__traceback__
+except:
+    tb = sys.exc_info()[2]
 
 class Callable:
     def __call__(self, *args):
@@ -113,8 +113,3 @@ class WhichComments:
        # after asyncf - line 113
     # end of WhichComments - line 114
   # after WhichComments - line 115
-
-# Test that getsource works on a line that includes
-# a closing parenthesis with the opening paren being in another line
-(
-); after_closing = lambda: 1

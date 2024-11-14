@@ -25,10 +25,9 @@ def setup_test_dir(testdir: str | None) -> None:
         sys.path.insert(0, os.path.abspath(testdir))
 
 
-def setup_process() -> None:
+def setup_process():
     fix_umask()
 
-    assert sys.__stderr__ is not None, "sys.__stderr__ is None"
     try:
         stderr_fd = sys.__stderr__.fileno()
     except (ValueError, AttributeError):
@@ -36,7 +35,7 @@ def setup_process() -> None:
         # and ValueError on a closed stream.
         #
         # Catch AttributeError for stderr being None.
-        pass
+        stderr_fd = None
     else:
         # Display the Python traceback on fatal errors (e.g. segfault)
         faulthandler.enable(all_threads=True, file=stderr_fd)
@@ -69,7 +68,7 @@ def setup_process() -> None:
             for index, path in enumerate(module.__path__):
                 module.__path__[index] = os.path.abspath(path)
         if getattr(module, '__file__', None):
-            module.__file__ = os.path.abspath(module.__file__)  # type: ignore[type-var]
+            module.__file__ = os.path.abspath(module.__file__)
 
     if hasattr(sys, 'addaudithook'):
         # Add an auditing hook for all tests to ensure PySys_Audit is tested
@@ -88,7 +87,7 @@ def setup_process() -> None:
         os.environ.setdefault(UNICODE_GUARD_ENV, FS_NONASCII)
 
 
-def setup_tests(runtests: RunTests) -> None:
+def setup_tests(runtests: RunTests):
     support.verbose = runtests.verbose
     support.failfast = runtests.fail_fast
     support.PGO = runtests.pgo

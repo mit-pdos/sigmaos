@@ -4,7 +4,6 @@ import sys
 import re
 import test.support as support
 import unittest
-from test.support.import_helper import import_module
 
 maxsize = support.MAX_Py_ssize_t
 
@@ -36,7 +35,7 @@ def testformat(formatstr, args, output=None, limit=None, overflowok=False):
         # when 'limit' is specified, it determines how many characters
         # must match exactly; lengths must always match.
         # ex: limit=5, '12345678' matches '12345___'
-        # (mainly for floating-point format tests for which an exact match
+        # (mainly for floating point format tests for which an exact match
         # can't be guaranteed due to rounding and representation errors)
         elif output and limit is not None and (
                 len(result)!=len(output) or result[:limit]!=output[:limit]):
@@ -304,9 +303,9 @@ class FormatTest(unittest.TestCase):
         test_exc('%c', sys.maxunicode+1, OverflowError,
                  "%c arg not in range(0x110000)")
         #test_exc('%c', 2**128, OverflowError, "%c arg not in range(0x110000)")
-        test_exc('%c', 3.14, TypeError, "%c requires an int or a unicode character, not float")
-        test_exc('%c', 'ab', TypeError, "%c requires an int or a unicode character, not a string of length 2")
-        test_exc('%c', b'x', TypeError, "%c requires an int or a unicode character, not bytes")
+        test_exc('%c', 3.14, TypeError, "%c requires int or char")
+        test_exc('%c', 'ab', TypeError, "%c requires int or char")
+        test_exc('%c', b'x', TypeError, "%c requires int or char")
 
         if maxsize == 2**31-1:
             # crashes 2.2.1 and earlier:
@@ -370,11 +369,11 @@ class FormatTest(unittest.TestCase):
         test_exc(b"%c", 2**128, OverflowError,
                 "%c arg not in range(256)")
         test_exc(b"%c", b"Za", TypeError,
-                "%c requires an integer in range(256) or a single byte, not a bytes object of length 2")
+                "%c requires an integer in range(256) or a single byte")
         test_exc(b"%c", "Y", TypeError,
-                "%c requires an integer in range(256) or a single byte, not str")
+                "%c requires an integer in range(256) or a single byte")
         test_exc(b"%c", 3.14, TypeError,
-                "%c requires an integer in range(256) or a single byte, not float")
+                "%c requires an integer in range(256) or a single byte")
         test_exc(b"%b", "Xc", TypeError,
                 "%b requires a bytes-like object, "
                  "or an object that implements __bytes__, not 'str'")
@@ -479,8 +478,7 @@ class FormatTest(unittest.TestCase):
 
     @support.cpython_only
     def test_precision_c_limits(self):
-        _testcapi = import_module("_testcapi")
-        INT_MAX = _testcapi.INT_MAX
+        from _testcapi import INT_MAX
 
         f = 1.2
         with self.assertRaises(ValueError) as cm:

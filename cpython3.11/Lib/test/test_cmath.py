@@ -1,5 +1,4 @@
 from test.support import requires_IEEE_754, cpython_only, import_helper
-from test.support.testcase import ComplexesAreIdenticalMixin
 from test.test_math import parse_testfile, test_file
 import test.test_math as test_math
 import unittest
@@ -50,7 +49,7 @@ complex_nans = [complex(x, y) for x, y in [
         (INF, NAN)
         ]]
 
-class CMathTests(ComplexesAreIdenticalMixin, unittest.TestCase):
+class CMathTests(unittest.TestCase):
     # list of all functions in cmath
     test_functions = [getattr(cmath, fname) for fname in [
             'acos', 'acosh', 'asin', 'asinh', 'atan', 'atanh',
@@ -65,6 +64,39 @@ class CMathTests(ComplexesAreIdenticalMixin, unittest.TestCase):
 
     def tearDown(self):
         self.test_values.close()
+
+    def assertFloatIdentical(self, x, y):
+        """Fail unless floats x and y are identical, in the sense that:
+        (1) both x and y are nans, or
+        (2) both x and y are infinities, with the same sign, or
+        (3) both x and y are zeros, with the same sign, or
+        (4) x and y are both finite and nonzero, and x == y
+
+        """
+        msg = 'floats {!r} and {!r} are not identical'
+
+        if math.isnan(x) or math.isnan(y):
+            if math.isnan(x) and math.isnan(y):
+                return
+        elif x == y:
+            if x != 0.0:
+                return
+            # both zero; check that signs match
+            elif math.copysign(1.0, x) == math.copysign(1.0, y):
+                return
+            else:
+                msg += ': zeros have different signs'
+        self.fail(msg.format(x, y))
+
+    def assertComplexIdentical(self, x, y):
+        """Fail unless complex numbers x and y have equal values and signs.
+
+        In particular, if x and y both have real (or imaginary) part
+        zero, but the zeros have different signs, this test will fail.
+
+        """
+        self.assertFloatIdentical(x.real, y.real)
+        self.assertFloatIdentical(x.imag, y.imag)
 
     def rAssertAlmostEqual(self, a, b, rel_err = 2e-15, abs_err = 5e-323,
                            msg=None):
@@ -134,11 +166,6 @@ class CMathTests(ComplexesAreIdenticalMixin, unittest.TestCase):
         self.assertEqual(cmath.nan.imag, 0.0)
         self.assertEqual(cmath.nanj.real, 0.0)
         self.assertTrue(math.isnan(cmath.nanj.imag))
-        # Also check that the sign of all of these is positive:
-        self.assertEqual(math.copysign(1., cmath.nan.real), 1.)
-        self.assertEqual(math.copysign(1., cmath.nan.imag), 1.)
-        self.assertEqual(math.copysign(1., cmath.nanj.real), 1.)
-        self.assertEqual(math.copysign(1., cmath.nanj.imag), 1.)
 
         # Check consistency with reprs.
         self.assertEqual(repr(cmath.inf), "inf")
@@ -165,7 +192,14 @@ class CMathTests(ComplexesAreIdenticalMixin, unittest.TestCase):
         # end up being passed to the cmath functions
 
         # usual case: new-style class implementing __complex__
-        class MyComplex:
+        class MyComplex(object):
+            def __init__(self, value):
+                self.value = value
+            def __complex__(self):
+                return self.value
+
+        # old-style class implementing __complex__
+        class MyComplexOS:
             def __init__(self, value):
                 self.value = value
             def __complex__(self):
@@ -174,12 +208,17 @@ class CMathTests(ComplexesAreIdenticalMixin, unittest.TestCase):
         # classes for which __complex__ raises an exception
         class SomeException(Exception):
             pass
-        class MyComplexException:
+        class MyComplexException(object):
+            def __complex__(self):
+                raise SomeException
+        class MyComplexExceptionOS:
             def __complex__(self):
                 raise SomeException
 
         # some classes not providing __float__ or __complex__
         class NeitherComplexNorFloat(object):
+            pass
+        class NeitherComplexNorFloatOS:
             pass
         class Index:
             def __int__(self): return 2
@@ -189,32 +228,48 @@ class CMathTests(ComplexesAreIdenticalMixin, unittest.TestCase):
 
         # other possible combinations of __float__ and __complex__
         # that should work
-        class FloatAndComplex:
+        class FloatAndComplex(object):
             def __float__(self):
                 return flt_arg
             def __complex__(self):
                 return cx_arg
-        class JustFloat:
+        class FloatAndComplexOS:
+            def __float__(self):
+                return flt_arg
+            def __complex__(self):
+                return cx_arg
+        class JustFloat(object):
+            def __float__(self):
+                return flt_arg
+        class JustFloatOS:
             def __float__(self):
                 return flt_arg
 
         for f in self.test_functions:
             # usual usage
             self.assertEqual(f(MyComplex(cx_arg)), f(cx_arg))
+            self.assertEqual(f(MyComplexOS(cx_arg)), f(cx_arg))
             # other combinations of __float__ and __complex__
             self.assertEqual(f(FloatAndComplex()), f(cx_arg))
+            self.assertEqual(f(FloatAndComplexOS()), f(cx_arg))
             self.assertEqual(f(JustFloat()), f(flt_arg))
+            self.assertEqual(f(JustFloatOS()), f(flt_arg))
             self.assertEqual(f(Index()), f(int(Index())))
             # TypeError should be raised for classes not providing
             # either __complex__ or __float__, even if they provide
-            # __int__ or __index__:
+            # __int__ or __index__.  An old-style class
+            # currently raises AttributeError instead of a TypeError;
+            # this could be considered a bug.
             self.assertRaises(TypeError, f, NeitherComplexNorFloat())
             self.assertRaises(TypeError, f, MyInt())
+            self.assertRaises(Exception, f, NeitherComplexNorFloatOS())
             # non-complex return value from __complex__ -> TypeError
             for bad_complex in non_complexes:
                 self.assertRaises(TypeError, f, MyComplex(bad_complex))
+                self.assertRaises(TypeError, f, MyComplexOS(bad_complex))
             # exceptions in __complex__ should be propagated correctly
             self.assertRaises(SomeException, f, MyComplexException())
+            self.assertRaises(SomeException, f, MyComplexExceptionOS())
 
     def test_input_type(self):
         # ints should be acceptable inputs to all cmath
@@ -523,7 +578,7 @@ class CMathTests(ComplexesAreIdenticalMixin, unittest.TestCase):
     @requires_IEEE_754
     def testTanhSign(self):
         for z in complex_zeros:
-            self.assertComplexesAreIdentical(cmath.tanh(z), z)
+            self.assertComplexIdentical(cmath.tanh(z), z)
 
     # The algorithm used for atan and atanh makes use of the system
     # log1p function; If that system function doesn't respect the sign
@@ -532,12 +587,12 @@ class CMathTests(ComplexesAreIdenticalMixin, unittest.TestCase):
     @requires_IEEE_754
     def testAtanSign(self):
         for z in complex_zeros:
-            self.assertComplexesAreIdentical(cmath.atan(z), z)
+            self.assertComplexIdentical(cmath.atan(z), z)
 
     @requires_IEEE_754
     def testAtanhSign(self):
         for z in complex_zeros:
-            self.assertComplexesAreIdentical(cmath.atanh(z), z)
+            self.assertComplexIdentical(cmath.atanh(z), z)
 
 
 class IsCloseTests(test_math.IsCloseTests):
@@ -579,14 +634,6 @@ class IsCloseTests(test_math.IsCloseTests):
 
         self.assertIsClose(0.001-0.001j, 0.001+0.001j, abs_tol=2e-03)
         self.assertIsNotClose(0.001-0.001j, 0.001+0.001j, abs_tol=1e-03)
-
-    def test_complex_special(self):
-        self.assertIsNotClose(INF, INF*1j)
-        self.assertIsNotClose(INF*1j, INF)
-        self.assertIsNotClose(INF, -INF)
-        self.assertIsNotClose(-INF, INF)
-        self.assertIsNotClose(0, INF)
-        self.assertIsNotClose(0, INF*1j)
 
 
 if __name__ == "__main__":

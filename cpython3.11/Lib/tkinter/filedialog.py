@@ -461,6 +461,7 @@ def test():
 
     # Start off with UTF-8
     enc = "utf-8"
+    import sys
 
     # See whether CODESET is defined
     try:
@@ -476,9 +477,9 @@ def test():
     try:
         fp=open(openfilename,"r")
         fp.close()
-    except BaseException as exc:
+    except:
         print("Could not open File: ")
-        print(exc)
+        print(sys.exc_info()[1])
 
     print("open", openfilename.encode(enc))
 

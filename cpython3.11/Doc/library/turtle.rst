@@ -14,11 +14,6 @@
    from turtle import *
    turtle = Turtle()
 
-.. testcleanup::
-
-   import os
-   os.remove("my_drawing.ps")
-
 --------------
 
 Introduction
@@ -28,15 +23,6 @@ Turtle graphics is an implementation of `the popular geometric drawing tools
 introduced in Logo <https://en.wikipedia.org/wiki/Turtle_
 (robot)>`_, developed by Wally Feurzeig, Seymour Papert and Cynthia Solomon
 in 1967.
-
-
-Get started
-===========
-
-Imagine a robotic turtle starting at (0, 0) in the x-y plane.  After an ``import turtle``, give it the
-command ``turtle.forward(15)``, and it moves (on-screen!) 15 pixels in the
-direction it is facing, drawing a line as it moves.  Give it the command
-``turtle.right(25)``, and it rotates in-place 25 degrees clockwise.
 
 .. sidebar:: Turtle star
 
@@ -125,7 +111,7 @@ off-screen)::
    home()
 
 The home position is at the center of the turtle's screen. If you ever need to
-know them, get the turtle's x-y coordinates with::
+know them, get the turtle's x-y co-ordinates with::
 
     pos()
 
@@ -311,7 +297,6 @@ Turtle motion
       | :func:`right` | :func:`rt`
       | :func:`left` | :func:`lt`
       | :func:`goto` | :func:`setpos` | :func:`setposition`
-      | :func:`teleport`
       | :func:`setx`
       | :func:`sety`
       | :func:`setheading` | :func:`seth`
@@ -370,6 +355,7 @@ Turtle state
       | :func:`resizemode`
       | :func:`shapesize` | :func:`turtlesize`
       | :func:`shearfactor`
+      | :func:`settiltangle`
       | :func:`tiltangle`
       | :func:`tilt`
       | :func:`shapetransform`
@@ -432,7 +418,6 @@ Input methods
 Methods specific to Screen
    | :func:`bye`
    | :func:`exitonclick`
-   | :func:`save`
    | :func:`setup`
    | :func:`title`
 
@@ -575,44 +560,6 @@ Turtle motion
       >>> turtle.setpos(tp)
       >>> turtle.pos()
       (0.00,0.00)
-
-
-.. function:: teleport(x, y=None, *, fill_gap=False)
-
-   :param x: a number or ``None``
-   :param y: a number or ``None``
-   :param fill_gap: a boolean
-
-   Move turtle to an absolute position. Unlike goto(x, y), a line will not
-   be drawn. The turtle's orientation does not change. If currently
-   filling, the polygon(s) teleported from will be filled after leaving,
-   and filling will begin again after teleporting. This can be disabled
-   with fill_gap=True, which makes the imaginary line traveled during
-   teleporting act as a fill barrier like in goto(x, y).
-
-   .. doctest::
-      :skipif: _tkinter is None
-      :hide:
-
-      >>> turtle.goto(0, 0)
-
-   .. doctest::
-      :skipif: _tkinter is None
-
-      >>> tp = turtle.pos()
-      >>> tp
-      (0.00,0.00)
-      >>> turtle.teleport(60)
-      >>> turtle.pos()
-      (60.00,0.00)
-      >>> turtle.teleport(y=10)
-      >>> turtle.pos()
-      (60.00,10.00)
-      >>> turtle.teleport(20, 30)
-      >>> turtle.pos()
-      (20.00,30.00)
-
-   .. versionadded:: 3.12
 
 
 .. function:: setx(x)
@@ -780,7 +727,8 @@ Turtle motion
       :skipif: _tkinter is None
 
       >>> turtle.color("blue")
-      >>> stamp_id = turtle.stamp()
+      >>> turtle.stamp()
+      11
       >>> turtle.fd(50)
 
 
@@ -817,8 +765,15 @@ Turtle motion
    .. doctest::
 
       >>> for i in range(8):
-      ...     unused_stamp_id = turtle.stamp()
-      ...     turtle.fd(30)
+      ...     turtle.stamp(); turtle.fd(30)
+      13
+      14
+      15
+      16
+      17
+      18
+      19
+      20
       >>> turtle.clearstamps(2)
       >>> turtle.clearstamps(-2)
       >>> turtle.clearstamps()
@@ -1503,6 +1458,28 @@ Appearance
       >>> turtle.fd(50)
       >>> turtle.tilt(30)
       >>> turtle.fd(50)
+
+
+.. function:: settiltangle(angle)
+
+   :param angle: a number
+
+   Rotate the turtleshape to point in the direction specified by *angle*,
+   regardless of its current tilt-angle.  *Do not* change the turtle's heading
+   (direction of movement).
+
+   .. doctest::
+      :skipif: _tkinter is None
+
+      >>> turtle.reset()
+      >>> turtle.shape("circle")
+      >>> turtle.shapesize(5,2)
+      >>> turtle.settiltangle(45)
+      >>> turtle.fd(50)
+      >>> turtle.settiltangle(-45)
+      >>> turtle.fd(50)
+
+   .. deprecated:: 3.1
 
 
 .. function:: tiltangle(angle=None)
@@ -2275,24 +2252,6 @@ Methods specific to Screen, not inherited from TurtleScreen
    client script.
 
 
-.. function:: save(filename, overwrite=False)
-
-   Save the current turtle drawing (and turtles) as a PostScript file.
-
-   :param filename: the path of the saved PostScript file
-   :param overwrite: if ``False`` and there already exists a file with the given
-                     filename, then the function will raise a
-                     ``FileExistsError``. If it is ``True``, the file will be
-                     overwritten.
-
-   .. doctest::
-      :skipif: _tkinter is None
-
-      >>> screen.save("my_drawing.ps")
-      >>> screen.save("my_drawing.ps", overwrite=True)
-
-   .. versionadded:: 3.14
-
 .. function:: setup(width=_CFG["width"], height=_CFG["height"], startx=_CFG["leftright"], starty=_CFG["topbottom"])
 
    Set the size and position of the main window.  Default values of arguments
@@ -2764,7 +2723,8 @@ Changes since Python 3.0
   :func:`get_shapepoly` have been added. Thus the full range of
   regular linear transforms is now available for transforming turtle shapes.
   :func:`tiltangle` has been enhanced in functionality: it now can
-  be used to get or set the tilt angle.
+  be used to get or set the tilt angle. :func:`settiltangle` has been
+  deprecated.
 
 - The :class:`Screen` method :func:`onkeypress` has been added as a complement to
   :func:`onkey`. As the latter binds actions to the key release event,
@@ -2777,6 +2737,9 @@ Changes since Python 3.0
 - Two input methods have been added: :func:`Screen.textinput <textinput>` and
   :func:`Screen.numinput <numinput>`. These pop up input dialogs and return
   strings and numbers respectively.
+
+- Two example scripts :file:`tdemo_nim.py` and :file:`tdemo_round_dance.py`
+  have been added to the :file:`Lib/turtledemo` directory.
 
 
 .. doctest::

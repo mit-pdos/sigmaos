@@ -332,10 +332,10 @@ Suppose you configure logging with the following JSON:
         }
     }
 
-This configuration does *almost* what we want, except that ``sys.stdout`` would show messages
-of severity ``ERROR`` and only events of this severity and higher will be tracked
-as well as ``INFO`` and ``WARNING`` messages. To prevent this, we can set up a filter which
-excludes those messages and add it to the relevant handler. This can be configured by
+This configuration does *almost* what we want, except that ``sys.stdout`` would
+show messages of severity ``ERROR`` and above as well as ``INFO`` and
+``WARNING`` messages. To prevent this, we can set up a filter which excludes
+those messages and add it to the relevant handler. This can be configured by
 adding a ``filters`` section parallel to ``formatters`` and ``handlers``:
 
 .. code-block:: json
@@ -1267,8 +1267,11 @@ to adapt in your own applications.
 
 You could also write your own handler which uses the :class:`~multiprocessing.Lock`
 class from the :mod:`multiprocessing` module to serialize access to the
-file from your processes. The stdlib :class:`FileHandler` and subclasses do
-not make use of :mod:`multiprocessing`.
+file from your processes. The existing :class:`FileHandler` and subclasses do
+not make use of :mod:`multiprocessing` at present, though they may do so in the
+future. Note that at present, the :mod:`multiprocessing` module does not provide
+working lock functionality on all platforms (see
+https://bugs.python.org/issue3770).
 
 .. currentmodule:: logging.handlers
 
@@ -1909,10 +1912,10 @@ Subclassing QueueHandler and QueueListener- a ``pynng`` example
 ---------------------------------------------------------------
 
 In a similar way to the above section, we can implement a listener and handler
-using :pypi:`pynng`, which is a Python binding to
+using `pynng <https://pypi.org/project/pynng/>`_, which is a Python binding to
 `NNG <https://nng.nanomsg.org/>`_, billed as a spiritual successor to ZeroMQ.
 The following snippets illustrate -- you can test them in an environment which has
-``pynng`` installed. Just for variety, we present the listener first.
+``pynng`` installed. Juat for variety, we present the listener first.
 
 
 Subclass ``QueueListener``
@@ -1920,7 +1923,6 @@ Subclass ``QueueListener``
 
 .. code-block:: python
 
-    # listener.py
     import json
     import logging
     import logging.handlers
@@ -1953,7 +1955,7 @@ Subclass ``QueueListener``
                     break
                 except pynng.Timeout:
                     pass
-                except pynng.Closed:  # sometimes happens when you hit Ctrl-C
+                except pynng.Closed:  # sometimes hit when you hit Ctrl-C
                     break
             if data is None:
                 return None
@@ -1986,7 +1988,6 @@ Subclass ``QueueHandler``
 
 .. code-block:: python
 
-    # sender.py
     import json
     import logging
     import logging.handlers
@@ -2014,10 +2015,9 @@ Subclass ``QueueHandler``
 
     logging.getLogger('pynng').propagate = False
     handler = NNGSocketHandler(DEFAULT_ADDR)
-    # Make sure the process ID is in the output
     logging.basicConfig(level=logging.DEBUG,
                         handlers=[logging.StreamHandler(), handler],
-                        format='%(levelname)-8s %(name)10s %(process)6s %(message)s')
+                        format='%(levelname)-8s %(name)10s %(message)s')
     levels = (logging.DEBUG, logging.INFO, logging.WARNING, logging.ERROR,
               logging.CRITICAL)
     logger_names = ('myapp', 'myapp.lib1', 'myapp.lib2')
@@ -2031,64 +2031,7 @@ Subclass ``QueueHandler``
         delay = random.random() * 2 + 0.5
         time.sleep(delay)
 
-You can run the above two snippets in separate command shells. If we run the
-listener in one shell and run the sender in two separate shells, we should see
-something like the following. In the first sender shell:
-
-.. code-block:: console
-
-    $ python sender.py
-    DEBUG         myapp    613 Message no.     1
-    WARNING  myapp.lib2    613 Message no.     2
-    CRITICAL myapp.lib2    613 Message no.     3
-    WARNING  myapp.lib2    613 Message no.     4
-    CRITICAL myapp.lib1    613 Message no.     5
-    DEBUG         myapp    613 Message no.     6
-    CRITICAL myapp.lib1    613 Message no.     7
-    INFO     myapp.lib1    613 Message no.     8
-    (and so on)
-
-In the second sender shell:
-
-.. code-block:: console
-
-    $ python sender.py
-    INFO     myapp.lib2    657 Message no.     1
-    CRITICAL myapp.lib2    657 Message no.     2
-    CRITICAL      myapp    657 Message no.     3
-    CRITICAL myapp.lib1    657 Message no.     4
-    INFO     myapp.lib1    657 Message no.     5
-    WARNING  myapp.lib2    657 Message no.     6
-    CRITICAL      myapp    657 Message no.     7
-    DEBUG    myapp.lib1    657 Message no.     8
-    (and so on)
-
-In the listener shell:
-
-.. code-block:: console
-
-    $ python listener.py
-    Press Ctrl-C to stop.
-    DEBUG         myapp    613 Message no.     1
-    WARNING  myapp.lib2    613 Message no.     2
-    INFO     myapp.lib2    657 Message no.     1
-    CRITICAL myapp.lib2    613 Message no.     3
-    CRITICAL myapp.lib2    657 Message no.     2
-    CRITICAL      myapp    657 Message no.     3
-    WARNING  myapp.lib2    613 Message no.     4
-    CRITICAL myapp.lib1    613 Message no.     5
-    CRITICAL myapp.lib1    657 Message no.     4
-    INFO     myapp.lib1    657 Message no.     5
-    DEBUG         myapp    613 Message no.     6
-    WARNING  myapp.lib2    657 Message no.     6
-    CRITICAL      myapp    657 Message no.     7
-    CRITICAL myapp.lib1    613 Message no.     7
-    INFO     myapp.lib1    613 Message no.     8
-    DEBUG    myapp.lib1    657 Message no.     8
-    (and so on)
-
-As you can see, the logging from the two sender processes is interleaved in the
-listener's output.
+You can run the above two snippets in separate command shells.
 
 
 An example dictionary-based configuration
@@ -2947,7 +2890,7 @@ When run, this produces a file with exactly two lines:
 .. code-block:: none
 
     28/01/2015 07:21:23|INFO|Sample message|
-    28/01/2015 07:21:23|ERROR|ZeroDivisionError: division by zero|'Traceback (most recent call last):\n  File "logtest7.py", line 30, in main\n    x = 1 / 0\nZeroDivisionError: division by zero'|
+    28/01/2015 07:21:23|ERROR|ZeroDivisionError: integer division or modulo by zero|'Traceback (most recent call last):\n  File "logtest7.py", line 30, in main\n    x = 1 / 0\nZeroDivisionError: integer division or modulo by zero'|
 
 While the above treatment is simplistic, it points the way to how exception
 information can be formatted to your liking. The :mod:`traceback` module may be
@@ -3572,8 +3515,9 @@ A Qt GUI for logging
 
 A question that comes up from time to time is about how to log to a GUI
 application. The `Qt <https://www.qt.io/>`_ framework is a popular
-cross-platform UI framework with Python bindings using :pypi:`PySide2`
-or :pypi:`PyQt5` libraries.
+cross-platform UI framework with Python bindings using `PySide2
+<https://pypi.org/project/PySide2/>`_ or `PyQt5
+<https://pypi.org/project/PyQt5/>`_ libraries.
 
 The following example shows how to log to a Qt GUI. This introduces a simple
 ``QtHandler`` class which takes a callable, which should be a slot in the main
@@ -3825,7 +3769,7 @@ detailed information.
 Logging to syslog with RFC5424 support
 --------------------------------------
 
-Although :rfc:`5424` dates from 2009, most syslog servers are configured by default to
+Although :rfc:`5424` dates from 2009, most syslog servers are configured by detault to
 use the older :rfc:`3164`, which hails from 2001. When ``logging`` was added to Python
 in 2003, it supported the earlier (and only existing) protocol at the time. Since
 RFC5424 came out, as there has not been widespread deployment of it in syslog
@@ -4016,10 +3960,10 @@ then running the script results in
     WARNING:demo:division by zero
 
 As you can see, this output isn't ideal. That's because the underlying code
-which writes to ``sys.stderr`` makes multiple writes, each of which results in a
+which writes to ``sys.stderr`` makes mutiple writes, each of which results in a
 separate logged line (for example, the last three lines above). To get around
 this problem, you need to buffer things and only output log lines when newlines
-are seen. Let's use a slightly better implementation of ``LoggerWriter``:
+are seen. Let's use a slghtly better implementation of ``LoggerWriter``:
 
 .. code-block:: python
 

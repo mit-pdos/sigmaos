@@ -4,19 +4,22 @@
  * unicode_eq() is called when the hash of two unicode objects is equal.
  */
 Py_LOCAL_INLINE(int)
-unicode_eq(PyObject *str1, PyObject *str2)
+unicode_eq(PyObject *aa, PyObject *bb)
 {
-    Py_ssize_t len = PyUnicode_GET_LENGTH(str1);
-    if (PyUnicode_GET_LENGTH(str2) != len) {
-        return 0;
-    }
+    assert(PyUnicode_Check(aa));
+    assert(PyUnicode_Check(bb));
+    assert(PyUnicode_IS_READY(aa));
+    assert(PyUnicode_IS_READY(bb));
 
-    int kind = PyUnicode_KIND(str1);
-    if (PyUnicode_KIND(str2) != kind) {
-        return 0;
-    }
+    PyUnicodeObject *a = (PyUnicodeObject *)aa;
+    PyUnicodeObject *b = (PyUnicodeObject *)bb;
 
-    const void *data1 = PyUnicode_DATA(str1);
-    const void *data2 = PyUnicode_DATA(str2);
-    return (memcmp(data1, data2, len * kind) == 0);
+    if (PyUnicode_GET_LENGTH(a) != PyUnicode_GET_LENGTH(b))
+        return 0;
+    if (PyUnicode_GET_LENGTH(a) == 0)
+        return 1;
+    if (PyUnicode_KIND(a) != PyUnicode_KIND(b))
+        return 0;
+    return memcmp(PyUnicode_1BYTE_DATA(a), PyUnicode_1BYTE_DATA(b),
+                  PyUnicode_GET_LENGTH(a) * PyUnicode_KIND(a)) == 0;
 }

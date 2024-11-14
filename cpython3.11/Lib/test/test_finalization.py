@@ -13,7 +13,7 @@ except ImportError:
     def with_tp_del(cls):
         class C(object):
             def __new__(cls, *args, **kwargs):
-                raise unittest.SkipTest('requires _testcapi.with_tp_del')
+                raise TypeError('requires _testcapi.with_tp_del')
         return C
 
 try:
@@ -22,7 +22,7 @@ except ImportError:
     def without_gc(cls):
         class C:
             def __new__(cls, *args, **kwargs):
-                raise unittest.SkipTest('requires _testcapi.without_gc')
+                raise TypeError('requires _testcapi.without_gc')
         return C
 
 from test import support

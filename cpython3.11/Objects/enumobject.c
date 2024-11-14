@@ -3,7 +3,6 @@
 #include "Python.h"
 #include "pycore_call.h"          // _PyObject_CallNoArgs()
 #include "pycore_long.h"          // _PyLong_GetOne()
-#include "pycore_modsupport.h"    // _PyArg_NoKwnames()
 #include "pycore_object.h"        // _PyObject_GC_TRACK()
 
 #include "clinic/enumobject.c.h"
@@ -390,7 +389,8 @@ reversed_new_impl(PyTypeObject *type, PyObject *seq)
         return NULL;
 
     ro->index = n-1;
-    ro->seq = Py_NewRef(seq);
+    Py_INCREF(seq);
+    ro->seq = seq;
     return (PyObject *)ro;
 }
 

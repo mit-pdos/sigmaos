@@ -1,9 +1,7 @@
 /* Iterator objects */
 
 #include "Python.h"
-#include "pycore_abstract.h"      // _PyObject_HasLen()
 #include "pycore_call.h"          // _PyObject_CallNoArgs()
-#include "pycore_ceval.h"         // _PyEval_GetBuiltin()
 #include "pycore_object.h"        // _PyObject_GC_TRACK()
 
 typedef struct {
@@ -25,7 +23,8 @@ PySeqIter_New(PyObject *seq)
     if (it == NULL)
         return NULL;
     it->it_index = 0;
-    it->it_seq = Py_NewRef(seq);
+    Py_INCREF(seq);
+    it->it_seq = seq;
     _PyObject_GC_TRACK(it);
     return (PyObject *)it;
 }
@@ -189,8 +188,10 @@ PyCallIter_New(PyObject *callable, PyObject *sentinel)
     it = PyObject_GC_New(calliterobject, &PyCallIter_Type);
     if (it == NULL)
         return NULL;
-    it->it_callable = Py_NewRef(callable);
-    it->it_sentinel = Py_NewRef(sentinel);
+    Py_INCREF(callable);
+    it->it_callable = callable;
+    Py_INCREF(sentinel);
+    it->it_sentinel = sentinel;
     _PyObject_GC_TRACK(it);
     return (PyObject *)it;
 }
@@ -437,13 +438,8 @@ return next yielded value or raise StopIteration.");
 
 
 PyDoc_STRVAR(throw_doc,
-"throw(value)\n\
-throw(typ[,val[,tb]])\n\
-\n\
-raise exception in the wrapped iterator, return next yielded value\n\
-or raise StopIteration.\n\
-the (type, val, tb) signature is deprecated, \n\
-and may be removed in a future version of Python.");
+"throw(typ[,val[,tb]]) -> raise exception in the wrapped iterator,\n\
+return next yielded value or raise StopIteration.");
 
 
 PyDoc_STRVAR(close_doc,
@@ -505,8 +501,10 @@ PyAnextAwaitable_New(PyObject *awaitable, PyObject *default_value)
     if (anext == NULL) {
         return NULL;
     }
-    anext->wrapped = Py_NewRef(awaitable);
-    anext->default_value = Py_NewRef(default_value);
+    Py_INCREF(awaitable);
+    anext->wrapped = awaitable;
+    Py_INCREF(default_value);
+    anext->default_value = default_value;
     _PyObject_GC_TRACK(anext);
     return (PyObject *)anext;
 }

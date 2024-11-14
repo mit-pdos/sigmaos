@@ -8,8 +8,6 @@ def insort_right(a, x, lo=0, hi=None, *, key=None):
 
     Optional args lo (default 0) and hi (default len(a)) bound the
     slice of a to be searched.
-
-    A custom key function can be supplied to customize the sort order.
     """
     if key is None:
         lo = bisect_right(a, x, lo, hi)
@@ -27,8 +25,6 @@ def bisect_right(a, x, lo=0, hi=None, *, key=None):
 
     Optional args lo (default 0) and hi (default len(a)) bound the
     slice of a to be searched.
-
-    A custom key function can be supplied to customize the sort order.
     """
 
     if lo < 0:
@@ -61,8 +57,6 @@ def insort_left(a, x, lo=0, hi=None, *, key=None):
 
     Optional args lo (default 0) and hi (default len(a)) bound the
     slice of a to be searched.
-
-    A custom key function can be supplied to customize the sort order.
     """
 
     if key is None:
@@ -80,8 +74,6 @@ def bisect_left(a, x, lo=0, hi=None, *, key=None):
 
     Optional args lo (default 0) and hi (default len(a)) bound the
     slice of a to be searched.
-
-    A custom key function can be supplied to customize the sort order.
     """
 
     if lo < 0:

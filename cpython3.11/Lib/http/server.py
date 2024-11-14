@@ -2,18 +2,18 @@
 
 Note: BaseHTTPRequestHandler doesn't implement any HTTP request; see
 SimpleHTTPRequestHandler for simple implementations of GET, HEAD and POST,
-and (deprecated) CGIHTTPRequestHandler for CGI scripts.
+and CGIHTTPRequestHandler for CGI scripts.
 
-It does, however, optionally implement HTTP/1.1 persistent connections.
+It does, however, optionally implement HTTP/1.1 persistent connections,
+as of version 0.3.
 
 Notes on CGIHTTPRequestHandler
 ------------------------------
 
-This class is deprecated. It implements GET and POST requests to cgi-bin scripts.
+This class implements GET and POST requests to cgi-bin scripts.
 
-If the os.fork() function is not present (Windows), subprocess.Popen() is used,
-with slightly altered but never documented semantics.  Use from a threaded
-process is likely to trigger a warning at os.fork() time.
+If the os.fork() function is not present (e.g. on Windows),
+subprocess.Popen() is used as a fallback, with slightly altered semantics.
 
 In all cases, the implementation is intentionally naive -- all
 requests are executed synchronously.
@@ -114,11 +114,6 @@ DEFAULT_ERROR_MESSAGE = """\
 <html lang="en">
     <head>
         <meta charset="utf-8">
-        <style type="text/css">
-            :root {
-                color-scheme: light dark;
-            }
-        </style>
         <title>Error response</title>
     </head>
     <body>
@@ -134,8 +129,7 @@ DEFAULT_ERROR_CONTENT_TYPE = "text/html;charset=utf-8"
 
 class HTTPServer(socketserver.TCPServer):
 
-    allow_reuse_address = True    # Seems to make sense in testing environment
-    allow_reuse_port = True
+    allow_reuse_address = 1    # Seems to make sense in testing environment
 
     def server_bind(self):
         """Override server_bind to store the server name."""
@@ -663,7 +657,6 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
     """
 
     server_version = "SimpleHTTP/" + __version__
-    index_pages = ("index.html", "index.htm")
     extensions_map = _encodings_map_default = {
         '.gz': 'application/gzip',
         '.Z': 'application/octet-stream',
@@ -717,7 +710,7 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
                 self.send_header("Content-Length", "0")
                 self.end_headers()
                 return None
-            for index in self.index_pages:
+            for index in "index.html", "index.htm":
                 index = os.path.join(path, index)
                 if os.path.isfile(index):
                     path = index
@@ -809,7 +802,6 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
         r.append('<html lang="en">')
         r.append('<head>')
         r.append(f'<meta charset="{enc}">')
-        r.append('<style type="text/css">\n:root {\ncolor-scheme: light dark;\n}\n</style>')
         r.append(f'<title>{title}</title>\n</head>')
         r.append(f'<body>\n<h1>{title}</h1>')
         r.append('<hr>\n<ul>')
@@ -904,7 +896,7 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
         ext = ext.lower()
         if ext in self.extensions_map:
             return self.extensions_map[ext]
-        guess, _ = mimetypes.guess_file_type(path)
+        guess, _ = mimetypes.guess_type(path)
         if guess:
             return guess
         return 'application/octet-stream'
@@ -992,12 +984,6 @@ class CGIHTTPRequestHandler(SimpleHTTPRequestHandler):
     The POST command is *only* implemented for CGI scripts.
 
     """
-
-    def __init__(self, *args, **kwargs):
-        import warnings
-        warnings._deprecated("http.server.CGIHTTPRequestHandler",
-                             remove=(3, 15))
-        super().__init__(*args, **kwargs)
 
     # Determine platform specifics
     have_fork = hasattr(os, 'fork')

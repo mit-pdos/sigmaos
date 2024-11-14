@@ -13,10 +13,9 @@ import threading
 import time
 import unittest
 from test import support
-from test.support import (
-    is_apple, is_apple_mobile, os_helper, threading_helper
-)
+from test.support import os_helper
 from test.support.script_helper import assert_python_ok, spawn_python
+from test.support import threading_helper
 try:
     import _testcapi
 except ImportError:
@@ -123,8 +122,6 @@ class PosixTests(unittest.TestCase):
         self.assertEqual(signal.getsignal(signal.SIGHUP), hup)
         self.assertEqual(0, argument.repr_count)
 
-    @unittest.skipIf(sys.platform.startswith("netbsd"),
-                     "gh-124083: strsignal is not supported on NetBSD")
     def test_strsignal(self):
         self.assertIn("Interrupt", signal.strsignal(signal.SIGINT))
         self.assertIn("Terminated", signal.strsignal(signal.SIGTERM))
@@ -700,7 +697,7 @@ class WakeupSocketSignalTests(unittest.TestCase):
 @unittest.skipUnless(hasattr(os, "pipe"), "requires os.pipe()")
 class SiginterruptTest(unittest.TestCase):
 
-    def readpipe_interrupted(self, interrupt, timeout=support.SHORT_TIMEOUT):
+    def readpipe_interrupted(self, interrupt):
         """Perform a read during which a signal will arrive.  Return True if the
         read is interrupted by the signal and raises an exception.  Return False
         if it returns normally.
@@ -748,7 +745,7 @@ class SiginterruptTest(unittest.TestCase):
                 # wait until the child process is loaded and has started
                 first_line = process.stdout.readline()
 
-                stdout, stderr = process.communicate(timeout=timeout)
+                stdout, stderr = process.communicate(timeout=support.SHORT_TIMEOUT)
             except subprocess.TimeoutExpired:
                 process.kill()
                 return False
@@ -779,7 +776,7 @@ class SiginterruptTest(unittest.TestCase):
         # If a signal handler is installed and siginterrupt is called with
         # a false value for the second argument, when that signal arrives, it
         # does not interrupt a syscall that's in progress.
-        interrupted = self.readpipe_interrupted(False, timeout=2)
+        interrupted = self.readpipe_interrupted(False)
         self.assertFalse(interrupted)
 
 
@@ -835,19 +832,23 @@ class ItimerTest(unittest.TestCase):
         self.assertEqual(self.hndl_called, True)
 
     # Issue 3864, unknown if this affects earlier versions of freebsd also
-    @unittest.skipIf(sys.platform in ('netbsd5',) or is_apple_mobile,
+    @unittest.skipIf(sys.platform in ('netbsd5',),
         'itimer not reliable (does not mix well with threading) on some BSDs.')
     def test_itimer_virtual(self):
         self.itimer = signal.ITIMER_VIRTUAL
         signal.signal(signal.SIGVTALRM, self.sig_vtalrm)
         signal.setitimer(self.itimer, 0.3, 0.2)
 
-        for _ in support.busy_retry(support.LONG_TIMEOUT):
+        for _ in support.busy_retry(60.0, error=False):
             # use up some virtual time by doing real work
             _ = pow(12345, 67890, 10000019)
             if signal.getitimer(self.itimer) == (0.0, 0.0):
                 # sig_vtalrm handler stopped this itimer
                 break
+        else:
+            # bpo-8424
+            self.skipTest("timeout: likely cause: machine too slow or load too "
+                          "high")
 
         # virtual itimer should be (0.0, 0.0) now
         self.assertEqual(signal.getitimer(self.itimer), (0.0, 0.0))
@@ -859,12 +860,16 @@ class ItimerTest(unittest.TestCase):
         signal.signal(signal.SIGPROF, self.sig_prof)
         signal.setitimer(self.itimer, 0.2, 0.2)
 
-        for _ in support.busy_retry(support.LONG_TIMEOUT):
+        for _ in support.busy_retry(60.0, error=False):
             # do some work
             _ = pow(12345, 67890, 10000019)
             if signal.getitimer(self.itimer) == (0.0, 0.0):
                 # sig_prof handler stopped this itimer
                 break
+        else:
+            # bpo-8424
+            self.skipTest("timeout: likely cause: machine too slow or load too "
+                          "high")
 
         # profiling itimer should be (0.0, 0.0) now
         self.assertEqual(signal.getitimer(self.itimer), (0.0, 0.0))
@@ -1327,22 +1332,19 @@ class StressTest(unittest.TestCase):
         def handler(signum, frame):
             sigs.append(signum)
 
-        # On Android, SIGUSR1 is unreliable when used in close proximity to
-        # another signal – see Android/testbed/app/src/main/python/main.py.
-        # So we use a different signal.
-        self.setsig(signal.SIGUSR2, handler)
+        self.setsig(signal.SIGUSR1, handler)
         self.setsig(signal.SIGALRM, handler)  # for ITIMER_REAL
 
         expected_sigs = 0
         while expected_sigs < N:
             # Hopefully the SIGALRM will be received somewhere during
-            # initial processing of SIGUSR2.
+            # initial processing of SIGUSR1.
             signal.setitimer(signal.ITIMER_REAL, 1e-6 + random.random() * 1e-5)
-            os.kill(os.getpid(), signal.SIGUSR2)
+            os.kill(os.getpid(), signal.SIGUSR1)
 
             expected_sigs += 2
             # Wait for handlers to run to avoid signal coalescing
-            for _ in support.sleeping_retry(support.SHORT_TIMEOUT):
+            for _ in support.sleeping_retry(support.SHORT_TIMEOUT, error=False):
                 if len(sigs) >= expected_sigs:
                     break
 
@@ -1350,8 +1352,7 @@ class StressTest(unittest.TestCase):
         # Python handler
         self.assertEqual(len(sigs), N, "Some signals were lost")
 
-    @support.requires_gil_enabled("gh-121065: test is flaky on free-threaded build")
-    @unittest.skipIf(is_apple, "crashes due to system bug (FB13453490)")
+    @unittest.skipIf(sys.platform == "darwin", "crashes due to system bug (FB13453490)")
     @unittest.skipUnless(hasattr(signal, "SIGUSR1"),
                          "test needs SIGUSR1")
     @threading_helper.requires_working_threading()

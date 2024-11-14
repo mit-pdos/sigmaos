@@ -16,7 +16,6 @@ from xml.sax.expatreader import create_parser
 from xml.sax.handler import (feature_namespaces, feature_external_ges,
                              LexicalHandler)
 from xml.sax.xmlreader import InputSource, AttributesImpl, AttributesNSImpl
-from xml import sax
 from io import BytesIO, StringIO
 import codecs
 import os.path
@@ -26,7 +25,7 @@ import sys
 from urllib.error import URLError
 import urllib.request
 from test.support import os_helper
-from test.support import findfile, check__all__
+from test.support import findfile
 from test.support.os_helper import FakePath, TESTFN
 
 
@@ -1556,21 +1555,6 @@ class CDATAHandlerTest(unittest.TestCase):
 
         self.assertFalse(self.in_cdata)
         self.assertEqual(self.char_index, 2)
-
-
-class TestModuleAll(unittest.TestCase):
-    def test_all(self):
-        extra = (
-            'ContentHandler',
-            'ErrorHandler',
-            'InputSource',
-            'SAXException',
-            'SAXNotRecognizedException',
-            'SAXNotSupportedException',
-            'SAXParseException',
-            'SAXReaderNotAvailable',
-        )
-        check__all__(self, sax, extra=extra)
 
 
 if __name__ == "__main__":

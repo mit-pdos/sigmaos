@@ -214,7 +214,10 @@ class InputWrapper:
         return lines
 
     def __iter__(self):
-        while line := self.readline():
+        while 1:
+            line = self.readline()
+            if not line:
+                return
             yield line
 
     def close(self):

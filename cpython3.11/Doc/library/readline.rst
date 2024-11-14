@@ -1,5 +1,5 @@
-:mod:`!readline` --- GNU readline interface
-===========================================
+:mod:`readline` --- GNU readline interface
+==========================================
 
 .. module:: readline
    :platform: Unix
@@ -24,20 +24,19 @@ in the GNU Readline manual for information about the format and
 allowable constructs of that file, and the capabilities of the
 Readline library in general.
 
-.. include:: ../includes/wasm-mobile-notavail.rst
-
 .. note::
 
   The underlying Readline library API may be implemented by
-  the ``editline`` (``libedit``) library instead of GNU readline.
+  the ``libedit`` library instead of GNU readline.
   On macOS the :mod:`readline` module detects which library is being used
   at run time.
 
-  The configuration file for ``editline`` is different from that
+  The configuration file for ``libedit`` is different from that
   of GNU readline. If you programmatically load configuration strings
-  you can use :data:`backend` to determine which library is being used.
+  you can check for the text "libedit" in :const:`readline.__doc__`
+  to differentiate between GNU readline and libedit.
 
-  If you use ``editline``/``libedit`` readline emulation on macOS, the
+  If you use *editline*/``libedit`` readline emulation on macOS, the
   initialization file located in your home directory is named
   ``.editrc``. For example, the following content in ``~/.editrc`` will
   turn ON *vi* keybindings and TAB completion::
@@ -45,16 +44,6 @@ Readline library in general.
     python:bind -v
     python:bind ^I rl_complete
 
-  Also note that different libraries may use different history file formats.
-  When switching the underlying library, existing history files may become
-  unusable.
-
-.. data:: backend
-
-   The name of the underlying Readline library being used, either
-   ``"readline"`` or ``"editline"``.
-
-   .. versionadded:: 3.13
 
 Init file
 ---------

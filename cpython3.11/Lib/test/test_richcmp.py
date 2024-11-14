@@ -28,6 +28,9 @@ class Number:
     def __ge__(self, other):
         return self.x >= other
 
+    def __cmp__(self, other):
+        raise support.TestFailed("Number.__cmp__() should not be called")
+
     def __repr__(self):
         return "Number(%r)" % (self.x, )
 
@@ -49,6 +52,9 @@ class Vector:
 
     def __bool__(self):
         raise TypeError("Vectors cannot be used in Boolean contexts")
+
+    def __cmp__(self, other):
+        raise support.TestFailed("Vector.__cmp__() should not be called")
 
     def __repr__(self):
         return "Vector(%r)" % (self.data, )

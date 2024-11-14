@@ -9,26 +9,34 @@ This software comes with no warranty. Use at your own risk.
 
 ******************************************************************/
 
+#define PY_SSIZE_T_CLEAN
 #include "Python.h"
-#include "pycore_fileutils.h"     // _Py_GetLocaleconvNumeric()
-#include "pycore_pymem.h"         // _PyMem_Strdup()
+#include "pycore_fileutils.h"
 
-#include <locale.h>               // setlocale()
-#include <string.h>               // strlen()
+#include <stdio.h>
+#include <locale.h>
+#include <string.h>
+#include <ctype.h>
+
 #ifdef HAVE_ERRNO_H
-#  include <errno.h>              // errno
+#include <errno.h>
 #endif
+
 #ifdef HAVE_LANGINFO_H
-#  include <langinfo.h>           // nl_langinfo()
+#include <langinfo.h>
 #endif
+
 #ifdef HAVE_LIBINTL_H
-#  include <libintl.h>
+#include <libintl.h>
 #endif
-#ifdef MS_WINDOWS
-#  ifndef WIN32_LEAN_AND_MEAN
-#    define WIN32_LEAN_AND_MEAN
-#  endif
-#  include <windows.h>
+
+#ifdef HAVE_WCHAR_H
+#include <wchar.h>
+#endif
+
+#if defined(MS_WINDOWS)
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
 #endif
 
 PyDoc_STRVAR(locale__doc__, "Support for POSIX locales.");
@@ -52,7 +60,7 @@ module _locale
 [clinic start generated code]*/
 /*[clinic end generated code: output=da39a3ee5e6b4b0d input=ed98569b726feada]*/
 
-/* support functions for formatting floating-point numbers */
+/* support functions for formatting floating point numbers */
 
 /* the grouping is terminated by either 0 or CHAR_MAX */
 static PyObject*
@@ -142,17 +150,6 @@ static int
 locale_is_ascii(const char *str)
 {
     return (strlen(str) == 1 && ((unsigned char)str[0]) <= 127);
-}
-
-static int
-is_all_ascii(const char *str)
-{
-    for (; *str; str++) {
-        if ((unsigned char)*str > 127) {
-            return 0;
-        }
-    }
-    return 1;
 }
 
 static int
@@ -460,12 +457,12 @@ _locale__getdefaultlocale_impl(PyObject *module)
 
     PyOS_snprintf(encoding, sizeof(encoding), "cp%u", GetACP());
 
-    if (GetLocaleInfoA(LOCALE_USER_DEFAULT,
+    if (GetLocaleInfo(LOCALE_USER_DEFAULT,
                       LOCALE_SISO639LANGNAME,
                       locale, sizeof(locale))) {
         Py_ssize_t i = strlen(locale);
         locale[i++] = '_';
-        if (GetLocaleInfoA(LOCALE_USER_DEFAULT,
+        if (GetLocaleInfo(LOCALE_USER_DEFAULT,
                           LOCALE_SISO3166CTRYNAME,
                           locale+i, (int)(sizeof(locale)-i)))
             return Py_BuildValue("ss", locale, encoding);
@@ -477,7 +474,7 @@ _locale__getdefaultlocale_impl(PyObject *module)
 
     locale[0] = '0';
     locale[1] = 'x';
-    if (GetLocaleInfoA(LOCALE_USER_DEFAULT, LOCALE_IDEFAULTLANGUAGE,
+    if (GetLocaleInfo(LOCALE_USER_DEFAULT, LOCALE_IDEFAULTLANGUAGE,
                       locale+2, sizeof(locale)-2)) {
         return Py_BuildValue("ss", locale, encoding);
     }
@@ -489,152 +486,112 @@ _locale__getdefaultlocale_impl(PyObject *module)
 #endif
 
 #ifdef HAVE_LANGINFO_H
-#define LANGINFO(X, Y) {#X, X, Y}
+#define LANGINFO(X) {#X, X}
 static struct langinfo_constant{
-    const char *name;
+    char* name;
     int value;
-    int category;
 } langinfo_constants[] =
 {
     /* These constants should exist on any langinfo implementation */
-    LANGINFO(DAY_1, LC_TIME),
-    LANGINFO(DAY_2, LC_TIME),
-    LANGINFO(DAY_3, LC_TIME),
-    LANGINFO(DAY_4, LC_TIME),
-    LANGINFO(DAY_5, LC_TIME),
-    LANGINFO(DAY_6, LC_TIME),
-    LANGINFO(DAY_7, LC_TIME),
+    LANGINFO(DAY_1),
+    LANGINFO(DAY_2),
+    LANGINFO(DAY_3),
+    LANGINFO(DAY_4),
+    LANGINFO(DAY_5),
+    LANGINFO(DAY_6),
+    LANGINFO(DAY_7),
 
-    LANGINFO(ABDAY_1, LC_TIME),
-    LANGINFO(ABDAY_2, LC_TIME),
-    LANGINFO(ABDAY_3, LC_TIME),
-    LANGINFO(ABDAY_4, LC_TIME),
-    LANGINFO(ABDAY_5, LC_TIME),
-    LANGINFO(ABDAY_6, LC_TIME),
-    LANGINFO(ABDAY_7, LC_TIME),
+    LANGINFO(ABDAY_1),
+    LANGINFO(ABDAY_2),
+    LANGINFO(ABDAY_3),
+    LANGINFO(ABDAY_4),
+    LANGINFO(ABDAY_5),
+    LANGINFO(ABDAY_6),
+    LANGINFO(ABDAY_7),
 
-    LANGINFO(MON_1, LC_TIME),
-    LANGINFO(MON_2, LC_TIME),
-    LANGINFO(MON_3, LC_TIME),
-    LANGINFO(MON_4, LC_TIME),
-    LANGINFO(MON_5, LC_TIME),
-    LANGINFO(MON_6, LC_TIME),
-    LANGINFO(MON_7, LC_TIME),
-    LANGINFO(MON_8, LC_TIME),
-    LANGINFO(MON_9, LC_TIME),
-    LANGINFO(MON_10, LC_TIME),
-    LANGINFO(MON_11, LC_TIME),
-    LANGINFO(MON_12, LC_TIME),
+    LANGINFO(MON_1),
+    LANGINFO(MON_2),
+    LANGINFO(MON_3),
+    LANGINFO(MON_4),
+    LANGINFO(MON_5),
+    LANGINFO(MON_6),
+    LANGINFO(MON_7),
+    LANGINFO(MON_8),
+    LANGINFO(MON_9),
+    LANGINFO(MON_10),
+    LANGINFO(MON_11),
+    LANGINFO(MON_12),
 
-    LANGINFO(ABMON_1, LC_TIME),
-    LANGINFO(ABMON_2, LC_TIME),
-    LANGINFO(ABMON_3, LC_TIME),
-    LANGINFO(ABMON_4, LC_TIME),
-    LANGINFO(ABMON_5, LC_TIME),
-    LANGINFO(ABMON_6, LC_TIME),
-    LANGINFO(ABMON_7, LC_TIME),
-    LANGINFO(ABMON_8, LC_TIME),
-    LANGINFO(ABMON_9, LC_TIME),
-    LANGINFO(ABMON_10, LC_TIME),
-    LANGINFO(ABMON_11, LC_TIME),
-    LANGINFO(ABMON_12, LC_TIME),
+    LANGINFO(ABMON_1),
+    LANGINFO(ABMON_2),
+    LANGINFO(ABMON_3),
+    LANGINFO(ABMON_4),
+    LANGINFO(ABMON_5),
+    LANGINFO(ABMON_6),
+    LANGINFO(ABMON_7),
+    LANGINFO(ABMON_8),
+    LANGINFO(ABMON_9),
+    LANGINFO(ABMON_10),
+    LANGINFO(ABMON_11),
+    LANGINFO(ABMON_12),
 
 #ifdef RADIXCHAR
     /* The following are not available with glibc 2.0 */
-    LANGINFO(RADIXCHAR, LC_NUMERIC),
-    LANGINFO(THOUSEP, LC_NUMERIC),
+    LANGINFO(RADIXCHAR),
+    LANGINFO(THOUSEP),
     /* YESSTR and NOSTR are deprecated in glibc, since they are
        a special case of message translation, which should be rather
        done using gettext. So we don't expose it to Python in the
        first place.
-    LANGINFO(YESSTR, LC_MESSAGES),
-    LANGINFO(NOSTR, LC_MESSAGES),
+    LANGINFO(YESSTR),
+    LANGINFO(NOSTR),
     */
-    LANGINFO(CRNCYSTR, LC_MONETARY),
+    LANGINFO(CRNCYSTR),
 #endif
 
-    LANGINFO(D_T_FMT, LC_TIME),
-    LANGINFO(D_FMT, LC_TIME),
-    LANGINFO(T_FMT, LC_TIME),
-    LANGINFO(AM_STR, LC_TIME),
-    LANGINFO(PM_STR, LC_TIME),
+    LANGINFO(D_T_FMT),
+    LANGINFO(D_FMT),
+    LANGINFO(T_FMT),
+    LANGINFO(AM_STR),
+    LANGINFO(PM_STR),
 
     /* The following constants are available only with XPG4, but...
        OpenBSD doesn't have CODESET but has T_FMT_AMPM, and doesn't have
        a few of the others.
        Solution: ifdef-test them all. */
 #ifdef CODESET
-    LANGINFO(CODESET, LC_CTYPE),
+    LANGINFO(CODESET),
 #endif
 #ifdef T_FMT_AMPM
-    LANGINFO(T_FMT_AMPM, LC_TIME),
+    LANGINFO(T_FMT_AMPM),
 #endif
 #ifdef ERA
-    LANGINFO(ERA, LC_TIME),
+    LANGINFO(ERA),
 #endif
 #ifdef ERA_D_FMT
-    LANGINFO(ERA_D_FMT, LC_TIME),
+    LANGINFO(ERA_D_FMT),
 #endif
 #ifdef ERA_D_T_FMT
-    LANGINFO(ERA_D_T_FMT, LC_TIME),
+    LANGINFO(ERA_D_T_FMT),
 #endif
 #ifdef ERA_T_FMT
-    LANGINFO(ERA_T_FMT, LC_TIME),
+    LANGINFO(ERA_T_FMT),
 #endif
 #ifdef ALT_DIGITS
-    LANGINFO(ALT_DIGITS, LC_TIME),
+    LANGINFO(ALT_DIGITS),
 #endif
 #ifdef YESEXPR
-    LANGINFO(YESEXPR, LC_MESSAGES),
+    LANGINFO(YESEXPR),
 #endif
 #ifdef NOEXPR
-    LANGINFO(NOEXPR, LC_MESSAGES),
+    LANGINFO(NOEXPR),
 #endif
 #ifdef _DATE_FMT
     /* This is not available in all glibc versions that have CODESET. */
-    LANGINFO(_DATE_FMT, LC_TIME),
+    LANGINFO(_DATE_FMT),
 #endif
-    {0, 0, 0}
+    {0, 0}
 };
-
-/* Temporary make the LC_CTYPE locale to be the same as
- * the locale of the specified category. */
-static int
-change_locale(int category, char **oldloc)
-{
-    /* Keep a copy of the LC_CTYPE locale */
-    *oldloc = setlocale(LC_CTYPE, NULL);
-    if (!*oldloc) {
-        PyErr_SetString(PyExc_RuntimeError, "faild to get LC_CTYPE locale");
-        return -1;
-    }
-    *oldloc = _PyMem_Strdup(*oldloc);
-    if (!*oldloc) {
-        PyErr_NoMemory();
-        return -1;
-    }
-
-    /* Set a new locale if it is different. */
-    char *loc = setlocale(category, NULL);
-    if (loc == NULL || strcmp(loc, *oldloc) == 0) {
-        PyMem_Free(*oldloc);
-        *oldloc = NULL;
-        return 0;
-    }
-
-    setlocale(LC_CTYPE, loc);
-    return 1;
-}
-
-/* Restore the old LC_CTYPE locale. */
-static void
-restore_locale(char *oldloc)
-{
-    if (oldloc != NULL) {
-        setlocale(LC_CTYPE, oldloc);
-        PyMem_Free(oldloc);
-    }
-}
 
 /*[clinic input]
 _locale.nl_langinfo
@@ -653,58 +610,14 @@ _locale_nl_langinfo_impl(PyObject *module, int item)
     /* Check whether this is a supported constant. GNU libc sometimes
        returns numeric values in the char* return value, which would
        crash PyUnicode_FromString.  */
-    for (i = 0; langinfo_constants[i].name; i++) {
+    for (i = 0; langinfo_constants[i].name; i++)
         if (langinfo_constants[i].value == item) {
             /* Check NULL as a workaround for GNU libc's returning NULL
                instead of an empty string for nl_langinfo(ERA).  */
             const char *result = nl_langinfo(item);
             result = result != NULL ? result : "";
-            char *oldloc = NULL;
-            if (langinfo_constants[i].category != LC_CTYPE
-                && !is_all_ascii(result)
-                && change_locale(langinfo_constants[i].category, &oldloc) < 0)
-            {
-                return NULL;
-            }
-            PyObject *pyresult;
-#ifdef __GLIBC__
-#ifdef ALT_DIGITS
-            if (item == ALT_DIGITS && *result) {
-                /* According to the POSIX specification the result must be
-                 * a sequence of up to 100 semicolon-separated strings.
-                 * But in Glibc they are NUL-separated. */
-                Py_ssize_t i = 0;
-                int count = 0;
-                for (; count < 100 && result[i]; count++) {
-                    i += strlen(result + i) + 1;
-                }
-                char *buf = PyMem_Malloc(i);
-                if (buf == NULL) {
-                    PyErr_NoMemory();
-                    pyresult = NULL;
-                }
-                else {
-                    memcpy(buf, result, i);
-                    /* Replace all NULs with semicolons. */
-                    i = 0;
-                    while (--count) {
-                        i += strlen(buf + i);
-                        buf[i++] = ';';
-                    }
-                    pyresult = PyUnicode_DecodeLocale(buf, NULL);
-                    PyMem_Free(buf);
-                }
-            }
-            else
-#endif
-#endif
-            {
-                pyresult = PyUnicode_DecodeLocale(result, NULL);
-            }
-            restore_locale(oldloc);
-            return pyresult;
+            return PyUnicode_DecodeLocale(result, NULL);
         }
-    }
     PyErr_SetString(PyExc_ValueError, "unsupported langinfo constant");
     return NULL;
 }
@@ -930,7 +843,12 @@ _locale_exec(PyObject *module)
 
     _locale_state *state = get_locale_state(module);
     state->Error = PyErr_NewException("locale.Error", NULL, NULL);
-    if (PyModule_AddObjectRef(module, "Error", state->Error) < 0) {
+    if (state->Error == NULL) {
+        return -1;
+    }
+    Py_INCREF(get_locale_state(module)->Error);
+    if (PyModule_AddObject(module, "Error", get_locale_state(module)->Error) < 0) {
+        Py_DECREF(get_locale_state(module)->Error);
         return -1;
     }
 
@@ -954,8 +872,6 @@ _locale_exec(PyObject *module)
 
 static struct PyModuleDef_Slot _locale_slots[] = {
     {Py_mod_exec, _locale_exec},
-    {Py_mod_multiple_interpreters, Py_MOD_PER_INTERPRETER_GIL_SUPPORTED},
-    {Py_mod_gil, Py_MOD_GIL_NOT_USED},
     {0, NULL}
 };
 
@@ -976,9 +892,9 @@ locale_clear(PyObject *module)
 }
 
 static void
-locale_free(void *module)
+locale_free(PyObject *module)
 {
-    locale_clear((PyObject*)module);
+    locale_clear(module);
 }
 
 static struct PyModuleDef _localemodule = {
@@ -990,7 +906,7 @@ static struct PyModuleDef _localemodule = {
     _locale_slots,
     locale_traverse,
     locale_clear,
-    locale_free,
+    (freefunc)locale_free,
 };
 
 PyMODINIT_FUNC

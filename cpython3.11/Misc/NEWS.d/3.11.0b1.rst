@@ -58,10 +58,10 @@ may have prevented Python-to-Python calls respecting PEP 523.
 .. nonce: -igcjS
 .. section: Core and Builtins
 
-Add a closure keyword-only parameter to :func:`exec`. It can only be specified
+Add a closure keyword-only parameter to exec(). It can only be specified
 when exec-ing a code object that uses free variables. When specified, it
 must be a tuple, with exactly the number of cell variables referenced by the
-code object. closure has a default value of ``None``, and it must be ``None`` if the
+code object. closure has a default value of None, and it must be None if the
 code object doesn't refer to any free variables.
 
 ..
@@ -285,7 +285,7 @@ macros.
 .. nonce: 11YXHQ
 .. section: Core and Builtins
 
-Add a new :c:func:`!_PyFrame_IsEntryFrame` API function, to check if a
+Add a new :c:func:`_PyFrame_IsEntryFrame` API function, to check if a
 :c:type:`PyFrameObject` is an entry frame. Patch by Pablo Galindo.
 
 ..
@@ -403,8 +403,8 @@ so this led to crashes. The problem is now fixed.
 .. nonce: 6S_uoU
 .. section: Core and Builtins
 
-Make opcodes :opcode:`!JUMP_IF_TRUE_OR_POP` and
-:opcode:`!JUMP_IF_FALSE_OR_POP` relative rather than absolute.
+Make opcodes :opcode:`JUMP_IF_TRUE_OR_POP` and
+:opcode:`JUMP_IF_FALSE_OR_POP` relative rather than absolute.
 
 ..
 
@@ -664,9 +664,8 @@ for :func:`os.fcopyfile` available in macOs.
 .. nonce: l1p7CJ
 .. section: Library
 
-For :func:`@dataclass <dataclasses.dataclass>`, add *weakref_slot*.
-The new parameter defaults to ``False``. If true, and if
-``slots=True``, add a slot named ``"__weakref__"``, which will allow instances to be
+For @dataclass, add weakref_slot. Default is False. If True, and if
+slots=True, add a slot named "__weakref__", which will allow instances to be
 weakref'd. Contributed by Eric V. Smith
 
 ..
@@ -797,7 +796,7 @@ Patch by Kabir Kwatra.
 .. nonce: roapI2
 .. section: Library
 
-The :mod:`!mailcap` module is now deprecated and will be removed in Python
+The :mod:`mailcap` module is now deprecated and will be removed in Python
 3.13. See :pep:`594` for the rationale and the :mod:`mimetypes` module for
 an alternative. Patch by Victor Stinner.
 
@@ -1801,8 +1800,8 @@ The documentation now lists which members of C structs are part of the
 .. section: Documentation
 
 All docstrings in code snippets are now wrapped into :c:macro:`PyDoc_STR` to
-follow the guideline of :pep:`PEP 7's Documentation Strings paragraph
-<0007#documentation-strings>`. Patch
+follow the guideline of `PEP 7's Documentation Strings paragraph
+<https://www.python.org/dev/peps/pep-0007/#documentation-strings>`_. Patch
 by Oleg Iarygin.
 
 ..
@@ -2029,8 +2028,8 @@ https://gitlab.com/warsaw/pynche
 .. nonce: 3mQ54t
 .. section: C API
 
-Deprecate the C functions: :c:func:`!PySys_SetArgv`,
-:c:func:`!PySys_SetArgvEx`, :c:func:`!PySys_SetPath`. Patch by Victor Stinner.
+Deprecate the C functions: :c:func:`PySys_SetArgv`,
+:c:func:`PySys_SetArgvEx`, :c:func:`PySys_SetPath`. Patch by Victor Stinner.
 
 ..
 

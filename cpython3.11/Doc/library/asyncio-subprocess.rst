@@ -207,9 +207,8 @@ their completion.
       Interact with process:
 
       1. send data to *stdin* (if *input* is not ``None``);
-      2. closes *stdin*;
-      3. read data from *stdout* and *stderr*, until EOF is reached;
-      4. wait for process to terminate.
+      2. read data from *stdout* and *stderr*, until EOF is reached;
+      3. wait for process to terminate.
 
       The optional *input* argument is the data (:class:`bytes` object)
       that will be sent to the child process.
@@ -229,10 +228,6 @@ their completion.
 
       Note, that the data read is buffered in memory, so do not use
       this method if the data size is large or unlimited.
-
-      .. versionchanged:: 3.12
-
-         *stdin* gets closed when `input=None` too.
 
    .. method:: send_signal(signal)
 
@@ -315,6 +310,18 @@ default.
 
 On Windows subprocesses are provided by :class:`ProactorEventLoop` only (default),
 :class:`SelectorEventLoop` has no subprocess support.
+
+On UNIX *child watchers* are used for subprocess finish waiting, see
+:ref:`asyncio-watchers` for more info.
+
+
+.. versionchanged:: 3.8
+
+   UNIX switched to use :class:`ThreadedChildWatcher` for spawning subprocesses from
+   different threads without any limitation.
+
+   Spawning a subprocess with *inactive* current child watcher raises
+   :exc:`RuntimeError`.
 
 Note that alternative event loop implementations might have own limitations;
 please refer to their documentation.

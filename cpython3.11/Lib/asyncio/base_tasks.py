@@ -15,13 +15,11 @@ def _task_repr_info(task):
 
     info.insert(1, 'name=%r' % task.get_name())
 
+    coro = coroutines._format_coroutine(task._coro)
+    info.insert(2, f'coro=<{coro}>')
+
     if task._fut_waiter is not None:
-        info.insert(2, f'wait_for={task._fut_waiter!r}')
-
-    if task._coro:
-        coro = coroutines._format_coroutine(task._coro)
-        info.insert(2, f'coro=<{coro}>')
-
+        info.insert(3, f'wait_for={task._fut_waiter!r}')
     return info
 
 

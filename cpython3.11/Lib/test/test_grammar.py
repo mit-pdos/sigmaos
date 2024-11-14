@@ -3,7 +3,7 @@
 
 from test.support import check_syntax_error
 from test.support import import_helper
-import annotationlib
+from test.support.warnings_helper import check_syntax_warning
 import inspect
 import unittest
 import sys
@@ -165,7 +165,7 @@ class TokenTests(unittest.TestCase):
         x = 3.14
         x = 314.
         x = 0.314
-        x = 000.314
+        # XXX x = 000.314
         x = .314
         x = 3e14
         x = 3E14
@@ -241,9 +241,12 @@ class TokenTests(unittest.TestCase):
             with self.assertRaisesRegex(SyntaxError, r"invalid character '⁄' \(U\+2044\)"):
                 compile(f"{num}⁄7", "<testcase>", "eval")
 
-            with self.assertWarnsRegex(SyntaxWarning, r'invalid \w+ literal'):
-                compile(f"{num}is x", "<testcase>", "eval")
             with warnings.catch_warnings():
+                warnings.filterwarnings('ignore', '"is" with a literal',
+                                        SyntaxWarning)
+                with self.assertWarnsRegex(SyntaxWarning,
+                            r'invalid \w+ literal'):
+                    compile(f"{num}is x", "<testcase>", "eval")
                 warnings.simplefilter('error', SyntaxWarning)
                 with self.assertRaisesRegex(SyntaxError,
                             r'invalid \w+ literal'):
@@ -306,6 +309,16 @@ the \'lazy\' dog.\n\
             self.assertIn("was never closed", str(cm.exception))
 
 var_annot_global: int # a global annotated is necessary for test_var_annot
+
+# custom namespace for testing __annotations__
+
+class CNS:
+    def __init__(self):
+        self._dct = {}
+    def __setitem__(self, item, value):
+        self._dct[item.lower()] = value
+    def __getitem__(self, item):
+        return self._dct[item]
 
 
 class GrammarTests(unittest.TestCase):
@@ -437,12 +450,22 @@ class GrammarTests(unittest.TestCase):
         self.assertEqual(E.__annotations__, {})
         self.assertEqual(F.__annotations__, {})
 
+
+    def test_var_annot_metaclass_semantics(self):
+        class CMeta(type):
+            @classmethod
+            def __prepare__(metacls, name, bases, **kwds):
+                return {'__annotations__': CNS()}
+        class CC(metaclass=CMeta):
+            XX: 'ANNOT'
+        self.assertEqual(CC.__annotations__['xx'], 'ANNOT')
+
     def test_var_annot_module_semantics(self):
         self.assertEqual(test.__annotations__, {})
         self.assertEqual(ann_module.__annotations__,
-                         {'x': int, 'y': str, 'f': typing.Tuple[int, int], 'u': int | float})
+                     {1: 2, 'x': int, 'y': str, 'f': typing.Tuple[int, int], 'u': int | float})
         self.assertEqual(ann_module.M.__annotations__,
-                         {'o': type})
+                              {'123': 123, 'o': type})
         self.assertEqual(ann_module2.__annotations__, {})
 
     def test_var_annot_in_module(self):
@@ -457,12 +480,51 @@ class GrammarTests(unittest.TestCase):
             ann_module3.D_bad_ann(5)
 
     def test_var_annot_simple_exec(self):
-        gns = {}; lns = {}
+        gns = {}; lns= {}
         exec("'docstring'\n"
+             "__annotations__[1] = 2\n"
              "x: int = 5\n", gns, lns)
-        self.assertEqual(lns["__annotate__"](annotationlib.Format.VALUE), {'x': int})
+        self.assertEqual(lns["__annotations__"], {1: 2, 'x': int})
         with self.assertRaises(KeyError):
-            gns['__annotate__']
+            gns['__annotations__']
+
+    def test_var_annot_custom_maps(self):
+        # tests with custom locals() and __annotations__
+        ns = {'__annotations__': CNS()}
+        exec('X: int; Z: str = "Z"; (w): complex = 1j', ns)
+        self.assertEqual(ns['__annotations__']['x'], int)
+        self.assertEqual(ns['__annotations__']['z'], str)
+        with self.assertRaises(KeyError):
+            ns['__annotations__']['w']
+        nonloc_ns = {}
+        class CNS2:
+            def __init__(self):
+                self._dct = {}
+            def __setitem__(self, item, value):
+                nonlocal nonloc_ns
+                self._dct[item] = value
+                nonloc_ns[item] = value
+            def __getitem__(self, item):
+                return self._dct[item]
+        exec('x: int = 1', {}, CNS2())
+        self.assertEqual(nonloc_ns['__annotations__']['x'], int)
+
+    def test_var_annot_refleak(self):
+        # complex case: custom locals plus custom __annotations__
+        # this was causing refleak
+        cns = CNS()
+        nonloc_ns = {'__annotations__': cns}
+        class CNS2:
+            def __init__(self):
+                self._dct = {'__annotations__': cns}
+            def __setitem__(self, item, value):
+                nonlocal nonloc_ns
+                self._dct[item] = value
+                nonloc_ns[item] = value
+            def __getitem__(self, item):
+                return self._dct[item]
+        exec('X: str', {}, CNS2())
+        self.assertEqual(nonloc_ns['__annotations__']['x'], str)
 
     def test_var_annot_rhs(self):
         ns = {}
@@ -1421,22 +1483,14 @@ class GrammarTests(unittest.TestCase):
         if 1 < 1 > 1 == 1 >= 1 <= 1 != 1 in 1 not in x is x is not x: pass
 
     def test_comparison_is_literal(self):
-        def check(test, msg):
+        def check(test, msg='"is" with a literal'):
             self.check_syntax_warning(test, msg)
 
-        check('x is 1', '"is" with \'int\' literal')
-        check('x is "thing"', '"is" with \'str\' literal')
-        check('1 is x', '"is" with \'int\' literal')
-        check('x is y is 1', '"is" with \'int\' literal')
-        check('x is not 1', '"is not" with \'int\' literal')
-        check('x is not (1, 2)', '"is not" with \'tuple\' literal')
-        check('(1, 2) is not x', '"is not" with \'tuple\' literal')
-
-        check('None is 1', '"is" with \'int\' literal')
-        check('1 is None', '"is" with \'int\' literal')
-
-        check('x == 3 is y', '"is" with \'int\' literal')
-        check('x == "thing" is y', '"is" with \'str\' literal')
+        check('x is 1')
+        check('x is "thing"')
+        check('1 is x')
+        check('x is y is 1')
+        check('x is not 1', '"is not" with a literal')
 
         with warnings.catch_warnings():
             warnings.simplefilter('error', SyntaxWarning)
@@ -1444,10 +1498,6 @@ class GrammarTests(unittest.TestCase):
             compile('x is False', '<testcase>', 'exec')
             compile('x is True', '<testcase>', 'exec')
             compile('x is ...', '<testcase>', 'exec')
-            compile('None is x', '<testcase>', 'exec')
-            compile('False is x', '<testcase>', 'exec')
-            compile('True is x', '<testcase>', 'exec')
-            compile('... is x', '<testcase>', 'exec')
 
     def test_warn_missed_comma(self):
         def check(test):
@@ -1578,7 +1628,7 @@ class GrammarTests(unittest.TestCase):
         s = a[-5:]
         s = a[:-1]
         s = a[-4:-3]
-        # A rough test of SF bug 1333982.  https://bugs.python.org/issue1333982
+        # A rough test of SF bug 1333982.  http://python.org/sf/1333982
         # The testing here is fairly incomplete.
         # Test cases should include: commas with 1 and 2 colons
         d = {}

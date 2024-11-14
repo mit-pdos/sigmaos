@@ -1,5 +1,5 @@
-:mod:`!tokenize` --- Tokenizer for Python source
-================================================
+:mod:`tokenize` --- Tokenizer for Python source
+===============================================
 
 .. module:: tokenize
    :synopsis: Lexical scanner for Python source code.
@@ -147,6 +147,11 @@ function it uses to do this is available:
       [1,
        2,
        3
+
+Note that unclosed single-quoted strings do not cause an error to be
+raised. They are tokenized as :data:`~token.ERRORTOKEN`, followed by the
+tokenization of their contents.
+
 
 .. _tokenize-cli:
 

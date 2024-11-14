@@ -22,20 +22,22 @@
 #  define Py_BUILD_CORE_MODULE 1
 #endif
 
-#include <stdbool.h>
+#define PY_SSIZE_T_CLEAN
+
 #include "Python.h"
 #include "pycore_hashtable.h"
-#include "pycore_strhex.h"        // _Py_strhex()
 #include "hashlib.h"
+#include "pycore_strhex.h"        // _Py_strhex()
 
 /* EVP is the preferred interface to hashing in OpenSSL */
 #include <openssl/evp.h>
 #include <openssl/hmac.h>
-#include <openssl/crypto.h>       // FIPS_mode()
+#include <openssl/crypto.h>
 /* We use the object interface to discover what hashes OpenSSL supports. */
 #include <openssl/objects.h>
 #include <openssl/err.h>
 
+#include <openssl/crypto.h>       // FIPS_mode()
 
 #ifndef OPENSSL_THREADS
 #  error "OPENSSL_THREADS is not defined, Python requires thread-safe OpenSSL"
@@ -44,15 +46,9 @@
 #define MUNCH_SIZE INT_MAX
 
 #define PY_OPENSSL_HAS_SCRYPT 1
-#if defined(NID_sha3_224) && defined(NID_sha3_256) && defined(NID_sha3_384) && defined(NID_sha3_512)
 #define PY_OPENSSL_HAS_SHA3 1
-#endif
-#if defined(NID_shake128) || defined(NID_shake256)
 #define PY_OPENSSL_HAS_SHAKE 1
-#endif
-#if defined(NID_blake2s256) || defined(NID_blake2b512)
 #define PY_OPENSSL_HAS_BLAKE2 1
-#endif
 
 #if OPENSSL_VERSION_NUMBER >= 0x30000000L
 #define PY_EVP_MD EVP_MD
@@ -93,45 +89,22 @@ typedef struct {
     PY_EVP_MD *evp_nosecurity;
 } py_hashentry_t;
 
-// Fundamental to TLS, assumed always present in any libcrypto:
 #define Py_hash_md5 "md5"
 #define Py_hash_sha1 "sha1"
 #define Py_hash_sha224 "sha224"
 #define Py_hash_sha256 "sha256"
 #define Py_hash_sha384 "sha384"
 #define Py_hash_sha512 "sha512"
-
-// Not all OpenSSL-like libcrypto libraries provide these:
-#if defined(NID_sha512_224)
-# define Py_hash_sha512_224 "sha512_224"
-#endif
-#if defined(NID_sha512_256)
-# define Py_hash_sha512_256 "sha512_256"
-#endif
-#if defined(NID_sha3_224)
-# define Py_hash_sha3_224 "sha3_224"
-#endif
-#if defined(NID_sha3_256)
-# define Py_hash_sha3_256 "sha3_256"
-#endif
-#if defined(NID_sha3_384)
-# define Py_hash_sha3_384 "sha3_384"
-#endif
-#if defined(NID_sha3_512)
-# define Py_hash_sha3_512 "sha3_512"
-#endif
-#if defined(NID_shake128)
-# define Py_hash_shake_128 "shake_128"
-#endif
-#if defined(NID_shake256)
-# define Py_hash_shake_256 "shake_256"
-#endif
-#if defined(NID_blake2s256)
-# define Py_hash_blake2s "blake2s"
-#endif
-#if defined(NID_blake2b512)
-# define Py_hash_blake2b "blake2b"
-#endif
+#define Py_hash_sha512_224 "sha512_224"
+#define Py_hash_sha512_256 "sha512_256"
+#define Py_hash_sha3_224 "sha3_224"
+#define Py_hash_sha3_256 "sha3_256"
+#define Py_hash_sha3_384 "sha3_384"
+#define Py_hash_sha3_512 "sha3_512"
+#define Py_hash_shake_128 "shake_128"
+#define Py_hash_shake_256 "shake_256"
+#define Py_hash_blake2s "blake2s"
+#define Py_hash_blake2b "blake2b"
 
 #define PY_HASH_ENTRY(py_name, py_alias, ossl_name, ossl_nid) \
     {py_name, py_alias, ossl_name, ossl_nid, 0, NULL, NULL}
@@ -147,45 +120,25 @@ static const py_hashentry_t py_hashes[] = {
     PY_HASH_ENTRY(Py_hash_sha384, "SHA384", SN_sha384, NID_sha384),
     PY_HASH_ENTRY(Py_hash_sha512, "SHA512", SN_sha512, NID_sha512),
     /* truncated sha2 */
-#ifdef Py_hash_sha512_224
     PY_HASH_ENTRY(Py_hash_sha512_224, "SHA512_224", SN_sha512_224, NID_sha512_224),
-#endif
-#ifdef Py_hash_sha512_256
     PY_HASH_ENTRY(Py_hash_sha512_256, "SHA512_256", SN_sha512_256, NID_sha512_256),
-#endif
     /* sha3 */
-#ifdef Py_hash_sha3_224
     PY_HASH_ENTRY(Py_hash_sha3_224, NULL, SN_sha3_224, NID_sha3_224),
-#endif
-#ifdef Py_hash_sha3_256
     PY_HASH_ENTRY(Py_hash_sha3_256, NULL, SN_sha3_256, NID_sha3_256),
-#endif
-#ifdef Py_hash_sha3_384
     PY_HASH_ENTRY(Py_hash_sha3_384, NULL, SN_sha3_384, NID_sha3_384),
-#endif
-#ifdef Py_hash_sha3_512
     PY_HASH_ENTRY(Py_hash_sha3_512, NULL, SN_sha3_512, NID_sha3_512),
-#endif
     /* sha3 shake */
-#ifdef Py_hash_shake_128
     PY_HASH_ENTRY(Py_hash_shake_128, NULL, SN_shake128, NID_shake128),
-#endif
-#ifdef Py_hash_shake_256
     PY_HASH_ENTRY(Py_hash_shake_256, NULL, SN_shake256, NID_shake256),
-#endif
     /* blake2 digest */
-#ifdef Py_hash_blake2s
     PY_HASH_ENTRY(Py_hash_blake2s, "blake2s256", SN_blake2s256, NID_blake2s256),
-#endif
-#ifdef Py_hash_blake2b
     PY_HASH_ENTRY(Py_hash_blake2b, "blake2b512", SN_blake2b512, NID_blake2b512),
-#endif
     PY_HASH_ENTRY(NULL, NULL, NULL, 0),
 };
 
 static Py_uhash_t
 py_hashentry_t_hash_name(const void *key) {
-    return Py_HashBuffer(key, strlen((const char *)key));
+    return _Py_HashBytes(key, strlen((const char *)key));
 }
 
 static int
@@ -275,17 +228,13 @@ get_hashlib_state(PyObject *module)
 typedef struct {
     PyObject_HEAD
     EVP_MD_CTX          *ctx;   /* OpenSSL message digest context */
-    // Prevents undefined behavior via multiple threads entering the C API.
-    bool use_mutex;
-    PyMutex mutex;  /* OpenSSL context lock */
+    PyThread_type_lock   lock;  /* OpenSSL context lock */
 } EVPobject;
 
 typedef struct {
     PyObject_HEAD
     HMAC_CTX *ctx;            /* OpenSSL hmac context */
-    // Prevents undefined behavior via multiple threads entering the C API.
-    bool use_mutex;
-    PyMutex mutex;  /* HMAC context lock */
+    PyThread_type_lock lock;  /* HMAC context lock */
 } HMACobject;
 
 #include "clinic/_hashopenssl.c.h"
@@ -306,7 +255,11 @@ _setException(PyObject *exc, const char* altmsg, ...)
     const char *lib, *func, *reason;
     va_list vargs;
 
+#ifdef HAVE_STDARG_PROTOTYPES
     va_start(vargs, altmsg);
+#else
+    va_start(vargs);
+#endif
     if (!errcode) {
         if (altmsg == NULL) {
             PyErr_SetString(exc, "no reason supplied");
@@ -463,7 +416,8 @@ newEVPobject(PyTypeObject *type)
     if (retval == NULL) {
         return NULL;
     }
-    HASHLIB_INIT_MUTEX(retval);
+
+    retval->lock = NULL;
 
     retval->ctx = EVP_MD_CTX_new();
     if (retval->ctx == NULL) {
@@ -501,6 +455,8 @@ static void
 EVP_dealloc(EVPobject *self)
 {
     PyTypeObject *tp = Py_TYPE(self);
+    if (self->lock != NULL)
+        PyThread_free_lock(self->lock);
     EVP_MD_CTX_free(self->ctx);
     PyObject_Free(self);
     Py_DECREF(tp);
@@ -628,14 +584,16 @@ EVP_update(EVPobject *self, PyObject *obj)
 
     GET_BUFFER_VIEW_OR_ERROUT(obj, &view);
 
-    if (!self->use_mutex && view.len >= HASHLIB_GIL_MINSIZE) {
-        self->use_mutex = true;
+    if (self->lock == NULL && view.len >= HASHLIB_GIL_MINSIZE) {
+        self->lock = PyThread_allocate_lock();
+        /* fail? lock = NULL and we fail over to non-threaded code. */
     }
-    if (self->use_mutex) {
+
+    if (self->lock != NULL) {
         Py_BEGIN_ALLOW_THREADS
-        PyMutex_Lock(&self->mutex);
+        PyThread_acquire_lock(self->lock, 1);
         result = EVP_hash(self, view.buf, view.len);
-        PyMutex_Unlock(&self->mutex);
+        PyThread_release_lock(self->lock);
         Py_END_ALLOW_THREADS
     } else {
         result = EVP_hash(self, view.buf, view.len);
@@ -944,8 +902,6 @@ py_evp_fromname(PyObject *module, const char *digestname, PyObject *data_obj,
 
     if (view.buf && view.len) {
         if (view.len >= HASHLIB_GIL_MINSIZE) {
-            /* We do not initialize self->lock here as this is the constructor
-             * where it is not yet possible to have concurrent access. */
             Py_BEGIN_ALLOW_THREADS
             result = EVP_hash(self, view.buf, view.len);
             Py_END_ALLOW_THREADS
@@ -1584,7 +1540,7 @@ _hashlib_hmac_new_impl(PyObject *module, Py_buffer *key, PyObject *msg_obj,
     }
 
     self->ctx = ctx;
-    HASHLIB_INIT_MUTEX(self);
+    self->lock = NULL;
 
     if ((msg_obj != NULL) && (msg_obj != Py_None)) {
         if (!_hmac_update(self, msg_obj))
@@ -1626,14 +1582,16 @@ _hmac_update(HMACobject *self, PyObject *obj)
 
     GET_BUFFER_VIEW_OR_ERROR(obj, &view, return 0);
 
-    if (!self->use_mutex && view.len >= HASHLIB_GIL_MINSIZE) {
-        self->use_mutex = true;
+    if (self->lock == NULL && view.len >= HASHLIB_GIL_MINSIZE) {
+        self->lock = PyThread_allocate_lock();
+        /* fail? lock = NULL and we fail over to non-threaded code. */
     }
-    if (self->use_mutex) {
+
+    if (self->lock != NULL) {
         Py_BEGIN_ALLOW_THREADS
-        PyMutex_Lock(&self->mutex);
+        PyThread_acquire_lock(self->lock, 1);
         r = HMAC_Update(self->ctx, (const unsigned char*)view.buf, view.len);
-        PyMutex_Unlock(&self->mutex);
+        PyThread_release_lock(self->lock);
         Py_END_ALLOW_THREADS
     } else {
         r = HMAC_Update(self->ctx, (const unsigned char*)view.buf, view.len);
@@ -1675,7 +1633,7 @@ _hashlib_HMAC_copy_impl(HMACobject *self)
         return NULL;
     }
     retval->ctx = ctx;
-    HASHLIB_INIT_MUTEX(retval);
+    retval->lock = NULL;
 
     return (PyObject *)retval;
 }
@@ -1684,6 +1642,9 @@ static void
 _hmac_dealloc(HMACobject *self)
 {
     PyTypeObject *tp = Py_TYPE(self);
+    if (self->lock != NULL) {
+        PyThread_free_lock(self->lock);
+    }
     HMAC_CTX_free(self->ctx);
     PyObject_Free(self);
     Py_DECREF(tp);
@@ -1928,7 +1889,12 @@ hashlib_md_meth_names(PyObject *module)
         return -1;
     }
 
-    return PyModule_Add(module, "openssl_md_meth_names", state.set);
+    if (PyModule_AddObject(module, "openssl_md_meth_names", state.set) < 0) {
+        Py_DECREF(state.set);
+        return -1;
+    }
+
+    return 0;
 }
 
 /*[clinic input]
@@ -2022,6 +1988,9 @@ _hashlib_compare_digest_impl(PyObject *module, PyObject *a, PyObject *b)
 
     /* ASCII unicode string */
     if(PyUnicode_Check(a) && PyUnicode_Check(b)) {
+        if (PyUnicode_READY(a) == -1 || PyUnicode_READY(b) == -1) {
+            return NULL;
+        }
         if (!PyUnicode_IS_ASCII(a) || !PyUnicode_IS_ASCII(b)) {
             PyErr_SetString(PyExc_TypeError,
                             "comparing strings with non-ASCII characters is "
@@ -2224,6 +2193,7 @@ hashlib_init_constructors(PyObject *module)
      */
     PyModuleDef *mdef;
     PyMethodDef *fdef;
+    PyObject *proxy;
     PyObject *func, *name_obj;
     _hashlibstate *state = get_hashlib_state(module);
 
@@ -2258,8 +2228,17 @@ hashlib_init_constructors(PyObject *module)
         }
     }
 
-    return PyModule_Add(module, "_constructors",
-                        PyDictProxy_New(state->constructs));
+    proxy = PyDictProxy_New(state->constructs);
+    if (proxy == NULL) {
+        return -1;
+    }
+
+    int rc = PyModule_AddObjectRef(module, "_constructors", proxy);
+    Py_DECREF(proxy);
+    if (rc < 0) {
+        return -1;
+    }
+    return 0;
 }
 
 static int
@@ -2287,8 +2266,6 @@ static PyModuleDef_Slot hashlib_slots[] = {
     {Py_mod_exec, hashlib_md_meth_names},
     {Py_mod_exec, hashlib_init_constructors},
     {Py_mod_exec, hashlib_exception},
-    {Py_mod_multiple_interpreters, Py_MOD_PER_INTERPRETER_GIL_SUPPORTED},
-    {Py_mod_gil, Py_MOD_GIL_NOT_USED},
     {0, NULL}
 };
 

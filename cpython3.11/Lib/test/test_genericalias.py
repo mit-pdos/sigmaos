@@ -2,7 +2,6 @@
 
 import unittest
 import pickle
-from array import array
 import copy
 from collections import (
     defaultdict, deque, OrderedDict, Counter, UserDict, UserList
@@ -12,7 +11,6 @@ from concurrent.futures import Future
 from concurrent.futures.thread import _WorkItem
 from contextlib import AbstractContextManager, AbstractAsyncContextManager
 from contextvars import ContextVar, Token
-from csv import DictReader, DictWriter
 from dataclasses import Field
 from functools import partial, partialmethod, cached_property
 from graphlib import TopologicalSorter
@@ -28,20 +26,14 @@ from fileinput import FileInput
 from itertools import chain
 from http.cookies import Morsel
 try:
-    from multiprocessing.managers import ValueProxy, DictProxy, ListProxy
+    from multiprocessing.managers import ValueProxy
     from multiprocessing.pool import ApplyResult
     from multiprocessing.queues import SimpleQueue as MPSimpleQueue
-    from multiprocessing.queues import Queue as MPQueue
-    from multiprocessing.queues import JoinableQueue as MPJoinableQueue
 except ImportError:
     # _multiprocessing module is optional
     ValueProxy = None
-    DictProxy = None
-    ListProxy = None
     ApplyResult = None
     MPSimpleQueue = None
-    MPQueue = None
-    MPJoinableQueue = None
 try:
     from multiprocessing.shared_memory import ShareableList
 except ImportError:
@@ -49,7 +41,7 @@ except ImportError:
     ShareableList = None
 from os import DirEntry
 from re import Pattern, Match
-from types import GenericAlias, MappingProxyType, AsyncGeneratorType, CoroutineType, GeneratorType
+from types import GenericAlias, MappingProxyType, AsyncGeneratorType
 from tempfile import TemporaryDirectory, SpooledTemporaryFile
 from urllib.parse import SplitResult, ParseResult
 from unittest.case import _AssertRaisesContext
@@ -57,10 +49,6 @@ from queue import Queue, SimpleQueue
 from weakref import WeakSet, ReferenceType, ref
 import typing
 from typing import Unpack
-try:
-    from tkinter import Event
-except ImportError:
-    Event = None
 
 from typing import TypeVar
 T = TypeVar('T')
@@ -100,7 +88,7 @@ _UNPACKED_TUPLES = [
 
 class BaseTest(unittest.TestCase):
     """Test basics."""
-    generic_types = [type, tuple, list, dict, set, frozenset, enumerate, memoryview,
+    generic_types = [type, tuple, list, dict, set, frozenset, enumerate,
                      defaultdict, deque,
                      SequenceMatcher,
                      dircmp,
@@ -124,7 +112,6 @@ class BaseTest(unittest.TestCase):
                      KeysView, ItemsView, ValuesView,
                      Sequence, MutableSequence,
                      MappingProxyType, AsyncGeneratorType,
-                     GeneratorType, CoroutineType,
                      DirEntry,
                      chain,
                      LoggerAdapter, StreamHandler,
@@ -135,16 +122,11 @@ class BaseTest(unittest.TestCase):
                      WeakSet, ReferenceType, ref,
                      ShareableList,
                      Future, _WorkItem,
-                     Morsel,
-                     DictReader, DictWriter,
-                     array]
+                     Morsel]
     if ctypes is not None:
         generic_types.extend((ctypes.Array, ctypes.LibraryLoader))
     if ValueProxy is not None:
-        generic_types.extend((ValueProxy, DictProxy, ListProxy, ApplyResult,
-                              MPSimpleQueue, MPQueue, MPJoinableQueue))
-    if Event is not None:
-        generic_types.append(Event)
+        generic_types.extend((ValueProxy, ApplyResult, MPSimpleQueue))
 
     def test_subscriptable(self):
         for t in self.generic_types:
@@ -218,9 +200,6 @@ class BaseTest(unittest.TestCase):
     def test_repr(self):
         class MyList(list):
             pass
-        class MyGeneric:
-            __class_getitem__ = classmethod(GenericAlias)
-
         self.assertEqual(repr(list[str]), 'list[str]')
         self.assertEqual(repr(list[()]), 'list[()]')
         self.assertEqual(repr(tuple[int, ...]), 'tuple[int, ...]')
@@ -232,11 +211,6 @@ class BaseTest(unittest.TestCase):
         self.assertEqual(repr(x3), 'tuple[*tuple[int, ...]]')
         self.assertTrue(repr(MyList[int]).endswith('.BaseTest.test_repr.<locals>.MyList[int]'))
         self.assertEqual(repr(list[str]()), '[]')  # instances should keep their normal repr
-
-        # gh-105488
-        self.assertTrue(repr(MyGeneric[int]).endswith('MyGeneric[int]'))
-        self.assertTrue(repr(MyGeneric[[]]).endswith('MyGeneric[[]]'))
-        self.assertTrue(repr(MyGeneric[[int, str]]).endswith('MyGeneric[[int, str]]'))
 
     def test_exposed_type(self):
         import types

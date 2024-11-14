@@ -2,12 +2,6 @@
 preserve
 [clinic start generated code]*/
 
-#if defined(Py_BUILD_CORE) && !defined(Py_BUILD_CORE_MODULE)
-#  include "pycore_gc.h"          // PyGC_Head
-#  include "pycore_runtime.h"     // _Py_ID()
-#endif
-#include "pycore_modsupport.h"    // _PyArg_UnpackKeywords()
-
 PyDoc_STRVAR(_testmultiphase_StateAccessType_get_defining_module__doc__,
 "get_defining_module($self, /)\n"
 "--\n"
@@ -79,38 +73,14 @@ static PyObject *
 _testmultiphase_StateAccessType_increment_count_clinic(StateAccessTypeObject *self, PyTypeObject *cls, PyObject *const *args, Py_ssize_t nargs, PyObject *kwnames)
 {
     PyObject *return_value = NULL;
-    #if defined(Py_BUILD_CORE) && !defined(Py_BUILD_CORE_MODULE)
-
-    #define NUM_KEYWORDS 2
-    static struct {
-        PyGC_Head _this_is_not_used;
-        PyObject_VAR_HEAD
-        PyObject *ob_item[NUM_KEYWORDS];
-    } _kwtuple = {
-        .ob_base = PyVarObject_HEAD_INIT(&PyTuple_Type, NUM_KEYWORDS)
-        .ob_item = { _Py_LATIN1_CHR('n'), &_Py_ID(twice), },
-    };
-    #undef NUM_KEYWORDS
-    #define KWTUPLE (&_kwtuple.ob_base.ob_base)
-
-    #else  // !Py_BUILD_CORE
-    #  define KWTUPLE NULL
-    #endif  // !Py_BUILD_CORE
-
     static const char * const _keywords[] = {"n", "twice", NULL};
-    static _PyArg_Parser _parser = {
-        .keywords = _keywords,
-        .fname = "increment_count_clinic",
-        .kwtuple = KWTUPLE,
-    };
-    #undef KWTUPLE
+    static _PyArg_Parser _parser = {NULL, _keywords, "increment_count_clinic", 0};
     PyObject *argsbuf[2];
     Py_ssize_t noptargs = nargs + (kwnames ? PyTuple_GET_SIZE(kwnames) : 0) - 0;
     int n = 1;
     int twice = 0;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 0, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser, 0, 1, 0, argsbuf);
     if (!args) {
         goto exit;
     }
@@ -118,7 +88,7 @@ _testmultiphase_StateAccessType_increment_count_clinic(StateAccessTypeObject *se
         goto skip_optional_pos;
     }
     if (args[0]) {
-        n = PyLong_AsInt(args[0]);
+        n = _PyLong_AsInt(args[0]);
         if (n == -1 && PyErr_Occurred()) {
             goto exit;
         }
@@ -163,4 +133,4 @@ _testmultiphase_StateAccessType_get_count(StateAccessTypeObject *self, PyTypeObj
     }
     return _testmultiphase_StateAccessType_get_count_impl(self, cls);
 }
-/*[clinic end generated code: output=c1aa0af3572bf059 input=a9049054013a1b77]*/
+/*[clinic end generated code: output=de38f6a82927fb11 input=a9049054013a1b77]*/

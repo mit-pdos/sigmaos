@@ -1,5 +1,5 @@
-:mod:`!asyncio` --- Asynchronous I/O
-====================================
+:mod:`asyncio` --- Asynchronous I/O
+===================================
 
 .. module:: asyncio
    :synopsis: Asynchronous I/O.
@@ -62,7 +62,7 @@ Additionally, there are **low-level** APIs for
 
 .. rubric:: asyncio REPL
 
-You can experiment with an ``asyncio`` concurrent context in the :term:`REPL`:
+You can experiment with an ``asyncio`` concurrent context in the REPL:
 
 .. code-block:: pycon
 
@@ -76,12 +76,8 @@ You can experiment with an ``asyncio`` concurrent context in the :term:`REPL`:
 
 .. audit-event:: cpython.run_stdin "" ""
 
-.. versionchanged:: 3.12.5 (also 3.11.10, 3.10.15, 3.9.20, and 3.8.20)
+.. versionchanged:: 3.11.10 (also 3.10.15, 3.9.20, and 3.8.20)
    Emits audit events.
-
-.. versionchanged:: 3.13
-   Uses PyREPL if possible, in which case :envvar:`PYTHONSTARTUP` is
-   also executed. Emits audit events.
 
 .. We use the "rubric" directive here to avoid creating
    the "Reference" subsection in the TOC.

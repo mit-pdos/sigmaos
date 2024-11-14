@@ -1,5 +1,6 @@
 /* PickleBuffer object implementation */
 
+#define PY_SSIZE_T_CLEAN
 #include "Python.h"
 #include <stddef.h>
 

@@ -1,12 +1,9 @@
 import glob
 import os
-import re
 import shutil
 import sys
 import unittest
-import warnings
 
-from test.support import is_wasi, Py_DEBUG
 from test.support.os_helper import (TESTFN, skip_unless_symlink,
                                     can_symlink, create_empty_file, change_cwd)
 
@@ -367,8 +364,6 @@ class GlobTests(unittest.TestCase):
         self.assertEqual(self.rglob('mypipe', 'sub'), [])
         self.assertEqual(self.rglob('mypipe', '*'), [])
 
-
-    @unittest.skipIf(is_wasi and Py_DEBUG, "requires too much stack")
     def test_glob_many_open_files(self):
         depth = 30
         base = os.path.join(self.tempdir, 'deep')
@@ -385,126 +380,6 @@ class GlobTests(unittest.TestCase):
             p = os.path.join(p, 'd')
             for it in iters:
                 self.assertEqual(next(it), p)
-
-    def test_glob0(self):
-        with self.assertWarns(DeprecationWarning):
-            glob.glob0(self.tempdir, 'a')
-
-        with warnings.catch_warnings():
-            warnings.simplefilter('ignore')
-            eq = self.assertSequencesEqual_noorder
-            eq(glob.glob0(self.tempdir, 'a'), ['a'])
-            eq(glob.glob0(self.tempdir, '.bb'), ['.bb'])
-            eq(glob.glob0(self.tempdir, '.b*'), [])
-            eq(glob.glob0(self.tempdir, 'b'), [])
-            eq(glob.glob0(self.tempdir, '?'), [])
-            eq(glob.glob0(self.tempdir, '*a'), [])
-            eq(glob.glob0(self.tempdir, 'a*'), [])
-
-    def test_glob1(self):
-        with self.assertWarns(DeprecationWarning):
-            glob.glob1(self.tempdir, 'a')
-
-        with warnings.catch_warnings():
-            warnings.simplefilter('ignore')
-            eq = self.assertSequencesEqual_noorder
-            eq(glob.glob1(self.tempdir, 'a'), ['a'])
-            eq(glob.glob1(self.tempdir, '.bb'), ['.bb'])
-            eq(glob.glob1(self.tempdir, '.b*'), ['.bb'])
-            eq(glob.glob1(self.tempdir, 'b'), [])
-            eq(glob.glob1(self.tempdir, '?'), ['a'])
-            eq(glob.glob1(self.tempdir, '*a'), ['a', 'aaa'])
-            eq(glob.glob1(self.tempdir, 'a*'), ['a', 'aaa', 'aab'])
-
-    def test_translate_matching(self):
-        match = re.compile(glob.translate('*')).match
-        self.assertIsNotNone(match('foo'))
-        self.assertIsNotNone(match('foo.bar'))
-        self.assertIsNone(match('.foo'))
-        match = re.compile(glob.translate('.*')).match
-        self.assertIsNotNone(match('.foo'))
-        match = re.compile(glob.translate('**', recursive=True)).match
-        self.assertIsNotNone(match('foo'))
-        self.assertIsNone(match('.foo'))
-        self.assertIsNotNone(match(os.path.join('foo', 'bar')))
-        self.assertIsNone(match(os.path.join('foo', '.bar')))
-        self.assertIsNone(match(os.path.join('.foo', 'bar')))
-        self.assertIsNone(match(os.path.join('.foo', '.bar')))
-        match = re.compile(glob.translate('**/*', recursive=True)).match
-        self.assertIsNotNone(match(os.path.join('foo', 'bar')))
-        self.assertIsNone(match(os.path.join('foo', '.bar')))
-        self.assertIsNone(match(os.path.join('.foo', 'bar')))
-        self.assertIsNone(match(os.path.join('.foo', '.bar')))
-        match = re.compile(glob.translate('*/**', recursive=True)).match
-        self.assertIsNotNone(match(os.path.join('foo', 'bar')))
-        self.assertIsNone(match(os.path.join('foo', '.bar')))
-        self.assertIsNone(match(os.path.join('.foo', 'bar')))
-        self.assertIsNone(match(os.path.join('.foo', '.bar')))
-        match = re.compile(glob.translate('**/.bar', recursive=True)).match
-        self.assertIsNotNone(match(os.path.join('foo', '.bar')))
-        self.assertIsNone(match(os.path.join('.foo', '.bar')))
-        match = re.compile(glob.translate('**/*.*', recursive=True)).match
-        self.assertIsNone(match(os.path.join('foo', 'bar')))
-        self.assertIsNone(match(os.path.join('foo', '.bar')))
-        self.assertIsNotNone(match(os.path.join('foo', 'bar.txt')))
-        self.assertIsNone(match(os.path.join('foo', '.bar.txt')))
-
-    def test_translate(self):
-        def fn(pat):
-            return glob.translate(pat, seps='/')
-        self.assertEqual(fn('foo'), r'(?s:foo)\Z')
-        self.assertEqual(fn('foo/bar'), r'(?s:foo/bar)\Z')
-        self.assertEqual(fn('*'), r'(?s:[^/.][^/]*)\Z')
-        self.assertEqual(fn('?'), r'(?s:(?!\.)[^/])\Z')
-        self.assertEqual(fn('a*'), r'(?s:a[^/]*)\Z')
-        self.assertEqual(fn('*a'), r'(?s:(?!\.)[^/]*a)\Z')
-        self.assertEqual(fn('.*'), r'(?s:\.[^/]*)\Z')
-        self.assertEqual(fn('?aa'), r'(?s:(?!\.)[^/]aa)\Z')
-        self.assertEqual(fn('aa?'), r'(?s:aa[^/])\Z')
-        self.assertEqual(fn('aa[ab]'), r'(?s:aa[ab])\Z')
-        self.assertEqual(fn('**'), r'(?s:(?!\.)[^/]*)\Z')
-        self.assertEqual(fn('***'), r'(?s:(?!\.)[^/]*)\Z')
-        self.assertEqual(fn('a**'), r'(?s:a[^/]*)\Z')
-        self.assertEqual(fn('**b'), r'(?s:(?!\.)[^/]*b)\Z')
-        self.assertEqual(fn('/**/*/*.*/**'),
-                         r'(?s:/(?!\.)[^/]*/[^/.][^/]*/(?!\.)[^/]*\.[^/]*/(?!\.)[^/]*)\Z')
-
-    def test_translate_include_hidden(self):
-        def fn(pat):
-            return glob.translate(pat, include_hidden=True, seps='/')
-        self.assertEqual(fn('foo'), r'(?s:foo)\Z')
-        self.assertEqual(fn('foo/bar'), r'(?s:foo/bar)\Z')
-        self.assertEqual(fn('*'), r'(?s:[^/]+)\Z')
-        self.assertEqual(fn('?'), r'(?s:[^/])\Z')
-        self.assertEqual(fn('a*'), r'(?s:a[^/]*)\Z')
-        self.assertEqual(fn('*a'), r'(?s:[^/]*a)\Z')
-        self.assertEqual(fn('.*'), r'(?s:\.[^/]*)\Z')
-        self.assertEqual(fn('?aa'), r'(?s:[^/]aa)\Z')
-        self.assertEqual(fn('aa?'), r'(?s:aa[^/])\Z')
-        self.assertEqual(fn('aa[ab]'), r'(?s:aa[ab])\Z')
-        self.assertEqual(fn('**'), r'(?s:[^/]*)\Z')
-        self.assertEqual(fn('***'), r'(?s:[^/]*)\Z')
-        self.assertEqual(fn('a**'), r'(?s:a[^/]*)\Z')
-        self.assertEqual(fn('**b'), r'(?s:[^/]*b)\Z')
-        self.assertEqual(fn('/**/*/*.*/**'), r'(?s:/[^/]*/[^/]+/[^/]*\.[^/]*/[^/]*)\Z')
-
-    def test_translate_recursive(self):
-        def fn(pat):
-            return glob.translate(pat, recursive=True, include_hidden=True, seps='/')
-        self.assertEqual(fn('*'), r'(?s:[^/]+)\Z')
-        self.assertEqual(fn('?'), r'(?s:[^/])\Z')
-        self.assertEqual(fn('**'), r'(?s:.*)\Z')
-        self.assertEqual(fn('**/**'), r'(?s:.*)\Z')
-        self.assertEqual(fn('***'), r'(?s:[^/]*)\Z')
-        self.assertEqual(fn('a**'), r'(?s:a[^/]*)\Z')
-        self.assertEqual(fn('**b'), r'(?s:[^/]*b)\Z')
-        self.assertEqual(fn('/**/*/*.*/**'), r'(?s:/(?:.+/)?[^/]+/[^/]*\.[^/]*/.*)\Z')
-
-    def test_translate_seps(self):
-        def fn(pat):
-            return glob.translate(pat, recursive=True, include_hidden=True, seps=['/', '\\'])
-        self.assertEqual(fn('foo/bar\\baz'), r'(?s:foo[/\\]bar[/\\]baz)\Z')
-        self.assertEqual(fn('**/*'), r'(?s:(?:.+[/\\])?[^/\\]+)\Z')
 
 
 @skip_unless_symlink

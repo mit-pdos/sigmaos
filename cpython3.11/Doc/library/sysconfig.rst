@@ -1,5 +1,5 @@
-:mod:`!sysconfig` --- Provide access to Python's configuration information
-==========================================================================
+:mod:`sysconfig` --- Provide access to Python's configuration information
+=========================================================================
 
 .. module:: sysconfig
    :synopsis: Python's configuration information
@@ -9,7 +9,7 @@
 
 .. versionadded:: 3.2
 
-**Source code:** :source:`Lib/sysconfig`
+**Source code:** :source:`Lib/sysconfig.py`
 
 .. index::
    single: configuration information
@@ -26,7 +26,7 @@ Configuration variables
 
 A Python distribution contains a :file:`Makefile` and a :file:`pyconfig.h`
 header file that are necessary to build both the Python binary itself and
-third-party C extensions compiled using ``setuptools``.
+third-party C extensions compiled using :mod:`distutils`.
 
 :mod:`sysconfig` puts all variables found in these files in a dictionary that
 can be accessed using :func:`get_config_vars` or :func:`get_config_var`.
@@ -305,7 +305,7 @@ Installation path functions
    mix with those by the other.
 
    End users should not use this function, but :func:`get_default_scheme` and
-   :func:`get_preferred_scheme` instead.
+   :func:`get_preferred_scheme()` instead.
 
    .. versionadded:: 3.10
 
@@ -376,7 +376,7 @@ Other functions
 
    This is used mainly to distinguish platform-specific build directories and
    platform-specific built distributions.  Typically includes the OS name and
-   version and the architecture (as supplied by :func:`os.uname`), although the
+   version and the architecture (as supplied by 'os.uname()'), although the
    exact information included depends on the OS; e.g., on Linux, the kernel
    version isn't particularly important.
 

@@ -6,7 +6,6 @@
 # You can set these variables from the command line.
 PYTHON       = python3
 VENVDIR      = ./venv
-UV           = uv
 SPHINXBUILD  = PATH=$(VENVDIR)/bin:$$PATH sphinx-build
 BLURB        = PATH=$(VENVDIR)/bin:$$PATH blurb
 JOBS         = auto
@@ -33,7 +32,6 @@ help:
 	@echo "  clean      to remove build files"
 	@echo "  venv       to create a venv with necessary tools"
 	@echo "  html       to make standalone HTML files"
-	@echo "  gettext    to generate POT files"
 	@echo "  htmlview   to open the index page built by the html target in your browser"
 	@echo "  htmllive   to rebuild and reload HTML files in your browser"
 	@echo "  htmlhelp   to make HTML files and a HTML help project"
@@ -47,6 +45,7 @@ help:
 	@echo "  doctest    to run doctests in the documentation"
 	@echo "  pydoc-topics  to regenerate the pydoc topics file"
 	@echo "  dist       to create a \"dist\" directory with archived docs for download"
+	@echo "  suspicious to check for suspicious markup in output text"
 	@echo "  check      to run a check for frequent markup errors"
 
 .PHONY: build
@@ -123,6 +122,19 @@ linkcheck:
 	     "or in build/$(BUILDER)/output.txt"; \
 	false; }
 
+.PHONY: suspicious
+suspicious: BUILDER = suspicious
+suspicious:
+	@$(MAKE) build BUILDER=$(BUILDER) || { \
+	echo "Suspicious check complete; look for any errors in the above output" \
+	     "or in build/$(BUILDER)/suspicious.csv.  If all issues are false" \
+	     "positives, append that file to tools/susp-ignored.csv."; \
+	false; }
+	@echo "⚠ make suspicious is deprecated and will be removed soon."
+	@echo "⚠ Use:"
+	@echo "⚠     make check"
+	@echo "⚠ instead."
+
 .PHONY: coverage
 coverage: BUILDER = coverage
 coverage: build
@@ -142,19 +154,14 @@ pydoc-topics: build
 	@echo "Building finished; now run this:" \
 	      "cp build/pydoc-topics/topics.py ../Lib/pydoc_data/topics.py"
 
-.PHONY: gettext
-gettext: BUILDER = gettext
-gettext: SPHINXOPTS += -d build/doctrees-gettext
-gettext: build
-
 .PHONY: htmlview
 htmlview: html
 	$(PYTHON) -c "import os, webbrowser; webbrowser.open('file://' + os.path.realpath('build/html/index.html'))"
 
 .PHONY: htmllive
-htmllive: SPHINXBUILD = PATH=$(VENVDIR)/bin:$$PATH sphinx-autobuild
+htmllive: SPHINXBUILD = $(VENVDIR)/bin/sphinx-autobuild
 htmllive: SPHINXOPTS = --re-ignore="/venv/" --open-browser --delay 0
-htmllive: _ensure-sphinx-autobuild html
+htmllive: html
 
 .PHONY: clean
 clean: clean-venv
@@ -171,125 +178,70 @@ venv:
 		echo "To recreate it, remove it first with \`make clean-venv'."; \
 	else \
 		echo "Creating venv in $(VENVDIR)"; \
-		if $(UV) --version >/dev/null 2>&1; then \
-			$(UV) venv $(VENVDIR); \
-			VIRTUAL_ENV=$(VENVDIR) $(UV) pip install -r $(REQUIREMENTS); \
-		else \
-			$(PYTHON) -m venv $(VENVDIR); \
-			$(VENVDIR)/bin/python3 -m pip install --upgrade pip; \
-			$(VENVDIR)/bin/python3 -m pip install -r $(REQUIREMENTS); \
-		fi; \
+		$(PYTHON) -m venv $(VENVDIR); \
+		$(VENVDIR)/bin/python3 -m pip install --upgrade pip; \
+		$(VENVDIR)/bin/python3 -m pip install -r $(REQUIREMENTS); \
 		echo "The venv has been created in the $(VENVDIR) directory"; \
 	fi
-
-.PHONY: dist-no-html
-dist-no-html: dist-text dist-pdf dist-epub dist-texinfo
 
 .PHONY: dist
 dist:
 	rm -rf dist
 	mkdir -p dist
-	$(MAKE) dist-html
-	$(MAKE) dist-text
-	$(MAKE) dist-pdf
-	$(MAKE) dist-epub
-	$(MAKE) dist-texinfo
 
-.PHONY: dist-html
-dist-html:
 	# archive the HTML
-	@echo "Building HTML..."
-	mkdir -p dist
-	rm -rf build/html
-	find dist -name 'python-$(DISTVERSION)-docs-html*' -exec rm -rf {} \;
-	$(MAKE) html
+	make html
 	cp -pPR build/html dist/python-$(DISTVERSION)-docs-html
 	tar -C dist -cf dist/python-$(DISTVERSION)-docs-html.tar python-$(DISTVERSION)-docs-html
 	bzip2 -9 -k dist/python-$(DISTVERSION)-docs-html.tar
 	(cd dist; zip -q -r -9 python-$(DISTVERSION)-docs-html.zip python-$(DISTVERSION)-docs-html)
 	rm -r dist/python-$(DISTVERSION)-docs-html
 	rm dist/python-$(DISTVERSION)-docs-html.tar
-	@echo "Build finished and archived!"
 
-.PHONY: dist-text
-dist-text:
 	# archive the text build
-	@echo "Building text..."
-	mkdir -p dist
-	rm -rf build/text
-	find dist -name 'python-$(DISTVERSION)-docs-text*' -exec rm -rf {} \;
-	$(MAKE) text
+	make text
 	cp -pPR build/text dist/python-$(DISTVERSION)-docs-text
 	tar -C dist -cf dist/python-$(DISTVERSION)-docs-text.tar python-$(DISTVERSION)-docs-text
 	bzip2 -9 -k dist/python-$(DISTVERSION)-docs-text.tar
 	(cd dist; zip -q -r -9 python-$(DISTVERSION)-docs-text.zip python-$(DISTVERSION)-docs-text)
 	rm -r dist/python-$(DISTVERSION)-docs-text
 	rm dist/python-$(DISTVERSION)-docs-text.tar
-	@echo "Build finished and archived!"
 
-.PHONY: dist-pdf
-dist-pdf:
 	# archive the A4 latex
-	@echo "Building LaTeX (A4 paper)..."
-	mkdir -p dist
 	rm -rf build/latex
-	find dist -name 'python-$(DISTVERSION)-docs-pdf*' -exec rm -rf {} \;
-	$(MAKE) latex PAPER=a4
-	# remove zip & bz2 dependency on all-pdf,
-	# as otherwise the full latexmk process is run twice.
-	# ($$ is needed to escape the $; https://www.gnu.org/software/make/manual/make.html#Basics-of-Variable-References)
-	-sed -i 's/: all-$$(FMT)/:/' build/latex/Makefile
-	(cd build/latex; $(MAKE) clean && $(MAKE) --jobs=$$((`nproc`+1)) --output-sync LATEXMKOPTS='-quiet' all-pdf && $(MAKE) FMT=pdf zip bz2)
+	make latex PAPER=a4
+	-sed -i 's/makeindex/makeindex -q/' build/latex/Makefile
+	(cd build/latex; make clean && make all-pdf && make FMT=pdf zip bz2)
 	cp build/latex/docs-pdf.zip dist/python-$(DISTVERSION)-docs-pdf-a4.zip
 	cp build/latex/docs-pdf.tar.bz2 dist/python-$(DISTVERSION)-docs-pdf-a4.tar.bz2
-	@echo "Build finished and archived!"
 
-.PHONY: dist-epub
-dist-epub:
+	# archive the letter latex
+	rm -rf build/latex
+	make latex PAPER=letter
+	-sed -i 's/makeindex/makeindex -q/' build/latex/Makefile
+	(cd build/latex; make clean && make all-pdf && make FMT=pdf zip bz2)
+	cp build/latex/docs-pdf.zip dist/python-$(DISTVERSION)-docs-pdf-letter.zip
+	cp build/latex/docs-pdf.tar.bz2 dist/python-$(DISTVERSION)-docs-pdf-letter.tar.bz2
+
 	# copy the epub build
-	@echo "Building EPUB..."
-	mkdir -p dist
 	rm -rf build/epub
-	rm -f dist/python-$(DISTVERSION)-docs.epub
-	$(MAKE) epub
+	make epub
 	cp -pPR build/epub/Python.epub dist/python-$(DISTVERSION)-docs.epub
-	@echo "Build finished and archived!"
 
-.PHONY: dist-texinfo
-dist-texinfo:
 	# archive the texinfo build
-	@echo "Building Texinfo..."
-	mkdir -p dist
 	rm -rf build/texinfo
-	find dist -name 'python-$(DISTVERSION)-docs-texinfo*' -exec rm -rf {} \;
-	$(MAKE) texinfo
-	$(MAKE) info --directory=build/texinfo
+	make texinfo
+	make info --directory=build/texinfo
 	cp -pPR build/texinfo dist/python-$(DISTVERSION)-docs-texinfo
 	tar -C dist -cf dist/python-$(DISTVERSION)-docs-texinfo.tar python-$(DISTVERSION)-docs-texinfo
 	bzip2 -9 -k dist/python-$(DISTVERSION)-docs-texinfo.tar
 	(cd dist; zip -q -r -9 python-$(DISTVERSION)-docs-texinfo.zip python-$(DISTVERSION)-docs-texinfo)
 	rm -r dist/python-$(DISTVERSION)-docs-texinfo
 	rm dist/python-$(DISTVERSION)-docs-texinfo.tar
-	@echo "Build finished and archived!"
-
-.PHONY: _ensure-package
-_ensure-package: venv
-	if $(UV) --version >/dev/null 2>&1; then \
-		VIRTUAL_ENV=$(VENVDIR) $(UV) pip install $(PACKAGE); \
-	else \
-		$(VENVDIR)/bin/python3 -m pip install $(PACKAGE); \
-	fi
-
-.PHONY: _ensure-pre-commit
-_ensure-pre-commit:
-	$(MAKE) _ensure-package PACKAGE=pre-commit
-
-.PHONY: _ensure-sphinx-autobuild
-_ensure-sphinx-autobuild:
-	$(MAKE) _ensure-package PACKAGE=sphinx-autobuild
 
 .PHONY: check
-check: _ensure-pre-commit
+check: venv
+	$(VENVDIR)/bin/python3 -m pre_commit --version > /dev/null || $(VENVDIR)/bin/python3 -m pip install pre-commit
 	$(VENVDIR)/bin/python3 -m pre_commit run --all-files
 
 .PHONY: serve
@@ -305,15 +257,13 @@ serve:
 
 # for development releases: always build
 .PHONY: autobuild-dev
-autobuild-dev: DISTVERSION = $(shell $(PYTHON) tools/extensions/patchlevel.py --short)
 autobuild-dev:
-	$(MAKE) dist-no-html SPHINXOPTS='$(SPHINXOPTS) -Ea -A daily=1' DISTVERSION=$(DISTVERSION)
+	make dist SPHINXOPTS='$(SPHINXOPTS) -Ea -A daily=1'
 
-# for HTML-only rebuilds
+# for quick rebuilds (HTML only)
 .PHONY: autobuild-dev-html
-autobuild-dev-html: DISTVERSION = $(shell $(PYTHON) tools/extensions/patchlevel.py --short)
 autobuild-dev-html:
-	$(MAKE) dist-html SPHINXOPTS='$(SPHINXOPTS) -Ea -A daily=1' DISTVERSION=$(DISTVERSION)
+	make html SPHINXOPTS='$(SPHINXOPTS) -Ea -A daily=1'
 
 # for stable releases: only build if not in pre-release stage (alpha, beta)
 # release candidate downloads are okay, since the stable tree can be in that stage
@@ -323,7 +273,7 @@ autobuild-stable:
 		echo "Not building; $(DISTVERSION) is not a release version."; \
 		exit 1;; \
 	esac
-	@$(MAKE) autobuild-dev
+	@make autobuild-dev
 
 .PHONY: autobuild-stable-html
 autobuild-stable-html:
@@ -331,4 +281,4 @@ autobuild-stable-html:
 		echo "Not building; $(DISTVERSION) is not a release version."; \
 		exit 1;; \
 	esac
-	@$(MAKE) autobuild-dev-html
+	@make autobuild-dev-html

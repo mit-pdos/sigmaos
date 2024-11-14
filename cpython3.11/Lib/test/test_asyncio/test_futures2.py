@@ -1,6 +1,5 @@
 # IsolatedAsyncioTestCase based tests
 import asyncio
-import contextvars
 import traceback
 import unittest
 from asyncio import tasks
@@ -28,46 +27,6 @@ class FutureTests:
             else:
                 self.fail('TypeError was not raised')
 
-    async def test_task_exc_handler_correct_context(self):
-        # see https://github.com/python/cpython/issues/96704
-        name = contextvars.ContextVar('name', default='foo')
-        exc_handler_called = False
-
-        def exc_handler(*args):
-            self.assertEqual(name.get(), 'bar')
-            nonlocal exc_handler_called
-            exc_handler_called = True
-
-        async def task():
-            name.set('bar')
-            1/0
-
-        loop = asyncio.get_running_loop()
-        loop.set_exception_handler(exc_handler)
-        self.cls(task())
-        await asyncio.sleep(0)
-        self.assertTrue(exc_handler_called)
-
-    async def test_handle_exc_handler_correct_context(self):
-        # see https://github.com/python/cpython/issues/96704
-        name = contextvars.ContextVar('name', default='foo')
-        exc_handler_called = False
-
-        def exc_handler(*args):
-            self.assertEqual(name.get(), 'bar')
-            nonlocal exc_handler_called
-            exc_handler_called = True
-
-        def callback():
-            name.set('bar')
-            1/0
-
-        loop = asyncio.get_running_loop()
-        loop.set_exception_handler(exc_handler)
-        loop.call_soon(callback)
-        await asyncio.sleep(0)
-        self.assertTrue(exc_handler_called)
-
 @unittest.skipUnless(hasattr(tasks, '_CTask'),
                        'requires the C _asyncio module')
 class CFutureTests(FutureTests, unittest.IsolatedAsyncioTestCase):
@@ -86,9 +45,10 @@ class FutureReprTests(unittest.IsolatedAsyncioTestCase):
         async def func():
             return asyncio.all_tasks()
 
-        # The repr() call should not raise RecursionError at first.
-        waiter = await asyncio.wait_for(asyncio.Task(func()),timeout=10)
-        self.assertIn('...', repr(waiter))
+        # The repr() call should not raise RecursiveError at first.
+        # The check for returned string is not very reliable but
+        # exact comparison for the whole string is even weaker.
+        self.assertIn('...', repr(await asyncio.wait_for(func(), timeout=10)))
 
 
 if __name__ == '__main__':

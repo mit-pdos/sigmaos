@@ -216,8 +216,8 @@ Condition
 
    .. method:: notify(n=1)
 
-      Wake up *n* tasks (1 by default) waiting on this
-      condition.  If fewer than *n* tasks are waiting they are all awakened.
+      Wake up at most *n* tasks (1 by default) waiting on this
+      condition.  The method is no-op if no tasks are waiting.
 
       The lock must be acquired before this method is called and
       released shortly after.  If called with an *unlocked* lock
@@ -257,18 +257,12 @@ Condition
       Once awakened, the Condition re-acquires its lock and this method
       returns ``True``.
 
-      Note that a task *may* return from this call spuriously,
-      which is why the caller should always re-check the state
-      and be prepared to :meth:`wait` again. For this reason, you may
-      prefer to use :meth:`wait_for` instead.
-
    .. coroutinemethod:: wait_for(predicate)
 
       Wait until a predicate becomes *true*.
 
       The predicate must be a callable which result will be
-      interpreted as a boolean value.  The method will repeatedly
-      :meth:`wait` until the predicate evaluates to *true*. The final value is the
+      interpreted as a boolean value.  The final value is the
       return value.
 
 

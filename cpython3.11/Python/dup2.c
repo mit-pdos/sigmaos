@@ -11,9 +11,9 @@
  * Return fd2 if all went well; return BADEXIT otherwise.
  */
 
-#include <errno.h>                // errno
-#include <fcntl.h>                // fcntl()
-#include <unistd.h>               // close()
+#include <errno.h>
+#include <fcntl.h>
+#include <unistd.h>
 
 #define BADEXIT -1
 

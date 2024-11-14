@@ -54,10 +54,7 @@ class TestRlcompleter(unittest.TestCase):
                          ['str.{}('.format(x) for x in dir(str)
                           if x.startswith('s')])
         self.assertEqual(self.stdcompleter.attr_matches('tuple.foospamegg'), [])
-        expected = sorted({'None.%s%s' % (x,
-                                          '()' if x in ('__init_subclass__', '__class__')
-                                          else '' if x == '__doc__'
-                                          else '(')
+        expected = sorted({'None.%s%s' % (x, '(' if x != '__doc__' else '')
                            for x in dir(None)})
         self.assertEqual(self.stdcompleter.attr_matches('None.'), expected)
         self.assertEqual(self.stdcompleter.attr_matches('None._'), expected)

@@ -2,7 +2,7 @@
 
 #include "Python.h"
 #include "pycore_strhex.h"        // _Py_strhex_with_sep()
-#include "pycore_unicodeobject.h" // _PyUnicode_CheckConsistency()
+#include <stdlib.h>               // abs()
 
 static PyObject *_Py_strhex_impl(const char* argbuf, const Py_ssize_t arglen,
                                  PyObject* sep, int bytes_per_sep_group,
@@ -21,6 +21,8 @@ static PyObject *_Py_strhex_impl(const char* argbuf, const Py_ssize_t arglen,
             return NULL;
         }
         if (PyUnicode_Check(sep)) {
+            if (PyUnicode_READY(sep))
+                return NULL;
             if (PyUnicode_KIND(sep) != PyUnicode_1BYTE_KIND) {
                 PyErr_SetString(PyExc_ValueError, "sep must be ASCII.");
                 return NULL;
@@ -43,7 +45,7 @@ static PyObject *_Py_strhex_impl(const char* argbuf, const Py_ssize_t arglen,
         bytes_per_sep_group = 0;
     }
 
-    unsigned int abs_bytes_per_sep = Py_ABS(bytes_per_sep_group);
+    unsigned int abs_bytes_per_sep = abs(bytes_per_sep_group);
     Py_ssize_t resultlen = 0;
     if (bytes_per_sep_group && arglen > 0) {
         /* How many sep characters we'll be inserting. */

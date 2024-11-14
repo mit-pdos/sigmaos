@@ -14,16 +14,14 @@ struct _warnings_runtime_state {
     PyObject *filters;  /* List */
     PyObject *once_registry;  /* Dict */
     PyObject *default_action; /* String */
-    PyMutex mutex;
     long filters_version;
 };
 
 extern int _PyWarnings_InitState(PyInterpreterState *interp);
 
-extern PyObject* _PyWarnings_Init(void);
+PyAPI_FUNC(PyObject*) _PyWarnings_Init(void);
 
 extern void _PyErr_WarnUnawaitedCoroutine(PyObject *coro);
-extern void _PyErr_WarnUnawaitedAgenMethod(PyAsyncGenObject *agen, PyObject *method);
 
 #ifdef __cplusplus
 }

@@ -14,11 +14,10 @@ import weakref
 import traceback
 import unittest
 from unittest.mock import Mock
-from typing import ClassVar, Any, List, Union, Tuple, Dict, Generic, TypeVar, Optional, Protocol, DefaultDict
+from typing import ClassVar, Any, List, Union, Tuple, Dict, Generic, TypeVar, Optional, Protocol
 from typing import get_type_hints
-from collections import deque, OrderedDict, namedtuple, defaultdict
-from copy import deepcopy
-from functools import total_ordering, wraps
+from collections import deque, OrderedDict, namedtuple
+from functools import total_ordering
 
 import typing       # Needed for the string "typing.ClassVar[int]" to work as an annotation.
 import dataclasses  # Needed for the string "dataclasses.InitVar[int]" to work as an annotation.
@@ -61,7 +60,7 @@ class TestCase(unittest.TestCase):
                 x: int = field(default=1, default_factory=int)
 
     def test_field_repr(self):
-        int_field = field(default=1, init=True, repr=False, doc='Docstring')
+        int_field = field(default=1, init=True, repr=False)
         int_field.name = "id"
         repr_output = repr(int_field)
         expected_output = "Field(name='id',type=None," \
@@ -69,7 +68,6 @@ class TestCase(unittest.TestCase):
                            "init=True,repr=False,hash=None," \
                            "compare=True,metadata=mappingproxy({})," \
                            f"kw_only={MISSING!r}," \
-                           "doc='Docstring'," \
                            "_field_type=None)"
 
         self.assertEqual(repr_output, expected_output)
@@ -92,32 +90,6 @@ class TestCase(unittest.TestCase):
 
         self.assertIn(",type=...,", repr(D.__dataclass_fields__["C"]))
 
-    def test_dataclass_params_repr(self):
-        # Even though this is testing an internal implementation detail,
-        # it's testing a feature we want to make sure is correctly implemented
-        # for the sake of dataclasses itself
-        @dataclass(slots=True, frozen=True)
-        class Some: pass
-
-        repr_output = repr(Some.__dataclass_params__)
-        expected_output = "_DataclassParams(init=True,repr=True," \
-                          "eq=True,order=False,unsafe_hash=False,frozen=True," \
-                          "match_args=True,kw_only=False," \
-                          "slots=True,weakref_slot=False)"
-        self.assertEqual(repr_output, expected_output)
-
-    def test_dataclass_params_signature(self):
-        # Even though this is testing an internal implementation detail,
-        # it's testing a feature we want to make sure is correctly implemented
-        # for the sake of dataclasses itself
-        @dataclass
-        class Some: pass
-
-        for param in inspect.signature(dataclass).parameters:
-            if param == 'cls':
-                continue
-            self.assertTrue(hasattr(Some.__dataclass_params__, param), msg=param)
-
     def test_named_init_params(self):
         @dataclass
         class C:
@@ -138,7 +110,7 @@ class TestCase(unittest.TestCase):
         # Non-defaults following defaults.
         with self.assertRaisesRegex(TypeError,
                                     "non-default argument 'y' follows "
-                                    "default argument 'x'"):
+                                    "default argument"):
             @dataclass
             class C:
                 x: int = 0
@@ -147,7 +119,7 @@ class TestCase(unittest.TestCase):
         # A derived class adds a non-default field after a default one.
         with self.assertRaisesRegex(TypeError,
                                     "non-default argument 'y' follows "
-                                    "default argument 'x'"):
+                                    "default argument"):
             @dataclass
             class B:
                 x: int = 0
@@ -160,7 +132,7 @@ class TestCase(unittest.TestCase):
         #  a field which didn't use to have a default.
         with self.assertRaisesRegex(TypeError,
                                     "non-default argument 'y' follows "
-                                    "default argument 'x'"):
+                                    "default argument"):
             @dataclass
             class B:
                 x: int
@@ -288,23 +260,6 @@ class TestCase(unittest.TestCase):
             BUILTINS: int
         c = C(5)
         self.assertEqual(c.BUILTINS, 5)
-
-    def test_field_with_special_single_underscore_names(self):
-        # gh-98886
-
-        @dataclass
-        class X:
-            x: int = field(default_factory=lambda: 111)
-            _dflt_x: int = field(default_factory=lambda: 222)
-
-        X()
-
-        @dataclass
-        class Y:
-            y: int = field(default_factory=lambda: 111)
-            _HAS_DEFAULT_FACTORY: int = 222
-
-        assert Y(y=222).y == 222
 
     def test_field_named_like_builtin(self):
         # Attribute names can shadow built-in names
@@ -761,8 +716,8 @@ class TestCase(unittest.TestCase):
                 class Subclass(typ): pass
 
                 with self.assertRaisesRegex(ValueError,
-                                            "mutable default .*Subclass'>"
-                                            " for field z is not allowed"
+                                            f"mutable default .*Subclass'>"
+                                            ' for field z is not allowed'
                                             ):
                     @dataclass
                     class Point:
@@ -1319,29 +1274,6 @@ class TestCase(unittest.TestCase):
         c = C(10, 11, 50, 51)
         self.assertEqual(vars(c), {'x': 21, 'y': 101})
 
-    def test_init_var_name_shadowing(self):
-        # Because dataclasses rely exclusively on `__annotations__` for
-        # handling InitVar and `__annotations__` preserves shadowed definitions,
-        # you can actually shadow an InitVar with a method or property.
-        #
-        # This only works when there is no default value; `dataclasses` uses the
-        # actual name (which will be bound to the shadowing method) for default
-        # values.
-        @dataclass
-        class C:
-            shadowed: InitVar[int]
-            _shadowed: int = field(init=False)
-
-            def __post_init__(self, shadowed):
-                self._shadowed = shadowed * 2
-
-            @property
-            def shadowed(self):
-                return self._shadowed * 3
-
-        c = C(5)
-        self.assertEqual(c.shadowed, 30)
-
     def test_default_factory(self):
         # Test a factory that returns a new list.
         @dataclass
@@ -1549,24 +1481,6 @@ class TestCase(unittest.TestCase):
         self.assertTrue(is_dataclass(type(a)))
         self.assertTrue(is_dataclass(a))
 
-    def test_is_dataclass_inheritance(self):
-        @dataclass
-        class X:
-            y: int
-
-        class Z(X):
-            pass
-
-        self.assertTrue(is_dataclass(X), "X should be a dataclass")
-        self.assertTrue(
-            is_dataclass(Z),
-            "Z should be a dataclass because it inherits from X",
-        )
-        z_instance = Z(y=5)
-        self.assertTrue(
-            is_dataclass(z_instance),
-            "z_instance should be a dataclass because it is an instance of Z",
-        )
 
     def test_helper_fields_with_class_instance(self):
         # Check that we can call fields() on either a class or instance,
@@ -1777,21 +1691,6 @@ class TestCase(unittest.TestCase):
         self.assertIsNot(d['f'], t)
         self.assertEqual(d['f'].my_a(), 6)
 
-    def test_helper_asdict_defaultdict(self):
-        # Ensure asdict() does not throw exceptions when a
-        # defaultdict is a member of a dataclass
-        @dataclass
-        class C:
-            mp: DefaultDict[str, List]
-
-        dd = defaultdict(list)
-        dd["x"].append(12)
-        c = C(mp=dd)
-        d = asdict(c)
-
-        self.assertEqual(d, {"mp": {"x": [12]}})
-        self.assertTrue(d["mp"] is not c.mp)  # make sure defaultdict is copied
-
     def test_helper_astuple(self):
         # Basic tests for astuple(), it should return a new tuple.
         @dataclass
@@ -1918,21 +1817,6 @@ class TestCase(unittest.TestCase):
         # Now, using a tuple_factory.  list is convenient here.
         t = astuple(c, tuple_factory=list)
         self.assertEqual(t, ['outer', T(1, ['inner', T(11, 12, 13)], 2)])
-
-    def test_helper_astuple_defaultdict(self):
-        # Ensure astuple() does not throw exceptions when a
-        # defaultdict is a member of a dataclass
-        @dataclass
-        class C:
-            mp: DefaultDict[str, List]
-
-        dd = defaultdict(list)
-        dd["x"].append(12)
-        c = C(mp=dd)
-        t = astuple(c)
-
-        self.assertEqual(t, ({"x": [12]},))
-        self.assertTrue(t[0] is not dd) # make sure defaultdict is copied
 
     def test_dynamic_class_creation(self):
         cls_dict = {'__annotations__': {'x': int, 'y': int},
@@ -2362,6 +2246,7 @@ class TestInit(unittest.TestCase):
         class B:
             def __init__(self):
                 self.z = 100
+                pass
 
         # Make sure that declaring this class doesn't raise an error.
         #  The issue is that we can't override __init__ in our class,
@@ -2514,15 +2399,6 @@ class TestRepr(unittest.TestCase):
 
 
 class TestEq(unittest.TestCase):
-    def test_recursive_eq(self):
-        # Test a class with recursive child
-        @dataclass
-        class C:
-            recursive: object = ...
-        c = C()
-        c.recursive = c
-        self.assertEqual(c, c)
-
     def test_no_eq(self):
         # Test a class with no __eq__ and eq=False.
         @dataclass(eq=False)
@@ -2877,19 +2753,6 @@ class TestFrozen(unittest.TestCase):
             c.i = 5
         self.assertEqual(c.i, 10)
 
-    def test_frozen_empty(self):
-        @dataclass(frozen=True)
-        class C:
-            pass
-
-        c = C()
-        self.assertFalse(hasattr(c, 'i'))
-        with self.assertRaises(FrozenInstanceError):
-            c.i = 5
-        self.assertFalse(hasattr(c, 'i'))
-        with self.assertRaises(FrozenInstanceError):
-            del c.i
-
     def test_inherit(self):
         @dataclass(frozen=True)
         class C:
@@ -2917,101 +2780,6 @@ class TestFrozen(unittest.TestCase):
             @dataclass
             class D(C):
                 j: int
-
-    def test_inherit_frozen_mutliple_inheritance(self):
-        @dataclass
-        class NotFrozen:
-            pass
-
-        @dataclass(frozen=True)
-        class Frozen:
-            pass
-
-        class NotDataclass:
-            pass
-
-        for bases in (
-            (NotFrozen, Frozen),
-            (Frozen, NotFrozen),
-            (Frozen, NotDataclass),
-            (NotDataclass, Frozen),
-        ):
-            with self.subTest(bases=bases):
-                with self.assertRaisesRegex(
-                    TypeError,
-                    'cannot inherit non-frozen dataclass from a frozen one',
-                ):
-                    @dataclass
-                    class NotFrozenChild(*bases):
-                        pass
-
-        for bases in (
-            (NotFrozen, Frozen),
-            (Frozen, NotFrozen),
-            (NotFrozen, NotDataclass),
-            (NotDataclass, NotFrozen),
-        ):
-            with self.subTest(bases=bases):
-                with self.assertRaisesRegex(
-                    TypeError,
-                    'cannot inherit frozen dataclass from a non-frozen one',
-                ):
-                    @dataclass(frozen=True)
-                    class FrozenChild(*bases):
-                        pass
-
-    def test_inherit_frozen_mutliple_inheritance_regular_mixins(self):
-        @dataclass(frozen=True)
-        class Frozen:
-            pass
-
-        class NotDataclass:
-            pass
-
-        class C1(Frozen, NotDataclass):
-            pass
-        self.assertEqual(C1.__mro__, (C1, Frozen, NotDataclass, object))
-
-        class C2(NotDataclass, Frozen):
-            pass
-        self.assertEqual(C2.__mro__, (C2, NotDataclass, Frozen, object))
-
-        @dataclass(frozen=True)
-        class C3(Frozen, NotDataclass):
-            pass
-        self.assertEqual(C3.__mro__, (C3, Frozen, NotDataclass, object))
-
-        @dataclass(frozen=True)
-        class C4(NotDataclass, Frozen):
-            pass
-        self.assertEqual(C4.__mro__, (C4, NotDataclass, Frozen, object))
-
-    def test_multiple_frozen_dataclasses_inheritance(self):
-        @dataclass(frozen=True)
-        class FrozenA:
-            pass
-
-        @dataclass(frozen=True)
-        class FrozenB:
-            pass
-
-        class C1(FrozenA, FrozenB):
-            pass
-        self.assertEqual(C1.__mro__, (C1, FrozenA, FrozenB, object))
-
-        class C2(FrozenB, FrozenA):
-            pass
-        self.assertEqual(C2.__mro__, (C2, FrozenB, FrozenA, object))
-
-        @dataclass(frozen=True)
-        class C3(FrozenA, FrozenB):
-            pass
-        self.assertEqual(C3.__mro__, (C3, FrozenA, FrozenB, object))
-
-        @dataclass(frozen=True)
-        class C4(FrozenB, FrozenA):
-            pass
-        self.assertEqual(C4.__mro__, (C4, FrozenB, FrozenA, object))
 
     def test_inherit_nonfrozen_from_empty(self):
         @dataclass
@@ -3108,37 +2876,6 @@ class TestFrozen(unittest.TestCase):
         self.assertEqual(s.y, 10)
         self.assertEqual(s.cached, True)
 
-        with self.assertRaises(FrozenInstanceError):
-            del s.x
-        self.assertEqual(s.x, 3)
-        with self.assertRaises(FrozenInstanceError):
-            del s.y
-        self.assertEqual(s.y, 10)
-        del s.cached
-        self.assertFalse(hasattr(s, 'cached'))
-        with self.assertRaises(AttributeError) as cm:
-            del s.cached
-        self.assertNotIsInstance(cm.exception, FrozenInstanceError)
-
-    def test_non_frozen_normal_derived_from_empty_frozen(self):
-        @dataclass(frozen=True)
-        class D:
-            pass
-
-        class S(D):
-            pass
-
-        s = S()
-        self.assertFalse(hasattr(s, 'x'))
-        s.x = 5
-        self.assertEqual(s.x, 5)
-
-        del s.x
-        self.assertFalse(hasattr(s, 'x'))
-        with self.assertRaises(AttributeError) as cm:
-            del s.x
-        self.assertNotIsInstance(cm.exception, FrozenInstanceError)
-
     def test_overwriting_frozen(self):
         # frozen uses __setattr__ and __delattr__.
         with self.assertRaisesRegex(TypeError,
@@ -3176,48 +2913,6 @@ class TestFrozen(unittest.TestCase):
         # If x is mutable, computing the hash is an error.
         with self.assertRaisesRegex(TypeError, 'unhashable type'):
             hash(C({}))
-
-    def test_frozen_deepcopy_without_slots(self):
-        # see: https://github.com/python/cpython/issues/89683
-        @dataclass(frozen=True, slots=False)
-        class C:
-            s: str
-
-        c = C('hello')
-        self.assertEqual(deepcopy(c), c)
-
-    def test_frozen_deepcopy_with_slots(self):
-        # see: https://github.com/python/cpython/issues/89683
-        with self.subTest('generated __slots__'):
-            @dataclass(frozen=True, slots=True)
-            class C:
-                s: str
-
-            c = C('hello')
-            self.assertEqual(deepcopy(c), c)
-
-        with self.subTest('user-defined __slots__ and no __{get,set}state__'):
-            @dataclass(frozen=True, slots=False)
-            class C:
-                __slots__ = ('s',)
-                s: str
-
-            # with user-defined slots, __getstate__ and __setstate__ are not
-            # automatically added, hence the error
-            err = r"^cannot\ assign\ to\ field\ 's'$"
-            self.assertRaisesRegex(FrozenInstanceError, err, deepcopy, C(''))
-
-        with self.subTest('user-defined __slots__ and __{get,set}state__'):
-            @dataclass(frozen=True, slots=False)
-            class C:
-                __slots__ = ('s',)
-                __getstate__ = dataclasses._dataclass_getstate
-                __setstate__ = dataclasses._dataclass_setstate
-
-                s: str
-
-            c = C('hello')
-            self.assertEqual(deepcopy(c), c)
 
 
 class TestSlots(unittest.TestCase):
@@ -3305,7 +3000,7 @@ class TestSlots(unittest.TestCase):
             j: str
             h: str
 
-        self.assertEqual(Base.__slots__, ('y',))
+        self.assertEqual(Base.__slots__, ('y', ))
 
         @dataclass(slots=True)
         class Derived(Base):
@@ -3315,31 +3010,13 @@ class TestSlots(unittest.TestCase):
             k: str
             h: str
 
-        self.assertEqual(Derived.__slots__, ('z',))
+        self.assertEqual(Derived.__slots__, ('z', ))
 
         @dataclass
         class AnotherDerived(Base):
             z: int
 
         self.assertNotIn('__slots__', AnotherDerived.__dict__)
-
-    def test_slots_with_docs(self):
-        class Root:
-            __slots__ = {'x': 'x'}
-
-        @dataclass(slots=True)
-        class Base(Root):
-            y1: int = field(doc='y1')
-            y2: int
-
-        self.assertEqual(Base.__slots__, {'y1': 'y1', 'y2': None})
-
-        @dataclass(slots=True)
-        class Child(Base):
-            z1: int = field(doc='z1')
-            z2: int
-
-        self.assertEqual(Child.__slots__, {'z1': 'z1', 'z2': None})
 
     def test_cant_inherit_from_iterator_slots(self):
 
@@ -3618,164 +3295,7 @@ class TestSlots(unittest.TestCase):
         class B(A):
             pass
 
-        self.assertEqual(B.__slots__, ())
         B()
-
-    def test_dataclass_derived_generic(self):
-        T = typing.TypeVar('T')
-
-        @dataclass(slots=True, weakref_slot=True)
-        class A(typing.Generic[T]):
-            pass
-        self.assertEqual(A.__slots__, ('__weakref__',))
-        self.assertTrue(A.__weakref__)
-        A()
-
-        @dataclass(slots=True, weakref_slot=True)
-        class B[T2]:
-            pass
-        self.assertEqual(B.__slots__, ('__weakref__',))
-        self.assertTrue(B.__weakref__)
-        B()
-
-    def test_dataclass_derived_generic_from_base(self):
-        T = typing.TypeVar('T')
-
-        class RawBase: ...
-
-        @dataclass(slots=True, weakref_slot=True)
-        class C1(typing.Generic[T], RawBase):
-            pass
-        self.assertEqual(C1.__slots__, ())
-        self.assertTrue(C1.__weakref__)
-        C1()
-        @dataclass(slots=True, weakref_slot=True)
-        class C2(RawBase, typing.Generic[T]):
-            pass
-        self.assertEqual(C2.__slots__, ())
-        self.assertTrue(C2.__weakref__)
-        C2()
-
-        @dataclass(slots=True, weakref_slot=True)
-        class D[T2](RawBase):
-            pass
-        self.assertEqual(D.__slots__, ())
-        self.assertTrue(D.__weakref__)
-        D()
-
-    def test_dataclass_derived_generic_from_slotted_base(self):
-        T = typing.TypeVar('T')
-
-        class WithSlots:
-            __slots__ = ('a', 'b')
-
-        @dataclass(slots=True, weakref_slot=True)
-        class E1(WithSlots, Generic[T]):
-            pass
-        self.assertEqual(E1.__slots__, ('__weakref__',))
-        self.assertTrue(E1.__weakref__)
-        E1()
-        @dataclass(slots=True, weakref_slot=True)
-        class E2(Generic[T], WithSlots):
-            pass
-        self.assertEqual(E2.__slots__, ('__weakref__',))
-        self.assertTrue(E2.__weakref__)
-        E2()
-
-        @dataclass(slots=True, weakref_slot=True)
-        class F[T2](WithSlots):
-            pass
-        self.assertEqual(F.__slots__, ('__weakref__',))
-        self.assertTrue(F.__weakref__)
-        F()
-
-    def test_dataclass_derived_generic_from_slotted_base(self):
-        T = typing.TypeVar('T')
-
-        class WithWeakrefSlot:
-            __slots__ = ('__weakref__',)
-
-        @dataclass(slots=True, weakref_slot=True)
-        class G1(WithWeakrefSlot, Generic[T]):
-            pass
-        self.assertEqual(G1.__slots__, ())
-        self.assertTrue(G1.__weakref__)
-        G1()
-        @dataclass(slots=True, weakref_slot=True)
-        class G2(Generic[T], WithWeakrefSlot):
-            pass
-        self.assertEqual(G2.__slots__, ())
-        self.assertTrue(G2.__weakref__)
-        G2()
-
-        @dataclass(slots=True, weakref_slot=True)
-        class H[T2](WithWeakrefSlot):
-            pass
-        self.assertEqual(H.__slots__, ())
-        self.assertTrue(H.__weakref__)
-        H()
-
-    def test_dataclass_slot_dict(self):
-        class WithDictSlot:
-            __slots__ = ('__dict__',)
-
-        @dataclass(slots=True)
-        class A(WithDictSlot): ...
-
-        self.assertEqual(A.__slots__, ())
-        self.assertEqual(A().__dict__, {})
-        A()
-
-    @support.cpython_only
-    def test_dataclass_slot_dict_ctype(self):
-        # https://github.com/python/cpython/issues/123935
-        from test.support import import_helper
-        # Skips test if `_testcapi` is not present:
-        _testcapi = import_helper.import_module('_testcapi')
-
-        @dataclass(slots=True)
-        class HasDictOffset(_testcapi.HeapCTypeWithDict):
-            __dict__: dict = {}
-        self.assertNotEqual(_testcapi.HeapCTypeWithDict.__dictoffset__, 0)
-        self.assertEqual(HasDictOffset.__slots__, ())
-
-        @dataclass(slots=True)
-        class DoesNotHaveDictOffset(_testcapi.HeapCTypeWithWeakref):
-            __dict__: dict = {}
-        self.assertEqual(_testcapi.HeapCTypeWithWeakref.__dictoffset__, 0)
-        self.assertEqual(DoesNotHaveDictOffset.__slots__, ('__dict__',))
-
-    @support.cpython_only
-    def test_slots_with_wrong_init_subclass(self):
-        # TODO: This test is for a kinda-buggy behavior.
-        # Ideally, it should be fixed and `__init_subclass__`
-        # should be fully supported in the future versions.
-        # See https://github.com/python/cpython/issues/91126
-        class WrongSuper:
-            def __init_subclass__(cls, arg):
-                pass
-
-        with self.assertRaisesRegex(
-            TypeError,
-            "missing 1 required positional argument: 'arg'",
-        ):
-            @dataclass(slots=True)
-            class WithWrongSuper(WrongSuper, arg=1):
-                pass
-
-        class CorrectSuper:
-            args = []
-            def __init_subclass__(cls, arg="default"):
-                cls.args.append(arg)
-
-        @dataclass(slots=True)
-        class WithCorrectSuper(CorrectSuper):
-            pass
-
-        # __init_subclass__ is called twice: once for `WithCorrectSuper`
-        # and once for `WithCorrectSuper__slots__` new class
-        # that we create internally.
-        self.assertEqual(CorrectSuper.args, ["default", "default"])
 
 
 class TestDescriptors(unittest.TestCase):
@@ -4114,15 +3634,6 @@ class TestStringAnnotations(unittest.TestCase):
              'return': type(None)})
 
 
-ByMakeDataClass = make_dataclass('ByMakeDataClass', [('x', int)])
-ManualModuleMakeDataClass = make_dataclass('ManualModuleMakeDataClass',
-                                           [('x', int)],
-                                           module=__name__)
-WrongNameMakeDataclass = make_dataclass('Wrong', [('x', int)])
-WrongModuleMakeDataclass = make_dataclass('WrongModuleMakeDataclass',
-                                          [('x', int)],
-                                          module='custom')
-
 class TestMakeDataclass(unittest.TestCase):
     def test_simple(self):
         C = make_dataclass('C',
@@ -4232,36 +3743,6 @@ class TestMakeDataclass(unittest.TestCase):
                                              'y': int,
                                              'z': 'typing.Any'})
 
-    def test_module_attr(self):
-        self.assertEqual(ByMakeDataClass.__module__, __name__)
-        self.assertEqual(ByMakeDataClass(1).__module__, __name__)
-        self.assertEqual(WrongModuleMakeDataclass.__module__, "custom")
-        Nested = make_dataclass('Nested', [])
-        self.assertEqual(Nested.__module__, __name__)
-        self.assertEqual(Nested().__module__, __name__)
-
-    def test_pickle_support(self):
-        for klass in [ByMakeDataClass, ManualModuleMakeDataClass]:
-            for proto in range(pickle.HIGHEST_PROTOCOL + 1):
-                with self.subTest(proto=proto):
-                    self.assertEqual(
-                        pickle.loads(pickle.dumps(klass, proto)),
-                        klass,
-                    )
-                    self.assertEqual(
-                        pickle.loads(pickle.dumps(klass(1), proto)),
-                        klass(1),
-                    )
-
-    def test_cannot_be_pickled(self):
-        for klass in [WrongNameMakeDataclass, WrongModuleMakeDataclass]:
-            for proto in range(pickle.HIGHEST_PROTOCOL + 1):
-                with self.subTest(proto=proto):
-                    with self.assertRaises(pickle.PickleError):
-                        pickle.dumps(klass, proto)
-                    with self.assertRaises(pickle.PickleError):
-                        pickle.dumps(klass(1), proto)
-
     def test_invalid_type_specification(self):
         for bad_field in [(),
                           (1, 2, 3, 4),
@@ -4317,23 +3798,6 @@ class TestMakeDataclass(unittest.TestCase):
                 C = make_dataclass(classname, ['a', 'b'])
                 self.assertEqual(C.__name__, classname)
 
-    def test_dataclass_decorator_default(self):
-        C = make_dataclass('C', [('x', int)], decorator=dataclass)
-        c = C(10)
-        self.assertEqual(c.x, 10)
-
-    def test_dataclass_custom_decorator(self):
-        def custom_dataclass(cls, *args, **kwargs):
-            dc = dataclass(cls, *args, **kwargs)
-            dc.__custom__ = True
-            return dc
-
-        C = make_dataclass('C', [('x', int)], decorator=custom_dataclass)
-        c = C(10)
-        self.assertEqual(c.x, 10)
-        self.assertEqual(c.__custom__, True)
-
-
 class TestReplace(unittest.TestCase):
     def test(self):
         @dataclass(frozen=True)
@@ -4360,9 +3824,9 @@ class TestReplace(unittest.TestCase):
         self.assertEqual((c1.x, c1.y, c1.z, c1.t), (3, 2, 10, 100))
 
 
-        with self.assertRaisesRegex(TypeError, 'init=False'):
+        with self.assertRaisesRegex(ValueError, 'init=False'):
             replace(c, x=3, z=20, t=50)
-        with self.assertRaisesRegex(TypeError, 'init=False'):
+        with self.assertRaisesRegex(ValueError, 'init=False'):
             replace(c, z=20)
             replace(c, x=3, z=20, t=50)
 
@@ -4415,10 +3879,10 @@ class TestReplace(unittest.TestCase):
         self.assertEqual((c1.x, c1.y), (5, 10))
 
         # Trying to replace y is an error.
-        with self.assertRaisesRegex(TypeError, 'init=False'):
+        with self.assertRaisesRegex(ValueError, 'init=False'):
             replace(c, x=2, y=30)
 
-        with self.assertRaisesRegex(TypeError, 'init=False'):
+        with self.assertRaisesRegex(ValueError, 'init=False'):
             replace(c, y=30)
 
     def test_classvar(self):
@@ -4451,8 +3915,8 @@ class TestReplace(unittest.TestCase):
 
         c = C(1, 10)
         self.assertEqual(c.x, 10)
-        with self.assertRaisesRegex(TypeError, r"InitVar 'y' must be "
-                                    r"specified with replace\(\)"):
+        with self.assertRaisesRegex(ValueError, r"InitVar 'y' must be "
+                                    "specified with replace()"):
             replace(c, x=3)
         c = replace(c, x=3, y=5)
         self.assertEqual(c.x, 15)
@@ -4595,7 +4059,7 @@ class TestAbstract(unittest.TestCase):
             day: 'int'
 
         self.assertTrue(inspect.isabstract(Date))
-        msg = "class Date without an implementation for abstract method 'foo'"
+        msg = 'class Date with abstract method foo'
         self.assertRaisesRegex(TypeError, msg, Date)
 
 
@@ -4916,7 +4380,7 @@ class TestKeywordArgs(unittest.TestCase):
 
         # Make sure we still check for non-kwarg non-defaults not following
         # defaults.
-        err_regex = "non-default argument 'z' follows default argument 'a'"
+        err_regex = "non-default argument 'z' follows default argument"
         with self.assertRaisesRegex(TypeError, err_regex):
             @dataclass
             class A:
@@ -4937,140 +4401,6 @@ class TestKeywordArgs(unittest.TestCase):
         self.assertTrue(fields(B)[0].kw_only)
         self.assertFalse(fields(B)[1].kw_only)
 
-    def test_deferred_annotations(self):
-        @dataclass
-        class A:
-            x: undefined
-            y: ClassVar[undefined]
-
-        fs = fields(A)
-        self.assertEqual(len(fs), 1)
-        self.assertEqual(fs[0].name, 'x')
-
-
-class TestZeroArgumentSuperWithSlots(unittest.TestCase):
-    def test_zero_argument_super(self):
-        @dataclass(slots=True)
-        class A:
-            def foo(self):
-                super()
-
-        A().foo()
-
-    def test_dunder_class_with_old_property(self):
-        @dataclass(slots=True)
-        class A:
-            def _get_foo(slf):
-                self.assertIs(__class__, type(slf))
-                self.assertIs(__class__, slf.__class__)
-                return __class__
-
-            def _set_foo(slf, value):
-                self.assertIs(__class__, type(slf))
-                self.assertIs(__class__, slf.__class__)
-
-            def _del_foo(slf):
-                self.assertIs(__class__, type(slf))
-                self.assertIs(__class__, slf.__class__)
-
-            foo = property(_get_foo, _set_foo, _del_foo)
-
-        a = A()
-        self.assertIs(a.foo, A)
-        a.foo = 4
-        del a.foo
-
-    def test_dunder_class_with_new_property(self):
-        @dataclass(slots=True)
-        class A:
-            @property
-            def foo(slf):
-                return slf.__class__
-
-            @foo.setter
-            def foo(slf, value):
-                self.assertIs(__class__, type(slf))
-
-            @foo.deleter
-            def foo(slf):
-                self.assertIs(__class__, type(slf))
-
-        a = A()
-        self.assertIs(a.foo, A)
-        a.foo = 4
-        del a.foo
-
-    # Test the parts of a property individually.
-    def test_slots_dunder_class_property_getter(self):
-        @dataclass(slots=True)
-        class A:
-            @property
-            def foo(slf):
-                return __class__
-
-        a = A()
-        self.assertIs(a.foo, A)
-
-    def test_slots_dunder_class_property_setter(self):
-        @dataclass(slots=True)
-        class A:
-            foo = property()
-            @foo.setter
-            def foo(slf, val):
-                self.assertIs(__class__, type(slf))
-
-        a = A()
-        a.foo = 4
-
-    def test_slots_dunder_class_property_deleter(self):
-        @dataclass(slots=True)
-        class A:
-            foo = property()
-            @foo.deleter
-            def foo(slf):
-                self.assertIs(__class__, type(slf))
-
-        a = A()
-        del a.foo
-
-    def test_wrapped(self):
-        def mydecorator(f):
-            @wraps(f)
-            def wrapper(*args, **kwargs):
-                return f(*args, **kwargs)
-            return wrapper
-
-        @dataclass(slots=True)
-        class A:
-            @mydecorator
-            def foo(self):
-                super()
-
-        A().foo()
-
-    def test_remembered_class(self):
-        # Apply the dataclass decorator manually (not when the class
-        # is created), so that we can keep a reference to the
-        # undecorated class.
-        class A:
-            def cls(self):
-                return __class__
-
-        self.assertIs(A().cls(), A)
-
-        B = dataclass(slots=True)(A)
-        self.assertIs(B().cls(), B)
-
-        # This is undesirable behavior, but is a function of how
-        # modifying __class__ in the closure works.  I'm not sure this
-        # should be tested or not: I don't really want to guarantee
-        # this behavior, but I don't want to lose the point that this
-        # is how it works.
-
-        # The underlying class is "broken" by changing its __class__
-        # in A.foo() to B.  This normally isn't a problem, because no
-        # one will be keeping a reference to the underlying class A.
-        self.assertIs(A().cls(), B)
 
 if __name__ == '__main__':
     unittest.main()

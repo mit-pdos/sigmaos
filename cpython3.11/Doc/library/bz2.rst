@@ -1,5 +1,5 @@
-:mod:`!bz2` --- Support for :program:`bzip2` compression
-========================================================
+:mod:`bz2` --- Support for :program:`bzip2` compression
+=======================================================
 
 .. module:: bz2
    :synopsis: Interfaces for bzip2 compression and decompression.
@@ -91,7 +91,7 @@ The :mod:`bz2` module contains:
    and :meth:`~io.IOBase.truncate`.
    Iteration and the :keyword:`with` statement are supported.
 
-   :class:`BZ2File` also provides the following methods and attributes:
+   :class:`BZ2File` also provides the following methods:
 
    .. method:: peek([n])
 
@@ -147,19 +147,6 @@ The :mod:`bz2` module contains:
       Returns the number of bytes read (0 for EOF).
 
       .. versionadded:: 3.3
-
-   .. attribute:: mode
-
-      ``'rb'`` for reading and ``'wb'`` for writing.
-
-      .. versionadded:: 3.13
-
-   .. attribute:: name
-
-      The bzip2 file name.  Equivalent to the :attr:`~io.FileIO.name`
-      attribute of the underlying :term:`file object`.
-
-      .. versionadded:: 3.13
 
 
    .. versionchanged:: 3.1
@@ -371,11 +358,9 @@ Writing and reading a bzip2-compressed file in binary mode:
     >>> with bz2.open("myfile.bz2", "wb") as f:
     ...     # Write compressed data to file
     ...     unused = f.write(data)
-    ...
     >>> with bz2.open("myfile.bz2", "rb") as f:
     ...     # Decompress data from file
     ...     content = f.read()
-    ...
     >>> content == data  # Check equality to original object after round-trip
     True
 

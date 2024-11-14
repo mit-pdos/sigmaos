@@ -145,7 +145,7 @@ class ExecutorDeadlockTest:
         self._check_crash(BrokenProcessPool, id, ExitAtUnpickle())
 
     def test_error_at_task_unpickle(self):
-        # gh-109832: Restore stderr overridden by _raise_error_ignore_stderr()
+        # gh-109832: Restore stderr overriden by _raise_error_ignore_stderr()
         self.addCleanup(setattr, sys, 'stderr', sys.stderr)
 
         # Check problem occurring while unpickling a task on workers
@@ -183,7 +183,7 @@ class ExecutorDeadlockTest:
         self._check_crash(PicklingError, _return_instance, ErrorAtPickle)
 
     def test_error_during_result_unpickle_in_result_handler(self):
-        # gh-109832: Restore stderr overridden by _raise_error_ignore_stderr()
+        # gh-109832: Restore stderr overriden by _raise_error_ignore_stderr()
         self.addCleanup(setattr, sys, 'stderr', sys.stderr)
 
         # Check problem occurring while unpickling a task in
@@ -236,7 +236,7 @@ class ExecutorDeadlockTest:
         executor_manager.join()
 
     def test_crash_big_data(self):
-        # Test that there is a clean exception instead of a deadlock when a
+        # Test that there is a clean exception instad of a deadlock when a
         # child process crashes while some data is being written into the
         # queue.
         # https://github.com/python/cpython/issues/94777
@@ -247,8 +247,6 @@ class ExecutorDeadlockTest:
             self.executor = executor  # Allow clean up in fail_on_deadlock
             with self.assertRaises(BrokenProcessPool):
                 list(executor.map(_crash_with_data, [data] * 10))
-
-        executor.shutdown(wait=True)
 
     def test_gh105829_should_not_deadlock_if_wakeup_pipe_full(self):
         # Issue #105829: The _ExecutorManagerThread wakeup pipe could

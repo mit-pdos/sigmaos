@@ -13,14 +13,11 @@ import pickle
 import operator
 import struct
 import sys
-import warnings
 
 import array
 from array import _array_reconstructor as array_reconstructor
 
-with warnings.catch_warnings():
-    warnings.simplefilter('ignore', DeprecationWarning)
-    sizeof_wchar = array.array('u').itemsize
+sizeof_wchar = array.array('u').itemsize
 
 
 class ArraySubclass(array.array):
@@ -30,7 +27,7 @@ class ArraySubclassWithKwargs(array.array):
     def __init__(self, typecode, newarg=None):
         array.array.__init__(self)
 
-typecodes = 'uwbBhHiIlLfdqQ'
+typecodes = 'ubBhHiIlLfdqQ'
 
 class MiscTest(unittest.TestCase):
 
@@ -96,16 +93,7 @@ UTF16_BE = 19
 UTF32_LE = 20
 UTF32_BE = 21
 
-
 class ArrayReconstructorTest(unittest.TestCase):
-
-    def setUp(self):
-        self.enterContext(warnings.catch_warnings())
-        warnings.filterwarnings(
-            "ignore",
-            message="The 'u' type code is deprecated and "
-                    "will be removed in Python 3.16",
-            category=DeprecationWarning)
 
     def test_error(self):
         self.assertRaises(TypeError, array_reconstructor,
@@ -198,12 +186,11 @@ class ArrayReconstructorTest(unittest.TestCase):
         )
         for testcase in testcases:
             mformat_code, encoding = testcase
-            for c in 'uw':
-                a = array.array(c, teststr)
-                b = array_reconstructor(
-                    array.array, c, mformat_code, teststr.encode(encoding))
-                self.assertEqual(a, b,
-                    msg="{0!r} != {1!r}; testcase={2!r}".format(a, b, testcase))
+            a = array.array('u', teststr)
+            b = array_reconstructor(
+                array.array, 'u', mformat_code, teststr.encode(encoding))
+            self.assertEqual(a, b,
+                msg="{0!r} != {1!r}; testcase={2!r}".format(a, b, testcase))
 
 
 class BaseTest:
@@ -214,14 +201,6 @@ class BaseTest:
     # biggerexample: the same length as example, but bigger
     # outside: An entry that is not in example
     # minitemsize: the minimum guaranteed itemsize
-
-    def setUp(self):
-        self.enterContext(warnings.catch_warnings())
-        warnings.filterwarnings(
-            "ignore",
-            message="The 'u' type code is deprecated and "
-                    "will be removed in Python 3.16",
-            category=DeprecationWarning)
 
     def assertEntryEqual(self, entry1, entry2):
         self.assertEqual(entry1, entry2)
@@ -255,7 +234,7 @@ class BaseTest:
         self.assertEqual(bi[1], len(a))
 
     def test_byteswap(self):
-        if self.typecode in ('u', 'w'):
+        if self.typecode == 'u':
             example = '\U00100100'
         else:
             example = self.example
@@ -1014,29 +993,6 @@ class BaseTest:
             array.array(self.typecode, self.example[3:]+self.example[:-1])
         )
 
-    def test_clear(self):
-        a = array.array(self.typecode, self.example)
-        with self.assertRaises(TypeError):
-            a.clear(42)
-        a.clear()
-        self.assertEqual(len(a), 0)
-        self.assertEqual(a.typecode, self.typecode)
-
-        a = array.array(self.typecode)
-        a.clear()
-        self.assertEqual(len(a), 0)
-        self.assertEqual(a.typecode, self.typecode)
-
-        a = array.array(self.typecode, self.example)
-        a.clear()
-        a.append(self.example[2])
-        a.append(self.example[3])
-        self.assertEqual(a, array.array(self.typecode, self.example[2:4]))
-
-        with memoryview(a):
-            with self.assertRaises(BufferError):
-                a.clear()
-
     def test_reverse(self):
         a = array.array(self.typecode, self.example)
         self.assertRaises(TypeError, a.reverse, 42)
@@ -1123,7 +1079,7 @@ class BaseTest:
         self.assertEqual(m.tobytes(), expected)
         self.assertRaises(BufferError, a.frombytes, a.tobytes())
         self.assertEqual(m.tobytes(), expected)
-        if self.typecode in ('u', 'w'):
+        if self.typecode == 'u':
             self.assertRaises(BufferError, a.fromunicode, a.tounicode())
             self.assertEqual(m.tobytes(), expected)
         self.assertRaises(BufferError, operator.imul, a, 2)
@@ -1179,17 +1135,16 @@ class BaseTest:
         support.check_sizeof(self, a, basesize)
 
     def test_initialize_with_unicode(self):
-        if self.typecode not in ('u', 'w'):
+        if self.typecode != 'u':
             with self.assertRaises(TypeError) as cm:
                 a = array.array(self.typecode, 'foo')
             self.assertIn("cannot use a str", str(cm.exception))
             with self.assertRaises(TypeError) as cm:
-                a = array.array(self.typecode, array.array('w', 'foo'))
+                a = array.array(self.typecode, array.array('u', 'foo'))
             self.assertIn("cannot use a unicode array", str(cm.exception))
         else:
             a = array.array(self.typecode, "foo")
             a = array.array(self.typecode, array.array('u', 'foo'))
-            a = array.array(self.typecode, array.array('w', 'foo'))
 
     @support.cpython_only
     def test_obsolete_write_lock(self):
@@ -1216,50 +1171,39 @@ class UnicodeTest(StringTest, unittest.TestCase):
     smallerexample = '\x01\u263a\x00\ufefe'
     biggerexample = '\x01\u263a\x01\ufeff'
     outside = str('\x33')
-    minitemsize = sizeof_wchar
+    minitemsize = 2
 
     def test_unicode(self):
         self.assertRaises(TypeError, array.array, 'b', 'foo')
 
-        a = array.array(self.typecode, '\xa0\xc2\u1234')
+        a = array.array('u', '\xa0\xc2\u1234')
         a.fromunicode(' ')
         a.fromunicode('')
         a.fromunicode('')
         a.fromunicode('\x11abc\xff\u1234')
         s = a.tounicode()
         self.assertEqual(s, '\xa0\xc2\u1234 \x11abc\xff\u1234')
-        self.assertEqual(a.itemsize, self.minitemsize)
+        self.assertEqual(a.itemsize, sizeof_wchar)
 
         s = '\x00="\'a\\b\x80\xff\u0000\u0001\u1234'
-        a = array.array(self.typecode, s)
+        a = array.array('u', s)
         self.assertEqual(
             repr(a),
-            f"array('{self.typecode}', '\\x00=\"\\'a\\\\b\\x80\xff\\x00\\x01\u1234')")
+            "array('u', '\\x00=\"\\'a\\\\b\\x80\xff\\x00\\x01\u1234')")
 
         self.assertRaises(TypeError, a.fromunicode)
 
     def test_issue17223(self):
-        if self.typecode == 'u' and sizeof_wchar == 2:
+        # this used to crash
+        if sizeof_wchar == 4:
+            # U+FFFFFFFF is an invalid code point in Unicode 6.0
+            invalid_str = b'\xff\xff\xff\xff'
+        else:
             # PyUnicode_FromUnicode() cannot fail with 16-bit wchar_t
             self.skipTest("specific to 32-bit wchar_t")
-
-        # this used to crash
-        # U+FFFFFFFF is an invalid code point in Unicode 6.0
-        invalid_str = b'\xff\xff\xff\xff'
-
-        a = array.array(self.typecode, invalid_str)
+        a = array.array('u', invalid_str)
         self.assertRaises(ValueError, a.tounicode)
         self.assertRaises(ValueError, str, a)
-
-    def test_typecode_u_deprecation(self):
-        with self.assertWarns(DeprecationWarning):
-            array.array("u")
-
-
-class UCS4Test(UnicodeTest):
-    typecode = 'w'
-    minitemsize = 4
-
 
 class NumberTest(BaseTest):
 
@@ -1492,8 +1436,8 @@ class FPTest(NumberTest):
             if a.itemsize==1:
                 self.assertEqual(a, b)
             else:
-                # On alphas treating the byte swapped bit patterns as
-                # floats/doubles results in floating-point exceptions
+                # On alphas treating the byte swapped bit patters as
+                # floats/doubles results in floating point exceptions
                 # => compare the 8bit string values instead
                 self.assertNotEqual(a.tobytes(), b.tobytes())
             b.byteswap()

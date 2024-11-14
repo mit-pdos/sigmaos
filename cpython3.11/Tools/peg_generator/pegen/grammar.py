@@ -1,15 +1,22 @@
 from __future__ import annotations
 
+from abc import abstractmethod
 from typing import (
+    TYPE_CHECKING,
     AbstractSet,
     Any,
+    Dict,
     Iterable,
     Iterator,
     List,
     Optional,
+    Set,
     Tuple,
     Union,
 )
+
+if TYPE_CHECKING:
+    from pegen.parser_generator import ParserGenerator
 
 
 class GrammarError(Exception):
@@ -35,13 +42,7 @@ class GrammarVisitor:
 
 class Grammar:
     def __init__(self, rules: Iterable[Rule], metas: Iterable[Tuple[str, Optional[str]]]):
-        # Check if there are repeated rules in "rules"
-        all_rules = {}
-        for rule in rules:
-            if rule.name in all_rules:
-                raise GrammarError(f"Repeated rule {rule.name!r}")
-            all_rules[rule.name] = rule
-        self.rules = all_rules
+        self.rules = {rule.name: rule for rule in rules}
         self.metas = dict(metas)
 
     def __str__(self) -> str:
@@ -118,7 +119,8 @@ class Leaf:
         return self.value
 
     def __iter__(self) -> Iterable[str]:
-        yield from ()
+        if False:
+            yield
 
 
 class NameLeaf(Leaf):
@@ -340,7 +342,8 @@ class Cut:
         return f"~"
 
     def __iter__(self) -> Iterator[Tuple[str, str]]:
-        yield from ()
+        if False:
+            yield
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, Cut):
@@ -353,7 +356,7 @@ class Cut:
 
 Plain = Union[Leaf, Group]
 Item = Union[Plain, Opt, Repeat, Forced, Lookahead, Rhs, Cut]
-RuleName = Tuple[str, Optional[str]]
+RuleName = Tuple[str, str]
 MetaTuple = Tuple[str, Optional[str]]
 MetaList = List[MetaTuple]
 RuleList = List[Rule]

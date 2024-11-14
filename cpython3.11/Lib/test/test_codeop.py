@@ -2,19 +2,48 @@
    Test cases for codeop.py
    Nick Mathewson
 """
+import sys
 import unittest
 import warnings
+from test import support
 from test.support import warnings_helper
 from textwrap import dedent
 
 from codeop import compile_command, PyCF_DONT_IMPLY_DEDENT
+import io
+
+if support.is_jython:
+
+    def unify_callables(d):
+        for n,v in d.items():
+            if hasattr(v, '__call__'):
+                d[n] = True
+        return d
 
 class CodeopTests(unittest.TestCase):
 
     def assertValid(self, str, symbol='single'):
         '''succeed iff str is a valid piece of code'''
-        expected = compile(str, "<input>", symbol, PyCF_DONT_IMPLY_DEDENT)
-        self.assertEqual(compile_command(str, "<input>", symbol), expected)
+        if support.is_jython:
+            code = compile_command(str, "<input>", symbol)
+            self.assertTrue(code)
+            if symbol == "single":
+                d,r = {},{}
+                saved_stdout = sys.stdout
+                sys.stdout = io.StringIO()
+                try:
+                    exec(code, d)
+                    exec(compile(str,"<input>","single"), r)
+                finally:
+                    sys.stdout = saved_stdout
+            elif symbol == 'eval':
+                ctx = {'a': 2}
+                d = { 'value': eval(code,ctx) }
+                r = { 'value': eval(str,ctx) }
+            self.assertEqual(unify_callables(r),unify_callables(d))
+        else:
+            expected = compile(str, "<input>", symbol, PyCF_DONT_IMPLY_DEDENT)
+            self.assertEqual(compile_command(str, "<input>", symbol), expected)
 
     def assertIncomplete(self, str, symbol='single'):
         '''succeed iff str is the start of a valid piece of code'''
@@ -34,12 +63,16 @@ class CodeopTests(unittest.TestCase):
         av = self.assertValid
 
         # special case
-        self.assertEqual(compile_command(""),
-                            compile("pass", "<input>", 'single',
-                                    PyCF_DONT_IMPLY_DEDENT))
-        self.assertEqual(compile_command("\n"),
-                            compile("pass", "<input>", 'single',
-                                    PyCF_DONT_IMPLY_DEDENT))
+        if not support.is_jython:
+            self.assertEqual(compile_command(""),
+                             compile("pass", "<input>", 'single',
+                                     PyCF_DONT_IMPLY_DEDENT))
+            self.assertEqual(compile_command("\n"),
+                             compile("pass", "<input>", 'single',
+                                     PyCF_DONT_IMPLY_DEDENT))
+        else:
+            av("")
+            av("\n")
 
         av("a = 1")
         av("\na = 1")
@@ -223,9 +256,6 @@ class CodeopTests(unittest.TestCase):
         ai("(x for x in")
         ai("(x for x in (")
 
-        ai('a = f"""')
-        ai('a = \\')
-
     def test_invalid(self):
         ai = self.assertInvalid
         ai("a b")
@@ -281,8 +311,8 @@ class CodeopTests(unittest.TestCase):
     def test_warning(self):
         # Test that the warning is only returned once.
         with warnings_helper.check_warnings(
-                ('"is" with \'str\' literal', SyntaxWarning),
-                ("invalid escape sequence", SyntaxWarning),
+                (".*literal", SyntaxWarning),
+                (".*invalid", DeprecationWarning),
                 ) as w:
             compile_command(r"'\e' is 0")
             self.assertEqual(len(w.warnings), 2)
@@ -292,9 +322,9 @@ class CodeopTests(unittest.TestCase):
             warnings.simplefilter('error', SyntaxWarning)
             compile_command('1 is 1', symbol='exec')
 
-        # Check SyntaxWarning treated as an SyntaxError
+        # Check DeprecationWarning treated as an SyntaxError
         with warnings.catch_warnings(), self.assertRaises(SyntaxError):
-            warnings.simplefilter('error', SyntaxWarning)
+            warnings.simplefilter('error', DeprecationWarning)
             compile_command(r"'\e'", symbol='exec')
 
     def test_incomplete_warning(self):
@@ -308,7 +338,7 @@ class CodeopTests(unittest.TestCase):
             warnings.simplefilter('always')
             self.assertInvalid("'\\e' 1")
         self.assertEqual(len(w), 1)
-        self.assertEqual(w[0].category, SyntaxWarning)
+        self.assertEqual(w[0].category, DeprecationWarning)
         self.assertRegex(str(w[0].message), 'invalid escape sequence')
         self.assertEqual(w[0].filename, '<input>')
 

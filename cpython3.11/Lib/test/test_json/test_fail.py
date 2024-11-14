@@ -89,7 +89,7 @@ class TestFail:
             except self.JSONDecodeError:
                 pass
             else:
-                self.fail(f"Expected failure for fail{idx}.json: {doc!r}")
+                self.fail("Expected failure for fail{0}.json: {1!r}".format(idx, doc))
 
     def test_non_string_keys_dict(self):
         data = {'a' : 1, (1, 2) : 2}
@@ -100,27 +100,8 @@ class TestFail:
     def test_not_serializable(self):
         import sys
         with self.assertRaisesRegex(TypeError,
-                'Object of type module is not JSON serializable') as cm:
+                'Object of type module is not JSON serializable'):
             self.dumps(sys)
-        self.assertFalse(hasattr(cm.exception, '__notes__'))
-
-        with self.assertRaises(TypeError) as cm:
-            self.dumps([1, [2, 3, sys]])
-        self.assertEqual(cm.exception.__notes__,
-                         ['when serializing list item 2',
-                          'when serializing list item 1'])
-
-        with self.assertRaises(TypeError) as cm:
-            self.dumps((1, (2, 3, sys)))
-        self.assertEqual(cm.exception.__notes__,
-                         ['when serializing tuple item 2',
-                          'when serializing tuple item 1'])
-
-        with self.assertRaises(TypeError) as cm:
-            self.dumps({'a': {'b': sys}})
-        self.assertEqual(cm.exception.__notes__,
-                         ["when serializing dict item 'b'",
-                          "when serializing dict item 'a'"])
 
     def test_truncated_input(self):
         test_cases = [
@@ -162,11 +143,11 @@ class TestFail:
             ('{"spam":[}', 'Expecting value', 9),
             ('[42:', "Expecting ',' delimiter", 3),
             ('[42 "spam"', "Expecting ',' delimiter", 4),
-            ('[42,]', "Illegal trailing comma before end of array", 3),
+            ('[42,]', 'Expecting value', 4),
             ('{"spam":[42}', "Expecting ',' delimiter", 11),
             ('["]', 'Unterminated string starting at', 1),
             ('["spam":', "Expecting ',' delimiter", 7),
-            ('["spam",]', "Illegal trailing comma before end of array", 7),
+            ('["spam",]', 'Expecting value', 8),
             ('{:', 'Expecting property name enclosed in double quotes', 1),
             ('{,', 'Expecting property name enclosed in double quotes', 1),
             ('{42', 'Expecting property name enclosed in double quotes', 1),
@@ -178,9 +159,7 @@ class TestFail:
             ('[{"spam":]', 'Expecting value', 9),
             ('{"spam":42 "ham"', "Expecting ',' delimiter", 11),
             ('[{"spam":42]', "Expecting ',' delimiter", 11),
-            ('{"spam":42,}', "Illegal trailing comma before end of object", 10),
-            ('{"spam":42 , }', "Illegal trailing comma before end of object", 11),
-            ('[123  , ]', "Illegal trailing comma before end of array", 6),
+            ('{"spam":42,}', 'Expecting property name enclosed in double quotes', 11),
         ]
         for data, msg, idx in test_cases:
             with self.assertRaises(self.JSONDecodeError) as cm:

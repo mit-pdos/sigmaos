@@ -1,7 +1,7 @@
 import sys
 
 try:
-    import layout  # noqa: F401
+    import layout
 except ImportError:
     # Failed to import our package, which likely means we were started directly
     # Add the additional search path needed to locate our module.

@@ -3,6 +3,7 @@
 # SPDX-FileCopyrightText: Copyright (c) 2015-2021 MagicStack Inc.  http://magic.io
 
 import asyncio
+import asyncio.sslproto
 import contextlib
 import gc
 import logging

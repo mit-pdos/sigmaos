@@ -5,31 +5,29 @@
 
 #include "Python.h"
 #include "pycore_fileutils.h"
-#include "pycore_pystate.h"
-#include "pycore_signal.h"        // _Py_RestoreSignals()
 #if defined(HAVE_PIPE2) && !defined(_GNU_SOURCE)
-#  define _GNU_SOURCE
+# define _GNU_SOURCE
 #endif
-#include <unistd.h>               // close()
-#include <fcntl.h>                // fcntl()
+#include <unistd.h>
+#include <fcntl.h>
 #ifdef HAVE_SYS_TYPES_H
-#  include <sys/types.h>
+#include <sys/types.h>
 #endif
 #if defined(HAVE_SYS_STAT_H)
-#  include <sys/stat.h>           // stat()
+#include <sys/stat.h>
 #endif
 #ifdef HAVE_SYS_SYSCALL_H
-#  include <sys/syscall.h>
+#include <sys/syscall.h>
 #endif
 #if defined(HAVE_SYS_RESOURCE_H)
-#  include <sys/resource.h>
+#include <sys/resource.h>
 #endif
 #ifdef HAVE_DIRENT_H
-#  include <dirent.h>             // opendir()
+#include <dirent.h>
 #endif
-#if defined(HAVE_SETGROUPS)
-#  include <grp.h>                // setgroups()
-#endif
+#ifdef HAVE_GRP_H
+#include <grp.h>
+#endif /* HAVE_GRP_H */
 
 #include "posixmodule.h"
 
@@ -76,29 +74,6 @@
 #define POSIX_CALL(call)   do { if ((call) == -1) goto error; } while (0)
 
 static struct PyModuleDef _posixsubprocessmodule;
-
-/*[clinic input]
-module _posixsubprocess
-[clinic start generated code]*/
-/*[clinic end generated code: output=da39a3ee5e6b4b0d input=c62211df27cf7334]*/
-
-/*[python input]
-class pid_t_converter(CConverter):
-    type = 'pid_t'
-    format_unit = '" _Py_PARSE_PID "'
-
-    def parse_arg(self, argname, displayname, *, limited_capi):
-        return self.format_code("""
-            {paramname} = PyLong_AsPid({argname});
-            if ({paramname} == -1 && PyErr_Occurred()) {{{{
-                goto exit;
-            }}}}
-            """,
-            argname=argname)
-[python start generated code]*/
-/*[python end generated code: output=da39a3ee5e6b4b0d input=c94349aa1aad151d]*/
-
-#include "clinic/_posixsubprocess.c.h"
 
 /* Convert ASCII to a positive int, no libc call. no overflow. -1 on error. */
 static int
@@ -183,88 +158,6 @@ _is_fd_in_sorted_fd_sequence(int fd, int *fd_sequence,
     } while (search_min <= search_max);
     return 0;
 }
-
-
-// Forward declaration
-static void _Py_FreeCharPArray(char *const array[]);
-
-/*
- * Flatten a sequence of bytes() objects into a C array of
- * NULL terminated string pointers with a NULL char* terminating the array.
- * (ie: an argv or env list)
- *
- * Memory allocated for the returned list is allocated using PyMem_Malloc()
- * and MUST be freed by _Py_FreeCharPArray().
- */
-static char *const *
-_PySequence_BytesToCharpArray(PyObject* self)
-{
-    char **array;
-    Py_ssize_t i, argc;
-    PyObject *item = NULL;
-    Py_ssize_t size;
-
-    argc = PySequence_Size(self);
-    if (argc == -1)
-        return NULL;
-
-    assert(argc >= 0);
-
-    if ((size_t)argc > (PY_SSIZE_T_MAX-sizeof(char *)) / sizeof(char *)) {
-        PyErr_NoMemory();
-        return NULL;
-    }
-
-    array = PyMem_Malloc((argc + 1) * sizeof(char *));
-    if (array == NULL) {
-        PyErr_NoMemory();
-        return NULL;
-    }
-    for (i = 0; i < argc; ++i) {
-        char *data;
-        item = PySequence_GetItem(self, i);
-        if (item == NULL) {
-            /* NULL terminate before freeing. */
-            array[i] = NULL;
-            goto fail;
-        }
-        /* check for embedded null bytes */
-        if (PyBytes_AsStringAndSize(item, &data, NULL) < 0) {
-            /* NULL terminate before freeing. */
-            array[i] = NULL;
-            goto fail;
-        }
-        size = PyBytes_GET_SIZE(item) + 1;
-        array[i] = PyMem_Malloc(size);
-        if (!array[i]) {
-            PyErr_NoMemory();
-            goto fail;
-        }
-        memcpy(array[i], data, size);
-        Py_DECREF(item);
-    }
-    array[argc] = NULL;
-
-    return array;
-
-fail:
-    Py_XDECREF(item);
-    _Py_FreeCharPArray(array);
-    return NULL;
-}
-
-
-/* Free's a NULL terminated char** array of C strings. */
-static void
-_Py_FreeCharPArray(char *const array[])
-{
-    Py_ssize_t i;
-    for (i = 0; array[i] != NULL; ++i) {
-        PyMem_Free(array[i]);
-    }
-    PyMem_Free((void*)array);
-}
-
 
 /*
  * Do all the Python C API calls in the parent process to turn the pass_fds
@@ -665,9 +558,9 @@ child_exec(char *const exec_array[],
            int errpipe_read, int errpipe_write,
            int close_fds, int restore_signals,
            int call_setsid, pid_t pgid_to_set,
-           gid_t gid,
-           Py_ssize_t extra_group_size, const gid_t *extra_groups,
-           uid_t uid, int child_umask,
+           int call_setgid, gid_t gid,
+           int call_setgroups, size_t groups_size, const gid_t *groups,
+           int call_setuid, uid_t uid, int child_umask,
            const void *child_sigmask,
            int *fds_to_keep, Py_ssize_t fds_to_keep_len,
            PyObject *preexec_fn,
@@ -746,9 +639,8 @@ child_exec(char *const exec_array[],
     if (child_umask >= 0)
         umask(child_umask);  /* umask() always succeeds. */
 
-    if (restore_signals) {
+    if (restore_signals)
         _Py_RestoreSignals();
-    }
 
 #ifdef VFORK_USABLE
     if (child_sigmask) {
@@ -765,26 +657,22 @@ child_exec(char *const exec_array[],
 #endif
 
 #ifdef HAVE_SETPGID
-    static_assert(_Py_IS_TYPE_SIGNED(pid_t), "pid_t is unsigned");
-    if (pgid_to_set >= 0) {
+    if (pgid_to_set >= 0)
         POSIX_CALL(setpgid(0, pgid_to_set));
-    }
 #endif
 
 #ifdef HAVE_SETGROUPS
-    if (extra_group_size >= 0) {
-        assert((extra_group_size == 0) == (extra_groups == NULL));
-        POSIX_CALL(setgroups(extra_group_size, extra_groups));
-    }
+    if (call_setgroups)
+        POSIX_CALL(setgroups(groups_size, groups));
 #endif /* HAVE_SETGROUPS */
 
 #ifdef HAVE_SETREGID
-    if (gid != (gid_t)-1)
+    if (call_setgid)
         POSIX_CALL(setregid(gid, gid));
 #endif /* HAVE_SETREGID */
 
 #ifdef HAVE_SETREUID
-    if (uid != (uid_t)-1)
+    if (call_setuid)
         POSIX_CALL(setreuid(uid, uid));
 #endif /* HAVE_SETREUID */
 
@@ -875,9 +763,9 @@ do_fork_exec(char *const exec_array[],
              int errpipe_read, int errpipe_write,
              int close_fds, int restore_signals,
              int call_setsid, pid_t pgid_to_set,
-             gid_t gid,
-             Py_ssize_t extra_group_size, const gid_t *extra_groups,
-             uid_t uid, int child_umask,
+             int call_setgid, gid_t gid,
+             int call_setgroups, size_t groups_size, const gid_t *groups,
+             int call_setuid, uid_t uid, int child_umask,
              const void *child_sigmask,
              int *fds_to_keep, Py_ssize_t fds_to_keep_len,
              PyObject *preexec_fn,
@@ -890,9 +778,9 @@ do_fork_exec(char *const exec_array[],
     PyThreadState *vfork_tstate_save;
     if (child_sigmask) {
         /* These are checked by our caller; verify them in debug builds. */
-        assert(uid == (uid_t)-1);
-        assert(gid == (gid_t)-1);
-        assert(extra_group_size < 0);
+        assert(!call_setuid);
+        assert(!call_setgid);
+        assert(!call_setgroups);
         assert(preexec_fn == Py_None);
 
         /* Drop the GIL so that other threads can continue execution while this
@@ -945,99 +833,58 @@ do_fork_exec(char *const exec_array[],
                p2cread, p2cwrite, c2pread, c2pwrite,
                errread, errwrite, errpipe_read, errpipe_write,
                close_fds, restore_signals, call_setsid, pgid_to_set,
-               gid, extra_group_size, extra_groups,
-               uid, child_umask, child_sigmask,
+               call_setgid, gid, call_setgroups, groups_size, groups,
+               call_setuid, uid, child_umask, child_sigmask,
                fds_to_keep, fds_to_keep_len,
                preexec_fn, preexec_fn_args_tuple);
     _exit(255);
     return 0;  /* Dead code to avoid a potential compiler warning. */
 }
 
-/*[clinic input]
-_posixsubprocess.fork_exec as subprocess_fork_exec
-    args as process_args: object
-    executable_list: object
-    close_fds: bool
-    pass_fds as py_fds_to_keep: object(subclass_of='&PyTuple_Type')
-    cwd as cwd_obj: object
-    env as env_list: object
-    p2cread: int
-    p2cwrite: int
-    c2pread: int
-    c2pwrite: int
-    errread: int
-    errwrite: int
-    errpipe_read: int
-    errpipe_write: int
-    restore_signals: bool
-    call_setsid: bool
-    pgid_to_set: pid_t
-    gid as gid_object: object
-    extra_groups as extra_groups_packed: object
-    uid as uid_object: object
-    child_umask: int
-    preexec_fn: object
-    /
-
-Spawn a fresh new child process.
-
-Fork a child process, close parent file descriptors as appropriate in the
-child and duplicate the few that are needed before calling exec() in the
-child process.
-
-If close_fds is True, close file descriptors 3 and higher, except those listed
-in the sorted tuple pass_fds.
-
-The preexec_fn, if supplied, will be called immediately before closing file
-descriptors and exec.
-
-WARNING: preexec_fn is NOT SAFE if your application uses threads.
-         It may trigger infrequent, difficult to debug deadlocks.
-
-If an error occurs in the child process before the exec, it is
-serialized and written to the errpipe_write fd per subprocess.py.
-
-Returns: the child process's PID.
-
-Raises: Only on an error in the parent process.
-[clinic start generated code]*/
 
 static PyObject *
-subprocess_fork_exec_impl(PyObject *module, PyObject *process_args,
-                          PyObject *executable_list, int close_fds,
-                          PyObject *py_fds_to_keep, PyObject *cwd_obj,
-                          PyObject *env_list, int p2cread, int p2cwrite,
-                          int c2pread, int c2pwrite, int errread,
-                          int errwrite, int errpipe_read, int errpipe_write,
-                          int restore_signals, int call_setsid,
-                          pid_t pgid_to_set, PyObject *gid_object,
-                          PyObject *extra_groups_packed,
-                          PyObject *uid_object, int child_umask,
-                          PyObject *preexec_fn)
-/*[clinic end generated code: output=288464dc56e373c7 input=f311c3bcb5dd55c8]*/
+subprocess_fork_exec(PyObject *module, PyObject *args)
 {
-    PyObject *converted_args = NULL, *fast_args = NULL;
+    PyObject *gc_module = NULL;
+    PyObject *executable_list, *py_fds_to_keep;
+    PyObject *env_list, *preexec_fn;
+    PyObject *process_args, *converted_args = NULL, *fast_args = NULL;
     PyObject *preexec_fn_args_tuple = NULL;
-    gid_t *extra_groups = NULL;
-    PyObject *cwd_obj2 = NULL;
-    const char *cwd = NULL;
+    PyObject *groups_list;
+    PyObject *uid_object, *gid_object;
+    int p2cread, p2cwrite, c2pread, c2pwrite, errread, errwrite;
+    int errpipe_read, errpipe_write, close_fds, restore_signals;
+    int call_setsid;
+    pid_t pgid_to_set = -1;
+    int call_setgid = 0, call_setgroups = 0, call_setuid = 0;
+    uid_t uid;
+    gid_t gid, *groups = NULL;
+    int child_umask;
+    PyObject *cwd_obj, *cwd_obj2 = NULL;
+    const char *cwd;
     pid_t pid = -1;
     int need_to_reenable_gc = 0;
-    char *const *argv = NULL, *const *envp = NULL;
+    char *const *exec_array, *const *argv = NULL, *const *envp = NULL;
+    Py_ssize_t arg_num, num_groups = 0;
     int need_after_fork = 0;
     int saved_errno = 0;
+    int allow_vfork;
     int *c_fds_to_keep = NULL;
-    Py_ssize_t fds_to_keep_len = PyTuple_GET_SIZE(py_fds_to_keep);
 
-    PyInterpreterState *interp = _PyInterpreterState_GET();
-    if ((preexec_fn != Py_None) &&
-        _PyInterpreterState_GetFinalizing(interp) != NULL)
-    {
-        PyErr_SetString(PyExc_PythonFinalizationError,
-                        "preexec_fn not supported at interpreter shutdown");
+    if (!PyArg_ParseTuple(
+            args, "OOpO!OOiiiiiiiiii" _Py_PARSE_PID "OOOiOp:fork_exec",
+            &process_args, &executable_list,
+            &close_fds, &PyTuple_Type, &py_fds_to_keep,
+            &cwd_obj, &env_list,
+            &p2cread, &p2cwrite, &c2pread, &c2pwrite,
+            &errread, &errwrite, &errpipe_read, &errpipe_write,
+            &restore_signals, &call_setsid, &pgid_to_set,
+            &gid_object, &groups_list, &uid_object, &child_umask,
+            &preexec_fn, &allow_vfork))
         return NULL;
-    }
-    if ((preexec_fn != Py_None) && (interp != PyInterpreterState_Main())) {
+
+    if ((preexec_fn != Py_None) &&
+            (PyInterpreterState_Get() != PyInterpreterState_Main())) {
         PyErr_SetString(PyExc_RuntimeError,
                         "preexec_fn not supported within subinterpreters");
         return NULL;
@@ -1052,12 +899,20 @@ subprocess_fork_exec_impl(PyObject *module, PyObject *process_args,
         return NULL;
     }
 
+    PyInterpreterState *interp = PyInterpreterState_Get();
+    const PyConfig *config = _PyInterpreterState_GetConfig(interp);
+    if (config->_isolated_interpreter) {
+        PyErr_SetString(PyExc_RuntimeError,
+                        "subprocess not supported for isolated subinterpreters");
+        return NULL;
+    }
+
     /* We need to call gc.disable() when we'll be calling preexec_fn */
     if (preexec_fn != Py_None) {
         need_to_reenable_gc = PyGC_Disable();
     }
 
-    char *const *exec_array = _PySequence_BytesToCharpArray(executable_list);
+    exec_array = _PySequence_BytesToCharpArray(executable_list);
     if (!exec_array)
         goto cleanup;
 
@@ -1075,7 +930,7 @@ subprocess_fork_exec_impl(PyObject *module, PyObject *process_args,
         converted_args = PyTuple_New(num_args);
         if (converted_args == NULL)
             goto cleanup;
-        for (Py_ssize_t arg_num = 0; arg_num < num_args; ++arg_num) {
+        for (arg_num = 0; arg_num < num_args; ++arg_num) {
             PyObject *borrowed_arg, *converted_arg;
             if (PySequence_Fast_GET_SIZE(fast_args) != num_args) {
                 PyErr_SetString(PyExc_RuntimeError, "args changed during iteration");
@@ -1104,63 +959,57 @@ subprocess_fork_exec_impl(PyObject *module, PyObject *process_args,
         if (PyUnicode_FSConverter(cwd_obj, &cwd_obj2) == 0)
             goto cleanup;
         cwd = PyBytes_AsString(cwd_obj2);
+    } else {
+        cwd = NULL;
     }
 
-    // Special initial value meaning that subprocess API was called with
-    // extra_groups=None leading to _posixsubprocess.fork_exec(gids=None).
-    // We use this to differentiate between code desiring a setgroups(0, NULL)
-    // call vs no call at all.  The fast vfork() code path could be used when
-    // there is no setgroups call.
-    Py_ssize_t extra_group_size = -2;
-
-    if (extra_groups_packed != Py_None) {
+    if (groups_list != Py_None) {
 #ifdef HAVE_SETGROUPS
-        if (!PyList_Check(extra_groups_packed)) {
+        Py_ssize_t i;
+        gid_t gid;
+
+        if (!PyList_Check(groups_list)) {
             PyErr_SetString(PyExc_TypeError,
                     "setgroups argument must be a list");
             goto cleanup;
         }
-        extra_group_size = PySequence_Size(extra_groups_packed);
+        num_groups = PySequence_Size(groups_list);
 
-        if (extra_group_size < 0)
+        if (num_groups < 0)
             goto cleanup;
 
-        if (extra_group_size > MAX_GROUPS) {
-            PyErr_SetString(PyExc_ValueError, "too many extra_groups");
+        if (num_groups > MAX_GROUPS) {
+            PyErr_SetString(PyExc_ValueError, "too many groups");
             goto cleanup;
         }
 
-        /* Deliberately keep extra_groups == NULL for extra_group_size == 0 */
-        if (extra_group_size > 0) {
-            extra_groups = PyMem_RawMalloc(extra_group_size * sizeof(gid_t));
-            if (extra_groups == NULL) {
-                PyErr_SetString(PyExc_MemoryError,
-                        "failed to allocate memory for group list");
-                goto cleanup;
-            }
+        if ((groups = PyMem_RawMalloc(num_groups * sizeof(gid_t))) == NULL) {
+            PyErr_SetString(PyExc_MemoryError,
+                    "failed to allocate memory for group list");
+            goto cleanup;
         }
 
-        for (Py_ssize_t i = 0; i < extra_group_size; i++) {
+        for (i = 0; i < num_groups; i++) {
             PyObject *elem;
-            elem = PySequence_GetItem(extra_groups_packed, i);
+            elem = PySequence_GetItem(groups_list, i);
             if (!elem)
                 goto cleanup;
             if (!PyLong_Check(elem)) {
                 PyErr_SetString(PyExc_TypeError,
-                                "extra_groups must be integers");
+                                "groups must be integers");
                 Py_DECREF(elem);
                 goto cleanup;
             } else {
-                gid_t gid;
                 if (!_Py_Gid_Converter(elem, &gid)) {
                     Py_DECREF(elem);
                     PyErr_SetString(PyExc_ValueError, "invalid group id");
                     goto cleanup;
                 }
-                extra_groups[i] = gid;
+                groups[i] = gid;
             }
             Py_DECREF(elem);
         }
+        call_setgroups = 1;
 
 #else /* HAVE_SETGROUPS */
         PyErr_BadInternalCall();
@@ -1168,11 +1017,12 @@ subprocess_fork_exec_impl(PyObject *module, PyObject *process_args,
 #endif /* HAVE_SETGROUPS */
     }
 
-    gid_t gid = (gid_t)-1;
     if (gid_object != Py_None) {
 #ifdef HAVE_SETREGID
         if (!_Py_Gid_Converter(gid_object, &gid))
             goto cleanup;
+
+        call_setgid = 1;
 
 #else /* HAVE_SETREGID */
         PyErr_BadInternalCall();
@@ -1180,11 +1030,12 @@ subprocess_fork_exec_impl(PyObject *module, PyObject *process_args,
 #endif /* HAVE_SETREUID */
     }
 
-    uid_t uid = (uid_t)-1;
     if (uid_object != Py_None) {
 #ifdef HAVE_SETREUID
         if (!_Py_Uid_Converter(uid_object, &uid))
             goto cleanup;
+
+        call_setuid = 1;
 
 #else /* HAVE_SETREUID */
         PyErr_BadInternalCall();
@@ -1192,6 +1043,7 @@ subprocess_fork_exec_impl(PyObject *module, PyObject *process_args,
 #endif /* HAVE_SETREUID */
     }
 
+    Py_ssize_t fds_to_keep_len = PyTuple_GET_SIZE(py_fds_to_keep);
     c_fds_to_keep = PyMem_Malloc(fds_to_keep_len * sizeof(int));
     if (c_fds_to_keep == NULL) {
         PyErr_SetString(PyExc_MemoryError, "failed to malloc c_fds_to_keep");
@@ -1217,8 +1069,8 @@ subprocess_fork_exec_impl(PyObject *module, PyObject *process_args,
 #ifdef VFORK_USABLE
     /* Use vfork() only if it's safe. See the comment above child_exec(). */
     sigset_t old_sigs;
-    if (preexec_fn == Py_None &&
-        uid == (uid_t)-1 && gid == (gid_t)-1 && extra_group_size < 0) {
+    if (preexec_fn == Py_None && allow_vfork &&
+        !call_setuid && !call_setgid && !call_setgroups) {
         /* Block all signals to ensure that no signal handlers are run in the
          * child process while it shares memory with us. Note that signals
          * used internally by C libraries won't be blocked by
@@ -1241,13 +1093,13 @@ subprocess_fork_exec_impl(PyObject *module, PyObject *process_args,
                        p2cread, p2cwrite, c2pread, c2pwrite,
                        errread, errwrite, errpipe_read, errpipe_write,
                        close_fds, restore_signals, call_setsid, pgid_to_set,
-                       gid, extra_group_size, extra_groups,
-                       uid, child_umask, old_sigmask,
+                       call_setgid, gid, call_setgroups, num_groups, groups,
+                       call_setuid, uid, child_umask, old_sigmask,
                        c_fds_to_keep, fds_to_keep_len,
                        preexec_fn, preexec_fn_args_tuple);
 
     /* Parent (original) process */
-    if (pid == (pid_t)-1) {
+    if (pid == -1) {
         /* Capture errno for the exception. */
         saved_errno = errno;
     }
@@ -1286,7 +1138,7 @@ cleanup:
     }
 
     Py_XDECREF(preexec_fn_args_tuple);
-    PyMem_RawFree(extra_groups);
+    PyMem_RawFree(groups);
     Py_XDECREF(cwd_obj2);
     if (envp)
         _Py_FreeCharPArray(envp);
@@ -1300,9 +1152,39 @@ cleanup:
     if (need_to_reenable_gc) {
         PyGC_Enable();
     }
+    Py_XDECREF(gc_module);
 
     return pid == -1 ? NULL : PyLong_FromPid(pid);
 }
+
+
+PyDoc_STRVAR(subprocess_fork_exec_doc,
+"fork_exec(args, executable_list, close_fds, pass_fds, cwd, env,\n\
+          p2cread, p2cwrite, c2pread, c2pwrite,\n\
+          errread, errwrite, errpipe_read, errpipe_write,\n\
+          restore_signals, call_setsid, pgid_to_set,\n\
+          gid, groups_list, uid,\n\
+          preexec_fn)\n\
+\n\
+Forks a child process, closes parent file descriptors as appropriate in the\n\
+child and dups the few that are needed before calling exec() in the child\n\
+process.\n\
+\n\
+If close_fds is true, close file descriptors 3 and higher, except those listed\n\
+in the sorted tuple pass_fds.\n\
+\n\
+The preexec_fn, if supplied, will be called immediately before closing file\n\
+descriptors and exec.\n\
+WARNING: preexec_fn is NOT SAFE if your application uses threads.\n\
+         It may trigger infrequent, difficult to debug deadlocks.\n\
+\n\
+If an error occurs in the child process before the exec, it is\n\
+serialized and written to the errpipe_write fd per subprocess.py.\n\
+\n\
+Returns: the child process's PID.\n\
+\n\
+Raises: Only on an error in the parent process.\n\
+");
 
 /* module level code ********************************************************/
 
@@ -1310,13 +1192,11 @@ PyDoc_STRVAR(module_doc,
 "A POSIX helper for the subprocess module.");
 
 static PyMethodDef module_methods[] = {
-    SUBPROCESS_FORK_EXEC_METHODDEF
+    {"fork_exec", subprocess_fork_exec, METH_VARARGS, subprocess_fork_exec_doc},
     {NULL, NULL}  /* sentinel */
 };
 
 static PyModuleDef_Slot _posixsubprocess_slots[] = {
-    {Py_mod_multiple_interpreters, Py_MOD_PER_INTERPRETER_GIL_SUPPORTED},
-    {Py_mod_gil, Py_MOD_GIL_NOT_USED},
     {0, NULL}
 };
 

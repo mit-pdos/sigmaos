@@ -5,12 +5,12 @@ import os
 import shlex
 import subprocess
 import sys
-from typing import Any, Iterator
+from typing import Any
 
 from test import support
 
 from .utils import (
-    StrPath, StrJSON, TestTuple, TestName, TestFilter, FilterTuple, FilterDict)
+    StrPath, StrJSON, TestTuple, TestFilter, FilterTuple, FilterDict)
 
 
 class JsonFileType:
@@ -41,8 +41,8 @@ class JsonFile:
                 popen_kwargs['startupinfo'] = startupinfo
 
     @contextlib.contextmanager
-    def inherit_subprocess(self) -> Iterator[None]:
-        if sys.platform == 'win32' and self.file_type == JsonFileType.WINDOWS_HANDLE:
+    def inherit_subprocess(self):
+        if self.file_type == JsonFileType.WINDOWS_HANDLE:
             os.set_handle_inheritable(self.file, True)
             try:
                 yield
@@ -93,7 +93,6 @@ class RunTests:
     hunt_refleak: HuntRefleak | None
     test_dir: StrPath | None
     use_junit: bool
-    coverage: bool
     memory_limit: str | None
     gc_threshold: int | None
     use_resources: tuple[str, ...]
@@ -106,25 +105,25 @@ class RunTests:
         state.update(override)
         return RunTests(**state)
 
-    def create_worker_runtests(self, **override) -> WorkerRunTests:
+    def create_worker_runtests(self, **override):
         state = dataclasses.asdict(self)
         state.update(override)
         return WorkerRunTests(**state)
 
-    def get_match_tests(self, test_name: TestName) -> FilterTuple | None:
+    def get_match_tests(self, test_name) -> FilterTuple | None:
         if self.match_tests_dict is not None:
             return self.match_tests_dict.get(test_name, None)
         else:
             return None
 
-    def get_jobs(self) -> int | None:
+    def get_jobs(self):
         # Number of run_single_test() calls needed to run all tests.
         # None means that there is not bound limit (--forever option).
         if self.forever:
             return None
         return len(self.tests)
 
-    def iter_tests(self) -> Iterator[TestName]:
+    def iter_tests(self):
         if self.forever:
             while True:
                 yield from self.tests
@@ -157,8 +156,6 @@ class RunTests:
         cmd = [*executable, *python_opts]
         if '-u' not in python_opts:
             cmd.append('-u')  # Unbuffered stdout and stderr
-        if self.coverage:
-            cmd.append("-Xpresite=test.cov")
         return cmd
 
     def bisect_cmd_args(self) -> list[str]:

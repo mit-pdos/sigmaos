@@ -8,14 +8,14 @@ from email.utils import make_msgid
 
 # Create the base text message.
 msg = EmailMessage()
-msg['Subject'] = "Pourquoi pas des asperges pour ce midi ?"
+msg['Subject'] = "Ayons asperges pour le déjeuner"
 msg['From'] = Address("Pepé Le Pew", "pepe", "example.com")
 msg['To'] = (Address("Penelope Pussycat", "penelope", "example.com"),
              Address("Fabrette Pussycat", "fabrette", "example.com"))
 msg.set_content("""\
 Salut!
 
-Cette recette [1] sera sûrement un très bon repas.
+Cela ressemble à un excellent recipie[1] déjeuner.
 
 [1] http://www.yummly.com/recipe/Roasted-Asparagus-Epicurious-203718
 
@@ -31,10 +31,10 @@ msg.add_alternative("""\
   <head></head>
   <body>
     <p>Salut!</p>
-    <p>Cette
+    <p>Cela ressemble à un excellent
         <a href="http://www.yummly.com/recipe/Roasted-Asparagus-Epicurious-203718">
-            recette
-        </a> sera sûrement un très bon repas.
+            recipie
+        </a> déjeuner.
     </p>
     <img src="cid:{asparagus_cid}" />
   </body>

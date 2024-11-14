@@ -6,10 +6,6 @@
 
 #define USING_IMPORTED_MAPS
 
-#define CJK_MOD_SPECIFIC_STATE      \
-    const encode_map *big5_encmap;  \
-    const decode_map *big5_decmap;
-
 #include "cjkcodecs.h"
 #include "mappings_hk.h"
 
@@ -17,12 +13,16 @@
  * BIG5HKSCS codec
  */
 
+static const encode_map *big5_encmap = NULL;
+static const decode_map *big5_decmap = NULL;
+
 CODEC_INIT(big5hkscs)
 {
-    cjkcodecs_module_state *st = codec->modstate;
-    if (IMPORT_MAP(tw, big5, &st->big5_encmap, &st->big5_decmap)) {
+    static int initialized = 0;
+
+    if (!initialized && IMPORT_MAP(tw, big5, &big5_encmap, &big5_decmap))
         return -1;
-    }
+    initialized = 1;
     return 0;
 }
 
@@ -81,7 +81,7 @@ ENCODER(big5hkscs)
                     }
                 }
             }
-            else if (TRYMAP_ENC_ST(big5, code, c))
+            else if (TRYMAP_ENC(big5, code, c))
                 ;
             else
                 return 1;
@@ -122,7 +122,7 @@ DECODER(big5hkscs)
         REQUIRE_INBUF(2);
 
         if (0xc6 > c || c > 0xc8 || (c < 0xc7 && INBYTE2 < 0xa1)) {
-            if (TRYMAP_DEC_ST(big5, decoded, c, INBYTE2)) {
+            if (TRYMAP_DEC(big5, decoded, c, INBYTE2)) {
                 OUTCHAR(decoded);
                 NEXT_IN(2);
                 continue;
@@ -177,13 +177,14 @@ DECODER(big5hkscs)
     return 0;
 }
 
-BEGIN_MAPPINGS_LIST(3)
+
+BEGIN_MAPPINGS_LIST
   MAPPING_DECONLY(big5hkscs)
   MAPPING_ENCONLY(big5hkscs_bmp)
   MAPPING_ENCONLY(big5hkscs_nonbmp)
 END_MAPPINGS_LIST
 
-BEGIN_CODECS_LIST(1)
+BEGIN_CODECS_LIST
   CODEC_STATELESS_WINIT(big5hkscs)
 END_CODECS_LIST
 

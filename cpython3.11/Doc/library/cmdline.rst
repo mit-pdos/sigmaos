@@ -23,7 +23,7 @@ The following modules have a command-line interface.
 * :ref:`http.server <http-server-cli>`
 * :mod:`!idlelib`
 * :ref:`inspect <inspect-module-cli>`
-* :ref:`json <json-commandline>`
+* :ref:`json.tool <json-commandline>`
 * :mod:`mimetypes`
 * :mod:`pdb`
 * :mod:`pickle`
@@ -36,11 +36,8 @@ The following modules have a command-line interface.
 * :mod:`pyclbr`
 * :mod:`pydoc`
 * :mod:`quopri`
-* :ref:`random <random-cli>`
 * :mod:`runpy`
 * :ref:`site <site-commandline>`
-* :ref:`sqlite3 <sqlite3-cli>`
-* :ref:`symtable <symtable-cli>`
 * :ref:`sysconfig <sysconfig-cli>`
 * :mod:`tabnanny`
 * :ref:`tarfile <tarfile-commandline>`
@@ -50,7 +47,6 @@ The following modules have a command-line interface.
 * :ref:`trace <trace-cli>`
 * :mod:`turtledemo`
 * :ref:`unittest <unittest-command-line-interface>`
-* :ref:`uuid <uuid-cli>`
 * :mod:`venv`
 * :mod:`webbrowser`
 * :ref:`zipapp <zipapp-command-line-interface>`

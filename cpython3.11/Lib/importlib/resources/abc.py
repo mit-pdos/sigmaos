@@ -1,8 +1,6 @@
 import abc
 import io
-import itertools
 import os
-import pathlib
 from typing import Any, BinaryIO, Iterable, Iterator, NoReturn, Text, Optional
 from typing import runtime_checkable, Protocol
 from typing import Union
@@ -55,10 +53,6 @@ class ResourceReader(metaclass=abc.ABCMeta):
         raise FileNotFoundError
 
 
-class TraversalError(Exception):
-    pass
-
-
 @runtime_checkable
 class Traversable(Protocol):
     """
@@ -101,6 +95,7 @@ class Traversable(Protocol):
         Return True if self is a file
         """
 
+    @abc.abstractmethod
     def joinpath(self, *descendants: StrPath) -> "Traversable":
         """
         Return Traversable resolved with any descendants applied.
@@ -109,22 +104,6 @@ class Traversable(Protocol):
         and each may contain multiple levels separated by
         ``posixpath.sep`` (``/``).
         """
-        if not descendants:
-            return self
-        names = itertools.chain.from_iterable(
-            path.parts for path in map(pathlib.PurePosixPath, descendants)
-        )
-        target = next(names)
-        matches = (
-            traversable for traversable in self.iterdir() if traversable.name == target
-        )
-        try:
-            match = next(matches)
-        except StopIteration:
-            raise TraversalError(
-                "Target not found during traversal.", target, list(names)
-            )
-        return match.joinpath(*names)
 
     def __truediv__(self, child: StrPath) -> "Traversable":
         """
@@ -142,8 +121,7 @@ class Traversable(Protocol):
         accepted by io.TextIOWrapper.
         """
 
-    @property
-    @abc.abstractmethod
+    @abc.abstractproperty
     def name(self) -> str:
         """
         The base name of this object without any parent references.

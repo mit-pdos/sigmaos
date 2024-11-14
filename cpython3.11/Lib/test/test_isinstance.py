@@ -3,9 +3,9 @@
 # testing of error conditions uncovered when using extension types.
 
 import unittest
+import sys
 import typing
 from test import support
-
 
 
 class TestIsInstanceExceptions(unittest.TestCase):
@@ -144,7 +144,6 @@ class TestIsSubclassExceptions(unittest.TestCase):
             __bases__ = property(getbases)
 
         self.assertRaises(TypeError, issubclass, B, C())
-
 
 
 # meta classes for creating abstract classes and instances
@@ -310,7 +309,7 @@ class TestIsInstanceIsSubclass(unittest.TestCase):
             @property
             def __bases__(self):
                 return self.__bases__
-        with support.infinite_recursion(25):
+        with support.infinite_recursion():
             self.assertRaises(RecursionError, issubclass, X(), int)
             self.assertRaises(RecursionError, issubclass, int, X())
             self.assertRaises(RecursionError, isinstance, 1, X())
@@ -344,7 +343,7 @@ class TestIsInstanceIsSubclass(unittest.TestCase):
                     pass
                 A.__getattr__ = B.__getattr__ = X.__getattr__
                 return (A(), B())
-        with support.infinite_recursion(25):
+        with support.infinite_recursion():
             self.assertRaises(RecursionError, issubclass, X(), int)
 
 
@@ -352,7 +351,7 @@ def blowstack(fxn, arg, compare_to):
     # Make sure that calling isinstance with a deeply nested tuple for its
     # argument will raise RecursionError eventually.
     tuple_arg = (compare_to,)
-    for cnt in range(support.exceeds_recursion_limit()):
+    for cnt in range(sys.getrecursionlimit()+5):
         tuple_arg = (tuple_arg,)
         fxn(arg, tuple_arg)
 

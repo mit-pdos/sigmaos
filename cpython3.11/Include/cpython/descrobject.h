@@ -57,6 +57,8 @@ typedef struct {
     void *d_wrapped; /* This can be any function pointer */
 } PyWrapperDescrObject;
 
+PyAPI_DATA(PyTypeObject) _PyMethodWrapper_Type;
+
 PyAPI_FUNC(PyObject *) PyDescr_NewWrapper(PyTypeObject *,
                                                 struct wrapperbase *, void *);
 PyAPI_FUNC(int) PyDescr_IsData(PyObject *);

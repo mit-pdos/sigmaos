@@ -1,4 +1,4 @@
-# Copyright (C) 2001 Python Software Foundation
+# Copyright (C) 2001-2010 Python Software Foundation
 # Contact: email-sig@python.org
 # email package unit tests
 
@@ -7,6 +7,7 @@ import time
 import base64
 import unittest
 import textwrap
+import warnings
 
 from io import StringIO, BytesIO
 from itertools import chain
@@ -46,7 +47,7 @@ from test.test_email import openfile, TestEmailBase
 
 # These imports are documented to work, but we are testing them using a
 # different path, so we import them here just to make sure they are importable.
-from email.parser import FeedParser
+from email.parser import FeedParser, BytesFeedParser
 
 NL = '\n'
 EMPTYSTRING = ''
@@ -2252,7 +2253,7 @@ class TestNonConformant(TestEmailBase):
                     "\nContent-Transfer-Encoding: {}".format(cte)))
             self.assertEqual(len(msg.defects), 0)
 
-    # test_headerregistry.TestContentTypeHeader invalid_1 and invalid_2.
+    # test_headerregistry.TestContentTyopeHeader invalid_1 and invalid_2.
     def test_invalid_content_type(self):
         eq = self.assertEqual
         neq = self.ndiffAssertEqual
@@ -4180,21 +4181,6 @@ class Test8BitBytesHandling(TestEmailBase):
         msg = email.message_from_bytes(m)
         self.assertEqual(msg.get_payload(decode=True),
                          '<,.V<W1A; á \n'.encode('utf-8'))
-
-    def test_rfc2231_charset_8bit_CTE(self):
-        m = textwrap.dedent("""\
-        From: foo@bar.com
-        To: baz
-        Mime-Version: 1.0
-        Content-Type: text/plain; charset*=ansi-x3.4-1968''utf-8
-        Content-Transfer-Encoding: 8bit
-
-        pöstal
-        """).encode('utf-8')
-        msg = email.message_from_bytes(m)
-        self.assertEqual(msg.get_payload(), "pöstal\n")
-        self.assertEqual(msg.get_payload(decode=True),
-                         "pöstal\n".encode('utf-8'))
 
 
     headertest_headers = (

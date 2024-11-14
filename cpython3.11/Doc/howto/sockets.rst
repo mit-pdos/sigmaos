@@ -100,8 +100,8 @@ mainloop of the web server::
        (clientsocket, address) = serversocket.accept()
        # now do something with the clientsocket
        # in this case, we'll pretend this is a threaded server
-       ct = make_client_thread(clientsocket)
-       ct.start()
+       ct = client_thread(clientsocket)
+       ct.run()
 
 There's actually 3 general ways in which this loop could work - dispatching a
 thread to handle ``clientsocket``, create a new process to handle

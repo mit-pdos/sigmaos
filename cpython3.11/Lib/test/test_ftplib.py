@@ -18,13 +18,14 @@ except ImportError:
 
 from unittest import TestCase, skipUnless
 from test import support
-from test.support import requires_subprocess
 from test.support import threading_helper
 from test.support import socket_helper
 from test.support import warnings_helper
-from test.support import asynchat
-from test.support import asyncore
 from test.support.socket_helper import HOST, HOSTv6
+
+
+asynchat = warnings_helper.import_deprecated('asynchat')
+asyncore = warnings_helper.import_deprecated('asyncore')
 
 
 support.requires_working_socket(module=True)
@@ -901,7 +902,6 @@ class TestIPv6Environment(TestCase):
 
 
 @skipUnless(ssl, "SSL not available")
-@requires_subprocess()
 class TestTLS_FTPClassMixin(TestFTPClass):
     """Repeat TestFTPClass tests starting the TLS layer for both control
     and data connections first.
@@ -918,7 +918,6 @@ class TestTLS_FTPClassMixin(TestFTPClass):
 
 
 @skipUnless(ssl, "SSL not available")
-@requires_subprocess()
 class TestTLS_FTPClass(TestCase):
     """Specific TLS_FTP class tests."""
 
@@ -983,11 +982,11 @@ class TestTLS_FTPClass(TestCase):
         ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
         ctx.check_hostname = False
         ctx.verify_mode = ssl.CERT_NONE
-        self.assertRaises(TypeError, ftplib.FTP_TLS, keyfile=CERTFILE,
+        self.assertRaises(ValueError, ftplib.FTP_TLS, keyfile=CERTFILE,
                           context=ctx)
-        self.assertRaises(TypeError, ftplib.FTP_TLS, certfile=CERTFILE,
+        self.assertRaises(ValueError, ftplib.FTP_TLS, certfile=CERTFILE,
                           context=ctx)
-        self.assertRaises(TypeError, ftplib.FTP_TLS, certfile=CERTFILE,
+        self.assertRaises(ValueError, ftplib.FTP_TLS, certfile=CERTFILE,
                           keyfile=CERTFILE, context=ctx)
 
         self.client = ftplib.FTP_TLS(context=ctx, timeout=TIMEOUT)

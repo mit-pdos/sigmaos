@@ -2,30 +2,6 @@
 preserve
 [clinic start generated code]*/
 
-#if defined(Py_BUILD_CORE) && !defined(Py_BUILD_CORE_MODULE)
-#  include "pycore_runtime.h"     // _Py_SINGLETON()
-#endif
-#include "pycore_abstract.h"      // _PyNumber_Index()
-#include "pycore_modsupport.h"    // _PyArg_CheckPositional()
-
-PyDoc_STRVAR(array_array_clear__doc__,
-"clear($self, /)\n"
-"--\n"
-"\n"
-"Remove all items from the array.");
-
-#define ARRAY_ARRAY_CLEAR_METHODDEF    \
-    {"clear", (PyCFunction)array_array_clear, METH_NOARGS, array_array_clear__doc__},
-
-static PyObject *
-array_array_clear_impl(arrayobject *self);
-
-static PyObject *
-array_array_clear(arrayobject *self, PyObject *Py_UNUSED(ignored))
-{
-    return array_array_clear_impl(self);
-}
-
 PyDoc_STRVAR(array_array___copy____doc__,
 "__copy__($self, /)\n"
 "--\n"
@@ -178,24 +154,12 @@ static PyObject *
 array_array_extend(arrayobject *self, PyTypeObject *cls, PyObject *const *args, Py_ssize_t nargs, PyObject *kwnames)
 {
     PyObject *return_value = NULL;
-    #if defined(Py_BUILD_CORE) && !defined(Py_BUILD_CORE_MODULE)
-    #  define KWTUPLE (PyObject *)&_Py_SINGLETON(tuple_empty)
-    #else
-    #  define KWTUPLE NULL
-    #endif
-
     static const char * const _keywords[] = {"", NULL};
-    static _PyArg_Parser _parser = {
-        .keywords = _keywords,
-        .fname = "extend",
-        .kwtuple = KWTUPLE,
-    };
-    #undef KWTUPLE
+    static _PyArg_Parser _parser = {NULL, _keywords, "extend", 0};
     PyObject *argsbuf[1];
     PyObject *bb;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser, 1, 1, 0, argsbuf);
     if (!args) {
         goto exit;
     }
@@ -333,25 +297,13 @@ static PyObject *
 array_array_fromfile(arrayobject *self, PyTypeObject *cls, PyObject *const *args, Py_ssize_t nargs, PyObject *kwnames)
 {
     PyObject *return_value = NULL;
-    #if defined(Py_BUILD_CORE) && !defined(Py_BUILD_CORE_MODULE)
-    #  define KWTUPLE (PyObject *)&_Py_SINGLETON(tuple_empty)
-    #else
-    #  define KWTUPLE NULL
-    #endif
-
     static const char * const _keywords[] = {"", "", NULL};
-    static _PyArg_Parser _parser = {
-        .keywords = _keywords,
-        .fname = "fromfile",
-        .kwtuple = KWTUPLE,
-    };
-    #undef KWTUPLE
+    static _PyArg_Parser _parser = {NULL, _keywords, "fromfile", 0};
     PyObject *argsbuf[2];
     PyObject *f;
     Py_ssize_t n;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 2, /*maxpos*/ 2, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser, 2, 2, 0, argsbuf);
     if (!args) {
         goto exit;
     }
@@ -390,24 +342,12 @@ static PyObject *
 array_array_tofile(arrayobject *self, PyTypeObject *cls, PyObject *const *args, Py_ssize_t nargs, PyObject *kwnames)
 {
     PyObject *return_value = NULL;
-    #if defined(Py_BUILD_CORE) && !defined(Py_BUILD_CORE_MODULE)
-    #  define KWTUPLE (PyObject *)&_Py_SINGLETON(tuple_empty)
-    #else
-    #  define KWTUPLE NULL
-    #endif
-
     static const char * const _keywords[] = {"", NULL};
-    static _PyArg_Parser _parser = {
-        .keywords = _keywords,
-        .fname = "tofile",
-        .kwtuple = KWTUPLE,
-    };
-    #undef KWTUPLE
+    static _PyArg_Parser _parser = {NULL, _keywords, "tofile", 0};
     PyObject *argsbuf[1];
     PyObject *f;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser, 1, 1, 0, argsbuf);
     if (!args) {
         goto exit;
     }
@@ -466,6 +406,10 @@ array_array_frombytes(arrayobject *self, PyObject *arg)
     if (PyObject_GetBuffer(arg, &buffer, PyBUF_SIMPLE) != 0) {
         goto exit;
     }
+    if (!PyBuffer_IsContiguous(&buffer, 'C')) {
+        _PyArg_BadArgument("frombytes", "argument", "contiguous buffer", arg);
+        goto exit;
+    }
     return_value = array_array_frombytes_impl(self, &buffer);
 
 exit:
@@ -519,6 +463,9 @@ array_array_fromunicode(arrayobject *self, PyObject *arg)
 
     if (!PyUnicode_Check(arg)) {
         _PyArg_BadArgument("fromunicode", "argument", "str", arg);
+        goto exit;
+    }
+    if (PyUnicode_READY(arg) == -1) {
         goto exit;
     }
     ustr = arg;
@@ -601,15 +548,15 @@ array__array_reconstructor(PyObject *module, PyObject *const *args, Py_ssize_t n
         _PyArg_BadArgument("_array_reconstructor", "argument 2", "a unicode character", args[1]);
         goto exit;
     }
+    if (PyUnicode_READY(args[1])) {
+        goto exit;
+    }
     if (PyUnicode_GET_LENGTH(args[1]) != 1) {
-        PyErr_Format(PyExc_TypeError,
-            "_array_reconstructor(): argument 2 must be a unicode character, "
-            "not a string of length %zd",
-            PyUnicode_GET_LENGTH(args[1]));
+        _PyArg_BadArgument("_array_reconstructor", "argument 2", "a unicode character", args[1]);
         goto exit;
     }
     typecode = PyUnicode_READ_CHAR(args[1], 0);
-    mformat_code = PyLong_AsInt(args[2]);
+    mformat_code = _PyLong_AsInt(args[2]);
     if (mformat_code == -1 && PyErr_Occurred()) {
         goto exit;
     }
@@ -637,24 +584,12 @@ static PyObject *
 array_array___reduce_ex__(arrayobject *self, PyTypeObject *cls, PyObject *const *args, Py_ssize_t nargs, PyObject *kwnames)
 {
     PyObject *return_value = NULL;
-    #if defined(Py_BUILD_CORE) && !defined(Py_BUILD_CORE_MODULE)
-    #  define KWTUPLE (PyObject *)&_Py_SINGLETON(tuple_empty)
-    #else
-    #  define KWTUPLE NULL
-    #endif
-
     static const char * const _keywords[] = {"", NULL};
-    static _PyArg_Parser _parser = {
-        .keywords = _keywords,
-        .fname = "__reduce_ex__",
-        .kwtuple = KWTUPLE,
-    };
-    #undef KWTUPLE
+    static _PyArg_Parser _parser = {NULL, _keywords, "__reduce_ex__", 0};
     PyObject *argsbuf[1];
     PyObject *value;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser, 1, 1, 0, argsbuf);
     if (!args) {
         goto exit;
     }
@@ -695,4 +630,4 @@ PyDoc_STRVAR(array_arrayiterator___setstate____doc__,
 
 #define ARRAY_ARRAYITERATOR___SETSTATE___METHODDEF    \
     {"__setstate__", (PyCFunction)array_arrayiterator___setstate__, METH_O, array_arrayiterator___setstate____doc__},
-/*[clinic end generated code: output=22dbe12826bfa86f input=a9049054013a1b77]*/
+/*[clinic end generated code: output=62cb180955450ca3 input=a9049054013a1b77]*/

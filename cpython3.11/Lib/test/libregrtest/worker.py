@@ -3,7 +3,7 @@ import sys
 import os
 from typing import Any, NoReturn
 
-from test.support import os_helper, Py_DEBUG
+from test.support import os_helper
 
 from .setup import setup_process, setup_test_dir
 from .runtests import WorkerRunTests, JsonFile, JsonFileType
@@ -14,9 +14,6 @@ from .utils import (
 
 
 USE_PROCESS_GROUP = (hasattr(os, "setsid") and hasattr(os, "killpg"))
-NEED_TTY = {
-    'test_ioctl',
-}
 
 
 def create_worker_process(runtests: WorkerRunTests, output_fd: int,
@@ -50,10 +47,7 @@ def create_worker_process(runtests: WorkerRunTests, output_fd: int,
         close_fds=True,
         cwd=work_dir,
     )
-
-    # Don't use setsid() in tests using TTY
-    test_name = runtests.tests[0]
-    if USE_PROCESS_GROUP and test_name not in NEED_TTY:
+    if USE_PROCESS_GROUP:
         kwargs['start_new_session'] = True
 
     # Pass json_file to the worker process
@@ -81,18 +75,6 @@ def worker_process(worker_json: StrJSON) -> NoReturn:
             print(f"Re-running {test_name} in verbose mode", flush=True)
 
     result = run_single_test(test_name, runtests)
-    if runtests.coverage:
-        if "test.cov" in sys.modules:  # imported by -Xpresite=
-            result.covered_lines = list(sys.modules["test.cov"].coverage)
-        elif not Py_DEBUG:
-            print(
-                "Gathering coverage in worker processes requires --with-pydebug",
-                flush=True,
-            )
-        else:
-            raise LookupError(
-                "`test.cov` not found in sys.modules but coverage wanted"
-            )
 
     if json_file.file_type == JsonFileType.STDOUT:
         print()
@@ -104,7 +86,7 @@ def worker_process(worker_json: StrJSON) -> NoReturn:
     sys.exit(0)
 
 
-def main() -> NoReturn:
+def main():
     if len(sys.argv) != 2:
         print("usage: python -m test.libregrtest.worker JSON")
         sys.exit(1)

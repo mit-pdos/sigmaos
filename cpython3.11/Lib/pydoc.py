@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """Generate Python documentation in HTML or text for interactive use.
 
 At the Python interactive prompt, calling help(thing) on a Python object
@@ -71,25 +72,9 @@ import time
 import tokenize
 import urllib.parse
 import warnings
-from annotationlib import Format
 from collections import deque
 from reprlib import Repr
 from traceback import format_exception_only
-
-from _pyrepl.pager import (get_pager, pipe_pager,
-                           plain_pager, tempfile_pager, tty_pager)
-
-# Expose plain() as pydoc.plain()
-from _pyrepl.pager import plain  # noqa: F401
-
-
-# --------------------------------------------------------- old names
-
-getpager = get_pager
-pipepager = pipe_pager
-plainpager = plain_pager
-tempfilepager = tempfile_pager
-ttypager = tty_pager
 
 
 # --------------------------------------------------------- common routines
@@ -142,8 +127,9 @@ def _finddoc(obj):
             cls = self.__class__
     # Should be tested before isdatadescriptor().
     elif isinstance(obj, property):
-        name = obj.__name__
-        cls = _findclass(obj.fget)
+        func = obj.fget
+        name = func.__name__
+        cls = _findclass(func)
         if cls is None or getattr(cls, name) is not obj:
             return None
     elif inspect.ismethoddescriptor(obj) or inspect.isdatadescriptor(obj):
@@ -210,27 +196,6 @@ def splitdoc(doc):
     elif len(lines) >= 2 and not lines[1].rstrip():
         return lines[0], '\n'.join(lines[2:])
     return '', '\n'.join(lines)
-
-def _getargspec(object):
-    try:
-        signature = inspect.signature(object, annotation_format=Format.STRING)
-        if signature:
-            name = getattr(object, '__name__', '')
-            # <lambda> function are always single-line and should not be formatted
-            max_width = (80 - len(name)) if name != '<lambda>' else None
-            return signature.format(max_width=max_width, quote_annotation_strings=False)
-    except (ValueError, TypeError):
-        argspec = getattr(object, '__text_signature__', None)
-        if argspec:
-            if argspec[:2] == '($':
-                argspec = '(' + argspec[2:]
-            if getattr(object, '__self__', None) is not None:
-                # Strip the bound argument.
-                m = re.match(r'\(\w+(?:(?=\))|,\s*(?:/(?:(?=\))|,\s*))?)', argspec)
-                if m:
-                    argspec = '(' + argspec[m.end():]
-        return argspec
-    return None
 
 def classname(object, modname):
     """Get a class name and qualify it with a module name if necessary."""
@@ -328,8 +293,7 @@ def visiblename(name, all=None, obj=None):
     if name in {'__author__', '__builtins__', '__cached__', '__credits__',
                 '__date__', '__doc__', '__file__', '__spec__',
                 '__loader__', '__module__', '__name__', '__package__',
-                '__path__', '__qualname__', '__slots__', '__version__',
-                '__static_attributes__', '__firstlineno__'}:
+                '__path__', '__qualname__', '__slots__', '__version__'}:
         return 0
     # Private names are hidden, but special names are displayed.
     if name.startswith('__') and name.endswith('__'): return 1
@@ -375,8 +339,6 @@ def sort_attributes(attrs, object):
 
 def ispackage(path):
     """Guess whether a path refers to a package directory."""
-    warnings.warn('The pydoc.ispackage() function is deprecated',
-                  DeprecationWarning, stacklevel=2)
     if os.path.isdir(path):
         for ext in ('.py', '.pyc'):
             if os.path.isfile(os.path.join(path, '__init__' + ext)):
@@ -442,17 +404,8 @@ def synopsis(filename, cache={}):
 class ErrorDuringImport(Exception):
     """Errors that occurred while trying to import something to document it."""
     def __init__(self, filename, exc_info):
-        if not isinstance(exc_info, tuple):
-            assert isinstance(exc_info, BaseException)
-            self.exc = type(exc_info)
-            self.value = exc_info
-            self.tb = exc_info.__traceback__
-        else:
-            warnings.warn("A tuple value for exc_info is deprecated, use an exception instance",
-                          DeprecationWarning)
-
-            self.exc, self.value, self.tb = exc_info
         self.filename = filename
+        self.exc, self.value, self.tb = exc_info
 
     def __str__(self):
         exc = self.exc.__name__
@@ -473,8 +426,8 @@ def importfile(path):
     spec = importlib.util.spec_from_file_location(name, path, loader=loader)
     try:
         return importlib._bootstrap._load(spec)
-    except BaseException as err:
-        raise ErrorDuringImport(path, err)
+    except:
+        raise ErrorDuringImport(path, sys.exc_info())
 
 def safeimport(path, forceload=0, cache={}):
     """Import a module; handle errors; return None if the module isn't found.
@@ -501,21 +454,25 @@ def safeimport(path, forceload=0, cache={}):
                     # Prevent garbage collection.
                     cache[key] = sys.modules[key]
                     del sys.modules[key]
-        module = importlib.import_module(path)
-    except BaseException as err:
+        module = __import__(path)
+    except:
         # Did the error occur before or after the module was found?
+        (exc, value, tb) = info = sys.exc_info()
         if path in sys.modules:
             # An error occurred while executing the imported module.
-            raise ErrorDuringImport(sys.modules[path].__file__, err)
-        elif type(err) is SyntaxError:
+            raise ErrorDuringImport(sys.modules[path].__file__, info)
+        elif exc is SyntaxError:
             # A SyntaxError occurred before we could execute the module.
-            raise ErrorDuringImport(err.filename, err)
-        elif isinstance(err, ImportError) and err.name == path:
+            raise ErrorDuringImport(value.filename, info)
+        elif issubclass(exc, ImportError) and value.name == path:
             # No such module in the path.
             return None
         else:
             # Some other error occurred during the importing process.
-            raise ErrorDuringImport(path, err)
+            raise ErrorDuringImport(path, sys.exc_info())
+    for part in path.split('.')[1:]:
+        try: module = getattr(module, part)
+        except AttributeError: return None
     return module
 
 # ---------------------------------------------------- formatter base class
@@ -562,7 +519,7 @@ class Doc:
 
         basedir = os.path.normcase(basedir)
         if (isinstance(object, type(os)) and
-            (object.__name__ in ('errno', 'exceptions', 'gc',
+            (object.__name__ in ('errno', 'exceptions', 'gc', 'imp',
                                  'marshal', 'posix', 'signal', 'sys',
                                  '_thread', 'zipimport') or
              (file.startswith(basedir) and
@@ -763,7 +720,9 @@ class HTMLDoc(Doc):
                                 r'RFC[- ]?(\d+)|'
                                 r'PEP[- ]?(\d+)|'
                                 r'(self\.)?(\w+))')
-        while match := pattern.search(text, here):
+        while True:
+            match = pattern.search(text, here)
+            if not match: break
             start, end = match.span()
             results.append(escape(text[here:start]))
 
@@ -798,7 +757,7 @@ class HTMLDoc(Doc):
         """Produce HTML for a class tree as given by inspect.getclasstree()."""
         result = ''
         for entry in tree:
-            if isinstance(entry, tuple):
+            if type(entry) is type(()):
                 c, bases = entry
                 result = result + '<dt class="heading-text">'
                 result = result + self.classlink(c, modname)
@@ -808,7 +767,7 @@ class HTMLDoc(Doc):
                         parents.append(self.classlink(base, modname))
                     result = result + '(' + ', '.join(parents) + ')'
                 result = result + '\n</dt>'
-            elif isinstance(entry, list):
+            elif type(entry) is type([]):
                 result = result + '<dd>\n%s</dd>\n' % self.formattree(
                     entry, modname, c)
         return '<dl>\n%s</dl>\n' % result
@@ -871,9 +830,9 @@ class HTMLDoc(Doc):
                             cdict[key] = cdict[base] = modname + '.html#' + key
         funcs, fdict = [], {}
         for key, value in inspect.getmembers(object, inspect.isroutine):
-            # if __all__ exists, believe it.  Otherwise use a heuristic.
-            if (all is not None
-                or (inspect.getmodule(value) or object) is object):
+            # if __all__ exists, believe it.  Otherwise use old heuristic.
+            if (all is not None or
+                inspect.isbuiltin(value) or inspect.getmodule(value) is object):
                 if visiblename(key, all, object):
                     funcs.append((key, value))
                     fdict[key] = '#-' + key
@@ -1075,9 +1034,14 @@ class HTMLDoc(Doc):
             title = title + '(%s)' % ', '.join(parents)
 
         decl = ''
-        argspec = _getargspec(object)
-        if argspec and argspec != '()':
-            decl = name + self.escape(argspec) + '\n\n'
+        try:
+            signature = inspect.signature(object)
+        except (ValueError, TypeError):
+            signature = None
+        if signature:
+            argspec = str(signature)
+            if argspec and argspec != '()':
+                decl = name + self.escape(argspec) + '\n\n'
 
         doc = getdoc(object)
         if decl:
@@ -1153,14 +1117,19 @@ class HTMLDoc(Doc):
                 anchor, name, reallink)
         argspec = None
         if inspect.isroutine(object):
-            argspec = _getargspec(object)
-            if argspec and realname == '<lambda>':
-                title = '<strong>%s</strong> <em>lambda</em> ' % name
-                # XXX lambda's won't usually have func_annotations['return']
-                # since the syntax doesn't support but it is possible.
-                # So removing parentheses isn't truly safe.
-                if not object.__annotations__:
-                    argspec = argspec[1:-1] # remove parentheses
+            try:
+                signature = inspect.signature(object)
+            except (ValueError, TypeError):
+                signature = None
+            if signature:
+                argspec = str(signature)
+                if realname == '<lambda>':
+                    title = '<strong>%s</strong> <em>lambda</em> ' % name
+                    # XXX lambda's won't usually have func_annotations['return']
+                    # since the syntax doesn't support but it is possible.
+                    # So removing parentheses isn't truly safe.
+                    if not object.__annotations__:
+                        argspec = argspec[1:-1] # remove parentheses
         if not argspec:
             argspec = '(...)'
 
@@ -1260,7 +1229,8 @@ class TextDoc(Doc):
     def indent(self, text, prefix='    '):
         """Indent text by prepending a given prefix to each line."""
         if not text: return ''
-        lines = [(prefix + line).rstrip() for line in text.split('\n')]
+        lines = [prefix + line for line in text.split('\n')]
+        if lines: lines[-1] = lines[-1].rstrip()
         return '\n'.join(lines)
 
     def section(self, title, contents):
@@ -1274,14 +1244,14 @@ class TextDoc(Doc):
         """Render in text a class tree as returned by inspect.getclasstree()."""
         result = ''
         for entry in tree:
-            if isinstance(entry, tuple):
+            if type(entry) is type(()):
                 c, bases = entry
                 result = result + prefix + classname(c, modname)
                 if bases and bases != (parent,):
                     parents = (classname(c, modname) for c in bases)
                     result = result + '(%s)' % ', '.join(parents)
                 result = result + '\n'
-            elif isinstance(entry, list):
+            elif type(entry) is type([]):
                 result = result + self.formattree(
                     entry, modname, c, prefix + '    ')
         return result
@@ -1315,9 +1285,9 @@ location listed above.
                     classes.append((key, value))
         funcs = []
         for key, value in inspect.getmembers(object, inspect.isroutine):
-            # if __all__ exists, believe it.  Otherwise use a heuristic.
-            if (all is not None
-                or (inspect.getmodule(value) or object) is object):
+            # if __all__ exists, believe it.  Otherwise use old heuristic.
+            if (all is not None or
+                inspect.isbuiltin(value) or inspect.getmodule(value) is object):
                 if visiblename(key, all, object):
                     funcs.append((key, value))
         data = []
@@ -1407,9 +1377,14 @@ location listed above.
         contents = []
         push = contents.append
 
-        argspec = _getargspec(object)
-        if argspec and argspec != '()':
-            push(name + argspec + '\n')
+        try:
+            signature = inspect.signature(object)
+        except (ValueError, TypeError):
+            signature = None
+        if signature:
+            argspec = str(signature)
+            if argspec and argspec != '()':
+                push(name + argspec + '\n')
 
         doc = getdoc(object)
         if doc:
@@ -1596,14 +1571,19 @@ location listed above.
         argspec = None
 
         if inspect.isroutine(object):
-            argspec = _getargspec(object)
-            if argspec and realname == '<lambda>':
-                title = self.bold(name) + ' lambda '
-                # XXX lambda's won't usually have func_annotations['return']
-                # since the syntax doesn't support but it is possible.
-                # So removing parentheses isn't truly safe.
-                if not object.__annotations__:
-                    argspec = argspec[1:-1]
+            try:
+                signature = inspect.signature(object)
+            except (ValueError, TypeError):
+                signature = None
+            if signature:
+                argspec = str(signature)
+                if realname == '<lambda>':
+                    title = self.bold(name) + ' lambda '
+                    # XXX lambda's won't usually have func_annotations['return']
+                    # since the syntax doesn't support but it is possible.
+                    # So removing parentheses isn't truly safe.
+                    if not object.__annotations__:
+                        argspec = argspec[1:-1] # remove parentheses
         if not argspec:
             argspec = '(...)'
         decl = asyncqualifier + title + argspec + note
@@ -1652,11 +1632,140 @@ class _PlainTextDoc(TextDoc):
 
 # --------------------------------------------------------- user interfaces
 
-def pager(text, title=''):
+def pager(text):
     """The first time this is called, determine what kind of pager to use."""
     global pager
-    pager = get_pager()
-    pager(text, title)
+    pager = getpager()
+    pager(text)
+
+def getpager():
+    """Decide what method to use for paging through text."""
+    if not hasattr(sys.stdin, "isatty"):
+        return plainpager
+    if not hasattr(sys.stdout, "isatty"):
+        return plainpager
+    if not sys.stdin.isatty() or not sys.stdout.isatty():
+        return plainpager
+    if sys.platform == "emscripten":
+        return plainpager
+    use_pager = os.environ.get('MANPAGER') or os.environ.get('PAGER')
+    if use_pager:
+        if sys.platform == 'win32': # pipes completely broken in Windows
+            return lambda text: tempfilepager(plain(text), use_pager)
+        elif os.environ.get('TERM') in ('dumb', 'emacs'):
+            return lambda text: pipepager(plain(text), use_pager)
+        else:
+            return lambda text: pipepager(text, use_pager)
+    if os.environ.get('TERM') in ('dumb', 'emacs'):
+        return plainpager
+    if sys.platform == 'win32':
+        return lambda text: tempfilepager(plain(text), 'more <')
+    if hasattr(os, 'system') and os.system('(less) 2>/dev/null') == 0:
+        return lambda text: pipepager(text, 'less')
+
+    import tempfile
+    (fd, filename) = tempfile.mkstemp()
+    os.close(fd)
+    try:
+        if hasattr(os, 'system') and os.system('more "%s"' % filename) == 0:
+            return lambda text: pipepager(text, 'more')
+        else:
+            return ttypager
+    finally:
+        os.unlink(filename)
+
+def plain(text):
+    """Remove boldface formatting from text."""
+    return re.sub('.\b', '', text)
+
+def pipepager(text, cmd):
+    """Page through text by feeding it to another program."""
+    import subprocess
+    proc = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE,
+                            errors='backslashreplace')
+    try:
+        with proc.stdin as pipe:
+            try:
+                pipe.write(text)
+            except KeyboardInterrupt:
+                # We've hereby abandoned whatever text hasn't been written,
+                # but the pager is still in control of the terminal.
+                pass
+    except OSError:
+        pass # Ignore broken pipes caused by quitting the pager program.
+    while True:
+        try:
+            proc.wait()
+            break
+        except KeyboardInterrupt:
+            # Ignore ctl-c like the pager itself does.  Otherwise the pager is
+            # left running and the terminal is in raw mode and unusable.
+            pass
+
+def tempfilepager(text, cmd):
+    """Page through text by invoking a program on a temporary file."""
+    import tempfile
+    with tempfile.TemporaryDirectory() as tempdir:
+        filename = os.path.join(tempdir, 'pydoc.out')
+        with open(filename, 'w', errors='backslashreplace',
+                  encoding=os.device_encoding(0) if
+                  sys.platform == 'win32' else None
+                  ) as file:
+            file.write(text)
+        os.system(cmd + ' "' + filename + '"')
+
+def _escape_stdout(text):
+    # Escape non-encodable characters to avoid encoding errors later
+    encoding = getattr(sys.stdout, 'encoding', None) or 'utf-8'
+    return text.encode(encoding, 'backslashreplace').decode(encoding)
+
+def ttypager(text):
+    """Page through text on a text terminal."""
+    lines = plain(_escape_stdout(text)).split('\n')
+    try:
+        import tty
+        fd = sys.stdin.fileno()
+        old = tty.tcgetattr(fd)
+        tty.setcbreak(fd)
+        getchar = lambda: sys.stdin.read(1)
+    except (ImportError, AttributeError, io.UnsupportedOperation):
+        tty = None
+        getchar = lambda: sys.stdin.readline()[:-1][:1]
+
+    try:
+        try:
+            h = int(os.environ.get('LINES', 0))
+        except ValueError:
+            h = 0
+        if h <= 1:
+            h = 25
+        r = inc = h - 1
+        sys.stdout.write('\n'.join(lines[:inc]) + '\n')
+        while lines[r:]:
+            sys.stdout.write('-- more --')
+            sys.stdout.flush()
+            c = getchar()
+
+            if c in ('q', 'Q'):
+                sys.stdout.write('\r          \r')
+                break
+            elif c in ('\r', '\n'):
+                sys.stdout.write('\r          \r' + lines[r] + '\n')
+                r = r + 1
+                continue
+            if c in ('b', 'B', '\x1b'):
+                r = r - inc - inc
+                if r < 0: r = 0
+            sys.stdout.write('\n' + '\n'.join(lines[r:r+inc]) + '\n')
+            r = r + inc
+
+    finally:
+        if tty:
+            tty.tcsetattr(fd, tty.TCSAFLUSH, old)
+
+def plainpager(text):
+    """Simply print unformatted text.  This is the ultimate fallback."""
+    sys.stdout.write(plain(_escape_stdout(text)))
 
 def describe(thing):
     """Produce a short description of the given thing."""
@@ -1683,13 +1792,6 @@ def describe(thing):
         return 'function ' + thing.__name__
     if inspect.ismethod(thing):
         return 'method ' + thing.__name__
-    if inspect.ismethodwrapper(thing):
-        return 'method wrapper ' + thing.__name__
-    if inspect.ismethoddescriptor(thing):
-        try:
-            return 'method descriptor ' + thing.__name__
-        except AttributeError:
-            pass
     return type(thing).__name__
 
 def locate(path, forceload=0):
@@ -1763,15 +1865,7 @@ def doc(thing, title='Python Library Documentation: %s', forceload=0,
     """Display text documentation, given an object or a path to an object."""
     if output is None:
         try:
-            if isinstance(thing, str):
-                what = thing
-            else:
-                what = getattr(thing, '__qualname__', None)
-                if not isinstance(what, str):
-                    what = getattr(thing, '__name__', None)
-                    if not isinstance(what, str):
-                        what = type(thing).__name__ + ' object'
-            pager(render_doc(thing, title, forceload), f'Help on {what!s}')
+            pager(render_doc(thing, title, forceload))
         except ImportError as exc:
             if is_cli:
                 raise
@@ -1871,7 +1965,6 @@ class Helper:
         ':': 'SLICINGS DICTIONARYLITERALS',
         '@': 'def class',
         '\\': 'STRINGS',
-        ':=': 'ASSIGNMENTEXPRESSIONS',
         '_': 'PRIVATENAMES',
         '__': 'PRIVATENAMES SPECIALMETHODS',
         '`': 'BACKQUOTES',
@@ -1965,7 +2058,6 @@ class Helper:
         'ASSERTION': 'assert',
         'ASSIGNMENT': ('assignment', 'AUGMENTEDASSIGNMENT'),
         'AUGMENTEDASSIGNMENT': ('augassign', 'NUMBERMETHODS'),
-        'ASSIGNMENTEXPRESSIONS': ('assignment-expressions', ''),
         'DELETION': 'del',
         'RETURNING': 'return',
         'IMPORTING': 'import',
@@ -2000,8 +2092,8 @@ class Helper:
         if request is not self._GoInteractive:
             try:
                 self.help(request)
-            except ImportError as err:
-                self.output.write(f'{err}\n')
+            except ImportError as e:
+                self.output.write(f'{e}\n')
         else:
             self.intro()
             self.interact()
@@ -2027,7 +2119,7 @@ has the same effect as typing a particular string at the help> prompt.
             if (len(request) > 2 and request[0] == request[-1] in ("'", '"')
                     and request[0] not in request[1:-1]):
                 request = request[1:-1]
-            if request.lower() in ('q', 'quit', 'exit'): break
+            if request.lower() in ('q', 'quit'): break
             if request == 'help':
                 self.intro()
             else:
@@ -2054,7 +2146,7 @@ has the same effect as typing a particular string at the help> prompt.
             elif request in self.symbols: self.showsymbol(request)
             elif request in ['True', 'False', 'None']:
                 # special case these keywords since they are objects too
-                doc(eval(request), 'Help on %s:', output=self._output, is_cli=is_cli)
+                doc(eval(request), 'Help on %s:', is_cli=is_cli)
             elif request in self.keywords: self.showtopic(request)
             elif request in self.topics: self.showtopic(request)
             elif request: doc(request, 'Help on %s:', output=self._output, is_cli=is_cli)
@@ -2079,7 +2171,7 @@ the modules whose name or summary contain a given string such as "spam",
 enter "modules spam".
 
 To quit this help utility and return to the interpreter,
-enter "q", "quit" or "exit".
+enter "q" or "quit".
 '''.format('%d.%d' % sys.version_info[:2]))
 
     def list(self, items, columns=4, width=80):
@@ -2130,7 +2222,7 @@ module "pydoc_data.topics" could not be found.
         if not target:
             self.output.write('no documentation found for %s\n' % repr(topic))
             return
-        if isinstance(target, str):
+        if type(target) is type(''):
             return self.showtopic(target, more_xrefs)
 
         label, xrefs = target
@@ -2147,11 +2239,7 @@ module "pydoc_data.topics" could not be found.
             text = 'Related help topics: ' + ', '.join(xrefs.split()) + '\n'
             wrapped_text = textwrap.wrap(text, 72)
             doc += '\n%s\n' % '\n'.join(wrapped_text)
-
-        if self._output is None:
-            pager(doc, f'Help on {topic!s}')
-        else:
-            self.output.write(doc)
+        pager(doc)
 
     def _gettopic(self, topic, more_xrefs=''):
         """Return unbuffered tuple of (topic, xrefs).
@@ -2243,7 +2331,7 @@ class ModuleScanner:
                 callback(None, modname, '')
             else:
                 try:
-                    spec = importer.find_spec(modname)
+                    spec = pkgutil._get_spec(importer, modname)
                 except SyntaxError:
                     # raised by tests for bad coding cookies or BOM
                     continue
@@ -2415,8 +2503,8 @@ def _start_server(urlhandler, hostname, port):
                 docsvr = DocServer(self.host, self.port, self.ready)
                 self.docserver = docsvr
                 docsvr.serve_until_quit()
-            except Exception as err:
-                self.error = err
+            except Exception as e:
+                self.error = e
 
         def ready(self, server):
             self.serving = True

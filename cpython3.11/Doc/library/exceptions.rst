@@ -412,26 +412,8 @@ The following exceptions are the exceptions that are usually raised.
    represented.  This cannot occur for integers (which would rather raise
    :exc:`MemoryError` than give up).  However, for historical reasons,
    OverflowError is sometimes raised for integers that are outside a required
-   range.   Because of the lack of standardization of floating-point exception
-   handling in C, most floating-point operations are not checked.
-
-
-.. exception:: PythonFinalizationError
-
-   This exception is derived from :exc:`RuntimeError`.  It is raised when
-   an operation is blocked during interpreter shutdown also known as
-   :term:`Python finalization <interpreter shutdown>`.
-
-   Examples of operations which can be blocked with a
-   :exc:`PythonFinalizationError` during the Python finalization:
-
-   * Creating a new Python thread.
-   * :func:`os.fork`.
-
-   See also the :func:`sys.is_finalizing` function.
-
-   .. versionadded:: 3.13
-      Previously, a plain :exc:`RuntimeError` was raised.
+   range.   Because of the lack of standardization of floating point exception
+   handling in C, most floating point operations are not checked.
 
 
 .. exception:: RecursionError
@@ -958,11 +940,10 @@ their subgroups based on the types of the contained exceptions.
       Returns an exception group that contains only the exceptions from the
       current group that match *condition*, or ``None`` if the result is empty.
 
-      The condition can be an exception type or tuple of exception types, in which
-      case each exception is checked for a match using the same check that is used
-      in an ``except`` clause.  The condition can also be a callable (other than
-      a type object) that accepts an exception as its single argument and returns
-      true for the exceptions that should be in the subgroup.
+      The condition can be either a function that accepts an exception and returns
+      true for those that should be in the subgroup, or it can be an exception type
+      or a tuple of exception types, which is used to check for a match using the
+      same check that is used in an ``except`` clause.
 
       The nesting structure of the current exception is preserved in the result,
       as are the values of its :attr:`message`,
@@ -975,9 +956,6 @@ their subgroups based on the types of the contained exceptions.
       including the top-level and any nested exception groups. If the condition is
       true for such an exception group, it is included in the result in full.
 
-      .. versionadded:: 3.13
-         ``condition`` can be any callable which is not a type object.
-
    .. method:: split(condition)
 
       Like :meth:`subgroup`, but returns the pair ``(match, rest)`` where ``match``
@@ -989,8 +967,7 @@ their subgroups based on the types of the contained exceptions.
       Returns an exception group with the same :attr:`message`, but which
       wraps the exceptions in ``excs``.
 
-      This method is used by :meth:`subgroup` and :meth:`split`, which
-      are used in various contexts to break up an exception group. A
+      This method is used by :meth:`subgroup` and :meth:`split`. A
       subclass needs to override it in order to make :meth:`subgroup`
       and :meth:`split` return instances of the subclass rather
       than :exc:`ExceptionGroup`.

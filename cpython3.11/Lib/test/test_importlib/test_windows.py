@@ -5,7 +5,7 @@ import os
 import re
 import sys
 import unittest
-from test import support
+import warnings
 from test.support import import_helper
 from contextlib import contextmanager
 from test.test_importlib.util import temp_module
@@ -92,16 +92,30 @@ class WindowsRegistryFinderTests:
 
     def test_find_spec_missing(self):
         spec = self.machinery.WindowsRegistryFinder.find_spec('spam')
-        self.assertIsNone(spec)
+        self.assertIs(spec, None)
+
+    def test_find_module_missing(self):
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", DeprecationWarning)
+            loader = self.machinery.WindowsRegistryFinder.find_module('spam')
+        self.assertIs(loader, None)
 
     def test_module_found(self):
         with setup_module(self.machinery, self.test_module):
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", DeprecationWarning)
+                loader = self.machinery.WindowsRegistryFinder.find_module(self.test_module)
             spec = self.machinery.WindowsRegistryFinder.find_spec(self.test_module)
-            self.assertIsNotNone(spec)
+            self.assertIsNot(loader, None)
+            self.assertIsNot(spec, None)
 
     def test_module_not_found(self):
         with setup_module(self.machinery, self.test_module, path="."):
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", DeprecationWarning)
+                loader = self.machinery.WindowsRegistryFinder.find_module(self.test_module)
             spec = self.machinery.WindowsRegistryFinder.find_spec(self.test_module)
+            self.assertIsNone(loader)
             self.assertIsNone(spec)
 
 (Frozen_WindowsRegistryFinderTests,
@@ -112,10 +126,8 @@ class WindowsRegistryFinderTests:
 class WindowsExtensionSuffixTests:
     def test_tagged_suffix(self):
         suffixes = self.machinery.EXTENSION_SUFFIXES
-        abi_flags = "t" if support.Py_GIL_DISABLED else ""
-        ver = sys.version_info
-        platform = re.sub('[^a-zA-Z0-9]', '_', get_platform())
-        expected_tag = f".cp{ver.major}{ver.minor}{abi_flags}-{platform}.pyd"
+        expected_tag = ".cp{0.major}{0.minor}-{1}.pyd".format(sys.version_info,
+            re.sub('[^a-zA-Z0-9]', '_', get_platform()))
         try:
             untagged_i = suffixes.index(".pyd")
         except ValueError:

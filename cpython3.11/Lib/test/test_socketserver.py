@@ -8,6 +8,7 @@ import os
 import select
 import signal
 import socket
+import tempfile
 import threading
 import unittest
 import socketserver
@@ -42,8 +43,16 @@ def receive(sock, n, timeout=test.support.SHORT_TIMEOUT):
     else:
         raise RuntimeError("timed out on %r" % (sock,))
 
+if HAVE_UNIX_SOCKETS and HAVE_FORKING:
+    class ForkingUnixStreamServer(socketserver.ForkingMixIn,
+                                  socketserver.UnixStreamServer):
+        pass
 
-@test.support.requires_fork()
+    class ForkingUnixDatagramServer(socketserver.ForkingMixIn,
+                                    socketserver.UnixDatagramServer):
+        pass
+
+
 @contextlib.contextmanager
 def simple_subprocess(testcase):
     """Tests that a custom child process is not waited on (Issue 1540386)"""
@@ -82,7 +91,8 @@ class SocketServerTest(unittest.TestCase):
         else:
             # XXX: We need a way to tell AF_UNIX to pick its own name
             # like AF_INET provides port==0.
-            fn = socket_helper.create_unix_domain_name()
+            dir = None
+            fn = tempfile.mktemp(prefix='unix_socket.', dir=dir)
             self.test_files.append(fn)
             return fn
 
@@ -196,7 +206,7 @@ class SocketServerTest(unittest.TestCase):
     @requires_forking
     def test_ForkingUnixStreamServer(self):
         with simple_subprocess(self):
-            self.run_server(socketserver.ForkingUnixStreamServer,
+            self.run_server(ForkingUnixStreamServer,
                             socketserver.StreamRequestHandler,
                             self.stream_examine)
 
@@ -232,7 +242,7 @@ class SocketServerTest(unittest.TestCase):
     @requires_unix_sockets
     @requires_forking
     def test_ForkingUnixDatagramServer(self):
-        self.run_server(socketserver.ForkingUnixDatagramServer,
+        self.run_server(ForkingUnixDatagramServer,
                         socketserver.DatagramRequestHandler,
                         self.dgram_examine)
 

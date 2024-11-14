@@ -35,31 +35,34 @@ iskeyword = frozenset(kwlist).__contains__
 issoftkeyword = frozenset(softkwlist).__contains__
 '''.lstrip()
 
+EXTRA_KEYWORDS = ["async", "await"]
+
 
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="Generate the Lib/keywords.py file from the grammar."
     )
     parser.add_argument(
-        "grammar", help="The file with the grammar definition in PEG format"
+        "grammar", type=str, help="The file with the grammar definition in PEG format"
     )
     parser.add_argument(
-        "tokens_file", help="The file with the token definitions"
+        "tokens_file", type=argparse.FileType("r"), help="The file with the token definitions"
     )
     parser.add_argument(
         "keyword_file",
+        type=argparse.FileType("w"),
         help="The path to write the keyword definitions",
     )
     args = parser.parse_args()
 
     grammar, _, _ = build_parser(args.grammar)
-    with open(args.tokens_file) as tok_file:
+    with args.tokens_file as tok_file:
         all_tokens, exact_tok, non_exact_tok = generate_token_definitions(tok_file)
     gen = CParserGenerator(grammar, all_tokens, exact_tok, non_exact_tok, file=None)
     gen.collect_rules()
 
-    with open(args.keyword_file, 'w') as thefile:
-        all_keywords = sorted(list(gen.keywords.keys()))
+    with args.keyword_file as thefile:
+        all_keywords = sorted(list(gen.keywords.keys()) + EXTRA_KEYWORDS)
         all_soft_keywords = sorted(gen.soft_keywords)
 
         keywords = "" if not all_keywords else "    " + ",\n    ".join(map(repr, all_keywords))

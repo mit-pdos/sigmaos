@@ -78,11 +78,6 @@ class State:
         }
 
 
-FileName = str
-LineNo = int
-Location = tuple[FileName, LineNo]
-
-
 @dataclasses.dataclass(slots=True)
 class TestResult:
     test_name: TestName
@@ -95,9 +90,6 @@ class TestResult:
     # errors and failures copied from support.TestFailedWithDetails
     errors: list[tuple[str, str]] | None = None
     failures: list[tuple[str, str]] | None = None
-
-    # partial coverage in a worker run; not used by sequential in-process runs
-    covered_lines: list[Location] | None = None
 
     def is_failed(self, fail_env_changed: bool) -> bool:
         if self.state == State.ENV_CHANGED:
@@ -149,7 +141,6 @@ class TestResult:
             case State.DID_NOT_RUN:
                 return f"{self.test_name} ran no tests"
             case State.TIMEOUT:
-                assert self.duration is not None, "self.duration is None"
                 return f"{self.test_name} timed out ({format_duration(self.duration)})"
             case _:
                 raise ValueError("unknown result state: {state!r}")
@@ -216,10 +207,6 @@ def _decode_test_result(data: dict[str, Any]) -> TestResult | dict[str, Any]:
         data.pop('__test_result__')
         if data['stats'] is not None:
             data['stats'] = TestStats(**data['stats'])
-        if data['covered_lines'] is not None:
-            data['covered_lines'] = [
-                tuple(loc) for loc in data['covered_lines']
-            ]
         return TestResult(**data)
     else:
         return data

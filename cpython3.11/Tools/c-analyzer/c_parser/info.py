@@ -1,5 +1,6 @@
 from collections import namedtuple
 import enum
+import os.path
 import re
 
 from c_common import fsutil
@@ -7,7 +8,7 @@ from c_common.clsutil import classonly
 import c_common.misc as _misc
 import c_common.strutil as _strutil
 import c_common.tables as _tables
-from .parser._regexes import _STORAGE
+from .parser._regexes import SIMPLE_TYPE, _STORAGE
 
 
 FIXED_TYPE = _misc.Labeled('FIXED_TYPE')
@@ -206,7 +207,7 @@ class DeclID(namedtuple('DeclID', 'filename funcname name')):
         row = _tables.fix_row(row, **markers)
         return cls(*row)
 
-    # We have to provide _make() because we implemented __new__().
+    # We have to provde _make() becaose we implemented __new__().
 
     @classmethod
     def _make(cls, iterable):
@@ -384,9 +385,6 @@ def get_parsed_vartype(decl):
     elif isinstance(decl, Variable):
         storage = decl.storage
         typequal, typespec, abstract = decl.vartype
-    elif isinstance(decl, Signature):
-        storage = None
-        typequal, typespec, abstract = decl.returntype
     elif isinstance(decl, Function):
         storage = decl.storage
         typequal, typespec, abstract = decl.signature.returntype
@@ -791,7 +789,6 @@ class Declaration(HighlevelParsedItem):
         if kind is not cls.kind:
             raise TypeError(f'expected kind {cls.kind.value!r}, got {row!r}')
         fileinfo = FileInfo.from_raw(filename)
-        extra = None
         if isinstance(data, str):
             data, extra = cls._parse_data(data, fmt='row')
         if extra:
@@ -1015,18 +1012,6 @@ class Signature(namedtuple('Signature', 'params returntype inline isforward')):
     def returns(self):
         return self.returntype
 
-    @property
-    def typequal(self):
-        return self.returntype.typequal
-
-    @property
-    def typespec(self):
-        return self.returntype.typespec
-
-    @property
-    def abstract(self):
-        return self.returntype.abstract
-
 
 class Function(Declaration):
     kind = KIND.FUNCTION
@@ -1121,16 +1106,9 @@ class TypeDef(TypeDeclaration):
     def _resolve_data(cls, data):
         if not data:
             raise NotImplementedError(data)
-        kwargs = dict(data)
-        del kwargs['storage']
-        if 'returntype' in kwargs:
-            vartype = kwargs['returntype']
-            del vartype['storage']
-            kwargs['returntype'] = VarType(**vartype)
-            datacls = Signature
-        else:
-            datacls = VarType
-        return datacls(**kwargs), None
+        vartype = dict(data)
+        del vartype['storage']
+        return VarType(**vartype), None
 
     @classmethod
     def _raw_data(self, data):

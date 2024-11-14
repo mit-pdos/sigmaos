@@ -1,5 +1,5 @@
-:mod:`!test` --- Regression tests package for Python
-====================================================
+:mod:`test` --- Regression tests package for Python
+===================================================
 
 .. module:: test
    :synopsis: Regression tests package containing the testing suite for Python.
@@ -322,15 +322,6 @@ The :mod:`test.support` module defines the following constants:
    to make writes blocking.
 
 
-.. data:: Py_DEBUG
-
-   ``True`` if Python was built with the :c:macro:`Py_DEBUG` macro
-   defined, that is, if
-   Python was :ref:`built in debug mode <debug-build>`.
-
-   .. versionadded:: 3.12
-
-
 .. data:: SOCK_MAX_SIZE
 
    A constant that is likely larger than the underlying OS socket buffer size,
@@ -499,13 +490,6 @@ The :mod:`test.support` module defines the following functions:
 
    Setting *subdir* indicates a relative path to use to find the file
    rather than looking directly in the path directories.
-
-
-.. function:: get_pagesize()
-
-   Get size of a page in bytes.
-
-   .. versionadded:: 3.12
 
 
 .. function:: setswitchinterval(interval)
@@ -731,12 +715,6 @@ The :mod:`test.support` module defines the following functions:
    macOS version is less than the minimum, the test is skipped.
 
 
-.. decorator:: requires_gil_enabled
-
-   Decorator for skipping tests on the free-threaded build.  If the
-   :term:`GIL` is disabled, the test is skipped.
-
-
 .. decorator:: requires_IEEE_754
 
    Decorator for skipping tests on non-IEEE 754 platforms.
@@ -770,12 +748,6 @@ The :mod:`test.support` module defines the following functions:
 .. decorator:: requires_docstrings
 
    Decorator for only running the test if :data:`HAVE_DOCSTRINGS`.
-
-
-.. decorator:: requires_limited_api
-
-   Decorator for only running the test if :ref:`Limited C API <limited-c-api>`
-   is available.
 
 
 .. decorator:: cpython_only
@@ -946,7 +918,7 @@ The :mod:`test.support` module defines the following functions:
    other modules, possibly a C backend (like ``csv`` and its ``_csv``).
 
    The *extra* argument can be a set of names that wouldn't otherwise be automatically
-   detected as "public", like objects without a proper :attr:`~definition.__module__`
+   detected as "public", like objects without a proper ``__module__``
    attribute. If provided, it will be added to the automatically detected ones.
 
    The *not_exported* argument can be a set of names that must not be treated
@@ -1701,7 +1673,7 @@ The :mod:`test.support.warnings_helper` module provides support for warnings tes
 
 .. function:: check_warnings(*filters, quiet=True)
 
-   A convenience wrapper for :func:`warnings.catch_warnings` that makes it
+   A convenience wrapper for :func:`warnings.catch_warnings()` that makes it
    easier to test that a warning was correctly raised.  It is approximately
    equivalent to calling ``warnings.catch_warnings(record=True)`` with
    :meth:`warnings.simplefilter` set to ``always`` and with the option to

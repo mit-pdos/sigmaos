@@ -10,14 +10,6 @@ from unittest import mock
 from test import support
 from test.support import os_helper
 
-try:
-    # Some of the iOS tests need ctypes to operate.
-    # Confirm that the ctypes module is available
-    # is available.
-    import _ctypes
-except ImportError:
-    _ctypes = None
-
 FEDORA_OS_RELEASE = """\
 NAME=Fedora
 VERSION="32 (Thirty Two)"
@@ -131,6 +123,10 @@ class PlatformTest(unittest.TestCase):
         for input, output in (
             ('2.4.3 (#1, Jun 21 2006, 13:54:21) \n[GCC 3.3.4 (pre 3.3.5 20040809)]',
              ('CPython', '2.4.3', '', '', '1', 'Jun 21 2006 13:54:21', 'GCC 3.3.4 (pre 3.3.5 20040809)')),
+            ('IronPython 1.0.60816 on .NET 2.0.50727.42',
+             ('IronPython', '1.0.60816', '', '', '', '', '.NET 2.0.50727.42')),
+            ('IronPython 1.0 (1.0.61005.1977) on .NET 2.0.50727.42',
+             ('IronPython', '1.0.0', '', '', '', '', '.NET 2.0.50727.42')),
             ('2.4.3 (truncation, date, t) \n[GCC]',
              ('CPython', '2.4.3', '', '', 'truncation', 'date t', 'GCC')),
             ('2.4.3 (truncation, date, ) \n[GCC]',
@@ -165,11 +161,20 @@ class PlatformTest(unittest.TestCase):
                  ('r261:67515', 'Dec  6 2008 15:26:00'),
                  'GCC 4.0.1 (Apple Computer, Inc. build 5370)'),
 
-            ("3.10.8 (tags/v3.10.8:aaaf517424, Feb 14 2023, 16:28:12) [GCC 9.4.0]",
-             None, "linux")
+            ("IronPython 2.0 (2.0.0.0) on .NET 2.0.50727.3053", None, "cli")
             :
-                ('CPython', '3.10.8', '', '',
-                ('tags/v3.10.8:aaaf517424', 'Feb 14 2023 16:28:12'), 'GCC 9.4.0'),
+                ("IronPython", "2.0.0", "", "", ("", ""),
+                 ".NET 2.0.50727.3053"),
+
+            ("2.6.1 (IronPython 2.6.1 (2.6.10920.0) on .NET 2.0.50727.1433)", None, "cli")
+            :
+                ("IronPython", "2.6.1", "", "", ("", ""),
+                 ".NET 2.0.50727.1433"),
+
+            ("2.7.4 (IronPython 2.7.4 (2.7.0.40) on Mono 4.0.30319.1 (32-bit))", None, "cli")
+            :
+                ("IronPython", "2.7.4", "", "", ("", ""),
+                 "Mono 4.0.30319.1 (32-bit)"),
 
             ("2.5 (trunk:6107, Mar 26 2009, 13:02:18) \n[Java HotSpot(TM) Client VM (\"Apple Computer, Inc.\")]",
             ('Jython', 'trunk', '6107'), "java1.5.0_16")
@@ -200,9 +205,6 @@ class PlatformTest(unittest.TestCase):
             self.assertEqual(platform.python_build(), info[4])
             self.assertEqual(platform.python_compiler(), info[5])
 
-        with self.assertRaises(ValueError):
-            platform._sys_version('2. 4.3 (truncation) \n[GCC]')
-
     def test_system_alias(self):
         res = platform.system_alias(
             platform.system(),
@@ -226,38 +228,6 @@ class PlatformTest(unittest.TestCase):
         self.assertEqual(res[5], res.processor)
         self.assertEqual(res[-1], res.processor)
         self.assertEqual(len(res), 6)
-
-        if os.name == "posix":
-            uname = os.uname()
-            self.assertEqual(res.node, uname.nodename)
-            self.assertEqual(res.version, uname.version)
-            self.assertEqual(res.machine, uname.machine)
-
-            if sys.platform == "android":
-                self.assertEqual(res.system, "Android")
-                self.assertEqual(res.release, platform.android_ver().release)
-            elif sys.platform == "ios":
-                # Platform module needs ctypes for full operation. If ctypes
-                # isn't available, there's no ObjC module, and dummy values are
-                # returned.
-                if _ctypes:
-                    self.assertIn(res.system, {"iOS", "iPadOS"})
-                    self.assertEqual(res.release, platform.ios_ver().release)
-                else:
-                    self.assertEqual(res.system, "")
-                    self.assertEqual(res.release, "")
-            else:
-                self.assertEqual(res.system, uname.sysname)
-                self.assertEqual(res.release, uname.release)
-
-
-    @unittest.skipUnless(sys.platform.startswith('win'), "windows only test")
-    def test_uname_win32_without_wmi(self):
-        def raises_oserror(*a):
-            raise OSError()
-
-        with support.swap_attr(platform, '_wmi_query', raises_oserror):
-            self.test_uname()
 
     def test_uname_cast_to_tuple(self):
         res = platform.uname()
@@ -327,36 +297,25 @@ class PlatformTest(unittest.TestCase):
         # on 64 bit Windows: if PROCESSOR_ARCHITEW6432 exists we should be
         # using it, per
         # http://blogs.msdn.com/david.wang/archive/2006/03/26/HOWTO-Detect-Process-Bitness.aspx
-
-        # We also need to suppress WMI checks, as those are reliable and
-        # overrule the environment variables
-        def raises_oserror(*a):
-            raise OSError()
-
-        with support.swap_attr(platform, '_wmi_query', raises_oserror):
+        try:
             with os_helper.EnvironmentVarGuard() as environ:
-                try:
-                    if 'PROCESSOR_ARCHITEW6432' in environ:
-                        del environ['PROCESSOR_ARCHITEW6432']
-                    environ['PROCESSOR_ARCHITECTURE'] = 'foo'
-                    platform._uname_cache = None
-                    system, node, release, version, machine, processor = platform.uname()
-                    self.assertEqual(machine, 'foo')
-                    environ['PROCESSOR_ARCHITEW6432'] = 'bar'
-                    platform._uname_cache = None
-                    system, node, release, version, machine, processor = platform.uname()
-                    self.assertEqual(machine, 'bar')
-                finally:
-                    platform._uname_cache = None
+                if 'PROCESSOR_ARCHITEW6432' in environ:
+                    del environ['PROCESSOR_ARCHITEW6432']
+                environ['PROCESSOR_ARCHITECTURE'] = 'foo'
+                platform._uname_cache = None
+                system, node, release, version, machine, processor = platform.uname()
+                self.assertEqual(machine, 'foo')
+                environ['PROCESSOR_ARCHITEW6432'] = 'bar'
+                platform._uname_cache = None
+                system, node, release, version, machine, processor = platform.uname()
+                self.assertEqual(machine, 'bar')
+        finally:
+            platform._uname_cache = None
 
     def test_java_ver(self):
-        import re
-        msg = re.escape(
-            "'java_ver' is deprecated and slated for removal in Python 3.15"
-        )
-        with self.assertWarnsRegex(DeprecationWarning, msg):
-            res = platform.java_ver()
-        self.assertEqual(len(res), 4)
+        res = platform.java_ver()
+        if sys.platform == 'java':
+            self.assertTrue(all(res))
 
     @unittest.skipUnless(support.MS_WINDOWS, 'This test only makes sense on Windows')
     def test_win32_ver(self):
@@ -441,56 +400,6 @@ class PlatformTest(unittest.TestCase):
             # parent
             support.wait_process(pid, exitcode=0)
 
-    def test_ios_ver(self):
-        result = platform.ios_ver()
-
-        # ios_ver is only fully available on iOS where ctypes is available.
-        if sys.platform == "ios" and _ctypes:
-            system, release, model, is_simulator = result
-            # Result is a namedtuple
-            self.assertEqual(result.system, system)
-            self.assertEqual(result.release, release)
-            self.assertEqual(result.model, model)
-            self.assertEqual(result.is_simulator, is_simulator)
-
-            # We can't assert specific values without reproducing the logic of
-            # ios_ver(), so we check that the values are broadly what we expect.
-
-            # System is either iOS or iPadOS, depending on the test device
-            self.assertIn(system, {"iOS", "iPadOS"})
-
-            # Release is a numeric version specifier with at least 2 parts
-            parts = release.split(".")
-            self.assertGreaterEqual(len(parts), 2)
-            self.assertTrue(all(part.isdigit() for part in parts))
-
-            # If this is a simulator, we get a high level device descriptor
-            # with no identifying model number. If this is a physical device,
-            # we get a model descriptor like "iPhone13,1"
-            if is_simulator:
-                self.assertIn(model, {"iPhone", "iPad"})
-            else:
-                self.assertTrue(
-                    (model.startswith("iPhone") or model.startswith("iPad"))
-                    and "," in model
-                )
-
-            self.assertEqual(type(is_simulator), bool)
-        else:
-            # On non-iOS platforms, calling ios_ver doesn't fail; you get
-            # default values
-            self.assertEqual(result.system, "")
-            self.assertEqual(result.release, "")
-            self.assertEqual(result.model, "")
-            self.assertFalse(result.is_simulator)
-
-            # Check the fallback values can be overridden by arguments
-            override = platform.ios_ver("Foo", "Bar", "Whiz", True)
-            self.assertEqual(override.system, "Foo")
-            self.assertEqual(override.release, "Bar")
-            self.assertEqual(override.model, "Whiz")
-            self.assertTrue(override.is_simulator)
-
     @unittest.skipIf(support.is_emscripten, "Does not apply to Emscripten")
     def test_libc_ver(self):
         # check that libc_ver(executable) doesn't raise an exception
@@ -540,43 +449,6 @@ class PlatformTest(unittest.TestCase):
         self.assertEqual(platform.libc_ver(filename, chunksize=chunksize),
                          ('glibc', '1.23.4'))
 
-    def test_android_ver(self):
-        res = platform.android_ver()
-        self.assertIsInstance(res, tuple)
-        self.assertEqual(res, (res.release, res.api_level, res.manufacturer,
-                               res.model, res.device, res.is_emulator))
-
-        if sys.platform == "android":
-            for name in ["release", "manufacturer", "model", "device"]:
-                with self.subTest(name):
-                    value = getattr(res, name)
-                    self.assertIsInstance(value, str)
-                    self.assertNotEqual(value, "")
-
-            self.assertIsInstance(res.api_level, int)
-            self.assertGreaterEqual(res.api_level, sys.getandroidapilevel())
-
-            self.assertIsInstance(res.is_emulator, bool)
-
-        # When not running on Android, it should return the default values.
-        else:
-            self.assertEqual(res.release, "")
-            self.assertEqual(res.api_level, 0)
-            self.assertEqual(res.manufacturer, "")
-            self.assertEqual(res.model, "")
-            self.assertEqual(res.device, "")
-            self.assertEqual(res.is_emulator, False)
-
-            # Default values may also be overridden using parameters.
-            res = platform.android_ver(
-                "alpha", 1, "bravo", "charlie", "delta", True)
-            self.assertEqual(res.release, "alpha")
-            self.assertEqual(res.api_level, 1)
-            self.assertEqual(res.manufacturer, "bravo")
-            self.assertEqual(res.model, "charlie")
-            self.assertEqual(res.device, "delta")
-            self.assertEqual(res.is_emulator, True)
-
     @support.cpython_only
     def test__comparable_version(self):
         from platform import _comparable_version as V
@@ -623,8 +495,7 @@ class PlatformTest(unittest.TestCase):
                   'root:xnu-4570.71.2~1/RELEASE_X86_64'),
                  'x86_64', 'i386')
         arch = ('64bit', '')
-        with mock.patch.object(sys, "platform", "darwin"), \
-             mock.patch.object(platform, 'uname', return_value=uname), \
+        with mock.patch.object(platform, 'uname', return_value=uname), \
              mock.patch.object(platform, 'architecture', return_value=arch):
             for mac_ver, expected_terse, expected in [
                 # darwin: mac_ver() returns empty strings

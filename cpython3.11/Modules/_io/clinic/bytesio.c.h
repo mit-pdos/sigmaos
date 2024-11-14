@@ -2,13 +2,6 @@
 preserve
 [clinic start generated code]*/
 
-#if defined(Py_BUILD_CORE) && !defined(Py_BUILD_CORE_MODULE)
-#  include "pycore_gc.h"          // PyGC_Head
-#  include "pycore_runtime.h"     // _Py_ID()
-#endif
-#include "pycore_abstract.h"      // _Py_convert_optional_to_ssize_t()
-#include "pycore_modsupport.h"    // _PyArg_CheckPositional()
-
 PyDoc_STRVAR(_io_BytesIO_readable__doc__,
 "readable($self, /)\n"
 "--\n"
@@ -88,19 +81,15 @@ PyDoc_STRVAR(_io_BytesIO_getbuffer__doc__,
 "Get a read-write view over the contents of the BytesIO object.");
 
 #define _IO_BYTESIO_GETBUFFER_METHODDEF    \
-    {"getbuffer", _PyCFunction_CAST(_io_BytesIO_getbuffer), METH_METHOD|METH_FASTCALL|METH_KEYWORDS, _io_BytesIO_getbuffer__doc__},
+    {"getbuffer", (PyCFunction)_io_BytesIO_getbuffer, METH_NOARGS, _io_BytesIO_getbuffer__doc__},
 
 static PyObject *
-_io_BytesIO_getbuffer_impl(bytesio *self, PyTypeObject *cls);
+_io_BytesIO_getbuffer_impl(bytesio *self);
 
 static PyObject *
-_io_BytesIO_getbuffer(bytesio *self, PyTypeObject *cls, PyObject *const *args, Py_ssize_t nargs, PyObject *kwnames)
+_io_BytesIO_getbuffer(bytesio *self, PyObject *Py_UNUSED(ignored))
 {
-    if (nargs || (kwnames && PyTuple_GET_SIZE(kwnames))) {
-        PyErr_SetString(PyExc_TypeError, "getbuffer() takes no arguments");
-        return NULL;
-    }
-    return _io_BytesIO_getbuffer_impl(self, cls);
+    return _io_BytesIO_getbuffer_impl(self);
 }
 
 PyDoc_STRVAR(_io_BytesIO_getvalue__doc__,
@@ -329,7 +318,12 @@ _io_BytesIO_readinto(bytesio *self, PyObject *arg)
     Py_buffer buffer = {NULL, NULL};
 
     if (PyObject_GetBuffer(arg, &buffer, PyBUF_WRITABLE) < 0) {
+        PyErr_Clear();
         _PyArg_BadArgument("readinto", "argument", "read-write bytes-like object", arg);
+        goto exit;
+    }
+    if (!PyBuffer_IsContiguous(&buffer, 'C')) {
+        _PyArg_BadArgument("readinto", "argument", "contiguous buffer", arg);
         goto exit;
     }
     return_value = _io_BytesIO_readinto_impl(self, &buffer);
@@ -423,7 +417,7 @@ _io_BytesIO_seek(bytesio *self, PyObject *const *args, Py_ssize_t nargs)
     if (nargs < 2) {
         goto skip_optional;
     }
-    whence = PyLong_AsInt(args[1]);
+    whence = _PyLong_AsInt(args[1]);
     if (whence == -1 && PyErr_Occurred()) {
         goto exit;
     }
@@ -489,39 +483,15 @@ static int
 _io_BytesIO___init__(PyObject *self, PyObject *args, PyObject *kwargs)
 {
     int return_value = -1;
-    #if defined(Py_BUILD_CORE) && !defined(Py_BUILD_CORE_MODULE)
-
-    #define NUM_KEYWORDS 1
-    static struct {
-        PyGC_Head _this_is_not_used;
-        PyObject_VAR_HEAD
-        PyObject *ob_item[NUM_KEYWORDS];
-    } _kwtuple = {
-        .ob_base = PyVarObject_HEAD_INIT(&PyTuple_Type, NUM_KEYWORDS)
-        .ob_item = { &_Py_ID(initial_bytes), },
-    };
-    #undef NUM_KEYWORDS
-    #define KWTUPLE (&_kwtuple.ob_base.ob_base)
-
-    #else  // !Py_BUILD_CORE
-    #  define KWTUPLE NULL
-    #endif  // !Py_BUILD_CORE
-
     static const char * const _keywords[] = {"initial_bytes", NULL};
-    static _PyArg_Parser _parser = {
-        .keywords = _keywords,
-        .fname = "BytesIO",
-        .kwtuple = KWTUPLE,
-    };
-    #undef KWTUPLE
+    static _PyArg_Parser _parser = {NULL, _keywords, "BytesIO", 0};
     PyObject *argsbuf[1];
     PyObject * const *fastargs;
     Py_ssize_t nargs = PyTuple_GET_SIZE(args);
     Py_ssize_t noptargs = nargs + (kwargs ? PyDict_GET_SIZE(kwargs) : 0) - 0;
     PyObject *initvalue = NULL;
 
-    fastargs = _PyArg_UnpackKeywords(_PyTuple_CAST(args)->ob_item, nargs, kwargs, NULL, &_parser,
-            /*minpos*/ 0, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+    fastargs = _PyArg_UnpackKeywords(_PyTuple_CAST(args)->ob_item, nargs, kwargs, NULL, &_parser, 0, 1, 0, argsbuf);
     if (!fastargs) {
         goto exit;
     }
@@ -535,4 +505,4 @@ skip_optional_pos:
 exit:
     return return_value;
 }
-/*[clinic end generated code: output=985ff54e89f6036e input=a9049054013a1b77]*/
+/*[clinic end generated code: output=93d9700a6cf395b8 input=a9049054013a1b77]*/

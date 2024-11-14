@@ -20,6 +20,8 @@ import errno
 
 from queue import Empty, Full
 
+import _multiprocessing
+
 from . import connection
 from . import context
 _ForkingPickler = context.reduction.ForkingPickler
@@ -156,20 +158,6 @@ class Queue(object):
         except AttributeError:
             pass
 
-    def _terminate_broken(self):
-        # Close a Queue on error.
-
-        # gh-94777: Prevent queue writing to a pipe which is no longer read.
-        self._reader.close()
-
-        # gh-107219: Close the connection writer which can unblock
-        # Queue._feed() if it was stuck in send_bytes().
-        if sys.platform == 'win32':
-            self._writer.close()
-
-        self.close()
-        self.join_thread()
-
     def _start_thread(self):
         debug('Queue._start_thread()')
 
@@ -181,19 +169,13 @@ class Queue(object):
                   self._wlock, self._reader.close, self._writer.close,
                   self._ignore_epipe, self._on_queue_feeder_error,
                   self._sem),
-            name='QueueFeederThread',
-            daemon=True,
+            name='QueueFeederThread'
         )
+        self._thread.daemon = True
 
-        try:
-            debug('doing self._thread.start()')
-            self._thread.start()
-            debug('... done self._thread.start()')
-        except:
-            # gh-109047: During Python finalization, creating a thread
-            # can fail with RuntimeError.
-            self._thread = None
-            raise
+        debug('doing self._thread.start()')
+        self._thread.start()
+        debug('... done self._thread.start()')
 
         if not self._joincancelled:
             self._jointhread = Finalize(
@@ -297,8 +279,6 @@ class Queue(object):
         """
         import traceback
         traceback.print_exc()
-
-    __class_getitem__ = classmethod(types.GenericAlias)
 
 
 _sentinel = object()

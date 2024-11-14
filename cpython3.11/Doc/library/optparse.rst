@@ -1,5 +1,5 @@
-:mod:`!optparse` --- Parser for command line options
-====================================================
+:mod:`optparse` --- Parser for command line options
+===================================================
 
 .. module:: optparse
    :synopsis: Command-line option parsing library.
@@ -11,9 +11,8 @@
 **Source code:** :source:`Lib/optparse.py`
 
 .. deprecated:: 3.2
-   The :mod:`optparse` module is :term:`soft deprecated` and will not be
-   developed further; development will continue with the :mod:`argparse`
-   module.
+   The :mod:`optparse` module is deprecated and will not be developed further;
+   development will continue with the :mod:`argparse` module.
 
 --------------
 
@@ -1352,7 +1351,7 @@ The whole point of creating and populating an OptionParser is to call its
       the list of arguments to process (default: ``sys.argv[1:]``)
 
    ``values``
-      a :class:`Values` object to store option arguments in (default: a
+      an :class:`Values` object to store option arguments in (default: a
       new instance of :class:`Values`) -- if you give an existing object, the
       option defaults will not be initialized on it
 
@@ -1739,7 +1738,7 @@ seen, but blow up if it comes after ``-b`` in the command-line.  ::
 Callback example 3: check option order (generalized)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-If you want to reuse this callback for several similar options (set a flag, but
+If you want to re-use this callback for several similar options (set a flag, but
 blow up if ``-b`` has already been seen), it needs a bit of work: the error
 message and the flag that it sets must be generalized.  ::
 
@@ -2048,7 +2047,7 @@ Features of note:
      values.ensure_value(attr, value)
 
   If the ``attr`` attribute of ``values`` doesn't exist or is ``None``, then
-  ensure_value() first sets it to ``value``, and then returns ``value``. This is
+  ensure_value() first sets it to ``value``, and then returns 'value. This is
   very handy for actions like ``"extend"``, ``"append"``, and ``"count"``, all
   of which accumulate data in a variable and expect that variable to be of a
   certain type (a list for the first two, an integer for the latter).  Using

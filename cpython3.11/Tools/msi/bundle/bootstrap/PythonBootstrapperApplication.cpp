@@ -213,7 +213,6 @@ static struct { LPCWSTR regName; LPCWSTR variableName; } OPTIONAL_FEATURES[] = {
     { L"Shortcuts", L"Shortcuts" },
     // Include_launcher and AssociateFiles are handled separately and so do
     // not need to be included in this list.
-    { L"freethreaded", L"Include_freethreaded" },
     { nullptr, nullptr }
 };
 
@@ -465,11 +464,11 @@ class PythonBootstrapperApplication : public CBalBaseBootstrapperApplication {
 
         LOC_STRING *pLocString = nullptr;
         LPCWSTR locKey = L"#(loc.Include_launcherHelp)";
-        LONGLONG blockedLauncher;
+        LONGLONG detectedLauncher;
 
-        if (SUCCEEDED(BalGetNumericVariable(L"BlockedLauncher", &blockedLauncher)) && blockedLauncher) {
+        if (SUCCEEDED(BalGetNumericVariable(L"DetectedLauncher", &detectedLauncher)) && detectedLauncher) {
             locKey = L"#(loc.Include_launcherRemove)";
-        } else if (SUCCEEDED(BalGetNumericVariable(L"DetectedOldLauncher", &blockedLauncher)) && blockedLauncher) {
+        } else if (SUCCEEDED(BalGetNumericVariable(L"DetectedOldLauncher", &detectedLauncher)) && detectedLauncher) {
             locKey = L"#(loc.Include_launcherUpgrade)";
         }
 
@@ -876,7 +875,8 @@ public: // IBootstrapperApplication
                 }
 
                 if (includeLauncherAllUsers < 0) {
-                    includeLauncherAllUsers = 0;
+                    // Python 3.11 installer defaults to 1. Later versions use 0
+                    includeLauncherAllUsers = 1;
                     _engine->SetVariableNumeric(L"InstallLauncherAllUsers", includeLauncherAllUsers);
                 }
 
@@ -2672,7 +2672,7 @@ private:
                 /*Elevate when installing for all users*/
                 L"InstallAllUsers or "
                 /*Elevate when installing the launcher for all users and it was not detected*/
-                L"(Include_launcher and InstallLauncherAllUsers and not BlockedLauncher)"
+                L"(Include_launcher and InstallLauncherAllUsers and not DetectedLauncher)"
             L")",
             L""
         };
@@ -3086,13 +3086,11 @@ private:
         LOC_STRING *pLocString = nullptr;
         
         if (IsWindowsServer()) {
-            if (IsWindowsVersionOrGreater(10, 0, 0)) {
-                BalLog(BOOTSTRAPPER_LOG_LEVEL_STANDARD, "Target OS is Windows Server 2016 or later");
+            if (IsWindowsVersionOrGreater(6, 2, 0)) {
+                BalLog(BOOTSTRAPPER_LOG_LEVEL_STANDARD, "Target OS is Windows Server 2012 or later");
                 return;
-            } else if (IsWindowsVersionOrGreater(6, 2, 0)) {
-                BalLog(BOOTSTRAPPER_LOG_LEVEL_ERROR, "Detected Windows Server 2012");
             } else if (IsWindowsVersionOrGreater(6, 1, 1)) {
-                BalLog(BOOTSTRAPPER_LOG_LEVEL_ERROR, "Detected Windows Server 2008 R2");
+                BalLog(BOOTSTRAPPER_LOG_LEVEL_STANDARD, "Detected Windows Server 2008 R2");
             } else if (IsWindowsVersionOrGreater(6, 1, 0)) {
                 BalLog(BOOTSTRAPPER_LOG_LEVEL_ERROR, "Detected Windows Server 2008 R2");
             } else if (IsWindowsVersionOrGreater(6, 0, 0)) {
@@ -3100,13 +3098,14 @@ private:
             } else {
                 BalLog(BOOTSTRAPPER_LOG_LEVEL_ERROR, "Detected Windows Server 2003 or earlier");
             }
-            BalLog(BOOTSTRAPPER_LOG_LEVEL_ERROR, "Windows Server 2016 or later is required to continue installation");
+            BalLog(BOOTSTRAPPER_LOG_LEVEL_ERROR, "Windows Server 2012 or later is required to continue installation");
         } else {
             if (IsWindows10OrGreater()) {
                 BalLog(BOOTSTRAPPER_LOG_LEVEL_STANDARD, "Target OS is Windows 10 or later");
                 return;
             } else if (IsWindows8Point1OrGreater()) {
-                BalLog(BOOTSTRAPPER_LOG_LEVEL_ERROR, "Detected Windows 8.1");
+                BalLog(BOOTSTRAPPER_LOG_LEVEL_STANDARD, "Target OS is Windows 8.1");
+                return;
             } else if (IsWindows8OrGreater()) {
                 BalLog(BOOTSTRAPPER_LOG_LEVEL_ERROR, "Detected Windows 8");
             } else if (IsWindows7OrGreater()) {
@@ -3116,7 +3115,7 @@ private:
             } else { 
                 BalLog(BOOTSTRAPPER_LOG_LEVEL_ERROR, "Detected Windows XP or earlier");
             }
-            BalLog(BOOTSTRAPPER_LOG_LEVEL_ERROR, "Windows 10 or later is required to continue installation");
+            BalLog(BOOTSTRAPPER_LOG_LEVEL_ERROR, "Windows 8.1 or later is required to continue installation");
         }
 
         LocGetString(_wixLoc, L"#(loc.FailureOldOS)", &pLocString);

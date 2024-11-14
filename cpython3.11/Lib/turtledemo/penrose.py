@@ -1,4 +1,7 @@
-"""turtledemo/penrose.py
+#!/usr/bin/env python3
+"""       xturtle-example-suite:
+
+          xtx_kites_and_darts.py
 
 Constructs two aperiodic penrose-tilings,
 consisting of kites and darts, by the method
@@ -9,7 +12,7 @@ consisting of five kites and "star"
 consisting of five darts.
 
 For more information see:
- https://en.wikipedia.org/wiki/Penrose_tiling
+ http://en.wikipedia.org/wiki/Penrose_tiling
  -------------------------------------------
 """
 from turtle import *

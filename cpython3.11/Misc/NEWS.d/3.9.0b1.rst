@@ -489,8 +489,8 @@ The first argument of :func:`pickle.loads` is now positional-only.
 .. nonce: Cuwu_H
 .. section: Library
 
-Update :mod:`!nntplib` to merge :class:`!nntplib.NNTP` and
-:class:`!nntplib._NNTPBase`. Patch by Donghee Na.
+Update :mod:`nntplib` to merge :class:`nntplib.NNTP` and
+:class:`nntplib._NNTPBase`. Patch by Donghee Na.
 
 ..
 
@@ -532,7 +532,7 @@ Remove ``_random.Random.randbytes()``: the C implementation of
 .. section: Library
 
 Added default arguments to
-:meth:`difflib.SequenceMatcher.find_longest_match`.
+:meth:`difflib.SequenceMatcher.find_longest_match()`.
 
 ..
 

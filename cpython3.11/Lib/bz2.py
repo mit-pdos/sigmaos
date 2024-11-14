@@ -17,7 +17,7 @@ import _compression
 from _bz2 import BZ2Compressor, BZ2Decompressor
 
 
-# Value 0 no longer used
+_MODE_CLOSED   = 0
 _MODE_READ     = 1
 # Value 2 no longer used
 _MODE_WRITE    = 3
@@ -54,7 +54,7 @@ class BZ2File(_compression.BaseStream):
         """
         self._fp = None
         self._closefp = False
-        self._mode = None
+        self._mode = _MODE_CLOSED
 
         if not (1 <= compresslevel <= 9):
             raise ValueError("compresslevel must be between 1 and 9")
@@ -100,7 +100,7 @@ class BZ2File(_compression.BaseStream):
         May be called more than once without error. Once the file is
         closed, any other operation on it will raise a ValueError.
         """
-        if self.closed:
+        if self._mode == _MODE_CLOSED:
             return
         try:
             if self._mode == _MODE_READ:
@@ -115,21 +115,13 @@ class BZ2File(_compression.BaseStream):
             finally:
                 self._fp = None
                 self._closefp = False
+                self._mode = _MODE_CLOSED
                 self._buffer = None
 
     @property
     def closed(self):
         """True if this file is closed."""
-        return self._fp is None
-
-    @property
-    def name(self):
-        self._check_not_closed()
-        return self._fp.name
-
-    @property
-    def mode(self):
-        return 'wb' if self._mode == _MODE_WRITE else 'rb'
+        return self._mode == _MODE_CLOSED
 
     def fileno(self):
         """Return the file descriptor for the underlying file."""

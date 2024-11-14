@@ -1,7 +1,4 @@
-Description of the internal format of the line number table in Python 3.10
-and earlier.
-
-(For 3.11 onwards, see Objects/locations.md)
+Description of the internal format of the line number table
 
 Conceptually, the line number table consists of a sequence of triples:
     start-offset (inclusive), end-offset (exclusive), line-number.

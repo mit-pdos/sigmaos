@@ -209,18 +209,18 @@ Numeric Types --- :class:`int`, :class:`float`, :class:`complex`
    pair: object; numeric
    pair: object; Boolean
    pair: object; integer
-   pair: object; floating-point
+   pair: object; floating point
    pair: object; complex number
    pair: C; language
 
-There are three distinct numeric types: :dfn:`integers`, :dfn:`floating-point
-numbers`, and :dfn:`complex numbers`.  In addition, Booleans are a
-subtype of integers.  Integers have unlimited precision.  Floating-point
+There are three distinct numeric types: :dfn:`integers`, :dfn:`floating
+point numbers`, and :dfn:`complex numbers`.  In addition, Booleans are a
+subtype of integers.  Integers have unlimited precision.  Floating point
 numbers are usually implemented using :c:expr:`double` in C; information
-about the precision and internal representation of floating-point
+about the precision and internal representation of floating point
 numbers for the machine on which your program is running is available
 in :data:`sys.float_info`.  Complex numbers have a real and imaginary
-part, which are each a floating-point number.  To extract these parts
+part, which are each a floating point number.  To extract these parts
 from a complex number *z*, use ``z.real`` and ``z.imag``. (The standard
 library includes the additional numeric types :mod:`fractions.Fraction`, for
 rationals, and :mod:`decimal.Decimal`, for floating-point numbers with
@@ -229,7 +229,7 @@ user-definable precision.)
 .. index::
    pair: numeric; literals
    pair: integer; literals
-   pair: floating-point; literals
+   pair: floating point; literals
    pair: complex number; literals
    pair: hexadecimal; literals
    pair: octal; literals
@@ -238,7 +238,7 @@ user-definable precision.)
 Numbers are created by numeric literals or as the result of built-in functions
 and operators.  Unadorned integer literals (including hex, octal and binary
 numbers) yield integers.  Numeric literals containing a decimal point or an
-exponent sign yield floating-point numbers.  Appending ``'j'`` or ``'J'`` to a
+exponent sign yield floating point numbers.  Appending ``'j'`` or ``'J'`` to a
 numeric literal yields an imaginary number (a complex number with a zero real
 part) which you can add to an integer or float to get a complex number with real
 and imaginary parts.
@@ -355,7 +355,7 @@ Notes:
    The numeric literals accepted include the digits ``0`` to ``9`` or any
    Unicode equivalent (code points with the ``Nd`` property).
 
-   See `the Unicode Standard <https://unicode.org/Public/UNIDATA/extracted/DerivedNumericType.txt>`_
+   See https://www.unicode.org/Public/14.0.0/ucd/extracted/DerivedNumericType.txt
    for a complete list of code points with the ``Nd`` property.
 
 
@@ -606,18 +606,12 @@ class`. In addition, it provides a few more methods:
 
 .. method:: int.as_integer_ratio()
 
-   Return a pair of integers whose ratio is equal to the original
-   integer and has a positive denominator.  The integer ratio of integers
+   Return a pair of integers whose ratio is exactly equal to the original
+   integer and with a positive denominator. The integer ratio of integers
    (whole numbers) is always the integer as the numerator and ``1`` as the
    denominator.
 
    .. versionadded:: 3.8
-
-.. method:: int.is_integer()
-
-   Returns ``True``. Exists for duck type compatibility with :meth:`float.is_integer`.
-
-   .. versionadded:: 3.12
 
 Additional Methods on Float
 ---------------------------
@@ -625,27 +619,10 @@ Additional Methods on Float
 The float type implements the :class:`numbers.Real` :term:`abstract base
 class`. float also has the following additional methods.
 
-.. classmethod:: float.from_number(x)
-
-   Class method to return a floating-point number constructed from a number *x*.
-
-   If the argument is an integer or a floating-point number, a
-   floating-point number with the same value (within Python's floating-point
-   precision) is returned.  If the argument is outside the range of a Python
-   float, an :exc:`OverflowError` will be raised.
-
-   For a general Python object ``x``, ``float.from_number(x)`` delegates to
-   ``x.__float__()``.
-   If :meth:`~object.__float__` is not defined then it falls back
-   to :meth:`~object.__index__`.
-
-   .. versionadded:: 3.14
-
-
 .. method:: float.as_integer_ratio()
 
    Return a pair of integers whose ratio is exactly equal to the
-   original float. The ratio is in lowest terms and has a positive denominator.  Raises
+   original float and with a positive denominator.  Raises
    :exc:`OverflowError` on infinities and a :exc:`ValueError` on
    NaNs.
 
@@ -718,25 +695,6 @@ hexadecimal string representing the same number::
 
    >>> float.hex(3740.0)
    '0x1.d380000000000p+11'
-
-
-Additional Methods on Complex
------------------------------
-
-The :class:`!complex` type implements the :class:`numbers.Complex`
-:term:`abstract base class`.
-:class:`!complex` also has the following additional methods.
-
-.. classmethod:: complex.from_number(x)
-
-   Class method to convert a number to a complex number.
-
-   For a general Python object ``x``, ``complex.from_number(x)`` delegates to
-   ``x.__complex__()``.  If :meth:`~object.__complex__` is not defined then it falls back
-   to :meth:`~object.__float__`.  If :meth:`!__float__` is not defined then it falls back
-   to :meth:`~object.__index__`.
-
-   .. versionadded:: 3.14
 
 
 .. _numeric-hash:
@@ -840,40 +798,6 @@ number, :class:`float`, or :class:`complex`::
        if hash_value == -1:
            hash_value = -2
        return hash_value
-
-.. _bltin-boolean-values:
-.. _typebool:
-
-Boolean Type - :class:`bool`
-============================
-
-Booleans represent truth values. The :class:`bool` type has exactly two
-constant instances: ``True`` and ``False``.
-
-.. index::
-   single: False
-   single: True
-   pair: Boolean; values
-
-The built-in function :func:`bool`  converts any value to a boolean, if the
-value can be interpreted as a truth value (see section :ref:`truth` above).
-
-For logical operations, use the :ref:`boolean operators <boolean>` ``and``,
-``or`` and ``not``.
-When applying the bitwise operators ``&``, ``|``, ``^`` to two booleans, they
-return a bool equivalent to the logical operations "and", "or", "xor". However,
-the logical operators ``and``, ``or`` and ``!=`` should be preferred
-over ``&``, ``|`` and ``^``.
-
-.. deprecated:: 3.12
-
-   The use of the bitwise inversion operator ``~`` is deprecated and will
-   raise an error in Python 3.16.
-
-:class:`bool` is a subclass of :class:`int` (see :ref:`typesnumeric`). In
-many numeric contexts, ``False`` and ``True`` behave like the integers 0 and 1, respectively.
-However, relying on this is discouraged; explicitly convert using :func:`int`
-instead.
 
 .. _typeiter:
 
@@ -1245,9 +1169,8 @@ accepts integers that meet the value restriction ``0 <= x <= 255``).
 | ``s.pop()`` or ``s.pop(i)``  | retrieves the item at *i* and  | \(2)                |
 |                              | also removes it from *s*       |                     |
 +------------------------------+--------------------------------+---------------------+
-| ``s.remove(x)``              | removes the first item from    | \(3)                |
-|                              | *s* where ``s[i]`` is equal to |                     |
-|                              | *x*                            |                     |
+| ``s.remove(x)``              | remove the first item from *s* | \(3)                |
+|                              | where ``s[i]`` is equal to *x* |                     |
 +------------------------------+--------------------------------+---------------------+
 | ``s.reverse()``              | reverses the items of *s* in   | \(4)                |
 |                              | place                          |                     |
@@ -1257,7 +1180,7 @@ accepts integers that meet the value restriction ``0 <= x <= 255``).
 Notes:
 
 (1)
-   If *k* is not equal to ``1``, *t* must have the same length as the slice it is replacing.
+   *t* must have the same length as the slice it is replacing.
 
 (2)
    The optional argument *i* defaults to ``-1``, so that by default the last
@@ -1533,9 +1456,9 @@ objects that compare equal might have different :attr:`~range.start`,
 
 .. seealso::
 
-   * The `linspace recipe <https://code.activestate.com/recipes/579000-equally-spaced-numbers-linspace/>`_
-     shows how to implement a lazy version of range suitable for floating-point
-     applications.
+   * The `linspace recipe <https://code.activestate.com/recipes/579000/>`_
+     shows how to implement a lazy version of range suitable for floating
+     point applications.
 
 .. index::
    single: string; text sequence type
@@ -1602,7 +1525,7 @@ multiple fragments.
    printable string representation of *object*.  For string objects, this is
    the string itself.  If *object* does not have a :meth:`~object.__str__`
    method, then :func:`str` falls back to returning
-   :func:`repr(object) <repr>`.
+   :meth:`repr(object) <repr>`.
 
    .. index::
       single: buffer protocol; str (built-in class)
@@ -1677,9 +1600,8 @@ expression support in the :mod:`re` module).
    lowercase, :meth:`lower` would do nothing to ``'ß'``; :meth:`casefold`
    converts it to ``"ss"``.
 
-   The casefolding algorithm is
-   `described in section 3.13 'Default Case Folding' of the Unicode Standard
-   <https://www.unicode.org/versions/Unicode16.0.0/core-spec/chapter-3/#G33992>`__.
+   The casefolding algorithm is described in section 3.13 of the Unicode
+   Standard.
 
    .. versionadded:: 3.3
 
@@ -1805,7 +1727,7 @@ expression support in the :mod:`re` module).
       cases.
 
 
-.. method:: str.format_map(mapping, /)
+.. method:: str.format_map(mapping)
 
    Similar to ``str.format(**mapping)``, except that ``mapping`` is
    used directly and not copied to a :class:`dict`.  This is useful
@@ -1841,9 +1763,7 @@ expression support in the :mod:`re` module).
    one character, ``False`` otherwise.  Alphabetic characters are those characters defined
    in the Unicode character database as "Letter", i.e., those with general category
    property being one of "Lm", "Lt", "Lu", "Ll", or "Lo".  Note that this is different
-   from the `Alphabetic property defined in the section 4.10 'Letters, Alphabetic, and
-   Ideographic' of the Unicode Standard
-   <https://www.unicode.org/versions/Unicode16.0.0/core-spec/chapter-4/#G91002>`_.
+   from the "Alphabetic" property defined in the Unicode Standard.
 
 
 .. method:: str.isascii()
@@ -1880,7 +1800,7 @@ expression support in the :mod:`re` module).
    Return ``True`` if the string is a valid identifier according to the language
    definition, section :ref:`identifiers`.
 
-   :func:`keyword.iskeyword` can be used to test whether string ``s`` is a reserved
+   Call :func:`keyword.iskeyword` to test whether string ``s`` is a reserved
    identifier, such as :keyword:`def` and :keyword:`class`.
 
    Example:
@@ -1977,9 +1897,8 @@ expression support in the :mod:`re` module).
    Return a copy of the string with all the cased characters [4]_ converted to
    lowercase.
 
-   The lowercasing algorithm used is
-   `described in section 3.13 'Default Case Folding' of the Unicode Standard
-   <https://www.unicode.org/versions/Unicode16.0.0/core-spec/chapter-3/#G33992>`__.
+   The lowercasing algorithm used is described in section 3.13 of the Unicode
+   Standard.
 
 
 .. method:: str.lstrip([chars])
@@ -2054,14 +1973,11 @@ expression support in the :mod:`re` module).
    .. versionadded:: 3.9
 
 
-.. method:: str.replace(old, new, count=-1)
+.. method:: str.replace(old, new[, count])
 
    Return a copy of the string with all occurrences of substring *old* replaced by
-   *new*.  If *count* is given, only the first *count* occurrences are replaced.
-   If *count* is not specified or ``-1``, then all occurrences are replaced.
-
-   .. versionchanged:: 3.13
-      *count* is now supported as a keyword argument.
+   *new*.  If the optional argument *count* is given, only the first *count*
+   occurrences are replaced.
 
 
 .. method:: str.rfind(sub[, start[, end]])
@@ -2132,9 +2048,8 @@ expression support in the :mod:`re` module).
    If *sep* is given, consecutive delimiters are not grouped together and are
    deemed to delimit empty strings (for example, ``'1,,2'.split(',')`` returns
    ``['1', '', '2']``).  The *sep* argument may consist of multiple characters
-   as a single delimiter (to split with multiple delimiters, use
-   :func:`re.split`). Splitting an empty string with a specified separator
-   returns ``['']``.
+   (for example, ``'1<>2<>3'.split('<>')`` returns ``['1', '2', '3']``).
+   Splitting an empty string with a specified separator returns ``['']``.
 
    For example::
 
@@ -2144,8 +2059,6 @@ expression support in the :mod:`re` module).
       ['1', '2,3']
       >>> '1,2,,3,'.split(',')
       ['1', '2', '', '3', '']
-      >>> '1<>2<>3<4'.split('<>')
-      ['1', '2', '3<4']
 
    If *sep* is not specified or is ``None``, a different splitting algorithm is
    applied: runs of consecutive whitespace are regarded as a single separator,
@@ -2329,9 +2242,8 @@ expression support in the :mod:`re` module).
    character(s) is not "Lu" (Letter, uppercase), but e.g. "Lt" (Letter,
    titlecase).
 
-   The uppercasing algorithm used is
-   `described in section 3.13 'Default Case Folding' of the Unicode Standard
-   <https://www.unicode.org/versions/Unicode16.0.0/core-spec/chapter-3/#G33992>`__.
+   The uppercasing algorithm used is described in section 3.13 of the Unicode
+   Standard.
 
 
 .. method:: str.zfill(width)
@@ -2379,13 +2291,7 @@ String objects have one unique built-in operation: the ``%`` operator (modulo).
 This is also known as the string *formatting* or *interpolation* operator.
 Given ``format % values`` (where *format* is a string), ``%`` conversion
 specifications in *format* are replaced with zero or more elements of *values*.
-The effect is similar to using the :c:func:`sprintf` function in the C language.
-For example:
-
-.. doctest::
-
-   >>> print('%s has %d quote types.' % ('Python', 2))
-   Python has 2 quote types.
+The effect is similar to using the :c:func:`sprintf` in the C language.
 
 If *format* requires a single argument, *values* may be a single non-tuple
 object. [5]_  Otherwise, *values* must be a tuple with exactly the number of
@@ -2479,19 +2385,19 @@ The conversion types are:
 +------------+-----------------------------------------------------+-------+
 | ``'X'``    | Signed hexadecimal (uppercase).                     | \(2)  |
 +------------+-----------------------------------------------------+-------+
-| ``'e'``    | Floating-point exponential format (lowercase).      | \(3)  |
+| ``'e'``    | Floating point exponential format (lowercase).      | \(3)  |
 +------------+-----------------------------------------------------+-------+
-| ``'E'``    | Floating-point exponential format (uppercase).      | \(3)  |
+| ``'E'``    | Floating point exponential format (uppercase).      | \(3)  |
 +------------+-----------------------------------------------------+-------+
-| ``'f'``    | Floating-point decimal format.                      | \(3)  |
+| ``'f'``    | Floating point decimal format.                      | \(3)  |
 +------------+-----------------------------------------------------+-------+
-| ``'F'``    | Floating-point decimal format.                      | \(3)  |
+| ``'F'``    | Floating point decimal format.                      | \(3)  |
 +------------+-----------------------------------------------------+-------+
-| ``'g'``    | Floating-point format. Uses lowercase exponential   | \(4)  |
+| ``'g'``    | Floating point format. Uses lowercase exponential   | \(4)  |
 |            | format if exponent is less than -4 or not less than |       |
 |            | precision, decimal format otherwise.                |       |
 +------------+-----------------------------------------------------+-------+
-| ``'G'``    | Floating-point format. Uses uppercase exponential   | \(4)  |
+| ``'G'``    | Floating point format. Uses uppercase exponential   | \(4)  |
 |            | format if exponent is less than -4 or not less than |       |
 |            | precision, decimal format otherwise.                |       |
 +------------+-----------------------------------------------------+-------+
@@ -3189,9 +3095,10 @@ produce new objects.
    If *sep* is given, consecutive delimiters are not grouped together and are
    deemed to delimit empty subsequences (for example, ``b'1,,2'.split(b',')``
    returns ``[b'1', b'', b'2']``).  The *sep* argument may consist of a
-   multibyte sequence as a single delimiter. Splitting an empty sequence with
-   a specified separator returns ``[b'']`` or ``[bytearray(b'')]`` depending
-   on the type of object being split.  The *sep* argument may be any
+   multibyte sequence (for example, ``b'1<>2<>3'.split(b'<>')`` returns
+   ``[b'1', b'2', b'3']``). Splitting an empty sequence with a specified
+   separator returns ``[b'']`` or ``[bytearray(b'')]`` depending on the type
+   of object being split.  The *sep* argument may be any
    :term:`bytes-like object`.
 
    For example::
@@ -3202,8 +3109,6 @@ produce new objects.
       [b'1', b'2,3']
       >>> b'1,2,,3,'.split(b',')
       [b'1', b'2', b'', b'3', b'']
-      >>> b'1<>2<>3<4'.split(b'<>')
-      [b'1', b'2', b'3<4']
 
    If *sep* is not specified or is ``None``, a different splitting algorithm
    is applied: runs of consecutive ASCII whitespace are regarded as a single
@@ -3477,7 +3382,7 @@ place, and instead produce new objects.
    ``b'abcdefghijklmnopqrstuvwxyz'``. Uppercase ASCII characters
    are those byte values in the sequence ``b'ABCDEFGHIJKLMNOPQRSTUVWXYZ'``.
 
-   Unlike :func:`str.swapcase`, it is always the case that
+   Unlike :func:`str.swapcase()`, it is always the case that
    ``bin.swapcase().swapcase() == bin`` for the binary versions. Case
    conversions are symmetrical in ASCII, even though that is not generally
    true for arbitrary Unicode code points.
@@ -3698,19 +3603,19 @@ The conversion types are:
 +------------+-----------------------------------------------------+-------+
 | ``'X'``    | Signed hexadecimal (uppercase).                     | \(2)  |
 +------------+-----------------------------------------------------+-------+
-| ``'e'``    | Floating-point exponential format (lowercase).      | \(3)  |
+| ``'e'``    | Floating point exponential format (lowercase).      | \(3)  |
 +------------+-----------------------------------------------------+-------+
-| ``'E'``    | Floating-point exponential format (uppercase).      | \(3)  |
+| ``'E'``    | Floating point exponential format (uppercase).      | \(3)  |
 +------------+-----------------------------------------------------+-------+
-| ``'f'``    | Floating-point decimal format.                      | \(3)  |
+| ``'f'``    | Floating point decimal format.                      | \(3)  |
 +------------+-----------------------------------------------------+-------+
-| ``'F'``    | Floating-point decimal format.                      | \(3)  |
+| ``'F'``    | Floating point decimal format.                      | \(3)  |
 +------------+-----------------------------------------------------+-------+
-| ``'g'``    | Floating-point format. Uses lowercase exponential   | \(4)  |
+| ``'g'``    | Floating point format. Uses lowercase exponential   | \(4)  |
 |            | format if exponent is less than -4 or not less than |       |
 |            | precision, decimal format otherwise.                |       |
 +------------+-----------------------------------------------------+-------+
-| ``'G'``    | Floating-point format. Uses uppercase exponential   | \(4)  |
+| ``'G'``    | Floating point format. Uses uppercase exponential   | \(4)  |
 |            | format if exponent is less than -4 or not less than |       |
 |            | precision, decimal format otherwise.                |       |
 +------------+-----------------------------------------------------+-------+
@@ -3801,15 +3706,12 @@ copying.
    types such as :class:`bytes` and :class:`bytearray`, an element is a single
    byte, but other types such as :class:`array.array` may have bigger elements.
 
-   ``len(view)`` is equal to the length of :class:`~memoryview.tolist`, which
-   is the nested list representation of the view. If ``view.ndim = 1``,
-   this is equal to the number of elements in the view.
-
-   .. versionchanged:: 3.12
-      If ``view.ndim == 0``, ``len(view)`` now raises :exc:`TypeError` instead of returning 1.
-
-   The :class:`~memoryview.itemsize` attribute will give you the number of
-   bytes in a single element.
+   ``len(view)`` is equal to the length of :class:`~memoryview.tolist`.
+   If ``view.ndim = 0``, the length is 1. If ``view.ndim = 1``, the length
+   is equal to the number of elements in the view. For higher dimensions,
+   the length is equal to the length of the nested list representation of
+   the view. The :class:`~memoryview.itemsize` attribute will give you the
+   number of bytes in a single element.
 
    A :class:`memoryview` supports slicing and indexing to expose its data.
    One-dimensional slicing will result in a subview::
@@ -3889,9 +3791,6 @@ copying.
    .. versionchanged:: 3.5
       memoryviews can now be indexed with tuple of integers.
 
-   .. versionchanged:: next
-      memoryview is now a :term:`generic type`.
-
    :class:`memoryview` has several methods:
 
    .. method:: __eq__(exporter)
@@ -3935,7 +3834,7 @@ copying.
          >>> a == b
          False
 
-      Note that, as with floating-point numbers, ``v is w`` does *not* imply
+      Note that, as with floating point numbers, ``v is w`` does *not* imply
       ``v == w`` for memoryview objects.
 
       .. versionchanged:: 3.3
@@ -4026,7 +3925,7 @@ copying.
       dangling resources) as soon as possible.
 
       After this method has been called, any further operation on the view
-      raises a :class:`ValueError` (except :meth:`release` itself which can
+      raises a :class:`ValueError` (except :meth:`release()` itself which can
       be called multiple times)::
 
          >>> m = memoryview(b'abc')
@@ -4508,14 +4407,14 @@ can be used interchangeably to index the same dictionary entry.
      ``dict([('foo', 100), ('bar', 200)])``, ``dict(foo=100, bar=200)``
 
    If no positional argument is given, an empty dictionary is created.
-   If a positional argument is given and it defines a ``keys()`` method, a
-   dictionary is created by calling :meth:`~object.__getitem__` on the argument with
-   each returned key from the method.  Otherwise, the positional argument must be an
-   :term:`iterable` object.  Each item in the iterable must itself be an iterable
-   with exactly two elements.  The first element of each item becomes a key in the
-   new dictionary, and the second element the corresponding value.  If a key occurs
-   more than once, the last value for that key becomes the corresponding value in
-   the new dictionary.
+   If a positional argument is given and it is a mapping object, a dictionary
+   is created with the same key-value pairs as the mapping object.  Otherwise,
+   the positional argument must be an :term:`iterable` object.  Each item in
+   the iterable must itself be an iterable with exactly two objects.  The
+   first object of each item becomes a key in the new dictionary, and the
+   second object the corresponding value.  If a key occurs more than once, the
+   last value for that key becomes the corresponding value in the new
+   dictionary.
 
    If keyword arguments are given, the keyword arguments and their values are
    added to the dictionary created from the positional argument.  If a key
@@ -4567,7 +4466,6 @@ can be used interchangeably to index the same dictionary entry.
           >>> class Counter(dict):
           ...     def __missing__(self, key):
           ...         return 0
-          ...
           >>> c = Counter()
           >>> c['red']
           0
@@ -4609,7 +4507,7 @@ can be used interchangeably to index the same dictionary entry.
 
       Return a shallow copy of the dictionary.
 
-   .. classmethod:: fromkeys(iterable, value=None, /)
+   .. classmethod:: fromkeys(iterable[, value])
 
       Create a new dictionary with keys from *iterable* and values set to *value*.
 
@@ -4619,7 +4517,7 @@ can be used interchangeably to index the same dictionary entry.
       such as an empty list.  To get distinct values, use a :ref:`dict
       comprehension <dict>` instead.
 
-   .. method:: get(key, default=None)
+   .. method:: get(key[, default])
 
       Return the value for *key* if *key* is in the dictionary, else *default*.
       If *default* is not given, it defaults to ``None``, so that this method
@@ -4661,7 +4559,7 @@ can be used interchangeably to index the same dictionary entry.
 
       .. versionadded:: 3.8
 
-   .. method:: setdefault(key, default=None)
+   .. method:: setdefault(key[, default])
 
       If *key* is in the dictionary, return its value.  If not, insert *key*
       with a value of *default* and return *default*.  *default* defaults to
@@ -4672,11 +4570,10 @@ can be used interchangeably to index the same dictionary entry.
       Update the dictionary with the key/value pairs from *other*, overwriting
       existing keys.  Return ``None``.
 
-      :meth:`update` accepts either another object with a ``keys()`` method (in
-      which case :meth:`~object.__getitem__` is called with every key returned from
-      the method) or an iterable of key/value pairs (as tuples or other iterables
-      of length two). If keyword arguments are specified, the dictionary is then
-      updated with those key/value pairs: ``d.update(red=1, blue=2)``.
+      :meth:`update` accepts either another dictionary object or an iterable of
+      key/value pairs (as tuples or other iterables of length two).  If keyword
+      arguments are specified, the dictionary is then updated with those
+      key/value pairs: ``d.update(red=1, blue=2)``.
 
    .. method:: values()
 
@@ -4807,17 +4704,12 @@ support membership tests:
 
    .. versionadded:: 3.10
 
-Keys views are set-like since their entries are unique and :term:`hashable`.
-Items views also have set-like operations since the (key, value) pairs
-are unique and the keys are hashable.
-If all values in an items view are hashable as well,
-then the items view can interoperate with other sets.
-(Values views are not treated as set-like
+Keys views are set-like since their entries are unique and :term:`hashable`.  If all
+values are hashable, so that ``(key, value)`` pairs are unique and hashable,
+then the items view is also set-like.  (Values views are not treated as set-like
 since the entries are generally not unique.)  For set-like views, all of the
 operations defined for the abstract base class :class:`collections.abc.Set` are
-available (for example, ``==``, ``<``, or ``^``).  While using set operators,
-set-like views accept any iterable as the other operand,
-unlike sets which only accept sets as the input.
+available (for example, ``==``, ``<``, or ``^``).
 
 An example of dictionary view usage::
 
@@ -4829,7 +4721,6 @@ An example of dictionary view usage::
    >>> n = 0
    >>> for val in values:
    ...     n += val
-   ...
    >>> print(n)
    504
 
@@ -5106,6 +4997,7 @@ list is non-exhaustive.
 * :class:`collections.abc.MutableMapping`
 * :class:`collections.abc.Sequence`
 * :class:`collections.abc.MutableSequence`
+* :class:`collections.abc.ByteString`
 * :class:`collections.abc.MappingView`
 * :class:`collections.abc.KeysView`
 * :class:`collections.abc.ItemsView`
@@ -5505,6 +5397,27 @@ information.  There is exactly one :data:`NotImplemented` object.
 It is written as :code:`NotImplemented`.
 
 
+.. _bltin-boolean-values:
+
+Boolean Values
+--------------
+
+Boolean values are the two constant objects ``False`` and ``True``.  They are
+used to represent truth values (although other values can also be considered
+false or true).  In numeric contexts (for example when used as the argument to
+an arithmetic operator), they behave like the integers 0 and 1, respectively.
+The built-in function :func:`bool` can be used to convert any value to a
+Boolean, if the value can be interpreted as a truth value (see section
+:ref:`truth` above).
+
+.. index::
+   single: False
+   single: True
+   pair: Boolean; values
+
+They are written as ``False`` and ``True``, respectively.
+
+
 .. _typesinternal:
 
 Internal Objects
@@ -5525,6 +5438,22 @@ types, where they are relevant.  Some of these are not reported by the
 :func:`dir` built-in function.
 
 
+.. attribute:: object.__dict__
+
+   A dictionary or other mapping object used to store an object's (writable)
+   attributes.
+
+
+.. attribute:: instance.__class__
+
+   The class to which a class instance belongs.
+
+
+.. attribute:: class.__bases__
+
+   The tuple of base classes of a class object.
+
+
 .. attribute:: definition.__name__
 
    The name of the class, function, method, descriptor, or
@@ -5539,23 +5468,27 @@ types, where they are relevant.  Some of these are not reported by the
    .. versionadded:: 3.3
 
 
-.. attribute:: definition.__module__
+.. attribute:: class.__mro__
 
-   The name of the module in which a class or function was defined.
-
-
-.. attribute:: definition.__doc__
-
-   The documentation string of a class or function, or ``None`` if undefined.
+   This attribute is a tuple of classes that are considered when looking for
+   base classes during method resolution.
 
 
-.. attribute:: definition.__type_params__
+.. method:: class.mro()
 
-   The :ref:`type parameters <type-params>` of generic classes, functions,
-   and :ref:`type aliases <type-aliases>`. For classes and functions that
-   are not generic, this will be an empty tuple.
+   This method can be overridden by a metaclass to customize the method
+   resolution order for its instances.  It is called at class instantiation, and
+   its result is stored in :attr:`~class.__mro__`.
 
-   .. versionadded:: 3.12
+
+.. method:: class.__subclasses__
+
+   Each class keeps a list of weak references to its immediate subclasses.  This
+   method returns a list of all those references still alive.  The list is in
+   definition order.  Example::
+
+      >>> int.__subclasses__()
+      [<class 'bool'>, <enum 'IntEnum'>, <flag 'IntFlag'>, <class 're._constants._NamedIntConstant'>]
 
 
 .. _int_max_str_digits:
@@ -5575,7 +5508,8 @@ a string to a binary integer or a binary integer to a string in linear time,
 have sub-quadratic complexity. Converting a large value such as ``int('1' *
 500_000)`` can take over a second on a fast CPU.
 
-Limiting conversion size offers a practical way to avoid :cve:`2020-10735`.
+Limiting conversion size offers a practical way to avoid `CVE-2020-10735
+<https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2020-10735>`_.
 
 The limit is applied to the number of digit characters in the input or output
 string when a non-linear conversion algorithm would be involved.  Underscores
@@ -5699,7 +5633,7 @@ Recommended configuration
 The default :data:`sys.int_info.default_max_str_digits` is expected to be
 reasonable for most applications. If your application requires a different
 limit, set it from your main entry point using Python version agnostic code as
-these APIs were added in security patch releases in versions before 3.12.
+these APIs were added in security patch releases in versions before 3.11.
 
 Example::
 

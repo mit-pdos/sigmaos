@@ -203,7 +203,7 @@ def internalTk():
 
 # Do we use 8.6.8 when building our own copy
 # of Tcl/Tk or a modern version.
-#   We use the old version when building on
+#   We use the old version when buildin on
 #   old versions of macOS due to build issues.
 def useOldTk():
     return getBuildTuple() < (10, 15)
@@ -246,9 +246,9 @@ def library_recipes():
 
     result.extend([
           dict(
-              name="OpenSSL 3.0.15",
-              url="https://github.com/openssl/openssl/releases/download/openssl-3.0.15/openssl-3.0.15.tar.gz",
-              checksum='23c666d0edf20f14249b3d8f0368acaee9ab585b09e1de82107c66e1f3ec9533',
+              name="OpenSSL 3.0.13",
+              url="https://www.openssl.org/source/openssl-3.0.13.tar.gz",
+              checksum='88525753f79d3bec27d2fa7c66aa0b92b3aa9498dafd93d7cfa4b3780cdae313',
               buildrecipe=build_universal_openssl,
               configure=None,
               install=None,
@@ -264,18 +264,17 @@ def library_recipes():
             tk_patches = ['backport_gh71383_fix.patch', 'tk868_on_10_8_10_9.patch', 'backport_gh110950_fix.patch']
 
         else:
-            tcl_tk_ver='8.6.15'
-            tcl_checksum='861e159753f2e2fbd6ec1484103715b0be56be3357522b858d3cbb5f893ffef1'
+            tcl_tk_ver='8.6.13'
+            tcl_checksum='43a1fae7412f61ff11de2cfd05d28cfc3a73762f354a417c62370a54e2caf066'
 
-            tk_checksum='550969f35379f952b3020f3ab7b9dd5bfd11c1ef7c9b7c6a75f5c49aca793fec'
-            tk_patches = []
+            tk_checksum='2e65fa069a23365440a3c56c556b8673b5e32a283800d8d9b257e3f584ce0675'
+            tk_patches = ['backport_gh92603_fix.patch', 'backport_gh71383_fix.patch', 'backport_gh110950_fix.patch']
 
 
-        base_url = "https://prdownloads.sourceforge.net/tcl/{what}{version}-src.tar.gz"
         result.extend([
           dict(
               name="Tcl %s"%(tcl_tk_ver,),
-              url=base_url.format(what="tcl", version=tcl_tk_ver),
+              url="ftp://ftp.tcl.tk/pub/tcl//tcl8_6/tcl%s-src.tar.gz"%(tcl_tk_ver,),
               checksum=tcl_checksum,
               buildDir="unix",
               configure_pre=[
@@ -292,7 +291,7 @@ def library_recipes():
               ),
           dict(
               name="Tk %s"%(tcl_tk_ver,),
-              url=base_url.format(what="tk", version=tcl_tk_ver),
+              url="ftp://ftp.tcl.tk/pub/tcl//tcl8_6/tk%s-src.tar.gz"%(tcl_tk_ver,),
               checksum=tk_checksum,
               patches=tk_patches,
               buildDir="unix",
@@ -359,9 +358,9 @@ def library_recipes():
                   ),
           ),
           dict(
-              name="SQLite 3.45.3",
-              url="https://sqlite.org/2024/sqlite-autoconf-3450300.tar.gz",
-              checksum="b2809ca53124c19c60f42bf627736eae011afdcc205bb48270a5ee9a38191531",
+              name="SQLite 3.45.1",
+              url="https://sqlite.org/2024/sqlite-autoconf-3450100.tar.gz",
+              checksum="cd9c27841b7a5932c9897651e20b86c701dd740556989b01ca596fcfa3d49a0a",
               extra_cflags=('-Os '
                             '-DSQLITE_ENABLE_FTS5 '
                             '-DSQLITE_ENABLE_FTS4 '
@@ -376,15 +375,6 @@ def library_recipes():
                   '--enable-static=yes',
                   '--disable-readline',
                   '--disable-dependency-tracking',
-              ]
-          ),
-          dict(
-              name="libmpdec 4.0.0",
-              url="https://www.bytereef.org/software/mpdecimal/releases/mpdecimal-4.0.0.tar.gz",
-              checksum="942445c3245b22730fd41a67a7c5c231d11cb1b9936b9c0f76334fb7d0b4468c",
-              configure_pre=[
-                  "--disable-cxx",
-                  "MACHINE=universal",
               ]
           ),
         ])
@@ -1156,10 +1146,7 @@ def buildPython():
     # will find them during its extension import sanity checks.
 
     print("Running configure...")
-    print(" NOTE: --with-mimalloc=no pending resolution of weak linking issues")
     runCommand("%s -C --enable-framework --enable-universalsdk=/ "
-               "--with-mimalloc=no "
-               "--with-system-libmpdec "
                "--with-universal-archs=%s "
                "%s "
                "%s "
@@ -1370,7 +1357,7 @@ def buildPython():
         build_time_vars = l_dict['build_time_vars']
     vars = {}
     for k, v in build_time_vars.items():
-        if isinstance(v, str):
+        if type(v) == type(''):
             for p in (include_path, lib_path):
                 v = v.replace(' ' + p, '')
                 v = v.replace(p + ' ', '')
@@ -1502,7 +1489,7 @@ def packageFromRecipe(targetDir, recipe):
                 IFPkgFlagRelocatable=False,
                 IFPkgFlagRestartAction="NoRestart",
                 IFPkgFlagRootVolumeOnly=True,
-                IFPkgFlagUpdateInstalledLanguages=False,
+                IFPkgFlagUpdateInstalledLangauges=False,
             )
         writePlist(pl, os.path.join(packageContents, 'Info.plist'))
 

@@ -1,5 +1,5 @@
-:mod:`!unittest.mock` --- getting started
-=========================================
+:mod:`unittest.mock` --- getting started
+========================================
 
 .. moduleauthor:: Michael Foord <michael@python.org>
 .. currentmodule:: unittest.mock
@@ -339,7 +339,7 @@ instantiate the class in those tests.
     >>> mock.old_method()
     Traceback (most recent call last):
        ...
-    AttributeError: Mock object has no attribute 'old_method'. Did you mean: 'class_method'?
+    AttributeError: object has no attribute 'old_method'
 
 Using a specification also enables a smarter matching of calls made to the
 mock, regardless of whether some parameters were passed as positional or
@@ -798,8 +798,7 @@ If your mock is only being called once you can use the
     >>> mock.foo_bar.assert_called_once_with('baz', spam='eggs')
     Traceback (most recent call last):
         ...
-    AssertionError: Expected 'foo_bar' to be called once. Called 2 times.
-    Calls: [call('baz', spam='eggs'), call()].
+    AssertionError: Expected to be called once. Called 2 times.
 
 Both ``assert_called_with`` and ``assert_called_once_with`` make assertions about
 the *most recent* call. If your mock is going to be called several times, and
@@ -928,9 +927,8 @@ Here's an example implementation:
     >>> c.assert_called_with(arg)
     Traceback (most recent call last):
         ...
-    AssertionError: expected call not found.
-    Expected: mock({1})
-    Actual: mock(set())
+    AssertionError: Expected call: mock({1})
+    Actual call: mock(set())
     >>> c.foo
     <CopyingMock name='mock.foo' id='...'>
 
@@ -1294,9 +1292,8 @@ sufficient:
     >>> mock.assert_called_with(Foo(1, 2))
     Traceback (most recent call last):
         ...
-    AssertionError: expected call not found.
-    Expected: mock(<__main__.Foo object at 0x...>)
-    Actual: mock(<__main__.Foo object at 0x...>)
+    AssertionError: Expected: call(<__main__.Foo object at 0x...>)
+    Actual call: call(<__main__.Foo object at 0x...>)
 
 A comparison function for our ``Foo`` class might look something like this:
 

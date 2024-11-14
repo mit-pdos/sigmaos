@@ -1,4 +1,4 @@
-"""turtledemo/two_canvases.py
+"""turtledemo.two_canvases
 
 Use TurtleScreen and RawTurtle to draw on two
 distinct canvases in a separate window. The

@@ -177,7 +177,7 @@ complete listing.
 .. c:macro:: Py_GETENV(s)
 
    Like ``getenv(s)``, but returns ``NULL`` if :option:`-E` was passed on the
-   command line (see :c:member:`PyConfig.use_environment`).
+   command line (i.e. if ``Py_IgnoreEnvironmentFlag`` is set).
 
 .. c:macro:: Py_MAX(x, y)
 
@@ -770,14 +770,14 @@ environment variable :envvar:`PYTHONHOME`, or insert additional directories in
 front of the standard path by setting :envvar:`PYTHONPATH`.
 
 .. index::
+   single: Py_SetProgramName (C function)
    single: Py_GetPath (C function)
    single: Py_GetPrefix (C function)
    single: Py_GetExecPrefix (C function)
    single: Py_GetProgramFullPath (C function)
 
-The embedding application can steer the search by setting
-:c:member:`PyConfig.program_name` *before* calling
-:c:func:`Py_InitializeFromConfig`. Note that
+The embedding application can steer the search by calling
+``Py_SetProgramName(file)`` *before* calling  :c:func:`Py_Initialize`.  Note that
 :envvar:`PYTHONHOME` still overrides this and :envvar:`PYTHONPATH` is still
 inserted in front of the standard path.  An application that requires total
 control has to provide its own implementation of :c:func:`Py_GetPath`,

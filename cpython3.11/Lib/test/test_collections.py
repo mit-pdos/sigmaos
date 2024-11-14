@@ -1,6 +1,5 @@
 """Unit tests for collections.py."""
 
-import array
 import collections
 import copy
 import doctest
@@ -26,7 +25,7 @@ from collections.abc import Sized, Container, Callable, Collection
 from collections.abc import Set, MutableSet
 from collections.abc import Mapping, MutableMapping, KeysView, ItemsView, ValuesView
 from collections.abc import Sequence, MutableSequence
-from collections.abc import Buffer
+from collections.abc import ByteString
 
 
 class TestUserObjects(unittest.TestCase):
@@ -71,14 +70,6 @@ class TestUserObjects(unittest.TestCase):
         obj = UserDict()
         obj[123] = "abc"
         self._copy_test(obj)
-
-    def test_dict_missing(self):
-        class A(UserDict):
-            def __missing__(self, key):
-                return 456
-        self.assertEqual(A()[123], 456)
-        # get() ignores __missing__ on dict
-        self.assertIs(A().get(123), None)
 
 
 ################################################################################
@@ -489,8 +480,12 @@ class TestNamedTuple(unittest.TestCase):
         self.assertEqual(p._replace(x=1), (1, 22))      # test _replace method
         self.assertEqual(p._asdict(), dict(x=11, y=22)) # test _asdict method
 
-        with self.assertRaises(TypeError):
+        try:
             p._replace(x=1, error=2)
+        except ValueError:
+            pass
+        else:
+            self._fail('Did not detect an incorrect fieldname')
 
         # verify that field string can have commas
         Point = namedtuple('Point', 'x, y')
@@ -542,7 +537,7 @@ class TestNamedTuple(unittest.TestCase):
         self.assertEqual(Dot(1)._replace(d=999), (999,))
         self.assertEqual(Dot(1)._fields, ('d',))
 
-        n = support.exceeds_recursion_limit()
+        n = 5000
         names = list(set(''.join([choice(string.ascii_letters)
                                   for j in range(10)]) for i in range(n)))
         n = len(names)
@@ -1623,7 +1618,7 @@ class TestCollectionABCs(ABCTestCase):
         class SetUsingInstanceFromIterable(MutableSet):
             def __init__(self, values, created_by):
                 if not created_by:
-                    raise ValueError('created_by must be specified')
+                    raise ValueError(f'created_by must be specified')
                 self.created_by = created_by
                 self._values = set(values)
 
@@ -1935,14 +1930,16 @@ class TestCollectionABCs(ABCTestCase):
                         assert_index_same(
                             nativeseq, seqseq, (letter, start, stop))
 
-    def test_Buffer(self):
-        for sample in [bytes, bytearray, memoryview]:
-            self.assertIsInstance(sample(b"x"), Buffer)
-            self.assertTrue(issubclass(sample, Buffer))
+    def test_ByteString(self):
+        for sample in [bytes, bytearray]:
+            self.assertIsInstance(sample(), ByteString)
+            self.assertTrue(issubclass(sample, ByteString))
         for sample in [str, list, tuple]:
-            self.assertNotIsInstance(sample(), Buffer)
-            self.assertFalse(issubclass(sample, Buffer))
-        self.validate_abstract_methods(Buffer, '__buffer__')
+            self.assertNotIsInstance(sample(), ByteString)
+            self.assertFalse(issubclass(sample, ByteString))
+        self.assertNotIsInstance(memoryview(b""), ByteString)
+        self.assertFalse(issubclass(memoryview, ByteString))
+        self.validate_abstract_methods(ByteString, '__getitem__', '__len__')
 
     def test_MutableSequence(self):
         for sample in [tuple, str, bytes]:
@@ -1951,7 +1948,6 @@ class TestCollectionABCs(ABCTestCase):
         for sample in [list, bytearray, deque]:
             self.assertIsInstance(sample(), MutableSequence)
             self.assertTrue(issubclass(sample, MutableSequence))
-        self.assertTrue(issubclass(array.array, MutableSequence))
         self.assertFalse(issubclass(str, MutableSequence))
         self.validate_abstract_methods(MutableSequence, '__contains__', '__iter__',
             '__len__', '__getitem__', '__setitem__', '__delitem__', 'insert')

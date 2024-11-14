@@ -1,5 +1,5 @@
-:mod:`!logging.config` --- Logging configuration
-================================================
+:mod:`logging.config` --- Logging configuration
+===============================================
 
 .. module:: logging.config
    :synopsis: Configuration of the logging module.
@@ -69,7 +69,7 @@ in :mod:`logging` itself) and defining handlers which are declared either in
              dictConfigClass(config).configure()
 
    For example, a subclass of :class:`DictConfigurator` could call
-   ``DictConfigurator.__init__()`` in its own :meth:`__init__`, then
+   ``DictConfigurator.__init__()`` in its own :meth:`__init__()`, then
    set up custom prefixes which would be usable in the subsequent
    :meth:`configure` call. :attr:`dictConfigClass` would be bound to
    this new subclass, and then :func:`dictConfig` could be called exactly as
@@ -130,7 +130,7 @@ in :mod:`logging` itself) and defining handlers which are declared either in
     .. versionchanged:: 3.10
        Added the *encoding* parameter.
 
-    .. versionchanged:: 3.12
+    .. versionchanged:: 3.11.4
        An exception will be thrown if the provided file
        doesn't exist or is invalid or empty.
 
@@ -261,7 +261,6 @@ otherwise, the context is used to determine what to instantiate.
   * ``datefmt``
   * ``style``
   * ``validate`` (since version >=3.8)
-  * ``defaults`` (since version >=3.12)
 
   An optional ``class`` key indicates the name of the formatter's
   class (as a dotted module and class name).  The instantiation
@@ -685,8 +684,7 @@ resolve to ``'dev_team@domain.tld'`` and the string
 ``'support_team@domain.tld'``. The ``subject`` value could be accessed
 using either ``'cfg://handlers.email.subject'`` or, equivalently,
 ``'cfg://handlers.email[subject]'``.  The latter form only needs to be
-used if the key contains spaces or non-alphanumeric characters. Please note
-that the characters ``[`` and ``]`` are not allowed in the keys. If an
+used if the key contains spaces or non-alphanumeric characters.  If an
 index value consists only of decimal digits, access will be attempted
 using the corresponding integer value, falling back to the string
 value if needed.
@@ -723,80 +721,6 @@ it with :func:`staticmethod`. For example::
 You don't need to wrap with :func:`staticmethod` if you're setting the import
 callable on a configurator *instance*.
 
-.. _configure-queue:
-
-Configuring QueueHandler and QueueListener
-""""""""""""""""""""""""""""""""""""""""""
-
-If you want to configure a :class:`~logging.handlers.QueueHandler`, noting that this
-is normally used in conjunction with a :class:`~logging.handlers.QueueListener`, you
-can configure both together. After the configuration, the ``QueueListener`` instance
-will be available as the :attr:`~logging.handlers.QueueHandler.listener` attribute of
-the created handler, and that in turn will be available to you using
-:func:`~logging.getHandlerByName` and passing the name you have used for the
-``QueueHandler`` in your configuration. The dictionary schema for configuring the pair
-is shown in the example YAML snippet below.
-
-.. code-block:: yaml
-
-    handlers:
-      qhand:
-        class: logging.handlers.QueueHandler
-        queue: my.module.queue_factory
-        listener: my.package.CustomListener
-        handlers:
-          - hand_name_1
-          - hand_name_2
-          ...
-
-The ``queue`` and ``listener`` keys are optional.
-
-If the ``queue`` key is present, the corresponding value can be one of the following:
-
-* An object implementing the :meth:`Queue.put_nowait <queue.Queue.put_nowait>`
-  and :meth:`Queue.get <queue.Queue.get>` public API. For instance, this may be
-  an actual instance of :class:`queue.Queue` or a subclass thereof, or a proxy
-  obtained by :meth:`multiprocessing.managers.SyncManager.Queue`.
-
-  This is of course only possible if you are constructing or modifying
-  the configuration dictionary in code.
-
-* A string that resolves to a callable which, when called with no arguments, returns
-  the queue instance to use. That callable could be a :class:`queue.Queue` subclass
-  or a function which returns a suitable queue instance,
-  such as ``my.module.queue_factory()``.
-
-* A dict with a ``'()'`` key which is constructed in the usual way as discussed in
-  :ref:`logging-config-dict-userdef`. The result of this construction should be a
-  :class:`queue.Queue` instance.
-
-If the  ``queue`` key is absent, a standard unbounded :class:`queue.Queue` instance is
-created and used.
-
-If the ``listener`` key is present, the corresponding value can be one of the following:
-
-* A subclass of :class:`logging.handlers.QueueListener`. This is of course only
-  possible if you are constructing or modifying the configuration dictionary in
-  code.
-
-* A string which resolves to a class which is a subclass of ``QueueListener``, such as
-  ``'my.package.CustomListener'``.
-
-* A dict with a ``'()'`` key which is constructed in the usual way as discussed in
-  :ref:`logging-config-dict-userdef`. The result of this construction should be a
-  callable with the same signature as the ``QueueListener`` initializer.
-
-If the ``listener`` key is absent, :class:`logging.handlers.QueueListener` is used.
-
-The values under the ``handlers`` key are the names of other handlers in the
-configuration (not shown in the above snippet) which will be passed to the queue
-listener.
-
-Any custom queue handler and listener classes will need to be defined with the same
-initialization signatures as :class:`~logging.handlers.QueueHandler` and
-:class:`~logging.handlers.QueueListener`.
-
-.. versionadded:: 3.12
 
 .. _logging-config-fileformat:
 
@@ -967,21 +891,15 @@ Sections which specify formatter configuration are typified by the following.
 .. code-block:: ini
 
    [formatter_form01]
-   format=F1 %(asctime)s %(levelname)s %(message)s %(customfield)s
+   format=F1 %(asctime)s %(levelname)s %(message)s
    datefmt=
    style=%
    validate=True
-   defaults={'customfield': 'defaultvalue'}
    class=logging.Formatter
 
 The arguments for the formatter configuration are the same as the keys
 in the dictionary schema :ref:`formatters section
 <logging-config-dictschema-formatters>`.
-
-The ``defaults`` entry, when :ref:`evaluated <func-eval>` in the context of
-the ``logging`` package's namespace, is a dictionary of default values for
-custom formatting fields. If not provided, it defaults to ``None``.
-
 
 .. note::
 

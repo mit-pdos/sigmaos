@@ -1,5 +1,5 @@
-:mod:`!random` --- Generate pseudo-random numbers
-=================================================
+:mod:`random` --- Generate pseudo-random numbers
+================================================
 
 .. module:: random
    :synopsis: Generate pseudo-random numbers with various common distributions.
@@ -55,15 +55,9 @@ from sources provided by the operating system.
 
 
    `Complementary-Multiply-with-Carry recipe
-   <https://code.activestate.com/recipes/576707-long-period-random-number-generator/>`_ for a compatible alternative
+   <https://code.activestate.com/recipes/576707/>`_ for a compatible alternative
    random number generator with a long period and comparatively simple update
    operations.
-
-.. note::
-   The global random number generator and instances of :class:`Random` are thread-safe.
-   However, in the free-threaded build, concurrent calls to the global generator or
-   to the same instance of :class:`Random` may encounter contention and poor performance.
-   Consider using separate instances of :class:`Random` per thread instead.
 
 
 Bookkeeping functions
@@ -127,26 +121,27 @@ Functions for integers
 .. function:: randrange(stop)
               randrange(start, stop[, step])
 
-   Return a randomly selected element from ``range(start, stop, step)``.
+   Return a randomly selected element from ``range(start, stop, step)``.  This is
+   equivalent to ``choice(range(start, stop, step))``, but doesn't actually build a
+   range object.
 
-   This is roughly equivalent to ``choice(range(start, stop, step))`` but
-   supports arbitrarily large ranges and is optimized for common cases.
-
-   The positional argument pattern matches the :func:`range` function.
-
-   Keyword arguments should not be used because they can be interpreted
-   in unexpected ways. For example ``randrange(start=100)`` is interpreted
-   as ``randrange(0, 100, 1)``.
+   The positional argument pattern matches that of :func:`range`.  Keyword arguments
+   should not be used because the function may use them in unexpected ways.
 
    .. versionchanged:: 3.2
       :meth:`randrange` is more sophisticated about producing equally distributed
       values.  Formerly it used a style like ``int(random()*n)`` which could produce
       slightly uneven distributions.
 
-   .. versionchanged:: 3.12
-      Automatic conversion of non-integer types is no longer supported.
-      Calls such as ``randrange(10.0)`` and ``randrange(Fraction(10, 1))``
-      now raise a :exc:`TypeError`.
+   .. deprecated:: 3.10
+      The automatic conversion of non-integer types to equivalent integers is
+      deprecated.  Currently ``randrange(10.0)`` is losslessly converted to
+      ``randrange(10)``.  In the future, this will raise a :exc:`TypeError`.
+
+   .. deprecated:: 3.10
+      The exception raised for non-integer values such as ``randrange(10.5)``
+      or ``randrange('10')`` will be changed from :exc:`ValueError` to
+      :exc:`TypeError`.
 
 .. function:: randint(a, b)
 
@@ -156,7 +151,7 @@ Functions for integers
 .. function:: getrandbits(k)
 
    Returns a non-negative Python integer with *k* random bits. This method
-   is supplied with the Mersenne Twister generator and some other generators
+   is supplied with the MersenneTwister generator and some other generators
    may also provide it as an optional part of the API. When available,
    :meth:`getrandbits` enables :meth:`randrange` to handle arbitrarily large
    ranges.
@@ -200,8 +195,8 @@ Functions for sequences
 
    For a given seed, the :func:`choices` function with equal weighting
    typically produces a different sequence than repeated calls to
-   :func:`choice`.  The algorithm used by :func:`choices` uses floating-point
-   arithmetic for internal consistency and speed.  The algorithm used
+   :func:`choice`.  The algorithm used by :func:`choices` uses floating
+   point arithmetic for internal consistency and speed.  The algorithm used
    by :func:`choice` defaults to integer arithmetic with repeated selections
    to avoid small biases from round-off error.
 
@@ -262,28 +257,6 @@ Functions for sequences
       The *population* must be a sequence.  Automatic conversion of sets
       to lists is no longer supported.
 
-Discrete distributions
-----------------------
-
-The following function generates a discrete distribution.
-
-.. function:: binomialvariate(n=1, p=0.5)
-
-   `Binomial distribution
-   <https://mathworld.wolfram.com/BinomialDistribution.html>`_.
-   Return the number of successes for *n* independent trials with the
-   probability of success in each trial being *p*:
-
-   Mathematically equivalent to::
-
-       sum(random() < p for i in range(n))
-
-   The number of trials *n* should be a non-negative integer.
-   The probability of success *p* should be between ``0.0 <= p <= 1.0``.
-   The result is an integer in the range ``0 <= X <= n``.
-
-   .. versionadded:: 3.12
-
 
 .. _real-valued-distributions:
 
@@ -298,12 +271,12 @@ be found in any statistics text.
 
 .. function:: random()
 
-   Return the next random floating-point number in the range ``0.0 <= X < 1.0``
+   Return the next random floating point number in the range ``0.0 <= X < 1.0``
 
 
 .. function:: uniform(a, b)
 
-   Return a random floating-point number *N* such that ``a <= N <= b`` for
+   Return a random floating point number *N* such that ``a <= N <= b`` for
    ``a <= b`` and ``b <= N <= a`` for ``b < a``.
 
    The end-point value ``b`` may or may not be included in the range
@@ -313,7 +286,7 @@ be found in any statistics text.
 
 .. function:: triangular(low, high, mode)
 
-   Return a random floating-point number *N* such that ``low <= N <= high`` and
+   Return a random floating point number *N* such that ``low <= N <= high`` and
    with the specified *mode* between those bounds.  The *low* and *high* bounds
    default to zero and one.  The *mode* argument defaults to the midpoint
    between the bounds, giving a symmetric distribution.
@@ -325,16 +298,13 @@ be found in any statistics text.
    ``beta > 0``. Returned values range between 0 and 1.
 
 
-.. function:: expovariate(lambd = 1.0)
+.. function:: expovariate(lambd)
 
    Exponential distribution.  *lambd* is 1.0 divided by the desired
    mean.  It should be nonzero.  (The parameter would be called
    "lambda", but that is a reserved word in Python.)  Returned values
    range from 0 to positive infinity if *lambd* is positive, and from
    negative infinity to 0 if *lambd* is negative.
-
-   .. versionchanged:: 3.12
-      Added the default value for ``lambd``.
 
 
 .. function:: gammavariate(alpha, beta)
@@ -462,7 +432,7 @@ Notes on Reproducibility
 ------------------------
 
 Sometimes it is useful to be able to reproduce the sequences given by a
-pseudo-random number generator.  By reusing a seed value, the same sequence should be
+pseudo-random number generator.  By re-using a seed value, the same sequence should be
 reproducible from run to run as long as multiple threads are not running.
 
 Most of the random module's algorithms and seeding functions are subject to
@@ -516,13 +486,16 @@ Simulations::
    >>> # Deal 20 cards without replacement from a deck
    >>> # of 52 playing cards, and determine the proportion of cards
    >>> # with a ten-value:  ten, jack, queen, or king.
-   >>> deal = sample(['tens', 'low cards'], counts=[16, 36], k=20)
-   >>> deal.count('tens') / 20
+   >>> dealt = sample(['tens', 'low cards'], counts=[16, 36], k=20)
+   >>> dealt.count('tens') / 20
    0.15
 
    >>> # Estimate the probability of getting 5 or more heads from 7 spins
    >>> # of a biased coin that settles on heads 60% of the time.
-   >>> sum(binomialvariate(n=7, p=0.6) >= 5 for i in range(10_000)) / 10_000
+   >>> def trial():
+   ...     return choices('HT', cum_weights=(0.60, 1.00), k=7).count('H') >= 5
+   ...
+   >>> sum(trial() for i in range(10_000)) / 10_000
    0.4169
 
    >>> # Probability of the median of 5 samples being in middle two quartiles
@@ -706,83 +679,3 @@ positive unnormalized float and is equal to ``math.ulp(0.0)``.)
    <https://allendowney.com/research/rand/downey07randfloat.pdf>`_ a
    paper by Allen B. Downey describing ways to generate more
    fine-grained floats than normally generated by :func:`.random`.
-
-.. _random-cli:
-
-Command-line usage
-------------------
-
-.. versionadded:: 3.13
-
-The :mod:`!random` module can be executed from the command line.
-
-.. code-block:: sh
-
-   python -m random [-h] [-c CHOICE [CHOICE ...] | -i N | -f N] [input ...]
-
-The following options are accepted:
-
-.. program:: random
-
-.. option:: -h, --help
-
-   Show the help message and exit.
-
-.. option:: -c CHOICE [CHOICE ...]
-            --choice CHOICE [CHOICE ...]
-
-   Print a random choice, using :meth:`choice`.
-
-.. option:: -i <N>
-            --integer <N>
-
-   Print a random integer between 1 and N inclusive, using :meth:`randint`.
-
-.. option:: -f <N>
-            --float <N>
-
-   Print a random floating-point number between 0 and N inclusive,
-   using :meth:`uniform`.
-
-If no options are given, the output depends on the input:
-
-* String or multiple: same as :option:`--choice`.
-* Integer: same as :option:`--integer`.
-* Float: same as :option:`--float`.
-
-.. _random-cli-example:
-
-Command-line example
---------------------
-
-Here are some examples of the :mod:`!random` command-line interface:
-
-.. code-block:: console
-
-   $ # Choose one at random
-   $ python -m random egg bacon sausage spam "Lobster Thermidor aux crevettes with a Mornay sauce"
-   Lobster Thermidor aux crevettes with a Mornay sauce
-
-   $ # Random integer
-   $ python -m random 6
-   6
-
-   $ # Random floating-point number
-   $ python -m random 1.8
-   1.7080016272295635
-
-   $ # With explicit arguments
-   $ python  -m random --choice egg bacon sausage spam "Lobster Thermidor aux crevettes with a Mornay sauce"
-   egg
-
-   $ python -m random --integer 6
-   3
-
-   $ python -m random --float 1.8
-   1.5666339105010318
-
-   $ python -m random --integer 6
-   5
-
-   $ python -m random --float 6
-   3.1942323316565915

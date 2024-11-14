@@ -1,4 +1,7 @@
-"""turtledemo/planets_and_moon.py
+#!/usr/bin/env python3
+"""       turtle-example-suite:
+
+        tdemo_planets_and_moon.py
 
 Gravitational system simulation using the
 approximation method from Feynman-lectures,

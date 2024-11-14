@@ -15,7 +15,6 @@ from test.support import _4G, bigmemtest, requires_subprocess
 from test.support.script_helper import assert_python_ok, assert_python_failure
 
 gzip = import_helper.import_module('gzip')
-zlib = import_helper.import_module('zlib')
 
 data1 = b"""  int length=DEFAULTALLOC, err = Z_OK;
   PyObject *RetVal;
@@ -587,8 +586,6 @@ class TestGzip(BaseTest):
             self.assertRaises(AttributeError, f.fileno)
 
     def test_fileobj_mode(self):
-        self.assertEqual(gzip.READ, 'rb')
-        self.assertEqual(gzip.WRITE, 'wb')
         gzip.GzipFile(self.filename, "wb").close()
         with open(self.filename, "r+b") as f:
             with gzip.GzipFile(fileobj=f, mode='r') as g:
@@ -713,35 +710,14 @@ class TestGzip(BaseTest):
                         f.read(1) # to set mtime attribute
                         self.assertEqual(f.mtime, mtime)
 
-    def test_compress_mtime_default(self):
-        # test for gh-125260
-        datac = gzip.compress(data1, mtime=0)
-        datac2 = gzip.compress(data1)
-        self.assertEqual(datac, datac2)
-        datac3 = gzip.compress(data1, mtime=None)
-        self.assertNotEqual(datac, datac3)
-        with gzip.GzipFile(fileobj=io.BytesIO(datac3), mode="rb") as f:
-            f.read(1) # to set mtime attribute
-            self.assertGreater(f.mtime, 1)
-
     def test_compress_correct_level(self):
+        # gzip.compress calls with mtime == 0 take a different code path.
         for mtime in (0, 42):
             with self.subTest(mtime=mtime):
                 nocompress = gzip.compress(data1, compresslevel=0, mtime=mtime)
                 yescompress = gzip.compress(data1, compresslevel=1, mtime=mtime)
                 self.assertIn(data1, nocompress)
                 self.assertNotIn(data1, yescompress)
-
-    def test_issue112346(self):
-        # The OS byte should be 255, this should not change between Python versions.
-        for mtime in (0, 42):
-            with self.subTest(mtime=mtime):
-                compress = gzip.compress(data1, compresslevel=1, mtime=mtime)
-                self.assertEqual(
-                    struct.unpack("<IxB", compress[4:10]),
-                    (mtime, 255),
-                    "Gzip header does not properly set either mtime or OS byte."
-                )
 
     def test_decompress(self):
         for data in (data1, data2):
@@ -797,66 +773,6 @@ class TestGzip(BaseTest):
         with gzip.GzipFile(fileobj=io.BytesIO(), mode='w') as f:
             self.assertEqual(f.write(q), LENGTH)
             self.assertEqual(f.tell(), LENGTH)
-
-    def test_flush_flushes_compressor(self):
-        # See issue GH-105808.
-        b = io.BytesIO()
-        message = b"important message here."
-        with gzip.GzipFile(fileobj=b, mode='w') as f:
-            f.write(message)
-            f.flush()
-            partial_data = b.getvalue()
-        full_data = b.getvalue()
-        self.assertEqual(gzip.decompress(full_data), message)
-        # The partial data should contain the gzip header and the complete
-        # message, but not the end-of-stream markers (so we can't just
-        # decompress it directly).
-        with self.assertRaises(EOFError):
-            gzip.decompress(partial_data)
-        d = zlib.decompressobj(wbits=-zlib.MAX_WBITS)
-        f = io.BytesIO(partial_data)
-        gzip._read_gzip_header(f)
-        read_message = d.decompress(f.read())
-        self.assertEqual(read_message, message)
-
-    def test_flush_modes(self):
-        # Make sure the argument to flush is properly passed to the
-        # zlib.compressobj; see issue GH-105808.
-        class FakeCompressor:
-            def __init__(self):
-                self.modes = []
-            def compress(self, data):
-                return b''
-            def flush(self, mode=-1):
-                self.modes.append(mode)
-                return b''
-        b = io.BytesIO()
-        fc = FakeCompressor()
-        with gzip.GzipFile(fileobj=b, mode='w') as f:
-            f.compress = fc
-            f.flush()
-            f.flush(50)
-            f.flush(zlib_mode=100)
-        # The implicit close will also flush the compressor.
-        expected_modes = [
-            zlib.Z_SYNC_FLUSH,
-            50,
-            100,
-            -1,
-        ]
-        self.assertEqual(fc.modes, expected_modes)
-
-    def test_write_seek_write(self):
-        # Make sure that offset is up-to-date before seeking
-        # See issue GH-108111
-        b = io.BytesIO()
-        message = b"important message here."
-        with gzip.GzipFile(fileobj=b, mode='w') as f:
-            f.write(message)
-            f.seek(len(message))
-            f.write(message)
-        data = b.getvalue()
-        self.assertEqual(gzip.decompress(data), message * 2)
 
 
 class TestOpen(BaseTest):

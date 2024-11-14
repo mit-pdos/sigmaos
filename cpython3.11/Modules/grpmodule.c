@@ -1,18 +1,10 @@
-/* UNIX group file access module */
 
-// Need limited C API version 3.13 for PyMem_RawRealloc()
-#include "pyconfig.h"   // Py_GIL_DISABLED
-#ifndef Py_GIL_DISABLED
-#define Py_LIMITED_API 0x030d0000
-#endif
+/* UNIX group file access module */
 
 #include "Python.h"
 #include "posixmodule.h"
 
-#include <errno.h>                // ERANGE
-#include <grp.h>                  // getgrgid_r()
-#include <string.h>               // memcpy()
-#include <unistd.h>               // sysconf()
+#include <grp.h>
 
 #include "clinic/grpmodule.c.h"
 /*[clinic input]
@@ -90,7 +82,7 @@ mkgrent(PyObject *module, struct group *p)
         Py_DECREF(x);
     }
 
-#define SET(i,val) PyStructSequence_SetItem(v, i, val)
+#define SET(i,val) PyStructSequence_SET_ITEM(v, i, val)
     SET(setIndex++, PyUnicode_DecodeFSDefault(p->gr_name));
     if (p->gr_passwd)
             SET(setIndex++, PyUnicode_DecodeFSDefault(p->gr_passwd));
@@ -341,8 +333,6 @@ grpmodule_exec(PyObject *module)
 
 static PyModuleDef_Slot grpmodule_slots[] = {
     {Py_mod_exec, grpmodule_exec},
-    {Py_mod_multiple_interpreters, Py_MOD_PER_INTERPRETER_GIL_SUPPORTED},
-    {Py_mod_gil, Py_MOD_GIL_NOT_USED},
     {0, NULL}
 };
 

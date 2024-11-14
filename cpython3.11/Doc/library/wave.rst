@@ -1,5 +1,5 @@
-:mod:`!wave` --- Read and write WAV files
-=========================================
+:mod:`wave` --- Read and write WAV files
+========================================
 
 .. module:: wave
    :synopsis: Provide an interface to the WAV sound format.
@@ -12,13 +12,9 @@
 --------------
 
 The :mod:`wave` module provides a convenient interface to the Waveform Audio
-"WAVE" (or "WAV") file format. Only uncompressed PCM encoded wave files are
-supported.
-
-.. versionchanged:: 3.12
-
-   Support for ``WAVE_FORMAT_EXTENSIBLE`` headers was added, provided that the
-   extended format is ``KSDATAFORMAT_SUBTYPE_PCM``.
+"WAVE" (or "WAV") file format.
+Only files using ``WAVE_FORMAT_PCM`` are supported. Note that this does not
+include files using ``WAVE_FORMAT_EXTENSIBLE`` even if the subformat is PCM.
 
 The :mod:`wave` module defines the following function and exception:
 
@@ -46,8 +42,8 @@ The :mod:`wave` module defines the following function and exception:
    the file object.
 
    The :func:`.open` function may be used in a :keyword:`with` statement.  When
-   the :keyword:`!with` block completes, the :meth:`Wave_read.close` or
-   :meth:`Wave_write.close` method is called.
+   the :keyword:`!with` block completes, the :meth:`Wave_read.close()` or
+   :meth:`Wave_write.close()` method is called.
 
    .. versionchanged:: 3.4
       Added support for unseekable files.
@@ -123,7 +119,7 @@ Wave_read Objects
 
       Rewind the file pointer to the beginning of the audio stream.
 
-   The following two methods are defined for compatibility with the old :mod:`!aifc`
+   The following two methods are defined for compatibility with the :mod:`aifc`
    module, and don't do anything interesting.
 
 
@@ -131,18 +127,10 @@ Wave_read Objects
 
       Returns ``None``.
 
-      .. deprecated-removed:: 3.13 3.15
-         The method only existed for compatibility with the :mod:`!aifc` module
-         which has been removed in Python 3.13.
-
 
    .. method:: getmark(id)
 
       Raise an error.
-
-      .. deprecated-removed:: 3.13 3.15
-         The method only existed for compatibility with the :mod:`!aifc` module
-         which has been removed in Python 3.13.
 
    The following two methods define a term "position" which is compatible between
    them, and is otherwise implementation dependent.

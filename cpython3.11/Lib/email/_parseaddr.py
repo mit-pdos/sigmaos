@@ -1,4 +1,4 @@
-# Copyright (C) 2002 Python Software Foundation
+# Copyright (C) 2002-2007 Python Software Foundation
 # Contact: email-sig@python.org
 
 """Email address parsing code.
@@ -13,7 +13,7 @@ __all__ = [
     'quote',
     ]
 
-import time
+import time, calendar
 
 SPACE = ' '
 EMPTYSTRING = ''
@@ -194,9 +194,6 @@ def mktime_tz(data):
         # No zone info, so localtime is better assumption than GMT
         return time.mktime(data[:8] + (-1,))
     else:
-        # Delay the import, since mktime_tz is rarely used
-        import calendar
-
         t = calendar.timegm(data)
         return t - data[9]
 
@@ -224,7 +221,7 @@ class AddrlistClass:
     def __init__(self, field):
         """Initialize a new instance.
 
-        'field' is an unparsed address header field, containing
+        `field' is an unparsed address header field, containing
         one or more addresses.
         """
         self.specials = '()<>@,:;.\"[]'
@@ -233,7 +230,7 @@ class AddrlistClass:
         self.CR = '\r\n'
         self.FWS = self.LWS + self.CR
         self.atomends = self.specials + self.LWS + self.CR
-        # Note that RFC 2822 now specifies '.' as obs-phrase, meaning that it
+        # Note that RFC 2822 now specifies `.' as obs-phrase, meaning that it
         # is obsolete syntax.  RFC 2822 requires that we recognize obsolete
         # syntax, so allow dots in phrases.
         self.phraseends = self.atomends.replace('.', '')
@@ -423,14 +420,14 @@ class AddrlistClass:
     def getdelimited(self, beginchar, endchars, allowcomments=True):
         """Parse a header fragment delimited by special characters.
 
-        'beginchar' is the start character for the fragment.
-        If self is not looking at an instance of 'beginchar' then
+        `beginchar' is the start character for the fragment.
+        If self is not looking at an instance of `beginchar' then
         getdelimited returns the empty string.
 
-        'endchars' is a sequence of allowable end-delimiting characters.
+        `endchars' is a sequence of allowable end-delimiting characters.
         Parsing stops when one of these is encountered.
 
-        If 'allowcomments' is non-zero, embedded RFC 2822 comments are allowed
+        If `allowcomments' is non-zero, embedded RFC 2822 comments are allowed
         within the parsed fragment.
         """
         if self.field[self.pos] != beginchar:
@@ -474,7 +471,7 @@ class AddrlistClass:
 
         Optional atomends specifies a different set of end token delimiters
         (the default is to use self.atomends).  This is used e.g. in
-        getphraselist() since phrase endings must not include the '.' (which
+        getphraselist() since phrase endings must not include the `.' (which
         is legal in phrases)."""
         atomlist = ['']
         if atomends is None:

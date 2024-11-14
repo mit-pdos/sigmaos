@@ -310,8 +310,11 @@ class BaseProcess(object):
                 # _run_after_forkers() is executed
                 del old_process
             util.info('child process calling self.run()')
-            self.run()
-            exitcode = 0
+            try:
+                self.run()
+                exitcode = 0
+            finally:
+                util._exit_function()
         except SystemExit as e:
             if e.code is None:
                 exitcode = 0

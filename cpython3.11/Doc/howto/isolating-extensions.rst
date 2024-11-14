@@ -1,7 +1,5 @@
 .. highlight:: c
 
-.. _isolating-extensions-howto:
-
 ***************************
 Isolating Extension Modules
 ***************************
@@ -64,7 +62,7 @@ Enter Per-Module State
 
 Instead of focusing on per-interpreter state, Python's C API is evolving
 to better support the more granular *per-module* state.
-This means that C-level data should be attached to a *module object*.
+This means that C-level data is be attached to a *module object*.
 Each interpreter creates its own module object, keeping the data separate.
 For testing the isolation, multiple module objects corresponding to a single
 extension can even be loaded in a single interpreter.
@@ -339,7 +337,7 @@ That is, heap types should:
 - Define a traverse function using ``Py_tp_traverse``, which
   visits the type (e.g. using ``Py_VISIT(Py_TYPE(self))``).
 
-Please refer to the documentation of
+Please refer to the the documentation of
 :c:macro:`Py_TPFLAGS_HAVE_GC` and :c:member:`~PyTypeObject.tp_traverse`
 for additional considerations.
 
@@ -465,7 +463,7 @@ To save a some tedious error-handling boilerplate code, you can combine
 these two steps with :c:func:`PyType_GetModuleState`, resulting in::
 
    my_struct *state = (my_struct*)PyType_GetModuleState(type);
-   if (state == NULL) {
+   if (state === NULL) {
        return NULL;
    }
 
@@ -528,7 +526,7 @@ For example::
            PyObject *kwnames)
    {
        my_struct *state = (my_struct*)PyType_GetModuleState(defining_class);
-       if (state == NULL) {
+       if (state === NULL) {
            return NULL;
        }
        ... // rest of logic
@@ -572,7 +570,7 @@ to get the state::
 
     PyObject *module = PyType_GetModuleByDef(Py_TYPE(self), &module_def);
     my_struct *state = (my_struct*)PyModule_GetState(module);
-    if (state == NULL) {
+    if (state === NULL) {
         return NULL;
     }
 

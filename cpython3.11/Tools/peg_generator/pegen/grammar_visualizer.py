@@ -29,6 +29,7 @@ class ASTGrammarPrinter:
             printer(self.print_nodes_recursively(rule))
 
     def print_nodes_recursively(self, node: Rule, prefix: str = "", istail: bool = True) -> str:
+
         children = list(self.children(node))
         value = self.name(node)
 

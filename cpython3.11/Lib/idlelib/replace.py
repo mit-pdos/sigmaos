@@ -4,6 +4,7 @@ Defines various replace related functions like replace, replace all,
 and replace+find.
 """
 import re
+re.PatternError = re.error  # New in 3.13.
 
 from tkinter import StringVar, TclError
 

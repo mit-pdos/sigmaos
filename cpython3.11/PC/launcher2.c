@@ -132,7 +132,7 @@ typedef BOOL (*PIsWow64Process2)(HANDLE, USHORT*, USHORT*);
 
 
 USHORT
-_getNativeMachine(void)
+_getNativeMachine()
 {
     static USHORT _nativeMachine = IMAGE_FILE_MACHINE_UNKNOWN;
     if (_nativeMachine == IMAGE_FILE_MACHINE_UNKNOWN) {
@@ -163,14 +163,14 @@ _getNativeMachine(void)
 
 
 bool
-isAMD64Host(void)
+isAMD64Host()
 {
     return _getNativeMachine() == IMAGE_FILE_MACHINE_AMD64;
 }
 
 
 bool
-isARM64Host(void)
+isARM64Host()
 {
     return _getNativeMachine() == IMAGE_FILE_MACHINE_ARM64;
 }
@@ -192,13 +192,6 @@ join(wchar_t *buffer, size_t bufferLength, const wchar_t *fragment)
         return true;
     }
     return false;
-}
-
-
-bool
-split_parent(wchar_t *buffer, size_t bufferLength)
-{
-    return SUCCEEDED(PathCchRemoveFileSpec(buffer, bufferLength));
 }
 
 
@@ -421,8 +414,8 @@ typedef struct {
     // if true, treats 'tag' as a non-PEP 514 filter
     bool oldStyleTag;
     // if true, ignores 'tag' when a high priority environment is found
-    // gh-92817: This is currently set when a tag is read from configuration,
-    // the environment, or a shebang, rather than the command line, and the
+    // gh-92817: This is currently set when a tag is read from configuration or
+    // the environment, rather than the command line or a shebang line, and the
     // only currently possible high priority environment is an active virtual
     // environment
     bool lowPriorityTag;
@@ -438,7 +431,7 @@ typedef struct {
     bool list;
     // if true, only list detected runtimes with paths without launching
     bool listPaths;
-    // if true, display help message before continuing
+    // if true, display help message before contiuning
     bool help;
     // if set, limits search to registry keys with the specified Company
     // This is intended for debugging and testing only
@@ -499,14 +492,10 @@ dumpSearchInfo(SearchInfo *search)
         return;
     }
 
-#ifdef __clang__
-#define DEBUGNAME(s) L # s
-#else
-#define DEBUGNAME(s) # s
-#endif
-#define DEBUG(s) debug(L"SearchInfo." DEBUGNAME(s) L": %s\n", (search->s) ? (search->s) : L"(null)")
-#define DEBUG_2(s, sl) _debugStringAndLength((search->s), (search->sl), L"SearchInfo." DEBUGNAME(s))
-#define DEBUG_BOOL(s) debug(L"SearchInfo." DEBUGNAME(s) L": %s\n", (search->s) ? L"True" : L"False")
+#define DEBUGNAME(s) L"SearchInfo." ## s
+#define DEBUG(s) debug(DEBUGNAME(#s) L": %s\n", (search->s) ? (search->s) : L"(null)")
+#define DEBUG_2(s, sl) _debugStringAndLength((search->s), (search->sl), DEBUGNAME(#s))
+#define DEBUG_BOOL(s) debug(DEBUGNAME(#s) L": %s\n", (search->s) ? L"True" : L"False")
     DEBUG(originalCmdLine);
     DEBUG(restOfCmdLine);
     DEBUG(executablePath);
@@ -853,7 +842,7 @@ searchPath(SearchInfo *search, const wchar_t *shebang, int shebangLength)
     }
 
     wchar_t filename[MAXLEN];
-    if (wcsncpy_s(filename, MAXLEN, command, commandLength)) {
+    if (wcsncpy_s(filename, MAXLEN, command, lastDot)) {
         return RC_BAD_VIRTUAL_PATH;
     }
 
@@ -864,8 +853,6 @@ searchPath(SearchInfo *search, const wchar_t *shebang, int shebangLength)
             return RC_BAD_VIRTUAL_PATH;
         }
     }
-
-    debug(L"# Search PATH for %s\n", filename);
 
     wchar_t pathVariable[MAXLEN];
     int n = GetEnvironmentVariableW(L"PATH", pathVariable, MAXLEN);
@@ -1109,11 +1096,8 @@ checkShebang(SearchInfo *search)
     debug(L"Shebang: %s\n", shebang);
 
     // Handle shebangs that we should search PATH for
-    int executablePathWasSetByUsrBinEnv = 0;
     exitCode = searchPath(search, shebang, shebangLength);
-    if (exitCode == 0) {
-        executablePathWasSetByUsrBinEnv = 1;
-    } else if (exitCode != RC_NO_SHEBANG) {
+    if (exitCode != RC_NO_SHEBANG) {
         return exitCode;
     }
 
@@ -1148,7 +1132,7 @@ checkShebang(SearchInfo *search)
             search->tagLength = commandLength;
             // If we had 'python3.12.exe' then we want to strip the suffix
             // off of the tag
-            if (search->tagLength >= 4) {
+            if (search->tagLength > 4) {
                 const wchar_t *suffix = &search->tag[search->tagLength - 4];
                 if (0 == _comparePath(suffix, 4, L".exe", -1)) {
                     search->tagLength -= 4;
@@ -1156,14 +1140,13 @@ checkShebang(SearchInfo *search)
             }
             // If we had 'python3_d' then we want to strip the '_d' (any
             // '.exe' is already gone)
-            if (search->tagLength >= 2) {
+            if (search->tagLength > 2) {
                 const wchar_t *suffix = &search->tag[search->tagLength - 2];
                 if (0 == _comparePath(suffix, 2, L"_d", -1)) {
                     search->tagLength -= 2;
                 }
             }
             search->oldStyleTag = true;
-            search->lowPriorityTag = true;
             search->executableArgs = &command[commandLength];
             search->executableArgsLength = shebangLength - commandLength;
             if (search->tag && search->tagLength) {
@@ -1175,11 +1158,6 @@ checkShebang(SearchInfo *search)
             }
             return 0;
         }
-    }
-
-    // Didn't match a template, but we found it on PATH
-    if (executablePathWasSetByUsrBinEnv) {
-        return 0;
     }
 
     // Unrecognised executables are first tried as command aliases
@@ -1594,7 +1572,6 @@ _registryReadLegacyEnvironment(const SearchInfo *search, HKEY root, EnvironmentI
 
             int count = swprintf_s(realTag, tagLength + 4, L"%s-32", env->tag);
             if (count == -1) {
-                debug(L"# Failed to generate 32bit tag\n");
                 free(realTag);
                 return RC_INTERNAL_ERROR;
             }
@@ -1750,18 +1727,10 @@ appxSearch(const SearchInfo *search, EnvironmentInfo **result, const wchar_t *pa
         exeName = search->windowed ? L"pythonw.exe" : L"python.exe";
     }
 
-    // Failure to get LocalAppData may just mean we're running as a user who
-    // doesn't have a profile directory.
-    // In this case, return "not found", but don't fail.
-    // Chances are they can't launch Store installs anyway.
-    if (FAILED(SHGetFolderPathW(NULL, CSIDL_LOCAL_APPDATA, NULL, 0, buffer))) {
-        return RC_NO_PYTHON;
-    }
-
-    if (!join(buffer, MAXLEN, L"Microsoft\\WindowsApps") ||
+    if (FAILED(SHGetFolderPathW(NULL, CSIDL_LOCAL_APPDATA, NULL, 0, buffer)) ||
+        !join(buffer, MAXLEN, L"Microsoft\\WindowsApps") ||
         !join(buffer, MAXLEN, packageFamilyName) ||
         !join(buffer, MAXLEN, exeName)) {
-        debug(L"# Failed to construct App Execution Alias path\n");
         return RC_INTERNAL_ERROR;
     }
 
@@ -1861,15 +1830,7 @@ virtualenvSearch(const SearchInfo *search, EnvironmentInfo **result)
         return 0;
     }
 
-    DWORD attr = GetFileAttributesW(buffer);
-    if (INVALID_FILE_ATTRIBUTES == attr && search->lowPriorityTag) {
-        if (!split_parent(buffer, MAXLEN) || !join(buffer, MAXLEN, L"python.exe")) {
-            return 0;
-        }
-        attr = GetFileAttributesW(buffer);
-    }
-
-    if (INVALID_FILE_ATTRIBUTES == attr) {
+    if (INVALID_FILE_ATTRIBUTES == GetFileAttributesW(buffer)) {
         debug(L"Python executable %s missing from virtual env\n", buffer);
         return 0;
     }
@@ -1962,7 +1923,6 @@ struct AppxSearchInfo {
 
 struct AppxSearchInfo APPX_SEARCH[] = {
     // Releases made through the Store
-    { L"PythonSoftwareFoundation.Python.3.14_qbz5n2kfra8p0", L"3.14", 10 },
     { L"PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0", L"3.13", 10 },
     { L"PythonSoftwareFoundation.Python.3.12_qbz5n2kfra8p0", L"3.12", 10 },
     { L"PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0", L"3.11", 10 },
@@ -1971,9 +1931,8 @@ struct AppxSearchInfo APPX_SEARCH[] = {
     { L"PythonSoftwareFoundation.Python.3.8_qbz5n2kfra8p0", L"3.8", 10 },
 
     // Side-loadable releases. Note that the publisher ID changes whenever we
-    // change our code signing certificate subject, so the newer IDs have higher
-    // priorities (lower sortKey)
-    { L"PythonSoftwareFoundation.Python.3.14_3847v3x7pw1km", L"3.14", 11 },
+    // renew our code-signing certificate, so the newer ID has a higher
+    // priority (lower sortKey)
     { L"PythonSoftwareFoundation.Python.3.13_3847v3x7pw1km", L"3.13", 11 },
     { L"PythonSoftwareFoundation.Python.3.12_3847v3x7pw1km", L"3.12", 11 },
     { L"PythonSoftwareFoundation.Python.3.11_3847v3x7pw1km", L"3.11", 11 },
@@ -1995,7 +1954,6 @@ collectEnvironments(const SearchInfo *search, EnvironmentInfo **result)
     EnvironmentInfo *env = NULL;
 
     if (!result) {
-        debug(L"# collectEnvironments() was passed a NULL result\n");
         return RC_INTERNAL_ERROR;
     }
     *result = NULL;
@@ -2056,8 +2014,7 @@ struct StoreSearchInfo {
 
 
 struct StoreSearchInfo STORE_SEARCH[] = {
-    { L"3", /* 3.13 */ L"9PNRBTZXMB4Z" },
-    { L"3.14", L"9NTRHQCBBPR8" },
+    { L"3", /* 3.12 */ L"9NCVDN91XZQP" },
     { L"3.13", L"9PNRBTZXMB4Z" },
     { L"3.12", L"9NCVDN91XZQP" },
     { L"3.11", L"9NRWMJP3717K" },
@@ -2292,7 +2249,6 @@ int
 selectEnvironment(const SearchInfo *search, EnvironmentInfo *root, EnvironmentInfo **best)
 {
     if (!best) {
-        debug(L"# selectEnvironment() was passed a NULL best\n");
         return RC_INTERNAL_ERROR;
     }
     if (!root) {
@@ -2585,7 +2541,8 @@ launchEnvironment(const SearchInfo *search, const EnvironmentInfo *launch, wchar
     window, or fetching a message).  As this launcher doesn't do this
     directly, that cursor remains even after the child process does these
     things.  We avoid that by doing a simple post+get message.
-    See http://bugs.python.org/issue17290
+    See http://bugs.python.org/issue17290 and
+    https://bitbucket.org/vinay.sajip/pylauncher/issue/20/busy-cursor-for-a-long-time-when-running
     */
     MSG msg;
 
@@ -2710,11 +2667,6 @@ process(int argc, wchar_t ** argv)
     DWORD len = GetEnvironmentVariableW(L"PYLAUNCHER_LIMIT_TO_COMPANY", NULL, 0);
     if (len > 1) {
         wchar_t *limitToCompany = allocSearchInfoBuffer(&search, len);
-        if (!limitToCompany) {
-            exitCode = RC_NO_MEMORY;
-            winerror(0, L"Failed to allocate internal buffer");
-            goto abort;
-        }
         search.limitToCompany = limitToCompany;
         if (0 == GetEnvironmentVariableW(L"PYLAUNCHER_LIMIT_TO_COMPANY", limitToCompany, len)) {
             exitCode = RC_INTERNAL_ERROR;

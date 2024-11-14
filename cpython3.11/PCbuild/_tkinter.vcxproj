@@ -79,7 +79,7 @@
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <PropertyGroup>
-    <TargetExt>$(PyStdlibPydExt)</TargetExt>
+    <TargetExt>.pyd</TargetExt>
   </PropertyGroup>
   <ImportGroup Label="ExtensionSettings">
   </ImportGroup>
@@ -111,7 +111,6 @@
   <ItemGroup>
     <_TclTkDLL Include="$(tcltkdir)\bin\$(tclDllName)" />
     <_TclTkDLL Include="$(tcltkdir)\bin\$(tkDllName)" />
-    <_TclTkDLL Include="$(tcltkdir)\bin\$(tclZlibDllName)" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="pythoncore.vcxproj">

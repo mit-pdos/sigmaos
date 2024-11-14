@@ -32,7 +32,7 @@
 import os, sys, locale, random
 import platform, subprocess
 from test.support.import_helper import import_fresh_module
-from shutil import which
+from distutils.spawn import find_executable
 
 C = import_fresh_module('decimal', fresh=['_decimal'])
 P = import_fresh_module('decimal', blocked=['_decimal'])
@@ -139,7 +139,7 @@ else:
         with open("/var/lib/locales/supported.d/local") as f:
             locale_list = [loc.split()[0] for loc in f.readlines() \
                            if not loc.startswith('#')]
-    elif which('locale'):
+    elif find_executable('locale'):
         locale_list = subprocess.Popen(["locale", "-a"],
                           stdout=subprocess.PIPE).communicate()[0]
         try:

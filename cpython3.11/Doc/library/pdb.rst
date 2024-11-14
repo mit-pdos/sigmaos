@@ -49,7 +49,7 @@ You can then step through the code following this statement, and continue
 running without the debugger using the :pdbcmd:`continue` command.
 
 .. versionchanged:: 3.7
-   The built-in :func:`breakpoint`, when called with defaults, can be used
+   The built-in :func:`breakpoint()`, when called with defaults, can be used
    instead of ``import pdb; pdb.set_trace()``.
 
 ::
@@ -62,8 +62,8 @@ running without the debugger using the :pdbcmd:`continue` command.
 
 The debugger's prompt is ``(Pdb)``, which is the indicator that you are in debug mode::
 
-   > ...(2)double()
-   -> breakpoint()
+   > ...(3)double()
+   -> return x * 2
    (Pdb) p x
    3
    (Pdb) continue
@@ -123,11 +123,6 @@ The typical usage to inspect a crashed program is::
    0
    (Pdb)
 
-.. versionchanged:: 3.13
-   The implementation of :pep:`667` means that name assignments made via ``pdb``
-   will immediately affect the active scope, even when running inside an
-   :term:`optimized scope`.
-
 
 The module defines the following functions; each enters the debugger in a
 slightly different way:
@@ -159,25 +154,16 @@ slightly different way:
    is entered.
 
 
-.. function:: set_trace(*, header=None, commands=None)
+.. function:: set_trace(*, header=None)
 
    Enter the debugger at the calling stack frame.  This is useful to hard-code
    a breakpoint at a given point in a program, even if the code is not
    otherwise being debugged (e.g. when an assertion fails).  If given,
    *header* is printed to the console just before debugging begins.
-   The *commands* argument, if given, is a list of commands to execute
-   when the debugger starts.
-
 
    .. versionchanged:: 3.7
       The keyword-only argument *header*.
 
-   .. versionchanged:: 3.13
-      :func:`set_trace` will enter the debugger immediately, rather than
-      on the next line of code to be executed.
-
-   .. versionadded:: 3.14
-      The *commands* argument.
 
 .. function:: post_mortem(traceback=None)
 
@@ -189,8 +175,8 @@ slightly different way:
 
 .. function:: pm()
 
-   Enter post-mortem debugging of the exception found in
-   :data:`sys.last_exc`.
+   Enter post-mortem debugging of the traceback found in
+   :data:`sys.last_traceback`.
 
 
 The ``run*`` functions and :func:`set_trace` are aliases for instantiating the
@@ -198,7 +184,7 @@ The ``run*`` functions and :func:`set_trace` are aliases for instantiating the
 access further features, you have to do this yourself:
 
 .. class:: Pdb(completekey='tab', stdin=None, stdout=None, skip=None, \
-               nosigint=False, readrc=True, mode=None)
+               nosigint=False, readrc=True)
 
    :class:`Pdb` is the debugger class.
 
@@ -217,13 +203,6 @@ access further features, you have to do this yourself:
    The *readrc* argument defaults to true and controls whether Pdb will load
    .pdbrc files from the filesystem.
 
-   The *mode* argument specifies how the debugger was invoked.
-   It impacts the workings of some debugger commands.
-   Valid values are ``'inline'`` (used by the breakpoint() builtin),
-   ``'cli'`` (used by the command line invocation)
-   or ``None`` (for backwards compatible behaviour, as before the *mode*
-   argument was added).
-
    Example call to enable tracing with *skip*::
 
       import pdb; pdb.Pdb(skip=['django.*']).set_trace()
@@ -239,9 +218,6 @@ access further features, you have to do this yourself:
 
    .. versionchanged:: 3.6
       The *readrc* argument.
-
-   .. versionadded:: 3.14
-      Added the *mode* argument.
 
    .. method:: run(statement, globals=None, locals=None)
                runeval(expression, globals=None, locals=None)
@@ -276,10 +252,6 @@ change a variable or call a function.  When an exception occurs in such a
 statement, the exception name is printed but the debugger's state is not
 changed.
 
-.. versionchanged:: 3.13
-   Expressions/Statements whose prefix is a pdb command are now correctly
-   identified and executed.
-
 The debugger supports :ref:`aliases <debugger-aliases>`.  Aliases can have
 parameters which allows one a certain level of adaptability to the context under
 examination.
@@ -290,23 +262,6 @@ that is passed to the Python parser.)  No intelligence is applied to separating
 the commands; the input is split at the first ``;;`` pair, even if it is in the
 middle of a quoted string. A workaround for strings with double semicolons
 is to use implicit string concatenation ``';'';'`` or ``";"";"``.
-
-To set a temporary global variable, use a *convenience variable*. A *convenience
-variable* is a variable whose name starts with ``$``.  For example, ``$foo = 1``
-sets a global variable ``$foo`` which you can use in the debugger session.  The
-*convenience variables* are cleared when the program resumes execution so it's
-less likely to interfere with your program compared to using normal variables
-like ``foo = 1``.
-
-There are three preset *convenience variables*:
-
-* ``$_frame``: the current frame you are debugging
-* ``$_retval``: the return value if the frame is returning
-* ``$_exception``: the exception if the frame is raising an exception
-
-.. versionadded:: 3.12
-
-   Added the *convenience variable* feature.
 
 .. index::
    pair: .pdbrc; file
@@ -337,16 +292,10 @@ can be overridden by the local file.
    argument must be an identifier, ``help exec`` must be entered to get help on
    the ``!`` command.
 
-.. pdbcommand:: w(here) [count]
+.. pdbcommand:: w(here)
 
-   Print a stack trace, with the most recent frame at the bottom.  if *count*
-   is 0, print the current frame entry. If *count* is negative, print the least
-   recent - *count* frames. If *count* is positive, print the most recent
-   *count* frames.  An arrow (``>``)
+   Print a stack trace, with the most recent frame at the bottom.  An arrow (``>``)
    indicates the current frame, which determines the context of most commands.
-
-   .. versionchanged:: 3.14
-      *count* argument is added.
 
 .. pdbcommand:: d(own) [count]
 
@@ -360,16 +309,12 @@ can be overridden by the local file.
 
 .. pdbcommand:: b(reak) [([filename:]lineno | function) [, condition]]
 
-   With a *lineno* argument, set a break at line *lineno* in the current file.
-   The line number may be prefixed with a *filename* and a colon,
-   to specify a breakpoint in another file (possibly one that hasn't been loaded
-   yet).  The file is searched on :data:`sys.path`.  Acceptable forms of *filename*
-   are ``/abspath/to/file.py``, ``relpath/file.py``, ``module`` and
-   ``package.module``.
-
-   With a *function* argument, set a break at the first executable statement within
-   that function. *function* can be any expression that evaluates to a function
-   in the current namespace.
+   With a *lineno* argument, set a break there in the current file.  With a
+   *function* argument, set a break at the first executable statement within
+   that function.  The line number may be prefixed with a filename and a colon,
+   to specify a breakpoint in another file (probably one that hasn't been loaded
+   yet).  The file is searched on :data:`sys.path`.  Note that each breakpoint
+   is assigned a number to which all the other breakpoint commands refer.
 
    If a second argument is present, it is an expression which must evaluate to
    true before the breakpoint is honored.
@@ -377,9 +322,6 @@ can be overridden by the local file.
    Without argument, list all breaks, including for each breakpoint, the number
    of times that breakpoint has been hit, the current ignore count, and the
    associated condition if any.
-
-   Each breakpoint is assigned a number to which all the other
-   breakpoint commands refer.
 
 .. pdbcommand:: tbreak [([filename:]lineno | function) [, condition]]
 
@@ -392,14 +334,14 @@ can be overridden by the local file.
    With a space separated list of breakpoint numbers, clear those breakpoints.
    Without argument, clear all breaks (but first ask confirmation).
 
-.. pdbcommand:: disable bpnumber [bpnumber ...]
+.. pdbcommand:: disable [bpnumber ...]
 
    Disable the breakpoints given as a space separated list of breakpoint
    numbers.  Disabling a breakpoint means it cannot cause the program to stop
    execution, but unlike clearing a breakpoint, it remains in the list of
    breakpoints and can be (re-)enabled.
 
-.. pdbcommand:: enable bpnumber [bpnumber ...]
+.. pdbcommand:: enable [bpnumber ...]
 
    Enable the breakpoints specified.
 
@@ -439,20 +381,17 @@ can be overridden by the local file.
 
    Specifying any command resuming execution
    (currently :pdbcmd:`continue`, :pdbcmd:`step`, :pdbcmd:`next`,
-   :pdbcmd:`return`, :pdbcmd:`until`, :pdbcmd:`jump`, :pdbcmd:`quit` and their abbreviations)
+   :pdbcmd:`return`, :pdbcmd:`jump`, :pdbcmd:`quit` and their abbreviations)
    terminates the command list (as if
    that command was immediately followed by end). This is because any time you
    resume execution (even with a simple next or step), you may encounter another
    breakpoint—which could have its own command list, leading to ambiguities about
    which list to execute.
 
-   If the list of commands contains the ``silent`` command, or a command that
-   resumes execution, then the breakpoint message containing information about
-   the frame is not displayed.
-
-   .. versionchanged:: 3.14
-      Frame information will not be displayed if a command that resumes execution
-      is present in the command list.
+   If you use the ``silent`` command in the command list, the usual message about
+   stopping at a breakpoint is not printed.  This may be desirable for breakpoints
+   that are to print a specific message and then continue.  If none of the other
+   commands print anything, you see no sign that the breakpoint was reached.
 
 .. pdbcommand:: s(tep)
 
@@ -611,27 +550,11 @@ can be overridden by the local file.
 
 .. pdbcommand:: interact
 
-   Start an interactive interpreter (using the :mod:`code` module) in a new
-   global namespace initialised from the local and global namespaces for the
-   current scope. Use ``exit()`` or ``quit()`` to exit the interpreter and
-   return to the debugger.
-
-   .. note::
-
-      As ``interact`` creates a new dedicated namespace for code execution,
-      assignments to variables will not affect the original namespaces.
-      However, modifications to any referenced mutable objects will be reflected
-      in the original namespaces as usual.
+   Start an interactive interpreter (using the :mod:`code` module) whose global
+   namespace contains all the (global and local) names found in the current
+   scope.
 
    .. versionadded:: 3.2
-
-   .. versionchanged:: 3.13
-      ``exit()`` and ``quit()`` can be used to exit the :pdbcmd:`interact`
-      command.
-
-   .. versionchanged:: 3.13
-      :pdbcmd:`interact` directs its output to the debugger's
-      output channel rather than :data:`sys.stderr`.
 
 .. _debugger-aliases:
 
@@ -639,7 +562,7 @@ can be overridden by the local file.
 
    Create an alias called *name* that executes *command*.  The *command* must
    *not* be enclosed in quotes.  Replaceable parameters can be indicated by
-   ``%1``, ``%2``, ... and ``%9``, while ``%*`` is replaced by all the parameters.
+   ``%1``, ``%2``, and so on, while ``%*`` is replaced by all the parameters.
    If *command* is omitted, the current alias for *name* is shown. If no
    arguments are given, all aliases are listed.
 
@@ -665,17 +588,9 @@ can be overridden by the local file.
 
    Execute the (one-line) *statement* in the context of the current stack frame.
    The exclamation point can be omitted unless the first word of the statement
-   resembles a debugger command, e.g.:
-
-   .. code-block:: none
-
-      (Pdb) ! n=42
-      (Pdb)
-
-   To set a global variable, you can prefix the assignment command with a
-   :keyword:`global` statement on the same line, e.g.:
-
-   .. code-block:: none
+   resembles a debugger command.  To set a global variable, you can prefix the
+   assignment command with a :keyword:`global` statement on the same line,
+   e.g.::
 
       (Pdb) global list_options; list_options = ['-l']
       (Pdb)
@@ -687,10 +602,6 @@ can be overridden by the local file.
    with :mod:`shlex` and the result is used as the new :data:`sys.argv`.
    History, breakpoints, actions and debugger options are preserved.
    :pdbcmd:`restart` is an alias for :pdbcmd:`run`.
-
-   .. versionchanged:: 3.14
-      :pdbcmd:`run` and :pdbcmd:`restart` commands are disabled when the
-      debugger is invoked in ``'inline'`` mode.
 
 .. pdbcommand:: q(uit)
 
@@ -705,55 +616,6 @@ can be overridden by the local file.
 .. pdbcommand:: retval
 
    Print the return value for the last return of the current function.
-
-.. pdbcommand:: exceptions [excnumber]
-
-   List or jump between chained exceptions.
-
-   When using ``pdb.pm()``  or ``Pdb.post_mortem(...)`` with a chained exception
-   instead of a traceback, it allows the user to move between the
-   chained exceptions using ``exceptions`` command to list exceptions, and
-   ``exception <number>`` to switch to that exception.
-
-
-   Example::
-
-        def out():
-            try:
-                middle()
-            except Exception as e:
-                raise ValueError("reraise middle() error") from e
-
-        def middle():
-            try:
-                return inner(0)
-            except Exception as e:
-                raise ValueError("Middle fail")
-
-        def inner(x):
-            1 / x
-
-         out()
-
-   calling ``pdb.pm()`` will allow to move between exceptions::
-
-    > example.py(5)out()
-    -> raise ValueError("reraise middle() error") from e
-
-    (Pdb) exceptions
-      0 ZeroDivisionError('division by zero')
-      1 ValueError('Middle fail')
-    > 2 ValueError('reraise middle() error')
-
-    (Pdb) exceptions 0
-    > example.py(16)inner()
-    -> 1 / x
-
-    (Pdb) up
-    > example.py(10)middle()
-    -> return inner(0)
-
-   .. versionadded:: 3.13
 
 .. rubric:: Footnotes
 

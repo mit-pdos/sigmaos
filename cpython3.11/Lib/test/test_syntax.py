@@ -59,18 +59,6 @@ SyntaxError: cannot assign to __debug__
 Traceback (most recent call last):
 SyntaxError: cannot assign to __debug__
 
->>> def __debug__(): pass
-Traceback (most recent call last):
-SyntaxError: cannot assign to __debug__
-
->>> async def __debug__(): pass
-Traceback (most recent call last):
-SyntaxError: cannot assign to __debug__
-
->>> class __debug__: pass
-Traceback (most recent call last):
-SyntaxError: cannot assign to __debug__
-
 >>> del __debug__
 Traceback (most recent call last):
 SyntaxError: cannot delete __debug__
@@ -271,36 +259,6 @@ SyntaxError: expected ':'
 Traceback (most recent call last):
 SyntaxError: invalid syntax
 
-Comprehensions without 'in' keyword:
-
->>> [x for x if range(1)]
-Traceback (most recent call last):
-SyntaxError: 'in' expected after for-loop variables
-
->>> tuple(x for x if range(1))
-Traceback (most recent call last):
-SyntaxError: 'in' expected after for-loop variables
-
->>> [x for x() in a]
-Traceback (most recent call last):
-SyntaxError: cannot assign to function call
-
->>> [x for a, b, (c + 1, d()) in y]
-Traceback (most recent call last):
-SyntaxError: cannot assign to expression
-
->>> [x for a, b, (c + 1, d()) if y]
-Traceback (most recent call last):
-SyntaxError: 'in' expected after for-loop variables
-
->>> [x for x+1 in y]
-Traceback (most recent call last):
-SyntaxError: cannot assign to expression
-
->>> [x for x+1, x() in y]
-Traceback (most recent call last):
-SyntaxError: cannot assign to expression
-
 Comprehensions creating tuples without parentheses
 should produce a specialized error message:
 
@@ -376,12 +334,7 @@ From ast_for_arguments():
 >>> def f(x, y=1, z):
 ...     pass
 Traceback (most recent call last):
-SyntaxError: parameter without a default follows parameter with a default
-
->>> def f(x, /, y=1, z):
-...     pass
-Traceback (most recent call last):
-SyntaxError: parameter without a default follows parameter with a default
+SyntaxError: non-default argument follows default argument
 
 >>> def f(x, None):
 ...     pass
@@ -602,14 +555,6 @@ SyntaxError: expected default value expression
 Traceback (most recent call last):
 SyntaxError: expected default value expression
 
->>> lambda a,d=3,c: None
-Traceback (most recent call last):
-SyntaxError: parameter without a default follows parameter with a default
-
->>> lambda a,/,d=3,c: None
-Traceback (most recent call last):
-SyntaxError: parameter without a default follows parameter with a default
-
 >>> import ast; ast.parse('''
 ... def f(
 ...     *, # type: int
@@ -798,30 +743,6 @@ SyntaxError: cannot assign to __debug__
 >>> __debug__: int
 Traceback (most recent call last):
 SyntaxError: cannot assign to __debug__
->>> x.__debug__: int
-Traceback (most recent call last):
-SyntaxError: cannot assign to __debug__
->>> f(a=)
-Traceback (most recent call last):
-SyntaxError: expected argument value expression
->>> f(a, b, c=)
-Traceback (most recent call last):
-SyntaxError: expected argument value expression
->>> f(a, b, c=, d)
-Traceback (most recent call last):
-SyntaxError: expected argument value expression
->>> f(*args=[0])
-Traceback (most recent call last):
-SyntaxError: cannot assign to iterable argument unpacking
->>> f(a, b, *args=[0])
-Traceback (most recent call last):
-SyntaxError: cannot assign to iterable argument unpacking
->>> f(**kwargs={'a': 1})
-Traceback (most recent call last):
-SyntaxError: cannot assign to keyword argument unpacking
->>> f(a, b, *args, **kwargs={'a': 1})
-Traceback (most recent call last):
-SyntaxError: cannot assign to keyword argument unpacking
 
 
 More set_context():
@@ -1049,22 +970,7 @@ Missing ':' before suites:
    Traceback (most recent call last):
    SyntaxError: expected ':'
 
-   >>> def f[T]()
-   ...     pass
-   Traceback (most recent call last):
-   SyntaxError: expected ':'
-
    >>> class A
-   ...     pass
-   Traceback (most recent call last):
-   SyntaxError: expected ':'
-
-   >>> class A[T]
-   ...     pass
-   Traceback (most recent call last):
-   SyntaxError: expected ':'
-
-   >>> class A[T]()
    ...     pass
    Traceback (most recent call last):
    SyntaxError: expected ':'
@@ -1197,24 +1103,6 @@ Missing ':' before suites:
    Traceback (most recent call last):
    SyntaxError: expected ':'
 
-   >>> match x:
-   ...   case a, __debug__, b:
-   ...       pass
-   Traceback (most recent call last):
-   SyntaxError: cannot assign to __debug__
-
-   >>> match x:
-   ...   case a, b, *__debug__:
-   ...       pass
-   Traceback (most recent call last):
-   SyntaxError: cannot assign to __debug__
-
-   >>> match x:
-   ...   case Foo(a, __debug__=1, b=2):
-   ...       pass
-   Traceback (most recent call last):
-   SyntaxError: cannot assign to __debug__
-
    >>> if x = 3:
    ...    pass
    Traceback (most recent call last):
@@ -1243,22 +1131,6 @@ Missing parens after function definition
    SyntaxError: expected '('
 
    >>> async def f:
-   Traceback (most recent call last):
-   SyntaxError: expected '('
-
-   >>> def f -> int:
-   Traceback (most recent call last):
-   SyntaxError: expected '('
-
-   >>> async def f -> int:  # type: int
-   Traceback (most recent call last):
-   SyntaxError: expected '('
-
-   >>> async def f[T]:
-   Traceback (most recent call last):
-   SyntaxError: expected '('
-
-   >>> def f[T] -> str:
    Traceback (most recent call last):
    SyntaxError: expected '('
 
@@ -1308,15 +1180,6 @@ Custom error messages for try blocks that are not followed by except/finally
    Traceback (most recent call last):
    SyntaxError: expected 'except' or 'finally' block
 
-Custom error message for __debug__ as exception variable
-
-   >>> try:
-   ...    pass
-   ... except TypeError as __debug__:
-   ...    pass
-   Traceback (most recent call last):
-   SyntaxError: cannot assign to __debug__
-
 Custom error message for try block mixing except and except*
 
    >>> try:
@@ -1358,36 +1221,6 @@ Custom error message for try block mixing except and except*
    ...    pass
    Traceback (most recent call last):
    SyntaxError: cannot have both 'except' and 'except*' on the same 'try'
-
-Better error message for using `except as` with not a name:
-
-   >>> try:
-   ...    pass
-   ... except TypeError as obj.attr:
-   ...    pass
-   Traceback (most recent call last):
-   SyntaxError: cannot use except statement with attribute
-
-   >>> try:
-   ...    pass
-   ... except TypeError as obj[1]:
-   ...    pass
-   Traceback (most recent call last):
-   SyntaxError: cannot use except statement with subscript
-
-   >>> try:
-   ...    pass
-   ... except* TypeError as (obj, name):
-   ...    pass
-   Traceback (most recent call last):
-   SyntaxError: cannot use except* statement with tuple
-
-   >>> try:
-   ...    pass
-   ... except* TypeError as 1:
-   ...    pass
-   Traceback (most recent call last):
-   SyntaxError: cannot use except* statement with literal
 
 Ensure that early = are not matched by the parser as invalid comparisons
    >>> f(2, 4, x=34); 1 $ 2
@@ -1579,33 +1412,10 @@ Specialized indentation errors:
    Traceback (most recent call last):
    IndentationError: expected an indented block after function definition on line 1
 
-   >>> def foo[T](x, /, y, *, z=2):
-   ... pass
-   Traceback (most recent call last):
-   IndentationError: expected an indented block after function definition on line 1
-
    >>> class Blech(A):
    ... pass
    Traceback (most recent call last):
    IndentationError: expected an indented block after class definition on line 1
-
-   >>> class Blech[T](A):
-   ... pass
-   Traceback (most recent call last):
-   IndentationError: expected an indented block after class definition on line 1
-
-   >>> class C(__debug__=42): ...
-   Traceback (most recent call last):
-   SyntaxError: cannot assign to __debug__
-
-   >>> class Meta(type):
-   ...     def __new__(*args, **kwargs):
-   ...         pass
-
-   >>> class C(metaclass=Meta, __debug__=42):
-   ...     pass
-   Traceback (most recent call last):
-   SyntaxError: cannot assign to __debug__
 
    >>> match something:
    ... pass
@@ -1761,76 +1571,12 @@ SyntaxError: trailing comma not allowed without surrounding parentheses
 Traceback (most recent call last):
 SyntaxError: trailing comma not allowed without surrounding parentheses
 
->>> import a from b
-Traceback (most recent call last):
-SyntaxError: Did you mean to use 'from ... import ...' instead?
-
->>> import a.y.z from b.y.z
-Traceback (most recent call last):
-SyntaxError: Did you mean to use 'from ... import ...' instead?
-
->>> import a from b as bar
-Traceback (most recent call last):
-SyntaxError: Did you mean to use 'from ... import ...' instead?
-
->>> import a.y.z from b.y.z as bar
-Traceback (most recent call last):
-SyntaxError: Did you mean to use 'from ... import ...' instead?
-
->>> import a, b,c from b
-Traceback (most recent call last):
-SyntaxError: Did you mean to use 'from ... import ...' instead?
-
->>> import a.y.z, b.y.z, c.y.z from b.y.z
-Traceback (most recent call last):
-SyntaxError: Did you mean to use 'from ... import ...' instead?
-
->>> import a,b,c from b as bar
-Traceback (most recent call last):
-SyntaxError: Did you mean to use 'from ... import ...' instead?
-
->>> import a.y.z, b.y.z, c.y.z from b.y.z as bar
-Traceback (most recent call last):
-SyntaxError: Did you mean to use 'from ... import ...' instead?
-
->>> import __debug__
-Traceback (most recent call last):
-SyntaxError: cannot assign to __debug__
-
->>> import a as __debug__
-Traceback (most recent call last):
-SyntaxError: cannot assign to __debug__
-
->>> import a.b.c as __debug__
-Traceback (most recent call last):
-SyntaxError: cannot assign to __debug__
-
->>> from a import __debug__
-Traceback (most recent call last):
-SyntaxError: cannot assign to __debug__
-
->>> from a import b as __debug__
-Traceback (most recent call last):
-SyntaxError: cannot assign to __debug__
-
 # Check that we dont raise the "trailing comma" error if there is more
 # input to the left of the valid part that we parsed.
 
 >>> from t import x,y, and 3
 Traceback (most recent call last):
 SyntaxError: invalid syntax
-
->>> from i import
-Traceback (most recent call last):
-SyntaxError: Expected one or more names after 'import'
-
->>> from .. import
-Traceback (most recent call last):
-SyntaxError: Expected one or more names after 'import'
-
->>> import
-Traceback (most recent call last):
-SyntaxError: Expected one or more names after 'import'
 
 >>> (): int
 Traceback (most recent call last):
@@ -1844,49 +1590,6 @@ SyntaxError: only single target (not tuple) can be annotated
 >>> ([]): int
 Traceback (most recent call last):
 SyntaxError: only single target (not list) can be annotated
-
-# 'not' after operators:
-
->>> 3 + not 3
-Traceback (most recent call last):
-SyntaxError: 'not' after an operator must be parenthesized
-
->>> 3 * not 3
-Traceback (most recent call last):
-SyntaxError: 'not' after an operator must be parenthesized
-
->>> + not 3
-Traceback (most recent call last):
-SyntaxError: 'not' after an operator must be parenthesized
-
->>> - not 3
-Traceback (most recent call last):
-SyntaxError: 'not' after an operator must be parenthesized
-
->>> ~ not 3
-Traceback (most recent call last):
-SyntaxError: 'not' after an operator must be parenthesized
-
->>> 3 + - not 3
-Traceback (most recent call last):
-SyntaxError: 'not' after an operator must be parenthesized
-
->>> 3 + not -1
-Traceback (most recent call last):
-SyntaxError: 'not' after an operator must be parenthesized
-
-# Check that we don't introduce misleading errors
->>> not 1 */ 2
-Traceback (most recent call last):
-SyntaxError: invalid syntax
-
->>> not 1 +
-Traceback (most recent call last):
-SyntaxError: invalid syntax
-
->>> not + 1 +
-Traceback (most recent call last):
-SyntaxError: invalid syntax
 
 Corner-cases that used to fail to raise the correct error:
 
@@ -1932,31 +1635,7 @@ Corner-cases that used to crash:
     ...   case 42 as 1+2+4:
     ...     ...
     Traceback (most recent call last):
-    SyntaxError: cannot use expression as pattern target
-
-    >>> match ...:
-    ...   case 42 as a.b:
-    ...     ...
-    Traceback (most recent call last):
-    SyntaxError: cannot use attribute as pattern target
-
-    >>> match ...:
-    ...   case 42 as (a, b):
-    ...     ...
-    Traceback (most recent call last):
-    SyntaxError: cannot use tuple as pattern target
-
-    >>> match ...:
-    ...   case 42 as (a + 1):
-    ...     ...
-    Traceback (most recent call last):
-    SyntaxError: cannot use expression as pattern target
-
-    >>> match ...:
-    ...   case (32 as x) | (42 as a()):
-    ...     ...
-    Traceback (most recent call last):
-    SyntaxError: cannot use function call as pattern target
+    SyntaxError: invalid pattern target
 
     >>> match ...:
     ...   case Foo(z=1, y=2, x):
@@ -2148,229 +1827,33 @@ Invalid bytes literals:
         ^^^^^^^^^^^
    SyntaxError: bytes can only contain ASCII literal characters
 
-Invalid expressions in type scopes:
-
-   >>> type A[] = int
+   >>> f(**x, *y)
    Traceback (most recent call last):
-   ...
-   SyntaxError: Type parameter list cannot be empty
+   SyntaxError: iterable argument unpacking follows keyword argument unpacking
 
-   >>> class A[]: ...
+   >>> f(**x, *)
    Traceback (most recent call last):
-   ...
-   SyntaxError: Type parameter list cannot be empty
+   SyntaxError: Invalid star expression
 
-   >>> def some[](): ...
+   >>> f(x, *:)
    Traceback (most recent call last):
-   ...
-   SyntaxError: Type parameter list cannot be empty
+   SyntaxError: Invalid star expression
 
-   >>> def some[]()
+   >>> f(x, *)
    Traceback (most recent call last):
-   ...
-   SyntaxError: Type parameter list cannot be empty
+   SyntaxError: Invalid star expression
 
-   >>> async def some[]:  # type: int
+   >>> f(x = 5, *)
    Traceback (most recent call last):
-   ...
-   SyntaxError: Type parameter list cannot be empty
+   SyntaxError: Invalid star expression
 
-   >>> def f[T: (x:=3)](): pass
+   >>> f(x = 5, *:)
    Traceback (most recent call last):
-      ...
-   SyntaxError: named expression cannot be used within a TypeVar bound
-
-   >>> def f[T: ((x:= 3), int)](): pass
-   Traceback (most recent call last):
-      ...
-   SyntaxError: named expression cannot be used within a TypeVar constraint
-
-   >>> def f[T = ((x:=3))](): pass
-   Traceback (most recent call last):
-      ...
-   SyntaxError: named expression cannot be used within a TypeVar default
-
-   >>> async def f[T: (x:=3)](): pass
-   Traceback (most recent call last):
-      ...
-   SyntaxError: named expression cannot be used within a TypeVar bound
-
-   >>> async def f[T: ((x:= 3), int)](): pass
-   Traceback (most recent call last):
-      ...
-   SyntaxError: named expression cannot be used within a TypeVar constraint
-
-   >>> async def f[T = ((x:=3))](): pass
-   Traceback (most recent call last):
-      ...
-   SyntaxError: named expression cannot be used within a TypeVar default
-
-   >>> type A[T: (x:=3)] = int
-   Traceback (most recent call last):
-      ...
-   SyntaxError: named expression cannot be used within a TypeVar bound
-
-   >>> type A[T: ((x:= 3), int)] = int
-   Traceback (most recent call last):
-      ...
-   SyntaxError: named expression cannot be used within a TypeVar constraint
-
-   >>> type A[T = ((x:=3))] = int
-   Traceback (most recent call last):
-      ...
-   SyntaxError: named expression cannot be used within a TypeVar default
-
-   >>> def f[T: (yield)](): pass
-   Traceback (most recent call last):
-      ...
-   SyntaxError: yield expression cannot be used within a TypeVar bound
-
-   >>> def f[T: (int, (yield))](): pass
-   Traceback (most recent call last):
-      ...
-   SyntaxError: yield expression cannot be used within a TypeVar constraint
-
-   >>> def f[T = (yield)](): pass
-   Traceback (most recent call last):
-      ...
-   SyntaxError: yield expression cannot be used within a TypeVar default
-
-   >>> def f[*Ts = (yield)](): pass
-   Traceback (most recent call last):
-      ...
-   SyntaxError: yield expression cannot be used within a TypeVarTuple default
-
-   >>> def f[**P = [(yield), int]](): pass
-   Traceback (most recent call last):
-      ...
-   SyntaxError: yield expression cannot be used within a ParamSpec default
-
-   >>> type A[T: (yield 3)] = int
-   Traceback (most recent call last):
-      ...
-   SyntaxError: yield expression cannot be used within a TypeVar bound
-
-   >>> type A[T: (int, (yield 3))] = int
-   Traceback (most recent call last):
-      ...
-   SyntaxError: yield expression cannot be used within a TypeVar constraint
-
-   >>> type A[T = (yield 3)] = int
-   Traceback (most recent call last):
-      ...
-   SyntaxError: yield expression cannot be used within a TypeVar default
-
-   >>> type A[T: (await 3)] = int
-   Traceback (most recent call last):
-      ...
-   SyntaxError: await expression cannot be used within a TypeVar bound
-
-   >>> type A[T: (yield from [])] = int
-   Traceback (most recent call last):
-      ...
-   SyntaxError: yield expression cannot be used within a TypeVar bound
-
-   >>> class A[T: (yield 3)]: pass
-   Traceback (most recent call last):
-      ...
-   SyntaxError: yield expression cannot be used within a TypeVar bound
-
-   >>> class A[T: (int, (yield 3))]: pass
-   Traceback (most recent call last):
-      ...
-   SyntaxError: yield expression cannot be used within a TypeVar constraint
-
-   >>> class A[T = (yield)]: pass
-   Traceback (most recent call last):
-      ...
-   SyntaxError: yield expression cannot be used within a TypeVar default
-
-   >>> class A[*Ts = (yield)]: pass
-   Traceback (most recent call last):
-      ...
-   SyntaxError: yield expression cannot be used within a TypeVarTuple default
-
-   >>> class A[**P = [(yield), int]]: pass
-   Traceback (most recent call last):
-      ...
-   SyntaxError: yield expression cannot be used within a ParamSpec default
-
-   >>> type A = (x := 3)
-   Traceback (most recent call last):
-      ...
-   SyntaxError: named expression cannot be used within a type alias
-
-   >>> type A = (yield 3)
-   Traceback (most recent call last):
-      ...
-   SyntaxError: yield expression cannot be used within a type alias
-
-   >>> type A = (await 3)
-   Traceback (most recent call last):
-      ...
-   SyntaxError: await expression cannot be used within a type alias
-
-   >>> type A = (yield from [])
-   Traceback (most recent call last):
-      ...
-   SyntaxError: yield expression cannot be used within a type alias
-
-   >>> type __debug__ = int
-   Traceback (most recent call last):
-   SyntaxError: cannot assign to __debug__
-
-   >>> class A[__debug__]: pass
-   Traceback (most recent call last):
-   SyntaxError: cannot assign to __debug__
-
-   >>> class A[T]((x := 3)): ...
-   Traceback (most recent call last):
-      ...
-   SyntaxError: named expression cannot be used within the definition of a generic
-
-   >>> class A[T]((yield 3)): ...
-   Traceback (most recent call last):
-      ...
-   SyntaxError: yield expression cannot be used within the definition of a generic
-
-   >>> class A[T]((await 3)): ...
-   Traceback (most recent call last):
-      ...
-   SyntaxError: await expression cannot be used within the definition of a generic
-
-   >>> class A[T]((yield from [])): ...
-   Traceback (most recent call last):
-      ...
-   SyntaxError: yield expression cannot be used within the definition of a generic
-
-    >>> f(**x, *y)
-    Traceback (most recent call last):
-    SyntaxError: iterable argument unpacking follows keyword argument unpacking
-
-    >>> f(**x, *)
-    Traceback (most recent call last):
-    SyntaxError: Invalid star expression
-
-    >>> f(x, *:)
-    Traceback (most recent call last):
-    SyntaxError: Invalid star expression
-
-    >>> f(x, *)
-    Traceback (most recent call last):
-    SyntaxError: Invalid star expression
-
-    >>> f(x = 5, *)
-    Traceback (most recent call last):
-    SyntaxError: Invalid star expression
-
-    >>> f(x = 5, *:)
-    Traceback (most recent call last):
-    SyntaxError: Invalid star expression
+   SyntaxError: Invalid star expression
 """
 
 import re
 import doctest
-import textwrap
 import unittest
 
 from test import support
@@ -2617,58 +2100,6 @@ if x:
         code += f"{' '*4*12}pass"
         self._check_error(code, "too many statically nested blocks")
 
-    @support.cpython_only
-    def test_with_statement_many_context_managers(self):
-        # See gh-113297
-
-        def get_code(n):
-            code = textwrap.dedent("""
-                def bug():
-                    with (
-                    a
-                """)
-            for i in range(n):
-                code += f"    as a{i}, a\n"
-            code += "): yield a"
-            return code
-
-        CO_MAXBLOCKS = 21  # static nesting limit of the compiler
-        MAX_MANAGERS = CO_MAXBLOCKS - 1  # One for the StopIteration block
-
-        for n in range(MAX_MANAGERS):
-            with self.subTest(f"within range: {n=}"):
-                compile(get_code(n), "<string>", "exec")
-
-        for n in range(MAX_MANAGERS, MAX_MANAGERS + 5):
-            with self.subTest(f"out of range: {n=}"):
-                self._check_error(get_code(n), "too many statically nested blocks")
-
-    @support.cpython_only
-    def test_async_with_statement_many_context_managers(self):
-        # See gh-116767
-
-        def get_code(n):
-            code = [ textwrap.dedent("""
-                async def bug():
-                    async with (
-                    a
-                """) ]
-            for i in range(n):
-                code.append(f"    as a{i}, a\n")
-            code.append("): yield a")
-            return "".join(code)
-
-        CO_MAXBLOCKS = 21  # static nesting limit of the compiler
-        MAX_MANAGERS = CO_MAXBLOCKS - 1  # One for the StopIteration block
-
-        for n in range(MAX_MANAGERS):
-            with self.subTest(f"within range: {n=}"):
-                compile(get_code(n), "<string>", "exec")
-
-        for n in range(MAX_MANAGERS, MAX_MANAGERS + 5):
-            with self.subTest(f"out of range: {n=}"):
-                self._check_error(get_code(n), "too many statically nested blocks")
-
     def test_barry_as_flufl_with_syntax_errors(self):
         # The "barry_as_flufl" rule can produce some "bugs-at-a-distance" if
         # is reading the wrong token in the presence of syntax errors later
@@ -2732,14 +2163,8 @@ func(
 
     def test_error_string_literal(self):
 
-        self._check_error("'blech", r"unterminated string literal \(.*\)$")
-        self._check_error('"blech', r"unterminated string literal \(.*\)$")
-        self._check_error(
-            r'"blech\"', r"unterminated string literal \(.*\); perhaps you escaped the end quote"
-        )
-        self._check_error(
-            r'r"blech\"', r"unterminated string literal \(.*\); perhaps you escaped the end quote"
-        )
+        self._check_error("'blech", "unterminated string literal")
+        self._check_error('"blech', "unterminated string literal")
         self._check_error("'''blech", "unterminated triple-quoted string literal")
         self._check_error('"""blech', "unterminated triple-quoted string literal")
 
@@ -2803,8 +2228,7 @@ while 1:
                   while 20:
                    while 21:
                     while 22:
-                     while 23:
-                      break
+                     break
 """
         self._check_error(source, "too many statically nested blocks")
 
@@ -2813,7 +2237,7 @@ while 1:
         source = "-" * 100000 + "4"
         for mode in ["exec", "eval", "single"]:
             with self.subTest(mode=mode):
-                with self.assertRaisesRegex(MemoryError, r"too complex"):
+                with self.assertRaises(MemoryError):
                     compile(source, "<string>", mode)
 
     @support.cpython_only
@@ -2823,39 +2247,6 @@ while 1:
         source = "d{{{{{{{{{{{{{{{{{{{{{{{{{```{{{{{{{ef f():y"
         with self.assertRaises(SyntaxError):
             compile(source, "<string>", "exec")
-
-    def test_except_stmt_invalid_as_expr(self):
-        self._check_error(
-            textwrap.dedent(
-                """
-                try:
-                    pass
-                except ValueError as obj.attr:
-                    pass
-                """
-            ),
-            errtext="cannot use except statement with attribute",
-            lineno=4,
-            end_lineno=4,
-            offset=22,
-            end_offset=22 + len("obj.attr"),
-        )
-
-    def test_match_stmt_invalid_as_expr(self):
-        self._check_error(
-            textwrap.dedent(
-                """
-                match 1:
-                    case x as obj.attr:
-                        ...
-                """
-            ),
-            errtext="cannot use attribute as pattern target",
-            lineno=3,
-            end_lineno=3,
-            offset=15,
-            end_offset=15 + len("obj.attr"),
-        )
 
 
 def load_tests(loader, tests, pattern):

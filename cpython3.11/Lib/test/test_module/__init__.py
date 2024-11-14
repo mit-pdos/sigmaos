@@ -1,5 +1,4 @@
 # Test the module type
-import importlib.machinery
 import unittest
 import weakref
 from test.support import gc_collect
@@ -9,10 +8,10 @@ from test.support.script_helper import assert_python_ok
 import sys
 ModuleType = type(sys)
 
-
 class FullLoader:
-    pass
-
+    @classmethod
+    def module_repr(cls, m):
+        return "<module '{}' (crafted)>".format(m.__name__)
 
 class BareLoader:
     pass
@@ -237,9 +236,10 @@ a = A(destroyed)"""
         # Yes, a class not an instance.
         m.__loader__ = FullLoader
         self.assertEqual(
-            repr(m), f"<module 'foo' (<class '{__name__}.FullLoader'>)>")
+            repr(m), "<module 'foo' (crafted)>")
 
     def test_module_repr_with_bare_loader_and_filename(self):
+        # Because the loader has no module_repr(), use the file name.
         m = ModuleType('foo')
         # Yes, a class not an instance.
         m.__loader__ = BareLoader
@@ -247,11 +247,12 @@ a = A(destroyed)"""
         self.assertEqual(repr(m), "<module 'foo' from '/tmp/foo.py'>")
 
     def test_module_repr_with_full_loader_and_filename(self):
+        # Even though the module has an __file__, use __loader__.module_repr()
         m = ModuleType('foo')
         # Yes, a class not an instance.
         m.__loader__ = FullLoader
         m.__file__ = '/tmp/foo.py'
-        self.assertEqual(repr(m), "<module 'foo' from '/tmp/foo.py'>")
+        self.assertEqual(repr(m), "<module 'foo' (crafted)>")
 
     def test_module_repr_builtin(self):
         self.assertEqual(repr(sys), "<module 'sys' (built-in)>")
@@ -264,35 +265,6 @@ a = A(destroyed)"""
                          '{!r} does not start with {!r}'.format(r, starts_with))
         self.assertEqual(r[-len(ends_with):], ends_with,
                          '{!r} does not end with {!r}'.format(r, ends_with))
-
-    def test_module_repr_with_namespace_package(self):
-        m = ModuleType('foo')
-        loader = importlib.machinery.NamespaceLoader('foo', ['bar'], 'baz')
-        spec = importlib.machinery.ModuleSpec('foo', loader)
-        m.__loader__ = loader
-        m.__spec__ = spec
-        self.assertEqual(repr(m), "<module 'foo' (namespace) from ['bar']>")
-
-    def test_module_repr_with_namespace_package_and_custom_loader(self):
-        m = ModuleType('foo')
-        loader = BareLoader()
-        spec = importlib.machinery.ModuleSpec('foo', loader)
-        m.__loader__ = loader
-        m.__spec__ = spec
-        expected_repr_pattern = r"<module 'foo' \(<.*\.BareLoader object at .+>\)>"
-        self.assertRegex(repr(m), expected_repr_pattern)
-        self.assertNotIn('from', repr(m))
-
-    def test_module_repr_with_fake_namespace_package(self):
-        m = ModuleType('foo')
-        loader = BareLoader()
-        loader._path = ['spam']
-        spec = importlib.machinery.ModuleSpec('foo', loader)
-        m.__loader__ = loader
-        m.__spec__ = spec
-        expected_repr_pattern = r"<module 'foo' \(<.*\.BareLoader object at .+>\)>"
-        self.assertRegex(repr(m), expected_repr_pattern)
-        self.assertNotIn('from', repr(m))
 
     def test_module_finalization_at_shutdown(self):
         # Module globals and builtins should still be available during shutdown
@@ -357,8 +329,6 @@ a = A(destroyed)"""
         ann_module4 = import_helper.import_fresh_module(
             'test.typinganndata.ann_module4',
         )
-        self.assertFalse("__annotations__" in ann_module4.__dict__)
-        self.assertEqual(ann_module4.__annotations__, {"a": int, "b": str})
         self.assertTrue("__annotations__" in ann_module4.__dict__)
         del ann_module4.__annotations__
         self.assertFalse("__annotations__" in ann_module4.__dict__)

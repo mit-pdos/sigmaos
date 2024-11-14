@@ -357,8 +357,8 @@ New Syntax
   provides a standardized way of annotating a function's parameters
   and return value.  There are no semantics attached to such
   annotations except that they can be introspected at runtime using
-  the :attr:`~object.__annotations__` attribute.  The intent is to
-  encourage experimentation through metaclasses, decorators or frameworks.
+  the :attr:`__annotations__` attribute.  The intent is to encourage
+  experimentation through metaclasses, decorators or frameworks.
 
 * :pep:`3102`: Keyword-only arguments.  Named parameters occurring
   after ``*args`` in the parameter list *must* be specified using
@@ -842,7 +842,7 @@ Builtins
   need it; however, 99 percent of the time an explicit :keyword:`for`
   loop is more readable.
 
-* Removed :func:`reload`.  Use :func:`!imp.reload`.
+* Removed :func:`reload`.  Use :func:`imp.reload`.
 
 * Removed. :meth:`dict.has_key` -- use the :keyword:`in` operator
   instead.
@@ -913,7 +913,7 @@ best strategy is the following:
    tests still pass.
 
 3. Run the ``2to3`` source-to-source translator over your source code
-   tree.  Run the
+   tree.  (See :ref:`2to3-reference` for more on this tool.)  Run the
    result of the translation under Python 3.0.  Manually fix up any
    remaining issues, fixing problems until all tests pass again.
 

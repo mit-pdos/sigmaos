@@ -1,5 +1,5 @@
-:mod:`!urllib.request` --- Extensible library for opening URLs
-==============================================================
+:mod:`urllib.request` --- Extensible library for opening URLs
+=============================================================
 
 .. module:: urllib.request
    :synopsis: Extensible library for opening URLs.
@@ -34,7 +34,7 @@ authentication, redirections, cookies and more.
 The :mod:`urllib.request` module defines the following functions:
 
 
-.. function:: urlopen(url, data=None[, timeout], *, context=None)
+.. function:: urlopen(url, data=None[, timeout], *, cafile=None, capath=None, cadefault=False, context=None)
 
    Open *url*, which can be either a string containing a valid, properly
    encoded URL, or a :class:`Request` object.
@@ -54,6 +54,14 @@ The :mod:`urllib.request` module defines the following functions:
    If *context* is specified, it must be a :class:`ssl.SSLContext` instance
    describing the various SSL options. See :class:`~http.client.HTTPSConnection`
    for more details.
+
+   The optional *cafile* and *capath* parameters specify a set of trusted
+   CA certificates for HTTPS requests.  *cafile* should point to a single
+   file containing a bundle of CA certificates, whereas *capath* should
+   point to a directory of hashed certificate files.  More information can
+   be found in :meth:`ssl.SSLContext.load_verify_locations`.
+
+   The *cadefault* parameter is ignored.
 
    This function always returns an object which can work as a
    :term:`context manager` and has the properties *url*, *headers*, and *status*.
@@ -113,9 +121,12 @@ The :mod:`urllib.request` module defines the following functions:
       ``http/1.1`` when no *context* is given. Custom *context* should set
       ALPN protocols with :meth:`~ssl.SSLContext.set_alpn_protocols`.
 
-   .. versionchanged:: 3.13
-      Remove *cafile*, *capath* and *cadefault* parameters: use the *context*
-      parameter instead.
+   .. deprecated:: 3.6
+
+       *cafile*, *capath* and *cadefault* are deprecated in favor of *context*.
+       Please use :meth:`ssl.SSLContext.load_cert_chain` instead, or let
+       :func:`ssl.create_default_context` select the system's trusted CA
+       certificates for you.
 
 
 .. function:: install_opener(opener)
@@ -218,7 +229,7 @@ The following classes are provided:
 
    An appropriate ``Content-Type`` header should be included if the *data*
    argument is present.  If this header has not been provided and *data*
-   is not ``None``, ``Content-Type: application/x-www-form-urlencoded`` will
+   is not None, ``Content-Type: application/x-www-form-urlencoded`` will
    be added as a default.
 
    The next two arguments are only of interest for correct handling
@@ -241,7 +252,7 @@ The following classes are provided:
 
    *method* should be a string that indicates the HTTP request method that
    will be used (e.g. ``'HEAD'``).  If provided, its value is stored in the
-   :attr:`~Request.method` attribute and is used by :meth:`get_method`.
+   :attr:`~Request.method` attribute and is used by :meth:`get_method()`.
    The default is ``'GET'`` if *data* is ``None`` or ``'POST'`` otherwise.
    Subclasses may indicate a different default method by setting the
    :attr:`~Request.method` attribute in the class itself.
@@ -1092,7 +1103,7 @@ FileHandler Objects
 
    .. versionchanged:: 3.2
       This method is applicable only for local hostnames.  When a remote
-      hostname is given, a :exc:`~urllib.error.URLError` is raised.
+      hostname is given, an :exc:`~urllib.error.URLError` is raised.
 
 
 .. _data-handler-objects:
@@ -1107,7 +1118,7 @@ DataHandler Objects
    ignores white spaces in base64 encoded data URLs so the URL may be wrapped
    in whatever source file it comes from. But even though some browsers don't
    mind about a missing padding at the end of a base64 encoded data URL, this
-   implementation will raise a :exc:`ValueError` in that case.
+   implementation will raise an :exc:`ValueError` in that case.
 
 
 .. _ftp-handler-objects:

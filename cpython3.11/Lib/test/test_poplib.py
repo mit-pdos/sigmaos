@@ -15,8 +15,11 @@ from test import support as test_support
 from test.support import hashlib_helper
 from test.support import socket_helper
 from test.support import threading_helper
-from test.support import asynchat
-from test.support import asyncore
+from test.support import warnings_helper
+
+
+asynchat = warnings_helper.import_deprecated('asynchat')
+asyncore = warnings_helper.import_deprecated('asyncore')
 
 
 test_support.requires_working_socket(module=True)
@@ -422,6 +425,13 @@ class TestPOP3_SSLClass(TestPOP3Class):
         ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
         ctx.check_hostname = False
         ctx.verify_mode = ssl.CERT_NONE
+        self.assertRaises(ValueError, poplib.POP3_SSL, self.server.host,
+                            self.server.port, keyfile=CERTFILE, context=ctx)
+        self.assertRaises(ValueError, poplib.POP3_SSL, self.server.host,
+                            self.server.port, certfile=CERTFILE, context=ctx)
+        self.assertRaises(ValueError, poplib.POP3_SSL, self.server.host,
+                            self.server.port, keyfile=CERTFILE,
+                            certfile=CERTFILE, context=ctx)
 
         self.client.quit()
         self.client = poplib.POP3_SSL(self.server.host, self.server.port,

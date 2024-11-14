@@ -1,5 +1,5 @@
-:mod:`!codecs` --- Codec registry and base classes
-==================================================
+:mod:`codecs` --- Codec registry and base classes
+=================================================
 
 .. module:: codecs
    :synopsis: Encode and decode data and streams.
@@ -1132,8 +1132,7 @@ particular, the following variants typically exist:
 +-----------------+--------------------------------+--------------------------------+
 | cp875           |                                | Greek                          |
 +-----------------+--------------------------------+--------------------------------+
-| cp932           | 932, ms932, mskanji, ms-kanji, | Japanese                       |
-|                 | windows-31j                    |                                |
+| cp932           | 932, ms932, mskanji, ms-kanji  | Japanese                       |
 +-----------------+--------------------------------+--------------------------------+
 | cp949           | 949, ms949, uhc                | Korean                         |
 +-----------------+--------------------------------+--------------------------------+
@@ -1421,8 +1420,10 @@ to :class:`bytes` mappings. They are not supported by :meth:`bytes.decode`
 |                      | quotedprintable, | quoted printable.            | ``quotetabs=True`` /         |
 |                      | quoted_printable |                              | :meth:`quopri.decode`        |
 +----------------------+------------------+------------------------------+------------------------------+
-| uu_codec             | uu               | Convert the operand using    |                              |
-|                      |                  | uuencode.                    |                              |
+| uu_codec             | uu               | Convert the operand using    | :meth:`!uu.encode` /         |
+|                      |                  | uuencode.                    | :meth:`!uu.decode`           |
+|                      |                  |                              | (Note: :mod:`uu` is          |
+|                      |                  |                              | deprecated.)                 |
 +----------------------+------------------+------------------------------+------------------------------+
 | zlib_codec           | zip, zlib        | Compress the operand using   | :meth:`zlib.compress` /      |
 |                      |                  | gzip.                        | :meth:`zlib.decompress`      |
@@ -1478,7 +1479,7 @@ Internationalized Domain Names (IDN)). It builds upon the ``punycode`` encoding
 and :mod:`stringprep`.
 
 If you need the IDNA 2008 standard from :rfc:`5891` and :rfc:`5895`, use the
-third-party :pypi:`idna` module.
+third-party `idna module <https://pypi.org/project/idna/>`_.
 
 These RFCs together define a protocol to support non-ASCII characters in domain
 names. A domain name containing non-ASCII characters (such as

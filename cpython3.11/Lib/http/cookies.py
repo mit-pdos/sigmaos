@@ -216,7 +216,7 @@ def _unquote(str):
 # header.  By default, _getdate() returns the current time in the appropriate
 # "expires" format for a Set-Cookie header.  The one optional argument is an
 # offset from now, in seconds.  For example, an offset of -3600 means "one hour
-# ago".  The offset may be a floating-point number.
+# ago".  The offset may be a floating point number.
 #
 
 _weekdayname = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
@@ -266,8 +266,6 @@ class Morsel(dict):
         "samesite" : "SameSite",
     }
 
-    _reserved_defaults = dict.fromkeys(_reserved, "")
-
     _flags = {'secure', 'httponly'}
 
     def __init__(self):
@@ -275,7 +273,8 @@ class Morsel(dict):
         self._key = self._value = self._coded_value = None
 
         # Set default attributes
-        dict.update(self, self._reserved_defaults)
+        for key in self._reserved:
+            dict.__setitem__(self, key, "")
 
     @property
     def key(self):

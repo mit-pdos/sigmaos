@@ -104,9 +104,9 @@ def time2isoz(t=None):
 
     """
     if t is None:
-        dt = datetime.datetime.now(tz=datetime.UTC)
+        dt = datetime.datetime.utcnow()
     else:
-        dt = datetime.datetime.fromtimestamp(t, tz=datetime.UTC)
+        dt = datetime.datetime.utcfromtimestamp(t)
     return "%04d-%02d-%02d %02d:%02d:%02dZ" % (
         dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second)
 
@@ -122,9 +122,9 @@ def time2netscape(t=None):
 
     """
     if t is None:
-        dt = datetime.datetime.now(tz=datetime.UTC)
+        dt = datetime.datetime.utcnow()
     else:
-        dt = datetime.datetime.fromtimestamp(t, tz=datetime.UTC)
+        dt = datetime.datetime.utcfromtimestamp(t)
     return "%s, %02d-%s-%04d %02d:%02d:%02d GMT" % (
         DAYS[dt.weekday()], dt.day, MONTHS[dt.month-1],
         dt.year, dt.hour, dt.minute, dt.second)
@@ -640,7 +640,7 @@ def eff_request_host(request):
 
     """
     erhn = req_host = request_host(request)
-    if "." not in req_host:
+    if req_host.find(".") == -1 and not IPV4_RE.search(req_host):
         erhn = req_host + ".local"
     return req_host, erhn
 
@@ -1918,7 +1918,9 @@ class LWPCookieJar(FileCookieJar):
                        "comment", "commenturl")
 
         try:
-            while (line := f.readline()) != "":
+            while 1:
+                line = f.readline()
+                if line == "": break
                 if not line.startswith(header):
                     continue
                 line = line[len(header):].strip()
@@ -1986,7 +1988,7 @@ class MozillaCookieJar(FileCookieJar):
 
     This class differs from CookieJar only in the format it uses to save and
     load cookies to and from a file.  This class uses the Mozilla/Netscape
-    'cookies.txt' format.  curl and lynx use this file format, too.
+    `cookies.txt' format.  curl and lynx use this file format, too.
 
     Don't expect cookies saved while the browser is running to be noticed by
     the browser (in fact, Mozilla on unix will overwrite your saved cookies if
@@ -2018,8 +2020,11 @@ class MozillaCookieJar(FileCookieJar):
                 filename)
 
         try:
-            while (line := f.readline()) != "":
+            while 1:
+                line = f.readline()
                 rest = {}
+
+                if line == "": break
 
                 # httponly is a cookie flag as defined in rfc6265
                 # when encoded in a netscape cookie file,

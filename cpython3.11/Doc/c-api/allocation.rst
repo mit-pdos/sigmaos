@@ -15,8 +15,10 @@ Allocating Objects on the Heap
 .. c:function:: PyObject* PyObject_Init(PyObject *op, PyTypeObject *type)
 
    Initialize a newly allocated object *op* with its type and initial
-   reference.  Returns the initialized object.  Other fields of the object are
-   not affected.
+   reference.  Returns the initialized object.  If *type* indicates that the
+   object participates in the cyclic garbage detector, it is added to the
+   detector's set of observed objects. Other fields of the object are not
+   affected.
 
 
 .. c:function:: PyVarObject* PyObject_InitVar(PyVarObject *op, PyTypeObject *type, Py_ssize_t size)
@@ -52,7 +54,12 @@ Allocating Objects on the Heap
 
 .. c:function:: void PyObject_Del(void *op)
 
-   Same as :c:func:`PyObject_Free`.
+   Releases memory allocated to an object using :c:macro:`PyObject_New` or
+   :c:macro:`PyObject_NewVar`.  This is normally called from the
+   :c:member:`~PyTypeObject.tp_dealloc` handler specified in the object's type.  The fields of
+   the object should not be accessed after this call as the memory is no
+   longer a valid Python object.
+
 
 .. c:var:: PyObject _Py_NoneStruct
 

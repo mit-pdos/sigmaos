@@ -3,6 +3,7 @@
 __all__ = 'staggered_race',
 
 import contextlib
+import typing
 
 from . import events
 from . import exceptions as exceptions_mod
@@ -10,7 +11,16 @@ from . import locks
 from . import tasks
 
 
-async def staggered_race(coro_fns, delay, *, loop=None):
+async def staggered_race(
+        coro_fns: typing.Iterable[typing.Callable[[], typing.Awaitable]],
+        delay: typing.Optional[float],
+        *,
+        loop: events.AbstractEventLoop = None,
+) -> typing.Tuple[
+    typing.Any,
+    typing.Optional[int],
+    typing.List[typing.Optional[Exception]]
+]:
     """Run coroutines with staggered start times and take the first to finish.
 
     This method takes an iterable of coroutine functions. The first one is
@@ -69,11 +79,8 @@ async def staggered_race(coro_fns, delay, *, loop=None):
     exceptions = []
     running_tasks = []
 
-    async def run_one_coro(ok_to_start, previous_failed) -> None:
-        # in eager tasks this waits for the calling task to append this task
-        # to running_tasks, in regular tasks this wait is a no-op that does
-        # not yield a future. See gh-124309.
-        await ok_to_start.wait()
+    async def run_one_coro(
+            previous_failed: typing.Optional[locks.Event]) -> None:
         # Wait for the previous task to finish, or for delay seconds
         if previous_failed is not None:
             with contextlib.suppress(exceptions_mod.TimeoutError):
@@ -89,12 +96,8 @@ async def staggered_race(coro_fns, delay, *, loop=None):
             return
         # Start task that will run the next coroutine
         this_failed = locks.Event()
-        next_ok_to_start = locks.Event()
-        next_task = loop.create_task(run_one_coro(next_ok_to_start, this_failed))
+        next_task = loop.create_task(run_one_coro(this_failed))
         running_tasks.append(next_task)
-        # next_task has been appended to running_tasks so next_task is ok to
-        # start.
-        next_ok_to_start.set()
         assert len(running_tasks) == this_index + 2
         # Prepare place to put this coroutine's exceptions if not won
         exceptions.append(None)
@@ -124,11 +127,8 @@ async def staggered_race(coro_fns, delay, *, loop=None):
                 if i != this_index:
                     t.cancel()
 
-    ok_to_start = locks.Event()
-    first_task = loop.create_task(run_one_coro(ok_to_start, None))
+    first_task = loop.create_task(run_one_coro(None))
     running_tasks.append(first_task)
-    # first_task has been appended to running_tasks so first_task is ok to start.
-    ok_to_start.set()
     try:
         # Wait for a growing list of tasks to all finish: poor man's version of
         # curio's TaskGroup or trio's nursery
@@ -144,7 +144,6 @@ async def staggered_race(coro_fns, delay, *, loop=None):
                         raise d.exception()
         return winner_result, winner_index, exceptions
     finally:
-        del exceptions
         # Make sure no tasks are left running if we leave this function
         for t in running_tasks:
             t.cancel()

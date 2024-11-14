@@ -157,8 +157,8 @@ and work with streams:
    .. versionchanged:: 3.10
       Removed the *loop* parameter.
 
-   .. versionchanged:: 3.11
-      Added the *ssl_shutdown_timeout* parameter.
+  .. versionchanged:: 3.11
+     Added the *ssl_shutdown_timeout* parameter.
 
 
 .. coroutinefunction:: start_unix_server(client_connected_cb, path=None, \
@@ -260,18 +260,7 @@ StreamReader
       buffer is reset.  The :attr:`IncompleteReadError.partial` attribute
       may contain a portion of the separator.
 
-      The *separator* may also be a tuple of separators. In this
-      case the return value will be the shortest possible that has any
-      separator as the suffix. For the purposes of :exc:`LimitOverrunError`,
-      the shortest possible separator is considered to be the one that
-      matched.
-
       .. versionadded:: 3.5.2
-
-      .. versionchanged:: 3.13
-
-         The *separator* parameter may now be a :class:`tuple` of
-         separators.
 
    .. method:: at_eof()
 
@@ -359,7 +348,7 @@ StreamWriter
       returns immediately.
 
    .. coroutinemethod:: start_tls(sslcontext, *, server_hostname=None, \
-                          ssl_handshake_timeout=None, ssl_shutdown_timeout=None)
+                          ssl_handshake_timeout=None)
 
       Upgrade an existing stream-based connection to TLS.
 
@@ -374,15 +363,7 @@ StreamWriter
         handshake to complete before aborting the connection.  ``60.0`` seconds
         if ``None`` (default).
 
-      * *ssl_shutdown_timeout* is the time in seconds to wait for the SSL shutdown
-        to complete before aborting the connection. ``30.0`` seconds if ``None``
-        (default).
-
       .. versionadded:: 3.11
-
-      .. versionchanged:: 3.12
-         Added the *ssl_shutdown_timeout* parameter.
-
 
    .. method:: is_closing()
 

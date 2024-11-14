@@ -312,25 +312,25 @@ cluttering source directories, the *pyc* files are now collected in a
 Aside from the filenames and target directories, the new scheme has a few
 aspects that are visible to the programmer:
 
-* Imported modules now have a :attr:`~module.__cached__` attribute which stores
-  the name of the actual file that was imported:
+* Imported modules now have a :attr:`__cached__` attribute which stores the name
+  of the actual file that was imported:
 
    >>> import collections
    >>> collections.__cached__ # doctest: +SKIP
    'c:/py32/lib/__pycache__/collections.cpython-32.pyc'
 
-* The tag that is unique to each interpreter is accessible from the :mod:`!imp`
+* The tag that is unique to each interpreter is accessible from the :mod:`imp`
   module:
 
-   >>> import imp # doctest: +SKIP
+   >>> import imp
    >>> imp.get_tag() # doctest: +SKIP
    'cpython-32'
 
 * Scripts that try to deduce source filename from the imported file now need to
   be smarter.  It is no longer sufficient to simply strip the "c" from a ".pyc"
-  filename.  Instead, use the new functions in the :mod:`!imp` module:
+  filename.  Instead, use the new functions in the :mod:`imp` module:
 
-  >>> imp.source_from_cache('c:/py32/lib/__pycache__/collections.cpython-32.pyc') # doctest: +SKIP
+  >>> imp.source_from_cache('c:/py32/lib/__pycache__/collections.cpython-32.pyc')
   'c:/py32/lib/collections.py'
   >>> imp.cache_from_source('c:/py32/lib/collections.py') # doctest: +SKIP
   'c:/py32/lib/__pycache__/collections.cpython-32.pyc'
@@ -468,7 +468,6 @@ Some smaller changes made to the core Python language are:
     >>> class LowerCasedDict(dict):
     ...     def __getitem__(self, key):
     ...         return dict.__getitem__(self, key.lower())
-    ...
     >>> lcd = LowerCasedDict(part='widgets', quantity=10)
     >>> 'There are {QUANTITY} {Part} in stock'.format_map(lcd)
     'There are 10 widgets in stock'
@@ -476,7 +475,6 @@ Some smaller changes made to the core Python language are:
     >>> class PlaceholderDict(dict):
     ...     def __missing__(self, key):
     ...         return '<{}>'.format(key)
-    ...
     >>> 'Hello {name}, welcome to {location}'.format_map(PlaceholderDict())
     'Hello <name>, welcome to <location>'
 
@@ -531,7 +529,7 @@ Some smaller changes made to the core Python language are:
 
   (Proposed and implemented by Mark Dickinson; :issue:`9337`.)
 
-* :class:`memoryview` objects now have a :meth:`~memoryview.release` method
+* :class:`memoryview` objects now have a :meth:`~memoryview.release()` method
   and they also now support the context management protocol.  This allows timely
   release of any resources that were acquired when requesting a buffer from the
   original object.
@@ -662,7 +660,7 @@ Python's standard library has undergone significant maintenance efforts and
 quality improvements.
 
 The biggest news for Python 3.2 is that the :mod:`email` package, :mod:`mailbox`
-module, and :mod:`!nntplib` modules now work correctly with the bytes/text model
+module, and :mod:`nntplib` modules now work correctly with the bytes/text model
 in Python 3.  For the first time, there is correct handling of messages with
 mixed encodings.
 
@@ -785,8 +783,8 @@ functools
 
   (Contributed by Raymond Hettinger and incorporating design ideas from Jim
   Baker, Miki Tebeka, and Nick Coghlan; see `recipe 498245
-  <https://code.activestate.com/recipes/498245-lru-and-lfu-cache-decorators/>`_\, `recipe 577479
-  <https://code.activestate.com/recipes/577479-simple-caching-decorator/>`_\, :issue:`10586`, and
+  <https://code.activestate.com/recipes/498245/>`_\, `recipe 577479
+  <https://code.activestate.com/recipes/577479/>`_\, :issue:`10586`, and
   :issue:`10593`.)
 
 * The :func:`functools.wraps` decorator now adds a :attr:`__wrapped__` attribute
@@ -1312,7 +1310,7 @@ An early decision to limit the interoperability of various numeric types has
 been relaxed.  It is still unsupported (and ill-advised) to have implicit
 mixing in arithmetic expressions such as ``Decimal('1.1') + float('1.1')``
 because the latter loses information in the process of constructing the binary
-float.  However, since existing floating-point value can be converted losslessly
+float.  However, since existing floating point value can be converted losslessly
 to either a decimal or rational representation, it makes sense to add them to
 the constructor and to support mixed-type comparisons.
 
@@ -1325,7 +1323,7 @@ the constructor and to support mixed-type comparisons.
   and :class:`fractions.Fraction` (:issue:`2531` and :issue:`8188`).
 
 Similar changes were made to :class:`fractions.Fraction` so that the
-:meth:`~fractions.Fraction.from_float` and :meth:`~fractions.Fraction.from_decimal`
+:meth:`~fractions.Fraction.from_float()` and :meth:`~fractions.Fraction.from_decimal`
 methods are no longer needed (:issue:`8294`):
 
 >>> from decimal import Decimal
@@ -1622,7 +1620,7 @@ socket
 
 The :mod:`socket` module has two new improvements.
 
-* Socket objects now have a :meth:`~socket.socket.detach` method which puts
+* Socket objects now have a :meth:`~socket.socket.detach()` method which puts
   the socket into closed state without actually closing the underlying file
   descriptor.  The latter can then be reused for other purposes.
   (Added by Antoine Pitrou; :issue:`8524`.)
@@ -1650,7 +1648,7 @@ for secure (encrypted, authenticated) internet connections:
 * The :func:`ssl.wrap_socket() <ssl.SSLContext.wrap_socket>` constructor function now takes a *ciphers*
   argument.  The *ciphers* string lists the allowed encryption algorithms using
   the format described in the `OpenSSL documentation
-  <https://docs.openssl.org/1.0.2/man1/ciphers/#cipher-list-format>`__.
+  <https://www.openssl.org/docs/man1.0.2/man1/ciphers.html#CIPHER-LIST-FORMAT>`__.
 
 * When linked against recent versions of OpenSSL, the :mod:`ssl` module now
   supports the Server Name Indication extension to the TLS protocol, allowing
@@ -1677,13 +1675,13 @@ for secure (encrypted, authenticated) internet connections:
 nntp
 ----
 
-The :mod:`!nntplib` module has a revamped implementation with better bytes and
+The :mod:`nntplib` module has a revamped implementation with better bytes and
 text semantics as well as more practical APIs.  These improvements break
 compatibility with the nntplib version in Python 3.1, which was partly
 dysfunctional in itself.
 
 Support for secure connections through both implicit (using
-:class:`!nntplib.NNTP_SSL`) and explicit (using :meth:`!nntplib.NNTP.starttls`)
+:class:`nntplib.NNTP_SSL`) and explicit (using :meth:`nntplib.NNTP.starttls`)
 TLS has also been added.
 
 (Contributed by Antoine Pitrou in :issue:`9360` and Andrew Vant in :issue:`1926`.)
@@ -1820,7 +1818,8 @@ names.
    ===============================   ==============================
 
   Likewise, the ``TestCase.fail*`` methods deprecated in Python 3.1 are expected
-  to be removed in Python 3.3.
+  to be removed in Python 3.3.  Also see the :ref:`deprecated-aliases` section in
+  the :mod:`unittest` documentation.
 
   (Contributed by Ezio Melotti; :issue:`9424`.)
 
@@ -1858,12 +1857,12 @@ structure.
 asyncore
 --------
 
-:class:`!asyncore.dispatcher` now provides a
-:meth:`!handle_accepted` method
+:class:`asyncore.dispatcher` now provides a
+:meth:`~asyncore.dispatcher.handle_accepted()` method
 returning a ``(sock, addr)`` pair which is called when a connection has actually
 been established with a new remote endpoint. This is supposed to be used as a
-replacement for old :meth:`!handle_accept` and avoids
-the user  to call :meth:`!accept` directly.
+replacement for old :meth:`~asyncore.dispatcher.handle_accept()` and avoids
+the user  to call :meth:`~asyncore.dispatcher.accept()` directly.
 
 (Contributed by Giampaolo Rodolà; :issue:`6706`.)
 
@@ -1889,7 +1888,6 @@ inspect
     >>> from inspect import getgeneratorstate
     >>> def gen():
     ...     yield 'demo'
-    ...
     >>> g = gen()
     >>> getgeneratorstate(g)
     'GEN_CREATED'
@@ -2060,7 +2058,7 @@ information:
   such as "3.2".
 
 It also provides access to the paths and variables corresponding to one of
-seven named schemes used by ``distutils``.  Those include *posix_prefix*,
+seven named schemes used by :mod:`distutils`.  Those include *posix_prefix*,
 *posix_home*, *posix_user*, *nt*, *nt_user*, *os2*, *os2_home*:
 
 * :func:`~sysconfig.get_paths` makes a dictionary containing installation paths
@@ -2321,7 +2319,7 @@ Multi-threading
   intervals and reduced overhead due to lock contention and the number of
   ensuing system calls.  The notion of a "check interval" to allow thread
   switches has been abandoned and replaced by an absolute duration expressed in
-  seconds.  This parameter is tunable through :func:`sys.setswitchinterval`.
+  seconds.  This parameter is tunable through :func:`sys.setswitchinterval()`.
   It currently defaults to 5 milliseconds.
 
   Additional details about the implementation can be read from a `python-dev
@@ -2644,7 +2642,7 @@ require changes to your code:
   * ``""`` is now a valid value and is no longer automatically converted to an
     empty string. For empty strings, use ``"option ="`` in a line.
 
-* The :mod:`!nntplib` module was reworked extensively, meaning that its APIs
+* The :mod:`nntplib` module was reworked extensively, meaning that its APIs
   are often incompatible with the 3.1 APIs.
 
 * :class:`bytearray` objects can no longer be used as filenames; instead,
@@ -2738,8 +2736,8 @@ require changes to your code:
   thread-state aware APIs (such as :c:func:`PyEval_SaveThread`
   and :c:func:`PyEval_RestoreThread`) should be used instead.
 
-* Due to security risks, :func:`!asyncore.handle_accept` has been deprecated, and
-  a new function, :func:`!asyncore.handle_accepted`, was added to replace it.
+* Due to security risks, :func:`asyncore.handle_accept` has been deprecated, and
+  a new function, :func:`asyncore.handle_accepted`, was added to replace it.
 
   (Contributed by Giampaolo Rodola in :issue:`6706`.)
 

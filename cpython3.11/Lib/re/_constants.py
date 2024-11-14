@@ -13,14 +13,14 @@
 
 # update when constants are added or removed
 
-MAGIC = 20230612
+MAGIC = 20220615
 
-from _sre import MAXREPEAT, MAXGROUPS  # noqa: F401
+from _sre import MAXREPEAT, MAXGROUPS
 
 # SRE standard exception (access as sre.error)
 # should this really be here?
 
-class PatternError(Exception):
+class error(Exception):
     """Exception raised for invalid regular expressions.
 
     Attributes:
@@ -52,9 +52,6 @@ class PatternError(Exception):
             self.lineno = self.colno = None
         super().__init__(msg)
 
-
-# Backward compatibility after renaming in 3.13
-error = PatternError
 
 class _NamedIntConstant(int):
     def __new__(cls, value, name):
@@ -206,9 +203,8 @@ CH_UNICODE = {
     CATEGORY_NOT_LINEBREAK: CATEGORY_UNI_NOT_LINEBREAK
 }
 
-CH_NEGATE = dict(zip(CHCODES[::2] + CHCODES[1::2], CHCODES[1::2] + CHCODES[::2]))
-
 # flags
+SRE_FLAG_TEMPLATE = 1 # template mode (unknown purpose, deprecated)
 SRE_FLAG_IGNORECASE = 2 # case insensitive
 SRE_FLAG_LOCALE = 4 # honour system locale
 SRE_FLAG_MULTILINE = 8 # treat target as multiline string

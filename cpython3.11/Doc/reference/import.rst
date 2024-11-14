@@ -281,7 +281,7 @@ When the named module is not found in :data:`sys.modules`, Python next
 searches :data:`sys.meta_path`, which contains a list of meta path finder
 objects.  These finders are queried in order to see if they know how to handle
 the named module.  Meta path finders must implement a method called
-:meth:`~importlib.abc.MetaPathFinder.find_spec` which takes three arguments:
+:meth:`~importlib.abc.MetaPathFinder.find_spec()` which takes three arguments:
 a name, an import path, and (optionally) a target module.  The meta path
 finder can use any strategy it wants to determine whether it can handle
 the named module or not.
@@ -292,7 +292,7 @@ spec object.  If it cannot handle the named module, it returns ``None``.  If
 a spec, then a :exc:`ModuleNotFoundError` is raised.  Any other exceptions
 raised are simply propagated up, aborting the import process.
 
-The :meth:`~importlib.abc.MetaPathFinder.find_spec` method of meta path
+The :meth:`~importlib.abc.MetaPathFinder.find_spec()` method of meta path
 finders is called with two or three arguments.  The first is the fully
 qualified name of the module being imported, for example ``foo.bar.baz``.
 The second argument is the path entries to use for the module search.  For
@@ -324,18 +324,14 @@ modules, and one that knows how to import modules from an :term:`import path`
 
 .. versionchanged:: 3.4
    The :meth:`~importlib.abc.MetaPathFinder.find_spec` method of meta path
-   finders replaced :meth:`!find_module`, which
+   finders replaced :meth:`~importlib.abc.MetaPathFinder.find_module`, which
    is now deprecated.  While it will continue to work without change, the
    import machinery will try it only if the finder does not implement
    :meth:`~importlib.abc.MetaPathFinder.find_spec`.
 
 .. versionchanged:: 3.10
-   Use of :meth:`!find_module` by the import system
+   Use of :meth:`~importlib.abc.MetaPathFinder.find_module` by the import system
    now raises :exc:`ImportWarning`.
-
-.. versionchanged:: 3.12
-   :meth:`!find_module` has been removed.
-   Use :meth:`~importlib.abc.MetaPathFinder.find_spec` instead.
 
 
 Loading
@@ -362,6 +358,7 @@ of what happens during the loading portion of import::
         sys.modules[spec.name] = module
     elif not hasattr(spec.loader, 'exec_module'):
         module = spec.loader.load_module(spec.name)
+        # Set __loader__ and __package__ if missing.
     else:
         sys.modules[spec.name] = module
         try:
@@ -513,10 +510,8 @@ holding is that if you have ``sys.modules['spam']`` and
 ``sys.modules['spam.foo']`` (as you would after the above import), the latter
 must appear as the ``foo`` attribute of the former.
 
-.. _module-specs:
-
-Module specs
-------------
+Module spec
+-----------
 
 The import machinery uses a variety of information about each module
 during import, especially before loading.  Most of the information is
@@ -529,44 +524,128 @@ and the loader that executes it.  Most importantly, it allows the
 import machinery to perform the boilerplate operations of loading,
 whereas without a module spec the loader had that responsibility.
 
-The module's spec is exposed as :attr:`module.__spec__`. Setting
-:attr:`!__spec__` appropriately applies equally to
-:ref:`modules initialized during interpreter startup <programs>`.
-The one exception is ``__main__``, where :attr:`!__spec__` is
-:ref:`set to None in some cases <main_spec>`.
-
+The module's spec is exposed as the ``__spec__`` attribute on a module object.
 See :class:`~importlib.machinery.ModuleSpec` for details on the contents of
 the module spec.
 
 .. versionadded:: 3.4
 
+.. _import-mod-attrs:
+
+Import-related module attributes
+--------------------------------
+
+The import machinery fills in these attributes on each module object
+during loading, based on the module's spec, before the loader executes
+the module.
+
+.. attribute:: __name__
+
+   The ``__name__`` attribute must be set to the fully qualified name of
+   the module.  This name is used to uniquely identify the module in
+   the import system.
+
+.. attribute:: __loader__
+
+   The ``__loader__`` attribute must be set to the loader object that
+   the import machinery used when loading the module.  This is mostly
+   for introspection, but can be used for additional loader-specific
+   functionality, for example getting data associated with a loader.
+
+.. attribute:: __package__
+
+   The module's ``__package__`` attribute must be set.  Its value must
+   be a string, but it can be the same value as its ``__name__``.  When
+   the module is a package, its ``__package__`` value should be set to
+   its ``__name__``.  When the module is not a package, ``__package__``
+   should be set to the empty string for top-level modules, or for
+   submodules, to the parent package's name.  See :pep:`366` for further
+   details.
+
+   This attribute is used instead of ``__name__`` to calculate explicit
+   relative imports for main modules, as defined in :pep:`366`. It is
+   expected to have the same value as ``__spec__.parent``.
+
+   .. versionchanged:: 3.6
+      The value of ``__package__`` is expected to be the same as
+      ``__spec__.parent``.
+
+.. attribute:: __spec__
+
+   The ``__spec__`` attribute must be set to the module spec that was
+   used when importing the module. Setting ``__spec__``
+   appropriately applies equally to :ref:`modules initialized during
+   interpreter startup <programs>`.  The one exception is ``__main__``,
+   where ``__spec__`` is :ref:`set to None in some cases <main_spec>`.
+
+   When ``__package__`` is not defined, ``__spec__.parent`` is used as
+   a fallback.
+
+   .. versionadded:: 3.4
+
+   .. versionchanged:: 3.6
+      ``__spec__.parent`` is used as a fallback when ``__package__`` is
+      not defined.
+
+.. attribute:: __path__
+
+   If the module is a package (either regular or namespace), the module
+   object's ``__path__`` attribute must be set.  The value must be
+   iterable, but may be empty if ``__path__`` has no further significance.
+   If ``__path__`` is not empty, it must produce strings when iterated
+   over. More details on the semantics of ``__path__`` are given
+   :ref:`below <package-path-rules>`.
+
+   Non-package modules should not have a ``__path__`` attribute.
+
+.. attribute:: __file__
+.. attribute:: __cached__
+
+   ``__file__`` is optional (if set, value must be a string). It indicates
+   the pathname of the file from which the module was loaded (if
+   loaded from a file), or the pathname of the shared library file
+   for extension modules loaded dynamically from a shared library.
+   It might be missing for certain types of modules, such as C
+   modules that are statically linked into the interpreter, and the
+   import system may opt to leave it unset if it has no semantic
+   meaning (e.g. a module loaded from a database).
+
+   If ``__file__`` is set then the ``__cached__`` attribute might also
+   be set,  which is the path to any compiled version of
+   the code (e.g. byte-compiled file). The file does not need to exist
+   to set this attribute; the path can simply point to where the
+   compiled file would exist (see :pep:`3147`).
+
+   Note that ``__cached__`` may be set even if ``__file__`` is not
+   set.  However, that scenario is quite atypical.  Ultimately, the
+   loader is what makes use of the module spec provided by the finder
+   (from which ``__file__`` and ``__cached__`` are derived).  So
+   if a loader can load from a cached module but otherwise does not load
+   from a file, that atypical scenario may be appropriate.
+
 .. _package-path-rules:
 
-__path__ attributes on modules
-------------------------------
+module.__path__
+---------------
 
-The :attr:`~module.__path__` attribute should be a (possibly empty)
-:term:`sequence` of strings enumerating the locations where the package's
-submodules will be found. By definition, if a module has a :attr:`!__path__`
-attribute, it is a :term:`package`.
+By definition, if a module has a ``__path__`` attribute, it is a package.
 
-A package's :attr:`~module.__path__` attribute is used during imports of its
-subpackages.
+A package's ``__path__`` attribute is used during imports of its subpackages.
 Within the import machinery, it functions much the same as :data:`sys.path`,
 i.e. providing a list of locations to search for modules during import.
-However, :attr:`!__path__` is typically much more constrained than
-:data:`!sys.path`.
+However, ``__path__`` is typically much more constrained than
+:data:`sys.path`.
 
+``__path__`` must be an iterable of strings, but it may be empty.
 The same rules used for :data:`sys.path` also apply to a package's
-:attr:`!__path__`. :data:`sys.path_hooks` (described below) are
-consulted when traversing a package's :attr:`!__path__`.
+``__path__``, and :data:`sys.path_hooks` (described below) are
+consulted when traversing a package's ``__path__``.
 
-A package's ``__init__.py`` file may set or alter the package's
-:attr:`~module.__path__`
+A package's ``__init__.py`` file may set or alter the package's ``__path__``
 attribute, and this was typically the way namespace packages were implemented
 prior to :pep:`420`.  With the adoption of :pep:`420`, namespace packages no
-longer need to supply ``__init__.py`` files containing only :attr:`!__path__`
-manipulation code; the import machinery automatically sets :attr:`!__path__`
+longer need to supply ``__init__.py`` files containing only ``__path__``
+manipulation code; the import machinery automatically sets ``__path__``
 correctly for the namespace package.
 
 Module reprs
@@ -597,10 +676,22 @@ Here are the exact rules used:
 
 * Otherwise, just use the module's ``__name__`` in the repr.
 
-.. versionchanged:: 3.12
-   Use of :meth:`!module_repr`, having been deprecated since Python 3.4, was
-   removed in Python 3.12 and is no longer called during the resolution of a
-   module's repr.
+.. versionchanged:: 3.4
+   Use of :meth:`loader.module_repr() <importlib.abc.Loader.module_repr>`
+   has been deprecated and the module spec is now used by the import
+   machinery to generate a module repr.
+
+   For backward compatibility with Python 3.3, the module repr will be
+   generated by calling the loader's
+   :meth:`~importlib.abc.Loader.module_repr` method, if defined, before
+   trying either approach described above.  However, the method is deprecated.
+
+.. versionchanged:: 3.10
+
+   Calling :meth:`~importlib.abc.Loader.module_repr` now occurs after trying to
+   use a module's ``__spec__`` attribute but before falling back on
+   ``__file__``. Use of :meth:`~importlib.abc.Loader.module_repr` is slated to
+   stop in Python 3.12.
 
 .. _pyc-invalidation:
 
@@ -732,7 +823,7 @@ stores finder objects rather than being limited to :term:`importer` objects).
 In this way, the expensive search for a particular :term:`path entry`
 location's :term:`path entry finder` need only be done once.  User code is
 free to remove cache entries from :data:`sys.path_importer_cache` forcing
-the path based finder to perform the path entry search again.
+the path based finder to perform the path entry search again [#fnpic]_.
 
 If the path entry is not present in the cache, the path based finder iterates
 over every callable in :data:`sys.path_hooks`.  Each of the :term:`path entry
@@ -782,13 +873,13 @@ module.  ``find_spec()`` returns a fully populated spec for the module.
 This spec will always have "loader" set (with one exception).
 
 To indicate to the import machinery that the spec represents a namespace
-:term:`portion`, the path entry finder sets ``submodule_search_locations`` to
+:term:`portion`, the path entry finder sets "submodule_search_locations" to
 a list containing the portion.
 
 .. versionchanged:: 3.4
    :meth:`~importlib.abc.PathEntryFinder.find_spec` replaced
-   :meth:`!find_loader` and
-   :meth:`!find_module`, both of which
+   :meth:`~importlib.abc.PathEntryFinder.find_loader` and
+   :meth:`~importlib.abc.PathEntryFinder.find_module`, both of which
    are now deprecated, but will be used if ``find_spec()`` is not defined.
 
    Older path entry finders may implement one of these two deprecated methods
@@ -796,7 +887,7 @@ a list containing the portion.
    sake of backward compatibility.  However, if ``find_spec()`` is
    implemented on the path entry finder, the legacy methods are ignored.
 
-   :meth:`!find_loader` takes one argument, the
+   :meth:`~importlib.abc.PathEntryFinder.find_loader` takes one argument, the
    fully qualified name of the module being imported.  ``find_loader()``
    returns a 2-tuple where the first item is the loader and the second item
    is a namespace :term:`portion`.
@@ -815,12 +906,9 @@ a list containing the portion.
    ``find_loader()`` in preference to ``find_module()``.
 
 .. versionchanged:: 3.10
-    Calls to :meth:`!find_module` and
-    :meth:`!find_loader` by the import
+    Calls to :meth:`~importlib.abc.PathEntryFinder.find_module` and
+    :meth:`~importlib.abc.PathEntryFinder.find_loader` by the import
     system will raise :exc:`ImportWarning`.
-
-.. versionchanged:: 3.12
-    ``find_module()`` and ``find_loader()`` have been removed.
 
 
 Replacing the standard import system
@@ -943,8 +1031,8 @@ The original specification for :data:`sys.meta_path` was :pep:`302`, with
 subsequent extension in :pep:`420`.
 
 :pep:`420` introduced :term:`namespace packages <namespace package>` for
-Python 3.3.  :pep:`420` also introduced the :meth:`!find_loader` protocol as an
-alternative to :meth:`!find_module`.
+Python 3.3.  :pep:`420` also introduced the :meth:`find_loader` protocol as an
+alternative to :meth:`find_module`.
 
 :pep:`366` describes the addition of the ``__package__`` attribute for
 explicit relative imports in main modules.
@@ -971,3 +1059,8 @@ methods to finders and loaders.
    module may replace itself in :data:`sys.modules`.  This is
    implementation-specific behavior that is not guaranteed to work in other
    Python implementations.
+
+.. [#fnpic] In legacy code, it is possible to find instances of
+   :class:`imp.NullImporter` in the :data:`sys.path_importer_cache`.  It
+   is recommended that code be changed to use ``None`` instead.  See
+   :ref:`portingpythoncode` for more details.

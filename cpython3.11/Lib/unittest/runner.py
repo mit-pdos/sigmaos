@@ -35,16 +35,13 @@ class TextTestResult(result.TestResult):
     separator1 = '=' * 70
     separator2 = '-' * 70
 
-    def __init__(self, stream, descriptions, verbosity, *, durations=None):
-        """Construct a TextTestResult. Subclasses should accept **kwargs
-        to ensure compatibility as the interface changes."""
+    def __init__(self, stream, descriptions, verbosity):
         super(TextTestResult, self).__init__(stream, descriptions, verbosity)
         self.stream = stream
         self.showAll = verbosity > 1
         self.dots = verbosity == 1
         self.descriptions = descriptions
         self._newline = True
-        self.durations = durations
 
     def getDescription(self, test):
         doc_first_line = test.shortDescription()
@@ -171,7 +168,7 @@ class TextTestRunner(object):
 
     def __init__(self, stream=None, descriptions=True, verbosity=1,
                  failfast=False, buffer=False, resultclass=None, warnings=None,
-                 *, tb_locals=False, durations=None):
+                 *, tb_locals=False):
         """Construct a TextTestRunner.
 
         Subclasses should accept **kwargs to ensure compatibility as the
@@ -185,41 +182,12 @@ class TextTestRunner(object):
         self.failfast = failfast
         self.buffer = buffer
         self.tb_locals = tb_locals
-        self.durations = durations
         self.warnings = warnings
         if resultclass is not None:
             self.resultclass = resultclass
 
     def _makeResult(self):
-        try:
-            return self.resultclass(self.stream, self.descriptions,
-                                    self.verbosity, durations=self.durations)
-        except TypeError:
-            # didn't accept the durations argument
-            return self.resultclass(self.stream, self.descriptions,
-                                    self.verbosity)
-
-    def _printDurations(self, result):
-        if not result.collectedDurations:
-            return
-        ls = sorted(result.collectedDurations, key=lambda x: x[1],
-                    reverse=True)
-        if self.durations > 0:
-            ls = ls[:self.durations]
-        self.stream.writeln("Slowest test durations")
-        if hasattr(result, 'separator2'):
-            self.stream.writeln(result.separator2)
-        hidden = False
-        for test, elapsed in ls:
-            if self.verbosity < 2 and elapsed < 0.001:
-                hidden = True
-                continue
-            self.stream.writeln("%-10s %s" % ("%.3fs" % elapsed, test))
-        if hidden:
-            self.stream.writeln("\n(durations < 0.001s were hidden; "
-                                "use -v to show these durations)")
-        else:
-            self.stream.writeln("")
+        return self.resultclass(self.stream, self.descriptions, self.verbosity)
 
     def run(self, test):
         "Run the given test case or test suite."
@@ -232,6 +200,15 @@ class TextTestRunner(object):
             if self.warnings:
                 # if self.warnings is set, use it to filter all the warnings
                 warnings.simplefilter(self.warnings)
+                # if the filter is 'default' or 'always', special-case the
+                # warnings from the deprecated unittest methods to show them
+                # no more than once per module, because they can be fairly
+                # noisy.  The -Wd and -Wa flags can be used to bypass this
+                # only when self.warnings is None.
+                if self.warnings in ['default', 'always']:
+                    warnings.filterwarnings('module',
+                            category=DeprecationWarning,
+                            message=r'Please use assert\w+ instead.')
             startTime = time.perf_counter()
             startTestRun = getattr(result, 'startTestRun', None)
             if startTestRun is not None:
@@ -245,12 +222,8 @@ class TextTestRunner(object):
             stopTime = time.perf_counter()
         timeTaken = stopTime - startTime
         result.printErrors()
-        if self.durations is not None:
-            self._printDurations(result)
-
         if hasattr(result, 'separator2'):
             self.stream.writeln(result.separator2)
-
         run = result.testsRun
         self.stream.writeln("Ran %d test%s in %.3fs" %
                             (run, run != 1 and "s" or "", timeTaken))
@@ -274,8 +247,6 @@ class TextTestRunner(object):
                 infos.append("failures=%d" % failed)
             if errored:
                 infos.append("errors=%d" % errored)
-        elif run == 0 and not skipped:
-            self.stream.write("NO TESTS RAN")
         else:
             self.stream.write("OK")
         if skipped:

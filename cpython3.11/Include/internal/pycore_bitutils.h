@@ -26,9 +26,9 @@ extern "C" {
 #endif
 
 #ifdef _MSC_VER
-#  include <intrin.h>             // _byteswap_uint64()
+   /* Get _byteswap_ushort(), _byteswap_ulong(), _byteswap_uint64() */
+#  include <intrin.h>
 #endif
-
 
 static inline uint16_t
 _Py_bswap16(uint16_t word)

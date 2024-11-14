@@ -23,7 +23,8 @@ class TestEncodeBasestringAscii:
         for input_string, expect in CASES:
             result = self.json.encoder.encode_basestring_ascii(input_string)
             self.assertEqual(result, expect,
-                f'{result!r} != {expect!r} for {fname}({input_string!r})')
+                '{0!r} != {1!r} for {2}({3!r})'.format(
+                    result, expect, fname, input_string))
 
     def test_ordered_dict(self):
         # See issue 6105

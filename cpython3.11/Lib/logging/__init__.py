@@ -1,4 +1,4 @@
-# Copyright 2001-2022 by Vinay Sajip. All Rights Reserved.
+# Copyright 2001-2019 by Vinay Sajip. All Rights Reserved.
 #
 # Permission to use, copy, modify, and distribute this software and its
 # documentation for any purpose and without fee is hereby granted,
@@ -18,7 +18,7 @@
 Logging package for Python. Based on PEP 282 and comments thereto in
 comp.lang.python.
 
-Copyright (C) 2001-2022 Vinay Sajip. All Rights Reserved.
+Copyright (C) 2001-2019 Vinay Sajip. All Rights Reserved.
 
 To use, simply 'import logging' and log away!
 """
@@ -38,8 +38,7 @@ __all__ = ['BASIC_FORMAT', 'BufferingFormatter', 'CRITICAL', 'DEBUG', 'ERROR',
            'exception', 'fatal', 'getLevelName', 'getLogger', 'getLoggerClass',
            'info', 'log', 'makeLogRecord', 'setLoggerClass', 'shutdown',
            'warn', 'warning', 'getLogRecordFactory', 'setLogRecordFactory',
-           'lastResort', 'raiseExceptions', 'getLevelNamesMapping',
-           'getHandlerByName', 'getHandlerNames']
+           'lastResort', 'raiseExceptions', 'getLevelNamesMapping']
 
 import threading
 
@@ -56,7 +55,7 @@ __date__    = "07 February 2010"
 #
 #_startTime is used as the base when calculating the relative time of events
 #
-_startTime = time.time_ns()
+_startTime = time.time()
 
 #
 #raiseExceptions is used to see if exceptions during handling should be
@@ -65,24 +64,19 @@ _startTime = time.time_ns()
 raiseExceptions = True
 
 #
-# If you don't want threading information in the log, set this to False
+# If you don't want threading information in the log, set this to zero
 #
 logThreads = True
 
 #
-# If you don't want multiprocessing information in the log, set this to False
+# If you don't want multiprocessing information in the log, set this to zero
 #
 logMultiprocessing = True
 
 #
-# If you don't want process information in the log, set this to False
+# If you don't want process information in the log, set this to zero
 #
 logProcesses = True
-
-#
-# If you don't want asyncio task information in the log, set this to False
-#
-logAsyncioTasks = True
 
 #---------------------------------------------------------------------------
 #   Level related stuff
@@ -159,9 +153,12 @@ def addLevelName(level, levelName):
 
     This is used when converting levels to text during message formatting.
     """
-    with _lock:
+    _acquireLock()
+    try:    #unlikely to cause an exception, but you never know...
         _levelToName[level] = levelName
         _nameToLevel[levelName] = level
+    finally:
+        _releaseLock()
 
 if hasattr(sys, "_getframe"):
     currentframe = lambda: sys._getframe(1)
@@ -170,8 +167,8 @@ else: #pragma: no cover
         """Return the frame object for the caller's stack frame."""
         try:
             raise Exception
-        except Exception as exc:
-            return exc.__traceback__.tb_frame.f_back
+        except Exception:
+            return sys.exc_info()[2].tb_frame.f_back
 
 #
 # _srcfile is used when walking the stack to check when we've got the first
@@ -228,27 +225,21 @@ def _checkLevel(level):
 #
 _lock = threading.RLock()
 
-def _prepareFork():
+def _acquireLock():
     """
-    Prepare to fork a new child process by acquiring the module-level lock.
+    Acquire the module-level lock for serializing access to shared data.
 
-    This should be used in conjunction with _afterFork().
+    This should be released with _releaseLock().
     """
-    # Wrap the lock acquisition in a try-except to prevent the lock from being
-    # abandoned in the event of an asynchronous exception. See gh-106238.
-    try:
+    if _lock:
         _lock.acquire()
-    except BaseException:
+
+def _releaseLock():
+    """
+    Release the module-level lock acquired by calling _acquireLock().
+    """
+    if _lock:
         _lock.release()
-        raise
-
-def _afterFork():
-    """
-    After a new child process has been forked, release the module-level lock.
-
-    This should be used in conjunction with _prepareFork().
-    """
-    _lock.release()
 
 
 # Prevent a held logging lock from blocking a child from logging.
@@ -263,20 +254,23 @@ else:
     _at_fork_reinit_lock_weakset = weakref.WeakSet()
 
     def _register_at_fork_reinit_lock(instance):
-        with _lock:
+        _acquireLock()
+        try:
             _at_fork_reinit_lock_weakset.add(instance)
+        finally:
+            _releaseLock()
 
     def _after_at_fork_child_reinit_locks():
         for handler in _at_fork_reinit_lock_weakset:
             handler._at_fork_reinit()
 
-        # _prepareFork() was called in the parent before forking.
+        # _acquireLock() was called in the parent before forking.
         # The lock is reinitialized to unlocked state.
         _lock._at_fork_reinit()
 
-    os.register_at_fork(before=_prepareFork,
+    os.register_at_fork(before=_acquireLock,
                         after_in_child=_after_at_fork_child_reinit_locks,
-                        after_in_parent=_afterFork)
+                        after_in_parent=_releaseLock)
 
 
 #---------------------------------------------------------------------------
@@ -300,7 +294,7 @@ class LogRecord(object):
         """
         Initialize a logging record with interesting information.
         """
-        ct = time.time_ns()
+        ct = time.time()
         self.name = name
         self.msg = msg
         #
@@ -339,17 +333,9 @@ class LogRecord(object):
         self.stack_info = sinfo
         self.lineno = lineno
         self.funcName = func
-        self.created = ct / 1e9  # ns to float seconds
-        # Get the number of whole milliseconds (0-999) in the fractional part of seconds.
-        # Eg: 1_677_903_920_999_998_503 ns --> 999_998_503 ns--> 999 ms
-        # Convert to float by adding 0.0 for historical reasons. See gh-89047
-        self.msecs = (ct % 1_000_000_000) // 1_000_000 + 0.0
-        if self.msecs == 999.0 and int(self.created) != ct // 1_000_000_000:
-            # ns -> sec conversion can round up, e.g:
-            # 1_677_903_920_999_999_900 ns --> 1_677_903_921.0 sec
-            self.msecs = 0.0
-
-        self.relativeCreated = (ct - _startTime) / 1e6
+        self.created = ct
+        self.msecs = int((ct - int(ct)) * 1000) + 0.0  # see gh-89047
+        self.relativeCreated = (self.created - _startTime) * 1000
         if logThreads:
             self.thread = threading.get_ident()
             self.threadName = threading.current_thread().name
@@ -374,15 +360,6 @@ class LogRecord(object):
             self.process = os.getpid()
         else:
             self.process = None
-
-        self.taskName = None
-        if logAsyncioTasks:
-            asyncio = sys.modules.get('asyncio')
-            if asyncio:
-                try:
-                    self.taskName = asyncio.current_task().get_name()
-                except Exception:
-                    pass
 
     def __repr__(self):
         return '<LogRecord: %s, %s, %s, %s, "%s">'%(self.name, self.levelno,
@@ -580,7 +557,7 @@ class Formatter(object):
     %(lineno)d          Source line number where the logging call was issued
                         (if available)
     %(funcName)s        Function name
-    %(created)f         Time when the LogRecord was created (time.time_ns() / 1e9
+    %(created)f         Time when the LogRecord was created (time.time()
                         return value)
     %(asctime)s         Textual time when the LogRecord was created
     %(msecs)d           Millisecond portion of the creation time
@@ -589,7 +566,6 @@ class Formatter(object):
                         (typically at application startup time)
     %(thread)d          Thread ID (if available)
     %(threadName)s      Thread name (if available)
-    %(taskName)s        Task name (if available)
     %(process)d         Process ID (if available)
     %(message)s         The result of record.getMessage(), computed just as
                         the record is emitted
@@ -666,7 +642,7 @@ class Formatter(object):
         # See issues #9427, #1553375. Commented out for now.
         #if getattr(self, 'fullstack', False):
         #    traceback.print_stack(tb.tb_frame.f_back, file=sio)
-        traceback.print_exception(ei[0], ei[1], tb, limit=None, file=sio)
+        traceback.print_exception(ei[0], ei[1], tb, None, sio)
         s = sio.getvalue()
         sio.close()
         if s[-1:] == "\n":
@@ -841,36 +817,23 @@ class Filterer(object):
         Determine if a record is loggable by consulting all the filters.
 
         The default is to allow the record to be logged; any filter can veto
-        this by returning a false value.
-        If a filter attached to a handler returns a log record instance,
-        then that instance is used in place of the original log record in
-        any further processing of the event by that handler.
-        If a filter returns any other true value, the original log record
-        is used in any further processing of the event by that handler.
-
-        If none of the filters return false values, this method returns
-        a log record.
-        If any of the filters return a false value, this method returns
-        a false value.
+        this and the record is then dropped. Returns a zero value if a record
+        is to be dropped, else non-zero.
 
         .. versionchanged:: 3.2
 
            Allow filters to be just callables.
-
-        .. versionchanged:: 3.12
-           Allow filters to return a LogRecord instead of
-           modifying it in place.
         """
+        rv = True
         for f in self.filters:
             if hasattr(f, 'filter'):
                 result = f.filter(record)
             else:
                 result = f(record) # assume callable - will raise if not
             if not result:
-                return False
-            if isinstance(result, LogRecord):
-                record = result
-        return record
+                rv = False
+                break
+        return rv
 
 #---------------------------------------------------------------------------
 #   Handler classes and functions
@@ -887,36 +850,25 @@ def _removeHandlerRef(wr):
     # set to None. It can also be called from another thread. So we need to
     # pre-emptively grab the necessary globals and check if they're None,
     # to prevent race conditions and failures during interpreter shutdown.
-    handlers, lock = _handlerList, _lock
-    if lock and handlers:
-        with lock:
-            try:
-                handlers.remove(wr)
-            except ValueError:
-                pass
+    acquire, release, handlers = _acquireLock, _releaseLock, _handlerList
+    if acquire and release and handlers:
+        acquire()
+        try:
+            handlers.remove(wr)
+        except ValueError:
+            pass
+        finally:
+            release()
 
 def _addHandlerRef(handler):
     """
     Add a handler to the internal cleanup list using a weak reference.
     """
-    with _lock:
+    _acquireLock()
+    try:
         _handlerList.append(weakref.ref(handler, _removeHandlerRef))
-
-
-def getHandlerByName(name):
-    """
-    Get a handler with the specified *name*, or None if there isn't one with
-    that name.
-    """
-    return _handlers.get(name)
-
-
-def getHandlerNames():
-    """
-    Return all known handler names as an immutable set.
-    """
-    return frozenset(_handlers)
-
+    finally:
+        _releaseLock()
 
 class Handler(Filterer):
     """
@@ -945,12 +897,15 @@ class Handler(Filterer):
         return self._name
 
     def set_name(self, name):
-        with _lock:
+        _acquireLock()
+        try:
             if self._name in _handlers:
                 del _handlers[self._name]
             self._name = name
             if name:
                 _handlers[name] = self
+        finally:
+            _releaseLock()
 
     name = property(get_name, set_name)
 
@@ -1013,17 +968,16 @@ class Handler(Filterer):
 
         Emission depends on filters which may have been added to the handler.
         Wrap the actual emission of the record with acquisition/release of
-        the I/O thread lock.
-
-        Returns an instance of the log record that was emitted
-        if it passed all filters, otherwise a false value is returned.
+        the I/O thread lock. Returns whether the filter passed the record for
+        emission.
         """
         rv = self.filter(record)
-        if isinstance(rv, LogRecord):
-            record = rv
         if rv:
-            with self.lock:
+            self.acquire()
+            try:
                 self.emit(record)
+            finally:
+                self.release()
         return rv
 
     def setFormatter(self, fmt):
@@ -1051,10 +1005,13 @@ class Handler(Filterer):
         methods.
         """
         #get the module data lock, as we're updating a shared structure.
-        with _lock:
+        _acquireLock()
+        try:    #unlikely to raise an exception, but you never know...
             self._closed = True
             if self._name and self._name in _handlers:
                 del _handlers[self._name]
+        finally:
+            _releaseLock()
 
     def handleError(self, record):
         """
@@ -1069,14 +1026,14 @@ class Handler(Filterer):
         The record which was being processed is passed in to this method.
         """
         if raiseExceptions and sys.stderr:  # see issue 13807
-            exc = sys.exception()
+            t, v, tb = sys.exc_info()
             try:
                 sys.stderr.write('--- Logging error ---\n')
-                traceback.print_exception(exc, limit=None, file=sys.stderr)
+                traceback.print_exception(t, v, tb, None, sys.stderr)
                 sys.stderr.write('Call stack:\n')
                 # Walk the stack frame up until we're out of logging,
                 # so as to print the calling context.
-                frame = exc.__traceback__.tb_frame
+                frame = tb.tb_frame
                 while (frame and os.path.dirname(frame.f_code.co_filename) ==
                        __path__[0]):
                     frame = frame.f_back
@@ -1101,7 +1058,7 @@ class Handler(Filterer):
             except OSError: #pragma: no cover
                 pass    # see issue 5971
             finally:
-                del exc
+                del t, v, tb
 
     def __repr__(self):
         level = getLevelName(self.level)
@@ -1131,9 +1088,12 @@ class StreamHandler(Handler):
         """
         Flushes the stream.
         """
-        with self.lock:
+        self.acquire()
+        try:
             if self.stream and hasattr(self.stream, "flush"):
                 self.stream.flush()
+        finally:
+            self.release()
 
     def emit(self, record):
         """
@@ -1169,9 +1129,12 @@ class StreamHandler(Handler):
             result = None
         else:
             result = self.stream
-            with self.lock:
+            self.acquire()
+            try:
                 self.flush()
                 self.stream = stream
+            finally:
+                self.release()
         return result
 
     def __repr__(self):
@@ -1221,7 +1184,8 @@ class FileHandler(StreamHandler):
         """
         Closes the stream.
         """
-        with self.lock:
+        self.acquire()
+        try:
             try:
                 if self.stream:
                     try:
@@ -1237,6 +1201,8 @@ class FileHandler(StreamHandler):
                 # Also see Issue #42378: we also rely on
                 # self._closed being set to True there
                 StreamHandler.close(self)
+        finally:
+            self.release()
 
     def _open(self):
         """
@@ -1372,7 +1338,8 @@ class Manager(object):
         rv = None
         if not isinstance(name, str):
             raise TypeError('A logger name must be a string')
-        with _lock:
+        _acquireLock()
+        try:
             if name in self.loggerDict:
                 rv = self.loggerDict[name]
                 if isinstance(rv, PlaceHolder):
@@ -1387,6 +1354,8 @@ class Manager(object):
                 rv.manager = self
                 self.loggerDict[name] = rv
                 self._fixupParents(rv)
+        finally:
+            _releaseLock()
         return rv
 
     def setLoggerClass(self, klass):
@@ -1449,11 +1418,12 @@ class Manager(object):
         Called when level changes are made
         """
 
-        with _lock:
-            for logger in self.loggerDict.values():
-                if isinstance(logger, Logger):
-                    logger._cache.clear()
-            self.root._cache.clear()
+        _acquireLock()
+        for logger in self.loggerDict.values():
+            if isinstance(logger, Logger):
+                logger._cache.clear()
+        self.root._cache.clear()
+        _releaseLock()
 
 #---------------------------------------------------------------------------
 #   Logger classes and functions
@@ -1513,7 +1483,7 @@ class Logger(Filterer):
         To pass exception information, use the keyword argument exc_info with
         a true value, e.g.
 
-        logger.info("Houston, we have a %s", "notable problem", exc_info=True)
+        logger.info("Houston, we have a %s", "interesting problem", exc_info=True)
         """
         if self.isEnabledFor(INFO):
             self._log(INFO, msg, args, **kwargs)
@@ -1670,30 +1640,30 @@ class Logger(Filterer):
         This method is used for unpickled records received from a socket, as
         well as those created locally. Logger-level filtering is applied.
         """
-        if self.disabled:
-            return
-        maybe_record = self.filter(record)
-        if not maybe_record:
-            return
-        if isinstance(maybe_record, LogRecord):
-            record = maybe_record
-        self.callHandlers(record)
+        if (not self.disabled) and self.filter(record):
+            self.callHandlers(record)
 
     def addHandler(self, hdlr):
         """
         Add the specified handler to this logger.
         """
-        with _lock:
+        _acquireLock()
+        try:
             if not (hdlr in self.handlers):
                 self.handlers.append(hdlr)
+        finally:
+            _releaseLock()
 
     def removeHandler(self, hdlr):
         """
         Remove the specified handler from this logger.
         """
-        with _lock:
+        _acquireLock()
+        try:
             if hdlr in self.handlers:
                 self.handlers.remove(hdlr)
+        finally:
+            _releaseLock()
 
     def hasHandlers(self):
         """
@@ -1771,13 +1741,16 @@ class Logger(Filterer):
         try:
             return self._cache[level]
         except KeyError:
-            with _lock:
+            _acquireLock()
+            try:
                 if self.manager.disable >= level:
                     is_enabled = self._cache[level] = False
                 else:
                     is_enabled = self._cache[level] = (
                         level >= self.getEffectiveLevel()
                     )
+            finally:
+                _releaseLock()
             return is_enabled
 
     def getChild(self, suffix):
@@ -1798,22 +1771,6 @@ class Logger(Filterer):
         if self.root is not self:
             suffix = '.'.join((self.name, suffix))
         return self.manager.getLogger(suffix)
-
-    def getChildren(self):
-
-        def _hierlevel(logger):
-            if logger is logger.manager.root:
-                return 0
-            return 1 + logger.name.count('.')
-
-        d = self.manager.loggerDict
-        with _lock:
-            # exclude PlaceHolders - the last check is to ensure that lower-level
-            # descendants aren't returned - if there are placeholders, a logger's
-            # parent field might point to a grandparent or ancestor thereof.
-            return set(item for item in d.values()
-                       if isinstance(item, Logger) and item.parent is self and
-                       _hierlevel(item) == 1 + _hierlevel(item.parent))
 
     def __repr__(self):
         level = getLevelName(self.getEffectiveLevel())
@@ -1849,7 +1806,7 @@ class LoggerAdapter(object):
     information in logging output.
     """
 
-    def __init__(self, logger, extra=None, merge_extra=False):
+    def __init__(self, logger, extra=None):
         """
         Initialize the adapter with a logger and a dict-like object which
         provides contextual information. This constructor signature allows
@@ -1859,20 +1816,9 @@ class LoggerAdapter(object):
         following example:
 
         adapter = LoggerAdapter(someLogger, dict(p1=v1, p2="v2"))
-
-        By default, LoggerAdapter objects will drop the "extra" argument
-        passed on the individual log calls to use its own instead.
-
-        Initializing it with merge_extra=True will instead merge both
-        maps when logging, the individual call extra taking precedence
-        over the LoggerAdapter instance extra
-
-        .. versionchanged:: 3.13
-           The *merge_extra* argument was added.
         """
         self.logger = logger
         self.extra = extra
-        self.merge_extra = merge_extra
 
     def process(self, msg, kwargs):
         """
@@ -1884,10 +1830,7 @@ class LoggerAdapter(object):
         Normally, you'll only need to override this one method in a
         LoggerAdapter subclass for your specific needs.
         """
-        if self.merge_extra and "extra" in kwargs:
-            kwargs["extra"] = {**self.extra, **kwargs["extra"]}
-        else:
-            kwargs["extra"] = self.extra
+        kwargs["extra"] = self.extra
         return msg, kwargs
 
     #
@@ -2070,7 +2013,8 @@ def basicConfig(**kwargs):
     """
     # Add thread safety in case someone mistakenly calls
     # basicConfig() from multiple threads
-    with _lock:
+    _acquireLock()
+    try:
         force = kwargs.pop('force', False)
         encoding = kwargs.pop('encoding', None)
         errors = kwargs.pop('errors', 'backslashreplace')
@@ -2119,6 +2063,8 @@ def basicConfig(**kwargs):
             if kwargs:
                 keys = ', '.join(kwargs.keys())
                 raise ValueError('Unrecognised argument(s): %s' % keys)
+    finally:
+        _releaseLock()
 
 #---------------------------------------------------------------------------
 # Utility functions at module level.
@@ -2236,11 +2182,7 @@ def shutdown(handlerList=_handlerList):
             if h:
                 try:
                     h.acquire()
-                    # MemoryHandlers might not want to be flushed on close,
-                    # but circular imports prevent us scoping this to just
-                    # those handlers.  hence the default to True.
-                    if getattr(h, 'flushOnClose', True):
-                        h.flush()
+                    h.flush()
                     h.close()
                 except (OSError, ValueError):
                     # Ignore errors which might be caused

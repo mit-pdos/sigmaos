@@ -5,8 +5,14 @@
 #  error "this header requires Py_BUILD_CORE define"
 #endif
 
-#include "pycore_pythread.h"      // _POSIX_THREADS
-
+#ifndef _POSIX_THREADS
+/* This means pthreads are not implemented in libc headers, hence the macro
+   not present in unistd.h. But they still can be implemented as an external
+   library (e.g. gnu pth in pthread emulation) */
+# ifdef HAVE_PTHREAD_H
+#  include <pthread.h> /* _POSIX_THREADS */
+# endif
+#endif
 
 #ifdef _POSIX_THREADS
 /*
@@ -15,7 +21,7 @@
 #define Py_HAVE_CONDVAR
 
 #ifdef HAVE_PTHREAD_H
-#  include <pthread.h>            // pthread_mutex_t
+#  include <pthread.h>
 #endif
 
 #define PyMUTEX_T pthread_mutex_t
@@ -32,17 +38,17 @@
 
 /* include windows if it hasn't been done before */
 #define WIN32_LEAN_AND_MEAN
-#include <windows.h>              // CRITICAL_SECTION
+#include <windows.h>
 
 /* options */
-/* emulated condition variables are provided for those that want
- * to target Windows XP or earlier. Modify this macro to enable them.
+/* non-emulated condition variables are provided for those that want
+ * to target Windows Vista.  Modify this macro to enable them.
  */
 #ifndef _PY_EMULATED_WIN_CV
-#define _PY_EMULATED_WIN_CV 0  /* use non-emulated condition variables */
+#define _PY_EMULATED_WIN_CV 1  /* use emulated condition variables */
 #endif
 
-/* fall back to emulation if targeting earlier than Vista */
+/* fall back to emulation if not targeting Vista */
 #if !defined NTDDI_VISTA || NTDDI_VERSION < NTDDI_VISTA
 #undef _PY_EMULATED_WIN_CV
 #define _PY_EMULATED_WIN_CV 1
@@ -77,7 +83,7 @@ typedef struct _PyCOND_T
 
 #else /* !_PY_EMULATED_WIN_CV */
 
-/* Use native Windows primitives if build target is Vista or higher */
+/* Use native Win7 primitives if build target is Win7 or higher */
 
 /* SRWLOCK is faster and better than CriticalSection */
 typedef SRWLOCK PyMUTEX_T;

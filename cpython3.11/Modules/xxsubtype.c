@@ -1,8 +1,5 @@
 #include "Python.h"
-
-#include <stddef.h>               // offsetof()
-#include <time.h>                 // clock()
-
+#include "structmember.h"         // PyMemberDef
 
 PyDoc_STRVAR(xxsubtype__doc__,
 "xxsubtype is an example module showing how to subtype builtin types from C.\n"
@@ -42,7 +39,8 @@ spamlist_setstate(spamlistobject *self, PyObject *args)
     if (!PyArg_ParseTuple(args, "i:setstate", &state))
         return NULL;
     self->state = state;
-    return Py_NewRef(Py_None);
+    Py_INCREF(Py_None);
+    return Py_None;
 }
 
 static PyObject *
@@ -55,9 +53,12 @@ spamlist_specialmeth(PyObject *self, PyObject *args, PyObject *kw)
             self = Py_None;
         if (kw == NULL)
             kw = Py_None;
-        PyTuple_SET_ITEM(result, 0, Py_NewRef(self));
-        PyTuple_SET_ITEM(result, 1, Py_NewRef(args));
-        PyTuple_SET_ITEM(result, 2, Py_NewRef(kw));
+        Py_INCREF(self);
+        PyTuple_SET_ITEM(result, 0, self);
+        Py_INCREF(args);
+        PyTuple_SET_ITEM(result, 1, args);
+        Py_INCREF(kw);
+        PyTuple_SET_ITEM(result, 2, kw);
     }
     return result;
 }
@@ -163,7 +164,8 @@ spamdict_setstate(spamdictobject *self, PyObject *args)
     if (!PyArg_ParseTuple(args, "i:setstate", &state))
         return NULL;
     self->state = state;
-    return Py_NewRef(Py_None);
+    Py_INCREF(Py_None);
+    return Py_None;
 }
 
 static PyMethodDef spamdict_methods[] = {
@@ -184,7 +186,7 @@ spamdict_init(spamdictobject *self, PyObject *args, PyObject *kwds)
 }
 
 static PyMemberDef spamdict_members[] = {
-    {"state", Py_T_INT, offsetof(spamdictobject, state), Py_READONLY,
+    {"state", T_INT, offsetof(spamdictobject, state), READONLY,
      PyDoc_STR("an int variable for demonstration purposes")},
     {0}
 };
@@ -277,18 +279,18 @@ xxsubtype_exec(PyObject* m)
     if (PyType_Ready(&spamdict_type) < 0)
         return -1;
 
-    if (PyModule_AddObjectRef(m, "spamlist", (PyObject *)&spamlist_type) < 0)
+    if (PyModule_AddObjectRef(m, "spamlist",
+                              (PyObject *) &spamlist_type) < 0)
         return -1;
 
-    if (PyModule_AddObjectRef(m, "spamdict", (PyObject *)&spamdict_type) < 0)
+    if (PyModule_AddObjectRef(m, "spamdict",
+                              (PyObject *) &spamdict_type) < 0)
         return -1;
     return 0;
 }
 
 static struct PyModuleDef_Slot xxsubtype_slots[] = {
     {Py_mod_exec, xxsubtype_exec},
-    {Py_mod_multiple_interpreters, Py_MOD_PER_INTERPRETER_GIL_SUPPORTED},
-    {Py_mod_gil, Py_MOD_GIL_NOT_USED},
     {0, NULL},
 };
 

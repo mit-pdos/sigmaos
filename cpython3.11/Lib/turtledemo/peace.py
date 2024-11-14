@@ -1,4 +1,7 @@
-"""turtledemo/peace.py
+#!/usr/bin/env python3
+"""       turtle-example-suite:
+
+              tdemo_peace.py
 
 A simple drawing suitable as a beginner's
 programming example. Aside from the

@@ -171,13 +171,6 @@ def _as_int(n):
     except TypeError:
         raise TypeError('Plural value must be an integer, got %s' %
                         (n.__class__.__name__,)) from None
-    return _as_int2(n)
-
-def _as_int2(n):
-    try:
-        return operator.index(n)
-    except TypeError:
-        pass
 
     import warnings
     frame = sys._getframe(1)
@@ -295,7 +288,6 @@ class NullTranslations:
     def ngettext(self, msgid1, msgid2, n):
         if self._fallback:
             return self._fallback.ngettext(msgid1, msgid2, n)
-        n = _as_int2(n)
         if n == 1:
             return msgid1
         else:
@@ -309,7 +301,6 @@ class NullTranslations:
     def npgettext(self, context, msgid1, msgid2, n):
         if self._fallback:
             return self._fallback.npgettext(context, msgid1, msgid2, n)
-        n = _as_int2(n)
         if n == 1:
             return msgid1
         else:
@@ -596,7 +587,6 @@ def dngettext(domain, msgid1, msgid2, n):
     try:
         t = translation(domain, _localedirs.get(domain, None))
     except OSError:
-        n = _as_int2(n)
         if n == 1:
             return msgid1
         else:
@@ -616,7 +606,6 @@ def dnpgettext(domain, context, msgid1, msgid2, n):
     try:
         t = translation(domain, _localedirs.get(domain, None))
     except OSError:
-        n = _as_int2(n)
         if n == 1:
             return msgid1
         else:
@@ -648,7 +637,7 @@ def npgettext(context, msgid1, msgid2, n):
 #    import gettext
 #    cat = gettext.Catalog(PACKAGE, localedir=LOCALEDIR)
 #    _ = cat.gettext
-#    print(_('Hello World'))
+#    print _('Hello World')
 
 # The resulting catalog object currently don't support access through a
 # dictionary API, which was supported (but apparently unused) in GNOME

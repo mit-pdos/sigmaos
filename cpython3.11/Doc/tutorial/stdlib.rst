@@ -15,7 +15,7 @@ operating system::
 
    >>> import os
    >>> os.getcwd()      # Return the current working directory
-   'C:\\Python314'
+   'C:\\Python311'
    >>> os.chdir('/server/accesslogs')   # Change current working directory
    >>> os.system('mkdir today')   # Run the command mkdir in the system shell
    0
@@ -65,15 +65,11 @@ Command Line Arguments
 
 Common utility scripts often need to process command line arguments. These
 arguments are stored in the :mod:`sys` module's *argv* attribute as a list.  For
-instance, let's take the following :file:`demo.py` file::
+instance the following output results from running ``python demo.py one two
+three`` at the command line::
 
-   # File demo.py
-   import sys
-   print(sys.argv)
-
-Here is the output from running ``python demo.py one two three`` at the command
-line::
-
+   >>> import sys
+   >>> print(sys.argv)
    ['demo.py', 'one', 'two', 'three']
 
 The :mod:`argparse` module provides a more sophisticated mechanism to process
@@ -138,7 +134,7 @@ Mathematics
 ===========
 
 The :mod:`math` module gives access to the underlying C library functions for
-floating-point math::
+floating point math::
 
    >>> import math
    >>> math.cos(math.pi / 4)
@@ -153,7 +149,7 @@ The :mod:`random` module provides tools for making random selections::
    'apple'
    >>> random.sample(range(100), 10)   # sampling without replacement
    [30, 83, 16, 4, 8, 81, 41, 50, 18, 33]
-   >>> random.random()    # random float from the interval [0.0, 1.0)
+   >>> random.random()    # random float
    0.17970987693706186
    >>> random.randrange(6)    # random integer chosen from range(6)
    4

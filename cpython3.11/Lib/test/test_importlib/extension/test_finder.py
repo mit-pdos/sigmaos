@@ -1,4 +1,3 @@
-from test.support import is_apple_mobile
 from test.test_importlib import abc, util
 
 machinery = util.import_importlib('importlib.machinery')
@@ -20,27 +19,9 @@ class FinderTests(abc.FinderTests):
             )
 
     def find_spec(self, fullname):
-        if is_apple_mobile:
-            # Apple mobile platforms require a specialist loader that uses
-            # .fwork files as placeholders for the true `.so` files.
-            loaders = [
-                (
-                    self.machinery.AppleFrameworkLoader,
-                    [
-                        ext.replace(".so", ".fwork")
-                        for ext in self.machinery.EXTENSION_SUFFIXES
-                    ]
-                )
-            ]
-        else:
-            loaders = [
-                (
-                    self.machinery.ExtensionFileLoader,
-                    self.machinery.EXTENSION_SUFFIXES
-                )
-            ]
-
-        importer = self.machinery.FileFinder(util.EXTENSIONS.path, *loaders)
+        importer = self.machinery.FileFinder(util.EXTENSIONS.path,
+                                            (self.machinery.ExtensionFileLoader,
+                                             self.machinery.EXTENSION_SUFFIXES))
 
         return importer.find_spec(fullname)
 

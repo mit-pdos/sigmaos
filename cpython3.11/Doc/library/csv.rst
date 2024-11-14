@@ -1,5 +1,5 @@
-:mod:`!csv` --- CSV File Reading and Writing
-============================================
+:mod:`csv` --- CSV File Reading and Writing
+===========================================
 
 .. module:: csv
    :synopsis: Write and read tabular data to and from delimited files.
@@ -156,10 +156,8 @@ The :mod:`csv` module defines the following classes:
 
    The *fieldnames* parameter is a :term:`sequence`.  If *fieldnames* is
    omitted, the values in the first row of file *f* will be used as the
-   fieldnames and will be omitted from the results. If
-   *fieldnames* is provided, they will be used and the first row will be
-   included in the results.  Regardless of how the fieldnames are determined,
-   the dictionary preserves their original ordering.
+   fieldnames.  Regardless of how the fieldnames are determined, the
+   dictionary preserves their original ordering.
 
    If a row has more fields than fieldnames, the remaining data is put in a
    list and stored with the fieldname specified by *restkey* (which defaults
@@ -169,8 +167,6 @@ The :mod:`csv` module defines the following classes:
 
    All other optional or keyword arguments are passed to the underlying
    :class:`reader` instance.
-
-   If the argument passed to *fieldnames* is an iterator, it will be coerced to a :class:`list`.
 
    .. versionchanged:: 3.6
       Returned rows are now of type :class:`OrderedDict`.
@@ -213,8 +209,6 @@ The :mod:`csv` module defines the following classes:
 
    Note that unlike the :class:`DictReader` class, the *fieldnames* parameter
    of the :class:`DictWriter` class is not optional.
-
-   If the argument passed to *fieldnames* is an iterator, it will be coerced to a :class:`list`.
 
    A short usage example::
 
@@ -331,7 +325,7 @@ The :mod:`csv` module defines the following constants:
 
    Instructs :class:`writer` objects to quote all non-numeric fields.
 
-   Instructs :class:`reader` objects to convert all non-quoted fields to type *float*.
+   Instructs the reader to convert all non-quoted fields to type *float*.
 
 
 .. data:: QUOTE_NONE
@@ -341,29 +335,7 @@ The :mod:`csv` module defines the following constants:
    character.  If *escapechar* is not set, the writer will raise :exc:`Error` if
    any characters that require escaping are encountered.
 
-   Instructs :class:`reader` objects to perform no special processing of quote characters.
-
-.. data:: QUOTE_NOTNULL
-
-   Instructs :class:`writer` objects to quote all fields which are not
-   ``None``.  This is similar to :data:`QUOTE_ALL`, except that if a
-   field value is ``None`` an empty (unquoted) string is written.
-
-   Instructs :class:`reader` objects to interpret an empty (unquoted) field
-   as ``None`` and to otherwise behave as :data:`QUOTE_ALL`.
-
-   .. versionadded:: 3.12
-
-.. data:: QUOTE_STRINGS
-
-   Instructs :class:`writer` objects to always place quotes around fields
-   which are strings.  This is similar to :data:`QUOTE_NONNUMERIC`, except that if a
-   field value is ``None`` an empty (unquoted) string is written.
-
-   Instructs :class:`reader` objects to interpret an empty (unquoted) string as ``None`` and
-   to otherwise behave as :data:`QUOTE_NONNUMERIC`.
-
-   .. versionadded:: 3.12
+   Instructs :class:`reader` to perform no special processing of quote characters.
 
 The :mod:`csv` module defines the following exception:
 

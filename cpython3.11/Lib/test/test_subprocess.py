@@ -4,9 +4,7 @@ from test import support
 from test.support import check_sanitizer
 from test.support import import_helper
 from test.support import os_helper
-from test.support import strace_helper
 from test.support import warnings_helper
-from test.support.script_helper import assert_python_ok
 import subprocess
 import sys
 import signal
@@ -26,6 +24,7 @@ import threading
 import gc
 import textwrap
 import json
+import pathlib
 from test.support.os_helper import FakePath
 
 try:
@@ -720,8 +719,7 @@ class ProcessTestCase(BaseTestCase):
             os.close(test_pipe_r)
             os.close(test_pipe_w)
         pipesize = pipesize_default // 2
-        pagesize_default = support.get_pagesize()
-        if pipesize < pagesize_default:  # the POSIX minimum
+        if pipesize < 512:  # the POSIX minimum
             raise unittest.SkipTest(
                 'default pipesize too small to perform test.')
         p = subprocess.Popen(
@@ -1408,7 +1406,7 @@ class ProcessTestCase(BaseTestCase):
         t = threading.Thread(target=open_fds)
         t.start()
         try:
-            with self.assertRaises(OSError):
+            with self.assertRaises(EnvironmentError):
                 subprocess.Popen(NONEXISTING_CMD,
                                  stdin=subprocess.PIPE,
                                  stdout=subprocess.PIPE,
@@ -1522,6 +1520,9 @@ class ProcessTestCase(BaseTestCase):
         p.communicate(b"x" * 2**20)
 
     def test_repr(self):
+        path_cmd = pathlib.Path("my-tool.py")
+        pathlib_cls = path_cmd.__class__.__name__
+
         cases = [
             ("ls", True, 123, "<Popen: returncode: 123 args: 'ls'>"),
             ('a' * 100, True, 0,
@@ -1529,8 +1530,7 @@ class ProcessTestCase(BaseTestCase):
             (["ls"], False, None, "<Popen: returncode: None args: ['ls']>"),
             (["ls", '--my-opts', 'a' * 100], False, None,
              "<Popen: returncode: None args: ['ls', '--my-opts', 'aaaaaaaaaaaaaaaaaaaaaaaa...>"),
-            (os_helper.FakePath("my-tool.py"), False, 7,
-             "<Popen: returncode: 7 args: <FakePath 'my-tool.py'>>")
+            (path_cmd, False, 7, f"<Popen: returncode: 7 args: {pathlib_cls}('my-tool.py')>")
         ]
         with unittest.mock.patch.object(subprocess.Popen, '_execute_child'):
             for cmd, shell, code, sx in cases:
@@ -1604,6 +1604,21 @@ class ProcessTestCase(BaseTestCase):
     def test_class_getitems(self):
         self.assertIsInstance(subprocess.Popen[bytes], types.GenericAlias)
         self.assertIsInstance(subprocess.CompletedProcess[str], types.GenericAlias)
+
+    @unittest.skipIf(not sysconfig.get_config_var("HAVE_VFORK"),
+                     "vfork() not enabled by configure.")
+    @mock.patch("subprocess._fork_exec")
+    def test__use_vfork(self, mock_fork_exec):
+        self.assertTrue(subprocess._USE_VFORK)  # The default value regardless.
+        mock_fork_exec.side_effect = RuntimeError("just testing args")
+        with self.assertRaises(RuntimeError):
+            subprocess.run([sys.executable, "-c", "pass"])
+        mock_fork_exec.assert_called_once()
+        self.assertTrue(mock_fork_exec.call_args.args[-1])
+        with mock.patch.object(subprocess, '_USE_VFORK', False):
+            with self.assertRaises(RuntimeError):
+                subprocess.run([sys.executable, "-c", "pass"])
+            self.assertFalse(mock_fork_exec.call_args_list[-1].args[-1])
 
     @unittest.skipUnless(hasattr(subprocess, '_winapi'),
                          'need subprocess._winapi')
@@ -1761,13 +1776,6 @@ class RunFuncTestCase(BaseTestCase):
         self.assertIn(b'BDFL', cp.stdout)
         self.assertIn(b'FLUFL', cp.stderr)
 
-    def test_stdout_stdout(self):
-        # run() refuses to accept stdout=STDOUT
-        with self.assertRaises(ValueError,
-                msg=("STDOUT can only be used for stderr")):
-            self.run_python("print('will not be run')",
-                            stdout=subprocess.STDOUT)
-
     def test_stdout_with_capture_output_arg(self):
         # run() refuses to accept 'stdout' with 'capture_output'
         tf = tempfile.TemporaryFile()
@@ -1821,9 +1829,9 @@ class RunFuncTestCase(BaseTestCase):
         cp = subprocess.run([sys.executable, "-Xwarn_default_encoding", "-c", code],
                             capture_output=True)
         lines = cp.stderr.splitlines()
-        self.assertEqual(len(lines), 4, lines)
+        self.assertEqual(len(lines), 2, lines)
         self.assertTrue(lines[0].startswith(b"<string>:2: EncodingWarning: "))
-        self.assertTrue(lines[2].startswith(b"<string>:3: EncodingWarning: "))
+        self.assertTrue(lines[1].startswith(b"<string>:3: EncodingWarning: "))
 
 
 def _get_test_grp_name():
@@ -2118,14 +2126,8 @@ class POSIXProcessTestCase(BaseTestCase):
     def test_extra_groups(self):
         gid = os.getegid()
         group_list = [65534 if gid != 65534 else 65533]
-        self._test_extra_groups_impl(gid=gid, group_list=group_list)
-
-    @unittest.skipUnless(hasattr(os, 'setgroups'), 'no setgroups() on platform')
-    def test_extra_groups_empty_list(self):
-        self._test_extra_groups_impl(gid=os.getegid(), group_list=[])
-
-    def _test_extra_groups_impl(self, *, gid, group_list):
         name_group = _get_test_grp_name()
+        perm_error = False
 
         if grp is not None:
             group_list.append(name_group)
@@ -2135,9 +2137,12 @@ class POSIXProcessTestCase(BaseTestCase):
                     [sys.executable, "-c",
                      "import os, sys, json; json.dump(os.getgroups(), sys.stdout)"],
                     extra_groups=group_list)
-        except PermissionError as e:
-            self.assertIsNone(e.filename)
-            self.skipTest("setgroup() EPERM; this test may require root.")
+        except OSError as ex:
+            if ex.errno != errno.EPERM:
+                raise
+            self.assertIsNone(ex.filename)
+            perm_error = True
+
         else:
             parent_groups = os.getgroups()
             child_groups = json.loads(output)
@@ -2148,15 +2153,12 @@ class POSIXProcessTestCase(BaseTestCase):
             else:
                 desired_gids = group_list
 
-            self.assertEqual(set(desired_gids), set(child_groups))
+            if perm_error:
+                self.assertEqual(set(child_groups), set(parent_groups))
+            else:
+                self.assertEqual(set(desired_gids), set(child_groups))
 
-        if grp is None:
-            with self.assertRaises(ValueError):
-                subprocess.check_call(ZERO_RETURN_CMD,
-                                      extra_groups=[name_group])
-
-    # No skip necessary, this test won't make it to a setgroup() call.
-    def test_extra_groups_invalid_gid_t_values(self):
+        # make sure we bomb on negative values
         with self.assertRaises(ValueError):
             subprocess.check_call(ZERO_RETURN_CMD, extra_groups=[-1])
 
@@ -2164,6 +2166,16 @@ class POSIXProcessTestCase(BaseTestCase):
             subprocess.check_call(ZERO_RETURN_CMD,
                                   cwd=os.curdir, env=os.environ,
                                   extra_groups=[2**64])
+
+        if grp is None:
+            with self.assertRaises(ValueError):
+                subprocess.check_call(ZERO_RETURN_CMD,
+                                      extra_groups=[name_group])
+
+    @unittest.skipIf(hasattr(os, 'setgroups'), 'setgroups() available on platform')
+    def test_extra_groups_error(self):
+        with self.assertRaises(ValueError):
+            subprocess.check_call(ZERO_RETURN_CMD, extra_groups=[])
 
     @unittest.skipIf(mswindows or not hasattr(os, 'umask'),
                      'POSIX umask() is not available.')
@@ -3279,7 +3291,7 @@ class POSIXProcessTestCase(BaseTestCase):
                         1, 2, 3, 4,
                         True, True, 0,
                         None, None, None, -1,
-                        None)
+                        None, True)
                 self.assertIn('fds_to_keep', str(c.exception))
         finally:
             if not gc_enabled:
@@ -3394,81 +3406,6 @@ class POSIXProcessTestCase(BaseTestCase):
                 return
             except subprocess.TimeoutExpired:
                 pass
-
-    def test_preexec_at_exit(self):
-        code = f"""if 1:
-        import atexit
-        import subprocess
-
-        def dummy():
-            pass
-
-        class AtFinalization:
-            def __del__(self):
-                print("OK")
-                subprocess.Popen({ZERO_RETURN_CMD}, preexec_fn=dummy)
-                print("shouldn't be printed")
-        at_finalization = AtFinalization()
-        """
-        _, out, err = assert_python_ok("-c", code)
-        self.assertEqual(out.strip(), b"OK")
-        self.assertIn(b"preexec_fn not supported at interpreter shutdown", err)
-
-    @unittest.skipIf(not sysconfig.get_config_var("HAVE_VFORK"),
-                     "vfork() not enabled by configure.")
-    @strace_helper.requires_strace()
-    @mock.patch("subprocess._USE_POSIX_SPAWN", new=False)
-    def test_vfork_used_when_expected(self):
-        # This is a performance regression test to ensure we default to using
-        # vfork() when possible.
-        # Technically this test could pass when posix_spawn is used as well
-        # because libc tends to implement that internally using vfork. But
-        # that'd just be testing a libc+kernel implementation detail.
-
-        # Are intersted in the system calls:
-        # clone,clone2,clone3,fork,vfork,exit,exit_group
-        # Unfortunately using `--trace` with that list to strace fails because
-        # not all are supported on all platforms (ex. clone2 is ia64 only...)
-        # So instead use `%process` which is recommended by strace, and contains
-        # the above.
-        true_binary = "/bin/true"
-        strace_args = ["--trace=%process"]
-
-        with self.subTest(name="default_is_vfork"):
-            vfork_result = strace_helper.strace_python(
-                f"""\
-                import subprocess
-                subprocess.check_call([{true_binary!r}])""",
-                strace_args
-            )
-            # Match both vfork() and clone(..., flags=...|CLONE_VFORK|...)
-            self.assertRegex(vfork_result.event_bytes, br"(?i)vfork")
-            # Do NOT check that fork() or other clones did not happen.
-            # If the OS denys the vfork it'll fallback to plain fork().
-
-        # Test that each individual thing that would disable the use of vfork
-        # actually disables it.
-        for sub_name, preamble, sp_kwarg, expect_permission_error in (
-                ("preexec", "", "preexec_fn=lambda: None", False),
-                ("setgid", "", f"group={os.getgid()}", True),
-                ("setuid", "", f"user={os.getuid()}", True),
-                ("setgroups", "", "extra_groups=[]", True),
-        ):
-            with self.subTest(name=sub_name):
-                non_vfork_result = strace_helper.strace_python(
-                    f"""\
-                    import subprocess
-                    {preamble}
-                    try:
-                        subprocess.check_call(
-                                [{true_binary!r}], **dict({sp_kwarg}))
-                    except PermissionError:
-                        if not {expect_permission_error}:
-                            raise""",
-                    strace_args
-                )
-                # Ensure neither vfork() or clone(..., flags=...|CLONE_VFORK|...).
-                self.assertNotRegex(non_vfork_result.event_bytes, br"(?i)vfork")
 
 
 @unittest.skipUnless(mswindows, "Windows specific tests")

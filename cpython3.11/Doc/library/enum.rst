@@ -1,5 +1,5 @@
-:mod:`!enum` --- Support for enumerations
-=========================================
+:mod:`enum` --- Support for enumerations
+========================================
 
 .. module:: enum
    :synopsis: Implementation of an enumeration class.
@@ -44,7 +44,7 @@ using function-call syntax::
    ...     BLUE = 3
 
    >>> # functional syntax
-   >>> Color = Enum('Color', [('RED', 1), ('GREEN', 2), ('BLUE', 3)])
+   >>> Color = Enum('Color', ['RED', 'GREEN', 'BLUE'])
 
 Even though we can use :keyword:`class` syntax to create Enums, Enums
 are not normal Python classes.  See
@@ -119,8 +119,7 @@ Module Contents
    :func:`~enum.property`
 
       Allows :class:`Enum` members to have attributes without conflicting with
-      member names.  The ``value`` and ``name`` attributes are implemented this
-      way.
+      member names.
 
    :func:`unique`
 
@@ -165,7 +164,7 @@ Data Types
    to subclass *EnumType* -- see :ref:`Subclassing EnumType <enumtype-examples>`
    for details.
 
-   ``EnumType`` is responsible for setting the correct :meth:`!__repr__`,
+   *EnumType* is responsible for setting the correct :meth:`!__repr__`,
    :meth:`!__str__`, :meth:`!__format__`, and :meth:`!__reduce__` methods on the
    final *enum*, as well as creating the enum members, properly handling
    duplicates, providing iteration over the enum class, etc.
@@ -198,12 +197,11 @@ Data Types
         >>> some_var = Color.RED
         >>> some_var in Color
         True
-        >>> Color.RED.value in Color
-        True
 
-   .. versionchanged:: 3.12
+      .. note::
 
-         Before Python 3.12, a ``TypeError`` is raised if a
+         In Python 3.12 it will be possible to check for member values and not
+         just members; until then, a ``TypeError`` will be raised if a
          non-Enum-member is used in a containment check.
 
    .. method:: EnumType.__dir__(cls)
@@ -213,6 +211,13 @@ Data Types
 
         >>> dir(Color)
         ['BLUE', 'GREEN', 'RED', '__class__', '__contains__', '__doc__', '__getitem__', '__init_subclass__', '__iter__', '__len__', '__members__', '__module__', '__name__', '__qualname__']
+
+   .. method:: EnumType.__getattr__(cls, name)
+
+      Returns the Enum member in *cls* matching *name*, or raises an :exc:`AttributeError`::
+
+        >>> Color.GREEN
+        <Color.GREEN: 2>
 
    .. method:: EnumType.__getitem__(cls, name)
 
@@ -235,10 +240,6 @@ Data Types
         >>> len(Color)
         3
 
-   .. attribute:: EnumType.__members__
-
-      Returns a mapping of every enum name to its member, including aliases
-
    .. method:: EnumType.__reversed__(cls)
 
       Returns each member in *cls* in reverse definition order::
@@ -246,19 +247,9 @@ Data Types
         >>> list(reversed(Color))
         [<Color.BLUE: 3>, <Color.GREEN: 2>, <Color.RED: 1>]
 
-   .. method:: EnumType._add_alias_
-
-      Adds a new name as an alias to an existing member.  Raises a
-      :exc:`NameError` if the name is already assigned to a different member.
-
-   .. method:: EnumType._add_value_alias_
-
-      Adds a new value as an alias to an existing member.  Raises a
-      :exc:`ValueError` if the value is already linked with a different member.
-
    .. versionadded:: 3.11
 
-      Before 3.11 ``EnumType`` was called ``EnumMeta``, which is still available as an alias.
+      Before 3.11 ``enum`` used ``EnumMeta`` type, which is kept as an alias.
 
 
 .. class:: Enum
@@ -279,7 +270,7 @@ Data Types
          >>> Color.RED.value
          1
 
-      Value of the member, can be set in :meth:`~Enum.__new__`.
+      Value of the member, can be set in :meth:`~object.__new__`.
 
       .. note:: Enum member values
 
@@ -299,7 +290,7 @@ Data Types
 
    .. attribute:: Enum._value_
 
-      Value of the member, can be set in :meth:`~Enum.__new__`.
+      Value of the member, can be set in :meth:`~object.__new__`.
 
    .. attribute:: Enum._order_
 
@@ -332,7 +323,6 @@ Data Types
          ...     @classmethod
          ...     def today(cls):
          ...         print('today is %s' % cls(date.today().isoweekday()).name)
-         ...
          >>> dir(Weekday.SATURDAY)
          ['__class__', '__doc__', '__eq__', '__hash__', '__module__', 'name', 'today', 'value']
 
@@ -353,20 +343,8 @@ Data Types
          ...         return 3 ** (count + 1)
          ...     FIRST = auto()
          ...     SECOND = auto()
-         ...
          >>> PowersOfThree.SECOND.value
          9
-
-   .. method:: Enum.__init__(self, *args, **kwds)
-
-      By default, does nothing.  If multiple values are given in the member
-      assignment, those values become separate arguments to ``__init__``; e.g.
-
-         >>> from enum import Enum
-         >>> class Weekday(Enum):
-         ...     MONDAY = 1, 'Mon'
-
-      ``Weekday.__init__()`` would be called as ``Weekday.__init__(self, 1, 'Mon')``
 
    .. method:: Enum.__init_subclass__(cls, **kwds)
 
@@ -389,28 +367,10 @@ Data Types
          ...             if member.value == value:
          ...                 return member
          ...         return None
-         ...
          >>> Build.DEBUG.value
          'debug'
          >>> Build('deBUG')
          <Build.DEBUG: 'debug'>
-
-   .. method:: Enum.__new__(cls, *args, **kwds)
-
-      By default, doesn't exist.  If specified, either in the enum class
-      definition or in a mixin class (such as ``int``), all values given
-      in the member assignment will be passed; e.g.
-
-         >>> from enum import Enum
-         >>> class MyIntEnum(int, Enum):
-         ...     TWENTYSIX = '1a', 16
-
-      results in the call ``int('1a', 16)`` and a value of ``26`` for the member.
-
-      .. note::
-
-         When writing a custom ``__new__``, do not use ``super().__new__`` --
-         call the appropriate ``__new__`` instead.
 
    .. method:: Enum.__repr__(self)
 
@@ -424,7 +384,6 @@ Data Types
          ...     def __repr__(self):
          ...         cls_name = self.__class__.__name__
          ...         return f'{cls_name}.{self.name}'
-         ...
          >>> OtherStyle.ALTERNATE, str(OtherStyle.ALTERNATE), f"{OtherStyle.ALTERNATE}"
          (OtherStyle.ALTERNATE, 'OtherStyle.ALTERNATE', 'OtherStyle.ALTERNATE')
 
@@ -439,7 +398,6 @@ Data Types
          ...     SOMETHING_ELSE = auto()
          ...     def __str__(self):
          ...         return f'{self.name}'
-         ...
          >>> OtherStyle.ALTERNATE, str(OtherStyle.ALTERNATE), f"{OtherStyle.ALTERNATE}"
          (<OtherStyle.ALTERNATE: 1>, 'ALTERNATE', 'ALTERNATE')
 
@@ -454,7 +412,6 @@ Data Types
          ...     SOMETHING_ELSE = auto()
          ...     def __format__(self, spec):
          ...         return f'{self.name}'
-         ...
          >>> OtherStyle.ALTERNATE, str(OtherStyle.ALTERNATE), f"{OtherStyle.ALTERNATE}"
          (<OtherStyle.ALTERNATE: 1>, 'OtherStyle.ALTERNATE', 'ALTERNATE')
 
@@ -463,12 +420,10 @@ Data Types
       Using :class:`auto` with :class:`Enum` results in integers of increasing value,
       starting with ``1``.
 
-   .. versionchanged:: 3.12 Added :ref:`enum-dataclass-support`
-
 
 .. class:: IntEnum
 
-   *IntEnum* is the same as :class:`Enum`, but its members are also integers and can be
+   *IntEnum* is the same as *Enum*, but its members are also integers and can be
    used anywhere that an integer can be used.  If any integer operation is performed
    with an *IntEnum* member, the resulting value loses its enumeration status.
 
@@ -499,7 +454,7 @@ Data Types
 
 .. class:: StrEnum
 
-   ``StrEnum`` is the same as :class:`Enum`, but its members are also strings and can be used
+   *StrEnum* is the same as *Enum*, but its members are also strings and can be used
    in most of the same places that a string can be used.  The result of any string
    operation performed on or with a *StrEnum* member is not part of the enumeration.
 
@@ -525,9 +480,9 @@ Data Types
 
 .. class:: Flag
 
-   ``Flag`` is the same as :class:`Enum`, but its members support the bitwise
-   operators ``&`` (*AND*), ``|`` (*OR*), ``^`` (*XOR*), and ``~`` (*INVERT*);
-   the results of those operations are (aliases of) members of the enumeration.
+   *Flag* members support the bitwise operators ``&`` (*AND*), ``|`` (*OR*),
+   ``^`` (*XOR*), and ``~`` (*INVERT*); the results of those operators are members
+   of the enumeration.
 
    .. method:: __contains__(self, value)
 
@@ -538,7 +493,6 @@ Data Types
          ...     RED = auto()
          ...     GREEN = auto()
          ...     BLUE = auto()
-         ...
          >>> purple = Color.RED | Color.BLUE
          >>> white = Color.RED | Color.GREEN | Color.BLUE
          >>> Color.GREEN in purple
@@ -569,8 +523,6 @@ Data Types
          1
          >>> len(white)
          3
-
-      .. versionadded:: 3.11
 
    .. method:: __bool__(self):
 
@@ -611,7 +563,7 @@ Data Types
 
    .. method:: __invert__(self):
 
-      Returns all the flags in *type(self)* that are not in *self*::
+      Returns all the flags in *type(self)* that are not in self::
 
          >>> ~white
          <Color: 0>
@@ -631,14 +583,14 @@ Data Types
       of two, starting with ``1``.
 
    .. versionchanged:: 3.11 The *repr()* of zero-valued flags has changed.  It
-      is now:
+      is now::
 
          >>> Color(0) # doctest: +SKIP
          <Color: 0>
 
 .. class:: IntFlag
 
-   ``IntFlag`` is the same as :class:`Flag`, but its members are also integers and can be
+   *IntFlag* is the same as *Flag*, but its members are also integers and can be
    used anywhere that an integer can be used.
 
       >>> from enum import IntFlag, auto
@@ -646,7 +598,6 @@ Data Types
       ...     RED = auto()
       ...     GREEN = auto()
       ...     BLUE = auto()
-      ...
       >>> Color.RED & 2
       <Color: 0>
       >>> Color.RED | 2
@@ -658,12 +609,12 @@ Data Types
         >>> Color.RED + 2
         3
 
-   If a :class:`Flag` operation is performed with an *IntFlag* member and:
+   If a *Flag* operation is performed with an *IntFlag* member and:
 
    * the result is a valid *IntFlag*: an *IntFlag* is returned
-   * the result is not a valid *IntFlag*: the result depends on the :class:`FlagBoundary` setting
+   * the result is not a valid *IntFlag*: the result depends on the *FlagBoundary* setting
 
-   The :func:`repr` of unnamed zero-valued flags has changed.  It is now:
+   The *repr()* of unnamed zero-valued flags has changed.  It is now:
 
       >>> Color(0)
       <Color: 0>
@@ -759,7 +710,7 @@ Data Types
 
 .. class:: FlagBoundary
 
-   ``FlagBoundary`` controls how out-of-range values are handled in :class:`Flag` and its
+   *FlagBoundary* controls how out-of-range values are handled in *Flag* and its
    subclasses.
 
    .. attribute:: STRICT
@@ -772,7 +723,6 @@ Data Types
          ...     RED = auto()
          ...     GREEN = auto()
          ...     BLUE = auto()
-         ...
          >>> StrictFlag(2**2 + 2**4)
          Traceback (most recent call last):
          ...
@@ -782,7 +732,7 @@ Data Types
 
    .. attribute:: CONFORM
 
-      Out-of-range values have invalid values removed, leaving a valid :class:`Flag`
+      Out-of-range values have invalid values removed, leaving a valid *Flag*
       value::
 
          >>> from enum import Flag, CONFORM, auto
@@ -790,26 +740,24 @@ Data Types
          ...     RED = auto()
          ...     GREEN = auto()
          ...     BLUE = auto()
-         ...
          >>> ConformFlag(2**2 + 2**4)
          <ConformFlag.BLUE: 4>
 
    .. attribute:: EJECT
 
-      Out-of-range values lose their :class:`Flag` membership and revert to :class:`int`.
+      Out-of-range values lose their *Flag* membership and revert to :class:`int`.
 
          >>> from enum import Flag, EJECT, auto
          >>> class EjectFlag(Flag, boundary=EJECT):
          ...     RED = auto()
          ...     GREEN = auto()
          ...     BLUE = auto()
-         ...
          >>> EjectFlag(2**2 + 2**4)
          20
 
    .. attribute:: KEEP
 
-      Out-of-range values are kept, and the :class:`Flag` membership is kept.
+      Out-of-range values are kept, and the *Flag* membership is kept.
       This is the default for :class:`IntFlag`::
 
          >>> from enum import Flag, KEEP, auto
@@ -817,7 +765,6 @@ Data Types
          ...     RED = auto()
          ...     GREEN = auto()
          ...     BLUE = auto()
-         ...
          >>> KeepFlag(2**2 + 2**4)
          <KeepFlag.BLUE|16: 20>
 
@@ -831,18 +778,14 @@ Supported ``__dunder__`` names
 :attr:`~EnumType.__members__` is a read-only ordered mapping of ``member_name``:``member``
 items.  It is only available on the class.
 
-:meth:`~Enum.__new__`, if specified, must create and return the enum members;
-it is also a very good idea to set the member's :attr:`!_value_` appropriately.
-Once all the members are created it is no longer used.
+:meth:`~object.__new__`, if specified, must create and return the enum members; it is
+also a very good idea to set the member's :attr:`!_value_` appropriately.  Once
+all the members are created it is no longer used.
 
 
 Supported ``_sunder_`` names
 """"""""""""""""""""""""""""
 
-- :meth:`~EnumType._add_alias_` -- adds a new name as an alias to an existing
-  member.
-- :meth:`~EnumType._add_value_alias_` -- adds a new value as an alias to an
-  existing member.
 - :attr:`~Enum._name_` -- name of the member
 - :attr:`~Enum._value_` -- value of the member; can be set in ``__new__``
 - :meth:`~Enum._missing_` -- a lookup function used when a value is not found;
@@ -857,21 +800,14 @@ Supported ``_sunder_`` names
 
   .. note::
 
-     For standard :class:`Enum` classes the next value chosen is the highest
-     value seen incremented by one.
+     For standard :class:`Enum` classes the next value chosen is the last value seen
+     incremented by one.
 
      For :class:`Flag` classes the next value chosen will be the next highest
-     power-of-two.
-
-- While ``_sunder_`` names are generally reserved for the further development
-  of the :class:`Enum` class and can not be used, some are explicitly allowed:
-
-  - ``_repr_*`` (e.g. ``_repr_html_``), as used in `IPython's rich display`_
+     power-of-two, regardless of the last value seen.
 
 .. versionadded:: 3.6 ``_missing_``, ``_order_``, ``_generate_next_value_``
 .. versionadded:: 3.7 ``_ignore_``
-.. versionadded:: 3.13 ``_add_alias_``, ``_add_value_alias_``, ``_repr_*``
-.. _`IPython's rich display`: https://ipython.readthedocs.io/en/stable/config/integrating.html#rich-display
 
 ---------------
 
@@ -881,10 +817,10 @@ Utilities and Decorators
 .. class:: auto
 
    *auto* can be used in place of a value.  If used, the *Enum* machinery will
-   call an :class:`Enum`'s :meth:`~Enum._generate_next_value_` to get an appropriate value.
-   For :class:`Enum` and :class:`IntEnum` that appropriate value will be the last value plus
-   one; for :class:`Flag` and :class:`IntFlag` it will be the first power-of-two greater
-   than the highest value; for :class:`StrEnum` it will be the lower-cased version of
+   call an *Enum*'s :meth:`~Enum._generate_next_value_` to get an appropriate value.
+   For *Enum* and *IntEnum* that appropriate value will be the last value plus
+   one; for *Flag* and *IntFlag* it will be the first power-of-two greater
+   than the highest value; for *StrEnum* it will be the lower-cased version of
    the member's name.  Care must be taken if mixing *auto()* with manually
    specified values.
 

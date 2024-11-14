@@ -1,13 +1,19 @@
-"""turtledemo/sorting_animation.py
+#!/usr/bin/env python3
+"""
+
+         sorting_animation.py
 
 A minimal sorting algorithm animation:
 Sorts a shelf of 10 blocks using insertion
 sort, selection sort and quicksort.
 
-Shelves are implemented using builtin lists.
+Shelfs are implemented using builtin lists.
 
 Blocks are turtles with shape "square", but
 stretched to rectangles by shapesize()
+ ---------------------------------------
+       To exit press space button
+ ---------------------------------------
 """
 from turtle import *
 import random

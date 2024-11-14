@@ -291,7 +291,7 @@ modules.
   configuration files can now be read, modified, and then written back
   in their original order.
 
-* The :meth:`~collections.somenamedtuple._asdict` method for
+* The :meth:`~collections.somenamedtuple._asdict()` method for
   :func:`collections.namedtuple` now returns an ordered dictionary with the
   values appearing in the same order as the underlying tuple indices.
 
@@ -1198,7 +1198,7 @@ changes, or look through the Subversion logs for all the details.
   of the operands.  Previously such comparisons would fall back to
   Python's default rules for comparing objects, which produced arbitrary
   results based on their type.  Note that you still cannot combine
-  :class:`!Decimal` and floating point in other operations such as addition,
+  :class:`!Decimal` and floating-point in other operations such as addition,
   since you should be explicitly choosing how to convert between float and
   :class:`!Decimal`.  (Fixed by Mark Dickinson; :issue:`2531`.)
 
@@ -1333,7 +1333,6 @@ changes, or look through the Subversion logs for all the details.
     >>> from inspect import getcallargs
     >>> def f(a, b=1, *pos, **named):
     ...     pass
-    ...
     >>> getcallargs(f, 1, 2, 3)
     {'a': 1, 'b': 2, 'pos': (3,), 'named': {}}
     >>> getcallargs(f, a=2, x=4)
@@ -1431,7 +1430,7 @@ changes, or look through the Subversion logs for all the details.
   become very large.
   (Contributed by Charles Cazabon; :issue:`6963`.)
 
-* The :mod:`!nntplib` module now supports IPv6 addresses.
+* The :mod:`nntplib` module now supports IPv6 addresses.
   (Contributed by Derek Morr; :issue:`1664`.)
 
 * New functions: the :mod:`os` module wraps the following POSIX system
@@ -1548,7 +1547,7 @@ changes, or look through the Subversion logs for all the details.
   *ciphers* argument that's a string listing the encryption algorithms
   to be allowed; the format of the string is described
   `in the OpenSSL documentation
-  <https://docs.openssl.org/1.0.2/man1/ciphers/>`__.
+  <https://www.openssl.org/docs/man1.0.2/man1/ciphers.html>`__.
   (Added by Antoine Pitrou; :issue:`8322`.)
 
   Another change makes the extension load all of OpenSSL's ciphers and
@@ -1738,7 +1737,7 @@ New module: importlib
 
 Python 3.1 includes the :mod:`importlib` package, a re-implementation
 of the logic underlying Python's :keyword:`import` statement.
-:mod:`importlib` is useful for implementers of Python interpreters and
+:mod:`importlib` is useful for implementors of Python interpreters and
 to users who wish to write new importers that can participate in the
 import process.  Python 2.7 doesn't contain the complete
 :mod:`importlib` package, but instead has a tiny subset that contains
@@ -1831,7 +1830,8 @@ The :mod:`unittest` module was greatly enhanced; many
 new features were added.  Most of these features were implemented
 by Michael Foord, unless otherwise noted.  The enhanced version of
 the module is downloadable separately for use with Python versions 2.4 to 2.6,
-packaged as the :mod:`!unittest2` package, from :pypi:`unittest2`.
+packaged as the :mod:`!unittest2` package, from
+https://pypi.org/project/unittest2.
 
 When used from the command line, the module can automatically discover
 tests.  It's not as fancy as `py.test <https://pytest.org>`__ or
@@ -2132,7 +2132,7 @@ Changes to Python's build process and to the C API include:
   only the filename, function name, and first line number are required.
   This is useful for extension modules that are attempting to
   construct a more useful traceback stack.  Previously such
-  extensions needed to call :c:func:`!PyCode_New`, which had many
+  extensions needed to call :c:func:`PyCode_New`, which had many
   more arguments.  (Added by Jeffrey Yasskin.)
 
 * New function: :c:func:`PyErr_NewExceptionWithDoc` creates a new
@@ -2159,13 +2159,13 @@ Changes to Python's build process and to the C API include:
   :c:func:`!PyOS_ascii_strtod` and :c:func:`!PyOS_ascii_atof` functions
   are now deprecated.
 
-* New function: :c:func:`!PySys_SetArgvEx` sets the value of
+* New function: :c:func:`PySys_SetArgvEx` sets the value of
   ``sys.argv`` and can optionally update ``sys.path`` to include the
   directory containing the script named by ``sys.argv[0]`` depending
   on the value of an *updatepath* parameter.
 
   This function was added to close a security hole for applications
-  that embed Python.  The old function, :c:func:`!PySys_SetArgv`, would
+  that embed Python.  The old function, :c:func:`PySys_SetArgv`, would
   always update ``sys.path``, and sometimes it would add the current
   directory.  This meant that, if you ran an application embedding
   Python in a directory controlled by someone else, attackers could
@@ -2173,11 +2173,12 @@ Changes to Python's build process and to the C API include:
   :file:`os.py`) that your application would then import and run.
 
   If you maintain a C/C++ application that embeds Python, check
-  whether you're calling :c:func:`!PySys_SetArgv` and carefully consider
-  whether the application should be using :c:func:`!PySys_SetArgvEx`
+  whether you're calling :c:func:`PySys_SetArgv` and carefully consider
+  whether the application should be using :c:func:`PySys_SetArgvEx`
   with *updatepath* set to false.
 
-  Security issue reported as :cve:`2008-5983`;
+  Security issue reported as `CVE-2008-5983
+  <https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2008-5983>`_;
   discussed in :issue:`5753`, and fixed by Antoine Pitrou.
 
 * New macros: the Python header files now define the following macros:
@@ -2548,11 +2549,11 @@ For C extensions:
 
 For applications that embed Python:
 
-* The :c:func:`!PySys_SetArgvEx` function was added, letting
+* The :c:func:`PySys_SetArgvEx` function was added, letting
   applications close a security hole when the existing
-  :c:func:`!PySys_SetArgv` function was used.  Check whether you're
-  calling :c:func:`!PySys_SetArgv` and carefully consider whether the
-  application should be using :c:func:`!PySys_SetArgvEx` with
+  :c:func:`PySys_SetArgv` function was used.  Check whether you're
+  calling :c:func:`PySys_SetArgv` and carefully consider whether the
+  application should be using :c:func:`PySys_SetArgvEx` with
   *updatepath* set to false.
 
 .. ======================================================================
@@ -2624,7 +2625,7 @@ with the first of those changes appearing in the Python 2.7.7 release.
   2 applications. (Contributed by Alex Gaynor; :issue:`21304`.)
 
 * OpenSSL 1.0.1h was upgraded for the official Windows installers published on
-  python.org. (Contributed by Zachary Ware in :issue:`21671` for :cve:`2014-0224`.)
+  python.org. (contributed by Zachary Ware in :issue:`21671` for CVE-2014-0224)
 
 :pep:`466` related features added in Python 2.7.9:
 
@@ -2680,11 +2681,13 @@ automatic ``PATH`` modifications to have ``pip`` available from the command
 line by default, otherwise it can still be accessed through the Python
 launcher for Windows as ``py -m pip``.
 
-As :pep:`discussed in the PEP <0477#disabling-ensurepip-by-downstream-distributors>`,
-platform packagers may choose not to install
+As `discussed in the PEP`__, platform packagers may choose not to install
 these commands by default, as long as, when invoked, they provide clear and
 simple directions on how to install them on that platform (usually using
 the system package manager).
+
+__ https://peps.python.org/pep-0477/#disabling-ensurepip-by-downstream-distributors
+
 
 Documentation Changes
 ~~~~~~~~~~~~~~~~~~~~~
@@ -2699,7 +2702,7 @@ projects.
 
 However, as this migration is currently still incomplete, the legacy
 versions of those guides remaining available as :ref:`install-index`
-and :ref:`setuptools-index`.
+and :ref:`distutils-index`.
 
 .. seealso::
 

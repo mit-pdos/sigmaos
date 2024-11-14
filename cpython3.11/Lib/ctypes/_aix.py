@@ -108,8 +108,12 @@ def get_ld_headers(file):
     p = Popen(["/usr/bin/dump", f"-X{AIX_ABI}", "-H", file],
         universal_newlines=True, stdout=PIPE, stderr=DEVNULL)
     # be sure to read to the end-of-file - getting all entries
-    while ld_header := get_ld_header(p):
-        ldr_headers.append((ld_header, get_ld_header_info(p)))
+    while True:
+        ld_header = get_ld_header(p)
+        if ld_header:
+            ldr_headers.append((ld_header, get_ld_header_info(p)))
+        else:
+            break
     p.stdout.close()
     p.wait()
     return ldr_headers

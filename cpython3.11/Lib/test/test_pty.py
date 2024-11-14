@@ -1,15 +1,12 @@
-import unittest
-from test.support import (
-    is_android, is_apple_mobile, is_emscripten, is_wasi, reap_children, verbose
-)
-from test.support.import_helper import import_module
+from test.support import verbose, reap_children
 from test.support.os_helper import TESTFN, unlink
+from test.support.import_helper import import_module
 
-# Skip these tests if termios is not available
+# Skip these tests if termios or fcntl are not available
 import_module('termios')
-
-if is_android or is_apple_mobile or is_emscripten or is_wasi:
-    raise unittest.SkipTest("pty is not available on this platform")
+# fcntl is a proxy for not being one of the wasm32 platforms even though we
+# don't use this module... a proper check for what crashes those is needed.
+import_module("fcntl")
 
 import errno
 import os
@@ -20,6 +17,7 @@ import select
 import signal
 import socket
 import io # readline
+import unittest
 import warnings
 
 TEST_STRING_1 = b"I wish to buy a fish license.\n"

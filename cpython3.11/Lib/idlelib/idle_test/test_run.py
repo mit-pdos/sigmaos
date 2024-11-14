@@ -8,7 +8,6 @@ import unittest
 from unittest import mock
 import idlelib
 from idlelib.idle_test.mock_idle import Func
-from test.support import force_not_colorized
 
 idlelib.testing = True  # Use {} for executing test user code.
 
@@ -40,14 +39,12 @@ class ExceptionTest(unittest.TestCase):
 
     data = (('1/0', ZeroDivisionError, "division by zero\n"),
             ('abc', NameError, "name 'abc' is not defined. "
-                               "Did you mean: 'abs'? "
-                               "Or did you forget to import 'abc'?\n"),
+                               "Did you mean: 'abs'?\n"),
             ('int.reel', AttributeError,
                  "type object 'int' has no attribute 'reel'. "
                  "Did you mean: 'real'?\n"),
             )
 
-    @force_not_colorized
     def test_get_message(self):
         for code, exc, msg in self.data:
             with self.subTest(code=code):
@@ -59,7 +56,6 @@ class ExceptionTest(unittest.TestCase):
                     expect = f'{exc.__name__}: {msg}'
                     self.assertEqual(actual, expect)
 
-    @force_not_colorized
     @mock.patch.object(run, 'cleanup_traceback',
                        new_callable=lambda: (lambda t, e: None))
     def test_get_multiple_message(self, mock):

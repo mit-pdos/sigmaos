@@ -300,28 +300,12 @@ def _in_document(node):
         node = node.parentNode
     return False
 
-def _write_data(writer, text, attr):
+def _write_data(writer, data):
     "Writes datachars to writer."
-    if not text:
-        return
-    # See the comments in ElementTree.py for behavior and
-    # implementation details.
-    if "&" in text:
-        text = text.replace("&", "&amp;")
-    if "<" in text:
-        text = text.replace("<", "&lt;")
-    if ">" in text:
-        text = text.replace(">", "&gt;")
-    if attr:
-        if '"' in text:
-            text = text.replace('"', "&quot;")
-        if "\r" in text:
-            text = text.replace("\r", "&#13;")
-        if "\n" in text:
-            text = text.replace("\n", "&#10;")
-        if "\t" in text:
-            text = text.replace("\t", "&#9;")
-    writer.write(text)
+    if data:
+        data = data.replace("&", "&amp;").replace("<", "&lt;"). \
+                    replace("\"", "&quot;").replace(">", "&gt;")
+        writer.write(data)
 
 def _get_elements_by_tagName_helper(parent, name, rc):
     for node in parent.childNodes:
@@ -899,7 +883,7 @@ class Element(Node):
 
         for a_name in attrs.keys():
             writer.write(" %s=\"" % a_name)
-            _write_data(writer, attrs[a_name].value, True)
+            _write_data(writer, attrs[a_name].value)
             writer.write("\"")
         if self.childNodes:
             writer.write(">")
@@ -1128,7 +1112,7 @@ class Text(CharacterData):
         return newText
 
     def writexml(self, writer, indent="", addindent="", newl=""):
-        _write_data(writer, "%s%s%s" % (indent, self.data, newl), False)
+        _write_data(writer, "%s%s%s" % (indent, self.data, newl))
 
     # DOM Level 3 (WD 9 April 2002)
 

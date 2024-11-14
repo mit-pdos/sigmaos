@@ -1,6 +1,5 @@
 import unittest
 from test import support
-from test.support.import_helper import import_module
 
 
 class TestMROEntry(unittest.TestCase):
@@ -278,9 +277,7 @@ class TestClassGetitem(unittest.TestCase):
 class CAPITest(unittest.TestCase):
 
     def test_c_class(self):
-        _testcapi = import_module("_testcapi")
-        Generic = _testcapi.Generic
-        GenericAlias = _testcapi.GenericAlias
+        from _testcapi import Generic, GenericAlias
         self.assertIsInstance(Generic.__class_getitem__(int), GenericAlias)
 
         IntGeneric = Generic[int]

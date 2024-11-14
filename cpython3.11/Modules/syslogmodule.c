@@ -49,33 +49,15 @@ Revision history:
 
 /* syslog module */
 
-// clinic/syslogmodule.c.h uses internal pycore_modsupport.h API
-#ifndef Py_BUILD_CORE_BUILTIN
-#  define Py_BUILD_CORE_MODULE 1
-#endif
-
 #include "Python.h"
 #include "osdefs.h"               // SEP
 
 #include <syslog.h>
 
-/*[clinic input]
-module syslog
-[clinic start generated code]*/
-/*[clinic end generated code: output=da39a3ee5e6b4b0d input=478f4ac94a1d4cae]*/
-
-#include "clinic/syslogmodule.c.h"
-
-/*  only one instance, only one syslog, so globals should be ok,
- *  these fields are writable from the main interpreter only. */
-static PyObject *S_ident_o = NULL;  // identifier, held by openlog()
+/*  only one instance, only one syslog, so globals should be ok  */
+static PyObject *S_ident_o = NULL;                      /*  identifier, held by openlog()  */
 static char S_log_open = 0;
 
-static inline int
-is_main_interpreter(void)
-{
-    return (PyInterpreterState_Get() == PyInterpreterState_Main());
-}
 
 static PyObject *
 syslog_get_argv(void)
@@ -131,30 +113,18 @@ syslog_get_argv(void)
 }
 
 
-/*[clinic input]
-@critical_section
-syslog.openlog
-
-    ident: unicode = NULL
-    logoption as logopt: long = 0
-    facility: long(c_default="LOG_USER") = LOG_USER
-
-Set logging options of subsequent syslog() calls.
-[clinic start generated code]*/
-
 static PyObject *
-syslog_openlog_impl(PyObject *module, PyObject *ident, long logopt,
-                    long facility)
-/*[clinic end generated code: output=5476c12829b6eb75 input=ee700b8786f81c23]*/
+syslog_openlog(PyObject * self, PyObject * args, PyObject *kwds)
 {
-    // Since the sys.openlog changes the process level state of syslog library,
-    // this operation is only allowed for the main interpreter.
-    if (!is_main_interpreter()) {
-        PyErr_SetString(PyExc_RuntimeError, "subinterpreter can't use syslog.openlog()");
-        return NULL;
-    }
-
+    long logopt = 0;
+    long facility = LOG_USER;
+    PyObject *ident = NULL;
+    static char *keywords[] = {"ident", "logoption", "facility", 0};
     const char *ident_str = NULL;
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwds,
+                          "|Ull:openlog", keywords, &ident, &logopt, &facility))
+        return NULL;
 
     if (ident) {
         Py_INCREF(ident);
@@ -188,49 +158,55 @@ syslog_openlog_impl(PyObject *module, PyObject *ident, long logopt,
 }
 
 
-
-/*[clinic input]
-@critical_section
-syslog.syslog
-
-    [
-    priority: int(c_default="LOG_INFO") = LOG_INFO
-    ]
-
-    message: str
-
-    /
-
-Send the string message to the system logger.
-[clinic start generated code]*/
-
 static PyObject *
-syslog_syslog_impl(PyObject *module, int group_left_1, int priority,
-                   const char *message)
-/*[clinic end generated code: output=c3dbc73445a0e078 input=6588ddb0b113af8e]*/
+syslog_syslog(PyObject * self, PyObject * args)
 {
+    PyObject *message_object;
+    const char *message;
+    int   priority = LOG_INFO;
+
+    if (!PyArg_ParseTuple(args, "iU;[priority,] message string",
+                          &priority, &message_object)) {
+        PyErr_Clear();
+        if (!PyArg_ParseTuple(args, "U;[priority,] message string",
+                              &message_object))
+            return NULL;
+    }
+
+    message = PyUnicode_AsUTF8(message_object);
+    if (message == NULL)
+        return NULL;
+
     if (PySys_Audit("syslog.syslog", "is", priority, message) < 0) {
         return NULL;
     }
 
     /*  if log is not opened, open it now  */
     if (!S_log_open) {
-        if (!is_main_interpreter()) {
-            PyErr_SetString(PyExc_RuntimeError, "subinterpreter can't use syslog.syslog() "
-                                                "until the syslog is opened by the main interpreter");
+        PyObject *openargs;
+
+        /* Continue even if PyTuple_New fails, because openlog(3) is optional.
+         * So, we can still do logging in the unlikely event things are so hosed
+         * that we can't do this tuple.
+         */
+        if ((openargs = PyTuple_New(0))) {
+            PyObject *openlog_ret = syslog_openlog(self, openargs, NULL);
+            Py_DECREF(openargs);
+            if (openlog_ret == NULL) {
+                return NULL;
+            }
+            Py_DECREF(openlog_ret);
+        }
+        else {
             return NULL;
         }
-        PyObject *openlog_ret = syslog_openlog_impl(module, NULL, 0, LOG_USER);
-        if (openlog_ret == NULL) {
-            return NULL;
-        }
-        Py_DECREF(openlog_ret);
     }
 
     /* Incref ident, because it can be decrefed if syslog.openlog() is
      * called when the GIL is released.
      */
-    PyObject *ident = Py_XNewRef(S_ident_o);
+    PyObject *ident = S_ident_o;
+    Py_XINCREF(ident);
 #ifdef __APPLE__
     // gh-98178: On macOS, libc syslog() is not thread-safe
     syslog(priority, "%s", message);
@@ -243,25 +219,9 @@ syslog_syslog_impl(PyObject *module, int group_left_1, int priority,
     Py_RETURN_NONE;
 }
 
-
-/*[clinic input]
-@critical_section
-syslog.closelog
-
-Reset the syslog module values and call the system library closelog().
-[clinic start generated code]*/
-
 static PyObject *
-syslog_closelog_impl(PyObject *module)
-/*[clinic end generated code: output=97890a80a24b1b84 input=167f489868bd5a72]*/
+syslog_closelog(PyObject *self, PyObject *unused)
 {
-    // Since the sys.closelog changes the process level state of syslog library,
-    // this operation is only allowed for the main interpreter.
-    if (!is_main_interpreter()) {
-        PyErr_SetString(PyExc_RuntimeError, "sunbinterpreter can't use syslog.closelog()");
-        return NULL;
-    }
-
     if (PySys_Audit("syslog.closelog", NULL) < 0) {
         return NULL;
     }
@@ -273,67 +233,51 @@ syslog_closelog_impl(PyObject *module)
     Py_RETURN_NONE;
 }
 
-/*[clinic input]
-syslog.setlogmask -> long
-
-    maskpri: long
-    /
-
-Set the priority mask to maskpri and return the previous mask value.
-[clinic start generated code]*/
-
-static long
-syslog_setlogmask_impl(PyObject *module, long maskpri)
-/*[clinic end generated code: output=d6ed163917b434bf input=adff2c2b76c7629c]*/
+static PyObject *
+syslog_setlogmask(PyObject *self, PyObject *args)
 {
+    long maskpri, omaskpri;
+
+    if (!PyArg_ParseTuple(args, "l;mask for priority", &maskpri))
+        return NULL;
     if (PySys_Audit("syslog.setlogmask", "l", maskpri) < 0) {
-        return -1;
+        return NULL;
     }
-
-    return setlogmask(maskpri);
+    omaskpri = setlogmask(maskpri);
+    return PyLong_FromLong(omaskpri);
 }
 
-/*[clinic input]
-syslog.LOG_MASK -> long
-
-    pri: long
-    /
-
-Calculates the mask for the individual priority pri.
-[clinic start generated code]*/
-
-static long
-syslog_LOG_MASK_impl(PyObject *module, long pri)
-/*[clinic end generated code: output=c4a5bbfcc74c7c94 input=534829cb7fb5f7d2]*/
+static PyObject *
+syslog_log_mask(PyObject *self, PyObject *args)
 {
-    return LOG_MASK(pri);
+    long mask;
+    long pri;
+    if (!PyArg_ParseTuple(args, "l:LOG_MASK", &pri))
+        return NULL;
+    mask = LOG_MASK(pri);
+    return PyLong_FromLong(mask);
 }
 
-/*[clinic input]
-syslog.LOG_UPTO -> long
-
-    pri: long
-    /
-
-Calculates the mask for all priorities up to and including pri.
-[clinic start generated code]*/
-
-static long
-syslog_LOG_UPTO_impl(PyObject *module, long pri)
-/*[clinic end generated code: output=9eab083c90601d7e input=5e906d6c406b7458]*/
+static PyObject *
+syslog_log_upto(PyObject *self, PyObject *args)
 {
-    return LOG_UPTO(pri);
+    long mask;
+    long pri;
+    if (!PyArg_ParseTuple(args, "l:LOG_UPTO", &pri))
+        return NULL;
+    mask = LOG_UPTO(pri);
+    return PyLong_FromLong(mask);
 }
 
 /* List of functions defined in the module */
 
 static PyMethodDef syslog_methods[] = {
-    SYSLOG_OPENLOG_METHODDEF
-    SYSLOG_CLOSELOG_METHODDEF
-    SYSLOG_SYSLOG_METHODDEF
-    SYSLOG_SETLOGMASK_METHODDEF
-    SYSLOG_LOG_MASK_METHODDEF
-    SYSLOG_LOG_UPTO_METHODDEF
+    {"openlog",         _PyCFunction_CAST(syslog_openlog),           METH_VARARGS | METH_KEYWORDS},
+    {"closelog",        syslog_closelog,        METH_NOARGS},
+    {"syslog",          syslog_syslog,          METH_VARARGS},
+    {"setlogmask",      syslog_setlogmask,      METH_VARARGS},
+    {"LOG_MASK",        syslog_log_mask,        METH_VARARGS},
+    {"LOG_UPTO",        syslog_log_upto,        METH_VARARGS},
     {NULL,              NULL,                   0}
 };
 
@@ -409,37 +353,11 @@ syslog_exec(PyObject *module)
     ADD_INT_MACRO(module, LOG_AUTHPRIV);
 #endif
 
-#ifdef LOG_FTP
-    ADD_INT_MACRO(module, LOG_FTP);
-#endif
-
-#ifdef LOG_NETINFO
-    ADD_INT_MACRO(module, LOG_NETINFO);
-#endif
-
-#ifdef LOG_REMOTEAUTH
-    ADD_INT_MACRO(module, LOG_REMOTEAUTH);
-#endif
-
-#ifdef LOG_INSTALL
-    ADD_INT_MACRO(module, LOG_INSTALL);
-#endif
-
-#ifdef LOG_RAS
-    ADD_INT_MACRO(module, LOG_RAS);
-#endif
-
-#ifdef LOG_LAUNCHD
-    ADD_INT_MACRO(module, LOG_LAUNCHD);
-#endif
-
     return 0;
 }
 
 static PyModuleDef_Slot syslog_slots[] = {
     {Py_mod_exec, syslog_exec},
-    {Py_mod_multiple_interpreters, Py_MOD_PER_INTERPRETER_GIL_SUPPORTED},
-    {Py_mod_gil, Py_MOD_GIL_NOT_USED},
     {0, NULL}
 };
 

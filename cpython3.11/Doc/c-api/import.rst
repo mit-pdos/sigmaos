@@ -26,9 +26,6 @@ Importing Modules
       to per-module locks for most purposes, so this function's special
       behaviour isn't needed anymore.
 
-   .. deprecated-removed:: 3.13 3.15
-      Use :c:func:`PyImport_ImportModule` instead.
-
 
 .. c:function:: PyObject* PyImport_ImportModuleEx(const char *name, PyObject *globals, PyObject *locals, PyObject *fromlist)
 
@@ -86,40 +83,27 @@ Importing Modules
    an exception set on failure (the module still exists in this case).
 
 
-.. c:function:: PyObject* PyImport_AddModuleRef(const char *name)
-
-   Return the module object corresponding to a module name.
-
-   The *name* argument may be of the form ``package.module``. First check the
-   modules dictionary if there's one there, and if not, create a new one and
-   insert it in the modules dictionary.
-
-   Return a :term:`strong reference` to the module on success. Return ``NULL``
-   with an exception set on failure.
-
-   The module name *name* is decoded from UTF-8.
-
-   This function does not load or import the module; if the module wasn't
-   already loaded, you will get an empty module object. Use
-   :c:func:`PyImport_ImportModule` or one of its variants to import a module.
-   Package structures implied by a dotted name for *name* are not created if
-   not already present.
-
-   .. versionadded:: 3.13
-
-
 .. c:function:: PyObject* PyImport_AddModuleObject(PyObject *name)
 
-   Similar to :c:func:`PyImport_AddModuleRef`, but return a :term:`borrowed
-   reference` and *name* is a Python :class:`str` object.
+   Return the module object corresponding to a module name.  The *name* argument
+   may be of the form ``package.module``. First check the modules dictionary if
+   there's one there, and if not, create a new one and insert it in the modules
+   dictionary. Return ``NULL`` with an exception set on failure.
+
+   .. note::
+
+      This function does not load or import the module; if the module wasn't already
+      loaded, you will get an empty module object. Use :c:func:`PyImport_ImportModule`
+      or one of its variants to import a module.  Package structures implied by a
+      dotted name for *name* are not created if not already present.
 
    .. versionadded:: 3.3
 
 
 .. c:function:: PyObject* PyImport_AddModule(const char *name)
 
-   Similar to :c:func:`PyImport_AddModuleRef`, but return a :term:`borrowed
-   reference`.
+   Similar to :c:func:`PyImport_AddModuleObject`, but the name is a UTF-8
+   encoded string instead of a Unicode object.
 
 
 .. c:function:: PyObject* PyImport_ExecCodeModule(const char *name, PyObject *co)
@@ -136,14 +120,14 @@ Importing Modules
    such modules have no way to know that the module object is an unknown (and
    probably damaged with respect to the module author's intents) state.
 
-   The module's :attr:`~module.__spec__` and :attr:`~module.__loader__` will be
-   set, if not set already, with the appropriate values.  The spec's loader
-   will be set to the module's :attr:`!__loader__` (if set) and to an instance
-   of :class:`~importlib.machinery.SourceFileLoader` otherwise.
+   The module's :attr:`__spec__` and :attr:`__loader__` will be set, if
+   not set already, with the appropriate values.  The spec's loader will
+   be set to the module's ``__loader__`` (if set) and to an instance of
+   :class:`~importlib.machinery.SourceFileLoader` otherwise.
 
-   The module's :attr:`~module.__file__` attribute will be set to the code
-   object's :attr:`~codeobject.co_filename`.  If applicable,
-   :attr:`~module.__cached__` will also be set.
+   The module's :attr:`__file__` attribute will be set to the code object's
+   :attr:`~codeobject.co_filename`.  If applicable, :attr:`__cached__` will also
+   be set.
 
    This function will reload the module if it was already imported.  See
    :c:func:`PyImport_ReloadModule` for the intended way to reload a module.
@@ -154,31 +138,22 @@ Importing Modules
    See also :c:func:`PyImport_ExecCodeModuleEx` and
    :c:func:`PyImport_ExecCodeModuleWithPathnames`.
 
-   .. versionchanged:: 3.12
-      The setting of :attr:`~module.__cached__` and :attr:`~module.__loader__`
-      is deprecated. See :class:`~importlib.machinery.ModuleSpec` for
-      alternatives.
-
 
 .. c:function:: PyObject* PyImport_ExecCodeModuleEx(const char *name, PyObject *co, const char *pathname)
 
-   Like :c:func:`PyImport_ExecCodeModule`, but the :attr:`~module.__file__`
-   attribute of the module object is set to *pathname* if it is non-``NULL``.
+   Like :c:func:`PyImport_ExecCodeModule`, but the :attr:`__file__` attribute of
+   the module object is set to *pathname* if it is non-``NULL``.
 
    See also :c:func:`PyImport_ExecCodeModuleWithPathnames`.
 
 
 .. c:function:: PyObject* PyImport_ExecCodeModuleObject(PyObject *name, PyObject *co, PyObject *pathname, PyObject *cpathname)
 
-   Like :c:func:`PyImport_ExecCodeModuleEx`, but the :attr:`~module.__cached__`
+   Like :c:func:`PyImport_ExecCodeModuleEx`, but the :attr:`__cached__`
    attribute of the module object is set to *cpathname* if it is
    non-``NULL``.  Of the three functions, this is the preferred one to use.
 
    .. versionadded:: 3.3
-
-   .. versionchanged:: 3.12
-      Setting :attr:`~module.__cached__` is deprecated. See
-      :class:`~importlib.machinery.ModuleSpec` for alternatives.
 
 
 .. c:function:: PyObject* PyImport_ExecCodeModuleWithPathnames(const char *name, PyObject *co, const char *pathname, const char *cpathname)
@@ -190,10 +165,8 @@ Importing Modules
 
    .. versionadded:: 3.2
    .. versionchanged:: 3.3
-      Uses :func:`!imp.source_from_cache` in calculating the source path if
+      Uses :func:`imp.source_from_cache()` in calculating the source path if
       only the bytecode path is provided.
-   .. versionchanged:: 3.12
-      No longer uses the removed :mod:`!imp` module.
 
 
 .. c:function:: long PyImport_GetMagicNumber()

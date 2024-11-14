@@ -9,7 +9,7 @@ the following defines used by the different modules:
 
 STRINGLIB_CHAR
 
-    the type used to hold a character (char, Py_UCS1, Py_UCS2 or Py_UCS4)
+    the type used to hold a character (char or Py_UNICODE)
 
 STRINGLIB_GET_EMPTY()
 

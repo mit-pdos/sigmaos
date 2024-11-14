@@ -331,7 +331,7 @@ STRINGLIB(utf8_encoder)(_PyBytesWriter *writer,
             case _Py_ERROR_REPLACE:
                 memset(p, '?', endpos - startpos);
                 p += (endpos - startpos);
-                _Py_FALLTHROUGH;
+                /* fall through */
             case _Py_ERROR_IGNORE:
                 i += (endpos - startpos - 1);
                 break;
@@ -379,7 +379,7 @@ STRINGLIB(utf8_encoder)(_PyBytesWriter *writer,
                 }
                 startpos = k;
                 assert(startpos < endpos);
-                _Py_FALLTHROUGH;
+                /* fall through */
             default:
                 rep = unicode_encode_call_errorhandler(
                       errors, &error_handler_obj, "utf-8", "surrogates not allowed",
@@ -408,6 +408,9 @@ STRINGLIB(utf8_encoder)(_PyBytesWriter *writer,
                 }
                 else {
                     /* rep is unicode */
+                    if (PyUnicode_READY(rep) < 0)
+                        goto error;
+
                     if (!PyUnicode_IS_ASCII(rep)) {
                         raise_encode_exception(&exc, "utf-8", unicode,
                                                startpos, endpos,

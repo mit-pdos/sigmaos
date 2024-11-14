@@ -5,14 +5,11 @@
 import os
 import subprocess
 import sys
-import sysconfig
 import tempfile
 import textwrap
 import unittest
 from test import support
 from test.support import os_helper
-from test.support import force_not_colorized
-from test.support import threading_helper
 from test.support.script_helper import (
     spawn_python, kill_python, assert_python_ok, assert_python_failure,
     interpreter_requires_environment
@@ -20,6 +17,9 @@ from test.support.script_helper import (
 
 if not support.has_subprocess_support:
     raise unittest.SkipTest("test module requires subprocess")
+
+# Debug build?
+Py_DEBUG = hasattr(sys, "gettotalrefcount")
 
 
 # XXX (ncoghlan): Move to script_helper and make consistent with run_python
@@ -139,7 +139,7 @@ class CmdLineTest(unittest.TestCase):
         # "-X showrefcount" shows the refcount, but only in debug builds
         rc, out, err = run_python('-I', '-X', 'showrefcount', '-c', code)
         self.assertEqual(out.rstrip(), b"{'showrefcount': True}")
-        if support.Py_DEBUG:
+        if Py_DEBUG:
             # bpo-46417: Tolerate negative reference count which can occur
             # because of bugs in C extensions. This test is only about checking
             # the showrefcount feature.
@@ -160,18 +160,6 @@ class CmdLineTest(unittest.TestCase):
                    '-c', 'import os; print(os.__spec__.loader, end="")']
             with self.subTest(raw):
                 res = assert_python_ok(*cmd)
-                self.assertRegex(res.out.decode('utf-8'), expected)
-
-    @support.cpython_only
-    def test_env_var_frozen_modules(self):
-        tests = {
-            ('on', 'FrozenImporter'),
-            ('off', 'SourceFileLoader'),
-        }
-        for raw, expected in tests:
-            cmd = ['-c', 'import os; print(os.__spec__.loader, end="")']
-            with self.subTest(raw):
-                res = assert_python_ok(*cmd, PYTHON_FROZEN_MODULES=raw)
                 self.assertRegex(res.out.decode('utf-8'), expected)
 
     def test_run_module(self):
@@ -489,9 +477,8 @@ class CmdLineTest(unittest.TestCase):
         rc, out, err = assert_python_failure('-c', code)
         self.assertEqual(b'', out)
         self.assertEqual(120, rc)
-        self.assertIn(b'Exception ignored on flushing sys.stdout:\n'
-                      b'OSError: '.replace(b'\n', os.linesep.encode()),
-                      err)
+        self.assertRegex(err.decode('ascii', 'ignore'),
+                         'Exception ignored in.*\nOSError: .*')
 
     def test_closed_stdout(self):
         # Issue #13444: if stdout has been explicitly closed, we should
@@ -645,13 +632,15 @@ class CmdLineTest(unittest.TestCase):
                 PYTHONDONTWRITEBYTECODE=value,
                 PYTHONVERBOSE=value,
             )
-            expected_bool = int(bool(value))
+            dont_write_bytecode = int(bool(value))
             code = (
                 "import sys; "
                 "sys.stderr.write(str(sys.flags)); "
                 f"""sys.exit(not (
-                    sys.flags.optimize == sys.flags.verbose == {expected}
-                    and sys.flags.debug == sys.flags.dont_write_bytecode == {expected_bool}
+                    sys.flags.debug == sys.flags.optimize ==
+                    sys.flags.verbose ==
+                    {expected}
+                    and sys.flags.dont_write_bytecode == {dont_write_bytecode}
                 ))"""
             )
             with self.subTest(envar_value=value):
@@ -715,7 +704,7 @@ class CmdLineTest(unittest.TestCase):
         code = ("import warnings; "
                 "print(' '.join('%s::%s' % (f[0], f[2].__name__) "
                                 "for f in warnings.filters))")
-        if support.Py_DEBUG:
+        if Py_DEBUG:
             expected_filters = "default::Warning"
         else:
             expected_filters = ("default::Warning "
@@ -739,24 +728,22 @@ class CmdLineTest(unittest.TestCase):
 
         # Memory allocator debug hooks
         try:
-            import _testinternalcapi  # noqa: F401
+            import _testcapi
         except ImportError:
             pass
         else:
-            code = "import _testinternalcapi; print(_testinternalcapi.pymem_getallocatorsname())"
+            code = "import _testcapi; print(_testcapi.pymem_getallocatorsname())"
             with support.SuppressCrashReport():
                 out = self.run_xdev("-c", code, check_exitcode=False)
             if support.with_pymalloc():
                 alloc_name = "pymalloc_debug"
-            elif support.Py_GIL_DISABLED:
-                alloc_name = "mimalloc_debug"
             else:
                 alloc_name = "malloc_debug"
             self.assertEqual(out, alloc_name)
 
         # Faulthandler
         try:
-            import faulthandler  # noqa: F401
+            import faulthandler
         except ImportError:
             pass
         else:
@@ -789,7 +776,7 @@ class CmdLineTest(unittest.TestCase):
         expected_filters = ("error::BytesWarning "
                             "once::UserWarning "
                             "always::UserWarning")
-        if not support.Py_DEBUG:
+        if not Py_DEBUG:
             expected_filters += (" "
                                  "default::DeprecationWarning "
                                  "ignore::DeprecationWarning "
@@ -807,7 +794,7 @@ class CmdLineTest(unittest.TestCase):
         self.assertEqual(out, expected_filters)
 
     def check_pythonmalloc(self, env_var, name):
-        code = 'import _testinternalcapi; print(_testinternalcapi.pymem_getallocatorsname())'
+        code = 'import _testcapi; print(_testcapi.pymem_getallocatorsname())'
         env = dict(os.environ)
         env.pop('PYTHONDEVMODE', None)
         if env_var is not None:
@@ -823,40 +810,26 @@ class CmdLineTest(unittest.TestCase):
         self.assertEqual(proc.stdout.rstrip(), name)
         self.assertEqual(proc.returncode, 0)
 
-    @support.cpython_only
     def test_pythonmalloc(self):
         # Test the PYTHONMALLOC environment variable
-        malloc = not support.Py_GIL_DISABLED
         pymalloc = support.with_pymalloc()
-        mimalloc = support.with_mimalloc()
-        if support.Py_GIL_DISABLED:
-            default_name = 'mimalloc_debug' if support.Py_DEBUG else 'mimalloc'
-            default_name_debug = 'mimalloc_debug'
-        elif pymalloc:
-            default_name = 'pymalloc_debug' if support.Py_DEBUG else 'pymalloc'
+        if pymalloc:
+            default_name = 'pymalloc_debug' if Py_DEBUG else 'pymalloc'
             default_name_debug = 'pymalloc_debug'
         else:
-            default_name = 'malloc_debug' if support.Py_DEBUG else 'malloc'
+            default_name = 'malloc_debug' if Py_DEBUG else 'malloc'
             default_name_debug = 'malloc_debug'
 
         tests = [
             (None, default_name),
             ('debug', default_name_debug),
+            ('malloc', 'malloc'),
+            ('malloc_debug', 'malloc_debug'),
         ]
-        if malloc:
-            tests.extend([
-                ('malloc', 'malloc'),
-                ('malloc_debug', 'malloc_debug'),
-            ])
         if pymalloc:
             tests.extend((
                 ('pymalloc', 'pymalloc'),
                 ('pymalloc_debug', 'pymalloc_debug'),
-            ))
-        if mimalloc:
-            tests.extend((
-                ('mimalloc', 'mimalloc'),
-                ('mimalloc_debug', 'mimalloc_debug'),
             ))
 
         for env_var, name in tests:
@@ -880,118 +853,6 @@ class CmdLineTest(unittest.TestCase):
                               universal_newlines=True, env=env)
         self.assertEqual(proc.stdout.rstrip(), 'True')
         self.assertEqual(proc.returncode, 0, proc)
-
-    def test_python_gil(self):
-        cases = [
-            # (env, opt, expected, msg)
-            ('1', None, '1', "PYTHON_GIL=1"),
-            (None, '1', '1', "-X gil=1"),
-        ]
-
-        if support.Py_GIL_DISABLED:
-            cases.extend(
-                [
-                    (None, None, 'None', "no options set"),
-                    ('0', None, '0', "PYTHON_GIL=0"),
-                    ('1', '0', '0', "-X gil=0 overrides PYTHON_GIL=1"),
-                    (None, '0', '0', "-X gil=0"),
-                ]
-            )
-        else:
-            cases.extend(
-                [
-                    (None, None, '1', '-X gil=0 (unsupported by this build)'),
-                    ('1', None, '1', 'PYTHON_GIL=0 (unsupported by this build)'),
-                ]
-            )
-        code = "import sys; print(sys.flags.gil)"
-        environ = dict(os.environ)
-
-        for env, opt, expected, msg in cases:
-            with self.subTest(msg, env=env, opt=opt):
-                environ.pop('PYTHON_GIL', None)
-                if env is not None:
-                    environ['PYTHON_GIL'] = env
-                extra_args = []
-                if opt is not None:
-                    extra_args = ['-X', f'gil={opt}']
-
-                proc = subprocess.run([sys.executable, *extra_args, '-c', code],
-                                      stdout=subprocess.PIPE,
-                                      stderr=subprocess.PIPE,
-                                      text=True, env=environ)
-                self.assertEqual(proc.returncode, 0, proc)
-                self.assertEqual(proc.stdout.rstrip(), expected)
-                self.assertEqual(proc.stderr, '')
-
-    def test_python_asyncio_debug(self):
-        code = "import asyncio; print(asyncio.new_event_loop().get_debug())"
-        rc, out, err = assert_python_ok('-c', code, PYTHONASYNCIODEBUG='1')
-        self.assertIn(b'True', out)
-
-    @unittest.skipUnless(sysconfig.get_config_var('Py_TRACE_REFS'), "Requires --with-trace-refs build option")
-    def test_python_dump_refs(self):
-        code = 'import sys; sys._clear_type_cache()'
-        rc, out, err = assert_python_ok('-c', code, PYTHONDUMPREFS='1')
-        self.assertEqual(rc, 0)
-
-    @unittest.skipUnless(sysconfig.get_config_var('Py_TRACE_REFS'), "Requires --with-trace-refs build option")
-    def test_python_dump_refs_file(self):
-        with tempfile.NamedTemporaryFile() as dump_file:
-            code = 'import sys; sys._clear_type_cache()'
-            rc, out, err = assert_python_ok('-c', code, PYTHONDUMPREFSFILE=dump_file.name)
-            self.assertEqual(rc, 0)
-            with open(dump_file.name, 'r') as file:
-                contents = file.read()
-                self.assertIn('Remaining objects', contents)
-
-    @unittest.skipUnless(sys.platform == 'darwin', 'PYTHONEXECUTABLE only works on macOS')
-    def test_python_executable(self):
-        code = 'import sys; print(sys.executable)'
-        expected = "/busr/bbin/bpython"
-        rc, out, err = assert_python_ok('-c', code, PYTHONEXECUTABLE=expected)
-        self.assertIn(expected.encode(), out)
-
-    @unittest.skipUnless(support.MS_WINDOWS, 'Test only applicable on Windows')
-    def test_python_legacy_windows_fs_encoding(self):
-        code = "import sys; print(sys.getfilesystemencoding())"
-        expected = 'mbcs'
-        rc, out, err = assert_python_ok('-c', code, PYTHONLEGACYWINDOWSFSENCODING='1')
-        self.assertIn(expected.encode(), out)
-
-    @unittest.skipUnless(support.MS_WINDOWS, 'Test only applicable on Windows')
-    def test_python_legacy_windows_stdio(self):
-        code = "import sys; print(sys.stdin.encoding, sys.stdout.encoding)"
-        expected = 'cp'
-        rc, out, err = assert_python_ok('-c', code, PYTHONLEGACYWINDOWSSTDIO='1')
-        self.assertIn(expected.encode(), out)
-
-    @unittest.skipIf("-fsanitize" in sysconfig.get_config_vars().get('PY_CFLAGS', ()),
-                     "PYTHONMALLOCSTATS doesn't work with ASAN")
-    def test_python_malloc_stats(self):
-        code = "pass"
-        rc, out, err = assert_python_ok('-c', code, PYTHONMALLOCSTATS='1')
-        self.assertIn(b'Small block threshold', err)
-
-    def test_python_user_base(self):
-        code = "import site; print(site.USER_BASE)"
-        expected = "/custom/userbase"
-        rc, out, err = assert_python_ok('-c', code, PYTHONUSERBASE=expected)
-        self.assertIn(expected.encode(), out)
-
-    def test_python_basic_repl(self):
-        # Currently this only tests that the env var is set. See test_pyrepl.test_python_basic_repl.
-        code = "import os; print('PYTHON_BASIC_REPL' in os.environ)"
-        expected = "True"
-        rc, out, err = assert_python_ok('-c', code, PYTHON_BASIC_REPL='1')
-        self.assertIn(expected.encode(), out)
-
-    @unittest.skipUnless(sysconfig.get_config_var('HAVE_PERF_TRAMPOLINE'), "Requires HAVE_PERF_TRAMPOLINE support")
-    def test_python_perf_jit_support(self):
-        code = "import sys; print(sys.is_stack_trampoline_active())"
-        expected = "True"
-        rc, out, err = assert_python_ok('-c', code, PYTHON_PERF_JIT_SUPPORT='1')
-        self.assertIn(expected.encode(), out)
 
     @unittest.skipUnless(sys.platform == 'win32',
                          'bpo-32457 only applies on Windows')
@@ -1028,10 +889,12 @@ class CmdLineTest(unittest.TestCase):
         assert_python_failure('-c', code, PYTHONINTMAXSTRDIGITS='foo')
         assert_python_failure('-c', code, PYTHONINTMAXSTRDIGITS='100')
 
+        def res2int(res):
+            out = res.out.strip().decode("utf-8")
+            return tuple(int(i) for i in out.split())
+
         res = assert_python_ok('-c', code)
-        res2int = self.res2int
-        current_max = sys.get_int_max_str_digits()
-        self.assertEqual(res2int(res), (current_max, current_max))
+        self.assertEqual(res2int(res), (-1, sys.get_int_max_str_digits()))
         res = assert_python_ok('-X', 'int_max_str_digits=0', '-c', code)
         self.assertEqual(res2int(res), (0, 0))
         res = assert_python_ok('-X', 'int_max_str_digits=4000', '-c', code)
@@ -1048,77 +911,6 @@ class CmdLineTest(unittest.TestCase):
             PYTHONINTMAXSTRDIGITS='4000'
         )
         self.assertEqual(res2int(res), (6000, 6000))
-
-    def test_cpu_count(self):
-        code = "import os; print(os.cpu_count(), os.process_cpu_count())"
-        res = assert_python_ok('-X', 'cpu_count=4321', '-c', code)
-        self.assertEqual(self.res2int(res), (4321, 4321))
-        res = assert_python_ok('-c', code, PYTHON_CPU_COUNT='1234')
-        self.assertEqual(self.res2int(res), (1234, 1234))
-
-    def test_cpu_count_default(self):
-        code = "import os; print(os.cpu_count(), os.process_cpu_count())"
-        res = assert_python_ok('-X', 'cpu_count=default', '-c', code)
-        self.assertEqual(self.res2int(res), (os.cpu_count(), os.process_cpu_count()))
-        res = assert_python_ok('-X', 'cpu_count=default', '-c', code, PYTHON_CPU_COUNT='1234')
-        self.assertEqual(self.res2int(res), (os.cpu_count(), os.process_cpu_count()))
-        res = assert_python_ok('-c', code, PYTHON_CPU_COUNT='default')
-        self.assertEqual(self.res2int(res), (os.cpu_count(), os.process_cpu_count()))
-
-    def res2int(self, res):
-        out = res.out.strip().decode("utf-8")
-        return tuple(int(i) for i in out.split())
-
-    @unittest.skipUnless(support.Py_GIL_DISABLED,
-                         "PYTHON_TLBC and -X tlbc"
-                         " only supported in Py_GIL_DISABLED builds")
-    @threading_helper.requires_working_threading()
-    def test_disable_thread_local_bytecode(self):
-        code = """if 1:
-            import threading
-            def test(x, y):
-                return x + y
-            t = threading.Thread(target=test, args=(1,2))
-            t.start()
-            t.join()"""
-        assert_python_ok("-W", "always", "-X", "tlbc=0", "-c", code)
-        assert_python_ok("-W", "always", "-c", code, PYTHON_TLBC="0")
-
-    @unittest.skipUnless(support.Py_GIL_DISABLED,
-                         "PYTHON_TLBC and -X tlbc"
-                         " only supported in Py_GIL_DISABLED builds")
-    @threading_helper.requires_working_threading()
-    def test_enable_thread_local_bytecode(self):
-        code = """if 1:
-            import threading
-            def test(x, y):
-                return x + y
-            t = threading.Thread(target=test, args=(1,2))
-            t.start()
-            t.join()"""
-        # The functionality of thread-local bytecode is tested more extensively
-        # in test_thread_local_bytecode
-        assert_python_ok("-W", "always", "-X", "tlbc=1", "-c", code)
-        assert_python_ok("-W", "always", "-c", code, PYTHON_TLBC="1")
-
-    @unittest.skipUnless(support.Py_GIL_DISABLED,
-                         "PYTHON_TLBC and -X tlbc"
-                         " only supported in Py_GIL_DISABLED builds")
-    def test_invalid_thread_local_bytecode(self):
-        rc, out, err = assert_python_failure("-X", "tlbc")
-        self.assertIn(b"tlbc=n: n is missing or invalid", err)
-        rc, out, err = assert_python_failure("-X", "tlbc=foo")
-        self.assertIn(b"tlbc=n: n is missing or invalid", err)
-        rc, out, err = assert_python_failure("-X", "tlbc=-1")
-        self.assertIn(b"tlbc=n: n is missing or invalid", err)
-        rc, out, err = assert_python_failure("-X", "tlbc=2")
-        self.assertIn(b"tlbc=n: n is missing or invalid", err)
-        rc, out, err = assert_python_failure(PYTHON_TLBC="foo")
-        self.assertIn(b"PYTHON_TLBC=N: N is missing or invalid", err)
-        rc, out, err = assert_python_failure(PYTHON_TLBC="-1")
-        self.assertIn(b"PYTHON_TLBC=N: N is missing or invalid", err)
-        rc, out, err = assert_python_failure(PYTHON_TLBC="2")
-        self.assertIn(b"PYTHON_TLBC=N: N is missing or invalid", err)
 
 
 @unittest.skipIf(interpreter_requires_environment(),
@@ -1160,7 +952,6 @@ class IgnoreEnvironmentTest(unittest.TestCase):
 
 
 class SyntaxErrorTests(unittest.TestCase):
-    @force_not_colorized
     def check_string(self, code):
         proc = subprocess.run([sys.executable, "-"], input=code,
                               stdout=subprocess.PIPE, stderr=subprocess.PIPE)

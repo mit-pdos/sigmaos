@@ -38,7 +38,7 @@ significant performance overhead when loading from ``.pyc`` files.
 .. section: Security
 
 Update the vendored copy of libexpat to 2.4.1 (from 2.2.8) to get the fix
-for the :cve:`2013-0340` "Billion Laughs" vulnerability. This copy is most used
+for the CVE-2013-0340 "Billion Laughs" vulnerability. This copy is most used
 on Windows and macOS.
 
 ..
@@ -613,7 +613,7 @@ Rename ``types.Union`` to ``types.UnionType``.
 .. section: Core and Builtins
 
 Expose specialization stats in python via
-:func:`!_opcode.get_specialization_stats`.
+:func:`_opcode.get_specialization_stats`.
 
 ..
 
@@ -819,7 +819,7 @@ always available when needed. Patch by Mark Shannon.
 .. nonce: qKnSqV
 .. section: Core and Builtins
 
-The threading debug (:envvar:`!PYTHONTHREADDEBUG` environment variable) is
+The threading debug (:envvar:`PYTHONTHREADDEBUG` environment variable) is
 deprecated in Python 3.10 and will be removed in Python 3.12. This feature
 requires a debug build of Python. Patch by Victor Stinner.
 
@@ -972,7 +972,7 @@ manager` protocols correspondingly.
 .. section: Core and Builtins
 
 Make sure that the line number is set when entering a comprehension scope.
-This ensures that backtraces including generator expressions show the correct
+Ensures that backtraces inclusing generator expressions show the correct
 line number.
 
 ..
@@ -1445,7 +1445,7 @@ asynchronous.
 .. nonce: NOwcDJ
 .. section: Library
 
-Fix clang rpath issue in ``distutils``. The UnixCCompiler now uses
+Fix clang rpath issue in :mod:`distutils`. The UnixCCompiler now uses
 correct clang option to add a runtime library directory (rpath) to a shared
 library.
 
@@ -1701,7 +1701,7 @@ Remove many old deprecated :mod:`unittest` features:
 .. nonce: y1kEfP
 .. section: Library
 
-Remove the deprecated ``split()`` method of :class:`!_tkinter.TkappType`.
+Remove the deprecated ``split()`` method of :class:`_tkinter.TkappType`.
 Patch by Erlend E. Aasland.
 
 ..
@@ -1825,7 +1825,7 @@ Patch by Victor Stinner.
 .. nonce: 9nmMtB
 .. section: Library
 
-The :mod:`!lib2to3` package is now deprecated and may not be able to parse
+The :mod:`lib2to3` package is now deprecated and may not be able to parse
 Python 3.10 or newer. See the :pep:`617` (New PEG parser for CPython). Patch
 by Victor Stinner.
 
@@ -1966,8 +1966,8 @@ A new function ``operator.call`` has been added, such that
 .. nonce: ofe3ms
 .. section: Library
 
-:class:`!webbrowser.MacOSX` is deprecated and will be removed in Python 3.13.
-It is untested and undocumented and also not used by :mod:`webbrowser` itself.
+:class:`webbrowser.MacOSX` is deprecated and will be removed in Python 3.13.
+It is untested and undocumented and also not used by webbrowser itself.
 Patch by Donghee Na.
 
 ..
@@ -2000,7 +2000,7 @@ during file extraction.
 .. nonce: roUl0G
 .. section: Library
 
-:mod:`subprocess` on Solaris now also uses :func:`os.posix_spawn` for
+:mod:`subprocess` on Solaris now also uses :func:`os.posix_spawn()` for
 better performance.
 
 ..
@@ -2298,9 +2298,9 @@ Adopt *binacii.a2b_base64*'s strict mode in *base64.b64decode*.
 .. nonce: ThuDMI
 .. section: Library
 
-Fixed a bug in the :mod:`!_ssl` module that was throwing :exc:`OverflowError`
-when using :meth:`!_ssl._SSLSocket.write` and :meth:`!_ssl._SSLSocket.read`
-for a big value of the ``len`` parameter. Patch by Pablo Galindo.
+Fixed a bug in the :mod:`_ssl` module that was throwing :exc:`OverflowError`
+when using :meth:`_ssl._SSLSocket.write` and :meth:`_ssl._SSLSocket.read`
+for a big value of the ``len`` parameter. Patch by Pablo Galindo
 
 ..
 
@@ -2398,7 +2398,7 @@ class in the interactive session. Instead of :exc:`TypeError`, it should be
 .. nonce: R3IcM1
 .. section: Library
 
-Fix memory leak in :func:`!_tkinter._flatten` if it is called with a sequence
+Fix memory leak in :func:`_tkinter._flatten` if it is called with a sequence
 or set, but not list or tuple.
 
 ..
@@ -2722,7 +2722,7 @@ Importing typing.io or typing.re now prints a ``DeprecationWarning``.
 .. section: Library
 
 argparse actions store_const and append_const each receive a default value
-of ``None`` when the ``const`` kwarg is not provided. Previously, this raised a
+of None when the ``const`` kwarg is not provided. Previously, this raised a
 :exc:`TypeError`.
 
 ..
@@ -2798,7 +2798,7 @@ documentation for deprecations.
 .. nonce: rvyf2v
 .. section: Library
 
-Restore back :func:`parse_makefile` in ``distutils.sysconfig`` because it
+Restore back :func:`parse_makefile` in :mod:`distutils.sysconfig` because it
 behaves differently than the similar implementation in :mod:`sysconfig`.
 
 ..
@@ -2808,7 +2808,7 @@ behaves differently than the similar implementation in :mod:`sysconfig`.
 .. nonce: 3hmkWw
 .. section: Library
 
-:class:`!smtpd.MailmanProxy` is now removed as it is unusable without an
+:class:`smtpd.MailmanProxy` is now removed as it is unusable without an
 external module, ``mailman``. Patch by Donghee Na.
 
 ..
@@ -3483,9 +3483,9 @@ Improved reprs of :mod:`threading` synchronization objects:
 Deprecated the following :mod:`unittest` functions, scheduled for removal in
 Python 3.13:
 
-* :func:`!findTestCases`
-* :func:`!makeSuite`
-* :func:`!getTestCaseNames`
+* :func:`~unittest.findTestCases`
+* :func:`~unittest.makeSuite`
+* :func:`~unittest.getTestCaseNames`
 
 Use :class:`~unittest.TestLoader` methods instead:
 
@@ -3995,7 +3995,7 @@ operator expressions.
 .. section: Documentation
 
 Document that :class:`collections.defaultdict` parameter ``default_factory``
-defaults to ``None`` and is positional-only.
+defaults to None and is positional-only.
 
 ..
 
@@ -4187,7 +4187,7 @@ Add calls of :func:`gc.collect` in tests to support PyPy.
 .. nonce: mQZdXU
 .. section: Tests
 
-Made tests relying on the :mod:`!_asyncio` C extension module optional to
+Made tests relying on the :mod:`_asyncio` C extension module optional to
 allow running on alternative Python implementations. Patch by Serhiy
 Storchaka.
 
@@ -4238,7 +4238,7 @@ harmless "malloc can't allocate region" messages spewed by test_decimal.
 .. nonce: KKsNOV
 .. section: Tests
 
-Fixed floating-point precision issue in turtle tests.
+Fixed floating point precision issue in turtle tests.
 
 ..
 

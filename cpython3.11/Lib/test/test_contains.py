@@ -24,11 +24,8 @@ class TestContains(unittest.TestCase):
         self.assertNotIn(0, b)
         self.assertIn(1, c)
         self.assertNotIn(0, c)
-        msg = "argument of type 'base_set' is not a container or iterable"
-        with self.assertRaisesRegex(TypeError, msg):
-            1 in a
-        with self.assertRaisesRegex(TypeError, msg):
-            1 not in a
+        self.assertRaises(TypeError, lambda: 1 in a)
+        self.assertRaises(TypeError, lambda: 1 not in a)
 
         # test char in string
         self.assertIn('c', 'abc')

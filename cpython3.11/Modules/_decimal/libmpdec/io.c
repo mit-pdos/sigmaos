@@ -48,7 +48,6 @@
 #if defined(__GNUC__) && !defined(__INTEL_COMPILER) && __GNUC__ >= 7
   #pragma GCC diagnostic ignored "-Wimplicit-fallthrough"
   #pragma GCC diagnostic ignored "-Wmisleading-indentation"
-  #pragma GCC diagnostic ignored "-Warray-bounds"
 #endif
 
 

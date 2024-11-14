@@ -228,10 +228,6 @@ class Tracer(Bdb):
         self.process_event('exception', frame)
         self.next_set_method()
 
-    def user_opcode(self, frame):
-        self.process_event('opcode', frame)
-        self.next_set_method()
-
     def do_clear(self, arg):
         # The temporary breakpoints are deleted in user_line().
         bp_list = [self.currentbp]
@@ -370,7 +366,7 @@ class Tracer(Bdb):
         set_method = getattr(self, 'set_' + set_type)
 
         # The following set methods give back control to the tracer.
-        if set_type in ('step', 'stepinstr', 'continue', 'quit'):
+        if set_type in ('step', 'continue', 'quit'):
             set_method()
             return
         elif set_type in ('next', 'return'):
@@ -437,9 +433,8 @@ class TracerRun():
         not_empty = ''
         if self.tracer.set_list:
             not_empty += 'All paired tuples have not been processed, '
-            not_empty += ('the last one was number %d\n' %
+            not_empty += ('the last one was number %d' %
                           self.tracer.expect_set_no)
-            not_empty += repr(self.tracer.set_list)
 
         # Make a BdbNotExpectedError a unittest failure.
         if type_ is not None and issubclass(BdbNotExpectedError, type_):
@@ -613,15 +608,6 @@ class StateTestCase(BaseTestCase):
                 ]
                 with TracerRun(self) as tracer:
                     tracer.runcall(tfunc_main)
-
-    def test_stepinstr(self):
-        self.expect_set = [
-            ('line',   2, 'tfunc_main'),  ('stepinstr', ),
-            ('opcode', 2, 'tfunc_main'),  ('next', ),
-            ('line',   3, 'tfunc_main'),  ('quit', ),
-        ]
-        with TracerRun(self) as tracer:
-            tracer.runcall(tfunc_main)
 
     def test_next(self):
         self.expect_set = [
@@ -1046,9 +1032,8 @@ class RunTestCase(BaseTestCase):
                 ('return', 1, '<module>'), ('quit', ),
             ]
             import test_module_for_bdb
-            ns = {'test_module_for_bdb': test_module_for_bdb}
             with TracerRun(self) as tracer:
-                tracer.runeval('test_module_for_bdb.main()', ns, ns)
+                tracer.runeval('test_module_for_bdb.main()', globals(), locals())
 
 class IssuesTestCase(BaseTestCase):
     """Test fixed bdb issues."""
@@ -1216,19 +1201,6 @@ class IssuesTestCase(BaseTestCase):
             ]
             with TracerRun(self) as tracer:
                 tracer.runcall(tfunc_import)
-
-    def test_next_to_botframe(self):
-        # gh-125422
-        # Check that next command won't go to the bottom frame.
-        code = """
-            lno = 2
-        """
-        self.expect_set = [
-            ('line', 2, '<module>'),   ('step', ),
-            ('return', 2, '<module>'), ('next', ),
-        ]
-        with TracerRun(self) as tracer:
-            tracer.run(compile(textwrap.dedent(code), '<string>', 'exec'))
 
 
 class TestRegressions(unittest.TestCase):

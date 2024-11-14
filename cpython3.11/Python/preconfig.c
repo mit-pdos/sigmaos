@@ -2,7 +2,6 @@
 #include "pycore_fileutils.h"     // DECODE_LOCALE_ERR
 #include "pycore_getopt.h"        // _PyOS_GetOpt()
 #include "pycore_initconfig.h"    // _PyArgv
-#include "pycore_pylifecycle.h"   // _Py_LegacyLocaleDetected()
 #include "pycore_pymem.h"         // _PyMem_GetAllocatorName()
 #include "pycore_runtime.h"       // _PyRuntime_Initialize()
 
@@ -25,8 +24,6 @@ int _Py_HasFileSystemDefaultEncodeErrors = 0;
 void
 _Py_ClearFileSystemEncoding(void)
 {
-_Py_COMP_DIAG_PUSH
-_Py_COMP_DIAG_IGNORE_DEPR_DECLS
     if (!Py_HasFileSystemDefaultEncoding && Py_FileSystemDefaultEncoding) {
         PyMem_RawFree((char*)Py_FileSystemDefaultEncoding);
         Py_FileSystemDefaultEncoding = NULL;
@@ -35,7 +32,6 @@ _Py_COMP_DIAG_IGNORE_DEPR_DECLS
         PyMem_RawFree((char*)Py_FileSystemDefaultEncodeErrors);
         Py_FileSystemDefaultEncodeErrors = NULL;
     }
-_Py_COMP_DIAG_POP
 }
 
 
@@ -60,14 +56,11 @@ _Py_SetFileSystemEncoding(const char *encoding, const char *errors)
 
     _Py_ClearFileSystemEncoding();
 
-_Py_COMP_DIAG_PUSH
-_Py_COMP_DIAG_IGNORE_DEPR_DECLS
     Py_FileSystemDefaultEncoding = encoding2;
     Py_HasFileSystemDefaultEncoding = 0;
 
     Py_FileSystemDefaultEncodeErrors = errors2;
     _Py_HasFileSystemDefaultEncodeErrors = 0;
-_Py_COMP_DIAG_POP
     return 0;
 }
 
@@ -479,8 +472,6 @@ preconfig_get_global_vars(PyPreConfig *config)
         config->ATTR = !(VALUE); \
     }
 
-_Py_COMP_DIAG_PUSH
-_Py_COMP_DIAG_IGNORE_DEPR_DECLS
     COPY_FLAG(isolated, Py_IsolatedFlag);
     COPY_NOT_FLAG(use_environment, Py_IgnoreEnvironmentFlag);
     if (Py_UTF8Mode > 0) {
@@ -489,7 +480,6 @@ _Py_COMP_DIAG_IGNORE_DEPR_DECLS
 #ifdef MS_WINDOWS
     COPY_FLAG(legacy_windows_fs_encoding, Py_LegacyWindowsFSEncodingFlag);
 #endif
-_Py_COMP_DIAG_POP
 
 #undef COPY_FLAG
 #undef COPY_NOT_FLAG
@@ -508,15 +498,12 @@ preconfig_set_global_vars(const PyPreConfig *config)
         VAR = !config->ATTR; \
     }
 
-_Py_COMP_DIAG_PUSH
-_Py_COMP_DIAG_IGNORE_DEPR_DECLS
     COPY_FLAG(isolated, Py_IsolatedFlag);
     COPY_NOT_FLAG(use_environment, Py_IgnoreEnvironmentFlag);
 #ifdef MS_WINDOWS
     COPY_FLAG(legacy_windows_fs_encoding, Py_LegacyWindowsFSEncodingFlag);
 #endif
     COPY_FLAG(utf8_mode, Py_UTF8Mode);
-_Py_COMP_DIAG_POP
 
 #undef COPY_FLAG
 #undef COPY_NOT_FLAG
@@ -829,10 +816,12 @@ _PyPreConfig_Read(PyPreConfig *config, const _PyArgv *args)
         _Py_SetLocaleFromEnv(LC_CTYPE);
     }
 
-    PyPreConfig save_runtime_config;
-    preconfig_copy(&save_runtime_config, &_PyRuntime.preconfig);
-
     _PyPreCmdline cmdline = _PyPreCmdline_INIT;
+    int init_utf8_mode = Py_UTF8Mode;
+#ifdef MS_WINDOWS
+    int init_legacy_encoding = Py_LegacyWindowsFSEncodingFlag;
+#endif
+
     int locale_coerced = 0;
     int loops = 0;
 
@@ -848,9 +837,11 @@ _PyPreConfig_Read(PyPreConfig *config, const _PyArgv *args)
         }
 
         /* bpo-34207: Py_DecodeLocale() and Py_EncodeLocale() depend
-           on the utf8_mode and legacy_windows_fs_encoding members
-           of _PyRuntime.preconfig. */
-        preconfig_copy(&_PyRuntime.preconfig, config);
+           on Py_UTF8Mode and Py_LegacyWindowsFSEncodingFlag. */
+        Py_UTF8Mode = config->utf8_mode;
+#ifdef MS_WINDOWS
+        Py_LegacyWindowsFSEncodingFlag = config->legacy_windows_fs_encoding;
+#endif
 
         if (args) {
             // Set command line arguments at each iteration. If they are bytes
@@ -913,10 +904,14 @@ _PyPreConfig_Read(PyPreConfig *config, const _PyArgv *args)
     status = _PyStatus_OK();
 
 done:
-    // Revert side effects
-    setlocale(LC_CTYPE, init_ctype_locale);
-    PyMem_RawFree(init_ctype_locale);
-    preconfig_copy(&_PyRuntime.preconfig, &save_runtime_config);
+    if (init_ctype_locale != NULL) {
+        setlocale(LC_CTYPE, init_ctype_locale);
+        PyMem_RawFree(init_ctype_locale);
+    }
+    Py_UTF8Mode = init_utf8_mode ;
+#ifdef MS_WINDOWS
+    Py_LegacyWindowsFSEncodingFlag = init_legacy_encoding;
+#endif
     _PyPreCmdline_Clear(&cmdline);
     return status;
 }

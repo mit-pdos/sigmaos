@@ -23,17 +23,11 @@ Copyright (C) 2001-2021 Vinay Sajip. All Rights Reserved.
 To use, simply 'import logging.handlers' and log away!
 """
 
-import copy
-import io
-import logging
-import os
-import pickle
+import io, logging, socket, os, pickle, struct, time, re
+from stat import ST_DEV, ST_INO, ST_MTIME
 import queue
-import re
-import socket
-import struct
 import threading
-import time
+import copy
 
 #
 # Some constants...
@@ -193,18 +187,15 @@ class RotatingFileHandler(BaseRotatingHandler):
         Basically, see if the supplied record would cause the file to exceed
         the size limit we have.
         """
+        # See bpo-45401: Never rollover anything other than regular files
+        if os.path.exists(self.baseFilename) and not os.path.isfile(self.baseFilename):
+            return False
         if self.stream is None:                 # delay was set...
             self.stream = self._open()
         if self.maxBytes > 0:                   # are we rolling over?
-            pos = self.stream.tell()
-            if not pos:
-                # gh-116263: Never rollover an empty file
-                return False
             msg = "%s\n" % self.format(record)
-            if pos + len(msg) >= self.maxBytes:
-                # See bpo-45401: Never rollover anything other than regular files
-                if os.path.exists(self.baseFilename) and not os.path.isfile(self.baseFilename):
-                    return False
+            self.stream.seek(0, 2)  #due to non-posix-compliant Windows feature
+            if self.stream.tell() + len(msg) >= self.maxBytes:
                 return True
         return False
 
@@ -278,7 +269,7 @@ class TimedRotatingFileHandler(BaseRotatingHandler):
         # path object (see Issue #27493), but self.baseFilename will be a string
         filename = self.baseFilename
         if os.path.exists(filename):
-            t = int(os.stat(filename).st_mtime)
+            t = os.stat(filename)[ST_MTIME]
         else:
             t = int(time.time())
         self.rolloverAt = self.computeRollover(t)
@@ -471,7 +462,8 @@ class WatchedFileHandler(logging.FileHandler):
     This handler is not appropriate for use under Windows, because
     under Windows open files cannot be moved or renamed - logging
     opens the files with exclusive locks - and so there is no need
-    for such a handler.
+    for such a handler. Furthermore, ST_INO is not supported under
+    Windows; stat always returns zero for this value.
 
     This handler is based on a suggestion and patch by Chad J.
     Schroeder.
@@ -487,11 +479,9 @@ class WatchedFileHandler(logging.FileHandler):
         self._statstream()
 
     def _statstream(self):
-        if self.stream is None:
-            return
-        sres = os.fstat(self.stream.fileno())
-        self.dev = sres.st_dev
-        self.ino = sres.st_ino
+        if self.stream:
+            sres = os.fstat(self.stream.fileno())
+            self.dev, self.ino = sres[ST_DEV], sres[ST_INO]
 
     def reopenIfNeeded(self):
         """
@@ -501,9 +491,6 @@ class WatchedFileHandler(logging.FileHandler):
         has, close the old stream and reopen the file to get the
         current stream.
         """
-        if self.stream is None:
-            return
-
         # Reduce the chance of race conditions by stat'ing by path only
         # once and then fstat'ing our new fd if we opened a new log stream.
         # See issue #14632: Thanks to John Mulligan for the problem report
@@ -511,23 +498,18 @@ class WatchedFileHandler(logging.FileHandler):
         try:
             # stat the file by path, checking for existence
             sres = os.stat(self.baseFilename)
-
-            # compare file system stat with that of our stream file handle
-            reopen = (sres.st_dev != self.dev or sres.st_ino != self.ino)
         except FileNotFoundError:
-            reopen = True
-
-        if not reopen:
-            return
-
-        # we have an open file handle, clean it up
-        self.stream.flush()
-        self.stream.close()
-        self.stream = None  # See Issue #21742: _open () might fail.
-
-        # open a new file handle and get new stat info from that fd
-        self.stream = self._open()
-        self._statstream()
+            sres = None
+        # compare file system stat with that of our stream file handle
+        if not sres or sres[ST_DEV] != self.dev or sres[ST_INO] != self.ino:
+            if self.stream is not None:
+                # we have an open file handle, clean it up
+                self.stream.flush()
+                self.stream.close()
+                self.stream = None  # See Issue #21742: _open () might fail.
+                # open a new file handle and get new stat info from that fd
+                self.stream = self._open()
+                self._statstream()
 
     def emit(self, record):
         """
@@ -697,12 +679,15 @@ class SocketHandler(logging.Handler):
         """
         Closes the socket.
         """
-        with self.lock:
+        self.acquire()
+        try:
             sock = self.sock
             if sock:
                 self.sock = None
                 sock.close()
             logging.Handler.close(self)
+        finally:
+            self.release()
 
 class DatagramHandler(SocketHandler):
     """
@@ -962,12 +947,15 @@ class SysLogHandler(logging.Handler):
         """
         Closes the socket.
         """
-        with self.lock:
+        self.acquire()
+        try:
             sock = self.socket
             if sock:
                 self.socket = None
                 sock.close()
             logging.Handler.close(self)
+        finally:
+            self.release()
 
     def mapPriority(self, levelName):
         """
@@ -1339,8 +1327,11 @@ class BufferingHandler(logging.Handler):
 
         This version just zaps the buffer to empty.
         """
-        with self.lock:
+        self.acquire()
+        try:
             self.buffer.clear()
+        finally:
+            self.release()
 
     def close(self):
         """
@@ -1390,8 +1381,11 @@ class MemoryHandler(BufferingHandler):
         """
         Set the target handler for this handler.
         """
-        with self.lock:
+        self.acquire()
+        try:
             self.target = target
+        finally:
+            self.release()
 
     def flush(self):
         """
@@ -1401,11 +1395,14 @@ class MemoryHandler(BufferingHandler):
 
         The record buffer is only cleared if a target has been set.
         """
-        with self.lock:
+        self.acquire()
+        try:
             if self.target:
                 for record in self.buffer:
                     self.target.handle(record)
                 self.buffer.clear()
+        finally:
+            self.release()
 
     def close(self):
         """
@@ -1416,9 +1413,12 @@ class MemoryHandler(BufferingHandler):
             if self.flushOnClose:
                 self.flush()
         finally:
-            with self.lock:
+            self.acquire()
+            try:
                 self.target = None
                 BufferingHandler.close(self)
+            finally:
+                self.release()
 
 
 class QueueHandler(logging.Handler):
@@ -1438,7 +1438,6 @@ class QueueHandler(logging.Handler):
         """
         logging.Handler.__init__(self)
         self.queue = queue
-        self.listener = None  # will be set to listener if configured via dictConfig()
 
     def enqueue(self, record):
         """
@@ -1600,7 +1599,6 @@ class QueueListener(object):
         Note that if you don't call this before your application exits, there
         may be some records still left on the queue, which won't be processed.
         """
-        if self._thread:  # see gh-114706 - allow calling this more than once
-            self.enqueue_sentinel()
-            self._thread.join()
-            self._thread = None
+        self.enqueue_sentinel()
+        self._thread.join()
+        self._thread = None

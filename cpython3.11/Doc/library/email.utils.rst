@@ -1,5 +1,5 @@
-:mod:`!email.utils`: Miscellaneous utilities
---------------------------------------------
+:mod:`email.utils`: Miscellaneous utilities
+-------------------------------------------
 
 .. module:: email.utils
    :synopsis: Miscellaneous email package utilities.
@@ -13,16 +13,19 @@ module:
 
 .. function:: localtime(dt=None)
 
-   Return local time as an aware datetime object.  If called without
-   arguments, return current time.  Otherwise *dt* argument should be a
-   :class:`~datetime.datetime` instance, and it is converted to the local time
-   zone according to the system time zone database.  If *dt* is naive (that
-   is, ``dt.tzinfo`` is ``None``), it is assumed to be in local time.
+    Return local time as an aware datetime object.  If called without
+    arguments, return current time.  Otherwise *dt* argument should be a
+    :class:`~datetime.datetime` instance, and it is converted to the local time
+    zone according to the system time zone database.  If *dt* is naive (that
+    is, ``dt.tzinfo`` is ``None``), it is assumed to be in local time.  In this
+    case, a positive or zero value for *isdst* causes ``localtime`` to presume
+    initially that summer time (for example, Daylight Saving Time) is or is not
+    (respectively) in effect for the specified time.  A negative value for
+    *isdst* causes the ``localtime`` to attempt to divine whether summer time
+    is in effect for the specified time.
 
-   .. versionadded:: 3.3
+    .. versionadded:: 3.3
 
-   .. deprecated-removed:: 3.12 3.14
-      The *isdst* parameter.
 
 .. function:: make_msgid(idstring=None, domain=None)
 
@@ -66,7 +69,7 @@ of the new API.
 
    If *strict* is true, use a strict parser which rejects malformed inputs.
 
-   .. versionchanged:: 3.13
+   .. versionchanged:: 3.11.10
       Add *strict* optional parameter and reject malformed inputs by default.
 
 
@@ -104,7 +107,7 @@ of the new API.
       resent_ccs = msg.get_all('resent-cc', [])
       all_recipients = getaddresses(tos + ccs + resent_tos + resent_ccs)
 
-   .. versionchanged:: 3.13
+   .. versionchanged:: 3.11.10
       Add *strict* optional parameter and reject malformed inputs by default.
 
 
@@ -158,7 +161,7 @@ of the new API.
 
       Fri, 09 Nov 2001 01:08:47 -0000
 
-   Optional *timeval* if given is a floating-point time value as accepted by
+   Optional *timeval* if given is a floating point time value as accepted by
    :func:`time.gmtime` and :func:`time.localtime`, otherwise the current time is
    used.
 

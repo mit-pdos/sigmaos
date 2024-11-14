@@ -3,10 +3,11 @@ Tests common to list and UserList.UserList
 """
 
 import sys
+import os
 from functools import cmp_to_key
 
-from test import seq_tests
-from test.support import ALWAYS_EQ, NEVER_EQ, get_c_recursion_limit
+from test import support, seq_tests
+from test.support import ALWAYS_EQ, NEVER_EQ
 
 
 class CommonTest(seq_tests.CommonTest):
@@ -61,7 +62,7 @@ class CommonTest(seq_tests.CommonTest):
 
     def test_repr_deep(self):
         a = self.type2test([])
-        for i in range(get_c_recursion_limit() + 1):
+        for i in range(sys.getrecursionlimit() + 100):
             a = self.type2test([a])
         self.assertRaises(RecursionError, repr, a)
 
@@ -190,14 +191,6 @@ class CommonTest(seq_tests.CommonTest):
         self.assertRaises(TypeError, a.__setitem__, slice(0, 1, 5))
 
         self.assertRaises(TypeError, a.__setitem__)
-
-    def test_slice_assign_iterator(self):
-        x = self.type2test(range(5))
-        x[0:3] = reversed(range(3))
-        self.assertEqual(x, self.type2test([2, 1, 0, 3, 4]))
-
-        x[:] = reversed(range(3))
-        self.assertEqual(x, self.type2test([2, 1, 0]))
 
     def test_delslice(self):
         a = self.type2test([0, 1])
@@ -570,8 +563,3 @@ class CommonTest(seq_tests.CommonTest):
         self.assertEqual(list(exhit), [])
         self.assertEqual(list(empit), [9])
         self.assertEqual(a, self.type2test([1, 2, 3, 9]))
-
-        # gh-115733: Crash when iterating over exhausted iterator
-        exhit = iter(self.type2test([1, 2, 3]))
-        for _ in exhit:
-            next(exhit, 1)

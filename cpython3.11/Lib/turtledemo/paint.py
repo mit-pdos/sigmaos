@@ -1,9 +1,13 @@
-"""turtledemo/paint.py
+#!/usr/bin/env python3
+"""       turtle-example-suite:
 
-A simple  event-driven paint program.
-- Left mouse button moves turtle.
-- Middle mouse button changes color.
-- Right mouse button toggles between pen up
+            tdemo_paint.py
+
+A simple  event-driven paint program
+
+- left mouse button moves turtle
+- middle mouse button changes color
+- right mouse button toggles between pen up
 (no line drawn when the turtle moves) and
 pen down (line is drawn). If pen up follows
 at least two pen-down moves, the polygon that
@@ -11,6 +15,8 @@ includes the starting point is filled.
  -------------------------------------------
  Play around by clicking into the canvas
  using all three mouse buttons.
+ -------------------------------------------
+          To exit press STOP button
  -------------------------------------------
 """
 from turtle import *

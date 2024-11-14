@@ -10,6 +10,7 @@ from typing import Any, Callable, ClassVar, Dict, Optional, Tuple, Type, TypeVar
 from pegen.tokenizer import Mark, Tokenizer, exact_token_types
 
 T = TypeVar("T")
+P = TypeVar("P", bound="Parser")
 F = TypeVar("F", bound=Callable[..., Any])
 
 
@@ -20,7 +21,7 @@ def logger(method: F) -> F:
     """
     method_name = method.__name__
 
-    def logger_wrapper(self: "Parser", *args: object) -> Any:
+    def logger_wrapper(self: P, *args: object) -> T:
         if not self._verbose:
             return method(self, *args)
         argsr = ",".join(repr(arg) for arg in args)
@@ -32,7 +33,7 @@ def logger(method: F) -> F:
         print(f"{fill}... {method_name}({argsr}) --> {tree!s:.200}")
         return tree
 
-    logger_wrapper.__wrapped__ = method  # type: ignore[attr-defined]
+    logger_wrapper.__wrapped__ = method  # type: ignore
     return cast(F, logger_wrapper)
 
 
@@ -40,7 +41,7 @@ def memoize(method: F) -> F:
     """Memoize a symbol method."""
     method_name = method.__name__
 
-    def memoize_wrapper(self: "Parser", *args: object) -> Any:
+    def memoize_wrapper(self: P, *args: object) -> T:
         mark = self._mark()
         key = mark, method_name, args
         # Fast path: cache hit, and not verbose.
@@ -69,17 +70,15 @@ def memoize(method: F) -> F:
             self._reset(endmark)
         return tree
 
-    memoize_wrapper.__wrapped__ = method  # type: ignore[attr-defined]
+    memoize_wrapper.__wrapped__ = method  # type: ignore
     return cast(F, memoize_wrapper)
 
 
-def memoize_left_rec(
-    method: Callable[["Parser"], Optional[T]]
-) -> Callable[["Parser"], Optional[T]]:
+def memoize_left_rec(method: Callable[[P], Optional[T]]) -> Callable[[P], Optional[T]]:
     """Memoize a left-recursive symbol method."""
     method_name = method.__name__
 
-    def memoize_left_rec_wrapper(self: "Parser") -> Optional[T]:
+    def memoize_left_rec_wrapper(self: P) -> Optional[T]:
         mark = self._mark()
         key = mark, method_name, ()
         # Fast path: cache hit, and not verbose.
@@ -153,7 +152,7 @@ def memoize_left_rec(
                 self._reset(endmark)
         return tree
 
-    memoize_left_rec_wrapper.__wrapped__ = method  # type: ignore[attr-defined]
+    memoize_left_rec_wrapper.__wrapped__ = method  # type: ignore
     return memoize_left_rec_wrapper
 
 
@@ -202,36 +201,6 @@ class Parser:
     def string(self) -> Optional[tokenize.TokenInfo]:
         tok = self._tokenizer.peek()
         if tok.type == token.STRING:
-            return self._tokenizer.getnext()
-        return None
-
-    @memoize
-    def fstring_start(self) -> Optional[tokenize.TokenInfo]:
-        FSTRING_START = getattr(token, "FSTRING_START")
-        if not FSTRING_START:
-            return None
-        tok = self._tokenizer.peek()
-        if tok.type == FSTRING_START:
-            return self._tokenizer.getnext()
-        return None
-
-    @memoize
-    def fstring_middle(self) -> Optional[tokenize.TokenInfo]:
-        FSTRING_MIDDLE = getattr(token, "FSTRING_MIDDLE")
-        if not FSTRING_MIDDLE:
-            return None
-        tok = self._tokenizer.peek()
-        if tok.type == FSTRING_MIDDLE:
-            return self._tokenizer.getnext()
-        return None
-
-    @memoize
-    def fstring_end(self) -> Optional[tokenize.TokenInfo]:
-        FSTRING_END = getattr(token, "FSTRING_END")
-        if not FSTRING_END:
-            return None
-        tok = self._tokenizer.peek()
-        if tok.type == FSTRING_END:
             return self._tokenizer.getnext()
         return None
 

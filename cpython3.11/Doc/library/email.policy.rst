@@ -1,5 +1,5 @@
-:mod:`!email.policy`: Policy Objects
-------------------------------------
+:mod:`email.policy`: Policy Objects
+-----------------------------------
 
 .. module:: email.policy
    :synopsis: Controlling the parsing and generating of messages
@@ -97,7 +97,6 @@ file on disk and pass it to the system ``sendmail`` program on a Unix system:
    >>> from subprocess import Popen, PIPE
    >>> with open('mymsg.txt', 'rb') as f:
    ...     msg = message_from_binary_file(f, policy=policy.default)
-   ...
    >>> p = Popen(['sendmail', msg['To'].addresses[0]], stdin=PIPE)
    >>> g = BytesGenerator(p.stdin, policy=msg.policy.clone(linesep='\r\n'))
    >>> g.flatten(msg)
@@ -244,7 +243,7 @@ added matters.  To illustrate::
       For backwards compatible, but unsafe, behavior, it must be set to
       ``False`` explicitly.
 
-      .. versionadded:: 3.13
+      .. versionadded:: 3.11.10
 
 
    The following :class:`Policy` method is intended to be called by code using

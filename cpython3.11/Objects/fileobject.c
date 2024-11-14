@@ -1,22 +1,19 @@
 /* File object implementation (what's left of it -- see io.py) */
 
+#define PY_SSIZE_T_CLEAN
 #include "Python.h"
 #include "pycore_call.h"          // _PyObject_CallNoArgs()
 #include "pycore_runtime.h"       // _PyRuntime
 
-#ifdef HAVE_UNISTD_H
-#  include <unistd.h>             // isatty()
-#endif
-
 #if defined(HAVE_GETC_UNLOCKED) && !defined(_Py_MEMORY_SANITIZER)
-   /* clang MemorySanitizer doesn't yet understand getc_unlocked. */
-#  define GETC(f) getc_unlocked(f)
-#  define FLOCKFILE(f) flockfile(f)
-#  define FUNLOCKFILE(f) funlockfile(f)
+/* clang MemorySanitizer doesn't yet understand getc_unlocked. */
+#define GETC(f) getc_unlocked(f)
+#define FLOCKFILE(f) flockfile(f)
+#define FUNLOCKFILE(f) funlockfile(f)
 #else
-#  define GETC(f) getc(f)
-#  define FLOCKFILE(f)
-#  define FUNLOCKFILE(f)
+#define GETC(f) getc(f)
+#define FLOCKFILE(f)
+#define FUNLOCKFILE(f)
 #endif
 
 /* Newline flags */
@@ -25,22 +22,26 @@
 #define NEWLINE_LF 2            /* \n newline seen */
 #define NEWLINE_CRLF 4          /* \r\n newline seen */
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* External C interface */
 
 PyObject *
 PyFile_FromFd(int fd, const char *name, const char *mode, int buffering, const char *encoding,
               const char *errors, const char *newline, int closefd)
 {
-    PyObject *open, *stream;
+    PyObject *io, *stream;
 
     /* import _io in case we are being used to open io.py */
-    open = _PyImport_GetModuleAttrString("_io", "open");
-    if (open == NULL)
+    io = PyImport_ImportModule("_io");
+    if (io == NULL)
         return NULL;
-    stream = PyObject_CallFunction(open, "isisssO", fd, mode,
+    stream = _PyObject_CallMethod(io, &_Py_ID(open), "isisssO", fd, mode,
                                   buffering, encoding, errors,
                                   newline, closefd ? Py_True : Py_False);
-    Py_DECREF(open);
+    Py_DECREF(io);
     if (stream == NULL)
         return NULL;
     /* ignore name attribute because the name attribute of _BufferedIOMixin
@@ -66,7 +67,8 @@ PyFile_GetLine(PyObject *f, int n)
     }
     if (result != NULL && !PyBytes_Check(result) &&
         !PyUnicode_Check(result)) {
-        Py_SETREF(result, NULL);
+        Py_DECREF(result);
+        result = NULL;
         PyErr_SetString(PyExc_TypeError,
                    "object.readline() returned non-string");
     }
@@ -75,25 +77,35 @@ PyFile_GetLine(PyObject *f, int n)
         const char *s = PyBytes_AS_STRING(result);
         Py_ssize_t len = PyBytes_GET_SIZE(result);
         if (len == 0) {
-            Py_SETREF(result, NULL);
+            Py_DECREF(result);
+            result = NULL;
             PyErr_SetString(PyExc_EOFError,
                             "EOF when reading a line");
         }
         else if (s[len-1] == '\n') {
-            (void) _PyBytes_Resize(&result, len-1);
+            if (Py_REFCNT(result) == 1)
+                _PyBytes_Resize(&result, len-1);
+            else {
+                PyObject *v;
+                v = PyBytes_FromStringAndSize(s, len-1);
+                Py_DECREF(result);
+                result = v;
+            }
         }
     }
     if (n < 0 && result != NULL && PyUnicode_Check(result)) {
         Py_ssize_t len = PyUnicode_GET_LENGTH(result);
         if (len == 0) {
-            Py_SETREF(result, NULL);
+            Py_DECREF(result);
+            result = NULL;
             PyErr_SetString(PyExc_EOFError,
                             "EOF when reading a line");
         }
         else if (PyUnicode_READ_CHAR(result, len-1) == '\n') {
             PyObject *v;
             v = PyUnicode_Substring(result, 0, len-1);
-            Py_SETREF(result, v);
+            Py_DECREF(result);
+            result = v;
         }
     }
     return result;
@@ -168,16 +180,9 @@ PyObject_AsFileDescriptor(PyObject *o)
     PyObject *meth;
 
     if (PyLong_Check(o)) {
-        if (PyBool_Check(o)) {
-            if (PyErr_WarnEx(PyExc_RuntimeWarning,
-                    "bool is used as a file descriptor", 1))
-            {
-                return -1;
-            }
-        }
-        fd = PyLong_AsInt(o);
+        fd = _PyLong_AsInt(o);
     }
-    else if (PyObject_GetOptionalAttr(o, &_Py_ID(fileno), &meth) < 0) {
+    else if (_PyObject_LookupAttr(o, &_Py_ID(fileno), &meth) < 0) {
         return -1;
     }
     else if (meth != NULL) {
@@ -187,7 +192,7 @@ PyObject_AsFileDescriptor(PyObject *o)
             return -1;
 
         if (PyLong_Check(fno)) {
-            fd = PyLong_AsInt(fno);
+            fd = _PyLong_AsInt(fno);
             Py_DECREF(fno);
         }
         else {
@@ -462,7 +467,7 @@ PyTypeObject PyStdPrinter_Type = {
     0,                                          /* tp_init */
     PyType_GenericAlloc,                        /* tp_alloc */
     0,                                          /* tp_new */
-    PyObject_Free,                              /* tp_free */
+    PyObject_Del,                               /* tp_free */
 };
 
 
@@ -494,7 +499,7 @@ PyFile_SetOpenCodeHook(Py_OpenCodeHookFunction hook, void *userData) {
 PyObject *
 PyFile_OpenCodeObject(PyObject *path)
 {
-    PyObject *f = NULL;
+    PyObject *iomod, *f = NULL;
 
     if (!PyUnicode_Check(path)) {
         PyErr_Format(PyExc_TypeError, "'path' must be 'str', not '%.200s'",
@@ -506,10 +511,10 @@ PyFile_OpenCodeObject(PyObject *path)
     if (hook) {
         f = hook(path, _PyRuntime.open_code_userdata);
     } else {
-        PyObject *open = _PyImport_GetModuleAttrString("_io", "open");
-        if (open) {
-            f = PyObject_CallFunction(open, "Os", path, "rb");
-            Py_DECREF(open);
+        iomod = PyImport_ImportModule("_io");
+        if (iomod) {
+            f = _PyObject_CallMethod(iomod, &_Py_ID(open), "Os", path, "rb");
+            Py_DECREF(iomod);
         }
     }
 
@@ -530,13 +535,6 @@ PyFile_OpenCode(const char *utf8path)
 }
 
 
-int
-_PyFile_Flush(PyObject *file)
-{
-    PyObject *tmp = PyObject_CallMethodNoArgs(file, &_Py_ID(flush));
-    if (tmp == NULL) {
-        return -1;
-    }
-    Py_DECREF(tmp);
-    return 0;
+#ifdef __cplusplus
 }
+#endif

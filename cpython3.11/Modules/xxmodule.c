@@ -52,7 +52,8 @@ Xxo_demo(XxoObject *self, PyObject *args)
 {
     if (!PyArg_ParseTuple(args, ":demo"))
         return NULL;
-    return Py_NewRef(Py_None);
+    Py_INCREF(Py_None);
+    return Py_None;
 }
 
 static PyMethodDef Xxo_methods[] = {
@@ -67,7 +68,8 @@ Xxo_getattro(XxoObject *self, PyObject *name)
     if (self->x_attr != NULL) {
         PyObject *v = PyDict_GetItemWithError(self->x_attr, name);
         if (v != NULL) {
-            return Py_NewRef(v);
+            Py_INCREF(v);
+            return v;
         }
         else if (PyErr_Occurred()) {
             return NULL;
@@ -193,7 +195,8 @@ xx_bug(PyObject *self, PyObject *args)
     printf("\n");
     /* Py_DECREF(item); */
 
-    return Py_NewRef(Py_None);
+    Py_INCREF(Py_None);
+    return Py_None;
 }
 
 /* Test bad format character */
@@ -205,7 +208,8 @@ xx_roj(PyObject *self, PyObject *args)
     long b;
     if (!PyArg_ParseTuple(args, "O#:roj", &a, &b))
         return NULL;
-    return Py_NewRef(Py_None);
+    Py_INCREF(Py_None);
+    return Py_None;
 }
 
 
@@ -262,7 +266,8 @@ static PyTypeObject Str_Type = {
 static PyObject *
 null_richcompare(PyObject *self, PyObject *other, int op)
 {
-    return Py_NewRef(Py_NotImplemented);
+    Py_INCREF(Py_NotImplemented);
+    return Py_NotImplemented;
 }
 
 static PyTypeObject Null_Type = {
@@ -383,8 +388,6 @@ xx_exec(PyObject *m)
 
 static struct PyModuleDef_Slot xx_slots[] = {
     {Py_mod_exec, xx_exec},
-    {Py_mod_multiple_interpreters, Py_MOD_PER_INTERPRETER_GIL_SUPPORTED},
-    {Py_mod_gil, Py_MOD_GIL_NOT_USED},
     {0, NULL},
 };
 

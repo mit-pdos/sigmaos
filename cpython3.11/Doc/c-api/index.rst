@@ -25,4 +25,3 @@ document the API functions in detail.
    memory.rst
    objimpl.rst
    apiabiversion.rst
-   monitoring.rst

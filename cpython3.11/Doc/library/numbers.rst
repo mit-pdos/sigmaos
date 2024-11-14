@@ -1,5 +1,5 @@
-:mod:`!numbers` --- Numeric abstract base classes
-=================================================
+:mod:`numbers` --- Numeric abstract base classes
+================================================
 
 .. module:: numbers
    :synopsis: Numeric abstract base classes (Complex, Real, Integral, etc.).
@@ -84,10 +84,10 @@ The numeric tower
    ``~``.
 
 
-Notes for type implementers
+Notes for type implementors
 ---------------------------
 
-Implementers should be careful to make equal numbers equal and hash
+Implementors should be careful to make equal numbers equal and hash
 them to the same values. This may be subtle if there are two different
 extensions of the real numbers. For example, :class:`fractions.Fraction`
 implements :func:`hash` as follows::

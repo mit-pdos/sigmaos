@@ -30,9 +30,7 @@ class ToThreadTests(unittest.IsolatedAsyncioTestCase):
         func.assert_called_once()
 
     async def test_to_thread_concurrent(self):
-        calls = []
-        def func():
-            calls.append(1)
+        func = mock.Mock()
 
         futs = []
         for _ in range(10):
@@ -40,7 +38,7 @@ class ToThreadTests(unittest.IsolatedAsyncioTestCase):
             futs.append(fut)
         await asyncio.gather(*futs)
 
-        self.assertEqual(sum(calls), 10)
+        self.assertEqual(func.call_count, 10)
 
     async def test_to_thread_args_kwargs(self):
         # Unlike run_in_executor(), to_thread() should directly accept kwargs.

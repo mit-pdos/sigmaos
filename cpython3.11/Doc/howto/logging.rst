@@ -1,5 +1,3 @@
-.. _logging-howto:
-
 =============
 Logging HOWTO
 =============
@@ -9,9 +7,6 @@ Logging HOWTO
 .. _logging-basic-tutorial:
 
 .. currentmodule:: logging
-
-This page contains tutorial information. For links to reference information and a
-logging cookbook, please see :ref:`tutorial-ref-links`.
 
 Basic Logging Tutorial
 ----------------------
@@ -94,8 +89,9 @@ described below (in increasing order of severity):
 |              | itself may be unable to continue running.   |
 +--------------+---------------------------------------------+
 
-The default level is ``WARNING``, which means that only events of this severity and higher
-will be tracked, unless the logging package is configured to do otherwise.
+The default level is ``WARNING``, which means that only events of this level
+and above will be tracked, unless the logging package is configured to do
+otherwise.
 
 Events that are tracked can be handled in different ways. The simplest way of
 handling tracked events is to print them to the console. Another common way
@@ -382,52 +378,8 @@ Logging Flow
 The flow of log event information in loggers and handlers is illustrated in the
 following diagram.
 
-.. only:: not html
-
-   .. image:: logging_flow.*
-
-.. raw:: html
-   :file: logging_flow.svg
-
-.. raw:: html
-
-   <script>
-   /*
-    * This snippet is needed to handle the case where a light or dark theme is
-    * chosen via the theme is selected in the page. We call the existing handler
-    * and then add a dark-theme class to the body when the dark theme is selected.
-    * The SVG styling (above) then does the rest.
-    *
-    * If the pydoc theme is updated to set the dark-theme class, this snippet
-    * won't be needed any more.
-    */
-   (function() {
-     var oldActivateTheme = activateTheme;
-
-     function updateBody(theme) {
-        let elem = document.body;
-
-        elem.classList.remove('dark-theme');
-        elem.classList.remove('light-theme');
-        if (theme === 'dark') {
-            elem.classList.add('dark-theme');
-        }
-        else if (theme === 'light') {
-            elem.classList.add('light-theme');
-        }
-     }
-
-     activateTheme = function(theme) {
-        oldActivateTheme(theme);
-        updateBody(theme);
-     };
-     /*
-      * If the page is refreshed, make sure we update the body - the overriding
-      * of activateTheme won't have taken effect yet.
-      */
-      updateBody(localStorage.getItem('currentTheme') || 'auto');
-   })();
-   </script>
+.. image:: logging_flow.png
+   :class: invert-in-dark-mode
 
 Loggers
 ^^^^^^^
@@ -1115,18 +1067,10 @@ need:
 | Current process name when using ``multiprocessing`` | Set ``logging.logMultiprocessing`` to ``False``.  |
 | to manage multiple processes.                       |                                                   |
 +-----------------------------------------------------+---------------------------------------------------+
-| Current :class:`asyncio.Task` name when using       | Set ``logging.logAsyncioTasks`` to ``False``.     |
-| ``asyncio``.                                        |                                                   |
-+-----------------------------------------------------+---------------------------------------------------+
 
 Also note that the core logging module only includes the basic handlers. If
 you don't import :mod:`logging.handlers` and :mod:`logging.config`, they won't
 take up any memory.
-
-.. _tutorial-ref-links:
-
-Other resources
----------------
 
 .. seealso::
 

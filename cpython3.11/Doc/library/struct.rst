@@ -1,9 +1,5 @@
-:mod:`!struct` --- Interpret bytes as packed binary data
-========================================================
-
-.. testsetup:: *
-
-   from struct import *
+:mod:`struct` --- Interpret bytes as packed binary data
+=======================================================
 
 .. module:: struct
    :synopsis: Interpret bytes as packed binary data.
@@ -267,25 +263,11 @@ platform-dependent.
 | ``P``  | :c:expr:`void \*`        | integer            |                | \(5)       |
 +--------+--------------------------+--------------------+----------------+------------+
 
-Additionally, if IEC 60559 compatible complex arithmetic (Annex G of the
-C11 standard) is supported, the following format characters are available:
-
-+--------+--------------------------+--------------------+----------------+------------+
-| Format | C Type                   | Python type        | Standard size  | Notes      |
-+========+==========================+====================+================+============+
-| ``E``  | :c:expr:`float complex`  | complex            | 8              | \(10)      |
-+--------+--------------------------+--------------------+----------------+------------+
-| ``C``  | :c:expr:`double complex` | complex            | 16             | \(10)      |
-+--------+--------------------------+--------------------+----------------+------------+
-
 .. versionchanged:: 3.3
    Added support for the ``'n'`` and ``'N'`` formats.
 
 .. versionchanged:: 3.6
    Added support for the ``'e'`` format.
-
-.. versionchanged:: 3.14
-   Added support for the ``'E'`` and ``'C'`` formats.
 
 
 Notes:
@@ -293,9 +275,9 @@ Notes:
 (1)
    .. index:: single: ? (question mark); in struct format strings
 
-   The ``'?'`` conversion code corresponds to the :c:expr:`_Bool` type
-   defined by C standards since C99.  In standard mode, it is
-   represented by one byte.
+   The ``'?'`` conversion code corresponds to the :c:expr:`_Bool` type defined by
+   C99. If this type is not available, it is simulated using a :c:expr:`char`. In
+   standard mode, it is always represented by one byte.
 
 (2)
    When attempting to pack a non-integer using any of the integer conversion
@@ -362,11 +344,6 @@ Notes:
    unpacking, the resulting bytes object always has exactly the specified number
    of bytes.  As a special case, ``'0s'`` means a single, empty string (while
    ``'0c'`` means 0 characters).
-
-(10)
-   For the ``'E'`` and ``'C'`` format characters, the packed representation uses
-   the IEEE 754 binary32 and binary64 format for components of the complex
-   number, regardless of the floating-point format used by the platform.
 
 A format character may be preceded by an integral repeat count.  For example,
 the format string ``'4h'`` means exactly the same as ``'hhhh'``.
@@ -500,7 +477,7 @@ In such cases, the ``@`` format character should be used to specify
 native byte ordering and data sizes.  Internal pad bytes are normally inserted
 automatically.  It is possible that a zero-repeat format code will be
 needed at the end of a format string to round up to the correct
-byte boundary for proper alignment of consecutive chunks of data.
+byte boundary for proper alignment of consective chunks of data.
 
 Consider these two simple examples (on a 64-bit, little-endian
 machine)::
@@ -586,9 +563,9 @@ The :mod:`struct` module also defines the following type:
    .. note::
 
       The compiled versions of the most recent format strings passed to
-      the module-level functions are cached, so programs that use only a few
-      format strings needn't worry about reusing a single :class:`Struct`
-      instance.
+      :class:`Struct` and the module-level functions are cached, so programs
+      that use only a few format strings needn't worry about reusing a single
+      :class:`Struct` instance.
 
    Compiled Struct objects support the following methods and attributes:
 
@@ -635,11 +612,6 @@ The :mod:`struct` module also defines the following type:
       The calculated size of the struct (and hence of the bytes object produced
       by the :meth:`pack` method) corresponding to :attr:`format`.
 
-   .. versionchanged:: 3.13 The *repr()* of structs has changed.  It
-      is now:
-
-         >>> Struct('i')
-         Struct('i')
 
 .. _half precision format: https://en.wikipedia.org/wiki/Half-precision_floating-point_format
 

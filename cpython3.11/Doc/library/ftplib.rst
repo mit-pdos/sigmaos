@@ -1,5 +1,5 @@
-:mod:`!ftplib` --- FTP protocol client
-======================================
+:mod:`ftplib` --- FTP protocol client
+=====================================
 
 .. module:: ftplib
    :synopsis: FTP protocol client (requires sockets).
@@ -243,7 +243,7 @@ FTP objects
       Retrieve a file in binary transfer mode.
 
       :param str cmd:
-        An appropriate ``RETR`` command: :samp:`"RETR {filename}"`.
+        An appropriate ``STOR`` command: :samp:`"STOR {filename}"`.
 
       :param callback:
          A single parameter callable that is called
@@ -446,8 +446,9 @@ FTP objects
 FTP_TLS objects
 ^^^^^^^^^^^^^^^
 
-.. class:: FTP_TLS(host='', user='', passwd='', acct='', *, context=None, \
-                   timeout=None, source_address=None, encoding='utf-8')
+.. class:: FTP_TLS(host='', user='', passwd='', acct='', keyfile=None, \
+                   certfile=None, context=None, timeout=None, \
+                   source_address=None, *, encoding='utf-8')
 
    An :class:`FTP` subclass which adds TLS support to FTP as described in
    :rfc:`4217`.
@@ -492,6 +493,10 @@ FTP_TLS objects
    :param str encoding:
       |param_doc_encoding|
 
+   *keyfile* and *certfile* are a legacy alternative to *context* -- they
+   can point to PEM-formatted private key and certificate chain files
+   (respectively) for the SSL connection.
+
    .. versionadded:: 3.2
 
    .. versionchanged:: 3.3
@@ -502,14 +507,18 @@ FTP_TLS objects
       :attr:`ssl.SSLContext.check_hostname` and *Server Name Indication* (see
       :const:`ssl.HAS_SNI`).
 
+   .. deprecated:: 3.6
+
+       *keyfile* and *certfile* are deprecated in favor of *context*.
+       Please use :meth:`ssl.SSLContext.load_cert_chain` instead, or let
+       :func:`ssl.create_default_context` select the system's trusted CA
+       certificates for you.
+
    .. versionchanged:: 3.9
       If the *timeout* parameter is set to be zero, it will raise a
       :class:`ValueError` to prevent the creation of a non-blocking socket.
       The *encoding* parameter was added, and the default was changed from
       Latin-1 to UTF-8 to follow :rfc:`2640`.
-
-   .. versionchanged:: 3.12
-      The deprecated *keyfile* and *certfile* parameters have been removed.
 
    Here's a sample session using the :class:`FTP_TLS` class::
 

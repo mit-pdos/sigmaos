@@ -41,8 +41,7 @@
 #define _CONDVAR_IMPL_H_
 
 #include "Python.h"
-#include "pycore_pythread.h"      // _POSIX_THREADS
-
+#include "pycore_condvar.h"
 
 #ifdef _POSIX_THREADS
 /*
@@ -69,9 +68,9 @@ void _PyThread_cond_after(long long us, struct timespec *abs);
 Py_LOCAL_INLINE(int)
 PyCOND_TIMEDWAIT(PyCOND_T *cond, PyMUTEX_T *mut, long long us)
 {
-    struct timespec abs_timeout;
-    _PyThread_cond_after(us, &abs_timeout);
-    int ret = pthread_cond_timedwait(cond, mut, &abs_timeout);
+    struct timespec abs;
+    _PyThread_cond_after(us, &abs);
+    int ret = pthread_cond_timedwait(cond, mut, &abs);
     if (ret == ETIMEDOUT) {
         return 1;
     }
@@ -260,13 +259,13 @@ PyMUTEX_UNLOCK(PyMUTEX_T *cs)
     return 0;
 }
 
+
 Py_LOCAL_INLINE(int)
 PyCOND_INIT(PyCOND_T *cv)
 {
     InitializeConditionVariable(cv);
     return 0;
 }
-
 Py_LOCAL_INLINE(int)
 PyCOND_FINI(PyCOND_T *cv)
 {
@@ -279,32 +278,27 @@ PyCOND_WAIT(PyCOND_T *cv, PyMUTEX_T *cs)
     return SleepConditionVariableSRW(cv, cs, INFINITE, 0) ? 0 : -1;
 }
 
-/* return 0 for success, 1 on timeout, -1 on error */
+/* This implementation makes no distinction about timeouts.  Signal
+ * 2 to indicate that we don't know.
+ */
 Py_LOCAL_INLINE(int)
 PyCOND_TIMEDWAIT(PyCOND_T *cv, PyMUTEX_T *cs, long long us)
 {
-    BOOL success = SleepConditionVariableSRW(cv, cs, (DWORD)(us/1000), 0);
-    if (!success) {
-        if (GetLastError() == ERROR_TIMEOUT) {
-            return 1;
-        }
-        return -1;
-    }
-    return 0;
+    return SleepConditionVariableSRW(cv, cs, (DWORD)(us/1000), 0) ? 2 : -1;
 }
 
 Py_LOCAL_INLINE(int)
 PyCOND_SIGNAL(PyCOND_T *cv)
 {
-    WakeConditionVariable(cv);
-    return 0;
+     WakeConditionVariable(cv);
+     return 0;
 }
 
 Py_LOCAL_INLINE(int)
 PyCOND_BROADCAST(PyCOND_T *cv)
 {
-    WakeAllConditionVariable(cv);
-    return 0;
+     WakeAllConditionVariable(cv);
+     return 0;
 }
 
 

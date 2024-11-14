@@ -1,5 +1,5 @@
-:mod:`!xml.etree.ElementTree` --- The ElementTree XML API
-=========================================================
+:mod:`xml.etree.ElementTree` --- The ElementTree XML API
+========================================================
 
 .. module:: xml.etree.ElementTree
    :synopsis: Implementation of the ElementTree API.
@@ -508,7 +508,7 @@ Functions
    `C14N 2.0 <https://www.w3.org/TR/xml-c14n2/>`_ transformation function.
 
    Canonicalization is a way to normalise XML output in a way that allows
-   byte-by-byte comparisons and digital signatures.  It reduces the freedom
+   byte-by-byte comparisons and digital signatures.  It reduced the freedom
    that XML serializers have and instead generates a more constrained XML
    representation.  The main restrictions regard the placement of namespace
    declarations, the ordering of attributes, and ignorable whitespace.
@@ -630,8 +630,6 @@ Functions
    target. Returns an :term:`iterator` providing ``(event, elem)`` pairs;
    it has a ``root`` attribute that references the root element of the
    resulting XML tree once *source* is fully read.
-   The iterator has the :meth:`!close` method that closes the internal
-   file object if *source* is a filename.
 
    Note that while :func:`iterparse` builds the tree incrementally, it issues
    blocking reads on *source* (or the file it names).  As such, it's unsuitable
@@ -653,9 +651,6 @@ Functions
 
    .. versionchanged:: 3.8
       The ``comment`` and ``pi`` events were added.
-
-   .. versionchanged:: 3.13
-      Added the :meth:`!close` method.
 
 
 .. function:: parse(source, parser=None)
@@ -840,28 +835,33 @@ Functions
 
 .. module:: xml.etree.ElementInclude
 
-.. function:: default_loader(href, parse, encoding=None)
+.. function:: xml.etree.ElementInclude.default_loader( href, parse, encoding=None)
+   :module:
 
-   Default loader. This default loader reads an included resource from disk.
-   *href* is a URL.  *parse* is for parse mode either "xml" or "text".
-   *encoding* is an optional text encoding.  If not given, encoding is ``utf-8``.
-   Returns the expanded resource.
-   If the parse mode is ``"xml"``, this is an :class:`~xml.etree.ElementTree.Element` instance.
-   If the parse mode is ``"text"``, this is a string.
-   If the loader fails, it can return ``None`` or raise an exception.
+   Default loader. This default loader reads an included resource from disk.  *href* is a URL.
+   *parse* is for parse mode either "xml" or "text".  *encoding*
+   is an optional text encoding.  If not given, encoding is ``utf-8``.  Returns the
+   expanded resource.  If the parse mode is ``"xml"``, this is an ElementTree
+   instance.  If the parse mode is "text", this is a Unicode string.  If the
+   loader fails, it can return None or raise an exception.
 
 
-.. function:: include(elem, loader=None, base_url=None, max_depth=6)
+.. function:: xml.etree.ElementInclude.include( elem, loader=None, base_url=None, \
+                                                max_depth=6)
+   :module:
 
-   This function expands XInclude directives in-place in tree pointed by *elem*.
-   *elem* is either the root :class:`~xml.etree.ElementTree.Element` or an
-   :class:`~xml.etree.ElementTree.ElementTree` instance to find such element.
-   *loader* is an optional resource loader.  If omitted, it defaults to :func:`default_loader`.
+   This function expands XInclude directives.  *elem* is the root element.  *loader* is
+   an optional resource loader.  If omitted, it defaults to :func:`default_loader`.
    If given, it should be a callable that implements the same interface as
    :func:`default_loader`.  *base_url* is base URL of the original file, to resolve
    relative include file references.  *max_depth* is the maximum number of recursive
-   inclusions.  Limited to reduce the risk of malicious content explosion.
-   Pass ``None`` to disable the limitation.
+   inclusions.  Limited to reduce the risk of malicious content explosion. Pass a
+   negative value to disable the limitation.
+
+   Returns the expanded resource.  If the parse mode is
+   ``"xml"``, this is an ElementTree instance.  If the parse mode is "text",
+   this is a Unicode string.  If the loader fails, it can return None or
+   raise an exception.
 
    .. versionchanged:: 3.9
       Added the *base_url* and *max_depth* parameters.
@@ -874,7 +874,6 @@ Element Objects
 
 .. module:: xml.etree.ElementTree
    :noindex:
-   :no-index:
 
 .. class:: Element(tag, attrib={}, **extra)
 
@@ -971,7 +970,7 @@ Element Objects
 
    .. method:: extend(subelements)
 
-      Appends *subelements* from an iterable of elements.
+      Appends *subelements* from a sequence object with zero or more elements.
       Raises :exc:`TypeError` if a subelement is not an :class:`Element`.
 
       .. versionadded:: 3.2
@@ -1059,10 +1058,9 @@ Element Objects
    :meth:`~object.__getitem__`, :meth:`~object.__setitem__`,
    :meth:`~object.__len__`.
 
-   Caution: Elements with no subelements will test as ``False``.  In a future
-   release of Python, all elements will test as ``True`` regardless of whether
-   subelements exist.  Instead, prefer explicit ``len(elem)`` or
-   ``elem is not None`` tests.::
+   Caution: Elements with no subelements will test as ``False``.  This behavior
+   will change in future versions.  Use specific ``len(elem)`` or ``elem is
+   None`` test instead. ::
 
      element = root.find('foo')
 
@@ -1071,9 +1069,6 @@ Element Objects
 
      if element is None:
          print("element not found")
-
-   .. versionchanged:: 3.12
-      Testing the truth value of an Element emits :exc:`DeprecationWarning`.
 
    Prior to Python 3.8, the serialisation order of the XML attributes of
    elements was artificially made predictable by sorting the attributes by
@@ -1230,7 +1225,6 @@ Example of changing the attribute "target" of every link in first paragraph::
     [<Element 'a' at 0xb77ec2ac>, <Element 'a' at 0xb77ec1cc>]
     >>> for i in links:             # Iterates through all found links
     ...     i.attrib["target"] = "blank"
-    ...
     >>> tree.write("output.xhtml")
 
 .. _elementtree-qname-objects:
@@ -1375,7 +1369,7 @@ XMLParser Objects
 
    .. versionchanged:: 3.8
       Parameters are now :ref:`keyword-only <keyword-only_parameter>`.
-      The *html* argument is no longer supported.
+      The *html* argument no longer supported.
 
 
    .. method:: close()
@@ -1404,7 +1398,7 @@ XMLParser Objects
       using :func:`hasattr` if used in code running across a variety of Python
       versions.
 
-      .. versionadded:: 3.13
+      .. versionadded:: 3.11.9
 
 
    :meth:`XMLParser.feed` calls *target*\'s ``start(tag, attrs_dict)`` method
@@ -1482,7 +1476,7 @@ XMLPullParser Objects
       using :func:`hasattr` if used in code running across a variety of Python
       versions.
 
-      .. versionadded:: 3.13
+      .. versionadded:: 3.11.9
 
    .. method:: close()
 

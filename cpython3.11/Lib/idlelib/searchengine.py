@@ -1,5 +1,6 @@
 '''Define SearchEngine for search dialogs.'''
 import re
+re.PatternError = re.error  # New in 3.13.
 
 from tkinter import StringVar, BooleanVar, TclError
 from tkinter import messagebox

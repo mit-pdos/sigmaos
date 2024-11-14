@@ -1,12 +1,9 @@
+
 /* GDBM module using dictionary interface */
 /* Author: Anthony Baxter, after dbmmodule.c */
 /* Doc strings: Mitch Chapman */
 
-// clinic/_gdbmmodule.c.h uses internal pycore_modsupport.h API
-#ifndef Py_BUILD_CORE_BUILTIN
-#  define Py_BUILD_CORE_MODULE 1
-#endif
-
+#define PY_SSIZE_T_CLEAN
 #include "Python.h"
 #include "gdbm.h"
 
@@ -165,35 +162,6 @@ gdbm_length(gdbmobject *dp)
     return dp->di_size;
 }
 
-static int
-gdbm_bool(gdbmobject *dp)
-{
-    _gdbm_state *state = PyType_GetModuleState(Py_TYPE(dp));
-    if (dp->di_dbm == NULL) {
-        PyErr_SetString(state->gdbm_error, "GDBM object has already been closed");
-        return -1;
-    }
-    if (dp->di_size > 0) {
-        /* Known non-zero size. */
-        return 1;
-    }
-    if (dp->di_size == 0) {
-        /* Known zero size. */
-        return 0;
-    }
-    /* Unknown size.  Ensure DBM object has an entry. */
-    datum key = gdbm_firstkey(dp->di_dbm);
-    if (key.dptr == NULL) {
-        /* Empty. Cache this fact. */
-        dp->di_size = 0;
-        return 0;
-    }
-
-    /* Non-empty. Don't cache the length since we don't know. */
-    free(key.dptr);
-    return 1;
-}
-
 // Wrapper function for PyArg_Parse(o, "s#", &d.dptr, &d.size).
 // This function is needed to support PY_SSIZE_T_CLEAN.
 // Return 1 on success, same to PyArg_Parse().
@@ -259,7 +227,8 @@ _gdbm_gdbm_get_impl(gdbmobject *self, PyObject *key, PyObject *default_value)
     res = gdbm_subscript(self, key);
     if (res == NULL && PyErr_ExceptionMatches(PyExc_KeyError)) {
         PyErr_Clear();
-        return Py_NewRef(default_value);
+        Py_INCREF(default_value);
+        return default_value;
     }
     return res;
 }
@@ -565,41 +534,11 @@ _gdbm_gdbm_sync_impl(gdbmobject *self, PyTypeObject *cls)
     Py_RETURN_NONE;
 }
 
-/*[clinic input]
-_gdbm.gdbm.clear
-    cls: defining_class
-    /
-Remove all items from the database.
-
-[clinic start generated code]*/
-
-static PyObject *
-_gdbm_gdbm_clear_impl(gdbmobject *self, PyTypeObject *cls)
-/*[clinic end generated code: output=673577c573318661 input=34136d52fcdd4210]*/
-{
-    _gdbm_state *state = PyType_GetModuleState(cls);
-    assert(state != NULL);
-    check_gdbmobject_open(self, state->gdbm_error);
-    datum key;
-    // Invalidate cache
-    self->di_size = -1;
-    while (1) {
-        key = gdbm_firstkey(self->di_dbm);
-        if (key.dptr == NULL) {
-            break;
-        }
-        if (gdbm_delete(self->di_dbm, key) < 0) {
-            PyErr_SetString(state->gdbm_error, "cannot delete item from database");
-            return NULL;
-        }
-    }
-    Py_RETURN_NONE;
-}
-
 static PyObject *
 gdbm__enter__(PyObject *self, PyObject *args)
 {
-    return Py_NewRef(self);
+    Py_INCREF(self);
+    return self;
 }
 
 static PyObject *
@@ -617,7 +556,6 @@ static PyMethodDef gdbm_methods[] = {
     _GDBM_GDBM_SYNC_METHODDEF
     _GDBM_GDBM_GET_METHODDEF
     _GDBM_GDBM_SETDEFAULT_METHODDEF
-    _GDBM_GDBM_CLEAR_METHODDEF
     {"__enter__", gdbm__enter__, METH_NOARGS, NULL},
     {"__exit__",  gdbm__exit__, METH_VARARGS, NULL},
     {NULL,              NULL}           /* sentinel */
@@ -631,7 +569,6 @@ static PyType_Slot gdbmtype_spec_slots[] = {
     {Py_mp_length, gdbm_length},
     {Py_mp_subscript, gdbm_subscript},
     {Py_mp_ass_subscript, gdbm_ass_sub},
-    {Py_nb_bool, gdbm_bool},
     {Py_tp_doc, (char*)gdbm_object__doc__},
     {0, 0}
 };
@@ -710,6 +647,7 @@ dbmopen_impl(PyObject *module, PyObject *filename, const char *flags,
         return NULL;
     }
     for (flags++; *flags != '\0'; flags++) {
+        char buf[40];
         switch (*flags) {
 #ifdef GDBM_FAST
             case 'f':
@@ -727,8 +665,9 @@ dbmopen_impl(PyObject *module, PyObject *filename, const char *flags,
                 break;
 #endif
             default:
-                PyErr_Format(state->gdbm_error,
-                             "Flag '%c' is not supported.", (unsigned char)*flags);
+                PyOS_snprintf(buf, sizeof(buf), "Flag '%c' is not supported.",
+                              *flags);
+                PyErr_SetString(state->gdbm_error, buf);
                 return NULL;
         }
     }
@@ -791,7 +730,11 @@ _gdbm_exec(PyObject *module)
     defined(GDBM_VERSION_PATCH)
     PyObject *obj = Py_BuildValue("iii", GDBM_VERSION_MAJOR,
                                   GDBM_VERSION_MINOR, GDBM_VERSION_PATCH);
-    if (PyModule_Add(module, "_GDBM_VERSION", obj) < 0) {
+    if (obj == NULL) {
+        return -1;
+    }
+    if (PyModule_AddObject(module, "_GDBM_VERSION", obj) < 0) {
+        Py_DECREF(obj);
         return -1;
     }
 #endif
@@ -824,8 +767,6 @@ _gdbm_module_free(void *module)
 
 static PyModuleDef_Slot _gdbm_module_slots[] = {
     {Py_mod_exec, _gdbm_exec},
-    {Py_mod_multiple_interpreters, Py_MOD_PER_INTERPRETER_GIL_SUPPORTED},
-    {Py_mod_gil, Py_MOD_GIL_NOT_USED},
     {0, NULL}
 };
 

@@ -174,8 +174,9 @@ def overrideRootMenu(root, flist):
     del mainmenu.menudefs[-3][1][0:2]
     menubar = Menu(root)
     root.configure(menu=menubar)
+    menudict = {}
 
-    menu = Menu(menubar, name='window', tearoff=0)
+    menudict['window'] = menu = Menu(menubar, name='window', tearoff=0)
     menubar.add_cascade(label='Window', menu=menu, underline=0)
 
     def postwindowsmenu(menu=menu):
@@ -225,7 +226,8 @@ def overrideRootMenu(root, flist):
 
     if isCarbonTk():
         # for Carbon AquaTk, replace the default Tk apple menu
-        menu = Menu(menubar, name='apple', tearoff=0)
+        menudict['application'] = menu = Menu(menubar, name='apple',
+                                              tearoff=0)
         menubar.add_cascade(label='IDLE', menu=menu)
         mainmenu.menudefs.insert(0,
             ('application', [

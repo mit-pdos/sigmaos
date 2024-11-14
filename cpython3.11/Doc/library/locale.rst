@@ -1,5 +1,5 @@
-:mod:`!locale` --- Internationalization services
-================================================
+:mod:`locale` --- Internationalization services
+===============================================
 
 .. module:: locale
    :synopsis: Internationalization services.
@@ -311,18 +311,8 @@ The :mod:`locale` module defines the following exception and functions:
 
    .. data:: ALT_DIGITS
 
-      Get a string consisting of up to 100 semicolon-separated symbols used
-      to represent the values 0 to 99 in a locale-specific way.
-      In most locales this is an empty string.
-
-   The function temporarily sets the ``LC_CTYPE`` locale to the locale
-   of the category that determines the requested value (``LC_TIME``,
-   ``LC_NUMERIC``, ``LC_MONETARY`` or ``LC_MESSAGES``) if locales are
-   different and the resulting string is non-ASCII.
-   This temporary change affects other threads.
-
-   .. versionchanged:: 3.14
-      The function now temporarily sets the ``LC_CTYPE`` locale in some cases.
+      Get a representation of up to 100 values used to represent the values
+      0 to 99.
 
 
 .. function:: getdefaultlocale([envvars])
@@ -414,6 +404,16 @@ The :mod:`locale` module defines the following exception and functions:
    encoding for the locale code just like :func:`setlocale`.
 
 
+.. function:: resetlocale(category=LC_ALL)
+
+   Sets the locale for *category* to the default setting.
+
+   The default setting is determined by calling :func:`getdefaultlocale`.
+   *category* defaults to :const:`LC_ALL`.
+
+   .. deprecated-removed:: 3.11 3.13
+
+
 .. function:: strcoll(string1, string2)
 
    Compares two strings according to the current :const:`LC_COLLATE` setting. As
@@ -434,7 +434,7 @@ The :mod:`locale` module defines the following exception and functions:
 .. function:: format_string(format, val, grouping=False, monetary=False)
 
    Formats a number *val* according to the current :const:`LC_NUMERIC` setting.
-   The format follows the conventions of the ``%`` operator.  For floating-point
+   The format follows the conventions of the ``%`` operator.  For floating point
    values, the decimal point is modified if appropriate.  If *grouping* is ``True``,
    also takes the grouping into account.
 
@@ -446,6 +446,18 @@ The :mod:`locale` module defines the following exception and functions:
 
    .. versionchanged:: 3.7
       The *monetary* keyword parameter was added.
+
+
+.. function:: format(format, val, grouping=False, monetary=False)
+
+   Please note that this function works like :meth:`format_string` but will
+   only work for exactly one ``%char`` specifier.  For example, ``'%f'`` and
+   ``'%.0f'`` are both valid specifiers, but ``'%f KiB'`` is not.
+
+   For whole format strings, use :func:`format_string`.
+
+   .. deprecated:: 3.7
+      Use :meth:`format_string` instead.
 
 
 .. function:: currency(val, symbol=True, grouping=False, international=False)
@@ -465,7 +477,7 @@ The :mod:`locale` module defines the following exception and functions:
 
 .. function:: str(float)
 
-   Formats a floating-point number using the same format as the built-in function
+   Formats a floating point number using the same format as the built-in function
    ``str(float)``, but takes the decimal point into account.
 
 
@@ -541,7 +553,7 @@ The :mod:`locale` module defines the following exception and functions:
 
 .. data:: LC_NUMERIC
 
-   Locale category for formatting numbers.  The functions :func:`format_string`,
+   Locale category for formatting numbers.  The functions :func:`.format`,
    :func:`atoi`, :func:`atof` and :func:`.str` of the :mod:`locale` module are
    affected by that category.  All other numeric formatting operations are not
    affected.
@@ -603,7 +615,7 @@ document that your module is not compatible with non-\ ``C`` locale settings.
 
 The only way to perform numeric operations according to the locale is to use the
 special functions defined by this module: :func:`atof`, :func:`atoi`,
-:func:`format_string`, :func:`.str`.
+:func:`.format`, :func:`.str`.
 
 There is no way to perform case conversions and character classifications
 according to the locale.  For (Unicode) text strings these are done according

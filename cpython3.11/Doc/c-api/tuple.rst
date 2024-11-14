@@ -33,14 +33,12 @@ Tuple Objects
 
 .. c:function:: PyObject* PyTuple_New(Py_ssize_t len)
 
-   Return a new tuple object of size *len*,
-   or ``NULL`` with an exception set on failure.
+   Return a new tuple object of size *len*, or ``NULL`` on failure.
 
 
 .. c:function:: PyObject* PyTuple_Pack(Py_ssize_t n, ...)
 
-   Return a new tuple object of size *n*,
-   or ``NULL`` with an exception set on failure. The tuple values
+   Return a new tuple object of size *n*, or ``NULL`` on failure. The tuple values
    are initialized to the subsequent *n* C arguments pointing to Python objects.
    ``PyTuple_Pack(2, a, b)`` is equivalent to ``Py_BuildValue("(OO)", a, b)``.
 
@@ -48,24 +46,18 @@ Tuple Objects
 .. c:function:: Py_ssize_t PyTuple_Size(PyObject *p)
 
    Take a pointer to a tuple object, and return the size of that tuple.
-   On error, return ``-1`` and with an exception set.
 
 
 .. c:function:: Py_ssize_t PyTuple_GET_SIZE(PyObject *p)
 
-   Like :c:func:`PyTuple_Size`, but without error checking.
+   Return the size of the tuple *p*, which must be non-``NULL`` and point to a tuple;
+   no error checking is performed.
 
 
 .. c:function:: PyObject* PyTuple_GetItem(PyObject *p, Py_ssize_t pos)
 
    Return the object at position *pos* in the tuple pointed to by *p*.  If *pos* is
    negative or out of bounds, return ``NULL`` and set an :exc:`IndexError` exception.
-
-   The returned reference is borrowed from the tuple *p*
-   (that is: it is only valid as long as you hold a reference to *p*).
-   To get a :term:`strong reference`, use
-   :c:func:`Py_NewRef(PyTuple_GetItem(...)) <Py_NewRef>`
-   or :c:func:`PySequence_GetItem`.
 
 
 .. c:function:: PyObject* PyTuple_GET_ITEM(PyObject *p, Py_ssize_t pos)
@@ -76,10 +68,8 @@ Tuple Objects
 .. c:function:: PyObject* PyTuple_GetSlice(PyObject *p, Py_ssize_t low, Py_ssize_t high)
 
    Return the slice of the tuple pointed to by *p* between *low* and *high*,
-   or ``NULL`` with an exception set on failure.
-
-   This is the equivalent of the Python expression ``p[low:high]``.
-   Indexing from the end of the tuple is not supported.
+   or ``NULL`` on failure.  This is the equivalent of the Python expression
+   ``p[low:high]``.  Indexing from the end of the list is not supported.
 
 
 .. c:function:: int PyTuple_SetItem(PyObject *p, Py_ssize_t pos, PyObject *o)
@@ -99,21 +89,12 @@ Tuple Objects
    Like :c:func:`PyTuple_SetItem`, but does no error checking, and should *only* be
    used to fill in brand new tuples.
 
-   Bounds checking is performed as an assertion if Python is built in
-   :ref:`debug mode <debug-build>` or :option:`with assertions <--with-assertions>`.
-
    .. note::
 
       This function "steals" a reference to *o*, and, unlike
       :c:func:`PyTuple_SetItem`, does *not* discard a reference to any item that
       is being replaced; any reference in the tuple at position *pos* will be
       leaked.
-
-   .. warning::
-
-      This macro should *only* be used on tuples that are newly created.
-      Using this macro on a tuple that is already in use (or in other words, has
-      a refcount > 1) could lead to undefined behavior.
 
 
 .. c:function:: int _PyTuple_Resize(PyObject **p, Py_ssize_t newsize)
@@ -145,8 +126,6 @@ type.
    Create a new struct sequence type from the data in *desc*, described below. Instances
    of the resulting type can be created with :c:func:`PyStructSequence_New`.
 
-   Return ``NULL`` with an exception set on failure.
-
 
 .. c:function:: void PyStructSequence_InitType(PyTypeObject *type, PyStructSequence_Desc *desc)
 
@@ -155,8 +134,8 @@ type.
 
 .. c:function:: int PyStructSequence_InitType2(PyTypeObject *type, PyStructSequence_Desc *desc)
 
-   Like :c:func:`PyStructSequence_InitType`, but returns ``0`` on success
-   and ``-1`` with an exception set on failure.
+   The same as ``PyStructSequence_InitType``, but returns ``0`` on success and ``-1`` on
+   failure.
 
    .. versionadded:: 3.4
 
@@ -167,8 +146,7 @@ type.
 
    .. c:member:: const char *name
 
-      Fully qualified name of the type; null-terminated UTF-8 encoded.
-      The name must contain the module name.
+      Name of the struct sequence type.
 
    .. c:member:: const char *doc
 
@@ -214,23 +192,16 @@ type.
    Creates an instance of *type*, which must have been created with
    :c:func:`PyStructSequence_NewType`.
 
-   Return ``NULL`` with an exception set on failure.
-
 
 .. c:function:: PyObject* PyStructSequence_GetItem(PyObject *p, Py_ssize_t pos)
 
    Return the object at position *pos* in the struct sequence pointed to by *p*.
-
-   Bounds checking is performed as an assertion if Python is built in
-   :ref:`debug mode <debug-build>` or :option:`with assertions <--with-assertions>`.
+   No bounds checking is performed.
 
 
 .. c:function:: PyObject* PyStructSequence_GET_ITEM(PyObject *p, Py_ssize_t pos)
 
-   Alias to :c:func:`PyStructSequence_GetItem`.
-
-   .. versionchanged:: 3.13
-      Now implemented as an alias to :c:func:`PyStructSequence_GetItem`.
+   Macro equivalent of :c:func:`PyStructSequence_GetItem`.
 
 
 .. c:function:: void PyStructSequence_SetItem(PyObject *p, Py_ssize_t pos, PyObject *o)
@@ -239,9 +210,6 @@ type.
    :c:func:`PyTuple_SET_ITEM`, this should only be used to fill in brand new
    instances.
 
-   Bounds checking is performed as an assertion if Python is built in
-   :ref:`debug mode <debug-build>` or :option:`with assertions <--with-assertions>`.
-
    .. note::
 
       This function "steals" a reference to *o*.
@@ -249,7 +217,9 @@ type.
 
 .. c:function:: void PyStructSequence_SET_ITEM(PyObject *p, Py_ssize_t *pos, PyObject *o)
 
-   Alias to :c:func:`PyStructSequence_SetItem`.
+   Similar to :c:func:`PyStructSequence_SetItem`, but implemented as a static
+   inlined function.
 
-   .. versionchanged:: 3.13
-      Now implemented as an alias to :c:func:`PyStructSequence_SetItem`.
+   .. note::
+
+      This function "steals" a reference to *o*.

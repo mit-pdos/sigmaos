@@ -1,5 +1,5 @@
-:mod:`!socketserver` --- A framework for network servers
-========================================================
+:mod:`socketserver` --- A framework for network servers
+=======================================================
 
 .. module:: socketserver
    :synopsis: A framework for network servers.
@@ -126,12 +126,6 @@ server is the address family.
       waits until all non-daemon threads complete, except if
       :attr:`block_on_close` attribute is ``False``.
 
-   .. attribute:: max_children
-
-      Specify how many child processes will exist to handle requests at a time
-      for :class:`ForkingMixIn`.  If the limit is reached,
-      new requests will wait until one child process has finished.
-
    .. attribute:: daemon_threads
 
       For :class:`ThreadingMixIn` use daemonic threads by setting
@@ -151,16 +145,9 @@ server is the address family.
            ForkingUDPServer
            ThreadingTCPServer
            ThreadingUDPServer
-           ForkingUnixStreamServer
-           ForkingUnixDatagramServer
-           ThreadingUnixStreamServer
-           ThreadingUnixDatagramServer
 
    These classes are pre-defined using the mix-in classes.
 
-.. versionadded:: 3.12
-   The ``ForkingUnixStreamServer`` and ``ForkingUnixDatagramServer`` classes
-   were added.
 
 To implement a service, you must derive a class from :class:`BaseRequestHandler`
 and redefine its :meth:`~BaseRequestHandler.handle` method.
@@ -194,7 +181,8 @@ expensive or inappropriate for the service) is to maintain an explicit table of
 partially finished requests and to use :mod:`selectors` to decide which
 request to work on next (or whether to handle a new incoming request).  This is
 particularly important for stream services where each client can potentially be
-connected for a long time (if threads or subprocesses cannot be used).
+connected for a long time (if threads or subprocesses cannot be used).  See
+:mod:`asyncore` for another way to manage this.
 
 .. XXX should data and methods be intermingled, or separate?
    how should the distinction between class and instance variables be drawn?

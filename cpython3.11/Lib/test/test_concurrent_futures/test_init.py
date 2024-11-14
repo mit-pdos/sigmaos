@@ -3,11 +3,7 @@ import logging
 import queue
 import time
 import unittest
-import sys
-import io
 from concurrent.futures._base import BrokenExecutor
-from concurrent.futures.process import _check_system_limits
-
 from logging.handlers import QueueHandler
 
 from test import support
@@ -82,8 +78,7 @@ class FailingInitializerMixin(ExecutorMixin):
                     future.result()
 
             # At some point, the executor should break
-            for _ in support.sleeping_retry(support.SHORT_TIMEOUT,
-                                            "executor not broken"):
+            for _ in support.sleeping_retry(5, "executor not broken"):
                 if self.executor._broken:
                     break
 
@@ -111,37 +106,6 @@ class FailingInitializerMixin(ExecutorMixin):
 
 create_executor_tests(globals(), InitializerMixin)
 create_executor_tests(globals(), FailingInitializerMixin)
-
-
-@unittest.skipIf(sys.platform == "win32", "Resource Tracker doesn't run on Windows")
-class FailingInitializerResourcesTest(unittest.TestCase):
-    """
-    Source: https://github.com/python/cpython/issues/104090
-    """
-
-    def _test(self, test_class):
-        try:
-            _check_system_limits()
-        except NotImplementedError:
-            self.skipTest("ProcessPoolExecutor unavailable on this system")
-
-        runner = unittest.TextTestRunner(stream=io.StringIO())
-        runner.run(test_class('test_initializer'))
-
-        # GH-104090:
-        # Stop resource tracker manually now, so we can verify there are not leaked resources by checking
-        # the process exit code
-        from multiprocessing.resource_tracker import _resource_tracker
-        _resource_tracker._stop()
-
-        self.assertEqual(_resource_tracker._exitcode, 0)
-
-    def test_spawn(self):
-        self._test(ProcessPoolSpawnFailingInitializerTest)
-
-    @support.skip_if_sanitizer("TSAN doesn't support threads after fork", thread=True)
-    def test_forkserver(self):
-        self._test(ProcessPoolForkserverFailingInitializerTest)
 
 
 def setUpModule():

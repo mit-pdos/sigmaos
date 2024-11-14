@@ -3,14 +3,14 @@ __all__ = ('Runner', 'run')
 import contextvars
 import enum
 import functools
-import inspect
 import threading
 import signal
+import sys
 from . import coroutines
 from . import events
 from . import exceptions
 from . import tasks
-from . import constants
+
 
 class _State(enum.Enum):
     CREATED = "created"
@@ -70,8 +70,7 @@ class Runner:
             loop = self._loop
             _cancel_all_tasks(loop)
             loop.run_until_complete(loop.shutdown_asyncgens())
-            loop.run_until_complete(
-                loop.shutdown_default_executor(constants.THREAD_JOIN_TIMEOUT))
+            loop.run_until_complete(loop.shutdown_default_executor())
         finally:
             if self._set_event_loop:
                 events.set_event_loop(None)
@@ -85,7 +84,10 @@ class Runner:
         return self._loop
 
     def run(self, coro, *, context=None):
-        """Run code in the embedded event loop."""
+        """Run a coroutine inside the embedded event loop."""
+        if not coroutines.iscoroutine(coro):
+            raise ValueError("a coroutine was expected, got {!r}".format(coro))
+
         if events._get_running_loop() is not None:
             # fail fast with short traceback
             raise RuntimeError(
@@ -93,19 +95,8 @@ class Runner:
 
         self._lazy_init()
 
-        if not coroutines.iscoroutine(coro):
-            if inspect.isawaitable(coro):
-                async def _wrap_awaitable(awaitable):
-                    return await awaitable
-
-                coro = _wrap_awaitable(coro)
-            else:
-                raise TypeError('An asyncio.Future, a coroutine or an '
-                                'awaitable is required')
-
         if context is None:
             context = self._context
-
         task = self._loop.create_task(coro, context=context)
 
         if (threading.current_thread() is threading.main_thread()
@@ -166,12 +157,12 @@ class Runner:
         raise KeyboardInterrupt()
 
 
-def run(main, *, debug=None, loop_factory=None):
+def run(main, *, debug=None):
     """Execute the coroutine and return the result.
 
     This function runs the passed coroutine, taking care of
-    managing the asyncio event loop, finalizing asynchronous
-    generators and closing the default executor.
+    managing the asyncio event loop and finalizing asynchronous
+    generators.
 
     This function cannot be called when another asyncio event loop is
     running in the same thread.
@@ -181,10 +172,6 @@ def run(main, *, debug=None, loop_factory=None):
     This function always creates a new event loop and closes it at the end.
     It should be used as a main entry point for asyncio programs, and should
     ideally only be called once.
-
-    The executor is given a timeout duration of 5 minutes to shutdown.
-    If the executor hasn't finished within that duration, a warning is
-    emitted and the executor is closed.
 
     Example:
 
@@ -199,7 +186,7 @@ def run(main, *, debug=None, loop_factory=None):
         raise RuntimeError(
             "asyncio.run() cannot be called from a running event loop")
 
-    with Runner(debug=debug, loop_factory=loop_factory) as runner:
+    with Runner(debug=debug) as runner:
         return runner.run(main)
 
 

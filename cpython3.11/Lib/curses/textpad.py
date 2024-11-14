@@ -102,10 +102,7 @@ class Textbox:
                 self._insert_printable_char(ch)
         elif ch == curses.ascii.SOH:                           # ^a
             self.win.move(y, 0)
-        elif ch in (curses.ascii.STX,curses.KEY_LEFT,
-                    curses.ascii.BS,
-                    curses.KEY_BACKSPACE,
-                    curses.ascii.DEL):
+        elif ch in (curses.ascii.STX,curses.KEY_LEFT, curses.ascii.BS,curses.KEY_BACKSPACE):
             if x > 0:
                 self.win.move(y, x-1)
             elif y == 0:
@@ -114,7 +111,7 @@ class Textbox:
                 self.win.move(y-1, self._end_of_line(y-1))
             else:
                 self.win.move(y-1, self.maxx)
-            if ch in (curses.ascii.BS, curses.KEY_BACKSPACE, curses.ascii.DEL):
+            if ch in (curses.ascii.BS, curses.KEY_BACKSPACE):
                 self.win.delch()
         elif ch == curses.ascii.EOT:                           # ^d
             self.win.delch()

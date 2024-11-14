@@ -4,9 +4,9 @@
 
 from termios import *
 
-__all__ = ["cfmakeraw", "cfmakecbreak", "setraw", "setcbreak"]
+__all__ = ["setraw", "setcbreak"]
 
-# Indices for termios list.
+# Indexes for termios list.
 IFLAG = 0
 OFLAG = 1
 CFLAG = 2
@@ -15,59 +15,22 @@ ISPEED = 4
 OSPEED = 5
 CC = 6
 
-def cfmakeraw(mode):
-    """Make termios mode raw."""
-    # Clear all POSIX.1-2017 input mode flags.
-    # See chapter 11 "General Terminal Interface"
-    # of POSIX.1-2017 Base Definitions.
-    mode[IFLAG] &= ~(IGNBRK | BRKINT | IGNPAR | PARMRK | INPCK | ISTRIP |
-                     INLCR | IGNCR | ICRNL | IXON | IXANY | IXOFF)
-
-    # Do not post-process output.
-    mode[OFLAG] &= ~OPOST
-
-    # Disable parity generation and detection; clear character size mask;
-    # let character size be 8 bits.
-    mode[CFLAG] &= ~(PARENB | CSIZE)
-    mode[CFLAG] |= CS8
-
-    # Clear all POSIX.1-2017 local mode flags.
-    mode[LFLAG] &= ~(ECHO | ECHOE | ECHOK | ECHONL | ICANON |
-                     IEXTEN | ISIG | NOFLSH | TOSTOP)
-
-    # POSIX.1-2017, 11.1.7 Non-Canonical Mode Input Processing,
-    # Case B: MIN>0, TIME=0
-    # A pending read shall block until MIN (here 1) bytes are received,
-    # or a signal is received.
-    mode[CC] = list(mode[CC])
-    mode[CC][VMIN] = 1
-    mode[CC][VTIME] = 0
-
-def cfmakecbreak(mode):
-    """Make termios mode cbreak."""
-    # Do not echo characters; disable canonical input.
-    mode[LFLAG] &= ~(ECHO | ICANON)
-
-    # POSIX.1-2017, 11.1.7 Non-Canonical Mode Input Processing,
-    # Case B: MIN>0, TIME=0
-    # A pending read shall block until MIN (here 1) bytes are received,
-    # or a signal is received.
-    mode[CC] = list(mode[CC])
-    mode[CC][VMIN] = 1
-    mode[CC][VTIME] = 0
-
 def setraw(fd, when=TCSAFLUSH):
-    """Put terminal into raw mode."""
+    """Put terminal into a raw mode."""
     mode = tcgetattr(fd)
-    new = list(mode)
-    cfmakeraw(new)
-    tcsetattr(fd, when, new)
-    return mode
+    mode[IFLAG] = mode[IFLAG] & ~(BRKINT | ICRNL | INPCK | ISTRIP | IXON)
+    mode[OFLAG] = mode[OFLAG] & ~(OPOST)
+    mode[CFLAG] = mode[CFLAG] & ~(CSIZE | PARENB)
+    mode[CFLAG] = mode[CFLAG] | CS8
+    mode[LFLAG] = mode[LFLAG] & ~(ECHO | ICANON | IEXTEN | ISIG)
+    mode[CC][VMIN] = 1
+    mode[CC][VTIME] = 0
+    tcsetattr(fd, when, mode)
 
 def setcbreak(fd, when=TCSAFLUSH):
-    """Put terminal into cbreak mode."""
+    """Put terminal into a cbreak mode."""
     mode = tcgetattr(fd)
-    new = list(mode)
-    cfmakecbreak(new)
-    tcsetattr(fd, when, new)
-    return mode
+    mode[LFLAG] = mode[LFLAG] & ~(ECHO | ICANON)
+    mode[CC][VMIN] = 1
+    mode[CC][VTIME] = 0
+    tcsetattr(fd, when, mode)

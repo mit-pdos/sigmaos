@@ -152,6 +152,8 @@ if [ "$MONGOIP" == "x.x.x.x" ] && docker ps | grep -q sigmamongo; then
   MONGOIP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' sigmamongo):27017
 fi
 
+PROJECT_ROOT=$(realpath $(dirname $0))
+
 # If running in local configuration, mount bin directory.
 MOUNTS="--mount type=bind,src=/var/run/docker.sock,dst=/var/run/docker.sock \
   --mount type=bind,src=/sys/fs/cgroup,dst=/cgroup \
@@ -163,9 +165,9 @@ MOUNTS="--mount type=bind,src=/var/run/docker.sock,dst=/var/run/docker.sock \
   --mount type=bind,src=${HOME}/.aws,dst=/home/sigmaos/.aws"
 if [ "$TAG" == "local-build" ]; then
   MOUNTS="$MOUNTS\
-    --mount type=bind,src=$(pwd)/../bin/user,dst=/home/sigmaos/bin/user/common \
-    --mount type=bind,src=$(pwd)/../bin/kernel,dst=/home/sigmaos/bin/kernel \
-    --mount type=bind,src=$(pwd)/../bin/linux,dst=/home/sigmaos/bin/linux"
+    --mount type=bind,src=$PROJECT_ROOT/bin/user,dst=/home/sigmaos/bin/user/common \
+    --mount type=bind,src=$PROJECT_ROOT/bin/kernel,dst=/home/sigmaos/bin/kernel \
+    --mount type=bind,src=$PROJECT_ROOT/bin/linux,dst=/home/sigmaos/bin/linux"
 fi
 
 # Mounting docker.sock is bad idea in general because it requires to

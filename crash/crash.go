@@ -19,9 +19,9 @@ import (
 
 const ONE = 1000
 
-var labels map[Tselector]Event
+var labels map[Tselector]Tevent
 
-type Event struct {
+type Tevent struct {
 	Label       string  `json:"label"`       // see selector.go
 	Start       int64   `json:"start"`       // wait for start ms to start generating events
 	MaxInterval int64   `json:"maxinterval"` // max length of event interval in ms
@@ -29,11 +29,13 @@ type Event struct {
 	Delay       int64   `json:"delay"`       // delay in ms (interpretable by event creator)
 }
 
-func (e *Event) String() string {
+type Teventf func(e Tevent)
+
+func (e *Tevent) String() string {
 	return fmt.Sprintf("{l %v s %v mi %v p %v d %v}", e.Label, e.Start, e.MaxInterval, e.Prob, e.Delay)
 }
 
-func MakeEvents(es []Event) (string, error) {
+func MakeTevents(es []Tevent) (string, error) {
 	b, err := json.Marshal(es)
 	if err != nil {
 		return "", err
@@ -41,8 +43,8 @@ func MakeEvents(es []Event) (string, error) {
 	return string(b), nil
 }
 
-func parseEvents(s string, labels map[Tselector]Event) error {
-	var evs []Event
+func parseTevents(s string, labels map[Tselector]Tevent) error {
+	var evs []Tevent
 	if s == "" {
 		return nil
 	}
@@ -58,8 +60,8 @@ func parseEvents(s string, labels map[Tselector]Event) error {
 func init() {
 	s := time.Now()
 	labelstr := proc.GetSigmaFail()
-	labels = make(map[Tselector]Event, len(labelstr))
-	if err := parseEvents(labelstr, labels); err != nil {
+	labels = make(map[Tselector]Tevent, len(labelstr))
+	if err := parseTevents(labelstr, labels); err != nil {
 		db.DFatalf("parseLabels %v err %v", labelstr, err)
 	}
 	db.DPrintf(db.SPAWN_LAT, "[%v] crash init pkg: %v", proc.GetSigmaDebugPid(), time.Since(s))
@@ -68,7 +70,7 @@ func init() {
 func randSleep(c int64) uint64 {
 	ms := rand.Int64(c)
 	r := rand.Int64(ONE)
-	db.DPrintf(db.CRASH, "randSleep %dms r %d\n", ms, r)
+	// db.DPrintf(db.CRASH, "randSleep %dms r %d\n", ms, r)
 	time.Sleep(time.Duration(ms) * time.Millisecond)
 	return r
 }
@@ -166,8 +168,24 @@ func Fail(crash int64) {
 	fail(crash, nil)
 }
 
+// New interface
+
+func AppendSigmaFail(es []Tevent) error {
+	s, err := MakeTevents(es)
+	if err != nil {
+		return err
+	}
+	proc.AppendSigmaFail(s)
+	return nil
+}
+
 func Crash() {
 	db.DPrintf(db.CRASH, "Crash")
+	os.Exit(1)
+}
+
+func CrashMsg(msg string) {
+	db.DPrintf(db.CRASH, "CrashMsg %v", msg)
 	os.Exit(1)
 }
 
@@ -178,7 +196,7 @@ func PartitionNamed(fsl *fslib.FsLib) {
 	}
 }
 
-func Failer(label Tselector, f func(e Event)) {
+func Failer(label Tselector, f Teventf) {
 	if e, ok := labels[label]; ok {
 		go func() {
 			time.Sleep(time.Duration(e.Start) * time.Millisecond)
@@ -190,6 +208,20 @@ func Failer(label Tselector, f func(e Event)) {
 			}
 		}()
 	} else {
-		db.DPrintf(db.TEST, "Unknown label %v", label)
+		db.DPrintf(db.CRASH, "Unknown label %v", label)
+	}
+}
+
+func FailersDefault(labels []Tselector, fsl *fslib.FsLib) {
+	defaults := []Teventf{
+		func(e Tevent) {
+			Crash()
+		},
+		func(e Tevent) {
+			PartitionNamed(fsl)
+		},
+	}
+	for i, l := range labels {
+		Failer(l, defaults[i])
 	}
 }

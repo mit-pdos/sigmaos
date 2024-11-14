@@ -96,7 +96,7 @@ func newReducer(reducef mr.ReduceT, args []string, p *perf.Perf) (*Reducer, erro
 	if err := r.Started(); err != nil {
 		return nil, fmt.Errorf("NewReducer couldn't start %v err %v", args, err)
 	}
-	crash.Crasher(r.FsLib)
+	crash.FailersDefault([]crash.Tselector{crash.MRTASK_CRASH, crash.MRTASK_PARTITION}, r.FsLib)
 	return r, nil
 }
 

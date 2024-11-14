@@ -114,7 +114,8 @@ func newMapper(mapf mr.MapT, reducef mr.ReduceT, args []string, p *perf.Perf) (*
 		return nil, fmt.Errorf("NewMapper couldn't start %v", args)
 	}
 	db.DPrintf(db.TEST, "Started at time: %v", time.Since(start))
-	crash.Crasher(m.FsLib)
+
+	crash.FailersDefault([]crash.Tselector{crash.MRTASK_CRASH, crash.MRTASK_PARTITION}, m.FsLib)
 	return m, nil
 }
 

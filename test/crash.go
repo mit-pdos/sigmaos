@@ -10,7 +10,7 @@ import (
 	db "sigmaos/debug"
 )
 
-// Sleep for a random time, then crash a server.  Crash a server of a
+// Sleep for a random time, then crash a server.  Boot a server of a
 // certain type, then crash a server of that type.
 func (ts *Tstate) CrashServer(srv string, randMax int, l *sync.Mutex, crashchan chan bool) {
 	r := rand.Intn(randMax)

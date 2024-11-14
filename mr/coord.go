@@ -447,7 +447,12 @@ func (c *Coord) Work() {
 
 	db.DPrintf(db.ALWAYS, "leader %s nmap %v nreduce %v\n", c.job, c.nmaptask, c.nreducetask)
 
-	crash.CrasherMsg(c.FsLib, c.stat.String)
+	crash.Failer(crash.MRCOORD_CRASH, func(e crash.Tevent) {
+		crash.CrashMsg(c.stat.String())
+	})
+	crash.Failer(crash.MRCOORD_PARTITION, func(e crash.Tevent) {
+		crash.PartitionNamed(c.FsLib)
+	})
 
 	start := time.Now()
 	if n, err := c.mft.RecoverTasks(); err != nil {

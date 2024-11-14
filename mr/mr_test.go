@@ -19,6 +19,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"sigmaos/auth"
+	"sigmaos/crash"
 	db "sigmaos/debug"
 	"sigmaos/mr"
 	"sigmaos/mr/chunkreader"
@@ -490,15 +491,33 @@ func TestMaliciousMapper(t *testing.T) {
 	runN(t, 0, 0, 0, 0, 0, 500, true)
 }
 
+var taskev []crash.Tevent
+
 func TestCrashTaskOnly(t *testing.T) {
+	e0 := crash.Tevent{crash.MRTASK_CRASH, 100, CRASHTASK, 0.33, 0}
+	e1 := crash.Tevent{crash.MRTASK_PARTITION, 100, CRASHTASK, 0.33, 0}
+	taskev = []crash.Tevent{e0, e1}
+	err := crash.AppendSigmaFail(taskev)
+	assert.Nil(t, err)
 	runN(t, CRASHTASK, 0, 0, 0, 0, 0, false)
 }
 
+var coordev []crash.Tevent
+
 func TestCrashCoordOnly(t *testing.T) {
+	e0 := crash.Tevent{crash.MRCOORD_CRASH, 100, CRASHTASK, 0.33, 0}
+	e1 := crash.Tevent{crash.MRCOORD_PARTITION, 100, CRASHTASK, 0.33, 0}
+	coordev = []crash.Tevent{e0, e1}
+	err := crash.AppendSigmaFail(coordev)
+	assert.Nil(t, err)
 	runN(t, 0, CRASHCOORD, 0, 0, 0, 0, false)
 }
 
 func TestCrashTaskAndCoord(t *testing.T) {
+	evs := append([]crash.Tevent{}, taskev...)
+	evs = append(evs, coordev...)
+	err := crash.AppendSigmaFail(evs)
+	assert.Nil(t, err)
 	runN(t, CRASHTASK, CRASHCOORD, 0, 0, 0, 0, false)
 }
 

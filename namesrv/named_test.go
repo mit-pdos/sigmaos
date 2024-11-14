@@ -241,12 +241,10 @@ func TestLeaseDelayReboot(t *testing.T) {
 
 // Test if read fails after a named lost leadership
 func TestPartitionNamed(t *testing.T) {
-	e := crash.Event{crash.NAMED_PARTITION, 2000, 1000, 1.0, 7000}
-	// e := crash.Event{crash.NAMED_PARTITION, 1000, 1000, 1.0, 0}
-	es := []crash.Event{e}
-	s, err := crash.MakeEvents(es)
+	e := crash.Tevent{crash.NAMED_PARTITION, 2000, 1000, 1.0, 7000}
+	// e := crash.Tevent{crash.NAMED_PARTITION, 1000, 1000, 1.0, 0}
+	err := crash.AppendSigmaFail([]crash.Tevent{e})
 	assert.Nil(t, err)
-	proc.SetSigmaFail(s)
 
 	ts, err1 := test.NewTstateAll(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {

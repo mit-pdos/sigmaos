@@ -59,8 +59,14 @@ func GetSigmaFail() string {
 	return os.Getenv(SIGMAFAIL)
 }
 
-func SetSigmaFail(s string) {
-	os.Setenv(SIGMAFAIL, s)
+func AppendSigmaFail(s string) {
+	s0 := os.Getenv(SIGMAFAIL)
+	if s0 != "" {
+		s0 = s0 + ";" + s
+	} else {
+		s0 = s
+	}
+	os.Setenv(SIGMAFAIL, s0)
 }
 
 func GetLabelsEnv(envvar string) map[string]bool {

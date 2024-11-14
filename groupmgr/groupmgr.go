@@ -165,9 +165,13 @@ func newMember(sc *sigmaclnt.SigmaClnt, cfg *GroupMgrConfig, id int, crash int64
 func (m *member) spawnL() error {
 	p := proc.NewProc(m.Program, m.Args)
 	p.SetMcpu(m.Mcpu)
+
+	// XXX to be deleted
 	p.SetCrash(m.crash)
 	p.SetPartition(m.partition)
 	p.SetNetFail(m.netfail)
+
+	p.SetEnv(proc.SIGMAFAIL, proc.GetSigmaFail())
 	p.AppendEnv("SIGMAREPL", newREPL(m.id, m.NReplicas))
 	// If we are specifically setting kvd's mcpu=1, then set GOMAXPROCS to 1
 	// (for use when comparing to redis).

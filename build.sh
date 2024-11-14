@@ -138,7 +138,7 @@ if [ -z "$rsbuildercid" ]; then
   # Start builder
   echo "========== Starting Rust builder container =========="
   docker run --rm -d -it \
-    --mount type=bind,src=$ROOT,dst=/home/sigmaos-local/ \
+    --mount type=bind,src=$ROOT,dst=/home/sigmaos/ \
     sig-rs-builder
   rsbuildercid=$(docker ps -a | grep -w "sig-rs-builder" | cut -d " " -f1)
   until [ "`docker inspect -f {{.State.Running}} $rsbuildercid`"=="true" ]; do
@@ -176,7 +176,7 @@ RS_BUILD_ARGS="--rustpath \$HOME/.cargo/bin/cargo \
 echo "========== Building Rust bins =========="
 docker exec -it $rsbuildercid \
   /usr/bin/time -f "Build time: %e sec" \
-  ../sigmaos-local/make-rs.sh $RS_BUILD_ARGS --version $VERSION \
+  ./make-rs.sh $RS_BUILD_ARGS --version $VERSION \
   2>&1 | tee $BUILD_LOG/make-user-rs.out
 echo "========== Done building Rust bins =========="
 

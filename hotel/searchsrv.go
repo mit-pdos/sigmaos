@@ -12,6 +12,7 @@ import (
 	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/rpcclnt"
+	"sigmaos/rpcdirclnt"
 	"sigmaos/sigmarpcchan"
 	"sigmaos/sigmasrv"
 	"sigmaos/tracing"
@@ -19,7 +20,7 @@ import (
 
 type Search struct {
 	ratec  *rpcclnt.RPCClnt
-	geoc   *rpcclnt.RPCClnt
+	geodc  *rpcdirclnt.RPCDirClnt
 	pds    *sigmasrv.SigmaSrv
 	tracer *tracing.Tracer
 }
@@ -41,12 +42,8 @@ func RunSearchSrv(n string) error {
 		return err
 	}
 	s.ratec = rpcc
-	rpcc, err = sigmarpcchan.NewSigmaRPCClnt(fsls, HOTELGEO)
-	if err != nil {
-		db.DFatalf("Err new rpcclnt geo: %v", err)
-		return err
-	}
-	s.geoc = rpcc
+
+	s.geodc = rpcdirclnt.NewRPCDirClnt(fsls[0], HOTELGEODIR, db.HOTEL_GEO, db.HOTEL_GEO_ERR)
 
 	p, err := perf.NewPerf(ssrv.MemFs.SigmaClnt().ProcEnv(), perf.HOTEL_SEARCH)
 	if err != nil {
@@ -80,7 +77,15 @@ func (s *Search) Nearby(ctx fs.CtxI, req proto.SearchRequest, res *proto.SearchR
 		Lon:               req.Lon,
 		SpanContextConfig: nil, //sctx2,
 	}
-	err := s.geoc.RPC("Geo.Nearby", greq, &gres)
+	geoID, err := s.geodc.WaitTimedRandomEntry()
+	if err != nil {
+		db.DFatalf("choose srv error: %v", err)
+	}
+	rpcc, err := s.geodc.GetClnt(geoID)
+	if err != nil {
+		db.DFatalf("geo getClnt error: %v", err)
+	}
+	err = rpcc.RPC("Geo.Nearby", greq, &gres)
 	//	if TRACING {
 	//		span2.End()
 	//	}

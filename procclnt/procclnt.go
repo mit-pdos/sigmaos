@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"sigmaos/beschedclnt"
 	"sigmaos/chunk"
 	"sigmaos/chunkclnt"
 	db "sigmaos/debug"
@@ -16,7 +17,6 @@ import (
 	"sigmaos/kproc"
 	"sigmaos/lcschedclnt"
 	"sigmaos/proc"
-	"sigmaos/procqclnt"
 	"sigmaos/scheddclnt"
 	"sigmaos/semclnt"
 	"sigmaos/serr"
@@ -30,7 +30,7 @@ type ProcClnt struct {
 	isExited       sp.Tpid
 	procDirCreated bool
 	scheddclnt     *scheddclnt.ScheddClnt
-	procqclnt      *procqclnt.ProcQClnt
+	beschedclnt    *beschedclnt.BESchedClnt
 	lcschedclnt    *lcschedclnt.LCSchedClnt
 	cs             *ChildState
 	bins           *chunkclnt.BinPaths
@@ -42,7 +42,7 @@ func newProcClnt(fsl *fslib.FsLib, pid sp.Tpid, procDirCreated bool, kernelID st
 		pid:            pid,
 		procDirCreated: procDirCreated,
 		scheddclnt:     scheddclnt.NewScheddClnt(fsl, kernelID),
-		procqclnt:      procqclnt.NewProcQClnt(fsl),
+		beschedclnt:    beschedclnt.NewBESchedClnt(fsl),
 		lcschedclnt:    lcschedclnt.NewLCSchedClnt(fsl),
 		cs:             newChildState(),
 		bins:           chunkclnt.NewBinPaths(),
@@ -82,7 +82,7 @@ func (clnt *ProcClnt) Spawn(p *proc.Proc) error {
 		}
 		p.SetNamedEndpoint(ep)
 	}
-	return clnt.spawn("~local", proc.HSCHEDD, p)
+	return clnt.spawn(sp.LOCAL, proc.HSCHEDD, p)
 }
 
 // Spawn a proc on kernelId.
@@ -118,7 +118,7 @@ func (clnt *ProcClnt) spawn(kernelId string, how proc.Thow, p *proc.Proc) error 
 		go func() {
 			db.DPrintf(db.PROCCLNT, "pre spawnRetry %v %v", kernelId, p)
 			pseqno, err := clnt.spawnRetry(kernelId, p)
-			db.DPrintf(db.PROCCLNT, "enqueued on procq %v and spawned on schedd %v err %v proc %v", pseqno.GetProcqID(), pseqno.GetScheddID(), err, p)
+			db.DPrintf(db.PROCCLNT, "enqueued on besched %v and spawned on schedd %v err %v proc %v", pseqno.GetProcqID(), pseqno.GetScheddID(), err, p)
 			clnt.cs.Started(p.GetPid(), pseqno, err)
 			if err != nil {
 				clnt.cleanupError(p.GetPid(), p.GetParentDir(), fmt.Errorf("Spawn error %v", err))
@@ -157,12 +157,12 @@ func (clnt *ProcClnt) forceRunViaSchedd(kernelID string, p *proc.Proc) error {
 	return nil
 }
 
-func (clnt *ProcClnt) enqueueViaProcQ(p *proc.Proc) (string, *proc.ProcSeqno, error) {
+func (clnt *ProcClnt) enqueueViaBESched(p *proc.Proc) (string, *proc.ProcSeqno, error) {
 	start := time.Now()
 	defer func(start time.Time) {
-		db.DPrintf(db.SPAWN_LAT, "[%v] time enqueueViaProcQ: %v", p.GetPid(), time.Since(start))
+		db.DPrintf(db.SPAWN_LAT, "[%v] time enqueueViaBESched: %v", p.GetPid(), time.Since(start))
 	}(start)
-	return clnt.procqclnt.Enqueue(p)
+	return clnt.beschedclnt.Enqueue(p)
 }
 
 func (clnt *ProcClnt) enqueueViaLCSched(p *proc.Proc) (string, error) {
@@ -185,9 +185,9 @@ func (clnt *ProcClnt) spawnRetry(kernelId string, p *proc.Proc) (*proc.ProcSeqno
 			pseqno = proc.NewProcSeqno(sp.NOT_SET, kernelId, 0, 0)
 		} else {
 			if p.GetType() == proc.T_BE {
-				// BE Non-kernel procs are enqueued via the procq.
+				// BE Non-kernel procs are enqueued via the besched.
 				var scheddID string
-				scheddID, pseqno, err = clnt.enqueueViaProcQ(p)
+				scheddID, pseqno, err = clnt.enqueueViaBESched(p)
 				if err == nil {
 					db.DPrintf(db.PROCCLNT, "spawn: SetBinKernelId proc %v seqno %v", p.GetProgram(), pseqno)
 					start := time.Now()
@@ -198,7 +198,7 @@ func (clnt *ProcClnt) spawnRetry(kernelId string, p *proc.Proc) (*proc.ProcSeqno
 					clnt.bins.DelBinKernelID(p.GetProgram(), scheddID)
 				}
 			} else {
-				// LC Non-kernel procs are enqueued via the procq.
+				// LC Non-kernel procs are enqueued via the besched.
 				var spawnedScheddID string
 				spawnedScheddID, err = clnt.enqueueViaLCSched(p)
 				pseqno = proc.NewProcSeqno(sp.NOT_SET, spawnedScheddID, 0, 0)
@@ -348,9 +348,9 @@ func (clnt *ProcClnt) Exited(status *proc.Status) {
 	}
 }
 
-// Stop the schedd/procq/lcsched monitoring threads
+// Stop the schedd/besched/lcsched monitoring threads
 func (clnt *ProcClnt) StopWatchingSrvs() {
-	clnt.procqclnt.StopWatching()
+	clnt.beschedclnt.StopWatching()
 	clnt.lcschedclnt.StopWatching()
 	clnt.scheddclnt.StopWatching()
 }

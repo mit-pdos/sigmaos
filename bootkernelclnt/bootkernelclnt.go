@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 
 	db "sigmaos/debug"
 	"sigmaos/kernelclnt"
@@ -17,9 +18,14 @@ import (
 // Shell script that starts the sigmaos container, which invokes Start
 // of [bootkernel]
 const (
-	START     = "../start-kernel.sh"
+	START     = "start-kernel.sh"
 	K_OUT_DIR = "/tmp/sigmaos-kernel-start-logs"
 )
+
+func projectRootPath() string {
+	_, b, _, _ := runtime.Caller(0)
+	return filepath.Dir(filepath.Dir(b))
+}
 
 func Start(kernelId string, etcdIP sp.Tip, pe *proc.ProcEnv, srvs string, overlays, gvisor, netproxy bool) (string, error) {
 	args := []string{
@@ -55,7 +61,7 @@ func Start(kernelId string, etcdIP sp.Tip, pe *proc.ProcEnv, srvs string, overla
 	}
 	defer efile.Close()
 	// Create the command struct and set stdout/stderr
-	cmd := exec.Command(START, args...)
+	cmd := exec.Command(filepath.Join(projectRootPath(), START), args...)
 	cmd.Stdout = ofile
 	cmd.Stderr = efile
 	if err := cmd.Run(); err != nil {
@@ -107,10 +113,10 @@ func NewKernelClnt(kernelId string, etcdIP sp.Tip, pe *proc.ProcEnv) (*Kernel, e
 		var pn1 string
 		var err error
 		if etcdIP != pe.GetOuterContainerIP() {
-			// If running in a distributed setting, bootkernel clnt can be ~any
-			pn1, _, err = sc.ResolveMount(sp.BOOT + "~any")
+			// If running in a distributed setting, bootkernel clnt can be ANY
+			pn1, _, err = sc.ResolveMount(sp.BOOT + sp.ANY)
 		} else {
-			pn1, _, err = sc.ResolveMount(sp.BOOT + "~local")
+			pn1, _, err = sc.ResolveMount(sp.BOOT + sp.LOCAL)
 		}
 		if err != nil {
 			db.DPrintf(db.ALWAYS, "Error resolve local")

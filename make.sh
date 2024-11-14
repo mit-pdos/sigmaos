@@ -1,7 +1,7 @@
 #!/bin/bash
 
 usage() {
-  echo "Usage: $0 [--norace] [--vet] [--parallel] [--gopath GO] [--target TARGET] [--version VERSION] [--userbin USERBIN] kernel|user|npproxy" 1>&2
+  echo "Usage: $0 [--norace] [--vet] [--parallel] [--gopath GO] [--target local|remote] [--version VERSION] [--userbin USERBIN] kernel|user|npproxy" 1>&2
 }
 
 RACE="-race"
@@ -71,6 +71,12 @@ if [ $# -gt 0 ]; then
     usage
     exit 1
 fi
+
+if [[ "$TARGET" != "local" ]] && [[ "$TARGET" != "remote" ]]; then
+  echo "Error! Build target must be either \"local\" or \"remote\""
+  exit 1
+fi
+
 echo $WHAT
 
 OUTPATH=bin
@@ -114,6 +120,11 @@ for k in $WHAT; do
         build="$GO build -ldflags=\"$LDF\" $RACE -o $OUTPATH/$k/$f$VERSION cmd/$k/$f/main.go"
         echo $build
         eval "$build"
+        # Bail out early on build error
+        export EXIT_STATUS=$?
+        if [ $EXIT_STATUS  -ne 0 ]; then
+          exit $EXIT_STATUS
+        fi
       fi
     done
   else
@@ -123,5 +134,10 @@ for k in $WHAT; do
     build="parallel -j$njobs $GO \"build -ldflags='$LDF' $RACE -o $OUTPATH/$k/{}$VERSION cmd/$k/{}/main.go\" ::: $FILES"
     echo $build
     eval $build
+    # Bail out early on build error
+    export EXIT_STATUS=$?
+    if [ $EXIT_STATUS  -ne 0 ]; then
+      exit $EXIT_STATUS
+    fi
   fi
 done

@@ -24,7 +24,7 @@ import (
 	"sigmaos/test"
 )
 
-var pathname string // e.g., --path "name/ux/~local/"
+var pathname string // e.g., --path "name/ux/sp.LOCAL/"
 var withmarshal bool
 
 func init() {
@@ -781,7 +781,7 @@ func TestColdPathMicro(t *testing.T) {
 	pe := proc.NewAddedProcEnv(ts.ProcEnv())
 	pe.KernelID = sts[0].Name
 
-	pn := filepath.Join(sp.UX, "~local", "mr-intermediate")
+	pn := filepath.Join(sp.UX, sp.LOCAL, "mr-intermediate")
 
 	var max time.Duration
 	var tot time.Duration

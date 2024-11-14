@@ -96,7 +96,7 @@ func TestWordSpanningChunk(t *testing.T) {
 		return
 	}
 
-	fn := filepath.Join("name/s3/~local/9ps3/gutenberg/pg-dorian_gray.txt")
+	fn := filepath.Join("name/s3/" + sp.LOCAL + "/9ps3/gutenberg/pg-dorian_gray.txt")
 	fn, ok := sp.S3ClientPath(fn)
 	assert.True(t, ok)
 	s := &api.Split{fn, 0, SPLITSZ}
@@ -204,7 +204,7 @@ func TestSplits(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	job, err1 = mr.ReadJobConfig(app)
+	job, err1 = mr.ReadJobConfig(filepath.Join("job-descriptions", app))
 	assert.Nil(t, err1, "Error ReadJobConfig: %v", err1)
 	bins, err := mr.NewBins(ts.FsLib, job.Input, sp.Tlength(job.Binsz), SPLITSZ)
 	assert.Nil(t, err)
@@ -462,7 +462,7 @@ func runN(t *testing.T, crashtask, crashcoord, crashschedd, crashprocq, crashux,
 	l3 := &sync.Mutex{}
 	for i := 0; i < crashprocq; i++ {
 		// Sleep for a random time, then crash a server.
-		go ts.CrashServer(sp.PROCQREL, (i+1)*CRASHSRV, l3, crashchan)
+		go ts.CrashServer(sp.BESCHEDREL, (i+1)*CRASHSRV, l3, crashchan)
 	}
 
 	db.DPrintf(db.TEST, "WaitGroup")

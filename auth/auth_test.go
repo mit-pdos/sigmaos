@@ -50,7 +50,7 @@ func TestMaliciousPrincipalS3Fail(t *testing.T) {
 		return
 	}
 
-	sts, err := rootts.GetDir(filepath.Join(sp.S3, "~local", "9ps3"))
+	sts, err := rootts.GetDir(filepath.Join(sp.S3, sp.LOCAL, "9ps3"))
 	assert.Nil(t, err)
 	db.DPrintf(db.TEST, "s3 contents %v", sp.Names(sts))
 
@@ -70,15 +70,15 @@ func TestMaliciousPrincipalS3Fail(t *testing.T) {
 	assert.Nil(t, err)
 	db.DPrintf(db.TEST, "realm names %v", sp.Names(sts))
 
-	sts, err = sc1.GetDir(filepath.Join(sp.S3, "~local"))
+	sts, err = sc1.GetDir(filepath.Join(sp.S3, sp.LOCAL))
 	assert.NotNil(t, err)
 	db.DPrintf(db.TEST, "s3 contents %v", sp.Names(sts))
 
-	sts, err = sc1.GetDir(filepath.Join(sp.S3, "~local", "9ps3"))
+	sts, err = sc1.GetDir(filepath.Join(sp.S3, sp.LOCAL, "9ps3"))
 	assert.NotNil(t, err, "Successfully got dir. \n\tPE: %v", sc1.ProcEnv())
 	db.DPrintf(db.TEST, "s3 contents %v", sp.Names(sts))
 
-	sts, err = rootts.GetDir(filepath.Join(sp.S3, "~local", "9ps3"))
+	sts, err = rootts.GetDir(filepath.Join(sp.S3, sp.LOCAL, "9ps3"))
 	assert.Nil(t, err)
 	db.DPrintf(db.TEST, "s3 contents %v", sp.Names(sts))
 
@@ -144,7 +144,7 @@ func TestDelegateFullAccessOK(t *testing.T) {
 
 	// Create a child proc, which should be able to access everything the test
 	// program can access
-	p1 := proc.NewProc("dirreader", []string{filepath.Join(sp.SCHEDD, "~any")})
+	p1 := proc.NewProc("dirreader", []string{filepath.Join(sp.SCHEDD, sp.ANY)})
 
 	err := rootts.Spawn(p1)
 	assert.Nil(t, err, "Spawn")
@@ -170,7 +170,7 @@ func TestDelegateNoAccessFail(t *testing.T) {
 		return
 	}
 
-	p1 := proc.NewProc("dirreader", []string{filepath.Join(sp.UX, "~any")})
+	p1 := proc.NewProc("dirreader", []string{filepath.Join(sp.UX, sp.ANY)})
 
 	err := rootts.Spawn(p1)
 	assert.Nil(t, err, "Spawn")
@@ -196,7 +196,7 @@ func TestDelegatePartialAccess(t *testing.T) {
 		return
 	}
 
-	p1 := proc.NewProc("dirreader", []string{filepath.Join(sp.S3, "~any")})
+	p1 := proc.NewProc("dirreader", []string{filepath.Join(sp.S3, sp.ANY)})
 
 	err := rootts.Spawn(p1)
 	assert.Nil(t, err, "Spawn")
@@ -212,7 +212,7 @@ func TestDelegatePartialAccess(t *testing.T) {
 	assert.True(t, status != nil && status.IsStatusErr(), "Exit status not error: %v", status)
 	db.DPrintf(db.TEST, "Unauthorized child proc return status: %v", status)
 
-	p2 := proc.NewProc("dirreader", []string{filepath.Join(sp.UX, "~any")})
+	p2 := proc.NewProc("dirreader", []string{filepath.Join(sp.UX, sp.ANY)})
 
 	err = rootts.Spawn(p2)
 	assert.Nil(t, err, "Spawn")
@@ -244,7 +244,7 @@ func TestAWSRestrictedProfileS3BucketAccess(t *testing.T) {
 		return
 	}
 
-	pn1 := filepath.Join(sp.S3, "~local", "mr-restricted")
+	pn1 := filepath.Join(sp.S3, sp.LOCAL, "mr-restricted")
 	pn2 := filepath.Join(pn1, "gutenberg")
 	sts, err := rootts.GetDir(pn1)
 	assert.Nil(t, err)
@@ -265,11 +265,11 @@ func TestAWSRestrictedProfileS3BucketAccess(t *testing.T) {
 	sc1, err := sigmaclnt.NewSigmaClnt(pe)
 	assert.Nil(t, err, "Err NewClnt: %v", err)
 
-	sts2, err := sc1.GetDir(filepath.Join(sp.S3, "~local") + "/")
-	assert.Nil(t, err, "Err GetDir [%v]: %v", filepath.Join(sp.S3, "~local/"), err)
+	sts2, err := sc1.GetDir(filepath.Join(sp.S3, sp.LOCAL) + "/")
+	assert.Nil(t, err, "Err GetDir [%v]: %v", filepath.Join(sp.S3, sp.LOCAL)+"/", err)
 	db.DPrintf(db.TEST, "accessbile s3 buckets %v", sp.Names(sts2))
 
-	sts2, err = sc1.GetDir(filepath.Join(sp.S3, "~local", "9ps3"))
+	sts2, err = sc1.GetDir(filepath.Join(sp.S3, sp.LOCAL, "9ps3"))
 	assert.NotNil(t, err, "Successfully got dir. \n\tPE: %v", sc1.ProcEnv())
 
 	sts2, err = sc1.GetDir(pn1)

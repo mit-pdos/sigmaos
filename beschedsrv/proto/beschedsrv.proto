@@ -2,9 +2,9 @@ syntax = "proto3";
 
 import "proc/proc.proto";
 
-option go_package = "sigmaos/procqsrv/proto";
+option go_package = "sigmaos/beschedsrv/proto";
 
-service ProcQ {
+service BESched {
   rpc Enqueue(EnqueueRequest) returns (EnqueueResponse);
   rpc GetProc(GetProcRequest) returns (GetProcResponse);
   rpc GetStats(GetStatsRequest) returns (GetStatsResponse);

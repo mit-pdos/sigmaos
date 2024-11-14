@@ -176,7 +176,7 @@ func TestWaitExitOne(t *testing.T) {
 
 	// cleaned up (may take a bit)
 	time.Sleep(500 * time.Millisecond)
-	_, err = ts.Stat(filepath.Join(sp.SCHEDD, "~local", sp.PIDS, pid.String()))
+	_, err = ts.Stat(filepath.Join(sp.SCHEDD, sp.LOCAL, sp.PIDS, pid.String()))
 	assert.NotNil(t, err, "Stat %v", filepath.Join(sp.PIDS, pid.String()))
 
 	end := time.Now()
@@ -209,7 +209,7 @@ func TestWaitExitN(t *testing.T) {
 
 			// cleaned up (may take a bit)
 			time.Sleep(500 * time.Millisecond)
-			_, err = ts.Stat(filepath.Join(sp.SCHEDD, "~local", sp.PIDS, pid.String()))
+			_, err = ts.Stat(filepath.Join(sp.SCHEDD, sp.LOCAL, sp.PIDS, pid.String()))
 			assert.NotNil(t, err, "Stat %v", filepath.Join(sp.PIDS, pid.String()))
 
 			checkSleeperResult(t, ts, pid)
@@ -238,14 +238,14 @@ func TestWaitExitParentRetStat(t *testing.T) {
 
 	// cleaned up
 	for {
-		_, err = ts.Stat(filepath.Join(sp.SCHEDD, "~local", sp.PIDS, pid.String()))
+		_, err = ts.Stat(filepath.Join(sp.SCHEDD, sp.LOCAL, sp.PIDS, pid.String()))
 		if err != nil {
 			break
 		}
 		time.Sleep(10 * time.Millisecond)
 		db.DPrintf(db.TEST, "PID dir not deleted yet.")
 	}
-	assert.NotNil(t, err, "Stat %v", filepath.Join(sp.SCHEDD, "~local", sp.PIDS, pid.String()))
+	assert.NotNil(t, err, "Stat %v", filepath.Join(sp.SCHEDD, sp.LOCAL, sp.PIDS, pid.String()))
 	end := time.Now()
 
 	assert.True(t, end.Sub(start) > SLEEP_MSECS*time.Millisecond)
@@ -275,7 +275,7 @@ func TestWaitExitParentAbandons(t *testing.T) {
 	time.Sleep(2 * SLEEP_MSECS * time.Millisecond)
 
 	// cleaned up
-	_, err = ts.Stat(filepath.Join(sp.SCHEDD, "~local", sp.PIDS, pid.String()))
+	_, err = ts.Stat(filepath.Join(sp.SCHEDD, sp.LOCAL, sp.PIDS, pid.String()))
 	assert.NotNil(t, err, "Stat")
 
 	end := time.Now()
@@ -304,7 +304,7 @@ func TestWaitExitParentCrash(t *testing.T) {
 	time.Sleep(2 * SLEEP_MSECS * time.Millisecond)
 
 	// cleaned up
-	_, err = ts.Stat(filepath.Join(sp.SCHEDD, "~local", sp.PIDS, pid.String()))
+	_, err = ts.Stat(filepath.Join(sp.SCHEDD, sp.LOCAL, sp.PIDS, pid.String()))
 	assert.NotNil(t, err, "Stat")
 
 	end := time.Now()
@@ -409,7 +409,7 @@ func TestEarlyExit1(t *testing.T) {
 	assert.Equal(t, "hello", string(b), "Output")
 
 	// .. and cleaned up
-	_, err = ts.Stat(filepath.Join(sp.SCHEDD, "~local", sp.PIDS, pid1.String()))
+	_, err = ts.Stat(filepath.Join(sp.SCHEDD, sp.LOCAL, sp.PIDS, pid1.String()))
 	assert.NotNil(t, err, "Stat")
 
 	cleanSleeperResult(t, ts, pid1)
@@ -455,7 +455,7 @@ func TestEarlyExitN(t *testing.T) {
 			assert.True(t, contentsCorrect, "Incorrect file contents: %v", string(b))
 
 			// .. and cleaned up
-			_, err = ts.Stat(filepath.Join(sp.SCHEDD, "~local", sp.PIDS, pid1.String()))
+			_, err = ts.Stat(filepath.Join(sp.SCHEDD, sp.LOCAL, sp.PIDS, pid1.String()))
 			assert.NotNil(t, err, "Stat")
 
 			cleanSleeperResult(t, ts, pid1)
@@ -512,7 +512,7 @@ func TestConcurrentProcs(t *testing.T) {
 			checkSleeperResult(t, ts, pid)
 			cleanSleeperResult(t, ts, pid)
 			time.Sleep(100 * time.Millisecond)
-			_, err := ts.Stat(filepath.Join(sp.SCHEDD, "~local", sp.PIDS, pid.String()))
+			_, err := ts.Stat(filepath.Join(sp.SCHEDD, sp.LOCAL, sp.PIDS, pid.String()))
 			assert.NotNil(t, err, "Stat %v", filepath.Join(sp.PIDS, pid.String()))
 		}(pid, &done, i)
 	}

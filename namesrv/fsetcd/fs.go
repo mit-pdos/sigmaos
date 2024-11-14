@@ -85,6 +85,7 @@ func (fs *FsEtcd) getFile(key string) (*EtcdFile, sp.TQversion, stats.Tcounter, 
 		return nil, 0, c, serr.NewErrError(err)
 	}
 	if len(resp.Kvs) != 1 {
+		db.DPrintf(db.FSETCD, "getFile unexpected len(resp.Kvs) %v %v %v err %v\n", len(resp.Kvs), key, resp, err)
 		return nil, 0, c, serr.NewErr(serr.TErrNotfound, key2realmpath(key))
 	}
 	nf := newEtcdFile()

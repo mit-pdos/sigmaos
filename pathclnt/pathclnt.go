@@ -81,12 +81,12 @@ func (pathc *PathClnt) detachAll() error {
 	return err
 }
 
-func (pathc *PathClnt) Create(p string, principal *sp.Tprincipal, perm sp.Tperm, mode sp.Tmode, lid sp.TleaseId, f *sp.Tfence) (sp.Tfid, error) {
-	db.DPrintf(db.PATHCLNT, "%v: Create %v perm %v lid %v\n", pathc.cid, p, perm, lid)
-	if filepath.Base(p) == "~local" || filepath.Base(p) == "~any" {
-		return sp.NoFid, fmt.Errorf("Can't create ~local or ~any: %v", p)
+func (pathc *PathClnt) Create(pn string, principal *sp.Tprincipal, perm sp.Tperm, mode sp.Tmode, lid sp.TleaseId, f *sp.Tfence) (sp.Tfid, error) {
+	db.DPrintf(db.PATHCLNT, "%v: Create %v perm %v lid %v\n", pathc.cid, pn, perm, lid)
+	if filepath.Base(pn) == sp.LOCAL || filepath.Base(pn) == sp.ANY {
+		return sp.NoFid, fmt.Errorf("Can't create %v or %v: %v", sp.LOCAL, sp.ANY, pn)
 	}
-	path, err := serr.PathSplitErr(p)
+	path, err := serr.PathSplitErr(pn)
 	if err != nil {
 		return sp.NoFid, err
 	}
@@ -94,12 +94,12 @@ func (pathc *PathClnt) Create(p string, principal *sp.Tprincipal, perm sp.Tperm,
 	base := path.Base()
 	fid, err := pathc.walk(dir, principal, true, nil)
 	if err != nil {
-		db.DPrintf(db.PATHCLNT_ERR, "%v: Walk failed: %v err %v", pathc.cid, p, err)
+		db.DPrintf(db.PATHCLNT_ERR, "%v: Walk failed: %v err %v", pathc.cid, pn, err)
 		return sp.NoFid, err
 	}
 	fid, err = pathc.FidClnt.Create(fid, base, perm, mode, lid, f)
 	if err != nil {
-		db.DPrintf(db.PATHCLNT_ERR, "%v: create failed: %v err %v", pathc.cid, p, err)
+		db.DPrintf(db.PATHCLNT_ERR, "%v: create failed: %v err %v", pathc.cid, pn, err)
 		return sp.NoFid, err
 	}
 	return fid, nil
@@ -287,8 +287,8 @@ func (pathc *PathClnt) GetFile(pn string, principal *sp.Tprincipal, mode sp.Tmod
 // Create or open file and write it
 func (pathc *PathClnt) PutFile(pn string, principal *sp.Tprincipal, mode sp.Tmode, perm sp.Tperm, data []byte, off sp.Toffset, lid sp.TleaseId, f *sp.Tfence) (sp.Tsize, error) {
 	db.DPrintf(db.PATHCLNT, "%v: PutFile %v %v %v\n", pathc.cid, pn, mode, lid)
-	if filepath.Base(pn) == "~local" || filepath.Base(pn) == "~any" {
-		return 0, fmt.Errorf("Can't create ~local or ~any: %v", pn)
+	if filepath.Base(pn) == sp.LOCAL || filepath.Base(pn) == sp.ANY {
+		return 0, fmt.Errorf("Can't create %v or %v: %v", sp.LOCAL, sp.ANY, pn)
 	}
 	p, err := serr.PathSplitErr(pn)
 	if err != nil {

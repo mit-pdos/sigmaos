@@ -37,7 +37,7 @@ func TestDump(t *testing.T) {
 	fs, err := fsetcd.NewFsEtcd(npc.Dial, pe.GetEtcdEndpoints(), pe.GetRealm(), nil)
 	assert.Nil(t, err)
 	nd, _, err := fs.ReadDir(fsetcd.NewDirEntInfoDir(fsetcd.ROOT))
-	assert.Nil(t, err)
+	assert.Nil(t, err, "Err %v", err)
 	err = fs.Dump(0, nd, path.Tpathname{}, fsetcd.ROOT)
 	eks, _, err := fs.LeasedPaths(sp.Trealm(realm))
 	assert.Nil(t, err)

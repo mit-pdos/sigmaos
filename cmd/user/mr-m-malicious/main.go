@@ -19,14 +19,14 @@ func main() {
 	}
 	// Should be able to access the restricted MR bucket. If not, then exit with
 	// OK so that the output files don't match.
-	if _, err := sc.GetDir(path.Join(sp.S3, "~local", "mr-restricted")); err != nil {
+	if _, err := sc.GetDir(path.Join(sp.S3, sp.LOCAL, "mr-restricted")); err != nil {
 		sc.ClntExitOK()
 	}
-	if sts, err := sc.GetDir(path.Join(sp.S3, "~local", "9ps3")); err == nil {
+	if sts, err := sc.GetDir(path.Join(sp.S3, sp.LOCAL, "9ps3")); err == nil {
 		// If able to get access to the s3 bucket the malicious mapper shouldn't
 		// have access to, declare success (from the malicious mapper's
 		// perspective)
-		db.DPrintf(db.ERROR, "HAHAHA! I can access your restricted S3 bucket [%v] ;)\n%v", path.Join(sp.S3, "~local", "9ps3"), sp.Names(sts))
+		db.DPrintf(db.ERROR, "HAHAHA! I can access your restricted S3 bucket [%v] ;)\n%v", path.Join(sp.S3, sp.LOCAL, "9ps3"), sp.Names(sts))
 		sc.ClntExitOK()
 	} else {
 		db.DPrintf(db.ALWAYS, "ARGH! Malicious mapper foiled!: %v", err)

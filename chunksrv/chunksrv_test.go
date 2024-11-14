@@ -17,7 +17,7 @@ import (
 
 const (
 	PROG = "sleeper"
-	PATH = "name/ux/~local/bin/user/common/"
+	PATH = "name/ux/" + sp.LOCAL + "/bin/user/common/"
 )
 
 type Tstate struct {

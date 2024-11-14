@@ -49,7 +49,7 @@ func TestOldLeaderCrash(t *testing.T) {
 }
 
 func TestMemfs(t *testing.T) {
-	dir := sp.MEMFS + "~local/"
+	dir := sp.MEMFS + sp.LOCAL + "/"
 	fencedir := filepath.Join(dir, sp.FENCEDIR)
 
 	ts, err1 := test.NewTstatePath(t, dir)

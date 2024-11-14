@@ -266,7 +266,7 @@ func TestAWSRestrictedProfileS3BucketAccess(t *testing.T) {
 	assert.Nil(t, err, "Err NewClnt: %v", err)
 
 	sts2, err := sc1.GetDir(filepath.Join(sp.S3, sp.LOCAL) + "/")
-	assert.Nil(t, err, "Err GetDir [%v]: %v", filepath.Join(sp.S3, "~local/"), err)
+	assert.Nil(t, err, "Err GetDir [%v]: %v", filepath.Join(sp.S3, sp.LOCAL)+"/", err)
 	db.DPrintf(db.TEST, "accessbile s3 buckets %v", sp.Names(sts2))
 
 	sts2, err = sc1.GetDir(filepath.Join(sp.S3, sp.LOCAL, "9ps3"))

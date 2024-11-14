@@ -181,7 +181,7 @@ func init() {
 	flag.Float64Var(&CONTENDERS_FRAC, "contenders", 4000, "Fraction of cores which should be taken up by contending procs.")
 	flag.IntVar(&GO_MAX_PROCS, "gomaxprocs", int(linuxsched.GetNCores()), "Go maxprocs setting for procs to be spawned.")
 	flag.IntVar(&MAX_PARALLEL, "max_parallel", 1, "Max amount of parallelism.")
-	flag.StringVar(&IMG_RESIZE_INPUT_PATH, "imgresize_path", "name/s3/~local/9ps3/img/1.jpg", "Path of img resize input file.")
+	flag.StringVar(&IMG_RESIZE_INPUT_PATH, "imgresize_path", "name/s3/"+sp.LOCAL+"/9ps3/img/1.jpg", "Path of img resize input file.")
 	flag.IntVar(&N_IMG_RESIZE_TASKS, "n_imgresize", 10, "Number of img resize tasks.")
 	flag.IntVar(&N_IMG_RESIZE_TASKS_PER_SECOND, "imgresize_tps", 1, "Number of img resize tasks/second.")
 	flag.DurationVar(&IMG_RESIZE_DUR, "imgresize_dur", 10*time.Second, "Duration of imgresize job")

@@ -110,7 +110,7 @@ func (ji *ImgResizeRPCJobInstance) Wait() {
 }
 
 func (ji *ImgResizeRPCJobInstance) Cleanup() {
-	dir := filepath.Join(sp.UX, "~local", filepath.Dir(ji.input))
+	dir := filepath.Join(sp.UX, sp.LOCAL, filepath.Dir(ji.input))
 	db.DPrintf(db.TEST, "[%v] Cleaning up dir %v", ji.GetRealm(), dir)
 	imgresizesrv.Cleanup(ji.FsLib, dir)
 }

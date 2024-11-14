@@ -23,7 +23,7 @@ import (
 const (
 	MR       = "/mr/"
 	MRDIRTOP = "name/" + MR
-	//MRDIRTOP    = "name/ux/~local/" + MR
+	//MRDIRTOP    = "name/ux/~sp.LOCAL/" + MR
 	MRDIRELECT  = "name/mr-elect"
 	OUTLINK     = "output"
 	INT_OUTLINK = "intermediate-output"
@@ -237,15 +237,15 @@ func PrepareJob(fsl *fslib.FsLib, ts *Tasks, jobRoot, jobName string, job *Job) 
 			return 0, err
 		}
 		for _, ux := range sp.Names(uxSts) {
-			intResolved := strings.ReplaceAll(job.Intermediate, "~local", ux)
+			intResolved := strings.ReplaceAll(job.Intermediate, sp.LOCAL, ux)
 			if err := fsl.MkDir(intResolved, 0777); err != nil {
 				return 0, err
 			}
-			intOutResolved := strings.ReplaceAll(intOutDir, "~local", ux)
+			intOutResolved := strings.ReplaceAll(intOutDir, sp.LOCAL, ux)
 			if err := fsl.MkDir(intOutResolved, 0777); err != nil {
 				return 0, err
 			}
-			redOutResolved := strings.ReplaceAll(redOutDir, "~local", ux)
+			redOutResolved := strings.ReplaceAll(redOutDir, sp.LOCAL, ux)
 			if err := fsl.MkDir(redOutResolved, 0777); err != nil {
 				return 0, err
 			}

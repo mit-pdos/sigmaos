@@ -24,7 +24,7 @@ import (
 	"sigmaos/test"
 )
 
-var pathname string // e.g., --path "name/ux/~local/" or  "name/schedd/~local/"
+var pathname string // e.g., --path "name/ux/sp.LOCAL/" or  "name/schedd/sp.LOCAL/"
 
 func init() {
 	flag.StringVar(&pathname, "path", sp.NAMED, "path for file system")
@@ -1150,11 +1150,11 @@ func TestUnionDir(t *testing.T) {
 	assert.Equal(t, nil, err)
 	assert.True(t, sp.Present(sts, path.Tpathname{"namedself0", "namedself1"}), "dir")
 
-	sts, err = ts.GetDir(filepath.Join(pathname, "d/~local") + "/")
+	sts, err = ts.GetDir(filepath.Join(pathname, "d", sp.LOCAL) + "/")
 	assert.Equal(t, nil, err)
 	assert.True(t, sp.Present(sts, path.Tpathname{"d"}), "dir")
 
-	pn, err := ts.ResolveMounts(filepath.Join(pathname, "d/~local"))
+	pn, err := ts.ResolveMounts(filepath.Join(pathname, "d", sp.LOCAL))
 	assert.Equal(t, nil, err)
 	sts, err = ts.GetDir(pn)
 	assert.Nil(t, err)
@@ -1181,7 +1181,7 @@ func TestUnionRoot(t *testing.T) {
 	assert.Nil(ts.T, err, "MkEndpointFile")
 
 	pn := pathname
-	if pathname != sp.NAMED && pathname != "name/memfs/~local/" {
+	if pathname != sp.NAMED && pathname != "name/memfs/"+sp.LOCAL+"/" {
 		pn = filepath.Join(pathname, sp.ANY)
 	}
 	sts, err := ts.GetDir(pn + "/")
@@ -1215,7 +1215,7 @@ func TestUnionSymlinkRead(t *testing.T) {
 	assert.Nil(ts.T, err, "MkEndpointFile")
 
 	basepn := pathname
-	if pathname != sp.NAMED && pathname != "name/memfs/~local/" {
+	if pathname != sp.NAMED && pathname != "name/memfs/"+sp.LOCAL+"/" {
 		basepn = filepath.Join(pathname, sp.ANY)
 	}
 	sts, err := ts.GetDir(filepath.Join(basepn, "d/namedself1") + "/")
@@ -1247,7 +1247,7 @@ func TestUnionSymlinkPut(t *testing.T) {
 
 	b := []byte("hello")
 	basepn := pathname
-	if pathname != sp.NAMED && pathname != "name/memfs/~local/" {
+	if pathname != sp.NAMED && pathname != "name/memfs/"+sp.LOCAL+"/" {
 		basepn = filepath.Join(pathname, sp.ANY)
 	}
 	fn := filepath.Join(basepn, "namedself0/f")
@@ -1349,7 +1349,7 @@ func TestEndpointUnion(t *testing.T) {
 	assert.Nil(ts.T, err, "MkEndpointFile")
 
 	eppn := "mount/"
-	if pathname != sp.NAMED && pathname != "name/memfs/~local/" {
+	if pathname != sp.NAMED && pathname != "name/memfs/"+sp.LOCAL+"/" {
 		eppn = filepath.Join(eppn, sp.ANY)
 	}
 

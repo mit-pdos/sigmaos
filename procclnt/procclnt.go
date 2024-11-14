@@ -82,7 +82,7 @@ func (clnt *ProcClnt) Spawn(p *proc.Proc) error {
 		}
 		p.SetNamedEndpoint(ep)
 	}
-	return clnt.spawn("~local", proc.HSCHEDD, p)
+	return clnt.spawn(sp.LOCAL, proc.HSCHEDD, p)
 }
 
 // Spawn a proc on kernelId.

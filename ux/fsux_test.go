@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	fn      = sp.UX + "/~local/"
+	fn      = sp.UX + "/" + sp.LOCAL + "/"
 	FILESZ  = 50 * sp.MBYTE
 	WRITESZ = 4096
 )
@@ -90,7 +90,7 @@ func TestDir(t *testing.T) {
 func writer(t *testing.T, ch chan error, pe *proc.ProcEnv, idx int) {
 	fsl, err := sigmaclnt.NewFsLib(pe, netproxyclnt.NewNetProxyClnt(pe))
 	assert.Nil(t, err)
-	fn := sp.UX + "~local/file-" + string(pe.GetPrincipal().GetID()) + "-" + strconv.Itoa(idx)
+	fn := sp.UX + sp.LOCAL + "/file-" + string(pe.GetPrincipal().GetID()) + "-" + strconv.Itoa(idx)
 	stop := false
 	nfile := 0
 	for !stop {

@@ -311,7 +311,7 @@ func TestWaitExitMultiNode(t *testing.T) {
 		return
 	}
 	rootts.BootNode(1)
-	subsysCnts := []int64{2, 1}
+	subsysCnts := []int64{2, 2}
 	ts1, err1 := test.NewRealmTstateNumSubsystems(rootts, REALM1, subsysCnts[0], subsysCnts[1])
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return

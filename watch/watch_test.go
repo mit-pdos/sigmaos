@@ -124,18 +124,21 @@ func testWatchPerf(t *testing.T, nWorkers int, nStartingFiles int, nTrials int, 
 	fmt.Printf("Creation Watch Delays:\n%s\n", computeStats(flatten(result.CreationWatchTimeNs)))
 	fmt.Printf("Deletion Watch Delays:\n%s\n", computeStats(flatten(result.DeletionWatchTimeNs)))
 
-	s3Filepath := filepath.Join("name/s3/~any/sigmaos-bucket-ryan/", fmt.Sprintf("watchperf_%s_%s.txt", prefix, time.Now().String()))
-	fd, err := ts.Create(s3Filepath, 0777, sp.OWRITE)
-	assert.Nil(t, err)
+	s3Bucket := os.Getenv("S3_BUCKET")
+	if s3Bucket != "" {
+		s3Filepath := filepath.Join("name/s3/~any/" + os.Getenv(s3Bucket), fmt.Sprintf("watchperf_%s_%s.txt", prefix, time.Now().String()))
+		fd, err := ts.Create(s3Filepath, 0777, sp.OWRITE)
+		assert.Nil(t, err)
 
-	creationWatchDelaysString := dataString(flatten(result.CreationWatchTimeNs))
-	deletionWatchDelaysString := dataString(flatten(result.DeletionWatchTimeNs))
-	writeString := strings.Join([]string{
-		creationWatchDelaysString,
-		deletionWatchDelaysString}, "\n")
-	_, err = ts.Write(fd, []byte(writeString))
-	assert.Nil(t, err)
-	ts.CloseFd(fd)
+		creationWatchDelaysString := dataString(flatten(result.CreationWatchTimeNs))
+		deletionWatchDelaysString := dataString(flatten(result.DeletionWatchTimeNs))
+		writeString := strings.Join([]string{
+			creationWatchDelaysString,
+			deletionWatchDelaysString}, "\n")
+		_, err = ts.Write(fd, []byte(writeString))
+		assert.Nil(t, err)
+		ts.CloseFd(fd)
+	}
 
 	ts.Shutdown()
 }

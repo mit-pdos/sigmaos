@@ -19,7 +19,6 @@ type FwatchV2 func(ents map[string] bool, changes map[string] bool) bool
 type DirReaderV2 struct {
 	*fslib.FsLib
 	*sync.Mutex
-	cond *sync.Cond
 	pn string
 	watchFd int
 	ents map[string]bool
@@ -37,9 +36,6 @@ func (wr watchReader) Read(p []byte) (int, error) {
 	size, err := wr.FsLib.Read(wr.watchFd, p)
 	return int(size), err
 }
-
-// TODO: update it so that this and the original dirreader have a unified interface and then swap between them with a flag
-
 
 var CREATE_PREFIX = "CREATE "
 var REMOVE_PREFIX = "REMOVE "
@@ -113,7 +109,7 @@ func (dw *DirReaderV2) ReadUpdates() error {
 }
 
 // should hold lock for dw
-func (dw *DirReaderV2)  ReadNextUpdate() error {
+func (dw *DirReaderV2) ReadNextUpdate() error {
 	event, err := dw.reader.ReadString('\n')
 
 	if dw.closed {
@@ -223,7 +219,6 @@ func (dw *DirReaderV2) readDirWatch(watch FwatchV2) error {
 	return nil
 }
 
-// Wait until pn isn't present
 func (dw *DirReaderV2) WaitRemove(file string) error {
 	err := dw.readDirWatch(func(ents map[string] bool, changes map[string]bool) bool {
 		db.DPrintf(db.WATCH_V2, "WaitRemove %v %v\n", ents, file)
@@ -232,7 +227,6 @@ func (dw *DirReaderV2) WaitRemove(file string) error {
 	return err
 }
 
-// Wait until pn exists
 func (dw *DirReaderV2) WaitCreate(file string) error {
 	err := dw.readDirWatch(func(ents map[string] bool, changes map[string]bool) bool {
 		db.DPrintf(db.WATCH_V2, "WaitCreate %v %v %t\n", ents, file, ents[file])
@@ -241,7 +235,6 @@ func (dw *DirReaderV2) WaitCreate(file string) error {
 	return err
 }
 
-// Wait until n entries are in the directory
 func (dw *DirReaderV2) WaitNEntries(n int) error {
 	err := dw.readDirWatch(func(ents map[string]bool, changes map[string]bool) bool {
 		db.DPrintf(db.WATCH_V2, "WaitNEntries: %v %v", ents, changes)
@@ -253,7 +246,6 @@ func (dw *DirReaderV2) WaitNEntries(n int) error {
 	return nil
 }
 
-// Wait until directory is empty
 func (dw *DirReaderV2) WaitEmpty() error {
 	err := dw.readDirWatch(func(ents map[string]bool, changes map[string]bool) bool {
 		db.DPrintf(db.WATCH_V2, "WaitEmpty: %v %v", ents, changes)
@@ -265,9 +257,6 @@ func (dw *DirReaderV2) WaitEmpty() error {
 	return nil
 }
 
-// Watch for a directory change relative to present view and then return
-// all directory entries. If provided, any file beginning with an
-// excluded prefix is ignored. present should be sorted.
 func (dw *DirReaderV2) WatchEntriesChangedRelative(present []string, excludedPrefixes []string) ([]string, bool, error) {
 	var files = make([]string, 0)
 	ix := 0
@@ -305,7 +294,6 @@ func (dw *DirReaderV2) WatchEntriesChangedRelative(present []string, excludedPre
 	return files, true, nil
 }
 
-// Watch for a directory change and then only return new changes since the last call to a Watch
 func (dw *DirReaderV2) WatchEntriesChanged() (map[string]bool, error) {
 	var ret map[string]bool
 	err := dw.readDirWatch(func(ents map[string]bool, changes map[string]bool) bool {
@@ -324,8 +312,6 @@ func (dw *DirReaderV2) WatchEntriesChanged() (map[string]bool, error) {
 	}
 }
 
-// Uses rename to move all entries in the directory to dst. If there are no further entries to be renamed,
-// waits for a new entry and moves it.
 func (dw *DirReaderV2) WatchNewEntriesAndRename(dst string) ([]string, error) {
 	var r error
 	presentFiles := filterMap(dw.ents)
@@ -351,7 +337,6 @@ func (dw *DirReaderV2) WatchNewEntriesAndRename(dst string) ([]string, error) {
 }
 
 
-// Uses rename to move all entries in the directory to dst. Does not block if there are no entries to rename
 func (dw *DirReaderV2) GetEntriesAndRename(dst string) ([]string, error) {
 	presentFiles := filterMap(dw.ents)
 	return dw.rename(presentFiles, dst)

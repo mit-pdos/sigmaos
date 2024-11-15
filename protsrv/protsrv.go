@@ -10,7 +10,6 @@ import (
 	"sigmaos/protsrv/lockmap"
 	"sigmaos/protsrv/namei"
 	"sigmaos/protsrv/pobj"
-	"sigmaos/protsrv/watch"
 	"sigmaos/serr"
 	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
@@ -24,7 +23,6 @@ type AttachAuthF func(*sp.Tprincipal, string) error
 type ProtSrv struct {
 	*ProtSrvState
 	fm          *fidMap
-	fwm         *watch.FidWatchMap
 	p           *sp.Tprincipal
 	srvPE       *proc.ProcEnv
 	sid         sessp.Tsession
@@ -36,7 +34,6 @@ func NewProtSrv(srvPE *proc.ProcEnv, pss *ProtSrvState, p *sp.Tprincipal, sid se
 	ps := &ProtSrv{
 		ProtSrvState: pss,
 		fm:           newFidMap(),
-		fwm:          watch.NewFidWatchMap(),
 		p:            p,
 		srvPE:        srvPE,
 		sid:          sid,
@@ -109,7 +106,7 @@ func (ps *ProtSrv) Attach(args *sp.Tattach, rets *sp.Rattach) (sp.TclntId, *sp.R
 
 // Close open files from this client and delete this client
 func (ps *ProtSrv) Detach(args *sp.Tdetach, rets *sp.Rdetach) *sp.Rerror {
-	fids := append(ps.fm.ClientFids(args.TclntId()), ps.fwm.ClientFids(args.TclntId())...)
+	fids := ps.fm.ClientFids(args.TclntId())
 	db.DPrintf(db.PROTSRV, "Detach clnt %v fes %v\n", args.TclntId(), fids)
 	for _, fid := range fids {
 		ps.clunk(fid)
@@ -181,32 +178,9 @@ func (ps *ProtSrv) Walk(args *sp.Twalk, rets *sp.Rwalk) *sp.Rerror {
 	return nil
 }
 
-func (ps *ProtSrv) clunkWatch(fid sp.Tfid) *sp.Rerror {
-	f, err := ps.fwm.LookupDel(fid)
-	if err != nil {
-		return sp.NewRerrorSerr(err)
-	}
-	db.DPrintf(db.PROTSRV, "%v: Clunk watch %v f %v path %q", f.Pobj().Ctx().ClntId(), fid, f, f.Pobj().Pathname())
-	if f.Watch() != nil {
-		f.Watch().LockPl()
-		ps.wtv2.FreeWatch(f.Watch(), f)
-		f.Watch().UnlockPl()
-	} else {
-		db.DFatalf("%v: clunk watch %v f %v watch nil\n", f.Pobj().Ctx().ClntId(), fid, f)
-	}
-
-	if _, err := ps.vt.Delete(f.Pobj().Obj().Path()); err != nil {
-		db.DFatalf("%v: clunk watch %v vt del failed %v err %v\n", f.Pobj().Ctx().ClntId(), fid, f.Pobj(), err)
-	}
-	return nil
-}
-
 func (ps *ProtSrv) clunk(fid sp.Tfid) *sp.Rerror {
 	f, err := ps.fm.LookupDel(fid)
 	if err != nil {
-		if serr.IsErrCode(err, serr.TErrUnknownfid) {
-			return ps.clunkWatch(fid)
-		}
 		return sp.NewRerrorSerr(err)
 	}
 	db.DPrintf(db.PROTSRV, "%v: Clunk %v f %v path %q", f.Pobj().Ctx().ClntId(), fid, f, f.Pobj().Pathname())
@@ -214,8 +188,16 @@ func (ps *ProtSrv) clunk(fid sp.Tfid) *sp.Rerror {
 		f.Pobj().Obj().Close(f.Pobj().Ctx(), f.Mode())
 		f.Close()
 	}
-	if _, err := ps.vt.Delete(f.Pobj().Obj().Path()); err != nil {
-		db.DFatalf("%v: clunk %v vt del failed %v err %v\n", f.Pobj().Ctx().ClntId(), fid, f.Pobj(), err)
+
+	watchObj, ok := f.Pobj().Obj().(*WatchFsObj)
+	if ok {
+		watchObj.Watch().LockPl()
+		ps.wtv2.FreeWatch(watchObj.Watch(), f)
+		watchObj.Watch().UnlockPl()
+	} else {
+		if _, err := ps.vt.Delete(f.Pobj().Obj().Path()); err != nil {
+			db.DFatalf("%v: clunk %v vt del failed %v err %v\n", f.Pobj().Ctx().ClntId(), fid, f.Pobj(), err)
+		}
 	}
 	return nil
 }
@@ -288,20 +270,18 @@ func (ps *ProtSrv) WatchV2(args *sp.Twatchv2, rets *sp.Rwatchv2) *sp.Rerror {
 	}
 
 	// Acquire path lock on the directory pn, so that no request can
-	// change the directory while setting a watch on it.  to the
-	// directory
+	// change the directory while setting a watch on the directory
 	pl := ps.plt.Acquire(dirf.Pobj().Ctx(), pn, lockmap.WLOCK)
 	defer ps.plt.Release(dirf.Pobj().Ctx(), pl, lockmap.WLOCK)
 
-	fidWatch := watch.NewFidWatch(dirf.Pobj())
+	fid := newFidWatch(dirf.Pobj().Ctx())
 
-	err = ps.fwm.Insert(args.Twatchfid(), fidWatch)
+	err = ps.fm.Insert(args.Twatchfid(), fid)
 	if err != nil {
 		return sp.NewRerrorSerr(err)
 	}
 
-	ps.wtv2.AllocWatch(pl, fidWatch)
-	ps.vt.Insert(dirf.qid.Tpath())
+	ps.wtv2.AllocWatch(pl, fid)
 
 	return nil
 }
@@ -324,29 +304,18 @@ func (ps *ProtSrv) Create(args *sp.Tcreate, rets *sp.Rcreate) *sp.Rerror {
 	return nil
 }
 
-func (ps *ProtSrv) ReadFWatch(args *sp.TreadF, rets *sp.Rread) ([]byte, *sp.Rerror) {
-	fidWatch, err := ps.fwm.Lookup(args.Tfid())
-	if err != nil {
-		return nil, sp.NewRerrorSerr(err)
-	}
-	buf := fidWatch.GetEventBuffer(int(args.Count))
-	rets.Count = uint32(len(buf))
-	return buf, nil
-}
-
 func (ps *ProtSrv) ReadF(args *sp.TreadF, rets *sp.Rread) ([]byte, *sp.Rerror) {
 	f, err := ps.fm.Lookup(args.Tfid())
 	if err != nil {
-		if serr.IsErrCode(err, serr.TErrUnknownfid) {
-			return ps.ReadFWatch(args, rets)
-		}
 		return nil, sp.NewRerrorSerr(err)
 	}
 
 	db.DPrintf(db.PROTSRV, "%v: ReadF f %v args {%v}\n", f.Pobj().Ctx().ClntId(), f, args)
 
-	flk := ps.plt.Acquire(f.Pobj().Ctx(), f.Pobj().Pathname(), lockmap.RLOCK)
-	defer ps.plt.Release(f.Pobj().Ctx(), flk, lockmap.RLOCK)
+	if !IsWatch(f.Pobj().Obj()) {
+		flk := ps.plt.Acquire(f.Pobj().Ctx(), f.Pobj().Pathname(), lockmap.RLOCK)
+		defer ps.plt.Release(f.Pobj().Ctx(), flk, lockmap.RLOCK)
+	}
 
 	data, err := f.Read(args.Toffset(), args.Tcount(), args.Tfence())
 	if err != nil {
@@ -378,6 +347,9 @@ func (ps *ProtSrv) WriteF(args *sp.TwriteF, data []byte, rets *sp.Rwrite) *sp.Re
 
 	db.DPrintf(db.PROTSRV, "%v: WriteV %v args {%v} path %d\n", f.Pobj().Ctx().ClntId(), f.Pobj().Pathname(), args, f.Pobj().Obj().Path())
 
+	if IsWatch(f.Pobj().Obj()) {
+		return sp.NewRerrorSerr(serr.NewErr(serr.TErrNowrite, "Cannot write to watch fid"))
+	}
 	n, err := f.Write(args.Toffset(), data, args.Tfence())
 	if err != nil {
 		return sp.NewRerrorSerr(err)

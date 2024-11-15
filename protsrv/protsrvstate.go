@@ -18,7 +18,7 @@ import (
 type ProtSrvState struct {
 	plt   *lockmap.PathLockTable
 	wt    *watch.WatchTable
-	wtv2  *watch.WatchTableV2
+	wtv2  *WatchTableV2
 	vt    *version.VersionTable
 	stats *stats.StatInode
 	lm    *leasedmap.LeasedMap
@@ -33,7 +33,7 @@ func NewProtSrvState(stats *stats.StatInode) *ProtSrvState {
 		plt:   lockmap.NewPathLockTable(),
 		cct:   cct,
 		wt:    watch.NewWatchTable(cct),
-		wtv2:  watch.NewWatchTableV2(),
+		wtv2:  newWatchTableV2(),
 		vt:    version.NewVersionTable(),
 	}
 	return pss

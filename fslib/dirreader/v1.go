@@ -71,7 +71,6 @@ func (dr *DirReaderV1) readDirWatch(watch Fwatch) (bool, error) {
 	}
 }
 
-// Wait until pn isn't present
 func (dr *DirReaderV1) WaitRemove(file string) error {
 	db.DPrintf(db.WATCH, "WaitRemove: file %v\n", file)
 	_, err := dr.readDirWatch(func(sts []*sp.Stat) bool {
@@ -86,7 +85,6 @@ func (dr *DirReaderV1) WaitRemove(file string) error {
 	return err
 }
 
-// Wait until pn exists
 func (dr *DirReaderV1) WaitCreate(file string) error {
 	db.DPrintf(db.WATCH, "WaitCreate: file %v\n", file)
 	_, err := dr.readDirWatch(func(sts []*sp.Stat) bool {
@@ -113,7 +111,6 @@ func (dr *DirReaderV1) GetDir() ([]string, error) {
 	return ents, nil
 }
 
-// Wait until n entries are in the directory
 func (dr *DirReaderV1) WaitNEntries(n int) error {
 	db.DPrintf(db.WATCH, "WaitNEntries: pn=%s n=%v\n", dr.pn, n)
 	_, err := dr.readDirWatch(func(sts []*sp.Stat) bool {
@@ -141,8 +138,6 @@ func (dr *DirReaderV1) WaitEmpty() error {
 	return nil
 }
 
-// Watch for a directory change relative to present change and return
-// all (unique) entries. Both present and sts are sorted.
 func (dr *DirReaderV1) WatchEntriesChangedRelative(present []string, prefixFilters []string) ([]string, bool, error) {
 	db.DPrintf(db.WATCH, "WatchEntriesChangedRelative: %v %v\n", present, prefixFilters)
 	newents := make([]string, 0)
@@ -201,7 +196,6 @@ func (dr *DirReaderV1) WatchEntriesChanged() (map[string]bool, error) {
 	return ents, nil
 }
 
-// GetEntsRename gets dr.pn's unique entries and renames them without blocking
 func (dr *DirReaderV1) GetEntriesAndRename(dst string) ([]string, error) {
 	sts, err := dr.FsLib.GetDir(dr.pn)
 	if err != nil {
@@ -214,7 +208,6 @@ func (dr *DirReaderV1) GetEntriesAndRename(dst string) ([]string, error) {
 	return newents, nil
 }
 
-// Watch for new entries in dr.pn and return unique renamed entries.
 func (dr *DirReaderV1) WatchNewEntriesAndRename(dst string) ([]string, error) {
 	var r error
 	var newents []string

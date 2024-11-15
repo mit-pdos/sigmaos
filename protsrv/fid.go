@@ -108,8 +108,10 @@ func (f *Fid) Read(off sp.Toffset, count sp.Tsize, fence sp.Tfence) ([]byte, *se
 			return nil, err
 		}
 		return b, nil
+	case *WatchFsObj:
+		return i.GetEventBuffer(int(count)), nil
 	default:
-		db.DFatalf("Read: obj %v type %T isn't Dir or File\n", po.Obj(), po.Obj())
+		db.DFatalf("Read: obj %v type %T isn't Dir or File or Watch\n", po.Obj(), po.Obj())
 		return nil, nil
 	}
 }

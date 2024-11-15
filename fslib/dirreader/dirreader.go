@@ -8,21 +8,47 @@ import (
 	"strconv"
 )
 
-// TODO:
-// - change the fidwatch to just be a normal fid with a diff fsobj
-// - write some doc comments
-
 type DirReader interface {
+	// Gets the path of the directory being watched
 	GetPath() string
+
+	// Gets the (potentially stale) list of files in the directory
 	GetDir() ([]string, error)
 	Close() error
+
+	// Waits for a file to be removed from the directory
 	WaitRemove(file string) error
+
+	// Waits for a file to be created in the directory
 	WaitCreate(file string) error
+
+	// Waits for n entries to be in the directory
+	// for V1, this does not account for deletions
+	// for V2, this accounts for deletions
 	WaitNEntries(n int) error
+
+	// Waits for the directory to be empty
 	WaitEmpty() error
+
+	// Watch for a directory change relative to present view and then return
+	// all directory entries. If provided, any file beginning with an
+	// excluded prefix is ignored. present should be sorted.
+  // 
+	// Also returns a boolean indicating whether the initial read of the directory
+	// was successful or not. This is only applicable to V1 and was kept for compatability
+	// purposes. In V2, this is always true
 	WatchEntriesChangedRelative(present []string, excludedPrefixes []string) ([]string, bool, error)
+
+	// Watch for a directory change and then return all directory entry changes since the last call to
+	// a Watch method. For V1, this does not properly account for deletions and can have incorrect results
+	// if used on the same DirReader instance as other Watch methods. This works as intended for V2.
 	WatchEntriesChanged() (map[string]bool, error)
+
+// Uses rename to move all entries in the directory to dst. If there are no further entries to be renamed,
+// waits for a new entry and then moves it.
 	WatchNewEntriesAndRename(dst string) ([]string, error)
+
+	// Uses rename to move all entries in the directory to dst. Does not block if there are no entries to rename
 	GetEntriesAndRename(dst string) ([]string, error)
 }
 
@@ -59,7 +85,6 @@ func NewDirReader(fslib *fslib.FsLib, pn string) (DirReader, error) {
 	}
 }
 
-// Wait until pn isn't present
 func WaitRemove(fsl *fslib.FsLib, pn string) error {
 	dir := filepath.Dir(pn) + "/"
 	f := filepath.Base(pn)
@@ -76,7 +101,6 @@ func WaitRemove(fsl *fslib.FsLib, pn string) error {
 	return err
 }
 
-// Wait until pn exists
 func WaitCreate(fsl *fslib.FsLib, pn string) error {
 	dir := filepath.Dir(pn) + "/"
 	f := filepath.Base(pn)

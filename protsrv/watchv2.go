@@ -1,4 +1,4 @@
-package watch
+package protsrv
 
 import (
 	db "sigmaos/debug"
@@ -6,38 +6,38 @@ import (
 	"sync"
 )
 
-type WatchV2 struct {
+type Watch struct {
 	pl   *lockmap.PathLock
-	fids []*FidWatch
+	fids []*Fid
 }
 
-func newWatchV2(pl *lockmap.PathLock) *WatchV2 {
-	w := &WatchV2{}
+func newWatch(pl *lockmap.PathLock) *Watch {
+	w := &Watch{}
 	w.pl = pl
 	return w
 }
 
-func (w *WatchV2) LockPl() {
+func (w *Watch) LockPl() {
 	w.pl.Lock()
 }
 
-func (w *WatchV2) UnlockPl() {
+func (w *Watch) UnlockPl() {
 	w.pl.Unlock()
 }
 
 type WatchTableV2 struct {
 	sync.Mutex
-	watches map[string]*WatchV2
+	watches map[string]*Watch
 }
 
-func NewWatchTableV2() *WatchTableV2 {
+func newWatchTableV2() *WatchTableV2 {
 	wt := &WatchTableV2{}
-	wt.watches = make(map[string]*WatchV2)
+	wt.watches = make(map[string]*Watch)
 	return wt
 }
 
 // Caller should have pl locked. Updates the fid's watch to store this
-func (wt *WatchTableV2) AllocWatch(pl *lockmap.PathLock, fid *FidWatch) *WatchV2 {
+func (wt *WatchTableV2) AllocWatch(pl *lockmap.PathLock, fid *Fid) *Watch {
 	wt.Lock()
 	defer wt.Unlock()
 
@@ -47,18 +47,22 @@ func (wt *WatchTableV2) AllocWatch(pl *lockmap.PathLock, fid *FidWatch) *WatchV2
 
 	ws, ok := wt.watches[p]
 	if !ok {
-		ws = newWatchV2(pl)
+		ws = newWatch(pl)
 		wt.watches[p] = ws
 	}
 	ws.fids = append(ws.fids, fid)
 
-	fid.watch = ws
+	watchObj, ok := fid.Pobj().Obj().(*WatchFsObj)
+	if !ok {
+		db.DFatalf("fid %v is not a watch\n", fid)
+	}
+	watchObj.watch = ws
 	return ws
 }
 
 
 // Free watch for path. Caller should have pl locked
-func (wt *WatchTableV2) FreeWatch(ws *WatchV2, fid *FidWatch) bool {
+func (wt *WatchTableV2) FreeWatch(ws *Watch, fid *Fid) bool {
 	db.DPrintf(db.WATCH_V2, "FreeWatch '%s'\n", ws.pl.Path())
 	wt.Lock()
 	defer wt.Unlock()
@@ -120,8 +124,12 @@ func (wt *WatchTableV2) addWatchEvent(pl *lockmap.PathLock, event string) {
 	
 	for _, fid := range ws.fids {
 		fid.mu.Lock()
-		fid.events = append(fid.events, event)
-		fid.cond.Broadcast()
+		watchObj, ok := fid.Pobj().Obj().(*WatchFsObj)
+		if !ok {
+			db.DFatalf("fid %v is not a watch\n", fid)
+		}
+		watchObj.events = append(watchObj.events, event)
+		watchObj.cond.Broadcast()
 		fid.mu.Unlock()
 	}
 }

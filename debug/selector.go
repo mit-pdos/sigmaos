@@ -261,7 +261,6 @@ const (
 	WATCH_ERR               = WATCH + ERR
 	LOCKMAP                 = "LOCKMAP"
 	SNAP                    = "SNAP"
-	STAT                    = "STAT"
 	NAMEI                   = "NAMEI"
 	FENCEFS                 = "FENCEFS"
 	FENCEFS_ERR             = FENCEFS + ERR

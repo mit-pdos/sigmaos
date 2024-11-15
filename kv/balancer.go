@@ -140,7 +140,7 @@ func RunBalancer(job, crashhelperstr, kvdmcpu string, auto string, repl string) 
 	// first epoch is used to create a functional system (e.g.,
 	// creating shards), so don't allow a crash then.
 	if _, err := bl.Stat(KVConfig(bl.job)); err == nil {
-		crash.Crasher(bl.FsLib)
+		crash.FailersDefault([]crash.Tselector{crash.KVBALANCER_CRASH, crash.KVBALANCER_PARTITION}, bl.FsLib)
 	}
 
 	go bl.monitorMyself()

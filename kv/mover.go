@@ -63,12 +63,18 @@ func NewMover(job, epochstr, shard, src, dst, repl string) (*Mover, error) {
 		db.DFatalf("couldn't start %v", err)
 	}
 
-	// crash.Crasher(mv.FsLib)
+	crash.Failer(crash.KVMOVER_CRASH, func(e crash.Tevent) {
+		crash.Crash()
+	})
 
-	if p := crash.PartitionParentProb(mv.SigmaClnt, 50); p {
+	crash.Failer(crash.KVMOVER_PARTITION, func(e crash.Tevent) {
+		// Randomly tell parent we exited but then keep running,
+		// simulating a network partition from the parent's point
+		// of view.
+		sc.ProcAPI.Exited(proc.NewStatusErr("partitioned", nil))
 		mv.exit = false // parent has received an exit status, so don't exit again
-		time.Sleep(2 * time.Second)
-	}
+		time.Sleep(time.Duration(e.Delay) * time.Millisecond)
+	})
 
 	checkFence(mv.FsLib, mv.job, mv.fence)
 

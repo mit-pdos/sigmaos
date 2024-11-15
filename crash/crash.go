@@ -13,7 +13,6 @@ import (
 	"sigmaos/proc"
 	"sigmaos/rand"
 	"sigmaos/sesssrv"
-	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 )
 
@@ -22,11 +21,19 @@ const ONE = 1000
 var labels map[Tselector]Tevent
 
 type Tevent struct {
-	Label       string  `json:"label"`       // see selector.go
-	Start       int64   `json:"start"`       // wait for start ms to start generating events
-	MaxInterval int64   `json:"maxinterval"` // max length of event interval in ms
-	Prob        float64 `json:"prob:`        // probability of generating event in this interval
-	Delay       int64   `json:"delay"`       // delay in ms (interpretable by event creator)
+	Label string `json:"label"` // see selector.go
+
+	// wait for start ms to start generating events
+	Start int64 `json:"start"`
+
+	// max length of event interval in ms (if 0, only once)
+	MaxInterval int64 `json:"maxinterval"`
+
+	// probability of generating event in this interval
+	Prob float64 `json:"prob:`
+
+	// delay in ms (interpretable by event creator)
+	Delay int64 `json:"delay"`
 }
 
 type Teventf func(e Tevent)
@@ -69,7 +76,10 @@ func init() {
 }
 
 func randSleep(c int64) uint64 {
-	ms := rand.Int64(c)
+	ms := uint64(0)
+	if c > 0 {
+		ms = rand.Int64(c)
+	}
 	r := rand.Int64(ONE)
 	// db.DPrintf(db.CRASH, "randSleep %dms r %d\n", ms, r)
 	time.Sleep(time.Duration(ms) * time.Millisecond)
@@ -140,22 +150,6 @@ func NetFailer(ss *sesssrv.SessSrv) {
 	}()
 }
 
-// Randomly tell parent we exited but then keep running, simulating a
-// network partition from the parent's point of view.
-func PartitionParentProb(sc *sigmaclnt.SigmaClnt, prob uint64) bool {
-	crash := sc.ProcEnv().GetCrash()
-	if crash == 0 {
-		return false
-	}
-	p := rand.Int64(100)
-	if p < prob {
-		db.DPrintf(db.CRASH, "PartitionParentProb %v p %v\n", prob, p)
-		sc.ProcAPI.Exited(proc.NewStatusErr("partitioned", nil))
-		return true
-	}
-	return false
-}
-
 func fail(crash int64, f func() string) {
 	msg := ""
 	if f != nil {
@@ -199,15 +193,19 @@ func PartitionNamed(fsl *fslib.FsLib) {
 
 func Failer(label Tselector, f Teventf) {
 	if e, ok := labels[label]; ok {
-		go func() {
+		go func(label Tselector, e Tevent) {
 			time.Sleep(time.Duration(e.Start) * time.Millisecond)
 			for true {
 				r := randSleep(e.MaxInterval)
 				if r < uint64(e.Prob*ONE) {
+					db.DPrintf(db.CRASH, "Label %v r %d %v", label, r, e)
 					f(e)
 				}
+				if e.MaxInterval == 0 {
+					break
+				}
 			}
-		}()
+		}(label, e)
 	} else {
 		db.DPrintf(db.CRASH, "Unknown label %v", label)
 	}

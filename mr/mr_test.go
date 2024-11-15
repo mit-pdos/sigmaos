@@ -55,7 +55,7 @@ var nmap int
 var job *mr.Job
 var timeout time.Duration
 
-var coordev []crash.Tevent
+var coordEv []crash.Tevent
 var taskEv []crash.Tevent
 
 func init() {

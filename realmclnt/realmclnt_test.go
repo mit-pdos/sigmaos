@@ -540,11 +540,17 @@ func TestMultiRealmIsolationBasic(t *testing.T) {
 
 	cc2 := cachedsvcclnt.NewCachedSvcClnt([]*fslib.FsLib{ts.ts2.FsLib}, job)
 
+	db.DPrintf(db.TEST, "About to stat srvs")
+
 	// Check that there is no cached in ts2
 	_, err = cc2.StatsSrvs()
 	assert.NotNil(t, err)
 
+	db.DPrintf(db.TEST, "Done stat srvs")
+
 	cm.Stop()
+
+	db.DPrintf(db.TEST, "Done cached stop")
 
 	ts.shutdown()
 }

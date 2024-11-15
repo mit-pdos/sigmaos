@@ -354,12 +354,15 @@ func (ups *UprocSrv) Run(ctx fs.CtxI, req proto.RunRequest, res *proto.RunResult
 		return err
 	}
 	pid := cmd.Pid()
-	db.DPrintf(db.UPROCD, "Pid %d\n", pid)
+	db.DPrintf(db.UPROCD, "Pid %v -> %d", uproc.GetPid(), pid)
 	pe, alloc := ups.procs.Alloc(pid, newProcEntry(uproc))
 	if !alloc { // it was already inserted
 		pe.insertSignal(uproc)
 	}
 	err = cmd.Wait()
+	if err != nil {
+		db.DPrintf(db.UPROCD, "[%v] Uproc Run cmd.Wait err %v", uproc.GetPid(), err)
+	}
 	scontainer.CleanupUproc(uproc.GetPid())
 	ups.procs.Delete(pid)
 	// ups.sc.CloseFd(pe.fd)

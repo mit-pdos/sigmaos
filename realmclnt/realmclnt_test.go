@@ -305,13 +305,17 @@ func TestBasicFairness(t *testing.T) {
 	rootts.Shutdown()
 }
 
+// May not work if running with non-local build, because we only start one S3
+// server but the proc may be spawned onto either node (and ~local resolution
+// will return ErrNotFound when fetching from the S3 Origin if using remote
+// builds on the node without an S3 server).
 func TestWaitExitMultiNode(t *testing.T) {
 	rootts, err1 := test.NewTstateWithRealms(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
 	rootts.BootNode(1)
-	subsysCnts := []int64{2, 2}
+	subsysCnts := []int64{1, 2}
 	ts1, err1 := test.NewRealmTstateNumSubsystems(rootts, REALM1, subsysCnts[0], subsysCnts[1])
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return

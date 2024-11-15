@@ -335,6 +335,9 @@ func (dc *DirCache[E]) watchDir(ch chan struct{}) {
 			} else { // give up
 				db.DPrintf(dc.ESelector, "watchDir[%v]: %t %v stop watching", dc.Path, ok, err)
 				dc.err = err
+				if first {
+					ch <- struct{}{}
+				}
 				return
 			}
 		}

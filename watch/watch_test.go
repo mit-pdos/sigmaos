@@ -126,7 +126,7 @@ func testWatchPerf(t *testing.T, nWorkers int, nStartingFiles int, nTrials int, 
 
 	s3Bucket := os.Getenv("S3_BUCKET")
 	if s3Bucket != "" {
-		s3Filepath := filepath.Join("name/s3/~any/" + os.Getenv(s3Bucket), fmt.Sprintf("watchperf_%s_%s.txt", prefix, time.Now().String()))
+		s3Filepath := filepath.Join("name/s3/~any/", s3Bucket, fmt.Sprintf("watchperf_%s_%s.txt", prefix, time.Now().String()))
 		fd, err := ts.Create(s3Filepath, 0777, sp.OWRITE)
 		assert.Nil(t, err)
 
@@ -155,7 +155,7 @@ func TestWatchStress(t *testing.T) {
 	testWatch(t, 10, 1000)
 }
 
-// Use USE_OLD_WATCH and WATCHPERF_MEASURE_MODE to configure perf data
+// Use DIRREADER_VERSION and WATCHPERF_MEASURE_MODE to configure perf data
 func TestWatchPerfSingleWorkerNoFiles(t *testing.T) {
 	testWatchPerf(t, 1, 0, 250, "single_no_files")
 }

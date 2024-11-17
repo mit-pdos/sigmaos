@@ -14,6 +14,10 @@ import (
 	sp "sigmaos/sigmap"
 )
 
+// TODO: figure out which tests if any are broken by this branch
+// TODO: write more small tests for each of the functions
+// TODO: make the message a protobuf instead of a string
+
 type FwatchV2 func(ents map[string] bool, changes map[string] bool) bool
 
 type DirReaderV2 struct {
@@ -118,10 +122,10 @@ func (dw *DirReaderV2) ReadNextUpdate() error {
 
 	if err != nil {
 		if serr.IsErrCode(err, serr.TErrClosed) || serr.IsErrCode(err, serr.TErrUnreachable) || serr.IsErrCode(err, serr.TErrUnknownfid) {
-			db.DPrintf(db.WATCH_V2, "DirWatcher: Watch stream for %s closed", dw.pn)
+			db.DPrintf(db.WATCH_V2, "DirReaderV2: Watch stream for %s closed", dw.pn)
 			return serr.NewErr(serr.TErrClosed, "")
 		} else {
-			db.DFatalf("DirWatcher: Watch stream produced err %v", err)
+			db.DFatalf("DirReaderV2: Watch stream produced err %v", err)
 		}
 	}
 
@@ -144,7 +148,7 @@ func (dw *DirReaderV2) ReadNextUpdate() error {
 		return serr.NewErr(serr.TErrClosed, "")
 	}
 
-	db.DPrintf(db.WATCH_V2, "DirWatcher: Read event %s %t", name, created)
+	db.DPrintf(db.WATCH_V2, "DirReaderV2: Read event %s %t", name, created)
 
 	dw.ents[name] = created
 	dw.changes[name] = created
@@ -157,7 +161,7 @@ func (dw *DirReaderV2) ReadNextUpdate() error {
 func (dw *DirReaderV2) HasUpdateAvailableInBuffer() (bool, error) {
 	buffer, err := dw.reader.Peek(dw.reader.Buffered())
 	if err != nil {
-		db.DPrintf(db.WATCH_V2, "DirWatcher: failed to peek at buffer for %s", dw.pn)
+		db.DPrintf(db.WATCH_V2, "DirReaderV2: failed to peek at buffer for %s", dw.pn)
 		return false, err
 	}
 

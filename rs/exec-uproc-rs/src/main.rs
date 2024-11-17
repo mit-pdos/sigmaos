@@ -104,8 +104,9 @@ fn main() {
     }
 
     let err = cmd.args(new_args).exec();
-
+    // Exec should never return
     log::info!("err: {}", err);
+    std::process::exit(1);
 }
 
 fn jail_proc(pid: &str) -> Result<(), Box<dyn std::error::Error>> {

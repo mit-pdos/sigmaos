@@ -78,6 +78,9 @@ func (ep *Tendpoint) TargetIPPort(idx int) (Tip, Tport) {
 }
 
 func (ep *Tendpoint) String() string {
+	if ep.TendpointProto == nil {
+		return "<nil-endpoint-proto>"
+	}
 	return fmt.Sprintf("{ type:%v addr:%v root:%v }", ep.Type(), ep.Claims.Addr, ep.Root)
 }
 

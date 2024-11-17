@@ -48,7 +48,7 @@ type encoder struct {
 func (e *encoder) encode(vs ...interface{}) error {
 	for _, v := range vs {
 		switch v := v.(type) {
-		case bool, uint8, uint16, uint32, uint64, sessp.Tfcall, sessp.Ttag, np.Qtype9P, np.Tpath, np.TQversion, np.Tperm, np.Tlength,
+		case bool, uint8, uint16, uint32, uint64, sessp.Tfcall, np.Ttag, np.Qtype9P, np.Tpath, np.TQversion, np.Tperm, np.Tlength,
 			*bool, *uint8, *uint16, *uint32, *uint64:
 			if err := binary.Write(e.wr, binary.LittleEndian, v); err != nil {
 				return err
@@ -206,7 +206,7 @@ type decoder struct {
 func (d *decoder) decode(vs ...interface{}) error {
 	for _, v := range vs {
 		switch v := v.(type) {
-		case *bool, *uint8, *uint16, *uint32, *uint64, *sessp.Tfcall, *sessp.Ttag, *np.Tfid, *np.Toffset, *np.Tsize, *np.Tmode9P, *np.Tperm, *np.Tlength, *np.Tpath, *np.TQversion, *np.Qtype9P:
+		case *bool, *uint8, *uint16, *uint32, *uint64, *sessp.Tfcall, *np.Ttag, *np.Tfid, *np.Toffset, *np.Tsize, *np.Tmode9P, *np.Tperm, *np.Tlength, *np.Tpath, *np.TQversion, *np.Qtype9P:
 			if err := binary.Read(d.rd, binary.LittleEndian, v); err != nil {
 				return err
 			}

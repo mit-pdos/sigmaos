@@ -76,7 +76,7 @@ func (o *Topen) Tmode() Tmode {
 	return Tmode(o.Mode)
 }
 
-func NewTcreate(fid Tfid, n string, p Tperm, mode Tmode, lid TleaseId, f Tfence) *Tcreate {
+func NewTcreate(fid Tfid, n string, p Tperm, mode Tmode, lid TleaseId, f *Tfence) *Tcreate {
 	return &Tcreate{Fid: uint32(fid), Name: n, Perm: uint32(p), Mode: uint32(mode), Lease: uint64(lid), Fence: f.FenceProto()}
 }
 

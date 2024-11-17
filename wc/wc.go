@@ -8,7 +8,7 @@ import (
 	"bufio"
 	"strconv"
 
-	"sigmaos/mr"
+	"sigmaos/mr/mr"
 )
 
 func Map(filename string, scanner *bufio.Scanner, emit mr.EmitT) error {

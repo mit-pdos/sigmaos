@@ -5,6 +5,11 @@ import (
 	"strings"
 )
 
+const (
+	ANY   = "~any"
+	LOCAL = "~local"
+)
+
 // if name ends in "/", it is a directory with mount files for that service
 const (
 	KNAMED      = "knamed"
@@ -34,11 +39,11 @@ const (
 	LCSCHEDREL  = "lcsched"
 	LCSCHED     = NAMED + LCSCHEDREL + "/"
 	SPPROXYDREL = "spproxyd"
-	PROCQREL    = "procq"
-	PROCQ       = NAMED + PROCQREL + "/"
+	BESCHEDREL  = "besched"
+	BESCHED     = NAMED + BESCHEDREL + "/"
 	DBREL       = "db"
 	DB          = NAMED + DBREL + "/"
-	DBD         = DB + "~any/"
+	DBD         = DB + ANY + "/"
 	MONGOREL    = "mongo"
 	MONGO       = NAMED + MONGOREL + "/"
 
@@ -87,7 +92,15 @@ func IsS3Path(pn string) bool {
 }
 
 func S3ClientPath(pn string) (string, bool) {
-	pn0, ok := strings.CutPrefix(pn, filepath.Join(S3, "~local"))
+	pn0, ok := strings.CutPrefix(pn, S3)
+	if !ok {
+		return pn, false
+	}
+	pn0, ok = strings.CutPrefix(pn0, LOCAL)
+	if ok {
+		return filepath.Join(S3CLNT, pn0), true
+	}
+	pn0, ok = strings.CutPrefix(pn0, ANY)
 	if ok {
 		return filepath.Join(S3CLNT, pn0), true
 	}
@@ -98,7 +111,7 @@ func S3ClientPath(pn string) (string, bool) {
 var RootNamedMountedDirs map[string]bool = map[string]bool{
 	REALMREL:   true,
 	LCSCHEDREL: true,
-	PROCQREL:   true,
+	BESCHEDREL: true,
 	SCHEDDREL:  true,
 	BOOTREL:    true,
 	DBREL:      true,
@@ -115,15 +128,15 @@ const (
 // spproxyd kernel
 const (
 	SPPROXYDKERNEL = "kernel-" + SPPROXYDREL + "-"
-	PROCQKERNEL    = "kernel-" + PROCQREL + "-"
+	BESCHEDKERNEL  = "kernel-" + BESCHEDREL + "-"
 )
 
 func SPProxydKernel(kid string) string {
 	return SPPROXYDKERNEL + kid
 }
 
-func ProcqKernel(kid string) string {
-	return PROCQKERNEL + kid
+func BESchedKernel(kid string) string {
+	return BESCHEDKERNEL + kid
 }
 
 func ProxyPathname(srv, kid string) string {

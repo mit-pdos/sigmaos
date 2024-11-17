@@ -2,6 +2,7 @@ package s3pathclnt
 
 import (
 	"context"
+	"io"
 	"net"
 	"net/http"
 	"strings"
@@ -19,11 +20,6 @@ import (
 	sos "sigmaos/sigmaos"
 	sp "sigmaos/sigmap"
 	"sigmaos/syncmap"
-)
-
-const (
-	MB      = (1 << 20)
-	CHUNKSZ = 4 * MB
 )
 
 type S3PathClnt struct {
@@ -73,7 +69,7 @@ func (s3c *S3PathClnt) Open(pn string, principal *sp.Tprincipal, mode sp.Tmode, 
 	return sp.NoFid, serr.NewErr(serr.TErrInval, mode)
 }
 
-func (s3c *S3PathClnt) Create(pn string, principal *sp.Tprincipal, perm sp.Tperm, mode sp.Tmode, lid sp.TleaseId, f sp.Tfence) (sp.Tfid, error) {
+func (s3c *S3PathClnt) Create(pn string, principal *sp.Tprincipal, perm sp.Tperm, mode sp.Tmode, lid sp.TleaseId, f *sp.Tfence) (sp.Tfid, error) {
 	s3w, err := s3c.openS3Writer(pn)
 	if err != nil {
 		return sp.NoFid, err
@@ -91,6 +87,14 @@ func (s3c *S3PathClnt) ReadF(fid sp.Tfid, off sp.Toffset, b []byte, f *sp.Tfence
 	}
 	n, err := s3r.read(off, b)
 	return sp.Tsize(n), err
+}
+
+func (s3c *S3PathClnt) PreadRdr(fid sp.Tfid, off sp.Toffset, sz sp.Tsize) (io.ReadCloser, error) {
+	s3r, ok := s3c.rfids.Lookup(fid)
+	if !ok {
+		return nil, serr.NewErr(serr.TErrNotfound, fid)
+	}
+	return s3r.readRdr(off, sz)
 }
 
 func (s3c *S3PathClnt) WriteF(fid sp.Tfid, off sp.Toffset, data []byte, f *sp.Tfence) (sp.Tsize, error) {
@@ -115,11 +119,6 @@ func (s3c *S3PathClnt) Clunk(fid sp.Tfid) error {
 		return nil
 	}
 	return serr.NewErr(serr.TErrNotfound, fid)
-}
-
-// To implement PathClntAPI...
-func (s3c *S3PathClnt) LookupPath(fid sp.Tfid) (path.Tpathname, error) {
-	return nil, nil
 }
 
 // XXX deduplicate with s3

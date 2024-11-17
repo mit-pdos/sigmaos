@@ -305,13 +305,17 @@ func TestBasicFairness(t *testing.T) {
 	rootts.Shutdown()
 }
 
+// May not work if running with non-local build, because we only start one S3
+// server but the proc may be spawned onto either node (and ~local resolution
+// will return ErrNotFound when fetching from the S3 Origin if using remote
+// builds on the node without an S3 server).
 func TestWaitExitMultiNode(t *testing.T) {
 	rootts, err1 := test.NewTstateWithRealms(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
 	rootts.BootNode(1)
-	subsysCnts := []int64{2, 1}
+	subsysCnts := []int64{1, 2}
 	ts1, err1 := test.NewRealmTstateNumSubsystems(rootts, REALM1, subsysCnts[0], subsysCnts[1])
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
@@ -461,7 +465,7 @@ func TestKernelIsolationBasic(t *testing.T) {
 	rootNamedEP, err := ts.rootts.GetNamedEndpoint()
 	assert.Nil(t, err, "Err %v", err)
 	db.DPrintf(db.TEST, "rootNamed EP: %v", rootNamedEP)
-	pn := filepath.Join(sp.NAME, sp.PROCQREL) + "/"
+	pn := filepath.Join(sp.NAME, sp.BESCHEDREL) + "/"
 	db.DPrintf(db.TEST, "Try to get dir %v", pn)
 	// Ensure that tenant realms can perform GetDir on union directories which
 	// live in the root named (and are mounted into the tenant's named)
@@ -495,7 +499,7 @@ func TestKernelIsolationBasic(t *testing.T) {
 	assert.NotNil(t, err, "Able to mount kernelsrv")
 
 	// Read an s3 endpoint from realm 1
-	s3r1EP, err := ts.ts1.ReadEndpoint(filepath.Join(sp.S3, "~any"))
+	s3r1EP, err := ts.ts1.ReadEndpoint(filepath.Join(sp.S3, sp.ANY))
 	assert.Nil(t, err, "Err %v", err)
 	db.DPrintf(db.TEST, "S3 Realm1 EP: %v", s3r1EP)
 	// Make sure ts1 can mount its realm's S3 server
@@ -506,7 +510,7 @@ func TestKernelIsolationBasic(t *testing.T) {
 	assert.NotNil(t, err, "Able to mount s3r1")
 
 	// Read a ux endpoint from realm 2
-	uxr2EP, err := ts.ts2.ReadEndpoint(filepath.Join(sp.UX, "~any"))
+	uxr2EP, err := ts.ts2.ReadEndpoint(filepath.Join(sp.UX, sp.ANY))
 	assert.Nil(t, err, "Err %v", err)
 	db.DPrintf(db.TEST, "UX Realm2 EP: %v", uxr2EP)
 	// Make sure ts2 can mount its realm's UX server
@@ -536,11 +540,17 @@ func TestMultiRealmIsolationBasic(t *testing.T) {
 
 	cc2 := cachedsvcclnt.NewCachedSvcClnt([]*fslib.FsLib{ts.ts2.FsLib}, job)
 
+	db.DPrintf(db.TEST, "About to stat srvs")
+
 	// Check that there is no cached in ts2
 	_, err = cc2.StatsSrvs()
 	assert.NotNil(t, err)
 
+	db.DPrintf(db.TEST, "Done stat srvs")
+
 	cm.Stop()
+
+	db.DPrintf(db.TEST, "Done cached stop")
 
 	ts.shutdown()
 }

@@ -183,29 +183,19 @@ func (mc *MntClnt) MountedPaths() []string {
 
 // Disconnect client from server permanently to simulate network
 // partition to server that exports pn
-func (mc *MntClnt) Disconnect(pn string, fids []sp.Tfid) error {
-	db.DPrintf(db.CRASH, "Disconnect %v mnts %v\n", pn, mc.MountedPaths())
+func (mc *MntClnt) Disconnect(pn string) error {
 	p, err := serr.PathSplitErr(pn)
 	if err != nil {
 		return err
 	}
 	pnt, ok := mc.mnt.isMountedAt(p)
-	for _, fid := range fids {
-		ch := mc.fidc.Lookup(fid)
-		if ch != nil {
-			if p.IsParent(ch.Path()) {
-				db.DPrintf(db.CRASH, "fid disconnect fid %v %v %v\n", fid, ch, pnt)
-				mc.fidc.Disconnect(fid)
-			}
-		}
+	if ok {
+		db.DPrintf(db.CRASH, "Disconnect %v pnt %v\n", pn, pnt)
+		mc.fidc.DisconnectAll(pnt.fid)
+		pnt.disconnect()
+	} else {
+		return serr.NewErr(serr.TErrUnreachable, pnt.path)
 	}
 	mc.rootmt.disconnect(pnt.path.String())
-	if ok {
-		pnt.disconnect()
-		fid, ok := pnt.getFid()
-		if ok {
-			mc.fidc.Disconnect(fid)
-		}
-	}
 	return nil
 }

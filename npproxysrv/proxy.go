@@ -122,9 +122,8 @@ func (npc *NpSess) Attach(args *sp.Tattach, rets *sp.Rattach) (sp.TclntId, *sp.R
 		db.DFatalf("Attach: resolve err %v", err)
 		return sp.NoClntId, sp.NewRerrorSerr(serr.NewErrError(err))
 	}
-	rets.Qid = npc.qm.Insert(path.Tpathname{sp.NAMED}, []*sp.Tqid{npc.fidc.Qid(fid)})[0]
+	rets.Qid = npc.qm.Insert(fid, []*sp.Tqid{npc.fidc.Qid(fid)})[0]
 	npc.fm.mapTo(args.Tfid(), fid)
-	npc.fidc.Lookup(fid).SetPath(path.Split(sp.NAMED))
 	db.DPrintf(db.NPPROXY, "Attach args %v rets %v fid %v\n", args, rets, fid)
 	return args.TclntId(), nil
 }
@@ -152,7 +151,7 @@ func (npc *NpSess) Walk(args *sp.Twalk, rets *sp.Rwalk) *sp.Rerror {
 	qids := ch.Qids()
 	qids = qids[len(qids)-len(args.Wnames):]
 
-	rets.Qids = npc.qm.Insert(ch.Path(), qids)
+	rets.Qids = npc.qm.Insert(fid1, qids)
 	npc.fm.mapTo(args.Tnewfid(), fid1)
 	return nil
 }
@@ -185,7 +184,7 @@ func (npc *NpSess) Create(args *sp.Tcreate, rets *sp.Rcreate) *sp.Rerror {
 	if !ok {
 		return sp.NewRerrorCode(serr.TErrNotfound)
 	}
-	fid1, err := npc.fidc.Create(fid, args.Name, args.Tperm(), args.Tmode(), sp.NoLeaseId, sp.NoFence())
+	fid1, err := npc.fidc.Create(fid, args.Name, args.Tperm(), args.Tmode(), sp.NoLeaseId, sp.NullFence())
 	if err != nil {
 		db.DPrintf(db.NPPROXY, "Create args %v err: %v\n", args, err)
 		return sp.NewRerrorSerr(err)
@@ -204,7 +203,7 @@ func (npc *NpSess) Clunk(args *sp.Tclunk, rets *sp.Rclunk) *sp.Rerror {
 		return sp.NewRerrorCode(serr.TErrNotfound)
 	}
 	ch := npc.fidc.Lookup(fid)
-	npc.qm.Clunk(ch.Path(), ch.Lastqid())
+	npc.qm.Clunk(fid, ch.Lastqid())
 	err := npc.fidc.Clunk(fid)
 	if err != nil {
 		db.DPrintf(db.NPPROXY, "Clunk: args %v err %v\n", args, err)

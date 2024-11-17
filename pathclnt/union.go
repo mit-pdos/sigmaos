@@ -3,8 +3,8 @@ package pathclnt
 import (
 	db "sigmaos/debug"
 	"sigmaos/fidclnt"
+	"sigmaos/fslib/reader"
 	"sigmaos/path"
-	"sigmaos/reader"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 )
@@ -43,7 +43,7 @@ func (pathc *PathClnt) unionScan(fid sp.Tfid, name, q string) (sp.Tfid, *serr.Er
 	}
 	db.DPrintf(db.WALK, "unionScan: %v ep: %v", name, ep)
 	ok, _ := pathc.IsLocalMount(ep)
-	if q == "~any" || ok {
+	if q == sp.ANY || ok {
 		fid2, _, err := pathc.FidClnt.Walk(fid, []string{name})
 		if err != nil {
 			db.DPrintf(db.WALK, "unionScan UnionMatch Walk %v err %v", fid, err)

@@ -15,6 +15,7 @@ import (
 	"sigmaos/port"
 	"sigmaos/proc"
 	"sigmaos/rpcclnt"
+	"sigmaos/rpcdirclnt"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmarpcchan"
@@ -32,7 +33,7 @@ type Www struct {
 	reservec *rpcclnt.RPCClnt
 	profc    *rpcclnt.RPCClnt
 	recc     *rpcclnt.RPCClnt
-	geoc     *rpcclnt.RPCClnt
+	geodc    *rpcdirclnt.RPCDirClnt
 }
 
 // Run starts the server
@@ -75,11 +76,7 @@ func RunWww(job string, public bool) error {
 		return err
 	}
 	www.recc = rpcc
-	rpcc, err = sigmarpcchan.NewSigmaRPCClnt(fsls, HOTELGEO)
-	if err != nil {
-		return err
-	}
-	www.geoc = rpcc
+	www.geodc = rpcdirclnt.NewRPCDirClnt(fsls[0], HOTELGEODIR, db.HOTEL_WWW, db.HOTEL_WWW_ERR)
 
 	//	www.tracer = tracing.Init("wwwd", proc.GetSigmaJaegerIP())
 	var mux *http.ServeMux
@@ -533,7 +530,17 @@ func (s *Www) geoHandler(w http.ResponseWriter, r *http.Request) {
 		Lon:               lon,
 		SpanContextConfig: nil, //sctx,
 	}
-	err := s.geoc.RPC("Geo.Nearby", &greq, &gres)
+	geoID, err := s.geodc.WaitTimedRandomEntry()
+	if err != nil {
+		db.DFatalf("choose srv error: %v", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	rpcc, err := s.geodc.GetClnt(geoID)
+	if err != nil {
+		db.DFatalf("geo getClnt error: %v", err)
+	}
+	err = rpcc.RPC("Geo.Nearby", &greq, &gres)
 	//	err := s.geoc.RPC("Geo.Nearby", greq, &gres)
 	if err != nil {
 		db.DFatalf("nearby error: %v", err)

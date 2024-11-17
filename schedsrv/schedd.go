@@ -7,6 +7,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"sigmaos/beschedclnt"
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/fslib"
@@ -15,7 +16,6 @@ import (
 	"sigmaos/mem"
 	"sigmaos/perf"
 	"sigmaos/proc"
-	"sigmaos/procqclnt"
 	"sigmaos/scheddclnt"
 	"sigmaos/schedsrv/procmgr"
 	"sigmaos/schedsrv/proto"
@@ -32,7 +32,7 @@ type Schedd struct {
 	cond                *sync.Cond
 	pmgr                *procmgr.ProcMgr
 	scheddclnt          *scheddclnt.ScheddClnt
-	procqclnt           *procqclnt.ProcQClnt
+	beschedclnt         *beschedclnt.BESchedClnt
 	pqsess              *syncmap.SyncMap[string, *ProcqSession]
 	mcpufree            proc.Tmcpu
 	memfree             proc.Tmem
@@ -59,7 +59,7 @@ func NewSchedd(sc *sigmaclnt.SigmaClnt, kernelID string, reserveMcpu uint) *Sche
 	}
 	sd.cond = sync.NewCond(&sd.mu)
 	sd.scheddclnt = scheddclnt.NewScheddClnt(sc.FsLib, sp.NOT_SET)
-	sd.procqclnt = procqclnt.NewProcQClntSchedd(sc.FsLib,
+	sd.beschedclnt = beschedclnt.NewBESchedClntSchedd(sc.FsLib,
 		func(pqID string) {
 			// When a new procq client is created, advance the epoch for the
 			// corresponding procq
@@ -97,7 +97,7 @@ func (sd *Schedd) ForceRun(ctx fs.CtxI, req proto.ForceRunRequest, res *proto.Fo
 		return fmt.Errorf("Proc realm %v doesn't match principal realm %v", p.GetRealm(), ctx.Principal().GetRealm())
 	}
 	// If this proc's memory has not been accounted for (it was not spawned via
-	// the ProcQ), account for it.
+	// the BESched), account for it.
 	if !req.MemAccountedFor {
 		sd.allocMem(p.GetMem())
 	}
@@ -141,7 +141,7 @@ func (sd *Schedd) WaitEvict(ctx fs.CtxI, req proto.WaitRequest, res *proto.WaitR
 	return nil
 }
 
-// Wait for a proc to mark itself as exited.
+// Evict a proc
 func (sd *Schedd) Evict(ctx fs.CtxI, req proto.NotifyRequest, res *proto.NotifyResponse) error {
 	db.DPrintf(db.SCHEDD, "Evict %v", req.PidStr)
 	sd.pmgr.Evict(sp.Tpid(req.PidStr))
@@ -252,7 +252,7 @@ func (sd *Schedd) getQueuedProcs() {
 		db.DPrintf(db.SCHEDD, "[%v] Try GetProc mem=%v bias=%v", sd.kernelID, memFree, bias)
 		start := time.Now()
 		// Try to get a proc from the proc queue.
-		p, pseqno, qlen, ok, err := sd.procqclnt.GetProc(sd.kernelID, memFree, bias)
+		p, pseqno, qlen, ok, err := sd.beschedclnt.GetProc(sd.kernelID, memFree, bias)
 		var pmem proc.Tmem
 		if ok {
 			pmem = p.GetMem()
@@ -345,7 +345,7 @@ func (sd *Schedd) shouldGetBEProc() (proc.Tmem, bool) {
 }
 
 func (sd *Schedd) register() {
-	rpcc, err := sigmarpcchan.NewSigmaRPCClnt([]*fslib.FsLib{sd.sc.FsLib}, filepath.Join(sp.LCSCHED, "~any"))
+	rpcc, err := sigmarpcchan.NewSigmaRPCClnt([]*fslib.FsLib{sd.sc.FsLib}, filepath.Join(sp.LCSCHED, sp.ANY))
 	if err != nil {
 		db.DFatalf("Error lsched rpccc: %v", err)
 	}

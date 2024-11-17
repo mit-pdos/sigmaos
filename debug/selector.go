@@ -39,6 +39,7 @@ const (
 const (
 	TEST     Tselector = "TEST"
 	TEST1              = "TEST1"
+	STAT               = "STAT"
 	TEST_LAT           = "TEST_LAT"
 	DELAY              = "DELAY"
 	CRASH              = "CRASH"
@@ -59,11 +60,13 @@ const (
 	RPC_BENCH_CLNT                    = "RPC_BENCH_CLNT"
 	HOTEL_CLNT                        = "HOTEL_CLNT"
 	HOTEL_GEO                         = "HOTEL_GEO"
+	HOTEL_GEO_ERR                     = "HOTEL_GEO" + ERR
 	HOTEL_PROF                        = "HOTEL_PROF"
 	HOTEL_RATE                        = "HOTEL_RATE"
 	HOTEL_RESERVE                     = "HOTEL_RESERVE"
 	HOTEL_SEARCH                      = "HOTEL_SEARCH"
 	HOTEL_WWW                         = "HOTEL_WWW"
+	HOTEL_WWW_ERR                     = "HOTEL_WWW" + ERR
 	HOTEL_WWW_STATS                   = "HOTEL_WWW_STATS"
 	SLEEPER                           = "SLEEPER"
 	SPINNER                           = "SPINNER"
@@ -120,10 +123,10 @@ const (
 	LCSCHEDCLNT_ERR           = "LCSCHEDCLNT" + ERR
 	LCSCHED                   = "LCSCHED"
 	LCSCHED_ERR               = "LCSCHED" + ERR
-	PROCQ                     = "PROCQ"
-	PROCQ_ERR                 = "PROCQ" + ERR
-	PROCQCLNT                 = "PROCQCLNT"
-	PROCQCLNT_ERR             = "PROCQCLNT" + ERR
+	BESCHED                   = "BESCHED"
+	BESCHED_ERR               = "BESCHED" + ERR
+	BESCHEDCLNT               = "BESCHEDCLNT"
+	BESCHEDCLNT_ERR           = "BESCHEDCLNT" + ERR
 	KEYCLNT                   = "KEYCLNT"
 	KEYCLNT_ERR               = "KEYCLNT" + ERR
 	KEYD                      = "KEYD"
@@ -175,6 +178,7 @@ const (
 	WRITER_ERR    Tselector = "WRITER" + ERR
 	READER_ERR              = "READER" + ERR
 	AWRITER                 = "AWRITER"
+	PREADER                 = "PREADER"
 	FSLIB                   = "FSLIB"
 	FSLIB_ERR               = "FSLIB" + ERR
 	SEMCLNT                 = "SEMCLNT"

@@ -16,13 +16,15 @@ import (
 	"sigmaos/crash"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
+	"sigmaos/mr/chunkreader"
+	"sigmaos/mr/kvmap"
+	"sigmaos/mr/mr"
 	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/rand"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
-	"sigmaos/writer"
 )
 
 const (
@@ -32,20 +34,18 @@ const (
 
 type Reducer struct {
 	*sigmaclnt.SigmaClnt
-	reducef      ReduceT
+	reducef      mr.ReduceT
 	input        Bin
 	outputTarget string
 	outlink      string
 	nmaptask     int
 	tmp          string
 	pwrt         *perf.PerfWriter
-	asyncwrt     fslib.WriterI
-	syncwrt      *writer.Writer
+	wrt          *fslib.FileWriter
 	perf         *perf.Perf
-	asyncrw      bool
 }
 
-func NewReducer(sc *sigmaclnt.SigmaClnt, reducef ReduceT, args []string, p *perf.Perf) (*Reducer, error) {
+func NewReducer(sc *sigmaclnt.SigmaClnt, reducef mr.ReduceT, args []string, p *perf.Perf) (*Reducer, error) {
 	r := &Reducer{
 		outlink:      args[1],
 		outputTarget: args[2],
@@ -57,14 +57,9 @@ func NewReducer(sc *sigmaclnt.SigmaClnt, reducef ReduceT, args []string, p *perf
 		db.DPrintf(db.MR, "NewReducer %s: unmarshal err %v\n", args[0], err)
 		return nil, err
 	}
-	asyncrw, err := strconv.ParseBool(args[4])
-	if err != nil {
-		return nil, fmt.Errorf("NewReducer: can't parse asyncrw %v", args[3])
-	}
-	r.asyncrw = asyncrw
 	r.tmp = r.outputTarget + rand.String(16)
 
-	db.DPrintf(db.MR, "Reducer outputting to %v %t", r.tmp, r.asyncrw)
+	db.DPrintf(db.MR, "Reducer outputting to %v", r.tmp)
 
 	m, err := strconv.Atoi(args[3])
 	if err != nil {
@@ -76,33 +71,23 @@ func NewReducer(sc *sigmaclnt.SigmaClnt, reducef ReduceT, args []string, p *perf
 		r.MountS3PathClnt()
 	}
 
-	if r.asyncrw {
-		w, err := r.CreateAsyncWriter(r.tmp, 0777, sp.OWRITE)
-		if err != nil {
-			db.DFatalf("Error CreateWriter [%v] %v", r.tmp, err)
-			return nil, err
-		}
-		r.asyncwrt = w
-		r.pwrt = perf.NewPerfWriter(r.asyncwrt, r.perf)
-	} else {
-		w, err := r.CreateWriter(r.tmp, 0777, sp.OWRITE)
-		if err != nil {
-			db.DFatalf("Error CreateWriter [%v] %v", r.tmp, err)
-			return nil, err
-		}
-		r.syncwrt = w
-		r.pwrt = perf.NewPerfWriter(r.syncwrt, r.perf)
+	w, err := r.CreateBufWriter(r.tmp, 0777)
+	if err != nil {
+		db.DFatalf("Error CreateBufWriter [%v] %v", r.tmp, err)
+		return nil, err
 	}
+	r.wrt = w
+	r.pwrt = perf.NewPerfWriter(r.wrt, r.perf)
 	return r, nil
 }
 
-func newReducer(reducef ReduceT, args []string, p *perf.Perf) (*Reducer, error) {
-	if len(args) != 5 {
+func newReducer(reducef mr.ReduceT, args []string, p *perf.Perf) (*Reducer, error) {
+	if len(args) != 4 {
 		return nil, errors.New("NewReducer: too few arguments")
 	}
 	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
 	if err != nil {
-		return nil, fmt.Errorf("NewReducer: can't parse asyncrw %v", args[3])
+		return nil, fmt.Errorf("NewReducer: can't create sc err %v", err)
 	}
 	r, err := NewReducer(sc, reducef, args, p)
 	if err != nil {
@@ -116,13 +101,13 @@ func newReducer(reducef ReduceT, args []string, p *perf.Perf) (*Reducer, error) 
 }
 
 type result struct {
-	kvs  []*KeyValue
+	kvs  []*mr.KeyValue
 	name string
 	ok   bool
 	n    sp.Tlength
 }
 
-func ReadKVs(rdr io.Reader, kvm *kvmap, reducef ReduceT) error {
+func ReadKVs(rdr io.Reader, kvm *kvmap.KVMap, reducef mr.ReduceT) error {
 	kvd := newKVDecoder(rdr, DEFAULT_KEY_BUF_SZ, DEFAULT_VAL_BUF_SZ)
 	for {
 		if k, v, err := kvd.decode(); err != nil {
@@ -134,7 +119,7 @@ func ReadKVs(rdr io.Reader, kvm *kvmap, reducef ReduceT) error {
 				break
 			}
 		} else {
-			if err := kvm.combine(k, v, reducef); err != nil {
+			if err := kvm.Combine(k, v, reducef); err != nil {
 				return err
 			}
 		}
@@ -147,7 +132,7 @@ type readResult struct {
 	ok         bool
 	n          sp.Tlength
 	d          time.Duration
-	kvm        *kvmap
+	kvm        *kvmap.KVMap
 	mapsFailed []string
 }
 
@@ -166,14 +151,13 @@ func (r *Reducer) readFile(rr *readResult) {
 	if ok {
 		rr.f = pn
 	}
-	rdr, err := r.OpenAsyncReader(rr.f, 0)
+	rdr, err := r.OpenBufReader(rr.f)
 	if err != nil {
 		db.DPrintf(db.MR, "NewReader %v err %v", rr.f, err)
 		rr.ok = false
 		return
 	}
 	defer rdr.Close()
-
 	start := time.Now()
 	err = ReadKVs(rdr, rr.kvm, r.reducef)
 	db.DPrintf(db.MR, "Reduce readfile %v %dms err %v\n", rr.f, time.Since(start).Milliseconds(), err)
@@ -201,7 +185,7 @@ func (r *Reducer) readerMgr(req chan string, rep chan readResult, max int) {
 		mu.Unlock()
 		db.DPrintf(db.MR, "readerMgr: start %q", f)
 		go func(f string) {
-			kvm := newKvmap(MINCAP, MAXCAP)
+			kvm := kvmap.NewKVMap(chunkreader.MINCAP, chunkreader.MAXCAP)
 			rr := readResult{f: f, kvm: kvm}
 			r.readFile(&rr)
 			rep <- rr
@@ -243,7 +227,7 @@ func (r *Reducer) ReadFiles(rtot *readResult) error {
 		for i := 0; i < r.nmaptask; i++ {
 			rr := <-rep
 			rtot.sum(&rr)
-			rtot.kvm.merge(rr.kvm, r.reducef)
+			rtot.kvm.Merge(rr.kvm, r.reducef)
 		}
 	}
 	return nil
@@ -261,7 +245,7 @@ func (r *Reducer) emit(key []byte, value string) error {
 func (r *Reducer) DoReduce() *proc.Status {
 	db.DPrintf(db.ALWAYS, "DoReduce in %v out %v nmap %v\n", r.input, r.outlink, r.nmaptask)
 	rtot := readResult{
-		kvm:        newKvmap(MINCAP, MAXCAP),
+		kvm:        kvmap.NewKVMap(chunkreader.MINCAP, chunkreader.MAXCAP),
 		mapsFailed: []string{},
 	}
 	if err := r.ReadFiles(&rtot); err != nil {
@@ -277,23 +261,15 @@ func (r *Reducer) DoReduce() *proc.Status {
 
 	start := time.Now()
 
-	if err := rtot.kvm.emit(r.reducef, r.emit); err != nil {
+	if err := rtot.kvm.Emit(r.reducef, r.emit); err != nil {
 		db.DPrintf(db.ALWAYS, "DoReduce: emit err %v", err)
 		return proc.NewStatusErr("reducef", err)
 	}
 
-	var nbyte sp.Tlength
-	if r.asyncrw {
-		if err := r.asyncwrt.Close(); err != nil {
-			return proc.NewStatusErr(fmt.Sprintf("%v: close %v err %v\n", r.ProcEnv().GetPID(), r.tmp, err), nil)
-		}
-		nbyte = r.asyncwrt.Nbytes()
-	} else {
-		if err := r.syncwrt.Close(); err != nil {
-			return proc.NewStatusErr(fmt.Sprintf("%v: close %v err %v\n", r.ProcEnv().GetPID(), r.tmp, err), nil)
-		}
-		nbyte = r.syncwrt.Nbytes()
+	if err := r.wrt.Close(); err != nil {
+		return proc.NewStatusErr(fmt.Sprintf("%v: close %v err %v\n", r.ProcEnv().GetPID(), r.tmp, err), nil)
 	}
+	nbyte := r.wrt.Nbytes()
 
 	// Include time spent writing output.
 	rtot.d += time.Since(start)
@@ -306,7 +282,7 @@ func (r *Reducer) DoReduce() *proc.Status {
 		Result{false, r.ProcEnv().GetPID().String(), rtot.n, nbyte, Bin{}, rtot.d.Milliseconds(), 0, r.ProcEnv().GetKernelID()})
 }
 
-func RunReducer(reducef ReduceT, args []string) {
+func RunReducer(reducef mr.ReduceT, args []string) {
 	pe := proc.GetProcEnv()
 	p, err := perf.NewPerf(pe, perf.MRREDUCER)
 	if err != nil {

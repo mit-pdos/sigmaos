@@ -1,3 +1,5 @@
+// The namesrv package implements the realm's root name server using
+// fsetcd.
 package namesrv
 
 import (
@@ -9,8 +11,8 @@ import (
 
 	"sigmaos/crash"
 	db "sigmaos/debug"
-	"sigmaos/leaderetcd"
 	"sigmaos/namesrv/fsetcd"
+	"sigmaos/namesrv/leaderetcd"
 	"sigmaos/netproxyclnt"
 	"sigmaos/path"
 	"sigmaos/perf"
@@ -23,9 +25,6 @@ import (
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
 )
-
-// Named implements fs/fs.go using fsetcd.  It assumes that its caller
-// (protsrv) holds read/write locks.
 
 type Named struct {
 	*sigmaclnt.SigmaClnt
@@ -111,7 +110,7 @@ func Run(args []string) error {
 		if err := sc.MountTree(rootEP, sp.SCHEDDREL, sp.SCHEDD); err != nil {
 			db.DFatalf("Err MountTree schedd: ep %v err %v", rootEP, err)
 		}
-		if err := sc.MountTree(rootEP, sp.PROCQREL, sp.PROCQ); err != nil {
+		if err := sc.MountTree(rootEP, sp.BESCHEDREL, sp.BESCHED); err != nil {
 			db.DFatalf("Err MountTree procq: ep %v err %v", rootEP, err)
 		}
 		if err := sc.MountTree(rootEP, sp.LCSCHEDREL, sp.LCSCHED); err != nil {
@@ -316,7 +315,7 @@ func (nd *Named) watchLeased() {
 }
 
 // XXX same as initRootDir?
-var warmRootDir = []string{sp.BOOT, sp.KPIDS, sp.MEMFS, sp.LCSCHED, sp.PROCQ, sp.SCHEDD, sp.UX, sp.S3, sp.DB, sp.MONGO, sp.REALM, sp.CHUNKD}
+var warmRootDir = []string{sp.BOOT, sp.KPIDS, sp.MEMFS, sp.LCSCHED, sp.BESCHED, sp.SCHEDD, sp.UX, sp.S3, sp.DB, sp.MONGO, sp.REALM, sp.CHUNKD}
 
 func (nd *Named) warmCache() error {
 	for _, n := range warmRootDir {

@@ -188,7 +188,7 @@ func (ft *FtTasks) ReadTaskOutput(name string, i any) error {
 }
 
 // Read tasks using a reader
-func (ft *FtTasks) TaskReader(name string) (*fslib.FdReader, error) {
+func (ft *FtTasks) TaskReader(name string) (*fslib.FileReader, error) {
 	rdr, err := ft.OpenReader(filepath.Join(ft.wip, name, "task"))
 	if err != nil {
 		return nil, err

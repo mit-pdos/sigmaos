@@ -194,7 +194,7 @@ func (st *StatInode) Write(ctx fs.CtxI, off sp.Toffset, data []byte, f sp.Tfence
 
 func (st *StatInode) Read(ctx fs.CtxI, off sp.Toffset, n sp.Tsize, f sp.Tfence) ([]byte, *serr.Err) {
 	b := st.stats()
-	db.DPrintf(db.TEST, "Read statinfo %v off %d %d sz %d", st, off, n, len(b))
+	db.DPrintf(db.STAT, "Read statinfo %v off %d %d sz %d", st, off, n, len(b))
 	if st == nil {
 		return nil, nil
 	}
@@ -291,7 +291,7 @@ func (sti *StatInode) StatsSnapshot() *StatsSnapshot {
 
 func (sti *StatInode) stats() []byte {
 	st := sti.StatsSnapshot()
-	db.DPrintf(db.TEST, "stat %v\n", st)
+	db.DPrintf(db.STAT, "stat %v\n", st)
 	data, err := json.Marshal(st)
 	if err != nil {
 		db.DFatalf("stats: json marshaling failed %v", err)

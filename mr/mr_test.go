@@ -10,23 +10,24 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/dustin/go-humanize"
-	"github.com/klauspost/readahead"
 	"github.com/stretchr/testify/assert"
 
 	"sigmaos/auth"
-	"sigmaos/awriter"
 	db "sigmaos/debug"
 	"sigmaos/mr"
+	"sigmaos/mr/chunkreader"
+	api "sigmaos/mr/mr"
+	mrscanner "sigmaos/mr/scanner"
 	"sigmaos/perf"
 	"sigmaos/proc"
 	rd "sigmaos/rand"
 	"sigmaos/scheddclnt"
-	"sigmaos/seqwc"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 
@@ -70,49 +71,118 @@ func TestHash(t *testing.T) {
 	assert.Equal(t, 7, mr.Khash([]byte("absently"))%8)
 }
 
-func TestLocalWc(t *testing.T) {
+func TestWordSpanningChunk(t *testing.T) {
+	const (
+		CKSZ    = 8
+		SPLITSZ = sp.MBYTE
+		LINESZ  = 65536
+		WORDSZ  = 20
+		NWORD   = 7777 // According to TestSeqWc
+		WC      = "/tmp/sigmaos/pg-dorian_gray.txt.wc"
+	)
+
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+
+	fn := filepath.Join("name/s3/" + sp.LOCAL + "/9ps3/gutenberg/pg-dorian_gray.txt")
+	fn, ok := sp.S3ClientPath(fn)
+	assert.True(t, ok)
+	s := &api.Split{fn, 0, SPLITSZ}
+	ts.MountS3PathClnt()
+
+	pfr, err := ts.OpenParallelFileReader(s.File, s.Offset, s.Length)
+	assert.Nil(t, err)
+
+	p, err := perf.NewPerf(ts.ProcEnv(), perf.MRMAPPER)
+	assert.Nil(t, err)
+
+	ckr := chunkreader.NewChunkReader(LINESZ, WORDSZ, wc.Reduce, p)
+	n, err := ckr.ReadChunks(pfr, s, wc.Map)
+	assert.Nil(t, err)
+
+	kvmap := ckr.KVMap()
+
+	db.DPrintf(db.TEST, "bytes %d words %d", n, kvmap.Len())
+
+	assert.Equal(t, NWORD, kvmap.Len())
+
+	file, err := os.Create(WC)
+	assert.Nil(t, err)
+	defer file.Close()
+	w := bufio.NewWriter(file)
+	defer w.Flush()
+	kvmap.Emit(wc.Reduce, func(k []byte, v string) error {
+		b := fmt.Sprintf("%s\t%v\n", string(k), v)
+		_, err := w.Write([]byte(b))
+		return err
+	})
+	p.Done()
+
+	ts.Shutdown()
+}
+
+type Tdata map[string]uint64
+
+func wcline(n int, line string, data Tdata, sbc *mrscanner.ScanByteCounter) (int, error) {
+	scanner := bufio.NewScanner(strings.NewReader(line))
+	scanner.Split(sbc.ScanWords)
+	cnt := 0
+	for scanner.Scan() {
+		w := scanner.Text()
+		if _, ok := data[w]; !ok {
+			data[w] = uint64(0)
+		}
+		data[w] += 1
+		cnt++
+	}
+	if err := scanner.Err(); err != nil {
+		return 0, err
+	}
+	return cnt, nil
+}
+
+func TestSeqWc(t *testing.T) {
 	const (
 		LOCALINPUT = "/tmp/enwiki-1G"
-		HOSTTMP    = "/tmp/sigmaos"
-		F          = "gutenberg.txt"
-		// INPUT   = "../input/" + F
-		INPUT = LOCALINPUT
-		OUT   = HOSTTMP + F + ".out"
+		HOSTTMP    = "/tmp/sigmaos/"
+		F          = "pg-dorian_gray.txt"
+		INPUT      = "../input/" + F
+		// INPUT = LOCALINPUT
+		OUT = HOSTTMP + F + ".out"
 	)
 
 	file, err := os.Open(INPUT)
 	assert.Nil(t, err)
 	defer file.Close()
 	r := bufio.NewReader(file)
-	rdr, err := readahead.NewReaderSize(r, 4, sp.BUFSZ)
-	assert.Nil(t, err, "Err reader: %v", err)
 	start := time.Now()
-	scanner := bufio.NewScanner(rdr)
+	scanner := bufio.NewScanner(r)
 	buf := make([]byte, 0, 2097152)
 	scanner.Buffer(buf, cap(buf))
-	data := make(seqwc.Tdata, 0)
+	data := make(Tdata, 0)
 	p, err := perf.NewPerf(proc.NewTestProcEnv(sp.ROOTREALM, nil, nil, sp.NO_IP, sp.NO_IP, "", false, false, false), perf.SEQWC)
 	assert.Nil(t, err)
-	sbc := mr.NewScanByteCounter(p)
+	sbc := mrscanner.NewScanByteCounter(p)
 	for scanner.Scan() {
 		l := scanner.Text()
 		if len(l) > 0 {
-			seqwc.Wcline(0, l, data, sbc)
+			_, err := wcline(0, l, data, sbc)
+			assert.Nil(t, err)
 		}
 	}
 	err = scanner.Err()
 	assert.Nil(t, err)
-	db.DPrintf(db.ALWAYS, "seqwc %v %v", INPUT, time.Since(start).Milliseconds())
+	db.DPrintf(db.ALWAYS, "seqwc %v %v %v", INPUT, time.Since(start), OUT)
 	file, err = os.Create(OUT)
 	assert.Nil(t, err)
 	defer file.Close()
-	aw := awriter.NewWriterSize(file, 4, sp.BUFSZ)
-	bw := bufio.NewWriterSize(aw, sp.BUFSZ)
-	defer bw.Flush()
-	defer aw.Close()
+	w := bufio.NewWriter(file)
+	defer w.Flush()
 	for k, v := range data {
 		b := fmt.Sprintf("%s\t%d\n", k, v)
-		_, err := bw.Write([]byte(b))
+		_, err := w.Write([]byte(b))
 		assert.Nil(t, err)
 	}
 	p.Done()
@@ -124,7 +194,7 @@ func TestSplits(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	job, err1 = mr.ReadJobConfig(app)
+	job, err1 = mr.ReadJobConfig(filepath.Join("job-descriptions", app))
 	assert.Nil(t, err1, "Error ReadJobConfig: %v", err1)
 	bins, err := mr.NewBins(ts.FsLib, job.Input, sp.Tlength(job.Binsz), SPLITSZ)
 	assert.Nil(t, err)
@@ -186,7 +256,7 @@ func TestMapperReducer(t *testing.T) {
 		assert.Nil(t, err, "NewSC: %v", err)
 		db.DPrintf(db.TEST, "NewSigmaClnt %v", time.Since(start))
 		start = time.Now()
-		m, err := mr.NewMapper(sc, mapper, reducer, ts.jobRoot, ts.job, p, job.Nreduce, job.Linesz, string(bin), job.Intermediate, true)
+		m, err := mr.NewMapper(sc, mapper, reducer, ts.jobRoot, ts.job, p, job.Nreduce, job.Linesz, job.Wordsz, string(bin), job.Intermediate)
 		assert.Nil(t, err, "NewMapper %v", err)
 		db.DPrintf(db.TEST, "Newmapper %v", time.Since(start))
 		start = time.Now()
@@ -227,7 +297,7 @@ func TestMapperReducer(t *testing.T) {
 		assert.True(t, status.IsStatusOK(), "status %v", status)
 		res, err := mr.NewResult(status.Data())
 		assert.Nil(t, err)
-		db.DPrintf(db.ALWAYS, "%s: in %v out %v tot %v %vms (%s)\n", res.Task, humanize.Bytes(uint64(res.In)), humanize.Bytes(uint64(res.Out)), test.Mbyte(res.In+res.Out), res.MsInner, test.TputStr(res.In+res.Out, res.MsInner))
+		db.DPrintf(db.ALWAYS, "%s: reduce in %v out %v tot %v %vms (%s)\n", res.Task, humanize.Bytes(uint64(res.In)), humanize.Bytes(uint64(res.Out)), test.Mbyte(res.In+res.Out), res.MsInner, test.TputStr(res.In+res.Out, res.MsInner))
 	}
 
 	if app == "mr-wc.yml" || app == "mr-ux-wc.yml" {
@@ -235,45 +305,6 @@ func TestMapperReducer(t *testing.T) {
 	}
 
 	p.Done()
-	ts.Shutdown()
-}
-
-func TestSeqGrep(t *testing.T) {
-	ts, err1 := test.NewTstateAll(t)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
-	job, err1 = mr.ReadJobConfig(app)
-	assert.Nil(t, err1, "Error ReadJobConfig: %v", err1)
-
-	p := proc.NewProc("seqgrep", []string{job.Input})
-	err := ts.Spawn(p)
-	assert.Nil(t, err)
-	status, err := ts.WaitExit(p.GetPid())
-	assert.Nil(t, err)
-	assert.True(t, status.IsStatusOK())
-	// assert.Equal(t, 795, n)
-	ts.Shutdown()
-}
-
-func TestSeqWc(t *testing.T) {
-	const OUT = "name/ux/~local/seqout.txt"
-	ts, err1 := test.NewTstateAll(t)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
-	job, err1 = mr.ReadJobConfig(app)
-	assert.Nil(t, err1, "Error ReadJobConfig: %v", err1)
-
-	ts.Remove(OUT)
-
-	p := proc.NewProc("seqwc", []string{job.Input, OUT})
-	err := ts.Spawn(p)
-	assert.Nil(t, err)
-	status, err := ts.WaitExit(p.GetPid())
-	assert.Nil(t, err)
-	assert.True(t, status.IsStatusOK())
-	// assert.Equal(t, 795, n)
 	ts.Shutdown()
 }
 
@@ -289,7 +320,7 @@ func newTstate(t1 *test.Tstate, jobRoot, app string) *Tstate {
 	ts := &Tstate{}
 	ts.jobRoot = jobRoot
 	ts.Tstate = t1
-	j, err := mr.ReadJobConfig(app)
+	j, err := mr.ReadJobConfig(filepath.Join("job-descriptions", app))
 	assert.Nil(t1.T, err, "Error ReadJobConfig: %v", err)
 	job = j
 	ts.nreducetask = job.Nreduce
@@ -405,7 +436,7 @@ func runN(t *testing.T, crashtask, crashcoord, crashschedd, crashprocq, crashux,
 	assert.Nil(ts.T, err, "Err prepare job %v: %v", job, err)
 	assert.NotEqual(ts.T, 0, nmap)
 
-	cm := mr.StartMRJob(sc, ts.jobRoot, ts.job, job, mr.NCOORD, nmap, crashtask, crashcoord, MEM_REQ, true, maliciousMapper)
+	cm := mr.StartMRJob(sc, ts.jobRoot, ts.job, job, mr.NCOORD, nmap, crashtask, crashcoord, MEM_REQ, maliciousMapper)
 
 	crashchan := make(chan bool)
 	l1 := &sync.Mutex{}
@@ -421,7 +452,7 @@ func runN(t *testing.T, crashtask, crashcoord, crashschedd, crashprocq, crashux,
 	l3 := &sync.Mutex{}
 	for i := 0; i < crashprocq; i++ {
 		// Sleep for a random time, then crash a server.
-		go ts.CrashServer(sp.PROCQREL, (i+1)*CRASHSRV, l3, crashchan)
+		go ts.CrashServer(sp.BESCHEDREL, (i+1)*CRASHSRV, l3, crashchan)
 	}
 
 	db.DPrintf(db.TEST, "WaitGroup")

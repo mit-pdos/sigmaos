@@ -5,7 +5,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/namesrv/fsetcd"
-	"sigmaos/leaderetcd"
+	"sigmaos/namesrv/leaderetcd"
 )
 
 func (nd *Named) startLeader() error {

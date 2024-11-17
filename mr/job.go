@@ -23,7 +23,7 @@ import (
 const (
 	MR       = "/mr/"
 	MRDIRTOP = "name/" + MR
-	//MRDIRTOP    = "name/ux/~local/" + MR
+	//MRDIRTOP    = "name/ux/~sp.LOCAL/" + MR
 	MRDIRELECT  = "name/mr-elect"
 	OUTLINK     = "output"
 	INT_OUTLINK = "intermediate-output"
@@ -104,6 +104,7 @@ type Job struct {
 	Intermediate string `yalm:"intermediate"`
 	Output       string `yalm:"output"`
 	Linesz       int    `yalm:"linesz"`
+	Wordsz       int    `yalm:"wordsz"`
 	Local        string `yalm:"input"`
 }
 
@@ -236,15 +237,15 @@ func PrepareJob(fsl *fslib.FsLib, ts *Tasks, jobRoot, jobName string, job *Job) 
 			return 0, err
 		}
 		for _, ux := range sp.Names(uxSts) {
-			intResolved := strings.ReplaceAll(job.Intermediate, "~local", ux)
+			intResolved := strings.ReplaceAll(job.Intermediate, sp.LOCAL, ux)
 			if err := fsl.MkDir(intResolved, 0777); err != nil {
 				return 0, err
 			}
-			intOutResolved := strings.ReplaceAll(intOutDir, "~local", ux)
+			intOutResolved := strings.ReplaceAll(intOutDir, sp.LOCAL, ux)
 			if err := fsl.MkDir(intOutResolved, 0777); err != nil {
 				return 0, err
 			}
-			redOutResolved := strings.ReplaceAll(redOutDir, "~local", ux)
+			redOutResolved := strings.ReplaceAll(redOutDir, sp.LOCAL, ux)
 			if err := fsl.MkDir(redOutResolved, 0777); err != nil {
 				return 0, err
 			}
@@ -272,8 +273,8 @@ func PrepareJob(fsl *fslib.FsLib, ts *Tasks, jobRoot, jobName string, job *Job) 
 	return len(bins), nil
 }
 
-func StartMRJob(sc *sigmaclnt.SigmaClnt, jobRoot, jobName string, job *Job, ncoord, nmap, crashtask, crashcoord int, memPerTask proc.Tmem, asyncrw bool, maliciousMapper int) *groupmgr.GroupMgr {
-	cfg := groupmgr.NewGroupConfig(ncoord, "mr-coord", []string{jobRoot, strconv.Itoa(nmap), strconv.Itoa(job.Nreduce), "mr-m-" + job.App, "mr-r-" + job.App, strconv.Itoa(crashtask), strconv.Itoa(job.Linesz), strconv.Itoa(int(memPerTask)), strconv.FormatBool(asyncrw), strconv.Itoa(maliciousMapper)}, 1000, jobName)
+func StartMRJob(sc *sigmaclnt.SigmaClnt, jobRoot, jobName string, job *Job, ncoord, nmap, crashtask, crashcoord int, memPerTask proc.Tmem, maliciousMapper int) *groupmgr.GroupMgr {
+	cfg := groupmgr.NewGroupConfig(ncoord, "mr-coord", []string{jobRoot, strconv.Itoa(nmap), strconv.Itoa(job.Nreduce), "mr-m-" + job.App, "mr-r-" + job.App, strconv.Itoa(crashtask), strconv.Itoa(job.Linesz), strconv.Itoa(job.Wordsz), strconv.Itoa(int(memPerTask)), strconv.Itoa(maliciousMapper)}, 1000, jobName)
 	cfg.SetTest(crashcoord, 0, 0)
 	return cfg.StartGrpMgr(sc, ncoord)
 }
@@ -294,7 +295,7 @@ func MergeReducerOutput(fsl *fslib.FsLib, jobRoot, jobName, out string, nreduce 
 			db.DPrintf(db.MR, "Error OpenReader [%v]: %v", ReduceOut(jobRoot, jobName)+r+"/", err)
 			return err
 		}
-		if _, err := io.Copy(wrt, rdr.Reader); err != nil {
+		if _, err := io.Copy(wrt, rdr); err != nil {
 			db.DPrintf(db.MR, "Error Copy: %v", err)
 			return err
 		}

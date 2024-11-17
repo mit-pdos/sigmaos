@@ -106,7 +106,7 @@ func (t *Trans) Work(i int, output string) *proc.Status {
 	}()
 
 	ds := time.Now()
-	img, err := jpeg.Decode(rdr.Reader)
+	img, err := jpeg.Decode(rdr)
 	if err != nil {
 		return proc.NewStatusErr("Decode", err)
 	}

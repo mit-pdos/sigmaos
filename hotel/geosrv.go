@@ -3,7 +3,7 @@ package hotel
 import (
 	"encoding/json"
 	"log"
-	"math/rand"
+	"path/filepath"
 	"strconv"
 	"sync"
 	"time"
@@ -22,38 +22,34 @@ import (
 	"sigmaos/tracing"
 )
 
-const (
-	N_INDEX   = 1000
-	RAND_SEED = 12345
-)
-
-const (
-	maxSearchRadius  = 10
-	maxSearchResults = 5
-)
-
-type safeIndex struct {
-	mu     sync.Mutex
-	geoidx *geoindex.ClusteringIndex
+type GeoIndexes struct {
+	mu      sync.Mutex
+	indexes chan *geoindex.ClusteringIndex
 }
 
-func newSafeIndex(path string) *safeIndex {
-	return &safeIndex{
-		geoidx: newGeoIndex(path),
+func NewGeoIndexes(n int, path string) *GeoIndexes {
+	idxs := &GeoIndexes{
+		indexes: make(chan *geoindex.ClusteringIndex, n),
 	}
+	for i := 0; i < n; i++ {
+		idxs.indexes <- newGeoIndex(path)
+	}
+	return idxs
 }
 
-func (si *safeIndex) KNN(center *geoindex.GeoPoint) []geoindex.Point {
-	si.mu.Lock()
-	defer si.mu.Unlock()
-
-	return si.geoidx.KNearest(
+func (gi GeoIndexes) KNN(center *geoindex.GeoPoint, maxSearchRadius float64, maxSearchResults int) []geoindex.Point {
+	idx := <-gi.indexes
+	start := time.Now()
+	points := idx.KNearest(
 		center,
 		maxSearchResults,
 		geoindex.Km(maxSearchRadius), func(p geoindex.Point) bool {
 			return true
 		},
 	)
+	db.DPrintf(db.ALWAYS, "Time KNN (%v): %v", center, time.Since(start))
+	gi.indexes <- idx
+	return points
 }
 
 // Point represents a hotels's geo location on map
@@ -70,21 +66,35 @@ func (p *point) Id() string   { return p.Pid }
 
 // Server implements the geo service
 type Geo struct {
-	tracer  *tracing.Tracer
-	indexes []*safeIndex
+	tracer           *tracing.Tracer
+	idxs             *GeoIndexes
+	maxSearchRadius  float64
+	maxSearchResults int
 }
 
 // Run starts the server
-func RunGeoSrv(job string) error {
-	rand.Seed(RAND_SEED)
-	geo := &Geo{}
-	start := time.Now()
-	geo.indexes = make([]*safeIndex, 0, N_INDEX)
-	for i := 0; i < N_INDEX; i++ {
-		geo.indexes = append(geo.indexes, newSafeIndex("data/geo.json"))
+func RunGeoSrv(job string, nidxStr string, maxSearchRadiusStr string, maxSearchResultsStr string) error {
+	nidx, err := strconv.Atoi(nidxStr)
+	if err != nil {
+		db.DFatalf("Invalid nidx: %v", err)
 	}
-	db.DPrintf(db.ALWAYS, "Geo srv done building indexes after: %v", time.Since(start))
-	ssrv, err := sigmasrv.NewSigmaSrv(HOTELGEO, geo, proc.GetProcEnv())
+	maxSearchRadius, err := strconv.Atoi(maxSearchRadiusStr)
+	if err != nil {
+		db.DFatalf("Invalid maxSearchRadiusStr: %v", err)
+	}
+	maxSearchResults, err := strconv.Atoi(maxSearchResultsStr)
+	if err != nil {
+		db.DFatalf("Invalid maxSearchResults: %v", err)
+	}
+	geo := &Geo{
+		maxSearchRadius:  float64(maxSearchRadius),
+		maxSearchResults: maxSearchResults,
+	}
+	start := time.Now()
+	geo.idxs = NewGeoIndexes(nidx, "data/geo.json")
+	db.DPrintf(db.ALWAYS, "Geo srv done building %v indexes, radius %v nresults %v,  after: %v", nidx, geo.maxSearchRadius, geo.maxSearchResults, time.Since(start))
+	pe := proc.GetProcEnv()
+	ssrv, err := sigmasrv.NewSigmaSrv(filepath.Join(HOTELGEODIR, pe.GetPID().String()), geo, pe)
 	if err != nil {
 		return err
 	}
@@ -124,12 +134,7 @@ func (s *Geo) getNearbyPoints(lat, lon float64) []geoindex.Point {
 		Plat: lat,
 		Plon: lon,
 	}
-
-	r := rand.Int63() % N_INDEX
-
-	si := s.indexes[r]
-
-	return si.KNN(center)
+	return s.idxs.KNN(center, s.maxSearchRadius, s.maxSearchResults)
 }
 
 // newGeoIndex returns a geo index with points loaded

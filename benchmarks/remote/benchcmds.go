@@ -174,7 +174,7 @@ func GetBEImgResizeRPCMultiplexingCmd(bcfg *BenchConfig, ccfg *ClusterConfig) st
 // instantaneous throughput. This is an optional parameter because it adds
 // non-insignificant overhead to the MR computation, which unfairly penalizes
 // the SigmaOS implementation when comparing to Corral.
-func GetMRCmdConstructor(mrApp string, memReq proc.Tmem, asyncRW, prewarmRealm, measureTpt bool) GetBenchCmdFn {
+func GetMRCmdConstructor(mrApp string, memReq proc.Tmem, prewarmRealm, measureTpt bool) GetBenchCmdFn {
 	return func(bcfg *BenchConfig, ccfg *ClusterConfig) string {
 		const (
 			debugSelectors        string = "\"TEST;BENCH;MR;\""
@@ -189,10 +189,6 @@ func GetMRCmdConstructor(mrApp string, memReq proc.Tmem, asyncRW, prewarmRealm, 
 		if prewarmRealm {
 			prewarm = "--prewarm_realm"
 		}
-		asyncrw := ""
-		if asyncRW {
-			asyncrw = "--mr_asyncrw"
-		}
 		netproxy := ""
 		if bcfg.NoNetproxy {
 			netproxy = "--nonetproxy"
@@ -206,7 +202,6 @@ func GetMRCmdConstructor(mrApp string, memReq proc.Tmem, asyncRW, prewarmRealm, 
 			"go test -v sigmaos/benchmarks -timeout 0 --no-shutdown %s %s --etcdIP %s --tag %s "+
 			"--run AppMR "+
 			"%s "+ // prewarm
-			"%s "+ // asyncrw
 			"--mr_mem_req %s "+
 			"--mrapp %s "+
 			"> /tmp/bench.out 2>&1",
@@ -217,7 +212,6 @@ func GetMRCmdConstructor(mrApp string, memReq proc.Tmem, asyncRW, prewarmRealm, 
 			ccfg.LeaderNodeIP,
 			bcfg.Tag,
 			prewarm,
-			asyncrw,
 			strconv.Itoa(int(memReq)),
 			mrApp,
 		)
@@ -257,11 +251,13 @@ func GetCorralCmdConstructor() GetBenchCmdFn {
 //
 // - clientDelay specifies the delay for which the client should wait before
 // starting to send requests.
-func GetHotelClientCmdConstructor(leader bool, numClients int, rps []int, dur []time.Duration, cacheType string, scaleCache bool, clientDelay time.Duration) GetBenchCmdFn {
+func GetHotelClientCmdConstructor(hotelReqName string, leader bool, numClients int, rps []int, dur []time.Duration, numCaches int, cacheType string, scaleCache bool, clientDelay time.Duration, manuallyScaleCaches bool, scaleCacheDelay time.Duration, numCachesToAdd int, numGeo int, geoNIdx int, geoSearchRadius int, geoNResults int, manuallyScaleGeo bool, scaleGeoDelay time.Duration, numGeoToAdd int) GetBenchCmdFn {
 	return func(bcfg *BenchConfig, ccfg *ClusterConfig) string {
 		const (
-			debugSelectors string = "\"TEST;THROUGHPUT;CPU_UTIL;\""
-			perfSelectors  string = "\"HOTEL_WWW_TPT;\""
+			//			debugSelectors string = "\"TEST;THROUGHPUT;CPU_UTIL;\""
+			debugSelectors string = "\"TEST;THROUGHPUT;CPU_UTIL;SPAWN_LAT\"" // XXX REMOVE
+			perfSelectors  string = "\"HOTEL_WWW_TPT;TEST_TPT;BENCH_TPT;\""
+			//			perfSelectors  string = "\"HOTEL_WWW_TPT;\"" // XXX Used to be just HOTEL_WWW_TPT. Is adding the others problematic?
 		)
 		sys := ""
 		if bcfg.K8s {
@@ -271,9 +267,9 @@ func GetHotelClientCmdConstructor(leader bool, numClients int, rps []int, dur []
 		}
 		testName := ""
 		if leader {
-			testName = fmt.Sprintf("Hotel%sSearch", sys)
+			testName = fmt.Sprintf("Hotel%s%s", sys, hotelReqName)
 		} else {
-			testName = fmt.Sprintf("Hotel%sJustCliSearch", sys)
+			testName = fmt.Sprintf("Hotel%sJustCli%s", sys, hotelReqName)
 		}
 		autoscaleCache := ""
 		if scaleCache {
@@ -288,12 +284,24 @@ func GetHotelClientCmdConstructor(leader bool, numClients int, rps []int, dur []
 			overlays = "--overlays"
 		}
 		k8sFrontendAddr := ""
+		k8sFrontendLogScrapeCmd := "echo 'no scraping k8s logs'"
 		if bcfg.K8s {
 			addr, err := getK8sHotelFrontendAddr(bcfg, ccfg.lcfg)
 			if err != nil {
 				db.DFatalf("Get k8s hotel frontend addr:%v", err)
 			}
 			k8sFrontendAddr = fmt.Sprintf("--k8saddr %s", addr)
+			if leader {
+				k8sFrontendLogScrapeCmd = "kubectl logs service/frontend"
+			}
+		}
+		scalecache := ""
+		if manuallyScaleCaches {
+			scalecache = "--manually_scale_caches"
+		}
+		scalegeo := ""
+		if manuallyScaleGeo {
+			scalegeo = "--manually_scale_geo"
 		}
 		return fmt.Sprintf("export SIGMADEBUG=%s; export SIGMAPERF=%s; go clean -testcache; "+
 			"aws s3 rm --profile sigmaos --recursive s3://9ps3/hotelperf/k8s > /dev/null; "+
@@ -302,7 +310,7 @@ func GetHotelClientCmdConstructor(leader bool, numClients int, rps []int, dur []
 			"go test -v sigmaos/benchmarks -timeout 0 --no-shutdown %s %s --etcdIP %s --tag %s "+
 			"--run %s "+
 			"--nclnt %s "+
-			"--hotel_ncache 3 "+
+			"--hotel_ncache %s "+
 			"--hotel_cache_mcpu 2000 "+
 			"--cache_type %s "+
 			"%s "+ // scaleCache
@@ -310,8 +318,19 @@ func GetHotelClientCmdConstructor(leader bool, numClients int, rps []int, dur []
 			"--hotel_dur %s "+
 			"--hotel_max_rps %s "+
 			"--sleep %s "+
+			"%s "+ // manually_scale_caches
+			"--scale_cache_delay %s "+
+			"--n_caches_to_add %s "+
+			"--hotel_ngeo %s "+
+			"--hotel_ngeo_idx %s "+
+			"--hotel_geo_search_radius %s "+
+			"--hotel_geo_nresults %s "+
+			"%s "+ // manually_scale_geo
+			"--scale_geo_delay %s "+
+			"--n_geo_to_add %s "+
 			"--prewarm_realm "+
-			"> /tmp/bench.out 2>&1",
+			"> /tmp/bench.out 2>&1 ; "+
+			"%s > /tmp/frontend-logs.out 2>&1 ;",
 			debugSelectors,
 			perfSelectors,
 			netproxy,
@@ -320,12 +339,24 @@ func GetHotelClientCmdConstructor(leader bool, numClients int, rps []int, dur []
 			bcfg.Tag,
 			testName,
 			strconv.Itoa(numClients),
+			strconv.Itoa(numCaches),
 			cacheType,
 			autoscaleCache,
 			k8sFrontendAddr,
 			dursToString(dur),
 			rpsToString(rps),
 			clientDelay.String(),
+			scalecache,
+			scaleCacheDelay.String(),
+			strconv.Itoa(numCachesToAdd),
+			strconv.Itoa(numGeo),
+			strconv.Itoa(geoNIdx),
+			strconv.Itoa(geoSearchRadius),
+			strconv.Itoa(geoNResults),
+			scalegeo,
+			scaleGeoDelay.String(),
+			strconv.Itoa(numGeoToAdd),
+			k8sFrontendLogScrapeCmd,
 		)
 	}
 }

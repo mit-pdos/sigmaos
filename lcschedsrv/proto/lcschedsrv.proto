@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-import "procqsrv/proto/procqsrv.proto";
+import "beschedsrv/proto/beschedsrv.proto";
 
 option go_package = "sigmaos/lcschedsrv/proto";
 

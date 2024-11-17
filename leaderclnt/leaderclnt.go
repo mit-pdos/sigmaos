@@ -1,3 +1,6 @@
+// Package leaderclnt allows a proc to become a leader for an epoch
+// and fence its operations so that its operations will fail in
+// subsequent epochs.
 package leaderclnt
 
 import (
@@ -7,10 +10,6 @@ import (
 	"sigmaos/fslib"
 	sp "sigmaos/sigmap"
 )
-
-//
-// Library for becoming a leader for an epoch.
-//
 
 type LeaderClnt struct {
 	fc *fenceclnt.FenceClnt

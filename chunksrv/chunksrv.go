@@ -493,12 +493,12 @@ func open(sc *sigmaclnt.SigmaClnt, prog string, paths []string) (int, string, er
 	return sfd, path, nil
 }
 
-// lookup of ~local is expensive because involves reading a
-// directory. chunksrv knows what ~local is, namely its kernelId.
+// lookup of sp.LOCAL is expensive because involves reading a
+// directory. chunksrv knows what sp.LOCAL is, namely its kernelId.
 func replaceLocal(paths []string, kernelId string) []string {
 	for i, p := range paths {
 		if strings.HasPrefix(p, sp.UX) {
-			paths[i] = strings.Replace(p, "~local", kernelId, 1)
+			paths[i] = strings.Replace(p, sp.LOCAL, kernelId, 1)
 		}
 	}
 	return paths

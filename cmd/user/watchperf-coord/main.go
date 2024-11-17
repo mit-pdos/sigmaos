@@ -4,9 +4,9 @@ import (
 	"os"
 
 	db "sigmaos/debug"
+	drtest "sigmaos/fslib/dirreader/test"
 	"sigmaos/perf"
 	"sigmaos/proc"
-	"sigmaos/watch"
 )
 
 func main() {
@@ -20,7 +20,7 @@ func main() {
 	}
 	defer p.Done()
 
-	c, err := watch.NewPerfCoord(os.Args[1:])
+	c, err := drtest.NewPerfCoord(os.Args[1:])
 	if err != nil {
 		db.DFatalf("%v: err %v", os.Args[0], err)
 	}

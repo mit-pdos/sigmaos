@@ -1,4 +1,4 @@
-package watch_test
+package test
 
 import (
 	"fmt"
@@ -13,7 +13,6 @@ import (
 	"time"
 
 	sp "sigmaos/sigmap"
-	"sigmaos/watch"
 
 	"github.com/mitchellh/mapstructure"
 	"github.com/stretchr/testify/assert"
@@ -101,7 +100,7 @@ func testWatchPerf(t *testing.T, nWorkers int, nStartingFiles int, nTrials int, 
 
 	measureMode := os.Getenv("WATCHPERF_MEASURE_MODE")
 	if measureMode == "" {
-		measureMode = strconv.Itoa(int(watch.JustWatch))
+		measureMode = strconv.Itoa(int(JustWatch))
 	}
 
 	fmt.Printf("Using measure mode %s\n", measureMode)
@@ -118,7 +117,7 @@ func testWatchPerf(t *testing.T, nWorkers int, nStartingFiles int, nTrials int, 
 	}
 
 	data := status.Data()
-	result := watch.Result{}
+	result := Result{}
 	mapstructure.Decode(data, &result)
 
 	fmt.Printf("Creation Watch Delays:\n%s\n", computeStats(flatten(result.CreationWatchTimeNs)))

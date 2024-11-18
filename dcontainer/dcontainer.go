@@ -20,17 +20,17 @@ import (
 	"sigmaos/dcontainer/cgroup"
 	db "sigmaos/debug"
 	"sigmaos/mem"
-	"sigmaos/util/perf"
 	"sigmaos/port"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
+	"sigmaos/util/perf"
 )
 
 const (
 	CGROUP_PATH_BASE = "/cgroup/system.slice"
 )
 
-type Dcontainer struct {
+type DContainer struct {
 	*port.PortMap
 	overlays     bool
 	ctx          context.Context
@@ -48,7 +48,7 @@ type cpustats struct {
 	util                float64
 }
 
-func StartDockerContainer(p *proc.Proc, kernelId string, overlays bool, gvisor bool) (*Dcontainer, error) {
+func StartDockerContainer(p *proc.Proc, kernelId string, overlays bool, gvisor bool) (*DContainer, error) {
 	image := "sigmauser"
 	ctx := context.Background()
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
@@ -176,7 +176,7 @@ func StartDockerContainer(p *proc.Proc, kernelId string, overlays bool, gvisor b
 
 	db.DPrintf(db.CONTAINER, "network setting: ip %v secondaryIPAddrs %v nets %v portmap %v", ip, json.NetworkSettings.SecondaryIPAddresses, json.NetworkSettings.Networks, pm)
 	cgroupPath := filepath.Join(CGROUP_PATH_BASE, "docker-"+resp.ID+".scope")
-	c := &Dcontainer{
+	c := &DContainer{
 		overlays:   p.GetProcEnv().GetOverlays(),
 		PortMap:    pm,
 		ctx:        ctx,
@@ -194,7 +194,7 @@ func StartDockerContainer(p *proc.Proc, kernelId string, overlays bool, gvisor b
 	return c, nil
 }
 
-func (c *Dcontainer) GetCPUUtil() (float64, error) {
+func (c *DContainer) GetCPUUtil() (float64, error) {
 	st, err := c.cmgr.GetCPUStats(c.cgroupPath)
 	if err != nil {
 		db.DPrintf(db.ERROR, "Err get cpu stats: %v", err)
@@ -203,22 +203,22 @@ func (c *Dcontainer) GetCPUUtil() (float64, error) {
 	return st.Util, nil
 }
 
-func (c *Dcontainer) SetCPUShares(cpu int64) error {
+func (c *DContainer) SetCPUShares(cpu int64) error {
 	s := time.Now()
 	err := c.cmgr.SetCPUShares(c.cgroupPath, cpu)
-	db.DPrintf(db.SPAWN_LAT, "Dcontainer.SetCPUShares %v", time.Since(s))
+	db.DPrintf(db.SPAWN_LAT, "DContainer.SetCPUShares %v", time.Since(s))
 	return err
 }
 
-func (c *Dcontainer) String() string {
+func (c *DContainer) String() string {
 	return c.container[:10]
 }
 
-func (c *Dcontainer) Ip() string {
+func (c *DContainer) Ip() string {
 	return c.ip
 }
 
-func (c *Dcontainer) Shutdown() error {
+func (c *DContainer) Shutdown() error {
 	db.DPrintf(db.CONTAINER, "containerwait for %v\n", c)
 	statusCh, errCh := c.cli.ContainerWait(c.ctx, c.container, container.WaitConditionNotRunning)
 	select {

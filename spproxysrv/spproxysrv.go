@@ -15,10 +15,10 @@ import (
 	"sigmaos/fidclnt"
 	"sigmaos/netproxyclnt"
 	"sigmaos/netproxysrv"
-	"sigmaos/util/perf"
 	"sigmaos/port"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
+	"sigmaos/util/perf"
 )
 
 const (
@@ -118,7 +118,7 @@ type Subsystem interface {
 	GetProc() *proc.Proc
 	GetHow() proc.Thow
 	GetCrashed() bool
-	GetContainer() *dcontainer.Dcontainer
+	GetContainer() *dcontainer.DContainer
 	SetWaited(bool)
 	GetWaited() bool
 	Wait() error
@@ -141,7 +141,7 @@ func (scsc *SPProxySrvCmd) GetCrashed() bool {
 	return false
 }
 
-func (scsc *SPProxySrvCmd) GetContainer() *dcontainer.Dcontainer {
+func (scsc *SPProxySrvCmd) GetContainer() *dcontainer.DContainer {
 	db.DFatalf("No container")
 	return nil
 }

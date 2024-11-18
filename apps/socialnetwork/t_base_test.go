@@ -2,10 +2,10 @@ package socialnetwork_test
 
 import (
 	"github.com/stretchr/testify/assert"
+	sn "sigmaos/apps/socialnetwork"
 	dbg "sigmaos/debug"
 	"sigmaos/linuxsched"
 	"sigmaos/rand"
-	sn "sigmaos/socialnetwork"
 	"sigmaos/test"
 )
 

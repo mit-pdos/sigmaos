@@ -1,8 +1,8 @@
 syntax = "proto3";
 
-import "socialnetwork/proto/post.proto";
+import "apps/socialnetwork/proto/post.proto";
 
-option go_package = "sigmaos/socialnetwork/proto";
+option go_package = "sigmaos/apps/socialnetwork/proto";
 
 service TimelineService {
 	rpc WriteTimeline(WriteTimelineRequest) returns (WriteTimelineResponse);

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"gopkg.in/mgo.v2/bson"
 	"math/rand"
+	"sigmaos/apps/socialnetwork/proto"
 	"sigmaos/cache"
 	"sigmaos/cachedsvcclnt"
 	dbg "sigmaos/debug"
@@ -11,7 +12,6 @@ import (
 	"sigmaos/mongoclnt"
 	"sigmaos/proc"
 	"sigmaos/sigmasrv"
-	"sigmaos/socialnetwork/proto"
 	"strconv"
 	"sync"
 )

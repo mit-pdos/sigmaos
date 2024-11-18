@@ -3,13 +3,13 @@ package socialnetwork
 import (
 	"fmt"
 	"regexp"
+	"sigmaos/apps/socialnetwork/proto"
 	dbg "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/proc"
 	"sigmaos/rpcclnt"
 	"sigmaos/sigmarpcchan"
 	"sigmaos/sigmasrv"
-	"sigmaos/socialnetwork/proto"
 	"sync"
 )
 

@@ -3,6 +3,7 @@ package socialnetwork
 import (
 	"fmt"
 	"math/rand"
+	"sigmaos/apps/socialnetwork/proto"
 	dbg "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/perf"
@@ -10,7 +11,6 @@ import (
 	"sigmaos/rpcclnt"
 	"sigmaos/sigmarpcchan"
 	"sigmaos/sigmasrv"
-	"sigmaos/socialnetwork/proto"
 	"sync"
 	"time"
 )

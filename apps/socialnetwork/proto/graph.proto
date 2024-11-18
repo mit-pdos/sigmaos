@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-option go_package = "sigmaos/socialnetwork/proto";
+option go_package = "sigmaos/apps/socialnetwork/proto";
 
 service GraphService {
 	rpc GetFollowers(GetFollowersRequest) returns (GraphGetResponse);

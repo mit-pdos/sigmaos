@@ -5,11 +5,11 @@ import (
 	"gopkg.in/mgo.v2/bson"
 	"sigmaos/proc"
 
+	sn "sigmaos/apps/socialnetwork"
+	"sigmaos/apps/socialnetwork/proto"
 	"sigmaos/fslib"
 	"sigmaos/linuxsched"
 	"sigmaos/sigmarpcchan"
-	sn "sigmaos/socialnetwork"
-	"sigmaos/socialnetwork/proto"
 	"sigmaos/test"
 	"testing"
 )

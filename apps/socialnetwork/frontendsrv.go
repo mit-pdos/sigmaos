@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"sigmaos/apps/socialnetwork/proto"
 	dbg "sigmaos/debug"
 	"sigmaos/perf"
 	"sigmaos/port"
@@ -16,7 +17,6 @@ import (
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmarpcchan"
-	"sigmaos/socialnetwork/proto"
 	"sigmaos/tracing"
 )
 

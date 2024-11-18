@@ -3,6 +3,7 @@ package socialnetwork
 import (
 	"fmt"
 	"gopkg.in/mgo.v2/bson"
+	"sigmaos/apps/socialnetwork/proto"
 	"sigmaos/cache"
 	"sigmaos/cachedsvcclnt"
 	dbg "sigmaos/debug"
@@ -11,7 +12,6 @@ import (
 	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/sigmasrv"
-	"sigmaos/socialnetwork/proto"
 	"strconv"
 )
 

@@ -3,12 +3,12 @@ package socialnetwork_test
 import (
 	"fmt"
 	"github.com/stretchr/testify/assert"
+	sn "sigmaos/apps/socialnetwork"
+	"sigmaos/apps/socialnetwork/proto"
 	"sigmaos/fslib"
 	"sigmaos/linuxsched"
 	"sigmaos/rpcclnt"
 	"sigmaos/sigmarpcchan"
-	sn "sigmaos/socialnetwork"
-	"sigmaos/socialnetwork/proto"
 	"sigmaos/test"
 	"testing"
 )

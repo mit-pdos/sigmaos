@@ -7,9 +7,9 @@ import (
 
 	proto "sigmaos/cache/proto"
 
+	"sigmaos/apps/kv/kvgrp"
 	"sigmaos/cache"
 	db "sigmaos/debug"
-	"sigmaos/kvgrp"
 	"sigmaos/proc"
 	"sigmaos/semclnt"
 	"sigmaos/sigmaclnt"

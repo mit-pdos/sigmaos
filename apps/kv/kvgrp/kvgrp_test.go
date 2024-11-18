@@ -7,10 +7,10 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"sigmaos/apps/kv/kvgrp"
 	db "sigmaos/debug"
-	"sigmaos/namesrv/fsetcd"
 	"sigmaos/groupmgr"
-	"sigmaos/kvgrp"
+	"sigmaos/namesrv/fsetcd"
 	"sigmaos/netproxyclnt"
 	"sigmaos/proc"
 	"sigmaos/rand"

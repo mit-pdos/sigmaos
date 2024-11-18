@@ -8,13 +8,13 @@ import (
 
 	"google.golang.org/protobuf/proto"
 
+	"sigmaos/apps/kv/kvgrp"
 	"sigmaos/cache"
 	cacheproto "sigmaos/cache/proto"
 	"sigmaos/cacheclnt"
 	"sigmaos/cachesrv"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
-	"sigmaos/kvgrp"
 	"sigmaos/replclnt"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"

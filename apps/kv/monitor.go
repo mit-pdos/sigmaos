@@ -4,9 +4,9 @@ import (
 	"strconv"
 	"sync"
 
+	"sigmaos/apps/kv/kvgrp"
 	db "sigmaos/debug"
 	"sigmaos/groupmgr"
-	"sigmaos/kvgrp"
 	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"

@@ -105,7 +105,7 @@ if [[ $COMPILE == "--compile" ]]; then
     # test if test packages compile
     #
 
-    for T in path intervals serr linuxsched perf sigmap netproxy sessclnt npproxysrv fslib/reader fslib/writer stats fslib semclnt chunksrv electclnt dircache memfs namesrv procclnt ux s3 bootkernelclnt leaderclnt leadertest kvgrp cachedsvcclnt www sigmapsrv realmclnt apps/mr apps/imgresize apps/kv apps/hotel apps/socialnetwork benchmarks benchmarks/remote example example_echo_server netperf; do
+    for T in path intervals serr linuxsched perf sigmap netproxy sessclnt npproxysrv fslib/reader fslib/writer stats fslib semclnt chunksrv electclnt dircache memfs namesrv procclnt ux s3 bootkernelclnt leaderclnt leadertest apps/kv/kvgrp cachedsvcclnt www sigmapsrv realmclnt apps/mr apps/imgresize apps/kv apps/hotel apps/socialnetwork benchmarks benchmarks/remote example example_echo_server netperf; do
         if ! [ -z "$SKIPTO" ]; then
           if [[ "$SKIPTO" == "$T" ]]; then
             # Stop skipping
@@ -187,7 +187,7 @@ if [[ $BASIC == "--basic" ]]; then
     # tests a full kernel using root realm
     #
 
-    for T in namesrv semclnt chunksrv procclnt ux bootkernelclnt s3 leaderclnt leadertest kvgrp cachedsvcclnt; do
+    for T in namesrv semclnt chunksrv procclnt ux bootkernelclnt s3 leaderclnt leadertest apps/kv/kvgrp cachedsvcclnt; do
         if ! [ -z "$SKIPTO" ]; then
           if [[ "$SKIPTO" == "$T" ]]; then
             # Stop skipping
@@ -278,7 +278,7 @@ if [[ $APPS == "--apps" ]]; then
 #        cleanup
 #        go test $VERB sigmaos/apps/imgresize -start $GVISOR $SPPROXYD $NETPROXY -run ImgdOne
 #        cleanup
-#        go test $VERB sigmaos/kv -start $GVISOR $SPPROXYD $NETPROXY -run KVOKN
+#        go test $VERB sigmaos/apps/kv -start $GVISOR $SPPROXYD $NETPROXY -run KVOKN
 #        cleanup
 #        ./start-db.sh
 #        go test $VERB sigmaos/apps/hotel -start $GVISOR $SPPROXYD $NETPROXY -run TestBenchDeathStarSingle

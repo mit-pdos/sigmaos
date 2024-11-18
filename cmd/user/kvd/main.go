@@ -5,9 +5,9 @@ import (
 	"os"
 	"strconv"
 
+	"sigmaos/apps/kv/kvgrp"
 	db "sigmaos/debug"
 	"sigmaos/groupmgr"
-	"sigmaos/kvgrp"
 )
 
 func main() {

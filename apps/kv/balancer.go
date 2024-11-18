@@ -21,6 +21,7 @@ import (
 	"sync"
 	"time"
 
+	"sigmaos/apps/kv/kvgrp"
 	"sigmaos/cache"
 	"sigmaos/cachesrv"
 	"sigmaos/crash"
@@ -28,7 +29,6 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/fslib"
-	"sigmaos/kvgrp"
 	"sigmaos/leaderclnt"
 	"sigmaos/memfs/dir"
 	"sigmaos/memfs/fenceddir"

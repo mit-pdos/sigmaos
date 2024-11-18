@@ -1,4 +1,4 @@
-package beschedsrv
+package srv
 
 import (
 	"fmt"

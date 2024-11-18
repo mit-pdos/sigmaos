@@ -1,4 +1,4 @@
-package lcschedsrv
+package srv
 
 import (
 	db "sigmaos/debug"

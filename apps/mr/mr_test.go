@@ -18,12 +18,12 @@ import (
 	"github.com/dustin/go-humanize"
 	"github.com/stretchr/testify/assert"
 
+	"sigmaos/apps/mr"
+	"sigmaos/apps/mr/chunkreader"
+	api "sigmaos/apps/mr/mr"
+	mrscanner "sigmaos/apps/mr/scanner"
 	"sigmaos/auth"
 	db "sigmaos/debug"
-	"sigmaos/mr"
-	"sigmaos/mr/chunkreader"
-	api "sigmaos/mr/mr"
-	mrscanner "sigmaos/mr/scanner"
 	"sigmaos/perf"
 	"sigmaos/proc"
 	rd "sigmaos/rand"
@@ -31,9 +31,9 @@ import (
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	// "sigmaos/stats"
-	"sigmaos/grep"
+	"sigmaos/apps/mr/grep"
+	"sigmaos/apps/mr/wc"
 	"sigmaos/test"
-	"sigmaos/wc"
 )
 
 const (
@@ -147,7 +147,7 @@ func TestSeqWc(t *testing.T) {
 		LOCALINPUT = "/tmp/enwiki-1G"
 		HOSTTMP    = "/tmp/sigmaos/"
 		F          = "pg-dorian_gray.txt"
-		INPUT      = "../input/" + F
+		INPUT      = "../../input/" + F
 		// INPUT = LOCALINPUT
 		OUT = HOSTTMP + F + ".out"
 	)

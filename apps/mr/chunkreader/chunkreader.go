@@ -5,11 +5,11 @@ import (
 	"bytes"
 	"io"
 
+	"sigmaos/apps/mr/kvmap"
+	"sigmaos/apps/mr/mr"
+	mrscanner "sigmaos/apps/mr/scanner"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
-	"sigmaos/mr/kvmap"
-	"sigmaos/mr/mr"
-	mrscanner "sigmaos/mr/scanner"
 	"sigmaos/perf"
 	sp "sigmaos/sigmap"
 )

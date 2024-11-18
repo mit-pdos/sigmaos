@@ -3,8 +3,8 @@ package main
 import (
 	"os"
 
+	"sigmaos/apps/mr"
 	db "sigmaos/debug"
-	"sigmaos/mr"
 )
 
 func main() {

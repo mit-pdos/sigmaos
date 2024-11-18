@@ -3,7 +3,7 @@ package kvmap
 import (
 	"github.com/fmstephe/unsafeutil"
 
-	"sigmaos/mr/mr"
+	"sigmaos/apps/mr/mr"
 )
 
 type KVMap struct {

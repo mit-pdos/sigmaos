@@ -12,11 +12,11 @@ import (
 
 	"github.com/dustin/go-humanize"
 
+	"sigmaos/apps/mr/chunkreader"
+	"sigmaos/apps/mr/mr"
 	"sigmaos/crash"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
-	"sigmaos/mr/chunkreader"
-	"sigmaos/mr/mr"
 	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/rand"

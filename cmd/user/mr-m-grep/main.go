@@ -3,8 +3,8 @@ package main
 import (
 	"os"
 
-	"sigmaos/grep"
-	"sigmaos/mr"
+	"sigmaos/apps/mr"
+	"sigmaos/apps/mr/grep"
 )
 
 func main() {

@@ -7,9 +7,9 @@ import (
 	"github.com/dustin/go-humanize"
 	"github.com/mitchellh/mapstructure"
 
+	"sigmaos/apps/mr/mr"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
-	"sigmaos/mr/mr"
 	sp "sigmaos/sigmap"
 )
 

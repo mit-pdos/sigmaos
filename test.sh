@@ -105,7 +105,7 @@ if [[ $COMPILE == "--compile" ]]; then
     # test if test packages compile
     #
 
-    for T in path intervals serr linuxsched perf sigmap netproxy sessclnt npproxysrv fslib/reader fslib/writer stats fslib semclnt chunksrv electclnt dircache memfs namesrv procclnt ux s3 bootkernelclnt leaderclnt leadertest kvgrp cachedsvcclnt www sigmapsrv realmclnt mr imgresizesrv kv hotel socialnetwork benchmarks benchmarks/remote example example_echo_server netperf; do
+    for T in path intervals serr linuxsched perf sigmap netproxy sessclnt npproxysrv fslib/reader fslib/writer stats fslib semclnt chunksrv electclnt dircache memfs namesrv procclnt ux s3 bootkernelclnt leaderclnt leadertest kvgrp cachedsvcclnt www sigmapsrv realmclnt apps/mr imgresizesrv kv hotel socialnetwork benchmarks benchmarks/remote example example_echo_server netperf; do
         if ! [ -z "$SKIPTO" ]; then
           if [[ "$SKIPTO" == "$T" ]]; then
             # Stop skipping
@@ -253,7 +253,7 @@ fi
 
 if [[ $APPS == "--apps" ]]; then
     if [[ $FAST == "--fast" ]]; then
-        PKGS="mr imgresizesrv kv hotel socialnetwork"
+        PKGS="apps/mr imgresizesrv kv hotel socialnetwork"
         TNAMES=("MRJob" "ImgdOne" "KVOKN" "TestBenchDeathStarSingle" "TestCompose")
         NEED_DB=("false" "false" "false" "true" "true")
         i=0
@@ -274,7 +274,7 @@ if [[ $APPS == "--apps" ]]; then
           cleanup
           i=$(($i+1))
         done
-#        go test $VERB sigmaos/mr -start $GVISOR $SPPROXYD $NETPROXY -run MRJob
+#        go test $VERB sigmaos/apps/mr -start $GVISOR $SPPROXYD $NETPROXY -run MRJob
 #        cleanup
 #        go test $VERB sigmaos/imgresizesrv -start $GVISOR $SPPROXYD $NETPROXY -run ImgdOne
 #        cleanup
@@ -287,7 +287,7 @@ if [[ $APPS == "--apps" ]]; then
 #       	go test $VERB sigmaos/socialnetwork -start $GVISOR $SPPROXYD $NETPROXY -run TestCompose
 #        cleanup
     else
-        for T in imgresizesrv mr hotel socialnetwork www; do
+        for T in imgresizesrv apps/mr hotel socialnetwork www; do
             if ! [ -z "$SKIPTO" ]; then
               if [[ "$SKIPTO" == "$T" ]]; then
                 # Stop skipping

@@ -10,8 +10,8 @@ import (
 
 	"github.com/go-redis/redis/v8"
 
+	cacheclnt "sigmaos/cache/clnt"
 	proto "sigmaos/cache/proto"
-	"sigmaos/cacheclnt"
 	"sigmaos/cachedsvcclnt"
 	db "sigmaos/debug"
 	"sigmaos/fslib"

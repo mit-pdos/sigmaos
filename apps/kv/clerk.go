@@ -10,8 +10,8 @@ import (
 
 	"sigmaos/apps/kv/kvgrp"
 	"sigmaos/cache"
+	cacheclnt "sigmaos/cache/clnt"
 	cacheproto "sigmaos/cache/proto"
-	"sigmaos/cacheclnt"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/replclnt"

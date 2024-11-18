@@ -1,4 +1,4 @@
-package cacheclnt
+package clnt
 
 import (
 	"bufio"

@@ -11,7 +11,6 @@ import (
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
-	// "sigmaos/seccomp"
 )
 
 var fsux *FsUx

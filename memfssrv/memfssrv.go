@@ -20,7 +20,7 @@ import (
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmapsrv"
-	"sigmaos/syncmap"
+	"sigmaos/util/syncmap"
 )
 
 var rootP = path.Tpathname{""}

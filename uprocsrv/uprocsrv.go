@@ -29,7 +29,7 @@ import (
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
 	"sigmaos/spproxysrv"
-	"sigmaos/syncmap"
+	"sigmaos/util/syncmap"
 	"sigmaos/uprocsrv/binsrv"
 	"sigmaos/uprocsrv/proto"
 )

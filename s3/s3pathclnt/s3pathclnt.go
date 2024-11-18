@@ -19,7 +19,7 @@ import (
 	"sigmaos/serr"
 	sos "sigmaos/sigmaos"
 	sp "sigmaos/sigmap"
-	"sigmaos/syncmap"
+	"sigmaos/util/syncmap"
 )
 
 type S3PathClnt struct {

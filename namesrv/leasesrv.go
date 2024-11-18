@@ -10,7 +10,7 @@ import (
 	"sigmaos/namesrv/fsetcd"
 	leaseproto "sigmaos/lease/proto"
 	sp "sigmaos/sigmap"
-	"sigmaos/syncmap"
+	"sigmaos/util/syncmap"
 )
 
 type LeaseSrv struct {

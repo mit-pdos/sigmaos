@@ -23,7 +23,7 @@ import (
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmarpcchan"
 	"sigmaos/sigmasrv"
-	"sigmaos/syncmap"
+	"sigmaos/util/syncmap"
 )
 
 type Schedd struct {

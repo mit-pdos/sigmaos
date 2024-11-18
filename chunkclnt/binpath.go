@@ -8,7 +8,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/util/rand"
 	sp "sigmaos/sigmap"
-	"sigmaos/syncmap"
+	"sigmaos/util/syncmap"
 )
 
 type kernelIDs struct {

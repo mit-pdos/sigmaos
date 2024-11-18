@@ -1,7 +1,7 @@
 package lcschedclnt
 
 import (
-	pqproto "sigmaos/beschedsrv/proto"
+	"sigmaos/besched/proto"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/proc"
@@ -38,10 +38,10 @@ func (lcs *LCSchedClnt) Enqueue(p *proc.Proc) (string, error) {
 		db.DPrintf(db.ALWAYS, "Error: Can't get lcsched clnt: %v", err)
 		return NOT_ENQ, err
 	}
-	req := &pqproto.EnqueueRequest{
+	req := &proto.EnqueueRequest{
 		ProcProto: p.GetProto(),
 	}
-	res := &pqproto.EnqueueResponse{}
+	res := &proto.EnqueueResponse{}
 	if err := rpcc.RPC("LCSched.Enqueue", req, res); err != nil {
 		db.DPrintf(db.ALWAYS, "LCSched.Enqueue err %v", err)
 		if serr.IsErrCode(err, serr.TErrUnreachable) {

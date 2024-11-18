@@ -5,14 +5,13 @@ import (
 	"path/filepath"
 	"sync"
 
-	beproto "sigmaos/beschedsrv/proto"
+	beschedproto "sigmaos/besched/proto"
 	"sigmaos/chunk"
 	"sigmaos/chunkclnt"
 	"sigmaos/chunksrv"
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	proto "sigmaos/lcschedsrv/proto"
-	"sigmaos/util/perf"
 	"sigmaos/proc"
 	"sigmaos/procfs"
 	"sigmaos/scheddclnt"
@@ -20,6 +19,7 @@ import (
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
+	"sigmaos/util/perf"
 )
 
 type LCSched struct {
@@ -90,7 +90,7 @@ func (qd *QDir) Len() int {
 	return qd.lcs.lenL()
 }
 
-func (lcs *LCSched) Enqueue(ctx fs.CtxI, req beproto.EnqueueRequest, res *beproto.EnqueueResponse) error {
+func (lcs *LCSched) Enqueue(ctx fs.CtxI, req beschedproto.EnqueueRequest, res *beschedproto.EnqueueResponse) error {
 	p := proc.NewProcFromProto(req.ProcProto)
 	if p.GetRealm() != ctx.Principal().GetRealm() {
 		return fmt.Errorf("Proc realm %v doesn't match principal realm %v", p.GetRealm(), ctx.Principal().GetRealm())

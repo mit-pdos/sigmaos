@@ -7,19 +7,19 @@ import (
 	"sync/atomic"
 	"time"
 
-	proto "sigmaos/beschedsrv/proto"
+	"sigmaos/besched/proto"
 	"sigmaos/chunk"
 	"sigmaos/chunkclnt"
 	"sigmaos/chunksrv"
 	db "sigmaos/debug"
 	"sigmaos/fs"
-	"sigmaos/util/perf"
 	"sigmaos/proc"
 	"sigmaos/procfs"
 	"sigmaos/schedqueue"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
+	"sigmaos/util/perf"
 )
 
 const (

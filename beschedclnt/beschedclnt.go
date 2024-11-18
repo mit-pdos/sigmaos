@@ -4,7 +4,7 @@ package beschedclnt
 import (
 	"time"
 
-	"sigmaos/beschedsrv/proto"
+	"sigmaos/besched/proto"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/proc"

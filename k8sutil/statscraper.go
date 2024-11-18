@@ -3,7 +3,7 @@ package k8sutil
 import (
 	"fmt"
 
-	"sigmaos/cgroup"
+	"sigmaos/dcontainer/cgroup"
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/k8sutil/proto"

@@ -5,7 +5,7 @@ import (
 
 	"sigmaos/apps/kv"
 	"sigmaos/apps/cache"
-	cachegrpclnt "sigmaos/cachegrp/clnt"
+	cachegrpclnt "sigmaos/apps/cache/cachegrp/clnt"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/memcachedclnt"

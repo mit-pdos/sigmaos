@@ -12,7 +12,7 @@ import (
 
 	"sigmaos/apps/cache"
 	cacheclnt "sigmaos/apps/cache/clnt"
-	"sigmaos/cachegrp"
+	"sigmaos/apps/cache/cachegrp"
 	db "sigmaos/debug"
 	"sigmaos/dircache"
 	"sigmaos/fslib"

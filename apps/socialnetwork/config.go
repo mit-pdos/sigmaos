@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"path/filepath"
 
-	cachegrpclnt "sigmaos/cachegrp/clnt"
-	cachegrpmgr "sigmaos/cachegrp/mgr"
+	cachegrpclnt "sigmaos/apps/cache/cachegrp/clnt"
+	cachegrpmgr "sigmaos/apps/cache/cachegrp/mgr"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/netproxyclnt"

@@ -5,7 +5,7 @@ import (
 	"gopkg.in/mgo.v2/bson"
 	"sigmaos/apps/socialnetwork/proto"
 	"sigmaos/apps/cache"
-	cachegrpclnt "sigmaos/cachegrp/clnt"
+	cachegrpclnt "sigmaos/apps/cache/cachegrp/clnt"
 	dbg "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/perf"

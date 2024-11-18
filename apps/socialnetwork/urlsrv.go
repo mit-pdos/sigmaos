@@ -6,7 +6,7 @@ import (
 	"math/rand"
 	"sigmaos/apps/socialnetwork/proto"
 	"sigmaos/apps/cache"
-	cachegrpclnt "sigmaos/cachegrp/clnt"
+	cachegrpclnt "sigmaos/apps/cache/cachegrp/clnt"
 	dbg "sigmaos/debug"
 	"sigmaos/fs"
 	mongoclnt "sigmaos/mongo/clnt"

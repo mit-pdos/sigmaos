@@ -4,7 +4,7 @@ import (
 	"sync"
 	"time"
 
-	"sigmaos/cachegrp/mgr"
+	"sigmaos/apps/cache/cachegrp/mgr"
 	db "sigmaos/debug"
 	"sigmaos/rpc"
 )

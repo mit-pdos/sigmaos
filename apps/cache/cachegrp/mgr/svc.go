@@ -7,7 +7,7 @@ import (
 	"sync"
 
 	// db "sigmaos/debug"
-	"sigmaos/cachegrp"
+	"sigmaos/apps/cache/cachegrp"
 	"sigmaos/proc"
 	"sigmaos/serr"
 	"sigmaos/sigmaclnt"

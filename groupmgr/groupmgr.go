@@ -54,11 +54,6 @@ type GroupMgrConfig struct {
 	Job       string
 	Mcpu      proc.Tmcpu
 	NReplicas int
-
-	// For testing purposes
-	crash     int64
-	partition int64
-	netfail   int64
 }
 
 // If n == 0, run only one member (i.e., no hot standby's or replication)
@@ -70,12 +65,6 @@ func NewGroupConfig(n int, bin string, args []string, mcpu proc.Tmcpu, job strin
 		Mcpu:      mcpu,
 		Job:       job,
 	}
-}
-
-func (cfg *GroupMgrConfig) SetTest(crash, partition, netfail int) {
-	cfg.crash = int64(crash)
-	cfg.partition = int64(partition)
-	cfg.netfail = int64(netfail)
 }
 
 func (cfg *GroupMgrConfig) Persist(fsl *fslib.FsLib) error {
@@ -96,15 +85,14 @@ func Recover(sc *sigmaclnt.SigmaClnt) ([]*GroupMgr, error) {
 			return true, err
 		}
 		log.Printf("cfg %v\n", cfg)
-		gms = append(gms, cfg.StartGrpMgr(sc, 0))
+		gms = append(gms, cfg.StartGrpMgr(sc))
 		return false, nil
 
 	})
 	return gms, nil
 }
 
-// ncrash = number of group members which may crash.
-func (cfg *GroupMgrConfig) StartGrpMgr(sc *sigmaclnt.SigmaClnt, ncrash int) *GroupMgr {
+func (cfg *GroupMgrConfig) StartGrpMgr(sc *sigmaclnt.SigmaClnt) *GroupMgr {
 	N := cfg.NReplicas
 	if cfg.NReplicas == 0 {
 		N = 1
@@ -116,13 +104,8 @@ func (cfg *GroupMgrConfig) StartGrpMgr(sc *sigmaclnt.SigmaClnt, ncrash int) *Gro
 	gm.ch = make(chan []*proc.Status)
 	gm.members = make([]*member, N)
 	for i := 0; i < N; i++ {
-		crashMember := cfg.crash
-		if i+1 > ncrash {
-			crashMember = 0
-		} else {
-			db.DPrintf(db.GROUPMGR, "group %v member %v crash %v\n", cfg.Args, i, crashMember)
-		}
-		gm.members[i] = newMember(sc, cfg, i, crashMember)
+		db.DPrintf(db.GROUPMGR, "group %v member %v", cfg.Args, i)
+		gm.members[i] = newMember(sc, cfg, i)
 	}
 	done := make(chan *procret)
 	go gm.manager(done, N)
@@ -139,7 +122,6 @@ type member struct {
 	*GroupMgrConfig
 	pid    sp.Tpid
 	id     int
-	crash  int64
 	nstart int
 }
 
@@ -157,19 +139,14 @@ func (pr procret) String() string {
 	return fmt.Sprintf("{m %v err %v status %v}", pr.member, pr.err, pr.status)
 }
 
-func newMember(sc *sigmaclnt.SigmaClnt, cfg *GroupMgrConfig, id int, crash int64) *member {
-	return &member{SigmaClnt: sc, GroupMgrConfig: cfg, crash: crash, id: id}
+func newMember(sc *sigmaclnt.SigmaClnt, cfg *GroupMgrConfig, id int) *member {
+	return &member{SigmaClnt: sc, GroupMgrConfig: cfg, id: id}
 }
 
 // Caller holds lock
 func (m *member) spawnL() error {
 	p := proc.NewProc(m.Program, m.Args)
 	p.SetMcpu(m.Mcpu)
-
-	// XXX to be deleted
-	p.SetCrash(m.crash)
-	p.SetPartition(m.partition)
-	p.SetNetFail(m.netfail)
 
 	p.SetEnv(proc.SIGMAFAIL, proc.GetSigmaFail())
 	p.AppendEnv("SIGMAREPL", newREPL(m.id, m.NReplicas))

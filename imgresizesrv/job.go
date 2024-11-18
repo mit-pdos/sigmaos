@@ -32,7 +32,7 @@ func StartImgd(sc *sigmaclnt.SigmaClnt, job string, workerMcpu proc.Tmcpu, worke
 	if persist {
 		cfg.Persist(sc.FsLib)
 	}
-	return cfg.StartGrpMgr(sc, 0)
+	return cfg.StartGrpMgr(sc)
 }
 
 func StartImgRPCd(sc *sigmaclnt.SigmaClnt, job string, workerMcpu proc.Tmcpu, workerMem proc.Tmem, nrounds int, imgdMcpu proc.Tmcpu) (*proc.Proc, error) {

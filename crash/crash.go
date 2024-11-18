@@ -102,23 +102,6 @@ func Crasher(fsl *fslib.FsLib) {
 	}()
 }
 
-func CrasherMsg(fsl *fslib.FsLib, f func() string) {
-	crash := fsl.ProcEnv().GetCrash()
-	if crash == 0 {
-		return
-	}
-	go func() {
-		for true {
-			r := randSleep(crash)
-			if r < 330 {
-				fail(crash, f)
-			} else if r < 660 {
-				PartitionNamed(fsl)
-			}
-		}
-	}()
-}
-
 func fail(crash int64, f func() string) {
 	msg := ""
 	if f != nil {

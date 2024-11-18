@@ -51,7 +51,6 @@ type Coord struct {
 	nmaptask        int
 	nreducetask     int
 	reduceBinIn     map[string]Bin
-	crash           int64
 	maliciousMapper uint64
 	linesz          string
 	wordsz          string
@@ -81,7 +80,7 @@ func (s *stat) String() string {
 type NewProc func(string) (*proc.Proc, error)
 
 func NewCoord(args []string) (*Coord, error) {
-	if len(args) != 11 {
+	if len(args) != 10 {
 		return nil, errors.New("NewCoord: wrong number of arguments")
 	}
 	c := &Coord{}
@@ -108,22 +107,16 @@ func NewCoord(args []string) (*Coord, error) {
 	c.mapperbin = args[4]
 	c.reducerbin = args[5]
 
-	ctime, err := strconv.Atoi(args[6])
+	malmap, err := strconv.Atoi(args[9])
 	if err != nil {
-		return nil, fmt.Errorf("NewCoord: crash %v isn't int", args[6])
-	}
-	c.crash = int64(ctime)
-
-	malmap, err := strconv.Atoi(args[10])
-	if err != nil {
-		return nil, fmt.Errorf("NewCoord: maliciousMapper %v isn't int", args[10])
+		return nil, fmt.Errorf("NewCoord: maliciousMapper %v isn't int", args[9])
 	}
 	c.maliciousMapper = uint64(malmap)
 
-	c.linesz = args[7]
-	c.wordsz = args[8]
+	c.linesz = args[6]
+	c.wordsz = args[7]
 
-	mem, err := strconv.Atoi(args[9])
+	mem, err := strconv.Atoi(args[8])
 	if err != nil {
 		return nil, fmt.Errorf("NewCoord: nreducetask %v isn't int", args[3])
 	}
@@ -167,9 +160,6 @@ func (c *Coord) newTask(bin string, args []string, mb proc.Tmem, allowedPaths []
 	//		p.AppendEnv("GOMEMLIMIT", strconv.Itoa(int(mb)*1024*1024))
 	//	}
 	p.SetMem(mb)
-	if c.crash > 0 {
-		p.SetCrash(c.crash)
-	}
 	return p
 }
 

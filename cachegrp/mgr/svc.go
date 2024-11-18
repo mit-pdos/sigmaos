@@ -1,20 +1,17 @@
-// The cachedsvc package manages a service of cachesrvs.  Server i
-// post itself with the pathname SRVDIR/i.
-package cachedsvc
+// The cachegrp package manages a service of cachesrvs.  Server i
+// post itself with the pathname cachegrp.SRVDIR/i.
+package mgr
 
 import (
 	"strconv"
 	"sync"
 
 	// db "sigmaos/debug"
+	"sigmaos/cachegrp"
 	"sigmaos/proc"
 	"sigmaos/serr"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
-)
-
-const (
-	SRVDIR = "servers/"
 )
 
 type CachedSvc struct {
@@ -30,7 +27,7 @@ type CachedSvc struct {
 
 func (cs *CachedSvc) addServer(i int) error {
 	// SpawnBurst to spread servers across procds.
-	p := proc.NewProc(cs.bin, []string{cs.pn, SRVDIR + strconv.Itoa(int(i))})
+	p := proc.NewProc(cs.bin, []string{cs.pn, cachegrp.SRVDIR + strconv.Itoa(int(i))})
 	//	p.AppendEnv("GODEBUG", "gctrace=1")
 	if !cs.gc {
 		p.AppendEnv("GOGC", "off")
@@ -50,7 +47,7 @@ func (cs *CachedSvc) addServer(i int) error {
 // XXX use job
 func NewCachedSvc(sc *sigmaclnt.SigmaClnt, nsrv int, mcpu proc.Tmcpu, job, bin, pn string, gc bool) (*CachedSvc, error) {
 	sc.MkDir(pn, 0777)
-	if err := sc.MkDir(pn+SRVDIR, 0777); err != nil {
+	if err := sc.MkDir(pn+cachegrp.SRVDIR, 0777); err != nil {
 		if !serr.IsErrCode(err, serr.TErrExists) {
 			return nil, err
 		}
@@ -80,10 +77,6 @@ func (cs *CachedSvc) AddServer() error {
 	return cs.addServer(n)
 }
 
-func Server(n string) string {
-	return SRVDIR + n
-}
-
 func (cs *CachedSvc) Nserver() int {
 	return len(cs.servers)
 }
@@ -93,7 +86,7 @@ func (cs *CachedSvc) SvcDir() string {
 }
 
 func (cs *CachedSvc) Server(n string) string {
-	return cs.pn + Server(n)
+	return cs.pn + cachegrp.Server(n)
 }
 
 func (cs *CachedSvc) Stop() error {
@@ -105,6 +98,6 @@ func (cs *CachedSvc) Stop() error {
 			return err
 		}
 	}
-	cs.RmDir(cs.pn + SRVDIR)
+	cs.RmDir(cs.pn + cachegrp.SRVDIR)
 	return nil
 }

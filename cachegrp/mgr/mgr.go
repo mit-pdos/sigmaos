@@ -1,4 +1,4 @@
-package cachedsvc
+package mgr
 
 import (
 	"sigmaos/apps/cache"

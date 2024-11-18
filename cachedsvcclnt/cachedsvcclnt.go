@@ -12,7 +12,7 @@ import (
 
 	"sigmaos/apps/cache"
 	cacheclnt "sigmaos/apps/cache/clnt"
-	"sigmaos/cachedsvc"
+	"sigmaos/cachegrp"
 	db "sigmaos/debug"
 	"sigmaos/dircache"
 	"sigmaos/fslib"
@@ -42,7 +42,7 @@ func NewCachedSvcClnt(fsls []*fslib.FsLib, job string) *CachedSvcClnt {
 		pn:  cache.CACHE,
 		cc:  cacheclnt.NewCacheClnt(fsls, job, cache.NSHARD),
 	}
-	dir := csc.pn + cachedsvc.SRVDIR
+	dir := csc.pn + cachegrp.SRVDIR
 	csc.dd = dircache.NewDirCache[struct{}](fsls[0], dir, csc.newEntry, nil, db.CACHEDSVCCLNT, db.CACHEDSVCCLNT)
 	return csc
 }
@@ -52,7 +52,7 @@ func (csc *CachedSvcClnt) newEntry(n string) (struct{}, error) {
 }
 
 func (csc *CachedSvcClnt) Server(i int) string {
-	return csc.pn + cachedsvc.Server(strconv.Itoa(i))
+	return csc.pn + cachegrp.Server(strconv.Itoa(i))
 }
 
 func (csc *CachedSvcClnt) StatsSrvs() ([]*rpc.RPCStatsSnapshot, error) {

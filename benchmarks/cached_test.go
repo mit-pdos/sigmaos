@@ -5,7 +5,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"sigmaos/cachedsvc"
+	"sigmaos/cachegrp/mgr"
 	"sigmaos/cachedsvcclnt"
 	db "sigmaos/debug"
 	"sigmaos/proc"

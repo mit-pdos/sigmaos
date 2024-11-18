@@ -6,8 +6,8 @@ import (
 	"strconv"
 
 	"sigmaos/apps/kv"
-	"sigmaos/cachedsvc"
 	"sigmaos/cachedsvcclnt"
+	cachegrpmgr "sigmaos/cachegrp/mgr"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/netproxyclnt"
@@ -146,7 +146,7 @@ func NewHotelSvc(public bool) []*Srv {
 type HotelJob struct {
 	*sigmaclnt.SigmaClnt
 	cacheClnt       *cachedsvcclnt.CachedSvcClnt
-	cacheMgr        *cachedsvc.CacheMgr
+	cacheMgr        *cachegrpmgr.CacheMgr
 	CacheAutoscaler *cachedsvcclnt.Autoscaler
 	pids            []sp.Tpid
 	cache           string
@@ -161,7 +161,7 @@ func NewHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []*Srv, nhotel int, c
 	geo.Args = []string{strconv.Itoa(ngeoidx), strconv.Itoa(geoSearchRadius), strconv.Itoa(geoNResults)}
 
 	var cc *cachedsvcclnt.CachedSvcClnt
-	var cm *cachedsvc.CacheMgr
+	var cm *cachegrpmgr.CacheMgr
 	var ca *cachedsvcclnt.Autoscaler
 	var err error
 	var kvf *kv.KVFleet
@@ -176,7 +176,7 @@ func NewHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []*Srv, nhotel int, c
 		switch cache {
 		case "cached":
 			db.DPrintf(db.ALWAYS, "Hotel running with cached")
-			cm, err = cachedsvc.NewCacheMgr(sc, job, ncache, cacheMcpu, gc)
+			cm, err = cachegrpmgr.NewCacheMgr(sc, job, ncache, cacheMcpu, gc)
 			if err != nil {
 				db.DPrintf(db.ERROR, "Error NewCacheMgr %v", err)
 				return nil, err

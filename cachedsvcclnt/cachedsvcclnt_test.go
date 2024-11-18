@@ -10,15 +10,15 @@ import (
 
 	"sigmaos/apps/cache"
 	"sigmaos/apps/cache/proto"
-	"sigmaos/cachedsvc"
 	"sigmaos/cachedsvcclnt"
+	cachegrpmgr "sigmaos/cachegrp/mgr"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/proc"
-	rd "sigmaos/util/rand"
 	"sigmaos/semclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
+	rd "sigmaos/util/rand"
 )
 
 const (
@@ -27,7 +27,7 @@ const (
 
 type Tstate struct {
 	*test.Tstate
-	cm    *cachedsvc.CacheMgr
+	cm    *cachegrpmgr.CacheMgr
 	clrks []sp.Tpid
 	job   string
 	sempn string
@@ -39,7 +39,7 @@ func newTstate(t *test.Tstate, nsrv int) *Tstate {
 	ts.Tstate = t
 	ts.job = rd.String(16)
 	ts.Remove(cache.CACHE)
-	cm, err := cachedsvc.NewCacheMgr(ts.SigmaClnt, ts.job, nsrv, proc.Tmcpu(CACHE_MCPU), true)
+	cm, err := cachegrpmgr.NewCacheMgr(ts.SigmaClnt, ts.job, nsrv, proc.Tmcpu(CACHE_MCPU), true)
 	assert.Nil(t.T, err)
 	ts.cm = cm
 	ts.sempn = cm.SvcDir() + "-cacheclerk-sem"

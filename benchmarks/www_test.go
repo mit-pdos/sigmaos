@@ -8,13 +8,13 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"sigmaos/apps/www"
 	db "sigmaos/debug"
 	"sigmaos/proc"
 	"sigmaos/rand"
 	"sigmaos/semclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
-	"sigmaos/www"
 )
 
 const (

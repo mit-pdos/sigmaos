@@ -105,7 +105,7 @@ if [[ $COMPILE == "--compile" ]]; then
     # test if test packages compile
     #
 
-    for T in path intervals serr linuxsched perf sigmap netproxy sessclnt npproxysrv fslib/reader fslib/writer stats fslib semclnt chunksrv electclnt dircache memfs namesrv procclnt ux s3 bootkernelclnt leaderclnt leadertest apps/kv/kvgrp cachedsvcclnt www sigmapsrv realmclnt apps/mr apps/imgresize apps/kv apps/hotel apps/socialnetwork benchmarks benchmarks/remote example example_echo_server netperf; do
+    for T in path intervals serr linuxsched perf sigmap netproxy sessclnt npproxysrv fslib/reader fslib/writer stats fslib semclnt chunksrv electclnt dircache memfs namesrv procclnt ux s3 bootkernelclnt leaderclnt leadertest apps/kv/kvgrp cachedsvcclnt apps/www sigmapsrv realmclnt apps/mr apps/imgresize apps/kv apps/hotel apps/socialnetwork benchmarks benchmarks/remote example example_echo_server netperf; do
         if ! [ -z "$SKIPTO" ]; then
           if [[ "$SKIPTO" == "$T" ]]; then
             # Stop skipping
@@ -287,7 +287,7 @@ if [[ $APPS == "--apps" ]]; then
 #       	go test $VERB sigmaos/apps/socialnetwork -start $GVISOR $SPPROXYD $NETPROXY -run TestCompose
 #        cleanup
     else
-        for T in apps/imgresize apps/mr apps/hotel apps/socialnetwork www; do
+        for T in apps/imgresize apps/mr apps/hotel apps/socialnetwork apps/www; do
             if ! [ -z "$SKIPTO" ]; then
               if [[ "$SKIPTO" == "$T" ]]; then
                 # Stop skipping

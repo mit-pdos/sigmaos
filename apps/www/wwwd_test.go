@@ -6,12 +6,12 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"sigmaos/apps/www"
 	db "sigmaos/debug"
 	"sigmaos/proc"
 	rd "sigmaos/rand"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
-	"sigmaos/www"
 )
 
 type Tstate struct {

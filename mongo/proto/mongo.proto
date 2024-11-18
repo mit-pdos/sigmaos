@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-option go_package = "sigmaos/mongosrv/proto";
+option go_package = "sigmaos/mongo/proto";
 
 /*
 Insert

@@ -1,4 +1,4 @@
-package mongosrv
+package srv
 
 import (
 	"context"
@@ -12,7 +12,7 @@ import (
 
 	dbg "sigmaos/debug"
 	"sigmaos/fs"
-	"sigmaos/mongosrv/proto"
+	"sigmaos/mongo/proto"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"

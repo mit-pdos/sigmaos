@@ -1,4 +1,4 @@
-package mongoclnt_test
+package clnt_test
 
 import (
 	"github.com/stretchr/testify/assert"

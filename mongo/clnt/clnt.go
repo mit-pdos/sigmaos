@@ -1,10 +1,10 @@
-package mongoclnt
+package clnt
 
 import (
 	"gopkg.in/mgo.v2/bson"
 	dbg "sigmaos/debug"
 	"sigmaos/fslib"
-	"sigmaos/mongosrv/proto"
+	proto "sigmaos/mongo/proto"
 	"sigmaos/rpcclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmarpcchan"

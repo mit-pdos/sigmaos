@@ -7,7 +7,7 @@ import (
 	"gopkg.in/mgo.v2/bson"
 	"math/rand"
 	dbg "sigmaos/debug"
-	"sigmaos/mongoclnt"
+	mongoclnt "sigmaos/mongo/clnt"
 	"sigmaos/sigmaclnt"
 	"strconv"
 	"sync"

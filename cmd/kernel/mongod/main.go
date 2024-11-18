@@ -4,7 +4,7 @@ import (
 	"os"
 	"runtime/debug"
 	db "sigmaos/debug"
-	"sigmaos/mongosrv"
+	mongosrv "sigmaos/mongo/srv"
 )
 
 func main() {

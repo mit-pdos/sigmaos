@@ -8,7 +8,7 @@ import (
 	"sigmaos/cachedsvcclnt"
 	dbg "sigmaos/debug"
 	"sigmaos/fs"
-	"sigmaos/mongoclnt"
+	mongoclnt "sigmaos/mongo/clnt"
 	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/sigmasrv"

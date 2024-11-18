@@ -1,4 +1,4 @@
-package mongosrv_test
+package srv_test
 
 import (
 	"context"

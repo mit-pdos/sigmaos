@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-option go_package = "sigmaos/k8sutil/proto";
+option go_package = "sigmaos/util/k8s/proto";
 
 message CPUUtilRequest {
   string qoSClass = 1;

@@ -1,4 +1,4 @@
-package k8sutil
+package k8s
 
 import (
 	"fmt"
@@ -6,10 +6,10 @@ import (
 	"sigmaos/dcontainer/cgroup"
 	db "sigmaos/debug"
 	"sigmaos/fs"
-	"sigmaos/k8sutil/proto"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
+	"sigmaos/util/k8s/proto"
 )
 
 // Kubernetes cgroups paths.

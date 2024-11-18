@@ -1,15 +1,15 @@
-package k8sutil
+package k8s
 
 import (
 	"path/filepath"
 
 	db "sigmaos/debug"
 	"sigmaos/fslib"
-	"sigmaos/k8sutil/proto"
 	"sigmaos/rpcclnt"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmarpcchan"
+	"sigmaos/util/k8s/proto"
 )
 
 type StatScraperClnt struct {

@@ -56,8 +56,11 @@ func (nc *netConn) IsClosed() bool {
 }
 
 func (nc *netConn) CloseConnTest() error {
-	db.DPrintf(db.CRASH, "CloseConnTest: close conn for sid %v\n", nc.sessid)
-	return nc.conn.Close()
+	if nc.conn != nil {
+		db.DPrintf(db.CRASH, "CloseConnTest: close conn for sid %v\n", nc.sessid)
+		return nc.conn.Close()
+	}
+	return nil
 }
 
 func (nc *netConn) Src() string {

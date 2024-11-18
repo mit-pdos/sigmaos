@@ -1,7 +1,7 @@
 package proto
 
 import (
-	"sigmaos/cache"
+	"sigmaos/apps/cache"
 )
 
 func (sa *ShardRequest) Tshard() cache.Tshard {

@@ -1,7 +1,7 @@
 package srv
 
 import (
-	"sigmaos/cache"
+	"sigmaos/apps/cache"
 	"sync"
 )
 

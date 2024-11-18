@@ -5,7 +5,7 @@ import (
 	"gopkg.in/mgo.v2/bson"
 	"math/rand"
 	"sigmaos/apps/socialnetwork/proto"
-	"sigmaos/cache"
+	"sigmaos/apps/cache"
 	"sigmaos/cachedsvcclnt"
 	dbg "sigmaos/debug"
 	"sigmaos/fs"

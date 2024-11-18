@@ -8,8 +8,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"sigmaos/cache"
-	"sigmaos/cache/proto"
+	"sigmaos/apps/cache"
+	"sigmaos/apps/cache/proto"
 	"sigmaos/cachedsvc"
 	"sigmaos/cachedsvcclnt"
 	db "sigmaos/debug"

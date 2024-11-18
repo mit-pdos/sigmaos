@@ -3,8 +3,8 @@ package srv
 import (
 	"google.golang.org/protobuf/proto"
 
-	"sigmaos/cache"
-	cacheproto "sigmaos/cache/proto"
+	"sigmaos/apps/cache"
+	cacheproto "sigmaos/apps/cache/proto"
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/memfs/inode"

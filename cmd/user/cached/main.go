@@ -3,8 +3,8 @@ package main
 import (
 	"os"
 
-	"sigmaos/cache"
-	cachesrv "sigmaos/cache/srv"
+	"sigmaos/apps/cache"
+	cachesrv "sigmaos/apps/cache/srv"
 	db "sigmaos/debug"
 )
 

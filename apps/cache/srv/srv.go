@@ -5,9 +5,9 @@ import (
 	"sync"
 	"time"
 
-	cacheproto "sigmaos/cache/proto"
+	cacheproto "sigmaos/apps/cache/proto"
 
-	"sigmaos/cache"
+	"sigmaos/apps/cache"
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/perf"

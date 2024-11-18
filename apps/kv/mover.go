@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	"sigmaos/cache"
+	"sigmaos/apps/cache"
 	"sigmaos/crash"
 	db "sigmaos/debug"
 	"sigmaos/fslib"

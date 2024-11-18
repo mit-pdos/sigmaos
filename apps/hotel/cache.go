@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"sigmaos/apps/kv"
-	"sigmaos/cache"
+	"sigmaos/apps/cache"
 	"sigmaos/cachedsvcclnt"
 	db "sigmaos/debug"
 	"sigmaos/fslib"

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"gopkg.in/mgo.v2/bson"
 	"sigmaos/apps/socialnetwork/proto"
-	"sigmaos/cache"
+	"sigmaos/apps/cache"
 	"sigmaos/cachedsvcclnt"
 	dbg "sigmaos/debug"
 	"sigmaos/fs"

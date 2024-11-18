@@ -1,7 +1,7 @@
 package cachedsvc
 
 import (
-	"sigmaos/cache"
+	"sigmaos/apps/cache"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
 )

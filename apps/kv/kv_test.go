@@ -10,10 +10,10 @@ import (
 
 	// "google.golang.org/protobuf/reflect/protoreflect"
 
-	cproto "sigmaos/cache/proto"
+	cproto "sigmaos/apps/cache/proto"
 
 	"sigmaos/apps/kv"
-	"sigmaos/cache"
+	"sigmaos/apps/cache"
 	db "sigmaos/debug"
 	"sigmaos/util/rand"
 	// sp "sigmaos/sigmap"

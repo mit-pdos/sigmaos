@@ -10,8 +10,8 @@ import (
 
 	"google.golang.org/protobuf/proto"
 
-	"sigmaos/cache"
-	cacheclnt "sigmaos/cache/clnt"
+	"sigmaos/apps/cache"
+	cacheclnt "sigmaos/apps/cache/clnt"
 	"sigmaos/cachedsvc"
 	db "sigmaos/debug"
 	"sigmaos/dircache"

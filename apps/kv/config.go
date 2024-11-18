@@ -3,7 +3,7 @@ package kv
 import (
 	"fmt"
 
-	"sigmaos/cache"
+	"sigmaos/apps/cache"
 	"sigmaos/fslib"
 	sp "sigmaos/sigmap"
 )

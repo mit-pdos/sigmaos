@@ -5,10 +5,10 @@ import (
 	"path/filepath"
 	"strconv"
 
-	proto "sigmaos/cache/proto"
+	proto "sigmaos/apps/cache/proto"
 
 	"sigmaos/apps/kv/kvgrp"
-	"sigmaos/cache"
+	"sigmaos/apps/cache"
 	db "sigmaos/debug"
 	"sigmaos/proc"
 	"sigmaos/semclnt"

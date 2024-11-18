@@ -5,7 +5,7 @@ import (
 	"strconv"
 
 	"sigmaos/apps/kv/kvgrp"
-	"sigmaos/cache"
+	"sigmaos/apps/cache"
 	"sigmaos/fslib"
 	"sigmaos/groupmgr"
 	"sigmaos/proc"

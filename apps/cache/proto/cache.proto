@@ -3,7 +3,7 @@ syntax = "proto3";
 import "tracing/proto/tracing.proto";
 import "sigmap/sigmap.proto";
 
-option go_package = "sigmaos/cache/proto";
+option go_package = "sigmaos/apps/cache/proto";
 
 service Cache {
   rpc Get(CacheRequest) returns (CacheResult);

@@ -14,7 +14,7 @@ import (
 	"github.com/harlow/go-micro-services/data"
 
 	"sigmaos/apps/hotel/proto"
-	"sigmaos/cache"
+	"sigmaos/apps/cache"
 	dbclnt "sigmaos/db/clnt"
 	db "sigmaos/debug"
 	"sigmaos/fs"

@@ -8,13 +8,13 @@ import (
 	"sync/atomic"
 	"time"
 
-	cproto "sigmaos/cache/proto"
+	cproto "sigmaos/apps/cache/proto"
 
 	"github.com/go-redis/redis/v8"
 
 	"sigmaos/apps/kv"
 	"sigmaos/apps/kv/proto"
-	"sigmaos/cache"
+	"sigmaos/apps/cache"
 	db "sigmaos/debug"
 	"sigmaos/perf"
 	"sigmaos/proc"

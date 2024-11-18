@@ -22,7 +22,7 @@ import (
 	"time"
 
 	"sigmaos/apps/kv/kvgrp"
-	"sigmaos/cache"
+	"sigmaos/apps/cache"
 	"sigmaos/crash"
 	"sigmaos/ctx"
 	db "sigmaos/debug"

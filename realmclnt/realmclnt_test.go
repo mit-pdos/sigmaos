@@ -11,7 +11,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	proto "sigmaos/cache/proto"
+	proto "sigmaos/apps/cache/proto"
 	"sigmaos/cachedsvc"
 	"sigmaos/cachedsvcclnt"
 	db "sigmaos/debug"

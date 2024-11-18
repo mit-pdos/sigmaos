@@ -9,9 +9,9 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	"sigmaos/apps/kv/kvgrp"
-	"sigmaos/cache"
-	cacheclnt "sigmaos/cache/clnt"
-	cacheproto "sigmaos/cache/proto"
+	"sigmaos/apps/cache"
+	cacheclnt "sigmaos/apps/cache/clnt"
+	cacheproto "sigmaos/apps/cache/proto"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/replclnt"

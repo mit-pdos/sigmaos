@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	"sigmaos/dbsrv"
+	dbsrv "sigmaos/db/srv"
 	db "sigmaos/debug"
 )
 

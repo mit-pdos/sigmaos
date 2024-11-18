@@ -1,9 +1,9 @@
-package dbclnt
+package clnt
 
 import (
 	"encoding/json"
 
-	"sigmaos/dbsrv/proto"
+	"sigmaos/db/proto"
 	"sigmaos/fslib"
 	"sigmaos/rpcclnt"
 	"sigmaos/sigmarpcchan"

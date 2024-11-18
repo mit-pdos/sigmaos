@@ -1,10 +1,10 @@
-package dbsrv
+package srv
 
 import (
 	"database/sql"
 	_ "github.com/go-sql-driver/mysql"
 
-	"sigmaos/dbsrv/proto"
+	"sigmaos/db/proto"
 	"sigmaos/debug"
 	"sigmaos/fs"
 )

@@ -1,4 +1,4 @@
-package dbsrv
+package srv
 
 import (
 	"path/filepath"

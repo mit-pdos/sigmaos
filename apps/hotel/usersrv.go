@@ -9,7 +9,7 @@ import (
 	//	"context"
 
 	"sigmaos/apps/hotel/proto"
-	"sigmaos/dbclnt"
+	dbclnt "sigmaos/db/clnt"
 	"sigmaos/fs"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"

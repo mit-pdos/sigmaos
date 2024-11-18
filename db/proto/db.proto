@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-option go_package = "sigmaos/dbsrv/proto";
+option go_package = "sigmaos/db/proto";
 
 service DB {
   rpc Query(DBRequest) returns (DBResult);

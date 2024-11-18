@@ -13,12 +13,12 @@ import (
 	"sigmaos/namesrv/fsetcd"
 	"sigmaos/netproxyclnt"
 	"sigmaos/proc"
-	"sigmaos/rand"
 	"sigmaos/semclnt"
 	"sigmaos/sesssrv"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
+	"sigmaos/util/rand"
 )
 
 const (

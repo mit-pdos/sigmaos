@@ -6,9 +6,9 @@ import (
 	//	"go.opentelemetry.io/otel/trace"
 	//	tproto "sigmaos/tracing/proto"
 
+	"sigmaos/apps/hotel/proto"
 	db "sigmaos/debug"
 	"sigmaos/fs"
-	"sigmaos/hotel/proto"
 	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/rpcclnt"

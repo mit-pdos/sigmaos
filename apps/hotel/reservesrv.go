@@ -8,12 +8,12 @@ import (
 
 	//	"go.opentelemetry.io/otel/trace"
 
+	"sigmaos/apps/hotel/proto"
 	"sigmaos/cache"
 	cacheproto "sigmaos/cache/proto"
 	"sigmaos/dbclnt"
 	db "sigmaos/debug"
 	"sigmaos/fs"
-	"sigmaos/hotel/proto"
 	"sigmaos/perf"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"

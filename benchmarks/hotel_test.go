@@ -11,8 +11,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"sigmaos/apps/hotel"
 	db "sigmaos/debug"
-	"sigmaos/hotel"
 	"sigmaos/loadgen"
 	"sigmaos/perf"
 	"sigmaos/proc"

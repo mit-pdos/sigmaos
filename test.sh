@@ -105,7 +105,7 @@ if [[ $COMPILE == "--compile" ]]; then
     # test if test packages compile
     #
 
-    for T in path intervals serr linuxsched perf sigmap netproxy sessclnt npproxysrv fslib/reader fslib/writer stats fslib semclnt chunksrv electclnt dircache memfs namesrv procclnt ux s3 bootkernelclnt leaderclnt leadertest kvgrp cachedsvcclnt www sigmapsrv realmclnt apps/mr imgresizesrv kv hotel socialnetwork benchmarks benchmarks/remote example example_echo_server netperf; do
+    for T in path intervals serr linuxsched perf sigmap netproxy sessclnt npproxysrv fslib/reader fslib/writer stats fslib semclnt chunksrv electclnt dircache memfs namesrv procclnt ux s3 bootkernelclnt leaderclnt leadertest kvgrp cachedsvcclnt www sigmapsrv realmclnt apps/mr imgresizesrv kv apps/hotel socialnetwork benchmarks benchmarks/remote example example_echo_server netperf; do
         if ! [ -z "$SKIPTO" ]; then
           if [[ "$SKIPTO" == "$T" ]]; then
             # Stop skipping
@@ -253,7 +253,7 @@ fi
 
 if [[ $APPS == "--apps" ]]; then
     if [[ $FAST == "--fast" ]]; then
-        PKGS="apps/mr imgresizesrv kv hotel socialnetwork"
+        PKGS="apps/mr imgresizesrv kv apps/hotel socialnetwork"
         TNAMES=("MRJob" "ImgdOne" "KVOKN" "TestBenchDeathStarSingle" "TestCompose")
         NEED_DB=("false" "false" "false" "true" "true")
         i=0
@@ -281,13 +281,13 @@ if [[ $APPS == "--apps" ]]; then
 #        go test $VERB sigmaos/kv -start $GVISOR $SPPROXYD $NETPROXY -run KVOKN
 #        cleanup
 #        ./start-db.sh
-#        go test $VERB sigmaos/hotel -start $GVISOR $SPPROXYD $NETPROXY -run TestBenchDeathStarSingle
+#        go test $VERB sigmaos/apps/hotel -start $GVISOR $SPPROXYD $NETPROXY -run TestBenchDeathStarSingle
 #        cleanup
 #        ./start-db.sh
 #       	go test $VERB sigmaos/socialnetwork -start $GVISOR $SPPROXYD $NETPROXY -run TestCompose
 #        cleanup
     else
-        for T in imgresizesrv apps/mr hotel socialnetwork www; do
+        for T in imgresizesrv apps/mr apps/hotel socialnetwork www; do
             if ! [ -z "$SKIPTO" ]; then
               if [[ "$SKIPTO" == "$T" ]]; then
                 # Stop skipping
@@ -344,10 +344,10 @@ if [[ $OVERLAY == "--overlay" ]] ; then
     go test $VERB sigmaos/cachedsvcclnt --etcdIP $HOST_IP -start $GVISOR --overlays --run TestCacheClerk
     cleanup
     ./start-db.sh
-    go test $VERB sigmaos/hotel --etcdIP $HOST_IP -start $GVISOR --overlays --run GeoSingle
+    go test $VERB sigmaos/apps/hotel --etcdIP $HOST_IP -start $GVISOR --overlays --run GeoSingle
     cleanup
     ./start-db.sh
-    go test $VERB sigmaos/hotel --etcdIP $HOST_IP -start $GVISOR --overlays --run Www
+    go test $VERB sigmaos/apps/hotel --etcdIP $HOST_IP -start $GVISOR --overlays --run Www
     cleanup
     go test $VERB sigmaos/realmclnt --etcdIP $HOST_IP -start $GVISOR --overlays --run Basic
     cleanup

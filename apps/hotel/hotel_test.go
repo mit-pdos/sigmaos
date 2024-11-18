@@ -11,11 +11,11 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"sigmaos/apps/hotel"
+	"sigmaos/apps/hotel/proto"
 	"sigmaos/dbclnt"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
-	"sigmaos/hotel"
-	"sigmaos/hotel/proto"
 	"sigmaos/linuxsched"
 	"sigmaos/loadgen"
 	"sigmaos/perf"

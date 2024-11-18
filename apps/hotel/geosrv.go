@@ -13,9 +13,9 @@ import (
 	"github.com/harlow/go-micro-services/data"
 	"github.com/mit-pdos/go-geoindex"
 
+	"sigmaos/apps/hotel/proto"
 	db "sigmaos/debug"
 	"sigmaos/fs"
-	"sigmaos/hotel/proto"
 	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/sigmasrv"

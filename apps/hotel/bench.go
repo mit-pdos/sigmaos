@@ -8,7 +8,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"sigmaos/hotel/proto"
+	"sigmaos/apps/hotel/proto"
 	"sigmaos/rpcclnt"
 )
 

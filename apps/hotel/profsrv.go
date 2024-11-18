@@ -10,11 +10,11 @@ import (
 
 	"github.com/harlow/go-micro-services/data"
 
+	"sigmaos/apps/hotel/proto"
 	"sigmaos/cache"
 	"sigmaos/dbclnt"
 	db "sigmaos/debug"
 	"sigmaos/fs"
-	"sigmaos/hotel/proto"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"

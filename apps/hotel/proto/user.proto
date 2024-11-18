@@ -2,7 +2,7 @@ syntax = "proto3";
 
 import "tracing/proto/tracing.proto";
 
-option go_package = "sigmaos/hotel/proto";
+option go_package = "sigmaos/apps/hotel/proto";
 
 service User {
   rpc MakeReservation(UserRequest) returns (UserResult);

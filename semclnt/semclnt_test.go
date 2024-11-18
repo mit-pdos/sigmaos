@@ -9,10 +9,10 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	db "sigmaos/debug"
-	"sigmaos/delay"
 	"sigmaos/namesrv/fsetcd"
 	"sigmaos/netproxyclnt"
 	"sigmaos/proc"
+	"sigmaos/rand"
 	"sigmaos/semclnt"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
@@ -27,6 +27,12 @@ var pathname string // e.g., --path "name/schedd/sp.LOCAL/"
 
 func init() {
 	flag.StringVar(&pathname, "path", sp.NAMED, "path for file system")
+}
+
+func Delay(maxms int64) {
+	ms := rand.Int64(maxms)
+	db.DPrintf(db.DELAY, "Delay to %vms\n", ms)
+	time.Sleep(time.Duration(ms) * time.Millisecond)
 }
 
 func TestCompile(t *testing.T) {
@@ -99,13 +105,13 @@ func TestSemClntConcur(t *testing.T) {
 		ch := make(chan bool)
 
 		go func(ch chan bool) {
-			delay.Delay(200)
+			Delay(200)
 			sem := semclnt.NewSemClnt(fsl0, pn+"/x")
 			sem.Down()
 			ch <- true
 		}(ch)
 		go func(ch chan bool) {
-			delay.Delay(200)
+			Delay(200)
 			sem := semclnt.NewSemClnt(fsl1, pn+"/x")
 			sem.Up()
 			ch <- true

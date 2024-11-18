@@ -5,7 +5,7 @@ import (
 	"sync"
 
 	db "sigmaos/debug"
-	"sigmaos/refmap"
+	"sigmaos/util/refmap"
 	sp "sigmaos/sigmap"
 )
 

@@ -14,7 +14,7 @@ import (
 	"sigmaos/benchmarks"
 	db "sigmaos/debug"
 	"sigmaos/linuxsched"
-	"sigmaos/perf"
+	"sigmaos/util/perf"
 	"sigmaos/proc"
 	"sigmaos/scheddclnt"
 	"sigmaos/sigmaclnt"

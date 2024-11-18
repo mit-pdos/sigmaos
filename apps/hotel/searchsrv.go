@@ -9,7 +9,7 @@ import (
 	"sigmaos/apps/hotel/proto"
 	db "sigmaos/debug"
 	"sigmaos/fs"
-	"sigmaos/perf"
+	"sigmaos/util/perf"
 	"sigmaos/proc"
 	"sigmaos/rpcclnt"
 	"sigmaos/rpcdirclnt"

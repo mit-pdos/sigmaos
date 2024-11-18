@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	db "sigmaos/debug"
-	"sigmaos/perf"
+	"sigmaos/util/perf"
 )
 
 func TestCompile(t *testing.T) {

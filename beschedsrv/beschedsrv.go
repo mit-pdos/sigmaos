@@ -13,7 +13,7 @@ import (
 	"sigmaos/chunksrv"
 	db "sigmaos/debug"
 	"sigmaos/fs"
-	"sigmaos/perf"
+	"sigmaos/util/perf"
 	"sigmaos/proc"
 	"sigmaos/procfs"
 	"sigmaos/schedqueue"

@@ -5,7 +5,7 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"sigmaos/perf"
+	"sigmaos/util/perf"
 )
 
 type ScanByteCounter struct {

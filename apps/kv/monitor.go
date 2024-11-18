@@ -7,7 +7,7 @@ import (
 	"sigmaos/apps/kv/kvgrp"
 	db "sigmaos/debug"
 	"sigmaos/groupmgr"
-	"sigmaos/perf"
+	"sigmaos/util/perf"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
 )

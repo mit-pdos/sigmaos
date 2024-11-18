@@ -16,7 +16,7 @@ import (
 	"sigmaos/apps/kv/proto"
 	"sigmaos/apps/cache"
 	db "sigmaos/debug"
-	"sigmaos/perf"
+	"sigmaos/util/perf"
 	"sigmaos/proc"
 	"sigmaos/semclnt"
 	"sigmaos/sigmaclnt"

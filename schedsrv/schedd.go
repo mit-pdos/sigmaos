@@ -14,7 +14,7 @@ import (
 	lcproto "sigmaos/lcschedsrv/proto"
 	"sigmaos/linuxsched"
 	"sigmaos/mem"
-	"sigmaos/perf"
+	"sigmaos/util/perf"
 	"sigmaos/proc"
 	"sigmaos/scheddclnt"
 	"sigmaos/schedsrv/procmgr"

@@ -14,7 +14,7 @@ import (
 	dbclnt "sigmaos/db/clnt"
 	db "sigmaos/debug"
 	"sigmaos/fs"
-	"sigmaos/perf"
+	"sigmaos/util/perf"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"

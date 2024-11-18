@@ -10,7 +10,7 @@ import (
 	"sigmaos/benchmarks"
 	db "sigmaos/debug"
 	"sigmaos/k8sutil"
-	"sigmaos/perf"
+	"sigmaos/util/perf"
 	"sigmaos/scheddclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"

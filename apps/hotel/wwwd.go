@@ -11,7 +11,7 @@ import (
 
 	"sigmaos/apps/hotel/proto"
 	db "sigmaos/debug"
-	"sigmaos/perf"
+	"sigmaos/util/perf"
 	"sigmaos/port"
 	"sigmaos/proc"
 	"sigmaos/rpcclnt"

@@ -15,7 +15,7 @@ import (
 	cachegrpclnt "sigmaos/apps/cache/cachegrp/clnt"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
-	"sigmaos/perf"
+	"sigmaos/util/perf"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
 	"sigmaos/semclnt"

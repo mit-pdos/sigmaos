@@ -14,7 +14,7 @@ import (
 	"sigmaos/apps/hotel"
 	"sigmaos/benchmarks/loadgen"
 	db "sigmaos/debug"
-	"sigmaos/perf"
+	"sigmaos/util/perf"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"

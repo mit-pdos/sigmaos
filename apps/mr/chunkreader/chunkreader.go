@@ -10,7 +10,7 @@ import (
 	mrscanner "sigmaos/apps/mr/scanner"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
-	"sigmaos/perf"
+	"sigmaos/util/perf"
 	sp "sigmaos/sigmap"
 )
 

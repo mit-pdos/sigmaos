@@ -8,7 +8,7 @@ import (
 	cachegrpclnt "sigmaos/apps/cache/cachegrp/clnt"
 	dbg "sigmaos/debug"
 	"sigmaos/fs"
-	"sigmaos/perf"
+	"sigmaos/util/perf"
 	"sigmaos/proc"
 	"sigmaos/rpcclnt"
 	"sigmaos/sigmarpcchan"

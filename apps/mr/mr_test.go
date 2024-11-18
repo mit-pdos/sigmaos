@@ -24,7 +24,7 @@ import (
 	mrscanner "sigmaos/apps/mr/scanner"
 	"sigmaos/auth"
 	db "sigmaos/debug"
-	"sigmaos/perf"
+	"sigmaos/util/perf"
 	"sigmaos/proc"
 	rd "sigmaos/util/rand"
 	"sigmaos/scheddclnt"

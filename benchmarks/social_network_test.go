@@ -14,7 +14,7 @@ import (
 	sn "sigmaos/apps/socialnetwork"
 	"sigmaos/benchmarks/loadgen"
 	dbg "sigmaos/debug"
-	"sigmaos/perf"
+	"sigmaos/util/perf"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 	rd "sigmaos/util/rand"

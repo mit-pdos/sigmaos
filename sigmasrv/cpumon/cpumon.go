@@ -5,7 +5,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"sigmaos/perf"
+	"sigmaos/util/perf"
 	"sigmaos/stats"
 )
 

@@ -6,7 +6,7 @@ import (
 	"sigmaos/apps/socialnetwork/proto"
 	dbg "sigmaos/debug"
 	"sigmaos/fs"
-	"sigmaos/perf"
+	"sigmaos/util/perf"
 	"sigmaos/proc"
 	"sigmaos/rpcclnt"
 	"sigmaos/sigmarpcchan"

@@ -10,7 +10,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fttasks"
 	"sigmaos/groupmgr"
-	"sigmaos/perf"
+	"sigmaos/util/perf"
 	"sigmaos/proc"
 	rd "sigmaos/util/rand"
 	sp "sigmaos/sigmap"

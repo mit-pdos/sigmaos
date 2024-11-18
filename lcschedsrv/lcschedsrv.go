@@ -12,7 +12,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	proto "sigmaos/lcschedsrv/proto"
-	"sigmaos/perf"
+	"sigmaos/util/perf"
 	"sigmaos/proc"
 	"sigmaos/procfs"
 	"sigmaos/scheddclnt"

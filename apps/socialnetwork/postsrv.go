@@ -9,7 +9,7 @@ import (
 	dbg "sigmaos/debug"
 	"sigmaos/fs"
 	mongoclnt "sigmaos/mongo/clnt"
-	"sigmaos/perf"
+	"sigmaos/util/perf"
 	"sigmaos/proc"
 	"sigmaos/sigmasrv"
 	"strconv"

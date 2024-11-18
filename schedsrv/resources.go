@@ -6,7 +6,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/mem"
-	"sigmaos/perf"
+	"sigmaos/util/perf"
 	"sigmaos/proc"
 )
 

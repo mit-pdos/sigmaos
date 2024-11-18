@@ -20,7 +20,7 @@ import (
 	"sigmaos/dcontainer/cgroup"
 	db "sigmaos/debug"
 	"sigmaos/mem"
-	"sigmaos/perf"
+	"sigmaos/util/perf"
 	"sigmaos/port"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"

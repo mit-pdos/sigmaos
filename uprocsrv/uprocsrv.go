@@ -22,7 +22,7 @@ import (
 	"sigmaos/kernelclnt"
 	"sigmaos/linuxsched"
 	"sigmaos/netsigma"
-	"sigmaos/perf"
+	"sigmaos/util/perf"
 	"sigmaos/proc"
 	"sigmaos/scontainer"
 	"sigmaos/sigmaclnt"

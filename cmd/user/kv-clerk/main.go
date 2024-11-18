@@ -12,10 +12,10 @@ import (
 
 	"github.com/go-redis/redis/v8"
 
+	"sigmaos/apps/kv"
+	"sigmaos/apps/kv/proto"
 	"sigmaos/cache"
 	db "sigmaos/debug"
-	"sigmaos/kv"
-	"sigmaos/kv/proto"
 	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/semclnt"

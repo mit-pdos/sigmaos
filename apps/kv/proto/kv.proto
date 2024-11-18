@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-option go_package = "sigmaos/kv/proto";
+option go_package = "sigmaos/apps/kv/proto";
 
 message KVTestVal {
   string pid = 1;

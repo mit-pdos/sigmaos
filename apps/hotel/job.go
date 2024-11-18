@@ -5,11 +5,11 @@ import (
 	"path/filepath"
 	"strconv"
 
+	"sigmaos/apps/kv"
 	"sigmaos/cachedsvc"
 	"sigmaos/cachedsvcclnt"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
-	"sigmaos/kv"
 	"sigmaos/netproxyclnt"
 	"sigmaos/proc"
 	"sigmaos/rpc"

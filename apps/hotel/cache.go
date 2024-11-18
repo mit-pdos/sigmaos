@@ -3,11 +3,11 @@ package hotel
 import (
 	"fmt"
 
+	"sigmaos/apps/kv"
 	"sigmaos/cache"
 	"sigmaos/cachedsvcclnt"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
-	"sigmaos/kv"
 	"sigmaos/memcachedclnt"
 )
 

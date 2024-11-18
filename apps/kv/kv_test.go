@@ -12,9 +12,9 @@ import (
 
 	cproto "sigmaos/cache/proto"
 
+	"sigmaos/apps/kv"
 	"sigmaos/cache"
 	db "sigmaos/debug"
-	"sigmaos/kv"
 	"sigmaos/rand"
 	// sp "sigmaos/sigmap"
 	"sigmaos/test"

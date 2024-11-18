@@ -203,7 +203,6 @@ func Run(args []string) error {
 	}
 
 	crash.Failer(crash.NAMED_PARTITION, func(e crash.Tevent) {
-		db.DPrintf(db.CRASH, "Partition named: %v", e)
 		if nd.delay == 0 {
 			nd.delay = e.Delay
 			nd.sess.Orphan()

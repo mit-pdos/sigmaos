@@ -12,7 +12,6 @@ import (
 	"sigmaos/fslib"
 	"sigmaos/proc"
 	"sigmaos/rand"
-	"sigmaos/sesssrv"
 	sp "sigmaos/sigmap"
 )
 
@@ -120,36 +119,6 @@ func CrasherMsg(fsl *fslib.FsLib, f func() string) {
 	}()
 }
 
-func Partitioner(ss *sesssrv.SessSrv) {
-	part := ss.ProcEnv().GetPartition()
-	if part == 0 {
-		return
-	}
-	go func() {
-		for true {
-			r := randSleep(part)
-			if r < 330 {
-				ss.PartitionClient(true)
-			}
-		}
-	}()
-}
-
-func NetFailer(ss *sesssrv.SessSrv) {
-	crash := ss.ProcEnv().GetNetFail()
-	if crash == 0 {
-		return
-	}
-	go func() {
-		for true {
-			r := randSleep(crash)
-			if r < 330 {
-				ss.PartitionClient(false)
-			}
-		}
-	}()
-}
-
 func fail(crash int64, f func() string) {
 	msg := ""
 	if f != nil {
@@ -175,7 +144,7 @@ func AppendSigmaFail(es []Tevent) error {
 }
 
 func Crash() {
-	db.DPrintf(db.CRASH, "Crash")
+	db.DPrintf(db.CRASH, "Crash: Exit")
 	os.Exit(1)
 }
 

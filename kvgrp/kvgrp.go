@@ -5,6 +5,7 @@
 package kvgrp
 
 import (
+	"os"
 	"path/filepath"
 	"sync"
 	"time"
@@ -120,6 +121,8 @@ func (g *Group) writeSymlink(sigmaEPs []*sp.Tendpoint) {
 }
 
 func RunMember(job, grp string, public bool, myid, nrepl int) {
+	db.DPrintf(db.CRASH, "Env %v", os.Getenv(proc.SIGMAFAIL))
+
 	g := &Group{myid: myid, grp: grp, isBusy: true}
 	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
 	if err != nil {
@@ -160,9 +163,15 @@ func RunMember(job, grp string, public bool, myid, nrepl int) {
 
 	g.ReleaseLeadership()
 
-	crash.Crasher(g.FsLib)
-	crash.Partitioner(g.ssrv.SessSrv)
-	crash.NetFailer(g.ssrv.SessSrv)
+	crash.Failer(crash.KVD_CRASH, func(e crash.Tevent) {
+		crash.Crash()
+	})
+	crash.Failer(crash.KVD_NETFAIL, func(e crash.Tevent) {
+		g.ssrv.SessSrv.PartitionClient(false)
+	})
+	crash.Failer(crash.KVD_PARTITION, func(e crash.Tevent) {
+		g.ssrv.SessSrv.PartitionClient(true)
+	})
 
 	// Record performance.
 	p, err := perf.NewPerf(g.ProcEnv(), perf.GROUP)

@@ -7,10 +7,11 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"sigmaos/crash"
 	db "sigmaos/debug"
-	"sigmaos/namesrv/fsetcd"
 	"sigmaos/groupmgr"
 	"sigmaos/kvgrp"
+	"sigmaos/namesrv/fsetcd"
 	"sigmaos/netproxyclnt"
 	"sigmaos/proc"
 	"sigmaos/rand"
@@ -29,6 +30,8 @@ const (
 	NETFAIL   = 200
 )
 
+var EvP = crash.Tevent{crash.KVD_PARTITION, 0, PARTITION, 0.33, 0}
+
 type Tstate struct {
 	*test.Tstate
 	grp string
@@ -46,7 +49,7 @@ func newTstate(t1 *test.Tstate, nrepl, ncrash, crash, partition, netfail int, pe
 	if persist {
 		mcfg.Persist(ts.SigmaClnt.FsLib)
 	}
-	mcfg.SetTest(crash, partition, netfail)
+	// mcfg.SetTest(crash, partition, netfail)
 	ts.gm = mcfg.StartGrpMgr(ts.SigmaClnt, ncrash)
 	cfg, err := kvgrp.WaitStarted(ts.SigmaClnt.FsLib, kvgrp.JobDir(ts.job), ts.grp)
 	assert.Nil(t1.T, err)
@@ -139,10 +142,14 @@ func TestServerCrash(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
+
+	e0 := crash.Tevent{crash.KVD_CRASH, 0, CRASH, 0.33, 0}
+	err := crash.AppendSigmaFail([]crash.Tevent{e0})
+
 	ts := newTstate(t1, 0, 1, CRASH, 0, 0, false)
 
 	sem := semclnt.NewSemClnt(ts.FsLib, kvgrp.GrpPath(kvgrp.JobDir(ts.job), ts.grp)+"/sem")
-	err := sem.Init(0)
+	err = sem.Init(0)
 	assert.Nil(t, err)
 
 	db.DPrintf(db.TEST, "Sem %v", kvgrp.GrpPath(kvgrp.JobDir(ts.job), ts.grp)+"/sem")
@@ -171,6 +178,10 @@ func TestReconnectSimple(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
+
+	e0 := crash.Tevent{crash.KVD_NETFAIL, 0, NETFAIL, 0.33, 0}
+	err := crash.AppendSigmaFail([]crash.Tevent{e0})
+
 	ts := newTstate(t1, 0, 0, 0, 0, NETFAIL, false)
 
 	ch := make(chan error)
@@ -189,7 +200,7 @@ func TestReconnectSimple(t *testing.T) {
 		ch <- nil
 	}()
 
-	err := <-ch
+	err = <-ch
 	assert.Nil(ts.T, err, "fsl1")
 
 	ts.gm.StopGroup()
@@ -219,7 +230,11 @@ func TestServerPartitionNonBlockingSimple(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
+
+	err := crash.AppendSigmaFail([]crash.Tevent{EvP})
+	assert.Nil(t, err)
 	ts := newTstate(t1, 0, 0, 0, PARTITION, 0, false)
+
 	ch := make(chan error)
 	for i := 0; i < N; i++ {
 		go ts.stat(t, i, ch)
@@ -238,6 +253,8 @@ func TestServerPartitionNonBlockingConcur(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
+	err := crash.AppendSigmaFail([]crash.Tevent{EvP})
+	assert.Nil(t, err)
 	ts := newTstate(t1, 0, 0, 0, PARTITION, 0, false)
 	ch := make(chan error)
 	for i := 0; i < N; i++ {
@@ -259,6 +276,10 @@ func TestServerPartitionBlocking(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
+
+	err := crash.AppendSigmaFail([]crash.Tevent{EvP})
+	assert.Nil(t, err)
+
 	ts := newTstate(t1, 0, 0, 0, PARTITION, 0, false)
 
 	for i := 0; i < N; i++ {

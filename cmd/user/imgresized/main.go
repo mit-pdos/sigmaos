@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"sigmaos/imgresize"
+	"sigmaos/apps/imgresize"
 )
 
 func main() {

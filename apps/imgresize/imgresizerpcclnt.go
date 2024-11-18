@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"sigmaos/apps/imgresize/proto"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
-	"sigmaos/imgresize/proto"
 	"sigmaos/rpcclnt"
 	"sigmaos/sigmarpcchan"
 )

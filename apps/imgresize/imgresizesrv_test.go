@@ -11,10 +11,10 @@ import (
 	"github.com/nfnt/resize"
 	"github.com/stretchr/testify/assert"
 
+	"sigmaos/apps/imgresize"
 	db "sigmaos/debug"
 	"sigmaos/fttasks"
 	"sigmaos/groupmgr"
-	"sigmaos/imgresize"
 	"sigmaos/namesrv/fsetcd"
 	"sigmaos/proc"
 	rd "sigmaos/rand"

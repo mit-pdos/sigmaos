@@ -3,8 +3,8 @@ package main
 import (
 	"os"
 
+	"sigmaos/apps/imgresize"
 	db "sigmaos/debug"
-	"sigmaos/imgresize"
 )
 
 func main() {

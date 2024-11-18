@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-option go_package = "sigmaos/imgresize/proto";
+option go_package = "sigmaos/apps/imgresize/proto";
 
 message ImgResizeRequest {
   string taskName = 1;

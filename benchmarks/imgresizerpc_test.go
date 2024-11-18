@@ -8,8 +8,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"sigmaos/apps/imgresize"
 	db "sigmaos/debug"
-	"sigmaos/imgresize"
 	"sigmaos/perf"
 	"sigmaos/proc"
 	rd "sigmaos/rand"

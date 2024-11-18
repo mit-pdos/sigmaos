@@ -7,8 +7,8 @@ import (
 	"net/http"
 	"time"
 
+	"sigmaos/benchmarks/loadgen"
 	db "sigmaos/debug"
-	"sigmaos/loadgen"
 )
 
 type HTTPClnt struct {

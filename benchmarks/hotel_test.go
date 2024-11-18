@@ -12,13 +12,13 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"sigmaos/apps/hotel"
+	"sigmaos/benchmarks/loadgen"
 	db "sigmaos/debug"
-	"sigmaos/loadgen"
 	"sigmaos/perf"
 	"sigmaos/proc"
-	rd "sigmaos/util/rand"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
+	rd "sigmaos/util/rand"
 )
 
 const (

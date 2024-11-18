@@ -13,18 +13,18 @@ import (
 
 	"sigmaos/apps/hotel"
 	"sigmaos/apps/hotel/proto"
+	"sigmaos/benchmarks/loadgen"
 	dbclnt "sigmaos/db/clnt"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/linuxsched"
-	"sigmaos/loadgen"
 	"sigmaos/perf"
 	"sigmaos/proc"
-	rd "sigmaos/util/rand"
 	"sigmaos/rpcdirclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmarpcchan"
 	"sigmaos/test"
+	rd "sigmaos/util/rand"
 )
 
 var K8S_ADDR string

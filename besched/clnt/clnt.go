@@ -1,5 +1,5 @@
-// Package proqqclnt implements the client-side of the besched scheduler
-package beschedclnt
+// Package besched/clnt implements the client-side of the besched scheduler
+package clnt
 
 import (
 	"time"

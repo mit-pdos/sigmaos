@@ -7,7 +7,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"sigmaos/beschedclnt"
+	beschedclnt "sigmaos/besched/clnt"
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/fslib"

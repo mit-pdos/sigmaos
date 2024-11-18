@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"sigmaos/beschedclnt"
+	beschedclnt "sigmaos/besched/clnt"
 	"sigmaos/chunk"
 	"sigmaos/chunkclnt"
 	db "sigmaos/debug"

@@ -5,14 +5,14 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"sigmaos/cachegrp/mgr"
 	"sigmaos/cachedsvcclnt"
+	cachegrpmgr "sigmaos/cachegrp/mgr"
 	db "sigmaos/debug"
 	"sigmaos/proc"
-	"sigmaos/util/rand"
 	"sigmaos/semclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
+	"sigmaos/util/rand"
 )
 
 type CachedJobInstance struct {
@@ -25,7 +25,7 @@ type CachedJobInstance struct {
 	nkeys     int
 	ready     chan bool
 	clerks    []sp.Tpid
-	cm        *cachedsvc.CacheMgr
+	cm        *cachegrpmgr.CacheMgr
 	sempn     string
 	sem       *semclnt.SemClnt
 	*test.RealmTstate
@@ -48,7 +48,7 @@ func NewCachedJob(ts *test.RealmTstate, nkeys, ncache, nclerks int, dur time.Dur
 }
 
 func (ji *CachedJobInstance) RunCachedJob() {
-	cm, err := cachedsvc.NewCacheMgr(ji.SigmaClnt, ji.job, ji.ncache, ji.cachemcpu, CACHE_GC)
+	cm, err := cachegrpmgr.NewCacheMgr(ji.SigmaClnt, ji.job, ji.ncache, ji.cachemcpu, CACHE_GC)
 	assert.Nil(ji.Ts.T, err, "Error NewCacheMgr: %v", err)
 	ji.cm = cm
 	ji.sempn = ji.cm.SvcDir() + "-cacheclerk-sem"

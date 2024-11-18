@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"sigmaos/cachedsvcclnt"
+	cachegrpclnt "sigmaos/cachegrp/clnt"
 	cachegrpmgr "sigmaos/cachegrp/mgr"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
@@ -66,7 +66,7 @@ type SocialNetworkConfig struct {
 	*sigmaclnt.SigmaClnt
 	srvs      []Srv
 	pids      []sp.Tpid
-	CacheClnt *cachedsvcclnt.CachedSvcClnt
+	CacheClnt *cachegrpclnt.CachedSvcClnt
 	cacheMgr  *cachegrpmgr.CacheMgr
 }
 
@@ -83,7 +83,7 @@ func NewConfig(sc *sigmaclnt.SigmaClnt, jobname string, srvs []Srv, nsrv int, gc
 		return nil, err
 	}
 	// Create a cache clnt.
-	var cc *cachedsvcclnt.CachedSvcClnt
+	var cc *cachegrpclnt.CachedSvcClnt
 	var cm *cachegrpmgr.CacheMgr
 	if nsrv > 0 {
 		db.DPrintf(db.SOCIAL_NETWORK, "social network running with cached: %v caches", nsrv)
@@ -92,7 +92,7 @@ func NewConfig(sc *sigmaclnt.SigmaClnt, jobname string, srvs []Srv, nsrv int, gc
 			db.DPrintf(db.ERROR, "Error NewCacheMgr %v", err)
 			return nil, err
 		}
-		cc = cachedsvcclnt.NewCachedSvcClnt([]*fslib.FsLib{sc.FsLib}, jobname)
+		cc = cachegrpclnt.NewCachedSvcClnt([]*fslib.FsLib{sc.FsLib}, jobname)
 	}
 
 	// Start procs

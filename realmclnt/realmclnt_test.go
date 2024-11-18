@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	proto "sigmaos/apps/cache/proto"
-	"sigmaos/cachedsvcclnt"
+	cachegrpclnt "sigmaos/cachegrp/clnt"
 	cachegrpmgr "sigmaos/cachegrp/mgr"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
@@ -531,14 +531,14 @@ func TestMultiRealmIsolationBasic(t *testing.T) {
 	cm, err := cachegrpmgr.NewCacheMgr(ts.ts1.SigmaClnt, job, 1, 0, true)
 	assert.Nil(t, err)
 
-	cc1 := cachedsvcclnt.NewCachedSvcClnt([]*fslib.FsLib{ts.ts1.FsLib}, job)
+	cc1 := cachegrpclnt.NewCachedSvcClnt([]*fslib.FsLib{ts.ts1.FsLib}, job)
 
 	err = cc1.Put("hello", &proto.CacheString{Val: "hello"})
 	assert.Nil(t, err)
 
 	db.DPrintf(db.TEST, "newcacheclnt %v", ts.ts2.FsLib)
 
-	cc2 := cachedsvcclnt.NewCachedSvcClnt([]*fslib.FsLib{ts.ts2.FsLib}, job)
+	cc2 := cachegrpclnt.NewCachedSvcClnt([]*fslib.FsLib{ts.ts2.FsLib}, job)
 
 	db.DPrintf(db.TEST, "About to stat srvs")
 
@@ -563,7 +563,7 @@ func TestMultiRealmIsolationEndpoint(t *testing.T) {
 	cm, err := cachegrpmgr.NewCacheMgr(ts.ts1.SigmaClnt, job, 1, 0, true)
 	assert.Nil(t, err)
 
-	cc1 := cachedsvcclnt.NewCachedSvcClnt([]*fslib.FsLib{ts.ts1.FsLib}, job)
+	cc1 := cachegrpclnt.NewCachedSvcClnt([]*fslib.FsLib{ts.ts1.FsLib}, job)
 
 	err = cc1.Put("hello", &proto.CacheString{Val: "hello"})
 	assert.Nil(t, err)

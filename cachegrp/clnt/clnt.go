@@ -1,7 +1,7 @@
 // The cachedsvclnt package is the client side of a [cachedsvc].  It
 // watches the directory of cached servers using [dircache] and sends
 // the request to one of them using [cachedclnt].
-package cachedsvcclnt
+package clnt
 
 import (
 	"hash/fnv"

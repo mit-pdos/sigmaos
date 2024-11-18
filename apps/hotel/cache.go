@@ -5,7 +5,7 @@ import (
 
 	"sigmaos/apps/kv"
 	"sigmaos/apps/cache"
-	"sigmaos/cachedsvcclnt"
+	cachegrpclnt "sigmaos/cachegrp/clnt"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/memcachedclnt"
@@ -14,7 +14,7 @@ import (
 func NewCacheClnt(cache string, fsls []*fslib.FsLib, job string) (cache.CacheClnt, error) {
 	switch cache {
 	case "cached":
-		cc := cachedsvcclnt.NewCachedSvcClnt(fsls, job)
+		cc := cachegrpclnt.NewCachedSvcClnt(fsls, job)
 		return cc, nil
 	case "kvd":
 		db.DPrintf(db.ALWAYS, "cache %v\n", cache)

@@ -7,7 +7,7 @@ import (
 	"math/rand"
 	"sigmaos/apps/socialnetwork/proto"
 	"sigmaos/apps/cache"
-	"sigmaos/cachedsvcclnt"
+	cachegrpclnt "sigmaos/cachegrp/clnt"
 	dbg "sigmaos/debug"
 	"sigmaos/fs"
 	mongoclnt "sigmaos/mongo/clnt"
@@ -30,7 +30,7 @@ const (
 type UserSrv struct {
 	mu           sync.Mutex
 	mongoc       *mongoclnt.MongoClnt
-	cachec       *cachedsvcclnt.CachedSvcClnt
+	cachec       *cachegrpclnt.CachedSvcClnt
 	sid          int32 // sid is a random number between 0 and 2^30
 	ucount       int32 //This server may overflow with over 2^31 users
 	dbCounter    *Counter
@@ -57,7 +57,7 @@ func RunUserSrv(jobname string) error {
 	if err != nil {
 		return err
 	}
-	usrv.cachec = cachedsvcclnt.NewCachedSvcClnt(fsls, jobname)
+	usrv.cachec = cachegrpclnt.NewCachedSvcClnt(fsls, jobname)
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_USER, "Starting user service %v\n", usrv.sid)
 	perf, err := perf.NewPerf(fsls[0].ProcEnv(), perf.SOCIAL_NETWORK_USER)
 	if err != nil {

@@ -5,7 +5,7 @@ import (
 	"gopkg.in/mgo.v2/bson"
 	"sigmaos/apps/socialnetwork/proto"
 	"sigmaos/apps/cache"
-	"sigmaos/cachedsvcclnt"
+	cachegrpclnt "sigmaos/cachegrp/clnt"
 	dbg "sigmaos/debug"
 	"sigmaos/fs"
 	mongoclnt "sigmaos/mongo/clnt"
@@ -28,7 +28,7 @@ const (
 
 type TimelineSrv struct {
 	mongoc *mongoclnt.MongoClnt
-	cachec *cachedsvcclnt.CachedSvcClnt
+	cachec *cachegrpclnt.CachedSvcClnt
 	postc  *rpcclnt.RPCClnt
 }
 
@@ -49,7 +49,7 @@ func RunTimelineSrv(jobname string) error {
 	if err != nil {
 		return err
 	}
-	tlsrv.cachec = cachedsvcclnt.NewCachedSvcClnt(fsls, jobname)
+	tlsrv.cachec = cachegrpclnt.NewCachedSvcClnt(fsls, jobname)
 	rpcc, err := sigmarpcchan.NewSigmaRPCClnt(fsls, SOCIAL_NETWORK_POST)
 	if err != nil {
 		return err

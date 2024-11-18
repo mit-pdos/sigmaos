@@ -6,7 +6,7 @@ import (
 	"strconv"
 
 	"sigmaos/apps/kv"
-	"sigmaos/cachedsvcclnt"
+	cachegrpclnt "sigmaos/cachegrp/clnt"
 	cachegrpmgr "sigmaos/cachegrp/mgr"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
@@ -145,9 +145,9 @@ func NewHotelSvc(public bool) []*Srv {
 
 type HotelJob struct {
 	*sigmaclnt.SigmaClnt
-	cacheClnt       *cachedsvcclnt.CachedSvcClnt
+	cacheClnt       *cachegrpclnt.CachedSvcClnt
 	cacheMgr        *cachegrpmgr.CacheMgr
-	CacheAutoscaler *cachedsvcclnt.Autoscaler
+	CacheAutoscaler *cachegrpclnt.Autoscaler
 	pids            []sp.Tpid
 	cache           string
 	kvf             *kv.KVFleet
@@ -160,9 +160,9 @@ func NewHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []*Srv, nhotel int, c
 	// Set the number of indexes to be used in each geo server
 	geo.Args = []string{strconv.Itoa(ngeoidx), strconv.Itoa(geoSearchRadius), strconv.Itoa(geoNResults)}
 
-	var cc *cachedsvcclnt.CachedSvcClnt
+	var cc *cachegrpclnt.CachedSvcClnt
 	var cm *cachegrpmgr.CacheMgr
-	var ca *cachedsvcclnt.Autoscaler
+	var ca *cachegrpclnt.Autoscaler
 	var err error
 	var kvf *kv.KVFleet
 
@@ -181,8 +181,8 @@ func NewHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []*Srv, nhotel int, c
 				db.DPrintf(db.ERROR, "Error NewCacheMgr %v", err)
 				return nil, err
 			}
-			cc = cachedsvcclnt.NewCachedSvcClnt([]*fslib.FsLib{sc.FsLib}, job)
-			ca = cachedsvcclnt.NewAutoscaler(cm, cc)
+			cc = cachegrpclnt.NewCachedSvcClnt([]*fslib.FsLib{sc.FsLib}, job)
+			ca = cachegrpclnt.NewAutoscaler(cm, cc)
 		case "kvd":
 			db.DPrintf(db.ALWAYS, "Hotel running with kvd")
 			kvf, err = kv.NewKvdFleet(sc, job, 0, ncache, 0, 0, cacheMcpu, "0", "manual")

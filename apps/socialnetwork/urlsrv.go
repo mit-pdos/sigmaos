@@ -6,7 +6,7 @@ import (
 	"math/rand"
 	"sigmaos/apps/socialnetwork/proto"
 	"sigmaos/apps/cache"
-	"sigmaos/cachedsvcclnt"
+	cachegrpclnt "sigmaos/cachegrp/clnt"
 	dbg "sigmaos/debug"
 	"sigmaos/fs"
 	mongoclnt "sigmaos/mongo/clnt"
@@ -29,7 +29,7 @@ const (
 var urlPrefixL = len(URL_HOSTNAME)
 
 type UrlSrv struct {
-	cachec *cachedsvcclnt.CachedSvcClnt
+	cachec *cachegrpclnt.CachedSvcClnt
 	mongoc *mongoclnt.MongoClnt
 	random *rand.Rand
 }
@@ -51,7 +51,7 @@ func RunUrlSrv(jobname string) error {
 	if err != nil {
 		return err
 	}
-	urlsrv.cachec = cachedsvcclnt.NewCachedSvcClnt(fsls, jobname)
+	urlsrv.cachec = cachegrpclnt.NewCachedSvcClnt(fsls, jobname)
 	urlsrv.random = rand.New(rand.NewSource(time.Now().UnixNano()))
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_URL, "Starting url service\n")
 	return ssrv.RunServer()

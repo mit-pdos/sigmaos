@@ -1,4 +1,4 @@
-package cachedsvcclnt_test
+package clnt_test
 
 import (
 	"strconv"
@@ -10,7 +10,7 @@ import (
 
 	"sigmaos/apps/cache"
 	"sigmaos/apps/cache/proto"
-	"sigmaos/cachedsvcclnt"
+	cachegrpclnt "sigmaos/cachegrp/clnt"
 	cachegrpmgr "sigmaos/cachegrp/mgr"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
@@ -52,7 +52,7 @@ func newTstate(t *test.Tstate, nsrv int) *Tstate {
 func (ts *Tstate) stop() {
 	db.DPrintf(db.ALWAYS, "wait for %d clerks to exit\n", len(ts.clrks))
 	for _, ck := range ts.clrks {
-		opTpt, err := cachedsvcclnt.WaitClerk(ts.SigmaClnt, ck)
+		opTpt, err := cachegrpclnt.WaitClerk(ts.SigmaClnt, ck)
 		assert.Nil(ts.T, err, "StopClerk: %v", err)
 		db.DPrintf(db.ALWAYS, "clerk %v %v ops/sec", ck, opTpt)
 	}
@@ -60,7 +60,7 @@ func (ts *Tstate) stop() {
 }
 
 func (ts *Tstate) StartClerk(dur time.Duration, nkeys, keyOffset int, mcpu proc.Tmcpu) {
-	pid, err := cachedsvcclnt.StartClerk(ts.SigmaClnt, ts.job, nkeys, dur, keyOffset, ts.sempn, mcpu)
+	pid, err := cachegrpclnt.StartClerk(ts.SigmaClnt, ts.job, nkeys, dur, keyOffset, ts.sempn, mcpu)
 	assert.Nil(ts.T, err, "Error StartClerk: %v", err)
 	ts.clrks = append(ts.clrks, pid)
 }
@@ -78,7 +78,7 @@ func TestCacheSingle(t *testing.T) {
 		return
 	}
 	ts := newTstate(t1, NSRV)
-	cc := cachedsvcclnt.NewCachedSvcClnt([]*fslib.FsLib{ts.FsLib}, ts.job)
+	cc := cachegrpclnt.NewCachedSvcClnt([]*fslib.FsLib{ts.FsLib}, ts.job)
 
 	for k := 0; k < N; k++ {
 		key := strconv.Itoa(k)
@@ -128,7 +128,7 @@ func testCacheSharded(t *testing.T, nsrv int) {
 		return
 	}
 	ts := newTstate(t1, nsrv)
-	cc := cachedsvcclnt.NewCachedSvcClnt([]*fslib.FsLib{ts.FsLib}, ts.job)
+	cc := cachegrpclnt.NewCachedSvcClnt([]*fslib.FsLib{ts.FsLib}, ts.job)
 
 	for k := 0; k < N; k++ {
 		key := strconv.Itoa(k)
@@ -185,7 +185,7 @@ func TestCacheConcur(t *testing.T) {
 	}
 	ts := newTstate(t1, NSRV)
 	v := "hello"
-	cc := cachedsvcclnt.NewCachedSvcClnt([]*fslib.FsLib{ts.FsLib}, ts.job)
+	cc := cachegrpclnt.NewCachedSvcClnt([]*fslib.FsLib{ts.FsLib}, ts.job)
 	err := cc.Put("x", &proto.CacheString{Val: v})
 	assert.Nil(t, err)
 
@@ -252,7 +252,7 @@ func TestElasticCache(t *testing.T) {
 
 	ts.sem.Up()
 
-	cc := cachedsvcclnt.NewCachedSvcClnt([]*fslib.FsLib{ts.FsLib}, ts.job)
+	cc := cachegrpclnt.NewCachedSvcClnt([]*fslib.FsLib{ts.FsLib}, ts.job)
 
 	for i := 0; i < 5; i++ {
 		time.Sleep(5 * time.Second)

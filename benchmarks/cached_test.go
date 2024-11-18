@@ -5,7 +5,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"sigmaos/cachedsvcclnt"
+	cachegrpclnt "sigmaos/cachegrp/clnt"
 	cachegrpmgr "sigmaos/cachegrp/mgr"
 	db "sigmaos/debug"
 	"sigmaos/proc"
@@ -58,7 +58,7 @@ func (ji *CachedJobInstance) RunCachedJob() {
 
 	// Start clerks
 	for i := 0; i < ji.nclerks; i++ {
-		ck, err := cachedsvcclnt.StartClerk(ji.SigmaClnt, ji.job, ji.nkeys, ji.dur, i*ji.nkeys, ji.sempn, ji.ckmcpu)
+		ck, err := cachegrpclnt.StartClerk(ji.SigmaClnt, ji.job, ji.nkeys, ji.dur, i*ji.nkeys, ji.sempn, ji.ckmcpu)
 		assert.Nil(ji.Ts.T, err, "Err StartClerk: %v", err)
 		ji.clerks = append(ji.clerks, ck)
 	}
@@ -66,7 +66,7 @@ func (ji *CachedJobInstance) RunCachedJob() {
 	// Stop clerks
 	aggTpt := float64(0)
 	for _, ck := range ji.clerks {
-		tpt, err := cachedsvcclnt.WaitClerk(ji.SigmaClnt, ck)
+		tpt, err := cachegrpclnt.WaitClerk(ji.SigmaClnt, ck)
 		db.DPrintf(db.ALWAYS, "Clerk throughput: %v ops/sec", tpt)
 		assert.Nil(ji.Ts.T, err, "Err waitclerk %v", err)
 		aggTpt += tpt

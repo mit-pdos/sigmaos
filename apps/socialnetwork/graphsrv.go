@@ -6,7 +6,7 @@ import (
 	"gopkg.in/mgo.v2/bson"
 	"sigmaos/apps/socialnetwork/proto"
 	"sigmaos/apps/cache"
-	"sigmaos/cachedsvcclnt"
+	cachegrpclnt "sigmaos/cachegrp/clnt"
 	dbg "sigmaos/debug"
 	"sigmaos/fs"
 	mongoclnt "sigmaos/mongo/clnt"
@@ -30,7 +30,7 @@ const (
 
 type GraphSrv struct {
 	mongoc *mongoclnt.MongoClnt
-	cachec *cachedsvcclnt.CachedSvcClnt
+	cachec *cachegrpclnt.CachedSvcClnt
 	userc  *rpcclnt.RPCClnt
 }
 
@@ -53,7 +53,7 @@ func RunGraphSrv(jobname string) error {
 	if err != nil {
 		return err
 	}
-	gsrv.cachec = cachedsvcclnt.NewCachedSvcClnt(fsls, jobname)
+	gsrv.cachec = cachegrpclnt.NewCachedSvcClnt(fsls, jobname)
 	rpcc, err := sigmarpcchan.NewSigmaRPCClnt(fsls, SOCIAL_NETWORK_USER)
 	if err != nil {
 		return err

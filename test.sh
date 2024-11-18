@@ -105,7 +105,7 @@ if [[ $COMPILE == "--compile" ]]; then
     # test if test packages compile
     #
 
-    for T in path serr linuxsched perf sigmap netproxy sessclnt npproxysrv fslib/reader fslib/writer stats fslib semclnt chunksrv electclnt dircache memfs namesrv procclnt ux s3 bootkernelclnt leaderclnt leadertest apps/kv/kvgrp cachedsvcclnt apps/www sigmapsrv realmclnt apps/mr apps/imgresize apps/kv apps/hotel apps/socialnetwork benchmarks benchmarks/remote example example_echo_server netperf; do
+    for T in path serr linuxsched perf sigmap netproxy sessclnt npproxysrv fslib/reader fslib/writer stats fslib semclnt chunksrv electclnt dircache memfs namesrv procclnt ux s3 bootkernelclnt leaderclnt leadertest apps/kv/kvgrp cachegrp/clnt apps/www sigmapsrv realmclnt apps/mr apps/imgresize apps/kv apps/hotel apps/socialnetwork benchmarks benchmarks/remote example example_echo_server netperf; do
         if ! [ -z "$SKIPTO" ]; then
           if [[ "$SKIPTO" == "$T" ]]; then
             # Stop skipping
@@ -187,7 +187,7 @@ if [[ $BASIC == "--basic" ]]; then
     # tests a full kernel using root realm
     #
 
-    for T in namesrv semclnt chunksrv procclnt ux bootkernelclnt s3 leaderclnt leadertest apps/kv/kvgrp cachedsvcclnt; do
+    for T in namesrv semclnt chunksrv procclnt ux bootkernelclnt s3 leaderclnt leadertest apps/kv/kvgrp cachegrp/clnt; do
         if ! [ -z "$SKIPTO" ]; then
           if [[ "$SKIPTO" == "$T" ]]; then
             # Stop skipping
@@ -341,7 +341,7 @@ if [[ $OVERLAY == "--overlay" ]] ; then
     
     go test $VERB sigmaos/procclnt --etcdIP $HOST_IP -start $GVISOR --overlays --run TestWaitExitSimpleSingle
     cleanup
-    go test $VERB sigmaos/cachedsvcclnt --etcdIP $HOST_IP -start $GVISOR --overlays --run TestCacheClerk
+    go test $VERB sigmaos/cachegrp/clnt --etcdIP $HOST_IP -start $GVISOR --overlays --run TestCacheClerk
     cleanup
     ./start-db.sh
     go test $VERB sigmaos/apps/hotel --etcdIP $HOST_IP -start $GVISOR --overlays --run GeoSingle

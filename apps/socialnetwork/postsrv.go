@@ -5,7 +5,7 @@ import (
 	"gopkg.in/mgo.v2/bson"
 	"sigmaos/apps/socialnetwork/proto"
 	"sigmaos/apps/cache"
-	"sigmaos/cachedsvcclnt"
+	cachegrpclnt "sigmaos/cachegrp/clnt"
 	dbg "sigmaos/debug"
 	"sigmaos/fs"
 	mongoclnt "sigmaos/mongo/clnt"
@@ -26,7 +26,7 @@ const (
 
 type PostSrv struct {
 	mongoc *mongoclnt.MongoClnt
-	cachec *cachedsvcclnt.CachedSvcClnt
+	cachec *cachegrpclnt.CachedSvcClnt
 }
 
 func RunPostSrv(jobname string) error {
@@ -46,7 +46,7 @@ func RunPostSrv(jobname string) error {
 	if err != nil {
 		return err
 	}
-	psrv.cachec = cachedsvcclnt.NewCachedSvcClnt(fsls, jobname)
+	psrv.cachec = cachegrpclnt.NewCachedSvcClnt(fsls, jobname)
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_POST, "Starting post service\n")
 	perf, err := perf.NewPerf(fsls[0].ProcEnv(), perf.SOCIAL_NETWORK_POST)
 	if err != nil {

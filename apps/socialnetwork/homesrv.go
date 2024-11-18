@@ -5,7 +5,7 @@ import (
 	"gopkg.in/mgo.v2/bson"
 	"sigmaos/apps/socialnetwork/proto"
 	"sigmaos/apps/cache"
-	"sigmaos/cachedsvcclnt"
+	cachegrpclnt "sigmaos/cachegrp/clnt"
 	dbg "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/perf"
@@ -26,7 +26,7 @@ const (
 )
 
 type HomeSrv struct {
-	cachec *cachedsvcclnt.CachedSvcClnt
+	cachec *cachegrpclnt.CachedSvcClnt
 	postc  *rpcclnt.RPCClnt
 	graphc *rpcclnt.RPCClnt
 }
@@ -42,7 +42,7 @@ func RunHomeSrv(jobname string) error {
 	if err != nil {
 		return err
 	}
-	hsrv.cachec = cachedsvcclnt.NewCachedSvcClnt(fsls, jobname)
+	hsrv.cachec = cachegrpclnt.NewCachedSvcClnt(fsls, jobname)
 	rpcc, err := sigmarpcchan.NewSigmaRPCClnt(fsls, SOCIAL_NETWORK_GRAPH)
 	if err != nil {
 		return err

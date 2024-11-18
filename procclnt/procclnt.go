@@ -15,7 +15,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/kproc"
-	"sigmaos/lcschedclnt"
+	lcschedclnt "sigmaos/lcsched/clnt"
 	"sigmaos/proc"
 	"sigmaos/scheddclnt"
 	"sigmaos/semclnt"

@@ -9,7 +9,7 @@ import (
 	"sigmaos/apps/www"
 	db "sigmaos/debug"
 	"sigmaos/proc"
-	rd "sigmaos/rand"
+	rd "sigmaos/util/rand"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )

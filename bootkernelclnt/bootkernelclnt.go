@@ -10,7 +10,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/kernelclnt"
 	"sigmaos/proc"
-	"sigmaos/rand"
+	"sigmaos/util/rand"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 )

@@ -12,7 +12,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/perf"
 	"sigmaos/proc"
-	rd "sigmaos/rand"
+	rd "sigmaos/util/rand"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"

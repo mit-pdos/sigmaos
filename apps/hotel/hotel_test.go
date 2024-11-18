@@ -20,7 +20,7 @@ import (
 	"sigmaos/loadgen"
 	"sigmaos/perf"
 	"sigmaos/proc"
-	rd "sigmaos/rand"
+	rd "sigmaos/util/rand"
 	"sigmaos/rpcdirclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmarpcchan"

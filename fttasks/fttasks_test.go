@@ -8,7 +8,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fttasks"
 	"sigmaos/mr"
-	rd "sigmaos/rand"
+	rd "sigmaos/util/rand"
 	"sigmaos/test"
 )
 

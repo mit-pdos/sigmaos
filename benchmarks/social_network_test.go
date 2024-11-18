@@ -15,7 +15,7 @@ import (
 	dbg "sigmaos/debug"
 	"sigmaos/loadgen"
 	"sigmaos/perf"
-	rd "sigmaos/rand"
+	rd "sigmaos/util/rand"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 	"strconv"

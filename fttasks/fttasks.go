@@ -9,7 +9,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fslib"
-	rd "sigmaos/rand"
+	rd "sigmaos/util/rand"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 )

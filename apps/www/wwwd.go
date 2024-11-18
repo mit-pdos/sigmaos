@@ -13,7 +13,7 @@ import (
 	"sigmaos/microbenchmarks"
 	"sigmaos/pipe"
 	"sigmaos/proc"
-	"sigmaos/rand"
+	"sigmaos/util/rand"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"

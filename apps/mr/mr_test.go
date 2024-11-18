@@ -26,7 +26,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/perf"
 	"sigmaos/proc"
-	rd "sigmaos/rand"
+	rd "sigmaos/util/rand"
 	"sigmaos/scheddclnt"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"

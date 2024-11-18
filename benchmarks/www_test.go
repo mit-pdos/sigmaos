@@ -11,7 +11,7 @@ import (
 	"sigmaos/apps/www"
 	db "sigmaos/debug"
 	"sigmaos/proc"
-	"sigmaos/rand"
+	"sigmaos/util/rand"
 	"sigmaos/semclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"

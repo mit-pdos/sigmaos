@@ -16,7 +16,7 @@ import (
 	"sigmaos/loadgen"
 	"sigmaos/perf"
 	"sigmaos/proc"
-	rd "sigmaos/rand"
+	rd "sigmaos/util/rand"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )

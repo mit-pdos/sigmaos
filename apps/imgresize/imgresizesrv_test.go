@@ -17,7 +17,7 @@ import (
 	"sigmaos/groupmgr"
 	"sigmaos/namesrv/fsetcd"
 	"sigmaos/proc"
-	rd "sigmaos/rand"
+	rd "sigmaos/util/rand"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )

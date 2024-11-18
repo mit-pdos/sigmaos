@@ -15,7 +15,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/proc"
-	rd "sigmaos/rand"
+	rd "sigmaos/util/rand"
 	"sigmaos/semclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"

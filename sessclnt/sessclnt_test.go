@@ -19,7 +19,7 @@ import (
 	"sigmaos/netsrv"
 	"sigmaos/path"
 	"sigmaos/protsrv"
-	"sigmaos/rand"
+	"sigmaos/util/rand"
 	"sigmaos/serr"
 	"sigmaos/sessclnt"
 	"sigmaos/sessp"

@@ -12,7 +12,7 @@ import (
 	"sigmaos/groupmgr"
 	"sigmaos/perf"
 	"sigmaos/proc"
-	rd "sigmaos/rand"
+	rd "sigmaos/util/rand"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )

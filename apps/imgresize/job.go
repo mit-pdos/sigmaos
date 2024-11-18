@@ -10,7 +10,7 @@ import (
 	"sigmaos/fttaskmgr"
 	"sigmaos/groupmgr"
 	"sigmaos/proc"
-	rd "sigmaos/rand"
+	rd "sigmaos/util/rand"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 )

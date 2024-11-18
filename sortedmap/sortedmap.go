@@ -7,7 +7,7 @@ import (
 
 	"golang.org/x/exp/constraints"
 
-	"sigmaos/rand"
+	"sigmaos/util/rand"
 )
 
 type val[V any] struct {

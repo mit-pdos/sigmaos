@@ -16,11 +16,11 @@ import (
 	"sigmaos/netclnt"
 	"sigmaos/netproxyclnt"
 	"sigmaos/proc"
-	"sigmaos/rand"
 	"sigmaos/serr"
 	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 	"sigmaos/spcodec"
+	"sigmaos/util/rand"
 )
 
 type SessClnt struct {

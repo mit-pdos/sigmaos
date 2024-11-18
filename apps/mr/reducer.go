@@ -21,7 +21,7 @@ import (
 	"sigmaos/fslib"
 	"sigmaos/perf"
 	"sigmaos/proc"
-	"sigmaos/rand"
+	"sigmaos/util/rand"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"

@@ -8,7 +8,7 @@ import (
 	"sigmaos/apps/kv"
 	db "sigmaos/debug"
 	"sigmaos/proc"
-	"sigmaos/rand"
+	"sigmaos/util/rand"
 	"sigmaos/test"
 )
 

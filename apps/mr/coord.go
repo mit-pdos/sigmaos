@@ -15,7 +15,7 @@ import (
 	"sigmaos/fttasks"
 	"sigmaos/leaderclnt"
 	"sigmaos/proc"
-	"sigmaos/rand"
+	"sigmaos/util/rand"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 )

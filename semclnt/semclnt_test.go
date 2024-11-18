@@ -12,7 +12,7 @@ import (
 	"sigmaos/namesrv/fsetcd"
 	"sigmaos/netproxyclnt"
 	"sigmaos/proc"
-	"sigmaos/rand"
+	"sigmaos/util/rand"
 	"sigmaos/semclnt"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"

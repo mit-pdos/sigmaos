@@ -5,7 +5,7 @@ import (
 	sn "sigmaos/apps/socialnetwork"
 	dbg "sigmaos/debug"
 	"sigmaos/linuxsched"
-	"sigmaos/rand"
+	"sigmaos/util/rand"
 	"sigmaos/test"
 )
 

@@ -11,7 +11,7 @@ import (
 	"sigmaos/chunksrv"
 	db "sigmaos/debug"
 	"sigmaos/fs"
-	proto "sigmaos/lcschedsrv/proto"
+	"sigmaos/lcsched/proto"
 	"sigmaos/proc"
 	"sigmaos/procfs"
 	"sigmaos/scheddclnt"

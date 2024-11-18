@@ -16,7 +16,6 @@ import (
 
 	"sigmaos/cache"
 	cacheproto "sigmaos/cache/proto"
-	"sigmaos/cachesrv"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/rpc"
@@ -207,7 +206,7 @@ func (cc *CacheClnt) DeleteSrv(srv, key string) error {
 	return cc.DeleteTracedFenced(nil, srv, key, sp.NullFence())
 }
 
-func (c *CacheClnt) NewShardRequest(shard cache.Tshard, fence *sp.Tfence, vals cachesrv.Tcache) *cacheproto.ShardRequest {
+func (c *CacheClnt) NewShardRequest(shard cache.Tshard, fence *sp.Tfence, vals cache.Tcache) *cacheproto.ShardRequest {
 	return &cacheproto.ShardRequest{
 		Shard: uint32(shard),
 		Fence: fence.FenceProto(),
@@ -215,7 +214,7 @@ func (c *CacheClnt) NewShardRequest(shard cache.Tshard, fence *sp.Tfence, vals c
 	}
 }
 
-func (c *CacheClnt) CreateShard(srv string, shard cache.Tshard, fence *sp.Tfence, vals cachesrv.Tcache) error {
+func (c *CacheClnt) CreateShard(srv string, shard cache.Tshard, fence *sp.Tfence, vals cache.Tcache) error {
 	req := c.NewShardRequest(shard, fence, vals)
 	var res cacheproto.CacheOK
 	if err := c.RPC(srv, "CacheSrv.CreateShard", req, &res); err != nil {
@@ -248,7 +247,7 @@ func (c *CacheClnt) FreezeShard(srv string, shard cache.Tshard, f *sp.Tfence) er
 	return nil
 }
 
-func (c *CacheClnt) DumpShard(srv string, shard cache.Tshard, f *sp.Tfence) (cachesrv.Tcache, error) {
+func (c *CacheClnt) DumpShard(srv string, shard cache.Tshard, f *sp.Tfence) (cache.Tcache, error) {
 	req := &cacheproto.ShardRequest{
 		Shard: uint32(shard),
 		Fence: f.FenceProto(),
@@ -269,7 +268,7 @@ func (cc *CacheClnt) StatsClnt() []map[string]*rpc.MethodStatSnapshot {
 }
 
 func (cc *CacheClnt) DumpSrv(srv string) (map[string]string, error) {
-	dir := filepath.Join(srv, cachesrv.DUMP)
+	dir := filepath.Join(srv, cache.DUMP)
 	b, err := cc.fsl.GetFile(dir + "/" + sessdev.CLONE)
 	if err != nil {
 		return nil, err

@@ -3,7 +3,7 @@ package kvgrp
 import (
 	"fmt"
 
-	"sigmaos/cachesrv"
+	cachesrv "sigmaos/cache/srv"
 	db "sigmaos/debug"
 	"sigmaos/replraft"
 	"sigmaos/replsrv"

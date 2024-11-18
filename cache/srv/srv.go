@@ -1,4 +1,4 @@
-package cachesrv
+package srv
 
 import (
 	"fmt"
@@ -19,11 +19,6 @@ import (
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
 	"sigmaos/tracing"
-)
-
-const (
-	DUMP   = "dump"
-	NSHARD = 1009 // for cached
 )
 
 type Tstatus string
@@ -61,7 +56,7 @@ func RunCacheSrv(args []string, nshard int) error {
 	s := NewCacheSrv(pe, pn)
 
 	for i := 0; i < nshard; i++ {
-		if err := s.createShard(cache.Tshard(i), sp.NoFence(), make(Tcache)); err != nil {
+		if err := s.createShard(cache.Tshard(i), sp.NoFence(), make(cache.Tcache)); err != nil {
 			db.DFatalf("CreateShard %v\n", err)
 		}
 	}
@@ -71,10 +66,10 @@ func RunCacheSrv(args []string, nshard int) error {
 	if err != nil {
 		return err
 	}
-	if _, err := ssrv.Create(DUMP, sp.DMDIR|0777, sp.ORDWR, sp.NoLeaseId); err != nil {
+	if _, err := ssrv.Create(cache.DUMP, sp.DMDIR|0777, sp.ORDWR, sp.NoLeaseId); err != nil {
 		return err
 	}
-	if err := sessdevsrv.NewSessDev(ssrv.MemFs, DUMP, s.newSession, nil); err != nil {
+	if err := sessdevsrv.NewSessDev(ssrv.MemFs, cache.DUMP, s.newSession, nil); err != nil {
 		return err
 	}
 	ssrv.RunServer()
@@ -158,7 +153,7 @@ func (cs *CacheSrv) lookupShardFence(s cache.Tshard, f sp.Tfence) (*shardInfo, e
 	return sh, nil
 }
 
-func (cs *CacheSrv) createShard(s cache.Tshard, f sp.Tfence, vals Tcache) error {
+func (cs *CacheSrv) createShard(s cache.Tshard, f sp.Tfence, vals cache.Tcache) error {
 	cs.mu.Lock()
 	defer cs.mu.Unlock()
 

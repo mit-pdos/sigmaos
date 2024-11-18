@@ -1,8 +1,9 @@
-package cachesrv
+package srv
 
 import (
 	"google.golang.org/protobuf/proto"
 
+	"sigmaos/cache"
 	cacheproto "sigmaos/cache/proto"
 	db "sigmaos/debug"
 	"sigmaos/fs"
@@ -40,7 +41,7 @@ func (cs *cacheSession) Read(ctx fs.CtxI, off sp.Toffset, cnt sp.Tsize, f sp.Tfe
 		return nil, nil
 	}
 	db.DPrintf(db.CACHESRV, "Dump cache %p %v\n", cs, cs.shards)
-	m := make(Tcache)
+	m := make(cache.Tcache)
 	for i, _ := range cs.shards {
 		cs.shards[i].s.Lock()
 		for k, v := range cs.shards[i].s.cache {

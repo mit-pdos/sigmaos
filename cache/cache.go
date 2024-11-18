@@ -15,9 +15,13 @@ import (
 )
 
 const (
+	DUMP     = "dump"
 	CACHEREL = "cache"
 	CACHE    = sp.NAMED + CACHEREL + "/"
+	NSHARD   = 1009 // default for cached
 )
+
+type Tcache map[string][]byte
 
 type Tkey string
 

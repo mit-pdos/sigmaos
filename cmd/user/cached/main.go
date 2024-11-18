@@ -3,7 +3,8 @@ package main
 import (
 	"os"
 
-	"sigmaos/cachesrv"
+	"sigmaos/cache"
+	cachesrv "sigmaos/cache/srv"
 	db "sigmaos/debug"
 )
 
@@ -11,7 +12,7 @@ func main() {
 	if len(os.Args) < 2 {
 		db.DFatalf("Usage: %v cachedir [shrdpn]", os.Args[0])
 	}
-	if err := cachesrv.RunCacheSrv(os.Args, cachesrv.NSHARD); err != nil {
+	if err := cachesrv.RunCacheSrv(os.Args, cache.NSHARD); err != nil {
 		db.DFatalf("Start %v err %v\n", os.Args[0], err)
 	}
 }

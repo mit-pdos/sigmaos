@@ -23,7 +23,6 @@ import (
 
 	"sigmaos/apps/kv/kvgrp"
 	"sigmaos/cache"
-	"sigmaos/cachesrv"
 	"sigmaos/crash"
 	"sigmaos/ctx"
 	db "sigmaos/debug"
@@ -306,7 +305,7 @@ func (bl *Balancer) initShards(nextShards []string) {
 		f := bl.conf.Fence
 		f.Seqno = 1
 
-		if err := bl.kc.CreateShard(srv, cache.Tshard(s), &f, make(cachesrv.Tcache)); err != nil {
+		if err := bl.kc.CreateShard(srv, cache.Tshard(s), &f, make(cache.Tcache)); err != nil {
 			db.DFatalf("CreateShard %v %d err %v\n", kvd, s, err)
 		}
 	}

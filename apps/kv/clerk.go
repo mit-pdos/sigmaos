@@ -12,7 +12,6 @@ import (
 	"sigmaos/cache"
 	cacheproto "sigmaos/cache/proto"
 	"sigmaos/cacheclnt"
-	"sigmaos/cachesrv"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/replclnt"
@@ -291,7 +290,7 @@ func (kc *KvClerk) Delete(k string) error {
 	return nil
 }
 
-func (kc *KvClerk) opShard(op, srv string, shard cache.Tshard, fence *sp.Tfence, vals cachesrv.Tcache) error {
+func (kc *KvClerk) opShard(op, srv string, shard cache.Tshard, fence *sp.Tfence, vals cache.Tcache) error {
 	req := kc.cc.NewShardRequest(shard, fence, vals)
 	db.DPrintf(db.KVCLERK, "%v start %v %v\n", op, shard, req)
 	b, err := kc.rc.ReplOp(srv, op, "", req)
@@ -304,7 +303,7 @@ func (kc *KvClerk) opShard(op, srv string, shard cache.Tshard, fence *sp.Tfence,
 	}
 	return nil
 }
-func (kc *KvClerk) opShardData(op, srv string, shard cache.Tshard, fence *sp.Tfence, vals cachesrv.Tcache) (cachesrv.Tcache, error) {
+func (kc *KvClerk) opShardData(op, srv string, shard cache.Tshard, fence *sp.Tfence, vals cache.Tcache) (cache.Tcache, error) {
 	req := kc.cc.NewShardRequest(shard, fence, vals)
 	db.DPrintf(db.KVCLERK, "%v start %v %v\n", op, shard, req)
 	b, err := kc.rc.ReplOp(srv, op, "", req)
@@ -318,7 +317,7 @@ func (kc *KvClerk) opShardData(op, srv string, shard cache.Tshard, fence *sp.Tfe
 	return res.Vals, nil
 }
 
-func (kc *KvClerk) CreateShard(srv string, shard cache.Tshard, fence *sp.Tfence, vals cachesrv.Tcache) error {
+func (kc *KvClerk) CreateShard(srv string, shard cache.Tshard, fence *sp.Tfence, vals cache.Tcache) error {
 	if kc.rc != nil {
 		return kc.opShard("CacheSrv.CreateShard", srv, shard, fence, vals)
 	} else {
@@ -328,7 +327,7 @@ func (kc *KvClerk) CreateShard(srv string, shard cache.Tshard, fence *sp.Tfence,
 
 func (kc *KvClerk) FreezeShard(srv string, shard cache.Tshard, fence *sp.Tfence) error {
 	if kc.rc != nil {
-		return kc.opShard("CacheSrv.FreezeShard", srv, shard, fence, make(cachesrv.Tcache))
+		return kc.opShard("CacheSrv.FreezeShard", srv, shard, fence, make(cache.Tcache))
 	} else {
 		return kc.cc.FreezeShard(srv, shard, fence)
 	}
@@ -336,15 +335,15 @@ func (kc *KvClerk) FreezeShard(srv string, shard cache.Tshard, fence *sp.Tfence)
 
 func (kc *KvClerk) DeleteShard(srv string, shard cache.Tshard, fence *sp.Tfence) error {
 	if kc.rc != nil {
-		return kc.opShard("CacheSrv.DeleteShard", srv, shard, fence, make(cachesrv.Tcache))
+		return kc.opShard("CacheSrv.DeleteShard", srv, shard, fence, make(cache.Tcache))
 	} else {
 		return kc.cc.DeleteShard(srv, shard, fence)
 	}
 }
 
-func (kc *KvClerk) DumpShard(srv string, shard cache.Tshard, fence *sp.Tfence) (cachesrv.Tcache, error) {
+func (kc *KvClerk) DumpShard(srv string, shard cache.Tshard, fence *sp.Tfence) (cache.Tcache, error) {
 	if kc.rc != nil {
-		return kc.opShardData("CacheSrv.DumpShard", srv, shard, fence, make(cachesrv.Tcache))
+		return kc.opShardData("CacheSrv.DumpShard", srv, shard, fence, make(cache.Tcache))
 	} else {
 		return kc.cc.DumpShard(srv, shard, fence)
 	}

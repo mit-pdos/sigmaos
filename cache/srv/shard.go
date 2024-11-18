@@ -1,19 +1,17 @@
-package cachesrv
+package srv
 
 import (
+	"sigmaos/cache"
 	"sync"
-	// sp "sigmaos/sigmap"
 )
-
-type Tcache map[string][]byte
 
 type shard struct {
 	sync.Mutex
-	cache Tcache
+	cache cache.Tcache
 }
 
 func newShard() *shard {
-	return &shard{cache: make(Tcache)}
+	return &shard{cache: make(cache.Tcache)}
 }
 
 func (s *shard) put(key string, val []byte) error {
@@ -53,7 +51,7 @@ func (s *shard) delete(key string) bool {
 	return false
 }
 
-func (s *shard) fill(vals Tcache) bool {
+func (s *shard) fill(vals cache.Tcache) bool {
 	s.Lock()
 	defer s.Unlock()
 
@@ -63,11 +61,11 @@ func (s *shard) fill(vals Tcache) bool {
 	return true
 }
 
-func (s *shard) dump() Tcache {
+func (s *shard) dump() cache.Tcache {
 	s.Lock()
 	defer s.Unlock()
 
-	m := make(Tcache)
+	m := make(cache.Tcache)
 	for k, v := range s.cache {
 		m[k] = v
 	}

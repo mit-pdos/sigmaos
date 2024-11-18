@@ -1,4 +1,4 @@
-package imgresizesrv_test
+package imgresize_test
 
 import (
 	"path/filepath"
@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	db "sigmaos/debug"
-	"sigmaos/imgresizesrv"
+	"sigmaos/imgresize"
 	"sigmaos/proc"
 	rd "sigmaos/rand"
 	sp "sigmaos/sigmap"
@@ -18,7 +18,7 @@ type TstateRPC struct {
 	job string
 	*test.Tstate
 	srvProc *proc.Proc
-	rpcc    *imgresizesrv.ImgResizeRPCClnt
+	rpcc    *imgresize.ImgResizeRPCClnt
 }
 
 func newTstateRPC(t *test.Tstate) (*TstateRPC, error) {
@@ -27,17 +27,17 @@ func newTstateRPC(t *test.Tstate) (*TstateRPC, error) {
 	ts.job = rd.String(4)
 	ts.cleanup()
 
-	err := ts.MkDir(imgresizesrv.IMG, 0777)
+	err := ts.MkDir(imgresize.IMG, 0777)
 	if !assert.Nil(ts.T, err) {
 		return nil, err
 	}
-	p, err := imgresizesrv.StartImgRPCd(ts.SigmaClnt, ts.job, IMG_RESIZE_MCPU, IMG_RESIZE_MEM, 1, 0)
+	p, err := imgresize.StartImgRPCd(ts.SigmaClnt, ts.job, IMG_RESIZE_MCPU, IMG_RESIZE_MEM, 1, 0)
 	if !assert.Nil(ts.T, err) {
 		return nil, err
 	}
 	db.DPrintf(db.TEST, "Started imgd RPC server")
 	ts.srvProc = p
-	rpcc, err := imgresizesrv.NewImgResizeRPCClnt(ts.SigmaClnt.FsLib, ts.job)
+	rpcc, err := imgresize.NewImgResizeRPCClnt(ts.SigmaClnt.FsLib, ts.job)
 	if !assert.Nil(ts.T, err) {
 		return nil, err
 	}
@@ -46,8 +46,8 @@ func newTstateRPC(t *test.Tstate) (*TstateRPC, error) {
 }
 
 func (ts *TstateRPC) cleanup() {
-	ts.RmDir(imgresizesrv.IMG)
-	imgresizesrv.Cleanup(ts.FsLib, filepath.Join(sp.S3, sp.LOCAL, "9ps3/img-save"))
+	ts.RmDir(imgresize.IMG)
+	imgresize.Cleanup(ts.FsLib, filepath.Join(sp.S3, sp.LOCAL, "9ps3/img-save"))
 }
 
 func (ts *TstateRPC) shutdown() {

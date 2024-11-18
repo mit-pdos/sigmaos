@@ -1,4 +1,4 @@
-package imgresizesrv
+package imgresize
 
 import (
 	"fmt"
@@ -10,7 +10,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/fttaskmgr"
-	"sigmaos/imgresizesrv/proto"
+	"sigmaos/imgresize/proto"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
 	"sigmaos/sigmasrv"

@@ -4,11 +4,11 @@ import (
 	"os"
 
 	db "sigmaos/debug"
-	"sigmaos/imgresizesrv"
+	"sigmaos/imgresize"
 )
 
 func main() {
-	w, err := imgresizesrv.NewImgSrvRPC(os.Args[1:])
+	w, err := imgresize.NewImgSrvRPC(os.Args[1:])
 	if err != nil {
 		db.DFatalf("%v", err)
 	}

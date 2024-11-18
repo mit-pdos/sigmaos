@@ -1,4 +1,4 @@
-package imgresizesrv
+package imgresize
 
 import (
 	"path/filepath"

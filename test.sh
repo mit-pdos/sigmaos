@@ -105,7 +105,7 @@ if [[ $COMPILE == "--compile" ]]; then
     # test if test packages compile
     #
 
-    for T in path intervals serr linuxsched perf sigmap netproxy sessclnt npproxysrv fslib/reader fslib/writer stats fslib semclnt chunksrv electclnt dircache memfs namesrv procclnt ux s3 bootkernelclnt leaderclnt leadertest kvgrp cachedsvcclnt www sigmapsrv realmclnt apps/mr imgresizesrv kv apps/hotel apps/socialnetwork benchmarks benchmarks/remote example example_echo_server netperf; do
+    for T in path intervals serr linuxsched perf sigmap netproxy sessclnt npproxysrv fslib/reader fslib/writer stats fslib semclnt chunksrv electclnt dircache memfs namesrv procclnt ux s3 bootkernelclnt leaderclnt leadertest kvgrp cachedsvcclnt www sigmapsrv realmclnt apps/mr imgresize kv apps/hotel apps/socialnetwork benchmarks benchmarks/remote example example_echo_server netperf; do
         if ! [ -z "$SKIPTO" ]; then
           if [[ "$SKIPTO" == "$T" ]]; then
             # Stop skipping
@@ -253,7 +253,7 @@ fi
 
 if [[ $APPS == "--apps" ]]; then
     if [[ $FAST == "--fast" ]]; then
-        PKGS="apps/mr imgresizesrv kv apps/hotel apps/socialnetwork"
+        PKGS="apps/mr imgresize kv apps/hotel apps/socialnetwork"
         TNAMES=("MRJob" "ImgdOne" "KVOKN" "TestBenchDeathStarSingle" "TestCompose")
         NEED_DB=("false" "false" "false" "true" "true")
         i=0
@@ -276,7 +276,7 @@ if [[ $APPS == "--apps" ]]; then
         done
 #        go test $VERB sigmaos/apps/mr -start $GVISOR $SPPROXYD $NETPROXY -run MRJob
 #        cleanup
-#        go test $VERB sigmaos/imgresizesrv -start $GVISOR $SPPROXYD $NETPROXY -run ImgdOne
+#        go test $VERB sigmaos/imgresize -start $GVISOR $SPPROXYD $NETPROXY -run ImgdOne
 #        cleanup
 #        go test $VERB sigmaos/kv -start $GVISOR $SPPROXYD $NETPROXY -run KVOKN
 #        cleanup
@@ -287,7 +287,7 @@ if [[ $APPS == "--apps" ]]; then
 #       	go test $VERB sigmaos/apps/socialnetwork -start $GVISOR $SPPROXYD $NETPROXY -run TestCompose
 #        cleanup
     else
-        for T in imgresizesrv apps/mr apps/hotel apps/socialnetwork www; do
+        for T in imgresize apps/mr apps/hotel apps/socialnetwork www; do
             if ! [ -z "$SKIPTO" ]; then
               if [[ "$SKIPTO" == "$T" ]]; then
                 # Stop skipping

@@ -139,7 +139,7 @@ func (w *TestWorker) readFile(file string) uint64 {
 	if err != nil {
 		db.DFatalf("readFile id %s: failed to open file: err %v", w.id, err)
 	}
-	scanner := bufio.NewScanner(reader.Reader)
+	scanner := bufio.NewScanner(reader)
 	exists := scanner.Scan()
 	if !exists {
 		db.DFatalf("readFile id %s: file %s does not contain line", w.id, file)

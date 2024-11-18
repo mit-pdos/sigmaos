@@ -307,7 +307,7 @@ func (c *PerfCoord) getWorkerTimes(trialNum int, deleted bool) []time.Time {
 		if err != nil {
 			db.DFatalf("getWorkerTimes: failed to open file %s, %v", path, err)
 		}
-		scanner := bufio.NewScanner(reader.Reader)
+		scanner := bufio.NewScanner(reader)
 		exists := scanner.Scan()
 		if !exists {
 			db.DFatalf("getWorkerTimes: file %s does not contain line", path)

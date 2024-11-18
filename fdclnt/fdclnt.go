@@ -271,7 +271,7 @@ func (fdc *FdClient) DirWatchV2(fd int) (int, error) {
 		return -1, err2
 	}
 
-	watchfd := fdc.fds.allocFd(watchfid, sp.OREAD, fdc.pc)
+	watchfd := fdc.fds.allocFd(watchfid, sp.OREAD, fdc.pc, "")
 
 	return watchfd, nil
 }

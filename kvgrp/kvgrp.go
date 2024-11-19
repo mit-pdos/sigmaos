@@ -5,7 +5,6 @@
 package kvgrp
 
 import (
-	"os"
 	"path/filepath"
 	"sync"
 	"time"
@@ -121,8 +120,6 @@ func (g *Group) writeSymlink(sigmaEPs []*sp.Tendpoint) {
 }
 
 func RunMember(job, grp string, public bool, myid, nrepl int) {
-	db.DPrintf(db.CRASH, "Env %v", os.Getenv(proc.SIGMAFAIL))
-
 	g := &Group{myid: myid, grp: grp, isBusy: true}
 	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
 	if err != nil {

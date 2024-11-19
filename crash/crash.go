@@ -175,8 +175,6 @@ func Failer(label Tselector, f Teventf) {
 				}
 			}
 		}(label, e)
-	} else {
-		db.DPrintf(db.CRASH, "Unknown label %v", label)
 	}
 }
 

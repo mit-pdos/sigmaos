@@ -143,7 +143,7 @@ func TestServerCrash(t *testing.T) {
 	}
 
 	e0 := crash.Tevent{crash.KVD_CRASH, 0, CRASH, 0.33, 0}
-	err := crash.AppendSigmaFail([]crash.Tevent{e0})
+	err := crash.SetSigmaFail([]crash.Tevent{e0})
 
 	ts := newTstate(t1, 0, false)
 
@@ -179,7 +179,7 @@ func TestReconnectSimple(t *testing.T) {
 	}
 
 	e0 := crash.Tevent{crash.KVD_NETFAIL, 0, NETFAIL, 0.33, 0}
-	err := crash.AppendSigmaFail([]crash.Tevent{e0})
+	err := crash.SetSigmaFail([]crash.Tevent{e0})
 
 	ts := newTstate(t1, 0, false)
 
@@ -230,7 +230,7 @@ func TestServerPartitionNonBlockingSimple(t *testing.T) {
 		return
 	}
 
-	err := crash.AppendSigmaFail([]crash.Tevent{EvP})
+	err := crash.SetSigmaFail([]crash.Tevent{EvP})
 	assert.Nil(t, err)
 	ts := newTstate(t1, 0, false)
 
@@ -252,7 +252,7 @@ func TestServerPartitionNonBlockingConcur(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	err := crash.AppendSigmaFail([]crash.Tevent{EvP})
+	err := crash.SetSigmaFail([]crash.Tevent{EvP})
 	assert.Nil(t, err)
 	ts := newTstate(t1, 0, false)
 	ch := make(chan error)
@@ -276,7 +276,7 @@ func TestServerPartitionBlocking(t *testing.T) {
 		return
 	}
 
-	err := crash.AppendSigmaFail([]crash.Tevent{EvP})
+	err := crash.SetSigmaFail([]crash.Tevent{EvP})
 	assert.Nil(t, err)
 
 	ts := newTstate(t1, 0, false)

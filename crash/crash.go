@@ -49,12 +49,19 @@ func MakeTevents(es []Tevent) (string, error) {
 	return string(b), nil
 }
 
-func parseTevents(s string, labels map[Tselector]Tevent) error {
-	var evs []Tevent
+func unmarshalTevents(s string, evs []Tevent) error {
 	if s == "" {
 		return nil
 	}
 	if err := json.Unmarshal([]byte(s), &evs); err != nil {
+		return err
+	}
+	return nil
+}
+
+func parseTevents(s string, labels map[Tselector]Tevent) error {
+	var evs []Tevent
+	if err := unmarshalTevents(s, evs); err != nil {
 		return err
 	}
 	for _, e := range evs {
@@ -117,13 +124,23 @@ func Fail(crash int64) {
 
 // New interface
 
-func AppendSigmaFail(es []Tevent) error {
+func SetSigmaFail(es []Tevent) error {
 	s, err := MakeTevents(es)
 	if err != nil {
 		return err
 	}
-	proc.AppendSigmaFail(s)
+	proc.SetSigmaFail(s)
 	return nil
+}
+
+func AppendSigmaFail(es []Tevent) error {
+	var evs []Tevent
+	s := proc.GetSigmaFail()
+	if err := unmarshalTevents(s, evs); err != nil {
+		return err
+	}
+	evs = append(evs, es...)
+	return SetSigmaFail(evs)
 }
 
 func Crash() {

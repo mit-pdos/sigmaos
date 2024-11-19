@@ -502,13 +502,13 @@ func TestMaliciousMapper(t *testing.T) {
 }
 
 func TestCrashTaskOnly(t *testing.T) {
-	err := crash.AppendSigmaFail(taskEv)
+	err := crash.SetSigmaFail(taskEv)
 	assert.Nil(t, err)
 	runN(t, CRASHTASK, 0, 0, 0, 0, 0, false)
 }
 
 func TestCrashCoordOnly(t *testing.T) {
-	err := crash.AppendSigmaFail(coordEv)
+	err := crash.SetSigmaFail(coordEv)
 	assert.Nil(t, err)
 	runN(t, 0, CRASHCOORD, 0, 0, 0, 0, false)
 }
@@ -517,7 +517,7 @@ func TestCrashTaskAndCoord(t *testing.T) {
 	evs := append([]crash.Tevent{}, taskEv...)
 	evs = append(evs, coordEv...)
 	db.DPrintf(db.TEST, "evs %v", evs)
-	err := crash.AppendSigmaFail(evs)
+	err := crash.SetSigmaFail(evs)
 	assert.Nil(t, err)
 	runN(t, CRASHTASK, CRASHCOORD, 0, 0, 0, 0, false)
 }

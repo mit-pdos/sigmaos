@@ -243,7 +243,7 @@ func TestLeaseDelayReboot(t *testing.T) {
 func TestPartitionNamed(t *testing.T) {
 	e := crash.Tevent{crash.NAMED_PARTITION, 2000, 1000, 1.0, 7000}
 	// e := crash.Tevent{crash.NAMED_PARTITION, 1000, 1000, 1.0, 0}
-	err := crash.AppendSigmaFail([]crash.Tevent{e})
+	err := crash.SetSigmaFail([]crash.Tevent{e})
 	assert.Nil(t, err)
 
 	ts, err1 := test.NewTstateAll(t)

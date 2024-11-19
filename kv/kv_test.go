@@ -262,55 +262,55 @@ func TestKVOKN(t *testing.T) {
 }
 
 func TestCrashBal0(t *testing.T) {
-	err := crash.AppendSigmaFail(balancerEv)
+	err := crash.SetSigmaFail(balancerEv)
 	assert.Nil(t, err)
 	concurN(t, 0, CRASHBALANCER, kv.KVD_NO_REPL, 0, "0")
 }
 
 func TestCrashBal1(t *testing.T) {
-	err := crash.AppendSigmaFail(balancerEv)
+	err := crash.SetSigmaFail(balancerEv)
 	assert.Nil(t, err)
 	concurN(t, 1, CRASHBALANCER, kv.KVD_NO_REPL, 0, "0")
 }
 
 func TestCrashBalN(t *testing.T) {
-	err := crash.AppendSigmaFail(balancerEv)
+	err := crash.SetSigmaFail(balancerEv)
 	assert.Nil(t, err)
 	concurN(t, NCLERK, CRASHBALANCER, kv.KVD_NO_REPL, 0, "0")
 }
 
 func TestCrashMov0(t *testing.T) {
-	err := crash.AppendSigmaFail(moverEv)
+	err := crash.SetSigmaFail(moverEv)
 	assert.Nil(t, err)
 	concurN(t, 0, 0, kv.KVD_NO_REPL, 0, CRASHMOVERX)
 }
 
 func TestCrashMov1(t *testing.T) {
-	err := crash.AppendSigmaFail(moverEv)
+	err := crash.SetSigmaFail(moverEv)
 	assert.Nil(t, err)
 	concurN(t, 1, 0, kv.KVD_NO_REPL, 0, CRASHMOVERX)
 }
 
 func TestCrashMovN(t *testing.T) {
-	err := crash.AppendSigmaFail(moverEv)
+	err := crash.SetSigmaFail(moverEv)
 	assert.Nil(t, err)
 	concurN(t, NCLERK, 0, kv.KVD_NO_REPL, 0, CRASHMOVERX)
 }
 
 func TestCrashAll0(t *testing.T) {
-	err := crash.AppendSigmaFail(bothEv)
+	err := crash.SetSigmaFail(bothEv)
 	assert.Nil(t, err)
 	concurN(t, 0, CRASHBALANCER, kv.KVD_NO_REPL, 0, CRASHMOVERX)
 }
 
 func TestCrashAll1(t *testing.T) {
-	err := crash.AppendSigmaFail(bothEv)
+	err := crash.SetSigmaFail(bothEv)
 	assert.Nil(t, err)
 	concurN(t, 1, CRASHBALANCER, kv.KVD_NO_REPL, 0, CRASHMOVERX)
 }
 
 func TestCrashAllN(t *testing.T) {
-	err := crash.AppendSigmaFail(bothEv)
+	err := crash.SetSigmaFail(bothEv)
 	assert.Nil(t, err)
 	concurN(t, NCLERK, CRASHBALANCER, kv.KVD_NO_REPL, 0, CRASHMOVERX)
 }

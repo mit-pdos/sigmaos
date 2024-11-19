@@ -1,20 +1,25 @@
 package protsrv
 
 import (
+	"bytes"
+	"encoding/binary"
 	"fmt"
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/ninep"
 	"sigmaos/protsrv/pobj"
+	protsrv_proto "sigmaos/protsrv/proto"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 	"sync"
+
+	"google.golang.org/protobuf/proto"
 )
 
 // implements FsObj so that watches can be implemented as fids
 type WatchFsObj struct {
-	events []string
-	unfinishedEvent string
+	events []*protsrv_proto.WatchEvent
+	remainingMsg []byte
 	cond  *sync.Cond
 	watch *Watch
 }
@@ -25,13 +30,13 @@ func newFidWatch(ctx fs.CtxI) *Fid {
 		isOpen: false, 
 		po: nil, 
 		m: 0, 
-		qid: nil, 
+		qid: nil,
 		cursor: 0,
 	}
 
 	fid.po = pobj.NewPobj(nil, &WatchFsObj{
 		events: nil,
-		unfinishedEvent: "",
+		remainingMsg: nil,
 		cond:  sync.NewCond(&fid.mu),
 		watch: nil,
 	}, ctx)
@@ -48,49 +53,46 @@ func IsWatch(obj fs.FsObj) bool {
 func (wo *WatchFsObj) GetEventBuffer(maxLength int) []byte {
 	wo.cond.L.Lock()
 	defer wo.cond.L.Unlock()
-	for len(wo.events) == 0 && wo.unfinishedEvent == "" {
+
+	if len(wo.remainingMsg) > 0 {
+		sendSize := min(maxLength, len(wo.remainingMsg))
+		ret := wo.remainingMsg[:sendSize]
+		wo.remainingMsg = wo.remainingMsg[sendSize:]
+		return ret
+	}
+
+	for len(wo.events) == 0 {
 		wo.cond.Wait()
 	}
 
-	buf := make([]byte, 0)
-	offset := uint32(0)
+	msg, err := proto.Marshal(&protsrv_proto.WatchEventList{
+		Events: wo.events,
+	})
 
-	if wo.unfinishedEvent != "" {
-		var offsetDiff int
-
-		buf, wo.unfinishedEvent, offsetDiff = addEvent(buf, maxLength, wo.unfinishedEvent)
-		offset += uint32(offsetDiff)
+	if err != nil {
+		db.DFatalf("Error marshalling events: %v\n", err)
+		return nil
 	}
 
-	if wo.unfinishedEvent == "" {
-		maxIxReached := -1
-		for ix, event := range wo.events {
-			db.DPrintf(db.WATCH_V2, "ReadFWatch event %v\n", event)
-			eventStr := event + "\n"
-			var offsetDiff int
-			buf, wo.unfinishedEvent, offsetDiff = addEvent(buf, maxLength - int(offset), eventStr)
-			offset += uint32(offsetDiff)
+	wo.events = nil
 
-			maxIxReached = ix
-			if wo.unfinishedEvent != "" {
-				break
-			} 
-		}
-
-		wo.events = wo.events[maxIxReached + 1:]
+	sz := uint32(len(msg))
+	var buf bytes.Buffer
+	err = binary.Write(&buf, binary.LittleEndian, sz)
+	if err != nil {
+		db.DFatalf("Error writing size: %v\n", err)
+		return nil
+	}
+	_, err = buf.Write(msg)
+	if err != nil {
+		db.DFatalf("Error writing message: %v\n", err)
+		return nil
 	}
 
-	return buf
-}
-
-func addEvent(buffer []byte, remainingCapacity int, event string) ([]byte, string, int) {
-	if remainingCapacity < len(event) {
-		buffer = append(buffer, event[:remainingCapacity]...)
-		return buffer, event[remainingCapacity:], remainingCapacity
-	}
-
-	buffer = append(buffer, event...)
-	return buffer, "", len(event)
+	fullMsg := buf.Bytes()
+	sendSize := min(maxLength, len(fullMsg))
+	wo.remainingMsg = fullMsg[sendSize:]
+	return fullMsg[:sendSize]
 }
 
 func (wo *WatchFsObj) Watch() *Watch {
@@ -98,7 +100,7 @@ func (wo *WatchFsObj) Watch() *Watch {
 }
 
 func (wo *WatchFsObj) String() string {
-	return fmt.Sprintf("{events %v unfinishedEvent %s}", wo.events, wo.unfinishedEvent)
+	return fmt.Sprintf("{events %v remainingMsg sz %d}", wo.events, len(wo.remainingMsg))
 }
 
 func (wo *WatchFsObj) Stat(ctx fs.CtxI) (*sp.Stat, *serr.Err) {

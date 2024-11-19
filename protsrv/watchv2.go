@@ -3,6 +3,7 @@ package protsrv
 import (
 	db "sigmaos/debug"
 	"sigmaos/protsrv/lockmap"
+	protsrv_proto "sigmaos/protsrv/proto"
 	"sync"
 )
 
@@ -101,15 +102,21 @@ func (wt *WatchTableV2) FreeWatch(ws *Watch, fid *Fid) bool {
 
 // Caller should have pl locked
 func (wt *WatchTableV2) AddRemoveEvent(pl *lockmap.PathLock, filename string) {
-	wt.addWatchEvent(pl, "REMOVE " + filename)
+	wt.addWatchEvent(pl, &protsrv_proto.WatchEvent{
+		File: filename,
+		Type: protsrv_proto.WatchEventType_REMOVE,
+	})
 }
 
 // Caller should have pl locked
 func (wt *WatchTableV2) AddCreateEvent(pl *lockmap.PathLock, filename string) {
-	wt.addWatchEvent(pl, "CREATE " + filename)
+	wt.addWatchEvent(pl, &protsrv_proto.WatchEvent{
+		File: filename,
+		Type: protsrv_proto.WatchEventType_CREATE,
+	})
 }
 
-func (wt *WatchTableV2) addWatchEvent(pl *lockmap.PathLock, event string) {
+func (wt *WatchTableV2) addWatchEvent(pl *lockmap.PathLock, event *protsrv_proto.WatchEvent) {
 	wt.Lock()
 	defer wt.Unlock()
 
@@ -120,7 +127,7 @@ func (wt *WatchTableV2) addWatchEvent(pl *lockmap.PathLock, event string) {
 		return
 	}
 
-	db.DPrintf(db.WATCH_V2, "AddWatchEvent '%s' '%s' %v\n", p, event, ws.fids)
+	// db.DPrintf(db.WATCH_V2, "AddWatchEvent '%s' '%s' %v\n", p, event, ws.fids)
 	
 	for _, fid := range ws.fids {
 		fid.mu.Lock()

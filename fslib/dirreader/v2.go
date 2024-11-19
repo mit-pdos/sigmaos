@@ -2,6 +2,8 @@ package dirreader
 
 import (
 	"bufio"
+	"encoding/binary"
+	"io"
 	"maps"
 	"path/filepath"
 	"slices"
@@ -12,11 +14,14 @@ import (
 	"sigmaos/fslib"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
+
+	protsrv_proto "sigmaos/protsrv/proto"
+
+	"google.golang.org/protobuf/proto"
 )
 
 // TODO: figure out which tests if any are broken by this branch
 // TODO: write more small tests for each of the functions
-// TODO: make the message a protobuf instead of a string
 
 type FwatchV2 func(ents map[string] bool, changes map[string] bool) bool
 
@@ -91,87 +96,55 @@ func NewDirReaderV2(fslib *fslib.FsLib, pn string) (*DirReaderV2, error) {
 	return dw, nil
 }
 
+func isWatchClosed(err error) bool {
+	return err != nil && (serr.IsErrCode(err, serr.TErrClosed) || serr.IsErrCode(err, serr.TErrUnreachable) || serr.IsErrCode(err, serr.TErrUnknownfid) || err == io.ErrUnexpectedEOF)
+}
+
 // should hold lock for dw
 func (dw *DirReaderV2) ReadUpdates() error {
-	err := dw.ReadNextUpdate()
-	if err != nil {
-		return err
-	}
-
-	// read extra events as long as they do not cause is to incur an additional RPC read()
-	hasUpdates, err := dw.HasUpdateAvailableInBuffer()
-	for hasUpdates && err == nil {
-		err = dw.ReadNextUpdate()
-		if err != nil {
-			return err
-		}
-
-		hasUpdates, err = dw.HasUpdateAvailableInBuffer()
-	}
-
-	return err
-}
-
-// should hold lock for dw
-func (dw *DirReaderV2) ReadNextUpdate() error {
-	event, err := dw.reader.ReadString('\n')
-
-	if dw.closed {
+	var length uint32
+	err := binary.Read(dw.reader, binary.LittleEndian, &length)
+	if isWatchClosed(err) {
+		db.DPrintf(db.WATCH_V2, "DirReaderV2: Watch stream for %s closed %v", dw.pn, err)
 		return serr.NewErr(serr.TErrClosed, "")
 	}
-
 	if err != nil {
-		if serr.IsErrCode(err, serr.TErrClosed) || serr.IsErrCode(err, serr.TErrUnreachable) || serr.IsErrCode(err, serr.TErrUnknownfid) {
-			db.DPrintf(db.WATCH_V2, "DirReaderV2: Watch stream for %s closed", dw.pn)
-			return serr.NewErr(serr.TErrClosed, "")
-		} else {
-			db.DFatalf("DirReaderV2: Watch stream produced err %v", err)
-		}
+		db.DFatalf("DirReaderV2: failed to read length %v", err)
 	}
-
-	// remove the newline
-	event = event[:len(event) - 1]
-	var name string
-	var created bool
-
-	if strings.HasPrefix(event, CREATE_PREFIX) {
-		name = event[len(CREATE_PREFIX):]
-		created = true
-	} else if strings.HasPrefix(event, REMOVE_PREFIX) {
-		name = event[len(REMOVE_PREFIX):]
-		created = false
-	} else {
-		db.DFatalf("Received malformed watch event: %s", event)
-	}
-
-	if dw.closed {
+	data := make([]byte, length)
+	numRead, err := io.ReadFull(dw.reader, data)
+	if isWatchClosed(err) {
+		db.DPrintf(db.WATCH_V2, "DirReaderV2: Watch stream for %s closed %v", dw.pn, err)
 		return serr.NewErr(serr.TErrClosed, "")
 	}
+	if err != nil {
+		db.DFatalf("DirReaderV2: Watch stream produced err %v", err)
+	}
 
-	db.DPrintf(db.WATCH_V2, "DirReaderV2: Read event %s %t", name, created)
+	if uint32(numRead) != length {
+		db.DFatalf("DirReaderV2: only received %d bytes, expected %d bytes", numRead, length)
+	}
 
-	dw.ents[name] = created
-	dw.changes[name] = created
+	eventList := &protsrv_proto.WatchEventList{}
+	err = proto.Unmarshal(data, eventList)
+	if err != nil {
+		db.DFatalf("DirReaderV2: failed to unmarshal data %v", err)
+	}
+
+	for _, event := range eventList.Events {
+		switch event.Type {
+		case protsrv_proto.WatchEventType_CREATE:
+			dw.ents[event.File] = true
+			dw.changes[event.File] = true
+		case protsrv_proto.WatchEventType_REMOVE:
+			dw.ents[event.File] = false
+			dw.changes[event.File] = false
+		default:
+			db.DFatalf("DirReaderV2: received unknown event type %v", event.Type)
+		}
+	}
 
 	return nil
-}
-
-
-// should hold lock for dw
-func (dw *DirReaderV2) HasUpdateAvailableInBuffer() (bool, error) {
-	buffer, err := dw.reader.Peek(dw.reader.Buffered())
-	if err != nil {
-		db.DPrintf(db.WATCH_V2, "DirReaderV2: failed to peek at buffer for %s", dw.pn)
-		return false, err
-	}
-
-	for _, b := range buffer {
-		if b == '\n' {
-			return true, nil
-		}
-	}
-
-	return false, nil
 }
 
 func filterMap(ents map[string] bool) []string {
@@ -208,8 +181,6 @@ func (dw *DirReaderV2) readDirWatch(watch FwatchV2) error {
 	dw.Lock()
 	defer dw.Unlock()
 
-	db.DPrintf(db.WATCH_V2, "readDirWatch: initial dir contents %v", dw.ents)
-
 	for watch(dw.ents, dw.changes) {
 		clear(dw.changes)
 		err := dw.ReadUpdates()
@@ -225,7 +196,7 @@ func (dw *DirReaderV2) readDirWatch(watch FwatchV2) error {
 
 func (dw *DirReaderV2) WaitRemove(file string) error {
 	err := dw.readDirWatch(func(ents map[string] bool, changes map[string]bool) bool {
-		db.DPrintf(db.WATCH_V2, "WaitRemove %v %v\n", ents, file)
+		// db.DPrintf(db.WATCH_V2, "WaitRemove %v %v\n", ents, file)
 		return ents[file]
 	})
 	return err
@@ -233,7 +204,7 @@ func (dw *DirReaderV2) WaitRemove(file string) error {
 
 func (dw *DirReaderV2) WaitCreate(file string) error {
 	err := dw.readDirWatch(func(ents map[string] bool, changes map[string]bool) bool {
-		db.DPrintf(db.WATCH_V2, "WaitCreate %v %v %t\n", ents, file, ents[file])
+		// db.DPrintf(db.WATCH_V2, "WaitCreate %v %v %t\n", ents, file, ents[file])
 		return !ents[file]
 	})
 	return err
@@ -241,7 +212,7 @@ func (dw *DirReaderV2) WaitCreate(file string) error {
 
 func (dw *DirReaderV2) WaitNEntries(n int) error {
 	err := dw.readDirWatch(func(ents map[string]bool, changes map[string]bool) bool {
-		db.DPrintf(db.WATCH_V2, "WaitNEntries: %v %v", ents, changes)
+		// db.DPrintf(db.WATCH_V2, "WaitNEntries: %v %v", ents, changes)
 		return len(filterMap(ents)) < n
 	})
 	if err != nil {
@@ -252,7 +223,7 @@ func (dw *DirReaderV2) WaitNEntries(n int) error {
 
 func (dw *DirReaderV2) WaitEmpty() error {
 	err := dw.readDirWatch(func(ents map[string]bool, changes map[string]bool) bool {
-		db.DPrintf(db.WATCH_V2, "WaitEmpty: %v %v", ents, changes)
+		// db.DPrintf(db.WATCH_V2, "WaitEmpty: %v %v", ents, changes)
 		return len(filterMap(ents)) > 0
 	})
 	if err != nil {
@@ -289,7 +260,6 @@ func (dw *DirReaderV2) WatchEntriesChangedRelative(present []string, excludedPre
 				unchanged = false
 			}
 		}
-		db.DPrintf(db.WATCH, "WatchUniqueEntries: ents: %v, present: %v, files: %v, unchanged: %v\n", ents, present, files, unchanged)
 		return unchanged
 	})
 	if err != nil {

@@ -14,6 +14,7 @@ import (
 
 	"sigmaos/apps/cache"
 	"sigmaos/apps/kv"
+	"sigmaos/crash"
 	db "sigmaos/debug"
 	"sigmaos/util/rand"
 	// sp "sigmaos/sigmap"

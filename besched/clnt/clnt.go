@@ -1,0 +1,186 @@
+// Package besched/clnt implements the client-side of the besched scheduler
+package clnt
+
+import (
+	"time"
+
+	"sigmaos/besched/proto"
+	db "sigmaos/debug"
+	"sigmaos/fslib"
+	"sigmaos/proc"
+	//	"sigmaos/rpc"
+	"sigmaos/rpcdirclnt"
+	"sigmaos/serr"
+	sp "sigmaos/sigmap"
+)
+
+const (
+	NOT_ENQ = "NOT_ENQUEUED"
+)
+
+type nextSeqnoFn func(string) *proc.ProcSeqno
+
+type BESchedClnt struct {
+	*fslib.FsLib
+	rpcdc     *rpcdirclnt.RPCDirClnt
+	nextSeqno nextSeqnoFn
+}
+
+func NewBESchedClnt(fsl *fslib.FsLib) *BESchedClnt {
+	return NewBESchedClntSchedd(fsl, nil, nil)
+}
+
+func NewBESchedClntSchedd(fsl *fslib.FsLib, nextEpoch rpcdirclnt.AllocFn, nextSeqno nextSeqnoFn) *BESchedClnt {
+	return &BESchedClnt{
+		FsLib:     fsl,
+		rpcdc:     rpcdirclnt.NewRPCDirClntAllocFn(fsl, sp.BESCHED, db.BESCHEDCLNT, db.BESCHEDCLNT_ERR, nextEpoch),
+		nextSeqno: nextSeqno,
+	}
+}
+
+func (besc *BESchedClnt) chooseBESched(pid sp.Tpid) (string, error) {
+	s := time.Now()
+	besId, err := besc.rpcdc.WaitTimedRandomEntry()
+	db.DPrintf(db.SPAWN_LAT, "[%v] BESchedClnt get BESched[%v] latency: %v", pid, besId, time.Since(s))
+	return besId, err
+}
+
+// Enqueue a proc on the besched. Returns the ID of the kernel that is running
+// the proc.
+func (besc *BESchedClnt) Enqueue(p *proc.Proc) (string, *proc.ProcSeqno, error) {
+	start := time.Now()
+	defer func(start time.Time) {
+		db.DPrintf(db.SPAWN_LAT, "[%v] beschedclnt.Enqueue: %v", p.GetPid(), time.Since(start))
+	}(start)
+	besID, err := besc.chooseBESched(p.GetPid())
+	if err != nil {
+		return NOT_ENQ, nil, err
+	}
+	s := time.Now()
+	rpcc, err := besc.rpcdc.GetClnt(besID)
+	if err != nil {
+		db.DPrintf(db.ALWAYS, "Error: Can't get besched clnt: %v", err)
+		return NOT_ENQ, nil, err
+	}
+	db.DPrintf(db.SPAWN_LAT, "[%v] BESchedClnt make clnt %v %v", p.GetPid(), besID, time.Since(s))
+	req := &proto.EnqueueRequest{
+		ProcProto: p.GetProto(),
+	}
+	res := &proto.EnqueueResponse{}
+	s = time.Now()
+	if err := rpcc.RPC("BESched.Enqueue", req, res); err != nil {
+		db.DPrintf(db.ALWAYS, "BESched.Enqueue err %v", err)
+		if serr.IsErrCode(err, serr.TErrUnreachable) {
+			db.DPrintf(db.ALWAYS, "Invalidate entry %v", besID)
+			besc.rpcdc.InvalidateEntry(besID)
+		}
+		return NOT_ENQ, nil, err
+	}
+	db.DPrintf(db.BESCHEDCLNT, "[%v] Enqueued Proc %v", p.GetRealm(), p)
+	db.DPrintf(db.SPAWN_LAT, "[%v] BESchedClnt client-side RPC latency %v", p.GetPid(), time.Since(s))
+	return res.ScheddID, res.ProcSeqno, nil
+}
+
+// Get a proc (passing in the kernelID of the caller). Will only return once
+// receives a response, or once there is an error.
+func (besc *BESchedClnt) GetProc(callerKernelID string, freeMem proc.Tmem, bias bool) (*proc.Proc, *proc.ProcSeqno, uint32, bool, error) {
+	// Retry until successful.
+	for {
+		var besID string
+		// Optionally bias the choice of besched to the caller's kernel
+		if bias {
+			besID = callerKernelID
+		} else {
+			var err error
+			besID, err = besc.rpcdc.WaitTimedRandomEntry()
+			if err != nil {
+				db.DPrintf(db.BESCHEDCLNT_ERR, "Error: Can't get random: %v", err)
+				return nil, nil, 0, false, err
+			}
+		}
+		rpcc, err := besc.rpcdc.GetClnt(besID)
+		if err != nil {
+			db.DPrintf(db.BESCHEDCLNT_ERR, "Error: Can't get besched clnt: %v", err)
+			return nil, nil, 0, false, err
+		}
+		procSeqno := besc.nextSeqno(besID)
+		req := &proto.GetProcRequest{
+			KernelID:  callerKernelID,
+			Mem:       uint32(freeMem),
+			ProcSeqno: procSeqno,
+		}
+		res := &proto.GetProcResponse{}
+		if err := rpcc.RPC("BESched.GetProc", req, res); err != nil {
+			db.DPrintf(db.ALWAYS, "BESched.GetProc %v err %v", callerKernelID, err)
+			if serr.IsErrCode(err, serr.TErrUnreachable) {
+				db.DPrintf(db.ALWAYS, "Invalidate entry %v", besID)
+				besc.rpcdc.InvalidateEntry(besID)
+				continue
+			}
+			return nil, nil, 0, false, err
+		}
+		db.DPrintf(db.BESCHEDCLNT, "GetProc success? %v", res.OK)
+		var p *proc.Proc
+		if res.OK {
+			p = proc.NewProcFromProto(res.GetProcProto())
+		}
+		return p, procSeqno, res.QLen, res.OK, nil
+	}
+}
+
+func (besc *BESchedClnt) GetQueueStats(nsample int) (map[sp.Trealm]int, error) {
+	sampled := make(map[string]bool)
+	qstats := make(map[sp.Trealm]int)
+	for i := 0; i < nsample; i++ {
+		besID, err := besc.rpcdc.WaitTimedRandomEntry()
+		if err != nil {
+			db.DPrintf(db.ERROR, "Can't get random srv: %v", err)
+			return nil, err
+		}
+		// Don't double-sample
+		if sampled[besID] {
+			continue
+		}
+		sampled[besID] = true
+		rpcc, err := besc.rpcdc.GetClnt(besID)
+		if err != nil {
+			db.DPrintf(db.ERROR, "Can't get random srv clnt: %v", err)
+			return nil, err
+		}
+		req := &proto.GetStatsRequest{}
+		res := &proto.GetStatsResponse{}
+		if err := rpcc.RPC("BESched.GetStats", req, res); err != nil {
+			db.DPrintf(db.ERROR, "Can't get stats: %v", err)
+			return nil, err
+		}
+		for rstr, l := range res.Nqueued {
+			r := sp.Trealm(rstr)
+			if _, ok := qstats[r]; !ok {
+				qstats[r] = 0
+			}
+			qstats[r] += int(l)
+		}
+	}
+	return qstats, nil
+}
+
+func (besc *BESchedClnt) StopWatching() {
+	besc.rpcdc.StopWatching()
+}
+
+// XXX
+//func (besc *BESchedClnt) GetRPCStats() (map[string]*rpc.RPCStatsSnapshot, error) {
+//	snaps := make(map[string]*rpc.RPCStatsSnapshot)
+//	srvs, err := besc.rpcdc.GetEntries()
+//	if err != nil {
+//		db.DPrintf(db.ERROR, "Err GetEntries: %v", err)
+//		return nil, err
+//	}
+//	for _, srv := range srvs {
+//		clnt, err := besc.rpcdc.GetClnt(srvID)
+//		if err != nil {
+//			db.DPrintf(db.ERROR, "Err GetClnt[%v]: %v", srvID, err)
+//			return nil, err
+//		}
+//	}
+//}

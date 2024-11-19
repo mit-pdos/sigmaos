@@ -5,7 +5,7 @@ import (
 
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
-	"sigmaos/syncmap"
+	"sigmaos/util/syncmap"
 )
 
 type bin struct {

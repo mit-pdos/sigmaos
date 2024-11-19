@@ -15,7 +15,7 @@ import (
 	"sigmaos/fidclnt"
 	"sigmaos/netproxyclnt"
 	"sigmaos/netproxysrv"
-	"sigmaos/perf"
+	"sigmaos/util/perf"
 	"sigmaos/port"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"

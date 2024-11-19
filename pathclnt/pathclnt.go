@@ -17,7 +17,7 @@ import (
 	"sigmaos/path"
 	"sigmaos/pathclnt/mntclnt"
 	"sigmaos/proc"
-	"sigmaos/rand"
+	"sigmaos/util/rand"
 	"sigmaos/serr"
 	sos "sigmaos/sigmaos"
 	sp "sigmaos/sigmap"

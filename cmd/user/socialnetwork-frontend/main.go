@@ -2,8 +2,8 @@ package main
 
 import (
 	"os"
+	sn "sigmaos/apps/socialnetwork"
 	dbg "sigmaos/debug"
-	sn "sigmaos/socialnetwork"
 	"strconv"
 )
 

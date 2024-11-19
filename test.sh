@@ -105,7 +105,7 @@ if [[ $COMPILE == "--compile" ]]; then
     # test if test packages compile
     #
 
-    for T in path intervals serr linuxsched perf sigmap netproxy sessclnt npproxysrv fslib/reader fslib/writer stats fslib semclnt chunksrv electclnt dircache memfs namesrv procclnt ux s3 bootkernelclnt leaderclnt leadertest kvgrp cachedsvcclnt www sigmapsrv realmclnt mr imgresizesrv kv hotel socialnetwork benchmarks benchmarks/remote example example_echo_server netperf; do
+    for T in path serr linuxsched util/perf sigmap netproxy sessclnt npproxysrv fslib/reader fslib/writer stats fslib semclnt chunksrv electclnt dircache memfs namesrv procclnt ux s3 bootkernelclnt leaderclnt leadertest apps/kv/kvgrp apps/cache/cachegrp/clnt apps/www sigmapsrv realmclnt apps/mr apps/imgresize apps/kv apps/hotel apps/socialnetwork benchmarks benchmarks/remote example example_echo_server netperf; do
         if ! [ -z "$SKIPTO" ]; then
           if [[ "$SKIPTO" == "$T" ]]; then
             # Stop skipping
@@ -125,7 +125,7 @@ if [[ $BASIC == "--basic" ]]; then
     # test some support package
     #
 
-    for T in path intervals serr linuxsched perf sigmap sortedmap; do
+    for T in path serr linuxsched util/perf sigmap sortedmap; do
         if ! [ -z "$SKIPTO" ]; then
           if [[ "$SKIPTO" == "$T" ]]; then
             # Stop skipping
@@ -187,7 +187,7 @@ if [[ $BASIC == "--basic" ]]; then
     # tests a full kernel using root realm
     #
 
-    for T in namesrv semclnt chunksrv procclnt ux bootkernelclnt s3 leaderclnt leadertest kvgrp cachedsvcclnt; do
+    for T in namesrv semclnt chunksrv procclnt ux bootkernelclnt s3 leaderclnt leadertest apps/kv/kvgrp apps/cache/cachegrp/clnt; do
         if ! [ -z "$SKIPTO" ]; then
           if [[ "$SKIPTO" == "$T" ]]; then
             # Stop skipping
@@ -253,7 +253,7 @@ fi
 
 if [[ $APPS == "--apps" ]]; then
     if [[ $FAST == "--fast" ]]; then
-        PKGS="mr imgresizesrv kv hotel socialnetwork"
+        PKGS="apps/mr apps/imgresize apps/kv apps/hotel apps/socialnetwork"
         TNAMES=("MRJob" "ImgdOne" "KVOKN" "TestBenchDeathStarSingle" "TestCompose")
         NEED_DB=("false" "false" "false" "true" "true")
         i=0
@@ -274,20 +274,20 @@ if [[ $APPS == "--apps" ]]; then
           cleanup
           i=$(($i+1))
         done
-#        go test $VERB sigmaos/mr -start $GVISOR $SPPROXYD $NETPROXY -run MRJob
+#        go test $VERB sigmaos/apps/mr -start $GVISOR $SPPROXYD $NETPROXY -run MRJob
 #        cleanup
-#        go test $VERB sigmaos/imgresizesrv -start $GVISOR $SPPROXYD $NETPROXY -run ImgdOne
+#        go test $VERB sigmaos/apps/imgresize -start $GVISOR $SPPROXYD $NETPROXY -run ImgdOne
 #        cleanup
-#        go test $VERB sigmaos/kv -start $GVISOR $SPPROXYD $NETPROXY -run KVOKN
-#        cleanup
-#        ./start-db.sh
-#        go test $VERB sigmaos/hotel -start $GVISOR $SPPROXYD $NETPROXY -run TestBenchDeathStarSingle
+#        go test $VERB sigmaos/apps/kv -start $GVISOR $SPPROXYD $NETPROXY -run KVOKN
 #        cleanup
 #        ./start-db.sh
-#       	go test $VERB sigmaos/socialnetwork -start $GVISOR $SPPROXYD $NETPROXY -run TestCompose
+#        go test $VERB sigmaos/apps/hotel -start $GVISOR $SPPROXYD $NETPROXY -run TestBenchDeathStarSingle
+#        cleanup
+#        ./start-db.sh
+#       	go test $VERB sigmaos/apps/socialnetwork -start $GVISOR $SPPROXYD $NETPROXY -run TestCompose
 #        cleanup
     else
-        for T in imgresizesrv mr hotel socialnetwork www; do
+        for T in apps/imgresize apps/mr apps/hotel apps/socialnetwork apps/www; do
             if ! [ -z "$SKIPTO" ]; then
               if [[ "$SKIPTO" == "$T" ]]; then
                 # Stop skipping
@@ -302,7 +302,7 @@ if [[ $APPS == "--apps" ]]; then
             cleanup
         done
         # On machines with many cores, kv tests may take a long time.
-        for T in kv; do
+        for T in apps/kv; do
             if ! [ -z "$SKIPTO" ]; then
               if [[ "$SKIPTO" == "$T" ]]; then
                 # Stop skipping
@@ -341,13 +341,13 @@ if [[ $OVERLAY == "--overlay" ]] ; then
     
     go test $VERB sigmaos/procclnt --etcdIP $HOST_IP -start $GVISOR --overlays --run TestWaitExitSimpleSingle
     cleanup
-    go test $VERB sigmaos/cachedsvcclnt --etcdIP $HOST_IP -start $GVISOR --overlays --run TestCacheClerk
+    go test $VERB sigmaos/apps/cache/cachegrp/clnt --etcdIP $HOST_IP -start $GVISOR --overlays --run TestCacheClerk
     cleanup
     ./start-db.sh
-    go test $VERB sigmaos/hotel --etcdIP $HOST_IP -start $GVISOR --overlays --run GeoSingle
+    go test $VERB sigmaos/apps/hotel --etcdIP $HOST_IP -start $GVISOR --overlays --run GeoSingle
     cleanup
     ./start-db.sh
-    go test $VERB sigmaos/hotel --etcdIP $HOST_IP -start $GVISOR --overlays --run Www
+    go test $VERB sigmaos/apps/hotel --etcdIP $HOST_IP -start $GVISOR --overlays --run Www
     cleanup
     go test $VERB sigmaos/realmclnt --etcdIP $HOST_IP -start $GVISOR --overlays --run Basic
     cleanup

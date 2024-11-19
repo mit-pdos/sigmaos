@@ -12,7 +12,7 @@ import (
 	"sigmaos/protsrv/leasedmap"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
-	"sigmaos/syncmap"
+	"sigmaos/util/syncmap"
 )
 
 type LeaseSrv struct {

@@ -10,12 +10,12 @@ import (
 
 	"github.com/go-redis/redis/v8"
 
-	proto "sigmaos/cache/proto"
-	"sigmaos/cacheclnt"
-	"sigmaos/cachedsvcclnt"
+	cacheclnt "sigmaos/apps/cache/clnt"
+	"sigmaos/apps/cache/proto"
+	cachegrpclnt "sigmaos/apps/cache/cachegrp/clnt"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
-	"sigmaos/perf"
+	"sigmaos/util/perf"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
 	"sigmaos/semclnt"
@@ -52,7 +52,7 @@ func main() {
 		db.DFatalf("NewSigmaClnt err %v", err)
 	}
 	var rcli *redis.Client
-	var csc *cachedsvcclnt.CachedSvcClnt
+	var csc *cachegrpclnt.CachedSvcClnt
 	if len(os.Args) > 6 {
 		rcli = redis.NewClient(&redis.Options{
 			Addr:     os.Args[6],
@@ -60,7 +60,7 @@ func main() {
 			DB:       0,
 		})
 	} else {
-		csc = cachedsvcclnt.NewCachedSvcClnt([]*fslib.FsLib{sc.FsLib}, os.Args[1])
+		csc = cachegrpclnt.NewCachedSvcClnt([]*fslib.FsLib{sc.FsLib}, os.Args[1])
 	}
 
 	// Record performance.
@@ -74,7 +74,7 @@ func main() {
 	run(sc, csc, rcli, p, dur, nkeys, uint64(keyOffset), sempath)
 }
 
-func waitEvict(csc *cachedsvcclnt.CachedSvcClnt, pclnt *procclnt.ProcClnt) {
+func waitEvict(csc *cachegrpclnt.CachedSvcClnt, pclnt *procclnt.ProcClnt) {
 	err := pclnt.WaitEvict(pclnt.ProcEnv().GetPID())
 	if err != nil {
 		db.DPrintf(db.CACHECLERK, "Error WaitEvict: %v", err)
@@ -83,7 +83,7 @@ func waitEvict(csc *cachedsvcclnt.CachedSvcClnt, pclnt *procclnt.ProcClnt) {
 	atomic.StoreInt32(&done, 1)
 }
 
-func run(sc *sigmaclnt.SigmaClnt, csc *cachedsvcclnt.CachedSvcClnt, rcli *redis.Client, p *perf.Perf, dur time.Duration, nkeys int, keyOffset uint64, sempath string) {
+func run(sc *sigmaclnt.SigmaClnt, csc *cachegrpclnt.CachedSvcClnt, rcli *redis.Client, p *perf.Perf, dur time.Duration, nkeys int, keyOffset uint64, sempath string) {
 	ntest := uint64(0)
 	nops := uint64(0)
 	var err error
@@ -118,7 +118,7 @@ func run(sc *sigmaclnt.SigmaClnt, csc *cachedsvcclnt.CachedSvcClnt, rcli *redis.
 	sc.ClntExit(status)
 }
 
-func test(sc *sigmaclnt.SigmaClnt, csc *cachedsvcclnt.CachedSvcClnt, rcli *redis.Client, ntest uint64, nkeys int, keyOffset uint64, nops *uint64, p *perf.Perf) error {
+func test(sc *sigmaclnt.SigmaClnt, csc *cachegrpclnt.CachedSvcClnt, rcli *redis.Client, ntest uint64, nkeys int, keyOffset uint64, nops *uint64, p *perf.Perf) error {
 	for i := uint64(0); i < uint64(nkeys) && atomic.LoadInt32(&done) == 0; i++ {
 		key := cacheclnt.NewKey(i + keyOffset)
 		// If running against redis.

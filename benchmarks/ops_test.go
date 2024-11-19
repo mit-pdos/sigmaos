@@ -5,8 +5,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"sigmaos/apps/mr"
 	db "sigmaos/debug"
-	"sigmaos/mr"
 	"sigmaos/proc"
 	"sigmaos/scheddclnt"
 	"sigmaos/semclnt"

@@ -14,7 +14,7 @@ import (
 	"sigmaos/namesrv/leaderetcd"
 	"sigmaos/netproxyclnt"
 	"sigmaos/path"
-	"sigmaos/perf"
+	"sigmaos/util/perf"
 	"sigmaos/port"
 	"sigmaos/proc"
 	"sigmaos/protsrv"

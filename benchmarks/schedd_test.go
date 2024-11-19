@@ -10,8 +10,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"sigmaos/benchmarks/loadgen"
 	db "sigmaos/debug"
-	"sigmaos/loadgen"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"

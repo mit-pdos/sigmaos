@@ -14,7 +14,7 @@ import (
 	"sigmaos/path"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
-	"sigmaos/sortedmap"
+	"sigmaos/util/sortedmap"
 	"sigmaos/spcodec"
 )
 

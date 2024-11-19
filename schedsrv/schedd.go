@@ -7,14 +7,13 @@ import (
 	"sync/atomic"
 	"time"
 
-	"sigmaos/beschedclnt"
+	beschedclnt "sigmaos/besched/clnt"
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/fslib"
-	lcproto "sigmaos/lcschedsrv/proto"
+	lcschedproto "sigmaos/lcsched/proto"
 	"sigmaos/linuxsched"
 	"sigmaos/mem"
-	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/scheddclnt"
 	"sigmaos/schedsrv/procmgr"
@@ -23,7 +22,8 @@ import (
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmarpcchan"
 	"sigmaos/sigmasrv"
-	"sigmaos/syncmap"
+	"sigmaos/util/perf"
+	"sigmaos/util/syncmap"
 )
 
 type Schedd struct {
@@ -349,12 +349,12 @@ func (sd *Schedd) register() {
 	if err != nil {
 		db.DFatalf("Error lsched rpccc: %v", err)
 	}
-	req := &lcproto.RegisterScheddRequest{
+	req := &lcschedproto.RegisterScheddRequest{
 		KernelID: sd.kernelID,
 		McpuInt:  uint32(sd.mcpufree),
 		MemInt:   uint32(sd.memfree),
 	}
-	res := &lcproto.RegisterScheddResponse{}
+	res := &lcschedproto.RegisterScheddResponse{}
 	if err := rpcc.RPC("LCSched.RegisterSchedd", req, res); err != nil {
 		db.DFatalf("Error LCSched RegisterSchedd: %v", err)
 	}

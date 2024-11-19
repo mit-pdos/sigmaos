@@ -8,7 +8,6 @@ package sigmasrv
 import (
 	"runtime/debug"
 
-	"sigmaos/cpumon"
 	"sigmaos/ctx"
 	db "sigmaos/debug"
 	"sigmaos/fencefs"
@@ -23,6 +22,7 @@ import (
 	"sigmaos/sessdevsrv"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
+	"sigmaos/sigmasrv/cpumon"
 )
 
 type SigmaSrv struct {

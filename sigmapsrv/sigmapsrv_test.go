@@ -16,7 +16,7 @@ import (
 	"sigmaos/fslib"
 	"sigmaos/namesrv/fsetcd"
 	"sigmaos/netproxyclnt"
-	"sigmaos/perf"
+	"sigmaos/util/perf"
 	"sigmaos/proc"
 	"sigmaos/rpc"
 	"sigmaos/sigmaclnt"

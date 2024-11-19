@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+option go_package = "sigmaos/util/k8s/proto";
+
+message CPUUtilRequest {
+  string qoSClass = 1;
+}
+
+message CPUUtilResult {
+  double util = 1;
+}

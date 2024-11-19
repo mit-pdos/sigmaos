@@ -3,7 +3,7 @@ package npproxysrv
 import (
 	db "sigmaos/debug"
 	sp "sigmaos/sigmap"
-	"sigmaos/syncmap"
+	"sigmaos/util/syncmap"
 )
 
 //

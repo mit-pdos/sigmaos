@@ -1,0 +1,9 @@
+syntax = "proto3";
+
+option go_package = "sigmaos/apps/kv/proto";
+
+message KVTestVal {
+  string pid = 1;
+  string key = 2;
+  uint64 n = 3;
+}

@@ -11,17 +11,17 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	proto "sigmaos/cache/proto"
-	"sigmaos/cachedsvc"
-	"sigmaos/cachedsvcclnt"
+	proto "sigmaos/apps/cache/proto"
+	cachegrpclnt "sigmaos/apps/cache/cachegrp/clnt"
+	cachegrpmgr "sigmaos/apps/cache/cachegrp/mgr"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/linuxsched"
 	"sigmaos/mem"
 	"sigmaos/proc"
-	rd "sigmaos/rand"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
+	rd "sigmaos/util/rand"
 )
 
 const (
@@ -305,13 +305,17 @@ func TestBasicFairness(t *testing.T) {
 	rootts.Shutdown()
 }
 
+// May not work if running with non-local build, because we only start one S3
+// server but the proc may be spawned onto either node (and ~local resolution
+// will return ErrNotFound when fetching from the S3 Origin if using remote
+// builds on the node without an S3 server).
 func TestWaitExitMultiNode(t *testing.T) {
 	rootts, err1 := test.NewTstateWithRealms(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
 	rootts.BootNode(1)
-	subsysCnts := []int64{2, 1}
+	subsysCnts := []int64{1, 2}
 	ts1, err1 := test.NewRealmTstateNumSubsystems(rootts, REALM1, subsysCnts[0], subsysCnts[1])
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
@@ -524,23 +528,29 @@ func TestKernelIsolationBasic(t *testing.T) {
 func TestMultiRealmIsolationBasic(t *testing.T) {
 	ts := newMultiRealmTstate(t)
 	job := rd.String(16)
-	cm, err := cachedsvc.NewCacheMgr(ts.ts1.SigmaClnt, job, 1, 0, true)
+	cm, err := cachegrpmgr.NewCacheMgr(ts.ts1.SigmaClnt, job, 1, 0, true)
 	assert.Nil(t, err)
 
-	cc1 := cachedsvcclnt.NewCachedSvcClnt([]*fslib.FsLib{ts.ts1.FsLib}, job)
+	cc1 := cachegrpclnt.NewCachedSvcClnt([]*fslib.FsLib{ts.ts1.FsLib}, job)
 
 	err = cc1.Put("hello", &proto.CacheString{Val: "hello"})
 	assert.Nil(t, err)
 
 	db.DPrintf(db.TEST, "newcacheclnt %v", ts.ts2.FsLib)
 
-	cc2 := cachedsvcclnt.NewCachedSvcClnt([]*fslib.FsLib{ts.ts2.FsLib}, job)
+	cc2 := cachegrpclnt.NewCachedSvcClnt([]*fslib.FsLib{ts.ts2.FsLib}, job)
+
+	db.DPrintf(db.TEST, "About to stat srvs")
 
 	// Check that there is no cached in ts2
 	_, err = cc2.StatsSrvs()
 	assert.NotNil(t, err)
 
+	db.DPrintf(db.TEST, "Done stat srvs")
+
 	cm.Stop()
+
+	db.DPrintf(db.TEST, "Done cached stop")
 
 	ts.shutdown()
 }
@@ -550,10 +560,10 @@ func TestMultiRealmIsolationBasic(t *testing.T) {
 func TestMultiRealmIsolationEndpoint(t *testing.T) {
 	ts := newMultiRealmTstate(t)
 	job := rd.String(16)
-	cm, err := cachedsvc.NewCacheMgr(ts.ts1.SigmaClnt, job, 1, 0, true)
+	cm, err := cachegrpmgr.NewCacheMgr(ts.ts1.SigmaClnt, job, 1, 0, true)
 	assert.Nil(t, err)
 
-	cc1 := cachedsvcclnt.NewCachedSvcClnt([]*fslib.FsLib{ts.ts1.FsLib}, job)
+	cc1 := cachegrpclnt.NewCachedSvcClnt([]*fslib.FsLib{ts.ts1.FsLib}, job)
 
 	err = cc1.Put("hello", &proto.CacheString{Val: "hello"})
 	assert.Nil(t, err)

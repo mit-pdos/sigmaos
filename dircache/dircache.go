@@ -15,7 +15,7 @@ import (
 	"sigmaos/namesrv/fsetcd"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
-	"sigmaos/sortedmap"
+	"sigmaos/util/sortedmap"
 )
 
 type NewValF[E any] func(string) (E, error)
@@ -335,6 +335,9 @@ func (dc *DirCache[E]) watchDir(ch chan struct{}) {
 			} else { // give up
 				db.DPrintf(dc.ESelector, "watchDir[%v]: %t %v stop watching", dc.Path, ok, err)
 				dc.err = err
+				if first {
+					ch <- struct{}{}
+				}
 				return
 			}
 		}

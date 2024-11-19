@@ -858,7 +858,7 @@ func TestMaintainReplicationLevelCrashSchedd(t *testing.T) {
 
 	// Start a bunch of replicated spinner procs.
 	cfg := groupmgr.NewGroupConfig(N_REPL, "spinner", []string{}, 0, OUTDIR)
-	sm := cfg.StartGrpMgr(ts.SigmaClnt, 0)
+	sm := cfg.StartGrpMgr(ts.SigmaClnt)
 	db.DPrintf(db.TEST, "GrpMgr started")
 
 	// Wait for them to spawn.

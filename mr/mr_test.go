@@ -523,6 +523,7 @@ func TestCrashTaskAndCoord(t *testing.T) {
 }
 
 func TestCrashSchedd1(t *testing.T) {
+	proc.ClearSigmaFail()
 	runN(t, 0, 0, 1, 0, 0, 0, false)
 }
 

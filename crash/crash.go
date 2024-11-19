@@ -49,11 +49,11 @@ func MakeTevents(es []Tevent) (string, error) {
 	return string(b), nil
 }
 
-func unmarshalTevents(s string, evs []Tevent) error {
+func unmarshalTevents(s string, evs *[]Tevent) error {
 	if s == "" {
 		return nil
 	}
-	if err := json.Unmarshal([]byte(s), &evs); err != nil {
+	if err := json.Unmarshal([]byte(s), evs); err != nil {
 		return err
 	}
 	return nil
@@ -61,7 +61,7 @@ func unmarshalTevents(s string, evs []Tevent) error {
 
 func parseTevents(s string, labels map[Tselector]Tevent) error {
 	var evs []Tevent
-	if err := unmarshalTevents(s, evs); err != nil {
+	if err := unmarshalTevents(s, &evs); err != nil {
 		return err
 	}
 	for _, e := range evs {
@@ -77,7 +77,7 @@ func init() {
 	if err := parseTevents(labelstr, labels); err != nil {
 		db.DFatalf("parseLabels %v err %v", labelstr, err)
 	}
-	// db.DPrintf(db.CRASH, "Events %v", labels)
+	db.DPrintf(db.CRASH, "Events %v %v", labels, proc.GetSigmaFail())
 	db.DPrintf(db.SPAWN_LAT, "[%v] crash init pkg: %v", proc.GetSigmaDebugPid(), time.Since(s))
 }
 
@@ -136,7 +136,7 @@ func SetSigmaFail(es []Tevent) error {
 func AppendSigmaFail(es []Tevent) error {
 	var evs []Tevent
 	s := proc.GetSigmaFail()
-	if err := unmarshalTevents(s, evs); err != nil {
+	if err := unmarshalTevents(s, &evs); err != nil {
 		return err
 	}
 	evs = append(evs, es...)

@@ -25,12 +25,12 @@ import (
 	"sigmaos/auth"
 	"sigmaos/crash"
 	db "sigmaos/debug"
-	"sigmaos/util/perf"
 	"sigmaos/proc"
-	rd "sigmaos/util/rand"
 	"sigmaos/scheddclnt"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
+	"sigmaos/util/perf"
+	rd "sigmaos/util/rand"
 	// "sigmaos/stats"
 	"sigmaos/apps/mr/grep"
 	"sigmaos/apps/mr/wc"
@@ -386,7 +386,7 @@ func (ts *Tstate) checkJob(app string) bool {
 	return true
 }
 
-func runN(t *testing.T, crashtask, crashcoord, crashschedd, crashprocq, crashux, maliciousMapper int, monitor bool) {
+func runN(t *testing.T, evs []crash.Tevent, crashschedd, crashprocq, crashux, maliciousMapper int, monitor bool) {
 	var s3secrets *sp.SecretProto
 	var err1 error
 	// If running with malicious mappers, try to get restricted AWS secrets
@@ -426,11 +426,15 @@ func runN(t *testing.T, crashtask, crashcoord, crashschedd, crashprocq, crashux,
 		}
 	}
 
+	// XXX maybe in pe
+	err := crash.SetSigmaFail(evs)
+	assert.Nil(t, err)
+
 	jobRoot := mr.MRDIRTOP
 
 	ts := newTstate(t1, jobRoot, runApp)
 
-	err := ts.BootNode(1)
+	err = ts.BootNode(1)
 	assert.Nil(t, err, "BootProcd 1")
 
 	err = ts.BootNode(1)
@@ -494,79 +498,71 @@ func runN(t *testing.T, crashtask, crashcoord, crashschedd, crashprocq, crashux,
 }
 
 func TestMRJob(t *testing.T) {
-	runN(t, 0, 0, 0, 0, 0, 0, true)
+	runN(t, nil, 0, 0, 0, 0, true)
 }
 
 func TestMaliciousMapper(t *testing.T) {
-	runN(t, 0, 0, 0, 0, 0, 500, true)
+	runN(t, nil, 0, 0, 0, 500, true)
 }
 
 func TestCrashTaskOnly(t *testing.T) {
-	err := crash.SetSigmaFail(taskEv)
-	assert.Nil(t, err)
-	runN(t, CRASHTASK, 0, 0, 0, 0, 0, false)
+	runN(t, taskEv, 0, 0, 0, 0, false)
 }
 
 func TestCrashCoordOnly(t *testing.T) {
-	err := crash.SetSigmaFail(coordEv)
-	assert.Nil(t, err)
-	runN(t, 0, CRASHCOORD, 0, 0, 0, 0, false)
+	runN(t, coordEv, 0, 0, 0, 0, false)
 }
 
 func TestCrashTaskAndCoord(t *testing.T) {
 	evs := append([]crash.Tevent{}, taskEv...)
 	evs = append(evs, coordEv...)
-	db.DPrintf(db.TEST, "evs %v", evs)
-	err := crash.SetSigmaFail(evs)
-	assert.Nil(t, err)
-	runN(t, CRASHTASK, CRASHCOORD, 0, 0, 0, 0, false)
+	runN(t, evs, 0, 0, 0, 0, false)
 }
 
 func TestCrashSchedd1(t *testing.T) {
-	proc.ClearSigmaFail()
-	runN(t, 0, 0, 1, 0, 0, 0, false)
+	runN(t, nil, 1, 0, 0, 0, false)
 }
 
 func TestCrashSchedd2(t *testing.T) {
 	N := 2
-	runN(t, 0, 0, N, 0, 0, 0, false)
+	runN(t, nil, N, 0, 0, 0, false)
 }
 
 func TestCrashScheddN(t *testing.T) {
 	N := 5
-	runN(t, 0, 0, N, 0, 0, 0, false)
+	runN(t, nil, N, 0, 0, 0, false)
 }
 
 func TestCrashProcq1(t *testing.T) {
-	runN(t, 0, 0, 0, 1, 0, 0, false)
+	runN(t, nil, 0, 1, 0, 0, false)
 }
 
 func TestCrashProcq2(t *testing.T) {
 	N := 2
-	runN(t, 0, 0, 0, N, 0, 0, false)
+	runN(t, nil, 0, N, 0, 0, false)
 }
 
 func TestCrashProcqN(t *testing.T) {
 	N := 5
-	runN(t, 0, 0, 0, N, 0, 0, false)
+	runN(t, nil, 0, N, 0, 0, false)
 }
 
 func TestCrashUx1(t *testing.T) {
 	N := 1
-	runN(t, 0, 0, 0, 0, N, 0, false)
+	runN(t, nil, 0, 0, N, 0, false)
 }
 
 func TestCrashUx2(t *testing.T) {
 	N := 2
-	runN(t, 0, 0, 0, 0, N, 0, false)
+	runN(t, nil, 0, 0, N, 0, false)
 }
 
 func TestCrashUx5(t *testing.T) {
 	N := 5
-	runN(t, 0, 0, 0, 0, N, 0, false)
+	runN(t, nil, 0, 0, N, 0, false)
 }
 
 func TestCrashScheddProcqUx5(t *testing.T) {
 	N := 5
-	runN(t, 0, 0, N, N, N, 0, false)
+	runN(t, nil, N, N, N, 0, false)
 }

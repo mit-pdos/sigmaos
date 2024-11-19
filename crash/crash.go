@@ -70,15 +70,16 @@ func parseTevents(s string, labels map[Tselector]Tevent) error {
 	return nil
 }
 
-func init() {
-	s := time.Now()
+func initLabels() {
+	if labels != nil {
+		return
+	}
 	labelstr := proc.GetSigmaFail()
 	labels = make(map[Tselector]Tevent, len(labelstr))
 	if err := parseTevents(labelstr, labels); err != nil {
 		db.DFatalf("parseLabels %v err %v", labelstr, err)
 	}
 	db.DPrintf(db.CRASH, "Events %v %v", labels, proc.GetSigmaFail())
-	db.DPrintf(db.SPAWN_LAT, "[%v] crash init pkg: %v", proc.GetSigmaDebugPid(), time.Since(s))
 }
 
 func randSleep(c int64) uint64 {
@@ -161,6 +162,7 @@ func PartitionNamed(fsl *fslib.FsLib) {
 }
 
 func Failer(label Tselector, f Teventf) {
+	initLabels()
 	if e, ok := labels[label]; ok {
 		go func(label Tselector, e Tevent) {
 			time.Sleep(time.Duration(e.Start) * time.Millisecond)

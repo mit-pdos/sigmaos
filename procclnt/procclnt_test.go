@@ -85,7 +85,7 @@ func spawnSpawner(t *testing.T, ts *test.Tstate, wait bool, childPid sp.Tpid, ms
 	e1 := crash.Tevent{crash.SPAWNER_PARTITION, 0, c, 0.66, 0}
 	s, err := crash.MakeTevents([]crash.Tevent{e0, e1})
 	assert.Nil(t, err)
-	p.SetEnv(proc.SIGMAFAIL, s)
+	p.AppendEnv(proc.SIGMAFAIL, s)
 	err = ts.Spawn(p)
 	assert.Nil(t, err, "Spawn")
 	return p.GetPid()

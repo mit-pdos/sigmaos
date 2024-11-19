@@ -148,7 +148,7 @@ func (m *member) spawnL() error {
 	p := proc.NewProc(m.Program, m.Args)
 	p.SetMcpu(m.Mcpu)
 
-	p.SetEnv(proc.SIGMAFAIL, proc.GetSigmaFail())
+	p.AppendEnv(proc.SIGMAFAIL, proc.GetSigmaFail())
 	p.AppendEnv("SIGMAREPL", newREPL(m.id, m.NReplicas))
 	// If we are specifically setting kvd's mcpu=1, then set GOMAXPROCS to 1
 	// (for use when comparing to redis).

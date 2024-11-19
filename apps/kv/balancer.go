@@ -21,8 +21,8 @@ import (
 	"sync"
 	"time"
 
-	"sigmaos/apps/kv/kvgrp"
 	"sigmaos/apps/cache"
+	"sigmaos/apps/kv/kvgrp"
 	"sigmaos/crash"
 	"sigmaos/ctx"
 	db "sigmaos/debug"
@@ -442,7 +442,7 @@ func (bl *Balancer) balance(opcode, kvd string) *serr.Err {
 	bl.doMoves(moves)
 
 	if docrash { // start crashing?
-		crash.Crasher(bl.FsLib)
+		crash.FailersDefault([]crash.Tselector{crash.KVBALANCER_CRASH, crash.KVBALANCER_PARTITION}, bl.FsLib)
 	}
 
 	return nil

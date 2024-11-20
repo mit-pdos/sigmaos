@@ -51,9 +51,6 @@ const (
 	BINPROC = sp.SIGMAHOME + "/bin/user/"
 )
 
-func Ckoff(i int) int64     { return int64(i * chunk.CHUNKSZ) }
-func CkRound(o int64) int64 { return (o + chunk.CHUNKSZ - 1) &^ (chunk.CHUNKSZ - 1) }
-
 // The path on the host where a kernel caches its binaries
 func PathHostKernel(kernelId string) string {
 	return filepath.Join(ROOTHOSTCACHE, kernelId)
@@ -210,7 +207,7 @@ func (cksrv *ChunkSrv) fetchOrigin(r sp.Trealm, prog string, pid sp.Tpid, s3secr
 		path = path0
 		db.DPrintf(db.SPAWN_LAT, "[%v] getFd %q open lat %v", be.prog, paths, time.Since(s))
 	}
-	sz, err := sc.Pread(fd, b, sp.Toffset(Ckoff(ck)))
+	sz, err := sc.Pread(fd, b, sp.Toffset(chunk.ChunkOff(ck)))
 	if err != nil {
 		db.DPrintf(db.CHUNKSRV, "%v: FetchOrigin: pid %v read %q ckid %d err %v", cksrv.kernelId, pid, prog, ck, err)
 		return 0, "", err
@@ -284,7 +281,7 @@ func (cksrv *ChunkSrv) fetch(realm sp.Trealm, prog string, pid sp.Tpid, s3secret
 
 	if st, ok := be.isStatCached(); ok {
 		db.DPrintf(db.CHUNKSRV, "%v: Fetch: pid %v hit stat %v %d", cksrv.kernelId, pid, prog, st.Length)
-		if uint64(sp.Tsize(Ckoff(ckid))+size) > st.Length {
+		if uint64(sp.Tsize(chunk.ChunkOff(ckid))+size) > st.Length {
 			size = sp.Tsize(st.Length)
 		}
 	} else {
@@ -517,7 +514,7 @@ func IsPresent(pn string, ck int, totsz sp.Tsize) (int64, bool) {
 		if err != nil {
 			db.DFatalf("Seek hole %q %d err %v", pn, o2, err)
 		}
-		o1 = CkRound(o1)
+		o1 = chunk.ChunkRound(o1)
 		for o := o1; o < o2; o += chunk.CHUNKSZ {
 			if o+chunk.CHUNKSZ <= o2 || o2 >= int64(totsz) { // a complete chunk?
 				i := chunk.Index(o)
@@ -546,7 +543,7 @@ func writeChunk(pn string, ckid int, b []byte) error {
 		return err
 	}
 	defer ufd.Close()
-	nn, err := ufd.WriteAt(b, Ckoff(ckid))
+	nn, err := ufd.WriteAt(b, chunk.ChunkOff(ckid))
 	if nn != len(b) {
 		return err
 	}
@@ -559,7 +556,7 @@ func ReadChunk(pn string, ckid int, b []byte) error {
 		return err
 	}
 	defer f.Close()
-	nn, err := f.ReadAt(b, Ckoff(ckid))
+	nn, err := f.ReadAt(b, chunk.ChunkOff(ckid))
 	if nn != len(b) {
 		return err
 	}

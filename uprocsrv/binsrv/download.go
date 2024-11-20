@@ -63,7 +63,7 @@ func min(n int64, l int) int {
 
 func (dl *downloader) read(off int64, nbyte int) (int, error) {
 	i := chunk.Index(off)
-	o := off - chunksrv.Ckoff(i)
+	o := off - chunk.ChunkOff(i)
 	j := chunk.Index(off+int64(nbyte)) + 1
 	n := int64(0)
 	db.DPrintf(db.BINSRV, "read %d %d: chunks [%d,%d)", off, nbyte, i, j)

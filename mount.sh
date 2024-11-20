@@ -4,8 +4,6 @@
 # Start npproxy and mount root named at /mnt/9p. Optionally boot a
 # rootrealm named.
 #
-# XXX keep IPaddr for now (maybe useful for overlays?)
-#
 
 usage() {
   echo "Usage: $0 --boot <IPaddr>"  1>&2

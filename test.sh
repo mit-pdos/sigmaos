@@ -4,17 +4,15 @@
 # Runs basic tests by default
 # --apps: run app tests
 # --apps-fast: run the fast app tests
-# --overlay: run overlay tests
 #
 
 usage() {
-  echo "Usage: $0 [--apps-fast] [--apps] [--compile] [--overlay HOST_IP] [--gvisor] [--usespproxyd] [--nonetproxy] [--reuse-kernel] [--cleanup] [--skipto PKG]" 
+  echo "Usage: $0 [--apps-fast] [--apps] [--compile] [--gvisor] [--usespproxyd] [--nonetproxy] [--reuse-kernel] [--cleanup] [--skipto PKG]" 
 }
 
 BASIC="--basic"
 FAST=""
 APPS=""
-OVERLAY=""
 GVISOR=""
 SPPROXYD=""
 NETPROXY=""
@@ -24,7 +22,6 @@ CONTAINER=""
 SKIPTO=""
 CLEANUP=""
 COMPILE=""
-HOST_IP="IP_NOT_SET"
 while [[ "$#" -gt 0 ]]; do
     case "$1" in
         --apps-fast)
@@ -42,13 +39,6 @@ while [[ "$#" -gt 0 ]]; do
             shift
             BASIC=""
             COMPILE="--compile"
-            ;;
-        --overlay)
-            shift
-            BASIC="" 
-            OVERLAY="--overlay"
-            HOST_IP="$1"
-            shift
             ;;
         --skipto)
             shift
@@ -325,34 +315,4 @@ fi
 
 if [[ $CONTAINER == "--container" ]] ; then
     go test $VERB sigmaos/scontainer -start
-fi
-
-#
-# Overlay network tests
-#
-
-if [[ $OVERLAY == "--overlay" ]] ; then
-    if [ "$HOST_IP" == "IP_NOT_SET" ] || [ -z "$HOST_IP" ]; then
-      echo "ERROR: Host IP not provided"
-      exit 1
-    fi
-    echo "Overlay tests running with host IP $HOST_IP"
-    ./start-network.sh
-    
-    go test $VERB sigmaos/procclnt --etcdIP $HOST_IP -start $GVISOR --overlays --run TestWaitExitSimpleSingle
-    cleanup
-    go test $VERB sigmaos/apps/cache/cachegrp/clnt --etcdIP $HOST_IP -start $GVISOR --overlays --run TestCacheClerk
-    cleanup
-    ./start-db.sh
-    go test $VERB sigmaos/apps/hotel --etcdIP $HOST_IP -start $GVISOR --overlays --run GeoSingle
-    cleanup
-    ./start-db.sh
-    go test $VERB sigmaos/apps/hotel --etcdIP $HOST_IP -start $GVISOR --overlays --run Www
-    cleanup
-    go test $VERB sigmaos/realmclnt --etcdIP $HOST_IP -start $GVISOR --overlays --run Basic
-    cleanup
-    go test $VERB sigmaos/realmclnt --etcdIP $HOST_IP -start $GVISOR --overlays --run WaitExitSimpleSingle
-    cleanup
-    go test $VERB sigmaos/realmclnt --etcdIP $HOST_IP -start $GVISOR --overlays --run RealmNetIsolation
-    cleanup
 fi

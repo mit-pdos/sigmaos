@@ -27,7 +27,7 @@ import (
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
-	"sigmaos/spproxysrv"
+	spproxysrv "sigmaos/spproxy/srv"
 	"sigmaos/uprocsrv/binsrv"
 	"sigmaos/uprocsrv/proto"
 	"sigmaos/util/perf"
@@ -81,7 +81,7 @@ type UprocSrv struct {
 	binsrv         *exec.Cmd
 	kernelId       string
 	realm          sp.Trealm
-	dialproxy       bool
+	dialproxy      bool
 	spproxydPID    sp.Tpid
 	schedPolicySet bool
 	procs          *syncmap.SyncMap[int, *procEntry]
@@ -96,7 +96,7 @@ func RunUprocSrv(kernelId string, dialproxy bool, spproxydPID sp.Tpid) error {
 	pe := proc.GetProcEnv()
 	ups := &UprocSrv{
 		kernelId:    kernelId,
-		dialproxy:    dialproxy,
+		dialproxy:   dialproxy,
 		ch:          make(chan struct{}),
 		pe:          pe,
 		spproxydPID: spproxydPID,

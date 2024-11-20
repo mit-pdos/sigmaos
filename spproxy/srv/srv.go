@@ -1,7 +1,7 @@
 // Package spproxysrv is an RPC-based server that proxies the
 // [sigmaos] interface over a pipe; it reads requests on stdin and
 // write responses to stdout.
-package spproxysrv
+package srv
 
 import (
 	"io"

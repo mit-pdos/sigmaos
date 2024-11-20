@@ -1,4 +1,4 @@
-package spproxysrv
+package srv
 
 import (
 	"errors"

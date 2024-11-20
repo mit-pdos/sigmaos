@@ -1,4 +1,4 @@
-package netproxytrans
+package transport
 
 import (
 	"net"
@@ -56,7 +56,7 @@ func fdToTCPConn(fd int) (*net.TCPConn, error) {
 
 func fdToConn(fd int) (net.Conn, error) {
 	// Make the  FD into a Golang file object
-	f := os.NewFile(uintptr(fd), "netproxy-conn")
+	f := os.NewFile(uintptr(fd), "dialproxy-conn")
 	if f == nil {
 		db.DFatalf("Error new file")
 	}

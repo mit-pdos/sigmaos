@@ -5,8 +5,8 @@ import (
 	"time"
 
 	db "sigmaos/debug"
-	"sigmaos/fidclnt"
 	dialproxyclnt "sigmaos/dialproxy/clnt"
+	"sigmaos/fidclnt"
 	"sigmaos/path"
 	"sigmaos/proc"
 	"sigmaos/serr"

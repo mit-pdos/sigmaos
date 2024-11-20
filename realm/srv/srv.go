@@ -11,9 +11,9 @@ import (
 
 	beschedclnt "sigmaos/besched/clnt"
 	db "sigmaos/debug"
+	dialproxyclnt "sigmaos/dialproxy/clnt"
 	"sigmaos/fs"
 	"sigmaos/kernelclnt"
-	dialproxyclnt "sigmaos/dialproxy/clnt"
 	"sigmaos/proc"
 	"sigmaos/protsrv"
 	realmpkg "sigmaos/realm"
@@ -154,7 +154,7 @@ func (rm *RealmSrv) Make(ctx fs.CtxI, req proto.MakeRequest, res *proto.MakeResu
 	// new realm.
 	p.SetRealmSwitch(rid)
 	// Make sure named uses netproxy
-	p.GetProcEnv().UseNetProxy = rm.netproxy
+	p.GetProcEnv().UseDialProxy = rm.netproxy
 	p.SetMcpu(NAMED_MCPU)
 	r.named = p
 

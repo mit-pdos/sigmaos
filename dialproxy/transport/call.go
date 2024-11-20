@@ -1,4 +1,4 @@
-package netproxytrans
+package transport
 
 import (
 	"fmt"
@@ -23,5 +23,5 @@ func (pc *ProxyCall) Tag() sessp.Ttag {
 }
 
 func (pc *ProxyCall) String() string {
-	return fmt.Sprintf("&{ NetProxyCall seqno:%v iov:%v }", pc.Seqno, pc.Iov)
+	return fmt.Sprintf("&{ DialProxyCall seqno:%v iov:%v }", pc.Seqno, pc.Iov)
 }

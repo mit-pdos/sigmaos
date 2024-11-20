@@ -123,7 +123,7 @@ func (scs *SPProxySrvAPI) Init(ctx fs.CtxI, req scproto.SigmaInitRequest, rep *s
 	}
 	pe := proc.NewProcEnvFromProto(req.ProcEnvProto)
 	pe.UseSPProxy = false
-	pe.UseNetProxy = false
+	pe.UseDialProxy = false
 	sc, err := sigmaclnt.NewSigmaClntFsLibFidClnt(pe, scs.fidc)
 	if err != nil {
 		rep.Err = scs.setErr(fmt.Errorf("Error init SPProxySrvAPI: %v pe %v", err, pe))

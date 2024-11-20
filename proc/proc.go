@@ -138,7 +138,7 @@ func (p *Proc) InheritParentProcEnv(parentPE *ProcEnv) {
 	p.ProcEnvProto.Version = parentPE.Version
 	p.ProcEnvProto.UseSPProxy = parentPE.UseSPProxy
 	// Don't override intentionally set net proxy settings
-	p.ProcEnvProto.UseNetProxy = parentPE.UseNetProxy || p.ProcEnvProto.UseNetProxy
+	p.ProcEnvProto.UseDialProxy = parentPE.UseDialProxy || p.ProcEnvProto.UseDialProxy
 	p.ProcEnvProto.SigmaPath = append(p.ProcEnvProto.SigmaPath, parentPE.SigmaPath...)
 	// If parent didn't specify secrets, inherit the parent's secrets
 	if p.ProcEnvProto.SecretsMap == nil {
@@ -230,7 +230,7 @@ func (p *Proc) String() string {
 		"SigmaPath:%v "+
 		"KernelId:%v "+
 		"UseSPProxy:%v "+
-		"UseNetProxy:%v "+
+		"UseDialProxy:%v "+
 		"Realm:%v "+
 		"Perf:%v "+
 		"InnerIP:%v "+
@@ -248,7 +248,7 @@ func (p *Proc) String() string {
 		p.ProcEnvProto.GetSigmaPath(),
 		p.ProcEnvProto.KernelID,
 		p.ProcEnvProto.UseSPProxy,
-		p.ProcEnvProto.UseNetProxy,
+		p.ProcEnvProto.UseDialProxy,
 		p.ProcEnvProto.GetRealm(),
 		p.ProcEnvProto.GetPerf(),
 		p.ProcEnvProto.GetInnerContainerIP(),

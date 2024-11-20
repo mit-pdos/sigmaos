@@ -1,4 +1,4 @@
-package netproxytrans
+package transport
 
 import (
 	"encoding/json"
@@ -26,15 +26,15 @@ const (
 
 var hasBeenInit bool
 
-type NetProxyTrans struct {
+type DialProxyTrans struct {
 	sync.Mutex
 	conn      *net.UnixConn
 	iovm      *demux.IoVecMap
 	openConns map[sessp.Tseqno]*os.File
 }
 
-func NewNetProxyTrans(conn *net.UnixConn, iovm *demux.IoVecMap) *NetProxyTrans {
-	return &NetProxyTrans{
+func NewDialProxyTrans(conn *net.UnixConn, iovm *demux.IoVecMap) *DialProxyTrans {
+	return &DialProxyTrans{
 		conn:      conn,
 		iovm:      iovm,
 		openConns: make(map[sessp.Tseqno]*os.File),
@@ -89,11 +89,11 @@ func GetNetproxydConn(pe *proc.ProcEnv) (*net.UnixConn, error) {
 	return conn, nil
 }
 
-func (trans *NetProxyTrans) Conn() *net.UnixConn {
+func (trans *DialProxyTrans) Conn() *net.UnixConn {
 	return trans.conn
 }
 
-func (trans *NetProxyTrans) ReadCall() (demux.CallI, *serr.Err) {
+func (trans *DialProxyTrans) ReadCall() (demux.CallI, *serr.Err) {
 	db.DPrintf(db.DIALPROXYTRANS, "ReadCall trans conn [%p]", trans.conn)
 	seqno, err := frame.ReadSeqno(trans.conn)
 	if err != nil {
@@ -115,7 +115,7 @@ func (trans *NetProxyTrans) ReadCall() (demux.CallI, *serr.Err) {
 			return nil, err
 		}
 		if uint32(len(iov)) < n {
-			db.DFatalf("NetProxyTrans mismatch between supplied destination nvec and incoming nvec: %v != %v\n%s", len(iov), n, debug.Stack())
+			db.DFatalf("DialProxyTrans mismatch between supplied destination nvec and incoming nvec: %v != %v\n%s", len(iov), n, debug.Stack())
 		}
 		db.DPrintf(db.DIALPROXYTRANS, "[%p] Read n frames: %v", trans.conn, len(iov))
 		if err := frame.ReadNFramesInto(trans.conn, iov); err != nil {
@@ -138,7 +138,7 @@ func (trans *NetProxyTrans) ReadCall() (demux.CallI, *serr.Err) {
 	return NewProxyCall(seqno, iov), nil
 }
 
-func (trans *NetProxyTrans) WriteCall(call demux.CallI) *serr.Err {
+func (trans *DialProxyTrans) WriteCall(call demux.CallI) *serr.Err {
 	db.DPrintf(db.DIALPROXYTRANS, "[%p] WriteCall trans %v", trans.conn, call)
 	pc := call.(*ProxyCall)
 	if err := frame.WriteSeqno(pc.Seqno, trans.conn); err != nil {
@@ -161,7 +161,7 @@ func (trans *NetProxyTrans) WriteCall(call demux.CallI) *serr.Err {
 }
 
 // Receive socket control message
-func (trans *NetProxyTrans) RecvSocketControlMsg(oob []byte) (bool, error) {
+func (trans *DialProxyTrans) RecvSocketControlMsg(oob []byte) (bool, error) {
 	db.DPrintf(db.DIALPROXYTRANS, "[%p] RecvSocketControlMsg len %v", trans.conn, len(oob))
 	defer db.DPrintf(db.DIALPROXYTRANS, "[%p] RecvSocketControlMsg done len %v", trans.conn, len(oob))
 	// Sanity check
@@ -185,7 +185,7 @@ func (trans *NetProxyTrans) RecvSocketControlMsg(oob []byte) (bool, error) {
 }
 
 // Send socket control message
-func (trans *NetProxyTrans) SendSocketControlMsg(oob []byte) error {
+func (trans *DialProxyTrans) SendSocketControlMsg(oob []byte) error {
 	db.DPrintf(db.DIALPROXYTRANS, "[%p] SendSocketControlMsg len %v", trans.conn, len(oob))
 	// Send at least one byte, in case there is no socket control message to be
 	// sent
@@ -199,7 +199,7 @@ func (trans *NetProxyTrans) SendSocketControlMsg(oob []byte) error {
 	return nil
 }
 
-func (trans *NetProxyTrans) AddConn(seqno sessp.Tseqno, conn *os.File) {
+func (trans *DialProxyTrans) AddConn(seqno sessp.Tseqno, conn *os.File) {
 	// If no connection, bail out
 	if conn == nil {
 		return
@@ -215,7 +215,7 @@ func (trans *NetProxyTrans) AddConn(seqno sessp.Tseqno, conn *os.File) {
 	trans.openConns[seqno] = conn
 }
 
-func (trans *NetProxyTrans) DelConn(seqno sessp.Tseqno) error {
+func (trans *DialProxyTrans) DelConn(seqno sessp.Tseqno) error {
 	trans.Lock()
 	defer trans.Unlock()
 

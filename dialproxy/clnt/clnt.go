@@ -10,9 +10,9 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/demux"
+	dialproxytrans "sigmaos/dialproxy/transport"
 	"sigmaos/netproxy"
 	"sigmaos/netproxy/proto"
-	"sigmaos/netproxytrans"
 	"sigmaos/proc"
 	"sigmaos/rpc"
 	rpcproto "sigmaos/rpc/proto"
@@ -27,7 +27,7 @@ type DialProxyClnt struct {
 	pe              *proc.ProcEnv
 	lm              *netproxy.ListenerMap
 	seqcntr         *sessp.Tseqcntr
-	trans           *netproxytrans.NetProxyTrans
+	trans           *dialproxytrans.DialProxyTrans
 	dmx             *demux.DemuxClnt
 	rpcc            *rpcclnt.RPCClnt
 	acceptAllRealms bool // If true, and this netproxyclnt belongs to a kernel proc, accept all realms' connections
@@ -142,7 +142,7 @@ func (npc *DialProxyClnt) useProxy() bool {
 	npc.Lock()
 	defer npc.Unlock()
 
-	return npc.pe.GetUseNetProxy()
+	return npc.pe.GetUseDialProxy()
 }
 
 // Lazily init connection to the netproxy srv
@@ -158,12 +158,12 @@ func (npc *DialProxyClnt) init() error {
 	db.DPrintf(db.DIALPROXYCLNT, "[%v] Init netproxyclnt %p", npc.pe.GetPrincipal(), npc)
 	defer db.DPrintf(db.DIALPROXYCLNT, "[%v] Init netproxyclnt %p done", npc.pe.GetPrincipal(), npc)
 	iovm := demux.NewIoVecMap()
-	conn, err := netproxytrans.GetNetproxydConn(npc.pe)
+	conn, err := dialproxytrans.GetNetproxydConn(npc.pe)
 	if err != nil {
 		return err
 	}
 	// Connect to the netproxy server
-	trans := netproxytrans.NewNetProxyTrans(conn, iovm)
+	trans := dialproxytrans.NewDialProxyTrans(conn, iovm)
 	npc.trans = trans
 	npc.dmx = demux.NewDemuxClnt(trans, iovm)
 	npc.rpcc = rpcclnt.NewRPCClnt(npc)
@@ -208,7 +208,7 @@ func (npc *DialProxyClnt) proxyDial(ep *sp.Tendpoint) (net.Conn, error) {
 	defer func(start time.Time) {
 		db.DPrintf(db.DIALPROXY_LAT, "Dial parseReturnedConn: %v", time.Since(start))
 	}(start)
-	return netproxytrans.ParseReturnedConn(res.Blob.Iov[0])
+	return dialproxytrans.ParseReturnedConn(res.Blob.Iov[0])
 }
 
 func (npc *DialProxyClnt) proxyListen(ept sp.TTendpoint, addr *sp.Taddr) (*sp.Tendpoint, *Listener, error) {
@@ -311,7 +311,7 @@ func (npc *DialProxyClnt) proxyAccept(lid netproxy.Tlid, internalListener bool) 
 		db.DPrintf(db.DIALPROXYCLNT_ERR, "Error Accept: %v", err)
 		return nil, nil, err
 	}
-	conn, err := netproxytrans.ParseReturnedConn(res.Blob.Iov[0])
+	conn, err := dialproxytrans.ParseReturnedConn(res.Blob.Iov[0])
 	if err != nil {
 		return nil, nil, err
 	}
@@ -365,12 +365,12 @@ func (npc *DialProxyClnt) newListener(lid netproxy.Tlid) net.Listener {
 }
 
 func (npc *DialProxyClnt) SendReceive(iniov sessp.IoVec, outiov sessp.IoVec) error {
-	c := netproxytrans.NewProxyCall(sessp.NextSeqno(npc.seqcntr), iniov)
+	c := dialproxytrans.NewProxyCall(sessp.NextSeqno(npc.seqcntr), iniov)
 	rep, err := npc.dmx.SendReceive(c, outiov)
 	if err != nil {
 		return err
 	} else {
-		c := rep.(*netproxytrans.ProxyCall)
+		c := rep.(*dialproxytrans.ProxyCall)
 		if len(outiov) != len(c.Iov) {
 			return fmt.Errorf("netproxyclnt outiov len wrong: %v != %v", len(outiov), len(c.Iov))
 		}

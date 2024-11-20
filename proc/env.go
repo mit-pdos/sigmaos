@@ -73,7 +73,7 @@ func GetLabels(s string) map[string]bool {
 	return m
 }
 
-func NewProcEnv(program string, pid sp.Tpid, realm sp.Trealm, principal *sp.Tprincipal, procDir string, parentDir string, priv, useSPProxy bool, useNetProxy bool) *ProcEnv {
+func NewProcEnv(program string, pid sp.Tpid, realm sp.Trealm, principal *sp.Tprincipal, procDir string, parentDir string, priv, useSPProxy bool, useDialProxy bool) *ProcEnv {
 	// Load Perf & Debug from the environment for convenience.
 	return &ProcEnv{
 		ProcEnvProto: &ProcEnvProto{
@@ -94,7 +94,7 @@ func NewProcEnv(program string, pid sp.Tpid, realm sp.Trealm, principal *sp.Tpri
 			UprocdPIDStr:        sp.NOT_SET,
 			Privileged:          priv,
 			UseSPProxy:          useSPProxy,
-			UseNetProxy:         useNetProxy,
+			UseDialProxy:        useDialProxy,
 			SecretsMap:          nil,
 			SigmaPath:           []string{},
 			RealmSwitchStr:      sp.NOT_SET,
@@ -129,7 +129,7 @@ func NewBootProcEnv(principal *sp.Tprincipal, secrets map[string]*sp.SecretProto
 	return pe
 }
 
-func NewTestProcEnv(realm sp.Trealm, secrets map[string]*sp.SecretProto, etcdMnts map[string]*sp.TendpointProto, innerIP sp.Tip, outerIP sp.Tip, buildTag string, useSPProxy bool, useNetProxy bool) *ProcEnv {
+func NewTestProcEnv(realm sp.Trealm, secrets map[string]*sp.SecretProto, etcdMnts map[string]*sp.TendpointProto, innerIP sp.Tip, outerIP sp.Tip, buildTag string, useSPProxy bool, useDialProxy bool) *ProcEnv {
 	pe := NewProcEnvUnset(true)
 	pe.SetPrincipal(sp.NewPrincipal(sp.TprincipalID("test"), realm))
 	pe.SetSecrets(secrets)
@@ -144,7 +144,7 @@ func NewTestProcEnv(realm sp.Trealm, secrets map[string]*sp.SecretProto, etcdMnt
 	pe.HowInt = int32(TEST)
 	pe.UseSPProxy = useSPProxy
 	pe.SetSigmaPath(buildTag)
-	pe.UseNetProxy = useNetProxy
+	pe.UseDialProxy = useDialProxy
 	return pe
 }
 
@@ -369,7 +369,7 @@ func (pe *ProcEnv) String() string {
 		"Partition:%v "+
 		"NetFail:%v "+
 		"UseSPProxy:%v "+
-		"UseNetProxy:%v "+
+		"UseDialProxy:%v "+
 		"SigmaPath:%v "+
 		"RealmSwitch:%v"+
 		"}",
@@ -394,7 +394,7 @@ func (pe *ProcEnv) String() string {
 		pe.Partition,
 		pe.NetFail,
 		pe.UseSPProxy,
-		pe.UseNetProxy,
+		pe.UseDialProxy,
 		pe.SigmaPath,
 		pe.RealmSwitchStr,
 	)

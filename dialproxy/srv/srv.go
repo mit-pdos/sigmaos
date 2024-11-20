@@ -10,11 +10,11 @@ import (
 	"sigmaos/ctx"
 	db "sigmaos/debug"
 	"sigmaos/demux"
+	dialproxytrans "sigmaos/dialproxy/transport"
 	"sigmaos/frame"
 	"sigmaos/fs"
 	"sigmaos/netproxy"
 	netproto "sigmaos/netproxy/proto"
-	"sigmaos/netproxytrans"
 	"sigmaos/proc"
 	"sigmaos/rpc"
 	rpcproto "sigmaos/rpc/proto"
@@ -45,7 +45,7 @@ type DialProxySrvConn struct {
 	npss    *DialProxySrvStubs
 	baseCtx *ctx.Ctx
 	conn    *net.UnixConn
-	trans   *netproxytrans.NetProxyTrans
+	trans   *dialproxytrans.DialProxyTrans
 	rpcs    *rpcsrv.RPCSrv
 	dmx     *demux.DemuxSrv
 }
@@ -90,7 +90,7 @@ func (nps *DialProxySrv) handleNewConn(conn *net.UnixConn) {
 	db.DPrintf(db.DIALPROXYSRV, "Handle connection [%p] from principal %v", conn, p)
 
 	npsc := &DialProxySrvConn{
-		trans:   netproxytrans.NewNetProxyTrans(conn, demux.NewIoVecMap()),
+		trans:   dialproxytrans.NewDialProxyTrans(conn, demux.NewIoVecMap()),
 		conn:    conn,
 		baseCtx: ctx.NewPrincipalOnlyCtx(p),
 		npss: &DialProxySrvStubs{
@@ -108,14 +108,14 @@ func (nps *DialProxySrv) handleNewConn(conn *net.UnixConn) {
 
 func (npsc *DialProxySrvConn) ServeRequest(c demux.CallI) (demux.CallI, *serr.Err) {
 	db.DPrintf(db.DIALPROXYSRV, "ServeRequest: %v", c)
-	req := c.(*netproxytrans.ProxyCall)
+	req := c.(*dialproxytrans.ProxyCall)
 	ctx := netproxy.NewCtx(npsc.baseCtx)
 	rep, err := npsc.rpcs.WriteRead(ctx, req.Iov)
 	if err != nil {
 		db.DPrintf(db.DIALPROXYSRV, "ServeRequest: writeRead err %v", err)
 	}
 	npsc.trans.AddConn(req.Seqno, ctx.GetConn())
-	return netproxytrans.NewProxyCall(req.Seqno, rep), nil
+	return dialproxytrans.NewProxyCall(req.Seqno, rep), nil
 }
 
 func (nps *DialProxySrvStubs) Dial(c fs.CtxI, req netproto.DialRequest, res *netproto.DialResponse) error {
@@ -147,7 +147,7 @@ func (nps *DialProxySrvStubs) Dial(c fs.CtxI, req netproto.DialRequest, res *net
 		res.Err = sp.NewRerror()
 	}
 	start = time.Now()
-	file, err := netproxytrans.ConnToFile(proxyConn)
+	file, err := dialproxytrans.ConnToFile(proxyConn)
 	if err != nil {
 		db.DFatalf("Error convert conn to FD: %v", err)
 	}
@@ -157,7 +157,7 @@ func (nps *DialProxySrvStubs) Dial(c fs.CtxI, req netproto.DialRequest, res *net
 	ctx.SetConn(file)
 	start = time.Now()
 	// Set socket control message in output blob
-	res.Blob.Iov[0] = netproxytrans.ConstructSocketControlMsg(file)
+	res.Blob.Iov[0] = dialproxytrans.ConstructSocketControlMsg(file)
 	db.DPrintf(db.DIALPROXY_LAT, "[%v] Dial ConstructSocketControlMsg latency: %v", ep, time.Since(start))
 	return nil
 }
@@ -232,7 +232,7 @@ func (nps *DialProxySrvStubs) Accept(c fs.CtxI, req netproto.AcceptRequest, res 
 		return nil
 	}
 	res.Principal = p
-	file, err := netproxytrans.ConnToFile(proxyConn)
+	file, err := dialproxytrans.ConnToFile(proxyConn)
 	if err != nil {
 		db.DFatalf("Error convert conn to FD: %v", err)
 	}
@@ -240,7 +240,7 @@ func (nps *DialProxySrvStubs) Accept(c fs.CtxI, req netproto.AcceptRequest, res 
 	// before it can be sent back to the client
 	ctx.SetConn(file)
 	// Set socket control message in output blob
-	res.Blob.Iov[0] = netproxytrans.ConstructSocketControlMsg(file)
+	res.Blob.Iov[0] = dialproxytrans.ConstructSocketControlMsg(file)
 	res.Err = sp.NewRerror()
 	return nil
 }

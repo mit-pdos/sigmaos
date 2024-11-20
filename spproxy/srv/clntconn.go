@@ -17,10 +17,10 @@ import (
 	"sigmaos/serr"
 	"sigmaos/sessp"
 	"sigmaos/sigmaclnt"
-	"sigmaos/sigmaclntcodec"
 	sos "sigmaos/sigmaos"
 	sp "sigmaos/sigmap"
 	scproto "sigmaos/spproxy/proto"
+	"sigmaos/spproxy/transport"
 )
 
 // One SigmaClntConn per client connection
@@ -46,17 +46,17 @@ func newSigmaClntConn(conn net.Conn, pe *proc.ProcEnv, fidc *fidclnt.FidClnt) (*
 		api:  scs,
 	}
 	iovm := demux.NewIoVecMap()
-	scc.dmx = demux.NewDemuxSrv(scc, sigmaclntcodec.NewTransport(conn, iovm))
+	scc.dmx = demux.NewDemuxSrv(scc, transport.NewTransport(conn, iovm))
 	return scc, nil
 }
 
 func (scc *SigmaClntConn) ServeRequest(c demux.CallI) (demux.CallI, *serr.Err) {
-	req := c.(*sigmaclntcodec.Call)
+	req := c.(*transport.Call)
 	rep, err := scc.rpcs.WriteRead(scc.ctx, req.Iov)
 	if err != nil {
 		db.DPrintf(db.SPPROXYSRV, "ServeRequest: writeRead err %v", err)
 	}
-	return sigmaclntcodec.NewCall(req.Seqno, rep), nil
+	return transport.NewCall(req.Seqno, rep), nil
 }
 
 func (scc *SigmaClntConn) ReportError(err error) {

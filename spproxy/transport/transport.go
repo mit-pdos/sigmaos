@@ -1,4 +1,4 @@
-package sigmaclntcodec
+package transport
 
 import (
 	"bufio"

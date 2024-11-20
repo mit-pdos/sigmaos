@@ -83,7 +83,6 @@ func NewPrivProcPid(pid sp.Tpid, program string, args []string, priv bool) *Proc
 		priv,
 		false,
 		false,
-		false,
 	).GetProto()
 	p.Args = args
 	p.TypeInt = uint32(T_BE)
@@ -137,7 +136,6 @@ func (p *Proc) InheritParentProcEnv(parentPE *ProcEnv) {
 	p.ProcEnvProto.Debug = parentPE.Debug
 	p.ProcEnvProto.BuildTag = parentPE.BuildTag
 	p.ProcEnvProto.Version = parentPE.Version
-	p.ProcEnvProto.Overlays = parentPE.Overlays
 	p.ProcEnvProto.UseSPProxy = parentPE.UseSPProxy
 	// Don't override intentionally set net proxy settings
 	p.ProcEnvProto.UseNetProxy = parentPE.UseNetProxy || p.ProcEnvProto.UseNetProxy

@@ -22,6 +22,7 @@ const (
 )
 
 func RunDbd(dbdaddr string) error {
+	db.DPrintf(db.DB, "Start dbd with dbaddr %v", dbdaddr)
 	s, err := newServer(dbdaddr)
 	if err != nil {
 		return err

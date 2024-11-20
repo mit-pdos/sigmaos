@@ -5,7 +5,7 @@
 #
 
 usage() {
-    echo "Usage: $0 [--pull TAG] [--boot all|all_no_besched|node|node_no_besched|minnode|besched_node|named|realm_no_besched|spproxyd] [--named ADDRs] [--dbip DBIP] [--mongoip MONGOIP] [--host] [--overlays] [--gvisor] [--usenetproxy] [--reserveMcpu rmcpu] kernelid"  1>&2
+    echo "Usage: $0 [--pull TAG] [--boot all|all_no_besched|node|node_no_besched|minnode|besched_node|named|realm_no_besched|spproxyd] [--named ADDRs] [--dbip DBIP] [--mongoip MONGOIP] [--host] [--gvisor] [--usenetproxy] [--reserveMcpu rmcpu] kernelid"  1>&2
 }
 
 UPDATE=""
@@ -16,7 +16,6 @@ DBIP="x.x.x.x"
 MONGOIP="x.x.x.x"
 NET="host"
 KERNELID=""
-OVERLAYS="false"
 GVISOR="false"
 NETPROXY="false"
 RMCPU="0"
@@ -71,10 +70,6 @@ while [[ "$#" -gt 1 ]]; do
   --host)
     shift
     NET="host"
-    ;;
-  --overlays)
-    shift
-    OVERLAYS="true"
     ;;
   --gvisor)
     shift
@@ -184,7 +179,6 @@ CID=$(docker run -dit \
              -e boot=${BOOT} \
              -e dbip=${DBIP} \
              -e mongoip=${MONGOIP} \
-             -e overlays=${OVERLAYS} \
              -e buildtag=${TAG} \
              -e gvisor=${GVISOR} \
              -e netproxy=${NETPROXY} \

@@ -2,11 +2,9 @@ package kernel
 
 import (
 	"fmt"
-	"path/filepath"
 	"strconv"
 
 	db "sigmaos/debug"
-	"sigmaos/port"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 	"sigmaos/spproxysrv"
@@ -201,39 +199,6 @@ func (k *Kernel) bootUprocd(args []string) (Subsystem, error) {
 	s, err := k.bootSubsystem("uprocd", append(args, spproxydArgs...), sp.ROOTREALM, proc.HDOCKER, 0)
 	if err != nil {
 		return nil, err
-	}
-	if k.Param.Overlays {
-		pn := filepath.Join(sp.SCHEDD, args[0], sp.UPROCDREL, s.GetProc().GetPid().String())
-
-		// container's first port is for uprocd
-		pm, err := s.GetContainer().GetPortBinding(port.UPROCD_PORT)
-		if err != nil {
-			return nil, err
-		}
-
-		// Use 127.0.0.1, because only the local schedd should be talking
-		// to uprocd.
-		addr := sp.NewTaddr(sp.LOCALHOST, sp.INNER_CONTAINER_IP, pm.HostPort)
-		ep := sp.NewEndpoint(sp.INTERNAL_EP, []*sp.Taddr{addr})
-		db.DPrintf(db.BOOT, "Advertise %s at %v\n", pn, ep)
-		if err := k.MkEndpointFile(pn, ep); err != nil {
-			return nil, err
-		}
-		// Get port binding for WWW srvs running on this uprocd
-		ports := []sp.Tport{port.PUBLIC_HTTP_PORT, port.PUBLIC_NAMED_PORT}
-		portFNs := []string{sp.PUBLIC_HTTP_PORT, sp.PUBLIC_NAMED_PORT}
-		for i := range ports {
-			pm, err := s.GetContainer().GetPortBinding(ports[i])
-			if err != nil {
-				return nil, err
-			}
-			portFN := filepath.Join(pn, portFNs[i])
-			if err := k.PutFileJson(portFN, 0777, pm); err != nil {
-				db.DPrintf(db.ERROR, "Error put public port file: %v", err)
-				return nil, err
-			}
-		}
-		db.DPrintf(db.KERNEL, "bootUprocd: started %v at %s pfn %v", pn, pm, portFNs)
 	}
 	return s, nil
 }

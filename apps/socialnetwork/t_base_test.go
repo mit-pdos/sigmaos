@@ -5,8 +5,8 @@ import (
 	sn "sigmaos/apps/socialnetwork"
 	dbg "sigmaos/debug"
 	"sigmaos/linuxsched"
-	"sigmaos/util/rand"
 	"sigmaos/test"
+	"sigmaos/util/rand"
 )
 
 const (
@@ -34,7 +34,7 @@ func newTstateSN(t *test.Tstate, srvs []sn.Srv, nsrv int) (*TstateSN, error) {
 			assert.Nil(tssn.T, err)
 		}
 	}
-	tssn.snCfg, err = sn.NewConfig(tssn.SigmaClnt, tssn.jobname, srvs, nsrv, false, test.Overlays)
+	tssn.snCfg, err = sn.NewConfig(tssn.SigmaClnt, tssn.jobname, srvs, nsrv, false)
 	assert.Nil(tssn.T, err, "config should initialize properly.")
 	tssn.dbu, err = sn.NewDBUtil(tssn.SigmaClnt)
 	if !assert.Nil(tssn.T, err, "Err create mongoc: %v", err) {

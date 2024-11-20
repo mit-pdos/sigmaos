@@ -32,7 +32,6 @@ const (
 
 type DContainer struct {
 	*port.PortMap
-	overlays     bool
 	ctx          context.Context
 	cli          *client.Client
 	container    string
@@ -48,7 +47,7 @@ type cpustats struct {
 	util                float64
 }
 
-func StartDockerContainer(p *proc.Proc, kernelId string, overlays bool, gvisor bool) (*DContainer, error) {
+func StartDockerContainer(p *proc.Proc, kernelId string, gvisor bool) (*DContainer, error) {
 	image := "sigmauser"
 	ctx := context.Background()
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
@@ -71,28 +70,10 @@ func StartDockerContainer(p *proc.Proc, kernelId string, overlays bool, gvisor b
 	up := sp.NO_PORT
 	netmode := "host"
 	var endpoints map[string]*network.EndpointSettings
-	ports := []sp.Tport{port.UPROCD_PORT, port.PUBLIC_HTTP_PORT, port.PUBLIC_NAMED_PORT}
-	if overlays {
-		db.DPrintf(db.CONTAINER, "Running with overlay ports: %v", ports)
-		up = port.UPROCD_PORT
-		netmode = "bridge"
-		netname := "sigmanet-testuser"
-		for _, i := range ports {
-			p, err := nat.NewPort("tcp", i.String())
-			if err != nil {
-				return nil, err
-			}
-			pset[p] = struct{}{}
-			pmap[p] = []nat.PortBinding{{}}
-		}
-		endpoints = make(map[string]*network.EndpointSettings, 1)
-		endpoints[netname] = &network.EndpointSettings{}
-	}
-
 	// append uprocd's port
 	p.Args = append(p.Args, up.String())
 	cmd := append([]string{p.GetProgram()}, p.Args...)
-	db.DPrintf(db.CONTAINER, "ContainerCreate %v %v overlays %v s %v\n", cmd, p.GetEnv(), overlays, score)
+	db.DPrintf(db.CONTAINER, "ContainerCreate %v %v s %v\n", cmd, p.GetEnv(), score)
 
 	runtime := "runc"
 	if gvisor {
@@ -170,14 +151,10 @@ func StartDockerContainer(p *proc.Proc, kernelId string, overlays bool, gvisor b
 	db.DPrintf(db.CONTAINER, "Container ID %v", json.ID)
 
 	var pm *port.PortMap
-	if overlays {
-		pm = port.NewPortMap(json.NetworkSettings.NetworkSettingsBase.Ports, ports)
-	}
 
 	db.DPrintf(db.CONTAINER, "network setting: ip %v secondaryIPAddrs %v nets %v portmap %v", ip, json.NetworkSettings.SecondaryIPAddresses, json.NetworkSettings.Networks, pm)
 	cgroupPath := filepath.Join(CGROUP_PATH_BASE, "docker-"+resp.ID+".scope")
 	c := &DContainer{
-		overlays:   p.GetProcEnv().GetOverlays(),
 		PortMap:    pm,
 		ctx:        ctx,
 		cli:        cli,

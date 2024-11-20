@@ -28,7 +28,6 @@ type Param struct {
 	Services    []string
 	Dbip        string
 	Mongoip     string
-	Overlays    bool
 	NetProxy    bool
 	BuildTag    string
 	GVisor      bool

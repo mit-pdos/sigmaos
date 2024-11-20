@@ -27,7 +27,6 @@ message ProcEnvProto {
   string debug = 13;
   string uprocdPIDStr = 14;
   bool privileged = 15;
-  bool overlays = 16;
   int64 netFail = 17;
   int64 crash = 18;
   int64 partition = 19;

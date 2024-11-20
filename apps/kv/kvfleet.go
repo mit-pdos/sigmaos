@@ -4,14 +4,13 @@ import (
 	"path/filepath"
 	"strconv"
 
-	"sigmaos/apps/kv/kvgrp"
 	"sigmaos/apps/cache"
+	"sigmaos/apps/kv/kvgrp"
 	"sigmaos/fslib"
 	"sigmaos/groupmgr"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
-	"sigmaos/test"
 )
 
 const (
@@ -170,7 +169,7 @@ func startBalancers(sc *sigmaclnt.SigmaClnt, job string, nbal, crashbal int, kvd
 }
 
 func spawnGrp(sc *sigmaclnt.SigmaClnt, job, grp string, mcpu proc.Tmcpu, repl, ncrash int) (*groupmgr.GroupMgr, error) {
-	cfg := groupmgr.NewGroupConfig(repl, "kvd", []string{grp, strconv.FormatBool(test.Overlays)}, mcpu, job)
+	cfg := groupmgr.NewGroupConfig(repl, "kvd", []string{grp}, mcpu, job)
 	cfg.SetTest(CRASHKVD, 0, 0)
 	gm := cfg.StartGrpMgr(sc, ncrash)
 	_, err := kvgrp.WaitStarted(sc.FsLib, kvgrp.JobDir(job), grp)

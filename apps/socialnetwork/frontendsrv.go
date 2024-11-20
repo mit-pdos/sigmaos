@@ -10,14 +10,13 @@ import (
 
 	"sigmaos/apps/socialnetwork/proto"
 	dbg "sigmaos/debug"
-	"sigmaos/util/perf"
-	"sigmaos/port"
 	"sigmaos/proc"
 	"sigmaos/rpcclnt"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmarpcchan"
 	"sigmaos/tracing"
+	"sigmaos/util/perf"
 )
 
 type FrontEnd struct {
@@ -46,7 +45,7 @@ var (
 )
 
 // Run starts the server
-func RunFrontendSrv(public bool, job string) error {
+func RunFrontendSrv(job string) error {
 	frontend := &FrontEnd{}
 	frontend.job = job
 	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
@@ -102,35 +101,17 @@ func RunFrontendSrv(public bool, job string) error {
 	mux.HandleFunc("/home", frontend.homeHandler)
 	mux.HandleFunc("/startrecording", frontend.startRecordingHandler)
 	//	}
-	dbg.DPrintf(dbg.ALWAYS, "SN public? %v", public)
-	if public {
-		ep, l, err := sc.GetNetProxyClnt().Listen(sp.EXTERNAL_EP, sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, port.PUBLIC_HTTP_PORT))
-		if err != nil {
-			dbg.DFatalf("Error %v Listen: %v", public, err)
-		}
-		dbg.DPrintf(dbg.ALWAYS, "SN Got ep %v", ep)
-
-		//		if TRACING {
-		//			go tmux.Serve(l)
-		//		} else {
-		go http.Serve(l, mux)
-		//		}
-		if err = port.AdvertisePublicHTTPPort(frontend.FsLib, JobHTTPAddrsPath(job), ep); err != nil {
-			dbg.DFatalf("AdvertisePort %v", err)
-		}
-	} else {
-		ep, l, err := sc.GetNetProxyClnt().Listen(sp.EXTERNAL_EP, sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, sp.NO_PORT))
-		if err != nil {
-			dbg.DFatalf("Error %v Listen: %v", public, err)
-		}
-		//		if TRACING {
-		//			go tmux.Serve(l)
-		//		} else {
-		go http.Serve(l, mux)
-		dbg.DPrintf(dbg.ALWAYS, "SN advertise %v", ep)
-		if err = sc.MkEndpointFile(JobHTTPAddrsPath(job), ep); err != nil {
-			dbg.DFatalf("MkEndpointFile %v", err)
-		}
+	ep, l, err := sc.GetNetProxyClnt().Listen(sp.EXTERNAL_EP, sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, sp.NO_PORT))
+	if err != nil {
+		dbg.DFatalf("Error Listen: %v", err)
+	}
+	//		if TRACING {
+	//			go tmux.Serve(l)
+	//		} else {
+	go http.Serve(l, mux)
+	dbg.DPrintf(dbg.ALWAYS, "SN advertise %v", ep)
+	if err = sc.MkEndpointFile(JobHTTPAddrsPath(job), ep); err != nil {
+		dbg.DFatalf("MkEndpointFile %v", err)
 	}
 
 	perf, err := perf.NewPerf(frontend.ProcEnv(), perf.SOCIAL_NETWORK_FRONTEND)

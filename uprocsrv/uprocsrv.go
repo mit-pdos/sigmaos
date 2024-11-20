@@ -22,16 +22,16 @@ import (
 	"sigmaos/kernelclnt"
 	"sigmaos/linuxsched"
 	"sigmaos/netsigma"
-	"sigmaos/util/perf"
 	"sigmaos/proc"
 	"sigmaos/scontainer"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
 	"sigmaos/spproxysrv"
-	"sigmaos/util/syncmap"
 	"sigmaos/uprocsrv/binsrv"
 	"sigmaos/uprocsrv/proto"
+	"sigmaos/util/perf"
+	"sigmaos/util/syncmap"
 )
 
 // Lookup may try to read proc in a proc's procEntry before uprocsrv
@@ -119,29 +119,11 @@ func RunUprocSrv(kernelId string, netproxy bool, up string, spproxydPID sp.Tpid)
 	}
 	ups.sc = sc
 	var ssrv *sigmasrv.SigmaSrv
-	if up == sp.NO_PORT.String() {
-		pn := filepath.Join(sp.SCHEDD, kernelId, sp.UPROCDREL, pe.GetPID().String())
-		ssrv, err = sigmasrv.NewSigmaSrvClnt(pn, sc, &UprocRPCSrv{ups})
-	} else {
-		var port sp.Tport
-		port, err = sp.ParsePort(up)
-		if err != nil {
-			db.DFatalf("Error parse port: %v", err)
-		}
-		addr := sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, port)
-
-		// This should only happen if running with overlays. If running with
-		// overlays, allow all principals to attach (because named will try to
-		// attach to find its port). Shouldn't really matter, because overlays are
-		// only ever in use for benchmarking.
-		if !pe.GetOverlays() {
-			// Sanity check
-			db.DFatalf("Sanity check failed! Uprocsrv got a port when running without overlays!")
-		}
-		sc.GetNetProxyClnt().AllowConnectionsFromAllRealms()
-		// The kernel will advertise the server, so pass "" as pn.
-		ssrv, err = sigmasrv.NewSigmaSrvAddrClnt("", addr, sc, &UprocRPCSrv{ups})
+	if up != sp.NO_PORT.String() {
+		db.DFatalf("Should only happen when running with overlays, but overlays are no more")
 	}
+	pn := filepath.Join(sp.SCHEDD, kernelId, sp.UPROCDREL, pe.GetPID().String())
+	ssrv, err = sigmasrv.NewSigmaSrvClnt(pn, sc, &UprocRPCSrv{ups})
 	if err != nil {
 		db.DFatalf("Error sigmasrvclnt: %v", err)
 		return err

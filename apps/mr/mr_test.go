@@ -24,12 +24,12 @@ import (
 	mrscanner "sigmaos/apps/mr/scanner"
 	"sigmaos/auth"
 	db "sigmaos/debug"
-	"sigmaos/util/perf"
 	"sigmaos/proc"
-	rd "sigmaos/util/rand"
 	"sigmaos/scheddclnt"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
+	"sigmaos/util/perf"
+	rd "sigmaos/util/rand"
 	// "sigmaos/stats"
 	"sigmaos/apps/mr/grep"
 	"sigmaos/apps/mr/wc"
@@ -161,7 +161,7 @@ func TestSeqWc(t *testing.T) {
 	buf := make([]byte, 0, 2097152)
 	scanner.Buffer(buf, cap(buf))
 	data := make(Tdata, 0)
-	p, err := perf.NewPerf(proc.NewTestProcEnv(sp.ROOTREALM, nil, nil, sp.NO_IP, sp.NO_IP, "", false, false, false), perf.SEQWC)
+	p, err := perf.NewPerf(proc.NewTestProcEnv(sp.ROOTREALM, nil, nil, sp.NO_IP, sp.NO_IP, "", false, false), perf.SEQWC)
 	assert.Nil(t, err)
 	sbc := mrscanner.NewScanByteCounter(p)
 	for scanner.Scan() {
@@ -233,7 +233,7 @@ func TestMapperReducer(t *testing.T) {
 		reducer = grep.Reduce
 	}
 
-	p, err := perf.NewPerf(proc.NewTestProcEnv(sp.ROOTREALM, nil, nil, sp.NO_IP, sp.NO_IP, "", false, false, false), perf.MRMAPPER)
+	p, err := perf.NewPerf(proc.NewTestProcEnv(sp.ROOTREALM, nil, nil, sp.NO_IP, sp.NO_IP, "", false, false), perf.MRMAPPER)
 	assert.Nil(t, err)
 
 	tns, err := ts.tasks.Mft.AcquireTasks()

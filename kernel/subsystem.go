@@ -126,7 +126,7 @@ func (s *KernelSubsystem) Run(how proc.Thow, kernelId string, localIP sp.Tip) er
 		h := sp.SIGMAHOME
 		s.p.AppendEnv("PATH", h+"/bin/user:"+h+"/bin/user/common:"+h+"/bin/kernel:/usr/sbin:/usr/bin:/bin")
 		s.p.FinalizeEnv(localIP, localIP, sp.Tpid(sp.NOT_SET))
-		c, err := dcontainer.StartDockerContainer(s.p, kernelId, s.k.Param.Overlays, s.k.Param.GVisor)
+		c, err := dcontainer.StartDockerContainer(s.p, kernelId, s.k.Param.GVisor)
 		if err != nil {
 			return err
 		}

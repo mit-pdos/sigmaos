@@ -1,7 +1,6 @@
 package kvgrp_test
 
 import (
-	"strconv"
 	"testing"
 	"time"
 
@@ -42,7 +41,7 @@ func newTstate(t1 *test.Tstate, nrepl, ncrash, crash, partition, netfail int, pe
 	ts.MkDir(kvgrp.KVDIR, 0777)
 	err := ts.MkDir(kvgrp.JobDir(ts.job), 0777)
 	assert.Nil(t1.T, err)
-	mcfg := groupmgr.NewGroupConfig(nrepl, "kvd", []string{ts.grp, strconv.FormatBool(test.Overlays)}, 0, ts.job)
+	mcfg := groupmgr.NewGroupConfig(nrepl, "kvd", []string{ts.grp}, 0, ts.job)
 	if persist {
 		mcfg.Persist(ts.SigmaClnt.FsLib)
 	}

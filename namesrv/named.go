@@ -15,7 +15,6 @@ import (
 	"sigmaos/namesrv/leaderetcd"
 	"sigmaos/netproxyclnt"
 	"sigmaos/path"
-	"sigmaos/util/perf"
 	"sigmaos/port"
 	"sigmaos/proc"
 	"sigmaos/protsrv"
@@ -24,6 +23,7 @@ import (
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
+	"sigmaos/util/perf"
 )
 
 type Named struct {
@@ -223,9 +223,9 @@ func (nd *Named) newSrv() (*sp.Tendpoint, error) {
 	root := rootDir(nd.fs, nd.realm)
 	var addr *sp.Taddr
 	var aaf protsrv.AttachAuthF
-	// If this is a root named, or we are running without overlays, don't do
+	// If this is a root named, don't do
 	// anything special.
-	if nd.realm == sp.ROOTREALM || !nd.ProcEnv().GetOverlays() {
+	if nd.realm == sp.ROOTREALM {
 		addr = sp.NewTaddr(ip, sp.INNER_CONTAINER_IP, sp.NO_PORT)
 		// Allow all realms to attach to dirs mounted from the root named, as well as RPC dir, since it is needed to take out leases
 		allowedDirs := []string{rpc.RPC}
@@ -234,7 +234,7 @@ func (nd *Named) newSrv() (*sp.Tendpoint, error) {
 		}
 		aaf = protsrv.AttachAllowAllPrincipalsSelectPaths(allowedDirs)
 	} else {
-		db.DPrintf(db.NAMED, "[%v] Listeing on overlay public port: %v:%v", nd.realm, nd.ProcEnv().GetOuterContainerIP(), port.PUBLIC_NAMED_PORT)
+		db.DPrintf(db.NAMED, "[%v] Listeing on public port: %v:%v", nd.realm, nd.ProcEnv().GetOuterContainerIP(), port.PUBLIC_NAMED_PORT)
 		addr = sp.NewTaddr(ip, sp.INNER_CONTAINER_IP, port.PUBLIC_NAMED_PORT)
 		aaf = protsrv.AttachAllowAllToAll
 	}
@@ -249,17 +249,6 @@ func (nd *Named) newSrv() (*sp.Tendpoint, error) {
 	nd.SigmaSrv = ssrv
 
 	ep := nd.GetEndpoint()
-	// If running with overlays, and this isn't the root named, fix up the
-	// endpoint.
-	if nd.realm != sp.ROOTREALM && nd.ProcEnv().GetOverlays() {
-		pm, err := port.GetPublicPortBinding(nd.FsLib, sp.PUBLIC_NAMED_PORT)
-		if err != nil {
-			db.DFatalf("Error get port binding: %v", err)
-		}
-		// Fix up the endpoint to use the public port and IP address
-		ep.Addrs()[0].IPStr = nd.ProcEnv().GetOuterContainerIP().String()
-		ep.Addrs()[0].PortInt = uint32(pm.HostPort)
-	}
 	db.DPrintf(db.NAMED, "newSrv %v %v %v %v %v", nd.realm, addr, ssrv.GetEndpoint(), nd.elect.Key(), ep)
 	return ep, nil
 }

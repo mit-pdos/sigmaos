@@ -74,7 +74,7 @@ func JobDir(job string) string {
 	return filepath.Join(SOCIAL_NETWORK, job)
 }
 
-func NewConfig(sc *sigmaclnt.SigmaClnt, jobname string, srvs []Srv, nsrv int, gc, public bool) (*SocialNetworkConfig, error) {
+func NewConfig(sc *sigmaclnt.SigmaClnt, jobname string, srvs []Srv, nsrv int, gc bool) (*SocialNetworkConfig, error) {
 	var err error
 	fsl := sc.FsLib
 	fsl.MkDir(SOCIAL_NETWORK, 0777)

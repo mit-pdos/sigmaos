@@ -32,9 +32,6 @@ func NewRealmTstateClnt(ts *Tstate, realm sp.Trealm) (*RealmTstate, error) {
 func newRealmTstateClnt(ts *Tstate, realm sp.Trealm, newrealm bool, numS3 int64, numUX int64) (*RealmTstate, error) {
 	if newrealm {
 		net := ""
-		if Overlays {
-			net = realm.String()
-		}
 		db.DPrintf(db.TEST, "Make realm %v", realm)
 		if err := ts.rc.NewRealm(realm, net, numS3, numUX); err != nil {
 			db.DPrintf(db.ERROR, "Error NewRealmTstate NewRealm: %v", err)

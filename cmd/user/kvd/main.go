@@ -1,9 +1,7 @@
 package main
 
 import (
-	"fmt"
 	"os"
-	"strconv"
 
 	"sigmaos/apps/kv/kvgrp"
 	db "sigmaos/debug"
@@ -11,17 +9,12 @@ import (
 )
 
 func main() {
-	if len(os.Args) < 4 {
-		fmt.Fprintf(os.Stderr, "Usage: %v <jobdir> <grp> <public>\n", os.Args[0])
-		os.Exit(1)
-	}
-	public, err := strconv.ParseBool(os.Args[3])
-	if err != nil {
-		db.DFatalf("%v: err %v\n", os.Args[0], err)
+	if len(os.Args) != 3 {
+		db.DFatalf("Usage: %v <jobdir> <grp>", os.Args[0])
 	}
 	id, nrepl, err := groupmgr.ParseREPL(os.Getenv("SIGMAREPL"))
 	if err != nil {
 		db.DFatalf("%v: err %v\n", os.Args[0], err)
 	}
-	kvgrp.RunMember(os.Args[1], os.Args[2], public, id, nrepl)
+	kvgrp.RunMember(os.Args[1], os.Args[2], id, nrepl)
 }

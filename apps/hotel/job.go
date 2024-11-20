@@ -5,9 +5,9 @@ import (
 	"path/filepath"
 	"strconv"
 
-	"sigmaos/apps/kv"
 	cachegrpclnt "sigmaos/apps/cache/cachegrp/clnt"
 	cachegrpmgr "sigmaos/apps/cache/cachegrp/mgr"
+	"sigmaos/apps/kv"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/netproxyclnt"
@@ -130,7 +130,7 @@ type Srv struct {
 var geo *Srv = &Srv{"hotel-geod", nil, 2000}
 
 // XXX searchd only needs 2, but in order to make spawns work out we need to have it run with 3.
-func NewHotelSvc(public bool) []*Srv {
+func NewHotelSvc() []*Srv {
 	return []*Srv{
 		&Srv{"hotel-userd", nil, 0},
 		&Srv{"hotel-rated", nil, 2000},
@@ -139,7 +139,7 @@ func NewHotelSvc(public bool) []*Srv {
 		&Srv{"hotel-searchd", nil, 3000},
 		&Srv{"hotel-reserved", nil, 3000},
 		&Srv{"hotel-recd", nil, 0},
-		&Srv{"hotel-wwwd", []string{strconv.FormatBool(public)}, 3000},
+		&Srv{"hotel-wwwd", nil, 3000},
 	}
 }
 

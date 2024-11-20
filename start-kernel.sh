@@ -24,19 +24,19 @@ while [[ "$#" -gt 1 ]]; do
     shift
     case "$1" in
         "all")
-            BOOT="knamed;besched;lcsched;schedd;ux;s3;chunkd;db;mongo;named"
+            BOOT="knamed;besched;lcsched;msched;ux;s3;chunkd;db;mongo;named"
             ;;
         "all_no_besched")
-            BOOT="knamed;lcsched;schedd;ux;s3;chunkd;db;mongo;named"
+            BOOT="knamed;lcsched;msched;ux;s3;chunkd;db;mongo;named"
             ;;
         "node")
-            BOOT="besched;schedd;ux;s3;db;chunkd;mongo"
+            BOOT="besched;msched;ux;s3;db;chunkd;mongo"
             ;;
         "node_no_besched")
-            BOOT="schedd;ux;s3;db;chunkd;mongo"
+            BOOT="msched;ux;s3;db;chunkd;mongo"
             ;;
         "minnode")
-            BOOT="schedd;ux;s3;chunkd"
+            BOOT="msched;ux;s3;chunkd"
             ;;
         "besched_node")
             BOOT="besched"
@@ -48,10 +48,10 @@ while [[ "$#" -gt 1 ]]; do
             BOOT="spproxyd"
             ;;
         "realm")
-            BOOT="knamed;besched;lcsched;schedd;realmd;ux;s3;chunkd;db;mongo;named"
+            BOOT="knamed;besched;lcsched;msched;realmd;ux;s3;chunkd;db;mongo;named"
             ;;
         "realm_no_besched")
-            BOOT="knamed;lcsched;schedd;realmd;ux;s3;chunkd;db;mongo;named"
+            BOOT="knamed;lcsched;msched;realmd;ux;s3;chunkd;db;mongo;named"
             ;;
         *)
             echo "unexpected argument $1 to boot"

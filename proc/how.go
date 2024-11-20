@@ -8,7 +8,7 @@ import (
 type Thow uint32
 
 const (
-	HSCHEDD Thow = iota + 1 // spawned as a sigmos proc
+	HMSCHED Thow = iota + 1 // spawned as a sigmos proc
 	HLINUX                  // spawned as a linux process
 	HDOCKER                 // spawned as a container
 	TEST                    // test program (not spawned)
@@ -17,8 +17,8 @@ const (
 
 func (h Thow) String() string {
 	switch h {
-	case HSCHEDD:
-		return "schedd"
+	case HMSCHED:
+		return "msched"
 	case HLINUX:
 		return "linux"
 	case HDOCKER:

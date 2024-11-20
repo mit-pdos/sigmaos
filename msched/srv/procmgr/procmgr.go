@@ -44,7 +44,7 @@ func NewProcMgr(sc *sigmaclnt.SigmaClnt, kernelId string) *ProcMgr {
 
 // Proc has been spawned.
 func (mgr *ProcMgr) Spawn(p *proc.Proc) {
-	db.DPrintf(db.SPAWN_LAT, "[%v] Schedd proc time since spawn %v", p.GetPid(), time.Since(p.GetSpawnTime()))
+	db.DPrintf(db.SPAWN_LAT, "[%v] MSched proc time since spawn %v", p.GetPid(), time.Since(p.GetSpawnTime()))
 	mgr.pstate.spawn(p)
 }
 
@@ -64,7 +64,7 @@ func (mgr *ProcMgr) RunProc(p *proc.Proc) {
 	p.SetKernelID(mgr.kernelId, true)
 	// Set the schedd mount for the proc, so it can mount this schedd in one RPC
 	// (without walking down to it).
-	p.SetScheddEndpoint(mgr.mfs.GetSigmaPSrvEndpoint())
+	p.SetMSchedEndpoint(mgr.mfs.GetSigmaPSrvEndpoint())
 	mgr.setupProcState(p)
 	err := mgr.runProc(p)
 	if err != nil {

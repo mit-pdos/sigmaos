@@ -165,10 +165,10 @@ func (k *Kernel) shutdown() {
 		for pid, _ := range k.svcs.svcMap {
 			cpids = append(cpids, pid)
 		}
-		// Sort schedds to the end, to avoid having as many eviction errors.
+		// Sort mscheds to the end, to avoid having as many eviction errors.
 		sort.Slice(cpids, func(i, j int) bool {
-			if strings.HasPrefix(cpids[i].String(), "schedd-") {
-				if strings.HasPrefix(cpids[j].String(), "schedd-") {
+			if strings.HasPrefix(cpids[i].String(), "msched-") {
+				if strings.HasPrefix(cpids[j].String(), "msched-") {
 					return strings.Compare(cpids[i].String(), cpids[j].String()) < 0
 				}
 				return false

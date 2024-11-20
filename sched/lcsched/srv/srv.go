@@ -25,7 +25,7 @@ type LCSched struct {
 	mu         sync.Mutex
 	cond       *sync.Cond
 	sc         *sigmaclnt.SigmaClnt
-	scheddclnt *scheddclnt.ScheddClnt
+	scheddclnt *scheddclnt.MSchedClnt
 	qs         map[sp.Trealm]*queue.Queue[string, chan string]
 	schedds    map[string]*Resources
 	realmbins  *chunkclnt.RealmBinPaths
@@ -38,7 +38,7 @@ type QDir struct {
 func NewLCSched(sc *sigmaclnt.SigmaClnt) *LCSched {
 	lcs := &LCSched{
 		sc:         sc,
-		scheddclnt: scheddclnt.NewScheddClnt(sc.FsLib, sp.NOT_SET),
+		scheddclnt: scheddclnt.NewMSchedClnt(sc.FsLib, sp.NOT_SET),
 		qs:         make(map[sp.Trealm]*queue.Queue[string, chan string]),
 		schedds:    make(map[string]*Resources),
 		realmbins:  chunkclnt.NewRealmBinPaths(),
@@ -98,15 +98,15 @@ func (lcs *LCSched) Enqueue(ctx fs.CtxI, req beschedproto.EnqueueRequest, res *b
 
 	ch := make(chan string)
 	lcs.addProc(p, ch)
-	res.ScheddID = <-ch
+	res.MSchedID = <-ch
 	return nil
 }
 
-func (lcs *LCSched) RegisterSchedd(ctx fs.CtxI, req proto.RegisterScheddRequest, res *proto.RegisterScheddResponse) error {
+func (lcs *LCSched) RegisterMSched(ctx fs.CtxI, req proto.RegisterMSchedRequest, res *proto.RegisterMSchedResponse) error {
 	lcs.mu.Lock()
 	defer lcs.mu.Unlock()
 
-	db.DPrintf(db.LCSCHED, "Register Schedd id:%v mcpu:%v mem:%v", req.KernelID, req.McpuInt, req.MemInt)
+	db.DPrintf(db.LCSCHED, "Register MSched id:%v mcpu:%v mem:%v", req.KernelID, req.McpuInt, req.MemInt)
 	if _, ok := lcs.schedds[req.KernelID]; ok {
 		db.DPrintf(db.ERROR, "Double-register schedd %v", req.KernelID)
 		return fmt.Errorf("Double-register schedd %v", req.KernelID)
@@ -161,7 +161,7 @@ func (lcs *LCSched) runProc(kernelID string, p *proc.Proc, ch chan string, r *Re
 	lcs.realmbins.SetBinKernelID(p.GetRealm(), p.GetProgram(), kernelID)
 	db.DPrintf(db.LCSCHED, "runProc kernelID %v p %v", kernelID, p)
 	if err := lcs.scheddclnt.ForceRun(kernelID, false, p); err != nil {
-		db.DPrintf(db.ALWAYS, "Schedd.Run %v err %v", kernelID, err)
+		db.DPrintf(db.ALWAYS, "MSched.Run %v err %v", kernelID, err)
 		// Re-enqueue the proc
 		lcs.addProc(p, ch)
 		return
@@ -176,7 +176,7 @@ func (lcs *LCSched) waitProcExit(kernelID string, p *proc.Proc, r *Resources) {
 	// RPC the schedd this proc was spawned on to wait for the proc to exit.
 	db.DPrintf(db.LCSCHED, "WaitExit %v RPC", p.GetPid())
 	if _, err := lcs.scheddclnt.Wait(scheddclnt.EXIT, kernelID, proc.NewProcSeqno(sp.NOT_SET, kernelID, 0, 0), p.GetPid()); err != nil {
-		db.DPrintf(db.ALWAYS, "Error Schedd WaitExit: %v", err)
+		db.DPrintf(db.ALWAYS, "Error MSched WaitExit: %v", err)
 	}
 	db.DPrintf(db.LCSCHED, "Proc exited %v", p.GetPid())
 	// Lock to modify resource allocations

@@ -312,8 +312,8 @@ func (pe *ProcEnvProto) GetSpawnTime() time.Time {
 	return pe.SpawnTimePB.AsTime()
 }
 
-func (pe *ProcEnv) GetScheddEndpoint() (*sp.Tendpoint, bool) {
-	mp := pe.ProcEnvProto.GetScheddEndpointProto()
+func (pe *ProcEnv) GetMSchedEndpoint() (*sp.Tendpoint, bool) {
+	mp := pe.ProcEnvProto.GetMSchedEndpointProto()
 	if mp == nil {
 		return &sp.Tendpoint{}, false
 	}

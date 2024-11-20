@@ -15,9 +15,9 @@ import (
 	"sigmaos/fttasks"
 	"sigmaos/leaderclnt"
 	"sigmaos/proc"
-	"sigmaos/util/rand"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
+	"sigmaos/util/rand"
 )
 
 const (
@@ -175,7 +175,7 @@ func (c *Coord) newTask(bin string, args []string, mb proc.Tmem, allowedPaths []
 
 func (c *Coord) mapperProc(task string) (*proc.Proc, error) {
 	input := c.mft.TaskPathName(task)
-	allowedPaths := []string{sp.NAMED, filepath.Join(sp.SCHEDD, "*"), filepath.Join(sp.S3, "*"), filepath.Join(sp.UX, "*")}
+	allowedPaths := []string{sp.NAMED, filepath.Join(sp.MSCHED, "*"), filepath.Join(sp.S3, "*"), filepath.Join(sp.UX, "*")}
 	mapperbin := c.mapperbin
 	// If running with malicious mappers, roll the dice and see if we should
 	// spawn a benign mapper or a malicious one.
@@ -215,7 +215,7 @@ func (c *Coord) reducerProc(tn string) (*proc.Proc, error) {
 	}
 	outlink := ReduceOut(c.jobRoot, c.job) + t.Task
 	outTarget := ReduceOutTarget(c.outdir, c.job) + t.Task
-	allowedPaths := []string{sp.NAMED, filepath.Join(sp.SCHEDD, "*"), filepath.Join(sp.S3, "*"), filepath.Join(sp.UX, "*")}
+	allowedPaths := []string{sp.NAMED, filepath.Join(sp.MSCHED, "*"), filepath.Join(sp.S3, "*"), filepath.Join(sp.UX, "*")}
 	c.stat.nReduce += 1
 	return c.newTask(c.reducerbin, []string{string(b), outlink, outTarget, strconv.Itoa(c.nmaptask)}, c.memPerTask, allowedPaths), nil
 }

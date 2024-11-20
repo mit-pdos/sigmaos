@@ -265,7 +265,7 @@ func (p *Proc) setProcDir(kernelId string) {
 	// Privileged procs have their ProcDir (sp.KPIDS) set at the time of creation
 	// of the proc struct.
 	if !p.IsPrivileged() {
-		p.ProcEnvProto.ProcDir = filepath.Join(sp.SCHEDD, kernelId, sp.PIDS, p.GetPid().String())
+		p.ProcEnvProto.ProcDir = filepath.Join(sp.MSCHED, kernelId, sp.PIDS, p.GetPid().String())
 	}
 }
 
@@ -386,8 +386,8 @@ func (p *Proc) GetHow() Thow {
 	return p.ProcEnvProto.GetHow()
 }
 
-func (p *Proc) SetScheddEndpoint(ep *sp.Tendpoint) {
-	p.ProcEnvProto.ScheddEndpointProto = ep.GetProto()
+func (p *Proc) SetMSchedEndpoint(ep *sp.Tendpoint) {
+	p.ProcEnvProto.MSchedEndpointProto = ep.GetProto()
 }
 
 func (p *Proc) SetNamedEndpoint(ep *sp.Tendpoint) {

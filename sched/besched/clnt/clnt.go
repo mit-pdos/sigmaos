@@ -27,10 +27,10 @@ type BESchedClnt struct {
 }
 
 func NewBESchedClnt(fsl *fslib.FsLib) *BESchedClnt {
-	return NewBESchedClntSchedd(fsl, nil, nil)
+	return NewBESchedClntMSched(fsl, nil, nil)
 }
 
-func NewBESchedClntSchedd(fsl *fslib.FsLib, nextEpoch rpcdirclnt.AllocFn, nextSeqno nextSeqnoFn) *BESchedClnt {
+func NewBESchedClntMSched(fsl *fslib.FsLib, nextEpoch rpcdirclnt.AllocFn, nextSeqno nextSeqnoFn) *BESchedClnt {
 	return &BESchedClnt{
 		FsLib:     fsl,
 		rpcdc:     rpcdirclnt.NewRPCDirClntAllocFn(fsl, sp.BESCHED, db.BESCHEDCLNT, db.BESCHEDCLNT_ERR, nextEpoch),
@@ -78,7 +78,7 @@ func (besc *BESchedClnt) Enqueue(p *proc.Proc) (string, *proc.ProcSeqno, error) 
 	}
 	db.DPrintf(db.BESCHEDCLNT, "[%v] Enqueued Proc %v", p.GetRealm(), p)
 	db.DPrintf(db.SPAWN_LAT, "[%v] BESchedClnt client-side RPC latency %v", p.GetPid(), time.Since(s))
-	return res.ScheddID, res.ProcSeqno, nil
+	return res.MSchedID, res.ProcSeqno, nil
 }
 
 // Get a proc (passing in the kernelID of the caller). Will only return once

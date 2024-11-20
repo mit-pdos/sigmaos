@@ -7,10 +7,10 @@ import (
 
 	db "sigmaos/debug"
 	dialproxyclnt "sigmaos/dialproxy/clnt"
-	"sigmaos/util/perf"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
+	"sigmaos/util/perf"
 )
 
 func RunKNamed(args []string) error {
@@ -87,7 +87,7 @@ func RunKNamed(args []string) error {
 	return nil
 }
 
-var InitRootDir = []string{sp.BOOT, sp.KPIDS, sp.MEMFS, sp.LCSCHED, sp.BESCHED, sp.SCHEDD, sp.UX, sp.S3, sp.DB, sp.MONGO, sp.REALM, sp.CHUNKD}
+var InitRootDir = []string{sp.BOOT, sp.KPIDS, sp.MEMFS, sp.LCSCHED, sp.BESCHED, sp.MSCHED, sp.UX, sp.S3, sp.DB, sp.MONGO, sp.REALM, sp.CHUNKD}
 
 // If initial root dir doesn't exist, create it.
 func (nd *Named) initfs() error {

@@ -22,8 +22,8 @@ func NewProcClnt(fsl *fslib.FsLib) (*ProcClnt, error) {
 
 	}
 	// If a schedd IP was specified for this proc, mount the RPC file directly.
-	if ep, ok := fsl.ProcEnv().GetScheddEndpoint(); ok {
-		pn := filepath.Join(sp.SCHEDD, fsl.ProcEnv().GetKernelID(), rpc.RPC)
+	if ep, ok := fsl.ProcEnv().GetMSchedEndpoint(); ok {
+		pn := filepath.Join(sp.MSCHED, fsl.ProcEnv().GetKernelID(), rpc.RPC)
 		db.DPrintf(db.PROCCLNT, "Mount[%v] %v as %v", ep, rpc.RPC, pn)
 		start := time.Now()
 		err := fsl.MountTree(ep, rpc.RPC, pn)
@@ -56,8 +56,8 @@ func NewProcClntInit(pid sp.Tpid, fsl *fslib.FsLib, program string) (*ProcClnt, 
 		return nil, err
 	}
 	// XXX needed?
-	db.DPrintf(db.PROCCLNT, "Mount %v as %v", sp.SCHEDDREL, sp.SCHEDDREL)
-	if err := fsl.NewRootMount(sp.SCHEDDREL, sp.SCHEDDREL); err != nil {
+	db.DPrintf(db.PROCCLNT, "Mount %v as %v", sp.MSCHEDREL, sp.MSCHEDREL)
+	if err := fsl.NewRootMount(sp.MSCHEDREL, sp.MSCHEDREL); err != nil {
 		db.DPrintf(db.ALWAYS, "Error mounting schedd err %v\n", err)
 		return nil, err
 	}
@@ -67,7 +67,7 @@ func NewProcClntInit(pid sp.Tpid, fsl *fslib.FsLib, program string) (*ProcClnt, 
 		return nil, err
 	}
 	clnt := newProcClnt(fsl, pid, true, sp.NOT_SET)
-	if err := clnt.MakeProcDir(pid, fsl.ProcEnv().ProcDir, false, proc.HSCHEDD); err != nil {
+	if err := clnt.MakeProcDir(pid, fsl.ProcEnv().ProcDir, false, proc.HMSCHED); err != nil {
 		// If the error is not ErrExists, bail out.
 		if !serr.IsErrCode(err, serr.TErrExists) {
 			debug.PrintStack()

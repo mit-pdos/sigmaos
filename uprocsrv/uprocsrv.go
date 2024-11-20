@@ -119,7 +119,7 @@ func RunUprocSrv(kernelId string, dialproxy bool, spproxydPID sp.Tpid) error {
 	}
 	ups.sc = sc
 	var ssrv *sigmasrv.SigmaSrv
-	pn := filepath.Join(sp.SCHEDD, kernelId, sp.UPROCDREL, pe.GetPID().String())
+	pn := filepath.Join(sp.MSCHED, kernelId, sp.UPROCDREL, pe.GetPID().String())
 	ssrv, err = sigmasrv.NewSigmaSrvClnt(pn, sc, &UprocRPCSrv{ups})
 	if err != nil {
 		db.DFatalf("Error sigmasrvclnt: %v", err)

@@ -15,7 +15,7 @@ message EnqueueRequest {
 }
 
 message EnqueueResponse {
-  string scheddID = 1;
+  string mSchedID = 1;
   ProcSeqno procSeqno = 2;
 }
 

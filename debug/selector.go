@@ -129,10 +129,10 @@ const (
 	KEYCLNT_ERR               = "KEYCLNT" + ERR
 	KEYD                      = "KEYD"
 	KEYD_ERR                  = "KEYD" + ERR
-	SCHEDD                    = "SCHEDD"
-	SCHEDD_ERR                = "SCHEDD" + ERR
-	SCHEDDCLNT                = "SCHEDDCLNT"
-	SCHEDDCLNT_ERR            = "SCHEDDCLNT" + ERR
+	MSCHED                    = "MSCHED"
+	MSCHED_ERR                = "MSCHED" + ERR
+	MSCHEDCLNT                = "MSCHEDCLNT"
+	MSCHEDCLNT_ERR            = "MSCHEDCLNT" + ERR
 	PROCMGR_ERR               = PROCMGR + ERR
 	PROCCACHE                 = "PROCCACHE"
 	PROCFS                    = "PROCFS"

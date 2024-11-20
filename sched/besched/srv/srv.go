@@ -140,7 +140,7 @@ func (be *BESched) addProc(p *proc.Proc, ch chan *proc.ProcSeqno) {
 
 func (be *BESched) replyToParent(pseqno *proc.ProcSeqno, p *proc.Proc, ch chan *proc.ProcSeqno, enqTS time.Time) {
 	db.DPrintf(db.SPAWN_LAT, "[%v] Internal beschedsrv Proc queueing time %v", p.GetPid(), time.Since(enqTS))
-	db.DPrintf(db.BESCHED, "replyToParent child is on kid %v", pseqno.GetScheddID())
+	db.DPrintf(db.BESCHED, "replyToParent child is on kid %v", pseqno.GetMSchedID())
 	ch <- pseqno
 }
 

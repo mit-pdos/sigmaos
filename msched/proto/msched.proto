@@ -2,9 +2,9 @@ syntax = "proto3";
 
 import "proc/proc.proto";
 
-option go_package = "sigmaos/schedsrv/proto";
+option go_package = "sigmaos/msched/proto";
 
-service Schedd {
+service MSched {
   rpc ForceRun(ForceRunRequest) returns (ForceRunResponse);
   rpc WaitStart(WaitRequest) returns (WaitResponse);
   rpc Started(NotifyRequest) returns (NotifyResponse);
@@ -14,7 +14,7 @@ service Schedd {
   rpc Evict(NotifyRequest) returns (NotifyResponse);
   rpc GetCPUShares(GetCPUSharesRequest) returns (GetCPUSharesResponse);
   rpc GetRunningProcs(GetRunningProcsRequest) returns (GetRunningProcsResponse);
-  rpc GetScheddStats(GetScheddStatsRequest) returns (GetScheddStatsResponse);
+  rpc GetMSchedStats(GetMSchedStatsRequest) returns (GetMSchedStatsResponse);
   rpc WarmCacheBin(WarmCacheBinRequest) returns (WarmCacheBinResponse);
 }
 
@@ -83,9 +83,9 @@ message RealmStats {
   int64 totalRan = 2; 
 }
 
-message GetScheddStatsRequest {
+message GetMSchedStatsRequest {
 }
 
-message GetScheddStatsResponse {
-  map<string, RealmStats> scheddStats = 1;
+message GetMSchedStatsResponse {
+  map<string, RealmStats> mSchedStats = 1;
 }

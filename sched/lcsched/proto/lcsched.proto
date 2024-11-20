@@ -6,14 +6,14 @@ option go_package = "sigmaos/sched/lcsched/proto";
 
 service LCSched {
   rpc Enqueue(EnqueueRequest) returns (EnqueueResponse);
-  rpc RegisterSchedd(RegisterScheddRequest) returns (RegisterScheddResponse);
+  rpc RegisterMSched(RegisterMSchedRequest) returns (RegisterMSchedResponse);
 }
 
-message RegisterScheddRequest {
+message RegisterMSchedRequest {
   string kernelID = 1;
   uint32 mcpuInt = 2;
   uint32 memInt = 3;
 }
 
-message RegisterScheddResponse {
+message RegisterMSchedResponse {
 }

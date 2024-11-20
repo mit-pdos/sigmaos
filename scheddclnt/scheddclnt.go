@@ -8,15 +8,15 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fslib"
+	"sigmaos/msched/proto"
 	"sigmaos/proc"
 	"sigmaos/rpcclnt"
 	"sigmaos/rpcdirclnt"
-	"sigmaos/schedsrv/proto"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmarpcchan"
 )
 
-type ScheddClnt struct {
+type MSchedClnt struct {
 	*fslib.FsLib
 	rpcdc *rpcdirclnt.RPCDirClnt
 	done  int32
@@ -26,33 +26,33 @@ type ScheddClnt struct {
 	rpcc     *rpcclnt.RPCClnt
 }
 
-func NewScheddClnt(fsl *fslib.FsLib, kernelID string) *ScheddClnt {
-	return &ScheddClnt{
+func NewMSchedClnt(fsl *fslib.FsLib, kernelID string) *MSchedClnt {
+	return &MSchedClnt{
 		FsLib:    fsl,
 		kernelID: kernelID,
-		rpcdc:    rpcdirclnt.NewRPCDirClnt(fsl, sp.SCHEDD, db.SCHEDDCLNT, db.SCHEDDCLNT_ERR),
+		rpcdc:    rpcdirclnt.NewRPCDirClnt(fsl, sp.MSCHED, db.MSCHEDCLNT, db.MSCHEDCLNT_ERR),
 	}
 }
 
-func (sdc *ScheddClnt) Nschedd() (int, error) {
+func (sdc *MSchedClnt) Nschedd() (int, error) {
 	return sdc.rpcdc.Nentry()
 }
 
-func (sdc *ScheddClnt) GetSchedds() ([]string, error) {
+func (sdc *MSchedClnt) GetMScheds() ([]string, error) {
 	return sdc.rpcdc.WaitTimedGetEntriesN(1)
 }
 
-func (sdc *ScheddClnt) UnregisterSrv(scheddID string) {
+func (sdc *MSchedClnt) UnregisterSrv(scheddID string) {
 	sdc.rpcdc.InvalidateEntry(scheddID)
 }
 
-func (sdc *ScheddClnt) Nprocs(procdir string) (int, error) {
+func (sdc *MSchedClnt) Nprocs(procdir string) (int, error) {
 	sts, err := sdc.GetDir(procdir)
 	if err != nil {
 		return 0, nil
 	}
 	// Only read the proc directory if absolutely necessary.
-	if db.WillBePrinted(db.SCHEDDCLNT) {
+	if db.WillBePrinted(db.MSCHEDCLNT) {
 		for _, st := range sts {
 			b, err := sdc.GetFile(filepath.Join(procdir, st.Name))
 			if err != nil { // the proc may not exist anymore
@@ -60,13 +60,13 @@ func (sdc *ScheddClnt) Nprocs(procdir string) (int, error) {
 			}
 			p := proc.NewEmptyProc()
 			p.Unmarshal(b)
-			db.DPrintf(db.SCHEDDCLNT, "%s: %v", procdir, p.GetProgram())
+			db.DPrintf(db.MSCHEDCLNT, "%s: %v", procdir, p.GetProgram())
 		}
 	}
 	return len(sts), nil
 }
 
-func (sdc *ScheddClnt) WarmUprocd(kernelID string, pid sp.Tpid, realm sp.Trealm, prog string, path []string, ptype proc.Ttype) error {
+func (sdc *MSchedClnt) WarmUprocd(kernelID string, pid sp.Tpid, realm sp.Trealm, prog string, path []string, ptype proc.Ttype) error {
 	rpcc, err := sdc.getRPCClnt(kernelID)
 	if err != nil {
 		return err
@@ -79,7 +79,7 @@ func (sdc *ScheddClnt) WarmUprocd(kernelID string, pid sp.Tpid, realm sp.Trealm,
 		ProcType:  int32(ptype),
 	}
 	res := &proto.WarmCacheBinResponse{}
-	if err := rpcc.RPC("Schedd.WarmUprocd", req, res); err != nil {
+	if err := rpcc.RPC("MSched.WarmUprocd", req, res); err != nil {
 		return err
 	}
 	if !res.OK {
@@ -92,25 +92,25 @@ func (sdc *ScheddClnt) WarmUprocd(kernelID string, pid sp.Tpid, realm sp.Trealm,
 // memAccountedFor should be false, unless this is a BE proc which the procqsrv
 // is pushing to schedd (the schedd asked for it, and accounted for its
 // memory).
-func (sdc *ScheddClnt) ForceRun(kernelID string, memAccountedFor bool, p *proc.Proc) error {
+func (sdc *MSchedClnt) ForceRun(kernelID string, memAccountedFor bool, p *proc.Proc) error {
 	start := time.Now()
 	rpcc, err := sdc.getRPCClnt(kernelID)
 	if err != nil {
 		return err
 	}
-	db.DPrintf(db.SPAWN_LAT, "[%v] GetScheddClnt time %v", p.GetPid(), time.Since(start))
+	db.DPrintf(db.SPAWN_LAT, "[%v] GetMSchedClnt time %v", p.GetPid(), time.Since(start))
 	req := &proto.ForceRunRequest{
 		ProcProto:       p.GetProto(),
 		MemAccountedFor: memAccountedFor,
 	}
 	res := &proto.ForceRunResponse{}
-	if err := rpcc.RPC("Schedd.ForceRun", req, res); err != nil {
+	if err := rpcc.RPC("MSched.ForceRun", req, res); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (sdc *ScheddClnt) Wait(method Tmethod, scheddID string, seqno *proc.ProcSeqno, pid sp.Tpid) (*proc.Status, error) {
+func (sdc *MSchedClnt) Wait(method Tmethod, scheddID string, seqno *proc.ProcSeqno, pid sp.Tpid) (*proc.Status, error) {
 	// RPC a schedd to wait.
 	rpcc, err := sdc.getRPCClnt(scheddID)
 	if err != nil {
@@ -121,13 +121,13 @@ func (sdc *ScheddClnt) Wait(method Tmethod, scheddID string, seqno *proc.ProcSeq
 		ProcSeqno: seqno,
 	}
 	res := &proto.WaitResponse{}
-	if err := rpcc.RPC("Schedd.Wait"+method.String(), req, res); err != nil {
+	if err := rpcc.RPC("MSched.Wait"+method.String(), req, res); err != nil {
 		return nil, err
 	}
 	return proc.NewStatusFromBytes(res.Status), nil
 }
 
-func (sdc *ScheddClnt) Notify(method Tmethod, kernelID string, pid sp.Tpid, status *proc.Status) error {
+func (sdc *MSchedClnt) Notify(method Tmethod, kernelID string, pid sp.Tpid, status *proc.Status) error {
 	start := time.Now()
 	// Get the RPC client for the local schedd
 	rpcc, err := sdc.getRPCClnt(kernelID)
@@ -147,7 +147,7 @@ func (sdc *ScheddClnt) Notify(method Tmethod, kernelID string, pid sp.Tpid, stat
 	}
 	res := &proto.NotifyResponse{}
 	start = time.Now()
-	if err := rpcc.RPC("Schedd."+method.Verb(), req, res); err != nil {
+	if err := rpcc.RPC("MSched."+method.Verb(), req, res); err != nil {
 		return err
 	}
 	if method == START {
@@ -156,7 +156,7 @@ func (sdc *ScheddClnt) Notify(method Tmethod, kernelID string, pid sp.Tpid, stat
 	return nil
 }
 
-func (sdc *ScheddClnt) GetRunningProcs(nsample int) (map[sp.Trealm][]*proc.Proc, error) {
+func (sdc *MSchedClnt) GetRunningProcs(nsample int) (map[sp.Trealm][]*proc.Proc, error) {
 	// map of realm -> proc
 	procs := make(map[sp.Trealm][]*proc.Proc, 0)
 	sampled := make(map[string]bool)
@@ -178,7 +178,7 @@ func (sdc *ScheddClnt) GetRunningProcs(nsample int) (map[sp.Trealm][]*proc.Proc,
 			db.DPrintf(db.ERROR, "Can't get clnt: %v", err)
 			return nil, err
 		}
-		if err := rpcc.RPC("Schedd.GetRunningProcs", req, res); err != nil {
+		if err := rpcc.RPC("MSched.GetRunningProcs", req, res); err != nil {
 			db.DPrintf(db.ERROR, "Err GetRunningProcs: %v", err)
 			return nil, err
 		}
@@ -195,37 +195,37 @@ func (sdc *ScheddClnt) GetRunningProcs(nsample int) (map[sp.Trealm][]*proc.Proc,
 	return procs, nil
 }
 
-func (sdc *ScheddClnt) ScheddStats() (int, []map[string]*proto.RealmStats, error) {
+func (sdc *MSchedClnt) MSchedStats() (int, []map[string]*proto.RealmStats, error) {
 	sds, err := sdc.rpcdc.GetEntries()
 	if err != nil {
 		return 0, nil, err
 	}
 	sdstats := make([]map[string]*proto.RealmStats, 0, len(sds))
 	for _, sd := range sds {
-		req := &proto.GetScheddStatsRequest{}
-		res := &proto.GetScheddStatsResponse{}
+		req := &proto.GetMSchedStatsRequest{}
+		res := &proto.GetMSchedStatsResponse{}
 		rpcc, err := sdc.getRPCClnt(sd)
 		if err != nil {
 			return 0, nil, err
 		}
-		if err := rpcc.RPC("Schedd.GetScheddStats", req, res); err != nil {
+		if err := rpcc.RPC("MSched.GetMSchedStats", req, res); err != nil {
 			return 0, nil, err
 		}
-		sdstats = append(sdstats, res.ScheddStats)
+		sdstats = append(sdstats, res.MSchedStats)
 	}
 	return len(sds), sdstats, err
 }
 
-func (sdc *ScheddClnt) Done() {
+func (sdc *MSchedClnt) Done() {
 	atomic.StoreInt32(&sdc.done, 1)
 }
 
-func (sdc *ScheddClnt) MonitorScheddStats(realm sp.Trealm, period time.Duration) {
+func (sdc *MSchedClnt) MonitorMSchedStats(realm sp.Trealm, period time.Duration) {
 	go func() {
 		for atomic.LoadInt32(&sdc.done) == 0 {
-			n, stats, err := sdc.ScheddStats()
+			n, stats, err := sdc.MSchedStats()
 			if err != nil && atomic.LoadInt32(&sdc.done) == 0 {
-				db.DPrintf(db.ALWAYS, "ScheddStats err %v", err)
+				db.DPrintf(db.ALWAYS, "MSchedStats err %v", err)
 				return
 			}
 			r := realm.String()
@@ -241,13 +241,13 @@ func (sdc *ScheddClnt) MonitorScheddStats(realm sp.Trealm, period time.Duration)
 	}()
 }
 
-func (sdc *ScheddClnt) GetCPUUtil(realm sp.Trealm) (float64, error) {
+func (sdc *MSchedClnt) GetCPUUtil(realm sp.Trealm) (float64, error) {
 	// Total CPU utilization by this sceddclnt's realm.
 	var total float64 = 0
 	// Get list of schedds
 	sds, err := sdc.rpcdc.GetEntries()
 	if err != nil {
-		db.DPrintf(db.SCHEDDCLNT_ERR, "Error getSchedds: %v", err)
+		db.DPrintf(db.MSCHEDCLNT_ERR, "Error getMScheds: %v", err)
 		return 0, err
 	}
 	for _, sd := range sds {
@@ -256,42 +256,42 @@ func (sdc *ScheddClnt) GetCPUUtil(realm sp.Trealm) (float64, error) {
 		res := &proto.GetCPUUtilResponse{}
 		sclnt, err := sdc.getRPCClnt(sd)
 		if err != nil {
-			db.DPrintf(db.SCHEDDCLNT_ERR, "Error GetCPUUtil GetScheddClnt: %v", err)
+			db.DPrintf(db.MSCHEDCLNT_ERR, "Error GetCPUUtil GetMSchedClnt: %v", err)
 			return 0, err
 		}
-		err = sclnt.RPC("Schedd.GetCPUUtil", req, res)
+		err = sclnt.RPC("MSched.GetCPUUtil", req, res)
 		if err != nil {
-			db.DPrintf(db.SCHEDDCLNT_ERR, "Error GetCPUUtil: %v", err)
+			db.DPrintf(db.MSCHEDCLNT_ERR, "Error GetCPUUtil: %v", err)
 			return 0, err
 		}
-		db.DPrintf(db.CPU_UTIL, "Schedd %v CPU util %v", sd, res.Util)
+		db.DPrintf(db.CPU_UTIL, "MSched %v CPU util %v", sd, res.Util)
 		total += res.Util
 	}
 	return total, nil
 }
 
-func (sdc *ScheddClnt) StopWatching() {
+func (sdc *MSchedClnt) StopWatching() {
 	sdc.rpcdc.StopWatching()
 }
 
 // Get the RPC client for my kernel's schedd
-func (sdc *ScheddClnt) getRPCClntMySchedd() (*rpcclnt.RPCClnt, error) {
+func (sdc *MSchedClnt) getRPCClntMyMSched() (*rpcclnt.RPCClnt, error) {
 	if sdc.rpcc == nil {
 		start := time.Now()
-		pn := filepath.Join(sp.SCHEDD, sdc.kernelID)
+		pn := filepath.Join(sp.MSCHED, sdc.kernelID)
 		rpcc, err := sigmarpcchan.NewSigmaRPCClnt([]*fslib.FsLib{sdc.FsLib}, pn)
 		if err != nil {
 			return nil, err
 		}
-		db.DPrintf(db.TEST, "getRPCClntMySchedd %v time %v", sdc.kernelID, time.Since(start))
+		db.DPrintf(db.TEST, "getRPCClntMyMSched %v time %v", sdc.kernelID, time.Since(start))
 		sdc.rpcc = rpcc
 	}
 	return sdc.rpcc, nil
 }
 
-func (sdc *ScheddClnt) getRPCClnt(kernelID string) (*rpcclnt.RPCClnt, error) {
+func (sdc *MSchedClnt) getRPCClnt(kernelID string) (*rpcclnt.RPCClnt, error) {
 	if kernelID == sdc.kernelID {
-		return sdc.getRPCClntMySchedd()
+		return sdc.getRPCClntMyMSched()
 	}
 	rpcc, err := sdc.rpcdc.GetClnt(kernelID)
 	if err != nil {

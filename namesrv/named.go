@@ -11,9 +11,9 @@ import (
 
 	"sigmaos/crash"
 	db "sigmaos/debug"
+	dialproxyclnt "sigmaos/dialproxy/clnt"
 	"sigmaos/namesrv/fsetcd"
 	"sigmaos/namesrv/leaderetcd"
-	dialproxyclnt "sigmaos/dialproxy/clnt"
 	"sigmaos/path"
 	"sigmaos/proc"
 	"sigmaos/protsrv"
@@ -106,7 +106,7 @@ func Run(args []string) error {
 		// scanned by schedd-/procq-/lcsched- clnts as soon as the procclnt is
 		// created, but this named won't have posted its endpoint in the namespace
 		// yet, so root named resolution will fail.
-		if err := sc.MountTree(rootEP, sp.SCHEDDREL, sp.SCHEDD); err != nil {
+		if err := sc.MountTree(rootEP, sp.MSCHEDREL, sp.MSCHED); err != nil {
 			db.DFatalf("Err MountTree schedd: ep %v err %v", rootEP, err)
 		}
 		if err := sc.MountTree(rootEP, sp.BESCHEDREL, sp.BESCHED); err != nil {
@@ -302,7 +302,7 @@ func (nd *Named) watchLeased() {
 }
 
 // XXX same as initRootDir?
-var warmRootDir = []string{sp.BOOT, sp.KPIDS, sp.MEMFS, sp.LCSCHED, sp.BESCHED, sp.SCHEDD, sp.UX, sp.S3, sp.DB, sp.MONGO, sp.REALM, sp.CHUNKD}
+var warmRootDir = []string{sp.BOOT, sp.KPIDS, sp.MEMFS, sp.LCSCHED, sp.BESCHED, sp.MSCHED, sp.UX, sp.S3, sp.DB, sp.MONGO, sp.REALM, sp.CHUNKD}
 
 func (nd *Named) warmCache() error {
 	for _, n := range warmRootDir {

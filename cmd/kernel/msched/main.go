@@ -5,7 +5,7 @@ import (
 	"strconv"
 
 	db "sigmaos/debug"
-	"sigmaos/schedsrv"
+	"sigmaos/msched/srv"
 )
 
 func main() {
@@ -16,5 +16,5 @@ func main() {
 	if err != nil {
 		db.DFatalf("Cannot parse reserve cpu unit \"%v\": %v", os.Args[2], err)
 	}
-	schedsrv.RunSchedd(os.Args[1], uint(reserveMcpu))
+	srv.RunMSched(os.Args[1], uint(reserveMcpu))
 }

@@ -10,14 +10,14 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-func (clnt *ProcClnt) notify(method scheddclnt.Tmethod, pid sp.Tpid, kernelID string, semName string, how proc.Thow, status *proc.Status, skipSchedd bool) error {
+func (clnt *ProcClnt) notify(method scheddclnt.Tmethod, pid sp.Tpid, kernelID string, semName string, how proc.Thow, status *proc.Status, skipMSched bool) error {
 	db.DPrintf(db.PROCCLNT, "%v %v", method, pid)
 	defer db.DPrintf(db.PROCCLNT, "%v done %v", method, pid)
 
-	if how == proc.HSCHEDD {
-		if skipSchedd {
+	if how == proc.HMSCHED {
+		if skipMSched {
 			// Skip notifying via schedd. Currently, this only happens when the proc
-			// crashes and schedd calls ExitedCrashed on behalf of the proc.  Schedd
+			// crashes and schedd calls ExitedCrashed on behalf of the proc.  MSched
 			// will take care of calling Exited locally, so no need to RPC (itself).
 			//
 			// Do nothing

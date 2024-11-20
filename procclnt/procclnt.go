@@ -29,7 +29,7 @@ type ProcClnt struct {
 	pid            sp.Tpid
 	isExited       sp.Tpid
 	procDirCreated bool
-	scheddclnt     *scheddclnt.ScheddClnt
+	scheddclnt     *scheddclnt.MSchedClnt
 	beschedclnt    *beschedclnt.BESchedClnt
 	lcschedclnt    *lcschedclnt.LCSchedClnt
 	cs             *ChildState
@@ -41,7 +41,7 @@ func newProcClnt(fsl *fslib.FsLib, pid sp.Tpid, procDirCreated bool, kernelID st
 		FsLib:          fsl,
 		pid:            pid,
 		procDirCreated: procDirCreated,
-		scheddclnt:     scheddclnt.NewScheddClnt(fsl, kernelID),
+		scheddclnt:     scheddclnt.NewMSchedClnt(fsl, kernelID),
 		beschedclnt:    beschedclnt.NewBESchedClnt(fsl),
 		lcschedclnt:    lcschedclnt.NewLCSchedClnt(fsl),
 		cs:             newChildState(),
@@ -82,7 +82,7 @@ func (clnt *ProcClnt) Spawn(p *proc.Proc) error {
 		}
 		p.SetNamedEndpoint(ep)
 	}
-	return clnt.spawn(sp.LOCAL, proc.HSCHEDD, p)
+	return clnt.spawn(sp.LOCAL, proc.HMSCHED, p)
 }
 
 // Spawn a proc on kernelId.
@@ -112,13 +112,13 @@ func (clnt *ProcClnt) spawn(kernelId string, how proc.Thow, p *proc.Proc) error 
 	p.SetSpawnTime(time.Now())
 
 	// Optionally spawn the proc through schedd.
-	if how == proc.HSCHEDD {
+	if how == proc.HMSCHED {
 		clnt.cs.Spawned(p.GetPid())
 		// Transparently spawn in a background thread.
 		go func() {
 			db.DPrintf(db.PROCCLNT, "pre spawnRetry %v %v", kernelId, p)
 			pseqno, err := clnt.spawnRetry(kernelId, p)
-			db.DPrintf(db.PROCCLNT, "enqueued on besched %v and spawned on schedd %v err %v proc %v", pseqno.GetProcqID(), pseqno.GetScheddID(), err, p)
+			db.DPrintf(db.PROCCLNT, "enqueued on besched %v and spawned on schedd %v err %v proc %v", pseqno.GetProcqID(), pseqno.GetMSchedID(), err, p)
 			clnt.cs.Started(p.GetPid(), pseqno, err)
 			if err != nil {
 				clnt.cleanupError(p.GetPid(), p.GetParentDir(), fmt.Errorf("Spawn error %v", err))
@@ -144,10 +144,10 @@ func (clnt *ProcClnt) spawn(kernelId string, how proc.Thow, p *proc.Proc) error 
 	return nil
 }
 
-func (clnt *ProcClnt) forceRunViaSchedd(kernelID string, p *proc.Proc) error {
+func (clnt *ProcClnt) forceRunViaMSched(kernelID string, p *proc.Proc) error {
 	err := clnt.scheddclnt.ForceRun(kernelID, false, p)
 	if err != nil {
-		db.DPrintf(db.PROCCLNT_ERR, "forceRunViaSchedd: getScheddClnt %v err %v\n", kernelID, err)
+		db.DPrintf(db.PROCCLNT_ERR, "forceRunViaMSched: getMSchedClnt %v err %v\n", kernelID, err)
 		if serr.IsErrCode(err, serr.TErrUnreachable) {
 			db.DPrintf(db.PROCCLNT_ERR, "Unregister %v", kernelID)
 			clnt.scheddclnt.UnregisterSrv(kernelID)
@@ -181,7 +181,7 @@ func (clnt *ProcClnt) spawnRetry(kernelId string, p *proc.Proc) (*proc.ProcSeqno
 		if p.IsPrivileged() {
 			// Privileged procs are force-run on the schedd specified by kernelID in
 			// order to make sure they end up on the correct scheddd
-			err = clnt.forceRunViaSchedd(kernelId, p)
+			err = clnt.forceRunViaMSched(kernelId, p)
 			pseqno = proc.NewProcSeqno(sp.NOT_SET, kernelId, 0, 0)
 		} else {
 			if p.GetType() == proc.T_BE {
@@ -191,17 +191,17 @@ func (clnt *ProcClnt) spawnRetry(kernelId string, p *proc.Proc) (*proc.ProcSeqno
 				if err == nil {
 					db.DPrintf(db.PROCCLNT, "spawn: SetBinKernelId proc %v seqno %v", p.GetProgram(), pseqno)
 					start := time.Now()
-					clnt.bins.SetBinKernelID(p.GetProgram(), pseqno.GetScheddID())
+					clnt.bins.SetBinKernelID(p.GetProgram(), pseqno.GetMSchedID())
 					db.DPrintf(db.SPAWN_LAT, "[%v] time SetBinKernelID: %v", p.GetPid(), time.Since(start))
-					p.SetKernelID(pseqno.GetScheddID(), false)
+					p.SetKernelID(pseqno.GetMSchedID(), false)
 				} else if serr.IsErrorUnavailable(err) {
 					clnt.bins.DelBinKernelID(p.GetProgram(), scheddID)
 				}
 			} else {
 				// LC Non-kernel procs are enqueued via the besched.
-				var spawnedScheddID string
-				spawnedScheddID, err = clnt.enqueueViaLCSched(p)
-				pseqno = proc.NewProcSeqno(sp.NOT_SET, spawnedScheddID, 0, 0)
+				var spawnedMSchedID string
+				spawnedMSchedID, err = clnt.enqueueViaLCSched(p)
+				pseqno = proc.NewProcSeqno(sp.NOT_SET, spawnedMSchedID, 0, 0)
 			}
 		}
 		// If spawn attempt resulted in an error, check if it was due to the
@@ -232,8 +232,8 @@ func (clnt *ProcClnt) waitStart(pid sp.Tpid, how proc.Thow) error {
 	if err != nil {
 		return fmt.Errorf("Unknown kernel ID %v", err)
 	}
-	db.DPrintf(db.PROCCLNT, "WaitStart %v got kid %v", pid, pseqno.GetScheddID())
-	_, err = clnt.wait(scheddclnt.START, pid, pseqno.GetScheddID(), pseqno, proc.START_SEM, how)
+	db.DPrintf(db.PROCCLNT, "WaitStart %v got kid %v", pid, pseqno.GetMSchedID())
+	_, err = clnt.wait(scheddclnt.START, pid, pseqno.GetMSchedID(), pseqno, proc.START_SEM, how)
 	if err != nil {
 		db.DPrintf(db.PROCCLNT_ERR, "Err WaitStart %v %v", pid, err)
 		return fmt.Errorf("WaitStart error %v", err)
@@ -244,7 +244,7 @@ func (clnt *ProcClnt) waitStart(pid sp.Tpid, how proc.Thow) error {
 // Parent calls WaitStart() to wait until the child proc has
 // started. If the proc doesn't exist, return immediately.
 func (clnt *ProcClnt) WaitStart(pid sp.Tpid) error {
-	return clnt.waitStart(pid, proc.HSCHEDD)
+	return clnt.waitStart(pid, proc.HMSCHED)
 }
 
 // Parent calls WaitStart() to wait until the child proc has
@@ -265,7 +265,7 @@ func (clnt *ProcClnt) waitExit(pid sp.Tpid, how proc.Thow) (*proc.Status, error)
 		return nil, err
 	}
 	// Wait for proc to exit
-	st, err := clnt.wait(scheddclnt.EXIT, pid, pseqno.GetScheddID(), pseqno, proc.EXIT_SEM, how)
+	st, err := clnt.wait(scheddclnt.EXIT, pid, pseqno.GetMSchedID(), pseqno, proc.EXIT_SEM, how)
 	// Mark proc as exited in local state
 	clnt.cs.Exited(pid, st)
 	if err != nil {
@@ -280,7 +280,7 @@ func (clnt *ProcClnt) waitExit(pid sp.Tpid, how proc.Thow) (*proc.Status, error)
 // the proc doesn't exist, return immediately.  After collecting
 // return status, parent removes the child from its list of children.
 func (clnt *ProcClnt) WaitExit(pid sp.Tpid) (*proc.Status, error) {
-	return clnt.waitExit(pid, proc.HSCHEDD)
+	return clnt.waitExit(pid, proc.HMSCHED)
 }
 
 // Parent calls WaitExit() to wait until child proc has exited. If
@@ -364,7 +364,7 @@ func (clnt *ProcClnt) ExitedCrashed(pid sp.Tpid, procdir string, parentdir strin
 	}
 	// If proc ran, but crashed before calling Started, the parent may block indefinitely. Stop this from happening by calling semStart.Up()
 	semPath := filepath.Join(parentdir, proc.START_SEM)
-	if how != proc.HSCHEDD {
+	if how != proc.HMSCHED {
 		kprocDir := proc.KProcDir(pid)
 		semPath = filepath.Join(kprocDir, proc.START_SEM)
 	}
@@ -384,17 +384,17 @@ func (clnt *ProcClnt) evict(pid sp.Tpid, how proc.Thow) error {
 		db.DPrintf(db.ALWAYS, "Error Evict can't get kernel ID for proc: %v", err)
 		return err
 	}
-	return clnt.evictAt(pid, pseqno.GetScheddID(), how)
+	return clnt.evictAt(pid, pseqno.GetMSchedID(), how)
 }
 
 // Notifies a proc that it will be evicted using Evict. Called by parent.
 func (clnt *ProcClnt) Evict(pid sp.Tpid) error {
-	return clnt.evict(pid, proc.HSCHEDD)
+	return clnt.evict(pid, proc.HMSCHED)
 }
 
 // For use by realmd when evicting procs for fairness
 func (clnt *ProcClnt) EvictRealmProc(pid sp.Tpid, scheddID string) error {
-	return clnt.evictAt(pid, scheddID, proc.HSCHEDD)
+	return clnt.evictAt(pid, scheddID, proc.HMSCHED)
 }
 
 func (clnt *ProcClnt) EvictKernelProc(pid sp.Tpid, how proc.Thow) error {

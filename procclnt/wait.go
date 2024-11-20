@@ -17,13 +17,13 @@ func (clnt *ProcClnt) wait(method scheddclnt.Tmethod, pid sp.Tpid, scheddID stri
 
 	var status *proc.Status
 	// If spawned via schedd, wait via RPC.
-	if how == proc.HSCHEDD {
+	if how == proc.HMSCHED {
 		// RPC the schedd this proc was spawned on to wait.
 		db.DPrintf(db.PROCCLNT, "Wait%v %v RPC", method, pid)
 		var err error
 		status, err = clnt.scheddclnt.Wait(method, scheddID, pseqno, pid)
 		if err != nil {
-			db.DPrintf(db.PROCCLNT_ERR, "Error Schedd Wait%v: %v", method, err)
+			db.DPrintf(db.PROCCLNT_ERR, "Error MSched Wait%v: %v", method, err)
 			return nil, err
 		}
 	} else {

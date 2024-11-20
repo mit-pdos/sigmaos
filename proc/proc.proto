@@ -8,7 +8,7 @@ message ProcSeqno {
   uint64 epoch = 1;
   uint64 seqno = 2;
   string procqID = 3;
-  string scheddID = 4;
+  string mSchedID = 4;
 }
 
 message ProcEnvProto {
@@ -33,7 +33,7 @@ message ProcEnvProto {
   int32 howInt = 20;
   google.protobuf.Timestamp spawnTimePB = 21;
   string strace = 22;
-  TendpointProto scheddEndpointProto = 23;
+  TendpointProto mSchedEndpointProto = 23;
   TendpointProto namedEndpointProto = 24;
   bool useSPProxy = 25;
   bool useDialProxy = 26;

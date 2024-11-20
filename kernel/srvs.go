@@ -59,8 +59,8 @@ func (k *Kernel) BootSub(s string, args []string, p *Param, realm sp.Trealm) (sp
 		ss, err = k.bootLCSched()
 	case sp.BESCHEDREL:
 		ss, err = k.bootBESched()
-	case sp.SCHEDDREL:
-		ss, err = k.bootSchedd()
+	case sp.MSCHEDREL:
+		ss, err = k.bootMSched()
 	case sp.REALMDREL:
 		ss, err = k.bootRealmd()
 	case sp.UPROCDREL:
@@ -140,27 +140,27 @@ func (k *Kernel) bootKNamed(pe *proc.ProcEnv, init bool) error {
 }
 
 func (k *Kernel) bootRealmd() (Subsystem, error) {
-	return k.bootSubsystem("realmd", []string{strconv.FormatBool(k.Param.DialProxy)}, sp.ROOTREALM, proc.HSCHEDD, 0)
+	return k.bootSubsystem("realmd", []string{strconv.FormatBool(k.Param.DialProxy)}, sp.ROOTREALM, proc.HMSCHED, 0)
 }
 
 func (k *Kernel) bootUxd(realm sp.Trealm) (Subsystem, error) {
-	return k.bootSubsystem("fsuxd", []string{sp.SIGMAHOME}, realm, proc.HSCHEDD, 0)
+	return k.bootSubsystem("fsuxd", []string{sp.SIGMAHOME}, realm, proc.HMSCHED, 0)
 }
 
 func (k *Kernel) bootS3d(realm sp.Trealm) (Subsystem, error) {
-	return k.bootSubsystem("fss3d", []string{}, realm, proc.HSCHEDD, 0)
+	return k.bootSubsystem("fss3d", []string{}, realm, proc.HMSCHED, 0)
 }
 
 func (k *Kernel) bootChunkd(realm sp.Trealm) (Subsystem, error) {
-	return k.bootSubsystem("chunkd", []string{k.Param.KernelID}, realm, proc.HSCHEDD, 0)
+	return k.bootSubsystem("chunkd", []string{k.Param.KernelID}, realm, proc.HMSCHED, 0)
 }
 
 func (k *Kernel) bootDbd(hostip string) (Subsystem, error) {
-	return k.bootSubsystem("dbd", []string{hostip}, sp.ROOTREALM, proc.HSCHEDD, 0)
+	return k.bootSubsystem("dbd", []string{hostip}, sp.ROOTREALM, proc.HMSCHED, 0)
 }
 
 func (k *Kernel) bootMongod(hostip string) (Subsystem, error) {
-	return k.bootSubsystem("mongod", []string{hostip}, sp.ROOTREALM, proc.HSCHEDD, 1000)
+	return k.bootSubsystem("mongod", []string{hostip}, sp.ROOTREALM, proc.HMSCHED, 1000)
 }
 
 func (k *Kernel) bootLCSched() (Subsystem, error) {
@@ -170,12 +170,12 @@ func (k *Kernel) bootLCSched() (Subsystem, error) {
 func (k *Kernel) bootBESched() (Subsystem, error) {
 	return k.bootSubsystem("besched", []string{}, sp.ROOTREALM, proc.HLINUX, 0)
 }
-func (k *Kernel) bootSchedd() (Subsystem, error) {
-	return k.bootSubsystem("schedd", []string{k.Param.KernelID, k.Param.ReserveMcpu}, sp.ROOTREALM, proc.HLINUX, 0)
+func (k *Kernel) bootMSched() (Subsystem, error) {
+	return k.bootSubsystem("msched", []string{k.Param.KernelID, k.Param.ReserveMcpu}, sp.ROOTREALM, proc.HLINUX, 0)
 }
 
 func (k *Kernel) bootNamed() (Subsystem, error) {
-	return k.bootSubsystem("named", []string{sp.ROOTREALM.String(), "0"}, sp.ROOTREALM, proc.HSCHEDD, 0)
+	return k.bootSubsystem("named", []string{sp.ROOTREALM.String(), "0"}, sp.ROOTREALM, proc.HMSCHED, 0)
 }
 
 func (k *Kernel) bootSPProxyd() (Subsystem, error) {

@@ -1,4 +1,4 @@
-package schedsrv
+package srv
 
 import (
 	"fmt"
@@ -45,7 +45,7 @@ func (pc *ProcqSession) AdvanceEpoch() {
 
 	// Advance epoch
 	pc.epoch++
-	db.DPrintf(db.SCHEDD, "AdvanceEpoch(%v) sess with procq %v", pc.epoch, pc.procqID)
+	db.DPrintf(db.MSCHED, "AdvanceEpoch(%v) sess with procq %v", pc.epoch, pc.procqID)
 	// Reset seqnos
 	pc.next = 0
 	pc.got = 0
@@ -57,7 +57,7 @@ func (pc *ProcqSession) Got(pseqno *proc.ProcSeqno) {
 	pc.Lock()
 	defer pc.Unlock()
 
-	db.DPrintf(db.SCHEDD, "ProcqSession got %v", pseqno)
+	db.DPrintf(db.MSCHED, "ProcqSession got %v", pseqno)
 
 	// Check if there was a change of epoch
 	if pseqno.GetEpoch() > pc.epoch {
@@ -79,8 +79,8 @@ func (pc *ProcqSession) WaitUntilGot(pseqno *proc.ProcSeqno) error {
 	pc.Lock()
 	defer pc.Unlock()
 
-	db.DPrintf(db.SCHEDD, "WaitUntilGot %v", pseqno)
-	defer db.DPrintf(db.SCHEDD, "WaitUntilGot done %v", pseqno)
+	db.DPrintf(db.MSCHED, "WaitUntilGot %v", pseqno)
+	defer db.DPrintf(db.MSCHED, "WaitUntilGot done %v", pseqno)
 
 	// Wait while the epoch has not changed, and the awaited sequence number has
 	// not been received

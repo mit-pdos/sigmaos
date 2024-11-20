@@ -12,12 +12,12 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fslib"
-	"sigmaos/fttasks"
+	"sigmaos/fttask"
 	"sigmaos/proc"
 )
 
 type FtTaskMgr struct {
-	*fttasks.FtTasks
+	*fttask.FtTasks
 	proc.ProcAPI
 	ntask atomic.Int32
 }
@@ -32,7 +32,7 @@ type Tresult struct {
 type Tnew func() interface{}
 type TmkProc func(n string, i interface{}) *proc.Proc
 
-func NewTaskMgr(pclnt proc.ProcAPI, ft *fttasks.FtTasks) (*FtTaskMgr, error) {
+func NewTaskMgr(pclnt proc.ProcAPI, ft *fttask.FtTasks) (*FtTaskMgr, error) {
 	if _, err := ft.RecoverTasks(); err != nil {
 		return nil, err
 	}
@@ -73,7 +73,7 @@ func (ftm *FtTaskMgr) StartTasks(ts []string, ch chan Tresult, new Tnew, mkProc 
 	var r error
 	stop := false
 	for _, t := range ts {
-		if t == fttasks.STOP {
+		if t == fttask.STOP {
 			db.DPrintf(db.FTTASKMGR, "StartTasks stop %v", t)
 			stop = true
 			continue

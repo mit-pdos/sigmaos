@@ -12,7 +12,7 @@ import (
 
 	"sigmaos/crash"
 	db "sigmaos/debug"
-	"sigmaos/fttasks"
+	"sigmaos/fttask"
 	"sigmaos/leaderclnt"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
@@ -44,8 +44,8 @@ const (
 
 type Coord struct {
 	*sigmaclnt.SigmaClnt
-	mft             *fttasks.FtTasks
-	rft             *fttasks.FtTasks
+	mft             *fttask.FtTasks
+	rft             *fttask.FtTasks
 	jobRoot         string
 	job             string
 	nmaptask        int
@@ -141,11 +141,11 @@ func NewCoord(args []string) (*Coord, error) {
 	}
 	c.intOutdir = string(b)
 
-	c.mft, err = fttasks.NewFtTasks(c.FsLib, filepath.Dir(JobDir(c.jobRoot, c.job)), filepath.Join(c.job, "/mtasks"))
+	c.mft, err = fttask.NewFtTasks(c.FsLib, filepath.Dir(JobDir(c.jobRoot, c.job)), filepath.Join(c.job, "/mtasks"))
 	if err != nil {
 		db.DFatalf("NewFtTasks mtasks %v", err)
 	}
-	c.rft, err = fttasks.NewFtTasks(c.FsLib, filepath.Dir(JobDir(c.jobRoot, c.job)), filepath.Join(c.job, "/rtasks"))
+	c.rft, err = fttask.NewFtTasks(c.FsLib, filepath.Dir(JobDir(c.jobRoot, c.job)), filepath.Join(c.job, "/rtasks"))
 	if err != nil {
 		db.DFatalf("NewFtTasks rtasks %v", err)
 	}
@@ -226,7 +226,7 @@ type Tresult struct {
 	res *Result
 }
 
-func (c *Coord) waitForTask(ft *fttasks.FtTasks, start time.Time, ch chan Tresult, p *proc.Proc, t string) {
+func (c *Coord) waitForTask(ft *fttask.FtTasks, start time.Time, ch chan Tresult, p *proc.Proc, t string) {
 	// Wait for the task to exit.
 	status, err := c.WaitExit(p.GetPid())
 	// Record end time.
@@ -270,7 +270,7 @@ func (c *Coord) waitForTask(ft *fttasks.FtTasks, start time.Time, ch chan Tresul
 	}
 }
 
-func (c *Coord) runTasks(ft *fttasks.FtTasks, ch chan Tresult, taskNames []string, f NewProc) {
+func (c *Coord) runTasks(ft *fttask.FtTasks, ch chan Tresult, taskNames []string, f NewProc) {
 	db.DPrintf(db.MR, "runTasks %v", taskNames)
 	for _, tn := range taskNames {
 		proc, err := f(tn)
@@ -295,7 +295,7 @@ func newStringSlice(data []interface{}) []string {
 	return s
 }
 
-func (c *Coord) startTasks(ft *fttasks.FtTasks, ch chan Tresult, f NewProc) int {
+func (c *Coord) startTasks(ft *fttask.FtTasks, ch chan Tresult, f NewProc) int {
 	start := time.Now()
 	tns, err := ft.AcquireTasks()
 	if err != nil {

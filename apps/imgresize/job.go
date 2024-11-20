@@ -7,7 +7,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fslib"
-	"sigmaos/fttaskmgr"
+	fttaskmgr "sigmaos/fttask/mgr"
 	"sigmaos/groupmgr"
 	"sigmaos/proc"
 	rd "sigmaos/util/rand"

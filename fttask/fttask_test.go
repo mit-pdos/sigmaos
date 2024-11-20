@@ -1,4 +1,4 @@
-package fttasks_test
+package fttask_test
 
 import (
 	"testing"
@@ -6,10 +6,10 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	db "sigmaos/debug"
-	"sigmaos/fttasks"
+	"sigmaos/fttask"
 	"sigmaos/mr"
-	rd "sigmaos/util/rand"
 	"sigmaos/test"
+	rd "sigmaos/util/rand"
 )
 
 const (
@@ -22,7 +22,7 @@ func TestCompile(t *testing.T) {
 type Tstate struct {
 	job string
 	*test.Tstate
-	ft *fttasks.FtTasks
+	ft *fttask.FtTasks
 }
 
 func newTstate(t *testing.T) (*Tstate, error) {
@@ -31,7 +31,7 @@ func newTstate(t *testing.T) (*Tstate, error) {
 		return nil, err1
 	}
 	ts := &Tstate{Tstate: ts1, job: rd.String(4)}
-	ft, err := fttasks.MkFtTasks(ts.SigmaClnt.FsLib, TASKS, ts.job)
+	ft, err := fttask.MkFtTasks(ts.SigmaClnt.FsLib, TASKS, ts.job)
 	if !assert.Nil(ts.T, err) {
 		return nil, err
 	}

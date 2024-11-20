@@ -8,8 +8,8 @@ import (
 
 	"sigmaos/crash"
 	db "sigmaos/debug"
-	"sigmaos/fttaskmgr"
-	"sigmaos/fttasks"
+	fttaskmgr "sigmaos/fttask/mgr"
+	"sigmaos/fttask"
 	"sigmaos/leaderclnt"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
@@ -18,7 +18,7 @@ import (
 
 type ImgSrv struct {
 	*sigmaclnt.SigmaClnt
-	ft         *fttasks.FtTasks
+	ft         *fttask.FtTasks
 	job        string
 	nrounds    int
 	workerMcpu proc.Tmcpu
@@ -46,7 +46,7 @@ func NewImgSrv(args []string) (*ImgSrv, error) {
 		return nil, fmt.Errorf("NewImgSrv: error parse crash %v", err)
 	}
 	imgd.crash = int64(crashing)
-	imgd.ft, err = fttasks.NewFtTasks(sc.FsLib, IMG, imgd.job)
+	imgd.ft, err = fttask.NewFtTasks(sc.FsLib, IMG, imgd.job)
 	if err != nil {
 		return nil, fmt.Errorf("NewImgSrv: NewFtTasks %v", err)
 	}

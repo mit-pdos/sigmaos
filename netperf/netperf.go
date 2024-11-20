@@ -11,7 +11,7 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-func SrvDialNetProxy(started chan bool, ntrial int, npc *dialproxyclnt.DialProxyClnt, addr *sp.Taddr, epType sp.TTendpoint) error {
+func SrvDialDialProxy(started chan bool, ntrial int, npc *dialproxyclnt.DialProxyClnt, addr *sp.Taddr, epType sp.TTendpoint) error {
 	_, l, err := npc.Listen(epType, addr)
 	if err != nil {
 		return err
@@ -31,7 +31,7 @@ func SrvDialNetProxy(started chan bool, ntrial int, npc *dialproxyclnt.DialProxy
 	return nil
 }
 
-func ClntDialNetProxy(ntrial int, npc *dialproxyclnt.DialProxyClnt, ep *sp.Tendpoint) (string, error) {
+func ClntDialDialProxy(ntrial int, npc *dialproxyclnt.DialProxyClnt, ep *sp.Tendpoint) (string, error) {
 	db.DPrintf(db.TEST, "Client start dialing")
 	lat := make([]float64, 0, ntrial)
 	for i := 0; i < ntrial; i++ {

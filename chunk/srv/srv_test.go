@@ -8,8 +8,8 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"sigmaos/chunk"
+	chunksrv "sigmaos/chunk/srv"
 	"sigmaos/chunkclnt"
-	"sigmaos/chunksrv"
 	db "sigmaos/debug"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"

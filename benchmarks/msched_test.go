@@ -17,7 +17,7 @@ import (
 	"sigmaos/test"
 )
 
-type scheddFn func(sc *sigmaclnt.SigmaClnt, pid sp.Tpid, kernelpref []string) time.Duration
+type mschedFn func(sc *sigmaclnt.SigmaClnt, pid sp.Tpid, kernelpref []string) time.Duration
 type kernelPrefFn func() []string
 
 type MSchedJobInstance struct {
@@ -27,7 +27,7 @@ type MSchedJobInstance struct {
 	maxrps    []int
 	ready     chan bool
 	progname  string
-	spawnFn   scheddFn
+	spawnFn   mschedFn
 	kpfn      kernelPrefFn
 	kidx      atomic.Int64
 	clnts     []*sigmaclnt.SigmaClnt
@@ -36,7 +36,7 @@ type MSchedJobInstance struct {
 	*test.RealmTstate
 }
 
-func NewMSchedJob(ts *test.RealmTstate, nclnt int, durs string, maxrpss string, progname string, sfn scheddFn, kernels []string, withKernelPref bool, skipstats bool) *MSchedJobInstance {
+func NewMSchedJob(ts *test.RealmTstate, nclnt int, durs string, maxrpss string, progname string, sfn mschedFn, kernels []string, withKernelPref bool, skipstats bool) *MSchedJobInstance {
 	ji := &MSchedJobInstance{}
 	ji.ready = make(chan bool)
 	ji.progname = progname

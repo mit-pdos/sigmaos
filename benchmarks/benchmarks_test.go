@@ -14,8 +14,8 @@ import (
 	"sigmaos/benchmarks"
 	db "sigmaos/debug"
 	"sigmaos/linuxsched"
-	mschedclnt "sigmaos/sched/msched/clnt"
 	"sigmaos/proc"
+	mschedclnt "sigmaos/sched/msched/clnt"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
@@ -1578,7 +1578,7 @@ func TestK8sMRMulti(t *testing.T) {
 	assert.Nil(rootts.T, err, "Error mkdir %v", err)
 	// Start up the stat scraper procs.
 	sdc := mschedclnt.NewMSchedClnt(ts[0].SigmaClnt.FsLib, sp.NOT_SET)
-	nMSched, err := sdc.Nmsched()
+	nMSched, err := sdc.NMSched()
 	ps2, _ := newNProcs(nMSched, "k8s-stat-scraper", []string{}, nil, proc.Tmcpu(1000*(linuxsched.GetNCores()-1)))
 	spawnBurstProcs(ts[0], ps2)
 	waitStartProcs(ts[0], ps2)
@@ -1701,7 +1701,7 @@ func TestK8sImgResize(t *testing.T) {
 		warmupRealm(ts1, nil)
 	}
 	sdc := mschedclnt.NewMSchedClnt(ts1.FsLib, sp.NOT_SET)
-	nMSched, err := sdc.Nmsched()
+	nMSched, err := sdc.NMSched()
 	assert.Nil(ts1.Ts.T, err, "Error nmsched %v", err)
 	rs := benchmarks.NewResults(1, benchmarks.E2E)
 	p := newRealmPerf(ts1)
@@ -1876,7 +1876,7 @@ func TestK8sSocialNetworkImgResize(t *testing.T) {
 		warmupRealm(ts0, nil)
 	}
 	sdc := mschedclnt.NewMSchedClnt(ts0.SigmaClnt.FsLib, sp.NOT_SET)
-	nMSched, err := sdc.Nmsched()
+	nMSched, err := sdc.NMSched()
 	assert.Nil(ts0.Ts.T, err, "Error nmsched %v", err)
 	rs0 := benchmarks.NewResults(1, benchmarks.E2E)
 	err = ts0.MkDir(sp.K8S_SCRAPER, 0777)

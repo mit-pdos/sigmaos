@@ -185,6 +185,7 @@ func (dr *DirReaderV1) WatchEntriesChanged() (map[string]bool, error) {
 			if !dr.ents[st.Name] {
 				dr.ents[st.Name] = true
 				ents[st.Name] = true
+				unchanged = false
 			}
 		}
 		return unchanged

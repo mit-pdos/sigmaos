@@ -196,7 +196,6 @@ func (dw *DirReaderV2) readDirWatch(watch FwatchV2) error {
 
 func (dw *DirReaderV2) WaitRemove(file string) error {
 	err := dw.readDirWatch(func(ents map[string] bool, changes map[string]bool) bool {
-		// db.DPrintf(db.WATCH_V2, "WaitRemove %v %v\n", ents, file)
 		return ents[file]
 	})
 	return err
@@ -204,7 +203,6 @@ func (dw *DirReaderV2) WaitRemove(file string) error {
 
 func (dw *DirReaderV2) WaitCreate(file string) error {
 	err := dw.readDirWatch(func(ents map[string] bool, changes map[string]bool) bool {
-		// db.DPrintf(db.WATCH_V2, "WaitCreate %v %v %t\n", ents, file, ents[file])
 		return !ents[file]
 	})
 	return err
@@ -212,7 +210,6 @@ func (dw *DirReaderV2) WaitCreate(file string) error {
 
 func (dw *DirReaderV2) WaitNEntries(n int) error {
 	err := dw.readDirWatch(func(ents map[string]bool, changes map[string]bool) bool {
-		// db.DPrintf(db.WATCH_V2, "WaitNEntries: %v %v", ents, changes)
 		return len(filterMap(ents)) < n
 	})
 	if err != nil {
@@ -223,7 +220,6 @@ func (dw *DirReaderV2) WaitNEntries(n int) error {
 
 func (dw *DirReaderV2) WaitEmpty() error {
 	err := dw.readDirWatch(func(ents map[string]bool, changes map[string]bool) bool {
-		// db.DPrintf(db.WATCH_V2, "WaitEmpty: %v %v", ents, changes)
 		return len(filterMap(ents)) > 0
 	})
 	if err != nil {
@@ -234,13 +230,14 @@ func (dw *DirReaderV2) WaitEmpty() error {
 
 func (dw *DirReaderV2) WatchEntriesChangedRelative(present []string, excludedPrefixes []string) ([]string, bool, error) {
 	var files = make([]string, 0)
-	ix := 0
-
 	db.DPrintf(db.WATCH, "WatchUniqueEntries: dir %v, present: %v, excludedPrefixes %v\n", dw.pn, present, excludedPrefixes)
+	var ret []string
 	err := dw.readDirWatch(func(ents map[string]bool, changes map[string]bool) bool {
 		unchanged := true
-		files = filterMap(ents)
+		files = filterMap(changes)
 		slices.Sort(files)
+		ret = make([]string, 0)
+		ix := 0
 		for _, file := range files {
 			skip := false
 			for _, pf := range excludedPrefixes {
@@ -252,6 +249,7 @@ func (dw *DirReaderV2) WatchEntriesChangedRelative(present []string, excludedPre
 			if skip {
 				continue
 			}
+			ret = append(ret, file)
 
 			for ix < len(present) && present[ix] < file {
 				ix += 1
@@ -265,7 +263,7 @@ func (dw *DirReaderV2) WatchEntriesChangedRelative(present []string, excludedPre
 	if err != nil {
 		return nil, true, err
 	}
-	return files, true, nil
+	return ret, true, nil
 }
 
 func (dw *DirReaderV2) WatchEntriesChanged() (map[string]bool, error) {
@@ -289,6 +287,7 @@ func (dw *DirReaderV2) WatchEntriesChanged() (map[string]bool, error) {
 func (dw *DirReaderV2) WatchNewEntriesAndRename(dst string) ([]string, error) {
 	var r error
 	presentFiles := filterMap(dw.ents)
+	db.DPrintf(db.WATCH, "WatchNewEntriesAndRename: dir %v, present: %v, dst %v\n", dw.pn, presentFiles, dst)
 	if len(presentFiles) > 0 {
 		return dw.rename(presentFiles, dst)
 	}

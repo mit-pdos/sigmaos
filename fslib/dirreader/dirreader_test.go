@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"sigmaos/fslib/dirreader"
 	drtest "sigmaos/fslib/dirreader/test"
 	sp "sigmaos/sigmap"
 
@@ -19,7 +20,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func testWatch(t *testing.T, nworkers int, nfiles int) {
+func testSumProgram(t *testing.T, nworkers int, nfiles int) {
 	ts, err := test.NewTstateAll(t)
 
 	if !assert.Nil(t, err, "Error New Tstate: %v", err) {
@@ -90,7 +91,7 @@ func dataString(data []time.Duration) string {
 	return str
 }
 
-func testWatchPerf(t *testing.T, nWorkers int, nStartingFiles int, nTrials int, prefix string) {
+func testPerf(t *testing.T, nWorkers int, nStartingFiles int, nTrials int, prefix string) {
 	ts, err := test.NewTstateAll(t)
 
 	if !assert.Nil(t, err, "Error New Tstate: %v", err) {
@@ -143,31 +144,336 @@ func testWatchPerf(t *testing.T, nWorkers int, nStartingFiles int, nTrials int, 
 	ts.Shutdown()
 }
 
-func TestWatchSingle(t *testing.T) {
-	testWatch(t, 1, 5)
+func TestSumProgramSingleWorker(t *testing.T) {
+	testSumProgram(t, 1, 5)
 }
 
-func TestWatchMultiple(t *testing.T) {
-	testWatch(t, 5, 50)
+func TestSumProgramMultipleWorkers(t *testing.T) {
+	testSumProgram(t, 5, 50)
 }
 
-func TestWatchStress(t *testing.T) {
-	testWatch(t, 10, 1000)
+func TestSumProgramStress(t *testing.T) {
+	testSumProgram(t, 10, 1000)
 }
 
 // Use DIRREADER_VERSION and WATCHPERF_MEASURE_MODE to configure perf data
-func TestWatchPerfSingleWorkerNoFiles(t *testing.T) {
-	testWatchPerf(t, 1, 0, 250, "single_no_files")
+func TestPerfSingleWorkerNoFiles(t *testing.T) {
+	testPerf(t, 1, 0, 250, "single_no_files")
 }
 
-func TestWatchPerfSingleWorkerSomeFiles(t *testing.T) {
-	testWatchPerf(t, 1, 100, 250, "single_some_files")
+func TestPerfSingleWorkerSomeFiles(t *testing.T) {
+	testPerf(t, 1, 100, 250, "single_some_files")
 }
 
-func TestWatchPerfSingleWorkerManyFiles(t *testing.T) {
-	testWatchPerf(t, 1, 1000, 250, "single_many_files")
+func TestPerfSingleWorkerManyFiles(t *testing.T) {
+	testPerf(t, 1, 1000, 250, "single_many_files")
 }
 
-func TestWatchPerfMultipleWorkersNoFiles(t *testing.T) {
-	testWatchPerf(t, 5, 0, 100, "multiple_no_files")
+func TestPerfMultipleWorkersNoFiles(t *testing.T) {
+	testPerf(t, 5, 0, 100, "multiple_no_files")
+}
+
+func runTest(t *testing.T, f func(*testing.T, *test.Tstate, string, dirreader.DirReader), timeoutSec int) {
+	ts, err := test.NewTstateAll(t)
+	assert.Nil(t, err, "Error New Tstate: %v", err)
+
+	done := make(chan bool)
+	timeout := time.After(time.Duration(timeoutSec) * time.Second)
+	go func() {
+		testdir := filepath.Join(sp.NAMED, "test")
+		err = ts.MkDir(testdir, 0777)
+		assert.Nil(t, err)
+
+		dr, err := dirreader.NewDirReader(ts.FsLib, testdir)
+		assert.Nil(t, err)
+
+		f(t, ts, testdir, dr)
+
+		err = dr.Close()
+		assert.Nil(t, err)
+
+		err = ts.RmDirEntries(testdir)
+		assert.Nil(t, err)
+
+		err = ts.Remove(testdir)
+		assert.Nil(t, err)
+
+		done <- true
+	}()
+
+	select {
+	case <-timeout:
+		assert.Fail(t, "Timeout")
+	case <-done:
+	}
+
+	ts.Shutdown()
+}
+
+func TestDirreaderBasic(t *testing.T) {
+	runTest(t, func(t *testing.T, ts *test.Tstate, testdir string, dr dirreader.DirReader) {
+		entries, err := dr.GetDir()
+		assert.Nil(t, err)
+		assert.Equal(t, len(entries), 0)
+
+		file1 := "file1"
+		_, err = ts.Create(filepath.Join(testdir, file1), 0777, sp.OWRITE)
+		assert.Nil(t, err)
+
+		err = dr.WaitCreate(file1)
+		assert.Nil(t, err, "")
+
+		entries, err = dr.GetDir()
+		assert.Nil(t, err)
+		assert.Equal(t, entries, []string{file1})
+
+		err = ts.Remove(filepath.Join(testdir, file1))
+		assert.Nil(t, err)
+
+		err = dr.WaitRemove(file1)
+		assert.Nil(t, err)
+
+		entries, err = dr.GetDir()
+		assert.Nil(t, err)
+		assert.Equal(t, len(entries), 0)
+	}, 10)
+}
+
+func TestDirreaderWaitNEntries(t *testing.T) {
+	runTest(t, func(t *testing.T, ts *test.Tstate, testdir string, dr dirreader.DirReader) {
+		err := dr.WaitNEntries(0)
+		assert.Nil(t, err)
+
+		_, err = ts.Create(filepath.Join(testdir, "file0"), 0777, sp.OWRITE)
+		assert.Nil(t, err)
+
+		err = dr.WaitNEntries(1)
+		assert.Nil(t, err)
+
+		done := make(chan bool)
+		go func() {
+			err := dr.WaitNEntries(10)
+			assert.Nil(t, err)
+			done <- true
+		}()
+
+		for i := 1; i < 10; i++ {
+			_, err = ts.Create(filepath.Join(testdir, fmt.Sprintf("file%d", i)), 0777, sp.OWRITE)
+			assert.Nil(t, err)
+		}
+
+		<- done
+	}, 10)
+}
+
+func TestDirreaderWaitEmpty(t *testing.T) {
+	runTest(t, func(t *testing.T, ts *test.Tstate, testdir string, dr dirreader.DirReader) {
+		err := dr.WaitEmpty()
+		assert.Nil(t, err)
+
+		for ix := 0; ix < 10; ix++ {
+			_, err = ts.Create(filepath.Join(testdir, fmt.Sprintf("file%d", ix)), 0777, sp.OWRITE)
+			assert.Nil(t, err)
+		}
+
+		err = dr.WaitNEntries(10)
+		assert.Nil(t, err)
+
+		done := make(chan bool)
+		go func() {
+			err := dr.WaitEmpty()
+			assert.Nil(t, err)
+			done <- true
+		}()
+
+		for ix := 0; ix < 10; ix++ {
+			err = ts.Remove(filepath.Join(testdir, fmt.Sprintf("file%d", ix)))
+			assert.Nil(t, err)
+		}
+
+		<- done
+	}, 10)
+}
+
+func TestDirreaderWatchEntriesChangedRelative(t *testing.T) {
+	runTest(t, func(t *testing.T, ts *test.Tstate, testdir string, dr dirreader.DirReader) {
+		for _, file := range []string{"a", "b", "c"} {
+			_, err := ts.Create(filepath.Join(testdir, file), 0777, sp.OWRITE)
+			assert.Nil(t, err)
+		}
+
+		entries, ok, err := dr.WatchEntriesChangedRelative([]string{}, []string{})
+		assert.True(t, ok)
+		assert.Nil(t, err)
+		assert.Equal(t, []string{"a", "b", "c"}, entries)
+
+		for _, file := range []string{"bb", "cc", "dd"} {
+			_, err := ts.Create(filepath.Join(testdir, file), 0777, sp.OWRITE)
+			assert.Nil(t, err)
+		}
+		time.Sleep(1 * time.Second)
+		assert.Nil(t, err)
+
+		entries, ok, err = dr.WatchEntriesChangedRelative([]string{"a", "b", "c"}, []string{"b"})
+		assert.True(t, ok)
+		assert.Nil(t, err)
+		assert.Equal(t, []string{"cc", "dd"}, entries)
+
+		done := make(chan bool)
+		go func() {
+			entries, ok, err = dr.WatchEntriesChangedRelative([]string{"a", "b", "bb", "c", "cc", "dd", "eee"}, []string{"b"})
+			assert.True(t, ok)
+			assert.Nil(t, err)
+			assert.Contains(t, entries, "fff") // could contain or not contain eee depending on whether changes were grouped or not
+			done <- true
+		}()
+
+		_, err = ts.Create(filepath.Join(testdir, "eee"), 0777, sp.OWRITE)
+		assert.Nil(t, err)
+		_, err = ts.Create(filepath.Join(testdir, "fff"), 0777, sp.OWRITE)
+		assert.Nil(t, err)
+
+		<- done
+	}, 10)
+}
+
+func TestDirreaderWatchEntriesChanged(t *testing.T) {
+	runTest(t, func(t *testing.T, ts *test.Tstate, testdir string, dr dirreader.DirReader) {
+		initialFiles := []string{"file1", "file2", "file3"}
+		for _, file := range initialFiles {
+			_, err := ts.Create(filepath.Join(testdir, file), 0777, sp.OWRITE)
+			assert.Nil(t, err)
+		}
+
+		time.Sleep(1 * time.Second)
+
+		changes, err := dr.WatchEntriesChanged()
+		assert.Nil(t, err)
+		assert.Equal(t, 3, len(changes))
+		for _, file := range initialFiles {
+			assert.True(t, changes[file])
+		}
+
+		done := make(chan bool)
+		go func() {
+			changes, err = dr.WatchEntriesChanged()
+			assert.Nil(t, err)
+			assert.True(t, changes["file4"])
+			assert.Equal(t, 1, len(changes))
+			done <- true
+		}()
+
+		_, err = ts.Create(filepath.Join(testdir, "file4"), 0777, sp.OWRITE)
+		assert.Nil(t, err)
+
+		<-done
+	}, 10)
+}
+
+func TestDirreaderWatchNewEntriesAndRename(t *testing.T) {
+	runTest(t, func(t *testing.T, ts *test.Tstate, testdir string, dr dirreader.DirReader) {
+		dstDir := filepath.Join(sp.NAMED, "dst")
+		err := ts.MkDir(dstDir, 0777)
+		assert.Nil(t, err)
+
+		initialFiles := []string{"file1", "file2"}
+		for _, file := range initialFiles {
+			_, err := ts.Create(filepath.Join(testdir, file), 0777, sp.OWRITE)
+			assert.Nil(t, err)
+		}
+
+		movedFiles, err := dr.WatchNewEntriesAndRename(dstDir)
+		assert.Nil(t, err)
+		assert.ElementsMatch(t, movedFiles, initialFiles)
+
+		entries, _, err := ts.ReadDir(dstDir)
+		assert.Nil(t, err)
+		for _, file := range initialFiles {
+			found := false
+			for _, entry := range entries {
+				if entry.Name == file {
+					found = true
+					break
+				}
+			}
+			assert.True(t, found)
+		}
+
+		done := make(chan bool)
+		go func() {
+			movedFiles, err = dr.WatchNewEntriesAndRename(dstDir)
+			assert.Nil(t, err)
+			assert.ElementsMatch(t, movedFiles, []string{"file3"})
+			done <- true
+		}()
+
+		_, err = ts.Create(filepath.Join(testdir, "file3"), 0777, sp.OWRITE)
+		assert.Nil(t, err)
+
+		<-done
+
+		// cleanup
+		err = ts.RmDirEntries(dstDir)
+		assert.Nil(t, err)
+
+		err = ts.Remove(dstDir)
+		assert.Nil(t, err)
+	}, 10)
+}
+
+func TestDirreaderGetEntriesAndRename(t *testing.T) {
+	runTest(t, func(t *testing.T, ts *test.Tstate, testdir string, dr dirreader.DirReader) {
+		dstDir := filepath.Join(sp.NAMED, "dst")
+		err := ts.MkDir(dstDir, 0777)
+		assert.Nil(t, err)
+
+		initialFiles := []string{"file1", "file2"}
+		for _, file := range initialFiles {
+			_, err := ts.Create(filepath.Join(testdir, file), 0777, sp.OWRITE)
+			assert.Nil(t, err)
+		}
+
+		// for V2, we need to wait for the files to be up to date in the cache,
+		// but doing this in V1 will cause V1 to no longer pick up on the files
+		if dirreader.GetDirReaderVersion(ts.ProcEnv()) == dirreader.V1 {
+			time.Sleep(1 * time.Second)
+		} else {
+			err = dr.WaitNEntries(2)
+			assert.Nil(t, err)
+		}
+
+		movedFiles, err := dr.GetEntriesAndRename(dstDir)
+		assert.Nil(t, err)
+		assert.ElementsMatch(t, movedFiles, initialFiles)
+
+		entries, _, err := ts.ReadDir(dstDir)
+		assert.Nil(t, err)
+		for _, file := range initialFiles {
+			found := false
+			for _, entry := range entries {
+				if entry.Name == file {
+					found = true
+					break
+				}
+			}
+			assert.True(t, found)
+		}
+
+		// ensure this doesn't block
+		movedFiles, err = dr.GetEntriesAndRename(dstDir)
+		assert.Nil(t, err)
+		assert.Empty(t, movedFiles)
+
+		// Ensure no entries remain in the original directory
+		remainingEntries, err := dr.GetDir()
+		assert.Nil(t, err)
+		assert.Empty(t, remainingEntries)
+
+		// cleanup
+		err = ts.RmDirEntries(dstDir)
+		assert.Nil(t, err)
+
+		err = ts.Remove(dstDir)
+		assert.Nil(t, err)
+	}, 10)
 }

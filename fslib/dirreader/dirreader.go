@@ -30,8 +30,9 @@ type DirReader interface {
 	// Waits for the directory to be empty
 	WaitEmpty() error
 
-	// Watch for a directory change relative to present view and then return
-	// all directory entries. If provided, any file beginning with an
+	// Watch for any directory additions not in present and then return
+	// all added entries. This could include entries in present if they were not
+	// already in the directory. If provided, any file beginning with an
 	// excluded prefix is ignored. present should be sorted.
   // 
 	// Also returns a boolean indicating whether the initial read of the directory
@@ -48,7 +49,9 @@ type DirReader interface {
 // waits for a new entry and then moves it.
 	WatchNewEntriesAndRename(dst string) ([]string, error)
 
-	// Uses rename to move all entries in the directory to dst. Does not block if there are no entries to rename
+	// Uses rename to move all entries in the directory to dst. Can be potentially stale in V2, so combining it
+	// with other Watch calls may be desired to get the cache up to date.
+	// Does not block if there are no entries to rename
 	GetEntriesAndRename(dst string) ([]string, error)
 }
 

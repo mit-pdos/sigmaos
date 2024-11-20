@@ -347,7 +347,7 @@ func TestSingleSearch(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts := newTstate(t1, []*hotel.Srv{&hotel.Srv{Name: "hotel-geod"}, &hotel.Srv{Name: "hotel-rated"}, &hotel.Srv{Name: "hotel-searchd"}}, NCACHESRV, DEF_GEO_N_IDX, DEF_GEO_SEARCH_RADIUS, DEF_GEO_N_RESULTS)
+	ts := newTstate(t1, []*hotel.Srv{&hotel.Srv{Name: "hotel-geod", Args: []string{"1", "10", "5"}}, &hotel.Srv{Name: "hotel-rated"}, &hotel.Srv{Name: "hotel-searchd"}}, NCACHESRV, DEF_GEO_N_IDX, DEF_GEO_SEARCH_RADIUS, DEF_GEO_N_RESULTS)
 	defer ts.Shutdown()
 	defer ts.stop()
 	rpcc, err := sigmarpcchan.NewSigmaRPCClnt([]*fslib.FsLib{ts.FsLib}, hotel.HOTELSEARCH)

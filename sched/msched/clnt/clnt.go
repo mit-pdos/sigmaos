@@ -8,7 +8,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fslib"
-	"sigmaos/msched/proto"
+	"sigmaos/sched/msched/proto"
 	"sigmaos/proc"
 	"sigmaos/rpcclnt"
 	"sigmaos/rpcdirclnt"

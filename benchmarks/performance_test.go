@@ -9,7 +9,7 @@ import (
 
 	"sigmaos/benchmarks"
 	db "sigmaos/debug"
-	mschedclnt "sigmaos/msched/clnt"
+	mschedclnt "sigmaos/sched/msched/clnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 	k8sutil "sigmaos/util/k8s"

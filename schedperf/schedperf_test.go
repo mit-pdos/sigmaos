@@ -11,7 +11,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/linuxsched"
 	"sigmaos/proc"
-	mschedclnt "sigmaos/msched/clnt"
+	mschedclnt "sigmaos/sched/msched/clnt"
 	"sigmaos/test"
 )
 

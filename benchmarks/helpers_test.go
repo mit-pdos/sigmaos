@@ -13,7 +13,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/linuxsched"
-	mschedclnt "sigmaos/msched/clnt"
+	mschedclnt "sigmaos/sched/msched/clnt"
 	"sigmaos/proc"
 	"sigmaos/semclnt"
 	"sigmaos/serr"

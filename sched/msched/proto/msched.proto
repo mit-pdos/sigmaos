@@ -2,7 +2,7 @@ syntax = "proto3";
 
 import "proc/proc.proto";
 
-option go_package = "sigmaos/msched/proto";
+option go_package = "sigmaos/sched/msched/proto";
 
 service MSched {
   rpc ForceRun(ForceRunRequest) returns (ForceRunResponse);

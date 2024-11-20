@@ -24,7 +24,7 @@ import (
 	mrscanner "sigmaos/apps/mr/scanner"
 	"sigmaos/auth"
 	db "sigmaos/debug"
-	mschedclnt "sigmaos/msched/clnt"
+	mschedclnt "sigmaos/sched/msched/clnt"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"

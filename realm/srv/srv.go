@@ -19,7 +19,7 @@ import (
 	"sigmaos/realm/proto"
 	"sigmaos/rpc"
 	beschedclnt "sigmaos/sched/besched/clnt"
-	mschedclnt "sigmaos/msched/clnt"
+	mschedclnt "sigmaos/sched/msched/clnt"
 	"sigmaos/semclnt"
 	"sigmaos/serr"
 	"sigmaos/sigmaclnt"

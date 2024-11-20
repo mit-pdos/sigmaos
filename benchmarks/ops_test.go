@@ -8,7 +8,7 @@ import (
 	"sigmaos/apps/mr"
 	db "sigmaos/debug"
 	"sigmaos/proc"
-	mschedclnt "sigmaos/msched/clnt"
+	mschedclnt "sigmaos/sched/msched/clnt"
 	"sigmaos/semclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"

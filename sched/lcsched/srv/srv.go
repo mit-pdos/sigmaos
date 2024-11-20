@@ -14,7 +14,7 @@ import (
 	beschedproto "sigmaos/sched/besched/proto"
 	"sigmaos/sched/lcsched/proto"
 	"sigmaos/sched/queue"
-	mschedclnt "sigmaos/msched/clnt"
+	mschedclnt "sigmaos/sched/msched/clnt"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"

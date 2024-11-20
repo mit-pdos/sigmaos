@@ -5,7 +5,7 @@ import (
 	"strconv"
 
 	db "sigmaos/debug"
-	"sigmaos/msched/srv"
+	"sigmaos/sched/msched/srv"
 )
 
 func main() {

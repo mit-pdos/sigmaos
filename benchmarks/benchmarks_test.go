@@ -14,7 +14,7 @@ import (
 	"sigmaos/benchmarks"
 	db "sigmaos/debug"
 	"sigmaos/linuxsched"
-	mschedclnt "sigmaos/msched/clnt"
+	mschedclnt "sigmaos/sched/msched/clnt"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"

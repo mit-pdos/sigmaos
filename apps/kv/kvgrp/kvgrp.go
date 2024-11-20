@@ -110,7 +110,6 @@ func WaitStarted(fsl *fslib.FsLib, jobdir, grp string) (*GroupConfig, error) {
 }
 
 func (g *Group) writeSymlink(sigmaEPs []*sp.Tendpoint) {
-	//	srvEPs := make([]*sp.Tendpoint, 0)
 	srvAddrs := make([]*sp.Taddr, 0)
 	for _, ep := range sigmaEPs {
 		if ep != nil {
@@ -118,9 +117,9 @@ func (g *Group) writeSymlink(sigmaEPs []*sp.Tendpoint) {
 		}
 	}
 	ep := sp.NewEndpoint(sp.INTERNAL_EP, srvAddrs)
-	db.DPrintf(db.KVGRP, "Advertise %v at %v", srvAddrs, GrpPath(g.jobdir, g.grp))
+	db.DPrintf(db.KVGRP, "writeSymlink: advertise %v at %v", srvAddrs, GrpPath(g.jobdir, g.grp))
 	if err := g.MkLeasedEndpoint(GrpPath(g.jobdir, g.grp), ep, g.lc.Lease()); err != nil {
-		db.DFatalf("couldn't make replica addrs file %v err %v", g.grp, err)
+		db.DFatalf("writeSymlink: make replica addrs file %v err %v", g.grp, err)
 	}
 }
 
@@ -159,6 +158,8 @@ func RunMember(job, grp string, public bool, myid, nrepl int) {
 		cfg, raftCfg = g.newRaftCfg(cfg, g.myid, nrepl)
 	}
 
+	// only replica will advertise the service
+
 	db.DPrintf(db.KVGRP, "Grp config: %v config: %v raftCfg %v", g.myid, cfg, raftCfg)
 
 	cfg, err = g.startServer(cfg, raftCfg)
@@ -172,7 +173,7 @@ func RunMember(job, grp string, public bool, myid, nrepl int) {
 
 	db.DPrintf(db.KVGRP, "Crash %v id %v gen %v", nrepl, g.myid, g.gen)
 
-	if (nrepl > 0 && g.myid == 1 && g.gen == 1) || nrepl == 0 {
+	if (nrepl > 0 && g.gen == 1) || nrepl == 0 {
 		crash.Failer(crash.KVD_CRASH, func(e crash.Tevent) {
 			crash.Crash()
 		})

@@ -1,4 +1,4 @@
-package schedqueue
+package queue
 
 import (
 	"fmt"

@@ -14,7 +14,7 @@ import (
 	"sigmaos/fs"
 	"sigmaos/proc"
 	"sigmaos/procfs"
-	"sigmaos/schedqueue"
+	"sigmaos/sched/queue"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
@@ -30,7 +30,7 @@ type BESched struct {
 	realmMu     sync.RWMutex
 	cond        *sync.Cond
 	sc          *sigmaclnt.SigmaClnt
-	qs          map[sp.Trealm]*schedqueue.Queue[*proc.ProcSeqno, chan *proc.ProcSeqno]
+	qs          map[sp.Trealm]*queue.Queue[*proc.ProcSeqno, chan *proc.ProcSeqno]
 	realms      []sp.Trealm
 	rr          *RealmRR
 	qlen        int // Aggregate queue length, across all queues
@@ -46,7 +46,7 @@ type QDir struct {
 func NewBESched(sc *sigmaclnt.SigmaClnt) *BESched {
 	be := &BESched{
 		sc:        sc,
-		qs:        make(map[sp.Trealm]*schedqueue.Queue[*proc.ProcSeqno, chan *proc.ProcSeqno]),
+		qs:        make(map[sp.Trealm]*queue.Queue[*proc.ProcSeqno, chan *proc.ProcSeqno]),
 		realms:    make([]sp.Trealm, 0),
 		rr:        NewRealmRR(),
 		qlen:      0,
@@ -248,7 +248,7 @@ func isEligible(p *proc.Proc, mem proc.Tmem, scheddID string) bool {
 	return p.HasKernelPref(scheddID)
 }
 
-func (be *BESched) getRealmQueue(realm sp.Trealm) *schedqueue.Queue[*proc.ProcSeqno, chan *proc.ProcSeqno] {
+func (be *BESched) getRealmQueue(realm sp.Trealm) *queue.Queue[*proc.ProcSeqno, chan *proc.ProcSeqno] {
 	be.realmMu.RLock()
 	defer be.realmMu.RUnlock()
 
@@ -261,7 +261,7 @@ func (be *BESched) getRealmQueue(realm sp.Trealm) *schedqueue.Queue[*proc.ProcSe
 		q, ok = be.tryGetRealmQueueL(realm)
 		if !ok {
 			// If the queue has still not been created, create it.
-			q = schedqueue.NewQueue[*proc.ProcSeqno, chan *proc.ProcSeqno]()
+			q = queue.NewQueue[*proc.ProcSeqno, chan *proc.ProcSeqno]()
 			be.qs[realm] = q
 			// Don't add the root realm as a realm to choose to schedule from.
 			if realm != sp.ROOTREALM {
@@ -276,7 +276,7 @@ func (be *BESched) getRealmQueue(realm sp.Trealm) *schedqueue.Queue[*proc.ProcSe
 }
 
 // Caller must hold lock.
-func (be *BESched) tryGetRealmQueueL(realm sp.Trealm) (*schedqueue.Queue[*proc.ProcSeqno, chan *proc.ProcSeqno], bool) {
+func (be *BESched) tryGetRealmQueueL(realm sp.Trealm) (*queue.Queue[*proc.ProcSeqno, chan *proc.ProcSeqno], bool) {
 	q, ok := be.qs[realm]
 	return q, ok
 }

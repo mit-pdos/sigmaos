@@ -13,8 +13,8 @@ import (
 	"sigmaos/lcsched/proto"
 	"sigmaos/proc"
 	"sigmaos/procfs"
+	"sigmaos/sched/queue"
 	"sigmaos/scheddclnt"
-	"sigmaos/schedqueue"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
@@ -26,7 +26,7 @@ type LCSched struct {
 	cond       *sync.Cond
 	sc         *sigmaclnt.SigmaClnt
 	scheddclnt *scheddclnt.ScheddClnt
-	qs         map[sp.Trealm]*schedqueue.Queue[string, chan string]
+	qs         map[sp.Trealm]*queue.Queue[string, chan string]
 	schedds    map[string]*Resources
 	realmbins  *chunkclnt.RealmBinPaths
 }
@@ -39,7 +39,7 @@ func NewLCSched(sc *sigmaclnt.SigmaClnt) *LCSched {
 	lcs := &LCSched{
 		sc:         sc,
 		scheddclnt: scheddclnt.NewScheddClnt(sc.FsLib, sp.NOT_SET),
-		qs:         make(map[sp.Trealm]*schedqueue.Queue[string, chan string]),
+		qs:         make(map[sp.Trealm]*queue.Queue[string, chan string]),
 		schedds:    make(map[string]*Resources),
 		realmbins:  chunkclnt.NewRealmBinPaths(),
 	}
@@ -211,8 +211,8 @@ func isEligible(p *proc.Proc, mcpu proc.Tmcpu, mem proc.Tmem) bool {
 }
 
 // Caller must hold lock.
-func (lcs *LCSched) addRealmQueueL(realm sp.Trealm) *schedqueue.Queue[string, chan string] {
-	q := schedqueue.NewQueue[string, chan string]()
+func (lcs *LCSched) addRealmQueueL(realm sp.Trealm) *queue.Queue[string, chan string] {
+	q := queue.NewQueue[string, chan string]()
 	lcs.qs[realm] = q
 	return q
 }

@@ -92,7 +92,7 @@ type UprocRPCSrv struct {
 	ups *UprocSrv
 }
 
-func RunUprocSrv(kernelId string, netproxy bool, up string, spproxydPID sp.Tpid) error {
+func RunUprocSrv(kernelId string, netproxy bool, spproxydPID sp.Tpid) error {
 	pe := proc.GetProcEnv()
 	ups := &UprocSrv{
 		kernelId:    kernelId,
@@ -111,7 +111,7 @@ func RunUprocSrv(kernelId string, netproxy bool, up string, spproxydPID sp.Tpid)
 	}
 	ups.pe.SetInnerContainerIP(sp.Tip(innerIP))
 
-	db.DPrintf(db.UPROCD, "Run kid %v port %v innerIP %s outerIP %s pe %v", kernelId, up, pe.GetInnerContainerIP(), pe.GetOuterContainerIP(), pe)
+	db.DPrintf(db.UPROCD, "Run kid %v innerIP %s outerIP %s pe %v", kernelId, pe.GetInnerContainerIP(), pe.GetOuterContainerIP(), pe)
 
 	sc, err := sigmaclnt.NewSigmaClnt(pe)
 	if err != nil {
@@ -119,9 +119,6 @@ func RunUprocSrv(kernelId string, netproxy bool, up string, spproxydPID sp.Tpid)
 	}
 	ups.sc = sc
 	var ssrv *sigmasrv.SigmaSrv
-	if up != sp.NO_PORT.String() {
-		db.DFatalf("Should only happen when running with overlays, but overlays are no more")
-	}
 	pn := filepath.Join(sp.SCHEDD, kernelId, sp.UPROCDREL, pe.GetPID().String())
 	ssrv, err = sigmasrv.NewSigmaSrvClnt(pn, sc, &UprocRPCSrv{ups})
 	if err != nil {

@@ -65,11 +65,8 @@ func StartDockerContainer(p *proc.Proc, kernelId string) (*DContainer, error) {
 
 	pset := nat.PortSet{} // Ports to expose
 	pmap := nat.PortMap{} // NAT mappings for exposed ports
-	up := sp.NO_PORT
 	netmode := "host"
 	var endpoints map[string]*network.EndpointSettings
-	// append uprocd's port
-	p.Args = append(p.Args, up.String())
 	cmd := append([]string{p.GetProgram()}, p.Args...)
 	db.DPrintf(db.CONTAINER, "ContainerCreate %v %v s %v\n", cmd, p.GetEnv(), score)
 

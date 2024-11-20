@@ -10,8 +10,8 @@ import (
 )
 
 func main() {
-	if len(os.Args) != 5 {
-		db.DFatalf("Usage: %v kernelId netproxy spproxydPID port\nPassed: %v", os.Args[0], os.Args)
+	if len(os.Args) != 4 {
+		db.DFatalf("Usage: %v kernelId netproxy spproxydPID\nPassed: %v", os.Args[0], os.Args)
 	}
 	netproxy, err := strconv.ParseBool(os.Args[2])
 	if err != nil {
@@ -19,7 +19,7 @@ func main() {
 	}
 	scPID := sp.Tpid(os.Args[3])
 	// ignore scheddIp
-	if err := uprocsrv.RunUprocSrv(os.Args[1], netproxy, os.Args[4], scPID); err != nil {
+	if err := uprocsrv.RunUprocSrv(os.Args[1], netproxy, scPID); err != nil {
 		db.DFatalf("Fatal start: %v %v\n", os.Args[0], err)
 	}
 }

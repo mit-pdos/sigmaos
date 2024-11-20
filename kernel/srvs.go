@@ -191,12 +191,11 @@ func (k *Kernel) bootSPProxyd() (Subsystem, error) {
 // uprocd.  Uprocd cannot post because it doesn't know what the host
 // IP address and port number are for it.
 func (k *Kernel) bootUprocd(args []string) (Subsystem, error) {
-	// Append netproxy bool to args
-	args = append(args, strconv.FormatBool(k.Param.NetProxy))
 	spproxydPID := sp.GenPid("spproxyd")
-	spproxydArgs := append([]string{spproxydPID.String()})
+	// Append args
+	args = append(args, strconv.FormatBool(k.Param.NetProxy), spproxydPID.String())
 	db.DPrintf(db.ALWAYS, "Uprocd args %v", args)
-	s, err := k.bootSubsystem("uprocd", append(args, spproxydArgs...), sp.ROOTREALM, proc.HDOCKER, 0)
+	s, err := k.bootSubsystem("uprocd", args, sp.ROOTREALM, proc.HDOCKER, 0)
 	if err != nil {
 		return nil, err
 	}

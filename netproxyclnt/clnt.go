@@ -193,7 +193,7 @@ func (npc *NetProxyClnt) proxyDial(ep *sp.Tendpoint) (net.Conn, error) {
 		},
 	}
 	start = time.Now()
-	if err := npc.rpcc.RPC("NetProxySrvStubs.Dial", req, res); err != nil {
+	if err := npc.rpcc.RPC("DialProxySrvStubs.Dial", req, res); err != nil {
 		return nil, err
 	}
 	db.DPrintf(db.DIALPROXYCLNT, "proxyDial response %v", res)
@@ -232,7 +232,7 @@ func (npc *NetProxyClnt) proxyListen(ept sp.TTendpoint, addr *sp.Taddr) (*sp.Ten
 			Iov: [][]byte{make([]byte, unix.CmsgSpace(4))},
 		},
 	}
-	if err := npc.rpcc.RPC("NetProxySrvStubs.Listen", req, res); err != nil {
+	if err := npc.rpcc.RPC("DialProxySrvStubs.Listen", req, res); err != nil {
 		return nil, nil, err
 	}
 	db.DPrintf(db.DIALPROXYCLNT, "proxyListen response %v", res)
@@ -301,7 +301,7 @@ func (npc *NetProxyClnt) proxyAccept(lid netproxy.Tlid, internalListener bool) (
 			Iov: [][]byte{make([]byte, unix.CmsgSpace(4))},
 		},
 	}
-	if err := npc.rpcc.RPC("NetProxySrvStubs.Accept", req, res); err != nil {
+	if err := npc.rpcc.RPC("DialProxySrvStubs.Accept", req, res); err != nil {
 		return nil, nil, err
 	}
 	db.DPrintf(db.DIALPROXYCLNT, "proxyAccept response %v", res)
@@ -346,7 +346,7 @@ func (npc *NetProxyClnt) proxyClose(lid netproxy.Tlid) error {
 			Iov: [][]byte{nil},
 		},
 	}
-	if err := npc.rpcc.RPC("NetProxySrvStubs.Close", req, res); err != nil {
+	if err := npc.rpcc.RPC("DialProxySrvStubs.Close", req, res); err != nil {
 		return err
 	}
 	db.DPrintf(db.DIALPROXYCLNT, "proxyClose response %v", res)
@@ -406,7 +406,7 @@ func (npc *NetProxyClnt) getNamedEndpoint(r sp.Trealm) (*sp.Tendpoint, error) {
 			Iov: [][]byte{nil},
 		},
 	}
-	if err := npc.rpcc.RPC("NetProxySrvStubs.GetNamedEndpoint", req, res); err != nil {
+	if err := npc.rpcc.RPC("DialProxySrvStubs.GetNamedEndpoint", req, res); err != nil {
 		return nil, err
 	}
 	if res.Err.ErrCode != 0 {
@@ -433,7 +433,7 @@ func (npc *NetProxyClnt) invalidateNamedEndpointCacheEntry(r sp.Trealm) error {
 			Iov: [][]byte{nil},
 		},
 	}
-	if err := npc.rpcc.RPC("NetProxySrvStubs.InvalidateNamedEndpointCacheEntry", req, res); err != nil {
+	if err := npc.rpcc.RPC("DialProxySrvStubs.InvalidateNamedEndpointCacheEntry", req, res); err != nil {
 		return err
 	}
 	if res.Err.ErrCode != 0 {

@@ -27,15 +27,15 @@ func projectRootPath() string {
 	return filepath.Dir(filepath.Dir(b))
 }
 
-func Start(kernelId string, etcdIP sp.Tip, pe *proc.ProcEnv, srvs string, netproxy bool) (string, error) {
+func Start(kernelId string, etcdIP sp.Tip, pe *proc.ProcEnv, srvs string, dialproxy bool) (string, error) {
 	args := []string{
 		"--pull", pe.BuildTag,
 		"--boot", srvs,
 		"--named", etcdIP.String(),
 		"--host",
 	}
-	if netproxy {
-		args = append(args, "--usenetproxy")
+	if dialproxy {
+		args = append(args, "--usedialproxy")
 	}
 	args = append(args, kernelId)
 	// Ensure the kernel output directory has been created
@@ -72,7 +72,7 @@ func Start(kernelId string, etcdIP sp.Tip, pe *proc.ProcEnv, srvs string, netpro
 		return "", err
 	}
 	ip := string(out)
-	db.DPrintf(db.BOOT, "Start: %v srvs %v IP %v netproxy %v", kernelId, srvs, ip, netproxy)
+	db.DPrintf(db.BOOT, "Start: %v srvs %v IP %v dialproxy %v", kernelId, srvs, ip, dialproxy)
 	return ip, nil
 }
 
@@ -86,9 +86,9 @@ type Kernel struct {
 	kclnt    *kernelclnt.KernelClnt
 }
 
-func NewKernelClntStart(etcdIP sp.Tip, pe *proc.ProcEnv, conf string, netproxy bool) (*Kernel, error) {
+func NewKernelClntStart(etcdIP sp.Tip, pe *proc.ProcEnv, conf string, dialproxy bool) (*Kernel, error) {
 	kernelId := GenKernelId()
-	_, err := Start(kernelId, etcdIP, pe, conf, netproxy)
+	_, err := Start(kernelId, etcdIP, pe, conf, dialproxy)
 	if err != nil {
 		return nil, err
 	}

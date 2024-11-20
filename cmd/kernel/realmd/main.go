@@ -10,13 +10,13 @@ import (
 
 func main() {
 	if len(os.Args) != 2 {
-		db.DFatalf("Usage: %v usenetproxy", os.Args[0])
+		db.DFatalf("Usage: %v usedialproxy", os.Args[0])
 	}
-	netproxy, err := strconv.ParseBool(os.Args[1])
+	dialproxy, err := strconv.ParseBool(os.Args[1])
 	if err != nil {
-		db.DFatalf("Error parse netproxy: %v", err)
+		db.DFatalf("Error parse dialproxy: %v", err)
 	}
-	if err := srv.RunRealmSrv(netproxy); err != nil {
+	if err := srv.RunRealmSrv(dialproxy); err != nil {
 		db.DFatalf("Fatal start: %v %v\n", os.Args[0], err)
 	}
 }

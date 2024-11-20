@@ -81,7 +81,7 @@ type UprocSrv struct {
 	binsrv         *exec.Cmd
 	kernelId       string
 	realm          sp.Trealm
-	netproxy       bool
+	dialproxy       bool
 	spproxydPID    sp.Tpid
 	schedPolicySet bool
 	procs          *syncmap.SyncMap[int, *procEntry]
@@ -92,11 +92,11 @@ type UprocRPCSrv struct {
 	ups *UprocSrv
 }
 
-func RunUprocSrv(kernelId string, netproxy bool, spproxydPID sp.Tpid) error {
+func RunUprocSrv(kernelId string, dialproxy bool, spproxydPID sp.Tpid) error {
 	pe := proc.GetProcEnv()
 	ups := &UprocSrv{
 		kernelId:    kernelId,
-		netproxy:    netproxy,
+		dialproxy:    dialproxy,
 		ch:          make(chan struct{}),
 		pe:          pe,
 		spproxydPID: spproxydPID,
@@ -328,7 +328,7 @@ func (ups *UprocSrv) Run(ctx fs.CtxI, req proto.RunRequest, res *proto.RunResult
 	}
 	uproc.FinalizeEnv(ups.pe.GetInnerContainerIP(), ups.pe.GetOuterContainerIP(), ups.pe.GetPID())
 	db.DPrintf(db.SPAWN_LAT, "[%v] Uproc Run: spawn time since spawn %v", uproc.GetPid(), time.Since(uproc.GetSpawnTime()))
-	cmd, err := scontainer.StartSigmaContainer(uproc, ups.netproxy)
+	cmd, err := scontainer.StartSigmaContainer(uproc, ups.dialproxy)
 	if err != nil {
 		return err
 	}

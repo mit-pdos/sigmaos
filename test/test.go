@@ -48,8 +48,8 @@ func init() {
 	flag.BoolVar(&reuseKernel, "reuse-kernel", false, "Reuse system, avoid restarting when possible")
 	flag.BoolVar(&noShutdown, "no-shutdown", false, "Don't shut down the system")
 	flag.BoolVar(&useSPProxy, "usespproxy", false, "Use spproxy?")
-	flag.BoolVar(&noNetProxy, "nonetproxy", false, "Disable use of proxy for network dialing/listening?")
-	flag.BoolVar(&noBootNetProxy, "no-boot-netproxy", false, "Boot spproxy?")
+	flag.BoolVar(&noNetProxy, "nodialproxy", false, "Disable use of proxy for network dialing/listening?")
+	flag.BoolVar(&noBootNetProxy, "no-boot-dialproxy", false, "Boot spproxy?")
 	flag.BoolVar(&Withs3pathclnt, "withs3pathclnt", false, "With s3clntpath?")
 }
 
@@ -207,7 +207,7 @@ func newSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 	var scsck *bootkernelclnt.Kernel
 	var sckid string
 	if !noBootNetProxy && (useSPProxy || useNetProxy) {
-		db.DPrintf(db.BOOT, "Booting spproxyd: usespproxyd %v usenetproxy %v", useSPProxy, useNetProxy)
+		db.DPrintf(db.BOOT, "Booting spproxyd: usespproxyd %v usedialproxy %v", useSPProxy, useNetProxy)
 		sckid = sp.SPProxydKernel(bootkernelclnt.GenKernelId())
 		_, err := bootkernelclnt.Start(sckid, sp.Tip(EtcdIP), pe, sp.SPPROXYDREL, useNetProxy)
 		if err != nil {

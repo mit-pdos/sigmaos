@@ -3,14 +3,14 @@ package clnt
 import (
 	"net"
 
-	"sigmaos/netproxy"
+	"sigmaos/dialproxy"
 	sp "sigmaos/sigmap"
 )
 
 // Must respect standard net.Listener API for compatibility
 type Listener struct {
 	npc *DialProxyClnt
-	lid netproxy.Tlid
+	lid dialproxy.Tlid
 	la  *ListenerAddr
 }
 
@@ -18,7 +18,7 @@ type ListenerAddr struct {
 	ep *sp.Tendpoint
 }
 
-func NewListener(npc *DialProxyClnt, lid netproxy.Tlid, ep *sp.Tendpoint) *Listener {
+func NewListener(npc *DialProxyClnt, lid dialproxy.Tlid, ep *sp.Tendpoint) *Listener {
 	return &Listener{
 		npc: npc,
 		lid: lid,

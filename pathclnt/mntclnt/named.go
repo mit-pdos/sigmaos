@@ -24,7 +24,7 @@ func (mc *MntClnt) InvalidateNamedEndpointCacheEntryRealm(realm sp.Trealm) error
 	return mc.invalidateNamedMountCacheEntry(realm)
 }
 
-// Get named enpoint via netproxy or directly
+// Get named enpoint via dialproxy or directly
 func (mc *MntClnt) getNamedEndpointRealm(realm sp.Trealm) (*sp.Tendpoint, *serr.Err) {
 	s := time.Now()
 	if ep, ok := mc.ndMntCache.Get(realm); ok {

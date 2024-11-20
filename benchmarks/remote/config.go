@@ -18,7 +18,7 @@ type BenchConfig struct {
 	Version    string       `json:"version"`
 	Debug      string       `json:"debug"`
 	Perf       string       `json:"perf"`
-	NoNetproxy bool         `json:"no_netproxy"`
+	NoNetproxy bool         `json:"no_dialproxy"`
 	Overlays   bool         `json:"overlays"`
 	Parallel   bool         `json:"parallel"`
 	NoShutdown bool         `json:"no_shutdown"`
@@ -68,10 +68,10 @@ func NewBenchConfig() (*BenchConfig, error) {
 		return nil, fmt.Errorf("k8s is only supported on cloudlab")
 	}
 	if cfg.Overlays && !cfg.NoNetproxy {
-		return nil, fmt.Errorf("Should not run with overlays AND netproxy!")
+		return nil, fmt.Errorf("Should not run with overlays AND dialproxy!")
 	}
 	if !cfg.Overlays && cfg.NoNetproxy {
-		return nil, fmt.Errorf("Should not run without overlays AND without netproxy!")
+		return nil, fmt.Errorf("Should not run without overlays AND without dialproxy!")
 	}
 	return cfg, nil
 }

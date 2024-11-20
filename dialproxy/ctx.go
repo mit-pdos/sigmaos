@@ -1,4 +1,4 @@
-package netproxy
+package dialproxy
 
 import (
 	"os"

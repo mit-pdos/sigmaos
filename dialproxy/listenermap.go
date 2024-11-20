@@ -1,4 +1,4 @@
-package netproxy
+package dialproxy
 
 import (
 	"fmt"
@@ -25,7 +25,7 @@ func (lm *ListenerMap) CloseListeners() error {
 	defer lm.Unlock()
 
 	if lm.closed {
-		return fmt.Errorf("Error: close closed netproxysrv")
+		return fmt.Errorf("Error: close closed dialproxysrv")
 	}
 	lm.closed = true
 	lids := make([]Tlid, 0, len(lm.ls))
@@ -45,7 +45,7 @@ func (lm *ListenerMap) Add(lid Tlid, l net.Listener) error {
 	defer lm.Unlock()
 
 	if lm.closed {
-		return fmt.Errorf("Error: add listener to closed netproxy conn")
+		return fmt.Errorf("Error: add listener to closed dialproxy conn")
 	}
 
 	lm.ls[lid] = l

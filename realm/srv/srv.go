@@ -70,7 +70,7 @@ func (r *Realm) addSubsystem(kernelID string, pid sp.Tpid) {
 
 type RealmSrv struct {
 	mu         sync.Mutex
-	netproxy   bool
+	dialproxy   bool
 	realms     map[sp.Trealm]*Realm
 	sc         *sigmaclnt.SigmaClntKernel
 	be         *beschedclnt.BESchedClnt
@@ -80,7 +80,7 @@ type RealmSrv struct {
 	ch         chan struct{}
 }
 
-func RunRealmSrv(netproxy bool) error {
+func RunRealmSrv(dialproxy bool) error {
 	pe := proc.GetProcEnv()
 	sc, err := sigmaclnt.NewSigmaClnt(pe)
 	if err != nil {
@@ -88,7 +88,7 @@ func RunRealmSrv(netproxy bool) error {
 	}
 	sc.GetDialProxyClnt().AllowConnectionsFromAllRealms()
 	rs := &RealmSrv{
-		netproxy:   netproxy,
+		dialproxy:   dialproxy,
 		lastNDPort: MIN_PORT,
 		realms:     make(map[sp.Trealm]*Realm),
 	}
@@ -153,8 +153,8 @@ func (rm *RealmSrv) Make(ctx fs.CtxI, req proto.MakeRequest, res *proto.MakeResu
 	// Set up a realm switch: when named runs, it should start as a member of the
 	// new realm.
 	p.SetRealmSwitch(rid)
-	// Make sure named uses netproxy
-	p.GetProcEnv().UseDialProxy = rm.netproxy
+	// Make sure named uses dialproxy
+	p.GetProcEnv().UseDialProxy = rm.dialproxy
 	p.SetMcpu(NAMED_MCPU)
 	r.named = p
 

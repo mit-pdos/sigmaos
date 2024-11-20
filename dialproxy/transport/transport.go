@@ -45,11 +45,11 @@ func GetNetproxydConn(pe *proc.ProcEnv) (*net.UnixConn, error) {
 	var conn *net.UnixConn
 	fdstr := os.Getenv(SIGMA_DIALPROXY_FD)
 	if fdstr == "" {
-		// Connect to the netproxy server by dialing the unix socket (should only
+		// Connect to the dialproxy server by dialing the unix socket (should only
 		// be done by the test program)
 		uconn, err := net.Dial("unix", sp.SIGMA_DIALPROXY_SOCKET)
 		if err != nil {
-			db.DPrintf(db.ERROR, "Error connect netproxy srv")
+			db.DPrintf(db.ERROR, "Error connect dialproxy srv")
 			return nil, err
 		}
 		conn = uconn.(*net.UnixConn)
@@ -69,20 +69,20 @@ func GetNetproxydConn(pe *proc.ProcEnv) (*net.UnixConn, error) {
 		// Sanity check that a proc only has one DialProxyClnt, since using the fd
 		// set up by the trampoline consumes it destructively.
 		if hasBeenInit {
-			db.DPrintf(db.ERROR, "Error double-init netproxyclnt")
-			return nil, fmt.Errorf("Error double-init netproxyclnt: %v", string(debug.Stack()))
+			db.DPrintf(db.ERROR, "Error double-init dialproxyclnt")
+			return nil, fmt.Errorf("Error double-init dialproxyclnt: %v", string(debug.Stack()))
 		}
 		hasBeenInit = true
-		// Connect to the netproxy server using the FD set up by the trampoline
+		// Connect to the dialproxy server using the FD set up by the trampoline
 		// (should be done by user procs)
 		fd, err := strconv.Atoi(fdstr)
 		if err != nil {
-			db.DPrintf(db.ERROR, "Error get netproxy fd (%v): %v", fdstr, err)
+			db.DPrintf(db.ERROR, "Error get dialproxy fd (%v): %v", fdstr, err)
 			return nil, err
 		}
 		conn, err = fdToUnixConn(fd)
 		if err != nil {
-			db.DPrintf(db.ERROR, "Error connect netproxy srv")
+			db.DPrintf(db.ERROR, "Error connect dialproxy srv")
 			return nil, err
 		}
 	}

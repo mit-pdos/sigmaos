@@ -33,7 +33,7 @@ func init() {
 	flag.StringVar(&tagArg, "tag", sp.NOT_SET, "Build tag with which to run.")
 	flag.StringVar(&branchArg, "branch", "master", "Branch on which to run.")
 	flag.StringVar(&versionArg, "version", sp.NOT_SET, "Output version string.")
-	flag.BoolVar(&noNetproxyArg, "nonetproxy", false, "Disable use of proxy for network dialing/listening.")
+	flag.BoolVar(&noNetproxyArg, "nodialproxy", false, "Disable use of proxy for network dialing/listening.")
 	flag.BoolVar(&overlaysArg, "overlays", false, "Run with Docker swarm overlays enabled.")
 	flag.BoolVar(&parallelArg, "parallelize", false, "Run commands in parallel to speed up, e.g., cluster shutdown.")
 	flag.BoolVar(&oneByOne, "one-by-one", false, "Run one benchmark part, and then return")

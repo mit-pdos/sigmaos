@@ -1,4 +1,4 @@
-package netproxy
+package dialproxy
 
 import (
 	"net"
@@ -17,7 +17,7 @@ func writeConnPreamble(c net.Conn, p *sp.Tprincipal) error {
 		db.DFatalf("Error marshal principal: %v", err)
 		return err
 	}
-	// Write the principal ID to the server's netproxyd, so that it
+	// Write the principal ID to the server's dialproxyd, so that it
 	// knows the principal associated with this connection
 	if err := frame.WriteFrame(c, b); err != nil {
 		db.DPrintf(db.ERROR, "Error WriteFrame principal preamble: %v", err)

@@ -1,4 +1,4 @@
-package netproxy_test
+package dialproxy_test
 
 import (
 	"net"
@@ -88,7 +88,7 @@ func TestListen(t *testing.T) {
 	}
 	addr := sp.NewTaddr(IP, sp.INNER_CONTAINER_IP, PORT)
 	npc := ts.GetDialProxyClnt()
-	// Create a listener via netproxy
+	// Create a listener via dialproxy
 	_, _, err := npc.Listen(sp.INTERNAL_EP, addr)
 	assert.Nil(t, err, "Err Listen: %v", err)
 	ts.Shutdown()
@@ -102,7 +102,7 @@ func TestFailedListen(t *testing.T) {
 	}
 	addr := sp.NewTaddr("123.456.789.000", sp.INNER_CONTAINER_IP, PORT)
 	npc := ts.GetDialProxyClnt()
-	// Create a listener via netproxy
+	// Create a listener via dialproxy
 	_, _, err := npc.Listen(sp.INTERNAL_EP, addr)
 	assert.NotNil(t, err, "Err Listen: %v", err)
 	ts.Shutdown()
@@ -116,7 +116,7 @@ func TestClose(t *testing.T) {
 	}
 	addr := sp.NewTaddr(IP, sp.INNER_CONTAINER_IP, PORT)
 	npc := ts.GetDialProxyClnt()
-	// Create a listener via netproxy
+	// Create a listener via dialproxy
 	ep, l, err := npc.Listen(sp.INTERNAL_EP, addr)
 	assert.Nil(t, err, "Err Listen: %v", err)
 	err = l.Close()
@@ -151,7 +151,7 @@ func TestAccept(t *testing.T) {
 	addr := sp.NewTaddr(IP, sp.INNER_CONTAINER_IP, PORT)
 	npc := ts.GetDialProxyClnt()
 	c := make(chan bool)
-	// Create a listener via netproxy
+	// Create a listener via dialproxy
 	ep, l, err := npc.Listen(sp.INTERNAL_EP, addr)
 	assert.Nil(t, err, "Err Listen: %v", err)
 	go func(l net.Listener, c chan bool) {

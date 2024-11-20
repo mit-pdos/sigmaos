@@ -13,7 +13,7 @@ import (
 	dialproxytrans "sigmaos/dialproxy/transport"
 	"sigmaos/frame"
 	"sigmaos/fs"
-	"sigmaos/netproxy"
+	"sigmaos/dialproxy"
 	netproto "sigmaos/dialproxy/proto"
 	"sigmaos/proc"
 	"sigmaos/rpc"
@@ -32,11 +32,11 @@ type DialProxySrv struct {
 
 type DialProxySrvStubs struct {
 	closed           bool
-	lidctr           netproxy.Tlidctr
-	lm               *netproxy.ListenerMap
+	lidctr           dialproxy.Tlidctr
+	lm               *dialproxy.ListenerMap
 	innerContainerIP sp.Tip
-	directDialFn     netproxy.DialFn
-	directListenFn   netproxy.ListenFn
+	directDialFn     dialproxy.DialFn
+	directListenFn   dialproxy.ListenFn
 	p                *sp.Tprincipal
 	sc               *sigmaclnt.SigmaClnt
 }
@@ -94,9 +94,9 @@ func (nps *DialProxySrv) handleNewConn(conn *net.UnixConn) {
 		conn:    conn,
 		baseCtx: ctx.NewPrincipalOnlyCtx(p),
 		npss: &DialProxySrvStubs{
-			lm:               netproxy.NewListenerMap(),
+			lm:               dialproxy.NewListenerMap(),
 			innerContainerIP: nps.innerContainerIP,
-			directListenFn:   netproxy.ListenDirect,
+			directListenFn:   dialproxy.ListenDirect,
 			sc:               nps.sc,
 			p:                p,
 		},
@@ -109,7 +109,7 @@ func (nps *DialProxySrv) handleNewConn(conn *net.UnixConn) {
 func (npsc *DialProxySrvConn) ServeRequest(c demux.CallI) (demux.CallI, *serr.Err) {
 	db.DPrintf(db.DIALPROXYSRV, "ServeRequest: %v", c)
 	req := c.(*dialproxytrans.ProxyCall)
-	ctx := netproxy.NewCtx(npsc.baseCtx)
+	ctx := dialproxy.NewCtx(npsc.baseCtx)
 	rep, err := npsc.rpcs.WriteRead(ctx, req.Iov)
 	if err != nil {
 		db.DPrintf(db.DIALPROXYSRV, "ServeRequest: writeRead err %v", err)
@@ -130,10 +130,10 @@ func (nps *DialProxySrvStubs) Dial(c fs.CtxI, req netproto.DialRequest, res *net
 	res.Blob = &rpcproto.Blob{
 		Iov: [][]byte{nil},
 	}
-	ctx := c.(*netproxy.Ctx)
+	ctx := c.(*dialproxy.Ctx)
 	ep := sp.NewEndpointFromProto(req.GetEndpoint())
 	db.DPrintf(db.DIALPROXYSRV, "Dial principal %v -> ep %v", ctx.Principal(), ep)
-	proxyConn, err := netproxy.DialDirect(ctx.Principal(), ep)
+	proxyConn, err := dialproxy.DialDirect(ctx.Principal(), ep)
 	// If Dial was unsuccessful, set the reply error appropriately
 	if err != nil {
 		db.DPrintf(db.DIALPROXYSRV_ERR, "Error dial direct: %v", err)
@@ -168,7 +168,7 @@ func (nps *DialProxySrvStubs) Listen(c fs.CtxI, req netproto.ListenRequest, res 
 	res.Blob = &rpcproto.Blob{
 		Iov: [][]byte{nil},
 	}
-	ctx := c.(*netproxy.Ctx)
+	ctx := c.(*dialproxy.Ctx)
 	addr := req.GetAddr()
 	db.DPrintf(db.DIALPROXYSRV, "Listen principal %v -> addr %v", ctx.Principal(), addr)
 	l, err := nps.directListenFn(addr)
@@ -182,14 +182,14 @@ func (nps *DialProxySrvStubs) Listen(c fs.CtxI, req netproto.ListenRequest, res 
 		}
 		return nil
 	}
-	ep, err := netproxy.NewEndpoint(sp.TTendpoint(req.EndpointType), nps.innerContainerIP, l)
+	ep, err := dialproxy.NewEndpoint(sp.TTendpoint(req.EndpointType), nps.innerContainerIP, l)
 	if err != nil {
 		db.DFatalf("Error construct endpoint: %v", err)
 		return err
 	}
 	res.Endpoint = ep.GetProto()
 	// Store the listener & assign it an ID
-	lid := netproxy.Tlid(nps.lidctr.Add(1))
+	lid := dialproxy.Tlid(nps.lidctr.Add(1))
 	err = nps.lm.Add(lid, l)
 	if err != nil {
 		db.DPrintf(db.DIALPROXYSRV_ERR, "Error addListener: %v", err)
@@ -213,8 +213,8 @@ func (nps *DialProxySrvStubs) Accept(c fs.CtxI, req netproto.AcceptRequest, res 
 	res.Blob = &rpcproto.Blob{
 		Iov: [][]byte{nil},
 	}
-	ctx := c.(*netproxy.Ctx)
-	lid := netproxy.Tlid(req.ListenerID)
+	ctx := c.(*dialproxy.Ctx)
+	lid := dialproxy.Tlid(req.ListenerID)
 	db.DPrintf(db.DIALPROXYSRV, "Accept principal %v -> lid %v", ctx.Principal(), lid)
 	l, ok := nps.lm.Get(lid)
 	if !ok {
@@ -224,8 +224,8 @@ func (nps *DialProxySrvStubs) Accept(c fs.CtxI, req netproto.AcceptRequest, res 
 	}
 	// Accept the next connection from a principal authorized to establish a
 	// connection to this listener
-	proxyConn, p, err := netproxy.AcceptFromAuthorizedPrincipal(l, req.GetInternalListener(), func(cliP *sp.Tprincipal) bool {
-		return netproxy.ConnectionIsAuthorized(false, nps.p, cliP)
+	proxyConn, p, err := dialproxy.AcceptFromAuthorizedPrincipal(l, req.GetInternalListener(), func(cliP *sp.Tprincipal) bool {
+		return dialproxy.ConnectionIsAuthorized(false, nps.p, cliP)
 	})
 	if err != nil {
 		res.Err = sp.NewRerrorErr(fmt.Errorf("Error accept: %v", err))
@@ -251,8 +251,8 @@ func (nps *DialProxySrvStubs) Close(c fs.CtxI, req netproto.CloseRequest, res *n
 	res.Blob = &rpcproto.Blob{
 		Iov: [][]byte{nil},
 	}
-	ctx := c.(*netproxy.Ctx)
-	lid := netproxy.Tlid(req.ListenerID)
+	ctx := c.(*dialproxy.Ctx)
+	lid := dialproxy.Tlid(req.ListenerID)
 	db.DPrintf(db.DIALPROXYSRV, "Close principal %v -> lid %v", ctx.Principal(), lid)
 	ok := nps.lm.Close(lid)
 	if !ok {

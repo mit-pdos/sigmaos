@@ -17,20 +17,20 @@ import (
 
 func main() {
 	if len(os.Args) != 9 {
-		db.DFatalf("usage: %v kernelid srvs nameds dbip mongoip reserveMcpu buildTag netproxy provided:%v", os.Args[0], os.Args)
+		db.DFatalf("usage: %v kernelid srvs nameds dbip mongoip reserveMcpu buildTag dialproxy provided:%v", os.Args[0], os.Args)
 	}
 	db.DPrintf(db.BOOT, "Boot %v", os.Args[1:])
 	srvs := strings.Split(os.Args[3], ";")
-	netproxy, err := strconv.ParseBool(os.Args[8])
+	dialproxy, err := strconv.ParseBool(os.Args[8])
 	if err != nil {
-		db.DFatalf("Error parse netproxy: %v", err)
+		db.DFatalf("Error parse dialproxy: %v", err)
 	}
 	param := kernel.Param{
 		KernelID: os.Args[1],
 		Services: srvs,
 		Dbip:     os.Args[4],
 		Mongoip:  os.Args[5],
-		NetProxy: netproxy,
+		NetProxy: dialproxy,
 		BuildTag: os.Args[7],
 	}
 	if len(os.Args) >= 7 {

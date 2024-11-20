@@ -31,7 +31,7 @@ func NewEndpointFromProto(p *TendpointProto) *Tendpoint {
 }
 
 // XXX Currently, endpoint type is a hint. In reality, it should be verified
-// somehow by netproxy (e.g., by inspecting the IP addrs)
+// somehow by dialproxy (e.g., by inspecting the IP addrs)
 func NewEndpointClaimsProto(t TTendpoint, addrs Taddrs) *TendpointClaimsProto {
 	return &TendpointClaimsProto{
 		EndpointType: uint32(t),

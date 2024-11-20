@@ -140,7 +140,7 @@ func (k *Kernel) bootKNamed(pe *proc.ProcEnv, init bool) error {
 }
 
 func (k *Kernel) bootRealmd() (Subsystem, error) {
-	return k.bootSubsystem("realmd", []string{strconv.FormatBool(k.Param.NetProxy)}, sp.ROOTREALM, proc.HSCHEDD, 0)
+	return k.bootSubsystem("realmd", []string{strconv.FormatBool(k.Param.DialProxy)}, sp.ROOTREALM, proc.HSCHEDD, 0)
 }
 
 func (k *Kernel) bootUxd(realm sp.Trealm) (Subsystem, error) {
@@ -193,7 +193,7 @@ func (k *Kernel) bootSPProxyd() (Subsystem, error) {
 func (k *Kernel) bootUprocd(args []string) (Subsystem, error) {
 	spproxydPID := sp.GenPid("spproxyd")
 	// Append args
-	args = append(args, strconv.FormatBool(k.Param.NetProxy), spproxydPID.String())
+	args = append(args, strconv.FormatBool(k.Param.DialProxy), spproxydPID.String())
 	db.DPrintf(db.ALWAYS, "Uprocd args %v", args)
 	s, err := k.bootSubsystem("uprocd", args, sp.ROOTREALM, proc.HDOCKER, 0)
 	if err != nil {

@@ -28,7 +28,7 @@ type Param struct {
 	Services    []string
 	Dbip        string
 	Mongoip     string
-	NetProxy    bool
+	DialProxy   bool
 	BuildTag    string
 	ReserveMcpu string
 }

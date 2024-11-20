@@ -41,7 +41,7 @@ func NewDialProxyTrans(conn *net.UnixConn, iovm *demux.IoVecMap) *DialProxyTrans
 	}
 }
 
-func GetNetproxydConn(pe *proc.ProcEnv) (*net.UnixConn, error) {
+func GetDialProxydConn(pe *proc.ProcEnv) (*net.UnixConn, error) {
 	var conn *net.UnixConn
 	fdstr := os.Getenv(SIGMA_DIALPROXY_FD)
 	if fdstr == "" {
@@ -210,7 +210,7 @@ func (trans *DialProxyTrans) AddConn(seqno sessp.Tseqno, conn *os.File) {
 
 	// Sanity check
 	if _, ok := trans.openConns[seqno]; ok {
-		db.DFatalf("Netproxytrans overwrite conn: seqno %v", seqno)
+		db.DFatalf("DialProxytrans overwrite conn: seqno %v", seqno)
 	}
 	trans.openConns[seqno] = conn
 }

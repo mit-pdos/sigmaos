@@ -26,12 +26,12 @@ func main() {
 		db.DFatalf("Error parse dialproxy: %v", err)
 	}
 	param := kernel.Param{
-		KernelID: os.Args[1],
-		Services: srvs,
-		Dbip:     os.Args[4],
-		Mongoip:  os.Args[5],
-		NetProxy: dialproxy,
-		BuildTag: os.Args[7],
+		KernelID:  os.Args[1],
+		Services:  srvs,
+		Dbip:      os.Args[4],
+		Mongoip:   os.Args[5],
+		DialProxy: dialproxy,
+		BuildTag:  os.Args[7],
 	}
 	if len(os.Args) >= 7 {
 		param.ReserveMcpu = os.Args[6]

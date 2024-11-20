@@ -10,9 +10,9 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/demux"
-	dialproxytrans "sigmaos/dialproxy/transport"
 	"sigmaos/dialproxy"
 	"sigmaos/dialproxy/proto"
+	dialproxytrans "sigmaos/dialproxy/transport"
 	"sigmaos/proc"
 	"sigmaos/rpc"
 	rpcproto "sigmaos/rpc/proto"
@@ -158,7 +158,7 @@ func (npc *DialProxyClnt) init() error {
 	db.DPrintf(db.DIALPROXYCLNT, "[%v] Init dialproxyclnt %p", npc.pe.GetPrincipal(), npc)
 	defer db.DPrintf(db.DIALPROXYCLNT, "[%v] Init dialproxyclnt %p done", npc.pe.GetPrincipal(), npc)
 	iovm := demux.NewIoVecMap()
-	conn, err := dialproxytrans.GetNetproxydConn(npc.pe)
+	conn, err := dialproxytrans.GetDialProxydConn(npc.pe)
 	if err != nil {
 		return err
 	}

@@ -5,7 +5,7 @@
 #
 
 usage() {
-    echo "Usage: $0 [--pull TAG] [--boot all|all_no_besched|node|node_no_besched|minnode|besched_node|named|realm_no_besched|spproxyd] [--named ADDRs] [--dbip DBIP] [--mongoip MONGOIP] [--host] [--usenetproxy] [--reserveMcpu rmcpu] kernelid"  1>&2
+    echo "Usage: $0 [--pull TAG] [--boot all|all_no_besched|node|node_no_besched|minnode|besched_node|named|realm_no_besched|spproxyd] [--named ADDRs] [--dbip DBIP] [--mongoip MONGOIP] [--host] [--usedialproxy] [--reserveMcpu rmcpu] kernelid"  1>&2
 }
 
 UPDATE=""
@@ -16,7 +16,7 @@ DBIP="x.x.x.x"
 MONGOIP="x.x.x.x"
 NET="host"
 KERNELID=""
-NETPROXY="false"
+DIALPROXY="false"
 RMCPU="0"
 while [[ "$#" -gt 1 ]]; do
   case "$1" in
@@ -70,9 +70,9 @@ while [[ "$#" -gt 1 ]]; do
     shift
     NET="host"
     ;;
-  --usenetproxy)
+  --usedialproxy)
     shift
-    NETPROXY="true"
+    DIALPROXY="true"
     ;;
   --named)
     shift
@@ -175,7 +175,7 @@ CID=$(docker run -dit \
              -e dbip=${DBIP} \
              -e mongoip=${MONGOIP} \
              -e buildtag=${TAG} \
-             -e netproxy=${NETPROXY} \
+             -e dialproxy=${DIALPROXY} \
              -e SIGMAPERF=${SIGMAPERF} \
              -e SIGMADEBUG=${SIGMADEBUG} \
              -e reserveMcpu=${RMCPU} \

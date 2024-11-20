@@ -3,8 +3,8 @@ package main
 import (
 	"os"
 
-	"sigmaos/besched/srv"
 	db "sigmaos/debug"
+	"sigmaos/sched/besched/srv"
 )
 
 func main() {

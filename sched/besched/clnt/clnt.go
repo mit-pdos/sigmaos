@@ -4,10 +4,10 @@ package clnt
 import (
 	"time"
 
-	"sigmaos/besched/proto"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/proc"
+	"sigmaos/sched/besched/proto"
 	//	"sigmaos/rpc"
 	"sigmaos/rpcdirclnt"
 	"sigmaos/serr"

@@ -1,11 +1,11 @@
 package lcschedclnt
 
 import (
-	"sigmaos/besched/proto"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/proc"
 	"sigmaos/rpcdirclnt"
+	"sigmaos/sched/besched/proto"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 )

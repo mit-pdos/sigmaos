@@ -1,8 +1,8 @@
 syntax = "proto3";
 
-import "besched/proto/besched.proto";
+import "sched/besched/proto/besched.proto";
 
-option go_package = "sigmaos/lcsched/proto";
+option go_package = "sigmaos/sched/lcsched/proto";
 
 service LCSched {
   rpc Enqueue(EnqueueRequest) returns (EnqueueResponse);

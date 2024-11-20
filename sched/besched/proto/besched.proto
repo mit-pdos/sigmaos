@@ -2,7 +2,7 @@ syntax = "proto3";
 
 import "proc/proc.proto";
 
-option go_package = "sigmaos/besched/proto";
+option go_package = "sigmaos/sched/besched/proto";
 
 service BESched {
   rpc Enqueue(EnqueueRequest) returns (EnqueueResponse);

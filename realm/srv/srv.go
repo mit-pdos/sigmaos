@@ -9,7 +9,6 @@ import (
 	"sync"
 	"time"
 
-	beschedclnt "sigmaos/besched/clnt"
 	db "sigmaos/debug"
 	dialproxyclnt "sigmaos/dialproxy/clnt"
 	"sigmaos/fs"
@@ -19,6 +18,7 @@ import (
 	realmpkg "sigmaos/realm"
 	"sigmaos/realm/proto"
 	"sigmaos/rpc"
+	beschedclnt "sigmaos/sched/besched/clnt"
 	"sigmaos/scheddclnt"
 	"sigmaos/semclnt"
 	"sigmaos/serr"
@@ -70,7 +70,7 @@ func (r *Realm) addSubsystem(kernelID string, pid sp.Tpid) {
 
 type RealmSrv struct {
 	mu         sync.Mutex
-	dialproxy   bool
+	dialproxy  bool
 	realms     map[sp.Trealm]*Realm
 	sc         *sigmaclnt.SigmaClntKernel
 	be         *beschedclnt.BESchedClnt
@@ -88,7 +88,7 @@ func RunRealmSrv(dialproxy bool) error {
 	}
 	sc.GetDialProxyClnt().AllowConnectionsFromAllRealms()
 	rs := &RealmSrv{
-		dialproxy:   dialproxy,
+		dialproxy:  dialproxy,
 		lastNDPort: MIN_PORT,
 		realms:     make(map[sp.Trealm]*Realm),
 	}

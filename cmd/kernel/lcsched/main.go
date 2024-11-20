@@ -4,7 +4,7 @@ import (
 	"os"
 
 	db "sigmaos/debug"
-	"sigmaos/lcsched/srv"
+	"sigmaos/sched/lcsched/srv"
 )
 
 func main() {

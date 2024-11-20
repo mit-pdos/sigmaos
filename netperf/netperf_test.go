@@ -16,7 +16,7 @@ import (
 func TestCompile(t *testing.T) {
 }
 
-func clntDialNetProxy(t *testing.T, ep *sp.Tendpoint) {
+func clntDialDialProxy(t *testing.T, ep *sp.Tendpoint) {
 	ts, err1 := test.NewTstateAll(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
@@ -24,11 +24,11 @@ func clntDialNetProxy(t *testing.T, ep *sp.Tendpoint) {
 	defer ts.Shutdown()
 
 	npc := ts.GetDialProxyClnt()
-	_, err := netperf.ClntDialNetProxy(ntrial, npc, ep)
+	_, err := netperf.ClntDialDialProxy(ntrial, npc, ep)
 	assert.Nil(ts.T, err, "Err clnt: %v", err)
 }
 
-func srvDialNetProxy(t *testing.T, addr *sp.Taddr, epType sp.TTendpoint) {
+func srvDialDialProxy(t *testing.T, addr *sp.Taddr, epType sp.TTendpoint) {
 	ts, err1 := test.NewTstateAll(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
@@ -37,11 +37,11 @@ func srvDialNetProxy(t *testing.T, addr *sp.Taddr, epType sp.TTendpoint) {
 
 	npc := ts.GetDialProxyClnt()
 	started := make(chan bool, 2)
-	err := netperf.SrvDialNetProxy(started, ntrial, npc, addr, epType)
+	err := netperf.SrvDialDialProxy(started, ntrial, npc, addr, epType)
 	assert.Nil(ts.T, err, "Err srv: %v", err)
 }
 
-func TestProcDialNetProxy(t *testing.T) {
+func TestProcDialDialProxy(t *testing.T) {
 	ts, err1 := test.NewTstateAll(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
@@ -72,33 +72,33 @@ func TestProcDialNetProxy(t *testing.T) {
 	db.DPrintf(db.BENCH, "Clnt latency: %s", clntStatus.Msg())
 }
 
-func TestClntDialNetProxyInternal(t *testing.T) {
+func TestClntDialDialProxyInternal(t *testing.T) {
 	addr, err := sp.NewTaddrFromString(srvaddr, sp.INNER_CONTAINER_IP)
 	assert.Nil(t, err, "Err parse addr: %v", err)
 	ep := sp.NewEndpoint(sp.INTERNAL_EP, sp.Taddrs{addr})
-	clntDialNetProxy(t, ep)
+	clntDialDialProxy(t, ep)
 }
 
-func TestSrvDialNetProxyInternal(t *testing.T) {
+func TestSrvDialDialProxyInternal(t *testing.T) {
 	addr, err := sp.NewTaddrFromString(srvaddr, sp.INNER_CONTAINER_IP)
 	assert.Nil(t, err, "Err parse addr: %v", err)
-	srvDialNetProxy(t, addr, sp.INTERNAL_EP)
+	srvDialDialProxy(t, addr, sp.INTERNAL_EP)
 }
 
-func TestClntDialNetProxyExternal(t *testing.T) {
+func TestClntDialDialProxyExternal(t *testing.T) {
 	addr, err := sp.NewTaddrFromString(srvaddr, sp.INNER_CONTAINER_IP)
 	assert.Nil(t, err, "Err parse addr: %v", err)
 	ep := sp.NewEndpoint(sp.EXTERNAL_EP, sp.Taddrs{addr})
-	clntDialNetProxy(t, ep)
+	clntDialDialProxy(t, ep)
 }
 
-func TestSrvDialNetProxyExternal(t *testing.T) {
+func TestSrvDialDialProxyExternal(t *testing.T) {
 	addr, err := sp.NewTaddrFromString(srvaddr, sp.INNER_CONTAINER_IP)
 	assert.Nil(t, err, "Err parse addr: %v", err)
-	srvDialNetProxy(t, addr, sp.EXTERNAL_EP)
+	srvDialDialProxy(t, addr, sp.EXTERNAL_EP)
 }
 
-func TestClntThroughputNetProxy(t *testing.T) {
+func TestClntThroughputDialProxy(t *testing.T) {
 	addr, err := sp.NewTaddrFromString(srvaddr, sp.INNER_CONTAINER_IP)
 	assert.Nil(t, err, "Err parse addr: %v", err)
 	ep := sp.NewEndpoint(sp.INTERNAL_EP, sp.Taddrs{addr})
@@ -116,7 +116,7 @@ func TestClntThroughputNetProxy(t *testing.T) {
 	clntThroughput(t, conn)
 }
 
-func TestSrvThroughputNetProxy(t *testing.T) {
+func TestSrvThroughputDialProxy(t *testing.T) {
 	addr, err := sp.NewTaddrFromString(srvaddr, sp.INNER_CONTAINER_IP)
 	assert.Nil(t, err, "Err parse addr: %v", err)
 	ts, err1 := test.NewTstateAll(t)
@@ -134,7 +134,7 @@ func TestSrvThroughputNetProxy(t *testing.T) {
 	srvThroughput(t, conn)
 }
 
-func TestClntRTTNetProxy(t *testing.T) {
+func TestClntRTTDialProxy(t *testing.T) {
 	addr, err := sp.NewTaddrFromString(srvaddr, sp.INNER_CONTAINER_IP)
 	assert.Nil(t, err, "Err parse addr: %v", err)
 	ep := sp.NewEndpoint(sp.INTERNAL_EP, sp.Taddrs{addr})
@@ -152,7 +152,7 @@ func TestClntRTTNetProxy(t *testing.T) {
 	clntRTT(t, conn)
 }
 
-func TestSrvRTTNetProxy(t *testing.T) {
+func TestSrvRTTDialProxy(t *testing.T) {
 	addr, err := sp.NewTaddrFromString(srvaddr, sp.INNER_CONTAINER_IP)
 	assert.Nil(t, err, "Err parse addr: %v", err)
 	ts, err1 := test.NewTstateAll(t)

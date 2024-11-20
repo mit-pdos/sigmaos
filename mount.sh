@@ -29,8 +29,8 @@ while [ $# -ne 1 ]; do
 done
 
 if [[ "$BOOT" == "--boot" ]] ; then
-    (cd npproxysrv; ../start-kernel.sh --pull local-build --boot all --usenetproxy sigma-named )
-    (cd npproxysrv; ../start-kernel.sh --pull local-build --boot spproxyd --usenetproxy sigma-scd )
+    (cd npproxysrv; ../start-kernel.sh --pull local-build --boot all --usedialproxy sigma-named )
+    (cd npproxysrv; ../start-kernel.sh --pull local-build --boot spproxyd --usedialproxy sigma-scd )
 fi
 
 ./bin/npproxy/npproxyd $1 &

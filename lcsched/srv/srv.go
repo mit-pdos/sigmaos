@@ -8,7 +8,6 @@ import (
 	beschedproto "sigmaos/besched/proto"
 	"sigmaos/chunk"
 	"sigmaos/chunkclnt"
-	"sigmaos/chunksrv"
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/lcsched/proto"
@@ -154,7 +153,7 @@ func (lcs *LCSched) schedule() {
 func (lcs *LCSched) runProc(kernelID string, p *proc.Proc, ch chan string, r *Resources) {
 	// Chunksrv relies on there only being one chunk server in the path to
 	// avoid circular waits & deadlocks.
-	if !chunksrv.IsChunkSrvPath(p.GetSigmaPath()[0]) {
+	if !chunk.IsChunkSrvPath(p.GetSigmaPath()[0]) {
 		if kid, ok := lcs.realmbins.GetBinKernelID(p.GetRealm(), p.GetProgram()); ok {
 			p.PrependSigmaPath(chunk.ChunkdPath(kid))
 		}

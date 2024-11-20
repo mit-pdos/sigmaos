@@ -1,4 +1,4 @@
-package chunksrv_test
+package srv_test
 
 import (
 	"os"

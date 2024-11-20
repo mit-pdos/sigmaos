@@ -4,7 +4,7 @@
 // SigmaPath is the origin for the binary (e.g., an S3 path) and
 // earlier entries are paths to other chunksrvs (e.g., prepended by
 // procclnt or procqsrv).
-package chunksrv
+package srv
 
 import (
 	"fmt"
@@ -18,9 +18,9 @@ import (
 	proto "sigmaos/chunk/proto"
 	"sigmaos/chunkclnt"
 	db "sigmaos/debug"
+	dialproxyclnt "sigmaos/dialproxy/clnt"
 	"sigmaos/fs"
 	"sigmaos/fslib"
-	dialproxyclnt "sigmaos/dialproxy/clnt"
 	"sigmaos/proc"
 	rpcproto "sigmaos/rpc/proto"
 	"sigmaos/serr"
@@ -51,13 +51,8 @@ const (
 	BINPROC = sp.SIGMAHOME + "/bin/user/"
 )
 
-func Index(o int64) int     { return int(o / chunk.CHUNKSZ) }
 func Ckoff(i int) int64     { return int64(i * chunk.CHUNKSZ) }
 func CkRound(o int64) int64 { return (o + chunk.CHUNKSZ - 1) &^ (chunk.CHUNKSZ - 1) }
-
-func IsChunkSrvPath(path string) bool {
-	return strings.Contains(path, sp.CHUNKD)
-}
 
 // The path on the host where a kernel caches its binaries
 func PathHostKernel(kernelId string) string {
@@ -241,7 +236,7 @@ func (cksrv *ChunkSrv) fetchChunk(be *bin, r sp.Trealm, pid sp.Tpid, s3secret *s
 
 	ok := false
 	srvpath := ""
-	for IsChunkSrvPath(paths[0]) {
+	for chunk.IsChunkSrvPath(paths[0]) {
 		srvpath = paths[0]
 		srv := filepath.Base(srvpath)
 		db.DPrintf(db.CHUNKSRV, "%v: fetchChunk: pid %v prog %v ckid %d %v", cksrv.kernelId, pid, be.prog, ck, []string{srvpath})
@@ -371,7 +366,7 @@ func (cksrv *ChunkSrv) getFileStat(r sp.Trealm, prog string, pid sp.Tpid, paths 
 		return nil, "", serr.NewErr(serr.TErrNotfound, prog)
 	}
 
-	for IsChunkSrvPath(paths[0]) {
+	for chunk.IsChunkSrvPath(paths[0]) {
 		s := filepath.Base(paths[0])
 		srv := paths[0]
 		st, _, err := cksrv.ckclnt.GetFileStat(s, prog, pid, r, s3secret, []string{}, nil)
@@ -525,7 +520,7 @@ func IsPresent(pn string, ck int, totsz sp.Tsize) (int64, bool) {
 		o1 = CkRound(o1)
 		for o := o1; o < o2; o += chunk.CHUNKSZ {
 			if o+chunk.CHUNKSZ <= o2 || o2 >= int64(totsz) { // a complete chunk?
-				i := Index(o)
+				i := chunk.Index(o)
 				if i == ck {
 					db.DPrintf(db.CHUNKSRV, "IsPresent: %q read chunk %d(%d) o2 %d sz %d", pn, i, o, o2, totsz)
 					ok = true

@@ -1,4 +1,4 @@
-package chunksrv
+package srv
 
 import (
 	"sync"

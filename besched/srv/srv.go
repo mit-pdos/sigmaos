@@ -10,7 +10,6 @@ import (
 	"sigmaos/besched/proto"
 	"sigmaos/chunk"
 	"sigmaos/chunkclnt"
-	"sigmaos/chunksrv"
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/proc"
@@ -203,7 +202,7 @@ func (be *BESched) GetProc(ctx fs.CtxI, req proto.GetProcRequest, res *proto.Get
 				db.DPrintf(db.BESCHED, "[%v] GetProc Dequeued for %v %v", r, req.KernelID, p)
 				// Chunksrv relies on there only being one chunk server in the path to
 				// avoid circular waits & deadlocks.
-				if !chunksrv.IsChunkSrvPath(p.GetSigmaPath()[0]) {
+				if !chunk.IsChunkSrvPath(p.GetSigmaPath()[0]) {
 					if kid, ok := be.realmbins.GetBinKernelID(p.GetRealm(), p.GetProgram()); ok {
 						p.PrependSigmaPath(chunk.ChunkdPath(kid))
 					}

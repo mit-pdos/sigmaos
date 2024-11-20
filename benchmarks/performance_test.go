@@ -9,11 +9,11 @@ import (
 
 	"sigmaos/benchmarks"
 	db "sigmaos/debug"
-	k8sutil "sigmaos/util/k8s"
-	"sigmaos/util/perf"
 	"sigmaos/scheddclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
+	k8sutil "sigmaos/util/k8s"
+	"sigmaos/util/perf"
 )
 
 const (
@@ -63,7 +63,7 @@ func newRealmPerf(ts *test.RealmTstate) *perf.Perf {
 
 // Monitor how many cores have been assigned to a realm.
 func monitorCPUUtil(ts *test.RealmTstate, p *perf.Perf) {
-	sdc := scheddclnt.NewScheddClnt(ts.SigmaClnt.FsLib, sp.NOT_SET)
+	sdc := scheddclnt.NewMSchedClnt(ts.SigmaClnt.FsLib, sp.NOT_SET)
 	go func() {
 		for {
 			perc, err := sdc.GetCPUUtil(ts.GetRealm())

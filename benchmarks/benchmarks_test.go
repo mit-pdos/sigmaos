@@ -14,12 +14,12 @@ import (
 	"sigmaos/benchmarks"
 	db "sigmaos/debug"
 	"sigmaos/linuxsched"
-	"sigmaos/util/perf"
+	mschedclnt "sigmaos/mschedclnt"
 	"sigmaos/proc"
-	"sigmaos/scheddclnt"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
+	"sigmaos/util/perf"
 	"strconv"
 	"testing"
 	"time"
@@ -55,8 +55,8 @@ var USE_DUMMY_PROC bool
 var SPAWN_BENCH_LC_PROC bool
 var WITH_KERNEL_PREF bool
 var DOWNLOAD_FROM_UX bool
-var SCHEDD_DURS string
-var SCHEDD_MAX_RPS string
+var MSCHED_DURS string
+var MSCHED_MAX_RPS string
 var N_CLNT_REQ int
 var KVD_MCPU int
 var WWWD_MCPU int
@@ -133,8 +133,8 @@ func init() {
 	flag.BoolVar(&SPAWN_BENCH_LC_PROC, "spawn_bench_lc_proc", false, "Use an LC proc for spawn bench")
 	flag.BoolVar(&WITH_KERNEL_PREF, "with_kernel_pref", false, "Set proc kernel preferences when spawning (e.g., to force & measure cold start)")
 	flag.BoolVar(&DOWNLOAD_FROM_UX, "download_from_ux", false, "Download the proc from ux, instead of S3. !!! WARNING: this only works for the spawn-latency proc !!!")
-	flag.StringVar(&SCHEDD_DURS, "schedd_dur", "10s", "Schedd benchmark load generation duration (comma-separated for multiple phases).")
-	flag.StringVar(&SCHEDD_MAX_RPS, "schedd_max_rps", "1000", "Max requests/second for schedd bench (comma-separated for multiple phases).")
+	flag.StringVar(&MSCHED_DURS, "msched_dur", "10s", "MSched benchmark load generation duration (comma-separated for multiple phases).")
+	flag.StringVar(&MSCHED_MAX_RPS, "msched_max_rps", "1000", "Max requests/second for msched bench (comma-separated for multiple phases).")
 	flag.IntVar(&N_CLNT_REQ, "nclnt_req", 1, "Number of request each client news.")
 	flag.StringVar(&CLERK_DURATION, "clerk_dur", "90s", "Clerk duration.")
 	flag.IntVar(&CLERK_MCPU, "clerk_mcpu", 1000, "Clerk mCPU")
@@ -315,7 +315,7 @@ func TestMicroSpawnWaitStartNode(t *testing.T) {
 		return
 	}
 
-	sts, err := rootts.GetDir(sp.SCHEDD)
+	sts, err := rootts.GetDir(sp.MSCHED)
 	kernels := sp.Names(sts)
 	kernel0 := kernels[0]
 
@@ -323,7 +323,7 @@ func TestMicroSpawnWaitStartNode(t *testing.T) {
 	assert.Nil(t, err, "Boot node: %v", err)
 	db.DPrintf(db.TEST, "Done boot node %d", N)
 
-	sts, err = rootts.GetDir(sp.SCHEDD)
+	sts, err = rootts.GetDir(sp.MSCHED)
 	kernels = sp.Names(sts)
 	kernel1 := ""
 	for _, n := range kernels {
@@ -414,7 +414,7 @@ func TestMicroWarmupRealm(t *testing.T) {
 	rootts.Shutdown()
 }
 
-func TestMicroScheddSpawn(t *testing.T) {
+func TestMicroMSchedSpawn(t *testing.T) {
 	rootts, err1 := test.NewTstateWithRealms(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
@@ -425,7 +425,7 @@ func TestMicroScheddSpawn(t *testing.T) {
 	}
 	rs := benchmarks.NewResults(1, benchmarks.OPS)
 
-	db.DPrintf(db.BENCH, "rust %v ux %v dummy %v lc %v prewarm %v kpref %v nclnt %v durs %v rps %v skipstats %v", USE_RUST_PROC, DOWNLOAD_FROM_UX, USE_DUMMY_PROC, SPAWN_BENCH_LC_PROC, PREWARM_REALM, WITH_KERNEL_PREF, N_CLNT, SCHEDD_DURS, SCHEDD_MAX_RPS, SKIPSTATS)
+	db.DPrintf(db.BENCH, "rust %v ux %v dummy %v lc %v prewarm %v kpref %v nclnt %v durs %v rps %v skipstats %v", USE_RUST_PROC, DOWNLOAD_FROM_UX, USE_DUMMY_PROC, SPAWN_BENCH_LC_PROC, PREWARM_REALM, WITH_KERNEL_PREF, N_CLNT, MSCHED_DURS, MSCHED_MAX_RPS, SKIPSTATS)
 
 	prog := "XXXX"
 	if USE_RUST_PROC {
@@ -439,8 +439,8 @@ func TestMicroScheddSpawn(t *testing.T) {
 		prog = sp.DUMMY_PROG
 	}
 
-	sts, err := rootts.GetDir(sp.SCHEDD)
-	assert.Nil(rootts.T, err, "Err GetDir schedd: %v", err)
+	sts, err := rootts.GetDir(sp.MSCHED)
+	assert.Nil(rootts.T, err, "Err GetDir msched: %v", err)
 	kernels := sp.Names(sts)
 	db.DPrintf(db.TEST, "Kernels %v", kernels)
 
@@ -474,8 +474,8 @@ func TestMicroScheddSpawn(t *testing.T) {
 	time.Sleep(5 * time.Second)
 
 	done := make(chan bool)
-	// Prep Schedd job
-	scheddJobs, ji := newScheddJobs(ts1, N_CLNT, SCHEDD_DURS, SCHEDD_MAX_RPS, prog, func(sc *sigmaclnt.SigmaClnt, pid sp.Tpid, kernelpref []string) time.Duration {
+	// Prep MSched job
+	mschedJobs, ji := newMSchedJobs(ts1, N_CLNT, MSCHED_DURS, MSCHED_MAX_RPS, prog, func(sc *sigmaclnt.SigmaClnt, pid sp.Tpid, kernelpref []string) time.Duration {
 		if USE_RUST_PROC {
 			return runRustSpawnBenchProc(ts1, sc, prog, pid, kernelpref)
 		} else if USE_DUMMY_PROC {
@@ -484,21 +484,21 @@ func TestMicroScheddSpawn(t *testing.T) {
 			return runSpawnBenchProc(ts1, sc, pid, kernelpref)
 		}
 	}, kernels, WITH_KERNEL_PREF, SKIPSTATS)
-	// Run Schedd job
+	// Run MSched job
 	go func() {
-		runOps(ts1, ji, runSchedd, rs)
+		runOps(ts1, ji, runMSched, rs)
 		done <- true
 	}()
-	// Wait for schedd jobs to set up.
-	<-scheddJobs[0].ready
-	db.DPrintf(db.TEST, "Schedd setup done.")
+	// Wait for msched jobs to set up.
+	<-mschedJobs[0].ready
+	db.DPrintf(db.TEST, "MSched setup done.")
 	db.DPrintf(db.TEST, "Setup phase done.")
 	// Sleep for a bit
 	time.Sleep(SLEEP)
-	// Kick off schedd jobs
-	scheddJobs[0].ready <- true
+	// Kick off msched jobs
+	mschedJobs[0].ready <- true
 	<-done
-	db.DPrintf(db.TEST, "Schedd load bench done.")
+	db.DPrintf(db.TEST, "MSched load bench done.")
 
 	printResultSummary(rs)
 	rootts.Shutdown()
@@ -1577,9 +1577,9 @@ func TestK8sMRMulti(t *testing.T) {
 	err := ts[0].MkDir(sp.K8S_SCRAPER, 0777)
 	assert.Nil(rootts.T, err, "Error mkdir %v", err)
 	// Start up the stat scraper procs.
-	sdc := scheddclnt.NewScheddClnt(ts[0].SigmaClnt.FsLib, sp.NOT_SET)
-	nSchedd, err := sdc.Nschedd()
-	ps2, _ := newNProcs(nSchedd, "k8s-stat-scraper", []string{}, nil, proc.Tmcpu(1000*(linuxsched.GetNCores()-1)))
+	sdc := mschedclnt.NewMSchedClnt(ts[0].SigmaClnt.FsLib, sp.NOT_SET)
+	nMSched, err := sdc.Nmsched()
+	ps2, _ := newNProcs(nMSched, "k8s-stat-scraper", []string{}, nil, proc.Tmcpu(1000*(linuxsched.GetNCores()-1)))
 	spawnBurstProcs(ts[0], ps2)
 	waitStartProcs(ts[0], ps2)
 
@@ -1700,16 +1700,16 @@ func TestK8sImgResize(t *testing.T) {
 	if PREWARM_REALM {
 		warmupRealm(ts1, nil)
 	}
-	sdc := scheddclnt.NewScheddClnt(ts1.FsLib, sp.NOT_SET)
-	nSchedd, err := sdc.Nschedd()
-	assert.Nil(ts1.Ts.T, err, "Error nschedd %v", err)
+	sdc := mschedclnt.NewMSchedClnt(ts1.FsLib, sp.NOT_SET)
+	nMSched, err := sdc.Nmsched()
+	assert.Nil(ts1.Ts.T, err, "Error nmsched %v", err)
 	rs := benchmarks.NewResults(1, benchmarks.E2E)
 	p := newRealmPerf(ts1)
 	defer p.Done()
 	err = ts1.MkDir(sp.K8S_SCRAPER, 0777)
 	assert.Nil(ts1.Ts.T, err, "Error mkdir %v", err)
 	// Start up the stat scraper procs.
-	ps, _ := newNProcs(nSchedd, "k8s-stat-scraper", []string{}, nil, proc.Tmcpu(1000*(linuxsched.GetNCores()-1)))
+	ps, _ := newNProcs(nMSched, "k8s-stat-scraper", []string{}, nil, proc.Tmcpu(1000*(linuxsched.GetNCores()-1)))
 	spawnBurstProcs(ts1, ps)
 	waitStartProcs(ts1, ps)
 	// NOte start time
@@ -1875,15 +1875,15 @@ func TestK8sSocialNetworkImgResize(t *testing.T) {
 	if PREWARM_REALM {
 		warmupRealm(ts0, nil)
 	}
-	sdc := scheddclnt.NewScheddClnt(ts0.SigmaClnt.FsLib, sp.NOT_SET)
-	nSchedd, err := sdc.Nschedd()
-	assert.Nil(ts0.Ts.T, err, "Error nschedd %v", err)
+	sdc := mschedclnt.NewMSchedClnt(ts0.SigmaClnt.FsLib, sp.NOT_SET)
+	nMSched, err := sdc.Nmsched()
+	assert.Nil(ts0.Ts.T, err, "Error nmsched %v", err)
 	rs0 := benchmarks.NewResults(1, benchmarks.E2E)
 	err = ts0.MkDir(sp.K8S_SCRAPER, 0777)
 	assert.Nil(ts0.Ts.T, err, "Error mkdir %v", err)
 	// Start up the stat scraper procs.
-	//ps, _ := newNProcs(nSchedd, "k8s-stat-scraper", []string{}, nil, proc.Tmcpu(1000*(linuxsched.GetNCores()-1)))
-	ps, _ := newNProcs(nSchedd, "k8s-stat-scraper", []string{}, nil, 0)
+	//ps, _ := newNProcs(nMSched, "k8s-stat-scraper", []string{}, nil, proc.Tmcpu(1000*(linuxsched.GetNCores()-1)))
+	ps, _ := newNProcs(nMSched, "k8s-stat-scraper", []string{}, nil, 0)
 	spawnBurstProcs(ts0, ps)
 	waitStartProcs(ts0, ps)
 	// Structures for image resize

@@ -89,7 +89,7 @@ func TestBasicSimple(t *testing.T) {
 
 	db.DPrintf(db.TEST, "Local ip: %v", ts1.ProcEnv().GetInnerContainerIP())
 
-	sts1, err := rootts.GetDir(sp.SCHEDD)
+	sts1, err := rootts.GetDir(sp.MSCHED)
 	assert.Nil(t, err)
 
 	db.DPrintf(db.TEST, "names sched %v\n", sp.Names(sts1))
@@ -101,7 +101,7 @@ func TestBasicSimple(t *testing.T) {
 
 	assert.True(t, sp.Present(sts, []string{sp.UXREL}), "initfs")
 
-	sts, err = ts1.GetDir(sp.SCHEDD)
+	sts, err = ts1.GetDir(sp.MSCHED)
 	assert.Nil(t, err)
 
 	db.DPrintf(db.TEST, "realm names sched %v\n", sp.Names(sts))
@@ -152,12 +152,12 @@ func (ts *realmTstate) shutdown() {
 
 func TestBasicMultiRealmSingleNode(t *testing.T) {
 	ts := newMultiRealmTstate(t)
-	schedds1, err := ts.ts1.GetDir(sp.SCHEDD)
+	schedds1, err := ts.ts1.GetDir(sp.MSCHED)
 	assert.Nil(t, err)
 	// Only one schedd so far.
 	assert.True(ts.rootts.T, len(schedds1) == 1, "Wrong number schedds %v", schedds1)
 
-	schedds2, err := ts.ts2.GetDir(sp.SCHEDD)
+	schedds2, err := ts.ts2.GetDir(sp.MSCHED)
 	assert.Nil(t, err)
 	// Only one schedd so far.
 	assert.True(ts.rootts.T, len(schedds2) == 1, "Wrong number schedds %v", schedds2)
@@ -181,12 +181,12 @@ func TestBasicMultiRealmMultiNode(t *testing.T) {
 	assert.Nil(t, err3, "GetNamedEndpoint: %v", err3)
 	db.DPrintf(db.TEST, "[%v] named addr: %v", REALM2, m2)
 
-	schedds1, err := ts.ts1.GetDir(sp.SCHEDD)
-	assert.Nil(t, err, "ErrGetDir SCHEDD: %v", err)
+	schedds1, err := ts.ts1.GetDir(sp.MSCHED)
+	assert.Nil(t, err, "ErrGetDir MSCHED: %v", err)
 	assert.True(ts.rootts.T, len(schedds1) == 2, "Wrong number schedds %v", schedds1)
 
-	schedds2, err := ts.ts2.GetDir(sp.SCHEDD)
-	assert.Nil(t, err, "ErrGetDir SCHEDD: %v", err)
+	schedds2, err := ts.ts2.GetDir(sp.MSCHED)
+	assert.Nil(t, err, "ErrGetDir MSCHED: %v", err)
 	assert.True(ts.rootts.T, len(schedds2) == 2, "Wrong number schedds %v", schedds2)
 
 	for i := range schedds1 {
@@ -206,7 +206,7 @@ func TestWaitExitSimpleSingle(t *testing.T) {
 		return
 	}
 
-	sts1, err := rootts.GetDir(sp.SCHEDD)
+	sts1, err := rootts.GetDir(sp.MSCHED)
 	assert.Nil(t, err)
 
 	db.DPrintf(db.TEST, "names sched %v\n", sp.Names(sts1))
@@ -321,7 +321,7 @@ func TestWaitExitMultiNode(t *testing.T) {
 		return
 	}
 
-	sts1, err := rootts.GetDir(sp.SCHEDD)
+	sts1, err := rootts.GetDir(sp.MSCHED)
 	assert.Nil(t, err)
 
 	db.DPrintf(db.TEST, "names sched %v\n", sp.Names(sts1))
@@ -376,7 +376,7 @@ func TestEvictSingle(t *testing.T) {
 		return
 	}
 
-	sts1, err := rootts.GetDir(sp.SCHEDD)
+	sts1, err := rootts.GetDir(sp.MSCHED)
 	assert.Nil(t, err)
 
 	db.DPrintf(db.TEST, "names sched %v\n", sp.Names(sts1))
@@ -413,7 +413,7 @@ func TestEvictSingle(t *testing.T) {
 
 func TestEvictMultiRealm(t *testing.T) {
 	ts := newMultiRealmTstate(t)
-	sts1, err := ts.rootts.GetDir(sp.SCHEDD)
+	sts1, err := ts.rootts.GetDir(sp.MSCHED)
 	assert.Nil(t, err)
 
 	db.DPrintf(db.TEST, "names sched %v\n", sp.Names(sts1))

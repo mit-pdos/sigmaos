@@ -1,4 +1,4 @@
-package realmclnt_test
+package clnt_test
 
 import (
 	"fmt"
@@ -11,9 +11,9 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	proto "sigmaos/apps/cache/proto"
 	cachegrpclnt "sigmaos/apps/cache/cachegrp/clnt"
 	cachegrpmgr "sigmaos/apps/cache/cachegrp/mgr"
+	proto "sigmaos/apps/cache/proto"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/linuxsched"

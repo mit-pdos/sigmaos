@@ -17,7 +17,7 @@ import (
 	"sigmaos/namesrv/fsetcd"
 	"sigmaos/netsigma"
 	"sigmaos/proc"
-	"sigmaos/realmclnt"
+	realmclnt "sigmaos/realm/clnt"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 )

@@ -1,4 +1,4 @@
-package realmsrv
+package srv
 
 import (
 	"fmt"
@@ -16,7 +16,8 @@ import (
 	"sigmaos/netproxyclnt"
 	"sigmaos/proc"
 	"sigmaos/protsrv"
-	"sigmaos/realmsrv/proto"
+	realmpkg "sigmaos/realm"
+	"sigmaos/realm/proto"
 	"sigmaos/rpc"
 	"sigmaos/scheddclnt"
 	"sigmaos/semclnt"
@@ -288,7 +289,7 @@ func (rm *RealmSrv) bootPerRealmKernelSubsystems(r *Realm, realm sp.Trealm, ss s
 		db.DPrintf(db.ERROR, "Tried to boot more than one kernel subsystem per kernel")
 		return fmt.Errorf("Tried to boot more than one kernel subsystem per kernel")
 	}
-	if n == SUBSYSTEM_PER_NODE {
+	if n == realmpkg.SUBSYSTEM_PER_NODE {
 		// Boot one subsystem for the realm on each node in the deployment, so use
 		// the full slice of kernels
 	} else {

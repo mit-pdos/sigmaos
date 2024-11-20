@@ -5,7 +5,7 @@ import (
 	"strconv"
 
 	db "sigmaos/debug"
-	"sigmaos/realmsrv"
+	srv "sigmaos/realm/srv"
 )
 
 func main() {
@@ -16,7 +16,7 @@ func main() {
 	if err != nil {
 		db.DFatalf("Error parse netproxy: %v", err)
 	}
-	if err := realmsrv.RunRealmSrv(netproxy); err != nil {
+	if err := srv.RunRealmSrv(netproxy); err != nil {
 		db.DFatalf("Fatal start: %v %v\n", os.Args[0], err)
 	}
 }

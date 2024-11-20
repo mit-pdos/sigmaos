@@ -1,8 +1,8 @@
-package realmclnt
+package clnt
 
 import (
 	"sigmaos/fslib"
-	"sigmaos/realmsrv/proto"
+	"sigmaos/realm/proto"
 	"sigmaos/rpcclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmarpcchan"

@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-option go_package = "sigmaos/realmsrv/proto";
+option go_package = "sigmaos/realm/proto";
 
 message MakeRequest {
   string realm = 1;

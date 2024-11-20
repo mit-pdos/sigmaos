@@ -14,7 +14,7 @@ import (
 	"sigmaos/frame"
 	"sigmaos/fs"
 	"sigmaos/netproxy"
-	netproto "sigmaos/netproxy/proto"
+	netproto "sigmaos/dialproxy/proto"
 	"sigmaos/proc"
 	"sigmaos/rpc"
 	rpcproto "sigmaos/rpc/proto"

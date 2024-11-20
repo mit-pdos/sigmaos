@@ -3,7 +3,7 @@ syntax = "proto3";
 import "sigmap/sigmap.proto";
 import "rpc/proto/rpc.proto";
 
-option go_package = "sigmaos/netproxy/proto";
+option go_package = "sigmaos/dialproxy/proto";
 
 message ListenRequest {
         Taddr addr = 1;

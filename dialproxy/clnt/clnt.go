@@ -12,7 +12,7 @@ import (
 	"sigmaos/demux"
 	dialproxytrans "sigmaos/dialproxy/transport"
 	"sigmaos/netproxy"
-	"sigmaos/netproxy/proto"
+	"sigmaos/dialproxy/proto"
 	"sigmaos/proc"
 	"sigmaos/rpc"
 	rpcproto "sigmaos/rpc/proto"

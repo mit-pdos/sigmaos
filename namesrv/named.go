@@ -15,7 +15,6 @@ import (
 	"sigmaos/namesrv/leaderetcd"
 	"sigmaos/netproxyclnt"
 	"sigmaos/path"
-	"sigmaos/port"
 	"sigmaos/proc"
 	"sigmaos/protsrv"
 	"sigmaos/rpc"
@@ -234,8 +233,7 @@ func (nd *Named) newSrv() (*sp.Tendpoint, error) {
 		}
 		aaf = protsrv.AttachAllowAllPrincipalsSelectPaths(allowedDirs)
 	} else {
-		db.DPrintf(db.NAMED, "[%v] Listeing on public port: %v:%v", nd.realm, nd.ProcEnv().GetOuterContainerIP(), port.PUBLIC_NAMED_PORT)
-		addr = sp.NewTaddr(ip, sp.INNER_CONTAINER_IP, port.PUBLIC_NAMED_PORT)
+		addr = sp.NewTaddr(ip, sp.INNER_CONTAINER_IP, sp.NO_PORT)
 		aaf = protsrv.AttachAllowAllToAll
 	}
 	ssrv, err := sigmasrv.NewSigmaSrvRootClntAuthFn(root, addr, "", nd.SigmaClnt, aaf)

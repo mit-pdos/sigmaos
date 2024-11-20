@@ -5,13 +5,13 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/proc"
-	"sigmaos/scheddclnt"
+	mschedclnt "sigmaos/msched/clnt"
 	"sigmaos/semclnt"
 	sp "sigmaos/sigmap"
 )
 
 // Wait for an event. Method must be one of "Exit", "Evict", or "Start"
-func (clnt *ProcClnt) wait(method scheddclnt.Tmethod, pid sp.Tpid, scheddID string, pseqno *proc.ProcSeqno, semName string, how proc.Thow) (*proc.Status, error) {
+func (clnt *ProcClnt) wait(method mschedclnt.Tmethod, pid sp.Tpid, scheddID string, pseqno *proc.ProcSeqno, semName string, how proc.Thow) (*proc.Status, error) {
 	db.DPrintf(db.PROCCLNT, "Wait%v %v how %v seqno %v", method, pid, how, pseqno)
 	defer db.DPrintf(db.PROCCLNT, "Wait%v done %v, seqno %v", method, pid, pseqno)
 
@@ -21,7 +21,7 @@ func (clnt *ProcClnt) wait(method scheddclnt.Tmethod, pid sp.Tpid, scheddID stri
 		// RPC the schedd this proc was spawned on to wait.
 		db.DPrintf(db.PROCCLNT, "Wait%v %v RPC", method, pid)
 		var err error
-		status, err = clnt.scheddclnt.Wait(method, scheddID, pseqno, pid)
+		status, err = clnt.mschedclnt.Wait(method, scheddID, pseqno, pid)
 		if err != nil {
 			db.DPrintf(db.PROCCLNT_ERR, "Error MSched Wait%v: %v", method, err)
 			return nil, err

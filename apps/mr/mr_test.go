@@ -24,8 +24,8 @@ import (
 	mrscanner "sigmaos/apps/mr/scanner"
 	"sigmaos/auth"
 	db "sigmaos/debug"
+	mschedclnt "sigmaos/msched/clnt"
 	"sigmaos/proc"
-	"sigmaos/scheddclnt"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/util/perf"
@@ -425,9 +425,9 @@ func runN(t *testing.T, crashtask, crashcoord, crashschedd, crashprocq, crashux,
 	err = ts.BootNode(1)
 	assert.Nil(t, err, "BootProcd 2")
 
-	sdc := scheddclnt.NewScheddClnt(sc.FsLib, sp.NOT_SET)
+	sdc := mschedclnt.NewMSchedClnt(sc.FsLib, sp.NOT_SET)
 	if monitor {
-		sdc.MonitorScheddStats(ts.ProcEnv().GetRealm(), time.Second)
+		sdc.MonitorMSchedStats(ts.ProcEnv().GetRealm(), time.Second)
 		defer sdc.Done()
 	}
 
@@ -441,7 +441,7 @@ func runN(t *testing.T, crashtask, crashcoord, crashschedd, crashprocq, crashux,
 	l1 := &sync.Mutex{}
 	for i := 0; i < crashschedd; i++ {
 		// Sleep for a random time, then crash a server.
-		go ts.CrashServer(sp.SCHEDDREL, (i+1)*CRASHSRV, l1, crashchan)
+		go ts.CrashServer(sp.MSCHEDREL, (i+1)*CRASHSRV, l1, crashchan)
 	}
 	l2 := &sync.Mutex{}
 	for i := 0; i < crashux; i++ {
@@ -502,16 +502,16 @@ func TestCrashTaskAndCoord(t *testing.T) {
 	runN(t, CRASHTASK, CRASHCOORD, 0, 0, 0, 0, false)
 }
 
-func TestCrashSchedd1(t *testing.T) {
+func TestCrashMSched1(t *testing.T) {
 	runN(t, 0, 0, 1, 0, 0, 0, false)
 }
 
-func TestCrashSchedd2(t *testing.T) {
+func TestCrashMSched2(t *testing.T) {
 	N := 2
 	runN(t, 0, 0, N, 0, 0, 0, false)
 }
 
-func TestCrashScheddN(t *testing.T) {
+func TestCrashMSchedN(t *testing.T) {
 	N := 5
 	runN(t, 0, 0, N, 0, 0, 0, false)
 }
@@ -545,7 +545,7 @@ func TestCrashUx5(t *testing.T) {
 	runN(t, 0, 0, 0, 0, N, 0, false)
 }
 
-func TestCrashScheddProcqUx5(t *testing.T) {
+func TestCrashMSchedProcqUx5(t *testing.T) {
 	N := 5
 	runN(t, 0, 0, N, N, N, 0, false)
 }

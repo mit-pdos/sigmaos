@@ -5,12 +5,12 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/proc"
-	"sigmaos/scheddclnt"
+	mschedclnt "sigmaos/msched/clnt"
 	"sigmaos/semclnt"
 	sp "sigmaos/sigmap"
 )
 
-func (clnt *ProcClnt) notify(method scheddclnt.Tmethod, pid sp.Tpid, kernelID string, semName string, how proc.Thow, status *proc.Status, skipMSched bool) error {
+func (clnt *ProcClnt) notify(method mschedclnt.Tmethod, pid sp.Tpid, kernelID string, semName string, how proc.Thow, status *proc.Status, skipMSched bool) error {
 	db.DPrintf(db.PROCCLNT, "%v %v", method, pid)
 	defer db.DPrintf(db.PROCCLNT, "%v done %v", method, pid)
 
@@ -24,7 +24,7 @@ func (clnt *ProcClnt) notify(method scheddclnt.Tmethod, pid sp.Tpid, kernelID st
 		} else {
 			// If the proc was spawned via schedd, notify via RPC.
 			db.DPrintf(db.PROCCLNT, "%v %v RPC", method, pid)
-			if err := clnt.scheddclnt.Notify(method, kernelID, pid, status); err != nil {
+			if err := clnt.mschedclnt.Notify(method, kernelID, pid, status); err != nil {
 				db.DPrintf(db.PROCCLNT_ERR, "Error schedd %v: %v", method, err)
 				return err
 			}

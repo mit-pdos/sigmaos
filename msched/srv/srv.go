@@ -18,7 +18,7 @@ import (
 	"sigmaos/proc"
 	beschedclnt "sigmaos/sched/besched/clnt"
 	lcschedproto "sigmaos/sched/lcsched/proto"
-	"sigmaos/scheddclnt"
+	mschedclnt "sigmaos/msched/clnt"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmarpcchan"
@@ -32,7 +32,7 @@ type MSched struct {
 	mu                  sync.Mutex
 	cond                *sync.Cond
 	pmgr                *procmgr.ProcMgr
-	scheddclnt          *scheddclnt.MSchedClnt
+	mschedclnt          *mschedclnt.MSchedClnt
 	beschedclnt         *beschedclnt.BESchedClnt
 	pqsess              *syncmap.SyncMap[string, *ProcqSession]
 	mcpufree            proc.Tmcpu
@@ -59,7 +59,7 @@ func NewMSched(sc *sigmaclnt.SigmaClnt, kernelID string, reserveMcpu uint) *MSch
 		cpuStats:    &cpuStats{},
 	}
 	msched.cond = sync.NewCond(&msched.mu)
-	msched.scheddclnt = scheddclnt.NewMSchedClnt(sc.FsLib, sp.NOT_SET)
+	msched.mschedclnt = mschedclnt.NewMSchedClnt(sc.FsLib, sp.NOT_SET)
 	msched.beschedclnt = beschedclnt.NewBESchedClntMSched(sc.FsLib,
 		func(pqID string) {
 			// When a new procq client is created, advance the epoch for the

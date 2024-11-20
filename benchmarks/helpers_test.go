@@ -13,8 +13,8 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/linuxsched"
+	mschedclnt "sigmaos/msched/clnt"
 	"sigmaos/proc"
-	"sigmaos/scheddclnt"
 	"sigmaos/semclnt"
 	"sigmaos/serr"
 	"sigmaos/sigmaclnt"
@@ -149,11 +149,11 @@ func blockMem(rootts *test.Tstate, mem string) []*proc.Proc {
 		db.DPrintf(db.TEST, "No mem blocking")
 		return nil
 	}
-	sdc := scheddclnt.NewMSchedClnt(rootts.SigmaClnt.FsLib, sp.NOT_SET)
-	// Get the number of schedds.
-	n, err := sdc.Nschedd()
+	sdc := mschedclnt.NewMSchedClnt(rootts.SigmaClnt.FsLib, sp.NOT_SET)
+	// Get the number of mscheds.
+	n, err := sdc.NMSched()
 	if err != nil {
-		db.DFatalf("Can't count nschedd: %v", err)
+		db.DFatalf("Can't count nmsched: %v", err)
 	}
 	db.DFatalf("Memory blocking deprecated")
 	ps := make([]*proc.Proc, 0, n)
@@ -190,11 +190,11 @@ func evictMemBlockers(ts *test.Tstate, ps []*proc.Proc) {
 
 // Warm up a realm, by starting uprocds for it on all machines in the cluster.
 func warmupRealm(ts *test.RealmTstate, progs []string) (time.Time, int) {
-	sdc := scheddclnt.NewMSchedClnt(ts.SigmaClnt.FsLib, sp.NOT_SET)
-	// Get the list of schedds.
+	sdc := mschedclnt.NewMSchedClnt(ts.SigmaClnt.FsLib, sp.NOT_SET)
+	// Get the list of mscheds.
 	sds, err := sdc.GetMScheds()
 	assert.Nil(ts.Ts.T, err, "Get MScheds: %v", err)
-	db.DPrintf(db.TEST, "Warm up realm %v for progs %v schedds %d %v", ts.GetRealm(), progs, len(sds), sds)
+	db.DPrintf(db.TEST, "Warm up realm %v for progs %v mscheds %d %v", ts.GetRealm(), progs, len(sds), sds)
 	start := time.Now()
 	nDL := 0
 	for _, kid := range sds {
@@ -292,7 +292,7 @@ func newNCachedJobs(ts *test.RealmTstate, n, nkeys, ncache, nclerks int, durstr 
 
 // ========== MSched Helpers ==========
 
-func newMSchedJobs(ts *test.RealmTstate, nclnt int, dur string, maxrps string, progname string, sfn scheddFn, kernels []string, withKernelPref, skipstats bool) ([]*MSchedJobInstance, []interface{}) {
+func newMSchedJobs(ts *test.RealmTstate, nclnt int, dur string, maxrps string, progname string, sfn mschedFn, kernels []string, withKernelPref, skipstats bool) ([]*MSchedJobInstance, []interface{}) {
 	// n is ntrials, which is always 1.
 	n := 1
 	ws := make([]*MSchedJobInstance, 0, n)

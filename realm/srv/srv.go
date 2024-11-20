@@ -19,7 +19,7 @@ import (
 	"sigmaos/realm/proto"
 	"sigmaos/rpc"
 	beschedclnt "sigmaos/sched/besched/clnt"
-	"sigmaos/scheddclnt"
+	mschedclnt "sigmaos/msched/clnt"
 	"sigmaos/semclnt"
 	"sigmaos/serr"
 	"sigmaos/sigmaclnt"
@@ -74,7 +74,7 @@ type RealmSrv struct {
 	realms     map[sp.Trealm]*Realm
 	sc         *sigmaclnt.SigmaClntKernel
 	be         *beschedclnt.BESchedClnt
-	sd         *scheddclnt.MSchedClnt
+	sd         *mschedclnt.MSchedClnt
 	mkc        *kernelclnt.MultiKernelClnt
 	lastNDPort int
 	ch         chan struct{}
@@ -112,7 +112,7 @@ func RunRealmSrv(dialproxy bool) error {
 	rs.sc = sigmaclnt.NewSigmaClntKernel(ssrv.MemFs.SigmaClnt())
 	rs.mkc = kernelclnt.NewMultiKernelClnt(ssrv.MemFs.SigmaClnt().FsLib, db.REALMD, db.REALMD_ERR)
 	rs.be = beschedclnt.NewBESchedClnt(rs.sc.FsLib)
-	rs.sd = scheddclnt.NewMSchedClnt(rs.sc.FsLib, pe.GetKernelID())
+	rs.sd = mschedclnt.NewMSchedClnt(rs.sc.FsLib, pe.GetKernelID())
 	go rs.enforceResourcePolicy()
 	err = ssrv.RunServer()
 	rs.mkc.StopWatching()

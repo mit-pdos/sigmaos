@@ -1,4 +1,4 @@
-package scheddclnt
+package clnt
 
 type Tmethod string
 

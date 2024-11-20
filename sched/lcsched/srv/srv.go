@@ -14,7 +14,7 @@ import (
 	beschedproto "sigmaos/sched/besched/proto"
 	"sigmaos/sched/lcsched/proto"
 	"sigmaos/sched/queue"
-	"sigmaos/scheddclnt"
+	mschedclnt "sigmaos/msched/clnt"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
@@ -25,7 +25,7 @@ type LCSched struct {
 	mu         sync.Mutex
 	cond       *sync.Cond
 	sc         *sigmaclnt.SigmaClnt
-	scheddclnt *scheddclnt.MSchedClnt
+	mschedclnt *mschedclnt.MSchedClnt
 	qs         map[sp.Trealm]*queue.Queue[string, chan string]
 	schedds    map[string]*Resources
 	realmbins  *chunkclnt.RealmBinPaths
@@ -38,7 +38,7 @@ type QDir struct {
 func NewLCSched(sc *sigmaclnt.SigmaClnt) *LCSched {
 	lcs := &LCSched{
 		sc:         sc,
-		scheddclnt: scheddclnt.NewMSchedClnt(sc.FsLib, sp.NOT_SET),
+		mschedclnt: mschedclnt.NewMSchedClnt(sc.FsLib, sp.NOT_SET),
 		qs:         make(map[sp.Trealm]*queue.Queue[string, chan string]),
 		schedds:    make(map[string]*Resources),
 		realmbins:  chunkclnt.NewRealmBinPaths(),
@@ -160,7 +160,7 @@ func (lcs *LCSched) runProc(kernelID string, p *proc.Proc, ch chan string, r *Re
 	}
 	lcs.realmbins.SetBinKernelID(p.GetRealm(), p.GetProgram(), kernelID)
 	db.DPrintf(db.LCSCHED, "runProc kernelID %v p %v", kernelID, p)
-	if err := lcs.scheddclnt.ForceRun(kernelID, false, p); err != nil {
+	if err := lcs.mschedclnt.ForceRun(kernelID, false, p); err != nil {
 		db.DPrintf(db.ALWAYS, "MSched.Run %v err %v", kernelID, err)
 		// Re-enqueue the proc
 		lcs.addProc(p, ch)
@@ -175,7 +175,7 @@ func (lcs *LCSched) runProc(kernelID string, p *proc.Proc, ch chan string, r *Re
 func (lcs *LCSched) waitProcExit(kernelID string, p *proc.Proc, r *Resources) {
 	// RPC the schedd this proc was spawned on to wait for the proc to exit.
 	db.DPrintf(db.LCSCHED, "WaitExit %v RPC", p.GetPid())
-	if _, err := lcs.scheddclnt.Wait(scheddclnt.EXIT, kernelID, proc.NewProcSeqno(sp.NOT_SET, kernelID, 0, 0), p.GetPid()); err != nil {
+	if _, err := lcs.mschedclnt.Wait(mschedclnt.EXIT, kernelID, proc.NewProcSeqno(sp.NOT_SET, kernelID, 0, 0), p.GetPid()); err != nil {
 		db.DPrintf(db.ALWAYS, "Error MSched WaitExit: %v", err)
 	}
 	db.DPrintf(db.LCSCHED, "Proc exited %v", p.GetPid())

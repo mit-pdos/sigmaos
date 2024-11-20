@@ -7,15 +7,15 @@ import (
 	"time"
 
 	db "sigmaos/debug"
+	dialproxyclnt "sigmaos/dialproxy/clnt"
 	"sigmaos/fdclnt"
 	"sigmaos/fidclnt"
 	"sigmaos/fslib"
 	"sigmaos/leaseclnt"
-	dialproxyclnt "sigmaos/dialproxy/clnt"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
 	sos "sigmaos/sigmaos"
-	"sigmaos/spproxyclnt"
+	spproxyclnt "sigmaos/spproxy/clnt"
 )
 
 func init() {

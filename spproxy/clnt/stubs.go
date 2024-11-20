@@ -1,4 +1,4 @@
-package spproxyclnt
+package clnt
 
 import (
 	"fmt"

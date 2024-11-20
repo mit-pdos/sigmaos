@@ -1,7 +1,7 @@
 // Package spproxyclnt is an RPC-based client for proxing the
 // [sigmaos] interface. It sends request to [spproxysrv], which has a
 // full sigmaclnt to interact with SigmaOS.
-package spproxyclnt
+package clnt
 
 import (
 	"fmt"

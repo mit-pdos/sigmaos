@@ -128,7 +128,7 @@ func (g *Group) newRaftCfg(cfg *GroupConfig, myid, nrepl int) (*GroupConfig, *re
 	return cfg, raftCfg
 }
 
-// Wait until all nodes of kvgrp are up so that we the IP address to
+// Wait until all nodes of kvgrp are up to collect the IP addresses to
 // form an initial Raft cluster.
 func (g *Group) waitRaftConfig(cfg *GroupConfig) *GroupConfig {
 	db.DPrintf(db.KVGRP, "waitRaftConfig %v\n", cfg)

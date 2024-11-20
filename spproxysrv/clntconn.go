@@ -20,7 +20,7 @@ import (
 	"sigmaos/sigmaclntcodec"
 	sos "sigmaos/sigmaos"
 	sp "sigmaos/sigmap"
-	scproto "sigmaos/spproxysrv/proto"
+	scproto "sigmaos/spproxy/proto"
 )
 
 // One SigmaClntConn per client connection

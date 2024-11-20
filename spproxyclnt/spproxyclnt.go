@@ -16,7 +16,7 @@ import (
 	"sigmaos/sessp"
 	"sigmaos/sigmaclntcodec"
 	sp "sigmaos/sigmap"
-	spproto "sigmaos/spproxysrv/proto"
+	spproto "sigmaos/spproxy/proto"
 )
 
 type SigmaClntClnt struct {

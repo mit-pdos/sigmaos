@@ -33,7 +33,7 @@ func (lm *ListenerMap) CloseListeners() error {
 		lids = append(lids, lid)
 	}
 	for _, lid := range lids {
-		db.DPrintf(db.NETPROXYSRV, "Close listener %v", lm.ls[lid].Addr())
+		db.DPrintf(db.DIALPROXYSRV, "Close listener %v", lm.ls[lid].Addr())
 		lm.closeListenerL(lid)
 	}
 	return nil

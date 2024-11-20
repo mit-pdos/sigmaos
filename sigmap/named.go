@@ -120,9 +120,9 @@ var RootNamedMountedDirs map[string]bool = map[string]bool{
 
 // Linux path
 const (
-	SIGMAHOME             = "/home/sigmaos"
-	SIGMASOCKET           = "/tmp/spproxyd/spproxyd.sock"
-	SIGMA_NETPROXY_SOCKET = "/tmp/spproxyd/spproxyd-netproxy.sock"
+	SIGMAHOME              = "/home/sigmaos"
+	SIGMASOCKET            = "/tmp/spproxyd/spproxyd.sock"
+	SIGMA_DIALPROXY_SOCKET = "/tmp/spproxyd/spproxyd-dialproxy.sock"
 )
 
 // spproxyd kernel

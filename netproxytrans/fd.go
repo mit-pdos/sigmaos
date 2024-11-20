@@ -23,11 +23,11 @@ func ListenerToFile(proxyListener net.Listener) (*os.File, error) {
 func ConnToFile(proxyConn net.Conn) (*os.File, error) {
 	start := time.Now()
 	c := proxyConn.(*net.TCPConn)
-	db.DPrintf(db.NETPROXY_LAT, "Dial ConnToFile typecast latency: %v", time.Since(start))
+	db.DPrintf(db.DIALPROXY_LAT, "Dial ConnToFile typecast latency: %v", time.Since(start))
 	start = time.Now()
 	f, err := c.File()
 	dur := time.Since(start)
-	db.DPrintf(db.NETPROXY_LAT, "Dial ConnToFile File[%v] latency: %v", f.Fd(), dur)
+	db.DPrintf(db.DIALPROXY_LAT, "Dial ConnToFile File[%v] latency: %v", f.Fd(), dur)
 	if err != nil {
 		db.DFatalf("Error get TCP conn fd: %v", err)
 		return nil, err
@@ -87,6 +87,6 @@ func ParseReturnedConn(oob []byte) (*net.TCPConn, error) {
 	if err != nil || len(fds) != 1 {
 		db.DFatalf("Error parse unix rights: len %v err %v", len(fds), err)
 	}
-	db.DPrintf(db.NETPROXYCLNT, "got socket fd %v", fds[0])
+	db.DPrintf(db.DIALPROXYCLNT, "got socket fd %v", fds[0])
 	return fdToTCPConn(fds[0])
 }

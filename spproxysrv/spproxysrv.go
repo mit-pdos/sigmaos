@@ -12,9 +12,9 @@ import (
 
 	"sigmaos/dcontainer"
 	db "sigmaos/debug"
+	"sigmaos/dialproxysrv"
 	"sigmaos/fidclnt"
 	"sigmaos/netproxyclnt"
-	"sigmaos/netproxysrv"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 	"sigmaos/util/perf"
@@ -28,15 +28,15 @@ const (
 // SigmaSrvClnt's share one fid table
 type SPProxySrv struct {
 	pe   *proc.ProcEnv
-	nps  *netproxysrv.NetProxySrv
+	nps  *dialproxysrv.DialProxySrv
 	fidc *fidclnt.FidClnt
 }
 
 func newSPProxySrv() (*SPProxySrv, error) {
 	pe := proc.GetProcEnv()
-	nps, err := netproxysrv.NewNetProxySrv(pe)
+	nps, err := dialproxysrv.NewDialProxySrv(pe)
 	if err != nil {
-		db.DPrintf(db.ERROR, "Error NewNetProxySrv: %v", err)
+		db.DPrintf(db.ERROR, "Error NewDialProxySrv: %v", err)
 		return nil, err
 	}
 	scs := &SPProxySrv{

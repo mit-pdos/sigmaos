@@ -55,16 +55,16 @@ func (npc *NetProxyClnt) Dial(ep *sp.Tendpoint) (net.Conn, error) {
 	var err error
 	start := time.Now()
 	if npc.useProxy() {
-		db.DPrintf(db.NETPROXYCLNT, "[%v] proxyDial %v", npc.pe.GetPrincipal(), ep)
+		db.DPrintf(db.DIALPROXYCLNT, "[%v] proxyDial %v", npc.pe.GetPrincipal(), ep)
 		c, err = npc.proxyDial(ep)
-		db.DPrintf(db.NETPROXYCLNT, "[%v] proxyDial %v done ok:%v", npc.pe.GetPrincipal(), ep, err == nil)
+		db.DPrintf(db.DIALPROXYCLNT, "[%v] proxyDial %v done ok:%v", npc.pe.GetPrincipal(), ep, err == nil)
 	} else {
-		db.DPrintf(db.NETPROXYCLNT, "[%v] directDial %v", npc.pe.GetPrincipal(), ep)
+		db.DPrintf(db.DIALPROXYCLNT, "[%v] directDial %v", npc.pe.GetPrincipal(), ep)
 		c, err = netproxy.DialDirect(npc.pe.GetPrincipal(), ep)
-		db.DPrintf(db.NETPROXYCLNT, "[%v] directDial %v done ok:%v", npc.pe.GetPrincipal(), ep, err == nil)
+		db.DPrintf(db.DIALPROXYCLNT, "[%v] directDial %v done ok:%v", npc.pe.GetPrincipal(), ep, err == nil)
 	}
 	if err == nil {
-		db.DPrintf(db.NETPROXY_LAT, "Dial latency: %v", time.Since(start))
+		db.DPrintf(db.DIALPROXY_LAT, "Dial latency: %v", time.Since(start))
 	}
 	return c, err
 }
@@ -74,18 +74,18 @@ func (npc *NetProxyClnt) Listen(ept sp.TTendpoint, addr *sp.Taddr) (*sp.Tendpoin
 	var l *Listener
 	var err error
 	if npc.useProxy() {
-		db.DPrintf(db.NETPROXYCLNT, "proxyListen %v", addr)
+		db.DPrintf(db.DIALPROXYCLNT, "proxyListen %v", addr)
 		ep, l, err = npc.proxyListen(ept, addr)
-		db.DPrintf(db.NETPROXYCLNT, "proxyListen %v done ok:%v", addr, err == nil)
+		db.DPrintf(db.DIALPROXYCLNT, "proxyListen %v done ok:%v", addr, err == nil)
 		if err != nil {
-			db.DPrintf(db.NETPROXYCLNT_ERR, "Error proxyListen %v: %v", addr, err)
+			db.DPrintf(db.DIALPROXYCLNT_ERR, "Error proxyListen %v: %v", addr, err)
 			return nil, nil, err
 		}
 	} else {
-		db.DPrintf(db.NETPROXYCLNT, "directListen %v", addr)
+		db.DPrintf(db.DIALPROXYCLNT, "directListen %v", addr)
 		ep, l, err = npc.directListen(ept, addr)
 		if err != nil {
-			db.DPrintf(db.NETPROXYCLNT_ERR, "Error directListen %v: %v", addr, err)
+			db.DPrintf(db.DIALPROXYCLNT_ERR, "Error directListen %v: %v", addr, err)
 			return nil, nil, err
 		}
 	}
@@ -97,19 +97,19 @@ func (npc *NetProxyClnt) Accept(lid netproxy.Tlid, internalListener bool) (net.C
 	var p *sp.Tprincipal
 	var err error
 	if npc.useProxy() {
-		db.DPrintf(db.NETPROXYCLNT, "proxyAccept %v", lid)
+		db.DPrintf(db.DIALPROXYCLNT, "proxyAccept %v", lid)
 		c, p, err = npc.proxyAccept(lid, internalListener)
-		db.DPrintf(db.NETPROXYCLNT, "[%v] proxyAccept %v done ok:%v", p, lid, err == nil)
+		db.DPrintf(db.DIALPROXYCLNT, "[%v] proxyAccept %v done ok:%v", p, lid, err == nil)
 		if err != nil {
-			db.DPrintf(db.NETPROXYCLNT_ERR, "Error proxyAccept %v: %v", lid, err)
+			db.DPrintf(db.DIALPROXYCLNT_ERR, "Error proxyAccept %v: %v", lid, err)
 			return nil, nil, err
 		}
 	} else {
-		db.DPrintf(db.NETPROXYCLNT, "directAccept %v", lid)
+		db.DPrintf(db.DIALPROXYCLNT, "directAccept %v", lid)
 		c, p, err = npc.directAccept(lid, internalListener)
-		db.DPrintf(db.NETPROXYCLNT, "[%v] directAccept %v done ok:%v", p, lid, err == nil)
+		db.DPrintf(db.DIALPROXYCLNT, "[%v] directAccept %v done ok:%v", p, lid, err == nil)
 		if err != nil {
-			db.DPrintf(db.NETPROXYCLNT_ERR, "Error directAccept %v: %v", lid, err)
+			db.DPrintf(db.DIALPROXYCLNT_ERR, "Error directAccept %v: %v", lid, err)
 			return nil, nil, err
 		}
 	}
@@ -119,18 +119,18 @@ func (npc *NetProxyClnt) Accept(lid netproxy.Tlid, internalListener bool) (net.C
 func (npc *NetProxyClnt) Close(lid netproxy.Tlid) error {
 	var err error
 	if npc.useProxy() {
-		db.DPrintf(db.NETPROXYCLNT, "proxyClose %v", lid)
+		db.DPrintf(db.DIALPROXYCLNT, "proxyClose %v", lid)
 		err = npc.proxyClose(lid)
-		db.DPrintf(db.NETPROXYCLNT, "proxyClose %v done ok:%v", lid, err == nil)
+		db.DPrintf(db.DIALPROXYCLNT, "proxyClose %v done ok:%v", lid, err == nil)
 		if err != nil {
-			db.DPrintf(db.NETPROXYCLNT_ERR, "Error proxyClose %v: %v", lid, err)
+			db.DPrintf(db.DIALPROXYCLNT_ERR, "Error proxyClose %v: %v", lid, err)
 			return err
 		}
 	} else {
-		db.DPrintf(db.NETPROXYCLNT, "directClose %v", lid)
+		db.DPrintf(db.DIALPROXYCLNT, "directClose %v", lid)
 		err = npc.directClose(lid)
 		if err != nil {
-			db.DPrintf(db.NETPROXYCLNT_ERR, "Error directClose %v: %v", lid, err)
+			db.DPrintf(db.DIALPROXYCLNT_ERR, "Error directClose %v: %v", lid, err)
 			return err
 		}
 	}
@@ -155,8 +155,8 @@ func (npc *NetProxyClnt) init() error {
 		return nil
 	}
 
-	db.DPrintf(db.NETPROXYCLNT, "[%v] Init netproxyclnt %p", npc.pe.GetPrincipal(), npc)
-	defer db.DPrintf(db.NETPROXYCLNT, "[%v] Init netproxyclnt %p done", npc.pe.GetPrincipal(), npc)
+	db.DPrintf(db.DIALPROXYCLNT, "[%v] Init netproxyclnt %p", npc.pe.GetPrincipal(), npc)
+	defer db.DPrintf(db.DIALPROXYCLNT, "[%v] Init netproxyclnt %p done", npc.pe.GetPrincipal(), npc)
 	iovm := demux.NewIoVecMap()
 	conn, err := netproxytrans.GetNetproxydConn(npc.pe)
 	if err != nil {
@@ -174,11 +174,11 @@ func (npc *NetProxyClnt) proxyDial(ep *sp.Tendpoint) (net.Conn, error) {
 	// Ensure that the connection to the netproxy server has been initialized
 	start := time.Now()
 	if err := npc.init(); err != nil {
-		db.DPrintf(db.NETPROXYCLNT_ERR, "Error init netproxyclnt %v", err)
+		db.DPrintf(db.DIALPROXYCLNT_ERR, "Error init netproxyclnt %v", err)
 		return nil, err
 	}
-	db.DPrintf(db.NETPROXY_LAT, "Dial netproxy conn init: %v", time.Since(start))
-	db.DPrintf(db.NETPROXYCLNT, "[%p] proxyDial request ep %v", npc.trans.Conn(), ep)
+	db.DPrintf(db.DIALPROXY_LAT, "Dial netproxy conn init: %v", time.Since(start))
+	db.DPrintf(db.DIALPROXYCLNT, "[%p] proxyDial request ep %v", npc.trans.Conn(), ep)
 	req := &proto.DialRequest{
 		Endpoint: ep.GetProto(),
 		// Requests must have blob too, so that unix sendmsg works
@@ -196,17 +196,17 @@ func (npc *NetProxyClnt) proxyDial(ep *sp.Tendpoint) (net.Conn, error) {
 	if err := npc.rpcc.RPC("NetProxySrvStubs.Dial", req, res); err != nil {
 		return nil, err
 	}
-	db.DPrintf(db.NETPROXYCLNT, "proxyDial response %v", res)
-	db.DPrintf(db.NETPROXY_LAT, "Dial netproxy RPC: %v", time.Since(start))
+	db.DPrintf(db.DIALPROXYCLNT, "proxyDial response %v", res)
+	db.DPrintf(db.DIALPROXY_LAT, "Dial netproxy RPC: %v", time.Since(start))
 	// If an error occurred during dialing, bail out
 	if res.Err.ErrCode != 0 {
 		err := sp.NewErr(res.Err)
-		db.DPrintf(db.NETPROXYCLNT_ERR, "Error Dial: %v", err)
+		db.DPrintf(db.DIALPROXYCLNT_ERR, "Error Dial: %v", err)
 		return nil, err
 	}
 	start = time.Now()
 	defer func(start time.Time) {
-		db.DPrintf(db.NETPROXY_LAT, "Dial parseReturnedConn: %v", time.Since(start))
+		db.DPrintf(db.DIALPROXY_LAT, "Dial parseReturnedConn: %v", time.Since(start))
 	}(start)
 	return netproxytrans.ParseReturnedConn(res.Blob.Iov[0])
 }
@@ -214,10 +214,10 @@ func (npc *NetProxyClnt) proxyDial(ep *sp.Tendpoint) (net.Conn, error) {
 func (npc *NetProxyClnt) proxyListen(ept sp.TTendpoint, addr *sp.Taddr) (*sp.Tendpoint, *Listener, error) {
 	// Ensure that the connection to the netproxy server has been initialized
 	if err := npc.init(); err != nil {
-		db.DPrintf(db.NETPROXYCLNT_ERR, "Error init netproxyclnt %v", err)
+		db.DPrintf(db.DIALPROXYCLNT_ERR, "Error init netproxyclnt %v", err)
 		return nil, nil, err
 	}
-	db.DPrintf(db.NETPROXYCLNT, "[%p] proxyListen request addr %v", npc.trans.Conn(), addr)
+	db.DPrintf(db.DIALPROXYCLNT, "[%p] proxyListen request addr %v", npc.trans.Conn(), addr)
 	req := &proto.ListenRequest{
 		Addr:         addr,
 		EndpointType: uint32(ept),
@@ -235,11 +235,11 @@ func (npc *NetProxyClnt) proxyListen(ept sp.TTendpoint, addr *sp.Taddr) (*sp.Ten
 	if err := npc.rpcc.RPC("NetProxySrvStubs.Listen", req, res); err != nil {
 		return nil, nil, err
 	}
-	db.DPrintf(db.NETPROXYCLNT, "proxyListen response %v", res)
+	db.DPrintf(db.DIALPROXYCLNT, "proxyListen response %v", res)
 	// If an error occurred during listen, bail out
 	if res.Err.ErrCode != 0 {
 		err := sp.NewErr(res.Err)
-		db.DPrintf(db.NETPROXYCLNT_ERR, "Error Listen: %v", err)
+		db.DPrintf(db.DIALPROXYCLNT_ERR, "Error Listen: %v", err)
 		return nil, nil, err
 	}
 	if res.ListenerID == 0 {
@@ -263,7 +263,7 @@ func (npc *NetProxyClnt) directListen(ept sp.TTendpoint, addr *sp.Taddr) (*sp.Te
 	}
 	// Add to the listener map
 	lid := netproxy.Tlid(npc.lidctr.Add(1))
-	db.DPrintf(db.NETPROXYCLNT, "Listen lid %v ep %v", lid, ep)
+	db.DPrintf(db.DIALPROXYCLNT, "Listen lid %v ep %v", lid, ep)
 	npc.lm.Add(lid, l)
 	return ep, NewListener(npc, lid, ep), err
 }
@@ -283,10 +283,10 @@ func (npc *NetProxyClnt) directAccept(lid netproxy.Tlid, internalListener bool) 
 func (npc *NetProxyClnt) proxyAccept(lid netproxy.Tlid, internalListener bool) (net.Conn, *sp.Tprincipal, error) {
 	// Ensure that the connection to the netproxy server has been initialized
 	if err := npc.init(); err != nil {
-		db.DPrintf(db.NETPROXYCLNT_ERR, "Error init netproxyclnt %v", err)
+		db.DPrintf(db.DIALPROXYCLNT_ERR, "Error init netproxyclnt %v", err)
 		return nil, nil, err
 	}
-	db.DPrintf(db.NETPROXYCLNT, "[%p] proxyAccept request lip %v", npc.trans.Conn(), lid)
+	db.DPrintf(db.DIALPROXYCLNT, "[%p] proxyAccept request lip %v", npc.trans.Conn(), lid)
 	req := &proto.AcceptRequest{
 		ListenerID:       uint64(lid),
 		InternalListener: internalListener,
@@ -304,11 +304,11 @@ func (npc *NetProxyClnt) proxyAccept(lid netproxy.Tlid, internalListener bool) (
 	if err := npc.rpcc.RPC("NetProxySrvStubs.Accept", req, res); err != nil {
 		return nil, nil, err
 	}
-	db.DPrintf(db.NETPROXYCLNT, "proxyAccept response %v", res)
+	db.DPrintf(db.DIALPROXYCLNT, "proxyAccept response %v", res)
 	// If an error occurred during dialing, bail out
 	if res.Err.ErrCode != 0 {
 		err := sp.NewErr(res.Err)
-		db.DPrintf(db.NETPROXYCLNT_ERR, "Error Accept: %v", err)
+		db.DPrintf(db.DIALPROXYCLNT_ERR, "Error Accept: %v", err)
 		return nil, nil, err
 	}
 	conn, err := netproxytrans.ParseReturnedConn(res.Blob.Iov[0])
@@ -320,7 +320,7 @@ func (npc *NetProxyClnt) proxyAccept(lid netproxy.Tlid, internalListener bool) (
 
 func (npc *NetProxyClnt) directClose(lid netproxy.Tlid) error {
 	if ok := npc.lm.Close(lid); !ok {
-		db.DPrintf(db.NETPROXYCLNT_ERR, "Error close unknown listener: %v", lid)
+		db.DPrintf(db.DIALPROXYCLNT_ERR, "Error close unknown listener: %v", lid)
 		return fmt.Errorf("Close unknown listener: %v", lid)
 	}
 	return nil
@@ -329,10 +329,10 @@ func (npc *NetProxyClnt) directClose(lid netproxy.Tlid) error {
 func (npc *NetProxyClnt) proxyClose(lid netproxy.Tlid) error {
 	// Ensure that the connection to the netproxy server has been initialized
 	if err := npc.init(); err != nil {
-		db.DPrintf(db.NETPROXYCLNT_ERR, "Error init netproxyclnt %v", err)
+		db.DPrintf(db.DIALPROXYCLNT_ERR, "Error init netproxyclnt %v", err)
 		return err
 	}
-	db.DPrintf(db.NETPROXYCLNT, "[%p] proxyClose request lip %v", npc.trans.Conn(), lid)
+	db.DPrintf(db.DIALPROXYCLNT, "[%p] proxyClose request lip %v", npc.trans.Conn(), lid)
 	req := &proto.CloseRequest{
 		ListenerID: uint64(lid),
 		// Requests must have blob too, so that unix sendmsg works
@@ -349,11 +349,11 @@ func (npc *NetProxyClnt) proxyClose(lid netproxy.Tlid) error {
 	if err := npc.rpcc.RPC("NetProxySrvStubs.Close", req, res); err != nil {
 		return err
 	}
-	db.DPrintf(db.NETPROXYCLNT, "proxyClose response %v", res)
+	db.DPrintf(db.DIALPROXYCLNT, "proxyClose response %v", res)
 	// If an error occurred during dialing, bail out
 	if res.Err.ErrCode != 0 {
 		err := sp.NewErr(res.Err)
-		db.DPrintf(db.NETPROXYCLNT_ERR, "Error Close: %v", err)
+		db.DPrintf(db.DIALPROXYCLNT_ERR, "Error Close: %v", err)
 		return err
 	}
 	return nil
@@ -383,7 +383,7 @@ func (npc *NetProxyClnt) GetNamedEndpoint(r sp.Trealm) (*sp.Tendpoint, error) {
 		db.DFatalf("GetNamedEndpoint: internal %v\n", npc)
 	}
 	ep, err := npc.getNamedEndpoint(r)
-	db.DPrintf(db.NETPROXYCLNT, "GetNamedEndpoint %v ep %v err %v", r, ep, err)
+	db.DPrintf(db.DIALPROXYCLNT, "GetNamedEndpoint %v ep %v err %v", r, ep, err)
 	if err != nil {
 		return nil, err
 	}
@@ -392,7 +392,7 @@ func (npc *NetProxyClnt) GetNamedEndpoint(r sp.Trealm) (*sp.Tendpoint, error) {
 
 func (npc *NetProxyClnt) getNamedEndpoint(r sp.Trealm) (*sp.Tendpoint, error) {
 	if err := npc.init(); err != nil {
-		db.DPrintf(db.NETPROXYCLNT_ERR, "Error init netproxyclnt %v", err)
+		db.DPrintf(db.DIALPROXYCLNT_ERR, "Error init netproxyclnt %v", err)
 		return nil, err
 	}
 	req := &proto.NamedEndpointRequest{
@@ -419,7 +419,7 @@ func (npc *NetProxyClnt) getNamedEndpoint(r sp.Trealm) (*sp.Tendpoint, error) {
 
 func (npc *NetProxyClnt) invalidateNamedEndpointCacheEntry(r sp.Trealm) error {
 	if err := npc.init(); err != nil {
-		db.DPrintf(db.NETPROXYCLNT_ERR, "Error init netproxyclnt %v", err)
+		db.DPrintf(db.DIALPROXYCLNT_ERR, "Error init netproxyclnt %v", err)
 		return err
 	}
 	req := &proto.InvalidateNamedEndpointRequest{
@@ -447,10 +447,10 @@ func (npc *NetProxyClnt) InvalidateNamedEndpointCacheEntry(r sp.Trealm) error {
 	if !npc.useProxy() {
 		db.DFatalf("InvalidateNamedEndpointCacheEntry: internal %v\n", npc)
 	}
-	db.DPrintf(db.NETPROXYCLNT, "InvalidateNamedEndpointCacheEntry %v", r)
+	db.DPrintf(db.DIALPROXYCLNT, "InvalidateNamedEndpointCacheEntry %v", r)
 	err := npc.invalidateNamedEndpointCacheEntry(r)
 	if err != nil {
-		db.DPrintf(db.NETPROXYCLNT_ERR, "InvalidateNamedEndpointCacheEntry %v err %v", r, err)
+		db.DPrintf(db.DIALPROXYCLNT_ERR, "InvalidateNamedEndpointCacheEntry %v err %v", r, err)
 		return err
 	}
 	return nil

@@ -21,7 +21,7 @@ import (
 )
 
 const (
-	SIGMA_NETPROXY_FD = "SIGMA_NETPROXY_FD"
+	SIGMA_DIALPROXY_FD = "SIGMA_DIALPROXY_FD"
 )
 
 var hasBeenInit bool
@@ -43,11 +43,11 @@ func NewNetProxyTrans(conn *net.UnixConn, iovm *demux.IoVecMap) *NetProxyTrans {
 
 func GetNetproxydConn(pe *proc.ProcEnv) (*net.UnixConn, error) {
 	var conn *net.UnixConn
-	fdstr := os.Getenv(SIGMA_NETPROXY_FD)
+	fdstr := os.Getenv(SIGMA_DIALPROXY_FD)
 	if fdstr == "" {
 		// Connect to the netproxy server by dialing the unix socket (should only
 		// be done by the test program)
-		uconn, err := net.Dial("unix", sp.SIGMA_NETPROXY_SOCKET)
+		uconn, err := net.Dial("unix", sp.SIGMA_DIALPROXY_SOCKET)
 		if err != nil {
 			db.DPrintf(db.ERROR, "Error connect netproxy srv")
 			return nil, err
@@ -94,10 +94,10 @@ func (trans *NetProxyTrans) Conn() *net.UnixConn {
 }
 
 func (trans *NetProxyTrans) ReadCall() (demux.CallI, *serr.Err) {
-	db.DPrintf(db.NETPROXYTRANS, "ReadCall trans conn [%p]", trans.conn)
+	db.DPrintf(db.DIALPROXYTRANS, "ReadCall trans conn [%p]", trans.conn)
 	seqno, err := frame.ReadSeqno(trans.conn)
 	if err != nil {
-		db.DPrintf(db.NETPROXYTRANS_ERR, "Error ReadSeqno: %v", err)
+		db.DPrintf(db.DIALPROXYTRANS_ERR, "Error ReadSeqno: %v", err)
 		return nil, err
 	}
 	iov, _ := trans.iovm.Get(sessp.Ttag(seqno))
@@ -105,32 +105,32 @@ func (trans *NetProxyTrans) ReadCall() (demux.CallI, *serr.Err) {
 		// Read frames, creating an IO vec
 		iov, err = frame.ReadFrames(trans.conn)
 		if err != nil {
-			db.DPrintf(db.NETPROXYTRANS_ERR, "Error ReadFrames: %v", err)
+			db.DPrintf(db.DIALPROXYTRANS_ERR, "Error ReadFrames: %v", err)
 			return nil, err
 		}
 	} else {
 		n, err := frame.ReadNumOfFrames(trans.conn)
 		if err != nil {
-			db.DPrintf(db.NETPROXYTRANS_ERR, "Error ReadNumOfFrames: %v", err)
+			db.DPrintf(db.DIALPROXYTRANS_ERR, "Error ReadNumOfFrames: %v", err)
 			return nil, err
 		}
 		if uint32(len(iov)) < n {
 			db.DFatalf("NetProxyTrans mismatch between supplied destination nvec and incoming nvec: %v != %v\n%s", len(iov), n, debug.Stack())
 		}
-		db.DPrintf(db.NETPROXYTRANS, "[%p] Read n frames: %v", trans.conn, len(iov))
+		db.DPrintf(db.DIALPROXYTRANS, "[%p] Read n frames: %v", trans.conn, len(iov))
 		if err := frame.ReadNFramesInto(trans.conn, iov); err != nil {
-			db.DPrintf(db.NETPROXYTRANS_ERR, "Error ReadNFramesInto: %v", err)
+			db.DPrintf(db.DIALPROXYTRANS_ERR, "Error ReadNFramesInto: %v", err)
 			return nil, err
 		}
 	}
-	db.DPrintf(db.NETPROXYTRANS, "Read n done: %v", len(iov))
+	db.DPrintf(db.DIALPROXYTRANS, "Read n done: %v", len(iov))
 	// Set the out blob IOV to the socket control message
 	ok, err1 := trans.RecvSocketControlMsg(iov[len(iov)-1])
 	if err1 != nil {
-		db.DPrintf(db.NETPROXYTRANS_ERR, "Error RecvSocketControlMsg: %v", err1)
+		db.DPrintf(db.DIALPROXYTRANS_ERR, "Error RecvSocketControlMsg: %v", err1)
 		return nil, serr.NewErrError(err1)
 	}
-	db.DPrintf(db.NETPROXYTRANS, "Recvd socket control msg ok %v", ok)
+	db.DPrintf(db.DIALPROXYTRANS, "Recvd socket control msg ok %v", ok)
 	// If no control message was received, set the blob's Iov to nil
 	if !ok {
 		iov[len(iov)-1] = nil
@@ -139,22 +139,22 @@ func (trans *NetProxyTrans) ReadCall() (demux.CallI, *serr.Err) {
 }
 
 func (trans *NetProxyTrans) WriteCall(call demux.CallI) *serr.Err {
-	db.DPrintf(db.NETPROXYTRANS, "[%p] WriteCall trans %v", trans.conn, call)
+	db.DPrintf(db.DIALPROXYTRANS, "[%p] WriteCall trans %v", trans.conn, call)
 	pc := call.(*ProxyCall)
 	if err := frame.WriteSeqno(pc.Seqno, trans.conn); err != nil {
-		db.DPrintf(db.NETPROXYTRANS_ERR, "Error WriteSeqno: %v", err)
+		db.DPrintf(db.DIALPROXYTRANS_ERR, "Error WriteSeqno: %v", err)
 		return err
 	}
 	if err := frame.WriteFrames(trans.conn, pc.Iov); err != nil {
-		db.DPrintf(db.NETPROXYTRANS_ERR, "Error WriteFrames: %v", err)
+		db.DPrintf(db.DIALPROXYTRANS_ERR, "Error WriteFrames: %v", err)
 		return err
 	}
 	if err := trans.SendSocketControlMsg(pc.Iov[len(pc.Iov)-1]); err != nil {
-		db.DPrintf(db.NETPROXYTRANS_ERR, "Error SendSocketControlMsg: %v", err)
+		db.DPrintf(db.DIALPROXYTRANS_ERR, "Error SendSocketControlMsg: %v", err)
 		return serr.NewErrError(err)
 	}
 	if err := trans.DelConn(pc.Seqno); err != nil {
-		db.DPrintf(db.NETPROXYTRANS_ERR, "Error DelConn: %v", err)
+		db.DPrintf(db.DIALPROXYTRANS_ERR, "Error DelConn: %v", err)
 		return serr.NewErrError(err)
 	}
 	return nil
@@ -162,8 +162,8 @@ func (trans *NetProxyTrans) WriteCall(call demux.CallI) *serr.Err {
 
 // Receive socket control message
 func (trans *NetProxyTrans) RecvSocketControlMsg(oob []byte) (bool, error) {
-	db.DPrintf(db.NETPROXYTRANS, "[%p] RecvSocketControlMsg len %v", trans.conn, len(oob))
-	defer db.DPrintf(db.NETPROXYTRANS, "[%p] RecvSocketControlMsg done len %v", trans.conn, len(oob))
+	db.DPrintf(db.DIALPROXYTRANS, "[%p] RecvSocketControlMsg len %v", trans.conn, len(oob))
+	defer db.DPrintf(db.DIALPROXYTRANS, "[%p] RecvSocketControlMsg done len %v", trans.conn, len(oob))
 	// Sanity check
 	if len(oob) > 0 && len(oob) != unix.CmsgSpace(4) {
 		db.DPrintf(db.ERROR, "Error oob for control message wrong size: %v != %v", len(oob), unix.CmsgSpace(4))
@@ -174,11 +174,11 @@ func (trans *NetProxyTrans) RecvSocketControlMsg(oob []byte) (bool, error) {
 	// Receive socket control message
 	_, oobn, _, _, err := trans.conn.ReadMsgUnix(b, oob)
 	if err != nil {
-		db.DPrintf(db.NETPROXYTRANS_ERR, "Error recv proxied conn fd: err %v", err)
+		db.DPrintf(db.DIALPROXYTRANS_ERR, "Error recv proxied conn fd: err %v", err)
 		return false, err
 	}
 	if oobn == 0 {
-		db.DPrintf(db.NETPROXYTRANS, "No socket control msg received")
+		db.DPrintf(db.DIALPROXYTRANS, "No socket control msg received")
 		return false, nil
 	}
 	return true, nil
@@ -186,14 +186,14 @@ func (trans *NetProxyTrans) RecvSocketControlMsg(oob []byte) (bool, error) {
 
 // Send socket control message
 func (trans *NetProxyTrans) SendSocketControlMsg(oob []byte) error {
-	db.DPrintf(db.NETPROXYTRANS, "[%p] SendSocketControlMsg len %v", trans.conn, len(oob))
+	db.DPrintf(db.DIALPROXYTRANS, "[%p] SendSocketControlMsg len %v", trans.conn, len(oob))
 	// Send at least one byte, in case there is no socket control message to be
 	// sent
 	b := []byte{'x'}
 	// Send socket control message
 	_, _, err := trans.conn.WriteMsgUnix(b, oob, nil)
 	if err != nil {
-		db.DPrintf(db.NETPROXYTRANS_ERR, "Error send conn fd (%v): %v", oob, err)
+		db.DPrintf(db.DIALPROXYTRANS_ERR, "Error send conn fd (%v): %v", oob, err)
 		return err
 	}
 	return nil

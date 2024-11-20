@@ -1,4 +1,4 @@
-package chunkclnt
+package clnt
 
 import (
 	"sync"
@@ -6,8 +6,8 @@ import (
 	"golang.org/x/exp/slices" // todo: upgrade to > 1.21
 
 	db "sigmaos/debug"
-	"sigmaos/util/rand"
 	sp "sigmaos/sigmap"
+	"sigmaos/util/rand"
 	"sigmaos/util/syncmap"
 )
 

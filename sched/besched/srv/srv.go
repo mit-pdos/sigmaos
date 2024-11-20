@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"sigmaos/chunk"
-	"sigmaos/chunkclnt"
+	chunkclnt "sigmaos/chunk/clnt"
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/proc"

@@ -9,7 +9,7 @@ import (
 
 	"sigmaos/chunk"
 	chunksrv "sigmaos/chunk/srv"
-	"sigmaos/chunkclnt"
+	chunkclnt "sigmaos/chunk/clnt"
 	db "sigmaos/debug"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"

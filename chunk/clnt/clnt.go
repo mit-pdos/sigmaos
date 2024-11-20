@@ -1,4 +1,4 @@
-package chunkclnt
+package clnt
 
 import (
 	"sigmaos/chunk"

@@ -16,7 +16,7 @@ import (
 
 	"sigmaos/chunk"
 	proto "sigmaos/chunk/proto"
-	"sigmaos/chunkclnt"
+	chunkclnt "sigmaos/chunk/clnt"
 	db "sigmaos/debug"
 	dialproxyclnt "sigmaos/dialproxy/clnt"
 	"sigmaos/fs"

@@ -238,15 +238,6 @@ func (gm *GroupMgr) manager(done chan *procret, n int) {
 	gm.ch <- gstatus
 }
 
-func (gm *GroupMgr) Crash() error {
-	db.DPrintf(db.GROUPMGR, "GroupMgr Crash")
-	gm.Lock()
-	defer gm.Unlock()
-
-	gm.running = false
-	return nil
-}
-
 func (gm *GroupMgr) WaitGroup() []*proc.Status {
 	db.DPrintf(db.GROUPMGR, "GroupMgr Wait Group")
 	statuses := <-gm.ch

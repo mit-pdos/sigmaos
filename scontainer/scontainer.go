@@ -29,17 +29,17 @@ func (upc *uprocCmd) Pid() int {
 }
 
 // Contain user procs using exec-uproc-rs trampoline
-func StartSigmaContainer(uproc *proc.Proc, netproxy bool) (*uprocCmd, error) {
-	db.DPrintf(db.CONTAINER, "RunUProc netproxy %v %v env %v\n", netproxy, uproc, os.Environ())
+func StartSigmaContainer(uproc *proc.Proc, dialproxy bool) (*uprocCmd, error) {
+	db.DPrintf(db.CONTAINER, "RunUProc dialproxy %v %v env %v\n", dialproxy, uproc, os.Environ())
 	var cmd *exec.Cmd
 	straceProcs := proc.GetLabels(uproc.GetProcEnv().GetStrace())
 
 	pn := binsrv.BinPath(uproc.GetVersionedProgram())
 	// Optionally strace the proc
 	if straceProcs[uproc.GetProgram()] {
-		cmd = exec.Command("strace", append([]string{"-D", "-f", "exec-uproc-rs", uproc.GetPid().String(), pn, strconv.FormatBool(netproxy)}, uproc.Args...)...)
+		cmd = exec.Command("strace", append([]string{"-D", "-f", "exec-uproc-rs", uproc.GetPid().String(), pn, strconv.FormatBool(dialproxy)}, uproc.Args...)...)
 	} else {
-		cmd = exec.Command("exec-uproc-rs", append([]string{uproc.GetPid().String(), pn, strconv.FormatBool(netproxy)}, uproc.Args...)...)
+		cmd = exec.Command("exec-uproc-rs", append([]string{uproc.GetPid().String(), pn, strconv.FormatBool(dialproxy)}, uproc.Args...)...)
 	}
 	uproc.AppendEnv("PATH", "/bin:/bin2:/usr/bin:/home/sigmaos/bin/kernel")
 	uproc.AppendEnv("SIGMA_EXEC_TIME", strconv.FormatInt(time.Now().UnixMicro(), 10))

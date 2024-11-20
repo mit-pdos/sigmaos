@@ -7,7 +7,6 @@ import (
 
 	"sigmaos/dcontainer"
 	db "sigmaos/debug"
-	"sigmaos/port"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
 	"sigmaos/sigmaclnt"
@@ -21,7 +20,7 @@ type Subsystem interface {
 	GetProc() *proc.Proc
 	GetHow() proc.Thow
 	GetCrashed() bool
-	GetContainer() *dcontainer.Dcontainer
+	GetContainer() *dcontainer.DContainer
 	SetWaited(bool)
 	GetWaited() bool
 	Evict() error
@@ -29,7 +28,6 @@ type Subsystem interface {
 	Kill() error
 	SetCPUShares(shares int64) error
 	GetCPUUtil() (float64, error)
-	GetPortBinding(p sp.Tport) (*port.PortBinding, error)
 	Run(how proc.Thow, kernelId string, localIP sp.Tip) error
 }
 
@@ -39,7 +37,7 @@ type KernelSubsystem struct {
 	p         *proc.Proc
 	how       proc.Thow
 	cmd       *exec.Cmd
-	container *dcontainer.Dcontainer
+	container *dcontainer.DContainer
 	waited    bool
 	crashed   bool
 }
@@ -48,7 +46,7 @@ func (ss *KernelSubsystem) GetProc() *proc.Proc {
 	return ss.p
 }
 
-func (ss *KernelSubsystem) GetContainer() *dcontainer.Dcontainer {
+func (ss *KernelSubsystem) GetContainer() *dcontainer.DContainer {
 	return ss.container
 }
 
@@ -113,7 +111,7 @@ func (s *KernelSubsystem) Evict() error {
 }
 
 func (s *KernelSubsystem) Run(how proc.Thow, kernelId string, localIP sp.Tip) error {
-	if how == proc.HLINUX || how == proc.HSCHEDD {
+	if how == proc.HLINUX || how == proc.HMSCHED {
 		cmd, err := s.SpawnKernelProc(s.p, s.how, kernelId)
 		if err != nil {
 			return err
@@ -127,7 +125,7 @@ func (s *KernelSubsystem) Run(how proc.Thow, kernelId string, localIP sp.Tip) er
 		h := sp.SIGMAHOME
 		s.p.AppendEnv("PATH", h+"/bin/user:"+h+"/bin/user/common:"+h+"/bin/kernel:/usr/sbin:/usr/bin:/bin")
 		s.p.FinalizeEnv(localIP, localIP, sp.Tpid(sp.NOT_SET))
-		c, err := dcontainer.StartDockerContainer(s.p, kernelId, s.k.Param.Overlays, s.k.Param.GVisor)
+		c, err := dcontainer.StartDockerContainer(s.p, kernelId)
 		if err != nil {
 			return err
 		}
@@ -143,10 +141,6 @@ func (ss *KernelSubsystem) SetCPUShares(shares int64) error {
 
 func (ss *KernelSubsystem) GetCPUUtil() (float64, error) {
 	return ss.container.GetCPUUtil()
-}
-
-func (ss *KernelSubsystem) GetPortBinding(p sp.Tport) (*port.PortBinding, error) {
-	return ss.container.GetPortBinding(p)
 }
 
 // Send SIGTERM to a system.
@@ -166,7 +160,7 @@ func (s *KernelSubsystem) Kill() error {
 	if s.p.GetProgram() == "knamed" {
 		return stopKNamed(s.cmd)
 	}
-	if s.how == proc.HSCHEDD || s.how == proc.HDOCKER {
+	if s.how == proc.HMSCHED || s.how == proc.HDOCKER {
 		db.DPrintf(db.ALWAYS, "Killing a kernel subsystem spawned through %v: %v", s.p, s.how)
 		err := s.EvictKernelProc(s.p.GetPid(), s.how)
 		if err != nil {
@@ -193,7 +187,7 @@ func (s *KernelSubsystem) Wait() error {
 		}
 	}
 
-	if s.how == proc.HSCHEDD || s.how == proc.HDOCKER {
+	if s.how == proc.HMSCHED || s.how == proc.HDOCKER {
 		// Do nothing (already waited)
 		return nil
 	} else {

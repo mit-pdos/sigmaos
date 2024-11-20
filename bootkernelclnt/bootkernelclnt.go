@@ -10,9 +10,9 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/kernelclnt"
 	"sigmaos/proc"
-	"sigmaos/util/rand"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
+	"sigmaos/util/rand"
 )
 
 // Shell script that starts the sigmaos container, which invokes Start
@@ -27,21 +27,15 @@ func projectRootPath() string {
 	return filepath.Dir(filepath.Dir(b))
 }
 
-func Start(kernelId string, etcdIP sp.Tip, pe *proc.ProcEnv, srvs string, overlays, gvisor, netproxy bool) (string, error) {
+func Start(kernelId string, etcdIP sp.Tip, pe *proc.ProcEnv, srvs string, dialproxy bool) (string, error) {
 	args := []string{
 		"--pull", pe.BuildTag,
 		"--boot", srvs,
 		"--named", etcdIP.String(),
 		"--host",
 	}
-	if overlays {
-		args = append(args, "--overlays")
-	}
-	if gvisor {
-		args = append(args, "--gvisor")
-	}
-	if netproxy {
-		args = append(args, "--usenetproxy")
+	if dialproxy {
+		args = append(args, "--usedialproxy")
 	}
 	args = append(args, kernelId)
 	// Ensure the kernel output directory has been created
@@ -78,7 +72,7 @@ func Start(kernelId string, etcdIP sp.Tip, pe *proc.ProcEnv, srvs string, overla
 		return "", err
 	}
 	ip := string(out)
-	db.DPrintf(db.BOOT, "Start: %v srvs %v IP %v overlays %v gvisor %v netproxy %v", kernelId, srvs, ip, overlays, gvisor, netproxy)
+	db.DPrintf(db.BOOT, "Start: %v srvs %v IP %v dialproxy %v", kernelId, srvs, ip, dialproxy)
 	return ip, nil
 }
 
@@ -92,9 +86,9 @@ type Kernel struct {
 	kclnt    *kernelclnt.KernelClnt
 }
 
-func NewKernelClntStart(etcdIP sp.Tip, pe *proc.ProcEnv, conf string, overlays, gvisor, netproxy bool) (*Kernel, error) {
+func NewKernelClntStart(etcdIP sp.Tip, pe *proc.ProcEnv, conf string, dialproxy bool) (*Kernel, error) {
 	kernelId := GenKernelId()
-	_, err := Start(kernelId, etcdIP, pe, conf, overlays, gvisor, netproxy)
+	_, err := Start(kernelId, etcdIP, pe, conf, dialproxy)
 	if err != nil {
 		return nil, err
 	}

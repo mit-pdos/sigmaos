@@ -2,14 +2,12 @@ package kernel
 
 import (
 	"fmt"
-	"path/filepath"
 	"strconv"
 
 	db "sigmaos/debug"
-	"sigmaos/port"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
-	"sigmaos/spproxysrv"
+	spproxysrv "sigmaos/spproxy/srv"
 )
 
 type Services struct {
@@ -61,8 +59,8 @@ func (k *Kernel) BootSub(s string, args, env []string, p *Param, realm sp.Trealm
 		ss, err = k.bootLCSched()
 	case sp.BESCHEDREL:
 		ss, err = k.bootBESched()
-	case sp.SCHEDDREL:
-		ss, err = k.bootSchedd()
+	case sp.MSCHEDREL:
+		ss, err = k.bootMSched()
 	case sp.REALMDREL:
 		ss, err = k.bootRealmd()
 	case sp.UPROCDREL:
@@ -142,27 +140,27 @@ func (k *Kernel) bootKNamed(pe *proc.ProcEnv, init bool) error {
 }
 
 func (k *Kernel) bootRealmd() (Subsystem, error) {
-	return k.bootSubsystem("realmd", []string{strconv.FormatBool(k.Param.NetProxy)}, []string{}, sp.ROOTREALM, proc.HSCHEDD, 0)
+	return k.bootSubsystem("realmd", []string{strconv.FormatBool(k.Param.DialProxy)}, []string{}, sp.ROOTREALM, proc.HMSCHED, 0)
 }
 
 func (k *Kernel) bootUxd(realm sp.Trealm) (Subsystem, error) {
-	return k.bootSubsystem("fsuxd", []string{sp.SIGMAHOME}, []string{}, realm, proc.HSCHEDD, 0)
+	return k.bootSubsystem("fsuxd", []string{sp.SIGMAHOME}, []string{}, realm, proc.HMSCHED, 0)
 }
 
 func (k *Kernel) bootS3d(realm sp.Trealm) (Subsystem, error) {
-	return k.bootSubsystem("fss3d", []string{}, []string{}, realm, proc.HSCHEDD, 0)
+	return k.bootSubsystem("fss3d", []string{}, []string{}, realm, proc.HMSCHED, 0)
 }
 
 func (k *Kernel) bootChunkd(realm sp.Trealm) (Subsystem, error) {
-	return k.bootSubsystem("chunkd", []string{k.Param.KernelID}, []string{}, realm, proc.HSCHEDD, 0)
+	return k.bootSubsystem("chunkd", []string{k.Param.KernelID}, []string{}, realm, proc.HMSCHED, 0)
 }
 
 func (k *Kernel) bootDbd(hostip string) (Subsystem, error) {
-	return k.bootSubsystem("dbd", []string{hostip}, []string{}, sp.ROOTREALM, proc.HSCHEDD, 0)
+	return k.bootSubsystem("dbd", []string{hostip}, []string{}, sp.ROOTREALM, proc.HMSCHED, 0)
 }
 
 func (k *Kernel) bootMongod(hostip string) (Subsystem, error) {
-	return k.bootSubsystem("mongod", []string{hostip}, []string{}, sp.ROOTREALM, proc.HSCHEDD, 1000)
+	return k.bootSubsystem("mongod", []string{hostip}, []string{}, sp.ROOTREALM, proc.HMSCHED, 1000)
 }
 
 func (k *Kernel) bootLCSched() (Subsystem, error) {
@@ -172,13 +170,12 @@ func (k *Kernel) bootLCSched() (Subsystem, error) {
 func (k *Kernel) bootBESched() (Subsystem, error) {
 	return k.bootSubsystem("besched", []string{}, []string{}, sp.ROOTREALM, proc.HLINUX, 0)
 }
-
-func (k *Kernel) bootSchedd() (Subsystem, error) {
-	return k.bootSubsystem("schedd", []string{k.Param.KernelID, k.Param.ReserveMcpu}, []string{}, sp.ROOTREALM, proc.HLINUX, 0)
+func (k *Kernel) bootMSched() (Subsystem, error) {
+	return k.bootSubsystem("msched", []string{k.Param.KernelID, k.Param.ReserveMcpu}, []string{}, sp.ROOTREALM, proc.HLINUX, 0)
 }
 
 func (k *Kernel) bootNamed(env []string) (Subsystem, error) {
-	return k.bootSubsystem("named", []string{sp.ROOTREALM.String()}, env, sp.ROOTREALM, proc.HSCHEDD, 0)
+	return k.bootSubsystem("named", []string{sp.ROOTREALM.String()}, env, sp.ROOTREALM, proc.HMSCHED, 0)
 }
 
 func (k *Kernel) bootSPProxyd() (Subsystem, error) {
@@ -194,47 +191,13 @@ func (k *Kernel) bootSPProxyd() (Subsystem, error) {
 // uprocd.  Uprocd cannot post because it doesn't know what the host
 // IP address and port number are for it.
 func (k *Kernel) bootUprocd(args []string) (Subsystem, error) {
-	// Append netproxy bool to args
-	args = append(args, strconv.FormatBool(k.Param.NetProxy))
 	spproxydPID := sp.GenPid("spproxyd")
-	spproxydArgs := append([]string{spproxydPID.String()})
+	// Append args
+	args = append(args, strconv.FormatBool(k.Param.DialProxy), spproxydPID.String())
 	db.DPrintf(db.ALWAYS, "Uprocd args %v", args)
-	s, err := k.bootSubsystem("uprocd", append(args, spproxydArgs...), []string{}, sp.ROOTREALM, proc.HDOCKER, 0)
+	s, err := k.bootSubsystem("uprocd", args, []string{}, sp.ROOTREALM, proc.HDOCKER, 0)
 	if err != nil {
 		return nil, err
-	}
-	if k.Param.Overlays {
-		pn := filepath.Join(sp.SCHEDD, args[0], sp.UPROCDREL, s.GetProc().GetPid().String())
-
-		// container's first port is for uprocd
-		pm, err := s.GetContainer().GetPortBinding(port.UPROCD_PORT)
-		if err != nil {
-			return nil, err
-		}
-
-		// Use 127.0.0.1, because only the local schedd should be talking
-		// to uprocd.
-		addr := sp.NewTaddr(sp.LOCALHOST, sp.INNER_CONTAINER_IP, pm.HostPort)
-		ep := sp.NewEndpoint(sp.INTERNAL_EP, []*sp.Taddr{addr})
-		db.DPrintf(db.BOOT, "Advertise %s at %v\n", pn, ep)
-		if err := k.MkEndpointFile(pn, ep); err != nil {
-			return nil, err
-		}
-		// Get port binding for WWW srvs running on this uprocd
-		ports := []sp.Tport{port.PUBLIC_HTTP_PORT, port.PUBLIC_NAMED_PORT}
-		portFNs := []string{sp.PUBLIC_HTTP_PORT, sp.PUBLIC_NAMED_PORT}
-		for i := range ports {
-			pm, err := s.GetContainer().GetPortBinding(ports[i])
-			if err != nil {
-				return nil, err
-			}
-			portFN := filepath.Join(pn, portFNs[i])
-			if err := k.PutFileJson(portFN, 0777, pm); err != nil {
-				db.DPrintf(db.ERROR, "Error put public port file: %v", err)
-				return nil, err
-			}
-		}
-		db.DPrintf(db.KERNEL, "bootUprocd: started %v at %s pfn %v", pn, pm, portFNs)
 	}
 	return s, nil
 }

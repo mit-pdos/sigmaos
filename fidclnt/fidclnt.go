@@ -15,7 +15,7 @@ import (
 	"time"
 
 	db "sigmaos/debug"
-	"sigmaos/netproxyclnt"
+	dialproxyclnt "sigmaos/dialproxy/clnt"
 	"sigmaos/path"
 	"sigmaos/proc"
 	"sigmaos/protclnt"
@@ -30,10 +30,10 @@ type FidClnt struct {
 	fids   *FidMap
 	refcnt int
 	sm     *sessclnt.Mgr
-	npc    *netproxyclnt.NetProxyClnt
+	npc    *dialproxyclnt.DialProxyClnt
 }
 
-func NewFidClnt(pe *proc.ProcEnv, npc *netproxyclnt.NetProxyClnt) *FidClnt {
+func NewFidClnt(pe *proc.ProcEnv, npc *dialproxyclnt.DialProxyClnt) *FidClnt {
 	return &FidClnt{
 		fids:   newFidMap(),
 		refcnt: 1,
@@ -47,7 +47,7 @@ func (fidc *FidClnt) String() string {
 	return str
 }
 
-func (fidc *FidClnt) GetNetProxyClnt() *netproxyclnt.NetProxyClnt {
+func (fidc *FidClnt) GetDialProxyClnt() *dialproxyclnt.DialProxyClnt {
 	return fidc.npc
 }
 

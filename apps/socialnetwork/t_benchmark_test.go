@@ -91,7 +91,7 @@ func setupSigmaState(t1 *test.Tstate) (*TstateSN, error) {
 		sn.Srv{"socialnetwork-url", nil, 1000},
 		sn.Srv{"socialnetwork-text", nil, 1000},
 		sn.Srv{"socialnetwork-compose", nil, 1000},
-		sn.Srv{"socialnetwork-frontend", []string{strconv.FormatBool(test.Overlays)}, 1000}}, NCACHESRV)
+		sn.Srv{"socialnetwork-frontend", nil, 1000}}, NCACHESRV)
 	if err != nil {
 		return tssn, err
 	}

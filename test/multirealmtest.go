@@ -3,7 +3,7 @@ package test
 import (
 	db "sigmaos/debug"
 	"sigmaos/proc"
-	"sigmaos/realmsrv"
+	realmpkg "sigmaos/realm"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 )
@@ -17,7 +17,7 @@ type RealmTstate struct {
 
 // Creates a realm, and a tstate relative to that realm.
 func NewRealmTstate(ts *Tstate, realm sp.Trealm) (*RealmTstate, error) {
-	return newRealmTstateClnt(ts, realm, true, realmsrv.SUBSYSTEM_PER_NODE, realmsrv.SUBSYSTEM_PER_NODE)
+	return newRealmTstateClnt(ts, realm, true, realmpkg.SUBSYSTEM_PER_NODE, realmpkg.SUBSYSTEM_PER_NODE)
 }
 
 func NewRealmTstateNumSubsystems(ts *Tstate, realm sp.Trealm, numS3 int64, numUX int64) (*RealmTstate, error) {
@@ -26,15 +26,12 @@ func NewRealmTstateNumSubsystems(ts *Tstate, realm sp.Trealm, numS3 int64, numUX
 
 // Creates a tstate relative to an existing realm.
 func NewRealmTstateClnt(ts *Tstate, realm sp.Trealm) (*RealmTstate, error) {
-	return newRealmTstateClnt(ts, realm, false, realmsrv.SUBSYSTEM_PER_NODE, realmsrv.SUBSYSTEM_PER_NODE)
+	return newRealmTstateClnt(ts, realm, false, realmpkg.SUBSYSTEM_PER_NODE, realmpkg.SUBSYSTEM_PER_NODE)
 }
 
 func newRealmTstateClnt(ts *Tstate, realm sp.Trealm, newrealm bool, numS3 int64, numUX int64) (*RealmTstate, error) {
 	if newrealm {
 		net := ""
-		if Overlays {
-			net = realm.String()
-		}
 		db.DPrintf(db.TEST, "Make realm %v", realm)
 		if err := ts.rc.NewRealm(realm, net, numS3, numUX); err != nil {
 			db.DPrintf(db.ERROR, "Error NewRealmTstate NewRealm: %v", err)

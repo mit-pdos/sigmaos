@@ -13,7 +13,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/namesrv/fsetcd"
-	"sigmaos/netproxyclnt"
+	dialproxyclnt "sigmaos/dialproxy/clnt"
 	"sigmaos/overlaydir"
 	"sigmaos/path"
 	"sigmaos/proc"
@@ -39,7 +39,7 @@ type SigmaPSrv struct {
 	attachAuthF protsrv.AttachAuthF
 }
 
-func NewSigmaPSrv(pe *proc.ProcEnv, npc *netproxyclnt.NetProxyClnt, root fs.Dir, addr *sp.Taddr, fencefs fs.Dir, aaf protsrv.AttachAuthF) *SigmaPSrv {
+func NewSigmaPSrv(pe *proc.ProcEnv, npc *dialproxyclnt.DialProxyClnt, root fs.Dir, addr *sp.Taddr, fencefs fs.Dir, aaf protsrv.AttachAuthF) *SigmaPSrv {
 	psrv := &SigmaPSrv{
 		pe:          pe,
 		dirunder:    root,
@@ -56,7 +56,7 @@ func NewSigmaPSrv(pe *proc.ProcEnv, npc *netproxyclnt.NetProxyClnt, root fs.Dir,
 }
 
 func NewSigmaPSrvPost(root fs.Dir, pn string, addr *sp.Taddr, sc *sigmaclnt.SigmaClnt, fencefs fs.Dir, aaf protsrv.AttachAuthF) (*SigmaPSrv, string, error) {
-	psrv := NewSigmaPSrv(sc.ProcEnv(), sc.GetNetProxyClnt(), root, addr, fencefs, aaf)
+	psrv := NewSigmaPSrv(sc.ProcEnv(), sc.GetDialProxyClnt(), root, addr, fencefs, aaf)
 	if len(pn) > 0 {
 		if mpn, err := psrv.postMount(sc, pn); err != nil {
 			return nil, "", err

@@ -5,8 +5,8 @@ import (
 	"time"
 
 	db "sigmaos/debug"
+	dialproxyclnt "sigmaos/dialproxy/clnt"
 	"sigmaos/fidclnt"
-	"sigmaos/netproxyclnt"
 	"sigmaos/path"
 	"sigmaos/proc"
 	"sigmaos/serr"
@@ -23,13 +23,13 @@ type MntClnt struct {
 	mnt        *MntTable
 	rootmt     *RootMountTable
 	pe         *proc.ProcEnv
-	npc        *netproxyclnt.NetProxyClnt
+	npc        *dialproxyclnt.DialProxyClnt
 	cid        sp.TclntId
 	fidc       *fidclnt.FidClnt
 	pathc      MntClntAPI
 }
 
-func NewMntClnt(pathc MntClntAPI, fidc *fidclnt.FidClnt, cid sp.TclntId, pe *proc.ProcEnv, npc *netproxyclnt.NetProxyClnt) *MntClnt {
+func NewMntClnt(pathc MntClntAPI, fidc *fidclnt.FidClnt, cid sp.TclntId, pe *proc.ProcEnv, npc *dialproxyclnt.DialProxyClnt) *MntClnt {
 	mc := &MntClnt{
 		cid:        cid,
 		mnt:        newMntTable(),

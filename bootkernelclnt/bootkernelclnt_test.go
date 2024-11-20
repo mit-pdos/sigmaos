@@ -170,7 +170,7 @@ func TestLeased(t *testing.T) {
 		return
 	}
 
-	name := filepath.Join(sp.SCHEDD, sp.ANY)
+	name := filepath.Join(sp.MSCHED, sp.ANY)
 
 	var err error
 
@@ -189,7 +189,7 @@ func TestLeased(t *testing.T) {
 	db.DPrintf(db.TEST, "entries %v\n", sp.Names(sts))
 	assert.Equal(t, 4, len(sts), "Unexpected len(sts) %v != %v:", sp.Names(sts), 4)
 
-	ts.KillOne(sp.SCHEDDREL)
+	ts.KillOne(sp.MSCHEDREL)
 
 	start := time.Now()
 	for {

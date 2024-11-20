@@ -5,7 +5,7 @@
 #
 
 usage() {
-    echo "Usage: $0 [--pull TAG] [--boot all|all_no_besched|node|node_no_besched|minnode|besched_node|named|realm_no_besched|spproxyd] [--named ADDRs] [--dbip DBIP] [--mongoip MONGOIP] [--host] [--overlays] [--gvisor] [--usenetproxy] [--reserveMcpu rmcpu] kernelid"  1>&2
+    echo "Usage: $0 [--pull TAG] [--boot all|all_no_besched|node|node_no_besched|minnode|besched_node|named|realm_no_besched|spproxyd] [--named ADDRs] [--dbip DBIP] [--mongoip MONGOIP] [--host] [--usedialproxy] [--reserveMcpu rmcpu] kernelid"  1>&2
 }
 
 UPDATE=""
@@ -16,9 +16,7 @@ DBIP="x.x.x.x"
 MONGOIP="x.x.x.x"
 NET="host"
 KERNELID=""
-OVERLAYS="false"
-GVISOR="false"
-NETPROXY="false"
+DIALPROXY="false"
 RMCPU="0"
 while [[ "$#" -gt 1 ]]; do
   case "$1" in
@@ -26,19 +24,19 @@ while [[ "$#" -gt 1 ]]; do
     shift
     case "$1" in
         "all")
-            BOOT="knamed;besched;lcsched;schedd;ux;s3;chunkd;db;mongo;named"
+            BOOT="knamed;besched;lcsched;msched;ux;s3;chunkd;db;mongo;named"
             ;;
         "all_no_besched")
-            BOOT="knamed;lcsched;schedd;ux;s3;chunkd;db;mongo;named"
+            BOOT="knamed;lcsched;msched;ux;s3;chunkd;db;mongo;named"
             ;;
         "node")
-            BOOT="besched;schedd;ux;s3;db;chunkd;mongo"
+            BOOT="besched;msched;ux;s3;db;chunkd;mongo"
             ;;
         "node_no_besched")
-            BOOT="schedd;ux;s3;db;chunkd;mongo"
+            BOOT="msched;ux;s3;db;chunkd;mongo"
             ;;
         "minnode")
-            BOOT="schedd;ux;s3;chunkd"
+            BOOT="msched;ux;s3;chunkd"
             ;;
         "besched_node")
             BOOT="besched"
@@ -50,10 +48,10 @@ while [[ "$#" -gt 1 ]]; do
             BOOT="spproxyd"
             ;;
         "realm")
-            BOOT="knamed;besched;lcsched;schedd;realmd;ux;s3;chunkd;db;mongo;named"
+            BOOT="knamed;besched;lcsched;msched;realmd;ux;s3;chunkd;db;mongo;named"
             ;;
         "realm_no_besched")
-            BOOT="knamed;lcsched;schedd;realmd;ux;s3;chunkd;db;mongo;named"
+            BOOT="knamed;lcsched;msched;realmd;ux;s3;chunkd;db;mongo;named"
             ;;
         *)
             echo "unexpected argument $1 to boot"
@@ -72,17 +70,9 @@ while [[ "$#" -gt 1 ]]; do
     shift
     NET="host"
     ;;
-  --overlays)
+  --usedialproxy)
     shift
-    OVERLAYS="true"
-    ;;
-  --gvisor)
-    shift
-    GVISOR="true"
-    ;;
-  --usenetproxy)
-    shift
-    NETPROXY="true"
+    DIALPROXY="true"
     ;;
   --named)
     shift
@@ -184,10 +174,8 @@ CID=$(docker run -dit \
              -e boot=${BOOT} \
              -e dbip=${DBIP} \
              -e mongoip=${MONGOIP} \
-             -e overlays=${OVERLAYS} \
              -e buildtag=${TAG} \
-             -e gvisor=${GVISOR} \
-             -e netproxy=${NETPROXY} \
+             -e dialproxy=${DIALPROXY} \
              -e SIGMAPERF=${SIGMAPERF} \
              -e SIGMAFAIL=${SIGMAFAIL} \
              -e SIGMADEBUG=${SIGMADEBUG} \

@@ -22,6 +22,7 @@ const (
 )
 
 func RunDbd(dbdaddr string) error {
+	db.DPrintf(db.DB, "Start dbd with dbaddr %v", dbdaddr)
 	s, err := newServer(dbdaddr)
 	if err != nil {
 		return err
@@ -32,7 +33,7 @@ func RunDbd(dbdaddr string) error {
 		db.DFatalf("Error NewSigmaClnt: %v", err)
 		return err
 	}
-	sc.GetNetProxyClnt().AllowConnectionsFromAllRealms()
+	sc.GetDialProxyClnt().AllowConnectionsFromAllRealms()
 	ssrv, err := sigmasrv.NewSigmaSrvClnt(filepath.Join(sp.DB, pe.GetKernelID()), sc, s)
 	if err != nil {
 		return err

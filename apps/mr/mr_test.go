@@ -26,7 +26,7 @@ import (
 	"sigmaos/crash"
 	db "sigmaos/debug"
 	"sigmaos/proc"
-	"sigmaos/scheddclnt"
+	mschedclnt "sigmaos/sched/msched/clnt"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/util/perf"
@@ -172,7 +172,7 @@ func TestSeqWc(t *testing.T) {
 	buf := make([]byte, 0, 2097152)
 	scanner.Buffer(buf, cap(buf))
 	data := make(Tdata, 0)
-	p, err := perf.NewPerf(proc.NewTestProcEnv(sp.ROOTREALM, nil, nil, sp.NO_IP, sp.NO_IP, "", false, false, false), perf.SEQWC)
+	p, err := perf.NewPerf(proc.NewTestProcEnv(sp.ROOTREALM, nil, nil, sp.NO_IP, sp.NO_IP, "", false, false), perf.SEQWC)
 	assert.Nil(t, err)
 	sbc := mrscanner.NewScanByteCounter(p)
 	for scanner.Scan() {
@@ -244,7 +244,7 @@ func TestMapperReducer(t *testing.T) {
 		reducer = grep.Reduce
 	}
 
-	p, err := perf.NewPerf(proc.NewTestProcEnv(sp.ROOTREALM, nil, nil, sp.NO_IP, sp.NO_IP, "", false, false, false), perf.MRMAPPER)
+	p, err := perf.NewPerf(proc.NewTestProcEnv(sp.ROOTREALM, nil, nil, sp.NO_IP, sp.NO_IP, "", false, false), perf.MRMAPPER)
 	assert.Nil(t, err)
 
 	tns, err := ts.tasks.Mft.AcquireTasks()
@@ -440,9 +440,9 @@ func runN(t *testing.T, evs []crash.Tevent, crashschedd, crashprocq, crashux, ma
 	err = ts.BootNode(1)
 	assert.Nil(t, err, "BootProcd 2")
 
-	sdc := scheddclnt.NewScheddClnt(sc.FsLib, sp.NOT_SET)
+	sdc := mschedclnt.NewMSchedClnt(sc.FsLib, sp.NOT_SET)
 	if monitor {
-		sdc.MonitorScheddStats(ts.ProcEnv().GetRealm(), time.Second)
+		sdc.MonitorMSchedStats(ts.ProcEnv().GetRealm(), time.Second)
 		defer sdc.Done()
 	}
 
@@ -456,7 +456,7 @@ func runN(t *testing.T, evs []crash.Tevent, crashschedd, crashprocq, crashux, ma
 	l1 := &sync.Mutex{}
 	for i := 0; i < crashschedd; i++ {
 		// Sleep for a random time, then crash a server.
-		go ts.CrashServer(sp.SCHEDDREL, (i+1)*CRASHSRV, l1, crashchan)
+		go ts.CrashServer(sp.MSCHEDREL, (i+1)*CRASHSRV, l1, crashchan)
 	}
 	l2 := &sync.Mutex{}
 	for i := 0; i < crashux; i++ {
@@ -519,16 +519,16 @@ func TestCrashTaskAndCoord(t *testing.T) {
 	runN(t, evs, 0, 0, 0, 0, false)
 }
 
-func TestCrashSchedd1(t *testing.T) {
+func TestCrashMSched1(t *testing.T) {
 	runN(t, nil, 1, 0, 0, 0, false)
 }
 
-func TestCrashSchedd2(t *testing.T) {
+func TestCrashMSched2(t *testing.T) {
 	N := 2
 	runN(t, nil, N, 0, 0, 0, false)
 }
 
-func TestCrashScheddN(t *testing.T) {
+func TestCrashMSchedN(t *testing.T) {
 	N := 5
 	runN(t, nil, N, 0, 0, 0, false)
 }
@@ -562,7 +562,7 @@ func TestCrashUx5(t *testing.T) {
 	runN(t, nil, 0, 0, N, 0, false)
 }
 
-func TestCrashScheddProcqUx5(t *testing.T) {
+func TestCrashMSchedProcqUx5(t *testing.T) {
 	N := 5
 	runN(t, nil, N, N, N, 0, false)
 }

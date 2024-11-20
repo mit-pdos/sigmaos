@@ -53,7 +53,7 @@ func RunUserSrv(jobname string) error {
 	}
 	mongoc.EnsureIndex(SN_DB, USER_COL, []string{"username"})
 	usrv.mongoc = mongoc
-	fsls, err := NewFsLibs(SOCIAL_NETWORK_USER, ssrv.MemFs.SigmaClnt().GetNetProxyClnt())
+	fsls, err := NewFsLibs(SOCIAL_NETWORK_USER, ssrv.MemFs.SigmaClnt().GetDialProxyClnt())
 	if err != nil {
 		return err
 	}

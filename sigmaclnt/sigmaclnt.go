@@ -7,15 +7,15 @@ import (
 	"time"
 
 	db "sigmaos/debug"
+	dialproxyclnt "sigmaos/dialproxy/clnt"
 	"sigmaos/fdclnt"
 	"sigmaos/fidclnt"
 	"sigmaos/fslib"
 	"sigmaos/leaseclnt"
-	"sigmaos/netproxyclnt"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
 	sos "sigmaos/sigmaos"
-	"sigmaos/spproxyclnt"
+	spproxyclnt "sigmaos/spproxy/clnt"
 )
 
 func init() {
@@ -48,18 +48,18 @@ func newFsLibFidClnt(pe *proc.ProcEnv, fidc *fidclnt.FidClnt) (*fslib.FsLib, err
 	var err error
 	var s sos.FileAPI
 	if pe.UseSPProxy {
-		s, err = spproxyclnt.NewSigmaClntClnt(pe, fidc.GetNetProxyClnt())
+		s, err = spproxyclnt.NewSPProxyClnt(pe, fidc.GetDialProxyClnt())
 		if err != nil {
-			db.DPrintf(db.ALWAYS, "newSigmaClntClnt err %v", err)
+			db.DPrintf(db.ALWAYS, "newSPProxyClnt err %v", err)
 			return nil, err
 		}
 	} else {
 		s = fdclnt.NewFdClient(pe, fidc)
 	}
-	return fslib.NewFsLibAPI(pe, fidc.GetNetProxyClnt(), s)
+	return fslib.NewFsLibAPI(pe, fidc.GetDialProxyClnt(), s)
 }
 
-func NewFsLib(pe *proc.ProcEnv, npc *netproxyclnt.NetProxyClnt) (*fslib.FsLib, error) {
+func NewFsLib(pe *proc.ProcEnv, npc *dialproxyclnt.DialProxyClnt) (*fslib.FsLib, error) {
 	return newFsLibFidClnt(pe, fidclnt.NewFidClnt(pe, npc))
 }
 
@@ -102,13 +102,13 @@ func NewSigmaClntFsLibFidClnt(pe *proc.ProcEnv, fidc *fidclnt.FidClnt) (*SigmaCl
 	}, nil
 }
 
-func NewSigmaClntFsLib(pe *proc.ProcEnv, npc *netproxyclnt.NetProxyClnt) (*SigmaClnt, error) {
+func NewSigmaClntFsLib(pe *proc.ProcEnv, npc *dialproxyclnt.DialProxyClnt) (*SigmaClnt, error) {
 	return NewSigmaClntFsLibFidClnt(pe, fidclnt.NewFidClnt(pe, npc))
 }
 
 func NewSigmaClnt(pe *proc.ProcEnv) (*SigmaClnt, error) {
 	start := time.Now()
-	sc, err := NewSigmaClntFsLib(pe, netproxyclnt.NewNetProxyClnt(pe))
+	sc, err := NewSigmaClntFsLib(pe, dialproxyclnt.NewDialProxyClnt(pe))
 	if err != nil {
 		db.DPrintf(db.ERROR, "NewSigmaClnt: %v", err)
 		return nil, err
@@ -123,7 +123,7 @@ func NewSigmaClnt(pe *proc.ProcEnv) (*SigmaClnt, error) {
 // Only to be used by non-procs (tests, and linux processes), and creates a
 // sigmaclnt for the root realm.
 func NewSigmaClntRootInit(pe *proc.ProcEnv) (*SigmaClnt, error) {
-	sc, err := NewSigmaClntFsLib(pe, netproxyclnt.NewNetProxyClnt(pe))
+	sc, err := NewSigmaClntFsLib(pe, dialproxyclnt.NewDialProxyClnt(pe))
 	if err != nil {
 		return nil, err
 	}

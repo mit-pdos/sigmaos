@@ -9,9 +9,9 @@ import (
 
 	"sigmaos/crash"
 	db "sigmaos/debug"
+	dialproxyclnt "sigmaos/dialproxy/clnt"
 	"sigmaos/namesrv"
 	"sigmaos/namesrv/fsetcd"
-	"sigmaos/netproxyclnt"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
@@ -252,7 +252,7 @@ func TestPartitionNamed(t *testing.T) {
 	}
 
 	pe := ts.ProcEnv()
-	npc := netproxyclnt.NewNetProxyClnt(pe)
+	npc := dialproxyclnt.NewDialProxyClnt(pe)
 	ep, err := fsetcd.GetRootNamed(npc.Dial, pe.GetEtcdEndpoints(), pe.GetRealm())
 	assert.Nil(t, err)
 	db.DPrintf(db.TEST, "ep named1 %v", ep)
@@ -284,7 +284,7 @@ func TestPartitionNamed(t *testing.T) {
 	time.Sleep(sp.EtcdSessionTTL * time.Second)
 
 	pe.ClearNamedEndpoint()
-	npc = netproxyclnt.NewNetProxyClnt(pe)
+	npc = dialproxyclnt.NewDialProxyClnt(pe)
 	ep, err = fsetcd.GetRootNamed(npc.Dial, pe.GetEtcdEndpoints(), pe.GetRealm())
 	assert.Nil(t, err)
 	db.DPrintf(db.TEST, "ep named2 %v", ep)
@@ -292,7 +292,7 @@ func TestPartitionNamed(t *testing.T) {
 	// read from second named
 	pe = proc.NewAddedProcEnv(ts.ProcEnv())
 	pe.SetNamedEndpoint(ep)
-	fsl2, err := sigmaclnt.NewFsLib(pe, ts.GetNetProxyClnt())
+	fsl2, err := sigmaclnt.NewFsLib(pe, ts.GetDialProxyClnt())
 
 	_, err = fsl2.PutFile(filepath.Join(dn, "ggg"), 0777, sp.OWRITE, []byte("bye"))
 	assert.Nil(t, err, "Err PutFile: %v", err)

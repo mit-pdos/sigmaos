@@ -13,7 +13,6 @@ import (
 	"sigmaos/memfs/dir"
 	"sigmaos/memfs/inode"
 	"sigmaos/path"
-	"sigmaos/port"
 	"sigmaos/protsrv"
 	"sigmaos/protsrv/lockmap"
 	"sigmaos/serr"
@@ -31,7 +30,6 @@ type MemFs struct {
 	ps    *protsrv.ProtSrv
 	roots *roots
 	sc    *sigmaclnt.SigmaClnt
-	pi    port.PortInfo
 	pn    string
 }
 

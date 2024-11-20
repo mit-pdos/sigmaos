@@ -13,7 +13,7 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	db "sigmaos/debug"
-	"sigmaos/netproxy"
+	"sigmaos/dialproxy"
 	"sigmaos/path"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
@@ -50,7 +50,7 @@ func NewFsEtcdEndpoint(ip sp.Tip) (TetcdEndpoints, error) {
 	return eps, nil
 }
 
-func NewFsEtcd(dial netproxy.DialFn, etcdMnts map[string]*sp.TendpointProto, realm sp.Trealm, psi *PstatInode) (*FsEtcd, error) {
+func NewFsEtcd(dial dialproxy.DialFn, etcdMnts map[string]*sp.TendpointProto, realm sp.Trealm, psi *PstatInode) (*FsEtcd, error) {
 	endpoints := []string{}
 	for addr, _ := range etcdMnts {
 		endpoints = append(endpoints, addr)
@@ -170,7 +170,7 @@ func (fs *FsEtcd) SetRootNamed(ep *sp.Tendpoint) *serr.Err {
 	}
 }
 
-func GetRootNamed(dial netproxy.DialFn, etcdMnts map[string]*sp.TendpointProto, realm sp.Trealm) (*sp.Tendpoint, *serr.Err) {
+func GetRootNamed(dial dialproxy.DialFn, etcdMnts map[string]*sp.TendpointProto, realm sp.Trealm) (*sp.Tendpoint, *serr.Err) {
 	fs, err := NewFsEtcd(dial, etcdMnts, realm, nil)
 	if err != nil {
 		return &sp.Tendpoint{}, serr.NewErrError(err)

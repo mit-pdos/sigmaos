@@ -5,7 +5,7 @@ import (
 	"sync"
 
 	db "sigmaos/debug"
-	"sigmaos/netproxyclnt"
+	dialproxyclnt "sigmaos/dialproxy/clnt"
 	"sigmaos/proc"
 	"sigmaos/s3/s3pathclnt"
 	"sigmaos/serr"
@@ -15,14 +15,14 @@ import (
 
 type FsLib struct {
 	pe  *proc.ProcEnv
-	npc *netproxyclnt.NetProxyClnt
+	npc *dialproxyclnt.DialProxyClnt
 	sos.FileAPI
 
 	sync.Mutex
 	s3c *s3pathclnt.S3PathClnt
 }
 
-func NewFsLibAPI(pe *proc.ProcEnv, npc *netproxyclnt.NetProxyClnt, sos sos.FileAPI) (*FsLib, error) {
+func NewFsLibAPI(pe *proc.ProcEnv, npc *dialproxyclnt.DialProxyClnt, sos sos.FileAPI) (*FsLib, error) {
 	db.DPrintf(db.FSLIB, "NewFsLib: principal %s innerip %s addrs %v\n", pe.GetPrincipal(), pe.GetInnerContainerIP(), pe.GetEtcdEndpoints())
 	fl := &FsLib{
 		pe:      pe,
@@ -45,7 +45,7 @@ func (fl *FsLib) ProcEnv() *proc.ProcEnv {
 }
 
 // TODO: should probably remove, and replace by a high-level SigmaOS API call.
-func (fl *FsLib) GetNetProxyClnt() *netproxyclnt.NetProxyClnt {
+func (fl *FsLib) GetDialProxyClnt() *dialproxyclnt.DialProxyClnt {
 	return fl.npc
 }
 

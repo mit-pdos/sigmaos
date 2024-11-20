@@ -8,7 +8,7 @@ message ProcSeqno {
   uint64 epoch = 1;
   uint64 seqno = 2;
   string procqID = 3;
-  string scheddID = 4;
+  string mSchedID = 4;
 }
 
 message ProcEnvProto {
@@ -27,17 +27,16 @@ message ProcEnvProto {
   string debug = 13;
   string uprocdPIDStr = 14;
   bool privileged = 15;
-  bool overlays = 16;
   int64 netFail = 17;
   int64 crash = 18;
   int64 partition = 19;
   int32 howInt = 20;
   google.protobuf.Timestamp spawnTimePB = 21;
   string strace = 22;
-  TendpointProto scheddEndpointProto = 23;
+  TendpointProto mSchedEndpointProto = 23;
   TendpointProto namedEndpointProto = 24;
   bool useSPProxy = 25;
-  bool useNetProxy = 26;
+  bool useDialProxy = 26;
   map<string, SecretProto> secretsMap = 27;
   repeated string sigmaPath = 28;
   repeated string kernels = 29;

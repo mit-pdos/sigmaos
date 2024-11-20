@@ -10,17 +10,6 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-func swap(addrs sp.Taddrs, i int) sp.Taddrs {
-	v := addrs[0]
-	addrs[0] = addrs[i]
-	addrs[i] = v
-	return addrs
-}
-
-func QualifyAddr(addrstr string) (sp.Tip, sp.Tport, error) {
-	return QualifyAddrLocalIP("", addrstr)
-}
-
 func QualifyAddrLocalIP(lip sp.Tip, addrstr string) (sp.Tip, sp.Tport, error) {
 	h, pstr, err := net.SplitHostPort(addrstr)
 	if err != nil {
@@ -45,37 +34,6 @@ func QualifyAddrLocalIP(lip sp.Tip, addrstr string) (sp.Tip, sp.Tport, error) {
 		}
 	}
 	return host, port, nil
-}
-
-// XXX deduplicate with localIP
-func LocalInterface() (string, error) {
-	ifaces, err := net.Interfaces()
-	if err != nil {
-		return "", err
-	}
-	for _, i := range ifaces {
-		addrs, err := i.Addrs()
-		if err != nil {
-			return "", err
-		}
-		for _, addr := range addrs {
-			var ip net.IP
-			switch v := addr.(type) {
-			case *net.IPNet:
-				ip = v.IP
-			case *net.IPAddr:
-				ip = v.IP
-			}
-			if ip.IsLoopback() {
-				continue
-			}
-			if ip.To4() == nil {
-				continue
-			}
-			return i.Name, nil
-		}
-	}
-	return "", fmt.Errorf("localInterface: not found")
 }
 
 func localIPs() ([]net.IP, error) {

@@ -5,26 +5,26 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/proc"
-	"sigmaos/scheddclnt"
+	mschedclnt "sigmaos/sched/msched/clnt"
 	"sigmaos/semclnt"
 	sp "sigmaos/sigmap"
 )
 
-func (clnt *ProcClnt) notify(method scheddclnt.Tmethod, pid sp.Tpid, kernelID string, semName string, how proc.Thow, status *proc.Status, skipSchedd bool) error {
+func (clnt *ProcClnt) notify(method mschedclnt.Tmethod, pid sp.Tpid, kernelID string, semName string, how proc.Thow, status *proc.Status, skipMSched bool) error {
 	db.DPrintf(db.PROCCLNT, "%v %v", method, pid)
 	defer db.DPrintf(db.PROCCLNT, "%v done %v", method, pid)
 
-	if how == proc.HSCHEDD {
-		if skipSchedd {
+	if how == proc.HMSCHED {
+		if skipMSched {
 			// Skip notifying via schedd. Currently, this only happens when the proc
-			// crashes and schedd calls ExitedCrashed on behalf of the proc.  Schedd
+			// crashes and schedd calls ExitedCrashed on behalf of the proc.  MSched
 			// will take care of calling Exited locally, so no need to RPC (itself).
 			//
 			// Do nothing
 		} else {
 			// If the proc was spawned via schedd, notify via RPC.
 			db.DPrintf(db.PROCCLNT, "%v %v RPC", method, pid)
-			if err := clnt.scheddclnt.Notify(method, kernelID, pid, status); err != nil {
+			if err := clnt.mschedclnt.Notify(method, kernelID, pid, status); err != nil {
 				db.DPrintf(db.PROCCLNT_ERR, "Error schedd %v: %v", method, err)
 				return err
 			}

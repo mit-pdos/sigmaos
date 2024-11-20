@@ -10,7 +10,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/namesrv/fsetcd"
-	"sigmaos/netproxyclnt"
+	dialproxyclnt "sigmaos/dialproxy/clnt"
 	"sigmaos/proc"
 	"sigmaos/util/rand"
 	"sigmaos/semclnt"
@@ -51,7 +51,7 @@ func TestSemClntSimple(t *testing.T) {
 	err := ts.MkDir(pn, 0777)
 	assert.Nil(ts.T, err, "Mkdir")
 	pe := proc.NewAddedProcEnv(ts.ProcEnv())
-	fsl0, err := sigmaclnt.NewFsLib(pe, netproxyclnt.NewNetProxyClnt(pe))
+	fsl0, err := sigmaclnt.NewFsLib(pe, dialproxyclnt.NewDialProxyClnt(pe))
 	assert.Nil(ts.T, err, "fsl0")
 
 	sem := semclnt.NewSemClnt(ts.FsLib, pn+"/x")
@@ -92,10 +92,10 @@ func TestSemClntConcur(t *testing.T) {
 	err := ts.MkDir(pn, 0777)
 	assert.Nil(ts.T, err, "Mkdir")
 	pe1 := proc.NewAddedProcEnv(ts.ProcEnv())
-	fsl0, err := sigmaclnt.NewFsLib(pe1, netproxyclnt.NewNetProxyClnt(pe1))
+	fsl0, err := sigmaclnt.NewFsLib(pe1, dialproxyclnt.NewDialProxyClnt(pe1))
 	assert.Nil(ts.T, err, "fsl0")
 	pe2 := proc.NewAddedProcEnv(ts.ProcEnv())
-	fsl1, err := sigmaclnt.NewFsLib(pe2, netproxyclnt.NewNetProxyClnt(pe2))
+	fsl1, err := sigmaclnt.NewFsLib(pe2, dialproxyclnt.NewDialProxyClnt(pe2))
 	assert.Nil(ts.T, err, "fsl1")
 
 	for i := 0; i < 100; i++ {

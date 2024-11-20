@@ -15,9 +15,9 @@ import (
 	"sigmaos/fttasks"
 	"sigmaos/leaderclnt"
 	"sigmaos/proc"
-	"sigmaos/util/rand"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
+	"sigmaos/util/rand"
 )
 
 const (
@@ -153,7 +153,7 @@ func NewCoord(args []string) (*Coord, error) {
 	return c, nil
 }
 
-func (c *Coord) newTask(bin string, args []string, mb proc.Tmem, allowedPaths []string) *proc.Proc {
+func (c *Coord) newTask(bin string, args []string, mb proc.Tmem) *proc.Proc {
 	pid := sp.GenPid(bin + "-" + c.job)
 	p := proc.NewProcPid(pid, bin, args)
 	//	if mb > 0 {
@@ -165,7 +165,6 @@ func (c *Coord) newTask(bin string, args []string, mb proc.Tmem, allowedPaths []
 
 func (c *Coord) mapperProc(task string) (*proc.Proc, error) {
 	input := c.mft.TaskPathName(task)
-	allowedPaths := []string{sp.NAMED, filepath.Join(sp.SCHEDD, "*"), filepath.Join(sp.S3, "*"), filepath.Join(sp.UX, "*")}
 	mapperbin := c.mapperbin
 	// If running with malicious mappers, roll the dice and see if we should
 	// spawn a benign mapper or a malicious one.
@@ -182,7 +181,7 @@ func (c *Coord) mapperProc(task string) (*proc.Proc, error) {
 	}
 	db.DPrintf(db.ALWAYS, "bin %v", string(bin))
 	c.stat.nMap += 1
-	proc := c.newTask(mapperbin, []string{c.jobRoot, c.job, strconv.Itoa(c.nreducetask), string(bin), c.intOutdir, c.linesz, c.wordsz}, c.memPerTask, allowedPaths)
+	proc := c.newTask(mapperbin, []string{c.jobRoot, c.job, strconv.Itoa(c.nreducetask), string(bin), c.intOutdir, c.linesz, c.wordsz}, c.memPerTask)
 	return proc, nil
 }
 
@@ -205,9 +204,8 @@ func (c *Coord) reducerProc(tn string) (*proc.Proc, error) {
 	}
 	outlink := ReduceOut(c.jobRoot, c.job) + t.Task
 	outTarget := ReduceOutTarget(c.outdir, c.job) + t.Task
-	allowedPaths := []string{sp.NAMED, filepath.Join(sp.SCHEDD, "*"), filepath.Join(sp.S3, "*"), filepath.Join(sp.UX, "*")}
 	c.stat.nReduce += 1
-	return c.newTask(c.reducerbin, []string{string(b), outlink, outTarget, strconv.Itoa(c.nmaptask)}, c.memPerTask, allowedPaths), nil
+	return c.newTask(c.reducerbin, []string{string(b), outlink, outTarget, strconv.Itoa(c.nmaptask)}, c.memPerTask), nil
 }
 
 type Tresult struct {

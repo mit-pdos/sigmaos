@@ -5,7 +5,8 @@ import (
 	"sync"
 	"time"
 
-	"sigmaos/chunksrv"
+	"sigmaos/chunk"
+	chunksrv "sigmaos/chunk/srv"
 	db "sigmaos/debug"
 	sp "sigmaos/sigmap"
 	"sigmaos/uprocclnt"
@@ -61,9 +62,9 @@ func min(n int64, l int) int {
 }
 
 func (dl *downloader) read(off int64, nbyte int) (int, error) {
-	i := chunksrv.Index(off)
-	o := off - chunksrv.Ckoff(i)
-	j := chunksrv.Index(off+int64(nbyte)) + 1
+	i := chunk.Index(off)
+	o := off - chunk.ChunkOff(i)
+	j := chunk.Index(off+int64(nbyte)) + 1
 	n := int64(0)
 	db.DPrintf(db.BINSRV, "read %d %d: chunks [%d,%d)", off, nbyte, i, j)
 	for c := i; c < j; c++ {

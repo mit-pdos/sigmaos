@@ -6,7 +6,7 @@ import (
 	"time"
 
 	db "sigmaos/debug"
-	"sigmaos/netproxyclnt"
+	dialproxyclnt "sigmaos/dialproxy/clnt"
 	"sigmaos/proc"
 	"sigmaos/serr"
 	"sigmaos/sessp"
@@ -18,10 +18,10 @@ type Mgr struct {
 	sessKeys map[*sp.Tendpoint]string
 	sessions map[string]*SessClnt
 	pe       *proc.ProcEnv
-	npc      *netproxyclnt.NetProxyClnt
+	npc      *dialproxyclnt.DialProxyClnt
 }
 
-func NewMgr(pe *proc.ProcEnv, npc *netproxyclnt.NetProxyClnt) *Mgr {
+func NewMgr(pe *proc.ProcEnv, npc *dialproxyclnt.DialProxyClnt) *Mgr {
 	sc := &Mgr{
 		sessions: make(map[string]*SessClnt),
 		sessKeys: make(map[*sp.Tendpoint]string),

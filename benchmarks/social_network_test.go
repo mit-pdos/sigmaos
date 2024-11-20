@@ -14,9 +14,9 @@ import (
 	sn "sigmaos/apps/socialnetwork"
 	"sigmaos/benchmarks/loadgen"
 	dbg "sigmaos/debug"
-	"sigmaos/util/perf"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
+	"sigmaos/util/perf"
 	rd "sigmaos/util/rand"
 	"strconv"
 	"strings"
@@ -45,7 +45,7 @@ func getDefaultSrvs() []sn.Srv {
 		sn.Srv{"socialnetwork-url", nil, 2000},
 		sn.Srv{"socialnetwork-text", nil, 2000},
 		sn.Srv{"socialnetwork-compose", nil, 2000},
-		sn.Srv{"socialnetwork-frontend", []string{strconv.FormatBool(test.Overlays)}, 2000}}
+		sn.Srv{"socialnetwork-frontend", nil, 2000}}
 }
 
 func init() {
@@ -101,10 +101,10 @@ func NewSocialNetworkJob(
 	if sigmaos {
 		initUserAndGraph(ts.Ts.T, MONGO_URL)
 		ji.snCfg, err = sn.NewConfig(
-			ts.SigmaClnt, ji.job, getDefaultSrvs(), ncache, true, test.Overlays)
+			ts.SigmaClnt, ji.job, getDefaultSrvs(), ncache, true)
 		assert.Nil(ts.Ts.T, err, "Error Make social network job: %v", err)
 	} else {
-		ji.snCfg, err = sn.NewConfig(ts.SigmaClnt, ji.job, nil, 0, false, test.Overlays)
+		ji.snCfg, err = sn.NewConfig(ts.SigmaClnt, ji.job, nil, 0, false)
 		p := sn.JobHTTPAddrsPath(ji.job)
 		h, po, err := net.SplitHostPort(K8S_ADDR)
 		assert.Nil(ts.Ts.T, err, "Err split host port %v: %v", ji.k8ssrvaddr, err)

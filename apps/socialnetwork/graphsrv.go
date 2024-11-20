@@ -49,7 +49,7 @@ func RunGraphSrv(jobname string) error {
 	mongoc.EnsureIndex(SN_DB, GRAPH_FLWEE_COL, []string{"userid"})
 	gsrv.mongoc = mongoc
 
-	fsls, err := NewFsLibs(SOCIAL_NETWORK_GRAPH, ssrv.MemFs.SigmaClnt().GetNetProxyClnt())
+	fsls, err := NewFsLibs(SOCIAL_NETWORK_GRAPH, ssrv.MemFs.SigmaClnt().GetDialProxyClnt())
 	if err != nil {
 		return err
 	}

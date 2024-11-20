@@ -38,7 +38,7 @@ func RunProfSrv(job string, cache string) error {
 		return err
 	}
 	ps.dbc = dbc
-	fsls, err := NewFsLibs(HOTELPROF, ssrv.MemFs.SigmaClnt().GetNetProxyClnt())
+	fsls, err := NewFsLibs(HOTELPROF, ssrv.MemFs.SigmaClnt().GetDialProxyClnt())
 	if err != nil {
 		return err
 	}

@@ -15,9 +15,9 @@ func GetInitFSCmd(bcfg *BenchConfig, ccfg *ClusterConfig) string {
 	const (
 		debugSelectors string = "\"BENCH;TEST;\""
 	)
-	netproxy := ""
+	dialproxy := ""
 	if bcfg.NoNetproxy {
-		netproxy = "--nonetproxy"
+		dialproxy = "--nodialproxy"
 	}
 	overlays := ""
 	if bcfg.Overlays {
@@ -28,7 +28,7 @@ func GetInitFSCmd(bcfg *BenchConfig, ccfg *ClusterConfig) string {
 		"--run InitFs "+
 		"> /tmp/bench.out 2>&1",
 		debugSelectors,
-		netproxy,
+		dialproxy,
 		overlays,
 		ccfg.LeaderNodeIP,
 		bcfg.Tag,
@@ -52,9 +52,9 @@ func GetStartCmdConstructor(rps int, dur time.Duration, dummyProc, lcProc, prewa
 		if prewarmRealm {
 			prewarm = "--prewarm_realm"
 		}
-		netproxy := ""
+		dialproxy := ""
 		if bcfg.NoNetproxy {
-			netproxy = "--nonetproxy"
+			dialproxy = "--nodialproxy"
 		}
 		overlays := ""
 		if bcfg.Overlays {
@@ -77,7 +77,7 @@ func GetStartCmdConstructor(rps int, dur time.Duration, dummyProc, lcProc, prewa
 			"%s "+ // lcProc
 			"> /tmp/bench.out 2>&1",
 			debugSelectors,
-			netproxy,
+			dialproxy,
 			overlays,
 			ccfg.LeaderNodeIP,
 			bcfg.Tag,
@@ -96,9 +96,9 @@ func GetBEImgResizeMultiplexingCmd(bcfg *BenchConfig, ccfg *ClusterConfig) strin
 	const (
 		debugSelectors string = "\"TEST;BENCH;\""
 	)
-	netproxy := ""
+	dialproxy := ""
 	if bcfg.NoNetproxy {
-		netproxy = "--nonetproxy"
+		dialproxy = "--nodialproxy"
 	}
 	overlays := ""
 	if bcfg.Overlays {
@@ -117,7 +117,7 @@ func GetBEImgResizeMultiplexingCmd(bcfg *BenchConfig, ccfg *ClusterConfig) strin
 		"--nrealm 4 "+
 		"> /tmp/bench.out 2>&1",
 		debugSelectors,
-		netproxy,
+		dialproxy,
 		overlays,
 		ccfg.LeaderNodeIP,
 		bcfg.Tag,
@@ -129,9 +129,9 @@ func GetBEImgResizeRPCMultiplexingCmd(bcfg *BenchConfig, ccfg *ClusterConfig) st
 	const (
 		debugSelectors string = "\"TEST;BENCH;IMGD;\""
 	)
-	netproxy := ""
+	dialproxy := ""
 	if bcfg.NoNetproxy {
-		netproxy = "--nonetproxy"
+		dialproxy = "--nodialproxy"
 	}
 	overlays := ""
 	if bcfg.Overlays {
@@ -150,7 +150,7 @@ func GetBEImgResizeRPCMultiplexingCmd(bcfg *BenchConfig, ccfg *ClusterConfig) st
 		"--nrealm 4 "+
 		"> /tmp/bench.out 2>&1",
 		debugSelectors,
-		netproxy,
+		dialproxy,
 		overlays,
 		ccfg.LeaderNodeIP,
 		bcfg.Tag,
@@ -189,9 +189,9 @@ func GetMRCmdConstructor(mrApp string, memReq proc.Tmem, prewarmRealm, measureTp
 		if prewarmRealm {
 			prewarm = "--prewarm_realm"
 		}
-		netproxy := ""
+		dialproxy := ""
 		if bcfg.NoNetproxy {
-			netproxy = "--nonetproxy"
+			dialproxy = "--nodialproxy"
 		}
 		overlays := ""
 		if bcfg.Overlays {
@@ -207,7 +207,7 @@ func GetMRCmdConstructor(mrApp string, memReq proc.Tmem, prewarmRealm, measureTp
 			"> /tmp/bench.out 2>&1",
 			debugSelectors,
 			perfSelectors,
-			netproxy,
+			dialproxy,
 			overlays,
 			ccfg.LeaderNodeIP,
 			bcfg.Tag,
@@ -275,9 +275,9 @@ func GetHotelClientCmdConstructor(hotelReqName string, leader bool, numClients i
 		if scaleCache {
 			autoscaleCache = "--hotel_cache_autoscale"
 		}
-		netproxy := ""
+		dialproxy := ""
 		if bcfg.NoNetproxy {
-			netproxy = "--nonetproxy"
+			dialproxy = "--nodialproxy"
 		}
 		overlays := ""
 		if bcfg.Overlays {
@@ -333,7 +333,7 @@ func GetHotelClientCmdConstructor(hotelReqName string, leader bool, numClients i
 			"%s > /tmp/frontend-logs.out 2>&1 ;",
 			debugSelectors,
 			perfSelectors,
-			netproxy,
+			dialproxy,
 			overlays,
 			ccfg.LeaderNodeIP,
 			bcfg.Tag,
@@ -388,9 +388,9 @@ func GetSocialnetClientCmdConstructor(leader bool, numClients int, rps []int, du
 		} else {
 			testName = fmt.Sprintf("SocialNetJustCli%s", sys)
 		}
-		netproxy := ""
+		dialproxy := ""
 		if bcfg.NoNetproxy {
-			netproxy = "--nonetproxy"
+			dialproxy = "--nodialproxy"
 		}
 		overlays := ""
 		if bcfg.Overlays {
@@ -411,7 +411,7 @@ func GetSocialnetClientCmdConstructor(leader bool, numClients int, rps []int, du
 			"> /tmp/bench.out 2>&1",
 			debugSelectors,
 			perfSelectors,
-			netproxy,
+			dialproxy,
 			overlays,
 			ccfg.LeaderNodeIP,
 			bcfg.Tag,
@@ -451,9 +451,9 @@ func GetLCBEHotelImgResizeMultiplexingCmdConstructor(numClients int, rps []int, 
 		if scaleCache {
 			autoscaleCache = "--hotel_cache_autoscale"
 		}
-		netproxy := ""
+		dialproxy := ""
 		if bcfg.NoNetproxy {
-			netproxy = "--nonetproxy"
+			dialproxy = "--nodialproxy"
 		}
 		overlays := ""
 		if bcfg.Overlays {
@@ -482,7 +482,7 @@ func GetLCBEHotelImgResizeMultiplexingCmdConstructor(numClients int, rps []int, 
 			"> /tmp/bench.out 2>&1",
 			debugSelectors,
 			perfSelectors,
-			netproxy,
+			dialproxy,
 			overlays,
 			ccfg.LeaderNodeIP,
 			bcfg.Tag,
@@ -523,9 +523,9 @@ func GetLCBEHotelImgResizeRPCMultiplexingCmdConstructor(numClients int, rps []in
 		if scaleCache {
 			autoscaleCache = "--hotel_cache_autoscale"
 		}
-		netproxy := ""
+		dialproxy := ""
 		if bcfg.NoNetproxy {
-			netproxy = "--nonetproxy"
+			dialproxy = "--nodialproxy"
 		}
 		overlays := ""
 		if bcfg.Overlays {
@@ -554,7 +554,7 @@ func GetLCBEHotelImgResizeRPCMultiplexingCmdConstructor(numClients int, rps []in
 			"> /tmp/bench.out 2>&1",
 			debugSelectors,
 			perfSelectors,
-			netproxy,
+			dialproxy,
 			overlays,
 			ccfg.LeaderNodeIP,
 			bcfg.Tag,

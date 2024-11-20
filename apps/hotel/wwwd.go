@@ -11,8 +11,6 @@ import (
 
 	"sigmaos/apps/hotel/proto"
 	db "sigmaos/debug"
-	"sigmaos/util/perf"
-	"sigmaos/port"
 	"sigmaos/proc"
 	"sigmaos/rpcclnt"
 	"sigmaos/rpcdirclnt"
@@ -20,6 +18,7 @@ import (
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmarpcchan"
 	"sigmaos/tracing"
+	"sigmaos/util/perf"
 )
 
 type Www struct {
@@ -37,7 +36,7 @@ type Www struct {
 }
 
 // Run starts the server
-func RunWww(job string, public bool) error {
+func RunWww(job string) error {
 	www := &Www{}
 	www.record = true
 	www.job = job
@@ -47,7 +46,7 @@ func RunWww(job string, public bool) error {
 	}
 	www.SigmaClnt = sc
 
-	fsls, err := NewFsLibs("hotel-wwwd", www.GetNetProxyClnt())
+	fsls, err := NewFsLibs("hotel-wwwd", www.GetDialProxyClnt())
 	if err != nil {
 		return err
 	}
@@ -98,34 +97,19 @@ func RunWww(job string, public bool) error {
 	mux.HandleFunc("/startrecording", www.startRecordingHandler)
 	//	}
 
-	if public {
-		ep, l, err := www.GetNetProxyClnt().Listen(sp.EXTERNAL_EP, sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, port.PUBLIC_HTTP_PORT))
-		if err != nil {
-			db.DFatalf("Error %v Listen: %v", public, err)
-		}
-		//		if TRACING {
-		//			go tmux.Serve(l)
-		//		} else {
-		go http.Serve(l, mux)
-		//		}
-		if err = port.AdvertisePublicHTTPPort(www.FsLib, JobHTTPAddrsPath(job), ep); err != nil {
-			db.DFatalf("AdvertisePort %v", err)
-		}
-	} else {
-		ep, l, err := www.GetNetProxyClnt().Listen(sp.EXTERNAL_EP, sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, port.PUBLIC_HTTP_PORT))
-		if err != nil {
-			db.DFatalf("Error %v Listen: %v", public, err)
-		}
-		//		if TRACING {
-		//			go tmux.Serve(l)
-		//		} else {
-		go http.Serve(l, mux)
-		//		}
+	ep, l, err := www.GetDialProxyClnt().Listen(sp.EXTERNAL_EP, sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, sp.NO_PORT))
+	if err != nil {
+		db.DFatalf("Error Listen: %v", err)
+	}
+	//		if TRACING {
+	//			go tmux.Serve(l)
+	//		} else {
+	go http.Serve(l, mux)
+	//		}
 
-		db.DPrintf(db.ALWAYS, "Hotel advertise %v", ep)
-		if err = www.MkEndpointFile(JobHTTPAddrsPath(job), ep); err != nil {
-			db.DFatalf("MkEndpointFile %v", err)
-		}
+	db.DPrintf(db.ALWAYS, "Hotel advertise %v", ep)
+	if err = www.MkEndpointFile(JobHTTPAddrsPath(job), ep); err != nil {
+		db.DFatalf("MkEndpointFile %v", err)
 	}
 
 	perf, err := perf.NewPerf(sc.ProcEnv(), perf.HOTEL_WWW)

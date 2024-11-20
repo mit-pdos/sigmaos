@@ -1,7 +1,7 @@
 #!/bin/bash
 
 usage() {
-  echo "Usage: $0 [--branch BRANCH] [--reserveMcpu rmcpu] [--pull TAG] [--n N_VM] [--ncores NCORES] [--overlays] [--nonetproxy] [--turbo] [--numfullnode N] [--numbeschednode N]" 1>&2
+  echo "Usage: $0 [--branch BRANCH] [--reserveMcpu rmcpu] [--pull TAG] [--n N_VM] [--ncores NCORES] [--nodialproxy] [--turbo] [--numfullnode N] [--numbeschednode N]" 1>&2
 }
 
 VPC=""
@@ -9,10 +9,9 @@ N_VM=""
 NCORES=4
 UPDATE=""
 TAG=""
-OVERLAYS=""
 NUM_FULL_NODE="0"
 NUM_BESCHED_NODE="0"
-NETPROXY="--usenetproxy"
+DIALPROXY="--usedialproxy"
 TOKEN=""
 TURBO=""
 RMCPU="0"
@@ -51,13 +50,9 @@ while [[ $# -gt 0 ]]; do
     TAG=$1
     shift
     ;;
-  --overlays)
+  --nodialproxy)
     shift
-    OVERLAYS="--overlays"
-    ;;
-  --nonetproxy)
-    shift
-    NETPROXY=""
+    DIALPROXY=""
     ;;
   --numfullnode)
     shift
@@ -204,7 +199,7 @@ for vm in $vms; do
       echo "START etcd"
       ./start-etcd.sh
     fi
-    ./start-kernel.sh --boot $LEADER_NODE --named ${SIGMASTART_PRIVADDR} --pull ${TAG} --reserveMcpu ${RMCPU} --dbip ${MAIN_PRIVADDR}:4406 --mongoip ${MAIN_PRIVADDR}:4407 ${OVERLAYS} ${NETPROXY} ${KERNELID} 2>&1 | tee /tmp/start.out
+    ./start-kernel.sh --boot $LEADER_NODE --named ${SIGMASTART_PRIVADDR} --pull ${TAG} --reserveMcpu ${RMCPU} --dbip ${MAIN_PRIVADDR}:4406 --mongoip ${MAIN_PRIVADDR}:4407 ${DIALPROXY} ${KERNELID} 2>&1 | tee /tmp/start.out
 #    docker cp ~/1.jpg ${KERNELID}:/home/sigmaos/1.jpg
 #    docker cp ~/6.jpg ${KERNELID}:/home/sigmaos/6.jpg
 #    docker cp ~/7.jpg ${KERNELID}:/home/sigmaos/7.jpg
@@ -212,7 +207,7 @@ for vm in $vms; do
   else
     echo "JOIN ${SIGMASTART} ${KERNELID}"
     ${TOKEN} 2>&1 > /dev/null
-    ./start-kernel.sh --boot $FOLLOWER_NODE --named ${SIGMASTART_PRIVADDR} --pull ${TAG} --dbip ${MAIN_PRIVADDR}:4406 --mongoip ${MAIN_PRIVADDR}:4407 ${OVERLAYS} ${NETPROXY} ${KERNELID} 2>&1 | tee /tmp/join.out
+    ./start-kernel.sh --boot $FOLLOWER_NODE --named ${SIGMASTART_PRIVADDR} --pull ${TAG} --dbip ${MAIN_PRIVADDR}:4406 --mongoip ${MAIN_PRIVADDR}:4407 ${DIALPROXY} ${KERNELID} 2>&1 | tee /tmp/join.out
 #    docker cp ~/1.jpg ${KERNELID}:/home/sigmaos/1.jpg
 #    docker cp ~/6.jpg ${KERNELID}:/home/sigmaos/6.jpg
 #    docker cp ~/7.jpg ${KERNELID}:/home/sigmaos/7.jpg

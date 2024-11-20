@@ -1,7 +1,6 @@
 package kvgrp_test
 
 import (
-	"strconv"
 	"testing"
 	"time"
 
@@ -12,7 +11,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/groupmgr"
 	"sigmaos/namesrv/fsetcd"
-	"sigmaos/netproxyclnt"
+	dialproxyclnt "sigmaos/dialproxy/clnt"
 	"sigmaos/proc"
 	"sigmaos/semclnt"
 	"sigmaos/sesssrv"
@@ -44,7 +43,7 @@ func newTstate(t1 *test.Tstate, nrepl int, persist bool) *Tstate {
 	ts.MkDir(kvgrp.KVDIR, 0777)
 	err := ts.MkDir(kvgrp.JobDir(ts.job), 0777)
 	assert.Nil(t1.T, err)
-	mcfg := groupmgr.NewGroupConfig(nrepl, "kvd", []string{ts.grp, strconv.FormatBool(test.Overlays)}, 0, ts.job)
+	mcfg := groupmgr.NewGroupConfig(nrepl, "kvd", []string{ts.grp}, 0, ts.job)
 	if persist {
 		mcfg.Persist(ts.SigmaClnt.FsLib)
 	}
@@ -155,7 +154,7 @@ func TestServerCrash(t *testing.T) {
 	ch := make(chan error)
 	go func() {
 		pe := proc.NewAddedProcEnv(ts.ProcEnv())
-		fsl, err := sigmaclnt.NewFsLib(pe, netproxyclnt.NewNetProxyClnt(pe))
+		fsl, err := sigmaclnt.NewFsLib(pe, dialproxyclnt.NewDialProxyClnt(pe))
 		assert.Nil(t, err)
 		sem := semclnt.NewSemClnt(fsl, kvgrp.GrpPath(kvgrp.JobDir(ts.job), ts.grp)+"/sem")
 		err = sem.Down()
@@ -185,7 +184,7 @@ func TestReconnectSimple(t *testing.T) {
 	ch := make(chan error)
 	go func() {
 		pe := proc.NewAddedProcEnv(ts.ProcEnv())
-		fsl, err := sigmaclnt.NewFsLib(pe, netproxyclnt.NewNetProxyClnt(pe))
+		fsl, err := sigmaclnt.NewFsLib(pe, dialproxyclnt.NewDialProxyClnt(pe))
 		assert.Nil(t, err)
 		for i := 0; i < N; i++ {
 			_, err := fsl.Stat(kvgrp.GrpPath(kvgrp.JobDir(ts.job), ts.grp) + "/")
@@ -207,7 +206,7 @@ func TestReconnectSimple(t *testing.T) {
 
 func (ts *Tstate) stat(t *testing.T, i int, ch chan error) {
 	pe := proc.NewAddedProcEnv(ts.ProcEnv())
-	fsl, err := sigmaclnt.NewFsLib(pe, netproxyclnt.NewNetProxyClnt(pe))
+	fsl, err := sigmaclnt.NewFsLib(pe, dialproxyclnt.NewDialProxyClnt(pe))
 	assert.Nil(t, err)
 	for true {
 		_, err := fsl.Stat(kvgrp.GrpPath(kvgrp.JobDir(ts.job), ts.grp) + "/")
@@ -284,7 +283,7 @@ func TestServerPartitionBlocking(t *testing.T) {
 		ch := make(chan error)
 		go func(i int) {
 			pe := proc.NewAddedProcEnv(ts.ProcEnv())
-			fsl, err := sigmaclnt.NewFsLib(pe, netproxyclnt.NewNetProxyClnt(pe))
+			fsl, err := sigmaclnt.NewFsLib(pe, dialproxyclnt.NewDialProxyClnt(pe))
 			assert.Nil(t, err)
 			sem := semclnt.NewSemClnt(fsl, kvgrp.GrpPath(kvgrp.JobDir(ts.job), ts.grp)+"/sem")
 			sem.Init(0)

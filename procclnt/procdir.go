@@ -16,8 +16,8 @@ func (clnt *ProcClnt) MakeProcDir(pid sp.Tpid, procdir string, isKernelProc bool
 		db.DPrintf(db.PROCCLNT_ERR, "MakeProcDir mkdir pid %v procdir %v err %v\n", pid, procdir, err)
 		return err
 	}
-	// Only create exit/evict semaphores if not spawned on SCHEDD.
-	if how != proc.HSCHEDD {
+	// Only create exit/evict semaphores if not spawned on MSCHED.
+	if how != proc.HMSCHED {
 		// Create exit signal
 		semExit := semclnt.NewSemClnt(clnt.FsLib, filepath.Join(procdir, proc.EXIT_SEM))
 		semExit.Init(0)

@@ -123,7 +123,7 @@ func (g *Group) writeSymlink(sigmaEPs []*sp.Tendpoint) {
 	}
 }
 
-func RunMember(job, grp string, public bool, myid, nrepl int) {
+func RunMember(job, grp string, myid, nrepl int) {
 	g := &Group{myid: myid, grp: grp, isBusy: true}
 	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
 	if err != nil {

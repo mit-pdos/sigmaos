@@ -52,7 +52,7 @@ func (ccfg *ClusterConfig) StartSigmaOSCluster() error {
 		args = append(args, "--overlays")
 	}
 	if ccfg.bcfg.NoNetproxy {
-		args = append(args, "--nonetproxy")
+		args = append(args, "--nodialproxy")
 	}
 	if ccfg.TurboBoost {
 		args = append(args, "--turbo")

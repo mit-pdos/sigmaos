@@ -42,7 +42,7 @@ func RunComposeSrv(jobname string) error {
 	if err != nil {
 		return err
 	}
-	fsls, err := NewFsLibs(SOCIAL_NETWORK_POST, ssrv.MemFs.SigmaClnt().GetNetProxyClnt())
+	fsls, err := NewFsLibs(SOCIAL_NETWORK_POST, ssrv.MemFs.SigmaClnt().GetDialProxyClnt())
 	if err != nil {
 		return err
 	}

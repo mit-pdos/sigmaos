@@ -18,12 +18,12 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/linuxsched"
-	"sigmaos/util/perf"
 	"sigmaos/proc"
 	"sigmaos/rpcdirclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmarpcchan"
 	"sigmaos/test"
+	"sigmaos/util/perf"
 	rd "sigmaos/util/rand"
 )
 
@@ -131,7 +131,7 @@ func TestGeoSingle(t *testing.T) {
 	err = rpcc.RPC("Geo.Nearby", &arg, &res)
 	assert.Nil(t, err)
 	db.DPrintf(db.TEST, "res %v\n", res.HotelIds)
-	assert.Equal(t, 5, len(res.HotelIds))
+	assert.Equal(t, 9, len(res.HotelIds))
 }
 
 func TestRateSingle(t *testing.T) {
@@ -347,7 +347,7 @@ func TestSingleSearch(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts := newTstate(t1, []*hotel.Srv{&hotel.Srv{Name: "hotel-geod", Args: []string{"1000"}}, &hotel.Srv{Name: "hotel-rated"}, &hotel.Srv{Name: "hotel-searchd"}}, NCACHESRV, DEF_GEO_N_IDX, DEF_GEO_SEARCH_RADIUS, DEF_GEO_N_RESULTS)
+	ts := newTstate(t1, []*hotel.Srv{&hotel.Srv{Name: "hotel-geod", Args: []string{"1", "10", "5"}}, &hotel.Srv{Name: "hotel-rated"}, &hotel.Srv{Name: "hotel-searchd"}}, NCACHESRV, DEF_GEO_N_IDX, DEF_GEO_SEARCH_RADIUS, DEF_GEO_N_RESULTS)
 	defer ts.Shutdown()
 	defer ts.stop()
 	rpcc, err := sigmarpcchan.NewSigmaRPCClnt([]*fslib.FsLib{ts.FsLib}, hotel.HOTELSEARCH)
@@ -378,7 +378,7 @@ func TestWww(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts := newTstate(t1, hotel.NewHotelSvc(test.Overlays), NCACHESRV, DEF_GEO_N_IDX, DEF_GEO_SEARCH_RADIUS, DEF_GEO_N_RESULTS)
+	ts := newTstate(t1, hotel.NewHotelSvc(), NCACHESRV, DEF_GEO_N_IDX, DEF_GEO_SEARCH_RADIUS, DEF_GEO_N_RESULTS)
 
 	wc, err1 := hotel.NewWebClnt(ts.FsLib, ts.job)
 	assert.Nil(t, err1, "Error NewWebClnt: %v", err1)
@@ -442,7 +442,7 @@ func TestBenchDeathStarSingle(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts := newTstate(t1, hotel.NewHotelSvc(test.Overlays), NCACHESRV, DEF_GEO_N_IDX, DEF_GEO_SEARCH_RADIUS, DEF_GEO_N_RESULTS)
+	ts := newTstate(t1, hotel.NewHotelSvc(), NCACHESRV, DEF_GEO_N_IDX, DEF_GEO_SEARCH_RADIUS, DEF_GEO_N_RESULTS)
 	wc, err1 := hotel.NewWebClnt(ts.FsLib, ts.job)
 	assert.Nil(t, err1, "Error NewWebClnt: %v", err1)
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
@@ -487,7 +487,7 @@ func TestBenchSearchSigma(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts := newTstate(t1, hotel.NewHotelSvc(test.Overlays), NCACHESRV, DEF_GEO_N_IDX, DEF_GEO_SEARCH_RADIUS, DEF_GEO_N_RESULTS)
+	ts := newTstate(t1, hotel.NewHotelSvc(), NCACHESRV, DEF_GEO_N_IDX, DEF_GEO_SEARCH_RADIUS, DEF_GEO_N_RESULTS)
 	wc, err1 := hotel.NewWebClnt(ts.FsLib, ts.job)
 	assert.Nil(t, err1, "Error NewWebClnt: %v", err1)
 	p, err := perf.NewPerf(ts.ProcEnv(), perf.TEST)
@@ -561,7 +561,7 @@ func TestBenchGeoSigma(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts := newTstate(t1, hotel.NewHotelSvc(test.Overlays), NCACHESRV, 1, 20, 500)
+	ts := newTstate(t1, hotel.NewHotelSvc(), NCACHESRV, 1, 20, 500)
 	wc, err1 := hotel.NewWebClnt(ts.FsLib, ts.job)
 	assert.Nil(t, err1, "Error NewWebClnt: %v", err1)
 	p, err := perf.NewPerf(ts.ProcEnv(), perf.TEST)
@@ -617,7 +617,7 @@ func testMultiSearch(t *testing.T, nthread int) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts := newTstate(t1, hotel.NewHotelSvc(test.Overlays), NCACHESRV, DEF_GEO_N_IDX, DEF_GEO_SEARCH_RADIUS, DEF_GEO_N_RESULTS)
+	ts := newTstate(t1, hotel.NewHotelSvc(), NCACHESRV, DEF_GEO_N_IDX, DEF_GEO_SEARCH_RADIUS, DEF_GEO_N_RESULTS)
 	wc, err1 := hotel.NewWebClnt(ts.FsLib, ts.job)
 	assert.Nil(t, err1, "Error NewWebClnt: %v", err1)
 	ch := make(chan bool)

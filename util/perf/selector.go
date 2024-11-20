@@ -29,7 +29,7 @@ const (
 	PROCD                = "PROCD"
 	S3                   = "S3"
 	UX                   = "UX"
-	SCHEDD               = "SCHEDD"
+	MSCHED               = "MSCHED"
 	KEYD                 = "KEYD"
 	SPPROXYSRV           = "SPPROXYSRV"
 	UPROCD               = "UPROCD"

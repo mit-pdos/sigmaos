@@ -19,7 +19,7 @@ import (
 	spproto "sigmaos/spproxy/proto"
 )
 
-type SigmaClntClnt struct {
+type SPProxyClnt struct {
 	pe           *proc.ProcEnv
 	dmx          *demux.DemuxClnt
 	rpcc         *rpcclnt.RPCClnt
@@ -29,12 +29,12 @@ type SigmaClntClnt struct {
 	disconnected bool
 }
 
-func NewSigmaClntClnt(pe *proc.ProcEnv, npc *dialproxyclnt.DialProxyClnt) (*SigmaClntClnt, error) {
+func NewSPProxyClnt(pe *proc.ProcEnv, npc *dialproxyclnt.DialProxyClnt) (*SPProxyClnt, error) {
 	conn, err := net.Dial("unix", sp.SIGMASOCKET)
 	if err != nil {
 		return nil, err
 	}
-	scc := &SigmaClntClnt{
+	scc := &SPProxyClnt{
 		pe:           pe,
 		npc:          npc,
 		dmx:          nil,
@@ -56,7 +56,7 @@ func NewSigmaClntClnt(pe *proc.ProcEnv, npc *dialproxyclnt.DialProxyClnt) (*Sigm
 	return scc, nil
 }
 
-func (scc *SigmaClntClnt) SendReceive(iniov sessp.IoVec, outiov sessp.IoVec) error {
+func (scc *SPProxyClnt) SendReceive(iniov sessp.IoVec, outiov sessp.IoVec) error {
 	c := sigmaclntcodec.NewCall(sessp.NextSeqno(scc.seqcntr), iniov)
 	rep, err := scc.dmx.SendReceive(c, outiov)
 	if err != nil {
@@ -70,11 +70,11 @@ func (scc *SigmaClntClnt) SendReceive(iniov sessp.IoVec, outiov sessp.IoVec) err
 	}
 }
 
-func (scc *SigmaClntClnt) StatsSrv() (*rpc.RPCStatsSnapshot, error) {
+func (scc *SPProxyClnt) StatsSrv() (*rpc.RPCStatsSnapshot, error) {
 	return nil, nil
 }
 
-func (scc *SigmaClntClnt) ReportError(err error) {
+func (scc *SPProxyClnt) ReportError(err error) {
 	db.DPrintf(db.DEMUXCLNT, "ReportError %v", err)
 	go func() {
 		scc.close()
@@ -82,7 +82,7 @@ func (scc *SigmaClntClnt) ReportError(err error) {
 }
 
 // Tell spproxyd to shut down
-func (scc *SigmaClntClnt) Shutdown() error {
+func (scc *SPProxyClnt) Shutdown() error {
 	req := spproto.SigmaNullRequest{}
 	rep := spproto.SigmaErrReply{}
 	err := scc.rpcErr("SPProxySrvAPI.Shutdown", &req, &rep)
@@ -91,6 +91,6 @@ func (scc *SigmaClntClnt) Shutdown() error {
 }
 
 // Close the socket connection, which closes dmxclnt too.
-func (scc *SigmaClntClnt) close() error {
+func (scc *SPProxyClnt) close() error {
 	return scc.conn.Close()
 }

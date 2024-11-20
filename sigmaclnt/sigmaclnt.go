@@ -48,9 +48,9 @@ func newFsLibFidClnt(pe *proc.ProcEnv, fidc *fidclnt.FidClnt) (*fslib.FsLib, err
 	var err error
 	var s sos.FileAPI
 	if pe.UseSPProxy {
-		s, err = spproxyclnt.NewSigmaClntClnt(pe, fidc.GetDialProxyClnt())
+		s, err = spproxyclnt.NewSPProxyClnt(pe, fidc.GetDialProxyClnt())
 		if err != nil {
-			db.DPrintf(db.ALWAYS, "newSigmaClntClnt err %v", err)
+			db.DPrintf(db.ALWAYS, "newSPProxyClnt err %v", err)
 			return nil, err
 		}
 	} else {

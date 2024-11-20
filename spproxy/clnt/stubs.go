@@ -16,7 +16,7 @@ import (
 	spproto "sigmaos/spproxy/proto"
 )
 
-func (scc *SigmaClntClnt) rpcErr(method string, req proto.Message, rep *spproto.SigmaErrReply) error {
+func (scc *SPProxyClnt) rpcErr(method string, req proto.Message, rep *spproto.SigmaErrReply) error {
 	err := scc.rpcc.RPC(method, req, rep)
 	if err != nil {
 		return err
@@ -27,7 +27,7 @@ func (scc *SigmaClntClnt) rpcErr(method string, req proto.Message, rep *spproto.
 	return nil
 }
 
-func (scc *SigmaClntClnt) rpcFd(method string, req proto.Message, rep *spproto.SigmaFdReply) (int, error) {
+func (scc *SPProxyClnt) rpcFd(method string, req proto.Message, rep *spproto.SigmaFdReply) (int, error) {
 	err := scc.rpcc.RPC(method, req, rep)
 	if err != nil {
 		return -1, err
@@ -38,7 +38,7 @@ func (scc *SigmaClntClnt) rpcFd(method string, req proto.Message, rep *spproto.S
 	return int(rep.Fd), nil
 }
 
-func (scc *SigmaClntClnt) rpcData(method string, req proto.Message, rep *spproto.SigmaDataReply) (sessp.IoVec, error) {
+func (scc *SPProxyClnt) rpcData(method string, req proto.Message, rep *spproto.SigmaDataReply) (sessp.IoVec, error) {
 	err := scc.rpcc.RPC(method, req, rep)
 	if err != nil {
 		return nil, err
@@ -49,7 +49,7 @@ func (scc *SigmaClntClnt) rpcData(method string, req proto.Message, rep *spproto
 	return sessp.NewIoVec(rep.Blob.Iov), nil
 }
 
-func (scc *SigmaClntClnt) rpcSize(method string, req proto.Message, rep *spproto.SigmaSizeReply) (sp.Tsize, error) {
+func (scc *SPProxyClnt) rpcSize(method string, req proto.Message, rep *spproto.SigmaSizeReply) (sp.Tsize, error) {
 	err := scc.rpcc.RPC(method, req, rep)
 	if err != nil {
 		return 0, err
@@ -61,7 +61,7 @@ func (scc *SigmaClntClnt) rpcSize(method string, req proto.Message, rep *spproto
 	}
 }
 
-func (scc *SigmaClntClnt) Init() error {
+func (scc *SPProxyClnt) Init() error {
 	req := spproto.SigmaInitRequest{ProcEnvProto: scc.pe.GetProto()}
 	rep := spproto.SigmaErrReply{}
 	err := scc.rpcErr("SPProxySrvAPI.Init", &req, &rep)
@@ -69,7 +69,7 @@ func (scc *SigmaClntClnt) Init() error {
 	return err
 }
 
-func (scc *SigmaClntClnt) CloseFd(fd int) error {
+func (scc *SPProxyClnt) CloseFd(fd int) error {
 	req := spproto.SigmaCloseRequest{Fd: uint32(fd)}
 	rep := spproto.SigmaErrReply{}
 	err := scc.rpcErr("SPProxySrvAPI.CloseFd", &req, &rep)
@@ -77,7 +77,7 @@ func (scc *SigmaClntClnt) CloseFd(fd int) error {
 	return err
 }
 
-func (scc *SigmaClntClnt) Stat(path string) (*sp.Stat, error) {
+func (scc *SPProxyClnt) Stat(path string) (*sp.Stat, error) {
 	req := spproto.SigmaPathRequest{Path: path}
 	rep := spproto.SigmaStatReply{}
 	err := scc.rpcc.RPC("SPProxySrvAPI.Stat", &req, &rep)
@@ -91,7 +91,7 @@ func (scc *SigmaClntClnt) Stat(path string) (*sp.Stat, error) {
 	return sp.NewStatProto(rep.Stat), nil
 }
 
-func (scc *SigmaClntClnt) Create(path string, p sp.Tperm, m sp.Tmode) (int, error) {
+func (scc *SPProxyClnt) Create(path string, p sp.Tperm, m sp.Tmode) (int, error) {
 	req := spproto.SigmaCreateRequest{Path: path, Perm: uint32(p), Mode: uint32(m)}
 	rep := spproto.SigmaFdReply{}
 	fd, err := scc.rpcFd("SPProxySrvAPI.Create", &req, &rep)
@@ -99,7 +99,7 @@ func (scc *SigmaClntClnt) Create(path string, p sp.Tperm, m sp.Tmode) (int, erro
 	return fd, err
 }
 
-func (scc *SigmaClntClnt) Open(path string, m sp.Tmode, w sos.Twait) (int, error) {
+func (scc *SPProxyClnt) Open(path string, m sp.Tmode, w sos.Twait) (int, error) {
 	req := spproto.SigmaCreateRequest{Path: path, Mode: uint32(m), Wait: bool(w)}
 	rep := spproto.SigmaFdReply{}
 	fd, err := scc.rpcFd("SPProxySrvAPI.Open", &req, &rep)
@@ -107,7 +107,7 @@ func (scc *SigmaClntClnt) Open(path string, m sp.Tmode, w sos.Twait) (int, error
 	return fd, err
 }
 
-func (scc *SigmaClntClnt) Rename(src, dst string) error {
+func (scc *SPProxyClnt) Rename(src, dst string) error {
 	req := spproto.SigmaRenameRequest{Src: src, Dst: dst}
 	rep := spproto.SigmaErrReply{}
 	err := scc.rpcErr("SPProxySrvAPI.Rename", &req, &rep)
@@ -115,7 +115,7 @@ func (scc *SigmaClntClnt) Rename(src, dst string) error {
 	return err
 }
 
-func (scc *SigmaClntClnt) Remove(path string) error {
+func (scc *SPProxyClnt) Remove(path string) error {
 	req := spproto.SigmaPathRequest{Path: path}
 	rep := spproto.SigmaErrReply{}
 	err := scc.rpcErr("SPProxySrvAPI.Remove", &req, &rep)
@@ -123,7 +123,7 @@ func (scc *SigmaClntClnt) Remove(path string) error {
 	return err
 }
 
-func (scc *SigmaClntClnt) GetFile(path string) ([]byte, error) {
+func (scc *SPProxyClnt) GetFile(path string) ([]byte, error) {
 	req := spproto.SigmaPathRequest{Path: path}
 	rep := spproto.SigmaDataReply{}
 	rep.Blob = &rpcproto.Blob{Iov: [][]byte{nil}}
@@ -135,7 +135,7 @@ func (scc *SigmaClntClnt) GetFile(path string) ([]byte, error) {
 	return d[0], nil
 }
 
-func (scc *SigmaClntClnt) PutFile(path string, p sp.Tperm, m sp.Tmode, data []byte, o sp.Toffset, l sp.TleaseId) (sp.Tsize, error) {
+func (scc *SPProxyClnt) PutFile(path string, p sp.Tperm, m sp.Tmode, data []byte, o sp.Toffset, l sp.TleaseId) (sp.Tsize, error) {
 	blob := &rpcproto.Blob{Iov: [][]byte{data}}
 	req := spproto.SigmaPutFileRequest{Path: path, Perm: uint32(p), Mode: uint32(m), Offset: uint64(o), LeaseId: uint64(l), Blob: blob}
 	rep := spproto.SigmaSizeReply{}
@@ -144,7 +144,7 @@ func (scc *SigmaClntClnt) PutFile(path string, p sp.Tperm, m sp.Tmode, data []by
 	return sz, err
 }
 
-func (scc *SigmaClntClnt) Read(fd int, b []byte) (sp.Tsize, error) {
+func (scc *SPProxyClnt) Read(fd int, b []byte) (sp.Tsize, error) {
 	req := spproto.SigmaReadRequest{Fd: uint32(fd), Size: uint64(len(b)), Off: uint64(sp.NoOffset)}
 	rep := spproto.SigmaDataReply{}
 	rep.Blob = &rpcproto.Blob{Iov: [][]byte{b}}
@@ -156,7 +156,7 @@ func (scc *SigmaClntClnt) Read(fd int, b []byte) (sp.Tsize, error) {
 	return sp.Tsize(len(d[0])), nil
 }
 
-func (scc *SigmaClntClnt) Pread(fd int, b []byte, o sp.Toffset) (sp.Tsize, error) {
+func (scc *SPProxyClnt) Pread(fd int, b []byte, o sp.Toffset) (sp.Tsize, error) {
 	req := spproto.SigmaReadRequest{Fd: uint32(fd), Size: uint64(len(b)), Off: uint64(o)}
 	rep := spproto.SigmaDataReply{}
 	rep.Blob = &rpcproto.Blob{Iov: [][]byte{b}}
@@ -168,12 +168,12 @@ func (scc *SigmaClntClnt) Pread(fd int, b []byte, o sp.Toffset) (sp.Tsize, error
 	return sp.Tsize(len(d[0])), nil
 }
 
-func (scc *SigmaClntClnt) PreadRdr(fd int, o sp.Toffset, sz sp.Tsize) (io.ReadCloser, error) {
+func (scc *SPProxyClnt) PreadRdr(fd int, o sp.Toffset, sz sp.Tsize) (io.ReadCloser, error) {
 	db.DFatalf("PreadRdr")
 	return nil, nil
 }
 
-func (scc *SigmaClntClnt) Write(fd int, data []byte) (sp.Tsize, error) {
+func (scc *SPProxyClnt) Write(fd int, data []byte) (sp.Tsize, error) {
 	blob := &rpcproto.Blob{Iov: [][]byte{data}}
 	req := spproto.SigmaWriteRequest{Fd: uint32(fd), Blob: blob}
 	rep := spproto.SigmaSizeReply{}
@@ -183,7 +183,7 @@ func (scc *SigmaClntClnt) Write(fd int, data []byte) (sp.Tsize, error) {
 	return sz, err
 }
 
-func (scc *SigmaClntClnt) Seek(fd int, off sp.Toffset) error {
+func (scc *SPProxyClnt) Seek(fd int, off sp.Toffset) error {
 	req := spproto.SigmaSeekRequest{Fd: uint32(fd), Offset: uint64(off)}
 	rep := spproto.SigmaErrReply{}
 	err := scc.rpcErr("SPProxySrvAPI.Seek", &req, &rep)
@@ -191,7 +191,7 @@ func (scc *SigmaClntClnt) Seek(fd int, off sp.Toffset) error {
 	return err
 }
 
-func (scc *SigmaClntClnt) CreateLeased(path string, p sp.Tperm, m sp.Tmode, l sp.TleaseId, f sp.Tfence) (int, error) {
+func (scc *SPProxyClnt) CreateLeased(path string, p sp.Tperm, m sp.Tmode, l sp.TleaseId, f sp.Tfence) (int, error) {
 	req := spproto.SigmaCreateRequest{Path: path, Perm: uint32(p), Mode: uint32(m), LeaseId: uint64(l), Fence: f.FenceProto()}
 	rep := spproto.SigmaFdReply{}
 	fd, err := scc.rpcFd("SPProxySrvAPI.CreateLeased", &req, &rep)
@@ -199,7 +199,7 @@ func (scc *SigmaClntClnt) CreateLeased(path string, p sp.Tperm, m sp.Tmode, l sp
 	return fd, err
 }
 
-func (scc *SigmaClntClnt) ClntId() sp.TclntId {
+func (scc *SPProxyClnt) ClntId() sp.TclntId {
 	req := spproto.SigmaNullRequest{}
 	rep := spproto.SigmaClntIdReply{}
 	err := scc.rpcc.RPC("SPProxySrvAPI.ClntId", &req, &rep)
@@ -213,7 +213,7 @@ func (scc *SigmaClntClnt) ClntId() sp.TclntId {
 	return sp.TclntId(rep.ClntId)
 }
 
-func (scc *SigmaClntClnt) FenceDir(path string, f sp.Tfence) error {
+func (scc *SPProxyClnt) FenceDir(path string, f sp.Tfence) error {
 	req := spproto.SigmaFenceRequest{Path: path, Fence: f.FenceProto()}
 	rep := spproto.SigmaErrReply{}
 	err := scc.rpcc.RPC("SPProxySrvAPI.FenceDir", &req, &rep)
@@ -221,7 +221,7 @@ func (scc *SigmaClntClnt) FenceDir(path string, f sp.Tfence) error {
 	return err
 }
 
-func (scc *SigmaClntClnt) WriteFence(fd int, d []byte, f sp.Tfence) (sp.Tsize, error) {
+func (scc *SPProxyClnt) WriteFence(fd int, d []byte, f sp.Tfence) (sp.Tsize, error) {
 	blob := &rpcproto.Blob{Iov: [][]byte{d}}
 	req := spproto.SigmaWriteRequest{Fd: uint32(fd), Blob: blob, Fence: f.FenceProto()}
 	rep := spproto.SigmaSizeReply{}
@@ -230,7 +230,7 @@ func (scc *SigmaClntClnt) WriteFence(fd int, d []byte, f sp.Tfence) (sp.Tsize, e
 	return sz, err
 }
 
-func (scc *SigmaClntClnt) WriteRead(fd int, iniov sessp.IoVec, outiov sessp.IoVec) error {
+func (scc *SPProxyClnt) WriteRead(fd int, iniov sessp.IoVec, outiov sessp.IoVec) error {
 	inblob := rpcproto.NewBlob(iniov)
 	outblob := rpcproto.NewBlob(outiov)
 	req := spproto.SigmaWriteRequest{Fd: uint32(fd), Blob: inblob, NOutVec: uint32(len(outiov))}
@@ -244,7 +244,7 @@ func (scc *SigmaClntClnt) WriteRead(fd int, iniov sessp.IoVec, outiov sessp.IoVe
 	return err
 }
 
-func (scc *SigmaClntClnt) DirWatch(fd int) error {
+func (scc *SPProxyClnt) DirWatch(fd int) error {
 	req := spproto.SigmaReadRequest{Fd: uint32(fd)}
 	rep := spproto.SigmaErrReply{}
 	err := scc.rpcErr("SPProxySrvAPI.DirWatch", &req, &rep)
@@ -252,7 +252,7 @@ func (scc *SigmaClntClnt) DirWatch(fd int) error {
 	return err
 }
 
-func (scc *SigmaClntClnt) MountTree(ep *sp.Tendpoint, tree, mount string) error {
+func (scc *SPProxyClnt) MountTree(ep *sp.Tendpoint, tree, mount string) error {
 	req := spproto.SigmaMountTreeRequest{Endpoint: ep.GetProto(), Tree: tree, MountName: mount}
 	rep := spproto.SigmaErrReply{}
 	err := scc.rpcErr("SPProxySrvAPI.MountTree", &req, &rep)
@@ -260,7 +260,7 @@ func (scc *SigmaClntClnt) MountTree(ep *sp.Tendpoint, tree, mount string) error 
 	return err
 }
 
-func (scc *SigmaClntClnt) IsLocalMount(ep *sp.Tendpoint) (bool, error) {
+func (scc *SPProxyClnt) IsLocalMount(ep *sp.Tendpoint) (bool, error) {
 	req := spproto.SigmaMountRequest{Endpoint: ep.GetProto()}
 	rep := spproto.SigmaMountReply{}
 	err := scc.rpcc.RPC("SPProxySrvAPI.IsLocalMount", &req, &rep)
@@ -274,7 +274,7 @@ func (scc *SigmaClntClnt) IsLocalMount(ep *sp.Tendpoint) (bool, error) {
 	return rep.Local, nil
 }
 
-func (scc *SigmaClntClnt) PathLastMount(pn string) (path.Tpathname, path.Tpathname, error) {
+func (scc *SPProxyClnt) PathLastMount(pn string) (path.Tpathname, path.Tpathname, error) {
 	req := spproto.SigmaPathRequest{Path: pn}
 	rep := spproto.SigmaLastMountReply{}
 	err := scc.rpcc.RPC("SPProxySrvAPI.PathLastMount", &req, &rep)
@@ -288,11 +288,11 @@ func (scc *SigmaClntClnt) PathLastMount(pn string) (path.Tpathname, path.Tpathna
 	return rep.Path1, rep.Path2, nil
 }
 
-func (scc *SigmaClntClnt) GetNamedEndpoint() (*sp.Tendpoint, error) {
+func (scc *SPProxyClnt) GetNamedEndpoint() (*sp.Tendpoint, error) {
 	return scc.GetNamedEndpointRealm(scc.pe.GetRealm())
 }
 
-func (scc *SigmaClntClnt) InvalidateNamedEndpointCacheEntryRealm(realm sp.Trealm) error {
+func (scc *SPProxyClnt) InvalidateNamedEndpointCacheEntryRealm(realm sp.Trealm) error {
 	req := spproto.SigmaRealmRequest{RealmStr: realm.String()}
 	rep := spproto.SigmaMountReply{}
 	err := scc.rpcc.RPC("SPProxySrvAPI.InvalidateNamedEndpointCacheEntryRealm", &req, &rep)
@@ -306,7 +306,7 @@ func (scc *SigmaClntClnt) InvalidateNamedEndpointCacheEntryRealm(realm sp.Trealm
 	return nil
 }
 
-func (scc *SigmaClntClnt) GetNamedEndpointRealm(realm sp.Trealm) (*sp.Tendpoint, error) {
+func (scc *SPProxyClnt) GetNamedEndpointRealm(realm sp.Trealm) (*sp.Tendpoint, error) {
 	req := spproto.SigmaRealmRequest{RealmStr: realm.String()}
 	rep := spproto.SigmaMountReply{}
 	err := scc.rpcc.RPC("SPProxySrvAPI.GetNamedEndpointRealm", &req, &rep)
@@ -320,7 +320,7 @@ func (scc *SigmaClntClnt) GetNamedEndpointRealm(realm sp.Trealm) (*sp.Tendpoint,
 	return sp.NewEndpointFromProto(rep.Endpoint), nil
 }
 
-func (scc *SigmaClntClnt) NewRootMount(pn, mntname string) error {
+func (scc *SPProxyClnt) NewRootMount(pn, mntname string) error {
 	req := spproto.SigmaMountTreeRequest{Tree: pn, MountName: mntname}
 	rep := spproto.SigmaErrReply{}
 	err := scc.rpcErr("SPProxySrvAPI.NewRootMount", &req, &rep)
@@ -328,7 +328,7 @@ func (scc *SigmaClntClnt) NewRootMount(pn, mntname string) error {
 	return err
 }
 
-func (scc *SigmaClntClnt) Mounts() []string {
+func (scc *SPProxyClnt) Mounts() []string {
 	req := spproto.SigmaNullRequest{}
 	rep := spproto.SigmaMountsReply{}
 	err := scc.rpcc.RPC("SPProxySrvAPI.Mounts", &req, &rep)
@@ -342,15 +342,15 @@ func (scc *SigmaClntClnt) Mounts() []string {
 	return rep.Endpoints
 }
 
-func (scc *SigmaClntClnt) SetLocalMount(ep *sp.Tendpoint, port sp.Tport) {
+func (scc *SPProxyClnt) SetLocalMount(ep *sp.Tendpoint, port sp.Tport) {
 	db.DFatalf("SetLocalMount %v", ep)
 }
 
-func (scc *SigmaClntClnt) MountPathClnt(path string, clnt sos.PathClntAPI) error {
+func (scc *SPProxyClnt) MountPathClnt(path string, clnt sos.PathClntAPI) error {
 	return serr.NewErr(serr.TErrNotSupported, "MountPathClnt")
 }
 
-func (scc *SigmaClntClnt) Detach(path string) error {
+func (scc *SPProxyClnt) Detach(path string) error {
 	req := spproto.SigmaPathRequest{Path: path}
 	rep := spproto.SigmaErrReply{}
 	err := scc.rpcErr("SPProxySrvAPI.Detach", &req, &rep)
@@ -358,11 +358,11 @@ func (scc *SigmaClntClnt) Detach(path string) error {
 	return err
 }
 
-func (scc *SigmaClntClnt) Disconnected() bool {
+func (scc *SPProxyClnt) Disconnected() bool {
 	return scc.disconnected
 }
 
-func (scc *SigmaClntClnt) Disconnect(path string) error {
+func (scc *SPProxyClnt) Disconnect(path string) error {
 	scc.disconnected = true
 	req := spproto.SigmaPathRequest{Path: path}
 	rep := spproto.SigmaErrReply{}
@@ -371,7 +371,7 @@ func (scc *SigmaClntClnt) Disconnect(path string) error {
 	return err
 }
 
-func (scc *SigmaClntClnt) Close() error {
+func (scc *SPProxyClnt) Close() error {
 	req := spproto.SigmaNullRequest{}
 	rep := spproto.SigmaErrReply{}
 	err := scc.rpcErr("SPProxySrvAPI.Close", &req, &rep)

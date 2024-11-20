@@ -27,15 +27,12 @@ func projectRootPath() string {
 	return filepath.Dir(filepath.Dir(b))
 }
 
-func Start(kernelId string, etcdIP sp.Tip, pe *proc.ProcEnv, srvs string, gvisor, netproxy bool) (string, error) {
+func Start(kernelId string, etcdIP sp.Tip, pe *proc.ProcEnv, srvs string, netproxy bool) (string, error) {
 	args := []string{
 		"--pull", pe.BuildTag,
 		"--boot", srvs,
 		"--named", etcdIP.String(),
 		"--host",
-	}
-	if gvisor {
-		args = append(args, "--gvisor")
 	}
 	if netproxy {
 		args = append(args, "--usenetproxy")
@@ -75,7 +72,7 @@ func Start(kernelId string, etcdIP sp.Tip, pe *proc.ProcEnv, srvs string, gvisor
 		return "", err
 	}
 	ip := string(out)
-	db.DPrintf(db.BOOT, "Start: %v srvs %v IP %v gvisor %v netproxy %v", kernelId, srvs, ip, gvisor, netproxy)
+	db.DPrintf(db.BOOT, "Start: %v srvs %v IP %v netproxy %v", kernelId, srvs, ip, netproxy)
 	return ip, nil
 }
 
@@ -89,9 +86,9 @@ type Kernel struct {
 	kclnt    *kernelclnt.KernelClnt
 }
 
-func NewKernelClntStart(etcdIP sp.Tip, pe *proc.ProcEnv, conf string, gvisor, netproxy bool) (*Kernel, error) {
+func NewKernelClntStart(etcdIP sp.Tip, pe *proc.ProcEnv, conf string, netproxy bool) (*Kernel, error) {
 	kernelId := GenKernelId()
-	_, err := Start(kernelId, etcdIP, pe, conf, gvisor, netproxy)
+	_, err := Start(kernelId, etcdIP, pe, conf, netproxy)
 	if err != nil {
 		return nil, err
 	}

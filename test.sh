@@ -7,13 +7,12 @@
 #
 
 usage() {
-  echo "Usage: $0 [--apps-fast] [--apps] [--compile] [--gvisor] [--usespproxyd] [--nonetproxy] [--reuse-kernel] [--cleanup] [--skipto PKG]" 
+  echo "Usage: $0 [--apps-fast] [--apps] [--compile] [--usespproxyd] [--nonetproxy] [--reuse-kernel] [--cleanup] [--skipto PKG]" 
 }
 
 BASIC="--basic"
 FAST=""
 APPS=""
-GVISOR=""
 SPPROXYD=""
 NETPROXY=""
 REUSEKERNEL=""
@@ -44,10 +43,6 @@ while [[ "$#" -gt 0 ]]; do
             shift
             SKIPTO="$1" 
             shift
-            ;;
-        --gvisor)
-            shift
-            GVISOR="--gvisor" 
             ;;
         --usespproxyd)
             shift
@@ -187,7 +182,7 @@ if [[ $BASIC == "--basic" ]]; then
             continue
           fi
         fi
-        go test $VERB sigmaos/$T -start $GVISOR  $SPPROXYD $NETPROXY $REUSEKERNEL
+        go test $VERB sigmaos/$T -start $SPPROXYD $NETPROXY $REUSEKERNEL
         cleanup
     done
 
@@ -232,7 +227,7 @@ if [[ $BASIC == "--basic" ]]; then
             continue
           fi
         fi
-      go test $VERB sigmaos/$T -start $GVISOR $SPPROXYD $NETPROXY $REUSEKERNEL
+      go test $VERB sigmaos/$T -start $SPPROXYD $NETPROXY $REUSEKERNEL
       cleanup
   done
 fi
@@ -260,21 +255,21 @@ if [[ $APPS == "--apps" ]]; then
           if [[ "${NEED_DB[$i]}" == "true" ]]; then
             ./start-db.sh
           fi
-          go test $VERB sigmaos/$T -start $GVISOR $SPPROXYD $NETPROXY -run "${TNAMES[$i]}"
+          go test $VERB sigmaos/$T -start $SPPROXYD $NETPROXY -run "${TNAMES[$i]}"
           cleanup
           i=$(($i+1))
         done
-#        go test $VERB sigmaos/apps/mr -start $GVISOR $SPPROXYD $NETPROXY -run MRJob
+#        go test $VERB sigmaos/apps/mr -start $SPPROXYD $NETPROXY -run MRJob
 #        cleanup
-#        go test $VERB sigmaos/apps/imgresize -start $GVISOR $SPPROXYD $NETPROXY -run ImgdOne
+#        go test $VERB sigmaos/apps/imgresize -start $SPPROXYD $NETPROXY -run ImgdOne
 #        cleanup
-#        go test $VERB sigmaos/apps/kv -start $GVISOR $SPPROXYD $NETPROXY -run KVOKN
-#        cleanup
-#        ./start-db.sh
-#        go test $VERB sigmaos/apps/hotel -start $GVISOR $SPPROXYD $NETPROXY -run TestBenchDeathStarSingle
+#        go test $VERB sigmaos/apps/kv -start $SPPROXYD $NETPROXY -run KVOKN
 #        cleanup
 #        ./start-db.sh
-#       	go test $VERB sigmaos/apps/socialnetwork -start $GVISOR $SPPROXYD $NETPROXY -run TestCompose
+#        go test $VERB sigmaos/apps/hotel -start $SPPROXYD $NETPROXY -run TestBenchDeathStarSingle
+#        cleanup
+#        ./start-db.sh
+#       	go test $VERB sigmaos/apps/socialnetwork -start $SPPROXYD $NETPROXY -run TestCompose
 #        cleanup
     else
         for T in apps/imgresize apps/mr apps/hotel apps/socialnetwork apps/www; do
@@ -288,7 +283,7 @@ if [[ $APPS == "--apps" ]]; then
               fi
             fi
             ./start-db.sh
-            go test -timeout 20m $VERB sigmaos/$T -start $GVISOR $SPPROXYD $NETPROXY $REUSEKERNEL
+            go test -timeout 20m $VERB sigmaos/$T -start $SPPROXYD $NETPROXY $REUSEKERNEL
             cleanup
         done
         # On machines with many cores, kv tests may take a long time.
@@ -303,7 +298,7 @@ if [[ $APPS == "--apps" ]]; then
               fi
             fi
             ./start-db.sh
-            go test -timeout 50m $VERB sigmaos/$T -start $GVISOR $SPPROXYD $NETPROXY $REUSEKERNEL
+            go test -timeout 50m $VERB sigmaos/$T -start $SPPROXYD $NETPROXY $REUSEKERNEL
             cleanup
         done
     fi

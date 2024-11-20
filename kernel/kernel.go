@@ -30,7 +30,6 @@ type Param struct {
 	Mongoip     string
 	NetProxy    bool
 	BuildTag    string
-	GVisor      bool
 	ReserveMcpu string
 }
 

@@ -35,7 +35,6 @@ var reuseKernel bool
 var noShutdown bool
 var tag string
 var EtcdIP string
-var GVisor bool
 var useSPProxy bool
 var noNetProxy bool
 var noBootNetProxy bool
@@ -48,7 +47,6 @@ func init() {
 	flag.BoolVar(&Start, "start", false, "Start system")
 	flag.BoolVar(&reuseKernel, "reuse-kernel", false, "Reuse system, avoid restarting when possible")
 	flag.BoolVar(&noShutdown, "no-shutdown", false, "Don't shut down the system")
-	flag.BoolVar(&GVisor, "gvisor", false, "GVisor")
 	flag.BoolVar(&useSPProxy, "usespproxy", false, "Use spproxy?")
 	flag.BoolVar(&noNetProxy, "nonetproxy", false, "Disable use of proxy for network dialing/listening?")
 	flag.BoolVar(&noBootNetProxy, "no-boot-netproxy", false, "Boot spproxy?")
@@ -200,7 +198,7 @@ func newSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 	var k *bootkernelclnt.Kernel
 	if Start {
 		kernelid = bootkernelclnt.GenKernelId()
-		_, err := bootkernelclnt.Start(kernelid, sp.Tip(EtcdIP), pe, srvs, GVisor, useNetProxy)
+		_, err := bootkernelclnt.Start(kernelid, sp.Tip(EtcdIP), pe, srvs, useNetProxy)
 		if err != nil {
 			db.DPrintf(db.ALWAYS, "Error start kernel")
 			return nil, err
@@ -211,7 +209,7 @@ func newSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 	if !noBootNetProxy && (useSPProxy || useNetProxy) {
 		db.DPrintf(db.BOOT, "Booting spproxyd: usespproxyd %v usenetproxy %v", useSPProxy, useNetProxy)
 		sckid = sp.SPProxydKernel(bootkernelclnt.GenKernelId())
-		_, err := bootkernelclnt.Start(sckid, sp.Tip(EtcdIP), pe, sp.SPPROXYDREL, GVisor, useNetProxy)
+		_, err := bootkernelclnt.Start(sckid, sp.Tip(EtcdIP), pe, sp.SPPROXYDREL, useNetProxy)
 		if err != nil {
 			db.DPrintf(db.ALWAYS, "Error start kernel for spproxyd")
 			return nil, err
@@ -252,7 +250,7 @@ func (ts *Tstate) bootNode(n int, nodetype string) error {
 	// node
 	savedTstate = nil
 	for i := 0; i < n; i++ {
-		kclnt, err := bootkernelclnt.NewKernelClntStart(sp.Tip(EtcdIP), ts.ProcEnv(), nodetype, GVisor, useNetProxy)
+		kclnt, err := bootkernelclnt.NewKernelClntStart(sp.Tip(EtcdIP), ts.ProcEnv(), nodetype, useNetProxy)
 		if err != nil {
 			return err
 		}

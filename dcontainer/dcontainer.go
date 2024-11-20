@@ -47,7 +47,7 @@ type cpustats struct {
 	util                float64
 }
 
-func StartDockerContainer(p *proc.Proc, kernelId string, gvisor bool) (*DContainer, error) {
+func StartDockerContainer(p *proc.Proc, kernelId string) (*DContainer, error) {
 	image := "sigmauser"
 	ctx := context.Background()
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
@@ -75,13 +75,7 @@ func StartDockerContainer(p *proc.Proc, kernelId string, gvisor bool) (*DContain
 	cmd := append([]string{p.GetProgram()}, p.Args...)
 	db.DPrintf(db.CONTAINER, "ContainerCreate %v %v s %v\n", cmd, p.GetEnv(), score)
 
-	runtime := "runc"
-	if gvisor {
-		db.DPrintf(db.CONTAINER, "Running uprocd with gVisor")
-		runtime = "runsc-kvm"
-	} else {
-		db.DPrintf(db.CONTAINER, "Running uprocd with Docker")
-	}
+	db.DPrintf(db.CONTAINER, "Running uprocd with Docker")
 
 	// Set up default mounts.
 	mnts := []mount.Mount{
@@ -124,7 +118,7 @@ func StartDockerContainer(p *proc.Proc, kernelId string, gvisor bool) (*DContain
 			Env:          p.GetEnv(),
 			ExposedPorts: pset,
 		}, &container.HostConfig{
-			Runtime:      runtime,
+			Runtime:      "runc",
 			NetworkMode:  container.NetworkMode(netmode),
 			Mounts:       mnts,
 			Privileged:   true,

@@ -16,16 +16,12 @@ import (
 )
 
 func main() {
-	if len(os.Args) != 10 {
-		db.DFatalf("usage: %v kernelid srvs nameds dbip mongoip reserveMcpu buildTag gvisor netproxy provided:%v", os.Args[0], os.Args)
+	if len(os.Args) != 9 {
+		db.DFatalf("usage: %v kernelid srvs nameds dbip mongoip reserveMcpu buildTag netproxy provided:%v", os.Args[0], os.Args)
 	}
 	db.DPrintf(db.BOOT, "Boot %v", os.Args[1:])
 	srvs := strings.Split(os.Args[3], ";")
-	gvisor, err := strconv.ParseBool(os.Args[8])
-	if err != nil {
-		db.DFatalf("Error parse gvisor: %v", err)
-	}
-	netproxy, err := strconv.ParseBool(os.Args[9])
+	netproxy, err := strconv.ParseBool(os.Args[8])
 	if err != nil {
 		db.DFatalf("Error parse netproxy: %v", err)
 	}
@@ -36,7 +32,6 @@ func main() {
 		Mongoip:  os.Args[5],
 		NetProxy: netproxy,
 		BuildTag: os.Args[7],
-		GVisor:   gvisor,
 	}
 	if len(os.Args) >= 7 {
 		param.ReserveMcpu = os.Args[6]

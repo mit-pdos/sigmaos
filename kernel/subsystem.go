@@ -7,7 +7,6 @@ import (
 
 	"sigmaos/dcontainer"
 	db "sigmaos/debug"
-	"sigmaos/port"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
 	"sigmaos/sigmaclnt"
@@ -29,7 +28,6 @@ type Subsystem interface {
 	Kill() error
 	SetCPUShares(shares int64) error
 	GetCPUUtil() (float64, error)
-	GetPortBinding(p sp.Tport) (*port.PortBinding, error)
 	Run(how proc.Thow, kernelId string, localIP sp.Tip) error
 }
 
@@ -142,10 +140,6 @@ func (ss *KernelSubsystem) SetCPUShares(shares int64) error {
 
 func (ss *KernelSubsystem) GetCPUUtil() (float64, error) {
 	return ss.container.GetCPUUtil()
-}
-
-func (ss *KernelSubsystem) GetPortBinding(p sp.Tport) (*port.PortBinding, error) {
-	return ss.container.GetPortBinding(p)
 }
 
 // Send SIGTERM to a system.

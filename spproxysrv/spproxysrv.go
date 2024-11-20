@@ -15,7 +15,6 @@ import (
 	"sigmaos/fidclnt"
 	"sigmaos/netproxyclnt"
 	"sigmaos/netproxysrv"
-	"sigmaos/port"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 	"sigmaos/util/perf"
@@ -125,7 +124,6 @@ type Subsystem interface {
 	Kill() error
 	SetCPUShares(shares int64) error
 	GetCPUUtil() (float64, error)
-	GetPortBinding(p sp.Tport) (*port.PortBinding, error)
 	Run(how proc.Thow, kernelId string, localIP sp.Tip) error
 }
 
@@ -176,11 +174,6 @@ func (scsc *SPProxySrvCmd) SetCPUShares(shares int64) error {
 func (scsc *SPProxySrvCmd) GetCPUUtil() (float64, error) {
 	db.DFatalf("Unimplemented")
 	return 0, nil
-}
-
-func (scsc *SPProxySrvCmd) GetPortBinding(p sp.Tport) (*port.PortBinding, error) {
-	db.DFatalf("Unimplemented")
-	return nil, nil
 }
 
 func (scsc *SPProxySrvCmd) Run(how proc.Thow, kernelId string, localIP sp.Tip) error {

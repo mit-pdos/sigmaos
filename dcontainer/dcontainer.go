@@ -20,7 +20,6 @@ import (
 	"sigmaos/dcontainer/cgroup"
 	db "sigmaos/debug"
 	"sigmaos/mem"
-	"sigmaos/port"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 	"sigmaos/util/perf"
@@ -31,7 +30,6 @@ const (
 )
 
 type DContainer struct {
-	*port.PortMap
 	ctx          context.Context
 	cli          *client.Client
 	container    string
@@ -144,12 +142,9 @@ func StartDockerContainer(p *proc.Proc, kernelId string) (*DContainer, error) {
 	ip := json.NetworkSettings.IPAddress
 	db.DPrintf(db.CONTAINER, "Container ID %v", json.ID)
 
-	var pm *port.PortMap
-
-	db.DPrintf(db.CONTAINER, "network setting: ip %v secondaryIPAddrs %v nets %v portmap %v", ip, json.NetworkSettings.SecondaryIPAddresses, json.NetworkSettings.Networks, pm)
+	db.DPrintf(db.CONTAINER, "network setting: ip %v secondaryIPAddrs %v nets %v ", ip, json.NetworkSettings.SecondaryIPAddresses, json.NetworkSettings.Networks)
 	cgroupPath := filepath.Join(CGROUP_PATH_BASE, "docker-"+resp.ID+".scope")
 	c := &DContainer{
-		PortMap:    pm,
 		ctx:        ctx,
 		cli:        cli,
 		container:  resp.ID,

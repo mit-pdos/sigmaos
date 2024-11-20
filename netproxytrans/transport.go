@@ -66,7 +66,7 @@ func GetNetproxydConn(pe *proc.ProcEnv) (*net.UnixConn, error) {
 			return nil, err
 		}
 	} else {
-		// Sanity check that a proc only has one NetProxyClnt, since using the fd
+		// Sanity check that a proc only has one DialProxyClnt, since using the fd
 		// set up by the trampoline consumes it destructively.
 		if hasBeenInit {
 			db.DPrintf(db.ERROR, "Error double-init netproxyclnt")

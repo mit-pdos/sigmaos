@@ -45,7 +45,7 @@ func RunTimelineSrv(jobname string) error {
 	}
 	mongoc.EnsureIndex(SN_DB, TIMELINE_COL, []string{"userid"})
 	tlsrv.mongoc = mongoc
-	fsls, err := NewFsLibs(SOCIAL_NETWORK_TIMELINE, ssrv.MemFs.SigmaClnt().GetNetProxyClnt())
+	fsls, err := NewFsLibs(SOCIAL_NETWORK_TIMELINE, ssrv.MemFs.SigmaClnt().GetDialProxyClnt())
 	if err != nil {
 		return err
 	}

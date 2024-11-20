@@ -23,7 +23,7 @@ func clntDialNetProxy(t *testing.T, ep *sp.Tendpoint) {
 	}
 	defer ts.Shutdown()
 
-	npc := ts.GetNetProxyClnt()
+	npc := ts.GetDialProxyClnt()
 	_, err := netperf.ClntDialNetProxy(ntrial, npc, ep)
 	assert.Nil(ts.T, err, "Err clnt: %v", err)
 }
@@ -35,7 +35,7 @@ func srvDialNetProxy(t *testing.T, addr *sp.Taddr, epType sp.TTendpoint) {
 	}
 	defer ts.Shutdown()
 
-	npc := ts.GetNetProxyClnt()
+	npc := ts.GetDialProxyClnt()
 	started := make(chan bool, 2)
 	err := netperf.SrvDialNetProxy(started, ntrial, npc, addr, epType)
 	assert.Nil(ts.T, err, "Err srv: %v", err)
@@ -109,7 +109,7 @@ func TestClntThroughputNetProxy(t *testing.T) {
 	}
 	defer ts.Shutdown()
 
-	npc := ts.GetNetProxyClnt()
+	npc := ts.GetDialProxyClnt()
 	db.DPrintf(db.TEST, "Client start")
 	conn, err := npc.Dial(ep)
 	assert.Nil(ts.T, err, "Err Dial: %v", err)
@@ -125,7 +125,7 @@ func TestSrvThroughputNetProxy(t *testing.T) {
 	}
 	defer ts.Shutdown()
 
-	npc := ts.GetNetProxyClnt()
+	npc := ts.GetDialProxyClnt()
 	_, l, err := npc.Listen(sp.INTERNAL_EP, addr)
 	assert.Nil(ts.T, err, "Err Listen: %v", err)
 	db.DPrintf(db.TEST, "Ready to accept connections")
@@ -145,7 +145,7 @@ func TestClntRTTNetProxy(t *testing.T) {
 	}
 	defer ts.Shutdown()
 
-	npc := ts.GetNetProxyClnt()
+	npc := ts.GetDialProxyClnt()
 	db.DPrintf(db.TEST, "Client start")
 	conn, err := npc.Dial(ep)
 	assert.Nil(ts.T, err, "Err Dial: %v", err)
@@ -161,7 +161,7 @@ func TestSrvRTTNetProxy(t *testing.T) {
 	}
 	defer ts.Shutdown()
 
-	npc := ts.GetNetProxyClnt()
+	npc := ts.GetDialProxyClnt()
 	_, l, err := npc.Listen(sp.INTERNAL_EP, addr)
 	assert.Nil(ts.T, err, "Err Listen: %v", err)
 	db.DPrintf(db.TEST, "Ready to accept connections")

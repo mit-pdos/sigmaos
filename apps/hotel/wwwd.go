@@ -46,7 +46,7 @@ func RunWww(job string) error {
 	}
 	www.SigmaClnt = sc
 
-	fsls, err := NewFsLibs("hotel-wwwd", www.GetNetProxyClnt())
+	fsls, err := NewFsLibs("hotel-wwwd", www.GetDialProxyClnt())
 	if err != nil {
 		return err
 	}
@@ -97,7 +97,7 @@ func RunWww(job string) error {
 	mux.HandleFunc("/startrecording", www.startRecordingHandler)
 	//	}
 
-	ep, l, err := www.GetNetProxyClnt().Listen(sp.EXTERNAL_EP, sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, sp.NO_PORT))
+	ep, l, err := www.GetDialProxyClnt().Listen(sp.EXTERNAL_EP, sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, sp.NO_PORT))
 	if err != nil {
 		db.DFatalf("Error Listen: %v", err)
 	}

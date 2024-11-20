@@ -34,7 +34,7 @@ func RunClnt(args []string) error {
 	var perfStr string
 	switch op {
 	case "dial":
-		if perfStr, err = ClntDialNetProxy(ntrial, sc.GetNetProxyClnt(), ep); err != nil {
+		if perfStr, err = ClntDialNetProxy(ntrial, sc.GetDialProxyClnt(), ep); err != nil {
 			db.DFatalf("Err SrvDialNetProxy: %v", err)
 		}
 	default:

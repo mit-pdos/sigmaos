@@ -5,14 +5,14 @@ import (
 	"net"
 
 	db "sigmaos/debug"
-	"sigmaos/netproxyclnt"
+	dialproxyclnt "sigmaos/dialproxy/clnt"
 	"sigmaos/proc"
 	"sigmaos/repl"
 	sp "sigmaos/sigmap"
 )
 
 type RaftConfig struct {
-	npc     *netproxyclnt.NetProxyClnt
+	npc     *dialproxyclnt.DialProxyClnt
 	id      int
 	peerEPs []*sp.Tendpoint
 	l       net.Listener
@@ -21,7 +21,7 @@ type RaftConfig struct {
 	pe      *proc.ProcEnv
 }
 
-func NewRaftConfig(pe *proc.ProcEnv, npc *netproxyclnt.NetProxyClnt, id int, addr *sp.Taddr, init bool) *RaftConfig {
+func NewRaftConfig(pe *proc.ProcEnv, npc *dialproxyclnt.DialProxyClnt, id int, addr *sp.Taddr, init bool) *RaftConfig {
 	rc := &RaftConfig{
 		pe:   pe,
 		npc:  npc,

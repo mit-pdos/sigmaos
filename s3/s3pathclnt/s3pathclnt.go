@@ -14,7 +14,7 @@ import (
 
 	"sigmaos/auth"
 	db "sigmaos/debug"
-	"sigmaos/netproxyclnt"
+	dialproxyclnt "sigmaos/dialproxy/clnt"
 	"sigmaos/path"
 	"sigmaos/serr"
 	sos "sigmaos/sigmaos"
@@ -31,7 +31,7 @@ type S3PathClnt struct {
 	next sp.Tfid
 }
 
-func NewS3PathClnt(s3secrets *sp.SecretProto, npc *netproxyclnt.NetProxyClnt) (*S3PathClnt, error) {
+func NewS3PathClnt(s3secrets *sp.SecretProto, npc *dialproxyclnt.DialProxyClnt) (*S3PathClnt, error) {
 	s3c := &S3PathClnt{
 		rfids: syncmap.NewSyncMap[sp.Tfid, *s3Reader](),
 		wfids: syncmap.NewSyncMap[sp.Tfid, *s3Writer](),
@@ -122,7 +122,7 @@ func (s3c *S3PathClnt) Clunk(fid sp.Tfid) error {
 }
 
 // XXX deduplicate with s3
-func getS3Client(s3secrets *sp.SecretProto, npc *netproxyclnt.NetProxyClnt) (*s3.Client, error) {
+func getS3Client(s3secrets *sp.SecretProto, npc *dialproxyclnt.DialProxyClnt) (*s3.Client, error) {
 	cfg, err := config.LoadDefaultConfig(
 		context.TODO(),
 		config.WithCredentialsProvider(

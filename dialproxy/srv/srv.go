@@ -1,4 +1,4 @@
-package dialproxysrv
+package srv
 
 import (
 	"encoding/json"

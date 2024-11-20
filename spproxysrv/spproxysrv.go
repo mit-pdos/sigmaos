@@ -12,9 +12,9 @@ import (
 
 	"sigmaos/dcontainer"
 	db "sigmaos/debug"
-	"sigmaos/dialproxysrv"
+	dialproxyclnt "sigmaos/dialproxy/clnt"
+	dialproxysrv "sigmaos/dialproxy/srv"
 	"sigmaos/fidclnt"
-	"sigmaos/netproxyclnt"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 	"sigmaos/util/perf"
@@ -42,7 +42,7 @@ func newSPProxySrv() (*SPProxySrv, error) {
 	scs := &SPProxySrv{
 		pe:   pe,
 		nps:  nps,
-		fidc: fidclnt.NewFidClnt(pe, netproxyclnt.NewNetProxyClnt(pe)),
+		fidc: fidclnt.NewFidClnt(pe, dialproxyclnt.NewDialProxyClnt(pe)),
 	}
 	db.DPrintf(db.SPPROXYSRV, "newSPProxySrv ProcEnv:%v", pe)
 	return scs, nil

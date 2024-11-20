@@ -111,7 +111,7 @@ func (g *Group) newRaftCfg(cfg *GroupConfig, myid, nrepl int) (*GroupConfig, *re
 	} else {
 		addr = ep.Addrs()[0]
 	}
-	raftCfg = replraft.NewRaftConfig(g.ProcEnv(), g.GetNetProxyClnt(), myid, addr, initial)
+	raftCfg = replraft.NewRaftConfig(g.ProcEnv(), g.GetDialProxyClnt(), myid, addr, initial)
 
 	if initial {
 		// Get the listener address selected by raft and advertise it to group (if initial)

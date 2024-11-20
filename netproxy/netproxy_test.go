@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	db "sigmaos/debug"
-	"sigmaos/netproxyclnt"
+	dialproxyclnt "sigmaos/dialproxy/clnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )
@@ -38,7 +38,7 @@ func TestDial(t *testing.T) {
 	}
 	addr := sp.NewTaddr(IP, sp.INNER_CONTAINER_IP, PORT)
 	ep := sp.NewEndpoint(sp.EXTERNAL_EP, sp.Taddrs{addr})
-	npc := ts.GetNetProxyClnt()
+	npc := ts.GetDialProxyClnt()
 	c := make(chan bool)
 	// Create a listener directly
 	l, err := net.Listen("tcp", addr.IPPort())
@@ -73,7 +73,7 @@ func TestFailedDial(t *testing.T) {
 	}
 	addr := sp.NewTaddr(IP, sp.INNER_CONTAINER_IP, PORT)
 	ep := sp.NewEndpoint(sp.INTERNAL_EP, sp.Taddrs{addr})
-	npc := ts.GetNetProxyClnt()
+	npc := ts.GetDialProxyClnt()
 	// Dial an address with no corresponding listener
 	_, err := npc.Dial(ep)
 	assert.NotNil(t, err, "Err Dial: %v", err)
@@ -87,7 +87,7 @@ func TestListen(t *testing.T) {
 		return
 	}
 	addr := sp.NewTaddr(IP, sp.INNER_CONTAINER_IP, PORT)
-	npc := ts.GetNetProxyClnt()
+	npc := ts.GetDialProxyClnt()
 	// Create a listener via netproxy
 	_, _, err := npc.Listen(sp.INTERNAL_EP, addr)
 	assert.Nil(t, err, "Err Listen: %v", err)
@@ -101,7 +101,7 @@ func TestFailedListen(t *testing.T) {
 		return
 	}
 	addr := sp.NewTaddr("123.456.789.000", sp.INNER_CONTAINER_IP, PORT)
-	npc := ts.GetNetProxyClnt()
+	npc := ts.GetDialProxyClnt()
 	// Create a listener via netproxy
 	_, _, err := npc.Listen(sp.INTERNAL_EP, addr)
 	assert.NotNil(t, err, "Err Listen: %v", err)
@@ -115,7 +115,7 @@ func TestClose(t *testing.T) {
 		return
 	}
 	addr := sp.NewTaddr(IP, sp.INNER_CONTAINER_IP, PORT)
-	npc := ts.GetNetProxyClnt()
+	npc := ts.GetDialProxyClnt()
 	// Create a listener via netproxy
 	ep, l, err := npc.Listen(sp.INTERNAL_EP, addr)
 	assert.Nil(t, err, "Err Listen: %v", err)
@@ -135,8 +135,8 @@ func TestFailedClose(t *testing.T) {
 	}
 	addr := sp.NewTaddr(IP, sp.INNER_CONTAINER_IP, PORT)
 	ep := sp.NewEndpoint(sp.INTERNAL_EP, sp.Taddrs{addr})
-	npc := ts.GetNetProxyClnt()
-	l := netproxyclnt.NewListener(npc, 1000, ep)
+	npc := ts.GetDialProxyClnt()
+	l := dialproxyclnt.NewListener(npc, 1000, ep)
 	err := l.Close()
 	assert.NotNil(t, err, "Err close: %v", err)
 	ts.Shutdown()
@@ -149,7 +149,7 @@ func TestAccept(t *testing.T) {
 		return
 	}
 	addr := sp.NewTaddr(IP, sp.INNER_CONTAINER_IP, PORT)
-	npc := ts.GetNetProxyClnt()
+	npc := ts.GetDialProxyClnt()
 	c := make(chan bool)
 	// Create a listener via netproxy
 	ep, l, err := npc.Listen(sp.INTERNAL_EP, addr)
@@ -184,8 +184,8 @@ func TestFailedAccept(t *testing.T) {
 	}
 	addr := sp.NewTaddr(IP, sp.INNER_CONTAINER_IP, PORT)
 	ep := sp.NewEndpoint(sp.INTERNAL_EP, sp.Taddrs{addr})
-	npc := ts.GetNetProxyClnt()
-	l := netproxyclnt.NewListener(npc, 1000, ep)
+	npc := ts.GetDialProxyClnt()
+	l := dialproxyclnt.NewListener(npc, 1000, ep)
 	_, err := l.Accept()
 	assert.NotNil(t, err, "Err accept: %v", err)
 	ts.Shutdown()
@@ -196,7 +196,7 @@ func TestNamedEndpoint(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	npc := ts.GetNetProxyClnt()
+	npc := ts.GetDialProxyClnt()
 	ep, err := npc.GetNamedEndpoint(sp.ROOTREALM)
 	assert.Nil(t, err, "GetNamedEndpoint: %v", err)
 	db.DPrintf(db.TEST, "endpoint %v\n", ep)

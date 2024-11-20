@@ -53,7 +53,7 @@ func RunFrontendSrv(job string) error {
 		return err
 	}
 	frontend.SigmaClnt = sc
-	fsls, err := NewFsLibs(SERVER_NAME, sc.GetNetProxyClnt())
+	fsls, err := NewFsLibs(SERVER_NAME, sc.GetDialProxyClnt())
 	if err != nil {
 		return err
 	}
@@ -101,7 +101,7 @@ func RunFrontendSrv(job string) error {
 	mux.HandleFunc("/home", frontend.homeHandler)
 	mux.HandleFunc("/startrecording", frontend.startRecordingHandler)
 	//	}
-	ep, l, err := sc.GetNetProxyClnt().Listen(sp.EXTERNAL_EP, sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, sp.NO_PORT))
+	ep, l, err := sc.GetDialProxyClnt().Listen(sp.EXTERNAL_EP, sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, sp.NO_PORT))
 	if err != nil {
 		dbg.DFatalf("Error Listen: %v", err)
 	}

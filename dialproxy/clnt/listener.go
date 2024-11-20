@@ -1,4 +1,4 @@
-package netproxyclnt
+package clnt
 
 import (
 	"net"
@@ -9,7 +9,7 @@ import (
 
 // Must respect standard net.Listener API for compatibility
 type Listener struct {
-	npc *NetProxyClnt
+	npc *DialProxyClnt
 	lid netproxy.Tlid
 	la  *ListenerAddr
 }
@@ -18,7 +18,7 @@ type ListenerAddr struct {
 	ep *sp.Tendpoint
 }
 
-func NewListener(npc *NetProxyClnt, lid netproxy.Tlid, ep *sp.Tendpoint) *Listener {
+func NewListener(npc *DialProxyClnt, lid netproxy.Tlid, ep *sp.Tendpoint) *Listener {
 	return &Listener{
 		npc: npc,
 		lid: lid,

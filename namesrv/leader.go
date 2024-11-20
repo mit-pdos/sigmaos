@@ -10,7 +10,7 @@ import (
 
 func (nd *Named) startLeader() error {
 	nd.pstats = fsetcd.NewPstatsDev()
-	fs, err := fsetcd.NewFsEtcd(nd.GetNetProxyClnt().Dial, nd.ProcEnv().GetEtcdEndpoints(), nd.realm, nd.pstats)
+	fs, err := fsetcd.NewFsEtcd(nd.GetDialProxyClnt().Dial, nd.ProcEnv().GetEtcdEndpoints(), nd.realm, nd.pstats)
 	if err != nil {
 		return err
 	}

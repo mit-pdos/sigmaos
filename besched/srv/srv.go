@@ -312,7 +312,7 @@ func Run() {
 	if err != nil {
 		db.DFatalf("Error NewSigmaClnt: %v", err)
 	}
-	sc.GetNetProxyClnt().AllowConnectionsFromAllRealms()
+	sc.GetDialProxyClnt().AllowConnectionsFromAllRealms()
 	be := NewBESched(sc)
 	ssrv, err := sigmasrv.NewSigmaSrvClnt(filepath.Join(sp.BESCHED, sc.ProcEnv().GetKernelID()), sc, be)
 	if err != nil {

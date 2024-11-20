@@ -375,7 +375,7 @@ func RunSchedd(kernelID string, reserveMcpu uint) error {
 	if err != nil {
 		db.DFatalf("Error NewSigmaClnt: %v", err)
 	}
-	sc.GetNetProxyClnt().AllowConnectionsFromAllRealms()
+	sc.GetDialProxyClnt().AllowConnectionsFromAllRealms()
 	sd := NewSchedd(sc, kernelID, reserveMcpu)
 	ssrv, err := sigmasrv.NewSigmaSrvClnt(filepath.Join(sp.SCHEDD, kernelID), sc, sd)
 	if err != nil {

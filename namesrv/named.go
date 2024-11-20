@@ -13,7 +13,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/namesrv/fsetcd"
 	"sigmaos/namesrv/leaderetcd"
-	"sigmaos/netproxyclnt"
+	dialproxyclnt "sigmaos/dialproxy/clnt"
 	"sigmaos/path"
 	"sigmaos/proc"
 	"sigmaos/protsrv"
@@ -82,7 +82,7 @@ func Run(args []string) error {
 	}
 	defer p.Done()
 
-	sc, err := sigmaclnt.NewSigmaClntFsLib(pe, netproxyclnt.NewNetProxyClnt(pe))
+	sc, err := sigmaclnt.NewSigmaClntFsLib(pe, dialproxyclnt.NewDialProxyClnt(pe))
 	if err != nil {
 		db.DFatalf("Error NewSigmaClnt: %v", err)
 		return err
@@ -167,7 +167,7 @@ func Run(args []string) error {
 	if nd.realm == sp.ROOTREALM {
 		// Allow connections from all realms, so that realms can mount the kernel
 		// service union directories
-		nd.GetNetProxyClnt().AllowConnectionsFromAllRealms()
+		nd.GetDialProxyClnt().AllowConnectionsFromAllRealms()
 		db.DPrintf(db.ALWAYS, "SetRootNamed %v ep %v", nd.realm, ep)
 		if err := nd.fs.SetRootNamed(ep); err != nil {
 			db.DFatalf("SetNamed: %v", err)

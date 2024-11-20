@@ -6,7 +6,7 @@ import (
 	"sigmaos/auth"
 	db "sigmaos/debug"
 	"sigmaos/namesrv/fsetcd"
-	"sigmaos/netproxyclnt"
+	dialproxyclnt "sigmaos/dialproxy/clnt"
 	"sigmaos/netsrv"
 	"sigmaos/npproxysrv"
 	"sigmaos/proc"
@@ -38,7 +38,7 @@ func main() {
 	))
 	db.DPrintf(db.NPPROXY, "Proxy env: %v", pe)
 	addr := sp.NewTaddr(sp.NO_IP, sp.INNER_CONTAINER_IP, 1110)
-	npc := netproxyclnt.NewNetProxyClnt(pe)
+	npc := dialproxyclnt.NewDialProxyClnt(pe)
 	npd := npproxysrv.NewNpd(pe, npc, lip)
 	netsrv.NewNetServerEPType(pe, npc, addr, sp.EXTERNAL_EP, npd)
 	ch := make(chan struct{})

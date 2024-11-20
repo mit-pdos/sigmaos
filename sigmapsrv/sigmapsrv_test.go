@@ -15,7 +15,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/namesrv/fsetcd"
-	"sigmaos/netproxyclnt"
+	dialproxyclnt "sigmaos/dialproxy/clnt"
 	"sigmaos/util/perf"
 	"sigmaos/proc"
 	"sigmaos/rpc"
@@ -154,7 +154,7 @@ func TestWriteFilePerfMultiClient(t *testing.T) {
 	for i := 0; i < N_CLI; i++ {
 		fns = append(fns, filepath.Join(pathname, "f"+strconv.Itoa(i)))
 		pe := proc.NewAddedProcEnv(ts.ProcEnv())
-		fsl, err := sigmaclnt.NewFsLib(pe, netproxyclnt.NewNetProxyClnt(pe))
+		fsl, err := sigmaclnt.NewFsLib(pe, dialproxyclnt.NewDialProxyClnt(pe))
 		assert.Nil(t, err)
 		fsls = append(fsls, fsl)
 	}
@@ -357,7 +357,7 @@ func TestReadFilePerfMultiClient(t *testing.T) {
 	for i := 0; i < N_CLI; i++ {
 		fns = append(fns, filepath.Join(pathname, "f"+strconv.Itoa(i)))
 		pe := proc.NewAddedProcEnv(ts.ProcEnv())
-		fsl, err := sigmaclnt.NewFsLib(pe, netproxyclnt.NewNetProxyClnt(pe))
+		fsl, err := sigmaclnt.NewFsLib(pe, dialproxyclnt.NewDialProxyClnt(pe))
 		assert.Nil(t, err)
 		fsls = append(fsls, fsl)
 	}
@@ -514,7 +514,7 @@ func lookuper(ts *test.Tstate, nclerk int, n int, dir string, nfile int, lip sp.
 	for c := 0; c < nclerk; c++ {
 		go func(c int) {
 			pe := proc.NewAddedProcEnv(ts.ProcEnv())
-			fsl, err := sigmaclnt.NewFsLib(pe, netproxyclnt.NewNetProxyClnt(pe))
+			fsl, err := sigmaclnt.NewFsLib(pe, dialproxyclnt.NewDialProxyClnt(pe))
 			assert.Nil(ts.T, err)
 			measuredir("lookup dir entry", NITER, dir, func() int {
 				for f := 0; f < nfile; f++ {
@@ -694,7 +694,7 @@ func TestLookupConcurPerf(t *testing.T) {
 		for j := 0; j < NTRIAL; j++ {
 			pe := proc.NewAddedProcEnv(ts.ProcEnv())
 			pe.NamedEndpointProto = ndMnt.TendpointProto
-			fsl, err := sigmaclnt.NewFsLib(pe, netproxyclnt.NewNetProxyClnt(pe))
+			fsl, err := sigmaclnt.NewFsLib(pe, dialproxyclnt.NewDialProxyClnt(pe))
 			assert.Nil(t, err)
 			fsl2 = append(fsl2, fsl)
 		}
@@ -753,7 +753,7 @@ func TestLookupMultiMount(t *testing.T) {
 	db.DPrintf(db.TEST, "kernelid %v %v\n", kernelId, uprocdpid)
 
 	pe.NamedEndpointProto = nil
-	fsl, err := sigmaclnt.NewFsLib(pe, netproxyclnt.NewNetProxyClnt(pe))
+	fsl, err := sigmaclnt.NewFsLib(pe, dialproxyclnt.NewDialProxyClnt(pe))
 	assert.Nil(t, err)
 
 	// cache named, which is typically the case
@@ -787,7 +787,7 @@ func TestColdPathMicro(t *testing.T) {
 	var tot time.Duration
 	const N = 1
 	for i := 0; i < N; i++ {
-		fsl, err := sigmaclnt.NewFsLib(pe, netproxyclnt.NewNetProxyClnt(pe))
+		fsl, err := sigmaclnt.NewFsLib(pe, dialproxyclnt.NewDialProxyClnt(pe))
 		assert.Nil(t, err)
 		db.DPrintf(db.TEST, "MkDir %v start %v", fsl.ClntId(), pn)
 		s := time.Now()
@@ -827,7 +827,7 @@ func TestColdAttach(t *testing.T) {
 	var tot time.Duration
 	const N = 1
 	for i := 0; i < N; i++ {
-		fsl, err := sigmaclnt.NewFsLib(pe, netproxyclnt.NewNetProxyClnt(pe))
+		fsl, err := sigmaclnt.NewFsLib(pe, dialproxyclnt.NewDialProxyClnt(pe))
 		assert.Nil(t, err)
 		pn = filepath.Join(pn, rpc.RPC)
 		start := time.Now()

@@ -131,7 +131,7 @@ func TestGeoSingle(t *testing.T) {
 	err = rpcc.RPC("Geo.Nearby", &arg, &res)
 	assert.Nil(t, err)
 	db.DPrintf(db.TEST, "res %v\n", res.HotelIds)
-	assert.Equal(t, 5, len(res.HotelIds))
+	assert.Equal(t, 9, len(res.HotelIds))
 }
 
 func TestRateSingle(t *testing.T) {

@@ -14,6 +14,7 @@ import (
 
 	"sigmaos/apps/cache"
 	"sigmaos/apps/kv"
+	"sigmaos/apps/kv/kvgrp"
 	"sigmaos/crash"
 	db "sigmaos/debug"
 	"sigmaos/util/rand"
@@ -96,9 +97,13 @@ type Tstate struct {
 	job string
 }
 
-func newTstate(t1 *test.Tstate, auto string, repl int) *Tstate {
+func newTstate(t1 *test.Tstate, evs []crash.Tevent, auto string, repl int) *Tstate {
 	ts := &Tstate{job: rand.String(4)}
 	ts.Tstate = t1
+
+	// XXX maybe in pe
+	err := crash.SetSigmaFail(evs)
+	assert.Nil(t1.T, err)
 
 	kvf, err := kv.NewKvdFleet(ts.SigmaClnt, ts.job, 1, repl, 0, auto)
 	assert.Nil(t1.T, err)
@@ -127,7 +132,7 @@ func TestMiss(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts := newTstate(t1, "manual", kv.KVD_NO_REPL)
+	ts := newTstate(t1, nil, "manual", kv.KVD_NO_REPL)
 	err := ts.cm.Get(cache.NewKey(kv.NKEYS+1), &cproto.CacheString{})
 	assert.True(t, cache.IsMiss(err))
 	ts.done()
@@ -138,7 +143,7 @@ func TestGetPut0(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts := newTstate(t1, "manual", kv.KVD_NO_REPL)
+	ts := newTstate(t1, nil, "manual", kv.KVD_NO_REPL)
 
 	err := ts.cm.Get(cache.NewKey(kv.NKEYS+1), &cproto.CacheString{})
 	assert.NotNil(ts.T, err, "Get")
@@ -165,7 +170,7 @@ func TestPutGetRepl(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts := newTstate(t1, "manual", kv.KVD_REPL_LEVEL)
+	ts := newTstate(t1, nil, "manual", kv.KVD_REPL_LEVEL)
 
 	err := ts.cm.StartClerks("", 1)
 	assert.Nil(ts.T, err, "Error StartClerk: %v", err)
@@ -188,9 +193,8 @@ func TestPutGetCrashKVD1(t *testing.T) {
 		return
 	}
 
-	// e0 := crash.Tevent{crash.KVD_CRASH, 0, CRASH, 0.33, 0}
-
-	ts := newTstate(t1, "manual", kv.KVD_REPL_LEVEL)
+	e0 := crash.Tevent{crash.KVD_CRASH, 0, kvgrp.CRASH, 0.33, 0}
+	ts := newTstate(t1, []crash.Tevent{e0}, "manual", kv.KVD_REPL_LEVEL)
 
 	err := ts.cm.StartClerks("", 1)
 	assert.Nil(ts.T, err, "Error StartClerk: %v", err)
@@ -213,13 +217,9 @@ func concurN(t *testing.T, nclerk int, evs []crash.Tevent, repl int) {
 		return
 	}
 
-	// XXX maybe in pe
-	err := crash.SetSigmaFail(evs)
-	assert.Nil(t, err)
+	ts := newTstate(t1, evs, "manual", repl)
 
-	ts := newTstate(t1, "manual", repl)
-
-	err = ts.cm.StartClerks("", nclerk)
+	err := ts.cm.StartClerks("", nclerk)
 	assert.Nil(ts.T, err, "Error StartClerk: %v", err)
 
 	db.DPrintf(db.TEST, "Done StartClerks")
@@ -302,7 +302,7 @@ func TestCrashAllN(t *testing.T) {
 	concurN(t, NCLERK, bothEv, kv.KVD_NO_REPL)
 }
 
-func TestRepl0(t *testing.T) {
+func TestReplOK0(t *testing.T) {
 	concurN(t, 0, nil, kv.KVD_REPL_LEVEL)
 }
 
@@ -337,7 +337,7 @@ func TestAuto(t *testing.T) {
 		return
 	}
 
-	ts := newTstate(t1, "auto", kv.KVD_NO_REPL)
+	ts := newTstate(t1, nil, "auto", kv.KVD_NO_REPL)
 
 	for i := 0; i < 0; i++ {
 		err := ts.kvf.AddKVDGroup()

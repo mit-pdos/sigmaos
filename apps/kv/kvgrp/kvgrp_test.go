@@ -25,7 +25,6 @@ import (
 const (
 	GRP       = "grp-0"
 	N_REPL    = 3
-	CRASH     = 1000
 	PARTITION = 200
 	NETFAIL   = 200
 )
@@ -142,7 +141,7 @@ func TestServerCrash(t *testing.T) {
 		return
 	}
 
-	e0 := crash.Tevent{crash.KVD_CRASH, 0, CRASH, 0.33, 0}
+	e0 := crash.Tevent{crash.KVD_CRASH, 0, kvgrp.CRASH, 0.33, 0}
 	err := crash.SetSigmaFail([]crash.Tevent{e0})
 
 	ts := newTstate(t1, 0, false)

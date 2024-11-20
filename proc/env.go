@@ -21,9 +21,10 @@ const (
 	SIGMADEBUGPID  = "SIGMADEBUGPID"
 	SIGMAPERF      = "SIGMAPERF"
 	SIGMADEBUG     = "SIGMADEBUG"
-	SIGMAFAIL      = "SIGMAFAIL"
 	SIGMACONFIG    = "SIGMACONFIG"
 	SIGMAPRINCIPAL = "SIGMAPRINCIPAL"
+	SIGMAFAIL      = "SIGMAFAIL"
+	SIGMAGEN       = "SIGMAGEN"
 )
 
 type ProcEnv struct {
@@ -63,8 +64,12 @@ func SetSigmaFail(s string) {
 	os.Setenv(SIGMAFAIL, s)
 }
 
-func ClearSigmaFail() {
-	os.Setenv(SIGMAFAIL, "")
+func GetSigmaGen() string {
+	return os.Getenv(SIGMAGEN)
+}
+
+func SetSigmaGen(s string) {
+	os.Setenv(SIGMAGEN, s)
 }
 
 func GetLabelsEnv(envvar string) map[string]bool {

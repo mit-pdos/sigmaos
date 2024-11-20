@@ -4,8 +4,8 @@ import (
 	"path/filepath"
 	"strconv"
 
-	"sigmaos/apps/kv/kvgrp"
 	"sigmaos/apps/cache"
+	"sigmaos/apps/kv/kvgrp"
 	"sigmaos/fslib"
 	"sigmaos/groupmgr"
 	"sigmaos/proc"
@@ -51,17 +51,16 @@ func kvShardPath(job, kvd string, shard cache.Tshard) string {
 
 type KVFleet struct {
 	*sigmaclnt.SigmaClnt
-	nkvd     int        // Number of kvd groups to run the test with.
-	kvdrepl  int        // kvd replication level
-	kvdmcpu  proc.Tmcpu // Number of exclusive cores allocated to each kvd.
-	ck       *KvClerk   // A clerk which can be used for initialization.
-	crashkvd int
-	auto     string // Balancer auto-balancing setting.
-	job      string
-	ready    chan bool
-	balgm    *groupmgr.GroupMgr
-	kvdgms   []*groupmgr.GroupMgr
-	cpids    []sp.Tpid
+	nkvd    int        // Number of kvd groups to run the test with.
+	kvdrepl int        // kvd replication level
+	kvdmcpu proc.Tmcpu // Number of exclusive cores allocated to each kvd.
+	ck      *KvClerk   // A clerk which can be used for initialization.
+	auto    string     // Balancer auto-balancing setting.
+	job     string
+	ready   chan bool
+	balgm   *groupmgr.GroupMgr
+	kvdgms  []*groupmgr.GroupMgr
+	cpids   []sp.Tpid
 }
 
 func NewKvdFleet(sc *sigmaclnt.SigmaClnt, job string, nkvd, kvdrepl int, kvdmcpu proc.Tmcpu, auto string) (*KVFleet, error) {
@@ -112,7 +111,7 @@ func (kvf *KVFleet) AddKVDGroup() error {
 	// Name group
 	grp := GRP + strconv.Itoa(len(kvf.kvdgms))
 	// Spawn group
-	gm, err := spawnGrp(kvf.SigmaClnt, kvf.job, grp, kvf.kvdmcpu, kvf.kvdrepl, kvf.crashkvd)
+	gm, err := spawnGrp(kvf.SigmaClnt, kvf.job, grp, kvf.kvdmcpu, kvf.kvdrepl)
 	if err != nil {
 		return err
 	}
@@ -163,7 +162,7 @@ func startBalancers(sc *sigmaclnt.SigmaClnt, job string, kvdmcpu proc.Tmcpu, aut
 	return cfg.StartGrpMgr(sc)
 }
 
-func spawnGrp(sc *sigmaclnt.SigmaClnt, job, grp string, mcpu proc.Tmcpu, repl, ncrash int) (*groupmgr.GroupMgr, error) {
+func spawnGrp(sc *sigmaclnt.SigmaClnt, job, grp string, mcpu proc.Tmcpu, repl int) (*groupmgr.GroupMgr, error) {
 	cfg := groupmgr.NewGroupConfig(repl, "kvd", []string{grp, strconv.FormatBool(test.Overlays)}, mcpu, job)
 	gm := cfg.StartGrpMgr(sc)
 	_, err := kvgrp.WaitStarted(sc.FsLib, kvgrp.JobDir(job), grp)

@@ -79,7 +79,7 @@ func initLabels() {
 	if err := parseTevents(labelstr, labels); err != nil {
 		db.DFatalf("parseLabels %v err %v", labelstr, err)
 	}
-	db.DPrintf(db.CRASH, "Events %v %v", labels, proc.GetSigmaFail())
+	db.DPrintf(db.CRASH, "Events %v", labels)
 }
 
 func randSleep(c int64) uint64 {

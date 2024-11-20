@@ -120,13 +120,13 @@ func (cfg *GroupMgrConfig) StartGrpMgr(sc *sigmaclnt.SigmaClnt) *GroupMgr {
 type member struct {
 	*sigmaclnt.SigmaClnt
 	*GroupMgrConfig
-	pid    sp.Tpid
-	id     int
-	nstart int
+	pid sp.Tpid
+	id  int
+	gen int
 }
 
 func (m *member) String() string {
-	return fmt.Sprintf("{pid %v, id %d, nstart %d}", m.pid, m.id, m.nstart)
+	return fmt.Sprintf("{pid %v, id %d, gen %d}", m.pid, m.id, m.gen)
 }
 
 type procret struct {
@@ -140,7 +140,11 @@ func (pr procret) String() string {
 }
 
 func newMember(sc *sigmaclnt.SigmaClnt, cfg *GroupMgrConfig, id int) *member {
-	return &member{SigmaClnt: sc, GroupMgrConfig: cfg, id: id}
+	return &member{
+		SigmaClnt:      sc,
+		GroupMgrConfig: cfg,
+		id:             id,
+	}
 }
 
 // Caller holds lock
@@ -149,6 +153,7 @@ func (m *member) spawnL() error {
 	p.SetMcpu(m.Mcpu)
 
 	p.AppendEnv(proc.SIGMAFAIL, proc.GetSigmaFail())
+	p.AppendEnv(proc.SIGMAGEN, strconv.Itoa(m.gen))
 	p.AppendEnv("SIGMAREPL", newREPL(m.id, m.NReplicas))
 	// If we are specifically setting kvd's mcpu=1, then set GOMAXPROCS to 1
 	// (for use when comparing to redis).
@@ -172,14 +177,14 @@ func (m *member) spawnL() error {
 
 // Caller holds lock
 func (m *member) runL(start chan error, done chan *procret) {
-	db.DPrintf(db.GROUPMGR, "spawn %d member %v", m.id, m.Program)
+	m.gen += 1
+	db.DPrintf(db.GROUPMGR, "spawn %d member %v gen# %d", m.id, m.Program, m.gen)
 	if err := m.spawnL(); err != nil {
 		start <- err
 		return
 	}
 	start <- nil
-	db.DPrintf(db.GROUPMGR, "%v: member %d started %v\n", m.Program, m.id, m.pid)
-	m.nstart += 1
+	db.DPrintf(db.GROUPMGR, "%v: member %d started %v gen# %d\n", m.Program, m.id, m.pid, m.gen)
 	status, err := m.WaitExit(m.pid)
 	db.DPrintf(db.GROUPMGR, "%v: member %v exited %v err %v\n", m.Program, m.pid, status, err)
 	done <- &procret{m.id, err, status}
@@ -233,7 +238,7 @@ func (gm *GroupMgr) manager(done chan *procret, n int) {
 	}
 	db.DPrintf(db.GROUPMGR, "%v exit\n", gm.members[0].Program)
 	for i := 0; i < len(gm.members); i++ {
-		db.DPrintf(db.GROUPMGR, "%v nstart %d exit\n", gm.members[i].Program, gm.members[i].nstart)
+		db.DPrintf(db.GROUPMGR, "%v gen# %d exit\n", gm.members[i].Program, gm.members[i].gen)
 	}
 	gm.ch <- gstatus
 }

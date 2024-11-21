@@ -19,7 +19,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/rpc"
-	"sigmaos/rpcclnt"
+	rpcclnt "sigmaos/rpc/clnt"
 	"sigmaos/sessdev"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmarpcchan"

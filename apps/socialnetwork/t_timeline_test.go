@@ -7,7 +7,7 @@ import (
 	"sigmaos/apps/socialnetwork/proto"
 	"sigmaos/fslib"
 	"sigmaos/linuxsched"
-	"sigmaos/rpcclnt"
+	rpcclnt "sigmaos/rpc/clnt"
 	"sigmaos/sigmarpcchan"
 	"sigmaos/test"
 	"testing"

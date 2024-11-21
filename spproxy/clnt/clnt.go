@@ -12,7 +12,7 @@ import (
 	dialproxyclnt "sigmaos/dialproxy/clnt"
 	"sigmaos/proc"
 	"sigmaos/rpc"
-	"sigmaos/rpcclnt"
+	rpcclnt "sigmaos/rpc/clnt"
 	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 	spproto "sigmaos/spproxy/proto"

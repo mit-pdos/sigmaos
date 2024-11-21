@@ -3,7 +3,7 @@ package clnt
 import (
 	"sigmaos/fslib"
 	"sigmaos/realm/proto"
-	"sigmaos/rpcclnt"
+	rpcclnt "sigmaos/rpc/clnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmarpcchan"
 )

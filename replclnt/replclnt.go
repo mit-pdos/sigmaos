@@ -7,7 +7,7 @@ import (
 
 	"sigmaos/fslib"
 	replproto "sigmaos/repl/proto"
-	"sigmaos/rpcclnt"
+	rpcclnt "sigmaos/rpc/clnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmarpcchan"
 )

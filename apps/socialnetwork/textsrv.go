@@ -7,7 +7,7 @@ import (
 	dbg "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/proc"
-	"sigmaos/rpcclnt"
+	rpcclnt "sigmaos/rpc/clnt"
 	"sigmaos/sigmarpcchan"
 	"sigmaos/sigmasrv"
 	"sync"

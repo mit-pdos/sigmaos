@@ -7,7 +7,7 @@ import (
 	"sigmaos/apps/imgresize/proto"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
-	"sigmaos/rpcclnt"
+	rpcclnt "sigmaos/rpc/clnt"
 	"sigmaos/sigmarpcchan"
 )
 

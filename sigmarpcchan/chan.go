@@ -8,7 +8,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/rpc"
-	"sigmaos/rpcclnt"
+	rpcclnt "sigmaos/rpc/clnt"
 	"sigmaos/sessdevclnt"
 	"sigmaos/sessp"
 	sp "sigmaos/sigmap"

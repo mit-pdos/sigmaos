@@ -11,7 +11,7 @@ import (
 	"sigmaos/fs"
 	"sigmaos/util/perf"
 	"sigmaos/proc"
-	"sigmaos/rpcclnt"
+	rpcclnt "sigmaos/rpc/clnt"
 	"sigmaos/rpcdirclnt"
 	"sigmaos/sigmarpcchan"
 	"sigmaos/sigmasrv"

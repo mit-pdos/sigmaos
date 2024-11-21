@@ -16,7 +16,7 @@ import (
 	"sigmaos/proc"
 	"sigmaos/rpc"
 	rpcproto "sigmaos/rpc/proto"
-	"sigmaos/rpcclnt"
+	rpcclnt "sigmaos/rpc/clnt"
 	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 )

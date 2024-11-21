@@ -3,7 +3,7 @@ package kernelclnt
 import (
 	"sigmaos/fslib"
 	"sigmaos/kernelsrv/proto"
-	"sigmaos/rpcclnt"
+	rpcclnt "sigmaos/rpc/clnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmarpcchan"
 )

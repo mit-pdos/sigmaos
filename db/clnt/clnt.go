@@ -5,7 +5,7 @@ import (
 
 	"sigmaos/db/proto"
 	"sigmaos/fslib"
-	"sigmaos/rpcclnt"
+	rpcclnt "sigmaos/rpc/clnt"
 	"sigmaos/sigmarpcchan"
 )
 

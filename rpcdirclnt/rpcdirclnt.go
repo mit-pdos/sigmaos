@@ -6,7 +6,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/dircache"
 	"sigmaos/fslib"
-	"sigmaos/rpcclnt"
+	rpcclnt "sigmaos/rpc/clnt"
 	"sigmaos/sigmarpcchan"
 )
 

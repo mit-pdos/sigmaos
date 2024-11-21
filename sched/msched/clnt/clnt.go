@@ -10,7 +10,7 @@ import (
 	"sigmaos/fslib"
 	"sigmaos/sched/msched/proto"
 	"sigmaos/proc"
-	"sigmaos/rpcclnt"
+	rpcclnt "sigmaos/rpc/clnt"
 	"sigmaos/rpcdirclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmarpcchan"

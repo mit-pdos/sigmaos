@@ -1,5 +1,5 @@
 // The rpcclnt package caches RPC clnts to avoid repeated lookups
-package rpcclnt
+package clnt
 
 import (
 	"errors"

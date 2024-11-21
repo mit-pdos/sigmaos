@@ -12,7 +12,7 @@ import (
 	mongoclnt "sigmaos/mongo/clnt"
 	"sigmaos/util/perf"
 	"sigmaos/proc"
-	"sigmaos/rpcclnt"
+	rpcclnt "sigmaos/rpc/clnt"
 	"sigmaos/sigmarpcchan"
 	"sigmaos/sigmasrv"
 	"strconv"

@@ -5,7 +5,7 @@ import (
 	dbg "sigmaos/debug"
 	"sigmaos/fslib"
 	proto "sigmaos/mongo/proto"
-	"sigmaos/rpcclnt"
+	rpcclnt "sigmaos/rpc/clnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmarpcchan"
 )

@@ -8,7 +8,7 @@ import (
 	"sigmaos/namesrv/fsetcd"
 	"sigmaos/fslib"
 	leaseproto "sigmaos/lease/proto"
-	"sigmaos/rpcclnt"
+	rpcclnt "sigmaos/rpc/clnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmarpcchan"
 	"sigmaos/util/syncmap"

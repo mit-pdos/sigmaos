@@ -4,7 +4,7 @@
 // into its own RPCCh interface to replace the default (e.g., to
 // send/receive over a pipe).
 
-package rpcclnt
+package clnt
 
 import (
 	"time"

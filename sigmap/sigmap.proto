@@ -47,14 +47,10 @@ message SecretProto {
   string metadata = 3;
 }
 
-message TendpointClaimsProto {
-        uint32   endpointType = 1; // Type of endpoint (e.g. internal vs external)
-        repeated Taddr addr = 2;
-}
-
 message TendpointProto {
-        TendpointClaimsProto claims = 1;
-        string root = 2;
+        uint32   type = 1; // Type of endpoint (e.g. internal vs external)
+        repeated Taddr addr = 2;
+        string root = 3;
 }
 
 message TfenceProto {

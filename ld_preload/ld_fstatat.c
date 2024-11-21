@@ -31,17 +31,6 @@ const char* get_path(const char *filename)
         read(sfd, x2, 2);
 
         init_done = 1;
-
-        DIR *d;
-        struct dirent *dir;
-        d = opendir("/tmp/python");
-        if (d) {
-          while ((dir = readdir(d)) != NULL) {
-            printf("%s\n", dir->d_name);
-          }
-          closedir(d);
-        } 
-
     }
     
     // Try setting PWD in init_done/exec_uproc_rs

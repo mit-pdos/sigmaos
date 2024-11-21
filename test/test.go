@@ -105,15 +105,13 @@ func NewTstateMin(t *testing.T) *TstateMin {
 type Tstate struct {
 	srvs string
 	*sigmaclnt.SigmaClnt
-	rc            *realmclnt.RealmClnt
-	memfs         *proc.Proc
-	kclnts        []*bootkernelclnt.Kernel
-	killidx       int
-	T             *testing.T
-	proc          *proc.Proc
-	scsck         *bootkernelclnt.Kernel
-	masterPubKey  auth.PublicKey
-	masterPrivKey auth.PrivateKey
+	rc      *realmclnt.RealmClnt
+	memfs   *proc.Proc
+	kclnts  []*bootkernelclnt.Kernel
+	killidx int
+	T       *testing.T
+	proc    *proc.Proc
+	scsck   *bootkernelclnt.Kernel
 }
 
 func NewTstatePath(t *testing.T, path string) (*Tstate, error) {

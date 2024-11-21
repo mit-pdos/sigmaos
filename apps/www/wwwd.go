@@ -13,10 +13,10 @@ import (
 	"sigmaos/microbenchmarks"
 	"sigmaos/pipe"
 	"sigmaos/proc"
-	"sigmaos/util/rand"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
+	"sigmaos/util/rand"
 )
 
 // HTTP server paths
@@ -174,9 +174,9 @@ func (www *Wwwd) spawnApp(app string, w http.ResponseWriter, r *http.Request, pi
 	}
 	// Create a pipe for the child to write to.
 	if pipe {
-		pipeName = www.newPipe()
-		// Set the shared link to point to the pipe
-		a.SetShared(filepath.Join(www.globalSrvpath, pipeName))
+		//		pipeName = www.newPipe()
+		//		// Set the shared link to point to the pipe
+		//		a.SetShared(filepath.Join(www.globalSrvpath, pipeName))
 	}
 	db.DPrintf(db.WWW, "About to spawn %v", a)
 

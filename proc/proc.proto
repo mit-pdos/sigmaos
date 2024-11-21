@@ -51,5 +51,4 @@ message ProcProto {
   uint32 typeInt = 4;
   uint32 mcpuInt = 5;
   uint32 memInt = 6;
-  string sharedTarget = 7;
 }

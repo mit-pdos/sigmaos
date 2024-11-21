@@ -4,7 +4,7 @@ import (
 	"sigmaos/fs"
 	"sigmaos/memfs/inode"
 	"sigmaos/memfssrv"
-	"sigmaos/rpcsrv"
+	rpcsrv "sigmaos/rpc/srv"
 	"sigmaos/serr"
 	"sigmaos/sessp"
 	sp "sigmaos/sigmap"

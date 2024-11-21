@@ -18,7 +18,7 @@ import (
 	"sigmaos/proc"
 	"sigmaos/protsrv"
 	"sigmaos/rpc"
-	"sigmaos/rpcsrv"
+	rpcsrv "sigmaos/rpc/srv"
 	"sigmaos/sessdevsrv"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"

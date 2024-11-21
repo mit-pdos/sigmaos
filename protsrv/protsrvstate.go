@@ -5,6 +5,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/path"
+	"sigmaos/protsrv/fid"
 	"sigmaos/protsrv/leasedmap"
 	"sigmaos/protsrv/lockmap"
 	"sigmaos/protsrv/pobj"
@@ -17,8 +18,8 @@ import (
 
 type ProtSrvState struct {
 	plt   *lockmap.PathLockTable
-	wt    *watch.WatchTable
-	wtv2  *WatchTableV2
+	wtv1    *watch.WatchV1Table
+	wtv2  *watch.WatchV2Table
 	vt    *version.VersionTable
 	stats *stats.StatInode
 	lm    *leasedmap.LeasedMap
@@ -32,8 +33,8 @@ func NewProtSrvState(stats *stats.StatInode) *ProtSrvState {
 		lm:    leasedmap.NewLeasedMap(),
 		plt:   lockmap.NewPathLockTable(),
 		cct:   cct,
-		wt:    watch.NewWatchTable(cct),
-		wtv2:  newWatchTableV2(),
+		wtv1:    watch.NewWatchV1Table(cct),
+		wtv2:  watch.NewWatchV2Table(),
 		vt:    version.NewVersionTable(),
 	}
 	return pss
@@ -63,10 +64,10 @@ func (pss *ProtSrvState) newQid(perm sp.Tperm, path sp.Tpath) *sp.Tqid {
 	return sp.NewQidPerm(perm, pss.vt.GetVersion(path), path)
 }
 
-func (pss *ProtSrvState) newFid(ctx fs.CtxI, dir path.Tpathname, name string, o fs.FsObj, lid sp.TleaseId, qid *sp.Tqid) *Fid {
+func (pss *ProtSrvState) newFid(ctx fs.CtxI, dir path.Tpathname, name string, o fs.FsObj, lid sp.TleaseId, qid *sp.Tqid) *fid.Fid {
 	pn := dir.Copy().Append(name)
 	po := pobj.NewPobj(pn, o, ctx)
-	nf := newFidPath(po, 0, qid)
+	nf := fid.NewFid(po, 0, qid)
 	if o.IsLeased() && pss.lm != nil {
 		pss.lm.Insert(pn.String(), lid)
 	}
@@ -84,7 +85,7 @@ func (pss *ProtSrvState) createObj(ctx fs.CtxI, d fs.Dir, dlk *lockmap.PathLock,
 	o1, err := d.Create(ctx, name, perm, mode, lid, f, dev)
 	if err == nil {
 		pss.vt.IncVersion(d.Path())
-		pss.wt.WakeupWatch(dlk)
+		pss.wtv1.WakeupWatch(dlk)
 		pss.wtv2.AddCreateEvent(dlk, name)
 		return o1, flk, nil
 	} else {
@@ -93,7 +94,7 @@ func (pss *ProtSrvState) createObj(ctx fs.CtxI, d fs.Dir, dlk *lockmap.PathLock,
 	}
 }
 
-func (pss *ProtSrvState) CreateObj(ctx fs.CtxI, o fs.FsObj, dir path.Tpathname, name string, perm sp.Tperm, m sp.Tmode, lid sp.TleaseId, fence sp.Tfence, dev fs.FsObj) (*sp.Tqid, *Fid, *serr.Err) {
+func (pss *ProtSrvState) CreateObj(ctx fs.CtxI, o fs.FsObj, dir path.Tpathname, name string, perm sp.Tperm, m sp.Tmode, lid sp.TleaseId, fence sp.Tfence, dev fs.FsObj) (*sp.Tqid, *fid.Fid, *serr.Err) {
 	db.DPrintf(db.PROTSRV, "%v: Create %v %v", ctx.ClntId(), o, dir)
 	fn := dir.Append(name)
 	if !o.Perm().IsDir() {
@@ -160,7 +161,7 @@ func (pss *ProtSrvState) RemoveObj(ctx fs.CtxI, o fs.FsObj, path path.Tpathname,
 	pss.vt.IncVersion(o.Path())
 	pss.vt.IncVersion(o.Parent().Path())
 
-	pss.wt.WakeupWatch(dlk)
+	pss.wtv1.WakeupWatch(dlk)
 	pss.wtv2.AddRemoveEvent(dlk, name)
 
 	if leased && pss.lm != nil {
@@ -188,7 +189,7 @@ func (pss *ProtSrvState) RenameObj(po *pobj.Pobj, name string, f sp.Tfence) *ser
 	pss.vt.IncVersion(po.Obj().Path())
 	pss.vt.IncVersion(po.Obj().Parent().Path())
 
-	pss.wt.WakeupWatch(dlk)
+	pss.wtv1.WakeupWatch(dlk)
 	pss.wtv2.AddRemoveEvent(dlk, oldname)
 	pss.wtv2.AddCreateEvent(dlk, name)
 
@@ -237,8 +238,8 @@ func (pss *ProtSrvState) RenameAtObj(old, new *pobj.Pobj, dold, dnew fs.Dir, old
 		pss.lm.Rename(old.Pathname().String(), new.Pathname().String())
 	}
 
-	pss.wt.WakeupWatch(d1lk) // trigger one dir watch
-	pss.wt.WakeupWatch(d2lk) // trigger the other dir watch
+	pss.wtv1.WakeupWatch(d1lk) // trigger one dir watch
+	pss.wtv1.WakeupWatch(d2lk) // trigger the other dir watch
 
 	pss.wtv2.AddRemoveEvent(d1lk, oldname)
 	pss.wtv2.AddCreateEvent(d2lk, newname)

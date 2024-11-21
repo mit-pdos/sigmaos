@@ -224,11 +224,6 @@ func (c *PerfCoord) Run() {
 		if err != nil {
 			db.DFatalf("Run: failed to clear signaldir entries %v", err)
 		}
-
-		err = c.RmDirEntries(c.watchDir)
-		if err != nil {
-			db.DFatalf("Run: failed to clear watchdir entries %v", err)
-		}
 	}
 
 	err = responseDirReader.Close()

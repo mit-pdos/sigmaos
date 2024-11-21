@@ -97,6 +97,7 @@ func (dr *DirReaderV2) isWatchClosed(err error) bool {
 
 // should hold lock for dr
 func (dr *DirReaderV2) ReadUpdates() error {
+	db.DPrintf(db.WATCH_V2, "DirReaderV2: Reading updates for %s", dr.pn)
 	var length uint32
 	err := binary.Read(dr.reader, binary.LittleEndian, &length)
 	if dr.isWatchClosed(err) {
@@ -125,6 +126,7 @@ func (dr *DirReaderV2) ReadUpdates() error {
 	if err != nil {
 		db.DFatalf("DirReaderV2: failed to unmarshal data %v", err)
 	}
+	db.DPrintf(db.WATCH_V2, "DirReaderV2: received %d bytes with %d events", numRead, len(eventList.Events))
 
 	for _, event := range eventList.Events {
 		switch event.Type {

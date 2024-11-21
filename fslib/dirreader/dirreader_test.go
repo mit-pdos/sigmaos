@@ -210,7 +210,7 @@ func runTest(t *testing.T, f func(*testing.T, *test.Tstate, string, dirreader.Di
 	ts.Shutdown()
 }
 
-func TestDirreaderBasic(t *testing.T) {
+func TestDirReaderBasic(t *testing.T) {
 	runTest(t, func(t *testing.T, ts *test.Tstate, testdir string, dr dirreader.DirReader) {
 		entries, err := dr.GetDir()
 		assert.Nil(t, err)
@@ -239,7 +239,7 @@ func TestDirreaderBasic(t *testing.T) {
 	}, 10)
 }
 
-func TestDirreaderWaitNEntries(t *testing.T) {
+func TestDirReaderWaitNEntries(t *testing.T) {
 	runTest(t, func(t *testing.T, ts *test.Tstate, testdir string, dr dirreader.DirReader) {
 		err := dr.WaitNEntries(0)
 		assert.Nil(t, err)
@@ -266,7 +266,7 @@ func TestDirreaderWaitNEntries(t *testing.T) {
 	}, 10)
 }
 
-func TestDirreaderWaitEmpty(t *testing.T) {
+func TestDirReaderWaitEmpty(t *testing.T) {
 	runTest(t, func(t *testing.T, ts *test.Tstate, testdir string, dr dirreader.DirReader) {
 		err := dr.WaitEmpty()
 		assert.Nil(t, err)
@@ -295,7 +295,7 @@ func TestDirreaderWaitEmpty(t *testing.T) {
 	}, 10)
 }
 
-func TestDirreaderWatchEntriesChangedRelative(t *testing.T) {
+func TestDirReaderWatchEntriesChangedRelative(t *testing.T) {
 	runTest(t, func(t *testing.T, ts *test.Tstate, testdir string, dr dirreader.DirReader) {
 		for _, file := range []string{"a", "b", "c"} {
 			_, err := ts.Create(filepath.Join(testdir, file), 0777, sp.OWRITE)
@@ -337,7 +337,7 @@ func TestDirreaderWatchEntriesChangedRelative(t *testing.T) {
 	}, 10)
 }
 
-func TestDirreaderWatchEntriesChanged(t *testing.T) {
+func TestDirReaderWatchEntriesChanged(t *testing.T) {
 	runTest(t, func(t *testing.T, ts *test.Tstate, testdir string, dr dirreader.DirReader) {
 		initialFiles := []string{"file1", "file2", "file3"}
 		for _, file := range initialFiles {
@@ -370,7 +370,7 @@ func TestDirreaderWatchEntriesChanged(t *testing.T) {
 	}, 10)
 }
 
-func TestDirreaderWatchNewEntriesAndRename(t *testing.T) {
+func TestDirReaderWatchNewEntriesAndRename(t *testing.T) {
 	runTest(t, func(t *testing.T, ts *test.Tstate, testdir string, dr dirreader.DirReader) {
 		dstDir := filepath.Join(sp.NAMED, "dst")
 		err := ts.MkDir(dstDir, 0777)
@@ -421,7 +421,7 @@ func TestDirreaderWatchNewEntriesAndRename(t *testing.T) {
 	}, 10)
 }
 
-func TestDirreaderGetEntriesAndRename(t *testing.T) {
+func TestDirReaderGetEntriesAndRename(t *testing.T) {
 	runTest(t, func(t *testing.T, ts *test.Tstate, testdir string, dr dirreader.DirReader) {
 		dstDir := filepath.Join(sp.NAMED, "dst")
 		err := ts.MkDir(dstDir, 0777)

@@ -11,11 +11,6 @@ message TqidProto {
         uint64  path = 3;
 };
 
-message Ttoken {
-        string signerStr = 1;
-        string signedToken = 2;
-}
-
 message Tprincipal {
         string iDStr = 1;
         string realmStr = 2;

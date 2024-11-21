@@ -158,13 +158,6 @@ const (
 	NO_SIGNED_TOKEN    string       = "NO_SIGNED_TOKEN"
 )
 
-func NoToken() *Ttoken {
-	return &Ttoken{
-		SignerStr:   NO_SIGNER,
-		SignedToken: NO_SIGNED_TOKEN,
-	}
-}
-
 func NoPrincipal() *Tprincipal {
 	return &Tprincipal{
 		IDStr:    NO_PRINCIPAL_ID.String(),

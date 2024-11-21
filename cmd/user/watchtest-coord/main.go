@@ -5,8 +5,8 @@ import (
 
 	db "sigmaos/debug"
 	drtest "sigmaos/fslib/dirreader/test"
-	"sigmaos/perf"
 	"sigmaos/proc"
+	"sigmaos/util/perf"
 )
 
 func main() {

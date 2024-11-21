@@ -6,9 +6,9 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fslib/dirreader"
 	"sigmaos/proc"
-	"sigmaos/rand"
 	"sigmaos/sigmaclnt"
 	"sigmaos/sigmap"
+	"sigmaos/util/rand"
 	"strconv"
 	"sync"
 )

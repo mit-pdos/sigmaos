@@ -55,7 +55,6 @@ message TendpointClaimsProto {
 message TendpointProto {
         TendpointClaimsProto claims = 1;
         string root = 2;
-        bytes pubKey = 3;
 }
 
 message TfenceProto {

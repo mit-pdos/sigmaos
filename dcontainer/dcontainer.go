@@ -16,23 +16,20 @@ import (
 	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/docker/go-connections/nat"
 
-	"sigmaos/cgroup"
-	"sigmaos/chunksrv"
+	chunksrv "sigmaos/chunk/srv"
+	"sigmaos/dcontainer/cgroup"
 	db "sigmaos/debug"
 	"sigmaos/mem"
-	"sigmaos/perf"
-	"sigmaos/port"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
+	"sigmaos/util/perf"
 )
 
 const (
 	CGROUP_PATH_BASE = "/cgroup/system.slice"
 )
 
-type Dcontainer struct {
-	*port.PortMap
-	overlays     bool
+type DContainer struct {
 	ctx          context.Context
 	cli          *client.Client
 	container    string
@@ -48,7 +45,7 @@ type cpustats struct {
 	util                float64
 }
 
-func StartDockerContainer(p *proc.Proc, kernelId string, overlays bool, gvisor bool) (*Dcontainer, error) {
+func StartDockerContainer(p *proc.Proc, kernelId string) (*DContainer, error) {
 	image := "sigmauser"
 	ctx := context.Background()
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
@@ -68,39 +65,12 @@ func StartDockerContainer(p *proc.Proc, kernelId string, overlays bool, gvisor b
 
 	pset := nat.PortSet{} // Ports to expose
 	pmap := nat.PortMap{} // NAT mappings for exposed ports
-	up := sp.NO_PORT
 	netmode := "host"
 	var endpoints map[string]*network.EndpointSettings
-	ports := []sp.Tport{port.UPROCD_PORT, port.PUBLIC_HTTP_PORT, port.PUBLIC_NAMED_PORT}
-	if overlays {
-		db.DPrintf(db.CONTAINER, "Running with overlay ports: %v", ports)
-		up = port.UPROCD_PORT
-		netmode = "bridge"
-		netname := "sigmanet-testuser"
-		for _, i := range ports {
-			p, err := nat.NewPort("tcp", i.String())
-			if err != nil {
-				return nil, err
-			}
-			pset[p] = struct{}{}
-			pmap[p] = []nat.PortBinding{{}}
-		}
-		endpoints = make(map[string]*network.EndpointSettings, 1)
-		endpoints[netname] = &network.EndpointSettings{}
-	}
-
-	// append uprocd's port
-	p.Args = append(p.Args, up.String())
 	cmd := append([]string{p.GetProgram()}, p.Args...)
-	db.DPrintf(db.CONTAINER, "ContainerCreate %v %v overlays %v s %v\n", cmd, p.GetEnv(), overlays, score)
+	db.DPrintf(db.CONTAINER, "ContainerCreate %v %v s %v\n", cmd, p.GetEnv(), score)
 
-	runtime := "runc"
-	if gvisor {
-		db.DPrintf(db.CONTAINER, "Running uprocd with gVisor")
-		runtime = "runsc-kvm"
-	} else {
-		db.DPrintf(db.CONTAINER, "Running uprocd with Docker")
-	}
+	db.DPrintf(db.CONTAINER, "Running uprocd with Docker")
 
 	// Set up default mounts.
 	mnts := []mount.Mount{
@@ -143,7 +113,7 @@ func StartDockerContainer(p *proc.Proc, kernelId string, overlays bool, gvisor b
 			Env:          p.GetEnv(),
 			ExposedPorts: pset,
 		}, &container.HostConfig{
-			Runtime:      runtime,
+			Runtime:      "runc",
 			NetworkMode:  container.NetworkMode(netmode),
 			Mounts:       mnts,
 			Privileged:   true,
@@ -169,16 +139,9 @@ func StartDockerContainer(p *proc.Proc, kernelId string, overlays bool, gvisor b
 	ip := json.NetworkSettings.IPAddress
 	db.DPrintf(db.CONTAINER, "Container ID %v", json.ID)
 
-	var pm *port.PortMap
-	if overlays {
-		pm = port.NewPortMap(json.NetworkSettings.NetworkSettingsBase.Ports, ports)
-	}
-
-	db.DPrintf(db.CONTAINER, "network setting: ip %v secondaryIPAddrs %v nets %v portmap %v", ip, json.NetworkSettings.SecondaryIPAddresses, json.NetworkSettings.Networks, pm)
+	db.DPrintf(db.CONTAINER, "network setting: ip %v secondaryIPAddrs %v nets %v ", ip, json.NetworkSettings.SecondaryIPAddresses, json.NetworkSettings.Networks)
 	cgroupPath := filepath.Join(CGROUP_PATH_BASE, "docker-"+resp.ID+".scope")
-	c := &Dcontainer{
-		overlays:   p.GetProcEnv().GetOverlays(),
-		PortMap:    pm,
+	c := &DContainer{
 		ctx:        ctx,
 		cli:        cli,
 		container:  resp.ID,
@@ -194,7 +157,7 @@ func StartDockerContainer(p *proc.Proc, kernelId string, overlays bool, gvisor b
 	return c, nil
 }
 
-func (c *Dcontainer) GetCPUUtil() (float64, error) {
+func (c *DContainer) GetCPUUtil() (float64, error) {
 	st, err := c.cmgr.GetCPUStats(c.cgroupPath)
 	if err != nil {
 		db.DPrintf(db.ERROR, "Err get cpu stats: %v", err)
@@ -203,22 +166,22 @@ func (c *Dcontainer) GetCPUUtil() (float64, error) {
 	return st.Util, nil
 }
 
-func (c *Dcontainer) SetCPUShares(cpu int64) error {
+func (c *DContainer) SetCPUShares(cpu int64) error {
 	s := time.Now()
 	err := c.cmgr.SetCPUShares(c.cgroupPath, cpu)
-	db.DPrintf(db.SPAWN_LAT, "Dcontainer.SetCPUShares %v", time.Since(s))
+	db.DPrintf(db.SPAWN_LAT, "DContainer.SetCPUShares %v", time.Since(s))
 	return err
 }
 
-func (c *Dcontainer) String() string {
+func (c *DContainer) String() string {
 	return c.container[:10]
 }
 
-func (c *Dcontainer) Ip() string {
+func (c *DContainer) Ip() string {
 	return c.ip
 }
 
-func (c *Dcontainer) Shutdown() error {
+func (c *DContainer) Shutdown() error {
 	db.DPrintf(db.CONTAINER, "containerwait for %v\n", c)
 	statusCh, errCh := c.cli.ContainerWait(c.ctx, c.container, container.WaitConditionNotRunning)
 	select {

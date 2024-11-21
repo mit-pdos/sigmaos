@@ -13,7 +13,7 @@ import (
 	echo "sigmaos/example_echo_server"
 	"sigmaos/fslib"
 	"sigmaos/proc"
-	"sigmaos/rand"
+	"sigmaos/util/rand"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmarpcchan"
 	"sigmaos/test"

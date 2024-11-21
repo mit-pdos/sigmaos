@@ -3,8 +3,8 @@ package main
 import (
 	"os"
 
-	"sigmaos/mr"
-	"sigmaos/wc"
+	"sigmaos/apps/mr"
+	"sigmaos/apps/mr/wc"
 )
 
 func main() {

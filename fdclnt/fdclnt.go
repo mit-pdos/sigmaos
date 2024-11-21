@@ -15,7 +15,7 @@ import (
 	"sigmaos/sessp"
 	sos "sigmaos/sigmaos"
 	sp "sigmaos/sigmap"
-	"sigmaos/syncmap"
+	"sigmaos/util/syncmap"
 )
 
 type FdClient struct {

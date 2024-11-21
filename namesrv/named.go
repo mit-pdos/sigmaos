@@ -11,12 +11,10 @@ import (
 
 	"sigmaos/crash"
 	db "sigmaos/debug"
+	dialproxyclnt "sigmaos/dialproxy/clnt"
 	"sigmaos/namesrv/fsetcd"
 	"sigmaos/namesrv/leaderetcd"
-	"sigmaos/netproxyclnt"
 	"sigmaos/path"
-	"sigmaos/perf"
-	"sigmaos/port"
 	"sigmaos/proc"
 	"sigmaos/protsrv"
 	"sigmaos/rpc"
@@ -24,6 +22,7 @@ import (
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
+	"sigmaos/util/perf"
 )
 
 type Named struct {
@@ -83,7 +82,7 @@ func Run(args []string) error {
 	}
 	defer p.Done()
 
-	sc, err := sigmaclnt.NewSigmaClntFsLib(pe, netproxyclnt.NewNetProxyClnt(pe))
+	sc, err := sigmaclnt.NewSigmaClntFsLib(pe, dialproxyclnt.NewDialProxyClnt(pe))
 	if err != nil {
 		db.DFatalf("Error NewSigmaClnt: %v", err)
 		return err
@@ -107,7 +106,7 @@ func Run(args []string) error {
 		// scanned by schedd-/procq-/lcsched- clnts as soon as the procclnt is
 		// created, but this named won't have posted its endpoint in the namespace
 		// yet, so root named resolution will fail.
-		if err := sc.MountTree(rootEP, sp.SCHEDDREL, sp.SCHEDD); err != nil {
+		if err := sc.MountTree(rootEP, sp.MSCHEDREL, sp.MSCHED); err != nil {
 			db.DFatalf("Err MountTree schedd: ep %v err %v", rootEP, err)
 		}
 		if err := sc.MountTree(rootEP, sp.BESCHEDREL, sp.BESCHED); err != nil {
@@ -168,7 +167,7 @@ func Run(args []string) error {
 	if nd.realm == sp.ROOTREALM {
 		// Allow connections from all realms, so that realms can mount the kernel
 		// service union directories
-		nd.GetNetProxyClnt().AllowConnectionsFromAllRealms()
+		nd.GetDialProxyClnt().AllowConnectionsFromAllRealms()
 		db.DPrintf(db.ALWAYS, "SetRootNamed %v ep %v", nd.realm, ep)
 		if err := nd.fs.SetRootNamed(ep); err != nil {
 			db.DFatalf("SetNamed: %v", err)
@@ -223,9 +222,9 @@ func (nd *Named) newSrv() (*sp.Tendpoint, error) {
 	root := rootDir(nd.fs, nd.realm)
 	var addr *sp.Taddr
 	var aaf protsrv.AttachAuthF
-	// If this is a root named, or we are running without overlays, don't do
+	// If this is a root named, don't do
 	// anything special.
-	if nd.realm == sp.ROOTREALM || !nd.ProcEnv().GetOverlays() {
+	if nd.realm == sp.ROOTREALM {
 		addr = sp.NewTaddr(ip, sp.INNER_CONTAINER_IP, sp.NO_PORT)
 		// Allow all realms to attach to dirs mounted from the root named, as well as RPC dir, since it is needed to take out leases
 		allowedDirs := []string{rpc.RPC}
@@ -234,8 +233,7 @@ func (nd *Named) newSrv() (*sp.Tendpoint, error) {
 		}
 		aaf = protsrv.AttachAllowAllPrincipalsSelectPaths(allowedDirs)
 	} else {
-		db.DPrintf(db.NAMED, "[%v] Listeing on overlay public port: %v:%v", nd.realm, nd.ProcEnv().GetOuterContainerIP(), port.PUBLIC_NAMED_PORT)
-		addr = sp.NewTaddr(ip, sp.INNER_CONTAINER_IP, port.PUBLIC_NAMED_PORT)
+		addr = sp.NewTaddr(ip, sp.INNER_CONTAINER_IP, sp.NO_PORT)
 		aaf = protsrv.AttachAllowAllToAll
 	}
 	ssrv, err := sigmasrv.NewSigmaSrvRootClntAuthFn(root, addr, "", nd.SigmaClnt, aaf)
@@ -249,17 +247,6 @@ func (nd *Named) newSrv() (*sp.Tendpoint, error) {
 	nd.SigmaSrv = ssrv
 
 	ep := nd.GetEndpoint()
-	// If running with overlays, and this isn't the root named, fix up the
-	// endpoint.
-	if nd.realm != sp.ROOTREALM && nd.ProcEnv().GetOverlays() {
-		pm, err := port.GetPublicPortBinding(nd.FsLib, sp.PUBLIC_NAMED_PORT)
-		if err != nil {
-			db.DFatalf("Error get port binding: %v", err)
-		}
-		// Fix up the endpoint to use the public port and IP address
-		ep.Addrs()[0].IPStr = nd.ProcEnv().GetOuterContainerIP().String()
-		ep.Addrs()[0].PortInt = uint32(pm.HostPort)
-	}
 	db.DPrintf(db.NAMED, "newSrv %v %v %v %v %v", nd.realm, addr, ssrv.GetEndpoint(), nd.elect.Key(), ep)
 	return ep, nil
 }
@@ -315,7 +302,7 @@ func (nd *Named) watchLeased() {
 }
 
 // XXX same as initRootDir?
-var warmRootDir = []string{sp.BOOT, sp.KPIDS, sp.MEMFS, sp.LCSCHED, sp.BESCHED, sp.SCHEDD, sp.UX, sp.S3, sp.DB, sp.MONGO, sp.REALM, sp.CHUNKD}
+var warmRootDir = []string{sp.BOOT, sp.KPIDS, sp.MEMFS, sp.LCSCHED, sp.BESCHED, sp.MSCHED, sp.UX, sp.S3, sp.DB, sp.MONGO, sp.REALM, sp.CHUNKD}
 
 func (nd *Named) warmCache() error {
 	for _, n := range warmRootDir {

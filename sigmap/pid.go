@@ -1,7 +1,7 @@
 package sigmap
 
 import (
-	"sigmaos/rand"
+	"sigmaos/util/rand"
 )
 
 func GenPid(program string) Tpid {

@@ -9,7 +9,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/path"
-	"sigmaos/refmap"
+	"sigmaos/util/refmap"
 )
 
 //

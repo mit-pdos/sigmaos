@@ -1,0 +1,48 @@
+syntax = "proto3";
+
+option go_package = "sigmaos/apps/socialnetwork/proto";
+
+service GraphService {
+	rpc GetFollowers(GetFollowersRequest) returns (GraphGetResponse);
+	rpc GetFollowees(GetFolloweesRequest) returns (GraphGetResponse);
+	rpc Follow(FollowRequest) returns (GraphUpdateResponse);
+	rpc Unfollow(UnfollowRequest) returns (GraphUpdateResponse);
+	rpc FollowWithUname(FollowWithUnameRequest) returns (GraphUpdateResponse);
+	rpc UnfollowWithUname(UnfollowWithUnameRequest) returns (GraphUpdateResponse);
+}
+
+message GetFollowersRequest {
+	int64 followeeid = 1;
+}
+
+message GetFolloweesRequest {
+	int64 followerid = 1;
+}
+
+message GraphGetResponse {
+	string ok = 1;
+	repeated int64 userids = 2;
+}
+
+message FollowRequest { int64 followerid = 1;
+	int64 followeeid = 2;
+}
+
+message UnfollowRequest {
+	int64 followerid = 1;
+	int64 followeeid = 2;
+}
+
+message FollowWithUnameRequest {
+	string followeruname = 1;
+	string followeeuname = 2;
+}
+
+message UnfollowWithUnameRequest {
+	string followeruname = 1;
+	string followeeuname = 2;
+}
+
+message GraphUpdateResponse {
+	string ok = 1;
+}

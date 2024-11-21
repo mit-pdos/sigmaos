@@ -11,7 +11,7 @@ import (
 	"sigmaos/rpcclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmarpcchan"
-	"sigmaos/syncmap"
+	"sigmaos/util/syncmap"
 )
 
 type LeaseClnt struct {

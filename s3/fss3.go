@@ -12,7 +12,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/path"
-	"sigmaos/perf"
+	"sigmaos/util/perf"
 	proc "sigmaos/proc"
 	"sigmaos/serr"
 	"sigmaos/sigmaclnt"

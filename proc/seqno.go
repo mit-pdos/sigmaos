@@ -1,9 +1,9 @@
 package proc
 
-func NewProcSeqno(procqID, scheddID string, epoch, seqno uint64) *ProcSeqno {
+func NewProcSeqno(procqID, mschedID string, epoch, seqno uint64) *ProcSeqno {
 	return &ProcSeqno{
 		ProcqID:  procqID,
-		ScheddID: scheddID,
+		MSchedID: mschedID,
 		Epoch:    epoch,
 		Seqno:    seqno,
 	}

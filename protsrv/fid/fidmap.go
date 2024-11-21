@@ -5,7 +5,7 @@ import (
 
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
-	"sigmaos/syncmap"
+	"sigmaos/util/syncmap"
 )
 
 type FidMap struct {

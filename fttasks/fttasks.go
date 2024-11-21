@@ -10,9 +10,9 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/fslib/dirreader"
-	rd "sigmaos/rand"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
+	rd "sigmaos/util/rand"
 )
 
 const (

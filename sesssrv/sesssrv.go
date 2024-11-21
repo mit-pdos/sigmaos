@@ -8,7 +8,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/demux"
-	"sigmaos/netproxyclnt"
+	dialproxyclnt "sigmaos/dialproxy/clnt"
 	"sigmaos/netsrv"
 	"sigmaos/proc"
 	"sigmaos/serr"
@@ -38,7 +38,7 @@ type SessSrv struct {
 	qlen  stats.Tcounter
 }
 
-func NewSessSrv(pe *proc.ProcEnv, npc *netproxyclnt.NetProxyClnt, addr *sp.Taddr, stats *stats.StatInode, newSess NewSessionI) *SessSrv {
+func NewSessSrv(pe *proc.ProcEnv, npc *dialproxyclnt.DialProxyClnt, addr *sp.Taddr, stats *stats.StatInode, newSess NewSessionI) *SessSrv {
 	ssrv := &SessSrv{
 		pe:    pe,
 		stats: stats,

@@ -5,7 +5,7 @@ import (
 
 	raft "go.etcd.io/etcd/raft/v3"
 
-	"sigmaos/netproxyclnt"
+	dialproxyclnt "sigmaos/dialproxy/clnt"
 	"sigmaos/proc"
 	"sigmaos/repl"
 	replproto "sigmaos/repl/proto"
@@ -17,7 +17,7 @@ type RaftReplServer struct {
 	clerk *Clerk
 }
 
-func NewRaftReplServer(npc *netproxyclnt.NetProxyClnt, pe *proc.ProcEnv, id int, peerEPs []*sp.Tendpoint, l net.Listener, init bool, apply repl.Tapplyf) (*RaftReplServer, error) {
+func NewRaftReplServer(npc *dialproxyclnt.DialProxyClnt, pe *proc.ProcEnv, id int, peerEPs []*sp.Tendpoint, l net.Listener, init bool, apply repl.Tapplyf) (*RaftReplServer, error) {
 	var err error
 	srv := &RaftReplServer{}
 	peers := []raft.Peer{}

@@ -17,7 +17,7 @@ import (
 	"sigmaos/namesrv/fsetcd"
 	"sigmaos/netsigma"
 	"sigmaos/proc"
-	"sigmaos/realmclnt"
+	realmclnt "sigmaos/realm/clnt"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 )
@@ -35,11 +35,9 @@ var reuseKernel bool
 var noShutdown bool
 var tag string
 var EtcdIP string
-var Overlays bool
-var GVisor bool
 var useSPProxy bool
-var noNetProxy bool
-var noBootNetProxy bool
+var noDialProxy bool
+var noBootDialProxy bool
 var Withs3pathclnt bool
 
 func init() {
@@ -49,11 +47,9 @@ func init() {
 	flag.BoolVar(&Start, "start", false, "Start system")
 	flag.BoolVar(&reuseKernel, "reuse-kernel", false, "Reuse system, avoid restarting when possible")
 	flag.BoolVar(&noShutdown, "no-shutdown", false, "Don't shut down the system")
-	flag.BoolVar(&Overlays, "overlays", false, "Overlays")
-	flag.BoolVar(&GVisor, "gvisor", false, "GVisor")
 	flag.BoolVar(&useSPProxy, "usespproxy", false, "Use spproxy?")
-	flag.BoolVar(&noNetProxy, "nonetproxy", false, "Disable use of proxy for network dialing/listening?")
-	flag.BoolVar(&noBootNetProxy, "no-boot-netproxy", false, "Boot spproxy?")
+	flag.BoolVar(&noDialProxy, "nodialproxy", false, "Disable use of proxy for network dialing/listening?")
+	flag.BoolVar(&noBootDialProxy, "no-boot-dialproxy", false, "Boot spproxy?")
 	flag.BoolVar(&Withs3pathclnt, "withs3pathclnt", false, "With s3clntpath?")
 }
 
@@ -89,7 +85,7 @@ func NewTstateMinAddr(t *testing.T, addr *sp.Taddr) *TstateMin {
 	if !assert.Nil(t, err, "Error NewFsEtcdEndpoint: %v", err) {
 		return nil
 	}
-	pe := proc.NewTestProcEnv(sp.ROOTREALM, secrets, etcdMnt, lip, lip, "", false, false, false)
+	pe := proc.NewTestProcEnv(sp.ROOTREALM, secrets, etcdMnt, lip, lip, "", false, false)
 	pe.Program = "srv"
 	pe.SetPrincipal(sp.NewPrincipal("srv", sp.ROOTREALM))
 	proc.SetSigmaDebugPid(pe.GetPID().String())
@@ -121,9 +117,6 @@ type Tstate struct {
 }
 
 func NewTstatePath(t *testing.T, path string) (*Tstate, error) {
-	if Overlays && EtcdIP == "127.0.0.1" {
-		return nil, fmt.Errorf("Overlays set, but etcdIP not set")
-	}
 	ts, err := newSysClntPath(t, path)
 	if err != nil {
 		db.DPrintf(db.ERROR, "NewTstatePath: %v\n", err)
@@ -198,14 +191,14 @@ func newSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 		return nil, err
 	}
 	secrets := map[string]*sp.SecretProto{"s3": s3secrets}
-	useNetProxy := !noNetProxy
-	pe := proc.NewTestProcEnv(sp.ROOTREALM, secrets, etcdMnt, localIP, localIP, tag, Overlays, useSPProxy, useNetProxy)
+	useDialProxy := !noDialProxy
+	pe := proc.NewTestProcEnv(sp.ROOTREALM, secrets, etcdMnt, localIP, localIP, tag, useSPProxy, useDialProxy)
 	proc.SetSigmaDebugPid(pe.GetPID().String())
 	var kernelid string
 	var k *bootkernelclnt.Kernel
 	if Start {
 		kernelid = bootkernelclnt.GenKernelId()
-		_, err := bootkernelclnt.Start(kernelid, sp.Tip(EtcdIP), pe, srvs, Overlays, GVisor, useNetProxy)
+		_, err := bootkernelclnt.Start(kernelid, sp.Tip(EtcdIP), pe, srvs, useDialProxy)
 		if err != nil {
 			db.DPrintf(db.ALWAYS, "Error start kernel")
 			return nil, err
@@ -213,10 +206,10 @@ func newSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 	}
 	var scsck *bootkernelclnt.Kernel
 	var sckid string
-	if !noBootNetProxy && (useSPProxy || useNetProxy) {
-		db.DPrintf(db.BOOT, "Booting spproxyd: usespproxyd %v usenetproxy %v", useSPProxy, useNetProxy)
+	if !noBootDialProxy && (useSPProxy || useDialProxy) {
+		db.DPrintf(db.BOOT, "Booting spproxyd: usespproxyd %v usedialproxy %v", useSPProxy, useDialProxy)
 		sckid = sp.SPProxydKernel(bootkernelclnt.GenKernelId())
-		_, err := bootkernelclnt.Start(sckid, sp.Tip(EtcdIP), pe, sp.SPPROXYDREL, Overlays, GVisor, useNetProxy)
+		_, err := bootkernelclnt.Start(sckid, sp.Tip(EtcdIP), pe, sp.SPPROXYDREL, useDialProxy)
 		if err != nil {
 			db.DPrintf(db.ALWAYS, "Error start kernel for spproxyd")
 			return nil, err
@@ -252,12 +245,12 @@ func (ts *Tstate) BootNode(n int) error {
 }
 
 func (ts *Tstate) bootNode(n int, nodetype string) error {
-	useNetProxy := !noNetProxy
+	useDialProxy := !noDialProxy
 	// Clear the saved kernel, since the next test may not need an additional
 	// node
 	savedTstate = nil
 	for i := 0; i < n; i++ {
-		kclnt, err := bootkernelclnt.NewKernelClntStart(sp.Tip(EtcdIP), ts.ProcEnv(), nodetype, Overlays, GVisor, useNetProxy)
+		kclnt, err := bootkernelclnt.NewKernelClntStart(sp.Tip(EtcdIP), ts.ProcEnv(), nodetype, useDialProxy)
 		if err != nil {
 			return err
 		}

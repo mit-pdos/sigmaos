@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+import "tracing/proto/tracing.proto";
+
+option go_package = "sigmaos/apps/hotel/proto";
+
+service Rec {
+  rpc GetRecs(RecRequest) returns (RecResult);
+}
+
+message RecRequest {
+  string require = 1;
+  double lat = 2;
+  double lon = 3;
+  SpanContextConfig spanContextConfig = 4;
+}
+
+message RecResult {
+  repeated string hotelIds = 1;
+}

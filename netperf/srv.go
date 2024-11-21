@@ -31,8 +31,8 @@ func RunSrv(args []string) error {
 	switch op {
 	case "dial":
 		go func() {
-			if err := SrvDialNetProxy(ch, ntrial, sc.GetNetProxyClnt(), addr, sp.INTERNAL_EP); err != nil {
-				db.DFatalf("Err SrvDialNetProxy: %v", err)
+			if err := SrvDialDialProxy(ch, ntrial, sc.GetDialProxyClnt(), addr, sp.INTERNAL_EP); err != nil {
+				db.DFatalf("Err SrvDialDialProxy: %v", err)
 			}
 			ch <- true
 		}()

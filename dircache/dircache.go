@@ -16,7 +16,7 @@ import (
 	"sigmaos/namesrv/fsetcd"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
-	"sigmaos/sortedmap"
+	"sigmaos/util/sortedmap"
 )
 
 type NewValF[E any] func(string) (E, error)

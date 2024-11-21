@@ -13,7 +13,7 @@ import (
 	"sigmaos/fs"
 	"sigmaos/memfs/inode"
 	"sigmaos/path"
-	"sigmaos/perf"
+	"sigmaos/util/perf"
 	"sigmaos/serr"
 	"sigmaos/sessp"
 	sp "sigmaos/sigmap"

@@ -61,7 +61,7 @@ func NewUprocdMgr(fsl *fslib.FsLib, kernelId string) *UprocdMgr {
 		if err != nil {
 			db.DFatalf("Err UprocdMgr Can't make kernelclnt: %v", err)
 		}
-		if err := updm.fsl.MkDir(filepath.Join(sp.SCHEDD, updm.kernelId, sp.UPROCDREL), 0777); err != nil {
+		if err := updm.fsl.MkDir(filepath.Join(sp.MSCHED, updm.kernelId, sp.UPROCDREL), 0777); err != nil {
 			db.DFatalf("Err mkdir for uprocds: %v", err)
 		}
 		updm.kclnt = kclnt
@@ -135,7 +135,7 @@ func (updm *UprocdMgr) startUprocd() (sp.Tpid, *UprocdClnt) {
 	if err != nil {
 		db.DFatalf("Error Boot Uprocd: %v", err)
 	}
-	pn := filepath.Join(sp.SCHEDD, updm.kernelId, sp.UPROCDREL, pid.String())
+	pn := filepath.Join(sp.MSCHED, updm.kernelId, sp.UPROCDREL, pid.String())
 	rc, err := sigmarpcchan.NewSigmaRPCClnt([]*fslib.FsLib{updm.fsl}, pn)
 	if err != nil {
 		db.DPrintf(db.ERROR, "Error Make RPCClnt Uprocd: %v", err)

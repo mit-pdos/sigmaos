@@ -11,7 +11,7 @@ import (
 
 func (clnt *ProcClnt) getExitStatus(pid sp.Tpid, how proc.Thow) (*proc.Status, error) {
 	status := clnt.cs.GetExitStatus(pid)
-	if how == proc.HSCHEDD {
+	if how == proc.HMSCHED {
 		// Status will be cached in the child state struct
 		return status, nil
 	} else {
@@ -29,7 +29,7 @@ func (clnt *ProcClnt) getExitStatus(pid sp.Tpid, how proc.Thow) (*proc.Status, e
 }
 
 func (clnt *ProcClnt) writeExitStatus(pid sp.Tpid, kernelID string, status *proc.Status, how proc.Thow) error {
-	if how == proc.HSCHEDD {
+	if how == proc.HMSCHED {
 		// Do nothing... exit status will be set by Notify RPC to schedd.
 	} else {
 		// Must write status to kproc dir

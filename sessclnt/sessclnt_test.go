@@ -15,11 +15,11 @@ import (
 	"sigmaos/demux"
 	"sigmaos/memfs"
 	"sigmaos/memfs/dir"
-	"sigmaos/netproxyclnt"
+	dialproxyclnt "sigmaos/dialproxy/clnt"
 	"sigmaos/netsrv"
 	"sigmaos/path"
 	"sigmaos/protsrv"
-	"sigmaos/rand"
+	"sigmaos/util/rand"
 	"sigmaos/serr"
 	"sigmaos/sessclnt"
 	"sigmaos/sessp"
@@ -97,14 +97,14 @@ type TstateSrv struct {
 
 func newTstateClntAddr(t *testing.T, addr *sp.Taddr, crash int) *TstateSrv {
 	ts := &TstateSrv{TstateMin: test.NewTstateMinAddr(t, addr), crash: crash}
-	ts.clnt = sessclnt.NewMgr(ts.PE, netproxyclnt.NewNetProxyClnt(ts.PE))
+	ts.clnt = sessclnt.NewMgr(ts.PE, dialproxyclnt.NewDialProxyClnt(ts.PE))
 	return ts
 }
 
 func newTstateSrvAddr(t *testing.T, addr *sp.Taddr, crash int) *TstateSrv {
 	ts := newTstateClntAddr(t, addr, crash)
 	db.DPrintf(db.ALWAYS, "pe: %v", ts.PE)
-	ts.srv = netsrv.NewNetServer(ts.PE, netproxyclnt.NewNetProxyClnt(ts.PE), ts.Addr, ts)
+	ts.srv = netsrv.NewNetServer(ts.PE, dialproxyclnt.NewDialProxyClnt(ts.PE), ts.Addr, ts)
 	db.DPrintf(db.TEST, "srv %v\n", ts.srv.GetEndpoint())
 	return ts
 }
@@ -457,8 +457,8 @@ func newTstateSp(t *testing.T) *TstateSp {
 	ts := &TstateSp{}
 	ts.TstateMin = test.NewTstateMin(t)
 	root := dir.NewRootDir(ctx.NewCtxNull(), memfs.NewInode, nil)
-	ts.srv = sigmapsrv.NewSigmaPSrv(ts.PE, netproxyclnt.NewNetProxyClnt(ts.PE), root, ts.Addr, nil, protsrv.AttachAllowAllToAll)
-	ts.clnt = sessclnt.NewMgr(ts.PE, netproxyclnt.NewNetProxyClnt(ts.PE))
+	ts.srv = sigmapsrv.NewSigmaPSrv(ts.PE, dialproxyclnt.NewDialProxyClnt(ts.PE), root, ts.Addr, nil, protsrv.AttachAllowAllToAll)
+	ts.clnt = sessclnt.NewMgr(ts.PE, dialproxyclnt.NewDialProxyClnt(ts.PE))
 	return ts
 }
 

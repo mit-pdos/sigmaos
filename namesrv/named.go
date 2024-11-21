@@ -35,7 +35,6 @@ type Named struct {
 	realm  sp.Trealm
 	crash  int
 	sess   *fsetcd.Session
-	signer sp.Tsigner
 	pstats *fsetcd.PstatInode
 	ephch  chan path.Tpathname
 }
@@ -69,7 +68,6 @@ func Run(args []string) error {
 	}
 
 	nd := newNamed(sp.Trealm(args[1]))
-	nd.signer = sp.Tsigner(pe.GetPID())
 	crashing, err := strconv.Atoi(args[2])
 	if err != nil {
 		return fmt.Errorf("%v: crash %v isn't int", args[0], args[1])

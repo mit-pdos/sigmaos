@@ -35,8 +35,6 @@ func RunKNamed(args []string) error {
 
 	init := args[2]
 
-	nd.signer = sp.Tsigner(nd.SigmaClnt.ProcEnv().GetKernelID())
-
 	db.DPrintf(db.NAMED, "started %v %v", pe.GetPID(), nd.realm)
 
 	w := os.NewFile(uintptr(3), "pipew")

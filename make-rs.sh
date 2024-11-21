@@ -62,24 +62,13 @@ eval $build
 
 # Copy Python executable
 cp cpython3.11/python $OUTPATH/kernel
-cp cpython3.11/python $OUTPATH/user
 cp cpython3.11/pybuilddir.txt $OUTPATH/kernel
-cp cpython3.11/pybuilddir.txt $OUTPATH/user
 cp -r cpython3.11/Lib $OUTPATH/kernel
-cp -r cpython3.11/Lib $OUTPATH/user
 echo "/tmp/python/Lib" > $OUTPATH/kernel/python._pth
-echo "/tmp/python/Lib" > $OUTPATH/user/python._pth
 # cp cpython3.11/python $OUTPATH/user
-# cp cpython3.11/Lib $OUTPATH/user -r
-
-# Copy Python executable
-# cp Python-3.11.0/python $OUTPATH/kernel
-# cp Python-3.11.0/python $OUTPATH/user
-# echo "/tmp/python/lib" > $OUTPATH/user/python._pth
-
-# Copy pybuilddir.txt
-# cp Python-3.11.0/pybuilddir.txt $OUTPATH/kernel
-# cp Python-3.11.0/pybuilddir.txt $OUTPATH/user
+# cp cpython3.11/pybuilddir.txt $OUTPATH/user
+# cp -r cpython3.11/Lib $OUTPATH/user
+# echo "/tmp/python/Lib" > $OUTPATH/user/python._pth
 
 # Copy and inject Python libs
 # cp ./pylib/splib.py Python-3.11.0/Lib

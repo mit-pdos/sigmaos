@@ -36,6 +36,7 @@ func TestPythonLaunch(t *testing.T) {
 	assert.Nil(ts.T, err)
 	duration := time.Since(start)
 	err = ts.WaitStart(p.GetPid())
+	// time.Sleep(10 * time.Second)
 	assert.Nil(ts.T, err, "Error waitstart: %v", err)
 	duration2 := time.Since(start)
 	return

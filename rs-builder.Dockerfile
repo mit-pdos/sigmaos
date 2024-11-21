@@ -21,8 +21,6 @@ RUN mkdir -p bin/kernel && \
   mkdir -p bin/user
 
 # Install Python
-ENV PYTHONHOME=/tmp/python
-ENV PYTHONPATH=/tmp/python/Lib
 RUN git clone https://github.com/ivywu2003/cpython.git cpython3.11 && \
   cd cpython3.11 && \ 
   git checkout 3.11 && \

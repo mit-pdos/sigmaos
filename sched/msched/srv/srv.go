@@ -34,7 +34,7 @@ type MSched struct {
 	pmgr                *procmgr.ProcMgr
 	mschedclnt          *mschedclnt.MSchedClnt
 	beschedclnt         *beschedclnt.BESchedClnt
-	pqsess              *syncmap.SyncMap[string, *ProcqSession]
+	pqsess              *syncmap.SyncMap[string, *BESchedSession]
 	mcpufree            proc.Tmcpu
 	memfree             proc.Tmem
 	kernelID            string
@@ -50,7 +50,7 @@ type MSched struct {
 func NewMSched(sc *sigmaclnt.SigmaClnt, kernelID string, reserveMcpu uint) *MSched {
 	msched := &MSched{
 		pmgr:        procmgr.NewProcMgr(sc, kernelID),
-		pqsess:      syncmap.NewSyncMap[string, *ProcqSession](),
+		pqsess:      syncmap.NewSyncMap[string, *BESchedSession](),
 		scheddStats: make(map[sp.Trealm]*realmStats),
 		mcpufree:    proc.Tmcpu(1000*linuxsched.GetNCores() - reserveMcpu),
 		memfree:     mem.GetTotalMem(),
@@ -64,15 +64,15 @@ func NewMSched(sc *sigmaclnt.SigmaClnt, kernelID string, reserveMcpu uint) *MSch
 		func(pqID string) {
 			// When a new procq client is created, advance the epoch for the
 			// corresponding procq
-			pqsess, _ := msched.pqsess.AllocNew(pqID, func(pqID string) *ProcqSession {
-				return NewProcqSession(pqID, msched.kernelID)
+			pqsess, _ := msched.pqsess.AllocNew(pqID, func(pqID string) *BESchedSession {
+				return NewBESchedSession(pqID, msched.kernelID)
 			})
 			pqsess.AdvanceEpoch()
 		},
 		func(pqID string) *proc.ProcSeqno {
 			// Get the next proc seqno for a given procq
-			pqsess, _ := msched.pqsess.AllocNew(pqID, func(pqID string) *ProcqSession {
-				return NewProcqSession(pqID, msched.kernelID)
+			pqsess, _ := msched.pqsess.AllocNew(pqID, func(pqID string) *BESchedSession {
+				return NewBESchedSession(pqID, msched.kernelID)
 			})
 			return pqsess.NextSeqno()
 		},
@@ -216,8 +216,8 @@ func (msched *MSched) gotProc(procSeqno *proc.ProcSeqno) {
 	// want to wait on that proc can now expect the state for that proc to exist
 	// at schedd. Set the seqno (which should be monotonically increasing) to
 	// release the clients, and allow schedd to handle the wait.
-	pqsess, _ := msched.pqsess.AllocNew(procSeqno.GetProcqID(), func(pqID string) *ProcqSession {
-		return NewProcqSession(pqID, msched.kernelID)
+	pqsess, _ := msched.pqsess.AllocNew(procSeqno.GetProcqID(), func(pqID string) *BESchedSession {
+		return NewBESchedSession(pqID, msched.kernelID)
 	})
 	pqsess.Got(procSeqno)
 }
@@ -230,8 +230,8 @@ func (msched *MSched) waitUntilGotProc(pseqno *proc.ProcSeqno) error {
 	if pseqno.GetEpoch() == 0 {
 		return nil
 	}
-	pqsess, _ := msched.pqsess.AllocNew(pseqno.GetProcqID(), func(pqID string) *ProcqSession {
-		return NewProcqSession(pqID, msched.kernelID)
+	pqsess, _ := msched.pqsess.AllocNew(pseqno.GetProcqID(), func(pqID string) *BESchedSession {
+		return NewBESchedSession(pqID, msched.kernelID)
 	})
 	return pqsess.WaitUntilGot(pseqno)
 }

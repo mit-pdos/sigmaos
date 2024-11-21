@@ -138,7 +138,7 @@ if [ -z "$rsbuildercid" ]; then
   # Start builder
   echo "========== Starting Rust builder container =========="
   docker run --rm -d -it \
-    --mount type=bind,src=$ROOT,dst=/home/sigmaos/ \
+    --mount type=bind,src=$ROOT,dst=/home/sigmaos-local/ \
     sig-rs-builder
   rsbuildercid=$(docker ps -a | grep -w "sig-rs-builder" | cut -d " " -f1)
   until [ "`docker inspect -f {{.State.Running}} $rsbuildercid`"=="true" ]; do
@@ -195,7 +195,7 @@ echo "========== Building Rust bins =========="
 BUILD_OUT_FILE=$BUILD_LOG/make-user-rs.out
 docker exec -it $rsbuildercid \
   /usr/bin/time -f "Build time: %e sec" \
-  ./make-rs.sh $RS_BUILD_ARGS --version $VERSION \
+  ../sigmaos-local/make-rs.sh $RS_BUILD_ARGS --version $VERSION \
   2>&1 | tee $BUILD_OUT_FILE && \
   if [ ${PIPESTATUS[0]} -ne 0 ]; then
     printf "\n!!!!!!!!!! BUILD ERROR !!!!!!!!!!\nLogs in: $BUILD_OUT_FILE\n" \
@@ -214,7 +214,7 @@ if [ "${TARGET}" == "local" ]; then
   cp $KERNELBIN/spproxyd $UPROCD_BIN/
   cp $KERNELBIN/exec-uproc-rs $UPROCD_BIN/
   cp $KERNELBIN/python $UPROCD_BIN/
-  cp -r $KERNELBIN/pylib $PYTHON/
+  cp -r $KERNELBIN/Lib $PYTHON/
   cp $KERNELBIN/ld_fstatat.so $PYTHON/
 fi
 echo "========== Done copying kernel bins for uproc =========="

@@ -82,7 +82,7 @@ func (scs *SPProxySrv) runServer() error {
 		os.Remove(sp.SIGMASOCKET)
 		scs.fidc.Close()
 		scs.nps.Shutdown()
-		// scs.pps.Shutdown()
+		scs.pps.Shutdown()
 		os.Exit(0)
 	}()
 

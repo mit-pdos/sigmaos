@@ -82,7 +82,6 @@ fn main() {
     let pyproxy_conn_fd = pyproxy_conn.into_raw_fd();
     fcntl::fcntl(pyproxy_conn_fd, FcntlArg::F_SETFD(FdFlag::empty())).unwrap();
     env::set_var("SIGMA_PYPROXY_FD", pyproxy_conn_fd.to_string());
-    env::set_var("PWD", "/tmp/python/pylib/Lib");
     print_elapsed_time("trampoline.connect_pyproxy", now, false);
     now = SystemTime::now();
     seccomp_proc(netproxy).expect("seccomp failed");

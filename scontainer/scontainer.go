@@ -41,6 +41,7 @@ func StartSigmaContainer(uproc *proc.Proc, netproxy bool) (*uprocCmd, error) {
 	pn := binsrv.BinPath(stringProg)
 	// Optionally strace the proc
 	if straceProcs[uproc.GetProgram()] {
+		db.DPrintf(db.CONTAINER, "strace %v", uproc.GetProgram())
 		cmd = exec.Command("strace", append([]string{"-D", "-f", "exec-uproc-rs", uproc.GetPid().String(), pn, strconv.FormatBool(netproxy)}, uproc.Args...)...)
 	} else {
 		cmd = exec.Command("exec-uproc-rs", append([]string{uproc.GetPid().String(), pn, strconv.FormatBool(netproxy)}, uproc.Args...)...)
@@ -49,9 +50,9 @@ func StartSigmaContainer(uproc *proc.Proc, netproxy bool) (*uprocCmd, error) {
 	uproc.AppendEnv("SIGMA_EXEC_TIME", strconv.FormatInt(time.Now().UnixMicro(), 10))
 	uproc.AppendEnv("SIGMA_SPAWN_TIME", strconv.FormatInt(uproc.GetSpawnTime().UnixMicro(), 10))
 	uproc.AppendEnv(proc.SIGMAPERF, uproc.GetProcEnv().GetPerf())
-	uproc.AppendEnv("PYTHONHOME", "/tmp/python/pylib/Lib")
+	uproc.AppendEnv("PYTHONHOME", "/tmp/python/Lib")
 	// uproc.AppendEnv("PYTHONPATH", "/~~/pylib/Lib")
-	uproc.AppendEnv("PYTHONPATH", "/tmp/python/pylib/Lib")
+	uproc.AppendEnv("PYTHONPATH", "/tmp/python/Lib")
 	uproc.AppendEnv("LD_PRELOAD", "/tmp/python/ld_fstatat.so")
 	// uproc.AppendEnv("RUST_BACKTRACE", "1")
 	cmd.Env = uproc.GetEnv()

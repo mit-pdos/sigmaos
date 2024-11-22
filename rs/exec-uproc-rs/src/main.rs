@@ -272,6 +272,8 @@ struct Cond {
 }
 
 fn seccomp_proc(netproxy: String) -> Result<(), Box<dyn std::error::Error>> {
+    // return Ok(());
+
     use libseccomp::*;
 
     // XXX Should really be 64 syscalls. We can remove ioctl, poll, and lstat,

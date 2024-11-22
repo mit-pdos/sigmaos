@@ -214,7 +214,6 @@ if [ "${TARGET}" == "local" ]; then
   cp $KERNELBIN/spproxyd $UPROCD_BIN/
   cp $KERNELBIN/exec-uproc-rs $UPROCD_BIN/
   cp $KERNELBIN/python $UPROCD_BIN/
-  cp -r $KERNELBIN/Lib $UPROCD_BIN/
   cp -r $KERNELBIN/Lib $PYTHON/
   cp $KERNELBIN/ld_fstatat.so $PYTHON/
 fi

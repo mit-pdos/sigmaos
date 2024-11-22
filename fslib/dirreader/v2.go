@@ -180,14 +180,14 @@ func (dr *DirReaderV2) readDirWatch(watch FwatchV2) error {
 	defer dr.Unlock()
 
 	for watch(dr.ents, dr.changes) {
-		clear(dr.changes)
+		dr.changes = make(map[string]bool)
 		err := dr.ReadUpdates()
 		if err != nil {
 			db.DPrintf(db.WATCH_V2, "readDirWatch: ReadUpdates failed %v", err)
 			return err
 		}
 	}
-	clear(dr.changes)
+	dr.changes = make(map[string]bool)
 
 	return nil
 }

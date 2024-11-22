@@ -104,7 +104,7 @@ func (w *PerfWorker) Run() {
 				w.waitForWatchFile(filename, false)
 				ch <- true
 			}()
-			time.Sleep(10 * time.Millisecond)
+			time.Sleep(100 * time.Millisecond)
 			w.sendSignal(trial, false)
 			<- ch
 		} else {
@@ -127,7 +127,7 @@ func (w *PerfWorker) Run() {
 				w.waitForWatchFile(filename, true)
 				ch <- true
 			}()
-			time.Sleep(10 * time.Millisecond)
+			time.Sleep(100 * time.Millisecond)
 			w.sendSignal(trial, true)
 			<- ch
 		} else {

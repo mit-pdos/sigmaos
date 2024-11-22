@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"sigmaos/proc"
 	"sigmaos/test"
+	"sort"
 	"strconv"
 	"strings"
 	"testing"
@@ -48,6 +49,7 @@ type Stats struct {
 	Max int64
 	Min int64
 	Stddev float64
+	Median int64
 }
 
 func flatten(data [][]time.Duration) []time.Duration {
@@ -76,11 +78,16 @@ func computeStats(data []time.Duration) Stats {
 	stddev /= float64(len(data))
 	stddev = math.Sqrt(stddev)
 
-	return Stats{average, maxT, minT, stddev}
+	sort.Slice(data, func (i, j int) bool {
+		return data[i] < data[j]
+	})
+	median := data[len(data) / 2].Nanoseconds()
+
+	return Stats{average, maxT, minT, stddev, median}
 }
 
 func (s Stats) String() string {
-	return fmt.Sprintf("Avg: %f us\nMax: %f us\nMin: %f us\nStddev: %f us", s.Average / 1000.0, float64(s.Max) / 1000.0, float64(s.Min) / 1000.0, s.Stddev / 1000.0)
+	return fmt.Sprintf("Avg: %f us\nMax: %f us\nMin: %f us\nStddev: %f us\nMedian %f\n", s.Average / 1000.0, float64(s.Max) / 1000.0, float64(s.Min) / 1000.0, s.Stddev / 1000.0, float64(s.Median) / 1000.0)
 }
 
 func dataString(data []time.Duration) string {
@@ -91,14 +98,19 @@ func dataString(data []time.Duration) string {
 	return str
 }
 
-func testPerf(t *testing.T, nWorkers int, nStartingFiles int, nTrials int, prefix string) {
+func testPerf(t *testing.T, nWorkers int, nStartingFiles int, nTrials int, prefix string, useUx bool) {
 	ts, err := test.NewTstateAll(t)
 
 	if !assert.Nil(t, err, "Error New Tstate: %v", err) {
 		return
 	}
-
-	basedir := filepath.Join(sp.NAMED, "watchperf")
+	
+	var basedir string
+	if useUx {
+		basedir = filepath.Join(sp.UX, sp.LOCAL, "watchperf")
+	} else {
+		basedir = filepath.Join(sp.NAMED, "watchperf")
+	}
 
 	measureMode := os.Getenv("WATCHPERF_MEASURE_MODE")
 	if measureMode == "" {
@@ -157,20 +169,36 @@ func TestSumProgramStress(t *testing.T) {
 }
 
 // Use DIRREADER_VERSION and WATCHPERF_MEASURE_MODE to configure perf data
-func TestPerfSingleWorkerNoFiles(t *testing.T) {
-	testPerf(t, 1, 0, 250, "single_no_files")
+func TestPerfSingleWorkerNoFilesNamed(t *testing.T) {
+	testPerf(t, 1, 0, 250, "single_no_files_named", false)
 }
 
-func TestPerfSingleWorkerSomeFiles(t *testing.T) {
-	testPerf(t, 1, 100, 250, "single_some_files")
+func TestPerfSingleWorkerSomeFilesNamed(t *testing.T) {
+	testPerf(t, 1, 100, 250, "single_some_files_named", false)
 }
 
-func TestPerfSingleWorkerManyFiles(t *testing.T) {
-	testPerf(t, 1, 1000, 250, "single_many_files")
+func TestPerfSingleWorkerManyFilesNamed(t *testing.T) {
+	testPerf(t, 1, 1000, 250, "single_many_files_named", false)
 }
 
-func TestPerfMultipleWorkersNoFiles(t *testing.T) {
-	testPerf(t, 5, 0, 100, "multiple_no_files")
+func TestPerfMultipleWorkersNoFilesNamed(t *testing.T) {
+	testPerf(t, 5, 0, 100, "multiple_no_files_named", false)
+}
+
+func TestPerfSingleWorkerNoFilesLocal(t *testing.T) {
+	testPerf(t, 1, 0, 250, "single_no_files_local", true)
+}
+
+func TestPerfSingleWorkerSomeFilesLocal(t *testing.T) {
+	testPerf(t, 1, 100, 250, "single_some_files_local", true)
+}
+
+func TestPerfSingleWorkerManyFilesLocal(t *testing.T) {
+	testPerf(t, 1, 1000, 250, "single_many_files_local", true)
+}
+
+func TestPerfMultipleWorkersNoFilesLocal(t *testing.T) {
+	testPerf(t, 5, 0, 100, "multiple_no_files_local", true)
 }
 
 func runTest(t *testing.T, f func(*testing.T, *test.Tstate, string, dirreader.DirReader), timeoutSec int) {

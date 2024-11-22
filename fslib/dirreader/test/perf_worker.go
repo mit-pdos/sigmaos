@@ -22,7 +22,8 @@ type PerfWorker struct {
 	tempDir string;
 	signalDir string;
 	signalDirReader dirreader.DirReader;
-	measureMode MeasureMode
+	measureMode MeasureMode;
+	nStartFiles int;
 }
 
 func NewPerfWorker(args []string) (*PerfWorker, error) {
@@ -62,6 +63,11 @@ func NewPerfWorker(args []string) (*PerfWorker, error) {
 		return &PerfWorker{}, fmt.Errorf("NewPerfWorker: measure mode %s is invalid", args[6])
 	}
 
+	nStartFiles, err := strconv.Atoi(args[7])
+	if err != nil {
+		return &PerfWorker{}, fmt.Errorf("NewPerfWorker: nStartFiles %s is not an integer", args[7])
+	}
+
 	return &PerfWorker {
 		sc,
 		id,
@@ -73,30 +79,37 @@ func NewPerfWorker(args []string) (*PerfWorker, error) {
 		signalDir,
 		signalDirReader,
 		MeasureMode(measureMode),
+		nStartFiles,
 	}, nil
 }
 
 func (w *PerfWorker) Run() {
+	w.watchDirReader.WaitNEntries(w.nStartFiles)
+
 	idFilePath := filepath.Join(w.responseDir, w.id)
 	idFileFd, err := w.Create(idFilePath, 0777, sigmap.OAPPEND)
 	if err != nil {
 		db.DFatalf("Run %s: failed to create id file %v", w.id, err)
 	}
 
-	watchDirFd, err := w.Open(w.watchDir, 0777)
-	if err != nil {
-		db.DFatalf("Run %s: failed to open watchdir %s", w.id, w.watchDir)
-	}
-	if err != nil {
-		db.DFatalf("Run %s: failed to open signaldir %s", w.id, w.signalDir)
-	}
 	for trial := 0; trial < w.nTrials; trial++ {
 		filename := fmt.Sprintf("trial_%d", trial)
 
 		db.DPrintf(db.WATCH_PERF, "Run %s: Trial %d: waiting for file creation", w.id, trial)
 		w.waitForCoordSignal(trial, false)
 		preWatchTime := time.Now()
-		w.waitForWatchFile(filename, false)
+		if w.measureMode == IncludeFileOp {
+			ch := make(chan bool)
+			go func() {
+				w.waitForWatchFile(filename, false)
+				ch <- true
+			}()
+			time.Sleep(10 * time.Millisecond)
+			w.sendSignal(trial, false)
+			<- ch
+		} else {
+			w.waitForWatchFile(filename, false)
+		}
 		createdFileTime := time.Now()
 
 		if w.measureMode == JustWatch {
@@ -108,7 +121,18 @@ func (w *PerfWorker) Run() {
 		db.DPrintf(db.WATCH_PERF, "Run %s: Trial %d: waiting for file deletion", w.id, trial)
 		w.waitForCoordSignal(trial, true)
 		preWatchTime = time.Now()
-		w.waitForWatchFile(filename, true)
+		if w.measureMode == IncludeFileOp {
+			ch := make(chan bool)
+			go func() {
+				w.waitForWatchFile(filename, true)
+				ch <- true
+			}()
+			time.Sleep(10 * time.Millisecond)
+			w.sendSignal(trial, true)
+			<- ch
+		} else {
+			w.waitForWatchFile(filename, true)
+		}
 		deletedFileTime := time.Now()
 
 		if w.measureMode == JustWatch {
@@ -118,14 +142,19 @@ func (w *PerfWorker) Run() {
 		}
 	}
 
-	err = w.CloseFd(watchDirFd)
-	if err != nil {
-		db.DFatalf("Run %s: failed to close fd for watchDir %v", w.id, err)
-	}
-	
 	err = w.CloseFd(idFileFd)
 	if err != nil {
 		db.DFatalf("Run %s: failed to close fd for id file %v", w.id, err)
+	}
+
+	err = w.watchDirReader.Close()
+	if err != nil {
+		db.DFatalf("Run %s: failed to close watcher for %s, %v", w.id, w.watchDir, err)
+	}
+
+	err = w.signalDirReader.Close()
+	if err != nil {
+		db.DFatalf("Run %s: failed to close watcher for %s, %v", w.id, w.signalDir, err)
 	}
 	
 	status := proc.NewStatusInfo(proc.StatusOK, "", nil)
@@ -176,6 +205,15 @@ func (w *PerfWorker) respondWith(resp string, trialNum int, deleted bool) {
 	}
 
 	db.DPrintf(db.WATCH_PERF, "respondWithTime: id %s with resp %s to file %s", w.id, resp, realPath)
+}
+
+func (w *PerfWorker) sendSignal(trialNum int, deleted bool) {
+	signalPath := filepath.Join(w.signalDir, workerSignalName(trialNum, deleted, w.id))
+	fd, err := w.Create(signalPath, 0777, sigmap.OAPPEND)
+	if err != nil {
+		db.DFatalf("sendSignal: failed to create signal file %s, %v", signalPath, err)
+	}
+	w.CloseFd(fd)
 }
 
 func formatTime(t time.Time) string {

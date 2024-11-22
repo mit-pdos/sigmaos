@@ -116,7 +116,7 @@ func (c *PerfCoord) Run() {
 
 	for ix := 0; ix < c.nWorkers; ix++ {
 		go func (ix int) {
-			p := proc.NewProc("watchperf-worker", []string{strconv.Itoa(ix), strconv.Itoa(c.nTrials), c.watchDir, c.responseDir, c.tempDir, c.signalDir, strconv.Itoa(int(c.measureMode))})
+			p := proc.NewProc("watchperf-worker", []string{strconv.Itoa(ix), strconv.Itoa(c.nTrials), c.watchDir, c.responseDir, c.tempDir, c.signalDir, strconv.Itoa(int(c.measureMode)), strconv.Itoa(c.nStartFiles)})
 			err := c.Spawn(p)
 			if err != nil {
 				db.DFatalf("Run: spawning %d failed %v", ix, err)
@@ -142,17 +142,13 @@ func (c *PerfCoord) Run() {
 		db.DFatalf("Run: failed to wait for all procs to be ready %v", err)
 	}
 
-	responseDirFd, err := c.Open(c.responseDir, sigmap.OREAD)
-	if err != nil {
-		db.DFatalf("Run: failed to open response dir %v", err)
-	}
-
 	creationWatchDelays := make([][]time.Duration, c.nTrials)
 	deletionWatchDelays := make([][]time.Duration, c.nTrials)
 
 	for trial := 0; trial < c.nTrials; trial++ {
 		db.DPrintf(db.WATCH_PERF, "Run: Running trial %d", trial)
-		path := filepath.Join(c.watchDir, fmt.Sprintf("trial_%d", trial))
+		filename := fmt.Sprintf("trial_%d", trial)
+		path := filepath.Join(c.watchDir, filename)
 		signal_path_create := filepath.Join(c.signalDir, coordSignalName(trial, false))
 		signal_path_delete := filepath.Join(c.signalDir, coordSignalName(trial, true))
 
@@ -167,6 +163,11 @@ func (c *PerfCoord) Run() {
 			if err != nil {
 				db.DFatalf("Run: failed to create trial file %d, %v", trial, err)
 			}
+			// wait for us to see it locally before signaling the worker to watch
+			err := dirreader.WaitCreate(c.FsLib, path)
+			if err != nil {
+				db.DFatalf("Run: failed to wait for file creation %v", err)
+			}
 			_, err = c.Create(signal_path_create, 0777, sigmap.OAPPEND)
 			if err != nil {
 				db.DFatalf("Run: failed to create signal file %d, %v", trial, err)
@@ -175,6 +176,10 @@ func (c *PerfCoord) Run() {
 			_, err = c.Create(signal_path_create, 0777, sigmap.OAPPEND)
 			if err != nil {
 				db.DFatalf("Run: failed to create signal file %d, %v", trial, err)
+			}
+			// wait for all workers to signal that they have started watching
+			for ix := 0; ix < c.nWorkers; ix++ {
+				c.waitForWorkerSignal(trial, strconv.Itoa(ix), false)
 			}
 			creationStart = time.Now()
 			_, err = c.Create(path, 0777, sigmap.OAPPEND)
@@ -196,6 +201,11 @@ func (c *PerfCoord) Run() {
 			if err != nil {
 				db.DFatalf("Run: failed to delete trial file %d, %v", trial, err)
 			}
+			// wait for us to see it locally before signalling the worker to watch
+			err := dirreader.WaitRemove(c.FsLib, path)
+			if err != nil {
+				db.DFatalf("Run: failed to wait for file creation %v", err)
+			}
 			_, err = c.Create(signal_path_delete, 0777, sigmap.OAPPEND)
 			if err != nil {
 				db.DFatalf("Run: failed to create signal file %d, %v", trial, err)
@@ -204,6 +214,10 @@ func (c *PerfCoord) Run() {
 			_, err = c.Create(signal_path_delete, 0777, sigmap.OAPPEND)
 			if err != nil {
 				db.DFatalf("Run: failed to create signal file %d, %v", trial, err)
+			}
+			// wait for all workers to signal that they have started watching
+			for ix := 0; ix < c.nWorkers; ix++ {
+				c.waitForWorkerSignal(trial, strconv.Itoa(ix), true)
 			}
 			deletionStart = time.Now()
 			err = c.Remove(path)
@@ -233,9 +247,6 @@ func (c *PerfCoord) Run() {
 
 	if err := c.RmDirEntries(c.responseDir); err != nil {
 		db.DFatalf("Run: failed to clear response dir entries %v", err)
-	}
-	if err := c.CloseFd(responseDirFd); err != nil {
-		db.DFatalf("Run: failed to close response dir fd %v", err)
 	}
 
 	if err := c.RmDirEntries(c.watchDir); err != nil {
@@ -342,11 +353,28 @@ func (c *PerfCoord) waitResponses(responseDirReader dirreader.DirReader, trialNu
 	}
 }
 
+
+func (c *PerfCoord) waitForWorkerSignal(trial int, workerId string, delete bool) {
+	signalPath := filepath.Join(c.signalDir, workerSignalName(trial, delete, workerId))
+	db.DPrintf(db.WATCH_PERF, "waitForWorkerSignal: Waiting for signal %s", signalPath)
+	err := dirreader.WaitCreate(c.FsLib, signalPath)
+	if err != nil {
+		db.DFatalf("waitForWorkerSignal: failed to wait for signal %s, %v", signalPath, err)
+	}
+}
+
 func coordSignalName(trial int, delete bool) string {
 	if delete {
 		return fmt.Sprintf("coord_signal_delete_%d", trial)
 	}
 	return fmt.Sprintf("coord_signal_create_%d", trial)
+}
+
+func workerSignalName(trial int, delete bool, workerId string) string {
+	if delete {
+		return fmt.Sprintf("worker_%s_signal_delete_%d", workerId, trial)
+	}
+	return fmt.Sprintf("worker_%s_signal_create_%d", workerId, trial)
 }
 
 func responseName(trialNum int, workerNum string, deleted bool) string {

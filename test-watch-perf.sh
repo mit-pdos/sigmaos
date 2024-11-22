@@ -8,4 +8,4 @@ export SIGMADEBUG=""
 export DIRREADER_VERSION="2"
 export WATCHPERF_MEASURE_MODE="1"
 export S3_BUCKET="sigmaos-bucket-ryan"
-go test sigmaos/fslib/dirreader -v --start
+go test sigmaos/fslib/dirreader -v --start --run "PerfSingleWorker"

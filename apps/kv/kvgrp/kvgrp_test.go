@@ -6,12 +6,13 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"sigmaos/apps/kv"
 	"sigmaos/apps/kv/kvgrp"
 	"sigmaos/crash"
 	db "sigmaos/debug"
+	dialproxyclnt "sigmaos/dialproxy/clnt"
 	"sigmaos/groupmgr"
 	"sigmaos/namesrv/fsetcd"
-	dialproxyclnt "sigmaos/dialproxy/clnt"
 	"sigmaos/proc"
 	"sigmaos/semclnt"
 	"sigmaos/sesssrv"
@@ -23,7 +24,6 @@ import (
 
 const (
 	GRP       = "grp-0"
-	N_REPL    = 3
 	PARTITION = 200
 	NETFAIL   = 200
 )
@@ -70,7 +70,7 @@ func TestStartStopRepl0(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts := newTstate(t1, 0, false)
+	ts := newTstate(t1, kv.KVD_NO_REPL, false)
 
 	sts, _, err := ts.ReadDir(kvgrp.GrpPath(kvgrp.JobDir(ts.job), ts.grp) + "/")
 	db.DPrintf(db.TEST, "Stat: %v %v\n", sp.Names(sts), err)
@@ -86,7 +86,7 @@ func TestStartStopReplN(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts := newTstate(t1, N_REPL, false)
+	ts := newTstate(t1, kv.KVD_REPL_LEVEL, false)
 	_, err := ts.gm.StopGroup()
 	assert.Nil(ts.T, err, "Stop")
 	ts.Shutdown(false)
@@ -118,7 +118,7 @@ func TestRestartRepl0(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts := newTstate(t1, 0, true)
+	ts := newTstate(t1, kv.KVD_NO_REPL, true)
 	ts.testRecover()
 }
 
@@ -127,7 +127,7 @@ func TestRestartReplN(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts := newTstate(t1, N_REPL, true)
+	ts := newTstate(t1, kv.KVD_REPL_LEVEL, true)
 	ts.testRecover()
 }
 
@@ -143,7 +143,7 @@ func TestServerCrash(t *testing.T) {
 	e0 := crash.Tevent{crash.KVD_CRASH, 0, kvgrp.CRASH, 0.33, 0}
 	err := crash.SetSigmaFail([]crash.Tevent{e0})
 
-	ts := newTstate(t1, 0, false)
+	ts := newTstate(t1, kv.KVD_NO_REPL, false)
 
 	sem := semclnt.NewSemClnt(ts.FsLib, kvgrp.GrpPath(kvgrp.JobDir(ts.job), ts.grp)+"/sem")
 	err = sem.Init(0)
@@ -179,7 +179,7 @@ func TestReconnectSimple(t *testing.T) {
 	e0 := crash.Tevent{crash.KVD_NETFAIL, 0, NETFAIL, 0.33, 0}
 	err := crash.SetSigmaFail([]crash.Tevent{e0})
 
-	ts := newTstate(t1, 0, false)
+	ts := newTstate(t1, kv.KVD_NO_REPL, false)
 
 	ch := make(chan error)
 	go func() {
@@ -230,7 +230,7 @@ func TestServerPartitionNonBlockingSimple(t *testing.T) {
 
 	err := crash.SetSigmaFail([]crash.Tevent{EvP})
 	assert.Nil(t, err)
-	ts := newTstate(t1, 0, false)
+	ts := newTstate(t1, kv.KVD_NO_REPL, false)
 
 	ch := make(chan error)
 	for i := 0; i < N; i++ {
@@ -252,7 +252,7 @@ func TestServerPartitionNonBlockingConcur(t *testing.T) {
 	}
 	err := crash.SetSigmaFail([]crash.Tevent{EvP})
 	assert.Nil(t, err)
-	ts := newTstate(t1, 0, false)
+	ts := newTstate(t1, kv.KVD_NO_REPL, false)
 	ch := make(chan error)
 	for i := 0; i < N; i++ {
 		go ts.stat(t, i, ch)
@@ -277,7 +277,7 @@ func TestServerPartitionBlocking(t *testing.T) {
 	err := crash.SetSigmaFail([]crash.Tevent{EvP})
 	assert.Nil(t, err)
 
-	ts := newTstate(t1, 0, false)
+	ts := newTstate(t1, kv.KVD_NO_REPL, false)
 
 	for i := 0; i < N; i++ {
 		ch := make(chan error)

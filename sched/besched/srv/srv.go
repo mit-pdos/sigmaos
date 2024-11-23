@@ -21,10 +21,6 @@ import (
 	"sigmaos/util/perf"
 )
 
-const (
-	GET_PROC_TIMEOUT = 50 * time.Millisecond
-)
-
 type BESched struct {
 	mu          sync.Mutex
 	realmMu     sync.RWMutex
@@ -168,7 +164,7 @@ func (be *BESched) GetProc(ctx fs.CtxI, req proto.GetProcRequest, res *proto.Get
 	start := time.Now()
 	// Try until we hit the timeout (which we may hit if the request is for too
 	// few resources).
-	for time.Since(start) < GET_PROC_TIMEOUT {
+	for time.Since(start) < sp.Conf.BESched.GET_PROC_TIMEOUT {
 		lockStart := time.Now()
 		be.mu.Lock()
 		lockDur := time.Since(lockStart)

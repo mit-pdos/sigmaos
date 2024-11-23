@@ -2,6 +2,8 @@ package srv
 
 import (
 	"time"
+
+	sp "sigmaos/sigmap"
 )
 
 // Wait for the condition variable, or time out. Returns true if wait was
@@ -11,7 +13,7 @@ import (
 func (be *BESched) waitOrTimeoutAndUnlock() bool {
 	ch := make(chan bool, 2)
 	go func(ch chan bool) {
-		time.Sleep(GET_PROC_TIMEOUT)
+		time.Sleep(sp.Conf.BESched.GET_PROC_TIMEOUT)
 		ch <- false
 	}(ch)
 	go func(ch chan bool) {

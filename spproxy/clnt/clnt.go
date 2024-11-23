@@ -13,6 +13,7 @@ import (
 	"sigmaos/proc"
 	"sigmaos/rpc"
 	rpcclnt "sigmaos/rpc/clnt"
+	rpcclntopts "sigmaos/rpc/clnt/opts"
 	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 	spproto "sigmaos/spproxy/proto"
@@ -46,7 +47,11 @@ func NewSPProxyClnt(pe *proc.ProcEnv, npc *dialproxyclnt.DialProxyClnt) (*SPProx
 
 	iovm := demux.NewIoVecMap()
 	scc.dmx = demux.NewDemuxClnt(transport.NewTransport(conn, iovm), iovm)
-	scc.rpcc = rpcclnt.NewRPCClnt(scc)
+	rpcc, err := rpcclnt.NewRPCClnt("spproxy", rpcclntopts.WithRPCChannel(scc))
+	if err != nil {
+		return nil, err
+	}
+	scc.rpcc = rpcc
 	// Initialize the server-side component of sigmaclnt by sending the proc env
 	db.DPrintf(db.SIGMACLNTCLNT, "Init sigmaclntclnt for %v", pe.GetPID())
 	if err := scc.Init(); err != nil {

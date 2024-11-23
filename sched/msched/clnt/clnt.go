@@ -8,12 +8,12 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fslib"
-	"sigmaos/sched/msched/proto"
 	"sigmaos/proc"
 	rpcclnt "sigmaos/rpc/clnt"
+	sprpcclnt "sigmaos/rpc/clnt/sigmap"
 	"sigmaos/rpcdirclnt"
+	"sigmaos/sched/msched/proto"
 	sp "sigmaos/sigmap"
-	"sigmaos/sigmarpcchan"
 )
 
 type MSchedClnt struct {
@@ -279,7 +279,7 @@ func (mc *MSchedClnt) getRPCClntMyMSched() (*rpcclnt.RPCClnt, error) {
 	if mc.rpcc == nil {
 		start := time.Now()
 		pn := filepath.Join(sp.MSCHED, mc.kernelID)
-		rpcc, err := sigmarpcchan.NewSigmaRPCClnt([]*fslib.FsLib{mc.FsLib}, pn)
+		rpcc, err := sprpcclnt.NewRPCClnt(mc.FsLib, pn)
 		if err != nil {
 			return nil, err
 		}

@@ -9,13 +9,13 @@ import (
 	"sigmaos/apps/hotel/proto"
 	db "sigmaos/debug"
 	"sigmaos/fs"
-	"sigmaos/util/perf"
 	"sigmaos/proc"
 	rpcclnt "sigmaos/rpc/clnt"
+	sprpcclnt "sigmaos/rpc/clnt/sigmap"
 	"sigmaos/rpcdirclnt"
-	"sigmaos/sigmarpcchan"
 	"sigmaos/sigmasrv"
 	"sigmaos/tracing"
+	"sigmaos/util/perf"
 )
 
 type Search struct {
@@ -32,18 +32,18 @@ func RunSearchSrv(n string) error {
 	if err != nil {
 		return err
 	}
-	fsls, err := NewFsLibs(HOTELSEARCH, ssrv.MemFs.SigmaClnt().GetDialProxyClnt())
+	fsl, err := NewFsLib(HOTELSEARCH, ssrv.MemFs.SigmaClnt().GetDialProxyClnt())
 	if err != nil {
 		return err
 	}
-	rpcc, err := sigmarpcchan.NewSigmaRPCClnt(fsls, HOTELRATE)
+	rpcc, err := sprpcclnt.NewRPCClnt(fsl, HOTELRATE)
 	if err != nil {
 		db.DFatalf("Err new rpcclnt rate: %v", err)
 		return err
 	}
 	s.ratec = rpcc
 
-	s.geodc = rpcdirclnt.NewRPCDirClnt(fsls[0], HOTELGEODIR, db.HOTEL_GEO, db.HOTEL_GEO_ERR)
+	s.geodc = rpcdirclnt.NewRPCDirClnt(fsl, HOTELGEODIR, db.HOTEL_GEO, db.HOTEL_GEO_ERR)
 
 	p, err := perf.NewPerf(ssrv.MemFs.SigmaClnt().ProcEnv(), perf.HOTEL_SEARCH)
 	if err != nil {

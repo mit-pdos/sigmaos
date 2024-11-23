@@ -20,9 +20,9 @@ import (
 	"sigmaos/fslib"
 	"sigmaos/rpc"
 	rpcclnt "sigmaos/rpc/clnt"
+	sprpcclnt "sigmaos/rpc/clnt/sigmap"
 	"sigmaos/sessdev"
 	sp "sigmaos/sigmap"
-	"sigmaos/sigmarpcchan"
 	tproto "sigmaos/tracing/proto"
 )
 
@@ -36,11 +36,11 @@ type CacheClnt struct {
 	nshard int
 }
 
-func NewCacheClnt(fsls []*fslib.FsLib, job string, nshard int) *CacheClnt {
+func NewCacheClnt(fsl *fslib.FsLib, job string, nshard int) *CacheClnt {
 	cc := &CacheClnt{
-		fsl:       fsls[0],
+		fsl:       fsl,
 		nshard:    nshard,
-		ClntCache: rpcclnt.NewRPCClntCache(sigmarpcchan.SigmaRPCChanFactory(fsls)),
+		ClntCache: rpcclnt.NewRPCClntCache(sprpcclnt.WithSPChannel(fsl)),
 	}
 	return cc
 }

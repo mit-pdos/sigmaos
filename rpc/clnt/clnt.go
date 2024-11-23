@@ -11,36 +11,46 @@ import (
 
 	"google.golang.org/protobuf/proto"
 
+	db "sigmaos/debug"
 	"sigmaos/rpc"
+	"sigmaos/rpc/clnt/channel"
+	rpcclntopts "sigmaos/rpc/clnt/opts"
 	rpcproto "sigmaos/rpc/proto"
 	"sigmaos/serr"
 	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 )
 
-type NewRPCChFn func(pn string) (RPCCh, error)
-
 type RPCcall struct {
 	method string
 	iov    sessp.IoVec
 }
 
-type RPCCh interface {
-	SendReceive(sessp.IoVec, sessp.IoVec) error
-	StatsSrv() (*rpc.RPCStatsSnapshot, error)
-}
-
 type RPCClnt struct {
 	si *rpc.StatInfo
-	ch RPCCh
+	ch channel.RPCChannel
 }
 
-func NewRPCClnt(ch RPCCh) *RPCClnt {
-	rpcc := &RPCClnt{
+// XXX TODO Shouldn't take pn here
+func NewRPCClnt(pn string, opts ...*rpcclntopts.RPCClntOption) (*RPCClnt, error) {
+	s := time.Now()
+	defer func() {
+		db.DPrintf(db.ATTACH_LAT, "NewSigmaRPCClnt %q lat %v", pn, time.Since(s))
+	}()
+
+	rpcOpts := rpcclntopts.NewEmptyRPCClntOptions()
+	for _, opt := range opts {
+		opt.Apply(rpcOpts)
+	}
+
+	ch, err := rpcOpts.NewRPCChannel(pn)
+	if err != nil {
+		return nil, err
+	}
+	return &RPCClnt{
 		si: rpc.NewStatInfo(),
 		ch: ch,
-	}
-	return rpcc
+	}, nil
 }
 
 func (rpcc *RPCClnt) rpc(method string, iniov sessp.IoVec, outiov sessp.IoVec) (*rpcproto.Reply, error) {

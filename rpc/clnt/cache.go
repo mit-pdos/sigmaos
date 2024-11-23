@@ -10,6 +10,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/rpc"
+	rpcclntopts "sigmaos/rpc/clnt/opts"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 )
@@ -17,13 +18,17 @@ import (
 type ClntCache struct {
 	sync.Mutex
 	rpccs   map[string]*RPCClnt
-	newChFn NewRPCChFn
+	rpcOpts *rpcclntopts.RPCClntOptions
 }
 
-func NewRPCClntCache(fn NewRPCChFn) *ClntCache {
+func NewRPCClntCache(opts ...*rpcclntopts.RPCClntOption) *ClntCache {
+	rpcOpts := rpcclntopts.NewEmptyRPCClntOptions()
+	for _, opt := range opts {
+		opt.Apply(rpcOpts)
+	}
 	return &ClntCache{
 		rpccs:   make(map[string]*RPCClnt),
-		newChFn: fn,
+		rpcOpts: rpcOpts,
 	}
 }
 
@@ -37,12 +42,15 @@ func (cc *ClntCache) Lookup(pn string) (*RPCClnt, error) {
 		return rpcc, nil
 	}
 	cc.Unlock()
-	ch, err := cc.newChFn(pn)
+	ch, err := cc.rpcOpts.NewRPCChannel(pn)
 	cc.Lock()
 	if err != nil {
 		return nil, err
 	}
-	rpcc = NewRPCClnt(ch)
+	rpcc, err = NewRPCClnt(pn, rpcclntopts.WithRPCChannel(ch))
+	if err != nil {
+		return nil, err
+	}
 	cc.rpccs[pn] = rpcc
 	return rpcc, nil
 }

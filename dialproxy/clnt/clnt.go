@@ -15,8 +15,9 @@ import (
 	dialproxytrans "sigmaos/dialproxy/transport"
 	"sigmaos/proc"
 	"sigmaos/rpc"
-	rpcproto "sigmaos/rpc/proto"
 	rpcclnt "sigmaos/rpc/clnt"
+	"sigmaos/rpc/clnt/opts"
+	rpcproto "sigmaos/rpc/proto"
 	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 )
@@ -166,7 +167,11 @@ func (npc *DialProxyClnt) init() error {
 	trans := dialproxytrans.NewDialProxyTrans(conn, iovm)
 	npc.trans = trans
 	npc.dmx = demux.NewDemuxClnt(trans, iovm)
-	npc.rpcc = rpcclnt.NewRPCClnt(npc)
+	rpcc, err := rpcclnt.NewRPCClnt("no-path", opts.WithRPCChannel(npc))
+	if err != nil {
+		return err
+	}
+	npc.rpcc = rpcc
 	return nil
 }
 

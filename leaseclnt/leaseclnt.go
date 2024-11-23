@@ -5,12 +5,12 @@ package leaseclnt
 
 import (
 	db "sigmaos/debug"
-	"sigmaos/namesrv/fsetcd"
 	"sigmaos/fslib"
 	leaseproto "sigmaos/lease/proto"
+	"sigmaos/namesrv/fsetcd"
 	rpcclnt "sigmaos/rpc/clnt"
+	sprpcclnt "sigmaos/rpc/clnt/sigmap"
 	sp "sigmaos/sigmap"
-	"sigmaos/sigmarpcchan"
 	"sigmaos/util/syncmap"
 )
 
@@ -25,7 +25,7 @@ func NewLeaseClnt(fsl *fslib.FsLib) (*LeaseClnt, error) {
 	return &LeaseClnt{
 		FsLib: fsl,
 		lm:    syncmap.NewSyncMap[string, *Lease](),
-		cc:    rpcclnt.NewRPCClntCache(sigmarpcchan.SigmaRPCChanFactory([]*fslib.FsLib{fsl})),
+		cc:    rpcclnt.NewRPCClntCache(sprpcclnt.WithSPChannel(fsl)),
 	}, nil
 }
 

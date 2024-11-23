@@ -7,7 +7,7 @@ import (
 	"sigmaos/dircache"
 	"sigmaos/fslib"
 	rpcclnt "sigmaos/rpc/clnt"
-	"sigmaos/sigmarpcchan"
+	sprpcclnt "sigmaos/rpc/clnt/sigmap"
 )
 
 type AllocFn func(string)
@@ -19,7 +19,7 @@ type RPCDirClnt struct {
 
 func (rpcdc *RPCDirClnt) newClnt(n string) (*rpcclnt.RPCClnt, error) {
 	pn := filepath.Join(rpcdc.Path, n)
-	rpcc, err := sigmarpcchan.NewSigmaRPCClnt([]*fslib.FsLib{rpcdc.FsLib}, pn)
+	rpcc, err := sprpcclnt.NewRPCClnt(rpcdc.FsLib, pn)
 	if err != nil {
 		db.DPrintf(rpcdc.ESelector, "Error NewSigmaRPCClnt[srvID:%v]: %v", pn, err)
 		return nil, err

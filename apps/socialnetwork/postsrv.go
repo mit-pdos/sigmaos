@@ -2,17 +2,19 @@ package socialnetwork
 
 import (
 	"fmt"
+	"strconv"
+
 	"gopkg.in/mgo.v2/bson"
-	"sigmaos/apps/socialnetwork/proto"
+
 	"sigmaos/apps/cache"
 	cachegrpclnt "sigmaos/apps/cache/cachegrp/clnt"
+	"sigmaos/apps/socialnetwork/proto"
 	dbg "sigmaos/debug"
 	"sigmaos/fs"
 	mongoclnt "sigmaos/mongo/clnt"
-	"sigmaos/util/perf"
 	"sigmaos/proc"
 	"sigmaos/sigmasrv"
-	"strconv"
+	"sigmaos/util/perf"
 )
 
 // YH:
@@ -42,13 +44,13 @@ func RunPostSrv(jobname string) error {
 	}
 	mongoc.EnsureIndex(SN_DB, POST_COL, []string{"postid"})
 	psrv.mongoc = mongoc
-	fsls, err := NewFsLibs(SOCIAL_NETWORK_POST, ssrv.MemFs.SigmaClnt().GetDialProxyClnt())
+	fsl, err := NewFsLib(SOCIAL_NETWORK_POST, ssrv.MemFs.SigmaClnt().GetDialProxyClnt())
 	if err != nil {
 		return err
 	}
-	psrv.cachec = cachegrpclnt.NewCachedSvcClnt(fsls, jobname)
+	psrv.cachec = cachegrpclnt.NewCachedSvcClnt(fsl, jobname)
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_POST, "Starting post service\n")
-	perf, err := perf.NewPerf(fsls[0].ProcEnv(), perf.SOCIAL_NETWORK_POST)
+	perf, err := perf.NewPerf(fsl.ProcEnv(), perf.SOCIAL_NETWORK_POST)
 	if err != nil {
 		dbg.DFatalf("NewPerf err %v\n", err)
 	}

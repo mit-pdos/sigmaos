@@ -9,8 +9,8 @@ import (
 	cachegrpmgr "sigmaos/apps/cache/cachegrp/mgr"
 	"sigmaos/apps/kv"
 	db "sigmaos/debug"
-	"sigmaos/fslib"
 	dialproxyclnt "sigmaos/dialproxy/clnt"
+	"sigmaos/fslib"
 	"sigmaos/proc"
 	"sigmaos/rpc"
 	"sigmaos/sigmaclnt"
@@ -88,19 +88,15 @@ func MemFsPath(job string) string {
 	return filepath.Join(JobDir(job), MEMFS)
 }
 
-func NewFsLibs(uname string, npc *dialproxyclnt.DialProxyClnt) ([]*fslib.FsLib, error) {
+func NewFsLib(uname string, npc *dialproxyclnt.DialProxyClnt) (*fslib.FsLib, error) {
 	pe := proc.GetProcEnv()
-	fsls := make([]*fslib.FsLib, 0, N_RPC_SESSIONS)
-	for i := 0; i < N_RPC_SESSIONS; i++ {
-		pen := proc.NewAddedProcEnv(pe)
-		fsl, err := sigmaclnt.NewFsLib(pen, npc)
-		if err != nil {
-			db.DPrintf(db.ERROR, "Error newfsl: %v", err)
-			return nil, err
-		}
-		fsls = append(fsls, fsl)
+	pen := proc.NewAddedProcEnv(pe)
+	fsl, err := sigmaclnt.NewFsLib(pen, npc)
+	if err != nil {
+		db.DPrintf(db.ERROR, "Error newfsl: %v", err)
+		return nil, err
 	}
-	return fsls, nil
+	return fsl, nil
 }
 
 func GetJobHTTPAddrs(fsl *fslib.FsLib, job string) (sp.Taddrs, error) {
@@ -181,7 +177,7 @@ func NewHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []*Srv, nhotel int, c
 				db.DPrintf(db.ERROR, "Error NewCacheMgr %v", err)
 				return nil, err
 			}
-			cc = cachegrpclnt.NewCachedSvcClnt([]*fslib.FsLib{sc.FsLib}, job)
+			cc = cachegrpclnt.NewCachedSvcClnt(sc.FsLib, job)
 			ca = cachegrpclnt.NewAutoscaler(cm, cc)
 		case "kvd":
 			db.DPrintf(db.ALWAYS, "Hotel running with kvd")

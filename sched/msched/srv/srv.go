@@ -10,10 +10,10 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fs"
-	"sigmaos/fslib"
 	"sigmaos/linuxsched"
 	"sigmaos/mem"
 	"sigmaos/proc"
+	sprpcclnt "sigmaos/rpc/clnt/sigmap"
 	beschedclnt "sigmaos/sched/besched/clnt"
 	lcschedproto "sigmaos/sched/lcsched/proto"
 	mschedclnt "sigmaos/sched/msched/clnt"
@@ -21,7 +21,6 @@ import (
 	"sigmaos/sched/msched/srv/procmgr"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
-	"sigmaos/sigmarpcchan"
 	"sigmaos/sigmasrv"
 	"sigmaos/util/perf"
 	"sigmaos/util/syncmap"
@@ -346,7 +345,7 @@ func (msched *MSched) shouldGetBEProc() (proc.Tmem, bool) {
 }
 
 func (msched *MSched) register() {
-	rpcc, err := sigmarpcchan.NewSigmaRPCClnt([]*fslib.FsLib{msched.sc.FsLib}, filepath.Join(sp.LCSCHED, sp.ANY))
+	rpcc, err := sprpcclnt.NewRPCClnt(msched.sc.FsLib, filepath.Join(sp.LCSCHED, sp.ANY))
 	if err != nil {
 		db.DFatalf("Error lsched rpccc: %v", err)
 	}

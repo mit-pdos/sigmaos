@@ -3,19 +3,21 @@ package socialnetwork
 import (
 	"crypto/sha256"
 	"fmt"
-	"gopkg.in/mgo.v2/bson"
 	"math/rand"
-	"sigmaos/apps/socialnetwork/proto"
+	"sync"
+	"time"
+
+	"gopkg.in/mgo.v2/bson"
+
 	"sigmaos/apps/cache"
 	cachegrpclnt "sigmaos/apps/cache/cachegrp/clnt"
+	"sigmaos/apps/socialnetwork/proto"
 	dbg "sigmaos/debug"
 	"sigmaos/fs"
 	mongoclnt "sigmaos/mongo/clnt"
-	"sigmaos/util/perf"
 	"sigmaos/proc"
 	"sigmaos/sigmasrv"
-	"sync"
-	"time"
+	"sigmaos/util/perf"
 )
 
 // YH:
@@ -53,13 +55,13 @@ func RunUserSrv(jobname string) error {
 	}
 	mongoc.EnsureIndex(SN_DB, USER_COL, []string{"username"})
 	usrv.mongoc = mongoc
-	fsls, err := NewFsLibs(SOCIAL_NETWORK_USER, ssrv.MemFs.SigmaClnt().GetDialProxyClnt())
+	fsl, err := NewFsLib(SOCIAL_NETWORK_USER, ssrv.MemFs.SigmaClnt().GetDialProxyClnt())
 	if err != nil {
 		return err
 	}
-	usrv.cachec = cachegrpclnt.NewCachedSvcClnt(fsls, jobname)
+	usrv.cachec = cachegrpclnt.NewCachedSvcClnt(fsl, jobname)
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_USER, "Starting user service %v\n", usrv.sid)
-	perf, err := perf.NewPerf(fsls[0].ProcEnv(), perf.SOCIAL_NETWORK_USER)
+	perf, err := perf.NewPerf(fsl.ProcEnv(), perf.SOCIAL_NETWORK_USER)
 	if err != nil {
 		dbg.DFatalf("NewPerf err %v\n", err)
 	}

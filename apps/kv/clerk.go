@@ -8,10 +8,10 @@ import (
 
 	"google.golang.org/protobuf/proto"
 
-	"sigmaos/apps/kv/kvgrp"
 	"sigmaos/apps/cache"
 	cacheclnt "sigmaos/apps/cache/clnt"
 	cacheproto "sigmaos/apps/cache/proto"
+	"sigmaos/apps/kv/kvgrp"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/replclnt"
@@ -55,13 +55,13 @@ func NewClerkFsLib(fsl *fslib.FsLib, job string, repl bool) *KvClerk {
 func newClerk(fsl *fslib.FsLib, job string, repl bool) *KvClerk {
 	var rc *replclnt.ReplClnt
 	if repl {
-		rc = replclnt.NewReplClnt([]*fslib.FsLib{fsl})
+		rc = replclnt.NewReplClnt(fsl)
 	}
 	kc := &KvClerk{
 		FsLib: fsl,
 		conf:  &Config{},
 		job:   job,
-		cc:    cacheclnt.NewCacheClnt([]*fslib.FsLib{fsl}, job, NSHARD),
+		cc:    cacheclnt.NewCacheClnt(fsl, job, NSHARD),
 		rc:    rc,
 	}
 	return kc

@@ -6,17 +6,17 @@ import (
 	"sigmaos/fslib"
 	proto "sigmaos/mongo/proto"
 	rpcclnt "sigmaos/rpc/clnt"
+	sprpcclnt "sigmaos/rpc/clnt/sigmap"
 	sp "sigmaos/sigmap"
-	"sigmaos/sigmarpcchan"
 )
 
 type MongoClnt struct {
 	rpcc *rpcclnt.RPCClnt
 }
 
-func NewMongoClntWithName(fsl *fslib.FsLib, name string) (*MongoClnt, error) {
+func NewMongoClntWithName(fsl *fslib.FsLib, pn string) (*MongoClnt, error) {
 	mongoc := &MongoClnt{}
-	rpcc, err := sigmarpcchan.NewSigmaRPCClnt([]*fslib.FsLib{fsl}, name)
+	rpcc, err := sprpcclnt.NewRPCClnt(fsl, pn)
 	if err != nil {
 		return nil, err
 	}

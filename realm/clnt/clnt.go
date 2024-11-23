@@ -4,8 +4,8 @@ import (
 	"sigmaos/fslib"
 	"sigmaos/realm/proto"
 	rpcclnt "sigmaos/rpc/clnt"
+	sprpcclnt "sigmaos/rpc/clnt/sigmap"
 	sp "sigmaos/sigmap"
-	"sigmaos/sigmarpcchan"
 )
 
 type RealmClnt struct {
@@ -15,7 +15,7 @@ type RealmClnt struct {
 
 func NewRealmClnt(fsl *fslib.FsLib) (*RealmClnt, error) {
 	rc := &RealmClnt{FsLib: fsl}
-	rpcc, err := sigmarpcchan.NewSigmaRPCClnt([]*fslib.FsLib{rc.FsLib}, sp.REALMD)
+	rpcc, err := sprpcclnt.NewRPCClnt(rc.FsLib, sp.REALMD)
 	if err != nil {
 		return nil, err
 	}

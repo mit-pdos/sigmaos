@@ -8,7 +8,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	rpcclnt "sigmaos/rpc/clnt"
-	"sigmaos/sigmarpcchan"
+	sprpcclnt "sigmaos/rpc/clnt/sigmap"
 )
 
 type ImgResizeRPCClnt struct {
@@ -16,7 +16,7 @@ type ImgResizeRPCClnt struct {
 }
 
 func NewImgResizeRPCClnt(fsl *fslib.FsLib, job string) (*ImgResizeRPCClnt, error) {
-	rpcc, err := sigmarpcchan.NewSigmaRPCClnt([]*fslib.FsLib{fsl}, filepath.Join(IMG, job))
+	rpcc, err := sprpcclnt.NewRPCClnt(fsl, filepath.Join(IMG, job))
 	if err != nil {
 		db.DPrintf(db.ERROR, "NewSigmaRPCClnt: %v", err)
 		return nil, err

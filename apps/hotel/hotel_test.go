@@ -16,12 +16,11 @@ import (
 	"sigmaos/benchmarks/loadgen"
 	dbclnt "sigmaos/db/clnt"
 	db "sigmaos/debug"
-	"sigmaos/fslib"
 	"sigmaos/linuxsched"
 	"sigmaos/proc"
+	sprpcclnt "sigmaos/rpc/clnt/sigmap"
 	"sigmaos/rpcdirclnt"
 	sp "sigmaos/sigmap"
-	"sigmaos/sigmarpcchan"
 	"sigmaos/test"
 	"sigmaos/util/perf"
 	rd "sigmaos/util/rand"
@@ -146,7 +145,7 @@ func TestRateSingle(t *testing.T) {
 	ts := newTstate(t1, []*hotel.Srv{&hotel.Srv{Name: "hotel-rated"}}, NCACHESRV, DEF_GEO_N_IDX, DEF_GEO_SEARCH_RADIUS, DEF_GEO_N_RESULTS)
 	defer ts.Shutdown()
 	defer ts.stop()
-	rpcc, err := sigmarpcchan.NewSigmaRPCClnt([]*fslib.FsLib{ts.FsLib}, hotel.HOTELRATE)
+	rpcc, err := sprpcclnt.NewRPCClnt(ts.FsLib, hotel.HOTELRATE)
 	if !assert.Nil(t, err, "Err make rpcclnt: %v", err) {
 		return
 	}
@@ -176,7 +175,7 @@ func TestRecSingle(t *testing.T) {
 	ts := newTstate(t1, []*hotel.Srv{&hotel.Srv{Name: "hotel-recd"}}, 0, DEF_GEO_N_IDX, DEF_GEO_SEARCH_RADIUS, DEF_GEO_N_RESULTS)
 	defer ts.Shutdown()
 	defer ts.stop()
-	rpcc, err := sigmarpcchan.NewSigmaRPCClnt([]*fslib.FsLib{ts.FsLib}, hotel.HOTELREC)
+	rpcc, err := sprpcclnt.NewRPCClnt(ts.FsLib, hotel.HOTELREC)
 	if !assert.Nil(t, err, "Err make rpcclnt: %v", err) {
 		return
 	}
@@ -204,7 +203,7 @@ func TestUserSingle(t *testing.T) {
 	ts := newTstate(t1, []*hotel.Srv{&hotel.Srv{Name: "hotel-userd"}}, 0, DEF_GEO_N_IDX, DEF_GEO_SEARCH_RADIUS, DEF_GEO_N_RESULTS)
 	defer ts.Shutdown()
 	defer ts.stop()
-	rpcc, err := sigmarpcchan.NewSigmaRPCClnt([]*fslib.FsLib{ts.FsLib}, hotel.HOTELUSER)
+	rpcc, err := sprpcclnt.NewRPCClnt(ts.FsLib, hotel.HOTELUSER)
 	if !assert.Nil(t, err, "Err make rpcclnt: %v", err) {
 		return
 	}
@@ -230,7 +229,7 @@ func TestProfile(t *testing.T) {
 	ts := newTstate(t1, []*hotel.Srv{&hotel.Srv{Name: "hotel-profd"}}, NCACHESRV, DEF_GEO_N_IDX, DEF_GEO_SEARCH_RADIUS, DEF_GEO_N_RESULTS)
 	defer ts.Shutdown()
 	defer ts.stop()
-	rpcc, err := sigmarpcchan.NewSigmaRPCClnt([]*fslib.FsLib{ts.FsLib}, hotel.HOTELPROF)
+	rpcc, err := sprpcclnt.NewRPCClnt(ts.FsLib, hotel.HOTELPROF)
 	if !assert.Nil(t, err, "Err make rpcclnt: %v", err) {
 		return
 	}
@@ -261,7 +260,7 @@ func TestCheck(t *testing.T) {
 	ts := newTstate(t1, []*hotel.Srv{&hotel.Srv{Name: "hotel-reserved"}}, NCACHESRV, DEF_GEO_N_IDX, DEF_GEO_SEARCH_RADIUS, DEF_GEO_N_RESULTS)
 	defer ts.Shutdown()
 	defer ts.stop()
-	rpcc, err := sigmarpcchan.NewSigmaRPCClnt([]*fslib.FsLib{ts.FsLib}, hotel.HOTELRESERVE)
+	rpcc, err := sprpcclnt.NewRPCClnt(ts.FsLib, hotel.HOTELRESERVE)
 	if !assert.Nil(t, err, "Err make rpcclnt: %v", err) {
 		return
 	}
@@ -294,7 +293,7 @@ func TestReserve(t *testing.T) {
 	ts := newTstate(t1, []*hotel.Srv{&hotel.Srv{Name: "hotel-reserved"}}, NCACHESRV, DEF_GEO_N_IDX, DEF_GEO_SEARCH_RADIUS, DEF_GEO_N_RESULTS)
 	defer ts.Shutdown()
 	defer ts.stop()
-	rpcc, err := sigmarpcchan.NewSigmaRPCClnt([]*fslib.FsLib{ts.FsLib}, hotel.HOTELRESERVE)
+	rpcc, err := sprpcclnt.NewRPCClnt(ts.FsLib, hotel.HOTELRESERVE)
 	if !assert.Nil(t, err, "Err make rpcclnt: %v", err) {
 		return
 	}
@@ -350,7 +349,7 @@ func TestSingleSearch(t *testing.T) {
 	ts := newTstate(t1, []*hotel.Srv{&hotel.Srv{Name: "hotel-geod", Args: []string{"1", "10", "5"}}, &hotel.Srv{Name: "hotel-rated"}, &hotel.Srv{Name: "hotel-searchd"}}, NCACHESRV, DEF_GEO_N_IDX, DEF_GEO_SEARCH_RADIUS, DEF_GEO_N_RESULTS)
 	defer ts.Shutdown()
 	defer ts.stop()
-	rpcc, err := sigmarpcchan.NewSigmaRPCClnt([]*fslib.FsLib{ts.FsLib}, hotel.HOTELSEARCH)
+	rpcc, err := sprpcclnt.NewRPCClnt(ts.FsLib, hotel.HOTELSEARCH)
 	if !assert.Nil(t, err, "Err make rpcclnt: %v", err) {
 		return
 	}

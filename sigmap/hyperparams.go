@@ -81,9 +81,12 @@ type Config struct {
 		ENABLED bool `yaml:"enabled"`
 	}
 	Path struct {
-		MAX_SYMLINK       int           `yaml:"max_symlink"`
-		RESOLVE_TIMEOUT   time.Duration `yaml:"path_resolve_timeout"`
-		MAX_RESOLVE_RETRY int           `yaml:"max_resolve_retry"`
+		// Max symlink depth allowed
+		MAX_SYMLINK int `yaml:"max_symlink"`
+		// Timeout for path resolution
+		RESOLVE_TIMEOUT time.Duration `yaml:"path_resolve_timeout"`
+		// Max number of path resolution retries, in the event of errors
+		MAX_RESOLVE_RETRY int `yaml:"max_resolve_retry"`
 	} `yaml:"path"`
 	Conn struct {
 		// SigmaP connection message length.

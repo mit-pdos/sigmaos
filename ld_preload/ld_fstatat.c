@@ -33,10 +33,6 @@ const char* get_path(const char *filename)
         init_done = 1;
     }
     
-    // Try setting PWD in init_done/exec_uproc_rs
-    // Try catching python._pth (suffix based)
-    // Fork cpython and try to change things there
-
     const char* prefix = "/~~";
     int i = 0;
     while(filename[i] != 0 && i < 3) {

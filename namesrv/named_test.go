@@ -70,7 +70,7 @@ func TestKillNamed(t *testing.T) {
 	db.DPrintf(db.TEST, "GetDir..\n")
 
 	n := 0
-	for i := 0; i < sp.PATHCLNT_MAXRETRY; i++ {
+	for i := 0; i < sp.Conf.Path.MAX_RESOLVE_RETRY; i++ {
 		n = i
 		sts, err = ts.GetDir(sp.NAMED + "/")
 		if err == nil {

@@ -11,11 +11,6 @@ message TqidProto {
         uint64  path = 3;
 };
 
-message Ttoken {
-        string signerStr = 1;
-        string signedToken = 2;
-}
-
 message Tprincipal {
         string iDStr = 1;
         string realmStr = 2;
@@ -47,15 +42,10 @@ message SecretProto {
   string metadata = 3;
 }
 
-message TendpointClaimsProto {
-        uint32   endpointType = 1; // Type of endpoint (e.g. internal vs external)
-        repeated Taddr addr = 2;
-}
-
 message TendpointProto {
-        TendpointClaimsProto claims = 1;
-        string root = 2;
-        bytes pubKey = 3;
+        uint32   type = 1; // Type of endpoint (e.g. internal vs external)
+        repeated Taddr addr = 2;
+        string root = 3;
 }
 
 message TfenceProto {

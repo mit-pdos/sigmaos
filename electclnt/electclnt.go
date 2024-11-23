@@ -21,7 +21,7 @@ type ElectClnt struct {
 
 func NewElectClnt(fsl *fslib.FsLib, pn string, perm sp.Tperm) (*ElectClnt, error) {
 	e := &ElectClnt{FsLib: fsl, pn: pn, perm: perm}
-	fs, err := fsetcd.NewFsEtcd(fsl.GetNetProxyClnt().Dial, fsl.ProcEnv().GetEtcdEndpoints(), fsl.ProcEnv().GetRealm(), nil)
+	fs, err := fsetcd.NewFsEtcd(fsl.GetDialProxyClnt().Dial, fsl.ProcEnv().GetEtcdEndpoints(), fsl.ProcEnv().GetRealm(), nil)
 	if err != nil {
 		return nil, err
 	}

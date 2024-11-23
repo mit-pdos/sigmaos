@@ -30,20 +30,6 @@ func TestSyscallBlock(t *testing.T) {
 	ts.Shutdown()
 }
 
-// func TestExpose(t *testing.T) {
-// 	const (
-// 		FPORT port.Tport = 100
-// 		LPORT port.Tport = 200
-// 	)
-// 	ports, err := nat.NewPort("tcp", FPORT.String()+"-"+LPORT.String())
-// 	assert.Nil(t, err)
-// 	pms, err := nat.ParsePortSpec("0.0.0.0:" + FPORT.String() + "-" + LPORT.String() + ":8100-8200")
-// 	assert.Nil(t, err)
-// 	pmap := nat.PortMap{}
-// 	pmap[ports] = []nat.PortBinding{}
-// 	log.Printf("ports %v pms  %v\n", ports, pms)
-// }
-
 func runMemHog(ts *test.Tstate, c chan error, id, delay, mem, dur string, nthread int) {
 	p := proc.NewProc("memhog", []string{id, delay, mem, dur, strconv.Itoa(nthread)})
 	if id == "LC" {

@@ -10,10 +10,13 @@ type Tendpoint struct {
 	*TendpointProto
 }
 
+// XXX Currently, endpoint type is a hint. In reality, it should be verified
+// by dialproxy (e.g., by inspecting the IP addrs)
 func NewEndpoint(t TTendpoint, srvaddrs Taddrs) *Tendpoint {
 	return &Tendpoint{
 		&TendpointProto{
-			Claims: NewEndpointClaimsProto(t, srvaddrs),
+			Type: uint32(t),
+			Addr: srvaddrs,
 		},
 	}
 }
@@ -30,21 +33,12 @@ func NewEndpointFromProto(p *TendpointProto) *Tendpoint {
 	return &Tendpoint{p}
 }
 
-// XXX Currently, endpoint type is a hint. In reality, it should be verified
-// somehow by netproxy (e.g., by inspecting the IP addrs)
-func NewEndpointClaimsProto(t TTendpoint, addrs Taddrs) *TendpointClaimsProto {
-	return &TendpointClaimsProto{
-		EndpointType: uint32(t),
-		Addr:         addrs,
-	}
-}
-
 func (ep *Tendpoint) SetType(t TTendpoint) {
-	ep.Claims.EndpointType = uint32(t)
+	ep.Type = uint32(t)
 }
 
-func (ep *Tendpoint) Type() TTendpoint {
-	return TTendpoint(ep.Claims.EndpointType)
+func (ep *Tendpoint) GetType() TTendpoint {
+	return TTendpoint(ep.Type)
 }
 
 func (ep *Tendpoint) GetProto() *TendpointProto {
@@ -56,7 +50,7 @@ func (ep *Tendpoint) SetTree(tree string) {
 }
 
 func (ep *Tendpoint) SetAddr(addr Taddrs) {
-	ep.Claims.Addr = addr
+	ep.Addr = addr
 }
 
 func (ep *Tendpoint) Marshal() ([]byte, error) {
@@ -64,16 +58,11 @@ func (ep *Tendpoint) Marshal() ([]byte, error) {
 }
 
 func (ep *Tendpoint) Addrs() Taddrs {
-	return ep.Claims.Addr
-}
-
-func (ep *Tendpoint) IsValidEP() bool {
-	t := ep.Type()
-	return t == EXTERNAL_EP || t == INTERNAL_EP
+	return ep.Addr
 }
 
 func (ep *Tendpoint) TargetIPPort(idx int) (Tip, Tport) {
-	a := ep.Claims.Addr[idx]
+	a := ep.Addr[idx]
 	return a.GetIP(), a.GetPort()
 }
 
@@ -81,7 +70,7 @@ func (ep *Tendpoint) String() string {
 	if ep.TendpointProto == nil {
 		return "<nil-endpoint-proto>"
 	}
-	return fmt.Sprintf("{ type:%v addr:%v root:%v }", ep.Type(), ep.Claims.Addr, ep.Root)
+	return fmt.Sprintf("{ type:%v addr:%v root:%v }", ep.GetType(), ep.Addr, ep.Root)
 }
 
 func (t TTendpoint) String() string {

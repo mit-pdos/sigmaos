@@ -34,7 +34,7 @@ func OldleaderTest(ts *test.Tstate, pn string, crash bool) *LeaderClnt {
 		// Make a new fsl for this test, because we want to use ts.FsLib
 		// to shutdown the system.
 		pe := proc.NewAddedProcEnv(ts.ProcEnv())
-		fsl2, err := sigmaclnt.NewFsLib(pe, ts.GetNetProxyClnt())
+		fsl2, err := sigmaclnt.NewFsLib(pe, ts.GetDialProxyClnt())
 		assert.Nil(ts.T, err, "NewFsLib")
 
 		l, err := NewLeaderClnt(fsl2, leadername, 0777)

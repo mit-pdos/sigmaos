@@ -15,23 +15,23 @@ import (
 
 	"golang.org/x/sys/unix"
 
-	"sigmaos/chunkclnt"
-	"sigmaos/chunksrv"
+	chunksrv "sigmaos/chunk/srv"
+	chunkclnt "sigmaos/chunk/clnt"
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/kernelclnt"
 	"sigmaos/linuxsched"
 	"sigmaos/netsigma"
-	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/scontainer"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
-	"sigmaos/spproxysrv"
-	"sigmaos/syncmap"
+	spproxysrv "sigmaos/spproxy/srv"
 	"sigmaos/uprocsrv/binsrv"
 	"sigmaos/uprocsrv/proto"
+	"sigmaos/util/perf"
+	"sigmaos/util/syncmap"
 )
 
 // Lookup may try to read proc in a proc's procEntry before uprocsrv
@@ -81,7 +81,7 @@ type UprocSrv struct {
 	binsrv         *exec.Cmd
 	kernelId       string
 	realm          sp.Trealm
-	netproxy       bool
+	dialproxy      bool
 	spproxydPID    sp.Tpid
 	schedPolicySet bool
 	procs          *syncmap.SyncMap[int, *procEntry]
@@ -92,11 +92,11 @@ type UprocRPCSrv struct {
 	ups *UprocSrv
 }
 
-func RunUprocSrv(kernelId string, netproxy bool, up string, spproxydPID sp.Tpid) error {
+func RunUprocSrv(kernelId string, dialproxy bool, spproxydPID sp.Tpid) error {
 	pe := proc.GetProcEnv()
 	ups := &UprocSrv{
 		kernelId:    kernelId,
-		netproxy:    netproxy,
+		dialproxy:   dialproxy,
 		ch:          make(chan struct{}),
 		pe:          pe,
 		spproxydPID: spproxydPID,
@@ -111,7 +111,7 @@ func RunUprocSrv(kernelId string, netproxy bool, up string, spproxydPID sp.Tpid)
 	}
 	ups.pe.SetInnerContainerIP(sp.Tip(innerIP))
 
-	db.DPrintf(db.UPROCD, "Run kid %v port %v innerIP %s outerIP %s pe %v", kernelId, up, pe.GetInnerContainerIP(), pe.GetOuterContainerIP(), pe)
+	db.DPrintf(db.UPROCD, "Run kid %v innerIP %s outerIP %s pe %v", kernelId, pe.GetInnerContainerIP(), pe.GetOuterContainerIP(), pe)
 
 	sc, err := sigmaclnt.NewSigmaClnt(pe)
 	if err != nil {
@@ -119,29 +119,8 @@ func RunUprocSrv(kernelId string, netproxy bool, up string, spproxydPID sp.Tpid)
 	}
 	ups.sc = sc
 	var ssrv *sigmasrv.SigmaSrv
-	if up == sp.NO_PORT.String() {
-		pn := filepath.Join(sp.SCHEDD, kernelId, sp.UPROCDREL, pe.GetPID().String())
-		ssrv, err = sigmasrv.NewSigmaSrvClnt(pn, sc, &UprocRPCSrv{ups})
-	} else {
-		var port sp.Tport
-		port, err = sp.ParsePort(up)
-		if err != nil {
-			db.DFatalf("Error parse port: %v", err)
-		}
-		addr := sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, port)
-
-		// This should only happen if running with overlays. If running with
-		// overlays, allow all principals to attach (because named will try to
-		// attach to find its port). Shouldn't really matter, because overlays are
-		// only ever in use for benchmarking.
-		if !pe.GetOverlays() {
-			// Sanity check
-			db.DFatalf("Sanity check failed! Uprocsrv got a port when running without overlays!")
-		}
-		sc.GetNetProxyClnt().AllowConnectionsFromAllRealms()
-		// The kernel will advertise the server, so pass "" as pn.
-		ssrv, err = sigmasrv.NewSigmaSrvAddrClnt("", addr, sc, &UprocRPCSrv{ups})
-	}
+	pn := filepath.Join(sp.MSCHED, kernelId, sp.UPROCDREL, pe.GetPID().String())
+	ssrv, err = sigmasrv.NewSigmaSrvClnt(pn, sc, &UprocRPCSrv{ups})
 	if err != nil {
 		db.DFatalf("Error sigmasrvclnt: %v", err)
 		return err
@@ -353,17 +332,20 @@ func (ups *UprocSrv) Run(ctx fs.CtxI, req proto.RunRequest, res *proto.RunResult
 	}
 	uproc.FinalizeEnv(ups.pe.GetInnerContainerIP(), ups.pe.GetOuterContainerIP(), ups.pe.GetPID())
 	db.DPrintf(db.SPAWN_LAT, "[%v] Uproc Run: spawn time since spawn %v", uproc.GetPid(), time.Since(uproc.GetSpawnTime()))
-	cmd, err := scontainer.StartSigmaContainer(uproc, ups.netproxy)
+	cmd, err := scontainer.StartSigmaContainer(uproc, ups.dialproxy)
 	if err != nil {
 		return err
 	}
 	pid := cmd.Pid()
-	db.DPrintf(db.UPROCD, "Pid %d\n", pid)
+	db.DPrintf(db.UPROCD, "Pid %v -> %d", uproc.GetPid(), pid)
 	pe, alloc := ups.procs.Alloc(pid, newProcEntry(uproc))
 	if !alloc { // it was already inserted
 		pe.insertSignal(uproc)
 	}
 	err = cmd.Wait()
+	if err != nil {
+		db.DPrintf(db.UPROCD, "[%v] Uproc Run cmd.Wait err %v", uproc.GetPid(), err)
+	}
 	scontainer.CleanupUproc(uproc.GetPid())
 	ups.procs.Delete(pid)
 	// ups.sc.CloseFd(pe.fd)

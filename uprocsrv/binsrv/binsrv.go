@@ -15,7 +15,7 @@ import (
 	"github.com/hanwen/go-fuse/v2/fs"
 	"github.com/hanwen/go-fuse/v2/fuse"
 
-	"sigmaos/chunksrv"
+	chunksrv "sigmaos/chunk/srv"
 	// db "sigmaos/debug"
 	sp "sigmaos/sigmap"
 	"sigmaos/uprocclnt"

@@ -13,15 +13,15 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	db "sigmaos/debug"
+	dialproxyclnt "sigmaos/dialproxy/clnt"
 	"sigmaos/fslib"
 	"sigmaos/namesrv/fsetcd"
-	"sigmaos/netproxyclnt"
-	"sigmaos/perf"
 	"sigmaos/proc"
 	"sigmaos/rpc"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
+	"sigmaos/util/perf"
 )
 
 var pathname string // e.g., --path "name/ux/sp.LOCAL/"
@@ -154,7 +154,7 @@ func TestWriteFilePerfMultiClient(t *testing.T) {
 	for i := 0; i < N_CLI; i++ {
 		fns = append(fns, filepath.Join(pathname, "f"+strconv.Itoa(i)))
 		pe := proc.NewAddedProcEnv(ts.ProcEnv())
-		fsl, err := sigmaclnt.NewFsLib(pe, netproxyclnt.NewNetProxyClnt(pe))
+		fsl, err := sigmaclnt.NewFsLib(pe, dialproxyclnt.NewDialProxyClnt(pe))
 		assert.Nil(t, err)
 		fsls = append(fsls, fsl)
 	}
@@ -357,7 +357,7 @@ func TestReadFilePerfMultiClient(t *testing.T) {
 	for i := 0; i < N_CLI; i++ {
 		fns = append(fns, filepath.Join(pathname, "f"+strconv.Itoa(i)))
 		pe := proc.NewAddedProcEnv(ts.ProcEnv())
-		fsl, err := sigmaclnt.NewFsLib(pe, netproxyclnt.NewNetProxyClnt(pe))
+		fsl, err := sigmaclnt.NewFsLib(pe, dialproxyclnt.NewDialProxyClnt(pe))
 		assert.Nil(t, err)
 		fsls = append(fsls, fsl)
 	}
@@ -514,7 +514,7 @@ func lookuper(ts *test.Tstate, nclerk int, n int, dir string, nfile int, lip sp.
 	for c := 0; c < nclerk; c++ {
 		go func(c int) {
 			pe := proc.NewAddedProcEnv(ts.ProcEnv())
-			fsl, err := sigmaclnt.NewFsLib(pe, netproxyclnt.NewNetProxyClnt(pe))
+			fsl, err := sigmaclnt.NewFsLib(pe, dialproxyclnt.NewDialProxyClnt(pe))
 			assert.Nil(ts.T, err)
 			measuredir("lookup dir entry", NITER, dir, func() int {
 				for f := 0; f < nfile; f++ {
@@ -694,7 +694,7 @@ func TestLookupConcurPerf(t *testing.T) {
 		for j := 0; j < NTRIAL; j++ {
 			pe := proc.NewAddedProcEnv(ts.ProcEnv())
 			pe.NamedEndpointProto = ndMnt.TendpointProto
-			fsl, err := sigmaclnt.NewFsLib(pe, netproxyclnt.NewNetProxyClnt(pe))
+			fsl, err := sigmaclnt.NewFsLib(pe, dialproxyclnt.NewDialProxyClnt(pe))
 			assert.Nil(t, err)
 			fsl2 = append(fsl2, fsl)
 		}
@@ -742,27 +742,27 @@ func TestLookupMultiMount(t *testing.T) {
 	//mnt, err := ts.GetNamedEndpoint()
 	//assert.Nil(ts.T, err)
 	//pe.NamedEndpointProto = mnt.GetProto()
-	sts, err := ts.GetDir(sp.SCHEDD)
+	sts, err := ts.GetDir(sp.MSCHED)
 	assert.Nil(t, err)
 	kernelId := sts[0].Name
 
-	sts, err = ts.GetDir(filepath.Join(sp.SCHEDD, kernelId, sp.UPROCDREL))
+	sts, err = ts.GetDir(filepath.Join(sp.MSCHED, kernelId, sp.UPROCDREL))
 	assert.Nil(t, err)
 	uprocdpid := sts[0].Name
 
 	db.DPrintf(db.TEST, "kernelid %v %v\n", kernelId, uprocdpid)
 
 	pe.NamedEndpointProto = nil
-	fsl, err := sigmaclnt.NewFsLib(pe, netproxyclnt.NewNetProxyClnt(pe))
+	fsl, err := sigmaclnt.NewFsLib(pe, dialproxyclnt.NewDialProxyClnt(pe))
 	assert.Nil(t, err)
 
 	// cache named, which is typically the case
-	_, err = fsl.GetDir(sp.SCHEDD)
+	_, err = fsl.GetDir(sp.MSCHED)
 	assert.Nil(t, err)
 
 	s := time.Now()
-	pn := filepath.Join(sp.SCHEDD, kernelId, rpc.RPC)
-	// pn := filepath.Join(sp.SCHEDD, kernelId, sp.UPROCDREL, uprocdpid, rpc.RPC)
+	pn := filepath.Join(sp.MSCHED, kernelId, rpc.RPC)
+	// pn := filepath.Join(sp.MSCHED, kernelId, sp.UPROCDREL, uprocdpid, rpc.RPC)
 	db.DPrintf(db.TEST, "Stat %v start %v\n", fsl.ClntId(), pn)
 	_, err = fsl.Stat(pn)
 	db.DPrintf(db.TEST, "Stat %v done %v took %v\n", fsl.ClntId(), pn, time.Since(s))
@@ -775,7 +775,7 @@ func TestColdPathMicro(t *testing.T) {
 	if !assert.Nil(t, err, "Error New Tstate: %v", err) {
 		return
 	}
-	sts, err := ts.GetDir(sp.SCHEDD)
+	sts, err := ts.GetDir(sp.MSCHED)
 	assert.Nil(t, err)
 
 	pe := proc.NewAddedProcEnv(ts.ProcEnv())
@@ -787,7 +787,7 @@ func TestColdPathMicro(t *testing.T) {
 	var tot time.Duration
 	const N = 1
 	for i := 0; i < N; i++ {
-		fsl, err := sigmaclnt.NewFsLib(pe, netproxyclnt.NewNetProxyClnt(pe))
+		fsl, err := sigmaclnt.NewFsLib(pe, dialproxyclnt.NewDialProxyClnt(pe))
 		assert.Nil(t, err)
 		db.DPrintf(db.TEST, "MkDir %v start %v", fsl.ClntId(), pn)
 		s := time.Now()
@@ -811,13 +811,13 @@ func TestColdAttach(t *testing.T) {
 		return
 	}
 
-	sts, err := ts.GetDir(sp.SCHEDD)
+	sts, err := ts.GetDir(sp.MSCHED)
 	assert.Nil(t, err)
 
 	pe := proc.NewAddedProcEnv(ts.ProcEnv())
 	pe.KernelID = sts[0].Name
 
-	pn := filepath.Join(sp.SCHEDD, pe.KernelID)
+	pn := filepath.Join(sp.MSCHED, pe.KernelID)
 	ep, err := ts.ReadEndpoint(pn)
 	assert.Nil(t, err)
 
@@ -827,7 +827,7 @@ func TestColdAttach(t *testing.T) {
 	var tot time.Duration
 	const N = 1
 	for i := 0; i < N; i++ {
-		fsl, err := sigmaclnt.NewFsLib(pe, netproxyclnt.NewNetProxyClnt(pe))
+		fsl, err := sigmaclnt.NewFsLib(pe, dialproxyclnt.NewDialProxyClnt(pe))
 		assert.Nil(t, err)
 		pn = filepath.Join(pn, rpc.RPC)
 		start := time.Now()

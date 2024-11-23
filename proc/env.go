@@ -73,7 +73,7 @@ func GetLabels(s string) map[string]bool {
 	return m
 }
 
-func NewProcEnv(program string, pid sp.Tpid, realm sp.Trealm, principal *sp.Tprincipal, procDir string, parentDir string, priv, overlays, useSPProxy bool, useNetProxy bool) *ProcEnv {
+func NewProcEnv(program string, pid sp.Tpid, realm sp.Trealm, principal *sp.Tprincipal, procDir string, parentDir string, priv, useSPProxy bool, useDialProxy bool) *ProcEnv {
 	// Load Perf & Debug from the environment for convenience.
 	return &ProcEnv{
 		ProcEnvProto: &ProcEnvProto{
@@ -93,9 +93,8 @@ func NewProcEnv(program string, pid sp.Tpid, realm sp.Trealm, principal *sp.Tpri
 			Debug:               os.Getenv(SIGMADEBUG),
 			UprocdPIDStr:        sp.NOT_SET,
 			Privileged:          priv,
-			Overlays:            overlays,
 			UseSPProxy:          useSPProxy,
-			UseNetProxy:         useNetProxy,
+			UseDialProxy:        useDialProxy,
 			SecretsMap:          nil,
 			SigmaPath:           []string{},
 			RealmSwitchStr:      sp.NOT_SET,
@@ -103,17 +102,17 @@ func NewProcEnv(program string, pid sp.Tpid, realm sp.Trealm, principal *sp.Tpri
 	}
 }
 
-func NewProcEnvUnset(priv, overlays bool) *ProcEnv {
+func NewProcEnvUnset(priv bool) *ProcEnv {
 	// Load Perf & Debug from the environment for convenience.
-	return NewProcEnv(sp.NOT_SET, sp.Tpid(sp.NOT_SET), sp.Trealm(sp.NOT_SET), sp.NoPrincipal(), sp.NOT_SET, sp.NOT_SET, priv, overlays, false, false)
+	return NewProcEnv(sp.NOT_SET, sp.Tpid(sp.NOT_SET), sp.Trealm(sp.NOT_SET), sp.NoPrincipal(), sp.NOT_SET, sp.NOT_SET, priv, false, false)
 }
 
 func NewProcEnvFromProto(p *ProcEnvProto) *ProcEnv {
 	return &ProcEnv{p}
 }
 
-func NewBootProcEnv(principal *sp.Tprincipal, secrets map[string]*sp.SecretProto, etcdMnts map[string]*sp.TendpointProto, innerIP sp.Tip, outerIP sp.Tip, buildTag string, overlays bool) *ProcEnv {
-	pe := NewProcEnvUnset(true, overlays)
+func NewBootProcEnv(principal *sp.Tprincipal, secrets map[string]*sp.SecretProto, etcdMnts map[string]*sp.TendpointProto, innerIP sp.Tip, outerIP sp.Tip, buildTag string) *ProcEnv {
+	pe := NewProcEnvUnset(true)
 	pe.SetPrincipal(principal)
 	pe.SetSecrets(secrets)
 	pe.Program = "kernel"
@@ -130,8 +129,8 @@ func NewBootProcEnv(principal *sp.Tprincipal, secrets map[string]*sp.SecretProto
 	return pe
 }
 
-func NewTestProcEnv(realm sp.Trealm, secrets map[string]*sp.SecretProto, etcdMnts map[string]*sp.TendpointProto, innerIP sp.Tip, outerIP sp.Tip, buildTag string, overlays, useSPProxy bool, useNetProxy bool) *ProcEnv {
-	pe := NewProcEnvUnset(true, overlays)
+func NewTestProcEnv(realm sp.Trealm, secrets map[string]*sp.SecretProto, etcdMnts map[string]*sp.TendpointProto, innerIP sp.Tip, outerIP sp.Tip, buildTag string, useSPProxy bool, useDialProxy bool) *ProcEnv {
+	pe := NewProcEnvUnset(true)
 	pe.SetPrincipal(sp.NewPrincipal(sp.TprincipalID("test"), realm))
 	pe.SetSecrets(secrets)
 	pe.SetPID(sp.GenPid("test"))
@@ -145,13 +144,13 @@ func NewTestProcEnv(realm sp.Trealm, secrets map[string]*sp.SecretProto, etcdMnt
 	pe.HowInt = int32(TEST)
 	pe.UseSPProxy = useSPProxy
 	pe.SetSigmaPath(buildTag)
-	pe.UseNetProxy = useNetProxy
+	pe.UseDialProxy = useDialProxy
 	return pe
 }
 
 // Create a new sigma config which is a derivative of an existing sigma config.
 func NewAddedProcEnv(pe *ProcEnv) *ProcEnv {
-	pe2 := NewProcEnvUnset(pe.Privileged, false)
+	pe2 := NewProcEnvUnset(pe.Privileged)
 	*(pe2.ProcEnvProto) = *(pe.ProcEnvProto)
 	pe2.SetPrincipal(sp.NewPrincipal(pe.GetPrincipal().GetID(), pe.GetRealm()))
 	pe2.SecretsMap = make(map[string]*sp.SecretProto)
@@ -167,7 +166,7 @@ func NewAddedProcEnv(pe *ProcEnv) *ProcEnv {
 }
 
 func NewDifferentRealmProcEnv(pe *ProcEnv, realm sp.Trealm) *ProcEnv {
-	pe2 := NewProcEnvUnset(pe.Privileged, pe.Overlays)
+	pe2 := NewProcEnvUnset(pe.Privileged)
 	*(pe2.ProcEnvProto) = *(pe.ProcEnvProto)
 	pe2.SetPrincipal(sp.NewPrincipal(
 		sp.TprincipalID(pe.GetPrincipal().GetID().String()+"-realm-"+realm.String()),
@@ -313,8 +312,8 @@ func (pe *ProcEnvProto) GetSpawnTime() time.Time {
 	return pe.SpawnTimePB.AsTime()
 }
 
-func (pe *ProcEnv) GetScheddEndpoint() (*sp.Tendpoint, bool) {
-	mp := pe.ProcEnvProto.GetScheddEndpointProto()
+func (pe *ProcEnv) GetMSchedEndpoint() (*sp.Tendpoint, bool) {
+	mp := pe.ProcEnvProto.GetMSchedEndpointProto()
 	if mp == nil {
 		return &sp.Tendpoint{}, false
 	}
@@ -366,12 +365,11 @@ func (pe *ProcEnv) String() string {
 		"OuterIP:%v "+
 		"BuildTag:%v "+
 		"Privileged:%v "+
-		"Overlays:%v "+
 		"Crash:%v "+
 		"Partition:%v "+
 		"NetFail:%v "+
 		"UseSPProxy:%v "+
-		"UseNetProxy:%v "+
+		"UseDialProxy:%v "+
 		"SigmaPath:%v "+
 		"RealmSwitch:%v"+
 		"}",
@@ -392,12 +390,11 @@ func (pe *ProcEnv) String() string {
 		pe.OuterContainerIPStr,
 		pe.BuildTag,
 		pe.Privileged,
-		pe.Overlays,
 		pe.Crash,
 		pe.Partition,
 		pe.NetFail,
 		pe.UseSPProxy,
-		pe.UseNetProxy,
+		pe.UseDialProxy,
 		pe.SigmaPath,
 		pe.RealmSwitchStr,
 	)

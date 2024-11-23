@@ -3,8 +3,8 @@ package main
 import (
 	"os"
 
+	"sigmaos/apps/kv"
 	db "sigmaos/debug"
-	"sigmaos/kv"
 )
 
 func main() {

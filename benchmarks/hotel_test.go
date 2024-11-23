@@ -11,14 +11,14 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"sigmaos/apps/hotel"
+	"sigmaos/benchmarks/loadgen"
 	db "sigmaos/debug"
-	"sigmaos/hotel"
-	"sigmaos/loadgen"
-	"sigmaos/perf"
 	"sigmaos/proc"
-	rd "sigmaos/rand"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
+	"sigmaos/util/perf"
+	rd "sigmaos/util/rand"
 )
 
 const (
@@ -96,7 +96,7 @@ func NewHotelJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, durs string, 
 	var err error
 	var svcs []*hotel.Srv
 	if sigmaos {
-		svcs = hotel.NewHotelSvc(test.Overlays)
+		svcs = hotel.NewHotelSvc()
 	}
 
 	if ji.justCli {
@@ -221,7 +221,7 @@ func (ji *HotelJobInstance) StartHotelJob() {
 }
 
 func (ji *HotelJobInstance) printStats() {
-	if ji.sigmaos && !ji.justCli && !ji.ProcEnv().GetOverlays() {
+	if ji.sigmaos && !ji.justCli {
 		for _, s := range hotel.HOTELSVC {
 			stats, err := ji.ReadStats(s)
 			assert.Nil(ji.Ts.T, err, "error get stats [%v] %v", s, err)

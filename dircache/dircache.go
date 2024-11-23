@@ -15,7 +15,7 @@ import (
 	"sigmaos/namesrv/fsetcd"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
-	"sigmaos/sortedmap"
+	"sigmaos/util/sortedmap"
 )
 
 type NewValF[E any] func(string) (E, error)
@@ -325,7 +325,7 @@ func (dc *DirCache[E]) watchDir(ch chan struct{}) {
 		}
 		if err != nil {
 			if serr.IsErrorUnreachable(err) && !retry {
-				time.Sleep(sp.PATHCLNT_TIMEOUT * time.Millisecond)
+				time.Sleep(sp.Conf.Path.RESOLVE_TIMEOUT)
 				// try again but remember we are already tried reading ReadDir
 				if !ok {
 					retry = true
@@ -335,6 +335,9 @@ func (dc *DirCache[E]) watchDir(ch chan struct{}) {
 			} else { // give up
 				db.DPrintf(dc.ESelector, "watchDir[%v]: %t %v stop watching", dc.Path, ok, err)
 				dc.err = err
+				if first {
+					ch <- struct{}{}
+				}
 				return
 			}
 		}

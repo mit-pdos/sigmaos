@@ -6,13 +6,13 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"sigmaos/apps/imgresize"
 	db "sigmaos/debug"
-	"sigmaos/fttasks"
+	"sigmaos/fttask"
 	"sigmaos/groupmgr"
-	"sigmaos/imgresizesrv"
-	"sigmaos/perf"
+	"sigmaos/util/perf"
 	"sigmaos/proc"
-	rd "sigmaos/rand"
+	rd "sigmaos/util/rand"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )
@@ -30,7 +30,7 @@ type ImgResizeJobInstance struct {
 	ready    chan bool
 	imgd     *groupmgr.GroupMgr
 	p        *perf.Perf
-	ft       *fttasks.FtTasks
+	ft       *fttask.FtTasks
 	*test.RealmTstate
 }
 
@@ -49,9 +49,9 @@ func NewImgResizeJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, input str
 	ji.mem = mem
 	ji.nrounds = nrounds
 
-	ts.RmDir(imgresizesrv.IMG)
+	ts.RmDir(imgresize.IMG)
 
-	ft, err := fttasks.MkFtTasks(ji.SigmaClnt.FsLib, imgresizesrv.IMG, ji.job)
+	ft, err := fttask.MkFtTasks(ji.SigmaClnt.FsLib, imgresize.IMG, ji.job)
 	assert.Nil(ts.Ts.T, err, "Error MkDirs: %v", err)
 	ji.ft = ft
 
@@ -65,7 +65,7 @@ func NewImgResizeJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, input str
 	for i := 0; i < ji.ntasks; i++ {
 		ts := make([]interface{}, 0, len(fns))
 		for _, fn := range fns {
-			ts = append(ts, imgresizesrv.NewTask(fn))
+			ts = append(ts, imgresize.NewTask(fn))
 		}
 		err := ft.SubmitTaskMulti(i, ts)
 		assert.Nil(ji.Ts.T, err, "Error SubmitTask: %v", err)
@@ -80,7 +80,7 @@ func NewImgResizeJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, input str
 
 func (ji *ImgResizeJobInstance) StartImgResizeJob() {
 	db.DPrintf(db.ALWAYS, "StartImgResizeJob input %v ntasks %v mcpu %v job %v", ji.input, ji.ntasks, ji.mcpu, ji.job)
-	ji.imgd = imgresizesrv.StartImgd(ji.SigmaClnt, ji.job, ji.mcpu, ji.mem, false, ji.nrounds, ji.imgdmcpu)
+	ji.imgd = imgresize.StartImgd(ji.SigmaClnt, ji.job, ji.mcpu, ji.mem, false, ji.nrounds, ji.imgdmcpu)
 	db.DPrintf(db.ALWAYS, "Done starting ImgResizeJob")
 }
 
@@ -103,5 +103,5 @@ func (ji *ImgResizeJobInstance) Wait() {
 func (ji *ImgResizeJobInstance) Cleanup() {
 	dir := filepath.Join(sp.UX, sp.LOCAL, filepath.Dir(ji.input))
 	db.DPrintf(db.TEST, "[%v] Cleaning up dir %v", ji.GetRealm(), dir)
-	imgresizesrv.Cleanup(ji.FsLib, dir)
+	imgresize.Cleanup(ji.FsLib, dir)
 }

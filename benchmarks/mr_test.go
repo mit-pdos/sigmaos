@@ -5,10 +5,10 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"sigmaos/apps/mr"
 	db "sigmaos/debug"
 	"sigmaos/groupmgr"
-	"sigmaos/mr"
-	"sigmaos/perf"
+	"sigmaos/util/perf"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"

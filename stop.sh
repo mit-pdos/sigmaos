@@ -43,7 +43,7 @@ pgrep -x npproxyd > /dev/null && killall -9 npproxyd
 pgrep -x spproxyd > /dev/null && killall -9 spproxyd
 
 sudo rm -f /tmp/spproxyd/spproxyd.sock
-sudo rm -f /tmp/spproxyd/spproxyd-netproxy.sock
+sudo rm -f /tmp/spproxyd/spproxyd-dialproxy.sock
 sudo rm -f /tmp/spproxyd/spproxyd-pyproxy.sock
 
 if docker ps -a | grep -qE 'sigma|uprocd|bootkerne|kernel-'; then

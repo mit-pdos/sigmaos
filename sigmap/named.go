@@ -34,8 +34,8 @@ const (
 	UX          = NAMED + UXREL + "/"
 	CHUNKDREL   = "chunkd"
 	CHUNKD      = NAMED + CHUNKDREL + "/"
-	SCHEDDREL   = "schedd"
-	SCHEDD      = NAMED + SCHEDDREL + "/"
+	MSCHEDREL   = "msched"
+	MSCHED      = NAMED + MSCHEDREL + "/"
 	LCSCHEDREL  = "lcsched"
 	LCSCHED     = NAMED + LCSCHEDREL + "/"
 	SPPROXYDREL = "spproxyd"
@@ -58,7 +58,7 @@ const (
 	KPIDSREL = "kpids"
 	KPIDS    = NAMED + KPIDSREL
 
-	// Schedd
+	// Mschedd
 	QUEUE   = "queue"
 	RUNNING = "running"
 	PIDS    = "pids"
@@ -112,7 +112,7 @@ var RootNamedMountedDirs map[string]bool = map[string]bool{
 	REALMREL:   true,
 	LCSCHEDREL: true,
 	BESCHEDREL: true,
-	SCHEDDREL:  true,
+	MSCHEDREL:  true,
 	BOOTREL:    true,
 	DBREL:      true,
 	MONGOREL:   true,
@@ -120,10 +120,10 @@ var RootNamedMountedDirs map[string]bool = map[string]bool{
 
 // Linux path
 const (
-	SIGMAHOME             = "/home/sigmaos"
-	SIGMASOCKET           = "/tmp/spproxyd/spproxyd.sock"
-	SIGMA_NETPROXY_SOCKET = "/tmp/spproxyd/spproxyd-netproxy.sock"
-	SIGMA_PYPROXY_SOCKET  = "/tmp/spproxyd/spproxyd-pyproxy.sock" 
+	SIGMAHOME              = "/home/sigmaos"
+	SIGMASOCKET            = "/tmp/spproxyd/spproxyd.sock"
+	SIGMA_DIALPROXY_SOCKET = "/tmp/spproxyd/spproxyd-dialproxy.sock"
+	SIGMA_PYPROXY_SOCKET   = "/tmp/spproxyd/spproxyd-pyproxy.sock"
 )
 
 // spproxyd kernel

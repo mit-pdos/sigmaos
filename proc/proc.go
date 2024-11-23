@@ -83,7 +83,6 @@ func NewPrivProcPid(pid sp.Tpid, program string, args []string, priv bool) *Proc
 		priv,
 		false,
 		false,
-		false,
 	).GetProto()
 	p.Args = args
 	p.TypeInt = uint32(T_BE)
@@ -137,10 +136,9 @@ func (p *Proc) InheritParentProcEnv(parentPE *ProcEnv) {
 	p.ProcEnvProto.Debug = parentPE.Debug
 	p.ProcEnvProto.BuildTag = parentPE.BuildTag
 	p.ProcEnvProto.Version = parentPE.Version
-	p.ProcEnvProto.Overlays = parentPE.Overlays
 	p.ProcEnvProto.UseSPProxy = parentPE.UseSPProxy
 	// Don't override intentionally set net proxy settings
-	p.ProcEnvProto.UseNetProxy = parentPE.UseNetProxy || p.ProcEnvProto.UseNetProxy
+	p.ProcEnvProto.UseDialProxy = parentPE.UseDialProxy || p.ProcEnvProto.UseDialProxy
 	p.ProcEnvProto.SigmaPath = append(p.ProcEnvProto.SigmaPath, parentPE.SigmaPath...)
 	// If parent didn't specify secrets, inherit the parent's secrets
 	if p.ProcEnvProto.SecretsMap == nil {
@@ -232,7 +230,7 @@ func (p *Proc) String() string {
 		"SigmaPath:%v "+
 		"KernelId:%v "+
 		"UseSPProxy:%v "+
-		"UseNetProxy:%v "+
+		"UseDialProxy:%v "+
 		"Realm:%v "+
 		"Perf:%v "+
 		"InnerIP:%v "+
@@ -250,7 +248,7 @@ func (p *Proc) String() string {
 		p.ProcEnvProto.GetSigmaPath(),
 		p.ProcEnvProto.KernelID,
 		p.ProcEnvProto.UseSPProxy,
-		p.ProcEnvProto.UseNetProxy,
+		p.ProcEnvProto.UseDialProxy,
 		p.ProcEnvProto.GetRealm(),
 		p.ProcEnvProto.GetPerf(),
 		p.ProcEnvProto.GetInnerContainerIP(),
@@ -267,7 +265,7 @@ func (p *Proc) setProcDir(kernelId string) {
 	// Privileged procs have their ProcDir (sp.KPIDS) set at the time of creation
 	// of the proc struct.
 	if !p.IsPrivileged() {
-		p.ProcEnvProto.ProcDir = filepath.Join(sp.SCHEDD, kernelId, sp.PIDS, p.GetPid().String())
+		p.ProcEnvProto.ProcDir = filepath.Join(sp.MSCHED, kernelId, sp.PIDS, p.GetPid().String())
 	}
 }
 
@@ -372,14 +370,6 @@ func (p *Proc) GetSpawnTime() time.Time {
 	return p.ProcEnvProto.GetSpawnTime()
 }
 
-func (p *Proc) SetShared(target string) {
-	p.SharedTarget = target
-}
-
-func (p *Proc) GetShared() string {
-	return p.SharedTarget
-}
-
 func (p *Proc) SetHow(n Thow) {
 	p.ProcEnvProto.SetHow(n)
 }
@@ -388,8 +378,8 @@ func (p *Proc) GetHow() Thow {
 	return p.ProcEnvProto.GetHow()
 }
 
-func (p *Proc) SetScheddEndpoint(ep *sp.Tendpoint) {
-	p.ProcEnvProto.ScheddEndpointProto = ep.GetProto()
+func (p *Proc) SetMSchedEndpoint(ep *sp.Tendpoint) {
+	p.ProcEnvProto.MSchedEndpointProto = ep.GetProto()
 }
 
 func (p *Proc) SetNamedEndpoint(ep *sp.Tendpoint) {

@@ -4,7 +4,7 @@ import (
 	dbg "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/proc"
-	"sigmaos/rand"
+	"sigmaos/util/rand"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
 )

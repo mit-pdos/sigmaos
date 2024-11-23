@@ -44,7 +44,7 @@ if ! mysqlshow -h $ip -u root -psigmadb | grep -q sigmaos; then
     mysql -h $ip -u root -psigmadb <<ENDOFSQL
 CREATE database sigmaos;
 USE sigmaos;
-source hotel/init-db.sql;
+source apps/hotel/init-db.sql;
 CREATE USER 'sigma1'@'172.17.%.%' IDENTIFIED BY 'sigmaos1';
 GRANT ALL PRIVILEGES ON sigmaos.* TO 'sigma1'@'172.17.%.%';
 CREATE USER 'sigma1'@'192.168.%.%' IDENTIFIED BY 'sigmaos1';

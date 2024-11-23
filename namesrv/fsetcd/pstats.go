@@ -10,7 +10,7 @@ import (
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 	"sigmaos/stats"
-	"sigmaos/syncmap"
+	"sigmaos/util/syncmap"
 )
 
 type pstats struct {

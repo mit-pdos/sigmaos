@@ -4,7 +4,7 @@ import (
 	"os"
 
 	db "sigmaos/debug"
-	"sigmaos/k8sutil"
+	k8sutil "sigmaos/util/k8s"
 )
 
 func main() {

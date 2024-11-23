@@ -48,7 +48,7 @@ fn main() {
     print_elapsed_time("trampoline.exec_trampoline", exec_time, false);
     let pid = env::args().nth(1).expect("no pid");
     let program = env::args().nth(2).expect("no program");
-    let netproxy = env::args().nth(3).expect("no netproxy");
+    let dialproxy = env::args().nth(3).expect("no dialproxy");
     let mut now = SystemTime::now();
     let aa = is_enabled_apparmor();
     print_elapsed_time("Check apparmor enabled", now, false);
@@ -62,20 +62,20 @@ fn main() {
     // Get principal ID from env
     let principal_id = env::var("SIGMAPRINCIPAL").unwrap_or("NO_PRINCIPAL_IN_ENV".to_string());
     let principal_id_frame_nbytes = (principal_id.len() + 4) as i32;
-    // Connect to the netproxy socket
-    let mut netproxy_conn = UnixStream::connect("/tmp/spproxyd/spproxyd-netproxy.sock").unwrap();
+    // Connect to the dialproxy socket
+    let mut dialproxy_conn = UnixStream::connect("/tmp/spproxyd/spproxyd-dialproxy.sock").unwrap();
     // Write frame containing principal ID to socket
-    netproxy_conn
+    dialproxy_conn
         .write_all(&i32::to_le_bytes(principal_id_frame_nbytes))
         .unwrap();
-    netproxy_conn.write_all(principal_id.as_bytes()).unwrap();
+    dialproxy_conn.write_all(principal_id.as_bytes()).unwrap();
     // Remove O_CLOEXEC flag so that the connection remains open when the
     // trampoline execs the proc.
-    let netproxy_conn_fd = netproxy_conn.into_raw_fd();
-    fcntl::fcntl(netproxy_conn_fd, FcntlArg::F_SETFD(FdFlag::empty())).unwrap();
-    // Pass the netproxy socket connection FD to the user proc
-    env::set_var("SIGMA_NETPROXY_FD", netproxy_conn_fd.to_string());
-    print_elapsed_time("trampoline.connect_netproxy", now, false);
+    let dialproxy_conn_fd = dialproxy_conn.into_raw_fd();
+    fcntl::fcntl(dialproxy_conn_fd, FcntlArg::F_SETFD(FdFlag::empty())).unwrap();
+    // Pass the dialproxy socket connection FD to the user proc
+    env::set_var("SIGMA_DIALPROXY_FD", dialproxy_conn_fd.to_string());
+    print_elapsed_time("trampoline.connect_dialproxy", now, false);
     now = SystemTime::now();
     // Connect to the pyproxy socket
     let pyproxy_conn = UnixStream::connect("/tmp/spproxyd/spproxyd-pyproxy.sock").unwrap();
@@ -84,7 +84,7 @@ fn main() {
     env::set_var("SIGMA_PYPROXY_FD", pyproxy_conn_fd.to_string());
     print_elapsed_time("trampoline.connect_pyproxy", now, false);
     now = SystemTime::now();
-    seccomp_proc(netproxy).expect("seccomp failed");
+    seccomp_proc(dialproxy).expect("seccomp failed");
     print_elapsed_time("trampoline.seccomp_proc", now, false);
     now = SystemTime::now();
 
@@ -112,8 +112,9 @@ fn main() {
     }
 
     let err = cmd.args(new_args).exec();
-
+    // Exec should never return
     log::info!("err: {}", err);
+    std::process::exit(1);
 }
 
 fn jail_proc(pid: &str) -> Result<(), Box<dyn std::error::Error>> {
@@ -271,7 +272,7 @@ struct Cond {
     op: String,
 }
 
-fn seccomp_proc(netproxy: String) -> Result<(), Box<dyn std::error::Error>> {
+fn seccomp_proc(dialproxy: String) -> Result<(), Box<dyn std::error::Error>> {
     use libseccomp::*;
 
     // XXX Should really be 64 syscalls. We can remove ioctl, poll, and lstat,
@@ -333,7 +334,7 @@ fn seccomp_proc(netproxy: String) -> Result<(), Box<dyn std::error::Error>> {
         ScmpSyscall::new("sched_getaffinity"),
         ScmpSyscall::new("sched_yield"),
         ScmpSyscall::new("sendto"),
-        ScmpSyscall::new("sendmsg"), // Needed for current implementation of netproxy transport for simplicity of implementation, but not actually needed
+        ScmpSyscall::new("sendmsg"), // Needed for current implementation of dialproxy transport for simplicity of implementation, but not actually needed
         ScmpSyscall::new("setitimer"),
         ScmpSyscall::new("setsockopt"), // Important for performance! (especially hotel/socialnet)
         ScmpSyscall::new("set_robust_list"),
@@ -353,7 +354,7 @@ fn seccomp_proc(netproxy: String) -> Result<(), Box<dyn std::error::Error>> {
         ScmpSyscall::new("readv"),
     ];
 
-    const NONETPROXY_ALLOWED_SYSCALLS: [ScmpSyscall; 3] = [
+    const NODIALPROXY_ALLOWED_SYSCALLS: [ScmpSyscall; 3] = [
         ScmpSyscall::new("bind"),
         ScmpSyscall::new("listen"),
         ScmpSyscall::new("connect"),
@@ -364,7 +365,7 @@ fn seccomp_proc(netproxy: String) -> Result<(), Box<dyn std::error::Error>> {
         ScmpArgCompare::new(0, ScmpCompareOp::MaskedEqual(0), 0x7E020000),
     )];
 
-    const NONETPROXY_COND_ALLOWED_SYSCALLS: [(ScmpSyscall, ScmpArgCompare); 1] = [(
+    const NODIALPROXY_COND_ALLOWED_SYSCALLS: [(ScmpSyscall, ScmpArgCompare); 1] = [(
         ScmpSyscall::new("socket"),
         ScmpArgCompare::new(0, ScmpCompareOp::NotEqual, 40),
     )];
@@ -379,11 +380,11 @@ fn seccomp_proc(netproxy: String) -> Result<(), Box<dyn std::error::Error>> {
         filter.add_rule_conditional(ScmpAction::Allow, syscall, &[cond])?;
     }
 
-    if netproxy == "false" {
-        for syscall in NONETPROXY_ALLOWED_SYSCALLS {
+    if dialproxy == "false" {
+        for syscall in NODIALPROXY_ALLOWED_SYSCALLS {
             filter.add_rule(ScmpAction::Allow, syscall)?;
         }
-        for c in NONETPROXY_COND_ALLOWED_SYSCALLS {
+        for c in NODIALPROXY_COND_ALLOWED_SYSCALLS {
             let syscall = c.0;
             let cond = c.1;
             filter.add_rule_conditional(ScmpAction::Allow, syscall, &[cond])?;

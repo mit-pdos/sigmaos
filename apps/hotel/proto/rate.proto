@@ -1,0 +1,38 @@
+syntax = "proto3";
+
+import "tracing/proto/tracing.proto";
+
+option go_package = "sigmaos/apps/hotel/proto";
+
+service Rate {
+  rpc GetRates(RateRequest) returns (RateResult);
+}
+
+message RateRequest {
+  repeated string hotelIds = 1;
+  string inDate = 2;
+  string outDate = 3;
+  SpanContextConfig spanContextConfig = 4;
+}
+
+message RoomType {
+  double bookableRate = 1;
+  double totalRate = 2;
+  double totalRateInclusive = 3;
+  string code = 4;
+  string currency = 5;
+  string roomDescription = 6;
+  bytes  image = 7;
+}
+
+message RatePlan {
+  string    hotelId = 1;
+  string    code = 2;
+  string    inDate = 3;
+  string    outDate = 4;
+  RoomType roomType = 5;
+}
+
+message RateResult {
+  repeated RatePlan ratePlans = 1;
+}

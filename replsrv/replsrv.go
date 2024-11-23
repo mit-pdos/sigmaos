@@ -10,7 +10,7 @@ import (
 	"sigmaos/fs"
 	"sigmaos/repl"
 	"sigmaos/replraft"
-	"sigmaos/rpcsrv"
+	rpcsrv "sigmaos/rpc/srv"
 	"sigmaos/sessp"
 )
 

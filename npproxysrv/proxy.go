@@ -12,12 +12,12 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/demux"
 	"sigmaos/fidclnt"
-	"sigmaos/netproxyclnt"
+	dialproxyclnt "sigmaos/dialproxy/clnt"
 	"sigmaos/npproxysrv/npcodec"
 	"sigmaos/path"
 	"sigmaos/pathclnt"
 	"sigmaos/proc"
-	"sigmaos/rand"
+	"sigmaos/util/rand"
 	"sigmaos/serr"
 	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
@@ -50,10 +50,10 @@ func (pc *proxyConn) ServeRequest(fc demux.CallI) (demux.CallI, *serr.Err) {
 type Npd struct {
 	lip sp.Tip
 	pe  *proc.ProcEnv
-	npc *netproxyclnt.NetProxyClnt
+	npc *dialproxyclnt.DialProxyClnt
 }
 
-func NewNpd(pe *proc.ProcEnv, npc *netproxyclnt.NetProxyClnt, lip sp.Tip) *Npd {
+func NewNpd(pe *proc.ProcEnv, npc *dialproxyclnt.DialProxyClnt, lip sp.Tip) *Npd {
 	return &Npd{
 		lip: lip,
 		pe:  pe,
@@ -84,7 +84,7 @@ type NpSess struct {
 	cid       sp.TclntId
 }
 
-func newNpSess(pe *proc.ProcEnv, npcs *netproxyclnt.NetProxyClnt, lip string) *NpSess {
+func newNpSess(pe *proc.ProcEnv, npcs *dialproxyclnt.DialProxyClnt, lip string) *NpSess {
 	npc := &NpSess{}
 	npc.pe = pe
 	npc.fidc = fidclnt.NewFidClnt(pe, npcs)

@@ -53,7 +53,7 @@ func TestReadOff(t *testing.T) {
 		return
 	}
 
-	rdr, err := ts.OpenReaderRegion(filepath.Join(sp.S3, sp.LOCAL, ",9ps3/gutenberg/pg-being_ernest.txt"), 1<<10, 0)
+	rdr, err := ts.OpenReaderRegion(filepath.Join(sp.S3, sp.LOCAL, "9ps3/gutenberg/pg-being_ernest.txt"), 1<<10, 0)
 	assert.Nil(t, err, "Error OpenReaderRegion %v", err)
 	brdr := bufio.NewReaderSize(rdr, 1<<16)
 	scanner := bufio.NewScanner(brdr)

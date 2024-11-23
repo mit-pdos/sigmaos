@@ -98,12 +98,6 @@ const (
 	EtcdSessionTTL = 5
 )
 
-// Path lookup consts
-const (
-	PATHCLNT_TIMEOUT  = 200 // ms  (XXX belongs in hyperparam?)
-	PATHCLNT_MAXRETRY = (EtcdSessionTTL + 1) * (1000 / PATHCLNT_TIMEOUT)
-)
-
 // Realm consts
 const (
 	ROOTREALM Trealm = "rootrealm"
@@ -157,13 +151,6 @@ const (
 	NO_SIGNER          string       = "NO_SIGNER"
 	NO_SIGNED_TOKEN    string       = "NO_SIGNED_TOKEN"
 )
-
-func NoToken() *Ttoken {
-	return &Ttoken{
-		SignerStr:   NO_SIGNER,
-		SignedToken: NO_SIGNED_TOKEN,
-	}
-}
 
 func NoPrincipal() *Tprincipal {
 	return &Tprincipal{

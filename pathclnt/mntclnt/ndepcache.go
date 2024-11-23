@@ -5,7 +5,7 @@ import (
 
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
-	"sigmaos/syncmap"
+	"sigmaos/util/syncmap"
 )
 
 type NamedEndpointCache struct {

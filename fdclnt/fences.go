@@ -6,7 +6,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/path"
 	sp "sigmaos/sigmap"
-	"sigmaos/syncmap"
+	"sigmaos/util/syncmap"
 )
 
 //

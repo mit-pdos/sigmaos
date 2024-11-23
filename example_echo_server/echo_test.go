@@ -13,10 +13,9 @@ import (
 	echo "sigmaos/example_echo_server"
 	"sigmaos/fslib"
 	"sigmaos/proc"
-	"sigmaos/rand"
 	sp "sigmaos/sigmap"
-	"sigmaos/sigmarpcchan"
 	"sigmaos/test"
+	"sigmaos/util/rand"
 )
 
 type TstateEcho struct {
@@ -79,7 +78,7 @@ func TestEcho(t *testing.T) {
 	}
 
 	// create a RPC client and query server
-	rpcc, err := sigmarpcchan.NewSigmaRPCClnt([]*fslib.FsLib{tse.FsLib}, echo.NAMED_ECHO_SERVER)
+	rpcc, err := sprpcclnt.NewRPCClnt(tse.FsLib, echo.NAMED_ECHO_SERVER)
 	assert.Nil(t, err, "RPC client should be created properly")
 	arg := echo.EchoRequest{Text: "Hello World!"}
 	res := echo.EchoResult{}

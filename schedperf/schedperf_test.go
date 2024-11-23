@@ -11,7 +11,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/linuxsched"
 	"sigmaos/proc"
-	"sigmaos/scheddclnt"
+	mschedclnt "sigmaos/sched/msched/clnt"
 	"sigmaos/test"
 )
 
@@ -66,7 +66,7 @@ func TestGetCPUUtilLatencyLowLoad(t *testing.T) {
 	rootts := test.NewTstateWithRealms(t)
 	ts1 := test.NewRealmTstate(rootts, REALM1)
 
-	sdc := scheddclnt.NewScheddClnt(ts1.SigmaClnt.FsLib)
+	sdc := mschedclnt.NewScheddClnt(ts1.SigmaClnt.FsLib)
 
 	db.DPrintf(db.TEST, "Run SpinPerf")
 	c := make(chan time.Duration)
@@ -95,7 +95,7 @@ func TestGetCPUUtilLatencyHighLoad(t *testing.T) {
 	rootts := test.NewTstateWithRealms(t)
 	ts1 := test.NewRealmTstate(rootts, REALM1)
 
-	sdc := scheddclnt.NewScheddClnt(ts1.SigmaClnt.FsLib)
+	sdc := mschedclnt.NewScheddClnt(ts1.SigmaClnt.FsLib)
 
 	db.DPrintf(db.TEST, "Run SpinPerf")
 	c := make(chan time.Duration)

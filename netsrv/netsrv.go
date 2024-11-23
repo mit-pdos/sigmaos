@@ -6,7 +6,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/demux"
-	"sigmaos/netproxyclnt"
+	dialproxyclnt "sigmaos/dialproxy/clnt"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 )
@@ -17,18 +17,18 @@ type NewConnI interface {
 
 type NetServer struct {
 	pe      *proc.ProcEnv
-	npc     *netproxyclnt.NetProxyClnt
+	npc     *dialproxyclnt.DialProxyClnt
 	ep      *sp.Tendpoint
-	l       *netproxyclnt.Listener
+	l       *dialproxyclnt.Listener
 	newConn NewConnI
 }
 
-func NewNetServer(pe *proc.ProcEnv, npc *netproxyclnt.NetProxyClnt, addr *sp.Taddr, newConn NewConnI) *NetServer {
+func NewNetServer(pe *proc.ProcEnv, npc *dialproxyclnt.DialProxyClnt, addr *sp.Taddr, newConn NewConnI) *NetServer {
 	return NewNetServerEPType(pe, npc, addr, sp.INTERNAL_EP, newConn)
 }
 
 // Special-case used just for proxy
-func NewNetServerEPType(pe *proc.ProcEnv, npc *netproxyclnt.NetProxyClnt, addr *sp.Taddr, eptype sp.TTendpoint, newConn NewConnI) *NetServer {
+func NewNetServerEPType(pe *proc.ProcEnv, npc *dialproxyclnt.DialProxyClnt, addr *sp.Taddr, eptype sp.TTendpoint, newConn NewConnI) *NetServer {
 	srv := &NetServer{
 		pe:      pe,
 		newConn: newConn,
@@ -56,7 +56,7 @@ func (srv *NetServer) CloseListener() error {
 	return srv.l.Close()
 }
 
-func (srv *NetServer) runsrv(l *netproxyclnt.Listener) {
+func (srv *NetServer) runsrv(l *dialproxyclnt.Listener) {
 	for {
 		conn, p, err := l.AcceptGetPrincipal()
 		db.DPrintf(db.NETSRV, "Accept conn from principal %v", p)

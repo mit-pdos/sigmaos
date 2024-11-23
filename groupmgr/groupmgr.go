@@ -212,7 +212,7 @@ func (gm *GroupMgr) startL(i int, done chan *procret) {
 	if err != nil {
 		go func() {
 			db.DPrintf(db.GROUPMGR_ERR, "failed to start %v: %v; try again\n", i, err)
-			time.Sleep(time.Duration(sp.PATHCLNT_TIMEOUT) * time.Millisecond)
+			time.Sleep(sp.Conf.Path.RESOLVE_TIMEOUT)
 			done <- &procret{i, err, nil}
 		}()
 	}

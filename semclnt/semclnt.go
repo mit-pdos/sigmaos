@@ -53,7 +53,7 @@ func (c *SemClnt) Down() error {
 		}
 		if serr.IsErrCode(err, serr.TErrUnreachable) {
 			db.DPrintf(db.SEMCLNT, "down unreachable %v ok err %v\n", c.path, err)
-			time.Sleep(sp.PATHCLNT_TIMEOUT * time.Millisecond)
+			time.Sleep(sp.Conf.Path.RESOLVE_TIMEOUT)
 			continue
 		}
 		if err == nil {

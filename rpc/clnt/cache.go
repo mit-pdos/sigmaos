@@ -76,7 +76,7 @@ func (cc *ClntCache) RPCRetry(pn string, method string, arg proto.Message, res p
 		if err := rpcc.RPC(method, arg, res); err != nil {
 			var sr *serr.Err
 			if errors.As(err, &sr) && serr.Retry(sr) {
-				time.Sleep(sp.PATHCLNT_TIMEOUT * time.Millisecond)
+				time.Sleep(sp.Conf.Path.RESOLVE_TIMEOUT)
 				db.DPrintf(db.RPCCLNT, "RPC: retry %v %v err %v", pn, method, sr)
 				cc.Delete(pn)
 				continue

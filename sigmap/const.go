@@ -99,9 +99,8 @@ const (
 )
 
 // Path lookup consts
-const (
-	PATHCLNT_TIMEOUT  = 200 // ms  (XXX belongs in hyperparam?)
-	PATHCLNT_MAXRETRY = (EtcdSessionTTL + 1) * (1000 / PATHCLNT_TIMEOUT)
+var (
+	PATHCLNT_MAXRETRY = int((EtcdSessionTTL + 1) * (1000 / Conf.Path.RESOLVE_TIMEOUT.Milliseconds()))
 )
 
 // Realm consts

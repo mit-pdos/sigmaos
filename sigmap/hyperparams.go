@@ -16,6 +16,10 @@ var local = `
 apparmor:
   enabled: false
 
+path:
+  max_symlink: 8
+  path_resolve_timeout: 200ms
+
 conn:
   msg_len: 65536
 
@@ -42,6 +46,10 @@ raft:
 var remote = `
 apparmor:
   enabled: true
+
+path:
+  max_symlink: 8
+  path_resolve_timeout: 200ms
 
 conn:
   msg_len: 65536
@@ -70,6 +78,10 @@ type Config struct {
 		// SigmaP connection message length.
 		ENABLED bool `yaml:"enabled"`
 	}
+	Path struct {
+		MAX_SYMLINK     int           `yaml:"max_symlink"`
+		RESOLVE_TIMEOUT time.Duration `yaml:"path_resolve_timeout"`
+	} `yaml:"path"`
 	Conn struct {
 		// SigmaP connection message length.
 		MSG_LEN int `yaml:"msg_len"`

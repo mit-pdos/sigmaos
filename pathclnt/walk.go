@@ -16,7 +16,7 @@ import (
 // again, perhaps switching to another replica.  (Note:
 // TestMaintainReplicationLevelCrashProcd test the fail-over case.)
 func (pathc *PathClnt) walk(path path.Tpathname, principal *sp.Tprincipal, resolve bool, w sos.Watch) (sp.Tfid, *serr.Err) {
-	for i := 0; i < sp.PATHCLNT_MAXRETRY; i++ {
+	for i := 0; i < sp.Conf.Path.MAX_RESOLVE_RETRY; i++ {
 		if err, cont := pathc.mntclnt.ResolveRoot(path); err != nil {
 			if cont && err.IsErrUnreachable() {
 				time.Sleep(sp.Conf.Path.RESOLVE_TIMEOUT)

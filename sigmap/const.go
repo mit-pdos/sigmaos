@@ -98,11 +98,6 @@ const (
 	EtcdSessionTTL = 5
 )
 
-// Path lookup consts
-var (
-	PATHCLNT_MAXRETRY = int((EtcdSessionTTL + 1) * (1000 / Conf.Path.RESOLVE_TIMEOUT.Milliseconds()))
-)
-
 // Realm consts
 const (
 	ROOTREALM Trealm = "rootrealm"

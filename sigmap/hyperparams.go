@@ -19,6 +19,7 @@ apparmor:
 path:
   max_symlink: 8
   path_resolve_timeout: 200ms
+  max_resolve_retry: 30
 
 conn:
   msg_len: 65536
@@ -50,6 +51,7 @@ apparmor:
 path:
   max_symlink: 8
   path_resolve_timeout: 200ms
+  max_resolve_retry: 30
 
 conn:
   msg_len: 65536
@@ -79,8 +81,9 @@ type Config struct {
 		ENABLED bool `yaml:"enabled"`
 	}
 	Path struct {
-		MAX_SYMLINK     int           `yaml:"max_symlink"`
-		RESOLVE_TIMEOUT time.Duration `yaml:"path_resolve_timeout"`
+		MAX_SYMLINK       int           `yaml:"max_symlink"`
+		RESOLVE_TIMEOUT   time.Duration `yaml:"path_resolve_timeout"`
+		MAX_RESOLVE_RETRY int           `yaml:"max_resolve_retry"`
 	} `yaml:"path"`
 	Conn struct {
 		// SigmaP connection message length.

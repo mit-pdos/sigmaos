@@ -176,7 +176,7 @@ func (clnt *ProcClnt) enqueueViaLCSched(p *proc.Proc) (string, error) {
 func (clnt *ProcClnt) spawnRetry(kernelId string, p *proc.Proc) (*proc.ProcSeqno, error) {
 	s := time.Now()
 	var pseqno *proc.ProcSeqno
-	for i := 0; i < sp.PATHCLNT_MAXRETRY; i++ {
+	for i := 0; i < sp.Conf.Path.MAX_RESOLVE_RETRY; i++ {
 		var err error
 		if p.IsPrivileged() {
 			// Privileged procs are force-run on the schedd specified by kernelID in
@@ -218,7 +218,7 @@ func (clnt *ProcClnt) spawnRetry(kernelId string, p *proc.Proc) (*proc.ProcSeqno
 		db.DPrintf(db.SPAWN_LAT, "[%v] E2E Spawn RPC %v nretry %v", p.GetPid(), time.Since(s), i)
 		return pseqno, nil
 	}
-	db.DPrintf(db.PROCCLNT_ERR, "spawnRetry failed, too many retries (%v): %v", sp.PATHCLNT_MAXRETRY, p)
+	db.DPrintf(db.PROCCLNT_ERR, "spawnRetry failed, too many retries (%v): %v", sp.Conf.Path.MAX_RESOLVE_RETRY, p)
 	return nil, serr.NewErr(serr.TErrUnreachable, kernelId)
 }
 

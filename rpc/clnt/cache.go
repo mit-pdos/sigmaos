@@ -62,7 +62,7 @@ func (cc *ClntCache) Delete(pn string) {
 }
 
 func (cc *ClntCache) RPCRetry(pn string, method string, arg proto.Message, res proto.Message) error {
-	for i := 0; i < sp.PATHCLNT_MAXRETRY; i++ {
+	for i := 0; i < sp.Conf.Path.MAX_RESOLVE_RETRY; i++ {
 		rpcc, err := cc.Lookup(pn)
 		if err != nil {
 			var sr *serr.Err

@@ -42,7 +42,7 @@ func (c *SemClnt) InitLease(perm sp.Tperm, lid sp.TleaseId) error {
 
 // Down semaphore. If not upped yet (i.e., if file exists), block
 func (c *SemClnt) Down() error {
-	for i := 0; i < sp.PATHCLNT_MAXRETRY; i++ {
+	for i := 0; i < sp.Conf.Path.MAX_RESOLVE_RETRY; i++ {
 		db.DPrintf(db.SEMCLNT, "Down %d %v\n", i, c.path)
 		err := c.WaitRemove(c.path)
 		// If err is because file has been removed, then no error: the
@@ -64,7 +64,7 @@ func (c *SemClnt) Down() error {
 			return err
 		}
 	}
-	db.DPrintf(db.SEMCLNT_ERR, "Down failed after %d retries\n", sp.PATHCLNT_MAXRETRY)
+	db.DPrintf(db.SEMCLNT_ERR, "Down failed after %d retries\n", sp.Conf.Path.MAX_RESOLVE_RETRY)
 	return serr.NewErr(serr.TErrUnreachable, c.path)
 }
 

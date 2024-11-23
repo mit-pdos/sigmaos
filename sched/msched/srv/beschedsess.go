@@ -12,16 +12,16 @@ type BESchedSession struct {
 	sync.Mutex
 	*sync.Cond
 	procqID  string
-	scheddID string
+	mschedID string
 	epoch    uint64
 	next     uint64
 	got      uint64
 }
 
-func NewBESchedSession(procqID, scheddID string) *BESchedSession {
+func NewBESchedSession(procqID, mschedID string) *BESchedSession {
 	pseqno := &BESchedSession{
 		procqID:  procqID,
-		scheddID: scheddID,
+		mschedID: mschedID,
 		epoch:    1,
 		next:     1,
 		got:      1,
@@ -36,7 +36,7 @@ func (pc *BESchedSession) NextSeqno() *proc.ProcSeqno {
 	defer pc.Unlock()
 
 	pc.next++
-	return proc.NewProcSeqno(pc.procqID, pc.scheddID, pc.epoch, pc.next)
+	return proc.NewProcSeqno(pc.procqID, pc.mschedID, pc.epoch, pc.next)
 }
 
 func (pc *BESchedSession) AdvanceEpoch() {

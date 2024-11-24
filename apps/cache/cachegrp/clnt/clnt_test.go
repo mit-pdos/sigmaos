@@ -184,7 +184,7 @@ func TestCacheConcur(t *testing.T) {
 	}
 	ts := newTstate(t1, NSRV)
 	v := "hello"
-	cc := cachegrpclnt.NewCachedSvcClnt(s.FsLib, ts.job)
+	cc := cachegrpclnt.NewCachedSvcClnt(ts.FsLib, ts.job)
 	err := cc.Put("x", &proto.CacheString{Val: v})
 	assert.Nil(t, err)
 

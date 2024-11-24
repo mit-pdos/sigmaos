@@ -21,8 +21,6 @@ import (
 	"sigmaos/util/perf"
 )
 
-const ()
-
 type Reservation struct {
 	HotelID  string
 	Customer string

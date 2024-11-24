@@ -29,6 +29,9 @@ RUN git clone https://github.com/ivywu2003/cpython.git cpython3.11 && \
   ./configure --prefix=/home/sigmaos-local/bin/user --exec-prefix=/home/sigmaos-local/bin/user && \
   make -j
 
+# Copy python user programs
+COPY pyproc pyproc
+
 # Install rust
 RUN curl https://sh.rustup.rs -sSf | bash -s -- -y
 RUN echo 'source $HOME/.cargo/env' >> $HOME/.bashrc

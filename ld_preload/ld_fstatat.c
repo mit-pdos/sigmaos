@@ -46,7 +46,7 @@ const char* get_path(const char *filename)
 
     fflush(stdout);
     char* x = malloc(512 * sizeof(char));
-    sprintf(x, "%s%s", "/bin", &(filename[3]));
+    sprintf(x, "%s%s", "/tmp/python", &(filename[3]));
 
     write(sfd, "pf", 2);
     write(sfd, &(filename[3]), strlen(filename) - 3);
@@ -59,9 +59,9 @@ const char* get_path(const char *filename)
 }
 
 int stat(const char *path, struct stat *buf) {
-    static int (*fstat_func)(const char*, struct stat*) = NULL;
-    fstat_func = (int(*)(const char*, struct stat*)) dlsym(RTLD_NEXT, "stat");
-    int res = fstat_func(get_path(path), buf);
+    static int (*stat_func)(const char*, struct stat*) = NULL;
+    stat_func = (int(*)(const char*, struct stat*)) dlsym(RTLD_NEXT, "stat");
+    int res = stat_func(get_path(path), buf);
     return res;
 }
 
@@ -89,17 +89,6 @@ FILE * fopen( const char * filename,
     FILE * res = fopen_func(get_path(filename), mode);
     return res;
 }
-/**
-int openat(int dirfd, const char *pathname, int flags)
-{
-    static int (*open_func)(int, const char*, int) = NULL;
-    open_func = (int(*)(int, const char*, int)) dlsym(RTLD_NEXT, "openat");
-    int res = open_func(dirfd, get_path(pathname), flags);
-    printf("preloaded openat\n");
-    fflush(stdout);
-    return res;
-}
-*/
 int openat(int dirfd, const char *pathname, int flags, mode_t mode)
 {
     static int (*open_func)(int, const char*, int, mode_t) = NULL;

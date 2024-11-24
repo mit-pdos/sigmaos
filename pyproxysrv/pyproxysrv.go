@@ -1,6 +1,7 @@
 package pyproxysrv
 
 import (
+	"bufio"
 	"net"
 	"os"
 
@@ -47,16 +48,15 @@ func (pps *PyProxySrv) Shutdown() {
 }
 
 func (pps *PyProxySrv) handleNewConn(conn *net.UnixConn) {
+	reader := bufio.NewReader(conn)
 	for {
-		buf := make([]byte, 512)
-		bytesRead, err := conn.Read(buf)
+		line, err := reader.ReadString('\n')
 		if err != nil {
 			db.DPrintf(db.PYPROXYSRV_ERR, "reader: rf err %v\n", err)
 			return
 		}
 
-		data := buf[0:bytesRead]
-		db.DPrintf(db.PYPROXYSRV, "reader: received %v\n", string(data))
+		db.DPrintf(db.PYPROXYSRV, "reader: received %v", string(line))
 
 		response := []byte("d\n")
 		_, err = conn.Write(response)
@@ -64,6 +64,7 @@ func (pps *PyProxySrv) handleNewConn(conn *net.UnixConn) {
 			db.DPrintf(db.PYPROXYSRV_ERR, "reader: wf err %v\n", err)
 			return
 		}
+
 	}
 }
 

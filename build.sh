@@ -215,6 +215,7 @@ if [ "${TARGET}" == "local" ]; then
   cp $KERNELBIN/exec-uproc-rs $UPROCD_BIN/
   cp $KERNELBIN/python $UPROCD_BIN/
   cp -r $KERNELBIN/Lib $PYTHON/
+  cp -r $KERNELBIN/pyproc $PYTHON/
   cp $KERNELBIN/ld_fstatat.so $PYTHON/
 fi
 echo "========== Done copying kernel bins for uproc =========="

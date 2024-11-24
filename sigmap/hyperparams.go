@@ -16,6 +16,9 @@ var local = `
 apparmor:
   enabled: false
 
+fslib:
+  max_retry: 100
+
 path:
   max_symlink: 8
   path_resolve_timeout: 200ms
@@ -47,6 +50,9 @@ raft:
 var remote = `
 apparmor:
   enabled: true
+
+fslib:
+  max_retry: 100
 
 path:
   max_symlink: 8
@@ -80,6 +86,10 @@ type Config struct {
 		// SigmaP connection message length.
 		ENABLED bool `yaml:"enabled"`
 	}
+	FsLib struct {
+		// Max number of retries at the FsLib layer
+		MAX_RETRY int
+	} `yaml:"path"`
 	Path struct {
 		// Max symlink depth allowed
 		MAX_SYMLINK int `yaml:"max_symlink"`

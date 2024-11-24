@@ -5,15 +5,12 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/serr"
-)
-
-const (
-	N_DOWNLOAD_RETRIES = 100
+	sp "sigmaos/sigmap"
 )
 
 func retryLoop(i int, f func(i int, pn string) error, src string) error {
 	var r error
-	for i := 0; i < N_DOWNLOAD_RETRIES; i++ {
+	for i := 0; i < sp.Conf.FsLib.MAX_RETRY; i++ {
 		// Return if successful. Else, retry
 		if err := f(i, src); err == nil {
 			return nil
@@ -25,7 +22,7 @@ func retryLoop(i int, f func(i int, pn string) error, src string) error {
 			}
 		}
 	}
-	return fmt.Errorf("retryLoop: couldn't do %T for %q in %d retries err %v", f, src, N_DOWNLOAD_RETRIES, r)
+	return fmt.Errorf("retryLoop: couldn't do %T for %q in %d retries err %v", f, src, sp.Conf.FsLib.MAX_RETRY, r)
 }
 
 func RetryPaths(paths []string, f func(i int, pn string) error) error {

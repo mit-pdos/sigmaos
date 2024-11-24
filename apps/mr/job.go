@@ -21,15 +21,13 @@ import (
 )
 
 const (
-	MR       = "/mr/"
-	MRDIRTOP = "name/" + MR
-	//MRDIRTOP    = "name/ux/~sp.LOCAL/" + MR
+	MR          = "/mr/"
+	MRDIRTOP    = "name/" + MR
 	MRDIRELECT  = "name/mr-elect"
 	OUTLINK     = "output"
 	INT_OUTLINK = "intermediate-output"
 	JOBSEM      = "jobsem"
 	SPLITSZ     = 10 * sp.MBYTE
-	// SPLITSZ = 200 * sp.KBYTE
 )
 
 func JobOut(outDir, job string) string {

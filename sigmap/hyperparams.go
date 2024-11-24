@@ -88,7 +88,7 @@ type Config struct {
 	}
 	FsLib struct {
 		// Max number of retries at the FsLib layer
-		MAX_RETRY int
+		MAX_RETRY int `yaml:"max_retry"`
 	} `yaml:"path"`
 	Path struct {
 		// Max symlink depth allowed

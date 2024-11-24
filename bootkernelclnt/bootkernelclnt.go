@@ -27,10 +27,10 @@ func projectRootPath() string {
 	return filepath.Dir(filepath.Dir(b))
 }
 
-func Start(kernelId string, etcdIP sp.Tip, pe *proc.ProcEnv, srvs string, dialproxy bool) (string, error) {
+func Start(kernelId string, etcdIP sp.Tip, pe *proc.ProcEnv, ntype Tboot, dialproxy bool) (string, error) {
 	args := []string{
 		"--pull", pe.BuildTag,
-		"--boot", srvs,
+		"--boot", ntype.String(),
 		"--named", etcdIP.String(),
 		"--host",
 	}
@@ -72,7 +72,7 @@ func Start(kernelId string, etcdIP sp.Tip, pe *proc.ProcEnv, srvs string, dialpr
 		return "", err
 	}
 	ip := string(out)
-	db.DPrintf(db.BOOT, "Start: %v srvs %v IP %v dialproxy %v", kernelId, srvs, ip, dialproxy)
+	db.DPrintf(db.BOOT, "Start: %v nodetype %v IP %v dialproxy %v", kernelId, ntype, ip, dialproxy)
 	return ip, nil
 }
 
@@ -86,9 +86,9 @@ type Kernel struct {
 	kclnt    *kernelclnt.KernelClnt
 }
 
-func NewKernelClntStart(etcdIP sp.Tip, pe *proc.ProcEnv, conf string, dialproxy bool) (*Kernel, error) {
+func NewKernelClntStart(etcdIP sp.Tip, pe *proc.ProcEnv, ntype Tboot, dialproxy bool) (*Kernel, error) {
 	kernelId := GenKernelId()
-	_, err := Start(kernelId, etcdIP, pe, conf, dialproxy)
+	_, err := Start(kernelId, etcdIP, pe, ntype, dialproxy)
 	if err != nil {
 		return nil, err
 	}
@@ -136,7 +136,7 @@ func (k *Kernel) NewSigmaClnt(pe *proc.ProcEnv) (*sigmaclnt.SigmaClnt, error) {
 func (k *Kernel) Shutdown() error {
 	db.DPrintf(db.KERNEL, "Shutdown kernel %s", k.kernelId)
 	k.SigmaClnt.StopWatchingSrvs()
-	db.DPrintf(db.KERNEL, "Stopped watching srvs kernelclnt %v", k.kernelId)
+	db.DPrintf(db.KERNEL, "Stopped watching kernelclnt %v", k.kernelId)
 	err := k.kclnt.Shutdown()
 	db.DPrintf(db.KERNEL, "Shutdown kernel %s err %v", k.kernelId, err)
 	if err != nil {

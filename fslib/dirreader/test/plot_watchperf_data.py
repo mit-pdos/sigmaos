@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
 
+import boto3
+import os
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from columnar import columnar
 
-def read_data(file_path):
-    with open(file_path, 'r') as file:
-        data = file.readlines()
+def read_data(file_path, bucket):
+    obj = bucket.Object(file_path)
+    data = obj.get()['Body'].read().decode('utf-8').split('\n')
     
     create_watch_times = data[0].strip().split(',')
     delete_watch_times = data[1].strip().split(',')
@@ -55,10 +57,11 @@ def plot_histogram(data, bins=10, title="Histogram", xlabel="Value", ylabel="Fre
     plt.grid(True)
     plt.legend()
     if save:
+        os.makedirs(os.path.dirname(save), exist_ok=True)
         plt.savefig(save)
 
-def process_file(file, save=None, label_suffix=""):
-    create_watch_times, delete_watch_times = read_data(file)
+def process_file(file, bucket, save=None, label_suffix=""):
+    create_watch_times, delete_watch_times = read_data(file, bucket)
     if save == "":
         save = file.replace(".txt", ".png")
 
@@ -71,22 +74,17 @@ def process_file(file, save=None, label_suffix=""):
     # plot_histogram(delete_watch_times, bins=30, title="Watch Times", xlabel="Delay (us)", ylabel="Frequency", save=save, label=("Delete" + label_suffix))
 
 if __name__ == "__main__":
-    process_file("./v1/watchperf_single_no_files_named_include_op.txt", label_suffix=" (No Files)")
-    process_file("./v1/watchperf_single_some_files_named_include_op.txt", label_suffix=" (Some Files)")
-    process_file("./v1/watchperf_single_many_files_named_include_op.txt", label_suffix=" (Many Files)", save="./v1/watchperf_single_named_include_op.png")
-    plt.clf()
+    timestamp = "2024-11-24_09:00:44"
+    session = boto3.Session(profile_name='sigmaos')
+    s3_resource = session.resource('s3')
+    bucket = s3_resource.Bucket('sigmaos-bucket-ryan')
+            
+    for v in ['v1', 'v2']:
+        for loc in ['named', 'local']:
+            for typ in ['include_op', 'watch_only']:
+                process_file(f"{timestamp}/{v}/watchperf_single_no_files_{loc}_{typ}.txt", bucket, label_suffix=" (0 other files in dir)")
+                process_file(f"{timestamp}/{v}/watchperf_single_some_files_{loc}_{typ}.txt", bucket, label_suffix=" (100 other files in dir)")
+                process_file(f"{timestamp}/{v}/watchperf_single_many_files_{loc}_{typ}.txt", bucket, label_suffix=" (1000 other files in dir)",
+                    save=f"./{timestamp}/{v}/watchperf_single_{loc}_{typ}.png")
+                plt.clf()
 
-    process_file("./v1/watchperf_single_no_files_local_include_op.txt", label_suffix=" (No Files)")
-    process_file("./v1/watchperf_single_some_files_local_include_op.txt", label_suffix=" (Some Files)")
-    process_file("./v1/watchperf_single_many_files_local_include_op.txt", label_suffix=" (Many Files)", save="./v1/watchperf_single_local_include_op.png")
-    plt.clf()
-
-    process_file("./v1/watchperf_single_no_files_named_watch_only.txt", label_suffix=" (No Files)")
-    process_file("./v1/watchperf_single_some_files_named_watch_only.txt", label_suffix=" (Some Files)")
-    process_file("./v1/watchperf_single_many_files_named_watch_only.txt", label_suffix=" (Many Files)", save="./v1/watchperf_single_named_watch_only.png")
-    plt.clf()
-
-    process_file("./v1/watchperf_single_no_files_local_watch_only.txt", label_suffix=" (No Files)")
-    process_file("./v1/watchperf_single_some_files_local_watch_only.txt", label_suffix=" (Some Files)")
-    process_file("./v1/watchperf_single_many_files_local_watch_only.txt", label_suffix=" (Many Files)", save="./v1/watchperf_single_local_watch_only.png")
-    plt.clf()

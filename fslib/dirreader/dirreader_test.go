@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"sigmaos/proc"
+	"sigmaos/serr"
 	"sigmaos/test"
 	"sort"
 	"strconv"
@@ -98,7 +99,7 @@ func dataString(data []time.Duration) string {
 	return str
 }
 
-func testPerf(t *testing.T, nWorkers int, nStartingFiles int, nTrials int, prefix string, useUx bool, measureMode drtest.MeasureMode) {
+func testPerf(t *testing.T, nWorkers int, nStartingFiles int, nTrials int, prefix string, useNamed bool, measureMode drtest.MeasureMode) {
 	ts, err := test.NewTstateAll(t)
 
 	if !assert.Nil(t, err, "Error New Tstate: %v", err) {
@@ -106,15 +107,13 @@ func testPerf(t *testing.T, nWorkers int, nStartingFiles int, nTrials int, prefi
 	}
 	
 	var basedir string
-	if useUx {
-		basedir = filepath.Join(sp.UX, sp.LOCAL, "watchperf")
-	} else {
+	if useNamed {
 		basedir = filepath.Join(sp.NAMED, "watchperf")
+	} else {
+		basedir = filepath.Join(sp.UX, sp.LOCAL, "watchperf")
 	}
 
 	measureModeStr := strconv.Itoa(int(measureMode))
-
-	fmt.Printf("Using measure mode %s\n", measureModeStr)
 
 	p := proc.NewProc("watchperf-coord", []string{strconv.Itoa(nWorkers), strconv.Itoa(nStartingFiles), strconv.Itoa(nTrials), basedir, measureModeStr})
 	err = ts.Spawn(p)
@@ -136,9 +135,9 @@ func testPerf(t *testing.T, nWorkers int, nStartingFiles int, nTrials int, prefi
 
 	s3Bucket := os.Getenv("S3_BUCKET")
 	if s3Bucket != "" {
-		useUxStr := "named"
-		if useUx {
-			useUxStr = "local"
+		storageType := "local"
+		if useNamed {
+			storageType = "named"
 		}
 
 		measureModeString := "watch_only"
@@ -146,7 +145,22 @@ func testPerf(t *testing.T, nWorkers int, nStartingFiles int, nTrials int, prefi
 			measureModeString = "include_op"
 		}
 
-		s3Filepath := filepath.Join("name/s3/~any/", s3Bucket, fmt.Sprintf("watchperf_%s_%s_%s.txt", prefix, useUxStr, measureModeString))
+		s3Folder := filepath.Join("name/s3/~any/", s3Bucket)
+		if err := ts.MkDir(s3Folder, 0777); err != nil {
+			if !serr.IsErrCode(err, serr.TErrExists) {
+				assert.Fail(t, "Failed to create s3 folder: %v", err)
+			}
+		}
+
+		versionFolder := "v" + strconv.Itoa(int(dirreader.GetDirReaderVersion(ts.ProcEnv())))
+		s3FolderVersioned := filepath.Join(s3Folder, versionFolder)
+		if err := ts.MkDir(s3FolderVersioned, 0777); err != nil {
+			if !serr.IsErrCode(err, serr.TErrExists) {
+				assert.Fail(t, "Failed to create s3 folder: %v", err)
+			}
+		}
+
+		s3Filepath := filepath.Join(s3FolderVersioned, fmt.Sprintf("watchperf_%s_%s_%s.txt", prefix, storageType, measureModeString))
 		fd, err := ts.Create(s3Filepath, 0777, sp.OWRITE)
 		assert.Nil(t, err)
 
@@ -175,41 +189,75 @@ func TestSumProgramStress(t *testing.T) {
 	testSumProgram(t, 10, 1000)
 }
 
-// Use DIRREADER_VERSION to configure perf data
-func TestPerfSingleWorkerNoFiles(t *testing.T) {
-	for _, measureMode := range []drtest.MeasureMode{drtest.IncludeFileOp, drtest.JustWatch} {
-		for _, useUx := range []bool{false, true} {
-			testPerf(t, 1, 0, 250, "single_no_files", useUx, measureMode)
+func runTestForAll(f func(bool, drtest.MeasureMode)) {
+	measureModeOptions := []drtest.MeasureMode{drtest.IncludeFileOp, drtest.JustWatch}
+	useNamedOptions := []bool{false, true}
+	dirreaderOptions := []dirreader.DirReaderVersion{dirreader.V1, dirreader.V2}
+
+	if os.Getenv("MEASURE_MODE") != "" {
+		if os.Getenv("MEASURE_MODE") == "watch_only" {
+			measureModeOptions = []drtest.MeasureMode{drtest.JustWatch}
+		} else if os.Getenv("MEASURE_MODE") == "include_op" {
+			measureModeOptions = []drtest.MeasureMode{drtest.IncludeFileOp}
+		} else {
+			panic("Invalid MEASURE_MODE")
 		}
 	}
+
+	if os.Getenv("USE_NAMED") != "" {
+		if os.Getenv("USE_NAMED") == "1" {
+			useNamedOptions = []bool{true}
+		} else if os.Getenv("USE_NAMED") == "0" {
+			useNamedOptions = []bool{false}
+		} else {
+			panic("Invalid USE_NAMED")
+		}
+	}
+
+	if os.Getenv("DIRREADER_VERSION") != "" {
+		if os.Getenv("DIRREADER_VERSION") == "1" {
+			dirreaderOptions = []dirreader.DirReaderVersion{dirreader.V1}
+		} else if os.Getenv("DIRREADER_VERSION") == "2" {
+			dirreaderOptions = []dirreader.DirReaderVersion{dirreader.V2}
+		} else {
+			panic("Invalid DIRREADER_VERSION")
+		}
+	}
+
+	for _, measureMode := range measureModeOptions {
+		for _, useNamed := range useNamedOptions {
+			for _, dirreaderVersion := range dirreaderOptions {
+				fmt.Println("Running test with useNamed:", useNamed, "measureMode:", measureMode, "dirreaderVersion:", dirreaderVersion)
+				os.Setenv("DIRREADER_VERSION", strconv.Itoa(int(dirreaderVersion)))
+				f(useNamed, measureMode)
+			}
+		}
+	}
+}
+
+// Use DIRREADER_VERSION to configure perf data
+func TestPerfSingleWorkerNoFiles(t *testing.T) {
+	runTestForAll(func(useNamed bool, measureMode drtest.MeasureMode) {
+		testPerf(t, 1, 0, 250, "single_no_files", useNamed, measureMode)
+	})
 }
 
 func TestPerfSingleWorkerSomeFiles(t *testing.T) {
-	for _, measureMode := range []drtest.MeasureMode{drtest.IncludeFileOp, drtest.JustWatch} {
-		for _, useUx := range []bool{false, true} {
-			testPerf(t, 1, 100, 250, "single_some_files", useUx, measureMode)
-		}
-	}
+	runTestForAll(func(useNamed bool, measureMode drtest.MeasureMode) {
+		testPerf(t, 1, 100, 250, "single_some_files", useNamed, measureMode)
+	})
 }
 
 func TestPerfSingleWorkerManyFiles(t *testing.T) {
-	for _, measureMode := range []drtest.MeasureMode{drtest.IncludeFileOp, drtest.JustWatch} {
-		for _, useUx := range []bool{false, true} {
-			testPerf(t, 1, 1000, 250, "single_many_files", useUx, measureMode)
-		}
-	}
-}
-
-func TestA(t *testing.T) {
-		testPerf(t, 1, 10000, 250, "", true, drtest.JustWatch)
+	runTestForAll(func(useNamed bool, measureMode drtest.MeasureMode) {
+		testPerf(t, 1, 1000, 250, "single_many_files", useNamed, measureMode)
+	})
 }
 
 func TestPerfMultipleWorkersNoFiles(t *testing.T) {
-	for _, measureMode := range []drtest.MeasureMode{drtest.IncludeFileOp, drtest.JustWatch} {
-		for _, useUx := range []bool{false, true} {
-			testPerf(t, 5, 0, 100, "multiple_no_files", useUx, measureMode)
-		}
-	}
+	runTestForAll(func(useNamed bool, measureMode drtest.MeasureMode) {
+		testPerf(t, 5, 0, 100, "multiple_no_files", useNamed, measureMode)
+	})
 }
 
 func runTest(t *testing.T, f func(*testing.T, *test.Tstate, string, dirreader.DirReader), timeoutSec int) {

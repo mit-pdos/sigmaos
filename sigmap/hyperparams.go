@@ -117,7 +117,7 @@ type Config struct {
 	UProcSrv struct {
 		// Size of Uprocsrv pool
 		POOL_SZ int `yaml:"pool_sz"`
-	} `yaml:"chunk"`
+	} `yaml:"uprocsrv"`
 	Chunk struct {
 		// Binary chunk size
 		CHUNK_SZ int64 `yaml:"chunk_sz"`

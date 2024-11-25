@@ -10,6 +10,8 @@ import (
 	sp "sigmaos/sigmap"
 )
 
+const NLAST = 10
+
 type sessionTable struct {
 	newSess NewSessionI
 	mu      sync.RWMutex

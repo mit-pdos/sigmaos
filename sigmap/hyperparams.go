@@ -19,6 +19,9 @@ util:
 apparmor:
   enabled: false
 
+chunk:
+  chunk_sz: 1048576
+
 fslib:
   max_retry: 100
 
@@ -59,6 +62,9 @@ util:
 
 apparmor:
   enabled: true
+
+chunk:
+  chunk_sz: 1048576
 
 fslib:
   max_retry: 100
@@ -102,6 +108,10 @@ type Config struct {
 		// SigmaP connection message length.
 		ENABLED bool `yaml:"enabled"`
 	}
+	Chunk struct {
+		// Binary chunk size
+		CHUNK_SZ int64 `yaml:"chunk_sz"`
+	} `yaml:"chunk"`
 	FsLib struct {
 		// Max number of retries at the FsLib layer
 		MAX_RETRY int `yaml:"max_retry"`

@@ -316,8 +316,6 @@ func (ps *ProtSrv) ReadF(args *sp.TreadF, rets *sp.Rread) ([]byte, *sp.Rerror) {
 	if !watch.IsWatch(f.Pobj().Obj()) {
 		flk := ps.plt.Acquire(f.Pobj().Ctx(), f.Pobj().Pathname(), lockmap.RLOCK)
 		defer ps.plt.Release(f.Pobj().Ctx(), flk, lockmap.RLOCK)
-	} else {
-		db.DPrintf(db.WATCH_V2, "%v: ReadF watch f %v\n", f.Pobj().Ctx().ClntId(), f)
 	}
 
 	data, err := FidRead(f, args.Toffset(), args.Tcount(), args.Tfence())

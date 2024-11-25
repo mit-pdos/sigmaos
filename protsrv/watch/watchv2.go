@@ -70,16 +70,16 @@ func (wo *WatchV2) GetEventBuffer(fid *fid.Fid, maxLength int) ([]byte, *serr.Er
 		return ret, nil
 	}
 
-	db.DPrintf(db.WATCH_V2, "GetEventBuffer: waiting for %s\n", wo.pl.Path())
+	db.DPrintf(db.WATCH, "WatchV2 GetEventBuffer: waiting for %s\n", wo.pl.Path())
 	for wo.perFidState[fid] != nil && len(wo.perFidState[fid].events) == 0 {
 		wo.mu.Unlock()
 		perFidState.cond.Wait()
 		wo.mu.Lock()
 	}
-	db.DPrintf(db.WATCH_V2, "GetEventBuffer: Finished waiting for %s\n", wo.pl.Path())
+	db.DPrintf(db.WATCH, "WatchV2 GetEventBuffer: Finished waiting for %s\n", wo.pl.Path())
 
 	if wo.perFidState[fid] != perFidState {
-		db.DPrintf(db.WATCH_V2, "GetEventBuffer: perFidState changed after watching\n")
+		db.DPrintf(db.WATCH, "WatchV2 GetEventBuffer: perFidState changed after watching\n")
 		if wo.perFidState[fid] == nil {
 			wo.mu.Unlock()
 			return nil, serr.NewErr(serr.TErrClosed, "Watch has been closed")
@@ -89,7 +89,7 @@ func (wo *WatchV2) GetEventBuffer(fid *fid.Fid, maxLength int) ([]byte, *serr.Er
 	}
 	wo.mu.Unlock()
 
-	db.DPrintf(db.WATCH_V2, "GetEventBuffer: %d events for %s\n", len(perFidState.events), wo.pl.Path())
+	db.DPrintf(db.WATCH, "WatchV2 GetEventBuffer: %d events for %s\n", len(perFidState.events), wo.pl.Path())
 
 	msg, err := proto.Marshal(&protsrv_proto.WatchEventList{
 		Events: perFidState.events,

@@ -44,7 +44,7 @@ func (wr watchReader) Read(p []byte) (int, error) {
 }
 
 func NewDirReaderV2(fslib *fslib.FsLib, pn string) (*DirReaderV2, error) {
-	db.DPrintf(db.WATCH_V2, "Creating new watch on %s", pn)
+	db.DPrintf(db.WATCH, "NewDirReaderV2: Creating v2 watch on %s", pn)
 
 	fd, err := fslib.Open(pn, sp.OREAD)
 	if err != nil {
@@ -55,7 +55,7 @@ func NewDirReaderV2(fslib *fslib.FsLib, pn string) (*DirReaderV2, error) {
 		return nil, err
 	}
 
-	db.DPrintf(db.WATCH_V2, "Created watch on %s with fd=%d", pn, watchFd)
+	db.DPrintf(db.WATCH, "NewDirReaderV2: Created v2 watch on %s with fd=%d", pn, watchFd)
 
 	reader := watchReader {
 		fslib,
@@ -85,8 +85,8 @@ func NewDirReaderV2(fslib *fslib.FsLib, pn string) (*DirReaderV2, error) {
 		dr.changes[st.Name] = true
 	}
 
-	if db.WillBePrinted(db.WATCH_V2) {
-		db.DPrintf(db.WATCH_V2, "NewDirReaderV2: Initial dir contents %v", dr.ents)
+	if db.WillBePrinted(db.WATCH) {
+		db.DPrintf(db.WATCH, "NewDirReaderV2: Initial dir contents %v", dr.ents)
 	}
 
 	return dr, nil
@@ -102,24 +102,24 @@ func (dr *DirReaderV2) ReadUpdates() error {
 	var length uint32
 	err := binary.Read(dr.reader, binary.LittleEndian, &length)
 	if dr.isWatchClosed(err) {
-		db.DPrintf(db.WATCH_V2, "DirReaderV2: Watch stream for %s closed %v", dr.pn, err)
+		db.DPrintf(db.WATCH, "DirReaderV2 ReadUpdates: watch stream for %s closed %v", dr.pn, err)
 		return serr.NewErr(serr.TErrClosed, "")
 	}
 	if err != nil {
-		db.DFatalf("DirReaderV2: failed to read length %v", err)
+		db.DFatalf("failed to read length %v", err)
 	}
 	data := make([]byte, length)
 	numRead, err := io.ReadFull(dr.reader, data)
 	if dr.isWatchClosed(err) {
-		db.DPrintf(db.WATCH_V2, "DirReaderV2: Watch stream for %s closed %v", dr.pn, err)
+		db.DPrintf(db.WATCH, "DirReaderV2 ReadUpdates: watch stream for %s closed %v", dr.pn, err)
 		return serr.NewErr(serr.TErrClosed, "")
 	}
 	if err != nil {
-		db.DFatalf("DirReaderV2: Watch stream produced err %v", err)
+		db.DFatalf("watch stream produced err %v", err)
 	}
 
 	if uint32(numRead) != length {
-		db.DFatalf("DirReaderV2: only received %d bytes, expected %d bytes", numRead, length)
+		db.DFatalf("only received %d bytes, expected %d bytes", numRead, length)
 	}
 
 	eventList := &protsrv_proto.WatchEventList{}
@@ -127,7 +127,7 @@ func (dr *DirReaderV2) ReadUpdates() error {
 	if err != nil {
 		db.DFatalf("DirReaderV2: failed to unmarshal data %v", err)
 	}
-	db.DPrintf(db.WATCH_V2, "DirReaderV2: received %d bytes with %d events", numRead, len(eventList.Events))
+	db.DPrintf(db.WATCH, "DirReaderV2 ReadUpdates: received %d bytes with %d events", numRead, len(eventList.Events))
 
 	for _, event := range eventList.Events {
 		switch event.Type {
@@ -168,7 +168,7 @@ func (dr *DirReaderV2) GetDir() ([]string, error) {
 }
 
 func (dr *DirReaderV2) Close() error {
-	db.DPrintf(db.WATCH_V2, "Closing watch on %s", dr.pn)
+	db.DPrintf(db.WATCH, "DirReaderV2: closing watch on %s", dr.pn)
 	dr.closed = true
 	return dr.CloseFd(dr.watchFd)
 }
@@ -183,7 +183,7 @@ func (dr *DirReaderV2) readDirWatch(watch FwatchV2) error {
 		dr.changes = make(map[string]bool)
 		err := dr.ReadUpdates()
 		if err != nil {
-			db.DPrintf(db.WATCH_V2, "readDirWatch: ReadUpdates failed %v", err)
+			db.DPrintf(db.WATCH, "DirReaderV2 readDirWatch: ReadUpdates failed %v", err)
 			return err
 		}
 	}
@@ -193,7 +193,7 @@ func (dr *DirReaderV2) readDirWatch(watch FwatchV2) error {
 }
 
 func (dr *DirReaderV2) WaitRemove(file string) error {
-	db.DPrintf(db.WATCH_V2, "WaitRemove: dir %s file %s", dr.pn, file)
+	db.DPrintf(db.WATCH, "DirReaderV2 WaitRemove: dir %s file %s", dr.pn, file)
 	err := dr.readDirWatch(func(ents map[string] bool, changes map[string]bool) bool {
 		return ents[file]
 	})
@@ -201,7 +201,7 @@ func (dr *DirReaderV2) WaitRemove(file string) error {
 }
 
 func (dr *DirReaderV2) WaitCreate(file string) error {
-	db.DPrintf(db.WATCH_V2, "WaitCreate: dir %s file %s", dr.pn, file)
+	db.DPrintf(db.WATCH, "DirReaderV2 WaitCreate: dir %s file %s", dr.pn, file)
 	err := dr.readDirWatch(func(ents map[string] bool, changes map[string]bool) bool {
 		return !ents[file]
 	})
@@ -209,7 +209,7 @@ func (dr *DirReaderV2) WaitCreate(file string) error {
 }
 
 func (dr *DirReaderV2) WaitNEntries(n int) error {
-	db.DPrintf(db.WATCH_V2, "WaitNEntries: dir %s n %d", dr.pn, n)
+	db.DPrintf(db.WATCH, "DirReaderV2 WaitNEntries: dir %s n %d", dr.pn, n)
 	err := dr.readDirWatch(func(ents map[string]bool, changes map[string]bool) bool {
 		return len(filterMap(ents)) < n
 	})
@@ -220,7 +220,7 @@ func (dr *DirReaderV2) WaitNEntries(n int) error {
 }
 
 func (dr *DirReaderV2) WaitEmpty() error {
-	db.DPrintf(db.WATCH_V2, "WaitEmpty: dir %s", dr.pn)
+	db.DPrintf(db.WATCH, "DirReaderV2 WaitEmpty: dir %s", dr.pn)
 	err := dr.readDirWatch(func(ents map[string]bool, changes map[string]bool) bool {
 		return len(filterMap(ents)) > 0
 	})
@@ -232,7 +232,9 @@ func (dr *DirReaderV2) WaitEmpty() error {
 
 func (dr *DirReaderV2) WatchEntriesChangedRelative(present []string, excludedPrefixes []string) ([]string, bool, error) {
 	var files = make([]string, 0)
-	db.DPrintf(db.WATCH_V2, "WatchUniqueEntries: dir %v, present: %v, excludedPrefixes %v\n", dr.pn, present, excludedPrefixes)
+	if db.WillBePrinted(db.WATCH) {
+		db.DPrintf(db.WATCH, "DirReaderV2 WatchUniqueEntries: dir %v, present: %v, excludedPrefixes %v\n", dr.pn, present, excludedPrefixes)
+	}
 	var ret []string
 	err := dr.readDirWatch(func(ents map[string]bool, changes map[string]bool) bool {
 		unchanged := true
@@ -270,6 +272,7 @@ func (dr *DirReaderV2) WatchEntriesChangedRelative(present []string, excludedPre
 
 func (dr *DirReaderV2) WatchEntriesChanged() (map[string]bool, error) {
 	var ret map[string]bool
+	db.DPrintf(db.WATCH, "DirReaderV2 WatchEntriesChanged: dir %v\n", dr.pn)
 	err := dr.readDirWatch(func(ents map[string]bool, changes map[string]bool) bool {
 		if len(changes) > 0 {
 			ret = maps.Clone(changes)
@@ -289,7 +292,9 @@ func (dr *DirReaderV2) WatchEntriesChanged() (map[string]bool, error) {
 func (dr *DirReaderV2) WatchNewEntriesAndRename(dst string) ([]string, error) {
 	var r error
 	presentFiles := filterMap(dr.ents)
-	db.DPrintf(db.WATCH_V2, "WatchNewEntriesAndRename: dir %v, present: %v, dst %v\n", dr.pn, presentFiles, dst)
+	if db.WillBePrinted(db.WATCH) {
+		db.DPrintf(db.WATCH, "DirReaderV2 WatchNewEntriesAndRename: dir %v, present: %v, dst %v\n", dr.pn, presentFiles, dst)
+	}
 	if len(presentFiles) > 0 {
 		return dr.rename(presentFiles, dst)
 	}
@@ -314,6 +319,9 @@ func (dr *DirReaderV2) WatchNewEntriesAndRename(dst string) ([]string, error) {
 
 func (dr *DirReaderV2) GetEntriesAndRename(dst string) ([]string, error) {
 	presentFiles := filterMap(dr.ents)
+	if db.WillBePrinted(db.WATCH) {
+		db.DPrintf(db.WATCH, "DirReaderV2 GetEntriesAndRename: dir %v, present: %v, dst %v\n", dr.pn, presentFiles, dst)
+	}
 	return dr.rename(presentFiles, dst)
 }
 

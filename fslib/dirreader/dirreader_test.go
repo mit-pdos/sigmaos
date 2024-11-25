@@ -189,7 +189,8 @@ func TestSumProgramStress(t *testing.T) {
 	testSumProgram(t, 10, 1000)
 }
 
-func runTestForAll(f func(bool, drtest.MeasureMode)) {
+// Use DIRREADER_VERSION, MEASURE_MODE, and/or USE_NAMED to restrict the test to specific configurations
+func runPerfTest(f func(bool, drtest.MeasureMode)) {
 	measureModeOptions := []drtest.MeasureMode{drtest.IncludeFileOp, drtest.JustWatch}
 	useNamedOptions := []bool{false, true}
 	dirreaderOptions := []dirreader.DirReaderVersion{dirreader.V1, dirreader.V2}
@@ -235,27 +236,26 @@ func runTestForAll(f func(bool, drtest.MeasureMode)) {
 	}
 }
 
-// Use DIRREADER_VERSION to configure perf data
 func TestPerfSingleWorkerNoFiles(t *testing.T) {
-	runTestForAll(func(useNamed bool, measureMode drtest.MeasureMode) {
+	runPerfTest(func(useNamed bool, measureMode drtest.MeasureMode) {
 		testPerf(t, 1, 0, 250, "single_no_files", useNamed, measureMode)
 	})
 }
 
 func TestPerfSingleWorkerSomeFiles(t *testing.T) {
-	runTestForAll(func(useNamed bool, measureMode drtest.MeasureMode) {
+	runPerfTest(func(useNamed bool, measureMode drtest.MeasureMode) {
 		testPerf(t, 1, 100, 250, "single_some_files", useNamed, measureMode)
 	})
 }
 
 func TestPerfSingleWorkerManyFiles(t *testing.T) {
-	runTestForAll(func(useNamed bool, measureMode drtest.MeasureMode) {
+	runPerfTest(func(useNamed bool, measureMode drtest.MeasureMode) {
 		testPerf(t, 1, 1000, 250, "single_many_files", useNamed, measureMode)
 	})
 }
 
 func TestPerfMultipleWorkersNoFiles(t *testing.T) {
-	runTestForAll(func(useNamed bool, measureMode drtest.MeasureMode) {
+	runPerfTest(func(useNamed bool, measureMode drtest.MeasureMode) {
 		testPerf(t, 5, 0, 100, "multiple_no_files", useNamed, measureMode)
 	})
 }

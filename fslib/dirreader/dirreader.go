@@ -77,7 +77,7 @@ func GetDirReaderVersion(pe *proc.ProcEnv) DirReaderVersion {
 
 func NewDirReader(fslib *fslib.FsLib, pn string) (DirReader, error) {
 	version := GetDirReaderVersion(fslib.ProcEnv())
-	db.DPrintf(db.WATCH_V2, "NewDirReader: version %v\n", version)
+	db.DPrintf(db.WATCH, "NewDirReader: version %v\n", version)
 	if version == V1 {
 		return NewDirReaderV1(fslib, pn), nil
 	} else if version == V2 {
@@ -91,7 +91,7 @@ func NewDirReader(fslib *fslib.FsLib, pn string) (DirReader, error) {
 func WaitRemove(fsl *fslib.FsLib, pn string) error {
 	dir := filepath.Dir(pn) + "/"
 	f := filepath.Base(pn)
-	db.DPrintf(db.WATCH_V2, "WaitRemove: waiting for %v in dir %v\n", f, dir)
+	db.DPrintf(db.WATCH, "WaitRemove: waiting for %v in dir %v\n", f, dir)
 	dirreader, err := NewDirReader(fsl, dir)
 	if err != nil {
 		return err
@@ -107,7 +107,7 @@ func WaitRemove(fsl *fslib.FsLib, pn string) error {
 func WaitCreate(fsl *fslib.FsLib, pn string) error {
 	dir := filepath.Dir(pn) + "/"
 	f := filepath.Base(pn)
-	db.DPrintf(db.WATCH_V2, "WaitCreate: waiting for %v in dir %v\n", f, dir)
+	db.DPrintf(db.WATCH, "WaitCreate: waiting for %v in dir %v\n", f, dir)
 	dirreader, err := NewDirReader(fsl, dir)
 	if err != nil {
 		return err

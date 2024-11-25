@@ -26,7 +26,7 @@ func (wt *WatchV2Table) AllocWatch(pl *lockmap.PathLock) *WatchV2 {
 
 	p := pl.Path()
 
-	db.DPrintf(db.WATCH_V2, "AllocWatch '%s'\n", p)
+	db.DPrintf(db.WATCH, "WatchV2Table AllocWatch '%s'\n", p)
 
 	ws, ok := wt.watches[p]
 	if !ok {
@@ -40,7 +40,7 @@ func (wt *WatchV2Table) AllocWatch(pl *lockmap.PathLock) *WatchV2 {
 
 // Free watch for path. Caller should have pl locked
 func (wt *WatchV2Table) FreeWatch(ws *WatchV2, fid *fid.Fid) bool {
-	db.DPrintf(db.WATCH_V2, "FreeWatch '%s'\n", ws.pl.Path())
+	db.DPrintf(db.WATCH, "WatchV2Table FreeWatch '%s'\n", ws.pl.Path())
 	wt.Lock()
 	defer wt.Unlock()
 
@@ -92,7 +92,7 @@ func (wt *WatchV2Table) addWatchEvent(pl *lockmap.PathLock, event *protsrv_proto
 		return
 	}
 
-	db.DPrintf(db.WATCH_V2, "AddWatchEvent '%s' '%v' %v\n", p, event, ws.perFidState)
+	db.DPrintf(db.WATCH, "WatchV2Table AddWatchEvent '%s' '%v' %v\n", p, event, ws.perFidState)
 	
 	for _, perFidState := range ws.perFidState {
 		perFidState.cond.L.Lock()

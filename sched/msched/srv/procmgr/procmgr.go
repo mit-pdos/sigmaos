@@ -8,7 +8,6 @@ import (
 	"sigmaos/memfssrv"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
-	"sigmaos/procfs"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/uprocclnt"
@@ -48,14 +47,8 @@ func (mgr *ProcMgr) Spawn(p *proc.Proc) {
 	mgr.pstate.spawn(p)
 }
 
-func (mgr *ProcMgr) SetupFs(mfs *memfssrv.MemFs) error {
+func (mgr *ProcMgr) SetMemFs(mfs *memfssrv.MemFs) {
 	mgr.mfs = mfs
-	dir := procfs.NewProcDir(mgr.pstate)
-	if err := mfs.MkNod(sp.RUNNING, dir); err != nil {
-		db.DPrintf(db.ERROR, "Error mknod %v: %v", sp.RUNNING, err)
-		return err
-	}
-	return nil
 }
 
 func (mgr *ProcMgr) RunProc(p *proc.Proc) {

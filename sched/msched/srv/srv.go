@@ -381,9 +381,7 @@ func RunMSched(kernelID string, reserveMcpu uint) error {
 	if err != nil {
 		db.DFatalf("Error NewSigmaSrv: %v", err)
 	}
-	if err := msched.pmgr.SetupFs(ssrv.MemFs); err != nil {
-		db.DFatalf("Error SetupFs: %v", err)
-	}
+	msched.pmgr.SetMemFs(ssrv.MemFs)
 	// Perf monitoring
 	p, err := perf.NewPerf(sc.ProcEnv(), perf.MSCHED)
 	if err != nil {

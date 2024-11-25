@@ -341,7 +341,7 @@ func (msched *MSched) shouldGetBEProc() (proc.Tmem, bool) {
 	mem := msched.getFreeMem()
 	cpu := msched.getCPUUtil()
 	db.DPrintf(db.MSCHED, "CPU util check: %v", cpu)
-	return mem, mem > 0 && cpu < (sp.Conf.MSched.TARGET_CPU_PCT*int64(linuxsched.GetNCores()))
+	return mem, mem > 0 && cpu < (sp.Conf.MSched.TARGET_CPU_UTIL*int64(linuxsched.GetNCores()))
 }
 
 func (msched *MSched) register() {

@@ -13,6 +13,9 @@ var Version = "1.0"
 
 // Local params
 var local = `
+util:
+  stats: true
+
 apparmor:
   enabled: false
 
@@ -48,6 +51,9 @@ raft:
 
 // AWS params
 var remote = `
+util:
+  stats: true
+
 apparmor:
   enabled: true
 
@@ -82,6 +88,10 @@ raft:
 `
 
 type Config struct {
+	Util struct {
+		// Record stats
+		STATS bool `yaml:"stats"`
+	} `yaml:"util"`
 	AppArmor struct {
 		// SigmaP connection message length.
 		ENABLED bool `yaml:"enabled"`

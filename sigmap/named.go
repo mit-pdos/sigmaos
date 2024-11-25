@@ -50,8 +50,7 @@ const (
 	IMGREL = "img"
 	IMG    = NAMED + IMGREL + "/"
 
-	MEMCACHED = "name/memcached"
-	MEMBLOCK  = "name/memblock"
+	MEMBLOCK = "name/memblock"
 
 	K8S_SCRAPER = NAMED + "k8sscraper/"
 

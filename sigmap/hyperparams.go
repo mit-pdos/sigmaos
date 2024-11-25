@@ -19,6 +19,10 @@ util:
 apparmor:
   enabled: false
 
+msched:
+  target_cpu_util: 95
+  util_refresh_rate: 20ms
+
 uprocsrv:
   pool_sz: 2
 
@@ -65,6 +69,10 @@ util:
 
 apparmor:
   enabled: true
+
+msched:
+  target_cpu_util: 95
+  util_refresh_rate: 20ms
 
 uprocsrv:
   pool_sz: 2
@@ -114,6 +122,12 @@ type Config struct {
 		// SigmaP connection message length.
 		ENABLED bool `yaml:"enabled"`
 	}
+	MSched struct {
+		// Target per-machine CPU utilization
+		TARGET_CPU_UTIL int64 `yaml:"target_cpu_util"`
+		// CPU utilization refresh rate
+		UTIL_REFRESH_RATE time.Duration `yaml:"util_refresh_rate"`
+	} `yaml:"msched"`
 	UProcSrv struct {
 		// Size of Uprocsrv pool
 		POOL_SZ int `yaml:"pool_sz"`

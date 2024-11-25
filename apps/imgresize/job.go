@@ -10,13 +10,9 @@ import (
 	fttaskmgr "sigmaos/fttask/mgr"
 	"sigmaos/groupmgr"
 	"sigmaos/proc"
-	rd "sigmaos/util/rand"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
-)
-
-const (
-	IMG = "name/img"
+	rd "sigmaos/util/rand"
 )
 
 type Ttask struct {

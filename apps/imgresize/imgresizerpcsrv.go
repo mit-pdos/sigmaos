@@ -13,6 +13,7 @@ import (
 	fttaskmgr "sigmaos/fttask/mgr"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
+	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
 )
 
@@ -34,7 +35,7 @@ func NewImgSrvRPC(args []string) (*ImgSrvRPC, error) {
 	imgd := &ImgSrvRPC{}
 	imgd.job = args[0]
 
-	ssrv, err := sigmasrv.NewSigmaSrv(filepath.Join(IMG, imgd.job), imgd, proc.GetProcEnv())
+	ssrv, err := sigmasrv.NewSigmaSrv(filepath.Join(sp.IMG, imgd.job), imgd, proc.GetProcEnv())
 	if err != nil {
 		db.DFatalf("NewSigmaSrv: %v", err)
 		return nil, err

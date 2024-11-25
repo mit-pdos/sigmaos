@@ -13,10 +13,6 @@ import (
 	"sigmaos/uprocclnt"
 )
 
-const (
-	PROC_CACHE_SZ = 500
-)
-
 type ProcMgr struct {
 	sync.Mutex
 	mfs            *memfssrv.MemFs

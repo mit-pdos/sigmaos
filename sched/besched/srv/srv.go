@@ -34,10 +34,6 @@ type BESched struct {
 	realmbins   *chunkclnt.RealmBinPaths
 }
 
-type QDir struct {
-	be *BESched
-}
-
 func NewBESched(sc *sigmaclnt.SigmaClnt) *BESched {
 	be := &BESched{
 		sc:        sc,
@@ -49,51 +45,6 @@ func NewBESched(sc *sigmaclnt.SigmaClnt) *BESched {
 	}
 	be.cond = sync.NewCond(&be.mu)
 	return be
-}
-
-// XXX Deduplicate with lcsched
-func (qd *QDir) GetProcs() []*proc.Proc {
-	qd.be.mu.Lock()
-	defer qd.be.mu.Unlock()
-
-	procs := make([]*proc.Proc, 0, qd.be.lenL())
-	for _, q := range qd.be.qs {
-		pmap := q.GetPMapL()
-		for _, p := range pmap {
-			procs = append(procs, p)
-		}
-	}
-	return procs
-}
-
-// XXX Deduplicate with lcsched
-func (qd *QDir) Lookup(pid string) (*proc.Proc, bool) {
-	qd.be.mu.Lock()
-	defer qd.be.mu.Unlock()
-
-	for _, q := range qd.be.qs {
-		pmap := q.GetPMapL()
-		if p, ok := pmap[sp.Tpid(pid)]; ok {
-			return p, ok
-		}
-	}
-	return nil, false
-}
-
-// XXX Deduplicate with lcsched
-func (be *BESched) lenL() int {
-	l := 0
-	for _, q := range be.qs {
-		l += q.Len()
-	}
-	return l
-}
-
-func (qd *QDir) Len() int {
-	qd.be.mu.Lock()
-	defer qd.be.mu.Unlock()
-
-	return qd.be.lenL()
 }
 
 func (be *BESched) Enqueue(ctx fs.CtxI, req proto.EnqueueRequest, res *proto.EnqueueResponse) error {

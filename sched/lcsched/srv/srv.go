@@ -30,10 +30,6 @@ type LCSched struct {
 	realmbins  *chunkclnt.RealmBinPaths
 }
 
-type QDir struct {
-	lcs *LCSched
-}
-
 func NewLCSched(sc *sigmaclnt.SigmaClnt) *LCSched {
 	lcs := &LCSched{
 		sc:         sc,
@@ -44,48 +40,6 @@ func NewLCSched(sc *sigmaclnt.SigmaClnt) *LCSched {
 	}
 	lcs.cond = sync.NewCond(&lcs.mu)
 	return lcs
-}
-
-func (qd *QDir) GetProcs() []*proc.Proc {
-	qd.lcs.mu.Lock()
-	defer qd.lcs.mu.Unlock()
-
-	procs := make([]*proc.Proc, 0, qd.lcs.lenL())
-	for _, q := range qd.lcs.qs {
-		pmap := q.GetPMapL()
-		for _, p := range pmap {
-			procs = append(procs, p)
-		}
-	}
-	return procs
-}
-
-func (qd *QDir) Lookup(pid string) (*proc.Proc, bool) {
-	qd.lcs.mu.Lock()
-	defer qd.lcs.mu.Unlock()
-
-	for _, q := range qd.lcs.qs {
-		pmap := q.GetPMapL()
-		if p, ok := pmap[sp.Tpid(pid)]; ok {
-			return p, ok
-		}
-	}
-	return nil, false
-}
-
-func (lcs *LCSched) lenL() int {
-	l := 0
-	for _, q := range lcs.qs {
-		l += q.Len()
-	}
-	return l
-}
-
-func (qd *QDir) Len() int {
-	qd.lcs.mu.Lock()
-	defer qd.lcs.mu.Unlock()
-
-	return qd.lcs.lenL()
 }
 
 func (lcs *LCSched) Enqueue(ctx fs.CtxI, req beschedproto.EnqueueRequest, res *beschedproto.EnqueueResponse) error {

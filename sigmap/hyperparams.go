@@ -19,6 +19,9 @@ util:
 apparmor:
   enabled: false
 
+uprocsrv:
+  pool_sz: 2
+
 chunk:
   chunk_sz: 1048576
 
@@ -62,6 +65,9 @@ util:
 
 apparmor:
   enabled: true
+
+uprocsrv:
+  pool_sz: 2
 
 chunk:
   chunk_sz: 1048576
@@ -108,6 +114,10 @@ type Config struct {
 		// SigmaP connection message length.
 		ENABLED bool `yaml:"enabled"`
 	}
+	UProcSrv struct {
+		// Size of Uprocsrv pool
+		POOL_SZ int64 `yaml:"pool_sz"`
+	} `yaml:"chunk"`
 	Chunk struct {
 		// Binary chunk size
 		CHUNK_SZ int64 `yaml:"chunk_sz"`

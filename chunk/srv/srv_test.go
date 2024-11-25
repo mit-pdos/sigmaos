@@ -85,7 +85,7 @@ func (ts *Tstate) fetch(srv string, paths []string, expect []string) {
 	}
 	assert.True(ts.T, isExpected(path, expect))
 
-	n := (st.Tlength() / sp.Tsize(sp.Conf.Chunk.CHUNK_SZ)) + 1
+	n := (st.Tlength() / sp.Tlength(sp.Conf.Chunk.CHUNK_SZ)) + 1
 	l := 0
 	h := int(n - 1)
 	for i := 0; i < int(n); i++ {

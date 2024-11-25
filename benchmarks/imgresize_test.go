@@ -10,11 +10,11 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fttask"
 	"sigmaos/groupmgr"
-	"sigmaos/util/perf"
 	"sigmaos/proc"
-	rd "sigmaos/util/rand"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
+	"sigmaos/util/perf"
+	rd "sigmaos/util/rand"
 )
 
 type ImgResizeJobInstance struct {
@@ -49,9 +49,9 @@ func NewImgResizeJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, input str
 	ji.mem = mem
 	ji.nrounds = nrounds
 
-	ts.RmDir(imgresize.IMG)
+	ts.RmDir(sp.IMG)
 
-	ft, err := fttask.MkFtTasks(ji.SigmaClnt.FsLib, imgresize.IMG, ji.job)
+	ft, err := fttask.MkFtTasks(ji.SigmaClnt.FsLib, sp.IMG, ji.job)
 	assert.Nil(ts.Ts.T, err, "Error MkDirs: %v", err)
 	ji.ft = ft
 

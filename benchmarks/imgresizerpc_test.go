@@ -10,12 +10,12 @@ import (
 
 	"sigmaos/apps/imgresize"
 	db "sigmaos/debug"
-	"sigmaos/util/perf"
 	"sigmaos/proc"
-	rd "sigmaos/util/rand"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
+	"sigmaos/util/perf"
+	rd "sigmaos/util/rand"
 )
 
 type ImgResizeRPCJobInstance struct {
@@ -54,9 +54,9 @@ func NewImgResizeRPCJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, input 
 	ji.nrounds = nrounds
 	ji.sleepBetweenTasks = time.Second / time.Duration(ji.tasksPerSecond)
 
-	ts.RmDir(imgresize.IMG)
+	ts.RmDir(sp.IMG)
 
-	if err := ji.MkDir(imgresize.IMG, 0777); err != nil {
+	if err := ji.MkDir(sp.IMG, 0777); err != nil {
 		assert.True(ji.Ts.T, serr.IsErrCode(err, serr.TErrExists), "Unexpected err mkdir: %v", err)
 	}
 

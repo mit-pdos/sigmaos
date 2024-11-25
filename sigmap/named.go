@@ -59,8 +59,7 @@ const (
 	KPIDS    = NAMED + KPIDSREL
 
 	// Mschedd
-	QUEUE = "queue"
-	PIDS  = "pids"
+	PIDS = "pids"
 
 	// special devs/dirs exported by SigmaSrv/SessSrv
 	STATSD   = ".statsd"

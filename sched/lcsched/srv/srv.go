@@ -10,11 +10,10 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/proc"
-	"sigmaos/procfs"
 	beschedproto "sigmaos/sched/besched/proto"
 	"sigmaos/sched/lcsched/proto"
-	"sigmaos/sched/queue"
 	mschedclnt "sigmaos/sched/msched/clnt"
+	"sigmaos/sched/queue"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
@@ -229,13 +228,6 @@ func Run() {
 	ssrv, err := sigmasrv.NewSigmaSrvClnt(filepath.Join(sp.LCSCHED, sc.ProcEnv().GetPID().String()), sc, lcs)
 	if err != nil {
 		db.DFatalf("Error NewSigmaSrv: %v", err)
-	}
-
-	// export queued procs through procfs. XXX maybe
-	// subdirectory per realm?
-	dir := procfs.NewProcDir(&QDir{lcs})
-	if err := ssrv.MkNod(sp.QUEUE, dir); err != nil {
-		db.DFatalf("Error mknod %v: %v", sp.QUEUE, err)
 	}
 
 	// Perf monitoring

@@ -22,7 +22,7 @@ import (
 
 const (
 	DialTimeout = 5 * time.Second
-	LeaseTTL    = sp.EtcdSessionTTL // 30
+	LeaseTTL    = sp.EtcdSessionTTL
 )
 
 var (

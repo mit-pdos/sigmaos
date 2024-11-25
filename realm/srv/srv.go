@@ -29,15 +29,7 @@ import (
 
 const (
 	MKNET      = "./bin/kernel/create-net.sh"
-	MIN_PORT   = 30000
 	NAMED_MCPU = 0
-)
-
-// Fairness
-const (
-	FAIRNESS_CHECK_PERIOD = time.Second
-	N_SAMPLE              = 2
-	STARVATION_RATIO      = 0.1
 )
 
 type Subsystem struct {
@@ -69,15 +61,14 @@ func (r *Realm) addSubsystem(kernelID string, pid sp.Tpid) {
 }
 
 type RealmSrv struct {
-	mu         sync.Mutex
-	dialproxy  bool
-	realms     map[sp.Trealm]*Realm
-	sc         *sigmaclnt.SigmaClntKernel
-	be         *beschedclnt.BESchedClnt
-	sd         *mschedclnt.MSchedClnt
-	mkc        *kernelclnt.MultiKernelClnt
-	lastNDPort int
-	ch         chan struct{}
+	mu        sync.Mutex
+	dialproxy bool
+	realms    map[sp.Trealm]*Realm
+	sc        *sigmaclnt.SigmaClntKernel
+	be        *beschedclnt.BESchedClnt
+	sd        *mschedclnt.MSchedClnt
+	mkc       *kernelclnt.MultiKernelClnt
+	ch        chan struct{}
 }
 
 func RunRealmSrv(dialproxy bool) error {
@@ -88,9 +79,8 @@ func RunRealmSrv(dialproxy bool) error {
 	}
 	sc.GetDialProxyClnt().AllowConnectionsFromAllRealms()
 	rs := &RealmSrv{
-		dialproxy:  dialproxy,
-		lastNDPort: MIN_PORT,
-		realms:     make(map[sp.Trealm]*Realm),
+		dialproxy: dialproxy,
+		realms:    make(map[sp.Trealm]*Realm),
 	}
 	rs.ch = make(chan struct{})
 	db.DPrintf(db.REALMD, "Run %v %s\n", sp.REALMD, os.Environ())
@@ -371,7 +361,7 @@ func findStarvedRealms(rusage map[sp.Trealm]proc.Tmem) (sp.Trealm, []sp.Trealm) 
 	for r, u := range rusage {
 		// If a realm is using less than STARVATION_RATIO fraction of the max
 		// realm's resources, it is a candidate for a starvation check.
-		if float64(u)/float64(maxUsage) < STARVATION_RATIO {
+		if float64(u)/float64(maxUsage) < sp.Conf.Realm.STARVATION_RATIO {
 			starved = append(starved, r)
 		}
 	}
@@ -401,11 +391,11 @@ func selectVictim(ps []*proc.Proc) *proc.Proc {
 }
 
 func (rm *RealmSrv) enforceResourcePolicy() {
-	t := time.NewTicker(FAIRNESS_CHECK_PERIOD)
+	t := time.NewTicker(sp.Conf.Realm.FAIRNESS_CHECK_PERIOD)
 	for {
 		<-t.C
 		db.DPrintf(db.FAIRNESS, "Check BE resource allocation")
-		running, err := rm.sd.GetRunningProcs(N_SAMPLE)
+		running, err := rm.sd.GetRunningProcs(sp.Conf.Realm.N_SAMPLE)
 		if err != nil {
 			db.DPrintf(db.ERROR, "Err getting running procs: %v", err)
 			continue
@@ -420,7 +410,7 @@ func (rm *RealmSrv) enforceResourcePolicy() {
 			db.DPrintf(db.FAIRNESS, "No starved realms. Fairness achieved.")
 			continue
 		}
-		realmQLens, err := rm.be.GetQueueStats(N_SAMPLE)
+		realmQLens, err := rm.be.GetQueueStats(sp.Conf.Realm.N_SAMPLE)
 		if err != nil {
 			db.DFatalf("Err getting queue stats: %v", err)
 		}

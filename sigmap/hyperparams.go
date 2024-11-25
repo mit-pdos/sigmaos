@@ -39,6 +39,9 @@ session:
 
 realm:
   refresh_kernel_srv_interval: 100ms
+  fairness_check_period: 1s
+  n_sample: 2
+  starvation_ratio: 0.1
 
 besched:
   get_proc_timeout: 50ms
@@ -77,6 +80,9 @@ session:
 
 realm:
   refresh_kernel_srv_interval: 100ms
+  fairness_check_period: 1s
+  n_sample: 2
+  starvation_ratio: 0.1
 
 besched:
   get_proc_timeout: 50ms
@@ -125,6 +131,12 @@ type Config struct {
 	Realm struct {
 		// Maximum frequency with which to refresh kernel servers.
 		KERNEL_SRV_REFRESH_INTERVAL time.Duration `yaml:"refresh_kernel_srv_interval"`
+		// Period at which realms' utiliztaion statistics are checked for fairness
+		FAIRNESS_CHECK_PERIOD time.Duration `yaml:"fairness_check_period"`
+		// Number of samples for fairness check
+		N_SAMPLE int `yaml:"n_sample"`
+		// Maximum starvation ratio before fairness is enforced
+		STARVATION_RATIO float64 `yaml:"starvation_ratio"`
 	} `yaml:"realm"`
 	BESched struct {
 		// Timeout for which an msched's request for a proc to a besched shard lasts

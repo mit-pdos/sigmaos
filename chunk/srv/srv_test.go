@@ -8,8 +8,8 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"sigmaos/chunk"
-	chunksrv "sigmaos/chunk/srv"
 	chunkclnt "sigmaos/chunk/clnt"
+	chunksrv "sigmaos/chunk/srv"
 	db "sigmaos/debug"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
@@ -85,7 +85,7 @@ func (ts *Tstate) fetch(srv string, paths []string, expect []string) {
 	}
 	assert.True(ts.T, isExpected(path, expect))
 
-	n := (st.Tlength() / chunk.CHUNKSZ) + 1
+	n := (st.Tlength() / sp.Tsize(sp.Conf.Chunk.CHUNK_SZ)) + 1
 	l := 0
 	h := int(n - 1)
 	for i := 0; i < int(n); i++ {
@@ -100,7 +100,7 @@ func (ts *Tstate) fetch(srv string, paths []string, expect []string) {
 		sz, path, err := ts.ckclnt.Fetch(srv, PROG, pid, sp.ROOTREALM, secrets, ck, st.Tsize(), paths, ts.ProcEnv().GetNamedEndpointProto())
 		db.DPrintf(db.TEST, "path %v", path)
 		assert.Nil(ts.T, err, "err %v", err)
-		assert.True(ts.T, sz > 0 && sz <= chunk.CHUNKSZ)
+		assert.True(ts.T, sz > 0 && sz <= sp.Tsize(sp.Conf.Chunk.CHUNK_SZ))
 		assert.True(ts.T, isExpected(path, expect))
 	}
 

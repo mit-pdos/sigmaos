@@ -11,7 +11,7 @@ import (
 	"sigmaos/fdclnt"
 	"sigmaos/fidclnt"
 	"sigmaos/fslib"
-	"sigmaos/leaseclnt"
+	leaseclnt "sigmaos/lease/clnt"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
 	sos "sigmaos/sigmaos"

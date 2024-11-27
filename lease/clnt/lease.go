@@ -1,4 +1,4 @@
-package leaseclnt
+package clnt
 
 import (
 	"fmt"
@@ -6,8 +6,8 @@ import (
 	"time"
 
 	db "sigmaos/debug"
-	"sigmaos/namesrv/fsetcd"
 	leaseproto "sigmaos/lease/proto"
+	"sigmaos/namesrv/fsetcd"
 	sp "sigmaos/sigmap"
 )
 

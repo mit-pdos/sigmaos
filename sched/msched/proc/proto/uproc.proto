@@ -3,7 +3,7 @@ syntax = "proto3";
 import "proc/proc.proto";
 import "sigmap/sigmap.proto";
 
-option go_package = "sigmaos/uprocsrv/proto";
+option go_package = "sigmaos/sched/msched/proc/proto";
 
 message RunRequest {
   ProcProto procProto = 1;

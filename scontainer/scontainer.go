@@ -12,8 +12,8 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/proc"
+	"sigmaos/sched/msched/proc/srv/binsrv"
 	sp "sigmaos/sigmap"
-	"sigmaos/uprocsrv/binsrv"
 )
 
 type uprocCmd struct {
@@ -63,14 +63,14 @@ func StartSigmaContainer(uproc *proc.Proc, dialproxy bool) (*uprocCmd, error) {
 	s := time.Now()
 	if err := cmd.Start(); err != nil {
 		db.DPrintf(db.CONTAINER, "Error start %v %v", cmd, err)
-		CleanupUproc(uproc.GetPid())
+		CleanupUProc(uproc.GetPid())
 		return nil, err
 	}
-	db.DPrintf(db.SPAWN_LAT, "[%v] Uproc cmd.Start %v", uproc.GetPid(), time.Since(s))
+	db.DPrintf(db.SPAWN_LAT, "[%v] UProc cmd.Start %v", uproc.GetPid(), time.Since(s))
 	return &uprocCmd{cmd: cmd}, nil
 }
 
-func CleanupUproc(pid sp.Tpid) {
+func CleanupUProc(pid sp.Tpid) {
 	if err := os.RemoveAll(jailPath(pid)); err != nil {
 		db.DPrintf(db.ALWAYS, "Error cleanupJail: %v", err)
 	}

@@ -5,8 +5,8 @@ import (
 	"strconv"
 
 	db "sigmaos/debug"
+	"sigmaos/sched/msched/proc/srv"
 	sp "sigmaos/sigmap"
-	"sigmaos/uprocsrv"
 )
 
 func main() {
@@ -19,7 +19,7 @@ func main() {
 	}
 	scPID := sp.Tpid(os.Args[3])
 	// ignore scheddIp
-	if err := uprocsrv.RunUprocSrv(os.Args[1], dialproxy, scPID); err != nil {
+	if err := srv.RunProcSrv(os.Args[1], dialproxy, scPID); err != nil {
 		db.DFatalf("Fatal start: %v %v\n", os.Args[0], err)
 	}
 }

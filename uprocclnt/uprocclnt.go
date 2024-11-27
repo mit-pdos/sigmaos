@@ -6,9 +6,9 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/proc"
 	rpcclnt "sigmaos/rpc/clnt"
+	"sigmaos/sched/msched/proc/proto"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
-	"sigmaos/uprocsrv/proto"
 )
 
 type UprocdClnt struct {

@@ -1,4 +1,4 @@
-package uprocclnt
+package clnt
 
 import (
 	"sync"
@@ -10,17 +10,17 @@ import (
 // A pool of booted, but unused, uprocds.
 type pool struct {
 	sync.Mutex
-	cond        *sync.Cond
-	startUprocd startUprocdFn
-	clnts       []*UprocdClnt
-	pids        []sp.Tpid
+	cond       *sync.Cond
+	startProcd startProcdFn
+	clnts      []*ProcClnt
+	pids       []sp.Tpid
 }
 
-func newPool(fn startUprocdFn) *pool {
+func newPool(fn startProcdFn) *pool {
 	p := &pool{
-		startUprocd: fn,
-		clnts:       make([]*UprocdClnt, 0, sp.Conf.UProcSrv.POOL_SZ),
-		pids:        make([]sp.Tpid, 0, sp.Conf.UProcSrv.POOL_SZ),
+		startProcd: fn,
+		clnts:      make([]*ProcClnt, 0, sp.Conf.UProcSrv.POOL_SZ),
+		pids:       make([]sp.Tpid, 0, sp.Conf.UProcSrv.POOL_SZ),
 	}
 	p.cond = sync.NewCond(&p.Mutex)
 	return p
@@ -36,7 +36,7 @@ func (p *pool) fill() {
 		// Unlock to allow clients to take a uprocd off the queue while another is
 		// being started
 		p.Unlock()
-		pid, clnt := p.startUprocd()
+		pid, clnt := p.startProcd()
 		// Reclaim lock
 		p.Lock()
 		p.pids = append(p.pids, pid)
@@ -48,7 +48,7 @@ func (p *pool) fill() {
 	p.cond.Broadcast()
 }
 
-func (p *pool) get() (sp.Tpid, *UprocdClnt) {
+func (p *pool) get() (sp.Tpid, *ProcClnt) {
 	p.Lock()
 	defer p.Unlock()
 
@@ -61,7 +61,7 @@ func (p *pool) get() (sp.Tpid, *UprocdClnt) {
 	db.DPrintf(db.UPROCDMGR, "Pop from uprocd pool")
 
 	var pid sp.Tpid
-	var clnt *UprocdClnt
+	var clnt *ProcClnt
 
 	// Pop from the pool of uprocds.
 	pid, p.pids = p.pids[0], p.pids[1:]

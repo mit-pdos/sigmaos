@@ -16,9 +16,8 @@ import (
 	"github.com/hanwen/go-fuse/v2/fuse"
 
 	chunksrv "sigmaos/chunk/srv"
-	// db "sigmaos/debug"
+	"sigmaos/sched/msched/proc"
 	sp "sigmaos/sigmap"
-	"sigmaos/uprocclnt"
 )
 
 const (
@@ -62,7 +61,7 @@ func (n *binFsNode) String() string {
 	return fmt.Sprintf("{N %q}", n.path())
 }
 
-func newBinRoot(upds uprocclnt.UprocSrv) (fs.InodeEmbedder, error) {
+func newBinRoot(upds proc.ProcSrv) (fs.InodeEmbedder, error) {
 	var st syscall.Stat_t
 	err := syscall.Stat(chunksrv.BINPROC, &st)
 	if err != nil {
@@ -74,7 +73,7 @@ func newBinRoot(upds uprocclnt.UprocSrv) (fs.InodeEmbedder, error) {
 	return root.newNode(nil, "", 0), nil
 }
 
-func mountBinFs(upds uprocclnt.UprocSrv) (*fuse.Server, error) {
+func mountBinFs(upds proc.ProcSrv) (*fuse.Server, error) {
 	loopbackRoot, err := newBinRoot(upds)
 	if err != nil {
 		return nil, err
@@ -101,7 +100,7 @@ func mountBinFs(upds uprocclnt.UprocSrv) (*fuse.Server, error) {
 	return server, nil
 }
 
-func StartBinFs(upds uprocclnt.UprocSrv) error {
+func StartBinFs(upds proc.ProcSrv) error {
 	if err := os.MkdirAll(BINFSMNT, 0750); err != nil {
 		return err
 	}

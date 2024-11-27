@@ -7,9 +7,9 @@ import (
 	"github.com/hanwen/go-fuse/v2/fs"
 
 	db "sigmaos/debug"
+	"sigmaos/sched/msched/proc"
 	sp "sigmaos/sigmap"
 	"sigmaos/util/syncmap"
-	"sigmaos/uprocclnt"
 )
 
 func idFromStat(st *syscall.Stat_t) fs.StableAttr {
@@ -45,18 +45,18 @@ type entry struct {
 type bincache struct {
 	kernelId string
 	cache    *syncmap.SyncMap[string, *entry]
-	upds     uprocclnt.UprocSrv
+	pds      proc.ProcSrv
 }
 
-func newBinCache(upds uprocclnt.UprocSrv) *bincache {
+func newBinCache(pds proc.ProcSrv) *bincache {
 	bc := &bincache{
 		cache: syncmap.NewSyncMap[string, *entry](),
-		upds:  upds,
+		pds:   pds,
 	}
 	return bc
 }
 
-// Check cache first. If not present, get stat from uprocd
+// Check cache first. If not present, get stat from procd
 func (bc *bincache) lookup(pn string, pid uint32) (*sp.Stat, error) {
 	e, ok := bc.cache.Lookup(pn)
 	if ok {
@@ -67,9 +67,9 @@ func (bc *bincache) lookup(pn string, pid uint32) (*sp.Stat, error) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	if e.st == nil {
-		st, err := bc.upds.Lookup(int(pid), pn)
+		st, err := bc.pds.Lookup(int(pid), pn)
 		if err != nil {
-			db.DPrintf(db.ERROR, "Error upds lookup bin: %v", err)
+			db.DPrintf(db.ERROR, "Error pds lookup bin: %v", err)
 			return nil, err
 		}
 		if st == nil {
@@ -81,5 +81,5 @@ func (bc *bincache) lookup(pn string, pid uint32) (*sp.Stat, error) {
 }
 
 func (bc *bincache) getDownload(pn string, sz sp.Tsize, pid uint32) *downloader {
-	return newDownloader(pn, bc.upds, sz, pid)
+	return newDownloader(pn, bc.pds, sz, pid)
 }

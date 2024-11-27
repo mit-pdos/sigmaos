@@ -81,7 +81,7 @@ func NewMSched(sc *sigmaclnt.SigmaClnt, kernelID string, reserveMcpu uint) *MSch
 
 // Start uprocd and warm cache of binaries
 func (msched *MSched) WarmUprocd(ctx fs.CtxI, req proto.WarmCacheBinRequest, res *proto.WarmCacheBinResponse) error {
-	if err := msched.pmgr.WarmUprocd(sp.Tpid(req.PidStr), sp.Trealm(req.RealmStr), req.Program, req.SigmaPath, proc.Ttype(req.ProcType)); err != nil {
+	if err := msched.pmgr.WarmProcd(sp.Tpid(req.PidStr), sp.Trealm(req.RealmStr), req.Program, req.SigmaPath, proc.Ttype(req.ProcType)); err != nil {
 		db.DPrintf(db.ERROR, "WarmUprocd %v err %v", req, err)
 		res.OK = false
 		return err

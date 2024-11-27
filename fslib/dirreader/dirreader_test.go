@@ -254,9 +254,15 @@ func TestPerfSingleWorkerManyFiles(t *testing.T) {
 	})
 }
 
-func TestPerfMultipleWorkersNoFiles(t *testing.T) {
+func TestPerfFewWorkersNoFiles(t *testing.T) {
 	runPerfTest(func(useNamed bool, measureMode drtest.MeasureMode) {
-		testPerf(t, 5, 0, 100, "multiple_no_files", useNamed, measureMode)
+		testPerf(t, 5, 0, 250, "few_no_files", useNamed, measureMode)
+	})
+}
+
+func TestPerfManyWorkersNoFiles(t *testing.T) {
+	runPerfTest(func(useNamed bool, measureMode drtest.MeasureMode) {
+		testPerf(t, 25, 0, 250, "many_no_files", useNamed, measureMode)
 	})
 }
 

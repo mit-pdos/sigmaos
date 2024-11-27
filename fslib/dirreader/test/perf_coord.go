@@ -168,6 +168,8 @@ func (c *PerfCoord) Run() {
 			if err != nil {
 				db.DFatalf("Run: failed to wait for file creation %v", err)
 			}
+			time.Sleep(10 * time.Millisecond) 
+
 			_, err = c.Create(signal_path_create, 0777, sigmap.OAPPEND)
 			if err != nil {
 				db.DFatalf("Run: failed to create signal file %d, %v", trial, err)
@@ -206,6 +208,8 @@ func (c *PerfCoord) Run() {
 			if err != nil {
 				db.DFatalf("Run: failed to wait for file creation %v", err)
 			}
+			time.Sleep(10 * time.Millisecond) 
+
 			_, err = c.Create(signal_path_delete, 0777, sigmap.OAPPEND)
 			if err != nil {
 				db.DFatalf("Run: failed to create signal file %d, %v", trial, err)

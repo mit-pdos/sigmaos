@@ -119,7 +119,7 @@ func (wo *WatchV2) GetEventBuffer(fid *fid.Fid, maxLength int) ([]byte, *serr.Er
 }
 
 func (wo *WatchV2) String() string {
-	return ""
+	return wo.pl.Path()
 }
 
 func (wo *WatchV2) Stat(ctx fs.CtxI) (*sp.Stat, *serr.Err) {

@@ -94,52 +94,8 @@ func (w *PerfWorker) Run() {
 
 	for trial := 0; trial < w.nTrials; trial++ {
 		filename := fmt.Sprintf("trial_%d", trial)
-
-		db.DPrintf(db.WATCH_PERF, "Run %s: Trial %d: waiting for file creation", w.id, trial)
-		w.waitForCoordSignal(trial, false)
-		preWatchTime := time.Now()
-		if w.measureMode == IncludeFileOp {
-			ch := make(chan bool)
-			go func() {
-				w.waitForWatchFile(filename, false)
-				ch <- true
-			}()
-			time.Sleep(100 * time.Millisecond)
-			w.sendSignal(trial, false)
-			<- ch
-		} else {
-			w.waitForWatchFile(filename, false)
-		}
-		createdFileTime := time.Now()
-
-		if w.measureMode == JustWatch {
-			w.respondWith(formatDuration(createdFileTime.Sub(preWatchTime)), trial, false)
-		} else if w.measureMode == IncludeFileOp {
-			w.respondWith(formatTime(createdFileTime), trial, false)
-		}
-
-		db.DPrintf(db.WATCH_PERF, "Run %s: Trial %d: waiting for file deletion", w.id, trial)
-		w.waitForCoordSignal(trial, true)
-		preWatchTime = time.Now()
-		if w.measureMode == IncludeFileOp {
-			ch := make(chan bool)
-			go func() {
-				w.waitForWatchFile(filename, true)
-				ch <- true
-			}()
-			time.Sleep(100 * time.Millisecond)
-			w.sendSignal(trial, true)
-			<- ch
-		} else {
-			w.waitForWatchFile(filename, true)
-		}
-		deletedFileTime := time.Now()
-
-		if w.measureMode == JustWatch {
-			w.respondWith(formatDuration(deletedFileTime.Sub(preWatchTime)), trial, true)
-		} else if w.measureMode == IncludeFileOp {
-			w.respondWith(formatTime(deletedFileTime), trial, true)
-		}
+		w.handleTrial(trial, filename, false)
+		w.handleTrial(trial, filename, true)
 	}
 
 	err = w.CloseFd(idFileFd)
@@ -159,6 +115,37 @@ func (w *PerfWorker) Run() {
 	
 	status := proc.NewStatusInfo(proc.StatusOK, "", nil)
 	w.ClntExit(status)
+}
+
+func (w *PerfWorker) handleTrial(trial int, filename string, deleted bool) {
+	opType := "creation"
+	if deleted {
+		opType = "deletion"
+	}
+
+	db.DPrintf(db.WATCH_PERF, "handleTrial %s: Trial %d: waiting for file %s", w.id, trial, opType)
+	w.waitForCoordSignal(trial, deleted)
+
+	if w.measureMode == IncludeFileOp {
+		ch := make(chan bool)
+		go func() {
+			w.waitForWatchFile(filename, deleted)
+			ch <- true
+		}()
+
+		// some delay that is much longer than the time it would take for the watch to start
+		time.Sleep(100 * time.Millisecond) 
+
+		w.sendSignal(trial, deleted)
+		<- ch
+		createdFileTime := time.Now()
+		w.respondWith(formatTime(createdFileTime), trial, deleted)
+	} else {
+		preWatchTime := time.Now()
+		w.waitForWatchFile(filename, deleted)
+		createdFileTime := time.Now()
+		w.respondWith(formatDuration(createdFileTime.Sub(preWatchTime)), trial, deleted)
+	}
 }
 
 // wait for a signal from the coord that we should now start watching for the next file

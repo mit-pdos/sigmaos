@@ -192,18 +192,29 @@ func (dr *DirReaderV2) readDirWatch(watch FwatchV2) error {
 	return nil
 }
 
-func (dr *DirReaderV2) WaitRemove(file string) error {
-	db.DPrintf(db.WATCH, "DirReaderV2 WaitRemove: dir %s file %s", dr.pn, file)
+func (dr *DirReaderV2) WaitCreate(file string) error {
+	db.DPrintf(db.WATCH, "DirReaderV2 WaitCreate: dir %s file %s", dr.pn, file)
+
 	err := dr.readDirWatch(func(ents map[string] bool, changes map[string]bool) bool {
-		return ents[file]
+		return !ents[file]
 	})
 	return err
 }
 
-func (dr *DirReaderV2) WaitCreate(file string) error {
-	db.DPrintf(db.WATCH, "DirReaderV2 WaitCreate: dir %s file %s", dr.pn, file)
+func (dr *DirReaderV2) WaitRemove(file string) error {
+	db.DPrintf(db.WATCH, "DirReaderV2 WaitRemove: dir %s file %s", dr.pn, file)
+	firstTime := true
 	err := dr.readDirWatch(func(ents map[string] bool, changes map[string]bool) bool {
-		return !ents[file]
+		if firstTime {
+			firstTime = false
+			return ents[file]
+		} else {
+			created, ok := changes[file]
+			if !ok {
+				return true
+			}
+			return created
+		}
 	})
 	return err
 }

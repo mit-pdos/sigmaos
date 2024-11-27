@@ -74,7 +74,7 @@ def save_file(save):
     plt.clf()
 
 if __name__ == "__main__":
-    timestamp = "2024-11-24_16:56:46"
+    timestamp = "2024-11-27_03:53:28"
     session = boto3.Session(profile_name='sigmaos')
     s3_resource = session.resource('s3')
     bucket = s3_resource.Bucket('sigmaos-bucket-ryan')

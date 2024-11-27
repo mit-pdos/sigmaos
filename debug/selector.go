@@ -113,10 +113,10 @@ const (
 	NAMED                     = "NAMED"
 	FSETCD                    = "FSETCD"
 	PROCMGR                   = "PROCMGR"
-	UPROCDMGR                 = "UPROCDMGR"
-	UPROCDMGR_ERR             = "UPROCDMGR" + ERR
-	UPROCD                    = "UPROCD"
-	UPROCD_ERR                = "UPROCD" + ERR
+	PROCDMGR                  = "PROCDMGR"
+	PROCDMGR_ERR              = "PROCDMGR" + ERR
+	PROCD                     = "PROCD"
+	PROCD_ERR                 = "PROCD" + ERR
 	LCSCHEDCLNT               = "LCSCHEDCLNT"
 	LCSCHEDCLNT_ERR           = "LCSCHEDCLNT" + ERR
 	LCSCHED                   = "LCSCHED"

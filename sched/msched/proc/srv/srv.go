@@ -111,7 +111,7 @@ func RunProcSrv(kernelId string, dialproxy bool, spproxydPID sp.Tpid) error {
 	}
 	ps.pe.SetInnerContainerIP(sp.Tip(innerIP))
 
-	db.DPrintf(db.UPROCD, "Run kid %v innerIP %s outerIP %s pe %v", kernelId, pe.GetInnerContainerIP(), pe.GetOuterContainerIP(), pe)
+	db.DPrintf(db.PROCD, "Run kid %v innerIP %s outerIP %s pe %v", kernelId, pe.GetInnerContainerIP(), pe.GetOuterContainerIP(), pe)
 
 	sc, err := sigmaclnt.NewSigmaClnt(pe)
 	if err != nil {
@@ -119,7 +119,7 @@ func RunProcSrv(kernelId string, dialproxy bool, spproxydPID sp.Tpid) error {
 	}
 	ps.sc = sc
 	var ssrv *sigmasrv.SigmaSrv
-	pn := filepath.Join(sp.MSCHED, kernelId, sp.UPROCDREL, pe.GetPID().String())
+	pn := filepath.Join(sp.MSCHED, kernelId, sp.PROCDREL, pe.GetPID().String())
 	ssrv, err = sigmasrv.NewSigmaSrvClnt(pn, sc, &ProcRPCSrv{ps})
 	if err != nil {
 		db.DFatalf("Error sigmasrvclnt: %v", err)
@@ -129,7 +129,7 @@ func RunProcSrv(kernelId string, dialproxy bool, spproxydPID sp.Tpid) error {
 		db.DFatalf("Error shrinking mount table: %v", err)
 	}
 	ps.ssrv = ssrv
-	p, err := perf.NewPerf(pe, perf.UPROCD)
+	p, err := perf.NewPerf(pe, perf.PROCD)
 	if err != nil {
 		db.DFatalf("Error NewPerf: %v", err)
 	}
@@ -141,10 +141,10 @@ func RunProcSrv(kernelId string, dialproxy bool, spproxydPID sp.Tpid) error {
 
 	ps.ckclnt = chunkclnt.NewChunkClnt(ps.sc.FsLib, false)
 
-	// Lookup the ckclnt for uprocd's local chunkd now since we will
+	// Lookup the ckclnt for procd's local chunkd now since we will
 	// need it later quickly.
 	if err := ps.ckclnt.LookupEntry(ps.kernelId); err != nil {
-		db.DPrintf(db.UPROCD, "LookupClnt %v %v", ps.kernelId, err)
+		db.DPrintf(db.PROCD, "LookupClnt %v %v", ps.kernelId, err)
 		return err
 	}
 
@@ -158,10 +158,10 @@ func RunProcSrv(kernelId string, dialproxy bool, spproxydPID sp.Tpid) error {
 	ps.scsc = scsc
 
 	if err = ssrv.RunServer(); err != nil {
-		db.DPrintf(db.UPROCD_ERR, "RunServer err %v\n", err)
+		db.DPrintf(db.PROCD_ERR, "RunServer err %v\n", err)
 		return err
 	}
-	db.DPrintf(db.UPROCD, "RunServer done\n")
+	db.DPrintf(db.PROCD, "RunServer done\n")
 	return nil
 }
 
@@ -225,7 +225,7 @@ func (ps *ProcSrv) setSchedPolicy(upid sp.Tpid, ptype proc.Ttype) error {
 
 	// Set sched policy to SCHED_IDLE if running BE procs
 	if ptype == proc.T_BE {
-		db.DPrintf(db.UPROCD, "Set SCHED_IDLE to run %v", upid)
+		db.DPrintf(db.PROCD, "Set SCHED_IDLE to run %v", upid)
 		attr, err := linuxsched.SchedGetAttr(0)
 		if err != nil {
 			db.DFatalf("Error Getattr %v", err)
@@ -247,7 +247,7 @@ func (ps *ProcSrv) setSchedPolicy(upid sp.Tpid, ptype proc.Ttype) error {
 	return nil
 }
 
-// Set up uprocd for use for a specific realm
+// Set up procd for use for a specific realm
 func (ps *ProcSrv) assignToRealm(realm sp.Trealm, upid sp.Tpid, prog string, path []string, s3secret *sp.SecretProto, ep *sp.TendpointProto) error {
 	ps.mu.RLock()
 	defer ps.mu.RUnlock()
@@ -276,19 +276,19 @@ func (ps *ProcSrv) assignToRealm(realm sp.Trealm, upid sp.Tpid, prog string, pat
 	go func() {
 		s := time.Now()
 		if _, _, err := ps.ckclnt.GetFileStat(ps.kernelId, prog, upid, realm, s3secret, path, ep); err != nil {
-			db.DPrintf(db.UPROCD, "GetFileStat %v %v err %v", ps.kernelId, realm, err)
+			db.DPrintf(db.PROCD, "GetFileStat %v %v err %v", ps.kernelId, realm, err)
 		}
 		db.DPrintf(db.SPAWN_LAT, "[%v] prefetch %v lat %v", upid, prog, time.Since(s))
 	}()
 	start = time.Now()
-	db.DPrintf(db.UPROCD, "Assign Procd to realm %v", realm)
+	db.DPrintf(db.PROCD, "Assign Procd to realm %v", realm)
 
 	if err := mountRealmBinDir(realm); err != nil {
 		db.DFatalf("Error mount realm bin dir: %v", err)
 	}
 	db.DPrintf(db.SPAWN_LAT, "[%v] uprocsrv.mountRealmBinDir: %v", upid, time.Since(start))
 
-	db.DPrintf(db.UPROCD, "Assign Procd to realm %v done", realm)
+	db.DPrintf(db.PROCD, "Assign Procd to realm %v done", realm)
 	// Note that the uprocsrv has been assigned.
 	ps.realm = realm
 
@@ -306,7 +306,7 @@ func (ps *ProcRPCSrv) Run(ctx fs.CtxI, req proto.RunRequest, res *proto.RunResul
 // Run a proc inside of an inner container
 func (ps *ProcSrv) Run(ctx fs.CtxI, req proto.RunRequest, res *proto.RunResult) error {
 	uproc := proc.NewProcFromProto(req.ProcProto)
-	db.DPrintf(db.UPROCD, "Run uproc %v", uproc)
+	db.DPrintf(db.PROCD, "Run uproc %v", uproc)
 	// XXX for spawn lat bench
 	//	db.DPrintf(db.ALWAYS, "[%v] ProcSrv.Run recvd proc time since spawn %v", uproc.GetPid(), time.Since(uproc.GetSpawnTime()))
 	db.DPrintf(db.SPAWN_LAT, "[%v] ProcSrv.Run recvd proc time since spawn %v", uproc.GetPid(), time.Since(uproc.GetSpawnTime()))
@@ -333,14 +333,14 @@ func (ps *ProcSrv) Run(ctx fs.CtxI, req proto.RunRequest, res *proto.RunResult) 
 		return err
 	}
 	pid := cmd.Pid()
-	db.DPrintf(db.UPROCD, "Pid %v -> %d", uproc.GetPid(), pid)
+	db.DPrintf(db.PROCD, "Pid %v -> %d", uproc.GetPid(), pid)
 	pe, alloc := ps.procs.Alloc(pid, newProcEntry(uproc))
 	if !alloc { // it was already inserted
 		pe.insertSignal(uproc)
 	}
 	err = cmd.Wait()
 	if err != nil {
-		db.DPrintf(db.UPROCD, "[%v] Proc Run cmd.Wait err %v", uproc.GetPid(), err)
+		db.DPrintf(db.PROCD, "[%v] Proc Run cmd.Wait err %v", uproc.GetPid(), err)
 	}
 	scontainer.CleanupUProc(uproc.GetPid())
 	ps.procs.Delete(pid)
@@ -348,13 +348,13 @@ func (ps *ProcSrv) Run(ctx fs.CtxI, req proto.RunRequest, res *proto.RunResult) 
 	return err
 }
 
-func (ps *ProcRPCSrv) WarmProc(ctx fs.CtxI, req proto.WarmBinRequest, res *proto.WarmBinResult) error {
-	return ps.ps.WarmProc(ctx, req, res)
+func (ps *ProcRPCSrv) WarmProcd(ctx fs.CtxI, req proto.WarmBinRequest, res *proto.WarmBinResult) error {
+	return ps.ps.WarmProcd(ctx, req, res)
 }
 
-// Warm uprocd to run a program for experiments with warm start.
-func (ps *ProcSrv) WarmProc(ctx fs.CtxI, req proto.WarmBinRequest, res *proto.WarmBinResult) error {
-	db.DPrintf(db.UPROCD, "WarmProc %v pid %v", req, os.Getpid())
+// Warm procd to run a program for experiments with warm start.
+func (ps *ProcSrv) WarmProcd(ctx fs.CtxI, req proto.WarmBinRequest, res *proto.WarmBinResult) error {
+	db.DPrintf(db.PROCD, "WarmProcd %v pid %v", req, os.Getpid())
 	pid := sp.Tpid(req.PidStr)
 	r := sp.Trealm(req.RealmStr)
 	if err := ps.assignToRealm(r, pid, req.Program, req.SigmaPath, req.GetS3Secret(), req.GetNamedEndpointProto()); err != nil {
@@ -376,7 +376,7 @@ func mountRealmBinDir(realm sp.Trealm) error {
 	dir := chunksrv.MkPathBinRealm(realm)
 	mnt := chunksrv.PathBinProc()
 
-	db.DPrintf(db.UPROCD, "mountRealmBinDir: %q %q\n", dir, mnt)
+	db.DPrintf(db.PROCD, "mountRealmBinDir: %q %q\n", dir, mnt)
 
 	if err := syscall.Mount(dir, mnt, "none", syscall.MS_BIND|syscall.MS_RDONLY, ""); err != nil {
 		db.DPrintf(db.ALWAYS, "failed to mount realm's bin dir %q to %q err %v", dir, mnt, err)
@@ -426,7 +426,7 @@ func (ps *ProcSrv) lookupProc(proc *proc.Proc, prog string) (*sp.Stat, error) {
 func (ps *ProcSrv) Lookup(pid int, prog string) (*sp.Stat, error) {
 	pe, alloc := ps.procs.Alloc(pid, newProcEntry(nil))
 	if alloc {
-		db.DPrintf(db.UPROCD, "Lookup wait for pid %v proc %v\n", pid, pe)
+		db.DPrintf(db.PROCD, "Lookup wait for pid %v proc %v\n", pid, pe)
 		pe.procWait()
 	}
 	return ps.lookupProc(pe.proc, prog)

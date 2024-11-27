@@ -731,7 +731,7 @@ func TestLookupMultiMount(t *testing.T) {
 		return
 	}
 
-	// Running a proc forces sigmaos to create uprocds and rpc special file
+	// Running a proc forces sigmaos to create procds and rpc special file
 	a := proc.NewProc("sleeper", []string{fmt.Sprintf("%dms", 0), "name/"})
 	err = ts.Spawn(a)
 	assert.Nil(ts.T, err, "Spawn")
@@ -746,11 +746,11 @@ func TestLookupMultiMount(t *testing.T) {
 	assert.Nil(t, err)
 	kernelId := sts[0].Name
 
-	sts, err = ts.GetDir(filepath.Join(sp.MSCHED, kernelId, sp.UPROCDREL))
+	sts, err = ts.GetDir(filepath.Join(sp.MSCHED, kernelId, sp.PROCDREL))
 	assert.Nil(t, err)
-	uprocdpid := sts[0].Name
+	procdpid := sts[0].Name
 
-	db.DPrintf(db.TEST, "kernelid %v %v\n", kernelId, uprocdpid)
+	db.DPrintf(db.TEST, "kernelid %v %v\n", kernelId, procdpid)
 
 	pe.NamedEndpointProto = nil
 	fsl, err := sigmaclnt.NewFsLib(pe, dialproxyclnt.NewDialProxyClnt(pe))
@@ -762,7 +762,7 @@ func TestLookupMultiMount(t *testing.T) {
 
 	s := time.Now()
 	pn := filepath.Join(sp.MSCHED, kernelId, rpc.RPC)
-	// pn := filepath.Join(sp.MSCHED, kernelId, sp.UPROCDREL, uprocdpid, rpc.RPC)
+	// pn := filepath.Join(sp.MSCHED, kernelId, sp.PROCDREL, procdpid, rpc.RPC)
 	db.DPrintf(db.TEST, "Stat %v start %v\n", fsl.ClntId(), pn)
 	_, err = fsl.Stat(pn)
 	db.DPrintf(db.TEST, "Stat %v done %v took %v\n", fsl.ClntId(), pn, time.Since(s))

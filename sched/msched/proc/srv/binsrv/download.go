@@ -41,7 +41,7 @@ func (dl *downloader) String() string {
 	return fmt.Sprintf("{pn %q sz %d ckclnt %v}", dl.pn, dl.sz)
 }
 
-// Fetch chunk through uprocd, which will fill in the realm and
+// Fetch chunk through procd, which will fill in the realm and
 // write it a local file, which binsrv can read.
 func (dl *downloader) fetchChunk(ck int) (int64, error) {
 	db.DPrintf(db.BINSRV, "fetchChunk invoke %q ck %d\n", dl.pn, ck)

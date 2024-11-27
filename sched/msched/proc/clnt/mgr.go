@@ -23,7 +23,7 @@ type ProcdMgr struct {
 	kernelId      string
 	pool          *pool
 	kclnt         *kernelclnt.KernelClnt
-	upcs          map[sp.Trealm]map[proc.Ttype]*ProcClnt // We use a separate uprocd for each type of proc (BE or LC) to simplify cgroup management.
+	upcs          map[sp.Trealm]map[proc.Ttype]*ProcClnt // We use a separate procd for each type of proc (BE or LC) to simplify cgroup management.
 	realms        map[sp.Trealm]bool
 	beProcds      []*ProcClnt
 	sharesAlloced Tshare
@@ -41,14 +41,14 @@ func NewProcdMgr(fsl *fslib.FsLib, kernelId string) *ProcdMgr {
 	go func() {
 		// In the boot sequence, schedd and other servers are started before the
 		// kernel server registers itself in the namespace. However, we need the
-		// kernel server to have started in order to boot more uprocds. Thus, we
+		// kernel server to have started in order to boot more procds. Thus, we
 		// wait for the kernel to start up and advertise itself in a separate
-		// goroutine, and then fill the uprocd pool
+		// goroutine, and then fill the procd pool
 		for {
 			err := pdm.fsl.WaitCreate(filepath.Join(sp.BOOT, pdm.kernelId))
 			// Retry if unreachable
 			if serr.IsErrCode(err, serr.TErrUnreachable) {
-				db.DPrintf(db.UPROCDMGR, "Boot dir unreachable")
+				db.DPrintf(db.PROCDMGR, "Boot dir unreachable")
 				continue
 			}
 			if err != nil {
@@ -60,8 +60,8 @@ func NewProcdMgr(fsl *fslib.FsLib, kernelId string) *ProcdMgr {
 		if err != nil {
 			db.DFatalf("Err ProcdMgr Can't make kernelclnt: %v", err)
 		}
-		if err := pdm.fsl.MkDir(filepath.Join(sp.MSCHED, pdm.kernelId, sp.UPROCDREL), 0777); err != nil {
-			db.DFatalf("Err mkdir for uprocds: %v", err)
+		if err := pdm.fsl.MkDir(filepath.Join(sp.MSCHED, pdm.kernelId, sp.PROCDREL), 0777); err != nil {
+			db.DFatalf("Err mkdir for procds: %v", err)
 		}
 		pdm.kclnt = kclnt
 		// Must have kclnt set in order to fill.
@@ -109,32 +109,32 @@ func (pdm *ProcdMgr) GetCPUUtil(realm sp.Trealm) float64 {
 			pdcs = append(pdcs, pdc)
 		}
 	} else {
-		db.DPrintf(db.UPROCDMGR, "No procs from realm %v", realm)
+		db.DPrintf(db.PROCDMGR, "No procs from realm %v", realm)
 	}
 	pdm.mu.Unlock()
 
 	var total float64 = 0.0
 
-	// Get CPU util for BE & LC uprocds, if there are any.
+	// Get CPU util for BE & LC procds, if there are any.
 	for _, rpcc := range pdcs {
 		util, err := pdm.kclnt.GetCPUUtil(rpcc.pid)
 		if err != nil {
 			db.DPrintf(db.ERROR, "Error GetCPUUtil: %v", err)
 		}
 		total += util
-		db.DPrintf(db.UPROCDMGR, "[%v] CPU util pid:%v util:%v", realm, rpcc.pid, util)
+		db.DPrintf(db.PROCDMGR, "[%v] CPU util pid:%v util:%v", realm, rpcc.pid, util)
 	}
 	return total
 }
 
 func (pdm *ProcdMgr) startProcd() (sp.Tpid, *ProcClnt) {
 	s := time.Now()
-	pid, err := pdm.kclnt.Boot("uprocd", []string{pdm.kernelId})
-	db.DPrintf(db.SPAWN_LAT, "Boot uprocd latency: %v", time.Since(s))
+	pid, err := pdm.kclnt.Boot("procd", []string{pdm.kernelId})
+	db.DPrintf(db.SPAWN_LAT, "Boot procd latency: %v", time.Since(s))
 	if err != nil {
 		db.DFatalf("Error Boot Procd: %v", err)
 	}
-	pn := filepath.Join(sp.MSCHED, pdm.kernelId, sp.UPROCDREL, pid.String())
+	pn := filepath.Join(sp.MSCHED, pdm.kernelId, sp.PROCDREL, pid.String())
 	rc, err := sprpcclnt.NewRPCClnt(pdm.fsl, pn)
 	if err != nil {
 		db.DPrintf(db.ERROR, "Error Make RPCClnt Procd: %v", err)
@@ -154,7 +154,7 @@ func (pdm *ProcdMgr) getClntOrStartProcd(realm sp.Trealm, ptype proc.Ttype) (*Pr
 		start := time.Now()
 		pid, clnt := pdm.pool.get()
 		db.DPrintf(db.REALM_GROW_LAT, "[%v] ProcdMgr.pool.get latency: %v", realm, time.Since(start))
-		db.DPrintf(db.UPROCDMGR, "[realm:%v] get uprocd %v ptype %v", realm, pid, ptype)
+		db.DPrintf(db.PROCDMGR, "[realm:%v] get procd %v ptype %v", realm, pid, ptype)
 		pdm.upcs[realm][ptype] = clnt
 		rpcc = clnt
 		if ptype == proc.T_BE {
@@ -168,27 +168,27 @@ func (pdm *ProcdMgr) lookupClnt(realm sp.Trealm, ptype proc.Ttype) (*ProcClnt, e
 	pdm.mu.Lock()
 	defer pdm.mu.Unlock()
 
-	// Try to either get the clnt for an existing uprocd, or start a new uprocd
+	// Try to either get the clnt for an existing procd, or start a new procd
 	// for the realm & return its client
 	return pdm.getClntOrStartProcd(realm, ptype)
 }
 
 func (pdm *ProcdMgr) RunUProc(uproc *proc.Proc) (uprocErr error, childErr error) {
-	db.DPrintf(db.UPROCDMGR, "[RunUProc %v] run uproc %v", uproc.GetRealm(), uproc)
+	db.DPrintf(db.PROCDMGR, "[RunUProc %v] run uproc %v", uproc.GetRealm(), uproc)
 	rpcc, err := pdm.lookupClnt(uproc.GetRealm(), uproc.GetType())
 	if err != nil {
 		return err, nil
 	}
 	// run and exit do resource accounting and share rebalancing for the
-	// uprocds.
+	// procds.
 	pdm.startBalanceShares(uproc)
 	db.DPrintf(db.SPAWN_LAT, "[%v] Balance Procd shares time since spawn %v", uproc.GetPid(), time.Since(uproc.GetSpawnTime()))
 	defer pdm.exitBalanceShares(uproc)
 	return rpcc.RunProc(uproc)
 }
 
-func (pdm *ProcdMgr) WarmProc(pid sp.Tpid, realm sp.Trealm, prog string, path []string, ptype proc.Ttype) (uprocErr error, childErr error) {
-	db.DPrintf(db.UPROCDMGR, "[WarmUproc %v] warm uproc %v", prog)
+func (pdm *ProcdMgr) WarmProcd(pid sp.Tpid, realm sp.Trealm, prog string, path []string, ptype proc.Ttype) (uprocErr error, childErr error) {
+	db.DPrintf(db.PROCDMGR, "[WarmUproc %v] warm uproc %v", prog)
 	rpcc, err := pdm.lookupClnt(realm, ptype)
 	if err != nil {
 		return err, nil
@@ -198,7 +198,7 @@ func (pdm *ProcdMgr) WarmProc(pid sp.Tpid, realm sp.Trealm, prog string, path []
 		db.DPrintf(db.ERROR, "Error get realm named EP in WarmProc: %v", err)
 		return err, nil
 	}
-	return rpcc.WarmProc(pid, realm, prog, pdm.fsl.ProcEnv().GetSecrets()["s3"], ep, path)
+	return rpcc.WarmProcd(pid, realm, prog, pdm.fsl.ProcEnv().GetSecrets()["s3"], ep, path)
 }
 
 func (pdm *ProcdMgr) String() string {

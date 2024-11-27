@@ -108,7 +108,7 @@ func (mgr *ProcMgr) WarmProcd(pid sp.Tpid, realm sp.Trealm, prog string, path []
 		db.DPrintf(db.ERROR, "WarmStartProcd %v err %v", realm, err)
 		return err
 	}
-	if uprocErr, childErr := mgr.updm.WarmProc(pid, realm, prog, path, ptype); childErr != nil {
+	if uprocErr, childErr := mgr.updm.WarmProcd(pid, realm, prog, path, ptype); childErr != nil {
 		return childErr
 	} else if uprocErr != nil {
 		// Unexpected error with uproc server.

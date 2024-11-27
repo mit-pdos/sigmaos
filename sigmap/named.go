@@ -27,7 +27,7 @@ const (
 	REALMS      = REALMD + "/" + REALMSREL
 	BOOTREL     = "boot"
 	BOOT        = NAMED + BOOTREL + "/"
-	UPROCDREL   = "uprocd"
+	PROCDREL    = "procd"
 	S3REL       = "s3"
 	S3          = NAMED + S3REL + "/"
 	UXREL       = "ux"

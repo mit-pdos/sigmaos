@@ -25,7 +25,7 @@ message ProcEnvProto {
   string buildTag = 11;
   string perf = 12;
   string debug = 13;
-  string uprocdPIDStr = 14;
+  string procdPIDStr = 14;
   bool privileged = 15;
   int64 netFail = 16;
   int64 crash = 17;

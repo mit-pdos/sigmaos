@@ -235,11 +235,6 @@ func TestPerf(t *testing.T) {
 		}
 	}
 
-	dirreaderVersion := os.Getenv("DIRREADER_VERSION")
-	if dirreaderVersion == "" {
-		dirreaderVersion = "V2"
-	}
-
 	testPerf(t, numWorkers, numStartingFiles, numTrials, useNamed, measureMode)
 }
 

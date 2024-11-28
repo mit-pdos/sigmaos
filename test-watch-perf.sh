@@ -1,3 +1,5 @@
+#!/bin/bash
+
 rm -f /tmp/sigmaos-perf/*
 # export SIGMADEBUG=""
 # export SIGMADEBUG="WATCH_DEBUG_PERF"
@@ -9,14 +11,39 @@ export S3_BUCKET="sigmaos-bucket-ryan/$(date +%Y-%m-%d_%H:%M:%S)"
 DIRREADER_VERSIONS=("1" "2")
 MEASURE_MODES=("watch_only" "include_op")
 USE_NAMEDS=("0" "1")
-NUM_WORKERS=("1" "10" "25")
 NUM_STARTING_FILES=("0" "100" "1000")
+
+NUM_WORKERS=("10" "25")
+
+retry_until_success() {
+  local log_prefix=$1
+  local max_retries=5
+  local retry_count=0
+
+  while [ $retry_count -lt $max_retries ]; do
+    go test sigmaos/fslib/dirreader -v --start --run "TestPerf" --timeout 5m
+    if [ $? -eq 0 ]; then
+      echo "Test succeeded after $retry_count retries."
+      return 0
+    else
+      echo "Error encountered. Saving logs and retrying..."
+      local log_file="${log_prefix}_retry_${retry_count}_$(date +%Y-%m-%d_%H:%M:%S).log"
+      ./logs.sh > "$log_file"
+      echo "Logs saved to $log_file"
+      retry_count=$((retry_count + 1))
+    fi
+  done
+
+  echo "Test failed after $max_retries retries. Moving on."
+  return 1
+}
 
 for DIRREADER_VERSION in "${DIRREADER_VERSIONS[@]}"; do
   for MEASURE_MODE in "${MEASURE_MODES[@]}"; do
     for USE_NAMED in "${USE_NAMEDS[@]}"; do
       for STARTING_FILES in "${NUM_STARTING_FILES[@]}"; do
         ./stop.sh
+        ./fsetcd-wipe.sh
         ./stop-etcd.sh
         ./start-etcd.sh
 
@@ -25,12 +52,7 @@ for DIRREADER_VERSION in "${DIRREADER_VERSIONS[@]}"; do
         USE_NAMED="$USE_NAMED" \
         NUM_WORKERS="1" \
         NUM_STARTING_FILES="$STARTING_FILES" \
-        go test sigmaos/fslib/dirreader -v --start --run "TestPerf" --timeout 5m
-
-        if [ $? -ne 0 ]; then
-          echo "Error encountered. Exiting."
-          exit 1
-        fi
+        retry_until_success "dirreader_${DIRREADER_VERSION}_${MEASURE_MODE}_${USE_NAMED}_${STARTING_FILES}"
       done
     done
   done
@@ -41,6 +63,7 @@ for DIRREADER_VERSION in "${DIRREADER_VERSIONS[@]}"; do
     for USE_NAMED in "${USE_NAMEDS[@]}"; do
       for WORKERS in "${NUM_WORKERS[@]}"; do
         ./stop.sh
+        ./fsetcd-wipe.sh
         ./stop-etcd.sh
         ./start-etcd.sh
 
@@ -49,12 +72,7 @@ for DIRREADER_VERSION in "${DIRREADER_VERSIONS[@]}"; do
         USE_NAMED="$USE_NAMED" \
         NUM_WORKERS="$WORKERS" \
         NUM_STARTING_FILES="0" \
-        go test sigmaos/fslib/dirreader -v --start --run "TestPerf" --timeout 5m
-
-        if [ $? -ne 0 ]; then
-          echo "Error encountered. Exiting."
-          exit 1
-        fi
+        retry_until_success "dirreader_${DIRREADER_VERSION}_${MEASURE_MODE}_${USE_NAMED}_${WORKERS}"
       done
     done
   done

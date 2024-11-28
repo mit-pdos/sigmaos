@@ -2,18 +2,20 @@ package socialnetwork
 
 import (
 	"fmt"
+	"strconv"
+
 	"gopkg.in/mgo.v2/bson"
-	"sigmaos/apps/socialnetwork/proto"
+
 	"sigmaos/apps/cache"
 	cachegrpclnt "sigmaos/apps/cache/cachegrp/clnt"
+	"sigmaos/apps/socialnetwork/proto"
 	dbg "sigmaos/debug"
 	"sigmaos/fs"
-	"sigmaos/util/perf"
 	"sigmaos/proc"
-	"sigmaos/rpcclnt"
-	"sigmaos/sigmarpcchan"
+	rpcclnt "sigmaos/rpc/clnt"
+	sprpcclnt "sigmaos/rpc/clnt/sigmap"
 	"sigmaos/sigmasrv"
-	"strconv"
+	"sigmaos/util/perf"
 )
 
 // YH:
@@ -38,23 +40,23 @@ func RunHomeSrv(jobname string) error {
 	if err != nil {
 		return err
 	}
-	fsls, err := NewFsLibs(SOCIAL_NETWORK_HOME, ssrv.MemFs.SigmaClnt().GetDialProxyClnt())
+	fsl, err := NewFsLib(SOCIAL_NETWORK_HOME, ssrv.MemFs.SigmaClnt().GetDialProxyClnt())
 	if err != nil {
 		return err
 	}
-	hsrv.cachec = cachegrpclnt.NewCachedSvcClnt(fsls, jobname)
-	rpcc, err := sigmarpcchan.NewSigmaRPCClnt(fsls, SOCIAL_NETWORK_GRAPH)
+	hsrv.cachec = cachegrpclnt.NewCachedSvcClnt(fsl, jobname)
+	rpcc, err := sprpcclnt.NewRPCClnt(fsl, SOCIAL_NETWORK_GRAPH)
 	if err != nil {
 		return err
 	}
 	hsrv.graphc = rpcc
-	rpcc, err = sigmarpcchan.NewSigmaRPCClnt(fsls, SOCIAL_NETWORK_POST)
+	rpcc, err = sprpcclnt.NewRPCClnt(fsl, SOCIAL_NETWORK_POST)
 	if err != nil {
 		return err
 	}
 	hsrv.postc = rpcc
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_HOME, "Starting home service\n")
-	perf, err := perf.NewPerf(fsls[0].ProcEnv(), perf.SOCIAL_NETWORK_HOME)
+	perf, err := perf.NewPerf(fsl.ProcEnv(), perf.SOCIAL_NETWORK_HOME)
 	if err != nil {
 		dbg.DFatalf("NewPerf err %v\n", err)
 	}

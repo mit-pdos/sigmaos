@@ -3,14 +3,15 @@ package socialnetwork
 import (
 	"fmt"
 	"regexp"
+	"sync"
+
 	"sigmaos/apps/socialnetwork/proto"
 	dbg "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/proc"
-	"sigmaos/rpcclnt"
-	"sigmaos/sigmarpcchan"
+	rpcclnt "sigmaos/rpc/clnt"
+	sprpcclnt "sigmaos/rpc/clnt/sigmap"
 	"sigmaos/sigmasrv"
-	"sync"
 )
 
 // YH:
@@ -36,16 +37,16 @@ func RunTextSrv(jobname string) error {
 	if err != nil {
 		return err
 	}
-	fsls, err := NewFsLibs(SOCIAL_NETWORK_TEXT, ssrv.MemFs.SigmaClnt().GetDialProxyClnt())
+	fsl, err := NewFsLib(SOCIAL_NETWORK_TEXT, ssrv.MemFs.SigmaClnt().GetDialProxyClnt())
 	if err != nil {
 		return err
 	}
-	rpcc, err := sigmarpcchan.NewSigmaRPCClnt(fsls, SOCIAL_NETWORK_USER)
+	rpcc, err := sprpcclnt.NewRPCClnt(fsl, SOCIAL_NETWORK_USER)
 	if err != nil {
 		return err
 	}
 	tsrv.userc = rpcc
-	rpcc, err = sigmarpcchan.NewSigmaRPCClnt(fsls, SOCIAL_NETWORK_URL)
+	rpcc, err = sprpcclnt.NewRPCClnt(fsl, SOCIAL_NETWORK_URL)
 	if err != nil {
 		return err
 	}

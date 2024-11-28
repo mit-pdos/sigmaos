@@ -13,7 +13,7 @@ import (
 	"sigmaos/fs"
 	"sigmaos/proc"
 	rpcproto "sigmaos/rpc/proto"
-	"sigmaos/rpcsrv"
+	rpcsrv "sigmaos/rpc/srv"
 	"sigmaos/serr"
 	"sigmaos/sessp"
 	"sigmaos/sigmaclnt"

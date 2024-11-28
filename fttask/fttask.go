@@ -1,5 +1,5 @@
 // The tasks package implements a bag of fault-tolerant tasks using named.
-package fttasks
+package fttask
 
 import (
 	"encoding/json"
@@ -9,9 +9,9 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fslib"
-	rd "sigmaos/util/rand"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
+	rd "sigmaos/util/rand"
 )
 
 const (

@@ -10,9 +10,9 @@ import (
 	"sigmaos/fslib"
 	"sigmaos/kernelclnt"
 	"sigmaos/proc"
+	sprpcclnt "sigmaos/rpc/clnt/sigmap"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
-	"sigmaos/sigmarpcchan"
 )
 
 type startUprocdFn func() (sp.Tpid, *UprocdClnt)
@@ -135,7 +135,7 @@ func (updm *UprocdMgr) startUprocd() (sp.Tpid, *UprocdClnt) {
 		db.DFatalf("Error Boot Uprocd: %v", err)
 	}
 	pn := filepath.Join(sp.MSCHED, updm.kernelId, sp.UPROCDREL, pid.String())
-	rc, err := sigmarpcchan.NewSigmaRPCClnt([]*fslib.FsLib{updm.fsl}, pn)
+	rc, err := sprpcclnt.NewRPCClnt(updm.fsl, pn)
 	if err != nil {
 		db.DPrintf(db.ERROR, "Error Make RPCClnt Uprocd: %v", err)
 	}

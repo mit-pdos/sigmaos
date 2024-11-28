@@ -17,17 +17,16 @@ import (
 	"sigmaos/crash"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
-	"sigmaos/util/perf"
 	"sigmaos/proc"
-	"sigmaos/util/rand"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
+	"sigmaos/util/perf"
+	"sigmaos/util/rand"
 )
 
 const (
 	CONCURRENCY = 5
-	// CONCURRENCY = 1
 )
 
 type Mapper struct {

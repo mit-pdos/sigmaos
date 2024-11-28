@@ -11,7 +11,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fslib"
-	"sigmaos/fttasks"
+	"sigmaos/fttask"
 	"sigmaos/groupmgr"
 	"sigmaos/proc"
 	"sigmaos/semclnt"
@@ -21,15 +21,13 @@ import (
 )
 
 const (
-	MR       = "/mr/"
-	MRDIRTOP = "name/" + MR
-	//MRDIRTOP    = "name/ux/~sp.LOCAL/" + MR
+	MR          = "/mr/"
+	MRDIRTOP    = "name/" + MR
 	MRDIRELECT  = "name/mr-elect"
 	OUTLINK     = "output"
 	INT_OUTLINK = "intermediate-output"
 	JOBSEM      = "jobsem"
 	SPLITSZ     = 10 * sp.MBYTE
-	// SPLITSZ = 200 * sp.KBYTE
 )
 
 func JobOut(outDir, job string) string {
@@ -134,20 +132,20 @@ func ReadJobConfig(app string) (*Job, error) {
 }
 
 type Tasks struct {
-	Mft *fttasks.FtTasks
-	Rft *fttasks.FtTasks
+	Mft *fttask.FtTasks
+	Rft *fttask.FtTasks
 }
 
 func InitCoordFS(fsl *fslib.FsLib, jobRoot, jobname string, nreducetask int) (*Tasks, error) {
 	fsl.MkDir(MRDIRTOP, 0777)
 	fsl.MkDir(MRDIRELECT, 0777)
 
-	mft, err := fttasks.MkFtTasks(fsl, jobRoot, filepath.Join(jobname, "/mtasks"))
+	mft, err := fttask.MkFtTasks(fsl, jobRoot, filepath.Join(jobname, "/mtasks"))
 	if err != nil {
 		db.DPrintf(db.ERROR, "MkFtTasks %v err %v\n", jobname, err)
 		return nil, err
 	}
-	rft, err := fttasks.MkFtTasks(fsl, jobRoot, filepath.Join(jobname, "/rtasks"))
+	rft, err := fttask.MkFtTasks(fsl, jobRoot, filepath.Join(jobname, "/rtasks"))
 	if err != nil {
 		db.DPrintf(db.ERROR, "MkFtTasks %v err %v\n", jobname, err)
 		return nil, err

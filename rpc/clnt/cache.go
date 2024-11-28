@@ -1,5 +1,5 @@
 // The rpcclnt package caches RPC clnts to avoid repeated lookups
-package rpcclnt
+package clnt
 
 import (
 	"errors"
@@ -10,6 +10,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/rpc"
+	rpcclntopts "sigmaos/rpc/clnt/opts"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 )
@@ -17,13 +18,17 @@ import (
 type ClntCache struct {
 	sync.Mutex
 	rpccs   map[string]*RPCClnt
-	newChFn NewRPCChFn
+	rpcOpts *rpcclntopts.RPCClntOptions
 }
 
-func NewRPCClntCache(fn NewRPCChFn) *ClntCache {
+func NewRPCClntCache(opts ...*rpcclntopts.RPCClntOption) *ClntCache {
+	rpcOpts := rpcclntopts.NewEmptyRPCClntOptions()
+	for _, opt := range opts {
+		opt.Apply(rpcOpts)
+	}
 	return &ClntCache{
 		rpccs:   make(map[string]*RPCClnt),
-		newChFn: fn,
+		rpcOpts: rpcOpts,
 	}
 }
 
@@ -37,12 +42,15 @@ func (cc *ClntCache) Lookup(pn string) (*RPCClnt, error) {
 		return rpcc, nil
 	}
 	cc.Unlock()
-	ch, err := cc.newChFn(pn)
+	ch, err := cc.rpcOpts.NewRPCChannel(pn)
 	cc.Lock()
 	if err != nil {
 		return nil, err
 	}
-	rpcc = NewRPCClnt(ch)
+	rpcc, err = NewRPCClnt(pn, rpcclntopts.WithRPCChannel(ch))
+	if err != nil {
+		return nil, err
+	}
 	cc.rpccs[pn] = rpcc
 	return rpcc, nil
 }
@@ -54,7 +62,7 @@ func (cc *ClntCache) Delete(pn string) {
 }
 
 func (cc *ClntCache) RPCRetry(pn string, method string, arg proto.Message, res proto.Message) error {
-	for i := 0; i < sp.PATHCLNT_MAXRETRY; i++ {
+	for i := 0; i < sp.Conf.Path.MAX_RESOLVE_RETRY; i++ {
 		rpcc, err := cc.Lookup(pn)
 		if err != nil {
 			var sr *serr.Err
@@ -68,7 +76,7 @@ func (cc *ClntCache) RPCRetry(pn string, method string, arg proto.Message, res p
 		if err := rpcc.RPC(method, arg, res); err != nil {
 			var sr *serr.Err
 			if errors.As(err, &sr) && serr.Retry(sr) {
-				time.Sleep(sp.PATHCLNT_TIMEOUT * time.Millisecond)
+				time.Sleep(sp.Conf.Path.RESOLVE_TIMEOUT)
 				db.DPrintf(db.RPCCLNT, "RPC: retry %v %v err %v", pn, method, sr)
 				cc.Delete(pn)
 				continue

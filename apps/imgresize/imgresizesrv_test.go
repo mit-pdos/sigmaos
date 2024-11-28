@@ -13,13 +13,13 @@ import (
 
 	"sigmaos/apps/imgresize"
 	db "sigmaos/debug"
-	"sigmaos/fttasks"
+	"sigmaos/fttask"
 	"sigmaos/groupmgr"
 	"sigmaos/namesrv/fsetcd"
 	"sigmaos/proc"
-	rd "sigmaos/util/rand"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
+	rd "sigmaos/util/rand"
 )
 
 const (
@@ -74,7 +74,7 @@ type Tstate struct {
 	job string
 	*test.Tstate
 	ch chan bool
-	ft *fttasks.FtTasks
+	ft *fttask.FtTasks
 }
 
 func newTstate(t *test.Tstate) (*Tstate, error) {
@@ -84,7 +84,7 @@ func newTstate(t *test.Tstate) (*Tstate, error) {
 	ts.ch = make(chan bool)
 	ts.cleanup()
 
-	ft, err := fttasks.MkFtTasks(ts.SigmaClnt.FsLib, imgresize.IMG, ts.job)
+	ft, err := fttask.MkFtTasks(ts.SigmaClnt.FsLib, sp.IMG, ts.job)
 	if !assert.Nil(ts.T, err) {
 		return nil, err
 	}
@@ -98,13 +98,13 @@ func (ts *Tstate) restartTstate() {
 		return
 	}
 	ts.Tstate = ts1
-	ft, err := fttasks.NewFtTasks(ts.SigmaClnt.FsLib, imgresize.IMG, ts.job)
+	ft, err := fttask.NewFtTasks(ts.SigmaClnt.FsLib, sp.IMG, ts.job)
 	assert.Nil(ts.T, err)
 	ts.ft = ft
 }
 
 func (ts *Tstate) cleanup() {
-	ts.RmDir(imgresize.IMG)
+	ts.RmDir(sp.IMG)
 	imgresize.Cleanup(ts.FsLib, filepath.Join(sp.S3, sp.LOCAL, "9ps3/img-save"))
 }
 

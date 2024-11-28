@@ -11,8 +11,8 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	"sigmaos/apps/cache"
-	cacheclnt "sigmaos/apps/cache/clnt"
 	"sigmaos/apps/cache/cachegrp"
+	cacheclnt "sigmaos/apps/cache/clnt"
 	db "sigmaos/debug"
 	"sigmaos/dircache"
 	"sigmaos/fslib"
@@ -36,14 +36,14 @@ type CachedSvcClnt struct {
 	dd  *dircache.DirCache[struct{}]
 }
 
-func NewCachedSvcClnt(fsls []*fslib.FsLib, job string) *CachedSvcClnt {
+func NewCachedSvcClnt(fsl *fslib.FsLib, job string) *CachedSvcClnt {
 	csc := &CachedSvcClnt{
-		fsl: fsls[0],
+		fsl: fsl,
 		pn:  cache.CACHE,
-		cc:  cacheclnt.NewCacheClnt(fsls, job, cache.NSHARD),
+		cc:  cacheclnt.NewCacheClnt(fsl, job, cache.NSHARD),
 	}
 	dir := csc.pn + cachegrp.SRVDIR
-	csc.dd = dircache.NewDirCache[struct{}](fsls[0], dir, csc.newEntry, nil, db.CACHEDSVCCLNT, db.CACHEDSVCCLNT)
+	csc.dd = dircache.NewDirCache[struct{}](fsl, dir, csc.newEntry, nil, db.CACHEDSVCCLNT, db.CACHEDSVCCLNT)
 	return csc
 }
 

@@ -49,7 +49,7 @@ func NewReader(args []string) (*Reader, error) {
 	}
 	r.SigmaClnt = sc
 	r.input = args[1]
-	r.output = path.Join(proc.PARENTDIR, proc.SHARED) + "/"
+	r.output = path.Join(proc.PARENTDIR /*, proc.SHARED*/) + "/"
 	r.Started()
 	return r, nil
 }

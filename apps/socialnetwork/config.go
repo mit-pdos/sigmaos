@@ -7,8 +7,8 @@ import (
 	cachegrpclnt "sigmaos/apps/cache/cachegrp/clnt"
 	cachegrpmgr "sigmaos/apps/cache/cachegrp/mgr"
 	db "sigmaos/debug"
-	"sigmaos/fslib"
 	dialproxyclnt "sigmaos/dialproxy/clnt"
+	"sigmaos/fslib"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
@@ -27,7 +27,6 @@ const (
 	SOCIAL_NETWORK_MEDIA    = SOCIAL_NETWORK + "media"
 	cacheMcpu               = 1000
 	HTTP_ADDRS              = "http-addr"
-	N_RPC_SESSIONS          = 10
 )
 
 type Srv struct {
@@ -48,18 +47,14 @@ func GetJobHTTPAddrs(fsl *fslib.FsLib, job string) (sp.Taddrs, error) {
 	return mnt.Addrs(), err
 }
 
-func NewFsLibs(uname string, npc *dialproxyclnt.DialProxyClnt) ([]*fslib.FsLib, error) {
-	fsls := make([]*fslib.FsLib, 0, N_RPC_SESSIONS)
-	for i := 0; i < N_RPC_SESSIONS; i++ {
-		pe := proc.GetProcEnv()
-		fsl, err := sigmaclnt.NewFsLib(proc.NewAddedProcEnv(pe), npc)
-		if err != nil {
-			db.DPrintf(db.ERROR, "Error newfsl: %v", err)
-			return nil, err
-		}
-		fsls = append(fsls, fsl)
+func NewFsLib(uname string, npc *dialproxyclnt.DialProxyClnt) (*fslib.FsLib, error) {
+	pe := proc.GetProcEnv()
+	fsl, err := sigmaclnt.NewFsLib(proc.NewAddedProcEnv(pe), npc)
+	if err != nil {
+		db.DPrintf(db.ERROR, "Error newfsl: %v", err)
+		return nil, err
 	}
-	return fsls, nil
+	return fsl, nil
 }
 
 type SocialNetworkConfig struct {
@@ -92,7 +87,7 @@ func NewConfig(sc *sigmaclnt.SigmaClnt, jobname string, srvs []Srv, nsrv int, gc
 			db.DPrintf(db.ERROR, "Error NewCacheMgr %v", err)
 			return nil, err
 		}
-		cc = cachegrpclnt.NewCachedSvcClnt([]*fslib.FsLib{sc.FsLib}, jobname)
+		cc = cachegrpclnt.NewCachedSvcClnt(sc.FsLib, jobname)
 	}
 
 	// Start procs

@@ -11,10 +11,10 @@ import (
 	"sigmaos/apps/socialnetwork/proto"
 	dbg "sigmaos/debug"
 	"sigmaos/proc"
-	"sigmaos/rpcclnt"
+	rpcclnt "sigmaos/rpc/clnt"
+	sprpcclnt "sigmaos/rpc/clnt/sigmap"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
-	"sigmaos/sigmarpcchan"
 	"sigmaos/tracing"
 	"sigmaos/util/perf"
 )
@@ -53,31 +53,31 @@ func RunFrontendSrv(job string) error {
 		return err
 	}
 	frontend.SigmaClnt = sc
-	fsls, err := NewFsLibs(SERVER_NAME, sc.GetDialProxyClnt())
+	fsl, err := NewFsLib(SERVER_NAME, sc.GetDialProxyClnt())
 	if err != nil {
 		return err
 	}
-	rpcc, err := sigmarpcchan.NewSigmaRPCClnt(fsls, SOCIAL_NETWORK_USER)
+	rpcc, err := sprpcclnt.NewRPCClnt(fsl, SOCIAL_NETWORK_USER)
 	if err != nil {
 		return err
 	}
 	frontend.userc = rpcc
-	rpcc, err = sigmarpcchan.NewSigmaRPCClnt(fsls, SOCIAL_NETWORK_GRAPH)
+	rpcc, err = sprpcclnt.NewRPCClnt(fsl, SOCIAL_NETWORK_GRAPH)
 	if err != nil {
 		return err
 	}
 	frontend.graphc = rpcc
-	rpcc, err = sigmarpcchan.NewSigmaRPCClnt(fsls, SOCIAL_NETWORK_TIMELINE)
+	rpcc, err = sprpcclnt.NewRPCClnt(fsl, SOCIAL_NETWORK_TIMELINE)
 	if err != nil {
 		return err
 	}
 	frontend.tlc = rpcc
-	rpcc, err = sigmarpcchan.NewSigmaRPCClnt(fsls, SOCIAL_NETWORK_HOME)
+	rpcc, err = sprpcclnt.NewRPCClnt(fsl, SOCIAL_NETWORK_HOME)
 	if err != nil {
 		return err
 	}
 	frontend.homec = rpcc
-	rpcc, err = sigmarpcchan.NewSigmaRPCClnt(fsls, SOCIAL_NETWORK_COMPOSE)
+	rpcc, err = sprpcclnt.NewRPCClnt(fsl, SOCIAL_NETWORK_COMPOSE)
 	if err != nil {
 		return err
 	}

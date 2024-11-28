@@ -10,16 +10,15 @@ import (
 
 	"github.com/go-redis/redis/v8"
 
+	cachegrpclnt "sigmaos/apps/cache/cachegrp/clnt"
 	cacheclnt "sigmaos/apps/cache/clnt"
 	"sigmaos/apps/cache/proto"
-	cachegrpclnt "sigmaos/apps/cache/cachegrp/clnt"
 	db "sigmaos/debug"
-	"sigmaos/fslib"
-	"sigmaos/util/perf"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
 	"sigmaos/semclnt"
 	"sigmaos/sigmaclnt"
+	"sigmaos/util/perf"
 )
 
 var done = int32(0)
@@ -60,7 +59,7 @@ func main() {
 			DB:       0,
 		})
 	} else {
-		csc = cachegrpclnt.NewCachedSvcClnt([]*fslib.FsLib{sc.FsLib}, os.Args[1])
+		csc = cachegrpclnt.NewCachedSvcClnt(sc.FsLib, os.Args[1])
 	}
 
 	// Record performance.

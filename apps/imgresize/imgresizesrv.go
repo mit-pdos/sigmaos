@@ -8,8 +8,8 @@ import (
 
 	"sigmaos/crash"
 	db "sigmaos/debug"
-	"sigmaos/fttaskmgr"
-	"sigmaos/fttasks"
+	"sigmaos/fttask"
+	fttaskmgr "sigmaos/fttask/mgr"
 	"sigmaos/leaderclnt"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
@@ -18,7 +18,7 @@ import (
 
 type ImgSrv struct {
 	*sigmaclnt.SigmaClnt
-	ft         *fttasks.FtTasks
+	ft         *fttask.FtTasks
 	job        string
 	nrounds    int
 	workerMcpu proc.Tmcpu
@@ -46,7 +46,7 @@ func NewImgSrv(args []string) (*ImgSrv, error) {
 		return nil, fmt.Errorf("NewImgSrv: error parse crash %v", err)
 	}
 	imgd.crash = int64(crashing)
-	imgd.ft, err = fttasks.NewFtTasks(sc.FsLib, IMG, imgd.job)
+	imgd.ft, err = fttask.NewFtTasks(sc.FsLib, sp.IMG, imgd.job)
 	if err != nil {
 		return nil, fmt.Errorf("NewImgSrv: NewFtTasks %v", err)
 	}
@@ -67,7 +67,7 @@ func NewImgSrv(args []string) (*ImgSrv, error) {
 
 	imgd.Started()
 
-	imgd.leaderclnt, err = leaderclnt.NewLeaderClnt(imgd.FsLib, filepath.Join(IMG, imgd.job, "imgd-leader"), 0777)
+	imgd.leaderclnt, err = leaderclnt.NewLeaderClnt(imgd.FsLib, filepath.Join(sp.IMG, imgd.job, "imgd-leader"), 0777)
 	if err != nil {
 		return nil, fmt.Errorf("NewLeaderclnt err %v", err)
 	}
@@ -89,7 +89,7 @@ func (imgd *ImgSrv) Work() {
 	db.DPrintf(db.IMGD, "Try acquire leadership coord %v job %v", imgd.ProcEnv().GetPID(), imgd.job)
 
 	// Try to become the leading coordinator.
-	if err := imgd.leaderclnt.LeadAndFence(nil, []string{filepath.Join(IMG, imgd.job)}); err != nil {
+	if err := imgd.leaderclnt.LeadAndFence(nil, []string{filepath.Join(sp.IMG, imgd.job)}); err != nil {
 		sts, err2 := imgd.ft.Jobs()
 		db.DFatalf("LeadAndFence err %v sts %v err2 %v", err, sp.Names(sts), err2)
 	}

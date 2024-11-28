@@ -4,11 +4,10 @@ import (
 	"path/filepath"
 
 	db "sigmaos/debug"
-	"sigmaos/fslib"
-	"sigmaos/rpcclnt"
+	rpcclnt "sigmaos/rpc/clnt"
+	sprpcclnt "sigmaos/rpc/clnt/sigmap"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
-	"sigmaos/sigmarpcchan"
 	"sigmaos/util/k8s/proto"
 )
 
@@ -32,7 +31,7 @@ func (clnt *StatScraperClnt) GetStatScrapers() []string {
 	scrapers := sp.Names(st)
 	for _, s := range scrapers {
 		if _, ok := clnt.rpccs[s]; !ok {
-			rpcc, err := sigmarpcchan.NewSigmaRPCClnt([]*fslib.FsLib{clnt.FsLib}, filepath.Join(sp.K8S_SCRAPER, s))
+			rpcc, err := sprpcclnt.NewRPCClnt(clnt.FsLib, filepath.Join(sp.K8S_SCRAPER, s))
 			if err != nil {
 				db.DFatalf("Error NewRPCClnt: %v", err)
 			}

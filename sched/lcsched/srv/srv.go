@@ -10,11 +10,10 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/proc"
-	"sigmaos/procfs"
 	beschedproto "sigmaos/sched/besched/proto"
 	"sigmaos/sched/lcsched/proto"
-	"sigmaos/sched/queue"
 	mschedclnt "sigmaos/sched/msched/clnt"
+	"sigmaos/sched/queue"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
@@ -31,10 +30,6 @@ type LCSched struct {
 	realmbins  *chunkclnt.RealmBinPaths
 }
 
-type QDir struct {
-	lcs *LCSched
-}
-
 func NewLCSched(sc *sigmaclnt.SigmaClnt) *LCSched {
 	lcs := &LCSched{
 		sc:         sc,
@@ -45,48 +40,6 @@ func NewLCSched(sc *sigmaclnt.SigmaClnt) *LCSched {
 	}
 	lcs.cond = sync.NewCond(&lcs.mu)
 	return lcs
-}
-
-func (qd *QDir) GetProcs() []*proc.Proc {
-	qd.lcs.mu.Lock()
-	defer qd.lcs.mu.Unlock()
-
-	procs := make([]*proc.Proc, 0, qd.lcs.lenL())
-	for _, q := range qd.lcs.qs {
-		pmap := q.GetPMapL()
-		for _, p := range pmap {
-			procs = append(procs, p)
-		}
-	}
-	return procs
-}
-
-func (qd *QDir) Lookup(pid string) (*proc.Proc, bool) {
-	qd.lcs.mu.Lock()
-	defer qd.lcs.mu.Unlock()
-
-	for _, q := range qd.lcs.qs {
-		pmap := q.GetPMapL()
-		if p, ok := pmap[sp.Tpid(pid)]; ok {
-			return p, ok
-		}
-	}
-	return nil, false
-}
-
-func (lcs *LCSched) lenL() int {
-	l := 0
-	for _, q := range lcs.qs {
-		l += q.Len()
-	}
-	return l
-}
-
-func (qd *QDir) Len() int {
-	qd.lcs.mu.Lock()
-	defer qd.lcs.mu.Unlock()
-
-	return qd.lcs.lenL()
 }
 
 func (lcs *LCSched) Enqueue(ctx fs.CtxI, req beschedproto.EnqueueRequest, res *beschedproto.EnqueueResponse) error {
@@ -229,13 +182,6 @@ func Run() {
 	ssrv, err := sigmasrv.NewSigmaSrvClnt(filepath.Join(sp.LCSCHED, sc.ProcEnv().GetPID().String()), sc, lcs)
 	if err != nil {
 		db.DFatalf("Error NewSigmaSrv: %v", err)
-	}
-
-	// export queued procs through procfs. XXX maybe
-	// subdirectory per realm?
-	dir := procfs.NewProcDir(&QDir{lcs})
-	if err := ssrv.MkNod(sp.QUEUE, dir); err != nil {
-		db.DFatalf("Error mknod %v: %v", sp.QUEUE, err)
 	}
 
 	// Perf monitoring

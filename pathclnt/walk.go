@@ -10,20 +10,16 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-const (
-	MAXSYMLINK = 8
-)
-
 // WalkPath walks path and, on success, returns the fd walked to; it
 // is the caller's responsibility to clunk the fd.  If a server is
 // unreachable, it umounts the path it walked to, and starts over
 // again, perhaps switching to another replica.  (Note:
 // TestMaintainReplicationLevelCrashProcd test the fail-over case.)
 func (pathc *PathClnt) walk(path path.Tpathname, principal *sp.Tprincipal, resolve bool, w sos.Watch) (sp.Tfid, *serr.Err) {
-	for i := 0; i < sp.PATHCLNT_MAXRETRY; i++ {
+	for i := 0; i < sp.Conf.Path.MAX_RESOLVE_RETRY; i++ {
 		if err, cont := pathc.mntclnt.ResolveRoot(path); err != nil {
 			if cont && err.IsErrUnreachable() {
-				time.Sleep(sp.PATHCLNT_TIMEOUT * time.Millisecond)
+				time.Sleep(sp.Conf.Path.RESOLVE_TIMEOUT)
 				continue
 			}
 			db.DPrintf(db.PATHCLNT_ERR, "WalkPath: resolveRoot %v err %v", path, err)
@@ -40,7 +36,7 @@ func (pathc *PathClnt) walk(path path.Tpathname, principal *sp.Tprincipal, resol
 			}
 			// try again
 			db.DPrintf(db.WALK_ERR, "walkPathUmount: retry p %v r %v", path, resolve)
-			time.Sleep(sp.PATHCLNT_TIMEOUT * time.Millisecond)
+			time.Sleep(sp.Conf.Path.RESOLVE_TIMEOUT)
 			continue
 		}
 		if err != nil {
@@ -65,7 +61,7 @@ func (pathc *PathClnt) walk(path path.Tpathname, principal *sp.Tprincipal, resol
 // the same as the argument; and the caller is responsible for
 // clunking it.
 func (pathc *PathClnt) walkPath(path path.Tpathname, resolve bool, w sos.Watch) (sp.Tfid, path.Tpathname, path.Tpathname, *serr.Err) {
-	for i := 0; i < MAXSYMLINK; i++ {
+	for i := 0; i < sp.Conf.Path.MAX_SYMLINK; i++ {
 		db.DPrintf(db.WALK, "walkPath: %v resolve %v", path, resolve)
 		fid, left, err := pathc.walkMount(path, resolve)
 		if err != nil {

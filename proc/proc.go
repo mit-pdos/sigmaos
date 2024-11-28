@@ -370,14 +370,6 @@ func (p *Proc) GetSpawnTime() time.Time {
 	return p.ProcEnvProto.GetSpawnTime()
 }
 
-func (p *Proc) SetShared(target string) {
-	p.SharedTarget = target
-}
-
-func (p *Proc) GetShared() string {
-	return p.SharedTarget
-}
-
 func (p *Proc) SetHow(n Thow) {
 	p.ProcEnvProto.SetHow(n)
 }

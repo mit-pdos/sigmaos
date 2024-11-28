@@ -8,20 +8,20 @@ import (
 	"sigmaos/proc"
 )
 
-type ProcqSession struct {
+type BESchedSession struct {
 	sync.Mutex
 	*sync.Cond
 	procqID  string
-	scheddID string
+	mschedID string
 	epoch    uint64
 	next     uint64
 	got      uint64
 }
 
-func NewProcqSession(procqID, scheddID string) *ProcqSession {
-	pseqno := &ProcqSession{
+func NewBESchedSession(procqID, mschedID string) *BESchedSession {
+	pseqno := &BESchedSession{
 		procqID:  procqID,
-		scheddID: scheddID,
+		mschedID: mschedID,
 		epoch:    1,
 		next:     1,
 		got:      1,
@@ -31,15 +31,15 @@ func NewProcqSession(procqID, scheddID string) *ProcqSession {
 }
 
 // Get the current seqno
-func (pc *ProcqSession) NextSeqno() *proc.ProcSeqno {
+func (pc *BESchedSession) NextSeqno() *proc.ProcSeqno {
 	pc.Lock()
 	defer pc.Unlock()
 
 	pc.next++
-	return proc.NewProcSeqno(pc.procqID, pc.scheddID, pc.epoch, pc.next)
+	return proc.NewProcSeqno(pc.procqID, pc.mschedID, pc.epoch, pc.next)
 }
 
-func (pc *ProcqSession) AdvanceEpoch() {
+func (pc *BESchedSession) AdvanceEpoch() {
 	pc.Lock()
 	defer pc.Unlock()
 
@@ -53,11 +53,11 @@ func (pc *ProcqSession) AdvanceEpoch() {
 }
 
 // Set the seqno of the last received proc
-func (pc *ProcqSession) Got(pseqno *proc.ProcSeqno) {
+func (pc *BESchedSession) Got(pseqno *proc.ProcSeqno) {
 	pc.Lock()
 	defer pc.Unlock()
 
-	db.DPrintf(db.MSCHED, "ProcqSession got %v", pseqno)
+	db.DPrintf(db.MSCHED, "BESchedSession got %v", pseqno)
 
 	// Check if there was a change of epoch
 	if pseqno.GetEpoch() > pc.epoch {
@@ -75,7 +75,7 @@ func (pc *ProcqSession) Got(pseqno *proc.ProcSeqno) {
 }
 
 // Wait until the "got proc" seqno reaches a threshold
-func (pc *ProcqSession) WaitUntilGot(pseqno *proc.ProcSeqno) error {
+func (pc *BESchedSession) WaitUntilGot(pseqno *proc.ProcSeqno) error {
 	pc.Lock()
 	defer pc.Unlock()
 

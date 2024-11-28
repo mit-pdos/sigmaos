@@ -10,10 +10,10 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fs"
-	"sigmaos/fslib"
 	"sigmaos/linuxsched"
 	"sigmaos/mem"
 	"sigmaos/proc"
+	sprpcclnt "sigmaos/rpc/clnt/sigmap"
 	beschedclnt "sigmaos/sched/besched/clnt"
 	lcschedproto "sigmaos/sched/lcsched/proto"
 	mschedclnt "sigmaos/sched/msched/clnt"
@@ -21,7 +21,6 @@ import (
 	"sigmaos/sched/msched/srv/procmgr"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
-	"sigmaos/sigmarpcchan"
 	"sigmaos/sigmasrv"
 	"sigmaos/util/perf"
 	"sigmaos/util/syncmap"
@@ -34,7 +33,7 @@ type MSched struct {
 	pmgr                *procmgr.ProcMgr
 	mschedclnt          *mschedclnt.MSchedClnt
 	beschedclnt         *beschedclnt.BESchedClnt
-	pqsess              *syncmap.SyncMap[string, *ProcqSession]
+	pqsess              *syncmap.SyncMap[string, *BESchedSession]
 	mcpufree            proc.Tmcpu
 	memfree             proc.Tmem
 	kernelID            string
@@ -50,7 +49,7 @@ type MSched struct {
 func NewMSched(sc *sigmaclnt.SigmaClnt, kernelID string, reserveMcpu uint) *MSched {
 	msched := &MSched{
 		pmgr:        procmgr.NewProcMgr(sc, kernelID),
-		pqsess:      syncmap.NewSyncMap[string, *ProcqSession](),
+		pqsess:      syncmap.NewSyncMap[string, *BESchedSession](),
 		scheddStats: make(map[sp.Trealm]*realmStats),
 		mcpufree:    proc.Tmcpu(1000*linuxsched.GetNCores() - reserveMcpu),
 		memfree:     mem.GetTotalMem(),
@@ -64,15 +63,15 @@ func NewMSched(sc *sigmaclnt.SigmaClnt, kernelID string, reserveMcpu uint) *MSch
 		func(pqID string) {
 			// When a new procq client is created, advance the epoch for the
 			// corresponding procq
-			pqsess, _ := msched.pqsess.AllocNew(pqID, func(pqID string) *ProcqSession {
-				return NewProcqSession(pqID, msched.kernelID)
+			pqsess, _ := msched.pqsess.AllocNew(pqID, func(pqID string) *BESchedSession {
+				return NewBESchedSession(pqID, msched.kernelID)
 			})
 			pqsess.AdvanceEpoch()
 		},
 		func(pqID string) *proc.ProcSeqno {
 			// Get the next proc seqno for a given procq
-			pqsess, _ := msched.pqsess.AllocNew(pqID, func(pqID string) *ProcqSession {
-				return NewProcqSession(pqID, msched.kernelID)
+			pqsess, _ := msched.pqsess.AllocNew(pqID, func(pqID string) *BESchedSession {
+				return NewBESchedSession(pqID, msched.kernelID)
 			})
 			return pqsess.NextSeqno()
 		},
@@ -216,8 +215,8 @@ func (msched *MSched) gotProc(procSeqno *proc.ProcSeqno) {
 	// want to wait on that proc can now expect the state for that proc to exist
 	// at schedd. Set the seqno (which should be monotonically increasing) to
 	// release the clients, and allow schedd to handle the wait.
-	pqsess, _ := msched.pqsess.AllocNew(procSeqno.GetProcqID(), func(pqID string) *ProcqSession {
-		return NewProcqSession(pqID, msched.kernelID)
+	pqsess, _ := msched.pqsess.AllocNew(procSeqno.GetProcqID(), func(pqID string) *BESchedSession {
+		return NewBESchedSession(pqID, msched.kernelID)
 	})
 	pqsess.Got(procSeqno)
 }
@@ -230,8 +229,8 @@ func (msched *MSched) waitUntilGotProc(pseqno *proc.ProcSeqno) error {
 	if pseqno.GetEpoch() == 0 {
 		return nil
 	}
-	pqsess, _ := msched.pqsess.AllocNew(pseqno.GetProcqID(), func(pqID string) *ProcqSession {
-		return NewProcqSession(pqID, msched.kernelID)
+	pqsess, _ := msched.pqsess.AllocNew(pseqno.GetProcqID(), func(pqID string) *BESchedSession {
+		return NewBESchedSession(pqID, msched.kernelID)
 	})
 	return pqsess.WaitUntilGot(pseqno)
 }
@@ -342,11 +341,11 @@ func (msched *MSched) shouldGetBEProc() (proc.Tmem, bool) {
 	mem := msched.getFreeMem()
 	cpu := msched.getCPUUtil()
 	db.DPrintf(db.MSCHED, "CPU util check: %v", cpu)
-	return mem, mem > 0 && cpu < (TARGET_CPU_PCT*int64(linuxsched.GetNCores()))
+	return mem, mem > 0 && cpu < (sp.Conf.MSched.TARGET_CPU_UTIL*int64(linuxsched.GetNCores()))
 }
 
 func (msched *MSched) register() {
-	rpcc, err := sigmarpcchan.NewSigmaRPCClnt([]*fslib.FsLib{msched.sc.FsLib}, filepath.Join(sp.LCSCHED, sp.ANY))
+	rpcc, err := sprpcclnt.NewRPCClnt(msched.sc.FsLib, filepath.Join(sp.LCSCHED, sp.ANY))
 	if err != nil {
 		db.DFatalf("Error lsched rpccc: %v", err)
 	}
@@ -382,9 +381,7 @@ func RunMSched(kernelID string, reserveMcpu uint) error {
 	if err != nil {
 		db.DFatalf("Error NewSigmaSrv: %v", err)
 	}
-	if err := msched.pmgr.SetupFs(ssrv.MemFs); err != nil {
-		db.DFatalf("Error SetupFs: %v", err)
-	}
+	msched.pmgr.SetMemFs(ssrv.MemFs)
 	// Perf monitoring
 	p, err := perf.NewPerf(sc.ProcEnv(), perf.MSCHED)
 	if err != nil {

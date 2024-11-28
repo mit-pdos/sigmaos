@@ -12,11 +12,11 @@ import (
 	"sigmaos/apps/hotel/proto"
 	db "sigmaos/debug"
 	"sigmaos/proc"
-	"sigmaos/rpcclnt"
+	rpcclnt "sigmaos/rpc/clnt"
+	sprpcclnt "sigmaos/rpc/clnt/sigmap"
 	"sigmaos/rpcdirclnt"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
-	"sigmaos/sigmarpcchan"
 	"sigmaos/tracing"
 	"sigmaos/util/perf"
 )
@@ -46,36 +46,36 @@ func RunWww(job string) error {
 	}
 	www.SigmaClnt = sc
 
-	fsls, err := NewFsLibs("hotel-wwwd", www.GetDialProxyClnt())
+	fsl, err := NewFsLib("hotel-wwwd", www.GetDialProxyClnt())
 	if err != nil {
 		return err
 	}
-	rpcc, err := sigmarpcchan.NewSigmaRPCClnt(fsls, HOTELUSER)
+	rpcc, err := sprpcclnt.NewRPCClnt(fsl, HOTELUSER)
 	if err != nil {
 		return err
 	}
 	www.userc = rpcc
-	rpcc, err = sigmarpcchan.NewSigmaRPCClnt(fsls, HOTELSEARCH)
+	rpcc, err = sprpcclnt.NewRPCClnt(fsl, HOTELSEARCH)
 	if err != nil {
 		return err
 	}
 	www.searchc = rpcc
-	rpcc, err = sigmarpcchan.NewSigmaRPCClnt(fsls, HOTELPROF)
+	rpcc, err = sprpcclnt.NewRPCClnt(fsl, HOTELPROF)
 	if err != nil {
 		return err
 	}
 	www.profc = rpcc
-	rpcc, err = sigmarpcchan.NewSigmaRPCClnt(fsls, HOTELRESERVE)
+	rpcc, err = sprpcclnt.NewRPCClnt(fsl, HOTELRESERVE)
 	if err != nil {
 		return err
 	}
 	www.reservec = rpcc
-	rpcc, err = sigmarpcchan.NewSigmaRPCClnt(fsls, HOTELREC)
+	rpcc, err = sprpcclnt.NewRPCClnt(fsl, HOTELREC)
 	if err != nil {
 		return err
 	}
 	www.recc = rpcc
-	www.geodc = rpcdirclnt.NewRPCDirClnt(fsls[0], HOTELGEODIR, db.HOTEL_WWW, db.HOTEL_WWW_ERR)
+	www.geodc = rpcdirclnt.NewRPCDirClnt(fsl, HOTELGEODIR, db.HOTEL_WWW, db.HOTEL_WWW_ERR)
 
 	//	www.tracer = tracing.Init("wwwd", proc.GetSigmaJaegerIP())
 	var mux *http.ServeMux

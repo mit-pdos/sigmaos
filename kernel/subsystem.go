@@ -13,8 +13,6 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-const NPORT_PER_CONTAINER = 20
-
 // XXX Make interface smaller
 type Subsystem interface {
 	GetProc() *proc.Proc

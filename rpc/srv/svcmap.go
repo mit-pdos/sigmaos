@@ -1,4 +1,4 @@
-package rpcsrv
+package srv
 
 import (
 	"fmt"
@@ -51,7 +51,6 @@ func (svcmap *svcMap) RegisterService(svci any) {
 		mtype := methodt.Type
 		mname := methodt.Name
 
-		// log.Printf("%v pp %v ni %v no %v\n", mname, methodt.PkgPath, mtype.NumIn(), mtype.NumOut())
 		if methodt.PkgPath != "" || // capitalized?
 			mtype.NumIn() != 4 ||
 			//mtype.In(1).Kind() != reflect.Ptr ||

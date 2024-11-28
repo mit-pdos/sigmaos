@@ -57,7 +57,7 @@ func (nc *NetClnt) connect(ep *sp.Tendpoint) *serr.Err {
 	db.DPrintf(db.NETCLNT, "NetClnt connect to any of %v, starting w. %v\n", ep, ep.Addrs()[0])
 	for i, addr := range ep.Addrs() {
 		if i > 0 {
-			ep.Claims.Addr = append(ep.Claims.Addr[1:], ep.Claims.Addr[0])
+			ep.Addr = append(ep.Addr[1:], ep.Addr[0])
 		}
 		c, err := nc.npc.Dial(ep)
 		db.DPrintf(db.NETCLNT, "Dial %v addr.Addr %v\n", addr.IPPort(), err)

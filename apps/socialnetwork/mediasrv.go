@@ -2,18 +2,20 @@ package socialnetwork
 
 import (
 	"fmt"
-	"gopkg.in/mgo.v2/bson"
 	"math/rand"
-	"sigmaos/apps/socialnetwork/proto"
+	"strconv"
+	"sync"
+
+	"gopkg.in/mgo.v2/bson"
+
 	"sigmaos/apps/cache"
 	cachegrpclnt "sigmaos/apps/cache/cachegrp/clnt"
+	"sigmaos/apps/socialnetwork/proto"
 	dbg "sigmaos/debug"
 	"sigmaos/fs"
 	mongoclnt "sigmaos/mongo/clnt"
 	"sigmaos/proc"
 	"sigmaos/sigmasrv"
-	"strconv"
-	"sync"
 )
 
 // YH:
@@ -46,11 +48,11 @@ func RunMediaSrv(jobname string) error {
 	}
 	mongoc.EnsureIndex(SN_DB, MEDIA_COL, []string{"mediaid"})
 	msrv.mongoc = mongoc
-	fsls, err := NewFsLibs(SOCIAL_NETWORK_MEDIA, ssrv.MemFs.SigmaClnt().GetDialProxyClnt())
+	fsl, err := NewFsLib(SOCIAL_NETWORK_MEDIA, ssrv.MemFs.SigmaClnt().GetDialProxyClnt())
 	if err != nil {
 		return err
 	}
-	msrv.cachec = cachegrpclnt.NewCachedSvcClnt(fsls, jobname)
+	msrv.cachec = cachegrpclnt.NewCachedSvcClnt(fsl, jobname)
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_MEDIA, "Starting media service\n")
 	return ssrv.RunServer()
 }

@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"sigmaos/apps/hotel/proto"
-	"sigmaos/rpcclnt"
+	rpcclnt "sigmaos/rpc/clnt"
 )
 
 func RandSearchReq(wc *WebClnt, r *rand.Rand) error {

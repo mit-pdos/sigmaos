@@ -1,7 +1,6 @@
 package clnt
 
 import (
-	"sigmaos/chunk"
 	proto "sigmaos/chunk/proto"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
@@ -115,7 +114,7 @@ func (ckclnt *ChunkClnt) Fetch(srvid, prog string, pid sp.Tpid, realm sp.Trealm,
 }
 
 func (ckclnt *ChunkClnt) FetchBinary(srvid, prog string, pid sp.Tpid, realm sp.Trealm, s3secret *sp.SecretProto, reqsz sp.Tsize, path []string, ep *sp.TendpointProto) (string, error) {
-	n := (reqsz / chunk.CHUNKSZ) + 1
+	n := (int64(reqsz) / sp.Conf.Chunk.CHUNK_SZ) + 1
 	db.DPrintf(db.CHUNKCLNT, "FetchBinary %q %v %d", prog, reqsz, n)
 	last := ""
 	for ck := 0; ck < int(n); ck++ {

@@ -5,17 +5,17 @@ import (
 
 	"sigmaos/db/proto"
 	"sigmaos/fslib"
-	"sigmaos/rpcclnt"
-	"sigmaos/sigmarpcchan"
+	rpcclnt "sigmaos/rpc/clnt"
+	sprpcclnt "sigmaos/rpc/clnt/sigmap"
 )
 
 type DbClnt struct {
 	rpcc *rpcclnt.RPCClnt
 }
 
-func NewDbClnt(fsl *fslib.FsLib, fn string) (*DbClnt, error) {
+func NewDbClnt(fsl *fslib.FsLib, pn string) (*DbClnt, error) {
 	dc := &DbClnt{}
-	rpcc, err := sigmarpcchan.NewSigmaRPCClnt([]*fslib.FsLib{fsl}, fn)
+	rpcc, err := sprpcclnt.NewRPCClnt(fsl, pn)
 	if err != nil {
 		return nil, err
 	}

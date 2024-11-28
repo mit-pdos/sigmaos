@@ -2,18 +2,20 @@ package socialnetwork
 
 import (
 	"fmt"
-	"gopkg.in/mgo.v2/bson"
 	"math/rand"
-	"sigmaos/apps/socialnetwork/proto"
+	"strings"
+	"time"
+
+	"gopkg.in/mgo.v2/bson"
+
 	"sigmaos/apps/cache"
 	cachegrpclnt "sigmaos/apps/cache/cachegrp/clnt"
+	"sigmaos/apps/socialnetwork/proto"
 	dbg "sigmaos/debug"
 	"sigmaos/fs"
 	mongoclnt "sigmaos/mongo/clnt"
 	"sigmaos/proc"
 	"sigmaos/sigmasrv"
-	"strings"
-	"time"
 )
 
 // YH:
@@ -47,11 +49,11 @@ func RunUrlSrv(jobname string) error {
 	}
 	mongoc.EnsureIndex(SN_DB, URL_COL, []string{"shorturl"})
 	urlsrv.mongoc = mongoc
-	fsls, err := NewFsLibs(SOCIAL_NETWORK_URL, ssrv.MemFs.SigmaClnt().GetDialProxyClnt())
+	fsl, err := NewFsLib(SOCIAL_NETWORK_URL, ssrv.MemFs.SigmaClnt().GetDialProxyClnt())
 	if err != nil {
 		return err
 	}
-	urlsrv.cachec = cachegrpclnt.NewCachedSvcClnt(fsls, jobname)
+	urlsrv.cachec = cachegrpclnt.NewCachedSvcClnt(fsl, jobname)
 	urlsrv.random = rand.New(rand.NewSource(time.Now().UnixNano()))
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_URL, "Starting url service\n")
 	return ssrv.RunServer()

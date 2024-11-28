@@ -27,12 +27,12 @@ func NewListener(npc *DialProxyClnt, lid dialproxy.Tlid, ep *sp.Tendpoint) *List
 }
 
 func (l *Listener) Accept() (net.Conn, error) {
-	c, _, err := l.npc.Accept(l.lid, l.la.ep.Type() == sp.INTERNAL_EP)
+	c, _, err := l.npc.Accept(l.lid, l.la.ep.GetType() == sp.INTERNAL_EP)
 	return c, err
 }
 
 func (l *Listener) AcceptGetPrincipal() (net.Conn, *sp.Tprincipal, error) {
-	return l.npc.Accept(l.lid, l.la.ep.Type() == sp.INTERNAL_EP)
+	return l.npc.Accept(l.lid, l.la.ep.GetType() == sp.INTERNAL_EP)
 }
 
 func (l *Listener) Close() error {

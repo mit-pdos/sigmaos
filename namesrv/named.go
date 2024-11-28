@@ -34,7 +34,6 @@ type Named struct {
 	realm  sp.Trealm
 	delay  int64
 	sess   *fsetcd.Session
-	signer sp.Tsigner
 	pstats *fsetcd.PstatInode
 	ephch  chan path.Tpathname
 }
@@ -68,8 +67,6 @@ func Run(args []string) error {
 	}
 
 	nd := newNamed(sp.Trealm(args[1]))
-	nd.signer = sp.Tsigner(pe.GetPID())
-
 	p, err := perf.NewPerf(pe, perf.NAMED)
 	if err != nil {
 		db.DFatalf("Error NewPerf: %v", err)

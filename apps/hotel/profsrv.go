@@ -10,8 +10,8 @@ import (
 
 	"github.com/harlow/go-micro-services/data"
 
-	"sigmaos/apps/hotel/proto"
 	"sigmaos/apps/cache"
+	"sigmaos/apps/hotel/proto"
 	dbclnt "sigmaos/db/clnt"
 	db "sigmaos/debug"
 	"sigmaos/fs"
@@ -38,11 +38,11 @@ func RunProfSrv(job string, cache string) error {
 		return err
 	}
 	ps.dbc = dbc
-	fsls, err := NewFsLibs(HOTELPROF, ssrv.MemFs.SigmaClnt().GetDialProxyClnt())
+	fsl, err := NewFsLib(HOTELPROF, ssrv.MemFs.SigmaClnt().GetDialProxyClnt())
 	if err != nil {
 		return err
 	}
-	cachec, err := NewCacheClnt(cache, fsls, job)
+	cachec, err := NewCacheClnt(cache, fsl, job)
 	if err != nil {
 		return err
 	}

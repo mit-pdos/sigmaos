@@ -50,8 +50,7 @@ const (
 	IMGREL = "img"
 	IMG    = NAMED + IMGREL + "/"
 
-	MEMCACHED = "name/memcached"
-	MEMBLOCK  = "name/memblock"
+	MEMBLOCK = "name/memblock"
 
 	K8S_SCRAPER = NAMED + "k8sscraper/"
 
@@ -59,26 +58,11 @@ const (
 	KPIDS    = NAMED + KPIDSREL
 
 	// Mschedd
-	QUEUE   = "queue"
-	RUNNING = "running"
-	PIDS    = "pids"
-
-	// Uprocd
-	PUBLIC_HTTP_PORT  = "public-http-port"
-	PUBLIC_NAMED_PORT = "public-named-port"
-
-	// Auth
-	KEYDREL    = "keyd"
-	KEYD       = NAME + "/" + KEYDREL
-	RW_REL     = "rw"
-	RONLY_REL  = "ronly"
-	KEYS_RW    = KEYD + "/" + RW_REL
-	KEYS_RONLY = KEYD + "/" + RONLY_REL
+	PIDS = "pids"
 
 	// special devs/dirs exported by SigmaSrv/SessSrv
 	STATSD   = ".statsd"
 	FENCEDIR = ".fences"
-	SNAPDEV  = "snapdev"
 
 	// stats exported by named
 	PSTATSD = ".pstatsd"

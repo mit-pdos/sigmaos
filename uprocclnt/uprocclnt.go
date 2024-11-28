@@ -5,7 +5,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/proc"
-	"sigmaos/rpcclnt"
+	rpcclnt "sigmaos/rpc/clnt"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 	"sigmaos/uprocsrv/proto"

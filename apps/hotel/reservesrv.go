@@ -8,20 +8,18 @@ import (
 
 	//	"go.opentelemetry.io/otel/trace"
 
-	"sigmaos/apps/hotel/proto"
 	"sigmaos/apps/cache"
 	cacheproto "sigmaos/apps/cache/proto"
+	"sigmaos/apps/hotel/proto"
 	dbclnt "sigmaos/db/clnt"
 	db "sigmaos/debug"
 	"sigmaos/fs"
-	"sigmaos/util/perf"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
 	"sigmaos/tracing"
+	"sigmaos/util/perf"
 )
-
-const ()
 
 type Reservation struct {
 	HotelID  string
@@ -97,11 +95,11 @@ func RunReserveSrv(job string, cache string) error {
 		return err
 	}
 	r.dbc = dbc
-	fsls, err := NewFsLibs(HOTELRESERVE, ssrv.MemFs.SigmaClnt().GetDialProxyClnt())
+	fsl, err := NewFsLib(HOTELRESERVE, ssrv.MemFs.SigmaClnt().GetDialProxyClnt())
 	if err != nil {
 		return err
 	}
-	cachec, err := NewCacheClnt(cache, fsls, job)
+	cachec, err := NewCacheClnt(cache, fsl, job)
 	if err != nil {
 		return err
 	}

@@ -26,7 +26,7 @@ func DialDirect(p *sp.Tprincipal, ep *sp.Tendpoint) (net.Conn, error) {
 		db.DPrintf(db.DIALPROXY_ERR, "[%v] Dial direct addr err %v: err %v", p, ep.Addrs()[0], err)
 	} else {
 		db.DPrintf(db.DIALPROXY, "[%v] Dial direct addr ok %v", p, ep.Addrs()[0])
-		if ep.Type() == sp.INTERNAL_EP {
+		if ep.GetType() == sp.INTERNAL_EP {
 			if err := writeConnPreamble(c, p); err != nil {
 				db.DPrintf(db.DIALPROXY_ERR, "[%v] Write preamble err: %v", p, err)
 				return nil, err

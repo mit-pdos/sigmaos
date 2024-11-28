@@ -12,17 +12,12 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/proc"
-	"sigmaos/procfs"
 	"sigmaos/sched/besched/proto"
 	"sigmaos/sched/queue"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
 	"sigmaos/util/perf"
-)
-
-const (
-	GET_PROC_TIMEOUT = 50 * time.Millisecond
 )
 
 type BESched struct {
@@ -39,10 +34,6 @@ type BESched struct {
 	realmbins   *chunkclnt.RealmBinPaths
 }
 
-type QDir struct {
-	be *BESched
-}
-
 func NewBESched(sc *sigmaclnt.SigmaClnt) *BESched {
 	be := &BESched{
 		sc:        sc,
@@ -54,51 +45,6 @@ func NewBESched(sc *sigmaclnt.SigmaClnt) *BESched {
 	}
 	be.cond = sync.NewCond(&be.mu)
 	return be
-}
-
-// XXX Deduplicate with lcsched
-func (qd *QDir) GetProcs() []*proc.Proc {
-	qd.be.mu.Lock()
-	defer qd.be.mu.Unlock()
-
-	procs := make([]*proc.Proc, 0, qd.be.lenL())
-	for _, q := range qd.be.qs {
-		pmap := q.GetPMapL()
-		for _, p := range pmap {
-			procs = append(procs, p)
-		}
-	}
-	return procs
-}
-
-// XXX Deduplicate with lcsched
-func (qd *QDir) Lookup(pid string) (*proc.Proc, bool) {
-	qd.be.mu.Lock()
-	defer qd.be.mu.Unlock()
-
-	for _, q := range qd.be.qs {
-		pmap := q.GetPMapL()
-		if p, ok := pmap[sp.Tpid(pid)]; ok {
-			return p, ok
-		}
-	}
-	return nil, false
-}
-
-// XXX Deduplicate with lcsched
-func (be *BESched) lenL() int {
-	l := 0
-	for _, q := range be.qs {
-		l += q.Len()
-	}
-	return l
-}
-
-func (qd *QDir) Len() int {
-	qd.be.mu.Lock()
-	defer qd.be.mu.Unlock()
-
-	return qd.be.lenL()
 }
 
 func (be *BESched) Enqueue(ctx fs.CtxI, req proto.EnqueueRequest, res *proto.EnqueueResponse) error {
@@ -168,7 +114,7 @@ func (be *BESched) GetProc(ctx fs.CtxI, req proto.GetProcRequest, res *proto.Get
 	start := time.Now()
 	// Try until we hit the timeout (which we may hit if the request is for too
 	// few resources).
-	for time.Since(start) < GET_PROC_TIMEOUT {
+	for time.Since(start) < sp.Conf.BESched.GET_PROC_TIMEOUT {
 		lockStart := time.Now()
 		be.mu.Lock()
 		lockDur := time.Since(lockStart)
@@ -316,11 +262,6 @@ func Run() {
 	ssrv, err := sigmasrv.NewSigmaSrvClnt(filepath.Join(sp.BESCHED, sc.ProcEnv().GetKernelID()), sc, be)
 	if err != nil {
 		db.DFatalf("Error NewSigmaSrv: %v", err)
-	}
-	// export queued procs through procfs. maybe a subdir per realm?
-	dir := procfs.NewProcDir(&QDir{be})
-	if err := ssrv.MkNod(sp.QUEUE, dir); err != nil {
-		db.DFatalf("Error mknod %v: %v", sp.QUEUE, err)
 	}
 	// Perf monitoring
 	p, err := perf.NewPerf(sc.ProcEnv(), perf.BESCHED)

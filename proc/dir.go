@@ -53,7 +53,6 @@ const (
 	PARENTDIR = "parentdir"
 
 	// Files/directories in "pids/<pid>":
-	SHARED      = "shared"
 	START_SEM   = "start-sem"
 	EXIT_SEM    = "exit-sem"
 	EVICT_SEM   = "evict-sem"

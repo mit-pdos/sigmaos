@@ -7,10 +7,6 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-const (
-	POOL_SZ = 2 // Size of running-but-unused pool of uprocds to be maintained at all times
-)
-
 // A pool of booted, but unused, uprocds.
 type pool struct {
 	sync.Mutex
@@ -23,8 +19,8 @@ type pool struct {
 func newPool(fn startUprocdFn) *pool {
 	p := &pool{
 		startUprocd: fn,
-		clnts:       make([]*UprocdClnt, 0, POOL_SZ),
-		pids:        make([]sp.Tpid, 0, POOL_SZ),
+		clnts:       make([]*UprocdClnt, 0, sp.Conf.UProcSrv.POOL_SZ),
+		pids:        make([]sp.Tpid, 0, sp.Conf.UProcSrv.POOL_SZ),
 	}
 	p.cond = sync.NewCond(&p.Mutex)
 	return p
@@ -35,8 +31,8 @@ func (p *pool) fill() {
 	p.Lock()
 	defer p.Unlock()
 
-	db.DPrintf(db.UPROCDMGR, "Fill uprocd pool len %v target %v", len(p.clnts), POOL_SZ)
-	for len(p.clnts) < POOL_SZ {
+	db.DPrintf(db.UPROCDMGR, "Fill uprocd pool len %v target %v", len(p.clnts), sp.Conf.UProcSrv.POOL_SZ)
+	for len(p.clnts) < sp.Conf.UProcSrv.POOL_SZ {
 		// Unlock to allow clients to take a uprocd off the queue while another is
 		// being started
 		p.Unlock()
@@ -48,7 +44,7 @@ func (p *pool) fill() {
 		// Wake up any potentially waiting clients
 		p.cond.Broadcast()
 	}
-	db.DPrintf(db.UPROCDMGR, "Done Fill uprocd pool len %v target %v", len(p.clnts), POOL_SZ)
+	db.DPrintf(db.UPROCDMGR, "Done Fill uprocd pool len %v target %v", len(p.clnts), sp.Conf.UProcSrv.POOL_SZ)
 	p.cond.Broadcast()
 }
 

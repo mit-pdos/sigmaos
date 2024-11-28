@@ -1,4 +1,4 @@
-package rpcsrv
+package srv
 
 import (
 	"errors"

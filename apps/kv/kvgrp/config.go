@@ -14,16 +14,26 @@ import (
 )
 
 type GroupConfig struct {
+	Fence    sp.Tfence
 	SigmaEPs []*sp.Tendpoint
 	RaftEPs  []*sp.Tendpoint
 }
 
 func (cfg *GroupConfig) String() string {
-	return fmt.Sprintf("&{ SigmaEPs:%v RaftEPs:%v }", cfg.SigmaEPs, cfg.RaftEPs)
+	return fmt.Sprintf("&{ Fence:%v SigmaEPs:%v RaftEPs:%v }", cfg.Fence, cfg.SigmaEPs, cfg.RaftEPs)
 }
 
 func (cfg *GroupConfig) RaftInitialized() bool {
 	for _, ep := range cfg.RaftEPs {
+		if ep == nil {
+			return false
+		}
+	}
+	return true
+}
+
+func (cfg *GroupConfig) EPsInitialized() bool {
+	for _, ep := range cfg.SigmaEPs {
 		if ep == nil {
 			return false
 		}
@@ -62,7 +72,7 @@ func (g *Group) writeGroupConfig(path string, cfg *GroupConfig) error {
 	return nil
 }
 
-func (g *Group) readCreateCfg(myid, nrepl int) *GroupConfig {
+func (g *Group) readCreateCfg(nrepl int) *GroupConfig {
 	pn := grpConfPath(g.jobdir, g.grp)
 	cfg, err := g.readGroupConfig(pn)
 	if err != nil { // create the initial config?
@@ -82,6 +92,14 @@ func (g *Group) readCreateCfg(myid, nrepl int) *GroupConfig {
 		}
 	}
 	return cfg
+}
+
+func (g *Group) updateCfg(cfg *GroupConfig, f sp.Tfence) error {
+	pn := grpConfPath(g.jobdir, g.grp)
+	s := cfg.Fence.Seqno
+	cfg.Fence = f
+	cfg.Fence.Seqno = s + 1
+	return g.writeGroupConfig(pn, cfg)
 }
 
 func (g *Group) AcquireReadCfg() *GroupConfig {

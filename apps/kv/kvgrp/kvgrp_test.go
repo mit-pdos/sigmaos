@@ -76,6 +76,11 @@ func TestStartStopRepl0(t *testing.T) {
 	db.DPrintf(db.TEST, "Stat: %v %v\n", sp.Names(sts), err)
 	assert.Nil(t, err, "stat")
 
+	time.Sleep(2 * fsetcd.LeaseTTL * time.Second)
+
+	_, err = ts.GetFile(kvgrp.GrpPath(kvgrp.JobDir(ts.job), ts.grp))
+	assert.Nil(t, err, "GetFile")
+
 	_, err = ts.gm.StopGroup()
 	assert.Nil(ts.T, err, "Stop")
 	ts.Shutdown(false)
@@ -87,7 +92,13 @@ func TestStartStopReplN(t *testing.T) {
 		return
 	}
 	ts := newTstate(t1, kv.KVD_REPL_LEVEL, false)
-	_, err := ts.gm.StopGroup()
+
+	time.Sleep(2 * fsetcd.LeaseTTL * time.Second)
+
+	_, err := ts.GetFile(kvgrp.GrpPath(kvgrp.JobDir(ts.job), ts.grp))
+	assert.Nil(t, err, "GetFile")
+
+	_, err = ts.gm.StopGroup()
 	assert.Nil(ts.T, err, "Stop")
 	ts.Shutdown(false)
 }

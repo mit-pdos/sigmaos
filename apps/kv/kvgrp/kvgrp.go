@@ -109,7 +109,7 @@ func WaitStarted(fsl *fslib.FsLib, jobdir, grp string) (*GroupConfig, error) {
 	return cfg, nil
 }
 
-func (g *Group) writeSymlink(sigmaEPs []*sp.Tendpoint) {
+func (g *Group) advertiseEPs(sigmaEPs []*sp.Tendpoint) {
 	srvAddrs := make([]*sp.Taddr, 0)
 	for _, ep := range sigmaEPs {
 		if ep != nil {
@@ -117,9 +117,15 @@ func (g *Group) writeSymlink(sigmaEPs []*sp.Tendpoint) {
 		}
 	}
 	ep := sp.NewEndpoint(sp.INTERNAL_EP, srvAddrs)
-	db.DPrintf(db.KVGRP, "writeSymlink: advertise %v at %v", srvAddrs, GrpPath(g.jobdir, g.grp))
-	if err := g.MkLeasedEndpoint(GrpPath(g.jobdir, g.grp), ep, g.lc.Lease()); err != nil {
-		db.DFatalf("writeSymlink: make replica addrs file %v err %v", g.grp, err)
+	db.DPrintf(db.KVGRP, "advertiseEPs: advertise %v at %v", srvAddrs, GrpPath(g.jobdir, g.grp))
+	if len(sigmaEPs) == 1 {
+		if err := g.MkLeasedEndpoint(GrpPath(g.jobdir, g.grp), ep, g.lc.Lease()); err != nil {
+			db.DFatalf("advertiseEPs: make replica addrs file %v err %v", g.grp, err)
+		}
+	} else {
+		if err := g.WriteEndpointFile(GrpPath(g.jobdir, g.grp), ep); err != nil {
+			db.DFatalf("advertiseEPs: make replica addrs file %v err %v", g.grp, err)
+		}
 	}
 }
 
@@ -151,29 +157,29 @@ func RunMember(job, grp string, myid, nrepl int) {
 
 	g.AcquireLeadership()
 
-	cfg := g.readCreateCfg(g.myid, nrepl)
+	cfg := g.readCreateCfg(nrepl)
 
 	var raftCfg *replraft.RaftConfig
 	if nrepl > 0 {
 		cfg, raftCfg = g.newRaftCfg(cfg, g.myid, nrepl)
 	}
 
-	// only replica will advertise the service
+	g.updateCfg(cfg, g.lc.Fence())
 
-	db.DPrintf(db.KVGRP, "Grp config: %v config: %v raftCfg %v", g.myid, cfg, raftCfg)
+	db.DPrintf(db.KVGRP, "Lock holder: %v config: %v raftCfg %v", g.myid, cfg, raftCfg)
 
 	cfg, err = g.startServer(cfg, raftCfg)
 	if err != nil {
 		db.DFatalf("startServer %v\n", err)
 	}
 
-	g.writeSymlink(cfg.SigmaEPs)
+	g.advertiseEPs(cfg.SigmaEPs)
 
 	g.ReleaseLeadership()
 
-	db.DPrintf(db.KVGRP, "Crash %v id %v gen %v", nrepl, g.myid, g.gen)
-
-	if (nrepl > 0 && g.gen == 1) || nrepl == 0 {
+	if (nrepl > 0 && cfg.Fence.Seqno == 1) || nrepl == 0 {
+		// if nrepl > 0, crash only on first configuration because restart
+		// and reconfigure aren't supported
 		crash.Failer(crash.KVD_CRASH, func(e crash.Tevent) {
 			crash.Crash()
 		})

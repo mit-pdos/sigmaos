@@ -24,7 +24,7 @@ func NewTask(fn string) *Ttask {
 }
 
 func StartImgd(sc *sigmaclnt.SigmaClnt, job string, workerMcpu proc.Tmcpu, workerMem proc.Tmem, persist bool, nrounds int, imgdMcpu proc.Tmcpu) *groupmgr.GroupMgr {
-	cfg := groupmgr.NewGroupConfig(1, "imgresized", []string{strconv.Itoa(0), strconv.Itoa(int(workerMcpu)), strconv.Itoa(int(workerMem)), strconv.Itoa(nrounds)}, imgdMcpu, job)
+	cfg := groupmgr.NewGroupConfig(1, "imgresized", []string{strconv.Itoa(int(workerMcpu)), strconv.Itoa(int(workerMem)), strconv.Itoa(nrounds)}, imgdMcpu, job)
 	if persist {
 		cfg.Persist(sc.FsLib)
 	}
@@ -70,15 +70,12 @@ func IsThumbNail(fn string) bool {
 	return strings.Contains(fn, "-thumb")
 }
 
-func getMkProcFn(job string, nrounds int, crash int64, workerMcpu proc.Tmcpu, workerMem proc.Tmem) fttaskmgr.TmkProc {
+func getMkProcFn(job string, nrounds int, workerMcpu proc.Tmcpu, workerMem proc.Tmem) fttaskmgr.TmkProc {
 	return func(tn string, t interface{}) *proc.Proc {
 		task := *t.(*Ttask)
 		db.DPrintf(db.IMGD, "mkProc %s %v", tn, task)
 		fn := task.FileName
 		p := proc.NewProcPid(sp.GenPid(job), "imgresize", []string{fn, ThumbName(fn), strconv.Itoa(nrounds)})
-		if crash > 0 {
-			p.SetCrash(crash)
-		}
 		p.SetMcpu(workerMcpu)
 		p.SetMem(workerMem)
 		return p

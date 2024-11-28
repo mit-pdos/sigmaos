@@ -57,7 +57,7 @@ func NewImgSrvRPC(args []string) (*ImgSrvRPC, error) {
 	if err != nil {
 		db.DFatalf("Error parse nrounds: %v", err)
 	}
-	imgd.mkProc = getMkProcFn(imgd.job, imgd.nrounds, 0, imgd.workerMcpu, imgd.workerMem)
+	imgd.mkProc = getMkProcFn(imgd.job, imgd.nrounds, imgd.workerMcpu, imgd.workerMem)
 	return imgd, nil
 }
 

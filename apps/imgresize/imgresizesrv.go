@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"strconv"
 
-	"sigmaos/crash"
+	// "sigmaos/crash"
 	db "sigmaos/debug"
 	"sigmaos/fttask"
 	fttaskmgr "sigmaos/fttask/mgr"
@@ -23,14 +23,13 @@ type ImgSrv struct {
 	nrounds    int
 	workerMcpu proc.Tmcpu
 	workerMem  proc.Tmem
-	crash      int64
 	exited     bool
 	leaderclnt *leaderclnt.LeaderClnt
 	stop       int32
 }
 
 func NewImgSrv(args []string) (*ImgSrv, error) {
-	if len(args) != 5 {
+	if len(args) != 4 {
 		return nil, fmt.Errorf("NewImgSrv: wrong number of arguments: %v", args)
 	}
 	imgd := &ImgSrv{}
@@ -41,26 +40,21 @@ func NewImgSrv(args []string) (*ImgSrv, error) {
 	}
 	db.DPrintf(db.IMGD, "Made fslib job %v", imgd.job)
 	imgd.SigmaClnt = sc
-	crashing, err := strconv.Atoi(args[1])
-	if err != nil {
-		return nil, fmt.Errorf("NewImgSrv: error parse crash %v", err)
-	}
-	imgd.crash = int64(crashing)
 	imgd.ft, err = fttask.NewFtTasks(sc.FsLib, sp.IMG, imgd.job)
 	if err != nil {
 		return nil, fmt.Errorf("NewImgSrv: NewFtTasks %v", err)
 	}
-	mcpu, err := strconv.Atoi(args[2])
+	mcpu, err := strconv.Atoi(args[1])
 	if err != nil {
 		return nil, fmt.Errorf("NewImgSrv: Error parse MCPU %v", err)
 	}
 	imgd.workerMcpu = proc.Tmcpu(mcpu)
-	mem, err := strconv.Atoi(args[3])
+	mem, err := strconv.Atoi(args[2])
 	if err != nil {
 		return nil, fmt.Errorf("NewImgSrv: Error parse Mem %v", err)
 	}
 	imgd.workerMem = proc.Tmem(mem)
-	imgd.nrounds, err = strconv.Atoi(args[4])
+	imgd.nrounds, err = strconv.Atoi(args[3])
 	if err != nil {
 		db.DFatalf("Error parse nrounds: %v", err)
 	}
@@ -71,8 +65,6 @@ func NewImgSrv(args []string) (*ImgSrv, error) {
 	if err != nil {
 		return nil, fmt.Errorf("NewLeaderclnt err %v", err)
 	}
-
-	crash.Crasher(imgd.FsLib)
 
 	go func() {
 		imgd.WaitEvict(sc.ProcEnv().GetPID())
@@ -100,7 +92,7 @@ func (imgd *ImgSrv) Work() {
 	if err != nil {
 		db.DFatalf("NewTaskMgr err %v", err)
 	}
-	status := ftm.ExecuteTasks(func() interface{} { return new(Ttask) }, getMkProcFn(imgd.job, imgd.nrounds, imgd.crash, imgd.workerMcpu, imgd.workerMem))
+	status := ftm.ExecuteTasks(func() interface{} { return new(Ttask) }, getMkProcFn(imgd.job, imgd.nrounds, imgd.workerMcpu, imgd.workerMem))
 	db.DPrintf(db.ALWAYS, "imgresized exit")
 	imgd.exited = true
 	if status == nil {

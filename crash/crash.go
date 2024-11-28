@@ -93,38 +93,6 @@ func randSleep(c int64) uint64 {
 	return r
 }
 
-func Crasher(fsl *fslib.FsLib) {
-	crash := fsl.ProcEnv().GetCrash()
-	if crash == 0 {
-		return
-	}
-	go func() {
-		for true {
-			r := randSleep(crash)
-			if r < 330 {
-				fail(crash, nil)
-			} else if r < 660 {
-				PartitionNamed(fsl)
-			}
-		}
-	}()
-}
-
-func fail(crash int64, f func() string) {
-	msg := ""
-	if f != nil {
-		msg = f()
-	}
-	db.DPrintf(db.CRASH, "crash.fail %v %v\n", crash, msg)
-	os.Exit(1)
-}
-
-func Fail(crash int64) {
-	fail(crash, nil)
-}
-
-// New interface
-
 func SetSigmaFail(es []Tevent) error {
 	s, err := MakeTevents(es)
 	if err != nil {

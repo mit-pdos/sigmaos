@@ -250,7 +250,7 @@ func (bl *Balancer) monitorMyself() {
 		time.Sleep(time.Duration(500) * time.Millisecond)
 		_, err := readConfig(bl.FsLib, KVConfig(bl.job))
 		if serr.IsErrCode(err, serr.TErrUnreachable) {
-			crash.Fail(0)
+			crash.Crash()
 		}
 	}
 }
@@ -259,7 +259,7 @@ func (bl *Balancer) monitorMyself() {
 func (bl *Balancer) PostConfig() {
 	if err := bl.PutFileJsonAtomic(KVConfig(bl.job), 0777, *bl.conf); err != nil {
 		if serr.IsErrCode(err, serr.TErrUnreachable) {
-			crash.Fail(0)
+			crash.Crash()
 		}
 		db.DFatalf("NewFile %v err %v\n", KVConfig(bl.job), err)
 	}

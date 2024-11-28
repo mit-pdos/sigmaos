@@ -82,12 +82,13 @@ if __name__ == "__main__":
     for v in ['v1', 'v2']:
         for loc in ['named', 'local']:
             for typ in ['include_op', 'watch_only']:
-                process_file(f"{timestamp}/{v}/watchperf_single_no_files_{loc}_{typ}.txt", bucket, label_suffix=" (0 other files in dir)")
-                process_file(f"{timestamp}/{v}/watchperf_single_some_files_{loc}_{typ}.txt", bucket, label_suffix=" (100 other files in dir)")
-                process_file(f"{timestamp}/{v}/watchperf_single_many_files_{loc}_{typ}.txt", bucket, label_suffix=" (1000 other files in dir)")
+                process_file(f"{timestamp}/{v}/watchperf_1_workers_0_startfiles_{loc}_{typ}.txt", bucket, label_suffix=" (0 other files in dir)")
+                process_file(f"{timestamp}/{v}/watchperf_1_workers_100_startfiles_{loc}_{typ}.txt", bucket, label_suffix=" (0 other files in dir)")
+                process_file(f"{timestamp}/{v}/watchperf_1_workers_1000_startfiles_{loc}_{typ}.txt", bucket, label_suffix=" (0 other files in dir)")
                 save_file(f"./{timestamp}/{v}/watchperf_single_{loc}_{typ}.png")
 
-                process_file(f"{timestamp}/{v}/watchperf_multiple_no_files_{loc}_{typ}.txt", bucket, label_suffix=" (10 workers)")
-                process_file(f"{timestamp}/{v}/watchperf_single_no_files_{loc}_{typ}.txt", bucket, label_suffix=" (1 workers)")
+                process_file(f"{timestamp}/{v}/watchperf_1_workers_0_startfiles_{loc}_{typ}.txt", bucket, label_suffix=" (1 worker)")
+                process_file(f"{timestamp}/{v}/watchperf_10_workers_0_startfiles_{loc}_{typ}.txt", bucket, label_suffix=" (5 workers)")
+                process_file(f"{timestamp}/{v}/watchperf_25_workers_0_startfiles_{loc}_{typ}.txt", bucket, label_suffix=" (15 workers)")
                 save_file(f"./{timestamp}/{v}/watchperf_multiple_{loc}_{typ}.png")
 

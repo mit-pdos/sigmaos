@@ -28,7 +28,7 @@ const (
 	// measure time from when the worker starts watching to when it notices the file.
 	// in this mode, the watch is guaranteed to start after the file is created to measure
 	// just the latency of the watch.
-	JustWatch                 = iota
+	JustWatch     MeasureMode = iota
 )
 
 type PerfCoord struct {

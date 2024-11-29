@@ -7,9 +7,9 @@ import (
 	"sigmaos/apps/kv/kvgrp"
 	db "sigmaos/debug"
 	"sigmaos/groupmgr"
-	"sigmaos/util/perf"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
+	"sigmaos/util/perf"
 )
 
 //
@@ -93,7 +93,7 @@ func (mo *Monitor) nextGroup() string {
 func (mo *Monitor) grow() error {
 	gn := mo.nextGroup()
 	db.DPrintf(db.KVMON, "Add group %v\n", gn)
-	grp, err := spawnGrp(mo.SigmaClnt, mo.job, gn, mo.kvdmcpu, KVD_NO_REPL, 0)
+	grp, err := spawnGrp(mo.SigmaClnt, mo.job, gn, mo.kvdmcpu, KVD_NO_REPL)
 	if err != nil {
 		return err
 	}

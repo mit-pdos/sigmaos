@@ -68,7 +68,9 @@ func (sess *Session) CloseConn() {
 		conn = sess.conn
 	}
 	sess.Unlock()
-	conn.CloseConnTest()
+	if conn != nil {
+		conn.CloseConnTest()
+	}
 }
 
 func (sess *Session) AddClnt(cid sp.TclntId) {

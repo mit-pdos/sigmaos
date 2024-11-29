@@ -181,7 +181,7 @@ func NewHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []*Srv, nhotel int, c
 			ca = cachegrpclnt.NewAutoscaler(cm, cc)
 		case "kvd":
 			db.DPrintf(db.ALWAYS, "Hotel running with kvd")
-			kvf, err = kv.NewKvdFleet(sc, job, 0, ncache, 0, 0, cacheMcpu, "0", "manual")
+			kvf, err = kv.NewKvdFleet(sc, job, ncache, 0, cacheMcpu, "manual")
 			if err != nil {
 				return nil, err
 			}

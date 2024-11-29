@@ -17,6 +17,7 @@ type Op struct {
 	reply     *replproto.ReplOpReply
 	err       error
 	startTime time.Time
+	timedOut  time.Time
 	ch        chan struct{}
 }
 
@@ -45,9 +46,11 @@ func (c *Clerk) request(op *Op) {
 }
 
 func (c *Clerk) serve() {
+	ticker := time.NewTicker(sp.Conf.Raft.TICK_INTERVAL)
 	for {
-		// TODO: re-propose ops on a ticker
 		select {
+		case <-ticker.C:
+			c.repropose()
 		case req := <-c.requests:
 			go c.propose(req)
 		case committedReqs := <-c.commit:
@@ -64,15 +67,19 @@ func (c *Clerk) serve() {
 	}
 }
 
-func (c *Clerk) propose(op *Op) {
+func (c *Clerk) submit(op *Op) {
 	db.DPrintf(db.REPLRAFT, "Propose %v\n", op.request)
 	op.startTime = time.Now()
 	frame, err := proto.Marshal(op.request)
 	if err != nil {
 		db.DFatalf("marshal op in replraft.Clerk.Propose: %v", err)
 	}
-	c.registerOp(op.request, op)
 	c.proposeC <- frame
+}
+
+func (c *Clerk) propose(op *Op) {
+	c.registerOp(op.request, op)
+	c.submit(op)
 }
 
 func (c *Clerk) apply(req *replproto.ReplOpRequest, leader uint64) {
@@ -102,6 +109,14 @@ func (c *Clerk) registerOp(req *replproto.ReplOpRequest, op *Op) {
 	m[seq] = op
 }
 
+func (c *Clerk) repropose() {
+	ops := c.timedOutOps()
+	for _, op := range ops {
+		db.DPrintf(db.REPLRAFT, "resubmit timedOut op %v", op.request)
+		go c.submit(op)
+	}
+}
+
 // Get the full op struct associated with an cid/seqno.
 func (c *Clerk) getOp(req *replproto.ReplOpRequest) *Op {
 	c.mu.Lock()
@@ -120,6 +135,23 @@ func (c *Clerk) getOp(req *replproto.ReplOpRequest) *Op {
 		}
 	}
 	return op
+}
+
+func (c *Clerk) timedOutOps() []*Op {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	ops := make([]*Op, 0)
+	for _, m := range c.opmap {
+		for _, op := range m {
+			// XXX 500 in raft config struct
+			if time.Now().After(op.timedOut) {
+				time.Now().Add(time.Duration(500 * time.Millisecond))
+				ops = append(ops, op)
+			}
+		}
+	}
+	return ops
 }
 
 // Print how much time an op spent in raft.

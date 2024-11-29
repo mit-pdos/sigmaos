@@ -5,7 +5,6 @@ package namesrv
 import (
 	"fmt"
 	"path/filepath"
-	"strconv"
 	"sync"
 	"time"
 
@@ -33,7 +32,7 @@ type Named struct {
 	elect  *leaderetcd.Election
 	job    string
 	realm  sp.Trealm
-	crash  int
+	delay  int64
 	sess   *fsetcd.Session
 	pstats *fsetcd.PstatInode
 	ephch  chan path.Tpathname
@@ -62,18 +61,12 @@ func Run(args []string) error {
 	//	}()
 
 	pe := proc.GetProcEnv()
-	db.DPrintf(db.NAMED, "named started: %v cfg: %v", args, pe)
-	if len(args) != 3 {
+	db.DPrintf(db.NAMED_LDR, "named start: %v cfg: %v", args, pe)
+	if len(args) != 2 {
 		return fmt.Errorf("%v: wrong number of arguments %v", args[0], args)
 	}
 
 	nd := newNamed(sp.Trealm(args[1]))
-	crashing, err := strconv.Atoi(args[2])
-	if err != nil {
-		return fmt.Errorf("%v: crash %v isn't int", args[0], args[1])
-	}
-	nd.crash = crashing
-
 	p, err := perf.NewPerf(pe, perf.NAMED)
 	if err != nil {
 		db.DFatalf("Error NewPerf: %v", err)
@@ -144,13 +137,20 @@ func Run(args []string) error {
 	ch := make(chan struct{})
 	go nd.waitExit(ch)
 
-	db.DPrintf(db.NAMED, "started %v %v", pe.GetPID(), nd.realm)
+	db.DPrintf(db.NAMED_LDR, "started %v %v", pe.GetPID(), nd.realm)
 
 	if err := nd.startLeader(); err != nil {
-		db.DPrintf(db.NAMED, "%v: startLeader %v err %v", pe.GetPID(), nd.realm, err)
+		db.DPrintf(db.NAMED_LDR, "%v: startLeader %v err %v", pe.GetPID(), nd.realm, err)
 		return err
 	}
 	defer nd.fs.Close()
+
+	go func() {
+		<-nd.sess.Done()
+		db.DPrintf(db.NAMED_LDR, "session expired delay %v", nd.delay)
+		time.Sleep(time.Duration(nd.delay) * time.Millisecond)
+		nd.resign()
+	}()
 
 	ep, err := nd.newSrv()
 	if err != nil {
@@ -159,7 +159,7 @@ func Run(args []string) error {
 
 	nd.SigmaSrv.Mount(sp.PSTATSD, nd.pstats)
 
-	db.DPrintf(db.NAMED, "newSrv %v ep %v", nd.realm, ep)
+	db.DPrintf(db.NAMED_LDR, "newSrv %v ep %v", nd.realm, ep)
 
 	pn = sp.NAMED
 	if nd.realm == sp.ROOTREALM {
@@ -192,22 +192,25 @@ func Run(args []string) error {
 		db.DPrintf(db.NAMED, "CreateElectionInfo %v err %v", nd.elect.Key(), err)
 	}
 
-	db.DPrintf(db.NAMED, "Created Leader file %v ", nd.elect.Key())
+	db.DPrintf(db.NAMED_LDR, "Created Leader file %v ", nd.elect.Key())
 
 	if err := nd.warmCache(); err != nil {
 		db.DFatalf("warmCache err %v", err)
 	}
 
-	if nd.crash > 0 {
-		crash.Crasher(nd.SigmaClnt.FsLib)
-	}
+	crash.Failer(crash.NAMED_PARTITION, func(e crash.Tevent) {
+		if nd.delay == 0 {
+			nd.delay = e.Delay
+			nd.sess.Orphan()
+		}
+	})
 
 	<-ch
 
 	db.DPrintf(db.ALWAYS, "named done %v %v", nd.realm, ep)
 
 	if err := nd.resign(); err != nil {
-		db.DPrintf(db.NAMED, "resign %v err %v", pe.GetPID(), err)
+		db.DPrintf(db.NAMED_LDR, "resign %v err %v", pe.GetPID(), err)
 	}
 
 	nd.SigmaSrv.SrvExit(proc.NewStatus(proc.StatusEvicted))
@@ -245,7 +248,7 @@ func (nd *Named) newSrv() (*sp.Tendpoint, error) {
 	nd.SigmaSrv = ssrv
 
 	ep := nd.GetEndpoint()
-	db.DPrintf(db.NAMED, "newSrv %v %v %v %v %v", nd.realm, addr, ssrv.GetEndpoint(), nd.elect.Key(), ep)
+	db.DPrintf(db.NAMED_LDR, "newSrv %v %v %v %v %v", nd.realm, addr, ssrv.GetEndpoint(), nd.elect.Key(), ep)
 	return ep, nil
 }
 
@@ -260,6 +263,7 @@ func (nd *Named) detach(cid sp.TclntId) {
 }
 
 func (nd *Named) resign() error {
+	db.DPrintf(db.NAMED_LDR, "%v resign", nd.realm)
 	if err := nd.fs.StopWatch(); err != nil {
 		return err
 	}
@@ -305,7 +309,9 @@ var warmRootDir = []string{sp.BOOT, sp.KPIDS, sp.MEMFS, sp.LCSCHED, sp.BESCHED, 
 func (nd *Named) warmCache() error {
 	for _, n := range warmRootDir {
 		if sts, err := nd.GetDir(n); err == nil {
-			db.DPrintf(db.TEST, "Warm cache %v: %v", n, sp.Names(sts))
+			db.DPrintf(db.NAMED, "Warm cache %v: %v", n, sp.Names(sts))
+		} else {
+			db.DPrintf(db.NAMED, "Warm cache %v err %v", n, err)
 		}
 	}
 	return nil

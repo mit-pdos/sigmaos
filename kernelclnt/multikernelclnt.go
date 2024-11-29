@@ -25,7 +25,7 @@ func (mkc *MultiKernelClnt) BootInRealm(kernelID string, realm sp.Trealm, s stri
 	if err != nil {
 		return sp.NO_PID, err
 	}
-	return bootInRealm(rpcc, realm, s, args)
+	return bootInRealm(rpcc, realm, s, args, []string{})
 }
 
 func (mkc *MultiKernelClnt) EvictKernelProc(kernelID string, pid sp.Tpid) error {

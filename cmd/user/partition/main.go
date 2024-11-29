@@ -1,3 +1,4 @@
+// A proc to test partition for [procclnt_test]
 package main
 
 import (
@@ -9,10 +10,6 @@ import (
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 )
-
-//
-// Partitioning proc
-//
 
 func main() {
 	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())

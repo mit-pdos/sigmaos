@@ -5,7 +5,9 @@
 package kvgrp
 
 import (
+	"os"
 	"path/filepath"
+	"strconv"
 	"sync"
 	"time"
 
@@ -26,6 +28,8 @@ const (
 	GRPELECT = "-elect"
 	GRPSEM   = "-sem"
 	KVDIR    = sp.NAMED + "kv/"
+
+	CRASH = 1000
 )
 
 func JobDir(job string) string {
@@ -54,6 +58,7 @@ type Group struct {
 	grp    string
 	ip     string
 	myid   int
+	gen    int
 	*sigmaclnt.SigmaClnt
 	ssrv   *sigmasrv.SigmaSrv
 	lc     *leaderclnt.LeaderClnt
@@ -86,7 +91,7 @@ func (g *Group) ReleaseLeadership() {
 	if err := g.lc.ReleaseLeadership(); err != nil {
 		db.DFatalf("release leadership: %v", err)
 	}
-	db.DPrintf(db.KVGRP, "%v/%v Released leadership", g.grp, g.myid)
+	db.DPrintf(db.KVGRP, "%v/%v gen# %d Released leadership", g.grp, g.myid, g.gen)
 }
 
 // For clients to wait unil a group is ready to serve
@@ -104,8 +109,7 @@ func WaitStarted(fsl *fslib.FsLib, jobdir, grp string) (*GroupConfig, error) {
 	return cfg, nil
 }
 
-func (g *Group) writeSymlink(sigmaEPs []*sp.Tendpoint) {
-	//	srvEPs := make([]*sp.Tendpoint, 0)
+func (g *Group) advertiseEPs(sigmaEPs []*sp.Tendpoint) {
 	srvAddrs := make([]*sp.Taddr, 0)
 	for _, ep := range sigmaEPs {
 		if ep != nil {
@@ -113,9 +117,15 @@ func (g *Group) writeSymlink(sigmaEPs []*sp.Tendpoint) {
 		}
 	}
 	ep := sp.NewEndpoint(sp.INTERNAL_EP, srvAddrs)
-	db.DPrintf(db.KVGRP, "Advertise %v at %v", srvAddrs, GrpPath(g.jobdir, g.grp))
-	if err := g.MkLeasedEndpoint(GrpPath(g.jobdir, g.grp), ep, g.lc.Lease()); err != nil {
-		db.DFatalf("couldn't make replica addrs file %v err %v", g.grp, err)
+	db.DPrintf(db.KVGRP, "advertiseEPs: advertise %v at %v", srvAddrs, GrpPath(g.jobdir, g.grp))
+	if len(sigmaEPs) == 1 {
+		if err := g.MkLeasedEndpoint(GrpPath(g.jobdir, g.grp), ep, g.lc.Lease()); err != nil {
+			db.DFatalf("advertiseEPs: make replica addrs file %v err %v", g.grp, err)
+		}
+	} else {
+		if err := g.WriteEndpointFile(GrpPath(g.jobdir, g.grp), ep); err != nil {
+			db.DFatalf("advertiseEPs: make replica addrs file %v err %v", g.grp, err)
+		}
 	}
 }
 
@@ -128,12 +138,17 @@ func RunMember(job, grp string, myid, nrepl int) {
 	g.SigmaClnt = sc
 	g.jobdir = JobDir(job)
 
+	s := os.Getenv(proc.SIGMAGEN)
+	if gen, err := strconv.Atoi(s); err == nil {
+		g.gen = gen
+	}
+
 	g.lc, err = leaderclnt.NewLeaderClnt(sc.FsLib, grpElectPath(g.jobdir, grp), 0777)
 	if err != nil {
 		db.DFatalf("NewLeaderClnt %v\n", err)
 	}
 
-	db.DPrintf(db.KVGRP, "Starting replica %d with replication level %v", g.myid, nrepl)
+	db.DPrintf(db.KVGRP, "Starting replica %d (gen# %d) with nrepl %v", g.myid, g.gen, nrepl)
 
 	g.Started()
 
@@ -142,27 +157,39 @@ func RunMember(job, grp string, myid, nrepl int) {
 
 	g.AcquireLeadership()
 
-	cfg := g.readCreateCfg(g.myid, nrepl)
+	cfg := g.readCreateCfg(nrepl)
 
 	var raftCfg *replraft.RaftConfig
 	if nrepl > 0 {
 		cfg, raftCfg = g.newRaftCfg(cfg, g.myid, nrepl)
 	}
 
-	db.DPrintf(db.KVGRP, "Grp config: %v config: %v raftCfg %v", g.myid, cfg, raftCfg)
+	g.updateCfg(cfg, g.lc.Fence())
+
+	db.DPrintf(db.KVGRP, "Lock holder: %v config: %v raftCfg %v", g.myid, cfg, raftCfg)
 
 	cfg, err = g.startServer(cfg, raftCfg)
 	if err != nil {
 		db.DFatalf("startServer %v\n", err)
 	}
 
-	g.writeSymlink(cfg.SigmaEPs)
+	g.advertiseEPs(cfg.SigmaEPs)
 
 	g.ReleaseLeadership()
 
-	crash.Crasher(g.FsLib)
-	crash.Partitioner(g.ssrv.SessSrv)
-	crash.NetFailer(g.ssrv.SessSrv)
+	if (nrepl > 0 && cfg.Fence.Seqno == 1) || nrepl == 0 {
+		// if nrepl > 0, crash only on first configuration because restart
+		// and reconfigure aren't supported
+		crash.Failer(crash.KVD_CRASH, func(e crash.Tevent) {
+			crash.Crash()
+		})
+		crash.Failer(crash.KVD_NETFAIL, func(e crash.Tevent) {
+			g.ssrv.SessSrv.PartitionClient(false)
+		})
+		crash.Failer(crash.KVD_PARTITION, func(e crash.Tevent) {
+			g.ssrv.SessSrv.PartitionClient(true)
+		})
+	}
 
 	// Record performance.
 	p, err := perf.NewPerf(g.ProcEnv(), perf.GROUP)

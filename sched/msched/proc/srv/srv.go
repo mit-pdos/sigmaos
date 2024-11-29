@@ -77,7 +77,7 @@ type ProcSrv struct {
 	ssrv           *sigmasrv.SigmaSrv
 	kc             *kernelclnt.KernelClnt
 	sc             *sigmaclnt.SigmaClnt
-	scsc           *spproxysrv.SPProxySrvCmd
+	spc            *spproxysrv.SPProxySrvCmd
 	binsrv         *exec.Cmd
 	kernelId       string
 	realm          sp.Trealm
@@ -151,11 +151,11 @@ func RunProcSrv(kernelId string, dialproxy bool, spproxydPID sp.Tpid) error {
 	scdp := proc.NewPrivProcPid(ps.spproxydPID, "spproxyd", nil, true)
 	scdp.InheritParentProcEnv(ps.pe)
 	scdp.SetHow(proc.HLINUX)
-	scsc, err := spproxysrv.ExecSPProxySrv(scdp, ps.pe.GetInnerContainerIP(), ps.pe.GetOuterContainerIP(), sp.NOT_SET)
+	spc, err := spproxysrv.ExecSPProxySrv(scdp, ps.pe.GetInnerContainerIP(), ups.pe.GetOuterContainerIP(), sp.NOT_SET)
 	if err != nil {
 		return err
 	}
-	ps.scsc = scsc
+	ups.spc = spc
 
 	if err = ssrv.RunServer(); err != nil {
 		db.DPrintf(db.PROCD_ERR, "RunServer err %v\n", err)

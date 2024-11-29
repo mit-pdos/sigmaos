@@ -23,9 +23,10 @@ import (
 	api "sigmaos/apps/mr/mr"
 	mrscanner "sigmaos/apps/mr/scanner"
 	"sigmaos/auth"
+	"sigmaos/crash"
 	db "sigmaos/debug"
-	mschedclnt "sigmaos/sched/msched/clnt"
 	"sigmaos/proc"
+	mschedclnt "sigmaos/sched/msched/clnt"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/util/perf"
@@ -54,10 +55,20 @@ var nmap int
 var job *mr.Job
 var timeout time.Duration
 
+var coordEv []crash.Tevent
+var taskEv []crash.Tevent
+
 func init() {
 	flag.StringVar(&app, "app", "mr-wc.yml", "application")
 	flag.IntVar(&nmap, "nmap", 1, "number of mapper threads")
 	flag.DurationVar(&timeout, "mr-timeout", 0, "timeout")
+
+	e0 := crash.Tevent{crash.MRTASK_CRASH, 100, CRASHTASK, 0.33, 0}
+	e1 := crash.Tevent{crash.MRTASK_PARTITION, 100, CRASHTASK, 0.33, 0}
+	taskEv = []crash.Tevent{e0, e1}
+	e0 = crash.Tevent{crash.MRCOORD_CRASH, 100, CRASHTASK, 0.33, 0}
+	e1 = crash.Tevent{crash.MRCOORD_PARTITION, 100, CRASHTASK, 0.33, 0}
+	coordEv = []crash.Tevent{e0, e1}
 }
 
 func TestCompile(t *testing.T) {
@@ -375,7 +386,7 @@ func (ts *Tstate) checkJob(app string) bool {
 	return true
 }
 
-func runN(t *testing.T, crashtask, crashcoord, crashschedd, crashprocq, crashux, maliciousMapper int, monitor bool) {
+func runN(t *testing.T, evs []crash.Tevent, crashschedd, crashprocq, crashux, maliciousMapper int, monitor bool) {
 	var s3secrets *sp.SecretProto
 	var err1 error
 	// If running with malicious mappers, try to get restricted AWS secrets
@@ -415,11 +426,15 @@ func runN(t *testing.T, crashtask, crashcoord, crashschedd, crashprocq, crashux,
 		}
 	}
 
+	// XXX maybe in pe
+	err := crash.SetSigmaFail(evs)
+	assert.Nil(t, err)
+
 	jobRoot := mr.MRDIRTOP
 
 	ts := newTstate(t1, jobRoot, runApp)
 
-	err := ts.BootNode(1)
+	err = ts.BootNode(1)
 	assert.Nil(t, err, "BootProcd 1")
 
 	err = ts.BootNode(1)
@@ -435,7 +450,7 @@ func runN(t *testing.T, crashtask, crashcoord, crashschedd, crashprocq, crashux,
 	assert.Nil(ts.T, err, "Err prepare job %v: %v", job, err)
 	assert.NotEqual(ts.T, 0, nmap)
 
-	cm := mr.StartMRJob(sc, ts.jobRoot, ts.job, job, mr.NCOORD, nmap, crashtask, crashcoord, MEM_REQ, maliciousMapper)
+	cm := mr.StartMRJob(sc, ts.jobRoot, ts.job, job, nmap, MEM_REQ, maliciousMapper)
 
 	crashchan := make(chan bool)
 	l1 := &sync.Mutex{}
@@ -483,69 +498,71 @@ func runN(t *testing.T, crashtask, crashcoord, crashschedd, crashprocq, crashux,
 }
 
 func TestMRJob(t *testing.T) {
-	runN(t, 0, 0, 0, 0, 0, 0, true)
+	runN(t, nil, 0, 0, 0, 0, true)
 }
 
 func TestMaliciousMapper(t *testing.T) {
-	runN(t, 0, 0, 0, 0, 0, 500, true)
+	runN(t, nil, 0, 0, 0, 500, true)
 }
 
 func TestCrashTaskOnly(t *testing.T) {
-	runN(t, CRASHTASK, 0, 0, 0, 0, 0, false)
+	runN(t, taskEv, 0, 0, 0, 0, false)
 }
 
 func TestCrashCoordOnly(t *testing.T) {
-	runN(t, 0, CRASHCOORD, 0, 0, 0, 0, false)
+	runN(t, coordEv, 0, 0, 0, 0, false)
 }
 
 func TestCrashTaskAndCoord(t *testing.T) {
-	runN(t, CRASHTASK, CRASHCOORD, 0, 0, 0, 0, false)
+	evs := append([]crash.Tevent{}, taskEv...)
+	evs = append(evs, coordEv...)
+	runN(t, evs, 0, 0, 0, 0, false)
 }
 
 func TestCrashMSched1(t *testing.T) {
-	runN(t, 0, 0, 1, 0, 0, 0, false)
+	runN(t, nil, 1, 0, 0, 0, false)
 }
 
 func TestCrashMSched2(t *testing.T) {
 	N := 2
-	runN(t, 0, 0, N, 0, 0, 0, false)
+	runN(t, nil, N, 0, 0, 0, false)
 }
 
 func TestCrashMSchedN(t *testing.T) {
 	N := 5
-	runN(t, 0, 0, N, 0, 0, 0, false)
+	runN(t, nil, N, 0, 0, 0, false)
 }
 
 func TestCrashProcq1(t *testing.T) {
-	runN(t, 0, 0, 0, 1, 0, 0, false)
+	runN(t, nil, 0, 1, 0, 0, false)
 }
 
 func TestCrashProcq2(t *testing.T) {
 	N := 2
-	runN(t, 0, 0, 0, N, 0, 0, false)
+	runN(t, nil, 0, N, 0, 0, false)
 }
 
 func TestCrashProcqN(t *testing.T) {
 	N := 5
-	runN(t, 0, 0, 0, N, 0, 0, false)
+	runN(t, nil, 0, N, 0, 0, false)
 }
 
 func TestCrashUx1(t *testing.T) {
 	N := 1
-	runN(t, 0, 0, 0, 0, N, 0, false)
+	runN(t, nil, 0, 0, N, 0, false)
 }
 
 func TestCrashUx2(t *testing.T) {
 	N := 2
-	runN(t, 0, 0, 0, 0, N, 0, false)
+	runN(t, nil, 0, 0, N, 0, false)
 }
 
 func TestCrashUx5(t *testing.T) {
 	N := 5
-	runN(t, 0, 0, 0, 0, N, 0, false)
+	runN(t, nil, 0, 0, N, 0, false)
 }
 
 func TestCrashMSchedProcqUx5(t *testing.T) {
 	N := 5
-	runN(t, 0, 0, N, N, N, 0, false)
+	runN(t, nil, N, N, N, 0, false)
 }

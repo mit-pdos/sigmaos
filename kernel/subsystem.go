@@ -77,13 +77,14 @@ func newSubsystem(pclnt *procclnt.ProcClnt, k *Kernel, p *proc.Proc, how proc.Th
 	return newSubsystemCmd(pclnt, k, p, how, nil)
 }
 
-func (k *Kernel) bootSubsystemPIDWithMcpu(pid sp.Tpid, program string, args []string, realm sp.Trealm, how proc.Thow, mcpu proc.Tmcpu) (Subsystem, error) {
+func (k *Kernel) bootSubsystemPIDWithMcpu(pid sp.Tpid, program string, args, env []string, realm sp.Trealm, how proc.Thow, mcpu proc.Tmcpu) (Subsystem, error) {
 	p := proc.NewPrivProcPid(pid, program, args, true)
 	p.SetRealm(realm)
 	p.GetProcEnv().SetInnerContainerIP(k.ip)
 	p.GetProcEnv().SetOuterContainerIP(k.ip)
 	p.GetProcEnv().SetSecrets(k.ProcEnv().GetSecrets())
 	p.SetMcpu(mcpu)
+	p.UpdateEnv(env)
 	var sck *sigmaclnt.SigmaClntKernel
 	var err error
 	if realm == sp.ROOTREALM {
@@ -98,9 +99,9 @@ func (k *Kernel) bootSubsystemPIDWithMcpu(pid sp.Tpid, program string, args []st
 	return ss, ss.Run(how, k.Param.KernelID, k.ip)
 }
 
-func (k *Kernel) bootSubsystem(program string, args []string, realm sp.Trealm, how proc.Thow, mcpu proc.Tmcpu) (Subsystem, error) {
+func (k *Kernel) bootSubsystem(program string, args, env []string, realm sp.Trealm, how proc.Thow, mcpu proc.Tmcpu) (Subsystem, error) {
 	pid := sp.GenPid(program)
-	return k.bootSubsystemPIDWithMcpu(pid, program, args, realm, how, mcpu)
+	return k.bootSubsystemPIDWithMcpu(pid, program, args, env, realm, how, mcpu)
 }
 
 func (s *KernelSubsystem) Evict() error {

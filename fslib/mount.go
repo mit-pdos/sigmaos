@@ -15,7 +15,7 @@ func (fsl *FsLib) MkLeasedEndpoint(pn string, ep *sp.Tendpoint, lid sp.TleaseId)
 		return err
 	}
 	if _, err := fsl.PutLeasedFile(pn, 0777|sp.DMSYMLINK, sp.OWRITE|sp.OEXCL, lid, b); err != nil {
-		db.DPrintf(db.ALWAYS, "MkEndpointFile: PutLeasedFile %v err %v\n", pn, err)
+		db.DPrintf(db.ALWAYS, "MkLeasedEndpoint: %v err %v\n", pn, err)
 		return err
 	}
 	return nil
@@ -27,7 +27,19 @@ func (fsl *FsLib) MkEndpointFile(pn string, ep *sp.Tendpoint) error {
 		return err
 	}
 	if _, err := fsl.PutFile(pn, 0777|sp.DMSYMLINK, sp.OWRITE|sp.OEXCL, b); err != nil {
-		db.DPrintf(db.ALWAYS, "MkEndpointFile: PutFile %v err %v\n", pn, err)
+		db.DPrintf(db.ALWAYS, "MkEndpointFile: %v err %v\n", pn, err)
+		return err
+	}
+	return nil
+}
+
+func (fsl *FsLib) WriteEndpointFile(pn string, ep *sp.Tendpoint) error {
+	b, err := ep.Marshal()
+	if err != nil {
+		return err
+	}
+	if err := fsl.PutFileAtomic(pn, 0777|sp.DMSYMLINK, b); err != nil {
+		db.DPrintf(db.ALWAYS, "WriteEndpointFile %v err %v\n", pn, err)
 		return err
 	}
 	return nil

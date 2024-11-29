@@ -23,6 +23,8 @@ const (
 	SIGMADEBUG     = "SIGMADEBUG"
 	SIGMACONFIG    = "SIGMACONFIG"
 	SIGMAPRINCIPAL = "SIGMAPRINCIPAL"
+	SIGMAFAIL      = "SIGMAFAIL"
+	SIGMAGEN       = "SIGMAGEN"
 )
 
 type ProcEnv struct {
@@ -52,6 +54,22 @@ func GetSigmaPerf() string {
 
 func GetSigmaDebug() string {
 	return os.Getenv(SIGMADEBUG)
+}
+
+func GetSigmaFail() string {
+	return os.Getenv(SIGMAFAIL)
+}
+
+func SetSigmaFail(s string) {
+	os.Setenv(SIGMAFAIL, s)
+}
+
+func GetSigmaGen() string {
+	return os.Getenv(SIGMAGEN)
+}
+
+func SetSigmaGen(s string) {
+	os.Setenv(SIGMAGEN, s)
 }
 
 func GetLabelsEnv(envvar string) map[string]bool {
@@ -92,6 +110,7 @@ func NewProcEnv(program string, pid sp.Tpid, realm sp.Trealm, principal *sp.Tpri
 			Strace:              os.Getenv(SIGMASTRACE),
 			Debug:               os.Getenv(SIGMADEBUG),
 			ProcdPIDStr:         sp.NOT_SET,
+			Fail:                os.Getenv(SIGMAFAIL),
 			Privileged:          priv,
 			UseSPProxy:          useSPProxy,
 			UseDialProxy:        useDialProxy,
@@ -328,6 +347,10 @@ func (pe *ProcEnv) GetNamedEndpoint() (*sp.Tendpoint, bool) {
 	return sp.NewEndpointFromProto(mp), true
 }
 
+func (pe *ProcEnv) SetNamedEndpoint(ep *sp.Tendpoint) {
+	pe.ProcEnvProto.NamedEndpointProto = ep.TendpointProto
+}
+
 func (pe *ProcEnv) Marshal() string {
 	b, err := json.Marshal(pe)
 	if err != nil {
@@ -363,6 +386,7 @@ func (pe *ProcEnv) String() string {
 		"EtcdMnt:%v "+
 		"InnerIP:%v "+
 		"OuterIP:%v "+
+		"Named:%v "+
 		"BuildTag:%v "+
 		"Privileged:%v "+
 		"Crash:%v "+
@@ -371,7 +395,8 @@ func (pe *ProcEnv) String() string {
 		"UseSPProxy:%v "+
 		"UseDialProxy:%v "+
 		"SigmaPath:%v "+
-		"RealmSwitch:%v"+
+		"RealmSwitch:%v "+
+		"Fail:%v"+
 		"}",
 		pe.Program,
 		pe.Version,
@@ -388,6 +413,7 @@ func (pe *ProcEnv) String() string {
 		pe.GetEtcdEndpoints(),
 		pe.InnerContainerIPStr,
 		pe.OuterContainerIPStr,
+		pe.NamedEndpointProto,
 		pe.BuildTag,
 		pe.Privileged,
 		pe.Crash,
@@ -397,5 +423,6 @@ func (pe *ProcEnv) String() string {
 		pe.UseDialProxy,
 		pe.SigmaPath,
 		pe.RealmSwitchStr,
+		pe.Fail,
 	)
 }

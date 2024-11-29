@@ -21,8 +21,8 @@ import (
 	"sync"
 	"time"
 
-	"sigmaos/apps/kv/kvgrp"
 	"sigmaos/apps/cache"
+	"sigmaos/apps/kv/kvgrp"
 	"sigmaos/crash"
 	"sigmaos/ctx"
 	db "sigmaos/debug"
@@ -43,16 +43,15 @@ import (
 type Balancer struct {
 	sync.Mutex
 	*sigmaclnt.SigmaClnt
-	conf        *Config
-	lc          *leaderclnt.LeaderClnt
-	mo          *Monitor
-	job         string
-	kvdmcpu     proc.Tmcpu
-	ch          chan bool
-	crashhelper int64
-	isBusy      bool // in config change?
-	kc          *KvClerk
-	repl        string
+	conf    *Config
+	lc      *leaderclnt.LeaderClnt
+	mo      *Monitor
+	job     string
+	kvdmcpu proc.Tmcpu
+	ch      chan bool
+	isBusy  bool // in config change?
+	kc      *KvClerk
+	repl    string
 }
 
 func (bl *Balancer) testAndSetIsBusy() bool {
@@ -69,7 +68,7 @@ func (bl *Balancer) clearIsBusy() {
 	bl.isBusy = false
 }
 
-func RunBalancer(job, crashhelperstr, kvdmcpu string, auto string, repl string) {
+func RunBalancer(job, kvdmcpu string, auto string, repl string) {
 	bl := &Balancer{}
 
 	// reject requests for changes until after recovery
@@ -81,11 +80,6 @@ func RunBalancer(job, crashhelperstr, kvdmcpu string, auto string, repl string) 
 	}
 	bl.SigmaClnt = sc
 	bl.job = job
-	crashhelper, err := strconv.Atoi(crashhelperstr)
-	if err != nil {
-		db.DFatalf("Error atoi crashhelperstr: %v", err)
-	}
-	bl.crashhelper = int64(crashhelper)
 	bl.kc = NewClerkFsLib(sc.FsLib, job, repl == "repl")
 	bl.repl = repl
 
@@ -139,7 +133,7 @@ func RunBalancer(job, crashhelperstr, kvdmcpu string, auto string, repl string) 
 	// first epoch is used to create a functional system (e.g.,
 	// creating shards), so don't allow a crash then.
 	if _, err := bl.Stat(KVConfig(bl.job)); err == nil {
-		crash.Crasher(bl.FsLib)
+		crash.FailersDefault([]crash.Tselector{crash.KVBALANCER_CRASH, crash.KVBALANCER_PARTITION}, bl.FsLib)
 	}
 
 	go bl.monitorMyself()
@@ -256,7 +250,7 @@ func (bl *Balancer) monitorMyself() {
 		time.Sleep(time.Duration(500) * time.Millisecond)
 		_, err := readConfig(bl.FsLib, KVConfig(bl.job))
 		if serr.IsErrCode(err, serr.TErrUnreachable) {
-			crash.Fail(0)
+			crash.Crash()
 		}
 	}
 }
@@ -265,7 +259,7 @@ func (bl *Balancer) monitorMyself() {
 func (bl *Balancer) PostConfig() {
 	if err := bl.PutFileJsonAtomic(KVConfig(bl.job), 0777, *bl.conf); err != nil {
 		if serr.IsErrCode(err, serr.TErrUnreachable) {
-			crash.Fail(0)
+			crash.Crash()
 		}
 		db.DFatalf("NewFile %v err %v\n", KVConfig(bl.job), err)
 	}
@@ -313,7 +307,6 @@ func (bl *Balancer) initShards(nextShards []string) {
 
 func (bl *Balancer) spawnProc(args []string) (sp.Tpid, error) {
 	p := proc.NewProc(args[0], args[1:])
-	p.SetCrash(bl.crashhelper)
 	err := bl.Spawn(p)
 	if err != nil {
 		db.DPrintf(db.KVBAL_ERR, "spawn pid %v err %v\n", p.GetPid(), err)
@@ -449,7 +442,7 @@ func (bl *Balancer) balance(opcode, kvd string) *serr.Err {
 	bl.doMoves(moves)
 
 	if docrash { // start crashing?
-		crash.Crasher(bl.FsLib)
+		crash.FailersDefault([]crash.Tselector{crash.KVBALANCER_CRASH, crash.KVBALANCER_PARTITION}, bl.FsLib)
 	}
 
 	return nil

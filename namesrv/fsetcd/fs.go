@@ -128,7 +128,7 @@ func (fs *FsEtcd) PutFile(dei *DirEntInfo, nf *EtcdFile, f sp.Tfence) (stats.Tco
 		if !resp.Succeeded {
 			if len(resp.Responses[0].GetResponseRange().Kvs) != 1 {
 				db.DPrintf(db.FENCEFS, "PutFile dei %v f %v resp %v stale\n", dei, f, resp)
-				return c, serr.NewErr(serr.TErrStale, fs.fencekey)
+				return c, serr.NewErr(serr.TErrUnreachable, fs.fencekey)
 			}
 			if fenced && len(resp.Responses[1].GetResponseRange().Kvs) != 1 {
 				db.DPrintf(db.FENCEFS, "PutFile dei %v f %v resp %v stale\n", dei, f, resp)
@@ -248,10 +248,9 @@ func (fs *FsEtcd) updateDir(dei *DirEntInfo, dir *DirInfo, v sp.TQversion) (stat
 		return c, serr.NewErrError(err)
 	}
 	if !resp.Succeeded {
-		if len(resp.Responses[0].GetResponseRange().Kvs) == 1 &&
-			resp.Responses[0].GetResponseRange().Kvs[0].CreateRevision != fs.fencerev {
+		if len(resp.Responses[0].GetResponseRange().Kvs) != 1 {
 			db.DPrintf(db.FSETCD, "updateDir %v stale\n", fs.fencekey)
-			return c, serr.NewErr(serr.TErrStale, fs.fencekey)
+			return c, serr.NewErr(serr.TErrUnreachable, fs.fencekey)
 		}
 		db.DPrintf(db.FSETCD, "updateDir %v version mismatch %v %v\n", dei.Path, v, resp.Responses[1])
 		return c, serr.NewErr(serr.TErrVersion, dei.Path)
@@ -301,10 +300,9 @@ func (fs *FsEtcd) create(dei *DirEntInfo, dir *DirInfo, v sp.TQversion, new *Dir
 		return c, serr.NewErrError(err)
 	}
 	if !resp.Succeeded {
-		if len(resp.Responses[0].GetResponseRange().Kvs) == 1 &&
-			resp.Responses[0].GetResponseRange().Kvs[0].CreateRevision != fs.fencerev {
+		if len(resp.Responses[0].GetResponseRange().Kvs) != 1 {
 			db.DPrintf(db.FSETCD, "create %v stale\n", fs.fencekey)
-			return c, serr.NewErr(serr.TErrStale, fs.fencekey)
+			return c, serr.NewErr(serr.TErrUnreachable, fs.fencekey)
 		}
 		if fenced && len(resp.Responses[3].GetResponseRange().Kvs) != 1 {
 			db.DPrintf(db.FENCEFS, "rename %v f stale", f)
@@ -353,10 +351,9 @@ func (fs *FsEtcd) remove(dei *DirEntInfo, dir *DirInfo, v sp.TQversion, del *Dir
 		return c, serr.NewErrError(err)
 	}
 	if !resp.Succeeded {
-		if len(resp.Responses[0].GetResponseRange().Kvs) == 1 &&
-			resp.Responses[0].GetResponseRange().Kvs[0].CreateRevision != fs.fencerev {
+		if len(resp.Responses[0].GetResponseRange().Kvs) != 1 {
 			db.DPrintf(db.FSETCD, "remove %v stale\n", fs.fencekey)
-			return c, serr.NewErr(serr.TErrStale, fs.fencekey)
+			return c, serr.NewErr(serr.TErrUnreachable, fs.fencekey)
 		}
 		if fenced && len(resp.Responses[3].GetResponseRange().Kvs) != 1 {
 			db.DPrintf(db.FSETCD, "remove %v stale\n", f)
@@ -418,10 +415,9 @@ func (fs *FsEtcd) rename(dei *DirEntInfo, dir *DirInfo, v sp.TQversion, del, fro
 		return c, serr.NewErrError(err)
 	}
 	if !resp.Succeeded {
-		if len(resp.Responses[0].GetResponseRange().Kvs) == 1 &&
-			resp.Responses[0].GetResponseRange().Kvs[0].CreateRevision != fs.fencerev {
+		if len(resp.Responses[0].GetResponseRange().Kvs) != 1 {
 			db.DPrintf(db.FSETCD, "rename %v stale", fs.fencekey)
-			return c, serr.NewErr(serr.TErrStale, fs.fencekey)
+			return c, serr.NewErr(serr.TErrUnreachable, fs.fencekey)
 		}
 		if fenced && len(resp.Responses[3].GetResponseRange().Kvs) != 1 {
 			db.DPrintf(db.FENCEFS, "rename %v f stale", f)
@@ -497,10 +493,9 @@ func (fs *FsEtcd) renameAt(deif *DirEntInfo, dirf *DirInfo, vf sp.TQversion, dei
 		return c, serr.NewErrError(err)
 	}
 	if !resp.Succeeded {
-		if len(resp.Responses[0].GetResponseRange().Kvs) == 1 &&
-			resp.Responses[0].GetResponseRange().Kvs[0].CreateRevision != fs.fencerev {
+		if len(resp.Responses[0].GetResponseRange().Kvs) != 1 {
 			db.DPrintf(db.FSETCD, "renameat %v stale\n", fs.fencekey)
-			return c, serr.NewErr(serr.TErrStale, fs.fencekey)
+			return c, serr.NewErr(serr.TErrUnreachable, fs.fencekey)
 		}
 		if len(resp.Responses[1].GetResponseRange().Kvs) != 1 {
 			db.DPrintf(db.FSETCD, "renameat from %v doesn't exist\n", from)

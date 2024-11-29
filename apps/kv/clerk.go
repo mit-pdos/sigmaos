@@ -196,7 +196,7 @@ func (kc *KvClerk) dorepl(o *op, srv string, s cache.Tshard) {
 			req, o.err = kc.cc.NewPut(nil, string(o.k), o.val, &kc.conf.Fence)
 		}
 	}
-	db.DPrintf(db.KVCLERK, "do %v err %v\n", req, o.err)
+	db.DPrintf(db.KVCLERK, "dorepl %v err %v\n", req, o.err)
 	if o.err == nil {
 		var b []byte
 		b, o.err = kc.rc.ReplOp(srv, m, string(o.k), req)
@@ -229,7 +229,7 @@ func (kc *KvClerk) dorepl(o *op, srv string, s cache.Tshard) {
 }
 
 func (kc *KvClerk) do(o *op, srv string, s cache.Tshard) {
-	db.DPrintf(db.KVCLERK, "do %v repl %v\n", o, kc.rc != nil)
+	db.DPrintf(db.KVCLERK, "do %v srv %q repl %v\n", o, srv, kc.rc != nil)
 	if kc.rc != nil {
 		kc.dorepl(o, srv, s)
 	} else {

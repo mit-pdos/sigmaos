@@ -129,7 +129,7 @@ func (pdm *ProcdMgr) GetCPUUtil(realm sp.Trealm) float64 {
 
 func (pdm *ProcdMgr) startProcd() (sp.Tpid, *ProcClnt) {
 	s := time.Now()
-	pid, err := pdm.kclnt.Boot("procd", []string{pdm.kernelId})
+	pid, err := pdm.kclnt.Boot("procd", []string{pdm.kernelId}, []string{})
 	db.DPrintf(db.SPAWN_LAT, "Boot procd latency: %v", time.Since(s))
 	if err != nil {
 		db.DFatalf("Error Boot Procd: %v", err)
@@ -195,7 +195,7 @@ func (pdm *ProcdMgr) WarmProcd(pid sp.Tpid, realm sp.Trealm, prog string, path [
 	}
 	ep, err := pdm.fsl.GetNamedEndpointRealm(realm)
 	if err != nil {
-		db.DPrintf(db.ERROR, "Error get realm named EP in WarmProc: %v", err)
+		db.DPrintf(db.ERROR, "Error get realm named EP in WarmProcd: %v", err)
 		return err, nil
 	}
 	return rpcc.WarmProcd(pid, realm, prog, pdm.fsl.ProcEnv().GetSecrets()["s3"], ep, path)

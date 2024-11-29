@@ -103,7 +103,7 @@ type Tstate struct {
 	killidx int
 	T       *testing.T
 	proc    *proc.Proc
-	scsck   *bootkernelclnt.Kernel
+	spkc    *bootkernelclnt.Kernel
 }
 
 func NewTstatePath(t *testing.T, path string) (*Tstate, error) {
@@ -194,17 +194,16 @@ func newSysClnt(t *testing.T, ntype bootkernelclnt.Tboot) (*Tstate, error) {
 			return nil, err
 		}
 	}
-	var scsck *bootkernelclnt.Kernel
-	var sckid string
+	var spkc *bootkernelclnt.Kernel
 	if !noBootDialProxy && (useSPProxy || useDialProxy) {
 		db.DPrintf(db.BOOT, "Booting spproxyd: usespproxyd %v usedialproxy %v", useSPProxy, useDialProxy)
-		sckid = sp.SPProxydKernel(bootkernelclnt.GenKernelId())
+		sckid := sp.SPProxydKernel(bootkernelclnt.GenKernelId())
 		_, err := bootkernelclnt.Start(sckid, sp.Tip(EtcdIP), pe, sp.SPPROXYDREL, useDialProxy)
 		if err != nil {
 			db.DPrintf(db.ALWAYS, "Error start kernel for spproxyd")
 			return nil, err
 		}
-		scsck, err = bootkernelclnt.NewKernelClnt(sckid, sp.Tip(EtcdIP), pe)
+		spkc, err = bootkernelclnt.NewKernelClnt(sckid, sp.Tip(EtcdIP), pe)
 		if err != nil {
 			db.DPrintf(db.ALWAYS, "Error make kernel clnt for spproxyd")
 			return nil, err
@@ -221,7 +220,7 @@ func newSysClnt(t *testing.T, ntype bootkernelclnt.Tboot) (*Tstate, error) {
 		kclnts:    []*bootkernelclnt.Kernel{k},
 		killidx:   0,
 		T:         t,
-		scsck:     scsck,
+		spkc:      spkc,
 	}
 	return savedTstate, nil
 }
@@ -258,6 +257,13 @@ func (ts *Tstate) Boot(s string) error {
 	// node
 	savedTstate = nil
 	return ts.kclnts[0].Boot(s)
+}
+
+func (ts *Tstate) BootEnv(s string, env []string) error {
+	// Clear the saved kernel, since the next test may not need an additional
+	// node
+	savedTstate = nil
+	return ts.kclnts[0].BootEnv(s, env)
 }
 
 func (ts *Tstate) BootFss3d() error {
@@ -320,11 +326,11 @@ func (ts *Tstate) Shutdown() error {
 			}
 			ts.kclnts[i].Close()
 		}
-		if ts.scsck != nil {
-			if err := ts.scsck.Shutdown(); err != nil {
+		if ts.spkc != nil {
+			if err := ts.spkc.Shutdown(); err != nil {
 				db.DPrintf(db.ALWAYS, "Shutdown spproxyd err %v", err)
 			}
-			ts.scsck.Close()
+			ts.spkc.Close()
 		}
 	}
 	return nil

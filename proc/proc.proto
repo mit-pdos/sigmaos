@@ -42,6 +42,7 @@ message ProcEnvProto {
   repeated string kernels = 28;
   string realmSwitchStr = 29;
   string version = 30;
+  string fail = 31;
 }
 
 message ProcProto {

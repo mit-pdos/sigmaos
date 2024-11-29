@@ -36,7 +36,7 @@ func (rt *ReplyTable) IsDuplicate(cid sp.TclntId, seqno sp.Tseqno) (bool, error,
 	defer rt.Unlock()
 
 	e, ok := rt.replies[cid]
-	if ok && e.seqno == seqno {
+	if ok && e.seqno >= seqno {
 		return true, e.err, e.reply
 	}
 	return false, nil, nil

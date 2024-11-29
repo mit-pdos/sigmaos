@@ -10,6 +10,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"sigmaos/crash"
 	db "sigmaos/debug"
 	"sigmaos/groupmgr"
 	"sigmaos/linuxsched"
@@ -78,10 +79,14 @@ func spawnSleeperMcpu(t *testing.T, ts *test.Tstate, pid sp.Tpid, mcpu proc.Tmcp
 	assert.Nil(t, err, "Spawn")
 }
 
-func spawnSpawner(t *testing.T, ts *test.Tstate, wait bool, childPid sp.Tpid, msecs, crash int) sp.Tpid {
+func spawnSpawner(t *testing.T, ts *test.Tstate, wait bool, childPid sp.Tpid, msecs, c int64) sp.Tpid {
 	p := proc.NewProc("spawner", []string{strconv.FormatBool(wait), childPid.String(), "sleeper", fmt.Sprintf("%dms", msecs), "name/"})
-	p.SetCrash(int64(crash))
-	err := ts.Spawn(p)
+	e0 := crash.Tevent{crash.SPAWNER_CRASH, 0, c, 0.33, 0}
+	e1 := crash.Tevent{crash.SPAWNER_PARTITION, 0, c, 0.66, 0}
+	s, err := crash.MakeTevents([]crash.Tevent{e0, e1})
+	assert.Nil(t, err)
+	p.AppendEnv(proc.SIGMAFAIL, s)
+	err = ts.Spawn(p)
 	assert.Nil(t, err, "Spawn")
 	return p.GetPid()
 }
@@ -853,7 +858,7 @@ func TestMaintainReplicationLevelCrashSchedd(t *testing.T) {
 
 	// Start a bunch of replicated spinner procs.
 	cfg := groupmgr.NewGroupConfig(N_REPL, "spinner", []string{}, 0, OUTDIR)
-	sm := cfg.StartGrpMgr(ts.SigmaClnt, 0)
+	sm := cfg.StartGrpMgr(ts.SigmaClnt)
 	db.DPrintf(db.TEST, "GrpMgr started")
 
 	// Wait for them to spawn.

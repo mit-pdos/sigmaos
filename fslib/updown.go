@@ -47,3 +47,24 @@ func (fsl *FsLib) UploadDir(lpn, spn string) error {
 	}
 	return nil
 }
+
+// Download a sigma a into lpn
+func (fsl *FsLib) DownloadFile(spn, lpn string) error {
+	src, err := fsl.OpenReader(spn)
+	if err != nil {
+		db.DPrintf(db.FSLIB, "OpenWriter %v err %v\n", spn, err)
+		return err
+	}
+	defer src.Close()
+	rdr := bufio.NewReader(src)
+	wrt, err := os.OpenFile(lpn, os.O_RDWR, 0)
+	if err != nil {
+		return err
+	}
+	defer wrt.Close()
+	if _, err := io.Copy(wrt, rdr); err != nil {
+		db.DPrintf(db.FSLIB, "UploadFile: Copy err %v", err)
+		return err
+	}
+	return nil
+}

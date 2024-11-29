@@ -16,11 +16,11 @@ import (
 	"sigmaos/apps/hotel/proto"
 	db "sigmaos/debug"
 	"sigmaos/fs"
-	"sigmaos/util/perf"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
 	"sigmaos/sigmasrv"
 	"sigmaos/tracing"
+	"sigmaos/util/perf"
 )
 
 type GeoIndexes struct {
@@ -75,9 +75,7 @@ type Geo struct {
 
 // Run starts the server
 func RunGeoSrv(job string, ckptpn string, nidxStr string, maxSearchRadiusStr string, maxSearchResultsStr string) error {
-func RunGeoSrv(job, ckptpn string) error {
 	db.DPrintf(db.CKPT, "start %v %v\n", job, ckptpn)
-	rand.Seed(RAND_SEED)
 	nidx, err := strconv.Atoi(nidxStr)
 	if err != nil {
 		db.DFatalf("Invalid nidx: %v", err)

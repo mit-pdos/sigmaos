@@ -6,11 +6,11 @@ import (
 	"os"
 
 	db "sigmaos/debug"
-	"sigmaos/netproxyclnt"
-	"sigmaos/perf"
+	dialproxyclnt "sigmaos/dialproxy/clnt"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
+	"sigmaos/util/perf"
 )
 
 func RunKNamed(args []string) error {
@@ -27,15 +27,13 @@ func RunKNamed(args []string) error {
 	}
 	defer p.Done()
 
-	sc, err := sigmaclnt.NewSigmaClntFsLib(pe, netproxyclnt.NewNetProxyClnt(pe))
+	sc, err := sigmaclnt.NewSigmaClntFsLib(pe, dialproxyclnt.NewDialProxyClnt(pe))
 	if err != nil {
 		db.DFatalf("NewSigmaClntFsLib: err %v", err)
 	}
 	nd.SigmaClnt = sc
 
 	init := args[2]
-
-	nd.signer = sp.Tsigner(nd.SigmaClnt.ProcEnv().GetKernelID())
 
 	db.DPrintf(db.NAMED, "started %v %v", pe.GetPID(), nd.realm)
 
@@ -87,7 +85,7 @@ func RunKNamed(args []string) error {
 	return nil
 }
 
-var InitRootDir = []string{sp.BOOT, sp.KPIDS, sp.MEMFS, sp.LCSCHED, sp.PROCQ, sp.SCHEDD, sp.UX, sp.S3, sp.DB, sp.MONGO, sp.REALM, sp.CHUNKD, sp.LAZYPAGESD}
+var InitRootDir = []string{sp.BOOT, sp.KPIDS, sp.MEMFS, sp.LCSCHED, sp.BESCHED, sp.MSCHED, sp.UX, sp.S3, sp.DB, sp.MONGO, sp.REALM, sp.CHUNKD, sp.LAZYPAGESD}
 
 // If initial root dir doesn't exist, create it.
 func (nd *Named) initfs() error {

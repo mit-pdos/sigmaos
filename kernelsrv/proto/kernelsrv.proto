@@ -6,6 +6,7 @@ message BootRequest {
   string name = 1;
   string realmStr = 2;
   repeated string args = 3;
+  repeated string env = 4;
 }
 
 message BootResult {

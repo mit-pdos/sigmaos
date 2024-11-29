@@ -26,8 +26,13 @@ func newDir(o *Obj) *Dir {
 
 func (d *Dir) LookupPath(ctx fs.CtxI, pn path.Tpathname) ([]fs.FsObj, fs.FsObj, path.Tpathname, *serr.Err) {
 	s := time.Now()
-	db.DPrintf(db.NAMED, "%v: Lookup %v o %v\n", ctx.ClntId(), pn, d)
+	if db.WillBePrinted(db.NAMED) {
+		db.DPrintf(db.NAMED, "%v: Dir.Lookup %v o %v\n", ctx.ClntId(), pn, d)
+	}
 	name := pn[0]
+	if path.IsUnionElem(pn[0]) {
+		return nil, nil, pn, serr.NewErr(serr.TErrNotfound, name)
+	}
 	pn1 := d.pn.Copy().Append(name)
 	di, err := d.fs.Lookup(&d.Obj.di, pn1)
 	if err == nil {
@@ -40,7 +45,9 @@ func (d *Dir) LookupPath(ctx fs.CtxI, pn path.Tpathname) ([]fs.FsObj, fs.FsObj, 
 		} else {
 			o = newFile(obj)
 		}
-		db.DPrintf(db.WALK_LAT, "Lookup %v %q %v lat %v\n", ctx.ClntId(), name, d, time.Since(s))
+		if db.WillBePrinted(db.WALK_LAT) {
+			db.DPrintf(db.WALK_LAT, "Lookup %v %q %v lat %v\n", ctx.ClntId(), name, d, time.Since(s))
+		}
 
 		return []fs.FsObj{o}, o, pn[1:], nil
 	}
@@ -48,7 +55,9 @@ func (d *Dir) LookupPath(ctx fs.CtxI, pn path.Tpathname) ([]fs.FsObj, fs.FsObj, 
 }
 
 func (d *Dir) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode, lid sp.TleaseId, f sp.Tfence, dev fs.FsObj) (fs.FsObj, *serr.Err) {
-	db.DPrintf(db.NAMED, "%v: Create name: %q perm %v lid %v\n", ctx.ClntId(), name, perm, lid)
+	if db.WillBePrinted(db.WALK_LAT) {
+		db.DPrintf(db.NAMED, "%v: Create name: %q perm %v lid %v\n", ctx.ClntId(), name, perm, lid)
+	}
 	cid := sp.NoClntId
 	if lid.IsLeased() {
 		cid = ctx.ClntId()
@@ -81,7 +90,9 @@ func (d *Dir) ReadDir(ctx fs.CtxI, cursor int, cnt sp.Tsize) ([]*sp.Stat, *serr.
 	if err != nil {
 		return nil, err
 	}
-	db.DPrintf(db.NAMED, "%v: fsetcd.ReadDir %d %v\n", ctx.ClntId(), cursor, dir)
+	if db.WillBePrinted(db.NAMED) {
+		db.DPrintf(db.NAMED, "%v: fsetcd.ReadDir %d %v\n", ctx.ClntId(), cursor, dir)
+	}
 	len := dir.Ents.Len() - 1 // ignore "."
 	if cursor > len {
 		return nil, nil

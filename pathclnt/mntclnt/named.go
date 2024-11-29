@@ -24,7 +24,7 @@ func (mc *MntClnt) InvalidateNamedEndpointCacheEntryRealm(realm sp.Trealm) error
 	return mc.invalidateNamedMountCacheEntry(realm)
 }
 
-// Get named enpoint via netproxy or directly
+// Get named enpoint via dialproxy or directly
 func (mc *MntClnt) getNamedEndpointRealm(realm sp.Trealm) (*sp.Tendpoint, *serr.Err) {
 	s := time.Now()
 	if ep, ok := mc.ndMntCache.Get(realm); ok {
@@ -32,8 +32,7 @@ func (mc *MntClnt) getNamedEndpointRealm(realm sp.Trealm) (*sp.Tendpoint, *serr.
 		return ep, nil
 	}
 	var ep *sp.Tendpoint
-	if mc.pe.UseNetProxy {
-		// If this mount was passed via the proc env, return it immediately.
+	if mc.pe.UseDialProxy {
 		ep0, err := mc.npc.GetNamedEndpoint(realm)
 		if err != nil {
 			if sr, ok := serr.IsErr(err); ok {
@@ -51,7 +50,7 @@ func (mc *MntClnt) getNamedEndpointRealm(realm sp.Trealm) (*sp.Tendpoint, *serr.
 	}
 	// Cache the newly resolved mount
 	mc.ndMntCache.Put(realm, ep)
-	db.DPrintf(db.MOUNT, "getNamedEndpointRealm [%v] %v", realm, ep)
+	db.DPrintf(db.MOUNT, "getNamedEndpointRealm %v [%v] %v", mc.cid, realm, ep)
 	db.DPrintf(db.WALK_LAT, "getNamedEndpointRealm %v %v %v", mc.cid, ep, time.Since(s))
 	return ep, nil
 
@@ -104,7 +103,7 @@ func (mc *MntClnt) getNamedEndpointDirect(realm sp.Trealm) (*sp.Tendpoint, *serr
 
 func (mc *MntClnt) invalidateNamedMountCacheEntry(realm sp.Trealm) error {
 	mc.ndMntCache.Invalidate(realm)
-	if mc.pe.UseNetProxy {
+	if mc.pe.UseDialProxy {
 		return mc.npc.InvalidateNamedEndpointCacheEntry(realm)
 	}
 	return nil

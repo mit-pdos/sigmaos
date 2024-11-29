@@ -5,37 +5,37 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 
 	db "sigmaos/debug"
 	"sigmaos/kernelclnt"
 	"sigmaos/proc"
-	"sigmaos/rand"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
+	"sigmaos/util/rand"
 )
 
 // Shell script that starts the sigmaos container, which invokes Start
 // of [bootkernel]
 const (
-	START     = "../start-kernel.sh"
+	START     = "start-kernel.sh"
 	K_OUT_DIR = "/tmp/sigmaos-kernel-start-logs"
 )
 
-func Start(kernelId string, etcdIP sp.Tip, pe *proc.ProcEnv, srvs string, overlays, gvisor, netproxy bool) (string, error) {
+func projectRootPath() string {
+	_, b, _, _ := runtime.Caller(0)
+	return filepath.Dir(filepath.Dir(b))
+}
+
+func Start(kernelId string, etcdIP sp.Tip, pe *proc.ProcEnv, ntype Tboot, dialproxy bool) (string, error) {
 	args := []string{
 		"--pull", pe.BuildTag,
-		"--boot", srvs,
+		"--boot", ntype.String(),
 		"--named", etcdIP.String(),
 		"--host",
 	}
-	if overlays {
-		args = append(args, "--overlays")
-	}
-	if gvisor {
-		args = append(args, "--gvisor")
-	}
-	if netproxy {
-		args = append(args, "--usenetproxy")
+	if dialproxy {
+		args = append(args, "--usedialproxy")
 	}
 	args = append(args, kernelId)
 	// Ensure the kernel output directory has been created
@@ -55,7 +55,7 @@ func Start(kernelId string, etcdIP sp.Tip, pe *proc.ProcEnv, srvs string, overla
 	}
 	defer efile.Close()
 	// Create the command struct and set stdout/stderr
-	cmd := exec.Command(START, args...)
+	cmd := exec.Command(filepath.Join(projectRootPath(), START), args...)
 	cmd.Stdout = ofile
 	cmd.Stderr = efile
 	if err := cmd.Run(); err != nil {
@@ -72,7 +72,7 @@ func Start(kernelId string, etcdIP sp.Tip, pe *proc.ProcEnv, srvs string, overla
 		return "", err
 	}
 	ip := string(out)
-	db.DPrintf(db.BOOT, "Start: %v srvs %v IP %v overlays %v gvisor %v netproxy %v", kernelId, srvs, ip, overlays, gvisor, netproxy)
+	db.DPrintf(db.BOOT, "Start: %v nodetype %v IP %v dialproxy %v", kernelId, ntype, ip, dialproxy)
 	return ip, nil
 }
 
@@ -86,9 +86,9 @@ type Kernel struct {
 	kclnt    *kernelclnt.KernelClnt
 }
 
-func NewKernelClntStart(etcdIP sp.Tip, pe *proc.ProcEnv, conf string, overlays, gvisor, netproxy bool) (*Kernel, error) {
+func NewKernelClntStart(etcdIP sp.Tip, pe *proc.ProcEnv, ntype Tboot, dialproxy bool) (*Kernel, error) {
 	kernelId := GenKernelId()
-	_, err := Start(kernelId, etcdIP, pe, conf, overlays, gvisor, netproxy)
+	_, err := Start(kernelId, etcdIP, pe, ntype, dialproxy)
 	if err != nil {
 		return nil, err
 	}
@@ -107,10 +107,10 @@ func NewKernelClnt(kernelId string, etcdIP sp.Tip, pe *proc.ProcEnv) (*Kernel, e
 		var pn1 string
 		var err error
 		if etcdIP != pe.GetOuterContainerIP() {
-			// If running in a distributed setting, bootkernel clnt can be ~any
-			pn1, _, err = sc.ResolveMount(sp.BOOT + "~any")
+			// If running in a distributed setting, bootkernel clnt can be ANY
+			pn1, _, err = sc.ResolveMount(sp.BOOT + sp.ANY)
 		} else {
-			pn1, _, err = sc.ResolveMount(sp.BOOT + "~local")
+			pn1, _, err = sc.ResolveMount(sp.BOOT + sp.LOCAL)
 		}
 		if err != nil {
 			db.DPrintf(db.ALWAYS, "Error resolve local")
@@ -136,7 +136,7 @@ func (k *Kernel) NewSigmaClnt(pe *proc.ProcEnv) (*sigmaclnt.SigmaClnt, error) {
 func (k *Kernel) Shutdown() error {
 	db.DPrintf(db.KERNEL, "Shutdown kernel %s", k.kernelId)
 	k.SigmaClnt.StopWatchingSrvs()
-	db.DPrintf(db.KERNEL, "Stopped watching srvs kernelclnt %v", k.kernelId)
+	db.DPrintf(db.KERNEL, "Stopped watching kernelclnt %v", k.kernelId)
 	err := k.kclnt.Shutdown()
 	db.DPrintf(db.KERNEL, "Shutdown kernel %s err %v", k.kernelId, err)
 	if err != nil {
@@ -146,7 +146,12 @@ func (k *Kernel) Shutdown() error {
 }
 
 func (k *Kernel) Boot(s string) error {
-	_, err := k.kclnt.Boot(s, []string{})
+	_, err := k.kclnt.Boot(s, []string{}, []string{})
+	return err
+}
+
+func (k *Kernel) BootEnv(s string, env []string) error {
+	_, err := k.kclnt.Boot(s, []string{}, env)
 	return err
 }
 

@@ -7,7 +7,7 @@ import (
 )
 
 type Tfcall uint8
-type Ttag uint16
+type Ttag uint32
 
 type Tsession uint64
 type Tseqno uint64

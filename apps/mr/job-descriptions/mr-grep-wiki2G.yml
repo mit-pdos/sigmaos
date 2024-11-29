@@ -1,0 +1,9 @@
+app: "grep"
+nreduce: 1
+# binsz: 10485760 # 536870912
+binsz: 10485760
+input: "name/s3/~local/9ps3/wiki-2G/"
+intermediate: "name/ux/~local/mr-intermediate"
+output: "name/ux/~local/mr-out"
+linesz: 2097152  # the longest line in wiki is just shorter than 2MB
+wordsz: 400

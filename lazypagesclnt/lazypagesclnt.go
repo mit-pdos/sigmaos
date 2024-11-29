@@ -4,9 +4,9 @@ import (
 	"sigmaos/fslib"
 	"sigmaos/lazypagessrv"
 	"sigmaos/lazypagessrv/proto"
-	"sigmaos/rpcclnt"
+	rpcclnt "sigmaos/rpc/clnt"
+	sprpcclnt "sigmaos/rpc/clnt/sigmap"
 	sp "sigmaos/sigmap"
-	"sigmaos/sigmarpcchan"
 )
 
 type LazyPagesClnt struct {
@@ -17,7 +17,7 @@ type LazyPagesClnt struct {
 func NewLazyPagesClnt(fsl *fslib.FsLib, pid sp.Tpid) (*LazyPagesClnt, error) {
 	pn := lazypagessrv.SrvPath(pid)
 	wd := lazypagessrv.WorkDir(pid)
-	rc, err := sigmarpcchan.NewSigmaRPCClnt([]*fslib.FsLib{fsl}, pn)
+	rc, err := sprpcclnt.NewRPCClnt(fsl, pn)
 	if err != nil {
 		return nil, err
 	}

@@ -7,9 +7,9 @@ import (
 
 	"sigmaos/fslib"
 	replproto "sigmaos/repl/proto"
-	"sigmaos/rpcclnt"
+	rpcclnt "sigmaos/rpc/clnt"
+	sprpcclnt "sigmaos/rpc/clnt/sigmap"
 	sp "sigmaos/sigmap"
-	"sigmaos/sigmarpcchan"
 )
 
 type ReplClnt struct {
@@ -18,10 +18,10 @@ type ReplClnt struct {
 	seqno atomic.Uint64
 }
 
-func NewReplClnt(fsls []*fslib.FsLib) *ReplClnt {
+func NewReplClnt(fsl *fslib.FsLib) *ReplClnt {
 	rc := &ReplClnt{
-		cid:       fsls[0].ClntId(),
-		ClntCache: rpcclnt.NewRPCClntCache(sigmarpcchan.SigmaRPCChanFactory(fsls)),
+		cid:       fsl.ClntId(),
+		ClntCache: rpcclnt.NewRPCClntCache(sprpcclnt.WithSPChannel(fsl)),
 	}
 	return rc
 }

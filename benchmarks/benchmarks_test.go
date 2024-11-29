@@ -2,25 +2,24 @@ package benchmarks_test
 
 import (
 	"flag"
-	// "fmt"
 	"math/rand"
 	"net/rpc"
+	"os"
 	"os/exec"
 	"path/filepath"
 
 	"github.com/stretchr/testify/assert"
 
+	"sigmaos/apps/hotel"
 	"sigmaos/benchmarks"
 	db "sigmaos/debug"
-	"sigmaos/hotel"
 	"sigmaos/linuxsched"
-	"sigmaos/perf"
 	"sigmaos/proc"
-	"sigmaos/rpcclnt"
-	"sigmaos/scheddclnt"
+	mschedclnt "sigmaos/sched/msched/clnt"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
+	"sigmaos/util/perf"
 	"strconv"
 	"testing"
 	"time"
@@ -41,9 +40,9 @@ const (
 var N_TRIALS int
 var N_THREADS int
 var PREWARM_REALM bool
+var SKIPSTATS bool
 var MR_APP string
 var MR_MEM_REQ int
-var MR_ASYNCRW bool
 var KV_AUTO string
 var N_KVD int
 var N_CLERK int
@@ -53,26 +52,37 @@ var N_NODE_PER_MACHINE int
 var N_CLNT int
 var USE_RUST_PROC bool
 var USE_DUMMY_PROC bool
+var SPAWN_BENCH_LC_PROC bool
 var WITH_KERNEL_PREF bool
 var DOWNLOAD_FROM_UX bool
-var SCHEDD_DURS string
-var SCHEDD_MAX_RPS string
+var MSCHED_DURS string
+var MSCHED_MAX_RPS string
 var N_CLNT_REQ int
 var KVD_MCPU int
 var WWWD_MCPU int
 var WWWD_REQ_TYPE string
 var WWWD_REQ_DELAY time.Duration
 var HOTEL_NCACHE int
+var HOTEL_NGEO int
+var HOTEL_NGEO_IDX int
+var HOTEL_GEO_SEARCH_RADIUS int
+var HOTEL_GEO_NRESULTS int
 var HOTEL_CACHE_MCPU int
 var N_HOTEL int
 var HOTEL_IMG_SZ_MB int
 var HOTEL_CACHE_AUTOSCALE bool
+var MANUALLY_SCALE_GEO bool
+var MANUALLY_SCALE_CACHES bool
+var N_GEO_TO_ADD int
+var SCALE_GEO_DELAY time.Duration
+var SCALE_CACHE_DELAY time.Duration
+var N_CACHES_TO_ADD int
 var CACHE_TYPE string
 var CACHE_GC bool
 var BLOCK_MEM string
 var N_REALM int
+var ASYNCRW bool
 
-// XXX Remove
 var MEMCACHED_ADDRS string
 var HTTP_URL string
 var DURATION time.Duration
@@ -105,13 +115,14 @@ var S3_RES_DIR string
 
 // Read & set the proc version.
 func init() {
+	db.DPrintf(db.ALWAYS, "Benchmark Args: %v", os.Args)
 	flag.IntVar(&N_REALM, "nrealm", 2, "Number of realms (relevant to BE balance benchmarks).")
 	flag.IntVar(&N_TRIALS, "ntrials", 1, "Number of trials.")
 	flag.IntVar(&N_THREADS, "nthreads", 1, "Number of threads.")
 	flag.BoolVar(&PREWARM_REALM, "prewarm_realm", false, "Pre-warm realm, starting a BE and an LC uprocd on every machine in the cluster.")
+	flag.BoolVar(&SKIPSTATS, "skipstats", false, "Skip printing stats.")
 	flag.StringVar(&MR_APP, "mrapp", "mr-wc-wiki1.8G.yml", "Name of mr yaml file.")
 	flag.IntVar(&MR_MEM_REQ, "mr_mem_req", 4000, "Amount of memory (in MB) required for each MR task.")
-	flag.BoolVar(&MR_ASYNCRW, "mr_asyncrw", true, "Mapers and reducers use asynchronous readers/writers.")
 	flag.StringVar(&KV_AUTO, "kvauto", "manual", "KV auto-growing/shrinking.")
 	flag.IntVar(&N_KVD, "nkvd", 1, "Number of kvds.")
 	flag.IntVar(&N_CLERK, "nclerk", 1, "Number of clerks.")
@@ -119,10 +130,11 @@ func init() {
 	flag.IntVar(&N_NODE_PER_MACHINE, "n_node_per_machine", 1, "Number of nodes per machine. Likely should always be 1, unless developing locally.")
 	flag.BoolVar(&USE_RUST_PROC, "use_rust_proc", false, "Use rust spawn bench proc")
 	flag.BoolVar(&USE_DUMMY_PROC, "use_dummy_proc", false, "Use dummy spawn bench proc")
+	flag.BoolVar(&SPAWN_BENCH_LC_PROC, "spawn_bench_lc_proc", false, "Use an LC proc for spawn bench")
 	flag.BoolVar(&WITH_KERNEL_PREF, "with_kernel_pref", false, "Set proc kernel preferences when spawning (e.g., to force & measure cold start)")
 	flag.BoolVar(&DOWNLOAD_FROM_UX, "download_from_ux", false, "Download the proc from ux, instead of S3. !!! WARNING: this only works for the spawn-latency proc !!!")
-	flag.StringVar(&SCHEDD_DURS, "schedd_dur", "10s", "Schedd benchmark load generation duration (comma-separated for multiple phases).")
-	flag.StringVar(&SCHEDD_MAX_RPS, "schedd_max_rps", "1000", "Max requests/second for schedd bench (comma-separated for multiple phases).")
+	flag.StringVar(&MSCHED_DURS, "msched_dur", "10s", "MSched benchmark load generation duration (comma-separated for multiple phases).")
+	flag.StringVar(&MSCHED_MAX_RPS, "msched_max_rps", "1000", "Max requests/second for msched bench (comma-separated for multiple phases).")
 	flag.IntVar(&N_CLNT_REQ, "nclnt_req", 1, "Number of request each client news.")
 	flag.StringVar(&CLERK_DURATION, "clerk_dur", "90s", "Clerk duration.")
 	flag.IntVar(&CLERK_MCPU, "clerk_mcpu", 1000, "Clerk mCPU")
@@ -132,10 +144,20 @@ func init() {
 	flag.DurationVar(&WWWD_REQ_DELAY, "wwwd_req_delay", 500*time.Millisecond, "Average request delay.")
 	flag.DurationVar(&SLEEP, "sleep", 0*time.Millisecond, "Sleep length.")
 	flag.IntVar(&HOTEL_NCACHE, "hotel_ncache", 1, "Hotel ncache")
+	flag.IntVar(&HOTEL_NGEO_IDX, "hotel_ngeo_idx", 1000, "Hotel num indexes per geo")
+	flag.IntVar(&HOTEL_GEO_SEARCH_RADIUS, "hotel_geo_search_radius", 10, "Hotel geo search radius")
+	flag.IntVar(&HOTEL_GEO_NRESULTS, "hotel_geo_nresults", 5, "Hotel num search results to return from geo")
+	flag.IntVar(&HOTEL_NGEO, "hotel_ngeo", 1, "Hotel ngeo")
 	flag.IntVar(&HOTEL_CACHE_MCPU, "hotel_cache_mcpu", 2000, "Hotel cache mcpu")
 	flag.IntVar(&HOTEL_IMG_SZ_MB, "hotel_img_sz_mb", 0, "Hotel image data size in megabytes.")
 	flag.IntVar(&N_HOTEL, "nhotel", 80, "Number of hotels in the dataset.")
 	flag.BoolVar(&HOTEL_CACHE_AUTOSCALE, "hotel_cache_autoscale", false, "Autoscale hotel cache")
+	flag.BoolVar(&MANUALLY_SCALE_GEO, "manually_scale_geo", false, "Manually scale geos")
+	flag.DurationVar(&SCALE_GEO_DELAY, "scale_geo_delay", 0*time.Second, "Delay to wait before scaling up number of geos.")
+	flag.IntVar(&N_GEO_TO_ADD, "n_geo_to_add", 0, "Number of geo to add.")
+	flag.BoolVar(&MANUALLY_SCALE_CACHES, "manually_scale_caches", false, "Manually scale caches")
+	flag.DurationVar(&SCALE_CACHE_DELAY, "scale_cache_delay", 0*time.Second, "Delay to wait before scaling up number of caches.")
+	flag.IntVar(&N_CACHES_TO_ADD, "n_caches_to_add", 0, "Number of caches to add.")
 	flag.StringVar(&CACHE_TYPE, "cache_type", "cached", "Hotel cache type (kvd or cached).")
 	flag.BoolVar(&CACHE_GC, "cache_gc", false, "Turn hotel cache GC on (true) or off (false).")
 	flag.StringVar(&BLOCK_MEM, "block_mem", "0MB", "Amount of physical memory to block on every machine.")
@@ -159,7 +181,7 @@ func init() {
 	flag.Float64Var(&CONTENDERS_FRAC, "contenders", 4000, "Fraction of cores which should be taken up by contending procs.")
 	flag.IntVar(&GO_MAX_PROCS, "gomaxprocs", int(linuxsched.GetNCores()), "Go maxprocs setting for procs to be spawned.")
 	flag.IntVar(&MAX_PARALLEL, "max_parallel", 1, "Max amount of parallelism.")
-	flag.StringVar(&IMG_RESIZE_INPUT_PATH, "imgresize_path", "name/s3/~local/9ps3/img/1.jpg", "Path of img resize input file.")
+	flag.StringVar(&IMG_RESIZE_INPUT_PATH, "imgresize_path", "name/s3/"+sp.LOCAL+"/9ps3/img/1.jpg", "Path of img resize input file.")
 	flag.IntVar(&N_IMG_RESIZE_TASKS, "n_imgresize", 10, "Number of img resize tasks.")
 	flag.IntVar(&N_IMG_RESIZE_TASKS_PER_SECOND, "imgresize_tps", 1, "Number of img resize tasks/second.")
 	flag.DurationVar(&IMG_RESIZE_DUR, "imgresize_dur", 10*time.Second, "Duration of imgresize job")
@@ -293,7 +315,7 @@ func TestMicroSpawnWaitStartNode(t *testing.T) {
 		return
 	}
 
-	sts, err := rootts.GetDir(sp.SCHEDD)
+	sts, err := rootts.GetDir(sp.MSCHED)
 	kernels := sp.Names(sts)
 	kernel0 := kernels[0]
 
@@ -301,7 +323,7 @@ func TestMicroSpawnWaitStartNode(t *testing.T) {
 	assert.Nil(t, err, "Boot node: %v", err)
 	db.DPrintf(db.TEST, "Done boot node %d", N)
 
-	sts, err = rootts.GetDir(sp.SCHEDD)
+	sts, err = rootts.GetDir(sp.MSCHED)
 	kernels = sp.Names(sts)
 	kernel1 := ""
 	for _, n := range kernels {
@@ -392,7 +414,7 @@ func TestMicroWarmupRealm(t *testing.T) {
 	rootts.Shutdown()
 }
 
-func TestMicroScheddSpawn(t *testing.T) {
+func TestMicroMSchedSpawn(t *testing.T) {
 	rootts, err1 := test.NewTstateWithRealms(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
@@ -403,7 +425,7 @@ func TestMicroScheddSpawn(t *testing.T) {
 	}
 	rs := benchmarks.NewResults(1, benchmarks.OPS)
 
-	db.DPrintf(db.BENCH, "rust %v ux %v prewarm %v kpref %v nclnt %v durs %v rps %v", USE_RUST_PROC, DOWNLOAD_FROM_UX, PREWARM_REALM, WITH_KERNEL_PREF, N_CLNT, SCHEDD_DURS, SCHEDD_MAX_RPS)
+	db.DPrintf(db.BENCH, "rust %v ux %v dummy %v lc %v prewarm %v kpref %v nclnt %v durs %v rps %v skipstats %v", USE_RUST_PROC, DOWNLOAD_FROM_UX, USE_DUMMY_PROC, SPAWN_BENCH_LC_PROC, PREWARM_REALM, WITH_KERNEL_PREF, N_CLNT, MSCHED_DURS, MSCHED_MAX_RPS, SKIPSTATS)
 
 	prog := "XXXX"
 	if USE_RUST_PROC {
@@ -414,11 +436,11 @@ func TestMicroScheddSpawn(t *testing.T) {
 		}
 	} else if USE_DUMMY_PROC {
 		assert.False(t, DOWNLOAD_FROM_UX, "Can only download rust proc from ux for now")
-		prog = "spawn-bench"
+		prog = sp.DUMMY_PROG
 	}
 
-	sts, err := rootts.GetDir(sp.SCHEDD)
-	assert.Nil(rootts.T, err, "Err GetDir schedd: %v", err)
+	sts, err := rootts.GetDir(sp.MSCHED)
+	assert.Nil(rootts.T, err, "Err GetDir msched: %v", err)
 	kernels := sp.Names(sts)
 	db.DPrintf(db.TEST, "Kernels %v", kernels)
 
@@ -452,31 +474,31 @@ func TestMicroScheddSpawn(t *testing.T) {
 	time.Sleep(5 * time.Second)
 
 	done := make(chan bool)
-	// Prep Schedd job
-	scheddJobs, ji := newScheddJobs(ts1, N_CLNT, SCHEDD_DURS, SCHEDD_MAX_RPS, func(sc *sigmaclnt.SigmaClnt, kernelpref []string) time.Duration {
+	// Prep MSched job
+	mschedJobs, ji := newMSchedJobs(ts1, N_CLNT, MSCHED_DURS, MSCHED_MAX_RPS, prog, func(sc *sigmaclnt.SigmaClnt, pid sp.Tpid, kernelpref []string) time.Duration {
 		if USE_RUST_PROC {
-			return runRustSpawnBenchProc(ts1, sc, prog, kernelpref)
+			return runRustSpawnBenchProc(ts1, sc, prog, pid, kernelpref)
 		} else if USE_DUMMY_PROC {
-			return runDummySpawnBenchProc(ts1, sc)
+			return runDummySpawnBenchProc(ts1, sc, pid, SPAWN_BENCH_LC_PROC)
 		} else {
-			return runSpawnBenchProc(ts1, sc, kernelpref)
+			return runSpawnBenchProc(ts1, sc, pid, kernelpref)
 		}
-	}, kernels, WITH_KERNEL_PREF)
-	// Run Schedd job
+	}, kernels, WITH_KERNEL_PREF, SKIPSTATS)
+	// Run MSched job
 	go func() {
-		runOps(ts1, ji, runSchedd, rs)
+		runOps(ts1, ji, runMSched, rs)
 		done <- true
 	}()
-	// Wait for schedd jobs to set up.
-	<-scheddJobs[0].ready
-	db.DPrintf(db.TEST, "Schedd setup done.")
+	// Wait for msched jobs to set up.
+	<-mschedJobs[0].ready
+	db.DPrintf(db.TEST, "MSched setup done.")
 	db.DPrintf(db.TEST, "Setup phase done.")
 	// Sleep for a bit
 	time.Sleep(SLEEP)
-	// Kick off schedd jobs
-	scheddJobs[0].ready <- true
+	// Kick off msched jobs
+	mschedJobs[0].ready <- true
 	<-done
-	db.DPrintf(db.TEST, "Schedd load bench done.")
+	db.DPrintf(db.TEST, "MSched load bench done.")
 
 	printResultSummary(rs)
 	rootts.Shutdown()
@@ -502,7 +524,7 @@ func TestAppMR(t *testing.T) {
 	rs := benchmarks.NewResults(1, benchmarks.E2E)
 	p := newRealmPerf(ts1)
 	defer p.Done()
-	jobs, apps := newNMRJobs(ts1, p, 1, MR_APP, proc.Tmem(MR_MEM_REQ), MR_ASYNCRW)
+	jobs, apps := newNMRJobs(ts1, p, 1, MR_APP, chooseMRJobRoot(ts1), proc.Tmem(MR_MEM_REQ))
 	go func() {
 		for _, j := range jobs {
 			// Wait until ready
@@ -687,9 +709,9 @@ func TestRealmBalanceMRHotel(t *testing.T) {
 	p2 := newRealmPerf(ts2)
 	defer p2.Done()
 	// Prep MR job
-	mrjobs, mrapps := newNMRJobs(ts1, p1, 1, MR_APP, proc.Tmem(MR_MEM_REQ), MR_ASYNCRW)
+	mrjobs, mrapps := newNMRJobs(ts1, p1, 1, MR_APP, chooseMRJobRoot(ts1), proc.Tmem(MR_MEM_REQ))
 	// Prep Hotel job
-	hotelJobs, ji := newHotelJobs(ts2, p2, true, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, CACHE_TYPE, proc.Tmcpu(HOTEL_CACHE_MCPU), func(wc *hotel.WebClnt, r *rand.Rand) {
+	hotelJobs, ji := newHotelJobs(ts2, p2, true, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, CACHE_TYPE, proc.Tmcpu(HOTEL_CACHE_MCPU), MANUALLY_SCALE_CACHES, SCALE_CACHE_DELAY, N_CACHES_TO_ADD, HOTEL_NGEO, MANUALLY_SCALE_GEO, SCALE_GEO_DELAY, N_GEO_TO_ADD, HOTEL_NGEO_IDX, HOTEL_GEO_SEARCH_RADIUS, HOTEL_GEO_NRESULTS, func(wc *hotel.WebClnt, r *rand.Rand) {
 		//		hotel.RunDSB(ts2.T, 1, wc, r)
 		err := hotel.RandSearchReq(wc, r)
 		assert.Nil(t, err, "SearchReq %v", err)
@@ -770,7 +792,7 @@ func TestRealmBalanceHotelRPCImgResize(t *testing.T) {
 	// Prep ImgResize job
 	imgJobs, imgApps := newImgResizeRPCJob(ts1, p1, true, IMG_RESIZE_INPUT_PATH, N_IMG_RESIZE_TASKS_PER_SECOND, IMG_RESIZE_DUR, proc.Tmcpu(IMG_RESIZE_MCPU), proc.Tmem(IMG_RESIZE_MEM_MB), IMG_RESIZE_N_ROUNDS, proc.Tmcpu(1000))
 	// Prep Hotel job
-	hotelJobs, ji := newHotelJobs(ts2, p2, true, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, CACHE_TYPE, proc.Tmcpu(HOTEL_CACHE_MCPU), func(wc *hotel.WebClnt, r *rand.Rand) {
+	hotelJobs, ji := newHotelJobs(ts2, p2, true, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, CACHE_TYPE, proc.Tmcpu(HOTEL_CACHE_MCPU), MANUALLY_SCALE_CACHES, SCALE_CACHE_DELAY, N_CACHES_TO_ADD, HOTEL_NGEO, MANUALLY_SCALE_GEO, SCALE_GEO_DELAY, N_GEO_TO_ADD, HOTEL_NGEO_IDX, HOTEL_GEO_SEARCH_RADIUS, HOTEL_GEO_NRESULTS, func(wc *hotel.WebClnt, r *rand.Rand) {
 		//		hotel.RunDSB(ts2.T, 1, wc, r)
 		err := hotel.RandSearchReq(wc, r)
 		assert.Nil(t, err, "SearchReq %v", err)
@@ -851,7 +873,7 @@ func TestRealmBalanceHotelImgResize(t *testing.T) {
 	// Prep ImgResize job
 	imgJobs, imgApps := newImgResizeJob(ts1, p1, true, IMG_RESIZE_INPUT_PATH, N_IMG_RESIZE_TASKS, N_IMG_RESIZE_INPUTS_PER_TASK, proc.Tmcpu(IMG_RESIZE_MCPU), proc.Tmem(IMG_RESIZE_MEM_MB), IMG_RESIZE_N_ROUNDS, 0)
 	// Prep Hotel job
-	hotelJobs, ji := newHotelJobs(ts2, p2, true, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, CACHE_TYPE, proc.Tmcpu(HOTEL_CACHE_MCPU), func(wc *hotel.WebClnt, r *rand.Rand) {
+	hotelJobs, ji := newHotelJobs(ts2, p2, true, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, CACHE_TYPE, proc.Tmcpu(HOTEL_CACHE_MCPU), MANUALLY_SCALE_CACHES, SCALE_CACHE_DELAY, N_CACHES_TO_ADD, HOTEL_NGEO, MANUALLY_SCALE_GEO, SCALE_GEO_DELAY, N_GEO_TO_ADD, HOTEL_NGEO_IDX, HOTEL_GEO_SEARCH_RADIUS, HOTEL_GEO_NRESULTS, func(wc *hotel.WebClnt, r *rand.Rand) {
 		//		hotel.RunDSB(ts2.T, 1, wc, r)
 		err := hotel.RandSearchReq(wc, r)
 		assert.Nil(t, err, "SearchReq %v", err)
@@ -924,7 +946,7 @@ func TestRealmBalanceMRMR(t *testing.T) {
 		rses[i] = benchmarks.NewResults(1, benchmarks.E2E)
 		ps[i] = newRealmPerf(tses[i])
 		defer ps[i].Done()
-		mrjob, mrapp := newNMRJobs(tses[i], ps[i], 1, MR_APP, proc.Tmem(MR_MEM_REQ), MR_ASYNCRW)
+		mrjob, mrapp := newNMRJobs(tses[i], ps[i], 1, MR_APP, chooseMRJobRoot(tses[i]), proc.Tmem(MR_MEM_REQ))
 		mrjobs[i] = mrjob
 		mrapps[i] = mrapp
 	}
@@ -1104,7 +1126,7 @@ func TestKVMRRRB(t *testing.T) {
 	p2 := newRealmPerf(ts2)
 	defer p2.Done()
 	// Prep MR job
-	mrjobs, mrapps := newNMRJobs(ts1, p1, 1, MR_APP, proc.Tmem(MR_MEM_REQ), MR_ASYNCRW)
+	mrjobs, mrapps := newNMRJobs(ts1, p1, 1, MR_APP, chooseMRJobRoot(ts1), proc.Tmem(MR_MEM_REQ))
 	// Prep KV job
 	nclerks := []int{N_CLERK}
 	kvjobs, ji := newNKVJobs(ts2, 1, N_KVD, 0, nclerks, nil, CLERK_DURATION, proc.Tmcpu(KVD_MCPU), proc.Tmcpu(CLERK_MCPU), KV_AUTO, REDIS_ADDR)
@@ -1180,7 +1202,7 @@ func TestWwwK8s(t *testing.T) {
 
 func testHotel(rootts *test.Tstate, ts1 *test.RealmTstate, p *perf.Perf, sigmaos bool, fn hotelFn) {
 	rs := benchmarks.NewResults(1, benchmarks.E2E)
-	jobs, ji := newHotelJobs(ts1, p, sigmaos, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, CACHE_TYPE, proc.Tmcpu(HOTEL_CACHE_MCPU), fn)
+	jobs, ji := newHotelJobs(ts1, p, sigmaos, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, CACHE_TYPE, proc.Tmcpu(HOTEL_CACHE_MCPU), MANUALLY_SCALE_CACHES, SCALE_CACHE_DELAY, N_CACHES_TO_ADD, HOTEL_NGEO, MANUALLY_SCALE_GEO, SCALE_GEO_DELAY, N_GEO_TO_ADD, HOTEL_NGEO_IDX, HOTEL_GEO_SEARCH_RADIUS, HOTEL_GEO_NRESULTS, fn)
 	go func() {
 		for _, j := range jobs {
 			// Wait until ready
@@ -1266,10 +1288,8 @@ func TestSocialNetK8s(t *testing.T) {
 	testSocialNet(rootts, ts1, p1, false)
 }
 
-// XXX Messy, get rid of this.
-var reservec *rpcclnt.RPCClnt
-
-func TestHotelSigmaosReserve(t *testing.T) {
+func TestHotelSigmaosGeo(t *testing.T) {
+	db.DPrintf(db.ALWAYS, "scaleGeo %v delay %v n2a %v", MANUALLY_SCALE_GEO, SCALE_GEO_DELAY, N_GEO_TO_ADD)
 	rootts, err1 := test.NewTstateWithRealms(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
@@ -1279,12 +1299,13 @@ func TestHotelSigmaosReserve(t *testing.T) {
 		return
 	}
 	testHotel(rootts, ts1, nil, true, func(wc *hotel.WebClnt, r *rand.Rand) {
-		err := hotel.RandCheckAvailabilityReq(reservec, r)
-		assert.Nil(t, err, "Error reserve req: %v", err)
+		_, err := hotel.GeoReq(wc)
+		assert.Nil(t, err, "Error search req: %v", err)
 	})
 }
 
 func TestHotelSigmaosSearch(t *testing.T) {
+	db.DPrintf(db.ALWAYS, "scaleGeo %v delay %v n2a %v", MANUALLY_SCALE_GEO, SCALE_GEO_DELAY, N_GEO_TO_ADD)
 	rootts, err1 := test.NewTstateWithRealms(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
@@ -1299,9 +1320,32 @@ func TestHotelSigmaosSearch(t *testing.T) {
 	})
 }
 
-func TestHotelSigmaosJustCliSearch(t *testing.T) {
+func TestHotelDevSigmaosSearchScaleCache(t *testing.T) {
 	rootts, err1 := test.NewTstateWithRealms(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	ts1, err1 := test.NewRealmTstate(rootts, REALM1)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	N := 3
+	err := rootts.BootMinNode(N)
+	assert.Nil(t, err, "Boot node: %v", err)
+	db.DPrintf(db.TEST, "Done boot node %d", N)
+	db.DPrintf(db.TEST, "Done boot node %d", N)
+	testHotel(rootts, ts1, nil, true, func(wc *hotel.WebClnt, r *rand.Rand) {
+		err := hotel.RandSearchReq(wc, r)
+		assert.Nil(t, err, "Error search req: %v", err)
+	})
+}
+
+func TestHotelSigmaosJustCliGeo(t *testing.T) {
+	rootts, err1 := test.NewTstateWithRealms(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	if err1 := waitForRealmCreation(rootts, REALM1); !assert.Nil(t, err1, "Error waitRealmCreation: %v") {
 		return
 	}
 	ts1, err1 := test.NewRealmTstateClnt(rootts, REALM1)
@@ -1312,9 +1356,75 @@ func TestHotelSigmaosJustCliSearch(t *testing.T) {
 	clientReady(rootts)
 	// Sleep for a bit
 	time.Sleep(SLEEP)
-	jobs, ji := newHotelJobsCli(ts1, true, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, CACHE_TYPE, proc.Tmcpu(HOTEL_CACHE_MCPU), func(wc *hotel.WebClnt, r *rand.Rand) {
+	jobs, ji := newHotelJobsCli(ts1, true, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, CACHE_TYPE, proc.Tmcpu(HOTEL_CACHE_MCPU), MANUALLY_SCALE_CACHES, SCALE_CACHE_DELAY, N_CACHES_TO_ADD, HOTEL_NGEO, MANUALLY_SCALE_GEO, SCALE_GEO_DELAY, N_GEO_TO_ADD, HOTEL_NGEO_IDX, HOTEL_GEO_SEARCH_RADIUS, HOTEL_GEO_NRESULTS, func(wc *hotel.WebClnt, r *rand.Rand) {
+		_, err := hotel.GeoReq(wc)
+		assert.Nil(t, err, "Error geo req: %v", err)
+	})
+	go func() {
+		for _, j := range jobs {
+			// Wait until ready
+			<-j.ready
+			// Ack to allow the job to proceed.
+			j.ready <- true
+		}
+	}()
+	runOps(ts1, ji, runHotel, rs)
+	//	printResultSummary(rs)
+	//	jobs[0].requestK8sStats()
+}
+
+func TestHotelSigmaosJustCliSearch(t *testing.T) {
+	rootts, err1 := test.NewTstateWithRealms(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	if err1 := waitForRealmCreation(rootts, REALM1); !assert.Nil(t, err1, "Error waitRealmCreation: %v") {
+		return
+	}
+	ts1, err1 := test.NewRealmTstateClnt(rootts, REALM1)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	rs := benchmarks.NewResults(1, benchmarks.E2E)
+	clientReady(rootts)
+	// Sleep for a bit
+	time.Sleep(SLEEP)
+	jobs, ji := newHotelJobsCli(ts1, true, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, CACHE_TYPE, proc.Tmcpu(HOTEL_CACHE_MCPU), MANUALLY_SCALE_CACHES, SCALE_CACHE_DELAY, N_CACHES_TO_ADD, HOTEL_NGEO, MANUALLY_SCALE_GEO, SCALE_GEO_DELAY, N_GEO_TO_ADD, HOTEL_NGEO_IDX, HOTEL_GEO_SEARCH_RADIUS, HOTEL_GEO_NRESULTS, func(wc *hotel.WebClnt, r *rand.Rand) {
 		err := hotel.RandSearchReq(wc, r)
 		assert.Nil(t, err, "Error search req: %v", err)
+	})
+	go func() {
+		for _, j := range jobs {
+			// Wait until ready
+			<-j.ready
+			// Ack to allow the job to proceed.
+			j.ready <- true
+		}
+	}()
+	runOps(ts1, ji, runHotel, rs)
+	//	printResultSummary(rs)
+	//	jobs[0].requestK8sStats()
+}
+
+func TestHotelK8sJustCliGeo(t *testing.T) {
+	rootts, err1 := test.NewTstateWithRealms(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	if err1 := waitForRealmCreation(rootts, REALM1); !assert.Nil(t, err1, "Error waitRealmCreation: %v") {
+		return
+	}
+	ts1, err1 := test.NewRealmTstateClnt(rootts, REALM1)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	rs := benchmarks.NewResults(1, benchmarks.E2E)
+	db.DPrintf(db.ALWAYS, "Clnt ready")
+	clientReady(rootts)
+	db.DPrintf(db.ALWAYS, "Clnt done waiting")
+	jobs, ji := newHotelJobsCli(ts1, false, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, CACHE_TYPE, proc.Tmcpu(HOTEL_CACHE_MCPU), MANUALLY_SCALE_CACHES, SCALE_CACHE_DELAY, N_CACHES_TO_ADD, HOTEL_NGEO, MANUALLY_SCALE_GEO, SCALE_GEO_DELAY, N_GEO_TO_ADD, HOTEL_NGEO_IDX, HOTEL_GEO_SEARCH_RADIUS, HOTEL_GEO_NRESULTS, func(wc *hotel.WebClnt, r *rand.Rand) {
+		_, err := hotel.GeoReq(wc)
+		assert.Nil(t, err, "Error geo req: %v", err)
 	})
 	go func() {
 		for _, j := range jobs {
@@ -1334,6 +1444,9 @@ func TestHotelK8sJustCliSearch(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
+	if err1 := waitForRealmCreation(rootts, REALM1); !assert.Nil(t, err1, "Error waitRealmCreation: %v") {
+		return
+	}
 	ts1, err1 := test.NewRealmTstateClnt(rootts, REALM1)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
@@ -1342,7 +1455,7 @@ func TestHotelK8sJustCliSearch(t *testing.T) {
 	db.DPrintf(db.ALWAYS, "Clnt ready")
 	clientReady(rootts)
 	db.DPrintf(db.ALWAYS, "Clnt done waiting")
-	jobs, ji := newHotelJobsCli(ts1, false, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, CACHE_TYPE, proc.Tmcpu(HOTEL_CACHE_MCPU), func(wc *hotel.WebClnt, r *rand.Rand) {
+	jobs, ji := newHotelJobsCli(ts1, false, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, CACHE_TYPE, proc.Tmcpu(HOTEL_CACHE_MCPU), MANUALLY_SCALE_CACHES, SCALE_CACHE_DELAY, N_CACHES_TO_ADD, HOTEL_NGEO, MANUALLY_SCALE_GEO, SCALE_GEO_DELAY, N_GEO_TO_ADD, HOTEL_NGEO_IDX, HOTEL_GEO_SEARCH_RADIUS, HOTEL_GEO_NRESULTS, func(wc *hotel.WebClnt, r *rand.Rand) {
 		err := hotel.RandSearchReq(wc, r)
 		assert.Nil(t, err, "Error search req: %v", err)
 	})
@@ -1359,6 +1472,22 @@ func TestHotelK8sJustCliSearch(t *testing.T) {
 	//	jobs[0].requestK8sStats()
 }
 
+func TestHotelK8sGeo(t *testing.T) {
+	rootts, err1 := test.NewTstateWithRealms(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	ts1, err1 := test.NewRealmTstate(rootts, REALM1)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	testHotel(rootts, ts1, nil, false, func(wc *hotel.WebClnt, r *rand.Rand) {
+		_, err := hotel.GeoReq(wc)
+		assert.Nil(t, err, "Error geo req: %v", err)
+	})
+	downloadS3Results(rootts, filepath.Join("name/s3/~any/9ps3/", "hotelperf/k8s"), HOSTTMP+"sigmaos-perf")
+}
+
 func TestHotelK8sSearch(t *testing.T) {
 	rootts, err1 := test.NewTstateWithRealms(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
@@ -1373,20 +1502,6 @@ func TestHotelK8sSearch(t *testing.T) {
 		assert.Nil(t, err, "Error search req: %v", err)
 	})
 	downloadS3Results(rootts, filepath.Join("name/s3/~any/9ps3/", "hotelperf/k8s"), HOSTTMP+"sigmaos-perf")
-}
-
-func TestHotelK8sSearchCli(t *testing.T) {
-	rootts, err1 := test.NewTstateWithRealms(t)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
-	ts1, err1 := test.NewRealmTstate(rootts, REALM1)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
-	testHotel(rootts, ts1, nil, false, func(wc *hotel.WebClnt, r *rand.Rand) {
-		hotel.RandSearchReq(wc, r)
-	})
 }
 
 func TestHotelSigmaosAll(t *testing.T) {
@@ -1462,9 +1577,9 @@ func TestK8sMRMulti(t *testing.T) {
 	err := ts[0].MkDir(sp.K8S_SCRAPER, 0777)
 	assert.Nil(rootts.T, err, "Error mkdir %v", err)
 	// Start up the stat scraper procs.
-	sdc := scheddclnt.NewScheddClnt(ts[0].SigmaClnt.FsLib)
-	nSchedd, err := sdc.Nschedd()
-	ps2, _ := newNProcs(nSchedd, "k8s-stat-scraper", []string{}, nil, proc.Tmcpu(1000*(linuxsched.GetNCores()-1)))
+	sdc := mschedclnt.NewMSchedClnt(ts[0].SigmaClnt.FsLib, sp.NOT_SET)
+	nMSched, err := sdc.NMSched()
+	ps2, _ := newNProcs(nMSched, "k8s-stat-scraper", []string{}, nil, proc.Tmcpu(1000*(linuxsched.GetNCores()-1)))
 	spawnBurstProcs(ts[0], ps2)
 	waitStartProcs(ts[0], ps2)
 
@@ -1585,16 +1700,16 @@ func TestK8sImgResize(t *testing.T) {
 	if PREWARM_REALM {
 		warmupRealm(ts1, nil)
 	}
-	sdc := scheddclnt.NewScheddClnt(ts1.FsLib)
-	nSchedd, err := sdc.Nschedd()
-	assert.Nil(ts1.Ts.T, err, "Error nschedd %v", err)
+	sdc := mschedclnt.NewMSchedClnt(ts1.FsLib, sp.NOT_SET)
+	nMSched, err := sdc.NMSched()
+	assert.Nil(ts1.Ts.T, err, "Error nmsched %v", err)
 	rs := benchmarks.NewResults(1, benchmarks.E2E)
 	p := newRealmPerf(ts1)
 	defer p.Done()
 	err = ts1.MkDir(sp.K8S_SCRAPER, 0777)
 	assert.Nil(ts1.Ts.T, err, "Error mkdir %v", err)
 	// Start up the stat scraper procs.
-	ps, _ := newNProcs(nSchedd, "k8s-stat-scraper", []string{}, nil, proc.Tmcpu(1000*(linuxsched.GetNCores()-1)))
+	ps, _ := newNProcs(nMSched, "k8s-stat-scraper", []string{}, nil, proc.Tmcpu(1000*(linuxsched.GetNCores()-1)))
 	spawnBurstProcs(ts1, ps)
 	waitStartProcs(ts1, ps)
 	// NOte start time
@@ -1760,15 +1875,15 @@ func TestK8sSocialNetworkImgResize(t *testing.T) {
 	if PREWARM_REALM {
 		warmupRealm(ts0, nil)
 	}
-	sdc := scheddclnt.NewScheddClnt(ts0.SigmaClnt.FsLib)
-	nSchedd, err := sdc.Nschedd()
-	assert.Nil(ts0.Ts.T, err, "Error nschedd %v", err)
+	sdc := mschedclnt.NewMSchedClnt(ts0.SigmaClnt.FsLib, sp.NOT_SET)
+	nMSched, err := sdc.NMSched()
+	assert.Nil(ts0.Ts.T, err, "Error nmsched %v", err)
 	rs0 := benchmarks.NewResults(1, benchmarks.E2E)
 	err = ts0.MkDir(sp.K8S_SCRAPER, 0777)
 	assert.Nil(ts0.Ts.T, err, "Error mkdir %v", err)
 	// Start up the stat scraper procs.
-	//ps, _ := newNProcs(nSchedd, "k8s-stat-scraper", []string{}, nil, proc.Tmcpu(1000*(linuxsched.GetNCores()-1)))
-	ps, _ := newNProcs(nSchedd, "k8s-stat-scraper", []string{}, nil, 0)
+	//ps, _ := newNProcs(nMSched, "k8s-stat-scraper", []string{}, nil, proc.Tmcpu(1000*(linuxsched.GetNCores()-1)))
+	ps, _ := newNProcs(nMSched, "k8s-stat-scraper", []string{}, nil, 0)
 	spawnBurstProcs(ts0, ps)
 	waitStartProcs(ts0, ps)
 	// Structures for image resize

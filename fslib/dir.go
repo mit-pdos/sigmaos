@@ -6,8 +6,8 @@ import (
 	"time"
 
 	db "sigmaos/debug"
+	"sigmaos/fslib/reader"
 	"sigmaos/path"
-	"sigmaos/reader"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 )
@@ -67,7 +67,7 @@ func (fl *FsLib) ProcessDir(dir string, f func(*sp.Stat) (bool, error)) (bool, e
 		return false, err
 	}
 	defer rdr.Close()
-	return reader.ReadDirEnts(reader.MkDirEntsReader(rdr.Reader), f)
+	return reader.ReadDirEnts(reader.MkDirEntsReader(rdr), f)
 }
 
 func (fl *FsLib) GetDir(dir string) ([]*sp.Stat, error) {
@@ -79,14 +79,14 @@ func (fl *FsLib) GetDir(dir string) ([]*sp.Stat, error) {
 }
 
 // Also returns reader.Reader for readDirWatch
-func (fl *FsLib) ReadDir(dir string) ([]*sp.Stat, *FdReader, error) {
+func (fl *FsLib) ReadDir(dir string) ([]*sp.Stat, *FileReader, error) {
 	rdr, err := fl.OpenReader(dir)
 	if err != nil {
 		db.DPrintf(db.FSLIB_ERR, "Err ReadDir.OpenReader: %v", err)
 		return nil, nil, err
 	}
 	dirents := []*sp.Stat{}
-	_, error := reader.ReadDirEnts(reader.MkDirEntsReader(rdr.Reader), func(st *sp.Stat) (bool, error) {
+	_, error := reader.ReadDirEnts(reader.MkDirEntsReader(rdr), func(st *sp.Stat) (bool, error) {
 		dirents = append(dirents, st)
 		return false, nil
 	})
@@ -115,7 +115,7 @@ func (fl *FsLib) CopyDir(src, dst string) error {
 	return err
 }
 
-func (fl *FsLib) MoveFiles(src, dst string) (int, error) {
+func (fl *FsLib) MoveDirEntries(src, dst string) (int, error) {
 	sts, err := fl.GetDir(src) // XXX handle one entry at the time?
 	if err != nil {
 		return 0, err
@@ -159,14 +159,19 @@ func (fsl *FsLib) RmDirEntries(dir string) error {
 }
 
 func (fsl *FsLib) SprintfDir(d string) (string, error) {
-	return fsl.sprintfDirIndent(d, "")
+	s := fmt.Sprintf("dir %v:\n", d)
+	s1, err := fsl.sprintfDirIndent(d, "")
+	if err != nil {
+		return "", err
+	}
+	return s + s1, nil
 }
 
 func (fsl *FsLib) sprintfDirIndent(d string, indent string) (string, error) {
-	s := fmt.Sprintf("%v dir %v\n", indent, d)
+	s := ""
 	sts, err := fsl.GetDir(d)
 	if err != nil {
-		return "", err
+		return s, err
 	}
 	for _, st := range sts {
 		s += fmt.Sprintf("%v %v %v\n", indent, st.Name, st.Tqid())

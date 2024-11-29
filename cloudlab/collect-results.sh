@@ -64,13 +64,13 @@ for vm in $vms; do
   fi
   # read log files.
   vm_hostname="${vm_id_a[$idx]}"
-  cmd1="ssh -i $DIR/keys/cloudlab-sigmaos $LOGIN@$vm \"/bin/bash -c '~/sigmaos/logs.sh --merge'\" > $LOG_DIR/$vm_hostname-$vm.out 2>&1"
+  cmd1="ssh -i $DIR/keys/cloudlab-sigmaos $LOGIN@$vm \"/bin/bash -c '~/sigmaos/logs.sh'\" > $LOG_DIR/$vm_hostname-$vm.out 2>&1"
   # zip up performance files.
-  cmd2="ssh -i $DIR/keys/cloudlab-sigmaos $LOGIN@$vm \"/bin/bash -c 'cd /tmp; tar -czf perf.tar.gz sigmaos-perf'\""
+  cmd2="ssh -i $DIR/keys/cloudlab-sigmaos $LOGIN@$vm \"/bin/bash -c 'rm -f /tmp/perf.tar.gz; cd /tmp/sigmaos-perf; tar -czf ../perf.tar.gz .'\""
   # scp performance files.
   cmd3="scp -C -i $DIR/keys/cloudlab-sigmaos $LOGIN@$vm:/tmp/perf.tar.gz $PERF_DIR/$vm_hostname-perf.tar.gz"
   # unzip performance files.
-  cmd4="tar -xzf $PERF_DIR/$vm_hostname-perf.tar.gz -C $PERF_DIR; mv $PERF_DIR/sigmaos-perf/* $PERF_DIR/; rm $PERF_DIR/$vm_hostname-perf.tar.gz"
+  cmd4="tar -xzf $PERF_DIR/$vm_hostname-perf.tar.gz -C $PERF_DIR; rm $PERF_DIR/$vm_hostname-perf.tar.gz"
   # scp the bench.out file.
   cmd5="scp -C -i $DIR/keys/cloudlab-sigmaos $LOGIN@$vm:/tmp/bench.out $PERF_DIR/bench.out.$idx"
   idx=$((idx+1)) 

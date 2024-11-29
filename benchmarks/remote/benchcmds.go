@@ -15,9 +15,9 @@ func GetInitFSCmd(bcfg *BenchConfig, ccfg *ClusterConfig) string {
 	const (
 		debugSelectors string = "\"BENCH;TEST;\""
 	)
-	netproxy := ""
+	dialproxy := ""
 	if bcfg.NoNetproxy {
-		netproxy = "--nonetproxy"
+		dialproxy = "--nodialproxy"
 	}
 	overlays := ""
 	if bcfg.Overlays {
@@ -28,14 +28,14 @@ func GetInitFSCmd(bcfg *BenchConfig, ccfg *ClusterConfig) string {
 		"--run InitFs "+
 		"> /tmp/bench.out 2>&1",
 		debugSelectors,
-		netproxy,
+		dialproxy,
 		overlays,
 		ccfg.LeaderNodeIP,
 		bcfg.Tag,
 	)
 }
 
-func GetStartCmdConstructor(rps int, dur time.Duration, dummyProc, prewarmRealm bool) GetBenchCmdFn {
+func GetStartCmdConstructor(rps int, dur time.Duration, dummyProc, lcProc, prewarmRealm, skipStats bool) GetBenchCmdFn {
 	return func(bcfg *BenchConfig, ccfg *ClusterConfig) string {
 		const (
 			debugSelectors string = "\"TEST;BENCH;LOADGEN;\""
@@ -44,36 +44,49 @@ func GetStartCmdConstructor(rps int, dur time.Duration, dummyProc, prewarmRealm 
 		if dummyProc {
 			proc = "--use_dummy_proc"
 		}
+		lc := ""
+		if lcProc {
+			lc = "--spawn_bench_lc_proc"
+		}
 		prewarm := ""
 		if prewarmRealm {
 			prewarm = "--prewarm_realm"
 		}
-		netproxy := ""
+		dialproxy := ""
 		if bcfg.NoNetproxy {
-			netproxy = "--nonetproxy"
+			dialproxy = "--nodialproxy"
 		}
 		overlays := ""
 		if bcfg.Overlays {
 			overlays = "--overlays"
+		}
+		skipStatsPrint := ""
+		if skipStats {
+			skipStatsPrint = "--skipstats"
 		}
 		return fmt.Sprintf("export SIGMADEBUG=%s; go clean -testcache; "+
 			"./set-cores.sh --set 1 --start 2 --end 39 > /dev/null 2>&1 ; "+
 			"go test -v sigmaos/benchmarks -timeout 0 --no-shutdown %s %s --etcdIP %s --tag %s "+
 			"--run TestMicroScheddSpawn "+
 			"%s "+ // proc
+			"--nclnt 50 "+
+			"%s "+ // skipStats
 			"--schedd_dur %s "+
 			"--schedd_max_rps %s "+
 			"%s "+ // prewarmRealm
+			"%s "+ // lcProc
 			"> /tmp/bench.out 2>&1",
 			debugSelectors,
-			netproxy,
+			dialproxy,
 			overlays,
 			ccfg.LeaderNodeIP,
 			bcfg.Tag,
 			proc,
+			skipStatsPrint,
 			dur.String(),
 			strconv.Itoa(rps),
 			prewarm,
+			lc,
 		)
 	}
 }
@@ -83,9 +96,9 @@ func GetBEImgResizeMultiplexingCmd(bcfg *BenchConfig, ccfg *ClusterConfig) strin
 	const (
 		debugSelectors string = "\"TEST;BENCH;\""
 	)
-	netproxy := ""
+	dialproxy := ""
 	if bcfg.NoNetproxy {
-		netproxy = "--nonetproxy"
+		dialproxy = "--nodialproxy"
 	}
 	overlays := ""
 	if bcfg.Overlays {
@@ -94,8 +107,8 @@ func GetBEImgResizeMultiplexingCmd(bcfg *BenchConfig, ccfg *ClusterConfig) strin
 	return fmt.Sprintf("export SIGMADEBUG=%s; go clean -testcache; "+
 		"go test -v sigmaos/benchmarks -timeout 0 --no-shutdown %s %s --etcdIP %s --tag %s "+
 		"--run TestRealmBalanceImgResizeImgResize "+
-		"--sleep 60s "+
-		"--n_imgresize 40 "+
+		"--sleep 15s "+
+		"--n_imgresize 10 "+
 		"--imgresize_nround 300 "+
 		"--n_imgresize_per 25 "+
 		"--imgresize_path name/ux/~local/8.jpg "+
@@ -104,7 +117,7 @@ func GetBEImgResizeMultiplexingCmd(bcfg *BenchConfig, ccfg *ClusterConfig) strin
 		"--nrealm 4 "+
 		"> /tmp/bench.out 2>&1",
 		debugSelectors,
-		netproxy,
+		dialproxy,
 		overlays,
 		ccfg.LeaderNodeIP,
 		bcfg.Tag,
@@ -116,9 +129,9 @@ func GetBEImgResizeRPCMultiplexingCmd(bcfg *BenchConfig, ccfg *ClusterConfig) st
 	const (
 		debugSelectors string = "\"TEST;BENCH;IMGD;\""
 	)
-	netproxy := ""
+	dialproxy := ""
 	if bcfg.NoNetproxy {
-		netproxy = "--nonetproxy"
+		dialproxy = "--nodialproxy"
 	}
 	overlays := ""
 	if bcfg.Overlays {
@@ -128,16 +141,16 @@ func GetBEImgResizeRPCMultiplexingCmd(bcfg *BenchConfig, ccfg *ClusterConfig) st
 		"go test -v sigmaos/benchmarks -timeout 0 --no-shutdown %s %s --etcdIP %s --tag %s "+
 		"--run TestRealmBalanceImgResizeRPCImgResizeRPC "+
 		"--sleep 10s "+
-		"--imgresize_tps 256 "+
-		"--imgresize_dur 30s "+
-		"--imgresize_nround 14 "+
+		"--imgresize_tps 500 "+
+		"--imgresize_dur 20s "+
+		"--imgresize_nround 43 "+
 		"--imgresize_path name/ux/~local/8.jpg "+
 		"--imgresize_mcpu 0 "+
-		"--imgresize_mem 1500 "+
+		"--imgresize_mem 2500 "+
 		"--nrealm 4 "+
 		"> /tmp/bench.out 2>&1",
 		debugSelectors,
-		netproxy,
+		dialproxy,
 		overlays,
 		ccfg.LeaderNodeIP,
 		bcfg.Tag,
@@ -161,7 +174,7 @@ func GetBEImgResizeRPCMultiplexingCmd(bcfg *BenchConfig, ccfg *ClusterConfig) st
 // instantaneous throughput. This is an optional parameter because it adds
 // non-insignificant overhead to the MR computation, which unfairly penalizes
 // the SigmaOS implementation when comparing to Corral.
-func GetMRCmdConstructor(mrApp string, memReq proc.Tmem, asyncRW, prewarmRealm, measureTpt bool) GetBenchCmdFn {
+func GetMRCmdConstructor(mrApp string, memReq proc.Tmem, prewarmRealm, measureTpt bool) GetBenchCmdFn {
 	return func(bcfg *BenchConfig, ccfg *ClusterConfig) string {
 		const (
 			debugSelectors        string = "\"TEST;BENCH;MR;\""
@@ -176,34 +189,29 @@ func GetMRCmdConstructor(mrApp string, memReq proc.Tmem, asyncRW, prewarmRealm, 
 		if prewarmRealm {
 			prewarm = "--prewarm_realm"
 		}
-		asyncrw := ""
-		if asyncRW {
-			asyncrw = "--mr_asyncrw"
-		}
-		netproxy := ""
+		dialproxy := ""
 		if bcfg.NoNetproxy {
-			netproxy = "--nonetproxy"
+			dialproxy = "--nodialproxy"
 		}
 		overlays := ""
 		if bcfg.Overlays {
 			overlays = "--overlays"
 		}
 		return fmt.Sprintf("export SIGMADEBUG=%s; export SIGMAPERF=%s; go clean -testcache; "+
+			"aws s3 rm --profile sigmaos --recursive s3://9ps3/mr-intermediate > /dev/null; "+
 			"go test -v sigmaos/benchmarks -timeout 0 --no-shutdown %s %s --etcdIP %s --tag %s "+
 			"--run AppMR "+
 			"%s "+ // prewarm
-			"%s "+ // asyncrw
 			"--mr_mem_req %s "+
 			"--mrapp %s "+
 			"> /tmp/bench.out 2>&1",
 			debugSelectors,
 			perfSelectors,
-			netproxy,
+			dialproxy,
 			overlays,
 			ccfg.LeaderNodeIP,
 			bcfg.Tag,
 			prewarm,
-			asyncrw,
 			strconv.Itoa(int(memReq)),
 			mrApp,
 		)
@@ -243,11 +251,13 @@ func GetCorralCmdConstructor() GetBenchCmdFn {
 //
 // - clientDelay specifies the delay for which the client should wait before
 // starting to send requests.
-func GetHotelClientCmdConstructor(leader bool, numClients int, rps []int, dur []time.Duration, cacheType string, scaleCache bool, clientDelay time.Duration) GetBenchCmdFn {
+func GetHotelClientCmdConstructor(hotelReqName string, leader bool, numClients int, rps []int, dur []time.Duration, numCaches int, cacheType string, scaleCache bool, clientDelay time.Duration, manuallyScaleCaches bool, scaleCacheDelay time.Duration, numCachesToAdd int, numGeo int, geoNIdx int, geoSearchRadius int, geoNResults int, manuallyScaleGeo bool, scaleGeoDelay time.Duration, numGeoToAdd int) GetBenchCmdFn {
 	return func(bcfg *BenchConfig, ccfg *ClusterConfig) string {
 		const (
-			debugSelectors string = "\"TEST;THROUGHPUT;CPU_UTIL;\""
-			perfSelectors  string = "\"HOTEL_WWW_TPT;\""
+			//			debugSelectors string = "\"TEST;THROUGHPUT;CPU_UTIL;\""
+			debugSelectors string = "\"TEST;THROUGHPUT;CPU_UTIL;SPAWN_LAT\"" // XXX REMOVE
+			perfSelectors  string = "\"HOTEL_WWW_TPT;TEST_TPT;BENCH_TPT;\""
+			//			perfSelectors  string = "\"HOTEL_WWW_TPT;\"" // XXX Used to be just HOTEL_WWW_TPT. Is adding the others problematic?
 		)
 		sys := ""
 		if bcfg.K8s {
@@ -257,29 +267,41 @@ func GetHotelClientCmdConstructor(leader bool, numClients int, rps []int, dur []
 		}
 		testName := ""
 		if leader {
-			testName = fmt.Sprintf("Hotel%sSearch", sys)
+			testName = fmt.Sprintf("Hotel%s%s", sys, hotelReqName)
 		} else {
-			testName = fmt.Sprintf("Hotel%sJustCliSearch", sys)
+			testName = fmt.Sprintf("Hotel%sJustCli%s", sys, hotelReqName)
 		}
 		autoscaleCache := ""
 		if scaleCache {
 			autoscaleCache = "--hotel_cache_autoscale"
 		}
-		netproxy := ""
+		dialproxy := ""
 		if bcfg.NoNetproxy {
-			netproxy = "--nonetproxy"
+			dialproxy = "--nodialproxy"
 		}
 		overlays := ""
 		if bcfg.Overlays {
 			overlays = "--overlays"
 		}
 		k8sFrontendAddr := ""
+		k8sFrontendLogScrapeCmd := "echo 'no scraping k8s logs'"
 		if bcfg.K8s {
 			addr, err := getK8sHotelFrontendAddr(bcfg, ccfg.lcfg)
 			if err != nil {
 				db.DFatalf("Get k8s hotel frontend addr:%v", err)
 			}
 			k8sFrontendAddr = fmt.Sprintf("--k8saddr %s", addr)
+			if leader {
+				k8sFrontendLogScrapeCmd = "kubectl logs service/frontend"
+			}
+		}
+		scalecache := ""
+		if manuallyScaleCaches {
+			scalecache = "--manually_scale_caches"
+		}
+		scalegeo := ""
+		if manuallyScaleGeo {
+			scalegeo = "--manually_scale_geo"
 		}
 		return fmt.Sprintf("export SIGMADEBUG=%s; export SIGMAPERF=%s; go clean -testcache; "+
 			"aws s3 rm --profile sigmaos --recursive s3://9ps3/hotelperf/k8s > /dev/null; "+
@@ -288,7 +310,7 @@ func GetHotelClientCmdConstructor(leader bool, numClients int, rps []int, dur []
 			"go test -v sigmaos/benchmarks -timeout 0 --no-shutdown %s %s --etcdIP %s --tag %s "+
 			"--run %s "+
 			"--nclnt %s "+
-			"--hotel_ncache 3 "+
+			"--hotel_ncache %s "+
 			"--hotel_cache_mcpu 2000 "+
 			"--cache_type %s "+
 			"%s "+ // scaleCache
@@ -296,22 +318,45 @@ func GetHotelClientCmdConstructor(leader bool, numClients int, rps []int, dur []
 			"--hotel_dur %s "+
 			"--hotel_max_rps %s "+
 			"--sleep %s "+
+			"%s "+ // manually_scale_caches
+			"--scale_cache_delay %s "+
+			"--n_caches_to_add %s "+
+			"--hotel_ngeo %s "+
+			"--hotel_ngeo_idx %s "+
+			"--hotel_geo_search_radius %s "+
+			"--hotel_geo_nresults %s "+
+			"%s "+ // manually_scale_geo
+			"--scale_geo_delay %s "+
+			"--n_geo_to_add %s "+
 			"--prewarm_realm "+
-			"> /tmp/bench.out 2>&1",
+			"> /tmp/bench.out 2>&1 ; "+
+			"%s > /tmp/frontend-logs.out 2>&1 ;",
 			debugSelectors,
 			perfSelectors,
-			netproxy,
+			dialproxy,
 			overlays,
 			ccfg.LeaderNodeIP,
 			bcfg.Tag,
 			testName,
 			strconv.Itoa(numClients),
+			strconv.Itoa(numCaches),
 			cacheType,
 			autoscaleCache,
 			k8sFrontendAddr,
 			dursToString(dur),
 			rpsToString(rps),
 			clientDelay.String(),
+			scalecache,
+			scaleCacheDelay.String(),
+			strconv.Itoa(numCachesToAdd),
+			strconv.Itoa(numGeo),
+			strconv.Itoa(geoNIdx),
+			strconv.Itoa(geoSearchRadius),
+			strconv.Itoa(geoNResults),
+			scalegeo,
+			scaleGeoDelay.String(),
+			strconv.Itoa(numGeoToAdd),
+			k8sFrontendLogScrapeCmd,
 		)
 	}
 }
@@ -343,9 +388,9 @@ func GetSocialnetClientCmdConstructor(leader bool, numClients int, rps []int, du
 		} else {
 			testName = fmt.Sprintf("SocialNetJustCli%s", sys)
 		}
-		netproxy := ""
+		dialproxy := ""
 		if bcfg.NoNetproxy {
-			netproxy = "--nonetproxy"
+			dialproxy = "--nodialproxy"
 		}
 		overlays := ""
 		if bcfg.Overlays {
@@ -366,7 +411,7 @@ func GetSocialnetClientCmdConstructor(leader bool, numClients int, rps []int, du
 			"> /tmp/bench.out 2>&1",
 			debugSelectors,
 			perfSelectors,
-			netproxy,
+			dialproxy,
 			overlays,
 			ccfg.LeaderNodeIP,
 			bcfg.Tag,
@@ -406,9 +451,9 @@ func GetLCBEHotelImgResizeMultiplexingCmdConstructor(numClients int, rps []int, 
 		if scaleCache {
 			autoscaleCache = "--hotel_cache_autoscale"
 		}
-		netproxy := ""
+		dialproxy := ""
 		if bcfg.NoNetproxy {
-			netproxy = "--nonetproxy"
+			dialproxy = "--nodialproxy"
 		}
 		overlays := ""
 		if bcfg.Overlays {
@@ -437,7 +482,7 @@ func GetLCBEHotelImgResizeMultiplexingCmdConstructor(numClients int, rps []int, 
 			"> /tmp/bench.out 2>&1",
 			debugSelectors,
 			perfSelectors,
-			netproxy,
+			dialproxy,
 			overlays,
 			ccfg.LeaderNodeIP,
 			bcfg.Tag,
@@ -478,9 +523,9 @@ func GetLCBEHotelImgResizeRPCMultiplexingCmdConstructor(numClients int, rps []in
 		if scaleCache {
 			autoscaleCache = "--hotel_cache_autoscale"
 		}
-		netproxy := ""
+		dialproxy := ""
 		if bcfg.NoNetproxy {
-			netproxy = "--nonetproxy"
+			dialproxy = "--nodialproxy"
 		}
 		overlays := ""
 		if bcfg.Overlays {
@@ -499,17 +544,17 @@ func GetLCBEHotelImgResizeRPCMultiplexingCmdConstructor(numClients int, rps []in
 			"--hotel_dur %s "+
 			"--hotel_max_rps %s "+
 			"--sleep %s "+
-			"--imgresize_tps 256 "+
+			"--imgresize_tps 150 "+
 			"--imgresize_dur 50s "+
-			"--imgresize_nround 14 "+
+			"--imgresize_nround 43 "+
 			"--imgresize_path name/ux/~local/8.jpg "+
 			"--imgresize_mcpu 0 "+
-			"--imgresize_mem 1500 "+
+			"--imgresize_mem 2500 "+
 			"--prewarm_realm "+
 			"> /tmp/bench.out 2>&1",
 			debugSelectors,
 			perfSelectors,
-			netproxy,
+			dialproxy,
 			overlays,
 			ccfg.LeaderNodeIP,
 			bcfg.Tag,

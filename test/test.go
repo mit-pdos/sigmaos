@@ -17,17 +17,9 @@ import (
 	"sigmaos/namesrv/fsetcd"
 	"sigmaos/netsigma"
 	"sigmaos/proc"
-	"sigmaos/realmclnt"
+	realmclnt "sigmaos/realm/clnt"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
-)
-
-const (
-	BOOT_REALM   = "realm"
-	BOOT_ALL     = "all"
-	BOOT_NAMED   = "named"
-	BOOT_NODE    = "node"
-	BOOT_MINNODE = "minnode"
 )
 
 var Start bool
@@ -35,10 +27,10 @@ var reuseKernel bool
 var noShutdown bool
 var tag string
 var EtcdIP string
-var Overlays bool
-var GVisor bool
 var useSPProxy bool
-var noNetProxy bool
+var noDialProxy bool
+var noBootDialProxy bool
+var Withs3pathclnt bool
 
 func init() {
 	flag.StringVar(&EtcdIP, "etcdIP", "127.0.0.1", "Etcd IP")
@@ -47,10 +39,10 @@ func init() {
 	flag.BoolVar(&Start, "start", false, "Start system")
 	flag.BoolVar(&reuseKernel, "reuse-kernel", false, "Reuse system, avoid restarting when possible")
 	flag.BoolVar(&noShutdown, "no-shutdown", false, "Don't shut down the system")
-	flag.BoolVar(&Overlays, "overlays", false, "Overlays")
-	flag.BoolVar(&GVisor, "gvisor", false, "GVisor")
 	flag.BoolVar(&useSPProxy, "usespproxy", false, "Use spproxy?")
-	flag.BoolVar(&noNetProxy, "nonetproxy", false, "Disable use of proxy for network dialing/listening?")
+	flag.BoolVar(&noDialProxy, "nodialproxy", false, "Disable use of proxy for network dialing/listening?")
+	flag.BoolVar(&noBootDialProxy, "no-boot-dialproxy", false, "Boot spproxy?")
+	flag.BoolVar(&Withs3pathclnt, "withs3pathclnt", false, "With s3clntpath?")
 }
 
 var savedTstate *Tstate
@@ -85,7 +77,7 @@ func NewTstateMinAddr(t *testing.T, addr *sp.Taddr) *TstateMin {
 	if !assert.Nil(t, err, "Error NewFsEtcdEndpoint: %v", err) {
 		return nil
 	}
-	pe := proc.NewTestProcEnv(sp.ROOTREALM, secrets, etcdMnt, lip, lip, "", false, false, false)
+	pe := proc.NewTestProcEnv(sp.ROOTREALM, secrets, etcdMnt, lip, lip, "", false, false)
 	pe.Program = "srv"
 	pe.SetPrincipal(sp.NewPrincipal("srv", sp.ROOTREALM))
 	proc.SetSigmaDebugPid(pe.GetPID().String())
@@ -103,29 +95,28 @@ func NewTstateMin(t *testing.T) *TstateMin {
 }
 
 type Tstate struct {
-	srvs string
+	ntype bootkernelclnt.Tboot
 	*sigmaclnt.SigmaClnt
-	rc            *realmclnt.RealmClnt
-	memfs         *proc.Proc
-	kclnts        []*bootkernelclnt.Kernel
-	killidx       int
-	T             *testing.T
-	proc          *proc.Proc
-	scsck         *bootkernelclnt.Kernel
-	masterPubKey  auth.PublicKey
-	masterPrivKey auth.PrivateKey
+	rc      *realmclnt.RealmClnt
+	memfs   *proc.Proc
+	kclnts  []*bootkernelclnt.Kernel
+	killidx int
+	T       *testing.T
+	proc    *proc.Proc
+	spkc    *bootkernelclnt.Kernel
 }
 
 func NewTstatePath(t *testing.T, path string) (*Tstate, error) {
-	if Overlays && EtcdIP == "127.0.0.1" {
-		return nil, fmt.Errorf("Overlays set, but etcdIP not set")
-	}
 	ts, err := newSysClntPath(t, path)
 	if err != nil {
 		db.DPrintf(db.ERROR, "NewTstatePath: %v\n", err)
 		return nil, err
 	}
-	if path == filepath.Join(sp.MEMFS, "~local/")+"/" {
+	if Withs3pathclnt {
+		err := ts.MountS3PathClnt()
+		assert.Nil(t, err, "MountS3PathClnt")
+	}
+	if path == filepath.Join(sp.MEMFS, sp.LOCAL)+"/" {
 		ts.memfs = proc.NewProc("memfsd", []string{})
 		err := ts.Spawn(ts.memfs)
 		assert.Nil(t, err)
@@ -144,7 +135,7 @@ func NewTstateAll(t *testing.T) (*Tstate, error) {
 }
 
 func NewTstateWithRealms(t *testing.T) (*Tstate, error) {
-	ts, err := newSysClnt(t, BOOT_REALM)
+	ts, err := newSysClnt(t, bootkernelclnt.BOOT_REALM)
 	if err != nil {
 		db.DPrintf(db.ERROR, "NewTstateRealm: %v\n", err)
 		return nil, err
@@ -160,16 +151,16 @@ func NewTstateWithRealms(t *testing.T) (*Tstate, error) {
 
 func newSysClntPath(t *testing.T, path string) (*Tstate, error) {
 	if path == sp.NAMED {
-		return newSysClnt(t, BOOT_NAMED)
+		return newSysClnt(t, bootkernelclnt.BOOT_NAMED)
 	} else {
-		return newSysClnt(t, BOOT_ALL)
+		return newSysClnt(t, bootkernelclnt.BOOT_ALL)
 	}
 }
 
-func newSysClnt(t *testing.T, srvs string) (*Tstate, error) {
+func newSysClnt(t *testing.T, ntype bootkernelclnt.Tboot) (*Tstate, error) {
 	// If the tests are invoked trying to reuse booted systems, and the same
 	// servers are meant to be booted, skip the boot.
-	if reuseKernel && savedTstate != nil && savedTstate.srvs == srvs {
+	if reuseKernel && savedTstate != nil && savedTstate.ntype == ntype {
 		// Reset the Tstate's *testing.T
 		savedTstate.T = t
 		db.DPrintf(db.TEST, "Reusing previously-booted system")
@@ -190,30 +181,29 @@ func newSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 		return nil, err
 	}
 	secrets := map[string]*sp.SecretProto{"s3": s3secrets}
-	useNetProxy := !noNetProxy
-	pe := proc.NewTestProcEnv(sp.ROOTREALM, secrets, etcdMnt, localIP, localIP, tag, Overlays, useSPProxy, useNetProxy)
+	useDialProxy := !noDialProxy
+	pe := proc.NewTestProcEnv(sp.ROOTREALM, secrets, etcdMnt, localIP, localIP, tag, useSPProxy, useDialProxy)
 	proc.SetSigmaDebugPid(pe.GetPID().String())
 	var kernelid string
 	var k *bootkernelclnt.Kernel
 	if Start {
 		kernelid = bootkernelclnt.GenKernelId()
-		_, err := bootkernelclnt.Start(kernelid, sp.Tip(EtcdIP), pe, srvs, Overlays, GVisor, useNetProxy)
+		_, err := bootkernelclnt.Start(kernelid, sp.Tip(EtcdIP), pe, ntype, useDialProxy)
 		if err != nil {
 			db.DPrintf(db.ALWAYS, "Error start kernel")
 			return nil, err
 		}
 	}
-	var scsck *bootkernelclnt.Kernel
-	var sckid string
-	if useSPProxy || useNetProxy {
-		db.DPrintf(db.BOOT, "Booting spproxyd: usespproxyd %v usenetproxy %v", useSPProxy, useNetProxy)
-		sckid = sp.SPProxydKernel(bootkernelclnt.GenKernelId())
-		_, err := bootkernelclnt.Start(sckid, sp.Tip(EtcdIP), pe, sp.SPPROXYDREL, Overlays, GVisor, useNetProxy)
+	var spkc *bootkernelclnt.Kernel
+	if !noBootDialProxy && (useSPProxy || useDialProxy) {
+		db.DPrintf(db.BOOT, "Booting spproxyd: usespproxyd %v usedialproxy %v", useSPProxy, useDialProxy)
+		sckid := sp.SPProxydKernel(bootkernelclnt.GenKernelId())
+		_, err := bootkernelclnt.Start(sckid, sp.Tip(EtcdIP), pe, sp.SPPROXYDREL, useDialProxy)
 		if err != nil {
 			db.DPrintf(db.ALWAYS, "Error start kernel for spproxyd")
 			return nil, err
 		}
-		scsck, err = bootkernelclnt.NewKernelClnt(sckid, sp.Tip(EtcdIP), pe)
+		spkc, err = bootkernelclnt.NewKernelClnt(sckid, sp.Tip(EtcdIP), pe)
 		if err != nil {
 			db.DPrintf(db.ALWAYS, "Error make kernel clnt for spproxyd")
 			return nil, err
@@ -225,31 +215,31 @@ func newSysClnt(t *testing.T, srvs string) (*Tstate, error) {
 		return nil, err
 	}
 	savedTstate = &Tstate{
-		srvs:      srvs,
+		ntype:     ntype,
 		SigmaClnt: k.SigmaClnt,
 		kclnts:    []*bootkernelclnt.Kernel{k},
 		killidx:   0,
 		T:         t,
-		scsck:     scsck,
+		spkc:      spkc,
 	}
 	return savedTstate, nil
 }
 
 func (ts *Tstate) BootMinNode(n int) error {
-	return ts.bootNode(n, BOOT_MINNODE)
+	return ts.bootNode(n, bootkernelclnt.BOOT_MINNODE)
 }
 
 func (ts *Tstate) BootNode(n int) error {
-	return ts.bootNode(n, BOOT_NODE)
+	return ts.bootNode(n, bootkernelclnt.BOOT_NODE)
 }
 
-func (ts *Tstate) bootNode(n int, nodetype string) error {
-	useNetProxy := !noNetProxy
+func (ts *Tstate) bootNode(n int, ntype bootkernelclnt.Tboot) error {
+	useDialProxy := !noDialProxy
 	// Clear the saved kernel, since the next test may not need an additional
 	// node
 	savedTstate = nil
 	for i := 0; i < n; i++ {
-		kclnt, err := bootkernelclnt.NewKernelClntStart(sp.Tip(EtcdIP), ts.ProcEnv(), nodetype, Overlays, GVisor, useNetProxy)
+		kclnt, err := bootkernelclnt.NewKernelClntStart(sp.Tip(EtcdIP), ts.ProcEnv(), ntype, useDialProxy)
 		if err != nil {
 			return err
 		}
@@ -267,6 +257,13 @@ func (ts *Tstate) Boot(s string) error {
 	// node
 	savedTstate = nil
 	return ts.kclnts[0].Boot(s)
+}
+
+func (ts *Tstate) BootEnv(s string, env []string) error {
+	// Clear the saved kernel, since the next test may not need an additional
+	// node
+	savedTstate = nil
+	return ts.kclnts[0].BootEnv(s, env)
 }
 
 func (ts *Tstate) BootFss3d() error {
@@ -329,11 +326,11 @@ func (ts *Tstate) Shutdown() error {
 			}
 			ts.kclnts[i].Close()
 		}
-		if ts.scsck != nil {
-			if err := ts.scsck.Shutdown(); err != nil {
+		if ts.spkc != nil {
+			if err := ts.spkc.Shutdown(); err != nil {
 				db.DPrintf(db.ALWAYS, "Shutdown spproxyd err %v", err)
 			}
-			ts.scsck.Close()
+			ts.spkc.Close()
 		}
 	}
 	return nil

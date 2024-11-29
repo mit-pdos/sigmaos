@@ -10,18 +10,18 @@ package pathclnt
 
 import (
 	"fmt"
+	"path/filepath"
 
 	db "sigmaos/debug"
 	"sigmaos/fidclnt"
 	"sigmaos/path"
 	"sigmaos/pathclnt/mntclnt"
 	"sigmaos/proc"
-	"sigmaos/rand"
+	"sigmaos/util/rand"
 	"sigmaos/serr"
+	sos "sigmaos/sigmaos"
 	sp "sigmaos/sigmap"
 )
-
-type Watch func(error)
 
 type PathClnt struct {
 	*fidclnt.FidClnt
@@ -37,7 +37,7 @@ func NewPathClnt(pe *proc.ProcEnv, fidc *fidclnt.FidClnt) *PathClnt {
 		FidClnt: fidc,
 		cid:     sp.TclntId(rand.Uint64()),
 	}
-	pathc.mntclnt = mntclnt.NewMntClnt(pathc, fidc, pathc.cid, pe, fidc.GetNetProxyClnt())
+	pathc.mntclnt = mntclnt.NewMntClnt(pathc, fidc, pathc.cid, pe, fidc.GetDialProxyClnt())
 	db.DPrintf(db.TEST, "New cid %v %v\n", pathc.cid, pe.GetRealm())
 	return pathc
 }
@@ -81,9 +81,12 @@ func (pathc *PathClnt) detachAll() error {
 	return err
 }
 
-func (pathc *PathClnt) Create(p string, principal *sp.Tprincipal, perm sp.Tperm, mode sp.Tmode, lid sp.TleaseId, f sp.Tfence) (sp.Tfid, error) {
-	db.DPrintf(db.PATHCLNT, "%v: Create %v perm %v lid %v\n", pathc.cid, p, perm, lid)
-	path, err := serr.PathSplitErr(p)
+func (pathc *PathClnt) Create(pn string, principal *sp.Tprincipal, perm sp.Tperm, mode sp.Tmode, lid sp.TleaseId, f *sp.Tfence) (sp.Tfid, error) {
+	db.DPrintf(db.PATHCLNT, "%v: Create %v perm %v lid %v\n", pathc.cid, pn, perm, lid)
+	if filepath.Base(pn) == sp.LOCAL || filepath.Base(pn) == sp.ANY {
+		return sp.NoFid, fmt.Errorf("Can't create %v or %v: %v", sp.LOCAL, sp.ANY, pn)
+	}
+	path, err := serr.PathSplitErr(pn)
 	if err != nil {
 		return sp.NoFid, err
 	}
@@ -91,12 +94,12 @@ func (pathc *PathClnt) Create(p string, principal *sp.Tprincipal, perm sp.Tperm,
 	base := path.Base()
 	fid, err := pathc.walk(dir, principal, true, nil)
 	if err != nil {
-		db.DPrintf(db.PATHCLNT_ERR, "%v: Walk failed: %v err %v", pathc.cid, p, err)
+		db.DPrintf(db.PATHCLNT_ERR, "%v: Walk failed: %v err %v", pathc.cid, pn, err)
 		return sp.NoFid, err
 	}
 	fid, err = pathc.FidClnt.Create(fid, base, perm, mode, lid, f)
 	if err != nil {
-		db.DPrintf(db.PATHCLNT_ERR, "%v: create failed: %v err %v", pathc.cid, p, err)
+		db.DPrintf(db.PATHCLNT_ERR, "%v: create failed: %v err %v", pathc.cid, pn, err)
 		return sp.NoFid, err
 	}
 	return fid, nil
@@ -222,7 +225,7 @@ func (pathc *PathClnt) Stat(name string, principal *sp.Tprincipal) (*sp.Stat, er
 	}
 }
 
-func (pathc *PathClnt) Open(pn string, principal *sp.Tprincipal, mode sp.Tmode, w Watch) (sp.Tfid, error) {
+func (pathc *PathClnt) Open(pn string, principal *sp.Tprincipal, mode sp.Tmode, w sos.Watch) (sp.Tfid, error) {
 	db.DPrintf(db.PATHCLNT, "%v: Open %v %v %v\n", pathc.cid, pn, mode, w)
 	p, err := serr.PathSplitErr(pn)
 	if err != nil {
@@ -240,7 +243,7 @@ func (pathc *PathClnt) Open(pn string, principal *sp.Tprincipal, mode sp.Tmode, 
 	return fid, nil
 }
 
-func (pathc *PathClnt) SetDirWatch(fid sp.Tfid, w Watch) error {
+func (pathc *PathClnt) SetDirWatch(fid sp.Tfid, w sos.Watch) error {
 	db.DPrintf(db.PATHCLNT, "%v: SetDirWatch %v\n", pathc.cid, fid)
 	go func() {
 		err := pathc.FidClnt.Watch(fid)
@@ -284,6 +287,9 @@ func (pathc *PathClnt) GetFile(pn string, principal *sp.Tprincipal, mode sp.Tmod
 // Create or open file and write it
 func (pathc *PathClnt) PutFile(pn string, principal *sp.Tprincipal, mode sp.Tmode, perm sp.Tperm, data []byte, off sp.Toffset, lid sp.TleaseId, f *sp.Tfence) (sp.Tsize, error) {
 	db.DPrintf(db.PATHCLNT, "%v: PutFile %v %v %v\n", pathc.cid, pn, mode, lid)
+	if filepath.Base(pn) == sp.LOCAL || filepath.Base(pn) == sp.ANY {
+		return 0, fmt.Errorf("Can't create %v or %v: %v", sp.LOCAL, sp.ANY, pn)
+	}
 	p, err := serr.PathSplitErr(pn)
 	if err != nil {
 		return 0, err
@@ -324,9 +330,13 @@ func (pathc *PathClnt) Walk(fid sp.Tfid, path path.Tpathname, principal *sp.Tpri
 	if ch == nil {
 		return sp.NoFid, serr.NewErr(serr.TErrNotfound, fid)
 	}
-	p := ch.Path().AppendPath(path)
-	db.DPrintf(db.PATHCLNT, "Walk %v (ch %v)", p, ch.Path())
-	return pathc.walk(p, principal, true, nil)
+
+	// XXX fix
+	// p := ch.Path().AppendPath(path)
+	// return pathc.walk(p, principal, true, nil)
+
+	db.DPrintf(db.PATHCLNT, "Walk %v %v (ch %v)", fid, path, ch)
+	return pathc.walk(path, principal, true, nil)
 }
 
 func (pathc *PathClnt) Disconnected() bool {
@@ -335,8 +345,8 @@ func (pathc *PathClnt) Disconnected() bool {
 
 // Disconnect client from server permanently to simulate network
 // partition to server that exports pn
-func (pathc *PathClnt) Disconnect(pn string, fids []sp.Tfid) error {
-	db.DPrintf(db.CRASH, "Disconnect %v mnts %v\n", pn, pathc.mntclnt.MountedPaths())
+func (pathc *PathClnt) Disconnect(pn string) error {
+	db.DPrintf(db.CRASH, "Disconnect %v\n", pn)
 	pathc.disconnected = true
-	return pathc.mntclnt.Disconnect(pn, fids)
+	return pathc.mntclnt.Disconnect(pn)
 }

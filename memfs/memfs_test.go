@@ -10,18 +10,18 @@ import (
 
 	// db "sigmaos/debug"
 	db "sigmaos/debug"
-	"sigmaos/netproxyclnt"
+	dialproxyclnt "sigmaos/dialproxy/clnt"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )
 
-var pathname string // e.g., --path "name/ux/~local/fslibtest"
+var pathname string // e.g., --path "name/ux/sp.LOCAL/fslibtest"
 
 func init() {
 	// use a memfs file system
-	flag.StringVar(&pathname, "path", "name/memfs/~local/", "path for file system")
+	flag.StringVar(&pathname, "path", filepath.Join("name/memfs", sp.LOCAL)+"/", "path for file system")
 }
 
 func TestCompile(t *testing.T) {
@@ -51,7 +51,7 @@ func TestPipeBasic(t *testing.T) {
 	ch := make(chan bool)
 	go func() {
 		pe := proc.NewAddedProcEnv(ts.ProcEnv())
-		fsl, err := sigmaclnt.NewFsLib(pe, netproxyclnt.NewNetProxyClnt(pe))
+		fsl, err := sigmaclnt.NewFsLib(pe, dialproxyclnt.NewDialProxyClnt(pe))
 		assert.Nil(t, err)
 		fd, err := fsl.Open(pipe, sp.OREAD)
 		assert.Nil(ts.T, err, "Open")
@@ -91,7 +91,7 @@ func TestPipeClose(t *testing.T) {
 	ch := make(chan bool)
 	go func(ch chan bool) {
 		pe := proc.NewAddedProcEnv(ts.ProcEnv())
-		fsl, err := sigmaclnt.NewFsLib(pe, netproxyclnt.NewNetProxyClnt(pe))
+		fsl, err := sigmaclnt.NewFsLib(pe, dialproxyclnt.NewDialProxyClnt(pe))
 		assert.Nil(t, err)
 		fd, err := fsl.Open(pipe, sp.OREAD)
 		assert.Nil(ts.T, err, "Open")
@@ -135,7 +135,7 @@ func TestPipeRemove(t *testing.T) {
 	ch := make(chan bool)
 	go func(ch chan bool) {
 		pe := proc.NewAddedProcEnv(ts.ProcEnv())
-		fsl, err := sigmaclnt.NewFsLib(pe, netproxyclnt.NewNetProxyClnt(pe))
+		fsl, err := sigmaclnt.NewFsLib(pe, dialproxyclnt.NewDialProxyClnt(pe))
 		assert.Nil(t, err)
 		_, err = fsl.Open(pipe, sp.OREAD)
 		assert.NotNil(ts.T, err, "Open")
@@ -161,7 +161,7 @@ func TestPipeCrash0(t *testing.T) {
 
 	go func() {
 		pe := proc.NewAddedProcEnv(ts.ProcEnv())
-		fsl, err := sigmaclnt.NewFsLib(pe, netproxyclnt.NewNetProxyClnt(pe))
+		fsl, err := sigmaclnt.NewFsLib(pe, dialproxyclnt.NewDialProxyClnt(pe))
 		assert.Nil(t, err)
 		_, err = fsl.Open(pipe, sp.OWRITE)
 		assert.Nil(ts.T, err, "Open")
@@ -189,7 +189,7 @@ func TestPipeCrash1(t *testing.T) {
 	assert.Nil(ts.T, err, "NewPipe")
 
 	pe := proc.NewAddedProcEnv(ts.ProcEnv())
-	fsl1, err := sigmaclnt.NewFsLib(pe, netproxyclnt.NewNetProxyClnt(pe))
+	fsl1, err := sigmaclnt.NewFsLib(pe, dialproxyclnt.NewDialProxyClnt(pe))
 
 	assert.Nil(t, err)
 	go func() {
@@ -208,7 +208,7 @@ func TestPipeCrash1(t *testing.T) {
 	// start up second write to pipe
 	go func() {
 		pe := proc.NewAddedProcEnv(ts.ProcEnv())
-		fsl2, err := sigmaclnt.NewFsLib(pe, netproxyclnt.NewNetProxyClnt(pe))
+		fsl2, err := sigmaclnt.NewFsLib(pe, dialproxyclnt.NewDialProxyClnt(pe))
 		assert.Nil(t, err)
 		// the pipe has been closed for writing due to crash;
 		// this open should fail.

@@ -22,6 +22,13 @@ const (
 	RUN     = 5
 )
 
+// Geo constants
+const (
+	DEF_GEO_N_IDX         = 1000
+	DEF_GEO_SEARCH_RADIUS = 10
+	DEF_GEO_N_RESULTS     = 5
+)
+
 func TestSpawnCkptProc(t *testing.T) {
 	ts, err := test.NewTstateAll(t)
 	assert.Nil(t, err)
@@ -74,7 +81,7 @@ func TestSpawnCkptGeo(t *testing.T) {
 
 	db.DPrintf(db.TEST, "Spawn proc %v %v", job, pn)
 
-	ckptProc := proc.NewProcPid(pid, GEO, []string{job, pn})
+	ckptProc := proc.NewProcPid(pid, GEO, []string{job, pn, []string{"1000", "10", "20"}})
 	err = ts.Spawn(ckptProc)
 	assert.Nil(t, err)
 	err = ts.WaitStart(ckptProc.GetPid())

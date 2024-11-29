@@ -9,10 +9,10 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	db "sigmaos/debug"
-	"sigmaos/delay"
 	"sigmaos/namesrv/fsetcd"
-	"sigmaos/netproxyclnt"
+	dialproxyclnt "sigmaos/dialproxy/clnt"
 	"sigmaos/proc"
+	"sigmaos/util/rand"
 	"sigmaos/semclnt"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
@@ -23,10 +23,16 @@ const (
 	SEMDIR = "semdir"
 )
 
-var pathname string // e.g., --path "name/schedd/~local/"
+var pathname string // e.g., --path "name/schedd/sp.LOCAL/"
 
 func init() {
 	flag.StringVar(&pathname, "path", sp.NAMED, "path for file system")
+}
+
+func Delay(maxms int64) {
+	ms := rand.Int64(maxms)
+	db.DPrintf(db.DELAY, "Delay to %vms\n", ms)
+	time.Sleep(time.Duration(ms) * time.Millisecond)
 }
 
 func TestCompile(t *testing.T) {
@@ -45,7 +51,7 @@ func TestSemClntSimple(t *testing.T) {
 	err := ts.MkDir(pn, 0777)
 	assert.Nil(ts.T, err, "Mkdir")
 	pe := proc.NewAddedProcEnv(ts.ProcEnv())
-	fsl0, err := sigmaclnt.NewFsLib(pe, netproxyclnt.NewNetProxyClnt(pe))
+	fsl0, err := sigmaclnt.NewFsLib(pe, dialproxyclnt.NewDialProxyClnt(pe))
 	assert.Nil(ts.T, err, "fsl0")
 
 	sem := semclnt.NewSemClnt(ts.FsLib, pn+"/x")
@@ -86,10 +92,10 @@ func TestSemClntConcur(t *testing.T) {
 	err := ts.MkDir(pn, 0777)
 	assert.Nil(ts.T, err, "Mkdir")
 	pe1 := proc.NewAddedProcEnv(ts.ProcEnv())
-	fsl0, err := sigmaclnt.NewFsLib(pe1, netproxyclnt.NewNetProxyClnt(pe1))
+	fsl0, err := sigmaclnt.NewFsLib(pe1, dialproxyclnt.NewDialProxyClnt(pe1))
 	assert.Nil(ts.T, err, "fsl0")
 	pe2 := proc.NewAddedProcEnv(ts.ProcEnv())
-	fsl1, err := sigmaclnt.NewFsLib(pe2, netproxyclnt.NewNetProxyClnt(pe2))
+	fsl1, err := sigmaclnt.NewFsLib(pe2, dialproxyclnt.NewDialProxyClnt(pe2))
 	assert.Nil(ts.T, err, "fsl1")
 
 	for i := 0; i < 100; i++ {
@@ -99,13 +105,13 @@ func TestSemClntConcur(t *testing.T) {
 		ch := make(chan bool)
 
 		go func(ch chan bool) {
-			delay.Delay(200)
+			Delay(200)
 			sem := semclnt.NewSemClnt(fsl0, pn+"/x")
 			sem.Down()
 			ch <- true
 		}(ch)
 		go func(ch chan bool) {
-			delay.Delay(200)
+			Delay(200)
 			sem := semclnt.NewSemClnt(fsl1, pn+"/x")
 			sem.Up()
 			ch <- true

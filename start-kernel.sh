@@ -5,7 +5,7 @@
 #
 
 usage() {
-    echo "Usage: $0 [--pull TAG] [--boot all|node|minnode|named|realm|spproxyd] [--named ADDRs] [--dbip DBIP] [--mongoip MONGOIP] [--host] [--overlays] [--gvisor] [--usenetproxy] [--reserveMcpu rmcpu] kernelid"  1>&2
+    echo "Usage: $0 [--pull TAG] [--boot all|all_no_besched|node|node_no_besched|minnode|besched_node|named|realm_no_besched|spproxyd] [--named ADDRs] [--dbip DBIP] [--mongoip MONGOIP] [--host] [--usedialproxy] [--reserveMcpu rmcpu] kernelid"  1>&2
 }
 
 UPDATE=""
@@ -16,9 +16,7 @@ DBIP="x.x.x.x"
 MONGOIP="x.x.x.x"
 NET="host"
 KERNELID=""
-OVERLAYS="false"
-GVISOR="false"
-NETPROXY="false"
+DIALPROXY="false"
 RMCPU="0"
 while [[ "$#" -gt 1 ]]; do
   case "$1" in
@@ -26,13 +24,22 @@ while [[ "$#" -gt 1 ]]; do
     shift
     case "$1" in
         "all")
-            BOOT="knamed;procq;lcsched;schedd;ux;s3;chunkd;db;mongo;named"
+            BOOT="knamed;besched;lcsched;msched;ux;s3;chunkd;db;mongo;named"
+            ;;
+        "all_no_besched")
+            BOOT="knamed;lcsched;msched;ux;s3;chunkd;db;mongo;named"
             ;;
         "node")
-            BOOT="procq;schedd;ux;s3;db;chunkd;mongo"
+            BOOT="besched;msched;ux;s3;db;chunkd;mongo"
+            ;;
+        "node_no_besched")
+            BOOT="msched;ux;s3;db;chunkd;mongo"
             ;;
         "minnode")
-            BOOT="schedd;ux;s3;chunkd"
+            BOOT="msched;ux;s3;chunkd"
+            ;;
+        "besched_node")
+            BOOT="besched"
             ;;
         "named")
             BOOT="knamed"
@@ -41,7 +48,10 @@ while [[ "$#" -gt 1 ]]; do
             BOOT="spproxyd"
             ;;
         "realm")
-            BOOT="knamed;procq;lcsched;schedd;realmd;ux;s3;chunkd;db;mongo;named"
+            BOOT="knamed;besched;lcsched;msched;realmd;ux;s3;chunkd;db;mongo;named"
+            ;;
+        "realm_no_besched")
+            BOOT="knamed;lcsched;msched;realmd;ux;s3;chunkd;db;mongo;named"
             ;;
         *)
             echo "unexpected argument $1 to boot"
@@ -60,17 +70,9 @@ while [[ "$#" -gt 1 ]]; do
     shift
     NET="host"
     ;;
-  --overlays)
+  --usedialproxy)
     shift
-    OVERLAYS="true"
-    ;;
-  --gvisor)
-    shift
-    GVISOR="true"
-    ;;
-  --usenetproxy)
-    shift
-    NETPROXY="true"
+    DIALPROXY="true"
     ;;
   --named)
     shift
@@ -140,6 +142,8 @@ if [ "$MONGOIP" == "x.x.x.x" ] && docker ps | grep -q sigmamongo; then
   MONGOIP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' sigmamongo):27017
 fi
 
+PROJECT_ROOT=$(realpath $(dirname $0))
+
 # If running in local configuration, mount bin directory.
 MOUNTS="--mount type=bind,src=/var/run/docker.sock,dst=/var/run/docker.sock \
   --mount type=bind,src=/sys/fs/cgroup,dst=/cgroup \
@@ -151,9 +155,9 @@ MOUNTS="--mount type=bind,src=/var/run/docker.sock,dst=/var/run/docker.sock \
   --mount type=bind,src=${HOME}/.aws,dst=/home/sigmaos/.aws"
 if [ "$TAG" == "local-build" ]; then
   MOUNTS="$MOUNTS\
-    --mount type=bind,src=$(pwd)/../bin/user,dst=/home/sigmaos/bin/user/common \
-    --mount type=bind,src=$(pwd)/../bin/kernel,dst=/home/sigmaos/bin/kernel \
-    --mount type=bind,src=$(pwd)/../bin/linux,dst=/home/sigmaos/bin/linux"
+    --mount type=bind,src=$PROJECT_ROOT/bin/user,dst=/home/sigmaos/bin/user/common \
+    --mount type=bind,src=$PROJECT_ROOT/bin/kernel,dst=/home/sigmaos/bin/kernel \
+    --mount type=bind,src=$PROJECT_ROOT/bin/linux,dst=/home/sigmaos/bin/linux"
 fi
 
 # Mounting docker.sock is bad idea in general because it requires to
@@ -170,11 +174,10 @@ CID=$(docker run -dit \
              -e boot=${BOOT} \
              -e dbip=${DBIP} \
              -e mongoip=${MONGOIP} \
-             -e overlays=${OVERLAYS} \
              -e buildtag=${TAG} \
-             -e gvisor=${GVISOR} \
-             -e netproxy=${NETPROXY} \
+             -e dialproxy=${DIALPROXY} \
              -e SIGMAPERF=${SIGMAPERF} \
+             -e SIGMAFAIL=${SIGMAFAIL} \
              -e SIGMADEBUG=${SIGMADEBUG} \
              -e reserveMcpu=${RMCPU} \
              sigmaos)

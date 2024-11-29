@@ -2,6 +2,8 @@
 package sigmaos
 
 import (
+	"io"
+
 	"sigmaos/path"
 	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
@@ -14,10 +16,7 @@ const (
 	O_WAIT Twait = true
 )
 
-type PathClntAPI interface {
-	GetFile(pn string, principal *sp.Tprincipal, mode sp.Tmode, off sp.Toffset, cnt sp.Tsize, f *sp.Tfence) ([]byte, error)
-	Stat(name string, principal *sp.Tprincipal) (*sp.Stat, error)
-}
+type Watch func(error)
 
 type FileAPI interface {
 	// Core interface
@@ -36,9 +35,10 @@ type FileAPI interface {
 	Read(fd int, b []byte) (sp.Tsize, error)
 	Write(fd int, d []byte) (sp.Tsize, error)
 	Pread(fd int, b []byte, o sp.Toffset) (sp.Tsize, error)
+	PreadRdr(fd int, o sp.Toffset, sz sp.Tsize) (io.ReadCloser, error)
 	Seek(fd int, o sp.Toffset) error
 
-	// Leased
+	// Leases
 	CreateLeased(path string, p sp.Tperm, m sp.Tmode, l sp.TleaseId, f sp.Tfence) (int, error)
 	ClntId() sp.TclntId
 
@@ -60,6 +60,7 @@ type FileAPI interface {
 	GetNamedEndpointRealm(realm sp.Trealm) (*sp.Tendpoint, error)
 	InvalidateNamedEndpointCacheEntryRealm(realm sp.Trealm) error
 	NewRootMount(path string, epname string) error
+	MountPathClnt(mnt string, pc PathClntAPI) error
 
 	// Done using SigmaOS, which detaches from any mounted servers and
 	// may close the session with those servers.
@@ -71,4 +72,13 @@ type FileAPI interface {
 	Detach(path string) error
 	Disconnect(path string) error
 	Disconnected() bool
+}
+
+type PathClntAPI interface {
+	Open(pn string, principal *sp.Tprincipal, mode sp.Tmode, w Watch) (sp.Tfid, error)
+	Create(p string, principal *sp.Tprincipal, perm sp.Tperm, mode sp.Tmode, lid sp.TleaseId, f *sp.Tfence) (sp.Tfid, error)
+	ReadF(fid sp.Tfid, off sp.Toffset, b []byte, f *sp.Tfence) (sp.Tsize, error)
+	PreadRdr(fid sp.Tfid, off sp.Toffset, len sp.Tsize) (io.ReadCloser, error)
+	WriteF(fid sp.Tfid, off sp.Toffset, data []byte, f *sp.Tfence) (sp.Tsize, error)
+	Clunk(fid sp.Tfid) error
 }

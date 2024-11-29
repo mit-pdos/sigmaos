@@ -10,7 +10,7 @@ import (
 
 type Fcall9P struct {
 	Type sessp.Tfcall
-	Tag  sessp.Ttag
+	Tag  np.Ttag
 	Msg  sessp.Tmsg
 }
 
@@ -65,7 +65,7 @@ func Np2SpStat(npst np.Stat9P) *sp.Stat {
 func to9P(fm *sessp.FcallMsg) *Fcall9P {
 	fcall9P := &Fcall9P{}
 	fcall9P.Type = sessp.Tfcall(fm.Fc.Type)
-	fcall9P.Tag = sessp.Ttag(fm.Fc.Seqno)
+	fcall9P.Tag = np.Ttag(fm.Fc.Seqno)
 	fcall9P.Msg = fm.Msg
 	return fcall9P
 }
@@ -100,7 +100,7 @@ func np2SpMsg(fcm *sessp.FcallMsg) {
 		fcm.Msg = r
 	case sessp.TTcreate9P:
 		m := fcm.Msg.(*np.Tcreate9P)
-		r := sp.NewTcreate(sp.Tfid(m.Fid), m.Name, sp.Tperm(m.Perm), sp.Tmode(m.Mode), sp.NoLeaseId, sp.NoFence())
+		r := sp.NewTcreate(sp.Tfid(m.Fid), m.Name, sp.Tperm(m.Perm), sp.Tmode(m.Mode), sp.NoLeaseId, sp.NullFence())
 		fcm.Msg = r
 	case sessp.TTremove9P:
 		m := fcm.Msg.(*np.Tremove9P)

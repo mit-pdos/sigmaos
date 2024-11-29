@@ -5,27 +5,31 @@ import (
 	"time"
 
 	db "sigmaos/debug"
+	dialproxyclnt "sigmaos/dialproxy/clnt"
 	"sigmaos/fidclnt"
-	"sigmaos/netproxyclnt"
 	"sigmaos/path"
 	"sigmaos/proc"
 	"sigmaos/serr"
-	"sigmaos/sigmaos"
 	sp "sigmaos/sigmap"
 )
+
+type MntClntAPI interface {
+	GetFile(pn string, principal *sp.Tprincipal, mode sp.Tmode, off sp.Toffset, cnt sp.Tsize, f *sp.Tfence) ([]byte, error)
+	Stat(pn string, principal *sp.Tprincipal) (*sp.Stat, error)
+}
 
 type MntClnt struct {
 	ndMntCache *NamedEndpointCache
 	mnt        *MntTable
 	rootmt     *RootMountTable
 	pe         *proc.ProcEnv
-	npc        *netproxyclnt.NetProxyClnt
+	npc        *dialproxyclnt.DialProxyClnt
 	cid        sp.TclntId
 	fidc       *fidclnt.FidClnt
-	pathc      sigmaos.PathClntAPI
+	pathc      MntClntAPI
 }
 
-func NewMntClnt(pathc sigmaos.PathClntAPI, fidc *fidclnt.FidClnt, cid sp.TclntId, pe *proc.ProcEnv, npc *netproxyclnt.NetProxyClnt) *MntClnt {
+func NewMntClnt(pathc MntClntAPI, fidc *fidclnt.FidClnt, cid sp.TclntId, pe *proc.ProcEnv, npc *dialproxyclnt.DialProxyClnt) *MntClnt {
 	mc := &MntClnt{
 		cid:        cid,
 		mnt:        newMntTable(),
@@ -179,29 +183,19 @@ func (mc *MntClnt) MountedPaths() []string {
 
 // Disconnect client from server permanently to simulate network
 // partition to server that exports pn
-func (mc *MntClnt) Disconnect(pn string, fids []sp.Tfid) error {
-	db.DPrintf(db.CRASH, "Disconnect %v mnts %v\n", pn, mc.MountedPaths())
+func (mc *MntClnt) Disconnect(pn string) error {
 	p, err := serr.PathSplitErr(pn)
 	if err != nil {
 		return err
 	}
 	pnt, ok := mc.mnt.isMountedAt(p)
-	for _, fid := range fids {
-		ch := mc.fidc.Lookup(fid)
-		if ch != nil {
-			if p.IsParent(ch.Path()) {
-				db.DPrintf(db.CRASH, "fid disconnect fid %v %v %v\n", fid, ch, pnt)
-				mc.fidc.Disconnect(fid)
-			}
-		}
+	if ok {
+		db.DPrintf(db.CRASH, "Disconnect %v pnt %v\n", pn, pnt)
+		mc.fidc.DisconnectAll(pnt.fid)
+		pnt.disconnect()
+	} else {
+		return serr.NewErr(serr.TErrUnreachable, pnt.path)
 	}
 	mc.rootmt.disconnect(pnt.path.String())
-	if ok {
-		pnt.disconnect()
-		fid, ok := pnt.getFid()
-		if ok {
-			mc.fidc.Disconnect(fid)
-		}
-	}
 	return nil
 }

@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+import "tracing/proto/tracing.proto";
+
+option go_package = "sigmaos/apps/hotel/proto";
+
+service Search {
+  rpc Nearby(SearchRequest) returns (SearchResult);
+}
+
+message SearchRequest {
+  float lat = 1;
+  float lon = 2;
+  string inDate = 3;
+  string outDate = 4;
+  SpanContextConfig spanContextConfig = 5;
+}
+
+message SearchResult {
+  repeated string hotelIds = 1;
+}

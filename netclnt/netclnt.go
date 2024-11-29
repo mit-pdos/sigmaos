@@ -5,10 +5,8 @@ import (
 	"net"
 	"sync"
 
-	// "time"
-
 	db "sigmaos/debug"
-	"sigmaos/netproxyclnt"
+	dialproxyclnt "sigmaos/dialproxy/clnt"
 	"sigmaos/proc"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
@@ -17,7 +15,7 @@ import (
 type NetClnt struct {
 	mu     sync.Mutex
 	pe     *proc.ProcEnv
-	npc    *netproxyclnt.NetProxyClnt
+	npc    *dialproxyclnt.DialProxyClnt
 	conn   net.Conn
 	ep     *sp.Tendpoint
 	addr   *sp.Taddr
@@ -25,7 +23,7 @@ type NetClnt struct {
 	realm  sp.Trealm
 }
 
-func NewNetClnt(pe *proc.ProcEnv, npc *netproxyclnt.NetProxyClnt, ep *sp.Tendpoint) (*NetClnt, *serr.Err) {
+func NewNetClnt(pe *proc.ProcEnv, npc *dialproxyclnt.DialProxyClnt, ep *sp.Tendpoint) (*NetClnt, *serr.Err) {
 	db.DPrintf(db.NETCLNT, "NewNetClnt to %v\n", ep)
 	nc := &NetClnt{
 		pe:  pe,
@@ -57,10 +55,9 @@ func (nc *NetClnt) Close() error {
 
 func (nc *NetClnt) connect(ep *sp.Tendpoint) *serr.Err {
 	db.DPrintf(db.NETCLNT, "NetClnt connect to any of %v, starting w. %v\n", ep, ep.Addrs()[0])
-	//	for _, addr := range addrs {
 	for i, addr := range ep.Addrs() {
 		if i > 0 {
-			ep.Claims.Addr = append(ep.Claims.Addr[1:], ep.Claims.Addr[0])
+			ep.Addr = append(ep.Addr[1:], ep.Addr[0])
 		}
 		c, err := nc.npc.Dial(ep)
 		db.DPrintf(db.NETCLNT, "Dial %v addr.Addr %v\n", addr.IPPort(), err)

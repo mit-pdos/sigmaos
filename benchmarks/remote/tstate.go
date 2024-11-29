@@ -48,30 +48,30 @@ func NewTstate(t *testing.T) (*Tstate, error) {
 // 7. Stop the SigmaOS cluster
 //
 // If any of the above steps results in an error, bail out early.
-func (ts *Tstate) RunParallelClientBenchmark(benchName string, driverVMs []int, getLeaderClientBenchCmd GetBenchCmdFn, getFollowerClientBenchCmd GetBenchCmdFn, startK8sApp K8sAppMgmtFn, stopK8sApp K8sAppMgmtFn, clientDelay time.Duration, numNodes int, numCoresPerNode uint, numFullNodes int, turboBoost bool) {
+func (ts *Tstate) RunParallelClientBenchmark(benchName string, driverVMs []int, getLeaderClientBenchCmd GetBenchCmdFn, getFollowerClientBenchCmd GetBenchCmdFn, startK8sApp K8sAppMgmtFn, stopK8sApp K8sAppMgmtFn, clientDelay time.Duration, numNodes int, numCoresPerNode uint, numFullNodes int, numProcqOnlyNodes int, turboBoost bool) bool {
 	db.DPrintf(db.ALWAYS, "========== Run benchmark %v ==========", benchName)
 	// Set up the benchmark, and bail out if the benchmark already ran
 	if alreadyRan, err := ts.PrepareToRunBenchmark(benchName); !assert.Nil(ts.t, err, "Prepare benchmark: %v", err) {
-		return
+		return false
 	} else if alreadyRan {
 		db.DPrintf(db.ALWAYS, "========== Skipping %v (already ran) ==========", benchName)
-		return
+		return false
 	}
 	// First, stop any previously running cluster
 	if err := ts.StopSigmaOSCluster(); !assert.Nil(ts.t, err, "Stop cluster: %v", err) {
-		return
+		return false
 	}
 	// Start a SigmaOS cluster
-	ccfg, err := ts.StartSigmaOSCluster(numNodes, numCoresPerNode, numFullNodes, turboBoost)
+	ccfg, err := ts.StartSigmaOSCluster(numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost)
 	db.DPrintf(db.ALWAYS, "\nCluster config:\n%v", ccfg)
 	if !assert.Nil(ts.t, err, "Start SigmaOS cluster: %v", err) {
-		return
+		return false
 	}
 	// If running the k8s version of the benchmark, start the k8s app
 	if ts.BCfg.K8s {
 		err := startK8sApp(ts.BCfg, ts.LCfg)
 		if !assert.Nil(ts.t, err, "Start k8s app: %v", err) {
-			return
+			return false
 		}
 		defer func() {
 			err := stopK8sApp(ts.BCfg, ts.LCfg)
@@ -122,8 +122,9 @@ func (ts *Tstate) RunParallelClientBenchmark(benchName string, driverVMs []int, 
 	}
 	// Collect the benchmark results
 	if err := ccfg.CollectResults(benchName, leaderBenchCmd, followerBenchCmd); !assert.Nil(ts.t, err, "CollectResults: %v", err) {
-		return
+		return true
 	}
+	return true
 }
 
 // Run a standard benchmark:
@@ -135,8 +136,8 @@ func (ts *Tstate) RunParallelClientBenchmark(benchName string, driverVMs []int, 
 // 6. Stop the SigmaOS cluster
 //
 // If any of the above steps results in an error, bail out early.
-func (ts *Tstate) RunStandardBenchmark(benchName string, driverVM int, getBenchCmd GetBenchCmdFn, numNodes int, numCoresPerNode uint, numFullNodes int, turboBoost bool) {
-	ts.RunParallelClientBenchmark(benchName, []int{driverVM}, getBenchCmd, nil, nil, nil, 0*time.Second, numNodes, numCoresPerNode, numFullNodes, turboBoost)
+func (ts *Tstate) RunStandardBenchmark(benchName string, driverVM int, getBenchCmd GetBenchCmdFn, numNodes int, numCoresPerNode uint, numFullNodes int, numProcqOnlyNodes int, turboBoost bool) {
+	ts.RunParallelClientBenchmark(benchName, []int{driverVM}, getBenchCmd, nil, nil, nil, 0*time.Second, numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost)
 }
 
 // Prepare to run a benchmark. If the benchmark has already been run, skip
@@ -155,8 +156,8 @@ func (ts *Tstate) PrepareToRunBenchmark(benchName string) (bool, error) {
 }
 
 // Start a SigmaOS cluster
-func (ts *Tstate) StartSigmaOSCluster(numNodes int, numCoresPerNode uint, numFullNodes int, turboBoost bool) (*ClusterConfig, error) {
-	ccfg, err := NewClusterConfig(ts.BCfg, ts.LCfg, numNodes, numCoresPerNode, numFullNodes, turboBoost)
+func (ts *Tstate) StartSigmaOSCluster(numNodes int, numCoresPerNode uint, numFullNodes int, numProcqOnlyNodes int, turboBoost bool) (*ClusterConfig, error) {
+	ccfg, err := NewClusterConfig(ts.BCfg, ts.LCfg, numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost)
 	if err != nil {
 		return nil, err
 	}
@@ -166,6 +167,7 @@ func (ts *Tstate) StartSigmaOSCluster(numNodes int, numCoresPerNode uint, numFul
 // Stop any running SigmaOS cluster
 func (ts *Tstate) StopSigmaOSCluster() error {
 	args := []string{
+		"--parallel",
 		"--vpc", ts.BCfg.VPC,
 	}
 	err := ts.LCfg.RunScriptRedirectOutputFile("./stop-sigmaos.sh", CLUSTER_INIT_LOG, args...)

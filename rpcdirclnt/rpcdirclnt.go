@@ -6,8 +6,8 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/dircache"
 	"sigmaos/fslib"
-	"sigmaos/rpcclnt"
-	"sigmaos/sigmarpcchan"
+	rpcclnt "sigmaos/rpc/clnt"
+	sprpcclnt "sigmaos/rpc/clnt/sigmap"
 )
 
 type AllocFn func(string)
@@ -19,7 +19,7 @@ type RPCDirClnt struct {
 
 func (rpcdc *RPCDirClnt) newClnt(n string) (*rpcclnt.RPCClnt, error) {
 	pn := filepath.Join(rpcdc.Path, n)
-	rpcc, err := sigmarpcchan.NewSigmaRPCClnt([]*fslib.FsLib{rpcdc.FsLib}, pn)
+	rpcc, err := sprpcclnt.NewRPCClnt(rpcdc.FsLib, pn)
 	if err != nil {
 		db.DPrintf(rpcdc.ESelector, "Error NewSigmaRPCClnt[srvID:%v]: %v", pn, err)
 		return nil, err
@@ -49,9 +49,9 @@ func NewRPCDirClntCh(fsl *fslib.FsLib, path string, ch chan string, lSelector db
 	return u
 }
 
-func NewRPCDirClntFilter(fsl *fslib.FsLib, path string, lSelector db.Tselector, eSelector db.Tselector, filter string) *RPCDirClnt {
+func NewRPCDirClntFilter(fsl *fslib.FsLib, path string, lSelector db.Tselector, eSelector db.Tselector, filters []string) *RPCDirClnt {
 	u := &RPCDirClnt{}
-	u.DirCache = dircache.NewDirCacheFilter[*rpcclnt.RPCClnt](fsl, path, u.newClnt, nil, lSelector, eSelector, filter)
+	u.DirCache = dircache.NewDirCacheFilter[*rpcclnt.RPCClnt](fsl, path, u.newClnt, nil, lSelector, eSelector, filters)
 	return u
 }
 

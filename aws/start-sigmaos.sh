@@ -1,7 +1,7 @@
 #!/bin/bash
 
 usage() {
-  echo "Usage: $0 --vpc VPC [--branch BRANCH] [--reserveMcpu rmcpu] [--pull TAG] [--n N_VM] [--ncores NCORES] [--overlays] [--nonetproxy] [--turbo] [--numfullnode N]" 1>&2
+  echo "Usage: $0 --vpc VPC [--branch BRANCH] [--reserveMcpu rmcpu] [--pull TAG] [--n N_VM] [--ncores NCORES] [--nodialproxy] [--turbo] [--numfullnode N] [--numbeschednode N]" 1>&2
 }
 
 VPC=""
@@ -9,9 +9,9 @@ N_VM=""
 NCORES=4
 UPDATE=""
 TAG=""
-OVERLAYS=""
 NUM_FULL_NODE="0"
-NETPROXY="--usenetproxy"
+NUM_BESCHED_NODE="0"
+DIALPROXY="--usedialproxy"
 TOKEN=""
 TURBO=""
 RMCPU="0"
@@ -51,23 +51,24 @@ while [[ $# -gt 0 ]]; do
     TAG=$1
     shift
     ;;
-  --overlays)
+  --nodialproxy)
     shift
-    OVERLAYS="--overlays"
-    ;;
-  --nonetproxy)
-    shift
-    NETPROXY=""
-    ;;
-  --reserveMcpu)
-    shift
-    RMCPU="$1"
-  	shift
+    DIALPROXY=""
     ;;
   --numfullnode)
     shift
     NUM_FULL_NODE=$1
     shift
+    ;;
+  --numbeschednode)
+    shift
+    NUM_BESCHED_NODE=$1
+    shift
+    ;;
+  --reserveMcpu)
+    shift
+    RMCPU="$1"
+  	shift
     ;;
   -help)
     usage
@@ -88,6 +89,16 @@ fi
 
 if [ $NCORES -ne 16 ] && [ $NCORES -ne 4 ] && [ $NCORES -ne 2 ]; then
   echo "Bad ncores $NCORES"
+  exit 1
+fi
+
+if [ $(($NUM_FULL_NODE + $NUM_BESCHED_NODE)) -gt $N_VM ]; then
+  echo "Error: NUM_FULL_NODE + NUM_BESCHED_NODE > N_VM"
+  exit 1
+fi
+
+if [ $N_VM == 1 ] && [ $NUM_BESCHED_NODE -gt 0 ]; then
+  echo "Error: N_VM == 1 but NUM_BESCHED_NODE > 0"
   exit 1
 fi
 
@@ -112,20 +123,48 @@ if ! [ -z "$TAG" ]; then
   ./update-repo.sh --vpc $VPC --parallel --branch $BRANCH
 fi
 
+LEADER_NODE="realm"
+FULL_NODE="node"
+BESCHED_NODE="beschednode"
+if [ $NUM_BESCHED_NODE -gt 0 ]; then
+  LEADER_NODE="realm_no_besched"
+  FULL_NODE="node_no_besched"
+fi
+
 vm_ncores=$(ssh -i key-$VPC.pem ubuntu@$MAIN nproc)
 i=0
 for vm in $vms; do
   i=$(($i+1))
+  FOLLOWER_NODE="$FULL_NODE"
   if [ $NUM_FULL_NODE -gt 0 ] && [ $i -gt $NUM_FULL_NODE ]; then
-    NODETYPE="minnode"
-  else
-    NODETYPE="node"
+    FOLLOWER_NODE="node_no_besched"
   fi
-  echo "starting SigmaOS on $vm nodetype: $NODETYPE!"
-  # No benchmarking setup needed for AWS.
+  KERNELID_PREFIX=""
+  # If running with besched-only nodes, then node 0 is the leader node, the
+  # following NUM_BESCHED_NODE nodes are the besched-only nodes, and the remainder
+  # are nodes without bescheds.
+  if [ $NUM_BESCHED_NODE -gt 0 ]; then
+    if [ $i -gt $(($NUM_BESCHED_NODE + 1)) ]; then
+      FOLLOWER_NODE="node_no_besched"
+    else
+      # If this is a besched-only follower node, prefix the kernel ID to denote
+      # this so that realmd doesn't try to start per-realm services (like UX)
+      # on it.
+      if [ $i -gt 1 ]; then
+        KERNELID_PREFIX="kernel-besched-"
+      fi
+      FOLLOWER_NODE="besched_node"
+    fi
+  fi
+  if [ $i -eq 1 ]; then
+    echo "starting SigmaOS on $vm nodetype leader $LEADER_NODE"
+  else
+    echo "starting SigmaOS on $vm nodetype follower $FOLLOWER_NODE"
+  fi
+  # No additional benchmarking setup needed for AWS.
   # Get hostname.
   VM_NAME=$(echo "$vms_full" | grep $vm | cut -d " " -f 2)
-  KERNELID="sigma-$VM_NAME-$(echo $RANDOM | md5sum | head -c 3)"
+  KERNELID="${KERNELID_PREFIX}sigma-$VM_NAME-$(echo $RANDOM | md5sum | head -c 3)"
   ssh -i key-$VPC.pem ubuntu@$vm /bin/bash <<ENDSSH
   mkdir -p /tmp/sigmaos
   export SIGMAPERF="$SIGMAPERF"
@@ -175,7 +214,7 @@ for vm in $vms; do
       echo "START etcd"
       ./start-etcd.sh
     fi
-    ./start-kernel.sh --boot realm --named ${SIGMASTART_PRIVADDR} --pull ${TAG} --reserveMcpu ${RMCPU} --dbip ${MAIN_PRIVADDR}:4406 --mongoip ${MAIN_PRIVADDR}:4407 ${OVERLAYS} ${NETPROXY} ${KERNELID} 2>&1 | tee /tmp/start.out
+    ./start-kernel.sh --boot $LEADER_NODE --named ${SIGMASTART_PRIVADDR} --pull ${TAG} --reserveMcpu ${RMCPU} --dbip ${MAIN_PRIVADDR}:4406 --mongoip ${MAIN_PRIVADDR}:4407 ${DIALPROXY} ${KERNELID} 2>&1 | tee /tmp/start.out
 #    docker cp ~/1.jpg ${KERNELID}:/home/sigmaos/1.jpg
 #    docker cp ~/6.jpg ${KERNELID}:/home/sigmaos/6.jpg
 #    docker cp ~/7.jpg ${KERNELID}:/home/sigmaos/7.jpg
@@ -183,7 +222,7 @@ for vm in $vms; do
   else
     echo "JOIN ${SIGMASTART} ${KERNELID}"
     ${TOKEN} 2>&1 > /dev/null
-    ./start-kernel.sh --boot $NODETYPE --named ${SIGMASTART_PRIVADDR} --pull ${TAG} --dbip ${MAIN_PRIVADDR}:4406 --mongoip ${MAIN_PRIVADDR}:4407 ${OVERLAYS} ${NETPROXY} ${KERNELID} 2>&1 | tee /tmp/join.out
+    ./start-kernel.sh --boot $FOLLOWER_NODE --named ${SIGMASTART_PRIVADDR} --pull ${TAG} --dbip ${MAIN_PRIVADDR}:4406 --mongoip ${MAIN_PRIVADDR}:4407 ${DIALPROXY} ${KERNELID} 2>&1 | tee /tmp/join.out
 #    docker cp ~/1.jpg ${KERNELID}:/home/sigmaos/1.jpg
 #    docker cp ~/6.jpg ${KERNELID}:/home/sigmaos/6.jpg
 #    docker cp ~/7.jpg ${KERNELID}:/home/sigmaos/7.jpg

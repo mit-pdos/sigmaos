@@ -14,8 +14,6 @@ import (
 	sps "sigmaos/sigmaprotsrv"
 )
 
-const NLAST = 10
-
 //
 // A session identifies a client across TCP connections.  For each
 // session, sigmaos has a protsrv.
@@ -70,7 +68,9 @@ func (sess *Session) CloseConn() {
 		conn = sess.conn
 	}
 	sess.Unlock()
-	conn.CloseConnTest()
+	if conn != nil {
+		conn.CloseConnTest()
+	}
 }
 
 func (sess *Session) AddClnt(cid sp.TclntId) {

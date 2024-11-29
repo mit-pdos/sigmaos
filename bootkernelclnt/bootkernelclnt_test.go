@@ -29,7 +29,7 @@ func TestSymlink1(t *testing.T) {
 	}
 
 	// Make a target file
-	targetPath := sp.UX + "/~local/symlink-test-file"
+	targetPath := sp.UX + "/" + sp.LOCAL + "/symlink-test-file"
 	contents := "symlink test!"
 	ts.Remove(targetPath)
 	_, err := ts.PutFile(targetPath, 0777, sp.OWRITE, []byte(contents))
@@ -77,7 +77,7 @@ func TestSymlink2(t *testing.T) {
 	}
 
 	// Make a target file
-	targetDirPath := sp.UX + "/~local/dir1"
+	targetDirPath := sp.UX + "/" + sp.LOCAL + "/dir1"
 	targetPath := targetDirPath + "/symlink-test-file"
 	contents := "symlink test!"
 	ts.Remove(targetPath)
@@ -170,7 +170,7 @@ func TestLeased(t *testing.T) {
 		return
 	}
 
-	name := filepath.Join(sp.SCHEDD, "~any")
+	name := filepath.Join(sp.MSCHED, sp.ANY)
 
 	var err error
 
@@ -189,7 +189,7 @@ func TestLeased(t *testing.T) {
 	db.DPrintf(db.TEST, "entries %v\n", sp.Names(sts))
 	assert.Equal(t, 4, len(sts), "Unexpected len(sts) %v != %v:", sp.Names(sts), 4)
 
-	ts.KillOne(sp.SCHEDDREL)
+	ts.KillOne(sp.MSCHEDREL)
 
 	start := time.Now()
 	for {

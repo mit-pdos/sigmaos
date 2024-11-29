@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime/debug"
+	"strings"
 	"time"
 
 	"google.golang.org/protobuf/proto"
@@ -83,7 +84,6 @@ func NewPrivProcPid(pid sp.Tpid, program string, args []string, priv bool) *Proc
 		priv,
 		false,
 		false,
-		false,
 	).GetProto()
 	p.Args = args
 	p.TypeInt = uint32(T_BE)
@@ -119,7 +119,6 @@ func NewProcFromCheckpoint(pid sp.Tpid, program string, chkptLoc string) *Proc {
 		),
 		sp.NOT_SET,
 		sp.NOT_SET,
-		false,
 		false,
 		false,
 		false,
@@ -163,10 +162,9 @@ func (p *Proc) InheritParentProcEnv(parentPE *ProcEnv) {
 	p.ProcEnvProto.Debug = parentPE.Debug
 	p.ProcEnvProto.BuildTag = parentPE.BuildTag
 	p.ProcEnvProto.Version = parentPE.Version
-	p.ProcEnvProto.Overlays = parentPE.Overlays
 	p.ProcEnvProto.UseSPProxy = parentPE.UseSPProxy
 	// Don't override intentionally set net proxy settings
-	p.ProcEnvProto.UseNetProxy = parentPE.UseNetProxy || p.ProcEnvProto.UseNetProxy
+	p.ProcEnvProto.UseDialProxy = parentPE.UseDialProxy || p.ProcEnvProto.UseDialProxy
 	p.ProcEnvProto.SigmaPath = append(p.ProcEnvProto.SigmaPath, parentPE.SigmaPath...)
 	// If parent didn't specify secrets, inherit the parent's secrets
 	if p.ProcEnvProto.SecretsMap == nil {
@@ -215,11 +213,11 @@ func (p *Proc) PrependSigmaPath(pn string) {
 }
 
 // Finalize env details which can only be set once a physical machine and
-// uprocd container have been chosen.
-func (p *Proc) FinalizeEnv(innerIP sp.Tip, outerIP sp.Tip, uprocdPid sp.Tpid) {
+// procd container have been chosen.
+func (p *Proc) FinalizeEnv(innerIP sp.Tip, outerIP sp.Tip, procdPid sp.Tpid) {
 	p.ProcEnvProto.InnerContainerIPStr = innerIP.String()
 	p.ProcEnvProto.OuterContainerIPStr = outerIP.String()
-	p.ProcEnvProto.SetUprocdPID(uprocdPid)
+	p.ProcEnvProto.SetProcdPID(procdPid)
 	oldr := p.GetRealm()
 	// If a realm switch was requested, perform the realm switch before
 	// marshaling the proc's ProcEnv. A realm switch is only possible if the
@@ -258,12 +256,13 @@ func (p *Proc) String() string {
 		"SigmaPath:%v "+
 		"KernelId:%v "+
 		"UseSPProxy:%v "+
-		"UseNetProxy:%v "+
+		"UseDialProxy:%v "+
 		"Realm:%v "+
 		"Perf:%v "+
 		"InnerIP:%v "+
 		"OuterIP:%v "+
 		"Args:%v "+
+		"Env:%v "+
 		"Type:%v "+
 		"Mcpu:%v "+
 		"Mem:%v "+
@@ -276,12 +275,13 @@ func (p *Proc) String() string {
 		p.ProcEnvProto.GetSigmaPath(),
 		p.ProcEnvProto.KernelID,
 		p.ProcEnvProto.UseSPProxy,
-		p.ProcEnvProto.UseNetProxy,
+		p.ProcEnvProto.UseDialProxy,
 		p.ProcEnvProto.GetRealm(),
 		p.ProcEnvProto.GetPerf(),
 		p.ProcEnvProto.GetInnerContainerIP(),
 		p.ProcEnvProto.GetOuterContainerIP(),
 		p.Args,
+		p.Env,
 		p.GetType(),
 		p.GetMcpu(),
 		p.GetMem(),
@@ -293,7 +293,7 @@ func (p *Proc) setProcDir(kernelId string) {
 	// Privileged procs have their ProcDir (sp.KPIDS) set at the time of creation
 	// of the proc struct.
 	if !p.IsPrivileged() {
-		p.ProcEnvProto.ProcDir = filepath.Join(sp.SCHEDD, kernelId, sp.PIDS, p.GetPid().String())
+		p.ProcEnvProto.ProcDir = filepath.Join(sp.MSCHED, kernelId, sp.PIDS, p.GetPid().String())
 	}
 }
 
@@ -302,6 +302,7 @@ func (p *Proc) setBaseEnv() {
 	// Pass through debug/performance vars.
 	p.AppendEnv(SIGMAPERF, GetSigmaPerf())
 	p.AppendEnv(SIGMADEBUG, GetSigmaDebug())
+	p.AppendEnv(SIGMAFAIL, GetSigmaFail())
 	p.AppendEnv(SIGMADEBUGPID, p.GetPid().String())
 	if p.IsPrivileged() {
 		p.AppendEnv("PATH", os.Getenv("PATH")) // inherit linux path from boot
@@ -398,14 +399,6 @@ func (p *Proc) GetSpawnTime() time.Time {
 	return p.ProcEnvProto.GetSpawnTime()
 }
 
-func (p *Proc) SetShared(target string) {
-	p.SharedTarget = target
-}
-
-func (p *Proc) GetShared() string {
-	return p.SharedTarget
-}
-
 func (p *Proc) SetHow(n Thow) {
 	p.ProcEnvProto.SetHow(n)
 }
@@ -414,8 +407,8 @@ func (p *Proc) GetHow() Thow {
 	return p.ProcEnvProto.GetHow()
 }
 
-func (p *Proc) SetScheddEndpoint(ep *sp.Tendpoint) {
-	p.ProcEnvProto.ScheddEndpointProto = ep.GetProto()
+func (p *Proc) SetMSchedEndpoint(ep *sp.Tendpoint) {
+	p.ProcEnvProto.MSchedEndpointProto = ep.GetProto()
 }
 
 func (p *Proc) SetNamedEndpoint(ep *sp.Tendpoint) {
@@ -437,6 +430,15 @@ func (p *Proc) GetEnv() []string {
 		env = append(env, key+"="+envvar)
 	}
 	return env
+}
+
+func (p *Proc) UpdateEnv(env []string) {
+	for _, e := range env {
+		kv := strings.Split(e, "=")
+		if len(kv) == 2 {
+			p.Env[kv[0]] = kv[1]
+		}
+	}
 }
 
 // Set the number of cores on this proc. If > 0, then this proc is LC. For now,

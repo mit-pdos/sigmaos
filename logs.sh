@@ -20,7 +20,7 @@ done
 
 out=""
 for containerid in $(docker ps -a --format "{{.Names}}"); do
-  if [[ $containerid == sigma-* ]] ; then
+  if [[ $containerid == sigma-* ]] || [[ $containerid == kernel-* ]]; then
     ctr_out="$(docker logs $containerid 2>&1)"
     if [[ "$MERGE" == "merge" ]] ; then
       out="$(printf "%s\n" "$out" "$ctr_out")"

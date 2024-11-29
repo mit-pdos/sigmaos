@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+import "tracing/proto/tracing.proto";
+
+option go_package = "sigmaos/apps/hotel/proto";
+
+service User {
+  rpc MakeReservation(UserRequest) returns (UserResult);
+  rpc CheckAvailability(UserRequest) returns (UserResult);
+}
+
+message UserRequest {
+	string name = 1;
+	string password = 2;
+  SpanContextConfig spanContextConfig = 3;
+}
+
+message UserResult {
+  string oK = 1;
+}

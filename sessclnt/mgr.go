@@ -3,9 +3,10 @@ package sessclnt
 import (
 	"sync"
 	//	"github.com/sasha-s/go-deadlock"
+	"time"
 
 	db "sigmaos/debug"
-	"sigmaos/netproxyclnt"
+	dialproxyclnt "sigmaos/dialproxy/clnt"
 	"sigmaos/proc"
 	"sigmaos/serr"
 	"sigmaos/sessp"
@@ -14,14 +15,16 @@ import (
 
 type Mgr struct {
 	mu       sync.Mutex
+	sessKeys map[*sp.Tendpoint]string
 	sessions map[string]*SessClnt
 	pe       *proc.ProcEnv
-	npc      *netproxyclnt.NetProxyClnt
+	npc      *dialproxyclnt.DialProxyClnt
 }
 
-func NewMgr(pe *proc.ProcEnv, npc *netproxyclnt.NetProxyClnt) *Mgr {
+func NewMgr(pe *proc.ProcEnv, npc *dialproxyclnt.DialProxyClnt) *Mgr {
 	sc := &Mgr{
 		sessions: make(map[string]*SessClnt),
+		sessKeys: make(map[*sp.Tendpoint]string),
 		pe:       pe,
 		npc:      npc,
 	}
@@ -45,12 +48,7 @@ func (sc *Mgr) SessClnts() []*SessClnt {
 func (sc *Mgr) allocSessClnt(ep *sp.Tendpoint) (*SessClnt, *serr.Err) {
 	sc.mu.Lock()
 	defer sc.mu.Unlock()
-	// TODO XXX: kill?
-	// Store as concatenation of addresses
-	//	if len(addrs) == 0 {
-	//		return nil, serr.NewErr(serr.TErrInval, ep)
-	//	}
-	key := sessKey(ep)
+	key := sc.getSessKeyL(ep)
 	if sess, ok := sc.sessions[key]; ok {
 		return sess, nil
 	}
@@ -65,7 +63,7 @@ func (sc *Mgr) allocSessClnt(ep *sp.Tendpoint) (*SessClnt, *serr.Err) {
 func (sc *Mgr) LookupSessClnt(ep *sp.Tendpoint) (*SessClnt, *serr.Err) {
 	sc.mu.Lock()
 	defer sc.mu.Unlock()
-	key := sessKey(ep)
+	key := sc.getSessKeyL(ep)
 	if sess, ok := sc.sessions[key]; ok {
 		return sess, nil
 	}
@@ -73,16 +71,32 @@ func (sc *Mgr) LookupSessClnt(ep *sp.Tendpoint) (*SessClnt, *serr.Err) {
 }
 
 func (sc *Mgr) RPC(ep *sp.Tendpoint, req sessp.Tmsg, iniov sessp.IoVec, outiov sessp.IoVec) (*sessp.FcallMsg, *serr.Err) {
+	s := time.Now()
 	// Get or establish sessection
 	sess, err := sc.allocSessClnt(ep)
 	if err != nil {
 		db.DPrintf(db.SESSCLNT, "Unable to alloc sess for req %v %v err %v to %v", req.Type(), req, err, ep)
 		return nil, err
 	}
+	start := time.Now()
 	rep, err := sess.RPC(req, iniov, outiov)
+
+	if db.WillBePrinted(db.RPC_LAT) {
+		db.DPrintf(db.RPC_LAT, "RPC time %v [%v] alloc %v tot %v\n", req.Type(), req, time.Since(start), time.Since(s))
+	}
+
 	return rep, err
 }
 
-func sessKey(ep *sp.Tendpoint) string {
+func (sc *Mgr) getSessKeyL(ep *sp.Tendpoint) string {
+	if s, ok := sc.sessKeys[ep]; ok {
+		return s
+	}
+	s := epToSessKey(ep)
+	sc.sessKeys[ep] = s
+	return s
+}
+
+func epToSessKey(ep *sp.Tendpoint) string {
 	return ep.Addrs().String()
 }

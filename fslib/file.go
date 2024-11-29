@@ -4,17 +4,14 @@ import (
 	"bufio"
 	"fmt"
 	"io"
-
+	"sync"
 	//	"time"
 
-	"github.com/klauspost/readahead"
-
-	"sigmaos/awriter"
 	db "sigmaos/debug"
-	"sigmaos/reader"
+	"sigmaos/fslib/reader"
+	"sigmaos/fslib/writer"
 	sos "sigmaos/sigmaos"
 	sp "sigmaos/sigmap"
-	"sigmaos/writer"
 )
 
 //
@@ -45,44 +42,53 @@ func (fl *FsLib) PutLeasedFile(fname string, perm sp.Tperm, mode sp.Tmode, lid s
 // Open readers
 //
 
-type FdReader struct {
-	*reader.Reader
-	sof sos.FileAPI
+// For clients of fslib that want an io.Reader interface for a file with
+// a few extra features (e.g., reading no more than len bytes, if len > 0).
+type FileReader struct {
+	rdr *reader.Reader
 	fd  int
+	len sp.Tlength
+	n   sp.Tlength
+	pn  string
 }
 
-func (rd *FdReader) Close() error {
-	return rd.sof.CloseFd(rd.fd)
+func newFileReader(rdr *reader.Reader, fd int, len sp.Tlength, pn string) *FileReader {
+	return &FileReader{rdr, fd, len, 0, pn}
 }
 
-func (rd *FdReader) Read(o sp.Toffset, b []byte) (int, error) {
-	sz, err := rd.sof.Read(rd.fd, b)
-	return int(sz), err
+func (rd *FileReader) Close() error {
+	return rd.rdr.Close()
 }
 
-func (rd *FdReader) Fd() int {
+func (rd *FileReader) Fd() int {
 	return rd.fd
 }
 
-func (rd *FdReader) Lseek(off sp.Toffset) error {
-	return rd.sof.Seek(rd.fd, off)
+// Read no more than len bytes, if len is set
+func (rd *FileReader) Read(b []byte) (int, error) {
+	if rd.len != 0 && rd.n >= rd.len {
+		return 0, io.EOF
+	}
+	sz, err := rd.rdr.Read(b)
+	rd.n += sp.Tlength(sz)
+	return sz, err
 }
 
-func newFdReader(sos sos.FileAPI, fd int) *FdReader {
-	return &FdReader{nil, sos, fd}
+func (rd *FileReader) Nbytes() sp.Tlength {
+	return rd.n
 }
 
-func (fl *FsLib) NewReader(fd int, path string) *FdReader {
+func (fl *FsLib) NewReaderRegion(fd int, path string, len sp.Tlength) *FileReader {
 	fdrdr := newFdReader(fl.FileAPI, fd)
-	fdrdr.Reader = reader.NewReader(fdrdr, path)
-	return fdrdr
+	rdr := reader.NewReader(fdrdr, path)
+	return newFileReader(rdr, fd, len, path)
 }
 
-func (fl *FsLib) NewWriter(fd int) *writer.Writer {
-	return writer.NewWriter(fl.FileAPI, fd)
+func (fl *FsLib) NewReader(fd int, path string) *FileReader {
+	return fl.NewReaderRegion(fd, path, 0)
 }
 
-func (fl *FsLib) OpenReader(path string) (*FdReader, error) {
+func (fl *FsLib) OpenReader(path string) (*FileReader, error) {
 	fd, err := fl.Open(path, sp.OREAD)
 	if err != nil {
 		return nil, err
@@ -90,115 +96,165 @@ func (fl *FsLib) OpenReader(path string) (*FdReader, error) {
 	return fl.NewReader(fd, path), nil
 }
 
-type Rdr struct {
-	fdrdr *FdReader
-	brdr  *bufio.Reader
-	ardr  io.ReadCloser
+func (fl *FsLib) OpenReaderRegion(path string, offset sp.Toffset, len sp.Tlength) (*FileReader, error) {
+	fd, err := fl.Open(path, sp.OREAD)
+	if err != nil {
+		return nil, err
+	}
+	fl.Seek(fd, offset)
+	return fl.NewReaderRegion(fd, path, len), nil
 }
 
-func (rdr *Rdr) Close() error {
-	if err := rdr.ardr.Close(); err != nil {
-		return err
-	}
-	if err := rdr.fdrdr.Close(); err != nil {
+type BufFileReader struct {
+	*FileReader
+	brdr *bufio.Reader
+}
+
+func (rdr *BufFileReader) Close() error {
+	if err := rdr.FileReader.Close(); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (rdr *Rdr) Read(p []byte) (n int, err error) {
-	return rdr.ardr.Read(p)
+func (rdr *BufFileReader) Read(p []byte) (n int, err error) {
+	return rdr.brdr.Read(p)
 }
 
-func (rdr *Rdr) Nbytes() sp.Tlength {
-	return rdr.fdrdr.Nbytes()
-}
-
-func (fl *FsLib) OpenAsyncReader(path string, offset sp.Toffset) (*Rdr, error) {
-	rdr, err := fl.OpenReader(path)
-	if err != nil {
-		return nil, err
-	}
-	r := &Rdr{}
-	r.fdrdr = rdr
-	if err := rdr.Lseek(offset); err != nil {
-		return nil, err
-	}
-	r.brdr = bufio.NewReaderSize(rdr.Reader, sp.BUFSZ)
-	r.ardr, err = readahead.NewReaderSize(r.brdr, 4, sp.BUFSZ)
-	if err != nil {
-		return nil, err
-	}
-	return r, nil
-}
-
-func (fl *FsLib) OpenWaitReader(path string) (*FdReader, error) {
-	fd, err := fl.FileAPI.Open(path, sp.OREAD, sos.O_WAIT)
-	db.DPrintf(db.FSLIB, "OpenWaitReader %v err %v\n", path, err)
+func (fl *FsLib) OpenBufReader(path string) (*BufFileReader, error) {
+	fd, err := fl.Open(path, sp.OREAD)
 	if err != nil {
 		return nil, err
 	}
 	rdr := fl.NewReader(fd, path)
-	return rdr, nil
+	brdr := bufio.NewReaderSize(rdr, sp.BUFSZ)
+	return &BufFileReader{rdr, brdr}, nil
 }
 
-func (fl *FsLib) GetFileWatch(path string) ([]byte, error) {
-	rdr, err := fl.OpenWaitReader(path)
+type ParallelFileReader struct {
+	fd  int
+	sof sos.FileAPI
+	end sp.Toffset
+
+	mu  sync.Mutex
+	err error
+	off sp.Toffset // next offset to consume
+}
+
+func (fl *FsLib) OpenParallelFileReader(path string, offset sp.Toffset, l sp.Tlength) (*ParallelFileReader, error) {
+	fd, err := fl.Open(path, sp.OREAD)
 	if err != nil {
 		return nil, err
 	}
-	defer rdr.Close()
-	b, error := rdr.GetData()
+	r := &ParallelFileReader{
+		fd:  fd,
+		sof: fl.FileAPI,
+		end: offset + sp.Toffset(l),
+		off: offset,
+	}
+	return r, nil
+}
+
+// caller can use offinc to arrange for some overlap between two chunks
+func (pfr *ParallelFileReader) getChunk(sz, offinc int) (sp.Toffset, sp.Toffset, error) {
+	pfr.mu.Lock()
+	defer pfr.mu.Unlock()
+
+	if pfr.off >= pfr.end {
+		return pfr.end, pfr.end, io.EOF
+	}
+
+	off := pfr.off
+	e := off + sp.Toffset(sz)
+	if pfr.end < e {
+		e = pfr.end
+	}
+	pfr.off += sp.Toffset(offinc)
+	return off, e, nil
+}
+
+func (pfr *ParallelFileReader) GetChunkReader(sz, offinc int) (io.ReadCloser, sp.Toffset, error) {
+	o, e, err := pfr.getChunk(sz, offinc)
+	if err != nil {
+		return nil, 0, err
+	}
+	db.DPrintf(db.PREADER, "GetChunkReader: %v %v", o, e)
+	r, err := pfr.sof.PreadRdr(pfr.fd, o, sp.Tsize(e-o))
+	return r, o, err
+}
+
+func (pfr *ParallelFileReader) Close() error {
+	return pfr.sof.CloseFd(pfr.fd)
+}
+
+func (fl *FsLib) OpenWaitReader(path string) (int, error) {
+	fd, err := fl.FileAPI.Open(path, sp.OREAD, sos.O_WAIT)
+	db.DPrintf(db.FSLIB, "OpenWaitReader %v err %v\n", path, err)
+	if err != nil {
+		return 0, err
+	}
+	return fd, nil
+}
+
+func (fl *FsLib) GetFileWatch(path string) ([]byte, error) {
+	fd, err := fl.OpenWaitReader(path)
+	if err != nil {
+		return nil, err
+	}
+	defer fl.FileAPI.CloseFd(fd)
+	b := make([]byte, sp.MAXGETSET)
+	sz, error := fl.FileAPI.Read(fd, b)
 	if error != nil {
 		return nil, error
 	}
-	return b, nil
+	return b[:sz], nil
+}
+
+// File readers pass fdReader to reader to provide an io.Reader
+// interface
+type fdReader struct {
+	sof sos.FileAPI
+	fd  int
+}
+
+func newFdReader(sos sos.FileAPI, fd int) *fdReader {
+	return &fdReader{sos, fd}
+}
+
+func (rd *fdReader) Close() error {
+	return rd.sof.CloseFd(rd.fd)
+}
+
+func (rd *fdReader) Read(off sp.Toffset, b []byte) (int, error) {
+	sz, err := rd.sof.Read(rd.fd, b)
+	return int(sz), err
 }
 
 //
 // Writers
 //
 
-func (fl *FsLib) CreateWriter(fname string, perm sp.Tperm, mode sp.Tmode) (*writer.Writer, error) {
-	fd, err := fl.Create(fname, perm, mode)
-	if err != nil {
-		return nil, err
-	}
-	wrt := fl.NewWriter(fd)
-	return wrt, nil
-}
-
-func (fl *FsLib) OpenWriter(fname string, mode sp.Tmode) (*writer.Writer, error) {
-	fd, err := fl.Open(fname, mode)
-	if err != nil {
-		return nil, err
-	}
-	wrt := fl.NewWriter(fd)
-	return wrt, nil
-}
-
-type Wrt struct {
+type FileWriter struct {
 	wrt  *writer.Writer
-	awrt *awriter.Writer
 	bwrt *bufio.Writer
 }
 
-func (fl *FsLib) CreateAsyncWriter(fname string, perm sp.Tperm, mode sp.Tmode) (*Wrt, error) {
-	w, err := fl.CreateWriter(fname, perm, mode)
-	if err != nil {
-		return nil, err
-	}
-	aw := awriter.NewWriterSize(w, 4, sp.BUFSZ)
-	bw := bufio.NewWriterSize(aw, sp.BUFSZ)
-	return &Wrt{w, aw, bw}, nil
+func (fl *FsLib) newFileWriter(fd int) *FileWriter {
+	w := writer.NewWriter(fl.FileAPI, fd)
+	return &FileWriter{w, nil}
 }
 
-func (wrt *Wrt) Close() error {
-	if err := wrt.bwrt.Flush(); err != nil {
-		return err
-	}
-	if err := wrt.awrt.Close(); err != nil {
-		return err
+func (fl *FsLib) newBufFileWriter(fd int) *FileWriter {
+	w := writer.NewWriter(fl.FileAPI, fd)
+	bw := bufio.NewWriterSize(w, sp.BUFSZ)
+	return &FileWriter{w, bw}
+}
+
+func (wrt *FileWriter) Close() error {
+	if wrt.bwrt != nil {
+		if err := wrt.bwrt.Flush(); err != nil {
+			return err
+		}
 	}
 	if err := wrt.wrt.Close(); err != nil {
 		return err
@@ -206,32 +262,66 @@ func (wrt *Wrt) Close() error {
 	return nil
 }
 
-func (wrt *Wrt) Write(b []byte) (int, error) {
-	return wrt.bwrt.Write(b)
+func (wrt *FileWriter) Write(b []byte) (int, error) {
+	if wrt.bwrt != nil {
+		return wrt.bwrt.Write(b)
+	}
+	return wrt.wrt.Write(b)
 }
 
-func (wrt *Wrt) Nbytes() sp.Tlength {
+func (wrt *FileWriter) Nbytes() sp.Tlength {
 	return wrt.wrt.Nbytes()
+}
+
+func (fl *FsLib) CreateWriter(fname string, perm sp.Tperm, mode sp.Tmode) (*FileWriter, error) {
+	fd, err := fl.Create(fname, perm, mode)
+	if err != nil {
+		return nil, err
+	}
+	return fl.newFileWriter(fd), nil
+}
+
+func (fl *FsLib) OpenWriter(fname string) (*FileWriter, error) {
+	fd, err := fl.Open(fname, sp.OWRITE)
+	if err != nil {
+		return nil, err
+	}
+	return fl.newFileWriter(fd), nil
+}
+
+func (fl *FsLib) CreateBufWriter(fname string, perm sp.Tperm) (*FileWriter, error) {
+	fd, err := fl.Create(fname, perm, sp.OWRITE)
+	if err != nil {
+		return nil, err
+	}
+	return fl.newBufFileWriter(fd), nil
+}
+
+func (fl *FsLib) OpenBufWriter(fname string, mode sp.Tmode) (*FileWriter, error) {
+	fd, err := fl.Open(fname, mode)
+	if err != nil {
+		return nil, err
+	}
+	return fl.newBufFileWriter(fd), nil
 }
 
 //
 // Util
 //
 
-// XXX use reader/writer interfaces
 func (fl *FsLib) CopyFile(src, dst string) error {
 	//	start := time.Now()
 	//	defer func(t *time.Time) {
 	//		db.DPrintf(db.ALWAYS, "Time reading + writing in copyFile: %v", time.Since(*t))
 	//	}(&start)
-	rdr, err := fl.OpenAsyncReader(src, 0)
+	rdr, err := fl.OpenReader(src)
 	if err != nil {
 		return err
 	}
 	//	db.DPrintf(db.ALWAYS, "Time openReader: %v", time.Since(start))
 	//	start = time.Now()
 	defer rdr.Close()
-	wrt, err := fl.CreateAsyncWriter(dst, 0777, sp.OWRITE)
+	wrt, err := fl.CreateWriter(dst, 0777, sp.OWRITE)
 	if err != nil {
 		return err
 	}

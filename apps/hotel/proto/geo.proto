@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+import "tracing/proto/tracing.proto";
+
+option go_package = "sigmaos/apps/hotel/proto";
+
+service Geo {
+  rpc Nearby(GeoRequest) returns (GeoResult);
+}
+
+message GeoRequest {
+  float lat                           = 1;
+  float lon                           = 2;
+  SpanContextConfig spanContextConfig = 3;
+}
+
+message GeoResult {
+  repeated string hotelIds = 1;
+}

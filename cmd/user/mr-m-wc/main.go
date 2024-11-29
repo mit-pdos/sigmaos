@@ -3,10 +3,10 @@ package main
 import (
 	"os"
 
-	"sigmaos/mr"
-	"sigmaos/wc"
+	"sigmaos/apps/mr"
+	"sigmaos/apps/mr/wc"
 )
 
 func main() {
-	mr.RunMapper(wc.Map, os.Args[1:])
+	mr.RunMapper(wc.Map, wc.Reduce, os.Args[1:])
 }

@@ -13,14 +13,13 @@ import (
 	"sigmaos/memfs/dir"
 	"sigmaos/memfs/inode"
 	"sigmaos/path"
-	"sigmaos/port"
 	"sigmaos/protsrv"
 	"sigmaos/protsrv/lockmap"
 	"sigmaos/serr"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmapsrv"
-	"sigmaos/syncmap"
+	"sigmaos/util/syncmap"
 )
 
 var rootP = path.Tpathname{""}
@@ -31,7 +30,6 @@ type MemFs struct {
 	ps    *protsrv.ProtSrv
 	roots *roots
 	sc    *sigmaclnt.SigmaClnt
-	pi    port.PortInfo
 	pn    string
 }
 

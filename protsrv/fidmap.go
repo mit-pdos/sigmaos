@@ -5,7 +5,7 @@ import (
 
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
-	"sigmaos/syncmap"
+	"sigmaos/util/syncmap"
 )
 
 type fidMap struct {
@@ -52,10 +52,11 @@ func (fm *fidMap) Update(fid sp.Tfid, f *Fid) *serr.Err {
 
 func (fm *fidMap) ClientFids(cid sp.TclntId) []sp.Tfid {
 	fids := make([]sp.Tfid, 0)
-	fm.fids.Iter(func(fid sp.Tfid, f *Fid) {
+	fm.fids.Iter(func(fid sp.Tfid, f *Fid) bool {
 		if f.Pobj().Ctx().ClntId() == cid {
 			fids = append(fids, fid)
 		}
+		return true
 	})
 	return fids
 }

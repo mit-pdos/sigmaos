@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"sigmaos/www"
+	"sigmaos/apps/www"
 )
 
 func main() {

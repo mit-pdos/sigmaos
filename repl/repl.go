@@ -4,10 +4,6 @@ import (
 	proto "sigmaos/repl/proto"
 )
 
-const (
-	PLACEHOLDER_ADDR = "PLACEHOLDER_ADDR"
-)
-
 type Tapplyf func(*proto.ReplOpRequest, *proto.ReplOpReply) error
 
 type Config interface {

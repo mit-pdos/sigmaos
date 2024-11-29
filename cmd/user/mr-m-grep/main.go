@@ -3,10 +3,10 @@ package main
 import (
 	"os"
 
-	"sigmaos/grep"
-	"sigmaos/mr"
+	"sigmaos/apps/mr"
+	"sigmaos/apps/mr/grep"
 )
 
 func main() {
-	mr.RunMapper(grep.Map, os.Args[1:])
+	mr.RunMapper(grep.Map, grep.Reduce, os.Args[1:])
 }

@@ -3,9 +3,9 @@ package kernelclnt
 import (
 	"sigmaos/fslib"
 	"sigmaos/kernelsrv/proto"
-	"sigmaos/rpcclnt"
+	rpcclnt "sigmaos/rpc/clnt"
+	sprpcclnt "sigmaos/rpc/clnt/sigmap"
 	sp "sigmaos/sigmap"
-	"sigmaos/sigmarpcchan"
 )
 
 type KernelClnt struct {
@@ -14,19 +14,19 @@ type KernelClnt struct {
 }
 
 func NewKernelClnt(fsl *fslib.FsLib, pn string) (*KernelClnt, error) {
-	rpcc, err := sigmarpcchan.NewSigmaRPCClnt([]*fslib.FsLib{fsl}, pn)
+	rpcc, err := sprpcclnt.NewRPCClnt(fsl, pn)
 	if err != nil {
 		return nil, err
 	}
 	return &KernelClnt{fsl, rpcc}, nil
 }
 
-func (kc *KernelClnt) Boot(s string, args []string) (sp.Tpid, error) {
-	return kc.BootInRealm(sp.ROOTREALM, s, args)
+func (kc *KernelClnt) Boot(s string, args, env []string) (sp.Tpid, error) {
+	return kc.BootInRealm(sp.ROOTREALM, s, args, env)
 }
 
-func (kc *KernelClnt) BootInRealm(realm sp.Trealm, s string, args []string) (sp.Tpid, error) {
-	return bootInRealm(kc.rpcc, realm, s, args)
+func (kc *KernelClnt) BootInRealm(realm sp.Trealm, s string, args, env []string) (sp.Tpid, error) {
+	return bootInRealm(kc.rpcc, realm, s, args, env)
 }
 
 func (kc *KernelClnt) SetCPUShares(pid sp.Tpid, shares int64) error {
@@ -67,12 +67,13 @@ func evictKernelProc(rpcc *rpcclnt.RPCClnt, pid sp.Tpid) error {
 	return nil
 }
 
-func bootInRealm(rpcc *rpcclnt.RPCClnt, realm sp.Trealm, s string, args []string) (sp.Tpid, error) {
+func bootInRealm(rpcc *rpcclnt.RPCClnt, realm sp.Trealm, s string, args, env []string) (sp.Tpid, error) {
 	var res proto.BootResult
 	req := &proto.BootRequest{
 		Name:     s,
 		RealmStr: realm.String(),
 		Args:     args,
+		Env:      env,
 	}
 	err := rpcc.RPC("KernelSrv.Boot", req, &res)
 	if err != nil {

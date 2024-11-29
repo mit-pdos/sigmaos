@@ -13,8 +13,29 @@ var Version = "1.0"
 
 // Local params
 var local = `
+util:
+  stats: true
+
 apparmor:
   enabled: false
+
+msched:
+  target_cpu_util: 95
+  util_refresh_rate: 20ms
+
+uprocsrv:
+  pool_sz: 2
+
+chunk:
+  chunk_sz: 1048576
+
+fslib:
+  max_retry: 100
+
+path:
+  max_symlink: 8
+  path_resolve_timeout: 200ms
+  max_resolve_retry: 30
 
 conn:
   msg_len: 65536
@@ -28,10 +49,12 @@ session:
 
 realm:
   refresh_kernel_srv_interval: 100ms
+  fairness_check_period: 1s
+  n_sample: 2
+  starvation_ratio: 0.1
 
-schedd:
-  stealable_proc_timeout: 100ms
-  work_steal_scan_timeout: 100ms
+besched:
+  get_proc_timeout: 50ms
 
 raft:
   tick_interval: 25ms
@@ -40,9 +63,30 @@ raft:
 `
 
 // AWS params
-var aws = `
+var remote = `
+util:
+  stats: true
+
 apparmor:
   enabled: true
+
+msched:
+  target_cpu_util: 95
+  util_refresh_rate: 20ms
+
+uprocsrv:
+  pool_sz: 2
+
+chunk:
+  chunk_sz: 1048576
+
+fslib:
+  max_retry: 100
+
+path:
+  max_symlink: 8
+  path_resolve_timeout: 200ms
+  max_resolve_retry: 30
 
 conn:
   msg_len: 65536
@@ -56,10 +100,12 @@ session:
 
 realm:
   refresh_kernel_srv_interval: 100ms
+  fairness_check_period: 1s
+  n_sample: 2
+  starvation_ratio: 0.1
 
-schedd:
-  stealable_proc_timeout: 50ms
-  work_steal_scan_timeout: 50ms
+besched:
+  get_proc_timeout: 50ms
 
 raft:
   tick_interval: 500ms
@@ -68,10 +114,40 @@ raft:
 `
 
 type Config struct {
+	Util struct {
+		// Record stats
+		STATS bool `yaml:"stats"`
+	} `yaml:"util"`
 	AppArmor struct {
 		// SigmaP connection message length.
 		ENABLED bool `yaml:"enabled"`
 	}
+	MSched struct {
+		// Target per-machine CPU utilization
+		TARGET_CPU_UTIL int64 `yaml:"target_cpu_util"`
+		// CPU utilization refresh rate
+		UTIL_REFRESH_RATE time.Duration `yaml:"util_refresh_rate"`
+	} `yaml:"msched"`
+	UProcSrv struct {
+		// Size of Uprocsrv pool
+		POOL_SZ int `yaml:"pool_sz"`
+	} `yaml:"uprocsrv"`
+	Chunk struct {
+		// Binary chunk size
+		CHUNK_SZ int64 `yaml:"chunk_sz"`
+	} `yaml:"chunk"`
+	FsLib struct {
+		// Max number of retries at the FsLib layer
+		MAX_RETRY int `yaml:"max_retry"`
+	} `yaml:"fslib"`
+	Path struct {
+		// Max symlink depth allowed
+		MAX_SYMLINK int `yaml:"max_symlink"`
+		// Timeout for path resolution
+		RESOLVE_TIMEOUT time.Duration `yaml:"path_resolve_timeout"`
+		// Max number of path resolution retries, in the event of errors
+		MAX_RESOLVE_RETRY int `yaml:"max_resolve_retry"`
+	} `yaml:"path"`
 	Conn struct {
 		// SigmaP connection message length.
 		MSG_LEN int `yaml:"msg_len"`
@@ -89,13 +165,17 @@ type Config struct {
 	Realm struct {
 		// Maximum frequency with which to refresh kernel servers.
 		KERNEL_SRV_REFRESH_INTERVAL time.Duration `yaml:"refresh_kernel_srv_interval"`
+		// Period at which realms' utiliztaion statistics are checked for fairness
+		FAIRNESS_CHECK_PERIOD time.Duration `yaml:"fairness_check_period"`
+		// Number of samples for fairness check
+		N_SAMPLE int `yaml:"n_sample"`
+		// Maximum starvation ratio before fairness is enforced
+		STARVATION_RATIO float64 `yaml:"starvation_ratio"`
 	} `yaml:"realm"`
-	Schedd struct {
-		// Time a proc remains un-spawned before becoming stealable.
-		STEALABLE_PROC_TIMEOUT time.Duration `yaml:"stealable_proc_timeout"`
-		// Frequency with which schedds scan the ws queue.
-		WORK_STEAL_SCAN_TIMEOUT time.Duration `yaml:"work_steal_scan_timeout"`
-	} `yaml:"schedd"`
+	BESched struct {
+		// Timeout for which an msched's request for a proc to a besched shard lasts
+		GET_PROC_TIMEOUT time.Duration `yaml:"get_proc_timeout"`
+	} `yaml:"besched"`
 	Raft struct {
 		// Frequency with which the raft library ticks
 		TICK_INTERVAL time.Duration `yaml:"tick_interval"`
@@ -110,10 +190,12 @@ var Conf *Config
 
 func init() {
 	switch Target {
-	case "aws":
-		Conf = ReadConfig(aws)
-	default:
+	case "remote":
+		Conf = ReadConfig(remote)
+	case "local":
 		Conf = ReadConfig(local)
+	default:
+		log.Fatalf("Built for unknown target %s", Target)
 	}
 }
 

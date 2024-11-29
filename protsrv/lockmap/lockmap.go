@@ -9,7 +9,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/path"
-	"sigmaos/refmap"
+	"sigmaos/util/refmap"
 )
 
 //
@@ -71,24 +71,29 @@ func NewPathLockTable() *PathLockTable {
 }
 
 // Caller must hold plt lock
-func (plt *PathLockTable) allocLockStringL(pn string) *PathLock {
-	sanitizedPn := strings.Trim(pn, "/")
-	lk, _ := plt.Insert(sanitizedPn, func() *PathLock { return newLock(sanitizedPn) })
+func (plt *PathLockTable) allocLockStringL(sanitizedPN string) *PathLock {
+	lk, _ := plt.Insert(sanitizedPN, func() *PathLock { return newLock(sanitizedPN) })
 	return lk
 }
 
 func (plt *PathLockTable) allocLock(p path.Tpathname) *PathLock {
+	sanitizedPN := strings.Trim(p.String(), "/")
+
 	plt.Lock()
 	defer plt.Unlock()
-	return plt.allocLockStringL(p.String())
+
+	return plt.allocLockStringL(sanitizedPN)
 }
 
 func (plt *PathLockTable) allocLockString(pn string) *PathLock {
+	sanitizedPN := strings.Trim(pn, "/")
+
 	plt.Lock()
 	defer plt.Unlock()
+
 	// Normalize paths (e.g., delete leading/trailing "/"s) so that matches
 	// work for equivalent paths
-	return plt.allocLockStringL(pn)
+	return plt.allocLockStringL(sanitizedPN)
 }
 
 func (plt *PathLockTable) Acquire(ctx fs.CtxI, path path.Tpathname, ltype Tlock) *PathLock {

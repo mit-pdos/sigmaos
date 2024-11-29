@@ -1,3 +1,5 @@
+// Package replsrv replicates a svci using Raft.  Each replica
+// maintains a reply table to filter out duplicate requests.
 package replsrv
 
 import (
@@ -10,14 +12,9 @@ import (
 	"sigmaos/fs"
 	"sigmaos/repl"
 	"sigmaos/replraft"
-	"sigmaos/rpcsrv"
+	rpcsrv "sigmaos/rpc/srv"
 	"sigmaos/sessp"
 )
-
-//
-// Replicates svci using Raft.  Each replica maintains a reply table
-// to filter out duplicate requests.
-//
 
 type ReplSrv struct {
 	mu      sync.Mutex

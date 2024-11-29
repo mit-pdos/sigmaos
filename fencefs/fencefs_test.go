@@ -11,13 +11,14 @@ import (
 )
 
 func TestNewFenceFs(t *testing.T) {
-	fence := sp.Tfence1{}
+	fence := sp.Tfence{}
 	fence.Epoch = 10
 
-	ctx := ctx.NewCtx("", 0, nil)
-	root := fencefs.NewRoot()
+	ctx := ctx.NewCtxNull()
+	root := fencefs.NewRoot(ctx, nil)
 	assert.NotNil(t, root)
-	i, err := root.Create(ctx, fence.FenceId.Path.String(), 0777, sp.OWRITE)
+
+	i, err := root.Create(ctx, fence.PathName, 0777, sp.OWRITE, sp.NoLeaseId, sp.NoFence(), nil)
 	assert.Nil(t, err)
 	assert.NotNil(t, i)
 }

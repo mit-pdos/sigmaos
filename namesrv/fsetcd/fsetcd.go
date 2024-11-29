@@ -13,7 +13,7 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	db "sigmaos/debug"
-	"sigmaos/netproxy"
+	"sigmaos/dialproxy"
 	"sigmaos/path"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
@@ -22,7 +22,7 @@ import (
 
 const (
 	DialTimeout = 5 * time.Second
-	LeaseTTL    = sp.EtcdSessionTTL // 30
+	LeaseTTL    = sp.EtcdSessionTTL
 )
 
 var (
@@ -50,7 +50,7 @@ func NewFsEtcdEndpoint(ip sp.Tip) (TetcdEndpoints, error) {
 	return eps, nil
 }
 
-func NewFsEtcd(dial netproxy.DialFn, etcdMnts map[string]*sp.TendpointProto, realm sp.Trealm, psi *PstatInode) (*FsEtcd, error) {
+func NewFsEtcd(dial dialproxy.DialFn, etcdMnts map[string]*sp.TendpointProto, realm sp.Trealm, psi *PstatInode) (*FsEtcd, error) {
 	endpoints := []string{}
 	for addr, _ := range etcdMnts {
 		endpoints = append(endpoints, addr)
@@ -164,12 +164,13 @@ func (fs *FsEtcd) SetRootNamed(ep *sp.Tendpoint) *serr.Err {
 			db.DPrintf(db.FSETCD, "SetNamed txn %v err %v\n", nf, err)
 			return serr.NewErrError(err)
 		}
+		// XXX return failure if fence check fails
 		db.DPrintf(db.FSETCD, "SetNamed txn %v %v\n", nf, resp)
 		return nil
 	}
 }
 
-func GetRootNamed(dial netproxy.DialFn, etcdMnts map[string]*sp.TendpointProto, realm sp.Trealm) (*sp.Tendpoint, *serr.Err) {
+func GetRootNamed(dial dialproxy.DialFn, etcdMnts map[string]*sp.TendpointProto, realm sp.Trealm) (*sp.Tendpoint, *serr.Err) {
 	fs, err := NewFsEtcd(dial, etcdMnts, realm, nil)
 	if err != nil {
 		return &sp.Tendpoint{}, serr.NewErrError(err)

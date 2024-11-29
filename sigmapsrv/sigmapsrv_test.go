@@ -1,9 +1,9 @@
 package sigmapsrv_test
 
 import (
-	"bufio"
 	"flag"
 	"fmt"
+	"io"
 	"path/filepath"
 	"strconv"
 	"testing"
@@ -13,18 +13,18 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	db "sigmaos/debug"
-	"sigmaos/namesrv/fsetcd"
+	dialproxyclnt "sigmaos/dialproxy/clnt"
 	"sigmaos/fslib"
-	"sigmaos/netproxyclnt"
-	"sigmaos/perf"
+	"sigmaos/namesrv/fsetcd"
 	"sigmaos/proc"
 	"sigmaos/rpc"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
+	"sigmaos/util/perf"
 )
 
-var pathname string // e.g., --path "name/ux/~local/"
+var pathname string // e.g., --path "name/ux/sp.LOCAL/"
 var withmarshal bool
 
 func init() {
@@ -38,7 +38,8 @@ const (
 	SYNCFILESZ = 100 * KBYTE
 	//	SYNCFILESZ = 250 * KBYTE
 	// SYNCFILESZ = WRITESZ
-	FILESZ  = 100 * sp.MBYTE
+	FILESZ = 100 * sp.MBYTE
+	//FILESZ  = 10 * sp.MBYTE
 	WRITESZ = 4096
 )
 
@@ -76,7 +77,6 @@ type Thow uint8
 const (
 	HSYNC Thow = iota + 1
 	HBUF
-	HASYNC
 )
 
 func newFile(t *testing.T, fsl *fslib.FsLib, fn string, how Thow, buf []byte, sz sp.Tlength) sp.Tlength {
@@ -89,20 +89,10 @@ func newFile(t *testing.T, fsl *fslib.FsLib, fn string, how Thow, buf []byte, sz
 		err = w.Close()
 		assert.Nil(t, err)
 	case HBUF:
-		w, err := fsl.CreateWriter(fn, 0777, sp.OWRITE)
-		assert.Nil(t, err, "Error Create writer: %v", err)
-		bw := bufio.NewWriterSize(w, sp.BUFSZ)
-		err = test.Writer(t, bw, buf, sz)
-		assert.Nil(t, err, "Err writer %v", err)
-		err = bw.Flush()
-		assert.Nil(t, err, "Err: %v", err)
-		err = w.Close()
-		assert.Nil(t, err)
-	case HASYNC:
-		w, err := fsl.CreateAsyncWriter(fn, 0777, sp.OWRITE)
+		w, err := fsl.CreateBufWriter(fn, 0777)
 		assert.Nil(t, err, "Error Create writer: %v", err)
 		err = test.Writer(t, w, buf, sz)
-		assert.Nil(t, err)
+		assert.Nil(t, err, "Err writer %v", err)
 		err = w.Close()
 		assert.Nil(t, err)
 	}
@@ -145,15 +135,6 @@ func TestWriteFilePerfSingle(t *testing.T) {
 		assert.Nil(t, err)
 		return sz
 	})
-	p3, err := perf.NewPerfMulti(ts.ProcEnv(), perf.BENCH, perf.ABUFWRITER)
-	assert.Nil(t, err)
-	defer p3.Done()
-	measure(p3, "abufwriter", func() sp.Tlength {
-		sz := newFile(t, ts.FsLib, fn, HASYNC, buf, FILESZ)
-		err := ts.Remove(fn)
-		assert.Nil(t, err)
-		return sz
-	})
 	ts.Shutdown()
 }
 
@@ -173,7 +154,7 @@ func TestWriteFilePerfMultiClient(t *testing.T) {
 	for i := 0; i < N_CLI; i++ {
 		fns = append(fns, filepath.Join(pathname, "f"+strconv.Itoa(i)))
 		pe := proc.NewAddedProcEnv(ts.ProcEnv())
-		fsl, err := sigmaclnt.NewFsLib(pe, netproxyclnt.NewNetProxyClnt(pe))
+		fsl, err := sigmaclnt.NewFsLib(pe, dialproxyclnt.NewDialProxyClnt(pe))
 		assert.Nil(t, err)
 		fsls = append(fsls, fsl)
 	}
@@ -223,27 +204,7 @@ func TestWriteFilePerfMultiClient(t *testing.T) {
 	}
 	ms = time.Since(start).Milliseconds()
 	db.DPrintf(db.ALWAYS, "Total tpt bufwriter: %s took %vms (%s)", humanize.Bytes(uint64(n)), ms, test.TputStr(n, ms))
-	p3, err := perf.NewPerfMulti(ts.ProcEnv(), perf.BENCH, perf.ABUFWRITER)
-	assert.Nil(t, err)
-	defer p3.Done()
-	start = time.Now()
-	for i := range fns {
-		go func(i int) {
-			n := measure(p3, "abufwriter", func() sp.Tlength {
-				sz := newFile(t, fsls[i], fns[i], HASYNC, buf, FILESZ)
-				err := ts.Remove(fns[i])
-				assert.Nil(t, err, "Remove err %v", err)
-				return sz
-			})
-			done <- n
-		}(i)
-	}
-	n = 0
-	for _ = range fns {
-		n += <-done
-	}
-	ms = time.Since(start).Milliseconds()
-	db.DPrintf(db.ALWAYS, "Total tpt bufwriter: %s took %vms (%s)", humanize.Bytes(uint64(n)), ms, test.TputStr(n, ms))
+
 	ts.Shutdown()
 }
 
@@ -269,9 +230,15 @@ func TestReadFilePerfSingle(t *testing.T) {
 	p1, r := perf.NewPerfMulti(ts.ProcEnv(), perf.BENCH, perf.READER)
 	assert.Nil(t, r)
 	measure(p1, "reader", func() sp.Tlength {
-		r, err := ts.OpenReader(fn)
+		pn := fn
+		if test.Withs3pathclnt {
+			pn0, ok := sp.S3ClientPath(fn)
+			assert.True(t, ok)
+			pn = pn0
+		}
+		r, err := ts.OpenReader(pn)
 		assert.Nil(t, err)
-		n, err := test.Reader(t, r.Reader, buf, sz)
+		n, err := test.Reader(t, r, buf, sz)
 		assert.Nil(t, err)
 		r.Close()
 		return n
@@ -285,9 +252,14 @@ func TestReadFilePerfSingle(t *testing.T) {
 	p2, err := perf.NewPerfMulti(ts.ProcEnv(), perf.BENCH, perf.BUFREADER)
 	assert.Nil(t, err)
 	measure(p2, "bufreader", func() sp.Tlength {
-		r, err := ts.OpenReader(fn)
-		br := bufio.NewReaderSize(r.Reader, sp.BUFSZ)
-		n, err := test.Reader(t, br, buf, sz)
+		pn := fn
+		if test.Withs3pathclnt {
+			pn0, ok := sp.S3ClientPath(fn)
+			assert.True(t, ok)
+			pn = pn0
+		}
+		r, err := ts.OpenBufReader(pn)
+		n, err := test.Reader(t, r, buf, sz)
 		assert.Nil(t, err)
 		r.Close()
 		return n
@@ -296,19 +268,68 @@ func TestReadFilePerfSingle(t *testing.T) {
 
 	err = ts.Remove(fn)
 	assert.Nil(t, err)
-	sz = newFile(t, ts.FsLib, fn, HBUF, buf, FILESZ)
 
-	p3, err := perf.NewPerfMulti(ts.ProcEnv(), perf.BENCH, perf.ABUFREADER)
+	ts.Shutdown()
+}
+
+func TestParallelReadFile(t *testing.T) {
+	const (
+		CONCURRENCY = 5
+		CHUNKSZ     = 2 * sp.MBYTE
+	)
+
+	if !assert.NotEqual(t, pathname, sp.NAMED, "Writing to named will trigger errors, because the buf size is too large for etcd's maximum write size") {
+		return
+	}
+	ts, err1 := test.NewTstatePath(t, pathname)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+
+	fn := filepath.Join(pathname, "f")
+	buf := test.NewBuf(WRITESZ)
+
+	ts.Remove(fn)
+
+	newFile(t, ts.FsLib, fn, HBUF, buf, FILESZ)
+
+	p1, err := perf.NewPerfMulti(ts.ProcEnv(), perf.BENCH, perf.ABUFREADER)
 	assert.Nil(t, err)
-	measure(p3, "readahead", func() sp.Tlength {
-		r, err := ts.OpenAsyncReader(fn, 0)
+	measure(p1, "pread", func() sp.Tlength {
+		pn := fn
+		if test.Withs3pathclnt {
+			pn0, ok := sp.S3ClientPath(fn)
+			assert.True(t, ok)
+			pn = pn0
+		}
+		r, err := ts.OpenParallelFileReader(pn, 0, FILESZ)
 		assert.Nil(t, err)
-		n, err := test.Reader(t, r, buf, sz)
-		assert.Nil(t, err)
+		ch := make(chan sp.Tlength)
+		for i := 0; i < CONCURRENCY; i++ {
+			go func(i int) {
+				m := sp.Tlength(0)
+				for {
+					rdr, _, err := r.GetChunkReader(CHUNKSZ, CHUNKSZ)
+					if err != nil && err == io.EOF {
+						break
+					}
+					assert.Nil(t, err)
+					n, err := test.Reader(t, rdr, buf, CHUNKSZ)
+					assert.Nil(t, err)
+					m += n
+				}
+				ch <- m
+			}(i)
+		}
+		sz := sp.Tlength(0)
+		for i := 0; i < CONCURRENCY; i++ {
+			n := <-ch
+			sz += n
+		}
 		r.Close()
-		return n
+		return sz
 	})
-	p3.Done()
+	p1.Done()
 
 	err = ts.Remove(fn)
 	assert.Nil(t, err)
@@ -336,7 +357,7 @@ func TestReadFilePerfMultiClient(t *testing.T) {
 	for i := 0; i < N_CLI; i++ {
 		fns = append(fns, filepath.Join(pathname, "f"+strconv.Itoa(i)))
 		pe := proc.NewAddedProcEnv(ts.ProcEnv())
-		fsl, err := sigmaclnt.NewFsLib(pe, netproxyclnt.NewNetProxyClnt(pe))
+		fsl, err := sigmaclnt.NewFsLib(pe, dialproxyclnt.NewDialProxyClnt(pe))
 		assert.Nil(t, err)
 		fsls = append(fsls, fsl)
 	}
@@ -356,7 +377,7 @@ func TestReadFilePerfMultiClient(t *testing.T) {
 				for j := 0; j < NTRIAL; j++ {
 					r, err := fsls[i].OpenReader(fns[i])
 					assert.Nil(t, err)
-					n2, err := test.Reader(t, r.Reader, buf, SYNCFILESZ)
+					n2, err := test.Reader(t, r, buf, SYNCFILESZ)
 					assert.Nil(t, err)
 					n += n2
 					r.Close()
@@ -388,10 +409,9 @@ func TestReadFilePerfMultiClient(t *testing.T) {
 			n := measure(p2, "bufreader", func() sp.Tlength {
 				n := sp.Tlength(0)
 				for j := 0; j < NTRIAL; j++ {
-					r, err := fsls[i].OpenReader(fns[i])
+					r, err := fsls[i].OpenBufReader(fns[i])
 					assert.Nil(t, err)
-					br := bufio.NewReaderSize(r.Reader, sp.BUFSZ)
-					n2, err := test.Reader(t, br, buf, FILESZ)
+					n2, err := test.Reader(t, r, buf, FILESZ)
 					assert.Nil(t, err)
 					n += n2
 					r.Close()
@@ -409,33 +429,7 @@ func TestReadFilePerfMultiClient(t *testing.T) {
 
 	ms = time.Since(start).Milliseconds()
 	db.DPrintf(db.ALWAYS, "Total tpt bufreader: %s took %vms (%s)", humanize.Bytes(uint64(n)), ms, test.TputStr(n, ms))
-	p3, err := perf.NewPerfMulti(ts.ProcEnv(), perf.BENCH, perf.ABUFREADER)
-	assert.Nil(t, err)
-	defer p3.Done()
-	start = time.Now()
-	for i := range fns {
-		go func(i int) {
-			n := measure(p3, "readabuf", func() sp.Tlength {
-				n := sp.Tlength(0)
-				for j := 0; j < NTRIAL; j++ {
-					r, err := fsls[i].OpenAsyncReader(fns[i], 0)
-					assert.Nil(t, err)
-					n2, err := test.Reader(t, r, buf, FILESZ)
-					assert.Nil(t, err)
-					n += n2
-					r.Close()
-				}
-				return n
-			})
-			done <- n
-		}(i)
-	}
-	n = 0
-	for _ = range fns {
-		n += <-done
-	}
-	ms = time.Since(start).Milliseconds()
-	db.DPrintf(db.ALWAYS, "Total tpt abufreader: %s took %vms (%s)", humanize.Bytes(uint64(n)), ms, test.TputStr(n, ms))
+
 	ts.Shutdown()
 }
 
@@ -481,13 +475,46 @@ func TestDirCreatePerf(t *testing.T) {
 	ts.Shutdown()
 }
 
+func fileRename(t *testing.T, fsl *fslib.FsLib, dir string, n int) int {
+	newDir(t, fsl, dir, 100)
+	b := []byte("hello")
+	_, err := fsl.PutFile(filepath.Join(dir, "f"), 0777, sp.OWRITE, b)
+	assert.Nil(t, err)
+	for i := 0; i < n; i++ {
+		if i%2 == 0 {
+			err := fsl.Rename(filepath.Join(dir, "f"), filepath.Join(dir, "g"))
+			assert.Nil(t, err)
+		} else {
+			err := fsl.Rename(filepath.Join(dir, "g"), filepath.Join(dir, "f"))
+			assert.Nil(t, err)
+		}
+	}
+	return n
+}
+
+func TestFileRenamePerf(t *testing.T) {
+	const N = 1000
+	ts, err1 := test.NewTstatePath(t, pathname)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	dir := filepath.Join(pathname, "d")
+	measuredir("rename", 1, dir, func() int {
+		n := fileRename(t, ts.FsLib, dir, N)
+		return n
+	})
+	err := ts.RmDir(dir)
+	assert.Nil(t, err)
+	ts.Shutdown()
+}
+
 func lookuper(ts *test.Tstate, nclerk int, n int, dir string, nfile int, lip sp.Tip) {
 	const NITER = 100 // 10000
 	ch := make(chan bool)
 	for c := 0; c < nclerk; c++ {
 		go func(c int) {
 			pe := proc.NewAddedProcEnv(ts.ProcEnv())
-			fsl, err := sigmaclnt.NewFsLib(pe, netproxyclnt.NewNetProxyClnt(pe))
+			fsl, err := sigmaclnt.NewFsLib(pe, dialproxyclnt.NewDialProxyClnt(pe))
 			assert.Nil(ts.T, err)
 			measuredir("lookup dir entry", NITER, dir, func() int {
 				for f := 0; f < nfile; f++ {
@@ -667,7 +694,7 @@ func TestLookupConcurPerf(t *testing.T) {
 		for j := 0; j < NTRIAL; j++ {
 			pe := proc.NewAddedProcEnv(ts.ProcEnv())
 			pe.NamedEndpointProto = ndMnt.TendpointProto
-			fsl, err := sigmaclnt.NewFsLib(pe, netproxyclnt.NewNetProxyClnt(pe))
+			fsl, err := sigmaclnt.NewFsLib(pe, dialproxyclnt.NewDialProxyClnt(pe))
 			assert.Nil(t, err)
 			fsl2 = append(fsl2, fsl)
 		}
@@ -704,7 +731,7 @@ func TestLookupMultiMount(t *testing.T) {
 		return
 	}
 
-	// Running a proc forces sigmaos to create uprocds and rpc special file
+	// Running a proc forces sigmaos to create procds and rpc special file
 	a := proc.NewProc("sleeper", []string{fmt.Sprintf("%dms", 0), "name/"})
 	err = ts.Spawn(a)
 	assert.Nil(ts.T, err, "Spawn")
@@ -715,27 +742,27 @@ func TestLookupMultiMount(t *testing.T) {
 	//mnt, err := ts.GetNamedEndpoint()
 	//assert.Nil(ts.T, err)
 	//pe.NamedEndpointProto = mnt.GetProto()
-	sts, err := ts.GetDir(sp.SCHEDD)
+	sts, err := ts.GetDir(sp.MSCHED)
 	assert.Nil(t, err)
 	kernelId := sts[0].Name
 
-	sts, err = ts.GetDir(filepath.Join(sp.SCHEDD, kernelId, sp.UPROCDREL))
+	sts, err = ts.GetDir(filepath.Join(sp.MSCHED, kernelId, sp.PROCDREL))
 	assert.Nil(t, err)
-	uprocdpid := sts[0].Name
+	procdpid := sts[0].Name
 
-	db.DPrintf(db.TEST, "kernelid %v %v\n", kernelId, uprocdpid)
+	db.DPrintf(db.TEST, "kernelid %v %v\n", kernelId, procdpid)
 
 	pe.NamedEndpointProto = nil
-	fsl, err := sigmaclnt.NewFsLib(pe, netproxyclnt.NewNetProxyClnt(pe))
+	fsl, err := sigmaclnt.NewFsLib(pe, dialproxyclnt.NewDialProxyClnt(pe))
 	assert.Nil(t, err)
 
 	// cache named, which is typically the case
-	_, err = fsl.GetDir(sp.SCHEDD)
+	_, err = fsl.GetDir(sp.MSCHED)
 	assert.Nil(t, err)
 
 	s := time.Now()
-	pn := filepath.Join(sp.SCHEDD, kernelId, rpc.RPC)
-	// pn := filepath.Join(sp.SCHEDD, kernelId, sp.UPROCDREL, uprocdpid, rpc.RPC)
+	pn := filepath.Join(sp.MSCHED, kernelId, rpc.RPC)
+	// pn := filepath.Join(sp.MSCHED, kernelId, sp.PROCDREL, procdpid, rpc.RPC)
 	db.DPrintf(db.TEST, "Stat %v start %v\n", fsl.ClntId(), pn)
 	_, err = fsl.Stat(pn)
 	db.DPrintf(db.TEST, "Stat %v done %v took %v\n", fsl.ClntId(), pn, time.Since(s))
@@ -743,19 +770,77 @@ func TestLookupMultiMount(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestStatUx(t *testing.T) {
+func TestColdPathMicro(t *testing.T) {
 	ts, err := test.NewTstateAll(t)
 	if !assert.Nil(t, err, "Error New Tstate: %v", err) {
 		return
 	}
-	pe := proc.NewAddedProcEnv(ts.ProcEnv())
-	fsl, err := sigmaclnt.NewFsLib(pe, netproxyclnt.NewNetProxyClnt(pe))
+	sts, err := ts.GetDir(sp.MSCHED)
 	assert.Nil(t, err)
-	s := time.Now()
-	pn := filepath.Join(sp.UX, "sigma-named", "bin/user/common/spawn-latency")
-	//pn := filepath.Join(sp.UX, "~local", "bin/user/common/spawn-latency")
-	db.DPrintf(db.TEST, "Stat %v start %v\n", fsl.ClntId(), pn)
-	_, err = fsl.Stat(pn)
-	db.DPrintf(db.TEST, "Stat %v done %v took %v\n", fsl.ClntId(), pn, time.Since(s))
+
+	pe := proc.NewAddedProcEnv(ts.ProcEnv())
+	pe.KernelID = sts[0].Name
+
+	pn := filepath.Join(sp.UX, sp.LOCAL, "mr-intermediate")
+
+	var max time.Duration
+	var tot time.Duration
+	const N = 1
+	for i := 0; i < N; i++ {
+		fsl, err := sigmaclnt.NewFsLib(pe, dialproxyclnt.NewDialProxyClnt(pe))
+		assert.Nil(t, err)
+		db.DPrintf(db.TEST, "MkDir %v start %v", fsl.ClntId(), pn)
+		s := time.Now()
+		err = fsl.MkDir(pn, 0777)
+		assert.Nil(t, err)
+		d := time.Since(s)
+		if d > max {
+			max = d
+		}
+		tot += d
+		fsl.RmDir(pn)
+		fsl.Close()
+	}
+	db.DPrintf(db.TEST, "MkDir done %v took avg %v max %v", pn, tot/N, max)
+	ts.Shutdown()
+}
+
+func TestColdAttach(t *testing.T) {
+	ts, err := test.NewTstateAll(t)
+	if !assert.Nil(t, err, "Error New Tstate: %v", err) {
+		return
+	}
+
+	sts, err := ts.GetDir(sp.MSCHED)
+	assert.Nil(t, err)
+
+	pe := proc.NewAddedProcEnv(ts.ProcEnv())
+	pe.KernelID = sts[0].Name
+
+	pn := filepath.Join(sp.MSCHED, pe.KernelID)
+	ep, err := ts.ReadEndpoint(pn)
+	assert.Nil(t, err)
+
+	db.DPrintf(db.TEST, "endpoint %v", ep)
+
+	var max time.Duration
+	var tot time.Duration
+	const N = 1
+	for i := 0; i < N; i++ {
+		fsl, err := sigmaclnt.NewFsLib(pe, dialproxyclnt.NewDialProxyClnt(pe))
+		assert.Nil(t, err)
+		pn = filepath.Join(pn, rpc.RPC)
+		start := time.Now()
+		err = fsl.MountTree(ep, rpc.RPC, pn)
+		assert.Nil(t, err)
+		d := time.Since(start)
+		db.DPrintf(db.TEST, "Mount schedd [%v] %v as %v time %v", ep, rpc.RPC, pn, d)
+		if d > max {
+			max = d
+		}
+		tot += d
+		fsl.Close()
+	}
+	db.DPrintf(db.TEST, "MountTree avg %v max %v", tot/N, max)
 	ts.Shutdown()
 }

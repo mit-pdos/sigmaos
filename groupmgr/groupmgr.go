@@ -1,7 +1,7 @@
 // package groupmgr keeps n instances of the same proc running. If one
 // instance (a member) of the group of n crashes, the manager starts
 // another one.  Some programs use the n instances to form a Raft
-// group (e.g., kvgrp); others use it in primary-backup configuration
+// group (e.g., kvgrp); others use it in a hot-standby configuration
 // (e.g., kv balancer, imageresized).
 //
 // There are two ways of stopping the group manager: the caller calls
@@ -54,11 +54,6 @@ type GroupMgrConfig struct {
 	Job       string
 	Mcpu      proc.Tmcpu
 	NReplicas int
-
-	// For testing purposes
-	crash     int64
-	partition int64
-	netfail   int64
 }
 
 // If n == 0, run only one member (i.e., no hot standby's or replication)
@@ -70,12 +65,6 @@ func NewGroupConfig(n int, bin string, args []string, mcpu proc.Tmcpu, job strin
 		Mcpu:      mcpu,
 		Job:       job,
 	}
-}
-
-func (cfg *GroupMgrConfig) SetTest(crash, partition, netfail int) {
-	cfg.crash = int64(crash)
-	cfg.partition = int64(partition)
-	cfg.netfail = int64(netfail)
 }
 
 func (cfg *GroupMgrConfig) Persist(fsl *fslib.FsLib) error {
@@ -96,15 +85,14 @@ func Recover(sc *sigmaclnt.SigmaClnt) ([]*GroupMgr, error) {
 			return true, err
 		}
 		log.Printf("cfg %v\n", cfg)
-		gms = append(gms, cfg.StartGrpMgr(sc, 0))
+		gms = append(gms, cfg.StartGrpMgr(sc))
 		return false, nil
 
 	})
 	return gms, nil
 }
 
-// ncrash = number of group members which may crash.
-func (cfg *GroupMgrConfig) StartGrpMgr(sc *sigmaclnt.SigmaClnt, ncrash int) *GroupMgr {
+func (cfg *GroupMgrConfig) StartGrpMgr(sc *sigmaclnt.SigmaClnt) *GroupMgr {
 	N := cfg.NReplicas
 	if cfg.NReplicas == 0 {
 		N = 1
@@ -116,13 +104,8 @@ func (cfg *GroupMgrConfig) StartGrpMgr(sc *sigmaclnt.SigmaClnt, ncrash int) *Gro
 	gm.ch = make(chan []*proc.Status)
 	gm.members = make([]*member, N)
 	for i := 0; i < N; i++ {
-		crashMember := cfg.crash
-		if i+1 > ncrash {
-			crashMember = 0
-		} else {
-			db.DPrintf(db.GROUPMGR, "group %v member %v crash %v\n", cfg.Args, i, crashMember)
-		}
-		gm.members[i] = newMember(sc, cfg, i, crashMember)
+		db.DPrintf(db.GROUPMGR, "group %v member %v", cfg.Args, i)
+		gm.members[i] = newMember(sc, cfg, i)
 	}
 	done := make(chan *procret)
 	go gm.manager(done, N)
@@ -137,14 +120,13 @@ func (cfg *GroupMgrConfig) StartGrpMgr(sc *sigmaclnt.SigmaClnt, ncrash int) *Gro
 type member struct {
 	*sigmaclnt.SigmaClnt
 	*GroupMgrConfig
-	pid    sp.Tpid
-	id     int
-	crash  int64
-	nstart int
+	pid sp.Tpid
+	id  int
+	gen int
 }
 
 func (m *member) String() string {
-	return fmt.Sprintf("{pid %v, id %d, nstart %d}", m.pid, m.id, m.nstart)
+	return fmt.Sprintf("{pid %v, id %d, gen %d}", m.pid, m.id, m.gen)
 }
 
 type procret struct {
@@ -157,17 +139,21 @@ func (pr procret) String() string {
 	return fmt.Sprintf("{m %v err %v status %v}", pr.member, pr.err, pr.status)
 }
 
-func newMember(sc *sigmaclnt.SigmaClnt, cfg *GroupMgrConfig, id int, crash int64) *member {
-	return &member{SigmaClnt: sc, GroupMgrConfig: cfg, crash: crash, id: id}
+func newMember(sc *sigmaclnt.SigmaClnt, cfg *GroupMgrConfig, id int) *member {
+	return &member{
+		SigmaClnt:      sc,
+		GroupMgrConfig: cfg,
+		id:             id,
+	}
 }
 
 // Caller holds lock
 func (m *member) spawnL() error {
 	p := proc.NewProc(m.Program, m.Args)
 	p.SetMcpu(m.Mcpu)
-	p.SetCrash(m.crash)
-	p.SetPartition(m.partition)
-	p.SetNetFail(m.netfail)
+
+	p.AppendEnv(proc.SIGMAFAIL, proc.GetSigmaFail())
+	p.AppendEnv(proc.SIGMAGEN, strconv.Itoa(m.gen))
 	p.AppendEnv("SIGMAREPL", newREPL(m.id, m.NReplicas))
 	// If we are specifically setting kvd's mcpu=1, then set GOMAXPROCS to 1
 	// (for use when comparing to redis).
@@ -191,14 +177,14 @@ func (m *member) spawnL() error {
 
 // Caller holds lock
 func (m *member) runL(start chan error, done chan *procret) {
-	db.DPrintf(db.GROUPMGR, "spawn %d member %v", m.id, m.Program)
+	m.gen += 1
+	db.DPrintf(db.GROUPMGR, "spawn %d member %v gen# %d", m.id, m.Program, m.gen)
 	if err := m.spawnL(); err != nil {
 		start <- err
 		return
 	}
 	start <- nil
-	db.DPrintf(db.GROUPMGR, "%v: member %d started %v\n", m.Program, m.id, m.pid)
-	m.nstart += 1
+	db.DPrintf(db.GROUPMGR, "%v: member %d started %v gen# %d\n", m.Program, m.id, m.pid, m.gen)
 	status, err := m.WaitExit(m.pid)
 	db.DPrintf(db.GROUPMGR, "%v: member %v exited %v err %v\n", m.Program, m.pid, status, err)
 	done <- &procret{m.id, err, status}
@@ -212,7 +198,7 @@ func (gm *GroupMgr) startL(i int, done chan *procret) {
 	if err != nil {
 		go func() {
 			db.DPrintf(db.GROUPMGR_ERR, "failed to start %v: %v; try again\n", i, err)
-			time.Sleep(time.Duration(sp.PATHCLNT_TIMEOUT) * time.Millisecond)
+			time.Sleep(sp.Conf.Path.RESOLVE_TIMEOUT)
 			done <- &procret{i, err, nil}
 		}()
 	}
@@ -252,7 +238,7 @@ func (gm *GroupMgr) manager(done chan *procret, n int) {
 	}
 	db.DPrintf(db.GROUPMGR, "%v exit\n", gm.members[0].Program)
 	for i := 0; i < len(gm.members); i++ {
-		db.DPrintf(db.GROUPMGR, "%v nstart %d exit\n", gm.members[i].Program, gm.members[i].nstart)
+		db.DPrintf(db.GROUPMGR, "%v gen# %d exit\n", gm.members[i].Program, gm.members[i].gen)
 	}
 	gm.ch <- gstatus
 }

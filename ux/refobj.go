@@ -5,7 +5,7 @@ import (
 
 	"sigmaos/debug"
 	"sigmaos/fs"
-	"sigmaos/refmap"
+	"sigmaos/util/refmap"
 	sp "sigmaos/sigmap"
 )
 

@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+import "sched/besched/proto/besched.proto";
+
+option go_package = "sigmaos/sched/lcsched/proto";
+
+service LCSched {
+  rpc Enqueue(EnqueueRequest) returns (EnqueueResponse);
+  rpc RegisterMSched(RegisterMSchedRequest) returns (RegisterMSchedResponse);
+}
+
+message RegisterMSchedRequest {
+  string kernelID = 1;
+  uint32 mcpuInt = 2;
+  uint32 memInt = 3;
+}
+
+message RegisterMSchedResponse {
+}

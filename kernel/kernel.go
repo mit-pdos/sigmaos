@@ -28,10 +28,8 @@ type Param struct {
 	Services    []string
 	Dbip        string
 	Mongoip     string
-	Overlays    bool
-	NetProxy    bool
+	DialProxy   bool
 	BuildTag    string
-	GVisor      bool
 	ReserveMcpu string
 }
 
@@ -108,6 +106,11 @@ func (k *Kernel) IsPurelySPProxydKernel() bool {
 	return len(k.Param.Services) == 1 && k.Param.Services[0] == sp.SPPROXYDREL
 }
 
+func (k *Kernel) IsPurelyProcqKernel() bool {
+	db.DPrintf(db.KERNEL, "Check is procq kernel: %v", k.Param.Services)
+	return len(k.Param.Services) == 1 && k.Param.Services[0] == sp.BESCHEDREL
+}
+
 func (k *Kernel) Shutdown() error {
 	k.Lock()
 	defer k.Unlock()
@@ -139,7 +142,7 @@ func (k *Kernel) getRealmSigmaClnt(realm sp.Trealm) (*sigmaclnt.SigmaClntKernel,
 // Start kernel services
 func startSrvs(k *Kernel) error {
 	for _, s := range k.Param.Services {
-		_, err := k.BootSub(s, nil, k.Param, sp.ROOTREALM)
+		_, err := k.BootSub(s, nil, nil, k.Param, sp.ROOTREALM)
 		if err != nil {
 			db.DPrintf(db.KERNEL, "StartSRv %v %v err %v\n", s, k.Param, err)
 			return err
@@ -162,10 +165,10 @@ func (k *Kernel) shutdown() {
 		for pid, _ := range k.svcs.svcMap {
 			cpids = append(cpids, pid)
 		}
-		// Sort schedds to the end, to avoid having as many eviction errors.
+		// Sort mscheds to the end, to avoid having as many eviction errors.
 		sort.Slice(cpids, func(i, j int) bool {
-			if strings.HasPrefix(cpids[i].String(), "schedd-") {
-				if strings.HasPrefix(cpids[j].String(), "schedd-") {
+			if strings.HasPrefix(cpids[i].String(), "msched-") {
+				if strings.HasPrefix(cpids[j].String(), "msched-") {
 					return strings.Compare(cpids[i].String(), cpids[j].String()) < 0
 				}
 				return false

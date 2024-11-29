@@ -35,10 +35,11 @@ func GetNCores() uint {
 var ErrInvalid = errors.New("invalid")
 
 // MaxCores is the maximum number of cores supported.
-const MaxCores uint = 256
-
-const bitsPerWord uint = uint(unsafe.Sizeof(uint(0)) * 8)
-const bitsPerUint32 uint = 32
+const (
+	MaxCores      uint = 256
+	bitsPerWord   uint = uint(unsafe.Sizeof(uint(0)) * 8)
+	bitsPerUint32 uint = 32
+)
 
 // CPUMask is a mask of cores passed to the Linux scheduler.
 type CPUMask struct {

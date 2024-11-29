@@ -10,6 +10,9 @@ import os
 import sys
 import durationpy
 
+matplotlib.rcParams['pdf.fonttype'] = 42
+matplotlib.rcParams['ps.fonttype'] = 42
+
 def read_tpt(fpath):
   with open(fpath, "r") as f:
     x = f.read()
@@ -171,15 +174,16 @@ def finalize_graph(fig, ax, plots, title, out, maxval):
 def setup_graph(nplots, units, total_ncore):
   figsize=(6.4, 4.8)
   if nplots == 1:
-    figsize=(6.4, 2.4)
+    figsize=(6.4, 1.2)
   if total_ncore > 0:
-    npl = nplots + 1
+#    npl = nplots + 1
+    npl = nplots 
   else:
     npl = nplots
   fig, tptax = plt.subplots(npl, figsize=figsize, sharex=True)
   if total_ncore > 0:
-    coresax = [ tptax[-1] ]
-    tptax = tptax[:-1]
+    coresax = [ tptax ]
+#    tptax = tptax[:-1]
   else:
     coresax = []
   ylabels = []
@@ -187,8 +191,8 @@ def setup_graph(nplots, units, total_ncore):
     ylabel = unit
     ylabels.append(ylabel)
   plt.xlabel("Time (sec)")
-  for idx in range(len(tptax)):
-    tptax[idx].set_ylabel(ylabels[idx])
+#  for idx in range(len(tptax)):
+#    tptax[idx].set_ylabel(ylabels[idx])
   for ax in coresax:
     ax.set_ylim((0, total_ncore + 5))
     ax.set_yticks([ nc for nc in [0, 16, 32, 48, 64, 80, 96] if nc <= total_ncore ])
@@ -237,16 +241,16 @@ def graph_data(input_dir, title, prefix, out, nrealm, units, total_ncore, percen
     x, y = buckets_to_lists(buckets[i])
     if "MB" in units:
       y = y / 1000000
-    p = add_data_to_graph(tptax[tptax_idx], x, y, "Realm {}".format(i + 1), colors[i], "-", "")
-    plots.append(p)
+#    p = add_data_to_graph(tptax[tptax_idx], x, y, "Realm {}".format(i + 1), colors[i], "-", "")
+#    plots.append(p)
   # If we are dealing with multiple realms...
   line_style = "solid"
   marker = ""
   for i in range(nrealm):
     x, y = buckets_to_lists(dict(procd_tpts[i][0]))
-    p = add_data_to_graph(coresax[0], x, y, "", colors[i], line_style, marker)
+    p = add_data_to_graph(coresax[0], x, y, "Realm {}".format(i + 1), colors[i], line_style, marker)
     plots.append(p)
-  ta = [ ax for ax in tptax ]
+  ta = [ tptax ]
   ta.append(coresax[0])
   tptax = ta
   finalize_graph(fig, tptax, plots, title, out, (xmax - xmin) / 1000.0)

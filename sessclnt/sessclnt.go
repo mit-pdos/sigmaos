@@ -14,13 +14,13 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/demux"
 	"sigmaos/netclnt"
-	"sigmaos/netproxyclnt"
+	dialproxyclnt "sigmaos/dialproxy/clnt"
 	"sigmaos/proc"
-	"sigmaos/rand"
 	"sigmaos/serr"
 	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 	"sigmaos/spcodec"
+	"sigmaos/util/rand"
 )
 
 type SessClnt struct {
@@ -29,13 +29,13 @@ type SessClnt struct {
 	seqcntr *sessp.Tseqcntr
 	closed  bool
 	mnt     *sp.Tendpoint
-	npc     *netproxyclnt.NetProxyClnt
+	npc     *dialproxyclnt.DialProxyClnt
 	nc      *netclnt.NetClnt
 	pe      *proc.ProcEnv
 	dmx     *demux.DemuxClnt
 }
 
-func newSessClnt(pe *proc.ProcEnv, npc *netproxyclnt.NetProxyClnt, mnt *sp.Tendpoint) (*SessClnt, *serr.Err) {
+func newSessClnt(pe *proc.ProcEnv, npc *dialproxyclnt.DialProxyClnt, mnt *sp.Tendpoint) (*SessClnt, *serr.Err) {
 	c := &SessClnt{
 		sid:     sessp.Tsession(rand.Uint64()),
 		npc:     npc,
@@ -83,9 +83,13 @@ func (c *SessClnt) RPC(req sessp.Tmsg, iniov sessp.IoVec, outiov sessp.IoVec) (*
 	if nc == nil {
 		return nil, serr.NewErr(serr.TErrUnreachable, c.mnt)
 	}
-	db.DPrintf(db.SESSCLNT, "sess %v RPC req %v", c.sid, fc)
+	if db.WillBePrinted(db.SESSCLNT) {
+		db.DPrintf(db.SESSCLNT, "sess %v RPC req %v", c.sid, fc)
+	}
 	rep, err := c.dmx.SendReceive(pmfc, outiov)
-	db.DPrintf(db.SESSCLNT, "sess %v RPC req %v rep %v err %v", c.sid, fc, rep, err)
+	if db.WillBePrinted(db.SESSCLNT) {
+		db.DPrintf(db.SESSCLNT, "sess %v RPC req %v rep %v err %v", c.sid, fc, rep, err)
+	}
 
 	if err != nil {
 		return nil, err

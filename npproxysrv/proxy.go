@@ -5,18 +5,19 @@
 package npproxysrv
 
 import (
+	"errors"
 	"net"
 	"sync"
 
 	db "sigmaos/debug"
 	"sigmaos/demux"
 	"sigmaos/fidclnt"
-	"sigmaos/netproxyclnt"
+	dialproxyclnt "sigmaos/dialproxy/clnt"
 	"sigmaos/npproxysrv/npcodec"
 	"sigmaos/path"
 	"sigmaos/pathclnt"
 	"sigmaos/proc"
-	"sigmaos/rand"
+	"sigmaos/util/rand"
 	"sigmaos/serr"
 	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
@@ -49,10 +50,10 @@ func (pc *proxyConn) ServeRequest(fc demux.CallI) (demux.CallI, *serr.Err) {
 type Npd struct {
 	lip sp.Tip
 	pe  *proc.ProcEnv
-	npc *netproxyclnt.NetProxyClnt
+	npc *dialproxyclnt.DialProxyClnt
 }
 
-func NewNpd(pe *proc.ProcEnv, npc *netproxyclnt.NetProxyClnt, lip sp.Tip) *Npd {
+func NewNpd(pe *proc.ProcEnv, npc *dialproxyclnt.DialProxyClnt, lip sp.Tip) *Npd {
 	return &Npd{
 		lip: lip,
 		pe:  pe,
@@ -83,7 +84,7 @@ type NpSess struct {
 	cid       sp.TclntId
 }
 
-func newNpSess(pe *proc.ProcEnv, npcs *netproxyclnt.NetProxyClnt, lip string) *NpSess {
+func newNpSess(pe *proc.ProcEnv, npcs *dialproxyclnt.DialProxyClnt, lip string) *NpSess {
 	npc := &NpSess{}
 	npc.pe = pe
 	npc.fidc = fidclnt.NewFidClnt(pe, npcs)
@@ -121,9 +122,8 @@ func (npc *NpSess) Attach(args *sp.Tattach, rets *sp.Rattach) (sp.TclntId, *sp.R
 		db.DFatalf("Attach: resolve err %v", err)
 		return sp.NoClntId, sp.NewRerrorSerr(serr.NewErrError(err))
 	}
-	rets.Qid = npc.qm.Insert(path.Tpathname{sp.NAMED}, []*sp.Tqid{npc.fidc.Qid(fid)})[0]
+	rets.Qid = npc.qm.Insert(fid, []*sp.Tqid{npc.fidc.Qid(fid)})[0]
 	npc.fm.mapTo(args.Tfid(), fid)
-	npc.fidc.Lookup(fid).SetPath(path.Split(sp.NAMED))
 	db.DPrintf(db.NPPROXY, "Attach args %v rets %v fid %v\n", args, rets, fid)
 	return args.TclntId(), nil
 }
@@ -151,7 +151,7 @@ func (npc *NpSess) Walk(args *sp.Twalk, rets *sp.Rwalk) *sp.Rerror {
 	qids := ch.Qids()
 	qids = qids[len(qids)-len(args.Wnames):]
 
-	rets.Qids = npc.qm.Insert(ch.Path(), qids)
+	rets.Qids = npc.qm.Insert(fid1, qids)
 	npc.fm.mapTo(args.Tnewfid(), fid1)
 	return nil
 }
@@ -180,7 +180,7 @@ func (npc *NpSess) Create(args *sp.Tcreate, rets *sp.Rcreate) *sp.Rerror {
 	if !ok {
 		return sp.NewRerrorCode(serr.TErrNotfound)
 	}
-	fid1, err := npc.fidc.Create(fid, args.Name, args.Tperm(), args.Tmode(), sp.NoLeaseId, sp.NoFence())
+	fid1, err := npc.fidc.Create(fid, args.Name, args.Tperm(), args.Tmode(), sp.NoLeaseId, sp.NullFence())
 	if err != nil {
 		db.DPrintf(db.NPPROXY, "Create args %v err: %v\n", args, err)
 		return sp.NewRerrorSerr(err)
@@ -199,11 +199,15 @@ func (npc *NpSess) Clunk(args *sp.Tclunk, rets *sp.Rclunk) *sp.Rerror {
 		return sp.NewRerrorCode(serr.TErrNotfound)
 	}
 	ch := npc.fidc.Lookup(fid)
-	npc.qm.Clunk(ch.Path(), ch.Lastqid())
+	npc.qm.Clunk(fid, ch.Lastqid())
 	err := npc.fidc.Clunk(fid)
 	if err != nil {
 		db.DPrintf(db.NPPROXY, "Clunk: args %v err %v\n", args, err)
-		return sp.NewRerrorSerr(err)
+		var sr *serr.Err
+		if errors.As(err, &sr) {
+			return sp.NewRerrorSerr(sr)
+		}
+		return sp.NewRerrorErr(err)
 	}
 	npc.fm.delete(args.Tfid())
 	db.DPrintf(db.NPPROXY, "Clunk: args %v rets %v\n", args, rets)
@@ -271,7 +275,11 @@ func (npc *NpSess) ReadF(args *sp.TreadF, rets *sp.Rread) ([]byte, *sp.Rerror) {
 	cnt, err := npc.fidc.ReadF(fid, args.Toffset(), b, sp.NullFence())
 	if err != nil {
 		db.DPrintf(db.NPPROXY, "Read: args %v err %v\n", args, err)
-		return nil, sp.NewRerrorSerr(err)
+		var sr *serr.Err
+		if errors.As(err, &sr) {
+			return nil, sp.NewRerrorSerr(sr)
+		}
+		return nil, sp.NewRerrorErr(err)
 	}
 	b = b[:cnt]
 	db.DPrintf(db.NPPROXY, "ReadUV: args %v rets %v %d", args, rets, cnt)
@@ -297,7 +305,11 @@ func (npc *NpSess) WriteF(args *sp.TwriteF, data []byte, rets *sp.Rwrite) *sp.Re
 	n, err := npc.fidc.WriteF(fid, args.Toffset(), data, sp.NullFence())
 	if err != nil {
 		db.DPrintf(db.NPPROXY, "Write: args %v err %v\n", args, err)
-		return sp.NewRerrorSerr(err)
+		var sr *serr.Err
+		if errors.As(err, &sr) {
+			return sp.NewRerrorSerr(sr)
+		}
+		return sp.NewRerrorErr(err)
 	}
 	rets.Count = uint32(n)
 	db.DPrintf(db.NPPROXY, "Write: args %v rets %v\n", args, rets)

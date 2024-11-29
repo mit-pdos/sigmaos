@@ -1,16 +1,14 @@
+// The electclnt package allows procs to elect a leader using [leaderetcd] and
+// ask for fence to fence the leader's write operations.
 package electclnt
 
 import (
 	db "sigmaos/debug"
-	"sigmaos/namesrv/fsetcd"
 	"sigmaos/fslib"
-	"sigmaos/leaderetcd"
+	"sigmaos/namesrv/fsetcd"
+	"sigmaos/namesrv/leaderetcd"
 	sp "sigmaos/sigmap"
 )
-
-//
-// Library to acquire leadership
-//
 
 type ElectClnt struct {
 	*fslib.FsLib
@@ -23,7 +21,7 @@ type ElectClnt struct {
 
 func NewElectClnt(fsl *fslib.FsLib, pn string, perm sp.Tperm) (*ElectClnt, error) {
 	e := &ElectClnt{FsLib: fsl, pn: pn, perm: perm}
-	fs, err := fsetcd.NewFsEtcd(fsl.GetNetProxyClnt().Dial, fsl.ProcEnv().GetEtcdEndpoints(), fsl.ProcEnv().GetRealm(), nil)
+	fs, err := fsetcd.NewFsEtcd(fsl.GetDialProxyClnt().Dial, fsl.ProcEnv().GetEtcdEndpoints(), fsl.ProcEnv().GetRealm(), nil)
 	if err != nil {
 		return nil, err
 	}

@@ -25,21 +25,25 @@ const (
 // Latency break-down.
 const (
 	SPAWN_LAT      Tselector = "SPAWN_LAT"
-	NET_LAT        Tselector = "NET_LAT"
+	NET_LAT                  = "NET_LAT"
+	DIALPROXY_LAT            = "DIALPROXY_LAT"
 	REALM_GROW_LAT           = "REALM_GROW_LAT"
 	CACHE_LAT                = "CACHE_LAT"
 	WALK_LAT                 = "WALK_LAT"
 	FSETCD_LAT               = "FSETCD_LAT"
 	ATTACH_LAT               = "ATTACH_LAT"
+	RPC_LAT                  = "RPC_LAT"
 )
 
 // Tests
 const (
-	TEST  Tselector = "TEST"
-	TEST1           = "TEST1"
-	DELAY           = "DELAY"
-	CRASH           = "CRASH"
-	PERF            = "PERF"
+	TEST     Tselector = "TEST"
+	TEST1              = "TEST1"
+	STAT               = "STAT"
+	TEST_LAT           = "TEST_LAT"
+	DELAY              = "DELAY"
+	CRASH              = "CRASH"
+	PERF               = "PERF"
 )
 
 // Apps
@@ -56,11 +60,13 @@ const (
 	RPC_BENCH_CLNT                    = "RPC_BENCH_CLNT"
 	HOTEL_CLNT                        = "HOTEL_CLNT"
 	HOTEL_GEO                         = "HOTEL_GEO"
+	HOTEL_GEO_ERR                     = "HOTEL_GEO" + ERR
 	HOTEL_PROF                        = "HOTEL_PROF"
 	HOTEL_RATE                        = "HOTEL_RATE"
 	HOTEL_RESERVE                     = "HOTEL_RESERVE"
 	HOTEL_SEARCH                      = "HOTEL_SEARCH"
 	HOTEL_WWW                         = "HOTEL_WWW"
+	HOTEL_WWW_ERR                     = "HOTEL_WWW" + ERR
 	HOTEL_WWW_STATS                   = "HOTEL_WWW_STATS"
 	SLEEPER                           = "SLEEPER"
 	SPINNER                           = "SPINNER"
@@ -105,28 +111,29 @@ const (
 	BOOT                         = "BOOT"
 	CONTAINER                    = "CONTAINER"
 	NAMED                        = "NAMED"
+	NAMED_LDR                    = "NAMED_LDR"
 	FSETCD                       = "FSETCD"
 	PROCMGR                      = "PROCMGR"
-	UPROCDMGR                    = "UPROCDMGR"
-	UPROCDMGR_ERR                = "UPROCDMGR" + ERR
-	UPROCD                       = "UPROCD"
-	UPROCD_ERR                   = "UPROCD" + ERR
+	PROCDMGR                     = "PROCDMGR"
+	PROCDMGR_ERR                 = "PROCDMGR" + ERR
+	PROCD                        = "PROCD"
+	PROCD_ERR                    = "PROCD" + ERR
 	LCSCHEDCLNT                  = "LCSCHEDCLNT"
 	LCSCHEDCLNT_ERR              = "LCSCHEDCLNT" + ERR
 	LCSCHED                      = "LCSCHED"
 	LCSCHED_ERR                  = "LCSCHED" + ERR
-	PROCQ                        = "PROCQ"
-	PROCQ_ERR                    = "PROCQ" + ERR
-	PROCQCLNT                    = "PROCQCLNT"
-	PROCQCLNT_ERR                = "PROCQCLNT" + ERR
+	BESCHED                      = "BESCHED"
+	BESCHED_ERR                  = "BESCHED" + ERR
+	BESCHEDCLNT                  = "BESCHEDCLNT"
+	BESCHEDCLNT_ERR              = "BESCHEDCLNT" + ERR
 	KEYCLNT                      = "KEYCLNT"
 	KEYCLNT_ERR                  = "KEYCLNT" + ERR
 	KEYD                         = "KEYD"
 	KEYD_ERR                     = "KEYD" + ERR
-	SCHEDD                       = "SCHEDD"
-	SCHEDD_ERR                   = "SCHEDD" + ERR
-	SCHEDDCLNT                   = "SCHEDDCLNT"
-	SCHEDDCLNT_ERR               = "SCHEDDCLNT" + ERR
+	MSCHED                       = "MSCHED"
+	MSCHED_ERR                   = "MSCHED" + ERR
+	MSCHEDCLNT                   = "MSCHEDCLNT"
+	MSCHEDCLNT_ERR               = "MSCHEDCLNT" + ERR
 	PROCMGR_ERR                  = PROCMGR + ERR
 	PROCCACHE                    = "PROCCACHE"
 	PROCFS                       = "PROCFS"
@@ -174,6 +181,7 @@ const (
 	WRITER_ERR    Tselector = "WRITER" + ERR
 	READER_ERR              = "READER" + ERR
 	AWRITER                 = "AWRITER"
+	PREADER                 = "PREADER"
 	FSLIB                   = "FSLIB"
 	FSLIB_ERR               = "FSLIB" + ERR
 	SEMCLNT                 = "SEMCLNT"
@@ -197,48 +205,48 @@ const (
 	SESSDEVCLNT             = "SESSDEVCLNT"
 	K8S_UTIL                = "K8S_UTIL"
 	SIGMACLNTCLNT           = "SIGMACLNTCLNT"
+	S3CLNT                  = "S3CLNT"
 )
 
 // Server Libraries
 const (
-	MEMFS           Tselector = "MEMFS"
-	PIPE                      = "PIPE"
-	OVERLAYDIR                = "OVERLAYDIR"
-	CLONEDEV                  = "CLONEDEV"
-	SESSDEV                   = "SESSDEV"
-	SIGMASRV                  = "SIGMASRV"
-	NETPROXY                  = "NETPROXY"
-	NETPROXY_ERR              = "NETPROXY_ERR"
-	NETPROXY_PERF             = "NETPROXY_PERF"
-	NETPROXYSRV               = "NETPROXYSRV"
-	NETPROXYSRV_ERR           = "NETPROXYSRV" + ERR
+	MEMFS            Tselector = "MEMFS"
+	PIPE                       = "PIPE"
+	OVERLAYDIR                 = "OVERLAYDIR"
+	CLONEDEV                   = "CLONEDEV"
+	SESSDEV                    = "SESSDEV"
+	SIGMASRV                   = "SIGMASRV"
+	DIALPROXY                  = "DIALPROXY"
+	DIALPROXY_ERR              = "DIALPROXY_ERR"
+	DIALPROXYSRV               = "DIALPROXYSRV"
+	DIALPROXYSRV_ERR           = "DIALPROXYSRV" + ERR
 )
 
 // Client-side Infrastructure
 const (
-	NETCLNT           Tselector = "NETCLNT"
-	NETCLNT_ERR                 = NETCLNT + ERR
-	NETPROXYCLNT                = "NETPROXYCLNT"
-	NETPROXYCLNT_ERR            = "NETPROXYCLNT" + ERR
-	NETPROXYTRANS               = "NETPROXYTRANS"
-	NETPROXYTRANS_ERR           = "NETPROXYTRANS" + ERR
-	DEMUXCLNT                   = "DEMUXCLNT"
-	DEMUXCLNT_ERR               = "DEMUXCLNT" + ERR
-	PROTCLNT                    = "PROTCLNT"
-	PROTCLNT_ERR                = "PROTCLNT" + ERR
-	SESS_CLNT_Q                 = "SESS_CLNT_Q"
-	SESSCLNT                    = "SESSCLNT"
-	SESSCLNT_ERR                = SESSCLNT + ERR
-	FIDCLNT                     = "FIDCLNT"
-	FIDCLNT_ERR                 = FIDCLNT + ERR
-	RPCCLNT                     = "RPCCLNT"
-	MOUNT                       = "MOUNT"
-	MOUNT_ERR                   = MOUNT + ERR
-	FDCLNT                      = "FDCLNT"
-	PATHCLNT                    = "PATHCLNT"
-	PATHCLNT_ERR                = PATHCLNT + ERR
-	WALK                        = "WALK"
-	WALK_ERR                    = "WALK" + ERR
+	NETCLNT            Tselector = "NETCLNT"
+	NETCLNT_ERR                  = NETCLNT + ERR
+	DIALPROXYCLNT                = "DIALPROXYCLNT"
+	DIALPROXYCLNT_ERR            = "DIALPROXYCLNT" + ERR
+	DIALPROXYTRANS               = "DIALPROXYTRANS"
+	DIALPROXYTRANS_ERR           = "DIALPROXYTRANS" + ERR
+	DEMUXCLNT                    = "DEMUXCLNT"
+	DEMUXCLNT_ERR                = "DEMUXCLNT" + ERR
+	PROTCLNT                     = "PROTCLNT"
+	PROTCLNT_ERR                 = "PROTCLNT" + ERR
+	SESS_CLNT_Q                  = "SESS_CLNT_Q"
+	SESSCLNT                     = "SESSCLNT"
+	SESSCLNT_ERR                 = SESSCLNT + ERR
+	FIDCLNT                      = "FIDCLNT"
+	FIDCLNT_ERR                  = FIDCLNT + ERR
+	RPCCLNT                      = "RPCCLNT"
+	MOUNT                        = "MOUNT"
+	MOUNT_ERR                    = MOUNT + ERR
+	FDCLNT                       = "FDCLNT"
+	PATHCLNT                     = "PATHCLNT"
+	PATHCLNT_ERR                 = PATHCLNT + ERR
+	WALK                         = "WALK"
+	WALK_ERR                     = "WALK" + ERR
 )
 
 // Server-side Infrastructure

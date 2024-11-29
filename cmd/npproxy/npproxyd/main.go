@@ -6,7 +6,7 @@ import (
 	"sigmaos/auth"
 	db "sigmaos/debug"
 	"sigmaos/namesrv/fsetcd"
-	"sigmaos/netproxyclnt"
+	dialproxyclnt "sigmaos/dialproxy/clnt"
 	"sigmaos/netsrv"
 	"sigmaos/npproxysrv"
 	"sigmaos/proc"
@@ -29,7 +29,7 @@ func main() {
 		db.DFatalf("Error new fsetcd moutn: %v", err)
 	}
 	// By default, proxy doesn't use overlays.
-	pe := proc.NewTestProcEnv(sp.ROOTREALM, secrets, etcdMnt, lip, lip, "", false, false, true)
+	pe := proc.NewTestProcEnv(sp.ROOTREALM, secrets, etcdMnt, lip, lip, "", false, true)
 	pe.SetPID("proxy")
 	pe.Program = "proxy"
 	pe.SetPrincipal(sp.NewPrincipal(
@@ -38,7 +38,7 @@ func main() {
 	))
 	db.DPrintf(db.NPPROXY, "Proxy env: %v", pe)
 	addr := sp.NewTaddr(sp.NO_IP, sp.INNER_CONTAINER_IP, 1110)
-	npc := netproxyclnt.NewNetProxyClnt(pe)
+	npc := dialproxyclnt.NewDialProxyClnt(pe)
 	npd := npproxysrv.NewNpd(pe, npc, lip)
 	netsrv.NewNetServerEPType(pe, npc, addr, sp.EXTERNAL_EP, npd)
 	ch := make(chan struct{})

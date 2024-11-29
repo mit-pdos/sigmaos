@@ -10,10 +10,11 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"sigmaos/crash"
 	db "sigmaos/debug"
-	"sigmaos/namesrv/fsetcd"
 	"sigmaos/groupmgr"
 	"sigmaos/linuxsched"
+	"sigmaos/namesrv/fsetcd"
 	"sigmaos/proc"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
@@ -30,7 +31,7 @@ const (
 const program = "procclnt_test"
 
 func schedd(ts *test.Tstate) string {
-	st, err := ts.GetDir(sp.SCHEDD)
+	st, err := ts.GetDir(sp.MSCHED)
 	assert.Nil(ts.T, err, "Readdir")
 	return st[0].Name
 }
@@ -78,10 +79,14 @@ func spawnSleeperMcpu(t *testing.T, ts *test.Tstate, pid sp.Tpid, mcpu proc.Tmcp
 	assert.Nil(t, err, "Spawn")
 }
 
-func spawnSpawner(t *testing.T, ts *test.Tstate, wait bool, childPid sp.Tpid, msecs, crash int) sp.Tpid {
+func spawnSpawner(t *testing.T, ts *test.Tstate, wait bool, childPid sp.Tpid, msecs, c int64) sp.Tpid {
 	p := proc.NewProc("spawner", []string{strconv.FormatBool(wait), childPid.String(), "sleeper", fmt.Sprintf("%dms", msecs), "name/"})
-	p.SetCrash(int64(crash))
-	err := ts.Spawn(p)
+	e0 := crash.Tevent{crash.SPAWNER_CRASH, 0, c, 0.33, 0}
+	e1 := crash.Tevent{crash.SPAWNER_PARTITION, 0, c, 0.66, 0}
+	s, err := crash.MakeTevents([]crash.Tevent{e0, e1})
+	assert.Nil(t, err)
+	p.AppendEnv(proc.SIGMAFAIL, s)
+	err = ts.Spawn(p)
 	assert.Nil(t, err, "Spawn")
 	return p.GetPid()
 }
@@ -171,7 +176,7 @@ func TestWaitExitOne(t *testing.T) {
 
 	// cleaned up (may take a bit)
 	time.Sleep(500 * time.Millisecond)
-	_, err = ts.Stat(filepath.Join(sp.SCHEDD, "~local", sp.PIDS, pid.String()))
+	_, err = ts.Stat(filepath.Join(sp.MSCHED, sp.LOCAL, sp.PIDS, pid.String()))
 	assert.NotNil(t, err, "Stat %v", filepath.Join(sp.PIDS, pid.String()))
 
 	end := time.Now()
@@ -204,7 +209,7 @@ func TestWaitExitN(t *testing.T) {
 
 			// cleaned up (may take a bit)
 			time.Sleep(500 * time.Millisecond)
-			_, err = ts.Stat(filepath.Join(sp.SCHEDD, "~local", sp.PIDS, pid.String()))
+			_, err = ts.Stat(filepath.Join(sp.MSCHED, sp.LOCAL, sp.PIDS, pid.String()))
 			assert.NotNil(t, err, "Stat %v", filepath.Join(sp.PIDS, pid.String()))
 
 			checkSleeperResult(t, ts, pid)
@@ -233,14 +238,14 @@ func TestWaitExitParentRetStat(t *testing.T) {
 
 	// cleaned up
 	for {
-		_, err = ts.Stat(filepath.Join(sp.SCHEDD, "~local", sp.PIDS, pid.String()))
+		_, err = ts.Stat(filepath.Join(sp.MSCHED, sp.LOCAL, sp.PIDS, pid.String()))
 		if err != nil {
 			break
 		}
 		time.Sleep(10 * time.Millisecond)
 		db.DPrintf(db.TEST, "PID dir not deleted yet.")
 	}
-	assert.NotNil(t, err, "Stat %v", filepath.Join(sp.SCHEDD, "~local", sp.PIDS, pid.String()))
+	assert.NotNil(t, err, "Stat %v", filepath.Join(sp.MSCHED, sp.LOCAL, sp.PIDS, pid.String()))
 	end := time.Now()
 
 	assert.True(t, end.Sub(start) > SLEEP_MSECS*time.Millisecond)
@@ -270,7 +275,7 @@ func TestWaitExitParentAbandons(t *testing.T) {
 	time.Sleep(2 * SLEEP_MSECS * time.Millisecond)
 
 	// cleaned up
-	_, err = ts.Stat(filepath.Join(sp.SCHEDD, "~local", sp.PIDS, pid.String()))
+	_, err = ts.Stat(filepath.Join(sp.MSCHED, sp.LOCAL, sp.PIDS, pid.String()))
 	assert.NotNil(t, err, "Stat")
 
 	end := time.Now()
@@ -299,7 +304,7 @@ func TestWaitExitParentCrash(t *testing.T) {
 	time.Sleep(2 * SLEEP_MSECS * time.Millisecond)
 
 	// cleaned up
-	_, err = ts.Stat(filepath.Join(sp.SCHEDD, "~local", sp.PIDS, pid.String()))
+	_, err = ts.Stat(filepath.Join(sp.MSCHED, sp.LOCAL, sp.PIDS, pid.String()))
 	assert.NotNil(t, err, "Stat")
 
 	end := time.Now()
@@ -404,7 +409,7 @@ func TestEarlyExit1(t *testing.T) {
 	assert.Equal(t, "hello", string(b), "Output")
 
 	// .. and cleaned up
-	_, err = ts.Stat(filepath.Join(sp.SCHEDD, "~local", sp.PIDS, pid1.String()))
+	_, err = ts.Stat(filepath.Join(sp.MSCHED, sp.LOCAL, sp.PIDS, pid1.String()))
 	assert.NotNil(t, err, "Stat")
 
 	cleanSleeperResult(t, ts, pid1)
@@ -450,7 +455,7 @@ func TestEarlyExitN(t *testing.T) {
 			assert.True(t, contentsCorrect, "Incorrect file contents: %v", string(b))
 
 			// .. and cleaned up
-			_, err = ts.Stat(filepath.Join(sp.SCHEDD, "~local", sp.PIDS, pid1.String()))
+			_, err = ts.Stat(filepath.Join(sp.MSCHED, sp.LOCAL, sp.PIDS, pid1.String()))
 			assert.NotNil(t, err, "Stat")
 
 			cleanSleeperResult(t, ts, pid1)
@@ -507,7 +512,7 @@ func TestConcurrentProcs(t *testing.T) {
 			checkSleeperResult(t, ts, pid)
 			cleanSleeperResult(t, ts, pid)
 			time.Sleep(100 * time.Millisecond)
-			_, err := ts.Stat(filepath.Join(sp.SCHEDD, "~local", sp.PIDS, pid.String()))
+			_, err := ts.Stat(filepath.Join(sp.MSCHED, sp.LOCAL, sp.PIDS, pid.String()))
 			assert.NotNil(t, err, "Stat %v", filepath.Join(sp.PIDS, pid.String()))
 		}(pid, &done, i)
 	}
@@ -631,7 +636,7 @@ func waitExitSimpleMultiKernel(t *testing.T, n int) {
 	assert.Nil(t, err, "Boot node: %v", err)
 	db.DPrintf(db.TEST, "Done boot node %d", n)
 
-	sts, err := ts.GetDir(sp.SCHEDD)
+	sts, err := ts.GetDir(sp.MSCHED)
 	kernels := sp.Names(sts)
 	db.DPrintf(db.TEST, "Kernels %v", kernels)
 
@@ -853,7 +858,7 @@ func TestMaintainReplicationLevelCrashSchedd(t *testing.T) {
 
 	// Start a bunch of replicated spinner procs.
 	cfg := groupmgr.NewGroupConfig(N_REPL, "spinner", []string{}, 0, OUTDIR)
-	sm := cfg.StartGrpMgr(ts.SigmaClnt, 0)
+	sm := cfg.StartGrpMgr(ts.SigmaClnt)
 	db.DPrintf(db.TEST, "GrpMgr started")
 
 	// Wait for them to spawn.
@@ -865,7 +870,7 @@ func TestMaintainReplicationLevelCrashSchedd(t *testing.T) {
 	assert.Equal(t, N_REPL, len(st), "wrong num spinners check #1")
 	db.DPrintf(db.TEST, "Get OutDir")
 
-	err = ts.KillOne(sp.SCHEDDREL)
+	err = ts.KillOne(sp.MSCHEDREL)
 	assert.Nil(t, err, "kill schedd")
 	db.DPrintf(db.TEST, "Killed a schedd")
 
@@ -878,7 +883,7 @@ func TestMaintainReplicationLevelCrashSchedd(t *testing.T) {
 	assert.Equal(t, N_REPL, len(st), "wrong num spinners check #2", sp.Names(st))
 	db.DPrintf(db.TEST, "Got out dir again")
 
-	err = ts.KillOne(sp.SCHEDDREL)
+	err = ts.KillOne(sp.MSCHEDREL)
 	assert.Nil(t, err, "kill schedd")
 	db.DPrintf(db.TEST, "Killed another schedd")
 

@@ -13,7 +13,7 @@ import (
 	"sigmaos/test"
 )
 
-var pathname string // e.g., --path "name/ux/~local/" or  "name/schedd/~local/"
+var pathname string // e.g., --path "name/ux/sp.LOCAL/" or  "name/schedd/sp.LOCAL/"
 
 func init() {
 	flag.StringVar(&pathname, "path", sp.NAMED, "path for file system")
@@ -38,7 +38,7 @@ func TestDirCache(t *testing.T) {
 	_, err = ts.PutFile(filepath.Join(dn, fn), 0777, sp.OWRITE, nil)
 	assert.Nil(t, err)
 
-	dc := dircache.NewDirCache[struct{}](ts.FsLib, dn, newEntry, db.FSLIB, db.FSLIB)
+	dc := dircache.NewDirCache[struct{}](ts.FsLib, dn, newEntry, nil, db.TEST, db.TEST)
 
 	ns, err := dc.GetEntries()
 

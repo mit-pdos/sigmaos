@@ -17,7 +17,7 @@ import (
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
-	"sigmaos/syncmap"
+	"sigmaos/util/syncmap"
 )
 
 const (

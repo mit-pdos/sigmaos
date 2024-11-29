@@ -6,8 +6,8 @@ import (
 	"runtime/debug"
 
 	db "sigmaos/debug"
-	"sigmaos/rand"
 	sp "sigmaos/sigmap"
+	"sigmaos/util/rand"
 )
 
 func (fsl *FsLib) PutFileAtomic(fname string, perm sp.Tperm, data []byte) error {

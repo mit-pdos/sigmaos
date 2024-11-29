@@ -57,13 +57,13 @@ if [ $# -gt 0 ]; then
 fi
 
 if [[ "$TAG" != "" && "$TARGET" == "local" ]] || [[ "$TAG" == "" && "$TARGET" != "local" ]] ; then
-  echo "Must run with either --push set and --target=aws, or --target=local and without --push"
+  echo "Must run with either --push set and --target=remote, or --target=local and without --push"
   exit 1
 fi
 
 TMP=/tmp/sigmaos
 BUILD_LOG=/tmp/sigmaos-build
-UPROCD_BIN=/tmp/sigmaos-uprocd-bin
+PROCD_BIN=/tmp/sigmaos-procd-bin
 
 # tests uses hosts /tmp, which mounted in kernel container.
 mkdir -p $TMP
@@ -75,12 +75,12 @@ BIN=${ROOT}/bin
 KERNELBIN=${BIN}/kernel
 USRBIN=${BIN}/user
 mkdir -p $USRBIN
-# Clear the uprocd bin directory
-rm -rf $UPROCD_BIN
-mkdir -p $UPROCD_BIN
+# Clear the procd bin directory
+rm -rf $PROCD_BIN
+mkdir -p $PROCD_BIN
 
 # build and start db container
-if [ "${TARGET}" != "aws" ]; then
+if [ "${TARGET}" != "remote" ]; then
     ./start-network.sh
 fi
 
@@ -148,38 +148,65 @@ BUILD_ARGS="--norace \
   $PARALLEL"
 
 echo "========== Building kernel bins =========="
+BUILD_OUT_FILE=$BUILD_LOG/make-kernel.out
 docker exec -it $buildercid \
   /usr/bin/time -f "Build time: %e sec" \
   ./make.sh $BUILD_ARGS kernel \
-  2>&1 | tee $BUILD_LOG/make-kernel.out
+  2>&1 | tee $BUILD_OUT_FILE && \
+  if [ ${PIPESTATUS[0]} -ne 0 ]; then
+    printf "\n!!!!!!!!!! BUILD ERROR !!!!!!!!!!\nLogs in: $BUILD_OUT_FILE\n" \
+      | tee -a $BUILD_OUT_FILE;
+  fi;
+  if [ $(grep -q "BUILD ERROR" $BUILD_OUT_FILE; echo $?) -eq 0 ]; then
+    echo "!!!!!!!!!! ABORTING BUILD !!!!!!!!!!"
+    exit 1
+  fi
   # Copy named, which is also a user bin
   cp $KERNELBIN/named $USRBIN/named
 echo "========== Done building kernel bins =========="
 
 echo "========== Building user bins =========="
+BUILD_OUT_FILE=$BUILD_LOG/make-user.out
 docker exec -it $buildercid \
   /usr/bin/time -f "Build time: %e sec" \
   ./make.sh $BUILD_ARGS --userbin $USERBIN user --version $VERSION \
-  2>&1 | tee $BUILD_LOG/make-user.out
+  2>&1 | tee $BUILD_OUT_FILE && \
+  if [ ${PIPESTATUS[0]} -ne 0 ]; then
+    printf "\n!!!!!!!!!! BUILD ERROR !!!!!!!!!!\nLogs in: $BUILD_OUT_FILE\n" \
+      | tee -a $BUILD_OUT_FILE;
+  fi;
+  if [ $(grep -q "BUILD ERROR" $BUILD_OUT_FILE; echo $?) -eq 0 ]; then
+    echo "!!!!!!!!!! ABORTING BUILD !!!!!!!!!!"
+    exit 1
+  fi
 echo "========== Done building user bins =========="
 
 RS_BUILD_ARGS="--rustpath \$HOME/.cargo/bin/cargo \
   $PARALLEL"
 
 echo "========== Building Rust bins =========="
+BUILD_OUT_FILE=$BUILD_LOG/make-user-rs.out
 docker exec -it $rsbuildercid \
   /usr/bin/time -f "Build time: %e sec" \
   ./make-rs.sh $RS_BUILD_ARGS --version $VERSION \
-  2>&1 | tee $BUILD_LOG/make-user-rs.out
+  2>&1 | tee $BUILD_OUT_FILE && \
+  if [ ${PIPESTATUS[0]} -ne 0 ]; then
+    printf "\n!!!!!!!!!! BUILD ERROR !!!!!!!!!!\nLogs in: $BUILD_OUT_FILE\n" \
+      | tee -a $BUILD_OUT_FILE;
+  fi;
+  if [ $(grep -q "BUILD ERROR" $BUILD_OUT_FILE; echo $?) -eq 0 ]; then
+    echo "!!!!!!!!!! ABORTING BUILD !!!!!!!!!!"
+    exit 1
+  fi
 echo "========== Done building Rust bins =========="
 
-echo "========== Copying kernel bins for uprocd =========="
+echo "========== Copying kernel bins for procd =========="
 if [ "${TARGET}" == "local" ]; then
   sudo cp $ROOT/create-net.sh $KERNELBIN/
-  cp $KERNELBIN/uprocd $UPROCD_BIN/
-  cp $KERNELBIN/spproxyd $UPROCD_BIN/
-  cp $KERNELBIN/exec-uproc-rs $UPROCD_BIN/
-  cp $KERNELBIN/lazypagesd $UPROCD_BIN/
+  cp $KERNELBIN/procd $PROCD_BIN/
+  cp $KERNELBIN/spproxyd $PROCD_BIN/
+  cp $KERNELBIN/exec-uproc-rs $PROCD_BIN/
+  cp $KERNELBIN/lazypagesd $PROCD_BIN/
 fi
 echo "========== Done copying kernel bins for uproc =========="
 
@@ -211,9 +238,9 @@ else
   docker tag sigmaos-remote sigmaos
   docker tag sigmauser-remote sigmauser
   # Upload the user bins to S3
-  echo "========== Pushing user bins to aws =========="
+  echo "========== Pushing user bins to S3 =========="
   ./upload.sh --tag $TAG --profile sigmaos
-  echo "========== Done pushing user bins to aws =========="
+  echo "========== Done pushing user bins to S3 =========="
 fi
 
 # Build npproxy for host

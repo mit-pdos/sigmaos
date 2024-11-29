@@ -6,12 +6,11 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/netsigma"
-	"sigmaos/perf"
+	"sigmaos/util/perf"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
-	// "sigmaos/seccomp"
 )
 
 var fsux *FsUx

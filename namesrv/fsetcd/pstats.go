@@ -10,7 +10,7 @@ import (
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 	"sigmaos/stats"
-	"sigmaos/syncmap"
+	"sigmaos/util/syncmap"
 )
 
 type pstats struct {
@@ -53,8 +53,9 @@ func NewPstatsDev() *PstatInode {
 
 func (sti *PstatInode) stats() []byte {
 	ss := NewPstatsSnapshot()
-	sti.pstats.paths.Iter(func(k string, c *stats.Tcounter) {
+	sti.pstats.paths.Iter(func(k string, c *stats.Tcounter) bool {
 		ss.Counters[k] = c.Load()
+		return true
 	})
 	data, err := json.Marshal(ss)
 	if err != nil {

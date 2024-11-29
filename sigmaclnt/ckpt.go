@@ -10,8 +10,8 @@ import (
 	"syscall"
 
 	db "sigmaos/debug"
+	dialproxytrans "sigmaos/dialproxy/transport"
 	"sigmaos/frame"
-	"sigmaos/netproxytrans"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
 	"sigmaos/serr"
@@ -121,7 +121,7 @@ func rcvConn(uconn *net.UnixConn) (net.Conn, error) {
 	}
 	db.DPrintf(db.CKPT, "spproxyd fd %d\n", fds[0])
 
-	os.Setenv(netproxytrans.SIGMA_NETPROXY_FD, strconv.Itoa(fds[0]))
+	os.Setenv(dialproxytrans.SIGMA_DIALPROXY_FD, strconv.Itoa(fds[0]))
 
 	f := os.NewFile(uintptr(fds[0]), "spproxyd")
 	conn, err := net.FileConn(f)

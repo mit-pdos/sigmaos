@@ -151,10 +151,10 @@ func restoreProc(criuclnt *criu.Criu, proc *proc.Proc, imgDir, workDir, jailPath
 
 	verbose := db.IsLabelSet(db.CRIU)
 
-	// XXX deduplicate with GetNetproxydConn
-	conn, err := net.Dial("unix", sp.SIGMA_NETPROXY_SOCKET)
+	// XXX deduplicate with GetDialproxydConn
+	conn, err := net.Dial("unix", sp.SIGMA_DIALPROXY_SOCKET)
 	if err != nil {
-		db.DFatalf("Error connect netproxy srv %v err %v", sp.SIGMA_NETPROXY_SOCKET, err)
+		db.DFatalf("Error connect dialproxy srv %v err %v", sp.SIGMA_DIALPROXY_SOCKET, err)
 	}
 	uconn := conn.(*net.UnixConn)
 	b, err := json.Marshal(proc.GetPrincipal())
@@ -180,7 +180,7 @@ func restoreProc(criuclnt *criu.Criu, proc *proc.Proc, imgDir, workDir, jailPath
 	if err != nil {
 		db.DFatalf("ReadImg fdinfo err %v\n", err)
 	}
-	// XXX 3 is SIGMA_NETPROXY_FD
+	// XXX 3 is SIGMA_DIALPROXY_FD
 	dstfd := criuDump.Entries[3].Message.(*fdinfo.FdinfoEntry)
 	criuDump, err = lazypagessrv.ReadImg(imgDir, "", "files")
 	if err != nil {

@@ -5,8 +5,8 @@ const (
 	KBYTE           = 1 << 10
 	MBYTE           = 1 << 20
 	GBYTE           = 1 << 30
-	BUFSZ           = 4 * MBYTE
-	MAXGETSET Tsize = 1_000_000 // If need more than MaxGetSet, use Open/Read/Close interface
+	BUFSZ           = 1 * MBYTE
+	MAXGETSET Tsize = MBYTE // If need more than MaxGetSet, use Open/Read/Close interface
 )
 
 // Build constants
@@ -98,12 +98,6 @@ const (
 	EtcdSessionTTL = 5
 )
 
-// Path lookup consts
-const (
-	PATHCLNT_TIMEOUT  = 200 // ms  (XXX belongs in hyperparam?)
-	PATHCLNT_MAXRETRY = (EtcdSessionTTL + 1) * (1000 / PATHCLNT_TIMEOUT)
-)
-
 // Realm consts
 const (
 	ROOTREALM Trealm = "rootrealm"
@@ -149,21 +143,9 @@ const (
 
 // Auth consts
 const (
-	NO_PRINCIPAL_ID    TprincipalID = "NO_PRINCIPAL_ID"
-	NO_REALM           Trealm       = "NO_REALM"
-	KEY_LEN            int          = 256
-	HOST_PRIV_KEY_FILE string       = "/tmp/sigmaos/master-key.priv"
-	HOST_PUB_KEY_FILE  string       = "/tmp/sigmaos/master-key.pub"
-	NO_SIGNER          string       = "NO_SIGNER"
-	NO_SIGNED_TOKEN    string       = "NO_SIGNED_TOKEN"
+	NO_PRINCIPAL_ID TprincipalID = "NO_PRINCIPAL_ID"
+	NO_REALM        Trealm       = "NO_REALM"
 )
-
-func NoToken() *Ttoken {
-	return &Ttoken{
-		SignerStr:   NO_SIGNER,
-		SignedToken: NO_SIGNED_TOKEN,
-	}
-}
 
 func NoPrincipal() *Tprincipal {
 	return &Tprincipal{

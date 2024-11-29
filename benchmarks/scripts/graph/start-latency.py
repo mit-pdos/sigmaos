@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 
 import matplotlib
+matplotlib.rcParams['pdf.fonttype'] = 42
+matplotlib.rcParams['ps.fonttype'] = 42
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
@@ -69,16 +71,16 @@ def get_xos_warm(cold_res_dir):
 
 def graph_data(cold_res_dir, warm_res_dir, out):
   fig, ax = plt.subplots(figsize=(6.4, 2.4))
-#  ax.set_ylim(bottom=0)
   ax.set_yscale("log")
   ax.set_ylabel("Start Latency (ms)")
 
   xos_cold = get_xos_cold(cold_res_dir)
   xos_warm = get_xos_warm(warm_res_dir)
+  print("cold: {} warm: {}".format(xos_cold, xos_warm))
 
-  sys = [     "XOS", "AWS λ", "Docker", "K8s", "Mitosis", "FAASM", ]
-  cold = [ xos_cold,  1289.6,   2671.4,  1143,       3.1,     8.8, ]
-  warm = [ xos_warm,    45.9,    469.1,   217,       3.1,     0.3, ]
+  sys = [     "σOS", "AWS λ", "Docker", "K8s", "Mitosis", "FAASM", ]
+  cold = [ xos_cold,    1290,     2671,  1143,       3.1,     8.8, ]
+  warm = [ xos_warm,      46,      469,   217,       2.8,     0.3, ]
 
   assert(len(sys) == len(cold))
   assert(len(sys) == len(warm))
@@ -89,11 +91,19 @@ def graph_data(cold_res_dir, warm_res_dir, out):
   warmx = [ x + width for x in xticks ]
   coldplot = plt.bar(coldx, cold, width=width, label="Cold-start")
   for i, v in enumerate(cold):
-    plt.text(xticks[i], v + .25, str(v), ha="center")
+    if v > 1:
+      plt.text(xticks[i], v + .25, str(v), ha="center")
+    else:
+      plt.text(xticks[i], v + .05, str(v), ha="center")
   warmplot = plt.bar(warmx, warm, width=width, label="Warm-start")
   for i, v in enumerate(warm):
-    plt.text(xticks[i] + width, v + .25, str(v), ha="center")
+    if v > 1:
+      plt.text(xticks[i] + width, v + .25, str(v), ha="center")
+    else:
+      plt.text(xticks[i] + width, v + .05, str(v), ha="center")
   plt.xticks(xticks + width / 2.0, sys)
+
+  ax.set_ylim(bottom=0, top=max(cold + warm)*2)
 
   ax.legend(loc="upper right")
   fig.savefig(out)

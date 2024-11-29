@@ -13,10 +13,10 @@ import (
 	echo "sigmaos/example_echo_server"
 	"sigmaos/fslib"
 	"sigmaos/proc"
-	"sigmaos/rand"
+	sprpcclnt "sigmaos/rpc/clnt/sigmap"
 	sp "sigmaos/sigmap"
-	"sigmaos/sigmarpcchan"
 	"sigmaos/test"
+	"sigmaos/util/rand"
 )
 
 type TstateEcho struct {
@@ -79,7 +79,7 @@ func TestEcho(t *testing.T) {
 	}
 
 	// create a RPC client and query server
-	rpcc, err := sigmarpcchan.NewSigmaRPCClnt([]*fslib.FsLib{tse.FsLib}, echo.NAMED_ECHO_SERVER)
+	rpcc, err := sprpcclnt.NewRPCClnt(tse.FsLib, echo.NAMED_ECHO_SERVER)
 	assert.Nil(t, err, "RPC client should be created properly")
 	arg := echo.EchoRequest{Text: "Hello World!"}
 	res := echo.EchoResult{}
@@ -99,7 +99,7 @@ func TestEchoTime(t *testing.T) {
 	}
 
 	// create a RPC client and query server
-	rpcc, err := sigmarpcchan.NewSigmaRPCClnt([]*fslib.FsLib{tse.FsLib}, echo.NAMED_ECHO_SERVER)
+	rpcc, err := sprpcclnt.NewRPCClnt(tse.FsLib, echo.NAMED_ECHO_SERVER)
 	assert.Nil(t, err, "RPC client should be created properly")
 	arg := echo.EchoRequest{Text: "Hello World!"}
 	res := echo.EchoResult{}
@@ -137,7 +137,7 @@ func TestEchoLoad(t *testing.T) {
 		}
 		fsls = append(fsls, fsl)
 	}
-	rpcc, err := sigmarpcchan.NewSigmaRPCClnt([]*fslib.FsLib{tse.FsLib}, echo.NAMED_ECHO_SERVER)
+	rpcc, err := sprpcclnt.NewRPCClnt(tse.FsLib, echo.NAMED_ECHO_SERVER)
 	assert.Nil(t, err, "RPC client should be created properly")
 	var wg sync.WaitGroup
 	for n := 1; n <= N; n++ {

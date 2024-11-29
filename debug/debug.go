@@ -1,3 +1,6 @@
+// The debug package allow callers to control debug output through the
+// SIGMADEBUG environment variable, which can be a list of labels
+// (e.g., "RPC;PATHCLNT").
 package debug
 
 import (
@@ -11,11 +14,6 @@ import (
 
 	"sigmaos/proc"
 )
-
-//
-// Debug output is controled by SIGMADEBUG environment variable, which
-// can be a list of labels (e.g., "RPC;PATHCLNT").
-//
 
 var labels map[Tselector]bool
 
@@ -35,6 +33,14 @@ func init() {
 // often, e.g., in the session layer). So, the function below can be called to
 // efficiently check if the DPrintf would succeed.
 func IsLabelSet(label Tselector) bool {
+	_, ok := labels[label]
+	return ok || label == ALWAYS
+}
+
+// Sometimes, converting pointers to call DPrintf is very expensive (and occurs
+// often, e.g., in the session layer). So, the function below can be called to
+// efficiently check if the DPrintf would succeed.
+func WillBePrinted(label Tselector) bool {
 	_, ok := labels[label]
 	return ok || label == ALWAYS
 }

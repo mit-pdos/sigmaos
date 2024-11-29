@@ -8,14 +8,14 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"sigmaos/apps/imgresize"
 	db "sigmaos/debug"
-	"sigmaos/imgresizesrv"
-	"sigmaos/perf"
 	"sigmaos/proc"
-	rd "sigmaos/rand"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
+	"sigmaos/util/perf"
+	rd "sigmaos/util/rand"
 )
 
 type ImgResizeRPCJobInstance struct {
@@ -32,7 +32,7 @@ type ImgResizeRPCJobInstance struct {
 	ready             chan bool
 	sleepBetweenTasks time.Duration
 	srvProc           *proc.Proc
-	rpcc              *imgresizesrv.ImgResizeRPCClnt
+	rpcc              *imgresize.ImgResizeRPCClnt
 	p                 *perf.Perf
 	*test.RealmTstate
 }
@@ -54,9 +54,9 @@ func NewImgResizeRPCJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, input 
 	ji.nrounds = nrounds
 	ji.sleepBetweenTasks = time.Second / time.Duration(ji.tasksPerSecond)
 
-	ts.RmDir(imgresizesrv.IMG)
+	ts.RmDir(sp.IMG)
 
-	if err := ji.MkDir(imgresizesrv.IMG, 0777); err != nil {
+	if err := ji.MkDir(sp.IMG, 0777); err != nil {
 		assert.True(ji.Ts.T, serr.IsErrCode(err, serr.TErrExists), "Unexpected err mkdir: %v", err)
 	}
 
@@ -84,10 +84,10 @@ func (ji *ImgResizeRPCJobInstance) runTasks() {
 
 func (ji *ImgResizeRPCJobInstance) StartImgResizeRPCJob() {
 	db.DPrintf(db.ALWAYS, "StartImgResizeRPC server input %v tps %v dur %v mcpu %v job %v", ji.input, ji.tasksPerSecond, ji.dur, ji.mcpu, ji.job)
-	p, err := imgresizesrv.StartImgRPCd(ji.SigmaClnt, ji.job, ji.mcpu, ji.mem, ji.nrounds, ji.imgdmcpu)
+	p, err := imgresize.StartImgRPCd(ji.SigmaClnt, ji.job, ji.mcpu, ji.mem, ji.nrounds, ji.imgdmcpu)
 	assert.Nil(ji.Ts.T, err, "StartImgRPCd: %v", err)
 	ji.srvProc = p
-	rpcc, err := imgresizesrv.NewImgResizeRPCClnt(ji.SigmaClnt.FsLib, ji.job)
+	rpcc, err := imgresize.NewImgResizeRPCClnt(ji.SigmaClnt.FsLib, ji.job)
 	assert.Nil(ji.Ts.T, err)
 	ji.rpcc = rpcc
 	go ji.runTasks()
@@ -110,7 +110,7 @@ func (ji *ImgResizeRPCJobInstance) Wait() {
 }
 
 func (ji *ImgResizeRPCJobInstance) Cleanup() {
-	dir := filepath.Join(sp.UX, "~local", filepath.Dir(ji.input))
+	dir := filepath.Join(sp.UX, sp.LOCAL, filepath.Dir(ji.input))
 	db.DPrintf(db.TEST, "[%v] Cleaning up dir %v", ji.GetRealm(), dir)
-	imgresizesrv.Cleanup(ji.FsLib, dir)
+	imgresize.Cleanup(ji.FsLib, dir)
 }

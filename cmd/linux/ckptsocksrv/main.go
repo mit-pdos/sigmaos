@@ -27,14 +27,14 @@ func main() {
 	for {
 		conn, err := socket.Accept()
 		if err != nil {
-			db.DFatalf("Error netproxysrv Accept: %v", err)
+			db.DFatalf("Error dialproxysrv Accept: %v", err)
 			return
 		}
 		// Handle incoming connection
 		go func(conn *net.UnixConn) {
 			b, err := frame.ReadFrame(conn)
 			if err != nil {
-				db.DPrintf(db.NETPROXYSRV_ERR, "Error Read PrincipalID frame: %v", err)
+				db.DPrintf(db.DIALPROXYSRV_ERR, "Error Read PrincipalID frame: %v", err)
 				return
 			}
 			db.DPrintf(db.ALWAYS, "frame: %v\n", string(b))

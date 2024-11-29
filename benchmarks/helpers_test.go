@@ -13,8 +13,8 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/linuxsched"
-	mschedclnt "sigmaos/sched/msched/clnt"
 	"sigmaos/proc"
+	mschedclnt "sigmaos/sched/msched/clnt"
 	"sigmaos/semclnt"
 	"sigmaos/serr"
 	"sigmaos/sigmaclnt"
@@ -201,9 +201,9 @@ func warmupRealm(ts *test.RealmTstate, progs []string) (time.Time, int) {
 		// Warm the cache for a binary
 		for _, ptype := range []proc.Ttype{proc.T_LC, proc.T_BE} {
 			for _, prog := range progs {
-				err := sdc.WarmUprocd(kid, ts.Ts.ProcEnv().GetPID(), ts.GetRealm(), prog+"-v"+sp.Version, ts.Ts.ProcEnv().GetSigmaPath(), ptype)
+				err := sdc.WarmProcd(kid, ts.Ts.ProcEnv().GetPID(), ts.GetRealm(), prog+"-v"+sp.Version, ts.Ts.ProcEnv().GetSigmaPath(), ptype)
 				nDL++
-				assert.Nil(ts.Ts.T, err, "WarmUprocd: %v", err)
+				assert.Nil(ts.Ts.T, err, "WarmProcd: %v", err)
 			}
 		}
 	}

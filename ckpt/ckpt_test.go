@@ -7,12 +7,12 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"sigmaos/apps/hotel"
 	db "sigmaos/debug"
-	"sigmaos/hotel"
 	"sigmaos/proc"
-	rd "sigmaos/rand"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
+	rd "sigmaos/util/rand"
 )
 
 const (
@@ -81,7 +81,7 @@ func TestSpawnCkptGeo(t *testing.T) {
 
 	db.DPrintf(db.TEST, "Spawn proc %v %v", job, pn)
 
-	ckptProc := proc.NewProcPid(pid, GEO, []string{job, pn, []string{"1000", "10", "20"}})
+	ckptProc := proc.NewProcPid(pid, GEO, []string{job, pn, "1000", "10", "20"})
 	err = ts.Spawn(ckptProc)
 	assert.Nil(t, err)
 	err = ts.WaitStart(ckptProc.GetPid())

@@ -5,7 +5,7 @@ import (
 	"os"
 
 	db "sigmaos/debug"
-	"sigmaos/lazypagessrv"
+	"sigmaos/lazypages/srv"
 )
 
 func main() {
@@ -13,7 +13,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Usage: %v <image-dir>\n", os.Args[0])
 		os.Exit(1)
 	}
-	if err := lazypagessrv.ExpandLazyPages(os.Args[1]); err != nil {
+	if err := srv.ExpandLazyPages(os.Args[1]); err != nil {
 		db.DPrintf(db.ALWAYS, "SplitPages err %w", err)
 		os.Exit(1)
 	}

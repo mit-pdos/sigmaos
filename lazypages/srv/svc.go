@@ -1,10 +1,10 @@
-package lazypagessrv
+package srv
 
 import (
 	db "sigmaos/debug"
 
 	"sigmaos/fs"
-	"sigmaos/lazypagessrv/proto"
+	"sigmaos/lazypages/proto"
 )
 
 //

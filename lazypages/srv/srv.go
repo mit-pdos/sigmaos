@@ -1,6 +1,6 @@
 // The lazypagesrv package implements a go version of criu's
 // lazy-pages daemon, but specialized to sigmaos's needs.
-package lazypagessrv
+package srv
 
 import (
 	"encoding/binary"
@@ -13,16 +13,12 @@ import (
 	"golang.org/x/sys/unix"
 
 	db "sigmaos/debug"
+	"sigmaos/lazypages"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
 	"sigmaos/util/syncmap"
-)
-
-const (
-	DIR      = "lazypagesd"
-	SOCKNAME = "lazy-pages.socket"
 )
 
 type lazyPagesSrv struct {
@@ -40,20 +36,12 @@ func newLazyPagesSrv(sc *sigmaclnt.SigmaClnt) (*lazyPagesSrv, error) {
 	return lps, nil
 }
 
-func WorkDir(pid sp.Tpid) string {
-	return filepath.Join(DIR, pid.String())
-}
-
-func SrvPath(pid sp.Tpid) string {
-	return filepath.Join(sp.LAZYPAGESD, pid.String())
-}
-
 // Called indirectly from ExecLazyPagesSrv
 func Run() error {
 	pe := proc.GetProcEnv()
 	pid := pe.GetPID()
 
-	db.DPrintf(db.ALWAYS, "Run: lazypagessrv %v", SrvPath(pid))
+	db.DPrintf(db.ALWAYS, "Run: lazypagessrv %v", lazypages.SrvPath(pid))
 
 	sc, err := sigmaclnt.NewSigmaClnt(pe)
 	if err != nil {
@@ -66,7 +54,7 @@ func Run() error {
 	}
 
 	svc := &LazyPagesSvc{lps}
-	_, err = sigmasrv.NewSigmaSrvClnt(SrvPath(pid), sc, svc)
+	_, err = sigmasrv.NewSigmaSrvClnt(lazypages.SrvPath(pid), sc, svc)
 	if err != nil {
 		db.DFatalf("Error NewSigmaSrv: %v", err)
 	}
@@ -97,9 +85,9 @@ func (lps *lazyPagesSrv) waitExit() {
 }
 
 func (lps *lazyPagesSrv) servePages(pid sp.Tpid) error {
-	sn := filepath.Join(WorkDir(pid), SOCKNAME)
-	os.Mkdir(DIR, 0755)
-	if err := os.Mkdir(WorkDir(pid), 0755); err != nil {
+	sn := filepath.Join(lazypages.WorkDir(pid), lazypages.SOCKNAME)
+	os.Mkdir(lazypages.DIR, 0755)
+	if err := os.Mkdir(lazypages.WorkDir(pid), 0755); err != nil {
 		return err
 	}
 	socket, err := net.Listen("unix", sn)

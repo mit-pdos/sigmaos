@@ -9,7 +9,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fs"
-	"sigmaos/lazypagessrv"
+	lazypagessrv "sigmaos/lazypages/srv"
 	"sigmaos/proc"
 	"sigmaos/sched/msched/proc/proto"
 	"sigmaos/scontainer"

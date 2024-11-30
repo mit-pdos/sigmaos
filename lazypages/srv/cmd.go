@@ -1,4 +1,4 @@
-package lazypagessrv
+package srv
 
 import (
 	"io"

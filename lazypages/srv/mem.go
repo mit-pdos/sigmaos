@@ -1,4 +1,4 @@
-package lazypagessrv
+package srv
 
 //
 // This file is based on criu/uffd.c

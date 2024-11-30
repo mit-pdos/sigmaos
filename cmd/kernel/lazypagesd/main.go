@@ -5,7 +5,7 @@ import (
 	"os"
 
 	db "sigmaos/debug"
-	"sigmaos/lazypagessrv"
+	"sigmaos/lazypages/srv"
 )
 
 func main() {
@@ -13,8 +13,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Usage:\n", os.Args[0])
 		os.Exit(1)
 	}
-	if err := lazypagessrv.Run(); err != nil {
-		db.DPrintf(db.ALWAYS, "lazypagessrv: err %w", err)
-		os.Exit(1)
+	if err := srv.Run(); err != nil {
+		db.DFatalf("lazypagessrv: err %w", err)
 	}
 }

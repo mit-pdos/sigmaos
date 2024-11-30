@@ -17,7 +17,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/frame"
-	"sigmaos/lazypagessrv"
+	lazypagessrv "sigmaos/lazypages/srv"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 )

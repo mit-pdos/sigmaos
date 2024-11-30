@@ -109,7 +109,7 @@ func RunGeoSrv(job string, ckptpn string, nidxStr string, maxSearchRadiusStr str
 		}
 		sc, err = sc.CheckpointMe(ckptpn)
 		if err != nil {
-			db.DFatalf("Checkpoint me didn't return error", err)
+			db.DFatalf("Checkpoint me didn't return error: %v", err)
 		}
 		db.DPrintf(db.ALWAYS, "Mark started")
 		err = sc.Started()

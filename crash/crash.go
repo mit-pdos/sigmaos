@@ -113,8 +113,10 @@ func AppendSigmaFail(es []Tevent) error {
 }
 
 func Crash() {
-	db.DPrintf(db.CRASH, "Crash: Exit")
-	os.Exit(1)
+	x := 0
+	db.DPrintf(db.CRASH, "Crash")
+	y := 10 / x
+	db.DPrintf(db.CRASH, "Crash", y)
 }
 
 func CrashMsg(msg string) {

@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"sigmaos/apps/imgresize"
+	"sigmaos/crash"
 	db "sigmaos/debug"
 	"sigmaos/fttask"
 	"sigmaos/groupmgr"
@@ -25,6 +26,8 @@ import (
 const (
 	IMG_RESIZE_MCPU proc.Tmcpu = 100
 	IMG_RESIZE_MEM  proc.Tmem  = 0
+
+	CRASHIMG = 1000
 )
 
 func TestCompile(t *testing.T) {
@@ -128,7 +131,7 @@ func (ts *Tstate) progress() {
 	}
 }
 
-func TestImgdFatal(t *testing.T) {
+func TestImgdFatalError(t *testing.T) {
 	t1, err1 := test.NewTstateAll(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
@@ -139,8 +142,9 @@ func TestImgdFatal(t *testing.T) {
 		return
 	}
 
-	imgd := imgresize.StartImgd(ts.SigmaClnt, ts.job, IMG_RESIZE_MCPU, IMG_RESIZE_MEM, false, 1, 0)
+	imgd := imgresize.StartImgd(ts.SigmaClnt, ts.job, IMG_RESIZE_MCPU, IMG_RESIZE_MEM, false, 1, 0, nil)
 
+	// a non-existing file
 	fn := filepath.Join(sp.S3, sp.LOCAL, "9ps3/img-save/", "yyy.jpg")
 
 	err := ts.ft.SubmitTask(0, imgresize.NewTask(fn))
@@ -155,8 +159,8 @@ func TestImgdFatal(t *testing.T) {
 	}
 }
 
-func (ts *Tstate) imgdJob(paths []string) {
-	imgd := imgresize.StartImgd(ts.SigmaClnt, ts.job, IMG_RESIZE_MCPU, IMG_RESIZE_MEM, false, 1, 0)
+func (ts *Tstate) imgdJob(paths []string, evs []crash.Tevent) {
+	imgd := imgresize.StartImgd(ts.SigmaClnt, ts.job, IMG_RESIZE_MCPU, IMG_RESIZE_MEM, false, 1, 0, evs)
 
 	for i, pn := range paths {
 		db.DPrintf(db.TEST, "submit %v\n", pn)
@@ -175,7 +179,7 @@ func (ts *Tstate) imgdJob(paths []string) {
 	}
 }
 
-func TestImgdOne(t *testing.T) {
+func TestImgdOneOK(t *testing.T) {
 	t1, err1 := test.NewTstateAll(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
@@ -186,12 +190,30 @@ func TestImgdOne(t *testing.T) {
 		return
 	}
 
-	fn := filepath.Join(sp.S3, sp.LOCAL, "9ps3/img-save/1.jpg")
-	ts.imgdJob([]string{fn})
+	fn := filepath.Join(sp.S3, sp.LOCAL, "9ps3/img-save/8.jpg")
+	ts.imgdJob([]string{fn}, nil)
 	ts.shutdown()
 }
 
-func TestImgdMany(t *testing.T) {
+func TestImgdOneCrash(t *testing.T) {
+	e0 := crash.Tevent{crash.IMGRESIZE_CRASH, 100, CRASHIMG, 0.25, 0}
+
+	t1, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	ts, err1 := newTstate(t1)
+	if !assert.Nil(t, err1, "Error New Tstate2: %v", err1) {
+		t1.Shutdown()
+		return
+	}
+
+	fn := filepath.Join(sp.S3, sp.LOCAL, "9ps3/img-save/8.jpg")
+	ts.imgdJob([]string{fn}, []crash.Tevent{e0})
+	ts.shutdown()
+}
+
+func TestImgdManyOK(t *testing.T) {
 	t1, err1 := test.NewTstateAll(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
@@ -217,7 +239,7 @@ func TestImgdMany(t *testing.T) {
 		paths = append(paths, fn)
 	}
 
-	ts.imgdJob(paths)
+	ts.imgdJob(paths, nil)
 	ts.shutdown()
 }
 
@@ -237,7 +259,7 @@ func TestImgdRestart(t *testing.T) {
 	err := ts.ft.SubmitTask(0, imgresize.NewTask(fn))
 	assert.Nil(t, err)
 
-	imgd := imgresize.StartImgd(ts.SigmaClnt, ts.job, IMG_RESIZE_MCPU, IMG_RESIZE_MEM, true, 1, 0)
+	imgd := imgresize.StartImgd(ts.SigmaClnt, ts.job, IMG_RESIZE_MCPU, IMG_RESIZE_MEM, true, 1, 0, nil)
 
 	time.Sleep(2 * time.Second)
 

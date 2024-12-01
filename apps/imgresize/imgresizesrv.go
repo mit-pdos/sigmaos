@@ -86,7 +86,7 @@ func (imgd *ImgSrv) Work() {
 		db.DFatalf("LeadAndFence err %v sts %v err2 %v", err, sp.Names(sts), err2)
 	}
 
-	db.DPrintf(db.ALWAYS, "leader %s", imgd.job)
+	db.DPrintf(db.ALWAYS, "leader %s fail %q", imgd.job, proc.GetSigmaFail())
 
 	ftm, err := fttaskmgr.NewTaskMgr(imgd.SigmaClnt.ProcAPI, imgd.ft)
 	if err != nil {

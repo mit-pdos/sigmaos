@@ -7,7 +7,7 @@
 #
 
 usage() {
-  echo "Usage: $0 [--apps-fast] [--apps] [--compile] [--usespproxyd] [--nodialproxy] [--reuse-kernel] [--cleanup] [--skipto PKG]" 
+  echo "Usage: $0 [--apps-fast] [--apps] [--compile] [--usespproxyd] [--nodialproxy] [--reuse-kernel] [--cleanup] [--skipto PKG] [--savelogs]" 
 }
 
 BASIC="--basic"
@@ -19,6 +19,7 @@ REUSEKERNEL=""
 VERB="-v"
 CONTAINER=""
 SKIPTO=""
+SAVELOGS=""
 CLEANUP=""
 COMPILE=""
 while [[ "$#" -gt 0 ]]; do
@@ -56,6 +57,10 @@ while [[ "$#" -gt 0 ]]; do
             shift
             REUSEKERNEL="--reuse-kernel"
             ;;
+        --savelogs)
+            shift
+            SAVELOGS="true" 
+            ;;
         --cleanup)
             shift
             CLEANUP="true" 
@@ -67,11 +72,39 @@ while [[ "$#" -gt 0 ]]; do
     esac
 done
 
+LOG_DIR="/tmp/sigmaos-test-logs"
+mkdir -p $LOG_DIR
+
 cleanup() {
   if [[ "$CLEANUP" == "true" ]]; then
     ./stop.sh --parallel --nopurge
     ./fsetcd-wipe.sh
   fi
+}
+
+# Save test logs to a file
+run_test() {
+  if [ $# -ne 2 ]; then
+    echo "save_logs args: pkg_name command" 1>&2
+    exit 1
+  fi
+  pkg_name=$1
+  pkg_name=$(echo $pkg_name | tr "/" ".")
+  cmd=$2
+  if [[ "$SAVELOGS" == "true" ]]; then
+    TEST_LOG_PATH="$LOG_DIR/$pkg_name.test.out"
+    printf "=== $pkg_name\n"
+    printf "  Run $pkg_name\n"
+    $cmd > $TEST_LOG_PATH 2>&1
+    printf "  Done running $pkg_name\n\tLog path: $TEST_LOG_PATH\n"
+    PROC_LOG_PATH="$LOG_DIR/$pkg_name.procs.out"
+    printf "  Save $pkg_name proc logs\n"
+    ./logs.sh > $PROC_LOG_PATH 2>&1
+    printf "  Done saving $pkg_name proc logs\n\tLog path: $PROC_LOG_PATH\n"
+  else
+    $cmd
+  fi
+  cleanup
 }
 
 go clean -testcache
@@ -100,7 +133,7 @@ if [[ $COMPILE == "--compile" ]]; then
             continue
           fi
         fi
-        go test $VERB sigmaos/$T --run TestCompile
+        run_test $T "go test $VERB sigmaos/$T --run TestCompile"
     done
 fi
 
@@ -120,8 +153,7 @@ if [[ $BASIC == "--basic" ]]; then
             continue
           fi
         fi
-        go test $VERB sigmaos/$T
-        cleanup
+        run_test $T "go test $VERB sigmaos/$T"
     done
 
     #
@@ -138,8 +170,7 @@ if [[ $BASIC == "--basic" ]]; then
             continue
           fi
         fi
-        go test $VERB sigmaos/$T
-        cleanup
+        run_test $T "go test $VERB sigmaos/$T"
     done
 
     #
@@ -156,17 +187,14 @@ if [[ $BASIC == "--basic" ]]; then
             continue
           fi
         fi
-        go test $VERB -timeout 20m sigmaos/$T -start $SPPROXYD $DIALPROXY $REUSEKERNEL
-        cleanup
+        run_test $T "go test $VERB -timeout 20m sigmaos/$T -start $SPPROXYD $DIALPROXY $REUSEKERNEL"
     done
 
-    # go test $VERB sigmaos/sigmapsrv -start  # no perf
+    # run_test $sigmapsrv "go test $VERB sigmaos/sigmapsrv -start"  # no perf
 
     # test memfs
-    go test $VERB sigmaos/fslib -start -path "name/memfs/~local/"  $SPPROXYD $DIALPROXY $REUSEKERNEL
-    cleanup
-    go test $VERB sigmaos/memfs -start $SPPROXYD $DIALPROXY $REUSEKERNEL
-    cleanup
+    run_test "memfs/local" "go test $VERB sigmaos/fslib -start -path "name/memfs/~local/"  $SPPROXYD $DIALPROXY $REUSEKERNEL"
+    run_test "memfs/start" "go test $VERB sigmaos/memfs -start $SPPROXYD $DIALPROXY $REUSEKERNEL"
 
     #
     # tests a full kernel using root realm
@@ -182,8 +210,7 @@ if [[ $BASIC == "--basic" ]]; then
             continue
           fi
         fi
-        go test $VERB sigmaos/$T -start $SPPROXYD $DIALPROXY $REUSEKERNEL
-        cleanup
+        run_test $T "go test $VERB sigmaos/$T -start $SPPROXYD $DIALPROXY $REUSEKERNEL"
     done
 
     #
@@ -200,17 +227,13 @@ if [[ $BASIC == "--basic" ]]; then
             continue
           fi
         fi
-        go test $VERB sigmaos/$T -start
-        cleanup
+        run_test $T "go test $VERB sigmaos/$T -start"
     done
 
 
-    go test $VERB sigmaos/sigmapsrv -start -path "name/ux/~local/" -run ReadPerf
-    cleanup
-    go test $VERB sigmaos/sigmapsrv -start -path "name/s3/~local/9ps3/" -run ReadPerf
-    cleanup
-    go test $VERB sigmaos/sigmapsrv --withs3pathclnt -start -path "name/s3/~local/9ps3/" -run ReadFilePerfSingle
-    cleanup
+    run_test "sigmapsrv/ux" "go test $VERB sigmaos/sigmapsrv -start -path "name/ux/~local/" -run ReadPerf"
+    run_test "sigmapsrv/s3" "go test $VERB sigmaos/sigmapsrv -start -path "name/s3/~local/9ps3/" -run ReadPerf"
+    run_test "sigmapsrv/s3pathclnt" "go test $VERB sigmaos/sigmapsrv --withs3pathclnt -start -path "name/s3/~local/9ps3/" -run ReadFilePerfSingle"
     
 
     #
@@ -227,8 +250,7 @@ if [[ $BASIC == "--basic" ]]; then
             continue
           fi
         fi
-      go test $VERB sigmaos/$T -start $SPPROXYD $DIALPROXY $REUSEKERNEL
-      cleanup
+      run_test $T "go test $VERB sigmaos/$T -start $SPPROXYD $DIALPROXY $REUSEKERNEL"
   done
 fi
 
@@ -255,8 +277,7 @@ if [[ $APPS == "--apps" ]]; then
           if [[ "${NEED_DB[$i]}" == "true" ]]; then
             ./start-db.sh
           fi
-          go test $VERB sigmaos/$T -start $SPPROXYD $DIALPROXY -run "${TNAMES[$i]}"
-          cleanup
+          run_test $T "go test $VERB sigmaos/$T -start $SPPROXYD $DIALPROXY -run '${TNAMES[$i]}'"
           i=$(($i+1))
         done
 #        go test $VERB sigmaos/apps/mr -start $SPPROXYD $DIALPROXY -run MRJob
@@ -283,8 +304,7 @@ if [[ $APPS == "--apps" ]]; then
               fi
             fi
             ./start-db.sh
-            go test -timeout 20m $VERB sigmaos/$T -start $SPPROXYD $DIALPROXY $REUSEKERNEL
-            cleanup
+            run_test $T "go test -timeout 20m $VERB sigmaos/$T -start $SPPROXYD $DIALPROXY $REUSEKERNEL"
         done
         # On machines with many cores, kv tests may take a long time.
         for T in apps/kv; do
@@ -298,8 +318,7 @@ if [[ $APPS == "--apps" ]]; then
               fi
             fi
             ./start-db.sh
-            go test -timeout 50m $VERB sigmaos/$T -start $SPPROXYD $DIALPROXY $REUSEKERNEL
-            cleanup
+            run_test $T "go test -timeout 50m $VERB sigmaos/$T -start $SPPROXYD $DIALPROXY $REUSEKERNEL"
         done
     fi
 fi
@@ -309,5 +328,5 @@ fi
 #
 
 if [[ $CONTAINER == "--container" ]] ; then
-    go test $VERB sigmaos/scontainer -start
+    run_test $T "go test $VERB sigmaos/scontainer -start"
 fi

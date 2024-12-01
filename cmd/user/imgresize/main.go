@@ -11,12 +11,13 @@ import (
 
 	"github.com/nfnt/resize"
 
+	"sigmaos/crash"
 	db "sigmaos/debug"
 	"sigmaos/fs"
-	"sigmaos/util/perf"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
+	"sigmaos/util/perf"
 )
 
 const (
@@ -29,7 +30,7 @@ const (
 
 func main() {
 	pe := proc.GetProcEnv()
-	db.DPrintf(db.IMGD, "NewTrans %v: %v\n", pe.GetPID(), os.Args)
+	db.DPrintf(db.IMGD, "imgresize %v: %v", pe.GetPID(), os.Args)
 	p, err := perf.NewPerf(pe, perf.THUMBNAIL)
 	if err != nil {
 		db.DFatalf("NewPerf err %v\n", err)
@@ -78,7 +79,7 @@ func NewTrans(pe *proc.ProcEnv, args []string, p *perf.Perf) (*Trans, error) {
 	}
 	t.SigmaClnt = sc
 	t.inputs = strings.Split(args[1], ",")
-	db.DPrintf(db.ALWAYS, "Args {%v} inputs {%v}", args[1], t.inputs)
+	db.DPrintf(db.ALWAYS, "Args {%v} inputs {%v} fail {%v}", args[1], t.inputs, proc.GetSigmaFail())
 	// XXX Should be fixed properly
 	t.output = t.inputs[0] + "-thumbnail"
 	t.nrounds, err = strconv.Atoi(args[3])
@@ -86,6 +87,7 @@ func NewTrans(pe *proc.ProcEnv, args []string, p *perf.Perf) (*Trans, error) {
 		db.DFatalf("Err convert nrounds: %v", err)
 	}
 	t.Started()
+	crash.FailersDefault([]crash.Tselector{crash.IMGRESIZE_CRASH}, sc.FsLib)
 	return t, nil
 }
 

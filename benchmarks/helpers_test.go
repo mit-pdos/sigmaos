@@ -467,7 +467,7 @@ func downloadS3Results(ts *test.Tstate, src string, dst string) {
 func downloadS3ResultsRealm(ts *test.Tstate, src string, dst string, realm sp.Trealm) {
 	// Make the destination directory.
 	os.MkdirAll(dst, 0777)
-	_, err := ts.ProcessDir(src, func(st *sp.Stat) (bool, error) {
+	_, err := ts.ProcessDir(src, func(st *sp.Tstat) (bool, error) {
 		rdr, err := ts.OpenReader(filepath.Join(src, st.Name))
 		defer rdr.Close()
 		assert.Nil(ts.T, err, "Error open reader %v", err)

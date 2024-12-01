@@ -17,10 +17,10 @@ import (
 	"sigmaos/path"
 	"sigmaos/pathclnt/mntclnt"
 	"sigmaos/proc"
-	"sigmaos/util/rand"
 	"sigmaos/serr"
 	sos "sigmaos/sigmaos"
 	sp "sigmaos/sigmap"
+	"sigmaos/util/rand"
 )
 
 type PathClnt struct {
@@ -196,7 +196,7 @@ func (pathc *PathClnt) Remove(name string, principal *sp.Tprincipal, f *sp.Tfenc
 	return nil
 }
 
-func (pathc *PathClnt) Stat(name string, principal *sp.Tprincipal) (*sp.Stat, error) {
+func (pathc *PathClnt) Stat(name string, principal *sp.Tprincipal) (*sp.Tstat, error) {
 	db.DPrintf(db.PATHCLNT, "%v: Stat %v\n", pathc.cid, name)
 	pn, err := serr.PathSplitErr(name)
 	if err != nil {

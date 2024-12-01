@@ -47,7 +47,7 @@ func (inode *Inode) String() string {
 	return str
 }
 
-func (inode *Inode) NewStat() (*sp.Stat, *serr.Err) {
+func (inode *Inode) NewStat() (*sp.Tstat, *serr.Err) {
 	inode.mu.Lock()
 	defer inode.mu.Unlock()
 

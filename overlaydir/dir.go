@@ -32,7 +32,7 @@ func MkDirOverlay(dir fs.Dir) *DirOverlay {
 }
 
 // XXX merge underlay Stat with overlay?
-func (dir *DirOverlay) Stat(ctx fs.CtxI) (*sp.Stat, *serr.Err) {
+func (dir *DirOverlay) Stat(ctx fs.CtxI) (*sp.Tstat, *serr.Err) {
 	st, err := dir.Inode.NewStat()
 	if err != nil {
 		return nil, err
@@ -75,11 +75,11 @@ func (dir *DirOverlay) removeMount(name string) bool {
 	return false
 }
 
-func (dir *DirOverlay) ls(ctx fs.CtxI) ([]*sp.Stat, error) {
+func (dir *DirOverlay) ls(ctx fs.CtxI) ([]*sp.Tstat, error) {
 	dir.mu.Lock()
 	defer dir.mu.Unlock()
 
-	entries := make([]*sp.Stat, 0, len(dir.entries))
+	entries := make([]*sp.Tstat, 0, len(dir.entries))
 	for k, i := range dir.entries {
 		st, err := i.Stat(ctx)
 		if err != nil {
@@ -128,7 +128,7 @@ func (dir *DirOverlay) Close(ctx fs.CtxI, m sp.Tmode) *serr.Err {
 
 // XXX account for extra entries in cursor, and sort
 // XXX ignores size
-func (dir *DirOverlay) ReadDir(ctx fs.CtxI, cursor int, n sp.Tsize) ([]*sp.Stat, *serr.Err) {
+func (dir *DirOverlay) ReadDir(ctx fs.CtxI, cursor int, n sp.Tsize) ([]*sp.Tstat, *serr.Err) {
 	sts, err := dir.underlay.ReadDir(ctx, cursor, n)
 	if err != nil {
 		return nil, err

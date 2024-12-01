@@ -405,7 +405,7 @@ func (ps *ProcSrv) Fetch(pid, cid int, prog string, sz sp.Tsize) (sp.Tsize, erro
 	return sz, err
 }
 
-func (ps *ProcSrv) lookupProc(proc *proc.Proc, prog string) (*sp.Stat, error) {
+func (ps *ProcSrv) lookupProc(proc *proc.Proc, prog string) (*sp.Tstat, error) {
 	db.DPrintf(db.SPAWN_LAT, "[%v] Lookup start %v paths %v; time since spawn %v", proc.GetPid(), ps.kernelId, proc.GetSigmaPath(), time.Since(proc.GetSpawnTime()))
 
 	paths := proc.GetSigmaPath()
@@ -423,7 +423,7 @@ func (ps *ProcSrv) lookupProc(proc *proc.Proc, prog string) (*sp.Stat, error) {
 	return st, nil
 }
 
-func (ps *ProcSrv) Lookup(pid int, prog string) (*sp.Stat, error) {
+func (ps *ProcSrv) Lookup(pid int, prog string) (*sp.Tstat, error) {
 	pe, alloc := ps.procs.Alloc(pid, newProcEntry(nil))
 	if alloc {
 		db.DPrintf(db.PROCD, "Lookup wait for pid %v proc %v\n", pid, pe)

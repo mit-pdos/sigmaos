@@ -26,7 +26,7 @@ func (s *CacheSrv) newSession(mfs *memfssrv.MemFs, sid sessp.Tsession) (fs.FsObj
 	return cs, nil
 }
 
-func (cs *cacheSession) Stat(ctx fs.CtxI) (*sp.Stat, *serr.Err) {
+func (cs *cacheSession) Stat(ctx fs.CtxI) (*sp.Tstat, *serr.Err) {
 	st, err := cs.Inode.NewStat()
 	if err != nil {
 		return nil, err

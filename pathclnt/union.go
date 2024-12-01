@@ -66,7 +66,7 @@ func (pathc *PathClnt) unionLookup(fid sp.Tfid, q string) (sp.Tfid, *serr.Err) {
 	drdr := reader.MkDirEntsReader(rdr)
 	rfid := sp.NoFid
 	db.DPrintf(db.WALK, "unionLookup ReadDir %v search %v fid %v", fid, q, fid)
-	_, error := reader.ReadDirEnts(drdr, func(st *sp.Stat) (bool, error) {
+	_, error := reader.ReadDirEnts(drdr, func(st *sp.Tstat) (bool, error) {
 		db.DPrintf(db.WALK, "unionScan %v check %v", q, st.Name)
 		fid1, err := pathc.unionScan(fid, st.Name, q)
 		if err != nil {

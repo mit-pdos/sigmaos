@@ -22,7 +22,7 @@ type FileAPI interface {
 	// Core interface
 
 	CloseFd(fd int) error
-	Stat(path string) (*sp.Stat, error)
+	Stat(path string) (*sp.Tstat, error)
 	Create(path string, p sp.Tperm, m sp.Tmode) (int, error)
 
 	// If w, then wait until path exists before opening it

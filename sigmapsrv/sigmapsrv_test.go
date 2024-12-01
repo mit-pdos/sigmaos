@@ -544,7 +544,7 @@ func TestDirReadPerf(t *testing.T) {
 	assert.Equal(t, NFILE, n)
 	measuredir("read dir", 1, dir, func() int {
 		n := 0
-		ts.ProcessDir(dir, func(st *sp.Stat) (bool, error) {
+		ts.ProcessDir(dir, func(st *sp.Tstat) (bool, error) {
 			n += 1
 			return false, nil
 		})

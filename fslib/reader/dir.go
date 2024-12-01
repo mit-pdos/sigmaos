@@ -18,7 +18,7 @@ func MkDirEntsReader(rdr io.Reader) *bufio.Reader {
 }
 
 // Too stop early, f must return true.  Returns true if stopped early.
-func ReadDirEnts(drdr *bufio.Reader, f func(*sp.Stat) (bool, error)) (bool, error) {
+func ReadDirEnts(drdr *bufio.Reader, f func(*sp.Tstat) (bool, error)) (bool, error) {
 	for {
 		st, err := spcodec.UnmarshalDirEnt(drdr)
 		if err != nil && errors.Is(err, io.EOF) {

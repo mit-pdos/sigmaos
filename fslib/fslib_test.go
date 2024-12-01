@@ -12,10 +12,10 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	db "sigmaos/debug"
+	dialproxyclnt "sigmaos/dialproxy/clnt"
 	"sigmaos/fslib"
 	"sigmaos/namesrv"
 	"sigmaos/namesrv/fsetcd"
-	dialproxyclnt "sigmaos/dialproxy/clnt"
 	"sigmaos/path"
 	"sigmaos/proc"
 	"sigmaos/serr"
@@ -553,7 +553,7 @@ func TestPageDir(t *testing.T) {
 		return names[i] < names[j]
 	})
 	i := 0
-	ts.ProcessDir(dn, func(st *sp.Stat) (bool, error) {
+	ts.ProcessDir(dn, func(st *sp.Tstat) (bool, error) {
 		db.DPrintf(db.TEST, "ProcessDir %v", i)
 		assert.Equal(t, names[i], st.Name)
 		i += 1
@@ -617,7 +617,7 @@ func TestDirConcur(t *testing.T) {
 	for i := 0; i < NSCAN; i++ {
 		i := 0
 		names := []string{}
-		b, err := ts.ProcessDir(dn, func(st *sp.Stat) (bool, error) {
+		b, err := ts.ProcessDir(dn, func(st *sp.Tstat) (bool, error) {
 			names = append(names, st.Name)
 			i += 1
 			return false, nil

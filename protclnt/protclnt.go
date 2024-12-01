@@ -230,7 +230,7 @@ func (pclnt *ProtClnt) Stat(fid sp.Tfid) (*sp.Rrstat, *serr.Err) {
 	return msg, nil
 }
 
-func (pclnt *ProtClnt) Wstat(fid sp.Tfid, st *sp.Stat) (*sp.Rwstat, *serr.Err) {
+func (pclnt *ProtClnt) Wstat(fid sp.Tfid, st *sp.Tstat) (*sp.Rwstat, *serr.Err) {
 	args := sp.NewTwstat(fid, st, sp.NullFence())
 	reply, err := pclnt.Call(args)
 	if err != nil {
@@ -243,7 +243,7 @@ func (pclnt *ProtClnt) Wstat(fid sp.Tfid, st *sp.Stat) (*sp.Rwstat, *serr.Err) {
 	return msg, nil
 }
 
-func (pclnt *ProtClnt) WstatF(fid sp.Tfid, st *sp.Stat, f *sp.Tfence) (*sp.Rwstat, *serr.Err) {
+func (pclnt *ProtClnt) WstatF(fid sp.Tfid, st *sp.Tstat, f *sp.Tfence) (*sp.Rwstat, *serr.Err) {
 	args := sp.NewTwstat(fid, st, f)
 	reply, err := pclnt.Call(args)
 	if err != nil {

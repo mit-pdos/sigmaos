@@ -13,7 +13,7 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-func MarshalSizeDir(dir []*sp.Stat) (sp.Tlength, *serr.Err) {
+func MarshalSizeDir(dir []*sp.Tstat) (sp.Tlength, *serr.Err) {
 	sz := uint64(0)
 	for _, st := range dir {
 		b, err := proto.Marshal(st)
@@ -25,7 +25,7 @@ func MarshalSizeDir(dir []*sp.Stat) (sp.Tlength, *serr.Err) {
 	return sp.Tlength(sz), nil
 }
 
-func MarshalDirEnt(st *sp.Stat, cnt uint64) ([]byte, *serr.Err) {
+func MarshalDirEnt(st *sp.Tstat, cnt uint64) ([]byte, *serr.Err) {
 	var buf bytes.Buffer
 	b, err := proto.Marshal(st)
 	if err != nil {
@@ -41,7 +41,7 @@ func MarshalDirEnt(st *sp.Stat, cnt uint64) ([]byte, *serr.Err) {
 	return buf.Bytes(), nil
 }
 
-func UnmarshalDirEnt(rdr io.Reader) (*sp.Stat, *serr.Err) {
+func UnmarshalDirEnt(rdr io.Reader) (*sp.Tstat, *serr.Err) {
 	st := sp.NewStatNull()
 	b, err := frame.ReadFrame(rdr)
 	if err != nil {

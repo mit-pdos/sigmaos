@@ -27,7 +27,7 @@ func newFence(i fs.Inode) *Fence {
 	return f
 }
 
-func (f *Fence) Stat(ctx fs.CtxI) (*sp.Stat, *serr.Err) {
+func (f *Fence) Stat(ctx fs.CtxI) (*sp.Tstat, *serr.Err) {
 	return nil, serr.NewErr(serr.TErrNotSupported, "Stat")
 }
 

@@ -21,7 +21,7 @@ func idFromStat(st *syscall.Stat_t) fs.StableAttr {
 	}
 }
 
-func toUstat(sst *sp.Stat, ust *syscall.Stat_t) {
+func toUstat(sst *sp.Tstat, ust *syscall.Stat_t) {
 	const BLOCKSIZE = 4096
 
 	ust.Dev = uint64(sst.Dev)
@@ -38,7 +38,7 @@ func toUstat(sst *sp.Stat, ust *syscall.Stat_t) {
 
 type entry struct {
 	mu sync.Mutex
-	st *sp.Stat
+	st *sp.Tstat
 	dl *downloader
 }
 
@@ -57,7 +57,7 @@ func newBinCache(pds proc.ProcSrv) *bincache {
 }
 
 // Check cache first. If not present, get stat from procd
-func (bc *bincache) lookup(pn string, pid uint32) (*sp.Stat, error) {
+func (bc *bincache) lookup(pn string, pid uint32) (*sp.Tstat, error) {
 	e, ok := bc.cache.Lookup(pn)
 	if ok {
 		return e.st, nil

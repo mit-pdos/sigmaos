@@ -14,8 +14,8 @@ import (
 	"sigmaos/path"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
-	"sigmaos/util/sortedmap"
 	"sigmaos/spcodec"
+	"sigmaos/util/sortedmap"
 )
 
 const DOT = "_._"
@@ -36,7 +36,7 @@ type Dir struct {
 	*Obj
 	sync.Mutex
 	dents *sortedmap.SortedMap[string, sp.Tperm]
-	sts   []*sp.Stat
+	sts   []*sp.Tstat
 }
 
 func (d *Dir) String() string {
@@ -161,7 +161,7 @@ func (d *Dir) dirents() []*Obj {
 	return dents
 }
 
-func (d *Dir) Stat(ctx fs.CtxI) (*sp.Stat, *serr.Err) {
+func (d *Dir) Stat(ctx fs.CtxI) (*sp.Tstat, *serr.Err) {
 	d.Lock()
 	defer d.Unlock()
 	db.DPrintf(db.S3, "Stat dir %v\n", d)
@@ -228,9 +228,9 @@ func (d *Dir) LookupPath(ctx fs.CtxI, p path.Tpathname) ([]fs.FsObj, fs.FsObj, p
 }
 
 func (d *Dir) statDir(ctx fs.CtxI) *serr.Err {
-	d.sts = make([]*sp.Stat, 0, d.dents.Len())
+	d.sts = make([]*sp.Tstat, 0, d.dents.Len())
 	for _, o := range d.dirents() {
-		var st *sp.Stat
+		var st *sp.Tstat
 		var err *serr.Err
 		if o.perm.IsDir() {
 			st, err = o.NewStat()
@@ -263,7 +263,7 @@ func (d *Dir) Open(ctx fs.CtxI, m sp.Tmode) (fs.FsObj, *serr.Err) {
 	return nil, nil
 }
 
-func (d *Dir) ReadDir(ctx fs.CtxI, cursor int, cnt sp.Tsize) ([]*sp.Stat, *serr.Err) {
+func (d *Dir) ReadDir(ctx fs.CtxI, cursor int, cnt sp.Tsize) ([]*sp.Tstat, *serr.Err) {
 	db.DPrintf(db.S3, "ReadDir %v %d cursor %d cnt %v\n", d, len(d.sts), cursor, cnt)
 
 	if err := d.fill(ctx); err != nil {

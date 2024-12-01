@@ -50,7 +50,7 @@ func (l *LeaderClnt) fenceDirs(dirs []string) error {
 	return nil
 }
 
-func (l *LeaderClnt) GetFences(pn string) ([]*sp.Stat, error) {
+func (l *LeaderClnt) GetFences(pn string) ([]*sp.Tstat, error) {
 	return l.fc.GetFences(pn)
 }
 

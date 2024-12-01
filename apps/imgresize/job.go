@@ -47,7 +47,7 @@ func StartImgRPCd(sc *sigmaclnt.SigmaClnt, job string, workerMcpu proc.Tmcpu, wo
 
 // remove old thumbnails
 func Cleanup(fsl *fslib.FsLib, dir string) error {
-	_, err := fsl.ProcessDir(dir, func(st *sp.Stat) (bool, error) {
+	_, err := fsl.ProcessDir(dir, func(st *sp.Tstat) (bool, error) {
 		if IsThumbNail(st.Name) {
 			err := fsl.Remove(filepath.Join(dir, st.Name))
 			if err != nil {

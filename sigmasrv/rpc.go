@@ -32,7 +32,7 @@ func (rd *rpcDev) newRpcSession(mfs *memfssrv.MemFs, sid sessp.Tsession) (fs.FsO
 	return rpc, nil
 }
 
-func (rpc *rpcSession) Stat(ctx fs.CtxI) (*sp.Stat, *serr.Err) {
+func (rpc *rpcSession) Stat(ctx fs.CtxI) (*sp.Tstat, *serr.Err) {
 	st, err := rpc.Inode.NewStat()
 	if err != nil {
 		return nil, err

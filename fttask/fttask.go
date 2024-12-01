@@ -64,7 +64,7 @@ func (ft *FtTasks) Cleanup() error {
 	return ft.RmDir(filepath.Join(ft.dir, ft.job))
 }
 
-func (ft *FtTasks) Jobs() ([]*sp.Stat, error) {
+func (ft *FtTasks) Jobs() ([]*sp.Tstat, error) {
 	return ft.GetDir(ft.dir)
 }
 

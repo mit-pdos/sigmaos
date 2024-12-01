@@ -15,7 +15,7 @@ type session struct {
 	wctl WriteCtlF
 }
 
-func (s *session) Stat(ctx fs.CtxI) (*sp.Stat, *serr.Err) {
+func (s *session) Stat(ctx fs.CtxI) (*sp.Tstat, *serr.Err) {
 	st, err := s.Inode.NewStat()
 	if err != nil {
 		return nil, err

@@ -37,7 +37,7 @@ func umode2Perm(umode uint16) sp.Tperm {
 	return perm
 }
 
-func ustat(path path.Tpathname) (*sp.Stat, *serr.Err) {
+func ustat(path path.Tpathname) (*sp.Tstat, *serr.Err) {
 	var statx unix.Statx_t
 	db.DPrintf(db.UX, "ustat %v\n", path)
 	if error := unix.Statx(unix.AT_FDCWD, path.String(), unix.AT_SYMLINK_NOFOLLOW, unix.STATX_ALL, &statx); error != nil {
@@ -96,7 +96,7 @@ func (o *Obj) PathName() string {
 	return p
 }
 
-func (o *Obj) NewStat() (*sp.Stat, *serr.Err) {
+func (o *Obj) NewStat() (*sp.Tstat, *serr.Err) {
 	db.DPrintf(db.UX, "%v: NewStat\n", o)
 	st, err := ustat(o.pathName)
 	if err != nil {
@@ -105,7 +105,7 @@ func (o *Obj) NewStat() (*sp.Stat, *serr.Err) {
 	return st, nil
 }
 
-func (o *Obj) Stat(ctx fs.CtxI) (*sp.Stat, *serr.Err) {
+func (o *Obj) Stat(ctx fs.CtxI) (*sp.Tstat, *serr.Err) {
 	db.DPrintf(db.UX, "%v: Stat %v\n", ctx, o)
 	st, err := o.NewStat()
 	if err != nil {

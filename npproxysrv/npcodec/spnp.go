@@ -46,7 +46,7 @@ func Sp2NpStat(spst *sp.TstatProto) *np.Stat9P {
 	return npst
 }
 
-func Np2SpStat(npst np.Stat9P) *sp.Stat {
+func Np2SpStat(npst np.Stat9P) *sp.Tstat {
 	spst := sp.NewStatNull()
 	spst.Type = uint32(npst.Type)
 	spst.Dev = npst.Dev

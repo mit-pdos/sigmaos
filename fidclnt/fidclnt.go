@@ -232,7 +232,7 @@ func (fidc *FidClnt) Watch(fid sp.Tfid) *serr.Err {
 	return ch.pc.Watch(fid)
 }
 
-func (fidc *FidClnt) Wstat(fid sp.Tfid, st *sp.Stat, f *sp.Tfence) *serr.Err {
+func (fidc *FidClnt) Wstat(fid sp.Tfid, st *sp.Tstat, f *sp.Tfence) *serr.Err {
 	ch := fidc.Lookup(fid)
 	if ch == nil {
 		return serr.NewErr(serr.TErrUnreachable, "Wstat")
@@ -273,7 +273,7 @@ func (fidc *FidClnt) RemoveFile(fid sp.Tfid, wnames []string, resolve bool, f *s
 	return ch.pc.RemoveFile(fid, wnames, resolve, f)
 }
 
-func (fidc *FidClnt) Stat(fid sp.Tfid) (*sp.Stat, *serr.Err) {
+func (fidc *FidClnt) Stat(fid sp.Tfid) (*sp.Tstat, *serr.Err) {
 	ch := fidc.Lookup(fid)
 	if ch == nil {
 		return nil, serr.NewErr(serr.TErrUnreachable, "Stat")

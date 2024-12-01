@@ -55,7 +55,7 @@ func newClone(mfs *memfssrv.MemFs, dir string, news NewSessionF, d sps.DetachSes
 	return nil
 }
 
-func (c *Clone) Stat(ctx fs.CtxI) (*sp.Stat, *serr.Err) {
+func (c *Clone) Stat(ctx fs.CtxI) (*sp.Tstat, *serr.Err) {
 	st, err := c.Inode.NewStat()
 	if err != nil {
 		return nil, err

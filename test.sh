@@ -73,7 +73,8 @@ while [[ "$#" -gt 0 ]]; do
 done
 
 LOG_DIR="/tmp/sigmaos-test-logs"
-mkdir -p $LOG_DIR
+rm -rf $LOG_DIR
+mkdir $LOG_DIR
 
 cleanup() {
   if [[ "$CLEANUP" == "true" ]]; then

@@ -86,7 +86,7 @@ cleanup() {
 # Save test logs to a file
 run_test() {
   if [ $# -ne 2 ]; then
-    echo "save_logs args: pkg_name command" 1>&2
+    echo "run_test args: pkg_name command" 1>&2
     exit 1
   fi
   pkg_name=$1
@@ -106,6 +106,23 @@ run_test() {
     $cmd
   fi
   cleanup
+}
+
+check_test_logs() {
+  if [ $# -ne 0 ]; then
+    echo "check_test_logs expects no args" 1>&2
+    exit 1
+  fi 
+  if [[ "$SAVELOGS" != "true" ]]; then
+    return
+  fi
+  grep -rE "panic|FATAL|FAIL" $LOG_DIR/*.test.out > /dev/null
+  if [ $(grep -rwE "panic|FATAL|FAIL" $LOG_DIR/*.test.out > /dev/null; echo $?) -eq 0 ]; then
+    echo "!!!!!!!!!! Some tests failed !!!!!!!!!!"
+    grep -rwlE "panic|FATAL|FAIL" $LOG_DIR/*.test.out
+  else
+    echo "++++++++++ All tests passed ++++++++++"
+  fi
 }
 
 go clean -testcache
@@ -331,3 +348,5 @@ fi
 if [[ $CONTAINER == "--container" ]] ; then
     run_test $T "go test $VERB sigmaos/scontainer -start"
 fi
+
+check_test_logs

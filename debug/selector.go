@@ -87,11 +87,15 @@ const (
 const (
 	IMGD     Tselector = "IMGD"
 	IMGD_ERR           = "IMGD" + ERR
-	MR                 = "MR"
-	MR_TPT             = "MR_TPT"
 )
 
 // MR
+const (
+	MR     Tselector = "MR"
+	MR_TPT           = "MR_TPT"
+)
+
+// KV
 const (
 	KVBAL       Tselector = "KVBAL"
 	KVBAL_ERR             = KVBAL + ERR
@@ -100,6 +104,8 @@ const (
 	KVMON                 = "KVMON"
 	KVMV                  = "KVMV"
 	KVMV_ERR              = KVMV + ERR
+	KVGRP                 = "KVGRP"
+	KVGRP_ERR             = KVGRP + ERR
 )
 
 // Socialnet
@@ -205,44 +211,56 @@ const (
 	REALMMGR               = "REALMMGR"
 	REALMMGR_ERR           = REALMMGR + ERR
 	REALMCLNT              = "REALMCLNT"
-	SIGMACLNT              = "SIGMACLNT"
-	NODED                  = "NODED"
-	NODED_ERR              = NODED + ERR
-	MACHINED               = "MACHINED"
 	REALM_LOCK             = "REALM_LOCK"
-	PORT                   = "PORT"
 )
 
 // Client Libraries
 const (
 	WRITER_ERR    Tselector = "WRITER" + ERR
+	SIGMACLNT               = "SIGMACLNT"
 	READER_ERR              = "READER" + ERR
 	AWRITER                 = "AWRITER"
 	PREADER                 = "PREADER"
 	FSLIB                   = "FSLIB"
 	FSLIB_ERR               = "FSLIB" + ERR
+	FIDCLNT                 = "FIDCLNT"
+	FIDCLNT_ERR             = FIDCLNT + ERR
+	FDCLNT                  = "FDCLNT"
 	SEMCLNT                 = "SEMCLNT"
 	SEMCLNT_ERR             = SEMCLNT + ERR
+	PROCCLNT                = "PROCCLNT"
+	PROCCLNT_ERR            = "PROCCLNT" + ERR
+	SIGMACLNTCLNT           = "SIGMACLNTCLNT"
+)
+
+// Fault-tolerance
+const (
+	FENCECLNT     Tselector = "FENCECLNT"
+	FENCECLNT_ERR           = FENCECLNT + ERR
+	GROUPMGR                = "GROUPMGR"
+	GROUPMGR_ERR            = GROUPMGR + ERR
+	LEADER                  = "LEADER"
+	LEADER_ERR              = LEADER + ERR
+	LEASECLNT               = "LEASECLNT"
+	ELECTCLNT               = "ELECTCLNT"
 	EPOCHCLNT               = "EPOCHCLNT"
 	EPOCHCLNT_ERR           = EPOCHCLNT + ERR
 	FTTASKS                 = "FTTASKS"
 	FTTASKMGR               = "FTTASKMGR"
-	LEADER                  = "LEADER"
-	LEADER_ERR              = LEADER + ERR
-	GROUPMGR                = "GROUPMGR"
-	GROUPMGR_ERR            = GROUPMGR + ERR
-	PROCCLNT                = "PROCCLNT"
-	PROCCLNT_ERR            = PROCCLNT + ERR
-	FENCECLNT               = "FENCECLNT"
-	FENCECLNT_ERR           = FENCECLNT + ERR
-	LEASECLNT               = "LEASECLNT"
-	ELECTCLNT               = "ELECTCLNT"
-	KVGRP                   = "KVGRP"
-	KVGRP_ERR               = KVGRP + ERR
+)
+
+// RPC Client Libraries
+const (
+	DEMUXCLNT     Tselector = "DEMUXCLNT"
+	DEMUXCLNT_ERR           = "DEMUXCLNT" + ERR
 	SESSDEVCLNT             = "SESSDEVCLNT"
-	K8S_UTIL                = "K8S_UTIL"
-	SIGMACLNTCLNT           = "SIGMACLNTCLNT"
-	S3CLNT                  = "S3CLNT"
+	RPCCLNT                 = "RPCCLNT"
+)
+
+// External service libraries
+const (
+	S3CLNT   Tselector = "S3CLNT"
+	K8S_UTIL           = "K8S_UTIL"
 )
 
 // Server Libraries
@@ -254,12 +272,12 @@ const (
 	SESSDEV                    = "SESSDEV"
 	SIGMASRV                   = "SIGMASRV"
 	DIALPROXY                  = "DIALPROXY"
-	DIALPROXY_ERR              = "DIALPROXY_ERR"
+	DIALPROXY_ERR              = "DIALPROXY" + ERR
 	DIALPROXYSRV               = "DIALPROXYSRV"
 	DIALPROXYSRV_ERR           = "DIALPROXYSRV" + ERR
 )
 
-// Client-side Infrastructure
+// Networking
 const (
 	NETCLNT            Tselector = "NETCLNT"
 	NETCLNT_ERR                  = NETCLNT + ERR
@@ -267,30 +285,30 @@ const (
 	DIALPROXYCLNT_ERR            = "DIALPROXYCLNT" + ERR
 	DIALPROXYTRANS               = "DIALPROXYTRANS"
 	DIALPROXYTRANS_ERR           = "DIALPROXYTRANS" + ERR
-	DEMUXCLNT                    = "DEMUXCLNT"
-	DEMUXCLNT_ERR                = "DEMUXCLNT" + ERR
-	PROTCLNT                     = "PROTCLNT"
-	PROTCLNT_ERR                 = "PROTCLNT" + ERR
-	SESS_CLNT_Q                  = "SESS_CLNT_Q"
-	SESSCLNT                     = "SESSCLNT"
-	SESSCLNT_ERR                 = SESSCLNT + ERR
-	FIDCLNT                      = "FIDCLNT"
-	FIDCLNT_ERR                  = FIDCLNT + ERR
-	RPCCLNT                      = "RPCCLNT"
-	MOUNT                        = "MOUNT"
-	MOUNT_ERR                    = MOUNT + ERR
-	FDCLNT                       = "FDCLNT"
-	PATHCLNT                     = "PATHCLNT"
-	PATHCLNT_ERR                 = PATHCLNT + ERR
-	WALK                         = "WALK"
-	WALK_ERR                     = "WALK" + ERR
+)
+
+// Path resolution
+const (
+	PATHCLNT     Tselector = "PATHCLNT"
+	PATHCLNT_ERR           = PATHCLNT + ERR
+	WALK                   = "WALK"
+	WALK_ERR               = "WALK" + ERR
+	MOUNT                  = "MOUNT"
+	MOUNT_ERR              = MOUNT + ERR
+)
+
+// Sessions & protocol client-side infrastructure
+const (
+	PROTCLNT     Tselector = "PROTCLNT"
+	PROTCLNT_ERR           = "PROTCLNT" + ERR
+	SESS_CLNT_Q            = "SESS_CLNT_Q"
+	SESSCLNT               = "SESSCLNT"
+	SESSCLNT_ERR           = SESSCLNT + ERR
 )
 
 // Server-side Infrastructure
 const (
-	AUTH          Tselector = "AUTH"
-	REPLSRV                 = "REPLSRV"
-	AUTH_ERR                = AUTH + ERR
+	REPLSRV       Tselector = "REPLSRV"
 	NETSRV                  = "NETSRV"
 	DEMUXSRV                = "DEMUXSRV"
 	DEMUXSRV_ERR            = "DEMUXSRV" + ERR

@@ -72,7 +72,7 @@ func (ft *FtTasks) JobState() (string, error) {
 	return ft.SprintfDir(filepath.Join(ft.dir, ft.job))
 }
 
-func (ft *FtTasks) NTasksTODO() (int, error) {
+func (ft *FtTasks) NTasksToDo() (int, error) {
 	sts, err := ft.GetDir(ft.todo)
 	if err != nil {
 		return -1, err

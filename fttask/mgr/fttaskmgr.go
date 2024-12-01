@@ -40,29 +40,50 @@ func NewTaskMgr(pclnt proc.ProcAPI, ft *fttask.FtTasks) (*FtTaskMgr, error) {
 }
 
 func (ftm *FtTaskMgr) ExecuteTasks(new Tnew, mkProc TmkProc) *proc.Status {
-	ch := make(chan Tresult)
-	finish := make(chan bool)
-	res := make(chan *Tresult)
+	var r *Tresult
+	chRes := make(chan Tresult)
+	chTask := make(chan []string)
 
-	go ftm.collector(ch, finish, res)
+	go ftm.getTasks(chTask)
 
-	// keep doing work until collector tells us to stop (e.g., because
-	// unrecoverable error) or until a client stops ftm.
+	// keep doing work until startTasks us to stop (e.g., clients
+	// stops ftm) or unrecoverable error.
 	stop := false
+	lasttask := false
 	for !stop {
-		ts, err := ftm.WaitForTasks()
-		if err != nil {
-			db.DFatalf("WaitForTasks err %v", err)
+		select {
+		case res := <-chRes:
+			ftm.ntask.Add(-1)
+			if ftm.ntask.Load() == 0 {
+				n, err := ftm.NTasksToDo()
+				if err != nil {
+					db.DFatalf("NTasksToDo err %v", err)
+				}
+				db.DPrintf(db.FTTASKMGR, "Lasttask %t ntask=0 n %d", lasttask, n)
+				if n == 0 && lasttask {
+					stop = true
+				}
+			}
+			if res.ok {
+				db.DPrintf(db.FTTASKMGR, "%v ok %v ms %d msg %v", res.t, res.ok, res.ms, res.status)
+			}
+			if !res.ok && res.status != nil {
+				db.DPrintf(db.ALWAYS, "task %v has unrecoverable err %v\n", res.t, res.status)
+				r = &res
+				break
+			}
+		case ts := <-chTask:
+			b, err := ftm.StartTasks(ts, chRes, new, mkProc)
+			if err != nil {
+				db.DFatalf("startTasks %v err %v", ts, err)
+			}
+			if b && !lasttask {
+				lasttask = b
+			}
 		}
-		b, err := ftm.StartTasks(ts, ch, new, mkProc)
-		if err != nil {
-			db.DFatalf("startTasks %v err %v", ts, err)
-		}
-		stop = b
 	}
-	// tell collector to finish up
-	finish <- true
-	if r := <-res; r != nil {
+	db.DPrintf(db.FTTASKMGR, "ExecuteTasks: done")
+	if r != nil {
 		return r.status
 	}
 	return nil
@@ -101,7 +122,6 @@ func (ftm *FtTaskMgr) StartTasks(ts []string, ch chan Tresult, new Tnew, mkProc 
 func (ftm *FtTaskMgr) runTask(p *proc.Proc, t string, ch chan Tresult) {
 	db.DPrintf(db.FTTASKMGR, "prep to spawn task %v %v", p.GetPid(), p.Args)
 	start := time.Now()
-	// Spawn proc.
 	err := ftm.Spawn(p)
 	if err != nil {
 		db.DPrintf(db.ALWAYS, "Couldn't spawn a task %v, err: %v", t, err)
@@ -123,8 +143,8 @@ func (ftm *FtTaskMgr) waitForTask(start time.Time, p *proc.Proc, t string) Tresu
 			db.DFatalf("MarkDone %v done err %v", t, err)
 		}
 		return Tresult{t, true, ms, status}
-	} else if err == nil && status.IsStatusErr() {
-		db.DPrintf(db.ALWAYS, "task %v errored err %v", t, status)
+	} else if err == nil && status.IsStatusFatal() {
+		db.DPrintf(db.ALWAYS, "task %v errored err %v sr %v", t, status)
 		// mark task as done, but return error
 		if err := ftm.MarkDone(t); err != nil {
 			db.DFatalf("MarkDone %v done err %v", t, err)
@@ -139,23 +159,13 @@ func (ftm *FtTaskMgr) waitForTask(start time.Time, p *proc.Proc, t string) Tresu
 	}
 }
 
-func (ftm *FtTaskMgr) collector(ch chan Tresult, finish chan bool, res chan *Tresult) {
-	var r *Tresult
-	stop := false
-	for !stop || ftm.ntask.Load() > 0 {
-		select {
-		case <-finish:
-			stop = true
-		case res := <-ch:
-			ftm.ntask.Add(-1)
-			if res.ok {
-				db.DPrintf(db.FTTASKMGR, "%v ok %v ms %d msg %v", res.t, res.ok, res.ms, res.status)
-			}
-			if !res.ok && res.status != nil {
-				db.DPrintf(db.ALWAYS, "task %v has unrecoverable err %v\n", res.t, res.status)
-				r = &res
-			}
+func (ftm *FtTaskMgr) getTasks(ch chan []string) {
+	for {
+		ts, err := ftm.WaitForTasks()
+		if err != nil {
+			db.DFatalf("WaitForTasks err %v", err)
 		}
+		ch <- ts
 	}
-	res <- r
+
 }

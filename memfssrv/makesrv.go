@@ -20,7 +20,6 @@ func NewMemFs(pn string, pe *proc.ProcEnv, aaf protsrv.AttachAuthF) (*MemFs, err
 }
 
 func NewMemFsAddrClnt(pn string, addr *sp.Taddr, sc *sigmaclnt.SigmaClnt, aaf protsrv.AttachAuthF) (*MemFs, error) {
-	db.DPrintf(db.PORT, "NewMemFsPort %v %v\n", pn, addr)
 	fs, err := NewMemFsPortClnt(pn, addr, sc, aaf)
 	return fs, err
 }

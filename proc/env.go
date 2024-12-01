@@ -299,20 +299,8 @@ func (pe *ProcEnvProto) ClearNamedEndpoint() {
 	pe.NamedEndpointProto = nil
 }
 
-func (pe *ProcEnvProto) SetNetFail(nf int64) {
-	pe.NetFail = nf
-}
-
 func (pe *ProcEnvProto) SetVersion(v string) {
 	pe.Version = v
-}
-
-func (pe *ProcEnvProto) SetCrash(nf int64) {
-	pe.Crash = nf
-}
-
-func (pe *ProcEnvProto) SetPartition(nf int64) {
-	pe.Partition = nf
 }
 
 func (pe *ProcEnvProto) SetHow(how Thow) {
@@ -389,9 +377,6 @@ func (pe *ProcEnv) String() string {
 		"Named:%v "+
 		"BuildTag:%v "+
 		"Privileged:%v "+
-		"Crash:%v "+
-		"Partition:%v "+
-		"NetFail:%v "+
 		"UseSPProxy:%v "+
 		"UseDialProxy:%v "+
 		"SigmaPath:%v "+
@@ -416,9 +401,6 @@ func (pe *ProcEnv) String() string {
 		pe.NamedEndpointProto,
 		pe.BuildTag,
 		pe.Privileged,
-		pe.Crash,
-		pe.Partition,
-		pe.NetFail,
 		pe.UseSPProxy,
 		pe.UseDialProxy,
 		pe.SigmaPath,

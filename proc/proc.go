@@ -346,18 +346,6 @@ func (p *Proc) GetKernelID() string {
 	return p.ProcEnvProto.KernelID
 }
 
-func (p *Proc) SetCrash(n int64) {
-	p.ProcEnvProto.SetCrash(n)
-}
-
-func (p *Proc) SetPartition(n int64) {
-	p.ProcEnvProto.SetPartition(n)
-}
-
-func (p *Proc) SetNetFail(n int64) {
-	p.ProcEnvProto.SetNetFail(n)
-}
-
 func (p *Proc) SetType(t Ttype) {
 	p.ProcProto.TypeInt = uint32(t)
 }

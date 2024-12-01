@@ -112,7 +112,7 @@ func (mgr *ProcMgr) WarmProcd(pid sp.Tpid, realm sp.Trealm, prog string, path []
 		return childErr
 	} else if uprocErr != nil {
 		// Unexpected error with uproc server.
-		db.DPrintf(db.PROCMGR, "WarmUproc err %v", uprocErr)
+		db.DPrintf(db.PROCDMGR, "WarmUproc err %v", uprocErr)
 		return uprocErr
 	}
 	return nil
@@ -122,7 +122,7 @@ func (mgr *ProcMgr) WarmProcd(pid sp.Tpid, realm sp.Trealm, prog string, path []
 func (mgr *ProcMgr) procCrashed(p *proc.Proc, err error) {
 	// Mark the proc as exited due to a crash, and record the error exit status.
 	mgr.pstate.exited(p.GetPid(), proc.NewStatusErr(err.Error(), nil).Marshal())
-	db.DPrintf(db.PROCMGR_ERR, "Proc %v finished with error: %v", p, err)
+	db.DPrintf(db.PROCDMGR_ERR, "Proc %v finished with error: %v", p, err)
 	mgr.getSigmaClnt(p.GetRealm()).ExitedCrashed(p.GetPid(), p.GetProcDir(), p.GetParentDir(), proc.NewStatusErr(err.Error(), nil), p.GetHow())
 }
 

@@ -15,7 +15,7 @@ func (mgr *ProcMgr) setupProcState(p *proc.Proc) {
 	// for user procs.
 	if p.IsPrivileged() {
 		if err := mgr.rootsc.MakeProcDir(p.GetPid(), p.GetProcDir(), p.IsPrivileged(), proc.HMSCHED); err != nil {
-			db.DPrintf(db.PROCMGR_ERR, "Err procmgr MakeProcDir: %v\n", err)
+			db.DPrintf(db.PROCDMGR_ERR, "Err procmgr MakeProcDir: %v\n", err)
 			db.DFatalf("Err MakeProcDir: %v", err)
 		}
 	}

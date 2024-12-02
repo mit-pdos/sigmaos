@@ -9,7 +9,7 @@ import (
 	"sigmaos/fslib"
 	"sigmaos/rpc"
 	"sigmaos/rpc/clnt/channel"
-	"sigmaos/sessdevclnt"
+	sessdevclnt "sigmaos/sessdev/clnt"
 	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 )

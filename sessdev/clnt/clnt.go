@@ -3,7 +3,7 @@
 // can then read/write the DATA device file in the session's directory
 // at the server. [sigmarpcchan] uses it to send/receive RPCs to a
 // server.
-package sessdevclnt
+package clnt
 
 import (
 	"path/filepath"

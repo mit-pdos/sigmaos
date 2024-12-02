@@ -1,4 +1,4 @@
-package kernelclnt
+package clnt
 
 import (
 	db "sigmaos/debug"

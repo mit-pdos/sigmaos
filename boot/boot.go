@@ -5,7 +5,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/kernel"
-	"sigmaos/kernelsrv"
+	"sigmaos/kernel/srv"
 	"sigmaos/proc"
 )
 
@@ -21,7 +21,7 @@ func BootUp(param *kernel.Param, pe *proc.ProcEnv) error {
 		return err
 	}
 	db.DPrintf(db.BOOT, "container %s booted %v\n", os.Args[1], k.Ip())
-	if err := kernelsrv.RunKernelSrv(k); err != nil {
+	if err := srv.Run(k); err != nil {
 		return err
 	}
 	return nil

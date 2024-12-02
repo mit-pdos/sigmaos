@@ -1,8 +1,8 @@
-package kernelclnt
+package clnt
 
 import (
 	"sigmaos/fslib"
-	"sigmaos/kernelsrv/proto"
+	"sigmaos/kernel/proto"
 	rpcclnt "sigmaos/rpc/clnt"
 	sprpcclnt "sigmaos/rpc/clnt/sigmap"
 	sp "sigmaos/sigmap"

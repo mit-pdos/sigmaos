@@ -19,7 +19,7 @@ import (
 	chunksrv "sigmaos/chunk/srv"
 	db "sigmaos/debug"
 	"sigmaos/fs"
-	"sigmaos/kernelclnt"
+	kernelclnt "sigmaos/kernel/clnt"
 	"sigmaos/linuxsched"
 	"sigmaos/netsigma"
 	"sigmaos/proc"

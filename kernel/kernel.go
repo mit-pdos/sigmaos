@@ -43,22 +43,18 @@ type Kernel struct {
 	shuttingDown bool
 }
 
-func newKernel(param *Param) *Kernel {
-	return &Kernel{
-		realms: make(map[sp.Trealm]*sigmaclnt.SigmaClntKernel),
-		Param:  param,
-		svcs:   newServices(),
-	}
-}
-
 func NewKernel(p *Param, pe *proc.ProcEnv) (*Kernel, error) {
-	k := newKernel(p)
 	ip, err := netsigma.LocalIP()
 	if err != nil {
 		return nil, err
 	}
 	db.DPrintf(db.KERNEL, "NewKernel ip %v", ip)
-	k.ip = ip
+	k := &Kernel{
+		realms: make(map[sp.Trealm]*sigmaclnt.SigmaClntKernel),
+		Param:  p,
+		svcs:   newServices(),
+		ip:     ip,
+	}
 	pe.SetInnerContainerIP(ip)
 	pe.SetOuterContainerIP(ip)
 	if p.Services[0] == sp.KNAMED {

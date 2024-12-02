@@ -8,7 +8,7 @@ import (
 	"runtime"
 
 	db "sigmaos/debug"
-	"sigmaos/kernelclnt"
+	kernelclnt "sigmaos/kernel/clnt"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"

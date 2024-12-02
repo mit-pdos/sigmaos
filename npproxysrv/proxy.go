@@ -9,6 +9,7 @@ import (
 	"net"
 	"sync"
 
+	"sigmaos/api/spprotsrv"
 	db "sigmaos/debug"
 	"sigmaos/demux"
 	dialproxyclnt "sigmaos/dialproxy/clnt"
@@ -20,7 +21,6 @@ import (
 	"sigmaos/sessp"
 	"sigmaos/sigmaclnt/fdclnt/pathclnt"
 	sp "sigmaos/sigmap"
-	"sigmaos/api/spprotsrv"
 	"sigmaos/util/rand"
 )
 
@@ -37,7 +37,7 @@ func (pc *proxyConn) ReportError(err error) {
 func (pc *proxyConn) ServeRequest(fc demux.CallI) (demux.CallI, *serr.Err) {
 	fm := fc.(*sessp.FcallMsg)
 	db.DPrintf(db.NPPROXY, "ServeRequest %v\n", fm)
-	msg, iov, rerror, _, _ := sigmaprotsrv.Dispatch(pc.sess, fm.Msg, fm.Iov)
+	msg, iov, rerror, _, _ := spprotsrv.Dispatch(pc.sess, fm.Msg, fm.Iov)
 	if rerror != nil {
 		msg = rerror
 	}

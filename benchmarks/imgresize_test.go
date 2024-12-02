@@ -71,7 +71,7 @@ func NewImgResizeJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, input str
 		assert.Nil(ji.Ts.T, err, "Error SubmitTask: %v", err)
 	}
 	// Sanity check
-	n, err := ft.NTasksTODO()
+	n, err := ft.NTasksToDo()
 	assert.Nil(ji.Ts.T, err, "Error NTasksTODO: %v", err)
 	assert.Equal(ji.Ts.T, n, ji.ntasks, "Num tasks TODO doesn't match ntasks")
 	db.DPrintf(db.ALWAYS, "Done submitting ImgResize tasks")
@@ -80,7 +80,7 @@ func NewImgResizeJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, input str
 
 func (ji *ImgResizeJobInstance) StartImgResizeJob() {
 	db.DPrintf(db.ALWAYS, "StartImgResizeJob input %v ntasks %v mcpu %v job %v", ji.input, ji.ntasks, ji.mcpu, ji.job)
-	ji.imgd = imgresize.StartImgd(ji.SigmaClnt, ji.job, ji.mcpu, ji.mem, false, ji.nrounds, ji.imgdmcpu)
+	ji.imgd = imgresize.StartImgd(ji.SigmaClnt, ji.job, ji.mcpu, ji.mem, false, ji.nrounds, ji.imgdmcpu, nil)
 	db.DPrintf(db.ALWAYS, "Done starting ImgResizeJob")
 }
 

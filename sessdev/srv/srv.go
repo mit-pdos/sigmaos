@@ -6,12 +6,12 @@ package srv
 import (
 	"path/filepath"
 
-	"sigmaos/clonedev"
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/memfssrv"
 	"sigmaos/serr"
 	"sigmaos/sessdev"
+	"sigmaos/sessdev/srv/clonedev"
 	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 )

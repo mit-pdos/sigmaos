@@ -6,8 +6,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"sigmaos/benchmarks/netperf"
 	db "sigmaos/debug"
-	"sigmaos/netperf"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"

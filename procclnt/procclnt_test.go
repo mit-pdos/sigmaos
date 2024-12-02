@@ -129,10 +129,11 @@ func spawnWaitSleeper(ts *test.Tstate, kernels []string) *proc.Proc {
 func TestCompile(t *testing.T) {
 }
 
-func TestCrashed(t *testing.T) {
+func TestErrStringCrashed(t *testing.T) {
 	msg := `"{Err: "Non-sigma error" Obj: "" (exit status 3)}`
-	sr := serr.NewErrString(msg)
-	assert.Equal(t, sr.Err.Error(), proc.CRASHSTATUS)
+	err := serr.NewErrString(msg)
+	assert.True(t, err.ErrCode == serr.TErrError)
+	assert.Equal(t, err.Err.Error(), proc.CRASHSTATUS)
 }
 
 func TestWaitExitSimpleSingleBE(t *testing.T) {

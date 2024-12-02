@@ -16,7 +16,7 @@ import (
 	"sigmaos/fslib"
 	"sigmaos/leaderclnt"
 	"sigmaos/proc"
-	"sigmaos/replraft"
+	"sigmaos/repl/raft"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
@@ -159,7 +159,7 @@ func RunMember(job, grp string, myid, nrepl int) {
 
 	cfg := g.readCreateCfg(nrepl)
 
-	var raftCfg *replraft.RaftConfig
+	var raftCfg *raft.RaftConfig
 	if nrepl > 0 {
 		cfg, raftCfg = g.newRaftCfg(cfg, g.myid, nrepl)
 	}

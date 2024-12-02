@@ -5,8 +5,8 @@ import (
 
 	cachesrv "sigmaos/apps/cache/srv"
 	db "sigmaos/debug"
+	"sigmaos/repl/raft"
 	replsrv "sigmaos/repl/srv"
-	"sigmaos/replraft"
 	"sigmaos/semclnt"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
@@ -113,8 +113,8 @@ func (g *Group) AcquireReadCfg() *GroupConfig {
 	return cfg
 }
 
-func (g *Group) newRaftCfg(cfg *GroupConfig, myid, nrepl int) (*GroupConfig, *replraft.RaftConfig) {
-	var raftCfg *replraft.RaftConfig
+func (g *Group) newRaftCfg(cfg *GroupConfig, myid, nrepl int) (*GroupConfig, *raft.RaftConfig) {
+	var raftCfg *raft.RaftConfig
 
 	db.DPrintf(db.KVGRP, "%v/%v newRaftConfig %v\n", g.grp, myid, cfg)
 
@@ -129,7 +129,7 @@ func (g *Group) newRaftCfg(cfg *GroupConfig, myid, nrepl int) (*GroupConfig, *re
 	} else {
 		addr = ep.Addrs()[0]
 	}
-	raftCfg = replraft.NewRaftConfig(g.ProcEnv(), g.GetDialProxyClnt(), myid, addr, initial)
+	raftCfg = raft.NewRaftConfig(g.ProcEnv(), g.GetDialProxyClnt(), myid, addr, initial)
 
 	if initial {
 		// Get the listener address selected by raft and advertise it to group (if initial)
@@ -171,7 +171,7 @@ func (g *Group) waitRaftConfig(cfg *GroupConfig) *GroupConfig {
 	return cfg
 }
 
-func (g *Group) startServer(cfg *GroupConfig, raftCfg *replraft.RaftConfig) (*GroupConfig, error) {
+func (g *Group) startServer(cfg *GroupConfig, raftCfg *raft.RaftConfig) (*GroupConfig, error) {
 	var cs any
 	var err error
 

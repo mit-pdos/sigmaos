@@ -1,4 +1,4 @@
-package rpcdirclnt
+package clnt
 
 import (
 	"path/filepath"
@@ -12,12 +12,12 @@ import (
 
 type AllocFn func(string)
 
-type RPCDirClnt struct {
+type ShardedSvcRPCClnt struct {
 	*dircache.DirCache[*rpcclnt.RPCClnt]
 	allocFn AllocFn // Callback to be invoked when a new client is created
 }
 
-func (rpcdc *RPCDirClnt) newClnt(n string) (*rpcclnt.RPCClnt, error) {
+func (rpcdc *ShardedSvcRPCClnt) newClnt(n string) (*rpcclnt.RPCClnt, error) {
 	pn := filepath.Join(rpcdc.Path, n)
 	rpcc, err := sprpcclnt.NewRPCClnt(rpcdc.FsLib, pn)
 	if err != nil {
@@ -31,30 +31,30 @@ func (rpcdc *RPCDirClnt) newClnt(n string) (*rpcclnt.RPCClnt, error) {
 	return rpcc, nil
 }
 
-func NewRPCDirClntAllocFn(fsl *fslib.FsLib, path string, lSelector db.Tselector, eSelector db.Tselector, fn AllocFn) *RPCDirClnt {
-	u := &RPCDirClnt{
+func NewShardedSvcRPCClntAllocFn(fsl *fslib.FsLib, path string, lSelector db.Tselector, eSelector db.Tselector, fn AllocFn) *ShardedSvcRPCClnt {
+	u := &ShardedSvcRPCClnt{
 		allocFn: fn,
 	}
 	u.DirCache = dircache.NewDirCache[*rpcclnt.RPCClnt](fsl, path, u.newClnt, nil, lSelector, eSelector)
 	return u
 }
 
-func NewRPCDirClnt(fsl *fslib.FsLib, path string, lSelector db.Tselector, eSelector db.Tselector) *RPCDirClnt {
-	return NewRPCDirClntAllocFn(fsl, path, lSelector, eSelector, nil)
+func NewShardedSvcRPCClnt(fsl *fslib.FsLib, path string, lSelector db.Tselector, eSelector db.Tselector) *ShardedSvcRPCClnt {
+	return NewShardedSvcRPCClntAllocFn(fsl, path, lSelector, eSelector, nil)
 }
 
-func NewRPCDirClntCh(fsl *fslib.FsLib, path string, ch chan string, lSelector db.Tselector, eSelector db.Tselector) *RPCDirClnt {
-	u := &RPCDirClnt{}
+func NewShardedSvcRPCClntCh(fsl *fslib.FsLib, path string, ch chan string, lSelector db.Tselector, eSelector db.Tselector) *ShardedSvcRPCClnt {
+	u := &ShardedSvcRPCClnt{}
 	u.DirCache = dircache.NewDirCache[*rpcclnt.RPCClnt](fsl, path, u.newClnt, ch, lSelector, eSelector)
 	return u
 }
 
-func NewRPCDirClntFilter(fsl *fslib.FsLib, path string, lSelector db.Tselector, eSelector db.Tselector, filters []string) *RPCDirClnt {
-	u := &RPCDirClnt{}
+func NewShardedSvcRPCClntFilter(fsl *fslib.FsLib, path string, lSelector db.Tselector, eSelector db.Tselector, filters []string) *ShardedSvcRPCClnt {
+	u := &ShardedSvcRPCClnt{}
 	u.DirCache = dircache.NewDirCacheFilter[*rpcclnt.RPCClnt](fsl, path, u.newClnt, nil, lSelector, eSelector, filters)
 	return u
 }
 
-func (rpcdc *RPCDirClnt) GetClnt(srvID string) (*rpcclnt.RPCClnt, error) {
+func (rpcdc *ShardedSvcRPCClnt) GetClnt(srvID string) (*rpcclnt.RPCClnt, error) {
 	return rpcdc.GetEntry(srvID)
 }

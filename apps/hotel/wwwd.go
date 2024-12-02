@@ -14,7 +14,7 @@ import (
 	"sigmaos/proc"
 	rpcclnt "sigmaos/rpc/clnt"
 	sprpcclnt "sigmaos/rpc/clnt/sigmap"
-	"sigmaos/rpcdirclnt"
+	shardedsvcrpcclnt "sigmaos/rpc/shardedsvc/clnt"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/tracing"
@@ -32,7 +32,7 @@ type Www struct {
 	reservec *rpcclnt.RPCClnt
 	profc    *rpcclnt.RPCClnt
 	recc     *rpcclnt.RPCClnt
-	geodc    *rpcdirclnt.RPCDirClnt
+	geodc    *shardedsvcrpcclnt.ShardedSvcRPCClnt
 }
 
 // Run starts the server
@@ -75,7 +75,7 @@ func RunWww(job string) error {
 		return err
 	}
 	www.recc = rpcc
-	www.geodc = rpcdirclnt.NewRPCDirClnt(fsl, HOTELGEODIR, db.HOTEL_WWW, db.HOTEL_WWW_ERR)
+	www.geodc = shardedsvcrpcclnt.NewShardedSvcRPCClnt(fsl, HOTELGEODIR, db.HOTEL_WWW, db.HOTEL_WWW_ERR)
 
 	//	www.tracer = tracing.Init("wwwd", proc.GetSigmaJaegerIP())
 	var mux *http.ServeMux

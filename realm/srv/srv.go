@@ -14,7 +14,6 @@ import (
 	"sigmaos/fs"
 	kernelclnt "sigmaos/kernel/clnt"
 	"sigmaos/proc"
-	"sigmaos/protsrv"
 	realmpkg "sigmaos/realm"
 	"sigmaos/realm/proto"
 	"sigmaos/rpc"
@@ -25,6 +24,7 @@ import (
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
+	spprotosrv "sigmaos/spproto/srv"
 )
 
 const (
@@ -86,11 +86,11 @@ func RunRealmSrv(dialproxy bool) error {
 	db.DPrintf(db.REALMD, "Run %v %s\n", sp.REALMD, os.Environ())
 	if false {
 		allowedPaths := []string{sp.REALMSREL, rpc.RPC}
-		ssrv, err := sigmasrv.NewSigmaSrvClntAuthFn(sp.REALMD, sc, rs, protsrv.AttachAllowAllPrincipalsSelectPaths(allowedPaths))
+		ssrv, err := sigmasrv.NewSigmaSrvClntAuthFn(sp.REALMD, sc, rs, spprotosrv.AttachAllowAllPrincipalsSelectPaths(allowedPaths))
 		_ = ssrv
 		_ = err
 	}
-	ssrv, err := sigmasrv.NewSigmaSrvClntAuthFn(sp.REALMD, sc, rs, protsrv.AttachAllowAllToAll)
+	ssrv, err := sigmasrv.NewSigmaSrvClntAuthFn(sp.REALMD, sc, rs, spprotosrv.AttachAllowAllToAll)
 	if err != nil {
 		return err
 	}

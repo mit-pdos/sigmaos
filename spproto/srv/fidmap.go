@@ -1,4 +1,4 @@
-package protsrv
+package srv
 
 import (
 	db "sigmaos/debug"

@@ -1,11 +1,11 @@
-package protsrv
+package srv
 
 import (
 	"sigmaos/fs"
 	"sigmaos/path"
-	"sigmaos/protsrv/lockmap"
-	"sigmaos/protsrv/namei"
 	"sigmaos/serr"
+	"sigmaos/spproto/srv/lockmap"
+	"sigmaos/spproto/srv/namei"
 )
 
 // LookupObj/namei will return an lo and a locked watch for it, even

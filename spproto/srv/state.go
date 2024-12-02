@@ -1,16 +1,16 @@
-package protsrv
+package srv
 
 import (
 	"sigmaos/clntcond"
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/path"
-	"sigmaos/protsrv/leasedmap"
-	"sigmaos/protsrv/lockmap"
-	"sigmaos/protsrv/version"
-	"sigmaos/protsrv/watch"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
+	"sigmaos/spproto/srv/leasedmap"
+	"sigmaos/spproto/srv/lockmap"
+	"sigmaos/spproto/srv/version"
+	"sigmaos/spproto/srv/watch"
 	"sigmaos/stats"
 )
 

@@ -13,12 +13,12 @@ import (
 	"sigmaos/memfs/dir"
 	"sigmaos/memfs/inode"
 	"sigmaos/path"
-	"sigmaos/protsrv"
-	"sigmaos/protsrv/lockmap"
 	"sigmaos/serr"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmapsrv"
+	spprotosrv "sigmaos/spproto/srv"
+	"sigmaos/spproto/srv/lockmap"
 	"sigmaos/util/syncmap"
 )
 
@@ -27,7 +27,7 @@ var rootP = path.Tpathname{""}
 type MemFs struct {
 	*sigmapsrv.SigmaPSrv
 	ctx   fs.CtxI // server context
-	ps    *protsrv.ProtSrv
+	ps    *spprotosrv.ProtSrv
 	roots *roots
 	sc    *sigmaclnt.SigmaClnt
 	pn    string
@@ -59,7 +59,7 @@ func NewMemFsSrv(pn string, srv *sigmapsrv.SigmaPSrv, sc *sigmaclnt.SigmaClnt, f
 		ctx:       ctx.NewCtx(sc.ProcEnv().GetPrincipal(), nil, 0, sp.NoClntId, nil, fencefs),
 		sc:        sc,
 		pn:        pn,
-		ps:        protsrv.NewProtSrv(sc.ProcEnv(), srv.ProtSrvState, nil, 0, srv.GetRootCtx, protsrv.AttachAllowAllToAll),
+		ps:        spprotosrv.NewProtSrv(sc.ProcEnv(), srv.ProtSrvState, nil, 0, srv.GetRootCtx, spprotosrv.AttachAllowAllToAll),
 		roots:     newRoots(),
 	}
 	return mfs

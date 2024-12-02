@@ -13,20 +13,20 @@ import (
 	"sigmaos/ctx"
 	db "sigmaos/debug"
 	"sigmaos/demux"
+	dialproxyclnt "sigmaos/dialproxy/clnt"
 	"sigmaos/memfs"
 	"sigmaos/memfs/dir"
-	dialproxyclnt "sigmaos/dialproxy/clnt"
 	"sigmaos/netsrv"
 	"sigmaos/path"
-	"sigmaos/protsrv"
-	"sigmaos/util/rand"
 	"sigmaos/serr"
 	"sigmaos/sessclnt"
 	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmapsrv"
 	"sigmaos/spcodec"
+	spprotosrv "sigmaos/spproto/srv"
 	"sigmaos/test"
+	"sigmaos/util/rand"
 )
 
 const (
@@ -457,7 +457,7 @@ func newTstateSp(t *testing.T) *TstateSp {
 	ts := &TstateSp{}
 	ts.TstateMin = test.NewTstateMin(t)
 	root := dir.NewRootDir(ctx.NewCtxNull(), memfs.NewInode, nil)
-	ts.srv = sigmapsrv.NewSigmaPSrv(ts.PE, dialproxyclnt.NewDialProxyClnt(ts.PE), root, ts.Addr, nil, protsrv.AttachAllowAllToAll)
+	ts.srv = sigmapsrv.NewSigmaPSrv(ts.PE, dialproxyclnt.NewDialProxyClnt(ts.PE), root, ts.Addr, nil, spprotosrv.AttachAllowAllToAll)
 	ts.clnt = sessclnt.NewMgr(ts.PE, dialproxyclnt.NewDialProxyClnt(ts.PE))
 	return ts
 }

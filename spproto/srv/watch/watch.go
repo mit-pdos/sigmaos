@@ -26,9 +26,9 @@ import (
 
 	"sigmaos/clntcond"
 	db "sigmaos/debug"
-	"sigmaos/protsrv/lockmap"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
+	"sigmaos/spproto/srv/lockmap"
 )
 
 type Watch struct {

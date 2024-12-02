@@ -1,4 +1,4 @@
-package protsrv
+package srv
 
 import (
 	"time"
@@ -7,12 +7,12 @@ import (
 	"sigmaos/fs"
 	"sigmaos/path"
 	"sigmaos/proc"
-	"sigmaos/protsrv/lockmap"
-	"sigmaos/protsrv/namei"
 	"sigmaos/serr"
 	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 	sps "sigmaos/sigmaprotsrv"
+	"sigmaos/spproto/srv/lockmap"
+	"sigmaos/spproto/srv/namei"
 )
 
 type GetRootCtxF func(*sp.Tprincipal, map[string]*sp.SecretProto, string, sessp.Tsession, sp.TclntId) (fs.Dir, fs.CtxI)

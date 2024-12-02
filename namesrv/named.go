@@ -15,12 +15,12 @@ import (
 	"sigmaos/namesrv/leaderetcd"
 	"sigmaos/path"
 	"sigmaos/proc"
-	"sigmaos/protsrv"
 	"sigmaos/rpc"
 	"sigmaos/semclnt"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
+	spprotosrv "sigmaos/spproto/srv"
 	"sigmaos/util/perf"
 )
 
@@ -222,7 +222,7 @@ func (nd *Named) newSrv() (*sp.Tendpoint, error) {
 	ip := sp.NO_IP
 	root := rootDir(nd.fs, nd.realm)
 	var addr *sp.Taddr
-	var aaf protsrv.AttachAuthF
+	var aaf spprotosrv.AttachAuthF
 	// If this is a root named, don't do
 	// anything special.
 	if nd.realm == sp.ROOTREALM {
@@ -232,10 +232,10 @@ func (nd *Named) newSrv() (*sp.Tendpoint, error) {
 		for s, _ := range sp.RootNamedMountedDirs {
 			allowedDirs = append(allowedDirs, s)
 		}
-		aaf = protsrv.AttachAllowAllPrincipalsSelectPaths(allowedDirs)
+		aaf = spprotosrv.AttachAllowAllPrincipalsSelectPaths(allowedDirs)
 	} else {
 		addr = sp.NewTaddr(ip, sp.INNER_CONTAINER_IP, sp.NO_PORT)
-		aaf = protsrv.AttachAllowAllToAll
+		aaf = spprotosrv.AttachAllowAllToAll
 	}
 	ssrv, err := sigmasrv.NewSigmaSrvRootClntAuthFn(root, addr, "", nd.SigmaClnt, aaf)
 	if err != nil {

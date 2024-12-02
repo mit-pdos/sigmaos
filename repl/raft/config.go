@@ -1,4 +1,4 @@
-package replraft
+package raft
 
 import (
 	"fmt"

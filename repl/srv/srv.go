@@ -11,20 +11,20 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/repl"
-	"sigmaos/replraft"
+	"sigmaos/repl/raft"
 	rpcsrv "sigmaos/rpc/srv"
 	"sigmaos/sessp"
 )
 
 type ReplSrv struct {
 	mu      sync.Mutex
-	raftcfg *replraft.RaftConfig
+	raftcfg *raft.RaftConfig
 	replSrv repl.Server
 	rpcs    *rpcsrv.RPCSrv
 	rt      *ReplyTable
 }
 
-func NewReplSrv(raftcfg *replraft.RaftConfig, svci any) (*ReplSrv, error) {
+func NewReplSrv(raftcfg *raft.RaftConfig, svci any) (*ReplSrv, error) {
 	var err error
 	rs := &ReplSrv{
 		raftcfg: raftcfg,

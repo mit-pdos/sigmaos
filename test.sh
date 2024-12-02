@@ -118,10 +118,10 @@ check_test_logs() {
   fi
   grep -rE "panic|FATAL|FAIL" $LOG_DIR/*.test.out > /dev/null
   if [ $(grep -rwE "panic|FATAL|FAIL" $LOG_DIR/*.test.out > /dev/null; echo $?) -eq 0 ]; then
-    echo "!!!!!!!!!! Some tests failed !!!!!!!!!!"
-    grep -rwlE "panic|FATAL|FAIL" $LOG_DIR/*.test.out
+    echo "!!!!!!!!!! Some tests failed !!!!!!!!!!" | tee $LOG_DIR/summary.out
+    grep -rwlE "panic|FATAL|FAIL" $LOG_DIR/*.test.out 2>&1 | tee -a $LOG_DIR/summary.out
   else
-    echo "++++++++++ All tests passed ++++++++++"
+    echo "++++++++++ All tests passed ++++++++++" | tee $LOG_DIR/summary.out
   fi
 }
 
@@ -348,5 +348,7 @@ fi
 if [[ $CONTAINER == "--container" ]] ; then
     run_test $T "go test $VERB sigmaos/scontainer -start"
 fi
+
+cleanup
 
 check_test_logs

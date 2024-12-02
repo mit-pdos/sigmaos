@@ -5,7 +5,7 @@ import (
 	"time"
 
 	db "sigmaos/debug"
-	"sigmaos/fenceclnt"
+	"sigmaos/leaderclnt/fenceclnt"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"

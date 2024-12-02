@@ -30,7 +30,7 @@ func TestErr(t *testing.T) {
 }
 
 func TestErrString(t *testing.T) {
-	err := NewErrString(`"{Err: "Non-sigma error" Obj: "" (exit status 2)}`)
+	err := NewErrString(`"{Err: "Non-sigma error" Obj: "" (exit status 3)}`)
 	assert.True(t, err.ErrCode == TErrError)
 }
 

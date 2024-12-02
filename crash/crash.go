@@ -15,7 +15,14 @@ import (
 	"sigmaos/util/rand"
 )
 
-const ONE = 1000
+const (
+	ONE = 1000
+
+	// for testing purposes, meaning sigma doesn't know what happened
+	// to proc; machine might have crashed.
+	CRASH       = 3
+	CRASHSTATUS = "exit status 3"
+)
 
 var labels map[Tselector]Tevent
 
@@ -113,15 +120,13 @@ func AppendSigmaFail(es []Tevent) error {
 }
 
 func Crash() {
-	x := 0
 	db.DPrintf(db.CRASH, "Crash")
-	y := 10 / x
-	db.DPrintf(db.CRASH, "Crash", y)
+	os.Exit(CRASH)
 }
 
 func CrashMsg(msg string) {
 	db.DPrintf(db.CRASH, "CrashMsg %v", msg)
-	os.Exit(1)
+	os.Exit(CRASH)
 }
 
 func PartitionNamed(fsl *fslib.FsLib) {

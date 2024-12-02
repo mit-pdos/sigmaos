@@ -377,7 +377,7 @@ func TestCrashProcOne(t *testing.T) {
 	assert.Nil(t, err, "WaitExit")
 	assert.True(t, status != nil && status.IsStatusErr(), "Status not err")
 	sr := serr.NewErrString(status.Msg())
-	assert.Equal(t, sr.Err.Error(), "exit status 2", "WaitExit")
+	assert.Equal(t, sr.Err.Error(), crash.CRASHSTATUS, "WaitExit")
 
 	ts.Shutdown()
 }
@@ -777,7 +777,7 @@ func TestProcManyCrash(t *testing.T) {
 	status, err := ts.WaitExit(a.GetPid())
 	assert.Nil(t, err, "waitexit")
 	sr := serr.NewErrString(status.Msg())
-	assert.Equal(t, sr.Err.Error(), "exit status 2", "WaitExit")
+	assert.Equal(t, sr.Err.Error(), crash.CRASHSTATUS, "WaitExit")
 	ts.Shutdown()
 }
 
@@ -795,7 +795,7 @@ func TestProcManyPartition(t *testing.T) {
 	assert.Nil(t, err, "waitexit")
 	if assert.NotNil(t, status, "nil status") {
 		sr := serr.NewErrString(status.Msg())
-		assert.Equal(t, sr.Err.Error(), "exit status 2", "WaitExit")
+		assert.Equal(t, sr.Err.Error(), crash.CRASHSTATUS, "WaitExit")
 	}
 	ts.Shutdown()
 }

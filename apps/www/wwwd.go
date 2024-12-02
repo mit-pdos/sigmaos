@@ -46,7 +46,7 @@ func RunWwwd(job, tree string) {
 	http.Handle("/debug/pprof/heap", pprof.Handler("heap"))
 	http.Handle("/debug/pprof/goroutine", pprof.Handler("goroutine"))
 
-	//	ip, err := netsigma.LocalIP()
+	//	ip, err := iputil.LocalIP()
 	//	if err != nil {
 	//		db.DFatalf("Error LocalIP: %v", err)
 	//	}

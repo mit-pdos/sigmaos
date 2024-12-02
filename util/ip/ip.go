@@ -1,4 +1,4 @@
-package netsigma
+package ip
 
 import (
 	"fmt"

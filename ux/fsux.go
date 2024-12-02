@@ -5,7 +5,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fs"
-	"sigmaos/netsigma"
+	iputil "sigmaos/util/ip"
 	"sigmaos/util/perf"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
@@ -30,7 +30,7 @@ func RunFsUx(rootux string) {
 	if err != nil {
 		db.DFatalf("Error NewSigmaClnt: %v", err)
 	}
-	ip, err := netsigma.LocalIP()
+	ip, err := iputil.LocalIP()
 	if err != nil {
 		db.DFatalf("LocalIP %v %v\n", sp.UX, err)
 	}

@@ -10,7 +10,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/kernel"
 	"sigmaos/namesrv/fsetcd"
-	"sigmaos/netsigma"
+	iputil "sigmaos/util/ip"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 )
@@ -40,7 +40,7 @@ func main() {
 	h := sp.SIGMAHOME
 	p := os.Getenv("PATH")
 	os.Setenv("PATH", p+":"+h+"/bin/kernel:"+h+"/bin/linux:"+h+"/bin/user")
-	localIP, err1 := netsigma.LocalIP()
+	localIP, err1 := iputil.LocalIP()
 	if err1 != nil {
 		db.DFatalf("Error local IP: %v", err1)
 	}

@@ -15,7 +15,7 @@ import (
 	"sigmaos/bootkernelclnt"
 	db "sigmaos/debug"
 	"sigmaos/namesrv/fsetcd"
-	"sigmaos/netsigma"
+	iputil "sigmaos/util/ip"
 	"sigmaos/proc"
 	realmclnt "sigmaos/realm/clnt"
 	"sigmaos/sigmaclnt"
@@ -166,7 +166,7 @@ func newSysClnt(t *testing.T, ntype bootkernelclnt.Tboot) (*Tstate, error) {
 		db.DPrintf(db.TEST, "Reusing previously-booted system")
 		return savedTstate, nil
 	}
-	localIP, err1 := netsigma.LocalIP()
+	localIP, err1 := iputil.LocalIP()
 	if err1 != nil {
 		db.DPrintf(db.ERROR, "Error local IP: %v", err1)
 		return nil, err1

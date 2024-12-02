@@ -21,7 +21,7 @@ import (
 	"sigmaos/fs"
 	kernelclnt "sigmaos/kernel/clnt"
 	"sigmaos/linuxsched"
-	"sigmaos/netsigma"
+	iputil "sigmaos/util/ip"
 	"sigmaos/proc"
 	"sigmaos/sched/msched/proc/proto"
 	"sigmaos/sched/msched/proc/srv/binsrv"
@@ -105,7 +105,7 @@ func RunProcSrv(kernelId string, dialproxy bool, spproxydPID sp.Tpid) error {
 	}
 
 	// Set inner container IP as soon as uprocsrv starts up
-	innerIP, err := netsigma.LocalIP()
+	innerIP, err := iputil.LocalIP()
 	if err != nil {
 		db.DFatalf("Error LocalIP: %v", err)
 	}

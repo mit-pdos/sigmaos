@@ -1,4 +1,4 @@
-package kernelsrv
+package srv
 
 import (
 	"os"
@@ -6,7 +6,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/kernel"
-	"sigmaos/kernelsrv/proto"
+	"sigmaos/kernel/proto"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
@@ -17,7 +17,7 @@ type KernelSrv struct {
 	ch chan struct{}
 }
 
-func RunKernelSrv(k *kernel.Kernel) error {
+func Run(k *kernel.Kernel) error {
 	ks := &KernelSrv{k: k}
 	ks.ch = make(chan struct{})
 	db.DPrintf(db.KERNEL, "Run KernelSrv %v", k.Param.KernelID)

@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	// db "sigmaos/debug"
-	"sigmaos/electclnt"
+	"sigmaos/leaderclnt/electclnt"
 	"sigmaos/test"
 )
 

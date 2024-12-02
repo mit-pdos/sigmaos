@@ -18,11 +18,11 @@ import (
 	dialproxyclnt "sigmaos/dialproxy/clnt"
 	"sigmaos/path"
 	"sigmaos/proc"
-	"sigmaos/protclnt"
 	"sigmaos/serr"
 	"sigmaos/sessclnt"
 	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
+	spprotoclnt "sigmaos/spproto/clnt"
 )
 
 type FidClnt struct {
@@ -136,7 +136,7 @@ func (fidc *FidClnt) Clunk(fid sp.Tfid) error {
 func (fidc *FidClnt) Attach(secrets map[string]*sp.SecretProto, cid sp.TclntId, ep *sp.Tendpoint, pn path.Tpathname, tree string) (sp.Tfid, *serr.Err) {
 	s := time.Now()
 	fid := fidc.allocFid()
-	pc := protclnt.NewProtClnt(ep, fidc.sm)
+	pc := spprotoclnt.NewSPProtoClnt(ep, fidc.sm)
 	reply, err := pc.Attach(secrets, cid, fid, path.Split(tree))
 	if err != nil {
 		db.DPrintf(db.FIDCLNT_ERR, "Error attach %v: %v", ep, err)

@@ -1,7 +1,7 @@
-// Package protclnt implements stubs for the sigmap messages for a
+// Package spprotoclnt implements stubs for the sigmap messages for a
 // server at an endpoint. It relies on [sessclnt] for maintaining a
 // session with that server.
-package protclnt
+package clnt
 
 import (
 	"fmt"
@@ -14,23 +14,23 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-type ProtClnt struct {
+type SPProtoClnt struct {
 	ep *sp.Tendpoint
 	sm *sessclnt.Mgr
 }
 
-func NewProtClnt(ep *sp.Tendpoint, sm *sessclnt.Mgr) *ProtClnt {
-	return &ProtClnt{
+func NewSPProtoClnt(ep *sp.Tendpoint, sm *sessclnt.Mgr) *SPProtoClnt {
+	return &SPProtoClnt{
 		ep: ep,
 		sm: sm,
 	}
 }
 
-func (pclnt *ProtClnt) Endpoint() *sp.Tendpoint {
+func (pclnt *SPProtoClnt) Endpoint() *sp.Tendpoint {
 	return pclnt.ep
 }
 
-func (pclnt *ProtClnt) CallServer(args sessp.Tmsg, iniov sessp.IoVec, outiov sessp.IoVec) (*sessp.FcallMsg, *serr.Err) {
+func (pclnt *SPProtoClnt) CallServer(args sessp.Tmsg, iniov sessp.IoVec, outiov sessp.IoVec) (*sessp.FcallMsg, *serr.Err) {
 	reply, err := pclnt.sm.RPC(pclnt.ep, args, iniov, outiov)
 	if err != nil {
 		return nil, err
@@ -42,15 +42,15 @@ func (pclnt *ProtClnt) CallServer(args sessp.Tmsg, iniov sessp.IoVec, outiov ses
 	return reply, nil
 }
 
-func (pclnt *ProtClnt) Call(args sessp.Tmsg) (*sessp.FcallMsg, *serr.Err) {
+func (pclnt *SPProtoClnt) Call(args sessp.Tmsg) (*sessp.FcallMsg, *serr.Err) {
 	return pclnt.CallServer(args, nil, nil)
 }
 
-func (pclnt *ProtClnt) CallIoVec(args sessp.Tmsg, iniov sessp.IoVec, outiov sessp.IoVec) (*sessp.FcallMsg, *serr.Err) {
+func (pclnt *SPProtoClnt) CallIoVec(args sessp.Tmsg, iniov sessp.IoVec, outiov sessp.IoVec) (*sessp.FcallMsg, *serr.Err) {
 	return pclnt.CallServer(args, iniov, outiov)
 }
 
-func (pclnt *ProtClnt) Attach(secrets map[string]*sp.SecretProto, cid sp.TclntId, fid sp.Tfid, path path.Tpathname) (*sp.Rattach, *serr.Err) {
+func (pclnt *SPProtoClnt) Attach(secrets map[string]*sp.SecretProto, cid sp.TclntId, fid sp.Tfid, path path.Tpathname) (*sp.Rattach, *serr.Err) {
 	args := sp.NewTattach(fid, sp.NoFid, secrets, cid, path)
 	reply, err := pclnt.CallServer(args, nil, nil)
 	if err != nil {
@@ -64,7 +64,7 @@ func (pclnt *ProtClnt) Attach(secrets map[string]*sp.SecretProto, cid sp.TclntId
 	return msg, nil
 }
 
-func (pclnt *ProtClnt) Walk(fid sp.Tfid, nfid sp.Tfid, path path.Tpathname) (*sp.Rwalk, *serr.Err) {
+func (pclnt *SPProtoClnt) Walk(fid sp.Tfid, nfid sp.Tfid, path path.Tpathname) (*sp.Rwalk, *serr.Err) {
 	args := sp.NewTwalk(fid, nfid, path)
 	reply, err := pclnt.Call(args)
 	if err != nil {
@@ -77,7 +77,7 @@ func (pclnt *ProtClnt) Walk(fid sp.Tfid, nfid sp.Tfid, path path.Tpathname) (*sp
 	return msg, nil
 }
 
-func (pclnt *ProtClnt) Create(fid sp.Tfid, name string, perm sp.Tperm, mode sp.Tmode, lid sp.TleaseId, f *sp.Tfence) (*sp.Rcreate, *serr.Err) {
+func (pclnt *SPProtoClnt) Create(fid sp.Tfid, name string, perm sp.Tperm, mode sp.Tmode, lid sp.TleaseId, f *sp.Tfence) (*sp.Rcreate, *serr.Err) {
 	args := sp.NewTcreate(fid, name, perm, mode, lid, f)
 	reply, err := pclnt.Call(args)
 	if err != nil {
@@ -90,7 +90,7 @@ func (pclnt *ProtClnt) Create(fid sp.Tfid, name string, perm sp.Tperm, mode sp.T
 	return msg, nil
 }
 
-func (pclnt *ProtClnt) Remove(fid sp.Tfid) *serr.Err {
+func (pclnt *SPProtoClnt) Remove(fid sp.Tfid) *serr.Err {
 	args := sp.NewTremove(fid, sp.NullFence())
 	reply, err := pclnt.Call(args)
 	if err != nil {
@@ -103,7 +103,7 @@ func (pclnt *ProtClnt) Remove(fid sp.Tfid) *serr.Err {
 	return nil
 }
 
-func (pclnt *ProtClnt) RemoveF(fid sp.Tfid, f *sp.Tfence) *serr.Err {
+func (pclnt *SPProtoClnt) RemoveF(fid sp.Tfid, f *sp.Tfence) *serr.Err {
 	args := sp.NewTremove(fid, f)
 	reply, err := pclnt.Call(args)
 	if err != nil {
@@ -116,7 +116,7 @@ func (pclnt *ProtClnt) RemoveF(fid sp.Tfid, f *sp.Tfence) *serr.Err {
 	return nil
 }
 
-func (pclnt *ProtClnt) RemoveFile(fid sp.Tfid, wnames path.Tpathname, resolve bool, f *sp.Tfence) *serr.Err {
+func (pclnt *SPProtoClnt) RemoveFile(fid sp.Tfid, wnames path.Tpathname, resolve bool, f *sp.Tfence) *serr.Err {
 	args := sp.NewTremovefile(fid, wnames, resolve, f)
 	reply, err := pclnt.Call(args)
 	if err != nil {
@@ -129,7 +129,7 @@ func (pclnt *ProtClnt) RemoveFile(fid sp.Tfid, wnames path.Tpathname, resolve bo
 	return nil
 }
 
-func (pclnt *ProtClnt) Clunk(fid sp.Tfid) *serr.Err {
+func (pclnt *SPProtoClnt) Clunk(fid sp.Tfid) *serr.Err {
 	args := sp.NewTclunk(fid)
 	reply, err := pclnt.Call(args)
 	if err != nil {
@@ -142,7 +142,7 @@ func (pclnt *ProtClnt) Clunk(fid sp.Tfid) *serr.Err {
 	return nil
 }
 
-func (pclnt *ProtClnt) Open(fid sp.Tfid, mode sp.Tmode) (*sp.Ropen, *serr.Err) {
+func (pclnt *SPProtoClnt) Open(fid sp.Tfid, mode sp.Tmode) (*sp.Ropen, *serr.Err) {
 	args := sp.NewTopen(fid, mode)
 	reply, err := pclnt.Call(args)
 	if err != nil {
@@ -155,7 +155,7 @@ func (pclnt *ProtClnt) Open(fid sp.Tfid, mode sp.Tmode) (*sp.Ropen, *serr.Err) {
 	return msg, nil
 }
 
-func (pclnt *ProtClnt) Watch(fid sp.Tfid) *serr.Err {
+func (pclnt *SPProtoClnt) Watch(fid sp.Tfid) *serr.Err {
 	args := sp.NewTwatch(fid)
 	reply, err := pclnt.Call(args)
 	if err != nil {
@@ -168,7 +168,7 @@ func (pclnt *ProtClnt) Watch(fid sp.Tfid) *serr.Err {
 	return nil
 }
 
-func (pclnt *ProtClnt) ReadF(fid sp.Tfid, offset sp.Toffset, b []byte, f *sp.Tfence) (sp.Tsize, *serr.Err) {
+func (pclnt *SPProtoClnt) ReadF(fid sp.Tfid, offset sp.Toffset, b []byte, f *sp.Tfence) (sp.Tsize, *serr.Err) {
 	args := sp.NewReadF(fid, offset, sp.Tsize(len(b)), f)
 	reply, err := pclnt.CallIoVec(args, nil, sessp.IoVec{b})
 	if err != nil {
@@ -182,7 +182,7 @@ func (pclnt *ProtClnt) ReadF(fid sp.Tfid, offset sp.Toffset, b []byte, f *sp.Tfe
 	return rep.Tcount(), nil
 }
 
-func (pclnt *ProtClnt) WriteF(fid sp.Tfid, offset sp.Toffset, f *sp.Tfence, data []byte) (*sp.Rwrite, *serr.Err) {
+func (pclnt *SPProtoClnt) WriteF(fid sp.Tfid, offset sp.Toffset, f *sp.Tfence, data []byte) (*sp.Rwrite, *serr.Err) {
 	args := sp.NewTwriteF(fid, offset, f)
 	reply, err := pclnt.CallIoVec(args, sessp.IoVec{data}, nil)
 	if err != nil {
@@ -195,7 +195,7 @@ func (pclnt *ProtClnt) WriteF(fid sp.Tfid, offset sp.Toffset, f *sp.Tfence, data
 	return msg, nil
 }
 
-func (pclnt *ProtClnt) WriteRead(fid sp.Tfid, iniov sessp.IoVec, outiov sessp.IoVec) *serr.Err {
+func (pclnt *SPProtoClnt) WriteRead(fid sp.Tfid, iniov sessp.IoVec, outiov sessp.IoVec) *serr.Err {
 	args := sp.NewTwriteread(fid)
 	reply, err := pclnt.CallIoVec(args, iniov, outiov)
 	if err != nil {
@@ -217,7 +217,7 @@ func (pclnt *ProtClnt) WriteRead(fid sp.Tfid, iniov sessp.IoVec, outiov sessp.Io
 	return nil
 }
 
-func (pclnt *ProtClnt) Stat(fid sp.Tfid) (*sp.Rrstat, *serr.Err) {
+func (pclnt *SPProtoClnt) Stat(fid sp.Tfid) (*sp.Rrstat, *serr.Err) {
 	args := sp.NewTrstat(fid)
 	reply, err := pclnt.Call(args)
 	if err != nil {
@@ -230,7 +230,7 @@ func (pclnt *ProtClnt) Stat(fid sp.Tfid) (*sp.Rrstat, *serr.Err) {
 	return msg, nil
 }
 
-func (pclnt *ProtClnt) Wstat(fid sp.Tfid, st *sp.Tstat) (*sp.Rwstat, *serr.Err) {
+func (pclnt *SPProtoClnt) Wstat(fid sp.Tfid, st *sp.Tstat) (*sp.Rwstat, *serr.Err) {
 	args := sp.NewTwstat(fid, st, sp.NullFence())
 	reply, err := pclnt.Call(args)
 	if err != nil {
@@ -243,7 +243,7 @@ func (pclnt *ProtClnt) Wstat(fid sp.Tfid, st *sp.Tstat) (*sp.Rwstat, *serr.Err) 
 	return msg, nil
 }
 
-func (pclnt *ProtClnt) WstatF(fid sp.Tfid, st *sp.Tstat, f *sp.Tfence) (*sp.Rwstat, *serr.Err) {
+func (pclnt *SPProtoClnt) WstatF(fid sp.Tfid, st *sp.Tstat, f *sp.Tfence) (*sp.Rwstat, *serr.Err) {
 	args := sp.NewTwstat(fid, st, f)
 	reply, err := pclnt.Call(args)
 	if err != nil {
@@ -256,7 +256,7 @@ func (pclnt *ProtClnt) WstatF(fid sp.Tfid, st *sp.Tstat, f *sp.Tfence) (*sp.Rwst
 	return msg, nil
 }
 
-func (pclnt *ProtClnt) Renameat(oldfid sp.Tfid, oldname string, newfid sp.Tfid, newname string, f *sp.Tfence) (*sp.Rrenameat, *serr.Err) {
+func (pclnt *SPProtoClnt) Renameat(oldfid sp.Tfid, oldname string, newfid sp.Tfid, newname string, f *sp.Tfence) (*sp.Rrenameat, *serr.Err) {
 	args := sp.NewTrenameat(oldfid, oldname, newfid, newname, f)
 	reply, err := pclnt.Call(args)
 	if err != nil {
@@ -269,7 +269,7 @@ func (pclnt *ProtClnt) Renameat(oldfid sp.Tfid, oldname string, newfid sp.Tfid, 
 	return msg, nil
 }
 
-func (pclnt *ProtClnt) GetFile(fid sp.Tfid, path path.Tpathname, mode sp.Tmode, offset sp.Toffset, cnt sp.Tsize, resolve bool, f *sp.Tfence) ([]byte, *serr.Err) {
+func (pclnt *SPProtoClnt) GetFile(fid sp.Tfid, path path.Tpathname, mode sp.Tmode, offset sp.Toffset, cnt sp.Tsize, resolve bool, f *sp.Tfence) ([]byte, *serr.Err) {
 	args := sp.NewTgetfile(fid, mode, offset, cnt, path, resolve, f)
 	reply, err := pclnt.Call(args)
 	if err != nil {
@@ -282,7 +282,7 @@ func (pclnt *ProtClnt) GetFile(fid sp.Tfid, path path.Tpathname, mode sp.Tmode, 
 	return reply.Iov[0], nil
 }
 
-func (pclnt *ProtClnt) PutFile(fid sp.Tfid, path path.Tpathname, mode sp.Tmode, perm sp.Tperm, offset sp.Toffset, resolve bool, f *sp.Tfence, data []byte, lid sp.TleaseId) (*sp.Rwrite, *serr.Err) {
+func (pclnt *SPProtoClnt) PutFile(fid sp.Tfid, path path.Tpathname, mode sp.Tmode, perm sp.Tperm, offset sp.Toffset, resolve bool, f *sp.Tfence, data []byte, lid sp.TleaseId) (*sp.Rwrite, *serr.Err) {
 	args := sp.NewTputfile(fid, mode, perm, offset, path, resolve, lid, f)
 	reply, err := pclnt.CallIoVec(args, sessp.IoVec{data}, nil)
 	if err != nil {
@@ -295,7 +295,7 @@ func (pclnt *ProtClnt) PutFile(fid sp.Tfid, path path.Tpathname, mode sp.Tmode, 
 	return msg, nil
 }
 
-func (pclnt *ProtClnt) Detach(cid sp.TclntId) *serr.Err {
+func (pclnt *SPProtoClnt) Detach(cid sp.TclntId) *serr.Err {
 	args := sp.NewTdetach(cid)
 	_, err := pclnt.Call(args)
 	if err != nil {

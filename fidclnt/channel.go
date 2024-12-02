@@ -6,16 +6,16 @@ package fidclnt
 import (
 	"fmt"
 
-	"sigmaos/protclnt"
 	sp "sigmaos/sigmap"
+	spprotoclnt "sigmaos/spproto/clnt"
 )
 
 type Channel struct {
-	pc   *protclnt.ProtClnt
+	pc   *spprotoclnt.SPProtoClnt
 	qids []*sp.Tqid
 }
 
-func newChannel(pc *protclnt.ProtClnt, qs []*sp.Tqid) *Channel {
+func newChannel(pc *spprotoclnt.SPProtoClnt, qs []*sp.Tqid) *Channel {
 	c := &Channel{}
 	c.pc = pc
 	c.qids = qs

@@ -6,8 +6,8 @@ import (
 	"sync"
 	"time"
 
+	"sigmaos/benchmarks/spin"
 	db "sigmaos/debug"
-	"sigmaos/microbenchmarks"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
 )
@@ -49,7 +49,7 @@ func main() {
 
 func spinWorker(niter int, wg *sync.WaitGroup) {
 	defer wg.Done()
-	microbenchmarks.ConsumeCPU(niter)
+	spin.ConsumeCPU(niter)
 }
 
 func spinPerf(nthread, niter int) {

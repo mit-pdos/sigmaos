@@ -1,4 +1,4 @@
-package microbenchmarks
+package spin
 
 import (
 	db "sigmaos/debug"

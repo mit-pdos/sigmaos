@@ -4,15 +4,22 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+
+	"sigmaos/serr"
 )
 
 type Tstatus uint8
 
 const (
-	StatusOK Tstatus = iota + 1
-	StatusEvicted
+	StatusOK      Tstatus = iota + 1
+	StatusEvicted         // killed
 	StatusErr
-	StatusFatal
+	StatusFatal // to indicate to groupmgr that a proc shouldn't be restarted
+
+	// for testing purposes, meaning sigma doesn't know what happened
+	// to proc; machine might have crashed.
+	CRASH       = 3
+	CRASHSTATUS = "exit status 3"
 )
 
 func (status Tstatus) String() string {
@@ -69,6 +76,11 @@ func (s *Status) IsStatusEvicted() bool {
 
 func (s *Status) IsStatusErr() bool {
 	return s.StatusCode == StatusErr
+}
+
+func (s *Status) IsCrashed() bool {
+	sr := serr.NewErrString(s.Msg())
+	return sr.Code() == serr.TErrError && sr.Err.Error() == CRASHSTATUS
 }
 
 func (s *Status) IsStatusFatal() bool {

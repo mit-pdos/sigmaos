@@ -17,11 +17,6 @@ import (
 
 const (
 	ONE = 1000
-
-	// for testing purposes, meaning sigma doesn't know what happened
-	// to proc; machine might have crashed.
-	CRASH       = 3
-	CRASHSTATUS = "exit status 3"
 )
 
 var labels map[Tselector]Tevent
@@ -121,12 +116,12 @@ func AppendSigmaFail(es []Tevent) error {
 
 func Crash() {
 	db.DPrintf(db.CRASH, "Crash")
-	os.Exit(CRASH)
+	os.Exit(proc.CRASH)
 }
 
 func CrashMsg(msg string) {
 	db.DPrintf(db.CRASH, "CrashMsg %v", msg)
-	os.Exit(CRASH)
+	os.Exit(proc.CRASH)
 }
 
 func PartitionNamed(fsl *fslib.FsLib) {

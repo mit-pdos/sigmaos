@@ -196,7 +196,7 @@ func TestImgdOneOK(t *testing.T) {
 }
 
 func TestImgdOneCrash(t *testing.T) {
-	e0 := crash.Tevent{crash.IMGRESIZE_CRASH, 100, CRASHIMG, 0.25, 0}
+	e0 := crash.Tevent{crash.IMGRESIZE_CRASH, 100, CRASHIMG, 0.3, 0}
 
 	t1, err1 := test.NewTstateAll(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {

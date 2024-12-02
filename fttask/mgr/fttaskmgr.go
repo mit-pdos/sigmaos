@@ -143,15 +143,15 @@ func (ftm *FtTaskMgr) waitForTask(start time.Time, p *proc.Proc, t string) Tresu
 			db.DFatalf("MarkDone %v done err %v", t, err)
 		}
 		return Tresult{t, true, ms, status}
-	} else if err == nil && status.IsStatusFatal() {
-		db.DPrintf(db.ALWAYS, "task %v errored err %v sr %v", t, status)
+	} else if err == nil && status.IsStatusErr() && !status.IsCrashed() {
+		db.DPrintf(db.ALWAYS, "task %v errored status %v msg %v", t, status, status.Msg())
 		// mark task as done, but return error
 		if err := ftm.MarkDone(t); err != nil {
 			db.DFatalf("MarkDone %v done err %v", t, err)
 		}
 		return Tresult{t, false, ms, status}
-	} else { // task failed; make it runnable again
-		db.DPrintf(db.FTTASKMGR, "task %v failed %v err %v", t, status, err)
+	} else { // an error, task crashed, or was evicted; make it runnable again
+		db.DPrintf(db.FTTASKMGR, "task %v failed %v err %v msg %q", t, status, err, status.Msg())
 		if err := ftm.MarkRunnable(t); err != nil {
 			db.DFatalf("MarkRunnable %v err %v", t, err)
 		}

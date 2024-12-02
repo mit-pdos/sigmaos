@@ -129,6 +129,12 @@ func spawnWaitSleeper(ts *test.Tstate, kernels []string) *proc.Proc {
 func TestCompile(t *testing.T) {
 }
 
+func TestCrashed(t *testing.T) {
+	msg := `"{Err: "Non-sigma error" Obj: "" (exit status 3)}`
+	sr := serr.NewErrString(msg)
+	assert.Equal(t, sr.Err.Error(), proc.CRASHSTATUS)
+}
+
 func TestWaitExitSimpleSingleBE(t *testing.T) {
 	ts, err1 := test.NewTstateAll(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
@@ -377,7 +383,7 @@ func TestCrashProcOne(t *testing.T) {
 	assert.Nil(t, err, "WaitExit")
 	assert.True(t, status != nil && status.IsStatusErr(), "Status not err")
 	sr := serr.NewErrString(status.Msg())
-	assert.Equal(t, sr.Err.Error(), crash.CRASHSTATUS, "WaitExit")
+	assert.Equal(t, sr.Err.Error(), proc.CRASHSTATUS, "WaitExit")
 
 	ts.Shutdown()
 }
@@ -776,8 +782,7 @@ func TestProcManyCrash(t *testing.T) {
 	assert.Nil(t, err, "WaitStart error")
 	status, err := ts.WaitExit(a.GetPid())
 	assert.Nil(t, err, "waitexit")
-	sr := serr.NewErrString(status.Msg())
-	assert.Equal(t, sr.Err.Error(), crash.CRASHSTATUS, "WaitExit")
+	assert.True(t, status.IsStatusOK(), status)
 	ts.Shutdown()
 }
 
@@ -795,7 +800,7 @@ func TestProcManyPartition(t *testing.T) {
 	assert.Nil(t, err, "waitexit")
 	if assert.NotNil(t, status, "nil status") {
 		sr := serr.NewErrString(status.Msg())
-		assert.Equal(t, sr.Err.Error(), crash.CRASHSTATUS, "WaitExit")
+		assert.Equal(t, sr.Err.Error(), proc.CRASHSTATUS, "WaitExit")
 	}
 	ts.Shutdown()
 }

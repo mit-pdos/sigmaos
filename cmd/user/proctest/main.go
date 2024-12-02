@@ -6,7 +6,6 @@ import (
 	"strconv"
 	"time"
 
-	"sigmaos/crash"
 	db "sigmaos/debug"
 	"sigmaos/proc"
 	"sigmaos/serr"
@@ -85,7 +84,7 @@ func main() {
 
 		if err != nil {
 			sr := serr.NewErrString(err.Error())
-			if !(os.Args[2] == "crash" && sr.Error() != crash.CRASHSTATUS) {
+			if !(os.Args[2] == "crash" && sr.Error() != proc.CRASHSTATUS) {
 				sc.ClntExit(proc.NewStatusErr(sr.Error(), nil))
 				os.Exit(1)
 			}

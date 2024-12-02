@@ -8,12 +8,12 @@ import (
 
 	db "sigmaos/debug"
 	dialproxyclnt "sigmaos/dialproxy/clnt"
-	"sigmaos/fdclnt"
 	"sigmaos/fidclnt"
 	"sigmaos/fslib"
 	leaseclnt "sigmaos/lease/clnt"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
+	"sigmaos/sigmaclnt/fdclnt"
 	sos "sigmaos/sigmaos"
 	spproxyclnt "sigmaos/spproxy/clnt"
 )

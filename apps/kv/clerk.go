@@ -14,7 +14,7 @@ import (
 	"sigmaos/apps/kv/kvgrp"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
-	"sigmaos/replclnt"
+	replclnt "sigmaos/repl/clnt"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 	tproto "sigmaos/tracing/proto"

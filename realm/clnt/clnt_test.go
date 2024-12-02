@@ -151,18 +151,18 @@ func (ts *realmTstate) shutdown() {
 
 func TestBasicMultiRealmSingleNode(t *testing.T) {
 	ts := newMultiRealmTstate(t)
-	schedds1, err := ts.ts1.GetDir(sp.MSCHED)
+	mscheds1, err := ts.ts1.GetDir(sp.MSCHED)
 	assert.Nil(t, err)
-	// Only one schedd so far.
-	assert.True(ts.rootts.T, len(schedds1) == 1, "Wrong number schedds %v", schedds1)
+	// Only one msched so far.
+	assert.True(ts.rootts.T, len(mscheds1) == 1, "Wrong number mscheds %v", mscheds1)
 
-	schedds2, err := ts.ts2.GetDir(sp.MSCHED)
+	mscheds2, err := ts.ts2.GetDir(sp.MSCHED)
 	assert.Nil(t, err)
-	// Only one schedd so far.
-	assert.True(ts.rootts.T, len(schedds2) == 1, "Wrong number schedds %v", schedds2)
+	// Only one msched so far.
+	assert.True(ts.rootts.T, len(mscheds2) == 1, "Wrong number mscheds %v", mscheds2)
 
-	for i := range schedds1 {
-		assert.Equal(t, schedds1[i].Name, schedds2[i].Name)
+	for i := range mscheds1 {
+		assert.Equal(t, mscheds1[i].Name, mscheds2[i].Name)
 	}
 	ts.shutdown()
 }
@@ -180,16 +180,16 @@ func TestBasicMultiRealmMultiNode(t *testing.T) {
 	assert.Nil(t, err3, "GetNamedEndpoint: %v", err3)
 	db.DPrintf(db.TEST, "[%v] named addr: %v", REALM2, m2)
 
-	schedds1, err := ts.ts1.GetDir(sp.MSCHED)
+	mscheds1, err := ts.ts1.GetDir(sp.MSCHED)
 	assert.Nil(t, err, "ErrGetDir MSCHED: %v", err)
-	assert.True(ts.rootts.T, len(schedds1) == 2, "Wrong number schedds %v", schedds1)
+	assert.True(ts.rootts.T, len(mscheds1) == 2, "Wrong number mscheds %v", mscheds1)
 
-	schedds2, err := ts.ts2.GetDir(sp.MSCHED)
+	mscheds2, err := ts.ts2.GetDir(sp.MSCHED)
 	assert.Nil(t, err, "ErrGetDir MSCHED: %v", err)
-	assert.True(ts.rootts.T, len(schedds2) == 2, "Wrong number schedds %v", schedds2)
+	assert.True(ts.rootts.T, len(mscheds2) == 2, "Wrong number mscheds %v", mscheds2)
 
-	for i := range schedds1 {
-		assert.Equal(t, schedds1[i].Name, schedds2[i].Name)
+	for i := range mscheds1 {
+		assert.Equal(t, mscheds1[i].Name, mscheds2[i].Name)
 	}
 
 	ts.shutdown()
@@ -470,7 +470,7 @@ func TestKernelIsolationBasic(t *testing.T) {
 	// live in the root named (and are mounted into the tenant's named)
 	sts, err := ts.ts1.GetDir(pn)
 	assert.Nil(t, err, "Unable to GetDir root-mounted union dir %v: %v", pn, err)
-	assert.True(t, len(sts) == 1, "Wrong list of schedds: %v", sp.Names(sts))
+	assert.True(t, len(sts) == 1, "Wrong list of mscheds: %v", sp.Names(sts))
 	sts1, err := ts.ts1.GetDir(filepath.Join(pn, sts[0].Name) + "/")
 	assert.Nil(t, err, "Unable to GetDir root-mounted union dir %v: %v", pn, err)
 	assert.True(t, len(sts1) == 3, "Wrong procq contents: %v", sp.Names(sts1))

@@ -20,8 +20,8 @@ func (clnt *ProcClnt) getExitStatus(pid sp.Tpid, how proc.Thow) (*proc.Status, e
 		var b []byte
 		b, err := clnt.GetFile(filepath.Join(kprocDir, proc.EXIT_STATUS))
 		if err != nil {
-			db.DPrintf(db.PROCCLNT_ERR, "Missing return status, schedd must have crashed: %v, %v", pid, err)
-			return nil, fmt.Errorf("Missing return status, schedd must have crashed: %v", err)
+			db.DPrintf(db.PROCCLNT_ERR, "Missing return status, msched must have crashed: %v, %v", pid, err)
+			return nil, fmt.Errorf("Missing return status, msched must have crashed: %v", err)
 		}
 		status = proc.NewStatusFromBytes(b)
 	}
@@ -30,7 +30,7 @@ func (clnt *ProcClnt) getExitStatus(pid sp.Tpid, how proc.Thow) (*proc.Status, e
 
 func (clnt *ProcClnt) writeExitStatus(pid sp.Tpid, kernelID string, status *proc.Status, how proc.Thow) error {
 	if how == proc.HMSCHED {
-		// Do nothing... exit status will be set by Notify RPC to schedd.
+		// Do nothing... exit status will be set by Notify RPC to msched.
 	} else {
 		// Must write status to kproc dir
 		b := status.Marshal()

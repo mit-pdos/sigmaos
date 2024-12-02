@@ -66,7 +66,7 @@ func (cs *ChildState) Spawned(pid sp.Tpid) {
 	cs.Lock()
 	defer cs.Unlock()
 
-	// Record ID of schedd this proc was spawned on
+	// Record ID of msched this proc was spawned on
 	cs.ranOn[pid] = newSpawnFuture(&cs.Mutex)
 }
 
@@ -74,7 +74,7 @@ func (cs *ChildState) Started(pid sp.Tpid, seqno *proc.ProcSeqno, err error) {
 	cs.Lock()
 	defer cs.Unlock()
 
-	// Record ID of schedd this proc was spawned on
+	// Record ID of msched this proc was spawned on
 	if sf, ok := cs.ranOn[pid]; ok {
 		sf.Complete(seqno, err)
 	} else {
@@ -112,7 +112,7 @@ func (cs *ChildState) GetProcSeqno(pid sp.Tpid) (*proc.ProcSeqno, error) {
 	cs.Lock()
 	defer cs.Unlock()
 
-	// If the proc already ran, return the ID of the schedd it ran on.
+	// If the proc already ran, return the ID of the msched it ran on.
 	if fut, ok := cs.ranOn[pid]; ok {
 		return fut.Get()
 	}

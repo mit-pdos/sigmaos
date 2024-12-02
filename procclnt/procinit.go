@@ -21,7 +21,7 @@ func NewProcClnt(fsl *fslib.FsLib) (*ProcClnt, error) {
 		fsl.NewRootMount(fsl.ProcEnv().ProcDir, proc.PROCDIR)
 
 	}
-	// If a schedd IP was specified for this proc, mount the RPC file directly.
+	// If a msched IP was specified for this proc, mount the RPC file directly.
 	if ep, ok := fsl.ProcEnv().GetMSchedEndpoint(); ok {
 		pn := filepath.Join(sp.MSCHED, fsl.ProcEnv().GetKernelID(), rpc.RPC)
 		db.DPrintf(db.PROCCLNT, "Mount[%v] %v as %v", ep, rpc.RPC, pn)
@@ -31,7 +31,7 @@ func NewProcClnt(fsl *fslib.FsLib) (*ProcClnt, error) {
 			db.DPrintf(db.ERROR, "Err MountTree: ep %v err %v", ep, err)
 			return nil, err
 		}
-		//db.DPrintf(db.TEST, "Mount schedd [%v] %v as %v time %v", ep, rpc.RPC, pn, time.Since(start))
+		//db.DPrintf(db.TEST, "Mount msched [%v] %v as %v time %v", ep, rpc.RPC, pn, time.Since(start))
 		db.DPrintf(db.SPAWN_LAT, "[%v] MountTree latency: %v", fsl.ProcEnv().GetPID(), time.Since(start))
 	}
 	if ep, ok := fsl.ProcEnv().GetNamedEndpoint(); ok {
@@ -58,7 +58,7 @@ func NewProcClntInit(pid sp.Tpid, fsl *fslib.FsLib, program string) (*ProcClnt, 
 	// XXX needed?
 	db.DPrintf(db.PROCCLNT, "Mount %v as %v", sp.MSCHEDREL, sp.MSCHEDREL)
 	if err := fsl.NewRootMount(sp.MSCHEDREL, sp.MSCHEDREL); err != nil {
-		db.DPrintf(db.ALWAYS, "Error mounting schedd err %v\n", err)
+		db.DPrintf(db.ALWAYS, "Error mounting msched err %v\n", err)
 		return nil, err
 	}
 	db.DPrintf(db.PROCCLNT, "Mount %v as %v", fsl.ProcEnv().ProcDir, proc.PROCDIR)

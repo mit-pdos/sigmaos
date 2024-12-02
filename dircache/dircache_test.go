@@ -13,7 +13,7 @@ import (
 	"sigmaos/test"
 )
 
-var pathname string // e.g., --path "name/ux/sp.LOCAL/" or  "name/schedd/sp.LOCAL/"
+var pathname string // e.g., --path "name/ux/sp.LOCAL/" or  "name/msched/sp.LOCAL/"
 
 func init() {
 	flag.StringVar(&pathname, "path", sp.NAMED, "path for file system")

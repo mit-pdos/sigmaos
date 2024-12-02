@@ -18,7 +18,7 @@ func main() {
 		db.DFatalf("Can't parse dialproxy bool: %v", err)
 	}
 	scPID := sp.Tpid(os.Args[3])
-	// ignore scheddIp
+	// ignore mschedIp
 	if err := srv.RunProcSrv(os.Args[1], dialproxy, scPID); err != nil {
 		db.DFatalf("Fatal start: %v %v\n", os.Args[0], err)
 	}

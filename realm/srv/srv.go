@@ -319,7 +319,7 @@ func (rm *RealmSrv) realmResourceUsage(running map[sp.Trealm][]*proc.Proc) map[s
 
 	rm.mu.Lock()
 	// Initialize from realmmgr's map, since a realm may have never spawn a proc
-	// (and hence not show up in any schedd samples) but may still be starved.
+	// (and hence not show up in any msched samples) but may still be starved.
 	for r, _ := range rm.realms {
 		// Don't consider the root realm when thinking about starvation
 		if r != sp.ROOTREALM {

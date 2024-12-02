@@ -43,16 +43,16 @@ func (msched *MSched) getRealmStats(realm sp.Trealm) *realmStats {
 	msched.realmMu.RLock()
 	defer msched.realmMu.RUnlock()
 
-	st, ok := msched.scheddStats[realm]
+	st, ok := msched.mschedStats[realm]
 	if !ok {
 		// Promote to writer lock.
 		msched.realmMu.RUnlock()
 		msched.realmMu.Lock()
 		// Check if the count was created during lock promotion.
-		st, ok = msched.scheddStats[realm]
+		st, ok = msched.mschedStats[realm]
 		if !ok {
 			st = &realmStats{}
-			msched.scheddStats[realm] = st
+			msched.mschedStats[realm] = st
 		}
 		// Demote to reader lock
 		msched.realmMu.Unlock()

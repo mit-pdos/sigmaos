@@ -4,8 +4,8 @@ import (
 	"time"
 
 	db "sigmaos/debug"
-	"sigmaos/kproc"
 	"sigmaos/proc"
+	"sigmaos/proc/kproc"
 )
 
 func (mgr *ProcMgr) runProc(p *proc.Proc) error {

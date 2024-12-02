@@ -11,9 +11,9 @@ import (
 	"time"
 
 	db "sigmaos/debug"
-	"sigmaos/kproc"
 	"sigmaos/netsigma"
 	"sigmaos/proc"
+	"sigmaos/proc/kproc"
 	"sigmaos/serr"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"

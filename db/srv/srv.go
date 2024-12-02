@@ -6,7 +6,7 @@ import (
 
 	"sigmaos/db/proto"
 	"sigmaos/debug"
-	"sigmaos/fs"
+	"sigmaos/api/fs"
 )
 
 type Server struct {

@@ -17,7 +17,7 @@ import (
 	dialproxyclnt "sigmaos/dialproxy/clnt"
 	"sigmaos/path"
 	"sigmaos/serr"
-	sos "sigmaos/sigmaos"
+	sos "sigmaos/api/sigmaos"
 	sp "sigmaos/sigmap"
 	"sigmaos/util/syncmap"
 )

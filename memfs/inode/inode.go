@@ -7,7 +7,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"sigmaos/fs"
+	"sigmaos/api/fs"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 )

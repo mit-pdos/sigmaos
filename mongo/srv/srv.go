@@ -11,7 +11,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 
 	dbg "sigmaos/debug"
-	"sigmaos/fs"
+	"sigmaos/api/fs"
 	"sigmaos/mongo/proto"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"

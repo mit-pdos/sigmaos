@@ -7,7 +7,7 @@ import (
 	// "github.com/sasha-s/go-deadlock"
 
 	db "sigmaos/debug"
-	"sigmaos/fs"
+	"sigmaos/api/fs"
 	"sigmaos/path"
 	"sigmaos/util/refmap"
 )

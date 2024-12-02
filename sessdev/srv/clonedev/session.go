@@ -2,7 +2,7 @@ package clonedev
 
 import (
 	db "sigmaos/debug"
-	"sigmaos/fs"
+	"sigmaos/api/fs"
 	"sigmaos/memfs/inode"
 	"sigmaos/serr"
 	"sigmaos/sessp"

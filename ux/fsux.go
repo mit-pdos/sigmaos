@@ -4,7 +4,7 @@ import (
 	"sync"
 
 	db "sigmaos/debug"
-	"sigmaos/fs"
+	"sigmaos/api/fs"
 	iputil "sigmaos/util/ip"
 	"sigmaos/util/perf"
 	"sigmaos/proc"

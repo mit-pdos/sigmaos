@@ -10,7 +10,7 @@ import (
 	"sync/atomic"
 
 	db "sigmaos/debug"
-	"sigmaos/fs"
+	"sigmaos/api/fs"
 	"sigmaos/memfs/inode"
 	"sigmaos/path"
 	"sigmaos/serr"

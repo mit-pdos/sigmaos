@@ -10,7 +10,7 @@ import (
 	"sigmaos/chunk"
 	chunkclnt "sigmaos/chunk/clnt"
 	db "sigmaos/debug"
-	"sigmaos/fs"
+	"sigmaos/api/fs"
 	"sigmaos/proc"
 	"sigmaos/sched/besched/proto"
 	"sigmaos/sched/queue"

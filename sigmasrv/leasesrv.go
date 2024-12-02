@@ -7,7 +7,7 @@ import (
 	leaseproto "sigmaos/lease/proto"
 
 	db "sigmaos/debug"
-	"sigmaos/fs"
+	"sigmaos/api/fs"
 	"sigmaos/memfssrv"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"

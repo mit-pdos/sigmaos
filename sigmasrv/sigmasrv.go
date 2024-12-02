@@ -11,7 +11,7 @@ import (
 	"sigmaos/ctx"
 	db "sigmaos/debug"
 	"sigmaos/fencefs"
-	"sigmaos/fs"
+	"sigmaos/api/fs"
 	"sigmaos/memfs"
 	"sigmaos/memfs/dir"
 	"sigmaos/memfssrv"

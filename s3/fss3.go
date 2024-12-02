@@ -10,7 +10,7 @@ import (
 
 	"sigmaos/auth"
 	db "sigmaos/debug"
-	"sigmaos/fs"
+	"sigmaos/api/fs"
 	"sigmaos/path"
 	"sigmaos/util/perf"
 	proc "sigmaos/proc"

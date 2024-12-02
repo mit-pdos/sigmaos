@@ -9,7 +9,7 @@ import (
 	"time"
 
 	db "sigmaos/debug"
-	"sigmaos/fs"
+	"sigmaos/api/fs"
 	"sigmaos/linuxsched"
 	"sigmaos/mem"
 	"sigmaos/proc"

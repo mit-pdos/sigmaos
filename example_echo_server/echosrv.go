@@ -2,7 +2,7 @@ package example_echo_server
 
 import (
 	dbg "sigmaos/debug"
-	"sigmaos/fs"
+	"sigmaos/api/fs"
 	"sigmaos/proc"
 	"sigmaos/util/rand"
 	sp "sigmaos/sigmap"

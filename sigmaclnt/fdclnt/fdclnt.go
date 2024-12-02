@@ -13,7 +13,7 @@ import (
 	"sigmaos/serr"
 	"sigmaos/sessp"
 	"sigmaos/sigmaclnt/fdclnt/pathclnt"
-	sos "sigmaos/sigmaos"
+	sos "sigmaos/api/sigmaos"
 	sp "sigmaos/sigmap"
 	"sigmaos/util/syncmap"
 )

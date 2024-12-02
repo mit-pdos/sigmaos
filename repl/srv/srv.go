@@ -9,7 +9,7 @@ import (
 
 	"sigmaos/ctx"
 	db "sigmaos/debug"
-	"sigmaos/fs"
+	"sigmaos/api/fs"
 	"sigmaos/repl"
 	"sigmaos/repl/raft"
 	rpcsrv "sigmaos/rpc/srv"

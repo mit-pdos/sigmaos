@@ -10,7 +10,7 @@ import (
 
 	"sigmaos/apps/hotel/proto"
 	dbclnt "sigmaos/db/clnt"
-	"sigmaos/fs"
+	"sigmaos/api/fs"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"

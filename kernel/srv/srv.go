@@ -4,7 +4,7 @@ import (
 	"os"
 
 	db "sigmaos/debug"
-	"sigmaos/fs"
+	"sigmaos/api/fs"
 	"sigmaos/kernel"
 	"sigmaos/kernel/proto"
 	"sigmaos/sigmaclnt"

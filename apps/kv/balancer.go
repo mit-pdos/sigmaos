@@ -26,7 +26,7 @@ import (
 	"sigmaos/crash"
 	"sigmaos/ctx"
 	db "sigmaos/debug"
-	"sigmaos/fs"
+	"sigmaos/api/fs"
 	"sigmaos/fslib"
 	"sigmaos/leaderclnt"
 	"sigmaos/memfs/dir"

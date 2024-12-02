@@ -2,7 +2,7 @@ package namei
 
 import (
 	db "sigmaos/debug"
-	"sigmaos/fs"
+	"sigmaos/api/fs"
 	"sigmaos/path"
 	"sigmaos/serr"
 	"sigmaos/spproto/srv/lockmap"

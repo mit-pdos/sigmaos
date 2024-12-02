@@ -9,7 +9,7 @@ import (
 	"sigmaos/proc"
 	"sigmaos/s3/s3pathclnt"
 	"sigmaos/serr"
-	sos "sigmaos/sigmaos"
+	sos "sigmaos/api/sigmaos"
 	sp "sigmaos/sigmap"
 )
 

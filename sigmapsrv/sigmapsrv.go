@@ -12,7 +12,7 @@ import (
 	"sigmaos/ctx"
 	db "sigmaos/debug"
 	dialproxyclnt "sigmaos/dialproxy/clnt"
-	"sigmaos/fs"
+	"sigmaos/api/fs"
 	"sigmaos/namesrv/fsetcd"
 	"sigmaos/path"
 	"sigmaos/proc"

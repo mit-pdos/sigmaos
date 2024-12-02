@@ -11,7 +11,7 @@ import (
 
 	db "sigmaos/debug"
 	dialproxyclnt "sigmaos/dialproxy/clnt"
-	"sigmaos/fs"
+	"sigmaos/api/fs"
 	kernelclnt "sigmaos/kernel/clnt"
 	"sigmaos/proc"
 	realmpkg "sigmaos/realm"

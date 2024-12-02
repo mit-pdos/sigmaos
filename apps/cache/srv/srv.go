@@ -9,7 +9,7 @@ import (
 
 	"sigmaos/apps/cache"
 	db "sigmaos/debug"
-	"sigmaos/fs"
+	"sigmaos/api/fs"
 	"sigmaos/proc"
 	"sigmaos/repl"
 	"sigmaos/serr"

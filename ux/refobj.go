@@ -4,7 +4,7 @@ import (
 	"sync"
 
 	"sigmaos/debug"
-	"sigmaos/fs"
+	"sigmaos/api/fs"
 	"sigmaos/util/refmap"
 	sp "sigmaos/sigmap"
 )

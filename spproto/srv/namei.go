@@ -1,7 +1,7 @@
 package srv
 
 import (
-	"sigmaos/fs"
+	"sigmaos/api/fs"
 	"sigmaos/path"
 	"sigmaos/serr"
 	"sigmaos/spproto/srv/lockmap"

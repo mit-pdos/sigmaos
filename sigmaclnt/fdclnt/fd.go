@@ -4,7 +4,7 @@ import (
 	"sync"
 
 	"sigmaos/serr"
-	sos "sigmaos/sigmaos"
+	sos "sigmaos/api/sigmaos"
 	sp "sigmaos/sigmap"
 )
 

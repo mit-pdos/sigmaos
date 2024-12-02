@@ -2,7 +2,7 @@ package writer
 
 import (
 	db "sigmaos/debug"
-	sof "sigmaos/sigmaos"
+	sof "sigmaos/api/sigmaos"
 	sp "sigmaos/sigmap"
 )
 

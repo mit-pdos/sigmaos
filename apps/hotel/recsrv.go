@@ -13,7 +13,7 @@ import (
 	// "github.com/harlow/go-micro-services/internal/proto/geo"
 
 	"sigmaos/apps/hotel/proto"
-	"sigmaos/fs"
+	"sigmaos/api/fs"
 	"sigmaos/proc"
 	"sigmaos/sigmasrv"
 	"sigmaos/tracing"

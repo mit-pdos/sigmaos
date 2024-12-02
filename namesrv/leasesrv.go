@@ -6,7 +6,7 @@ import (
 	"go.etcd.io/etcd/client/v3"
 
 	db "sigmaos/debug"
-	"sigmaos/fs"
+	"sigmaos/api/fs"
 	"sigmaos/namesrv/fsetcd"
 	leaseproto "sigmaos/lease/proto"
 	sp "sigmaos/sigmap"

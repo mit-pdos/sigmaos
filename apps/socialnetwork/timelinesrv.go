@@ -10,7 +10,7 @@ import (
 	cachegrpclnt "sigmaos/apps/cache/cachegrp/clnt"
 	"sigmaos/apps/socialnetwork/proto"
 	dbg "sigmaos/debug"
-	"sigmaos/fs"
+	"sigmaos/api/fs"
 	mongoclnt "sigmaos/mongo/clnt"
 	"sigmaos/proc"
 	rpcclnt "sigmaos/rpc/clnt"

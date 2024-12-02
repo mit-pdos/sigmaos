@@ -18,7 +18,7 @@ import (
 	chunkclnt "sigmaos/chunk/clnt"
 	chunksrv "sigmaos/chunk/srv"
 	db "sigmaos/debug"
-	"sigmaos/fs"
+	"sigmaos/api/fs"
 	kernelclnt "sigmaos/kernel/clnt"
 	"sigmaos/linuxsched"
 	iputil "sigmaos/util/ip"

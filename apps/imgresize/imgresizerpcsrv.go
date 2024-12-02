@@ -9,7 +9,7 @@ import (
 
 	"sigmaos/apps/imgresize/proto"
 	db "sigmaos/debug"
-	"sigmaos/fs"
+	"sigmaos/api/fs"
 	fttaskmgr "sigmaos/fttask/mgr"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"

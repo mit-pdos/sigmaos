@@ -14,7 +14,7 @@ import (
 	"sigmaos/proc"
 	"sigmaos/procclnt"
 	"sigmaos/sigmaclnt/fdclnt"
-	sos "sigmaos/sigmaos"
+	sos "sigmaos/api/sigmaos"
 	spproxyclnt "sigmaos/spproxy/clnt"
 )
 

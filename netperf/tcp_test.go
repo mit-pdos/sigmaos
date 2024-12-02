@@ -61,10 +61,14 @@ func srvDialTCP(t *testing.T, addr string) {
 	log.Printf("Done accepting connections")
 }
 
+// Client-side stub to measure performance of dialing using direct TCP
+// connections. Useful for running cross-machine performance benchmarks.
 func TestClntDialTCP(t *testing.T) {
 	clntDialTCP(t, srvaddr)
 }
 
+// Server-side stub to measure performance of dialing using direct TCP
+// connections. Useful for running cross-machine performance benchmarks.
 func TestSrvDialTCP(t *testing.T) {
 	srvDialTCP(t, srvaddr)
 }
@@ -97,6 +101,8 @@ func srvThroughput(t *testing.T, conn net.Conn) {
 	assert.Nil(t, err, "Err Close: %v", err)
 }
 
+// Client-side stub to measure network throguhput using direct TCP
+// connections. Useful for running cross-machine performance benchmarks.
 func TestClntThroughputTCP(t *testing.T) {
 	conn, err := net.Dial("tcp", srvaddr)
 	if !assert.Nil(t, err, "Err Dial: %v", err) {
@@ -105,6 +111,8 @@ func TestClntThroughputTCP(t *testing.T) {
 	clntThroughput(t, conn)
 }
 
+// Server-side stub to measure network throguhput using direct TCP
+// connections. Useful for running cross-machine performance benchmarks.
 func TestSrvThroughputTCP(t *testing.T) {
 	l, err := net.Listen("tcp", srvaddr)
 	if !assert.Nil(t, err, "Err Listen: %v", err) {
@@ -154,6 +162,8 @@ func srvRTT(t *testing.T, conn net.Conn) {
 	assert.Nil(t, err, "Err Close: %v", err)
 }
 
+// Client-side stub to measure network RTT using direct TCP
+// connections. Useful for running cross-machine performance benchmarks.
 func TestClntRTTTCP(t *testing.T) {
 	conn, err := net.Dial("tcp", srvaddr)
 	if !assert.Nil(t, err, "Err Dial: %v", err) {
@@ -162,6 +172,8 @@ func TestClntRTTTCP(t *testing.T) {
 	clntRTT(t, conn)
 }
 
+// Server-side stub to measure network RTT using direct TCP
+// connections. Useful for running cross-machine performance benchmarks.
 func TestSrvRTTTCP(t *testing.T) {
 	l, err := net.Listen("tcp", srvaddr)
 	if !assert.Nil(t, err, "Err Listen: %v", err) {

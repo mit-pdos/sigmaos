@@ -11,17 +11,17 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/demux"
-	"sigmaos/fidclnt"
 	dialproxyclnt "sigmaos/dialproxy/clnt"
+	"sigmaos/fidclnt"
 	"sigmaos/npproxysrv/npcodec"
 	"sigmaos/path"
-	"sigmaos/pathclnt"
 	"sigmaos/proc"
-	"sigmaos/util/rand"
 	"sigmaos/serr"
 	"sigmaos/sessp"
+	"sigmaos/sigmaclnt/fdclnt/pathclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmaprotsrv"
+	"sigmaos/util/rand"
 )
 
 type proxyConn struct {

@@ -59,7 +59,7 @@ func (ts *Tstate) shutdown() {
 	ts.Shutdown()
 }
 
-func (ts *Tstate) check(srv string, st *sp.Stat) {
+func (ts *Tstate) check(srv string, st *sp.Tstat) {
 	pn := chunksrv.PathHostKernelRealm(srv, sp.ROOTREALM)
 	pn = filepath.Join(pn, PROG)
 	fi, err := os.Stat(pn)

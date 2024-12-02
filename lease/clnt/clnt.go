@@ -1,7 +1,7 @@
 // The leaseclnt package allows clients to obtain leases, which can
 // then be attached to files.  If a lease isn't refreshed, the lease
 // will expire, and the leased file will be deleted.
-package leaseclnt
+package clnt
 
 import (
 	db "sigmaos/debug"

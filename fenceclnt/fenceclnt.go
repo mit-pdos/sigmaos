@@ -49,7 +49,7 @@ func (fc *FenceClnt) registerFence(path string, fence sp.Tfence) error {
 	return nil
 }
 
-func (fc *FenceClnt) GetFences(p string) ([]*sp.Stat, error) {
+func (fc *FenceClnt) GetFences(p string) ([]*sp.Tstat, error) {
 	srv, _, err := fc.PathLastMount(p)
 	if err != nil {
 		db.DPrintf(db.FENCECLNT_ERR, "PathLastMount %v err %v", p, err)

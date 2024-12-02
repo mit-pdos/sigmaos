@@ -95,7 +95,7 @@ func (o *Obj) fill(ctx fs.CtxI) *serr.Err {
 }
 
 // stat without filling
-func (o *Obj) NewStat() (*sp.Stat, *serr.Err) {
+func (o *Obj) NewStat() (*sp.Tstat, *serr.Err) {
 	db.DPrintf(db.S3, "NewStat: %v\n", o)
 	name := ""
 	if len(o.key) > 0 {
@@ -122,7 +122,7 @@ func (o *Obj) Parent() fs.Dir {
 	return newDir(o.bucket, dir, sp.DMDIR)
 }
 
-func (o *Obj) Stat(ctx fs.CtxI) (*sp.Stat, *serr.Err) {
+func (o *Obj) Stat(ctx fs.CtxI) (*sp.Tstat, *serr.Err) {
 	db.DPrintf(db.S3, "Stat: %v\n", o)
 	if err := o.fill(ctx); err != nil {
 		db.DPrintf(db.S3, "Stat: %v err %v\n", o, err)

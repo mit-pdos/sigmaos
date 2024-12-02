@@ -15,7 +15,7 @@ import (
 
 type MntClntAPI interface {
 	GetFile(pn string, principal *sp.Tprincipal, mode sp.Tmode, off sp.Toffset, cnt sp.Tsize, f *sp.Tfence) ([]byte, error)
-	Stat(pn string, principal *sp.Tprincipal) (*sp.Stat, error)
+	Stat(pn string, principal *sp.Tprincipal) (*sp.Tstat, error)
 }
 
 type MntClnt struct {

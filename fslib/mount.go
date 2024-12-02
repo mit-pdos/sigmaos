@@ -131,7 +131,7 @@ func (fsl *FsLib) resolveMount0(d string, q string) (string, *sp.Tendpoint, erro
 	var rep *sp.Tendpoint
 	rname := ""
 	// Make sure to resolve d in case it is a symlink or endpoint point.
-	_, err := fsl.ProcessDir(d+"/", func(st *sp.Stat) (bool, error) {
+	_, err := fsl.ProcessDir(d+"/", func(st *sp.Tstat) (bool, error) {
 		ok, ep, err := fsl.isLocal(filepath.Join(d, st.Name))
 		if err != nil {
 			return false, err

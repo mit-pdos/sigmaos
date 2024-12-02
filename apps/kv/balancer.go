@@ -201,7 +201,7 @@ func newCtl(ctx fs.CtxI, parent fs.Dir, bl *Balancer) fs.FsObj {
 	return &Ctl{i, bl}
 }
 
-func (c *Ctl) Stat(ctx fs.CtxI) (*sp.Stat, *serr.Err) {
+func (c *Ctl) Stat(ctx fs.CtxI) (*sp.Tstat, *serr.Err) {
 	st, err := c.Inode.NewStat()
 	if err != nil {
 		return nil, err

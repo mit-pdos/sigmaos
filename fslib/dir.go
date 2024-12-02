@@ -61,7 +61,7 @@ func (fl *FsLib) MkDirPath(dir, pn string, perm sp.Tperm) error {
 // true if stopped early.  Note that as ProcessDir pages through dir
 // other procs may add/delete entries, which may cause ProcessDir to
 // see the same file twice.  Use DirReader to filter duplicates.
-func (fl *FsLib) ProcessDir(dir string, f func(*sp.Stat) (bool, error)) (bool, error) {
+func (fl *FsLib) ProcessDir(dir string, f func(*sp.Tstat) (bool, error)) (bool, error) {
 	rdr, err := fl.OpenReader(dir)
 	if err != nil {
 		return false, err
@@ -70,7 +70,7 @@ func (fl *FsLib) ProcessDir(dir string, f func(*sp.Stat) (bool, error)) (bool, e
 	return reader.ReadDirEnts(reader.MkDirEntsReader(rdr), f)
 }
 
-func (fl *FsLib) GetDir(dir string) ([]*sp.Stat, error) {
+func (fl *FsLib) GetDir(dir string) ([]*sp.Tstat, error) {
 	st, rdr, err := fl.ReadDir(dir)
 	if rdr != nil {
 		rdr.Close()
@@ -79,14 +79,14 @@ func (fl *FsLib) GetDir(dir string) ([]*sp.Stat, error) {
 }
 
 // Also returns reader.Reader for readDirWatch
-func (fl *FsLib) ReadDir(dir string) ([]*sp.Stat, *FileReader, error) {
+func (fl *FsLib) ReadDir(dir string) ([]*sp.Tstat, *FileReader, error) {
 	rdr, err := fl.OpenReader(dir)
 	if err != nil {
 		db.DPrintf(db.FSLIB_ERR, "Err ReadDir.OpenReader: %v", err)
 		return nil, nil, err
 	}
-	dirents := []*sp.Stat{}
-	_, error := reader.ReadDirEnts(reader.MkDirEntsReader(rdr), func(st *sp.Stat) (bool, error) {
+	dirents := []*sp.Tstat{}
+	_, error := reader.ReadDirEnts(reader.MkDirEntsReader(rdr), func(st *sp.Tstat) (bool, error) {
 		dirents = append(dirents, st)
 		return false, nil
 	})
@@ -98,7 +98,7 @@ func (fl *FsLib) ReadDir(dir string) ([]*sp.Stat, *FileReader, error) {
 
 // XXX should use Reader
 func (fl *FsLib) CopyDir(src, dst string) error {
-	_, err := fl.ProcessDir(src, func(st *sp.Stat) (bool, error) {
+	_, err := fl.ProcessDir(src, func(st *sp.Tstat) (bool, error) {
 		s := filepath.Join(src, st.Name)
 		d := filepath.Join(dst, st.Name)
 		db.DPrintf(db.FSLIB, "CopyFile: %v %v\n", s, d)

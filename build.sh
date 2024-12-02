@@ -63,7 +63,7 @@ fi
 
 TMP=/tmp/sigmaos
 BUILD_LOG=/tmp/sigmaos-build
-UPROCD_BIN=/tmp/sigmaos-uprocd-bin
+PROCD_BIN=/tmp/sigmaos-procd-bin
 
 # tests uses hosts /tmp, which mounted in kernel container.
 mkdir -p $TMP
@@ -75,9 +75,9 @@ BIN=${ROOT}/bin
 KERNELBIN=${BIN}/kernel
 USRBIN=${BIN}/user
 mkdir -p $USRBIN
-# Clear the uprocd bin directory
-rm -rf $UPROCD_BIN
-mkdir -p $UPROCD_BIN
+# Clear the procd bin directory
+rm -rf $PROCD_BIN
+mkdir -p $PROCD_BIN
 
 # build and start db container
 if [ "${TARGET}" != "remote" ]; then
@@ -200,12 +200,12 @@ docker exec -it $rsbuildercid \
   fi
 echo "========== Done building Rust bins =========="
 
-echo "========== Copying kernel bins for uprocd =========="
+echo "========== Copying kernel bins for procd =========="
 if [ "${TARGET}" == "local" ]; then
   sudo cp $ROOT/create-net.sh $KERNELBIN/
-  cp $KERNELBIN/uprocd $UPROCD_BIN/
-  cp $KERNELBIN/spproxyd $UPROCD_BIN/
-  cp $KERNELBIN/exec-uproc-rs $UPROCD_BIN/
+  cp $KERNELBIN/procd $PROCD_BIN/
+  cp $KERNELBIN/spproxyd $PROCD_BIN/
+  cp $KERNELBIN/exec-uproc-rs $PROCD_BIN/
 fi
 echo "========== Done copying kernel bins for uproc =========="
 

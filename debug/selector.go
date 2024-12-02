@@ -46,44 +46,71 @@ const (
 	PERF               = "PERF"
 )
 
-// Apps
+// WWW
 const (
-	WWW                     Tselector = "WWW"
-	WWW_ERR                           = WWW + ERR
-	WWW_CLNT                          = WWW + "_CLNT"
-	MATMUL                            = "MATMUL"
-	CACHESRV                          = "CACHESRV"
-	REPLSRV                           = "REPLSRV"
-	CACHECLERK                        = "CACHECLERK"
-	CACHEDSVCCLNT                     = "CACHEDSVCCLNT"
-	RPC_BENCH_SRV                     = "RPC_BENCH_SRV"
-	RPC_BENCH_CLNT                    = "RPC_BENCH_CLNT"
-	HOTEL_CLNT                        = "HOTEL_CLNT"
-	HOTEL_GEO                         = "HOTEL_GEO"
-	HOTEL_GEO_ERR                     = "HOTEL_GEO" + ERR
-	HOTEL_PROF                        = "HOTEL_PROF"
-	HOTEL_RATE                        = "HOTEL_RATE"
-	HOTEL_RESERVE                     = "HOTEL_RESERVE"
-	HOTEL_SEARCH                      = "HOTEL_SEARCH"
-	HOTEL_WWW                         = "HOTEL_WWW"
-	HOTEL_WWW_ERR                     = "HOTEL_WWW" + ERR
-	HOTEL_WWW_STATS                   = "HOTEL_WWW_STATS"
-	SLEEPER                           = "SLEEPER"
-	SPINNER                           = "SPINNER"
-	FSREADER                          = "FSREADER"
-	SLEEPER_TIMING                    = "SLEEPER_TIMING"
-	IMGD                              = "IMGD"
-	IMGD_ERR                          = "IMGD" + ERR
-	MR                                = "MR"
-	MR_TPT                            = "MR_TPT"
-	KVBAL                             = "KVBAL"
-	KVBAL_ERR                         = KVBAL + ERR
-	KVCLERK                           = "KVCLERK"
-	KVCLERK_ERR                       = KVCLERK + ERR
-	KVMON                             = "KVMON"
-	KVMV                              = "KVMV"
-	KVMV_ERR                          = KVMV + ERR
-	SOCIAL_NETWORK                    = "SOCIAL_NETWORK"
+	WWW      Tselector = "WWW"
+	WWW_ERR            = WWW + ERR
+	WWW_CLNT           = WWW + "_CLNT"
+	MATMUL             = "MATMUL"
+)
+
+// Cache
+const (
+	CACHESRV      Tselector = "CACHESRV"
+	CACHECLERK              = "CACHECLERK"
+	CACHEDSVCCLNT           = "CACHEDSVCCLNT"
+)
+
+// Hotel
+const (
+	HOTEL_CLNT      Tselector = "HOTEL_CLNT"
+	HOTEL_GEO                 = "HOTEL_GEO"
+	HOTEL_GEO_ERR             = "HOTEL_GEO" + ERR
+	HOTEL_PROF                = "HOTEL_PROF"
+	HOTEL_RATE                = "HOTEL_RATE"
+	HOTEL_RESERVE             = "HOTEL_RESERVE"
+	HOTEL_SEARCH              = "HOTEL_SEARCH"
+	HOTEL_WWW                 = "HOTEL_WWW"
+	HOTEL_WWW_ERR             = "HOTEL_WWW" + ERR
+	HOTEL_WWW_STATS           = "HOTEL_WWW_STATS"
+)
+
+// Test apps
+const (
+	SLEEPER        Tselector = "SLEEPER"
+	SPINNER                  = "SPINNER"
+	FSREADER                 = "FSREADER"
+	SLEEPER_TIMING           = "SLEEPER_TIMING"
+)
+
+// Img
+const (
+	IMGD     Tselector = "IMGD"
+	IMGD_ERR           = "IMGD" + ERR
+)
+
+// MR
+const (
+	MR     Tselector = "MR"
+	MR_TPT           = "MR_TPT"
+)
+
+// KV
+const (
+	KVBAL       Tselector = "KVBAL"
+	KVBAL_ERR             = KVBAL + ERR
+	KVCLERK               = "KVCLERK"
+	KVCLERK_ERR           = KVCLERK + ERR
+	KVMON                 = "KVMON"
+	KVMV                  = "KVMV"
+	KVMV_ERR              = KVMV + ERR
+	KVGRP                 = "KVGRP"
+	KVGRP_ERR             = KVGRP + ERR
+)
+
+// Socialnet
+const (
+	SOCIAL_NETWORK          Tselector = "SOCIAL_NETWORK"
 	SOCIAL_NETWORK_USER               = SOCIAL_NETWORK + "_USER"
 	SOCIAL_NETWORK_GRAPH              = SOCIAL_NETWORK + "_GRAPH"
 	SOCIAL_NETWORK_POST               = SOCIAL_NETWORK + "_POST"
@@ -104,54 +131,74 @@ const (
 
 // Kernel
 const (
-	KERNEL          Tselector = "KERNEL"
-	KERNELCLNT                = "KERNELCLNT"
-	KERNELCLNT_ERR            = "KERNELCLNT_ERR"
-	BOOTCLNT                  = "BOOTCLNT"
-	BOOT                      = "BOOT"
-	CONTAINER                 = "CONTAINER"
-	NAMED                     = "NAMED"
-	NAMED_LDR                 = "NAMED_LDR"
-	FSETCD                    = "FSETCD"
-	PROCMGR                   = "PROCMGR"
-	UPROCDMGR                 = "UPROCDMGR"
-	UPROCDMGR_ERR             = "UPROCDMGR" + ERR
-	UPROCD                    = "UPROCD"
-	UPROCD_ERR                = "UPROCD" + ERR
-	LCSCHEDCLNT               = "LCSCHEDCLNT"
+	KERNEL         Tselector = "KERNEL"
+	KERNELCLNT               = "KERNELCLNT"
+	KERNELCLNT_ERR           = "KERNELCLNT_ERR"
+)
+
+// Boot
+const (
+	BOOTCLNT  Tselector = "BOOTCLNT"
+	BOOT                = "BOOT"
+	CONTAINER           = "CONTAINER"
+)
+
+// Named
+const (
+	NAMED     Tselector = "NAMED"
+	NAMED_LDR           = "NAMED_LDR"
+	FSETCD              = "FSETCD"
+)
+
+// MSched
+const (
+	PROCDMGR       Tselector = "PROCDMGR"
+	PROCDMGR_ERR             = "PROCDMGR" + ERR
+	PROCD                    = "PROCD"
+	PROCD_ERR                = "PROCD" + ERR
+	MSCHED                   = "MSCHED"
+	MSCHED_ERR               = "MSCHED" + ERR
+	MSCHEDCLNT               = "MSCHEDCLNT"
+	MSCHEDCLNT_ERR           = "MSCHEDCLNT" + ERR
+	CGROUP                   = "CGROUP"
+	CGROUP_ERR               = "CGROUP" + ERR
+)
+
+// LCSched
+const (
+	LCSCHEDCLNT     Tselector = "LCSCHEDCLNT"
 	LCSCHEDCLNT_ERR           = "LCSCHEDCLNT" + ERR
 	LCSCHED                   = "LCSCHED"
 	LCSCHED_ERR               = "LCSCHED" + ERR
-	BESCHED                   = "BESCHED"
+)
+
+// BESched
+const (
+	BESCHED         Tselector = "BESCHED"
 	BESCHED_ERR               = "BESCHED" + ERR
 	BESCHEDCLNT               = "BESCHEDCLNT"
 	BESCHEDCLNT_ERR           = "BESCHEDCLNT" + ERR
-	KEYCLNT                   = "KEYCLNT"
-	KEYCLNT_ERR               = "KEYCLNT" + ERR
-	KEYD                      = "KEYD"
-	KEYD_ERR                  = "KEYD" + ERR
-	MSCHED                    = "MSCHED"
-	MSCHED_ERR                = "MSCHED" + ERR
-	MSCHEDCLNT                = "MSCHEDCLNT"
-	MSCHEDCLNT_ERR            = "MSCHEDCLNT" + ERR
-	PROCMGR_ERR               = PROCMGR + ERR
-	PROCCACHE                 = "PROCCACHE"
-	PROCFS                    = "PROCFS"
-	CGROUP                    = "CGROUP"
-	CGROUP_ERR                = "CGROUP" + ERR
-	S3                        = "S3"
-	UX                        = "UX"
-	DB                        = "DB"
-	MONGO                     = "MONGO"
-	MONGO_ERR                 = "MONGO" + ERR
-	NPPROXY                   = "NPPROXY"
-	SPPROXYSRV                = "SPPROXYSRV"
-	SPPROXYSRV_ERR            = "SPPROXYSRV" + ERR
-	BINSRV                    = "BINSRV"
-	CHUNKSRV                  = "CHUNKSRV"
-	CHUNKSRV_ERR              = "CHUNKSRV" + ERR
-	CHUNKCLNT                 = "CHUNKCLNT"
-	CHUNKCLNT_ERR             = "CHUNKCLNT" + ERR
+)
+
+// Bins
+const (
+	BINSRV        Tselector = "BINSRV"
+	CHUNKSRV                = "CHUNKSRV"
+	CHUNKSRV_ERR            = "CHUNKSRV" + ERR
+	CHUNKCLNT               = "CHUNKCLNT"
+	CHUNKCLNT_ERR           = "CHUNKCLNT" + ERR
+)
+
+// Proxies
+const (
+	S3             Tselector = "S3"
+	UX                       = "UX"
+	DB                       = "DB"
+	MONGO                    = "MONGO"
+	MONGO_ERR                = "MONGO" + ERR
+	NPPROXY                  = "NPPROXY"
+	SPPROXYSRV               = "SPPROXYSRV"
+	SPPROXYSRV_ERR           = "SPPROXYSRV" + ERR
 )
 
 // Realm
@@ -164,44 +211,56 @@ const (
 	REALMMGR               = "REALMMGR"
 	REALMMGR_ERR           = REALMMGR + ERR
 	REALMCLNT              = "REALMCLNT"
-	SIGMACLNT              = "SIGMACLNT"
-	NODED                  = "NODED"
-	NODED_ERR              = NODED + ERR
-	MACHINED               = "MACHINED"
 	REALM_LOCK             = "REALM_LOCK"
-	PORT                   = "PORT"
 )
 
 // Client Libraries
 const (
 	WRITER_ERR    Tselector = "WRITER" + ERR
+	SIGMACLNT               = "SIGMACLNT"
 	READER_ERR              = "READER" + ERR
 	AWRITER                 = "AWRITER"
 	PREADER                 = "PREADER"
 	FSLIB                   = "FSLIB"
 	FSLIB_ERR               = "FSLIB" + ERR
+	FIDCLNT                 = "FIDCLNT"
+	FIDCLNT_ERR             = FIDCLNT + ERR
+	FDCLNT                  = "FDCLNT"
 	SEMCLNT                 = "SEMCLNT"
 	SEMCLNT_ERR             = SEMCLNT + ERR
+	PROCCLNT                = "PROCCLNT"
+	PROCCLNT_ERR            = "PROCCLNT" + ERR
+	SIGMACLNTCLNT           = "SIGMACLNTCLNT"
+)
+
+// Fault-tolerance
+const (
+	FENCECLNT     Tselector = "FENCECLNT"
+	FENCECLNT_ERR           = FENCECLNT + ERR
+	GROUPMGR                = "GROUPMGR"
+	GROUPMGR_ERR            = GROUPMGR + ERR
+	LEADER                  = "LEADER"
+	LEADER_ERR              = LEADER + ERR
+	LEASECLNT               = "LEASECLNT"
+	ELECTCLNT               = "ELECTCLNT"
 	EPOCHCLNT               = "EPOCHCLNT"
 	EPOCHCLNT_ERR           = EPOCHCLNT + ERR
 	FTTASKS                 = "FTTASKS"
 	FTTASKMGR               = "FTTASKMGR"
-	LEADER                  = "LEADER"
-	LEADER_ERR              = LEADER + ERR
-	GROUPMGR                = "GROUPMGR"
-	GROUPMGR_ERR            = GROUPMGR + ERR
-	PROCCLNT                = "PROCCLNT"
-	PROCCLNT_ERR            = PROCCLNT + ERR
-	FENCECLNT               = "FENCECLNT"
-	FENCECLNT_ERR           = FENCECLNT + ERR
-	LEASECLNT               = "LEASECLNT"
-	ELECTCLNT               = "ELECTCLNT"
-	KVGRP                   = "KVGRP"
-	KVGRP_ERR               = KVGRP + ERR
+)
+
+// RPC Client Libraries
+const (
+	DEMUXCLNT     Tselector = "DEMUXCLNT"
+	DEMUXCLNT_ERR           = "DEMUXCLNT" + ERR
 	SESSDEVCLNT             = "SESSDEVCLNT"
-	K8S_UTIL                = "K8S_UTIL"
-	SIGMACLNTCLNT           = "SIGMACLNTCLNT"
-	S3CLNT                  = "S3CLNT"
+	RPCCLNT                 = "RPCCLNT"
+)
+
+// External service libraries
+const (
+	S3CLNT   Tselector = "S3CLNT"
+	K8S_UTIL           = "K8S_UTIL"
 )
 
 // Server Libraries
@@ -213,12 +272,12 @@ const (
 	SESSDEV                    = "SESSDEV"
 	SIGMASRV                   = "SIGMASRV"
 	DIALPROXY                  = "DIALPROXY"
-	DIALPROXY_ERR              = "DIALPROXY_ERR"
+	DIALPROXY_ERR              = "DIALPROXY" + ERR
 	DIALPROXYSRV               = "DIALPROXYSRV"
 	DIALPROXYSRV_ERR           = "DIALPROXYSRV" + ERR
 )
 
-// Client-side Infrastructure
+// Networking
 const (
 	NETCLNT            Tselector = "NETCLNT"
 	NETCLNT_ERR                  = NETCLNT + ERR
@@ -226,29 +285,30 @@ const (
 	DIALPROXYCLNT_ERR            = "DIALPROXYCLNT" + ERR
 	DIALPROXYTRANS               = "DIALPROXYTRANS"
 	DIALPROXYTRANS_ERR           = "DIALPROXYTRANS" + ERR
-	DEMUXCLNT                    = "DEMUXCLNT"
-	DEMUXCLNT_ERR                = "DEMUXCLNT" + ERR
-	PROTCLNT                     = "PROTCLNT"
-	PROTCLNT_ERR                 = "PROTCLNT" + ERR
-	SESS_CLNT_Q                  = "SESS_CLNT_Q"
-	SESSCLNT                     = "SESSCLNT"
-	SESSCLNT_ERR                 = SESSCLNT + ERR
-	FIDCLNT                      = "FIDCLNT"
-	FIDCLNT_ERR                  = FIDCLNT + ERR
-	RPCCLNT                      = "RPCCLNT"
-	MOUNT                        = "MOUNT"
-	MOUNT_ERR                    = MOUNT + ERR
-	FDCLNT                       = "FDCLNT"
-	PATHCLNT                     = "PATHCLNT"
-	PATHCLNT_ERR                 = PATHCLNT + ERR
-	WALK                         = "WALK"
-	WALK_ERR                     = "WALK" + ERR
+)
+
+// Path resolution
+const (
+	PATHCLNT     Tselector = "PATHCLNT"
+	PATHCLNT_ERR           = PATHCLNT + ERR
+	WALK                   = "WALK"
+	WALK_ERR               = "WALK" + ERR
+	MOUNT                  = "MOUNT"
+	MOUNT_ERR              = MOUNT + ERR
+)
+
+// Sessions & protocol client-side infrastructure
+const (
+	PROTCLNT     Tselector = "PROTCLNT"
+	PROTCLNT_ERR           = "PROTCLNT" + ERR
+	SESS_CLNT_Q            = "SESS_CLNT_Q"
+	SESSCLNT               = "SESSCLNT"
+	SESSCLNT_ERR           = SESSCLNT + ERR
 )
 
 // Server-side Infrastructure
 const (
-	AUTH          Tselector = "AUTH"
-	AUTH_ERR                = AUTH + ERR
+	REPLSRV       Tselector = "REPLSRV"
 	NETSRV                  = "NETSRV"
 	DEMUXSRV                = "DEMUXSRV"
 	DEMUXSRV_ERR            = "DEMUXSRV" + ERR

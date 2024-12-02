@@ -64,7 +64,7 @@ func (sti *PstatInode) stats() []byte {
 	return data
 }
 
-func (sti *PstatInode) Stat(ctx fs.CtxI) (*sp.Stat, *serr.Err) {
+func (sti *PstatInode) Stat(ctx fs.CtxI) (*sp.Tstat, *serr.Err) {
 	st, err := sti.Inode.NewStat()
 	if err != nil {
 		return nil, err

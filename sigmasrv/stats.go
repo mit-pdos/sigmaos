@@ -41,7 +41,7 @@ func (std *statsDev) marshal() ([]byte, *serr.Err) {
 	return b, nil
 }
 
-func (std *statsDev) Stat(ctx fs.CtxI) (*sp.Stat, *serr.Err) {
+func (std *statsDev) Stat(ctx fs.CtxI) (*sp.Tstat, *serr.Err) {
 	st, err := std.Inode.NewStat()
 	if err != nil {
 		return nil, err

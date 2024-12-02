@@ -1,4 +1,4 @@
-package uprocclnt
+package clnt
 
 import (
 	"runtime/debug"
@@ -25,9 +25,9 @@ const (
 )
 
 // Rebalance CPU shares when a proc runs.
-func (updm *UprocdMgr) startBalanceShares(p *proc.Proc) {
-	updm.mu.Lock()
-	defer updm.mu.Unlock()
+func (pdm *ProcdMgr) startBalanceShares(p *proc.Proc) {
+	pdm.mu.Lock()
+	defer pdm.mu.Unlock()
 
 	// Bail out early if dummy prog
 	if p.GetProgram() == sp.DUMMY_PROG {
@@ -36,23 +36,23 @@ func (updm *UprocdMgr) startBalanceShares(p *proc.Proc) {
 
 	switch p.GetType() {
 	case proc.T_LC:
-		rpcc := updm.upcs[p.GetRealm()][p.GetType()]
+		rpcc := pdm.upcs[p.GetRealm()][p.GetType()]
 		// Reset rpcc share amount to 0, since it was set to min before.
 		if rpcc.share == MIN_SHARE {
 			rpcc.share = 0
 		}
-		updm.setShare(rpcc, rpcc.share+mcpuToShare(p.GetMcpu()))
+		pdm.setShare(rpcc, rpcc.share+mcpuToShare(p.GetMcpu()))
 	case proc.T_BE:
-		updm.balanceBEShares()
+		pdm.balanceBEShares()
 	default:
 		db.DFatalf("Unrecognized proc type: %v", p.GetType())
 	}
 }
 
 // Rebalance CPU shares when a proc exits.
-func (updm *UprocdMgr) exitBalanceShares(p *proc.Proc) {
-	updm.mu.Lock()
-	defer updm.mu.Unlock()
+func (pdm *ProcdMgr) exitBalanceShares(p *proc.Proc) {
+	pdm.mu.Lock()
+	defer pdm.mu.Unlock()
 
 	// Bail out early if dummy prog
 	if p.GetProgram() == sp.DUMMY_PROG {
@@ -61,8 +61,8 @@ func (updm *UprocdMgr) exitBalanceShares(p *proc.Proc) {
 
 	switch p.GetType() {
 	case proc.T_LC:
-		rpcc := updm.upcs[p.GetRealm()][p.GetType()]
-		updm.setShare(rpcc, rpcc.share-mcpuToShare(p.GetMcpu()))
+		rpcc := pdm.upcs[p.GetRealm()][p.GetType()]
+		pdm.setShare(rpcc, rpcc.share-mcpuToShare(p.GetMcpu()))
 	case proc.T_BE:
 		// No need to readjust share.
 	default:
@@ -70,44 +70,44 @@ func (updm *UprocdMgr) exitBalanceShares(p *proc.Proc) {
 	}
 }
 
-func (updm *UprocdMgr) balanceBEShares() {
-	// Equal share for each BE uprocd.
-	cpuShare := BE_SHARES / Tshare(len(updm.beUprocds))
-	for _, rpcc := range updm.beUprocds {
-		// If the number of BE Uprocds has not changed, no rebalancing needs to
+func (pdm *ProcdMgr) balanceBEShares() {
+	// Equal share for each BE procd.
+	cpuShare := BE_SHARES / Tshare(len(pdm.beProcds))
+	for _, rpcc := range pdm.beProcds {
+		// If the number of BE Procds has not changed, no rebalancing needs to
 		// happen.
 		if rpcc.share == cpuShare {
 			continue
 		}
-		updm.setShare(rpcc, cpuShare)
+		pdm.setShare(rpcc, cpuShare)
 	}
-	db.DPrintf(db.UPROCDMGR, "Rebalanced BE shares: %v", updm.beUprocds)
+	db.DPrintf(db.PROCDMGR, "Rebalanced BE shares: %v", pdm.beProcds)
 }
 
-// Set a uprocd's CPU share, and RPC to the kernelsrv to adjust the shares.
-func (updm *UprocdMgr) setShare(rpcc *UprocdClnt, share Tshare) {
+// Set a procd's CPU share, and RPC to the kernelsrv to adjust the shares.
+func (pdm *ProcdMgr) setShare(rpcc *ProcClnt, share Tshare) {
 	if share < MIN_SHARE {
 		// BE realms should not get <.1 cores.
 		if rpcc.ptype == proc.T_BE {
-			db.DFatalf("Assign %v share to BE uprocd", share)
+			db.DFatalf("Assign %v share to BE procd", share)
 		}
-		// If the uprocd is an LC uprocd, and it isn't running and procs which
+		// If the procd is an LC procd, and it isn't running and procs which
 		// request cores, then set its share to .1 core.
 		share = MIN_SHARE
 	}
 	// If the share isn't changing, return.
 	if rpcc.share == share {
-		db.DPrintf(db.UPROCDMGR, "Skip setting CPU share for %v: no change", rpcc, share)
+		db.DPrintf(db.PROCDMGR, "Skip setting CPU share for %v: no change", rpcc, share)
 		return
 	}
 	rpcc.share = share
 	if rpcc.share > 10000 {
 		db.DFatalf("Share outside of cgroupsv2 range [1,10000]: %v\n%v", rpcc.share, string(debug.Stack()))
 	}
-	if err := updm.kclnt.SetCPUShares(rpcc.pid, int64(share)); err != nil {
+	if err := pdm.kclnt.SetCPUShares(rpcc.pid, int64(share)); err != nil {
 		db.DFatalf("Error SetCPUShares[%v] %v", rpcc.pid, err)
 	}
-	db.DPrintf(db.UPROCDMGR, "Set CPU share %v to %v", rpcc, share)
+	db.DPrintf(db.PROCDMGR, "Set CPU share %v to %v", rpcc, share)
 }
 
 func mcpuToShare(mcpu proc.Tmcpu) Tshare {

@@ -10,8 +10,8 @@ import (
 	"sigmaos/path"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
-	"sigmaos/util/sortedmap"
 	"sigmaos/spcodec"
+	"sigmaos/util/sortedmap"
 )
 
 type DirImpl struct {
@@ -125,7 +125,7 @@ func (dir *DirImpl) LookupPath(ctx fs.CtxI, path path.Tpathname) ([]fs.FsObj, fs
 	return []fs.FsObj{o}, o, path[1:], nil
 }
 
-func (dir *DirImpl) Stat(ctx fs.CtxI) (*sp.Stat, *serr.Err) {
+func (dir *DirImpl) Stat(ctx fs.CtxI) (*sp.Tstat, *serr.Err) {
 	dir.mu.Lock()
 	defer dir.mu.Unlock()
 	st, err := dir.Inode.NewStat()
@@ -144,8 +144,8 @@ func (dir *DirImpl) Stat(ctx fs.CtxI) (*sp.Stat, *serr.Err) {
 	return st, nil
 }
 
-func (dir *DirImpl) lsL(cursor int) ([]*sp.Stat, *serr.Err) {
-	entries := []*sp.Stat{}
+func (dir *DirImpl) lsL(cursor int) ([]*sp.Tstat, *serr.Err) {
+	entries := []*sp.Tstat{}
 	var r *serr.Err
 	dir.dents.Iter(func(n string, e fs.FsObj) bool {
 		if n == "." {
@@ -198,7 +198,7 @@ func (dir *DirImpl) remove(name string) *serr.Err {
 
 // XXX don't return more than n bytes of dir entries, since any more
 // won't be sent to client anyway.
-func (dir *DirImpl) ReadDir(ctx fs.CtxI, cursor int, n sp.Tsize) ([]*sp.Stat, *serr.Err) {
+func (dir *DirImpl) ReadDir(ctx fs.CtxI, cursor int, n sp.Tsize) ([]*sp.Tstat, *serr.Err) {
 	dir.mu.Lock()
 	defer dir.mu.Unlock()
 

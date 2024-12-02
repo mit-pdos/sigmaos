@@ -109,8 +109,8 @@ func NewProcEnv(program string, pid sp.Tpid, realm sp.Trealm, principal *sp.Tpri
 			Perf:                os.Getenv(SIGMAPERF),
 			Strace:              os.Getenv(SIGMASTRACE),
 			Debug:               os.Getenv(SIGMADEBUG),
+			ProcdPIDStr:         sp.NOT_SET,
 			Fail:                os.Getenv(SIGMAFAIL),
-			UprocdPIDStr:        sp.NOT_SET,
 			Privileged:          priv,
 			UseSPProxy:          useSPProxy,
 			UseDialProxy:        useDialProxy,
@@ -269,12 +269,12 @@ func (pe *ProcEnvProto) SetPrincipal(principal *sp.Tprincipal) {
 	pe.Principal = principal
 }
 
-func (pe *ProcEnvProto) SetUprocdPID(pid sp.Tpid) {
-	pe.UprocdPIDStr = string(pid)
+func (pe *ProcEnvProto) SetProcdPID(pid sp.Tpid) {
+	pe.ProcdPIDStr = string(pid)
 }
 
-func (pe *ProcEnvProto) GetUprocdPID() sp.Tpid {
-	return sp.Tpid(pe.UprocdPIDStr)
+func (pe *ProcEnvProto) GetProcdPID() sp.Tpid {
+	return sp.Tpid(pe.ProcdPIDStr)
 }
 
 func (pe *ProcEnv) GetProto() *ProcEnvProto {
@@ -299,20 +299,8 @@ func (pe *ProcEnvProto) ClearNamedEndpoint() {
 	pe.NamedEndpointProto = nil
 }
 
-func (pe *ProcEnvProto) SetNetFail(nf int64) {
-	pe.NetFail = nf
-}
-
 func (pe *ProcEnvProto) SetVersion(v string) {
 	pe.Version = v
-}
-
-func (pe *ProcEnvProto) SetCrash(nf int64) {
-	pe.Crash = nf
-}
-
-func (pe *ProcEnvProto) SetPartition(nf int64) {
-	pe.Partition = nf
 }
 
 func (pe *ProcEnvProto) SetHow(how Thow) {
@@ -377,7 +365,7 @@ func (pe *ProcEnv) String() string {
 		"Realm:%v "+
 		"Principal:{%v} "+
 		"KernelID:%v "+
-		"UprocdPID:%v "+
+		"ProcdPID:%v "+
 		"ProcDir:%v "+
 		"ParentDir:%v "+
 		"How:%v "+
@@ -389,9 +377,6 @@ func (pe *ProcEnv) String() string {
 		"Named:%v "+
 		"BuildTag:%v "+
 		"Privileged:%v "+
-		"Crash:%v "+
-		"Partition:%v "+
-		"NetFail:%v "+
 		"UseSPProxy:%v "+
 		"UseDialProxy:%v "+
 		"SigmaPath:%v "+
@@ -404,7 +389,7 @@ func (pe *ProcEnv) String() string {
 		pe.GetRealm(),
 		pe.GetPrincipal().String(),
 		pe.KernelID,
-		pe.UprocdPIDStr,
+		pe.ProcdPIDStr,
 		pe.ProcDir,
 		pe.ParentDir,
 		Thow(pe.HowInt),
@@ -416,9 +401,6 @@ func (pe *ProcEnv) String() string {
 		pe.NamedEndpointProto,
 		pe.BuildTag,
 		pe.Privileged,
-		pe.Crash,
-		pe.Partition,
-		pe.NetFail,
 		pe.UseSPProxy,
 		pe.UseDialProxy,
 		pe.SigmaPath,

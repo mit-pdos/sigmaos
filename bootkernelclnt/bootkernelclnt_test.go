@@ -146,7 +146,7 @@ func TestSymlink3(t *testing.T) {
 	pe := proc.NewAddedProcEnv(ts.ProcEnv())
 	sc, err := ts.NewClnt(0, pe)
 	assert.Nil(t, err)
-	sc.ProcessDir(linkDir, func(st *sp.Stat) (bool, error) {
+	sc.ProcessDir(linkDir, func(st *sp.Tstat) (bool, error) {
 		// Read symlink contents
 		fd, err := sc.Open(linkPath+"/", sp.OREAD)
 		assert.Nil(t, err, "Opening")

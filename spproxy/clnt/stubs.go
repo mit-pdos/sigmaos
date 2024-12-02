@@ -77,7 +77,7 @@ func (scc *SPProxyClnt) CloseFd(fd int) error {
 	return err
 }
 
-func (scc *SPProxyClnt) Stat(path string) (*sp.Stat, error) {
+func (scc *SPProxyClnt) Stat(path string) (*sp.Tstat, error) {
 	req := spproto.SigmaPathRequest{Path: path}
 	rep := spproto.SigmaStatReply{}
 	err := scc.rpcc.RPC("SPProxySrvAPI.Stat", &req, &rep)

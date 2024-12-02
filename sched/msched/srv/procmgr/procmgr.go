@@ -7,10 +7,10 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/memfssrv"
 	"sigmaos/proc"
-	"sigmaos/procclnt"
+	pc "sigmaos/procclnt"
+	procclnt "sigmaos/sched/msched/proc/clnt"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
-	"sigmaos/uprocclnt"
 )
 
 type ProcMgr struct {
@@ -18,7 +18,7 @@ type ProcMgr struct {
 	mfs            *memfssrv.MemFs
 	kernelId       string
 	rootsc         *sigmaclnt.SigmaClntKernel
-	updm           *uprocclnt.UprocdMgr
+	updm           *procclnt.ProcdMgr
 	sclnts         map[sp.Trealm]*sigmaclnt.SigmaClntKernel
 	cachedProcBins map[sp.Trealm]map[string]bool
 	pstate         *ProcState
@@ -29,7 +29,7 @@ func NewProcMgr(sc *sigmaclnt.SigmaClnt, kernelId string) *ProcMgr {
 	mgr := &ProcMgr{
 		kernelId:       kernelId,
 		rootsc:         sigmaclnt.NewSigmaClntKernel(sc),
-		updm:           uprocclnt.NewUprocdMgr(sc.FsLib, kernelId),
+		updm:           procclnt.NewProcdMgr(sc.FsLib, kernelId),
 		sclnts:         make(map[sp.Trealm]*sigmaclnt.SigmaClntKernel),
 		cachedProcBins: make(map[sp.Trealm]map[string]bool),
 		pstate:         NewProcState(),
@@ -85,7 +85,7 @@ func (mgr *ProcMgr) WaitExit(pid sp.Tpid) []byte {
 	return mgr.pstate.waitExit(pid)
 }
 
-func (mgr *ProcMgr) GetCPUShares() map[sp.Trealm]uprocclnt.Tshare {
+func (mgr *ProcMgr) GetCPUShares() map[sp.Trealm]procclnt.Tshare {
 	return mgr.updm.GetCPUShares()
 }
 
@@ -97,22 +97,22 @@ func (mgr *ProcMgr) GetRunningProcs() []*proc.Proc {
 	return mgr.pstate.GetProcs()
 }
 
-func (mgr *ProcMgr) WarmUprocd(pid sp.Tpid, realm sp.Trealm, prog string, path []string, ptype proc.Ttype) error {
+func (mgr *ProcMgr) WarmProcd(pid sp.Tpid, realm sp.Trealm, prog string, path []string, ptype proc.Ttype) error {
 	start := time.Now()
 	defer func(start time.Time) {
-		db.DPrintf(db.REALM_GROW_LAT, "[%v.%v] WarmUprocd latency: %v", realm, prog, time.Since(start))
+		db.DPrintf(db.REALM_GROW_LAT, "[%v.%v] WarmProcd latency: %v", realm, prog, time.Since(start))
 	}(start)
 	// Warm up sigmaclnt
 	mgr.getSigmaClnt(realm)
-	if err := mgr.updm.WarmStartUprocd(realm, ptype); err != nil {
-		db.DPrintf(db.ERROR, "WarmStartUprocd %v err %v", realm, err)
+	if err := mgr.updm.WarmStartProcd(realm, ptype); err != nil {
+		db.DPrintf(db.ERROR, "WarmStartProcd %v err %v", realm, err)
 		return err
 	}
-	if uprocErr, childErr := mgr.updm.WarmProc(pid, realm, prog, path, ptype); childErr != nil {
+	if uprocErr, childErr := mgr.updm.WarmProcd(pid, realm, prog, path, ptype); childErr != nil {
 		return childErr
 	} else if uprocErr != nil {
 		// Unexpected error with uproc server.
-		db.DPrintf(db.PROCMGR, "WarmUproc err %v", uprocErr)
+		db.DPrintf(db.PROCDMGR, "WarmUproc err %v", uprocErr)
 		return uprocErr
 	}
 	return nil
@@ -122,7 +122,7 @@ func (mgr *ProcMgr) WarmUprocd(pid sp.Tpid, realm sp.Trealm, prog string, path [
 func (mgr *ProcMgr) procCrashed(p *proc.Proc, err error) {
 	// Mark the proc as exited due to a crash, and record the error exit status.
 	mgr.pstate.exited(p.GetPid(), proc.NewStatusErr(err.Error(), nil).Marshal())
-	db.DPrintf(db.PROCMGR_ERR, "Proc %v finished with error: %v", p, err)
+	db.DPrintf(db.PROCDMGR_ERR, "Proc %v finished with error: %v", p, err)
 	mgr.getSigmaClnt(p.GetRealm()).ExitedCrashed(p.GetPid(), p.GetProcDir(), p.GetParentDir(), proc.NewStatusErr(err.Error(), nil), p.GetHow())
 }
 
@@ -147,7 +147,7 @@ func (mgr *ProcMgr) getSigmaClntL(realm sp.Trealm) *sigmaclnt.SigmaClntKernel {
 			} else {
 				// Endpoint KPIDS.
 				clnt = sigmaclnt.NewSigmaClntKernel(sc)
-				if err := procclnt.MountPids(clnt.FsLib); err != nil {
+				if err := pc.MountPids(clnt.FsLib); err != nil {
 					db.DFatalf("Error MountPids: %v", err)
 				}
 			}

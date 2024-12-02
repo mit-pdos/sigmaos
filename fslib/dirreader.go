@@ -10,7 +10,7 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-type Fwatch func([]*sp.Stat) bool
+type Fwatch func([]*sp.Tstat) bool
 
 // Keep reading dir until wait returns false (e.g., a new file has
 // been created in dir). Return whether the ReadDir succeeded or not, so
@@ -46,7 +46,7 @@ func (fsl *FsLib) WaitRemove(pn string) error {
 	dir := filepath.Dir(pn) + "/"
 	f := filepath.Base(pn)
 	db.DPrintf(db.WATCH, "WaitRemove: readDirWatch dir %v\n", dir)
-	_, err := fsl.readDirWatch(dir, func(sts []*sp.Stat) bool {
+	_, err := fsl.readDirWatch(dir, func(sts []*sp.Tstat) bool {
 		db.DPrintf(db.WATCH, "WaitRemove %v %v %v\n", dir, sp.Names(sts), f)
 		for _, st := range sts {
 			if st.Name == f {
@@ -63,7 +63,7 @@ func (fsl *FsLib) WaitCreate(pn string) error {
 	dir := filepath.Dir(pn) + "/"
 	f := filepath.Base(pn)
 	db.DPrintf(db.WATCH, "WaitCreate: readDirWatch dir %v\n", dir)
-	_, err := fsl.readDirWatch(dir, func(sts []*sp.Stat) bool {
+	_, err := fsl.readDirWatch(dir, func(sts []*sp.Tstat) bool {
 		db.DPrintf(db.WATCH, "WaitCreate %v %v %v\n", dir, sp.Names(sts), f)
 		for _, st := range sts {
 			if st.Name == f {
@@ -99,7 +99,7 @@ func NewDirReader(fslib *FsLib, pn string) *DirReader {
 
 // Wait until n entries are in the directory
 func (dr *DirReader) WaitNEntries(n int) error {
-	_, err := dr.readDirWatch(dr.pn, func(sts []*sp.Stat) bool {
+	_, err := dr.readDirWatch(dr.pn, func(sts []*sp.Tstat) bool {
 		for _, st := range sts {
 			if !dr.ents[st.Name] {
 				dr.ents[st.Name] = true
@@ -123,7 +123,7 @@ func (dr *DirReader) GetUniqueEntries() ([]string, error) {
 func (dr *DirReader) GetUniqueEntriesFilter(prefixFilter string) ([]string, error) {
 	db.DPrintf(db.WATCH, "GetUniqueEntries %v\n", dr.pn)
 	newents := make([]string, 0)
-	_, err := dr.ProcessDir(dr.pn, func(st *sp.Stat) (bool, error) {
+	_, err := dr.ProcessDir(dr.pn, func(st *sp.Tstat) (bool, error) {
 		db.DPrintf(db.WATCH, "GetUniqueEntries: process entry %v\n", st.Name)
 		if prefixFilter != "" && strings.HasPrefix(st.Name, prefixFilter) {
 			return false, nil
@@ -144,7 +144,7 @@ func (dr *DirReader) GetUniqueEntriesFilter(prefixFilter string) ([]string, erro
 // all (unique) entries.  Both present and sts are sorted.
 func (dr *DirReader) WatchUniqueEntries(present []string, prefixFilters []string) ([]string, bool, error) {
 	newents := make([]string, 0)
-	ok, err := dr.readDirWatch(dr.pn, func(sts []*sp.Stat) bool {
+	ok, err := dr.readDirWatch(dr.pn, func(sts []*sp.Tstat) bool {
 		unchanged := true
 		for i, st := range sts {
 			if len(prefixFilters) > 0 {
@@ -180,7 +180,7 @@ func (dr *DirReader) WatchUniqueEntries(present []string, prefixFilters []string
 // are present
 func (dr *DirReader) WatchNewUniqueEntries() ([]string, error) {
 	newents := make([]string, 0)
-	_, err := dr.readDirWatch(dr.pn, func(sts []*sp.Stat) bool {
+	_, err := dr.readDirWatch(dr.pn, func(sts []*sp.Tstat) bool {
 		for _, st := range sts {
 			if !dr.ents[st.Name] {
 				dr.ents[st.Name] = true
@@ -215,7 +215,7 @@ func (dr *DirReader) GetEntriesRename(dst string) ([]string, error) {
 func (dr *DirReader) WatchNewEntriesAndRename(dst string) ([]string, error) {
 	var r error
 	var newents []string
-	_, err := dr.readDirWatch(dr.pn, func(sts []*sp.Stat) bool {
+	_, err := dr.readDirWatch(dr.pn, func(sts []*sp.Tstat) bool {
 		db.DPrintf(db.MR, "readDirWatch: %v\n", sts)
 		newents, r = dr.rename(sts, dst)
 		if r != nil || len(newents) > 0 {
@@ -234,7 +234,7 @@ func (dr *DirReader) WatchNewEntriesAndRename(dst string) ([]string, error) {
 }
 
 // Filter out duplicates and rename
-func (dr *DirReader) rename(sts []*sp.Stat, dst string) ([]string, error) {
+func (dr *DirReader) rename(sts []*sp.Tstat, dst string) ([]string, error) {
 	var r error
 	newents := make([]string, 0)
 	for _, st := range sts {

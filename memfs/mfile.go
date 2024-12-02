@@ -32,7 +32,7 @@ func (f *File) Size() sp.Tlength {
 	return f.File.Size()
 }
 
-func (f *File) Stat(ctx fs.CtxI) (*sp.Stat, *serr.Err) {
+func (f *File) Stat(ctx fs.CtxI) (*sp.Tstat, *serr.Err) {
 	st, err := f.Inode.NewStat()
 	if err != nil {
 		return nil, err

@@ -54,7 +54,7 @@ func (fdc *FdClient) CloseFd(fd int) error {
 	return nil
 }
 
-func (fdc *FdClient) Stat(name string) (*sp.Stat, error) {
+func (fdc *FdClient) Stat(name string) (*sp.Tstat, error) {
 	return fdc.pc.Stat(name, fdc.pe.GetPrincipal())
 }
 

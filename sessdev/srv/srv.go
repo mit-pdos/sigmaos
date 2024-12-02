@@ -1,17 +1,17 @@
 // Package sessdevsrv allows a server to make a directory using
 // [clonedev] when a clients open [clonedev]. sessdevsrv populates the
 // directory with DATA special file.
-package sessdevsrv
+package srv
 
 import (
 	"path/filepath"
 
-	"sigmaos/clonedev"
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/memfssrv"
 	"sigmaos/serr"
 	"sigmaos/sessdev"
+	"sigmaos/sessdev/srv/clonedev"
 	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 )

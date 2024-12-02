@@ -15,7 +15,7 @@ import (
 	"sigmaos/repl"
 	"sigmaos/replraft"
 	"sigmaos/serr"
-	"sigmaos/sessdevsrv"
+	sessdevsrv "sigmaos/sessdev/srv"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
 	"sigmaos/tracing"

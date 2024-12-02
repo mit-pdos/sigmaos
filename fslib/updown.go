@@ -41,7 +41,7 @@ func (fsl *FsLib) UploadDir(lpn, spn string) error {
 	}
 	for _, file := range files {
 		if err := fsl.UploadFile(filepath.Join(lpn, file.Name()), filepath.Join(spn, file.Name())); err != nil {
-			db.DPrintf(db.UPROCD, "UploadFile %v err %v\n", file.Name(), err)
+			db.DPrintf(db.FSLIB_ERR, "UploadFile %v err %v\n", file.Name(), err)
 			return err
 		}
 	}

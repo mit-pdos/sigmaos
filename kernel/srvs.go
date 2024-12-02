@@ -63,8 +63,8 @@ func (k *Kernel) BootSub(s string, args, env []string, p *Param, realm sp.Trealm
 		ss, err = k.bootMSched()
 	case sp.REALMDREL:
 		ss, err = k.bootRealmd()
-	case sp.UPROCDREL:
-		ss, err = k.bootUprocd(args)
+	case sp.PROCDREL:
+		ss, err = k.bootProcd(args)
 	default:
 		err = fmt.Errorf("bootSub: unknown srv %s\n", s)
 	}
@@ -187,15 +187,15 @@ func (k *Kernel) bootSPProxyd() (Subsystem, error) {
 	return spproxysrv.ExecSPProxySrv(p, k.ProcEnv().GetInnerContainerIP(), k.ProcEnv().GetOuterContainerIP(), sp.Tpid("NO_PID"))
 }
 
-// Start uprocd in a sigmauser container and post the mount for
-// uprocd.  Uprocd cannot post because it doesn't know what the host
+// Start procd in a sigmauser container and post the mount for
+// procd.  Procd cannot post because it doesn't know what the host
 // IP address and port number are for it.
-func (k *Kernel) bootUprocd(args []string) (Subsystem, error) {
+func (k *Kernel) bootProcd(args []string) (Subsystem, error) {
 	spproxydPID := sp.GenPid("spproxyd")
 	// Append args
 	args = append(args, strconv.FormatBool(k.Param.DialProxy), spproxydPID.String())
-	db.DPrintf(db.ALWAYS, "Uprocd args %v", args)
-	s, err := k.bootSubsystem("uprocd", args, []string{}, sp.ROOTREALM, proc.HDOCKER, 0)
+	db.DPrintf(db.ALWAYS, "Procd args %v", args)
+	s, err := k.bootSubsystem("procd", args, []string{}, sp.ROOTREALM, proc.HDOCKER, 0)
 	if err != nil {
 		return nil, err
 	}

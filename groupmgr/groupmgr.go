@@ -78,7 +78,7 @@ func (cfg *GroupMgrConfig) Persist(fsl *fslib.FsLib) error {
 
 func Recover(sc *sigmaclnt.SigmaClnt) ([]*GroupMgr, error) {
 	gms := make([]*GroupMgr, 0)
-	sc.ProcessDir(GRPMGRDIR, func(st *sp.Stat) (bool, error) {
+	sc.ProcessDir(GRPMGRDIR, func(st *sp.Tstat) (bool, error) {
 		pn := filepath.Join(GRPMGRDIR, st.Name)
 		cfg := &GroupMgrConfig{}
 		if err := sc.GetFileJson(pn, cfg); err != nil {

@@ -31,7 +31,7 @@ func (p *Pipe) Unlink() {
 	p.Pipe.Unlink()
 }
 
-func (p *Pipe) Stat(ctx fs.CtxI) (*sp.Stat, *serr.Err) {
+func (p *Pipe) Stat(ctx fs.CtxI) (*sp.Tstat, *serr.Err) {
 	st, err := p.Inode.NewStat()
 	if err != nil {
 		return nil, err

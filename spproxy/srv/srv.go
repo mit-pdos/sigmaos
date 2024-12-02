@@ -182,8 +182,8 @@ func (scsc *SPProxySrvCmd) Run(how proc.Thow, kernelId string, localIP sp.Tip) e
 }
 
 // Start the spproxyd process
-func ExecSPProxySrv(p *proc.Proc, innerIP sp.Tip, outerIP sp.Tip, uprocdPid sp.Tpid) (*SPProxySrvCmd, error) {
-	p.FinalizeEnv(innerIP, outerIP, uprocdPid)
+func ExecSPProxySrv(p *proc.Proc, innerIP sp.Tip, outerIP sp.Tip, procdPid sp.Tpid) (*SPProxySrvCmd, error) {
+	p.FinalizeEnv(innerIP, outerIP, procdPid)
 	db.DPrintf(db.SPPROXYSRV, "ExecSPProxySrv: %v", p)
 	cmd := exec.Command("spproxyd")
 	cmd.Env = p.GetEnv()

@@ -184,11 +184,11 @@ func (p *Proc) PrependSigmaPath(pn string) {
 }
 
 // Finalize env details which can only be set once a physical machine and
-// uprocd container have been chosen.
-func (p *Proc) FinalizeEnv(innerIP sp.Tip, outerIP sp.Tip, uprocdPid sp.Tpid) {
+// procd container have been chosen.
+func (p *Proc) FinalizeEnv(innerIP sp.Tip, outerIP sp.Tip, procdPid sp.Tpid) {
 	p.ProcEnvProto.InnerContainerIPStr = innerIP.String()
 	p.ProcEnvProto.OuterContainerIPStr = outerIP.String()
-	p.ProcEnvProto.SetUprocdPID(uprocdPid)
+	p.ProcEnvProto.SetProcdPID(procdPid)
 	oldr := p.GetRealm()
 	// If a realm switch was requested, perform the realm switch before
 	// marshaling the proc's ProcEnv. A realm switch is only possible if the
@@ -344,18 +344,6 @@ func (p *Proc) GetBuildTag() string {
 
 func (p *Proc) GetKernelID() string {
 	return p.ProcEnvProto.KernelID
-}
-
-func (p *Proc) SetCrash(n int64) {
-	p.ProcEnvProto.SetCrash(n)
-}
-
-func (p *Proc) SetPartition(n int64) {
-	p.ProcEnvProto.SetPartition(n)
-}
-
-func (p *Proc) SetNetFail(n int64) {
-	p.ProcEnvProto.SetNetFail(n)
 }
 
 func (p *Proc) SetType(t Ttype) {

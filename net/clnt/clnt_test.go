@@ -1,4 +1,4 @@
-package netclnt_test
+package clnt_test
 
 import (
 	"bufio"

@@ -1,4 +1,4 @@
-package netsrv
+package srv
 
 import (
 	"fmt"

@@ -1,5 +1,5 @@
 // The netclnt package establishes a TCP connection to a server.
-package netclnt
+package clnt
 
 import (
 	"net"

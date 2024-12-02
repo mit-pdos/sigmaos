@@ -20,14 +20,6 @@ type SPChannel struct {
 	pn  string
 }
 
-//func NewSigmaRPCClntEndpoint(fsls []*fslib.FsLib, pn string, ep *sp.Tendpoint) (*rpcclnt.RPCClnt, error) {
-//	ch, err := NewSigmaRPCChEndpoint(fsls, pn, ep)
-//	if err != nil {
-//		return nil, err
-//	}
-//	return rpcclnt.NewRPCClnt(ch), nil
-//}
-
 func NewSPChannelEndpoint(fsl *fslib.FsLib, pn string, ep *sp.Tendpoint) (channel.RPCChannel, error) {
 	if err := fsl.MountTree(ep, rpc.RPC, filepath.Join(pn, rpc.RPC)); err != nil {
 		return nil, err

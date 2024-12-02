@@ -180,13 +180,13 @@ func RunMember(job, grp string, myid, nrepl int) {
 	if (nrepl > 0 && cfg.Fence.Seqno == 1) || nrepl == 0 {
 		// if nrepl > 0, crash only on first configuration because restart
 		// and reconfigure aren't supported
-		crash.Failer(crash.KVD_CRASH, func(e crash.Tevent) {
+		crash.Failer(sc.FsLib, crash.KVD_CRASH, func(e crash.Tevent) {
 			crash.Crash()
 		})
-		crash.Failer(crash.KVD_NETFAIL, func(e crash.Tevent) {
+		crash.Failer(sc.FsLib, crash.KVD_NETFAIL, func(e crash.Tevent) {
 			g.ssrv.SessSrv.PartitionClient(false)
 		})
-		crash.Failer(crash.KVD_PARTITION, func(e crash.Tevent) {
+		crash.Failer(sc.FsLib, crash.KVD_PARTITION, func(e crash.Tevent) {
 			g.ssrv.SessSrv.PartitionClient(true)
 		})
 	}

@@ -114,7 +114,7 @@ func newMapper(mapf mr.MapT, reducef mr.ReduceT, args []string, p *perf.Perf) (*
 	}
 	db.DPrintf(db.TEST, "Started at time: %v", time.Since(start))
 
-	crash.FailersDefault([]crash.Tselector{crash.MRTASK_CRASH, crash.MRTASK_PARTITION}, m.FsLib)
+	crash.FailersDefault(m.FsLib, []crash.Tselector{crash.MRTASK_CRASH, crash.MRTASK_PARTITION})
 	return m, nil
 }
 

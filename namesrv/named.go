@@ -198,7 +198,11 @@ func Run(args []string) error {
 		db.DFatalf("warmCache err %v", err)
 	}
 
-	crash.Failer(crash.NAMED_PARTITION, func(e crash.Tevent) {
+	crash.Failer(nd.FsLib, crash.NAMED_CRASH, func(e crash.Tevent) {
+		crash.Crash()
+	})
+
+	crash.Failer(nd.FsLib, crash.NAMED_PARTITION, func(e crash.Tevent) {
 		if nd.delay == 0 {
 			nd.delay = e.Delay
 			nd.sess.Orphan()

@@ -87,7 +87,7 @@ func NewTrans(pe *proc.ProcEnv, args []string, p *perf.Perf) (*Trans, error) {
 		db.DFatalf("Err convert nrounds: %v", err)
 	}
 	t.Started()
-	crash.FailersDefault([]crash.Tselector{crash.IMGRESIZE_CRASH}, sc.FsLib)
+	crash.FailersDefault(sc.FsLib, []crash.Tselector{crash.IMGRESIZE_CRASH})
 	return t, nil
 }
 

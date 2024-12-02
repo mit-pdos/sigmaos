@@ -11,6 +11,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/proc"
+	"sigmaos/semclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/util/rand"
 )
@@ -35,9 +36,29 @@ type Tevent struct {
 
 	// delay in ms (interpretable by event creator)
 	Delay int64 `json:"delay"`
+
+	// pathname for, for example, a semaphore to delay event
+	// generation until semaphore has been upped.
+	Path string
 }
 
 type Teventf func(e Tevent)
+
+func NewEvent(l string, mi int64, p float64) Tevent {
+	return Tevent{Label: l, MaxInterval: mi, Prob: p}
+}
+
+func NewEventPath(l string, mi int64, p float64, pn string) Tevent {
+	return Tevent{Label: l, MaxInterval: mi, Prob: p, Path: pn}
+}
+
+func NewEventStart(l string, s, mi int64, p float64) Tevent {
+	return Tevent{Label: l, Start: s, MaxInterval: mi, Prob: p}
+}
+
+func NewEventStartDelay(l string, s, mi int64, d int64, p float64) Tevent {
+	return Tevent{Label: l, Start: s, MaxInterval: mi, Delay: d, Prob: p}
+}
 
 func (e *Tevent) String() string {
 	return fmt.Sprintf("{l %v s %v mi %v p %v d %v}", e.Label, e.Start, e.MaxInterval, e.Prob, e.Delay)
@@ -131,10 +152,16 @@ func PartitionNamed(fsl *fslib.FsLib) {
 	}
 }
 
-func Failer(label Tselector, f Teventf) {
+func Failer(fsl *fslib.FsLib, label Tselector, f Teventf) {
 	initLabels()
 	if e, ok := labels[label]; ok {
 		go func(label Tselector, e Tevent) {
+			if e.Path != "" {
+				sem := semclnt.NewSemClnt(fsl, e.Path)
+				sem.Init(0)
+				sem.Down()
+				db.DPrintf(db.CRASH, "Downed %v", e.Path)
+			}
 			time.Sleep(time.Duration(e.Start) * time.Millisecond)
 			for true {
 				r := randSleep(e.MaxInterval)
@@ -150,7 +177,7 @@ func Failer(label Tselector, f Teventf) {
 	}
 }
 
-func FailersDefault(labels []Tselector, fsl *fslib.FsLib) {
+func FailersDefault(fsl *fslib.FsLib, labels []Tselector) {
 	defaults := []Teventf{
 		func(e Tevent) {
 			Crash()
@@ -160,6 +187,6 @@ func FailersDefault(labels []Tselector, fsl *fslib.FsLib) {
 		},
 	}
 	for i, l := range labels {
-		Failer(l, defaults[i])
+		Failer(fsl, l, defaults[i])
 	}
 }

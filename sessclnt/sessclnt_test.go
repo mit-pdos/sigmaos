@@ -16,7 +16,7 @@ import (
 	dialproxyclnt "sigmaos/dialproxy/clnt"
 	"sigmaos/memfs"
 	"sigmaos/memfs/dir"
-	"sigmaos/netsrv"
+	netsrv "sigmaos/net/srv"
 	"sigmaos/path"
 	"sigmaos/serr"
 	"sigmaos/sessclnt"

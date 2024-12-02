@@ -5,9 +5,9 @@ import (
 
 	"sigmaos/auth"
 	db "sigmaos/debug"
-	"sigmaos/namesrv/fsetcd"
 	dialproxyclnt "sigmaos/dialproxy/clnt"
-	"sigmaos/netsrv"
+	"sigmaos/namesrv/fsetcd"
+	netsrv "sigmaos/net/srv"
 	"sigmaos/npproxysrv"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"

@@ -14,13 +14,13 @@ import (
 	"sigmaos/serr"
 	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
-	sps "sigmaos/sigmaprotsrv"
+	sps "sigmaos/api/spprotsrv"
 	"sigmaos/spcodec"
 	"sigmaos/stats"
 )
 
 type NewSessionI interface {
-	NewSession(*sp.Tprincipal, sessp.Tsession) sps.Protsrv
+	NewSession(*sp.Tprincipal, sessp.Tsession) sps.ProtSrv
 }
 
 //

@@ -10,7 +10,7 @@ import (
 	"sigmaos/serr"
 	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
-	sps "sigmaos/sigmaprotsrv"
+	sps "sigmaos/api/spprotsrv"
 	"sigmaos/spproto/srv/lockmap"
 	"sigmaos/spproto/srv/namei"
 )
@@ -43,7 +43,7 @@ func NewProtSrv(srvPE *proc.ProcEnv, pss *ProtSrvState, p *sp.Tprincipal, sid se
 	return ps
 }
 
-func NewProtServer(srvPE *proc.ProcEnv, pss *ProtSrvState, p *sp.Tprincipal, sid sessp.Tsession, grf GetRootCtxF, aaf AttachAuthF) sps.Protsrv {
+func NewProtServer(srvPE *proc.ProcEnv, pss *ProtSrvState, p *sp.Tprincipal, sid sessp.Tsession, grf GetRootCtxF, aaf AttachAuthF) sps.ProtSrv {
 	return NewProtSrv(srvPE, pss, p, sid, grf, aaf)
 }
 

@@ -20,7 +20,7 @@ import (
 	"sigmaos/sessp"
 	"sigmaos/sigmaclnt/fdclnt/pathclnt"
 	sp "sigmaos/sigmap"
-	"sigmaos/sigmaprotsrv"
+	"sigmaos/api/spprotsrv"
 	"sigmaos/util/rand"
 )
 

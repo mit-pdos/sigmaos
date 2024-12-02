@@ -21,7 +21,7 @@ import (
 	"sigmaos/sesssrv"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
-	sps "sigmaos/sigmaprotsrv"
+	sps "sigmaos/api/spprotsrv"
 	"sigmaos/sigmapsrv/overlaydir"
 	spprotosrv "sigmaos/spproto/srv"
 	"sigmaos/stats"
@@ -67,7 +67,7 @@ func NewSigmaPSrvPost(root fs.Dir, pn string, addr *sp.Taddr, sc *sigmaclnt.Sigm
 	return psrv, pn, nil
 }
 
-func (psrv *SigmaPSrv) NewSession(p *sp.Tprincipal, sessid sessp.Tsession) sps.Protsrv {
+func (psrv *SigmaPSrv) NewSession(p *sp.Tprincipal, sessid sessp.Tsession) sps.ProtSrv {
 	return spprotosrv.NewProtServer(psrv.pe, psrv.ProtSrvState, p, sessid, psrv.GetRootCtx, psrv.attachAuthF)
 }
 

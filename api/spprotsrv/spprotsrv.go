@@ -1,4 +1,4 @@
-package sigmaprotsrv
+package spprotsrv
 
 import (
 	db "sigmaos/debug"
@@ -7,7 +7,7 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-type Protsrv interface {
+type ProtSrv interface {
 	Version(*sp.Tversion, *sp.Rversion) *sp.Rerror
 	Auth(*sp.Tauth, *sp.Rauth) *sp.Rerror
 	Attach(*sp.Tattach, *sp.Rattach) (sp.TclntId, *sp.Rerror)
@@ -39,7 +39,7 @@ const (
 	TSESS_DEL
 )
 
-func Dispatch(protsrv Protsrv, msg sessp.Tmsg, iov sessp.IoVec) (sessp.Tmsg, sessp.IoVec, *sp.Rerror, Tsessop, sp.TclntId) {
+func Dispatch(protsrv ProtSrv, msg sessp.Tmsg, iov sessp.IoVec) (sessp.Tmsg, sessp.IoVec, *sp.Rerror, Tsessop, sp.TclntId) {
 	switch req := msg.(type) {
 	case *sp.Tversion:
 		reply := &sp.Rversion{}

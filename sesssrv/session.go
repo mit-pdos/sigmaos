@@ -11,7 +11,7 @@ import (
 	"sigmaos/serr"
 	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
-	sps "sigmaos/sigmaprotsrv"
+	sps "sigmaos/api/spprotsrv"
 )
 
 //
@@ -26,7 +26,7 @@ import (
 type Session struct {
 	sync.Mutex
 	conn          *netConn
-	protsrv       sps.Protsrv
+	protsrv       sps.ProtSrv
 	lastHeartbeat time.Time
 	Sid           sessp.Tsession
 	began         bool // true if the fssrv has already begun processing ops
@@ -36,7 +36,7 @@ type Session struct {
 	clnts         map[sp.TclntId]bool
 }
 
-func newSession(protsrv sps.Protsrv, sid sessp.Tsession, nc *netConn) *Session {
+func newSession(protsrv sps.ProtSrv, sid sessp.Tsession, nc *netConn) *Session {
 	sess := &Session{
 		protsrv:       protsrv,
 		lastHeartbeat: time.Now(),

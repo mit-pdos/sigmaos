@@ -1,6 +1,6 @@
 // Package replsrv replicates a svci using Raft.  Each replica
 // maintains a reply table to filter out duplicate requests.
-package replsrv
+package srv
 
 import (
 	"sync"

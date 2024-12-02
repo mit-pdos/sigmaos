@@ -1,4 +1,4 @@
-package replsrv
+package srv
 
 import (
 	"sync"

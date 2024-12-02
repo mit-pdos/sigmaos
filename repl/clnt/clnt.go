@@ -1,4 +1,4 @@
-package replclnt
+package clnt
 
 import (
 	"sync/atomic"

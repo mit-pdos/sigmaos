@@ -12,7 +12,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/proc"
 	"sigmaos/serr"
-	sessdevsrv "sigmaos/sessdev/srv"
+	rpcdevsrv "sigmaos/rpc/dev/srv"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
 	"sigmaos/tracing"
@@ -65,7 +65,7 @@ func RunCacheSrv(args []string, nshard int) error {
 	if _, err := ssrv.Create(cache.DUMP, sp.DMDIR|0777, sp.ORDWR, sp.NoLeaseId); err != nil {
 		return err
 	}
-	if err := sessdevsrv.NewSessDev(ssrv.MemFs, cache.DUMP, s.newSession, nil); err != nil {
+	if err := rpcdevsrv.NewSessDev(ssrv.MemFs, cache.DUMP, s.newSession, nil); err != nil {
 		return err
 	}
 	ssrv.RunServer()

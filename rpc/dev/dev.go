@@ -1,4 +1,4 @@
-package sessdev
+package dev
 
 const (
 	DATA  = "data"

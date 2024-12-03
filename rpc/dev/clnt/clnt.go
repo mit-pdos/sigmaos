@@ -1,5 +1,5 @@
-// Package sessdevclnt creates a session with a server that exports a
-// session device file; see [sessdevsrv] and [clonedev]. The client
+// Package rpcdevclnt creates a session with a server that exports a
+// session device file; see [rpcdevsrv] and [clonedev]. The client
 // can then read/write the DATA device file in the session's directory
 // at the server. [sigmarpcchan] uses it to send/receive RPCs to a
 // server.
@@ -10,7 +10,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/sigmaclnt/fslib"
-	"sigmaos/sessdev"
+	rpcdev "sigmaos/rpc/dev"
 )
 
 type SessDevClnt struct {
@@ -24,15 +24,15 @@ type SessDevClnt struct {
 func NewSessDevClnt(fsl *fslib.FsLib, pn string) (*SessDevClnt, error) {
 	sdc := &SessDevClnt{FsLib: fsl, pn: pn}
 
-	clone := sdc.pn + "/" + sessdev.CLONE
+	clone := sdc.pn + "/" + rpcdev.CLONE
 	db.DPrintf(db.SESSDEVCLNT, "NewSessDevClnt: %q\n", clone)
 	b, err := sdc.GetFile(clone)
 	if err != nil {
 		return nil, err
 	}
 	sdc.sid = string(b)
-	sdc.ctl = filepath.Join(sdc.pn, sdc.sid, sessdev.CTL)
-	sdc.data = filepath.Join(sdc.pn, sdc.sid, sessdev.DATA)
+	sdc.ctl = filepath.Join(sdc.pn, sdc.sid, rpcdev.CTL)
+	sdc.data = filepath.Join(sdc.pn, sdc.sid, rpcdev.DATA)
 	return sdc, nil
 }
 

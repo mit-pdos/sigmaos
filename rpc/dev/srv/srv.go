@@ -1,5 +1,5 @@
-// Package sessdevsrv allows a server to make a directory using
-// [clonedev] when a clients open [clonedev]. sessdevsrv populates the
+// Package rpcdevsrv allows a server to make a directory using
+// [clonedev] when a clients open [clonedev]. rpcdevsrv populates the
 // directory with DATA special file.
 package srv
 
@@ -10,8 +10,8 @@ import (
 	"sigmaos/api/fs"
 	"sigmaos/memfssrv"
 	"sigmaos/serr"
-	"sigmaos/sessdev"
-	"sigmaos/sessdev/srv/clonedev"
+	rpcdev "sigmaos/rpc/dev"
+	"sigmaos/rpc/dev/srv/clonedev"
 	sessp "sigmaos/session/proto"
 	sp "sigmaos/sigmap"
 )
@@ -40,7 +40,7 @@ func (sd *SessDev) newSession(mfs *memfssrv.MemFs, sid sessp.Tsession) *serr.Err
 	if err != nil {
 		return err
 	}
-	fn := filepath.Join(sd.dir, sid.String(), sessdev.DATA)
+	fn := filepath.Join(sd.dir, sid.String(), rpcdev.DATA)
 	db.DPrintf(db.SESSDEV, "newSession %v\n", fn)
 	if err := mfs.MkNod(fn, sess); err != nil {
 		db.DPrintf(db.SESSDEV, "newSession %v err %v\n", fn, err)
@@ -50,14 +50,14 @@ func (sd *SessDev) newSession(mfs *memfssrv.MemFs, sid sessp.Tsession) *serr.Err
 }
 
 func (sd *SessDev) detachSession(sid sessp.Tsession) {
-	fn := filepath.Join(sd.dir, sid.String(), sessdev.DATA)
+	fn := filepath.Join(sd.dir, sid.String(), rpcdev.DATA)
 	if err := sd.mfs.Remove(fn); err != nil {
 		db.DPrintf(db.SESSDEV, "detachSession %v err %v\n", fn, err)
 	}
 }
 
 func (sd *SessDev) Close(ctx fs.CtxI, m sp.Tmode) *serr.Err {
-	fn := filepath.Join(sd.dir, ctx.SessionId().String(), sessdev.DATA)
+	fn := filepath.Join(sd.dir, ctx.SessionId().String(), rpcdev.DATA)
 	db.DPrintf(db.SESSDEV, "Close %v\n", fn)
 	return nil
 }

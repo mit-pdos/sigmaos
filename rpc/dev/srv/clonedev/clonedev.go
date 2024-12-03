@@ -2,10 +2,10 @@
 // unique session id as name for a client session when the client
 // opens the server's CLONE file.  The directory contains a CTL device
 // file and the caller may create additional session file (see
-// [sessdevsrv]). When a client opens the CLONE file, the open returns
+// [rpcdevsrv]). When a client opens the CLONE file, the open returns
 // a file descriptor for the CTL file, which the client can read to
 // learn the session id and then open files in the session directory (see
-// [sessdevclnt])
+// [rpcdevclnt])
 package clonedev
 
 import (
@@ -17,7 +17,7 @@ import (
 	"sigmaos/memfs/inode"
 	"sigmaos/memfssrv"
 	"sigmaos/serr"
-	"sigmaos/sessdev"
+	rpcdev "sigmaos/rpc/dev"
 	sessp "sigmaos/session/proto"
 	sp "sigmaos/sigmap"
 	sps "sigmaos/api/spprotsrv"
@@ -46,7 +46,7 @@ func newClone(mfs *memfssrv.MemFs, dir string, news NewSessionF, d sps.DetachSes
 		dir:        dir,
 		wctl:       w,
 	}
-	pn := dir + "/" + sessdev.CLONE
+	pn := dir + "/" + rpcdev.CLONE
 	db.DPrintf(db.CLONEDEV, "newClone %q\n", dir)
 	err := mfs.MkNod(pn, cl) // put clone file into dir <dir>
 	if err != nil {
@@ -77,7 +77,7 @@ func (c *Clone) Open(ctx fs.CtxI, m sp.Tmode) (fs.FsObj, *serr.Err) {
 		return nil, err
 	}
 	var s *session
-	ctl := pn + "/" + sessdev.CTL
+	ctl := pn + "/" + rpcdev.CTL
 	if err == nil {
 		s = &session{id: sid, wctl: c.wctl}
 		s.Inode = c.mfs.NewDevInode()
@@ -111,7 +111,7 @@ func (c *Clone) Close(ctx fs.CtxI, m sp.Tmode) *serr.Err {
 func (c *Clone) Detach(session sessp.Tsession) {
 	db.DPrintf(db.CLONEDEV, "Detach %v\n", session)
 	dir := filepath.Join(c.dir, session.String())
-	ctl := filepath.Join(dir, sessdev.CTL)
+	ctl := filepath.Join(dir, rpcdev.CTL)
 	if err := c.mfs.Remove(ctl); err != nil {
 		db.DPrintf(db.CLONEDEV, "Remove %v err %v\n", ctl, err)
 	}

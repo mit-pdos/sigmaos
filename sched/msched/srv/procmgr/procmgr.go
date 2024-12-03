@@ -7,9 +7,9 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/memfssrv"
 	"sigmaos/proc"
-	pc "sigmaos/procclnt"
 	procclnt "sigmaos/sched/msched/proc/clnt"
 	"sigmaos/sigmaclnt"
+	pc "sigmaos/sigmaclnt/procclnt"
 	sp "sigmaos/sigmap"
 )
 

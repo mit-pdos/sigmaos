@@ -14,9 +14,9 @@ import (
 	"sigmaos/fslib"
 	leaseclnt "sigmaos/ft/lease/clnt"
 	"sigmaos/proc"
-	"sigmaos/procclnt"
 	spproxyclnt "sigmaos/proxy/sigmap/clnt"
 	"sigmaos/sigmaclnt/fdclnt"
+	"sigmaos/sigmaclnt/procclnt"
 )
 
 func init() {

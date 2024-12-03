@@ -7,11 +7,10 @@ import (
 
 	cacheproto "sigmaos/apps/cache/proto"
 
+	"sigmaos/api/fs"
 	"sigmaos/apps/cache"
 	db "sigmaos/debug"
-	"sigmaos/api/fs"
 	"sigmaos/proc"
-	"sigmaos/repl"
 	"sigmaos/serr"
 	sessdevsrv "sigmaos/sessdev/srv"
 	sp "sigmaos/sigmap"
@@ -38,7 +37,6 @@ type CacheSrv struct {
 	mu        sync.Mutex
 	shards    shardMap
 	shrd      string
-	replSrv   repl.Server
 	tracer    *tracing.Tracer
 	lastFence *sp.Tfence
 	perf      *perf.Perf

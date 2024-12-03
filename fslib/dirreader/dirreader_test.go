@@ -113,17 +113,14 @@ func testPerf(t *testing.T, nWorkers int, nStartingFiles int, nTrials int, useNa
 	dirreaderVersion := "V" + strconv.Itoa(int(dirreader.GetDirReaderVersion(ts.ProcEnv())))
 
 	fmt.Printf("Running perf test with %d workers, %d starting files, %d trials, dirreader version %s, measure mode %s, useNamed %t\n", nWorkers, nStartingFiles, nTrials, dirreaderVersion, measureModeStr, useNamed)
-	
-	var basedir string
-	if useNamed {
-		basedir = filepath.Join(sp.NAMED, "watchperf")
-	} else {
-		basedir = filepath.Join(sp.UX, sp.LOCAL, "watchperf")
-	}
 
 	measureModeIntStr := strconv.Itoa(int(measureMode))
 
-	p := proc.NewProc("watchperf-coord", []string{strconv.Itoa(nWorkers), strconv.Itoa(nStartingFiles), strconv.Itoa(nTrials), basedir, measureModeIntStr})
+	useNamedStr := "0"
+	if useNamed {
+		useNamedStr = "1"
+	}
+	p := proc.NewProc("watchperf-coord", []string{strconv.Itoa(nWorkers), strconv.Itoa(nStartingFiles), strconv.Itoa(nTrials), useNamedStr, measureModeIntStr})
 	err = ts.Spawn(p)
 	assert.Nil(t, err)
 	err = ts.WaitStart(p.GetPid())

@@ -7,11 +7,11 @@ import (
 	"sigmaos/fslib/dirreader"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
-	"sigmaos/sigmap"
 	"strconv"
 	"time"
 
 	db "sigmaos/debug"
+	sp "sigmaos/sigmap"
 )
 
 type Result struct {
@@ -36,7 +36,8 @@ type PerfCoord struct {
   nWorkers int
 	nStartFiles int
 	nTrials int
-	baseDir string
+	namedBase string
+	localBase string
 	watchDir string
 	responseDir string
 	tempDir string
@@ -70,11 +71,20 @@ func NewPerfCoord(args []string) (*PerfCoord, error) {
 		return &PerfCoord{}, fmt.Errorf("NewPerfCoord: nTrials %s is not an integer", args[2])
 	}
 
-	baseDir := args[3]
-	watchDir := filepath.Join(baseDir, "watch")
-	responseDir := filepath.Join(baseDir, "response")
-	tempDir := filepath.Join(baseDir, "temp")
-	signalDir := filepath.Join(baseDir, "signal")
+	useNamed := args[3] == "1"
+
+	namedBase := filepath.Join(sp.NAMED, "watchperf")
+	localBase := filepath.Join(sp.UX, sp.LOCAL, "watchperf")
+	
+	var watchDir string
+	if useNamed {
+		watchDir = filepath.Join(namedBase, "watch")
+	} else {
+		watchDir = filepath.Join(localBase, "watch")
+	}
+	responseDir := filepath.Join(localBase, "response")
+	tempDir := filepath.Join(localBase, "temp")
+	signalDir := filepath.Join(localBase, "signal")
 
 	measureMode, err := strconv.Atoi(args[4])
 	if err != nil || measureMode < 0 || measureMode > 1 {
@@ -86,7 +96,8 @@ func NewPerfCoord(args []string) (*PerfCoord, error) {
 		nWorkers,
 		nStartFiles,
 		nTrials,
-		baseDir,
+		namedBase,
+		localBase,
 		watchDir,
 		responseDir,
 		tempDir,
@@ -96,7 +107,8 @@ func NewPerfCoord(args []string) (*PerfCoord, error) {
 }
 
 func (c *PerfCoord) Run() {
-	c.MkDir(c.baseDir, 0777)
+	c.MkDir(c.namedBase, 0777)
+	c.MkDir(c.localBase, 0777)
 	c.MkDir(c.watchDir, 0777)
 	c.MkDir(c.responseDir, 0777)
 	c.MkDir(c.tempDir, 0777)
@@ -104,7 +116,7 @@ func (c *PerfCoord) Run() {
 
 	for ix := 0; ix < c.nStartFiles; ix++ {
 		path := filepath.Join(c.watchDir, strconv.Itoa(ix))
-		fd, err := c.Create(path, 0777, sigmap.OAPPEND)
+		fd, err := c.Create(path, 0777, sp.OAPPEND)
 		if err != nil {
 			db.DFatalf("Run: failed to create starting file %d, %v", ix, err)
 		}
@@ -159,7 +171,7 @@ func (c *PerfCoord) Run() {
 
 		if c.measureMode == JustWatch {
 			creationStart = time.Now()
-			_, err = c.Create(path, 0777, sigmap.OAPPEND)
+			_, err = c.Create(path, 0777, sp.OAPPEND)
 			if err != nil {
 				db.DFatalf("Run: failed to create trial file %d, %v", trial, err)
 			}
@@ -170,21 +182,18 @@ func (c *PerfCoord) Run() {
 			}
 			time.Sleep(10 * time.Millisecond) 
 
-			_, err = c.Create(signal_path_create, 0777, sigmap.OAPPEND)
+			_, err = c.Create(signal_path_create, 0777, sp.OAPPEND)
 			if err != nil {
 				db.DFatalf("Run: failed to create signal file %d, %v", trial, err)
 			}
 		} else {
-			_, err = c.Create(signal_path_create, 0777, sigmap.OAPPEND)
+			_, err = c.Create(signal_path_create, 0777, sp.OAPPEND)
 			if err != nil {
 				db.DFatalf("Run: failed to create signal file %d, %v", trial, err)
 			}
-			// wait for all workers to signal that they have started watching
-			for ix := 0; ix < c.nWorkers; ix++ {
-				c.waitForWorkerSignal(trial, strconv.Itoa(ix), false)
-			}
+			c.waitForWorkerSignals(trial, false)
 			creationStart = time.Now()
-			_, err = c.Create(path, 0777, sigmap.OAPPEND)
+			_, err = c.Create(path, 0777, sp.OAPPEND)
 			if err != nil {
 				db.DFatalf("Run: failed to create trial file %d, %v", trial, err)
 			}
@@ -210,19 +219,17 @@ func (c *PerfCoord) Run() {
 			}
 			time.Sleep(10 * time.Millisecond) 
 
-			_, err = c.Create(signal_path_delete, 0777, sigmap.OAPPEND)
+			_, err = c.Create(signal_path_delete, 0777, sp.OAPPEND)
 			if err != nil {
 				db.DFatalf("Run: failed to create signal file %d, %v", trial, err)
 			}
 		} else {
-			_, err = c.Create(signal_path_delete, 0777, sigmap.OAPPEND)
+			_, err = c.Create(signal_path_delete, 0777, sp.OAPPEND)
 			if err != nil {
 				db.DFatalf("Run: failed to create signal file %d, %v", trial, err)
 			}
 			// wait for all workers to signal that they have started watching
-			for ix := 0; ix < c.nWorkers; ix++ {
-				c.waitForWorkerSignal(trial, strconv.Itoa(ix), true)
-			}
+			c.waitForWorkerSignals(trial, true)
 			deletionStart = time.Now()
 			err = c.Remove(path)
 			if err != nil {
@@ -266,15 +273,15 @@ func (c *PerfCoord) Run() {
 	if err := c.Remove(c.tempDir); err != nil {
 		db.DFatalf("Run: failed to remove tempdir %v", err)
 	}
-	if err := c.RmDirEntries(c.signalDir); err != nil {
-		db.DFatalf("Run: failed to clear signaldir entries %v", err)
-	}
-
 	if err := c.Remove(c.signalDir); err != nil {
 		db.DFatalf("Run: failed to remove signaldir %v", err)
 	}
-	if err := c.Remove(c.baseDir); err != nil {
-		db.DFatalf("Run: failed to remove basedir %v", err)
+
+	if err := c.Remove(c.namedBase); err != nil {
+		db.DFatalf("Run: failed to remove named base %v", err)
+	}
+	if err := c.Remove(c.localBase); err != nil {
+		db.DFatalf("Run: failed to remove local base %v", err)
 	}
 
 	result := Result{
@@ -345,25 +352,24 @@ func (c *PerfCoord) getWorkerTimes(trialNum int, deleted bool) []time.Time {
 }
 
 func (c *PerfCoord) waitResponses(responseDirReader dirreader.DirReader, trialNum int, deleted bool) {
-	numFiles := trialNum * 2 + 2 // 1 for the initial responses, 2 for each prev trial, 1 for the current trial
-	if deleted {
-		numFiles += 1 // 1 for the creation ones
-	}
-	numFiles *= c.nWorkers
-
-	err := responseDirReader.WaitNEntries(numFiles)
-	if err != nil {
-		db.DFatalf("Run: failed to wait for all procs to respond %v", err)
+	for ix := 0; ix < c.nWorkers; ix++ {
+		err := responseDirReader.WaitCreate(responseName(trialNum, strconv.Itoa(ix), deleted))
+		if err != nil {
+			db.DFatalf("Run: failed to wait for all procs to respond %v", err)
+		}
 	}
 }
 
 
-func (c *PerfCoord) waitForWorkerSignal(trial int, workerId string, delete bool) {
-	signalPath := filepath.Join(c.signalDir, workerSignalName(trial, delete, workerId))
-	db.DPrintf(db.WATCH_PERF, "waitForWorkerSignal: Waiting for signal %s", signalPath)
-	err := dirreader.WaitCreate(c.FsLib, signalPath)
-	if err != nil {
-		db.DFatalf("waitForWorkerSignal: failed to wait for signal %s, %v", signalPath, err)
+func (c *PerfCoord) waitForWorkerSignals(trial int, delete bool) {
+	for ix := 0; ix < c.nWorkers; ix++ {
+		workerId := strconv.Itoa(ix)
+		signalPath := filepath.Join(c.signalDir, workerSignalName(trial, delete, workerId))
+		db.DPrintf(db.WATCH_PERF, "waitForWorkerSignal: Waiting for signal %s", signalPath)
+		err := dirreader.WaitCreate(c.FsLib, signalPath)
+		if err != nil {
+			db.DFatalf("waitForWorkerSignal: failed to wait for signal %s, %v", signalPath, err)
+		}
 	}
 }
 

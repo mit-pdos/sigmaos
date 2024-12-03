@@ -10,14 +10,14 @@ import (
 	"strings"
 
 	db "sigmaos/debug"
-	"sigmaos/sigmaclnt/fslib"
-	fttask "sigmaos/ft/task"
 	"sigmaos/ft/groupmgr"
+	fttask "sigmaos/ft/task"
 	"sigmaos/proc"
 	"sigmaos/semclnt"
 	"sigmaos/sigmaclnt"
+	"sigmaos/sigmaclnt/fslib"
 	sp "sigmaos/sigmap"
-	"sigmaos/yaml"
+	"sigmaos/util/yaml"
 )
 
 const (

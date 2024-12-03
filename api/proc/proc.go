@@ -1,18 +1,19 @@
-package proc
+package rooc
 
 import (
+	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 )
 
 type ProcAPI interface {
 	// Functions for parent proc
-	Spawn(p *Proc) error
+	Spawn(p *proc.Proc) error
 	Evict(pid sp.Tpid) error
 	WaitStart(pid sp.Tpid) error
-	WaitExit(pid sp.Tpid) (*Status, error)
+	WaitExit(pid sp.Tpid) (*proc.Status, error)
 
 	// Functions for child proc
 	Started() error
-	Exited(status *Status)
+	Exited(status *proc.Status)
 	WaitEvict(pid sp.Tpid) error
 }

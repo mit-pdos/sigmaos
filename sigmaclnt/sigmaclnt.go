@@ -6,6 +6,8 @@ import (
 	"strings"
 	"time"
 
+	procapi "sigmaos/api/proc"
+	sos "sigmaos/api/sigmaos"
 	db "sigmaos/debug"
 	dialproxyclnt "sigmaos/dialproxy/clnt"
 	"sigmaos/fidclnt"
@@ -13,9 +15,8 @@ import (
 	leaseclnt "sigmaos/ft/lease/clnt"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
-	"sigmaos/sigmaclnt/fdclnt"
-	sos "sigmaos/api/sigmaos"
 	spproxyclnt "sigmaos/proxy/sigmap/clnt"
+	"sigmaos/sigmaclnt/fdclnt"
 )
 
 func init() {
@@ -32,7 +33,7 @@ func init() {
 
 type SigmaClnt struct {
 	*fslib.FsLib
-	proc.ProcAPI
+	procapi.ProcAPI
 	*leaseclnt.LeaseClnt
 }
 

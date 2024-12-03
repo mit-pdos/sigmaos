@@ -6,9 +6,9 @@ import (
 	"net/http"
 	"strconv"
 
+	procapi "sigmaos/api/proc"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
-	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 )
 
@@ -81,7 +81,7 @@ func (clnt *WWWClnt) ConsCPULocal(n int) error {
 }
 
 // XXX Remove eventually, repalce with Evict
-func (clnt *WWWClnt) StopServer(pclnt proc.ProcAPI, pid sp.Tpid) error {
+func (clnt *WWWClnt) StopServer(pclnt procapi.ProcAPI, pid sp.Tpid) error {
 	ch := make(chan error)
 	go func() {
 		_, err := clnt.get(EXIT)

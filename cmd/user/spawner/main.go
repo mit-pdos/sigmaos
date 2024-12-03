@@ -6,7 +6,7 @@ import (
 	"os"
 	"strconv"
 
-	"sigmaos/crash"
+	"sigmaos/util/crash"
 	db "sigmaos/debug"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"

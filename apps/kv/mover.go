@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"sigmaos/apps/cache"
-	"sigmaos/crash"
+	"sigmaos/util/crash"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/proc"

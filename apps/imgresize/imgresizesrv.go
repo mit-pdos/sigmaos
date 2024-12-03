@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"strconv"
 
-	// "sigmaos/crash"
+	// "sigmaos/util/crash"
 	db "sigmaos/debug"
 	fttask "sigmaos/ft/task"
 	fttaskmgr"sigmaos/ft/task/mgr"

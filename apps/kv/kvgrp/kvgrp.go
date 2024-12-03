@@ -11,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	"sigmaos/crash"
+	"sigmaos/util/crash"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/ft/leaderclnt"

@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"sigmaos/crash"
+	"sigmaos/util/crash"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	fttaskmgr"sigmaos/ft/task/mgr"

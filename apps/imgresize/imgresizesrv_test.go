@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"sigmaos/apps/imgresize"
-	"sigmaos/crash"
+	"sigmaos/util/crash"
 	db "sigmaos/debug"
 	fttask "sigmaos/ft/task"
 	"sigmaos/ft/groupmgr"

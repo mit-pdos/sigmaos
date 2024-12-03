@@ -8,7 +8,7 @@ import (
 
 	"sigmaos/apps/kv"
 	"sigmaos/apps/kv/kvgrp"
-	"sigmaos/crash"
+	"sigmaos/util/crash"
 	db "sigmaos/debug"
 	dialproxyclnt "sigmaos/dialproxy/clnt"
 	"sigmaos/ft/groupmgr"

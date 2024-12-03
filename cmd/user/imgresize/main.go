@@ -11,7 +11,7 @@ import (
 
 	"github.com/nfnt/resize"
 
-	"sigmaos/crash"
+	"sigmaos/util/crash"
 	db "sigmaos/debug"
 	"sigmaos/api/fs"
 	"sigmaos/proc"

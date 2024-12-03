@@ -8,7 +8,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/api/fs"
 	"sigmaos/namesrv/fsetcd"
-	leaseproto "sigmaos/lease/proto"
+	leaseproto "sigmaos/ft/lease/proto"
 	sp "sigmaos/sigmap"
 	"sigmaos/util/syncmap"
 )

@@ -12,7 +12,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fslib"
-	"sigmaos/fttask"
+	fttask "sigmaos/ft/task"
 	"sigmaos/proc"
 )
 

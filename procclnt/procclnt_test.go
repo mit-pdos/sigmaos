@@ -12,7 +12,7 @@ import (
 
 	"sigmaos/crash"
 	db "sigmaos/debug"
-	"sigmaos/groupmgr"
+	"sigmaos/ft/groupmgr"
 	"sigmaos/linuxsched"
 	"sigmaos/namesrv/fsetcd"
 	"sigmaos/proc"

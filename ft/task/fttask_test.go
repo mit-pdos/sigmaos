@@ -1,4 +1,4 @@
-package fttask_test
+package task_test
 
 import (
 	"testing"
@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	db "sigmaos/debug"
-	"sigmaos/fttask"
+	fttask "sigmaos/ft/task"
 	"sigmaos/mr"
 	"sigmaos/test"
 	rd "sigmaos/util/rand"

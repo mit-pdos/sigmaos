@@ -1,5 +1,5 @@
 // The tasks package implements a bag of fault-tolerant tasks using named.
-package fttask
+package task
 
 import (
 	"encoding/json"

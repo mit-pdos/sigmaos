@@ -28,7 +28,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/api/fs"
 	"sigmaos/fslib"
-	"sigmaos/leaderclnt"
+	"sigmaos/ft/leaderclnt"
 	"sigmaos/memfs/dir"
 	"sigmaos/memfs/fenceddir"
 	"sigmaos/memfs/inode"

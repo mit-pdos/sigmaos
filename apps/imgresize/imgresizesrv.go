@@ -8,9 +8,9 @@ import (
 
 	// "sigmaos/crash"
 	db "sigmaos/debug"
-	"sigmaos/fttask"
-	fttaskmgr "sigmaos/fttask/mgr"
-	"sigmaos/leaderclnt"
+	fttask "sigmaos/ft/task"
+	fttaskmgr"sigmaos/ft/task/mgr"
+	"sigmaos/ft/leaderclnt"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"

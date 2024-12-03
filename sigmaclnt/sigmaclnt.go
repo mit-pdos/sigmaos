@@ -10,7 +10,7 @@ import (
 	dialproxyclnt "sigmaos/dialproxy/clnt"
 	"sigmaos/fidclnt"
 	"sigmaos/fslib"
-	leaseclnt "sigmaos/lease/clnt"
+	leaseclnt "sigmaos/ft/lease/clnt"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
 	"sigmaos/sigmaclnt/fdclnt"

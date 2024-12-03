@@ -14,7 +14,7 @@ import (
 	"sigmaos/crash"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
-	"sigmaos/leaderclnt"
+	"sigmaos/ft/leaderclnt"
 	"sigmaos/proc"
 	"sigmaos/apps/kv/repl/raft"
 	"sigmaos/sigmaclnt"

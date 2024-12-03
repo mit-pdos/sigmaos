@@ -4,7 +4,7 @@ import (
 	"sync"
 	"time"
 
-	leaseproto "sigmaos/lease/proto"
+	leaseproto "sigmaos/ft/lease/proto"
 
 	db "sigmaos/debug"
 	"sigmaos/api/fs"

@@ -141,7 +141,7 @@ if [[ $COMPILE == "--compile" ]]; then
     # test if test packages compile
     #
 
-    for T in path serr linuxsched util/perf sigmap dialproxy sessclnt proxy/ninep fslib/reader fslib/writer stats fslib semclnt chunk/srv leaderclnt/electclnt dircache memfs namesrv procclnt proxy/ux proxy/s3 bootkernelclnt leaderclnt leadertest apps/kv/kvgrp apps/cache/cachegrp/clnt apps/www sigmapsrv realm/clnt apps/mr apps/imgresize apps/kv apps/hotel apps/socialnetwork benchmarks benchmarks/remote example example_echo_server benchmarks/netperf; do
+    for T in path serr linuxsched util/perf sigmap dialproxy sessclnt proxy/ninep fslib/reader fslib/writer stats fslib semclnt chunk/srv ft/leaderclnt/electclnt dircache memfs namesrv procclnt proxy/ux proxy/s3 bootkernelclnt ft/leaderclnt leadertest apps/kv/kvgrp apps/cache/cachegrp/clnt apps/www sigmapsrv realm/clnt apps/mr apps/imgresize apps/kv apps/hotel apps/socialnetwork benchmarks benchmarks/remote example example_echo_server benchmarks/netperf; do
         if ! [ -z "$SKIPTO" ]; then
           if [[ "$SKIPTO" == "$T" ]]; then
             # Stop skipping
@@ -195,7 +195,7 @@ if [[ $BASIC == "--basic" ]]; then
     # test with a kernel with just named
     #
 
-    for T in fslib/reader fslib/writer stats dialproxy fslib leaderclnt/electclnt dircache; do
+    for T in fslib/reader fslib/writer stats dialproxy fslib ft/leaderclnt/electclnt dircache; do
         if ! [ -z "$SKIPTO" ]; then
           if [[ "$SKIPTO" == "$T" ]]; then
             # Stop skipping
@@ -218,7 +218,7 @@ if [[ $BASIC == "--basic" ]]; then
     # tests a full kernel using root realm
     #
 
-    for T in namesrv semclnt chunk/srv procclnt proxy/ux bootkernelclnt proxy/s3 leaderclnt leadertest apps/kv/kvgrp apps/cache/cachegrp/clnt; do
+    for T in namesrv semclnt chunk/srv procclnt proxy/ux bootkernelclnt proxy/s3 ft/leaderclnt leadertest apps/kv/kvgrp apps/cache/cachegrp/clnt; do
         if ! [ -z "$SKIPTO" ]; then
           if [[ "$SKIPTO" == "$T" ]]; then
             # Stop skipping

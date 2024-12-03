@@ -11,8 +11,8 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fslib"
-	"sigmaos/fttask"
-	"sigmaos/groupmgr"
+	fttask "sigmaos/ft/task"
+	"sigmaos/ft/groupmgr"
 	"sigmaos/proc"
 	"sigmaos/semclnt"
 	"sigmaos/sigmaclnt"

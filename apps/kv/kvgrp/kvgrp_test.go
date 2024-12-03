@@ -11,7 +11,7 @@ import (
 	"sigmaos/crash"
 	db "sigmaos/debug"
 	dialproxyclnt "sigmaos/dialproxy/clnt"
-	"sigmaos/groupmgr"
+	"sigmaos/ft/groupmgr"
 	"sigmaos/namesrv/fsetcd"
 	"sigmaos/proc"
 	"sigmaos/semclnt"

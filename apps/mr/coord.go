@@ -12,8 +12,8 @@ import (
 
 	"sigmaos/crash"
 	db "sigmaos/debug"
-	"sigmaos/fttask"
-	"sigmaos/leaderclnt"
+	fttask "sigmaos/ft/task"
+	"sigmaos/ft/leaderclnt"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"

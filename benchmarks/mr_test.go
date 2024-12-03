@@ -7,7 +7,7 @@ import (
 
 	"sigmaos/apps/mr"
 	db "sigmaos/debug"
-	"sigmaos/groupmgr"
+	"sigmaos/ft/groupmgr"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"

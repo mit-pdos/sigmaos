@@ -15,7 +15,6 @@ import (
 	"sigmaos/apps/cache/proto"
 	db "sigmaos/debug"
 	"sigmaos/proc"
-	"sigmaos/procclnt"
 	"sigmaos/semclnt"
 	"sigmaos/sigmaclnt"
 	"sigmaos/util/perf"
@@ -71,15 +70,6 @@ func main() {
 
 	sc.Started()
 	run(sc, csc, rcli, p, dur, nkeys, uint64(keyOffset), sempath)
-}
-
-func waitEvict(csc *cachegrpclnt.CachedSvcClnt, pclnt *procclnt.ProcClnt) {
-	err := pclnt.WaitEvict(pclnt.ProcEnv().GetPID())
-	if err != nil {
-		db.DPrintf(db.CACHECLERK, "Error WaitEvict: %v", err)
-	}
-	db.DPrintf(db.CACHECLERK, "Evict\n")
-	atomic.StoreInt32(&done, 1)
 }
 
 func run(sc *sigmaclnt.SigmaClnt, csc *cachegrpclnt.CachedSvcClnt, rcli *redis.Client, p *perf.Perf, dur time.Duration, nkeys int, keyOffset uint64, sempath string) {

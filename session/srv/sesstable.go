@@ -1,4 +1,4 @@
-package sesssrv
+package srv
 
 import (
 	"sync"
@@ -6,7 +6,7 @@ import (
 	//	"github.com/sasha-s/go-deadlock"
 
 	// db "sigmaos/debug"
-	"sigmaos/sessp"
+	sessp "sigmaos/session/proto"
 	sp "sigmaos/sigmap"
 )
 

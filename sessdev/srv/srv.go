@@ -12,7 +12,7 @@ import (
 	"sigmaos/serr"
 	"sigmaos/sessdev"
 	"sigmaos/sessdev/srv/clonedev"
-	"sigmaos/sessp"
+	sessp "sigmaos/session/proto"
 	sp "sigmaos/sigmap"
 )
 

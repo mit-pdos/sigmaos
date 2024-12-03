@@ -141,7 +141,7 @@ if [[ $COMPILE == "--compile" ]]; then
     # test if test packages compile
     #
 
-    for T in path serr linuxsched util/perf sigmap dialproxy sessclnt proxy/ninep fslib/reader fslib/writer stats fslib semclnt chunk/srv ft/leaderclnt/electclnt dircache memfs namesrv procclnt proxy/ux proxy/s3 bootkernelclnt ft/leaderclnt leadertest apps/kv/kvgrp apps/cache/cachegrp/clnt apps/www sigmapsrv realm/clnt apps/mr apps/imgresize apps/kv apps/hotel apps/socialnetwork benchmarks benchmarks/remote example example_echo_server benchmarks/netperf; do
+    for T in path serr linuxsched util/perf sigmap dialproxy session/clnt proxy/ninep fslib/reader fslib/writer stats fslib semclnt chunk/srv ft/leaderclnt/electclnt dircache memfs namesrv procclnt proxy/ux proxy/s3 bootkernelclnt ft/leaderclnt leadertest apps/kv/kvgrp apps/cache/cachegrp/clnt apps/www sigmapsrv realm/clnt apps/mr apps/imgresize apps/kv apps/hotel apps/socialnetwork benchmarks benchmarks/remote example example_echo_server benchmarks/netperf; do
         if ! [ -z "$SKIPTO" ]; then
           if [[ "$SKIPTO" == "$T" ]]; then
             # Stop skipping
@@ -178,7 +178,7 @@ if [[ $BASIC == "--basic" ]]; then
     # test sessions
     #
     
-    for T in sessclnt; do
+    for T in session/clnt; do
         if ! [ -z "$SKIPTO" ]; then
           if [[ "$SKIPTO" == "$T" ]]; then
             # Stop skipping

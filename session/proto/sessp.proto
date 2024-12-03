@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-option go_package = "sigmaos/sessp";
+option go_package = "sigmaos/session/proto";
 
 message Fcall {
         uint32 type = 1;

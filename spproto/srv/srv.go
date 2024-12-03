@@ -8,7 +8,7 @@ import (
 	"sigmaos/path"
 	"sigmaos/proc"
 	"sigmaos/serr"
-	"sigmaos/sessp"
+	sessp "sigmaos/session/proto"
 	sp "sigmaos/sigmap"
 	sps "sigmaos/api/spprotsrv"
 	"sigmaos/spproto/srv/lockmap"

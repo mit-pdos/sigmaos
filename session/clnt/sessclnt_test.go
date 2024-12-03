@@ -1,4 +1,4 @@
-package sessclnt_test
+package clnt_test
 
 import (
 	"flag"
@@ -19,11 +19,11 @@ import (
 	netsrv "sigmaos/net/srv"
 	"sigmaos/path"
 	"sigmaos/serr"
-	"sigmaos/sessclnt"
-	"sigmaos/sessp"
+	sessclnt "sigmaos/session/clnt"
+	sessp "sigmaos/session/proto"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmapsrv"
-	"sigmaos/spcodec"
+	spcodec "sigmaos/session/codec"
 	spprotosrv "sigmaos/spproto/srv"
 	"sigmaos/test"
 	"sigmaos/util/rand"

@@ -1,4 +1,4 @@
-package sesssrv
+package srv
 
 import (
 	"fmt"
@@ -7,11 +7,11 @@ import (
 
 	//	"github.com/sasha-s/go-deadlock"
 
+	sps "sigmaos/api/spprotsrv"
 	db "sigmaos/debug"
 	"sigmaos/serr"
-	"sigmaos/sessp"
+	sessp "sigmaos/session/proto"
 	sp "sigmaos/sigmap"
-	sps "sigmaos/api/spprotsrv"
 )
 
 //

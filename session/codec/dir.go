@@ -1,4 +1,4 @@
-package spcodec
+package codec
 
 import (
 	"bytes"

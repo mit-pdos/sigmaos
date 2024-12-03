@@ -40,7 +40,6 @@ func removeProc(fsl *fslib.FsLib, procdir string, createdProcDir bool) error {
 		// should only have to retry once at most.
 		for i := 0; i < maxRetries && err != nil; i++ {
 			s, _ := fsl.SprintfDir(procdir)
-			// debug.PrintStack()
 			db.DPrintf(db.PROCCLNT_ERR, "RmDir %v err %v \n%v", procdir, err, s)
 			// Retry
 			err = fsl.RmDir(procdir)

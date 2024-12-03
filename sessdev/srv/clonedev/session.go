@@ -5,7 +5,7 @@ import (
 	"sigmaos/api/fs"
 	"sigmaos/memfs/inode"
 	"sigmaos/serr"
-	"sigmaos/sessp"
+	sessp "sigmaos/session/proto"
 	sp "sigmaos/sigmap"
 )
 

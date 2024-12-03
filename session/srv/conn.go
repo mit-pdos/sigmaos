@@ -1,4 +1,4 @@
-package sesssrv
+package srv
 
 import (
 	"net"
@@ -6,8 +6,8 @@ import (
 
 	"sigmaos/demux"
 	"sigmaos/serr"
-	"sigmaos/sessp"
-	"sigmaos/spcodec"
+	sessp "sigmaos/session/proto"
+	spcodec "sigmaos/session/codec"
 
 	db "sigmaos/debug"
 	sp "sigmaos/sigmap"

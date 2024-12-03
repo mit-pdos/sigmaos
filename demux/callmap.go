@@ -4,7 +4,7 @@ import (
 	"sync"
 
 	"sigmaos/serr"
-	"sigmaos/sessp"
+	sessp "sigmaos/session/proto"
 )
 
 // Map of outstanding calls indexed by tag

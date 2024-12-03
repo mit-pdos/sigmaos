@@ -3,7 +3,7 @@ package spprotsrv
 import (
 	db "sigmaos/debug"
 	"sigmaos/serr"
-	"sigmaos/sessp"
+	sessp "sigmaos/session/proto"
 	sp "sigmaos/sigmap"
 )
 

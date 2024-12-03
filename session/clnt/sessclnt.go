@@ -3,7 +3,7 @@
 // sessclnt could re-establish a new [netclnt] (but no longer
 // supported for now).  Sessclnt uses [demux] to multiplex
 // requests/replies over the connetion.
-package sessclnt
+package clnt
 
 import (
 	"sync"
@@ -17,9 +17,9 @@ import (
 	netclnt "sigmaos/net/clnt"
 	"sigmaos/proc"
 	"sigmaos/serr"
-	"sigmaos/sessp"
+	sessp "sigmaos/session/proto"
 	sp "sigmaos/sigmap"
-	"sigmaos/spcodec"
+	spcodec "sigmaos/session/codec"
 	"sigmaos/util/rand"
 )
 

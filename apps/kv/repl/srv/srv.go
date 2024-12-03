@@ -13,7 +13,7 @@ import (
 	"sigmaos/apps/kv/repl"
 	"sigmaos/apps/kv/repl/raft"
 	rpcsrv "sigmaos/rpc/srv"
-	"sigmaos/sessp"
+	sessp "sigmaos/session/proto"
 )
 
 type ReplSrv struct {

@@ -15,7 +15,7 @@ import (
 	rpcproto "sigmaos/rpc/proto"
 	rpcsrv "sigmaos/rpc/srv"
 	"sigmaos/serr"
-	"sigmaos/sessp"
+	sessp "sigmaos/session/proto"
 	"sigmaos/sigmaclnt"
 	sos "sigmaos/api/sigmaos"
 	sp "sigmaos/sigmap"

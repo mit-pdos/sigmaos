@@ -1,10 +1,10 @@
-package sesssrv
+package srv
 
 import (
 	"time"
 
 	db "sigmaos/debug"
-	"sigmaos/sessp"
+	sessp "sigmaos/session/proto"
 	sp "sigmaos/sigmap"
 )
 

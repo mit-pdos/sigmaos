@@ -6,7 +6,7 @@ import (
 	"io"
 
 	sp "sigmaos/sigmap"
-	"sigmaos/spcodec"
+	spcodec "sigmaos/session/codec"
 )
 
 // Making rdr a bufio is important because the first read must be >=

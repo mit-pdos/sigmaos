@@ -15,7 +15,7 @@ import (
 	"sigmaos/namesrv/fsetcd"
 	"sigmaos/proc"
 	"sigmaos/semclnt"
-	"sigmaos/sesssrv"
+	sesssrv "sigmaos/session/srv"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"

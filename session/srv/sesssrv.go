@@ -1,21 +1,21 @@
 // The sesssrv package dispatches incoming calls on a session to a
 // protsrv for that session.  The clients on a session share an fid
 // table.
-package sesssrv
+package srv
 
 import (
 	"net"
 
+	sps "sigmaos/api/spprotsrv"
 	db "sigmaos/debug"
 	"sigmaos/demux"
 	dialproxyclnt "sigmaos/dialproxy/clnt"
 	netsrv "sigmaos/net/srv"
 	"sigmaos/proc"
 	"sigmaos/serr"
-	"sigmaos/sessp"
+	sessp "sigmaos/session/proto"
 	sp "sigmaos/sigmap"
-	sps "sigmaos/api/spprotsrv"
-	"sigmaos/spcodec"
+	spcodec "sigmaos/session/codec"
 	"sigmaos/stats"
 )
 

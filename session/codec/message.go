@@ -1,10 +1,10 @@
-package spcodec
+package codec
 
 import (
 	"fmt"
 
 	"sigmaos/serr"
-	"sigmaos/sessp"
+	sessp "sigmaos/session/proto"
 	sp "sigmaos/sigmap"
 )
 

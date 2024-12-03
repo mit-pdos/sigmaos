@@ -9,8 +9,8 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/path"
 	"sigmaos/serr"
-	"sigmaos/sessclnt"
-	"sigmaos/sessp"
+	sessclnt "sigmaos/session/clnt"
+	sessp "sigmaos/session/proto"
 	sp "sigmaos/sigmap"
 )
 

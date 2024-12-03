@@ -1,4 +1,4 @@
-package spcodec
+package codec
 
 import (
 	"bufio"
@@ -13,7 +13,7 @@ import (
 	"sigmaos/demux"
 	"sigmaos/frame"
 	"sigmaos/serr"
-	"sigmaos/sessp"
+	sessp "sigmaos/session/proto"
 	sp "sigmaos/sigmap"
 )
 

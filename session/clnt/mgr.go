@@ -1,4 +1,4 @@
-package sessclnt
+package clnt
 
 import (
 	"sync"
@@ -9,7 +9,7 @@ import (
 	dialproxyclnt "sigmaos/dialproxy/clnt"
 	"sigmaos/proc"
 	"sigmaos/serr"
-	"sigmaos/sessp"
+	sessp "sigmaos/session/proto"
 	sp "sigmaos/sigmap"
 )
 

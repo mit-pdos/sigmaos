@@ -1,4 +1,4 @@
-package sessp
+package proto
 
 import (
 	"fmt"

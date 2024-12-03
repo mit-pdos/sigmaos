@@ -6,7 +6,7 @@ import (
 
 	"sigmaos/clntcond"
 	"sigmaos/api/fs"
-	"sigmaos/sessp"
+	sessp "sigmaos/session/proto"
 	sp "sigmaos/sigmap"
 )
 

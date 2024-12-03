@@ -17,7 +17,7 @@ import (
 	rpcclntopts "sigmaos/rpc/clnt/opts"
 	rpcproto "sigmaos/rpc/proto"
 	"sigmaos/serr"
-	"sigmaos/sessp"
+	sessp "sigmaos/session/proto"
 	sp "sigmaos/sigmap"
 )
 

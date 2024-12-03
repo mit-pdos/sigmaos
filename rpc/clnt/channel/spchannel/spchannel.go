@@ -10,7 +10,7 @@ import (
 	"sigmaos/rpc"
 	"sigmaos/rpc/clnt/channel"
 	sessdevclnt "sigmaos/sessdev/clnt"
-	"sigmaos/sessp"
+	sessp "sigmaos/session/proto"
 	sp "sigmaos/sigmap"
 )
 

@@ -20,9 +20,9 @@ import (
 	"sigmaos/netclnt"
 	"sigmaos/netsrv"
 	"sigmaos/serr"
-	"sigmaos/sessp"
+	sessp "sigmaos/session/proto"
 	sp "sigmaos/sigmap"
-	"sigmaos/spcodec"
+	spcodec "sigmaos/session/codec"
 	"sigmaos/test"
 )
 

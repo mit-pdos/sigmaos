@@ -18,7 +18,7 @@ import (
 	"sigmaos/memfssrv"
 	"sigmaos/serr"
 	"sigmaos/sessdev"
-	"sigmaos/sessp"
+	sessp "sigmaos/session/proto"
 	sp "sigmaos/sigmap"
 	sps "sigmaos/api/spprotsrv"
 )

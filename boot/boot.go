@@ -9,10 +9,6 @@ import (
 	"sigmaos/proc"
 )
 
-type Boot struct {
-	k *kernel.Kernel
-}
-
 // The boot processes enters here
 func BootUp(param *kernel.Param, pe *proc.ProcEnv) error {
 	db.DPrintf(db.KERNEL, "Boot param %v ProcEnv %v env %v", param, pe, os.Environ())

@@ -10,6 +10,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	procapi "sigmaos/api/proc"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	fttask "sigmaos/ft/task"
@@ -18,7 +19,7 @@ import (
 
 type FtTaskMgr struct {
 	*fttask.FtTasks
-	proc.ProcAPI
+	procapi.ProcAPI
 	ntask atomic.Int32
 }
 
@@ -32,7 +33,7 @@ type Tresult struct {
 type Tnew func() interface{}
 type TmkProc func(n string, i interface{}) *proc.Proc
 
-func NewTaskMgr(pclnt proc.ProcAPI, ft *fttask.FtTasks) (*FtTaskMgr, error) {
+func NewTaskMgr(pclnt procapi.ProcAPI, ft *fttask.FtTasks) (*FtTaskMgr, error) {
 	if _, err := ft.RecoverTasks(); err != nil {
 		return nil, err
 	}

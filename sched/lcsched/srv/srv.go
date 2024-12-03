@@ -7,6 +7,7 @@ import (
 
 	"sigmaos/chunk"
 	chunkclnt "sigmaos/chunk/clnt"
+	"sigmaos/crash"
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/proc"
@@ -183,6 +184,10 @@ func Run() {
 	if err != nil {
 		db.DFatalf("Error NewSigmaSrv: %v", err)
 	}
+
+	crash.Failer(sc.FsLib, crash.LCSCHED_CRASH, func(e crash.Tevent) {
+		crash.Crash()
+	})
 
 	// Perf monitoring
 	p, err := perf.NewPerf(sc.ProcEnv(), perf.LCSCHED)

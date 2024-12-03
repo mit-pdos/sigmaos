@@ -51,7 +51,7 @@ func TestPstats(t *testing.T) {
 
 func TestKillNamed(t *testing.T) {
 	const T = 1000
-	fn := sp.NAMED + "crash.sem"
+	fn := sp.NAMED + "crashnd.sem"
 
 	e := crash.NewEventPath(crash.NAMED_CRASH, T, 1.0, fn)
 	err := crash.SetSigmaFail([]crash.Tevent{e})
@@ -77,7 +77,8 @@ func TestKillNamed(t *testing.T) {
 	db.DPrintf(db.TEST, "Crash named..\n")
 
 	sem := semclnt.NewSemClnt(ts.FsLib, fn)
-	sem.Up()
+	err := sem.Up()
+	assert.Nil(t, err)
 	time.Sleep(T * time.Millisecond)
 
 	db.DPrintf(db.TEST, "GetDir..\n")

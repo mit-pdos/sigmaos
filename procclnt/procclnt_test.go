@@ -16,6 +16,7 @@ import (
 	"sigmaos/linuxsched"
 	"sigmaos/namesrv/fsetcd"
 	"sigmaos/proc"
+	"sigmaos/semclnt"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
@@ -81,8 +82,8 @@ func spawnSleeperMcpu(t *testing.T, ts *test.Tstate, pid sp.Tpid, mcpu proc.Tmcp
 
 func spawnSpawner(t *testing.T, ts *test.Tstate, wait bool, childPid sp.Tpid, msecs, c int64) sp.Tpid {
 	p := proc.NewProc("spawner", []string{strconv.FormatBool(wait), childPid.String(), "sleeper", fmt.Sprintf("%dms", msecs), "name/"})
-	e0 := crash.Tevent{crash.SPAWNER_CRASH, 0, c, 0.33, 0}
-	e1 := crash.Tevent{crash.SPAWNER_PARTITION, 0, c, 0.66, 0}
+	e0 := crash.NewEvent(crash.SPAWNER_CRASH, c, 0.33)
+	e1 := crash.NewEvent(crash.SPAWNER_PARTITION, c, 0.66)
 	s, err := crash.MakeTevents([]crash.Tevent{e0, e1})
 	assert.Nil(t, err)
 	p.AppendEnv(proc.SIGMAFAIL, s)
@@ -807,6 +808,13 @@ func TestProcManyPartition(t *testing.T) {
 }
 
 func TestSpawnCrashLCSched(t *testing.T) {
+	const T = 1000
+	fn := sp.NAMED + "crashlc.sem"
+
+	e := crash.NewEventPath(crash.LCSCHED_CRASH, T, 1.0, fn)
+	err := crash.SetSigmaFail([]crash.Tevent{e})
+	assert.Nil(t, err)
+
 	ts, err1 := test.NewTstateAll(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
@@ -817,12 +825,14 @@ func TestSpawnCrashLCSched(t *testing.T) {
 	// Spawn a proc which can't possibly be run by any schedd.
 	pid := spawnSpinnerMcpu(ts, proc.Tmcpu(1000*linuxsched.GetNCores()*2))
 
-	db.DPrintf(db.TEST, "Kill a schedd")
+	db.DPrintf(db.TEST, "Crash a schedd")
 
-	err := ts.KillOne(sp.LCSCHEDREL)
-	assert.Nil(t, err, "KillOne: %v", err)
+	sem := semclnt.NewSemClnt(ts.FsLib, fn)
+	err = sem.Up()
+	assert.Nil(t, err)
+	time.Sleep(T * time.Millisecond)
 
-	db.DPrintf(db.TEST, "Schedd killed")
+	db.DPrintf(db.TEST, "Upped Schedd ")
 
 	err = ts.WaitStart(pid)
 	assert.NotNil(t, err, "WaitStart: %v", err)

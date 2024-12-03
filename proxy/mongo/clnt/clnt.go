@@ -4,7 +4,7 @@ import (
 	"gopkg.in/mgo.v2/bson"
 	dbg "sigmaos/debug"
 	"sigmaos/fslib"
-	proto "sigmaos/mongo/proto"
+	proto "sigmaos/proxy/mongo/proto"
 	rpcclnt "sigmaos/rpc/clnt"
 	sprpcclnt "sigmaos/rpc/clnt/sigmap"
 	sp "sigmaos/sigmap"

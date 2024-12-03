@@ -3,7 +3,7 @@ package clnt
 import (
 	"encoding/json"
 
-	"sigmaos/db/proto"
+	"sigmaos/proxy/db/proto"
 	"sigmaos/fslib"
 	rpcclnt "sigmaos/rpc/clnt"
 	sprpcclnt "sigmaos/rpc/clnt/sigmap"

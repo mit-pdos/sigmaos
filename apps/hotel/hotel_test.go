@@ -14,7 +14,7 @@ import (
 	"sigmaos/apps/hotel"
 	"sigmaos/apps/hotel/proto"
 	"sigmaos/benchmarks/loadgen"
-	dbclnt "sigmaos/db/clnt"
+	dbclnt "sigmaos/proxy/db/clnt"
 	db "sigmaos/debug"
 	"sigmaos/linuxsched"
 	"sigmaos/proc"

@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	_ "github.com/go-sql-driver/mysql"
 
-	"sigmaos/db/proto"
+	"sigmaos/proxy/db/proto"
 	"sigmaos/debug"
 	"sigmaos/api/fs"
 )

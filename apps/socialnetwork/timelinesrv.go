@@ -11,7 +11,7 @@ import (
 	"sigmaos/apps/socialnetwork/proto"
 	dbg "sigmaos/debug"
 	"sigmaos/api/fs"
-	mongoclnt "sigmaos/mongo/clnt"
+	mongoclnt "sigmaos/proxy/mongo/clnt"
 	"sigmaos/proc"
 	rpcclnt "sigmaos/rpc/clnt"
 	sprpcclnt "sigmaos/rpc/clnt/sigmap"

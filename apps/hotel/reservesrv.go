@@ -11,7 +11,7 @@ import (
 	"sigmaos/apps/cache"
 	cacheproto "sigmaos/apps/cache/proto"
 	"sigmaos/apps/hotel/proto"
-	dbclnt "sigmaos/db/clnt"
+	dbclnt "sigmaos/proxy/db/clnt"
 	db "sigmaos/debug"
 	"sigmaos/api/fs"
 	"sigmaos/proc"

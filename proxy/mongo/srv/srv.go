@@ -12,7 +12,7 @@ import (
 
 	dbg "sigmaos/debug"
 	"sigmaos/api/fs"
-	"sigmaos/mongo/proto"
+	"sigmaos/proxy/mongo/proto"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"

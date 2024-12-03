@@ -7,7 +7,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
-	spproxysrv "sigmaos/spproxy/srv"
+	spproxysrv "sigmaos/proxy/sigmap/srv"
 )
 
 type Services struct {

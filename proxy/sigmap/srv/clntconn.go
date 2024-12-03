@@ -19,8 +19,8 @@ import (
 	"sigmaos/sigmaclnt"
 	sos "sigmaos/api/sigmaos"
 	sp "sigmaos/sigmap"
-	scproto "sigmaos/spproxy/proto"
-	"sigmaos/spproxy/transport"
+	scproto "sigmaos/proxy/sigmap/proto"
+	"sigmaos/proxy/sigmap/transport"
 )
 
 // One SigmaClntConn per client connection

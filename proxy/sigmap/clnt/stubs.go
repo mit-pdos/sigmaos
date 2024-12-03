@@ -13,7 +13,7 @@ import (
 	"sigmaos/sessp"
 	sos "sigmaos/api/sigmaos"
 	sp "sigmaos/sigmap"
-	spproto "sigmaos/spproxy/proto"
+	spproto "sigmaos/proxy/sigmap/proto"
 )
 
 func (scc *SPProxyClnt) rpcErr(method string, req proto.Message, rep *spproto.SigmaErrReply) error {

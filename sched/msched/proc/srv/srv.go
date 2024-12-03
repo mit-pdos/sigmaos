@@ -29,7 +29,7 @@ import (
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
-	spproxysrv "sigmaos/spproxy/srv"
+	spproxysrv "sigmaos/proxy/sigmap/srv"
 	"sigmaos/util/perf"
 	"sigmaos/util/syncmap"
 )

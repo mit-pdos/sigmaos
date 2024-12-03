@@ -15,7 +15,7 @@ import (
 	"sigmaos/procclnt"
 	"sigmaos/sigmaclnt/fdclnt"
 	sos "sigmaos/api/sigmaos"
-	spproxyclnt "sigmaos/spproxy/clnt"
+	spproxyclnt "sigmaos/proxy/sigmap/clnt"
 )
 
 func init() {

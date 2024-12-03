@@ -16,8 +16,8 @@ import (
 	rpcclntopts "sigmaos/rpc/clnt/opts"
 	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
-	spproto "sigmaos/spproxy/proto"
-	"sigmaos/spproxy/transport"
+	spproto "sigmaos/proxy/sigmap/proto"
+	"sigmaos/proxy/sigmap/transport"
 )
 
 type SPProxyClnt struct {

@@ -5,13 +5,13 @@ package srv
 import (
 	"sync"
 
-	replproto "sigmaos/repl/proto"
+	replproto "sigmaos/apps/kv/repl/proto"
 
 	"sigmaos/ctx"
 	db "sigmaos/debug"
 	"sigmaos/api/fs"
-	"sigmaos/repl"
-	"sigmaos/repl/raft"
+	"sigmaos/apps/kv/repl"
+	"sigmaos/apps/kv/repl/raft"
 	rpcsrv "sigmaos/rpc/srv"
 	"sigmaos/sessp"
 )

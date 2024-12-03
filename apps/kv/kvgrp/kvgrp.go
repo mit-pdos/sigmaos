@@ -16,7 +16,7 @@ import (
 	"sigmaos/fslib"
 	"sigmaos/leaderclnt"
 	"sigmaos/proc"
-	"sigmaos/repl/raft"
+	"sigmaos/apps/kv/repl/raft"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"

@@ -6,7 +6,7 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	"sigmaos/fslib"
-	replproto "sigmaos/repl/proto"
+	replproto "sigmaos/apps/kv/repl/proto"
 	rpcclnt "sigmaos/rpc/clnt"
 	sprpcclnt "sigmaos/rpc/clnt/sigmap"
 	sp "sigmaos/sigmap"

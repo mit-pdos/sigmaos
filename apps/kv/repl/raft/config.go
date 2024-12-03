@@ -7,7 +7,7 @@ import (
 	db "sigmaos/debug"
 	dialproxyclnt "sigmaos/dialproxy/clnt"
 	"sigmaos/proc"
-	"sigmaos/repl"
+	"sigmaos/apps/kv/repl"
 	sp "sigmaos/sigmap"
 )
 

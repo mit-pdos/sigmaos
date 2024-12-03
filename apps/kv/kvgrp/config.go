@@ -5,8 +5,8 @@ import (
 
 	cachesrv "sigmaos/apps/cache/srv"
 	db "sigmaos/debug"
-	"sigmaos/repl/raft"
-	replsrv "sigmaos/repl/srv"
+	"sigmaos/apps/kv/repl/raft"
+	replsrv "sigmaos/apps/kv/repl/srv"
 	"sigmaos/semclnt"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"

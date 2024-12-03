@@ -7,8 +7,8 @@ import (
 
 	dialproxyclnt "sigmaos/dialproxy/clnt"
 	"sigmaos/proc"
-	"sigmaos/repl"
-	replproto "sigmaos/repl/proto"
+	"sigmaos/apps/kv/repl"
+	replproto "sigmaos/apps/kv/repl/proto"
 	sp "sigmaos/sigmap"
 )
 

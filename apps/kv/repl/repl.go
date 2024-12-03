@@ -1,7 +1,7 @@
 package repl
 
 import (
-	proto "sigmaos/repl/proto"
+	proto "sigmaos/apps/kv/repl/proto"
 )
 
 type Tapplyf func(*proto.ReplOpRequest, *proto.ReplOpReply) error

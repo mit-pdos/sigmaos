@@ -7,8 +7,8 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	db "sigmaos/debug"
-	"sigmaos/repl"
-	replproto "sigmaos/repl/proto"
+	"sigmaos/apps/kv/repl"
+	replproto "sigmaos/apps/kv/repl/proto"
 	sp "sigmaos/sigmap"
 )
 

@@ -4,7 +4,7 @@ import "sigmap/sigmap.proto";
 import "proc/proc.proto";
 import "rpc/proto/rpc.proto";
 
-option go_package = "sigmaos/spproxy/proto";
+option go_package = "sigmaos/proxy/sigmap/proto";
 
 message SigmaInitRequest {
         ProcEnvProto procEnvProto = 1;

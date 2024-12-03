@@ -5,7 +5,7 @@ import (
 	"sigmaos/clntcond"
 	db "sigmaos/debug"
 	np "sigmaos/ninep"
-	"sigmaos/npproxysrv/npcodec"
+	"sigmaos/proxy/ninep/npcodec"
 	"sigmaos/path"
 	"sigmaos/serr"
 	"sigmaos/sessp"

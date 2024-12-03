@@ -14,7 +14,7 @@ import (
 	"sigmaos/demux"
 	dialproxyclnt "sigmaos/dialproxy/clnt"
 	"sigmaos/fidclnt"
-	"sigmaos/npproxysrv/npcodec"
+	"sigmaos/proxy/ninep/npcodec"
 	"sigmaos/path"
 	"sigmaos/proc"
 	"sigmaos/serr"

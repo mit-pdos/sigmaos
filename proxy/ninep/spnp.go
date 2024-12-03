@@ -7,7 +7,7 @@ import (
 	"sigmaos/api/fs"
 	"sigmaos/fslib/reader"
 	np "sigmaos/ninep"
-	"sigmaos/npproxysrv/npcodec"
+	"sigmaos/proxy/ninep/npcodec"
 	sp "sigmaos/sigmap"
 )
 

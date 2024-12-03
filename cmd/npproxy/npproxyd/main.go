@@ -8,7 +8,7 @@ import (
 	dialproxyclnt "sigmaos/dialproxy/clnt"
 	"sigmaos/namesrv/fsetcd"
 	netsrv "sigmaos/net/srv"
-	"sigmaos/npproxysrv"
+	"sigmaos/proxy/ninep"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 )

@@ -23,12 +23,12 @@ import (
 	api "sigmaos/apps/mr/mr"
 	mrscanner "sigmaos/apps/mr/scanner"
 	"sigmaos/auth"
-	"sigmaos/util/crash"
 	db "sigmaos/debug"
 	"sigmaos/proc"
 	mschedclnt "sigmaos/sched/msched/clnt"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
+	"sigmaos/util/crash"
 	"sigmaos/util/perf"
 	rd "sigmaos/util/rand"
 	// "sigmaos/stats"
@@ -63,11 +63,11 @@ func init() {
 	flag.IntVar(&nmap, "nmap", 1, "number of mapper threads")
 	flag.DurationVar(&timeout, "mr-timeout", 0, "timeout")
 
-	e0 := crash.Tevent{crash.MRTASK_CRASH, 100, CRASHTASK, 0.33, 0}
-	e1 := crash.Tevent{crash.MRTASK_PARTITION, 100, CRASHTASK, 0.33, 0}
+	e0 := crash.NewEventStart(crash.MRTASK_CRASH, 100, CRASHTASK, 0.33)
+	e1 := crash.NewEventStart(crash.MRTASK_PARTITION, 100, CRASHTASK, 0.33)
 	taskEv = []crash.Tevent{e0, e1}
-	e0 = crash.Tevent{crash.MRCOORD_CRASH, 100, CRASHTASK, 0.33, 0}
-	e1 = crash.Tevent{crash.MRCOORD_PARTITION, 100, CRASHTASK, 0.33, 0}
+	e0 = crash.NewEventStart(crash.MRCOORD_CRASH, 100, CRASHTASK, 0.33)
+	e1 = crash.NewEventStart(crash.MRCOORD_PARTITION, 100, CRASHTASK, 0.33)
 	coordEv = []crash.Tevent{e0, e1}
 }
 

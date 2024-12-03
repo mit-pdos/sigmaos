@@ -6,6 +6,7 @@ rm -rf $TEST_OUT_DIR
 mkdir $TEST_OUT_DIR
 
 SIGMAOS_ROOT=$HOME/sigmaos
+cd $SIGMAOS_ROOT
 for branch in $(cat $SIGMAOS_ROOT/branches-to-test.txt); do
   BRANCH_OUT_DIR="$TEST_OUT_DIR/$branch"
   mkdir $BRANCH_OUT_DIR

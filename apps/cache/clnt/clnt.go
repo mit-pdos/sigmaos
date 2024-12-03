@@ -17,7 +17,7 @@ import (
 	"sigmaos/apps/cache"
 	cacheproto "sigmaos/apps/cache/proto"
 	db "sigmaos/debug"
-	"sigmaos/fslib"
+	"sigmaos/sigmaclnt/fslib"
 	"sigmaos/rpc"
 	rpcclnt "sigmaos/rpc/clnt"
 	sprpcclnt "sigmaos/rpc/clnt/sigmap"

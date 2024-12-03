@@ -8,7 +8,7 @@ import (
 
 	procapi "sigmaos/api/proc"
 	db "sigmaos/debug"
-	"sigmaos/fslib"
+	"sigmaos/sigmaclnt/fslib"
 	sp "sigmaos/sigmap"
 )
 

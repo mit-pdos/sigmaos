@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	db "sigmaos/debug"
-	"sigmaos/fslib"
+	"sigmaos/sigmaclnt/fslib"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"

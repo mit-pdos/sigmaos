@@ -6,7 +6,7 @@ import (
 	"time"
 
 	db "sigmaos/debug"
-	"sigmaos/fslib/reader"
+	"sigmaos/sigmaclnt/fslib/reader"
 	"sigmaos/path"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"

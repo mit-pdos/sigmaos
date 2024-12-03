@@ -11,7 +11,7 @@ import (
 	db "sigmaos/debug"
 	dialproxyclnt "sigmaos/dialproxy/clnt"
 	"sigmaos/fidclnt"
-	"sigmaos/fslib"
+	"sigmaos/sigmaclnt/fslib"
 	leaseclnt "sigmaos/ft/lease/clnt"
 	"sigmaos/proc"
 	spproxyclnt "sigmaos/proxy/sigmap/clnt"

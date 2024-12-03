@@ -6,7 +6,7 @@ import (
 	"time"
 
 	db "sigmaos/debug"
-	"sigmaos/fslib"
+	"sigmaos/sigmaclnt/fslib"
 	"sigmaos/rpc"
 	"sigmaos/rpc/clnt/channel"
 	sessdevclnt "sigmaos/sessdev/clnt"

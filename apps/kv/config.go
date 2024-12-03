@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"sigmaos/apps/cache"
-	"sigmaos/fslib"
+	"sigmaos/sigmaclnt/fslib"
 	sp "sigmaos/sigmap"
 )
 

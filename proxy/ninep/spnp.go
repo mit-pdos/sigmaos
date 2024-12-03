@@ -5,7 +5,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/api/fs"
-	"sigmaos/fslib/reader"
+	"sigmaos/sigmaclnt/fslib/reader"
 	np "sigmaos/ninep"
 	"sigmaos/proxy/ninep/npcodec"
 	sp "sigmaos/sigmap"

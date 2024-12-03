@@ -20,7 +20,7 @@ import (
 	db "sigmaos/debug"
 	dialproxyclnt "sigmaos/dialproxy/clnt"
 	"sigmaos/api/fs"
-	"sigmaos/fslib"
+	"sigmaos/sigmaclnt/fslib"
 	"sigmaos/proc"
 	rpcproto "sigmaos/rpc/proto"
 	"sigmaos/serr"

@@ -18,7 +18,7 @@ import (
 	"sigmaos/apps/mr/mr"
 	"sigmaos/util/crash"
 	db "sigmaos/debug"
-	"sigmaos/fslib"
+	"sigmaos/sigmaclnt/fslib"
 	"sigmaos/util/perf"
 	"sigmaos/proc"
 	"sigmaos/util/rand"

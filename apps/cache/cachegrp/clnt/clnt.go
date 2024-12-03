@@ -15,7 +15,7 @@ import (
 	cacheclnt "sigmaos/apps/cache/clnt"
 	db "sigmaos/debug"
 	"sigmaos/dircache"
-	"sigmaos/fslib"
+	"sigmaos/sigmaclnt/fslib"
 	"sigmaos/rpc"
 	sp "sigmaos/sigmap"
 	tproto "sigmaos/tracing/proto"

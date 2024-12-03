@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	db "sigmaos/debug"
-	"sigmaos/fslib"
+	"sigmaos/sigmaclnt/fslib"
 	fttask "sigmaos/ft/task"
 	"sigmaos/ft/groupmgr"
 	"sigmaos/proc"

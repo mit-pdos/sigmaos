@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 
 	db "sigmaos/debug"
-	"sigmaos/fslib"
+	"sigmaos/sigmaclnt/fslib"
 	"sigmaos/sessdev"
 )
 

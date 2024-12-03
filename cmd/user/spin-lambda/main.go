@@ -6,7 +6,7 @@ import (
 	//	"time"
 
 	"github.com/aws/aws-lambda-go/lambda"
-	//	"sigmaos/fslib"
+	//	"sigmaos/sigmaclnt/fslib"
 	//	"sigmaos/semclnt"
 	//	sp "sigmaos/sigmap"
 	db "sigmaos/debug"

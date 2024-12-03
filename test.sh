@@ -141,7 +141,7 @@ if [[ $COMPILE == "--compile" ]]; then
     # test if test packages compile
     #
 
-    for T in path serr linuxsched util/perf sigmap dialproxy session/clnt proxy/ninep fslib/reader fslib/writer stats fslib semclnt chunk/srv ft/leaderclnt/electclnt dircache memfs namesrv sigmaclnt/procclnt proxy/ux proxy/s3 bootkernelclnt ft/leaderclnt leadertest apps/kv/kvgrp apps/cache/cachegrp/clnt apps/www sigmapsrv realm/clnt apps/mr apps/imgresize apps/kv apps/hotel apps/socialnetwork benchmarks benchmarks/remote example example_echo_server benchmarks/netperf; do
+    for T in path serr linuxsched util/perf sigmap dialproxy session/clnt proxy/ninep sigmaclnt/fslib/reader sigmaclnt/fslib/writer stats sigmaclnt/fslib semclnt chunk/srv ft/leaderclnt/electclnt dircache memfs namesrv sigmaclnt/procclnt proxy/ux proxy/s3 bootkernelclnt ft/leaderclnt leadertest apps/kv/kvgrp apps/cache/cachegrp/clnt apps/www sigmapsrv realm/clnt apps/mr apps/imgresize apps/kv apps/hotel apps/socialnetwork benchmarks benchmarks/remote example example_echo_server benchmarks/netperf; do
         if ! [ -z "$SKIPTO" ]; then
           if [[ "$SKIPTO" == "$T" ]]; then
             # Stop skipping
@@ -195,7 +195,7 @@ if [[ $BASIC == "--basic" ]]; then
     # test with a kernel with just named
     #
 
-    for T in fslib/reader fslib/writer stats dialproxy fslib ft/leaderclnt/electclnt dircache; do
+    for T in sigmaclnt/fslib/reader sigmaclnt/fslib/writer stats dialproxy sigmaclnt/fslib ft/leaderclnt/electclnt dircache; do
         if ! [ -z "$SKIPTO" ]; then
           if [[ "$SKIPTO" == "$T" ]]; then
             # Stop skipping
@@ -211,7 +211,7 @@ if [[ $BASIC == "--basic" ]]; then
     # run_test $sigmapsrv "go test $VERB sigmaos/sigmapsrv -start"  # no perf
 
     # test memfs
-    run_test "memfs/local" "go test $VERB sigmaos/fslib -start -path "name/memfs/~local/"  $SPPROXYD $DIALPROXY $REUSEKERNEL"
+    run_test "memfs/local" "go test $VERB sigmaos/sigmaclnt/fslib -start -path "name/memfs/~local/"  $SPPROXYD $DIALPROXY $REUSEKERNEL"
     run_test "memfs/start" "go test $VERB sigmaos/memfs -start $SPPROXYD $DIALPROXY $REUSEKERNEL"
 
     #

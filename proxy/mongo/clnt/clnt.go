@@ -3,7 +3,7 @@ package clnt
 import (
 	"gopkg.in/mgo.v2/bson"
 	dbg "sigmaos/debug"
-	"sigmaos/fslib"
+	"sigmaos/sigmaclnt/fslib"
 	proto "sigmaos/proxy/mongo/proto"
 	rpcclnt "sigmaos/rpc/clnt"
 	sprpcclnt "sigmaos/rpc/clnt/sigmap"

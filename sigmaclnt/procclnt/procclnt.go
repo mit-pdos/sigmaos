@@ -12,7 +12,7 @@ import (
 	"sigmaos/chunk"
 	chunkclnt "sigmaos/chunk/clnt"
 	db "sigmaos/debug"
-	"sigmaos/fslib"
+	"sigmaos/sigmaclnt/fslib"
 	"sigmaos/proc"
 	"sigmaos/proc/kproc"
 	beschedclnt "sigmaos/sched/besched/clnt"

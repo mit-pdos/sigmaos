@@ -4,7 +4,7 @@ package electclnt
 
 import (
 	db "sigmaos/debug"
-	"sigmaos/fslib"
+	"sigmaos/sigmaclnt/fslib"
 	"sigmaos/namesrv/fsetcd"
 	"sigmaos/namesrv/leaderetcd"
 	sp "sigmaos/sigmap"

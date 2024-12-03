@@ -7,7 +7,7 @@ import (
 	"runtime/debug"
 
 	db "sigmaos/debug"
-	"sigmaos/fslib"
+	"sigmaos/sigmaclnt/fslib"
 	"sigmaos/proc"
 	"sigmaos/rpc"
 	"sigmaos/serr"

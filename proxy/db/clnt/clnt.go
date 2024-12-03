@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 
 	"sigmaos/proxy/db/proto"
-	"sigmaos/fslib"
+	"sigmaos/sigmaclnt/fslib"
 	rpcclnt "sigmaos/rpc/clnt"
 	sprpcclnt "sigmaos/rpc/clnt/sigmap"
 )

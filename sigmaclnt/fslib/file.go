@@ -8,8 +8,8 @@ import (
 	//	"time"
 
 	db "sigmaos/debug"
-	"sigmaos/fslib/reader"
-	"sigmaos/fslib/writer"
+	"sigmaos/sigmaclnt/fslib/reader"
+	"sigmaos/sigmaclnt/fslib/writer"
 	sos "sigmaos/api/sigmaos"
 	sp "sigmaos/sigmap"
 )

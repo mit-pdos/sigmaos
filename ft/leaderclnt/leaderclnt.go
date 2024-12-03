@@ -5,7 +5,7 @@ package leaderclnt
 
 import (
 	db "sigmaos/debug"
-	"sigmaos/fslib"
+	"sigmaos/sigmaclnt/fslib"
 	"sigmaos/ft/leaderclnt/electclnt"
 	"sigmaos/ft/leaderclnt/fenceclnt"
 	sp "sigmaos/sigmap"

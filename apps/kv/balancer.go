@@ -27,7 +27,7 @@ import (
 	"sigmaos/ctx"
 	db "sigmaos/debug"
 	"sigmaos/api/fs"
-	"sigmaos/fslib"
+	"sigmaos/sigmaclnt/fslib"
 	"sigmaos/ft/leaderclnt"
 	"sigmaos/memfs/dir"
 	"sigmaos/memfs/fenceddir"

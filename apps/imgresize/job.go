@@ -7,7 +7,7 @@ import (
 
 	"sigmaos/util/crash"
 	db "sigmaos/debug"
-	"sigmaos/fslib"
+	"sigmaos/sigmaclnt/fslib"
 	fttaskmgr"sigmaos/ft/task/mgr"
 	"sigmaos/ft/groupmgr"
 	"sigmaos/proc"

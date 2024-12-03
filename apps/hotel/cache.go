@@ -7,7 +7,7 @@ import (
 	cachegrpclnt "sigmaos/apps/cache/cachegrp/clnt"
 	"sigmaos/apps/kv"
 	db "sigmaos/debug"
-	"sigmaos/fslib"
+	"sigmaos/sigmaclnt/fslib"
 )
 
 func NewCacheClnt(cache string, fsl *fslib.FsLib, job string) (cache.CacheClnt, error) {

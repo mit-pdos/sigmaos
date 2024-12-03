@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 
 	db "sigmaos/debug"
-	"sigmaos/fs"
+	"sigmaos/api/fs"
 	"sigmaos/memfs/inode"
 	"sigmaos/memfssrv"
 	"sigmaos/rpc"

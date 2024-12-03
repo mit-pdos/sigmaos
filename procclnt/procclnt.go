@@ -13,8 +13,8 @@ import (
 	chunkclnt "sigmaos/chunk/clnt"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
-	"sigmaos/kproc"
 	"sigmaos/proc"
+	"sigmaos/proc/kproc"
 	beschedclnt "sigmaos/sched/besched/clnt"
 	lcschedclnt "sigmaos/sched/lcsched/clnt"
 	mschedclnt "sigmaos/sched/msched/clnt"
@@ -111,14 +111,14 @@ func (clnt *ProcClnt) spawn(kernelId string, how proc.Thow, p *proc.Proc) error 
 
 	p.SetSpawnTime(time.Now())
 
-	// Optionally spawn the proc through schedd.
+	// Optionally spawn the proc through msched.
 	if how == proc.HMSCHED {
 		clnt.cs.Spawned(p.GetPid())
 		// Transparently spawn in a background thread.
 		go func() {
 			db.DPrintf(db.PROCCLNT, "pre spawnRetry %v %v", kernelId, p)
 			pseqno, err := clnt.spawnRetry(kernelId, p)
-			db.DPrintf(db.PROCCLNT, "enqueued on besched %v and spawned on schedd %v err %v proc %v", pseqno.GetProcqID(), pseqno.GetMSchedID(), err, p)
+			db.DPrintf(db.PROCCLNT, "enqueued on besched %v and spawned on msched %v err %v proc %v", pseqno.GetProcqID(), pseqno.GetMSchedID(), err, p)
 			clnt.cs.Started(p.GetPid(), pseqno, err)
 			if err != nil {
 				clnt.cleanupError(p.GetPid(), p.GetParentDir(), fmt.Errorf("Spawn error %v", err))
@@ -136,7 +136,7 @@ func (clnt *ProcClnt) spawn(kernelId string, how proc.Thow, p *proc.Proc) error 
 			return err
 		}
 		// Create a semaphore to indicate a proc has started if this is a kernel
-		// proc. Otherwise, schedd will create the semaphore.
+		// proc. Otherwise, msched will create the semaphore.
 		kprocDir := proc.KProcDir(p.GetPid())
 		semStart := semclnt.NewSemClnt(clnt.FsLib, filepath.Join(kprocDir, proc.START_SEM))
 		semStart.Init(0)
@@ -179,15 +179,15 @@ func (clnt *ProcClnt) spawnRetry(kernelId string, p *proc.Proc) (*proc.ProcSeqno
 	for i := 0; i < sp.Conf.Path.MAX_RESOLVE_RETRY; i++ {
 		var err error
 		if p.IsPrivileged() {
-			// Privileged procs are force-run on the schedd specified by kernelID in
-			// order to make sure they end up on the correct scheddd
+			// Privileged procs are force-run on the msched specified by kernelID in
+			// order to make sure they end up on the correct msched
 			err = clnt.forceRunViaMSched(kernelId, p)
 			pseqno = proc.NewProcSeqno(sp.NOT_SET, kernelId, 0, 0)
 		} else {
 			if p.GetType() == proc.T_BE {
 				// BE Non-kernel procs are enqueued via the besched.
-				var scheddID string
-				scheddID, pseqno, err = clnt.enqueueViaBESched(p)
+				var mschedID string
+				mschedID, pseqno, err = clnt.enqueueViaBESched(p)
 				if err == nil {
 					db.DPrintf(db.PROCCLNT, "spawn: SetBinKernelId proc %v seqno %v", p.GetProgram(), pseqno)
 					start := time.Now()
@@ -195,7 +195,7 @@ func (clnt *ProcClnt) spawnRetry(kernelId string, p *proc.Proc) (*proc.ProcSeqno
 					db.DPrintf(db.SPAWN_LAT, "[%v] time SetBinKernelID: %v", p.GetPid(), time.Since(start))
 					p.SetKernelID(pseqno.GetMSchedID(), false)
 				} else if serr.IsErrorUnavailable(err) {
-					clnt.bins.DelBinKernelID(p.GetProgram(), scheddID)
+					clnt.bins.DelBinKernelID(p.GetProgram(), mschedID)
 				}
 			} else {
 				// LC Non-kernel procs are enqueued via the besched.
@@ -307,11 +307,11 @@ func (clnt *ProcClnt) Started() error {
 // ========== EXITED ==========
 
 // Proc pid mark itself as exited. Typically exited() is called by
-// proc pid, but if the proc crashes, schedd calls exited() on behalf
+// proc pid, but if the proc crashes, msched calls exited() on behalf
 // of the failed proc. The exited proc abandons any chidren it may
 // have. The exited proc cleans itself up.
 //
-// exited() should be called *once* per proc, but schedd's procclnt may
+// exited() should be called *once* per proc, but msched's procclnt may
 // call exited() for other (crashed) procs.
 func (clnt *ProcClnt) exited(procdir, parentdir, kernelID string, pid sp.Tpid, status *proc.Status, how proc.Thow, crashed bool) error {
 	// Write the exit status
@@ -337,7 +337,7 @@ func (clnt *ProcClnt) Exited(status *proc.Status) {
 	db.DPrintf(db.PROCCLNT, "Done Exited normally")
 	clnt.StopWatchingSrvs()
 	// will catch some unintended misuses: a proc calling exited
-	// twice or schedd calling exited twice.
+	// twice or msched calling exited twice.
 	if clnt.setExited(clnt.ProcEnv().GetPID()) == clnt.ProcEnv().GetPID() {
 		b := debug.Stack()
 		db.DFatalf("Exited called after exited %v stack:\n%v", clnt.ProcEnv().ProcDir, string(b))
@@ -348,14 +348,14 @@ func (clnt *ProcClnt) Exited(status *proc.Status) {
 	}
 }
 
-// Stop the schedd/besched/lcsched monitoring threads
+// Stop the msched/besched/lcsched monitoring threads
 func (clnt *ProcClnt) StopWatchingSrvs() {
 	clnt.beschedclnt.StopWatching()
 	clnt.lcschedclnt.StopWatching()
 	clnt.mschedclnt.StopWatching()
 }
 
-// Called on behalf of the proc by schedd when the proc crashes.
+// Called on behalf of the proc by msched when the proc crashes.
 func (clnt *ProcClnt) ExitedCrashed(pid sp.Tpid, procdir string, parentdir string, status *proc.Status, how proc.Thow) {
 	db.DPrintf(db.PROCCLNT, "Exited crashed %v parent %v pid %v status %v", procdir, parentdir, pid, status)
 	err := clnt.exited(procdir, parentdir, "IGNORE_KERNEL_CRASHED", pid, status, how, true)
@@ -374,8 +374,8 @@ func (clnt *ProcClnt) ExitedCrashed(pid sp.Tpid, procdir string, parentdir strin
 
 // ========== EVICT ==========
 
-func (clnt *ProcClnt) evictAt(pid sp.Tpid, scheddID string, how proc.Thow) error {
-	return clnt.notify(mschedclnt.EVICT, pid, scheddID, proc.EVICT_SEM, how, nil, false)
+func (clnt *ProcClnt) evictAt(pid sp.Tpid, mschedID string, how proc.Thow) error {
+	return clnt.notify(mschedclnt.EVICT, pid, mschedID, proc.EVICT_SEM, how, nil, false)
 }
 
 func (clnt *ProcClnt) evict(pid sp.Tpid, how proc.Thow) error {
@@ -393,8 +393,8 @@ func (clnt *ProcClnt) Evict(pid sp.Tpid) error {
 }
 
 // For use by realmd when evicting procs for fairness
-func (clnt *ProcClnt) EvictRealmProc(pid sp.Tpid, scheddID string) error {
-	return clnt.evictAt(pid, scheddID, proc.HMSCHED)
+func (clnt *ProcClnt) EvictRealmProc(pid sp.Tpid, mschedID string) error {
+	return clnt.evictAt(pid, mschedID, proc.HMSCHED)
 }
 
 func (clnt *ProcClnt) EvictKernelProc(pid sp.Tpid, how proc.Thow) error {

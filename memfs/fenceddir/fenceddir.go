@@ -6,7 +6,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/fencefs"
-	"sigmaos/fs"
+	"sigmaos/api/fs"
 	"sigmaos/path"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"

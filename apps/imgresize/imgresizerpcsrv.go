@@ -7,10 +7,10 @@ import (
 	"sync/atomic"
 	"time"
 
+	"sigmaos/api/fs"
 	"sigmaos/apps/imgresize/proto"
 	db "sigmaos/debug"
-	"sigmaos/fs"
-	fttaskmgr "sigmaos/fttask/mgr"
+	fttaskmgr "sigmaos/ft/task/mgr"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"

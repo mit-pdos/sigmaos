@@ -10,7 +10,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fslib/reader"
 	"sigmaos/fslib/writer"
-	sos "sigmaos/sigmaos"
+	sos "sigmaos/api/sigmaos"
 	sp "sigmaos/sigmap"
 )
 

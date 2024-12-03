@@ -11,9 +11,9 @@ import (
 	"time"
 
 	db "sigmaos/debug"
-	"sigmaos/kproc"
-	"sigmaos/netsigma"
+	iputil "sigmaos/util/ip"
 	"sigmaos/proc"
+	"sigmaos/proc/kproc"
 	"sigmaos/serr"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
@@ -44,7 +44,7 @@ type Kernel struct {
 }
 
 func NewKernel(p *Param, pe *proc.ProcEnv) (*Kernel, error) {
-	ip, err := netsigma.LocalIP()
+	ip, err := iputil.LocalIP()
 	if err != nil {
 		return nil, err
 	}

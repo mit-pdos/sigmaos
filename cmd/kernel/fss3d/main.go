@@ -4,7 +4,7 @@ import (
 	"os"
 
 	db "sigmaos/debug"
-	"sigmaos/s3"
+	"sigmaos/proxy/s3"
 )
 
 func main() {

@@ -3,7 +3,7 @@ package main
 import (
 	"time"
 
-	"sigmaos/crash"
+	"sigmaos/util/crash"
 	db "sigmaos/debug"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"

@@ -8,7 +8,7 @@ import (
 
 	"sigmaos/clntcond"
 	db "sigmaos/debug"
-	"sigmaos/fs"
+	"sigmaos/api/fs"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 )

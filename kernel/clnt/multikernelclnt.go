@@ -3,20 +3,20 @@ package clnt
 import (
 	db "sigmaos/debug"
 	"sigmaos/fslib"
-	"sigmaos/rpcdirclnt"
+	shardedsvcrpcclnt "sigmaos/rpc/shardedsvc/clnt"
 	sp "sigmaos/sigmap"
 )
 
 type MultiKernelClnt struct {
 	*fslib.FsLib
-	rpcdc *rpcdirclnt.RPCDirClnt
+	rpcdc *shardedsvcrpcclnt.ShardedSvcRPCClnt
 	done  int32
 }
 
 func NewMultiKernelClnt(fsl *fslib.FsLib, lsel, esel db.Tselector) *MultiKernelClnt {
 	return &MultiKernelClnt{
 		FsLib: fsl,
-		rpcdc: rpcdirclnt.NewRPCDirClntFilter(fsl, sp.BOOT, lsel, esel, []string{sp.SPPROXYDKERNEL, sp.BESCHEDKERNEL}),
+		rpcdc: shardedsvcrpcclnt.NewShardedSvcRPCClntFilter(fsl, sp.BOOT, lsel, esel, []string{sp.SPPROXYDKERNEL, sp.BESCHEDKERNEL}),
 	}
 }
 

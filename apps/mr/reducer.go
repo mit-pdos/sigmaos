@@ -16,7 +16,7 @@ import (
 	"sigmaos/apps/mr/chunkreader"
 	"sigmaos/apps/mr/kvmap"
 	"sigmaos/apps/mr/mr"
-	"sigmaos/crash"
+	"sigmaos/util/crash"
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/proc"

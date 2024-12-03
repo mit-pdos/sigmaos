@@ -18,10 +18,10 @@ import (
 	chunkclnt "sigmaos/chunk/clnt"
 	chunksrv "sigmaos/chunk/srv"
 	db "sigmaos/debug"
-	"sigmaos/fs"
+	"sigmaos/api/fs"
 	kernelclnt "sigmaos/kernel/clnt"
 	"sigmaos/linuxsched"
-	"sigmaos/netsigma"
+	iputil "sigmaos/util/ip"
 	"sigmaos/proc"
 	"sigmaos/sched/msched/proc/proto"
 	"sigmaos/sched/msched/proc/srv/binsrv"
@@ -29,7 +29,7 @@ import (
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
-	spproxysrv "sigmaos/spproxy/srv"
+	spproxysrv "sigmaos/proxy/sigmap/srv"
 	"sigmaos/util/perf"
 	"sigmaos/util/syncmap"
 )
@@ -105,7 +105,7 @@ func RunProcSrv(kernelId string, dialproxy bool, spproxydPID sp.Tpid) error {
 	}
 
 	// Set inner container IP as soon as uprocsrv starts up
-	innerIP, err := netsigma.LocalIP()
+	innerIP, err := iputil.LocalIP()
 	if err != nil {
 		db.DFatalf("Error LocalIP: %v", err)
 	}

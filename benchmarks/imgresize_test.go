@@ -8,8 +8,8 @@ import (
 
 	"sigmaos/apps/imgresize"
 	db "sigmaos/debug"
-	"sigmaos/fttask"
-	"sigmaos/groupmgr"
+	fttask "sigmaos/ft/task"
+	"sigmaos/ft/groupmgr"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"

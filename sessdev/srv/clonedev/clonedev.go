@@ -13,14 +13,14 @@ import (
 	"sync"
 
 	db "sigmaos/debug"
-	"sigmaos/fs"
+	"sigmaos/api/fs"
 	"sigmaos/memfs/inode"
 	"sigmaos/memfssrv"
 	"sigmaos/serr"
 	"sigmaos/sessdev"
 	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
-	sps "sigmaos/sigmaprotsrv"
+	sps "sigmaos/api/spprotsrv"
 )
 
 type NewSessionF func(*memfssrv.MemFs, sessp.Tsession) *serr.Err

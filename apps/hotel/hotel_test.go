@@ -14,12 +14,12 @@ import (
 	"sigmaos/apps/hotel"
 	"sigmaos/apps/hotel/proto"
 	"sigmaos/benchmarks/loadgen"
-	dbclnt "sigmaos/db/clnt"
+	dbclnt "sigmaos/proxy/db/clnt"
 	db "sigmaos/debug"
 	"sigmaos/linuxsched"
 	"sigmaos/proc"
 	sprpcclnt "sigmaos/rpc/clnt/sigmap"
-	"sigmaos/rpcdirclnt"
+	shardedsvcrpcclnt "sigmaos/rpc/shardedsvc/clnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 	"sigmaos/util/perf"
@@ -113,7 +113,7 @@ func TestGeoSingle(t *testing.T) {
 	defer ts.Shutdown()
 	defer ts.stop()
 
-	rpcdc := rpcdirclnt.NewRPCDirClnt(ts.FsLib, hotel.HOTELGEODIR, db.TEST, db.TEST)
+	rpcdc := shardedsvcrpcclnt.NewShardedSvcRPCClnt(ts.FsLib, hotel.HOTELGEODIR, db.TEST, db.TEST)
 	geoID, err := rpcdc.WaitTimedRandomEntry()
 	if !assert.Nil(t, err, "Err get geo server ID: %v", err) {
 		return

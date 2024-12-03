@@ -57,7 +57,7 @@ const (
 	KPIDSREL = "kpids"
 	KPIDS    = NAMED + KPIDSREL
 
-	// Mschedd
+	// MSched
 	PIDS = "pids"
 
 	// special devs/dirs exported by SigmaSrv/SessSrv

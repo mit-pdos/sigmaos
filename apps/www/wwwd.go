@@ -9,8 +9,8 @@ import (
 
 	"net/http/pprof"
 
+	"sigmaos/benchmarks/spin"
 	db "sigmaos/debug"
-	"sigmaos/microbenchmarks"
 	"sigmaos/pipe"
 	"sigmaos/proc"
 	"sigmaos/serr"
@@ -46,7 +46,7 @@ func RunWwwd(job, tree string) {
 	http.Handle("/debug/pprof/heap", pprof.Handler("heap"))
 	http.Handle("/debug/pprof/goroutine", pprof.Handler("goroutine"))
 
-	//	ip, err := netsigma.LocalIP()
+	//	ip, err := iputil.LocalIP()
 	//	if err != nil {
 	//		db.DFatalf("Error LocalIP: %v", err)
 	//	}
@@ -240,6 +240,6 @@ func doConsumeCPULocal(www *Wwwd, w http.ResponseWriter, r *http.Request, args s
 	if err != nil {
 		db.DFatalf("Can't convert niter %v", args)
 	}
-	microbenchmarks.ConsumeCPU(niter)
+	spin.ConsumeCPU(niter)
 	return proc.NewStatus(proc.StatusOK), nil
 }

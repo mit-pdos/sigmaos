@@ -19,7 +19,7 @@ import (
 	proto "sigmaos/chunk/proto"
 	db "sigmaos/debug"
 	dialproxyclnt "sigmaos/dialproxy/clnt"
-	"sigmaos/fs"
+	"sigmaos/api/fs"
 	"sigmaos/fslib"
 	"sigmaos/proc"
 	rpcproto "sigmaos/rpc/proto"

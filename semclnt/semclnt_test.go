@@ -23,7 +23,7 @@ const (
 	SEMDIR = "semdir"
 )
 
-var pathname string // e.g., --path "name/schedd/sp.LOCAL/"
+var pathname string // e.g., --path "name/msched/sp.LOCAL/"
 
 func init() {
 	flag.StringVar(&pathname, "path", sp.NAMED, "path for file system")

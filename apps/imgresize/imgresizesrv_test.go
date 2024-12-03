@@ -12,10 +12,10 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"sigmaos/apps/imgresize"
-	"sigmaos/crash"
+	"sigmaos/util/crash"
 	db "sigmaos/debug"
-	"sigmaos/fttask"
-	"sigmaos/groupmgr"
+	fttask "sigmaos/ft/task"
+	"sigmaos/ft/groupmgr"
 	"sigmaos/namesrv/fsetcd"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"

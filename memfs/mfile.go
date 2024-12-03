@@ -6,7 +6,7 @@ import (
 	//"time"
 	"fmt"
 
-	"sigmaos/fs"
+	"sigmaos/api/fs"
 	"sigmaos/memfs/file"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"

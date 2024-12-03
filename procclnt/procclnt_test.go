@@ -10,9 +10,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"sigmaos/crash"
 	db "sigmaos/debug"
-	"sigmaos/groupmgr"
+	"sigmaos/ft/groupmgr"
 	"sigmaos/linuxsched"
 	"sigmaos/namesrv/fsetcd"
 	"sigmaos/proc"
@@ -20,6 +19,7 @@ import (
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
+	"sigmaos/util/crash"
 )
 
 const (
@@ -31,7 +31,7 @@ const (
 
 const program = "procclnt_test"
 
-func schedd(ts *test.Tstate) string {
+func msched(ts *test.Tstate) string {
 	st, err := ts.GetDir(sp.MSCHED)
 	assert.Nil(ts.T, err, "Readdir")
 	return st[0].Name
@@ -822,17 +822,17 @@ func TestSpawnCrashLCSched(t *testing.T) {
 
 	db.DPrintf(db.TEST, "Spawn proc which will queue forever")
 
-	// Spawn a proc which can't possibly be run by any schedd.
+	// Spawn a proc which can't possibly be run by any msched.
 	pid := spawnSpinnerMcpu(ts, proc.Tmcpu(1000*linuxsched.GetNCores()*2))
 
-	db.DPrintf(db.TEST, "Crash a schedd")
+	db.DPrintf(db.TEST, "Crash a msched")
 
 	sem := semclnt.NewSemClnt(ts.FsLib, fn)
 	err = sem.Up()
 	assert.Nil(t, err)
 	time.Sleep(T * time.Millisecond)
 
-	db.DPrintf(db.TEST, "Upped Schedd ")
+	db.DPrintf(db.TEST, "Upped msched")
 
 	err = ts.WaitStart(pid)
 	assert.NotNil(t, err, "WaitStart: %v", err)
@@ -848,7 +848,7 @@ func TestSpawnCrashLCSched(t *testing.T) {
 }
 
 // Make sure this test is still meaningful
-func TestMaintainReplicationLevelCrashSchedd(t *testing.T) {
+func TestMaintainReplicationLevelCrashMSched(t *testing.T) {
 	ts, err1 := test.NewTstateAll(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
@@ -887,8 +887,8 @@ func TestMaintainReplicationLevelCrashSchedd(t *testing.T) {
 	db.DPrintf(db.TEST, "Get OutDir")
 
 	err = ts.KillOne(sp.MSCHEDREL)
-	assert.Nil(t, err, "kill schedd")
-	db.DPrintf(db.TEST, "Killed a schedd")
+	assert.Nil(t, err, "kill msched")
+	db.DPrintf(db.TEST, "Killed a msched")
 
 	// Wait for them to respawn.
 	time.Sleep(2 * fsetcd.LeaseTTL * time.Second)
@@ -900,8 +900,8 @@ func TestMaintainReplicationLevelCrashSchedd(t *testing.T) {
 	db.DPrintf(db.TEST, "Got out dir again")
 
 	err = ts.KillOne(sp.MSCHEDREL)
-	assert.Nil(t, err, "kill schedd")
-	db.DPrintf(db.TEST, "Killed another schedd")
+	assert.Nil(t, err, "kill msched")
+	db.DPrintf(db.TEST, "Killed another msched")
 
 	// Wait for them to respawn.
 	time.Sleep(2 * fsetcd.LeaseTTL * time.Second)

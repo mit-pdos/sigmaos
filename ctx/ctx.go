@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"sigmaos/clntcond"
-	"sigmaos/fs"
+	"sigmaos/api/fs"
 	"sigmaos/sessp"
 	sp "sigmaos/sigmap"
 )

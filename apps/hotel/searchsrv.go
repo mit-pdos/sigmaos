@@ -8,11 +8,11 @@ import (
 
 	"sigmaos/apps/hotel/proto"
 	db "sigmaos/debug"
-	"sigmaos/fs"
+	"sigmaos/api/fs"
 	"sigmaos/proc"
 	rpcclnt "sigmaos/rpc/clnt"
 	sprpcclnt "sigmaos/rpc/clnt/sigmap"
-	"sigmaos/rpcdirclnt"
+	shardedsvcrpcclnt "sigmaos/rpc/shardedsvc/clnt"
 	"sigmaos/sigmasrv"
 	"sigmaos/tracing"
 	"sigmaos/util/perf"
@@ -20,7 +20,7 @@ import (
 
 type Search struct {
 	ratec  *rpcclnt.RPCClnt
-	geodc  *rpcdirclnt.RPCDirClnt
+	geodc  *shardedsvcrpcclnt.ShardedSvcRPCClnt
 	pds    *sigmasrv.SigmaSrv
 	tracer *tracing.Tracer
 }
@@ -43,7 +43,7 @@ func RunSearchSrv(n string) error {
 	}
 	s.ratec = rpcc
 
-	s.geodc = rpcdirclnt.NewRPCDirClnt(fsl, HOTELGEODIR, db.HOTEL_GEO, db.HOTEL_GEO_ERR)
+	s.geodc = shardedsvcrpcclnt.NewShardedSvcRPCClnt(fsl, HOTELGEODIR, db.HOTEL_GEO, db.HOTEL_GEO_ERR)
 
 	p, err := perf.NewPerf(ssrv.MemFs.SigmaClnt().ProcEnv(), perf.HOTEL_SEARCH)
 	if err != nil {

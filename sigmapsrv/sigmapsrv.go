@@ -11,24 +11,24 @@ package sigmapsrv
 import (
 	"sigmaos/ctx"
 	db "sigmaos/debug"
-	"sigmaos/fs"
-	"sigmaos/namesrv/fsetcd"
 	dialproxyclnt "sigmaos/dialproxy/clnt"
-	"sigmaos/overlaydir"
+	"sigmaos/api/fs"
+	"sigmaos/namesrv/fsetcd"
 	"sigmaos/path"
 	"sigmaos/proc"
-	"sigmaos/protsrv"
 	"sigmaos/serr"
 	"sigmaos/sessp"
 	"sigmaos/sesssrv"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
-	sps "sigmaos/sigmaprotsrv"
+	sps "sigmaos/api/spprotsrv"
+	"sigmaos/sigmapsrv/overlaydir"
+	spprotosrv "sigmaos/spproto/srv"
 	"sigmaos/stats"
 )
 
 type SigmaPSrv struct {
-	*protsrv.ProtSrvState
+	*spprotosrv.ProtSrvState
 	*sesssrv.SessSrv
 	pe          *proc.ProcEnv
 	srvep       *sp.Tendpoint
@@ -36,10 +36,10 @@ type SigmaPSrv struct {
 	dirover     *overlay.DirOverlay
 	fencefs     fs.Dir
 	stats       *stats.StatInode
-	attachAuthF protsrv.AttachAuthF
+	attachAuthF spprotosrv.AttachAuthF
 }
 
-func NewSigmaPSrv(pe *proc.ProcEnv, npc *dialproxyclnt.DialProxyClnt, root fs.Dir, addr *sp.Taddr, fencefs fs.Dir, aaf protsrv.AttachAuthF) *SigmaPSrv {
+func NewSigmaPSrv(pe *proc.ProcEnv, npc *dialproxyclnt.DialProxyClnt, root fs.Dir, addr *sp.Taddr, fencefs fs.Dir, aaf spprotosrv.AttachAuthF) *SigmaPSrv {
 	psrv := &SigmaPSrv{
 		pe:          pe,
 		dirunder:    root,
@@ -48,14 +48,14 @@ func NewSigmaPSrv(pe *proc.ProcEnv, npc *dialproxyclnt.DialProxyClnt, root fs.Di
 		attachAuthF: aaf,
 	}
 	psrv.stats = stats.NewStatsDev(psrv.dirover)
-	psrv.ProtSrvState = protsrv.NewProtSrvState(psrv.stats)
+	psrv.ProtSrvState = spprotosrv.NewProtSrvState(psrv.stats)
 	psrv.VersionTable().Insert(psrv.dirover.Path())
 	psrv.dirover.Mount(sp.STATSD, psrv.stats)
 	psrv.SessSrv = sesssrv.NewSessSrv(pe, npc, addr, psrv.stats, psrv)
 	return psrv
 }
 
-func NewSigmaPSrvPost(root fs.Dir, pn string, addr *sp.Taddr, sc *sigmaclnt.SigmaClnt, fencefs fs.Dir, aaf protsrv.AttachAuthF) (*SigmaPSrv, string, error) {
+func NewSigmaPSrvPost(root fs.Dir, pn string, addr *sp.Taddr, sc *sigmaclnt.SigmaClnt, fencefs fs.Dir, aaf spprotosrv.AttachAuthF) (*SigmaPSrv, string, error) {
 	psrv := NewSigmaPSrv(sc.ProcEnv(), sc.GetDialProxyClnt(), root, addr, fencefs, aaf)
 	if len(pn) > 0 {
 		if mpn, err := psrv.postMount(sc, pn); err != nil {
@@ -67,8 +67,8 @@ func NewSigmaPSrvPost(root fs.Dir, pn string, addr *sp.Taddr, sc *sigmaclnt.Sigm
 	return psrv, pn, nil
 }
 
-func (psrv *SigmaPSrv) NewSession(p *sp.Tprincipal, sessid sessp.Tsession) sps.Protsrv {
-	return protsrv.NewProtServer(psrv.pe, psrv.ProtSrvState, p, sessid, psrv.GetRootCtx, psrv.attachAuthF)
+func (psrv *SigmaPSrv) NewSession(p *sp.Tprincipal, sessid sessp.Tsession) sps.ProtSrv {
+	return spprotosrv.NewProtServer(psrv.pe, psrv.ProtSrvState, p, sessid, psrv.GetRootCtx, psrv.attachAuthF)
 }
 
 func (psrv *SigmaPSrv) Root(p path.Tpathname) (fs.Dir, path.Tpathname, path.Tpathname) {

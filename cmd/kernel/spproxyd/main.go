@@ -4,7 +4,7 @@ import (
 	"os"
 
 	db "sigmaos/debug"
-	"sigmaos/spproxy/srv"
+	"sigmaos/proxy/sigmap/srv"
 )
 
 func main() {

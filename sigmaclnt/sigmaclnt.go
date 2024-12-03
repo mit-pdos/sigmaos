@@ -8,14 +8,14 @@ import (
 
 	db "sigmaos/debug"
 	dialproxyclnt "sigmaos/dialproxy/clnt"
-	"sigmaos/fdclnt"
 	"sigmaos/fidclnt"
 	"sigmaos/fslib"
-	leaseclnt "sigmaos/lease/clnt"
+	leaseclnt "sigmaos/ft/lease/clnt"
 	"sigmaos/proc"
 	"sigmaos/procclnt"
-	sos "sigmaos/sigmaos"
-	spproxyclnt "sigmaos/spproxy/clnt"
+	"sigmaos/sigmaclnt/fdclnt"
+	sos "sigmaos/api/sigmaos"
+	spproxyclnt "sigmaos/proxy/sigmap/clnt"
 )
 
 func init() {

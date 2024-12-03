@@ -23,7 +23,7 @@ import (
 	api "sigmaos/apps/mr/mr"
 	mrscanner "sigmaos/apps/mr/scanner"
 	"sigmaos/auth"
-	"sigmaos/crash"
+	"sigmaos/util/crash"
 	db "sigmaos/debug"
 	"sigmaos/proc"
 	mschedclnt "sigmaos/sched/msched/clnt"
@@ -386,7 +386,7 @@ func (ts *Tstate) checkJob(app string) bool {
 	return true
 }
 
-func runN(t *testing.T, evs []crash.Tevent, crashschedd, crashprocq, crashux, maliciousMapper int, monitor bool) {
+func runN(t *testing.T, evs []crash.Tevent, crashmsched, crashprocq, crashux, maliciousMapper int, monitor bool) {
 	var s3secrets *sp.SecretProto
 	var err1 error
 	// If running with malicious mappers, try to get restricted AWS secrets
@@ -454,7 +454,7 @@ func runN(t *testing.T, evs []crash.Tevent, crashschedd, crashprocq, crashux, ma
 
 	crashchan := make(chan bool)
 	l1 := &sync.Mutex{}
-	for i := 0; i < crashschedd; i++ {
+	for i := 0; i < crashmsched; i++ {
 		// Sleep for a random time, then crash a server.
 		go ts.CrashServer(sp.MSCHEDREL, (i+1)*CRASHSRV, l1, crashchan)
 	}
@@ -473,7 +473,7 @@ func runN(t *testing.T, evs []crash.Tevent, crashschedd, crashprocq, crashux, ma
 	cm.WaitGroup()
 	db.DPrintf(db.TEST, "Done WaitGroup")
 
-	for i := 0; i < crashschedd+crashux+crashprocq; i++ {
+	for i := 0; i < crashmsched+crashux+crashprocq; i++ {
 		<-crashchan
 	}
 

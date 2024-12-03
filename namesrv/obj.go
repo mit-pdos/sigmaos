@@ -6,7 +6,7 @@ import (
 	"time"
 
 	db "sigmaos/debug"
-	"sigmaos/fs"
+	"sigmaos/api/fs"
 	"sigmaos/namesrv/fsetcd"
 	"sigmaos/path"
 	"sigmaos/serr"

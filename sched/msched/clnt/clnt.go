@@ -11,14 +11,14 @@ import (
 	"sigmaos/proc"
 	rpcclnt "sigmaos/rpc/clnt"
 	sprpcclnt "sigmaos/rpc/clnt/sigmap"
-	"sigmaos/rpcdirclnt"
+	shardedsvcrpcclnt "sigmaos/rpc/shardedsvc/clnt"
 	"sigmaos/sched/msched/proto"
 	sp "sigmaos/sigmap"
 )
 
 type MSchedClnt struct {
 	*fslib.FsLib
-	rpcdc *rpcdirclnt.RPCDirClnt
+	rpcdc *shardedsvcrpcclnt.ShardedSvcRPCClnt
 	done  int32
 
 	// rpcclnt for my msched
@@ -30,7 +30,7 @@ func NewMSchedClnt(fsl *fslib.FsLib, kernelID string) *MSchedClnt {
 	return &MSchedClnt{
 		FsLib:    fsl,
 		kernelID: kernelID,
-		rpcdc:    rpcdirclnt.NewRPCDirClnt(fsl, sp.MSCHED, db.MSCHEDCLNT, db.MSCHEDCLNT_ERR),
+		rpcdc:    shardedsvcrpcclnt.NewShardedSvcRPCClnt(fsl, sp.MSCHED, db.MSCHEDCLNT, db.MSCHEDCLNT_ERR),
 	}
 }
 

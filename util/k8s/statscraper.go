@@ -5,7 +5,7 @@ import (
 
 	"sigmaos/dcontainer/cgroup"
 	db "sigmaos/debug"
-	"sigmaos/fs"
+	"sigmaos/api/fs"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"

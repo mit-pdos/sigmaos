@@ -7,7 +7,7 @@ import (
 	"sigmaos/apps/cache"
 	"sigmaos/apps/kv/kvgrp"
 	"sigmaos/fslib"
-	"sigmaos/groupmgr"
+	"sigmaos/ft/groupmgr"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"

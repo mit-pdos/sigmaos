@@ -51,7 +51,7 @@ func (mgr *ProcMgr) RunProc(p *proc.Proc) {
 	// Set the proc's kernel ID, now that a kernel has been selected to run the
 	// proc.
 	p.SetKernelID(mgr.kernelId, true)
-	// Set the schedd mount for the proc, so it can mount this schedd in one RPC
+	// Set the msched mount for the proc, so it can mount this msched in one RPC
 	// (without walking down to it).
 	p.SetMSchedEndpoint(mgr.mfs.GetSigmaPSrvEndpoint())
 	mgr.setupProcState(p)

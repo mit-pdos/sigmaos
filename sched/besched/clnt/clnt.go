@@ -7,9 +7,8 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fslib"
 	"sigmaos/proc"
+	shardedsvcrpcclnt "sigmaos/rpc/shardedsvc/clnt"
 	"sigmaos/sched/besched/proto"
-	//	"sigmaos/rpc"
-	"sigmaos/rpcdirclnt"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 )
@@ -22,7 +21,7 @@ type nextSeqnoFn func(string) *proc.ProcSeqno
 
 type BESchedClnt struct {
 	*fslib.FsLib
-	rpcdc     *rpcdirclnt.RPCDirClnt
+	rpcdc     *shardedsvcrpcclnt.ShardedSvcRPCClnt
 	nextSeqno nextSeqnoFn
 }
 
@@ -30,10 +29,10 @@ func NewBESchedClnt(fsl *fslib.FsLib) *BESchedClnt {
 	return NewBESchedClntMSched(fsl, nil, nil)
 }
 
-func NewBESchedClntMSched(fsl *fslib.FsLib, nextEpoch rpcdirclnt.AllocFn, nextSeqno nextSeqnoFn) *BESchedClnt {
+func NewBESchedClntMSched(fsl *fslib.FsLib, nextEpoch shardedsvcrpcclnt.AllocFn, nextSeqno nextSeqnoFn) *BESchedClnt {
 	return &BESchedClnt{
 		FsLib:     fsl,
-		rpcdc:     rpcdirclnt.NewRPCDirClntAllocFn(fsl, sp.BESCHED, db.BESCHEDCLNT, db.BESCHEDCLNT_ERR, nextEpoch),
+		rpcdc:     shardedsvcrpcclnt.NewShardedSvcRPCClntAllocFn(fsl, sp.BESCHED, db.BESCHEDCLNT, db.BESCHEDCLNT_ERR, nextEpoch),
 		nextSeqno: nextSeqno,
 	}
 }

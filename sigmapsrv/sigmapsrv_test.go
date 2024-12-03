@@ -834,7 +834,7 @@ func TestColdAttach(t *testing.T) {
 		err = fsl.MountTree(ep, rpc.RPC, pn)
 		assert.Nil(t, err)
 		d := time.Since(start)
-		db.DPrintf(db.TEST, "Mount schedd [%v] %v as %v time %v", ep, rpc.RPC, pn, d)
+		db.DPrintf(db.TEST, "Mount msched [%v] %v as %v time %v", ep, rpc.RPC, pn, d)
 		if d > max {
 			max = d
 		}

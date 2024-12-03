@@ -10,7 +10,7 @@ import (
 	"sigmaos/chunk"
 	chunkclnt "sigmaos/chunk/clnt"
 	db "sigmaos/debug"
-	"sigmaos/fs"
+	"sigmaos/api/fs"
 	"sigmaos/proc"
 	"sigmaos/sched/besched/proto"
 	"sigmaos/sched/queue"
@@ -155,8 +155,8 @@ func (be *BESched) GetProc(ctx fs.CtxI, req proto.GetProcRequest, res *proto.Get
 				}
 				be.realmbins.SetBinKernelID(p.GetRealm(), p.GetProgram(), req.KernelID)
 
-				// Tell client about schedd chosen to run this proc. Do this
-				// asynchronously so that schedd can proceed with the proc immediately.
+				// Tell client about msched chosen to run this proc. Do this
+				// asynchronously so that msched can proceed with the proc immediately.
 				go be.replyToParent(req.GetProcSeqno(), p, ch, ts)
 				res.ProcProto = p.GetProto()
 				res.OK = true
@@ -172,7 +172,7 @@ func (be *BESched) GetProc(ctx fs.CtxI, req proto.GetProcRequest, res *proto.Get
 		db.DPrintf(db.BESCHED, "GetProc No procs schedulable qs:%v", be.qs)
 		// Releases the lock, so we must re-acquire on the next loop iteration.
 		ok := be.waitOrTimeoutAndUnlock()
-		// If timed out, respond to schedd to have it try another besched.
+		// If timed out, respond to msched to have it try another besched.
 		if !ok {
 			db.DPrintf(db.BESCHED, "Timed out GetProc request from: %v", req.KernelID)
 			res.OK = false
@@ -184,14 +184,14 @@ func (be *BESched) GetProc(ctx fs.CtxI, req proto.GetProcRequest, res *proto.Get
 	return nil
 }
 
-func isEligible(p *proc.Proc, mem proc.Tmem, scheddID string) bool {
+func isEligible(p *proc.Proc, mem proc.Tmem, mschedID string) bool {
 	if p.GetMem() > mem {
 		return false
 	}
 	if p.HasNoKernelPref() {
 		return true
 	}
-	return p.HasKernelPref(scheddID)
+	return p.HasKernelPref(mschedID)
 }
 
 func (be *BESched) getRealmQueue(realm sp.Trealm) *queue.Queue[*proc.ProcSeqno, chan *proc.ProcSeqno] {

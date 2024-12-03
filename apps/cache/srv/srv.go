@@ -7,18 +7,16 @@ import (
 
 	cacheproto "sigmaos/apps/cache/proto"
 
+	"sigmaos/api/fs"
 	"sigmaos/apps/cache"
 	db "sigmaos/debug"
-	"sigmaos/fs"
-	"sigmaos/util/perf"
 	"sigmaos/proc"
-	"sigmaos/repl"
-	"sigmaos/replraft"
 	"sigmaos/serr"
 	sessdevsrv "sigmaos/sessdev/srv"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
 	"sigmaos/tracing"
+	"sigmaos/util/perf"
 )
 
 type Tstatus string
@@ -39,8 +37,6 @@ type CacheSrv struct {
 	mu        sync.Mutex
 	shards    shardMap
 	shrd      string
-	raftcfg   *replraft.RaftConfig
-	replSrv   repl.Server
 	tracer    *tracing.Tracer
 	lastFence *sp.Tfence
 	perf      *perf.Perf

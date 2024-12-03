@@ -39,7 +39,7 @@ func NewProcdMgr(fsl *fslib.FsLib, kernelId string) *ProcdMgr {
 	}
 	pdm.pool = newPool(pdm.startProcd)
 	go func() {
-		// In the boot sequence, schedd and other servers are started before the
+		// In the boot sequence, msched and other servers are started before the
 		// kernel server registers itself in the namespace. However, we need the
 		// kernel server to have started in order to boot more procds. Thus, we
 		// wait for the kernel to start up and advertise itself in a separate

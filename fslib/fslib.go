@@ -7,9 +7,9 @@ import (
 	db "sigmaos/debug"
 	dialproxyclnt "sigmaos/dialproxy/clnt"
 	"sigmaos/proc"
-	"sigmaos/s3/s3pathclnt"
+	"sigmaos/proxy/s3/s3pathclnt"
 	"sigmaos/serr"
-	sos "sigmaos/sigmaos"
+	sos "sigmaos/api/sigmaos"
 	sp "sigmaos/sigmap"
 )
 

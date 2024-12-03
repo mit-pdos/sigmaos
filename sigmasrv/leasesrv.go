@@ -4,14 +4,14 @@ import (
 	"sync"
 	"time"
 
-	leaseproto "sigmaos/lease/proto"
+	leaseproto "sigmaos/ft/lease/proto"
 
 	db "sigmaos/debug"
-	"sigmaos/fs"
+	"sigmaos/api/fs"
 	"sigmaos/memfssrv"
-	"sigmaos/protsrv/leasedmap"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
+	"sigmaos/spproto/srv/leasedmap"
 	"sigmaos/util/syncmap"
 )
 

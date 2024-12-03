@@ -5,7 +5,7 @@ import (
 
 	"sigmaos/apps/kv/kvgrp"
 	db "sigmaos/debug"
-	"sigmaos/groupmgr"
+	"sigmaos/ft/groupmgr"
 )
 
 func main() {

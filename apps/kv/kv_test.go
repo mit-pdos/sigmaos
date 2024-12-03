@@ -15,8 +15,8 @@ import (
 	"sigmaos/apps/cache"
 	"sigmaos/apps/kv"
 	"sigmaos/apps/kv/kvgrp"
-	"sigmaos/util/crash"
 	db "sigmaos/debug"
+	"sigmaos/util/crash"
 	"sigmaos/util/rand"
 	// sp "sigmaos/sigmap"
 	"sigmaos/test"
@@ -34,11 +34,11 @@ var moverEv []crash.Tevent
 var bothEv []crash.Tevent
 
 func init() {
-	e0 := crash.Tevent{crash.KVBALANCER_CRASH, 0, CRASHBALANCER, 0.33, 0}
-	e1 := crash.Tevent{crash.KVBALANCER_PARTITION, 0, CRASHBALANCER, 0.5, 0}
+	e0 := crash.NewEvent(crash.KVBALANCER_CRASH, CRASHBALANCER, 0.33)
+	e1 := crash.NewEvent(crash.KVBALANCER_PARTITION, CRASHBALANCER, 0.5)
 	balancerEv = []crash.Tevent{e0, e1}
-	e0 = crash.Tevent{crash.KVMOVER_CRASH, 0, CRASHMOVER, 0.2, 0}
-	e1 = crash.Tevent{crash.KVMOVER_PARTITION, 1, 0, 0.5, 2000}
+	e0 = crash.NewEvent(crash.KVMOVER_CRASH, CRASHMOVER, 0.2)
+	e1 = crash.NewEventStartDelay(crash.KVMOVER_PARTITION, 1, 0, 2000, 0.5)
 	moverEv = []crash.Tevent{e0, e1}
 	bothEv = append([]crash.Tevent{}, balancerEv...)
 	bothEv = append(bothEv, moverEv...)
@@ -193,7 +193,7 @@ func TestPutGetCrashKVD1(t *testing.T) {
 		return
 	}
 
-	e0 := crash.Tevent{crash.KVD_CRASH, 0, kvgrp.CRASH, 0.33, 0}
+	e0 := crash.NewEvent(crash.KVD_CRASH, kvgrp.CRASH, 0.33)
 	ts := newTstate(t1, []crash.Tevent{e0}, "manual", kv.KVD_REPL_LEVEL)
 
 	err := ts.cm.StartClerks("", 1)

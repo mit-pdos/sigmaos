@@ -12,14 +12,14 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"sigmaos/apps/imgresize"
-	"sigmaos/util/crash"
 	db "sigmaos/debug"
-	fttask "sigmaos/ft/task"
 	"sigmaos/ft/groupmgr"
+	fttask "sigmaos/ft/task"
 	"sigmaos/namesrv/fsetcd"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
+	"sigmaos/util/crash"
 	rd "sigmaos/util/rand"
 )
 
@@ -196,7 +196,7 @@ func TestImgdOneOK(t *testing.T) {
 }
 
 func TestImgdOneCrash(t *testing.T) {
-	e0 := crash.Tevent{crash.IMGRESIZE_CRASH, 100, CRASHIMG, 0.3, 0}
+	e0 := crash.NewEventStart(crash.IMGRESIZE_CRASH, 100, CRASHIMG, 0.3)
 
 	t1, err1 := test.NewTstateAll(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {

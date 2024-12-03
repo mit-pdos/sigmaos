@@ -60,6 +60,10 @@ func NewEventStartDelay(l string, s, mi int64, d int64, p float64) Tevent {
 	return Tevent{Label: l, Start: s, MaxInterval: mi, Delay: d, Prob: p}
 }
 
+func NewEventDelay(l string, mi int64, d int64, p float64) Tevent {
+	return Tevent{Label: l, MaxInterval: mi, Delay: d, Prob: p}
+}
+
 func (e *Tevent) String() string {
 	return fmt.Sprintf("{l %v s %v mi %v p %v d %v}", e.Label, e.Start, e.MaxInterval, e.Prob, e.Delay)
 }

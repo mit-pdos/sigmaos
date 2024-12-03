@@ -8,7 +8,6 @@ import (
 
 	"sigmaos/apps/kv"
 	"sigmaos/apps/kv/kvgrp"
-	"sigmaos/util/crash"
 	db "sigmaos/debug"
 	dialproxyclnt "sigmaos/dialproxy/clnt"
 	"sigmaos/ft/groupmgr"
@@ -19,6 +18,7 @@ import (
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
+	"sigmaos/util/crash"
 	"sigmaos/util/rand"
 )
 
@@ -28,7 +28,7 @@ const (
 	NETFAIL   = 200
 )
 
-var EvP = crash.Tevent{crash.KVD_PARTITION, 0, PARTITION, 0.33, 0}
+var EvP = crash.NewEvent(crash.KVD_PARTITION, PARTITION, 0.33)
 
 type Tstate struct {
 	*test.Tstate
@@ -151,7 +151,7 @@ func TestServerCrash(t *testing.T) {
 		return
 	}
 
-	e0 := crash.Tevent{crash.KVD_CRASH, 0, kvgrp.CRASH, 0.33, 0}
+	e0 := crash.NewEvent(crash.KVD_CRASH, kvgrp.CRASH, 0.33)
 	err := crash.SetSigmaFail([]crash.Tevent{e0})
 
 	ts := newTstate(t1, kv.KVD_NO_REPL, false)
@@ -187,7 +187,7 @@ func TestReconnectSimple(t *testing.T) {
 		return
 	}
 
-	e0 := crash.Tevent{crash.KVD_NETFAIL, 0, NETFAIL, 0.33, 0}
+	e0 := crash.NewEvent(crash.KVD_NETFAIL, NETFAIL, 0.33)
 	err := crash.SetSigmaFail([]crash.Tevent{e0})
 
 	ts := newTstate(t1, kv.KVD_NO_REPL, false)

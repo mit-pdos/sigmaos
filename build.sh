@@ -113,6 +113,7 @@ if [ -z "$buildercid" ]; then
   # Start builder
   echo "========== Starting builder container =========="
   docker run --rm -d -it \
+    --name sig-builder \
     --mount type=bind,src=$ROOT,dst=/home/sigmaos/ \
     sig-builder
   buildercid=$(docker ps -a | grep -w "sig-builder" | cut -d " " -f1)
@@ -131,6 +132,7 @@ if [ -z "$rsbuildercid" ]; then
   # Start builder
   echo "========== Starting Rust builder container =========="
   docker run --rm -d -it \
+    --name sig-rs-builder \
     --mount type=bind,src=$ROOT,dst=/home/sigmaos/ \
     sig-rs-builder
   rsbuildercid=$(docker ps -a | grep -w "sig-rs-builder" | cut -d " " -f1)

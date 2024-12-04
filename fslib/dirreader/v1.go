@@ -175,16 +175,22 @@ func (dr *DirReaderV1) WatchEntriesChangedRelative(present []string, prefixFilte
 }
 
 func (dr *DirReaderV1) WatchEntriesChanged() (map[string]bool, error) {
-	db.DPrintf(db.WATCH, "WatchEntriesChanged: This is implemented for V1 of watch for backwards compatability, but does not " + 
-		"properly handle returning deletions and may return incorrect results when combined with certain other watch methods. Use " + 
-		"WatchEntriesChangedRelative for a safer solution or use V2")
 	ents := make(map[string]bool)
 	_, err := dr.readDirWatch(func(sts []*sp.Stat) bool {
 		unchanged := true
+		stsMap := make(map[string]bool)
 		for _, st := range sts {
 			if !dr.ents[st.Name] {
 				dr.ents[st.Name] = true
 				ents[st.Name] = true
+				unchanged = false
+			}
+			stsMap[st.Name] = true
+		}
+		for file, exists := range dr.ents {
+			if !stsMap[file] && exists {
+				dr.ents[file] = false
+				ents[file] = false
 				unchanged = false
 			}
 		}

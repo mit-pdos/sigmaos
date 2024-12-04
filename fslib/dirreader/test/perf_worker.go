@@ -16,6 +16,7 @@ type PerfWorker struct {
 	*sigmaclnt.SigmaClnt
 	id string;
 	nTrials int;
+	nFilesPerTrial int;
 	watchDir string;
 	watchDirReader dirreader.DirReader;
 	responseDir string;
@@ -44,10 +45,15 @@ func NewPerfWorker(args []string) (*PerfWorker, error) {
 		return &PerfWorker{}, fmt.Errorf("NewPerfWorker %s: ntrials %s is not an integer", id, args[1])
 	}
 
-	watchDir := args[2]
-	responseDir := args[3]
-	tempDir := args[4]
-	signalDir := args[5]
+	nFilesPerTrial, err := strconv.Atoi(args[2])
+	if err != nil {
+		return &PerfWorker{}, fmt.Errorf("NewPerfWorker %s: nFilesPerTrial %s is not an integer", id, args[2])
+	}
+
+	watchDir := args[3]
+	responseDir := args[4]
+	tempDir := args[5]
+	signalDir := args[6]
 
 	watchDirReader, err := dirreader.NewDirReader(sc.FsLib, watchDir)
 	if err != nil {
@@ -58,12 +64,12 @@ func NewPerfWorker(args []string) (*PerfWorker, error) {
 		return &PerfWorker{}, fmt.Errorf("NewPerfWorker %s: failed to construct watcher for %s, %v", id, signalDir, err)
 	}
 
-	measureMode, err := strconv.Atoi(args[6])
+	measureMode, err := strconv.Atoi(args[7])
 	if err != nil || measureMode < 0 || measureMode > 1 {
 		return &PerfWorker{}, fmt.Errorf("NewPerfWorker: measure mode %s is invalid", args[6])
 	}
 
-	nStartFiles, err := strconv.Atoi(args[7])
+	nStartFiles, err := strconv.Atoi(args[8])
 	if err != nil {
 		return &PerfWorker{}, fmt.Errorf("NewPerfWorker: nStartFiles %s is not an integer", args[7])
 	}
@@ -72,6 +78,7 @@ func NewPerfWorker(args []string) (*PerfWorker, error) {
 		sc,
 		id,
 		nTrials,
+		nFilesPerTrial,
 		watchDir,
 		watchDirReader,
 		responseDir,
@@ -93,9 +100,8 @@ func (w *PerfWorker) Run() {
 	}
 
 	for trial := 0; trial < w.nTrials; trial++ {
-		filename := fmt.Sprintf("trial_%d", trial)
-		w.handleTrial(trial, filename, false)
-		w.handleTrial(trial, filename, true)
+		w.handleTrial(trial, false)
+		w.handleTrial(trial, true)
 	}
 
 	err = w.CloseFd(idFileFd)
@@ -117,7 +123,7 @@ func (w *PerfWorker) Run() {
 	w.ClntExit(status)
 }
 
-func (w *PerfWorker) handleTrial(trial int, filename string, deleted bool) {
+func (w *PerfWorker) handleTrial(trial int, deleted bool) {
 	opType := "creation"
 	if deleted {
 		opType = "deletion"
@@ -126,10 +132,11 @@ func (w *PerfWorker) handleTrial(trial int, filename string, deleted bool) {
 	db.DPrintf(db.WATCH_PERF, "handleTrial %s: Trial %d: waiting for file %s", w.id, trial, opType)
 	w.waitForCoordSignal(trial, deleted)
 
+	times := make([]time.Time, w.nFilesPerTrial)
 	if w.measureMode == IncludeFileOp {
 		ch := make(chan bool)
 		go func() {
-			w.waitForWatchFile(filename, deleted)
+			w.waitForWatchFile(trial, deleted, times)
 			ch <- true
 		}()
 
@@ -138,13 +145,11 @@ func (w *PerfWorker) handleTrial(trial int, filename string, deleted bool) {
 
 		w.sendSignal(trial, deleted)
 		<- ch
-		createdFileTime := time.Now()
-		w.respondWith(formatTime(createdFileTime), trial, deleted)
+		w.respondWith(formatTimes(times), trial, deleted)
 	} else {
 		preWatchTime := time.Now()
-		w.waitForWatchFile(filename, deleted)
-		createdFileTime := time.Now()
-		w.respondWith(formatDuration(createdFileTime.Sub(preWatchTime)), trial, deleted)
+		w.waitForWatchFile(trial, deleted, times)
+		w.respondWith(formatDurations(times, preWatchTime), trial, deleted)
 	}
 }
 
@@ -153,8 +158,43 @@ func (w *PerfWorker) waitForCoordSignal(trial int, deleted bool) {
 	w.waitForFile( w.signalDirReader, coordSignalName(trial, deleted), false)
 }
 
-func (w *PerfWorker) waitForWatchFile(filename string, deleted bool) {
-	w.waitForFile( w.watchDirReader, filename, deleted)
+func (w *PerfWorker) waitForWatchFile(trial int, deleted bool, times []time.Time) {
+	opType := "creation"
+	if deleted {
+		opType = "deletion"
+	}
+
+	for {
+		changes, err := w.watchDirReader.WatchEntriesChanged()
+		if err != nil {
+			db.DFatalf("handleTrial %s: failed to watch entries changed, %v", w.id, err)
+		}
+		db.DPrintf(db.WATCH_PERF, "handleTrial %s: trial %d, received changes %v", w.id, trial, changes)
+
+		anyMissing := false
+		for ix := 0; ix < w.nFilesPerTrial; ix++ {
+			if !times[ix].IsZero() {
+				continue
+			}
+
+			created, ok := changes[trialName(trial, ix)]
+			if !ok {
+				anyMissing = true
+				continue
+			}
+
+			if created != !deleted {
+				db.DFatalf("handleTrial %s: trial %d, expected file to be %s, but received opposite", w.id, trial, opType)
+			}
+
+			db.DPrintf(db.WATCH_PERF, "handleTrial %s: trial %d, file %d %s", w.id, trial, ix, opType)
+			times[ix] = time.Now()
+		}
+
+		if !anyMissing {
+			break
+		}
+	}
 }
 
 func (w *PerfWorker) waitForFile(watcher dirreader.DirReader, filename string, deleted bool) {
@@ -173,7 +213,6 @@ func (w *PerfWorker) waitForFile(watcher dirreader.DirReader, filename string, d
 }
 
 func (w *PerfWorker) respondWith(resp string, trialNum int, deleted bool) {
-	db.DPrintf(db.WATCH_PERF, "respondWithTime: id %s with resp %s", w.id, resp)
 	fileName := responseName(trialNum, w.id, deleted)
 	tempPath := filepath.Join(w.tempDir, fileName)
 	realPath := filepath.Join(w.responseDir, fileName)
@@ -203,10 +242,23 @@ func (w *PerfWorker) sendSignal(trialNum int, deleted bool) {
 	w.CloseFd(fd)
 }
 
-func formatTime(t time.Time) string {
-	return t.Format(time.RFC3339Nano)
+func formatTimes(times []time.Time) string {
+	str := ""
+	for _, t := range times {
+		str += t.Format(time.RFC3339Nano) + "\n"
+	}
+	return str
 }
 
-func formatDuration(d time.Duration) string {
-	return strconv.FormatInt(d.Nanoseconds(), 10)
+func formatDurations(times []time.Time, startTime time.Time) string {
+	durations := make([]time.Duration, len(times))
+	for ix, t := range times {
+		durations[ix] = t.Sub(startTime)
+	}
+	str := ""
+	for _, d := range durations {
+		str += strconv.FormatInt(d.Nanoseconds(), 10) + "\n"
+	}
+
+	return str
 }

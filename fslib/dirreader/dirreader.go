@@ -41,8 +41,8 @@ type DirReader interface {
 	WatchEntriesChangedRelative(present []string, excludedPrefixes []string) ([]string, bool, error)
 
 	// Watch for a directory change and then return all directory entry changes since the last call to
-	// a Watch method. For V1, this does not properly account for deletions and can have incorrect results
-	// if used on the same DirReader instance as other Watch methods. This works as intended for V2.
+	// a Watch method. For V1, this can have unintended behavior if combined with other Watch methods due to
+	// some methods using the cache differently. For V2, this is not an issue
 	WatchEntriesChanged() (map[string]bool, error)
 
 // Uses rename to move all entries in the directory to dst. If there are no further entries to be renamed,

@@ -53,10 +53,12 @@ type Stats struct {
 	Median int64
 }
 
-func flatten(data [][]time.Duration) []time.Duration {
+func flatten(data [][][]time.Duration) []time.Duration {
 	flat := make([]time.Duration, 0)
 	for _, d := range data {
-		flat = append(flat, d...)
+		for _, e := range d {
+			flat = append(flat, e...)
+		}
 	}
 	return flat
 }
@@ -88,7 +90,7 @@ func computeStats(data []time.Duration) Stats {
 }
 
 func (s Stats) String() string {
-	return fmt.Sprintf("Avg: %f us\nMax: %f us\nMin: %f us\nStddev: %f us\nMedian %f\n", s.Average / 1000.0, float64(s.Max) / 1000.0, float64(s.Min) / 1000.0, s.Stddev / 1000.0, float64(s.Median) / 1000.0)
+	return fmt.Sprintf("Avg: %f us\nMax: %f us\nMin: %f us\nStddev: %f us\nMedian: %f us\n", s.Average / 1000.0, float64(s.Max) / 1000.0, float64(s.Min) / 1000.0, s.Stddev / 1000.0, float64(s.Median) / 1000.0)
 }
 
 func dataString(data []time.Duration) string {
@@ -99,7 +101,7 @@ func dataString(data []time.Duration) string {
 	return str
 }
 
-func testPerf(t *testing.T, nWorkers int, nStartingFiles int, nTrials int, useNamed bool, measureMode drtest.MeasureMode) {
+func testPerf(t *testing.T, nWorkers int, nStartingFiles int, nTrials int, nFilesPerTrial int, useNamed bool, measureMode drtest.MeasureMode) {
 	ts, err := test.NewTstateAll(t)
 
 	if !assert.Nil(t, err, "Error New Tstate: %v", err) {
@@ -112,7 +114,8 @@ func testPerf(t *testing.T, nWorkers int, nStartingFiles int, nTrials int, useNa
 	}
 	dirreaderVersion := "V" + strconv.Itoa(int(dirreader.GetDirReaderVersion(ts.ProcEnv())))
 
-	fmt.Printf("Running perf test with %d workers, %d starting files, %d trials, dirreader version %s, measure mode %s, useNamed %t\n", nWorkers, nStartingFiles, nTrials, dirreaderVersion, measureModeStr, useNamed)
+	fmt.Printf("Running perf test with %d workers, %d starting files, %d trials, %d files per trial, dirreader version %s, measure mode %s, useNamed %t\n",
+		nWorkers, nStartingFiles, nTrials, nFilesPerTrial, dirreaderVersion, measureModeStr, useNamed)
 
 	measureModeIntStr := strconv.Itoa(int(measureMode))
 
@@ -120,7 +123,7 @@ func testPerf(t *testing.T, nWorkers int, nStartingFiles int, nTrials int, useNa
 	if useNamed {
 		useNamedStr = "1"
 	}
-	p := proc.NewProc("watchperf-coord", []string{strconv.Itoa(nWorkers), strconv.Itoa(nStartingFiles), strconv.Itoa(nTrials), useNamedStr, measureModeIntStr})
+	p := proc.NewProc("watchperf-coord", []string{strconv.Itoa(nWorkers), strconv.Itoa(nStartingFiles), strconv.Itoa(nTrials), strconv.Itoa(nFilesPerTrial), useNamedStr, measureModeIntStr})
 	err = ts.Spawn(p)
 	assert.Nil(t, err)
 	err = ts.WaitStart(p.GetPid())
@@ -159,7 +162,7 @@ func testPerf(t *testing.T, nWorkers int, nStartingFiles int, nTrials int, useNa
 			}
 		}
 
-		prefix := fmt.Sprintf("%d_workers_%d_startfiles", nWorkers, nStartingFiles)
+		prefix := fmt.Sprintf("%d_workers_%d_startfiles_%d_files_per_trial", nWorkers, nStartingFiles, nFilesPerTrial)
 		s3Filepath := filepath.Join(s3FolderVersioned, fmt.Sprintf("watchperf_%s_%s_%s.txt", prefix, storageType, measureModeStr))
 		fd, err := ts.Create(s3Filepath, 0777, sp.OWRITE)
 		assert.Nil(t, err)
@@ -195,6 +198,7 @@ func TestPerf(t *testing.T) {
 	numWorkers := 1
 	numStartingFiles := 0
 	numTrials := 250
+	numFilesPerTrial := 1
 
 	if os.Getenv("MEASURE_MODE") != "" {
 		if os.Getenv("MEASURE_MODE") == "watch_only" {
@@ -232,7 +236,23 @@ func TestPerf(t *testing.T) {
 		}
 	}
 
-	testPerf(t, numWorkers, numStartingFiles, numTrials, useNamed, measureMode)
+	if os.Getenv("NUM_FILES_PER_TRIAL") != "" {
+		var ok error
+		numFilesPerTrial, ok = strconv.Atoi(os.Getenv("NUM_FILES_PER_TRIAL"))
+		if ok != nil {
+			assert.Fail(t, "Invalid value for NUM_FILES_PER_TRIAL")
+		}
+	}
+
+	if os.Getenv("NUM_TRIALS") != "" {
+		var ok error
+		numTrials, ok = strconv.Atoi(os.Getenv("NUM_TRIALS"))
+		if ok != nil {
+			assert.Fail(t, "Invalid value for NUM_TRIALS")
+		}
+	}
+
+	testPerf(t, numWorkers, numStartingFiles, numTrials, numFilesPerTrial, useNamed, measureMode)
 }
 
 func runTest(t *testing.T, f func(*testing.T, *test.Tstate, string, dirreader.DirReader), timeoutSec int) {

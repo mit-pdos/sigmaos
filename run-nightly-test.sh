@@ -9,6 +9,8 @@ SIGMAOS_ROOT=$HOME/sigmaos
 cd $SIGMAOS_ROOT
 git checkout master
 git pull
+./stop.sh
+./start-etcd.sh
 for branch in $(cat $SIGMAOS_ROOT/branches-to-test.txt); do
   BRANCH_OUT_DIR="$TEST_OUT_DIR/$branch"
   mkdir $BRANCH_OUT_DIR

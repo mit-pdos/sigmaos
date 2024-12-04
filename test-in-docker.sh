@@ -29,6 +29,21 @@ fi
 
 testercid=$(docker ps -a | grep -w "sig-tester" | cut -d " " -f1)
 
+ETCD_CTR_NAME=etcd-tester
+TESTER_NETWORK_NAME=sigmanet-testuser
+if ! docker ps | grep -q $ETCD_CTR_NAME ; then
+  DATA_DIR="etcd-data"
+  if ! docker volume ls | grep -q $DATA_DIR; then
+      echo "create vol"
+      docker volume create --name $DATA_DIR
+  fi
+  
+  docker run -d \
+      --name $ETCD_CTR_NAME \
+      --env ALLOW_NONE_AUTHENTICATION=yes \
+      --network $TESTER_NETWORK_NAME \
+      bitnami/etcd:latest
+fi
 
 if [[ $REBUILD_TESTER == "true" ]]; then
   if ! [ -z "$testercid" ]; then
@@ -52,6 +67,8 @@ if [ -z "$testercid" ]; then
   echo "========== Starting tester container =========="
   mkdir -p /tmp/sigmaos-bin
   docker run --rm -d -it \
+    --name sig-tester \
+    --network $TESTER_NETWORK_NAME \
     --mount type=bind,src=$ROOT,dst=/home/sigmaos/ \
     --mount type=bind,src=$HOME/.aws,dst=/home/sigmaos/.aws \
     --mount type=bind,src=/var/run/docker.sock,dst=/var/run/docker.sock \
@@ -80,6 +97,6 @@ TNAME=WaitExitSimpleSingleBE
 
 # Run the test
 docker exec \
-  -e SIGMADEBUG="TEST;BENCH;BOOT;SYSTEM;KERNEL;CONTAINER;" \
+  --env SIGMADEBUG="$SIGMADEBUG" \
   -it $(docker ps -a | grep sig-tester | cut -d " " -f1) \
   go test -v sigmaos/$SPKG --run $TNAME --start --homedir $HOME --projectroot /home/arielck/sigmaos

@@ -75,6 +75,9 @@ docker exec \
   -it $(docker ps -a | grep sig-tester | cut -d " " -f1) \
   go clean -testcache
 
+SPKG=sigmaclnt/procclnt
+TNAME=WaitExitSimpleSingleBE
+
 # Run the test
 docker exec \
   -e SIGMADEBUG="TEST;BENCH;BOOT;SYSTEM;KERNEL;CONTAINER;" \

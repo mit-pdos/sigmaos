@@ -1,6 +1,43 @@
 #!/bin/bash
 
+usage() {
+  echo "Usage: $0 [--rebuildtester]" 1>&2
+}
+
+REBUILD_TESTER="false"
+while [[ "$#" -gt 0 ]]; do
+  case "$1" in
+  --rebuildtester)
+    shift
+    REBUILD_TESTER="true"
+    ;;
+  -help)
+    usage
+    exit 0
+    ;;
+  *)
+   echo "unexpected argument $1"
+   usage
+   exit 1
+  esac
+done
+
+if [ $# -gt 0 ]; then
+    usage
+    exit 1
+fi
+
 testercid=$(docker ps -a | grep -w "sig-tester" | cut -d " " -f1)
+
+
+if [[ $REBUILD_TESTER == "true" ]]; then
+  if ! [ -z "$testercid" ]; then
+    echo "========== Stopping old tester container $testercid =========="
+    docker stop $testercid
+    # Reset tester container ID
+    testercid=""
+  fi
+fi
 
 ROOT=$(pwd)
 BUILD_LOG=/tmp/sigmaos-build

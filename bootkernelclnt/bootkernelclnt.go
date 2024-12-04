@@ -27,12 +27,20 @@ func projectRootPath() string {
 	return filepath.Dir(filepath.Dir(b))
 }
 
-func Start(kernelId string, etcdIP sp.Tip, pe *proc.ProcEnv, ntype Tboot, dialproxy bool) (string, error) {
+func Start(kernelId string, etcdIP sp.Tip, pe *proc.ProcEnv, ntype Tboot, dialproxy bool, homeDir string, projectRoot string) (string, error) {
 	args := []string{
 		"--pull", pe.BuildTag,
 		"--boot", ntype.String(),
 		"--named", etcdIP.String(),
 		"--host",
+	}
+	if homeDir != "" {
+		args = append(args, "--homedir")
+		args = append(args, homeDir)
+	}
+	if projectRoot != "" {
+		args = append(args, "--projectroot")
+		args = append(args, projectRoot)
 	}
 	if dialproxy {
 		args = append(args, "--usedialproxy")
@@ -86,9 +94,10 @@ type Kernel struct {
 	kclnt    *kernelclnt.KernelClnt
 }
 
-func NewKernelClntStart(etcdIP sp.Tip, pe *proc.ProcEnv, ntype Tboot, dialproxy bool) (*Kernel, error) {
+func NewKernelClntStart(etcdIP sp.Tip, pe *proc.ProcEnv, ntype Tboot, dialproxy bool, homeDir string, projectRoot string) (*Kernel, error) {
 	kernelId := GenKernelId()
-	_, err := Start(kernelId, etcdIP, pe, ntype, dialproxy)
+	// XXX
+	_, err := Start(kernelId, etcdIP, pe, ntype, dialproxy, homeDir, projectRoot)
 	if err != nil {
 		return nil, err
 	}

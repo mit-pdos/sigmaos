@@ -1,0 +1,8 @@
+benchmarks/results/
+.git/
+Dockerfile
+Dockerfile.*
+*.Dockerfile
+!make.sh
+!create-net.sh
+rs/*/target/

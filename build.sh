@@ -141,7 +141,6 @@ if [ -z "$rsbuildercid" ]; then
   echo "========== Done starting Rust builder ========== "
 fi
 
-
 BUILD_ARGS="--norace \
   --gopath /go-custom/bin/go \
   --target $TARGET \

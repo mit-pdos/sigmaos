@@ -5,7 +5,7 @@
 #
 
 usage() {
-    echo "Usage: $0 [--pull TAG] [--boot all|all_no_besched|node|node_no_besched|minnode|besched_node|named|realm_no_besched|spproxyd] [--named ADDRs] [--dbip DBIP] [--mongoip MONGOIP] [--host] [--usedialproxy] [--reserveMcpu rmcpu] kernelid"  1>&2
+    echo "Usage: $0 [--pull TAG] [--boot all|all_no_besched|node|node_no_besched|minnode|besched_node|named|realm_no_besched|spproxyd] [--named ADDRs] [--dbip DBIP] [--mongoip MONGOIP] [--host] [--usedialproxy] [--reserveMcpu rmcpu] [--homedir HOMEDIR] [--projectroot PROJECT_ROOT] kernelid"  1>&2
 }
 
 UPDATE=""
@@ -18,6 +18,8 @@ NET="host"
 KERNELID=""
 DIALPROXY="false"
 RMCPU="0"
+HOMEDIR=$HOME
+PROJECT_ROOT=$(realpath $(dirname $0))
 while [[ "$#" -gt 1 ]]; do
   case "$1" in
   --boot)
@@ -94,6 +96,16 @@ while [[ "$#" -gt 1 ]]; do
     RMCPU=$1
     shift
     ;;
+  --homedir)
+    shift
+    HOMEDIR=$1
+    shift
+    ;;
+  --projectroot)
+    shift
+    PROJECT_ROOT=$1
+    shift
+    ;;
   -help)
     usage
     exit 0
@@ -142,8 +154,6 @@ if [ "$MONGOIP" == "x.x.x.x" ] && docker ps | grep -q sigmamongo; then
   MONGOIP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' sigmamongo):27017
 fi
 
-PROJECT_ROOT=$(realpath $(dirname $0))
-
 # If running in local configuration, mount bin directory.
 MOUNTS="--mount type=bind,src=/var/run/docker.sock,dst=/var/run/docker.sock \
   --mount type=bind,src=/sys/fs/cgroup,dst=/cgroup \
@@ -152,7 +162,7 @@ MOUNTS="--mount type=bind,src=/var/run/docker.sock,dst=/var/run/docker.sock \
   --mount type=bind,src=/tmp/sigmaos-data,dst=/home/sigmaos/data \
   --mount type=bind,src=/tmp/sigmaos-bin/${KERNELID},dst=/home/sigmaos/bin/user/realms \
   --mount type=bind,src=/tmp/sigmaos-perf,dst=/tmp/sigmaos-perf \
-  --mount type=bind,src=${HOME}/.aws,dst=/home/sigmaos/.aws"
+  --mount type=bind,src=$HOMEDIR/.aws,dst=/home/sigmaos/.aws"
 if [ "$TAG" == "local-build" ]; then
   MOUNTS="$MOUNTS\
     --mount type=bind,src=$PROJECT_ROOT/bin/user,dst=/home/sigmaos/bin/user/common \

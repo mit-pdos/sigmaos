@@ -9,7 +9,7 @@ import (
 	"time"
 
 	db "sigmaos/debug"
-	"sigmaos/fslib"
+	"sigmaos/sigmaclnt/fslib"
 	"sigmaos/proc"
 	"sigmaos/semclnt"
 	sp "sigmaos/sigmap"

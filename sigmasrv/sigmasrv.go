@@ -18,7 +18,7 @@ import (
 	"sigmaos/proc"
 	"sigmaos/rpc"
 	rpcsrv "sigmaos/rpc/srv"
-	sessdevsrv "sigmaos/sessdev/srv"
+	rpcdevsrv "sigmaos/rpc/dev/srv"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv/cpumon"
@@ -176,7 +176,7 @@ func (ssrv *SigmaSrv) newRPCDev(relpath string, svci any) error {
 	} else {
 		ssrv.rpcs = rpcsrv.NewRPCSrv(svci, si)
 		rd := newRpcDev(ssrv.rpcs)
-		if err := sessdevsrv.NewSessDev(ssrv.MemFs, relpath, rd.newRpcSession, nil); err != nil {
+		if err := rpcdevsrv.NewSessDev(ssrv.MemFs, relpath, rd.newRpcSession, nil); err != nil {
 			return err
 		}
 		return nil

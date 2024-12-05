@@ -8,9 +8,9 @@ import (
 	"sigmaos/proxy/ninep/npcodec"
 	"sigmaos/path"
 	"sigmaos/serr"
-	"sigmaos/sessp"
+	sessp "sigmaos/session/proto"
 	sp "sigmaos/sigmap"
-	"sigmaos/spcodec"
+	spcodec "sigmaos/session/codec"
 )
 
 type NewFsObjF func(CtxI, sp.Tperm, sp.TleaseId, sp.Tmode, Dir, MkDirF) (FsObj, *serr.Err)

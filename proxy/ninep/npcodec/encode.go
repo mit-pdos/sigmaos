@@ -11,9 +11,9 @@ import (
 	db "sigmaos/debug"
 	np "sigmaos/ninep"
 	"sigmaos/serr"
-	"sigmaos/sessp"
+	sessp "sigmaos/session/proto"
 	sp "sigmaos/sigmap"
-	"sigmaos/spcodec"
+	spcodec "sigmaos/session/codec"
 )
 
 // Adopted from https://github.com/docker/go-p9p/encoding.go and Go's codecs

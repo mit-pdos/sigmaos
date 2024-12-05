@@ -18,7 +18,7 @@ import (
 	"sigmaos/path"
 	"sigmaos/proc"
 	"sigmaos/serr"
-	"sigmaos/sessp"
+	sessp "sigmaos/session/proto"
 	"sigmaos/sigmaclnt/fdclnt/pathclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/util/rand"

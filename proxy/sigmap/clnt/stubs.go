@@ -10,7 +10,7 @@ import (
 	"sigmaos/path"
 	rpcproto "sigmaos/rpc/proto"
 	"sigmaos/serr"
-	"sigmaos/sessp"
+	sessp "sigmaos/session/proto"
 	sos "sigmaos/api/sigmaos"
 	sp "sigmaos/sigmap"
 	spproto "sigmaos/proxy/sigmap/proto"

@@ -6,7 +6,7 @@ import (
 	"sigmaos/memfssrv"
 	rpcsrv "sigmaos/rpc/srv"
 	"sigmaos/serr"
-	"sigmaos/sessp"
+	sessp "sigmaos/session/proto"
 	sp "sigmaos/sigmap"
 )
 

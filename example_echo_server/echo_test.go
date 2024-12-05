@@ -11,7 +11,7 @@ import (
 
 	db "sigmaos/debug"
 	echo "sigmaos/example_echo_server"
-	"sigmaos/fslib"
+	"sigmaos/sigmaclnt/fslib"
 	"sigmaos/proc"
 	sprpcclnt "sigmaos/rpc/clnt/sigmap"
 	sp "sigmaos/sigmap"

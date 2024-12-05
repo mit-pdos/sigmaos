@@ -8,7 +8,7 @@ import (
 	"sigmaos/apps/cache"
 	"sigmaos/util/crash"
 	db "sigmaos/debug"
-	"sigmaos/fslib"
+	"sigmaos/sigmaclnt/fslib"
 	"sigmaos/proc"
 	"sigmaos/serr"
 	"sigmaos/sigmaclnt"

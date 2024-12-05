@@ -14,7 +14,7 @@ import (
 	"sigmaos/rpc"
 	rpcclnt "sigmaos/rpc/clnt"
 	rpcclntopts "sigmaos/rpc/clnt/opts"
-	"sigmaos/sessp"
+	sessp "sigmaos/session/proto"
 	sp "sigmaos/sigmap"
 	spproto "sigmaos/proxy/sigmap/proto"
 	"sigmaos/proxy/sigmap/transport"

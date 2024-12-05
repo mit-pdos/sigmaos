@@ -8,7 +8,6 @@ import (
 	"sigmaos/dcontainer"
 	db "sigmaos/debug"
 	"sigmaos/proc"
-	"sigmaos/procclnt"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 )
@@ -30,7 +29,7 @@ type Subsystem interface {
 }
 
 type KernelSubsystem struct {
-	*procclnt.ProcClnt
+	*sigmaclnt.SigmaClntKernel
 	k         *Kernel
 	p         *proc.Proc
 	how       proc.Thow
@@ -69,12 +68,12 @@ func (ss *KernelSubsystem) String() string {
 	return s
 }
 
-func newSubsystemCmd(pclnt *procclnt.ProcClnt, k *Kernel, p *proc.Proc, how proc.Thow, cmd *exec.Cmd) Subsystem {
-	return &KernelSubsystem{pclnt, k, p, how, cmd, nil, false, false}
+func newSubsystemCmd(sc *sigmaclnt.SigmaClntKernel, k *Kernel, p *proc.Proc, how proc.Thow, cmd *exec.Cmd) Subsystem {
+	return &KernelSubsystem{sc, k, p, how, cmd, nil, false, false}
 }
 
-func newSubsystem(pclnt *procclnt.ProcClnt, k *Kernel, p *proc.Proc, how proc.Thow) Subsystem {
-	return newSubsystemCmd(pclnt, k, p, how, nil)
+func newSubsystem(sc *sigmaclnt.SigmaClntKernel, k *Kernel, p *proc.Proc, how proc.Thow) Subsystem {
+	return newSubsystemCmd(sc, k, p, how, nil)
 }
 
 func (k *Kernel) bootSubsystemPIDWithMcpu(pid sp.Tpid, program string, args, env []string, realm sp.Trealm, how proc.Thow, mcpu proc.Tmcpu) (Subsystem, error) {
@@ -95,7 +94,7 @@ func (k *Kernel) bootSubsystemPIDWithMcpu(pid sp.Tpid, program string, args, env
 			return nil, err
 		}
 	}
-	ss := newSubsystem(sck.ProcClnt, k, p, how)
+	ss := newSubsystem(sck, k, p, how)
 	return ss, ss.Run(how, k.Param.KernelID, k.ip)
 }
 

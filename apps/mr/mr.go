@@ -9,7 +9,7 @@ import (
 
 	"sigmaos/apps/mr/mr"
 	db "sigmaos/debug"
-	"sigmaos/fslib"
+	"sigmaos/sigmaclnt/fslib"
 	sp "sigmaos/sigmap"
 )
 

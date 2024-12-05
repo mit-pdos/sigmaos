@@ -5,7 +5,7 @@ import (
 	"io"
 
 	"sigmaos/path"
-	"sigmaos/sessp"
+	sessp "sigmaos/session/proto"
 	sp "sigmaos/sigmap"
 )
 

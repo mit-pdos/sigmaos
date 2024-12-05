@@ -5,7 +5,7 @@ import (
 
 	"sigmaos/path"
 	"sigmaos/serr"
-	"sigmaos/sessp"
+	sessp "sigmaos/session/proto"
 )
 
 func (r *Rerror) TErrCode() serr.Terror {

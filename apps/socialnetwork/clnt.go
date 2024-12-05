@@ -8,7 +8,7 @@ import (
 	"net/url"
 	//"strconv"
 	dbg "sigmaos/debug"
-	"sigmaos/fslib"
+	"sigmaos/sigmaclnt/fslib"
 	sp "sigmaos/sigmap"
 	"time"
 )

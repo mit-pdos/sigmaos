@@ -1,7 +1,7 @@
 package proto
 
 import (
-	"sigmaos/sessp"
+	sessp "sigmaos/session/proto"
 )
 
 func NewBlob(iov sessp.IoVec) *Blob {

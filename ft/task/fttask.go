@@ -8,7 +8,7 @@ import (
 	"strconv"
 
 	db "sigmaos/debug"
-	"sigmaos/fslib"
+	"sigmaos/sigmaclnt/fslib"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 	rd "sigmaos/util/rand"

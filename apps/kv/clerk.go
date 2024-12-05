@@ -13,7 +13,7 @@ import (
 	cacheproto "sigmaos/apps/cache/proto"
 	"sigmaos/apps/kv/kvgrp"
 	db "sigmaos/debug"
-	"sigmaos/fslib"
+	"sigmaos/sigmaclnt/fslib"
 	replclnt "sigmaos/apps/kv/repl/clnt"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"

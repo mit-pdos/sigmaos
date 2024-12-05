@@ -4,7 +4,7 @@ import (
 	np "sigmaos/ninep"
 	"sigmaos/path"
 	"sigmaos/serr"
-	"sigmaos/sessp"
+	sessp "sigmaos/session/proto"
 	sp "sigmaos/sigmap"
 )
 

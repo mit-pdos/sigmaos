@@ -6,11 +6,11 @@ import (
 	"time"
 
 	db "sigmaos/debug"
-	"sigmaos/fslib"
+	"sigmaos/sigmaclnt/fslib"
 	"sigmaos/rpc"
 	"sigmaos/rpc/clnt/channel"
-	sessdevclnt "sigmaos/sessdev/clnt"
-	"sigmaos/sessp"
+	rpcdevclnt "sigmaos/rpc/dev/clnt"
+	sessp "sigmaos/session/proto"
 	sp "sigmaos/sigmap"
 )
 
@@ -34,7 +34,7 @@ func NewSPChannel(fsl *fslib.FsLib, pn string) (channel.RPCChannel, error) {
 	}()
 
 	pn0 := filepath.Join(pn, rpc.RPC)
-	sdc, err := sessdevclnt.NewSessDevClnt(fsl, pn0)
+	sdc, err := rpcdevclnt.NewSessDevClnt(fsl, pn0)
 	if err != nil {
 		return nil, err
 	}

@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"strconv"
 
-	"sigmaos/sessp"
+	sessp "sigmaos/session/proto"
 )
 
 type Tsize uint32

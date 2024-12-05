@@ -14,7 +14,7 @@ import (
 	"sigmaos/memfs/inode"
 	"sigmaos/path"
 	"sigmaos/serr"
-	"sigmaos/sessp"
+	sessp "sigmaos/session/proto"
 	sp "sigmaos/sigmap"
 	"sigmaos/util/perf"
 )

@@ -13,7 +13,7 @@ import (
 
 	"sigmaos/util/crash"
 	db "sigmaos/debug"
-	"sigmaos/fslib"
+	"sigmaos/sigmaclnt/fslib"
 	"sigmaos/ft/leaderclnt"
 	"sigmaos/proc"
 	"sigmaos/apps/kv/repl/raft"

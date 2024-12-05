@@ -3,7 +3,7 @@ package clnt
 import (
 	proto "sigmaos/chunk/proto"
 	db "sigmaos/debug"
-	"sigmaos/fslib"
+	"sigmaos/sigmaclnt/fslib"
 	rpcproto "sigmaos/rpc/proto"
 	shardedsvcrpcclnt "sigmaos/rpc/shardedsvc/clnt"
 	sp "sigmaos/sigmap"

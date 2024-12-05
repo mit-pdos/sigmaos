@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	db "sigmaos/debug"
-	"sigmaos/fslib"
+	"sigmaos/sigmaclnt/fslib"
 	"sigmaos/linuxsched"
 	"sigmaos/proc"
 	mschedclnt "sigmaos/sched/msched/clnt"

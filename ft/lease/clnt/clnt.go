@@ -5,7 +5,7 @@ package clnt
 
 import (
 	db "sigmaos/debug"
-	"sigmaos/fslib"
+	"sigmaos/sigmaclnt/fslib"
 	leaseproto "sigmaos/ft/lease/proto"
 	"sigmaos/namesrv/fsetcd"
 	rpcclnt "sigmaos/rpc/clnt"

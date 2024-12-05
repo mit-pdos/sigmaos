@@ -56,7 +56,7 @@ func (clnt *ProcClnt) CheckpointProc(pid sp.Tpid, pn string) (uprocErr error, ch
 		PathName: pn,
 	}
 	res := &proto.CheckpointProcResponse{}
-	if err := clnt.RPC("ProcSrv.Checkpoint", req, res); serr.IsErrCode(err, serr.TErrUnreachable) {
+	if err := clnt.RPC("ProcRPCSrv.Checkpoint", req, res); serr.IsErrCode(err, serr.TErrUnreachable) {
 		return err, nil
 	} else {
 		return nil, err

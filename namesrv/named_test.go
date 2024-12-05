@@ -7,7 +7,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"sigmaos/util/crash"
 	db "sigmaos/debug"
 	dialproxyclnt "sigmaos/dialproxy/clnt"
 	"sigmaos/namesrv"
@@ -17,6 +16,7 @@ import (
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
+	"sigmaos/util/crash"
 )
 
 func TestCompile(t *testing.T) {
@@ -76,8 +76,7 @@ func TestKillNamed(t *testing.T) {
 
 	db.DPrintf(db.TEST, "Crash named..\n")
 
-	sem := semclnt.NewSemClnt(ts.FsLib, fn)
-	err := sem.Up()
+	err := crash.SignalFailer(ts.FsLib, fn)
 	assert.Nil(t, err)
 	time.Sleep(T * time.Millisecond)
 

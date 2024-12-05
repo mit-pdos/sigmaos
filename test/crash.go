@@ -45,7 +45,7 @@ func (ts *Tstate) CrashServer1(e0, e1 crash.Tevent, randMax int, crashchan chan 
 	time.Sleep(time.Duration(r) * time.Microsecond)
 	db.DPrintf(db.ALWAYS, "Crashing a %v after %v", e0.Path, time.Duration(r)*time.Microsecond)
 	db.DPrintf(db.ALWAYS, "Booting %v node Before crashing a %v.", e1.Path, e0.Path)
-	err := crash.SetSigmaFail([]crash.Tevent{e1})
+	err := crash.SetSigmaFail(crash.NewTeventMapOne(e1))
 	assert.Nil(ts.T, err)
 	err = ts.BootNode(1)
 	db.DPrintf(db.ALWAYS, "Done booting a node before crashing a %v.", e0.Path)

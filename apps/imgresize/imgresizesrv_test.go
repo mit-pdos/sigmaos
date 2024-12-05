@@ -159,8 +159,8 @@ func TestImgdFatalError(t *testing.T) {
 	}
 }
 
-func (ts *Tstate) imgdJob(paths []string, evs []crash.Tevent) {
-	imgd := imgresize.StartImgd(ts.SigmaClnt, ts.job, IMG_RESIZE_MCPU, IMG_RESIZE_MEM, false, 1, 0, evs)
+func (ts *Tstate) imgdJob(paths []string, em *crash.TeventMap) {
+	imgd := imgresize.StartImgd(ts.SigmaClnt, ts.job, IMG_RESIZE_MCPU, IMG_RESIZE_MEM, false, 1, 0, em)
 
 	for i, pn := range paths {
 		db.DPrintf(db.TEST, "submit %v\n", pn)
@@ -209,7 +209,7 @@ func TestImgdOneCrash(t *testing.T) {
 	}
 
 	fn := filepath.Join(sp.S3, sp.LOCAL, "9ps3/img-save/8.jpg")
-	ts.imgdJob([]string{fn}, []crash.Tevent{e0})
+	ts.imgdJob([]string{fn}, crash.NewTeventMapOne(e0))
 	ts.shutdown()
 }
 

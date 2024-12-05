@@ -162,8 +162,8 @@ func testPerf(t *testing.T, nWorkers int, nStartingFiles int, nTrials int, nFile
 			}
 		}
 
-		prefix := fmt.Sprintf("%d_workers_%d_startfiles_%d_files_per_trial", nWorkers, nStartingFiles, nFilesPerTrial)
-		s3Filepath := filepath.Join(s3FolderVersioned, fmt.Sprintf("watchperf_%s_%s_%s.txt", prefix, storageType, measureModeStr))
+		filename := fmt.Sprintf("%dwkrs_%dstfi_%dfpt_%s_%s", nWorkers, nStartingFiles, nFilesPerTrial, storageType, measureModeStr)
+		s3Filepath := filepath.Join(s3FolderVersioned, filename)
 		fd, err := ts.Create(s3Filepath, 0777, sp.OWRITE)
 		assert.Nil(t, err)
 

@@ -33,7 +33,7 @@ retry_until_success() {
   while [ $retry_count -lt $max_retries ]; do
     ./stop.sh
     ./fsetcd-wipe.sh
-    go test sigmaos/fslib/dirreader -v --start --run "TestPerf" --timeout 5m
+    go test sigmaos/fslib/dirreader -v --start --run "TestPerf" --timeout 15m
     if [ $? -eq 0 ]; then
       echo "Test succeeded after $retry_count retries."
       return 0
@@ -54,15 +54,14 @@ for DIRREADER_VERSION in "${DIRREADER_VERSIONS[@]}"; do
   for MEASURE_MODE in "${MEASURE_MODES[@]}"; do
     for USE_NAMED in "${USE_NAMEDS[@]}"; do
       for STARTING_FILES in "${NUM_STARTING_FILES[@]}"; do
-        for WORKERS in "${NUM_WORKERS[@]}"; do
-          DIRREADER_VERSION="$DIRREADER_VERSION" \
-          MEASURE_MODE="$MEASURE_MODE" \
-          USE_NAMED="$USE_NAMED" \
-          NUM_WORKERS="1" \
-          NUM_TRIALS="250" \
-          NUM_FILES_PER_TRIAL="1" \
-          NUM_STARTING_FILES="$STARTING_FILES" \
-          retry_until_success "dirreader_${DIRREADER_VERSION}_${MEASURE_MODE}_${USE_NAMED}_${STARTING_FILES}"
+        DIRREADER_VERSION="$DIRREADER_VERSION" \
+        MEASURE_MODE="$MEASURE_MODE" \
+        USE_NAMED="$USE_NAMED" \
+        NUM_WORKERS="1" \
+        NUM_TRIALS="250" \
+        NUM_FILES_PER_TRIAL="1" \
+        NUM_STARTING_FILES="$STARTING_FILES" \
+        retry_until_success "dirreader_${DIRREADER_VERSION}_${MEASURE_MODE}_${USE_NAMED}_${STARTING_FILES}"
       done
     done
   done

@@ -13,6 +13,7 @@ import (
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
+	"sigmaos/util/crash"
 )
 
 //
@@ -165,14 +166,18 @@ func TestSymlink3(t *testing.T) {
 }
 
 func TestLeased(t *testing.T) {
+	const T = 1000
+	fn := sp.NAMED + "crashms.sem"
+	e := crash.NewEventPath(crash.MSCHED_CRASH, T, 1.0, fn)
+	err := crash.SetSigmaFail([]crash.Tevent{e})
+	assert.Nil(t, err)
+
 	ts, err1 := test.NewTstateAll(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
 
 	name := filepath.Join(sp.MSCHED, sp.ANY)
-
-	var err error
 
 	b, err := ts.GetFile(name)
 	assert.Nil(t, err, name)
@@ -185,11 +190,11 @@ func TestLeased(t *testing.T) {
 	sts, err := ts.GetDir(name + "/")
 	assert.Nil(t, err, name+"/")
 
-	// 5: .statsd, pids, rpc, and running
 	db.DPrintf(db.TEST, "entries %v\n", sp.Names(sts))
-	assert.Equal(t, 4, len(sts), "Unexpected len(sts) %v != %v:", sp.Names(sts), 4)
+	assert.Equal(t, 3, len(sts), "Unexpected len(sts) %v != %v:", sp.Names(sts), 3)
 
-	ts.KillOne(sp.MSCHEDREL)
+	err = crash.SignalFailer(ts.FsLib, fn)
+	assert.Nil(t, err)
 
 	start := time.Now()
 	for {

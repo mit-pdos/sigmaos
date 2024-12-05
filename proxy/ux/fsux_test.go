@@ -1,8 +1,8 @@
 package fsux
 
 import (
+	"fmt"
 	"strconv"
-	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -13,6 +13,7 @@ import (
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
+	"sigmaos/util/crash"
 )
 
 const (
@@ -127,7 +128,13 @@ func TestWriteCrash5x20(t *testing.T) {
 		N        = 20
 		NCRASH   = 5
 		CRASHSRV = 1000000
+		T        = 1000
 	)
+
+	fn := sp.NAMED + fmt.Sprintf("crashux%d.sem", 0)
+	e0 := crash.NewEventPath(crash.UX_CRASH, T, 1.0, fn)
+	err := crash.SetSigmaFail([]crash.Tevent{e0})
+	assert.Nil(t, err)
 
 	ts, err1 := test.NewTstateAll(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
@@ -141,13 +148,13 @@ func TestWriteCrash5x20(t *testing.T) {
 	}
 
 	crashchan := make(chan bool)
-	l := &sync.Mutex{}
 	for i := 0; i < NCRASH; i++ {
-		go ts.CrashServer(sp.UXREL, (i+1)*CRASHSRV, l, crashchan)
-	}
-
-	for i := 0; i < NCRASH; i++ {
+		// go ts.CrashServer(sp.UXREL, (i+1)*CRASHSRV, l, crashchan)
+		fn = sp.NAMED + fmt.Sprintf("crashux%d.sem", i+1)
+		e1 := crash.NewEventPath(crash.UX_CRASH, T, 1.0, fn)
+		go ts.CrashServer1(e0, e1, CRASHSRV, crashchan)
 		<-crashchan
+		e0 = e1
 	}
 
 	for i := 0; i < N; i++ {

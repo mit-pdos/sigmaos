@@ -194,3 +194,9 @@ func FailersDefault(fsl *fslib.FsLib, labels []Tselector) {
 		Failer(fsl, l, defaults[i])
 	}
 }
+
+func SignalFailer(fsl *fslib.FsLib, fn string) error {
+	db.DPrintf(db.CRASH, "Signal %v", fn)
+	sem := semclnt.NewSemClnt(fsl, fn)
+	return sem.Up()
+}

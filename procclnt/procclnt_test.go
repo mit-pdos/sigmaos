@@ -15,7 +15,6 @@ import (
 	"sigmaos/linuxsched"
 	"sigmaos/namesrv/fsetcd"
 	"sigmaos/proc"
-	"sigmaos/semclnt"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
@@ -827,12 +826,9 @@ func TestSpawnCrashLCSched(t *testing.T) {
 
 	db.DPrintf(db.TEST, "Crash a msched")
 
-	sem := semclnt.NewSemClnt(ts.FsLib, fn)
-	err = sem.Up()
+	err = crash.SignalFailer(ts.FsLib, fn)
 	assert.Nil(t, err)
 	time.Sleep(T * time.Millisecond)
-
-	db.DPrintf(db.TEST, "Upped msched")
 
 	err = ts.WaitStart(pid)
 	assert.NotNil(t, err, "WaitStart: %v", err)
@@ -849,6 +845,12 @@ func TestSpawnCrashLCSched(t *testing.T) {
 
 // Make sure this test is still meaningful
 func TestMaintainReplicationLevelCrashMSched(t *testing.T) {
+	const T = 1000
+	fn0 := sp.NAMED + "crashms0.sem"
+	e0 := crash.NewEventPath(crash.MSCHED_CRASH, T, 1.0, fn0)
+	err := crash.SetSigmaFail([]crash.Tevent{e0})
+	assert.Nil(t, err)
+
 	ts, err1 := test.NewTstateAll(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
@@ -859,7 +861,13 @@ func TestMaintainReplicationLevelCrashMSched(t *testing.T) {
 
 	db.DPrintf(db.TEST, "Boot node 2")
 	// Start a couple new nodes.
-	err := ts.BootNode(1)
+	fn1 := sp.NAMED + "crashms1.sem"
+	e1 := crash.NewEventPath(crash.MSCHED_CRASH, T, 1.0, fn1)
+	err = crash.SetSigmaFail([]crash.Tevent{e1})
+	assert.Nil(t, err)
+	err = ts.BootNode(1)
+
+	err = crash.SetSigmaFail([]crash.Tevent{})
 	assert.Nil(t, err, "BootNode %v", err)
 	db.DPrintf(db.TEST, "Boot node 3")
 	err = ts.BootNode(1)
@@ -886,9 +894,8 @@ func TestMaintainReplicationLevelCrashMSched(t *testing.T) {
 	assert.Equal(t, N_REPL, len(st), "wrong num spinners check #1")
 	db.DPrintf(db.TEST, "Get OutDir")
 
-	err = ts.KillOne(sp.MSCHEDREL)
-	assert.Nil(t, err, "kill msched")
-	db.DPrintf(db.TEST, "Killed a msched")
+	err = crash.SignalFailer(ts.FsLib, fn0)
+	assert.Nil(t, err, "crash msched")
 
 	// Wait for them to respawn.
 	time.Sleep(2 * fsetcd.LeaseTTL * time.Second)
@@ -899,9 +906,8 @@ func TestMaintainReplicationLevelCrashMSched(t *testing.T) {
 	assert.Equal(t, N_REPL, len(st), "wrong num spinners check #2", sp.Names(st))
 	db.DPrintf(db.TEST, "Got out dir again")
 
-	err = ts.KillOne(sp.MSCHEDREL)
-	assert.Nil(t, err, "kill msched")
-	db.DPrintf(db.TEST, "Killed another msched")
+	err = crash.SignalFailer(ts.FsLib, fn1)
+	assert.Nil(t, err, "crash msched1")
 
 	// Wait for them to respawn.
 	time.Sleep(2 * fsetcd.LeaseTTL * time.Second)

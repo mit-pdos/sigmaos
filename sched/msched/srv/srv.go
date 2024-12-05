@@ -8,8 +8,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	db "sigmaos/debug"
 	"sigmaos/api/fs"
+	db "sigmaos/debug"
 	"sigmaos/linuxsched"
 	"sigmaos/mem"
 	"sigmaos/proc"
@@ -22,6 +22,7 @@ import (
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
+	"sigmaos/util/crash"
 	"sigmaos/util/perf"
 	"sigmaos/util/syncmap"
 )
@@ -382,6 +383,11 @@ func RunMSched(kernelID string, reserveMcpu uint) error {
 		db.DFatalf("Error NewSigmaSrv: %v", err)
 	}
 	msched.pmgr.SetMemFs(ssrv.MemFs)
+
+	crash.Failer(sc.FsLib, crash.MSCHED_CRASH, func(e crash.Tevent) {
+		crash.Crash()
+	})
+
 	// Perf monitoring
 	p, err := perf.NewPerf(sc.ProcEnv(), perf.MSCHED)
 	if err != nil {

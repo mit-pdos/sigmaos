@@ -26,7 +26,8 @@ const (
 )
 
 var (
-	endpointPorts = []sp.Tport{3379, 3380, 3381, 3382, 3383}
+	//	endpointPorts = []sp.Tport{3379, 3380, 3381, 3382, 3383} // For use when running on the same machine as K8s
+	endpointPorts = []sp.Tport{2379, 2380, 2381, 2382, 2383}
 )
 
 type TetcdEndpoints map[string]*sp.TendpointProto

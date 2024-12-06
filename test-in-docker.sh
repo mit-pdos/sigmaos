@@ -30,19 +30,21 @@ fi
 testercid=$(docker ps -a | grep -w "sig-tester" | cut -d " " -f1)
 
 ETCD_CTR_NAME=etcd-tester
-TESTER_NETWORK_NAME=sigmanet-testuser
+TESTER_NETWORK=sigmanet-testuser
 if ! docker ps | grep -q $ETCD_CTR_NAME ; then
-  DATA_DIR="etcd-data"
+  DATA_DIR="etcd-tester-data"
   if ! docker volume ls | grep -q $DATA_DIR; then
       echo "create vol"
       docker volume create --name $DATA_DIR
   fi
-  
   docker run -d \
       --name $ETCD_CTR_NAME \
       --env ALLOW_NONE_AUTHENTICATION=yes \
-      --network $TESTER_NETWORK_NAME \
+      --network $TESTER_NETWORK \
       bitnami/etcd:latest
+else
+  # delete all keys from etcd
+  docker exec $ETCD_CTR_NAME etcdctl del --prefix ''
 fi
 
 if [[ $REBUILD_TESTER == "true" ]]; then
@@ -68,7 +70,7 @@ if [ -z "$testercid" ]; then
   mkdir -p /tmp/sigmaos-bin
   docker run --rm -d -it \
     --name sig-tester \
-    --network $TESTER_NETWORK_NAME \
+    --network $TESTER_NETWORK \
     --mount type=bind,src=$ROOT,dst=/home/sigmaos/ \
     --mount type=bind,src=$HOME/.aws,dst=/home/sigmaos/.aws \
     --mount type=bind,src=/var/run/docker.sock,dst=/var/run/docker.sock \
@@ -95,8 +97,15 @@ docker exec \
 SPKG=sigmaclnt/procclnt
 TNAME=WaitExitSimpleSingleBE
 
+ETCD_IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $ETCD_CTR_NAME)
+
 # Run the test
 docker exec \
   --env SIGMADEBUG="$SIGMADEBUG" \
   -it $(docker ps -a | grep sig-tester | cut -d " " -f1) \
-  go test -v sigmaos/$SPKG --run $TNAME --start --homedir $HOME --projectroot /home/arielck/sigmaos
+  go test -v sigmaos/$SPKG --run $TNAME \
+  --start \
+  --homedir $HOME \
+  --projectroot /home/arielck/sigmaos \
+  --etcdIP $ETCD_IP \
+  --netname $TESTER_NETWORK

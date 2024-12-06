@@ -5,7 +5,7 @@
 #
 
 usage() {
-    echo "Usage: $0 [--pull TAG] [--boot all|all_no_besched|node|node_no_besched|minnode|besched_node|named|realm_no_besched|spproxyd] [--named ADDRs] [--dbip DBIP] [--mongoip MONGOIP] [--host] [--usedialproxy] [--reserveMcpu rmcpu] [--homedir HOMEDIR] [--projectroot PROJECT_ROOT] kernelid"  1>&2
+    echo "Usage: $0 [--pull TAG] [--boot all|all_no_besched|node|node_no_besched|minnode|besched_node|named|realm_no_besched|spproxyd] [--named ADDRs] [--dbip DBIP] [--mongoip MONGOIP] [--usedialproxy] [--reserveMcpu rmcpu] [--homedir HOMEDIR] [--projectroot PROJECT_ROOT] kernelid"  1>&2
 }
 
 UPDATE=""
@@ -68,9 +68,10 @@ while [[ "$#" -gt 1 ]]; do
     TAG=$1
     shift
     ;;
-  --host)
+  --net)
     shift
-    NET="host"
+    NET=$1
+    shift
     ;;
   --usedialproxy)
     shift
@@ -190,6 +191,7 @@ CID=$(docker run -dit \
              -e SIGMAFAIL=${SIGMAFAIL} \
              -e SIGMADEBUG=${SIGMADEBUG} \
              -e reserveMcpu=${RMCPU} \
+             -e netmode=$NET \
              sigmaos)
 
 if [ -z ${CID} ]; then

@@ -45,7 +45,7 @@ type cpustats struct {
 	util                float64
 }
 
-func StartDockerContainer(p *proc.Proc, kernelId string) (*DContainer, error) {
+func StartDockerContainer(p *proc.Proc, kernelId, netmode string) (*DContainer, error) {
 	image := "sigmauser"
 	ctx := context.Background()
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
@@ -60,7 +60,6 @@ func StartDockerContainer(p *proc.Proc, kernelId string) (*DContainer, error) {
 
 	pset := nat.PortSet{} // Ports to expose
 	pmap := nat.PortMap{} // NAT mappings for exposed ports
-	netmode := "host"
 	var endpoints map[string]*network.EndpointSettings
 	cmd := append([]string{p.GetProgram()}, p.Args...)
 	db.DPrintf(db.CONTAINER, "ContainerCreate %v %v s %v\n", cmd, p.GetEnv(), score)

@@ -76,7 +76,7 @@ if ! [ -z $PURGE ]; then
   yes | docker volume prune
 fi
 
-sudo rm -rf /tmp/sigmaos-bin
+sudo rm -rf /tmp/sigmaos-bin/*
 sudo rm -rf /tmp/sigmaos-kernel-start-logs
 
 # delete all keys from etcd

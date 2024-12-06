@@ -11,12 +11,12 @@ import (
 	"time"
 
 	db "sigmaos/debug"
-	iputil "sigmaos/util/ip"
 	"sigmaos/proc"
 	"sigmaos/proc/kproc"
 	"sigmaos/serr"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
+	iputil "sigmaos/util/ip"
 )
 
 const (
@@ -30,6 +30,7 @@ type Param struct {
 	Mongoip     string
 	DialProxy   bool
 	BuildTag    string
+	Net         string
 	ReserveMcpu string
 }
 

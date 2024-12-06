@@ -34,6 +34,7 @@ var Withs3pathclnt bool
 
 var homeDir string
 var projectRoot string
+var netname string
 
 func init() {
 	flag.StringVar(&EtcdIP, "etcdIP", "127.0.0.1", "Etcd IP")
@@ -48,6 +49,7 @@ func init() {
 	flag.BoolVar(&Withs3pathclnt, "withs3pathclnt", false, "With s3clntpath?")
 	flag.StringVar(&projectRoot, "projectroot", "", "Path to project root")
 	flag.StringVar(&homeDir, "homedir", "", "Home directory, which contains the user's .aws directory")
+	flag.StringVar(&netname, "netname", "host", "Overlay network in which to run tests (or host if running in host mode)")
 }
 
 var savedTstate *Tstate
@@ -193,7 +195,7 @@ func newSysClnt(t *testing.T, ntype bootkernelclnt.Tboot) (*Tstate, error) {
 	var k *bootkernelclnt.Kernel
 	if Start {
 		kernelid = bootkernelclnt.GenKernelId()
-		_, err := bootkernelclnt.Start(kernelid, sp.Tip(EtcdIP), pe, ntype, useDialProxy, homeDir, projectRoot)
+		_, err := bootkernelclnt.Start(kernelid, sp.Tip(EtcdIP), pe, ntype, useDialProxy, homeDir, projectRoot, netname)
 		if err != nil {
 			db.DPrintf(db.ALWAYS, "Error start kernel")
 			return nil, err
@@ -203,7 +205,7 @@ func newSysClnt(t *testing.T, ntype bootkernelclnt.Tboot) (*Tstate, error) {
 	if !noBootDialProxy && (useSPProxy || useDialProxy) {
 		db.DPrintf(db.BOOT, "Booting spproxyd: usespproxyd %v usedialproxy %v", useSPProxy, useDialProxy)
 		sckid := sp.SPProxydKernel(bootkernelclnt.GenKernelId())
-		_, err := bootkernelclnt.Start(sckid, sp.Tip(EtcdIP), pe, sp.SPPROXYDREL, useDialProxy, homeDir, projectRoot)
+		_, err := bootkernelclnt.Start(sckid, sp.Tip(EtcdIP), pe, sp.SPPROXYDREL, useDialProxy, homeDir, projectRoot, netname)
 		if err != nil {
 			db.DPrintf(db.ALWAYS, "Error start kernel for spproxyd")
 			return nil, err
@@ -244,7 +246,7 @@ func (ts *Tstate) bootNode(n int, ntype bootkernelclnt.Tboot) error {
 	// node
 	savedTstate = nil
 	for i := 0; i < n; i++ {
-		kclnt, err := bootkernelclnt.NewKernelClntStart(sp.Tip(EtcdIP), ts.ProcEnv(), ntype, useDialProxy, homeDir, projectRoot)
+		kclnt, err := bootkernelclnt.NewKernelClntStart(sp.Tip(EtcdIP), ts.ProcEnv(), ntype, useDialProxy, homeDir, projectRoot, netname)
 		if err != nil {
 			return err
 		}

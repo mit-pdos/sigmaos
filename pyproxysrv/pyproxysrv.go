@@ -58,13 +58,12 @@ func (pps *PyProxySrv) handleNewConn(conn *net.UnixConn) {
 
 		db.DPrintf(db.PYPROXYSRV, "reader: received %v", string(line))
 
-		response := []byte("d\n")
+		response := []byte("d")
 		_, err = conn.Write(response)
 		if err != nil {
 			db.DPrintf(db.PYPROXYSRV_ERR, "reader: wf err %v\n", err)
 			return
 		}
-
 	}
 }
 

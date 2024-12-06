@@ -51,10 +51,12 @@ const char* get_path(const char *filename)
     write(sfd, "pf", 2);
     write(sfd, &(filename[3]), strlen(filename) - 3);
     write(sfd, "\n", 1);
+    printf("LD_PRELOAD: wrote to socket: %s\n", filename);
     read(sfd, x2, 1);
     while(x2[0] != 'd') {
         read(sfd, x2, 1);
     }
+    printf("LD_PRELOAD: finished\n");
     return x;
 }
 

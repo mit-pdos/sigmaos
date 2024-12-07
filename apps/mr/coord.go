@@ -10,13 +10,13 @@ import (
 	"sync/atomic"
 	"time"
 
-	"sigmaos/util/crash"
 	db "sigmaos/debug"
-	fttask "sigmaos/ft/task"
 	"sigmaos/ft/leaderclnt"
+	fttask "sigmaos/ft/task"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
+	"sigmaos/util/crash"
 	"sigmaos/util/rand"
 )
 
@@ -324,16 +324,24 @@ func (c *Coord) restart(files []string, task string) {
 
 // Mark all error-ed tasks as runnable
 func (c *Coord) doRestart() bool {
-	n, err := c.mft.Restart()
-	if err != nil {
-		db.DFatalf("Restart mappers err %v\n", err)
-	}
-	m, err := c.rft.Restart()
+	m, err := c.rft.MarkErrorTodo()
 	if err != nil {
 		db.DFatalf("Restart reducers err %v\n", err)
 	}
+	if m > 0 {
+		// if a reducer couldn't read its input files, mark all
+		// mappers as failed so that they will be restarted.
+		_, err := c.mft.MarkDoneError()
+		if err != nil {
+			db.DFatalf("MarkDoneError err %v\n", err)
+		}
+	}
+	n, err := c.mft.MarkErrorTodo()
+	if err != nil {
+		db.DFatalf("Restart mappers err %v\n", err)
+	}
 	if n+m > 0 {
-		db.DPrintf(db.ALWAYS, "do.Restart(): restarted %d tasks\n", n+m)
+		db.DPrintf(db.ALWAYS, "doRestart(): restart %d tasks\n", n+m)
 	}
 	c.stat.nRestart += n + m
 	return n+m > 0

@@ -6,8 +6,8 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/proc"
-	sp "sigmaos/sigmap"
 	spproxysrv "sigmaos/proxy/sigmap/srv"
+	sp "sigmaos/sigmap"
 )
 
 type Services struct {
@@ -50,7 +50,7 @@ func (k *Kernel) BootSub(s string, args, env []string, p *Param, realm sp.Trealm
 	case sp.CHUNKDREL:
 		ss, err = k.bootChunkd(realm)
 	case sp.UXREL:
-		ss, err = k.bootUxd(realm)
+		ss, err = k.bootUxd(realm, env)
 	case sp.DBREL:
 		ss, err = k.bootDbd(p.Dbip)
 	case sp.MONGOREL:
@@ -143,8 +143,8 @@ func (k *Kernel) bootRealmd() (Subsystem, error) {
 	return k.bootSubsystem("realmd", []string{strconv.FormatBool(k.Param.DialProxy)}, []string{}, sp.ROOTREALM, proc.HMSCHED, 0)
 }
 
-func (k *Kernel) bootUxd(realm sp.Trealm) (Subsystem, error) {
-	return k.bootSubsystem("fsuxd", []string{sp.SIGMAHOME}, []string{}, realm, proc.HMSCHED, 0)
+func (k *Kernel) bootUxd(realm sp.Trealm, env []string) (Subsystem, error) {
+	return k.bootSubsystem("fsuxd", []string{sp.SIGMAHOME}, env, realm, proc.HMSCHED, 0)
 }
 
 func (k *Kernel) bootS3d(realm sp.Trealm) (Subsystem, error) {

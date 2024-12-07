@@ -169,7 +169,7 @@ func TestLeased(t *testing.T) {
 	const T = 1000
 	fn := sp.NAMED + "crashms.sem"
 	e := crash.NewEventPath(crash.MSCHED_CRASH, T, 1.0, fn)
-	err := crash.SetSigmaFail([]crash.Tevent{e})
+	err := crash.SetSigmaFail(crash.NewTeventMapOne(e))
 	assert.Nil(t, err)
 
 	ts, err1 := test.NewTstateAll(t)

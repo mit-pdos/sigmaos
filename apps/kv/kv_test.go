@@ -29,19 +29,24 @@ const (
 	CRASHMOVER    = 1000
 )
 
-var balancerEv []crash.Tevent
-var moverEv []crash.Tevent
-var bothEv []crash.Tevent
+var balancerEv *crash.TeventMap
+var moverEv *crash.TeventMap
+var bothEv *crash.TeventMap
 
 func init() {
 	e0 := crash.NewEvent(crash.KVBALANCER_CRASH, CRASHBALANCER, 0.33)
+	balancerEv = crash.NewTeventMapOne(e0)
 	e1 := crash.NewEvent(crash.KVBALANCER_PARTITION, CRASHBALANCER, 0.5)
-	balancerEv = []crash.Tevent{e0, e1}
+	balancerEv.Insert(e1)
+
 	e0 = crash.NewEvent(crash.KVMOVER_CRASH, CRASHMOVER, 0.2)
+	moverEv = crash.NewTeventMapOne(e0)
 	e1 = crash.NewEventStartDelay(crash.KVMOVER_PARTITION, 1, 0, 2000, 0.5)
-	moverEv = []crash.Tevent{e0, e1}
-	bothEv = append([]crash.Tevent{}, balancerEv...)
-	bothEv = append(bothEv, moverEv...)
+	moverEv.Insert(e1)
+
+	bothEv = crash.NewTeventMap()
+	bothEv.Merge(balancerEv)
+	bothEv.Merge(moverEv)
 }
 
 func checkKvs(t *testing.T, kvs *kv.KvSet, n int) {
@@ -97,12 +102,12 @@ type Tstate struct {
 	job string
 }
 
-func newTstate(t1 *test.Tstate, evs []crash.Tevent, auto string, repl int) *Tstate {
+func newTstate(t1 *test.Tstate, em *crash.TeventMap, auto string, repl int) *Tstate {
 	ts := &Tstate{job: rand.String(4)}
 	ts.Tstate = t1
 
 	// XXX maybe in pe
-	err := crash.SetSigmaFail(evs)
+	err := crash.SetSigmaFail(em)
 	assert.Nil(t1.T, err)
 
 	kvf, err := kv.NewKvdFleet(ts.SigmaClnt, ts.job, 1, repl, 0, auto)
@@ -194,7 +199,7 @@ func TestPutGetCrashKVD1(t *testing.T) {
 	}
 
 	e0 := crash.NewEvent(crash.KVD_CRASH, kvgrp.CRASH, 0.33)
-	ts := newTstate(t1, []crash.Tevent{e0}, "manual", kv.KVD_REPL_LEVEL)
+	ts := newTstate(t1, crash.NewTeventMapOne(e0), "manual", kv.KVD_REPL_LEVEL)
 
 	err := ts.cm.StartClerks("", 1)
 	assert.Nil(ts.T, err, "Error StartClerk: %v", err)
@@ -209,7 +214,7 @@ func TestPutGetCrashKVD1(t *testing.T) {
 	ts.done()
 }
 
-func concurN(t *testing.T, nclerk int, evs []crash.Tevent, repl int) {
+func concurN(t *testing.T, nclerk int, em *crash.TeventMap, repl int) {
 	const TIME = 100
 
 	t1, err1 := test.NewTstateAll(t)
@@ -217,7 +222,7 @@ func concurN(t *testing.T, nclerk int, evs []crash.Tevent, repl int) {
 		return
 	}
 
-	ts := newTstate(t1, evs, "manual", repl)
+	ts := newTstate(t1, em, "manual", repl)
 
 	err := ts.cm.StartClerks("", nclerk)
 	assert.Nil(ts.T, err, "Error StartClerk: %v", err)

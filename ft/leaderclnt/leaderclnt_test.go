@@ -38,7 +38,7 @@ func TestOldLeaderCrash(t *testing.T) {
 	fn := sp.NAMED + "crashnd.sem"
 
 	e := crash.NewEventPath(crash.NAMED_CRASH, T, 1.0, fn)
-	err := crash.SetSigmaFail([]crash.Tevent{e})
+	err := crash.SetSigmaFail(crash.NewTeventMapOne(e))
 	assert.Nil(t, err)
 
 	ts, err1 := test.NewTstateAll(t)

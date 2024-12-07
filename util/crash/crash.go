@@ -90,6 +90,15 @@ func (em *TeventMap) Events2String() (string, error) {
 	return string(b), nil
 }
 
+func (em *TeventMap) Insert(e Tevent) {
+	em.Evs[Tselector(e.Label)] = e
+}
+
+func (em *TeventMap) Lookup(l Tselector) (Tevent, bool) {
+	e, ok := em.Evs[l]
+	return e, ok
+}
+
 func (em *TeventMap) Merge(em0 *TeventMap) {
 	for k, v := range em0.Evs {
 		em.Evs[k] = v
@@ -97,7 +106,6 @@ func (em *TeventMap) Merge(em0 *TeventMap) {
 }
 
 func unmarshalTevents(s string) (*TeventMap, error) {
-	db.DPrintf(db.CRASH, "unmarshalTevents %v", s)
 	if s == "" {
 		return NewTeventMap(), nil
 	}

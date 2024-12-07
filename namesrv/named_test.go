@@ -12,7 +12,6 @@ import (
 	"sigmaos/namesrv"
 	"sigmaos/namesrv/fsetcd"
 	"sigmaos/proc"
-	"sigmaos/semclnt"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
@@ -54,7 +53,7 @@ func TestKillNamed(t *testing.T) {
 	fn := sp.NAMED + "crashnd.sem"
 
 	e := crash.NewEventPath(crash.NAMED_CRASH, T, 1.0, fn)
-	err := crash.SetSigmaFail([]crash.Tevent{e})
+	err := crash.SetSigmaFail(crash.NewTeventMapOne(e))
 	assert.Nil(t, err)
 
 	ts, err1 := test.NewTstateAll(t)
@@ -76,7 +75,7 @@ func TestKillNamed(t *testing.T) {
 
 	db.DPrintf(db.TEST, "Crash named..\n")
 
-	err := crash.SignalFailer(ts.FsLib, fn)
+	err = crash.SignalFailer(ts.FsLib, fn)
 	assert.Nil(t, err)
 	time.Sleep(T * time.Millisecond)
 
@@ -251,7 +250,7 @@ func TestLeaseDelayReboot(t *testing.T) {
 // Test if read fails after a named lost leadership
 func TestPartitionNamed(t *testing.T) {
 	e := crash.NewEventStartDelay(crash.NAMED_PARTITION, 2000, 1000, 1.0, 7000)
-	err := crash.SetSigmaFail([]crash.Tevent{e})
+	err := crash.SetSigmaFail(crash.NewTeventMapOne(e))
 	assert.Nil(t, err)
 
 	ts, err1 := test.NewTstateAll(t)

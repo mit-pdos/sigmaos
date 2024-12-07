@@ -3,6 +3,7 @@ package fsux
 import (
 	"fmt"
 	"strconv"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -147,18 +148,18 @@ func TestWriteCrash5x20(t *testing.T) {
 		go writer(ts.T, ch, pe, i)
 	}
 
-	crashchan := make(chan bool)
-	for i := 0; i < NCRASH; i++ {
-		fn = sp.NAMED + fmt.Sprintf("crashux%d.sem", i+1)
-		e1 := crash.NewEventPath(crash.UX_CRASH, T, 1.0, fn)
-		go ts.CrashServer1(e0, e1, CRASHSRV, crashchan)
-		<-crashchan
-		e0 = e1
-	}
-
-	for i := 0; i < N; i++ {
-		ch <- nil
-	}
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for i := 0; i < NCRASH; i++ {
+			fn = sp.NAMED + fmt.Sprintf("crashux%d.sem", i+1)
+			e1 := crash.NewEventPath(crash.UX_CRASH, T, 1.0, fn)
+			ts.CrashServer1(e0, e1, CRASHSRV)
+			e0 = e1
+		}
+	}()
+	wg.Wait()
 
 	ts.Shutdown()
 }

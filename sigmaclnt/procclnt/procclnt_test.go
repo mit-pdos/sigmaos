@@ -82,8 +82,10 @@ func spawnSleeperMcpu(t *testing.T, ts *test.Tstate, pid sp.Tpid, mcpu proc.Tmcp
 func spawnSpawner(t *testing.T, ts *test.Tstate, wait bool, childPid sp.Tpid, msecs, c int64) sp.Tpid {
 	p := proc.NewProc("spawner", []string{strconv.FormatBool(wait), childPid.String(), "sleeper", fmt.Sprintf("%dms", msecs), "name/"})
 	e0 := crash.NewEvent(crash.SPAWNER_CRASH, c, 0.33)
+	em := crash.NewTeventMapOne(e0)
 	e1 := crash.NewEvent(crash.SPAWNER_PARTITION, c, 0.66)
-	s, err := crash.MakeTevents([]crash.Tevent{e0, e1})
+	em.Insert(e1)
+	s, err := em.Events2String()
 	assert.Nil(t, err)
 	p.AppendEnv(proc.SIGMAFAIL, s)
 	err = ts.Spawn(p)
@@ -811,7 +813,8 @@ func TestSpawnCrashLCSched(t *testing.T) {
 	fn := sp.NAMED + "crashlc.sem"
 
 	e := crash.NewEventPath(crash.LCSCHED_CRASH, T, 1.0, fn)
-	err := crash.SetSigmaFail([]crash.Tevent{e})
+	em := crash.NewTeventMapOne(e)
+	err := crash.SetSigmaFail(em)
 	assert.Nil(t, err)
 
 	ts, err1 := test.NewTstateAll(t)
@@ -848,7 +851,8 @@ func TestMaintainReplicationLevelCrashMSched(t *testing.T) {
 	const T = 1000
 	fn0 := sp.NAMED + "crashms0.sem"
 	e0 := crash.NewEventPath(crash.MSCHED_CRASH, T, 1.0, fn0)
-	err := crash.SetSigmaFail([]crash.Tevent{e0})
+	em := crash.NewTeventMapOne(e0)
+	err := crash.SetSigmaFail(em)
 	assert.Nil(t, err)
 
 	ts, err1 := test.NewTstateAll(t)
@@ -863,11 +867,12 @@ func TestMaintainReplicationLevelCrashMSched(t *testing.T) {
 	// Start a couple new nodes.
 	fn1 := sp.NAMED + "crashms1.sem"
 	e1 := crash.NewEventPath(crash.MSCHED_CRASH, T, 1.0, fn1)
-	err = crash.SetSigmaFail([]crash.Tevent{e1})
+	em = crash.NewTeventMapOne(e1)
+	err = crash.SetSigmaFail(em)
 	assert.Nil(t, err)
 	err = ts.BootNode(1)
 
-	err = crash.SetSigmaFail([]crash.Tevent{})
+	err = crash.SetSigmaFail(crash.NewTeventMap())
 	assert.Nil(t, err, "BootNode %v", err)
 	db.DPrintf(db.TEST, "Boot node 3")
 	err = ts.BootNode(1)

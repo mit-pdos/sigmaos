@@ -14,13 +14,13 @@ import (
 
 	"sigmaos/apps/mr/chunkreader"
 	"sigmaos/apps/mr/mr"
-	"sigmaos/util/crash"
 	db "sigmaos/debug"
-	"sigmaos/sigmaclnt/fslib"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
+	"sigmaos/sigmaclnt/fslib"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
+	"sigmaos/util/crash"
 	"sigmaos/util/perf"
 	"sigmaos/util/rand"
 )
@@ -102,17 +102,17 @@ func newMapper(mapf mr.MapT, reducef mr.ReduceT, args []string, p *perf.Perf) (*
 		return nil, err
 	}
 
-	db.DPrintf(db.TEST, "NewSigmaClnt done at time: %v", time.Since(start))
+	db.DPrintf(db.SPAWN_LAT, "NewSigmaClnt done at time: %v", time.Since(start))
 	m, err := NewMapper(sc, mapf, reducef, args[0], args[1], p, nr, lsz, wsz, args[3], args[4])
 	if err != nil {
 		return nil, fmt.Errorf("NewMapper failed %v", err)
 	}
 
-	db.DPrintf(db.TEST, "NewMapper done at time: %v", time.Since(start))
+	db.DPrintf(db.SPAWN_LAT, "NewMapper done at time: %v", time.Since(start))
 	if err := m.Started(); err != nil {
 		return nil, fmt.Errorf("NewMapper couldn't start %v", args)
 	}
-	db.DPrintf(db.TEST, "Started at time: %v", time.Since(start))
+	db.DPrintf(db.SPAWN_LAT, "Started at time: %v", time.Since(start))
 
 	crash.FailersDefault(m.FsLib, []crash.Tselector{crash.MRTASK_CRASH, crash.MRTASK_PARTITION})
 	return m, nil
@@ -144,7 +144,7 @@ func (m *Mapper) initWrt(r int, name string) error {
 func (m *Mapper) initOutput() error {
 	start := time.Now()
 	defer func(start time.Time) {
-		db.DPrintf(db.TEST, "initOutput time: %v", time.Since(start))
+		db.DPrintf(db.SPAWN_LAT, "initOutput time: %v", time.Since(start))
 	}(start)
 
 	outDirPath := MapIntermediateDir(m.job, m.intOutput)
@@ -217,7 +217,7 @@ func (m *Mapper) combineEmit() {
 	for _, ckr := range m.ckrs[1:] {
 		d.MergeKVMap(ckr)
 	}
-	db.DPrintf(db.TEST, "combineEmit: %v", time.Since(s))
+	db.DPrintf(db.SPAWN_LAT, "combineEmit: %v", time.Since(s))
 	d.CombineEmit(m.Emit)
 	for _, ckr := range m.ckrs {
 		ckr.Reset()
@@ -284,7 +284,7 @@ func (m *Mapper) DoMap() (sp.Tlength, sp.Tlength, Bin, error) {
 		db.DPrintf(db.MR, "Mapper %s: unmarshal err %v\n", m.bin, err)
 		return 0, 0, nil, err
 	}
-	db.DPrintf(db.TEST, "Mapper getInput time: %v", time.Since(getInputStart))
+	db.DPrintf(db.SPAWN_LAT, "Mapper getInput time: %v", time.Since(getInputStart))
 	ni := sp.Tlength(0)
 	getSplitStart := time.Now()
 	for _, s := range bin {
@@ -298,13 +298,13 @@ func (m *Mapper) DoMap() (sp.Tlength, sp.Tlength, Bin, error) {
 		}
 		ni += n
 	}
-	db.DPrintf(db.TEST, "split time: %v", time.Since(getSplitStart))
+	db.DPrintf(db.SPAWN_LAT, "split time: %v", time.Since(getSplitStart))
 	closeWrtStart := time.Now()
 	nout, err := m.CloseWrt()
 	if err != nil {
 		return 0, 0, nil, err
 	}
-	db.DPrintf(db.TEST, "Mapper closeWrt time: %v", time.Since(closeWrtStart))
+	db.DPrintf(db.SPAWN_LAT, "Mapper closeWrt time: %v", time.Since(closeWrtStart))
 	obin, err := m.outputBin()
 	if err != nil {
 		return 0, 0, nil, err

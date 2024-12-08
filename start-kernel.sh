@@ -143,7 +143,6 @@ DATA_DIR="${TMP_BASE}/sigmaos-data"
 PERF_DIR="${TMP_BASE}/sigmaos-perf"
 KERNEL_DIR="${TMP_BASE}/sigmaos"
 
-mkdir -p /tmp/sigmaos
 # Perhaps /tmp/spproxyd should not always be mounted/should not be mounted by
 # every kernel instance on a machine?
 mkdir -p /tmp/spproxyd

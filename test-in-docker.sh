@@ -27,14 +27,39 @@ if [ $# -gt 0 ]; then
     exit 1
 fi
 
-testercid=$(docker ps -a | grep -w "sig-tester" | cut -d " " -f1)
+ROOT=$(dirname $(realpath $0))
+source $ROOT/env/env.sh
 
-ETCD_CTR_NAME=etcd-tester
-TESTER_NETWORK=sigmanet-testuser
+TMP_BASE="/tmp"
+TESTER_NAME="sig-tester"
+TESTER_NETWORK="sigmanet-testuser"
+ETCD_CTR_NAME="etcd-tester"
+if ! [ -z "$SIGMAUSER" ]; then
+  TESTER_NAME=$TESTER_NAME-$SIGMAUSER
+  TESTER_NETWORK=$TESTER_NETWORK-$SIGMAUSER
+  ETCD_CTR_NAME=$ETCD_CTR_NAME-$SIGMAUSER
+  TMP_BASE=$TMP_BASE/$SIGMAUSER
+fi
+HOST_BIN_CACHE="${TMP_BASE}/sigmaos-bin"
+DATA_DIR="${TMP_BASE}/sigmaos-data"
+PERF_DIR="${TMP_BASE}/sigmaos-perf"
+KERNEL_DIR="${TMP_BASE}/sigmaos"
+BUILD_LOG="${TMP_BASE}/sigmaos-build"
+
+mkdir -p $BUILD_LOG
+mkdir -p $DATA_DIR
+mkdir -p $PERF_DIR
+mkdir -p $KERNEL_DIR
+
+if ! docker network ls | grep -q $TESTER_NETWORK ; then
+  docker network create --driver overlay $TESTER_NETWORK --attachable    
+fi
+
+# Start up etcd
 if ! docker ps | grep -q $ETCD_CTR_NAME ; then
-  DATA_DIR="etcd-tester-data"
+  DATA_DIR="$ETCD_CTR_NAME-data"
   if ! docker volume ls | grep -q $DATA_DIR; then
-      echo "create vol"
+      echo "create volume $DATA_DIR"
       docker volume create --name $DATA_DIR
   fi
   docker run -d \
@@ -47,6 +72,8 @@ else
   docker exec $ETCD_CTR_NAME etcdctl del --prefix ''
 fi
 
+testercid=$(docker ps -a | grep -w $TESTER_NAME | cut -d " " -f1)
+
 if [[ $REBUILD_TESTER == "true" ]]; then
   if ! [ -z "$testercid" ]; then
     echo "========== Stopping old tester container $testercid =========="
@@ -56,32 +83,30 @@ if [[ $REBUILD_TESTER == "true" ]]; then
   fi
 fi
 
-ROOT=$(pwd)
-BUILD_LOG=/tmp/sigmaos-build
 mkdir -p $BUILD_LOG
 
 if [ -z "$testercid" ]; then
   # Build tester
   echo "========== Build tester image =========="
-  DOCKER_BUILDKIT=1 docker build --progress=plain -f tester.Dockerfile -t sig-tester . 2>&1 | tee $BUILD_LOG/sig-tester.out
+  DOCKER_BUILDKIT=1 docker build --progress=plain -f tester.Dockerfile -t $TESTER_NAME . 2>&1 | tee $BUILD_LOG/sig-tester.out
   echo "========== Done building tester =========="
   # Start tester
   echo "========== Starting tester container =========="
-  mkdir -p /tmp/sigmaos-bin
+  mkdir -p $HOST_BIN_CACHE
   docker run --rm -d -it \
-    --name sig-tester \
+    --name $TESTER_NAME \
     --network $TESTER_NETWORK \
     --mount type=bind,src=$ROOT,dst=/home/sigmaos/ \
     --mount type=bind,src=$HOME/.aws,dst=/home/sigmaos/.aws \
     --mount type=bind,src=/var/run/docker.sock,dst=/var/run/docker.sock \
     --mount type=bind,src=/sys/fs/cgroup,dst=/sys/fs/cgroup \
-    --mount type=bind,src=/tmp/sigmaos,dst=/tmp/sigmaos \
-    --mount type=bind,src=/tmp/sigmaos-bin/,dst=/tmp/sigmaos-bin \
+    --mount type=bind,src=$HOST_BIN_CACHE,dst=$HOST_BIN_CACHE \
     --mount type=bind,src=/tmp/spproxyd,dst=/tmp/spproxyd \
-    --mount type=bind,src=/tmp/sigmaos-data,dst=/tmp/sigmaos-data \
-    --mount type=bind,src=/tmp/sigmaos-perf,dst=/tmp/sigmaos-perf \
-    sig-tester
-  testercid=$(docker ps -a | grep -w "sig-tester" | cut -d " " -f1)
+    --mount type=bind,src=$KERNEL_DIR,dst=$KERNEL_DIR \
+    --mount type=bind,src=$DATA_DIR,dst=$DATA_DIR \
+    --mount type=bind,src=$PERF_DIR,dst=$PERF_DIR \
+    $TESTER_NAME 
+  testercid=$(docker ps -a | grep -w $TESTER_NAME | cut -d " " -f1)
   until [ "`docker inspect -f {{.State.Running}} $testercid`"=="true" ]; do
       echo -n "." 1>&2
       sleep 0.1;
@@ -91,7 +116,7 @@ fi
 
 # Clean the test cache
 docker exec \
-  -it $(docker ps -a | grep sig-tester | cut -d " " -f1) \
+  -it $testercid \
   go clean -testcache
 
 SPKG=sigmaclnt/procclnt
@@ -102,9 +127,10 @@ ETCD_IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{
 # Run the test
 docker exec \
   --env SIGMADEBUG="$SIGMADEBUG" \
-  -it $(docker ps -a | grep sig-tester | cut -d " " -f1) \
+  -it $testercid \
   go test -v sigmaos/$SPKG --run $TNAME \
   --start \
+  --user $SIGMAUSER \
   --homedir $HOME \
   --projectroot /home/arielck/sigmaos \
   --etcdIP $ETCD_IP \

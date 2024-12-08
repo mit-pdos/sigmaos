@@ -45,8 +45,15 @@ type cpustats struct {
 	util                float64
 }
 
-func StartDockerContainer(p *proc.Proc, kernelId, netmode string) (*DContainer, error) {
+func StartDockerContainer(p *proc.Proc, kernelId, user, netmode string) (*DContainer, error) {
 	image := "sigmauser"
+	tmpBase := "/tmp"
+	if user != sp.NOT_SET {
+		image += "-" + user
+		tmpBase = filepath.Join(tmpBase, user)
+	}
+	procdBin := filepath.Join(tmpBase, "sigmaos-procd-bin")
+	perfOutputPath := filepath.Join(tmpBase, perf.OUTPUT_DIR)
 	ctx := context.Background()
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {
@@ -71,14 +78,14 @@ func StartDockerContainer(p *proc.Proc, kernelId, netmode string) (*DContainer, 
 		// user bin dir.
 		mount.Mount{
 			Type:     mount.TypeBind,
-			Source:   chunksrv.PathHostKernel(kernelId),
+			Source:   chunksrv.PathHostKernel(user, kernelId),
 			Target:   chunksrv.ROOTBINCONTAINER,
 			ReadOnly: false,
 		},
 		// perf output dir
 		mount.Mount{
 			Type:     mount.TypeBind,
-			Source:   perf.OUTPUT_PATH,
+			Source:   perfOutputPath,
 			Target:   perf.OUTPUT_PATH,
 			ReadOnly: false,
 		},
@@ -92,7 +99,7 @@ func StartDockerContainer(p *proc.Proc, kernelId, netmode string) (*DContainer, 
 		mnts = append(mnts,
 			mount.Mount{
 				Type:     mount.TypeBind,
-				Source:   filepath.Join("/tmp/sigmaos-procd-bin"),
+				Source:   procdBin,
 				Target:   filepath.Join(sp.SIGMAHOME, "bin/kernel"),
 				ReadOnly: true,
 			},

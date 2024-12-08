@@ -43,7 +43,8 @@ func Hz() int {
 }
 
 const (
-	OUTPUT_PATH            = "/tmp/sigmaos-perf"
+	OUTPUT_DIR             = "sigmaos-perf"
+	OUTPUT_PATH            = "/tmp/" + OUTPUT_DIR
 	MUTEX_PROFILE_FRACTION = 1
 	BLOCK_PROFILE_FRACTION = 5
 )

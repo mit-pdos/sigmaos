@@ -5,7 +5,7 @@
 #
 
 usage() {
-    echo "Usage: $0 [--pull TAG] [--boot all|all_no_besched|node|node_no_besched|minnode|besched_node|named|realm_no_besched|spproxyd] [--named ADDRs] [--dbip DBIP] [--mongoip MONGOIP] [--usedialproxy] [--reserveMcpu rmcpu] [--homedir HOMEDIR] [--projectroot PROJECT_ROOT] kernelid"  1>&2
+    echo "Usage: $0 [--pull TAG] [--boot all|all_no_besched|node|node_no_besched|minnode|besched_node|named|realm_no_besched|spproxyd] [--named ADDRs] [--dbip DBIP] [--mongoip MONGOIP] [--usedialproxy] [--reserveMcpu rmcpu] [--homedir HOMEDIR] [--projectroot PROJECT_ROOT] [--sigmauser SIGMAUSER] kernelid"  1>&2
 }
 
 UPDATE=""
@@ -20,6 +20,7 @@ DIALPROXY="false"
 RMCPU="0"
 HOMEDIR=$HOME
 PROJECT_ROOT=$(realpath $(dirname $0))
+SIGMAUSER="NOT_SET"
 while [[ "$#" -gt 1 ]]; do
   case "$1" in
   --boot)
@@ -71,6 +72,11 @@ while [[ "$#" -gt 1 ]]; do
   --net)
     shift
     NET=$1
+    shift
+    ;;
+  --sigmauser)
+    shift
+    SIGMAUSER=$1
     shift
     ;;
   --usedialproxy)
@@ -125,15 +131,28 @@ if [ $# -ne 1 ]; then
 fi
 KERNELID=$1
 
+KERNEL_IMAGE_NAME="sigmaos"
+TMP_BASE="/tmp"
+if [[ "$SIGMAUSER" != "NOT_SET" ]]; then
+  TMP_BASE=$TMP_BASE/$SIGMAUSER
+  KERNEL_IMAGE_NAME=$KERNEL_IMAGE_NAME-$SIGMAUSER
+fi
+
+HOST_BIN_CACHE="${TMP_BASE}/sigmaos-bin"
+DATA_DIR="${TMP_BASE}/sigmaos-data"
+PERF_DIR="${TMP_BASE}/sigmaos-perf"
+KERNEL_DIR="${TMP_BASE}/sigmaos"
+
 mkdir -p /tmp/sigmaos
 # Perhaps /tmp/spproxyd should not always be mounted/should not be mounted by
 # every kernel instance on a machine?
 mkdir -p /tmp/spproxyd
-mkdir -p /tmp/sigmaos-bin
-mkdir -p /tmp/sigmaos-bin/$KERNELID
-mkdir -p /tmp/sigmaos-perf
-mkdir -p /tmp/sigmaos-data
-chmod a+w /tmp/sigmaos-perf
+mkdir -p $HOST_BIN_CACHE
+mkdir -p $HOST_BIN_CACHE/$KERNELID
+mkdir -p $DATA_DIR
+mkdir -p $PERF_DIR
+chmod a+w $PERF_DIR
+mkdir -p $KERNEL_DIR
 
 # Pull latest docker images, if not running a local build.
 if [ "$TAG" != "local-build" ]; then
@@ -158,11 +177,11 @@ fi
 # If running in local configuration, mount bin directory.
 MOUNTS="--mount type=bind,src=/var/run/docker.sock,dst=/var/run/docker.sock \
   --mount type=bind,src=/sys/fs/cgroup,dst=/cgroup \
-  --mount type=bind,src=/tmp/sigmaos,dst=/tmp/sigmaos \
+  --mount type=bind,src=$KERNEL_DIR,dst=/tmp/sigmaos \
   --mount type=bind,src=/tmp/spproxyd,dst=/tmp/spproxyd \
-  --mount type=bind,src=/tmp/sigmaos-data,dst=/home/sigmaos/data \
-  --mount type=bind,src=/tmp/sigmaos-bin/${KERNELID},dst=/home/sigmaos/bin/user/realms \
-  --mount type=bind,src=/tmp/sigmaos-perf,dst=/tmp/sigmaos-perf \
+  --mount type=bind,src=$DATA_DIR,dst=/home/sigmaos/data \
+  --mount type=bind,src=$HOST_BIN_CACHE/${KERNELID},dst=/home/sigmaos/bin/user/realms \
+  --mount type=bind,src=$PERF_DIR,dst=/tmp/sigmaos-perf \
   --mount type=bind,src=$HOMEDIR/.aws,dst=/home/sigmaos/.aws"
 if [ "$TAG" == "local-build" ]; then
   MOUNTS="$MOUNTS\
@@ -191,8 +210,9 @@ CID=$(docker run -dit \
              -e SIGMAFAIL=${SIGMAFAIL} \
              -e SIGMADEBUG=${SIGMADEBUG} \
              -e reserveMcpu=${RMCPU} \
-             -e netmode=$NET \
-             sigmaos)
+             -e netmode=${NET} \
+             -e sigmauser=${SIGMAUSER} \
+             $KERNEL_IMAGE_NAME)
 
 if [ -z ${CID} ]; then
     echo "Docker run failed $?"  1>&2
@@ -211,11 +231,11 @@ until [ "`docker inspect -f {{.State.Running}} ${CID}`"=="true" ]; do
 done;
 
 # Wait until kernel is ready
-while [ ! -f "/tmp/sigmaos/${KERNELID}" ]; do
+while [ ! -f "${KERNEL_DIR}/${KERNELID}" ]; do
     echo -n "." 1>&2
     sleep 0.1
 done;
-rm -f "/tmp/sigmaos/${KERNELID}"
+rm -f "${KERNEL_DIR}/${KERNELID}"
 
 echo "nproc: $(nproc)"
 echo "booted: $BOOT"

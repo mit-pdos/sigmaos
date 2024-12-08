@@ -31,6 +31,7 @@ type Param struct {
 	DialProxy   bool
 	BuildTag    string
 	Net         string
+	User        string
 	ReserveMcpu string
 }
 

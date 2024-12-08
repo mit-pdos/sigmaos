@@ -61,19 +61,36 @@ if [[ "$TAG" != "" && "$TARGET" == "local" ]] || [[ "$TAG" == "" && "$TARGET" !=
   exit 1
 fi
 
-TMP=/tmp/sigmaos
-BUILD_LOG=/tmp/sigmaos-build
-PROCD_BIN=/tmp/sigmaos-procd-bin
+ROOT=$(dirname $(realpath $0))
+source $ROOT/env/env.sh
 
-# tests uses hosts /tmp, which mounted in kernel container.
-mkdir -p $TMP
+TMP_BASE="/tmp"
+BUILDER_NAME="sig-builder"
+RS_BUILDER_NAME="sig-rs-builder"
+USER_IMAGE_NAME="sigmauser"
+KERNEL_IMAGE_NAME="sigmaos"
+BUILD_TARGET_SUFFIX=""
+if ! [ -z "$SIGMAUSER" ]; then
+  TMP_BASE=$TMP_BASE/$SIGMAUSER
+  BUILDER_NAME=$BUILDER_NAME-$SIGMAUSER
+  RS_BUILDER_NAME=$RS_BUILDER_NAME-$SIGMAUSER
+  USER_IMAGE_NAME=$USER_IMAGE_NAME-$SIGMAUSER
+  KERNEL_IMAGE_NAME=$KERNEL_IMAGE_NAME-$SIGMAUSER
+  BUILD_TARGET_SUFFIX="-$SIGMAUSER"
+fi
+
+BUILD_LOG="${TMP_BASE}/sigmaos-build"
+PROCD_BIN="${TMP_BASE}/sigmaos-procd-bin"
+
+# tests uses host's /tmp, which mounted in kernel container.
+mkdir -p $TMP_BASE
 mkdir -p $BUILD_LOG
 
 # Make a dir to hold user proc build output
-ROOT=$(pwd)
 BIN=${ROOT}/bin
 KERNELBIN=${BIN}/kernel
 USRBIN=${BIN}/user
+mkdir -p $KERNELBIN
 mkdir -p $USRBIN
 # Clear the procd bin directory
 rm -rf $PROCD_BIN
@@ -85,8 +102,8 @@ if [ "${TARGET}" != "remote" ]; then
 fi
 
 # Check if a builder is running already
-buildercid=$(docker ps -a | grep -w "sig-builder" | cut -d " " -f1)
-rsbuildercid=$(docker ps -a | grep -w "sig-rs-builder" | cut -d " " -f1)
+buildercid=$(docker ps -a | grep -w $BUILDER_NAME | cut -d " " -f1)
+rsbuildercid=$(docker ps -a | grep -w $RS_BUILDER_NAME | cut -d " " -f1)
 
 # Optionally stop any existing builder container, so it will be rebuilt and
 # restarted.
@@ -108,15 +125,15 @@ fi
 if [ -z "$buildercid" ]; then
   # Build builder
   echo "========== Build builder image =========="
-  DOCKER_BUILDKIT=1 docker build --progress=plain -f builder.Dockerfile -t sig-builder . 2>&1 | tee $BUILD_LOG/sig-builder.out
+  DOCKER_BUILDKIT=1 docker build --progress=plain -f builder.Dockerfile -t $BUILDER_NAME . 2>&1 | tee $BUILD_LOG/sig-builder.out
   echo "========== Done building builder =========="
   # Start builder
   echo "========== Starting builder container =========="
   docker run --rm -d -it \
-    --name sig-builder \
+    --name $BUILDER_NAME \
     --mount type=bind,src=$ROOT,dst=/home/sigmaos/ \
-    sig-builder
-  buildercid=$(docker ps -a | grep -w "sig-builder" | cut -d " " -f1)
+    $BUILDER_NAME 
+  buildercid=$(docker ps -a | grep -w $BUILDER_NAME | cut -d " " -f1)
   until [ "`docker inspect -f {{.State.Running}} $buildercid`"=="true" ]; do
       echo -n "." 1>&2
       sleep 0.1;
@@ -127,15 +144,15 @@ fi
 if [ -z "$rsbuildercid" ]; then
   # Build builder
   echo "========== Build Rust builder image =========="
-  DOCKER_BUILDKIT=1 docker build --progress=plain -f rs-builder.Dockerfile -t sig-rs-builder . 2>&1 | tee $BUILD_LOG/sig-rs-builder.out
+  DOCKER_BUILDKIT=1 docker build --progress=plain -f rs-builder.Dockerfile -t $RS_BUILDER_NAME . 2>&1 | tee $BUILD_LOG/sig-rs-builder.out
   echo "========== Done building Rust builder =========="
   # Start builder
   echo "========== Starting Rust builder container =========="
   docker run --rm -d -it \
-    --name sig-rs-builder \
+    --name $RS_BUILDER_NAME \
     --mount type=bind,src=$ROOT,dst=/home/sigmaos/ \
-    sig-rs-builder
-  rsbuildercid=$(docker ps -a | grep -w "sig-rs-builder" | cut -d " " -f1)
+    $RS_BUILDER_NAME
+  rsbuildercid=$(docker ps -a | grep -w $RS_BUILDER_NAME | cut -d " " -f1)
   until [ "`docker inspect -f {{.State.Running}} $rsbuildercid`"=="true" ]; do
       echo -n "." 1>&2
       sleep 0.1;
@@ -222,7 +239,7 @@ if ! [ -z "$PARALLEL" ]; then
   njobs=$(echo $targets | wc -w)
 fi
 
-build_targets="parallel -j$njobs \"DOCKER_BUILDKIT=1 docker build --progress=plain -f target.Dockerfile --target {} -t {} . 2>&1 | tee $BUILD_LOG/{}.out\" ::: $targets"
+build_targets="parallel -j$njobs \"DOCKER_BUILDKIT=1 docker build --progress=plain -f target.Dockerfile --target {} -t {}$BUILD_TARGET_SUFFIX . 2>&1 | tee $BUILD_LOG/{}.out\" ::: $targets"
 
 printf "\nBuilding Docker image targets\n$build_targets\n\n"
 echo "========== Start Docker targets build =========="
@@ -232,11 +249,11 @@ echo "========== Done building Docker targets =========="
 if [ "${TARGET}" == "local" ]; then
   # If developing locally, rename the sigmaos image which includes binaries to
   # be the default sigmaos image.
-  docker tag sigmaos-local sigmaos
-  docker tag sigmauser-local sigmauser
+  docker tag sigmaos-local$BUILD_TARGET_SUFFIX $KERNEL_IMAGE_NAME
+  docker tag sigmauser-local$BUILD_TARGET_SUFFIX $USER_IMAGE_NAME
 else
-  docker tag sigmaos-remote sigmaos
-  docker tag sigmauser-remote sigmauser
+  docker tag sigmaos-remote $KERNEL_IMAGE_NAME
+  docker tag sigmauser-remote $USER_IMAGE_NAME
   # Upload the user bins to S3
   echo "========== Pushing user bins to S3 =========="
   ./upload.sh --tag $TAG --profile sigmaos

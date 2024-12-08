@@ -16,8 +16,8 @@ import (
 )
 
 func main() {
-	if len(os.Args) != 10 {
-		db.DFatalf("usage: %v kernelid srvs nameds dbip mongoip reserveMcpu buildTag dialproxy net\nprovided:%v", os.Args[0], os.Args)
+	if len(os.Args) != 11 {
+		db.DFatalf("usage: %v kernelid srvs nameds dbip mongoip reserveMcpu buildTag dialproxy net user\nprovided:%v", os.Args[0], os.Args)
 	}
 	db.DPrintf(db.BOOT, "Boot %v", os.Args[1:])
 	srvs := strings.Split(os.Args[3], ";")
@@ -33,6 +33,7 @@ func main() {
 		DialProxy: dialproxy,
 		BuildTag:  os.Args[7],
 		Net:       os.Args[9],
+		User:      os.Args[10],
 	}
 	if len(os.Args) >= 7 {
 		param.ReserveMcpu = os.Args[6]

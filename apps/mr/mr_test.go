@@ -46,7 +46,7 @@ const (
 	// dynamically
 	CRASHTASK  = 500
 	CRASHCOORD = 1000
-	CRASHSRV   = 10000
+	CRASHSRV   = 200
 	MEM_REQ    = 1000
 )
 
@@ -55,8 +55,8 @@ var nmap int
 var job *mr.Job
 var timeout time.Duration
 
-var coordEv []crash.Tevent
-var taskEv []crash.Tevent
+var coordEv *crash.TeventMap
+var taskEv *crash.TeventMap
 
 func init() {
 	flag.StringVar(&app, "app", "mr-wc.yml", "application")
@@ -65,10 +65,12 @@ func init() {
 
 	e0 := crash.NewEventStart(crash.MRTASK_CRASH, 100, CRASHTASK, 0.33)
 	e1 := crash.NewEventStart(crash.MRTASK_PARTITION, 100, CRASHTASK, 0.33)
-	taskEv = []crash.Tevent{e0, e1}
+	taskEv = crash.NewTeventMapOne(e0)
+	taskEv.Insert(e1)
 	e0 = crash.NewEventStart(crash.MRCOORD_CRASH, 100, CRASHTASK, 0.33)
 	e1 = crash.NewEventStart(crash.MRCOORD_PARTITION, 100, CRASHTASK, 0.33)
-	coordEv = []crash.Tevent{e0, e1}
+	coordEv = crash.NewTeventMapOne(e0)
+	coordEv.Insert(e1)
 }
 
 func TestCompile(t *testing.T) {
@@ -386,7 +388,23 @@ func (ts *Tstate) checkJob(app string) bool {
 	return true
 }
 
-func runN(t *testing.T, evs []crash.Tevent, crashmsched, crashprocq, crashux, maliciousMapper int, monitor bool) {
+func crashSemPn(l crash.Tselector, i int) string {
+	fn := sp.NAMED + fmt.Sprintf("%v-%d.sem", l, i)
+	return fn
+}
+
+func (ts *Tstate) crashServers(l crash.Tselector, em *crash.TeventMap, n int) {
+	e0, ok := em.Lookup(l)
+	assert.True(ts.T, ok)
+	for i := 0; i < n; i++ {
+		time.Sleep(CRASHSRV * time.Millisecond)
+		e1 := crash.NewEventPath(string(l), 0, 1.0, crashSemPn(l, i+1))
+		ts.CrashServer1(e0, e1)
+		e0 = e1
+	}
+}
+
+func runN(t *testing.T, em *crash.TeventMap, crashmsched, crashprocq, crashux, maliciousMapper int, monitor bool) {
 	var s3secrets *sp.SecretProto
 	var err1 error
 	// If running with malicious mappers, try to get restricted AWS secrets
@@ -397,6 +415,10 @@ func runN(t *testing.T, evs []crash.Tevent, crashmsched, crashprocq, crashux, ma
 			return
 		}
 	}
+
+	// XXX maybe in pe
+	err := crash.SetSigmaFail(em)
+	assert.Nil(t, err)
 
 	t1, err1 := test.NewTstateAll(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
@@ -426,19 +448,18 @@ func runN(t *testing.T, evs []crash.Tevent, crashmsched, crashprocq, crashux, ma
 		}
 	}
 
-	// XXX maybe in pe
-	err := crash.SetSigmaFail(evs)
-	assert.Nil(t, err)
-
 	jobRoot := mr.MRDIRTOP
 
 	ts := newTstate(t1, jobRoot, runApp)
 
-	err = ts.BootNode(1)
-	assert.Nil(t, err, "BootProcd 1")
-
-	err = ts.BootNode(1)
-	assert.Nil(t, err, "BootProcd 2")
+	// Start more nodes to run mappers/reducers in parallel, if not a
+	// crash test.
+	if crashmsched+crashux+crashprocq == 0 {
+		err = ts.BootNode(1)
+		assert.Nil(t, err, "BootProcd 1")
+		err = ts.BootNode(1)
+		assert.Nil(t, err, "BootProcd 2")
+	}
 
 	sdc := mschedclnt.NewMSchedClnt(sc.FsLib, sp.NOT_SET)
 	if monitor {
@@ -452,30 +473,40 @@ func runN(t *testing.T, evs []crash.Tevent, crashmsched, crashprocq, crashux, ma
 
 	cm := mr.StartMRJob(sc, ts.jobRoot, ts.job, job, nmap, MEM_REQ, maliciousMapper)
 
-	crashchan := make(chan bool)
-	l1 := &sync.Mutex{}
-	for i := 0; i < crashmsched; i++ {
-		// Sleep for a random time, then crash a server.
-		go ts.CrashServer(sp.MSCHEDREL, (i+1)*CRASHSRV, l1, crashchan)
+	var wg sync.WaitGroup
+	if crashmsched > 0 {
+		wg.Add(1)
+		go func() {
+			ts.crashServers(crash.MSCHED_CRASH, em, crashmsched)
+			wg.Done()
+		}()
 	}
-	l2 := &sync.Mutex{}
-	for i := 0; i < crashux; i++ {
-		// Sleep for a random time, then crash a server.
-		go ts.CrashServer(sp.UXREL, (i+1)*CRASHSRV, l2, crashchan)
+	if crashux > 0 {
+		wg.Add(1)
+		go func() {
+			e0, ok := em.Lookup(crash.UX_CRASH)
+			assert.True(ts.T, ok)
+			for i := 0; i < crashux; i++ {
+				time.Sleep(CRASHSRV * time.Millisecond)
+				e1 := crash.NewEventPath(string(crash.UX_CRASH), 0, 1.0, crashSemPn(crash.UX_CRASH, i+1))
+				ts.CrashUx(e0, e1)
+				e0 = e1
+			}
+			wg.Done()
+		}()
 	}
-	l3 := &sync.Mutex{}
-	for i := 0; i < crashprocq; i++ {
-		// Sleep for a random time, then crash a server.
-		go ts.CrashServer(sp.BESCHEDREL, (i+1)*CRASHSRV, l3, crashchan)
+	if crashprocq > 0 {
+		wg.Add(1)
+		go func() {
+			ts.crashServers(crash.BESCHED_CRASH, em, crashprocq)
+			wg.Done()
+		}()
 	}
+	wg.Wait()
 
 	db.DPrintf(db.TEST, "WaitGroup")
 	cm.WaitGroup()
 	db.DPrintf(db.TEST, "Done WaitGroup")
-
-	for i := 0; i < crashmsched+crashux+crashprocq; i++ {
-		<-crashchan
-	}
 
 	db.DPrintf(db.TEST, "Check Job")
 	ok := ts.checkJob(runApp)
@@ -514,13 +545,15 @@ func TestCrashCoordOnly(t *testing.T) {
 }
 
 func TestCrashTaskAndCoord(t *testing.T) {
-	evs := append([]crash.Tevent{}, taskEv...)
-	evs = append(evs, coordEv...)
-	runN(t, evs, 0, 0, 0, 0, false)
+	em := crash.NewTeventMap()
+	em.Merge(taskEv)
+	em.Merge(coordEv)
+	runN(t, em, 0, 0, 0, 0, false)
 }
 
 func TestCrashMSched1(t *testing.T) {
-	runN(t, nil, 1, 0, 0, 0, false)
+	e0 := crash.NewEventPath(crash.MSCHED_CRASH, CRASHTASK, 1.0, crashSemPn(crash.MSCHED_CRASH, 0))
+	runN(t, crash.NewTeventMapOne(e0), 1, 0, 0, 0, false)
 }
 
 func TestCrashMSched2(t *testing.T) {
@@ -549,7 +582,8 @@ func TestCrashProcqN(t *testing.T) {
 
 func TestCrashUx1(t *testing.T) {
 	N := 1
-	runN(t, nil, 0, 0, N, 0, false)
+	e0 := crash.NewEventPath(crash.UX_CRASH, 0, 1.0, crashSemPn(crash.UX_CRASH, 0))
+	runN(t, crash.NewTeventMapOne(e0), 0, 0, N, 0, false)
 }
 
 func TestCrashUx2(t *testing.T) {

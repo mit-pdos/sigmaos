@@ -12,7 +12,6 @@ import (
 	"sigmaos/chunk"
 	chunkclnt "sigmaos/chunk/clnt"
 	db "sigmaos/debug"
-	"sigmaos/sigmaclnt/fslib"
 	"sigmaos/proc"
 	"sigmaos/proc/kproc"
 	beschedclnt "sigmaos/sched/besched/clnt"
@@ -20,6 +19,7 @@ import (
 	mschedclnt "sigmaos/sched/msched/clnt"
 	"sigmaos/semclnt"
 	"sigmaos/serr"
+	"sigmaos/sigmaclnt/fslib"
 	sp "sigmaos/sigmap"
 )
 
@@ -128,8 +128,8 @@ func (clnt *ProcClnt) spawn(kernelId string, how proc.Thow, p *proc.Proc) error 
 		clnt.cs.Spawned(p.GetPid())
 		pseqno := proc.NewProcSeqno(sp.NOT_SET, kernelId, 0, 0)
 		clnt.cs.Started(p.GetPid(), pseqno, nil)
-		// Make the proc's procdir
-		err := clnt.MakeProcDir(p.GetPid(), p.GetProcDir(), p.IsPrivileged(), how)
+		// Make the privileged proc's procdir
+		err := clnt.MakeProcDir(p.GetPid(), p.GetProcDir())
 		if err != nil {
 			db.DPrintf(db.PROCCLNT_ERR, "Err SpawnKernelProc MakeProcDir: %v", err)
 			db.DPrintf(db.ERROR, "Err spawn MakeProcDir: %v", err)

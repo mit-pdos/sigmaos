@@ -307,7 +307,7 @@ func TestWaitExitParentCrash(t *testing.T) {
 	err := ts.WaitStart(pid)
 	assert.Nil(t, err, "WaitStart error")
 	status, err := ts.WaitExit(pid)
-	assert.True(t, status.IsStatusErr(), "WaitExit status not error: %v", status)
+	assert.True(t, status != nil && status.IsStatusErr(), "WaitExit status not error: %v", status)
 	assert.Nil(t, err, "WaitExit error")
 	// Wait for the child to run & finish
 	time.Sleep(2 * SLEEP_MSECS * time.Millisecond)
@@ -827,7 +827,7 @@ func TestSpawnCrashLCSched(t *testing.T) {
 	// Spawn a proc which can't possibly be run by any msched.
 	pid := spawnSpinnerMcpu(ts, proc.Tmcpu(1000*linuxsched.GetNCores()*2))
 
-	db.DPrintf(db.TEST, "Crash a msched")
+	db.DPrintf(db.TEST, "Crash an lcsched")
 
 	err = crash.SignalFailer(ts.FsLib, fn)
 	assert.Nil(t, err)

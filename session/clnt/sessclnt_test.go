@@ -22,7 +22,7 @@ import (
 	sessclnt "sigmaos/session/clnt"
 	sessp "sigmaos/session/proto"
 	sp "sigmaos/sigmap"
-	"sigmaos/sigmapsrv"
+	"sigmaos/sigmasrv/memfssrv/sigmapsrv"
 	spcodec "sigmaos/session/codec"
 	spprotosrv "sigmaos/spproto/srv"
 	"sigmaos/test"

@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	db "sigmaos/debug"
-	"sigmaos/fencefs"
+	"sigmaos/sigmasrv/fencefs"
 	"sigmaos/api/fs"
 	"sigmaos/path"
 	"sigmaos/serr"

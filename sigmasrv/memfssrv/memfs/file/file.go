@@ -5,7 +5,7 @@ import (
 	//"time"
 
 	db "sigmaos/debug"
-	"sigmaos/fencefs"
+	"sigmaos/sigmasrv/fencefs"
 	"sigmaos/api/fs"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"

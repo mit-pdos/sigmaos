@@ -10,7 +10,7 @@ import (
 	sos "sigmaos/api/sigmaos"
 	db "sigmaos/debug"
 	dialproxyclnt "sigmaos/dialproxy/clnt"
-	"sigmaos/fidclnt"
+	"sigmaos/sigmaclnt/fidclnt"
 	"sigmaos/sigmaclnt/fslib"
 	leaseclnt "sigmaos/ft/lease/clnt"
 	"sigmaos/proc"

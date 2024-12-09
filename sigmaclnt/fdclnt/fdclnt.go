@@ -7,7 +7,7 @@ import (
 	"io"
 
 	db "sigmaos/debug"
-	"sigmaos/fidclnt"
+	"sigmaos/sigmaclnt/fidclnt"
 	"sigmaos/path"
 	"sigmaos/proc"
 	"sigmaos/serr"

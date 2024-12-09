@@ -142,10 +142,9 @@ HOST_BIN_CACHE="${TMP_BASE}/sigmaos-bin"
 DATA_DIR="${TMP_BASE}/sigmaos-data"
 PERF_DIR="${TMP_BASE}/sigmaos-perf"
 KERNEL_DIR="${TMP_BASE}/sigmaos"
+SPPROXY_DIR="${TMP_BASE}/spproxyd"
 
-# Perhaps /tmp/spproxyd should not always be mounted/should not be mounted by
-# every kernel instance on a machine?
-mkdir -p /tmp/spproxyd
+mkdir -p $SPPROXY_DIR
 mkdir -p $HOST_BIN_CACHE
 mkdir -p $HOST_BIN_CACHE/$KERNELID
 mkdir -p $DATA_DIR
@@ -177,7 +176,7 @@ fi
 MOUNTS="--mount type=bind,src=/var/run/docker.sock,dst=/var/run/docker.sock \
   --mount type=bind,src=/sys/fs/cgroup,dst=/cgroup \
   --mount type=bind,src=$KERNEL_DIR,dst=/tmp/sigmaos \
-  --mount type=bind,src=/tmp/spproxyd,dst=/tmp/spproxyd \
+  --mount type=bind,src=$SPPROXY_DIR,dst=/tmp/spproxyd \
   --mount type=bind,src=$DATA_DIR,dst=/home/sigmaos/data \
   --mount type=bind,src=$HOST_BIN_CACHE/${KERNELID},dst=/home/sigmaos/bin/user/realms \
   --mount type=bind,src=$PERF_DIR,dst=/tmp/sigmaos-perf \

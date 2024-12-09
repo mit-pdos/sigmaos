@@ -44,12 +44,14 @@ HOST_BIN_CACHE="${TMP_BASE}/sigmaos-bin"
 DATA_DIR="${TMP_BASE}/sigmaos-data"
 PERF_DIR="${TMP_BASE}/sigmaos-perf"
 KERNEL_DIR="${TMP_BASE}/sigmaos"
+SPPROXY_DIR="${TMP_BASE}/spproxyd"
 BUILD_LOG="${TMP_BASE}/sigmaos-build"
 
 mkdir -p $BUILD_LOG
 mkdir -p $DATA_DIR
 mkdir -p $PERF_DIR
 mkdir -p $KERNEL_DIR
+mkdir -p $SPPROXY_DIR
 
 if ! docker network ls | grep -q $TESTER_NETWORK ; then
   docker network create --driver overlay $TESTER_NETWORK --attachable    
@@ -101,7 +103,7 @@ if [ -z "$testercid" ]; then
     --mount type=bind,src=/var/run/docker.sock,dst=/var/run/docker.sock \
     --mount type=bind,src=/sys/fs/cgroup,dst=/sys/fs/cgroup \
     --mount type=bind,src=$HOST_BIN_CACHE,dst=$HOST_BIN_CACHE \
-    --mount type=bind,src=/tmp/spproxyd,dst=/tmp/spproxyd \
+    --mount type=bind,src=$SPPROXY_DIR,dst=/tmp/spproxyd \
     --mount type=bind,src=$KERNEL_DIR,dst=$KERNEL_DIR \
     --mount type=bind,src=$DATA_DIR,dst=$DATA_DIR \
     --mount type=bind,src=$PERF_DIR,dst=$PERF_DIR \

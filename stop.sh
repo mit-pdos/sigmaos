@@ -1,11 +1,12 @@
 #!/bin/bash
 
 usage() {
-  echo "Usage: $0 [--parallel] [--nopurge] [--skipdb]" 1>&2
+  echo "Usage: $0 [--parallel] [--nopurge] [--skipdb] [--all]" 1>&2
 }
 
 PARALLEL=""
 PURGE="true"
+ALL="false"
 SKIPDB="false"
 while [[ $# -gt 0 ]]; do
   key="$1"
@@ -17,6 +18,10 @@ while [[ $# -gt 0 ]]; do
   --nopurge)
     shift
     PURGE=""
+    ;;
+  --all)
+    shift
+    ALL="true"
     ;;
   --skipdb)
     shift
@@ -44,8 +49,10 @@ KERNEL_IMAGE_NAME="sigmaos"
 if ! [ -z "$SIGMAUSER" ]; then
   TMP_BASE="${TMP_BASE}/$SIGMAUSER"
   ETCD_CTR_NAME=$ETCD_CTR_NAME-$SIGMAUSER
-  USER_IMAGE_NAME="$USER_IMAGE_NAME-$SIGMAUSER"
-  KERNEL_IMAGE_NAME="$KERNEL_IMAGE_NAME-$SIGMAUSER"
+  if [[ "$ALL" == "false" ]]; then
+    USER_IMAGE_NAME="$USER_IMAGE_NAME-$SIGMAUSER"
+    KERNEL_IMAGE_NAME="$KERNEL_IMAGE_NAME-$SIGMAUSER"
+  fi
 fi
 
 if mount | grep -q 9p; then
@@ -56,8 +63,12 @@ fi
 pgrep -x npproxyd > /dev/null && killall -9 npproxyd
 pgrep -x spproxyd > /dev/null && killall -9 spproxyd
 
-sudo rm -f /tmp/spproxyd/spproxyd.sock
-sudo rm -f /tmp/spproxyd/spproxyd-dialproxy.sock
+sudo rm -f $TMP_BASE/spproxyd/spproxyd.sock
+sudo rm -f $TMP_BASE/spproxyd/spproxyd-dialproxy.sock
+if [[ "$ALL" == "true" ]]; then
+  sudo rm -f /tmp/spproxyd/spproxyd.sock
+  sudo rm -f /tmp/spproxyd/spproxyd-dialproxy.sock
+fi
 
 if docker ps -a | grep -qE "$USER_IMAGE_NAME|$KERNEL_IMAGE_NAME|sigmadb|sigmamongo"; then
   for container in $(docker ps -a | grep -E "$USER_IMAGE_NAME|$KERNEL_IMAGE_NAME|sigmadb|sigmamongo" | cut -d ' ' -f1) ; do

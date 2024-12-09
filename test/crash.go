@@ -4,7 +4,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	db "sigmaos/debug"
-	sp "sigmaos/sigmap"
+	// sp "sigmaos/sigmap"
 	"sigmaos/util/crash"
 )
 

@@ -12,8 +12,8 @@ import (
 	"go.etcd.io/etcd/client/v3"
 
 	db "sigmaos/debug"
-	"sigmaos/namesrv/fsetcd"
 	dialproxyclnt "sigmaos/dialproxy/clnt"
+	"sigmaos/namesrv/fsetcd"
 	"sigmaos/path"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
@@ -32,7 +32,7 @@ func TestCompile(t *testing.T) {
 func TestDump(t *testing.T) {
 	lip := sp.Tip("127.0.0.1")
 	etcdMnt, err := fsetcd.NewFsEtcdEndpoint(sp.Tip(test.EtcdIP))
-	pe := proc.NewTestProcEnv(sp.Trealm(realm), nil, etcdMnt, lip, lip, "", false, false, false)
+	pe := proc.NewTestProcEnv(sp.Trealm(realm), nil, etcdMnt, lip, lip, "", false, false)
 	npc := dialproxyclnt.NewDialProxyClnt(pe)
 	fs, err := fsetcd.NewFsEtcd(npc.Dial, pe.GetEtcdEndpoints(), pe.GetRealm(), nil)
 	assert.Nil(t, err)
@@ -47,7 +47,7 @@ func TestDump(t *testing.T) {
 func TestLease(t *testing.T) {
 	lip := sp.Tip("127.0.0.1")
 	etcdMnt, err := fsetcd.NewFsEtcdEndpoint(sp.Tip(test.EtcdIP))
-	pe := proc.NewTestProcEnv(sp.ROOTREALM, nil, etcdMnt, lip, lip, "", false, false, false)
+	pe := proc.NewTestProcEnv(sp.ROOTREALM, nil, etcdMnt, lip, lip, "", false, false)
 	npc := dialproxyclnt.NewDialProxyClnt(pe)
 	ec, err := fsetcd.NewFsEtcd(npc.Dial, pe.GetEtcdEndpoints(), pe.GetRealm(), nil)
 	assert.Nil(t, err, "Err %v", err)
@@ -88,7 +88,7 @@ func TestLease(t *testing.T) {
 func TestEvents(t *testing.T) {
 	lip := sp.Tip("127.0.0.1")
 	etcdMnt, err := fsetcd.NewFsEtcdEndpoint(sp.Tip(test.EtcdIP))
-	pe := proc.NewTestProcEnv(sp.ROOTREALM, nil, etcdMnt, lip, lip, "", false, false, false)
+	pe := proc.NewTestProcEnv(sp.ROOTREALM, nil, etcdMnt, lip, lip, "", false, false)
 	npc := dialproxyclnt.NewDialProxyClnt(pe)
 	ec, err := fsetcd.NewFsEtcd(npc.Dial, pe.GetEtcdEndpoints(), pe.GetRealm(), nil)
 	assert.Nil(t, err, "Err %v", err)

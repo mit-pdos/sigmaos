@@ -34,6 +34,20 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+ROOT=$(dirname $(realpath $0))
+source $ROOT/env/env.sh
+
+TMP_BASE="/tmp"
+ETCD_CTR_NAME="etcd-tester"
+USER_IMAGE_NAME="sigmauser"
+KERNEL_IMAGE_NAME="sigmaos"
+if ! [ -z "$SIGMAUSER" ]; then
+  TMP_BASE="${TMP_BASE}/$SIGMAUSER"
+  ETCD_CTR_NAME=$ETCD_CTR_NAME-$SIGMAUSER
+  USER_IMAGE_NAME="$USER_IMAGE_NAME-$SIGMAUSER"
+  KERNEL_IMAGE_NAME="$KERNEL_IMAGE_NAME-$SIGMAUSER"
+fi
+
 if mount | grep -q 9p; then
     echo "umount /mnt/9p"
     ./umount.sh
@@ -45,8 +59,8 @@ pgrep -x spproxyd > /dev/null && killall -9 spproxyd
 sudo rm -f /tmp/spproxyd/spproxyd.sock
 sudo rm -f /tmp/spproxyd/spproxyd-dialproxy.sock
 
-if docker ps -a | grep -qE 'sigma|procd|bootkerne|kernel-'; then
-  for container in $(docker ps -a | grep -E 'sigma|procd|bootkerne|kernel-' | cut -d ' ' -f1) ; do
+if docker ps -a | grep -qE "$USER_IMAGE_NAME|$KERNEL_IMAGE_NAME|sigmadb|sigmamongo"; then
+  for container in $(docker ps -a | grep -E "$USER_IMAGE_NAME|$KERNEL_IMAGE_NAME|sigmadb|sigmamongo" | cut -d ' ' -f1) ; do
     # Optionally skip DB shutdown
     if [ "$SKIPDB" == "true" ]; then
       cname=$(docker ps -a | grep $container | cut -d ' ' -f4)
@@ -76,8 +90,11 @@ if ! [ -z $PURGE ]; then
   yes | docker volume prune
 fi
 
-sudo rm -rf /tmp/sigmaos-bin/*
-sudo rm -rf /tmp/sigmaos-kernel-start-logs
+sudo rm -rf $TMP_BASE/sigmaos-bin/*
+sudo rm -rf $TMP_BASE/sigmaos-kernel-start-logs
 
 # delete all keys from etcd
-docker exec etcd-server etcdctl del --prefix ''
+if docker ps | grep -q etcd-server ; then
+  docker exec etcd-server etcdctl del --prefix ''
+fi
+docker exec $ETCD_CTR_NAME etcdctl del --prefix ''

@@ -22,7 +22,7 @@ import (
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	sps "sigmaos/api/spprotsrv"
-	"sigmaos/sigmapsrv/overlaydir"
+	"sigmaos/sigmasrv/memfssrv/sigmapsrv/overlaydir"
 	spprotosrv "sigmaos/spproto/srv"
 	"sigmaos/stats"
 )

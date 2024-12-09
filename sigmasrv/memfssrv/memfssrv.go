@@ -16,7 +16,7 @@ import (
 	"sigmaos/serr"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
-	"sigmaos/sigmapsrv"
+	"sigmaos/sigmasrv/memfssrv/sigmapsrv"
 	spprotosrv "sigmaos/spproto/srv"
 	"sigmaos/spproto/srv/lockmap"
 	"sigmaos/util/syncmap"

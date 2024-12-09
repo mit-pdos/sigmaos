@@ -8,8 +8,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	db "sigmaos/debug"
 	"sigmaos/api/fs"
+	db "sigmaos/debug"
 	"sigmaos/linuxsched"
 	"sigmaos/mem"
 	"sigmaos/proc"
@@ -381,7 +381,7 @@ func RunMSched(kernelID string, reserveMcpu uint) error {
 	if err != nil {
 		db.DFatalf("Error NewSigmaSrv: %v", err)
 	}
-	msched.pmgr.SetMemFs(ssrv.MemFs)
+	msched.pmgr.SetSigmaSrv(ssrv)
 	// Perf monitoring
 	p, err := perf.NewPerf(sc.ProcEnv(), perf.MSCHED)
 	if err != nil {

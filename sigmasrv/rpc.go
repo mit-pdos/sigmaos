@@ -3,7 +3,7 @@ package sigmasrv
 import (
 	"sigmaos/api/fs"
 	"sigmaos/memfs/inode"
-	"sigmaos/memfssrv"
+	"sigmaos/sigmasrv/memfssrv"
 	rpcsrv "sigmaos/rpc/srv"
 	"sigmaos/serr"
 	sessp "sigmaos/session/proto"

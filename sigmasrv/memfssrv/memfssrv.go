@@ -1,15 +1,15 @@
 // Servers use package memfsssrv to create an in-memory file server.
 // memfsssrv uses protsrv to handle client sigmaP requests. The server
-// itself can also create, remove, etc.  files in its file system,
+// itself can also create, remove, etc. files in its file system,
 // which directly call into protsrv.
 package memfssrv
 
 import (
 	"path/filepath"
 
+	"sigmaos/api/fs"
 	"sigmaos/ctx"
 	db "sigmaos/debug"
-	"sigmaos/api/fs"
 	"sigmaos/memfs/dir"
 	"sigmaos/memfs/inode"
 	"sigmaos/path"

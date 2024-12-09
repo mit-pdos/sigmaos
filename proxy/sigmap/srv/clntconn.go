@@ -9,7 +9,7 @@ import (
 	"sigmaos/ctx"
 	db "sigmaos/debug"
 	"sigmaos/demux"
-	"sigmaos/fidclnt"
+	"sigmaos/sigmaclnt/fidclnt"
 	"sigmaos/api/fs"
 	"sigmaos/proc"
 	rpcproto "sigmaos/rpc/proto"

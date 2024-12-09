@@ -13,7 +13,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/demux"
 	dialproxyclnt "sigmaos/dialproxy/clnt"
-	"sigmaos/fidclnt"
+	"sigmaos/sigmaclnt/fidclnt"
 	"sigmaos/proxy/ninep/npcodec"
 	"sigmaos/path"
 	"sigmaos/proc"

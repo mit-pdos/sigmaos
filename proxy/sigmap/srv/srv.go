@@ -14,7 +14,7 @@ import (
 	db "sigmaos/debug"
 	dialproxyclnt "sigmaos/dialproxy/clnt"
 	dialproxysrv "sigmaos/dialproxy/srv"
-	"sigmaos/fidclnt"
+	"sigmaos/sigmaclnt/fidclnt"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 	"sigmaos/util/perf"

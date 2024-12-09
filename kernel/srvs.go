@@ -60,7 +60,7 @@ func (k *Kernel) BootSub(s string, args, env []string, p *Param, realm sp.Trealm
 	case sp.BESCHEDREL:
 		ss, err = k.bootBESched()
 	case sp.MSCHEDREL:
-		ss, err = k.bootMSched()
+		ss, err = k.bootMSched(env)
 	case sp.REALMDREL:
 		ss, err = k.bootRealmd()
 	case sp.PROCDREL:
@@ -170,8 +170,8 @@ func (k *Kernel) bootLCSched() (Subsystem, error) {
 func (k *Kernel) bootBESched() (Subsystem, error) {
 	return k.bootSubsystem("besched", []string{}, []string{}, sp.ROOTREALM, proc.HLINUX, 0)
 }
-func (k *Kernel) bootMSched() (Subsystem, error) {
-	return k.bootSubsystem("msched", []string{k.Param.KernelID, k.Param.ReserveMcpu}, []string{}, sp.ROOTREALM, proc.HLINUX, 0)
+func (k *Kernel) bootMSched(env []string) (Subsystem, error) {
+	return k.bootSubsystem("msched", []string{k.Param.KernelID, k.Param.ReserveMcpu}, env, sp.ROOTREALM, proc.HLINUX, 0)
 }
 
 func (k *Kernel) bootNamed(env []string) (Subsystem, error) {

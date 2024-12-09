@@ -393,13 +393,13 @@ func crashSemPn(l crash.Tselector, i int) string {
 	return fn
 }
 
-func (ts *Tstate) crashServers(l crash.Tselector, em *crash.TeventMap, n int) {
+func (ts *Tstate) crashServers(srv string, l crash.Tselector, em *crash.TeventMap, n int) {
 	e0, ok := em.Lookup(l)
 	assert.True(ts.T, ok)
 	for i := 0; i < n; i++ {
 		time.Sleep(CRASHSRV * time.Millisecond)
 		e1 := crash.NewEventPath(string(l), 0, 1.0, crashSemPn(l, i+1))
-		ts.CrashServer1(e0, e1)
+		ts.CrashServer(e0, e1, srv)
 		e0 = e1
 	}
 }
@@ -452,8 +452,8 @@ func runN(t *testing.T, em *crash.TeventMap, crashmsched, crashprocq, crashux, m
 
 	ts := newTstate(t1, jobRoot, runApp)
 
-	// Start more nodes to run mappers/reducers in parallel, if not a
-	// crash test.
+	// Start more nodes to run mappers/reducers in parallel (except
+	// for crash tests).
 	if crashmsched+crashux+crashprocq == 0 {
 		err = ts.BootNode(1)
 		assert.Nil(t, err, "BootProcd 1")
@@ -477,7 +477,7 @@ func runN(t *testing.T, em *crash.TeventMap, crashmsched, crashprocq, crashux, m
 	if crashmsched > 0 {
 		wg.Add(1)
 		go func() {
-			ts.crashServers(crash.MSCHED_CRASH, em, crashmsched)
+			ts.crashServers(sp.MSCHEDREL, crash.MSCHED_CRASH, em, crashmsched)
 			wg.Done()
 		}()
 	}
@@ -489,7 +489,7 @@ func runN(t *testing.T, em *crash.TeventMap, crashmsched, crashprocq, crashux, m
 			for i := 0; i < crashux; i++ {
 				time.Sleep(CRASHSRV * time.Millisecond)
 				e1 := crash.NewEventPath(string(crash.UX_CRASH), 0, 1.0, crashSemPn(crash.UX_CRASH, i+1))
-				ts.CrashUx(e0, e1)
+				ts.CrashServer(e0, e1, sp.UXREL)
 				e0 = e1
 			}
 			wg.Done()
@@ -498,7 +498,7 @@ func runN(t *testing.T, em *crash.TeventMap, crashmsched, crashprocq, crashux, m
 	if crashprocq > 0 {
 		wg.Add(1)
 		go func() {
-			ts.crashServers(crash.BESCHED_CRASH, em, crashprocq)
+			ts.crashServers(sp.PROCDREL, crash.BESCHED_CRASH, em, crashprocq)
 			wg.Done()
 		}()
 	}

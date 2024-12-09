@@ -24,8 +24,8 @@ func (ts *Tstate) CrashServer1(e0, e1 crash.Tevent) {
 	db.DPrintf(db.ALWAYS, "Done crash one %v", e0.Path)
 }
 
-func (ts *Tstate) CrashUx(e0, e1 crash.Tevent) {
-	db.DPrintf(db.ALWAYS, "Crash %v", e0.Path)
+func (ts *Tstate) CrashServer(e0, e1 crash.Tevent, srv string) {
+	db.DPrintf(db.ALWAYS, "Crash %v srv %v", e0.Path, srv)
 	err := crash.SignalFailer(ts.FsLib, e0.Path)
 	if !assert.Nil(ts.T, err) {
 		db.DPrintf(db.ERROR, "Error non-nil kill %v: %v", e0.Path, err)
@@ -33,7 +33,7 @@ func (ts *Tstate) CrashUx(e0, e1 crash.Tevent) {
 	em := crash.NewTeventMapOne(e1)
 	s, err := em.Events2String()
 	assert.Nil(ts.T, err)
-	err = ts.BootEnv(sp.UXREL, []string{"SIGMAFAIL=" + s})
+	err = ts.BootEnv(srv, []string{"SIGMAFAIL=" + s})
 	assert.Nil(ts.T, err)
 	db.DPrintf(db.ALWAYS, "Booted %v %v", e1.Path, em)
 }

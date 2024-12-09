@@ -249,9 +249,9 @@ if [[ $BASIC == "--basic" ]]; then
     done
 
 
-    run_test "sigmapsrv/ux" "go test $VERB sigmaos/sigmapsrv -start -path "name/ux/~local/" -run ReadPerf"
-    run_test "sigmapsrv/s3" "go test $VERB sigmaos/sigmapsrv -start -path "name/s3/~local/9ps3/" -run ReadPerf"
-    run_test "sigmapsrv/s3pathclnt" "go test $VERB sigmaos/sigmapsrv --withs3pathclnt -start -path "name/s3/~local/9ps3/" -run ReadFilePerfSingle"
+    run_test "sigmapsrv/ux" "go test $VERB sigmaos/sigmasrv/memfssrv/sigmapsrv -start -path "name/ux/~local/" -run ReadPerf"
+    run_test "sigmapsrv/s3" "go test $VERB sigmaos/sigmasrv/memfssrvsigmapsrv -start -path "name/s3/~local/9ps3/" -run ReadPerf"
+    run_test "sigmapsrv/s3pathclnt" "go test $VERB sigmaos/sigmasrv/memfssrvsigmapsrv --withs3pathclnt -start -path "name/s3/~local/9ps3/" -run ReadFilePerfSingle"
     
 
     #

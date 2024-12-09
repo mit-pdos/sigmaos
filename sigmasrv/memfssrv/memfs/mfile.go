@@ -7,7 +7,7 @@ import (
 	"fmt"
 
 	"sigmaos/api/fs"
-	"sigmaos/memfs/file"
+	"sigmaos/sigmasrv/memfssrv/memfs/file"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 )

@@ -8,7 +8,7 @@ import (
 
 	"sigmaos/ctx"
 	"sigmaos/api/fs"
-	"sigmaos/memfs/dir"
+	"sigmaos/sigmasrv/memfssrv/memfs/dir"
 	"sigmaos/path"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"

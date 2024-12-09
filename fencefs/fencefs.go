@@ -9,8 +9,8 @@ import (
 	"sigmaos/ctx"
 	db "sigmaos/debug"
 	"sigmaos/api/fs"
-	"sigmaos/memfs/dir"
-	"sigmaos/memfs/inode"
+	"sigmaos/sigmasrv/memfssrv/memfs/dir"
+	"sigmaos/sigmasrv/memfssrv/memfs/inode"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 )

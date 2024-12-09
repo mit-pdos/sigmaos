@@ -14,7 +14,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/api/fs"
-	"sigmaos/memfs/inode"
+	"sigmaos/sigmasrv/memfssrv/memfs/inode"
 	"sigmaos/sigmasrv/memfssrv"
 	"sigmaos/serr"
 	rpcdev "sigmaos/rpc/dev"

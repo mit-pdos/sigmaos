@@ -908,7 +908,7 @@ func TestMaintainReplicationLevelCrashMSched(t *testing.T) {
 	// Make sure they spawned correctly.
 	st, err = ts.GetDir(OUTDIR)
 	assert.Nil(t, err, "readdir1")
-	assert.Equal(t, N_REPL, len(st), "wrong num spinners check #2", sp.Names(st))
+	assert.Equal(t, N_REPL, len(st), "wrong num spinners check #2 %v", sp.Names(st))
 	db.DPrintf(db.TEST, "Got out dir again")
 
 	err = crash.SignalFailer(ts.FsLib, fn1)

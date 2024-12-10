@@ -12,14 +12,9 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-// XXX Make interface smaller
 type Subsystem interface {
 	GetProc() *proc.Proc
-	GetHow() proc.Thow
 	GetCrashed() bool
-	GetContainer() *dcontainer.DContainer
-	SetWaited(bool)
-	GetWaited() bool
 	Evict() error
 	Wait() error
 	Kill() error
@@ -35,7 +30,6 @@ type KernelSubsystem struct {
 	how       proc.Thow
 	cmd       *exec.Cmd
 	container *dcontainer.DContainer
-	waited    bool
 	crashed   bool
 }
 
@@ -43,24 +37,8 @@ func (ss *KernelSubsystem) GetProc() *proc.Proc {
 	return ss.p
 }
 
-func (ss *KernelSubsystem) GetContainer() *dcontainer.DContainer {
-	return ss.container
-}
-
-func (ss *KernelSubsystem) GetHow() proc.Thow {
-	return ss.how
-}
-
 func (ss *KernelSubsystem) GetCrashed() bool {
 	return ss.crashed
-}
-
-func (ss *KernelSubsystem) GetWaited() bool {
-	return ss.waited
-}
-
-func (ss *KernelSubsystem) SetWaited(w bool) {
-	ss.waited = w
 }
 
 func (ss *KernelSubsystem) String() string {
@@ -69,7 +47,7 @@ func (ss *KernelSubsystem) String() string {
 }
 
 func newSubsystemCmd(sc *sigmaclnt.SigmaClntKernel, k *Kernel, p *proc.Proc, how proc.Thow, cmd *exec.Cmd) Subsystem {
-	return &KernelSubsystem{sc, k, p, how, cmd, nil, false, false}
+	return &KernelSubsystem{sc, k, p, how, cmd, nil, false}
 }
 
 func newSubsystem(sc *sigmaclnt.SigmaClntKernel, k *Kernel, p *proc.Proc, how proc.Thow) Subsystem {
@@ -174,7 +152,6 @@ func (s *KernelSubsystem) Wait() error {
 	defer db.DPrintf(db.KERNEL, "Wait subsystem done for %v", s)
 
 	if !s.GetCrashed() {
-		s.SetWaited(true)
 		// Only wait if this proc has not been waited for already, since calling
 		// WaitExit twice leads to an error.
 		status, err := s.WaitExitKernelProc(s.p.GetPid(), s.how)

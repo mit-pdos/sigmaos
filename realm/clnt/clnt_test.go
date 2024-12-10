@@ -16,7 +16,7 @@ import (
 	proto "sigmaos/apps/cache/proto"
 	db "sigmaos/debug"
 	linuxsched "sigmaos/util/linux/sched"
-	"sigmaos/mem"
+	"sigmaos/util/linux/mem"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"

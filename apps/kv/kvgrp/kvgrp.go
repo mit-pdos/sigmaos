@@ -11,15 +11,15 @@ import (
 	"sync"
 	"time"
 
-	"sigmaos/util/crash"
+	"sigmaos/apps/kv/repl/raft"
 	db "sigmaos/debug"
-	"sigmaos/sigmaclnt/fslib"
 	"sigmaos/ft/leaderclnt"
 	"sigmaos/proc"
-	"sigmaos/apps/kv/repl/raft"
 	"sigmaos/sigmaclnt"
+	"sigmaos/sigmaclnt/fslib"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
+	"sigmaos/util/crash"
 	"sigmaos/util/perf"
 )
 
@@ -209,7 +209,6 @@ func RunMember(job, grp string, myid, nrepl int) {
 	g.ssrv.SrvExit(proc.NewStatus(proc.StatusEvicted))
 }
 
-// XXX move to procclnt?
 func (g *Group) waitExit(ch chan struct{}) {
 	for {
 		err := g.WaitEvict(g.ProcEnv().GetPID())

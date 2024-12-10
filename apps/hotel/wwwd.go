@@ -17,8 +17,8 @@ import (
 	shardedsvcrpcclnt "sigmaos/rpc/shardedsvc/clnt"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
-	"sigmaos/util/tracing"
 	"sigmaos/util/perf"
+	"sigmaos/util/tracing"
 )
 
 type Www struct {
@@ -493,7 +493,6 @@ func (s *Www) geoHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 
-	//XXX
 	// lan/lon from query params
 	sLat, sLon := r.URL.Query().Get("lat"), r.URL.Query().Get("lon")
 	//	sLat := r.FormValue("lat")

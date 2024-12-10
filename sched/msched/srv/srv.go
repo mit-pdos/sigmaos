@@ -10,8 +10,6 @@ import (
 
 	"sigmaos/api/fs"
 	db "sigmaos/debug"
-	linuxsched "sigmaos/util/linux/sched"
-	"sigmaos/util/linux/mem"
 	"sigmaos/proc"
 	sprpcclnt "sigmaos/rpc/clnt/sigmap"
 	beschedclnt "sigmaos/sched/besched/clnt"
@@ -22,6 +20,8 @@ import (
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
+	"sigmaos/util/linux/mem"
+	linuxsched "sigmaos/util/linux/sched"
 	"sigmaos/util/perf"
 	"sigmaos/util/syncmap"
 )
@@ -116,7 +116,6 @@ func (msched *MSched) WaitStart(ctx fs.CtxI, req proto.WaitRequest, res *proto.W
 	// Wait until this msched has heard about the proc, and has created the state
 	// for it.
 	if err := msched.waitUntilGotProc(req.GetProcSeqno()); err != nil {
-		// XXX return in res?
 		return err
 	}
 	msched.pmgr.WaitStart(sp.Tpid(req.PidStr))

@@ -15,21 +15,21 @@ import (
 
 	"golang.org/x/sys/unix"
 
+	"sigmaos/api/fs"
 	chunkclnt "sigmaos/chunk/clnt"
 	chunksrv "sigmaos/chunk/srv"
 	db "sigmaos/debug"
-	"sigmaos/api/fs"
 	kernelclnt "sigmaos/kernel/clnt"
-	linuxsched "sigmaos/util/linux/sched"
-	iputil "sigmaos/util/ip"
 	"sigmaos/proc"
+	spproxysrv "sigmaos/proxy/sigmap/srv"
 	"sigmaos/sched/msched/proc/proto"
 	"sigmaos/sched/msched/proc/srv/binsrv"
 	"sigmaos/scontainer"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
-	spproxysrv "sigmaos/proxy/sigmap/srv"
+	iputil "sigmaos/util/ip"
+	linuxsched "sigmaos/util/linux/sched"
 	"sigmaos/util/perf"
 	"sigmaos/util/syncmap"
 )
@@ -307,8 +307,6 @@ func (ps *ProcRPCSrv) Run(ctx fs.CtxI, req proto.RunRequest, res *proto.RunResul
 func (ps *ProcSrv) Run(ctx fs.CtxI, req proto.RunRequest, res *proto.RunResult) error {
 	uproc := proc.NewProcFromProto(req.ProcProto)
 	db.DPrintf(db.PROCD, "Run uproc %v", uproc)
-	// XXX for spawn lat bench
-	//	db.DPrintf(db.ALWAYS, "[%v] ProcSrv.Run recvd proc time since spawn %v", uproc.GetPid(), time.Since(uproc.GetSpawnTime()))
 	db.DPrintf(db.SPAWN_LAT, "[%v] ProcSrv.Run recvd proc time since spawn %v", uproc.GetPid(), time.Since(uproc.GetSpawnTime()))
 	// Spawn, but don't actually run the dummy proc
 	if uproc.GetProgram() == sp.DUMMY_PROG {

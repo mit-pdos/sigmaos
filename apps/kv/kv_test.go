@@ -15,8 +15,8 @@ import (
 	"sigmaos/apps/cache"
 	"sigmaos/apps/kv"
 	"sigmaos/apps/kv/kvgrp"
-	"sigmaos/util/crash"
 	db "sigmaos/debug"
+	"sigmaos/util/crash"
 	"sigmaos/util/rand"
 	// sp "sigmaos/sigmap"
 	"sigmaos/test"
@@ -331,7 +331,6 @@ func XTestReplCrashN(t *testing.T) {
 }
 
 func TestAuto(t *testing.T) {
-	// runtime.GOMAXPROCS(2) // XXX for KV
 	t1, err1 := test.NewTstateAll(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return

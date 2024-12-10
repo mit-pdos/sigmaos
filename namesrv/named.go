@@ -16,7 +16,7 @@ import (
 	"sigmaos/path"
 	"sigmaos/proc"
 	"sigmaos/rpc"
-	"sigmaos/semclnt"
+	"sigmaos/util/coordination/semclnt"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"

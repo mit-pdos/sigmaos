@@ -9,7 +9,7 @@ import (
 	cachegrpmgr "sigmaos/apps/cache/cachegrp/mgr"
 	db "sigmaos/debug"
 	"sigmaos/proc"
-	"sigmaos/semclnt"
+	"sigmaos/util/coordination/semclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 	"sigmaos/util/rand"

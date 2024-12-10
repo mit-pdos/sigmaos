@@ -7,7 +7,7 @@ import (
 
 	"github.com/aws/aws-lambda-go/lambda"
 	//	"sigmaos/sigmaclnt/fslib"
-	//	"sigmaos/semclnt"
+	//	"sigmaos/util/coordination/semclnt"
 	//	sp "sigmaos/sigmap"
 	db "sigmaos/debug"
 )

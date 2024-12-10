@@ -15,7 +15,7 @@ import (
 	"sigmaos/linuxsched"
 	"sigmaos/proc"
 	mschedclnt "sigmaos/sched/msched/clnt"
-	"sigmaos/semclnt"
+	"sigmaos/util/coordination/semclnt"
 	"sigmaos/serr"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"

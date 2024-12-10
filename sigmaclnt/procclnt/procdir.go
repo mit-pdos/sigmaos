@@ -6,7 +6,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/sigmaclnt/fslib"
 	"sigmaos/proc"
-	"sigmaos/semclnt"
+	"sigmaos/util/coordination/semclnt"
 	sp "sigmaos/sigmap"
 )
 

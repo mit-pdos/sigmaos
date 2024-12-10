@@ -17,7 +17,7 @@ import (
 	"time"
 
 	db "sigmaos/debug"
-	"sigmaos/linuxsched"
+	linuxsched "sigmaos/util/linux/sched"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 )

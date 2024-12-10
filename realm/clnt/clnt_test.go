@@ -15,7 +15,7 @@ import (
 	cachegrpmgr "sigmaos/apps/cache/cachegrp/mgr"
 	proto "sigmaos/apps/cache/proto"
 	db "sigmaos/debug"
-	"sigmaos/linuxsched"
+	linuxsched "sigmaos/util/linux/sched"
 	"sigmaos/mem"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"

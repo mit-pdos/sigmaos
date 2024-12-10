@@ -20,7 +20,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/api/fs"
 	kernelclnt "sigmaos/kernel/clnt"
-	"sigmaos/linuxsched"
+	linuxsched "sigmaos/util/linux/sched"
 	iputil "sigmaos/util/ip"
 	"sigmaos/proc"
 	"sigmaos/sched/msched/proc/proto"

@@ -16,7 +16,7 @@ import (
 	"sigmaos/benchmarks/loadgen"
 	dbclnt "sigmaos/proxy/db/clnt"
 	db "sigmaos/debug"
-	"sigmaos/linuxsched"
+	linuxsched "sigmaos/util/linux/sched"
 	"sigmaos/proc"
 	sprpcclnt "sigmaos/rpc/clnt/sigmap"
 	shardedsvcrpcclnt "sigmaos/rpc/shardedsvc/clnt"

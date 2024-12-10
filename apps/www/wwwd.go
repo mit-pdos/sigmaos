@@ -11,7 +11,7 @@ import (
 
 	"sigmaos/benchmarks/spin"
 	db "sigmaos/debug"
-	"sigmaos/pipe"
+	"sigmaos/sigmasrv/pipe"
 	"sigmaos/proc"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"

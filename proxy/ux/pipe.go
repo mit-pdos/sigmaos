@@ -4,7 +4,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/api/fs"
 	"sigmaos/path"
-	"sigmaos/pipe"
+	"sigmaos/sigmasrv/pipe"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 )

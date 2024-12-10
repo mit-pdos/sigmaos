@@ -11,7 +11,7 @@ import (
 
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
-	tproto "sigmaos/tracing/proto"
+	tproto "sigmaos/util/tracing/proto"
 )
 
 const (

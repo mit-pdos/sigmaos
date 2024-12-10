@@ -23,7 +23,7 @@ import (
 	sprpcclnt "sigmaos/rpc/clnt/sigmap"
 	rpcdev "sigmaos/rpc/dev"
 	sp "sigmaos/sigmap"
-	tproto "sigmaos/tracing/proto"
+	tproto "sigmaos/util/tracing/proto"
 )
 
 func NewKey(k uint64) string {

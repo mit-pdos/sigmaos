@@ -9,7 +9,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/demux"
-	"sigmaos/frame"
+	"sigmaos/util/io/frame"
 	"sigmaos/serr"
 	sessp "sigmaos/session/proto"
 	sp "sigmaos/sigmap"

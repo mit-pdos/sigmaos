@@ -6,7 +6,7 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	db "sigmaos/debug"
-	"sigmaos/frame"
+	"sigmaos/util/io/frame"
 	sp "sigmaos/sigmap"
 )
 

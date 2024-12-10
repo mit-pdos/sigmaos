@@ -1,5 +1,5 @@
-// Package bootkernelclnt starts a SigmaOS kernel
-package bootkernelclnt
+// Package boot/clnt starts a SigmaOS kernel
+package clnt
 
 import (
 	"os"

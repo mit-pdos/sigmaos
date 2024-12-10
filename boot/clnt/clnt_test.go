@@ -1,4 +1,4 @@
-package bootkernelclnt_test
+package clnt_test
 
 import (
 	"path/filepath"

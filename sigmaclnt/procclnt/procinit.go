@@ -7,10 +7,10 @@ import (
 	"runtime/debug"
 
 	db "sigmaos/debug"
-	"sigmaos/sigmaclnt/fslib"
 	"sigmaos/proc"
 	"sigmaos/rpc"
 	"sigmaos/serr"
+	"sigmaos/sigmaclnt/fslib"
 	sp "sigmaos/sigmap"
 )
 
@@ -48,14 +48,11 @@ func NewProcClnt(fsl *fslib.FsLib) (*ProcClnt, error) {
 }
 
 // Fake an initial process for, for example, tests.
-// XXX deduplicate with Spawn()
-// XXX deduplicate with NewProcClnt()
 func NewProcClntInit(pid sp.Tpid, fsl *fslib.FsLib, program string) (*ProcClnt, error) {
 	if err := MountPids(fsl); err != nil {
 		db.DPrintf(db.ERROR, "error MountPids: %v", err)
 		return nil, err
 	}
-	// XXX needed?
 	db.DPrintf(db.PROCCLNT, "Mount %v as %v", sp.MSCHEDREL, sp.MSCHEDREL)
 	if err := fsl.NewRootMount(sp.MSCHEDREL, sp.MSCHEDREL); err != nil {
 		db.DPrintf(db.ALWAYS, "Error mounting msched err %v\n", err)

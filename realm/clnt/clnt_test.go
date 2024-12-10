@@ -15,11 +15,11 @@ import (
 	cachegrpmgr "sigmaos/apps/cache/cachegrp/mgr"
 	proto "sigmaos/apps/cache/proto"
 	db "sigmaos/debug"
-	linuxsched "sigmaos/util/linux/sched"
-	"sigmaos/util/linux/mem"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
+	"sigmaos/util/linux/mem"
+	linuxsched "sigmaos/util/linux/sched"
 	rd "sigmaos/util/rand"
 )
 
@@ -670,7 +670,7 @@ func targetTime(baseline time.Duration, tslowdown float64) time.Duration {
 	return time.Duration(float64(baseline) * tslowdown)
 }
 
-// XXX May fail on Linux systems (especially when they have multiple NUMA
+// May fail on Linux systems (especially when they have multiple NUMA
 // nodes), due to a linux scheduler bug. See:
 // https://www.usenix.org/system/files/login/articles/login_winter16_02_lozi.pdf
 func TestSpinPerfDoubleSlowdown(t *testing.T) {

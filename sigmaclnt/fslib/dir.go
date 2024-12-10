@@ -6,9 +6,9 @@ import (
 	"time"
 
 	db "sigmaos/debug"
-	"sigmaos/sigmaclnt/fslib/reader"
 	"sigmaos/path"
 	"sigmaos/serr"
+	"sigmaos/sigmaclnt/fslib/reader"
 	sp "sigmaos/sigmap"
 )
 
@@ -96,7 +96,6 @@ func (fl *FsLib) ReadDir(dir string) ([]*sp.Tstat, *FileReader, error) {
 	return dirents, rdr, error
 }
 
-// XXX should use Reader
 func (fl *FsLib) CopyDir(src, dst string) error {
 	_, err := fl.ProcessDir(src, func(st *sp.Tstat) (bool, error) {
 		s := filepath.Join(src, st.Name)

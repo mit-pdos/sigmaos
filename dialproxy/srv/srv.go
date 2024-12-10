@@ -9,7 +9,7 @@ import (
 
 	"sigmaos/ctx"
 	db "sigmaos/debug"
-	"sigmaos/demux"
+	"sigmaos/util/io/demux"
 	dialproxytrans "sigmaos/dialproxy/transport"
 	"sigmaos/util/io/frame"
 	"sigmaos/api/fs"

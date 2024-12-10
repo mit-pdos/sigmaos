@@ -12,7 +12,7 @@ import (
 
 	"sigmaos/ctx"
 	db "sigmaos/debug"
-	"sigmaos/demux"
+	"sigmaos/util/io/demux"
 	dialproxyclnt "sigmaos/dialproxy/clnt"
 	"sigmaos/sigmasrv/memfssrv/memfs"
 	"sigmaos/sigmasrv/memfssrv/memfs/dir"

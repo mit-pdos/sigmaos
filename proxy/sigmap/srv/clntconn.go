@@ -8,7 +8,7 @@ import (
 
 	"sigmaos/ctx"
 	db "sigmaos/debug"
-	"sigmaos/demux"
+	"sigmaos/util/io/demux"
 	"sigmaos/sigmaclnt/fidclnt"
 	"sigmaos/api/fs"
 	"sigmaos/proc"

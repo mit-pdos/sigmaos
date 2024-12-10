@@ -12,7 +12,7 @@ import (
 	"golang.org/x/sys/unix"
 
 	db "sigmaos/debug"
-	"sigmaos/demux"
+	"sigmaos/util/io/demux"
 	"sigmaos/util/io/frame"
 	"sigmaos/proc"
 	"sigmaos/serr"

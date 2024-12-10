@@ -8,7 +8,7 @@ import (
 	//	"runtime/debug"
 
 	db "sigmaos/debug"
-	"sigmaos/demux"
+	"sigmaos/util/io/demux"
 	"sigmaos/util/io/frame"
 	"sigmaos/serr"
 	sessp "sigmaos/session/proto"

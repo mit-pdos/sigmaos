@@ -4,7 +4,7 @@ import (
 	"net"
 	"sync"
 
-	"sigmaos/demux"
+	"sigmaos/util/io/demux"
 	"sigmaos/serr"
 	sessp "sigmaos/session/proto"
 	spcodec "sigmaos/session/codec"

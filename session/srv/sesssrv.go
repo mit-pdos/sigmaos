@@ -8,7 +8,7 @@ import (
 
 	sps "sigmaos/api/spprotsrv"
 	db "sigmaos/debug"
-	"sigmaos/demux"
+	"sigmaos/util/io/demux"
 	dialproxyclnt "sigmaos/dialproxy/clnt"
 	netsrv "sigmaos/net/srv"
 	"sigmaos/proc"

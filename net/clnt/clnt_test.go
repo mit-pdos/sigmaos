@@ -16,7 +16,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	db "sigmaos/debug"
-	"sigmaos/demux"
+	"sigmaos/util/io/demux"
 	"sigmaos/netclnt"
 	"sigmaos/netsrv"
 	"sigmaos/serr"

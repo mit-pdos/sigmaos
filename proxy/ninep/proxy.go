@@ -11,7 +11,7 @@ import (
 
 	"sigmaos/api/spprotsrv"
 	db "sigmaos/debug"
-	"sigmaos/demux"
+	"sigmaos/util/io/demux"
 	dialproxyclnt "sigmaos/dialproxy/clnt"
 	"sigmaos/sigmaclnt/fidclnt"
 	"sigmaos/proxy/ninep/npcodec"

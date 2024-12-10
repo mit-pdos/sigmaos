@@ -7,9 +7,8 @@ import (
 	leaseclnt "sigmaos/ft/lease/clnt"
 	"sigmaos/namesrv/fsetcd"
 	"sigmaos/proc"
-	"sigmaos/semclnt"
-	"sigmaos/sigmaclnt/fslib"
 	sp "sigmaos/sigmap"
+	"sigmaos/util/coordination/semclnt"
 )
 
 // For documentation on dir structure, see sigmaos/proc/dir.go

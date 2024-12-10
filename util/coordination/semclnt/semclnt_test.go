@@ -13,7 +13,7 @@ import (
 	dialproxyclnt "sigmaos/dialproxy/clnt"
 	"sigmaos/proc"
 	"sigmaos/util/rand"
-	"sigmaos/semclnt"
+	"sigmaos/util/coordination/semclnt"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"

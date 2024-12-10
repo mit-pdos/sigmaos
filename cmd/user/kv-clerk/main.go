@@ -18,7 +18,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/util/perf"
 	"sigmaos/proc"
-	"sigmaos/semclnt"
+	"sigmaos/util/coordination/semclnt"
 	"sigmaos/sigmaclnt"
 )
 

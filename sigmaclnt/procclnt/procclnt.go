@@ -17,7 +17,7 @@ import (
 	beschedclnt "sigmaos/sched/besched/clnt"
 	lcschedclnt "sigmaos/sched/lcsched/clnt"
 	mschedclnt "sigmaos/sched/msched/clnt"
-	"sigmaos/semclnt"
+	"sigmaos/util/coordination/semclnt"
 	"sigmaos/serr"
 	"sigmaos/sigmaclnt/fslib"
 	sp "sigmaos/sigmap"

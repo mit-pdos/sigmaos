@@ -2,7 +2,7 @@ package memfs
 
 import (
 	"sigmaos/api/fs"
-	"sigmaos/pipe"
+	"sigmaos/sigmasrv/pipe"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 )

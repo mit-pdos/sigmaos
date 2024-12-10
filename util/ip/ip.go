@@ -68,7 +68,6 @@ func localIPs() ([]net.IP, error) {
 	return ips, nil
 }
 
-// XXX should find what outgoing ip is
 func LocalIP() (sp.Tip, error) {
 	ips, err := localIPs()
 	if err != nil {
@@ -87,7 +86,6 @@ func LocalIP() (sp.Tip, error) {
 			return sp.Tip(i.String()), nil
 		}
 	}
-	// XXX Should do this in a more principled way
 	// Next, prioritize non-localhost IPs
 	for _, i := range ips {
 		if !strings.HasPrefix(i.String(), "127.") {

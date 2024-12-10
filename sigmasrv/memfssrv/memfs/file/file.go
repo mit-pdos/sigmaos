@@ -4,11 +4,11 @@ import (
 	"sync"
 	//"time"
 
-	db "sigmaos/debug"
-	"sigmaos/sigmasrv/fencefs"
 	"sigmaos/api/fs"
+	db "sigmaos/debug"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
+	"sigmaos/sigmasrv/fencefs"
 )
 
 type File struct {
@@ -83,7 +83,6 @@ func (f *File) Read(ctx fs.CtxI, offset sp.Toffset, n sp.Tsize, fence sp.Tfence)
 	if offset >= f.LenOff() {
 		return nil, nil
 	} else {
-		// XXX overflow?
 		end := offset + sp.Toffset(n)
 		if end >= f.LenOff() {
 			end = f.LenOff()

@@ -1,4 +1,4 @@
-package bootkernelclnt
+package clnt
 
 type Tboot string
 

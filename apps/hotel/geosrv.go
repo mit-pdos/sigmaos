@@ -19,7 +19,7 @@ import (
 	"sigmaos/util/perf"
 	"sigmaos/proc"
 	"sigmaos/sigmasrv"
-	"sigmaos/tracing"
+	"sigmaos/util/tracing"
 )
 
 type GeoIndexes struct {

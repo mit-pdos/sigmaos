@@ -11,7 +11,7 @@ import (
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 	"sigmaos/util/sortedmap"
-	"sigmaos/stats"
+	"sigmaos/sigmasrv/stats"
 )
 
 // This file implements directory operations on top of etcd.  It

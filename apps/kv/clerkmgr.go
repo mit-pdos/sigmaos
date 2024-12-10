@@ -11,7 +11,7 @@ import (
 	"sigmaos/apps/cache"
 	db "sigmaos/debug"
 	"sigmaos/proc"
-	"sigmaos/semclnt"
+	"sigmaos/util/coordination/semclnt"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 )

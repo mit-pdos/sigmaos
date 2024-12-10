@@ -5,7 +5,7 @@ import (
 	"net"
 
 	db "sigmaos/debug"
-	"sigmaos/demux"
+	"sigmaos/util/io/demux"
 	dialproxyclnt "sigmaos/dialproxy/clnt"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"

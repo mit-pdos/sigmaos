@@ -6,7 +6,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/api/fs"
-	"sigmaos/memfs/file"
+	"sigmaos/sigmasrv/memfssrv/memfs/file"
 	"sigmaos/path"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"

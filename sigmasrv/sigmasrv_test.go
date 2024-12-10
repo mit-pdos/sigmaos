@@ -20,7 +20,7 @@ func g(svci any) {
 	fmt.Printf("svc %q %s %q %q\n", typ.Name(), typ.String(), typ.PkgPath(), svc)
 }
 
-func TestXXX(t *testing.T) {
+func TestServer(t *testing.T) {
 	s := &Server{}
 	g(s)
 }

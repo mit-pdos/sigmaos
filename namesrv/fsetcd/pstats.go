@@ -5,11 +5,11 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/api/fs"
-	"sigmaos/memfs/inode"
+	"sigmaos/sigmasrv/memfssrv/memfs/inode"
 	"sigmaos/path"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
-	"sigmaos/stats"
+	"sigmaos/sigmasrv/stats"
 	"sigmaos/util/syncmap"
 )
 

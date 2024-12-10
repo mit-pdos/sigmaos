@@ -4,7 +4,7 @@ import (
 	//	"context"
 
 	//	"go.opentelemetry.io/otel/trace"
-	//	tproto "sigmaos/tracing/proto"
+	//	tproto "sigmaos/util/tracing/proto"
 
 	"sigmaos/apps/hotel/proto"
 	db "sigmaos/debug"
@@ -14,7 +14,7 @@ import (
 	sprpcclnt "sigmaos/rpc/clnt/sigmap"
 	shardedsvcrpcclnt "sigmaos/rpc/shardedsvc/clnt"
 	"sigmaos/sigmasrv"
-	"sigmaos/tracing"
+	"sigmaos/util/tracing"
 	"sigmaos/util/perf"
 )
 

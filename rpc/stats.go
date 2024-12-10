@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"sync"
 
-	"sigmaos/stats"
+	"sigmaos/sigmasrv/stats"
 )
 
 type MethodStat struct {

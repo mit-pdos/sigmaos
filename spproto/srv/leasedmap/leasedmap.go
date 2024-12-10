@@ -8,7 +8,6 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-// XXX maintain lid -> string map
 type LeasedMap struct {
 	sync.Mutex
 	pns  map[string]sp.TleaseId

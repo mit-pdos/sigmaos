@@ -6,8 +6,8 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/api/fs"
-	"sigmaos/memfs/inode"
-	"sigmaos/memfssrv"
+	"sigmaos/sigmasrv/memfssrv/memfs/inode"
+	"sigmaos/sigmasrv/memfssrv"
 	"sigmaos/rpc"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"

@@ -8,7 +8,7 @@ import (
 
 	sps "sigmaos/api/spprotsrv"
 	db "sigmaos/debug"
-	"sigmaos/demux"
+	"sigmaos/util/io/demux"
 	dialproxyclnt "sigmaos/dialproxy/clnt"
 	netsrv "sigmaos/net/srv"
 	"sigmaos/proc"
@@ -16,7 +16,7 @@ import (
 	sessp "sigmaos/session/proto"
 	sp "sigmaos/sigmap"
 	spcodec "sigmaos/session/codec"
-	"sigmaos/stats"
+	"sigmaos/sigmasrv/stats"
 )
 
 type NewSessionI interface {

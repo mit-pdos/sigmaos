@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 	dbg "sigmaos/debug"
-	echo "sigmaos/example_echo_server"
+	echo "sigmaos/example/example_echo_server"
 )
 
 func main() {

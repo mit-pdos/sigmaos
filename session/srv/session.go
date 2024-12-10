@@ -55,12 +55,13 @@ func (sess *Session) QueueLen() int64 {
 func (sess *Session) GetConn() *netConn {
 	sess.Lock()
 	defer sess.Unlock()
+
 	return sess.conn
 }
 
 // For testing. Invoking CloseConn() will eventually cause
-// sess.Close() to be called by Detach().  XXX really
-// won't the connection be re-established by client?
+// sess.Close() to be called by Detach(). Client will retry & re-establish
+// connection.
 func (sess *Session) CloseConn() {
 	sess.Lock()
 	var conn *netConn

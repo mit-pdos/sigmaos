@@ -5,17 +5,17 @@ import (
 	"time"
 
 	db "sigmaos/debug"
-	"sigmaos/memfssrv"
 	"sigmaos/proc"
 	procclnt "sigmaos/sched/msched/proc/clnt"
 	"sigmaos/sigmaclnt"
 	pc "sigmaos/sigmaclnt/procclnt"
 	sp "sigmaos/sigmap"
+	"sigmaos/sigmasrv"
 )
 
 type ProcMgr struct {
 	sync.Mutex
-	mfs            *memfssrv.MemFs
+	ssrv           *sigmasrv.SigmaSrv
 	kernelId       string
 	rootsc         *sigmaclnt.SigmaClntKernel
 	updm           *procclnt.ProcdMgr
@@ -43,8 +43,8 @@ func (mgr *ProcMgr) Spawn(p *proc.Proc) {
 	mgr.pstate.spawn(p)
 }
 
-func (mgr *ProcMgr) SetMemFs(mfs *memfssrv.MemFs) {
-	mgr.mfs = mfs
+func (mgr *ProcMgr) SetSigmaSrv(ssrv *sigmasrv.SigmaSrv) {
+	mgr.ssrv = ssrv
 }
 
 func (mgr *ProcMgr) RunProc(p *proc.Proc) {
@@ -53,7 +53,7 @@ func (mgr *ProcMgr) RunProc(p *proc.Proc) {
 	p.SetKernelID(mgr.kernelId, true)
 	// Set the msched mount for the proc, so it can mount this msched in one RPC
 	// (without walking down to it).
-	p.SetMSchedEndpoint(mgr.mfs.GetSigmaPSrvEndpoint())
+	p.SetMSchedEndpoint(mgr.ssrv.GetSigmaPSrvEndpoint())
 	mgr.setupProcState(p)
 	err := mgr.runProc(p)
 	if err != nil {

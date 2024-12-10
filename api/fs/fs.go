@@ -2,7 +2,7 @@
 package fs
 
 import (
-	"sigmaos/clntcond"
+	"sigmaos/sigmasrv/clntcond"
 	db "sigmaos/debug"
 	np "sigmaos/ninep"
 	"sigmaos/proxy/ninep/npcodec"

@@ -141,7 +141,7 @@ if [[ $COMPILE == "--compile" ]]; then
     # test if test packages compile
     #
 
-    for T in path serr linuxsched util/perf sigmap dialproxy session/clnt proxy/ninep sigmaclnt/fslib/reader sigmaclnt/fslib/writer stats sigmaclnt/fslib semclnt chunk/srv ft/leaderclnt/electclnt dircache memfs namesrv sigmaclnt/procclnt proxy/ux proxy/s3 bootkernelclnt ft/leaderclnt leadertest apps/kv/kvgrp apps/cache/cachegrp/clnt apps/www sigmapsrv realm/clnt apps/mr apps/imgresize apps/kv apps/hotel apps/socialnetwork benchmarks benchmarks/remote example example_echo_server benchmarks/netperf; do
+    for T in path serr util/linux/sched util/perf sigmap dialproxy session/clnt proxy/ninep sigmaclnt/fslib/reader sigmaclnt/fslib/writer sigmasrv/stats sigmaclnt/fslib util/coordination/semclnt chunk/srv ft/leaderclnt/electclnt sigmaclnt/fslib/dircache sigmasrv/memfssrv/memfs namesrv namesrv/fsetcd sigmaclnt/procclnt proxy/ux proxy/s3 boot/clnt ft/leaderclnt leadertest apps/kv/kvgrp apps/cache/cachegrp/clnt apps/www sigmasrv/memfssrv/sigmapsrv realm/clnt apps/mr apps/imgresize apps/kv apps/hotel apps/socialnetwork benchmarks benchmarks/remote example example/example_echo_server benchmarks/netperf; do
         if ! [ -z "$SKIPTO" ]; then
           if [[ "$SKIPTO" == "$T" ]]; then
             # Stop skipping
@@ -161,7 +161,7 @@ if [[ $BASIC == "--basic" ]]; then
     # test some support package
     #
 
-    for T in path serr linuxsched util/perf sigmap sortedmap; do
+    for T in path serr util/linux/sched util/perf sigmap sortedmap; do
         if ! [ -z "$SKIPTO" ]; then
           if [[ "$SKIPTO" == "$T" ]]; then
             # Stop skipping
@@ -195,7 +195,7 @@ if [[ $BASIC == "--basic" ]]; then
     # test with a kernel with just named
     #
 
-    for T in sigmaclnt/fslib/reader sigmaclnt/fslib/writer stats dialproxy sigmaclnt/fslib ft/leaderclnt/electclnt dircache; do
+    for T in sigmaclnt/fslib/reader sigmaclnt/fslib/writer sigmasrv/stats dialproxy sigmaclnt/fslib ft/leaderclnt/electclnt sigmaclnt/fslib/dircache; do
         if ! [ -z "$SKIPTO" ]; then
           if [[ "$SKIPTO" == "$T" ]]; then
             # Stop skipping
@@ -218,7 +218,7 @@ if [[ $BASIC == "--basic" ]]; then
     # tests a full kernel using root realm
     #
 
-    for T in namesrv semclnt chunk/srv sigmaclnt/procclnt proxy/ux bootkernelclnt proxy/s3 ft/leaderclnt leadertest apps/kv/kvgrp apps/cache/cachegrp/clnt; do
+    for T in namesrv util/coordination/semclnt chunk/srv sigmaclnt/procclnt proxy/ux boot/clnt proxy/s3 ft/leaderclnt leadertest apps/kv/kvgrp apps/cache/cachegrp/clnt; do
         if ! [ -z "$SKIPTO" ]; then
           if [[ "$SKIPTO" == "$T" ]]; then
             # Stop skipping
@@ -249,9 +249,9 @@ if [[ $BASIC == "--basic" ]]; then
     done
 
 
-    run_test "sigmapsrv/ux" "go test $VERB sigmaos/sigmapsrv -start -path "name/ux/~local/" -run ReadPerf"
-    run_test "sigmapsrv/s3" "go test $VERB sigmaos/sigmapsrv -start -path "name/s3/~local/9ps3/" -run ReadPerf"
-    run_test "sigmapsrv/s3pathclnt" "go test $VERB sigmaos/sigmapsrv --withs3pathclnt -start -path "name/s3/~local/9ps3/" -run ReadFilePerfSingle"
+    run_test "sigmapsrv/ux" "go test $VERB sigmaos/sigmasrv/memfssrv/sigmapsrv -start -path "name/ux/~local/" -run ReadPerf"
+    run_test "sigmapsrv/s3" "go test $VERB sigmaos/sigmasrv/memfssrvsigmapsrv -start -path "name/s3/~local/9ps3/" -run ReadPerf"
+    run_test "sigmapsrv/s3pathclnt" "go test $VERB sigmaos/sigmasrv/memfssrvsigmapsrv --withs3pathclnt -start -path "name/s3/~local/9ps3/" -run ReadFilePerfSingle"
     
 
     #

@@ -15,7 +15,7 @@ import (
 	rpcdevsrv "sigmaos/rpc/dev/srv"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
-	"sigmaos/tracing"
+	"sigmaos/util/tracing"
 	"sigmaos/util/perf"
 )
 

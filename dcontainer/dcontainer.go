@@ -19,7 +19,7 @@ import (
 	chunksrv "sigmaos/chunk/srv"
 	"sigmaos/dcontainer/cgroup"
 	db "sigmaos/debug"
-	"sigmaos/mem"
+	"sigmaos/util/linux/mem"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 	"sigmaos/util/perf"

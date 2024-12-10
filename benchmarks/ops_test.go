@@ -9,7 +9,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/proc"
 	mschedclnt "sigmaos/sched/msched/clnt"
-	"sigmaos/semclnt"
+	"sigmaos/util/coordination/semclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )

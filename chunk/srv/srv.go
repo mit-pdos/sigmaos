@@ -123,7 +123,6 @@ func newChunkSrv(kernelId string, sc *sigmaclnt.SigmaClnt) *ChunkSrv {
 }
 
 // Create a new sigmaclnt for a realm, with given s3 secrets
-// XXX sigmaclnt is overkill; we only need fslib
 func (cksrv *ChunkSrv) getRealmSigmaClnt(r sp.Trealm, s3secret *sp.SecretProto) (*sigmaclnt.SigmaClnt, error) {
 	db.DPrintf(db.CHUNKSRV, "%v: Create SigmaClnt for realm %v", cksrv.kernelId, r)
 	// Create a new proc env for the client

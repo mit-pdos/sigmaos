@@ -7,7 +7,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/apps/kv/repl/raft"
 	replsrv "sigmaos/apps/kv/repl/srv"
-	"sigmaos/semclnt"
+	"sigmaos/util/coordination/semclnt"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"

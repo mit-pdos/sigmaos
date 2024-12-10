@@ -13,7 +13,7 @@ import (
 	"sigmaos/ft/groupmgr"
 	fttask "sigmaos/ft/task"
 	"sigmaos/proc"
-	"sigmaos/semclnt"
+	"sigmaos/util/coordination/semclnt"
 	"sigmaos/sigmaclnt"
 	"sigmaos/sigmaclnt/fslib"
 	sp "sigmaos/sigmap"

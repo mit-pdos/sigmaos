@@ -21,7 +21,7 @@ import (
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
-	"sigmaos/tracing"
+	"sigmaos/util/tracing"
 	"sigmaos/util/perf"
 )
 

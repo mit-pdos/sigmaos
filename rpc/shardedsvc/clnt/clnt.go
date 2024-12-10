@@ -4,7 +4,7 @@ import (
 	"path/filepath"
 
 	db "sigmaos/debug"
-	"sigmaos/dircache"
+	"sigmaos/sigmaclnt/fslib/dircache"
 	"sigmaos/sigmaclnt/fslib"
 	rpcclnt "sigmaos/rpc/clnt"
 	sprpcclnt "sigmaos/rpc/clnt/sigmap"

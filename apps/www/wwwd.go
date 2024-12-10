@@ -11,11 +11,11 @@ import (
 
 	"sigmaos/benchmarks/spin"
 	db "sigmaos/debug"
-	"sigmaos/pipe"
 	"sigmaos/proc"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
+	"sigmaos/sigmasrv/pipe"
 	"sigmaos/util/rand"
 )
 
@@ -31,7 +31,6 @@ const (
 
 //
 // Web front end that spawns an app to handle a request.
-// XXX limit process's name space to the app binary and pipe.
 //
 
 var validPath = regexp.MustCompile(`^/(static|hotel|exit|matmul|user)/([=.a-zA-Z0-9/]*)$`)
@@ -60,12 +59,10 @@ func RunWwwd(job, tree string) {
 	if err = www.ssrv.SigmaClnt().MkEndpointFile(JobHTTPAddrsPath(job), ep); err != nil {
 		db.DFatalf("MkEndpointFile %v", err)
 	}
-
 	go func() {
-		www.ssrv.Serve()
+		db.DFatalf("%v", http.Serve(l, nil))
 	}()
-
-	db.DFatalf("%v", http.Serve(l, nil))
+	www.ssrv.RunServer()
 }
 
 type Wwwd struct {

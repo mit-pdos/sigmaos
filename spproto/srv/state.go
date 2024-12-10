@@ -1,7 +1,7 @@
 package srv
 
 import (
-	"sigmaos/clntcond"
+	"sigmaos/sigmasrv/clntcond"
 	db "sigmaos/debug"
 	"sigmaos/api/fs"
 	"sigmaos/path"
@@ -11,7 +11,7 @@ import (
 	"sigmaos/spproto/srv/lockmap"
 	"sigmaos/spproto/srv/version"
 	"sigmaos/spproto/srv/watch"
-	"sigmaos/stats"
+	"sigmaos/sigmasrv/stats"
 )
 
 type ProtSrvState struct {

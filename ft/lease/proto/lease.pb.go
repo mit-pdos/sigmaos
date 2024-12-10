@@ -10,7 +10,7 @@ import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
-	proto "sigmaos/tracing/proto"
+	proto "sigmaos/util/tracing/proto"
 	sync "sync"
 )
 

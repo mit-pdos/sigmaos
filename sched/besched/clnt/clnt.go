@@ -5,11 +5,11 @@ import (
 	"time"
 
 	db "sigmaos/debug"
-	"sigmaos/sigmaclnt/fslib"
 	"sigmaos/proc"
 	shardedsvcrpcclnt "sigmaos/rpc/shardedsvc/clnt"
 	"sigmaos/sched/besched/proto"
 	"sigmaos/serr"
+	"sigmaos/sigmaclnt/fslib"
 	sp "sigmaos/sigmap"
 )
 
@@ -166,20 +166,3 @@ func (besc *BESchedClnt) GetQueueStats(nsample int) (map[sp.Trealm]int, error) {
 func (besc *BESchedClnt) StopWatching() {
 	besc.rpcdc.StopWatching()
 }
-
-// XXX
-//func (besc *BESchedClnt) GetRPCStats() (map[string]*rpc.RPCStatsSnapshot, error) {
-//	snaps := make(map[string]*rpc.RPCStatsSnapshot)
-//	srvs, err := besc.rpcdc.GetEntries()
-//	if err != nil {
-//		db.DPrintf(db.ERROR, "Err GetEntries: %v", err)
-//		return nil, err
-//	}
-//	for _, srv := range srvs {
-//		clnt, err := besc.rpcdc.GetClnt(srvID)
-//		if err != nil {
-//			db.DPrintf(db.ERROR, "Err GetClnt[%v]: %v", srvID, err)
-//			return nil, err
-//		}
-//	}
-//}

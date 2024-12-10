@@ -4,7 +4,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	sn "sigmaos/apps/socialnetwork"
 	dbg "sigmaos/debug"
-	"sigmaos/linuxsched"
+	linuxsched "sigmaos/util/linux/sched"
 	"sigmaos/test"
 	"sigmaos/util/rand"
 )

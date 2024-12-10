@@ -6,21 +6,21 @@ import (
 	"net"
 	"sync"
 
+	"sigmaos/api/fs"
+	sos "sigmaos/api/sigmaos"
 	"sigmaos/ctx"
 	db "sigmaos/debug"
-	"sigmaos/demux"
-	"sigmaos/fidclnt"
-	"sigmaos/api/fs"
 	"sigmaos/proc"
+	scproto "sigmaos/proxy/sigmap/proto"
+	"sigmaos/proxy/sigmap/transport"
 	rpcproto "sigmaos/rpc/proto"
 	rpcsrv "sigmaos/rpc/srv"
 	"sigmaos/serr"
 	sessp "sigmaos/session/proto"
 	"sigmaos/sigmaclnt"
-	sos "sigmaos/api/sigmaos"
+	"sigmaos/sigmaclnt/fidclnt"
 	sp "sigmaos/sigmap"
-	scproto "sigmaos/proxy/sigmap/proto"
-	"sigmaos/proxy/sigmap/transport"
+	"sigmaos/util/io/demux"
 )
 
 // One SigmaClntConn per client connection
@@ -323,7 +323,6 @@ func (scs *SPProxySrvAPI) GetNamedEndpoint(ctx fs.CtxI, req scproto.SigmaRealmRe
 	return nil
 }
 
-// XXX need a few fslib instead of reusing bootkernel one?
 func (scs *SPProxySrvAPI) NewRootMount(ctx fs.CtxI, req scproto.SigmaMountTreeRequest, rep *scproto.SigmaErrReply) error {
 	err := scs.sc.NewRootMount(req.Tree, req.MountName)
 	rep.Err = scs.setErr(err)

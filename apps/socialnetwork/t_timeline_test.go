@@ -8,7 +8,7 @@ import (
 
 	sn "sigmaos/apps/socialnetwork"
 	"sigmaos/apps/socialnetwork/proto"
-	"sigmaos/linuxsched"
+	linuxsched "sigmaos/util/linux/sched"
 	rpcclnt "sigmaos/rpc/clnt"
 	sprpcclnt "sigmaos/rpc/clnt/sigmap"
 	"sigmaos/test"

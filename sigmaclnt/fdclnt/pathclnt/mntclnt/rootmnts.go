@@ -40,7 +40,6 @@ func (rootmt *RootMountTable) String() string {
 	return fmt.Sprintf("{mnts %v}", rootmt.mounts)
 }
 
-// XXX lookup should involve principal
 func (rootmt *RootMountTable) lookup(mntName string) (*RootMount, *serr.Err) {
 	rootmt.Lock()
 	defer rootmt.Unlock()

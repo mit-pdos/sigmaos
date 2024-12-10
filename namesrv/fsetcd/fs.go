@@ -14,7 +14,7 @@ import (
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 	"sigmaos/util/sortedmap"
-	"sigmaos/stats"
+	"sigmaos/sigmasrv/stats"
 )
 
 type Tstat int

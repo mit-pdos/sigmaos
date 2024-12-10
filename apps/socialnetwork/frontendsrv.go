@@ -15,7 +15,7 @@ import (
 	sprpcclnt "sigmaos/rpc/clnt/sigmap"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
-	"sigmaos/tracing"
+	"sigmaos/util/tracing"
 	"sigmaos/util/perf"
 )
 

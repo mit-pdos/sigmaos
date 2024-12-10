@@ -6,7 +6,7 @@ import (
 	"sigmaos/namesrv/fsetcd"
 	"sigmaos/rpc"
 	sp "sigmaos/sigmap"
-	"sigmaos/stats"
+	"sigmaos/sigmasrv/stats"
 )
 
 func (fsl *FsLib) ReadStats(pn string) (*stats.StatsSnapshot, error) {

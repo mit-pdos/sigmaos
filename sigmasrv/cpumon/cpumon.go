@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"sigmaos/util/perf"
-	"sigmaos/stats"
+	"sigmaos/sigmasrv/stats"
 )
 
 type UtilFn func() float64

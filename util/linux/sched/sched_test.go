@@ -1,4 +1,4 @@
-package linuxsched_test
+package sched_test
 
 import (
 	"os"
@@ -6,7 +6,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"sigmaos/linuxsched"
+	linuxsched "sigmaos/util/linux/sched"
 )
 
 func TestCompile(t *testing.T) {

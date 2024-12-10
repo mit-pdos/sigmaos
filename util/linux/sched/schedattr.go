@@ -1,4 +1,4 @@
-package linuxsched
+package sched
 
 import (
 	"unsafe"

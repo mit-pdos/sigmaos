@@ -10,7 +10,7 @@ import (
 
 	"sigmaos/api/fs"
 	db "sigmaos/debug"
-	"sigmaos/linuxsched"
+	linuxsched "sigmaos/util/linux/sched"
 	"sigmaos/mem"
 	"sigmaos/proc"
 	sprpcclnt "sigmaos/rpc/clnt/sigmap"

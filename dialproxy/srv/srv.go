@@ -11,7 +11,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/demux"
 	dialproxytrans "sigmaos/dialproxy/transport"
-	"sigmaos/frame"
+	"sigmaos/util/io/frame"
 	"sigmaos/api/fs"
 	"sigmaos/dialproxy"
 	netproto "sigmaos/dialproxy/proto"

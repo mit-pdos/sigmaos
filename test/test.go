@@ -11,7 +11,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"sigmaos/auth"
+	"sigmaos/util/auth"
 	"sigmaos/bootkernelclnt"
 	db "sigmaos/debug"
 	"sigmaos/namesrv/fsetcd"

@@ -22,7 +22,7 @@ import (
 	"sigmaos/apps/mr/chunkreader"
 	api "sigmaos/apps/mr/mr"
 	mrscanner "sigmaos/apps/mr/scanner"
-	"sigmaos/auth"
+	"sigmaos/util/auth"
 	"sigmaos/util/crash"
 	db "sigmaos/debug"
 	"sigmaos/proc"

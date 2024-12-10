@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	"sigmaos/auth"
+	"sigmaos/util/auth"
 	db "sigmaos/debug"
 	dialproxyclnt "sigmaos/dialproxy/clnt"
 	"sigmaos/namesrv/fsetcd"

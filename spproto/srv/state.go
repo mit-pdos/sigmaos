@@ -1,7 +1,7 @@
 package srv
 
 import (
-	"sigmaos/clntcond"
+	"sigmaos/sigmasrv/clntcond"
 	db "sigmaos/debug"
 	"sigmaos/api/fs"
 	"sigmaos/path"

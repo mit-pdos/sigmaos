@@ -6,7 +6,7 @@ import (
 
 	//	"github.com/sasha-s/go-deadlock"
 
-	"sigmaos/clntcond"
+	"sigmaos/sigmasrv/clntcond"
 	db "sigmaos/debug"
 	"sigmaos/api/fs"
 	"sigmaos/serr"

@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"sigmaos/auth"
+	"sigmaos/util/auth"
 	"sigmaos/boot"
 	db "sigmaos/debug"
 	"sigmaos/kernel"

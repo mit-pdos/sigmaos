@@ -18,7 +18,7 @@ import (
 	"sigmaos/sigmaclnt/fslib"
 	"sigmaos/rpc"
 	sp "sigmaos/sigmap"
-	tproto "sigmaos/tracing/proto"
+	tproto "sigmaos/util/tracing/proto"
 )
 
 func key2server(key string, nserver int) int {

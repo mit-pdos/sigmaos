@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-option go_package = "sigmaos/tracing/proto";
+option go_package = "sigmaos/util/tracing/proto";
 
 message SpanContextConfig {
   bytes  traceID    = 1;

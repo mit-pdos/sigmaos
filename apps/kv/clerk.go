@@ -17,7 +17,7 @@ import (
 	replclnt "sigmaos/apps/kv/repl/clnt"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
-	tproto "sigmaos/tracing/proto"
+	tproto "sigmaos/util/tracing/proto"
 )
 
 //

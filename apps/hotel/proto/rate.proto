@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-import "tracing/proto/tracing.proto";
+import "util/tracing/proto/tracing.proto";
 
 option go_package = "sigmaos/apps/hotel/proto";
 

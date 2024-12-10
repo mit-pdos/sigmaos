@@ -11,7 +11,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 
 	db "sigmaos/debug"
-	proto "sigmaos/tracing/proto"
+	proto "sigmaos/util/tracing/proto"
 )
 
 const (

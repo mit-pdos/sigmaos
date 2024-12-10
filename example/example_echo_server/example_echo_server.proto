@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-option go_package = "sigmaos/example_echo_server";
+option go_package = "sigmaos/example/example_echo_server";
 
 service EchoService {
   rpc Echo(EchoRequest) returns (EchoResult);

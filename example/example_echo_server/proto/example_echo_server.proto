@@ -3,16 +3,16 @@ syntax = "proto3";
 option go_package = "sigmaos/example/example_echo_server/proto";
 
 service EchoService {
-  rpc Echo(EchoRequest) returns (EchoResult);
+  rpc Echo(EchoReq) returns (EchoRep);
 }
 
-message EchoRequest {
+message EchoReq {
   string text = 1;
   int32 num1 = 2;
   int32 num2 = 3;
 }
 
-message EchoResult {
+message EchoRep {
   string text = 1;
   int32 res = 2;
 }

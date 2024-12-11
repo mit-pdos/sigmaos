@@ -3,6 +3,7 @@ package example_echo_server
 import (
 	"sigmaos/api/fs"
 	dbg "sigmaos/debug"
+	"sigmaos/example/example_echo_server/proto"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
@@ -32,7 +33,7 @@ func RunEchoSrv() error {
 }
 
 // find meaning of life for request
-func (echosrv *EchoSrv) Echo(ctx fs.CtxI, req EchoRequest, rep *EchoResult) error {
+func (echosrv *EchoSrv) Echo(ctx fs.CtxI, req proto.EchoReq, rep *proto.EchoRep) error {
 	dbg.DPrintf(DEBUG_ECHO_SERVER, "==%v== Received Echo Request: %v\n", echosrv.sid, req)
 	rep.Text = req.Text
 	return nil

@@ -32,14 +32,14 @@ var noDialProxy bool
 var noBootDialProxy bool
 var Withs3pathclnt bool
 
-var user string
+var User string
 var homeDir string
 var projectRoot string
 var netname string
 
 func init() {
 	flag.StringVar(&EtcdIP, "etcdIP", "127.0.0.1", "Etcd IP")
-	flag.StringVar(&user, "user", sp.NOT_SET, "SigmaUser, used for multi-tenant development")
+	flag.StringVar(&User, "User", sp.NOT_SET, "SigmaUser, used for multi-tenant development")
 	flag.StringVar(&tag, "tag", sp.LOCAL_BUILD, "Docker image tag")
 	flag.StringVar(&sp.Version, "version", sp.DEFAULT_VERSION, "Build version")
 	flag.BoolVar(&Start, "start", false, "Start system")
@@ -50,7 +50,7 @@ func init() {
 	flag.BoolVar(&noBootDialProxy, "no-boot-dialproxy", false, "Boot spproxy?")
 	flag.BoolVar(&Withs3pathclnt, "withs3pathclnt", false, "With s3clntpath?")
 	flag.StringVar(&projectRoot, "projectroot", "", "Path to project root")
-	flag.StringVar(&homeDir, "homedir", "", "Home directory, which contains the user's .aws directory")
+	flag.StringVar(&homeDir, "homedir", "", "Home directory, which contains the User's .aws directory")
 	flag.StringVar(&netname, "netname", "host", "Overlay network in which to run tests (or host if running in host mode)")
 }
 
@@ -167,7 +167,7 @@ func newSysClntPath(t *testing.T, path string) (*Tstate, error) {
 }
 
 func newSysClnt(t *testing.T, ntype bootclnt.Tboot) (*Tstate, error) {
-	db.DPrintf(db.TEST, "SigmaUser: %v", user)
+	db.DPrintf(db.TEST, "SigmaUser: %v", User)
 	// If the tests are invoked trying to reuse booted systems, and the same
 	// servers are meant to be booted, skip the boot.
 	if reuseKernel && savedTstate != nil && savedTstate.ntype == ntype {
@@ -198,7 +198,7 @@ func newSysClnt(t *testing.T, ntype bootclnt.Tboot) (*Tstate, error) {
 	var k *bootclnt.Kernel
 	if Start {
 		kernelid = bootclnt.GenKernelId()
-		_, err := bootclnt.Start(kernelid, sp.Tip(EtcdIP), pe, ntype, useDialProxy, homeDir, projectRoot, user, netname)
+		_, err := bootclnt.Start(kernelid, sp.Tip(EtcdIP), pe, ntype, useDialProxy, homeDir, projectRoot, User, netname)
 		if err != nil {
 			db.DPrintf(db.ALWAYS, "Error start kernel: %v", err)
 			return nil, err
@@ -208,7 +208,7 @@ func newSysClnt(t *testing.T, ntype bootclnt.Tboot) (*Tstate, error) {
 	if !noBootDialProxy && (useSPProxy || useDialProxy) {
 		db.DPrintf(db.BOOT, "Booting spproxyd: usespproxyd %v usedialproxy %v", useSPProxy, useDialProxy)
 		sckid := sp.SPProxydKernel(bootclnt.GenKernelId())
-		_, err := bootclnt.Start(sckid, sp.Tip(EtcdIP), pe, sp.SPPROXYDREL, useDialProxy, homeDir, projectRoot, user, netname)
+		_, err := bootclnt.Start(sckid, sp.Tip(EtcdIP), pe, sp.SPPROXYDREL, useDialProxy, homeDir, projectRoot, User, netname)
 		if err != nil {
 			db.DPrintf(db.ALWAYS, "Error start kernel for spproxyd")
 			return nil, err
@@ -249,7 +249,7 @@ func (ts *Tstate) bootNode(n int, ntype bootclnt.Tboot) error {
 	// node
 	savedTstate = nil
 	for i := 0; i < n; i++ {
-		kclnt, err := bootclnt.NewKernelClntStart(sp.Tip(EtcdIP), ts.ProcEnv(), ntype, useDialProxy, homeDir, projectRoot, user, netname)
+		kclnt, err := bootclnt.NewKernelClntStart(sp.Tip(EtcdIP), ts.ProcEnv(), ntype, useDialProxy, homeDir, projectRoot, User, netname)
 		if err != nil {
 			return err
 		}

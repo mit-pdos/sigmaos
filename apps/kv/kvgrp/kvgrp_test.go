@@ -8,17 +8,17 @@ import (
 
 	"sigmaos/apps/kv"
 	"sigmaos/apps/kv/kvgrp"
-	"sigmaos/util/crash"
 	db "sigmaos/debug"
 	dialproxyclnt "sigmaos/dialproxy/clnt"
 	"sigmaos/ft/groupmgr"
 	"sigmaos/namesrv/fsetcd"
 	"sigmaos/proc"
-	"sigmaos/util/coordination/semclnt"
 	sesssrv "sigmaos/session/srv"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
+	"sigmaos/util/coordination/semclnt"
+	"sigmaos/util/crash"
 	"sigmaos/util/rand"
 )
 
@@ -38,7 +38,7 @@ type Tstate struct {
 }
 
 func newTstate(t1 *test.Tstate, nrepl int, persist bool) *Tstate {
-	ts := &Tstate{job: rand.String(4), grp: GRP}
+	ts := &Tstate{job: rand.Name(), grp: GRP}
 	ts.Tstate = t1
 	ts.MkDir(kvgrp.KVDIR, 0777)
 	err := ts.MkDir(kvgrp.JobDir(ts.job), 0777)

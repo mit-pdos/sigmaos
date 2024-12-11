@@ -4,8 +4,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	sn "sigmaos/apps/socialnetwork"
 	dbg "sigmaos/debug"
-	linuxsched "sigmaos/util/linux/sched"
 	"sigmaos/test"
+	linuxsched "sigmaos/util/linux/sched"
 	"sigmaos/util/rand"
 )
 
@@ -23,7 +23,7 @@ type TstateSN struct {
 func newTstateSN(t *test.Tstate, srvs []sn.Srv, nsrv int) (*TstateSN, error) {
 	var err error
 	tssn := &TstateSN{}
-	tssn.jobname = rand.String(8)
+	tssn.jobname = rand.Name()
 	tssn.Tstate = t
 	if test.Start {
 		nMoreKernel := ((len(srvs)*2 + NCACHESRV) - 1) / int(linuxsched.GetNCores())

@@ -9,8 +9,16 @@ import (
 	"github.com/thanhpk/randstr"
 )
 
+const (
+	NAME_LEN = 16 // Must be long enough to make collisions unlikely
+)
+
 func String(n int) string {
 	return randstr.Hex(n)
+}
+
+func Name() string {
+	return randstr.Hex(NAME_LEN)
 }
 
 func Uint64() uint64 {

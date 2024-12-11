@@ -98,7 +98,7 @@ type Tstate struct {
 }
 
 func newTstate(t1 *test.Tstate, evs []crash.Tevent, auto string, repl int) *Tstate {
-	ts := &Tstate{job: rand.String(4)}
+	ts := &Tstate{job: rand.Name()}
 	ts.Tstate = t1
 
 	// XXX maybe in pe

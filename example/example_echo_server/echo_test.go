@@ -11,9 +11,9 @@ import (
 
 	db "sigmaos/debug"
 	echo "sigmaos/example_echo_server"
-	"sigmaos/sigmaclnt/fslib"
 	"sigmaos/proc"
 	sprpcclnt "sigmaos/rpc/clnt/sigmap"
+	"sigmaos/sigmaclnt/fslib"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 	"sigmaos/util/rand"
@@ -26,7 +26,7 @@ type TstateEcho struct {
 }
 
 func newTstateEcho(t *testing.T) (*TstateEcho, error) {
-	jobname := rand.String(8)
+	jobname := rand.Name()
 	jobdir := filepath.Join(echo.DIR_ECHO_SERVER, jobname)
 	var err error
 	tse := &TstateEcho{}

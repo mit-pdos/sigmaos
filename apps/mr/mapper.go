@@ -14,13 +14,13 @@ import (
 
 	"sigmaos/apps/mr/chunkreader"
 	"sigmaos/apps/mr/mr"
-	"sigmaos/util/crash"
 	db "sigmaos/debug"
-	"sigmaos/sigmaclnt/fslib"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
+	"sigmaos/sigmaclnt/fslib"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
+	"sigmaos/util/crash"
 	"sigmaos/util/perf"
 	"sigmaos/util/rand"
 )
@@ -59,7 +59,7 @@ func NewMapper(sc *sigmaclnt.SigmaClnt, mapf mr.MapT, combinef mr.ReduceT, jobRo
 		job:         job,
 		nreducetask: nr,
 		linesz:      lsz,
-		rand:        rand.String(16),
+		rand:        rand.Name(),
 		input:       input,
 		intOutput:   intOutput,
 		bin:         filepath.Base(input),

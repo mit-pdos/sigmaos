@@ -123,7 +123,7 @@ func (www *Wwwd) newHandler(fn func(*Wwwd, http.ResponseWriter, *http.Request, s
 
 func (www *Wwwd) newPipe() string {
 	// Make the pipe in the server.
-	pipeName := rand.String(16)
+	pipeName := rand.Name()
 	pipePath := filepath.Join(www.localSrvpath, pipeName)
 	if err := www.ssrv.SigmaClnt().NewPipe(pipePath, 0777); err != nil {
 		db.DFatalf("Error NewPipe %v", err)

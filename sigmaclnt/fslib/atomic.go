@@ -11,7 +11,7 @@ import (
 )
 
 func (fsl *FsLib) PutFileAtomic(fname string, perm sp.Tperm, data []byte) error {
-	tmpName := fname + rand.String(16)
+	tmpName := fname + rand.Name()
 	if _, err := fsl.PutFile(tmpName, perm, sp.OWRITE|sp.OEXCL, data); err != nil {
 		debug.PrintStack()
 		db.DPrintf(db.ERROR, "PutFileAtomic %v %v err %v", fname, tmpName, err)

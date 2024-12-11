@@ -16,15 +16,15 @@ import (
 	"sigmaos/apps/mr/chunkreader"
 	"sigmaos/apps/mr/kvmap"
 	"sigmaos/apps/mr/mr"
-	"sigmaos/util/crash"
 	db "sigmaos/debug"
-	"sigmaos/sigmaclnt/fslib"
-	"sigmaos/util/perf"
 	"sigmaos/proc"
-	"sigmaos/util/rand"
 	"sigmaos/sigmaclnt"
+	"sigmaos/sigmaclnt/fslib"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
+	"sigmaos/util/crash"
+	"sigmaos/util/perf"
+	"sigmaos/util/rand"
 )
 
 const (
@@ -57,7 +57,7 @@ func NewReducer(sc *sigmaclnt.SigmaClnt, reducef mr.ReduceT, args []string, p *p
 		db.DPrintf(db.MR, "NewReducer %s: unmarshal err %v\n", args[0], err)
 		return nil, err
 	}
-	r.tmp = r.outputTarget + rand.String(16)
+	r.tmp = r.outputTarget + rand.Name()
 
 	db.DPrintf(db.MR, "Reducer outputting to %v", r.tmp)
 

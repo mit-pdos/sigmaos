@@ -55,7 +55,7 @@ func Start(kernelId string, etcdIP sp.Tip, pe *proc.ProcEnv, ntype Tboot, dialpr
 	}
 	defer efile.Close()
 	// Create the command struct and set stdout/stderr
-	cmd := exec.Command(filepath.Join(projectRootPath(), START), args...)
+	cmd := exec.Command(filepath.Join(projectRootPath(), "..", START), args...)
 	cmd.Stdout = ofile
 	cmd.Stderr = efile
 	if err := cmd.Run(); err != nil {

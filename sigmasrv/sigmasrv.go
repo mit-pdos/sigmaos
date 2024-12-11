@@ -14,7 +14,7 @@ import (
 	"sigmaos/api/fs"
 	"sigmaos/memfs"
 	"sigmaos/memfs/dir"
-	"sigmaos/memfssrv"
+	"sigmaos/sigmasrv/memfssrv"
 	"sigmaos/proc"
 	"sigmaos/rpc"
 	rpcsrv "sigmaos/rpc/srv"

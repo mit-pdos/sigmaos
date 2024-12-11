@@ -382,8 +382,7 @@ func RunMSched(kernelID string, reserveMcpu uint) error {
 	if err != nil {
 		db.DFatalf("Error NewSigmaSrv: %v", err)
 	}
-	msched.pmgr.SetMemFs(ssrv.MemFs)
-
+	msched.pmgr.SetSigmaSrv(ssrv)
 	crash.Failer(sc.FsLib, crash.MSCHED_CRASH, func(e crash.Tevent) {
 		crash.Crash()
 	})

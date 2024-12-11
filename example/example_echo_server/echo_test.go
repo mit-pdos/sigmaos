@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	db "sigmaos/debug"
-	echo "sigmaos/example_echo_server"
+	echo "sigmaos/example/example_echo_server"
 	"sigmaos/proc"
 	sprpcclnt "sigmaos/rpc/clnt/sigmap"
 	"sigmaos/sigmaclnt/fslib"

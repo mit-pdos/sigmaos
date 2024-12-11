@@ -6,7 +6,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/proc"
 	mschedclnt "sigmaos/sched/msched/clnt"
-	"sigmaos/util/coordination/semclnt"
+	"sigmaos/util/coordination/barrier"
 	sp "sigmaos/sigmap"
 )
 
@@ -33,7 +33,7 @@ func (clnt *ProcClnt) notify(method mschedclnt.Tmethod, pid sp.Tpid, kernelID st
 		// If the proc was not spawned via msched, notify via sem.
 		kprocDir := proc.KProcDir(pid)
 		db.DPrintf(db.PROCCLNT, "%v sem %v dir %v", method, pid, kprocDir)
-		sem := semclnt.NewSemClnt(clnt.FsLib, filepath.Join(kprocDir, semName))
+		sem := barrier.NewBarrier(clnt.FsLib, filepath.Join(kprocDir, semName))
 		err := sem.Up()
 		if err != nil {
 			db.DPrintf(db.PROCCLNT_ERR, "Error %v: %v", method, err)

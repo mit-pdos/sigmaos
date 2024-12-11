@@ -14,7 +14,7 @@ import (
 	"sigmaos/apps/cache/proto"
 	db "sigmaos/debug"
 	"sigmaos/proc"
-	"sigmaos/util/coordination/semclnt"
+	"sigmaos/util/coordination/barrier"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 	rd "sigmaos/util/rand"
@@ -30,7 +30,7 @@ type Tstate struct {
 	clrks []sp.Tpid
 	job   string
 	sempn string
-	sem   *semclnt.SemClnt
+	sem   *barrier.Barrier
 }
 
 func newTstate(t *test.Tstate, nsrv int) *Tstate {
@@ -42,7 +42,7 @@ func newTstate(t *test.Tstate, nsrv int) *Tstate {
 	assert.Nil(t.T, err)
 	ts.cm = cm
 	ts.sempn = cm.SvcDir() + "-cacheclerk-sem"
-	ts.sem = semclnt.NewSemClnt(ts.FsLib, ts.sempn)
+	ts.sem = barrier.NewBarrier(ts.FsLib, ts.sempn)
 	err = ts.sem.Init(0)
 	assert.Nil(t.T, err)
 	return ts

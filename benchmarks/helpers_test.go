@@ -15,7 +15,7 @@ import (
 	linuxsched "sigmaos/util/linux/sched"
 	"sigmaos/proc"
 	mschedclnt "sigmaos/sched/msched/clnt"
-	"sigmaos/util/coordination/semclnt"
+	"sigmaos/util/coordination/barrier"
 	"sigmaos/serr"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
@@ -225,12 +225,12 @@ func rmOutDir(ts *test.RealmTstate) {
 
 // ========== Semaphore Helpers ==========
 
-func newNSemaphores(ts *test.RealmTstate, n int) ([]*semclnt.SemClnt, []interface{}) {
-	ss := make([]*semclnt.SemClnt, 0, n)
+func newNSemaphores(ts *test.RealmTstate, n int) ([]*barrier.Barrier, []interface{}) {
+	ss := make([]*barrier.Barrier, 0, n)
 	is := make([]interface{}, 0, n)
 	for i := 0; i < n; i++ {
 		spath := filepath.Join(OUT_DIR, rand.String(16))
-		s := semclnt.NewSemClnt(ts.FsLib, spath)
+		s := barrier.NewBarrier(ts.FsLib, spath)
 		ss = append(ss, s)
 		is = append(is, s)
 	}
@@ -411,8 +411,8 @@ func waitForRealmCreation(rootts *test.Tstate, realm sp.Trealm) error {
 	return nil
 }
 
-func createClntWaitSem(rootts *test.Tstate) *semclnt.SemClnt {
-	sem := semclnt.NewSemClnt(rootts.FsLib, filepath.Join(clidir, "clisem"))
+func createClntWaitSem(rootts *test.Tstate) *barrier.Barrier {
+	sem := barrier.NewBarrier(rootts.FsLib, filepath.Join(clidir, "clisem"))
 	err := sem.Init(0)
 	if !assert.True(rootts.T, err == nil || !serr.IsErrCode(err, serr.TErrExists), "Error sem init %v", err) {
 		return nil

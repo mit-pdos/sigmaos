@@ -11,7 +11,7 @@ import (
 	"sigmaos/apps/cache"
 	db "sigmaos/debug"
 	"sigmaos/proc"
-	"sigmaos/util/coordination/semclnt"
+	"sigmaos/util/coordination/barrier"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 )
@@ -21,7 +21,7 @@ type ClerkMgr struct {
 	*sigmaclnt.SigmaClnt
 	job     string
 	sempath string
-	sem     *semclnt.SemClnt
+	sem     *barrier.Barrier
 	ckmcpu  proc.Tmcpu // Number of exclusive cores allocated to each clerk.
 	clrks   []sp.Tpid
 	repl    bool
@@ -32,7 +32,7 @@ func NewClerkMgr(sc *sigmaclnt.SigmaClnt, job string, mcpu proc.Tmcpu, repl bool
 	clrk := NewClerkFsLib(cm.SigmaClnt.FsLib, cm.job, repl)
 	cm.KvClerk = clrk
 	cm.sempath = filepath.Join(kvgrp.JobDir(job), "kvclerk-sem")
-	cm.sem = semclnt.NewSemClnt(sc.FsLib, cm.sempath)
+	cm.sem = barrier.NewBarrier(sc.FsLib, cm.sempath)
 	if err := cm.sem.Init(0); err != nil {
 		return nil, err
 	}

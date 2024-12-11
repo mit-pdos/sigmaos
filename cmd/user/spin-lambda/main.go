@@ -7,7 +7,7 @@ import (
 
 	"github.com/aws/aws-lambda-go/lambda"
 	//	"sigmaos/sigmaclnt/fslib"
-	//	"sigmaos/util/coordination/semclnt"
+	//	"sigmaos/util/coordination/barrier"
 	//	sp "sigmaos/sigmap"
 	db "sigmaos/debug"
 )
@@ -22,7 +22,7 @@ func spin(args []string) error {
 	//		return err
 	//	}
 	//
-	// sem := semclnt.NewSemClnt(fsl, sempath)
+	// sem := barrier.NewBarrier(fsl, sempath)
 	// err = sem.Up()
 	//
 	//	if err != nil {

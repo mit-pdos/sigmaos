@@ -11,16 +11,16 @@ import (
 
 	"sigmaos/api/spprotsrv"
 	db "sigmaos/debug"
-	"sigmaos/util/io/demux"
 	dialproxyclnt "sigmaos/dialproxy/clnt"
-	"sigmaos/sigmaclnt/fidclnt"
-	"sigmaos/proxy/ninep/npcodec"
 	"sigmaos/path"
 	"sigmaos/proc"
+	"sigmaos/proxy/ninep/npcodec"
 	"sigmaos/serr"
 	sessp "sigmaos/session/proto"
 	"sigmaos/sigmaclnt/fdclnt/pathclnt"
+	"sigmaos/sigmaclnt/fidclnt"
 	sp "sigmaos/sigmap"
+	"sigmaos/util/io/demux"
 	"sigmaos/util/rand"
 )
 
@@ -31,12 +31,12 @@ type proxyConn struct {
 }
 
 func (pc *proxyConn) ReportError(err error) {
-	db.DPrintf(db.NPPROXY, "ReportError %v err %v\n", pc, err)
+	db.DPrintf(db.NPPROXY, "ReportError %v err %v", pc, err)
 }
 
 func (pc *proxyConn) ServeRequest(fc demux.CallI) (demux.CallI, *serr.Err) {
 	fm := fc.(*sessp.FcallMsg)
-	db.DPrintf(db.NPPROXY, "ServeRequest %v\n", fm)
+	db.DPrintf(db.NPPROXY, "ServeRequest %v", fm)
 	msg, iov, rerror, _, _ := spprotsrv.Dispatch(pc.sess, fm.Msg, fm.Iov)
 	if rerror != nil {
 		msg = rerror
@@ -113,7 +113,7 @@ func (npc *NpSess) Attach(args *sp.Tattach, rets *sp.Rattach) (sp.TclntId, *sp.R
 		return sp.NoClntId, sp.NewRerrorSerr(serr.NewErrError(error))
 	}
 	if err := npc.pc.MntClnt().MountTree(npc.pe.GetSecrets(), ep, ep.Root, sp.NAMED); err != nil {
-		db.DPrintf(db.NPPROXY, "MountTree %v err %v\n", ep, err)
+		db.DPrintf(db.NPPROXY, "MountTree %v err %v", ep, err)
 		return sp.NoClntId, sp.NewRerrorSerr(serr.NewErrError(err))
 	}
 
@@ -124,12 +124,12 @@ func (npc *NpSess) Attach(args *sp.Tattach, rets *sp.Rattach) (sp.TclntId, *sp.R
 	}
 	rets.Qid = npc.qm.Insert(fid, []*sp.Tqid{npc.fidc.Qid(fid)})[0]
 	npc.fm.mapTo(args.Tfid(), fid)
-	db.DPrintf(db.NPPROXY, "Attach args %v rets %v fid %v\n", args, rets, fid)
+	db.DPrintf(db.NPPROXY, "Attach args %v rets %v fid %v", args, rets, fid)
 	return args.TclntId(), nil
 }
 
 func (npc *NpSess) Detach(args *sp.Tdetach, rets *sp.Rdetach) *sp.Rerror {
-	db.DPrintf(db.NPPROXY, "Detach\n")
+	db.DPrintf(db.NPPROXY, "Detach")
 	return nil
 }
 
@@ -138,12 +138,12 @@ func (npc *NpSess) Walk(args *sp.Twalk, rets *sp.Rwalk) *sp.Rerror {
 	if !ok {
 		return sp.NewRerrorCode(serr.TErrNotfound)
 	}
-	fid1, err := npc.pc.Walk(fid, args.Wnames, sp.NewPrincipal(
+	fid1, err := npc.pc.Walk(fid, append([]string{"name"}, args.Wnames...), sp.NewPrincipal(
 		sp.TprincipalID("proxy"),
 		sp.ROOTREALM,
 	))
 	if err != nil {
-		db.DPrintf(db.NPPROXY, "Walk args %v err: %v\n", args, err)
+		db.DPrintf(db.NPPROXY, "Walk args %v err: %v", args, err)
 		return sp.NewRerrorSerr(err)
 	}
 
@@ -153,6 +153,7 @@ func (npc *NpSess) Walk(args *sp.Twalk, rets *sp.Rwalk) *sp.Rerror {
 
 	rets.Qids = npc.qm.Insert(fid1, qids)
 	npc.fm.mapTo(args.Tnewfid(), fid1)
+	db.DPrintf(db.NPPROXY, "Walk ret %v fid %v mapTo %v", rets, fid1, args.Tnewfid())
 	return nil
 }
 
@@ -163,11 +164,11 @@ func (npc *NpSess) Open(args *sp.Topen, rets *sp.Ropen) *sp.Rerror {
 	}
 	qid, err := npc.fidc.Open(fid, args.Tmode())
 	if err != nil {
-		db.DPrintf(db.NPPROXY, "Open args %v err: %v\n", args, err)
+		db.DPrintf(db.NPPROXY, "Open args %v err: %v", args, err)
 		return sp.NewRerrorSerr(err)
 	}
 	rets.Qid = qid.Proto()
-	db.DPrintf(db.NPPROXY, "Open args %v rets: %v\n", args, rets)
+	db.DPrintf(db.NPPROXY, "Open args %v rets: %v", args, rets)
 	return nil
 }
 
@@ -182,14 +183,14 @@ func (npc *NpSess) Create(args *sp.Tcreate, rets *sp.Rcreate) *sp.Rerror {
 	}
 	fid1, err := npc.fidc.Create(fid, args.Name, args.Tperm(), args.Tmode(), sp.NoLeaseId, sp.NullFence())
 	if err != nil {
-		db.DPrintf(db.NPPROXY, "Create args %v err: %v\n", args, err)
+		db.DPrintf(db.NPPROXY, "Create args %v err: %v", args, err)
 		return sp.NewRerrorSerr(err)
 	}
 	if fid != fid1 {
-		db.DPrintf(db.ALWAYS, "Create fid %v fid1 %v\n", fid, fid1)
+		db.DPrintf(db.ALWAYS, "Create fid %v fid1 %v", fid, fid1)
 	}
 	rets.Qid = npc.pc.Qid(fid1).Proto()
-	db.DPrintf(db.NPPROXY, "Create args %v rets: %v\n", args, rets)
+	db.DPrintf(db.NPPROXY, "Create args %v rets: %v", args, rets)
 	return nil
 }
 
@@ -202,7 +203,7 @@ func (npc *NpSess) Clunk(args *sp.Tclunk, rets *sp.Rclunk) *sp.Rerror {
 	npc.qm.Clunk(fid, ch.Lastqid())
 	err := npc.fidc.Clunk(fid)
 	if err != nil {
-		db.DPrintf(db.NPPROXY, "Clunk: args %v err %v\n", args, err)
+		db.DPrintf(db.NPPROXY, "Clunk: args %v err %v", args, err)
 		var sr *serr.Err
 		if errors.As(err, &sr) {
 			return sp.NewRerrorSerr(sr)
@@ -210,7 +211,7 @@ func (npc *NpSess) Clunk(args *sp.Tclunk, rets *sp.Rclunk) *sp.Rerror {
 		return sp.NewRerrorErr(err)
 	}
 	npc.fm.delete(args.Tfid())
-	db.DPrintf(db.NPPROXY, "Clunk: args %v rets %v\n", args, rets)
+	db.DPrintf(db.NPPROXY, "Clunk: args %v rets %v", args, rets)
 	return nil
 }
 
@@ -221,11 +222,11 @@ func (npc *NpSess) Remove(args *sp.Tremove, rets *sp.Rremove) *sp.Rerror {
 	}
 	err := npc.fidc.Remove(fid, sp.NullFence())
 	if err != nil {
-		db.DPrintf(db.NPPROXY, "Remove: args %v err %v\n", args, err)
+		db.DPrintf(db.NPPROXY, "Remove: args %v err %v", args, err)
 		return sp.NewRerrorSerr(err)
 	}
 	npc.fm.delete(args.Tfid())
-	db.DPrintf(db.NPPROXY, "Remove: args %v rets %v\n", args, rets)
+	db.DPrintf(db.NPPROXY, "Remove: args %v rets %v", args, rets)
 	return nil
 }
 
@@ -238,13 +239,14 @@ func (npc *NpSess) Stat(args *sp.Trstat, rets *sp.Rrstat) *sp.Rerror {
 	if !ok {
 		return sp.NewRerrorCode(serr.TErrNotfound)
 	}
+	db.DPrintf(db.NPPROXY, "Stat: req %v mapTo %v", args.Tfid(), fid)
 	st, err := npc.fidc.Stat(fid)
 	if err != nil {
-		db.DPrintf(db.NPPROXY, "Stats: args %v err %v\n", args, err)
+		db.DPrintf(db.NPPROXY, "Stats: args %v err %v", args, err)
 		return sp.NewRerrorSerr(err)
 	}
 	rets.Stat = st.StatProto()
-	db.DPrintf(db.NPPROXY, "Stat: req %v rets %v\n", args, rets)
+	db.DPrintf(db.NPPROXY, "Stat: req %v rets %v", args, rets)
 	return nil
 }
 
@@ -255,10 +257,10 @@ func (npc *NpSess) Wstat(args *sp.Twstat, rets *sp.Rwstat) *sp.Rerror {
 	}
 	err := npc.fidc.Wstat(fid, sp.NewStatProto(args.Stat), sp.NullFence())
 	if err != nil {
-		db.DPrintf(db.NPPROXY, "Wstats: args %v err %v\n", args, err)
+		db.DPrintf(db.NPPROXY, "Wstats: args %v err %v", args, err)
 		return sp.NewRerrorSerr(err)
 	}
-	db.DPrintf(db.NPPROXY, "Wstat: req %v rets %v\n", args, rets)
+	db.DPrintf(db.NPPROXY, "Wstat: req %v rets %v", args, rets)
 	return nil
 }
 
@@ -274,7 +276,7 @@ func (npc *NpSess) ReadF(args *sp.TreadF, rets *sp.Rread) ([]byte, *sp.Rerror) {
 	b := make([]byte, args.Tcount())
 	cnt, err := npc.fidc.ReadF(fid, args.Toffset(), b, sp.NullFence())
 	if err != nil {
-		db.DPrintf(db.NPPROXY, "Read: args %v err %v\n", args, err)
+		db.DPrintf(db.NPPROXY, "Read: args %v err %v", args, err)
 		var sr *serr.Err
 		if errors.As(err, &sr) {
 			return nil, sp.NewRerrorSerr(sr)
@@ -287,13 +289,13 @@ func (npc *NpSess) ReadF(args *sp.TreadF, rets *sp.Rread) ([]byte, *sp.Rerror) {
 	if sp.Qtype(qid.Type)&sp.QTDIR == sp.QTDIR {
 		d1, err1 := Sp2NpDir(b, args.Tcount())
 		if err != nil {
-			db.DPrintf(db.NPPROXY, "Read: Sp2NpDir err %v\n", err1)
+			db.DPrintf(db.NPPROXY, "Read: Sp2NpDir err %v", err1)
 			return nil, sp.NewRerrorSerr(serr.NewErrError(err1))
 		}
 		b = d1
 	}
 	rets.Count = uint32(len(b))
-	db.DPrintf(db.NPPROXY, "Read: args %v rets %v %v\n", args, rets, cnt)
+	db.DPrintf(db.NPPROXY, "Read: args %v rets %v %v", args, rets, cnt)
 	return b, nil
 }
 
@@ -304,7 +306,7 @@ func (npc *NpSess) WriteF(args *sp.TwriteF, data []byte, rets *sp.Rwrite) *sp.Re
 	}
 	n, err := npc.fidc.WriteF(fid, args.Toffset(), data, sp.NullFence())
 	if err != nil {
-		db.DPrintf(db.NPPROXY, "Write: args %v err %v\n", args, err)
+		db.DPrintf(db.NPPROXY, "Write: args %v err %v", args, err)
 		var sr *serr.Err
 		if errors.As(err, &sr) {
 			return sp.NewRerrorSerr(sr)
@@ -312,7 +314,7 @@ func (npc *NpSess) WriteF(args *sp.TwriteF, data []byte, rets *sp.Rwrite) *sp.Re
 		return sp.NewRerrorErr(err)
 	}
 	rets.Count = uint32(n)
-	db.DPrintf(db.NPPROXY, "Write: args %v rets %v\n", args, rets)
+	db.DPrintf(db.NPPROXY, "Write: args %v rets %v", args, rets)
 	return nil
 }
 

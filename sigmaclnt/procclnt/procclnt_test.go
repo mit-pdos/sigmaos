@@ -12,7 +12,7 @@ import (
 
 	"sigmaos/util/crash"
 	db "sigmaos/debug"
-	"sigmaos/ft/groupmgr"
+	"sigmaos/ft/procgroupmgr"
 	linuxsched "sigmaos/util/linux/sched"
 	"sigmaos/namesrv/fsetcd"
 	"sigmaos/proc"
@@ -863,7 +863,7 @@ func TestMaintainReplicationLevelCrashMSched(t *testing.T) {
 	db.DPrintf(db.TEST, "Rm out dir done")
 
 	// Start a bunch of replicated spinner procs.
-	cfg := groupmgr.NewGroupConfig(N_REPL, "spinner", []string{}, 0, OUTDIR)
+	cfg := procgroupmgr.NewGroupConfig(N_REPL, "spinner", []string{}, 0, OUTDIR)
 	sm := cfg.StartGrpMgr(ts.SigmaClnt)
 	db.DPrintf(db.TEST, "GrpMgr started")
 

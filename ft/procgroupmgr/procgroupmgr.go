@@ -1,4 +1,4 @@
-// package groupmgr keeps n instances of the same proc running. If one
+// package procgroupmgr keeps n instances of the same proc running. If one
 // instance (a member) of the group of n crashes, the manager starts
 // another one.  Some programs use the n instances to form a Raft
 // group (e.g., kvgrp); others use it in a hot-standby configuration
@@ -7,7 +7,7 @@
 // There are two ways of stopping the group manager: the caller calls
 // StopGroup() or the caller calls WaitGroup() (which returns when all
 // members returned with an OK status).
-package groupmgr
+package procgroupmgr
 
 import (
 	"fmt"
@@ -21,9 +21,9 @@ import (
 	//"github.com/sasha-s/go-deadlock"
 
 	db "sigmaos/debug"
-	"sigmaos/sigmaclnt/fslib"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
+	"sigmaos/sigmaclnt/fslib"
 	sp "sigmaos/sigmap"
 )
 
@@ -31,7 +31,7 @@ const (
 	GRPMGRDIR = sp.NAMED + "grpmgr"
 )
 
-type GroupMgr struct {
+type ProcGroupMgr struct {
 	sync.Mutex
 	*sigmaclnt.SigmaClnt
 	members []*member
@@ -39,16 +39,16 @@ type GroupMgr struct {
 	ch      chan []*proc.Status
 }
 
-func (gm *GroupMgr) String() string {
+func (pgm *ProcGroupMgr) String() string {
 	s := "["
-	for _, m := range gm.members {
+	for _, m := range pgm.members {
 		s += fmt.Sprintf(" %v ", m)
 	}
 	s += "]"
 	return s
 }
 
-type GroupMgrConfig struct {
+type ProcGroupMgrConfig struct {
 	Program   string
 	Args      []string
 	Job       string
@@ -57,8 +57,8 @@ type GroupMgrConfig struct {
 }
 
 // If n == 0, run only one member (i.e., no hot standby's or replication)
-func NewGroupConfig(n int, bin string, args []string, mcpu proc.Tmcpu, job string) *GroupMgrConfig {
-	return &GroupMgrConfig{
+func NewGroupConfig(n int, bin string, args []string, mcpu proc.Tmcpu, job string) *ProcGroupMgrConfig {
+	return &ProcGroupMgrConfig{
 		NReplicas: n,
 		Program:   bin,
 		Args:      append([]string{job}, args...),
@@ -67,7 +67,7 @@ func NewGroupConfig(n int, bin string, args []string, mcpu proc.Tmcpu, job strin
 	}
 }
 
-func (cfg *GroupMgrConfig) Persist(fsl *fslib.FsLib) error {
+func (cfg *ProcGroupMgrConfig) Persist(fsl *fslib.FsLib) error {
 	fsl.MkDir(GRPMGRDIR, 0777)
 	pn := filepath.Join(GRPMGRDIR, cfg.Job)
 	if err := fsl.PutFileJsonAtomic(pn, 0777, cfg); err != nil {
@@ -76,50 +76,50 @@ func (cfg *GroupMgrConfig) Persist(fsl *fslib.FsLib) error {
 	return nil
 }
 
-func Recover(sc *sigmaclnt.SigmaClnt) ([]*GroupMgr, error) {
-	gms := make([]*GroupMgr, 0)
+func Recover(sc *sigmaclnt.SigmaClnt) ([]*ProcGroupMgr, error) {
+	pgms := make([]*ProcGroupMgr, 0)
 	sc.ProcessDir(GRPMGRDIR, func(st *sp.Tstat) (bool, error) {
 		pn := filepath.Join(GRPMGRDIR, st.Name)
-		cfg := &GroupMgrConfig{}
+		cfg := &ProcGroupMgrConfig{}
 		if err := sc.GetFileJson(pn, cfg); err != nil {
 			return true, err
 		}
 		log.Printf("cfg %v\n", cfg)
-		gms = append(gms, cfg.StartGrpMgr(sc))
+		pgms = append(pgms, cfg.StartGrpMgr(sc))
 		return false, nil
 
 	})
-	return gms, nil
+	return pgms, nil
 }
 
-func (cfg *GroupMgrConfig) StartGrpMgr(sc *sigmaclnt.SigmaClnt) *GroupMgr {
+func (cfg *ProcGroupMgrConfig) StartGrpMgr(sc *sigmaclnt.SigmaClnt) *ProcGroupMgr {
 	N := cfg.NReplicas
 	if cfg.NReplicas == 0 {
 		N = 1
 	}
-	gm := &GroupMgr{
+	pgm := &ProcGroupMgr{
 		running:   true,
 		SigmaClnt: sc,
 	}
-	gm.ch = make(chan []*proc.Status)
-	gm.members = make([]*member, N)
+	pgm.ch = make(chan []*proc.Status)
+	pgm.members = make([]*member, N)
 	for i := 0; i < N; i++ {
 		db.DPrintf(db.GROUPMGR, "group %v member %v", cfg.Args, i)
-		gm.members[i] = newMember(sc, cfg, i)
+		pgm.members[i] = newMember(sc, cfg, i)
 	}
 	done := make(chan *procret)
-	go gm.manager(done, N)
+	go pgm.manager(done, N)
 
 	// make the manager start the members
 	for i := 0; i < N; i++ {
 		done <- &procret{i, nil, proc.NewStatusErr("start", nil)}
 	}
-	return gm
+	return pgm
 }
 
 type member struct {
 	*sigmaclnt.SigmaClnt
-	*GroupMgrConfig
+	*ProcGroupMgrConfig
 	pid sp.Tpid
 	id  int
 	gen int
@@ -139,11 +139,11 @@ func (pr procret) String() string {
 	return fmt.Sprintf("{m %v err %v status %v}", pr.member, pr.err, pr.status)
 }
 
-func newMember(sc *sigmaclnt.SigmaClnt, cfg *GroupMgrConfig, id int) *member {
+func newMember(sc *sigmaclnt.SigmaClnt, cfg *ProcGroupMgrConfig, id int) *member {
 	return &member{
-		SigmaClnt:      sc,
-		GroupMgrConfig: cfg,
-		id:             id,
+		SigmaClnt:          sc,
+		ProcGroupMgrConfig: cfg,
+		id:                 id,
 	}
 }
 
@@ -191,9 +191,9 @@ func (m *member) runL(start chan error, done chan *procret) {
 }
 
 // Caller holds lock
-func (gm *GroupMgr) startL(i int, done chan *procret) {
+func (pgm *ProcGroupMgr) startL(i int, done chan *procret) {
 	start := make(chan error)
-	go gm.members[i].runL(start, done)
+	go pgm.members[i].runL(start, done)
 	err := <-start
 	if err != nil {
 		go func() {
@@ -205,70 +205,70 @@ func (gm *GroupMgr) startL(i int, done chan *procret) {
 }
 
 // stop restarting a member?
-func (gm *GroupMgr) stopMember(pr *procret) bool {
+func (pgm *ProcGroupMgr) stopMember(pr *procret) bool {
 	return pr.err == nil && (pr.status.IsStatusOK() || pr.status.IsStatusEvicted() || pr.status.IsStatusFatal())
 }
 
-func (gm *GroupMgr) handleProcRet(pr *procret, gstatus *[]*proc.Status, n *int, done chan *procret) {
-	// Take the lock to protect gm.running
-	gm.Lock()
-	defer gm.Unlock()
+func (pgm *ProcGroupMgr) handleProcRet(pr *procret, gstatus *[]*proc.Status, n *int, done chan *procret) {
+	// Take the lock to protect pgm.running
+	pgm.Lock()
+	defer pgm.Unlock()
 
-	if !gm.running {
+	if !pgm.running {
 		// we are finishing up; don't respawn the member
-		db.DPrintf(db.GROUPMGR, "%v: done %v n %v\n", gm.members[pr.member].Program, pr.member, *n)
+		db.DPrintf(db.GROUPMGR, "%v: done %v n %v\n", pgm.members[pr.member].Program, pr.member, *n)
 		*n--
-	} else if gm.stopMember(pr) {
-		db.DPrintf(db.GROUPMGR, "%v: stop %v\n", gm.members[pr.member].Program, pr)
-		gm.running = false
+	} else if pgm.stopMember(pr) {
+		db.DPrintf(db.GROUPMGR, "%v: stop %v\n", pgm.members[pr.member].Program, pr)
+		pgm.running = false
 		*gstatus = append(*gstatus, pr.status)
 		*n--
 	} else { // restart member i
-		db.DPrintf(db.GROUPMGR, "%v: start %v\n", gm.members[pr.member].Program, pr)
-		gm.startL(pr.member, done)
+		db.DPrintf(db.GROUPMGR, "%v: start %v\n", pgm.members[pr.member].Program, pr)
+		pgm.startL(pr.member, done)
 	}
 }
 
-func (gm *GroupMgr) manager(done chan *procret, n int) {
+func (pgm *ProcGroupMgr) manager(done chan *procret, n int) {
 	gstatus := make([]*proc.Status, 0, n)
 
 	for n > 0 {
 		pr := <-done
-		gm.handleProcRet(pr, &gstatus, &n, done)
+		pgm.handleProcRet(pr, &gstatus, &n, done)
 	}
-	db.DPrintf(db.GROUPMGR, "%v exit\n", gm.members[0].Program)
-	for i := 0; i < len(gm.members); i++ {
-		db.DPrintf(db.GROUPMGR, "%v gen# %d exit\n", gm.members[i].Program, gm.members[i].gen)
+	db.DPrintf(db.GROUPMGR, "%v exit\n", pgm.members[0].Program)
+	for i := 0; i < len(pgm.members); i++ {
+		db.DPrintf(db.GROUPMGR, "%v gen# %d exit\n", pgm.members[i].Program, pgm.members[i].gen)
 	}
-	gm.ch <- gstatus
+	pgm.ch <- gstatus
 }
 
-func (gm *GroupMgr) Crash() error {
-	db.DPrintf(db.GROUPMGR, "GroupMgr Crash")
-	gm.Lock()
-	defer gm.Unlock()
+func (pgm *ProcGroupMgr) Crash() error {
+	db.DPrintf(db.GROUPMGR, "ProcGroupMgr Crash")
+	pgm.Lock()
+	defer pgm.Unlock()
 
-	gm.running = false
+	pgm.running = false
 	return nil
 }
 
-func (gm *GroupMgr) WaitGroup() []*proc.Status {
-	db.DPrintf(db.GROUPMGR, "GroupMgr Wait Group")
-	statuses := <-gm.ch
-	db.DPrintf(db.GROUPMGR, "Done GroupMgr Wait Group")
+func (pgm *ProcGroupMgr) WaitGroup() []*proc.Status {
+	db.DPrintf(db.GROUPMGR, "ProcGroupMgr Wait Group")
+	statuses := <-pgm.ch
+	db.DPrintf(db.GROUPMGR, "Done ProcGroupMgr Wait Group")
 	return statuses
 }
 
-func (gm *GroupMgr) evictGroupMembers() error {
+func (pgm *ProcGroupMgr) evictGroupMembers() error {
 	// Take the lock, to ensure that the group members don't change after running
 	// is set to false
-	gm.Lock()
-	defer gm.Unlock()
+	pgm.Lock()
+	defer pgm.Unlock()
 
-	gm.running = false
+	pgm.running = false
 
 	var err error
-	for _, c := range gm.members {
+	for _, c := range pgm.members {
 		go func(m *member) {
 			db.DPrintf(db.GROUPMGR, "evict %v\n", m.pid)
 			r := m.Evict(m.pid)
@@ -284,13 +284,13 @@ func (gm *GroupMgr) evictGroupMembers() error {
 // not run in order of members, and be blocked waiting for becoming
 // leader, while the primary keeps running, because it is later in the
 // list.
-func (gm *GroupMgr) StopGroup() ([]*proc.Status, error) {
-	db.DPrintf(db.GROUPMGR, "GroupMgr Stop")
-	err := gm.evictGroupMembers()
+func (pgm *ProcGroupMgr) StopGroup() ([]*proc.Status, error) {
+	db.DPrintf(db.GROUPMGR, "ProcGroupMgr Stop")
+	err := pgm.evictGroupMembers()
 
 	db.DPrintf(db.GROUPMGR, "wait for members")
-	gstatus := <-gm.ch
-	db.DPrintf(db.GROUPMGR, "done members %v %v\n", gm, gstatus)
+	gstatus := <-pgm.ch
+	db.DPrintf(db.GROUPMGR, "done members %v %v\n", pgm, gstatus)
 	return gstatus, err
 }
 

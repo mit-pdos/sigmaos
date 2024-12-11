@@ -1,4 +1,4 @@
-package groupmgr
+package procgroupmgr_test
 
 import (
 	"testing"

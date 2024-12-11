@@ -15,7 +15,7 @@ import (
 	"sigmaos/util/crash"
 	db "sigmaos/debug"
 	fttask "sigmaos/ft/task"
-	"sigmaos/ft/groupmgr"
+	"sigmaos/ft/procgroupmgr"
 	"sigmaos/namesrv/fsetcd"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
@@ -273,7 +273,7 @@ func TestImgdRestart(t *testing.T) {
 
 	ts.restartTstate()
 
-	gms, err := groupmgr.Recover(ts.SigmaClnt)
+	gms, err := procgroupmgr.Recover(ts.SigmaClnt)
 	assert.Nil(ts.T, err, "Recover")
 	assert.Equal(ts.T, 1, len(gms))
 

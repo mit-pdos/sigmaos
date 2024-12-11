@@ -10,7 +10,7 @@ import (
 	"sigmaos/apps/kv/kvgrp"
 	db "sigmaos/debug"
 	dialproxyclnt "sigmaos/dialproxy/clnt"
-	"sigmaos/ft/groupmgr"
+	"sigmaos/ft/procgroupmgr"
 	"sigmaos/namesrv/fsetcd"
 	"sigmaos/proc"
 	sesssrv "sigmaos/session/srv"
@@ -33,7 +33,7 @@ var EvP = crash.Tevent{crash.KVD_PARTITION, 0, PARTITION, 0.33, 0}
 type Tstate struct {
 	*test.Tstate
 	grp string
-	gm  *groupmgr.GroupMgr
+	gm  *procgroupmgr.ProcGroupMgr
 	job string
 }
 
@@ -43,7 +43,7 @@ func newTstate(t1 *test.Tstate, nrepl int, persist bool) *Tstate {
 	ts.MkDir(kvgrp.KVDIR, 0777)
 	err := ts.MkDir(kvgrp.JobDir(ts.job), 0777)
 	assert.Nil(t1.T, err)
-	mcfg := groupmgr.NewGroupConfig(nrepl, "kvd", []string{ts.grp}, 0, ts.job)
+	mcfg := procgroupmgr.NewGroupConfig(nrepl, "kvd", []string{ts.grp}, 0, ts.job)
 	if persist {
 		mcfg.Persist(ts.SigmaClnt.FsLib)
 	}
@@ -111,7 +111,7 @@ func (ts *Tstate) testRecover() {
 		return
 	}
 	ts.Tstate = t1
-	gms, err := groupmgr.Recover(ts.SigmaClnt)
+	gms, err := procgroupmgr.Recover(ts.SigmaClnt)
 	assert.Nil(ts.T, err, "Recover")
 	assert.Equal(ts.T, 1, len(gms))
 	cfg, err := kvgrp.WaitStarted(ts.SigmaClnt.FsLib, kvgrp.JobDir(ts.job), ts.grp)
@@ -120,7 +120,7 @@ func (ts *Tstate) testRecover() {
 	db.DPrintf(db.TEST, "cfg %v\n", cfg)
 	time.Sleep(1 * fsetcd.LeaseTTL * time.Second)
 	gms[0].StopGroup()
-	ts.RmDir(groupmgr.GRPMGRDIR)
+	ts.RmDir(procgroupmgr.GRPMGRDIR)
 	ts.Shutdown(false)
 }
 

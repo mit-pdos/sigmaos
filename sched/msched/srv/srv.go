@@ -10,11 +10,6 @@ import (
 
 	"sigmaos/api/fs"
 	db "sigmaos/debug"
-<<<<<<< HEAD
-	linuxsched "sigmaos/util/linux/sched"
-	"sigmaos/util/linux/mem"
-=======
->>>>>>> master
 	"sigmaos/proc"
 	sprpcclnt "sigmaos/rpc/clnt/sigmap"
 	beschedclnt "sigmaos/sched/besched/clnt"
@@ -25,12 +20,9 @@ import (
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
-<<<<<<< HEAD
 	"sigmaos/util/crash"
-=======
 	"sigmaos/util/linux/mem"
 	linuxsched "sigmaos/util/linux/sched"
->>>>>>> master
 	"sigmaos/util/perf"
 	"sigmaos/util/syncmap"
 )

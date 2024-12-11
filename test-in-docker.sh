@@ -53,12 +53,13 @@ mkdir -p $PERF_DIR
 mkdir -p $KERNEL_DIR
 mkdir -p $SPPROXY_DIR
 
-if ! docker network ls | grep -q $TESTER_NETWORK ; then
-  docker network create --driver overlay $TESTER_NETWORK --attachable    
-fi
+# Create the network for the user
+$ROOT/create-net.sh $TESTER_NETWORK
 
-# Start up etcd
-$ROOT/start-etcd.sh
+# Start up etcd, if it isn't already running
+if ! docker ps -a | grep -qw $ETCD_CTR_NAME ; then
+  $ROOT/start-etcd.sh
+fi
 
 testercid=$(docker ps -a | grep -w $TESTER_NAME | cut -d " " -f1)
 

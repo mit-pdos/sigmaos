@@ -43,14 +43,14 @@ ROOT=$(dirname $(realpath $0))
 source $ROOT/env/env.sh
 
 TMP_BASE="/tmp"
-ETCD_CTR_NAME="etcd-tester"
+ETCD_CTR_NAME="etcd-server"
 USER_IMAGE_NAME="sigmauser"
 KERNEL_IMAGE_NAME="sigmaos"
 DB_IMAGE_NAME="sigmadb"
 MONGO_IMAGE_NAME="sigmamongo"
 if ! [ -z "$SIGMAUSER" ]; then
   TMP_BASE="${TMP_BASE}/$SIGMAUSER"
-  ETCD_CTR_NAME=$ETCD_CTR_NAME-$SIGMAUSER
+  ETCD_CTR_NAME="etcd-tester-${SIGMAUSER}"
   if [[ "$ALL" == "false" ]]; then
     USER_IMAGE_NAME="$USER_IMAGE_NAME-$SIGMAUSER"
     KERNEL_IMAGE_NAME="$KERNEL_IMAGE_NAME-$SIGMAUSER"
@@ -109,7 +109,12 @@ sudo rm -rf $TMP_BASE/sigmaos-bin/*
 sudo rm -rf $TMP_BASE/sigmaos-kernel-start-logs
 
 # delete all keys from etcd
-if docker ps | grep -q etcd-server ; then
-  docker exec etcd-server etcdctl del --prefix ''
+if docker ps | grep -q $ETCD_CTR_NAME ; then
+  docker exec $ETCD_CTR_NAME etcdctl del --prefix ''
 fi
-docker exec $ETCD_CTR_NAME etcdctl del --prefix ''
+
+if [[ "$ALL" == "true" ]]; then
+  if docker ps | grep -q etcd-server ; then
+    docker exec etcd-server etcdctl del --prefix ''
+  fi
+fi

@@ -58,21 +58,7 @@ if ! docker network ls | grep -q $TESTER_NETWORK ; then
 fi
 
 # Start up etcd
-if ! docker ps | grep -q $ETCD_CTR_NAME ; then
-  DATA_DIR="$ETCD_CTR_NAME-data"
-  if ! docker volume ls | grep -q $DATA_DIR; then
-      echo "create volume $DATA_DIR"
-      docker volume create --name $DATA_DIR
-  fi
-  docker run -d \
-      --name $ETCD_CTR_NAME \
-      --env ALLOW_NONE_AUTHENTICATION=yes \
-      --network $TESTER_NETWORK \
-      bitnami/etcd:latest
-else
-  # delete all keys from etcd
-  docker exec $ETCD_CTR_NAME etcdctl del --prefix ''
-fi
+$ROOT/start-etcd.sh
 
 testercid=$(docker ps -a | grep -w $TESTER_NAME | cut -d " " -f1)
 

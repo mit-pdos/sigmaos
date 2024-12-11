@@ -130,20 +130,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "exec-uproc-rs"
-version = "0.1.0"
-dependencies = [
- "caps",
- "chrono",
- "env_logger",
- "libseccomp",
- "log",
- "nix",
- "serde",
- "sys-mount",
-]
-
-[[package]]
 name = "hermit-abi"
 version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -471,6 +457,20 @@ name = "unicode-ident"
 version = "1.0.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3354b9ac3fae1ff6755cb6db53683adb661634f67557942dea4facebec0fee4b"
+
+[[package]]
+name = "uproc-trampoline"
+version = "0.1.0"
+dependencies = [
+ "caps",
+ "chrono",
+ "env_logger",
+ "libseccomp",
+ "log",
+ "nix",
+ "serde",
+ "sys-mount",
+]
 
 [[package]]
 name = "wasm-bindgen"

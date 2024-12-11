@@ -1,5 +1,5 @@
 [package]
-name = "exec-uproc-rs"
+name = "uproc-trampoline"
 version = "0.1.0"
 edition = "2021"
 

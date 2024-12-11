@@ -25,7 +25,7 @@ import (
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv/memfssrv/sigmapsrv/overlaydir"
 	spprotosrv "sigmaos/spproto/srv"
-	"sigmaos/stats"
+	"sigmaos/sigmasrv/stats"
 )
 
 type SigmaPSrv struct {

@@ -16,7 +16,7 @@ import (
 	sessp "sigmaos/session/proto"
 	sp "sigmaos/sigmap"
 	spcodec "sigmaos/session/codec"
-	"sigmaos/stats"
+	"sigmaos/sigmasrv/stats"
 )
 
 type NewSessionI interface {

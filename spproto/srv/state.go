@@ -11,7 +11,7 @@ import (
 	"sigmaos/spproto/srv/lockmap"
 	"sigmaos/spproto/srv/version"
 	"sigmaos/spproto/srv/watch"
-	"sigmaos/stats"
+	"sigmaos/sigmasrv/stats"
 )
 
 type ProtSrvState struct {

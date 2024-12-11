@@ -9,7 +9,7 @@ import (
 	"sigmaos/path"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
-	"sigmaos/stats"
+	"sigmaos/sigmasrv/stats"
 	"sigmaos/util/syncmap"
 )
 

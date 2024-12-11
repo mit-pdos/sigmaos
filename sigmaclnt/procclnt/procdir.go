@@ -7,6 +7,7 @@ import (
 	leaseclnt "sigmaos/ft/lease/clnt"
 	"sigmaos/namesrv/fsetcd"
 	"sigmaos/proc"
+	"sigmaos/sigmaclnt/fslib"
 	sp "sigmaos/sigmap"
 	"sigmaos/util/coordination/semclnt"
 )

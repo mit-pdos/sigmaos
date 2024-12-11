@@ -31,8 +31,7 @@ import (
 	"sigmaos/util/crash"
 	"sigmaos/util/perf"
 	rd "sigmaos/util/rand"
-
-	// "sigmaos/stats"
+	// "sigmaos/sigmasrv/stats"
 	"sigmaos/apps/mr/grep"
 	"sigmaos/apps/mr/wc"
 	"sigmaos/test"

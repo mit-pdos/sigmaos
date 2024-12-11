@@ -46,12 +46,16 @@ TMP_BASE="/tmp"
 ETCD_CTR_NAME="etcd-tester"
 USER_IMAGE_NAME="sigmauser"
 KERNEL_IMAGE_NAME="sigmaos"
+DB_IMAGE_NAME="sigmadb"
+MONGO_IMAGE_NAME="sigmamongo"
 if ! [ -z "$SIGMAUSER" ]; then
   TMP_BASE="${TMP_BASE}/$SIGMAUSER"
   ETCD_CTR_NAME=$ETCD_CTR_NAME-$SIGMAUSER
   if [[ "$ALL" == "false" ]]; then
     USER_IMAGE_NAME="$USER_IMAGE_NAME-$SIGMAUSER"
     KERNEL_IMAGE_NAME="$KERNEL_IMAGE_NAME-$SIGMAUSER"
+    DB_IMAGE_NAME=$DB_IMAGE_NAME-$SIGMAUSER
+    MONGO_IMAGE_NAME=$MONGO_IMAGE_NAME-$SIGMAUSER
   fi
 fi
 
@@ -70,8 +74,8 @@ if [[ "$ALL" == "true" ]]; then
   sudo rm -f /tmp/spproxyd/spproxyd-dialproxy.sock
 fi
 
-if docker ps -a | grep -qE "$USER_IMAGE_NAME|$KERNEL_IMAGE_NAME|sigmadb|sigmamongo"; then
-  for container in $(docker ps -a | grep -E "$USER_IMAGE_NAME|$KERNEL_IMAGE_NAME|sigmadb|sigmamongo" | cut -d ' ' -f1) ; do
+if docker ps -a | grep -qE "$USER_IMAGE_NAME|$KERNEL_IMAGE_NAME|$DB_IMAGE_NAME|$MONGO_IMAGE_NAME"; then
+  for container in $(docker ps -a | grep -E "$USER_IMAGE_NAME|$KERNEL_IMAGE_NAME|$DB_IMAGE_NAME|$MONGO_IMAGE_NAME" | cut -d ' ' -f1) ; do
     # Optionally skip DB shutdown
     if [ "$SKIPDB" == "true" ]; then
       cname=$(docker ps -a | grep $container | cut -d ' ' -f4)

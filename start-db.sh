@@ -19,18 +19,34 @@ usage() {
 PORT=4406  # use non-default port number on host
 MONGO_PORT=4407
 
-docker pull mariadb:10.4
-if ! docker ps | grep -q sigmadb; then
-    echo "start db"
-    docker run --name sigmadb -e MYSQL_ROOT_PASSWORD=sigmadb -p $PORT:3306 -d mariadb
+ROOT=$(dirname $(realpath $0))
+source $ROOT/env/env.sh
+
+DB_IMAGE_NAME="sigmadb"
+MONGO_IMAGE_NAME="sigmamongo"
+TESTER_NETWORK="host"
+if [[ "$SIGMAUSER" != "NOT_SET" ]]; then
+  DB_IMAGE_NAME=$DB_IMAGE_NAME-$SIGMAUSER
+  MONGO_IMAGE_NAME=$MONGO_IMAGE_NAME-$SIGMAUSER
+  TESTER_NETWORK="sigmanet-testuser-${SIGMAUSER}"
 fi
 
-until [ "`docker inspect -f {{.State.Running}} sigmadb`"=="true" ]; do
+docker pull mariadb:10.4
+if ! docker ps | grep -q $DB_IMAGE_NAME; then
+    echo "start db"
+    docker run \
+    --name $DB_IMAGE_NAME \
+    -e MYSQL_ROOT_PASSWORD=sigmadb \
+    -d mariadb
+#    -p $PORT:3306 \
+fi
+
+until [ "`docker inspect -f {{.State.Running}} $DB_IMAGE_NAME`"=="true" ]; do
     echo -n "." 1>&2
     sleep 0.1;
 done;
 
-ip=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' sigmadb)
+ip=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $DB_IMAGE_NAME)
 
 echo "db IP: $ip"
 
@@ -58,17 +74,28 @@ SET GLOBAL max_connections = 100000;
 ENDOFSQL
 fi
 
-docker pull mongo:4.4.6
-if ! docker ps | grep -q sigmamongo; then
-    echo "start mongodb"
-    docker run --name sigmamongo -p $MONGO_PORT:27017 -d mongo:4.4.6
+if [[ "$TESTER_NETWORK" != "host" ]]; then
+  docker network connect $TESTER_NETWORK $DB_IMAGE_NAME
+  docker network disconnect bridge $DB_IMAGE_NAME
 fi
 
-until [ "`docker inspect -f {{.State.Running}} sigmamongo`"=="true" ]; do
+echo "db IP post reconnect: $ip"
+
+docker pull mongo:4.4.6
+if ! docker ps | grep -q $MONGO_IMAGE_NAME; then
+    echo "start mongodb"
+    docker run \
+      --name $MONGO_IMAGE_NAME \
+      --network $TESTER_NETWORK \
+      -d mongo:4.4.6
+#      -p $MONGO_PORT:27017 \
+fi
+
+until [ "`docker inspect -f {{.State.Running}} $MONGO_IMAGE_NAME`"=="true" ]; do
     echo -n "." 1>&2
     sleep 0.1;
 done;
 
-ip=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' sigmamongo)
+ip=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $MONGO_IMAGE_NAME)
 
 echo "mongo IP: $ip"

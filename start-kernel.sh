@@ -132,10 +132,14 @@ fi
 KERNELID=$1
 
 KERNEL_IMAGE_NAME="sigmaos"
+DB_IMAGE_NAME="sigmadb"
+MONGO_IMAGE_NAME="sigmamongo"
 TMP_BASE="/tmp"
 if [[ "$SIGMAUSER" != "NOT_SET" ]]; then
   TMP_BASE=$TMP_BASE/$SIGMAUSER
   KERNEL_IMAGE_NAME=$KERNEL_IMAGE_NAME-$SIGMAUSER
+  DB_IMAGE_NAME=$DB_IMAGE_NAME-$SIGMAUSER
+  MONGO_IMAGE_NAME=$MONGO_IMAGE_NAME-$SIGMAUSER
 fi
 
 HOST_BIN_CACHE="${TMP_BASE}/sigmaos-bin"
@@ -164,12 +168,12 @@ if [ "$NAMED" == ":1111" ] && ! docker ps | grep -q etcd ; then
   ./start-etcd.sh
 fi
 
-if [ "$DBIP" == "x.x.x.x" ] && docker ps | grep -q sigmadb; then
-  DBIP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' sigmadb):3306
+if [ "$DBIP" == "x.x.x.x" ] && docker ps | grep -q $DB_IMAGE_NAME; then
+  DBIP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $DB_IMAGE_NAME):3306
 fi
 
-if [ "$MONGOIP" == "x.x.x.x" ] && docker ps | grep -q sigmamongo; then
-  MONGOIP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' sigmamongo):27017
+if [ "$MONGOIP" == "x.x.x.x" ] && docker ps | grep -q $MONGO_IMAGE_NAME; then
+  MONGOIP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $MONGO_IMAGE_NAME):27017
 fi
 
 # If running in local configuration, mount bin directory.

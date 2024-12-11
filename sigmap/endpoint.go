@@ -10,8 +10,6 @@ type Tendpoint struct {
 	*TendpointProto
 }
 
-// XXX Currently, endpoint type is a hint. In reality, it should be verified
-// by dialproxy (e.g., by inspecting the IP addrs)
 func NewEndpoint(t TTendpoint, srvaddrs Taddrs) *Tendpoint {
 	return &Tendpoint{
 		&TendpointProto{

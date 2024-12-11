@@ -336,7 +336,6 @@ func XTestReplCrashN(t *testing.T) {
 }
 
 func TestAuto(t *testing.T) {
-	// runtime.GOMAXPROCS(2) // XXX for KV
 	t1, err1 := test.NewTstateAll(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return

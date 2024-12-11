@@ -11,12 +11,12 @@ import (
 
 	"github.com/nfnt/resize"
 
-	"sigmaos/util/crash"
-	db "sigmaos/debug"
 	"sigmaos/api/fs"
+	db "sigmaos/debug"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
+	"sigmaos/util/crash"
 	"sigmaos/util/perf"
 )
 
@@ -80,7 +80,6 @@ func NewTrans(pe *proc.ProcEnv, args []string, p *perf.Perf) (*Trans, error) {
 	t.SigmaClnt = sc
 	t.inputs = strings.Split(args[1], ",")
 	db.DPrintf(db.ALWAYS, "Args {%v} inputs {%v} fail {%v}", args[1], t.inputs, proc.GetSigmaFail())
-	// XXX Should be fixed properly
 	t.output = t.inputs[0] + "-thumbnail"
 	t.nrounds, err = strconv.Atoi(args[3])
 	if err != nil {

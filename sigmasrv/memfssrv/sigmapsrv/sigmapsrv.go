@@ -24,8 +24,8 @@ import (
 	"sigmaos/sigmaclnt/procclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv/memfssrv/sigmapsrv/overlaydir"
-	spprotosrv "sigmaos/spproto/srv"
 	"sigmaos/sigmasrv/stats"
+	spprotosrv "sigmaos/spproto/srv"
 )
 
 type SigmaPSrv struct {

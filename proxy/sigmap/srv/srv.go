@@ -10,12 +10,11 @@ import (
 	"os/exec"
 	"syscall"
 
-	"sigmaos/dcontainer"
 	db "sigmaos/debug"
 	dialproxyclnt "sigmaos/dialproxy/clnt"
 	dialproxysrv "sigmaos/dialproxy/srv"
-	"sigmaos/sigmaclnt/fidclnt"
 	"sigmaos/proc"
+	"sigmaos/sigmaclnt/fidclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/util/perf"
 )
@@ -107,49 +106,17 @@ func RunSPProxySrv() error {
 }
 
 type SPProxySrvCmd struct {
-	p      *proc.Proc
-	cmd    *exec.Cmd
-	out    io.WriteCloser
-	waited bool
-}
-
-type Subsystem interface {
-	GetProc() *proc.Proc
-	GetHow() proc.Thow
-	GetCrashed() bool
-	GetContainer() *dcontainer.DContainer
-	SetWaited(bool)
-	GetWaited() bool
-	Wait() error
-	Kill() error
-	SetCPUShares(shares int64) error
-	GetCPUUtil() (float64, error)
-	Run(how proc.Thow, kernelId string, localIP sp.Tip) error
+	p   *proc.Proc
+	cmd *exec.Cmd
+	out io.WriteCloser
 }
 
 func (scsc *SPProxySrvCmd) GetProc() *proc.Proc {
 	return scsc.p
 }
 
-func (scsc *SPProxySrvCmd) GetHow() proc.Thow {
-	return proc.HLINUX
-}
-
 func (scsc *SPProxySrvCmd) GetCrashed() bool {
 	return false
-}
-
-func (scsc *SPProxySrvCmd) GetContainer() *dcontainer.DContainer {
-	db.DFatalf("No container")
-	return nil
-}
-
-func (scsc *SPProxySrvCmd) SetWaited(w bool) {
-	scsc.waited = w
-}
-
-func (scsc *SPProxySrvCmd) GetWaited() bool {
-	return scsc.waited
 }
 
 func (scsc *SPProxySrvCmd) Evict() error {

@@ -37,7 +37,6 @@ func NewWebClnt(fsl *fslib.FsLib, job string) (*WebClnt, error) {
 		Timeout:   2 * time.Minute,
 		Transport: http.DefaultTransport,
 	}
-	// XXX This is sort of arbitrary, perhaps change or remove?.
 	clnt.Transport.(*http.Transport).MaxIdleConnsPerHost = 10000
 	db.DPrintf(db.ALWAYS, "Advertised addr %v", addrs[0])
 	return &WebClnt{job, addrs, "http://" + addrs[0].IPPort(), clnt, fsl}, nil

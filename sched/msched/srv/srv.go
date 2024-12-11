@@ -10,8 +10,11 @@ import (
 
 	"sigmaos/api/fs"
 	db "sigmaos/debug"
+<<<<<<< HEAD
 	linuxsched "sigmaos/util/linux/sched"
 	"sigmaos/util/linux/mem"
+=======
+>>>>>>> master
 	"sigmaos/proc"
 	sprpcclnt "sigmaos/rpc/clnt/sigmap"
 	beschedclnt "sigmaos/sched/besched/clnt"
@@ -22,7 +25,12 @@ import (
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
+<<<<<<< HEAD
 	"sigmaos/util/crash"
+=======
+	"sigmaos/util/linux/mem"
+	linuxsched "sigmaos/util/linux/sched"
+>>>>>>> master
 	"sigmaos/util/perf"
 	"sigmaos/util/syncmap"
 )
@@ -117,7 +125,6 @@ func (msched *MSched) WaitStart(ctx fs.CtxI, req proto.WaitRequest, res *proto.W
 	// Wait until this msched has heard about the proc, and has created the state
 	// for it.
 	if err := msched.waitUntilGotProc(req.GetProcSeqno()); err != nil {
-		// XXX return in res?
 		return err
 	}
 	msched.pmgr.WaitStart(sp.Tpid(req.PidStr))
@@ -386,7 +393,6 @@ func RunMSched(kernelID string, reserveMcpu uint) error {
 	crash.Failer(sc.FsLib, crash.MSCHED_CRASH, func(e crash.Tevent) {
 		crash.Crash()
 	})
-
 	// Perf monitoring
 	p, err := perf.NewPerf(sc.ProcEnv(), perf.MSCHED)
 	if err != nil {

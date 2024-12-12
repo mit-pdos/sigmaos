@@ -508,18 +508,22 @@ func runN(t *testing.T, em *crash.TeventMap, crashmsched, crashprocq, crashux, m
 
 	db.DPrintf(db.TEST, "WaitGroup")
 	stati := cm.WaitGroup()
-	st := &mr.Stat{}
-	for _, status := range stati {
-		if status.IsStatusOK() {
-			err := mapstructure.Decode(status.Data(), st)
+	mrst := mr.Stat{}
+	nrestart := 0
+	for _, st := range stati {
+		nrestart += st.Nrestart
+		if st.IsStatusOK() {
+			t := mr.Stat{}
+			err := mapstructure.Decode(st.Data(), &t)
 			assert.Nil(ts.T, err)
+			if t.Nmap > 0 || t.Nreduce > 0 {
+				mrst = t
+			}
 		}
 	}
-	db.DPrintf(db.TEST, "Done WaitGroup %v", stati)
+	db.DPrintf(db.TEST, "Done WaitGroup %d", len(stati))
 
-	if em != nil && len(em.Evs) > 0 {
-		db.DPrintf(db.TEST, "Failure stats %v", st)
-	}
+	db.DPrintf(db.TEST, "MR proc stats ncoord %d %v", nrestart, &mrst)
 
 	db.DPrintf(db.TEST, "Check Job")
 	ok := ts.checkJob(runApp)

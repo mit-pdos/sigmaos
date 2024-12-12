@@ -2,7 +2,7 @@
 // instance (a member) of the group of n crashes, the manager starts
 // another one.  Some programs use the n instances to form a Raft
 // group (e.g., kvgrp); others use it in a hot-standby configuration
-// (e.g., kv balancer, imageresized).
+// (e.g., mr coordinator, kv balancer, imageresized).
 //
 // There are two ways of stopping the group manager: the caller calls
 // StopGroup() or the caller calls WaitGroup() (which returns when all
@@ -31,12 +31,17 @@ const (
 	GRPMGRDIR = sp.NAMED + "grpmgr"
 )
 
+type ProcStatus struct {
+	Nrestart int
+	*proc.Status
+}
+
 type ProcGroupMgr struct {
 	sync.Mutex
 	*sigmaclnt.SigmaClnt
 	members []*member
 	running bool
-	ch      chan []*proc.Status
+	ch      chan []*ProcStatus
 }
 
 func (pgm *ProcGroupMgr) String() string {
@@ -101,7 +106,7 @@ func (cfg *ProcGroupMgrConfig) StartGrpMgr(sc *sigmaclnt.SigmaClnt) *ProcGroupMg
 		running:   true,
 		SigmaClnt: sc,
 	}
-	pgm.ch = make(chan []*proc.Status)
+	pgm.ch = make(chan []*ProcStatus)
 	pgm.members = make([]*member, N)
 	for i := 0; i < N; i++ {
 		db.DPrintf(db.GROUPMGR, "group %v member %v", cfg.Args, i)
@@ -209,7 +214,7 @@ func (pgm *ProcGroupMgr) stopMember(pr *procret) bool {
 	return pr.err == nil && (pr.status.IsStatusOK() || pr.status.IsStatusEvicted() || pr.status.IsStatusFatal())
 }
 
-func (pgm *ProcGroupMgr) handleProcRet(pr *procret, gstatus *[]*proc.Status, n *int, done chan *procret) {
+func (pgm *ProcGroupMgr) handleProcRet(pr *procret, gstatus *[]*ProcStatus, n *int, done chan *procret) {
 	// Take the lock to protect pgm.running
 	pgm.Lock()
 	defer pgm.Unlock()
@@ -218,10 +223,11 @@ func (pgm *ProcGroupMgr) handleProcRet(pr *procret, gstatus *[]*proc.Status, n *
 		// we are finishing up; don't respawn the member
 		db.DPrintf(db.GROUPMGR, "%v: done %v n %v\n", pgm.members[pr.member].Program, pr.member, *n)
 		*n--
+		*gstatus = append(*gstatus, &ProcStatus{pgm.members[pr.member].gen, pr.status})
 	} else if pgm.stopMember(pr) {
 		db.DPrintf(db.GROUPMGR, "%v: stop %v\n", pgm.members[pr.member].Program, pr)
 		pgm.running = false
-		*gstatus = append(*gstatus, pr.status)
+		*gstatus = append(*gstatus, &ProcStatus{pgm.members[pr.member].gen, pr.status})
 		*n--
 	} else { // restart member i
 		db.DPrintf(db.GROUPMGR, "%v: start %v\n", pgm.members[pr.member].Program, pr)
@@ -230,7 +236,7 @@ func (pgm *ProcGroupMgr) handleProcRet(pr *procret, gstatus *[]*proc.Status, n *
 }
 
 func (pgm *ProcGroupMgr) manager(done chan *procret, n int) {
-	gstatus := make([]*proc.Status, 0, n)
+	gstatus := make([]*ProcStatus, 0, n)
 
 	for n > 0 {
 		pr := <-done
@@ -252,7 +258,7 @@ func (pgm *ProcGroupMgr) Crash() error {
 	return nil
 }
 
-func (pgm *ProcGroupMgr) WaitGroup() []*proc.Status {
+func (pgm *ProcGroupMgr) WaitGroup() []*ProcStatus {
 	db.DPrintf(db.GROUPMGR, "ProcGroupMgr Wait Group")
 	statuses := <-pgm.ch
 	db.DPrintf(db.GROUPMGR, "Done ProcGroupMgr Wait Group")
@@ -284,7 +290,7 @@ func (pgm *ProcGroupMgr) evictGroupMembers() error {
 // not run in order of members, and be blocked waiting for becoming
 // leader, while the primary keeps running, because it is later in the
 // list.
-func (pgm *ProcGroupMgr) StopGroup() ([]*proc.Status, error) {
+func (pgm *ProcGroupMgr) StopGroup() ([]*ProcStatus, error) {
 	db.DPrintf(db.GROUPMGR, "ProcGroupMgr Stop")
 	err := pgm.evictGroupMembers()
 

@@ -1,11 +1,13 @@
 #!/bin/bash
 
 usage() {
-  echo "Usage: $0 --pkg PKG [--test TEST] [--rebuildtester]" 1>&2
+  echo "Usage: $0 --pkg PKG [--test TEST] [--args ARGS] [--no-start] [--rebuildtester]" 1>&2
 }
 
 TNAME="Test"
 SPKG=""
+ARGS=""
+START="--start"
 REBUILD_TESTER="false"
 while [[ "$#" -gt 0 ]]; do
   case "$1" in
@@ -14,9 +16,18 @@ while [[ "$#" -gt 0 ]]; do
       TNAME="$1" 
       shift
       ;;
+  --no-start)
+      shift
+      START="" 
+      ;;
   --pkg)
       shift
       SPKG="$1" 
+      shift
+      ;;
+  --args)
+      shift
+      ARGS="$1" 
       shift
       ;;
   --rebuildtester)
@@ -127,9 +138,10 @@ docker exec \
   --env SIGMADEBUG="$SIGMADEBUG" \
   -it $testercid \
   go test -v sigmaos/$SPKG --run $TNAME \
-  --start \
   --user $SIGMAUSER \
   --homedir $HOME \
-  --projectroot /home/arielck/sigmaos \
+  --projectroot $ROOT \
   --etcdIP $ETCD_IP \
-  --netname $TESTER_NETWORK
+  --netname $TESTER_NETWORK \
+  $START \
+  $ARGS

@@ -1,4 +1,4 @@
-package barrier_test
+package semaphore_test
 
 import (
 	"flag"
@@ -15,7 +15,7 @@ import (
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
-	"sigmaos/util/coordination/barrier"
+	"sigmaos/util/coordination/semaphore"
 	"sigmaos/util/rand"
 )
 
@@ -38,7 +38,7 @@ func Delay(maxms int64) {
 func TestCompile(t *testing.T) {
 }
 
-func TestBarrierSimple(t *testing.T) {
+func TestSemaphoreSimple(t *testing.T) {
 	ts, err1 := test.NewTstateAll(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
@@ -54,12 +54,12 @@ func TestBarrierSimple(t *testing.T) {
 	fsl0, err := sigmaclnt.NewFsLib(pe, dialproxyclnt.NewDialProxyClnt(pe))
 	assert.Nil(ts.T, err, "fsl0")
 
-	bar := barrier.NewBarrier(ts.FsLib, pn+"/x")
+	bar := semaphore.NewSemaphore(ts.FsLib, pn+"/x")
 	bar.Init(0)
 
 	ch := make(chan bool)
 	go func(ch chan bool) {
-		bar := barrier.NewBarrier(fsl0, pn+"/x")
+		bar := semaphore.NewSemaphore(fsl0, pn+"/x")
 		bar.Down()
 		ch <- true
 	}(ch)
@@ -83,7 +83,7 @@ func TestBarrierSimple(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestBarrierConcur(t *testing.T) {
+func TestSemaphoreConcur(t *testing.T) {
 	ts, err1 := test.NewTstateAll(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
@@ -99,20 +99,20 @@ func TestBarrierConcur(t *testing.T) {
 	assert.Nil(ts.T, err, "fsl1")
 
 	for i := 0; i < 100; i++ {
-		bar := barrier.NewBarrier(ts.FsLib, pn+"/x")
+		bar := semaphore.NewSemaphore(ts.FsLib, pn+"/x")
 		bar.Init(0)
 
 		ch := make(chan bool)
 
 		go func(ch chan bool) {
 			Delay(200)
-			bar := barrier.NewBarrier(fsl0, pn+"/x")
+			bar := semaphore.NewSemaphore(fsl0, pn+"/x")
 			bar.Down()
 			ch <- true
 		}(ch)
 		go func(ch chan bool) {
 			Delay(200)
-			bar := barrier.NewBarrier(fsl1, pn+"/x")
+			bar := semaphore.NewSemaphore(fsl1, pn+"/x")
 			bar.Up()
 			ch <- true
 		}(ch)
@@ -126,7 +126,7 @@ func TestBarrierConcur(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestBarrierFail(t *testing.T) {
+func TestSemaphoreFail(t *testing.T) {
 	ts, err1 := test.NewTstateAll(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
@@ -142,12 +142,12 @@ func TestBarrierFail(t *testing.T) {
 	li, err := sc1.LeaseClnt.AskLease(pn+"/bar", fsetcd.LeaseTTL)
 	assert.Nil(t, err, "Error AskLease: %v", err)
 
-	bar := barrier.NewBarrier(sc1.FsLib, pn+"/bar")
+	bar := semaphore.NewSemaphore(sc1.FsLib, pn+"/bar")
 	bar.InitLease(0777, li.Lease())
 
 	ch := make(chan bool)
 	go func(ch chan bool) {
-		bar := barrier.NewBarrier(ts.FsLib, pn+"/bar")
+		bar := semaphore.NewSemaphore(ts.FsLib, pn+"/bar")
 		bar.Down()
 		ch <- true
 	}(ch)

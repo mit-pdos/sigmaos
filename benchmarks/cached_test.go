@@ -9,7 +9,7 @@ import (
 	cachegrpmgr "sigmaos/apps/cache/cachegrp/mgr"
 	db "sigmaos/debug"
 	"sigmaos/proc"
-	"sigmaos/util/coordination/barrier"
+	"sigmaos/util/coordination/semaphore"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 	"sigmaos/util/rand"
@@ -27,7 +27,7 @@ type CachedJobInstance struct {
 	clerks    []sp.Tpid
 	cm        *cachegrpmgr.CacheMgr
 	sempn     string
-	sem       *barrier.Barrier
+	sem       *semaphore.Semaphore
 	*test.RealmTstate
 }
 
@@ -52,7 +52,7 @@ func (ji *CachedJobInstance) RunCachedJob() {
 	assert.Nil(ji.Ts.T, err, "Error NewCacheMgr: %v", err)
 	ji.cm = cm
 	ji.sempn = ji.cm.SvcDir() + "-cacheclerk-sem"
-	ji.sem = barrier.NewBarrier(ji.FsLib, ji.sempn)
+	ji.sem = semaphore.NewSemaphore(ji.FsLib, ji.sempn)
 	err = ji.sem.Init(0)
 	assert.Nil(ji.Ts.T, err, "Err sem init %v", err)
 

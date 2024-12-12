@@ -15,7 +15,7 @@ import (
 	"sigmaos/apps/cache/proto"
 	db "sigmaos/debug"
 	"sigmaos/proc"
-	"sigmaos/util/coordination/barrier"
+	"sigmaos/util/coordination/semaphore"
 	"sigmaos/sigmaclnt"
 	"sigmaos/util/perf"
 )
@@ -76,7 +76,7 @@ func run(sc *sigmaclnt.SigmaClnt, csc *cachegrpclnt.CachedSvcClnt, rcli *redis.C
 	ntest := uint64(0)
 	nops := uint64(0)
 	var err error
-	sclnt := barrier.NewBarrier(sc.FsLib, sempath)
+	sclnt := semaphore.NewSemaphore(sc.FsLib, sempath)
 	sclnt.Down()
 	// Run for duration dur, then mark as done.
 	go func() {

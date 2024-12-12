@@ -9,7 +9,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/proc"
 	mschedclnt "sigmaos/sched/msched/clnt"
-	"sigmaos/util/coordination/barrier"
+	"sigmaos/util/coordination/semaphore"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )
@@ -22,7 +22,7 @@ type testOp func(*test.RealmTstate, interface{}) (time.Duration, float64)
 
 func initSemaphore(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
 	start := time.Now()
-	s := i.(*barrier.Barrier)
+	s := i.(*semaphore.Semaphore)
 	err := s.Init(0)
 	assert.Nil(ts.Ts.T, err, "Sem init: %v", err)
 	return time.Since(start), 1.0
@@ -30,7 +30,7 @@ func initSemaphore(ts *test.RealmTstate, i interface{}) (time.Duration, float64)
 
 func upSemaphore(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
 	start := time.Now()
-	s := i.(*barrier.Barrier)
+	s := i.(*semaphore.Semaphore)
 	err := s.Up()
 	assert.Nil(ts.Ts.T, err, "Sem up: %v", err)
 	return time.Since(start), 1.0
@@ -38,7 +38,7 @@ func upSemaphore(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
 
 func downSemaphore(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
 	start := time.Now()
-	s := i.(*barrier.Barrier)
+	s := i.(*semaphore.Semaphore)
 	err := s.Down()
 	assert.Nil(ts.Ts.T, err, "Sem down: %v", err)
 	return time.Since(start), 1.0
@@ -102,10 +102,10 @@ func spawnBurstWaitStartProcs(ts *test.RealmTstate, i interface{}) (time.Duratio
 
 func invokeWaitStartLambdas(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
 	start := time.Now()
-	sems := i.([]*barrier.Barrier)
+	sems := i.([]*semaphore.Semaphore)
 	for _, sem := range sems {
 		// Spawn a lambda, which will Up this semaphore when it starts.
-		go func(sem *barrier.Barrier) {
+		go func(sem *semaphore.Semaphore) {
 			spawnLambda(ts, sem.GetPath())
 		}(sem)
 	}
@@ -118,8 +118,8 @@ func invokeWaitStartLambdas(ts *test.RealmTstate, i interface{}) (time.Duration,
 
 func invokeWaitStartOneLambda(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
 	start := time.Now()
-	sem := i.(*barrier.Barrier)
-	go func(sem *barrier.Barrier) {
+	sem := i.(*semaphore.Semaphore)
+	go func(sem *semaphore.Semaphore) {
 		spawnLambda(ts, sem.GetPath())
 	}(sem)
 	downSemaphore(ts, sem)

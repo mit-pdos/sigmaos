@@ -13,7 +13,7 @@ import (
 	"sigmaos/ft/procgroupmgr"
 	fttask "sigmaos/ft/task"
 	"sigmaos/proc"
-	"sigmaos/util/coordination/barrier"
+	"sigmaos/util/coordination/semaphore"
 	"sigmaos/sigmaclnt"
 	"sigmaos/sigmaclnt/fslib"
 	sp "sigmaos/sigmap"
@@ -108,17 +108,17 @@ type Job struct {
 
 // Wait until the job is done
 func WaitJobDone(fsl *fslib.FsLib, jobRoot, job string) error {
-	sc := barrier.NewBarrier(fsl, JobSem(jobRoot, job))
+	sc := semaphore.NewSemaphore(fsl, JobSem(jobRoot, job))
 	return sc.Down()
 }
 
 func InitJobSem(fsl *fslib.FsLib, jobRoot, job string) error {
-	sc := barrier.NewBarrier(fsl, JobSem(jobRoot, job))
+	sc := semaphore.NewSemaphore(fsl, JobSem(jobRoot, job))
 	return sc.Init(0)
 }
 
 func JobDone(fsl *fslib.FsLib, jobRoot, job string) {
-	sc := barrier.NewBarrier(fsl, JobSem(jobRoot, job))
+	sc := semaphore.NewSemaphore(fsl, JobSem(jobRoot, job))
 	sc.Up()
 }
 

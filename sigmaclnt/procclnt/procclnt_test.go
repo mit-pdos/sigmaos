@@ -489,7 +489,7 @@ func TestConcurrentProcs(t *testing.T) {
 	pids := map[sp.Tpid]int{}
 
 	var barrier sync.WaitGroup
-	barrier.Add(nProcs)
+	semaphore.Add(nProcs)
 	var started sync.WaitGroup
 	started.Add(nProcs)
 	var done sync.WaitGroup
@@ -504,8 +504,8 @@ func TestConcurrentProcs(t *testing.T) {
 		}
 		pids[pid] = i
 		go func(pid sp.Tpid, started *sync.WaitGroup, i int) {
-			barrier.Done()
-			barrier.Wait()
+			semaphore.Done()
+			semaphore.Wait()
 			spawnSleeperWithPid(t, ts, pid)
 			started.Done()
 		}(pid, &started, i)

@@ -6,7 +6,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/proc"
 	mschedclnt "sigmaos/sched/msched/clnt"
-	"sigmaos/util/coordination/barrier"
+	"sigmaos/util/coordination/semaphore"
 	sp "sigmaos/sigmap"
 )
 
@@ -30,7 +30,7 @@ func (clnt *ProcClnt) wait(method mschedclnt.Tmethod, pid sp.Tpid, mschedID stri
 		// If not spawned via msched, wait via semaphore.
 		kprocDir := proc.KProcDir(pid)
 		db.DPrintf(db.PROCCLNT, "Wait%v sem %v dir %v", method, pid, kprocDir)
-		sem := barrier.NewBarrier(clnt.FsLib, filepath.Join(kprocDir, semName))
+		sem := semaphore.NewSemaphore(clnt.FsLib, filepath.Join(kprocDir, semName))
 		err := sem.Down()
 		if err != nil {
 			db.DPrintf(db.PROCCLNT_ERR, "Wait%v error %v", method, err)

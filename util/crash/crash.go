@@ -12,7 +12,7 @@ import (
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt/fslib"
 	sp "sigmaos/sigmap"
-	"sigmaos/util/coordination/barrier"
+	"sigmaos/util/coordination/semaphore"
 	"sigmaos/util/rand"
 )
 
@@ -181,7 +181,7 @@ func Failer(fsl *fslib.FsLib, label Tselector, f Teventf) {
 	if e, ok := labels.Evs[label]; ok {
 		go func(label Tselector, e Tevent) {
 			if e.Path != "" {
-				sem := barrier.NewBarrier(fsl, e.Path)
+				sem := semaphore.NewSemaphore(fsl, e.Path)
 				sem.Init(0)
 				sem.Down()
 				db.DPrintf(db.CRASH, "Downed %v", e.Path)
@@ -217,6 +217,6 @@ func FailersDefault(fsl *fslib.FsLib, labels []Tselector) {
 
 func SignalFailer(fsl *fslib.FsLib, fn string) error {
 	db.DPrintf(db.CRASH, "Signal %v", fn)
-	sem := barrier.NewBarrier(fsl, fn)
+	sem := semaphore.NewSemaphore(fsl, fn)
 	return sem.Up()
 }

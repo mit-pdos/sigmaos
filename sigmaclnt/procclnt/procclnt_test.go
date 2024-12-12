@@ -12,13 +12,13 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/ft/procgroupmgr"
-	linuxsched "sigmaos/util/linux/sched"
 	"sigmaos/namesrv/fsetcd"
 	"sigmaos/proc"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 	"sigmaos/util/crash"
+	linuxsched "sigmaos/util/linux/sched"
 )
 
 const (
@@ -489,7 +489,7 @@ func TestConcurrentProcs(t *testing.T) {
 	pids := map[sp.Tpid]int{}
 
 	var barrier sync.WaitGroup
-	semaphore.Add(nProcs)
+	barrier.Add(nProcs)
 	var started sync.WaitGroup
 	started.Add(nProcs)
 	var done sync.WaitGroup
@@ -504,8 +504,8 @@ func TestConcurrentProcs(t *testing.T) {
 		}
 		pids[pid] = i
 		go func(pid sp.Tpid, started *sync.WaitGroup, i int) {
-			semaphore.Done()
-			semaphore.Wait()
+			barrier.Done()
+			barrier.Wait()
 			spawnSleeperWithPid(t, ts, pid)
 			started.Done()
 		}(pid, &started, i)

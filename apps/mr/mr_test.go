@@ -100,7 +100,7 @@ func TestWordSpanningChunk(t *testing.T) {
 		return
 	}
 
-	fn := filepath.Join("name/s3/" + sp.LOCAL + "/9ps3/gutenberg/pg-dorian_gray.txt")
+	fn := filepath.Join("name/s3/" + sp.ANY + "/9ps3/gutenberg/pg-dorian_gray.txt")
 	fn, ok := sp.S3ClientPath(fn)
 	assert.True(t, ok)
 	s := &api.Split{fn, 0, SPLITSZ}

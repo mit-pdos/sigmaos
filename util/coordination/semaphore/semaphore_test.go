@@ -54,13 +54,13 @@ func TestSemaphoreSimple(t *testing.T) {
 	fsl0, err := sigmaclnt.NewFsLib(pe, dialproxyclnt.NewDialProxyClnt(pe))
 	assert.Nil(ts.T, err, "fsl0")
 
-	bar := semaphore.NewSemaphore(ts.FsLib, pn+"/x")
-	bar.Init(0)
+	sem := semaphore.NewSemaphore(ts.FsLib, pn+"/x")
+	sem.Init(0)
 
 	ch := make(chan bool)
 	go func(ch chan bool) {
-		bar := semaphore.NewSemaphore(fsl0, pn+"/x")
-		bar.Down()
+		sem := semaphore.NewSemaphore(fsl0, pn+"/x")
+		sem.Down()
 		ch <- true
 	}(ch)
 
@@ -72,7 +72,7 @@ func TestSemaphoreSimple(t *testing.T) {
 	default:
 	}
 
-	bar.Up()
+	sem.Up()
 
 	ok := <-ch
 	assert.True(ts.T, ok, "down")
@@ -99,21 +99,21 @@ func TestSemaphoreConcur(t *testing.T) {
 	assert.Nil(ts.T, err, "fsl1")
 
 	for i := 0; i < 100; i++ {
-		bar := semaphore.NewSemaphore(ts.FsLib, pn+"/x")
-		bar.Init(0)
+		sem := semaphore.NewSemaphore(ts.FsLib, pn+"/x")
+		sem.Init(0)
 
 		ch := make(chan bool)
 
 		go func(ch chan bool) {
 			Delay(200)
-			bar := semaphore.NewSemaphore(fsl0, pn+"/x")
-			bar.Down()
+			sem := semaphore.NewSemaphore(fsl0, pn+"/x")
+			sem.Down()
 			ch <- true
 		}(ch)
 		go func(ch chan bool) {
 			Delay(200)
-			bar := semaphore.NewSemaphore(fsl1, pn+"/x")
-			bar.Up()
+			sem := semaphore.NewSemaphore(fsl1, pn+"/x")
+			sem.Up()
 			ch <- true
 		}(ch)
 
@@ -142,13 +142,13 @@ func TestSemaphoreFail(t *testing.T) {
 	li, err := sc1.LeaseClnt.AskLease(pn+"/bar", fsetcd.LeaseTTL)
 	assert.Nil(t, err, "Error AskLease: %v", err)
 
-	bar := semaphore.NewSemaphore(sc1.FsLib, pn+"/bar")
-	bar.InitLease(0777, li.Lease())
+	sem := semaphore.NewSemaphore(sc1.FsLib, pn+"/bar")
+	sem.InitLease(0777, li.Lease())
 
 	ch := make(chan bool)
 	go func(ch chan bool) {
-		bar := semaphore.NewSemaphore(ts.FsLib, pn+"/bar")
-		bar.Down()
+		sem := semaphore.NewSemaphore(ts.FsLib, pn+"/bar")
+		sem.Down()
 		ch <- true
 	}(ch)
 

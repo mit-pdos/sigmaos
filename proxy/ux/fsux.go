@@ -3,14 +3,15 @@ package fsux
 import (
 	"sync"
 
-	db "sigmaos/debug"
 	"sigmaos/api/fs"
-	iputil "sigmaos/util/ip"
-	"sigmaos/util/perf"
+	db "sigmaos/debug"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
+	"sigmaos/util/crash"
+	iputil "sigmaos/util/ip"
+	"sigmaos/util/perf"
 )
 
 var fsux *FsUx
@@ -43,6 +44,9 @@ func RunFsUx(rootux string) {
 	}
 	fsux.SigmaSrv = srv
 
+	crash.Failer(sc.FsLib, crash.UX_CRASH, func(e crash.Tevent) {
+		crash.Crash()
+	})
 	// Perf monitoring
 	p, err := perf.NewPerf(pe, perf.UX)
 	if err != nil {

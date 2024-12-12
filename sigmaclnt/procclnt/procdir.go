@@ -4,27 +4,41 @@ import (
 	"path/filepath"
 
 	db "sigmaos/debug"
-	"sigmaos/sigmaclnt/fslib"
+	leaseclnt "sigmaos/ft/lease/clnt"
+	"sigmaos/namesrv/fsetcd"
 	"sigmaos/proc"
-	"sigmaos/util/coordination/barrier"
+	"sigmaos/sigmaclnt/fslib"
 	sp "sigmaos/sigmap"
+	"sigmaos/util/coordination/barrier"
 )
 
 // For documentation on dir structure, see sigmaos/proc/dir.go
-func (clnt *ProcClnt) MakeProcDir(pid sp.Tpid, procdir string, isKernelProc bool, how proc.Thow) error {
+func (clnt *ProcClnt) MakeProcDir(pid sp.Tpid, procdir string) error {
 	if err := clnt.MkDir(procdir, 0777); err != nil {
 		db.DPrintf(db.PROCCLNT_ERR, "MakeProcDir mkdir pid %v procdir %v err %v\n", pid, procdir, err)
 		return err
 	}
-	// Only create exit/evict semaphores if not spawned on MSCHED.
-	if how != proc.HMSCHED {
-		// Create exit signal
-		semExit := barrier.NewBarrier(clnt.FsLib, filepath.Join(procdir, proc.EXIT_SEM))
-		semExit.Init(0)
+	return nil
+}
 
-		// Create eviction signal
-		semEvict := barrier.NewBarrier(clnt.FsLib, filepath.Join(procdir, proc.EVICT_SEM))
-		semEvict.Init(0)
+func MakeKProcSemaphores(fsl *fslib.FsLib, lc *leaseclnt.LeaseClnt) error {
+	db.DPrintf(db.PROCCLNT, "MakeKProcSemaphores")
+	exitSemPN := filepath.Join(fsl.ProcEnv().GetProcDir(), proc.EXIT_SEM)
+	evictSemPN := filepath.Join(fsl.ProcEnv().GetProcDir(), proc.EVICT_SEM)
+	li, err := lc.AskLease(exitSemPN, fsetcd.LeaseTTL)
+	if err != nil {
+		db.DPrintf(db.PROCCLNT_ERR, "Err AskLease: %v", err)
+	}
+	li.KeepExtending()
+	// Create exit signal
+	semExit := barrier.NewBarrier(fsl, exitSemPN)
+	if err := semExit.InitLease(0777, li.Lease()); err != nil {
+		db.DPrintf(db.PROCCLNT_ERR, "Err init lease sem [%v]: %v", exitSemPN, err)
+	}
+	// Create eviction signal
+	semEvict := barrier.NewBarrier(fsl, evictSemPN)
+	if err := semEvict.InitLease(0777, li.Lease()); err != nil {
+		db.DPrintf(db.PROCCLNT_ERR, "Err init lease sem [%v]: %v", evictSemPN, err)
 	}
 	return nil
 }

@@ -29,6 +29,7 @@ func MakeKProcSemaphores(fsl *fslib.FsLib, lc *leaseclnt.LeaseClnt) error {
 	if err != nil {
 		db.DPrintf(db.PROCCLNT_ERR, "Err AskLease: %v", err)
 	}
+	li.KeepExtending()
 	// Create exit signal
 	semExit := semclnt.NewSemClnt(fsl, exitSemPN)
 	if err := semExit.InitLease(0777, li.Lease()); err != nil {

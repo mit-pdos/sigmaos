@@ -1,4 +1,4 @@
-// The semphore package implements a counting semaphore, implemented
+// The semaphore package implements a counting semaphore, implemented
 // using a file and a watch.
 package semaphore
 

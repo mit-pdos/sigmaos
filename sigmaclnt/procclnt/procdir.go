@@ -9,7 +9,7 @@ import (
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt/fslib"
 	sp "sigmaos/sigmap"
-	"sigmaos/util/coordination/barrier"
+	"sigmaos/util/coordination/semaphore"
 )
 
 // For documentation on dir structure, see sigmaos/proc/dir.go
@@ -31,12 +31,12 @@ func MakeKProcSemaphores(fsl *fslib.FsLib, lc *leaseclnt.LeaseClnt) error {
 	}
 	li.KeepExtending()
 	// Create exit signal
-	semExit := barrier.NewBarrier(fsl, exitSemPN)
+	semExit := semaphore.NewSemaphore(fsl, exitSemPN)
 	if err := semExit.InitLease(0777, li.Lease()); err != nil {
 		db.DPrintf(db.PROCCLNT_ERR, "Err init lease sem [%v]: %v", exitSemPN, err)
 	}
 	// Create eviction signal
-	semEvict := barrier.NewBarrier(fsl, evictSemPN)
+	semEvict := semaphore.NewSemaphore(fsl, evictSemPN)
 	if err := semEvict.InitLease(0777, li.Lease()); err != nil {
 		db.DPrintf(db.PROCCLNT_ERR, "Err init lease sem [%v]: %v", evictSemPN, err)
 	}

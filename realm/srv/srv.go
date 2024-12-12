@@ -19,7 +19,7 @@ import (
 	"sigmaos/rpc"
 	beschedclnt "sigmaos/sched/besched/clnt"
 	mschedclnt "sigmaos/sched/msched/clnt"
-	"sigmaos/util/coordination/barrier"
+	"sigmaos/util/coordination/semaphore"
 	"sigmaos/serr"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
@@ -160,7 +160,7 @@ func (rm *RealmSrv) Make(ctx fs.CtxI, req proto.MakeRequest, res *proto.MakeResu
 	db.DPrintf(db.REALMD, "RealmSrv.Make %v named started", req.Realm)
 
 	// wait until realm's named is ready to serve
-	sem := barrier.NewBarrier(rm.sc.FsLib, filepath.Join(sp.REALMS, req.Realm)+".sem")
+	sem := semaphore.NewSemaphore(rm.sc.FsLib, filepath.Join(sp.REALMS, req.Realm)+".sem")
 	if err := sem.Down(); err != nil {
 		return err
 	}

@@ -16,7 +16,7 @@ import (
 	"sigmaos/path"
 	"sigmaos/proc"
 	"sigmaos/rpc"
-	"sigmaos/util/coordination/barrier"
+	"sigmaos/util/coordination/semaphore"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
@@ -114,7 +114,7 @@ func Run(args []string) error {
 	}
 
 	pn := filepath.Join(sp.REALMS, nd.realm.String()) + ".sem"
-	sem := barrier.NewBarrier(nd.FsLib, pn)
+	sem := semaphore.NewSemaphore(nd.FsLib, pn)
 	if nd.realm != sp.ROOTREALM {
 		// create semaphore to signal realmd when we are the leader
 		// and ready to serve requests.  realmd downs this semaphore.

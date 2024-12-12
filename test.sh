@@ -141,7 +141,7 @@ if [[ $COMPILE == "--compile" ]]; then
     # test if test packages compile
     #
 
-    for T in path serr util/linux/sched util/perf sigmap dialproxy session/clnt proxy/ninep sigmaclnt/fslib/reader sigmaclnt/fslib/writer sigmasrv/stats sigmaclnt/fslib util/coordination/barrier chunk/srv ft/leaderclnt/electclnt sigmaclnt/fslib/dircache sigmasrv/memfssrv/memfs namesrv namesrv/fsetcd sigmaclnt/procclnt proxy/ux proxy/s3 boot/clnt ft/leaderclnt leadertest apps/kv/kvgrp apps/cache/cachegrp/clnt apps/www sigmasrv/memfssrv/sigmapsrv realm/clnt apps/mr apps/imgresize apps/kv apps/hotel apps/socialnetwork benchmarks benchmarks/remote example example/example_echo_server benchmarks/netperf; do
+    for T in path serr util/linux/sched util/perf sigmap dialproxy session/clnt proxy/ninep sigmaclnt/fslib/reader sigmaclnt/fslib/writer sigmasrv/stats sigmaclnt/fslib util/coordination/semaphore chunk/srv ft/leaderclnt/electclnt sigmaclnt/fslib/dircache sigmasrv/memfssrv/memfs namesrv namesrv/fsetcd sigmaclnt/procclnt proxy/ux proxy/s3 boot/clnt ft/leaderclnt leadertest apps/kv/kvgrp apps/cache/cachegrp/clnt apps/www sigmasrv/memfssrv/sigmapsrv realm/clnt apps/mr apps/imgresize apps/kv apps/hotel apps/socialnetwork benchmarks benchmarks/remote example example/example_echo_server benchmarks/netperf; do
         if ! [ -z "$SKIPTO" ]; then
           if [[ "$SKIPTO" == "$T" ]]; then
             # Stop skipping
@@ -218,7 +218,7 @@ if [[ $BASIC == "--basic" ]]; then
     # tests a full kernel using root realm
     #
 
-    for T in namesrv util/coordination/barrier chunk/srv sigmaclnt/procclnt proxy/ux boot/clnt proxy/s3 ft/leaderclnt leadertest apps/kv/kvgrp apps/cache/cachegrp/clnt; do
+    for T in namesrv util/coordination/semaphore chunk/srv sigmaclnt/procclnt proxy/ux boot/clnt proxy/s3 ft/leaderclnt leadertest apps/kv/kvgrp apps/cache/cachegrp/clnt; do
         if ! [ -z "$SKIPTO" ]; then
           if [[ "$SKIPTO" == "$T" ]]; then
             # Stop skipping

@@ -17,7 +17,7 @@ import (
 	beschedclnt "sigmaos/sched/besched/clnt"
 	lcschedclnt "sigmaos/sched/lcsched/clnt"
 	mschedclnt "sigmaos/sched/msched/clnt"
-	"sigmaos/util/coordination/barrier"
+	"sigmaos/util/coordination/semaphore"
 	"sigmaos/serr"
 	"sigmaos/sigmaclnt/fslib"
 	sp "sigmaos/sigmap"
@@ -138,7 +138,7 @@ func (clnt *ProcClnt) spawn(kernelId string, how proc.Thow, p *proc.Proc) error 
 		// Create a semaphore to indicate a proc has started if this is a kernel
 		// proc. Otherwise, msched will create the semaphore.
 		kprocDir := proc.KProcDir(p.GetPid())
-		semStart := barrier.NewBarrier(clnt.FsLib, filepath.Join(kprocDir, proc.START_SEM))
+		semStart := semaphore.NewSemaphore(clnt.FsLib, filepath.Join(kprocDir, proc.START_SEM))
 		semStart.Init(0)
 	}
 	return nil
@@ -368,7 +368,7 @@ func (clnt *ProcClnt) ExitedCrashed(pid sp.Tpid, procdir string, parentdir strin
 		kprocDir := proc.KProcDir(pid)
 		semPath = filepath.Join(kprocDir, proc.START_SEM)
 	}
-	semStart := barrier.NewBarrier(clnt.FsLib, semPath)
+	semStart := semaphore.NewSemaphore(clnt.FsLib, semPath)
 	semStart.Up()
 }
 

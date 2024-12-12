@@ -12,13 +12,13 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/ft/procgroupmgr"
-	linuxsched "sigmaos/util/linux/sched"
 	"sigmaos/namesrv/fsetcd"
 	"sigmaos/proc"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 	"sigmaos/util/crash"
+	linuxsched "sigmaos/util/linux/sched"
 )
 
 const (

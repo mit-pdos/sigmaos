@@ -17,7 +17,7 @@ import (
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
-	"sigmaos/util/coordination/barrier"
+	"sigmaos/util/coordination/semaphore"
 	"sigmaos/util/crash"
 	"sigmaos/util/rand"
 )
@@ -144,7 +144,7 @@ func TestRestartReplN(t *testing.T) {
 
 // kvd crashes storing a semaphore. The test's down() will return a
 // not-found for the semaphore, which is interpreted as a successful
-// down by the barrier.
+// down by the semaphore.
 func TestServerCrash(t *testing.T) {
 	t1, err1 := test.NewTstateAll(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
@@ -156,7 +156,7 @@ func TestServerCrash(t *testing.T) {
 
 	ts := newTstate(t1, kv.KVD_NO_REPL, false)
 
-	sem := barrier.NewBarrier(ts.FsLib, kvgrp.GrpPath(kvgrp.JobDir(ts.job), ts.grp)+"/sem")
+	sem := semaphore.NewSemaphore(ts.FsLib, kvgrp.GrpPath(kvgrp.JobDir(ts.job), ts.grp)+"/sem")
 	err = sem.Init(0)
 	assert.Nil(t, err)
 
@@ -167,7 +167,7 @@ func TestServerCrash(t *testing.T) {
 		pe := proc.NewAddedProcEnv(ts.ProcEnv())
 		fsl, err := sigmaclnt.NewFsLib(pe, dialproxyclnt.NewDialProxyClnt(pe))
 		assert.Nil(t, err)
-		sem := barrier.NewBarrier(fsl, kvgrp.GrpPath(kvgrp.JobDir(ts.job), ts.grp)+"/sem")
+		sem := semaphore.NewSemaphore(fsl, kvgrp.GrpPath(kvgrp.JobDir(ts.job), ts.grp)+"/sem")
 		err = sem.Down()
 		ch <- err
 	}()
@@ -296,7 +296,7 @@ func TestServerPartitionBlocking(t *testing.T) {
 			pe := proc.NewAddedProcEnv(ts.ProcEnv())
 			fsl, err := sigmaclnt.NewFsLib(pe, dialproxyclnt.NewDialProxyClnt(pe))
 			assert.Nil(t, err)
-			sem := barrier.NewBarrier(fsl, kvgrp.GrpPath(kvgrp.JobDir(ts.job), ts.grp)+"/sem")
+			sem := semaphore.NewSemaphore(fsl, kvgrp.GrpPath(kvgrp.JobDir(ts.job), ts.grp)+"/sem")
 			sem.Init(0)
 			err = sem.Down()
 			ch <- err

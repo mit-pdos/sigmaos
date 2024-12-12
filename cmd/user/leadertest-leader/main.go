@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"sigmaos/leadertest"
+	"sigmaos/ft/leadertest"
 )
 
 func main() {

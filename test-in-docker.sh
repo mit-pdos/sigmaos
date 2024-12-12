@@ -34,7 +34,7 @@ while [[ "$#" -gt 0 ]]; do
   esac
 done
 
-if [ $# -gt 0 ]; then
+if [ -z "$SPKG" ] || [ $# -gt 0 ]; then
     usage
     exit 1
 fi

@@ -1,12 +1,24 @@
 #!/bin/bash
 
 usage() {
-  echo "Usage: $0 [--rebuildtester]" 1>&2
+  echo "Usage: $0 --pkg PKG [--test TEST] [--rebuildtester]" 1>&2
 }
 
+TNAME="Test"
+SPKG=""
 REBUILD_TESTER="false"
 while [[ "$#" -gt 0 ]]; do
   case "$1" in
+  --test)
+      shift
+      TNAME="$1" 
+      shift
+      ;;
+  --pkg)
+      shift
+      SPKG="$1" 
+      shift
+      ;;
   --rebuildtester)
     shift
     REBUILD_TESTER="true"
@@ -107,9 +119,6 @@ fi
 docker exec \
   -it $testercid \
   go clean -testcache
-
-SPKG=sigmaclnt/procclnt
-TNAME=WaitExitSimpleSingleBE
 
 ETCD_IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $ETCD_CTR_NAME)
 

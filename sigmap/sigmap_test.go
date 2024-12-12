@@ -8,9 +8,11 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	sp "sigmaos/sigmap"
+	"sigmaos/test"
 )
 
 func TestCompile(t *testing.T) {
+	assert.NotNil(t, test.User)
 }
 
 func TestString(t *testing.T) {

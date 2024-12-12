@@ -6,9 +6,14 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	db "sigmaos/debug"
+	"sigmaos/test"
 )
 
 var NAMES = []string{"a", "b.txt", "gutenberg", "ls.PDF", "wiki"}
+
+func TestCompile(t *Testing.T) {
+	assert.NotNil(t, test.User)
+}
 
 func TestBasic(t *testing.T) {
 	sd := NewSortedMap[string, *bool]()

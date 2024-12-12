@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/dustin/go-humanize"
+	"github.com/mitchellh/mapstructure"
 	"github.com/stretchr/testify/assert"
 
 	"sigmaos/apps/mr"
@@ -47,7 +48,7 @@ const (
 	// dynamically
 	CRASHTASK  = 500
 	CRASHCOORD = 1000
-	CRASHSRV   = 200
+	CRASHSRV   = 1000
 	MEM_REQ    = 1000
 )
 
@@ -99,7 +100,7 @@ func TestWordSpanningChunk(t *testing.T) {
 		return
 	}
 
-	fn := filepath.Join("name/s3/" + sp.LOCAL + "/9ps3/gutenberg/pg-dorian_gray.txt")
+	fn := filepath.Join("name/s3/" + sp.ANY + "/9ps3/gutenberg/pg-dorian_gray.txt")
 	fn, ok := sp.S3ClientPath(fn)
 	assert.True(t, ok)
 	s := &api.Split{fn, 0, SPLITSZ}
@@ -506,8 +507,19 @@ func runN(t *testing.T, em *crash.TeventMap, crashmsched, crashprocq, crashux, m
 	wg.Wait()
 
 	db.DPrintf(db.TEST, "WaitGroup")
-	cm.WaitGroup()
-	db.DPrintf(db.TEST, "Done WaitGroup")
+	stati := cm.WaitGroup()
+	st := &mr.Stat{}
+	for _, status := range stati {
+		if status.IsStatusOK() {
+			err := mapstructure.Decode(status.Data(), st)
+			assert.Nil(ts.T, err)
+		}
+	}
+	db.DPrintf(db.TEST, "Done WaitGroup %v", stati)
+
+	if em != nil && len(em.Evs) > 0 {
+		db.DPrintf(db.TEST, "Failure stats %v", st)
+	}
 
 	db.DPrintf(db.TEST, "Check Job")
 	ok := ts.checkJob(runApp)

@@ -61,20 +61,20 @@ type Coord struct {
 	intOutdir       string
 	done            int32
 	memPerTask      proc.Tmem
-	stat            stat
+	stat            Stat
 }
 
-type stat struct {
-	nMap           int
-	nReduce        int
-	nFail          int
-	nRestart       int
-	nRecoverMap    int
-	nRecoverReduce int
+type Stat struct {
+	Nmap           int
+	Nreduce        int
+	Nfail          int
+	Nrestart       int
+	NrecoverMap    int
+	NrecoverReduce int
 }
 
-func (s *stat) String() string {
-	return fmt.Sprintf("{nM %d nR %d nfail %d nrestart %d nrecoverM %d nrecoverR %d}", s.nMap, s.nReduce, s.nFail, s.nRestart, s.nRecoverMap, s.nRecoverReduce)
+func (s *Stat) String() string {
+	return fmt.Sprintf("{nM %d nR %d nfail %d nrestart %d nrecoverM %d nrecoverR %d}", s.Nmap, s.Nreduce, s.Nfail, s.Nrestart, s.NrecoverMap, s.NrecoverReduce)
 }
 
 type NewProc func(string) (*proc.Proc, error)
@@ -180,7 +180,7 @@ func (c *Coord) mapperProc(task string) (*proc.Proc, error) {
 		return nil, err
 	}
 	db.DPrintf(db.ALWAYS, "bin %v", string(bin))
-	c.stat.nMap += 1
+	c.stat.Nmap += 1
 	proc := c.newTask(mapperbin, []string{c.jobRoot, c.job, strconv.Itoa(c.nreducetask), string(bin), c.intOutdir, c.linesz, c.wordsz}, c.memPerTask)
 	return proc, nil
 }
@@ -204,7 +204,7 @@ func (c *Coord) reducerProc(tn string) (*proc.Proc, error) {
 	}
 	outlink := ReduceOut(c.jobRoot, c.job) + t.Task
 	outTarget := ReduceOutTarget(c.outdir, c.job) + t.Task
-	c.stat.nReduce += 1
+	c.stat.Nreduce += 1
 	return c.newTask(c.reducerbin, []string{string(b), outlink, outTarget, strconv.Itoa(c.nmaptask)}, c.memPerTask), nil
 }
 
@@ -245,7 +245,7 @@ func (c *Coord) waitForTask(ft *fttask.FtTasks, start time.Time, ch chan Tresult
 		r.MsOuter = ms
 		ch <- Tresult{t, true, ms, status.Msg(), r}
 	} else { // task failed; make it runnable again
-		c.stat.nFail += 1
+		c.stat.Nfail += 1
 		db.DPrintf(db.MR, "Task failed %v status %v", t, status)
 		if status != nil && status.Msg() == RESTART {
 			// reducer indicates to run some mappers again
@@ -343,7 +343,7 @@ func (c *Coord) doRestart() bool {
 	if n+m > 0 {
 		db.DPrintf(db.ALWAYS, "doRestart(): restart %d tasks\n", n+m)
 	}
-	c.stat.nRestart += n + m
+	c.stat.Nrestart += n + m
 	return n+m > 0
 }
 
@@ -454,7 +454,7 @@ func (c *Coord) Work() {
 	if n, err := c.mft.RecoverTasks(); err != nil {
 		db.DFatalf("RecoverTasks mapper err %v", err)
 	} else {
-		c.stat.nRecoverMap = n
+		c.stat.NrecoverMap = n
 		db.DPrintf(db.MR, "Recover %d map tasks took %v", n, time.Since(start))
 	}
 
@@ -462,7 +462,7 @@ func (c *Coord) Work() {
 	if n, err := c.rft.RecoverTasks(); err != nil {
 		db.DFatalf("RecoverTasks reducer err %v", err)
 	} else {
-		c.stat.nRecoverReduce = n
+		c.stat.NrecoverReduce = n
 		db.DPrintf(db.MR, "Recover %d reduce tasks took %v", n, time.Since(start))
 	}
 	start = time.Now()

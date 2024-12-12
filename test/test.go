@@ -39,7 +39,7 @@ var netname string
 
 func init() {
 	flag.StringVar(&EtcdIP, "etcdIP", "127.0.0.1", "Etcd IP")
-	flag.StringVar(&User, "User", sp.NOT_SET, "SigmaUser, used for multi-tenant development")
+	flag.StringVar(&User, "user", sp.NOT_SET, "SigmaUser, used for multi-tenant development")
 	flag.StringVar(&tag, "tag", sp.LOCAL_BUILD, "Docker image tag")
 	flag.StringVar(&sp.Version, "version", sp.DEFAULT_VERSION, "Build version")
 	flag.BoolVar(&Start, "start", false, "Start system")

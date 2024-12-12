@@ -12,13 +12,13 @@ import (
 	"fmt"
 	"path/filepath"
 
+	sos "sigmaos/api/sigmaos"
 	db "sigmaos/debug"
-	"sigmaos/sigmaclnt/fidclnt"
 	"sigmaos/path"
 	"sigmaos/proc"
 	"sigmaos/serr"
 	"sigmaos/sigmaclnt/fdclnt/pathclnt/mntclnt"
-	sos "sigmaos/api/sigmaos"
+	"sigmaos/sigmaclnt/fidclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/util/rand"
 )

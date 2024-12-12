@@ -142,7 +142,7 @@ func startSrvs(k *Kernel) error {
 	for _, s := range k.Param.Services {
 		_, err := k.BootSub(s, nil, nil, k.Param, sp.ROOTREALM)
 		if err != nil {
-			db.DPrintf(db.KERNEL, "StartSRv %v %v err %v\n", s, k.Param, err)
+			db.DPrintf(db.KERNEL, "StartSrv %v %v err %v", s, k.Param, err)
 			return err
 		}
 	}

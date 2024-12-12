@@ -1,12 +1,13 @@
 package example_echo_server
 
 import (
-	dbg "sigmaos/debug"
 	"sigmaos/api/fs"
+	dbg "sigmaos/debug"
+	"sigmaos/example/example_echo_server/proto"
 	"sigmaos/proc"
-	"sigmaos/util/rand"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
+	"sigmaos/util/rand"
 )
 
 // YH:
@@ -21,7 +22,7 @@ const DIR_ECHO_SERVER = sp.NAMED + "example/"
 const NAMED_ECHO_SERVER = DIR_ECHO_SERVER + "echo-server"
 
 func RunEchoSrv() error {
-	echosrv := &EchoSrv{rand.String(8)}
+	echosrv := &EchoSrv{rand.Name()}
 	dbg.DPrintf(DEBUG_ECHO_SERVER, "==%v== Creating echo server \n", echosrv.sid)
 	ssrv, err := sigmasrv.NewSigmaSrv(NAMED_ECHO_SERVER, echosrv, proc.GetProcEnv())
 	if err != nil {
@@ -32,7 +33,7 @@ func RunEchoSrv() error {
 }
 
 // find meaning of life for request
-func (echosrv *EchoSrv) Echo(ctx fs.CtxI, req EchoRequest, rep *EchoResult) error {
+func (echosrv *EchoSrv) Echo(ctx fs.CtxI, req proto.EchoReq, rep *proto.EchoRep) error {
 	dbg.DPrintf(DEBUG_ECHO_SERVER, "==%v== Received Echo Request: %v\n", echosrv.sid, req)
 	rep.Text = req.Text
 	return nil

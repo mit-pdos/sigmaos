@@ -16,7 +16,7 @@ import (
 	"sigmaos/path"
 	"sigmaos/proc"
 	"sigmaos/rpc"
-	"sigmaos/util/coordination/semclnt"
+	"sigmaos/util/coordination/barrier"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
@@ -114,7 +114,7 @@ func Run(args []string) error {
 	}
 
 	pn := filepath.Join(sp.REALMS, nd.realm.String()) + ".sem"
-	sem := semclnt.NewSemClnt(nd.FsLib, pn)
+	sem := barrier.NewBarrier(nd.FsLib, pn)
 	if nd.realm != sp.ROOTREALM {
 		// create semaphore to signal realmd when we are the leader
 		// and ready to serve requests.  realmd downs this semaphore.
@@ -198,7 +198,11 @@ func Run(args []string) error {
 		db.DFatalf("warmCache err %v", err)
 	}
 
-	crash.Failer(crash.NAMED_PARTITION, func(e crash.Tevent) {
+	crash.Failer(nd.FsLib, crash.NAMED_CRASH, func(e crash.Tevent) {
+		crash.Crash()
+	})
+
+	crash.Failer(nd.FsLib, crash.NAMED_PARTITION, func(e crash.Tevent) {
 		if nd.delay == 0 {
 			nd.delay = e.Delay
 			nd.sess.Orphan()

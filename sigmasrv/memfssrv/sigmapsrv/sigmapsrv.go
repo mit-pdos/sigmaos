@@ -9,10 +9,11 @@
 package sigmapsrv
 
 import (
+	"sigmaos/api/fs"
+	sps "sigmaos/api/spprotsrv"
 	"sigmaos/ctx"
 	db "sigmaos/debug"
 	dialproxyclnt "sigmaos/dialproxy/clnt"
-	"sigmaos/api/fs"
 	"sigmaos/namesrv/fsetcd"
 	"sigmaos/path"
 	"sigmaos/proc"
@@ -20,11 +21,11 @@ import (
 	sessp "sigmaos/session/proto"
 	sesssrv "sigmaos/session/srv"
 	"sigmaos/sigmaclnt"
+	"sigmaos/sigmaclnt/procclnt"
 	sp "sigmaos/sigmap"
-	sps "sigmaos/api/spprotsrv"
 	"sigmaos/sigmasrv/memfssrv/sigmapsrv/overlaydir"
-	spprotosrv "sigmaos/spproto/srv"
 	"sigmaos/sigmasrv/stats"
+	spprotosrv "sigmaos/spproto/srv"
 )
 
 type SigmaPSrv struct {
@@ -115,6 +116,15 @@ func (psrv *SigmaPSrv) postMount(sc *sigmaclnt.SigmaClnt, pn string) (string, er
 		return "", err
 	}
 	li.KeepExtending()
+
+	if sc.ProcEnv().GetPrivileged() && sc.ProcEnv().GetHow() != proc.HMSCHED {
+		// Make kproc semaphores here, so that they are leased (and don't cause hangs
+		// on shutdown for kernel procs)
+		if err := procclnt.MakeKProcSemaphores(sc.FsLib, sc.LeaseClnt); err != nil {
+			db.DPrintf(db.ERROR, "Err make kproc semaphores: %v", err)
+			return "", err
+		}
+	}
 
 	if err := sc.MkLeasedEndpoint(pn, ep, li.Lease()); err != nil {
 		return "", err

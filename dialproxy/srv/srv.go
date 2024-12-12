@@ -7,14 +7,12 @@ import (
 	"os"
 	"time"
 
+	"sigmaos/api/fs"
 	"sigmaos/ctx"
 	db "sigmaos/debug"
-	"sigmaos/util/io/demux"
-	dialproxytrans "sigmaos/dialproxy/transport"
-	"sigmaos/util/io/frame"
-	"sigmaos/api/fs"
 	"sigmaos/dialproxy"
 	netproto "sigmaos/dialproxy/proto"
+	dialproxytrans "sigmaos/dialproxy/transport"
 	"sigmaos/proc"
 	"sigmaos/rpc"
 	rpcproto "sigmaos/rpc/proto"
@@ -22,6 +20,8 @@ import (
 	"sigmaos/serr"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
+	"sigmaos/util/io/demux"
+	"sigmaos/util/io/frame"
 )
 
 type DialProxySrv struct {
@@ -118,7 +118,7 @@ func (npsc *DialProxySrvConn) ServeRequest(c demux.CallI) (demux.CallI, *serr.Er
 	return dialproxytrans.NewProxyCall(req.Seqno, rep), nil
 }
 
-func (nps *DialProxySrvStubs) Dial(c fs.CtxI, req netproto.DialRequest, res *netproto.DialResponse) error {
+func (nps *DialProxySrvStubs) Dial(c fs.CtxI, req netproto.DialReq, res *netproto.DialRep) error {
 	start := time.Now()
 	defer func(start time.Time) {
 		dur := time.Since(start)
@@ -162,7 +162,7 @@ func (nps *DialProxySrvStubs) Dial(c fs.CtxI, req netproto.DialRequest, res *net
 	return nil
 }
 
-func (nps *DialProxySrvStubs) Listen(c fs.CtxI, req netproto.ListenRequest, res *netproto.ListenResponse) error {
+func (nps *DialProxySrvStubs) Listen(c fs.CtxI, req netproto.ListenReq, res *netproto.ListenRep) error {
 	// Set socket control message in output blob. Do this immediately to make
 	// sure it is set, even if we return early
 	res.Blob = &rpcproto.Blob{
@@ -207,7 +207,7 @@ func (nps *DialProxySrvStubs) Listen(c fs.CtxI, req netproto.ListenRequest, res 
 	return nil
 }
 
-func (nps *DialProxySrvStubs) Accept(c fs.CtxI, req netproto.AcceptRequest, res *netproto.AcceptResponse) error {
+func (nps *DialProxySrvStubs) Accept(c fs.CtxI, req netproto.AcceptReq, res *netproto.AcceptRep) error {
 	// Set socket control message in output blob. Do this immediately to make
 	// sure it is set, even if we return early
 	res.Blob = &rpcproto.Blob{
@@ -245,7 +245,7 @@ func (nps *DialProxySrvStubs) Accept(c fs.CtxI, req netproto.AcceptRequest, res 
 	return nil
 }
 
-func (nps *DialProxySrvStubs) Close(c fs.CtxI, req netproto.CloseRequest, res *netproto.CloseResponse) error {
+func (nps *DialProxySrvStubs) Close(c fs.CtxI, req netproto.CloseReq, res *netproto.CloseRep) error {
 	// Set socket control message in output blob. Do this immediately to make
 	// sure it is set, even if we return early
 	res.Blob = &rpcproto.Blob{
@@ -265,7 +265,7 @@ func (nps *DialProxySrvStubs) Close(c fs.CtxI, req netproto.CloseRequest, res *n
 }
 
 // TODO: check if calling proc cannot invalidate `realm`'s endpoint
-func (nps *DialProxySrvStubs) InvalidateNamedEndpointCacheEntry(c fs.CtxI, req netproto.InvalidateNamedEndpointRequest, res *netproto.InvalidateNamedEndpointResponse) error {
+func (nps *DialProxySrvStubs) InvalidateNamedEndpointCacheEntry(c fs.CtxI, req netproto.InvalidateNamedEndpointReq, res *netproto.InvalidateNamedEndpointRep) error {
 	db.DPrintf(db.DIALPROXYSRV, "InvalidateNamedEndpointCacheEntry %v", req)
 	res.Blob = &rpcproto.Blob{
 		Iov: [][]byte{nil},
@@ -285,7 +285,7 @@ func (nps *DialProxySrvStubs) InvalidateNamedEndpointCacheEntry(c fs.CtxI, req n
 }
 
 // TODO: check if calling proc cannot look up `realm`'s endpoint
-func (nps *DialProxySrvStubs) GetNamedEndpoint(c fs.CtxI, req netproto.NamedEndpointRequest, res *netproto.NamedEndpointResponse) error {
+func (nps *DialProxySrvStubs) GetNamedEndpoint(c fs.CtxI, req netproto.NamedEndpointReq, res *netproto.NamedEndpointRep) error {
 	db.DPrintf(db.DIALPROXYSRV, "GetNamedEndpoint %v", req)
 	res.Blob = &rpcproto.Blob{
 		Iov: [][]byte{nil},

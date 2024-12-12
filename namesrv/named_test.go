@@ -7,7 +7,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"sigmaos/util/crash"
 	db "sigmaos/debug"
 	dialproxyclnt "sigmaos/dialproxy/clnt"
 	"sigmaos/namesrv"
@@ -16,6 +15,7 @@ import (
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
+	"sigmaos/util/crash"
 )
 
 func TestCompile(t *testing.T) {
@@ -49,6 +49,13 @@ func TestPstats(t *testing.T) {
 }
 
 func TestKillNamed(t *testing.T) {
+	const T = 1000
+	fn := sp.NAMED + "crashnd.sem"
+
+	e := crash.NewEventPath(crash.NAMED_CRASH, T, 1.0, fn)
+	err := crash.SetSigmaFail(crash.NewTeventMapOne(e))
+	assert.Nil(t, err)
+
 	ts, err1 := test.NewTstateAll(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
@@ -59,17 +66,18 @@ func TestKillNamed(t *testing.T) {
 
 	db.DPrintf(db.TEST, "named %v\n", sp.Names(sts))
 
-	err = ts.Boot(sp.NAMEDREL)
+	err = ts.BootEnv(sp.NAMEDREL, []string{"SIGMAFAIL="})
 	assert.Nil(t, err)
 
 	sts, err = ts.GetDir(sp.NAMED + "/")
 	assert.Nil(t, err)
 	db.DPrintf(db.TEST, "named %v\n", sp.Names(sts))
 
-	db.DPrintf(db.TEST, "kill named..\n")
+	db.DPrintf(db.TEST, "Crash named..\n")
 
-	err = ts.KillOne(sp.NAMEDREL)
+	err = crash.SignalFailer(ts.FsLib, fn)
 	assert.Nil(t, err)
+	time.Sleep(T * time.Millisecond)
 
 	db.DPrintf(db.TEST, "GetDir..\n")
 
@@ -189,8 +197,8 @@ func TestLeaseQuickReboot(t *testing.T) {
 }
 
 // In these tests named will not receive notification from etcd when
-// leased file expires, but discover when reading from etcd and call
-// updateDir.
+// leased file expires, but discovers it when reading from etcd and
+// call updateDir.
 func TestLeaseDelayReboot(t *testing.T) {
 	ts, err1 := test.NewTstatePath(t, sp.NAMED)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
@@ -241,9 +249,8 @@ func TestLeaseDelayReboot(t *testing.T) {
 
 // Test if read fails after a named lost leadership
 func TestPartitionNamed(t *testing.T) {
-	e := crash.Tevent{crash.NAMED_PARTITION, 2000, 1000, 1.0, 7000}
-	// e := crash.Tevent{crash.NAMED_PARTITION, 1000, 1000, 1.0, 0}
-	err := crash.SetSigmaFail([]crash.Tevent{e})
+	e := crash.NewEventStartDelay(crash.NAMED_PARTITION, 2000, 1000, 1.0, 7000)
+	err := crash.SetSigmaFail(crash.NewTeventMapOne(e))
 	assert.Nil(t, err)
 
 	ts, err1 := test.NewTstateAll(t)
@@ -277,7 +284,7 @@ func TestPartitionNamed(t *testing.T) {
 	err = ts.BootEnv(sp.NAMEDREL, []string{"SIGMAFAIL="})
 	assert.Nil(t, err)
 
-	// give the first named chance to fail
+	// give the first named chance to partition
 	time.Sleep(time.Duration(e.Start+e.MaxInterval) * time.Millisecond)
 
 	// wait until session times out
@@ -289,7 +296,7 @@ func TestPartitionNamed(t *testing.T) {
 	assert.Nil(t, err)
 	db.DPrintf(db.TEST, "ep named2 %v", ep)
 
-	// read from second named
+	// put to second named
 	pe = proc.NewAddedProcEnv(ts.ProcEnv())
 	pe.SetNamedEndpoint(ep)
 	fsl2, err := sigmaclnt.NewFsLib(pe, ts.GetDialProxyClnt())

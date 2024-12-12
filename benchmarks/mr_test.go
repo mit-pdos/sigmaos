@@ -7,7 +7,7 @@ import (
 
 	"sigmaos/apps/mr"
 	db "sigmaos/debug"
-	"sigmaos/ft/groupmgr"
+	"sigmaos/ft/procgroupmgr"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
@@ -25,7 +25,7 @@ type MRJobInstance struct {
 	memreq  proc.Tmem
 	done    int32
 	job     *mr.Job
-	cm      *groupmgr.GroupMgr
+	cm      *procgroupmgr.ProcGroupMgr
 }
 
 func NewMRJobInstance(ts *test.RealmTstate, p *perf.Perf, app, jobRoot, jobname string, memreq proc.Tmem) *MRJobInstance {

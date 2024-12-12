@@ -7,7 +7,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/apps/kv/repl/raft"
 	replsrv "sigmaos/apps/kv/repl/srv"
-	"sigmaos/util/coordination/semclnt"
+	"sigmaos/util/coordination/barrier"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
@@ -84,7 +84,7 @@ func (g *Group) readCreateCfg(nrepl int) *GroupConfig {
 			}
 			if nrepl > 0 {
 				sem := grpSemPath(g.jobdir, g.grp)
-				sclnt := semclnt.NewSemClnt(g.SigmaClnt.FsLib, sem)
+				sclnt := barrier.NewBarrier(g.SigmaClnt.FsLib, sem)
 				sclnt.Init(0)
 			}
 		} else {
@@ -152,7 +152,7 @@ func (g *Group) waitRaftConfig(cfg *GroupConfig) *GroupConfig {
 	db.DPrintf(db.KVGRP, "waitRaftConfig %v\n", cfg)
 
 	sem := grpSemPath(g.jobdir, g.grp)
-	sclnt := semclnt.NewSemClnt(g.SigmaClnt.FsLib, sem)
+	sclnt := barrier.NewBarrier(g.SigmaClnt.FsLib, sem)
 
 	if !cfg.RaftInitialized() {
 		// Release leadership so that another member can write config

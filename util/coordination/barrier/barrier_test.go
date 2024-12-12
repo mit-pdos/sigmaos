@@ -1,4 +1,4 @@
-package semclnt_test
+package barrier_test
 
 import (
 	"flag"
@@ -9,18 +9,18 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	db "sigmaos/debug"
-	"sigmaos/namesrv/fsetcd"
 	dialproxyclnt "sigmaos/dialproxy/clnt"
+	"sigmaos/namesrv/fsetcd"
 	"sigmaos/proc"
-	"sigmaos/util/rand"
-	"sigmaos/util/coordination/semclnt"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
+	"sigmaos/util/coordination/barrier"
+	"sigmaos/util/rand"
 )
 
 const (
-	SEMDIR = "semdir"
+	SEMDIR = "bardir"
 )
 
 var pathname string // e.g., --path "name/msched/sp.LOCAL/"
@@ -38,7 +38,7 @@ func Delay(maxms int64) {
 func TestCompile(t *testing.T) {
 }
 
-func TestSemClntSimple(t *testing.T) {
+func TestBarrierSimple(t *testing.T) {
 	ts, err1 := test.NewTstateAll(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
@@ -54,13 +54,13 @@ func TestSemClntSimple(t *testing.T) {
 	fsl0, err := sigmaclnt.NewFsLib(pe, dialproxyclnt.NewDialProxyClnt(pe))
 	assert.Nil(ts.T, err, "fsl0")
 
-	sem := semclnt.NewSemClnt(ts.FsLib, pn+"/x")
-	sem.Init(0)
+	bar := barrier.NewBarrier(ts.FsLib, pn+"/x")
+	bar.Init(0)
 
 	ch := make(chan bool)
 	go func(ch chan bool) {
-		sem := semclnt.NewSemClnt(fsl0, pn+"/x")
-		sem.Down()
+		bar := barrier.NewBarrier(fsl0, pn+"/x")
+		bar.Down()
 		ch <- true
 	}(ch)
 
@@ -72,7 +72,7 @@ func TestSemClntSimple(t *testing.T) {
 	default:
 	}
 
-	sem.Up()
+	bar.Up()
 
 	ok := <-ch
 	assert.True(ts.T, ok, "down")
@@ -83,7 +83,7 @@ func TestSemClntSimple(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestSemClntConcur(t *testing.T) {
+func TestBarrierConcur(t *testing.T) {
 	ts, err1 := test.NewTstateAll(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
@@ -99,21 +99,21 @@ func TestSemClntConcur(t *testing.T) {
 	assert.Nil(ts.T, err, "fsl1")
 
 	for i := 0; i < 100; i++ {
-		sem := semclnt.NewSemClnt(ts.FsLib, pn+"/x")
-		sem.Init(0)
+		bar := barrier.NewBarrier(ts.FsLib, pn+"/x")
+		bar.Init(0)
 
 		ch := make(chan bool)
 
 		go func(ch chan bool) {
 			Delay(200)
-			sem := semclnt.NewSemClnt(fsl0, pn+"/x")
-			sem.Down()
+			bar := barrier.NewBarrier(fsl0, pn+"/x")
+			bar.Down()
 			ch <- true
 		}(ch)
 		go func(ch chan bool) {
 			Delay(200)
-			sem := semclnt.NewSemClnt(fsl1, pn+"/x")
-			sem.Up()
+			bar := barrier.NewBarrier(fsl1, pn+"/x")
+			bar.Up()
 			ch <- true
 		}(ch)
 
@@ -126,7 +126,7 @@ func TestSemClntConcur(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestSemClntFail(t *testing.T) {
+func TestBarrierFail(t *testing.T) {
 	ts, err1 := test.NewTstateAll(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
@@ -139,16 +139,16 @@ func TestSemClntFail(t *testing.T) {
 
 	sc1, err := sigmaclnt.NewSigmaClnt(pe)
 
-	li, err := sc1.LeaseClnt.AskLease(pn+"/sem", fsetcd.LeaseTTL)
+	li, err := sc1.LeaseClnt.AskLease(pn+"/bar", fsetcd.LeaseTTL)
 	assert.Nil(t, err, "Error AskLease: %v", err)
 
-	sem := semclnt.NewSemClnt(sc1.FsLib, pn+"/sem")
-	sem.InitLease(0777, li.Lease())
+	bar := barrier.NewBarrier(sc1.FsLib, pn+"/bar")
+	bar.InitLease(0777, li.Lease())
 
 	ch := make(chan bool)
 	go func(ch chan bool) {
-		sem := semclnt.NewSemClnt(ts.FsLib, pn+"/sem")
-		sem.Down()
+		bar := barrier.NewBarrier(ts.FsLib, pn+"/bar")
+		bar.Down()
 		ch <- true
 	}(ch)
 

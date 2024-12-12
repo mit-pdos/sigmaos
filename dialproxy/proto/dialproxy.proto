@@ -5,68 +5,68 @@ import "rpc/proto/rpc.proto";
 
 option go_package = "sigmaos/dialproxy/proto";
 
-message ListenRequest {
+message ListenReq {
         Taddr addr = 1;
         uint32 EndpointType = 2;
         Blob blob = 3;
 };
 
-message ListenResponse {
+message ListenRep {
         Rerror err = 1;
         TendpointProto endpoint = 2;
         uint64 listenerID = 3;
         Blob blob = 4;
 };
 
-message DialRequest {
+message DialReq {
         TendpointProto endpoint = 1;
         Blob blob = 2;
 };
 
-message DialResponse {
+message DialRep {
         Rerror err = 1;
         Blob blob = 2;
 };
 
-message AcceptRequest {
+message AcceptReq {
         uint64 listenerID = 1;
         bool internalListener = 2;
         Blob blob = 3;
 };
 
-message AcceptResponse {
+message AcceptRep {
         Rerror err = 1;
         Tprincipal principal = 2;
         Blob blob = 3;
 }
 
-message CloseRequest {
+message CloseReq {
         uint64 listenerID = 1;
         Blob blob = 2;
 };
 
-message CloseResponse {
+message CloseRep {
         Rerror err = 1;
         Blob blob = 2;
 }
 
-message NamedEndpointRequest {
+message NamedEndpointReq {
         string realmStr = 1;
         Blob blob = 2;
 }
 
-message NamedEndpointResponse {
+message NamedEndpointRep {
         Rerror err = 1;
         TendpointProto endpoint = 2;
         Blob blob = 3;
 }
 
-message InvalidateNamedEndpointRequest {
+message InvalidateNamedEndpointReq {
         string realmStr = 1;
         Blob blob = 2;
 }
 
-message InvalidateNamedEndpointResponse {
+message InvalidateNamedEndpointRep {
         Rerror err = 1;
         Blob blob = 2;
 }

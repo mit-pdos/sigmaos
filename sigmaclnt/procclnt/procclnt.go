@@ -12,14 +12,14 @@ import (
 	"sigmaos/chunk"
 	chunkclnt "sigmaos/chunk/clnt"
 	db "sigmaos/debug"
-	"sigmaos/sigmaclnt/fslib"
 	"sigmaos/proc"
 	"sigmaos/proc/kproc"
 	beschedclnt "sigmaos/sched/besched/clnt"
 	lcschedclnt "sigmaos/sched/lcsched/clnt"
 	mschedclnt "sigmaos/sched/msched/clnt"
-	"sigmaos/util/coordination/semclnt"
+	"sigmaos/util/coordination/barrier"
 	"sigmaos/serr"
+	"sigmaos/sigmaclnt/fslib"
 	sp "sigmaos/sigmap"
 )
 
@@ -128,8 +128,8 @@ func (clnt *ProcClnt) spawn(kernelId string, how proc.Thow, p *proc.Proc) error 
 		clnt.cs.Spawned(p.GetPid())
 		pseqno := proc.NewProcSeqno(sp.NOT_SET, kernelId, 0, 0)
 		clnt.cs.Started(p.GetPid(), pseqno, nil)
-		// Make the proc's procdir
-		err := clnt.MakeProcDir(p.GetPid(), p.GetProcDir(), p.IsPrivileged(), how)
+		// Make the privileged proc's procdir
+		err := clnt.MakeProcDir(p.GetPid(), p.GetProcDir())
 		if err != nil {
 			db.DPrintf(db.PROCCLNT_ERR, "Err SpawnKernelProc MakeProcDir: %v", err)
 			db.DPrintf(db.ERROR, "Err spawn MakeProcDir: %v", err)
@@ -138,7 +138,7 @@ func (clnt *ProcClnt) spawn(kernelId string, how proc.Thow, p *proc.Proc) error 
 		// Create a semaphore to indicate a proc has started if this is a kernel
 		// proc. Otherwise, msched will create the semaphore.
 		kprocDir := proc.KProcDir(p.GetPid())
-		semStart := semclnt.NewSemClnt(clnt.FsLib, filepath.Join(kprocDir, proc.START_SEM))
+		semStart := barrier.NewBarrier(clnt.FsLib, filepath.Join(kprocDir, proc.START_SEM))
 		semStart.Init(0)
 	}
 	return nil
@@ -368,7 +368,7 @@ func (clnt *ProcClnt) ExitedCrashed(pid sp.Tpid, procdir string, parentdir strin
 		kprocDir := proc.KProcDir(pid)
 		semPath = filepath.Join(kprocDir, proc.START_SEM)
 	}
-	semStart := semclnt.NewSemClnt(clnt.FsLib, semPath)
+	semStart := barrier.NewBarrier(clnt.FsLib, semPath)
 	semStart.Up()
 }
 

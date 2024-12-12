@@ -10,6 +10,7 @@ import (
 	"sigmaos/ft/leaderclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
+	"sigmaos/util/crash"
 )
 
 const (
@@ -25,7 +26,7 @@ func TestOldLeaderOK(t *testing.T) {
 		return
 	}
 
-	l := leaderclnt.OldleaderTest(ts, sp.NAMED+DIR, false)
+	l := leaderclnt.OldleaderTest(ts, sp.NAMED+DIR, "")
 
 	l.ReleaseLeadership()
 
@@ -33,15 +34,22 @@ func TestOldLeaderOK(t *testing.T) {
 }
 
 func TestOldLeaderCrash(t *testing.T) {
+	const T = 1000
+	fn := sp.NAMED + "crashnd.sem"
+
+	e := crash.NewEventPath(crash.NAMED_CRASH, T, 1.0, fn)
+	err := crash.SetSigmaFail(crash.NewTeventMapOne(e))
+	assert.Nil(t, err)
+
 	ts, err1 := test.NewTstateAll(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
 
-	err := ts.Boot(sp.NAMEDREL)
+	err = ts.BootEnv(sp.NAMEDREL, []string{"SIGMAFAIL="})
 	assert.Nil(t, err)
 
-	l := leaderclnt.OldleaderTest(ts, sp.NAMED+DIR, true)
+	l := leaderclnt.OldleaderTest(ts, sp.NAMED+DIR, fn)
 
 	l.ReleaseLeadership()
 
@@ -57,7 +65,7 @@ func TestMemfs(t *testing.T) {
 		return
 	}
 
-	l := leaderclnt.OldleaderTest(ts, dir+DIR, false)
+	l := leaderclnt.OldleaderTest(ts, dir+DIR, "")
 
 	sts, err := l.GetFences(fencedir)
 	assert.Nil(ts.T, err, "GetFences")

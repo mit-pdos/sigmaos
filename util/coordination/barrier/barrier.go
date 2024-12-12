@@ -1,12 +1,12 @@
-package semclnt
+package barrier
 
 import (
 	"fmt"
 	"time"
 
 	db "sigmaos/debug"
-	"sigmaos/sigmaclnt/fslib"
 	"sigmaos/serr"
+	"sigmaos/sigmaclnt/fslib"
 	sp "sigmaos/sigmap"
 )
 
@@ -14,13 +14,13 @@ import (
 // Library for binary semaphore, implemented using a file and a watch.
 //
 
-type SemClnt struct {
+type Barrier struct {
 	path string // Path for semaphore variable
 	*fslib.FsLib
 }
 
-func NewSemClnt(fsl *fslib.FsLib, semaphore string) *SemClnt {
-	c := &SemClnt{}
+func NewBarrier(fsl *fslib.FsLib, semaphore string) *Barrier {
+	c := &Barrier{}
 	c.path = semaphore
 	c.FsLib = fsl
 	return c
@@ -28,20 +28,20 @@ func NewSemClnt(fsl *fslib.FsLib, semaphore string) *SemClnt {
 
 // Initialize semaphore variable by creating its sigmaOS state. This should
 // only ever be called once globally.
-func (c *SemClnt) Init(perm sp.Tperm) error {
+func (c *Barrier) Init(perm sp.Tperm) error {
 	db.DPrintf(db.SEMCLNT, "Semaphore init %v\n", c.path)
 	_, err := c.PutFile(c.path, 0777|perm, sp.OWRITE, []byte{})
 	return err
 }
 
-func (c *SemClnt) InitLease(perm sp.Tperm, lid sp.TleaseId) error {
+func (c *Barrier) InitLease(perm sp.Tperm, lid sp.TleaseId) error {
 	db.DPrintf(db.SEMCLNT, "Semaphore init %v lease %v\n", c.path, lid)
 	_, err := c.PutLeasedFile(c.path, 0777|perm, sp.OWRITE, lid, []byte{})
 	return err
 }
 
 // Down semaphore. If not upped yet (i.e., if file exists), block
-func (c *SemClnt) Down() error {
+func (c *Barrier) Down() error {
 	for i := 0; i < sp.Conf.Path.MAX_RESOLVE_RETRY; i++ {
 		db.DPrintf(db.SEMCLNT, "Down %d %v\n", i, c.path)
 		err := c.WaitRemove(c.path)
@@ -70,15 +70,15 @@ func (c *SemClnt) Down() error {
 
 // Up a semaphore variable (i.e., remove semaphore to indicate up has
 // happened).
-func (c *SemClnt) Up() error {
+func (c *Barrier) Up() error {
 	db.DPrintf(db.SEMCLNT, "Up %v\n", c.path)
 	return c.Remove(c.path)
 }
 
-func (c *SemClnt) GetPath() string {
+func (c *Barrier) GetPath() string {
 	return c.path
 }
 
-func (c *SemClnt) String() string {
+func (c *Barrier) String() string {
 	return fmt.Sprintf("sem %v", c.path)
 }

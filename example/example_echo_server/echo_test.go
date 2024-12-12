@@ -10,10 +10,11 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	db "sigmaos/debug"
-	echo "sigmaos/example_echo_server"
-	"sigmaos/sigmaclnt/fslib"
+	echo "sigmaos/example/example_echo_server"
+	"sigmaos/example/example_echo_server/proto"
 	"sigmaos/proc"
 	sprpcclnt "sigmaos/rpc/clnt/sigmap"
+	"sigmaos/sigmaclnt/fslib"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 	"sigmaos/util/rand"
@@ -26,7 +27,7 @@ type TstateEcho struct {
 }
 
 func newTstateEcho(t *testing.T) (*TstateEcho, error) {
-	jobname := rand.String(8)
+	jobname := rand.Name()
 	jobdir := filepath.Join(echo.DIR_ECHO_SERVER, jobname)
 	var err error
 	tse := &TstateEcho{}
@@ -81,8 +82,8 @@ func TestEcho(t *testing.T) {
 	// create a RPC client and query server
 	rpcc, err := sprpcclnt.NewRPCClnt(tse.FsLib, echo.NAMED_ECHO_SERVER)
 	assert.Nil(t, err, "RPC client should be created properly")
-	arg := echo.EchoRequest{Text: "Hello World!"}
-	res := echo.EchoResult{}
+	arg := proto.EchoReq{Text: "Hello World!"}
+	res := proto.EchoRep{}
 	err = rpcc.RPC("EchoSrv.Echo", &arg, &res)
 	assert.Nil(t, err, "RPC call should succeed")
 	assert.Equal(t, "Hello World!", res.Text)
@@ -101,8 +102,8 @@ func TestEchoTime(t *testing.T) {
 	// create a RPC client and query server
 	rpcc, err := sprpcclnt.NewRPCClnt(tse.FsLib, echo.NAMED_ECHO_SERVER)
 	assert.Nil(t, err, "RPC client should be created properly")
-	arg := echo.EchoRequest{Text: "Hello World!"}
-	res := echo.EchoResult{}
+	arg := proto.EchoReq{Text: "Hello World!"}
+	res := proto.EchoRep{}
 	N_REQ := 10000
 	t0 := time.Now()
 	for i := 0; i < N_REQ; i++ {
@@ -148,8 +149,8 @@ func TestEchoLoad(t *testing.T) {
 			wg.Add(1)
 			go func(i int) {
 				defer wg.Done()
-				arg := echo.EchoRequest{Text: "Hello!"}
-				res := echo.EchoResult{}
+				arg := proto.EchoReq{Text: "Hello!"}
+				res := proto.EchoRep{}
 				t1 := time.Now()
 				err = rpcc.RPC("EchoSrv.Echo", &arg, &res)
 				tArr[i] = time.Since(t1).Microseconds()
@@ -163,7 +164,7 @@ func TestEchoLoad(t *testing.T) {
 		for _, t := range tArr {
 			sum += t
 		}
-		db.DPrintf(db.TEST, "Request Number: %v; Total time: %v; Avg Lat: %v", nn, totalTime, sum/int64(nn))
+		db.DPrintf(db.TEST, "Req Number: %v; Total time: %v; Avg Lat: %v", nn, totalTime, sum/int64(nn))
 	}
 
 	// Stop server

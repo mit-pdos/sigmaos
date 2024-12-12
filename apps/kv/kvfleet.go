@@ -7,7 +7,7 @@ import (
 	"sigmaos/apps/cache"
 	"sigmaos/apps/kv/kvgrp"
 	"sigmaos/sigmaclnt/fslib"
-	"sigmaos/ft/groupmgr"
+	"sigmaos/ft/procgroupmgr"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
@@ -57,8 +57,8 @@ type KVFleet struct {
 	auto    string     // Balancer auto-balancing setting.
 	job     string
 	ready   chan bool
-	balgm   *groupmgr.GroupMgr
-	kvdgms  []*groupmgr.GroupMgr
+	balgm   *procgroupmgr.ProcGroupMgr
+	kvdgms  []*procgroupmgr.ProcGroupMgr
 	cpids   []sp.Tpid
 }
 
@@ -79,7 +79,7 @@ func NewKvdFleet(sc *sigmaclnt.SigmaClnt, job string, nkvd, kvdrepl int, kvdmcpu
 	if err := kvf.MkDir(kvgrp.JobDir(kvf.job), 0777); err != nil {
 		return nil, err
 	}
-	kvf.kvdgms = []*groupmgr.GroupMgr{}
+	kvf.kvdgms = []*procgroupmgr.ProcGroupMgr{}
 	kvf.cpids = []sp.Tpid{}
 	return kvf, nil
 }
@@ -155,14 +155,14 @@ func (kvf *KVFleet) Stop() error {
 	return nil
 }
 
-func startBalancers(sc *sigmaclnt.SigmaClnt, job string, kvdmcpu proc.Tmcpu, auto, repl string) *groupmgr.GroupMgr {
+func startBalancers(sc *sigmaclnt.SigmaClnt, job string, kvdmcpu proc.Tmcpu, auto, repl string) *procgroupmgr.ProcGroupMgr {
 	kvdnc := strconv.Itoa(int(kvdmcpu))
-	cfg := groupmgr.NewGroupConfig(NBALANCER, KVBALANCER, []string{kvdnc, auto, repl}, 0, job)
+	cfg := procgroupmgr.NewGroupConfig(NBALANCER, KVBALANCER, []string{kvdnc, auto, repl}, 0, job)
 	return cfg.StartGrpMgr(sc)
 }
 
-func spawnGrp(sc *sigmaclnt.SigmaClnt, job, grp string, mcpu proc.Tmcpu, repl int) (*groupmgr.GroupMgr, error) {
-	cfg := groupmgr.NewGroupConfig(repl, "kvd", []string{grp}, mcpu, job)
+func spawnGrp(sc *sigmaclnt.SigmaClnt, job, grp string, mcpu proc.Tmcpu, repl int) (*procgroupmgr.ProcGroupMgr, error) {
+	cfg := procgroupmgr.NewGroupConfig(repl, "kvd", []string{grp}, mcpu, job)
 	gm := cfg.StartGrpMgr(sc)
 	_, err := kvgrp.WaitStarted(sc.FsLib, kvgrp.JobDir(job), grp)
 	if err != nil {

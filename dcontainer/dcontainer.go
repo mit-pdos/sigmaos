@@ -19,9 +19,9 @@ import (
 	chunksrv "sigmaos/chunk/srv"
 	"sigmaos/dcontainer/cgroup"
 	db "sigmaos/debug"
-	"sigmaos/util/linux/mem"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
+	"sigmaos/util/linux/mem"
 	"sigmaos/util/perf"
 )
 
@@ -91,7 +91,7 @@ func StartDockerContainer(p *proc.Proc, kernelId, user, netmode string) (*DConta
 		},
 	}
 
-	// If developing locally, mount kernel bins (exec-uproc-rs, spproxyd, and
+	// If developing locally, mount kernel bins (uproc-trampoline, spproxyd, and
 	// procd) from host, since they are excluded from the container image
 	// during local dev in order to speed up build times.
 	if p.GetBuildTag() == sp.LOCAL_BUILD {

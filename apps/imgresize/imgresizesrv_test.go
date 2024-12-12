@@ -12,14 +12,14 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"sigmaos/apps/imgresize"
-	"sigmaos/util/crash"
 	db "sigmaos/debug"
+	"sigmaos/ft/procgroupmgr"
 	fttask "sigmaos/ft/task"
-	"sigmaos/ft/groupmgr"
 	"sigmaos/namesrv/fsetcd"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
+	"sigmaos/util/crash"
 	rd "sigmaos/util/rand"
 )
 
@@ -159,8 +159,8 @@ func TestImgdFatalError(t *testing.T) {
 	}
 }
 
-func (ts *Tstate) imgdJob(paths []string, evs []crash.Tevent) {
-	imgd := imgresize.StartImgd(ts.SigmaClnt, ts.job, IMG_RESIZE_MCPU, IMG_RESIZE_MEM, false, 1, 0, evs)
+func (ts *Tstate) imgdJob(paths []string, em *crash.TeventMap) {
+	imgd := imgresize.StartImgd(ts.SigmaClnt, ts.job, IMG_RESIZE_MCPU, IMG_RESIZE_MEM, false, 1, 0, em)
 
 	for i, pn := range paths {
 		db.DPrintf(db.TEST, "submit %v\n", pn)
@@ -196,7 +196,7 @@ func TestImgdOneOK(t *testing.T) {
 }
 
 func TestImgdOneCrash(t *testing.T) {
-	e0 := crash.Tevent{crash.IMGRESIZE_CRASH, 100, CRASHIMG, 0.3, 0}
+	e0 := crash.NewEventStart(crash.IMGRESIZE_CRASH, 100, CRASHIMG, 0.3)
 
 	t1, err1 := test.NewTstateAll(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
@@ -209,7 +209,7 @@ func TestImgdOneCrash(t *testing.T) {
 	}
 
 	fn := filepath.Join(sp.S3, sp.LOCAL, "9ps3/img-save/8.jpg")
-	ts.imgdJob([]string{fn}, []crash.Tevent{e0})
+	ts.imgdJob([]string{fn}, crash.NewTeventMapOne(e0))
 	ts.shutdown()
 }
 
@@ -273,7 +273,7 @@ func TestImgdRestart(t *testing.T) {
 
 	ts.restartTstate()
 
-	gms, err := groupmgr.Recover(ts.SigmaClnt)
+	gms, err := procgroupmgr.Recover(ts.SigmaClnt)
 	assert.Nil(ts.T, err, "Recover")
 	assert.Equal(ts.T, 1, len(gms))
 

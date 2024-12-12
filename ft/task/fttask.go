@@ -8,8 +8,8 @@ import (
 	"strconv"
 
 	db "sigmaos/debug"
-	"sigmaos/sigmaclnt/fslib"
 	"sigmaos/serr"
+	"sigmaos/sigmaclnt/fslib"
 	sp "sigmaos/sigmap"
 	rd "sigmaos/util/rand"
 )
@@ -218,6 +218,11 @@ func (ft *FtTasks) MarkError(name string) error {
 }
 
 // Mark all error-ed tasks as runnable
-func (ft *FtTasks) Restart() (int, error) {
+func (ft *FtTasks) MarkErrorTodo() (int, error) {
 	return ft.MoveDirEntries(ft.error, ft.todo)
+}
+
+// Mark all error-ed tasks as runnable
+func (ft *FtTasks) MarkDoneError() (int, error) {
+	return ft.MoveDirEntries(ft.done, ft.error)
 }

@@ -9,7 +9,7 @@ import (
 	"sigmaos/apps/imgresize"
 	db "sigmaos/debug"
 	fttask "sigmaos/ft/task"
-	"sigmaos/ft/groupmgr"
+	"sigmaos/ft/procgroupmgr"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
@@ -28,7 +28,7 @@ type ImgResizeJobInstance struct {
 	nrounds  int
 	input    string
 	ready    chan bool
-	imgd     *groupmgr.GroupMgr
+	imgd     *procgroupmgr.ProcGroupMgr
 	p        *perf.Perf
 	ft       *fttask.FtTasks
 	*test.RealmTstate

@@ -11,6 +11,7 @@ import (
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
+	"sigmaos/util/crash"
 )
 
 //
@@ -21,7 +22,7 @@ const (
 	leadername = "name/leader"
 )
 
-func OldleaderTest(ts *test.Tstate, pn string, crash bool) *LeaderClnt {
+func OldleaderTest(ts *test.Tstate, pn string, crashfn string) *LeaderClnt {
 	ts.MkDir(pn, 0777)
 	ts.Remove(pn + "/fff")
 	ts.Remove(pn + "/ggg")
@@ -117,9 +118,9 @@ func OldleaderTest(ts *test.Tstate, pn string, crash bool) *LeaderClnt {
 	_, err = ts.PutFile(pn+"/ggg", 0777, sp.OWRITE, []byte(strconv.Itoa(0)))
 	assert.Nil(ts.T, err, "PutFile")
 
-	if crash {
-		db.DPrintf(db.TEST, "kill named...")
-		err := ts.KillOne(sp.NAMEDREL)
+	if crashfn != "" {
+		db.DPrintf(db.TEST, "Crash named...")
+		err := crash.SignalFailer(ts.FsLib, crashfn)
 		assert.Nil(ts.T, err)
 	}
 

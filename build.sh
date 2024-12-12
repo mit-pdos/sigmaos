@@ -223,7 +223,7 @@ if [ "${TARGET}" == "local" ]; then
   sudo cp $ROOT/create-net.sh $KERNELBIN/
   cp $KERNELBIN/procd $PROCD_BIN/
   cp $KERNELBIN/spproxyd $PROCD_BIN/
-  cp $KERNELBIN/exec-uproc-rs $PROCD_BIN/
+  cp $KERNELBIN/uproc-trampoline $PROCD_BIN/
 fi
 echo "========== Done copying kernel bins for uproc =========="
 

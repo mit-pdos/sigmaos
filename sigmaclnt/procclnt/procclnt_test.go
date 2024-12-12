@@ -10,15 +10,15 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"sigmaos/util/crash"
 	db "sigmaos/debug"
-	"sigmaos/ft/groupmgr"
+	"sigmaos/ft/procgroupmgr"
 	linuxsched "sigmaos/util/linux/sched"
 	"sigmaos/namesrv/fsetcd"
 	"sigmaos/proc"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
+	"sigmaos/util/crash"
 )
 
 const (
@@ -81,9 +81,11 @@ func spawnSleeperMcpu(t *testing.T, ts *test.Tstate, pid sp.Tpid, mcpu proc.Tmcp
 
 func spawnSpawner(t *testing.T, ts *test.Tstate, wait bool, childPid sp.Tpid, msecs, c int64) sp.Tpid {
 	p := proc.NewProc("spawner", []string{strconv.FormatBool(wait), childPid.String(), "sleeper", fmt.Sprintf("%dms", msecs), "name/"})
-	e0 := crash.Tevent{crash.SPAWNER_CRASH, 0, c, 0.33, 0}
-	e1 := crash.Tevent{crash.SPAWNER_PARTITION, 0, c, 0.66, 0}
-	s, err := crash.MakeTevents([]crash.Tevent{e0, e1})
+	e0 := crash.NewEvent(crash.SPAWNER_CRASH, c, 0.33)
+	em := crash.NewTeventMapOne(e0)
+	e1 := crash.NewEvent(crash.SPAWNER_PARTITION, c, 0.66)
+	em.Insert(e1)
+	s, err := em.Events2String()
 	assert.Nil(t, err)
 	p.AppendEnv(proc.SIGMAFAIL, s)
 	err = ts.Spawn(p)
@@ -305,7 +307,7 @@ func TestWaitExitParentCrash(t *testing.T) {
 	err := ts.WaitStart(pid)
 	assert.Nil(t, err, "WaitStart error")
 	status, err := ts.WaitExit(pid)
-	assert.True(t, status.IsStatusErr(), "WaitExit status not error: %v", status)
+	assert.True(t, status != nil && status.IsStatusErr(), "WaitExit status not error: %v", status)
 	assert.Nil(t, err, "WaitExit error")
 	// Wait for the child to run & finish
 	time.Sleep(2 * SLEEP_MSECS * time.Millisecond)
@@ -807,6 +809,14 @@ func TestProcManyPartition(t *testing.T) {
 }
 
 func TestSpawnCrashLCSched(t *testing.T) {
+	const T = 1000
+	fn := sp.NAMED + "crashlc.sem"
+
+	e := crash.NewEventPath(crash.LCSCHED_CRASH, T, 1.0, fn)
+	em := crash.NewTeventMapOne(e)
+	err := crash.SetSigmaFail(em)
+	assert.Nil(t, err)
+
 	ts, err1 := test.NewTstateAll(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
@@ -817,12 +827,11 @@ func TestSpawnCrashLCSched(t *testing.T) {
 	// Spawn a proc which can't possibly be run by any msched.
 	pid := spawnSpinnerMcpu(ts, proc.Tmcpu(1000*linuxsched.GetNCores()*2))
 
-	db.DPrintf(db.TEST, "Kill a msched")
+	db.DPrintf(db.TEST, "Crash an lcsched")
 
-	err := ts.KillOne(sp.LCSCHEDREL)
-	assert.Nil(t, err, "KillOne: %v", err)
-
-	db.DPrintf(db.TEST, "Msched killed")
+	err = crash.SignalFailer(ts.FsLib, fn)
+	assert.Nil(t, err)
+	time.Sleep(T * time.Millisecond)
 
 	err = ts.WaitStart(pid)
 	assert.NotNil(t, err, "WaitStart: %v", err)
@@ -839,6 +848,13 @@ func TestSpawnCrashLCSched(t *testing.T) {
 
 // Make sure this test is still meaningful
 func TestMaintainReplicationLevelCrashMSched(t *testing.T) {
+	const T = 1000
+	fn0 := sp.NAMED + "crashms0.sem"
+	e0 := crash.NewEventPath(crash.MSCHED_CRASH, T, 1.0, fn0)
+	em := crash.NewTeventMapOne(e0)
+	err := crash.SetSigmaFail(em)
+	assert.Nil(t, err)
+
 	ts, err1 := test.NewTstateAll(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
@@ -849,7 +865,14 @@ func TestMaintainReplicationLevelCrashMSched(t *testing.T) {
 
 	db.DPrintf(db.TEST, "Boot node 2")
 	// Start a couple new nodes.
-	err := ts.BootNode(1)
+	fn1 := sp.NAMED + "crashms1.sem"
+	e1 := crash.NewEventPath(crash.MSCHED_CRASH, T, 1.0, fn1)
+	em = crash.NewTeventMapOne(e1)
+	err = crash.SetSigmaFail(em)
+	assert.Nil(t, err)
+	err = ts.BootNode(1)
+
+	err = crash.SetSigmaFail(crash.NewTeventMap())
 	assert.Nil(t, err, "BootNode %v", err)
 	db.DPrintf(db.TEST, "Boot node 3")
 	err = ts.BootNode(1)
@@ -863,7 +886,7 @@ func TestMaintainReplicationLevelCrashMSched(t *testing.T) {
 	db.DPrintf(db.TEST, "Rm out dir done")
 
 	// Start a bunch of replicated spinner procs.
-	cfg := groupmgr.NewGroupConfig(N_REPL, "spinner", []string{}, 0, OUTDIR)
+	cfg := procgroupmgr.NewGroupConfig(N_REPL, "spinner", []string{}, 0, OUTDIR)
 	sm := cfg.StartGrpMgr(ts.SigmaClnt)
 	db.DPrintf(db.TEST, "GrpMgr started")
 
@@ -876,9 +899,8 @@ func TestMaintainReplicationLevelCrashMSched(t *testing.T) {
 	assert.Equal(t, N_REPL, len(st), "wrong num spinners check #1")
 	db.DPrintf(db.TEST, "Get OutDir")
 
-	err = ts.KillOne(sp.MSCHEDREL)
-	assert.Nil(t, err, "kill msched")
-	db.DPrintf(db.TEST, "Killed a msched")
+	err = crash.SignalFailer(ts.FsLib, fn0)
+	assert.Nil(t, err, "crash msched")
 
 	// Wait for them to respawn.
 	time.Sleep(2 * fsetcd.LeaseTTL * time.Second)
@@ -886,12 +908,11 @@ func TestMaintainReplicationLevelCrashMSched(t *testing.T) {
 	// Make sure they spawned correctly.
 	st, err = ts.GetDir(OUTDIR)
 	assert.Nil(t, err, "readdir1")
-	assert.Equal(t, N_REPL, len(st), "wrong num spinners check #2", sp.Names(st))
+	assert.Equal(t, N_REPL, len(st), "wrong num spinners check #2 %v", sp.Names(st))
 	db.DPrintf(db.TEST, "Got out dir again")
 
-	err = ts.KillOne(sp.MSCHEDREL)
-	assert.Nil(t, err, "kill msched")
-	db.DPrintf(db.TEST, "Killed another msched")
+	err = crash.SignalFailer(ts.FsLib, fn1)
+	assert.Nil(t, err, "crash msched1")
 
 	// Wait for them to respawn.
 	time.Sleep(2 * fsetcd.LeaseTTL * time.Second)

@@ -20,6 +20,7 @@ import (
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
+	"sigmaos/util/crash"
 	"sigmaos/util/linux/mem"
 	linuxsched "sigmaos/util/linux/sched"
 	"sigmaos/util/perf"
@@ -381,6 +382,9 @@ func RunMSched(kernelID string, reserveMcpu uint) error {
 		db.DFatalf("Error NewSigmaSrv: %v", err)
 	}
 	msched.pmgr.SetSigmaSrv(ssrv)
+	crash.Failer(sc.FsLib, crash.MSCHED_CRASH, func(e crash.Tevent) {
+		crash.Crash()
+	})
 	// Perf monitoring
 	p, err := perf.NewPerf(sc.ProcEnv(), perf.MSCHED)
 	if err != nil {

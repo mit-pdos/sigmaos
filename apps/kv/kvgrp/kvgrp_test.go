@@ -8,17 +8,17 @@ import (
 
 	"sigmaos/apps/kv"
 	"sigmaos/apps/kv/kvgrp"
-	"sigmaos/util/crash"
 	db "sigmaos/debug"
 	dialproxyclnt "sigmaos/dialproxy/clnt"
-	"sigmaos/ft/groupmgr"
+	"sigmaos/ft/procgroupmgr"
 	"sigmaos/namesrv/fsetcd"
 	"sigmaos/proc"
-	"sigmaos/util/coordination/semclnt"
 	sesssrv "sigmaos/session/srv"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
+	"sigmaos/util/coordination/barrier"
+	"sigmaos/util/crash"
 	"sigmaos/util/rand"
 )
 
@@ -28,22 +28,22 @@ const (
 	NETFAIL   = 200
 )
 
-var EvP = crash.Tevent{crash.KVD_PARTITION, 0, PARTITION, 0.33, 0}
+var EvP = crash.NewEvent(crash.KVD_PARTITION, PARTITION, 0.33)
 
 type Tstate struct {
 	*test.Tstate
 	grp string
-	gm  *groupmgr.GroupMgr
+	gm  *procgroupmgr.ProcGroupMgr
 	job string
 }
 
 func newTstate(t1 *test.Tstate, nrepl int, persist bool) *Tstate {
-	ts := &Tstate{job: rand.String(4), grp: GRP}
+	ts := &Tstate{job: rand.Name(), grp: GRP}
 	ts.Tstate = t1
 	ts.MkDir(kvgrp.KVDIR, 0777)
 	err := ts.MkDir(kvgrp.JobDir(ts.job), 0777)
 	assert.Nil(t1.T, err)
-	mcfg := groupmgr.NewGroupConfig(nrepl, "kvd", []string{ts.grp}, 0, ts.job)
+	mcfg := procgroupmgr.NewGroupConfig(nrepl, "kvd", []string{ts.grp}, 0, ts.job)
 	if persist {
 		mcfg.Persist(ts.SigmaClnt.FsLib)
 	}
@@ -111,7 +111,7 @@ func (ts *Tstate) testRecover() {
 		return
 	}
 	ts.Tstate = t1
-	gms, err := groupmgr.Recover(ts.SigmaClnt)
+	gms, err := procgroupmgr.Recover(ts.SigmaClnt)
 	assert.Nil(ts.T, err, "Recover")
 	assert.Equal(ts.T, 1, len(gms))
 	cfg, err := kvgrp.WaitStarted(ts.SigmaClnt.FsLib, kvgrp.JobDir(ts.job), ts.grp)
@@ -120,7 +120,7 @@ func (ts *Tstate) testRecover() {
 	db.DPrintf(db.TEST, "cfg %v\n", cfg)
 	time.Sleep(1 * fsetcd.LeaseTTL * time.Second)
 	gms[0].StopGroup()
-	ts.RmDir(groupmgr.GRPMGRDIR)
+	ts.RmDir(procgroupmgr.GRPMGRDIR)
 	ts.Shutdown(false)
 }
 
@@ -144,19 +144,19 @@ func TestRestartReplN(t *testing.T) {
 
 // kvd crashes storing a semaphore. The test's down() will return a
 // not-found for the semaphore, which is interpreted as a successful
-// down by the semclnt.
+// down by the barrier.
 func TestServerCrash(t *testing.T) {
 	t1, err1 := test.NewTstateAll(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
 
-	e0 := crash.Tevent{crash.KVD_CRASH, 0, kvgrp.CRASH, 0.33, 0}
-	err := crash.SetSigmaFail([]crash.Tevent{e0})
+	e0 := crash.NewEvent(crash.KVD_CRASH, kvgrp.CRASH, 0.33)
+	err := crash.SetSigmaFail(crash.NewTeventMapOne(e0))
 
 	ts := newTstate(t1, kv.KVD_NO_REPL, false)
 
-	sem := semclnt.NewSemClnt(ts.FsLib, kvgrp.GrpPath(kvgrp.JobDir(ts.job), ts.grp)+"/sem")
+	sem := barrier.NewBarrier(ts.FsLib, kvgrp.GrpPath(kvgrp.JobDir(ts.job), ts.grp)+"/sem")
 	err = sem.Init(0)
 	assert.Nil(t, err)
 
@@ -167,7 +167,7 @@ func TestServerCrash(t *testing.T) {
 		pe := proc.NewAddedProcEnv(ts.ProcEnv())
 		fsl, err := sigmaclnt.NewFsLib(pe, dialproxyclnt.NewDialProxyClnt(pe))
 		assert.Nil(t, err)
-		sem := semclnt.NewSemClnt(fsl, kvgrp.GrpPath(kvgrp.JobDir(ts.job), ts.grp)+"/sem")
+		sem := barrier.NewBarrier(fsl, kvgrp.GrpPath(kvgrp.JobDir(ts.job), ts.grp)+"/sem")
 		err = sem.Down()
 		ch <- err
 	}()
@@ -187,8 +187,8 @@ func TestReconnectSimple(t *testing.T) {
 		return
 	}
 
-	e0 := crash.Tevent{crash.KVD_NETFAIL, 0, NETFAIL, 0.33, 0}
-	err := crash.SetSigmaFail([]crash.Tevent{e0})
+	e0 := crash.NewEvent(crash.KVD_NETFAIL, NETFAIL, 0.33)
+	err := crash.SetSigmaFail(crash.NewTeventMapOne(e0))
 
 	ts := newTstate(t1, kv.KVD_NO_REPL, false)
 
@@ -239,7 +239,7 @@ func TestServerPartitionNonBlockingSimple(t *testing.T) {
 		return
 	}
 
-	err := crash.SetSigmaFail([]crash.Tevent{EvP})
+	err := crash.SetSigmaFail(crash.NewTeventMapOne(EvP))
 	assert.Nil(t, err)
 	ts := newTstate(t1, kv.KVD_NO_REPL, false)
 
@@ -261,7 +261,7 @@ func TestServerPartitionNonBlockingConcur(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	err := crash.SetSigmaFail([]crash.Tevent{EvP})
+	err := crash.SetSigmaFail(crash.NewTeventMapOne(EvP))
 	assert.Nil(t, err)
 	ts := newTstate(t1, kv.KVD_NO_REPL, false)
 	ch := make(chan error)
@@ -285,7 +285,7 @@ func TestServerPartitionBlocking(t *testing.T) {
 		return
 	}
 
-	err := crash.SetSigmaFail([]crash.Tevent{EvP})
+	err := crash.SetSigmaFail(crash.NewTeventMapOne(EvP))
 	assert.Nil(t, err)
 
 	ts := newTstate(t1, kv.KVD_NO_REPL, false)
@@ -296,7 +296,7 @@ func TestServerPartitionBlocking(t *testing.T) {
 			pe := proc.NewAddedProcEnv(ts.ProcEnv())
 			fsl, err := sigmaclnt.NewFsLib(pe, dialproxyclnt.NewDialProxyClnt(pe))
 			assert.Nil(t, err)
-			sem := semclnt.NewSemClnt(fsl, kvgrp.GrpPath(kvgrp.JobDir(ts.job), ts.grp)+"/sem")
+			sem := barrier.NewBarrier(fsl, kvgrp.GrpPath(kvgrp.JobDir(ts.job), ts.grp)+"/sem")
 			sem.Init(0)
 			err = sem.Down()
 			ch <- err

@@ -51,7 +51,7 @@ mkdir -p $OUTPATH/user
 
 LDF="-X sigmaos/sigmap.Target=$TARGET -s -w"
 
-TARGETS="exec-uproc-rs spawn-latency"
+TARGETS="uproc-trampoline spawn-latency"
 
 # If building in parallel, build with (n - 1) threads.
 njobs=$(nproc)
@@ -63,5 +63,5 @@ eval $build
 #cp 
 
 # Copy rust bins
-cp rs/exec-uproc-rs/target/release/exec-uproc-rs bin/kernel
+cp rs/uproc-trampoline/target/release/uproc-trampoline bin/kernel
 cp rs/spawn-latency/target/release/spawn-latency bin/user/spawn-latency-v$VERSION

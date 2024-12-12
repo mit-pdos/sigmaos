@@ -5,14 +5,14 @@ import (
 	"strconv"
 	"strings"
 
-	"sigmaos/util/crash"
 	db "sigmaos/debug"
-	"sigmaos/sigmaclnt/fslib"
-	fttaskmgr"sigmaos/ft/task/mgr"
-	"sigmaos/ft/groupmgr"
+	"sigmaos/ft/procgroupmgr"
+	fttaskmgr "sigmaos/ft/task/mgr"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
+	"sigmaos/sigmaclnt/fslib"
 	sp "sigmaos/sigmap"
+	"sigmaos/util/crash"
 	rd "sigmaos/util/rand"
 )
 
@@ -24,9 +24,9 @@ func NewTask(fn string) *Ttask {
 	return &Ttask{fn}
 }
 
-func StartImgd(sc *sigmaclnt.SigmaClnt, job string, workerMcpu proc.Tmcpu, workerMem proc.Tmem, persist bool, nrounds int, imgdMcpu proc.Tmcpu, evs []crash.Tevent) *groupmgr.GroupMgr {
-	crash.SetSigmaFail(evs)
-	cfg := groupmgr.NewGroupConfig(1, "imgresized", []string{strconv.Itoa(int(workerMcpu)), strconv.Itoa(int(workerMem)), strconv.Itoa(nrounds)}, imgdMcpu, job)
+func StartImgd(sc *sigmaclnt.SigmaClnt, job string, workerMcpu proc.Tmcpu, workerMem proc.Tmem, persist bool, nrounds int, imgdMcpu proc.Tmcpu, em *crash.TeventMap) *procgroupmgr.ProcGroupMgr {
+	crash.SetSigmaFail(em)
+	cfg := procgroupmgr.NewGroupConfig(1, "imgresized", []string{strconv.Itoa(int(workerMcpu)), strconv.Itoa(int(workerMem)), strconv.Itoa(nrounds)}, imgdMcpu, job)
 	if persist {
 		cfg.Persist(sc.FsLib)
 	}

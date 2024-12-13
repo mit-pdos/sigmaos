@@ -406,7 +406,7 @@ func (ts *Tstate) crashServers(srv string, l crash.Tselector, em *crash.TeventMa
 	}
 }
 
-func runN(t *testing.T, em *crash.TeventMap, crashmsched, crashprocq, crashux, maliciousMapper int, monitor bool) {
+func runN(t *testing.T, em *crash.TeventMap, crashmsched, crashprocq, crashux, maliciousMapper int, monitor bool) (int, *mr.Stat) {
 	var s3secrets *sp.SecretProto
 	var err1 error
 	// If running with malicious mappers, try to get restricted AWS secrets
@@ -414,7 +414,7 @@ func runN(t *testing.T, em *crash.TeventMap, crashmsched, crashprocq, crashux, m
 	if maliciousMapper > 0 {
 		s3secrets, err1 = auth.GetAWSSecrets(sp.AWS_S3_RESTRICTED_PROFILE)
 		if !assert.Nil(t, err1, "Can't get secrets for aws profile %v: %v", sp.AWS_S3_RESTRICTED_PROFILE, err1) {
-			return
+			return 0, nil
 		}
 	}
 
@@ -424,7 +424,7 @@ func runN(t *testing.T, em *crash.TeventMap, crashmsched, crashprocq, crashux, m
 
 	t1, err1 := test.NewTstateAll(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
+		return 0, nil
 	}
 
 	var sc *sigmaclnt.SigmaClnt = t1.SigmaClnt
@@ -543,6 +543,7 @@ func runN(t *testing.T, em *crash.TeventMap, crashmsched, crashprocq, crashux, m
 	mr.CleanupMROutputs(ts.FsLib, mr.JobOut(job.Output, ts.job), mr.MapIntermediateDir(ts.job, job.Intermediate))
 	db.DPrintf(db.TEST, "Done cleanup MR outputs")
 	ts.Shutdown()
+	return nrestart, &mrst
 }
 
 func TestMRJob(t *testing.T) {
@@ -558,7 +559,8 @@ func TestCrashTaskOnly(t *testing.T) {
 }
 
 func TestCrashCoordOnly(t *testing.T) {
-	runN(t, coordEv, 0, 0, 0, 0, false)
+	nr, _ := runN(t, coordEv, 0, 0, 0, 0, false)
+	assert.True(t, nr > mr.NCOORD)
 }
 
 func TestCrashTaskAndCoord(t *testing.T) {

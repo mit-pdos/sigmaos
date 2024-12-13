@@ -65,6 +65,7 @@ type Coord struct {
 }
 
 type Stat struct {
+	Ntask          int
 	Nmap           int
 	Nreduce        int
 	Nfail          int
@@ -74,7 +75,7 @@ type Stat struct {
 }
 
 func (s *Stat) String() string {
-	return fmt.Sprintf("{nM %d nR %d nfail %d nrestart %d nrecoverM %d nrecoverR %d}", s.Nmap, s.Nreduce, s.Nfail, s.Nrestart, s.NrecoverMap, s.NrecoverReduce)
+	return fmt.Sprintf("{nT %d nM %d nR %d nfail %d nrestart %d nrecoverM %d nrecoverR %d}", s.Ntask, s.Nmap, s.Nreduce, s.Nfail, s.Nrestart, s.NrecoverMap, s.NrecoverReduce)
 }
 
 type NewProc func(string) (*proc.Proc, error)
@@ -133,15 +134,6 @@ func NewCoord(args []string) (*Coord, error) {
 		db.DFatalf("Error GetFile JobIntOutLink: %v", err)
 	}
 	c.intOutdir = string(b)
-
-	c.mft, err = fttask.NewFtTasks(c.FsLib, filepath.Dir(JobDir(c.jobRoot, c.job)), filepath.Join(c.job, "/mtasks"))
-	if err != nil {
-		db.DFatalf("NewFtTasks mtasks %v", err)
-	}
-	c.rft, err = fttask.NewFtTasks(c.FsLib, filepath.Dir(JobDir(c.jobRoot, c.job)), filepath.Join(c.job, "/rtasks"))
-	if err != nil {
-		db.DFatalf("NewFtTasks rtasks %v", err)
-	}
 
 	c.Started()
 
@@ -443,6 +435,16 @@ func (c *Coord) Work() {
 
 	db.DPrintf(db.ALWAYS, "leader %s nmap %v nreduce %v\n", c.job, c.nmaptask, c.nreducetask)
 
+	ft, err := fttask.NewFtTasks(c.FsLib, filepath.Dir(JobDir(c.jobRoot, c.job)), filepath.Join(c.job, "/mtasks"))
+	if err != nil {
+		db.DFatalf("NewFtTasks mtasks %v", err)
+	}
+	c.mft = ft
+	c.rft, err = fttask.NewFtTasks(c.FsLib, filepath.Dir(JobDir(c.jobRoot, c.job)), filepath.Join(c.job, "/rtasks"))
+	if err != nil {
+		db.DFatalf("NewFtTasks rtasks %v", err)
+	}
+
 	crash.Failer(c.FsLib, crash.MRCOORD_CRASH, func(e crash.Tevent) {
 		crash.CrashMsg(c.stat.String())
 	})
@@ -465,6 +467,9 @@ func (c *Coord) Work() {
 		c.stat.NrecoverReduce = n
 		db.DPrintf(db.MR, "Recover %d reduce tasks took %v", n, time.Since(start))
 	}
+
+	c.stat.Ntask = c.mft.GetStats().Ntask + c.rft.GetStats().Ntask
+
 	start = time.Now()
 	c.doRestart()
 	db.DPrintf(db.MR, "doRestart took %v", time.Since(start))

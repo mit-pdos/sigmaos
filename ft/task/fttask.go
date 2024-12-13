@@ -26,6 +26,12 @@ type FtTasks struct {
 	wip   string
 	todo  string
 	error string
+	stats string
+	sts   Stats
+}
+
+type Stats struct {
+	Ntask int
 }
 
 func MkFtTasks(fsl *fslib.FsLib, dir, job string) (*FtTasks, error) {
@@ -48,6 +54,10 @@ func MkFtTasks(fsl *fslib.FsLib, dir, job string) (*FtTasks, error) {
 	if err := fsl.MkDir(filepath.Join(dir, job, "error"), 0777); err != nil {
 		return nil, err
 	}
+	sts := Stats{}
+	if err := fsl.PutFileJson(filepath.Join(dir, job, "stats"), 0777, sts); err != nil {
+		return nil, err
+	}
 	return NewFtTasks(fsl, dir, job)
 }
 
@@ -57,6 +67,10 @@ func NewFtTasks(fsl *fslib.FsLib, dir, job string) (*FtTasks, error) {
 	ft.todo = filepath.Join(dir, job, "todo")
 	ft.wip = filepath.Join(dir, job, "wip")
 	ft.error = filepath.Join(dir, job, "error")
+	ft.stats = filepath.Join(dir, job, "stats")
+	if err := fsl.GetFileJson(ft.stats, &ft.sts); err != nil {
+		return nil, err
+	}
 	return ft, nil
 }
 
@@ -86,6 +100,19 @@ func (ft *FtTasks) NTaskDone() (int, error) {
 		return -1, err
 	}
 	return len(sts), nil
+}
+
+func (ft *FtTasks) updateStats(n int) error {
+	ft.sts.Ntask += n
+	if err := ft.SetFileJson(ft.stats, ft.sts); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (ft *FtTasks) GetStats() Stats {
+	sts := ft.sts
+	return sts
 }
 
 func (ft *FtTasks) getTasks(dir string) ([]string, error) {
@@ -127,7 +154,13 @@ func (ft *FtTasks) SubmitTask(id int, i any) error {
 		return err
 	}
 	t := filepath.Join(ft.todo, tid, "task")
-	return ft.PutFileJson(t, 0777, i)
+	if err := ft.PutFileJson(t, 0777, i); err != nil {
+		return err
+	}
+	if err := ft.updateStats(1); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (ft *FtTasks) SubmitTaskMulti(id int, is []any) error {
@@ -146,6 +179,11 @@ func (ft *FtTasks) SubmitTaskMulti(id int, is []any) error {
 	t := filepath.Join(ft.todo, tid, "task")
 	db.DPrintf(db.FTTASKS, "SubmitTaskMulti id %v tname %v", id, tid)
 	_, err := ft.PutFile(t, 0777, sp.OWRITE, bs)
+
+	if err := ft.updateStats(len(bs)); err != nil {
+		return err
+	}
+
 	return err
 }
 
@@ -153,6 +191,12 @@ func (ft *FtTasks) SubmitTaskMulti(id int, is []any) error {
 // correct), and make them runnable.
 func (ft *FtTasks) RecoverTasks() (int, error) {
 	n, err := ft.MoveDirEntries(ft.wip, ft.todo)
+	if err != nil {
+		return 0, err
+	}
+	if err := ft.updateStats(n); err != nil {
+		return 0, err
+	}
 	return n, err
 }
 
@@ -219,7 +263,14 @@ func (ft *FtTasks) MarkError(name string) error {
 
 // Mark all error-ed tasks as runnable
 func (ft *FtTasks) MarkErrorTodo() (int, error) {
-	return ft.MoveDirEntries(ft.error, ft.todo)
+	n, err := ft.MoveDirEntries(ft.error, ft.todo)
+	if err != nil {
+		return 0, err
+	}
+	if err := ft.updateStats(n); err != nil {
+		return 0, err
+	}
+	return n, err
 }
 
 // Mark all error-ed tasks as runnable

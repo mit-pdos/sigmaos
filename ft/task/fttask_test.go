@@ -5,9 +5,9 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"sigmaos/apps/mr"
 	db "sigmaos/debug"
 	fttask "sigmaos/ft/task"
-	"sigmaos/mr"
 	"sigmaos/test"
 	rd "sigmaos/util/rand"
 )
@@ -72,5 +72,36 @@ func TestBasic(t *testing.T) {
 	db.DPrintf(db.TEST, "JobState %v", s)
 	err = ts.ft.ReadTaskOutput(tns[0], &b)
 	db.DPrintf(db.TEST, "Output %v", b)
+	ts.shutdown()
+}
+
+func TestStats(t *testing.T) {
+	ts, err1 := newTstate(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	bin := make(mr.Bin, 1)
+	bin[0].File = "hello"
+
+	err := ts.ft.SubmitTask(0, bin)
+	assert.Nil(t, err)
+
+	sts := ts.ft.GetStats()
+	assert.Equal(t, 1, sts.Ntask)
+	_, err = ts.ft.AcquireTasks()
+	assert.Nil(t, err)
+
+	ft, err := fttask.NewFtTasks(ts.FsLib, TASKS, ts.job)
+	_, err = ft.RecoverTasks()
+	assert.Nil(t, err)
+
+	sts = ft.GetStats()
+	assert.Equal(t, 2, sts.Ntask)
+
+	ft, err = fttask.NewFtTasks(ts.FsLib, TASKS, ts.job)
+	assert.Nil(t, err)
+	sts = ft.GetStats()
+	assert.Equal(t, 2, sts.Ntask)
+
 	ts.shutdown()
 }

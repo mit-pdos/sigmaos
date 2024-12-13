@@ -24,6 +24,8 @@ RUN git clone https://github.com/ArielSzekely/go.git go-custom && \
 
 RUN pacman -Sy --noconfirm docker
 
+RUN mkdir /tmp/sigmaos
+
 WORKDIR /home/sigmaos
 
 CMD [ "/bin/bash", "-l" ]

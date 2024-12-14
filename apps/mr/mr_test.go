@@ -46,7 +46,7 @@ const (
 	// time interval (ms) for when a failure might happen. If too
 	// frequent and they don't finish ever. XXX determine
 	// dynamically
-	CRASHTASK  = 500
+	CRASHTASK  = 400
 	CRASHCOORD = 1000
 	CRASHSRV   = 1000
 	MEM_REQ    = 1000
@@ -516,6 +516,7 @@ func runN(t *testing.T, em *crash.TeventMap, crashmsched, crashprocq, crashux, m
 			t := mr.Stat{}
 			err := mapstructure.Decode(st.Data(), &t)
 			assert.Nil(ts.T, err)
+			db.DPrintf(db.TEST, "mr stat: %v", t)
 			if t.Nmap > 0 || t.Nreduce > 0 {
 				mrst = t
 			}
@@ -555,7 +556,8 @@ func TestMaliciousMapper(t *testing.T) {
 }
 
 func TestCrashTaskOnly(t *testing.T) {
-	runN(t, taskEv, 0, 0, 0, 0, false)
+	_, st := runN(t, taskEv, 0, 0, 0, 0, false)
+	assert.True(t, st.Nfail > 0)
 }
 
 func TestCrashCoordOnly(t *testing.T) {
@@ -567,7 +569,9 @@ func TestCrashTaskAndCoord(t *testing.T) {
 	em := crash.NewTeventMap()
 	em.Merge(taskEv)
 	em.Merge(coordEv)
-	runN(t, em, 0, 0, 0, 0, false)
+	nr, st := runN(t, em, 0, 0, 0, 0, false)
+	assert.True(t, nr > mr.NCOORD)
+	assert.True(t, st.Ntask > 10)
 }
 
 func TestCrashMSched1(t *testing.T) {

@@ -508,14 +508,7 @@ func runN(t *testing.T, em *crash.TeventMap, crashmsched, crashprocq, crashux, m
 	if crashux > 0 {
 		wg.Add(1)
 		go func() {
-			e0, ok := em.Lookup(crash.UX_CRASH)
-			assert.True(ts.T, ok)
-			for i := 0; i < crashux; i++ {
-				time.Sleep(CRASHSRV * time.Millisecond)
-				e1 := crash.NewEventPath(string(crash.UX_CRASH), 0, 1.0, crashSemPn(crash.UX_CRASH, i+1))
-				ts.CrashServer(e0, e1, sp.UXREL)
-				e0 = e1
-			}
+			ts.crashServers(sp.UXREL, crash.UX_CRASH, em, crashux)
 			wg.Done()
 		}()
 	}

@@ -71,8 +71,8 @@ func init() {
 	e1 := crash.NewEventStart(crash.MRMAP_PARTITION, 100, CRASHTASK, 0.33)
 	mapEv = crash.NewTeventMapOne(e0)
 	mapEv.Insert(e1)
-	e0 = crash.NewEventStart(crash.MRREDUCE_CRASH, 100, CRASHTASK, 0.33)
-	e1 = crash.NewEventStart(crash.MRREDUCE_PARTITION, 100, CRASHTASK, 0.33)
+	e0 = crash.NewEventStart(crash.MRREDUCE_CRASH, 0, CRASHTASK, 0.7)
+	e1 = crash.NewEventStart(crash.MRREDUCE_PARTITION, 0, CRASHTASK/2, 0.5)
 	reduceEv = crash.NewTeventMapOne(e0)
 	reduceEv.Insert(e1)
 	e0 = crash.NewEventStart(crash.MRCOORD_CRASH, 100, CRASHTASK, 0.33)
@@ -569,7 +569,17 @@ func TestCrashMapperOnly(t *testing.T) {
 	assert.True(t, st.Nfail > 0)
 }
 
-func TestCrashReducerOnly(t *testing.T) {
+func TestCrashReducerOnlyCrash(t *testing.T) {
+	_, _, st := runN(t, reduceEv.Filter(crash.MRREDUCE_CRASH), 0, 0, 0, 0, false)
+	assert.True(t, st.Nfail > 0)
+}
+
+func TestCrashReducerOnlyPartition(t *testing.T) {
+	_, _, st := runN(t, reduceEv.Filter(crash.MRREDUCE_PARTITION), 0, 0, 0, 0, false)
+	assert.True(t, st.Nfail > 0)
+}
+
+func TestCrashReducerOnlyBoth(t *testing.T) {
 	_, _, st := runN(t, reduceEv, 0, 0, 0, 0, false)
 	assert.True(t, st.Nfail > 0)
 }

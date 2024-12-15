@@ -281,7 +281,12 @@ func RunReducer(reducef mr.ReduceT, args []string) {
 	if err := r.Started(); err != nil {
 		db.DFatalf("%v: error %v", os.Args[0], err)
 	}
-	crash.FailersDefault(r.FsLib, []crash.Tselector{crash.MRREDUCE_CRASH, crash.MRREDUCE_PARTITION})
+	crash.Failer(sc.FsLib, crash.MRREDUCE_CRASH, func(e crash.Tevent) {
+		crash.Crash()
+	})
+	crash.Failer(sc.FsLib, crash.MRREDUCE_PARTITION, func(e crash.Tevent) {
+		crash.PartitionPath(sc.FsLib, r.input[0].File)
+	})
 	status := r.DoReduce()
 	r.ClntExit(status)
 }

@@ -13,10 +13,10 @@ import (
 	"sigmaos/ft/procgroupmgr"
 	fttask "sigmaos/ft/task"
 	"sigmaos/proc"
-	"sigmaos/util/coordination/semaphore"
 	"sigmaos/sigmaclnt"
 	"sigmaos/sigmaclnt/fslib"
 	sp "sigmaos/sigmap"
+	"sigmaos/util/coordination/semaphore"
 	"sigmaos/util/yaml"
 )
 
@@ -87,7 +87,7 @@ func BinName(i int) string {
 }
 
 func mshardfile(dir string, r int) string {
-	return filepath.Join(dir, "r-"+strconv.Itoa(r))
+	return filepath.Join(dir, "r-"+strconv.Itoa(r)+"-")
 }
 
 func symname(jobRoot, job, r, name string) string {

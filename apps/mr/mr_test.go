@@ -59,17 +59,22 @@ var job *mr.Job
 var timeout time.Duration
 
 var coordEv *crash.TeventMap
-var taskEv *crash.TeventMap
+var mapEv *crash.TeventMap
+var reduceEv *crash.TeventMap
 
 func init() {
 	flag.StringVar(&app, "app", "mr-wc.yml", "application")
 	flag.IntVar(&nmap, "nmap", 1, "number of mapper threads")
 	flag.DurationVar(&timeout, "mr-timeout", 0, "timeout")
 
-	e0 := crash.NewEventStart(crash.MRTASK_CRASH, 100, CRASHTASK, 0.33)
-	e1 := crash.NewEventStart(crash.MRTASK_PARTITION, 100, CRASHTASK, 0.33)
-	taskEv = crash.NewTeventMapOne(e0)
-	taskEv.Insert(e1)
+	e0 := crash.NewEventStart(crash.MRMAP_CRASH, 100, CRASHTASK, 0.33)
+	e1 := crash.NewEventStart(crash.MRMAP_PARTITION, 100, CRASHTASK, 0.33)
+	mapEv = crash.NewTeventMapOne(e0)
+	mapEv.Insert(e1)
+	e0 = crash.NewEventStart(crash.MRREDUCE_CRASH, 100, CRASHTASK, 0.33)
+	e1 = crash.NewEventStart(crash.MRREDUCE_PARTITION, 100, CRASHTASK, 0.33)
+	reduceEv = crash.NewTeventMapOne(e0)
+	reduceEv.Insert(e1)
 	e0 = crash.NewEventStart(crash.MRCOORD_CRASH, 100, CRASHTASK, 0.33)
 	e1 = crash.NewEventStart(crash.MRCOORD_PARTITION, 100, CRASHTASK, 0.33)
 	coordEv = crash.NewTeventMapOne(e0)
@@ -412,11 +417,12 @@ func (ts *Tstate) collectStats(stati []*procgroupmgr.ProcStatus) (int, mr.Stat) 
 	nrestart := 0
 	for _, st := range stati {
 		nrestart += st.Nrestart
+		db.DPrintf(db.TEST, "grpmgr stat: %v", st)
 		if st.IsStatusOK() {
+			// if st.Status != nil && st.IsStatusOK() {
 			t := mr.Stat{}
 			err := mapstructure.Decode(st.Data(), &t)
 			assert.Nil(ts.T, err)
-			db.DPrintf(db.TEST, "mr stat: %v", t)
 			if t.Nmap > 0 || t.Nreduce > 0 {
 				mrst = t
 			}
@@ -558,8 +564,13 @@ func TestMaliciousMapper(t *testing.T) {
 	runN(t, nil, 0, 0, 0, 500, true)
 }
 
-func TestCrashTaskOnly(t *testing.T) {
-	_, _, st := runN(t, taskEv, 0, 0, 0, 0, false)
+func TestCrashMapperOnly(t *testing.T) {
+	_, _, st := runN(t, mapEv, 0, 0, 0, 0, false)
+	assert.True(t, st.Nfail > 0)
+}
+
+func TestCrashReducerOnly(t *testing.T) {
+	_, _, st := runN(t, reduceEv, 0, 0, 0, 0, false)
 	assert.True(t, st.Nfail > 0)
 }
 
@@ -570,7 +581,8 @@ func TestCrashCoordOnly(t *testing.T) {
 
 func TestCrashTaskAndCoord(t *testing.T) {
 	em := crash.NewTeventMap()
-	em.Merge(taskEv)
+	em.Merge(mapEv)
+	em.Merge(reduceEv)
 	em.Merge(coordEv)
 	ntask, nr, st := runN(t, em, 0, 0, 0, 0, false)
 	assert.True(t, nr > mr.NCOORD)

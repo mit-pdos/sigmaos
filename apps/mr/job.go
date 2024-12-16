@@ -188,7 +188,6 @@ func CleanupMROutputs(fsl *fslib.FsLib, outputDir, intOutputDir string) {
 	db.DPrintf(db.MR, "Clean up MR outputs done")
 }
 
-// Put names of input files in name/mr/m
 func PrepareJob(fsl *fslib.FsLib, ts *Tasks, jobRoot, jobName string, job *Job) (int, error) {
 	db.DPrintf(db.TEST, "job %v", job)
 	if job.Output == "" || job.Intermediate == "" {
@@ -204,8 +203,10 @@ func PrepareJob(fsl *fslib.FsLib, ts *Tasks, jobRoot, jobName string, job *Job) 
 		db.DPrintf(db.ALWAYS, "Error link output dir [%v] [%v]: %v", job.Output, JobOutLink(jobRoot, jobName), err)
 		return 0, err
 	}
+
 	redOutDir := ReduceOutTarget(job.Output, jobName)
 	intOutDir := MapIntermediateDir(jobName, job.Intermediate)
+
 	// If intermediate output directory lives in S3, make it only once.
 	// Otherwise, make it on every node
 	if strings.Contains(job.Intermediate, "/s3/") {

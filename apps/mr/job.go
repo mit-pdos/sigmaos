@@ -90,10 +90,6 @@ func mshardfile(dir string, r int) string {
 	return filepath.Join(dir, "r-"+strconv.Itoa(r)+"-")
 }
 
-func symname(jobRoot, job, r, name string) string {
-	return filepath.Join(ReduceIn(jobRoot, job), r, "m-"+name)
-}
-
 type Job struct {
 	App          string `yalm:"app"`
 	Nreduce      int    `yalm:"nreduce"`
@@ -155,7 +151,6 @@ func InitCoordFS(fsl *fslib.FsLib, jobRoot, jobname string, nreducetask int) (*T
 		LeaderElectDir(jobname),
 		MapTask(jobRoot, jobname),
 		ReduceTask(jobRoot, jobname),
-		ReduceIn(jobRoot, jobname),
 	}
 	for _, n := range dirs {
 		if err := fsl.MkDir(n, 0777); err != nil {
@@ -168,15 +163,9 @@ func InitCoordFS(fsl *fslib.FsLib, jobRoot, jobname string, nreducetask int) (*T
 		return nil, err
 	}
 
-	// Make input directories for reduce tasks and submit task
+	// Submit reduce task
 	for r := 0; r < nreducetask; r++ {
-		rs := strconv.Itoa(r)
-		n := ReduceIn(jobRoot, jobname) + "/" + rs
-		if err := fsl.MkDir(n, 0777); err != nil {
-			db.DPrintf(db.ERROR, "Mkdir %v err %v\n", n, err)
-			return nil, err
-		}
-		t := &TreduceTask{rs}
+		t := &TreduceTask{strconv.Itoa(r)}
 		if err := rft.SubmitTask(r, t); err != nil {
 			db.DPrintf(db.ERROR, "SubmitTask %v err %v\n", t, err)
 			return nil, err

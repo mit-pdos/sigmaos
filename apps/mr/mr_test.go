@@ -47,10 +47,11 @@ const (
 	// time interval (ms) for when a failure might happen. If too
 	// frequent and they don't finish ever. XXX determine
 	// dynamically
-	CRASHTASK  = 400
-	CRASHCOORD = 1000
-	CRASHSRV   = 1000
-	MEM_REQ    = 1000
+	CRASHREDUCE = 150
+	CRASHMAP    = 400
+	CRASHCOORD  = 1000
+	CRASHSRV    = 1000
+	MEM_REQ     = 1000
 )
 
 var app string // yaml app file
@@ -67,16 +68,16 @@ func init() {
 	flag.IntVar(&nmap, "nmap", 1, "number of mapper threads")
 	flag.DurationVar(&timeout, "mr-timeout", 0, "timeout")
 
-	e0 := crash.NewEventStart(crash.MRMAP_CRASH, 100, CRASHTASK, 0.33)
-	e1 := crash.NewEventStart(crash.MRMAP_PARTITION, 100, CRASHTASK, 0.33)
+	e0 := crash.NewEventStart(crash.MRMAP_CRASH, 100, CRASHMAP, 0.33)
+	e1 := crash.NewEventStart(crash.MRMAP_PARTITION, 100, CRASHMAP, 0.33)
 	mapEv = crash.NewTeventMapOne(e0)
 	mapEv.Insert(e1)
-	e0 = crash.NewEventStart(crash.MRREDUCE_CRASH, 0, CRASHTASK, 0.33)
-	e1 = crash.NewEventStart(crash.MRREDUCE_PARTITION, 0, CRASHTASK, 0.33)
+	e0 = crash.NewEventStart(crash.MRREDUCE_CRASH, 0, CRASHREDUCE, 0.33)
+	e1 = crash.NewEventStart(crash.MRREDUCE_PARTITION, 0, CRASHREDUCE, 0.33)
 	reduceEv = crash.NewTeventMapOne(e0)
 	reduceEv.Insert(e1)
-	e0 = crash.NewEventStart(crash.MRCOORD_CRASH, 100, CRASHTASK, 0.33)
-	e1 = crash.NewEventStart(crash.MRCOORD_PARTITION, 100, CRASHTASK, 0.33)
+	e0 = crash.NewEventStart(crash.MRCOORD_CRASH, 100, CRASHCOORD, 0.33)
+	e1 = crash.NewEventStart(crash.MRCOORD_PARTITION, 100, CRASHCOORD, 0.33)
 	coordEv = crash.NewTeventMapOne(e0)
 	coordEv.Insert(e1)
 }
@@ -633,7 +634,7 @@ func TestCrashUx5(t *testing.T) {
 }
 
 func TestCrashMSched1(t *testing.T) {
-	e0 := crash.NewEventPath(crash.MSCHED_CRASH, CRASHTASK, 1.0, crashSemPn(crash.MSCHED_CRASH, 0))
+	e0 := crash.NewEventPath(crash.MSCHED_CRASH, CRASHCOORD, 1.0, crashSemPn(crash.MSCHED_CRASH, 0))
 	runN(t, crash.NewTeventMapOne(e0), 1, 0, 0, 0, false)
 }
 

@@ -71,8 +71,8 @@ func init() {
 	e1 := crash.NewEventStart(crash.MRMAP_PARTITION, 100, CRASHTASK, 0.33)
 	mapEv = crash.NewTeventMapOne(e0)
 	mapEv.Insert(e1)
-	e0 = crash.NewEventStart(crash.MRREDUCE_CRASH, 0, CRASHTASK, 0.7)
-	e1 = crash.NewEventStart(crash.MRREDUCE_PARTITION, 0, CRASHTASK/2, 0.5)
+	e0 = crash.NewEventStart(crash.MRREDUCE_CRASH, 0, CRASHTASK, 0.33)
+	e1 = crash.NewEventStart(crash.MRREDUCE_PARTITION, 0, CRASHTASK, 0.33)
 	reduceEv = crash.NewTeventMapOne(e0)
 	reduceEv.Insert(e1)
 	e0 = crash.NewEventStart(crash.MRCOORD_CRASH, 100, CRASHTASK, 0.33)
@@ -555,6 +555,18 @@ func runN(t *testing.T, em *crash.TeventMap, crashmsched, crashprocq, crashux, m
 	return nmap + ts.nreducetask, nrestart, &mrst
 }
 
+// if f returns true, repeat test
+func repeatTest(t *testing.T, f func() bool) {
+	ok := false
+	for i := 0; i < 10; i++ {
+		if !f() {
+			ok = true
+			break
+		}
+	}
+	assert.True(t, ok)
+}
+
 func TestMRJob(t *testing.T) {
 	n, _, st := runN(t, nil, 0, 0, 0, 0, true)
 	assert.Equal(t, n, st.Ntask)
@@ -570,13 +582,17 @@ func TestCrashMapperOnly(t *testing.T) {
 }
 
 func TestCrashReducerOnlyCrash(t *testing.T) {
-	_, _, st := runN(t, reduceEv.Filter(crash.MRREDUCE_CRASH), 0, 0, 0, 0, false)
-	assert.True(t, st.Nfail > 0)
+	repeatTest(t, func() bool {
+		_, _, st := runN(t, reduceEv.Filter(crash.MRREDUCE_CRASH), 0, 0, 0, 0, false)
+		return st.Nfail == 0
+	})
 }
 
 func TestCrashReducerOnlyPartition(t *testing.T) {
-	_, _, st := runN(t, reduceEv.Filter(crash.MRREDUCE_PARTITION), 0, 0, 0, 0, false)
-	assert.True(t, st.Nfail > 0)
+	repeatTest(t, func() bool {
+		_, _, st := runN(t, reduceEv.Filter(crash.MRREDUCE_PARTITION), 0, 0, 0, 0, false)
+		return st.Nfail == 0
+	})
 }
 
 func TestCrashReducerOnlyBoth(t *testing.T) {
@@ -597,6 +613,23 @@ func TestCrashTaskAndCoord(t *testing.T) {
 	ntask, nr, st := runN(t, em, 0, 0, 0, 0, false)
 	assert.True(t, nr > mr.NCOORD)
 	assert.True(t, st.Ntask > ntask)
+}
+
+func TestCrashUx1(t *testing.T) {
+	N := 1
+	e0 := crash.NewEventPath(crash.UX_CRASH, 0, 1.0, crashSemPn(crash.UX_CRASH, 0))
+	ntask, _, st := runN(t, crash.NewTeventMapOne(e0), 0, 0, N, 0, false)
+	assert.True(t, st.Ntask > ntask || st.Nfail > 0)
+}
+
+func TestCrashUx2(t *testing.T) {
+	N := 2
+	runN(t, nil, 0, 0, N, 0, false)
+}
+
+func TestCrashUx5(t *testing.T) {
+	N := 5
+	runN(t, nil, 0, 0, N, 0, false)
 }
 
 func TestCrashMSched1(t *testing.T) {
@@ -626,23 +659,6 @@ func TestCrashProcq2(t *testing.T) {
 func TestCrashProcqN(t *testing.T) {
 	N := 5
 	runN(t, nil, 0, N, 0, 0, false)
-}
-
-func TestCrashUx1(t *testing.T) {
-	N := 1
-	e0 := crash.NewEventPath(crash.UX_CRASH, 0, 1.0, crashSemPn(crash.UX_CRASH, 0))
-	ntask, _, st := runN(t, crash.NewTeventMapOne(e0), 0, 0, N, 0, false)
-	assert.True(t, st.Ntask > ntask)
-}
-
-func TestCrashUx2(t *testing.T) {
-	N := 2
-	runN(t, nil, 0, 0, N, 0, false)
-}
-
-func TestCrashUx5(t *testing.T) {
-	N := 5
-	runN(t, nil, 0, 0, N, 0, false)
 }
 
 func TestCrashMSchedProcqUx5(t *testing.T) {

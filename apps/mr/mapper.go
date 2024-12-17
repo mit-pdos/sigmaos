@@ -147,7 +147,6 @@ func (m *Mapper) initOutput() error {
 	}(start)
 
 	if err := CreateMapperIntOutDirUx(m.FsLib, m.job, m.intOutput); err != nil {
-		db.DPrintf(db.MR, "CreateMapperIntOutDirUx err %v", err)
 		return err
 	}
 	db.DPrintf(db.SPAWN_LAT, "CreateMapperIntOutDirUx %v", time.Since(start))

@@ -103,7 +103,7 @@ run_test() {
     ./logs.sh > $PROC_LOG_PATH 2>&1
     printf "  Done saving $pkg_name proc logs\n\tLog path: $PROC_LOG_PATH\n"
   else
-    $cmd
+    eval "$cmd"
   fi
   cleanup
 }
@@ -171,7 +171,7 @@ if [[ $BASIC == "--basic" ]]; then
             continue
           fi
         fi
-        run_test $T "go test $VERB sigmaos/$T"
+        run_test $T "./test-in-docker.sh --pkg $T --no-start --args \"$VERB\""
     done
 
     #
@@ -188,7 +188,7 @@ if [[ $BASIC == "--basic" ]]; then
             continue
           fi
         fi
-        run_test $T "go test $VERB sigmaos/$T"
+        run_test $T "./test-in-docker.sh --pkg $T --args \"$VERB\""
     done
 
     #
@@ -205,14 +205,14 @@ if [[ $BASIC == "--basic" ]]; then
             continue
           fi
         fi
-        run_test $T "go test $VERB -timeout 20m sigmaos/$T -start $SPPROXYD $DIALPROXY $REUSEKERNEL"
+        run_test $T "./test-in-docker.sh --pkg $T --args \"$VERB --timeout 20m $SPPROXYD $DIALPROXY $REUSEKERNEL\""
     done
 
     # run_test $sigmapsrv "go test $VERB sigmaos/sigmapsrv -start"  # no perf
 
     # test memfs
-    run_test "memfs/local" "go test $VERB sigmaos/sigmaclnt/fslib -start -path "name/memfs/~local/"  $SPPROXYD $DIALPROXY $REUSEKERNEL"
-    run_test "memfs/start" "go test $VERB sigmaos/memfs -start $SPPROXYD $DIALPROXY $REUSEKERNEL"
+    run_test "memfs/local" "./test-in-docker.sh --pkg sigmaclnt/fslib --args \"$VERB -path name/memfs/~local/ $SPPROXYD $DIALPROXY $REUSEKERNEL\""
+    run_test "memfs/start" "./test-in-docker.sh --pkg sigmasrv/memfssrv/memfs --args \"$VERB -path name/memfs/~local/ $SPPROXYD $DIALPROXY $REUSEKERNEL\""
 
     #
     # tests a full kernel using root realm
@@ -228,7 +228,7 @@ if [[ $BASIC == "--basic" ]]; then
             continue
           fi
         fi
-        run_test $T "go test $VERB sigmaos/$T -start $SPPROXYD $DIALPROXY $REUSEKERNEL"
+        run_test $T "./test-in-docker.sh --pkg $T --args \"$VERB $SPPROXYD $DIALPROXY $REUSEKERNEL\""
     done
 
     #
@@ -245,14 +245,14 @@ if [[ $BASIC == "--basic" ]]; then
             continue
           fi
         fi
-        run_test $T "go test $VERB sigmaos/$T -start"
+        run_test $T "./test-in-docker.sh --pkg $T --args \"$VERB --timeout 20m $SPPROXYD $DIALPROXY $REUSEKERNEL\""
     done
 
 
-    run_test "sigmapsrv/ux" "go test $VERB sigmaos/sigmasrv/memfssrv/sigmapsrv -start -path "name/ux/~local/" -run ReadPerf"
-    run_test "sigmapsrv/s3" "go test $VERB sigmaos/sigmasrv/memfssrvsigmapsrv -start -path "name/s3/~local/9ps3/" -run ReadPerf"
-    run_test "sigmapsrv/s3pathclnt" "go test $VERB sigmaos/sigmasrv/memfssrvsigmapsrv --withs3pathclnt -start -path "name/s3/~local/9ps3/" -run ReadFilePerfSingle"
-    
+    run_test "sigmapsrv/ux" "./test-in-docker.sh --pkg sigmasrv/memfssrv/sigmapsrv --test ReadPerf --args \"$VERB --path name/ux/~local/ $SPPROXYD $DIALPROXY $REUSEKERNEL\""
+    run_test "sigmapsrv/s3" "./test-in-docker.sh --pkg sigmasrv/memfssrv/sigmapsrv --test ReadPerf --args \"$VERB --path name/s3/~local/9ps3/ $SPPROXYD $DIALPROXY $REUSEKERNEL\""
+    run_test "sigmapsrv/s3pathclnt" "./test-in-docker.sh --pkg sigmasrv/memfssrv/sigmapsrv --test ReadFilePerfSingle --args \"$VERB --path name/s3/~local/9ps3/ --withs3pathclnt $SPPROXYD $DIALPROXY $REUSEKERNEL\""
+
 
     #
     # test with realms
@@ -268,7 +268,7 @@ if [[ $BASIC == "--basic" ]]; then
             continue
           fi
         fi
-      run_test $T "go test $VERB sigmaos/$T -start $SPPROXYD $DIALPROXY $REUSEKERNEL"
+      run_test $T "./test-in-docker.sh --pkg $T --args \"$VERB $SPPROXYD $DIALPROXY $REUSEKERNEL\""
   done
 fi
 
@@ -295,8 +295,9 @@ if [[ $APPS == "--apps" ]]; then
           if [[ "${NEED_DB[$i]}" == "true" ]]; then
             ./start-db.sh
           fi
-          run_test $T "go test $VERB sigmaos/$T -start $SPPROXYD $DIALPROXY -run '${TNAMES[$i]}'"
+          run_test $T "./test-in-docker.sh --pkg $T --test '${TNAMES[$i]}' --args \"$VERB $SPPROXYD $DIALPROXY\""
           i=$(($i+1))
+#XXX XXX
         done
 #        go test $VERB sigmaos/apps/mr -start $SPPROXYD $DIALPROXY -run MRJob
 #        cleanup
@@ -322,7 +323,7 @@ if [[ $APPS == "--apps" ]]; then
               fi
             fi
             ./start-db.sh
-            run_test $T "go test -timeout 20m $VERB sigmaos/$T -start $SPPROXYD $DIALPROXY $REUSEKERNEL"
+            run_test $T "./test-in-docker.sh --pkg $T --args \"$VERB --timeout 20m $SPPROXYD $DIALPROXY $REUSEKERNEL\""
         done
         # On machines with many cores, kv tests may take a long time.
         for T in apps/kv; do
@@ -336,7 +337,7 @@ if [[ $APPS == "--apps" ]]; then
               fi
             fi
             ./start-db.sh
-            run_test $T "go test -timeout 50m $VERB sigmaos/$T -start $SPPROXYD $DIALPROXY $REUSEKERNEL"
+            run_test $T "./test-in-docker.sh --pkg $T --args \"$VERB --timeout 50m $SPPROXYD $DIALPROXY $REUSEKERNEL\""
         done
     fi
 fi
@@ -346,7 +347,7 @@ fi
 #
 
 if [[ $CONTAINER == "--container" ]] ; then
-    run_test $T "go test $VERB sigmaos/scontainer -start"
+    run_test $T "./test-in-docker.sh --pkg scontainer --args \"$VERB\""
 fi
 
 cleanup

@@ -105,6 +105,16 @@ func (em *TeventMap) Merge(em0 *TeventMap) {
 	}
 }
 
+func (em0 *TeventMap) Filter(l Tselector) *TeventMap {
+	em1 := NewTeventMap()
+	for k, v := range em0.Evs {
+		if k == l {
+			em1.Evs[k] = v
+		}
+	}
+	return em1
+}
+
 func unmarshalTevents(s string) (*TeventMap, error) {
 	if s == "" {
 		return NewTeventMap(), nil
@@ -171,8 +181,18 @@ func CrashMsg(msg string) {
 
 func PartitionNamed(fsl *fslib.FsLib) {
 	db.DPrintf(db.CRASH, "PartitionNamed from %v\n", sp.NAMED)
-	if error := fsl.Disconnect(sp.NAMED); error != nil {
-		db.DPrintf(db.CRASH, "Disconnect %v name fails err %v\n", os.Args, error)
+	if err := fsl.Disconnect(sp.NAMED); err != nil {
+		db.DPrintf(db.CRASH, "Disconnect %v name fails err %v\n", os.Args, err)
+	}
+}
+
+func PartitionPath(fsl *fslib.FsLib, pn string) {
+	db.DPrintf(db.CRASH, "PartitionPath %v\n", pn)
+	if _, err := fsl.Stat(pn); err != nil {
+		db.DPrintf(db.CRASH, "PartitionPath: %v Stat %v err %v\n", os.Args, pn, err)
+	}
+	if err := fsl.Disconnect(pn); err != nil {
+		db.DPrintf(db.CRASH, "PartitionPath: %v Disconnect %v err %v\n", os.Args, pn, err)
 	}
 }
 

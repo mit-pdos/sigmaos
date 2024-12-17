@@ -24,6 +24,7 @@ import (
 	api "sigmaos/apps/mr/mr"
 	mrscanner "sigmaos/apps/mr/scanner"
 	db "sigmaos/debug"
+	"sigmaos/ft/procgroupmgr"
 	"sigmaos/proc"
 	mschedclnt "sigmaos/sched/msched/clnt"
 	"sigmaos/sigmaclnt"
@@ -46,10 +47,12 @@ const (
 	// time interval (ms) for when a failure might happen. If too
 	// frequent and they don't finish ever. XXX determine
 	// dynamically
-	CRASHTASK  = 400
-	CRASHCOORD = 1000
-	CRASHSRV   = 1000
-	MEM_REQ    = 1000
+
+	CRASHREDUCE = 150
+	CRASHMAP    = 400
+	CRASHCOORD  = 1000
+	CRASHSRV    = 1000
+	MEM_REQ     = 1000
 )
 
 var app string // yaml app file
@@ -58,19 +61,24 @@ var job *mr.Job
 var timeout time.Duration
 
 var coordEv *crash.TeventMap
-var taskEv *crash.TeventMap
+var mapEv *crash.TeventMap
+var reduceEv *crash.TeventMap
 
 func init() {
 	flag.StringVar(&app, "app", "mr-wc.yml", "application")
 	flag.IntVar(&nmap, "nmap", 1, "number of mapper threads")
 	flag.DurationVar(&timeout, "mr-timeout", 0, "timeout")
 
-	e0 := crash.NewEventStart(crash.MRTASK_CRASH, 100, CRASHTASK, 0.33)
-	e1 := crash.NewEventStart(crash.MRTASK_PARTITION, 100, CRASHTASK, 0.33)
-	taskEv = crash.NewTeventMapOne(e0)
-	taskEv.Insert(e1)
-	e0 = crash.NewEventStart(crash.MRCOORD_CRASH, 100, CRASHTASK, 0.33)
-	e1 = crash.NewEventStart(crash.MRCOORD_PARTITION, 100, CRASHTASK, 0.33)
+	e0 := crash.NewEventStart(crash.MRMAP_CRASH, 100, CRASHMAP, 0.33)
+	e1 := crash.NewEventStart(crash.MRMAP_PARTITION, 100, CRASHMAP, 0.33)
+	mapEv = crash.NewTeventMapOne(e0)
+	mapEv.Insert(e1)
+	e0 = crash.NewEventStart(crash.MRREDUCE_CRASH, 0, CRASHREDUCE, 0.33)
+	e1 = crash.NewEventStart(crash.MRREDUCE_PARTITION, 0, CRASHREDUCE, 0.33)
+	reduceEv = crash.NewTeventMapOne(e0)
+	reduceEv.Insert(e1)
+	e0 = crash.NewEventStart(crash.MRCOORD_CRASH, 100, CRASHCOORD, 0.33)
+	e1 = crash.NewEventStart(crash.MRCOORD_PARTITION, 100, CRASHCOORD, 0.33)
 	coordEv = crash.NewTeventMapOne(e0)
 	coordEv.Insert(e1)
 }
@@ -406,7 +414,29 @@ func (ts *Tstate) crashServers(srv string, l crash.Tselector, em *crash.TeventMa
 	}
 }
 
-func runN(t *testing.T, em *crash.TeventMap, crashmsched, crashprocq, crashux, maliciousMapper int, monitor bool) (int, *mr.Stat) {
+func (ts *Tstate) collectStats(stati []*procgroupmgr.ProcStatus) (int, mr.Stat) {
+	mrst := mr.Stat{}
+	nrestart := 0
+	for _, st := range stati {
+		nrestart += st.Nrestart
+		db.DPrintf(db.TEST, "grpmgr stat: %v", st)
+		if st.IsStatusOK() {
+			// if st.Status != nil && st.IsStatusOK() {
+			t := mr.Stat{}
+			err := mapstructure.Decode(st.Data(), &t)
+			assert.Nil(ts.T, err)
+			if t.Nmap > 0 || t.Nreduce > 0 {
+				mrst = t
+			}
+			if t.Ntask > mrst.Ntask {
+				mrst.Ntask = t.Ntask
+			}
+		}
+	}
+	return nrestart, mrst
+}
+
+func runN(t *testing.T, em *crash.TeventMap, crashmsched, crashprocq, crashux, maliciousMapper int, monitor bool) (int, int, *mr.Stat) {
 	var s3secrets *sp.SecretProto
 	var err1 error
 	// If running with malicious mappers, try to get restricted AWS secrets
@@ -414,7 +444,7 @@ func runN(t *testing.T, em *crash.TeventMap, crashmsched, crashprocq, crashux, m
 	if maliciousMapper > 0 {
 		s3secrets, err1 = auth.GetAWSSecrets(sp.AWS_S3_RESTRICTED_PROFILE)
 		if !assert.Nil(t, err1, "Can't get secrets for aws profile %v: %v", sp.AWS_S3_RESTRICTED_PROFILE, err1) {
-			return 0, nil
+			return 0, 0, nil
 		}
 	}
 
@@ -424,7 +454,7 @@ func runN(t *testing.T, em *crash.TeventMap, crashmsched, crashprocq, crashux, m
 
 	t1, err1 := test.NewTstateAll(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return 0, nil
+		return 0, 0, nil
 	}
 
 	var sc *sigmaclnt.SigmaClnt = t1.SigmaClnt
@@ -486,14 +516,7 @@ func runN(t *testing.T, em *crash.TeventMap, crashmsched, crashprocq, crashux, m
 	if crashux > 0 {
 		wg.Add(1)
 		go func() {
-			e0, ok := em.Lookup(crash.UX_CRASH)
-			assert.True(ts.T, ok)
-			for i := 0; i < crashux; i++ {
-				time.Sleep(CRASHSRV * time.Millisecond)
-				e1 := crash.NewEventPath(string(crash.UX_CRASH), 0, 1.0, crashSemPn(crash.UX_CRASH, i+1))
-				ts.CrashServer(e0, e1, sp.UXREL)
-				e0 = e1
-			}
+			ts.crashServers(sp.UXREL, crash.UX_CRASH, em, crashux)
 			wg.Done()
 		}()
 	}
@@ -507,24 +530,11 @@ func runN(t *testing.T, em *crash.TeventMap, crashmsched, crashprocq, crashux, m
 	wg.Wait()
 
 	db.DPrintf(db.TEST, "WaitGroup")
-	stati := cm.WaitGroup()
-	mrst := mr.Stat{}
-	nrestart := 0
-	for _, st := range stati {
-		nrestart += st.Nrestart
-		if st.IsStatusOK() {
-			t := mr.Stat{}
-			err := mapstructure.Decode(st.Data(), &t)
-			assert.Nil(ts.T, err)
-			db.DPrintf(db.TEST, "mr stat: %v", t)
-			if t.Nmap > 0 || t.Nreduce > 0 {
-				mrst = t
-			}
-		}
-	}
-	db.DPrintf(db.TEST, "Done WaitGroup %d", len(stati))
 
-	db.DPrintf(db.TEST, "MR proc stats ncoord %d %v", nrestart, &mrst)
+	stati := cm.WaitGroup()
+	nrestart, mrst := ts.collectStats(stati)
+
+	db.DPrintf(db.TEST, "Done WaitGroup %d %v", nrestart, &mrst)
 
 	db.DPrintf(db.TEST, "Check Job")
 	ok := ts.checkJob(runApp)
@@ -544,38 +554,88 @@ func runN(t *testing.T, em *crash.TeventMap, crashmsched, crashprocq, crashux, m
 	mr.CleanupMROutputs(ts.FsLib, mr.JobOut(job.Output, ts.job), mr.MapIntermediateDir(ts.job, job.Intermediate))
 	db.DPrintf(db.TEST, "Done cleanup MR outputs")
 	ts.Shutdown()
-	return nrestart, &mrst
+	return nmap + ts.nreducetask, nrestart, &mrst
+}
+
+// if f returns true, repeat test
+func repeatTest(t *testing.T, f func() bool) {
+	ok := false
+	for i := 0; i < 10; i++ {
+		if !f() {
+			ok = true
+			break
+		}
+	}
+	assert.True(t, ok)
 }
 
 func TestMRJob(t *testing.T) {
-	runN(t, nil, 0, 0, 0, 0, true)
+	n, _, st := runN(t, nil, 0, 0, 0, 0, true)
+	assert.Equal(t, n, st.Ntask)
 }
 
 func TestMaliciousMapper(t *testing.T) {
 	runN(t, nil, 0, 0, 0, 500, true)
 }
 
-func TestCrashTaskOnly(t *testing.T) {
-	_, st := runN(t, taskEv, 0, 0, 0, 0, false)
+func TestCrashMapperOnly(t *testing.T) {
+	_, _, st := runN(t, mapEv, 0, 0, 0, 0, false)
+	assert.True(t, st.Nfail > 0)
+}
+
+func TestCrashReducerOnlyCrash(t *testing.T) {
+	repeatTest(t, func() bool {
+		_, _, st := runN(t, reduceEv.Filter(crash.MRREDUCE_CRASH), 0, 0, 0, 0, false)
+		return st.Nfail == 0
+	})
+}
+
+func TestCrashReducerOnlyPartition(t *testing.T) {
+	repeatTest(t, func() bool {
+		_, _, st := runN(t, reduceEv.Filter(crash.MRREDUCE_PARTITION), 0, 0, 0, 0, false)
+		return st.Nfail == 0
+	})
+}
+
+func TestCrashReducerOnlyBoth(t *testing.T) {
+	_, _, st := runN(t, reduceEv, 0, 0, 0, 0, false)
 	assert.True(t, st.Nfail > 0)
 }
 
 func TestCrashCoordOnly(t *testing.T) {
-	nr, _ := runN(t, coordEv, 0, 0, 0, 0, false)
+	_, nr, _ := runN(t, coordEv, 0, 0, 0, 0, false)
 	assert.True(t, nr > mr.NCOORD)
 }
 
 func TestCrashTaskAndCoord(t *testing.T) {
 	em := crash.NewTeventMap()
-	em.Merge(taskEv)
+	em.Merge(mapEv)
+	em.Merge(reduceEv)
 	em.Merge(coordEv)
-	nr, st := runN(t, em, 0, 0, 0, 0, false)
+	ntask, nr, st := runN(t, em, 0, 0, 0, 0, false)
 	assert.True(t, nr > mr.NCOORD)
-	assert.True(t, st.Ntask > 10)
+	assert.True(t, st.Ntask > ntask)
+}
+
+func TestCrashUx1(t *testing.T) {
+	N := 1
+	e0 := crash.NewEventPath(crash.UX_CRASH, 0, 1.0, crashSemPn(crash.UX_CRASH, 0))
+	ntask, _, st := runN(t, crash.NewTeventMapOne(e0), 0, 0, N, 0, false)
+	assert.True(t, st.Ntask > ntask || st.Nfail > 0)
+}
+
+func TestCrashUx2(t *testing.T) {
+	N := 2
+	runN(t, nil, 0, 0, N, 0, false)
+}
+
+func TestCrashUx5(t *testing.T) {
+	N := 5
+	runN(t, nil, 0, 0, N, 0, false)
 }
 
 func TestCrashMSched1(t *testing.T) {
-	e0 := crash.NewEventPath(crash.MSCHED_CRASH, CRASHTASK, 1.0, crashSemPn(crash.MSCHED_CRASH, 0))
+	e0 := crash.NewEventPath(crash.MSCHED_CRASH, CRASHCOORD, 1.0, crashSemPn(crash.MSCHED_CRASH, 0))
 	runN(t, crash.NewTeventMapOne(e0), 1, 0, 0, 0, false)
 }
 
@@ -601,22 +661,6 @@ func TestCrashProcq2(t *testing.T) {
 func TestCrashProcqN(t *testing.T) {
 	N := 5
 	runN(t, nil, 0, N, 0, 0, false)
-}
-
-func TestCrashUx1(t *testing.T) {
-	N := 1
-	e0 := crash.NewEventPath(crash.UX_CRASH, 0, 1.0, crashSemPn(crash.UX_CRASH, 0))
-	runN(t, crash.NewTeventMapOne(e0), 0, 0, N, 0, false)
-}
-
-func TestCrashUx2(t *testing.T) {
-	N := 2
-	runN(t, nil, 0, 0, N, 0, false)
-}
-
-func TestCrashUx5(t *testing.T) {
-	N := 5
-	runN(t, nil, 0, 0, N, 0, false)
 }
 
 func TestCrashMSchedProcqUx5(t *testing.T) {

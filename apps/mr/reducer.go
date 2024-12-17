@@ -2,7 +2,6 @@ package mr
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -78,25 +77,6 @@ func NewReducer(sc *sigmaclnt.SigmaClnt, reducef mr.ReduceT, args []string, p *p
 	}
 	r.wrt = w
 	r.pwrt = perf.NewPerfWriter(r.wrt, r.perf)
-	return r, nil
-}
-
-func newReducer(reducef mr.ReduceT, args []string, p *perf.Perf) (*Reducer, error) {
-	if len(args) != 4 {
-		return nil, errors.New("NewReducer: too few arguments")
-	}
-	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
-	if err != nil {
-		return nil, fmt.Errorf("NewReducer: can't create sc err %v", err)
-	}
-	r, err := NewReducer(sc, reducef, args, p)
-	if err != nil {
-		return nil, err
-	}
-	if err := r.Started(); err != nil {
-		return nil, fmt.Errorf("NewReducer couldn't start %v err %v", args, err)
-	}
-	crash.FailersDefault(r.FsLib, []crash.Tselector{crash.MRTASK_CRASH, crash.MRTASK_PARTITION})
 	return r, nil
 }
 
@@ -298,7 +278,15 @@ func RunReducer(reducef mr.ReduceT, args []string) {
 	if err != nil {
 		db.DFatalf("%v: error %v", os.Args[0], err)
 	}
-
+	if err := r.Started(); err != nil {
+		db.DFatalf("%v: error %v", os.Args[0], err)
+	}
+	crash.Failer(sc.FsLib, crash.MRREDUCE_CRASH, func(e crash.Tevent) {
+		crash.Crash()
+	})
+	crash.Failer(sc.FsLib, crash.MRREDUCE_PARTITION, func(e crash.Tevent) {
+		crash.PartitionPath(sc.FsLib, r.input[0].File)
+	})
 	status := r.DoReduce()
 	r.ClntExit(status)
 }

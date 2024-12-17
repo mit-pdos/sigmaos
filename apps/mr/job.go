@@ -87,11 +87,7 @@ func BinName(i int) string {
 }
 
 func mshardfile(dir string, r int) string {
-	return filepath.Join(dir, "r-"+strconv.Itoa(r))
-}
-
-func symname(jobRoot, job, r, name string) string {
-	return filepath.Join(ReduceIn(jobRoot, job), r, "m-"+name)
+	return filepath.Join(dir, "r-"+strconv.Itoa(r)+"-")
 }
 
 type Job struct {
@@ -155,7 +151,6 @@ func InitCoordFS(fsl *fslib.FsLib, jobRoot, jobname string, nreducetask int) (*T
 		LeaderElectDir(jobname),
 		MapTask(jobRoot, jobname),
 		ReduceTask(jobRoot, jobname),
-		ReduceIn(jobRoot, jobname),
 	}
 	for _, n := range dirs {
 		if err := fsl.MkDir(n, 0777); err != nil {
@@ -168,15 +163,9 @@ func InitCoordFS(fsl *fslib.FsLib, jobRoot, jobname string, nreducetask int) (*T
 		return nil, err
 	}
 
-	// Make input directories for reduce tasks and submit task
+	// Submit reduce task
 	for r := 0; r < nreducetask; r++ {
-		rs := strconv.Itoa(r)
-		n := ReduceIn(jobRoot, jobname) + "/" + rs
-		if err := fsl.MkDir(n, 0777); err != nil {
-			db.DPrintf(db.ERROR, "Mkdir %v err %v\n", n, err)
-			return nil, err
-		}
-		t := &TreduceTask{rs}
+		t := &TreduceTask{strconv.Itoa(r)}
 		if err := rft.SubmitTask(r, t); err != nil {
 			db.DPrintf(db.ERROR, "SubmitTask %v err %v\n", t, err)
 			return nil, err
@@ -199,7 +188,6 @@ func CleanupMROutputs(fsl *fslib.FsLib, outputDir, intOutputDir string) {
 	db.DPrintf(db.MR, "Clean up MR outputs done")
 }
 
-// Put names of input files in name/mr/m
 func PrepareJob(fsl *fslib.FsLib, ts *Tasks, jobRoot, jobName string, job *Job) (int, error) {
 	db.DPrintf(db.TEST, "job %v", job)
 	if job.Output == "" || job.Intermediate == "" {
@@ -215,8 +203,10 @@ func PrepareJob(fsl *fslib.FsLib, ts *Tasks, jobRoot, jobName string, job *Job) 
 		db.DPrintf(db.ALWAYS, "Error link output dir [%v] [%v]: %v", job.Output, JobOutLink(jobRoot, jobName), err)
 		return 0, err
 	}
+
 	redOutDir := ReduceOutTarget(job.Output, jobName)
 	intOutDir := MapIntermediateDir(jobName, job.Intermediate)
+
 	// If intermediate output directory lives in S3, make it only once.
 	// Otherwise, make it on every node
 	if strings.Contains(job.Intermediate, "/s3/") {

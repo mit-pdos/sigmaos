@@ -66,7 +66,7 @@ func (be *bin) signalStatWaiters() {
 }
 
 // Caller should open file if getFd returns -1
-func (be *bin) getFd(sc *sigmaclnt.SigmaClnt, paths []string) (int, string) {
+func (be *bin) getFd(paths []string) (int, string) {
 	be.Lock()
 	defer be.Unlock()
 
@@ -80,6 +80,12 @@ func (be *bin) getFd(sc *sigmaclnt.SigmaClnt, paths []string) (int, string) {
 		}
 		be.cond.Wait()
 	}
+}
+
+func (be *bin) failFd() {
+	be.Lock()
+	defer be.Unlock()
+	be.fd = -1
 }
 
 func (be *bin) signalFdWaiters() {

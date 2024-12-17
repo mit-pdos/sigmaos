@@ -192,7 +192,7 @@ func (cksrv *ChunkSrv) fetchOrigin(r sp.Trealm, prog string, pid sp.Tpid, s3secr
 		return 0, "", err
 	}
 	// paths = replaceLocal(paths, cksrv.kernelId)
-	fd, path := be.getFd(sc, paths)
+	fd, path := be.getFd(paths)
 	if fd == -1 {
 		defer be.signalFdWaiters()
 		s := time.Now()
@@ -208,7 +208,9 @@ func (cksrv *ChunkSrv) fetchOrigin(r sp.Trealm, prog string, pid sp.Tpid, s3secr
 	}
 	sz, err := sc.Pread(fd, b, sp.Toffset(chunk.ChunkOff(ck)))
 	if err != nil {
-		db.DPrintf(db.CHUNKSRV, "%v: FetchOrigin: pid %v read %q ckid %d err %v", cksrv.kernelId, pid, prog, ck, err)
+		db.DPrintf(db.CHUNKSRV, "%v: fetchOrigin: pid %v read %q ckid %d err %v", cksrv.kernelId, pid, prog, ck, err)
+		be.failFd()
+		sc.CloseFd(fd)
 		return 0, "", err
 	}
 	return sz, path, nil

@@ -13,10 +13,10 @@ import (
 	"sigmaos/ft/procgroupmgr"
 	fttask "sigmaos/ft/task"
 	"sigmaos/proc"
-	"sigmaos/util/coordination/semaphore"
 	"sigmaos/sigmaclnt"
 	"sigmaos/sigmaclnt/fslib"
 	sp "sigmaos/sigmap"
+	"sigmaos/util/coordination/semaphore"
 	"sigmaos/util/yaml"
 )
 
@@ -235,15 +235,15 @@ func PrepareJob(fsl *fslib.FsLib, ts *Tasks, jobRoot, jobName string, job *Job) 
 			return 0, err
 		}
 		for _, ux := range sp.Names(uxSts) {
-			intResolved := strings.ReplaceAll(job.Intermediate, sp.LOCAL, ux)
+			intResolved := strings.ReplaceAll(job.Intermediate, sp.ANY, ux)
 			if err := fsl.MkDir(intResolved, 0777); err != nil {
 				return 0, err
 			}
-			intOutResolved := strings.ReplaceAll(intOutDir, sp.LOCAL, ux)
+			intOutResolved := strings.ReplaceAll(intOutDir, sp.ANY, ux)
 			if err := fsl.MkDir(intOutResolved, 0777); err != nil {
 				return 0, err
 			}
-			redOutResolved := strings.ReplaceAll(redOutDir, sp.LOCAL, ux)
+			redOutResolved := strings.ReplaceAll(redOutDir, sp.ANY, ux)
 			if err := fsl.MkDir(redOutResolved, 0777); err != nil {
 				return 0, err
 			}

@@ -95,6 +95,31 @@ func main() {
 			currentDir = newDir
 		case "pwd":
 			fmt.Println(currentDir)
+		case "putfile":
+			if len(args) != 3 {
+				fmt.Println("Usage: putfile <filename> <content>")
+				continue
+			}
+			filename := filepath.Join(currentDir, args[1])
+			content := []byte(args[2])
+			_, err := ts.PutFile(filename, 0777, sp.OWRITE, content)
+			if err != nil {
+				fmt.Printf("Error writing file: %v\n", err)
+			} else {
+				fmt.Printf("File %s created successfully\n", args[1])
+			}
+		case "getfile":
+			if len(args) != 2 {
+				fmt.Println("Usage: getfile <filename>")
+				continue
+			}
+			filename := filepath.Join(currentDir, args[1])
+			data, err := ts.GetFile(filename)
+			if err != nil {
+				fmt.Printf("Error reading file: %v\n", err)
+			} else {
+				fmt.Printf("File contents: %s\n", string(data))
+			}
 		case "exit":
 			return
 		case "help":
@@ -105,6 +130,8 @@ func main() {
 			fmt.Println("  ls - List contents of the current directory")
 			fmt.Println("  cd <directory> - Change current directory")
 			fmt.Println("  pwd - Print current working directory")
+			fmt.Println("  putfile <filename> <content> - Create and write to a file")
+			fmt.Println("  getfile <filename> - Read and display file contents")
 			fmt.Println("  exit - Exit the CLI")
 		default:
 			fmt.Println("Unknown command. Type 'help' for available commands.")

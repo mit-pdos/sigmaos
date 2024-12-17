@@ -80,7 +80,6 @@ func NewMapper(sc *sigmaclnt.SigmaClnt, mapf mr.MapT, combinef mr.ReduceT, jobRo
 }
 
 func newMapper(mapf mr.MapT, reducef mr.ReduceT, args []string, p *perf.Perf) (*Mapper, error) {
-
 	if len(args) != 7 {
 		return nil, fmt.Errorf("NewMapper: too few arguments %v", args)
 	}
@@ -147,6 +146,11 @@ func (m *Mapper) initOutput() error {
 		db.DPrintf(db.SPAWN_LAT, "initOutput time: %v", time.Since(start))
 	}(start)
 
+	if err := CreateMapperIntOutDirUx(m.FsLib, m.job, m.intOutput); err != nil {
+		return err
+	}
+	db.DPrintf(db.SPAWN_LAT, "CreateMapperIntOutDirUx %v", time.Since(start))
+
 	outDirPath := MapIntermediateDir(m.job, m.intOutput)
 
 	// Create the output files
@@ -211,17 +215,18 @@ func (m *Mapper) Emit(key []byte, value string) error {
 	return err
 }
 
-func (m *Mapper) combineEmit() {
+func (m *Mapper) combineEmit() error {
 	s := time.Now()
 	d := m.ckrs[0]
 	for _, ckr := range m.ckrs[1:] {
 		d.MergeKVMap(ckr)
 	}
 	db.DPrintf(db.SPAWN_LAT, "combineEmit: %v", time.Since(s))
-	d.CombineEmit(m.Emit)
+	err := d.CombineEmit(m.Emit)
 	for _, ckr := range m.ckrs {
 		ckr.Reset()
 	}
+	return err
 }
 
 func (m *Mapper) doSplit(s *mr.Split) (sp.Tlength, error) {
@@ -272,8 +277,8 @@ func (m *Mapper) doSplit(s *mr.Split) (sp.Tlength, error) {
 	if n >= s.Length {
 		db.DPrintf(db.MR, "%v read %v bytes %d extra %d", s.File, n, s.Length, n-s.Length)
 	}
-	m.combineEmit()
-	return n, nil
+	err = m.combineEmit()
+	return n, err
 }
 
 func (m *Mapper) DoMap() (sp.Tlength, sp.Tlength, Bin, error) {

@@ -4,7 +4,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	db "sigmaos/debug"
-	// sp "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 	"sigmaos/util/crash"
 )
 
@@ -17,7 +17,11 @@ func (ts *Tstate) CrashServer(e0, e1 crash.Tevent, srv string) {
 	em := crash.NewTeventMapOne(e1)
 	s, err := em.Events2String()
 	assert.Nil(ts.T, err)
-	err = ts.BootEnv(srv, []string{"SIGMAFAIL=" + s})
+	if srv == sp.MSCHEDREL {
+		err = ts.BootNode(1)
+	} else {
+		err = ts.BootEnv(srv, []string{"SIGMAFAIL=" + s})
+	}
 	assert.Nil(ts.T, err)
 	db.DPrintf(db.ALWAYS, "Booted %v %v", e1.Path, em)
 }

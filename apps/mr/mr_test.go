@@ -571,6 +571,7 @@ func repeatTest(t *testing.T, f func() bool) {
 func TestMRJob(t *testing.T) {
 	n, _, st := runN(t, nil, 0, 0, 0, 0, true)
 	assert.Equal(t, n, st.Ntask)
+	assert.Equal(t, 0, st.Nfail)
 }
 
 func TestMaliciousMapper(t *testing.T) {
@@ -625,27 +626,34 @@ func TestCrashUx1(t *testing.T) {
 
 func TestCrashUx2(t *testing.T) {
 	N := 2
-	runN(t, nil, 0, 0, N, 0, false)
+	e0 := crash.NewEventPath(crash.UX_CRASH, 0, 1.0, crashSemPn(crash.UX_CRASH, 0))
+	ntask, _, st := runN(t, crash.NewTeventMapOne(e0), 0, 0, N, 0, false)
+	assert.True(t, st.Ntask > ntask || st.Nfail > 0)
 }
 
 func TestCrashUx5(t *testing.T) {
 	N := 5
-	runN(t, nil, 0, 0, N, 0, false)
+	e0 := crash.NewEventPath(crash.UX_CRASH, 0, 1.0, crashSemPn(crash.UX_CRASH, 0))
+	ntask, _, st := runN(t, crash.NewTeventMapOne(e0), 0, 0, N, 0, false)
+	assert.True(t, st.Ntask > ntask || st.Nfail > 0)
 }
 
 func TestCrashMSched1(t *testing.T) {
 	e0 := crash.NewEventPath(crash.MSCHED_CRASH, CRASHCOORD, 1.0, crashSemPn(crash.MSCHED_CRASH, 0))
-	runN(t, crash.NewTeventMapOne(e0), 1, 0, 0, 0, false)
+	ntask, _, st := runN(t, crash.NewTeventMapOne(e0), 1, 0, 0, 0, false)
+	assert.True(t, st.Ntask > ntask || st.Nfail > 0)
 }
 
 func TestCrashMSched2(t *testing.T) {
 	N := 2
-	runN(t, nil, N, 0, 0, 0, false)
+	e0 := crash.NewEventPath(crash.MSCHED_CRASH, CRASHCOORD, 1.0, crashSemPn(crash.MSCHED_CRASH, 0))
+	runN(t, crash.NewTeventMapOne(e0), N, 0, 0, 0, false)
 }
 
 func TestCrashMSchedN(t *testing.T) {
 	N := 5
-	runN(t, nil, N, 0, 0, 0, false)
+	e0 := crash.NewEventPath(crash.MSCHED_CRASH, CRASHCOORD, 1.0, crashSemPn(crash.MSCHED_CRASH, 0))
+	runN(t, crash.NewTeventMapOne(e0), N, 0, 0, 0, false)
 }
 
 func TestCrashProcq1(t *testing.T) {

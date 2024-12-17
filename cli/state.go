@@ -144,7 +144,7 @@ func NewTstate(t *testing.T) (*Tstate, error) {
 	return NewTstatePath(sp.NAMED)
 }
 
-func NewTstateAll(t *testing.T) (*Tstate, error) {
+func NewTstateAll() (*Tstate, error) {
 	return NewTstatePath("all")
 }
 

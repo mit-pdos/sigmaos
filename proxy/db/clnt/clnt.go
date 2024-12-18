@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 
 	"sigmaos/proxy/db/proto"
-	"sigmaos/sigmaclnt/fslib"
 	rpcclnt "sigmaos/rpc/clnt"
 	sprpcclnt "sigmaos/rpc/clnt/sigmap"
+	"sigmaos/sigmaclnt/fslib"
 )
 
 type DbClnt struct {
@@ -24,8 +24,8 @@ func NewDbClnt(fsl *fslib.FsLib, pn string) (*DbClnt, error) {
 }
 
 func (dc *DbClnt) Query(q string, res any) error {
-	req := &proto.DBRequest{Cmd: q}
-	rep := proto.DBResult{}
+	req := &proto.DBReq{Cmd: q}
+	rep := proto.DBRep{}
 	err := dc.rpcc.RPC("Server.Query", req, &rep)
 	if err != nil {
 		return err
@@ -38,8 +38,8 @@ func (dc *DbClnt) Query(q string, res any) error {
 }
 
 func (dc *DbClnt) Exec(q string) error {
-	req := &proto.DBRequest{Cmd: q}
-	rep := proto.DBResult{}
+	req := &proto.DBReq{Cmd: q}
+	rep := proto.DBRep{}
 	err := dc.rpcc.RPC("Server.Exec", req, &rep)
 	if err != nil {
 		return err

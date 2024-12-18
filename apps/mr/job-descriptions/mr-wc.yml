@@ -5,9 +5,9 @@ binsz: 262144
 # binsz: 2048576
 # binsz: 1048576
 # binsz: 136314880
-input: "name/s3/~any/9ps3/gutenberg/"
+input: "name/s3/~local/9ps3/gutenberg/"
 # intermediate: "name/s3/~any/9ps3/mr-intermediate"
-intermediate: "name/ux/~any/mr-intermediate"
-output: "name/s3/~any/9ps3/mr-out/"
+intermediate: "name/ux/~local/mr-intermediate"
+output: "name/s3/~local/9ps3/mr-out/"
 linesz: 65536
 wordsz: 25

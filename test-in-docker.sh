@@ -1,7 +1,7 @@
 #!/bin/bash
 
 usage() {
-  echo "Usage: $0 --pkg PKG [--test TEST] [--args ARGS] [--no-start] [--rebuildtester]" 1>&2
+  echo "Usage: $0 --pkg PKG [--run TEST] [--args ARGS] [--no-start] [--rebuildtester]" 1>&2
 }
 
 TNAME="Test"
@@ -11,7 +11,7 @@ START="--start"
 REBUILD_TESTER="false"
 while [[ "$#" -gt 0 ]]; do
   case "$1" in
-  --test)
+  --run)
       shift
       TNAME="$1" 
       shift

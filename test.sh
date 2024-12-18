@@ -249,9 +249,9 @@ if [[ $BASIC == "--basic" ]]; then
     done
 
 
-    run_test "sigmapsrv/ux" "./test-in-docker.sh --pkg sigmasrv/memfssrv/sigmapsrv --test ReadPerf --args \"$VERB --path name/ux/~local/ $SPPROXYD $DIALPROXY $REUSEKERNEL\""
-    run_test "sigmapsrv/s3" "./test-in-docker.sh --pkg sigmasrv/memfssrv/sigmapsrv --test ReadPerf --args \"$VERB --path name/s3/~local/9ps3/ $SPPROXYD $DIALPROXY $REUSEKERNEL\""
-    run_test "sigmapsrv/s3pathclnt" "./test-in-docker.sh --pkg sigmasrv/memfssrv/sigmapsrv --test ReadFilePerfSingle --args \"$VERB --path name/s3/~local/9ps3/ --withs3pathclnt $SPPROXYD $DIALPROXY $REUSEKERNEL\""
+    run_test "sigmapsrv/ux" "./test-in-docker.sh --pkg sigmasrv/memfssrv/sigmapsrv --run ReadPerf --args \"$VERB --path name/ux/~local/ $SPPROXYD $DIALPROXY $REUSEKERNEL\""
+    run_test "sigmapsrv/s3" "./test-in-docker.sh --pkg sigmasrv/memfssrv/sigmapsrv --run ReadPerf --args \"$VERB --path name/s3/~local/9ps3/ $SPPROXYD $DIALPROXY $REUSEKERNEL\""
+    run_test "sigmapsrv/s3pathclnt" "./test-in-docker.sh --pkg sigmasrv/memfssrv/sigmapsrv --run ReadFilePerfSingle --args \"$VERB --path name/s3/~local/9ps3/ --withs3pathclnt $SPPROXYD $DIALPROXY $REUSEKERNEL\""
 
 
     #
@@ -295,7 +295,7 @@ if [[ $APPS == "--apps" ]]; then
           if [[ "${NEED_DB[$i]}" == "true" ]]; then
             ./start-db.sh
           fi
-          run_test $T "./test-in-docker.sh --pkg $T --test '${TNAMES[$i]}' --args \"$VERB $SPPROXYD $DIALPROXY\""
+          run_test $T "./test-in-docker.sh --pkg $T --run '${TNAMES[$i]}' --args \"$VERB $SPPROXYD $DIALPROXY\""
           i=$(($i+1))
 #XXX XXX
         done

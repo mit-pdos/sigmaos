@@ -29,9 +29,9 @@ func (l *Lease) String() string {
 }
 
 func (l *Lease) extendLease() error {
-	var res leaseproto.ExtendResult
+	var res leaseproto.ExtendRep
 	db.DPrintf(db.LEASECLNT, "extend lease %v\n", l)
-	return l.lmc.cc.RPC(l.srv, "LeaseSrv.Extend", &leaseproto.ExtendRequest{LeaseId: uint64(l.lid)}, &res)
+	return l.lmc.cc.RPC(l.srv, "LeaseSrv.Extend", &leaseproto.ExtendReq{LeaseId: uint64(l.lid)}, &res)
 }
 
 func (l *Lease) extender() {
@@ -87,6 +87,6 @@ func (l *Lease) End() error {
 	close(l.ch)
 
 	// Tell the server to end the lease.
-	var res leaseproto.EndResult
-	return l.lmc.cc.RPC(l.srv, "LeaseSrv.End", &leaseproto.EndRequest{LeaseId: uint64(l.lid)}, &res)
+	var res leaseproto.EndRep
+	return l.lmc.cc.RPC(l.srv, "LeaseSrv.End", &leaseproto.EndReq{LeaseId: uint64(l.lid)}, &res)
 }

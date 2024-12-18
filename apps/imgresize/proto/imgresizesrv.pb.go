@@ -20,7 +20,7 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-type ImgResizeRequest struct {
+type ImgResizeReq struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
@@ -29,8 +29,8 @@ type ImgResizeRequest struct {
 	InputPath string `protobuf:"bytes,2,opt,name=inputPath,proto3" json:"inputPath,omitempty"`
 }
 
-func (x *ImgResizeRequest) Reset() {
-	*x = ImgResizeRequest{}
+func (x *ImgResizeReq) Reset() {
+	*x = ImgResizeReq{}
 	if protoimpl.UnsafeEnabled {
 		mi := &file_apps_imgresize_proto_imgresizesrv_proto_msgTypes[0]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -38,13 +38,13 @@ func (x *ImgResizeRequest) Reset() {
 	}
 }
 
-func (x *ImgResizeRequest) String() string {
+func (x *ImgResizeReq) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*ImgResizeRequest) ProtoMessage() {}
+func (*ImgResizeReq) ProtoMessage() {}
 
-func (x *ImgResizeRequest) ProtoReflect() protoreflect.Message {
+func (x *ImgResizeReq) ProtoReflect() protoreflect.Message {
 	mi := &file_apps_imgresize_proto_imgresizesrv_proto_msgTypes[0]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -56,26 +56,26 @@ func (x *ImgResizeRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ImgResizeRequest.ProtoReflect.Descriptor instead.
-func (*ImgResizeRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use ImgResizeReq.ProtoReflect.Descriptor instead.
+func (*ImgResizeReq) Descriptor() ([]byte, []int) {
 	return file_apps_imgresize_proto_imgresizesrv_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *ImgResizeRequest) GetTaskName() string {
+func (x *ImgResizeReq) GetTaskName() string {
 	if x != nil {
 		return x.TaskName
 	}
 	return ""
 }
 
-func (x *ImgResizeRequest) GetInputPath() string {
+func (x *ImgResizeReq) GetInputPath() string {
 	if x != nil {
 		return x.InputPath
 	}
 	return ""
 }
 
-type ImgResizeResult struct {
+type ImgResizeRep struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
@@ -83,8 +83,8 @@ type ImgResizeResult struct {
 	OK bool `protobuf:"varint,1,opt,name=oK,proto3" json:"oK,omitempty"`
 }
 
-func (x *ImgResizeResult) Reset() {
-	*x = ImgResizeResult{}
+func (x *ImgResizeRep) Reset() {
+	*x = ImgResizeRep{}
 	if protoimpl.UnsafeEnabled {
 		mi := &file_apps_imgresize_proto_imgresizesrv_proto_msgTypes[1]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -92,13 +92,13 @@ func (x *ImgResizeResult) Reset() {
 	}
 }
 
-func (x *ImgResizeResult) String() string {
+func (x *ImgResizeRep) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*ImgResizeResult) ProtoMessage() {}
+func (*ImgResizeRep) ProtoMessage() {}
 
-func (x *ImgResizeResult) ProtoReflect() protoreflect.Message {
+func (x *ImgResizeRep) ProtoReflect() protoreflect.Message {
 	mi := &file_apps_imgresize_proto_imgresizesrv_proto_msgTypes[1]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -110,26 +110,26 @@ func (x *ImgResizeResult) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ImgResizeResult.ProtoReflect.Descriptor instead.
-func (*ImgResizeResult) Descriptor() ([]byte, []int) {
+// Deprecated: Use ImgResizeRep.ProtoReflect.Descriptor instead.
+func (*ImgResizeRep) Descriptor() ([]byte, []int) {
 	return file_apps_imgresize_proto_imgresizesrv_proto_rawDescGZIP(), []int{1}
 }
 
-func (x *ImgResizeResult) GetOK() bool {
+func (x *ImgResizeRep) GetOK() bool {
 	if x != nil {
 		return x.OK
 	}
 	return false
 }
 
-type StatusRequest struct {
+type StatusReq struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 }
 
-func (x *StatusRequest) Reset() {
-	*x = StatusRequest{}
+func (x *StatusReq) Reset() {
+	*x = StatusReq{}
 	if protoimpl.UnsafeEnabled {
 		mi := &file_apps_imgresize_proto_imgresizesrv_proto_msgTypes[2]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -137,13 +137,13 @@ func (x *StatusRequest) Reset() {
 	}
 }
 
-func (x *StatusRequest) String() string {
+func (x *StatusReq) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*StatusRequest) ProtoMessage() {}
+func (*StatusReq) ProtoMessage() {}
 
-func (x *StatusRequest) ProtoReflect() protoreflect.Message {
+func (x *StatusReq) ProtoReflect() protoreflect.Message {
 	mi := &file_apps_imgresize_proto_imgresizesrv_proto_msgTypes[2]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -155,12 +155,12 @@ func (x *StatusRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use StatusRequest.ProtoReflect.Descriptor instead.
-func (*StatusRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use StatusReq.ProtoReflect.Descriptor instead.
+func (*StatusReq) Descriptor() ([]byte, []int) {
 	return file_apps_imgresize_proto_imgresizesrv_proto_rawDescGZIP(), []int{2}
 }
 
-type StatusResult struct {
+type StatusRep struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
@@ -168,8 +168,8 @@ type StatusResult struct {
 	NDone int64 `protobuf:"varint,1,opt,name=nDone,proto3" json:"nDone,omitempty"`
 }
 
-func (x *StatusResult) Reset() {
-	*x = StatusResult{}
+func (x *StatusRep) Reset() {
+	*x = StatusRep{}
 	if protoimpl.UnsafeEnabled {
 		mi := &file_apps_imgresize_proto_imgresizesrv_proto_msgTypes[3]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -177,13 +177,13 @@ func (x *StatusResult) Reset() {
 	}
 }
 
-func (x *StatusResult) String() string {
+func (x *StatusRep) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*StatusResult) ProtoMessage() {}
+func (*StatusRep) ProtoMessage() {}
 
-func (x *StatusResult) ProtoReflect() protoreflect.Message {
+func (x *StatusRep) ProtoReflect() protoreflect.Message {
 	mi := &file_apps_imgresize_proto_imgresizesrv_proto_msgTypes[3]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -195,12 +195,12 @@ func (x *StatusResult) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use StatusResult.ProtoReflect.Descriptor instead.
-func (*StatusResult) Descriptor() ([]byte, []int) {
+// Deprecated: Use StatusRep.ProtoReflect.Descriptor instead.
+func (*StatusRep) Descriptor() ([]byte, []int) {
 	return file_apps_imgresize_proto_imgresizesrv_proto_rawDescGZIP(), []int{3}
 }
 
-func (x *StatusResult) GetNDone() int64 {
+func (x *StatusRep) GetNDone() int64 {
 	if x != nil {
 		return x.NDone
 	}
@@ -212,20 +212,19 @@ var File_apps_imgresize_proto_imgresizesrv_proto protoreflect.FileDescriptor
 var file_apps_imgresize_proto_imgresizesrv_proto_rawDesc = []byte{
 	0x0a, 0x27, 0x61, 0x70, 0x70, 0x73, 0x2f, 0x69, 0x6d, 0x67, 0x72, 0x65, 0x73, 0x69, 0x7a, 0x65,
 	0x2f, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x2f, 0x69, 0x6d, 0x67, 0x72, 0x65, 0x73, 0x69, 0x7a, 0x65,
-	0x73, 0x72, 0x76, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x22, 0x4c, 0x0a, 0x10, 0x49, 0x6d, 0x67,
-	0x52, 0x65, 0x73, 0x69, 0x7a, 0x65, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x1a, 0x0a,
-	0x08, 0x74, 0x61, 0x73, 0x6b, 0x4e, 0x61, 0x6d, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52,
-	0x08, 0x74, 0x61, 0x73, 0x6b, 0x4e, 0x61, 0x6d, 0x65, 0x12, 0x1c, 0x0a, 0x09, 0x69, 0x6e, 0x70,
-	0x75, 0x74, 0x50, 0x61, 0x74, 0x68, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x09, 0x69, 0x6e,
-	0x70, 0x75, 0x74, 0x50, 0x61, 0x74, 0x68, 0x22, 0x21, 0x0a, 0x0f, 0x49, 0x6d, 0x67, 0x52, 0x65,
-	0x73, 0x69, 0x7a, 0x65, 0x52, 0x65, 0x73, 0x75, 0x6c, 0x74, 0x12, 0x0e, 0x0a, 0x02, 0x6f, 0x4b,
-	0x18, 0x01, 0x20, 0x01, 0x28, 0x08, 0x52, 0x02, 0x6f, 0x4b, 0x22, 0x0f, 0x0a, 0x0d, 0x53, 0x74,
-	0x61, 0x74, 0x75, 0x73, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x22, 0x24, 0x0a, 0x0c, 0x53,
-	0x74, 0x61, 0x74, 0x75, 0x73, 0x52, 0x65, 0x73, 0x75, 0x6c, 0x74, 0x12, 0x14, 0x0a, 0x05, 0x6e,
-	0x44, 0x6f, 0x6e, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x03, 0x52, 0x05, 0x6e, 0x44, 0x6f, 0x6e,
-	0x65, 0x42, 0x1e, 0x5a, 0x1c, 0x73, 0x69, 0x67, 0x6d, 0x61, 0x6f, 0x73, 0x2f, 0x61, 0x70, 0x70,
-	0x73, 0x2f, 0x69, 0x6d, 0x67, 0x72, 0x65, 0x73, 0x69, 0x7a, 0x65, 0x2f, 0x70, 0x72, 0x6f, 0x74,
-	0x6f, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x73, 0x72, 0x76, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x22, 0x48, 0x0a, 0x0c, 0x49, 0x6d, 0x67,
+	0x52, 0x65, 0x73, 0x69, 0x7a, 0x65, 0x52, 0x65, 0x71, 0x12, 0x1a, 0x0a, 0x08, 0x74, 0x61, 0x73,
+	0x6b, 0x4e, 0x61, 0x6d, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x08, 0x74, 0x61, 0x73,
+	0x6b, 0x4e, 0x61, 0x6d, 0x65, 0x12, 0x1c, 0x0a, 0x09, 0x69, 0x6e, 0x70, 0x75, 0x74, 0x50, 0x61,
+	0x74, 0x68, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x09, 0x69, 0x6e, 0x70, 0x75, 0x74, 0x50,
+	0x61, 0x74, 0x68, 0x22, 0x1e, 0x0a, 0x0c, 0x49, 0x6d, 0x67, 0x52, 0x65, 0x73, 0x69, 0x7a, 0x65,
+	0x52, 0x65, 0x70, 0x12, 0x0e, 0x0a, 0x02, 0x6f, 0x4b, 0x18, 0x01, 0x20, 0x01, 0x28, 0x08, 0x52,
+	0x02, 0x6f, 0x4b, 0x22, 0x0b, 0x0a, 0x09, 0x53, 0x74, 0x61, 0x74, 0x75, 0x73, 0x52, 0x65, 0x71,
+	0x22, 0x21, 0x0a, 0x09, 0x53, 0x74, 0x61, 0x74, 0x75, 0x73, 0x52, 0x65, 0x70, 0x12, 0x14, 0x0a,
+	0x05, 0x6e, 0x44, 0x6f, 0x6e, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x03, 0x52, 0x05, 0x6e, 0x44,
+	0x6f, 0x6e, 0x65, 0x42, 0x1e, 0x5a, 0x1c, 0x73, 0x69, 0x67, 0x6d, 0x61, 0x6f, 0x73, 0x2f, 0x61,
+	0x70, 0x70, 0x73, 0x2f, 0x69, 0x6d, 0x67, 0x72, 0x65, 0x73, 0x69, 0x7a, 0x65, 0x2f, 0x70, 0x72,
+	0x6f, 0x74, 0x6f, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -242,10 +241,10 @@ func file_apps_imgresize_proto_imgresizesrv_proto_rawDescGZIP() []byte {
 
 var file_apps_imgresize_proto_imgresizesrv_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
 var file_apps_imgresize_proto_imgresizesrv_proto_goTypes = []interface{}{
-	(*ImgResizeRequest)(nil), // 0: ImgResizeRequest
-	(*ImgResizeResult)(nil),  // 1: ImgResizeResult
-	(*StatusRequest)(nil),    // 2: StatusRequest
-	(*StatusResult)(nil),     // 3: StatusResult
+	(*ImgResizeReq)(nil), // 0: ImgResizeReq
+	(*ImgResizeRep)(nil), // 1: ImgResizeRep
+	(*StatusReq)(nil),    // 2: StatusReq
+	(*StatusRep)(nil),    // 3: StatusRep
 }
 var file_apps_imgresize_proto_imgresizesrv_proto_depIdxs = []int32{
 	0, // [0:0] is the sub-list for method output_type
@@ -262,7 +261,7 @@ func file_apps_imgresize_proto_imgresizesrv_proto_init() {
 	}
 	if !protoimpl.UnsafeEnabled {
 		file_apps_imgresize_proto_imgresizesrv_proto_msgTypes[0].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ImgResizeRequest); i {
+			switch v := v.(*ImgResizeReq); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -274,7 +273,7 @@ func file_apps_imgresize_proto_imgresizesrv_proto_init() {
 			}
 		}
 		file_apps_imgresize_proto_imgresizesrv_proto_msgTypes[1].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ImgResizeResult); i {
+			switch v := v.(*ImgResizeRep); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -286,7 +285,7 @@ func file_apps_imgresize_proto_imgresizesrv_proto_init() {
 			}
 		}
 		file_apps_imgresize_proto_imgresizesrv_proto_msgTypes[2].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*StatusRequest); i {
+			switch v := v.(*StatusReq); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -298,7 +297,7 @@ func file_apps_imgresize_proto_imgresizesrv_proto_init() {
 			}
 		}
 		file_apps_imgresize_proto_imgresizesrv_proto_msgTypes[3].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*StatusResult); i {
+			switch v := v.(*StatusRep); i {
 			case 0:
 				return &v.state
 			case 1:

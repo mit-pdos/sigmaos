@@ -61,12 +61,12 @@ func NewImgSrvRPC(args []string) (*ImgSrvRPC, error) {
 	return imgd, nil
 }
 
-func (imgd *ImgSrvRPC) Status(ctx fs.CtxI, req proto.StatusRequest, rep *proto.StatusResult) error {
+func (imgd *ImgSrvRPC) Status(ctx fs.CtxI, req proto.StatusReq, rep *proto.StatusRep) error {
 	rep.NDone = imgd.ndone.Load()
 	return nil
 }
 
-func (imgd *ImgSrvRPC) Resize(ctx fs.CtxI, req proto.ImgResizeRequest, rep *proto.ImgResizeResult) error {
+func (imgd *ImgSrvRPC) Resize(ctx fs.CtxI, req proto.ImgResizeReq, rep *proto.ImgResizeRep) error {
 	db.DPrintf(db.IMGD, "Resize %v", req)
 	defer db.DPrintf(db.IMGD, "Resize %v done", req)
 

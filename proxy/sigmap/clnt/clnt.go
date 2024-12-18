@@ -8,16 +8,16 @@ import (
 	"net"
 
 	db "sigmaos/debug"
-	"sigmaos/util/io/demux"
 	dialproxyclnt "sigmaos/dialproxy/clnt"
 	"sigmaos/proc"
+	spproto "sigmaos/proxy/sigmap/proto"
+	"sigmaos/proxy/sigmap/transport"
 	"sigmaos/rpc"
 	rpcclnt "sigmaos/rpc/clnt"
 	rpcclntopts "sigmaos/rpc/clnt/opts"
 	sessp "sigmaos/session/proto"
 	sp "sigmaos/sigmap"
-	spproto "sigmaos/proxy/sigmap/proto"
-	"sigmaos/proxy/sigmap/transport"
+	"sigmaos/util/io/demux"
 )
 
 type SPProxyClnt struct {
@@ -88,8 +88,8 @@ func (scc *SPProxyClnt) ReportError(err error) {
 
 // Tell spproxyd to shut down
 func (scc *SPProxyClnt) Shutdown() error {
-	req := spproto.SigmaNullRequest{}
-	rep := spproto.SigmaErrReply{}
+	req := spproto.SigmaNullReq{}
+	rep := spproto.SigmaErrRep{}
 	err := scc.rpcErr("SPProxySrvAPI.Shutdown", &req, &rep)
 	db.DPrintf(db.SIGMACLNTCLNT, "Shutdown %v %v %v", req, rep, err)
 	return err

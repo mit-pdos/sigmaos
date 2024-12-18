@@ -14,14 +14,14 @@ import (
 	"sigmaos/apps/hotel"
 	"sigmaos/apps/hotel/proto"
 	"sigmaos/benchmarks/loadgen"
-	dbclnt "sigmaos/proxy/db/clnt"
 	db "sigmaos/debug"
-	linuxsched "sigmaos/util/linux/sched"
 	"sigmaos/proc"
+	dbclnt "sigmaos/proxy/db/clnt"
 	sprpcclnt "sigmaos/rpc/clnt/sigmap"
 	shardedsvcrpcclnt "sigmaos/rpc/shardedsvc/clnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
+	linuxsched "sigmaos/util/linux/sched"
 	"sigmaos/util/perf"
 	rd "sigmaos/util/rand"
 )
@@ -122,11 +122,11 @@ func TestGeoSingle(t *testing.T) {
 	if !assert.Nil(t, err, "Err get geo clnt: %v", err) {
 		return
 	}
-	arg := proto.GeoRequest{
+	arg := proto.GeoReq{
 		Lat: 37.7749,
 		Lon: -122.4194,
 	}
-	res := proto.GeoResult{}
+	res := proto.GeoRep{}
 	err = rpcc.RPC("Geo.Nearby", &arg, &res)
 	assert.Nil(t, err)
 	db.DPrintf(db.TEST, "res %v\n", res.HotelIds)
@@ -149,12 +149,12 @@ func TestRateSingle(t *testing.T) {
 	if !assert.Nil(t, err, "Err make rpcclnt: %v", err) {
 		return
 	}
-	arg := &proto.RateRequest{
+	arg := &proto.RateReq{
 		HotelIds: []string{"5", "3", "1", "6", "2"}, // from TestGeo
 		InDate:   "2015-04-09",
 		OutDate:  "2015-04-10",
 	}
-	var res proto.RateResult
+	var res proto.RateRep
 	err = rpcc.RPC("Rate.GetRates", arg, &res)
 	assert.Nil(t, err)
 	assert.Equal(t, 3, len(res.RatePlans))
@@ -179,12 +179,12 @@ func TestRecSingle(t *testing.T) {
 	if !assert.Nil(t, err, "Err make rpcclnt: %v", err) {
 		return
 	}
-	arg := &proto.RecRequest{
+	arg := &proto.RecReq{
 		Require: "dis",
 		Lat:     38.0235,
 		Lon:     -122.095,
 	}
-	var res proto.RecResult
+	var res proto.RecRep
 	err = rpcc.RPC("Rec.GetRecs", arg, &res)
 	assert.Nil(t, err)
 	db.DPrintf(db.TEST, "res %v\n", res.HotelIds)
@@ -207,11 +207,11 @@ func TestUserSingle(t *testing.T) {
 	if !assert.Nil(t, err, "Err make rpcclnt: %v", err) {
 		return
 	}
-	arg := &proto.UserRequest{
+	arg := &proto.UserReq{
 		Name:     "Cornell_0",
 		Password: hotel.NewPassword("0"),
 	}
-	var res proto.UserResult
+	var res proto.UserRep
 	err = rpcc.RPC("Users.CheckUser", arg, &res)
 	assert.Nil(t, err)
 	db.DPrintf(db.TEST, "res %v\n", res)
@@ -233,10 +233,10 @@ func TestProfile(t *testing.T) {
 	if !assert.Nil(t, err, "Err make rpcclnt: %v", err) {
 		return
 	}
-	arg := &proto.ProfRequest{
+	arg := &proto.ProfReq{
 		HotelIds: []string{"1", "2"},
 	}
-	var res proto.ProfResult
+	var res proto.ProfRep
 	err = rpcc.RPC("ProfSrv.GetProfiles", arg, &res)
 	assert.Nil(t, err)
 	assert.Equal(t, 2, len(res.Hotels))
@@ -264,14 +264,14 @@ func TestCheck(t *testing.T) {
 	if !assert.Nil(t, err, "Err make rpcclnt: %v", err) {
 		return
 	}
-	arg := &proto.ReserveRequest{
+	arg := &proto.ReserveReq{
 		HotelId:      []string{"4"},
 		CustomerName: "Cornell_0",
 		InDate:       "2015-04-09",
 		OutDate:      "2015-04-10",
 		Number:       1,
 	}
-	var res proto.ReserveResult
+	var res proto.ReserveRep
 	err = rpcc.RPC("Reserve.CheckAvailability", arg, &res)
 	assert.Nil(t, err)
 	assert.Equal(t, 1, len(res.HotelIds))
@@ -297,14 +297,14 @@ func TestReserve(t *testing.T) {
 	if !assert.Nil(t, err, "Err make rpcclnt: %v", err) {
 		return
 	}
-	arg := &proto.ReserveRequest{
+	arg := &proto.ReserveReq{
 		HotelId:      []string{"4"},
 		CustomerName: "Cornell_0",
 		InDate:       "2015-04-09",
 		OutDate:      "2015-04-10",
 		Number:       1,
 	}
-	var res proto.ReserveResult
+	var res proto.ReserveRep
 
 	err = rpcc.RPC("Reserve.NewReservation", arg, &res)
 	assert.Nil(t, err)
@@ -353,13 +353,13 @@ func TestSingleSearch(t *testing.T) {
 	if !assert.Nil(t, err, "Err make rpcclnt: %v", err) {
 		return
 	}
-	arg := &proto.SearchRequest{
+	arg := &proto.SearchReq{
 		Lat:     37.7749,
 		Lon:     -122.4194,
 		InDate:  "2015-04-09",
 		OutDate: "2015-04-10",
 	}
-	var res proto.SearchResult
+	var res proto.SearchRep
 	err = rpcc.RPC("Search.Nearby", arg, &res)
 	assert.Nil(t, err)
 	assert.Equal(t, 3, len(res.HotelIds))

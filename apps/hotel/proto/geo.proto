@@ -5,15 +5,15 @@ import "util/tracing/proto/tracing.proto";
 option go_package = "sigmaos/apps/hotel/proto";
 
 service Geo {
-  rpc Nearby(GeoRequest) returns (GeoResult);
+  rpc Nearby(GeoReq) returns (GeoRep);
 }
 
-message GeoRequest {
+message GeoReq {
   float lat                           = 1;
   float lon                           = 2;
   SpanContextConfig spanContextConfig = 3;
 }
 
-message GeoResult {
+message GeoRep {
   repeated string hotelIds = 1;
 }

@@ -5,11 +5,11 @@ import "util/tracing/proto/tracing.proto";
 option go_package = "sigmaos/apps/hotel/proto";
 
 service Reserve {
-  rpc MakeReservation(ReserveRequest) returns (ReserveResult);
-  rpc CheckAvailability(ReserveRequest) returns (ReserveResult);
+  rpc MakeReservation(ReserveReq) returns (ReserveRep);
+  rpc CheckAvailability(ReserveReq) returns (ReserveRep);
 }
 
-message ReserveRequest {
+message ReserveReq {
 	string          customerName = 1;
 	repeated string hotelId = 2;
 	string          inDate = 3;
@@ -18,6 +18,6 @@ message ReserveRequest {
   SpanContextConfig spanContextConfig = 6;
 }
 
-message ReserveResult {
+message ReserveRep {
   repeated string hotelIds = 1;
 }

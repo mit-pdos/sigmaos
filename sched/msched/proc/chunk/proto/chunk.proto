@@ -3,7 +3,7 @@ syntax = "proto3";
 import "rpc/proto/rpc.proto";
 import "sigmap/sigmap.proto";
 
-option go_package = "sigmaos/chunk/proto";
+option go_package = "sigmaos/sched/msched/proc/chunk/proto";
 
 message GetFileStatRequest {
   string prog = 1;

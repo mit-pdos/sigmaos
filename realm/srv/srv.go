@@ -9,9 +9,9 @@ import (
 	"sync"
 	"time"
 
+	"sigmaos/api/fs"
 	db "sigmaos/debug"
 	dialproxyclnt "sigmaos/dialproxy/clnt"
-	"sigmaos/api/fs"
 	kernelclnt "sigmaos/kernel/clnt"
 	"sigmaos/proc"
 	realmpkg "sigmaos/realm"
@@ -19,12 +19,12 @@ import (
 	"sigmaos/rpc"
 	beschedclnt "sigmaos/sched/besched/clnt"
 	mschedclnt "sigmaos/sched/msched/clnt"
-	"sigmaos/util/coordination/semaphore"
 	"sigmaos/serr"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
 	spprotosrv "sigmaos/spproto/srv"
+	"sigmaos/util/coordination/semaphore"
 )
 
 const (
@@ -124,7 +124,7 @@ func NewNet(net string) error {
 }
 
 // XXX clean up if fail during Make
-func (rm *RealmSrv) Make(ctx fs.CtxI, req proto.MakeRequest, res *proto.MakeResult) error {
+func (rm *RealmSrv) Make(ctx fs.CtxI, req proto.MakeReq, res *proto.MakeRep) error {
 	rm.mu.Lock()
 	defer rm.mu.Unlock()
 
@@ -229,7 +229,7 @@ func (rm *RealmSrv) Make(ctx fs.CtxI, req proto.MakeRequest, res *proto.MakeResu
 	return nil
 }
 
-func (rm *RealmSrv) Remove(ctx fs.CtxI, req proto.RemoveRequest, res *proto.RemoveResult) error {
+func (rm *RealmSrv) Remove(ctx fs.CtxI, req proto.RemoveReq, res *proto.RemoveRep) error {
 	rm.mu.Lock()
 	defer rm.mu.Unlock()
 

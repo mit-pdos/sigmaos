@@ -241,6 +241,7 @@ func TestMapperReducer(t *testing.T) {
 	}
 	ts := newTstate(t1, mr.MRDIRTOP, app) // or --app mr-wc-ux.yml or --app mr-ux-wiki1G.yml
 
+	job = mr.JobLocalToAny(job, true, true, true)
 	if job.Local != "" {
 		err := ts.UploadDir(job.Local, job.Input)
 		assert.Nil(t, err, "UploadDir %v %v err %v", job.Local, job.Input, err)

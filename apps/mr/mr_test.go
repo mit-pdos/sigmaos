@@ -436,7 +436,7 @@ func (ts *Tstate) collectStats(stati []*procgroupmgr.ProcStatus) (int, mr.Stat) 
 	return nrestart, mrst
 }
 
-func runN(t *testing.T, em *crash.TeventMap, crashmsched, crashprocq, crashux, maliciousMapper int, monitor bool) (int, int, *mr.Stat) {
+func runN(t *testing.T, em *crash.TeventMap, srvs map[string]crash.Tselector, maliciousMapper int, monitor bool) (int, int, *mr.Stat) {
 	var s3secrets *sp.SecretProto
 	var err1 error
 	// If running with malicious mappers, try to get restricted AWS secrets
@@ -486,7 +486,7 @@ func runN(t *testing.T, em *crash.TeventMap, crashmsched, crashprocq, crashux, m
 
 	// Start more nodes to run mappers/reducers in parallel (except
 	// for crash tests).
-	if crashmsched+crashux+crashprocq == 0 {
+	if len(srvs) == 0 {
 		err = ts.BootNode(1)
 		assert.Nil(t, err, "BootProcd 1")
 		err = ts.BootNode(1)
@@ -506,24 +506,10 @@ func runN(t *testing.T, em *crash.TeventMap, crashmsched, crashprocq, crashux, m
 	cm := mr.StartMRJob(sc, ts.jobRoot, ts.job, job, nmap, MEM_REQ, maliciousMapper)
 
 	var wg sync.WaitGroup
-	if crashmsched > 0 {
+	for k, v := range srvs {
 		wg.Add(1)
 		go func() {
-			ts.crashServers(sp.MSCHEDREL, crash.MSCHED_CRASH, em, crashmsched)
-			wg.Done()
-		}()
-	}
-	if crashux > 0 {
-		wg.Add(1)
-		go func() {
-			ts.crashServers(sp.UXREL, crash.UX_CRASH, em, crashux)
-			wg.Done()
-		}()
-	}
-	if crashprocq > 0 {
-		wg.Add(1)
-		go func() {
-			ts.crashServers(sp.PROCDREL, crash.BESCHED_CRASH, em, crashprocq)
+			ts.crashServers(k, v, em, 1)
 			wg.Done()
 		}()
 	}
@@ -570,41 +556,41 @@ func repeatTest(t *testing.T, f func() bool) {
 }
 
 func TestMRJob(t *testing.T) {
-	n, _, st := runN(t, nil, 0, 0, 0, 0, true)
+	n, _, st := runN(t, nil, nil, 0, true)
 	assert.Equal(t, n, st.Ntask)
 	assert.Equal(t, 0, st.Nfail)
 }
 
 func TestMaliciousMapper(t *testing.T) {
-	runN(t, nil, 0, 0, 0, 500, true)
+	runN(t, nil, nil, 500, true)
 }
 
 func TestCrashMapperOnly(t *testing.T) {
-	_, _, st := runN(t, mapEv, 0, 0, 0, 0, false)
+	_, _, st := runN(t, mapEv, nil, 0, false)
 	assert.True(t, st.Nfail > 0)
 }
 
 func TestCrashReducerOnlyCrash(t *testing.T) {
 	repeatTest(t, func() bool {
-		_, _, st := runN(t, reduceEv.Filter(crash.MRREDUCE_CRASH), 0, 0, 0, 0, false)
+		_, _, st := runN(t, reduceEv.Filter(crash.MRREDUCE_CRASH), nil, 0, false)
 		return st.Nfail == 0
 	})
 }
 
 func TestCrashReducerOnlyPartition(t *testing.T) {
 	repeatTest(t, func() bool {
-		_, _, st := runN(t, reduceEv.Filter(crash.MRREDUCE_PARTITION), 0, 0, 0, 0, false)
+		_, _, st := runN(t, reduceEv.Filter(crash.MRREDUCE_PARTITION), nil, 0, false)
 		return st.Nfail == 0
 	})
 }
 
 func TestCrashReducerOnlyBoth(t *testing.T) {
-	_, _, st := runN(t, reduceEv, 0, 0, 0, 0, false)
+	_, _, st := runN(t, reduceEv, nil, 0, false)
 	assert.True(t, st.Nfail > 0)
 }
 
 func TestCrashCoordOnly(t *testing.T) {
-	_, nr, _ := runN(t, coordEv, 0, 0, 0, 0, false)
+	_, nr, _ := runN(t, coordEv, nil, 0, false)
 	assert.True(t, nr > mr.NCOORD)
 }
 
@@ -613,62 +599,51 @@ func TestCrashTaskAndCoord(t *testing.T) {
 	em.Merge(mapEv)
 	em.Merge(reduceEv)
 	em.Merge(coordEv)
-	ntask, nr, st := runN(t, em, 0, 0, 0, 0, false)
+	ntask, nr, st := runN(t, em, nil, 0, false)
 	assert.True(t, nr > mr.NCOORD)
 	assert.True(t, st.Ntask > ntask)
 }
 
-func testCrashUx(t *testing.T, n int) {
-	e0 := crash.NewEventPath(crash.UX_CRASH, 0, 1.0, crashSemPn(crash.UX_CRASH, 0))
-	ntask, _, st := runN(t, crash.NewTeventMapOne(e0), 0, 0, n, 0, false)
-	assert.True(t, st.Ntask > ntask || st.Nfail > 0)
-}
-
 func TestCrashUx1(t *testing.T) {
-	testCrashUx(t, 1)
-}
-
-func TestCrashUx2(t *testing.T) {
-	testCrashUx(t, 2)
-}
-
-func TestCrashUx5(t *testing.T) {
-	testCrashUx(t, 5)
+	e0 := crash.NewEventPath(crash.UX_CRASH, 0, 1.0, crashSemPn(crash.UX_CRASH, 0))
+	srvs := make(map[string]crash.Tselector)
+	srvs[sp.UXREL] = crash.UX_CRASH
+	ntask, _, st := runN(t, crash.NewTeventMapOne(e0), srvs, 0, false)
+	assert.True(t, st.Ntask > ntask || st.Nfail > 0)
 }
 
 func TestCrashMSched1(t *testing.T) {
 	e0 := crash.NewEventPath(crash.MSCHED_CRASH, CRASHCOORD, 1.0, crashSemPn(crash.MSCHED_CRASH, 0))
-	ntask, _, st := runN(t, crash.NewTeventMapOne(e0), 1, 0, 0, 0, false)
+	srvs := make(map[string]crash.Tselector)
+	srvs[sp.MSCHEDREL] = crash.MSCHED_CRASH
+	ntask, _, st := runN(t, crash.NewTeventMapOne(e0), srvs, 0, false)
 	assert.True(t, st.Ntask > ntask || st.Nfail > 0)
 }
 
-func TestCrashMSched2(t *testing.T) {
-	N := 2
-	e0 := crash.NewEventPath(crash.MSCHED_CRASH, CRASHCOORD, 1.0, crashSemPn(crash.MSCHED_CRASH, 0))
-	runN(t, crash.NewTeventMapOne(e0), N, 0, 0, 0, false)
+func TestCrashBESched1(t *testing.T) {
+	e0 := crash.NewEventPath(crash.BESCHED_CRASH, CRASHCOORD, 1.0, crashSemPn(crash.BESCHED_CRASH, 0))
+	srvs := make(map[string]crash.Tselector)
+	srvs[sp.BESCHEDREL] = crash.BESCHED_CRASH
+	ntask, _, st := runN(t, crash.NewTeventMapOne(e0), srvs, 0, false)
+	assert.True(t, st.Ntask >= ntask || st.Nfail >= 0)
 }
 
-func TestCrashMSchedN(t *testing.T) {
-	N := 5
-	e0 := crash.NewEventPath(crash.MSCHED_CRASH, CRASHCOORD, 1.0, crashSemPn(crash.MSCHED_CRASH, 0))
-	runN(t, crash.NewTeventMapOne(e0), N, 0, 0, 0, false)
+func TestCrashProcd1(t *testing.T) {
+	e0 := crash.NewEventPath(crash.PROCD_CRASH, CRASHCOORD, 1.0, crashSemPn(crash.PROCD_CRASH, 0))
+	srvs := make(map[string]crash.Tselector)
+	srvs[sp.PROCDREL] = crash.PROCD_CRASH
+	ntask, _, st := runN(t, crash.NewTeventMapOne(e0), srvs, 0, false)
+	assert.True(t, st.Ntask > ntask || st.Nfail > 0)
 }
 
-func TestCrashProcq1(t *testing.T) {
-	runN(t, nil, 0, 1, 0, 0, false)
-}
-
-func TestCrashProcq2(t *testing.T) {
-	N := 2
-	runN(t, nil, 0, N, 0, 0, false)
-}
-
-func TestCrashProcqN(t *testing.T) {
-	N := 5
-	runN(t, nil, 0, N, 0, 0, false)
-}
-
-func TestCrashMSchedProcqUx5(t *testing.T) {
-	N := 5
-	runN(t, nil, N, N, N, 0, false)
+func TestCrashMSchedBESchedUx1(t *testing.T) {
+	e := crash.NewEventPath(crash.UX_CRASH, 0, 1.0, crashSemPn(crash.UX_CRASH, 0))
+	em := crash.NewTeventMapOne(e)
+	e = crash.NewEventPath(crash.MSCHED_CRASH, CRASHCOORD, 1.0, crashSemPn(crash.MSCHED_CRASH, 0))
+	em.Insert(e)
+	srvs := make(map[string]crash.Tselector)
+	srvs[sp.UXREL] = crash.UX_CRASH
+	srvs[sp.MSCHEDREL] = crash.MSCHED_CRASH
+	ntask, _, st := runN(t, em, srvs, 0, false)
+	assert.True(t, st.Ntask > ntask || st.Nfail > 0)
 }

@@ -17,7 +17,7 @@ func (ts *Tstate) CrashServer(e0, e1 crash.Tevent, srv string) {
 	em := crash.NewTeventMapOne(e1)
 	s, err := em.Events2String()
 	assert.Nil(ts.T, err)
-	if srv == sp.MSCHEDREL {
+	if srv == sp.MSCHEDREL || srv == sp.BESCHEDREL {
 		err = ts.BootNode(1)
 	} else {
 		err = ts.BootEnv(srv, []string{"SIGMAFAIL=" + s})

@@ -53,8 +53,8 @@ func NewRPCClnt(pn string, opts ...*rpcclntopts.RPCClntOption) (*RPCClnt, error)
 	}, nil
 }
 
-func (rpcc *RPCClnt) rpc(method string, iniov sessp.IoVec, outiov sessp.IoVec) (*rpcproto.Reply, error) {
-	req := rpcproto.Request{Method: method}
+func (rpcc *RPCClnt) rpc(method string, iniov sessp.IoVec, outiov sessp.IoVec) (*rpcproto.Rep, error) {
+	req := rpcproto.Req{Method: method}
 	b, err := proto.Marshal(&req)
 	if err != nil {
 		return nil, serr.NewErrError(err)
@@ -68,7 +68,7 @@ func (rpcc *RPCClnt) rpc(method string, iniov sessp.IoVec, outiov sessp.IoVec) (
 	// Record stats
 	rpcc.si.Stat(method, time.Since(start).Microseconds())
 
-	rep := &rpcproto.Reply{}
+	rep := &rpcproto.Rep{}
 	if err := proto.Unmarshal(outiov[0], rep); err != nil {
 		return nil, serr.NewErrError(err)
 	}
@@ -89,7 +89,7 @@ func (rpcc *RPCClnt) RPC(method string, arg proto.Message, res proto.Message) er
 	if err != nil {
 		return err
 	}
-	// Prepend 2 empty slots to the out iovec: one for the rpcproto.Reply
+	// Prepend 2 empty slots to the out iovec: one for the rpcproto.Rep
 	// wrapper, and one for the marshaled res proto.Message
 	outiov := make(sessp.IoVec, 2)
 	outblob := rpc.GetBlob(res)

@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	"sigmaos/chunk/srv"
+	"sigmaos/sched/msched/proc/chunk/srv"
 	db "sigmaos/debug"
 )
 

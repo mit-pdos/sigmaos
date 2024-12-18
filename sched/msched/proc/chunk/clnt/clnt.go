@@ -1,7 +1,7 @@
 package clnt
 
 import (
-	proto "sigmaos/chunk/proto"
+	proto "sigmaos/sched/msched/proc/chunk/proto"
 	db "sigmaos/debug"
 	"sigmaos/sigmaclnt/fslib"
 	rpcproto "sigmaos/rpc/proto"

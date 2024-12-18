@@ -16,8 +16,8 @@ import (
 	"golang.org/x/sys/unix"
 
 	"sigmaos/api/fs"
-	chunkclnt "sigmaos/chunk/clnt"
-	chunksrv "sigmaos/chunk/srv"
+	chunkclnt "sigmaos/sched/msched/proc/chunk/clnt"
+	chunksrv "sigmaos/sched/msched/proc/chunk/srv"
 	db "sigmaos/debug"
 	kernelclnt "sigmaos/kernel/clnt"
 	"sigmaos/proc"

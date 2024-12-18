@@ -6,8 +6,8 @@ import (
 	"sync"
 
 	"sigmaos/api/fs"
-	"sigmaos/chunk"
-	chunkclnt "sigmaos/chunk/clnt"
+	"sigmaos/sched/msched/proc/chunk"
+	chunkclnt "sigmaos/sched/msched/proc/chunk/clnt"
 	db "sigmaos/debug"
 	"sigmaos/proc"
 	beschedproto "sigmaos/sched/besched/proto"

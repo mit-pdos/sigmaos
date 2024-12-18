@@ -15,9 +15,9 @@ import (
 	"time"
 
 	"sigmaos/api/fs"
-	"sigmaos/chunk"
-	chunkclnt "sigmaos/chunk/clnt"
-	proto "sigmaos/chunk/proto"
+	"sigmaos/sched/msched/proc/chunk"
+	chunkclnt "sigmaos/sched/msched/proc/chunk/clnt"
+	proto "sigmaos/sched/msched/proc/chunk/proto"
 	db "sigmaos/debug"
 	dialproxyclnt "sigmaos/dialproxy/clnt"
 	"sigmaos/proc"

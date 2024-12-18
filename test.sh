@@ -297,7 +297,6 @@ if [[ $APPS == "--apps" ]]; then
           fi
           run_test $T "./test-in-docker.sh --pkg $T --run '${TNAMES[$i]}' --args \"$VERB $SPPROXYD $DIALPROXY\""
           i=$(($i+1))
-#XXX XXX
         done
 #        go test $VERB sigmaos/apps/mr -start $SPPROXYD $DIALPROXY -run MRJob
 #        cleanup

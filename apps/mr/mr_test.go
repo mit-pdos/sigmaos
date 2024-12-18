@@ -51,8 +51,9 @@ const (
 	CRASHREDUCE = 150
 	CRASHMAP    = 400
 	CRASHCOORD  = 1000
-	CRASHSRV    = 1000
-	MEM_REQ     = 1000
+	// CRASHSRV    = 1000
+	CRASHSRV = 500
+	MEM_REQ  = 1000
 )
 
 var app string // yaml app file
@@ -618,25 +619,22 @@ func TestCrashTaskAndCoord(t *testing.T) {
 	assert.True(t, st.Ntask > ntask)
 }
 
-func TestCrashUx1(t *testing.T) {
-	N := 1
+func testCrashUx(t *testing.T, n int) {
 	e0 := crash.NewEventPath(crash.UX_CRASH, 0, 1.0, crashSemPn(crash.UX_CRASH, 0))
-	ntask, _, st := runN(t, crash.NewTeventMapOne(e0), 0, 0, N, 0, false)
+	ntask, _, st := runN(t, crash.NewTeventMapOne(e0), 0, 0, n, 0, false)
 	assert.True(t, st.Ntask > ntask || st.Nfail > 0)
+}
+
+func TestCrashUx1(t *testing.T) {
+	testCrashUx(t, 1)
 }
 
 func TestCrashUx2(t *testing.T) {
-	N := 2
-	e0 := crash.NewEventPath(crash.UX_CRASH, 0, 1.0, crashSemPn(crash.UX_CRASH, 0))
-	ntask, _, st := runN(t, crash.NewTeventMapOne(e0), 0, 0, N, 0, false)
-	assert.True(t, st.Ntask > ntask || st.Nfail > 0)
+	testCrashUx(t, 2)
 }
 
 func TestCrashUx5(t *testing.T) {
-	N := 5
-	e0 := crash.NewEventPath(crash.UX_CRASH, 0, 1.0, crashSemPn(crash.UX_CRASH, 0))
-	ntask, _, st := runN(t, crash.NewTeventMapOne(e0), 0, 0, N, 0, false)
-	assert.True(t, st.Ntask > ntask || st.Nfail > 0)
+	testCrashUx(t, 5)
 }
 
 func TestCrashMSched1(t *testing.T) {

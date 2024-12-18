@@ -28,6 +28,7 @@ import (
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
+	"sigmaos/util/crash"
 	iputil "sigmaos/util/ip"
 	linuxsched "sigmaos/util/linux/sched"
 	"sigmaos/util/perf"
@@ -129,6 +130,11 @@ func RunProcSrv(kernelId string, dialproxy bool, spproxydPID sp.Tpid) error {
 		db.DFatalf("Error shrinking mount table: %v", err)
 	}
 	ps.ssrv = ssrv
+
+	crash.Failer(sc.FsLib, crash.PROCD_CRASH, func(e crash.Tevent) {
+		crash.Crash()
+	})
+
 	p, err := perf.NewPerf(pe, perf.PROCD)
 	if err != nil {
 		db.DFatalf("Error NewPerf: %v", err)

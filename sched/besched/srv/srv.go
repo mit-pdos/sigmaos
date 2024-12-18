@@ -7,16 +7,17 @@ import (
 	"sync/atomic"
 	"time"
 
+	"sigmaos/api/fs"
 	"sigmaos/chunk"
 	chunkclnt "sigmaos/chunk/clnt"
 	db "sigmaos/debug"
-	"sigmaos/api/fs"
 	"sigmaos/proc"
 	"sigmaos/sched/besched/proto"
 	"sigmaos/sched/queue"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
+	"sigmaos/util/crash"
 	"sigmaos/util/perf"
 )
 
@@ -263,6 +264,11 @@ func Run() {
 	if err != nil {
 		db.DFatalf("Error NewSigmaSrv: %v", err)
 	}
+
+	crash.Failer(sc.FsLib, crash.BESCHED_CRASH, func(e crash.Tevent) {
+		crash.Crash()
+	})
+
 	// Perf monitoring
 	p, err := perf.NewPerf(sc.ProcEnv(), perf.BESCHED)
 	if err != nil {

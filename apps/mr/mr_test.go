@@ -219,7 +219,7 @@ func TestSplits(t *testing.T) {
 	}
 	job, err1 = mr.ReadJobConfig(filepath.Join("job-descriptions", app))
 	assert.Nil(t, err1, "Error ReadJobConfig: %v", err1)
-	bins, err := mr.NewBins(ts.FsLib, job.Input, sp.Tlength(job.Binsz), SPLITSZ)
+	bins, err := mr.NewBins(ts.FsLib, job.Input, true, sp.Tlength(job.Binsz), SPLITSZ)
 	assert.Nil(t, err)
 	sum := sp.Tlength(0)
 	for _, b := range bins {
@@ -538,7 +538,8 @@ func runN(t *testing.T, em *crash.TeventMap, srvs map[string]crash.Tselector, ma
 	db.DPrintf(db.TEST, "Cleanup tasks state")
 	ts.tasks.Mft.Cleanup()
 	ts.tasks.Rft.Cleanup()
-	mr.CleanupMROutputs(ts.FsLib, mr.JobOut(job.Output, ts.job), mr.MapIntermediateDir(ts.job, job.Intermediate))
+	err = mr.CleanupMROutputs(ts.FsLib, mr.JobOut(job.Output, ts.job), mr.MapIntermediateDir(ts.job, job.Intermediate), true)
+	assert.Nil(ts.T, err, "Cleanup MR Outputs: %v", err)
 	db.DPrintf(db.TEST, "Done cleanup MR outputs")
 	ts.Shutdown()
 	return nmap + ts.nreducetask, nrestart, &mrst

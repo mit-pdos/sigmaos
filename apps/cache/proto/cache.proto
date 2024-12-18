@@ -5,13 +5,7 @@ import "sigmap/sigmap.proto";
 
 option go_package = "sigmaos/apps/cache/proto";
 
-service Cache {
-  rpc Get(CacheRequest) returns (CacheResult);
-  rpc Set(CacheRequest) returns (CacheResult);
-  rpc Delete(CacheRequest) returns (CacheResult);
-}
-
-message CacheRequest {
+message CacheReq {
   string key = 1;
   bytes value = 2;
   uint32 shard = 3;
@@ -20,7 +14,7 @@ message CacheRequest {
   TfenceProto fence = 6;
 }
 
-message ShardRequest {
+message ShardReq {
   uint32 shard = 1;
   TfenceProto fence = 2;
   map<string, bytes> vals = 3;
@@ -28,7 +22,7 @@ message ShardRequest {
 
 message CacheOK {}
 
-message CacheResult {
+message CacheRep {
   bytes value = 1;
 }
 
@@ -43,5 +37,3 @@ message CacheString {
 message CacheInt {
   int64 val = 1;
 }
-
-

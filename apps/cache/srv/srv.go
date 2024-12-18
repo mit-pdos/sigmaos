@@ -11,12 +11,12 @@ import (
 	"sigmaos/apps/cache"
 	db "sigmaos/debug"
 	"sigmaos/proc"
-	"sigmaos/serr"
 	rpcdevsrv "sigmaos/rpc/dev/srv"
+	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
-	"sigmaos/util/tracing"
 	"sigmaos/util/perf"
+	"sigmaos/util/tracing"
 )
 
 type Tstatus string
@@ -165,12 +165,12 @@ func (cs *CacheSrv) createShard(s cache.Tshard, f sp.Tfence, vals cache.Tcache) 
 	return nil
 }
 
-func (cs *CacheSrv) CreateShard(ctx fs.CtxI, req cacheproto.ShardRequest, rep *cacheproto.CacheOK) error {
+func (cs *CacheSrv) CreateShard(ctx fs.CtxI, req cacheproto.ShardReq, rep *cacheproto.CacheOK) error {
 	db.DPrintf(db.CACHESRV, "CreateShard %v\n", req)
 	return cs.createShard(req.Tshard(), req.Fence.Tfence(), req.Vals)
 }
 
-func (cs *CacheSrv) DeleteShard(ctx fs.CtxI, req cacheproto.ShardRequest, rep *cacheproto.CacheOK) error {
+func (cs *CacheSrv) DeleteShard(ctx fs.CtxI, req cacheproto.ShardReq, rep *cacheproto.CacheOK) error {
 	cs.mu.Lock()
 	defer cs.mu.Unlock()
 
@@ -183,7 +183,7 @@ func (cs *CacheSrv) DeleteShard(ctx fs.CtxI, req cacheproto.ShardRequest, rep *c
 	return nil
 }
 
-func (cs *CacheSrv) FreezeShard(ctx fs.CtxI, req cacheproto.ShardRequest, rep *cacheproto.CacheOK) error {
+func (cs *CacheSrv) FreezeShard(ctx fs.CtxI, req cacheproto.ShardReq, rep *cacheproto.CacheOK) error {
 	cs.mu.Lock()
 	defer cs.mu.Unlock()
 
@@ -205,7 +205,7 @@ func (cs *CacheSrv) FreezeShard(ctx fs.CtxI, req cacheproto.ShardRequest, rep *c
 	return nil
 }
 
-func (cs *CacheSrv) DumpShard(ctx fs.CtxI, req cacheproto.ShardRequest, rep *cacheproto.ShardData) error {
+func (cs *CacheSrv) DumpShard(ctx fs.CtxI, req cacheproto.ShardReq, rep *cacheproto.ShardData) error {
 	cs.mu.Lock()
 	defer cs.mu.Unlock()
 
@@ -222,7 +222,7 @@ func (cs *CacheSrv) DumpShard(ctx fs.CtxI, req cacheproto.ShardRequest, rep *cac
 	return nil
 }
 
-func (cs *CacheSrv) PutFence(ctx fs.CtxI, req cacheproto.CacheRequest, rep *cacheproto.CacheResult) error {
+func (cs *CacheSrv) PutFence(ctx fs.CtxI, req cacheproto.CacheReq, rep *cacheproto.CacheRep) error {
 	cs.mu.Lock()
 	defer cs.mu.Unlock()
 
@@ -239,7 +239,7 @@ func (cs *CacheSrv) PutFence(ctx fs.CtxI, req cacheproto.CacheRequest, rep *cach
 	return err
 }
 
-func (cs *CacheSrv) GetFence(ctx fs.CtxI, req cacheproto.CacheRequest, rep *cacheproto.CacheResult) error {
+func (cs *CacheSrv) GetFence(ctx fs.CtxI, req cacheproto.CacheReq, rep *cacheproto.CacheRep) error {
 	cs.mu.Lock()
 	defer cs.mu.Unlock()
 
@@ -271,7 +271,7 @@ func (cs *CacheSrv) lookupShard(s cache.Tshard) (*shard, error) {
 	return sh.s, nil
 }
 
-func (cs *CacheSrv) Put(ctx fs.CtxI, req cacheproto.CacheRequest, rep *cacheproto.CacheResult) error {
+func (cs *CacheSrv) Put(ctx fs.CtxI, req cacheproto.CacheReq, rep *cacheproto.CacheRep) error {
 	if req.Fence.HasFence() {
 		return cs.PutFence(ctx, req, rep)
 	}
@@ -302,7 +302,7 @@ func (cs *CacheSrv) Put(ctx fs.CtxI, req cacheproto.CacheRequest, rep *cacheprot
 	return err
 }
 
-func (cs *CacheSrv) Get(ctx fs.CtxI, req cacheproto.CacheRequest, rep *cacheproto.CacheResult) error {
+func (cs *CacheSrv) Get(ctx fs.CtxI, req cacheproto.CacheReq, rep *cacheproto.CacheRep) error {
 	if req.Fence.HasFence() {
 		return cs.GetFence(ctx, req, rep)
 	}
@@ -336,7 +336,7 @@ func (cs *CacheSrv) Get(ctx fs.CtxI, req cacheproto.CacheRequest, rep *cacheprot
 	return serr.NewErr(serr.TErrNotfound, fmt.Sprintf("key %s", req.Key))
 }
 
-func (cs *CacheSrv) Delete(ctx fs.CtxI, req cacheproto.CacheRequest, rep *cacheproto.CacheResult) error {
+func (cs *CacheSrv) Delete(ctx fs.CtxI, req cacheproto.CacheReq, rep *cacheproto.CacheRep) error {
 	if false {
 		_, span := cs.tracer.StartRPCSpan(&req, "Delete")
 		defer span.End()

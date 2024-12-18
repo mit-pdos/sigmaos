@@ -9,30 +9,20 @@ Upsert
 Update
 */
 
-service Mongo {
-  rpc Insert(MongoRequest) returns (MongoResponse);
-  rpc Update(MongoRequest) returns (MongoResponse);
-  rpc Upsert(MongoRequest) returns (MongoResponse);
-  rpc Find(MongoRequest) returns (MongoResponse);
-  rpc Drop(MongoConfigRequest) returns (MongoResponse);
-  rpc Remove(MongoConfigRequest) returns (MongoResponse);
-  rpc Index(MongoConfigRequest) returns (MongoResponse);
-}
-
-message MongoRequest {
+message MongoReq {
   string db = 1;
   string collection = 2;
   bytes  query = 3;
   bytes  obj = 4;
 }
 
-message MongoConfigRequest {
+message MongoConfigReq {
   string          db = 1;
   string          collection = 2;
   repeated string indexkeys = 3;
 }
 
-message MongoResponse {
+message MongoRep {
   string         ok = 1;
   repeated bytes objs = 2;
 }

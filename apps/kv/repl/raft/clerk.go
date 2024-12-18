@@ -6,15 +6,15 @@ import (
 
 	"google.golang.org/protobuf/proto"
 
-	db "sigmaos/debug"
 	"sigmaos/apps/kv/repl"
 	replproto "sigmaos/apps/kv/repl/proto"
+	db "sigmaos/debug"
 	sp "sigmaos/sigmap"
 )
 
 type Op struct {
-	request   *replproto.ReplOpRequest
-	reply     *replproto.ReplOpReply
+	request   *replproto.ReplOpReq
+	reply     *replproto.ReplOpRep
 	err       error
 	startTime time.Time
 	timedOut  time.Time
@@ -55,7 +55,7 @@ func (c *Clerk) serve() {
 			go c.propose(req)
 		case committedReqs := <-c.commit:
 			for _, frame := range committedReqs.entries {
-				req := replproto.ReplOpRequest{}
+				req := replproto.ReplOpReq{}
 				if err := proto.Unmarshal(frame, &req); err != nil {
 					db.DFatalf("Error unmarshalling req in Clerk.serve: %v, %v", err, string(frame))
 				} else {
@@ -82,7 +82,7 @@ func (c *Clerk) propose(op *Op) {
 	c.submit(op)
 }
 
-func (c *Clerk) apply(req *replproto.ReplOpRequest, leader uint64) {
+func (c *Clerk) apply(req *replproto.ReplOpReq, leader uint64) {
 	op := c.getOp(req)
 	if op != nil { // let proposer know its message has been applied
 		op.err = c.applyf(req, op.reply)
@@ -92,7 +92,7 @@ func (c *Clerk) apply(req *replproto.ReplOpRequest, leader uint64) {
 	}
 }
 
-func (c *Clerk) registerOp(req *replproto.ReplOpRequest, op *Op) {
+func (c *Clerk) registerOp(req *replproto.ReplOpReq, op *Op) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -118,7 +118,7 @@ func (c *Clerk) repropose() {
 }
 
 // Get the full op struct associated with an cid/seqno.
-func (c *Clerk) getOp(req *replproto.ReplOpRequest) *Op {
+func (c *Clerk) getOp(req *replproto.ReplOpReq) *Op {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 

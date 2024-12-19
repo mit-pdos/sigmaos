@@ -8,13 +8,13 @@ import (
 
 	"gopkg.in/mgo.v2/bson"
 
+	"sigmaos/api/fs"
 	"sigmaos/apps/cache"
 	cachegrpclnt "sigmaos/apps/cache/cachegrp/clnt"
 	"sigmaos/apps/socialnetwork/proto"
 	dbg "sigmaos/debug"
-	"sigmaos/api/fs"
-	mongoclnt "sigmaos/proxy/mongo/clnt"
 	"sigmaos/proc"
+	mongoclnt "sigmaos/proxy/mongo/clnt"
 	"sigmaos/sigmasrv"
 )
 
@@ -60,7 +60,7 @@ func RunUrlSrv(jobname string) error {
 }
 
 func (urlsrv *UrlSrv) ComposeUrls(
-	ctx fs.CtxI, req proto.ComposeUrlsRequest, res *proto.ComposeUrlsResponse) error {
+	ctx fs.CtxI, req proto.ComposeUrlsReq, res *proto.ComposeUrlsRep) error {
 	nUrls := len(req.Extendedurls)
 	if nUrls == 0 {
 		res.Ok = "Empty input"
@@ -81,7 +81,7 @@ func (urlsrv *UrlSrv) ComposeUrls(
 }
 
 func (urlsrv *UrlSrv) GetUrls(
-	ctx fs.CtxI, req proto.GetUrlsRequest, res *proto.GetUrlsResponse) error {
+	ctx fs.CtxI, req proto.GetUrlsReq, res *proto.GetUrlsRep) error {
 	res.Ok = "No."
 	extendedurls := make([]string, len(req.Shorturls))
 	missing := false

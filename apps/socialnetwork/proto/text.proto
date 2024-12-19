@@ -3,37 +3,37 @@ syntax = "proto3";
 option go_package = "sigmaos/apps/socialnetwork/proto";
 
 service TextService {
-	rpc ProcessText(ProcessTextRequest) returns (ProcessTextResponse);
+	rpc ProcessText(ProcessTextReq) returns (ProcessTextRep);
 }
 
 service UrlService {
-	rpc ComposeUrls(ComposeUrlsRequest) returns (ComposeUrlsResponse);
-	rpc GetUrls(GetUrlsRequest) returns (GetUrlsResponse);
+	rpc ComposeUrls(ComposeUrlsReq) returns (ComposeUrlsRep);
+	rpc GetUrls(GetUrlsReq) returns (GetUrlsRep);
 }
 
-message ComposeUrlsRequest {
+message ComposeUrlsReq {
 	repeated string extendedurls = 1;
 }
 
-message ComposeUrlsResponse {
+message ComposeUrlsRep {
 	string          ok = 1;
 	repeated string shorturls = 2;
 }
 
-message GetUrlsRequest {
+message GetUrlsReq {
 	repeated string shorturls = 1;
 }
 
-message GetUrlsResponse {
+message GetUrlsRep {
 	string          ok = 1;
 	repeated string extendedurls = 2;
 }
 
-message ProcessTextRequest {
+message ProcessTextReq {
 	string text = 1;
 }
 
-message ProcessTextResponse {
+message ProcessTextRep {
 	string          ok = 1;
 	string          text = 2;
 	repeated int64  usermentions = 3;

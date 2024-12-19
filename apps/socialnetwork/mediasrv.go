@@ -8,13 +8,13 @@ import (
 
 	"gopkg.in/mgo.v2/bson"
 
+	"sigmaos/api/fs"
 	"sigmaos/apps/cache"
 	cachegrpclnt "sigmaos/apps/cache/cachegrp/clnt"
 	"sigmaos/apps/socialnetwork/proto"
 	dbg "sigmaos/debug"
-	"sigmaos/api/fs"
-	mongoclnt "sigmaos/proxy/mongo/clnt"
 	"sigmaos/proc"
+	mongoclnt "sigmaos/proxy/mongo/clnt"
 	"sigmaos/sigmasrv"
 )
 
@@ -57,7 +57,7 @@ func RunMediaSrv(jobname string) error {
 	return ssrv.RunServer()
 }
 
-func (msrv *MediaSrv) StoreMedia(ctx fs.CtxI, req proto.StoreMediaRequest, res *proto.StoreMediaResponse) error {
+func (msrv *MediaSrv) StoreMedia(ctx fs.CtxI, req proto.StoreMediaReq, res *proto.StoreMediaRep) error {
 	res.Ok = "No"
 	mId := msrv.getNextMediaId()
 	newMedia := Media{mId, req.Mediatype, req.Mediadata}
@@ -70,7 +70,7 @@ func (msrv *MediaSrv) StoreMedia(ctx fs.CtxI, req proto.StoreMediaRequest, res *
 	return nil
 }
 
-func (msrv *MediaSrv) ReadMedia(ctx fs.CtxI, req proto.ReadMediaRequest, res *proto.ReadMediaResponse) error {
+func (msrv *MediaSrv) ReadMedia(ctx fs.CtxI, req proto.ReadMediaReq, res *proto.ReadMediaRep) error {
 	res.Ok = "No."
 	mediatypes := make([]string, len(req.Mediaids))
 	mediadatas := make([][]byte, len(req.Mediaids))

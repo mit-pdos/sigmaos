@@ -6,13 +6,13 @@ import (
 
 	"gopkg.in/mgo.v2/bson"
 
+	"sigmaos/api/fs"
 	"sigmaos/apps/cache"
 	cachegrpclnt "sigmaos/apps/cache/cachegrp/clnt"
 	"sigmaos/apps/socialnetwork/proto"
 	dbg "sigmaos/debug"
-	"sigmaos/api/fs"
-	mongoclnt "sigmaos/proxy/mongo/clnt"
 	"sigmaos/proc"
+	mongoclnt "sigmaos/proxy/mongo/clnt"
 	rpcclnt "sigmaos/rpc/clnt"
 	sprpcclnt "sigmaos/rpc/clnt/sigmap"
 	"sigmaos/sigmasrv"
@@ -68,7 +68,7 @@ func RunTimelineSrv(jobname string) error {
 }
 
 func (tlsrv *TimelineSrv) WriteTimeline(
-	ctx fs.CtxI, req proto.WriteTimelineRequest, res *proto.WriteTimelineResponse) error {
+	ctx fs.CtxI, req proto.WriteTimelineReq, res *proto.WriteTimelineRep) error {
 	res.Ok = "No"
 	err := tlsrv.mongoc.Upsert(
 		SN_DB, TIMELINE_COL, bson.M{"userid": req.Userid},
@@ -87,7 +87,7 @@ func (tlsrv *TimelineSrv) WriteTimeline(
 }
 
 func (tlsrv *TimelineSrv) ReadTimeline(
-	ctx fs.CtxI, req proto.ReadTimelineRequest, res *proto.ReadTimelineResponse) error {
+	ctx fs.CtxI, req proto.ReadTimelineReq, res *proto.ReadTimelineRep) error {
 	res.Ok = "No"
 	timeline, err := tlsrv.getUserTimeline(req.Userid)
 	if err != nil {
@@ -109,8 +109,8 @@ func (tlsrv *TimelineSrv) ReadTimeline(
 	for i := start; i < stop; i++ {
 		postids[i-start] = timeline.Postids[nItems-i-1]
 	}
-	readPostReq := proto.ReadPostsRequest{Postids: postids}
-	readPostRes := proto.ReadPostsResponse{}
+	readPostReq := proto.ReadPostsReq{Postids: postids}
+	readPostRes := proto.ReadPostsRep{}
 	if err := tlsrv.postc.RPC("PostSrv.ReadPosts", &readPostReq, &readPostRes); err != nil {
 		return err
 	}

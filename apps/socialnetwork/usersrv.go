@@ -9,13 +9,13 @@ import (
 
 	"gopkg.in/mgo.v2/bson"
 
+	"sigmaos/api/fs"
 	"sigmaos/apps/cache"
 	cachegrpclnt "sigmaos/apps/cache/cachegrp/clnt"
 	"sigmaos/apps/socialnetwork/proto"
 	dbg "sigmaos/debug"
-	"sigmaos/api/fs"
-	mongoclnt "sigmaos/proxy/mongo/clnt"
 	"sigmaos/proc"
+	mongoclnt "sigmaos/proxy/mongo/clnt"
 	"sigmaos/sigmasrv"
 	"sigmaos/util/perf"
 )
@@ -73,7 +73,7 @@ func RunUserSrv(jobname string) error {
 	return ssrv.RunServer()
 }
 
-func (usrv *UserSrv) CheckUser(ctx fs.CtxI, req proto.CheckUserRequest, res *proto.CheckUserResponse) error {
+func (usrv *UserSrv) CheckUser(ctx fs.CtxI, req proto.CheckUserReq, res *proto.CheckUserRep) error {
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_USER, "Checking user at %v: %v\n", usrv.sid, req.Usernames)
 	userids := make([]int64, len(req.Usernames))
 	res.Ok = "No"
@@ -97,7 +97,7 @@ func (usrv *UserSrv) CheckUser(ctx fs.CtxI, req proto.CheckUserRequest, res *pro
 	return nil
 }
 
-func (usrv *UserSrv) RegisterUser(ctx fs.CtxI, req proto.RegisterUserRequest, res *proto.UserResponse) error {
+func (usrv *UserSrv) RegisterUser(ctx fs.CtxI, req proto.RegisterUserReq, res *proto.UserRep) error {
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_USER, "Register user at %v: %v\n", usrv.sid, req)
 	res.Ok = "No"
 	user, err := usrv.getUserbyUname(req.Username)
@@ -136,7 +136,7 @@ func (usrv *UserSrv) getNextUserId() int64 {
 	return int64(usrv.sid)*1e10 + int64(usrv.incCountSafe())
 }
 
-func (usrv *UserSrv) Login(ctx fs.CtxI, req proto.LoginRequest, res *proto.UserResponse) error {
+func (usrv *UserSrv) Login(ctx fs.CtxI, req proto.LoginReq, res *proto.UserRep) error {
 	t0 := time.Now()
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_USER, "User login with %v: %v\n", usrv.sid, req)
 	res.Ok = "Login Failure."

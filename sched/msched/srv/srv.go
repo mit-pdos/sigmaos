@@ -81,7 +81,7 @@ func NewMSched(sc *sigmaclnt.SigmaClnt, kernelID string, reserveMcpu uint) *MSch
 }
 
 // Start procd and warm cache of binaries
-func (msched *MSched) WarmProcd(ctx fs.CtxI, req proto.WarmCacheBinRequest, res *proto.WarmCacheBinResponse) error {
+func (msched *MSched) WarmProcd(ctx fs.CtxI, req proto.WarmCacheBinReq, res *proto.WarmCacheBinRep) error {
 	if err := msched.pmgr.WarmProcd(sp.Tpid(req.PidStr), sp.Trealm(req.RealmStr), req.Program, req.SigmaPath, proc.Ttype(req.ProcType)); err != nil {
 		db.DPrintf(db.ERROR, "WarmProcd %v err %v", req, err)
 		res.OK = false
@@ -91,7 +91,7 @@ func (msched *MSched) WarmProcd(ctx fs.CtxI, req proto.WarmCacheBinRequest, res 
 	return nil
 }
 
-func (msched *MSched) ForceRun(ctx fs.CtxI, req proto.ForceRunRequest, res *proto.ForceRunResponse) error {
+func (msched *MSched) ForceRun(ctx fs.CtxI, req proto.ForceRunReq, res *proto.ForceRunRep) error {
 	msched.nProcsRun.Add(1)
 	p := proc.NewProcFromProto(req.ProcProto)
 	if ctx.Principal().GetRealm() != sp.ROOTREALM && p.GetRealm() != ctx.Principal().GetRealm() {
@@ -112,7 +112,7 @@ func (msched *MSched) ForceRun(ctx fs.CtxI, req proto.ForceRunRequest, res *prot
 }
 
 // Wait for a proc to mark itself as started.
-func (msched *MSched) WaitStart(ctx fs.CtxI, req proto.WaitRequest, res *proto.WaitResponse) error {
+func (msched *MSched) WaitStart(ctx fs.CtxI, req proto.WaitReq, res *proto.WaitRep) error {
 	db.DPrintf(db.MSCHED, "WaitStart %v seqno %v", req.PidStr, req.GetProcSeqno())
 	// Wait until this msched has heard about the proc, and has created the state
 	// for it.
@@ -125,7 +125,7 @@ func (msched *MSched) WaitStart(ctx fs.CtxI, req proto.WaitRequest, res *proto.W
 }
 
 // Wait for a proc to mark itself as started.
-func (msched *MSched) Started(ctx fs.CtxI, req proto.NotifyRequest, res *proto.NotifyResponse) error {
+func (msched *MSched) Started(ctx fs.CtxI, req proto.NotifyReq, res *proto.NotifyRep) error {
 	db.DPrintf(db.MSCHED, "Started %v", req.PidStr)
 	start := time.Now()
 	msched.pmgr.Started(sp.Tpid(req.PidStr))
@@ -134,7 +134,7 @@ func (msched *MSched) Started(ctx fs.CtxI, req proto.NotifyRequest, res *proto.N
 }
 
 // Wait for a proc to be evicted.
-func (msched *MSched) WaitEvict(ctx fs.CtxI, req proto.WaitRequest, res *proto.WaitResponse) error {
+func (msched *MSched) WaitEvict(ctx fs.CtxI, req proto.WaitReq, res *proto.WaitRep) error {
 	db.DPrintf(db.MSCHED, "WaitEvict %v", req.PidStr)
 	msched.pmgr.WaitEvict(sp.Tpid(req.PidStr))
 	db.DPrintf(db.MSCHED, "WaitEvict done %v", req.PidStr)
@@ -142,14 +142,14 @@ func (msched *MSched) WaitEvict(ctx fs.CtxI, req proto.WaitRequest, res *proto.W
 }
 
 // Evict a proc
-func (msched *MSched) Evict(ctx fs.CtxI, req proto.NotifyRequest, res *proto.NotifyResponse) error {
+func (msched *MSched) Evict(ctx fs.CtxI, req proto.NotifyReq, res *proto.NotifyRep) error {
 	db.DPrintf(db.MSCHED, "Evict %v", req.PidStr)
 	msched.pmgr.Evict(sp.Tpid(req.PidStr))
 	return nil
 }
 
 // Wait for a proc to mark itself as exited.
-func (msched *MSched) WaitExit(ctx fs.CtxI, req proto.WaitRequest, res *proto.WaitResponse) error {
+func (msched *MSched) WaitExit(ctx fs.CtxI, req proto.WaitReq, res *proto.WaitRep) error {
 	db.DPrintf(db.MSCHED, "WaitExit %v", req.PidStr)
 	res.Status = msched.pmgr.WaitExit(sp.Tpid(req.PidStr))
 	db.DPrintf(db.MSCHED, "WaitExit done %v", req.PidStr)
@@ -157,14 +157,14 @@ func (msched *MSched) WaitExit(ctx fs.CtxI, req proto.WaitRequest, res *proto.Wa
 }
 
 // Wait for a proc to mark itself as exited.
-func (msched *MSched) Exited(ctx fs.CtxI, req proto.NotifyRequest, res *proto.NotifyResponse) error {
+func (msched *MSched) Exited(ctx fs.CtxI, req proto.NotifyReq, res *proto.NotifyRep) error {
 	db.DPrintf(db.MSCHED, "Exited %v", req.PidStr)
 	msched.pmgr.Exited(sp.Tpid(req.PidStr), req.Status)
 	return nil
 }
 
 // Get CPU shares assigned to this realm.
-func (msched *MSched) GetCPUShares(ctx fs.CtxI, req proto.GetCPUSharesRequest, res *proto.GetCPUSharesResponse) error {
+func (msched *MSched) GetCPUShares(ctx fs.CtxI, req proto.GetCPUSharesReq, res *proto.GetCPUSharesRep) error {
 	msched.mu.Lock()
 	defer msched.mu.Unlock()
 
@@ -178,13 +178,13 @@ func (msched *MSched) GetCPUShares(ctx fs.CtxI, req proto.GetCPUSharesRequest, r
 }
 
 // Get msched's CPU util.
-func (msched *MSched) GetCPUUtil(ctx fs.CtxI, req proto.GetCPUUtilRequest, res *proto.GetCPUUtilResponse) error {
+func (msched *MSched) GetCPUUtil(ctx fs.CtxI, req proto.GetCPUUtilReq, res *proto.GetCPUUtilRep) error {
 	res.Util = msched.pmgr.GetCPUUtil(sp.Trealm(req.RealmStr))
 	return nil
 }
 
 // Get realm utilization information.
-func (msched *MSched) GetRunningProcs(ctx fs.CtxI, req proto.GetRunningProcsRequest, res *proto.GetRunningProcsResponse) error {
+func (msched *MSched) GetRunningProcs(ctx fs.CtxI, req proto.GetRunningProcsReq, res *proto.GetRunningProcsRep) error {
 	ps := msched.pmgr.GetRunningProcs()
 	res.ProcProtos = make([]*proc.ProcProto, 0, len(ps))
 	for _, p := range ps {
@@ -193,7 +193,7 @@ func (msched *MSched) GetRunningProcs(ctx fs.CtxI, req proto.GetRunningProcsRequ
 	return nil
 }
 
-func (msched *MSched) GetMSchedStats(ctx fs.CtxI, req proto.GetMSchedStatsRequest, res *proto.GetMSchedStatsResponse) error {
+func (msched *MSched) GetMSchedStats(ctx fs.CtxI, req proto.GetMSchedStatsReq, res *proto.GetMSchedStatsRep) error {
 	mschedStats := make(map[string]*proto.RealmStats)
 	msched.realmMu.RLock()
 	for r, s := range msched.mschedStats {
@@ -349,12 +349,12 @@ func (msched *MSched) register() {
 	if err != nil {
 		db.DFatalf("Error lsched rpccc: %v", err)
 	}
-	req := &lcschedproto.RegisterMSchedRequest{
+	req := &lcschedproto.RegisterMSchedReq{
 		KernelID: msched.kernelID,
 		McpuInt:  uint32(msched.mcpufree),
 		MemInt:   uint32(msched.memfree),
 	}
-	res := &lcschedproto.RegisterMSchedResponse{}
+	res := &lcschedproto.RegisterMSchedRep{}
 	if err := rpcc.RPC("LCSched.RegisterMSched", req, res); err != nil {
 		db.DFatalf("Error LCSched RegisterMSched: %v", err)
 	}

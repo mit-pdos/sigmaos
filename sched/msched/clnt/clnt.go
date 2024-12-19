@@ -7,12 +7,12 @@ import (
 	"time"
 
 	db "sigmaos/debug"
-	"sigmaos/sigmaclnt/fslib"
 	"sigmaos/proc"
 	rpcclnt "sigmaos/rpc/clnt"
 	sprpcclnt "sigmaos/rpc/clnt/sigmap"
 	shardedsvcrpcclnt "sigmaos/rpc/shardedsvc/clnt"
 	"sigmaos/sched/msched/proto"
+	"sigmaos/sigmaclnt/fslib"
 	sp "sigmaos/sigmap"
 )
 
@@ -71,14 +71,14 @@ func (mc *MSchedClnt) WarmProcd(kernelID string, pid sp.Tpid, realm sp.Trealm, p
 	if err != nil {
 		return err
 	}
-	req := &proto.WarmCacheBinRequest{
+	req := &proto.WarmCacheBinReq{
 		PidStr:    pid.String(),
 		RealmStr:  realm.String(),
 		Program:   prog,
 		SigmaPath: path,
 		ProcType:  int32(ptype),
 	}
-	res := &proto.WarmCacheBinResponse{}
+	res := &proto.WarmCacheBinRep{}
 	if err := rpcc.RPC("MSched.WarmProcd", req, res); err != nil {
 		return err
 	}
@@ -99,11 +99,11 @@ func (mc *MSchedClnt) ForceRun(kernelID string, memAccountedFor bool, p *proc.Pr
 		return err
 	}
 	db.DPrintf(db.SPAWN_LAT, "[%v] GetMSchedClnt time %v", p.GetPid(), time.Since(start))
-	req := &proto.ForceRunRequest{
+	req := &proto.ForceRunReq{
 		ProcProto:       p.GetProto(),
 		MemAccountedFor: memAccountedFor,
 	}
-	res := &proto.ForceRunResponse{}
+	res := &proto.ForceRunRep{}
 	if err := rpcc.RPC("MSched.ForceRun", req, res); err != nil {
 		return err
 	}
@@ -116,11 +116,11 @@ func (mc *MSchedClnt) Wait(method Tmethod, mschedID string, seqno *proc.ProcSeqn
 	if err != nil {
 		return nil, err
 	}
-	req := &proto.WaitRequest{
+	req := &proto.WaitReq{
 		PidStr:    pid.String(),
 		ProcSeqno: seqno,
 	}
-	res := &proto.WaitResponse{}
+	res := &proto.WaitRep{}
 	if err := rpcc.RPC("MSched.Wait"+method.String(), req, res); err != nil {
 		return nil, err
 	}
@@ -141,11 +141,11 @@ func (mc *MSchedClnt) Notify(method Tmethod, kernelID string, pid sp.Tpid, statu
 	if status != nil {
 		b = status.Marshal()
 	}
-	req := &proto.NotifyRequest{
+	req := &proto.NotifyReq{
 		PidStr: pid.String(),
 		Status: b,
 	}
-	res := &proto.NotifyResponse{}
+	res := &proto.NotifyRep{}
 	start = time.Now()
 	if err := rpcc.RPC("MSched."+method.Verb(), req, res); err != nil {
 		return err
@@ -171,8 +171,8 @@ func (mc *MSchedClnt) GetRunningProcs(nsample int) (map[sp.Trealm][]*proc.Proc, 
 			continue
 		}
 		sampled[kernelID] = true
-		req := &proto.GetRunningProcsRequest{}
-		res := &proto.GetRunningProcsResponse{}
+		req := &proto.GetRunningProcsReq{}
+		res := &proto.GetRunningProcsRep{}
 		rpcc, err := mc.getRPCClnt(kernelID)
 		if err != nil {
 			db.DPrintf(db.ERROR, "Can't get clnt: %v", err)
@@ -202,8 +202,8 @@ func (mc *MSchedClnt) MSchedStats() (int, []map[string]*proto.RealmStats, error)
 	}
 	sdstats := make([]map[string]*proto.RealmStats, 0, len(sds))
 	for _, sd := range sds {
-		req := &proto.GetMSchedStatsRequest{}
-		res := &proto.GetMSchedStatsResponse{}
+		req := &proto.GetMSchedStatsReq{}
+		res := &proto.GetMSchedStatsRep{}
 		rpcc, err := mc.getRPCClnt(sd)
 		if err != nil {
 			return 0, nil, err
@@ -252,8 +252,8 @@ func (mc *MSchedClnt) GetCPUUtil(realm sp.Trealm) (float64, error) {
 	}
 	for _, sd := range sds {
 		// Get the CPU shares on this msched.
-		req := &proto.GetCPUUtilRequest{RealmStr: realm.String()}
-		res := &proto.GetCPUUtilResponse{}
+		req := &proto.GetCPUUtilReq{RealmStr: realm.String()}
+		res := &proto.GetCPUUtilRep{}
 		sclnt, err := mc.getRPCClnt(sd)
 		if err != nil {
 			db.DPrintf(db.MSCHEDCLNT_ERR, "Error GetCPUUtil GetMSchedClnt: %v", err)

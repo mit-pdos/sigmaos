@@ -2,11 +2,11 @@ package lcschedclnt
 
 import (
 	db "sigmaos/debug"
-	"sigmaos/sigmaclnt/fslib"
 	"sigmaos/proc"
 	shardedsvcrpcclnt "sigmaos/rpc/shardedsvc/clnt"
 	"sigmaos/sched/besched/proto"
 	"sigmaos/serr"
+	"sigmaos/sigmaclnt/fslib"
 	sp "sigmaos/sigmap"
 )
 
@@ -38,10 +38,10 @@ func (lcs *LCSchedClnt) Enqueue(p *proc.Proc) (string, error) {
 		db.DPrintf(db.ALWAYS, "Error: Can't get lcsched clnt: %v", err)
 		return NOT_ENQ, err
 	}
-	req := &proto.EnqueueRequest{
+	req := &proto.EnqueueReq{
 		ProcProto: p.GetProto(),
 	}
-	res := &proto.EnqueueResponse{}
+	res := &proto.EnqueueRep{}
 	if err := rpcc.RPC("LCSched.Enqueue", req, res); err != nil {
 		db.DPrintf(db.ALWAYS, "LCSched.Enqueue err %v", err)
 		if serr.IsErrCode(err, serr.TErrUnreachable) {

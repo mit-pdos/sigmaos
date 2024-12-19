@@ -3,57 +3,57 @@ syntax = "proto3";
 option go_package = "sigmaos/apps/socialnetwork/proto";
 
 service PostService {
-	rpc StorePost(StorePostRequest) returns (StorePostResponse);
-	rpc ReadPosts(ReadPostsRequest) returns (ReadPostsResponse);
+	rpc StorePost(StorePostReq) returns (StorePostRep);
+	rpc ReadPosts(ReadPostsReq) returns (ReadPostsRep);
 }
 
 service ComposeService {
-	rpc ComposePost(ComposePostRequest) returns (ComposePostResponse);
+	rpc ComposePost(ComposePostReq) returns (ComposePostRep);
 }
 
 service MediaService {
-	rpc StoreMedia(StoreMediaRequest) returns (StoreMediaResponse);
-	rpc ReadMedia(ReadMediaRequest) returns (ReadMediaResponse);
+	rpc StoreMedia(StoreMediaReq) returns (StoreMediaRep);
+	rpc ReadMedia(ReadMediaReq) returns (ReadMediaRep);
 }
 
-message StorePostRequest {
+message StorePostReq {
 	Post post = 1;
 }
 
-message StorePostResponse {
+message StorePostRep {
 	string ok = 1;
 }
 
-message ReadPostsRequest {
+message ReadPostsReq {
 	repeated int64 postids = 1;	
 }
 
-message ReadPostsResponse {
+message ReadPostsRep {
 	string ok = 1;
 	repeated Post posts = 2;
 }
 
-message StoreMediaRequest {
+message StoreMediaReq {
 	string mediatype = 1;
 	bytes  mediadata = 2;
 }
 
-message StoreMediaResponse {
+message StoreMediaRep {
 	string ok = 1;
 	int64  mediaid = 2;
 }
 
-message ReadMediaRequest {
+message ReadMediaReq {
 	repeated int64 mediaids = 1;
 }
 
-message ReadMediaResponse {
+message ReadMediaRep {
 	string          ok = 1;
 	repeated string mediatypes = 2;
 	repeated bytes  mediadatas = 3;
 }
 
-message ComposePostRequest {
+message ComposePostReq {
 	string          username = 1;
 	int64           userid = 2;
 	string          text = 3;
@@ -61,7 +61,7 @@ message ComposePostRequest {
     repeated int64  mediaids = 5;
 }
 
-message ComposePostResponse {
+message ComposePostRep {
 	string ok = 1;
 }
 

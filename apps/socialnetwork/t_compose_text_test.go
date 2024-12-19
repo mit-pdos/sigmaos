@@ -9,9 +9,9 @@ import (
 
 	sn "sigmaos/apps/socialnetwork"
 	"sigmaos/apps/socialnetwork/proto"
-	linuxsched "sigmaos/util/linux/sched"
 	sprpcclnt "sigmaos/rpc/clnt/sigmap"
 	"sigmaos/test"
+	linuxsched "sigmaos/util/linux/sched"
 )
 
 func TestUrl(t *testing.T) {
@@ -40,8 +40,8 @@ func TestUrl(t *testing.T) {
 	// compose urls
 	url1 := "http://www.google.com/q=apple"
 	url2 := "https://www.bing.com"
-	arg_url := proto.ComposeUrlsRequest{Extendedurls: []string{url1, url2}}
-	res_url := proto.ComposeUrlsResponse{}
+	arg_url := proto.ComposeUrlsReq{Extendedurls: []string{url1, url2}}
+	res_url := proto.ComposeUrlsRep{}
 	assert.Nil(t, rpcc.RPC("UrlSrv.ComposeUrls", &arg_url, &res_url))
 	assert.Equal(t, "OK", res_url.Ok)
 	assert.Equal(t, 2, len(res_url.Shorturls))
@@ -49,8 +49,8 @@ func TestUrl(t *testing.T) {
 	// get urls
 	shortUrl1 := res_url.Shorturls[0]
 	shortUrl2 := res_url.Shorturls[1]
-	arg_get := proto.GetUrlsRequest{Shorturls: []string{shortUrl1, shortUrl2}}
-	res_get := proto.GetUrlsResponse{}
+	arg_get := proto.GetUrlsReq{Shorturls: []string{shortUrl1, shortUrl2}}
+	res_get := proto.GetUrlsRep{}
 	assert.Nil(t, rpcc.RPC("UrlSrv.GetUrls", &arg_get, &res_get))
 	assert.Equal(t, "OK", res_get.Ok)
 	assert.Equal(t, 2, len(res_get.Extendedurls))
@@ -86,8 +86,8 @@ func TestText(t *testing.T) {
 	}
 
 	// process text
-	arg_text := proto.ProcessTextRequest{}
-	res_text := proto.ProcessTextResponse{}
+	arg_text := proto.ProcessTextReq{}
+	res_text := proto.ProcessTextRep{}
 	assert.Nil(t, rpcc.RPC("TextSrv.ProcessText", &arg_text, &res_text))
 	assert.Equal(t, "Cannot process empty text.", res_text.Ok)
 
@@ -157,8 +157,8 @@ func TestCompose(t *testing.T) {
 	}
 
 	// compose empty post not allowed
-	arg_compose := proto.ComposePostRequest{}
-	res_compose := proto.ComposePostResponse{}
+	arg_compose := proto.ComposePostReq{}
+	res_compose := proto.ComposePostRep{}
 	assert.Nil(t, rpcc.RPC("ComposeSrv.ComposePost", &arg_compose, &res_compose))
 	assert.Equal(t, "Cannot compose empty post!", res_compose.Ok)
 
@@ -179,8 +179,8 @@ func TestCompose(t *testing.T) {
 	assert.Equal(t, "OK", res_compose.Ok)
 
 	// check timelines: user_1 has two items
-	arg_tl := proto.ReadTimelineRequest{Userid: int64(1), Start: int32(0), Stop: int32(2)}
-	res_tl := proto.ReadTimelineResponse{}
+	arg_tl := proto.ReadTimelineReq{Userid: int64(1), Start: int32(0), Stop: int32(2)}
+	res_tl := proto.ReadTimelineRep{}
 	assert.Nil(t, trpcc.RPC("TimelineSrv.ReadTimeline", &arg_tl, &res_tl))
 	assert.Equal(t, 2, len(res_tl.Posts))
 	assert.Equal(t, "OK", res_tl.Ok)
@@ -191,20 +191,20 @@ func TestCompose(t *testing.T) {
 
 	// check hometimelines:
 	// user_0 has two items (follower), user_0 and user_3 have one item (mentioned)
-	arg_home := proto.ReadTimelineRequest{Userid: int64(0), Start: int32(0), Stop: int32(2)}
-	res_home := proto.ReadTimelineResponse{}
+	arg_home := proto.ReadTimelineReq{Userid: int64(0), Start: int32(0), Stop: int32(2)}
+	res_home := proto.ReadTimelineRep{}
 	assert.Nil(t, hrpcc.RPC("HomeSrv.ReadHomeTimeline", &arg_home, &res_home))
 	assert.Equal(t, 2, len(res_home.Posts))
 	assert.Equal(t, "OK", res_home.Ok)
 	assert.True(t, IsPostEqual(post2, res_home.Posts[0]))
 	assert.True(t, IsPostEqual(post1, res_home.Posts[1]))
 
-	arg_home = proto.ReadTimelineRequest{Userid: int64(2), Start: int32(0), Stop: int32(1)}
+	arg_home = proto.ReadTimelineReq{Userid: int64(2), Start: int32(0), Stop: int32(1)}
 	assert.Nil(t, hrpcc.RPC("HomeSrv.ReadHomeTimeline", &arg_home, &res_home))
 	assert.Equal(t, "OK", res_home.Ok)
 	assert.True(t, IsPostEqual(post2, res_home.Posts[0]))
 
-	arg_home = proto.ReadTimelineRequest{Userid: int64(3), Start: int32(0), Stop: int32(1)}
+	arg_home = proto.ReadTimelineReq{Userid: int64(3), Start: int32(0), Stop: int32(1)}
 	assert.Nil(t, hrpcc.RPC("HomeSrv.ReadHomeTimeline", &arg_home, &res_home))
 	assert.Equal(t, "OK", res_home.Ok)
 	assert.True(t, IsPostEqual(post1, res_home.Posts[0]))

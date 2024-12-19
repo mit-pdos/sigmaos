@@ -6,13 +6,13 @@ import (
 
 	"gopkg.in/mgo.v2/bson"
 
+	"sigmaos/api/fs"
 	"sigmaos/apps/cache"
 	cachegrpclnt "sigmaos/apps/cache/cachegrp/clnt"
 	"sigmaos/apps/socialnetwork/proto"
 	dbg "sigmaos/debug"
-	"sigmaos/api/fs"
-	mongoclnt "sigmaos/proxy/mongo/clnt"
 	"sigmaos/proc"
+	mongoclnt "sigmaos/proxy/mongo/clnt"
 	rpcclnt "sigmaos/rpc/clnt"
 	sprpcclnt "sigmaos/rpc/clnt/sigmap"
 	"sigmaos/sigmasrv"
@@ -70,7 +70,7 @@ func RunGraphSrv(jobname string) error {
 }
 
 func (gsrv *GraphSrv) GetFollowers(
-	ctx fs.CtxI, req proto.GetFollowersRequest, res *proto.GraphGetResponse) error {
+	ctx fs.CtxI, req proto.GetFollowersReq, res *proto.GraphGetRep) error {
 	res.Ok = "No"
 	res.Userids = make([]int64, 0)
 	followers, err := gsrv.getFollowers(req.Followeeid)
@@ -83,7 +83,7 @@ func (gsrv *GraphSrv) GetFollowers(
 }
 
 func (gsrv *GraphSrv) GetFollowees(
-	ctx fs.CtxI, req proto.GetFolloweesRequest, res *proto.GraphGetResponse) error {
+	ctx fs.CtxI, req proto.GetFolloweesReq, res *proto.GraphGetRep) error {
 	res.Ok = "No"
 	res.Userids = make([]int64, 0)
 	followees, err := gsrv.getFollowees(req.Followerid)
@@ -96,27 +96,27 @@ func (gsrv *GraphSrv) GetFollowees(
 }
 
 func (gsrv *GraphSrv) Follow(
-	ctx fs.CtxI, req proto.FollowRequest, res *proto.GraphUpdateResponse) error {
+	ctx fs.CtxI, req proto.FollowReq, res *proto.GraphUpdateRep) error {
 	return gsrv.updateGraph(req.Followerid, req.Followeeid, true, res)
 }
 
 func (gsrv *GraphSrv) Unfollow(
-	ctx fs.CtxI, req proto.UnfollowRequest, res *proto.GraphUpdateResponse) error {
+	ctx fs.CtxI, req proto.UnfollowReq, res *proto.GraphUpdateRep) error {
 	return gsrv.updateGraph(req.Followerid, req.Followeeid, false, res)
 }
 
 func (gsrv *GraphSrv) FollowWithUname(
-	ctx fs.CtxI, req proto.FollowWithUnameRequest, res *proto.GraphUpdateResponse) error {
+	ctx fs.CtxI, req proto.FollowWithUnameReq, res *proto.GraphUpdateRep) error {
 	return gsrv.updateGraphWithUname(req.Followeruname, req.Followeeuname, true, res)
 }
 
 func (gsrv *GraphSrv) UnfollowWithUname(
-	ctx fs.CtxI, req proto.UnfollowWithUnameRequest, res *proto.GraphUpdateResponse) error {
+	ctx fs.CtxI, req proto.UnfollowWithUnameReq, res *proto.GraphUpdateRep) error {
 	return gsrv.updateGraphWithUname(req.Followeruname, req.Followeeuname, false, res)
 }
 
 func (gsrv *GraphSrv) updateGraph(
-	followerid, followeeid int64, isFollow bool, res *proto.GraphUpdateResponse) error {
+	followerid, followeeid int64, isFollow bool, res *proto.GraphUpdateRep) error {
 	res.Ok = "No"
 	if followerid == followeeid {
 		if isFollow {
@@ -150,11 +150,11 @@ func (gsrv *GraphSrv) updateGraph(
 }
 
 func (gsrv *GraphSrv) updateGraphWithUname(
-	follwer_uname, followee_uname string, isFollow bool, res *proto.GraphUpdateResponse) error {
+	follwer_uname, followee_uname string, isFollow bool, res *proto.GraphUpdateRep) error {
 	res.Ok = "No"
 	// get follower
-	follower_arg := &proto.CheckUserRequest{Usernames: []string{follwer_uname}}
-	follower_res := &proto.CheckUserResponse{}
+	follower_arg := &proto.CheckUserReq{Usernames: []string{follwer_uname}}
+	follower_res := &proto.CheckUserRep{}
 	if err := gsrv.userc.RPC("UserSrv.CheckUser", follower_arg, follower_res); err != nil {
 		return err
 	} else if follower_res.Ok != USER_QUERY_OK {
@@ -163,8 +163,8 @@ func (gsrv *GraphSrv) updateGraphWithUname(
 	}
 	followerid := follower_res.Userids[0]
 	// get followee id
-	followee_arg := &proto.CheckUserRequest{Usernames: []string{followee_uname}}
-	followee_res := &proto.CheckUserResponse{}
+	followee_arg := &proto.CheckUserReq{Usernames: []string{followee_uname}}
+	followee_res := &proto.CheckUserRep{}
 	if err := gsrv.userc.RPC("UserSrv.CheckUser", followee_arg, followee_res); err != nil {
 		return err
 	} else if followee_res.Ok != USER_QUERY_OK {

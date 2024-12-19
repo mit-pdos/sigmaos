@@ -6,11 +6,11 @@ import (
 
 	"gopkg.in/mgo.v2/bson"
 
+	"sigmaos/api/fs"
 	"sigmaos/apps/cache"
 	cachegrpclnt "sigmaos/apps/cache/cachegrp/clnt"
 	"sigmaos/apps/socialnetwork/proto"
 	dbg "sigmaos/debug"
-	"sigmaos/api/fs"
 	"sigmaos/proc"
 	rpcclnt "sigmaos/rpc/clnt"
 	sprpcclnt "sigmaos/rpc/clnt/sigmap"
@@ -66,11 +66,11 @@ func RunHomeSrv(jobname string) error {
 }
 
 func (hsrv *HomeSrv) WriteHomeTimeline(
-	ctx fs.CtxI, req proto.WriteHomeTimelineRequest, res *proto.WriteTimelineResponse) error {
+	ctx fs.CtxI, req proto.WriteHomeTimelineReq, res *proto.WriteTimelineRep) error {
 	res.Ok = "No."
 	otherUserIds := make(map[int64]bool, 0)
-	argFollower := proto.GetFollowersRequest{Followeeid: req.Userid}
-	resFollower := proto.GraphGetResponse{}
+	argFollower := proto.GetFollowersReq{Followeeid: req.Userid}
+	resFollower := proto.GraphGetRep{}
 	err := hsrv.graphc.RPC("GraphSrv.GetFollowers", &argFollower, &resFollower)
 	if err != nil {
 		return err
@@ -103,7 +103,7 @@ func (hsrv *HomeSrv) WriteHomeTimeline(
 }
 
 func (hsrv *HomeSrv) ReadHomeTimeline(
-	ctx fs.CtxI, req proto.ReadTimelineRequest, res *proto.ReadTimelineResponse) error {
+	ctx fs.CtxI, req proto.ReadTimelineReq, res *proto.ReadTimelineRep) error {
 	res.Ok = "No"
 	timeline, err := hsrv.getHomeTimeline(req.Userid)
 	if err != nil {
@@ -121,8 +121,8 @@ func (hsrv *HomeSrv) ReadHomeTimeline(
 	for i := start; i < stop; i++ {
 		postids[i-start] = timeline.Postids[nItems-i-1]
 	}
-	readPostReq := proto.ReadPostsRequest{Postids: postids}
-	readPostRes := proto.ReadPostsResponse{}
+	readPostReq := proto.ReadPostsReq{Postids: postids}
+	readPostRes := proto.ReadPostsRep{}
 	if err := hsrv.postc.RPC("PostSrv.ReadPosts", &readPostReq, &readPostRes); err != nil {
 		return err
 	}

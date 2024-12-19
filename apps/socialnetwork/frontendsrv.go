@@ -15,8 +15,8 @@ import (
 	sprpcclnt "sigmaos/rpc/clnt/sigmap"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
-	"sigmaos/util/tracing"
 	"sigmaos/util/perf"
+	"sigmaos/util/tracing"
 )
 
 type FrontEnd struct {
@@ -160,9 +160,9 @@ func (s *FrontEnd) userHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Please specify username and password", http.StatusBadRequest)
 		return
 	}
-	var res proto.UserResponse
+	var res proto.UserRep
 	// Check username and password
-	err := s.userc.RPC("UserSrv.Login", &proto.LoginRequest{
+	err := s.userc.RPC("UserSrv.Login", &proto.LoginReq{
 		Username: username,
 		Password: password,
 	}, &res)
@@ -195,10 +195,10 @@ func (s *FrontEnd) composeHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Please specify username or id", http.StatusBadRequest)
 			return
 		}
-		var res proto.CheckUserResponse
+		var res proto.CheckUserRep
 		// retrieve userid
 		err := s.userc.RPC("UserSrv.CheckUser",
-			&proto.CheckUserRequest{Usernames: []string{username}}, &res)
+			&proto.CheckUserReq{Usernames: []string{username}}, &res)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -229,8 +229,8 @@ func (s *FrontEnd) composeHandler(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
-	var res proto.ComposePostResponse
-	err := s.composec.RPC("ComposeSrv.ComposePost", &proto.ComposePostRequest{
+	var res proto.ComposePostRep
+	err := s.composec.RPC("ComposeSrv.ComposePost", &proto.ComposePostReq{
 		Username: username,
 		Userid:   userid,
 		Text:     text,
@@ -290,12 +290,12 @@ func (s *FrontEnd) timelineHandlerInner(w http.ResponseWriter, r *http.Request, 
 		http.Error(w, "bad number format in request", http.StatusBadRequest)
 		return
 	}
-	var res proto.ReadTimelineResponse
+	var res proto.ReadTimelineRep
 	if isHome {
-		err = s.homec.RPC("HomeSrv.ReadHomeTimeline", &proto.ReadTimelineRequest{
+		err = s.homec.RPC("HomeSrv.ReadHomeTimeline", &proto.ReadTimelineReq{
 			Userid: userid, Start: int32(start), Stop: int32(stop)}, &res)
 	} else {
-		err = s.tlc.RPC("TimelineSrv.ReadTimeline", &proto.ReadTimelineRequest{
+		err = s.tlc.RPC("TimelineSrv.ReadTimeline", &proto.ReadTimelineReq{
 			Userid: userid, Start: int32(start), Stop: int32(stop)}, &res)
 	}
 	if err != nil {

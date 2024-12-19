@@ -6,9 +6,9 @@ import (
 	"sync"
 	"time"
 
+	"sigmaos/api/fs"
 	"sigmaos/apps/socialnetwork/proto"
 	dbg "sigmaos/debug"
-	"sigmaos/api/fs"
 	"sigmaos/proc"
 	rpcclnt "sigmaos/rpc/clnt"
 	sprpcclnt "sigmaos/rpc/clnt/sigmap"
@@ -77,7 +77,7 @@ func RunComposeSrv(jobname string) error {
 }
 
 func (csrv *ComposeSrv) ComposePost(
-	ctx fs.CtxI, req proto.ComposePostRequest, res *proto.ComposePostResponse) error {
+	ctx fs.CtxI, req proto.ComposePostReq, res *proto.ComposePostRep) error {
 	res.Ok = "No"
 	timestamp := time.Now().UnixNano()
 	if req.Text == "" {
@@ -85,8 +85,8 @@ func (csrv *ComposeSrv) ComposePost(
 		return nil
 	}
 	// process text
-	textReq := proto.ProcessTextRequest{Text: req.Text}
-	textRes := proto.ProcessTextResponse{}
+	textReq := proto.ProcessTextReq{Text: req.Text}
+	textRes := proto.ProcessTextRep{}
 	if err := csrv.textc.RPC("TextSrv.ProcessText", &textReq, &textRes); err != nil {
 		return err
 	}
@@ -111,15 +111,15 @@ func (csrv *ComposeSrv) ComposePost(
 
 	var wg sync.WaitGroup
 	var postErr, tlErr, homeErr error
-	postReq := proto.StorePostRequest{Post: post}
-	postRes := proto.StorePostResponse{}
-	tlReq := proto.WriteTimelineRequest{
+	postReq := proto.StorePostReq{Post: post}
+	postRes := proto.StorePostRep{}
+	tlReq := proto.WriteTimelineReq{
 		Userid: req.Userid, Postid: post.Postid, Timestamp: post.Timestamp}
-	tlRes := proto.WriteTimelineResponse{}
-	homeReq := proto.WriteHomeTimelineRequest{
+	tlRes := proto.WriteTimelineRep{}
+	homeReq := proto.WriteHomeTimelineReq{
 		Usermentionids: post.Usermentions, Userid: req.Userid,
 		Postid: post.Postid, Timestamp: post.Timestamp}
-	homeRes := proto.WriteTimelineResponse{}
+	homeRes := proto.WriteTimelineRep{}
 	wg.Add(3)
 	go func() {
 		defer wg.Done()

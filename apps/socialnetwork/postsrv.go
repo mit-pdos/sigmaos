@@ -6,13 +6,13 @@ import (
 
 	"gopkg.in/mgo.v2/bson"
 
+	"sigmaos/api/fs"
 	"sigmaos/apps/cache"
 	cachegrpclnt "sigmaos/apps/cache/cachegrp/clnt"
 	"sigmaos/apps/socialnetwork/proto"
 	dbg "sigmaos/debug"
-	"sigmaos/api/fs"
-	mongoclnt "sigmaos/proxy/mongo/clnt"
 	"sigmaos/proc"
+	mongoclnt "sigmaos/proxy/mongo/clnt"
 	"sigmaos/sigmasrv"
 	"sigmaos/util/perf"
 )
@@ -59,7 +59,7 @@ func RunPostSrv(jobname string) error {
 	return ssrv.RunServer()
 }
 
-func (psrv *PostSrv) StorePost(ctx fs.CtxI, req proto.StorePostRequest, res *proto.StorePostResponse) error {
+func (psrv *PostSrv) StorePost(ctx fs.CtxI, req proto.StorePostReq, res *proto.StorePostRep) error {
 	res.Ok = "No"
 	postBson := postToBson(req.Post)
 	if err := psrv.mongoc.Insert(SN_DB, POST_COL, postBson); err != nil {
@@ -70,7 +70,7 @@ func (psrv *PostSrv) StorePost(ctx fs.CtxI, req proto.StorePostRequest, res *pro
 	return nil
 }
 
-func (psrv *PostSrv) ReadPosts(ctx fs.CtxI, req proto.ReadPostsRequest, res *proto.ReadPostsResponse) error {
+func (psrv *PostSrv) ReadPosts(ctx fs.CtxI, req proto.ReadPostsReq, res *proto.ReadPostsRep) error {
 	res.Ok = "No."
 	posts := make([]*proto.Post, len(req.Postids))
 	missing := false

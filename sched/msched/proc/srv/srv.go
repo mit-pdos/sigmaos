@@ -123,7 +123,7 @@ func RunProcSrv(kernelId string, dialproxy bool, spproxydPID sp.Tpid) error {
 	pn := filepath.Join(sp.MSCHED, kernelId, sp.PROCDREL, pe.GetPID().String())
 	ssrv, err = sigmasrv.NewSigmaSrvClnt(pn, sc, &ProcRPCSrv{ps})
 	if err != nil {
-		db.DFatalf("Error sigmasrvclnt: %v", err)
+		db.DFatalf("Error sigmasrvclnt: %v %v", pn, err)
 		return err
 	}
 	if err := shrinkMountTable(); err != nil {

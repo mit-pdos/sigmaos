@@ -1,11 +1,11 @@
 package clnt
 
 import (
-	proto "sigmaos/sched/msched/proc/chunk/proto"
 	db "sigmaos/debug"
-	"sigmaos/sigmaclnt/fslib"
 	rpcproto "sigmaos/rpc/proto"
 	shardedsvcrpcclnt "sigmaos/rpc/shardedsvc/clnt"
+	proto "sigmaos/sched/msched/proc/chunk/proto"
+	"sigmaos/sigmaclnt/fslib"
 	sp "sigmaos/sigmap"
 )
 
@@ -47,7 +47,7 @@ func (ckclnt *ChunkClnt) GetFileStat(srvid, pn string, pid sp.Tpid, realm sp.Tre
 	if err != nil {
 		return nil, "", err
 	}
-	req := &proto.GetFileStatRequest{
+	req := &proto.GetFileStatReq{
 		Prog:               pn,
 		RealmStr:           string(realm),
 		Pid:                pid.String(),
@@ -55,7 +55,7 @@ func (ckclnt *ChunkClnt) GetFileStat(srvid, pn string, pid sp.Tpid, realm sp.Tre
 		S3Secret:           s3secret,
 		NamedEndpointProto: ep,
 	}
-	res := &proto.GetFileStatResponse{}
+	res := &proto.GetFileStatRep{}
 	if err := rpcc.RPC("ChunkSrv.GetFileStat", req, res); err != nil {
 		db.DPrintf(db.CHUNKCLNT_ERR, "ChunkClnt.GetFileStat %v err %v", req, err)
 		return nil, "", err
@@ -69,7 +69,7 @@ func (ckclnt *ChunkClnt) FetchChunk(srvid, pn string, pid sp.Tpid, realm sp.Trea
 	if err != nil {
 		return 0, "", err
 	}
-	req := &proto.FetchChunkRequest{
+	req := &proto.FetchChunkReq{
 		Prog:      pn,
 		ChunkId:   int32(ck),
 		Size:      uint64(sz),
@@ -79,7 +79,7 @@ func (ckclnt *ChunkClnt) FetchChunk(srvid, pn string, pid sp.Tpid, realm sp.Trea
 		Data:      true,
 		S3Secret:  s3secret,
 	}
-	res := &proto.FetchChunkResponse{}
+	res := &proto.FetchChunkRep{}
 	res.Blob = &rpcproto.Blob{Iov: [][]byte{b}}
 	if err := rpcc.RPC("ChunkSrv.Fetch", req, res); err != nil {
 		db.DPrintf(db.CHUNKCLNT_ERR, "ChunkClnt.FetchChunk %v err %v", req, err)
@@ -94,7 +94,7 @@ func (ckclnt *ChunkClnt) Fetch(srvid, prog string, pid sp.Tpid, realm sp.Trealm,
 	if err != nil {
 		return 0, "", err
 	}
-	req := &proto.FetchChunkRequest{
+	req := &proto.FetchChunkReq{
 		Prog:               prog,
 		ChunkId:            int32(ck),
 		Size:               uint64(sz),
@@ -105,7 +105,7 @@ func (ckclnt *ChunkClnt) Fetch(srvid, prog string, pid sp.Tpid, realm sp.Trealm,
 		S3Secret:           s3secret,
 		NamedEndpointProto: ep,
 	}
-	res := &proto.FetchChunkResponse{}
+	res := &proto.FetchChunkRep{}
 	if err := rpcc.RPC("ChunkSrv.Fetch", req, res); err != nil {
 		db.DPrintf(db.CHUNKCLNT_ERR, "ChunkClnt.Fetch %v err %v", req, err)
 		return 0, "", err

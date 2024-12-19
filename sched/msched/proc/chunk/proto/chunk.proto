@@ -5,7 +5,7 @@ import "sigmap/sigmap.proto";
 
 option go_package = "sigmaos/sched/msched/proc/chunk/proto";
 
-message GetFileStatRequest {
+message GetFileStatReq {
   string prog = 1;
   string realmStr = 2;
   string pid = 3;
@@ -14,12 +14,12 @@ message GetFileStatRequest {
   TendpointProto namedEndpointProto = 6;
 }
 
-message GetFileStatResponse {
+message GetFileStatRep {
   TstatProto stat = 1;
   string path = 2;
 }
 
-message FetchChunkRequest {
+message FetchChunkReq {
   string prog = 1;
   int32 chunkId = 2;
   uint64 size = 3;
@@ -31,7 +31,7 @@ message FetchChunkRequest {
   TendpointProto namedEndpointProto = 9;
 }
 
-message FetchChunkResponse {
+message FetchChunkRep {
   Blob blob = 1;
   uint64 size = 2;
   string path = 3;

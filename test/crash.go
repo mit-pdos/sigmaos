@@ -17,11 +17,11 @@ func (ts *Tstate) CrashServer(e0, e1 crash.Tevent, srv string) {
 	em := crash.NewTeventMapOne(e1)
 	s, err := em.Events2String()
 	assert.Nil(ts.T, err)
-	if srv == sp.MSCHEDREL || srv == sp.BESCHEDREL {
+	if srv == sp.MSCHEDREL || srv == sp.BESCHEDREL || srv == sp.PROCDREL {
 		err = ts.BootNode(1)
 	} else {
 		err = ts.BootEnv(srv, []string{"SIGMAFAIL=" + s})
 	}
-	assert.Nil(ts.T, err)
+	assert.Nil(ts.T, err, "Error Boot: %v", err)
 	db.DPrintf(db.ALWAYS, "Booted %v %v", e1.Path, em)
 }

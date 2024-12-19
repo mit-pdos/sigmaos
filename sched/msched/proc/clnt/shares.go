@@ -105,7 +105,7 @@ func (pdm *ProcdMgr) setShare(rpcc *ProcClnt, share Tshare) {
 		db.DFatalf("Share outside of cgroupsv2 range [1,10000]: %v\n%v", rpcc.share, string(debug.Stack()))
 	}
 	if err := pdm.kclnt.SetCPUShares(rpcc.pid, int64(share)); err != nil {
-		db.DFatalf("Error SetCPUShares[%v] %v", rpcc.pid, err)
+		db.DPrintf(db.ERROR, "Error SetCPUShares[%v] %v", rpcc.pid, err)
 	}
 	db.DPrintf(db.PROCDMGR, "Set CPU share %v to %v", rpcc, share)
 }

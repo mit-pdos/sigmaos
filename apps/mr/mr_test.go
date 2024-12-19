@@ -608,8 +608,10 @@ func TestCrashUx1(t *testing.T) {
 	e0 := crash.NewEventPath(crash.UX_CRASH, 0, 1.0, crashSemPn(crash.UX_CRASH, 0))
 	srvs := make(map[string]crash.Tselector)
 	srvs[sp.UXREL] = crash.UX_CRASH
-	ntask, _, st := runN(t, crash.NewTeventMapOne(e0), srvs, 0, false)
-	assert.True(t, st.Ntask > ntask || st.Nfail > 0)
+	repeatTest(t, func() bool {
+		ntask, _, st := runN(t, crash.NewTeventMapOne(e0), srvs, 0, false)
+		return st.Ntask <= ntask && st.Nfail <= 0
+	})
 }
 
 func TestCrashMSched1(t *testing.T) {

@@ -16,12 +16,12 @@ import (
 	"golang.org/x/sys/unix"
 
 	"sigmaos/api/fs"
-	chunkclnt "sigmaos/chunk/clnt"
-	chunksrv "sigmaos/chunk/srv"
 	db "sigmaos/debug"
 	kernelclnt "sigmaos/kernel/clnt"
 	"sigmaos/proc"
 	spproxysrv "sigmaos/proxy/sigmap/srv"
+	chunkclnt "sigmaos/sched/msched/proc/chunk/clnt"
+	chunksrv "sigmaos/sched/msched/proc/chunk/srv"
 	"sigmaos/sched/msched/proc/proto"
 	"sigmaos/sched/msched/proc/srv/binsrv"
 	"sigmaos/scontainer"
@@ -305,12 +305,12 @@ func (ps *ProcSrv) assignToRealm(realm sp.Trealm, upid sp.Tpid, prog string, pat
 	return nil
 }
 
-func (ps *ProcRPCSrv) Run(ctx fs.CtxI, req proto.RunRequest, res *proto.RunResult) error {
+func (ps *ProcRPCSrv) Run(ctx fs.CtxI, req proto.RunReq, res *proto.RunRep) error {
 	return ps.ps.Run(ctx, req, res)
 }
 
 // Run a proc inside of an inner container
-func (ps *ProcSrv) Run(ctx fs.CtxI, req proto.RunRequest, res *proto.RunResult) error {
+func (ps *ProcSrv) Run(ctx fs.CtxI, req proto.RunReq, res *proto.RunRep) error {
 	uproc := proc.NewProcFromProto(req.ProcProto)
 	db.DPrintf(db.PROCD, "Run uproc %v", uproc)
 	db.DPrintf(db.SPAWN_LAT, "[%v] ProcSrv.Run recvd proc time since spawn %v", uproc.GetPid(), time.Since(uproc.GetSpawnTime()))
@@ -352,12 +352,12 @@ func (ps *ProcSrv) Run(ctx fs.CtxI, req proto.RunRequest, res *proto.RunResult) 
 	return err
 }
 
-func (ps *ProcRPCSrv) WarmProcd(ctx fs.CtxI, req proto.WarmBinRequest, res *proto.WarmBinResult) error {
+func (ps *ProcRPCSrv) WarmProcd(ctx fs.CtxI, req proto.WarmBinReq, res *proto.WarmBinRep) error {
 	return ps.ps.WarmProcd(ctx, req, res)
 }
 
 // Warm procd to run a program for experiments with warm start.
-func (ps *ProcSrv) WarmProcd(ctx fs.CtxI, req proto.WarmBinRequest, res *proto.WarmBinResult) error {
+func (ps *ProcSrv) WarmProcd(ctx fs.CtxI, req proto.WarmBinReq, res *proto.WarmBinRep) error {
 	db.DPrintf(db.PROCD, "WarmProcd %v pid %v", req, os.Getpid())
 	pid := sp.Tpid(req.PidStr)
 	r := sp.Trealm(req.RealmStr)

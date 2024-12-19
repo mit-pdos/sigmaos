@@ -8,11 +8,11 @@ import (
 	"time"
 
 	"sigmaos/api/fs"
-	"sigmaos/chunk"
-	chunkclnt "sigmaos/chunk/clnt"
 	db "sigmaos/debug"
 	"sigmaos/proc"
 	"sigmaos/sched/besched/proto"
+	"sigmaos/sched/msched/proc/chunk"
+	chunkclnt "sigmaos/sched/msched/proc/chunk/clnt"
 	"sigmaos/sched/queue"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
@@ -48,7 +48,7 @@ func NewBESched(sc *sigmaclnt.SigmaClnt) *BESched {
 	return be
 }
 
-func (be *BESched) Enqueue(ctx fs.CtxI, req proto.EnqueueRequest, res *proto.EnqueueResponse) error {
+func (be *BESched) Enqueue(ctx fs.CtxI, req proto.EnqueueReq, res *proto.EnqueueRep) error {
 	p := proc.NewProcFromProto(req.ProcProto)
 	if p.GetRealm() != ctx.Principal().GetRealm() {
 		return fmt.Errorf("Proc realm %v doesn't match principal realm %v", p.GetRealm(), ctx.Principal().GetRealm())
@@ -91,7 +91,7 @@ func (be *BESched) replyToParent(pseqno *proc.ProcSeqno, p *proc.Proc, ch chan *
 	ch <- pseqno
 }
 
-func (be *BESched) GetStats(ctx fs.CtxI, req proto.GetStatsRequest, res *proto.GetStatsResponse) error {
+func (be *BESched) GetStats(ctx fs.CtxI, req proto.GetStatsReq, res *proto.GetStatsRep) error {
 	be.realmMu.RLock()
 	realms := make(map[string]int64, len(be.realms))
 	for _, r := range be.realms {
@@ -107,7 +107,7 @@ func (be *BESched) GetStats(ctx fs.CtxI, req proto.GetStatsRequest, res *proto.G
 	return nil
 }
 
-func (be *BESched) GetProc(ctx fs.CtxI, req proto.GetProcRequest, res *proto.GetProcResponse) error {
+func (be *BESched) GetProc(ctx fs.CtxI, req proto.GetProcReq, res *proto.GetProcRep) error {
 	db.DPrintf(db.BESCHED, "GetProc request by %v mem %v", req.KernelID, req.Mem)
 
 	be.ngetprocReq.Add(1)

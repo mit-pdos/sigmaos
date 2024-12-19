@@ -7,9 +7,9 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"sigmaos/chunk"
-	chunkclnt "sigmaos/chunk/clnt"
-	chunksrv "sigmaos/chunk/srv"
+	"sigmaos/sched/msched/proc/chunk"
+	chunkclnt "sigmaos/sched/msched/proc/chunk/clnt"
+	chunksrv "sigmaos/sched/msched/proc/chunk/srv"
 	db "sigmaos/debug"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"

@@ -13,16 +13,16 @@ import (
 
 	"github.com/harlow/go-micro-services/data"
 
+	"sigmaos/api/fs"
 	"sigmaos/apps/cache"
 	"sigmaos/apps/hotel/proto"
-	dbclnt "sigmaos/proxy/db/clnt"
 	db "sigmaos/debug"
-	"sigmaos/api/fs"
 	"sigmaos/proc"
+	dbclnt "sigmaos/proxy/db/clnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
-	"sigmaos/util/tracing"
 	"sigmaos/util/perf"
+	"sigmaos/util/tracing"
 )
 
 var (
@@ -94,7 +94,7 @@ func RunRateSrv(job string, cache string) error {
 }
 
 // GetRates gets rates for hotels
-func (s *Rate) GetRates(ctx fs.CtxI, req proto.RateRequest, res *proto.RateResult) error {
+func (s *Rate) GetRates(ctx fs.CtxI, req proto.RateReq, res *proto.RateRep) error {
 	var sctx context.Context
 	//	var span trace.Span
 	//	if TRACING {

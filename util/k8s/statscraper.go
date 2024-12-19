@@ -3,9 +3,9 @@ package k8s
 import (
 	"fmt"
 
+	"sigmaos/api/fs"
 	"sigmaos/dcontainer/cgroup"
 	db "sigmaos/debug"
-	"sigmaos/api/fs"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
@@ -39,7 +39,7 @@ func newScraper() *scraper {
 	}
 }
 
-func (s *scraper) GetCPUUtil(ctx fs.CtxI, req proto.CPUUtilRequest, res *proto.CPUUtilResult) error {
+func (s *scraper) GetCPUUtil(ctx fs.CtxI, req proto.CPUUtilReq, res *proto.CPUUtilRep) error {
 	var total *cgroup.CPUStat
 	var be *cgroup.CPUStat
 	var burst *cgroup.CPUStat

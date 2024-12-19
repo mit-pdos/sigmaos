@@ -5,8 +5,8 @@ import (
 	"sync"
 	"time"
 
-	"sigmaos/chunk"
-	chunksrv "sigmaos/chunk/srv"
+	"sigmaos/sched/msched/proc/chunk"
+	chunksrv "sigmaos/sched/msched/proc/chunk/srv"
 	db "sigmaos/debug"
 	"sigmaos/sched/msched/proc"
 	sp "sigmaos/sigmap"

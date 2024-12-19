@@ -9,8 +9,8 @@ import (
 
 	"google.golang.org/protobuf/proto"
 
-	db "sigmaos/debug"
 	"sigmaos/api/fs"
+	db "sigmaos/debug"
 	"sigmaos/rpc"
 	rpcproto "sigmaos/rpc/proto"
 	"sigmaos/serr"
@@ -38,7 +38,7 @@ func (rpcs *RPCSrv) WriteRead(ctx fs.CtxI, iov sessp.IoVec) (sessp.IoVec, *serr.
 	if rpcs.sti != nil {
 		start = time.Now()
 	}
-	req := rpcproto.Request{}
+	req := rpcproto.Req{}
 	if err := proto.Unmarshal(iov[0], &req); err != nil {
 		return nil, serr.NewErrError(err)
 	}
@@ -49,7 +49,7 @@ func (rpcs *RPCSrv) WriteRead(ctx fs.CtxI, iov sessp.IoVec) (sessp.IoVec, *serr.
 	} else {
 		rerr = sp.NewRerror()
 	}
-	rep := &rpcproto.Reply{Err: rerr}
+	rep := &rpcproto.Rep{Err: rerr}
 	b, err := proto.Marshal(rep)
 	if err != nil {
 		return nil, serr.NewErrError(err)

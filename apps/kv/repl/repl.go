@@ -4,7 +4,7 @@ import (
 	proto "sigmaos/apps/kv/repl/proto"
 )
 
-type Tapplyf func(*proto.ReplOpRequest, *proto.ReplOpReply) error
+type Tapplyf func(*proto.ReplOpReq, *proto.ReplOpRep) error
 
 type Config interface {
 	ReplAddr() string
@@ -14,5 +14,5 @@ type Config interface {
 
 type Server interface {
 	Start()
-	Process(*proto.ReplOpRequest, *proto.ReplOpReply) error
+	Process(*proto.ReplOpReq, *proto.ReplOpRep) error
 }

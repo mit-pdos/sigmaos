@@ -10,12 +10,12 @@ import (
 
 	"github.com/harlow/go-micro-services/data"
 
+	"sigmaos/api/fs"
 	"sigmaos/apps/cache"
 	"sigmaos/apps/hotel/proto"
-	dbclnt "sigmaos/proxy/db/clnt"
 	db "sigmaos/debug"
-	"sigmaos/api/fs"
 	"sigmaos/proc"
+	dbclnt "sigmaos/proxy/db/clnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
 	"sigmaos/util/tracing"
@@ -125,7 +125,7 @@ func (ps *ProfSrv) initDB(profs []*Profile) error {
 	return nil
 }
 
-func (ps *ProfSrv) GetProfiles(ctx fs.CtxI, req proto.ProfRequest, res *proto.ProfResult) error {
+func (ps *ProfSrv) GetProfiles(ctx fs.CtxI, req proto.ProfReq, res *proto.ProfRep) error {
 	var sctx context.Context
 	//	var span trace.Span
 	//	if TRACING {

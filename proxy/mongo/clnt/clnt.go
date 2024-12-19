@@ -3,10 +3,10 @@ package clnt
 import (
 	"gopkg.in/mgo.v2/bson"
 	dbg "sigmaos/debug"
-	"sigmaos/sigmaclnt/fslib"
 	proto "sigmaos/proxy/mongo/proto"
 	rpcclnt "sigmaos/rpc/clnt"
 	sprpcclnt "sigmaos/rpc/clnt/sigmap"
+	"sigmaos/sigmaclnt/fslib"
 	sp "sigmaos/sigmap"
 )
 
@@ -34,8 +34,8 @@ func (mongoc *MongoClnt) Insert(db, collection string, obj interface{}) error {
 		dbg.DPrintf(dbg.MONGO_ERR, "cannot encode insert object: %v. Err: %v", obj, err)
 		return err
 	}
-	req := &proto.MongoRequest{Db: db, Collection: collection, Obj: objEncoded}
-	res := &proto.MongoResponse{}
+	req := &proto.MongoReq{Db: db, Collection: collection, Obj: objEncoded}
+	res := &proto.MongoRep{}
 	return mongoc.rpcc.RPC("MongoSrv.Insert", req, res)
 }
 
@@ -57,8 +57,8 @@ func (mongoc *MongoClnt) FindOne(db, collection string, query bson.M, result any
 // TODO use reflection to handle find all
 func (mongoc *MongoClnt) FindAllEncoded(db, collection string, query bson.M) ([][]byte, error) {
 	queryEncoded, _ := bson.Marshal(query)
-	req := &proto.MongoRequest{Db: db, Collection: collection, Query: queryEncoded}
-	res := &proto.MongoResponse{}
+	req := &proto.MongoReq{Db: db, Collection: collection, Query: queryEncoded}
+	res := &proto.MongoRep{}
 	if err := mongoc.rpcc.RPC("MongoSrv.Find", req, res); err != nil {
 		return nil, err
 	}
@@ -84,8 +84,8 @@ func (mongoc *MongoClnt) update(db, collection string, query, update bson.M, ups
 		dbg.DPrintf(dbg.MONGO_ERR, "cannot encode update bson %v\n", update)
 		return err
 	}
-	req := &proto.MongoRequest{Db: db, Collection: collection, Query: qEncoded, Obj: uEncoded}
-	res := &proto.MongoResponse{}
+	req := &proto.MongoReq{Db: db, Collection: collection, Query: qEncoded, Obj: uEncoded}
+	res := &proto.MongoRep{}
 	if upsert {
 		return mongoc.rpcc.RPC("MongoSrv.Upsert", req, res)
 	} else {
@@ -94,19 +94,19 @@ func (mongoc *MongoClnt) update(db, collection string, query, update bson.M, ups
 }
 
 func (mongoc *MongoClnt) DropCollection(db, collection string) error {
-	req := &proto.MongoConfigRequest{Db: db, Collection: collection}
-	res := &proto.MongoResponse{}
+	req := &proto.MongoConfigReq{Db: db, Collection: collection}
+	res := &proto.MongoRep{}
 	return mongoc.rpcc.RPC("MongoSrv.Drop", req, res)
 }
 
 func (mongoc *MongoClnt) RemoveAll(db, collection string) error {
-	req := &proto.MongoConfigRequest{Db: db, Collection: collection}
-	res := &proto.MongoResponse{}
+	req := &proto.MongoConfigReq{Db: db, Collection: collection}
+	res := &proto.MongoRep{}
 	return mongoc.rpcc.RPC("MongoSrv.Remove", req, res)
 }
 
 func (mongoc *MongoClnt) EnsureIndex(db, collection string, indexkeys []string) error {
-	req := &proto.MongoConfigRequest{Db: db, Collection: collection, Indexkeys: indexkeys}
-	res := &proto.MongoResponse{}
+	req := &proto.MongoConfigReq{Db: db, Collection: collection, Indexkeys: indexkeys}
+	res := &proto.MongoRep{}
 	return mongoc.rpcc.RPC("MongoSrv.Index", req, res)
 }

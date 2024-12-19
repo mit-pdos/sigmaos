@@ -6,13 +6,13 @@ import (
 	"sync"
 
 	"sigmaos/api/fs"
-	"sigmaos/chunk"
-	chunkclnt "sigmaos/chunk/clnt"
 	db "sigmaos/debug"
 	"sigmaos/proc"
 	beschedproto "sigmaos/sched/besched/proto"
 	"sigmaos/sched/lcsched/proto"
 	mschedclnt "sigmaos/sched/msched/clnt"
+	"sigmaos/sched/msched/proc/chunk"
+	chunkclnt "sigmaos/sched/msched/proc/chunk/clnt"
 	"sigmaos/sched/queue"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
@@ -43,7 +43,7 @@ func NewLCSched(sc *sigmaclnt.SigmaClnt) *LCSched {
 	return lcs
 }
 
-func (lcs *LCSched) Enqueue(ctx fs.CtxI, req beschedproto.EnqueueRequest, res *beschedproto.EnqueueResponse) error {
+func (lcs *LCSched) Enqueue(ctx fs.CtxI, req beschedproto.EnqueueReq, res *beschedproto.EnqueueRep) error {
 	p := proc.NewProcFromProto(req.ProcProto)
 	if p.GetRealm() != ctx.Principal().GetRealm() {
 		return fmt.Errorf("Proc realm %v doesn't match principal realm %v", p.GetRealm(), ctx.Principal().GetRealm())
@@ -56,7 +56,7 @@ func (lcs *LCSched) Enqueue(ctx fs.CtxI, req beschedproto.EnqueueRequest, res *b
 	return nil
 }
 
-func (lcs *LCSched) RegisterMSched(ctx fs.CtxI, req proto.RegisterMSchedRequest, res *proto.RegisterMSchedResponse) error {
+func (lcs *LCSched) RegisterMSched(ctx fs.CtxI, req proto.RegisterMSchedReq, res *proto.RegisterMSchedRep) error {
 	lcs.mu.Lock()
 	defer lcs.mu.Unlock()
 

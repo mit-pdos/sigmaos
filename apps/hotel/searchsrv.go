@@ -6,16 +6,16 @@ import (
 	//	"go.opentelemetry.io/otel/trace"
 	//	tproto "sigmaos/util/tracing/proto"
 
+	"sigmaos/api/fs"
 	"sigmaos/apps/hotel/proto"
 	db "sigmaos/debug"
-	"sigmaos/api/fs"
 	"sigmaos/proc"
 	rpcclnt "sigmaos/rpc/clnt"
 	sprpcclnt "sigmaos/rpc/clnt/sigmap"
 	shardedsvcrpcclnt "sigmaos/rpc/shardedsvc/clnt"
 	"sigmaos/sigmasrv"
-	"sigmaos/util/tracing"
 	"sigmaos/util/perf"
+	"sigmaos/util/tracing"
 )
 
 type Search struct {
@@ -57,7 +57,7 @@ func RunSearchSrv(n string) error {
 }
 
 // Nearby returns ids of nearby hotels order by results of ratesrv
-func (s *Search) Nearby(ctx fs.CtxI, req proto.SearchRequest, res *proto.SearchResult) error {
+func (s *Search) Nearby(ctx fs.CtxI, req proto.SearchReq, res *proto.SearchRep) error {
 	//	var sctx context.Context
 	//	var span trace.Span
 	//	if TRACING {
@@ -71,8 +71,8 @@ func (s *Search) Nearby(ctx fs.CtxI, req proto.SearchRequest, res *proto.SearchR
 	//		_, span2 = s.tracer.StartContextSpan(sctx, "Geo.Nearby")
 	//		sctx2 = tracing.SpanToContext(span2)
 	//	}
-	var gres proto.GeoResult
-	greq := &proto.GeoRequest{
+	var gres proto.GeoRep
+	greq := &proto.GeoReq{
 		Lat:               req.Lat,
 		Lon:               req.Lon,
 		SpanContextConfig: nil, //sctx2,
@@ -102,8 +102,8 @@ func (s *Search) Nearby(ctx fs.CtxI, req proto.SearchRequest, res *proto.SearchR
 	//		_, span3 = s.tracer.StartContextSpan(sctx, "Rate.GetRates")
 	//		sctx3 = tracing.SpanToContext(span3)
 	//	}
-	var rres proto.RateResult
-	rreq := &proto.RateRequest{
+	var rres proto.RateRep
+	rreq := &proto.RateReq{
 		HotelIds:          gres.HotelIds,
 		InDate:            req.InDate,
 		OutDate:           req.OutDate,

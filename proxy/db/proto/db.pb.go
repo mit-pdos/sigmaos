@@ -20,7 +20,7 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-type DBRequest struct {
+type DBReq struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
@@ -28,8 +28,8 @@ type DBRequest struct {
 	Cmd string `protobuf:"bytes,1,opt,name=cmd,proto3" json:"cmd,omitempty"`
 }
 
-func (x *DBRequest) Reset() {
-	*x = DBRequest{}
+func (x *DBReq) Reset() {
+	*x = DBReq{}
 	if protoimpl.UnsafeEnabled {
 		mi := &file_proxy_db_proto_db_proto_msgTypes[0]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -37,13 +37,13 @@ func (x *DBRequest) Reset() {
 	}
 }
 
-func (x *DBRequest) String() string {
+func (x *DBReq) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*DBRequest) ProtoMessage() {}
+func (*DBReq) ProtoMessage() {}
 
-func (x *DBRequest) ProtoReflect() protoreflect.Message {
+func (x *DBReq) ProtoReflect() protoreflect.Message {
 	mi := &file_proxy_db_proto_db_proto_msgTypes[0]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -55,19 +55,19 @@ func (x *DBRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use DBRequest.ProtoReflect.Descriptor instead.
-func (*DBRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use DBReq.ProtoReflect.Descriptor instead.
+func (*DBReq) Descriptor() ([]byte, []int) {
 	return file_proxy_db_proto_db_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *DBRequest) GetCmd() string {
+func (x *DBReq) GetCmd() string {
 	if x != nil {
 		return x.Cmd
 	}
 	return ""
 }
 
-type DBResult struct {
+type DBRep struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
@@ -75,8 +75,8 @@ type DBResult struct {
 	Res []byte `protobuf:"bytes,1,opt,name=res,proto3" json:"res,omitempty"`
 }
 
-func (x *DBResult) Reset() {
-	*x = DBResult{}
+func (x *DBRep) Reset() {
+	*x = DBRep{}
 	if protoimpl.UnsafeEnabled {
 		mi := &file_proxy_db_proto_db_proto_msgTypes[1]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -84,13 +84,13 @@ func (x *DBResult) Reset() {
 	}
 }
 
-func (x *DBResult) String() string {
+func (x *DBRep) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*DBResult) ProtoMessage() {}
+func (*DBRep) ProtoMessage() {}
 
-func (x *DBResult) ProtoReflect() protoreflect.Message {
+func (x *DBRep) ProtoReflect() protoreflect.Message {
 	mi := &file_proxy_db_proto_db_proto_msgTypes[1]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -102,12 +102,12 @@ func (x *DBResult) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use DBResult.ProtoReflect.Descriptor instead.
-func (*DBResult) Descriptor() ([]byte, []int) {
+// Deprecated: Use DBRep.ProtoReflect.Descriptor instead.
+func (*DBRep) Descriptor() ([]byte, []int) {
 	return file_proxy_db_proto_db_proto_rawDescGZIP(), []int{1}
 }
 
-func (x *DBResult) GetRes() []byte {
+func (x *DBRep) GetRes() []byte {
 	if x != nil {
 		return x.Res
 	}
@@ -118,17 +118,16 @@ var File_proxy_db_proto_db_proto protoreflect.FileDescriptor
 
 var file_proxy_db_proto_db_proto_rawDesc = []byte{
 	0x0a, 0x17, 0x70, 0x72, 0x6f, 0x78, 0x79, 0x2f, 0x64, 0x62, 0x2f, 0x70, 0x72, 0x6f, 0x74, 0x6f,
-	0x2f, 0x64, 0x62, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x22, 0x1d, 0x0a, 0x09, 0x44, 0x42, 0x52,
-	0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x10, 0x0a, 0x03, 0x63, 0x6d, 0x64, 0x18, 0x01, 0x20,
-	0x01, 0x28, 0x09, 0x52, 0x03, 0x63, 0x6d, 0x64, 0x22, 0x1c, 0x0a, 0x08, 0x44, 0x42, 0x52, 0x65,
-	0x73, 0x75, 0x6c, 0x74, 0x12, 0x10, 0x0a, 0x03, 0x72, 0x65, 0x73, 0x18, 0x01, 0x20, 0x01, 0x28,
-	0x0c, 0x52, 0x03, 0x72, 0x65, 0x73, 0x32, 0x43, 0x0a, 0x02, 0x44, 0x42, 0x12, 0x1e, 0x0a, 0x05,
-	0x51, 0x75, 0x65, 0x72, 0x79, 0x12, 0x0a, 0x2e, 0x44, 0x42, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73,
-	0x74, 0x1a, 0x09, 0x2e, 0x44, 0x42, 0x52, 0x65, 0x73, 0x75, 0x6c, 0x74, 0x12, 0x1d, 0x0a, 0x04,
-	0x45, 0x78, 0x65, 0x63, 0x12, 0x0a, 0x2e, 0x44, 0x42, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74,
-	0x1a, 0x09, 0x2e, 0x44, 0x42, 0x52, 0x65, 0x73, 0x75, 0x6c, 0x74, 0x42, 0x18, 0x5a, 0x16, 0x73,
-	0x69, 0x67, 0x6d, 0x61, 0x6f, 0x73, 0x2f, 0x70, 0x72, 0x6f, 0x78, 0x79, 0x2f, 0x64, 0x62, 0x2f,
-	0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x2f, 0x64, 0x62, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x22, 0x19, 0x0a, 0x05, 0x44, 0x42, 0x52,
+	0x65, 0x71, 0x12, 0x10, 0x0a, 0x03, 0x63, 0x6d, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52,
+	0x03, 0x63, 0x6d, 0x64, 0x22, 0x19, 0x0a, 0x05, 0x44, 0x42, 0x52, 0x65, 0x70, 0x12, 0x10, 0x0a,
+	0x03, 0x72, 0x65, 0x73, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x03, 0x72, 0x65, 0x73, 0x32,
+	0x35, 0x0a, 0x02, 0x44, 0x42, 0x12, 0x17, 0x0a, 0x05, 0x51, 0x75, 0x65, 0x72, 0x79, 0x12, 0x06,
+	0x2e, 0x44, 0x42, 0x52, 0x65, 0x71, 0x1a, 0x06, 0x2e, 0x44, 0x42, 0x52, 0x65, 0x70, 0x12, 0x16,
+	0x0a, 0x04, 0x45, 0x78, 0x65, 0x63, 0x12, 0x06, 0x2e, 0x44, 0x42, 0x52, 0x65, 0x71, 0x1a, 0x06,
+	0x2e, 0x44, 0x42, 0x52, 0x65, 0x70, 0x42, 0x18, 0x5a, 0x16, 0x73, 0x69, 0x67, 0x6d, 0x61, 0x6f,
+	0x73, 0x2f, 0x70, 0x72, 0x6f, 0x78, 0x79, 0x2f, 0x64, 0x62, 0x2f, 0x70, 0x72, 0x6f, 0x74, 0x6f,
+	0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -145,14 +144,14 @@ func file_proxy_db_proto_db_proto_rawDescGZIP() []byte {
 
 var file_proxy_db_proto_db_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
 var file_proxy_db_proto_db_proto_goTypes = []interface{}{
-	(*DBRequest)(nil), // 0: DBRequest
-	(*DBResult)(nil),  // 1: DBResult
+	(*DBReq)(nil), // 0: DBReq
+	(*DBRep)(nil), // 1: DBRep
 }
 var file_proxy_db_proto_db_proto_depIdxs = []int32{
-	0, // 0: DB.Query:input_type -> DBRequest
-	0, // 1: DB.Exec:input_type -> DBRequest
-	1, // 2: DB.Query:output_type -> DBResult
-	1, // 3: DB.Exec:output_type -> DBResult
+	0, // 0: DB.Query:input_type -> DBReq
+	0, // 1: DB.Exec:input_type -> DBReq
+	1, // 2: DB.Query:output_type -> DBRep
+	1, // 3: DB.Exec:output_type -> DBRep
 	2, // [2:4] is the sub-list for method output_type
 	0, // [0:2] is the sub-list for method input_type
 	0, // [0:0] is the sub-list for extension type_name
@@ -167,7 +166,7 @@ func file_proxy_db_proto_db_proto_init() {
 	}
 	if !protoimpl.UnsafeEnabled {
 		file_proxy_db_proto_db_proto_msgTypes[0].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*DBRequest); i {
+			switch v := v.(*DBReq); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -179,7 +178,7 @@ func file_proxy_db_proto_db_proto_init() {
 			}
 		}
 		file_proxy_db_proto_db_proto_msgTypes[1].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*DBResult); i {
+			switch v := v.(*DBRep); i {
 			case 0:
 				return &v.state
 			case 1:

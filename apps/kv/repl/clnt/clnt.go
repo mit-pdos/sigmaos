@@ -5,10 +5,10 @@ import (
 
 	"google.golang.org/protobuf/proto"
 
-	"sigmaos/sigmaclnt/fslib"
 	replproto "sigmaos/apps/kv/repl/proto"
 	rpcclnt "sigmaos/rpc/clnt"
 	sprpcclnt "sigmaos/rpc/clnt/sigmap"
+	"sigmaos/sigmaclnt/fslib"
 	sp "sigmaos/sigmap"
 )
 
@@ -30,13 +30,13 @@ func (rc *ReplClnt) nextSeqno() sp.Tseqno {
 	return sp.Tseqno(rc.seqno.Add(1))
 }
 
-func (rc *ReplClnt) NewReplOp(method, key string, val proto.Message) (*replproto.ReplOpRequest, error) {
+func (rc *ReplClnt) NewReplOp(method, key string, val proto.Message) (*replproto.ReplOpReq, error) {
 	b, err := proto.Marshal(val)
 	if err != nil {
 		return nil, err
 	}
 	seqno := rc.nextSeqno()
-	return &replproto.ReplOpRequest{
+	return &replproto.ReplOpReq{
 		Method: method,
 		ClntId: uint32(rc.cid),
 		Seqno:  uint64(seqno),
@@ -49,7 +49,7 @@ func (rc *ReplClnt) ReplOp(srv, method, key string, val proto.Message) ([]byte, 
 	if err != nil {
 		return nil, err
 	}
-	var res replproto.ReplOpReply
+	var res replproto.ReplOpRep
 	if err := rc.RPC(srv, "ReplSrv.ProcessOp", req, &res); err != nil {
 		return nil, err
 	}

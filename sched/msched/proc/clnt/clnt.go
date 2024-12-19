@@ -38,10 +38,10 @@ func (clnt *ProcClnt) GetPid() sp.Tpid {
 }
 
 func (clnt *ProcClnt) RunProc(uproc *proc.Proc) (uprocErr error, childErr error) {
-	req := &proto.RunRequest{
+	req := &proto.RunReq{
 		ProcProto: uproc.GetProto(),
 	}
-	res := &proto.RunResult{}
+	res := &proto.RunRep{}
 	if err := clnt.RPC("ProcRPCSrv.Run", req, res); serr.IsErrCode(err, serr.TErrUnreachable) {
 		return err, nil
 	} else {
@@ -51,7 +51,7 @@ func (clnt *ProcClnt) RunProc(uproc *proc.Proc) (uprocErr error, childErr error)
 }
 
 func (clnt *ProcClnt) WarmProcd(pid sp.Tpid, realm sp.Trealm, prog string, s3secret *sp.SecretProto, namedEP *sp.Tendpoint, path []string) (uprocErr error, childErr error) {
-	req := &proto.WarmBinRequest{
+	req := &proto.WarmBinReq{
 		RealmStr:           realm.String(),
 		Program:            prog,
 		SigmaPath:          path,
@@ -59,7 +59,7 @@ func (clnt *ProcClnt) WarmProcd(pid sp.Tpid, realm sp.Trealm, prog string, s3sec
 		S3Secret:           s3secret,
 		NamedEndpointProto: namedEP.GetProto(),
 	}
-	res := &proto.RunResult{}
+	res := &proto.RunRep{}
 	if err := clnt.RPC("ProcRPCSrv.WarmProcd", req, res); serr.IsErrCode(err, serr.TErrUnreachable) {
 		return err, nil
 	} else {

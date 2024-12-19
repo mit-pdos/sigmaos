@@ -1,10 +1,10 @@
 package clnt
 
 import (
-	"sigmaos/sigmaclnt/fslib"
 	"sigmaos/realm/proto"
 	rpcclnt "sigmaos/rpc/clnt"
 	sprpcclnt "sigmaos/rpc/clnt/sigmap"
+	"sigmaos/sigmaclnt/fslib"
 	sp "sigmaos/sigmap"
 )
 
@@ -24,13 +24,13 @@ func NewRealmClnt(fsl *fslib.FsLib) (*RealmClnt, error) {
 }
 
 func (rc *RealmClnt) NewRealm(realm sp.Trealm, net string, numS3 int64, numUX int64) error {
-	req := &proto.MakeRequest{
+	req := &proto.MakeReq{
 		Realm:   realm.String(),
 		NumS3:   numS3,
 		NumUX:   numUX,
 		Network: net,
 	}
-	res := &proto.MakeResult{}
+	res := &proto.MakeRep{}
 	if err := rc.rpcc.RPC("RealmSrv.Make", req, res); err != nil {
 		return err
 	}
@@ -38,10 +38,10 @@ func (rc *RealmClnt) NewRealm(realm sp.Trealm, net string, numS3 int64, numUX in
 }
 
 func (rc *RealmClnt) RemoveRealm(realm sp.Trealm) error {
-	req := &proto.RemoveRequest{
+	req := &proto.RemoveReq{
 		Realm: realm.String(),
 	}
-	res := &proto.RemoveResult{}
+	res := &proto.RemoveRep{}
 	if err := rc.rpcc.RPC("RealmSrv.Remove", req, res); err != nil {
 		return err
 	}

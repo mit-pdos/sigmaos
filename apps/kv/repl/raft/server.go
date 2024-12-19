@@ -5,10 +5,10 @@ import (
 
 	raft "go.etcd.io/etcd/raft/v3"
 
-	dialproxyclnt "sigmaos/dialproxy/clnt"
-	"sigmaos/proc"
 	"sigmaos/apps/kv/repl"
 	replproto "sigmaos/apps/kv/repl/proto"
+	dialproxyclnt "sigmaos/dialproxy/clnt"
+	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 )
 
@@ -38,7 +38,7 @@ func (srv *RaftReplServer) Start() {
 	go srv.clerk.serve()
 }
 
-func (srv *RaftReplServer) Process(req *replproto.ReplOpRequest, rep *replproto.ReplOpReply) error {
+func (srv *RaftReplServer) Process(req *replproto.ReplOpReq, rep *replproto.ReplOpRep) error {
 	op := &Op{request: req, reply: rep, ch: make(chan struct{})}
 	srv.clerk.request(op)
 	<-op.ch

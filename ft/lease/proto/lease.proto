@@ -2,30 +2,28 @@ syntax = "proto3";
 
 import "util/tracing/proto/tracing.proto";
 
-option go_package = "sigmaos/lease/proto";
+option go_package = "sigmaos/ft/lease/proto";
 
-message AskRequest {
+message AskReq {
   uint64 ClntId = 1;
   uint64 tTL = 2;
   SpanContextConfig spanContextConfig = 3;
 }
 
-message AskResult {
+message AskRep {
   uint64 LeaseId = 1;
 }
 
-message ExtendRequest {
+message ExtendReq {
   uint64 LeaseId = 1;
 }
 
-message ExtendResult {
+message ExtendRep {
 }
 
-message EndRequest {
+message EndReq {
   uint64 LeaseId = 1;
 }
 
-message EndResult {
+message EndRep {
 }
-
-

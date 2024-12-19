@@ -10,10 +10,10 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 
-	dbg "sigmaos/debug"
 	"sigmaos/api/fs"
-	"sigmaos/proxy/mongo/proto"
+	dbg "sigmaos/debug"
 	"sigmaos/proc"
+	"sigmaos/proxy/mongo/proto"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
@@ -68,7 +68,7 @@ func RunMongod(mongodUrl string) error {
 	return ssrv.RunServer()
 }
 
-func (s *MongoSrv) Insert(ctx fs.CtxI, req proto.MongoRequest, res *proto.MongoResponse) error {
+func (s *MongoSrv) Insert(ctx fs.CtxI, req proto.MongoReq, res *proto.MongoRep) error {
 	res.Ok = MONGO_NO
 	var m bson.M
 	if err := bson.Unmarshal(req.Obj, &m); err != nil {
@@ -85,16 +85,16 @@ func (s *MongoSrv) Insert(ctx fs.CtxI, req proto.MongoRequest, res *proto.MongoR
 	return nil
 }
 
-func (s *MongoSrv) Update(ctx fs.CtxI, req proto.MongoRequest, res *proto.MongoResponse) error {
+func (s *MongoSrv) Update(ctx fs.CtxI, req proto.MongoReq, res *proto.MongoRep) error {
 	return s.update(ctx, req, res, false)
 }
 
-func (s *MongoSrv) Upsert(ctx fs.CtxI, req proto.MongoRequest, res *proto.MongoResponse) error {
+func (s *MongoSrv) Upsert(ctx fs.CtxI, req proto.MongoReq, res *proto.MongoRep) error {
 	return s.update(ctx, req, res, true)
 }
 
 func (s *MongoSrv) update(
-	ctx fs.CtxI, req proto.MongoRequest, res *proto.MongoResponse, upsert bool) error {
+	ctx fs.CtxI, req proto.MongoReq, res *proto.MongoRep, upsert bool) error {
 	res.Ok = MONGO_NO
 	rpcName := "update"
 	if upsert {
@@ -121,7 +121,7 @@ func (s *MongoSrv) update(
 	return nil
 }
 
-func (s *MongoSrv) Find(ctx fs.CtxI, req proto.MongoRequest, res *proto.MongoResponse) error {
+func (s *MongoSrv) Find(ctx fs.CtxI, req proto.MongoReq, res *proto.MongoRep) error {
 	res.Ok = MONGO_NO
 	var m bson.M
 	if err := bson.Unmarshal(req.Query, &m); err != nil {
@@ -145,7 +145,7 @@ func (s *MongoSrv) Find(ctx fs.CtxI, req proto.MongoRequest, res *proto.MongoRes
 	return nil
 }
 
-func (s *MongoSrv) Drop(ctx fs.CtxI, req proto.MongoConfigRequest, res *proto.MongoResponse) error {
+func (s *MongoSrv) Drop(ctx fs.CtxI, req proto.MongoConfigReq, res *proto.MongoRep) error {
 	dbg.DPrintf(dbg.MONGO, "Received drop request: %v", req)
 	res.Ok = MONGO_NO
 	err := s.mclnt.Database(req.Db).Collection(req.Collection).Drop(context.TODO())
@@ -157,7 +157,7 @@ func (s *MongoSrv) Drop(ctx fs.CtxI, req proto.MongoConfigRequest, res *proto.Mo
 	return nil
 }
 
-func (s *MongoSrv) Remove(ctx fs.CtxI, req proto.MongoConfigRequest, res *proto.MongoResponse) error {
+func (s *MongoSrv) Remove(ctx fs.CtxI, req proto.MongoConfigReq, res *proto.MongoRep) error {
 	dbg.DPrintf(dbg.MONGO, "Received remove request: %v", req)
 	res.Ok = MONGO_NO
 	_, err := s.mclnt.Database(req.Db).Collection(req.Collection).DeleteMany(
@@ -170,7 +170,7 @@ func (s *MongoSrv) Remove(ctx fs.CtxI, req proto.MongoConfigRequest, res *proto.
 	return nil
 }
 
-func (s *MongoSrv) Index(ctx fs.CtxI, req proto.MongoConfigRequest, res *proto.MongoResponse) error {
+func (s *MongoSrv) Index(ctx fs.CtxI, req proto.MongoConfigReq, res *proto.MongoRep) error {
 	dbg.DPrintf(dbg.MONGO, "Received index request: %v", req)
 	res.Ok = MONGO_NO
 	indexKeys := bson.D{}

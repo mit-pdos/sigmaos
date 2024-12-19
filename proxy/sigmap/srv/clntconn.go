@@ -112,7 +112,7 @@ func (scs *SPProxySrvAPI) setErr(err error) *sp.Rerror {
 	}
 }
 
-func (scs *SPProxySrvAPI) Init(ctx fs.CtxI, req scproto.SigmaInitRequest, rep *scproto.SigmaErrReply) error {
+func (scs *SPProxySrvAPI) Init(ctx fs.CtxI, req scproto.SigmaInitReq, rep *scproto.SigmaErrRep) error {
 	scs.mu.Lock()
 	defer scs.mu.Unlock()
 
@@ -135,14 +135,14 @@ func (scs *SPProxySrvAPI) Init(ctx fs.CtxI, req scproto.SigmaInitRequest, rep *s
 	return nil
 }
 
-func (scs *SPProxySrvAPI) CloseFd(ctx fs.CtxI, req scproto.SigmaCloseRequest, rep *scproto.SigmaErrReply) error {
+func (scs *SPProxySrvAPI) CloseFd(ctx fs.CtxI, req scproto.SigmaCloseReq, rep *scproto.SigmaErrRep) error {
 	err := scs.sc.CloseFd(int(req.Fd))
 	db.DPrintf(db.SPPROXYSRV, "%v: CloseFd %v err %v", scs.sc.ClntId(), req, err)
 	rep.Err = scs.setErr(err)
 	return nil
 }
 
-func (scs *SPProxySrvAPI) Stat(ctx fs.CtxI, req scproto.SigmaPathRequest, rep *scproto.SigmaStatReply) error {
+func (scs *SPProxySrvAPI) Stat(ctx fs.CtxI, req scproto.SigmaPathReq, rep *scproto.SigmaStatRep) error {
 	st, err := scs.sc.Stat(req.Path)
 	db.DPrintf(db.SPPROXYSRV, "%v: Stat %v st %v err %v", scs.sc.ClntId(), req, st, err)
 	rep.Stat = st.StatProto()
@@ -150,7 +150,7 @@ func (scs *SPProxySrvAPI) Stat(ctx fs.CtxI, req scproto.SigmaPathRequest, rep *s
 	return nil
 }
 
-func (scs *SPProxySrvAPI) Create(ctx fs.CtxI, req scproto.SigmaCreateRequest, rep *scproto.SigmaFdReply) error {
+func (scs *SPProxySrvAPI) Create(ctx fs.CtxI, req scproto.SigmaCreateReq, rep *scproto.SigmaFdRep) error {
 	fd, err := scs.sc.Create(req.Path, sp.Tperm(req.Perm), sp.Tmode(req.Mode))
 	db.DPrintf(db.SPPROXYSRV, "%v: Create %v fd %v err %v", scs.sc.ClntId(), req, fd, err)
 	rep.Fd = uint32(fd)
@@ -158,7 +158,7 @@ func (scs *SPProxySrvAPI) Create(ctx fs.CtxI, req scproto.SigmaCreateRequest, re
 	return nil
 }
 
-func (scs *SPProxySrvAPI) Open(ctx fs.CtxI, req scproto.SigmaCreateRequest, rep *scproto.SigmaFdReply) error {
+func (scs *SPProxySrvAPI) Open(ctx fs.CtxI, req scproto.SigmaCreateReq, rep *scproto.SigmaFdRep) error {
 	fd, err := scs.sc.FileAPI.Open(req.Path, sp.Tmode(req.Mode), sos.Twait(req.Wait))
 	db.DPrintf(db.SPPROXYSRV, "%v: Open %v fd %v err %v", scs.sc.ClntId(), req, fd, err)
 	rep.Fd = uint32(fd)
@@ -166,21 +166,21 @@ func (scs *SPProxySrvAPI) Open(ctx fs.CtxI, req scproto.SigmaCreateRequest, rep 
 	return nil
 }
 
-func (scs *SPProxySrvAPI) Rename(ctx fs.CtxI, req scproto.SigmaRenameRequest, rep *scproto.SigmaErrReply) error {
+func (scs *SPProxySrvAPI) Rename(ctx fs.CtxI, req scproto.SigmaRenameReq, rep *scproto.SigmaErrRep) error {
 	err := scs.sc.Rename(req.Src, req.Dst)
 	rep.Err = scs.setErr(err)
 	db.DPrintf(db.SPPROXYSRV, "%v: Rename %v %v", scs.sc.ClntId(), req, rep)
 	return nil
 }
 
-func (scs *SPProxySrvAPI) Remove(ctx fs.CtxI, req scproto.SigmaPathRequest, rep *scproto.SigmaErrReply) error {
+func (scs *SPProxySrvAPI) Remove(ctx fs.CtxI, req scproto.SigmaPathReq, rep *scproto.SigmaErrRep) error {
 	err := scs.sc.Remove(req.Path)
 	rep.Err = scs.setErr(err)
 	db.DPrintf(db.SPPROXYSRV, "%v: Remove %v %v", scs.sc.ClntId(), req, rep)
 	return nil
 }
 
-func (scs *SPProxySrvAPI) GetFile(ctx fs.CtxI, req scproto.SigmaPathRequest, rep *scproto.SigmaDataReply) error {
+func (scs *SPProxySrvAPI) GetFile(ctx fs.CtxI, req scproto.SigmaPathReq, rep *scproto.SigmaDataRep) error {
 	d, err := scs.sc.GetFile(req.Path)
 	rep.Blob = &rpcproto.Blob{Iov: [][]byte{d}}
 	rep.Err = scs.setErr(err)
@@ -188,7 +188,7 @@ func (scs *SPProxySrvAPI) GetFile(ctx fs.CtxI, req scproto.SigmaPathRequest, rep
 	return nil
 }
 
-func (scs *SPProxySrvAPI) PutFile(ctx fs.CtxI, req scproto.SigmaPutFileRequest, rep *scproto.SigmaSizeReply) error {
+func (scs *SPProxySrvAPI) PutFile(ctx fs.CtxI, req scproto.SigmaPutFileReq, rep *scproto.SigmaSizeRep) error {
 	sz, err := scs.sc.FileAPI.PutFile(req.Path, sp.Tperm(req.Perm), sp.Tmode(req.Mode), req.Blob.Iov[0], sp.Toffset(req.Offset), sp.TleaseId(req.LeaseId))
 	rep.Size = uint64(sz)
 	rep.Err = scs.setErr(err)
@@ -196,7 +196,7 @@ func (scs *SPProxySrvAPI) PutFile(ctx fs.CtxI, req scproto.SigmaPutFileRequest, 
 	return nil
 }
 
-func (scs *SPProxySrvAPI) Read(ctx fs.CtxI, req scproto.SigmaReadRequest, rep *scproto.SigmaDataReply) error {
+func (scs *SPProxySrvAPI) Read(ctx fs.CtxI, req scproto.SigmaReadReq, rep *scproto.SigmaDataRep) error {
 	b := make([]byte, req.Size)
 	o := sp.Toffset(req.Off)
 	var cnt sp.Tsize
@@ -213,7 +213,7 @@ func (scs *SPProxySrvAPI) Read(ctx fs.CtxI, req scproto.SigmaReadRequest, rep *s
 	return nil
 }
 
-func (scs *SPProxySrvAPI) Write(ctx fs.CtxI, req scproto.SigmaWriteRequest, rep *scproto.SigmaSizeReply) error {
+func (scs *SPProxySrvAPI) Write(ctx fs.CtxI, req scproto.SigmaWriteReq, rep *scproto.SigmaSizeRep) error {
 	db.DPrintf(db.SPPROXYSRV, "%v: Write spproxysrv begin %v %v", scs.sc.ClntId(), req.Fd, len(req.Blob.Iov))
 	sz, err := scs.sc.Write(int(req.Fd), req.Blob.Iov[0])
 	rep.Size = uint64(sz)
@@ -222,14 +222,14 @@ func (scs *SPProxySrvAPI) Write(ctx fs.CtxI, req scproto.SigmaWriteRequest, rep 
 	return nil
 }
 
-func (scs *SPProxySrvAPI) Seek(ctx fs.CtxI, req scproto.SigmaSeekRequest, rep *scproto.SigmaErrReply) error {
+func (scs *SPProxySrvAPI) Seek(ctx fs.CtxI, req scproto.SigmaSeekReq, rep *scproto.SigmaErrRep) error {
 	err := scs.sc.Seek(int(req.Fd), sp.Toffset(req.Offset))
 	rep.Err = scs.setErr(err)
 	db.DPrintf(db.SPPROXYSRV, "%v: Seek %v %v", req, rep)
 	return nil
 }
 
-func (scs *SPProxySrvAPI) WriteRead(ctx fs.CtxI, req scproto.SigmaWriteRequest, rep *scproto.SigmaDataReply) error {
+func (scs *SPProxySrvAPI) WriteRead(ctx fs.CtxI, req scproto.SigmaWriteReq, rep *scproto.SigmaDataRep) error {
 	bl := make(sessp.IoVec, req.NOutVec)
 	err := scs.sc.WriteRead(int(req.Fd), req.Blob.GetIoVec(), bl)
 	db.DPrintf(db.SPPROXYSRV, "%v: WriteRead %v %v %v %v", scs.sc.ClntId(), req.Fd, len(req.Blob.Iov), len(bl), err)
@@ -238,7 +238,7 @@ func (scs *SPProxySrvAPI) WriteRead(ctx fs.CtxI, req scproto.SigmaWriteRequest, 
 	return nil
 }
 
-func (scs *SPProxySrvAPI) CreateLeased(ctx fs.CtxI, req scproto.SigmaCreateRequest, rep *scproto.SigmaFdReply) error {
+func (scs *SPProxySrvAPI) CreateLeased(ctx fs.CtxI, req scproto.SigmaCreateReq, rep *scproto.SigmaFdRep) error {
 	fd, err := scs.sc.CreateLeased(req.Path, sp.Tperm(req.Perm), sp.Tmode(req.Mode), sp.TleaseId(req.LeaseId), req.Fence.Tfence())
 	db.DPrintf(db.SPPROXYSRV, "%v: CreateLeased %v %v %v", scs.sc.ClntId(), req, fd, err)
 	rep.Fd = uint32(fd)
@@ -246,7 +246,7 @@ func (scs *SPProxySrvAPI) CreateLeased(ctx fs.CtxI, req scproto.SigmaCreateReque
 	return nil
 }
 
-func (scs *SPProxySrvAPI) ClntId(ctx fs.CtxI, req scproto.SigmaNullRequest, rep *scproto.SigmaClntIdReply) error {
+func (scs *SPProxySrvAPI) ClntId(ctx fs.CtxI, req scproto.SigmaNullReq, rep *scproto.SigmaClntIdRep) error {
 	id := scs.sc.ClntId()
 	rep.ClntId = uint64(id)
 	rep.Err = scs.setErr(nil)
@@ -254,14 +254,14 @@ func (scs *SPProxySrvAPI) ClntId(ctx fs.CtxI, req scproto.SigmaNullRequest, rep 
 	return nil
 }
 
-func (scs *SPProxySrvAPI) FenceDir(ctx fs.CtxI, req scproto.SigmaFenceRequest, rep *scproto.SigmaErrReply) error {
+func (scs *SPProxySrvAPI) FenceDir(ctx fs.CtxI, req scproto.SigmaFenceReq, rep *scproto.SigmaErrRep) error {
 	err := scs.sc.FenceDir(req.Path, req.Fence.Tfence())
 	rep.Err = scs.setErr(err)
 	db.DPrintf(db.SPPROXYSRV, "%v: FenceDir %v %v", req, rep)
 	return nil
 }
 
-func (scs *SPProxySrvAPI) WriteFence(ctx fs.CtxI, req scproto.SigmaWriteRequest, rep *scproto.SigmaSizeReply) error {
+func (scs *SPProxySrvAPI) WriteFence(ctx fs.CtxI, req scproto.SigmaWriteReq, rep *scproto.SigmaSizeRep) error {
 	sz, err := scs.sc.WriteFence(int(req.Fd), req.Blob.Iov[0], req.Fence.Tfence())
 	rep.Size = uint64(sz)
 	rep.Err = scs.setErr(err)
@@ -269,14 +269,14 @@ func (scs *SPProxySrvAPI) WriteFence(ctx fs.CtxI, req scproto.SigmaWriteRequest,
 	return nil
 }
 
-func (scs *SPProxySrvAPI) DirWatch(ctx fs.CtxI, req scproto.SigmaReadRequest, rep *scproto.SigmaErrReply) error {
+func (scs *SPProxySrvAPI) DirWatch(ctx fs.CtxI, req scproto.SigmaReadReq, rep *scproto.SigmaErrRep) error {
 	err := scs.sc.DirWatch(int(req.Fd))
 	rep.Err = scs.setErr(err)
 	db.DPrintf(db.SPPROXYSRV, "%v: DirWatch %v %v", scs.sc.ClntId(), req, rep)
 	return nil
 }
 
-func (scs *SPProxySrvAPI) IsLocalMount(ctx fs.CtxI, req scproto.SigmaMountRequest, rep *scproto.SigmaMountReply) error {
+func (scs *SPProxySrvAPI) IsLocalMount(ctx fs.CtxI, req scproto.SigmaMountReq, rep *scproto.SigmaMountRep) error {
 	ok, err := scs.sc.IsLocalMount(sp.NewEndpointFromProto(req.Endpoint))
 	rep.Local = ok
 	rep.Err = scs.setErr(err)
@@ -284,14 +284,14 @@ func (scs *SPProxySrvAPI) IsLocalMount(ctx fs.CtxI, req scproto.SigmaMountReques
 	return nil
 }
 
-func (scs *SPProxySrvAPI) MountTree(ctx fs.CtxI, req scproto.SigmaMountTreeRequest, rep *scproto.SigmaErrReply) error {
+func (scs *SPProxySrvAPI) MountTree(ctx fs.CtxI, req scproto.SigmaMountTreeReq, rep *scproto.SigmaErrRep) error {
 	err := scs.sc.MountTree(sp.NewEndpointFromProto(req.Endpoint), req.Tree, req.MountName)
 	rep.Err = scs.setErr(err)
 	db.DPrintf(db.SPPROXYSRV, "%v: MountTree %v %v", scs.sc.ClntId(), req, rep)
 	return nil
 }
 
-func (scs *SPProxySrvAPI) PathLastMount(ctx fs.CtxI, req scproto.SigmaPathRequest, rep *scproto.SigmaLastMountReply) error {
+func (scs *SPProxySrvAPI) PathLastMount(ctx fs.CtxI, req scproto.SigmaPathReq, rep *scproto.SigmaLastMountRep) error {
 	p1, p2, err := scs.sc.PathLastMount(req.Path)
 	rep.Path1 = p1
 	rep.Path2 = p2
@@ -300,7 +300,7 @@ func (scs *SPProxySrvAPI) PathLastMount(ctx fs.CtxI, req scproto.SigmaPathReques
 	return nil
 }
 
-func (scs *SPProxySrvAPI) InvalidateNamedEndpointCacheEntryRealm(ctx fs.CtxI, req scproto.SigmaRealmRequest, rep *scproto.SigmaMountReply) error {
+func (scs *SPProxySrvAPI) InvalidateNamedEndpointCacheEntryRealm(ctx fs.CtxI, req scproto.SigmaRealmReq, rep *scproto.SigmaMountRep) error {
 	err := scs.sc.InvalidateNamedEndpointCacheEntryRealm(sp.Trealm(req.RealmStr))
 	if err != nil {
 		db.DPrintf(db.ERROR, "Err GetNamedEndpoint: %v", err)
@@ -311,7 +311,7 @@ func (scs *SPProxySrvAPI) InvalidateNamedEndpointCacheEntryRealm(ctx fs.CtxI, re
 	return nil
 }
 
-func (scs *SPProxySrvAPI) GetNamedEndpoint(ctx fs.CtxI, req scproto.SigmaRealmRequest, rep *scproto.SigmaMountReply) error {
+func (scs *SPProxySrvAPI) GetNamedEndpoint(ctx fs.CtxI, req scproto.SigmaRealmReq, rep *scproto.SigmaMountRep) error {
 	ep, err := scs.sc.GetNamedEndpointRealm(sp.Trealm(req.RealmStr))
 	if err != nil {
 		db.DPrintf(db.ERROR, "Err GetNamedEndpoint: %v", err)
@@ -323,14 +323,14 @@ func (scs *SPProxySrvAPI) GetNamedEndpoint(ctx fs.CtxI, req scproto.SigmaRealmRe
 	return nil
 }
 
-func (scs *SPProxySrvAPI) NewRootMount(ctx fs.CtxI, req scproto.SigmaMountTreeRequest, rep *scproto.SigmaErrReply) error {
+func (scs *SPProxySrvAPI) NewRootMount(ctx fs.CtxI, req scproto.SigmaMountTreeReq, rep *scproto.SigmaErrRep) error {
 	err := scs.sc.NewRootMount(req.Tree, req.MountName)
 	rep.Err = scs.setErr(err)
 	db.DPrintf(db.SPPROXYSRV, "%v: NewRootMount %v %v", scs.sc.ClntId(), req, rep)
 	return nil
 }
 
-func (scs *SPProxySrvAPI) Mounts(ctx fs.CtxI, req scproto.SigmaNullRequest, rep *scproto.SigmaMountsReply) error {
+func (scs *SPProxySrvAPI) Mounts(ctx fs.CtxI, req scproto.SigmaNullReq, rep *scproto.SigmaMountsRep) error {
 	mnts := scs.sc.Mounts()
 	rep.Endpoints = mnts
 	rep.Err = scs.setErr(nil)
@@ -338,21 +338,21 @@ func (scs *SPProxySrvAPI) Mounts(ctx fs.CtxI, req scproto.SigmaNullRequest, rep 
 	return nil
 }
 
-func (scs *SPProxySrvAPI) Detach(ctx fs.CtxI, req scproto.SigmaPathRequest, rep *scproto.SigmaErrReply) error {
+func (scs *SPProxySrvAPI) Detach(ctx fs.CtxI, req scproto.SigmaPathReq, rep *scproto.SigmaErrRep) error {
 	err := scs.sc.Detach(req.Path)
 	rep.Err = scs.setErr(err)
 	db.DPrintf(db.SPPROXYSRV, "%v: Detach %v %v", scs.sc.ClntId(), req, rep)
 	return nil
 }
 
-func (scs *SPProxySrvAPI) Disconnect(ctx fs.CtxI, req scproto.SigmaPathRequest, rep *scproto.SigmaErrReply) error {
+func (scs *SPProxySrvAPI) Disconnect(ctx fs.CtxI, req scproto.SigmaPathReq, rep *scproto.SigmaErrRep) error {
 	err := scs.sc.Disconnect(req.Path)
 	rep.Err = scs.setErr(err)
 	db.DPrintf(db.SPPROXYSRV, "%v: Disconnect %v %v", scs.sc.ClntId(), req, rep)
 	return nil
 }
 
-func (scs *SPProxySrvAPI) Close(ctx fs.CtxI, req scproto.SigmaNullRequest, rep *scproto.SigmaErrReply) error {
+func (scs *SPProxySrvAPI) Close(ctx fs.CtxI, req scproto.SigmaNullReq, rep *scproto.SigmaErrRep) error {
 	db.DPrintf(db.ALWAYS, "%v: Close fslib %v", scs.sc.ClntId(), scs)
 	var err error
 	if !scs.testAndSetClosed() {

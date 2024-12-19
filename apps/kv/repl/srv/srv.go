@@ -7,11 +7,11 @@ import (
 
 	replproto "sigmaos/apps/kv/repl/proto"
 
-	"sigmaos/ctx"
-	db "sigmaos/debug"
 	"sigmaos/api/fs"
 	"sigmaos/apps/kv/repl"
 	"sigmaos/apps/kv/repl/raft"
+	"sigmaos/ctx"
+	db "sigmaos/debug"
 	rpcsrv "sigmaos/rpc/srv"
 	sessp "sigmaos/session/proto"
 )
@@ -40,7 +40,7 @@ func NewReplSrv(raftcfg *raft.RaftConfig, svci any) (*ReplSrv, error) {
 	return rs, nil
 }
 
-func (rs *ReplSrv) applyOp(req *replproto.ReplOpRequest, rep *replproto.ReplOpReply) error {
+func (rs *ReplSrv) applyOp(req *replproto.ReplOpReq, rep *replproto.ReplOpRep) error {
 	db.DPrintf(db.REPLSRV, "ApplyOp %v\n", req)
 	duplicate, err, b := rs.rt.IsDuplicate(req.TclntId(), req.Tseqno())
 	if duplicate {
@@ -63,7 +63,7 @@ func (rs *ReplSrv) applyOp(req *replproto.ReplOpRequest, rep *replproto.ReplOpRe
 	return nil
 }
 
-func (rs *ReplSrv) ProcessOp(ctx fs.CtxI, req replproto.ReplOpRequest, rep *replproto.ReplOpReply) error {
+func (rs *ReplSrv) ProcessOp(ctx fs.CtxI, req replproto.ReplOpReq, rep *replproto.ReplOpRep) error {
 	rs.mu.Lock()
 	defer rs.mu.Unlock()
 	db.DPrintf(db.REPLSRV, "ProcessOp: submit %v\n", req)

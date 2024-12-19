@@ -18,7 +18,7 @@ func (ts *Tstate) CrashServer(e0, e1 crash.Tevent, srv string) {
 	s, err := em.Events2String()
 	assert.Nil(ts.T, err)
 	switch srv {
-	case sp.MSCHEDREL, sp.PROCDREL:
+	case sp.MSCHEDREL, sp.BESCHEDREL, sp.PROCDREL:
 		err = ts.BootNode(1)
 	default:
 		err = ts.BootEnv(srv, []string{"SIGMAFAIL=" + s})

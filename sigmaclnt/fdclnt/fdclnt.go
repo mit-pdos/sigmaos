@@ -6,14 +6,14 @@ import (
 	"fmt"
 	"io"
 
+	sos "sigmaos/api/sigmaos"
 	db "sigmaos/debug"
-	"sigmaos/sigmaclnt/fidclnt"
 	"sigmaos/path"
 	"sigmaos/proc"
 	"sigmaos/serr"
 	sessp "sigmaos/session/proto"
 	"sigmaos/sigmaclnt/fdclnt/pathclnt"
-	sos "sigmaos/api/sigmaos"
+	"sigmaos/sigmaclnt/fidclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/util/syncmap"
 )

@@ -309,7 +309,7 @@ func (ps *ProcRPCSrv) Run(ctx fs.CtxI, req proto.RunReq, res *proto.RunRep) erro
 	return ps.ps.Run(ctx, req, res)
 }
 
-// Run a proc inside of an inner container
+// Run a proc inside of an sigma container
 func (ps *ProcSrv) Run(ctx fs.CtxI, req proto.RunReq, res *proto.RunRep) error {
 	uproc := proc.NewProcFromProto(req.ProcProto)
 	db.DPrintf(db.PROCD, "Run uproc %v", uproc)

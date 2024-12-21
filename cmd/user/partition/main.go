@@ -27,5 +27,7 @@ func main() {
 
 	time.Sleep(100 * time.Millisecond)
 
+	// This exit will not mark proc as exited because proc is
+	// disconnected.
 	sc.ClntExitOK()
 }

@@ -21,11 +21,13 @@ func main() {
 	if err != nil {
 		db.DFatalf("Named GetDir error: %v", err)
 	}
-	if error := sc.Disconnect(sp.NAMED); error != nil {
+	if error := sc.Disconnect(""); error != nil {
 		db.DFatalf("Disconnect %v name fails err %v", os.Args, error)
 	}
 
 	time.Sleep(100 * time.Millisecond)
 
+	// This exit will not mark proc as exited because proc is
+	// disconnected.
 	sc.ClntExitOK()
 }

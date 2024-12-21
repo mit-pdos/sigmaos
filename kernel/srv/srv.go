@@ -85,7 +85,3 @@ func (ks *KernelSrv) Shutdown(ctx fs.CtxI, req proto.ShutdownReq, rep *proto.Shu
 	ks.ch <- struct{}{}
 	return nil
 }
-
-func (ks *KernelSrv) Kill(ctx fs.CtxI, req proto.KillReq, rep *proto.KillRep) error {
-	return ks.k.KillOne(req.Name)
-}

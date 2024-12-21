@@ -283,15 +283,6 @@ func (ts *Tstate) BootFss3d() error {
 	return ts.Boot(sp.S3REL)
 }
 
-func (ts *Tstate) KillOne(s string) error {
-	idx := ts.killidx
-	ts.killidx++
-	// Clear the saved kernel, to make sure it is fully shut down and then
-	// brought back up again before the next test
-	savedTstate = nil
-	return ts.kclnts[idx].Kill(s)
-}
-
 func (ts *Tstate) NewClnt(idx int, pe *proc.ProcEnv) (*sigmaclnt.SigmaClnt, error) {
 	return ts.kclnts[idx].NewSigmaClnt(pe)
 }

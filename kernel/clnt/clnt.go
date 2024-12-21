@@ -45,12 +45,6 @@ func (kc *KernelClnt) GetCPUUtil(pid sp.Tpid) (float64, error) {
 	return res.Util, nil
 }
 
-func (kc *KernelClnt) Kill(s string) error {
-	var res proto.KillRep
-	req := &proto.KillReq{Name: s}
-	return kc.rpcc.RPC("KernelSrv.Kill", req, &res)
-}
-
 func (kc *KernelClnt) Shutdown() error {
 	var res proto.ShutdownRep
 	req := &proto.ShutdownReq{}

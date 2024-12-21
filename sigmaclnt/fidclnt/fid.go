@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	db "sigmaos/debug"
+	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 	"sigmaos/util/syncmap"
 )
@@ -56,18 +57,19 @@ func (fm *FidMap) free(fid sp.Tfid) {
 	fm.fids.Delete(fid)
 }
 
-func (fm *FidMap) disconnect(fid0 sp.Tfid) {
+func (fm *FidMap) disconnect(fid0 sp.Tfid) error {
 	ch0, ok := fm.fids.Lookup(fid0)
 	if !ok {
-		db.DFatalf("disconnect: fid %v unknown\n", fid0)
+		return serr.NewErr(serr.TErrNotfound, fid0)
 	}
-	db.DPrintf(db.CRASH, "fid disconnect fid %v ch0 %v\n", fid0, ch0)
+	db.DPrintf(db.CRASH, "fid disconnect %v ch0 %v\n", fid0, ch0)
 	fm.fids.Iter(func(fid sp.Tfid, ch *Channel) bool {
 		if fid != fid0 && ch != nil && ch0 != nil && ch.pc == ch0.pc {
-			db.DPrintf(db.CRASH, "fid disconnect fid %v ch %v\n", fid, ch)
+			db.DPrintf(db.CRASH, "fid disconnect %v ch %v\n", fid, ch)
 			fm.fids.UpdateL(fid, nil)
 		}
 		return true
 	})
 	fm.fids.Update(fid0, nil)
+	return nil
 }

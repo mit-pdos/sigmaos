@@ -101,8 +101,8 @@ func (fidc *FidClnt) Free(fid sp.Tfid) {
 	fidc.fids.free(fid)
 }
 
-func (fidc *FidClnt) DisconnectAll(fid sp.Tfid) {
-	fidc.fids.disconnect(fid)
+func (fidc *FidClnt) DisconnectSrv(fid sp.Tfid) error {
+	return fidc.fids.disconnect(fid)
 }
 
 func (fidc *FidClnt) Lookup(fid sp.Tfid) *Channel {

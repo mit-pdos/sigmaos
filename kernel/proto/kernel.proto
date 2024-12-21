@@ -41,10 +41,3 @@ message ShutdownReq {
 
 message ShutdownRep {
 }
-
-message KillReq {
-  string name = 1;
-}
-
-message KillRep {
-}

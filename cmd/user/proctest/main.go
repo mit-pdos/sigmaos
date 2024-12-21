@@ -51,6 +51,7 @@ func main() {
 		db.DFatalf("Started: error %v\n", err)
 	}
 	start := time.Now()
+	ncrash := 0
 	for i := 0; i < n; i += M {
 		if i%1000 == 0 {
 			db.DPrintf(db.ALWAYS, "i = %d %dms\n", i, time.Since(start).Milliseconds())
@@ -88,7 +89,8 @@ func main() {
 				sc.ClntExit(proc.NewStatusErr(sr.Error(), nil))
 				os.Exit(1)
 			}
+			ncrash += 1
 		}
 	}
-	sc.ClntExitOK()
+	sc.ClntExit(proc.NewStatusInfo(proc.StatusOK, "OK", ncrash))
 }

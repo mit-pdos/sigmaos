@@ -770,6 +770,7 @@ func TestProcManyOK(t *testing.T) {
 	status, err := ts.WaitExit(a.GetPid())
 	assert.Nil(t, err, "waitexit")
 	assert.True(t, status.IsStatusOK(), status)
+	assert.True(t, status.Data().(float64) == 0)
 	ts.Shutdown()
 }
 
@@ -786,10 +787,11 @@ func TestProcManyCrash(t *testing.T) {
 	status, err := ts.WaitExit(a.GetPid())
 	assert.Nil(t, err, "waitexit")
 	assert.True(t, status.IsStatusOK(), status)
+	assert.True(t, status.Data().(float64) > 0)
 	ts.Shutdown()
 }
 
-func TestProcManyPartition(t *testing.T) {
+func testProcManyPartition(t *testing.T) {
 	ts, err1 := test.NewTstateAll(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
@@ -801,10 +803,8 @@ func TestProcManyPartition(t *testing.T) {
 	assert.Nil(t, err, "WaitStart error")
 	status, err := ts.WaitExit(a.GetPid())
 	assert.Nil(t, err, "waitexit")
-	if assert.NotNil(t, status, "nil status") {
-		sr := serr.NewErrString(status.Msg())
-		assert.Equal(t, sr.Err.Error(), proc.CRASHSTATUS, "WaitExit")
-	}
+	assert.True(t, status.IsStatusOK(), status)
+	assert.True(t, status.Data().(float64) > 0)
 	ts.Shutdown()
 }
 

@@ -164,10 +164,6 @@ func (k *Kernel) BootEnv(s string, env []string) error {
 	return err
 }
 
-func (k *Kernel) Kill(s string) error {
-	return k.kclnt.Kill(s)
-}
-
 func (k *Kernel) KernelId() string {
 	return k.kernelId
 }

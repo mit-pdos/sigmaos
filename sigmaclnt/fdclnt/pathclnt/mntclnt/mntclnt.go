@@ -6,10 +6,10 @@ import (
 
 	db "sigmaos/debug"
 	dialproxyclnt "sigmaos/dialproxy/clnt"
-	"sigmaos/sigmaclnt/fidclnt"
 	"sigmaos/path"
 	"sigmaos/proc"
 	"sigmaos/serr"
+	"sigmaos/sigmaclnt/fidclnt"
 	sp "sigmaos/sigmap"
 )
 
@@ -181,21 +181,37 @@ func (mc *MntClnt) MountedPaths() []string {
 	return mc.mnt.mountedPaths()
 }
 
-// Disconnect client from server permanently to simulate network
-// partition to server that exports pn
+// Disconnect client pn to simulate partition to partition to server
+// that exports pn.  If pn is "", disconnect from all mounted servers.
 func (mc *MntClnt) Disconnect(pn string) error {
-	p, err := serr.PathSplitErr(pn)
-	if err != nil {
-		return err
-	}
-	pnt, ok := mc.mnt.isMountedAt(p)
-	if ok {
-		db.DPrintf(db.CRASH, "Disconnect %v pnt %v\n", pn, pnt)
-		mc.fidc.DisconnectAll(pnt.fid)
-		pnt.disconnect()
+	if pn == "" { // disconnect from all servers?
+		pnts := mc.mnt.mountedPoints()
+		var r error
+		for _, p := range pnts {
+			if err := mc.disconnectMnt(p); err != nil {
+				r = err
+			}
+		}
+		return r
 	} else {
-		return serr.NewErr(serr.TErrUnreachable, pnt.path)
+		p, err := serr.PathSplitErr(pn)
+		if err != nil {
+			return err
+		}
+		pnt, ok := mc.mnt.isMountedAt(p)
+		if ok {
+			return mc.disconnectMnt(pnt)
+		} else {
+			return serr.NewErr(serr.TErrUnreachable, pnt.path)
+		}
 	}
-	mc.rootmt.disconnect(pnt.path.String())
 	return nil
+}
+
+func (mc *MntClnt) disconnectMnt(pnt *Point) error {
+	err := mc.fidc.DisconnectSrv(pnt.fid)
+	db.DPrintf(db.CRASH, "Disconnect pnt %v err %v", pnt, err)
+	pnt.disconnect()
+	mc.rootmt.disconnect(pnt.path.String())
+	return err
 }

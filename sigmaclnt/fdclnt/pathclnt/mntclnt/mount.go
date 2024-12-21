@@ -172,3 +172,14 @@ func (mnt *MntTable) mountedPaths() []string {
 	}
 	return paths
 }
+
+func (mnt *MntTable) mountedPoints() []*Point {
+	mnt.Lock()
+	defer mnt.Unlock()
+
+	pnts := make([]*Point, 0, len(mnt.mounts))
+	for _, pnt := range mnt.mounts {
+		pnts = append(pnts, pnt)
+	}
+	return pnts
+}

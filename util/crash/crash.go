@@ -115,6 +115,15 @@ func (em0 *TeventMap) Filter(l Tselector) *TeventMap {
 	return em1
 }
 
+func (em *TeventMap) AppendEnv(p *proc.Proc) error {
+	s, err := em.Events2String()
+	if err != nil {
+		return err
+	}
+	p.AppendEnv(proc.SIGMAFAIL, s)
+	return nil
+}
+
 func unmarshalTevents(s string) (*TeventMap, error) {
 	if s == "" {
 		return NewTeventMap(), nil
@@ -180,19 +189,26 @@ func CrashMsg(msg string) {
 }
 
 func PartitionNamed(fsl *fslib.FsLib) {
-	db.DPrintf(db.CRASH, "PartitionNamed from %v\n", sp.NAMED)
+	db.DPrintf(db.CRASH, "PartitionNamed from %v", sp.NAMED)
 	if err := fsl.Disconnect(sp.NAMED); err != nil {
-		db.DPrintf(db.CRASH, "Disconnect %v name fails err %v\n", os.Args, err)
+		db.DPrintf(db.CRASH, "Disconnect %v name fails err %v", os.Args, err)
+	}
+}
+
+func PartitionAll(fsl *fslib.FsLib) {
+	db.DPrintf(db.CRASH, "PartitionAll")
+	if err := fsl.Disconnect(""); err != nil {
+		db.DPrintf(db.CRASH, "Disconnect %v name fails err %v", os.Args, err)
 	}
 }
 
 func PartitionPath(fsl *fslib.FsLib, pn string) {
-	db.DPrintf(db.CRASH, "PartitionPath %v\n", pn)
+	db.DPrintf(db.CRASH, "PartitionPath %v", pn)
 	if _, err := fsl.Stat(pn); err != nil {
-		db.DPrintf(db.CRASH, "PartitionPath: %v Stat %v err %v\n", os.Args, pn, err)
+		db.DPrintf(db.CRASH, "PartitionPath: %v Stat %v err %v", os.Args, pn, err)
 	}
 	if err := fsl.Disconnect(pn); err != nil {
-		db.DPrintf(db.CRASH, "PartitionPath: %v Disconnect %v err %v\n", os.Args, pn, err)
+		db.DPrintf(db.CRASH, "PartitionPath: %v Disconnect %v err %v", os.Args, pn, err)
 	}
 }
 

@@ -18,7 +18,7 @@ func (ts *Tstate) CrashServer(e0, e1 crash.Tevent, srv string) {
 	s, err := em.Events2String()
 	assert.Nil(ts.T, err)
 	switch srv {
-	case sp.MSCHEDREL, sp.BESCHEDREL, sp.PROCDREL:
+	case sp.MSCHEDREL, sp.PROCDREL:
 		// a crashed msched and procd causes several kernel services
 		// to exit, so start a new node.
 		err = ts.BootNode(1)

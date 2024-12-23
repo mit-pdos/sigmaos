@@ -614,20 +614,20 @@ func TestCrashUx1(t *testing.T) {
 	})
 }
 
+func TestCrashBESched1(t *testing.T) {
+	e0 := crash.NewEventPath(crash.BESCHED_CRASH, CRASHSRV, 1.0, crashSemPn(crash.BESCHED_CRASH, 0))
+	srvs := make(map[string]crash.Tselector)
+	srvs[sp.BESCHEDREL] = crash.BESCHED_CRASH
+	ntask, _, st := runN(t, crash.NewTeventMapOne(e0), srvs, 0, false)
+	assert.True(t, st.Ntask >= ntask || st.Nfail >= 0)
+}
+
 func TestCrashMSched1(t *testing.T) {
 	e0 := crash.NewEventPath(crash.MSCHED_CRASH, CRASHCOORD, 1.0, crashSemPn(crash.MSCHED_CRASH, 0))
 	srvs := make(map[string]crash.Tselector)
 	srvs[sp.MSCHEDREL] = crash.MSCHED_CRASH
 	ntask, _, st := runN(t, crash.NewTeventMapOne(e0), srvs, 0, false)
 	assert.True(t, st.Ntask > ntask || st.Nfail > 0)
-}
-
-func TestCrashBESched1(t *testing.T) {
-	e0 := crash.NewEventPath(crash.BESCHED_CRASH, CRASHCOORD, 1.0, crashSemPn(crash.BESCHED_CRASH, 0))
-	srvs := make(map[string]crash.Tselector)
-	srvs[sp.BESCHEDREL] = crash.BESCHED_CRASH
-	ntask, _, st := runN(t, crash.NewTeventMapOne(e0), srvs, 0, false)
-	assert.True(t, st.Ntask >= ntask || st.Nfail >= 0)
 }
 
 func TestCrashProcd1(t *testing.T) {

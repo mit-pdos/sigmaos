@@ -11,9 +11,9 @@ import (
 	"time"
 
 	db "sigmaos/debug"
-	"sigmaos/sigmaclnt/fslib"
 	"sigmaos/namesrv/fsetcd"
 	"sigmaos/serr"
+	"sigmaos/sigmaclnt/fslib"
 	sp "sigmaos/sigmap"
 	"sigmaos/util/sortedmap"
 )
@@ -61,7 +61,7 @@ func (dc *DirCache[E]) init() {
 	if dc.isInit.Swap(1) == 0 && dc.isDone.Load() == 0 {
 		go dc.watchDir(ch)
 		go dc.watchdog()
-		<-ch
+		<-ch // wait until watchDir() has read the directory once
 	}
 }
 
@@ -336,7 +336,8 @@ func (dc *DirCache[E]) watchDir(ch chan struct{}) {
 				db.DPrintf(dc.ESelector, "watchDir[%v]: %t %v stop watching", dc.Path, ok, err)
 				dc.err = err
 				if first {
-					ch <- struct{}{}
+					close(ch)
+					first = false
 				}
 				return
 			}
@@ -346,7 +347,8 @@ func (dc *DirCache[E]) watchDir(ch chan struct{}) {
 		dc.updateEntriesL(ents)
 		dc.Unlock()
 		if first {
-			ch <- struct{}{}
+			close(ch)
+			first = false
 		}
 	}
 	if dc.ch != nil {

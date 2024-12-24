@@ -81,12 +81,8 @@ func spawnSleeperMcpu(t *testing.T, ts *test.Tstate, pid sp.Tpid, mcpu proc.Tmcp
 	assert.Nil(t, err, "Spawn")
 }
 
-func spawnSpawner(t *testing.T, ts *test.Tstate, wait bool, childPid sp.Tpid, msecs, c int64) sp.Tpid {
+func spawnSpawner(t *testing.T, ts *test.Tstate, wait bool, childPid sp.Tpid, msecs int, em *crash.TeventMap) sp.Tpid {
 	p := proc.NewProc("spawner", []string{strconv.FormatBool(wait), childPid.String(), "sleeper", fmt.Sprintf("%dms", msecs), "name/"})
-	e0 := crash.NewEvent(crash.SPAWNER_CRASH, c, 0.33)
-	em := crash.NewTeventMapOne(e0)
-	e1 := crash.NewEvent(crash.SPAWNER_PARTITION, c, 0.66)
-	em.Insert(e1)
 	err := em.AppendEnv(p)
 	assert.Nil(t, err)
 	err = ts.Spawn(p)
@@ -275,7 +271,7 @@ func TestWaitExitParentAbandons(t *testing.T) {
 	start := time.Now()
 
 	cPid := sp.GenPid("sleeper")
-	pid := spawnSpawner(t, ts, false, cPid, SLEEP_MSECS, 0)
+	pid := spawnSpawner(t, ts, false, cPid, SLEEP_MSECS, nil)
 	err := ts.WaitStart(pid)
 	assert.Nil(t, err, "WaitStart error")
 	status, err := ts.WaitExit(pid)
@@ -303,13 +299,22 @@ func TestWaitExitParentCrash(t *testing.T) {
 
 	start := time.Now()
 
+	e0 := crash.NewEvent(crash.SPAWNER_CRASH, CRASH_MSECS, 0.33)
+	em := crash.NewTeventMapOne(e0)
+	e1 := crash.NewEvent(crash.SPAWNER_PARTITION, CRASH_MSECS, 0.66)
+	em.Insert(e1)
+
 	cPid := sp.GenPid("spawner")
-	pid := spawnSpawner(t, ts, true, cPid, SLEEP_MSECS, CRASH_MSECS)
+	pid := spawnSpawner(t, ts, true, cPid, SLEEP_MSECS, em)
 	err := ts.WaitStart(pid)
 	assert.Nil(t, err, "WaitStart error")
 	status, err := ts.WaitExit(pid)
-	assert.True(t, status != nil && status.IsStatusErr(), "WaitExit status not error: %v", status)
+	db.DPrintf(db.TEST, "status %v", status)
 	assert.Nil(t, err, "WaitExit error")
+	assert.True(t, status != nil)
+	assert.True(t, status.IsStatusErr())
+	sr := serr.NewErrString(status.Msg())
+	assert.Equal(t, sr.Err.Error(), proc.CRASHSTATUS)
 	// Wait for the child to run & finish
 	time.Sleep(2 * SLEEP_MSECS * time.Millisecond)
 

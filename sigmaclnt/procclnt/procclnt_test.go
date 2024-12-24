@@ -309,7 +309,6 @@ func TestWaitExitParentCrash(t *testing.T) {
 	err := ts.WaitStart(pid)
 	assert.Nil(t, err, "WaitStart error")
 	status, err := ts.WaitExit(pid)
-	db.DPrintf(db.TEST, "status %v", status)
 	assert.Nil(t, err, "WaitExit error")
 	assert.True(t, status != nil)
 	assert.True(t, status.IsStatusErr())
@@ -824,7 +823,6 @@ func TestProcManyCrash(t *testing.T) {
 	status, err := ts.WaitExit(a.GetPid())
 	assert.Nil(t, err, "waitexit")
 	assert.True(t, status.IsStatusOK(), status)
-	db.DPrintf(db.TEST, "data: %v", status.Data().(float64))
 	assert.True(t, status.Data().(float64) > 0)
 	ts.Shutdown()
 }

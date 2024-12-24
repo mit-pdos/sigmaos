@@ -1,8 +1,8 @@
 // The sessclnt package establishes a session with a server using a
 // [netclnt], which sets up a TCP connection.  If [netclnt] fails,
-// sessclnt could re-establish a new [netclnt] (but no longer
-// supported for now).  Sessclnt uses [demux] to multiplex
-// requests/replies over the connetion.
+// sessclnt will return error, and sessclnt creates a new [netclnt] on
+// the next RPC.  Sessclnt uses [demux] to multiplex requests/replies
+// over the connetion.
 package clnt
 
 import (
@@ -44,7 +44,7 @@ func newSessClnt(pe *proc.ProcEnv, npc *dialproxyclnt.DialProxyClnt, ep *sp.Tend
 		seqcntr: new(sessp.Tseqcntr),
 	}
 	db.DPrintf(db.SESSCLNT, "Make session %v to srvs %v", c.sid, ep)
-	if err := c.getConn(); err != nil {
+	if _, err := c.getConn(); err != nil {
 		return nil, err
 	}
 	return c, nil
@@ -68,6 +68,14 @@ func (c *SessClnt) ownNetClnt() *netclnt.NetClnt {
 	return r
 }
 
+func (c *SessClnt) resetNetClnt(nc *netclnt.NetClnt) {
+	c.Lock()
+	defer c.Unlock()
+	if nc == c.nc {
+		c.nc = nil
+	}
+}
+
 func (c *SessClnt) IsConnected() bool {
 	if nc := c.netClnt(); nc != nil {
 		return !c.dmx.IsClosed()
@@ -81,7 +89,11 @@ func (c *SessClnt) RPC(req sessp.Tmsg, iniov sessp.IoVec, outiov sessp.IoVec) (*
 	pmfc := spcodec.NewPartMarshaledMsg(fc)
 	nc := c.netClnt()
 	if nc == nil {
-		return nil, serr.NewErr(serr.TErrUnreachable, c.ep)
+		if nc0, err := c.getConn(); err != nil {
+			return nil, err
+		} else {
+			nc = nc0
+		}
 	}
 	if db.WillBePrinted(db.SESSCLNT) {
 		db.DPrintf(db.SESSCLNT, "sess %v RPC req %v", c.sid, fc)
@@ -92,6 +104,9 @@ func (c *SessClnt) RPC(req sessp.Tmsg, iniov sessp.IoVec, outiov sessp.IoVec) (*
 	}
 
 	if err != nil {
+		if err.IsErrUnreachable() {
+			c.resetNetClnt(nc)
+		}
 		return nil, err
 	}
 
@@ -112,12 +127,12 @@ func (c *SessClnt) sendHeartbeat() {
 }
 
 // Get a connection to the server and demux it with [demux]
-func (c *SessClnt) getConn() *serr.Err {
+func (c *SessClnt) getConn() (*netclnt.NetClnt, *serr.Err) {
 	c.Lock()
 	defer c.Unlock()
 
 	if c.closed {
-		return serr.NewErr(serr.TErrUnreachable, c.ep)
+		return nil, serr.NewErr(serr.TErrUnreachable, c.ep)
 	}
 
 	if c.nc == nil {
@@ -125,14 +140,14 @@ func (c *SessClnt) getConn() *serr.Err {
 		nc, err := netclnt.NewNetClnt(c.pe, c.npc, c.ep)
 		if err != nil {
 			db.DPrintf(db.SESSCLNT, "%v Error %v unable to reconnect to %v\n", c.sid, err, c.ep)
-			return err
+			return nil, err
 		}
 		db.DPrintf(db.SESSCLNT, "%v connection to %v out of %v\n", c.sid, nc.Dst(), c.ep)
 		c.nc = nc
 		iovm := demux.NewIoVecMap()
 		c.dmx = demux.NewDemuxClnt(spcodec.NewTransport(nc.Conn(), iovm), iovm)
 	}
-	return nil
+	return c.nc, nil
 }
 
 func (c *SessClnt) ownClosed() bool {

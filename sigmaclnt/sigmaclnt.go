@@ -10,12 +10,12 @@ import (
 	sos "sigmaos/api/sigmaos"
 	db "sigmaos/debug"
 	dialproxyclnt "sigmaos/dialproxy/clnt"
-	"sigmaos/sigmaclnt/fidclnt"
-	"sigmaos/sigmaclnt/fslib"
 	leaseclnt "sigmaos/ft/lease/clnt"
 	"sigmaos/proc"
 	spproxyclnt "sigmaos/proxy/sigmap/clnt"
-	"sigmaos/sigmaclnt/fdclnt"
+	"sigmaos/sigmaclnt/fidclnt"
+	"sigmaos/sigmaclnt/fsclnt"
+	"sigmaos/sigmaclnt/fslib"
 	"sigmaos/sigmaclnt/procclnt"
 )
 
@@ -44,7 +44,7 @@ type SigmaClntKernel struct {
 	sc *SigmaClnt
 }
 
-// Create FsLib using either sigmacntclnt or fdclnt
+// Create FsLib using either sigmacntclnt or fsclnt
 func newFsLibFidClnt(pe *proc.ProcEnv, fidc *fidclnt.FidClnt) (*fslib.FsLib, error) {
 	var err error
 	var s sos.FileAPI
@@ -55,7 +55,7 @@ func newFsLibFidClnt(pe *proc.ProcEnv, fidc *fidclnt.FidClnt) (*fslib.FsLib, err
 			return nil, err
 		}
 	} else {
-		s = fdclnt.NewFdClient(pe, fidc)
+		s = fsclnt.NewFsClient(pe, fidc)
 	}
 	return fslib.NewFsLibAPI(pe, fidc.GetDialProxyClnt(), s)
 }

@@ -1,10 +1,10 @@
-package fdclnt
+package fsclnt
 
 import (
 	"sync"
 
-	"sigmaos/serr"
 	sos "sigmaos/api/sigmaos"
+	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 )
 

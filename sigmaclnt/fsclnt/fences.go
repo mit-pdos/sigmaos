@@ -1,4 +1,4 @@
-package fdclnt
+package fsclnt
 
 import (
 	"strings"
@@ -28,7 +28,7 @@ func newFenceTable() *FenceTable {
 // If already exist, just update
 func (ft *FenceTable) insert(pn string, f sp.Tfence) error {
 	path := path.Split(pn) // cleans up pn
-	db.DPrintf(db.FDCLNT, "Insert fence %v %v\n", path, f)
+	db.DPrintf(db.FSCLNT, "Insert fence %v %v\n", path, f)
 	ft.fencedDirs.InsertBlind(path.String(), f)
 	return nil
 }
@@ -36,13 +36,13 @@ func (ft *FenceTable) insert(pn string, f sp.Tfence) error {
 func (ft *FenceTable) lookup(pn string) *sp.Tfence {
 	f := sp.NullFence()
 	ft.fencedDirs.Iter(func(pni string, f0 sp.Tfence) bool {
-		db.DPrintf(db.FDCLNT, "Lookup fence %v %v\n", pn, f0)
+		db.DPrintf(db.FSCLNT, "Lookup fence %v %v\n", pn, f0)
 		if strings.HasPrefix(pn, pni) {
 			f = &f0
 			return false
 		}
 		return true
 	})
-	db.DPrintf(db.FDCLNT, "Lookup fence %v: fence %v", pn, f)
+	db.DPrintf(db.FSCLNT, "Lookup fence %v: fence %v", pn, f)
 	return f
 }

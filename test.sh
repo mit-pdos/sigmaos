@@ -295,7 +295,7 @@ if [[ $APPS == "--apps" ]]; then
           if [[ "${NEED_DB[$i]}" == "true" ]]; then
             ./start-db.sh
           fi
-          run_test $T "go test $VERB sigmaos/$T -start $SPPROXYD $DIALPROXY -run '${TNAMES[$i]}'"
+          run_test $T "go test $VERB sigmaos/$T -start $SPPROXYD $DIALPROXY -run ${TNAMES[$i]}"
           i=$(($i+1))
         done
 #        go test $VERB sigmaos/apps/mr -start $SPPROXYD $DIALPROXY -run MRJob

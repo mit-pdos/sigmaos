@@ -5,15 +5,17 @@ import (
 	"path/filepath"
 	"strconv"
 
+	"github.com/mitchellh/mapstructure"
+
 	proto "sigmaos/apps/cache/proto"
 
-	"sigmaos/apps/kv/kvgrp"
 	"sigmaos/apps/cache"
+	"sigmaos/apps/kv/kvgrp"
 	db "sigmaos/debug"
 	"sigmaos/proc"
-	"sigmaos/util/coordination/semaphore"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
+	"sigmaos/util/coordination/semaphore"
 )
 
 type ClerkMgr struct {
@@ -87,19 +89,30 @@ func (cm *ClerkMgr) AddClerks(dur string, nclerk int) error {
 	return nil
 }
 
-func (cm *ClerkMgr) StopClerks() error {
+type TclerkRes struct {
+	Ntest int64 `json:"Ntest"`
+	Ms    int64 `json:"Ms"`
+}
+
+func (cm *ClerkMgr) StopClerks() (int64, error) {
 	db.DPrintf(db.ALWAYS, "clerks to evict %v\n", len(cm.clrks))
+	cr := TclerkRes{}
+	ntest := int64(0)
 	for _, ck := range cm.clrks {
 		status, err := cm.stopClerk(ck)
 		if err != nil {
-			return err
+			return 0, err
 		}
-		db.DPrintf(db.ALWAYS, "Clerk exit status %v\n", status)
+		if err := mapstructure.Decode(status.Data(), &cr); err != nil {
+			return 0, err
+		}
+		db.DPrintf(db.ALWAYS, "Clerk %v cr %v\n", status.Msg(), cr)
 		if !(status.IsStatusEvicted() || status.IsStatusOK()) {
-			return fmt.Errorf("wrong status %v", status)
+			return 0, fmt.Errorf("wrong status %v", status)
 		}
+		ntest += cr.Ntest
 	}
-	return nil
+	return ntest, nil
 }
 
 func (cm *ClerkMgr) WaitForClerks() error {

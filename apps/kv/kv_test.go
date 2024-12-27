@@ -25,13 +25,16 @@ import (
 const (
 	NCLERK = 4
 
-	CRASHBALANCER   = 5000
+	PARTITION = 200
+
+	CRASHBALANCER   = 4000
 	CRASHMOVERDELAY = -10
 )
 
 var balancerEv *crash.TeventMap
 var moverEv *crash.TeventMap
 var bothEv *crash.TeventMap
+var EvP = crash.NewEvent(crash.KVD_PARTITION, PARTITION, 0.33)
 
 func init() {
 	e0 := crash.NewEvent(crash.KVBALANCER_CRASH, CRASHBALANCER, 0.2)
@@ -245,7 +248,10 @@ func concurN(t *testing.T, nclerk int, em *crash.TeventMap, repl int) (int, int)
 
 	db.DPrintf(db.TEST, "Done dels")
 
-	ts.cm.StopClerks()
+	n, err := ts.cm.StopClerks()
+
+	assert.Nil(t, err)
+	assert.True(t, n >= int64(nclerk*5))
 
 	db.DPrintf(db.TEST, "Done stopClerks")
 
@@ -279,6 +285,12 @@ func TestKVOK1(t *testing.T) {
 
 func TestKVOKN(t *testing.T) {
 	n, r := concurN(t, NCLERK, nil, kv.KVD_NO_REPL)
+	assert.Equal(t, 1, n)
+	assert.Equal(t, 0, r)
+}
+
+func TestClerkPartition1(t *testing.T) {
+	n, r := concurN(t, 1, crash.NewTeventMapOne(EvP), kv.KVD_NO_REPL)
 	assert.Equal(t, 1, n)
 	assert.Equal(t, 0, r)
 }
@@ -333,6 +345,13 @@ func TestCrashAll1(t *testing.T) {
 
 func TestCrashAllN(t *testing.T) {
 	n, r := concurN(t, NCLERK, bothEv, kv.KVD_NO_REPL)
+	assert.True(t, n > 1)
+	assert.True(t, r > 0)
+}
+
+func TestCrashAllPartition1(t *testing.T) {
+	bothEv.Insert(EvP)
+	n, r := concurN(t, 1, bothEv, kv.KVD_NO_REPL)
 	assert.True(t, n > 1)
 	assert.True(t, r > 0)
 }

@@ -17,7 +17,8 @@ import (
 )
 
 const (
-	ONE = 1000
+	ONE   = 1000
+	FIFTY = 500
 )
 
 var labels *TeventMap
@@ -28,7 +29,7 @@ type Tevent struct {
 	// wait for start ms to start generating events
 	Start int64 `json:"start"`
 
-	// max length of event interval in ms (if 0, only once)
+	// max length of event interval in ms (if <= 0, only once)
 	MaxInterval int64 `json:"maxinterval"`
 
 	// probability of generating event in this interval
@@ -56,10 +57,6 @@ func NewEventStart(l string, s, mi int64, p float64) Tevent {
 
 func NewEventStartDelay(l string, s, mi int64, d int64, p float64) Tevent {
 	return Tevent{Label: l, Start: s, MaxInterval: mi, Delay: d, Prob: p}
-}
-
-func NewEventDelay(l string, mi int64, d int64, p float64) Tevent {
-	return Tevent{Label: l, MaxInterval: mi, Delay: d, Prob: p}
 }
 
 func (e *Tevent) String() string {
@@ -148,6 +145,10 @@ func initLabels() {
 	db.DPrintf(db.CRASH, "Events %v", labels)
 }
 
+func Rand50() bool {
+	return rand.Int64(ONE) < FIFTY
+}
+
 func randSleep(c int64) uint64 {
 	ms := uint64(0)
 	if c > 0 {
@@ -224,12 +225,16 @@ func Failer(fsl *fslib.FsLib, label Tselector, f Teventf) {
 			}
 			time.Sleep(time.Duration(e.Start) * time.Millisecond)
 			for true {
-				r := randSleep(e.MaxInterval)
+				t := e.MaxInterval
+				if e.MaxInterval < 0 {
+					t = -t
+				}
+				r := randSleep(t)
 				if r < uint64(e.Prob*ONE) {
-					db.DPrintf(db.CRASH, "Label %v r %d %v", label, r, e)
+					db.DPrintf(db.CRASH, "Raise event %v r %d %v", label, r, e)
 					f(e)
 				}
-				if e.MaxInterval == 0 {
+				if e.MaxInterval <= 0 {
 					break
 				}
 			}

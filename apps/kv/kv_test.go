@@ -215,12 +215,12 @@ func TestPutGetCrashKVD1(t *testing.T) {
 	ts.done()
 }
 
-func concurN(t *testing.T, nclerk int, em *crash.TeventMap, repl int) (int, int) {
+func concurN(t *testing.T, nclerk int, em *crash.TeventMap, repl int) (int, int, kv.TclerkRes) {
 	const TIME = 100
 
 	t1, err1 := test.NewTstateAll(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return 0, 0
+		return 0, 0, kv.TclerkRes{}
 	}
 
 	ts := newTstate(t1, em, "manual", repl)
@@ -248,10 +248,10 @@ func concurN(t *testing.T, nclerk int, em *crash.TeventMap, repl int) (int, int)
 
 	db.DPrintf(db.TEST, "Done dels")
 
-	n, err := ts.cm.StopClerks()
+	cr, err := ts.cm.StopClerks()
 
 	assert.Nil(t, err)
-	assert.True(t, n >= int64(nclerk*5))
+	assert.True(t, cr.Nkeys >= int64(nclerk*kv.NKEYS))
 
 	db.DPrintf(db.TEST, "Done stopClerks")
 
@@ -268,108 +268,115 @@ func concurN(t *testing.T, nclerk int, em *crash.TeventMap, repl int) (int, int)
 
 	ts.Shutdown()
 
-	return int(conf.Ncoord), int(conf.Nretry)
+	return int(conf.Ncoord), int(conf.Nretry), cr
 }
 
 func TestKVOK0(t *testing.T) {
-	n, r := concurN(t, 0, nil, kv.KVD_NO_REPL)
+	n, r, _ := concurN(t, 0, nil, kv.KVD_NO_REPL)
 	assert.Equal(t, 1, n)
 	assert.Equal(t, 0, r)
 }
 
 func TestKVOK1(t *testing.T) {
-	n, r := concurN(t, 1, nil, kv.KVD_NO_REPL)
+	n, r, cr := concurN(t, 1, nil, kv.KVD_NO_REPL)
 	assert.Equal(t, 1, n)
 	assert.Equal(t, 0, r)
+	assert.Equal(t, int64(0), cr.Nretry)
 }
 
 func TestKVOKN(t *testing.T) {
-	n, r := concurN(t, NCLERK, nil, kv.KVD_NO_REPL)
+	n, r, cr := concurN(t, NCLERK, nil, kv.KVD_NO_REPL)
 	assert.Equal(t, 1, n)
 	assert.Equal(t, 0, r)
+	assert.Equal(t, int64(0), cr.Nretry)
 }
 
 func TestClerkPartition1(t *testing.T) {
-	n, r := concurN(t, 1, crash.NewTeventMapOne(EvP), kv.KVD_NO_REPL)
+	n, r, cr := concurN(t, 1, crash.NewTeventMapOne(EvP), kv.KVD_NO_REPL)
 	assert.Equal(t, 1, n)
 	assert.Equal(t, 0, r)
+	assert.True(t, cr.Nretry > int64(0))
 }
 
 func TestCrashBal0(t *testing.T) {
-	n, r := concurN(t, 0, balancerEv, kv.KVD_NO_REPL)
+	n, r, cr := concurN(t, 0, balancerEv, kv.KVD_NO_REPL)
 	assert.True(t, n > 1)
 	assert.Equal(t, 0, r)
+	assert.Equal(t, int64(0), cr.Nretry)
 }
 
 func TestCrashBal1(t *testing.T) {
-	n, r := concurN(t, 1, balancerEv, kv.KVD_NO_REPL)
+	n, r, cr := concurN(t, 1, balancerEv, kv.KVD_NO_REPL)
 	assert.True(t, n > 1)
 	assert.Equal(t, 0, r)
+	assert.Equal(t, int64(0), cr.Nretry)
 }
 
 func TestCrashBalN(t *testing.T) {
-	n, r := concurN(t, NCLERK, balancerEv, kv.KVD_NO_REPL)
+	n, r, cr := concurN(t, NCLERK, balancerEv, kv.KVD_NO_REPL)
 	assert.True(t, n > 1)
 	assert.Equal(t, 0, r)
+	assert.Equal(t, int64(0), cr.Nretry)
 }
 
 func TestCrashMov0(t *testing.T) {
-	n, r := concurN(t, 0, moverEv, kv.KVD_NO_REPL)
+	n, r, _ := concurN(t, 0, moverEv, kv.KVD_NO_REPL)
 	assert.Equal(t, 1, n)
 	assert.True(t, r > 0)
 }
 
 func TestCrashMov1(t *testing.T) {
-	n, r := concurN(t, 1, moverEv, kv.KVD_NO_REPL)
+	n, r, _ := concurN(t, 1, moverEv, kv.KVD_NO_REPL)
 	assert.Equal(t, 1, n)
 	assert.True(t, r > 0)
 }
 
 func TestCrashMovN(t *testing.T) {
-	n, r := concurN(t, NCLERK, moverEv, kv.KVD_NO_REPL)
+	n, r, _ := concurN(t, NCLERK, moverEv, kv.KVD_NO_REPL)
 	assert.Equal(t, 1, n)
 	assert.True(t, r > 0)
 }
 
 func TestCrashAll0(t *testing.T) {
-	n, r := concurN(t, 0, bothEv, kv.KVD_NO_REPL)
+	n, r, _ := concurN(t, 0, bothEv, kv.KVD_NO_REPL)
 	assert.True(t, n > 1)
 	assert.True(t, r > 0)
 }
 
 func TestCrashAll1(t *testing.T) {
-	n, r := concurN(t, 1, bothEv, kv.KVD_NO_REPL)
+	n, r, _ := concurN(t, 1, bothEv, kv.KVD_NO_REPL)
 	assert.True(t, n > 1)
 	assert.True(t, r > 0)
 }
 
 func TestCrashAllN(t *testing.T) {
-	n, r := concurN(t, NCLERK, bothEv, kv.KVD_NO_REPL)
+	n, r, _ := concurN(t, NCLERK, bothEv, kv.KVD_NO_REPL)
 	assert.True(t, n > 1)
 	assert.True(t, r > 0)
 }
 
 func TestCrashAllPartition1(t *testing.T) {
 	bothEv.Insert(EvP)
-	n, r := concurN(t, 1, bothEv, kv.KVD_NO_REPL)
+	n, r, cr := concurN(t, 1, bothEv, kv.KVD_NO_REPL)
 	assert.True(t, n > 1)
 	assert.True(t, r > 0)
+	assert.True(t, cr.Nretry > int64(0))
 }
 
 func TestReplOK0(t *testing.T) {
-	n, r := concurN(t, 0, nil, kv.KVD_REPL_LEVEL)
+	n, r, _ := concurN(t, 0, nil, kv.KVD_REPL_LEVEL)
 	assert.Equal(t, 1, n)
 	assert.Equal(t, 0, r)
 }
 
 func TestReplOK1(t *testing.T) {
-	n, r := concurN(t, 1, nil, kv.KVD_REPL_LEVEL)
+	n, r, _ := concurN(t, 1, nil, kv.KVD_REPL_LEVEL)
 	assert.Equal(t, 1, n)
 	assert.Equal(t, 0, r)
 }
 
 func TestReplOKN(t *testing.T) {
-	n, r := concurN(t, NCLERK, nil, kv.KVD_REPL_LEVEL)
+	n, r, _ := concurN(t, NCLERK, nil, kv.KVD_REPL_LEVEL)
 	assert.Equal(t, 1, n)
 	assert.Equal(t, 0, r)
 }

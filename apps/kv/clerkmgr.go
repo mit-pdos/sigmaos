@@ -89,30 +89,25 @@ func (cm *ClerkMgr) AddClerks(dur string, nclerk int) error {
 	return nil
 }
 
-type TclerkRes struct {
-	Ntest int64 `json:"Ntest"`
-	Ms    int64 `json:"Ms"`
-}
-
-func (cm *ClerkMgr) StopClerks() (int64, error) {
+func (cm *ClerkMgr) StopClerks() (TclerkRes, error) {
 	db.DPrintf(db.ALWAYS, "clerks to evict %v\n", len(cm.clrks))
-	cr := TclerkRes{}
-	ntest := int64(0)
+	cr := &TclerkRes{}
 	for _, ck := range cm.clrks {
 		status, err := cm.stopClerk(ck)
 		if err != nil {
-			return 0, err
+			return *cr, err
 		}
-		if err := mapstructure.Decode(status.Data(), &cr); err != nil {
-			return 0, err
+		cr0 := TclerkRes{}
+		if err := mapstructure.Decode(status.Data(), &cr0); err != nil {
+			return *cr, err
 		}
-		db.DPrintf(db.ALWAYS, "Clerk %v cr %v\n", status.Msg(), cr)
+		db.DPrintf(db.ALWAYS, "Clerk %v cr %v\n", status.Msg(), cr0)
 		if !(status.IsStatusEvicted() || status.IsStatusOK()) {
-			return 0, fmt.Errorf("wrong status %v", status)
+			return *cr, fmt.Errorf("wrong status %v", status)
 		}
-		ntest += cr.Ntest
+		cr.Add(cr0)
 	}
-	return ntest, nil
+	return *cr, nil
 }
 
 func (cm *ClerkMgr) WaitForClerks() error {

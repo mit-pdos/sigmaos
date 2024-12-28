@@ -125,7 +125,7 @@ func run(sc *sigmaclnt.SigmaClnt, kc *kv.KvClerk, rcli *redis.Client, p *perf.Pe
 			status = proc.NewStatusInfo(proc.StatusOK, "ops/sec", float64(nops)/d.Seconds())
 		} else {
 			// If this was an unbounded clerk, we should return status evicted.
-			status = proc.NewStatusInfo(proc.StatusEvicted, "OK", kv.TclerkRes{int64(ntest), d.Milliseconds()})
+			status = proc.NewStatusInfo(proc.StatusEvicted, "OK", kv.TclerkRes{int64(ntest * kv.NKEYS), kc.Stats().Nretry, d.Milliseconds()})
 		}
 	}
 	sc.ClntExit(status)

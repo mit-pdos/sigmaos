@@ -50,6 +50,13 @@ func (ts *tstate) walk(fid, nfid sp.Tfid) {
 	assert.Nil(ts.t, rerr, "rerror %v", rerr)
 }
 
+func (ts *tstate) clunk(fid sp.Tfid) {
+	args := sp.NewTclunk(fid)
+	rets := sp.Rclunk{}
+	rerr := ts.srv.Clunk(args, &rets)
+	assert.Nil(ts.t, rerr, "rerror %v", rerr)
+}
+
 func (ts *tstate) create(fid sp.Tfid, n string) {
 	args := sp.NewTcreate(fid, n, 0777, sp.ORDWR, sp.NoLeaseId, sp.NullFence())
 	rets := sp.Rcreate{}
@@ -58,13 +65,14 @@ func (ts *tstate) create(fid sp.Tfid, n string) {
 }
 
 func TestCreate(t *testing.T) {
-	const N = 3
+	const N = 1000
 
 	ts := newTstate(t)
 	s := time.Now()
 	for i := 1; i < N; i++ {
 		ts.walk(0, sp.Tfid(i))
 		ts.create(sp.Tfid(i), "fff"+strconv.Itoa(i))
+		ts.clunk(sp.Tfid(i))
 	}
 	db.DPrintf(db.TEST, "%d creates %v", N, time.Since(s))
 }

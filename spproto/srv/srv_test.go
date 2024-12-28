@@ -65,14 +65,27 @@ func (ts *tstate) create(fid sp.Tfid, n string) {
 }
 
 func TestCreate(t *testing.T) {
-	const N = 1000
+	const N = 100000
 
 	ts := newTstate(t)
 	s := time.Now()
+	twalk := sp.NewTwalk(0, 0, path.Tpathname{})
+	rwalk := &sp.Rwalk{}
+	tclunk := sp.NewTclunk(0)
+	rclunk := &sp.Rclunk{}
+	tcreate := sp.NewTcreate(0, "", 0777, sp.ORDWR, sp.NoLeaseId, sp.NullFence())
+	rcreate := &sp.Rcreate{}
 	for i := 1; i < N; i++ {
-		ts.walk(0, sp.Tfid(i))
-		ts.create(sp.Tfid(i), "fff"+strconv.Itoa(i))
-		ts.clunk(sp.Tfid(i))
+		twalk.NewFid = uint32(i)
+		rerr := ts.srv.Walk(twalk, rwalk)
+		assert.Nil(ts.t, rerr, "walk rerror %v", rerr)
+		tcreate.Fid = uint32(i)
+		tcreate.Name = strconv.Itoa(i)
+		rerr = ts.srv.Create(tcreate, rcreate)
+		assert.Nil(ts.t, rerr, "create rerror %v", rerr)
+		tclunk.Fid = uint32(i)
+		rerr = ts.srv.Clunk(tclunk, rclunk)
+		assert.Nil(ts.t, rerr, "clunk rerror %v", rerr)
 	}
 	db.DPrintf(db.TEST, "%d creates %v", N, time.Since(s))
 }

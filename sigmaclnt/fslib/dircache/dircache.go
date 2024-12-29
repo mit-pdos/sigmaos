@@ -90,7 +90,7 @@ func (dc *DirCache[E]) GetEntries() ([]string, error) {
 	if err := dc.checkErr(); err != nil {
 		return nil, err
 	}
-	return dc.dir.Keys(0), nil
+	return dc.dir.Keys(), nil
 }
 
 func (dc *DirCache[E]) WaitTimedEntriesN(n int) (int, error) {
@@ -111,7 +111,7 @@ func (dc *DirCache[E]) WaitTimedGetEntriesN(n int) ([]string, error) {
 	if _, err := dc.WaitTimedEntriesN(n); err != nil {
 		return nil, err
 	}
-	return dc.dir.Keys(0), nil
+	return dc.dir.Keys(), nil
 }
 
 func (dc *DirCache[E]) GetEntry(n string) (E, error) {
@@ -300,7 +300,7 @@ func (dc *DirCache[E]) updateEntriesL(ents []string) error {
 			}
 		}
 	}
-	for _, n := range dc.dir.Keys(0) {
+	for _, n := range dc.dir.Keys() {
 		if !entsMap[n] {
 			dc.dir.Delete(n)
 		}
@@ -318,7 +318,7 @@ func (dc *DirCache[E]) watchDir(ch chan struct{}) {
 	first := true
 	for dc.isDone.Load() == 0 {
 		dr := fslib.NewDirReader(dc.FsLib, dc.Path)
-		ents, ok, err := dr.WatchUniqueEntries(dc.dir.Keys(0), dc.prefixFilters)
+		ents, ok, err := dr.WatchUniqueEntries(dc.dir.Keys(), dc.prefixFilters)
 		if ok { // reset retry?
 			retry = false
 		}

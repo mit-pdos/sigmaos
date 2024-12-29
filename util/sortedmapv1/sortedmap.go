@@ -162,7 +162,7 @@ func (sm *SortedMap[K, V]) RoundRobin() (K, bool) {
 	return k, true
 }
 
-func (sm *SortedMap[K, V]) Keys(s int) []K {
+func (sm *SortedMap[K, V]) Keys() []K {
 	keys := make([]K, 0)
 	sm.Iter(func(k K, v V) bool {
 		keys = append(keys, k)

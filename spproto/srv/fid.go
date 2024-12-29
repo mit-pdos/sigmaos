@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"sync"
 
-	db "sigmaos/debug"
 	"sigmaos/api/fs"
+	db "sigmaos/debug"
 	"sigmaos/path"
 	"sigmaos/serr"
 	sessp "sigmaos/session/proto"
@@ -51,11 +51,11 @@ type Fid struct {
 	isOpen bool
 	po     *Pobj
 	m      sp.Tmode
-	qid    *sp.Tqid // the qid of obj at the time of invoking NewFidPath
-	cursor int      // for directories
+	qid    sp.Tqid // the qid of obj at the time of invoking NewFidPath
+	cursor int     // for directories
 }
 
-func newFidPath(pobj *Pobj, m sp.Tmode, qid *sp.Tqid) *Fid {
+func newFidPath(pobj *Pobj, m sp.Tmode, qid sp.Tqid) *Fid {
 	return &Fid{sync.Mutex{}, false, pobj, m, qid, 0}
 }
 
@@ -81,7 +81,7 @@ func (f *Fid) IsOpen() bool {
 }
 
 func (f *Fid) Qid() *sp.Tqid {
-	return f.qid
+	return &f.qid
 }
 
 func (f *Fid) Close() {

@@ -1,17 +1,17 @@
 package srv
 
 import (
-	"sigmaos/sigmasrv/clntcond"
-	db "sigmaos/debug"
 	"sigmaos/api/fs"
+	db "sigmaos/debug"
 	"sigmaos/path"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
+	"sigmaos/sigmasrv/clntcond"
+	"sigmaos/sigmasrv/stats"
 	"sigmaos/spproto/srv/leasedmap"
 	"sigmaos/spproto/srv/lockmap"
 	"sigmaos/spproto/srv/version"
 	"sigmaos/spproto/srv/watch"
-	"sigmaos/sigmasrv/stats"
 )
 
 type ProtSrvState struct {
@@ -56,11 +56,11 @@ func (pss *ProtSrvState) Stats() *stats.StatInode {
 	return pss.stats
 }
 
-func (pss *ProtSrvState) newQid(perm sp.Tperm, path sp.Tpath) *sp.Tqid {
+func (pss *ProtSrvState) newQid(perm sp.Tperm, path sp.Tpath) sp.Tqid {
 	return sp.NewQidPerm(perm, pss.vt.GetVersion(path), path)
 }
 
-func (pss *ProtSrvState) newFid(ctx fs.CtxI, dir path.Tpathname, name string, o fs.FsObj, lid sp.TleaseId, qid *sp.Tqid) *Fid {
+func (pss *ProtSrvState) newFid(ctx fs.CtxI, dir path.Tpathname, name string, o fs.FsObj, lid sp.TleaseId, qid sp.Tqid) *Fid {
 	pn := dir.Copy().Append(name)
 	po := newPobj(pn, o, ctx)
 	nf := newFidPath(po, 0, qid)
@@ -89,11 +89,11 @@ func (pss *ProtSrvState) createObj(ctx fs.CtxI, d fs.Dir, dlk *lockmap.PathLock,
 	}
 }
 
-func (pss *ProtSrvState) CreateObj(ctx fs.CtxI, o fs.FsObj, dir path.Tpathname, name string, perm sp.Tperm, m sp.Tmode, lid sp.TleaseId, fence sp.Tfence, dev fs.FsObj) (*sp.Tqid, *Fid, *serr.Err) {
+func (pss *ProtSrvState) CreateObj(ctx fs.CtxI, o fs.FsObj, dir path.Tpathname, name string, perm sp.Tperm, m sp.Tmode, lid sp.TleaseId, fence sp.Tfence, dev fs.FsObj) (sp.Tqid, *Fid, *serr.Err) {
 	db.DPrintf(db.PROTSRV, "%v: Create %v %v", ctx.ClntId(), o, dir)
 	fn := dir.Append(name)
 	if !o.Perm().IsDir() {
-		return nil, nil, serr.NewErr(serr.TErrNotDir, dir)
+		return sp.Tqid{}, nil, serr.NewErr(serr.TErrNotDir, dir)
 	}
 	d := o.(fs.Dir)
 	dlk := pss.plt.Acquire(ctx, dir, lockmap.WLOCK)
@@ -104,7 +104,7 @@ func (pss *ProtSrvState) CreateObj(ctx fs.CtxI, o fs.FsObj, dir path.Tpathname, 
 		db.DPrintf(db.PROTSRV, "%v: createObj Leased %q %v %v lid %v", ctx.ClntId(), name, o1, err, lid)
 	}
 	if err != nil {
-		return nil, nil, err
+		return sp.Tqid{}, nil, err
 	}
 	defer pss.plt.Release(ctx, flk, lockmap.WLOCK)
 
@@ -116,11 +116,11 @@ func (pss *ProtSrvState) CreateObj(ctx fs.CtxI, o fs.FsObj, dir path.Tpathname, 
 	return qid, nf, nil
 }
 
-func (pss *ProtSrvState) OpenObj(ctx fs.CtxI, o fs.FsObj, m sp.Tmode) (fs.FsObj, *sp.Tqid, *serr.Err) {
+func (pss *ProtSrvState) OpenObj(ctx fs.CtxI, o fs.FsObj, m sp.Tmode) (fs.FsObj, sp.Tqid, *serr.Err) {
 	pss.stats.IncPathString(o.Path().String())
 	no, r := o.Open(ctx, m)
 	if r != nil {
-		return nil, nil, r
+		return nil, sp.Tqid{}, r
 	}
 	if no != nil {
 		pss.vt.Insert(no.Path())

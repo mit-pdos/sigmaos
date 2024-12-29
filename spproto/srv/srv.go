@@ -3,14 +3,14 @@ package srv
 import (
 	"time"
 
-	db "sigmaos/debug"
 	"sigmaos/api/fs"
+	sps "sigmaos/api/spprotsrv"
+	db "sigmaos/debug"
 	"sigmaos/path"
 	"sigmaos/proc"
 	"sigmaos/serr"
 	sessp "sigmaos/session/proto"
 	sp "sigmaos/sigmap"
-	sps "sigmaos/api/spprotsrv"
 	"sigmaos/spproto/srv/lockmap"
 	"sigmaos/spproto/srv/namei"
 )

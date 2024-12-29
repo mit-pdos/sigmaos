@@ -65,7 +65,9 @@ func (ts *tstate) create(fid sp.Tfid, n string) {
 }
 
 func TestCreate(t *testing.T) {
-	for _, n := range []int{10, 100, 1000, 10_000, 100_000} {
+	ns := []int{10, 100, 1000, 10_000, 100_000, 1_000_000}
+	// ns := []int{10000}
+	for _, n := range ns {
 		ts := newTstate(t)
 		s := time.Now()
 		twalk := sp.NewTwalk(0, 0, path.Tpathname{})
@@ -81,8 +83,7 @@ func TestCreate(t *testing.T) {
 			rerr := ts.srv.Walk(twalk, rwalk)
 			assert.Nil(ts.t, rerr, "walk rerror %v", rerr)
 			tcreate.Fid = uint32(i)
-			n0 := rand.Int64(int64(n))
-			tcreate.Name = strconv.Itoa(int(n0))
+			tcreate.Name = "fff" + strconv.Itoa(i)
 			rerr = ts.srv.Create(tcreate, rcreate)
 			assert.Nil(ts.t, rerr, "create rerror %v", rerr)
 			tclunk.Fid = uint32(i)

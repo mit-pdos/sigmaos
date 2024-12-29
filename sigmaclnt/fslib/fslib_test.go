@@ -13,18 +13,18 @@ import (
 
 	db "sigmaos/debug"
 	dialproxyclnt "sigmaos/dialproxy/clnt"
-	"sigmaos/sigmaclnt/fslib"
 	"sigmaos/namesrv"
 	"sigmaos/namesrv/fsetcd"
 	"sigmaos/path"
 	"sigmaos/proc"
 	"sigmaos/serr"
 	"sigmaos/sigmaclnt"
+	"sigmaos/sigmaclnt/fslib"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )
 
-var pathname string // e.g., --path "name/ux/sp.LOCAL/" or  "name/msched/sp.LOCAL/"
+var pathname string // e.g., --path "name/ux/sp.LOCAL/" or  "name/msched/~local/"
 
 func init() {
 	flag.StringVar(&pathname, "path", sp.NAMED, "path for file system")

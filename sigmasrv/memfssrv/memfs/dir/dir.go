@@ -5,27 +5,27 @@ import (
 	"sync"
 	"time"
 
-	db "sigmaos/debug"
 	"sigmaos/api/fs"
+	db "sigmaos/debug"
 	"sigmaos/path"
 	"sigmaos/serr"
-	sp "sigmaos/sigmap"
 	spcodec "sigmaos/session/codec"
-	"sigmaos/util/sortedmap"
+	sp "sigmaos/sigmap"
+	"sigmaos/util/sortedmapv1"
 )
 
 type DirImpl struct {
 	fs.Inode
 	no    fs.NewFsObjF
 	mu    sync.Mutex
-	dents *sortedmap.SortedMap[string, fs.FsObj]
+	dents *sortedmapv1.SortedMap[string, fs.FsObj]
 }
 
 func MkDir(i fs.Inode, no fs.NewFsObjF) *DirImpl {
 	d := &DirImpl{}
 	d.Inode = i
 	d.no = no
-	d.dents = sortedmap.NewSortedMap[string, fs.FsObj]()
+	d.dents = sortedmapv1.NewSortedMap[string, fs.FsObj]()
 	d.dents.Insert(".", d)
 	return d
 }

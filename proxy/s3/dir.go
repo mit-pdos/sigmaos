@@ -9,13 +9,13 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 
-	db "sigmaos/debug"
 	"sigmaos/api/fs"
+	db "sigmaos/debug"
 	"sigmaos/path"
 	"sigmaos/serr"
-	sp "sigmaos/sigmap"
 	spcodec "sigmaos/session/codec"
-	"sigmaos/util/sortedmap"
+	sp "sigmaos/sigmap"
+	"sigmaos/util/sortedmapv1"
 )
 
 const DOT = "_._"
@@ -35,7 +35,7 @@ func fromDot(pn string) string {
 type Dir struct {
 	*Obj
 	sync.Mutex
-	dents *sortedmap.SortedMap[string, sp.Tperm]
+	dents *sortedmapv1.SortedMap[string, sp.Tperm]
 	sts   []*sp.Tstat
 }
 
@@ -48,7 +48,7 @@ func newDir(bucket string, key path.Tpathname, perm sp.Tperm) *Dir {
 	o := newObj(bucket, key, perm)
 	dir := &Dir{}
 	dir.Obj = o
-	dir.dents = sortedmap.NewSortedMap[string, sp.Tperm]()
+	dir.dents = sortedmapv1.NewSortedMap[string, sp.Tperm]()
 	return dir
 }
 

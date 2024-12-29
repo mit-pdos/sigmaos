@@ -299,9 +299,9 @@ func TestWaitExitParentCrash(t *testing.T) {
 
 	start := time.Now()
 
-	e0 := crash.NewEvent(crash.SPAWNER_CRASH, CRASH_MSECS, 0.33)
+	e0 := crash.NewEvent(crash.SPAWNER_CRASH, CRASH_MSECS, 0.6)
 	em := crash.NewTeventMapOne(e0)
-	e1 := crash.NewEvent(crash.SPAWNER_PARTITION, CRASH_MSECS, 0.66)
+	e1 := crash.NewEvent(crash.SPAWNER_PARTITION, CRASH_MSECS, 0.6)
 	em.Insert(e1)
 
 	cPid := sp.GenPid("spawner")

@@ -13,8 +13,8 @@ import (
 	"sigmaos/path"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
-	"sigmaos/util/sortedmap"
 	"sigmaos/sigmasrv/stats"
+	"sigmaos/util/sortedmapv1"
 )
 
 type Tstat int
@@ -167,7 +167,7 @@ func (fs *FsEtcd) readDirEtcd(dei *DirEntInfo, stat Tstat) (*DirInfo, sp.TQversi
 	if err != nil {
 		return nil, 0, stat, nops, err
 	}
-	dents := sortedmap.NewSortedMap[string, *DirEntInfo]()
+	dents := sortedmapv1.NewSortedMap[string, *DirEntInfo]()
 	update := false
 	nstat := 0
 	for _, e := range dir.Ents {

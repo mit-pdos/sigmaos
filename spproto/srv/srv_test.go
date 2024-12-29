@@ -64,36 +64,41 @@ func (ts *tstate) create(fid sp.Tfid, n string) {
 	assert.Nil(ts.t, rerr, "rerror %v", rerr)
 }
 
-func TestCreate(t *testing.T) {
+func (ts *tstate) remove(fid sp.Tfid) {
+	args := sp.NewTremove(fid, sp.NullFence())
+	rets := sp.Rremove{}
+	rerr := ts.srv.Remove(args, &rets)
+	assert.Nil(ts.t, rerr, "rerror %v", rerr)
+}
+
+func TestCreateMany(t *testing.T) {
 	// ns := []int{10, 100, 1000, 10_000, 100_000, 1_000_000}
 	ns := []int{100_000}
 	for _, n := range ns {
 		ts := newTstate(t)
 		s := time.Now()
-		twalk := sp.NewTwalk(0, 0, path.Tpathname{})
-		rwalk := &sp.Rwalk{}
-		tclunk := sp.NewTclunk(0)
-		rclunk := &sp.Rclunk{}
-		tcreate := sp.NewTcreate(0, "", 0777, sp.ORDWR, sp.NoLeaseId, sp.NullFence())
-		rcreate := &sp.Rcreate{}
-		//tremove := sp.NewTremove(0, sp.NullFence())
-		//rremove := &sp.Rremove{}
 		for i := 1; i < n; i++ {
-			twalk.NewFid = uint32(i)
-			rerr := ts.srv.Walk(twalk, rwalk)
-			assert.Nil(ts.t, rerr, "walk rerror %v", rerr)
-			tcreate.Fid = uint32(i)
-			tcreate.Name = "fff" + strconv.Itoa(i)
-			rerr = ts.srv.Create(tcreate, rcreate)
-			assert.Nil(ts.t, rerr, "create rerror %v", rerr)
-			tclunk.Fid = uint32(i)
-			rerr = ts.srv.Clunk(tclunk, rclunk)
-			assert.Nil(ts.t, rerr, "clunk rerror %v", rerr)
-			//tremove.Fid = uint32(i)
-			//rerr = ts.srv.Remove(tremove, rremove)
-			//assert.Nil(ts.t, rerr, "clunk rerror %v", rerr)
+			ts.walk(0, sp.Tfid(i))
+			ts.create(sp.Tfid(i), "fff"+strconv.Itoa(i))
+			ts.clunk(sp.Tfid(i))
 		}
 		t := time.Since(s)
 		db.DPrintf(db.TEST, "%d creates %v us/op %f", n, t, float64(t.Microseconds())/float64(n))
+	}
+}
+
+func TestCreateRemove(t *testing.T) {
+	// ns := []int{10, 100, 1000, 10_000, 100_000, 1_000_000}
+	ns := []int{100_000}
+	for _, n := range ns {
+		ts := newTstate(t)
+		s := time.Now()
+		for i := 1; i < n; i++ {
+			ts.walk(0, sp.Tfid(i))
+			ts.create(sp.Tfid(i), "fff"+strconv.Itoa(i))
+			ts.remove(sp.Tfid(i))
+		}
+		t := time.Since(s)
+		db.DPrintf(db.TEST, "%d create+remove %v us/op %f", n, t, float64(t.Microseconds())/float64(n))
 	}
 }

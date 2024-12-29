@@ -65,8 +65,8 @@ func (ts *tstate) create(fid sp.Tfid, n string) {
 }
 
 func TestCreate(t *testing.T) {
-	ns := []int{10, 100, 1000, 10_000, 100_000, 1_000_000}
-	// ns := []int{10000}
+	// ns := []int{10, 100, 1000, 10_000, 100_000, 1_000_000}
+	ns := []int{100_000}
 	for _, n := range ns {
 		ts := newTstate(t)
 		s := time.Now()

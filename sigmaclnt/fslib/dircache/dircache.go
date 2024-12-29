@@ -1,8 +1,7 @@
 // Package dircache watches a changing directory and keeps a local copy
 // with entries of type E chosen by the caller (e.g., rpcclnt's as in
-// [rpcdirclnt]).  dircache updates the entries as file as
+// [rpcdirclnt]).  dircache updates the entries as files are
 // created/removed in the watched directory.
-
 package dircache
 
 import (
@@ -15,7 +14,7 @@ import (
 	"sigmaos/serr"
 	"sigmaos/sigmaclnt/fslib"
 	sp "sigmaos/sigmap"
-	"sigmaos/util/sortedmap"
+	"sigmaos/util/sortedmapv1"
 )
 
 type NewValF[E any] func(string) (E, error)
@@ -24,7 +23,7 @@ type DirCache[E any] struct {
 	*fslib.FsLib
 	sync.RWMutex
 	hasEntries    *sync.Cond
-	dir           *sortedmap.SortedMap[string, E]
+	dir           *sortedmapv1.SortedMap[string, E]
 	isDone        atomic.Uint64
 	isInit        atomic.Uint64
 	Path          string
@@ -45,7 +44,7 @@ func NewDirCacheFilter[E any](fsl *fslib.FsLib, path string, newVal NewValF[E], 
 	dc := &DirCache[E]{
 		FsLib:         fsl,
 		Path:          path,
-		dir:           sortedmap.NewSortedMap[string, E](),
+		dir:           sortedmapv1.NewSortedMap[string, E](),
 		LSelector:     LSelector,
 		ESelector:     ESelector,
 		newVal:        newVal,

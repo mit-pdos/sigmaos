@@ -65,27 +65,34 @@ func (ts *tstate) create(fid sp.Tfid, n string) {
 }
 
 func TestCreate(t *testing.T) {
-	const N = 100000
-
-	ts := newTstate(t)
-	s := time.Now()
-	twalk := sp.NewTwalk(0, 0, path.Tpathname{})
-	rwalk := &sp.Rwalk{}
-	tclunk := sp.NewTclunk(0)
-	rclunk := &sp.Rclunk{}
-	tcreate := sp.NewTcreate(0, "", 0777, sp.ORDWR, sp.NoLeaseId, sp.NullFence())
-	rcreate := &sp.Rcreate{}
-	for i := 1; i < N; i++ {
-		twalk.NewFid = uint32(i)
-		rerr := ts.srv.Walk(twalk, rwalk)
-		assert.Nil(ts.t, rerr, "walk rerror %v", rerr)
-		tcreate.Fid = uint32(i)
-		tcreate.Name = strconv.Itoa(i)
-		rerr = ts.srv.Create(tcreate, rcreate)
-		assert.Nil(ts.t, rerr, "create rerror %v", rerr)
-		tclunk.Fid = uint32(i)
-		rerr = ts.srv.Clunk(tclunk, rclunk)
-		assert.Nil(ts.t, rerr, "clunk rerror %v", rerr)
+	for _, n := range []int{10, 100, 1000, 10_000, 100_000} {
+		ts := newTstate(t)
+		s := time.Now()
+		twalk := sp.NewTwalk(0, 0, path.Tpathname{})
+		rwalk := &sp.Rwalk{}
+		tclunk := sp.NewTclunk(0)
+		rclunk := &sp.Rclunk{}
+		tcreate := sp.NewTcreate(0, "", 0777, sp.ORDWR, sp.NoLeaseId, sp.NullFence())
+		rcreate := &sp.Rcreate{}
+		//tremove := sp.NewTremove(0, sp.NullFence())
+		//rremove := &sp.Rremove{}
+		for i := 1; i < n; i++ {
+			twalk.NewFid = uint32(i)
+			rerr := ts.srv.Walk(twalk, rwalk)
+			assert.Nil(ts.t, rerr, "walk rerror %v", rerr)
+			tcreate.Fid = uint32(i)
+			n0 := rand.Int64(int64(n))
+			tcreate.Name = strconv.Itoa(int(n0))
+			rerr = ts.srv.Create(tcreate, rcreate)
+			assert.Nil(ts.t, rerr, "create rerror %v", rerr)
+			tclunk.Fid = uint32(i)
+			rerr = ts.srv.Clunk(tclunk, rclunk)
+			assert.Nil(ts.t, rerr, "clunk rerror %v", rerr)
+			//tremove.Fid = uint32(i)
+			//rerr = ts.srv.Remove(tremove, rremove)
+			//assert.Nil(ts.t, rerr, "clunk rerror %v", rerr)
+		}
+		t := time.Since(s)
+		db.DPrintf(db.TEST, "%d creates %v us/op %f", n, t, float64(t.Microseconds())/float64(n))
 	}
-	db.DPrintf(db.TEST, "%d creates %v", N, time.Since(s))
 }

@@ -123,10 +123,22 @@ func RunProcSrv(kernelId string, dialproxy bool, spproxydPID sp.Tpid) error {
 	pn := filepath.Join(sp.MSCHED, kernelId, sp.PROCDREL, pe.GetPID().String())
 	ssrv, err = sigmasrv.NewSigmaSrvClnt(pn, sc, &ProcRPCSrv{ps})
 	if err != nil {
+		// Currently, the boot sequence assumes that procd will not crash before
+		// the failer is initialized. This means that if procd fatals out before
+		// this point, the kernel server may hang indefinitely while booting
+		// waiting for procd to register itself as started. In order to avoid this,
+		// Manually call started before fatal-ing out
+		sc.Started()
 		db.DFatalf("Error sigmasrvclnt: %v %v", pn, err)
 		return err
 	}
 	if err := shrinkMountTable(); err != nil {
+		// Currently, the boot sequence assumes that procd will not crash before
+		// the failer is initialized. This means that if procd fatals out before
+		// this point, the kernel server may hang indefinitely while booting
+		// waiting for procd to register itself as started. In order to avoid this,
+		// Manually call started before fatal-ing out
+		sc.Started()
 		db.DFatalf("Error shrinking mount table: %v", err)
 	}
 	ps.ssrv = ssrv

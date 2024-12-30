@@ -46,8 +46,8 @@ sudo rm -f /tmp/spproxyd/spproxyd.sock
 sudo rm -f /tmp/spproxyd/spproxyd-dialproxy.sock
 sudo rm -f /tmp/spproxyd/spproxyd-pyproxy.sock
 
-if docker ps -a | grep -qE 'sigma|uprocd|bootkerne|kernel-'; then
-  for container in $(docker ps -a | grep -E 'sigma|uprocd|bootkerne|kernel-' | cut -d ' ' -f1) ; do
+if docker ps -a | grep -qE 'sigma|procd|bootkerne|kernel-'; then
+  for container in $(docker ps -a | grep -E 'sigma|procd|bootkerne|kernel-' | cut -d ' ' -f1) ; do
     # Optionally skip DB shutdown
     if [ "$SKIPDB" == "true" ]; then
       cname=$(docker ps -a | grep $container | cut -d ' ' -f4)

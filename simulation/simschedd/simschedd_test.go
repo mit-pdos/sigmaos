@@ -1,4 +1,4 @@
-package simschedd
+package simmsched
 
 import (
 	"math/rand"
@@ -24,10 +24,10 @@ func uniform(r *rand.Rand) uint64 {
 	return (rand.Uint64() % MAX_SERVICE_TIME) + 1
 }
 
-// nschedd ticks available per world tick; divide on average equally
+// nmsched ticks available per world tick; divide on average equally
 // across realms.
-func newTrealmSmall(id TrealmId, nschedd, nrealm int) *TrealmSmall {
-	lambda := AVG_ARRIVAL_RATE_SMALL * (float64(nschedd) / float64(nrealm))
+func newTrealmSmall(id TrealmId, nmsched, nrealm int) *TrealmSmall {
+	lambda := AVG_ARRIVAL_RATE_SMALL * (float64(nmsched) / float64(nrealm))
 	return &TrealmSmall{id: id, poisson: &distuv.Poisson{Lambda: lambda}}
 }
 
@@ -48,14 +48,14 @@ func (r *TrealmSmall) genLoad(rand *rand.Rand) []*Proc {
 
 type TrealmBig struct {
 	id      TrealmId
-	nschedd int
+	nmsched int
 	nrealm  int
 	poisson *distuv.Poisson
 	extra   bool
 }
 
-func newTrealmBig(id TrealmId, nschedd, nrealm int, extra bool) *TrealmBig {
-	lambda := AVG_ARRIVAL_RATE_BIG * (float64(nschedd) / float64(nrealm))
+func newTrealmBig(id TrealmId, nmsched, nrealm int, extra bool) *TrealmBig {
+	lambda := AVG_ARRIVAL_RATE_BIG * (float64(nmsched) / float64(nrealm))
 	return &TrealmBig{id: id, poisson: &distuv.Poisson{Lambda: lambda}, extra: extra}
 }
 

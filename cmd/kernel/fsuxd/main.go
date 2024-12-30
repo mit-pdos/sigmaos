@@ -5,7 +5,7 @@ import (
 	"path"
 
 	db "sigmaos/debug"
-	"sigmaos/ux"
+	"sigmaos/proxy/ux"
 )
 
 func main() {

@@ -2,7 +2,7 @@ package channel
 
 import (
 	"sigmaos/rpc"
-	"sigmaos/sessp"
+	sessp "sigmaos/session/proto"
 )
 
 type NewRPCChannelFn func(pn string) (RPCChannel, error)

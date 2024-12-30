@@ -2,9 +2,9 @@ package lcschedclnt
 
 import (
 	db "sigmaos/debug"
-	"sigmaos/fslib"
+	"sigmaos/sigmaclnt/fslib"
 	"sigmaos/proc"
-	"sigmaos/rpcdirclnt"
+	shardedsvcrpcclnt "sigmaos/rpc/shardedsvc/clnt"
 	"sigmaos/sched/besched/proto"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
@@ -16,13 +16,13 @@ const (
 
 type LCSchedClnt struct {
 	*fslib.FsLib
-	rpcdc *rpcdirclnt.RPCDirClnt
+	rpcdc *shardedsvcrpcclnt.ShardedSvcRPCClnt
 }
 
 func NewLCSchedClnt(fsl *fslib.FsLib) *LCSchedClnt {
 	return &LCSchedClnt{
 		FsLib: fsl,
-		rpcdc: rpcdirclnt.NewRPCDirClnt(fsl, sp.LCSCHED, db.LCSCHEDCLNT, db.LCSCHEDCLNT_ERR),
+		rpcdc: shardedsvcrpcclnt.NewShardedSvcRPCClnt(fsl, sp.LCSCHED, db.LCSCHEDCLNT, db.LCSCHEDCLNT_ERR),
 	}
 }
 

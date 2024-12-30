@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+option go_package = "sigmaos/session/proto";
+
+message Fcall {
+        uint32 type = 1;
+        uint64 session = 2;
+        uint64 seqno = 3;
+        uint32 len = 4;
+        uint32 nvec = 5;
+}

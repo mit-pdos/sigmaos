@@ -7,12 +7,13 @@ import (
 	"sync/atomic"
 	"time"
 
+	"sigmaos/api/fs"
 	"sigmaos/apps/imgresize/proto"
 	db "sigmaos/debug"
-	"sigmaos/fs"
-	fttaskmgr "sigmaos/fttask/mgr"
+	fttaskmgr "sigmaos/ft/task/mgr"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
+	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
 )
 
@@ -34,7 +35,7 @@ func NewImgSrvRPC(args []string) (*ImgSrvRPC, error) {
 	imgd := &ImgSrvRPC{}
 	imgd.job = args[0]
 
-	ssrv, err := sigmasrv.NewSigmaSrv(filepath.Join(IMG, imgd.job), imgd, proc.GetProcEnv())
+	ssrv, err := sigmasrv.NewSigmaSrv(filepath.Join(sp.IMG, imgd.job), imgd, proc.GetProcEnv())
 	if err != nil {
 		db.DFatalf("NewSigmaSrv: %v", err)
 		return nil, err
@@ -56,7 +57,7 @@ func NewImgSrvRPC(args []string) (*ImgSrvRPC, error) {
 	if err != nil {
 		db.DFatalf("Error parse nrounds: %v", err)
 	}
-	imgd.mkProc = getMkProcFn(imgd.job, imgd.nrounds, 0, imgd.workerMcpu, imgd.workerMem)
+	imgd.mkProc = getMkProcFn(imgd.job, imgd.nrounds, imgd.workerMcpu, imgd.workerMem)
 	return imgd, nil
 }
 

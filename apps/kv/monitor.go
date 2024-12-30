@@ -6,10 +6,10 @@ import (
 
 	"sigmaos/apps/kv/kvgrp"
 	db "sigmaos/debug"
-	"sigmaos/groupmgr"
-	"sigmaos/util/perf"
+	"sigmaos/ft/procgroupmgr"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
+	"sigmaos/util/perf"
 )
 
 //
@@ -26,22 +26,22 @@ const (
 
 type grpMap struct {
 	sync.Mutex
-	grps map[string]*groupmgr.GroupMgr
+	grps map[string]*procgroupmgr.ProcGroupMgr
 }
 
 func newGrpMap() *grpMap {
 	gm := &grpMap{}
-	gm.grps = make(map[string]*groupmgr.GroupMgr)
+	gm.grps = make(map[string]*procgroupmgr.ProcGroupMgr)
 	return gm
 }
 
-func (gm *grpMap) insert(gn string, grp *groupmgr.GroupMgr) {
+func (gm *grpMap) insert(gn string, grp *procgroupmgr.ProcGroupMgr) {
 	gm.Lock()
 	defer gm.Unlock()
 	gm.grps[gn] = grp
 }
 
-func (gm *grpMap) delete(gn string) (*groupmgr.GroupMgr, bool) {
+func (gm *grpMap) delete(gn string) (*procgroupmgr.ProcGroupMgr, bool) {
 	gm.Lock()
 	defer gm.Unlock()
 	if grp, ok := gm.grps[gn]; ok {
@@ -52,10 +52,10 @@ func (gm *grpMap) delete(gn string) (*groupmgr.GroupMgr, bool) {
 	}
 }
 
-func (gm *grpMap) groups() []*groupmgr.GroupMgr {
+func (gm *grpMap) groups() []*procgroupmgr.ProcGroupMgr {
 	gm.Lock()
 	defer gm.Unlock()
-	gs := make([]*groupmgr.GroupMgr, 0, len(gm.grps))
+	gs := make([]*procgroupmgr.ProcGroupMgr, 0, len(gm.grps))
 	for _, grp := range gm.grps {
 		gs = append(gs, grp)
 	}
@@ -93,7 +93,7 @@ func (mo *Monitor) nextGroup() string {
 func (mo *Monitor) grow() error {
 	gn := mo.nextGroup()
 	db.DPrintf(db.KVMON, "Add group %v\n", gn)
-	grp, err := spawnGrp(mo.SigmaClnt, mo.job, gn, mo.kvdmcpu, KVD_NO_REPL, 0)
+	grp, err := spawnGrp(mo.SigmaClnt, mo.job, gn, mo.kvdmcpu, KVD_NO_REPL)
 	if err != nil {
 		return err
 	}

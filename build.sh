@@ -68,8 +68,8 @@ fi
 
 TMP=/tmp/sigmaos
 BUILD_LOG=/tmp/sigmaos-build
-UPROCD_BIN=/tmp/sigmaos-uprocd-bin
 PYTHON=/tmp/python
+PROCD_BIN=/tmp/sigmaos-procd-bin
 
 # tests uses hosts /tmp, which mounted in kernel container.
 mkdir -p $TMP
@@ -82,9 +82,9 @@ BIN=${ROOT}/bin
 KERNELBIN=${BIN}/kernel
 USRBIN=${BIN}/user
 mkdir -p $USRBIN
-# Clear the uprocd bin directory
-rm -rf $UPROCD_BIN
-mkdir -p $UPROCD_BIN
+# Clear the procd bin directory
+rm -rf $PROCD_BIN
+mkdir -p $PROCD_BIN
 
 # build and start db container
 if [ "${TARGET}" != "remote" ]; then
@@ -120,6 +120,7 @@ if [ -z "$buildercid" ]; then
   # Start builder
   echo "========== Starting builder container =========="
   docker run --rm -d -it \
+    --name sig-builder \
     --mount type=bind,src=$ROOT,dst=/home/sigmaos/ \
     sig-builder
   buildercid=$(docker ps -a | grep -w "sig-builder" | cut -d " " -f1)
@@ -138,6 +139,7 @@ if [ -z "$rsbuildercid" ]; then
   # Start builder
   echo "========== Starting Rust builder container =========="
   docker run --rm -d -it \
+    --name sig-rs-builder \
     --mount type=bind,src=$ROOT,dst=/home/sigmaos-local/ \
     sig-rs-builder
   rsbuildercid=$(docker ps -a | grep -w "sig-rs-builder" | cut -d " " -f1)
@@ -207,13 +209,13 @@ docker exec -it $rsbuildercid \
   fi
 echo "========== Done building Rust bins =========="
 
-echo "========== Copying kernel bins for uprocd =========="
+echo "========== Copying kernel bins for procd =========="
 if [ "${TARGET}" == "local" ]; then
   sudo cp $ROOT/create-net.sh $KERNELBIN/
-  cp $KERNELBIN/uprocd $UPROCD_BIN/
-  cp $KERNELBIN/spproxyd $UPROCD_BIN/
-  cp $KERNELBIN/exec-uproc-rs $UPROCD_BIN/
-  cp $KERNELBIN/python $UPROCD_BIN/
+  cp $KERNELBIN/procd $PROCD_BIN/
+  cp $KERNELBIN/spproxyd $PROCD_BIN/
+  cp $KERNELBIN/uproc-trampoline $PROCD_BIN/
+  cp $KERNELBIN/python $PROCD_BIN/
   cp -r $KERNELBIN/Lib $PYTHON/
   cp -r $KERNELBIN/pyproc $PYTHON/
   cp $KERNELBIN/ld_fstatat.so $PYTHON/

@@ -8,10 +8,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"sigmaos/api/fs"
 	db "sigmaos/debug"
-	"sigmaos/fs"
-	"sigmaos/linuxsched"
-	"sigmaos/mem"
 	"sigmaos/proc"
 	sprpcclnt "sigmaos/rpc/clnt/sigmap"
 	beschedclnt "sigmaos/sched/besched/clnt"
@@ -22,6 +20,9 @@ import (
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
+	"sigmaos/util/crash"
+	"sigmaos/util/linux/mem"
+	linuxsched "sigmaos/util/linux/sched"
 	"sigmaos/util/perf"
 	"sigmaos/util/syncmap"
 )
@@ -37,7 +38,7 @@ type MSched struct {
 	mcpufree            proc.Tmcpu
 	memfree             proc.Tmem
 	kernelID            string
-	scheddStats         map[sp.Trealm]*realmStats
+	mschedStats         map[sp.Trealm]*realmStats
 	sc                  *sigmaclnt.SigmaClnt
 	cpuStats            *cpuStats
 	cpuUtil             int64
@@ -50,7 +51,7 @@ func NewMSched(sc *sigmaclnt.SigmaClnt, kernelID string, reserveMcpu uint) *MSch
 	msched := &MSched{
 		pmgr:        procmgr.NewProcMgr(sc, kernelID),
 		pqsess:      syncmap.NewSyncMap[string, *BESchedSession](),
-		scheddStats: make(map[sp.Trealm]*realmStats),
+		mschedStats: make(map[sp.Trealm]*realmStats),
 		mcpufree:    proc.Tmcpu(1000*linuxsched.GetNCores() - reserveMcpu),
 		memfree:     mem.GetTotalMem(),
 		kernelID:    kernelID,
@@ -79,10 +80,10 @@ func NewMSched(sc *sigmaclnt.SigmaClnt, kernelID string, reserveMcpu uint) *MSch
 	return msched
 }
 
-// Start uprocd and warm cache of binaries
-func (msched *MSched) WarmUprocd(ctx fs.CtxI, req proto.WarmCacheBinRequest, res *proto.WarmCacheBinResponse) error {
-	if err := msched.pmgr.WarmUprocd(sp.Tpid(req.PidStr), sp.Trealm(req.RealmStr), req.Program, req.SigmaPath, proc.Ttype(req.ProcType)); err != nil {
-		db.DPrintf(db.ERROR, "WarmUprocd %v err %v", req, err)
+// Start procd and warm cache of binaries
+func (msched *MSched) WarmProcd(ctx fs.CtxI, req proto.WarmCacheBinRequest, res *proto.WarmCacheBinResponse) error {
+	if err := msched.pmgr.WarmProcd(sp.Tpid(req.PidStr), sp.Trealm(req.RealmStr), req.Program, req.SigmaPath, proc.Ttype(req.ProcType)); err != nil {
+		db.DPrintf(db.ERROR, "WarmProcd %v err %v", req, err)
 		res.OK = false
 		return err
 	}
@@ -113,10 +114,9 @@ func (msched *MSched) ForceRun(ctx fs.CtxI, req proto.ForceRunRequest, res *prot
 // Wait for a proc to mark itself as started.
 func (msched *MSched) WaitStart(ctx fs.CtxI, req proto.WaitRequest, res *proto.WaitResponse) error {
 	db.DPrintf(db.MSCHED, "WaitStart %v seqno %v", req.PidStr, req.GetProcSeqno())
-	// Wait until this schedd has heard about the proc, and has created the state
+	// Wait until this msched has heard about the proc, and has created the state
 	// for it.
 	if err := msched.waitUntilGotProc(req.GetProcSeqno()); err != nil {
-		// XXX return in res?
 		return err
 	}
 	msched.pmgr.WaitStart(sp.Tpid(req.PidStr))
@@ -177,7 +177,7 @@ func (msched *MSched) GetCPUShares(ctx fs.CtxI, req proto.GetCPUSharesRequest, r
 	return nil
 }
 
-// Get schedd's CPU util.
+// Get msched's CPU util.
 func (msched *MSched) GetCPUUtil(ctx fs.CtxI, req proto.GetCPUUtilRequest, res *proto.GetCPUUtilResponse) error {
 	res.Util = msched.pmgr.GetCPUUtil(sp.Trealm(req.RealmStr))
 	return nil
@@ -194,27 +194,27 @@ func (msched *MSched) GetRunningProcs(ctx fs.CtxI, req proto.GetRunningProcsRequ
 }
 
 func (msched *MSched) GetMSchedStats(ctx fs.CtxI, req proto.GetMSchedStatsRequest, res *proto.GetMSchedStatsResponse) error {
-	scheddStats := make(map[string]*proto.RealmStats)
+	mschedStats := make(map[string]*proto.RealmStats)
 	msched.realmMu.RLock()
-	for r, s := range msched.scheddStats {
+	for r, s := range msched.mschedStats {
 		st := &proto.RealmStats{
 			Running:  s.running.Load(),
 			TotalRan: s.totalRan.Load(),
 		}
-		scheddStats[r.String()] = st
+		mschedStats[r.String()] = st
 	}
 	msched.realmMu.RUnlock()
-	res.MSchedStats = scheddStats
+	res.MSchedStats = mschedStats
 	return nil
 }
 
 // Note that a proc has been received and its corresponding state has been
 // created, so the sequence number can be incremented
 func (msched *MSched) gotProc(procSeqno *proc.ProcSeqno) {
-	// schedd has successfully received a proc from procq pqID. Any clients which
+	// msched has successfully received a proc from procq pqID. Any clients which
 	// want to wait on that proc can now expect the state for that proc to exist
-	// at schedd. Set the seqno (which should be monotonically increasing) to
-	// release the clients, and allow schedd to handle the wait.
+	// at msched. Set the seqno (which should be monotonically increasing) to
+	// release the clients, and allow msched to handle the wait.
 	pqsess, _ := msched.pqsess.AllocNew(procSeqno.GetProcqID(), func(pqID string) *BESchedSession {
 		return NewBESchedSession(pqID, msched.kernelID)
 	})
@@ -223,8 +223,8 @@ func (msched *MSched) gotProc(procSeqno *proc.ProcSeqno) {
 
 // Wait to hear about a proc from procq pqID.
 func (msched *MSched) waitUntilGotProc(pseqno *proc.ProcSeqno) error {
-	// Kernel procs, spawned directly to schedd, will have an epoch of 0. Pass
-	// them through (since the proc is guaranteed to have been pushed to schedd
+	// Kernel procs, spawned directly to msched, will have an epoch of 0. Pass
+	// them through (since the proc is guaranteed to have been pushed to msched
 	// by the kernel srv before calling WaitStart)
 	if pseqno.GetEpoch() == 0 {
 		return nil
@@ -236,9 +236,9 @@ func (msched *MSched) waitUntilGotProc(pseqno *proc.ProcSeqno) error {
 }
 
 // For resource accounting purposes, it is assumed that only one getQueuedProcs
-// thread runs per schedd.
+// thread runs per msched.
 func (msched *MSched) getQueuedProcs() {
-	// If true, bias choice of procq to this schedd's kernel.
+	// If true, bias choice of procq to this msched's kernel.
 	var bias bool = true
 	for {
 		memFree, ok := msched.shouldGetBEProc()
@@ -265,10 +265,10 @@ func (msched *MSched) getQueuedProcs() {
 		}
 		if err != nil {
 			db.DPrintf(db.MSCHED_ERR, "Error GetProc: %v", err)
-			// If previously biased to this schedd's kernel, and GetProc returned an
+			// If previously biased to this msched's kernel, and GetProc returned an
 			// error, then un-bias.
 			//
-			// If not biased to this schedd's kernel, and GetProc returned an error,
+			// If not biased to this msched's kernel, and GetProc returned an error,
 			// then bias on the next attempt.
 			if bias {
 				bias = false
@@ -280,10 +280,10 @@ func (msched *MSched) getQueuedProcs() {
 		msched.nProcGets.Add(1)
 		if !ok {
 			db.DPrintf(db.MSCHED, "[%v] No proc on procq, try another, bias=%v qlen=%v", msched.kernelID, bias, qlen)
-			// If already biased to this schedd's kernel, and no proc was available,
+			// If already biased to this msched's kernel, and no proc was available,
 			// try another.
 			//
-			// If not biased to this schedd's kernel, and no proc was available, then
+			// If not biased to this msched's kernel, and no proc was available, then
 			// bias on the next attempt.
 			if bias {
 				bias = false
@@ -321,14 +321,14 @@ func (msched *MSched) spawnAndRunProc(p *proc.Proc, pseqno *proc.ProcSeqno) {
 	// If this proc was spawned via procq, handle the sequence number
 	if pseqno != nil {
 		// Proc state now exists. Mark it as such to release any clients which may
-		// be waiting in WaitStart for schedd to receive this proc
+		// be waiting in WaitStart for msched to receive this proc
 		msched.gotProc(pseqno)
 	}
 	// Run the proc
 	go msched.runProc(p)
 }
 
-// Run a proc via the local schedd. Caller holds lock.
+// Run a proc via the local msched. Caller holds lock.
 func (msched *MSched) runProc(p *proc.Proc) {
 	defer msched.decRealmStats(p)
 	db.DPrintf(db.MSCHED, "[%v] %v runProc %v", p.GetRealm(), msched.kernelID, p)
@@ -341,7 +341,7 @@ func (msched *MSched) shouldGetBEProc() (proc.Tmem, bool) {
 	mem := msched.getFreeMem()
 	cpu := msched.getCPUUtil()
 	db.DPrintf(db.MSCHED, "CPU util check: %v", cpu)
-	return mem, mem > 0 && cpu < (TARGET_CPU_PCT*int64(linuxsched.GetNCores()))
+	return mem, mem > 0 && cpu < (sp.Conf.MSched.TARGET_CPU_UTIL*int64(linuxsched.GetNCores()))
 }
 
 func (msched *MSched) register() {
@@ -381,9 +381,10 @@ func RunMSched(kernelID string, reserveMcpu uint) error {
 	if err != nil {
 		db.DFatalf("Error NewSigmaSrv: %v", err)
 	}
-	if err := msched.pmgr.SetupFs(ssrv.MemFs); err != nil {
-		db.DFatalf("Error SetupFs: %v", err)
-	}
+	msched.pmgr.SetSigmaSrv(ssrv)
+	crash.Failer(sc.FsLib, crash.MSCHED_CRASH, func(e crash.Tevent) {
+		crash.Crash()
+	})
 	// Perf monitoring
 	p, err := perf.NewPerf(sc.ProcEnv(), perf.MSCHED)
 	if err != nil {

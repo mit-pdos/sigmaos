@@ -11,11 +11,11 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	db "sigmaos/debug"
-	"sigmaos/fslib"
-	"sigmaos/linuxsched"
-	mschedclnt "sigmaos/sched/msched/clnt"
+	"sigmaos/sigmaclnt/fslib"
+	linuxsched "sigmaos/util/linux/sched"
 	"sigmaos/proc"
-	"sigmaos/semclnt"
+	mschedclnt "sigmaos/sched/msched/clnt"
+	"sigmaos/util/coordination/semaphore"
 	"sigmaos/serr"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
@@ -201,9 +201,9 @@ func warmupRealm(ts *test.RealmTstate, progs []string) (time.Time, int) {
 		// Warm the cache for a binary
 		for _, ptype := range []proc.Ttype{proc.T_LC, proc.T_BE} {
 			for _, prog := range progs {
-				err := sdc.WarmUprocd(kid, ts.Ts.ProcEnv().GetPID(), ts.GetRealm(), prog+"-v"+sp.Version, ts.Ts.ProcEnv().GetSigmaPath(), ptype)
+				err := sdc.WarmProcd(kid, ts.Ts.ProcEnv().GetPID(), ts.GetRealm(), prog+"-v"+sp.Version, ts.Ts.ProcEnv().GetSigmaPath(), ptype)
 				nDL++
-				assert.Nil(ts.Ts.T, err, "WarmUprocd: %v", err)
+				assert.Nil(ts.Ts.T, err, "WarmProcd: %v", err)
 			}
 		}
 	}
@@ -225,12 +225,12 @@ func rmOutDir(ts *test.RealmTstate) {
 
 // ========== Semaphore Helpers ==========
 
-func newNSemaphores(ts *test.RealmTstate, n int) ([]*semclnt.SemClnt, []interface{}) {
-	ss := make([]*semclnt.SemClnt, 0, n)
+func newNSemaphores(ts *test.RealmTstate, n int) ([]*semaphore.Semaphore, []interface{}) {
+	ss := make([]*semaphore.Semaphore, 0, n)
 	is := make([]interface{}, 0, n)
 	for i := 0; i < n; i++ {
 		spath := filepath.Join(OUT_DIR, rand.String(16))
-		s := semclnt.NewSemClnt(ts.FsLib, spath)
+		s := semaphore.NewSemaphore(ts.FsLib, spath)
 		ss = append(ss, s)
 		is = append(is, s)
 	}
@@ -411,8 +411,8 @@ func waitForRealmCreation(rootts *test.Tstate, realm sp.Trealm) error {
 	return nil
 }
 
-func createClntWaitSem(rootts *test.Tstate) *semclnt.SemClnt {
-	sem := semclnt.NewSemClnt(rootts.FsLib, filepath.Join(clidir, "clisem"))
+func createClntWaitSem(rootts *test.Tstate) *semaphore.Semaphore {
+	sem := semaphore.NewSemaphore(rootts.FsLib, filepath.Join(clidir, "clisem"))
 	err := sem.Init(0)
 	if !assert.True(rootts.T, err == nil || !serr.IsErrCode(err, serr.TErrExists), "Error sem init %v", err) {
 		return nil
@@ -467,7 +467,7 @@ func downloadS3Results(ts *test.Tstate, src string, dst string) {
 func downloadS3ResultsRealm(ts *test.Tstate, src string, dst string, realm sp.Trealm) {
 	// Make the destination directory.
 	os.MkdirAll(dst, 0777)
-	_, err := ts.ProcessDir(src, func(st *sp.Stat) (bool, error) {
+	_, err := ts.ProcessDir(src, func(st *sp.Tstat) (bool, error) {
 		rdr, err := ts.OpenReader(filepath.Join(src, st.Name))
 		defer rdr.Close()
 		assert.Nil(ts.T, err, "Error open reader %v", err)

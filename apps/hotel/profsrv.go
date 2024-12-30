@@ -12,13 +12,13 @@ import (
 
 	"sigmaos/apps/cache"
 	"sigmaos/apps/hotel/proto"
-	dbclnt "sigmaos/db/clnt"
+	dbclnt "sigmaos/proxy/db/clnt"
 	db "sigmaos/debug"
-	"sigmaos/fs"
+	"sigmaos/api/fs"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
-	"sigmaos/tracing"
+	"sigmaos/util/tracing"
 )
 
 type ProfSrv struct {

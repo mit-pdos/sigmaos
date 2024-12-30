@@ -12,8 +12,8 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/proc"
+	"sigmaos/sched/msched/proc/srv/binsrv"
 	sp "sigmaos/sigmap"
-	"sigmaos/uprocsrv/binsrv"
 )
 
 type uprocCmd struct {
@@ -28,7 +28,7 @@ func (upc *uprocCmd) Pid() int {
 	return upc.cmd.Process.Pid
 }
 
-// Contain user procs using exec-uproc-rs trampoline
+// Contain user procs using uproc-trampoline trampoline
 func StartSigmaContainer(uproc *proc.Proc, dialproxy bool) (*uprocCmd, error) {
 	db.DPrintf(db.CONTAINER, "RunUProc dialproxy %v %v env %v\n", dialproxy, uproc, os.Environ())
 	var cmd *exec.Cmd
@@ -42,9 +42,9 @@ func StartSigmaContainer(uproc *proc.Proc, dialproxy bool) (*uprocCmd, error) {
 	// Optionally strace the proc
 	if straceProcs[uproc.GetProgram()] {
 		db.DPrintf(db.CONTAINER, "strace %v", uproc.GetProgram())
-		cmd = exec.Command("strace", append([]string{"-D", "-f", "exec-uproc-rs", uproc.GetPid().String(), pn, strconv.FormatBool(dialproxy)}, uproc.Args...)...)
+		cmd = exec.Command("strace", append([]string{"-D", "-f", "uproc-trampoline", uproc.GetPid().String(), pn, strconv.FormatBool(dialproxy)}, uproc.Args...)...)
 	} else {
-		cmd = exec.Command("exec-uproc-rs", append([]string{uproc.GetPid().String(), pn, strconv.FormatBool(dialproxy)}, uproc.Args...)...)
+		cmd = exec.Command("uproc-trampoline", append([]string{uproc.GetPid().String(), pn, strconv.FormatBool(dialproxy)}, uproc.Args...)...)
 	}
 	uproc.AppendEnv("PATH", "/bin:/bin2:/usr/bin:/home/sigmaos/bin/kernel")
 	uproc.AppendEnv("SIGMA_EXEC_TIME", strconv.FormatInt(time.Now().UnixMicro(), 10))
@@ -71,14 +71,14 @@ func StartSigmaContainer(uproc *proc.Proc, dialproxy bool) (*uprocCmd, error) {
 	s := time.Now()
 	if err := cmd.Start(); err != nil {
 		db.DPrintf(db.CONTAINER, "Error start %v %v", cmd, err)
-		CleanupUproc(uproc.GetPid())
+		CleanupUProc(uproc.GetPid())
 		return nil, err
 	}
-	db.DPrintf(db.SPAWN_LAT, "[%v] Uproc cmd.Start %v", uproc.GetPid(), time.Since(s))
+	db.DPrintf(db.SPAWN_LAT, "[%v] UProc cmd.Start %v", uproc.GetPid(), time.Since(s))
 	return &uprocCmd{cmd: cmd}, nil
 }
 
-func CleanupUproc(pid sp.Tpid) {
+func CleanupUProc(pid sp.Tpid) {
 	if err := os.RemoveAll(jailPath(pid)); err != nil {
 		db.DPrintf(db.ALWAYS, "Error cleanupJail: %v", err)
 	}

@@ -14,11 +14,11 @@ import (
 	"sigmaos/apps/cache/cachegrp"
 	cacheclnt "sigmaos/apps/cache/clnt"
 	db "sigmaos/debug"
-	"sigmaos/dircache"
-	"sigmaos/fslib"
+	"sigmaos/sigmaclnt/fslib/dircache"
+	"sigmaos/sigmaclnt/fslib"
 	"sigmaos/rpc"
 	sp "sigmaos/sigmap"
-	tproto "sigmaos/tracing/proto"
+	tproto "sigmaos/util/tracing/proto"
 )
 
 func key2server(key string, nserver int) int {

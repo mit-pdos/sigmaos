@@ -10,26 +10,24 @@ import (
 	"strings"
 
 	db "sigmaos/debug"
-	"sigmaos/fslib"
-	"sigmaos/fttask"
-	"sigmaos/groupmgr"
+	"sigmaos/ft/procgroupmgr"
+	fttask "sigmaos/ft/task"
 	"sigmaos/proc"
-	"sigmaos/semclnt"
+	"sigmaos/util/coordination/semaphore"
 	"sigmaos/sigmaclnt"
+	"sigmaos/sigmaclnt/fslib"
 	sp "sigmaos/sigmap"
-	"sigmaos/yaml"
+	"sigmaos/util/yaml"
 )
 
 const (
-	MR       = "/mr/"
-	MRDIRTOP = "name/" + MR
-	//MRDIRTOP    = "name/ux/~sp.LOCAL/" + MR
+	MR          = "/mr/"
+	MRDIRTOP    = "name/" + MR
 	MRDIRELECT  = "name/mr-elect"
 	OUTLINK     = "output"
 	INT_OUTLINK = "intermediate-output"
 	JOBSEM      = "jobsem"
 	SPLITSZ     = 10 * sp.MBYTE
-	// SPLITSZ = 200 * sp.KBYTE
 )
 
 func JobOut(outDir, job string) string {
@@ -110,17 +108,17 @@ type Job struct {
 
 // Wait until the job is done
 func WaitJobDone(fsl *fslib.FsLib, jobRoot, job string) error {
-	sc := semclnt.NewSemClnt(fsl, JobSem(jobRoot, job))
+	sc := semaphore.NewSemaphore(fsl, JobSem(jobRoot, job))
 	return sc.Down()
 }
 
 func InitJobSem(fsl *fslib.FsLib, jobRoot, job string) error {
-	sc := semclnt.NewSemClnt(fsl, JobSem(jobRoot, job))
+	sc := semaphore.NewSemaphore(fsl, JobSem(jobRoot, job))
 	return sc.Init(0)
 }
 
 func JobDone(fsl *fslib.FsLib, jobRoot, job string) {
-	sc := semclnt.NewSemClnt(fsl, JobSem(jobRoot, job))
+	sc := semaphore.NewSemaphore(fsl, JobSem(jobRoot, job))
 	sc.Up()
 }
 
@@ -273,10 +271,9 @@ func PrepareJob(fsl *fslib.FsLib, ts *Tasks, jobRoot, jobName string, job *Job) 
 	return len(bins), nil
 }
 
-func StartMRJob(sc *sigmaclnt.SigmaClnt, jobRoot, jobName string, job *Job, ncoord, nmap, crashtask, crashcoord int, memPerTask proc.Tmem, maliciousMapper int) *groupmgr.GroupMgr {
-	cfg := groupmgr.NewGroupConfig(ncoord, "mr-coord", []string{jobRoot, strconv.Itoa(nmap), strconv.Itoa(job.Nreduce), "mr-m-" + job.App, "mr-r-" + job.App, strconv.Itoa(crashtask), strconv.Itoa(job.Linesz), strconv.Itoa(job.Wordsz), strconv.Itoa(int(memPerTask)), strconv.Itoa(maliciousMapper)}, 1000, jobName)
-	cfg.SetTest(crashcoord, 0, 0)
-	return cfg.StartGrpMgr(sc, ncoord)
+func StartMRJob(sc *sigmaclnt.SigmaClnt, jobRoot, jobName string, job *Job, nmap int, memPerTask proc.Tmem, maliciousMapper int) *procgroupmgr.ProcGroupMgr {
+	cfg := procgroupmgr.NewGroupConfig(NCOORD, "mr-coord", []string{jobRoot, strconv.Itoa(nmap), strconv.Itoa(job.Nreduce), "mr-m-" + job.App, "mr-r-" + job.App, strconv.Itoa(job.Linesz), strconv.Itoa(job.Wordsz), strconv.Itoa(int(memPerTask)), strconv.Itoa(maliciousMapper)}, 1000, jobName)
+	return cfg.StartGrpMgr(sc)
 }
 
 // XXX run as a proc?

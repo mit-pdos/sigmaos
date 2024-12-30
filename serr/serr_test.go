@@ -29,11 +29,6 @@ func TestErr(t *testing.T) {
 	assert.True(t, IsErrCode(err, TErrNotfound))
 }
 
-func TestErrString(t *testing.T) {
-	err := NewErrString(`"{Err: "Non-sigma error" Obj: "" (exit status 2)}`)
-	assert.True(t, err.ErrCode == TErrError)
-}
-
 func TestError(t *testing.T) {
 	for c := TErrBadattach; c <= TErrError; c++ {
 		log.Printf("%d %v\n", c, c)

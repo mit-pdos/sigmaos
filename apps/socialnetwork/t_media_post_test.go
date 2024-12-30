@@ -1,14 +1,15 @@
 package socialnetwork_test
 
 import (
+	"testing"
+
 	"github.com/stretchr/testify/assert"
+
 	sn "sigmaos/apps/socialnetwork"
 	"sigmaos/apps/socialnetwork/proto"
-	"sigmaos/fslib"
-	"sigmaos/linuxsched"
-	"sigmaos/sigmarpcchan"
+	linuxsched "sigmaos/util/linux/sched"
+	sprpcclnt "sigmaos/rpc/clnt/sigmap"
 	"sigmaos/test"
-	"testing"
 )
 
 func IsPostEqual(a, b *proto.Post) bool {
@@ -54,7 +55,7 @@ func TestMedia(t *testing.T) {
 	snCfg := tssn.snCfg
 
 	// create a RPC client and query
-	rpcc, err := sigmarpcchan.NewSigmaRPCClnt([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_MEDIA)
+	rpcc, err := sprpcclnt.NewRPCClnt(snCfg.FsLib, sn.SOCIAL_NETWORK_MEDIA)
 	if !assert.Nil(t, err, "Err make rpcclnt: %v", err) {
 		return
 	}
@@ -103,7 +104,7 @@ func TestPost(t *testing.T) {
 	snCfg := tssn.snCfg
 
 	// create a RPC client and query
-	rpcc, err := sigmarpcchan.NewSigmaRPCClnt([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_POST)
+	rpcc, err := sprpcclnt.NewRPCClnt(snCfg.FsLib, sn.SOCIAL_NETWORK_POST)
 	if !assert.Nil(t, err, "Err make rpcclnt: %v", err) {
 		return
 	}

@@ -13,8 +13,24 @@ var Version = "1.0"
 
 // Local params
 var local = `
+util:
+  stats: true
+
 apparmor:
   enabled: false
+
+msched:
+  target_cpu_util: 95
+  util_refresh_rate: 20ms
+
+uprocsrv:
+  pool_sz: 2
+
+chunk:
+  chunk_sz: 1048576
+
+fslib:
+  max_retry: 100
 
 path:
   max_symlink: 8
@@ -33,6 +49,9 @@ session:
 
 realm:
   refresh_kernel_srv_interval: 100ms
+  fairness_check_period: 1s
+  n_sample: 2
+  starvation_ratio: 0.1
 
 besched:
   get_proc_timeout: 50ms
@@ -45,8 +64,24 @@ raft:
 
 // AWS params
 var remote = `
+util:
+  stats: true
+
 apparmor:
   enabled: true
+
+msched:
+  target_cpu_util: 95
+  util_refresh_rate: 20ms
+
+uprocsrv:
+  pool_sz: 2
+
+chunk:
+  chunk_sz: 1048576
+
+fslib:
+  max_retry: 100
 
 path:
   max_symlink: 8
@@ -65,6 +100,9 @@ session:
 
 realm:
   refresh_kernel_srv_interval: 100ms
+  fairness_check_period: 1s
+  n_sample: 2
+  starvation_ratio: 0.1
 
 besched:
   get_proc_timeout: 50ms
@@ -76,10 +114,32 @@ raft:
 `
 
 type Config struct {
+	Util struct {
+		// Record stats
+		STATS bool `yaml:"stats"`
+	} `yaml:"util"`
 	AppArmor struct {
 		// SigmaP connection message length.
 		ENABLED bool `yaml:"enabled"`
 	}
+	MSched struct {
+		// Target per-machine CPU utilization
+		TARGET_CPU_UTIL int64 `yaml:"target_cpu_util"`
+		// CPU utilization refresh rate
+		UTIL_REFRESH_RATE time.Duration `yaml:"util_refresh_rate"`
+	} `yaml:"msched"`
+	UProcSrv struct {
+		// Size of Uprocsrv pool
+		POOL_SZ int `yaml:"pool_sz"`
+	} `yaml:"uprocsrv"`
+	Chunk struct {
+		// Binary chunk size
+		CHUNK_SZ int64 `yaml:"chunk_sz"`
+	} `yaml:"chunk"`
+	FsLib struct {
+		// Max number of retries at the FsLib layer
+		MAX_RETRY int `yaml:"max_retry"`
+	} `yaml:"fslib"`
 	Path struct {
 		// Max symlink depth allowed
 		MAX_SYMLINK int `yaml:"max_symlink"`
@@ -105,6 +165,12 @@ type Config struct {
 	Realm struct {
 		// Maximum frequency with which to refresh kernel servers.
 		KERNEL_SRV_REFRESH_INTERVAL time.Duration `yaml:"refresh_kernel_srv_interval"`
+		// Period at which realms' utiliztaion statistics are checked for fairness
+		FAIRNESS_CHECK_PERIOD time.Duration `yaml:"fairness_check_period"`
+		// Number of samples for fairness check
+		N_SAMPLE int `yaml:"n_sample"`
+		// Maximum starvation ratio before fairness is enforced
+		STARVATION_RATIO float64 `yaml:"starvation_ratio"`
 	} `yaml:"realm"`
 	BESched struct {
 		// Timeout for which an msched's request for a proc to a besched shard lasts

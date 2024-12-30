@@ -5,9 +5,9 @@ import (
 	"path/filepath"
 
 	db "sigmaos/debug"
-	"sigmaos/fs"
-	"sigmaos/memfs/inode"
-	"sigmaos/memfssrv"
+	"sigmaos/api/fs"
+	"sigmaos/sigmasrv/memfssrv/memfs/inode"
+	"sigmaos/sigmasrv/memfssrv"
 	"sigmaos/rpc"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
@@ -41,7 +41,7 @@ func (std *statsDev) marshal() ([]byte, *serr.Err) {
 	return b, nil
 }
 
-func (std *statsDev) Stat(ctx fs.CtxI) (*sp.Stat, *serr.Err) {
+func (std *statsDev) Stat(ctx fs.CtxI) (*sp.Tstat, *serr.Err) {
 	st, err := std.Inode.NewStat()
 	if err != nil {
 		return nil, err

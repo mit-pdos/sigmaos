@@ -71,8 +71,8 @@ func GetStartCmdConstructor(rps int, dur time.Duration, dummyProc, lcProc, prewa
 			"%s "+ // proc
 			"--nclnt 50 "+
 			"%s "+ // skipStats
-			"--schedd_dur %s "+
-			"--schedd_max_rps %s "+
+			"--msched_dur %s "+
+			"--msched_max_rps %s "+
 			"%s "+ // prewarmRealm
 			"%s "+ // lcProc
 			"> /tmp/bench.out 2>&1",

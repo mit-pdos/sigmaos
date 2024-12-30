@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	db "sigmaos/debug"
-	"sigmaos/mem"
+	"sigmaos/util/linux/mem"
 	"sigmaos/proc"
 	"sigmaos/test"
 )

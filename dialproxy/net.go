@@ -6,7 +6,7 @@ import (
 	"time"
 
 	db "sigmaos/debug"
-	"sigmaos/netsigma"
+	iputil "sigmaos/util/ip"
 	sp "sigmaos/sigmap"
 )
 
@@ -90,7 +90,7 @@ func AcceptFromAuthorizedPrincipal(l net.Listener, getPrincipal bool, isAuthoriz
 }
 
 func NewEndpoint(ept sp.TTendpoint, ip sp.Tip, l net.Listener) (*sp.Tendpoint, error) {
-	host, port, err := netsigma.QualifyAddrLocalIP(ip, l.Addr().String())
+	host, port, err := iputil.QualifyAddrLocalIP(ip, l.Addr().String())
 	if err != nil {
 		db.DPrintf(db.ERROR, "Error Listen qualify local IP %v: %v", l.Addr().String(), err)
 		db.DPrintf(db.DIALPROXY_ERR, "Error Listen qualify local IP %v: %v", l.Addr().String(), err)

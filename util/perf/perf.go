@@ -17,9 +17,9 @@ import (
 	"time"
 
 	db "sigmaos/debug"
-	"sigmaos/linuxsched"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
+	linuxsched "sigmaos/util/linux/sched"
 )
 
 //
@@ -68,6 +68,11 @@ func initLabels(pe *proc.ProcEnv) {
 
 var loadfile *os.File
 
+type prof struct {
+	active bool
+	file   *os.File
+}
+
 // XXX make into multiple structs
 // Tracks performance statistics for any cores on which the current process is
 // able to run.
@@ -75,22 +80,17 @@ type Perf struct {
 	mu             sync.Mutex
 	selector       Tselector
 	done           uint32
-	util           bool
-	pprof          bool
-	pprofMem       bool
-	pprofMutex     bool
-	pprofBlock     bool
-	tpt            bool
 	utilChan       chan bool
-	utilFile       *os.File
+	util           prof
+	pprof          prof
+	pprofMem       prof
+	pprofMutex     prof
+	pprofBlock     prof
+	tpt            bool
 	cpuCyclesBusy  []float64
 	cpuCyclesTotal []float64
 	cpuUtilPct     []float64
 	cores          map[string]bool
-	pprofFile      *os.File
-	pprofMemFile   *os.File
-	pprofMutexFile *os.File
-	pprofBlockFile *os.File
 	tpts           []float64
 	times          []time.Time
 	tptFile        *os.File
@@ -366,12 +366,12 @@ func (p *Perf) monitorCPUUtil(sampleHz int) {
 func (p *Perf) setupCPUUtil(sampleHz int, fpath string) {
 	p.mu.Lock()
 
-	p.util = true
+	p.util.active = true
 	f, err := os.Create(fpath)
 	if err != nil {
 		db.DFatalf("Create util file %v failed %v", fpath, err)
 	}
-	p.utilFile = f
+	p.util.file = f
 	p.cpuCyclesBusy = make([]float64, 0, 40*sampleHz)
 	p.cpuCyclesTotal = make([]float64, 0, 40*sampleHz)
 	p.cpuUtilPct = make([]float64, 0, 40*sampleHz)
@@ -409,8 +409,8 @@ func (p *Perf) setupPprof(fpath string) {
 	if err != nil {
 		db.DFatalf("Couldn't create pprof profile file: %v, %v", fpath, err)
 	}
-	p.pprof = true
-	p.pprofFile = f
+	p.pprof.active = true
+	p.pprof.file = f
 	if err := pprof.StartCPUProfile(f); err != nil {
 		debug.PrintStack()
 		db.DFatalf("Couldn't start CPU profile: %v", err)
@@ -425,8 +425,8 @@ func (p *Perf) setupPprofMem(fpath string) {
 	if err != nil {
 		db.DFatalf("Couldn't create pprofMem profile file: %v, %v", fpath, err)
 	}
-	p.pprofMem = true
-	p.pprofMemFile = f
+	p.pprofMem.active = true
+	p.pprofMem.file = f
 }
 
 func (p *Perf) setupPprofMutex(fpath string) {
@@ -439,8 +439,8 @@ func (p *Perf) setupPprofMutex(fpath string) {
 	if err != nil {
 		db.DFatalf("Couldn't create pprofMutex profile file: %v, %v", fpath, err)
 	}
-	p.pprofMutex = true
-	p.pprofMutexFile = f
+	p.pprofMutex.active = true
+	p.pprofMutex.file = f
 }
 
 func (p *Perf) setupPprofBlock(fpath string) {
@@ -453,22 +453,22 @@ func (p *Perf) setupPprofBlock(fpath string) {
 	if err != nil {
 		db.DFatalf("Couldn't create pprofBlock profile file: %v, %v", fpath, err)
 	}
-	p.pprofBlock = true
-	p.pprofBlockFile = f
+	p.pprofBlock.active = true
+	p.pprofBlock.file = f
 }
 
 // Caller holds lock.
 func (p *Perf) teardownPprof() {
-	if p.pprof {
+	if p.pprof.active {
 		db.DPrintf(db.PERF, "Tear down pprof perf tracker")
 		defer db.DPrintf(db.PERF, "Done Tear down pprof perf tracker")
 		// Avoid double-closing
-		p.pprof = false
+		p.pprof.active = false
 		pprof.StopCPUProfile()
-		if err := p.pprofFile.Sync(); err != nil {
+		if err := p.pprof.file.Sync(); err != nil {
 			db.DFatalf("Error sync pprof file: %v", err)
 		}
-		if err := p.pprofFile.Close(); err != nil {
+		if err := p.pprof.file.Close(); err != nil {
 			db.DFatalf("Error close pprof file: %v", err)
 		}
 		db.DPrintf(db.ALWAYS, "Done flushing and closing pprof file")
@@ -477,59 +477,59 @@ func (p *Perf) teardownPprof() {
 
 // Caller holds lock.
 func (p *Perf) teardownPprofMem() {
-	if p.pprofMem {
+	if p.pprofMem.active {
 		// Avoid double-closing
-		p.pprofMem = false
+		p.pprofMem.active = false
 		// Don't do GC before collecting the heap profile.
 		// runtime.GC() // get up-to-date statistics
 		// Write a heap profile
-		if err := pprof.WriteHeapProfile(p.pprofMemFile); err != nil {
+		if err := pprof.WriteHeapProfile(p.pprofMem.file); err != nil {
 			db.DFatalf("could not write memory profile: %v", err)
 		}
-		p.pprofMemFile.Close()
+		p.pprofMem.file.Close()
 	}
 }
 
 func (p *Perf) teardownPprofMutex() {
-	if p.pprofMutex {
+	if p.pprofMutex.active {
 		// Avoid double-closing
-		p.pprofMutex = false
+		p.pprofMutex.active = false
 		// Don't do GC before collecting the heap profile.
 		// runtime.GC() // get up-to-date statistics
 		// Write a heap profile
-		if err := pprof.Lookup("mutex").WriteTo(p.pprofMutexFile, 0); err != nil {
+		if err := pprof.Lookup("mutex").WriteTo(p.pprofMutex.file, 0); err != nil {
 			db.DFatalf("could not write mutex profile: %v", err)
 		}
-		p.pprofMutexFile.Close()
+		p.pprofMutex.file.Close()
 	}
 }
 
 func (p *Perf) teardownPprofBlock() {
-	if p.pprofBlock {
+	if p.pprofBlock.active {
 		// Avoid double-closing
-		p.pprofBlock = false
+		p.pprofBlock.active = false
 		// Don't do GC before collecting the heap profile.
 		// runtime.GC() // get up-to-date statistics
 		// Write a heap profile
-		if err := pprof.Lookup("mutex").WriteTo(p.pprofBlockFile, 0); err != nil {
+		if err := pprof.Lookup("mutex").WriteTo(p.pprofBlock.file, 0); err != nil {
 			db.DFatalf("could not write mutex profile: %v", err)
 		}
-		p.pprofBlockFile.Close()
+		p.pprofBlock.file.Close()
 	}
 }
 
 // Caller holds lock.
 func (p *Perf) teardownUtil() {
-	if p.util {
+	if p.util.active {
 		<-p.utilChan
 		// Avoid double-closing
-		p.util = false
+		p.util.active = false
 		for i := 0; i < len(p.cpuCyclesBusy); i++ {
-			if _, err := p.utilFile.WriteString(fmt.Sprintf("%f,%f,%f\n", p.cpuUtilPct[i], p.cpuCyclesBusy[i], p.cpuCyclesTotal[i])); err != nil {
+			if _, err := p.util.file.WriteString(fmt.Sprintf("%f,%f,%f\n", p.cpuUtilPct[i], p.cpuCyclesBusy[i], p.cpuCyclesTotal[i])); err != nil {
 				db.DFatalf("Error writing to util file: %v", err)
 			}
 		}
-		p.utilFile.Close()
+		p.util.file.Close()
 	}
 }
 

@@ -3,12 +3,12 @@ package main
 import (
 	"os"
 
-	"sigmaos/auth"
+	"sigmaos/util/auth"
 	db "sigmaos/debug"
-	"sigmaos/namesrv/fsetcd"
 	dialproxyclnt "sigmaos/dialproxy/clnt"
-	"sigmaos/netsrv"
-	"sigmaos/npproxysrv"
+	"sigmaos/namesrv/fsetcd"
+	netsrv "sigmaos/net/srv"
+	"sigmaos/proxy/ninep"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 )

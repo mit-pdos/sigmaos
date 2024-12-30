@@ -9,7 +9,6 @@ import (
 	"golang.org/x/sys/unix"
 
 	db "sigmaos/debug"
-	"sigmaos/demux"
 	"sigmaos/dialproxy"
 	"sigmaos/dialproxy/proto"
 	dialproxytrans "sigmaos/dialproxy/transport"
@@ -18,8 +17,9 @@ import (
 	rpcclnt "sigmaos/rpc/clnt"
 	"sigmaos/rpc/clnt/opts"
 	rpcproto "sigmaos/rpc/proto"
-	"sigmaos/sessp"
+	sessp "sigmaos/session/proto"
 	sp "sigmaos/sigmap"
+	"sigmaos/util/io/demux"
 )
 
 type DialProxyClnt struct {
@@ -184,7 +184,7 @@ func (npc *DialProxyClnt) proxyDial(ep *sp.Tendpoint) (net.Conn, error) {
 	}
 	db.DPrintf(db.DIALPROXY_LAT, "Dial dialproxy conn init: %v", time.Since(start))
 	db.DPrintf(db.DIALPROXYCLNT, "[%p] proxyDial request ep %v", npc.trans.Conn(), ep)
-	req := &proto.DialRequest{
+	req := &proto.DialReq{
 		Endpoint: ep.GetProto(),
 		// Requests must have blob too, so that unix sendmsg works
 		Blob: &rpcproto.Blob{
@@ -192,7 +192,7 @@ func (npc *DialProxyClnt) proxyDial(ep *sp.Tendpoint) (net.Conn, error) {
 		},
 	}
 	// Set up the blob to receive the socket control message
-	res := &proto.DialResponse{
+	res := &proto.DialRep{
 		Blob: &rpcproto.Blob{
 			Iov: [][]byte{make([]byte, unix.CmsgSpace(4))},
 		},
@@ -223,7 +223,7 @@ func (npc *DialProxyClnt) proxyListen(ept sp.TTendpoint, addr *sp.Taddr) (*sp.Te
 		return nil, nil, err
 	}
 	db.DPrintf(db.DIALPROXYCLNT, "[%p] proxyListen request addr %v", npc.trans.Conn(), addr)
-	req := &proto.ListenRequest{
+	req := &proto.ListenReq{
 		Addr:         addr,
 		EndpointType: uint32(ept),
 		// Requests must have blob too, so that unix sendmsg works
@@ -232,7 +232,7 @@ func (npc *DialProxyClnt) proxyListen(ept sp.TTendpoint, addr *sp.Taddr) (*sp.Te
 		},
 	}
 	// Set up the blob to receive the socket control message
-	res := &proto.ListenResponse{
+	res := &proto.ListenRep{
 		Blob: &rpcproto.Blob{
 			Iov: [][]byte{make([]byte, unix.CmsgSpace(4))},
 		},
@@ -292,7 +292,7 @@ func (npc *DialProxyClnt) proxyAccept(lid dialproxy.Tlid, internalListener bool)
 		return nil, nil, err
 	}
 	db.DPrintf(db.DIALPROXYCLNT, "[%p] proxyAccept request lip %v", npc.trans.Conn(), lid)
-	req := &proto.AcceptRequest{
+	req := &proto.AcceptReq{
 		ListenerID:       uint64(lid),
 		InternalListener: internalListener,
 		// Requests must have blob too, so that unix sendmsg works
@@ -301,7 +301,7 @@ func (npc *DialProxyClnt) proxyAccept(lid dialproxy.Tlid, internalListener bool)
 		},
 	}
 	// Set up the blob to receive the socket control message
-	res := &proto.AcceptResponse{
+	res := &proto.AcceptRep{
 		Blob: &rpcproto.Blob{
 			Iov: [][]byte{make([]byte, unix.CmsgSpace(4))},
 		},
@@ -338,7 +338,7 @@ func (npc *DialProxyClnt) proxyClose(lid dialproxy.Tlid) error {
 		return err
 	}
 	db.DPrintf(db.DIALPROXYCLNT, "[%p] proxyClose request lip %v", npc.trans.Conn(), lid)
-	req := &proto.CloseRequest{
+	req := &proto.CloseReq{
 		ListenerID: uint64(lid),
 		// Requests must have blob too, so that unix sendmsg works
 		Blob: &rpcproto.Blob{
@@ -346,7 +346,7 @@ func (npc *DialProxyClnt) proxyClose(lid dialproxy.Tlid) error {
 		},
 	}
 	// Set up the blob to receive the socket control message
-	res := &proto.CloseResponse{
+	res := &proto.CloseRep{
 		Blob: &rpcproto.Blob{
 			Iov: [][]byte{nil},
 		},
@@ -400,13 +400,13 @@ func (npc *DialProxyClnt) getNamedEndpoint(r sp.Trealm) (*sp.Tendpoint, error) {
 		db.DPrintf(db.DIALPROXYCLNT_ERR, "Error init dialproxyclnt %v", err)
 		return nil, err
 	}
-	req := &proto.NamedEndpointRequest{
+	req := &proto.NamedEndpointReq{
 		RealmStr: r.String(),
 		Blob: &rpcproto.Blob{
 			Iov: [][]byte{nil},
 		},
 	}
-	res := &proto.NamedEndpointResponse{
+	res := &proto.NamedEndpointRep{
 		Blob: &rpcproto.Blob{
 			Iov: [][]byte{nil},
 		},
@@ -427,13 +427,13 @@ func (npc *DialProxyClnt) invalidateNamedEndpointCacheEntry(r sp.Trealm) error {
 		db.DPrintf(db.DIALPROXYCLNT_ERR, "Error init dialproxyclnt %v", err)
 		return err
 	}
-	req := &proto.InvalidateNamedEndpointRequest{
+	req := &proto.InvalidateNamedEndpointReq{
 		RealmStr: r.String(),
 		Blob: &rpcproto.Blob{
 			Iov: [][]byte{nil},
 		},
 	}
-	res := &proto.InvalidateNamedEndpointResponse{
+	res := &proto.InvalidateNamedEndpointRep{
 		Blob: &rpcproto.Blob{
 			Iov: [][]byte{nil},
 		},

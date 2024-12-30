@@ -17,13 +17,13 @@ import (
 	"sigmaos/apps/cache"
 	cacheproto "sigmaos/apps/cache/proto"
 	db "sigmaos/debug"
-	"sigmaos/fslib"
+	"sigmaos/sigmaclnt/fslib"
 	"sigmaos/rpc"
 	rpcclnt "sigmaos/rpc/clnt"
 	sprpcclnt "sigmaos/rpc/clnt/sigmap"
-	"sigmaos/sessdev"
+	rpcdev "sigmaos/rpc/dev"
 	sp "sigmaos/sigmap"
-	tproto "sigmaos/tracing/proto"
+	tproto "sigmaos/util/tracing/proto"
 )
 
 func NewKey(k uint64) string {
@@ -269,12 +269,12 @@ func (cc *CacheClnt) StatsClnt() []map[string]*rpc.MethodStatSnapshot {
 
 func (cc *CacheClnt) DumpSrv(srv string) (map[string]string, error) {
 	dir := filepath.Join(srv, cache.DUMP)
-	b, err := cc.fsl.GetFile(dir + "/" + sessdev.CLONE)
+	b, err := cc.fsl.GetFile(dir + "/" + rpcdev.CLONE)
 	if err != nil {
 		return nil, err
 	}
 	sid := string(b)
-	fn := dir + "/" + sid + "/" + sessdev.DATA
+	fn := dir + "/" + sid + "/" + rpcdev.DATA
 	b, err = cc.fsl.GetFile(fn)
 	if err != nil {
 		return nil, err

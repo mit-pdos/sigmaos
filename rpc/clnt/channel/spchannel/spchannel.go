@@ -6,11 +6,11 @@ import (
 	"time"
 
 	db "sigmaos/debug"
-	"sigmaos/fslib"
+	"sigmaos/sigmaclnt/fslib"
 	"sigmaos/rpc"
 	"sigmaos/rpc/clnt/channel"
-	"sigmaos/sessdevclnt"
-	"sigmaos/sessp"
+	rpcdevclnt "sigmaos/rpc/dev/clnt"
+	sessp "sigmaos/session/proto"
 	sp "sigmaos/sigmap"
 )
 
@@ -19,14 +19,6 @@ type SPChannel struct {
 	fd  int
 	pn  string
 }
-
-//func NewSigmaRPCClntEndpoint(fsls []*fslib.FsLib, pn string, ep *sp.Tendpoint) (*rpcclnt.RPCClnt, error) {
-//	ch, err := NewSigmaRPCChEndpoint(fsls, pn, ep)
-//	if err != nil {
-//		return nil, err
-//	}
-//	return rpcclnt.NewRPCClnt(ch), nil
-//}
 
 func NewSPChannelEndpoint(fsl *fslib.FsLib, pn string, ep *sp.Tendpoint) (channel.RPCChannel, error) {
 	if err := fsl.MountTree(ep, rpc.RPC, filepath.Join(pn, rpc.RPC)); err != nil {
@@ -42,7 +34,7 @@ func NewSPChannel(fsl *fslib.FsLib, pn string) (channel.RPCChannel, error) {
 	}()
 
 	pn0 := filepath.Join(pn, rpc.RPC)
-	sdc, err := sessdevclnt.NewSessDevClnt(fsl, pn0)
+	sdc, err := rpcdevclnt.NewSessDevClnt(fsl, pn0)
 	if err != nil {
 		return nil, err
 	}

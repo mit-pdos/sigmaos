@@ -16,15 +16,15 @@ import (
 	"sigmaos/apps/mr/chunkreader"
 	"sigmaos/apps/mr/kvmap"
 	"sigmaos/apps/mr/mr"
-	"sigmaos/crash"
 	db "sigmaos/debug"
-	"sigmaos/fslib"
-	"sigmaos/util/perf"
 	"sigmaos/proc"
-	"sigmaos/util/rand"
 	"sigmaos/sigmaclnt"
+	"sigmaos/sigmaclnt/fslib"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
+	"sigmaos/util/crash"
+	"sigmaos/util/perf"
+	"sigmaos/util/rand"
 )
 
 const (
@@ -57,7 +57,7 @@ func NewReducer(sc *sigmaclnt.SigmaClnt, reducef mr.ReduceT, args []string, p *p
 		db.DPrintf(db.MR, "NewReducer %s: unmarshal err %v\n", args[0], err)
 		return nil, err
 	}
-	r.tmp = r.outputTarget + rand.String(16)
+	r.tmp = r.outputTarget + rand.Name()
 
 	db.DPrintf(db.MR, "Reducer outputting to %v", r.tmp)
 
@@ -96,7 +96,7 @@ func newReducer(reducef mr.ReduceT, args []string, p *perf.Perf) (*Reducer, erro
 	if err := r.Started(); err != nil {
 		return nil, fmt.Errorf("NewReducer couldn't start %v err %v", args, err)
 	}
-	crash.Crasher(r.FsLib)
+	crash.FailersDefault(r.FsLib, []crash.Tselector{crash.MRTASK_CRASH, crash.MRTASK_PARTITION})
 	return r, nil
 }
 

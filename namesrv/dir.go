@@ -4,7 +4,7 @@ import (
 	"time"
 
 	db "sigmaos/debug"
-	"sigmaos/fs"
+	"sigmaos/api/fs"
 	"sigmaos/namesrv/fsetcd"
 	"sigmaos/path"
 	"sigmaos/serr"
@@ -84,7 +84,7 @@ func (d *Dir) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode, lid sp
 	}
 }
 
-func (d *Dir) ReadDir(ctx fs.CtxI, cursor int, cnt sp.Tsize) ([]*sp.Stat, *serr.Err) {
+func (d *Dir) ReadDir(ctx fs.CtxI, cursor int, cnt sp.Tsize) ([]*sp.Tstat, *serr.Err) {
 	dir, c, err := d.fs.ReadDir(&d.Obj.di)
 	d.Obj.fs.PstatUpdate(d.pn, c)
 	if err != nil {
@@ -97,7 +97,7 @@ func (d *Dir) ReadDir(ctx fs.CtxI, cursor int, cnt sp.Tsize) ([]*sp.Stat, *serr.
 	if cursor > len {
 		return nil, nil
 	} else {
-		sts := make([]*sp.Stat, 0, len)
+		sts := make([]*sp.Tstat, 0, len)
 		var r *serr.Err
 		dir.Ents.Iter(func(n string, di *fsetcd.DirEntInfo) bool {
 			if n != "." {

@@ -32,7 +32,6 @@ const (
 	MSCHED               = "MSCHED"
 	KEYD                 = "KEYD"
 	SPPROXYSRV           = "SPPROXYSRV"
-	UPROCD               = "UPROCD"
 	BESCHED              = "BESCHED"
 	LCSCHED              = "LCSCHED"
 )

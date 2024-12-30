@@ -1,0 +1,16 @@
+[package]
+name = "uproc-trampoline"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+caps = "0.5.5"
+chrono = "0.4.31"
+env_logger = "0.10.0"
+libseccomp = { version = "0.3.0", features = ["const-syscall"] }
+log = "0.4.20"
+nix = { version = "0.27.1", features = ["fs"] }
+serde = { version = "1.0.188", features = ["derive"] }
+sys-mount = { version = "2.1.0", default-features = false}

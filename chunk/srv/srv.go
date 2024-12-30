@@ -14,17 +14,17 @@ import (
 	"sync"
 	"time"
 
+	"sigmaos/api/fs"
 	"sigmaos/chunk"
-	proto "sigmaos/chunk/proto"
 	chunkclnt "sigmaos/chunk/clnt"
+	proto "sigmaos/chunk/proto"
 	db "sigmaos/debug"
 	dialproxyclnt "sigmaos/dialproxy/clnt"
-	"sigmaos/fs"
-	"sigmaos/fslib"
 	"sigmaos/proc"
 	rpcproto "sigmaos/rpc/proto"
 	"sigmaos/serr"
 	"sigmaos/sigmaclnt"
+	"sigmaos/sigmaclnt/fslib"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
 )
@@ -115,7 +115,6 @@ func newChunkSrv(kernelId string, sc *sigmaclnt.SigmaClnt) *ChunkSrv {
 }
 
 // Create a new sigmaclnt for a realm, with given s3 secrets
-// XXX sigmaclnt is overkill; we only need fslib
 func (cksrv *ChunkSrv) getRealmSigmaClnt(r sp.Trealm, s3secret *sp.SecretProto) (*sigmaclnt.SigmaClnt, error) {
 	db.DPrintf(db.CHUNKSRV, "%v: Create SigmaClnt for realm %v", cksrv.kernelId, r)
 	// Create a new proc env for the client
@@ -217,7 +216,7 @@ func (cksrv *ChunkSrv) fetchOrigin(r sp.Trealm, prog string, pid sp.Tpid, s3secr
 
 func (cksrv *ChunkSrv) fetchChunk(be *bin, r sp.Trealm, pid sp.Tpid, s3secret *sp.SecretProto, ck int, size sp.Tsize, paths []string, ep *sp.Tendpoint) (sp.Tsize, string, error) {
 	sz := sp.Tsize(0)
-	b := make([]byte, chunk.CHUNKSZ)
+	b := make([]byte, int(sp.Conf.Chunk.CHUNK_SZ))
 	var err error
 
 	if paths[0] == cksrv.path {
@@ -334,7 +333,7 @@ func (cksrv *ChunkSrv) Fetch(ctx fs.CtxI, req proto.FetchChunkRequest, res *prot
 // Handle a GetFileStatRequest
 //
 
-func (cksrv *ChunkSrv) getOrigin(r sp.Trealm, prog string, paths []string, s3secret *sp.SecretProto, ep *sp.Tendpoint) (*sp.Stat, string, error) {
+func (cksrv *ChunkSrv) getOrigin(r sp.Trealm, prog string, paths []string, s3secret *sp.SecretProto, ep *sp.Tendpoint) (*sp.Tstat, string, error) {
 	db.DPrintf(db.CHUNKSRV, "%v: getOrigin %v %v", cksrv.kernelId, prog, paths)
 	sc, err := cksrv.getSc(r, s3secret, ep)
 	if err != nil {
@@ -432,7 +431,7 @@ func (cksrv *ChunkSrv) GetFileStat(ctx fs.CtxI, req proto.GetFileStatRequest, re
 	// Prefetch first chunk
 	go func() {
 		db.DPrintf(db.SPAWN_LAT, "Prefetch chunk 0 %v %v %v", req.GetProg(), req.GetPid(), req.GetSigmaPath())
-		cksrv.fetch(r, be.prog, sp.Tpid(req.Pid), req.GetS3Secret(), 0, chunk.CHUNKSZ, req.GetSigmaPath(), true, ep)
+		cksrv.fetch(r, be.prog, sp.Tpid(req.Pid), req.GetS3Secret(), 0, sp.Tsize(sp.Conf.Chunk.CHUNK_SZ), req.GetSigmaPath(), true, ep)
 	}()
 
 	st, srv, err := cksrv.getFileStat(r, req.GetProg(), sp.Tpid(req.Pid), req.GetSigmaPath(), req.GetS3Secret(), ep)
@@ -445,10 +444,10 @@ func (cksrv *ChunkSrv) GetFileStat(ctx fs.CtxI, req proto.GetFileStatRequest, re
 	return nil
 }
 
-func (cksrv *ChunkSrv) lookup(sc *sigmaclnt.SigmaClnt, prog string, paths []string) (*sp.Stat, string, error) {
+func (cksrv *ChunkSrv) lookup(sc *sigmaclnt.SigmaClnt, prog string, paths []string) (*sp.Tstat, string, error) {
 	db.DPrintf(db.CHUNKSRV, "lookup %q %v", prog, paths)
 
-	var st *sp.Stat
+	var st *sp.Tstat
 	path := ""
 	err := fslib.RetryPaths(paths, func(i int, pn string) error {
 		db.DPrintf(db.CHUNKSRV, "Stat '%v/%v'", pn, prog)
@@ -515,14 +514,14 @@ func IsPresent(pn string, ck int, totsz sp.Tsize) (int64, bool) {
 			db.DFatalf("Seek hole %q %d err %v", pn, o2, err)
 		}
 		o1 = chunk.ChunkRound(o1)
-		for o := o1; o < o2; o += chunk.CHUNKSZ {
-			if o+chunk.CHUNKSZ <= o2 || o2 >= int64(totsz) { // a complete chunk?
+		for o := o1; o < o2; o += sp.Conf.Chunk.CHUNK_SZ {
+			if o+sp.Conf.Chunk.CHUNK_SZ <= o2 || o2 >= int64(totsz) { // a complete chunk?
 				i := chunk.Index(o)
 				if i == ck {
 					db.DPrintf(db.CHUNKSRV, "IsPresent: %q read chunk %d(%d) o2 %d sz %d", pn, i, o, o2, totsz)
 					ok = true
-					sz = chunk.CHUNKSZ
-					if o+chunk.CHUNKSZ >= int64(totsz) {
+					sz = sp.Conf.Chunk.CHUNK_SZ
+					if o+sp.Conf.Chunk.CHUNK_SZ >= int64(totsz) {
 						sz = int64(totsz) - o
 					}
 					break
@@ -531,7 +530,7 @@ func IsPresent(pn string, ck int, totsz sp.Tsize) (int64, bool) {
 		}
 		off = o2
 	}
-	if sz > chunk.CHUNKSZ {
+	if sz > sp.Conf.Chunk.CHUNK_SZ {
 		db.DFatalf("IsPresent %d sz", sz)
 	}
 	return sz, ok

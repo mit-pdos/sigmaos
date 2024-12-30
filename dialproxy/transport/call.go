@@ -3,7 +3,7 @@ package transport
 import (
 	"fmt"
 
-	"sigmaos/sessp"
+	sessp "sigmaos/session/proto"
 )
 
 type ProxyCall struct {

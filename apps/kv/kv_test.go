@@ -12,9 +12,11 @@ import (
 
 	cproto "sigmaos/apps/cache/proto"
 
-	"sigmaos/apps/kv"
 	"sigmaos/apps/cache"
+	"sigmaos/apps/kv"
+	"sigmaos/apps/kv/kvgrp"
 	db "sigmaos/debug"
+	"sigmaos/util/crash"
 	"sigmaos/util/rand"
 	// sp "sigmaos/sigmap"
 	"sigmaos/test"
@@ -24,8 +26,28 @@ const (
 	NCLERK = 4
 
 	CRASHBALANCER = 10000
-	CRASHMOVER    = "1000"
+	CRASHMOVER    = 1000
 )
+
+var balancerEv *crash.TeventMap
+var moverEv *crash.TeventMap
+var bothEv *crash.TeventMap
+
+func init() {
+	e0 := crash.NewEvent(crash.KVBALANCER_CRASH, CRASHBALANCER, 0.33)
+	balancerEv = crash.NewTeventMapOne(e0)
+	e1 := crash.NewEvent(crash.KVBALANCER_PARTITION, CRASHBALANCER, 0.5)
+	balancerEv.Insert(e1)
+
+	e0 = crash.NewEvent(crash.KVMOVER_CRASH, CRASHMOVER, 0.2)
+	moverEv = crash.NewTeventMapOne(e0)
+	e1 = crash.NewEventStartDelay(crash.KVMOVER_PARTITION, 1, 0, 2000, 0.5)
+	moverEv.Insert(e1)
+
+	bothEv = crash.NewTeventMap()
+	bothEv.Merge(balancerEv)
+	bothEv.Merge(moverEv)
+}
 
 func checkKvs(t *testing.T, kvs *kv.KvSet, n int) {
 	for _, v := range kvs.Set {
@@ -80,11 +102,15 @@ type Tstate struct {
 	job string
 }
 
-func newTstate(t1 *test.Tstate, auto string, crashbal, repl, ncrash int, crashhelper string) *Tstate {
+func newTstate(t1 *test.Tstate, em *crash.TeventMap, auto string, repl int) *Tstate {
 	ts := &Tstate{job: rand.String(4)}
 	ts.Tstate = t1
 
-	kvf, err := kv.NewKvdFleet(ts.SigmaClnt, ts.job, crashbal, 1, repl, ncrash, 0, crashhelper, auto)
+	// XXX maybe in pe
+	err := crash.SetSigmaFail(em)
+	assert.Nil(t1.T, err)
+
+	kvf, err := kv.NewKvdFleet(ts.SigmaClnt, ts.job, 1, repl, 0, auto)
 	assert.Nil(t1.T, err)
 	ts.kvf = kvf
 	ts.cm, err = kv.NewClerkMgr(ts.SigmaClnt, ts.job, 0, repl > 0)
@@ -111,7 +137,7 @@ func TestMiss(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts := newTstate(t1, "manual", 0, kv.KVD_NO_REPL, 0, "0")
+	ts := newTstate(t1, nil, "manual", kv.KVD_NO_REPL)
 	err := ts.cm.Get(cache.NewKey(kv.NKEYS+1), &cproto.CacheString{})
 	assert.True(t, cache.IsMiss(err))
 	ts.done()
@@ -122,7 +148,7 @@ func TestGetPut0(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts := newTstate(t1, "manual", 0, kv.KVD_NO_REPL, 0, "0")
+	ts := newTstate(t1, nil, "manual", kv.KVD_NO_REPL)
 
 	err := ts.cm.Get(cache.NewKey(kv.NKEYS+1), &cproto.CacheString{})
 	assert.NotNil(ts.T, err, "Get")
@@ -149,7 +175,7 @@ func TestPutGetRepl(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts := newTstate(t1, "manual", 0, kv.KVD_REPL_LEVEL, 0, "0")
+	ts := newTstate(t1, nil, "manual", kv.KVD_REPL_LEVEL)
 
 	err := ts.cm.StartClerks("", 1)
 	assert.Nil(ts.T, err, "Error StartClerk: %v", err)
@@ -172,7 +198,8 @@ func TestPutGetCrashKVD1(t *testing.T) {
 		return
 	}
 
-	ts := newTstate(t1, "manual", 0, kv.KVD_REPL_LEVEL, 1, "0")
+	e0 := crash.NewEvent(crash.KVD_CRASH, kvgrp.CRASH, 0.33)
+	ts := newTstate(t1, crash.NewTeventMapOne(e0), "manual", kv.KVD_REPL_LEVEL)
 
 	err := ts.cm.StartClerks("", 1)
 	assert.Nil(ts.T, err, "Error StartClerk: %v", err)
@@ -187,7 +214,7 @@ func TestPutGetCrashKVD1(t *testing.T) {
 	ts.done()
 }
 
-func concurN(t *testing.T, nclerk, crashbal, repl, ncrash int, crashhelper string) {
+func concurN(t *testing.T, nclerk int, em *crash.TeventMap, repl int) {
 	const TIME = 100
 
 	t1, err1 := test.NewTstateAll(t)
@@ -195,7 +222,7 @@ func concurN(t *testing.T, nclerk, crashbal, repl, ncrash int, crashhelper strin
 		return
 	}
 
-	ts := newTstate(t1, "manual", crashbal, repl, ncrash, crashhelper)
+	ts := newTstate(t1, em, "manual", repl)
 
 	err := ts.cm.StartClerks("", nclerk)
 	assert.Nil(ts.T, err, "Error StartClerk: %v", err)
@@ -233,63 +260,63 @@ func concurN(t *testing.T, nclerk, crashbal, repl, ncrash int, crashhelper strin
 }
 
 func TestKVOK0(t *testing.T) {
-	concurN(t, 0, 0, kv.KVD_NO_REPL, 0, "0")
+	concurN(t, 0, nil, kv.KVD_NO_REPL)
 }
 
 func TestKVOK1(t *testing.T) {
-	concurN(t, 1, 0, kv.KVD_NO_REPL, 0, "0")
+	concurN(t, 1, nil, kv.KVD_NO_REPL)
 }
 
 func TestKVOKN(t *testing.T) {
-	concurN(t, NCLERK, 0, kv.KVD_NO_REPL, 0, "0")
+	concurN(t, NCLERK, nil, kv.KVD_NO_REPL)
 }
 
 func TestCrashBal0(t *testing.T) {
-	concurN(t, 0, CRASHBALANCER, kv.KVD_NO_REPL, 0, "0")
+	concurN(t, 0, balancerEv, kv.KVD_NO_REPL)
 }
 
 func TestCrashBal1(t *testing.T) {
-	concurN(t, 1, CRASHBALANCER, kv.KVD_NO_REPL, 0, "0")
+	concurN(t, 1, balancerEv, kv.KVD_NO_REPL)
 }
 
 func TestCrashBalN(t *testing.T) {
-	concurN(t, NCLERK, CRASHBALANCER, kv.KVD_NO_REPL, 0, "0")
+	concurN(t, NCLERK, balancerEv, kv.KVD_NO_REPL)
 }
 
 func TestCrashMov0(t *testing.T) {
-	concurN(t, 0, 0, kv.KVD_NO_REPL, 0, CRASHMOVER)
+	concurN(t, 0, moverEv, kv.KVD_NO_REPL)
 }
 
 func TestCrashMov1(t *testing.T) {
-	concurN(t, 1, 0, kv.KVD_NO_REPL, 0, CRASHMOVER)
+	concurN(t, 1, moverEv, kv.KVD_NO_REPL)
 }
 
 func TestCrashMovN(t *testing.T) {
-	concurN(t, NCLERK, 0, kv.KVD_NO_REPL, 0, CRASHMOVER)
+	concurN(t, NCLERK, moverEv, kv.KVD_NO_REPL)
 }
 
 func TestCrashAll0(t *testing.T) {
-	concurN(t, 0, CRASHBALANCER, kv.KVD_NO_REPL, 0, CRASHMOVER)
+	concurN(t, 0, bothEv, kv.KVD_NO_REPL)
 }
 
 func TestCrashAll1(t *testing.T) {
-	concurN(t, 1, CRASHBALANCER, kv.KVD_NO_REPL, 0, CRASHMOVER)
+	concurN(t, 1, bothEv, kv.KVD_NO_REPL)
 }
 
 func TestCrashAllN(t *testing.T) {
-	concurN(t, NCLERK, CRASHBALANCER, kv.KVD_NO_REPL, 0, CRASHMOVER)
+	concurN(t, NCLERK, bothEv, kv.KVD_NO_REPL)
 }
 
-func TestRepl0(t *testing.T) {
-	concurN(t, 0, 0, kv.KVD_REPL_LEVEL, 0, "0")
+func TestReplOK0(t *testing.T) {
+	concurN(t, 0, nil, kv.KVD_REPL_LEVEL)
 }
 
 func TestReplOK1(t *testing.T) {
-	concurN(t, 1, 0, kv.KVD_REPL_LEVEL, 0, "0")
+	concurN(t, 1, nil, kv.KVD_REPL_LEVEL)
 }
 
 func TestReplOKN(t *testing.T) {
-	concurN(t, NCLERK, 0, kv.KVD_REPL_LEVEL, 0, "0")
+	concurN(t, NCLERK, nil, kv.KVD_REPL_LEVEL)
 }
 
 //
@@ -297,25 +324,24 @@ func TestReplOKN(t *testing.T) {
 //
 
 func XTestReplCrash0(t *testing.T) {
-	concurN(t, 0, 0, kv.KVD_REPL_LEVEL, 1, "0")
+	concurN(t, 0, nil, kv.KVD_REPL_LEVEL)
 }
 
 func XTestReplCrash1(t *testing.T) {
-	concurN(t, 1, 0, kv.KVD_REPL_LEVEL, 1, "0")
+	concurN(t, 1, nil, kv.KVD_REPL_LEVEL)
 }
 
 func XTestReplCrashN(t *testing.T) {
-	concurN(t, NCLERK, 0, kv.KVD_REPL_LEVEL, 1, "0")
+	concurN(t, NCLERK, nil, kv.KVD_REPL_LEVEL)
 }
 
 func TestAuto(t *testing.T) {
-	// runtime.GOMAXPROCS(2) // XXX for KV
 	t1, err1 := test.NewTstateAll(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
 
-	ts := newTstate(t1, "auto", 0, kv.KVD_NO_REPL, 0, "0")
+	ts := newTstate(t1, nil, "auto", kv.KVD_NO_REPL)
 
 	for i := 0; i < 0; i++ {
 		err := ts.kvf.AddKVDGroup()

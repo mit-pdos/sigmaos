@@ -2,7 +2,7 @@
 package sigmap
 
 import (
-	"sigmaos/fslib"
+	"sigmaos/sigmaclnt/fslib"
 	"sigmaos/rpc/clnt"
 	"sigmaos/rpc/clnt/channel"
 	"sigmaos/rpc/clnt/channel/spchannel"

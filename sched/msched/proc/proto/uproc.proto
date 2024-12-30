@@ -1,0 +1,46 @@
+syntax = "proto3";
+
+import "proc/proc.proto";
+import "sigmap/sigmap.proto";
+
+option go_package = "sigmaos/sched/msched/proc/proto";
+
+message RunRequest {
+  ProcProto procProto = 1;
+}
+
+message RunResult {
+}
+
+message WarmBinRequest {
+  string realmStr = 1;
+  string program = 2;
+  string pidStr = 3;
+  repeated string sigmaPath = 4;
+  SecretProto s3Secret = 5;
+  TendpointProto NamedEndpointProto = 6;
+}
+
+message WarmBinResult {
+  bool oK = 1;
+}
+
+message FetchRequest {
+   string prog = 1;
+   int32 chunkId = 2;
+   uint64 size = 3;
+   uint32 pid = 4;
+}
+
+message FetchResponse {
+  uint64 size = 1;
+}
+
+message LookupRequest {
+   string prog = 1;
+   uint32 pid = 2;
+}
+
+message LookupResponse {
+  TstatProto stat = 1;
+}

@@ -1,9 +1,9 @@
 package main
 
 import (
-	"os"
 	"time"
 
+	"sigmaos/util/crash"
 	db "sigmaos/debug"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
@@ -23,5 +23,5 @@ func main() {
 		db.DFatalf("Started: err %v\n", err)
 	}
 	time.Sleep(1 * time.Millisecond)
-	os.Exit(2)
+	crash.Crash()
 }

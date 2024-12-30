@@ -14,7 +14,7 @@ import (
 	"sigmaos/apps/cache/proto"
 	db "sigmaos/debug"
 	"sigmaos/proc"
-	"sigmaos/semclnt"
+	"sigmaos/util/coordination/semaphore"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 	rd "sigmaos/util/rand"
@@ -30,7 +30,7 @@ type Tstate struct {
 	clrks []sp.Tpid
 	job   string
 	sempn string
-	sem   *semclnt.SemClnt
+	sem   *semaphore.Semaphore
 }
 
 func newTstate(t *test.Tstate, nsrv int) *Tstate {
@@ -42,7 +42,7 @@ func newTstate(t *test.Tstate, nsrv int) *Tstate {
 	assert.Nil(t.T, err)
 	ts.cm = cm
 	ts.sempn = cm.SvcDir() + "-cacheclerk-sem"
-	ts.sem = semclnt.NewSemClnt(ts.FsLib, ts.sempn)
+	ts.sem = semaphore.NewSemaphore(ts.FsLib, ts.sempn)
 	err = ts.sem.Init(0)
 	assert.Nil(t.T, err)
 	return ts
@@ -184,7 +184,7 @@ func TestCacheConcur(t *testing.T) {
 	}
 	ts := newTstate(t1, NSRV)
 	v := "hello"
-	cc := cachegrpclnt.NewCachedSvcClnt(s.FsLib, ts.job)
+	cc := cachegrpclnt.NewCachedSvcClnt(ts.FsLib, ts.job)
 	err := cc.Put("x", &proto.CacheString{Val: v})
 	assert.Nil(t, err)
 

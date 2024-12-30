@@ -175,9 +175,8 @@ func NewErrError(error error) *Err {
 }
 
 func NewErrString(err string) *Err {
-	//re := regexp.MustCompile(`{Err: (\w)+ Obj: (\w)+ ((\w+))}`)
 	re := regexp.MustCompile(`{Err: "(.*)" Obj: "(.*)" \((.*)\)}`)
-	s := re.FindStringSubmatch(`"{Err: "Non-sigma error" Obj: "" (exit status 2)}"`)
+	s := re.FindStringSubmatch(err)
 	if len(s) == 4 {
 		for c := TErrBadattach; c <= TErrError; c++ {
 			if c.String() == s[1] {

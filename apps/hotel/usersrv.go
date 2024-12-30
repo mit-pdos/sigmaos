@@ -9,12 +9,12 @@ import (
 	//	"context"
 
 	"sigmaos/apps/hotel/proto"
-	dbclnt "sigmaos/db/clnt"
-	"sigmaos/fs"
+	dbclnt "sigmaos/proxy/db/clnt"
+	"sigmaos/api/fs"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
-	"sigmaos/tracing"
+	"sigmaos/util/tracing"
 )
 
 const (

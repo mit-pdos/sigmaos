@@ -7,18 +7,16 @@ import (
 
 	cacheproto "sigmaos/apps/cache/proto"
 
+	"sigmaos/api/fs"
 	"sigmaos/apps/cache"
 	db "sigmaos/debug"
-	"sigmaos/fs"
-	"sigmaos/util/perf"
 	"sigmaos/proc"
-	"sigmaos/repl"
-	"sigmaos/replraft"
 	"sigmaos/serr"
-	"sigmaos/sessdevsrv"
+	rpcdevsrv "sigmaos/rpc/dev/srv"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
-	"sigmaos/tracing"
+	"sigmaos/util/tracing"
+	"sigmaos/util/perf"
 )
 
 type Tstatus string
@@ -39,8 +37,6 @@ type CacheSrv struct {
 	mu        sync.Mutex
 	shards    shardMap
 	shrd      string
-	raftcfg   *replraft.RaftConfig
-	replSrv   repl.Server
 	tracer    *tracing.Tracer
 	lastFence *sp.Tfence
 	perf      *perf.Perf
@@ -69,7 +65,7 @@ func RunCacheSrv(args []string, nshard int) error {
 	if _, err := ssrv.Create(cache.DUMP, sp.DMDIR|0777, sp.ORDWR, sp.NoLeaseId); err != nil {
 		return err
 	}
-	if err := sessdevsrv.NewSessDev(ssrv.MemFs, cache.DUMP, s.newSession, nil); err != nil {
+	if err := rpcdevsrv.NewSessDev(ssrv.MemFs, cache.DUMP, s.newSession, nil); err != nil {
 		return err
 	}
 	ssrv.RunServer()

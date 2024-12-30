@@ -114,15 +114,6 @@ func NewHotelJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, durs string, 
 	}
 
 	if !ji.justCli {
-		if sigmaos {
-			if CACHE_TYPE == "memcached" {
-				addrs := strings.Split(MEMCACHED_ADDRS, ",")
-				err := ts.SigmaClnt.PutFileJson(sp.MEMCACHED, 0777, addrs)
-				if err != nil {
-					db.DFatalf("Error put memcached file")
-				}
-			}
-		}
 		var nc = ncache
 		// Only start one cache if autoscaling.
 		if sigmaos && CACHE_TYPE == "cached" && HOTEL_CACHE_AUTOSCALE {

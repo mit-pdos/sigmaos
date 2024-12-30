@@ -6,11 +6,11 @@ import (
 	"sigmaos/apps/cache"
 	cacheproto "sigmaos/apps/cache/proto"
 	db "sigmaos/debug"
-	"sigmaos/fs"
-	"sigmaos/memfs/inode"
-	"sigmaos/memfssrv"
+	"sigmaos/api/fs"
+	"sigmaos/sigmasrv/memfssrv/memfs/inode"
+	"sigmaos/sigmasrv/memfssrv"
 	"sigmaos/serr"
-	"sigmaos/sessp"
+	sessp "sigmaos/session/proto"
 	sp "sigmaos/sigmap"
 )
 
@@ -26,7 +26,7 @@ func (s *CacheSrv) newSession(mfs *memfssrv.MemFs, sid sessp.Tsession) (fs.FsObj
 	return cs, nil
 }
 
-func (cs *cacheSession) Stat(ctx fs.CtxI) (*sp.Stat, *serr.Err) {
+func (cs *cacheSession) Stat(ctx fs.CtxI) (*sp.Tstat, *serr.Err) {
 	st, err := cs.Inode.NewStat()
 	if err != nil {
 		return nil, err

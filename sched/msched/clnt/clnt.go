@@ -7,18 +7,18 @@ import (
 	"time"
 
 	db "sigmaos/debug"
-	"sigmaos/fslib"
+	"sigmaos/sigmaclnt/fslib"
 	"sigmaos/proc"
 	rpcclnt "sigmaos/rpc/clnt"
 	sprpcclnt "sigmaos/rpc/clnt/sigmap"
-	"sigmaos/rpcdirclnt"
+	shardedsvcrpcclnt "sigmaos/rpc/shardedsvc/clnt"
 	"sigmaos/sched/msched/proto"
 	sp "sigmaos/sigmap"
 )
 
 type MSchedClnt struct {
 	*fslib.FsLib
-	rpcdc *rpcdirclnt.RPCDirClnt
+	rpcdc *shardedsvcrpcclnt.ShardedSvcRPCClnt
 	done  int32
 
 	// rpcclnt for my msched
@@ -30,7 +30,7 @@ func NewMSchedClnt(fsl *fslib.FsLib, kernelID string) *MSchedClnt {
 	return &MSchedClnt{
 		FsLib:    fsl,
 		kernelID: kernelID,
-		rpcdc:    rpcdirclnt.NewRPCDirClnt(fsl, sp.MSCHED, db.MSCHEDCLNT, db.MSCHEDCLNT_ERR),
+		rpcdc:    shardedsvcrpcclnt.NewShardedSvcRPCClnt(fsl, sp.MSCHED, db.MSCHEDCLNT, db.MSCHEDCLNT_ERR),
 	}
 }
 
@@ -66,7 +66,7 @@ func (mc *MSchedClnt) Nprocs(procdir string) (int, error) {
 	return len(sts), nil
 }
 
-func (mc *MSchedClnt) WarmUprocd(kernelID string, pid sp.Tpid, realm sp.Trealm, prog string, path []string, ptype proc.Ttype) error {
+func (mc *MSchedClnt) WarmProcd(kernelID string, pid sp.Tpid, realm sp.Trealm, prog string, path []string, ptype proc.Ttype) error {
 	rpcc, err := mc.getRPCClnt(kernelID)
 	if err != nil {
 		return err
@@ -79,12 +79,12 @@ func (mc *MSchedClnt) WarmUprocd(kernelID string, pid sp.Tpid, realm sp.Trealm, 
 		ProcType:  int32(ptype),
 	}
 	res := &proto.WarmCacheBinResponse{}
-	if err := rpcc.RPC("MSched.WarmUprocd", req, res); err != nil {
+	if err := rpcc.RPC("MSched.WarmProcd", req, res); err != nil {
 		return err
 	}
 	if !res.OK {
-		db.DPrintf(db.ERROR, "WarmUprocd failed realm %v prog %v tag %v", prog, prog, path)
-		return fmt.Errorf("WarmUprocd failed: realm %v prog %v tag %v", prog, prog, path)
+		db.DPrintf(db.ERROR, "WarmProcd failed realm %v prog %v tag %v", prog, prog, path)
+		return fmt.Errorf("WarmProcd failed: realm %v prog %v tag %v", prog, prog, path)
 	}
 	return nil
 }

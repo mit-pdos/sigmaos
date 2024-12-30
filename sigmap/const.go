@@ -143,13 +143,8 @@ const (
 
 // Auth consts
 const (
-	NO_PRINCIPAL_ID    TprincipalID = "NO_PRINCIPAL_ID"
-	NO_REALM           Trealm       = "NO_REALM"
-	KEY_LEN            int          = 256
-	HOST_PRIV_KEY_FILE string       = "/tmp/sigmaos/master-key.priv"
-	HOST_PUB_KEY_FILE  string       = "/tmp/sigmaos/master-key.pub"
-	NO_SIGNER          string       = "NO_SIGNER"
-	NO_SIGNED_TOKEN    string       = "NO_SIGNED_TOKEN"
+	NO_PRINCIPAL_ID TprincipalID = "NO_PRINCIPAL_ID"
+	NO_REALM        Trealm       = "NO_REALM"
 )
 
 func NoPrincipal() *Tprincipal {

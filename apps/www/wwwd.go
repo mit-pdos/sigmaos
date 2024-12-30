@@ -9,13 +9,13 @@ import (
 
 	"net/http/pprof"
 
+	"sigmaos/benchmarks/spin"
 	db "sigmaos/debug"
-	"sigmaos/microbenchmarks"
-	"sigmaos/pipe"
 	"sigmaos/proc"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
+	"sigmaos/sigmasrv/pipe"
 	"sigmaos/util/rand"
 )
 
@@ -31,7 +31,6 @@ const (
 
 //
 // Web front end that spawns an app to handle a request.
-// XXX limit process's name space to the app binary and pipe.
 //
 
 var validPath = regexp.MustCompile(`^/(static|hotel|exit|matmul|user)/([=.a-zA-Z0-9/]*)$`)
@@ -46,7 +45,7 @@ func RunWwwd(job, tree string) {
 	http.Handle("/debug/pprof/heap", pprof.Handler("heap"))
 	http.Handle("/debug/pprof/goroutine", pprof.Handler("goroutine"))
 
-	//	ip, err := netsigma.LocalIP()
+	//	ip, err := iputil.LocalIP()
 	//	if err != nil {
 	//		db.DFatalf("Error LocalIP: %v", err)
 	//	}
@@ -60,12 +59,10 @@ func RunWwwd(job, tree string) {
 	if err = www.ssrv.SigmaClnt().MkEndpointFile(JobHTTPAddrsPath(job), ep); err != nil {
 		db.DFatalf("MkEndpointFile %v", err)
 	}
-
 	go func() {
-		www.ssrv.Serve()
+		db.DFatalf("%v", http.Serve(l, nil))
 	}()
-
-	db.DFatalf("%v", http.Serve(l, nil))
+	www.ssrv.RunServer()
 }
 
 type Wwwd struct {
@@ -126,7 +123,7 @@ func (www *Wwwd) newHandler(fn func(*Wwwd, http.ResponseWriter, *http.Request, s
 
 func (www *Wwwd) newPipe() string {
 	// Make the pipe in the server.
-	pipeName := rand.String(16)
+	pipeName := rand.Name()
 	pipePath := filepath.Join(www.localSrvpath, pipeName)
 	if err := www.ssrv.SigmaClnt().NewPipe(pipePath, 0777); err != nil {
 		db.DFatalf("Error NewPipe %v", err)
@@ -240,6 +237,6 @@ func doConsumeCPULocal(www *Wwwd, w http.ResponseWriter, r *http.Request, args s
 	if err != nil {
 		db.DFatalf("Can't convert niter %v", args)
 	}
-	microbenchmarks.ConsumeCPU(niter)
+	spin.ConsumeCPU(niter)
 	return proc.NewStatus(proc.StatusOK), nil
 }

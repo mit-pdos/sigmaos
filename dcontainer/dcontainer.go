@@ -20,9 +20,9 @@ import (
 	chunksrv "sigmaos/chunk/srv"
 	"sigmaos/dcontainer/cgroup"
 	db "sigmaos/debug"
-	"sigmaos/mem"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
+	"sigmaos/util/linux/mem"
 	"sigmaos/util/perf"
 )
 
@@ -58,11 +58,6 @@ func StartDockerContainer(p *proc.Proc, kernelId string) (*DContainer, error) {
 
 	score := 0
 	memswap := int64(0)
-	// TODO: set swap score
-	//	if ptype == proc.T_BE {
-	//		score = 1000
-	//		memswap = membytes
-	//	}
 
 	pset := nat.PortSet{} // Ports to expose
 	pmap := nat.PortMap{} // NAT mappings for exposed ports
@@ -71,7 +66,7 @@ func StartDockerContainer(p *proc.Proc, kernelId string) (*DContainer, error) {
 	cmd := append([]string{p.GetProgram()}, p.Args...)
 	db.DPrintf(db.CONTAINER, "ContainerCreate %v %v s %v\n", cmd, p.GetEnv(), score)
 
-	db.DPrintf(db.CONTAINER, "Running uprocd with Docker")
+	db.DPrintf(db.CONTAINER, "Running procd with Docker")
 
 	// Set up default mounts.
 	mnts := []mount.Mount{
@@ -97,15 +92,15 @@ func StartDockerContainer(p *proc.Proc, kernelId string) (*DContainer, error) {
 		},
 	}
 
-	// If developing locally, mount kernel bins (exec-uproc-rs, spproxyd, and
-	// uprocd) from host, since they are excluded from the container image
+	// If developing locally, mount kernel bins (uproc-trampoline, spproxyd, and
+	// procd) from host, since they are excluded from the container image
 	// during local dev in order to speed up build times.
 	if p.GetBuildTag() == sp.LOCAL_BUILD {
 		db.DPrintf(db.CONTAINER, "Mounting kernel bins to user container for local build")
 		mnts = append(mnts,
 			mount.Mount{
 				Type:     mount.TypeBind,
-				Source:   filepath.Join("/tmp/sigmaos-uprocd-bin"),
+				Source:   filepath.Join("/tmp/sigmaos-procd-bin"),
 				Target:   filepath.Join(sp.SIGMAHOME, "bin/kernel"),
 				ReadOnly: true,
 			},
@@ -128,7 +123,7 @@ func StartDockerContainer(p *proc.Proc, kernelId string) (*DContainer, error) {
 			OomScoreAdj:  score,
 		}, &network.NetworkingConfig{
 			EndpointsConfig: endpoints,
-		}, nil, kernelId+"-uprocd-"+p.GetPid().String())
+		}, nil, kernelId+"-procd-"+p.GetPid().String())
 	if err != nil {
 		db.DPrintf(db.CONTAINER, "ContainerCreate err %v\n", err)
 		return nil, err

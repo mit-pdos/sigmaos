@@ -8,21 +8,13 @@ import (
 	"sigmaos/dcontainer"
 	db "sigmaos/debug"
 	"sigmaos/proc"
-	"sigmaos/procclnt"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 )
 
-const NPORT_PER_CONTAINER = 20
-
-// XXX Make interface smaller
 type Subsystem interface {
 	GetProc() *proc.Proc
-	GetHow() proc.Thow
 	GetCrashed() bool
-	GetContainer() *dcontainer.DContainer
-	SetWaited(bool)
-	GetWaited() bool
 	Evict() error
 	Wait() error
 	Kill() error
@@ -32,13 +24,12 @@ type Subsystem interface {
 }
 
 type KernelSubsystem struct {
-	*procclnt.ProcClnt
+	*sigmaclnt.SigmaClntKernel
 	k         *Kernel
 	p         *proc.Proc
 	how       proc.Thow
 	cmd       *exec.Cmd
 	container *dcontainer.DContainer
-	waited    bool
 	crashed   bool
 }
 
@@ -46,24 +37,8 @@ func (ss *KernelSubsystem) GetProc() *proc.Proc {
 	return ss.p
 }
 
-func (ss *KernelSubsystem) GetContainer() *dcontainer.DContainer {
-	return ss.container
-}
-
-func (ss *KernelSubsystem) GetHow() proc.Thow {
-	return ss.how
-}
-
 func (ss *KernelSubsystem) GetCrashed() bool {
 	return ss.crashed
-}
-
-func (ss *KernelSubsystem) GetWaited() bool {
-	return ss.waited
-}
-
-func (ss *KernelSubsystem) SetWaited(w bool) {
-	ss.waited = w
 }
 
 func (ss *KernelSubsystem) String() string {
@@ -71,21 +46,22 @@ func (ss *KernelSubsystem) String() string {
 	return s
 }
 
-func newSubsystemCmd(pclnt *procclnt.ProcClnt, k *Kernel, p *proc.Proc, how proc.Thow, cmd *exec.Cmd) Subsystem {
-	return &KernelSubsystem{pclnt, k, p, how, cmd, nil, false, false}
+func newSubsystemCmd(sc *sigmaclnt.SigmaClntKernel, k *Kernel, p *proc.Proc, how proc.Thow, cmd *exec.Cmd) Subsystem {
+	return &KernelSubsystem{sc, k, p, how, cmd, nil, false}
 }
 
-func newSubsystem(pclnt *procclnt.ProcClnt, k *Kernel, p *proc.Proc, how proc.Thow) Subsystem {
-	return newSubsystemCmd(pclnt, k, p, how, nil)
+func newSubsystem(sc *sigmaclnt.SigmaClntKernel, k *Kernel, p *proc.Proc, how proc.Thow) Subsystem {
+	return newSubsystemCmd(sc, k, p, how, nil)
 }
 
-func (k *Kernel) bootSubsystemPIDWithMcpu(pid sp.Tpid, program string, args []string, realm sp.Trealm, how proc.Thow, mcpu proc.Tmcpu) (Subsystem, error) {
+func (k *Kernel) bootSubsystemPIDWithMcpu(pid sp.Tpid, program string, args, env []string, realm sp.Trealm, how proc.Thow, mcpu proc.Tmcpu) (Subsystem, error) {
 	p := proc.NewPrivProcPid(pid, program, args, true)
 	p.SetRealm(realm)
 	p.GetProcEnv().SetInnerContainerIP(k.ip)
 	p.GetProcEnv().SetOuterContainerIP(k.ip)
 	p.GetProcEnv().SetSecrets(k.ProcEnv().GetSecrets())
 	p.SetMcpu(mcpu)
+	p.UpdateEnv(env)
 	var sck *sigmaclnt.SigmaClntKernel
 	var err error
 	if realm == sp.ROOTREALM {
@@ -96,13 +72,13 @@ func (k *Kernel) bootSubsystemPIDWithMcpu(pid sp.Tpid, program string, args []st
 			return nil, err
 		}
 	}
-	ss := newSubsystem(sck.ProcClnt, k, p, how)
+	ss := newSubsystem(sck, k, p, how)
 	return ss, ss.Run(how, k.Param.KernelID, k.ip)
 }
 
-func (k *Kernel) bootSubsystem(program string, args []string, realm sp.Trealm, how proc.Thow, mcpu proc.Tmcpu) (Subsystem, error) {
+func (k *Kernel) bootSubsystem(program string, args, env []string, realm sp.Trealm, how proc.Thow, mcpu proc.Tmcpu) (Subsystem, error) {
 	pid := sp.GenPid(program)
-	return k.bootSubsystemPIDWithMcpu(pid, program, args, realm, how, mcpu)
+	return k.bootSubsystemPIDWithMcpu(pid, program, args, env, realm, how, mcpu)
 }
 
 func (s *KernelSubsystem) Evict() error {
@@ -120,7 +96,6 @@ func (s *KernelSubsystem) Run(how proc.Thow, kernelId string, localIP sp.Tip) er
 		if err := s.NewProc(s.p, proc.HDOCKER, kernelId); err != nil {
 			return err
 		}
-		// XXX don't hard code
 		h := sp.SIGMAHOME
 		s.p.AppendEnv("PATH", h+"/bin/user:"+h+"/bin/user/common:"+h+"/bin/kernel:/usr/sbin:/usr/bin:/bin")
 		s.p.FinalizeEnv(localIP, localIP, sp.Tpid(sp.NOT_SET))
@@ -176,7 +151,6 @@ func (s *KernelSubsystem) Wait() error {
 	defer db.DPrintf(db.KERNEL, "Wait subsystem done for %v", s)
 
 	if !s.GetCrashed() {
-		s.SetWaited(true)
 		// Only wait if this proc has not been waited for already, since calling
 		// WaitExit twice leads to an error.
 		status, err := s.WaitExitKernelProc(s.p.GetPid(), s.how)

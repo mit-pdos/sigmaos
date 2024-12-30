@@ -8,7 +8,7 @@ import (
 	"net/url"
 	//"strconv"
 	dbg "sigmaos/debug"
-	"sigmaos/fslib"
+	"sigmaos/sigmaclnt/fslib"
 	sp "sigmaos/sigmap"
 	"time"
 )
@@ -34,7 +34,6 @@ func NewWebClntWithAddr(fsl *fslib.FsLib, job string, feAddrs sp.Taddrs) *WebCln
 		Timeout:   1 * time.Minute,
 		Transport: http.DefaultTransport,
 	}
-	// XXX This is sort of arbitrary, perhaps change or remove?.
 	clnt.Transport.(*http.Transport).MaxIdleConnsPerHost = 10000
 	dbg.DPrintf(dbg.TEST, "Advertised addrs %v", feAddrs)
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_CLNT, "Advertised addr %v", feAddrs[0])

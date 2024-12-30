@@ -1,17 +1,16 @@
 package clnt
 
 import (
-	"sigmaos/chunk"
 	proto "sigmaos/chunk/proto"
 	db "sigmaos/debug"
-	"sigmaos/fslib"
+	"sigmaos/sigmaclnt/fslib"
 	rpcproto "sigmaos/rpc/proto"
-	"sigmaos/rpcdirclnt"
+	shardedsvcrpcclnt "sigmaos/rpc/shardedsvc/clnt"
 	sp "sigmaos/sigmap"
 )
 
 type ChunkClnt struct {
-	*rpcdirclnt.RPCDirClnt
+	*shardedsvcrpcclnt.ShardedSvcRPCClnt
 	ch chan string
 }
 
@@ -22,8 +21,8 @@ func NewChunkClnt(fsl *fslib.FsLib, eager bool) *ChunkClnt {
 		ch = make(chan string)
 	}
 	ckclnt := &ChunkClnt{
-		RPCDirClnt: rpcdirclnt.NewRPCDirClntCh(fsl, sp.CHUNKD, ch, db.CHUNKCLNT, db.CHUNKCLNT_ERR),
-		ch:         ch,
+		ShardedSvcRPCClnt: shardedsvcrpcclnt.NewShardedSvcRPCClntCh(fsl, sp.CHUNKD, ch, db.CHUNKCLNT, db.CHUNKCLNT_ERR),
+		ch:                ch,
 	}
 	if eager {
 		go ckclnt.readCh()
@@ -34,17 +33,17 @@ func NewChunkClnt(fsl *fslib.FsLib, eager bool) *ChunkClnt {
 // Eagerly make chunk clnts
 func (ckclnt *ChunkClnt) readCh() {
 	for n := range ckclnt.ch {
-		_, err := ckclnt.RPCDirClnt.GetClnt(n)
+		_, err := ckclnt.GetClnt(n)
 		db.DPrintf(db.CHUNKCLNT, "new chunksrv: %v err %v\n", n, err)
 	}
 }
 
 func (ckclnt *ChunkClnt) UnregisterSrv(srv string) {
-	ckclnt.RPCDirClnt.InvalidateEntry(srv)
+	ckclnt.InvalidateEntry(srv)
 }
 
-func (ckclnt *ChunkClnt) GetFileStat(srvid, pn string, pid sp.Tpid, realm sp.Trealm, s3secret *sp.SecretProto, paths []string, ep *sp.TendpointProto) (*sp.Stat, string, error) {
-	rpcc, err := ckclnt.RPCDirClnt.GetClnt(srvid)
+func (ckclnt *ChunkClnt) GetFileStat(srvid, pn string, pid sp.Tpid, realm sp.Trealm, s3secret *sp.SecretProto, paths []string, ep *sp.TendpointProto) (*sp.Tstat, string, error) {
+	rpcc, err := ckclnt.GetClnt(srvid)
 	if err != nil {
 		return nil, "", err
 	}
@@ -66,7 +65,7 @@ func (ckclnt *ChunkClnt) GetFileStat(srvid, pn string, pid sp.Tpid, realm sp.Tre
 
 // For chunksrv to fetch chunk from another chunksrv and return data in b
 func (ckclnt *ChunkClnt) FetchChunk(srvid, pn string, pid sp.Tpid, realm sp.Trealm, s3secret *sp.SecretProto, ck int, sz sp.Tsize, path []string, b []byte) (sp.Tsize, string, error) {
-	rpcc, err := ckclnt.RPCDirClnt.GetClnt(srvid)
+	rpcc, err := ckclnt.GetClnt(srvid)
 	if err != nil {
 		return 0, "", err
 	}
@@ -91,7 +90,7 @@ func (ckclnt *ChunkClnt) FetchChunk(srvid, pn string, pid sp.Tpid, realm sp.Trea
 
 // For uprocsrv to ask chunksrv to fetch ck, but not return data to uprocsrv
 func (ckclnt *ChunkClnt) Fetch(srvid, prog string, pid sp.Tpid, realm sp.Trealm, s3secret *sp.SecretProto, ck int, sz sp.Tsize, path []string, ep *sp.TendpointProto) (sp.Tsize, string, error) {
-	rpcc, err := ckclnt.RPCDirClnt.GetClnt(srvid)
+	rpcc, err := ckclnt.GetClnt(srvid)
 	if err != nil {
 		return 0, "", err
 	}
@@ -115,7 +114,7 @@ func (ckclnt *ChunkClnt) Fetch(srvid, prog string, pid sp.Tpid, realm sp.Trealm,
 }
 
 func (ckclnt *ChunkClnt) FetchBinary(srvid, prog string, pid sp.Tpid, realm sp.Trealm, s3secret *sp.SecretProto, reqsz sp.Tsize, path []string, ep *sp.TendpointProto) (string, error) {
-	n := (reqsz / chunk.CHUNKSZ) + 1
+	n := (int64(reqsz) / sp.Conf.Chunk.CHUNK_SZ) + 1
 	db.DPrintf(db.CHUNKCLNT, "FetchBinary %q %v %d", prog, reqsz, n)
 	last := ""
 	for ck := 0; ck < int(n); ck++ {

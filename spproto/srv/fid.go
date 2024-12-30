@@ -12,6 +12,8 @@ import (
 	sp "sigmaos/sigmap"
 )
 
+// Several fids may name the same Pobj. For example, each session's
+// fid 0 refers to the root of the file system.
 type Pobj struct {
 	pathname path.Tpathname
 	obj      fs.FsObj

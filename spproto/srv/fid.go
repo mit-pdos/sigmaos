@@ -30,6 +30,10 @@ func (po *Pobj) Pathname() path.Tpathname {
 	return po.pathname
 }
 
+func (po *Pobj) Path() sp.Tpath {
+	return po.obj.Path()
+}
+
 func (po *Pobj) Ctx() fs.CtxI {
 	return po.ctx
 }

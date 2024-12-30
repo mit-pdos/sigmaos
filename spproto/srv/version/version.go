@@ -5,18 +5,16 @@ import (
 	"sync"
 
 	db "sigmaos/debug"
-	"sigmaos/util/refmap"
 	sp "sigmaos/sigmap"
+	"sigmaos/util/refmap"
 )
 
 type version struct {
 	V sp.TQversion
 }
 
-func newVersion() *version {
-	v := &version{}
-	v.V = 0
-	return v
+func newVersion() version {
+	return version{}
 }
 
 func (v *version) String() string {
@@ -25,12 +23,12 @@ func (v *version) String() string {
 
 type VersionTable struct {
 	sync.Mutex
-	*refmap.RefTable[sp.Tpath, *version]
+	*refmap.RefTable[sp.Tpath, version]
 }
 
 func NewVersionTable() *VersionTable {
 	vt := &VersionTable{}
-	vt.RefTable = refmap.NewRefTable[sp.Tpath, *version](db.VERSION)
+	vt.RefTable = refmap.NewRefTable[sp.Tpath, version](db.VERSION)
 	return vt
 }
 
@@ -47,7 +45,7 @@ func (vt *VersionTable) GetVersion(path sp.Tpath) sp.TQversion {
 func (vt *VersionTable) Insert(path sp.Tpath) {
 	vt.Lock()
 	defer vt.Unlock()
-	vt.RefTable.Insert(path, newVersion)
+	vt.RefTable.Insert(path, newVersion())
 }
 
 func (vt *VersionTable) Delete(p sp.Tpath) (bool, error) {

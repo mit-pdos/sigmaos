@@ -9,13 +9,13 @@ import (
 	"sigmaos/sigmasrv/clntcond"
 	"sigmaos/sigmasrv/stats"
 	"sigmaos/spproto/srv/leasedmap"
-	"sigmaos/spproto/srv/lockmap"
+	"sigmaos/spproto/srv/lockmapv1"
 	"sigmaos/spproto/srv/version"
 	"sigmaos/spproto/srv/watch"
 )
 
 type ProtSrvState struct {
-	plt   *lockmap.PathLockTable
+	plt   *lockmapv1.PathLockTable
 	wt    *watch.WatchTable
 	vt    *version.VersionTable
 	stats *stats.StatInode
@@ -28,7 +28,7 @@ func NewProtSrvState(stats *stats.StatInode) *ProtSrvState {
 	pss := &ProtSrvState{
 		stats: stats,
 		lm:    leasedmap.NewLeasedMap(),
-		plt:   lockmap.NewPathLockTable(),
+		plt:   lockmapv1.NewPathLockTable(),
 		cct:   cct,
 		wt:    watch.NewWatchTable(cct),
 		vt:    version.NewVersionTable(),
@@ -44,7 +44,7 @@ func (pss *ProtSrvState) VersionTable() *version.VersionTable {
 	return pss.vt
 }
 
-func (pss *ProtSrvState) PathLockTable() *lockmap.PathLockTable {
+func (pss *ProtSrvState) PathLockTable() *lockmapv1.PathLockTable {
 	return pss.plt
 }
 
@@ -71,42 +71,39 @@ func (pss *ProtSrvState) newFid(ctx fs.CtxI, dir path.Tpathname, name string, o 
 }
 
 // Create name in dir and returns lock for it.
-func (pss *ProtSrvState) createObj(ctx fs.CtxI, d fs.Dir, dlk *lockmap.PathLock, fn path.Tpathname, perm sp.Tperm, mode sp.Tmode, lid sp.TleaseId, f sp.Tfence, dev fs.FsObj) (fs.FsObj, *lockmap.PathLock, *serr.Err) {
-	name := fn.Base()
+func (pss *ProtSrvState) createObj(ctx fs.CtxI, d fs.Dir, dlk *lockmapv1.PathLock, name string, perm sp.Tperm, mode sp.Tmode, lid sp.TleaseId, f sp.Tfence, dev fs.FsObj) (fs.FsObj, *lockmapv1.PathLock, *serr.Err) {
 	if name == "." {
 		return nil, nil, serr.NewErr(serr.TErrInval, name)
 	}
-	pss.stats.IncPathString(fn.Dir().String())
-	flk := pss.plt.Acquire(ctx, fn, lockmap.WLOCK)
+	// pss.stats.IncPathString(fn.Dir().String())
 	o1, err := d.Create(ctx, name, perm, mode, lid, f, dev)
 	if err == nil {
 		pss.vt.IncVersion(d.Path())
 		pss.wt.WakeupWatch(dlk)
+		flk := pss.plt.Acquire(ctx, o1.Path(), lockmapv1.WLOCK)
 		return o1, flk, nil
 	} else {
-		pss.plt.Release(ctx, flk, lockmap.WLOCK)
 		return nil, nil, err
 	}
 }
 
 func (pss *ProtSrvState) CreateObj(ctx fs.CtxI, o fs.FsObj, dir path.Tpathname, name string, perm sp.Tperm, m sp.Tmode, lid sp.TleaseId, fence sp.Tfence, dev fs.FsObj) (sp.Tqid, *Fid, *serr.Err) {
-	db.DPrintf(db.PROTSRV, "%v: Create %v %v", ctx.ClntId(), o, dir)
-	fn := dir.Append(name)
+	db.DPrintf(db.PROTSRV, "%v: Create %v %q", ctx.ClntId(), o, dir)
 	if !o.Perm().IsDir() {
 		return sp.Tqid{}, nil, serr.NewErr(serr.TErrNotDir, dir)
 	}
 	d := o.(fs.Dir)
-	dlk := pss.plt.Acquire(ctx, dir, lockmap.WLOCK)
-	defer pss.plt.Release(ctx, dlk, lockmap.WLOCK)
+	dlk := pss.plt.Acquire(ctx, d.Path(), lockmapv1.WLOCK)
+	defer pss.plt.Release(ctx, dlk, lockmapv1.WLOCK)
 
-	o1, flk, err := pss.createObj(ctx, d, dlk, fn, perm, m, lid, fence, dev)
+	o1, flk, err := pss.createObj(ctx, d, dlk, name, perm, m, lid, fence, dev)
 	if lid.IsLeased() {
 		db.DPrintf(db.PROTSRV, "%v: createObj Leased %q %v %v lid %v", ctx.ClntId(), name, o1, err, lid)
 	}
 	if err != nil {
 		return sp.Tqid{}, nil, err
 	}
-	defer pss.plt.Release(ctx, flk, lockmap.WLOCK)
+	defer pss.plt.Release(ctx, flk, lockmapv1.WLOCK)
 
 	pss.vt.Insert(o1.Path())
 	qid := pss.newQid(o1.Perm(), o1.Path())
@@ -138,11 +135,12 @@ func (pss *ProtSrvState) RemoveObj(ctx fs.CtxI, o fs.FsObj, path path.Tpathname,
 	}
 
 	// lock path to make WatchV and Remove interact correctly
-	dlk := pss.plt.Acquire(ctx, path.Dir(), lockmap.WLOCK)
-	flk := pss.plt.Acquire(ctx, path, lockmap.WLOCK)
-	defer pss.plt.ReleaseLocks(ctx, dlk, flk, lockmap.WLOCK)
+	dlk := pss.plt.Acquire(ctx, o.Parent().Path(), lockmapv1.WLOCK)
+	flk := pss.plt.Acquire(ctx, o.Path(), lockmapv1.WLOCK)
+	defer pss.plt.ReleaseLocks(ctx, dlk, flk, lockmapv1.WLOCK)
+	// defer pss.plt.Release(ctx, dlk, lockmapv1.WLOCK)
 
-	pss.stats.IncPathString(flk.Path())
+	// pss.stats.IncPathString(flk.Path())
 
 	db.DPrintf(db.PROTSRV, "%v: removeObj %v %v", ctx.ClntId(), name, o)
 
@@ -170,10 +168,10 @@ func (pss *ProtSrvState) RemoveObj(ctx fs.CtxI, o fs.FsObj, path path.Tpathname,
 
 func (pss *ProtSrvState) RenameObj(po *Pobj, name string, f sp.Tfence) *serr.Err {
 	dst := po.Pathname().Dir().Copy().AppendPath(path.Split(name))
-	dlk, slk := pss.plt.AcquireLocks(po.Ctx(), po.Pathname().Dir(), po.Pathname().Base(), lockmap.WLOCK)
-	defer pss.plt.ReleaseLocks(po.Ctx(), dlk, slk, lockmap.WLOCK)
-	tlk := pss.plt.Acquire(po.Ctx(), dst, lockmap.WLOCK)
-	defer pss.plt.Release(po.Ctx(), tlk, lockmap.WLOCK)
+	dlk, slk := pss.plt.AcquireLocks(po.Ctx(), po.Obj().Parent().Path(), po.Path(), lockmapv1.WLOCK)
+	defer pss.plt.ReleaseLocks(po.Ctx(), dlk, slk, lockmapv1.WLOCK)
+	//tlk := pss.plt.Acquire(po.Ctx(), dst, lockmapv1.WLOCK)
+	//defer pss.plt.Release(po.Ctx(), tlk, lockmapv1.WLOCK)
 	pss.stats.IncPathString(po.Pathname().String())
 	err := po.Obj().Parent().Rename(po.Ctx(), po.Pathname().Base(), name, f)
 	if err != nil {
@@ -202,16 +200,16 @@ func lockOrder(d1 fs.FsObj, d2 fs.FsObj) bool {
 }
 
 func (pss *ProtSrvState) RenameAtObj(old, new *Pobj, dold, dnew fs.Dir, oldname, newname string, f sp.Tfence) *serr.Err {
-	var d1lk, d2lk, srclk, dstlk *lockmap.PathLock
+	var d1lk, d2lk, srclk, dstlk *lockmapv1.PathLock
 	if srcfirst := lockOrder(dold, dnew); srcfirst {
-		d1lk, srclk = pss.plt.AcquireLocks(old.Ctx(), old.Pathname(), oldname, lockmap.WLOCK)
-		d2lk, dstlk = pss.plt.AcquireLocks(new.Ctx(), new.Pathname(), newname, lockmap.WLOCK)
+		d1lk, srclk = pss.plt.AcquireLocks(old.Ctx(), old.Obj().Parent().Path(), old.Path(), lockmapv1.WLOCK)
+		d2lk, dstlk = pss.plt.AcquireLocks(new.Ctx(), new.Obj().Parent().Path(), new.Path(), lockmapv1.WLOCK)
 	} else {
-		d2lk, dstlk = pss.plt.AcquireLocks(new.Ctx(), new.Pathname(), newname, lockmap.WLOCK)
-		d1lk, srclk = pss.plt.AcquireLocks(old.Ctx(), old.Pathname(), oldname, lockmap.WLOCK)
+		d2lk, dstlk = pss.plt.AcquireLocks(new.Ctx(), new.Obj().Parent().Path(), new.Path(), lockmapv1.WLOCK)
+		d1lk, srclk = pss.plt.AcquireLocks(old.Ctx(), old.Obj().Parent().Path(), old.Path(), lockmapv1.WLOCK)
 	}
-	defer pss.plt.ReleaseLocks(old.Ctx(), d1lk, srclk, lockmap.WLOCK)
-	defer pss.plt.ReleaseLocks(new.Ctx(), d2lk, dstlk, lockmap.WLOCK)
+	defer pss.plt.ReleaseLocks(old.Ctx(), d1lk, srclk, lockmapv1.WLOCK)
+	defer pss.plt.ReleaseLocks(new.Ctx(), d2lk, dstlk, lockmapv1.WLOCK)
 
 	err := dold.Renameat(old.Ctx(), oldname, dnew, newname, f)
 	if err != nil {

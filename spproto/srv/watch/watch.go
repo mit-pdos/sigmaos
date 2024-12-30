@@ -24,20 +24,20 @@ import (
 
 	// "github.com/sasha-s/go-deadlock"
 
-	"sigmaos/sigmasrv/clntcond"
 	db "sigmaos/debug"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
-	"sigmaos/spproto/srv/lockmap"
+	"sigmaos/sigmasrv/clntcond"
+	"sigmaos/spproto/srv/lockmapv1"
 )
 
 type Watch struct {
-	pl   *lockmap.PathLock
+	pl   *lockmapv1.PathLock
 	sc   *clntcond.ClntCond
 	nref int
 }
 
-func newWatch(sct *clntcond.ClntCondTable, pl *lockmap.PathLock) *Watch {
+func newWatch(sct *clntcond.ClntCondTable, pl *lockmapv1.PathLock) *Watch {
 	w := &Watch{}
 	w.pl = pl
 	w.sc = sct.NewClntCond(pl)
@@ -61,20 +61,20 @@ func (ws *Watch) Wakeup() {
 type WatchTable struct {
 	//      deadlock.Mutex
 	sync.Mutex
-	watches map[string]*Watch
+	watches map[sp.Tpath]*Watch
 	sct     *clntcond.ClntCondTable
 }
 
 func NewWatchTable(sct *clntcond.ClntCondTable) *WatchTable {
 	wt := &WatchTable{}
 	wt.sct = sct
-	wt.watches = make(map[string]*Watch)
+	wt.watches = make(map[sp.Tpath]*Watch)
 	return wt
 }
 
 // Alloc watch, if doesn't exist allocate one.  Caller must have pl
 // locked.
-func (wt *WatchTable) allocWatch(pl *lockmap.PathLock) *Watch {
+func (wt *WatchTable) allocWatch(pl *lockmapv1.PathLock) *Watch {
 	wt.Lock()
 	defer wt.Unlock()
 
@@ -129,7 +129,7 @@ func (wt *WatchTable) freeWatch(ws *Watch) {
 }
 
 // Caller should have pl locked
-func (wt *WatchTable) WaitWatch(pl *lockmap.PathLock, cid sp.TclntId) *serr.Err {
+func (wt *WatchTable) WaitWatch(pl *lockmapv1.PathLock, cid sp.TclntId) *serr.Err {
 	ws := wt.allocWatch(pl)
 	err := ws.Watch(cid)
 	wt.freeWatch(ws)
@@ -137,7 +137,7 @@ func (wt *WatchTable) WaitWatch(pl *lockmap.PathLock, cid sp.TclntId) *serr.Err 
 }
 
 // Caller should have pl locked
-func (wt *WatchTable) WakeupWatch(pl *lockmap.PathLock) {
+func (wt *WatchTable) WakeupWatch(pl *lockmapv1.PathLock) {
 	wt.Lock()
 	defer wt.Unlock()
 

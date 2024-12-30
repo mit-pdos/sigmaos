@@ -4,21 +4,21 @@ import (
 	"sigmaos/api/fs"
 	"sigmaos/path"
 	"sigmaos/serr"
-	"sigmaos/spproto/srv/lockmap"
+	"sigmaos/spproto/srv/lockmapv1"
 	"sigmaos/spproto/srv/namei"
 )
 
 // LookupObj/namei will return an lo and a locked watch for it, even
 // in error cases because the caller create a new fid anyway.
-func (ps *ProtSrv) lookupObj(ctx fs.CtxI, po *Pobj, target path.Tpathname, ltype lockmap.Tlock) ([]fs.FsObj, fs.FsObj, *lockmap.PathLock, path.Tpathname, *serr.Err) {
-	src := po.Pathname()
+func (ps *ProtSrv) lookupObj(ctx fs.CtxI, po *Pobj, target path.Tpathname, ltype lockmapv1.Tlock) ([]fs.FsObj, fs.FsObj, *lockmapv1.PathLock, path.Tpathname, *serr.Err) {
+	src := po.Path()
 	lk := ps.plt.Acquire(ctx, src, ltype)
 	o := po.Obj()
 	if len(target) == 0 {
 		return nil, o, lk, nil, nil
 	}
 	if !o.Perm().IsDir() {
-		return nil, o, lk, nil, serr.NewErr(serr.TErrNotDir, src.Base())
+		return nil, o, lk, nil, serr.NewErr(serr.TErrNotDir, po.Pathname().Base())
 	}
-	return namei.Walk(ps.plt, ctx, o, lk, src, target, nil, ltype)
+	return namei.Walk(ps.plt, ctx, o, lk, target, nil, ltype)
 }

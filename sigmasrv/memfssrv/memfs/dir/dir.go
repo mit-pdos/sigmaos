@@ -36,7 +36,7 @@ func MkDirF(i fs.Inode, no fs.NewFsObjF) fs.FsObj {
 }
 
 func (dir *DirImpl) String() string {
-	str := fmt.Sprintf("{dir %p i %p %T Dir{entries: ", dir, dir.Inode, dir.Inode)
+	str := fmt.Sprintf("{dir %p(%v) i %p %T Dir{entries: ", dir, dir.Path(), dir.Inode, dir.Inode)
 
 	dir.dents.Iter(func(n string, e fs.FsObj) bool {
 		str += fmt.Sprintf("[%v]", n)

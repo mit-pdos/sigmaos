@@ -8,20 +8,20 @@ package sigmasrv
 import (
 	"runtime/debug"
 
+	"sigmaos/api/fs"
 	"sigmaos/ctx"
 	db "sigmaos/debug"
-	"sigmaos/sigmasrv/fencefs"
-	"sigmaos/api/fs"
-	"sigmaos/sigmasrv/memfssrv/memfs"
-	"sigmaos/sigmasrv/memfssrv/memfs/dir"
-	"sigmaos/sigmasrv/memfssrv"
 	"sigmaos/proc"
 	"sigmaos/rpc"
-	rpcsrv "sigmaos/rpc/srv"
 	rpcdevsrv "sigmaos/rpc/dev/srv"
+	rpcsrv "sigmaos/rpc/srv"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv/cpumon"
+	"sigmaos/sigmasrv/fencefs"
+	"sigmaos/sigmasrv/memfssrv"
+	"sigmaos/sigmasrv/memfssrv/memfs"
+	"sigmaos/sigmasrv/memfssrv/memfs/dir"
 	spprotosrv "sigmaos/spproto/srv"
 )
 

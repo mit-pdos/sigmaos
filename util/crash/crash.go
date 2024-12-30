@@ -17,7 +17,8 @@ import (
 )
 
 const (
-	ONE = 1000
+	ONE   = 1000
+	FIFTY = 500
 )
 
 var labels *TeventMap
@@ -28,7 +29,7 @@ type Tevent struct {
 	// wait for start ms to start generating events
 	Start int64 `json:"start"`
 
-	// max length of event interval in ms (if 0, only once)
+	// max length of event interval in ms (if <= 0, only once)
 	MaxInterval int64 `json:"maxinterval"`
 
 	// probability of generating event in this interval
@@ -56,10 +57,6 @@ func NewEventStart(l string, s, mi int64, p float64) Tevent {
 
 func NewEventStartDelay(l string, s, mi int64, d int64, p float64) Tevent {
 	return Tevent{Label: l, Start: s, MaxInterval: mi, Delay: d, Prob: p}
-}
-
-func NewEventDelay(l string, mi int64, d int64, p float64) Tevent {
-	return Tevent{Label: l, MaxInterval: mi, Delay: d, Prob: p}
 }
 
 func (e *Tevent) String() string {
@@ -115,6 +112,15 @@ func (em0 *TeventMap) Filter(l Tselector) *TeventMap {
 	return em1
 }
 
+func (em *TeventMap) AppendEnv(p *proc.Proc) error {
+	s, err := em.Events2String()
+	if err != nil {
+		return err
+	}
+	p.AppendEnv(proc.SIGMAFAIL, s)
+	return nil
+}
+
 func unmarshalTevents(s string) (*TeventMap, error) {
 	if s == "" {
 		return NewTeventMap(), nil
@@ -137,6 +143,10 @@ func initLabels() {
 	}
 	labels = em
 	db.DPrintf(db.CRASH, "Events %v", labels)
+}
+
+func Rand50() bool {
+	return rand.Int64(ONE) < FIFTY
 }
 
 func randSleep(c int64) uint64 {
@@ -180,19 +190,26 @@ func CrashMsg(msg string) {
 }
 
 func PartitionNamed(fsl *fslib.FsLib) {
-	db.DPrintf(db.CRASH, "PartitionNamed from %v\n", sp.NAMED)
+	db.DPrintf(db.CRASH, "PartitionNamed from %v", sp.NAMED)
 	if err := fsl.Disconnect(sp.NAMED); err != nil {
-		db.DPrintf(db.CRASH, "Disconnect %v name fails err %v\n", os.Args, err)
+		db.DPrintf(db.CRASH, "Disconnect %v name fails err %v", os.Args, err)
+	}
+}
+
+func PartitionAll(fsl *fslib.FsLib) {
+	db.DPrintf(db.CRASH, "PartitionAll")
+	if err := fsl.Disconnect(""); err != nil {
+		db.DPrintf(db.CRASH, "Disconnect %v name fails err %v", os.Args, err)
 	}
 }
 
 func PartitionPath(fsl *fslib.FsLib, pn string) {
-	db.DPrintf(db.CRASH, "PartitionPath %v\n", pn)
+	db.DPrintf(db.CRASH, "PartitionPath %v", pn)
 	if _, err := fsl.Stat(pn); err != nil {
-		db.DPrintf(db.CRASH, "PartitionPath: %v Stat %v err %v\n", os.Args, pn, err)
+		db.DPrintf(db.CRASH, "PartitionPath: %v Stat %v err %v", os.Args, pn, err)
 	}
 	if err := fsl.Disconnect(pn); err != nil {
-		db.DPrintf(db.CRASH, "PartitionPath: %v Disconnect %v err %v\n", os.Args, pn, err)
+		db.DPrintf(db.CRASH, "PartitionPath: %v Disconnect %v err %v", os.Args, pn, err)
 	}
 }
 
@@ -208,12 +225,16 @@ func Failer(fsl *fslib.FsLib, label Tselector, f Teventf) {
 			}
 			time.Sleep(time.Duration(e.Start) * time.Millisecond)
 			for true {
-				r := randSleep(e.MaxInterval)
+				t := e.MaxInterval
+				if e.MaxInterval < 0 {
+					t = -t
+				}
+				r := randSleep(t)
 				if r < uint64(e.Prob*ONE) {
-					db.DPrintf(db.CRASH, "Label %v r %d %v", label, r, e)
+					db.DPrintf(db.CRASH, "Raise event %v r %d %v", label, r, e)
 					f(e)
 				}
-				if e.MaxInterval == 0 {
+				if e.MaxInterval <= 0 {
 					break
 				}
 			}

@@ -9,18 +9,19 @@ import (
 	"sync"
 	"time"
 
-	"sigmaos/sched/msched/proc/chunk"
-	chunkclnt "sigmaos/sched/msched/proc/chunk/clnt"
 	db "sigmaos/debug"
 	"sigmaos/proc"
 	"sigmaos/proc/kproc"
 	beschedclnt "sigmaos/sched/besched/clnt"
 	lcschedclnt "sigmaos/sched/lcsched/clnt"
 	mschedclnt "sigmaos/sched/msched/clnt"
-	"sigmaos/util/coordination/semaphore"
+	"sigmaos/sched/msched/proc/chunk"
+	chunkclnt "sigmaos/sched/msched/proc/chunk/clnt"
 	"sigmaos/serr"
 	"sigmaos/sigmaclnt/fslib"
 	sp "sigmaos/sigmap"
+	"sigmaos/util/coordination/semaphore"
+	"sigmaos/util/crash"
 )
 
 type ProcClnt struct {
@@ -328,13 +329,12 @@ func (clnt *ProcClnt) exited(procdir, parentdir, kernelID string, pid sp.Tpid, s
 	if r != nil {
 		return fmt.Errorf("Exited error [%v] %v", procdir, r)
 	}
-	return nil
+	return err
 }
 
 // Called voluntarily by the proc when it Exits normally.
 func (clnt *ProcClnt) Exited(status *proc.Status) {
 	db.DPrintf(db.PROCCLNT, "Exited normally %v parent %v pid %v status %v", clnt.ProcEnv().ProcDir, clnt.ProcEnv().ParentDir, clnt.ProcEnv().GetPID(), status)
-	db.DPrintf(db.PROCCLNT, "Done Exited normally")
 	clnt.StopWatchingSrvs()
 	// will catch some unintended misuses: a proc calling exited
 	// twice or msched calling exited twice.
@@ -345,7 +345,11 @@ func (clnt *ProcClnt) Exited(status *proc.Status) {
 	err := clnt.exited(clnt.ProcEnv().ProcDir, clnt.ProcEnv().ParentDir, clnt.ProcEnv().GetKernelID(), clnt.ProcEnv().GetPID(), status, clnt.ProcEnv().GetHow(), false)
 	if err != nil {
 		db.DPrintf(db.ALWAYS, "exited %v err %v", clnt.ProcEnv().GetPID(), err)
+		// failed to mark ourselves exited; crash to give procd/msched a chance
+		// to cleanup
+		crash.Crash()
 	}
+	db.DPrintf(db.PROCCLNT, "Done Exited normally")
 }
 
 // Stop the msched/besched/lcsched monitoring threads

@@ -1,4 +1,4 @@
-package sortedmap
+package sortedmapv1
 
 import (
 	"strconv"
@@ -9,15 +9,10 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	db "sigmaos/debug"
-	"sigmaos/test"
 	"sigmaos/util/rand"
 )
 
 var NAMES = []string{"a", "b.txt", "gutenberg", "ls.PDF", "wiki"}
-
-func TestCompile(t *Testing.T) {
-	assert.NotNil(t, test.User)
-}
 
 func TestBasic(t *testing.T) {
 	sd := NewSortedMap[string, *bool]()
@@ -25,7 +20,7 @@ func TestBasic(t *testing.T) {
 		j := len(NAMES) - (i + 1)
 		sd.Insert(NAMES[j], new(bool))
 	}
-	db.DPrintf(db.TEST, "sd %v\n", sd.sorted)
+	db.DPrintf(db.TEST, "sd %v\n", sd)
 	i := 0
 	sd.Iter(func(n string, b *bool) bool {
 		assert.Equal(t, NAMES[i], n)
@@ -33,8 +28,7 @@ func TestBasic(t *testing.T) {
 		return true
 	})
 	sd.Delete("a")
-	assert.Equal(t, len(NAMES)-1, len(sd.dents))
-	assert.Equal(t, len(NAMES)-1, len(sd.sorted))
+	assert.Equal(t, len(NAMES)-1, sd.Len())
 	i = 1
 	sd.Iter(func(n string, b *bool) bool {
 		assert.Equal(t, NAMES[i], n)
@@ -66,6 +60,14 @@ func TestRR(t *testing.T) {
 	i, ok := sd.RoundRobin()
 	assert.False(t, ok)
 
+	sd.Insert("1", new(bool))
+	i, ok = sd.RoundRobin()
+	assert.True(t, ok)
+	j, ok := sd.RoundRobin()
+	assert.True(t, ok)
+	assert.True(t, i == j)
+	sd.Delete(i)
+
 	for i, _ := range NAMES {
 		j := len(NAMES) - (i + 1)
 		sd.Insert(NAMES[j], new(bool))
@@ -75,7 +77,7 @@ func TestRR(t *testing.T) {
 	assert.True(t, ok)
 	assert.Equal(t, "a", i)
 
-	db.DPrintf(db.TEST, "sd %v\n", sd.sorted)
+	db.DPrintf(db.TEST, "sd %v\n", sd)
 	ok = sd.Delete("a")
 	assert.True(t, ok)
 

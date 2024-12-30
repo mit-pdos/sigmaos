@@ -30,7 +30,7 @@ func (pclnt *SPProtoClnt) Endpoint() *sp.Tendpoint {
 	return pclnt.ep
 }
 
-func (pclnt *SPProtoClnt) CallServer(args sessp.Tmsg, iniov sessp.IoVec, outiov sessp.IoVec) (*sessp.FcallMsg, *serr.Err) {
+func (pclnt *SPProtoClnt) callServer(args sessp.Tmsg, iniov sessp.IoVec, outiov sessp.IoVec) (*sessp.FcallMsg, *serr.Err) {
 	reply, err := pclnt.sm.RPC(pclnt.ep, args, iniov, outiov)
 	if err != nil {
 		return nil, err
@@ -43,16 +43,16 @@ func (pclnt *SPProtoClnt) CallServer(args sessp.Tmsg, iniov sessp.IoVec, outiov 
 }
 
 func (pclnt *SPProtoClnt) Call(args sessp.Tmsg) (*sessp.FcallMsg, *serr.Err) {
-	return pclnt.CallServer(args, nil, nil)
+	return pclnt.callServer(args, nil, nil)
 }
 
 func (pclnt *SPProtoClnt) CallIoVec(args sessp.Tmsg, iniov sessp.IoVec, outiov sessp.IoVec) (*sessp.FcallMsg, *serr.Err) {
-	return pclnt.CallServer(args, iniov, outiov)
+	return pclnt.callServer(args, iniov, outiov)
 }
 
 func (pclnt *SPProtoClnt) Attach(secrets map[string]*sp.SecretProto, cid sp.TclntId, fid sp.Tfid, path path.Tpathname) (*sp.Rattach, *serr.Err) {
 	args := sp.NewTattach(fid, sp.NoFid, secrets, cid, path)
-	reply, err := pclnt.CallServer(args, nil, nil)
+	reply, err := pclnt.callServer(args, nil, nil)
 	if err != nil {
 		return nil, err
 	}

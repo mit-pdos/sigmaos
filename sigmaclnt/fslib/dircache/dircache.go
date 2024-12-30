@@ -1,8 +1,7 @@
 // Package dircache watches a changing directory and keeps a local copy
 // with entries of type E chosen by the caller (e.g., rpcclnt's as in
-// [rpcdirclnt]).  dircache updates the entries as file as
+// [rpcdirclnt]).  dircache updates the entries as files are
 // created/removed in the watched directory.
-
 package dircache
 
 import (
@@ -11,11 +10,11 @@ import (
 	"time"
 
 	db "sigmaos/debug"
-	"sigmaos/sigmaclnt/fslib"
 	"sigmaos/namesrv/fsetcd"
 	"sigmaos/serr"
+	"sigmaos/sigmaclnt/fslib"
 	sp "sigmaos/sigmap"
-	"sigmaos/util/sortedmap"
+	"sigmaos/util/sortedmapv1"
 )
 
 type NewValF[E any] func(string) (E, error)
@@ -24,7 +23,7 @@ type DirCache[E any] struct {
 	*fslib.FsLib
 	sync.RWMutex
 	hasEntries    *sync.Cond
-	dir           *sortedmap.SortedMap[string, E]
+	dir           *sortedmapv1.SortedMap[string, E]
 	isDone        atomic.Uint64
 	isInit        atomic.Uint64
 	Path          string
@@ -45,7 +44,7 @@ func NewDirCacheFilter[E any](fsl *fslib.FsLib, path string, newVal NewValF[E], 
 	dc := &DirCache[E]{
 		FsLib:         fsl,
 		Path:          path,
-		dir:           sortedmap.NewSortedMap[string, E](),
+		dir:           sortedmapv1.NewSortedMap[string, E](),
 		LSelector:     LSelector,
 		ESelector:     ESelector,
 		newVal:        newVal,
@@ -61,7 +60,7 @@ func (dc *DirCache[E]) init() {
 	if dc.isInit.Swap(1) == 0 && dc.isDone.Load() == 0 {
 		go dc.watchDir(ch)
 		go dc.watchdog()
-		<-ch
+		<-ch // wait until watchDir() has read the directory once
 	}
 }
 
@@ -91,7 +90,7 @@ func (dc *DirCache[E]) GetEntries() ([]string, error) {
 	if err := dc.checkErr(); err != nil {
 		return nil, err
 	}
-	return dc.dir.Keys(0), nil
+	return dc.dir.Keys(), nil
 }
 
 func (dc *DirCache[E]) WaitTimedEntriesN(n int) (int, error) {
@@ -112,7 +111,7 @@ func (dc *DirCache[E]) WaitTimedGetEntriesN(n int) ([]string, error) {
 	if _, err := dc.WaitTimedEntriesN(n); err != nil {
 		return nil, err
 	}
-	return dc.dir.Keys(0), nil
+	return dc.dir.Keys(), nil
 }
 
 func (dc *DirCache[E]) GetEntry(n string) (E, error) {
@@ -301,7 +300,7 @@ func (dc *DirCache[E]) updateEntriesL(ents []string) error {
 			}
 		}
 	}
-	for _, n := range dc.dir.Keys(0) {
+	for _, n := range dc.dir.Keys() {
 		if !entsMap[n] {
 			dc.dir.Delete(n)
 		}
@@ -319,7 +318,7 @@ func (dc *DirCache[E]) watchDir(ch chan struct{}) {
 	first := true
 	for dc.isDone.Load() == 0 {
 		dr := fslib.NewDirReader(dc.FsLib, dc.Path)
-		ents, ok, err := dr.WatchUniqueEntries(dc.dir.Keys(0), dc.prefixFilters)
+		ents, ok, err := dr.WatchUniqueEntries(dc.dir.Keys(), dc.prefixFilters)
 		if ok { // reset retry?
 			retry = false
 		}
@@ -336,7 +335,8 @@ func (dc *DirCache[E]) watchDir(ch chan struct{}) {
 				db.DPrintf(dc.ESelector, "watchDir[%v]: %t %v stop watching", dc.Path, ok, err)
 				dc.err = err
 				if first {
-					ch <- struct{}{}
+					close(ch)
+					first = false
 				}
 				return
 			}
@@ -346,7 +346,8 @@ func (dc *DirCache[E]) watchDir(ch chan struct{}) {
 		dc.updateEntriesL(ents)
 		dc.Unlock()
 		if first {
-			ch <- struct{}{}
+			close(ch)
+			first = false
 		}
 	}
 	if dc.ch != nil {

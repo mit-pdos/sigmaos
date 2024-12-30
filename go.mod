@@ -42,6 +42,7 @@ require (
 	github.com/docker/go-connections v0.4.0
 	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/golang/protobuf v1.5.4
+	github.com/google/btree v1.1.3
 	github.com/hanwen/go-fuse/v2 v2.5.0
 	github.com/hashicorp/golang-lru/v2 v2.0.7
 	github.com/mit-pdos/go-geoindex v0.0.0-20230316114931-aab59857d7c8

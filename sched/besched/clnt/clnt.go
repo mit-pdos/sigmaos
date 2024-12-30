@@ -1,4 +1,4 @@
-// Package besched/clnt implements the client-side of the besched scheduler
+// Package [beschedclnt] implements the client-side of the besched scheduler
 package clnt
 
 import (

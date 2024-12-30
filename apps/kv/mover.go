@@ -6,13 +6,13 @@ import (
 	"time"
 
 	"sigmaos/apps/cache"
-	"sigmaos/util/crash"
 	db "sigmaos/debug"
-	"sigmaos/sigmaclnt/fslib"
 	"sigmaos/proc"
 	"sigmaos/serr"
 	"sigmaos/sigmaclnt"
+	"sigmaos/sigmaclnt/fslib"
 	sp "sigmaos/sigmap"
+	"sigmaos/util/crash"
 )
 
 //
@@ -63,17 +63,17 @@ func NewMover(job, epochstr, shard, src, dst, repl string) (*Mover, error) {
 		db.DFatalf("couldn't start %v", err)
 	}
 
-	crash.Failer(mv.FsLib, crash.KVMOVER_CRASH, func(e crash.Tevent) {
-		crash.Crash()
-	})
-
-	crash.Failer(mv.FsLib, crash.KVMOVER_PARTITION, func(e crash.Tevent) {
-		// Randomly tell parent we exited but then keep running,
-		// simulating a network partition from the parent's point
-		// of view.
-		sc.ProcAPI.Exited(proc.NewStatusErr("partitioned", nil))
-		mv.exit = false // parent has received an exit status, so don't exit again
-		time.Sleep(time.Duration(e.Delay) * time.Millisecond)
+	crash.Failer(mv.FsLib, crash.KVMOVER_EVENT, func(e crash.Tevent) {
+		if crash.Rand50() {
+			crash.Crash()
+		} else {
+			// Randomly tell parent we exited but then keep running,
+			// simulating a network partition from the parent's point
+			// of view.
+			db.DPrintf(db.CRASH, "Partition mover")
+			sc.ProcAPI.Exited(proc.NewStatusErr("partitioned", nil))
+			mv.exit = false // parent has received an exit status, so don't exit again
+		}
 	})
 
 	checkFence(mv.FsLib, mv.job, mv.fence)
@@ -82,38 +82,44 @@ func NewMover(job, epochstr, shard, src, dst, repl string) (*Mover, error) {
 }
 
 // Copy shard from src to dst
-func (mv *Mover) moveShard(s, d string) error {
+func (mv *Mover) moveShard(s, d string) (int, error) {
 	if err := mv.kc.FreezeShard(s, mv.shard, mv.fence); err != nil {
 		db.DPrintf(db.KVMV_ERR, "FreezeShard %v err %v\n", s, err)
 		// did previous mover finish the job?
 		if serr.IsErrCode(err, serr.TErrNotfound) {
-			return nil
+			return 0, nil
 		}
-		return err
+		return 0, err
 	}
 
 	vals, err := mv.kc.DumpShard(s, mv.shard, mv.fence)
 	if err != nil {
 		db.DPrintf(db.KVMV_ERR, "DumpShard %v err %v\n", mv.shard, err)
-		return err
+		return 0, err
 	}
 
 	if err := mv.kc.CreateShard(d, mv.shard, mv.fence, vals); err != nil {
 		db.DPrintf(db.KVMV_ERR, "CreateShard %v err %v\n", mv.shard, err)
-		return err
+		return 0, err
 	}
 
 	// Mark that move is done by deleting s
 	if err := mv.kc.DeleteShard(s, mv.shard, mv.fence); err != nil {
 		db.DPrintf(db.KVMV_ERR, "DeleteShard src %v err %v\n", mv.shard, err)
-		return err
+		return 0, err
 	}
-	return nil
+	return len(vals), nil
+}
+
+type TmoverRes struct {
+	Ms    int64 `json:"Ms"`
+	Nkeys int64 `json:"Nkeys"`
 }
 
 func (mv *Mover) Move(src, dst string) {
+	s := time.Now()
 	db.DPrintf(db.KVMV, "conf %v: mov %v from %v to %v\n", mv.fence, mv.shard, src, dst)
-	err := mv.moveShard(src, dst)
+	n, err := mv.moveShard(src, dst)
 	if err != nil {
 		db.DPrintf(db.KVMV_ERR, "conf %v: move %v from %v to %v err %v\n", mv.fence, mv.shard, src, dst, err)
 	}
@@ -122,7 +128,7 @@ func (mv *Mover) Move(src, dst string) {
 		if err != nil {
 			mv.ClntExit(proc.NewStatusErr(err.Error(), nil))
 		} else {
-			mv.ClntExitOK()
+			mv.ClntExit(proc.NewStatusInfo(proc.StatusOK, "OK", TmoverRes{time.Since(s).Milliseconds(), int64(n)}))
 		}
 	}
 }

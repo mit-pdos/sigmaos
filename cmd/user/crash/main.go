@@ -1,17 +1,15 @@
+// Crash or partition proc
 package main
 
 import (
 	"time"
 
-	"sigmaos/util/crash"
 	db "sigmaos/debug"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
+	sp "sigmaos/sigmap"
+	"sigmaos/util/crash"
 )
-
-//
-// Crashing proc
-//
 
 func main() {
 	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
@@ -22,6 +20,19 @@ func main() {
 	if err != nil {
 		db.DFatalf("Started: err %v\n", err)
 	}
-	time.Sleep(1 * time.Millisecond)
-	crash.Crash()
+	_, err = sc.GetDir(sp.NAMED)
+	if err != nil {
+		db.DFatalf("Named GetDir error: %v", err)
+	}
+	crash.Failer(sc.FsLib, crash.CRASH_CRASH, func(e crash.Tevent) {
+		crash.Crash()
+	})
+	crash.Failer(sc.FsLib, crash.CRASH_PARTITION, func(e crash.Tevent) {
+		crash.PartitionAll(sc.FsLib)
+	})
+
+	time.Sleep(1000 * time.Millisecond)
+
+	// This exit will not mark proc as exited if proc disconnected.
+	sc.ClntExitOK()
 }

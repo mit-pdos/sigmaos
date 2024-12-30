@@ -225,7 +225,7 @@ const (
 	FSLIB_ERR               = "FSLIB" + ERR
 	FIDCLNT                 = "FIDCLNT"
 	FIDCLNT_ERR             = FIDCLNT + ERR
-	FDCLNT                  = "FDCLNT"
+	FSCLNT                  = "FSCLNT"
 	SEMCLNT                 = "SEMCLNT"
 	SEMCLNT_ERR             = SEMCLNT + ERR
 	PROCCLNT                = "PROCCLNT"

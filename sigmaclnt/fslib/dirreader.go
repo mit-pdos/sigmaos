@@ -146,6 +146,7 @@ func (dr *DirReader) WatchUniqueEntries(present []string, prefixFilters []string
 	newents := make([]string, 0)
 	ok, err := dr.readDirWatch(dr.pn, func(sts []*sp.Tstat) bool {
 		unchanged := true
+		db.DPrintf(db.WATCH, "readDirWatch %v sts %v filter %v", dr.pn, sp.Names(sts), prefixFilters)
 		for i, st := range sts {
 			if len(prefixFilters) > 0 {
 				skip := false

@@ -12,10 +12,6 @@ import (
 	"sigmaos/sigmaclnt"
 )
 
-const (
-	M = 20
-)
-
 func BurstProc(n int, f func(chan error)) error {
 	ch := make(chan error)
 	for i := 0; i < n; i++ {
@@ -32,8 +28,8 @@ func BurstProc(n int, f func(chan error)) error {
 }
 
 func main() {
-	if len(os.Args) < 3 {
-		fmt.Fprintf(os.Stderr, "Usage: %v <n> <program> <program-args>\n", os.Args[0])
+	if len(os.Args) < 4 {
+		fmt.Fprintf(os.Stderr, "Usage: %v <n> <burst> <program> <program-args>\n", os.Args[0])
 		os.Exit(1)
 	}
 	n, err := strconv.Atoi(os.Args[1])
@@ -41,7 +37,11 @@ func main() {
 		fmt.Fprintf(os.Stderr, "n is not a number %v\n", os.Args[1])
 		os.Exit(1)
 	}
-
+	b, err := strconv.Atoi(os.Args[2])
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "b is not a number %v\n", os.Args[2])
+		os.Exit(1)
+	}
 	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
 	if err != nil {
 		db.DFatalf("NewSigmaClnt: error %v\n", err)
@@ -52,13 +52,13 @@ func main() {
 	}
 	start := time.Now()
 	ncrash := 0
-	for i := 0; i < n; i += M {
-		if i%1000 == 0 {
-			db.DPrintf(db.ALWAYS, "i = %d %dms\n", i, time.Since(start).Milliseconds())
+	for i := 0; i < n; i += b {
+		if i%100 == 0 {
+			db.DPrintf(db.ALWAYS, "iter i = %d %dms\n", i, time.Since(start).Milliseconds())
 			start = time.Now()
 		}
-		err := BurstProc(M, func(ch chan error) {
-			a := proc.NewProc(os.Args[2], os.Args[3:])
+		err := BurstProc(b, func(ch chan error) {
+			a := proc.NewProc(os.Args[3], os.Args[4:])
 			db.DPrintf(db.TEST1, "Spawning %v", a.GetPid().String())
 			if err := sc.Spawn(a); err != nil {
 				ch <- err
@@ -85,7 +85,7 @@ func main() {
 
 		if err != nil {
 			sr := serr.NewErrString(err.Error())
-			if !(os.Args[2] == "crash" && sr.Error() != proc.CRASHSTATUS) {
+			if !(os.Args[3] == "crash" && sr.Error() != proc.CRASHSTATUS) {
 				sc.ClntExit(proc.NewStatusErr(sr.Error(), nil))
 				os.Exit(1)
 			}

@@ -50,14 +50,14 @@ ip=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}
 
 echo "db IP: $ip"
 
-until mysqlshow -h $ip -u root -psigmadb 2> /dev/null; do
+until mariadb-show --skip-ssl -h $ip -u root -psigmadb 2> /dev/null; do
     echo -n "." 1>&2
     sleep 0.1;
 done;    
 
-if ! mysqlshow -h $ip -u root -psigmadb | grep -q sigmaos; then
+if ! mariadb-show --skip-ssl -h $ip -u root -psigmadb | grep -q sigmaos; then
     echo "initialize db"
-    mysql -h $ip -u root -psigmadb <<ENDOFSQL
+    mariadb --skip-ssl -h $ip -u root -psigmadb <<ENDOFSQL
 CREATE database sigmaos;
 USE sigmaos;
 source apps/hotel/init-db.sql;

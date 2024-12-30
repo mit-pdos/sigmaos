@@ -14,6 +14,7 @@ import (
 	"sigmaos/apps/kv/kvgrp"
 	replclnt "sigmaos/apps/kv/repl/clnt"
 	db "sigmaos/debug"
+	rpcclnt "sigmaos/rpc/clnt"
 	"sigmaos/serr"
 	"sigmaos/sigmaclnt/fslib"
 	sp "sigmaos/sigmap"
@@ -42,6 +43,18 @@ type KvClerk struct {
 	job  string
 	cc   *cacheclnt.CacheClnt
 	rc   *replclnt.ReplClnt
+}
+
+type TclerkRes struct {
+	Nkeys  int64 `json:"Nkeys"`
+	Nretry int64 `json:"Nretry"`
+	Ms     int64 `json:"Ms"`
+}
+
+func (cr *TclerkRes) Add(cr0 TclerkRes) {
+	cr.Nkeys += cr0.Nkeys
+	cr.Nretry += cr0.Nretry
+	cr.Ms += cr0.Ms
 }
 
 func NewClerkStart(fsl *fslib.FsLib, job string, repl bool) (*KvClerk, error) {
@@ -77,6 +90,10 @@ func (kc *KvClerk) StartClerk() error {
 		return err
 	}
 	return nil
+}
+
+func (kc *KvClerk) Stats() rpcclnt.Tstats {
+	return kc.cc.Stats()
 }
 
 // Detach servers not in kvs

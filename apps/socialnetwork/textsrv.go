@@ -5,9 +5,9 @@ import (
 	"regexp"
 	"sync"
 
+	"sigmaos/api/fs"
 	"sigmaos/apps/socialnetwork/proto"
 	dbg "sigmaos/debug"
-	"sigmaos/api/fs"
 	"sigmaos/proc"
 	rpcclnt "sigmaos/rpc/clnt"
 	sprpcclnt "sigmaos/rpc/clnt/sigmap"
@@ -56,7 +56,7 @@ func RunTextSrv(jobname string) error {
 }
 
 func (tsrv *TextSrv) ProcessText(
-	ctx fs.CtxI, req proto.ProcessTextRequest, res *proto.ProcessTextResponse) error {
+	ctx fs.CtxI, req proto.ProcessTextReq, res *proto.ProcessTextRep) error {
 	res.Ok = "No. "
 	if req.Text == "" {
 		res.Ok = "Cannot process empty text."
@@ -69,8 +69,8 @@ func (tsrv *TextSrv) ProcessText(
 	for idx, mention := range mentions {
 		usernames[idx] = mention[1:]
 	}
-	userArg := proto.CheckUserRequest{Usernames: usernames}
-	userRes := proto.CheckUserResponse{}
+	userArg := proto.CheckUserReq{Usernames: usernames}
+	userRes := proto.CheckUserRep{}
 
 	urlIndices := urlRegex.FindAllStringIndex(req.Text, -1)
 	urlIndicesL := len(urlIndices)
@@ -78,8 +78,8 @@ func (tsrv *TextSrv) ProcessText(
 	for idx, loc := range urlIndices {
 		extendedUrls[idx] = req.Text[loc[0]:loc[1]]
 	}
-	urlArg := proto.ComposeUrlsRequest{Extendedurls: extendedUrls}
-	urlRes := proto.ComposeUrlsResponse{}
+	urlArg := proto.ComposeUrlsReq{Extendedurls: extendedUrls}
+	urlRes := proto.ComposeUrlsRep{}
 
 	// concurrent RPC calls
 	var wg sync.WaitGroup

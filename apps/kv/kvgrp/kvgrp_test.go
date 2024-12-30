@@ -181,7 +181,7 @@ func TestServerCrash(t *testing.T) {
 }
 
 func TestReconnectSimple(t *testing.T) {
-	const N = 10
+	const N = 100
 	t1, err1 := test.NewTstateAll(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
@@ -210,7 +210,6 @@ func TestReconnectSimple(t *testing.T) {
 
 	err = <-ch
 	assert.Nil(ts.T, err, "fsl1")
-
 	ts.gm.StopGroup()
 	ts.Shutdown(false)
 }

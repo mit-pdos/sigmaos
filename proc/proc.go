@@ -237,6 +237,7 @@ func (p *Proc) String() string {
 		"Type:%v "+
 		"Mcpu:%v "+
 		"Mem:%v "+
+		"Kernels:%v "+
 		"}",
 		p.ProcEnvProto.Program,
 		p.ProcEnvProto.Version,
@@ -256,6 +257,7 @@ func (p *Proc) String() string {
 		p.GetType(),
 		p.GetMcpu(),
 		p.GetMem(),
+		p.ProcEnvProto.Kernels,
 	)
 }
 

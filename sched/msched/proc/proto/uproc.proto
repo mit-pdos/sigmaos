@@ -5,14 +5,14 @@ import "sigmap/sigmap.proto";
 
 option go_package = "sigmaos/sched/msched/proc/proto";
 
-message RunRequest {
+message RunReq {
   ProcProto procProto = 1;
 }
 
-message RunResult {
+message RunRep {
 }
 
-message WarmBinRequest {
+message WarmBinReq {
   string realmStr = 1;
   string program = 2;
   string pidStr = 3;
@@ -21,26 +21,26 @@ message WarmBinRequest {
   TendpointProto NamedEndpointProto = 6;
 }
 
-message WarmBinResult {
+message WarmBinRep {
   bool oK = 1;
 }
 
-message FetchRequest {
+message FetchReq {
    string prog = 1;
    int32 chunkId = 2;
    uint64 size = 3;
    uint32 pid = 4;
 }
 
-message FetchResponse {
+message FetchRep {
   uint64 size = 1;
 }
 
-message LookupRequest {
+message LookupReq {
    string prog = 1;
    uint32 pid = 2;
 }
 
-message LookupResponse {
+message LookupRep {
   TstatProto stat = 1;
 }

@@ -15,13 +15,13 @@ import (
 	"time"
 
 	"sigmaos/api/fs"
-	"sigmaos/chunk"
-	chunkclnt "sigmaos/chunk/clnt"
-	proto "sigmaos/chunk/proto"
 	db "sigmaos/debug"
 	dialproxyclnt "sigmaos/dialproxy/clnt"
 	"sigmaos/proc"
 	rpcproto "sigmaos/rpc/proto"
+	"sigmaos/sched/msched/proc/chunk"
+	chunkclnt "sigmaos/sched/msched/proc/chunk/clnt"
+	proto "sigmaos/sched/msched/proc/chunk/proto"
 	"sigmaos/serr"
 	"sigmaos/sigmaclnt"
 	"sigmaos/sigmaclnt/fslib"
@@ -161,7 +161,7 @@ func (cksrv *ChunkSrv) getBin(realm sp.Trealm, prog string) (*bin, error) {
 }
 
 //
-// Handle a FetchChunkRequest
+// Handle a FetchChunkReq
 //
 
 func (cksrv *ChunkSrv) fetchCache(be *bin, r sp.Trealm, pid sp.Tpid, s3secret *sp.SecretProto, ck int, size sp.Tsize, data bool) (bool, sp.Tsize, string, *rpcproto.Blob, error) {
@@ -192,7 +192,7 @@ func (cksrv *ChunkSrv) fetchOrigin(r sp.Trealm, prog string, pid sp.Tpid, s3secr
 		return 0, "", err
 	}
 	// paths = replaceLocal(paths, cksrv.kernelId)
-	fd, path := be.getFd(sc, paths)
+	fd, path := be.getFd(paths)
 	if fd == -1 {
 		defer be.signalFdWaiters()
 		s := time.Now()
@@ -208,7 +208,9 @@ func (cksrv *ChunkSrv) fetchOrigin(r sp.Trealm, prog string, pid sp.Tpid, s3secr
 	}
 	sz, err := sc.Pread(fd, b, sp.Toffset(chunk.ChunkOff(ck)))
 	if err != nil {
-		db.DPrintf(db.CHUNKSRV, "%v: FetchOrigin: pid %v read %q ckid %d err %v", cksrv.kernelId, pid, prog, ck, err)
+		db.DPrintf(db.CHUNKSRV, "%v: fetchOrigin: pid %v read %q ckid %d err %v", cksrv.kernelId, pid, prog, ck, err)
+		be.failFd()
+		sc.CloseFd(fd)
 		return 0, "", err
 	}
 	return sz, path, nil
@@ -311,7 +313,7 @@ func (cksrv *ChunkSrv) fetch(realm sp.Trealm, prog string, pid sp.Tpid, s3secret
 	return sz, srvpath, nil, nil
 }
 
-func (cksrv *ChunkSrv) Fetch(ctx fs.CtxI, req proto.FetchChunkRequest, res *proto.FetchChunkResponse) error {
+func (cksrv *ChunkSrv) Fetch(ctx fs.CtxI, req proto.FetchChunkReq, res *proto.FetchChunkRep) error {
 	var ep *sp.Tendpoint
 	epp := req.GetNamedEndpointProto()
 	if epp != nil {
@@ -330,7 +332,7 @@ func (cksrv *ChunkSrv) Fetch(ctx fs.CtxI, req proto.FetchChunkRequest, res *prot
 }
 
 //
-// Handle a GetFileStatRequest
+// Handle a GetFileStatReq
 //
 
 func (cksrv *ChunkSrv) getOrigin(r sp.Trealm, prog string, paths []string, s3secret *sp.SecretProto, ep *sp.Tendpoint) (*sp.Tstat, string, error) {
@@ -387,7 +389,7 @@ func (cksrv *ChunkSrv) getFileStat(r sp.Trealm, prog string, pid sp.Tpid, paths 
 	return st, srv, nil
 }
 
-func (cksrv *ChunkSrv) GetFileStat(ctx fs.CtxI, req proto.GetFileStatRequest, res *proto.GetFileStatResponse) error {
+func (cksrv *ChunkSrv) GetFileStat(ctx fs.CtxI, req proto.GetFileStatReq, res *proto.GetFileStatRep) error {
 	db.DPrintf(db.CHUNKSRV, "%v: GetFileStat: %v", cksrv.kernelId, req)
 	db.DPrintf(db.SPAWN_LAT, "%v: GetFileStat: %v", cksrv.kernelId, req)
 	s := time.Now()

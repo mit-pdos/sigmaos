@@ -3,8 +3,8 @@ package srv
 import (
 	"os"
 
-	db "sigmaos/debug"
 	"sigmaos/api/fs"
+	db "sigmaos/debug"
 	"sigmaos/kernel"
 	"sigmaos/kernel/proto"
 	"sigmaos/sigmaclnt"
@@ -37,7 +37,7 @@ func Run(k *kernel.Kernel) error {
 	return nil
 }
 
-func (ks *KernelSrv) Boot(ctx fs.CtxI, req proto.BootRequest, rep *proto.BootResult) error {
+func (ks *KernelSrv) Boot(ctx fs.CtxI, req proto.BootReq, rep *proto.BootRep) error {
 	db.DPrintf(db.KERNEL, "kernelsrv boot %v args %v", req.Name, req.Args)
 	var pid sp.Tpid
 	var err error
@@ -49,11 +49,11 @@ func (ks *KernelSrv) Boot(ctx fs.CtxI, req proto.BootRequest, rep *proto.BootRes
 	return nil
 }
 
-func (ks *KernelSrv) SetCPUShares(ctx fs.CtxI, req proto.SetCPUSharesRequest, rep *proto.SetCPUSharesResponse) error {
+func (ks *KernelSrv) SetCPUShares(ctx fs.CtxI, req proto.SetCPUSharesReq, rep *proto.SetCPUSharesRep) error {
 	return ks.k.SetCPUShares(sp.Tpid(req.PidStr), req.Shares)
 }
 
-func (ks *KernelSrv) GetCPUUtil(ctx fs.CtxI, req proto.GetKernelSrvCPUUtilRequest, rep *proto.GetKernelSrvCPUUtilResponse) error {
+func (ks *KernelSrv) GetCPUUtil(ctx fs.CtxI, req proto.GetKernelSrvCPUUtilReq, rep *proto.GetKernelSrvCPUUtilRep) error {
 	util, err := ks.k.GetCPUUtil(sp.Tpid(req.PidStr))
 	if err != nil {
 		return err
@@ -62,11 +62,11 @@ func (ks *KernelSrv) GetCPUUtil(ctx fs.CtxI, req proto.GetKernelSrvCPUUtilReques
 	return nil
 }
 
-func (ks *KernelSrv) EvictKernelProc(ctx fs.CtxI, req proto.EvictKernelProcRequest, rep *proto.EvictKernelProcResponse) error {
+func (ks *KernelSrv) EvictKernelProc(ctx fs.CtxI, req proto.EvictKernelProcReq, rep *proto.EvictKernelProcRep) error {
 	return ks.k.EvictKernelProc(sp.Tpid(req.PidStr))
 }
 
-func (ks *KernelSrv) Shutdown(ctx fs.CtxI, req proto.ShutdownRequest, rep *proto.ShutdownResult) error {
+func (ks *KernelSrv) Shutdown(ctx fs.CtxI, req proto.ShutdownReq, rep *proto.ShutdownRep) error {
 	db.DPrintf(db.KERNEL, "%v: kernelsrv begin shutdown (spproxyd %t)", ks.k.Param.KernelID, ks.k.IsPurelySPProxydKernel())
 	if ks.k.IsPurelySPProxydKernel() {
 		// This is the last container to shut down, so no named isn't up anymore.
@@ -84,8 +84,4 @@ func (ks *KernelSrv) Shutdown(ctx fs.CtxI, req proto.ShutdownRequest, rep *proto
 	db.DPrintf(db.KERNEL, "%v: kernelsrv done shutdown", ks.k.Param.KernelID)
 	ks.ch <- struct{}{}
 	return nil
-}
-
-func (ks *KernelSrv) Kill(ctx fs.CtxI, req proto.KillRequest, rep *proto.KillResult) error {
-	return ks.k.KillOne(req.Name)
 }

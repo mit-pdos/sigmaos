@@ -10,8 +10,8 @@ import (
 	mrscanner "sigmaos/apps/mr/scanner"
 	db "sigmaos/debug"
 	"sigmaos/sigmaclnt/fslib"
-	"sigmaos/util/perf"
 	sp "sigmaos/sigmap"
+	"sigmaos/util/perf"
 )
 
 const (
@@ -54,9 +54,9 @@ func (ckr *ChunkReader) Reset() {
 }
 
 func (ckr *ChunkReader) CombineEmit(emit mr.EmitT) error {
-	ckr.combined.Emit(ckr.combinef, emit)
+	err := ckr.combined.Emit(ckr.combinef, emit)
 	ckr.combined = kvmap.NewKVMap(MINCAP, MAXCAP)
-	return nil
+	return err
 }
 
 func (ckr *ChunkReader) combine(key []byte, value string) error {

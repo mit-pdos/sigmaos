@@ -24,7 +24,9 @@ import (
 const (
 	SLEEP_MSECS = 2000
 	CRASH_MSECS = 5
-	NTRIALS     = "3001"
+	NPROC       = "3000"
+	NPROC1      = "1000"
+	BURST       = "20"
 	N_NODES     = 2
 )
 
@@ -79,15 +81,10 @@ func spawnSleeperMcpu(t *testing.T, ts *test.Tstate, pid sp.Tpid, mcpu proc.Tmcp
 	assert.Nil(t, err, "Spawn")
 }
 
-func spawnSpawner(t *testing.T, ts *test.Tstate, wait bool, childPid sp.Tpid, msecs, c int64) sp.Tpid {
+func spawnSpawner(t *testing.T, ts *test.Tstate, wait bool, childPid sp.Tpid, msecs int, em *crash.TeventMap) sp.Tpid {
 	p := proc.NewProc("spawner", []string{strconv.FormatBool(wait), childPid.String(), "sleeper", fmt.Sprintf("%dms", msecs), "name/"})
-	e0 := crash.NewEvent(crash.SPAWNER_CRASH, c, 0.33)
-	em := crash.NewTeventMapOne(e0)
-	e1 := crash.NewEvent(crash.SPAWNER_PARTITION, c, 0.66)
-	em.Insert(e1)
-	s, err := em.Events2String()
+	err := em.AppendEnv(p)
 	assert.Nil(t, err)
-	p.AppendEnv(proc.SIGMAFAIL, s)
 	err = ts.Spawn(p)
 	assert.Nil(t, err, "Spawn")
 	return p.GetPid()
@@ -274,7 +271,7 @@ func TestWaitExitParentAbandons(t *testing.T) {
 	start := time.Now()
 
 	cPid := sp.GenPid("sleeper")
-	pid := spawnSpawner(t, ts, false, cPid, SLEEP_MSECS, 0)
+	pid := spawnSpawner(t, ts, false, cPid, SLEEP_MSECS, nil)
 	err := ts.WaitStart(pid)
 	assert.Nil(t, err, "WaitStart error")
 	status, err := ts.WaitExit(pid)
@@ -302,13 +299,21 @@ func TestWaitExitParentCrash(t *testing.T) {
 
 	start := time.Now()
 
+	e0 := crash.NewEvent(crash.SPAWNER_CRASH, CRASH_MSECS, 0.6)
+	em := crash.NewTeventMapOne(e0)
+	e1 := crash.NewEvent(crash.SPAWNER_PARTITION, CRASH_MSECS, 0.6)
+	em.Insert(e1)
+
 	cPid := sp.GenPid("spawner")
-	pid := spawnSpawner(t, ts, true, cPid, SLEEP_MSECS, CRASH_MSECS)
+	pid := spawnSpawner(t, ts, true, cPid, SLEEP_MSECS, em)
 	err := ts.WaitStart(pid)
 	assert.Nil(t, err, "WaitStart error")
 	status, err := ts.WaitExit(pid)
-	assert.True(t, status != nil && status.IsStatusErr(), "WaitExit status not error: %v", status)
 	assert.Nil(t, err, "WaitExit error")
+	assert.True(t, status != nil)
+	assert.True(t, status.IsStatusErr())
+	sr := serr.NewErrString(status.Msg())
+	assert.Equal(t, sr.Err.Error(), proc.CRASHSTATUS)
 	// Wait for the child to run & finish
 	time.Sleep(2 * SLEEP_MSECS * time.Millisecond)
 
@@ -376,7 +381,35 @@ func TestCrashProcOne(t *testing.T) {
 	}
 
 	a := proc.NewProc("crash", []string{})
-	err := ts.Spawn(a)
+	em := crash.NewTeventMapOne(crash.NewEvent(crash.CRASH_CRASH, 0, 1.0))
+	err := em.AppendEnv(a)
+	assert.Nil(t, err)
+	err = ts.Spawn(a)
+	assert.Nil(t, err, "Spawn")
+
+	err = ts.WaitStart(a.GetPid())
+	assert.Nil(t, err, "WaitStart error")
+
+	status, err := ts.WaitExit(a.GetPid())
+	assert.Nil(t, err, "WaitExit")
+	assert.True(t, status != nil && status.IsStatusErr(), "Status not err")
+	sr := serr.NewErrString(status.Msg())
+	assert.Equal(t, sr.Err.Error(), proc.CRASHSTATUS, "WaitExit")
+
+	ts.Shutdown()
+}
+
+func TestPartitionProcOne(t *testing.T) {
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+
+	a := proc.NewProc("crash", []string{})
+	em := crash.NewTeventMapOne(crash.NewEvent(crash.CRASH_PARTITION, 0, 1.0))
+	err := em.AppendEnv(a)
+	assert.Nil(t, err)
+	err = ts.Spawn(a)
 	assert.Nil(t, err, "Spawn")
 
 	err = ts.WaitStart(a.GetPid())
@@ -762,7 +795,7 @@ func TestProcManyOK(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	a := proc.NewProc("proctest", []string{NTRIALS, "sleeper", "1us", ""})
+	a := proc.NewProc("proctest", []string{NPROC, BURST, "sleeper", "1us", ""})
 	err := ts.Spawn(a)
 	assert.Nil(t, err, "Spawn")
 	err = ts.WaitStart(a.GetPid())
@@ -770,6 +803,7 @@ func TestProcManyOK(t *testing.T) {
 	status, err := ts.WaitExit(a.GetPid())
 	assert.Nil(t, err, "waitexit")
 	assert.True(t, status.IsStatusOK(), status)
+	assert.True(t, status.Data().(float64) == 0)
 	ts.Shutdown()
 }
 
@@ -778,14 +812,18 @@ func TestProcManyCrash(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	a := proc.NewProc("proctest", []string{NTRIALS, "crash"})
-	err := ts.Spawn(a)
+	a := proc.NewProc("proctest", []string{NPROC, BURST, "crash"})
+	em := crash.NewTeventMapOne(crash.NewEvent(crash.CRASH_CRASH, 0, 1.0))
+	err := em.AppendEnv(a)
+	assert.Nil(t, err)
+	err = ts.Spawn(a)
 	assert.Nil(t, err, "Spawn")
 	err = ts.WaitStart(a.GetPid())
 	assert.Nil(t, err, "WaitStart error")
 	status, err := ts.WaitExit(a.GetPid())
 	assert.Nil(t, err, "waitexit")
 	assert.True(t, status.IsStatusOK(), status)
+	assert.True(t, status.Data().(float64) > 0)
 	ts.Shutdown()
 }
 
@@ -794,17 +832,18 @@ func TestProcManyPartition(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	a := proc.NewProc("proctest", []string{NTRIALS, "partition"})
-	err := ts.Spawn(a)
+	a := proc.NewProc("proctest", []string{NPROC1, BURST, "crash"})
+	em := crash.NewTeventMapOne(crash.NewEvent(crash.CRASH_PARTITION, 0, 1.0))
+	err := em.AppendEnv(a)
+	assert.Nil(t, err, "Spawn")
+	err = ts.Spawn(a)
 	assert.Nil(t, err, "Spawn")
 	err = ts.WaitStart(a.GetPid())
 	assert.Nil(t, err, "WaitStart error")
 	status, err := ts.WaitExit(a.GetPid())
 	assert.Nil(t, err, "waitexit")
-	if assert.NotNil(t, status, "nil status") {
-		sr := serr.NewErrString(status.Msg())
-		assert.Equal(t, sr.Err.Error(), proc.CRASHSTATUS, "WaitExit")
-	}
+	assert.True(t, status.IsStatusOK(), status)
+	assert.True(t, status.Data().(float64) > 0)
 	ts.Shutdown()
 }
 

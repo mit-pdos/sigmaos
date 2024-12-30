@@ -4,9 +4,9 @@ import (
 	"database/sql"
 	_ "github.com/go-sql-driver/mysql"
 
-	"sigmaos/proxy/db/proto"
-	"sigmaos/debug"
 	"sigmaos/api/fs"
+	"sigmaos/debug"
+	"sigmaos/proxy/db/proto"
 )
 
 type Server struct {
@@ -38,7 +38,7 @@ func (s *Server) doQuery(arg string, rep *[]byte) error {
 	return nil
 }
 
-func (s *Server) Query(ctx fs.CtxI, req proto.DBRequest, rep *proto.DBResult) error {
+func (s *Server) Query(ctx fs.CtxI, req proto.DBReq, rep *proto.DBRep) error {
 	err := s.doQuery(req.Cmd, &rep.Res)
 	if err != nil {
 		return err
@@ -46,7 +46,7 @@ func (s *Server) Query(ctx fs.CtxI, req proto.DBRequest, rep *proto.DBResult) er
 	return nil
 }
 
-func (s *Server) Exec(ctx fs.CtxI, req proto.DBRequest, rep *proto.DBResult) error {
+func (s *Server) Exec(ctx fs.CtxI, req proto.DBReq, rep *proto.DBRep) error {
 	err := s.doQuery(req.Cmd, &rep.Res)
 	if err != nil {
 		return err

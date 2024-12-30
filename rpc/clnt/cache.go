@@ -19,6 +19,11 @@ type ClntCache struct {
 	sync.Mutex
 	rpccs   map[string]*RPCClnt
 	rpcOpts *rpcclntopts.RPCClntOptions
+	stats   Tstats
+}
+
+type Tstats struct {
+	Nretry int64
 }
 
 func NewRPCClntCache(opts ...*rpcclntopts.RPCClntOption) *ClntCache {
@@ -30,6 +35,10 @@ func NewRPCClntCache(opts ...*rpcclntopts.RPCClntOption) *ClntCache {
 		rpccs:   make(map[string]*RPCClnt),
 		rpcOpts: rpcOpts,
 	}
+}
+
+func (cc *ClntCache) Stats() Tstats {
+	return cc.stats
 }
 
 // Note: several threads may call Lookup for same pn, overwriting the
@@ -77,6 +86,7 @@ func (cc *ClntCache) RPCRetry(pn string, method string, arg proto.Message, res p
 			var sr *serr.Err
 			if errors.As(err, &sr) && serr.Retry(sr) {
 				time.Sleep(sp.Conf.Path.RESOLVE_TIMEOUT)
+				cc.stats.Nretry += 1
 				db.DPrintf(db.RPCCLNT, "RPC: retry %v %v err %v", pn, method, sr)
 				cc.Delete(pn)
 				continue

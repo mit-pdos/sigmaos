@@ -7,10 +7,10 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"sigmaos/chunk"
-	chunkclnt "sigmaos/chunk/clnt"
-	chunksrv "sigmaos/chunk/srv"
 	db "sigmaos/debug"
+	"sigmaos/sched/msched/proc/chunk"
+	chunkclnt "sigmaos/sched/msched/proc/chunk/clnt"
+	chunksrv "sigmaos/sched/msched/proc/chunk/srv"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )
@@ -76,18 +76,20 @@ func isExpected(path string, expect []string) bool {
 	return false
 }
 
-func (ts *Tstate) fetch(srv string, paths []string, expect []string) {
+func (ts *Tstate) fetch(srv string, paths []string, expect []string) int {
 	pid := ts.ProcEnv().GetPID()
 	secrets := ts.ProcEnv().GetSecrets()["s3"]
+	pnsrv := chunk.ChunkdPath(srv)
 	st, path, err := ts.ckclnt.GetFileStat(srv, PROG, pid, sp.ROOTREALM, secrets, paths, nil)
 	if !assert.Nil(ts.T, err, "Err GetFileStat: %v", err) {
-		return
+		return 0
 	}
 	assert.True(ts.T, isExpected(path, expect))
 
 	n := (st.Tlength() / sp.Tlength(sp.Conf.Chunk.CHUNK_SZ)) + 1
 	l := 0
 	h := int(n - 1)
+	nlocal := 0
 	for i := 0; i < int(n); i++ {
 		ck := 0
 		if i%2 == 0 {
@@ -98,15 +100,22 @@ func (ts *Tstate) fetch(srv string, paths []string, expect []string) {
 			h--
 		}
 		sz, path, err := ts.ckclnt.Fetch(srv, PROG, pid, sp.ROOTREALM, secrets, ck, st.Tsize(), paths, ts.ProcEnv().GetNamedEndpointProto())
-		db.DPrintf(db.TEST, "path %v", path)
+		db.DPrintf(db.TEST, "ck %d(%d) srv %v path %v expect %v nlocal %d", ck, n, srv, path, expect, nlocal)
 		assert.Nil(ts.T, err, "err %v", err)
 		assert.True(ts.T, sz > 0 && sz <= sp.Tsize(sp.Conf.Chunk.CHUNK_SZ))
-		assert.True(ts.T, isExpected(path, expect))
+
+		// chunkd prefetches and may return a chunk from srv
+		isLocal := isExpected(path, []string{pnsrv})
+		if isLocal {
+			nlocal += 1
+		}
+		assert.True(ts.T, isExpected(path, expect) || isLocal)
 	}
 
 	ts.bins.SetBinKernelID(PROG, srv)
 
 	ts.check(srv, st)
+	return nlocal
 }
 
 func TestCompile(t *testing.T) {
@@ -150,7 +159,9 @@ func TestFetchPath(t *testing.T) {
 
 	// fetch through chunkd 0 with chunkd1 in search path,
 	// so data should come from chunkd1
-	ts.fetch(ts.srvs[0], []string{pn1, PATH}, []string{pn1})
+	n := ts.fetch(ts.srvs[0], []string{pn1, PATH}, []string{pn1})
+	assert.True(t, n == 1)
+
 	ts.shutdown()
 }
 

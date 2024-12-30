@@ -2,18 +2,18 @@ syntax = "proto3";
 
 option go_package = "sigmaos/apps/imgresize/proto";
 
-message ImgResizeRequest {
+message ImgResizeReq {
   string taskName = 1;
   string inputPath = 2;
 }
 
-message ImgResizeResult {
+message ImgResizeRep {
   bool oK = 1;
 }
 
-message StatusRequest {
+message StatusReq {
 }
 
-message StatusResult {
+message StatusRep {
   int64 nDone = 1;
 }

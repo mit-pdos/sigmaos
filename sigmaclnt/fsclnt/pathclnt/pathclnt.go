@@ -17,8 +17,8 @@ import (
 	"sigmaos/path"
 	"sigmaos/proc"
 	"sigmaos/serr"
-	"sigmaos/sigmaclnt/fdclnt/pathclnt/mntclnt"
 	"sigmaos/sigmaclnt/fidclnt"
+	"sigmaos/sigmaclnt/fsclnt/pathclnt/mntclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/util/rand"
 )
@@ -346,7 +346,7 @@ func (pathc *PathClnt) Disconnected() bool {
 // Disconnect client from server permanently to simulate network
 // partition to server that exports pn
 func (pathc *PathClnt) Disconnect(pn string) error {
-	db.DPrintf(db.CRASH, "Disconnect %v\n", pn)
+	db.DPrintf(db.CRASH, "Disconnect %q\n", pn)
 	pathc.disconnected = true
 	return pathc.mntclnt.Disconnect(pn)
 }

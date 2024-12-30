@@ -12,10 +12,11 @@ import (
 	cacheclnt "sigmaos/apps/cache/clnt"
 	cacheproto "sigmaos/apps/cache/proto"
 	"sigmaos/apps/kv/kvgrp"
-	db "sigmaos/debug"
-	"sigmaos/sigmaclnt/fslib"
 	replclnt "sigmaos/apps/kv/repl/clnt"
+	db "sigmaos/debug"
+	rpcclnt "sigmaos/rpc/clnt"
 	"sigmaos/serr"
+	"sigmaos/sigmaclnt/fslib"
 	sp "sigmaos/sigmap"
 	tproto "sigmaos/util/tracing/proto"
 )
@@ -42,6 +43,18 @@ type KvClerk struct {
 	job  string
 	cc   *cacheclnt.CacheClnt
 	rc   *replclnt.ReplClnt
+}
+
+type TclerkRes struct {
+	Nkeys  int64 `json:"Nkeys"`
+	Nretry int64 `json:"Nretry"`
+	Ms     int64 `json:"Ms"`
+}
+
+func (cr *TclerkRes) Add(cr0 TclerkRes) {
+	cr.Nkeys += cr0.Nkeys
+	cr.Nretry += cr0.Nretry
+	cr.Ms += cr0.Ms
 }
 
 func NewClerkStart(fsl *fslib.FsLib, job string, repl bool) (*KvClerk, error) {
@@ -77,6 +90,10 @@ func (kc *KvClerk) StartClerk() error {
 		return err
 	}
 	return nil
+}
+
+func (kc *KvClerk) Stats() rpcclnt.Tstats {
+	return kc.cc.Stats()
 }
 
 // Detach servers not in kvs
@@ -210,14 +227,14 @@ func (kc *KvClerk) dorepl(o *op, srv string, s cache.Tshard) {
 				o.err = err
 			}
 		case GET:
-			res := &cacheproto.CacheResult{}
+			res := &cacheproto.CacheRep{}
 			o.err = proto.Unmarshal(b, res)
 			if o.err != nil {
 				return
 			}
 			o.err = proto.Unmarshal(res.Value, o.val)
 		case GETVALS:
-			res := &cacheproto.CacheResult{}
+			res := &cacheproto.CacheRep{}
 			o.err = proto.Unmarshal(b, res)
 			if o.err != nil {
 				return
@@ -291,7 +308,7 @@ func (kc *KvClerk) Delete(k string) error {
 }
 
 func (kc *KvClerk) opShard(op, srv string, shard cache.Tshard, fence *sp.Tfence, vals cache.Tcache) error {
-	req := kc.cc.NewShardRequest(shard, fence, vals)
+	req := kc.cc.NewShardReq(shard, fence, vals)
 	db.DPrintf(db.KVCLERK, "%v start %v %v\n", op, shard, req)
 	b, err := kc.rc.ReplOp(srv, op, "", req)
 	if err != nil {
@@ -304,7 +321,7 @@ func (kc *KvClerk) opShard(op, srv string, shard cache.Tshard, fence *sp.Tfence,
 	return nil
 }
 func (kc *KvClerk) opShardData(op, srv string, shard cache.Tshard, fence *sp.Tfence, vals cache.Tcache) (cache.Tcache, error) {
-	req := kc.cc.NewShardRequest(shard, fence, vals)
+	req := kc.cc.NewShardReq(shard, fence, vals)
 	db.DPrintf(db.KVCLERK, "%v start %v %v\n", op, shard, req)
 	b, err := kc.rc.ReplOp(srv, op, "", req)
 	if err != nil {

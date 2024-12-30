@@ -2,49 +2,42 @@ syntax = "proto3";
 
 option go_package = "sigmaos/kernel/proto";
 
-message BootRequest {
+message BootReq {
   string name = 1;
   string realmStr = 2;
   repeated string args = 3;
   repeated string env = 4;
 }
 
-message BootResult {
+message BootRep {
   string pidStr = 1;
 }
 
-message EvictKernelProcRequest {
+message EvictKernelProcReq {
   string PidStr = 1;
 }
 
-message EvictKernelProcResponse {
+message EvictKernelProcRep {
 }
 
-message SetCPUSharesRequest {
+message SetCPUSharesReq {
   string PidStr = 1;
   int64 Shares = 2;
 }
 
-message SetCPUSharesResponse {
+message SetCPUSharesRep {
 }
 
-message GetKernelSrvCPUUtilRequest {
+message GetKernelSrvCPUUtilReq {
   string PidStr = 1;
 }
 
-message GetKernelSrvCPUUtilResponse {
+message GetKernelSrvCPUUtilRep {
   double util = 1;
 }
 
-message ShutdownRequest {
+message ShutdownReq {
 }
 
-message ShutdownResult {
-}
-
-message KillRequest {
-  string name = 1;
-}
-
-message KillResult {
+message ShutdownRep {
 }

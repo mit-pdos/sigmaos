@@ -4,11 +4,11 @@ import "sigmap/sigmap.proto";
 
 option go_package = "sigmaos/rpc/proto";
 
-message Request {
+message Req {
         string method = 1;
 }
 
-message Reply {
+message Rep {
         Rerror err = 1;
 }
 

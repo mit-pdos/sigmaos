@@ -13,10 +13,11 @@ import (
 	"sigmaos/ft/procgroupmgr"
 	fttask "sigmaos/ft/task"
 	"sigmaos/proc"
-	"sigmaos/util/coordination/semaphore"
+	"sigmaos/serr"
 	"sigmaos/sigmaclnt"
 	"sigmaos/sigmaclnt/fslib"
 	sp "sigmaos/sigmap"
+	"sigmaos/util/coordination/semaphore"
 	"sigmaos/util/yaml"
 )
 
@@ -87,11 +88,7 @@ func BinName(i int) string {
 }
 
 func mshardfile(dir string, r int) string {
-	return filepath.Join(dir, "r-"+strconv.Itoa(r))
-}
-
-func symname(jobRoot, job, r, name string) string {
-	return filepath.Join(ReduceIn(jobRoot, job), r, "m-"+name)
+	return filepath.Join(dir, "r-"+strconv.Itoa(r)+"-")
 }
 
 type Job struct {
@@ -155,7 +152,6 @@ func InitCoordFS(fsl *fslib.FsLib, jobRoot, jobname string, nreducetask int) (*T
 		LeaderElectDir(jobname),
 		MapTask(jobRoot, jobname),
 		ReduceTask(jobRoot, jobname),
-		ReduceIn(jobRoot, jobname),
 	}
 	for _, n := range dirs {
 		if err := fsl.MkDir(n, 0777); err != nil {
@@ -168,15 +164,9 @@ func InitCoordFS(fsl *fslib.FsLib, jobRoot, jobname string, nreducetask int) (*T
 		return nil, err
 	}
 
-	// Make input directories for reduce tasks and submit task
+	// Submit reduce task
 	for r := 0; r < nreducetask; r++ {
-		rs := strconv.Itoa(r)
-		n := ReduceIn(jobRoot, jobname) + "/" + rs
-		if err := fsl.MkDir(n, 0777); err != nil {
-			db.DPrintf(db.ERROR, "Mkdir %v err %v\n", n, err)
-			return nil, err
-		}
-		t := &TreduceTask{rs}
+		t := &TreduceTask{strconv.Itoa(r)}
 		if err := rft.SubmitTask(r, t); err != nil {
 			db.DPrintf(db.ERROR, "SubmitTask %v err %v\n", t, err)
 			return nil, err
@@ -199,7 +189,6 @@ func CleanupMROutputs(fsl *fslib.FsLib, outputDir, intOutputDir string) {
 	db.DPrintf(db.MR, "Clean up MR outputs done")
 }
 
-// Put names of input files in name/mr/m
 func PrepareJob(fsl *fslib.FsLib, ts *Tasks, jobRoot, jobName string, job *Job) (int, error) {
 	db.DPrintf(db.TEST, "job %v", job)
 	if job.Output == "" || job.Intermediate == "" {
@@ -215,42 +204,19 @@ func PrepareJob(fsl *fslib.FsLib, ts *Tasks, jobRoot, jobName string, job *Job) 
 		db.DPrintf(db.ALWAYS, "Error link output dir [%v] [%v]: %v", job.Output, JobOutLink(jobRoot, jobName), err)
 		return 0, err
 	}
-	redOutDir := ReduceOutTarget(job.Output, jobName)
-	intOutDir := MapIntermediateDir(jobName, job.Intermediate)
-	// If intermediate output directory lives in S3, make it only once.
-	// Otherwise, make it on every node
+
+	// If intermediate output directory lives in S3, make it only
+	// once.  Mappers make intermediate and out dirs in their local ux
 	if strings.Contains(job.Intermediate, "/s3/") {
+		intOutDir := MapIntermediateDir(jobName, job.Intermediate)
 		if err := fsl.MkDir(job.Intermediate, 0777); err != nil {
 			return 0, err
 		}
 		if err := fsl.MkDir(intOutDir, 0777); err != nil {
 			return 0, err
 		}
-		if err := fsl.MkDir(redOutDir, 0777); err != nil {
-			return 0, err
-		}
-	} else if strings.Contains(job.Intermediate, "/ux/") {
-		uxSts, err := fsl.GetDir(sp.UX)
-		if err != nil {
-			return 0, err
-		}
-		for _, ux := range sp.Names(uxSts) {
-			intResolved := strings.ReplaceAll(job.Intermediate, sp.LOCAL, ux)
-			if err := fsl.MkDir(intResolved, 0777); err != nil {
-				return 0, err
-			}
-			intOutResolved := strings.ReplaceAll(intOutDir, sp.LOCAL, ux)
-			if err := fsl.MkDir(intOutResolved, 0777); err != nil {
-				return 0, err
-			}
-			redOutResolved := strings.ReplaceAll(redOutDir, sp.LOCAL, ux)
-			if err := fsl.MkDir(redOutResolved, 0777); err != nil {
-				return 0, err
-			}
-		}
-	} else {
-		return 0, fmt.Errorf("Unknown intermediate job location")
 	}
+
 	if _, err := fsl.PutFile(JobIntOutLink(jobRoot, jobName), 0777, sp.OWRITE, []byte(job.Intermediate)); err != nil {
 		db.DPrintf(db.ALWAYS, "Error link intermediate dir [%v] [%v]: %v", job.Output, JobOutLink(jobRoot, jobName), err)
 		return 0, err
@@ -269,6 +235,28 @@ func PrepareJob(fsl *fslib.FsLib, ts *Tasks, jobRoot, jobName string, job *Job) 
 
 	}
 	return len(bins), nil
+}
+
+func CreateMapperIntOutDirUx(fsl *fslib.FsLib, job, intOutput string) error {
+	if strings.Contains(intOutput, "/ux/") {
+		if _, err := fsl.Stat(intOutput); err != nil {
+			if err := fsl.MkDir(intOutput, 0777); err != nil {
+				if !serr.IsErrorExists(err) {
+					return err
+				}
+			}
+		}
+		intOutDir := MapIntermediateDir(job, intOutput)
+		if _, err := fsl.Stat(intOutDir); err != nil {
+			if err := fsl.MkDir(intOutDir, 0777); err != nil {
+				if serr.IsErrorExists(err) {
+					return nil
+				}
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 func StartMRJob(sc *sigmaclnt.SigmaClnt, jobRoot, jobName string, job *Job, nmap int, memPerTask proc.Tmem, maliciousMapper int) *procgroupmgr.ProcGroupMgr {

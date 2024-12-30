@@ -1,9 +1,10 @@
-// The fttaskmgr implements a task manager using [fttasks], which
-// stores tasks persistently.  The manger proc spawns procs to process
-// these tasks, and restarts them if a proc crashes.  The fttask mgr
-// itself is fault-tolerant: after a crash, another mgr procs will
-// take over and resumes from the fttask state. [imgrsizesrv] uses
-// [fttaskmgr] to proces image-resizing tasks.
+// The fttaskmgr package implements a task manager using [fttasks],
+// which stores tasks persistently.  The manger proc spawns procs to
+// process these tasks, and restarts them if a proc crashes.  The
+// fttask mgr itself is fault-tolerant: after a crash, another mgr
+// procs will take over and resumes from the fttask
+// state. [imgrsizesrv] uses [fttaskmgr] to proces image-resizing
+// tasks.
 package fttaskmgr
 
 import (
@@ -12,9 +13,9 @@ import (
 
 	procapi "sigmaos/api/proc"
 	db "sigmaos/debug"
-	"sigmaos/sigmaclnt/fslib"
 	fttask "sigmaos/ft/task"
 	"sigmaos/proc"
+	"sigmaos/sigmaclnt/fslib"
 )
 
 type FtTaskMgr struct {

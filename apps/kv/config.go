@@ -33,14 +33,25 @@ type Config struct {
 	Fence  sp.Tfence
 	Shards []string // slice mapping shard # to server
 	Moves  Moves    // shards to be deleted because they moved
+
+	// Stats
+	Ncoord  int64
+	Nmovers int64
+	Nretry  int64
+	MovMs   int64
+	Nkeys   int64
 }
 
 func (cf *Config) String() string {
-	return fmt.Sprintf("{Fence %v, Shards %v, Moves %v}", cf.Fence, cf.Shards, cf.Moves)
+	ms := int64(0)
+	if cf.Nmovers != 0 {
+		ms = cf.MovMs / cf.Nmovers
+	}
+	return fmt.Sprintf("{Fence %v, Shards %v, Moves %v, Ncoord %d, Nmovers %d, Nretry %d, Nkeys %d, MsPerMov %v}", cf.Fence, cf.Shards, cf.Moves, cf.Ncoord, cf.Nmovers, cf.Nretry, cf.Nkeys, ms)
 }
 
 func NewConfig(f sp.Tfence) *Config {
-	cf := &Config{Fence: f, Shards: make([]string, NSHARD), Moves: Moves{}}
+	cf := &Config{Fence: f, Shards: make([]string, NSHARD), Moves: Moves{}, Ncoord: 1}
 	return cf
 }
 

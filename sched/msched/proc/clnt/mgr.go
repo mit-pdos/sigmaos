@@ -7,11 +7,11 @@ import (
 	"time"
 
 	db "sigmaos/debug"
-	"sigmaos/sigmaclnt/fslib"
 	kernelclnt "sigmaos/kernel/clnt"
 	"sigmaos/proc"
 	sprpcclnt "sigmaos/rpc/clnt/sigmap"
 	"sigmaos/serr"
+	"sigmaos/sigmaclnt/fslib"
 	sp "sigmaos/sigmap"
 )
 
@@ -164,6 +164,27 @@ func (pdm *ProcdMgr) getClntOrStartProcd(realm sp.Trealm, ptype proc.Ttype) (*Pr
 	return rpcc, nil
 }
 
+func (pdm *ProcdMgr) delProcClnt(realm sp.Trealm, ptype proc.Ttype) error {
+	pdm.mu.Lock()
+	defer pdm.mu.Unlock()
+
+	pdcm, ok1 := pdm.upcs[realm]
+	rpcc, ok2 := pdcm[ptype]
+	if !ok1 || !ok2 {
+		db.DFatalf("delProcClnt %v %v", realm, ptype)
+	}
+	delete(pdcm, ptype)
+	if ptype == proc.T_BE {
+		for i, r := range pdm.beProcds {
+			if r == rpcc {
+				pdm.beProcds = append(pdm.beProcds[0:i], pdm.beProcds[i+1:]...)
+				break
+			}
+		}
+	}
+	return nil
+}
+
 func (pdm *ProcdMgr) lookupClnt(realm sp.Trealm, ptype proc.Ttype) (*ProcClnt, error) {
 	pdm.mu.Lock()
 	defer pdm.mu.Unlock()
@@ -181,10 +202,19 @@ func (pdm *ProcdMgr) RunUProc(uproc *proc.Proc) (uprocErr error, childErr error)
 	}
 	// run and exit do resource accounting and share rebalancing for the
 	// procds.
-	pdm.startBalanceShares(uproc)
+	if err := pdm.startBalanceShares(uproc); err != nil {
+		pdm.delProcClnt(uproc.GetRealm(), uproc.GetType())
+		db.DPrintf(db.PROCDMGR, "[RunUProc %v] delProcClnt %v", uproc.GetRealm(), uproc)
+		return err, nil
+	}
 	db.DPrintf(db.SPAWN_LAT, "[%v] Balance Procd shares time since spawn %v", uproc.GetPid(), time.Since(uproc.GetSpawnTime()))
-	defer pdm.exitBalanceShares(uproc)
-	return rpcc.RunProc(uproc)
+	if err0, err1 := rpcc.RunProc(uproc); err0 != nil {
+		pdm.delProcClnt(uproc.GetRealm(), uproc.GetType())
+		return err0, err1
+	} else {
+		pdm.exitBalanceShares(uproc)
+		return nil, err1
+	}
 }
 
 func (pdm *ProcdMgr) WarmProcd(pid sp.Tpid, realm sp.Trealm, prog string, path []string, ptype proc.Ttype) (uprocErr error, childErr error) {

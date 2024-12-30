@@ -5,10 +5,10 @@ import "util/tracing/proto/tracing.proto";
 option go_package = "sigmaos/apps/hotel/proto";
 
 service Search {
-  rpc Nearby(SearchRequest) returns (SearchResult);
+  rpc Nearby(SearchReq) returns (SearchRep);
 }
 
-message SearchRequest {
+message SearchReq {
   float lat = 1;
   float lon = 2;
   string inDate = 3;
@@ -16,6 +16,6 @@ message SearchRequest {
   SpanContextConfig spanContextConfig = 5;
 }
 
-message SearchResult {
+message SearchRep {
   repeated string hotelIds = 1;
 }

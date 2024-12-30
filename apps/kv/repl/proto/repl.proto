@@ -1,15 +1,15 @@
 syntax = "proto3";
 
-option go_package = "sigmaos/repl/proto";
+option go_package = "sigmaos/apps/kv/repl/proto";
 
-message ReplOpRequest {
+message ReplOpReq {
   uint32 clntId = 1;
   uint64 seqno = 2;
   string method = 3;
   bytes msg = 4;
 }
 
-message ReplOpReply {
+message ReplOpRep {
   bytes msg = 1;
 }
 

@@ -25,13 +25,13 @@ const (
 )
 
 // Rebalance CPU shares when a proc runs.
-func (pdm *ProcdMgr) startBalanceShares(p *proc.Proc) {
+func (pdm *ProcdMgr) startBalanceShares(p *proc.Proc) error {
 	pdm.mu.Lock()
 	defer pdm.mu.Unlock()
 
 	// Bail out early if dummy prog
 	if p.GetProgram() == sp.DUMMY_PROG {
-		return
+		return nil
 	}
 
 	switch p.GetType() {
@@ -41,36 +41,44 @@ func (pdm *ProcdMgr) startBalanceShares(p *proc.Proc) {
 		if rpcc.share == MIN_SHARE {
 			rpcc.share = 0
 		}
-		pdm.setShare(rpcc, rpcc.share+mcpuToShare(p.GetMcpu()))
+		if err := pdm.setShare(rpcc, rpcc.share+mcpuToShare(p.GetMcpu())); err != nil {
+			return err
+		}
 	case proc.T_BE:
-		pdm.balanceBEShares()
+		if err := pdm.balanceBEShares(); err != nil {
+			return err
+		}
 	default:
 		db.DFatalf("Unrecognized proc type: %v", p.GetType())
 	}
+	return nil
 }
 
 // Rebalance CPU shares when a proc exits.
-func (pdm *ProcdMgr) exitBalanceShares(p *proc.Proc) {
+func (pdm *ProcdMgr) exitBalanceShares(p *proc.Proc) error {
 	pdm.mu.Lock()
 	defer pdm.mu.Unlock()
 
 	// Bail out early if dummy prog
 	if p.GetProgram() == sp.DUMMY_PROG {
-		return
+		return nil
 	}
 
 	switch p.GetType() {
 	case proc.T_LC:
 		rpcc := pdm.upcs[p.GetRealm()][p.GetType()]
-		pdm.setShare(rpcc, rpcc.share-mcpuToShare(p.GetMcpu()))
+		if err := pdm.setShare(rpcc, rpcc.share-mcpuToShare(p.GetMcpu())); err != nil {
+			return err
+		}
 	case proc.T_BE:
 		// No need to readjust share.
 	default:
 		db.DFatalf("Unrecognized proc type: %v", p.GetType())
 	}
+	return nil
 }
 
-func (pdm *ProcdMgr) balanceBEShares() {
+func (pdm *ProcdMgr) balanceBEShares() error {
 	// Equal share for each BE procd.
 	cpuShare := BE_SHARES / Tshare(len(pdm.beProcds))
 	for _, rpcc := range pdm.beProcds {
@@ -79,13 +87,16 @@ func (pdm *ProcdMgr) balanceBEShares() {
 		if rpcc.share == cpuShare {
 			continue
 		}
-		pdm.setShare(rpcc, cpuShare)
+		if err := pdm.setShare(rpcc, cpuShare); err != nil {
+			return err
+		}
 	}
 	db.DPrintf(db.PROCDMGR, "Rebalanced BE shares: %v", pdm.beProcds)
+	return nil
 }
 
 // Set a procd's CPU share, and RPC to the kernelsrv to adjust the shares.
-func (pdm *ProcdMgr) setShare(rpcc *ProcClnt, share Tshare) {
+func (pdm *ProcdMgr) setShare(rpcc *ProcClnt, share Tshare) error {
 	if share < MIN_SHARE {
 		// BE realms should not get <.1 cores.
 		if rpcc.ptype == proc.T_BE {
@@ -98,16 +109,18 @@ func (pdm *ProcdMgr) setShare(rpcc *ProcClnt, share Tshare) {
 	// If the share isn't changing, return.
 	if rpcc.share == share {
 		db.DPrintf(db.PROCDMGR, "Skip setting CPU share for %v: no change", rpcc, share)
-		return
+		return nil
 	}
 	rpcc.share = share
 	if rpcc.share > 10000 {
 		db.DFatalf("Share outside of cgroupsv2 range [1,10000]: %v\n%v", rpcc.share, string(debug.Stack()))
 	}
 	if err := pdm.kclnt.SetCPUShares(rpcc.pid, int64(share)); err != nil {
-		db.DFatalf("Error SetCPUShares[%v] %v", rpcc.pid, err)
+		db.DPrintf(db.PROCDMGR, "Error SetCPUShares[%v] %v", rpcc.pid, err)
+		return err
 	}
 	db.DPrintf(db.PROCDMGR, "Set CPU share %v to %v", rpcc, share)
+	return nil
 }
 
 func mcpuToShare(mcpu proc.Tmcpu) Tshare {

@@ -17,7 +17,7 @@ import (
 	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/docker/go-connections/nat"
 
-	chunksrv "sigmaos/chunk/srv"
+	chunksrv "sigmaos/sched/msched/proc/chunk/srv"
 	"sigmaos/dcontainer/cgroup"
 	db "sigmaos/debug"
 	"sigmaos/proc"

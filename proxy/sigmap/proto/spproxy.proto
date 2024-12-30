@@ -6,35 +6,35 @@ import "rpc/proto/rpc.proto";
 
 option go_package = "sigmaos/proxy/sigmap/proto";
 
-message SigmaInitRequest {
+message SigmaInitReq {
         ProcEnvProto procEnvProto = 1;
 }
 
-message SigmaNullRequest {
+message SigmaNullReq {
 }
 
-message SigmaRealmRequest {
+message SigmaRealmReq {
         string realmStr = 1;
 }
 
-message SigmaCloseRequest {
+message SigmaCloseReq {
         uint32 fd = 1;
 }
 
-message SigmaErrReply {
+message SigmaErrRep {
         Rerror err = 1;
 }
 
-message SigmaPathRequest {
+message SigmaPathReq {
         string path = 1;
 }
 
-message SigmaStatReply {
+message SigmaStatRep {
         TstatProto stat = 1;
         Rerror err = 2;
 }
 
-message SigmaCreateRequest {
+message SigmaCreateReq {
         string path = 1;
         uint32 perm = 2;
         uint32 mode = 3;
@@ -43,22 +43,22 @@ message SigmaCreateRequest {
         bool wait = 6;
 }
 
-message SigmaFdReply {
+message SigmaFdRep {
         uint32 fd = 1;
         Rerror err = 2;
 }
 
-message SigmaRenameRequest {
+message SigmaRenameReq {
         string src = 1;
         string dst = 2;
 }
 
-message SigmaDataReply {
+message SigmaDataRep {
         Blob blob = 1;
         Rerror err = 2;
 }
 
-message SigmaPutFileRequest {
+message SigmaPutFileReq {
         string path = 1;
         uint32 perm = 2;
         uint32 mode = 3;
@@ -67,63 +67,63 @@ message SigmaPutFileRequest {
         Blob blob = 6;
 }
 
-message SigmaSizeReply {
+message SigmaSizeRep {
         uint64 size = 1;
         Rerror err = 2;
 }
 
-message SigmaReadRequest {
+message SigmaReadReq {
         uint32 fd = 1;
         uint64 size = 2;
         uint64 off = 3;
 }
 
-message SigmaWriteRequest {
+message SigmaWriteReq {
         uint32 fd = 1;
         TfenceProto fence = 2;
         Blob blob = 3;
         uint32 nOutVec = 4;
 }
 
-message SigmaSeekRequest {
+message SigmaSeekReq {
         uint32 fd = 1;
         uint64 offset = 2;
 }
 
-message SigmaClntIdReply {
+message SigmaClntIdRep {
         uint64 clntId = 1;
         Rerror err = 2;
 }
 
-message SigmaFenceRequest {
+message SigmaFenceReq {
         string Path = 1;
         TfenceProto Fence = 2;
 }
 
-message SigmaMountTreeRequest {
+message SigmaMountTreeReq {
         TendpointProto Endpoint = 1;
         string tree = 2;
         string mountName = 3;
 }
 
-message SigmaLastMountReply {
+message SigmaLastMountRep {
         repeated string path1 = 1;
         repeated string path2 = 2;
         Rerror err = 3;
 }
 
-message SigmaMountRequest {
+message SigmaMountReq {
         TendpointProto endpoint = 1;
         string port = 2;
 }
 
-message SigmaMountReply {
+message SigmaMountRep {
         TendpointProto endpoint = 1;
         bool local = 2;
         Rerror err = 3;
 }
 
-message SigmaMountsReply {
+message SigmaMountsRep {
         repeated string endpoints = 1;
         Rerror err = 2;
 }

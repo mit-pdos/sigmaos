@@ -164,10 +164,10 @@ func (s *Www) userHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var res proto.UserResult
+	var res proto.UserRep
 
 	// Check username and password
-	err := s.userc.RPC("Users.CheckUser", &proto.UserRequest{
+	err := s.userc.RPC("Users.CheckUser", &proto.UserReq{
 		Name:              username,
 		Password:          password,
 		SpanContextConfig: nil, //sctx,
@@ -237,8 +237,8 @@ func (s *Www) searchHandler(w http.ResponseWriter, r *http.Request) {
 	//		_, span2 = s.tracer.StartContextSpan(sctx, "Search.Nearby")
 	//		sctx2 = tracing.SpanToContext(span2)
 	//	}
-	var searchRes proto.SearchResult
-	searchReq := &proto.SearchRequest{
+	var searchRes proto.SearchRep
+	searchReq := &proto.SearchReq{
 		Lat:               lat,
 		Lon:               lon,
 		InDate:            inDate,
@@ -263,14 +263,14 @@ func (s *Www) searchHandler(w http.ResponseWriter, r *http.Request) {
 		locale = "en"
 	}
 
-	var reserveRes proto.ReserveResult
+	var reserveRes proto.ReserveRep
 	//	var span3 trace.Span
 	//	var sctx3 *tproto.SpanContextConfig
 	//	if TRACING {
 	//		_, span3 = s.tracer.StartContextSpan(sctx, "Reserve.CheckAvailability")
 	//		sctx3 = tracing.SpanToContext(span3)
 	//	}
-	err = s.reservec.RPC("Reserve.CheckAvailability", &proto.ReserveRequest{
+	err = s.reservec.RPC("Reserve.CheckAvailability", &proto.ReserveReq{
 		CustomerName:      "",
 		HotelId:           searchRes.HotelIds,
 		InDate:            inDate,
@@ -287,14 +287,14 @@ func (s *Www) searchHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// hotel profiles
-	var profRes proto.ProfResult
+	var profRes proto.ProfRep
 	//	var span4 trace.Span
 	//	var sctx4 *tproto.SpanContextConfig
 	//	if TRACING {
 	//		_, span4 = s.tracer.StartContextSpan(sctx, "ProfSrv.GetProfiles")
 	//		sctx4 = tracing.SpanToContext(span4)
 	//	}
-	err = s.profc.RPC("ProfSrv.GetProfiles", &proto.ProfRequest{
+	err = s.profc.RPC("ProfSrv.GetProfiles", &proto.ProfReq{
 		HotelIds:          reserveRes.HotelIds,
 		Locale:            locale,
 		SpanContextConfig: nil, //sctx4,
@@ -345,8 +345,8 @@ func (s *Www) recommendHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// recommend hotels
-	var recResp proto.RecResult
-	err := s.recc.RPC("Rec.GetRecs", &proto.RecRequest{
+	var recResp proto.RecRep
+	err := s.recc.RPC("Rec.GetRecs", &proto.RecReq{
 		Require:           require,
 		Lat:               lat,
 		Lon:               lon,
@@ -365,8 +365,8 @@ func (s *Www) recommendHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// hotel profiles
-	var profResp proto.ProfResult
-	err = s.profc.RPC("ProfSrv.GetProfiles", &proto.ProfRequest{
+	var profResp proto.ProfRep
+	err = s.profc.RPC("ProfSrv.GetProfiles", &proto.ProfReq{
 		HotelIds:          recResp.HotelIds,
 		Locale:            locale,
 		SpanContextConfig: nil, //sctx,
@@ -435,10 +435,10 @@ func (s *Www) reservationHandler(w http.ResponseWriter, r *http.Request) {
 		numberOfRoom, _ = strconv.Atoi(num)
 	}
 
-	var res proto.UserResult
+	var res proto.UserRep
 
 	// Check username and password
-	err := s.userc.RPC("Users.CheckUser", &proto.UserRequest{
+	err := s.userc.RPC("Users.CheckUser", &proto.UserReq{
 		Name:              username,
 		Password:          password,
 		SpanContextConfig: nil, //sctx,
@@ -455,8 +455,8 @@ func (s *Www) reservationHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Make reservation
-	var resResp proto.ReserveResult
-	err = s.reservec.RPC("Reserve.NewReservation", &proto.ReserveRequest{
+	var resResp proto.ReserveRep
+	err = s.reservec.RPC("Reserve.NewReservation", &proto.ReserveReq{
 		CustomerName:      customerName,
 		HotelId:           []string{hotelId},
 		InDate:            inDate,
@@ -507,8 +507,8 @@ func (s *Www) geoHandler(w http.ResponseWriter, r *http.Request) {
 	Lon, _ := strconv.ParseFloat(sLon, 64)
 	lon := float32(Lon)
 
-	var gres proto.GeoResult
-	greq := proto.GeoRequest{
+	var gres proto.GeoRep
+	greq := proto.GeoReq{
 		Lat:               lat,
 		Lon:               lon,
 		SpanContextConfig: nil, //sctx,

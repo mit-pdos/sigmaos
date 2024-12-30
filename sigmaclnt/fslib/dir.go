@@ -15,7 +15,7 @@ import (
 func (fl *FsLib) MkDir(path string, perm sp.Tperm) error {
 	perm = perm | sp.DMDIR
 	start := time.Now()
-	fd, err := fl.Create(path, perm, sp.OREAD)
+	fd, err := fl.Create(path, perm, sp.ORDWR)
 	if err != nil {
 		return err
 	}

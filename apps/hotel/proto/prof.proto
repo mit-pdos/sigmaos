@@ -5,10 +5,10 @@ import "util/tracing/proto/tracing.proto";
 option go_package = "sigmaos/apps/hotel/proto";
 
 service Prof {
-  rpc GetProfiles(ProfRequest) returns (ProfResult);
+  rpc GetProfiles(ProfReq) returns (ProfRep);
 }
 
-message ProfRequest {
+message ProfReq {
   repeated string hotelIds = 1;
   string locale = 2;
   SpanContextConfig spanContextConfig = 3;
@@ -29,6 +29,6 @@ message ProfileFlat {
   float   lon = 12;
 }
 
-message ProfResult {
+message ProfRep {
   repeated ProfileFlat hotels = 1;
 }

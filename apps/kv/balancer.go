@@ -1,17 +1,19 @@
-package kv
-
+// Package kv implements a sharded KV service.  A KV service
+// deployment has several balancers: one primary and several hot
+// standbys. The primary balancer acts as a coordinator for a sharded
+// KV service.  Clients can ask the balancer to add shards, and the
+// primary balancer updates KVCONF, which has the mapping from shards
+// to groups.
 //
-// A balancer, which acts as a coordinator for a sharded KV service.
-// A KV service deployment has several balancers: one primary and
-// several backups.
+// Applications interact with the kv service using a clerk, which
+// provides a Put/Get API and uses KVCONF to find the shard for key.
 //
-// When a client adds/removes a shard, the primary balancer updates
-// KVCONF, which has the mapping from shards to groups.
+// A shard is implemented by the [kvgrp] package.
 //
 // If the balancer isn't the primary anymore (e.g., it is partitioned
 // and another balancer has become primary), the old primary's writes
 // will fail, because its fences have an old epoch.
-//
+package kv
 
 import (
 	"errors"
@@ -21,23 +23,25 @@ import (
 	"sync"
 	"time"
 
+	"github.com/mitchellh/mapstructure"
+
+	"sigmaos/api/fs"
 	"sigmaos/apps/cache"
 	"sigmaos/apps/kv/kvgrp"
-	"sigmaos/util/crash"
 	"sigmaos/ctx"
 	db "sigmaos/debug"
-	"sigmaos/api/fs"
-	"sigmaos/sigmaclnt/fslib"
 	"sigmaos/ft/leaderclnt"
-	"sigmaos/sigmasrv/memfssrv/memfs/dir"
-	"sigmaos/sigmasrv/memfssrv/memfs/fenceddir"
-	"sigmaos/sigmasrv/memfssrv/memfs/inode"
 	"sigmaos/path"
 	"sigmaos/proc"
 	"sigmaos/serr"
 	"sigmaos/sigmaclnt"
+	"sigmaos/sigmaclnt/fslib"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
+	"sigmaos/sigmasrv/memfssrv/memfs/dir"
+	"sigmaos/sigmasrv/memfssrv/memfs/fenceddir"
+	"sigmaos/sigmasrv/memfssrv/memfs/inode"
+	"sigmaos/util/crash"
 )
 
 type Balancer struct {
@@ -93,18 +97,18 @@ func RunBalancer(job, kvdmcpu string, auto string, repl string) {
 
 	bl.lc, err = leaderclnt.NewLeaderClnt(bl.FsLib, KVBalancerElect(bl.job), sp.DMSYMLINK|077)
 	if err != nil {
-		db.DFatalf("NewLeaderClnt %v\n", err)
+		db.DFatalf("NewLeaderClnt %v", err)
 	}
 
 	ssrv, err := sigmasrv.NewSigmaSrvClntNoRPC("", bl.SigmaClnt)
 	if err != nil {
-		db.DFatalf("StartMemFs %v\n", err)
+		db.DFatalf("StartMemFs %v", err)
 	}
 	ctx := ctx.NewCtx(sp.NewPrincipal(sp.TprincipalID(KVBALANCER), bl.SigmaClnt.ProcEnv().GetRealm()), nil, 0, sp.NoClntId, nil, nil)
 	root, _, _ := ssrv.Root(path.Tpathname{})
 	err1 := dir.MkNod(ctx, fenceddir.GetDir(root), "ctl", newCtl(ctx, root, bl))
 	if err1 != nil {
-		db.DFatalf("MkNod clone failed %v\n", err1)
+		db.DFatalf("MkNod clone failed %v", err1)
 	}
 
 	// start server and write ch when server is done
@@ -117,17 +121,17 @@ func RunBalancer(job, kvdmcpu string, auto string, repl string) {
 	ep := ssrv.GetEndpoint()
 	b, error := ep.Marshal()
 	if error != nil {
-		db.DFatalf("Marshal failed %v\n", error)
+		db.DFatalf("Marshal failed %v", error)
 	}
 
 	if err := bl.lc.LeadAndFence(b, []string{kvgrp.JobDir(bl.job)}); err != nil {
-		db.DFatalf("LeadAndFence %v err %v\n", kvgrp.JobDir(bl.job), err)
+		db.DFatalf("LeadAndFence %v err %v", kvgrp.JobDir(bl.job), err)
 	}
 
-	db.DPrintf(db.ALWAYS, "primary %v with fence %v\n", bl.ProcEnv().GetPID(), bl.lc.Fence())
+	db.DPrintf(db.ALWAYS, "primary %v with fence %v", bl.ProcEnv().GetPID(), bl.lc.Fence())
 
 	if err := bl.MkLeasedEndpoint(KVBalancer(bl.job), ep, bl.lc.Lease()); err != nil {
-		db.DFatalf("MkEndpointFile %v at %v err %v\n", ep, KVBalancer(bl.job), err)
+		db.DFatalf("MkEndpointFile %v at %v err %v", ep, KVBalancer(bl.job), err)
 	}
 
 	// first epoch is used to create a functional system (e.g.,
@@ -156,7 +160,7 @@ func RunBalancer(job, kvdmcpu string, auto string, repl string) {
 		<-ch
 	}
 
-	db.DPrintf(db.KVBAL, "terminate\n")
+	db.DPrintf(db.KVBAL, "terminate")
 
 	if bl.mo != nil {
 		bl.ch <- true
@@ -167,7 +171,7 @@ func RunBalancer(job, kvdmcpu string, auto string, repl string) {
 
 func BalancerOp(fsl *fslib.FsLib, job string, opcode, kvd string) error {
 	s := opcode + " " + kvd
-	db.DPrintf(db.KVBAL, "Balancer %v op %v\n", KVBalancerCtl(job), opcode)
+	db.DPrintf(db.KVBAL, "Balancer %v op %v", KVBalancerCtl(job), opcode)
 	_, err := fsl.SetFile(KVBalancerCtl(job), []byte(s), sp.OWRITE, 0)
 	return err
 }
@@ -181,10 +185,10 @@ func BalancerOpRetry(fsl *fslib.FsLib, job, opcode, kvd string) error {
 		}
 		var serr *serr.Err
 		if errors.As(err, &serr) && (serr.IsErrUnavailable() || serr.IsErrRetry()) {
-			db.DPrintf(db.KVBAL_ERR, "balancer op wait err %v\n", err)
+			db.DPrintf(db.KVBAL_ERR, "balancer op wait err %v", err)
 			time.Sleep(WAITMS * time.Millisecond)
 		} else {
-			db.DPrintf(db.KVBAL_ERR, "balancer op err %v\n", err)
+			db.DPrintf(db.KVBAL_ERR, "balancer op err %v", err)
 			return err
 		}
 	}
@@ -261,7 +265,7 @@ func (bl *Balancer) PostConfig() {
 		if serr.IsErrCode(err, serr.TErrUnreachable) {
 			crash.Crash()
 		}
-		db.DFatalf("NewFile %v err %v\n", KVConfig(bl.job), err)
+		db.DFatalf("NewFile %v err %v", KVConfig(bl.job), err)
 	}
 }
 
@@ -269,7 +273,8 @@ func (bl *Balancer) PostConfig() {
 func (bl *Balancer) restore(conf *Config, fence sp.Tfence) {
 	bl.conf = conf
 	bl.conf.Fence = fence
-	db.DPrintf(db.KVBAL, "restore to %v with fence %v\n", bl.conf, fence)
+	bl.conf.Ncoord += 1
+	db.DPrintf(db.KVBAL, "restore to %v with fence %v", bl.conf, fence)
 	bl.PostConfig()
 	bl.doMoves(bl.conf.Moves)
 }
@@ -290,7 +295,7 @@ func (bl *Balancer) recover(fence sp.Tfence) {
 // Make intial shard directories
 func (bl *Balancer) initShards(nextShards []string) {
 	for s, kvd := range nextShards {
-		db.DPrintf(db.KVBAL, "initshards %v %v\n", kvd, s)
+		db.DPrintf(db.KVBAL, "initshards %v %v", kvd, s)
 		srv := kvGrpPath(bl.job, kvd)
 
 		// simulate that the creates happen after posting
@@ -300,7 +305,7 @@ func (bl *Balancer) initShards(nextShards []string) {
 		f.Seqno = 1
 
 		if err := bl.kc.CreateShard(srv, cache.Tshard(s), &f, make(cache.Tcache)); err != nil {
-			db.DFatalf("CreateShard %v %d err %v\n", kvd, s, err)
+			db.DFatalf("CreateShard %v %d err %v", kvd, s, err)
 		}
 	}
 }
@@ -309,7 +314,7 @@ func (bl *Balancer) spawnProc(args []string) (sp.Tpid, error) {
 	p := proc.NewProc(args[0], args[1:])
 	err := bl.Spawn(p)
 	if err != nil {
-		db.DPrintf(db.KVBAL_ERR, "spawn pid %v err %v\n", p.GetPid(), err)
+		db.DPrintf(db.KVBAL_ERR, "spawn pid %v err %v", p.GetPid(), err)
 	}
 	return p.GetPid(), err
 }
@@ -323,27 +328,26 @@ func (bl *Balancer) runProc(args []string) (sp.Tpid, *proc.Status, error) {
 	return pid, status, err
 }
 
-func (bl *Balancer) runProcRetry(args []string, retryf func(error, *proc.Status) bool) (error, *proc.Status) {
-	var status *proc.Status
-	var err error
-	var pid sp.Tpid
+func (bl *Balancer) runProcRetry(args []string, retryf func(error, *proc.Status) bool) int64 {
+	nretry := int64(0)
 	for true {
-		pid, status, err = bl.runProc(args)
+		pid, status, err := bl.runProc(args)
 		if err != nil {
-			db.DPrintf(db.ALWAYS, "runProc %v %v err %v status %v\n", pid, args, err, status)
+			db.DPrintf(db.ALWAYS, "runProc %v %v err %v status %v", pid, args, err, status)
 		}
 		if err != nil && (strings.HasPrefix(err.Error(), "Spawn error") ||
 			strings.HasPrefix(err.Error(), "Missing return status") ||
 			serr.IsErrCode(err, serr.TErrUnreachable)) {
-			db.DFatalf("CRASH: runProc %v err %v\n", pid, err)
+			db.DFatalf("CRASH: runProc %v err %v", pid, err)
 		}
 		if retryf(err, status) {
-			db.DPrintf(db.KVBAL_ERR, "retry pid %v %v err %v status %v\n", pid, args, err, status)
+			db.DPrintf(db.KVBAL_ERR, "retry pid %v %v err %v status %v", pid, args, err, status)
 		} else {
 			break
 		}
+		nretry += 1
 	}
-	return err, status
+	return nretry
 }
 
 func (mvs Moves) moved() []string {
@@ -366,35 +370,51 @@ func (bl *Balancer) computeMoves(nextShards []string) Moves {
 	return moves
 }
 
-func (bl *Balancer) doMove(ch chan int, m *Move, i int) {
+type moveRes struct {
+	i      int
+	nretry int64
+	res    TmoverRes
+}
+
+func (bl *Balancer) doMove(ch chan moveRes, m *Move, i int) {
+	nr := int64(0)
+	mr := TmoverRes{}
 	if m != nil {
-		bl.runProcRetry([]string{"kv-mover", bl.job, string(bl.conf.Fence.Json()), strconv.Itoa(int(m.Shard)), m.Src, m.Dst, bl.repl},
+		nr = bl.runProcRetry([]string{"kv-mover", bl.job, string(bl.conf.Fence.Json()), strconv.Itoa(int(m.Shard)), m.Src, m.Dst, bl.repl},
 			func(err error, status *proc.Status) bool {
-				db.DPrintf(db.KVBAL, "%v: move %v m %v err %v status %v\n", bl.conf.Fence.Epoch, i, m, err, status)
+				db.DPrintf(db.KVBAL, "%v: move %v m %v err %v status %v", bl.conf.Fence.Epoch, i, m, err, status)
+				if err == nil && status.IsStatusOK() {
+					mapstructure.Decode(status.Data(), &mr)
+				}
 				return err != nil || !status.IsStatusOK()
 			})
 	}
 
-	ch <- i
+	ch <- moveRes{i, nr, mr}
 }
 
 // Perform moves in parallel
 func (bl *Balancer) doMoves(moves Moves) {
 	todo := make(Moves, len(moves))
 	copy(todo, moves)
-	ch := make(chan int)
+	ch := make(chan moveRes)
 	for i, m := range moves {
 		go bl.doMove(ch, m, i)
 	}
 	m := 0
 	for range moves {
-		i := <-ch
-		bl.conf.Moves[i] = nil
-		db.DPrintf(db.KVBAL, "Cleared move %v %v\n", i, bl.conf)
+		mr := <-ch
+		bl.conf.Moves[mr.i] = nil
+		db.DPrintf(db.KVBAL, "Cleared move %v %v", mr, bl.conf)
+		bl.conf.Nmovers += 1
+		bl.conf.Nretry += mr.nretry
+		bl.conf.MovMs += mr.res.Ms
+		bl.conf.Nkeys += mr.res.Nkeys
+
 		bl.PostConfig()
 		m += 1
 	}
-	db.DPrintf(db.ALWAYS, "%v: all moves done\n", bl.conf)
+	db.DPrintf(db.ALWAYS, "%v: all moves done", bl.conf)
 }
 
 func (bl *Balancer) balance(opcode, kvd string) *serr.Err {
@@ -403,7 +423,7 @@ func (bl *Balancer) balance(opcode, kvd string) *serr.Err {
 	}
 	defer bl.clearIsBusy()
 
-	db.DPrintf(db.KVBAL, "%v: opcode %v kvd %v conf %v\n", bl.ProcEnv().GetPID(), opcode, kvd, bl.conf)
+	db.DPrintf(db.KVBAL, "%v: opcode %v kvd %v conf %v", bl.ProcEnv().GetPID(), opcode, kvd, bl.conf)
 
 	var nextShards []string
 	switch opcode {
@@ -433,7 +453,7 @@ func (bl *Balancer) balance(opcode, kvd string) *serr.Err {
 	bl.conf.Shards = nextShards
 	bl.conf.Moves = moves
 
-	db.DPrintf(db.ALWAYS, "New config %v\n", bl.conf)
+	db.DPrintf(db.ALWAYS, "New config %v", bl.conf)
 
 	// If balancer crashes, before here, KVCONFIG has the old
 	// config; otherwise, the new conf.

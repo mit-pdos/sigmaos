@@ -3,8 +3,8 @@ package namesrv
 import (
 	"time"
 
-	db "sigmaos/debug"
 	"sigmaos/api/fs"
+	db "sigmaos/debug"
 	"sigmaos/namesrv/fsetcd"
 	"sigmaos/path"
 	"sigmaos/serr"
@@ -55,9 +55,7 @@ func (d *Dir) LookupPath(ctx fs.CtxI, pn path.Tpathname) ([]fs.FsObj, fs.FsObj, 
 }
 
 func (d *Dir) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode, lid sp.TleaseId, f sp.Tfence, dev fs.FsObj) (fs.FsObj, *serr.Err) {
-	if db.WillBePrinted(db.WALK_LAT) {
-		db.DPrintf(db.NAMED, "%v: Create name: %q perm %v lid %v\n", ctx.ClntId(), name, perm, lid)
-	}
+	db.DPrintf(db.NAMED, "%v: Create name %q (perm %v lid %v) in dir %v", ctx.ClntId(), name, perm, lid, d)
 	cid := sp.NoClntId
 	if lid.IsLeased() {
 		cid = ctx.ClntId()

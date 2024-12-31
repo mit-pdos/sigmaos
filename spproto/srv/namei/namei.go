@@ -22,10 +22,14 @@ func Walk(plt *lockmapv1.PathLockTable, ctx fs.CtxI, o fs.FsObj, dlk *lockmapv1.
 	os = append(os, nos...)
 	lo := os[len(os)-1]
 	if len(rest) == 0 { // done?
-		db.DPrintf(db.NAMEI, "%v: namei %v e %v os %v", ctx.Principal(), lo, e, os)
-		flk := plt.Acquire(ctx, lo.Path(), ltype)
-		plt.Release(ctx, dlk, ltype)
-		// releaseLk(plt, ctx, plk, ltype)
+		db.DPrintf(db.NAMEI, "%v: namei %q lo %v e %v os %v", ctx.Principal(), target, lo, e, os)
+		var flk *lockmapv1.PathLock
+		if target.Base() == "." {
+			flk = dlk
+		} else {
+			flk = plt.Acquire(ctx, lo.Path(), ltype)
+			plt.Release(ctx, dlk, ltype)
+		}
 		return os, e, flk, nil, nil
 	}
 	// releaseLk(plt, ctx, plk, ltype)

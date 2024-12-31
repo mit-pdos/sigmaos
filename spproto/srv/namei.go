@@ -11,9 +11,8 @@ import (
 // LookupObj/namei will return an lo and a locked watch for it, even
 // in error cases because the caller create a new fid anyway.
 func (ps *ProtSrv) lookupObj(ctx fs.CtxI, po *Pobj, target path.Tpathname, ltype lockmapv1.Tlock) ([]fs.FsObj, fs.FsObj, *lockmapv1.PathLock, path.Tpathname, *serr.Err) {
-	src := po.Path()
-	lk := ps.plt.Acquire(ctx, src, ltype)
 	o := po.Obj()
+	lk := ps.plt.Acquire(ctx, o.Path(), ltype)
 	if len(target) == 0 {
 		return nil, o, lk, nil, nil
 	}

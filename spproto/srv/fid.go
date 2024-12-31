@@ -25,7 +25,11 @@ func newPobj(pn path.Tpathname, o fs.FsObj, ctx fs.CtxI) *Pobj {
 }
 
 func (po *Pobj) String() string {
-	return fmt.Sprintf("{%v %v %v}", po.pathname, po.obj, po.ctx)
+	p := sp.NoPath
+	if po.obj.Parent() != nil {
+		p = po.obj.Parent().Path()
+	}
+	return fmt.Sprintf("{%q(p %d) o %v ctx %v parent %d}", po.pathname, po.Path(), po.obj, po.ctx, p)
 }
 
 func (po *Pobj) Pathname() path.Tpathname {

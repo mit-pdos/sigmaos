@@ -134,11 +134,9 @@ func (pss *ProtSrvState) RemoveObj(ctx fs.CtxI, o fs.FsObj, path path.Tpathname,
 		return serr.NewErr(serr.TErrInval, name)
 	}
 
-	// lock path to make WatchV and Remove interact correctly
+	// lock dir to make WatchV and Remove interact correctly
 	dlk := pss.plt.Acquire(ctx, o.Parent().Path(), lockmapv1.WLOCK)
-	flk := pss.plt.Acquire(ctx, o.Path(), lockmapv1.WLOCK)
-	defer pss.plt.ReleaseLocks(ctx, dlk, flk, lockmapv1.WLOCK)
-	// defer pss.plt.Release(ctx, dlk, lockmapv1.WLOCK)
+	defer pss.plt.Release(ctx, dlk, lockmapv1.WLOCK)
 
 	// pss.stats.IncPathString(flk.Path())
 
@@ -168,17 +166,21 @@ func (pss *ProtSrvState) RemoveObj(ctx fs.CtxI, o fs.FsObj, path path.Tpathname,
 
 func (pss *ProtSrvState) RenameObj(po *Pobj, name string, f sp.Tfence) *serr.Err {
 	dst := po.Pathname().Dir().Copy().AppendPath(path.Split(name))
-	dlk, slk := pss.plt.AcquireLocks(po.Ctx(), po.Obj().Parent().Path(), po.Path(), lockmapv1.WLOCK)
-	defer pss.plt.ReleaseLocks(po.Ctx(), dlk, slk, lockmapv1.WLOCK)
-	//tlk := pss.plt.Acquire(po.Ctx(), dst, lockmapv1.WLOCK)
-	//defer pss.plt.Release(po.Ctx(), tlk, lockmapv1.WLOCK)
-	pss.stats.IncPathString(po.Pathname().String())
+
+	dlk := pss.plt.Acquire(po.Ctx(), po.Obj().Path(), lockmapv1.WLOCK)
+	defer pss.plt.Release(po.Ctx(), dlk, lockmapv1.WLOCK)
+
+	// pss.stats.IncPathString(po.Pathname().String())
+
 	err := po.Obj().Parent().Rename(po.Ctx(), po.Pathname().Base(), name, f)
 	if err != nil {
 		return err
 	}
 	pss.vt.IncVersion(po.Obj().Path())
-	pss.vt.IncVersion(po.Obj().Parent().Path())
+
+	// XXX update version name
+	// pss.vt.IncVersion(po.Obj().Parent().Path())
+
 	pss.wt.WakeupWatch(dlk)
 	if po.Obj().IsLeased() && pss.lm != nil {
 		pss.lm.Rename(po.Pathname().String(), dst.String())
@@ -200,26 +202,28 @@ func lockOrder(d1 fs.FsObj, d2 fs.FsObj) bool {
 }
 
 func (pss *ProtSrvState) RenameAtObj(old, new *Pobj, dold, dnew fs.Dir, oldname, newname string, f sp.Tfence) *serr.Err {
-	var d1lk, d2lk, srclk, dstlk *lockmapv1.PathLock
+	var d1lk, d2lk *lockmapv1.PathLock
 	if srcfirst := lockOrder(dold, dnew); srcfirst {
-		d1lk, srclk = pss.plt.AcquireLocks(old.Ctx(), old.Obj().Parent().Path(), old.Path(), lockmapv1.WLOCK)
-		d2lk, dstlk = pss.plt.AcquireLocks(new.Ctx(), new.Obj().Parent().Path(), new.Path(), lockmapv1.WLOCK)
+		d1lk = pss.plt.Acquire(old.Ctx(), dold.Path(), lockmapv1.WLOCK)
+		d2lk = pss.plt.Acquire(new.Ctx(), dnew.Path(), lockmapv1.WLOCK)
 	} else {
-		d2lk, dstlk = pss.plt.AcquireLocks(new.Ctx(), new.Obj().Parent().Path(), new.Path(), lockmapv1.WLOCK)
-		d1lk, srclk = pss.plt.AcquireLocks(old.Ctx(), old.Obj().Parent().Path(), old.Path(), lockmapv1.WLOCK)
+		d2lk = pss.plt.Acquire(new.Ctx(), dnew.Path(), lockmapv1.WLOCK)
+		d1lk = pss.plt.Acquire(old.Ctx(), dold.Path(), lockmapv1.WLOCK)
 	}
-	defer pss.plt.ReleaseLocks(old.Ctx(), d1lk, srclk, lockmapv1.WLOCK)
-	defer pss.plt.ReleaseLocks(new.Ctx(), d2lk, dstlk, lockmapv1.WLOCK)
+	defer pss.plt.Release(old.Ctx(), d1lk, lockmapv1.WLOCK)
+	defer pss.plt.Release(new.Ctx(), d2lk, lockmapv1.WLOCK)
 
 	err := dold.Renameat(old.Ctx(), oldname, dnew, newname, f)
 	if err != nil {
 		return err
 	}
+
 	pss.vt.IncVersion(new.Obj().Path())
 	pss.vt.IncVersion(old.Obj().Path())
 
-	pss.vt.IncVersion(old.Obj().Parent().Path())
-	pss.vt.IncVersion(new.Obj().Parent().Path())
+	// XXX Update files versions
+	// pss.vt.IncVersion(old.Obj().Parent().Path())
+	// pss.vt.IncVersion(new.Obj().Parent().Path())
 
 	if old.Obj().IsLeased() && pss.lm != nil {
 		pss.lm.Rename(old.Pathname().String(), new.Pathname().String())

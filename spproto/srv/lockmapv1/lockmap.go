@@ -119,14 +119,3 @@ func (plt *PathLockTable) HandOverLock(ctx fs.CtxI, dlk *PathLock, path sp.Tpath
 	plt.Release(ctx, dlk, ltype)
 	return flk
 }
-
-func (plt *PathLockTable) AcquireLocks(ctx fs.CtxI, dir sp.Tpath, file sp.Tpath, ltype Tlock) (*PathLock, *PathLock) {
-	dlk := plt.Acquire(ctx, dir, ltype)
-	flk := plt.Acquire(ctx, file, ltype)
-	return dlk, flk
-}
-
-func (plt *PathLockTable) ReleaseLocks(ctx fs.CtxI, dlk, flk *PathLock, ltype Tlock) {
-	plt.Release(ctx, dlk, ltype)
-	plt.Release(ctx, flk, ltype)
-}

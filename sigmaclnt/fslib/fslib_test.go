@@ -1257,11 +1257,11 @@ func TestUnionSymlinkPut(t *testing.T) {
 	if pathname != sp.NAMED && pathname != "name/memfs/"+sp.LOCAL+"/" {
 		basepn = filepath.Join(pathname, sp.ANY)
 	}
-	fn := filepath.Join(basepn, "namedself0/f")
+	fn := filepath.Join(basepn, "namedself0", FILE)
 	_, err = ts.PutFile(fn, 0777, sp.OWRITE, b)
 	assert.Equal(t, nil, err)
 
-	fn1 := filepath.Join(basepn, "namedself0/g")
+	fn1 := filepath.Join(basepn, "namedself0", FILE1)
 	_, err = ts.PutFile(fn1, 0777, sp.OWRITE, b)
 	assert.Equal(t, nil, err)
 
@@ -1269,11 +1269,11 @@ func TestUnionSymlinkPut(t *testing.T) {
 	assert.Equal(t, nil, err)
 	assert.True(t, sp.Present(sts, path.Tpathname{FILE, FILE1}), "root wrong")
 
-	d, err := ts.GetFile(filepath.Join(basepn, "namedself0/f"))
+	d, err := ts.GetFile(filepath.Join(basepn, "namedself0", FILE))
 	assert.Nil(ts.T, err, "GetFile")
 	assert.Equal(ts.T, b, d, "GetFile")
 
-	d, err = ts.GetFile(filepath.Join(basepn, "namedself0/g"))
+	d, err = ts.GetFile(filepath.Join(basepn, "namedself0", FILE1))
 	assert.Nil(ts.T, err, "GetFile")
 	assert.Equal(ts.T, b, d, "GetFile")
 

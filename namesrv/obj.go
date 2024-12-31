@@ -5,8 +5,8 @@ import (
 	"hash/fnv"
 	"time"
 
-	db "sigmaos/debug"
 	"sigmaos/api/fs"
+	db "sigmaos/debug"
 	"sigmaos/namesrv/fsetcd"
 	"sigmaos/path"
 	"sigmaos/serr"
@@ -81,7 +81,8 @@ func (o *Obj) Stat(ctx fs.CtxI) (*sp.Tstat, *serr.Err) {
 func (o *Obj) NewStat() (*sp.Tstat, *serr.Err) {
 	st := sp.NewStatNull()
 	st.Name = o.pn.Base()
-	st.SetQid(sp.NewQidPerm(o.di.Perm, 0, o.di.Path))
+	qid := sp.NewQidPerm(o.di.Perm, 0, o.di.Path)
+	st.SetQid(&qid)
 	st.SetMode(o.di.Perm)
 	st.SetLengthInt(len(o.di.Nf.Data))
 	return st, nil

@@ -113,7 +113,7 @@ func (fidc *FidClnt) Qid(fid sp.Tfid) *sp.Tqid {
 	return fidc.Lookup(fid).Lastqid()
 }
 
-func (fidc *FidClnt) Qids(fid sp.Tfid) []*sp.Tqid {
+func (fidc *FidClnt) Qids(fid sp.Tfid) []sp.Tqid {
 	return fidc.Lookup(fid).Qids()
 }
 
@@ -143,7 +143,7 @@ func (fidc *FidClnt) Attach(secrets map[string]*sp.SecretProto, cid sp.TclntId, 
 		fidc.freeFid(fid)
 		return sp.NoFid, err
 	}
-	fidc.fids.insert(fid, newChannel(pc, []*sp.Tqid{sp.NewTqid(reply.Qid)}))
+	fidc.fids.insert(fid, newChannel(pc, []sp.Tqid{sp.NewTqid(reply.Qid)}))
 	db.DPrintf(db.ATTACH_LAT, "%v: attach %v pn %q tree %q lat %v\n", cid, ep, pn, tree, time.Since(s))
 	return fid, nil
 }
@@ -221,7 +221,8 @@ func (fidc *FidClnt) Open(fid sp.Tfid, mode sp.Tmode) (*sp.Tqid, *serr.Err) {
 	if err != nil {
 		return nil, err
 	}
-	return sp.NewTqid(reply.Qid), nil
+	qid := sp.NewTqid(reply.Qid)
+	return &qid, nil
 }
 
 func (fidc *FidClnt) Watch(fid sp.Tfid) *serr.Err {

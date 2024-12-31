@@ -45,8 +45,8 @@ func NewQidPerm(perm Tperm, v TQversion, p Tpath) Tqid {
 	return NewQid(Qtype(perm>>QTYPESHIFT), v, p)
 }
 
-func NewTqid(qid TqidProto) Tqid {
-	return Tqid{qid}
+func NewTqid(qid *TqidProto) Tqid {
+	return Tqid{*qid}
 }
 
 func (qid Tqid) String() string {
@@ -57,7 +57,7 @@ func (qid Tqid) Proto() *TqidProto {
 	return &qid.TqidProto
 }
 
-func NewSliceProto(qids []*Tqid) []*TqidProto {
+func NewSliceProto(qids []Tqid) []*TqidProto {
 	qp := make([]*TqidProto, len(qids))
 	for i, q := range qids {
 		qp[i] = q.Proto()

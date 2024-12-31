@@ -57,9 +57,9 @@ func newQidMap() *qidMap {
 	return &qidMap{qm: syncmap.NewSyncMap[sp.Tpath, *pathMap]()}
 }
 
-func (qm *qidMap) Insert(fid sp.Tfid, qids []*sp.Tqid) []*sp.TqidProto {
+func (qm *qidMap) Insert(fid sp.Tfid, qids []sp.Tqid) []*sp.TqidProto {
 	db.DPrintf(db.NPPROXY, "Insert: %v qids %v\n", fid, qids)
-	pqids := make([]*sp.Tqid, len(qids))
+	pqids := make([]sp.Tqid, len(qids))
 	for i, q := range qids {
 		pm, _ := qm.qm.AllocNew(sp.Tpath(q.Path), newPathMap)
 		pp, ok := pm.pm.AllocNew(fid, newProxyPath)

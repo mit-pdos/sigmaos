@@ -26,7 +26,7 @@ type CtxI interface {
 	FenceFs() Dir
 }
 
-// [protsrv] interacts with the backing file system using FsObj.  Backing
+// [spproto/srv] interacts with the backing file system using FsObj.  Backing
 // file system include namesrv, ux, s3, and memfs
 type FsObj interface {
 	Stat(CtxI) (*sp.Tstat, *serr.Err)

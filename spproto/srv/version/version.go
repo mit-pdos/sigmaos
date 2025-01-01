@@ -13,8 +13,8 @@ type version struct {
 	V sp.TQversion
 }
 
-func newVersion() version {
-	return version{}
+func newVersion() *version {
+	return &version{}
 }
 
 func (v *version) String() string {
@@ -23,12 +23,12 @@ func (v *version) String() string {
 
 type VersionTable struct {
 	sync.Mutex
-	*refmap.RefTable[sp.Tpath, version]
+	*refmap.RefTable[sp.Tpath, *version]
 }
 
 func NewVersionTable() *VersionTable {
 	vt := &VersionTable{}
-	vt.RefTable = refmap.NewRefTable[sp.Tpath, version](db.VERSION)
+	vt.RefTable = refmap.NewRefTable[sp.Tpath, *version](db.VERSION)
 	return vt
 }
 
@@ -42,10 +42,11 @@ func (vt *VersionTable) GetVersion(path sp.Tpath) sp.TQversion {
 	return 0
 }
 
-func (vt *VersionTable) Insert(path sp.Tpath) {
+func (vt *VersionTable) Insert(path sp.Tpath) (sp.TQversion, bool) {
 	vt.Lock()
 	defer vt.Unlock()
-	vt.RefTable.Insert(path, newVersion())
+	e, ok := vt.RefTable.Insert(path, newVersion())
+	return e.V, ok
 }
 
 func (vt *VersionTable) Delete(p sp.Tpath) (bool, error) {
@@ -54,13 +55,13 @@ func (vt *VersionTable) Delete(p sp.Tpath) (bool, error) {
 	return vt.RefTable.Delete(p)
 }
 
-func (vt *VersionTable) IncVersion(path sp.Tpath) {
+func (vt *VersionTable) IncVersion(path sp.Tpath) (sp.TQversion, bool) {
 	vt.Lock()
 	defer vt.Unlock()
 
 	if e, ok := vt.RefTable.Lookup(path); ok {
-		v := e
-		v.V += 1
-		return
+		e.V += 1
+		return e.V, true
 	}
+	return 0, false
 }

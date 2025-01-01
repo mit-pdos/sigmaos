@@ -169,10 +169,6 @@ func (ps *ProtSrv) Walk(args *sp.Twalk, rets *sp.Rwalk) *sp.Rerror {
 	db.DPrintf(db.WALK_LAT, "ProtSrv.Walk %v %v lat %v\n", f.Pobj().Ctx().ClntId(), args.Wnames, time.Since(s))
 	defer ps.plt.Release(f.Pobj().Ctx(), lk, lockmapv1.RLOCK)
 
-	//if lk != nil {
-	// ps.stats.IncPathString(lk.Path())
-	//}
-
 	if err != nil && !err.IsMaybeSpecialElem() {
 		return sp.NewRerrorSerr(err)
 	}
@@ -239,8 +235,6 @@ func (ps *ProtSrv) Watch(args *sp.Twatch, rets *sp.Ropen) *sp.Rerror {
 	}
 	p := f.Pobj().Obj().Path()
 
-	db.DPrintf(db.PROTSRV, "%v: Watch p %v v %v %v %v", f.Pobj().Ctx().ClntId(), f.Pobj().Path(), f.Qid(), args, f)
-
 	if !f.Pobj().Obj().Perm().IsDir() {
 		return sp.NewRerrorSerr(serr.NewErr(serr.TErrNotDir, f.Pobj().Pathname().String()))
 	}
@@ -252,7 +246,11 @@ func (ps *ProtSrv) Watch(args *sp.Twatch, rets *sp.Ropen) *sp.Rerror {
 	defer ps.plt.Release(f.Pobj().Ctx(), pl, lockmapv1.WLOCK)
 
 	v := ps.vt.GetVersion(p)
+
+	db.DPrintf(db.PROTSRV, "%v: Watch p %v pn %q qid %v %v", f.Pobj().Ctx().ClntId(), f.Pobj().Path(), f.Pobj().Pathname(), f.Qid(), args, v)
+
 	if !sp.VEq(f.Qid().Tversion(), v) {
+		db.DPrintf(db.PROTSRV, "%v: Watch stale version p %v v %q pn %v %v", f.Pobj().Ctx().ClntId(), f.Pobj().Path(), f.Pobj().Pathname(), f.Qid().Tversion(), v)
 		return sp.NewRerrorSerr(serr.NewErr(serr.TErrVersion, v))
 	}
 	err = ps.wt.WaitWatch(pl, f.Pobj().Ctx().ClntId())
@@ -551,9 +549,6 @@ func (ps *ProtSrv) PutFile(args *sp.Tputfile, data []byte, rets *sp.Rwrite) *sp.
 		// try to create file, which will fail if it exists
 		dir = lo.(fs.Dir)
 		lo, flk, err = ps.createObj(f.Pobj().Ctx(), dir, dlk, name, args.Tperm(), args.Tmode(), args.TleaseId(), args.Tfence(), nil)
-		if lo != nil {
-			db.DPrintf(db.TEST, "createObj lo %v", lo)
-		}
 		if err != nil {
 			if err.Code() != serr.TErrExists {
 				return sp.NewRerrorSerr(err)

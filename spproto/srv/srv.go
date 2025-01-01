@@ -241,7 +241,7 @@ func (ps *ProtSrv) Watch(args *sp.Twatch, rets *sp.Ropen) *sp.Rerror {
 
 	v := ps.vt.GetVersion(p)
 
-	db.DPrintf(db.PROTSRV, "%v: Watch p %v pn %q qid %v %v", f.Pobj().Ctx().ClntId(), f.Pobj().Path(), f.Pobj().Pathname(), f.Qid(), args, v)
+	db.DPrintf(db.PROTSRV, "%v: Watch p %v pn %q qid %v %v", f.Pobj().Ctx().ClntId(), f.Pobj().Path(), f.Pobj().Pathname(), f.Qid(), v)
 
 	if !sp.VEq(f.Qid().Tversion(), v) {
 		db.DPrintf(db.PROTSRV, "%v: Watch stale version p %v v %q pn %v %v", f.Pobj().Ctx().ClntId(), f.Pobj().Path(), f.Pobj().Pathname(), f.Qid().Tversion(), v)

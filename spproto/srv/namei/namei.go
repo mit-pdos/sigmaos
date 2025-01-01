@@ -1,8 +1,8 @@
 package namei
 
 import (
-	db "sigmaos/debug"
 	"sigmaos/api/fs"
+	db "sigmaos/debug"
 	"sigmaos/path"
 	"sigmaos/serr"
 	"sigmaos/spproto/srv/lockmap"
@@ -33,7 +33,7 @@ func Walk(plt *lockmap.PathLockTable, ctx fs.CtxI, o fs.FsObj, dlk *lockmap.Path
 	}
 	os = append(os, nos...)
 	if len(rest) == 0 { // done?
-		db.DPrintf(db.NAMEI, "%v: namei %v e %v os %v", ctx.Principal(), fn, e, os)
+		db.DPrintf(db.NAMEI, "%v: namei %v e %v os %v %d", ctx.Principal(), fn, e, os, len(os))
 		flk := plt.Acquire(ctx, fn, ltype)
 		plt.Release(ctx, dlk, ltype)
 		releaseLk(plt, ctx, plk, ltype)
@@ -42,6 +42,7 @@ func Walk(plt *lockmap.PathLockTable, ctx fs.CtxI, o fs.FsObj, dlk *lockmap.Path
 	releaseLk(plt, ctx, plk, ltype)
 	switch e := e.(type) {
 	case fs.Dir:
+		db.DPrintf(db.NAMEI, "%v: namei %v e %v os(%d) %v target '%v'", ctx.Principal(), fn, e, len(os), os, target[1:])
 		dlk = plt.HandOverLock(ctx, dlk, target[0], ltype)
 		return Walk(plt, ctx, e, dlk, dn.Append(target[0]), target[1:], os, ltype)
 	default: // an error or perhaps a symlink

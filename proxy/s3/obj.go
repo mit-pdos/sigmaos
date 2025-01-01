@@ -52,7 +52,7 @@ func newObj(bucket string, key path.Tpathname, perm sp.Tperm) *Obj {
 }
 
 func (o *Obj) String() string {
-	return fmt.Sprintf("bucket %q key %q perm %v", o.bucket, o.key, o.perm)
+	return fmt.Sprintf("{Obj bucket %q key %q perm %v}", o.bucket, o.key, o.perm)
 }
 
 func (o *Obj) readHead(ctx fs.CtxI, fss3 *Fss3) *serr.Err {
@@ -79,7 +79,7 @@ func (o *Obj) readHead(ctx fs.CtxI, fss3 *Fss3) *serr.Err {
 	return nil
 }
 
-func newFsObj(bucket string, perm sp.Tperm, key path.Tpathname) fs.FsObj {
+func newFsObj(bucket string, key path.Tpathname, perm sp.Tperm) fs.FsObj {
 	if perm.IsDir() {
 		return newDir(bucket, key.Copy(), perm)
 	} else {

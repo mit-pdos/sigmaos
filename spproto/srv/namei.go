@@ -2,6 +2,7 @@ package srv
 
 import (
 	"sigmaos/api/fs"
+	db "sigmaos/debug"
 	"sigmaos/path"
 	"sigmaos/serr"
 	"sigmaos/spproto/srv/lockmap"
@@ -22,6 +23,7 @@ func getParent(start fs.Dir, os []fs.FsObj) fs.Dir {
 func (ps *ProtSrv) lookupObj(ctx fs.CtxI, po *Pobj, target path.Tpathname, ltype lockmap.Tlock) ([]fs.FsObj, fs.FsObj, *lockmap.PathLock, path.Tpathname, *serr.Err) {
 	src := po.Pathname()
 	lk := ps.plt.Acquire(ctx, src, ltype)
+	db.DPrintf(db.NAMEI, "%v: lookupObj %v target '%v'", ctx.Principal(), po, target)
 	o := po.Obj()
 	if len(target) == 0 {
 		return nil, o, lk, nil, nil

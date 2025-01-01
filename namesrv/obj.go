@@ -22,20 +22,19 @@ func newTpath(pn path.Tpathname) sp.Tpath {
 
 // An obj is either a directory or file
 type Obj struct {
-	fs     *fsetcd.FsEtcd
-	pn     path.Tpathname
-	di     fsetcd.DirEntInfo
-	parent sp.Tpath
-	mtime  int64
+	fs    *fsetcd.FsEtcd
+	pn    path.Tpathname
+	di    fsetcd.DirEntInfo
+	mtime int64
 }
 
-func newObjDi(fs *fsetcd.FsEtcd, pn path.Tpathname, di fsetcd.DirEntInfo, parent sp.Tpath) *Obj {
-	o := &Obj{fs: fs, pn: pn, di: di, parent: parent}
+func newObjDi(fs *fsetcd.FsEtcd, pn path.Tpathname, di fsetcd.DirEntInfo) *Obj {
+	o := &Obj{fs: fs, pn: pn, di: di}
 	return o
 }
 
 func (o *Obj) String() string {
-	return fmt.Sprintf("pn %q di %v parent %v", o.pn, o.di, o.parent)
+	return fmt.Sprintf("{pn %q di %v}", o.pn, o.di)
 }
 
 func (o *Obj) Path() sp.Tpath {

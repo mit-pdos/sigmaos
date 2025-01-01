@@ -36,7 +36,7 @@ func (d *Dir) LookupPath(ctx fs.CtxI, pn path.Tpathname) ([]fs.FsObj, fs.FsObj, 
 	pn1 := d.pn.Copy().Append(name)
 	di, err := d.fs.Lookup(&d.Obj.di, pn1)
 	if err == nil {
-		obj := newObjDi(d.fs, pn1, *di, d.Obj.di.Path)
+		obj := newObjDi(d.fs, pn1, *di)
 		var o fs.FsObj
 		if obj.di.Perm.IsDir() {
 			o = newDir(obj)
@@ -72,7 +72,7 @@ func (d *Dir) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode, lid sp
 		db.DPrintf(db.NAMED, "Create %v %q err %v\n", d, name, err)
 		return nil, err
 	}
-	obj := newObjDi(d.fs, pn, *di, d.Obj.di.Path)
+	obj := newObjDi(d.fs, pn, *di)
 	if obj.di.Perm.IsDir() {
 		return newDir(obj), nil
 	} else if obj.di.Perm.IsDevice() {
@@ -99,7 +99,7 @@ func (d *Dir) ReadDir(ctx fs.CtxI, cursor int, cnt sp.Tsize) ([]*sp.Tstat, *serr
 		var r *serr.Err
 		dir.Ents.Iter(func(n string, di *fsetcd.DirEntInfo) bool {
 			if n != "." {
-				o := newObjDi(d.fs, d.pn.Append(n), *di, d.Obj.di.Path)
+				o := newObjDi(d.fs, d.pn.Append(n), *di)
 				st, err := o.NewStat()
 				if err != nil {
 					r = err
@@ -184,7 +184,5 @@ func rootDir(fs *fsetcd.FsEtcd, realm sp.Trealm) *Dir {
 	} else if err != nil {
 		db.DFatalf("rootDir: fsetcd.ReadDir err %v\n", err)
 	}
-	return newDir(newObjDi(fs, path.Tpathname{},
-		*fsetcd.NewDirEntInfoDir(fsetcd.ROOT),
-		fsetcd.ROOT))
+	return newDir(newObjDi(fs, path.Tpathname{}, *fsetcd.NewDirEntInfoDir(fsetcd.ROOT)))
 }

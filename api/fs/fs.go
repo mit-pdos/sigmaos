@@ -2,18 +2,18 @@
 package fs
 
 import (
-	"sigmaos/sigmasrv/clntcond"
 	db "sigmaos/debug"
 	np "sigmaos/ninep"
-	"sigmaos/proxy/ninep/npcodec"
 	"sigmaos/path"
+	"sigmaos/proxy/ninep/npcodec"
 	"sigmaos/serr"
+	spcodec "sigmaos/session/codec"
 	sessp "sigmaos/session/proto"
 	sp "sigmaos/sigmap"
-	spcodec "sigmaos/session/codec"
+	"sigmaos/sigmasrv/clntcond"
 )
 
-type NewFsObjF func(CtxI, sp.Tperm, sp.TleaseId, sp.Tmode, Dir, MkDirF) (FsObj, *serr.Err)
+type NewFsObjF func(CtxI, sp.Tperm, sp.TleaseId, sp.Tmode, MkDirF) (FsObj, *serr.Err)
 type MkDirF func(Inode, NewFsObjF) FsObj
 
 // Each request takes a Ctx with context for the request
@@ -34,10 +34,8 @@ type FsObj interface {
 	Close(CtxI, sp.Tmode) *serr.Err // for pipes
 	Path() sp.Tpath
 	Perm() sp.Tperm
-	SetParent(Dir)
 	Unlink()
 	String() string
-	Parent() Dir
 	IsLeased() bool
 }
 
@@ -68,13 +66,11 @@ type Dir interface {
 }
 
 type Inode interface {
-	Parent() Dir
 	Path() sp.Tpath
 	Perm() sp.Tperm
 	IsLeased() bool
 	SetMtime(int64)
 	Mtime() int64
-	SetParent(Dir)
 	Unlink()
 	NewStat() (*sp.Tstat, *serr.Err)
 	Open(CtxI, sp.Tmode) (FsObj, *serr.Err)

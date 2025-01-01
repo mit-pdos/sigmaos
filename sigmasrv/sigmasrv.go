@@ -161,7 +161,7 @@ func NewSigmaSrvRoot(root fs.Dir, path string, addr *sp.Taddr, pe *proc.ProcEnv)
 // function is useful for sigmasrv whose root is for a non-memfs file
 // system (e.g., knamed/named, which uses fsetcd).
 func (ssrv *SigmaSrv) MountRPCSrv(svci any) error {
-	d := dir.NewRootDir(ctx.NewCtxNull(), memfs.NewInode, nil)
+	d := dir.NewRootDir(ctx.NewCtxNull(), memfs.NewInode)
 	ssrv.MemFs.SigmaPSrv.Mount(rpc.RPC, d.(*dir.DirImpl))
 	if err := ssrv.newRPCDev(rpc.RPC, svci); err != nil {
 		return err

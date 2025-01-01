@@ -3,12 +3,12 @@ package fsetcd
 import (
 	"encoding/json"
 
-	db "sigmaos/debug"
 	"sigmaos/api/fs"
-	"sigmaos/sigmasrv/memfssrv/memfs/inode"
+	db "sigmaos/debug"
 	"sigmaos/path"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
+	"sigmaos/sigmasrv/memfssrv/memfs/inode"
 	"sigmaos/sigmasrv/stats"
 	"sigmaos/util/syncmap"
 )
@@ -45,7 +45,7 @@ type PstatInode struct {
 
 func NewPstatsDev() *PstatInode {
 	sti := &PstatInode{
-		Inode:  inode.NewInode(nil, sp.DMDEVICE, sp.NoLeaseId, nil),
+		Inode:  inode.NewInode(nil, sp.DMDEVICE, sp.NoLeaseId),
 		pstats: newPstats(),
 	}
 	return sti

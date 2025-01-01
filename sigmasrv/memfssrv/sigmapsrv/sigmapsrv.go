@@ -48,7 +48,7 @@ func NewSigmaPSrv(pe *proc.ProcEnv, npc *dialproxyclnt.DialProxyClnt, root fs.Di
 		fencefs:     fencefs,
 		attachAuthF: aaf,
 	}
-	psrv.stats = stats.NewStatsDev(psrv.dirover)
+	psrv.stats = stats.NewStatsDev()
 	psrv.ProtSrvState = spprotosrv.NewProtSrvState(psrv.stats)
 	psrv.VersionTable().Insert(psrv.dirover.Path())
 	psrv.dirover.Mount(sp.STATSD, psrv.stats)
@@ -84,7 +84,6 @@ func (psrv *SigmaPSrv) Root(p path.Tpathname) (fs.Dir, path.Tpathname, path.Tpat
 }
 
 func (psrv *SigmaPSrv) Mount(name string, i fs.FsObj) {
-	i.SetParent(psrv.dirover)
 	psrv.dirover.Mount(name, i)
 }
 

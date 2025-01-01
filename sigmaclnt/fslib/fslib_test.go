@@ -190,6 +190,10 @@ func TestRemovePath(t *testing.T) {
 	err = ts.Remove(fn)
 	assert.Equal(t, nil, err)
 
+	db.DPrintf(db.TEST, "StatFile")
+	_, err = ts.Stat(fn)
+	assert.NotEqual(t, nil, err)
+
 	err = ts.RmDir(d1)
 	assert.Nil(t, err, "RmDir: %v", err)
 

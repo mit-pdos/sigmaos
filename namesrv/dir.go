@@ -3,8 +3,8 @@ package namesrv
 import (
 	"time"
 
-	db "sigmaos/debug"
 	"sigmaos/api/fs"
+	db "sigmaos/debug"
 	"sigmaos/namesrv/fsetcd"
 	"sigmaos/path"
 	"sigmaos/serr"
@@ -161,10 +161,6 @@ func (d *Dir) SetMtime(mtime int64) {
 func (d *Dir) Mtime() int64 {
 	db.DFatalf("Unimplemented")
 	return 0
-}
-
-func (d *Dir) SetParent(di fs.Dir) {
-	db.DFatalf("Unimplemented")
 }
 
 func (d *Dir) Unlink() {

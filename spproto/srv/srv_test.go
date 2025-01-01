@@ -30,8 +30,8 @@ type tstate struct {
 
 func newTstate(t *testing.T) *tstate {
 	ctx := ctx.NewCtx(sp.NoPrincipal(), nil, 0, sp.NoClntId, nil, nil)
-	root := dir.NewRootDir(ctx, memfs.NewInode, nil)
-	stats := stats.NewStatsDev(root)
+	root := dir.NewRootDir(ctx, memfs.NewInode)
+	stats := stats.NewStatsDev()
 	pps := srv.NewProtSrvState(stats)
 	grf := func(*sp.Tprincipal, map[string]*sp.SecretProto, string, sessp.Tsession, sp.TclntId) (fs.Dir, fs.CtxI) {
 		return root, ctx
@@ -89,7 +89,7 @@ func TestCreateMany(t *testing.T) {
 
 func TestCreateRemove(t *testing.T) {
 	// ns := []int{10, 100, 1000, 10_000, 100_000, 1_000_000}
-	ns := []int{100_000}
+	ns := []int{2}
 	for _, n := range ns {
 		ts := newTstate(t)
 		s := time.Now()

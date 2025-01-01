@@ -8,6 +8,15 @@ import (
 	"sigmaos/spproto/srv/namei"
 )
 
+func getParent(start fs.Dir, os []fs.FsObj) fs.Dir {
+	if len(os) <= 1 {
+		return start
+	} else {
+		d := os[len(os)-2]
+		return d.(fs.Dir)
+	}
+}
+
 // LookupObj/namei will return an lo and a locked watch for it, even
 // in error cases because the caller create a new fid anyway.
 func (ps *ProtSrv) lookupObj(ctx fs.CtxI, po *Pobj, target path.Tpathname, ltype lockmap.Tlock) ([]fs.FsObj, fs.FsObj, *lockmap.PathLock, path.Tpathname, *serr.Err) {

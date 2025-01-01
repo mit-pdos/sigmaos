@@ -9,13 +9,13 @@ import (
 	"sync"
 	"sync/atomic"
 
-	db "sigmaos/debug"
 	"sigmaos/api/fs"
-	"sigmaos/sigmasrv/memfssrv/memfs/inode"
+	db "sigmaos/debug"
 	"sigmaos/path"
 	"sigmaos/serr"
 	sessp "sigmaos/session/proto"
 	sp "sigmaos/sigmap"
+	"sigmaos/sigmasrv/memfssrv/memfs/inode"
 	"sigmaos/util/perf"
 )
 
@@ -152,9 +152,9 @@ type StatInode struct {
 	pathCnts bool
 }
 
-func NewStatsDev(parent fs.Dir) *StatInode {
+func NewStatsDev() *StatInode {
 	sti := &StatInode{
-		Inode:    inode.NewInode(nil, sp.DMDEVICE, sp.NoLeaseId, parent),
+		Inode:    inode.NewInode(nil, sp.DMDEVICE, sp.NoLeaseId),
 		st:       NewStats(),
 		pathCnts: false,
 	}

@@ -8,12 +8,12 @@ package overlay
 import (
 	"sync"
 
-	db "sigmaos/debug"
 	"sigmaos/api/fs"
-	"sigmaos/sigmasrv/memfssrv/memfs/inode"
+	db "sigmaos/debug"
 	"sigmaos/path"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
+	"sigmaos/sigmasrv/memfssrv/memfs/inode"
 )
 
 type DirOverlay struct {
@@ -25,7 +25,7 @@ type DirOverlay struct {
 
 func MkDirOverlay(dir fs.Dir) *DirOverlay {
 	d := &DirOverlay{}
-	d.Inode = inode.NewInode(nil, sp.DMDIR, sp.NoLeaseId, nil)
+	d.Inode = inode.NewInode(nil, sp.DMDIR, sp.NoLeaseId)
 	d.underlay = dir
 	d.entries = make(map[string]fs.FsObj)
 	return d

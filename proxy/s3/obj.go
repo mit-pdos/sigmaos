@@ -10,8 +10,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 
-	db "sigmaos/debug"
 	"sigmaos/api/fs"
+	db "sigmaos/debug"
 	"sigmaos/path"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
@@ -115,11 +115,6 @@ func (o *Obj) Perm() sp.Tperm {
 
 func (o *Obj) IsLeased() bool {
 	return false
-}
-
-func (o *Obj) Parent() fs.Dir {
-	dir := o.key.Dir()
-	return newDir(o.bucket, dir, sp.DMDIR)
 }
 
 func (o *Obj) Stat(ctx fs.CtxI) (*sp.Tstat, *serr.Err) {
@@ -271,10 +266,6 @@ func (o *Obj) Write(ctx fs.CtxI, off sp.Toffset, b []byte, f sp.Tfence) (sp.Tsiz
 }
 
 // ===== The following functions are needed to make an s3 obj support fs.Inode
-
-func (o *Obj) SetParent(di fs.Dir) {
-	db.DFatalf("Unimplemented")
-}
 
 func (o *Obj) Unlink() {
 	db.DFatalf("Unimplemented")

@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"sync"
 
-	db "sigmaos/debug"
 	"sigmaos/api/fs"
+	db "sigmaos/debug"
 	"sigmaos/path"
 	"sigmaos/serr"
 	sessp "sigmaos/session/proto"
@@ -15,15 +15,16 @@ import (
 type Pobj struct {
 	pathname path.Tpathname
 	obj      fs.FsObj
+	parent   fs.Dir
 	ctx      fs.CtxI
 }
 
-func newPobj(pn path.Tpathname, o fs.FsObj, ctx fs.CtxI) *Pobj {
-	return &Pobj{pn, o, ctx}
+func newPobj(pn path.Tpathname, o fs.FsObj, dir fs.Dir, ctx fs.CtxI) *Pobj {
+	return &Pobj{pathname: pn, parent: dir, obj: o, ctx: ctx}
 }
 
 func (po *Pobj) String() string {
-	return fmt.Sprintf("{%v %v %v}", po.pathname, po.obj, po.ctx)
+	return fmt.Sprintf("{pn '%v' o %v parent %v ctx %v}", po.pathname, po.obj, po.parent, po.ctx)
 }
 
 func (po *Pobj) Pathname() path.Tpathname {
@@ -44,6 +45,10 @@ func (po *Pobj) Obj() fs.FsObj {
 
 func (po *Pobj) SetObj(o fs.FsObj) {
 	po.obj = o
+}
+
+func (po *Pobj) Parent() fs.Dir {
+	return po.parent
 }
 
 type Fid struct {
@@ -74,6 +79,10 @@ func (f *Fid) SetMode(m sp.Tmode) {
 
 func (f *Fid) Pobj() *Pobj {
 	return f.po
+}
+
+func (f *Fid) Parent() fs.Dir {
+	return f.po.parent
 }
 
 func (f *Fid) IsOpen() bool {

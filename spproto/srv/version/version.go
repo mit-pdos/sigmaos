@@ -1,3 +1,6 @@
+// Package version maintains a version number for a
+// Tpath. [spproto/srv] uses it to detect if a directory has changed
+// since opening it for reading and setting a watch on it.
 package version
 
 import (

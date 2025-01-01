@@ -105,11 +105,10 @@ func (pss *ProtSrvState) CreateObj(ctx fs.CtxI, o fs.FsObj, dir path.Tpathname, 
 	}
 	defer pss.plt.Release(ctx, flk, lockmapv1.WLOCK)
 
-	pss.vt.Insert(o1.Path())
 	qid := pss.newQid(o1.Perm(), o1.Path())
 	nf := pss.newFid(ctx, d, dir, name, o1, lid, qid)
 	nf.SetMode(m)
-
+	pss.vt.Insert(qid.Tpath())
 	return qid, nf, nil
 }
 
@@ -120,8 +119,6 @@ func (pss *ProtSrvState) OpenObj(ctx fs.CtxI, o fs.FsObj, m sp.Tmode) (fs.FsObj,
 		return nil, sp.Tqid{}, r
 	}
 	if no != nil {
-		pss.vt.Insert(no.Path())
-		pss.vt.IncVersion(no.Path())
 		return no, pss.newQid(no.Perm(), no.Path()), nil
 	} else {
 		return o, pss.newQid(o.Perm(), o.Path()), nil
@@ -149,9 +146,7 @@ func (pss *ProtSrvState) RemoveObj(ctx fs.CtxI, dir fs.Dir, o fs.FsObj, path pat
 		return err
 	}
 
-	pss.vt.IncVersion(o.Path())
 	pss.vt.IncVersion(dir.Path())
-
 	pss.wt.WakeupWatch(dlk)
 
 	if leased && pss.lm != nil {
@@ -175,12 +170,10 @@ func (pss *ProtSrvState) RenameObj(po *Pobj, name string, f sp.Tfence) *serr.Err
 	if err != nil {
 		return err
 	}
-	pss.vt.IncVersion(po.Obj().Path())
 
-	// XXX update version name
-	// pss.vt.IncVersion(po.Obj().Parent().Path())
-
+	pss.vt.IncVersion(po.Parent().Path())
 	pss.wt.WakeupWatch(dlk)
+
 	if po.Obj().IsLeased() && pss.lm != nil {
 		pss.lm.Rename(po.Pathname().String(), dst.String())
 	}
@@ -219,10 +212,6 @@ func (pss *ProtSrvState) RenameAtObj(old, new *Pobj, dold, dnew fs.Dir, oldname,
 
 	pss.vt.IncVersion(new.Obj().Path())
 	pss.vt.IncVersion(old.Obj().Path())
-
-	// XXX Update files versions
-	// pss.vt.IncVersion(old.Obj().Parent().Path())
-	// pss.vt.IncVersion(new.Obj().Parent().Path())
 
 	if old.Obj().IsLeased() && pss.lm != nil {
 		pss.lm.Rename(old.Pathname().String(), new.Pathname().String())

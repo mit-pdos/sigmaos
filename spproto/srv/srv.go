@@ -87,15 +87,9 @@ func (ps *ProtSrv) Attach(args *sp.Tattach, rets *sp.Rattach) (sp.TclntId, *sp.R
 		if len(rest) > 0 || err != nil {
 			return sp.NoClntId, sp.NewRerrorSerr(err)
 		}
-		// insert before releasing
-		ps.vt.Insert(lo.Path())
 		tree = lo
 		parent = getParent(root, os)
 		qid = ps.newQid(lo.Perm(), lo.Path())
-	} else {
-		// root is already in the version table; this updates
-		// just the refcnt.
-		ps.vt.Insert(root.Path())
 	}
 	if err := ps.fm.Insert(args.Tfid(), newFidPath(newPobj(p, tree, parent, ctx), 0, qid)); err != nil {
 		return sp.NoClntId, sp.NewRerrorSerr(err)
@@ -183,9 +177,6 @@ func (ps *ProtSrv) Walk(args *sp.Twalk, rets *sp.Rwalk) *sp.Rerror {
 	if err := ps.fm.Insert(args.Tnewfid(), newFidPath(newPobj(p, lo, parent, f.Pobj().Ctx()), 0, qid)); err != nil {
 		return sp.NewRerrorSerr(err)
 	}
-
-	ps.vt.Insert(qid.Tpath())
-
 	return nil
 }
 
@@ -196,11 +187,11 @@ func (ps *ProtSrv) clunk(fid sp.Tfid) *sp.Rerror {
 	}
 	db.DPrintf(db.PROTSRV, "%v: Clunk %v f %v path %q", f.Pobj().Ctx().ClntId(), fid, f, f.Pobj().Pathname())
 	if f.IsOpen() { // has the fid been opened?
+		if _, err := ps.vt.Delete(f.Pobj().Obj().Path()); err != nil {
+			db.DFatalf("%v: clunk %v vt del failed %v err %v\n", f.Pobj().Ctx().ClntId(), fid, f.Pobj(), err)
+		}
 		f.Pobj().Obj().Close(f.Pobj().Ctx(), f.Mode())
 		f.Close()
-	}
-	if _, err := ps.vt.Delete(f.Pobj().Obj().Path()); err != nil {
-		db.DFatalf("%v: clunk %v vt del failed %v err %v\n", f.Pobj().Ctx().ClntId(), fid, f.Pobj(), err)
 	}
 	return nil
 }
@@ -224,6 +215,9 @@ func (ps *ProtSrv) Open(args *sp.Topen, rets *sp.Ropen) *sp.Rerror {
 	if no != o {
 		f.Pobj().SetObj(no)
 	}
+
+	ps.vt.Insert(qid.Tpath())
+
 	rets.Qid = qid.Proto()
 	return nil
 }
@@ -307,7 +301,6 @@ func (ps *ProtSrv) WriteRead(args *sp.Twriteread, iov sessp.IoVec, rets *sp.Rrea
 	if err != nil {
 		return nil, sp.NewRerrorSerr(err)
 	}
-	ps.vt.IncVersion(f.Pobj().Obj().Path())
 	return retiov, nil
 }
 
@@ -324,7 +317,6 @@ func (ps *ProtSrv) WriteF(args *sp.TwriteF, data []byte, rets *sp.Rwrite) *sp.Re
 		return sp.NewRerrorSerr(err)
 	}
 	rets.Count = uint32(n)
-	ps.vt.IncVersion(f.Pobj().Obj().Path())
 	return nil
 }
 

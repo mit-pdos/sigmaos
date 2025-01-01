@@ -1,15 +1,15 @@
 package memfssrv
 
 import (
+	"sigmaos/api/fs"
 	"sigmaos/ctx"
 	db "sigmaos/debug"
-	"sigmaos/api/fs"
-	"sigmaos/sigmasrv/memfssrv/memfs"
-	"sigmaos/sigmasrv/memfssrv/memfs/dir"
-	"sigmaos/sigmasrv/memfssrv/memfs/fenceddir"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
+	"sigmaos/sigmasrv/memfssrv/memfs"
+	"sigmaos/sigmasrv/memfssrv/memfs/dir"
+	"sigmaos/sigmasrv/memfssrv/memfs/fenceddir"
 	"sigmaos/sigmasrv/memfssrv/sigmapsrv"
 	spprotosrv "sigmaos/spproto/srv"
 )
@@ -41,7 +41,7 @@ func NewMemFsPortClnt(pn string, addr *sp.Taddr, sc *sigmaclnt.SigmaClnt, aaf sp
 
 func NewMemFsPortClntFenceAuth(pn string, addr *sp.Taddr, sc *sigmaclnt.SigmaClnt, fencefs fs.Dir, aaf spprotosrv.AttachAuthF) (*MemFs, error) {
 	ctx := ctx.NewCtx(sp.NoPrincipal(), nil, 0, sp.NoClntId, nil, fencefs)
-	root := fenceddir.NewFencedRoot(dir.NewRootDir(ctx, memfs.NewInode, nil))
+	root := fenceddir.NewFencedRoot(dir.NewRootDir(ctx, memfs.NewInode))
 	return NewMemFsRootPortClntFenceAuth(root, pn, addr, sc, fencefs, aaf)
 }
 

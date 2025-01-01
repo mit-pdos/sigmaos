@@ -60,9 +60,9 @@ func (pss *ProtSrvState) newQid(perm sp.Tperm, path sp.Tpath) sp.Tqid {
 	return sp.NewQidPerm(perm, pss.vt.GetVersion(path), path)
 }
 
-func (pss *ProtSrvState) newFid(ctx fs.CtxI, dir path.Tpathname, name string, o fs.FsObj, lid sp.TleaseId, qid sp.Tqid) *Fid {
-	pn := dir.Copy().Append(name)
-	po := newPobj(pn, o, ctx)
+func (pss *ProtSrvState) newFid(ctx fs.CtxI, dir fs.Dir, dname path.Tpathname, name string, o fs.FsObj, lid sp.TleaseId, qid sp.Tqid) *Fid {
+	pn := dname.Copy().Append(name)
+	po := newPobj(pn, o, dir, ctx)
 	nf := newFidPath(po, 0, qid)
 	if o.IsLeased() && pss.lm != nil {
 		pss.lm.Insert(pn.String(), lid)
@@ -88,7 +88,7 @@ func (pss *ProtSrvState) createObj(ctx fs.CtxI, d fs.Dir, dlk *lockmapv1.PathLoc
 }
 
 func (pss *ProtSrvState) CreateObj(ctx fs.CtxI, o fs.FsObj, dir path.Tpathname, name string, perm sp.Tperm, m sp.Tmode, lid sp.TleaseId, fence sp.Tfence, dev fs.FsObj) (sp.Tqid, *Fid, *serr.Err) {
-	db.DPrintf(db.PROTSRV, "%v: Create %v %q", ctx.ClntId(), o, dir)
+	db.DPrintf(db.PROTSRV, "%v: Create o %v dir %v dev %v", ctx.ClntId(), o, dir, dev)
 	if !o.Perm().IsDir() {
 		return sp.Tqid{}, nil, serr.NewErr(serr.TErrNotDir, dir)
 	}
@@ -107,7 +107,7 @@ func (pss *ProtSrvState) CreateObj(ctx fs.CtxI, o fs.FsObj, dir path.Tpathname, 
 
 	pss.vt.Insert(o1.Path())
 	qid := pss.newQid(o1.Perm(), o1.Path())
-	nf := pss.newFid(ctx, dir, name, o1, lid, qid)
+	nf := pss.newFid(ctx, d, dir, name, o1, lid, qid)
 	nf.SetMode(m)
 
 	return qid, nf, nil
@@ -128,14 +128,14 @@ func (pss *ProtSrvState) OpenObj(ctx fs.CtxI, o fs.FsObj, m sp.Tmode) (fs.FsObj,
 	}
 }
 
-func (pss *ProtSrvState) RemoveObj(ctx fs.CtxI, o fs.FsObj, path path.Tpathname, f sp.Tfence, del fs.Tdel) *serr.Err {
+func (pss *ProtSrvState) RemoveObj(ctx fs.CtxI, dir fs.Dir, o fs.FsObj, path path.Tpathname, f sp.Tfence, del fs.Tdel) *serr.Err {
 	name := path.Base()
 	if name == "." {
 		return serr.NewErr(serr.TErrInval, name)
 	}
 
 	// lock dir to make WatchV and Remove interact correctly
-	dlk := pss.plt.Acquire(ctx, o.Parent().Path(), lockmapv1.WLOCK)
+	dlk := pss.plt.Acquire(ctx, dir.Path(), lockmapv1.WLOCK)
 	defer pss.plt.Release(ctx, dlk, lockmapv1.WLOCK)
 
 	// pss.stats.IncPathString(flk.Path())
@@ -145,12 +145,12 @@ func (pss *ProtSrvState) RemoveObj(ctx fs.CtxI, o fs.FsObj, path path.Tpathname,
 	// Call before Remove(), because after remove o's underlying
 	// object may not exist anymore.
 	leased := o.IsLeased()
-	if err := o.Parent().Remove(ctx, name, f, del); err != nil {
+	if err := dir.Remove(ctx, name, f, del); err != nil {
 		return err
 	}
 
 	pss.vt.IncVersion(o.Path())
-	pss.vt.IncVersion(o.Parent().Path())
+	pss.vt.IncVersion(dir.Path())
 
 	pss.wt.WakeupWatch(dlk)
 
@@ -166,13 +166,12 @@ func (pss *ProtSrvState) RemoveObj(ctx fs.CtxI, o fs.FsObj, path path.Tpathname,
 
 func (pss *ProtSrvState) RenameObj(po *Pobj, name string, f sp.Tfence) *serr.Err {
 	dst := po.Pathname().Dir().Copy().AppendPath(path.Split(name))
-
 	dlk := pss.plt.Acquire(po.Ctx(), po.Obj().Path(), lockmapv1.WLOCK)
 	defer pss.plt.Release(po.Ctx(), dlk, lockmapv1.WLOCK)
 
 	// pss.stats.IncPathString(po.Pathname().String())
 
-	err := po.Obj().Parent().Rename(po.Ctx(), po.Pathname().Base(), name, f)
+	err := po.Parent().Rename(po.Ctx(), po.Pathname().Base(), name, f)
 	if err != nil {
 		return err
 	}

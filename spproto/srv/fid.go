@@ -17,19 +17,16 @@ import (
 type Pobj struct {
 	pathname path.Tpathname
 	obj      fs.FsObj
+	parent   fs.Dir
 	ctx      fs.CtxI
 }
 
-func newPobj(pn path.Tpathname, o fs.FsObj, ctx fs.CtxI) *Pobj {
-	return &Pobj{pn, o, ctx}
+func newPobj(pn path.Tpathname, o fs.FsObj, dir fs.Dir, ctx fs.CtxI) *Pobj {
+	return &Pobj{pathname: pn, parent: dir, obj: o, ctx: ctx}
 }
 
 func (po *Pobj) String() string {
-	p := sp.NoPath
-	if po.obj.Parent() != nil {
-		p = po.obj.Parent().Path()
-	}
-	return fmt.Sprintf("{%q(p %d) o %v ctx %v parent %d}", po.pathname, po.Path(), po.obj, po.ctx, p)
+	return fmt.Sprintf("{pn '%v'(p %d) o %v parent %v ctx %v}", po.pathname, po.Path(), po.obj, po.parent, po.ctx)
 }
 
 func (po *Pobj) Pathname() path.Tpathname {
@@ -54,6 +51,10 @@ func (po *Pobj) Obj() fs.FsObj {
 
 func (po *Pobj) SetObj(o fs.FsObj) {
 	po.obj = o
+}
+
+func (po *Pobj) Parent() fs.Dir {
+	return po.parent
 }
 
 type Fid struct {
@@ -84,6 +85,10 @@ func (f *Fid) SetMode(m sp.Tmode) {
 
 func (f *Fid) Pobj() *Pobj {
 	return f.po
+}
+
+func (f *Fid) Parent() fs.Dir {
+	return f.po.parent
 }
 
 func (f *Fid) IsOpen() bool {

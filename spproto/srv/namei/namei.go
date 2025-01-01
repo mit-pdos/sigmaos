@@ -35,6 +35,7 @@ func Walk(plt *lockmapv1.PathLockTable, ctx fs.CtxI, o fs.FsObj, dlk *lockmapv1.
 	// releaseLk(plt, ctx, plk, ltype)
 	switch e := e.(type) {
 	case fs.Dir:
+		db.DPrintf(db.NAMEI, "%v: namei e %v os(%d) %v target '%v'", ctx.Principal(), e, len(os), os, target[1:])
 		dlk = plt.HandOverLock(ctx, dlk, lo.Path(), ltype)
 		return Walk(plt, ctx, e, dlk, target[1:], os, ltype)
 	default: // an error or perhaps a symlink

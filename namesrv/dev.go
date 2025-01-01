@@ -1,8 +1,8 @@
 package namesrv
 
 import (
-	db "sigmaos/debug"
 	"sigmaos/api/fs"
+	db "sigmaos/debug"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 )
@@ -58,18 +58,6 @@ func (o *Obj) Mtime() int64 {
 }
 
 func (o *Obj) SetMtime(m int64) {
-}
-
-// func (o *Obj) Parent() fs.Dir {
-// 	dir := o.pathName.Dir()
-// 	d, err := newDir(dir)
-// 	if err != nil {
-// 		db.DFatalf("Parent %v err %v\n", dir, err)
-// 	}
-// 	return d
-// }
-
-func (o *Obj) SetParent(p fs.Dir) {
 }
 
 func (o *Obj) Unlink() {

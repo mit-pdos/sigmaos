@@ -76,8 +76,8 @@ func (dir *DirImpl) Dump() (string, error) {
 	return s, nil
 }
 
-func NewRootDir(ctx fs.CtxI, no fs.NewFsObjF, parent fs.Dir) fs.Dir {
-	i, _ := no(ctx, sp.DMDIR, sp.NoLeaseId, 0, parent, MkDirF)
+func NewRootDir(ctx fs.CtxI, no fs.NewFsObjF) fs.Dir {
+	i, _ := no(ctx, sp.DMDIR, sp.NoLeaseId, 0, MkDirF)
 	return i.(fs.Dir)
 }
 
@@ -216,13 +216,11 @@ func (dir *DirImpl) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode, 
 	}
 	newo := dev
 	if dev == nil {
-		no, err := dir.no(ctx, perm, lid, m, dir, MkDirF)
+		no, err := dir.no(ctx, perm, lid, m, MkDirF)
 		if err != nil {
 			return nil, err
 		}
 		newo = no
-	} else {
-		dev.SetParent(dir)
 	}
 	db.DPrintf(db.MEMFS, "Create %v in %v obj %v\n", name, dir, newo)
 	dir.SetMtime(time.Now().Unix())
@@ -328,7 +326,6 @@ func (dir *DirImpl) Renameat(ctx fs.CtxI, old string, nd fs.Dir, new string, f s
 		db.DFatalf("Rename %v createL: %v\n", new, err)
 		return err
 	}
-	ino.SetParent(newdir)
 	return nil
 }
 

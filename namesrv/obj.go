@@ -50,14 +50,6 @@ func (o *Obj) IsLeased() bool {
 	return o.di.LeaseId.IsLeased()
 }
 
-// XXX 0 should be o.parent.parent
-func (o *Obj) Parent() fs.Dir {
-	dir := o.pn.Dir()
-	return newDir(newObjDi(o.fs, dir, *fsetcd.NewDirEntInfoDir(o.parent), 0))
-}
-
-// XXX SetParent
-
 func (o *Obj) Stat(ctx fs.CtxI) (*sp.Tstat, *serr.Err) {
 	db.DPrintf(db.NAMED, "Stat: %v\n", o)
 

@@ -13,24 +13,22 @@ import (
 )
 
 type Inode struct {
-	mu     sync.Mutex
-	inum   sp.Tpath
-	perm   sp.Tperm
-	lid    sp.TleaseId
-	mtime  int64
-	parent fs.Dir
-	owner  *sp.Tprincipal
+	mu    sync.Mutex
+	inum  sp.Tpath
+	perm  sp.Tperm
+	lid   sp.TleaseId
+	mtime int64
+	owner *sp.Tprincipal
 }
 
 var NextInum atomic.Uint64
 
-func NewInode(ctx fs.CtxI, p sp.Tperm, lid sp.TleaseId, parent fs.Dir) *Inode {
+func NewInode(ctx fs.CtxI, p sp.Tperm, lid sp.TleaseId) *Inode {
 	i := &Inode{
-		inum:   sp.Tpath(NextInum.Add(1)),
-		perm:   p,
-		mtime:  time.Now().Unix(),
-		parent: parent,
-		lid:    lid,
+		inum:  sp.Tpath(NextInum.Add(1)),
+		perm:  p,
+		mtime: time.Now().Unix(),
+		lid:   lid,
 	}
 	if ctx == nil {
 		i.owner = sp.NoPrincipal()
@@ -71,18 +69,6 @@ func (inode *Inode) IsLeased() bool {
 	inode.mu.Lock()
 	defer inode.mu.Unlock()
 	return inode.lid.IsLeased()
-}
-
-func (inode *Inode) Parent() fs.Dir {
-	inode.mu.Lock()
-	defer inode.mu.Unlock()
-	return inode.parent
-}
-
-func (inode *Inode) SetParent(p fs.Dir) {
-	inode.mu.Lock()
-	defer inode.mu.Unlock()
-	inode.parent = p
 }
 
 func (inode *Inode) Mtime() int64 {

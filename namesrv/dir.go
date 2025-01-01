@@ -161,10 +161,6 @@ func (d *Dir) Mtime() int64 {
 	return 0
 }
 
-func (d *Dir) SetParent(di fs.Dir) {
-	db.DFatalf("Unimplemented")
-}
-
 func (d *Dir) Unlink() {
 	db.DFatalf("Unimplemented")
 }

@@ -1,15 +1,11 @@
-// Package lockmap provides table for locking pathnames.  Servers lock
-// a pathname before manipulating/creating a file or directory.  When
-// a server starts an operation it calls Acquire, which allocates a
-// pathlock in the table and locks the pathlock. Then, it does it
-// work, and releases the pathlock at the end.  If the releasing
-// thread is the last thread using the pathlock, then the thread
-// removes the pathlock from the table.  Thread acquire path locks in
-// the following order: first the parent directory, then the file or
-// child directory.
-//
-
-package lockmapv1
+// Package lockmap provides table for locking pathnames.
+// [spproto/srv] locks Tpath of a directory/file before manipulating
+// it.  When a server starts an operation it calls Acquire, which
+// allocates a pathlock in the table and locks the pathlock. Then, it
+// does it work, and releases the pathlock at the end.  If the
+// releasing thread is the last thread using the pathlock, then the
+// thread removes the pathlock from the table.
+package lockmap
 
 import (
 	"sync"

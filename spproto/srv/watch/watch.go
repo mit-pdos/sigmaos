@@ -28,16 +28,16 @@ import (
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv/clntcond"
-	"sigmaos/spproto/srv/lockmapv1"
+	"sigmaos/spproto/srv/lockmap"
 )
 
 type Watch struct {
-	pl   *lockmapv1.PathLock
+	pl   *lockmap.PathLock
 	sc   *clntcond.ClntCond
 	nref int
 }
 
-func newWatch(sct *clntcond.ClntCondTable, pl *lockmapv1.PathLock) *Watch {
+func newWatch(sct *clntcond.ClntCondTable, pl *lockmap.PathLock) *Watch {
 	w := &Watch{}
 	w.pl = pl
 	w.sc = sct.NewClntCond(pl)
@@ -74,7 +74,7 @@ func NewWatchTable(sct *clntcond.ClntCondTable) *WatchTable {
 
 // Alloc watch, if doesn't exist allocate one.  Caller must have pl
 // locked.
-func (wt *WatchTable) allocWatch(pl *lockmapv1.PathLock) *Watch {
+func (wt *WatchTable) allocWatch(pl *lockmap.PathLock) *Watch {
 	wt.Lock()
 	defer wt.Unlock()
 
@@ -129,7 +129,7 @@ func (wt *WatchTable) freeWatch(ws *Watch) {
 }
 
 // Caller should have pl locked
-func (wt *WatchTable) WaitWatch(pl *lockmapv1.PathLock, cid sp.TclntId) *serr.Err {
+func (wt *WatchTable) WaitWatch(pl *lockmap.PathLock, cid sp.TclntId) *serr.Err {
 	ws := wt.allocWatch(pl)
 	err := ws.Watch(cid)
 	wt.freeWatch(ws)
@@ -137,7 +137,7 @@ func (wt *WatchTable) WaitWatch(pl *lockmapv1.PathLock, cid sp.TclntId) *serr.Er
 }
 
 // Caller should have pl locked
-func (wt *WatchTable) WakeupWatch(pl *lockmapv1.PathLock) {
+func (wt *WatchTable) WakeupWatch(pl *lockmap.PathLock) {
 	wt.Lock()
 	defer wt.Unlock()
 

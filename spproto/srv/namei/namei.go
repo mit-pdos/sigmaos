@@ -5,13 +5,13 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/path"
 	"sigmaos/serr"
-	"sigmaos/spproto/srv/lockmapv1"
+	"sigmaos/spproto/srv/lockmap"
 )
 
 // Walk traverses target element by element or in one LookupPath call,
 // depending if the underlying file system can do a lookup for the
 // complete path.  Caller provides locked dir.
-func Walk(plt *lockmapv1.PathLockTable, ctx fs.CtxI, o fs.FsObj, dlk *lockmapv1.PathLock, target path.Tpathname, os []fs.FsObj, ltype lockmapv1.Tlock) ([]fs.FsObj, fs.FsObj, *lockmapv1.PathLock, path.Tpathname, *serr.Err) {
+func Walk(plt *lockmap.PathLockTable, ctx fs.CtxI, o fs.FsObj, dlk *lockmap.PathLock, target path.Tpathname, os []fs.FsObj, ltype lockmap.Tlock) ([]fs.FsObj, fs.FsObj, *lockmap.PathLock, path.Tpathname, *serr.Err) {
 	d := o.(fs.Dir)
 	nos, e, rest, err := d.LookupPath(ctx, target)
 	if err != nil { // an error or perhaps a ~
@@ -23,7 +23,7 @@ func Walk(plt *lockmapv1.PathLockTable, ctx fs.CtxI, o fs.FsObj, dlk *lockmapv1.
 	lo := os[len(os)-1]
 	if len(rest) == 0 { // done?
 		db.DPrintf(db.NAMEI, "%v: namei %q lo %v e %v os %v", ctx.Principal(), target, lo, e, os)
-		var flk *lockmapv1.PathLock
+		var flk *lockmap.PathLock
 		if target.Base() == "." {
 			flk = dlk
 		} else {

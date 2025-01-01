@@ -18,7 +18,7 @@ import (
 	"sigmaos/sigmasrv/memfssrv/memfs/inode"
 	"sigmaos/sigmasrv/memfssrv/sigmapsrv"
 	spprotosrv "sigmaos/spproto/srv"
-	"sigmaos/spproto/srv/lockmapv1"
+	"sigmaos/spproto/srv/lockmap"
 	"sigmaos/util/syncmap"
 )
 
@@ -97,7 +97,7 @@ func (mfs *MemFs) lookupWalk(pn string) (fs.Dir, fs.FsObj, path.Tpathname, *serr
 		return nil, nil, nil, err
 	}
 	db.DPrintf(db.MEMFSSRV, "lookupWalk %q %v path %v\n", pn, fid, path)
-	_, parent, _, lo, err := mfs.ps.LookupWalkParent(fid, path, false, lockmapv1.RLOCK)
+	_, parent, _, lo, err := mfs.ps.LookupWalkParent(fid, path, false, lockmap.RLOCK)
 	if err != nil {
 		db.DPrintf(db.MEMFSSRV, "LookupWalk %v err %v\n", path.Dir(), err)
 		return nil, nil, nil, err

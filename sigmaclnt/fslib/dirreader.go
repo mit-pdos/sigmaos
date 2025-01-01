@@ -45,7 +45,7 @@ func (fsl *FsLib) readDirWatch(dir string, watch Fwatch) (bool, error) {
 func (fsl *FsLib) WaitRemove(pn string) error {
 	dir := filepath.Dir(pn) + "/"
 	f := filepath.Base(pn)
-	db.DPrintf(db.WATCH, "WaitRemove: readDirWatch dir %v\n", dir)
+	db.DPrintf(db.WATCH, "WaitRemove: readDirWatch dir %v for remove of %v\n", dir, f)
 	_, err := fsl.readDirWatch(dir, func(sts []*sp.Tstat) bool {
 		db.DPrintf(db.WATCH, "WaitRemove %v %v %v\n", dir, sp.Names(sts), f)
 		for _, st := range sts {

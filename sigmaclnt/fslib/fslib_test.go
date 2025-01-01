@@ -772,7 +772,7 @@ func TestDirWatch(t *testing.T) {
 }
 
 // Concurrently remove & wait
-func TestWaitRemoveWaitConcur(t *testing.T) {
+func TestWaitRemoveConcur(t *testing.T) {
 	const N = 100 // 10_000
 
 	ts, err1 := test.NewTstatePath(t, pathname)
@@ -783,30 +783,32 @@ func TestWaitRemoveWaitConcur(t *testing.T) {
 	err := ts.MkDir(dn, 0777)
 	assert.Equal(t, nil, err)
 
-	done := make(chan bool)
+	done := make(chan int)
 	pe := proc.NewAddedProcEnv(ts.ProcEnv())
 	fsl, err := sigmaclnt.NewFsLib(pe, dialproxyclnt.NewDialProxyClnt(pe))
 	assert.Nil(t, err)
 	for i := 0; i < N; i++ {
-		fn := filepath.Join(dn, strconv.Itoa(i))
+		fn := filepath.Join(dn, FILE+strconv.Itoa(i))
 		_, err := fsl.PutFile(fn, 0777, sp.OWRITE, nil)
 		assert.Nil(t, err, "Err putfile: %v", err)
 	}
 	for i := 0; i < N; i++ {
-		fn := filepath.Join(dn, strconv.Itoa(i))
-		go func(fn string) {
+		go func(i int) {
+			fn := filepath.Join(dn, FILE+strconv.Itoa(i))
 			err := ts.WaitRemove(fn)
 			assert.True(ts.T, err == nil, "Unexpected WaitRemove error: %v", err)
-			done <- true
-		}(fn)
-		go func(fn string) {
+			done <- i
+		}(i)
+		go func(i int) {
+			fn := filepath.Join(dn, FILE+strconv.Itoa(i))
 			err := ts.Remove(fn)
 			assert.Nil(t, err, "Unexpected remove error: %v", err)
-			done <- true
-		}(fn)
+			done <- N + i
+		}(i)
 	}
 	for i := 0; i < 2*N; i++ {
-		<-done
+		j := <-done
+		db.DPrintf(db.TEST, "done  %v", j)
 	}
 	err = fsl.Close()
 	assert.Nil(t, err)

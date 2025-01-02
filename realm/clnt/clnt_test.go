@@ -19,7 +19,6 @@ import (
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 	"sigmaos/util/linux/mem"
-	linuxsched "sigmaos/util/linux/sched"
 	rd "sigmaos/util/rand"
 )
 

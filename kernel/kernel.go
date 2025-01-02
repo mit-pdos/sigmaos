@@ -110,6 +110,8 @@ func (k *Kernel) IsPurelyProcqKernel() bool {
 }
 
 func (k *Kernel) Shutdown() error {
+	db.DPrintf(db.KERNEL, "Shutdown lock %v", k.Param.KernelID)
+
 	k.Lock()
 	defer k.Unlock()
 

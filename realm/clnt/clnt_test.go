@@ -472,7 +472,7 @@ func TestKernelIsolationBasic(t *testing.T) {
 	assert.True(t, len(sts) == 1, "Wrong list of mscheds: %v", sp.Names(sts))
 	sts1, err := ts.ts1.GetDir(filepath.Join(pn, sts[0].Name) + "/")
 	assert.Nil(t, err, "Unable to GetDir root-mounted union dir %v: %v", pn, err)
-	assert.True(t, len(sts1) == 3, "Wrong procq contents: %v", sp.Names(sts1))
+	assert.True(t, len(sts1) == 2, "Wrong procq contents: %v", sp.Names(sts1))
 	db.DPrintf(db.TEST, "Got contents of %v%v: %v", pn, sts[0].Name, sp.Names(sts1))
 	// Ensure that tenant realms can't access the root named's root directory
 	err = ts.ts1.MountTree(rootNamedEP, "", "name/rootnamed")

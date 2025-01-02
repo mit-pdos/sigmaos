@@ -8,7 +8,6 @@ import (
 	"sync"
 	"time"
 
-	"sigmaos/util/crash"
 	db "sigmaos/debug"
 	dialproxyclnt "sigmaos/dialproxy/clnt"
 	"sigmaos/namesrv/fsetcd"
@@ -16,11 +15,12 @@ import (
 	"sigmaos/path"
 	"sigmaos/proc"
 	"sigmaos/rpc"
-	"sigmaos/util/coordination/semaphore"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
 	spprotosrv "sigmaos/spproto/srv"
+	"sigmaos/util/coordination/semaphore"
+	"sigmaos/util/crash"
 	"sigmaos/util/perf"
 )
 
@@ -50,16 +50,16 @@ func toGiB(nbyte uint64) float64 {
 	return float64(nbyte) / float64(1<<30)
 }
 
-func Run(args []string) error {
-	//	go func() {
-	//		for {
-	//			time.Sleep(1000 * time.Millisecond)
-	//			var ms runtime.MemStats
-	//			runtime.ReadMemStats(&ms)
-	//			db.DPrintf(db.ALWAYS, "Num goroutines (%v) HeapLiveBytes:(%.3f) TotalHeapAllocCum:(%3f) MaxHeapSizeEver:(%.3f) HeapNotReleasedToSys:(%.3f) HeapReleasedToSys:(%.3f) StackInuse:(%.3f) StackReqeuestedFromSys:(%.3f) SysAllocated:(%.3f)", runtime.NumGoroutine(), toGiB(ms.HeapAlloc), toGiB(ms.TotalAlloc), toGiB(ms.HeapSys), toGiB(ms.HeapIdle), toGiB(ms.HeapReleased), toGiB(ms.StackInuse), toGiB(ms.StackSys), toGiB(ms.Sys))
-	//		}
-	//	}()
+//	go func() {
+//		for {
+//			time.Sleep(1000 * time.Millisecond)
+//			var ms runtime.MemStats
+//			runtime.ReadMemStats(&ms)
+//			db.DPrintf(db.ALWAYS, "Num goroutines (%v) HeapLiveBytes:(%.3f) TotalHeapAllocCum:(%3f) MaxHeapSizeEver:(%.3f) HeapNotReleasedToSys:(%.3f) HeapReleasedToSys:(%.3f) StackInuse:(%.3f) StackReqeuestedFromSys:(%.3f) SysAllocated:(%.3f)", runtime.NumGoroutine(), toGiB(ms.HeapAlloc), toGiB(ms.TotalAlloc), toGiB(ms.HeapSys), toGiB(ms.HeapIdle), toGiB(ms.HeapReleased), toGiB(ms.StackInuse), toGiB(ms.StackSys), toGiB(ms.Sys))
+//		}
+//	}()
 
+func Run(args []string) error {
 	pe := proc.GetProcEnv()
 	db.DPrintf(db.NAMED_LDR, "named start: %v cfg: %v", args, pe)
 	if len(args) != 2 {
@@ -288,15 +288,21 @@ func (nd *Named) getRoot(pn string) error {
 }
 
 func (nd *Named) waitExit(ch chan struct{}) {
-	for {
+	var i int = 0
+	for ; ; i++ {
 		err := nd.WaitEvict(nd.ProcEnv().GetPID())
 		if err == nil {
 			db.DPrintf(db.ALWAYS, "candidate %v %v evicted", nd.realm, nd.ProcEnv().GetPID().String())
 			ch <- struct{}{}
 			break
 		}
+		if i > sp.Conf.Path.MAX_RESOLVE_RETRY {
+			db.DPrintf(db.ALWAYS, "candidate %v %v err evict giving up!", nd.realm, nd.ProcEnv().GetPID().String())
+			ch <- struct{}{}
+			break
+		}
 		db.DPrintf(db.NAMED, "Error WaitEvict: %v", err)
-		time.Sleep(time.Second)
+		time.Sleep(sp.Conf.Path.RESOLVE_TIMEOUT)
 		continue
 	}
 }

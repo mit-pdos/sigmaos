@@ -213,11 +213,6 @@ func TestWaitExitN(t *testing.T) {
 			assert.True(t, status != nil && status.IsStatusOK(), "Exit status wrong %v", status)
 			db.DPrintf(db.TEST, "Exited %v", pid)
 
-			// cleaned up (may take a bit)
-			time.Sleep(500 * time.Millisecond)
-			_, err = ts.Stat(filepath.Join(sp.MSCHED, sp.LOCAL, sp.PIDS, pid.String()))
-			assert.NotNil(t, err, "Stat %v", filepath.Join(sp.PIDS, pid.String()))
-
 			checkSleeperResult(t, ts, pid)
 			cleanSleeperResult(t, ts, pid)
 

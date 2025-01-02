@@ -51,10 +51,10 @@ while [[ "$#" -gt 1 ]]; do
             BOOT="spproxyd"
             ;;
         "realm")
-            BOOT="knamed;besched;lcsched;msched;realmd;ux;s3;chunkd;db;mongo;named"
+            BOOT="knamed;besched;lcsched;msched;realmd;ux;s3;chunkd;db;mongo"
             ;;
         "realm_no_besched")
-            BOOT="knamed;lcsched;msched;realmd;ux;s3;chunkd;db;mongo;named"
+            BOOT="knamed;lcsched;msched;realmd;ux;s3;chunkd;db;mongo"
             ;;
         *)
             echo "unexpected argument $1 to boot"

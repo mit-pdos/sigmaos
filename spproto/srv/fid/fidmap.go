@@ -1,20 +1,50 @@
 package fid
 
 import (
+	"sync"
+
 	db "sigmaos/debug"
 
+	"sigmaos/api/fs"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
+	"sigmaos/util/freelist"
 	"sigmaos/util/syncmap"
 )
 
 type FidMap struct {
+	fl   *freelist.FreeList[Fid]
 	fids *syncmap.SyncMap[sp.Tfid, *Fid]
 }
 
-func NewFidMap() *FidMap {
-	fm := &FidMap{syncmap.NewSyncMap[sp.Tfid, *Fid]()}
+func NewFidMap(fl *freelist.FreeList[Fid]) *FidMap {
+	fm := &FidMap{
+		fl:   fl,
+		fids: syncmap.NewSyncMap[sp.Tfid, *Fid](),
+	}
 	return fm
+}
+
+func (fm *FidMap) NewFid(n string, obj fs.FsObj, dir fs.Dir, ctx fs.CtxI, m sp.Tmode, qid sp.Tqid) *Fid {
+	fid := fm.fl.New()
+	fid.mu = sync.Mutex{}
+	fid.obj = obj
+	fid.name = n
+	fid.dir = dir
+	fid.ctx = ctx
+	fid.isOpen = false
+	fid.m = m
+	fid.qid = qid
+	fid.cursor = 0
+	return fid
+}
+
+func (fm *FidMap) Free(f *Fid) {
+	fm.fl.Free(f)
+}
+
+func (fm *FidMap) Len() int {
+	return fm.fids.Len()
 }
 
 func (fm *FidMap) Lookup(fid sp.Tfid) (*Fid, *serr.Err) {

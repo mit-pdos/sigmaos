@@ -115,7 +115,7 @@ func (mfs *MemFs) MkNod(pn string, i fs.FsObj) *serr.Err {
 func (mfs *MemFs) CreateNod(pn string, p sp.Tperm, m sp.Tmode, lid sp.TleaseId, o fs.FsObj) (fs.FsObj, *serr.Err) {
 	_, lo, name, err := mfs.lookupWalk(filepath.Dir(pn))
 	db.DPrintf(db.MEMFSSRV, "Create %q perm %v dir %v base %q o %v\n", pn, p, lo, name, o)
-	_, nf, err := mfs.CreateObj(mfs.ctx, lo, filepath.Base(pn), p, m, lid, sp.NoFence(), o)
+	_, nf, err := mfs.ps.CreateObjFm(mfs.ctx, lo, filepath.Base(pn), p, m, lid, sp.NoFence(), o)
 	if err != nil {
 		db.DPrintf(db.MEMFSSRV, "Create: CreateObj %q %v err %v\n", pn, nf, err)
 		return nil, err

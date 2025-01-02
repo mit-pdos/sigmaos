@@ -36,7 +36,7 @@ type ProtSrv struct {
 func NewProtSrv(srvPE *proc.ProcEnv, pss *ProtSrvState, p *sp.Tprincipal, sid sessp.Tsession, grf GetRootCtxF, aaf AttachAuthF) *ProtSrv {
 	ps := &ProtSrv{
 		ProtSrvState: pss,
-		fm:           fid.NewFidMap(),
+		fm:           fid.NewFidMap(pss.fidfl),
 		p:            p,
 		srvPE:        srvPE,
 		sid:          sid,
@@ -64,7 +64,8 @@ func (ps *ProtSrv) Version(args *sp.Tversion, rets *sp.Rversion) *sp.Rerror {
 
 func (ps *ProtSrv) NewRootFid(id sp.Tfid, ctx fs.CtxI, root fs.FsObj, name string) {
 	qid := ps.newQid(root.Perm(), root.Path())
-	if err := ps.fm.Insert(id, fid.NewFid(name, root, root.(fs.Dir), ctx, 0, qid)); err != nil {
+	f := ps.fm.NewFid(name, root, root.(fs.Dir), ctx, 0, qid)
+	if err := ps.fm.Insert(id, f); err != nil {
 		db.DFatalf("NewRootFid err %v\n", err)
 	}
 }
@@ -103,7 +104,8 @@ func (ps *ProtSrv) Attach(args *sp.Tattach, rets *sp.Rattach) (sp.TclntId, *sp.R
 		parent = getParent(root, os)
 		qid = ps.newQid(lo.Perm(), lo.Path())
 	}
-	if err := ps.fm.Insert(args.Tfid(), fid.NewFid(p.Base(), tree, parent, ctx, 0, qid)); err != nil {
+	fid := ps.fm.NewFid(p.Base(), tree, parent, ctx, 0, qid)
+	if err := ps.fm.Insert(args.Tfid(), fid); err != nil {
 		return sp.NoClntId, sp.NewRerrorSerr(err)
 	}
 	rets.Qid = qid.Proto()
@@ -184,7 +186,8 @@ func (ps *ProtSrv) Walk(args *sp.Twalk, rets *sp.Rwalk) *sp.Rerror {
 	qid := ps.newQid(lo.Perm(), lo.Path())
 	parent := getParent(f.Obj().(fs.Dir), os)
 	db.DPrintf(db.PROTSRV, "%v: Walk NewFid fid %v lo %v qid %v os %v", f.Ctx().ClntId(), args.NewFid, lo, qid, os)
-	if err := ps.fm.Insert(args.Tnewfid(), fid.NewFid(name, lo, parent, f.Ctx(), 0, qid)); err != nil {
+	fid := ps.fm.NewFid(name, lo, parent, f.Ctx(), 0, qid)
+	if err := ps.fm.Insert(args.Tnewfid(), fid); err != nil {
 		return sp.NewRerrorSerr(err)
 	}
 	return nil
@@ -203,6 +206,7 @@ func (ps *ProtSrv) clunk(fid sp.Tfid) *sp.Rerror {
 		f.Obj().Close(f.Ctx(), f.Mode())
 		f.Close()
 	}
+	ps.fm.Free(f)
 	return nil
 }
 
@@ -264,6 +268,10 @@ func (ps *ProtSrv) Watch(args *sp.Twatch, rets *sp.Ropen) *sp.Rerror {
 	return nil
 }
 
+func (ps *ProtSrv) CreateObjFm(ctx fs.CtxI, o fs.FsObj, name string, perm sp.Tperm, m sp.Tmode, lid sp.TleaseId, fence sp.Tfence, dev fs.FsObj) (sp.Tqid, *fid.Fid, *serr.Err) {
+	return ps.CreateObj(ps.fm, ctx, o, name, perm, m, lid, fence, dev)
+}
+
 func (ps *ProtSrv) Create(args *sp.Tcreate, rets *sp.Rcreate) *sp.Rerror {
 	f, err := ps.fm.Lookup(args.Tfid())
 	if err != nil {
@@ -271,13 +279,14 @@ func (ps *ProtSrv) Create(args *sp.Tcreate, rets *sp.Rcreate) *sp.Rerror {
 	}
 	db.DPrintf(db.PROTSRV, "%v: Create %v n %v args %v", f.Ctx().ClntId(), args.Tfid(), f.Name(), args.Name)
 
-	qid, nf, err := ps.CreateObj(f.Ctx(), f.Obj(), args.Name, args.Tperm(), args.Tmode(), args.TleaseId(), args.Tfence(), nil)
+	qid, nf, err := ps.CreateObj(ps.fm, f.Ctx(), f.Obj(), args.Name, args.Tperm(), args.Tmode(), args.TleaseId(), args.Tfence(), nil)
 	if err != nil {
 		return sp.NewRerrorSerr(err)
 	}
 	if ps.fm.Update(args.Tfid(), nf); err != nil {
 		return sp.NewRerrorSerr(err)
 	}
+	ps.fm.Free(f)
 	rets.Qid = qid.Proto()
 	return nil
 }
@@ -586,7 +595,7 @@ func (ps *ProtSrv) PutFile(args *sp.Tputfile, data []byte, rets *sp.Rwrite) *sp.
 
 	// make an fid for the file (in case we created it)
 	qid := ps.newQid(lo.Perm(), lo.Path())
-	f = ps.newFid(f.Ctx(), dir, name, lo, args.TleaseId(), qid)
+	f = ps.newFid(ps.fm, f.Ctx(), dir, name, lo, args.TleaseId(), qid)
 	i, err := fs.Obj2File(lo, name)
 	if err != nil {
 		return sp.NewRerrorSerr(err)

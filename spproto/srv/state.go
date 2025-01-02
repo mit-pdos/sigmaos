@@ -12,7 +12,10 @@ import (
 	"sigmaos/spproto/srv/lockmap"
 	"sigmaos/spproto/srv/version"
 	"sigmaos/spproto/srv/watch"
+	"sigmaos/util/freelist"
 )
+
+const N = 1000
 
 type ProtSrvState struct {
 	plt   *lockmap.PathLockTable
@@ -21,6 +24,7 @@ type ProtSrvState struct {
 	stats *stats.StatInode
 	lm    *leasedmap.LeasedMap
 	cct   *clntcond.ClntCondTable
+	fidfl *freelist.FreeList[fid.Fid]
 }
 
 func NewProtSrvState(stats *stats.StatInode) *ProtSrvState {
@@ -32,6 +36,7 @@ func NewProtSrvState(stats *stats.StatInode) *ProtSrvState {
 		cct:   cct,
 		wt:    watch.NewWatchTable(cct),
 		vt:    version.NewVersionTable(),
+		fidfl: freelist.NewFreeList[fid.Fid](N),
 	}
 	return pss
 }
@@ -60,8 +65,8 @@ func (pss *ProtSrvState) newQid(perm sp.Tperm, path sp.Tpath) sp.Tqid {
 	return sp.NewQidPerm(perm, pss.vt.GetVersion(path), path)
 }
 
-func (pss *ProtSrvState) newFid(ctx fs.CtxI, dir fs.Dir, name string, o fs.FsObj, lid sp.TleaseId, qid sp.Tqid) *fid.Fid {
-	nf := fid.NewFid(name, o, dir, ctx, 0, qid)
+func (pss *ProtSrvState) newFid(fm *fid.FidMap, ctx fs.CtxI, dir fs.Dir, name string, o fs.FsObj, lid sp.TleaseId, qid sp.Tqid) *fid.Fid {
+	nf := fm.NewFid(name, o, dir, ctx, 0, qid)
 	if o.IsLeased() && pss.lm != nil {
 		pss.lm.Insert(o.Path(), lid, name, o, dir)
 	}
@@ -85,7 +90,7 @@ func (pss *ProtSrvState) createObj(ctx fs.CtxI, d fs.Dir, dlk *lockmap.PathLock,
 	}
 }
 
-func (pss *ProtSrvState) CreateObj(ctx fs.CtxI, o fs.FsObj, name string, perm sp.Tperm, m sp.Tmode, lid sp.TleaseId, fence sp.Tfence, dev fs.FsObj) (sp.Tqid, *fid.Fid, *serr.Err) {
+func (pss *ProtSrvState) CreateObj(fm *fid.FidMap, ctx fs.CtxI, o fs.FsObj, name string, perm sp.Tperm, m sp.Tmode, lid sp.TleaseId, fence sp.Tfence, dev fs.FsObj) (sp.Tqid, *fid.Fid, *serr.Err) {
 	db.DPrintf(db.PROTSRV, "%v: Create o %v name %v dev %v", ctx.ClntId(), o, name, dev)
 	if !o.Perm().IsDir() {
 		return sp.Tqid{}, nil, serr.NewErr(serr.TErrNotDir, name)
@@ -104,7 +109,7 @@ func (pss *ProtSrvState) CreateObj(ctx fs.CtxI, o fs.FsObj, name string, perm sp
 	defer pss.plt.Release(ctx, flk, lockmap.WLOCK)
 
 	qid := pss.newQid(o1.Perm(), o1.Path())
-	nf := pss.newFid(ctx, d, name, o1, lid, qid)
+	nf := pss.newFid(fm, ctx, d, name, o1, lid, qid)
 	nf.SetMode(m)
 	pss.vt.Insert(qid.Tpath())
 	return qid, nf, nil

@@ -41,6 +41,10 @@ func NewRefTable[K comparable, T any](debug db.Tselector) *RefTable[K, T] {
 	return rf
 }
 
+func (rf *RefTable[K, T]) Len() int {
+	return len(rf.refs)
+}
+
 func (rf *RefTable[K, T]) Lookup(k K) (T, bool) {
 	var r T
 	if e, ok := rf.refs[k]; ok {

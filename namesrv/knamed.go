@@ -32,6 +32,9 @@ func RunKNamed(args []string) error {
 		db.DFatalf("NewSigmaClntFsLib: err %v", err)
 	}
 	nd.SigmaClnt = sc
+
+	// Allow connections from all realms, so that realms can mount the kernel
+	// service union directories
 	nd.GetDialProxyClnt().AllowConnectionsFromAllRealms()
 
 	init := args[2]

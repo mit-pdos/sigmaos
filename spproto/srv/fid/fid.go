@@ -6,7 +6,6 @@ import (
 
 	"sigmaos/api/fs"
 	db "sigmaos/debug"
-	"sigmaos/path"
 	"sigmaos/serr"
 	sessp "sigmaos/session/proto"
 	sp "sigmaos/sigmap"
@@ -15,22 +14,22 @@ import (
 // Several fids may name the same Pobj. For example, each session's
 // fid 0 refers to the root of the file system.
 type Pobj struct {
-	pathname path.Tpathname
-	obj      fs.FsObj
-	parent   fs.Dir
-	ctx      fs.CtxI
+	name   string
+	obj    fs.FsObj
+	parent fs.Dir
+	ctx    fs.CtxI
 }
 
-func NewPobj(pn path.Tpathname, o fs.FsObj, dir fs.Dir, ctx fs.CtxI) *Pobj {
-	return &Pobj{pathname: pn, parent: dir, obj: o, ctx: ctx}
+func NewPobj(name string, o fs.FsObj, dir fs.Dir, ctx fs.CtxI) *Pobj {
+	return &Pobj{name: name, parent: dir, obj: o, ctx: ctx}
 }
 
 func (po *Pobj) String() string {
-	return fmt.Sprintf("{pn '%v'(p %d) o %v parent %v ctx %v}", po.pathname, po.Path(), po.obj, po.parent, po.ctx)
+	return fmt.Sprintf("{name '%v'(p %d) o %v parent %v ctx %v}", po.name, po.Path(), po.obj, po.parent, po.ctx)
 }
 
-func (po *Pobj) Pathname() path.Tpathname {
-	return po.pathname
+func (po *Pobj) Name() string {
+	return po.name
 }
 
 func (po *Pobj) Path() sp.Tpath {
@@ -41,8 +40,8 @@ func (po *Pobj) Ctx() fs.CtxI {
 	return po.ctx
 }
 
-func (po *Pobj) SetPath(path path.Tpathname) {
-	po.pathname = path
+func (po *Pobj) SetName(name string) {
+	po.name = name
 }
 
 func (po *Pobj) Obj() fs.FsObj {

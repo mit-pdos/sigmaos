@@ -83,7 +83,7 @@ func (mfs *MemFs) rootFid(pn string) (sp.Tfid, path.Tpathname, *serr.Err) {
 	}
 	root, rp, rest := mfs.Root(path)
 	db.DPrintf(db.MEMFSSRV, "rootFid: %q root %v rp %q rest '%v'\n", pn, root, rp, rest)
-	fid, ok := mfs.roots.lookupAlloc(rp.String())
+	fid, ok := mfs.roots.lookupAlloc(rp))
 	if ok {
 		db.DPrintf(db.MEMFSSRV, "rootFid: %q new fid %d\n", pn, fid)
 		mfs.ps.NewRootFid(fid, mfs.ctx, root, rp)

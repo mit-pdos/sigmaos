@@ -82,7 +82,7 @@ type RPC interface {
 	WriteRead(CtxI, sessp.IoVec) (sessp.IoVec, *serr.Err)
 }
 
-func Obj2File(o FsObj, fname path.Tpathname) (File, *serr.Err) {
+func Obj2File(o FsObj, fname string) (File, *serr.Err) {
 	switch i := o.(type) {
 	case Dir:
 		return nil, serr.NewErr(serr.TErrNotFile, fname)

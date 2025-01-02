@@ -5,7 +5,6 @@ import (
 	"sync"
 
 	db "sigmaos/debug"
-	"sigmaos/path"
 	sp "sigmaos/sigmap"
 	"sigmaos/spproto/srv/fid"
 )
@@ -78,7 +77,7 @@ func (lm *LeasedMap) Rename(p sp.Tpath, dst string) bool {
 	}
 	for _, v := range lm.lids[lid] {
 		if v.P == p {
-			v.Po.SetPath(path.Tpathname{dst})
+			v.Po.SetName(dst)
 			break
 		}
 	}

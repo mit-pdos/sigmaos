@@ -203,12 +203,13 @@ func (pdm *ProcdMgr) RunUProc(uproc *proc.Proc) (uprocErr error, childErr error)
 	// run and exit do resource accounting and share rebalancing for the
 	// procds.
 	if err := pdm.startBalanceShares(uproc); err != nil {
+		db.DPrintf(db.PROCDMGR, "[RunUProc.startBalanceShares %v] delProcClnt %v due to err: %v", uproc.GetRealm(), uproc, err)
 		pdm.delProcClnt(uproc.GetRealm(), uproc.GetType())
-		db.DPrintf(db.PROCDMGR, "[RunUProc %v] delProcClnt %v", uproc.GetRealm(), uproc)
 		return err, nil
 	}
 	db.DPrintf(db.SPAWN_LAT, "[%v] Balance Procd shares time since spawn %v", uproc.GetPid(), time.Since(uproc.GetSpawnTime()))
 	if err0, err1 := rpcc.RunProc(uproc); err0 != nil {
+		db.DPrintf(db.PROCDMGR, "[RunUProc.RunProc %v] delProcClnt %v due to err: %v", uproc.GetRealm(), uproc, err)
 		pdm.delProcClnt(uproc.GetRealm(), uproc.GetType())
 		return err0, err1
 	} else {

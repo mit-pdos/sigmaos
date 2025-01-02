@@ -555,7 +555,7 @@ func repeatTest(t *testing.T, f func() bool) {
 			break
 		}
 	}
-	assert.True(t, ok)
+	assert.True(t, ok, "Test never caused a failure")
 }
 
 func TestMRJob(t *testing.T) {

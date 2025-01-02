@@ -25,12 +25,8 @@ type Fid struct {
 	cursor int      // for directories
 }
 
-func NewFid(n string, obj fs.FsObj, dir fs.Dir, ctx fs.CtxI, m sp.Tmode, qid sp.Tqid) *Fid {
-	return &Fid{obj: obj, name: n, dir: dir, ctx: ctx, m: m, qid: qid}
-}
-
 func (f *Fid) String() string {
-	return fmt.Sprintf("{n %q o %v dir %v o? %v m %v qid v ctx %v}", f.name, f.obj, f.dir, f.isOpen, f.m, f.qid, f.ctx)
+	return fmt.Sprintf("{n %q o %v dir %v o? %v m %v qid %v ctx %v}", f.name, f.obj, f.dir, f.isOpen, f.m, f.qid, f.ctx)
 }
 
 func (f *Fid) Obj() fs.FsObj {

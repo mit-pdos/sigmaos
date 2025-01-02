@@ -68,6 +68,9 @@ func (ps *ProtSrv) Auth(args *sp.Tauth, rets *sp.Rauth) *sp.Rerror {
 	return sp.NewRerrorSerr(serr.NewErr(serr.TErrNotSupported, "Auth"))
 }
 
+// A client attaches to a server using Attach. There maybe many
+// clients per session. The fids of a client share the client's
+// context.
 func (ps *ProtSrv) Attach(args *sp.Tattach, rets *sp.Rattach) (sp.TclntId, *sp.Rerror) {
 	s := time.Now()
 	p := path.Split(args.Aname)

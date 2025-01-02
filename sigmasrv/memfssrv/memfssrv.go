@@ -18,6 +18,7 @@ import (
 	"sigmaos/sigmasrv/memfssrv/memfs/inode"
 	"sigmaos/sigmasrv/memfssrv/sigmapsrv"
 	spprotosrv "sigmaos/spproto/srv"
+	"sigmaos/spproto/srv/fid"
 	"sigmaos/spproto/srv/lockmap"
 	"sigmaos/util/syncmap"
 )
@@ -134,6 +135,11 @@ func (mfs *MemFs) Remove(pn string) *serr.Err {
 	}
 	db.DPrintf(db.MEMFSSRV, "Remove %q %v %v\n", pn, lo, path.Base())
 	return mfs.RemoveObj(mfs.ctx, parent, lo, path, sp.NoFence(), fs.DEL_EXIST)
+}
+
+func (mfs *MemFs) RemoveLease(po *fid.Pobj) *serr.Err {
+	db.DPrintf(db.MEMFSSRV, "RemoveLease p %v po %v", po)
+	return mfs.RemoveObj(mfs.ctx, po.Parent(), po.Obj(), po.Pathname(), sp.NoFence(), fs.DEL_EXIST)
 }
 
 func (mfs *MemFs) Open(pn string, m sp.Tmode) (fs.FsObj, *serr.Err) {

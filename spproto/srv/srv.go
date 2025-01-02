@@ -11,6 +11,7 @@ import (
 	"sigmaos/serr"
 	sessp "sigmaos/session/proto"
 	sp "sigmaos/sigmap"
+	"sigmaos/spproto/srv/fid"
 	"sigmaos/spproto/srv/lockmap"
 	"sigmaos/spproto/srv/namei"
 )
@@ -21,7 +22,7 @@ type AttachAuthF func(*sp.Tprincipal, string) error
 // Each session has its own protsrv, but they share ProtSrvState
 type ProtSrv struct {
 	*ProtSrvState
-	fm          *fidMap
+	fm          *fid.FidMap
 	p           *sp.Tprincipal
 	srvPE       *proc.ProcEnv
 	sid         sessp.Tsession
@@ -32,7 +33,7 @@ type ProtSrv struct {
 func NewProtSrv(srvPE *proc.ProcEnv, pss *ProtSrvState, p *sp.Tprincipal, sid sessp.Tsession, grf GetRootCtxF, aaf AttachAuthF) *ProtSrv {
 	ps := &ProtSrv{
 		ProtSrvState: pss,
-		fm:           newFidMap(),
+		fm:           fid.NewFidMap(),
 		p:            p,
 		srvPE:        srvPE,
 		sid:          sid,
@@ -55,7 +56,7 @@ func (ps *ProtSrv) Version(args *sp.Tversion, rets *sp.Rversion) *sp.Rerror {
 
 func (ps *ProtSrv) NewRootFid(id sp.Tfid, ctx fs.CtxI, root fs.FsObj, pn path.Tpathname) {
 	qid := ps.newQid(root.Perm(), root.Path())
-	if err := ps.fm.Insert(id, newFidPath(newPobj(pn, root, root.(fs.Dir), ctx), 0, qid)); err != nil {
+	if err := ps.fm.Insert(id, fid.NewFidPath(fid.NewPobj(pn, root, root.(fs.Dir), ctx), 0, qid)); err != nil {
 		db.DFatalf("NewRootFid err %v\n", err)
 	}
 }
@@ -91,7 +92,7 @@ func (ps *ProtSrv) Attach(args *sp.Tattach, rets *sp.Rattach) (sp.TclntId, *sp.R
 		parent = getParent(root, os)
 		qid = ps.newQid(lo.Perm(), lo.Path())
 	}
-	if err := ps.fm.Insert(args.Tfid(), newFidPath(newPobj(p, tree, parent, ctx), 0, qid)); err != nil {
+	if err := ps.fm.Insert(args.Tfid(), fid.NewFidPath(fid.NewPobj(p, tree, parent, ctx), 0, qid)); err != nil {
 		return sp.NoClntId, sp.NewRerrorSerr(err)
 	}
 	rets.Qid = qid.Proto()
@@ -121,7 +122,7 @@ func (ps *ProtSrv) newQidProtos(os []fs.FsObj) []*sp.TqidProto {
 	return qids
 }
 
-func (ps *ProtSrv) lookupObjLast(ctx fs.CtxI, f *Fid, names path.Tpathname, resolve bool, ltype lockmap.Tlock) (fs.FsObj, *serr.Err) {
+func (ps *ProtSrv) lookupObjLast(ctx fs.CtxI, f *fid.Fid, names path.Tpathname, resolve bool, ltype lockmap.Tlock) (fs.FsObj, *serr.Err) {
 	_, lo, lk, _, err := ps.lookupObj(ctx, f.Pobj(), names, ltype)
 	ps.plt.Release(ctx, lk, ltype)
 	if err != nil {
@@ -133,7 +134,7 @@ func (ps *ProtSrv) lookupObjLast(ctx fs.CtxI, f *Fid, names path.Tpathname, reso
 	return lo, nil
 }
 
-func (ps *ProtSrv) lookupObjLastParent(ctx fs.CtxI, f *Fid, names path.Tpathname, resolve bool, ltype lockmap.Tlock) (fs.Dir, fs.FsObj, *serr.Err) {
+func (ps *ProtSrv) lookupObjLastParent(ctx fs.CtxI, f *fid.Fid, names path.Tpathname, resolve bool, ltype lockmap.Tlock) (fs.Dir, fs.FsObj, *serr.Err) {
 	os, lo, lk, _, err := ps.lookupObj(ctx, f.Pobj(), names, ltype)
 	ps.plt.Release(ctx, lk, ltype)
 	if err != nil {
@@ -174,7 +175,7 @@ func (ps *ProtSrv) Walk(args *sp.Twalk, rets *sp.Rwalk) *sp.Rerror {
 	qid := ps.newQid(lo.Perm(), lo.Path())
 	parent := getParent(f.Pobj().Obj().(fs.Dir), os)
 	db.DPrintf(db.PROTSRV, "%v: Walk NewFidPath fid %v p %v lo %v qid %v os %v", f.Pobj().Ctx().ClntId(), args.NewFid, p, lo, qid, os)
-	if err := ps.fm.Insert(args.Tnewfid(), newFidPath(newPobj(p, lo, parent, f.Pobj().Ctx()), 0, qid)); err != nil {
+	if err := ps.fm.Insert(args.Tnewfid(), fid.NewFidPath(fid.NewPobj(p, lo, parent, f.Pobj().Ctx()), 0, qid)); err != nil {
 		return sp.NewRerrorSerr(err)
 	}
 	return nil
@@ -401,7 +402,7 @@ func (ps *ProtSrv) Renameat(args *sp.Trenameat, rets *sp.Rrenameat) *sp.Rerror {
 	return nil
 }
 
-func (ps *ProtSrv) LookupWalk(fid sp.Tfid, wnames path.Tpathname, resolve bool, ltype lockmap.Tlock) (*Fid, path.Tpathname, fs.FsObj, *serr.Err) {
+func (ps *ProtSrv) LookupWalk(fid sp.Tfid, wnames path.Tpathname, resolve bool, ltype lockmap.Tlock) (*fid.Fid, path.Tpathname, fs.FsObj, *serr.Err) {
 	f, err := ps.fm.Lookup(fid)
 	if err != nil {
 		return nil, nil, nil, err
@@ -417,7 +418,7 @@ func (ps *ProtSrv) LookupWalk(fid sp.Tfid, wnames path.Tpathname, resolve bool, 
 	return f, fname, lo, nil
 }
 
-func (ps *ProtSrv) LookupWalkParent(fid sp.Tfid, wnames path.Tpathname, resolve bool, ltype lockmap.Tlock) (*Fid, fs.Dir, path.Tpathname, fs.FsObj, *serr.Err) {
+func (ps *ProtSrv) LookupWalkParent(fid sp.Tfid, wnames path.Tpathname, resolve bool, ltype lockmap.Tlock) (*fid.Fid, fs.Dir, path.Tpathname, fs.FsObj, *serr.Err) {
 	f, err := ps.fm.Lookup(fid)
 	if err != nil {
 		return nil, nil, nil, nil, err
@@ -434,7 +435,7 @@ func (ps *ProtSrv) LookupWalkParent(fid sp.Tfid, wnames path.Tpathname, resolve 
 	return f, parent, fname, lo, nil
 }
 
-func (ps *ProtSrv) lookupWalkOpen(fid sp.Tfid, wnames path.Tpathname, resolve bool, mode sp.Tmode, ltype lockmap.Tlock) (*Fid, path.Tpathname, fs.FsObj, fs.File, *serr.Err) {
+func (ps *ProtSrv) lookupWalkOpen(fid sp.Tfid, wnames path.Tpathname, resolve bool, mode sp.Tmode, ltype lockmap.Tlock) (*fid.Fid, path.Tpathname, fs.FsObj, fs.File, *serr.Err) {
 	f, fname, lo, err := ps.LookupWalk(fid, wnames, resolve, ltype)
 	if err != nil {
 		return nil, nil, nil, nil, err
@@ -489,7 +490,7 @@ func (ps *ProtSrv) GetFile(args *sp.Tgetfile, rets *sp.Rread) ([]byte, *sp.Rerro
 }
 
 // Caller holds pathname lock for f
-func (ps *ProtSrv) lookupPathOpen(f *Fid, dir fs.Dir, name string, mode sp.Tmode, resolve bool) (fs.FsObj, *serr.Err) {
+func (ps *ProtSrv) lookupPathOpen(f *fid.Fid, dir fs.Dir, name string, mode sp.Tmode, resolve bool) (fs.FsObj, *serr.Err) {
 	_, lo, _, err := dir.LookupPath(f.Pobj().Ctx(), path.Tpathname{name})
 	if err != nil {
 		return nil, err

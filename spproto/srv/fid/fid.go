@@ -1,4 +1,4 @@
-package srv
+package fid
 
 import (
 	"fmt"
@@ -21,7 +21,7 @@ type Pobj struct {
 	ctx      fs.CtxI
 }
 
-func newPobj(pn path.Tpathname, o fs.FsObj, dir fs.Dir, ctx fs.CtxI) *Pobj {
+func NewPobj(pn path.Tpathname, o fs.FsObj, dir fs.Dir, ctx fs.CtxI) *Pobj {
 	return &Pobj{pathname: pn, parent: dir, obj: o, ctx: ctx}
 }
 
@@ -66,7 +66,7 @@ type Fid struct {
 	cursor int     // for directories
 }
 
-func newFidPath(pobj *Pobj, m sp.Tmode, qid sp.Tqid) *Fid {
+func NewFidPath(pobj *Pobj, m sp.Tmode, qid sp.Tqid) *Fid {
 	return &Fid{sync.Mutex{}, false, pobj, m, qid, 0}
 }
 

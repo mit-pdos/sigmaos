@@ -1,4 +1,4 @@
-package srv
+package fid
 
 import (
 	db "sigmaos/debug"
@@ -8,16 +8,16 @@ import (
 	"sigmaos/util/syncmap"
 )
 
-type fidMap struct {
+type FidMap struct {
 	fids *syncmap.SyncMap[sp.Tfid, *Fid]
 }
 
-func newFidMap() *fidMap {
-	fm := &fidMap{syncmap.NewSyncMap[sp.Tfid, *Fid]()}
+func NewFidMap() *FidMap {
+	fm := &FidMap{syncmap.NewSyncMap[sp.Tfid, *Fid]()}
 	return fm
 }
 
-func (fm *fidMap) Lookup(fid sp.Tfid) (*Fid, *serr.Err) {
+func (fm *FidMap) Lookup(fid sp.Tfid) (*Fid, *serr.Err) {
 	f, ok := fm.fids.Lookup(fid)
 	if !ok {
 		return nil, serr.NewErr(serr.TErrUnknownfid, fid)
@@ -25,7 +25,7 @@ func (fm *fidMap) Lookup(fid sp.Tfid) (*Fid, *serr.Err) {
 	return f, nil
 }
 
-func (fm *fidMap) LookupDel(fid sp.Tfid) (*Fid, *serr.Err) {
+func (fm *FidMap) LookupDel(fid sp.Tfid) (*Fid, *serr.Err) {
 	if f, ok := fm.fids.LookupDelete(fid); !ok {
 		return nil, serr.NewErr(serr.TErrUnknownfid, fid)
 	} else {
@@ -33,7 +33,7 @@ func (fm *fidMap) LookupDel(fid sp.Tfid) (*Fid, *serr.Err) {
 	}
 }
 
-func (fm *fidMap) Insert(fid sp.Tfid, f *Fid) *serr.Err {
+func (fm *FidMap) Insert(fid sp.Tfid, f *Fid) *serr.Err {
 	if ok := fm.fids.Insert(fid, f); !ok {
 		f1, _ := fm.fids.Lookup(fid)
 		db.DPrintf(db.ERROR, "Insert err %v %v %v\n", fid, f, f1)
@@ -42,7 +42,7 @@ func (fm *fidMap) Insert(fid sp.Tfid, f *Fid) *serr.Err {
 	return nil
 }
 
-func (fm *fidMap) Update(fid sp.Tfid, f *Fid) *serr.Err {
+func (fm *FidMap) Update(fid sp.Tfid, f *Fid) *serr.Err {
 	if ok := fm.fids.Update(fid, f); !ok {
 		db.DPrintf(db.ERROR, "Update err %v %v\n", fid, f)
 		return serr.NewErr(serr.TErrUnknownfid, fid)
@@ -50,7 +50,7 @@ func (fm *fidMap) Update(fid sp.Tfid, f *Fid) *serr.Err {
 	return nil
 }
 
-func (fm *fidMap) ClientFids(cid sp.TclntId) []sp.Tfid {
+func (fm *FidMap) ClientFids(cid sp.TclntId) []sp.Tfid {
 	fids := make([]sp.Tfid, 0)
 	fm.fids.Iter(func(fid sp.Tfid, f *Fid) bool {
 		if f.Pobj().Ctx().ClntId() == cid {

@@ -62,7 +62,7 @@ func (pss *ProtSrvState) newQid(perm sp.Tperm, path sp.Tpath) sp.Tqid {
 
 func (pss *ProtSrvState) newFid(ctx fs.CtxI, dir fs.Dir, name string, o fs.FsObj, lid sp.TleaseId, qid sp.Tqid) *fid.Fid {
 	po := fid.NewPobj(name, o, dir, ctx)
-	nf := fid.NewFidPath(po, 0, qid)
+	nf := fid.NewFid(po, 0, qid)
 	if o.IsLeased() && pss.lm != nil {
 		pss.lm.Insert(o.Path(), lid, po)
 	}

@@ -59,7 +59,7 @@ func (ps *ProtSrv) Version(args *sp.Tversion, rets *sp.Rversion) *sp.Rerror {
 
 func (ps *ProtSrv) NewRootFid(id sp.Tfid, ctx fs.CtxI, root fs.FsObj, name string) {
 	qid := ps.newQid(root.Perm(), root.Path())
-	if err := ps.fm.Insert(id, fid.NewFidPath(fid.NewPobj(name, root, root.(fs.Dir), ctx), 0, qid)); err != nil {
+	if err := ps.fm.Insert(id, fid.NewFid(fid.NewPobj(name, root, root.(fs.Dir), ctx), 0, qid)); err != nil {
 		db.DFatalf("NewRootFid err %v\n", err)
 	}
 }
@@ -95,7 +95,7 @@ func (ps *ProtSrv) Attach(args *sp.Tattach, rets *sp.Rattach) (sp.TclntId, *sp.R
 		parent = getParent(root, os)
 		qid = ps.newQid(lo.Perm(), lo.Path())
 	}
-	if err := ps.fm.Insert(args.Tfid(), fid.NewFidPath(fid.NewPobj(p.Base(), tree, parent, ctx), 0, qid)); err != nil {
+	if err := ps.fm.Insert(args.Tfid(), fid.NewFid(fid.NewPobj(p.Base(), tree, parent, ctx), 0, qid)); err != nil {
 		return sp.NoClntId, sp.NewRerrorSerr(err)
 	}
 	rets.Qid = qid.Proto()
@@ -150,10 +150,10 @@ func (ps *ProtSrv) lookupObjLastParent(ctx fs.CtxI, f *fid.Fid, names path.Tpath
 	return parent, lo, nil
 }
 
-// Requests that combine walk, open, and do operation in a single RPC,
-// which also avoids clunking. They may fail because args.Wnames may
-// contains a special path element; in that, case the client must walk
-// args.Wnames.
+// Walk to args.Wnames.  Walk may fail because args.Wnames contains a
+// special path element or symlink; in that, case the client must
+// handle the special path element or symlink and perhaps continue the
+// walk at another server.
 func (ps *ProtSrv) Walk(args *sp.Twalk, rets *sp.Rwalk) *sp.Rerror {
 	f, err := ps.fm.Lookup(args.Tfid())
 	if err != nil {
@@ -164,7 +164,7 @@ func (ps *ProtSrv) Walk(args *sp.Twalk, rets *sp.Rwalk) *sp.Rerror {
 
 	s := time.Now()
 	os, lo, lk, name, err := ps.lookupObj(f.Pobj().Ctx(), f.Pobj(), args.Wnames, lockmap.RLOCK)
-	db.DPrintf(db.WALK_LAT, "ProtSrv.Walk %v %v lat %v\n", f.Pobj().Ctx().ClntId(), args.Wnames, time.Since(s))
+	db.DPrintf(db.WALK_LAT, "ProtSrv.Walk %v %v lat %v", f.Pobj().Ctx().ClntId(), args.Wnames, time.Since(s))
 	defer ps.plt.Release(f.Pobj().Ctx(), lk, lockmap.RLOCK)
 
 	if err != nil && !err.IsMaybeSpecialElem() {
@@ -175,8 +175,8 @@ func (ps *ProtSrv) Walk(args *sp.Twalk, rets *sp.Rwalk) *sp.Rerror {
 	rets.Qids = ps.newQidProtos(os)
 	qid := ps.newQid(lo.Perm(), lo.Path())
 	parent := getParent(f.Pobj().Obj().(fs.Dir), os)
-	db.DPrintf(db.PROTSRV, "%v: Walk NewFidPath fid %v lo %v qid %v os %v", f.Pobj().Ctx().ClntId(), args.NewFid, lo, qid, os)
-	if err := ps.fm.Insert(args.Tnewfid(), fid.NewFidPath(fid.NewPobj(name, lo, parent, f.Pobj().Ctx()), 0, qid)); err != nil {
+	db.DPrintf(db.PROTSRV, "%v: Walk NewFid fid %v lo %v qid %v os %v", f.Pobj().Ctx().ClntId(), args.NewFid, lo, qid, os)
+	if err := ps.fm.Insert(args.Tnewfid(), fid.NewFid(fid.NewPobj(name, lo, parent, f.Pobj().Ctx()), 0, qid)); err != nil {
 		return sp.NewRerrorSerr(err)
 	}
 	return nil

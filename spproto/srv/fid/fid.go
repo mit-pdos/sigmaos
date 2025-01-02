@@ -14,10 +14,10 @@ import (
 // Several fids may name the same Pobj. For example, each session's
 // fid 0 refers to the root of the file system.
 type Pobj struct {
-	name   string
-	obj    fs.FsObj
-	parent fs.Dir
-	ctx    fs.CtxI
+	name   string   // name for obj
+	obj    fs.FsObj // the obj in the backing file system
+	parent fs.Dir   // parent dir of obj
+	ctx    fs.CtxI  // the context of the attached sesssion
 }
 
 func NewPobj(name string, o fs.FsObj, dir fs.Dir, ctx fs.CtxI) *Pobj {
@@ -58,15 +58,15 @@ func (po *Pobj) Parent() fs.Dir {
 
 type Fid struct {
 	mu     sync.Mutex
-	isOpen bool
 	po     *Pobj
-	m      sp.Tmode
-	qid    sp.Tqid // the qid of obj at the time of invoking NewFidPath
-	cursor int     // for directories
+	isOpen bool     // has Create/Open() been called for po.Obj?
+	m      sp.Tmode // mode for Create/Open()
+	qid    sp.Tqid  // the qid of obj at the time of invoking NewFidPath
+	cursor int      // for directories
 }
 
-func NewFidPath(pobj *Pobj, m sp.Tmode, qid sp.Tqid) *Fid {
-	return &Fid{sync.Mutex{}, false, pobj, m, qid, 0}
+func NewFid(pobj *Pobj, m sp.Tmode, qid sp.Tqid) *Fid {
+	return &Fid{isOpen: false, po: pobj, m: m, qid: qid}
 }
 
 func (f *Fid) String() string {

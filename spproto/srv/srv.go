@@ -163,7 +163,7 @@ func (ps *ProtSrv) Walk(args *sp.Twalk, rets *sp.Rwalk) *sp.Rerror {
 	db.DPrintf(db.PROTSRV, "%v: Walk o %v args {%v} (%v)", f.Pobj().Ctx().ClntId(), f, args, len(args.Wnames))
 
 	s := time.Now()
-	os, lo, lk, _, err := ps.lookupObj(f.Pobj().Ctx(), f.Pobj(), args.Wnames, lockmap.RLOCK)
+	os, lo, lk, name, err := ps.lookupObj(f.Pobj().Ctx(), f.Pobj(), args.Wnames, lockmap.RLOCK)
 	db.DPrintf(db.WALK_LAT, "ProtSrv.Walk %v %v lat %v\n", f.Pobj().Ctx().ClntId(), args.Wnames, time.Since(s))
 	defer ps.plt.Release(f.Pobj().Ctx(), lk, lockmap.RLOCK)
 
@@ -171,10 +171,6 @@ func (ps *ProtSrv) Walk(args *sp.Twalk, rets *sp.Rwalk) *sp.Rerror {
 		return sp.NewRerrorSerr(err)
 	}
 
-	name := f.Pobj().Name()
-	if len(args.Wnames) > 0 {
-		name = args.Wnames[len(os)-1]
-	}
 	// let the client decide what to do with rest (when there is a rest)
 	rets.Qids = ps.newQidProtos(os)
 	qid := ps.newQid(lo.Perm(), lo.Path())

@@ -21,15 +21,20 @@ func getParent(start fs.Dir, os []fs.FsObj) fs.Dir {
 
 // LookupObj/namei will return an lo and a locked watch for it, even
 // in error cases because the caller create a new fid anyway.
-func (ps *ProtSrv) lookupObj(ctx fs.CtxI, po *fid.Pobj, target path.Tpathname, ltype lockmap.Tlock) ([]fs.FsObj, fs.FsObj, *lockmap.PathLock, path.Tpathname, *serr.Err) {
+func (ps *ProtSrv) lookupObj(ctx fs.CtxI, po *fid.Pobj, target path.Tpathname, ltype lockmap.Tlock) ([]fs.FsObj, fs.FsObj, *lockmap.PathLock, string, *serr.Err) {
 	db.DPrintf(db.NAMEI, "%v: lookupObj %v target '%v'", ctx.Principal(), po, target)
 	o := po.Obj()
+	name := po.Name()
 	lk := ps.plt.Acquire(ctx, o.Path(), ltype)
 	if len(target) == 0 {
-		return nil, o, lk, nil, nil
+		return nil, o, lk, name, nil
 	}
 	if !o.Perm().IsDir() {
-		return nil, o, lk, nil, serr.NewErr(serr.TErrNotDir, po.Name())
+		return nil, o, lk, "", serr.NewErr(serr.TErrNotDir, po.Name())
 	}
-	return namei.Walk(ps.plt, ctx, o, lk, target, nil, ltype)
+	os, lo, lk, _, err := namei.Walk(ps.plt, ctx, o, lk, target, nil, ltype)
+	if err == nil {
+		name = target[len(os)-1]
+	}
+	return os, lo, lk, name, err
 }

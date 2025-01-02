@@ -175,6 +175,10 @@ func (pss *ProtSrvState) RenameObj(po *fid.Pobj, name string, f sp.Tfence) *serr
 	pss.vt.IncVersion(po.Parent().Path())
 	pss.wt.WakeupWatch(dlk)
 
+	if po.Obj().IsLeased() && pss.lm != nil {
+		pss.lm.Rename(po.Path(), name)
+	}
+
 	po.SetPath(dst)
 	return nil
 }
@@ -207,6 +211,11 @@ func (pss *ProtSrvState) RenameAtObj(old, new *fid.Pobj, dold, dnew fs.Dir, oldn
 	if err != nil {
 		return err
 	}
+
+	// XXX fixme
+	//if po.Obj().IsLeased() && pss.lm != nil {
+	//pss.lm.Rename(po.Path, newname)
+	//}
 
 	pss.vt.IncVersion(new.Obj().Path())
 	pss.vt.IncVersion(old.Obj().Path())

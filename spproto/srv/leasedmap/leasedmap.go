@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	db "sigmaos/debug"
+	"sigmaos/path"
 	sp "sigmaos/sigmap"
 	"sigmaos/spproto/srv/fid"
 )
@@ -63,6 +64,25 @@ func (lm *LeasedMap) Delete(p sp.Tpath) bool {
 		}
 	}
 	db.DPrintf(db.LEASESRV, "Delete %q %v\n", p, lm.lids)
+	return true
+}
+
+func (lm *LeasedMap) Rename(p sp.Tpath, dst string) bool {
+	lm.Lock()
+	defer lm.Unlock()
+
+	lid, ok := lm.ps[p]
+	if !ok {
+		db.DFatalf("Rename %v doesn't exist %v\n", p, lm.ps)
+		return false
+	}
+	for _, v := range lm.lids[lid] {
+		if v.P == p {
+			v.Po.SetPath(path.Tpathname{dst})
+			break
+		}
+	}
+	db.DPrintf(db.LEASESRV, "Rename %v %q %v\n", p, dst, lm.lids)
 	return true
 }
 

@@ -27,10 +27,10 @@ while [[ "$#" -gt 1 ]]; do
     shift
     case "$1" in
         "all")
-            BOOT="knamed;besched;lcsched;msched;ux;s3;chunkd;db;mongo;named"
+            BOOT="knamed;besched;lcsched;msched;ux;s3;chunkd;db;mongo"
             ;;
         "all_no_besched")
-            BOOT="knamed;lcsched;msched;ux;s3;chunkd;db;mongo;named"
+            BOOT="knamed;lcsched;msched;ux;s3;chunkd;db;mongo"
             ;;
         "node")
             BOOT="besched;msched;ux;s3;db;chunkd;mongo"

@@ -32,6 +32,7 @@ func RunKNamed(args []string) error {
 		db.DFatalf("NewSigmaClntFsLib: err %v", err)
 	}
 	nd.SigmaClnt = sc
+	nd.GetDialProxyClnt().AllowConnectionsFromAllRealms()
 
 	init := args[2]
 

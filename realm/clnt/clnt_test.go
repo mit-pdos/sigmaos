@@ -635,165 +635,166 @@ func TestMultiRealmIsolationNamed(t *testing.T) {
 	ts.shutdown()
 }
 
-func TestSpinPerfCalibrate(t *testing.T) {
-	rootts, err1 := test.NewTstateWithRealms(t)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
-	ts1, err1 := test.NewRealmTstate(rootts, REALM1)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
-
-	db.DPrintf(db.TEST, "Calibrate SigmaOS baseline")
-	// -1 for named
-	ctimeS := calibrateCTimeSigma(ts1, linuxsched.GetNCores()-1, N_ITER)
-	db.DPrintf(db.TEST, "SigmaOS baseline compute time: %v", ctimeS)
-
-	db.DPrintf(db.TEST, "Calibrate Linux baseline")
-	// -1 for named
-	ctimeL := calibrateCTimeLinux(ts1, linuxsched.GetNCores()-1, N_ITER)
-	db.DPrintf(db.TEST, "Linux baseline compute time: %v", ctimeL)
-
-	err := ts1.Remove()
-	assert.Nil(t, err)
-
-	rootts.Shutdown()
-}
-
-// Calculate slowdown %
-func slowdown(baseline, dur time.Duration) float64 {
-	return float64(dur) / float64(baseline)
-}
-
-func targetTime(baseline time.Duration, tslowdown float64) time.Duration {
-	return time.Duration(float64(baseline) * tslowdown)
-}
-
-// May fail on Linux systems (especially when they have multiple NUMA
-// nodes), due to a linux scheduler bug. See:
-// https://www.usenix.org/system/files/login/articles/login_winter16_02_lozi.pdf
-func TestSpinPerfDoubleSlowdown(t *testing.T) {
-	rootts, err1 := test.NewTstateWithRealms(t)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
-	ts1, err1 := test.NewRealmTstate(rootts, REALM1)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
-
-	db.DPrintf(db.TEST, "Calibrate SigmaOS baseline")
-	// - 2 to account for NAMED reserved cores
-	ctimeS := calibrateCTimeSigma(ts1, linuxsched.GetNCores()-2, N_ITER)
-	db.DPrintf(db.TEST, "SigmaOS baseline compute time: %v", ctimeS)
-
-	c := make(chan time.Duration)
-	go runSpinPerf(ts1, c, 0, linuxsched.GetNCores()-2, N_ITER, "spin1")
-	go runSpinPerf(ts1, c, 0, linuxsched.GetNCores()-2, N_ITER, "spin2")
-
-	d1 := <-c
-	d2 := <-c
-
-	// Calculate slowdown
-	d1sd := slowdown(ctimeS, d1)
-	d2sd := slowdown(ctimeS, d2)
-
-	// Target slowdown (x)
-	tsd := 1.70
-
-	// Check that execution time matches target time.
-	assert.True(rootts.T, d1sd > tsd, "Spin perf 1 not enough slowdown (%v): %v <= %v", d1sd, d1, targetTime(ctimeS, tsd))
-	assert.True(rootts.T, d2sd > tsd, "Spin perf 2 not enough slowdown (%v): %v <= %v", d1sd, d2, targetTime(ctimeS, tsd))
-
-	err := ts1.Remove()
-	assert.Nil(t, err)
-
-	rootts.Shutdown()
-}
-
-func TestSpinPerfDoubleBEandLC(t *testing.T) {
-	// Bail out early if machine has too many cores (which messes with the cgroups setting)
-	if !assert.False(t, linuxsched.GetNCores() > 10, "SpawnBurst test will fail because machine has >10 cores, which causes cgroups settings to fail") {
-		return
-	}
-	rootts, err1 := test.NewTstateWithRealms(t)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
-	ts1, err1 := test.NewRealmTstate(rootts, REALM1)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
-
-	db.DPrintf(db.TEST, "Calibrate SigmaOS baseline")
-	// - 2 to account for NAMED reserved cores
-	ctimeS := calibrateCTimeSigma(ts1, linuxsched.GetNCores()-2, N_ITER)
-	db.DPrintf(db.TEST, "SigmaOS baseline compute time: %v", ctimeS)
-
-	beC := make(chan time.Duration)
-	lcC := make(chan time.Duration)
-	// - 2 to account for NAMED reserved cores
-	go runSpinPerf(ts1, lcC, proc.Tmcpu(1000*(linuxsched.GetNCores()-2)), linuxsched.GetNCores()-2, N_ITER, "lcspin")
-	go runSpinPerf(ts1, beC, 0, linuxsched.GetNCores()-2, N_ITER, "bespin")
-
-	durBE := <-beC
-	durLC := <-lcC
-
-	// Calculate slodown
-	beSD := slowdown(ctimeS, durBE)
-	lcSD := slowdown(ctimeS, durLC)
-
-	// Target slowdown (x)
-	beMinSD := 1.5
-	beMaxSD := 2.5
-	lcMaxSD := 1.1
-
-	// Check that execution time matches target time.
-	assert.True(rootts.T, lcSD <= lcMaxSD, "LC too much slowdown (%v): %v > %v", lcSD, durLC, targetTime(ctimeS, lcMaxSD))
-	assert.True(rootts.T, beSD <= beMaxSD, "BE too much slowdown (%v): %v > %v", beSD, durBE, targetTime(ctimeS, beMaxSD))
-	assert.True(rootts.T, beSD > beMinSD, "BE not enough slowdown (%v): %v < %v", beSD, durBE, targetTime(ctimeS, beMinSD))
-
-	err := ts1.Remove()
-	assert.Nil(t, err)
-
-	rootts.Shutdown()
-}
-
-func TestSpinPerfDoubleBEandLCMultiRealm(t *testing.T) {
-	// Bail out early if machine has too many cores (which messes with the cgroups setting)
-	if !assert.False(t, linuxsched.GetNCores() > 10, "SpawnBurst test will fail because machine has >10 cores, which causes cgroups settings to fail") {
-		return
-	}
-	ts := newMultiRealmTstate(t)
-
-	db.DPrintf(db.TEST, "Calibrate SigmaOS baseline")
-	// - 2 to account for NAMED reserved cores
-	ctimeS := calibrateCTimeSigma(ts.ts1, linuxsched.GetNCores()-2, N_ITER)
-	db.DPrintf(db.TEST, "SigmaOS baseline compute time: %v", ctimeS)
-
-	beC := make(chan time.Duration)
-	lcC := make(chan time.Duration)
-	// - 2 to account for NAMED reserved cores
-	go runSpinPerf(ts.ts1, lcC, proc.Tmcpu(1000*(linuxsched.GetNCores()-2)), linuxsched.GetNCores()-2, N_ITER, "lcspin")
-	go runSpinPerf(ts.ts2, beC, 0, linuxsched.GetNCores()-2, N_ITER, "bespin")
-
-	durBE := <-beC
-	durLC := <-lcC
-
-	// Calculate slodown
-	beSD := slowdown(ctimeS, durBE)
-	lcSD := slowdown(ctimeS, durLC)
-
-	// Target slowdown (x)
-	beMinSD := 1.5
-	beMaxSD := 2.5
-	lcMaxSD := 1.1
-
-	// Check that execution time matches target time.
-	assert.True(t, lcSD <= lcMaxSD, "LC too much slowdown (%v): %v > %v", lcSD, durLC, targetTime(ctimeS, lcMaxSD))
-	assert.True(t, beSD <= beMaxSD, "BE too much slowdown (%v): %v > %v", beSD, durBE, targetTime(ctimeS, beMaxSD))
-	assert.True(t, beSD > beMinSD, "BE not enough slowdown (%v): %v < %v", beSD, durBE, targetTime(ctimeS, beMinSD))
-
-	ts.shutdown()
-}
+// These often don't pass due to a scheduling bug in Linux.
+//func TestSpinPerfCalibrate(t *testing.T) {
+//	rootts, err1 := test.NewTstateWithRealms(t)
+//	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+//		return
+//	}
+//	ts1, err1 := test.NewRealmTstate(rootts, REALM1)
+//	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+//		return
+//	}
+//
+//	db.DPrintf(db.TEST, "Calibrate SigmaOS baseline")
+//	// -1 for named
+//	ctimeS := calibrateCTimeSigma(ts1, linuxsched.GetNCores()-1, N_ITER)
+//	db.DPrintf(db.TEST, "SigmaOS baseline compute time: %v", ctimeS)
+//
+//	db.DPrintf(db.TEST, "Calibrate Linux baseline")
+//	// -1 for named
+//	ctimeL := calibrateCTimeLinux(ts1, linuxsched.GetNCores()-1, N_ITER)
+//	db.DPrintf(db.TEST, "Linux baseline compute time: %v", ctimeL)
+//
+//	err := ts1.Remove()
+//	assert.Nil(t, err)
+//
+//	rootts.Shutdown()
+//}
+//
+//// Calculate slowdown %
+//func slowdown(baseline, dur time.Duration) float64 {
+//	return float64(dur) / float64(baseline)
+//}
+//
+//func targetTime(baseline time.Duration, tslowdown float64) time.Duration {
+//	return time.Duration(float64(baseline) * tslowdown)
+//}
+//
+//// May fail on Linux systems (especially when they have multiple NUMA
+//// nodes), due to a linux scheduler bug. See:
+//// https://www.usenix.org/system/files/login/articles/login_winter16_02_lozi.pdf
+//func TestSpinPerfDoubleSlowdown(t *testing.T) {
+//	rootts, err1 := test.NewTstateWithRealms(t)
+//	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+//		return
+//	}
+//	ts1, err1 := test.NewRealmTstate(rootts, REALM1)
+//	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+//		return
+//	}
+//
+//	db.DPrintf(db.TEST, "Calibrate SigmaOS baseline")
+//	// - 2 to account for NAMED reserved cores
+//	ctimeS := calibrateCTimeSigma(ts1, linuxsched.GetNCores()-2, N_ITER)
+//	db.DPrintf(db.TEST, "SigmaOS baseline compute time: %v", ctimeS)
+//
+//	c := make(chan time.Duration)
+//	go runSpinPerf(ts1, c, 0, linuxsched.GetNCores()-2, N_ITER, "spin1")
+//	go runSpinPerf(ts1, c, 0, linuxsched.GetNCores()-2, N_ITER, "spin2")
+//
+//	d1 := <-c
+//	d2 := <-c
+//
+//	// Calculate slowdown
+//	d1sd := slowdown(ctimeS, d1)
+//	d2sd := slowdown(ctimeS, d2)
+//
+//	// Target slowdown (x)
+//	tsd := 1.70
+//
+//	// Check that execution time matches target time.
+//	assert.True(rootts.T, d1sd > tsd, "Spin perf 1 not enough slowdown (%v): %v <= %v", d1sd, d1, targetTime(ctimeS, tsd))
+//	assert.True(rootts.T, d2sd > tsd, "Spin perf 2 not enough slowdown (%v): %v <= %v", d1sd, d2, targetTime(ctimeS, tsd))
+//
+//	err := ts1.Remove()
+//	assert.Nil(t, err)
+//
+//	rootts.Shutdown()
+//}
+//
+//func TestSpinPerfDoubleBEandLC(t *testing.T) {
+//	// Bail out early if machine has too many cores (which messes with the cgroups setting)
+//	if !assert.False(t, linuxsched.GetNCores() > 10, "SpawnBurst test will fail because machine has >10 cores, which causes cgroups settings to fail") {
+//		return
+//	}
+//	rootts, err1 := test.NewTstateWithRealms(t)
+//	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+//		return
+//	}
+//	ts1, err1 := test.NewRealmTstate(rootts, REALM1)
+//	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+//		return
+//	}
+//
+//	db.DPrintf(db.TEST, "Calibrate SigmaOS baseline")
+//	// - 2 to account for NAMED reserved cores
+//	ctimeS := calibrateCTimeSigma(ts1, linuxsched.GetNCores()-2, N_ITER)
+//	db.DPrintf(db.TEST, "SigmaOS baseline compute time: %v", ctimeS)
+//
+//	beC := make(chan time.Duration)
+//	lcC := make(chan time.Duration)
+//	// - 2 to account for NAMED reserved cores
+//	go runSpinPerf(ts1, lcC, proc.Tmcpu(1000*(linuxsched.GetNCores()-2)), linuxsched.GetNCores()-2, N_ITER, "lcspin")
+//	go runSpinPerf(ts1, beC, 0, linuxsched.GetNCores()-2, N_ITER, "bespin")
+//
+//	durBE := <-beC
+//	durLC := <-lcC
+//
+//	// Calculate slodown
+//	beSD := slowdown(ctimeS, durBE)
+//	lcSD := slowdown(ctimeS, durLC)
+//
+//	// Target slowdown (x)
+//	beMinSD := 1.5
+//	beMaxSD := 2.5
+//	lcMaxSD := 1.1
+//
+//	// Check that execution time matches target time.
+//	assert.True(rootts.T, lcSD <= lcMaxSD, "LC too much slowdown (%v): %v > %v", lcSD, durLC, targetTime(ctimeS, lcMaxSD))
+//	assert.True(rootts.T, beSD <= beMaxSD, "BE too much slowdown (%v): %v > %v", beSD, durBE, targetTime(ctimeS, beMaxSD))
+//	assert.True(rootts.T, beSD > beMinSD, "BE not enough slowdown (%v): %v < %v", beSD, durBE, targetTime(ctimeS, beMinSD))
+//
+//	err := ts1.Remove()
+//	assert.Nil(t, err)
+//
+//	rootts.Shutdown()
+//}
+//
+//func TestSpinPerfDoubleBEandLCMultiRealm(t *testing.T) {
+//	// Bail out early if machine has too many cores (which messes with the cgroups setting)
+//	if !assert.False(t, linuxsched.GetNCores() > 10, "SpawnBurst test will fail because machine has >10 cores, which causes cgroups settings to fail") {
+//		return
+//	}
+//	ts := newMultiRealmTstate(t)
+//
+//	db.DPrintf(db.TEST, "Calibrate SigmaOS baseline")
+//	// - 2 to account for NAMED reserved cores
+//	ctimeS := calibrateCTimeSigma(ts.ts1, linuxsched.GetNCores()-2, N_ITER)
+//	db.DPrintf(db.TEST, "SigmaOS baseline compute time: %v", ctimeS)
+//
+//	beC := make(chan time.Duration)
+//	lcC := make(chan time.Duration)
+//	// - 2 to account for NAMED reserved cores
+//	go runSpinPerf(ts.ts1, lcC, proc.Tmcpu(1000*(linuxsched.GetNCores()-2)), linuxsched.GetNCores()-2, N_ITER, "lcspin")
+//	go runSpinPerf(ts.ts2, beC, 0, linuxsched.GetNCores()-2, N_ITER, "bespin")
+//
+//	durBE := <-beC
+//	durLC := <-lcC
+//
+//	// Calculate slodown
+//	beSD := slowdown(ctimeS, durBE)
+//	lcSD := slowdown(ctimeS, durLC)
+//
+//	// Target slowdown (x)
+//	beMinSD := 1.5
+//	beMaxSD := 2.5
+//	lcMaxSD := 1.1
+//
+//	// Check that execution time matches target time.
+//	assert.True(t, lcSD <= lcMaxSD, "LC too much slowdown (%v): %v > %v", lcSD, durLC, targetTime(ctimeS, lcMaxSD))
+//	assert.True(t, beSD <= beMaxSD, "BE too much slowdown (%v): %v > %v", beSD, durBE, targetTime(ctimeS, beMaxSD))
+//	assert.True(t, beSD > beMinSD, "BE not enough slowdown (%v): %v < %v", beSD, durBE, targetTime(ctimeS, beMinSD))
+//
+//	ts.shutdown()
+//}

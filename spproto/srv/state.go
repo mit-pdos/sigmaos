@@ -15,7 +15,7 @@ import (
 	"sigmaos/util/freelist"
 )
 
-const N = 1000
+const N = 10000
 
 type ProtSrvState struct {
 	plt   *lockmap.PathLockTable
@@ -36,7 +36,7 @@ func NewProtSrvState(stats *stats.StatInode) *ProtSrvState {
 		cct:   cct,
 		wt:    watch.NewWatchTable(cct),
 		vt:    version.NewVersionTable(),
-		fidfl: freelist.NewFreeList[fid.Fid](N),
+		fidfl: freelist.NewFreeList[fid.Fid](N), // one free list shared by all sessions
 	}
 	return pss
 }

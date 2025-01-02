@@ -61,10 +61,9 @@ func (pss *ProtSrvState) newQid(perm sp.Tperm, path sp.Tpath) sp.Tqid {
 }
 
 func (pss *ProtSrvState) newFid(ctx fs.CtxI, dir fs.Dir, name string, o fs.FsObj, lid sp.TleaseId, qid sp.Tqid) *fid.Fid {
-	po := fid.NewPobj(name, o, dir, ctx)
-	nf := fid.NewFid(po, 0, qid)
+	nf := fid.NewFid(name, o, dir, ctx, 0, qid)
 	if o.IsLeased() && pss.lm != nil {
-		pss.lm.Insert(o.Path(), lid, po)
+		pss.lm.Insert(o.Path(), lid, name, o, dir)
 	}
 	return nf
 }
@@ -157,24 +156,25 @@ func (pss *ProtSrvState) RemoveObj(ctx fs.CtxI, dir fs.Dir, o fs.FsObj, name str
 	return nil
 }
 
-func (pss *ProtSrvState) RenameObj(po *fid.Pobj, name string, f sp.Tfence) *serr.Err {
-	dlk := pss.plt.Acquire(po.Ctx(), po.Obj().Path(), lockmap.WLOCK)
-	defer pss.plt.Release(po.Ctx(), dlk, lockmap.WLOCK)
+// Rename this fid.  Other fids for the same underlying fs obj are unchanged.
+func (pss *ProtSrvState) RenameObj(f *fid.Fid, name string, fence sp.Tfence) *serr.Err {
+	dlk := pss.plt.Acquire(f.Ctx(), f.Path(), lockmap.WLOCK)
+	defer pss.plt.Release(f.Ctx(), dlk, lockmap.WLOCK)
 
 	// pss.stats.IncPathString(po.Pathname().String())
 
-	err := po.Parent().Rename(po.Ctx(), po.Name(), name, f)
+	err := f.Parent().Rename(f.Ctx(), f.Name(), name, fence)
 	if err != nil {
 		return err
 	}
 
-	pss.vt.IncVersion(po.Parent().Path())
+	pss.vt.IncVersion(f.Parent().Path())
 	pss.wt.WakeupWatch(dlk)
 
-	if po.Obj().IsLeased() && pss.lm != nil {
-		pss.lm.Rename(po.Path(), name)
+	if f.Obj().IsLeased() && pss.lm != nil {
+		pss.lm.Rename(f.Path(), name)
 	}
-	po.SetName(name)
+	f.SetName(name)
 	return nil
 }
 
@@ -190,7 +190,7 @@ func lockOrder(d1 fs.FsObj, d2 fs.FsObj) bool {
 	}
 }
 
-func (pss *ProtSrvState) RenameAtObj(old, new *fid.Pobj, dold, dnew fs.Dir, oldname, newname string, f sp.Tfence) *serr.Err {
+func (pss *ProtSrvState) RenameAtObj(old, new *fid.Fid, dold, dnew fs.Dir, oldname, newname string, f sp.Tfence) *serr.Err {
 	var d1lk, d2lk *lockmap.PathLock
 	if srcfirst := lockOrder(dold, dnew); srcfirst {
 		d1lk = pss.plt.Acquire(old.Ctx(), dold.Path(), lockmap.WLOCK)

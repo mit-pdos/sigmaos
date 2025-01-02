@@ -53,7 +53,7 @@ func (fm *FidMap) Update(fid sp.Tfid, f *Fid) *serr.Err {
 func (fm *FidMap) ClientFids(cid sp.TclntId) []sp.Tfid {
 	fids := make([]sp.Tfid, 0)
 	fm.fids.Iter(func(fid sp.Tfid, f *Fid) bool {
-		if f.Pobj().Ctx().ClntId() == cid {
+		if f.Ctx().ClntId() == cid {
 			fids = append(fids, fid)
 		}
 		return true

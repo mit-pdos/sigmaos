@@ -91,7 +91,7 @@ func (ls *LeaseSrv) expire(lid sp.TleaseId) {
 	ps := ls.lm.Expired(lid)
 	db.DPrintf(db.ALWAYS, "expire %v %v\n", lid, ps)
 	for _, e := range ps {
-		ls.mfs.RemoveLease(e.Po)
+		ls.mfs.RemoveLease(e.P, e.Obj, e.Name, e.Parent)
 	}
 }
 

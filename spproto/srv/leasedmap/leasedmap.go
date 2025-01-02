@@ -4,14 +4,16 @@ package leasedmap
 import (
 	"sync"
 
+	"sigmaos/api/fs"
 	db "sigmaos/debug"
 	sp "sigmaos/sigmap"
-	"sigmaos/spproto/srv/fid"
 )
 
 type Entry struct {
-	P  sp.Tpath
-	Po *fid.Pobj
+	P      sp.Tpath
+	Name   string
+	Obj    fs.FsObj
+	Parent fs.Dir
 }
 
 type LeasedMap struct {
@@ -28,7 +30,7 @@ func NewLeasedMap() *LeasedMap {
 	return et
 }
 
-func (lm *LeasedMap) Insert(p sp.Tpath, lid sp.TleaseId, po *fid.Pobj) {
+func (lm *LeasedMap) Insert(p sp.Tpath, lid sp.TleaseId, n string, o fs.FsObj, dir fs.Dir) {
 	lm.Lock()
 	defer lm.Unlock()
 
@@ -39,9 +41,9 @@ func (lm *LeasedMap) Insert(p sp.Tpath, lid sp.TleaseId, po *fid.Pobj) {
 	lm.ps[p] = lid
 	v, ok := lm.lids[lid]
 	if !ok {
-		lm.lids[lid] = []Entry{Entry{p, po}}
+		lm.lids[lid] = []Entry{Entry{p, n, o, dir}}
 	} else {
-		lm.lids[lid] = append(v, Entry{p, po})
+		lm.lids[lid] = append(v, Entry{p, n, o, dir})
 	}
 	db.DPrintf(db.LEASESRV, "Insert %q %v %v\n", p, lid, lm.lids)
 }
@@ -77,7 +79,7 @@ func (lm *LeasedMap) Rename(p sp.Tpath, dst string) bool {
 	}
 	for _, v := range lm.lids[lid] {
 		if v.P == p {
-			v.Po.SetName(dst)
+			v.Name = dst
 			break
 		}
 	}

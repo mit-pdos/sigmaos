@@ -18,7 +18,6 @@ import (
 	"sigmaos/sigmasrv/memfssrv/memfs/inode"
 	"sigmaos/sigmasrv/memfssrv/sigmapsrv"
 	spprotosrv "sigmaos/spproto/srv"
-	"sigmaos/spproto/srv/fid"
 	"sigmaos/spproto/srv/lockmap"
 	"sigmaos/util/syncmap"
 )
@@ -121,7 +120,7 @@ func (mfs *MemFs) CreateNod(pn string, p sp.Tperm, m sp.Tmode, lid sp.TleaseId, 
 		db.DPrintf(db.MEMFSSRV, "Create: CreateObj %q %v err %v\n", pn, nf, err)
 		return nil, err
 	}
-	return nf.Pobj().Obj(), nil
+	return nf.Obj(), nil
 }
 
 func (mfs *MemFs) Create(pn string, p sp.Tperm, m sp.Tmode, lid sp.TleaseId) (fs.FsObj, *serr.Err) {
@@ -137,9 +136,9 @@ func (mfs *MemFs) Remove(pn string) *serr.Err {
 	return mfs.RemoveObj(mfs.ctx, parent, lo, name, sp.NoFence(), fs.DEL_EXIST)
 }
 
-func (mfs *MemFs) RemoveLease(po *fid.Pobj) *serr.Err {
-	db.DPrintf(db.MEMFSSRV, "RemoveLease p %v po %v", po)
-	return mfs.RemoveObj(mfs.ctx, po.Parent(), po.Obj(), po.Name(), sp.NoFence(), fs.DEL_EXIST)
+func (mfs *MemFs) RemoveLease(p sp.Tpath, obj fs.FsObj, name string, dir fs.Dir) *serr.Err {
+	db.DPrintf(db.MEMFSSRV, "RemoveLease p %v o %v name %q dir %v", p, obj, name, dir)
+	return mfs.RemoveObj(mfs.ctx, dir, obj, name, sp.NoFence(), fs.DEL_EXIST)
 }
 
 func (mfs *MemFs) Open(pn string, m sp.Tmode) (fs.FsObj, *serr.Err) {

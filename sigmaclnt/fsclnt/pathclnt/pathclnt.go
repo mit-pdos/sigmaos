@@ -188,7 +188,7 @@ func (pathc *PathClnt) Remove(name string, principal *sp.Tprincipal, f *sp.Tfenc
 		if err != nil {
 			return err
 		}
-		defer pathc.FidClnt.Clunk(fid)
+		// remove will also clunk fid
 		err = pathc.FidClnt.Remove(fid, f)
 	} else if err != nil {
 		return err

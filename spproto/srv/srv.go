@@ -51,6 +51,11 @@ func NewProtServer(srvPE *proc.ProcEnv, pss *ProtSrvState, p *sp.Tprincipal, sid
 	return NewProtSrv(srvPE, pss, p, sid, grf, aaf)
 }
 
+func (ps *ProtSrv) LenFreeList() int {
+	db.DPrintf(db.TEST, "lockmap len %d", ps.ProtSrvState.plt.Len())
+	return ps.fm.Len()
+}
+
 func (ps *ProtSrv) Version(args *sp.Tversion, rets *sp.Rversion) *sp.Rerror {
 	rets.Msize = args.Msize
 	rets.Version = "9P2000"
@@ -333,6 +338,7 @@ func (ps *ProtSrv) Remove(args *sp.Tremove, rets *sp.Rremove) *sp.Rerror {
 		return sp.NewRerrorSerr(err)
 	}
 	db.DPrintf(db.PROTSRV, "%v: Remove %v", f.Ctx().ClntId(), f.Name())
+	defer ps.clunk(args.Tfid())
 	if err := ps.RemoveObj(f.Ctx(), f.Parent(), f.Obj(), f.Name(), args.Tfence(), fs.DEL_EXIST); err != nil {
 		return sp.NewRerrorSerr(err)
 	}

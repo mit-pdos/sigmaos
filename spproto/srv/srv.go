@@ -163,7 +163,7 @@ func (ps *ProtSrv) Walk(args *sp.Twalk, rets *sp.Rwalk) *sp.Rerror {
 	db.DPrintf(db.PROTSRV, "%v: Walk o %v args {%v} (%v)", f.Pobj().Ctx().ClntId(), f, args, len(args.Wnames))
 
 	s := time.Now()
-	os, lo, lk, rest, err := ps.lookupObj(f.Pobj().Ctx(), f.Pobj(), args.Wnames, lockmap.RLOCK)
+	os, lo, lk, _, err := ps.lookupObj(f.Pobj().Ctx(), f.Pobj(), args.Wnames, lockmap.RLOCK)
 	db.DPrintf(db.WALK_LAT, "ProtSrv.Walk %v %v lat %v\n", f.Pobj().Ctx().ClntId(), args.Wnames, time.Since(s))
 	defer ps.plt.Release(f.Pobj().Ctx(), lk, lockmap.RLOCK)
 
@@ -171,9 +171,11 @@ func (ps *ProtSrv) Walk(args *sp.Twalk, rets *sp.Rwalk) *sp.Rerror {
 		return sp.NewRerrorSerr(err)
 	}
 
+	name := f.Pobj().Name()
+	if len(args.Wnames) > 0 {
+		name = args.Wnames[len(os)-1]
+	}
 	// let the client decide what to do with rest (when there is a rest)
-	n := len(args.Wnames) - len(rest)
-	name := args.Wnames[n-1]
 	rets.Qids = ps.newQidProtos(os)
 	qid := ps.newQid(lo.Perm(), lo.Path())
 	parent := getParent(f.Pobj().Obj().(fs.Dir), os)
@@ -405,7 +407,7 @@ func (ps *ProtSrv) Renameat(args *sp.Trenameat, rets *sp.Rrenameat) *sp.Rerror {
 	return nil
 }
 
-func (ps *ProtSrv) LookupWalk(fid sp.Tfid, wnames path.Tpathname, resolve bool, ltype lockmap.Tlock) (*Fid, string, fs.FsObj, *serr.Err) {
+func (ps *ProtSrv) LookupWalk(fid sp.Tfid, wnames path.Tpathname, resolve bool, ltype lockmap.Tlock) (*fid.Fid, string, fs.FsObj, *serr.Err) {
 	f, err := ps.fm.Lookup(fid)
 	if err != nil {
 		return nil, "", nil, err
@@ -421,7 +423,7 @@ func (ps *ProtSrv) LookupWalk(fid sp.Tfid, wnames path.Tpathname, resolve bool, 
 	return f, fname, lo, nil
 }
 
-func (ps *ProtSrv) LookupWalkParent(fid sp.Tfid, wnames path.Tpathname, resolve bool, ltype lockmap.Tlock) (*Fid, fs.Dir, string, fs.FsObj, *serr.Err) {
+func (ps *ProtSrv) LookupWalkParent(fid sp.Tfid, wnames path.Tpathname, resolve bool, ltype lockmap.Tlock) (*fid.Fid, fs.Dir, string, fs.FsObj, *serr.Err) {
 	f, err := ps.fm.Lookup(fid)
 	if err != nil {
 		return nil, nil, "", nil, err
@@ -438,7 +440,7 @@ func (ps *ProtSrv) LookupWalkParent(fid sp.Tfid, wnames path.Tpathname, resolve 
 	return f, parent, fname, lo, nil
 }
 
-func (ps *ProtSrv) lookupWalkOpen(fid sp.Tfid, wnames path.Tpathname, resolve bool, mode sp.Tmode, ltype lockmap.Tlock) (*Fid, string, fs.FsObj, fs.File, *serr.Err) {
+func (ps *ProtSrv) lookupWalkOpen(fid sp.Tfid, wnames path.Tpathname, resolve bool, mode sp.Tmode, ltype lockmap.Tlock) (*fid.Fid, string, fs.FsObj, fs.File, *serr.Err) {
 	f, fname, lo, err := ps.LookupWalk(fid, wnames, resolve, ltype)
 	if err != nil {
 		return nil, "", nil, nil, err

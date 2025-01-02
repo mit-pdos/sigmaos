@@ -61,8 +61,8 @@ func (pss *ProtSrvState) newQid(perm sp.Tperm, path sp.Tpath) sp.Tqid {
 }
 
 func (pss *ProtSrvState) newFid(ctx fs.CtxI, dir fs.Dir, name string, o fs.FsObj, lid sp.TleaseId, qid sp.Tqid) *fid.Fid {
-	po := newPobj(name, o, dir, ctx)
-	nf := newFidPath(po, 0, qid)
+	po := fid.NewPobj(name, o, dir, ctx)
+	nf := fid.NewFidPath(po, 0, qid)
 	if o.IsLeased() && pss.lm != nil {
 		pss.lm.Insert(o.Path(), lid, po)
 	}
@@ -157,7 +157,7 @@ func (pss *ProtSrvState) RemoveObj(ctx fs.CtxI, dir fs.Dir, o fs.FsObj, name str
 	return nil
 }
 
-func (pss *ProtSrvState) RenameObj(po *Pobj, name string, f sp.Tfence) *serr.Err {
+func (pss *ProtSrvState) RenameObj(po *fid.Pobj, name string, f sp.Tfence) *serr.Err {
 	dlk := pss.plt.Acquire(po.Ctx(), po.Obj().Path(), lockmap.WLOCK)
 	defer pss.plt.Release(po.Ctx(), dlk, lockmap.WLOCK)
 

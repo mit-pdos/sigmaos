@@ -39,7 +39,7 @@ func newTstate(t *testing.T) *tstate {
 	aaf := srv.AttachAllowAllToAll
 	pe := proc.NewTestProcEnv(sp.ROOTREALM, nil, nil, sp.NO_IP, sp.NO_IP, "", false, false)
 	srv := srv.NewProtSrv(pe, pps, sp.NoPrincipal(), 0, grf, aaf)
-	srv.NewRootFid(0, ctx, root, path.Tpathname{})
+	srv.NewRootFid(0, ctx, root, "")
 	return &tstate{t, srv}
 }
 

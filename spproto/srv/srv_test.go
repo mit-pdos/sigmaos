@@ -82,11 +82,15 @@ func newTstate(t *testing.T) *tstate {
 	return &tstate{t, srv}
 }
 
-func (ts *tstate) walk(fid, nfid sp.Tfid) {
-	args := sp.NewTwalk(fid, nfid, path.Tpathname{})
+func (ts *tstate) walkPath(fid, nfid sp.Tfid, path path.Tpathname) {
+	args := sp.NewTwalk(fid, nfid, path)
 	rets := sp.Rwalk{}
 	rerr := ts.srv.Walk(args, &rets)
 	assert.Nil(ts.t, rerr, "rerror %v", rerr)
+}
+
+func (ts *tstate) walk(fid, nfid sp.Tfid) {
+	ts.walkPath(fid, nfid, path.Tpathname{})
 }
 
 func (ts *tstate) clunk(fid sp.Tfid) {
@@ -108,6 +112,14 @@ func (ts *tstate) remove(fid sp.Tfid) {
 	rets := sp.Rremove{}
 	rerr := ts.srv.Remove(args, &rets)
 	assert.Nil(ts.t, rerr, "rerror %v", rerr)
+}
+
+func (ts *tstate) stat(fid sp.Tfid) *sp.Tstat {
+	args := sp.NewTrstat(fid)
+	rets := sp.Rrstat{}
+	rerr := ts.srv.Stat(args, &rets)
+	assert.Nil(ts.t, rerr, "rerror %v", rerr)
+	return &sp.Tstat{rets.Stat}
 }
 
 func TestCreateMany(t *testing.T) {
@@ -157,6 +169,28 @@ func TestWalkClunk(t *testing.T) {
 		}
 		t := time.Since(s)
 		db.DPrintf(db.TEST, "%d walk+clunk %v us/op %f", n, t, float64(t.Microseconds())/float64(n))
+		db.DPrintf(db.TEST, "len freelist %v", ts.srv.Stats())
+	}
+}
+
+func TestWalkStat(t *testing.T) {
+	// ns := []int{10, 100, 1000, 10_000, 100_000, 1_000_000}
+	// ns := []int{100_000}
+	ns := []int{10}
+	for _, n := range ns {
+		ts := newTstate(t)
+		for i := 1; i < n; i++ {
+			ts.walk(0, sp.Tfid(i))
+			ts.create(sp.Tfid(i), "fff"+strconv.Itoa(i))
+			ts.clunk(sp.Tfid(i))
+		}
+		s := time.Now()
+		nfid := sp.Tfid(1)
+		ts.walkPath(0, nfid, path.Split("fff1"))
+		st := ts.stat(nfid)
+		ts.clunk(nfid)
+		t := time.Since(s)
+		db.DPrintf(db.TEST, "%v for walk+stat in dir w. %d files st %v", t, n, st)
 		db.DPrintf(db.TEST, "len freelist %v", ts.srv.Stats())
 	}
 }

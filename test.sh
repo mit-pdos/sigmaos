@@ -218,7 +218,7 @@ if [[ $BASIC == "--basic" ]]; then
     # tests a full kernel using root realm
     #
 
-    for T in namesrv util/coordination/semaphore sched/msched/proc/chunk/srv sigmaclnt/procclnt proxy/ux boot/clnt proxy/s3 ft/leaderclnt ft/leadertest apps/kv/kvgrp apps/cache/cachegrp/clnt; do
+    for T in namesrv util/coordination/semaphore sched/msched/proc/chunk/srv proxy/ux boot/clnt proxy/s3 realm/clnt; do
         if ! [ -z "$SKIPTO" ]; then
           if [[ "$SKIPTO" == "$T" ]]; then
             # Stop skipping
@@ -230,6 +230,25 @@ if [[ $BASIC == "--basic" ]]; then
         fi
         run_test $T "./test-in-docker.sh --pkg $T --args \"$VERB $SPPROXYD $DIALPROXY $REUSEKERNEL\""
     done
+
+    #
+    # test realms
+    #
+
+    for T in sigmaclnt/procclnt ft/leaderclnt ft/leadertest apps/kv/kvgrp apps/cache/cachegrp/clnt; do
+        if ! [ -z "$SKIPTO" ]; then
+          if [[ "$SKIPTO" == "$T" ]]; then
+            # Stop skipping
+            SKIPTO=""
+          else
+            # Skip
+            continue
+          fi
+        fi
+      run_test $T "./test-in-docker.sh --pkg $T --args \"$VERB $SPPROXYD $DIALPROXY $REUSEKERNEL\""
+  done
+fi
+
 
     #
     # test ninep proxy with just named and full kernel
@@ -252,25 +271,6 @@ if [[ $BASIC == "--basic" ]]; then
     run_test "sigmapsrv/ux" "./test-in-docker.sh --pkg sigmasrv/memfssrv/sigmapsrv --run ReadPerf --args \"$VERB --path name/ux/~local/ $SPPROXYD $DIALPROXY $REUSEKERNEL\""
     run_test "sigmapsrv/s3" "./test-in-docker.sh --pkg sigmasrv/memfssrv/sigmapsrv --run ReadPerf --args \"$VERB --path name/s3/~local/9ps3/ $SPPROXYD $DIALPROXY $REUSEKERNEL\""
     run_test "sigmapsrv/s3pathclnt" "./test-in-docker.sh --pkg sigmasrv/memfssrv/sigmapsrv --run ReadFilePerfSingle --args \"$VERB --path name/s3/~local/9ps3/ --withs3pathclnt $SPPROXYD $DIALPROXY $REUSEKERNEL\""
-
-
-    #
-    # test with realms
-    #
-
-    for T in realm/clnt; do
-        if ! [ -z "$SKIPTO" ]; then
-          if [[ "$SKIPTO" == "$T" ]]; then
-            # Stop skipping
-            SKIPTO=""
-          else
-            # Skip
-            continue
-          fi
-        fi
-      run_test $T "./test-in-docker.sh --pkg $T --args \"$VERB $SPPROXYD $DIALPROXY $REUSEKERNEL\""
-  done
-fi
 
 #
 # app tests

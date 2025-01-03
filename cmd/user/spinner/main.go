@@ -65,6 +65,8 @@ func (s *Spinner) waitEvict() {
 	if err != nil {
 		db.DFatalf("Error WaitEvict: %v", err)
 	}
+	// Remove file
+	s.Remove(path.Join(s.outdir, s.ProcEnv().GetPID().String()))
 	s.ClntExit(proc.NewStatus(proc.StatusEvicted))
 	os.Exit(0)
 }

@@ -241,6 +241,7 @@ func (rm *RealmSrv) Remove(ctx fs.CtxI, req proto.RemoveReq, res *proto.RemoveRe
 	}
 
 	if err := r.sc.RmDirEntries(sp.NAMED); err != nil {
+		db.DPrintf(db.ERROR, "Error remove NAMED: %v", err)
 		return err
 	}
 

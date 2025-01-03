@@ -186,6 +186,7 @@ func (ps *ProtSrv) Walk(args *sp.Twalk, rets *sp.Rwalk) *sp.Rerror {
 
 	s := time.Now()
 	os, lo, lk, name, err := ps.lookupObj(f.Ctx(), f, args.Wnames, lockmap.RLOCK)
+
 	db.DPrintf(db.WALK_LAT, "ProtSrv.Walk %v %v lat %v", f.Ctx().ClntId(), args.Wnames, time.Since(s))
 	defer ps.plt.Release(f.Ctx(), lk, lockmap.RLOCK)
 
@@ -197,7 +198,9 @@ func (ps *ProtSrv) Walk(args *sp.Twalk, rets *sp.Rwalk) *sp.Rerror {
 	rets.Qids = ps.newQidProtos(os)
 	qid := ps.newQid(lo.Perm(), lo.Path())
 	parent := getParent(f.Obj().(fs.Dir), os)
+
 	db.DPrintf(db.PROTSRV, "%v: Walk NewFid fid %v lo %v qid %v os %v", f.Ctx().ClntId(), args.NewFid, lo, qid, os)
+
 	fid := ps.fm.NewFid(name, lo, parent, f.Ctx(), 0, qid)
 	if err := ps.fm.Insert(args.Tnewfid(), fid); err != nil {
 		return sp.NewRerrorSerr(err)

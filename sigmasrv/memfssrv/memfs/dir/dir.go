@@ -36,6 +36,10 @@ func MkDirF(i fs.Inode, no fs.NewFsObjF) fs.FsObj {
 }
 
 func (dir *DirImpl) String() string {
+	return fmt.Sprintf("{dir %p(%v) i %p %T len %d}", dir, dir.Path(), dir.Inode, dir.Inode, dir.dents.Len())
+}
+
+func (dir *DirImpl) Dump() string {
 	str := fmt.Sprintf("{dir %p(%v) i %p %T Dir{entries: ", dir, dir.Path(), dir.Inode, dir.Inode)
 
 	dir.dents.Iter(func(n string, e fs.FsObj) bool {
@@ -46,7 +50,7 @@ func (dir *DirImpl) String() string {
 	return str
 }
 
-func (dir *DirImpl) Dump() (string, error) {
+func (dir *DirImpl) DumpTree() (string, error) {
 	sts, err := dir.lsL(0)
 	if err != nil {
 		return "", err
@@ -61,7 +65,7 @@ func (dir *DirImpl) Dump() (string, error) {
 			}
 			switch d := i.(type) {
 			case *DirImpl:
-				s1, err := d.Dump()
+				s1, err := d.DumpTree()
 				if err != nil {
 					s += fmt.Sprintf("[%v err %v]", st, err)
 					continue

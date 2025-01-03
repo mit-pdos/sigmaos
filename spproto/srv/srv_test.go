@@ -124,7 +124,7 @@ func (ts *tstate) stat(fid sp.Tfid) *sp.Tstat {
 
 func TestCreateMany(t *testing.T) {
 	//ns := []int{10, 100, 1000, 10_000, 100_000, 1_000_000}
-	ns := []int{2}
+	ns := []int{10}
 	for _, n := range ns {
 		ts := newTstate(t)
 		s := time.Now()

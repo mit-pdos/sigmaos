@@ -164,7 +164,7 @@ func (mfs *MemFs) Notify(pn path.Tpathname) error {
 
 func (mfs *MemFs) Dump() error {
 	d, _, path := mfs.Root(rootP)
-	s, err := d.(*dir.DirImpl).Dump()
+	s, err := d.(*dir.DirImpl).DumpTree()
 	if err != nil {
 		return err
 	}

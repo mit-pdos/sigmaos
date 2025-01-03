@@ -26,9 +26,13 @@ import (
 )
 
 var srvname string // e.g., memfs
+var N int
+var D int
 
 func init() {
 	flag.StringVar(&srvname, "server", sp.MEMFSREL, "server")
+	flag.IntVar(&N, "N", 1000, "N iterations")
+	flag.IntVar(&D, "D", 1, "Create test directory w D directory entries")
 }
 
 func TestCompile(t *testing.T) {
@@ -122,30 +126,27 @@ func (ts *tstate) stat(fid sp.Tfid) *sp.Tstat {
 	return &sp.Tstat{rets.Stat}
 }
 
-func TestCreateMany(t *testing.T) {
-	// ns := []int{10, 100, 1000, 10_000, 100_000, 1_000_000}
-	ns := []int{10_000}
-	for _, n := range ns {
-		ts := newTstate(t)
-		s := time.Now()
-		for i := 1; i < n; i++ {
-			ts.walk(0, sp.Tfid(i))
-			ts.create(sp.Tfid(i), "fff"+strconv.Itoa(i))
-			ts.clunk(sp.Tfid(i))
-		}
-		t := time.Since(s)
-		db.DPrintf(db.TEST, "%d creates %v us/op %f", n, t, float64(t.Microseconds())/float64(n))
-		db.DPrintf(db.TEST, "len freelist %d", ts.srv.Stats())
+func (ts *tstate) mkDir() {
+	s := time.Now()
+	for i := 1; i < D+1; i++ {
+		ts.walk(0, sp.Tfid(i))
+		ts.create(sp.Tfid(i), "ggg"+strconv.Itoa(i))
+		ts.clunk(sp.Tfid(i))
+	}
+	t := time.Since(s)
+	if D > 0 {
+		db.DPrintf(db.TEST, "mkDir: %d creates %v us/op %f", D, t, float64(t.Microseconds())/float64(D))
+		db.DPrintf(db.TEST, "mkDir: len freelist %d", ts.srv.Stats())
 	}
 }
 
 func TestCreateRemove(t *testing.T) {
-	//ns := []int{10, 100, 1000, 10_000, 100_000, 1_000_000}
-	ns := []int{100_000}
+	ns := []int{N}
 	for _, n := range ns {
 		ts := newTstate(t)
+		ts.mkDir()
 		s := time.Now()
-		for i := 1; i < n; i++ {
+		for i := 1; i < n+1; i++ {
 			ts.walk(0, sp.Tfid(i))
 			ts.create(sp.Tfid(i), "fff"+strconv.Itoa(i))
 			ts.remove(sp.Tfid(i))
@@ -157,12 +158,11 @@ func TestCreateRemove(t *testing.T) {
 }
 
 func TestWalkClunk(t *testing.T) {
-	// ns := []int{10, 100, 1000, 10_000, 100_000, 1_000_000}
-	ns := []int{100_000}
+	ns := []int{N}
 	for _, n := range ns {
 		ts := newTstate(t)
 		s := time.Now()
-		for i := 1; i < n; i++ {
+		for i := 1; i < n+1; i++ {
 			ts.walk(0, sp.Tfid(i))
 			ts.clunk(sp.Tfid(i))
 		}
@@ -173,29 +173,20 @@ func TestWalkClunk(t *testing.T) {
 }
 
 func TestWalkStat(t *testing.T) {
-	ns := []int{1000}
-	max := time.Duration(0)
+	ns := []int{N}
 	for _, n := range ns {
 		ts := newTstate(t)
-		tot := time.Duration(0)
-		for i := 1; i < n; i++ {
-			ts.walk(0, sp.Tfid(i))
-			ts.create(sp.Tfid(i), "fff"+strconv.Itoa(i))
-			ts.clunk(sp.Tfid(i))
-
-			// lookup
-			s := time.Now()
+		ts.mkDir()
+		s := time.Now()
+		pn := path.Split("ggg1")
+		for i := 1; i < n+1; i++ {
 			nfid := sp.Tfid(1)
-			ts.walkPath(0, nfid, path.Split("fff1"))
+			ts.walkPath(0, nfid, pn)
 			ts.stat(nfid)
 			ts.clunk(nfid)
-			t := time.Since(s)
-			tot += t
-			if t > max {
-				max = t
-			}
 		}
-		db.DPrintf(db.TEST, "%d walk+stat %v us/op %f max %v", n, tot, float64(tot.Microseconds())/float64(n), max)
+		t := time.Since(s)
+		db.DPrintf(db.TEST, "%d walk+stat %v us/op %f", n, t, float64(t.Microseconds())/float64(n))
 		db.DPrintf(db.TEST, "len freelist %v", ts.srv.Stats())
 	}
 }

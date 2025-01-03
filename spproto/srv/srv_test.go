@@ -128,8 +128,8 @@ func TestCreateMany(t *testing.T) {
 
 func TestCreateRemove(t *testing.T) {
 	// ns := []int{10, 100, 1000, 10_000, 100_000, 1_000_000}
-	ns := []int{10_000}
-	//ns := []int{10}
+	//ns := []int{10_000}
+	ns := []int{10}
 	for _, n := range ns {
 		ts := newTstate(t)
 		s := time.Now()

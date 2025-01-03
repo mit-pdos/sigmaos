@@ -66,7 +66,7 @@ func (d *Dir) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode, lid sp
 	if r != nil {
 		return nil, serr.NewErrError(r)
 	}
-	di, c, err := d.fs.Create(&d.Obj.di, pn, path, nf, f, cid, lid)
+	di, c, err := d.fs.Create(&d.Obj.di, pn, path, nf, perm, f, cid, lid)
 	d.Obj.fs.PstatUpdate(d.Obj.pn, c)
 	if err != nil {
 		db.DPrintf(db.NAMED, "Create %v %q err %v\n", d, name, err)

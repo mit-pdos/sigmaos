@@ -80,7 +80,7 @@ func (o *Obj) NewStat() (*sp.Tstat, *serr.Err) {
 }
 
 func (o *Obj) putObj(f sp.Tfence, data []byte) *serr.Err {
-	nf := fsetcd.NewEtcdFile(o.di.Perm|0777, data)
+	nf := fsetcd.NewEtcdFile(data)
 	c, err := o.fs.PutFile(&o.di, nf, f)
 	o.fs.PstatUpdate(o.pn, c)
 	return err

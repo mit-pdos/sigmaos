@@ -55,7 +55,6 @@ func (di DirEntInfo) String() string {
 
 type DirInfo struct {
 	Ents *sortedmapv1.SortedMap[string, *DirEntInfo]
-	Perm sp.Tperm
 }
 
 func (fse *FsEtcd) isEmpty(dei *DirEntInfo) (bool, stats.Tcounter, *serr.Err) {
@@ -80,7 +79,7 @@ func (fse *FsEtcd) NewRootDir() *serr.Err {
 		db.DPrintf(db.FSETCD, "NewEtcdFileDir err %v", r)
 		return serr.NewErrError(r)
 	}
-	dei := NewDirEntInfoNf(nf, ROOT, nf.Tperm(), sp.NoClntId, sp.NoLeaseId)
+	dei := NewDirEntInfoNf(nf, ROOT, sp.DMDIR, sp.NoClntId, sp.NoLeaseId)
 	if _, err := fse.PutFile(dei, nf, sp.NoFence()); err != nil {
 		db.DPrintf(db.FSETCD, "NewRootDir PutFile err %v", err)
 		return err
@@ -111,7 +110,7 @@ func (fse *FsEtcd) Lookup(dei *DirEntInfo, pn path.Tpathname) (*DirEntInfo, *ser
 }
 
 // OEXCL: should only succeed if file doesn't exist
-func (fse *FsEtcd) Create(dei *DirEntInfo, pn path.Tpathname, path sp.Tpath, nf *EtcdFile, f sp.Tfence, cid sp.TclntId, lid sp.TleaseId) (*DirEntInfo, stats.Tcounter, *serr.Err) {
+func (fse *FsEtcd) Create(dei *DirEntInfo, pn path.Tpathname, path sp.Tpath, nf *EtcdFile, perm sp.Tperm, f sp.Tfence, cid sp.TclntId, lid sp.TleaseId) (*DirEntInfo, stats.Tcounter, *serr.Err) {
 	name := pn.Base()
 	dir, v, nops, err := fse.readDir(dei, TSTAT_NONE)
 	if err != nil {
@@ -123,7 +122,7 @@ func (fse *FsEtcd) Create(dei *DirEntInfo, pn path.Tpathname, path sp.Tpath, nf 
 	}
 	// Insert name into dir so that fse.create() will write the updated
 	// directory to etcd, but undo the Insert if create fails.
-	di := NewDirEntInfoNf(nf, path, nf.Tperm(), cid, lid)
+	di := NewDirEntInfoNf(nf, path, perm, cid, lid)
 	dir.Ents.Insert(name, di)
 	db.DPrintf(db.FSETCD, "Create %q(%v) di %v f %v\n", name, pn, di, f)
 	if nops1, err := fse.create(dei, dir, v, di, pn, f); err == nil {

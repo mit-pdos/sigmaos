@@ -101,7 +101,7 @@ func TestCreateRemove(t *testing.T) {
 		}
 		t := time.Since(s)
 		db.DPrintf(db.TEST, "%d create+remove %v us/op %f", n, t, float64(t.Microseconds())/float64(n))
-		db.DPrintf(db.TEST, "len freelist %d", ts.srv.LenFreeList())
+		db.DPrintf(db.TEST, "len freelist %d", ts.srv.Stats())
 	}
 }
 
@@ -118,6 +118,6 @@ func TestWalkClunk(t *testing.T) {
 		}
 		t := time.Since(s)
 		db.DPrintf(db.TEST, "%d walk+clunk %v us/op %f", n, t, float64(t.Microseconds())/float64(n))
-		db.DPrintf(db.TEST, "len freelist %d", ts.srv.LenFreeList())
+		db.DPrintf(db.TEST, "len freelist %v", ts.srv.Stats())
 	}
 }

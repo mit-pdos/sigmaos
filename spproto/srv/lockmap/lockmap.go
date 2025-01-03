@@ -21,6 +21,8 @@ type Tlock int
 const (
 	RLOCK Tlock = iota + 1
 	WLOCK
+
+	N = 1000
 )
 
 func (t Tlock) String() string {
@@ -44,23 +46,23 @@ func (pl *PathLock) Path() sp.Tpath {
 	return pl.path
 }
 
-func newLock(p sp.Tpath) *PathLock {
-	return &PathLock{path: p}
+func newLock(p sp.Tpath) PathLock {
+	return PathLock{path: p}
 }
 
 type PathLockTable struct {
 	//	deadlock.Mutex
 	sync.Mutex
-	*refmap.RefTable[sp.Tpath, *PathLock]
+	*refmap.RefTable[sp.Tpath, PathLock]
 }
 
 func NewPathLockTable() *PathLockTable {
 	plt := &PathLockTable{}
-	plt.RefTable = refmap.NewRefTable[sp.Tpath, *PathLock](db.LOCKMAP)
+	plt.RefTable = refmap.NewRefTable[sp.Tpath, PathLock](N, db.LOCKMAP)
 	return plt
 }
 
-func (plt *PathLockTable) Len() int {
+func (plt *PathLockTable) Len() (int, int) {
 	plt.Lock()
 	defer plt.Unlock()
 	return plt.RefTable.Len()

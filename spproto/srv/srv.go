@@ -51,9 +51,21 @@ func NewProtServer(srvPE *proc.ProcEnv, pss *ProtSrvState, p *sp.Tprincipal, sid
 	return NewProtSrv(srvPE, pss, p, sid, grf, aaf)
 }
 
-func (ps *ProtSrv) LenFreeList() int {
-	db.DPrintf(db.TEST, "lockmap len %d", ps.ProtSrvState.plt.Len())
-	return ps.fm.Len()
+type ProtSrvStats struct {
+	nfid         int
+	nfidFree     int
+	nlock        int
+	nlockFree    int
+	nversion     int
+	nversionFree int
+}
+
+func (ps *ProtSrv) Stats() *ProtSrvStats {
+	pss := &ProtSrvStats{}
+	pss.nfid, pss.nfidFree = ps.fm.Len()
+	pss.nlock, pss.nlockFree = ps.ProtSrvState.plt.Len()
+	pss.nversion, pss.nversionFree = ps.ProtSrvState.vt.Len()
+	return pss
 }
 
 func (ps *ProtSrv) Version(args *sp.Tversion, rets *sp.Rversion) *sp.Rerror {

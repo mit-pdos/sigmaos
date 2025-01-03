@@ -9,19 +9,12 @@ import (
 	"fmt"
 
 	db "sigmaos/debug"
+	"sigmaos/util/freelist"
 )
 
 type entry[T any] struct {
 	n int
 	v T
-}
-
-func newEntry[T any](v T) *entry[T] {
-	e := &entry[T]{
-		n: 1,
-		v: v,
-	}
-	return e
 }
 
 func (e *entry[T]) String() string {
@@ -31,40 +24,48 @@ func (e *entry[T]) String() string {
 type RefTable[K comparable, T any] struct {
 	debug db.Tselector
 	refs  map[K]*entry[T]
+	fl    *freelist.FreeList[entry[T]]
 }
 
-func NewRefTable[K comparable, T any](debug db.Tselector) *RefTable[K, T] {
+func NewRefTable[K comparable, T any](sz int, debug db.Tselector) *RefTable[K, T] {
 	rf := &RefTable[K, T]{
 		debug: debug + db.REFMAP_SUFFIX,
 		refs:  make(map[K]*entry[T]),
+		fl:    freelist.NewFreeList[entry[T]](sz),
 	}
 	return rf
 }
 
-func (rf *RefTable[K, T]) Len() int {
-	return len(rf.refs)
+func (rf *RefTable[K, T]) newEntry(v T) *entry[T] {
+	e := rf.fl.New()
+	e.n = 1
+	e.v = v
+	return e
 }
 
-func (rf *RefTable[K, T]) Lookup(k K) (T, bool) {
-	var r T
+func (rf *RefTable[K, T]) Len() (int, int) {
+	return len(rf.refs), rf.fl.Len()
+}
+
+func (rf *RefTable[K, T]) Lookup(k K) (*T, bool) {
 	if e, ok := rf.refs[k]; ok {
 		db.DPrintf(rf.debug, "lookup %v %v", k, e)
-		return e.v, true
+		return &e.v, true
 	}
 	db.DPrintf(rf.debug, "lookup %v no entry", k)
-	return r, false
+	return nil, false
 }
 
-func (rf *RefTable[K, T]) Insert(k K, v T) (T, bool) {
+func (rf *RefTable[K, T]) Insert(k K, v T) (*T, bool) {
 	if e, ok := rf.refs[k]; ok {
 		e.n += 1
 		db.DPrintf(rf.debug, "insert %v %v", k, e)
-		return e.v, true
+		return &e.v, true
 	}
-	e := newEntry(v)
+	e := rf.newEntry(v)
 	db.DPrintf(rf.debug, "new insert %v %v", k, e)
 	rf.refs[k] = e
-	return e.v, false
+	return &e.v, false
 }
 
 func (rf *RefTable[K, T]) Delete(k K) (bool, error) {
@@ -76,9 +77,10 @@ func (rf *RefTable[K, T]) Delete(k K) (bool, error) {
 	}
 	e.n -= 1
 	if e.n <= 0 {
-		db.DPrintf(rf.debug, "delete %v -> %v", k, e.v)
+		// db.DPrintf(rf.debug, "delete %v -> %v", k, e.v)
 		del = true
 		delete(rf.refs, k)
+		rf.fl.Free(e)
 	}
 	return del, nil
 }

@@ -43,8 +43,8 @@ func (fm *FidMap) Free(f *Fid) {
 	fm.fl.Free(f)
 }
 
-func (fm *FidMap) Len() int {
-	return fm.fids.Len()
+func (fm *FidMap) Len() (int, int) {
+	return fm.fids.Len(), fm.fl.Len()
 }
 
 func (fm *FidMap) Lookup(fid sp.Tfid) (*Fid, *serr.Err) {

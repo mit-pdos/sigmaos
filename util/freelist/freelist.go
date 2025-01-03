@@ -2,8 +2,6 @@ package freelist
 
 import (
 	"sync"
-
-	db "sigmaos/debug"
 )
 
 type FreeList[T any] struct {
@@ -19,9 +17,6 @@ func NewFreeList[T any](sz int) *FreeList[T] {
 func (fl *FreeList[T]) Len() int {
 	fl.mu.Lock()
 	defer fl.mu.Unlock()
-
-	db.DPrintf(db.TEST, "New: newNew %d", fl.nNew)
-
 	return len(fl.freelist)
 }
 
@@ -31,7 +26,6 @@ func (fl *FreeList[T]) New() *T {
 
 	index := len(fl.freelist) - 1
 	if index < 0 {
-		db.DPrintf(db.TEST, "New: allocate %d", index)
 		fl.nNew += 1
 		return new(T)
 	}

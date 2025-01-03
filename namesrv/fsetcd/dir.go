@@ -45,7 +45,7 @@ func NewDirEntInfoDir(p sp.Tpath) *DirEntInfo {
 	return NewDirEntInfo(p, sp.DMDIR|0777, sp.NoClntId, sp.NoLeaseId)
 }
 
-func (di DirEntInfo) String() string {
+func (di *DirEntInfo) String() string {
 	if di.Nf != nil {
 		return fmt.Sprintf("{p %v perm %v cid %v lid %v len %d}", di.Path, di.Perm, di.ClntId, di.LeaseId, len(di.Nf.Data))
 	} else {
@@ -55,6 +55,10 @@ func (di DirEntInfo) String() string {
 
 type DirInfo struct {
 	Ents *sortedmapv1.SortedMap[string, *DirEntInfo]
+}
+
+func (di *DirInfo) String() string {
+	return fmt.Sprintf("DI %p len %d", di, di.Ents.Len())
 }
 
 func (fse *FsEtcd) isEmpty(dei *DirEntInfo) (bool, stats.Tcounter, *serr.Err) {

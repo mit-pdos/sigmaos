@@ -123,8 +123,8 @@ func (ts *tstate) stat(fid sp.Tfid) *sp.Tstat {
 }
 
 func TestCreateMany(t *testing.T) {
-	//ns := []int{10, 100, 1000, 10_000, 100_000, 1_000_000}
-	ns := []int{10}
+	// ns := []int{10, 100, 1000, 10_000, 100_000, 1_000_000}
+	ns := []int{10_000}
 	for _, n := range ns {
 		ts := newTstate(t)
 		s := time.Now()
@@ -135,13 +135,13 @@ func TestCreateMany(t *testing.T) {
 		}
 		t := time.Since(s)
 		db.DPrintf(db.TEST, "%d creates %v us/op %f", n, t, float64(t.Microseconds())/float64(n))
+		db.DPrintf(db.TEST, "len freelist %d", ts.srv.Stats())
 	}
 }
 
 func TestCreateRemove(t *testing.T) {
-	// ns := []int{10, 100, 1000, 10_000, 100_000, 1_000_000}
-	//ns := []int{10_000}
-	ns := []int{10}
+	//ns := []int{10, 100, 1000, 10_000, 100_000, 1_000_000}
+	ns := []int{100_000}
 	for _, n := range ns {
 		ts := newTstate(t)
 		s := time.Now()
@@ -159,7 +159,6 @@ func TestCreateRemove(t *testing.T) {
 func TestWalkClunk(t *testing.T) {
 	// ns := []int{10, 100, 1000, 10_000, 100_000, 1_000_000}
 	ns := []int{100_000}
-	//ns := []int{10}
 	for _, n := range ns {
 		ts := newTstate(t)
 		s := time.Now()
@@ -174,23 +173,29 @@ func TestWalkClunk(t *testing.T) {
 }
 
 func TestWalkStat(t *testing.T) {
-	// ns := []int{10, 100, 1000, 10_000, 100_000, 1_000_000}
-	// ns := []int{100_000}
-	ns := []int{10}
+	ns := []int{1000}
+	max := time.Duration(0)
 	for _, n := range ns {
 		ts := newTstate(t)
+		tot := time.Duration(0)
 		for i := 1; i < n; i++ {
 			ts.walk(0, sp.Tfid(i))
 			ts.create(sp.Tfid(i), "fff"+strconv.Itoa(i))
 			ts.clunk(sp.Tfid(i))
+
+			// lookup
+			s := time.Now()
+			nfid := sp.Tfid(1)
+			ts.walkPath(0, nfid, path.Split("fff1"))
+			ts.stat(nfid)
+			ts.clunk(nfid)
+			t := time.Since(s)
+			tot += t
+			if t > max {
+				max = t
+			}
 		}
-		s := time.Now()
-		nfid := sp.Tfid(1)
-		ts.walkPath(0, nfid, path.Split("fff1"))
-		st := ts.stat(nfid)
-		ts.clunk(nfid)
-		t := time.Since(s)
-		db.DPrintf(db.TEST, "%v for walk+stat in dir w. %d files st %v", t, n, st)
+		db.DPrintf(db.TEST, "%d walk+stat %v us/op %f max %v", n, tot, float64(tot.Microseconds())/float64(n), max)
 		db.DPrintf(db.TEST, "len freelist %v", ts.srv.Stats())
 	}
 }

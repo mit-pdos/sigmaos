@@ -292,7 +292,7 @@ func (ps *ProtSrv) Create(args *sp.Tcreate, rets *sp.Rcreate) *sp.Rerror {
 	if err != nil {
 		return sp.NewRerrorSerr(err)
 	}
-	db.DPrintf(db.PROTSRV, "%v: Create %v n %v args %v", f.Ctx().ClntId(), args.Tfid(), f.Name(), args.Name)
+	db.DPrintf(db.PROTSRV, "%v: Create %v n %q args %v", f.Ctx().ClntId(), args.Tfid(), f.Name(), args.Name)
 
 	qid, nf, err := ps.CreateObj(ps.fm, f.Ctx(), f.Obj(), args.Name, args.Tperm(), args.Tmode(), args.TleaseId(), args.Tfence(), nil)
 	if err != nil {

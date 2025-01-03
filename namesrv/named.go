@@ -8,7 +8,6 @@ import (
 	"sync"
 	"time"
 
-	"sigmaos/util/crash"
 	db "sigmaos/debug"
 	dialproxyclnt "sigmaos/dialproxy/clnt"
 	"sigmaos/namesrv/fsetcd"
@@ -16,11 +15,12 @@ import (
 	"sigmaos/path"
 	"sigmaos/proc"
 	"sigmaos/rpc"
-	"sigmaos/util/coordination/semaphore"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
 	spprotosrv "sigmaos/spproto/srv"
+	"sigmaos/util/coordination/semaphore"
+	"sigmaos/util/crash"
 	"sigmaos/util/perf"
 )
 
@@ -224,7 +224,7 @@ func Run(args []string) error {
 
 func (nd *Named) newSrv() (*sp.Tendpoint, error) {
 	ip := sp.NO_IP
-	root := rootDir(nd.fs, nd.realm)
+	root := RootDir(nd.fs, nd.realm)
 	var addr *sp.Taddr
 	var aaf spprotosrv.AttachAuthF
 	// If this is a root named, don't do

@@ -6,7 +6,29 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/namesrv/fsetcd"
 	"sigmaos/namesrv/leaderetcd"
+	"sigmaos/proc"
+	sp "sigmaos/sigmap"
 )
+
+// XXX maybe in fsetd
+func Elect(fs *fsetcd.FsEtcd, pe *proc.ProcEnv, realm sp.Trealm) (*fsetcd.Session, *leaderetcd.Election, error) {
+	fn := fmt.Sprintf("named-election-%s", realm)
+	sess, err := fs.NewSession()
+	if err != nil {
+		return nil, nil, err
+	}
+	db.DPrintf(db.NAMED, "created fsetcd session")
+	elect, err := leaderetcd.NewElection(pe, sess, fn)
+	if err != nil {
+		return nil, nil, err
+	}
+	db.DPrintf(db.NAMED, "started leaderetcd session")
+	if err := elect.Candidate(); err != nil {
+		return nil, nil, err
+	}
+	db.DPrintf(db.NAMED, "succeeded leaderetcd election")
+	return sess, elect, nil
+}
 
 func (nd *Named) startLeader() error {
 	nd.pstats = fsetcd.NewPstatsDev()
@@ -15,28 +37,12 @@ func (nd *Named) startLeader() error {
 		return err
 	}
 	nd.fs = fs
-	fn := fmt.Sprintf("named-election-%s", nd.realm)
 	db.DPrintf(db.NAMED, "created fsetcd client")
 
-	sess, err := fs.NewSession()
+	nd.sess, nd.elect, err = Elect(fs, nd.ProcEnv(), nd.realm)
 	if err != nil {
 		return err
 	}
-	nd.sess = sess
-
-	db.DPrintf(db.NAMED, "created fsetcd session")
-
-	nd.elect, err = leaderetcd.NewElection(nd.ProcEnv(), nd.sess, fn)
-	if err != nil {
-		return err
-	}
-	db.DPrintf(db.NAMED, "started leaderetcd session")
-
-	if err := nd.elect.Candidate(); err != nil {
-		return err
-	}
-
-	db.DPrintf(db.NAMED, "succeeded leaderetcd election")
 
 	if err := nd.fs.WatchLeased(nd.ephch); err != nil {
 		return err

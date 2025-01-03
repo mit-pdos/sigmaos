@@ -1,6 +1,7 @@
 package srv_test
 
 import (
+	"flag"
 	"strconv"
 	"testing"
 	"time"
@@ -10,6 +11,9 @@ import (
 	"sigmaos/api/fs"
 	"sigmaos/ctx"
 	db "sigmaos/debug"
+	dialproxyclnt "sigmaos/dialproxy/clnt"
+	"sigmaos/namesrv"
+	"sigmaos/namesrv/fsetcd"
 	"sigmaos/path"
 	"sigmaos/proc"
 	sessp "sigmaos/session/proto"
@@ -18,7 +22,14 @@ import (
 	"sigmaos/sigmasrv/memfssrv/memfs/dir"
 	"sigmaos/sigmasrv/stats"
 	"sigmaos/spproto/srv"
+	"sigmaos/test"
 )
+
+var srvname string // e.g., memfs
+
+func init() {
+	flag.StringVar(&srvname, "server", sp.MEMFSREL, "server")
+}
 
 func TestCompile(t *testing.T) {
 }
@@ -28,16 +39,44 @@ type tstate struct {
 	srv *srv.ProtSrv
 }
 
+func setupNamed(pe *proc.ProcEnv) fs.Dir {
+	stats := fsetcd.NewPstatsDev()
+	npc := dialproxyclnt.NewDialProxyClnt(pe)
+	fs, err := fsetcd.NewFsEtcd(npc.Dial, pe.GetEtcdEndpoints(), sp.ROOTREALM, stats)
+	if err != nil {
+		db.DFatalf("setupNamed: NewFsEtcd err %v", err)
+	}
+	_, elect, err := namesrv.Elect(fs, pe, sp.ROOTREALM)
+	if err != nil {
+		db.DFatalf("setupNamed: Elect err %v", err)
+	}
+	fs.Fence(elect.Key(), elect.Rev())
+	return namesrv.RootDir(fs, sp.ROOTREALM)
+}
+
 func newTstate(t *testing.T) *tstate {
+	lip := sp.Tip("127.0.0.1")
+	etcdMnt, err := fsetcd.NewFsEtcdEndpoint(sp.Tip(test.EtcdIP))
+	if err != nil {
+		db.DFatalf("newTstate: NewFsEtcdEndpoints err %v", err)
+	}
+	pe := proc.NewTestProcEnv(sp.ROOTREALM, nil, etcdMnt, lip, lip, "", false, false)
 	ctx := ctx.NewCtx(sp.NoPrincipal(), nil, 0, sp.NoClntId, nil, nil)
-	root := dir.NewRootDir(ctx, memfs.NewInode)
+	var root fs.Dir
+	switch srvname {
+	case sp.MEMFSREL:
+		root = dir.NewRootDir(ctx, memfs.NewInode)
+	case sp.NAMEDREL:
+		root = setupNamed(pe)
+	default:
+		db.DFatalf("newTstate: Unknown srv %v", srvname)
+	}
 	stats := stats.NewStatsDev()
 	pps := srv.NewProtSrvState(stats)
 	grf := func(*sp.Tprincipal, map[string]*sp.SecretProto, string, sessp.Tsession, sp.TclntId) (fs.Dir, fs.CtxI) {
 		return root, ctx
 	}
 	aaf := srv.AttachAllowAllToAll
-	pe := proc.NewTestProcEnv(sp.ROOTREALM, nil, nil, sp.NO_IP, sp.NO_IP, "", false, false)
 	srv := srv.NewProtSrv(pe, pps, sp.NoPrincipal(), 0, grf, aaf)
 	srv.NewRootFid(0, ctx, root, "")
 	return &tstate{t, srv}
@@ -72,8 +111,8 @@ func (ts *tstate) remove(fid sp.Tfid) {
 }
 
 func TestCreateMany(t *testing.T) {
-	// ns := []int{10, 100, 1000, 10_000, 100_000, 1_000_000}
-	ns := []int{100_000}
+	//ns := []int{10, 100, 1000, 10_000, 100_000, 1_000_000}
+	ns := []int{2}
 	for _, n := range ns {
 		ts := newTstate(t)
 		s := time.Now()
@@ -89,7 +128,7 @@ func TestCreateMany(t *testing.T) {
 
 func TestCreateRemove(t *testing.T) {
 	// ns := []int{10, 100, 1000, 10_000, 100_000, 1_000_000}
-	ns := []int{100_000}
+	ns := []int{10_000}
 	//ns := []int{10}
 	for _, n := range ns {
 		ts := newTstate(t)

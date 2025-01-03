@@ -173,7 +173,7 @@ func (d *Dir) VersionInc() {
 // Helpers
 //
 
-func rootDir(fs *fsetcd.FsEtcd, realm sp.Trealm) *Dir {
+func RootDir(fs *fsetcd.FsEtcd, realm sp.Trealm) *Dir {
 	_, c, err := fs.ReadRootDir()
 	fs.PstatUpdate(path.Tpathname{}, c)
 	if err != nil && err.IsErrNotfound() { // make root dir

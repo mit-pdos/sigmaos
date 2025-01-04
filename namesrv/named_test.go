@@ -249,7 +249,7 @@ func TestLeaseDelayReboot(t *testing.T) {
 
 // Test if read fails after a named lost leadership
 func TestPartitionNamed(t *testing.T) {
-	e := crash.NewEventStartDelay(crash.NAMED_PARTITION, 2000, 1000, 1.0, 7000)
+	e := crash.NewEventStartDelay(crash.NAMED_PARTITION, 2000, 1000, 7000, float64(1.0))
 	err := crash.SetSigmaFail(crash.NewTeventMapOne(e))
 	assert.Nil(t, err)
 

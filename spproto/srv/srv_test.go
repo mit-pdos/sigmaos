@@ -252,7 +252,7 @@ func TestCreateRenameat(t *testing.T) {
 
 			ts.rename("d0", "fff1", "d1", "fff2")
 
-			//nfid := ts.walkPath("d1/ggg2")
+			//nfid := ts.walkPath("d1/fff2")
 			//ts.remove(nfid)
 		}
 		t := time.Since(s)

@@ -12,20 +12,20 @@ import (
 
 	"sigmaos/ctx"
 	db "sigmaos/debug"
-	"sigmaos/util/io/demux"
 	dialproxyclnt "sigmaos/dialproxy/clnt"
-	"sigmaos/sigmasrv/memfssrv/memfs"
-	"sigmaos/sigmasrv/memfssrv/memfs/dir"
 	netsrv "sigmaos/net/srv"
 	"sigmaos/path"
 	"sigmaos/serr"
 	sessclnt "sigmaos/session/clnt"
+	spcodec "sigmaos/session/codec"
 	sessp "sigmaos/session/proto"
 	sp "sigmaos/sigmap"
+	"sigmaos/sigmasrv/memfssrv/memfs"
+	"sigmaos/sigmasrv/memfssrv/memfs/dir"
 	"sigmaos/sigmasrv/memfssrv/sigmapsrv"
-	spcodec "sigmaos/session/codec"
 	spprotosrv "sigmaos/spproto/srv"
 	"sigmaos/test"
+	"sigmaos/util/io/demux"
 	"sigmaos/util/rand"
 )
 
@@ -456,7 +456,7 @@ type TstateSp struct {
 func newTstateSp(t *testing.T) *TstateSp {
 	ts := &TstateSp{}
 	ts.TstateMin = test.NewTstateMin(t)
-	root := dir.NewRootDir(ctx.NewCtxNull(), memfs.NewInode, nil)
+	root := dir.NewRootDir(ctx.NewCtxNull(), memfs.NewInode)
 	ts.srv = sigmapsrv.NewSigmaPSrv(ts.PE, dialproxyclnt.NewDialProxyClnt(ts.PE), root, ts.Addr, nil, spprotosrv.AttachAllowAllToAll)
 	ts.clnt = sessclnt.NewMgr(ts.PE, dialproxyclnt.NewDialProxyClnt(ts.PE))
 	return ts

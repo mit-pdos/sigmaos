@@ -158,10 +158,10 @@ func (ts *tstate) rename(dsrc, src, ddst, dst string) {
 	ts.clunk(d1fid)
 }
 
-func (ts *tstate) setupDir() {
+func (ts *tstate) setupDir(dir string) {
 	s := time.Now()
 	for i := 0; i < D; i++ {
-		fid := ts.create("ggg" + strconv.Itoa(i))
+		fid := ts.create(filepath.Join(dir, "ggg"+strconv.Itoa(i)))
 		ts.clunk(fid)
 	}
 	t := time.Since(s)
@@ -190,7 +190,7 @@ func TestWalkPathClunk(t *testing.T) {
 	ns := []int{N}
 	for _, n := range ns {
 		ts := newTstate(t)
-		ts.setupDir()
+		ts.setupDir("")
 		ts.mkdir("d0")
 		fid := ts.create("d0/fff0")
 		ts.clunk(fid)
@@ -209,7 +209,7 @@ func TestWalkStat(t *testing.T) {
 	ns := []int{N}
 	for _, n := range ns {
 		ts := newTstate(t)
-		ts.setupDir()
+		ts.setupDir("")
 		s := time.Now()
 		for i := 0; i < n+1; i++ {
 			nfid := ts.walkPath("ggg0")
@@ -226,7 +226,7 @@ func TestCreateRemove(t *testing.T) {
 	ns := []int{N}
 	for _, n := range ns {
 		ts := newTstate(t)
-		ts.setupDir()
+		ts.setupDir("")
 		s := time.Now()
 		for i := 0; i < n; i++ {
 			fid := ts.create("fff" + strconv.Itoa(i))
@@ -243,6 +243,8 @@ func TestCreateRenameat(t *testing.T) {
 		ts := newTstate(t)
 		ts.mkdir("d0")
 		ts.mkdir("d1")
+		ts.setupDir("d0")
+		ts.setupDir("d1")
 		s := time.Now()
 		for i := 0; i < n; i++ {
 			fid := ts.create("d0/fff1")

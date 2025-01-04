@@ -292,7 +292,7 @@ func (ps *ProtSrv) Create(args *sp.Tcreate, rets *sp.Rcreate) *sp.Rerror {
 	if err != nil {
 		return sp.NewRerrorSerr(err)
 	}
-	db.DPrintf(db.PROTSRV, "%v: Create %v n %q args %v", f.Ctx().ClntId(), args.Tfid(), f.Name(), args.Name)
+	db.DPrintf(db.PROTSRV, "%v: Create %v n %q args {%v %q %v}", f.Ctx().ClntId(), f.Name(), args.Tfid(), args.Name, args.Tperm())
 
 	qid, nf, err := ps.CreateObj(ps.fm, f.Ctx(), f.Obj(), args.Name, args.Tperm(), args.Tmode(), args.TleaseId(), args.Tfence(), nil)
 	if err != nil {
@@ -344,7 +344,7 @@ func (ps *ProtSrv) WriteF(args *sp.TwriteF, data []byte, rets *sp.Rwrite) *sp.Re
 		return sp.NewRerrorSerr(err)
 	}
 
-	db.DPrintf(db.PROTSRV, "%v: WriteV %v args {%v} path %d\n", f.Ctx().ClntId(), f.Name(), args, f.Obj().Path())
+	db.DPrintf(db.PROTSRV, "%v: WriteV %v args {%v}", f.Ctx().ClntId(), f, args)
 
 	n, err := f.Write(args.Toffset(), data, args.Tfence())
 	if err != nil {
@@ -546,7 +546,7 @@ func (ps *ProtSrv) lookupPathOpen(f *fid.Fid, dir fs.Dir, name string, mode sp.T
 	return lo, nil
 }
 
-// Create file or open file, and write data to it
+// Create file or open file , and write data to it
 func (ps *ProtSrv) PutFile(args *sp.Tputfile, data []byte, rets *sp.Rwrite) *sp.Rerror {
 	db.DPrintf(db.PROTSRV, "%v: PutFile start args {%v}", ps.sid, args)
 	if sp.Tsize(len(data)) > sp.MAXGETSET {
@@ -557,7 +557,10 @@ func (ps *ProtSrv) PutFile(args *sp.Tputfile, data []byte, rets *sp.Rwrite) *sp.
 		return sp.NewRerrorSerr(err)
 	}
 	db.DPrintf(db.PROTSRV, "%v: PutFile o %v args {%v}", f.Ctx().ClntId(), f, args)
-	name := args.Wnames[len(args.Wnames)-1]
+	name := f.Name()
+	if len(args.Wnames) > 0 {
+		name = args.Wnames[len(args.Wnames)-1]
+	}
 	lo := f.Obj()
 	var dlk, flk *lockmap.PathLock
 	dir := f.Parent()

@@ -195,8 +195,9 @@ func lockOrder(d1 fs.FsObj, d2 fs.FsObj) bool {
 	}
 }
 
-func (pss *ProtSrvState) RenameAtObj(old, new *fid.Fid, dold, dnew fs.Dir, oldname, newname string, f sp.Tfence) *serr.Err {
+func (pss *ProtSrvState) RenameAtObj(old, new *fid.Fid, dold, dnew fs.Dir, oldname, newname string, o fs.FsObj, f sp.Tfence) *serr.Err {
 	var d1lk, d2lk *lockmap.PathLock
+
 	if srcfirst := lockOrder(dold, dnew); srcfirst {
 		d1lk = pss.plt.Acquire(old.Ctx(), dold.Path(), lockmap.WLOCK)
 		d2lk = pss.plt.Acquire(new.Ctx(), dnew.Path(), lockmap.WLOCK)
@@ -212,10 +213,9 @@ func (pss *ProtSrvState) RenameAtObj(old, new *fid.Fid, dold, dnew fs.Dir, oldna
 		return err
 	}
 
-	// XXX fixme
-	//if po.Obj().IsLeased() && pss.lm != nil {
-	//pss.lm.Rename(po.Path, newname)
-	//}
+	if o.IsLeased() && pss.lm != nil {
+		pss.lm.Rename(o.Path(), newname)
+	}
 
 	pss.vt.IncVersion(new.Obj().Path())
 	pss.vt.IncVersion(old.Obj().Path())

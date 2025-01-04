@@ -426,8 +426,12 @@ func (ps *ProtSrv) Renameat(args *sp.Trenameat, rets *sp.Rrenameat) *sp.Rerror {
 		if oo.Path() == no.Path() {
 			return sp.NewRerrorSerr(serr.NewErr(serr.TErrInval, newf.Name()))
 		}
-		err := ps.RenameAtObj(oldf, newf, d1, d2, args.OldName, args.NewName, args.Tfence())
+		_, o, lk, _, err := ps.lookupObj(oldf.Ctx(), oldf, path.Tpathname{args.OldName}, lockmap.RLOCK)
+		ps.plt.Release(oldf.Ctx(), lk, lockmap.RLOCK)
 		if err != nil {
+			return sp.NewRerrorSerr(serr.NewErr(serr.TErrNotfound, args.OldName))
+		}
+		if err := ps.RenameAtObj(oldf, newf, d1, d2, args.OldName, args.NewName, o, args.Tfence()); err != nil {
 			return sp.NewRerrorSerr(err)
 		}
 	default:

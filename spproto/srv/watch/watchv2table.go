@@ -3,7 +3,6 @@ package watch
 import (
 	db "sigmaos/debug"
 	sp "sigmaos/sigmap"
-	"sigmaos/spproto/srv/fid"
 	"sigmaos/spproto/srv/lockmap"
 	protsrv_proto "sigmaos/spproto/srv/proto"
 	"sync"
@@ -20,46 +19,46 @@ func NewWatchV2Table() *WatchV2Table {
 	return wt
 }
 
-// Caller should have pl locked
+// Caller should have pl for locked
 func (wt *WatchV2Table) AllocWatch(pl *lockmap.PathLock) *WatchV2 {
 	wt.Lock()
 	defer wt.Unlock()
 
 	p := pl.Path()
 
-	db.DPrintf(db.WATCH, "WatchV2Table AllocWatch '%s'\n", p)
+	db.DPrintf(db.WATCH, "WatchV2Table AllocWatch %v", p)
 
 	ws, ok := wt.watches[p]
 	if !ok {
-		ws = newWatchV2(pl)
+		ws = newWatchV2(p)
 		wt.watches[p] = ws
 	}
 
 	return ws
 }
 
-// Free watch for path. Caller should have pl locked
-func (wt *WatchV2Table) FreeWatch(ws *WatchV2, fid *fid.Fid) bool {
-	db.DPrintf(db.WATCH, "WatchV2Table FreeWatch '%s'\n", ws.pl.Path())
+// Free watch for path. Caller should have pl for ws.dir locked
+func (wt *WatchV2Table) FreeWatch(ws *WatchV2, fid sp.Tfid) bool {
+	db.DPrintf(db.WATCH, "WatchV2Table FreeWatch %v %v", ws, fid)
 	wt.Lock()
 	defer wt.Unlock()
 
 	del := false
 	delete(ws.perFidState, fid)
 
-	ws1, ok := wt.watches[ws.pl.Path()]
+	ws1, ok := wt.watches[ws.dir]
 	if !ok {
 		// Another thread already deleted the entry
-		db.DFatalf("free '%v'\n", ws)
+		db.DFatalf("free ws %v", ws)
 		return del
 	}
 
 	if ws != ws1 {
-		db.DFatalf("free\n")
+		db.DFatalf("free")
 	}
 
 	if len(ws.perFidState) == 0 {
-		delete(wt.watches, ws.pl.Path())
+		delete(wt.watches, ws.dir)
 		del = true
 	}
 	return del

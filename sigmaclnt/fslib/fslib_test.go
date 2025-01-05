@@ -774,7 +774,7 @@ func TestDirWatch(t *testing.T) {
 }
 
 // Concurrently remove & wait
-func xxxTestWaitRemoveConcur(t *testing.T) {
+func TestWaitRemoveConcur(t *testing.T) {
 	const N = 100 // 10_000
 
 	ts, err1 := test.NewTstatePath(t, pathname)
@@ -798,7 +798,7 @@ func xxxTestWaitRemoveConcur(t *testing.T) {
 		go func(i int) {
 			fn := filepath.Join(dn, FILE+strconv.Itoa(i))
 			err = dirreader.WaitRemove(ts.FsLib, fn)
-			assert.True(ts.T, err == nil, "Unexpected WaitRemove error: %v", err)
+			assert.Nil(t, err, "Unexpected remove error: %v", err)
 			done <- i
 		}(i)
 		go func(i int) {
@@ -820,7 +820,7 @@ func xxxTestWaitRemoveConcur(t *testing.T) {
 }
 
 // Concurrently wait, create and remove in dir
-func xxxTestWaitCreateRemoveConcur(t *testing.T) {
+func TestWaitCreateRemoveConcur(t *testing.T) {
 	const N = 500 // 5_000
 	const MS = 2
 

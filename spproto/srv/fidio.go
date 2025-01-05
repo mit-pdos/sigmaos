@@ -51,7 +51,7 @@ func readDir(f *fid.Fid, o fs.FsObj, off sp.Toffset, count sp.Tsize) ([]byte, *s
 	return b, nil
 }
 
-func FidRead(f *fid.Fid, off sp.Toffset, count sp.Tsize, fence sp.Tfence) ([]byte, *serr.Err) {
+func FidRead(fidn sp.Tfid, f *fid.Fid, off sp.Toffset, count sp.Tsize, fence sp.Tfence) ([]byte, *serr.Err) {
 	switch i := f.Obj().(type) {
 	case fs.Dir:
 		return readDir(f, f.Obj(), off, count)
@@ -62,7 +62,7 @@ func FidRead(f *fid.Fid, off sp.Toffset, count sp.Tsize, fence sp.Tfence) ([]byt
 		}
 		return b, nil
 	case *watch.WatchV2:
-		return i.GetEventBuffer(f, int(count))
+		return i.GetEventBuffer(fidn, int(count))
 	default:
 		db.DFatalf("Read: obj %v type %T isn't Dir or File or Watch\n", f.Obj(), f.Obj())
 		return nil, nil

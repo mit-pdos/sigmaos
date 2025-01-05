@@ -9,25 +9,25 @@ import (
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 	"sigmaos/spproto/srv/fid"
-	"sigmaos/spproto/srv/lockmap"
 	protsrv_proto "sigmaos/spproto/srv/proto"
 	"sync"
 
 	"google.golang.org/protobuf/proto"
 )
 
-func NewFidWatch(fm *fid.FidMap, ctx fs.CtxI, watch *WatchV2) *fid.Fid {
-	fid := fm.NewFid("", watch, nil, ctx, 0, sp.Tqid{})
+func NewFidWatch(fm *fid.FidMap, ctx fs.CtxI, fid sp.Tfid, watch *WatchV2) *fid.Fid {
+	f := fm.NewFid("fidWatch", watch, nil, ctx, 0, sp.Tqid{})
 	watch.perFidState[fid] = &PerFidState{
+		fid:          f,
 		events:       nil,
 		remainingMsg: nil,
 		cond:         sync.NewCond(&sync.Mutex{}),
 	}
-
-	return fid
+	return f
 }
 
 type PerFidState struct {
+	fid          *fid.Fid
 	events       []*protsrv_proto.WatchEvent
 	remainingMsg []byte
 	cond         *sync.Cond
@@ -35,16 +35,16 @@ type PerFidState struct {
 
 // implements FsObj so that watches can be implemented as fids
 type WatchV2 struct {
-	pl          *lockmap.PathLock
+	dir         sp.Tpath
 	mu          sync.Mutex
-	perFidState map[*fid.Fid]*PerFidState
+	perFidState map[sp.Tfid]*PerFidState
 }
 
-func newWatchV2(pl *lockmap.PathLock) *WatchV2 {
+func newWatchV2(dir sp.Tpath) *WatchV2 {
 	w := &WatchV2{
-		pl:          pl,
+		dir:         dir,
 		mu:          sync.Mutex{},
-		perFidState: make(map[*fid.Fid]*PerFidState),
+		perFidState: make(map[sp.Tfid]*PerFidState),
 	}
 	return w
 }
@@ -55,7 +55,7 @@ func IsWatch(obj fs.FsObj) bool {
 }
 
 // creates a buffer with as many events as possible, blocking if there are currently no events
-func (wo *WatchV2) GetEventBuffer(fid *fid.Fid, maxLength int) ([]byte, *serr.Err) {
+func (wo *WatchV2) GetEventBuffer(fid sp.Tfid, maxLength int) ([]byte, *serr.Err) {
 	wo.mu.Lock()
 	perFidState := wo.perFidState[fid]
 
@@ -68,13 +68,13 @@ func (wo *WatchV2) GetEventBuffer(fid *fid.Fid, maxLength int) ([]byte, *serr.Er
 		return ret, nil
 	}
 
-	db.DPrintf(db.WATCH, "WatchV2 GetEventBuffer: waiting for %s\n", wo.pl.Path())
+	db.DPrintf(db.WATCH, "WatchV2 GetEventBuffer: waiting for %v\n", wo.dir)
 	for wo.perFidState[fid] != nil && len(wo.perFidState[fid].events) == 0 {
 		wo.mu.Unlock()
 		perFidState.cond.Wait()
 		wo.mu.Lock()
 	}
-	db.DPrintf(db.WATCH, "WatchV2 GetEventBuffer: Finished waiting for %s\n", wo.pl.Path())
+	db.DPrintf(db.WATCH, "WatchV2 GetEventBuffer: Finished waiting for %s\n", wo.dir)
 
 	if wo.perFidState[fid] != perFidState {
 		db.DPrintf(db.WATCH, "WatchV2 GetEventBuffer: perFidState changed after watching\n")
@@ -87,7 +87,7 @@ func (wo *WatchV2) GetEventBuffer(fid *fid.Fid, maxLength int) ([]byte, *serr.Er
 	}
 	wo.mu.Unlock()
 
-	db.DPrintf(db.WATCH, "WatchV2 GetEventBuffer: %d events for %s\n", len(perFidState.events), wo.pl.Path())
+	db.DPrintf(db.WATCH, "WatchV2 GetEventBuffer: %d events for %s\n", len(perFidState.events), wo.dir)
 
 	msg, err := proto.Marshal(&protsrv_proto.WatchEventList{
 		Events: perFidState.events,
@@ -116,8 +116,12 @@ func (wo *WatchV2) GetEventBuffer(fid *fid.Fid, maxLength int) ([]byte, *serr.Er
 	return fullMsg[:sendSize], nil
 }
 
+func (wo *WatchV2) Dir() sp.Tpath {
+	return wo.dir
+}
+
 func (wo *WatchV2) String() string {
-	return wo.pl.Path().String()
+	return wo.dir.String()
 }
 
 func (wo *WatchV2) Stat(ctx fs.CtxI) (*sp.Tstat, *serr.Err) {
@@ -140,26 +144,10 @@ func (wo *WatchV2) Perm() sp.Tperm {
 	return ninep.DMREAD
 }
 
-func (wo *WatchV2) SetParent(dir fs.Dir) {
-
-}
-
 func (wo *WatchV2) Unlink() {
 
 }
 
-func (wo *WatchV2) Parent() fs.Dir {
-	return nil
-}
-
 func (wo *WatchV2) IsLeased() bool {
 	return false
-}
-
-func (w *WatchV2) LockPl() {
-	w.pl.Lock()
-}
-
-func (w *WatchV2) UnlockPl() {
-	w.pl.Unlock()
 }

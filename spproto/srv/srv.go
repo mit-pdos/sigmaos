@@ -225,9 +225,9 @@ func (ps *ProtSrv) clunk(fid sp.Tfid) *sp.Rerror {
 
 	watch, ok := f.Obj().(*watch.WatchV2)
 	if ok {
-		watch.LockPl()
-		ps.wtv2.FreeWatch(watch, f)
-		watch.UnlockPl()
+		pl := ps.plt.Acquire(f.Ctx(), watch.Dir(), lockmap.WLOCK)
+		defer ps.plt.Release(f.Ctx(), pl, lockmap.WLOCK)
+		ps.wtv2.FreeWatch(watch, fid)
 	}
 
 	ps.fm.Free(f)
@@ -302,9 +302,9 @@ func (ps *ProtSrv) WatchV2(args *sp.Twatchv2, rets *sp.Rwatchv2) *sp.Rerror {
 	if err != nil {
 		return sp.NewRerrorSerr(err)
 	}
-	p := dirf.Obj().Path()
+	p := dirf.Path()
 
-	db.DPrintf(db.PROTSRV, "%v: Watch %v v %v %v", dirf.Ctx().ClntId(), p, dirf.Qid(), args)
+	db.DPrintf(db.PROTSRV, "%v: Watchv2 %v %q v %v %v", dirf.Ctx().ClntId(), p, dirf.Name(), dirf.Qid(), args)
 
 	if !dirf.Obj().Perm().IsDir() {
 		return sp.NewRerrorSerr(serr.NewErr(serr.TErrNotDir, dirf.Name()))
@@ -316,7 +316,7 @@ func (ps *ProtSrv) WatchV2(args *sp.Twatchv2, rets *sp.Rwatchv2) *sp.Rerror {
 	defer ps.plt.Release(dirf.Ctx(), pl, lockmap.WLOCK)
 
 	w := ps.wtv2.AllocWatch(pl)
-	fid := watch.NewFidWatch(ps.fm, dirf.Ctx(), w)
+	fid := watch.NewFidWatch(ps.fm, dirf.Ctx(), args.Twatchfid(), w)
 
 	err = ps.fm.Insert(args.Twatchfid(), fid)
 	if err != nil {
@@ -358,7 +358,7 @@ func (ps *ProtSrv) ReadF(args *sp.TreadF, rets *sp.Rread) ([]byte, *sp.Rerror) {
 		defer ps.plt.Release(f.Ctx(), flk, lockmap.RLOCK)
 	}
 
-	data, err := FidRead(f, args.Toffset(), args.Tcount(), args.Tfence())
+	data, err := FidRead(args.Tfid(), f, args.Toffset(), args.Tcount(), args.Tfence())
 	if err != nil {
 		return nil, sp.NewRerrorSerr(err)
 	}

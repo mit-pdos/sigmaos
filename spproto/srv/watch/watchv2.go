@@ -187,7 +187,7 @@ func (perFidState *PerFidState) read(maxLength int) ([]byte, *serr.Err) {
 		}
 	}
 
-	db.DPrintf(db.WATCH, "WatchV2 GetEventBuffer: watcher %fid %d events for %v", perFidState.fid, len(perFidState.events), perFidState.dir)
+	db.DPrintf(db.WATCH, "WatchV2 GetEventBuffer: watcher %v %d events for %v", perFidState.fid, len(perFidState.events), perFidState.dir)
 
 	msg, err := proto.Marshal(&protsrv_proto.WatchEventList{
 		Events: perFidState.events,

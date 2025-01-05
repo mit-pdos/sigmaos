@@ -227,6 +227,7 @@ func (ps *ProtSrv) clunk(fid sp.Tfid) *sp.Rerror {
 	if ok {
 		pl := ps.plt.Acquire(f.Ctx(), watch.Dir(), lockmap.WLOCK)
 		defer ps.plt.Release(f.Ctx(), pl, lockmap.WLOCK)
+
 		ps.wtv2.FreeWatch(watch, fid)
 	}
 
@@ -315,7 +316,7 @@ func (ps *ProtSrv) WatchV2(args *sp.Twatchv2, rets *sp.Rwatchv2) *sp.Rerror {
 	pl := ps.plt.Acquire(dirf.Ctx(), p, lockmap.WLOCK)
 	defer ps.plt.Release(dirf.Ctx(), pl, lockmap.WLOCK)
 
-	w := ps.wtv2.AllocWatch(pl)
+	w := ps.wtv2.AllocWatch(p)
 	fid := watch.NewFidWatch(ps.fm, dirf.Ctx(), args.Twatchfid(), w)
 
 	err = ps.fm.Insert(args.Twatchfid(), fid)

@@ -19,49 +19,31 @@ func NewWatchV2Table() *WatchV2Table {
 	return wt
 }
 
-// Caller should have pl for locked
-func (wt *WatchV2Table) AllocWatch(pl *lockmap.PathLock) *WatchV2 {
+// Allocate watch for dir. Caller should have acquire pathlock for dir
+func (wt *WatchV2Table) AllocWatch(dir sp.Tpath) *WatchV2 {
 	wt.Lock()
 	defer wt.Unlock()
 
-	p := pl.Path()
+	db.DPrintf(db.WATCH, "WatchV2Table AllocWatch %v", dir)
 
-	db.DPrintf(db.WATCH, "WatchV2Table AllocWatch %v", p)
-
-	ws, ok := wt.watches[p]
+	ws, ok := wt.watches[dir]
 	if !ok {
-		ws = newWatchV2(p)
-		wt.watches[p] = ws
+		ws = newWatchV2(dir)
+		wt.watches[dir] = ws
 	}
 
 	return ws
 }
 
-// Free watch for path. Caller should have pl for ws.dir locked
-func (wt *WatchV2Table) FreeWatch(ws *WatchV2, fid sp.Tfid) bool {
-	db.DPrintf(db.WATCH, "WatchV2Table FreeWatch %v %v", ws, fid)
-	wt.Lock()
-	defer wt.Unlock()
-
-	del := false
-	delete(ws.perFidState, fid)
-
-	ws1, ok := wt.watches[ws.dir]
-	if !ok {
-		// Another thread already deleted the entry
-		db.DFatalf("free ws %v", ws)
-		return del
-	}
-
-	if ws != ws1 {
-		db.DFatalf("free")
-	}
-
-	if len(ws.perFidState) == 0 {
+// Close fid and free watch for ws.dir, if no more watchers.  Caller
+// should have pl for ws.dir locked
+func (wt *WatchV2Table) FreeWatch(ws *WatchV2, fid sp.Tfid) {
+	if ws.closeFid(fid) {
+		db.DPrintf(db.WATCH, "WatchV2Table FreeWatch %v %v", ws, fid)
+		wt.Lock()
+		defer wt.Unlock()
 		delete(wt.watches, ws.dir)
-		del = true
 	}
-	return del
 }
 
 // Caller should have pl locked

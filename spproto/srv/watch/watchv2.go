@@ -27,6 +27,7 @@ type PerFidState struct {
 	events       []*protsrv_proto.WatchEvent
 	remainingMsg []byte
 	cond         *sync.Cond
+	closed       bool
 }
 
 // implements FsObj so that watches can be implemented as fids
@@ -50,11 +51,12 @@ func IsWatch(obj fs.FsObj) bool {
 	return ok
 }
 
-func (wo *WatchV2) lookupFidState(fid sp.Tfid) *PerFidState {
+func (wo *WatchV2) lookupFidState(fid sp.Tfid) (*PerFidState, bool) {
 	wo.mu.Lock()
 	defer wo.mu.Unlock()
 
-	return wo.perFidState[fid]
+	f, ok := wo.perFidState[fid]
+	return f, ok
 }
 
 func (wo *WatchV2) newWatcher(fidn sp.Tfid, f *fid.Fid) {
@@ -81,10 +83,29 @@ func (wo *WatchV2) addEvent(event *protsrv_proto.WatchEvent) {
 	}
 }
 
-// creates a buffer with as many events as possible, blocking if there are currently no events
 func (wo *WatchV2) GetEventBuffer(fid sp.Tfid, maxLength int) ([]byte, *serr.Err) {
-	perFidState := wo.lookupFidState(fid)
+	perFidState, ok := wo.lookupFidState(fid)
+	if !ok {
+		db.DPrintf(db.ERROR, "GetEvenBuffer: unknown %v for watching dir %v", fid, wo.dir)
+	}
 	return perFidState.read(maxLength)
+}
+
+func (wo *WatchV2) closeFid(fid sp.Tfid) bool {
+	perFidState, ok := wo.lookupFidState(fid)
+	if !ok {
+		db.DPrintf(db.ERROR, "closeFid: unknown %v for watching dir %v", fid, wo.dir)
+	}
+	perFidState.close()
+
+	wo.mu.Lock()
+	defer wo.mu.Unlock()
+
+	delete(wo.perFidState, fid)
+	if len(wo.perFidState) == 0 {
+		return true
+	}
+	return false
 }
 
 func (wo *WatchV2) Dir() sp.Tpath {
@@ -123,6 +144,14 @@ func (wo *WatchV2) IsLeased() bool {
 	return false
 }
 
+func (perFidState *PerFidState) close() {
+	perFidState.cond.L.Lock()
+	defer perFidState.cond.L.Unlock()
+
+	perFidState.closed = true
+	perFidState.cond.Broadcast()
+}
+
 func (perFidState *PerFidState) addEvent(event *protsrv_proto.WatchEvent) {
 	perFidState.cond.L.Lock()
 	defer perFidState.cond.L.Unlock()
@@ -131,9 +160,11 @@ func (perFidState *PerFidState) addEvent(event *protsrv_proto.WatchEvent) {
 	perFidState.cond.Broadcast()
 }
 
+// read as many events as possible, blocking if there are currently no events
 func (perFidState *PerFidState) read(maxLength int) ([]byte, *serr.Err) {
 	perFidState.cond.L.Lock()
 	defer perFidState.cond.L.Unlock()
+
 	if len(perFidState.remainingMsg) > 0 {
 		sendSize := min(maxLength, len(perFidState.remainingMsg))
 		ret := perFidState.remainingMsg[:sendSize]
@@ -141,19 +172,18 @@ func (perFidState *PerFidState) read(maxLength int) ([]byte, *serr.Err) {
 		return ret, nil
 	}
 
-	db.DPrintf(db.WATCH, "WatchV2 GetEventBuffer: waiting for %v", perFidState.dir)
+	if perFidState.closed {
+		return nil, nil
+	}
+
+	db.DPrintf(db.WATCH, "WatchV2 GetEventBuffer: %v waiting for %v", perFidState.dir)
 	for len(perFidState.events) == 0 {
 		perFidState.cond.Wait()
+		if perFidState.closed {
+			db.DPrintf(db.WATCH, "WatchV2 GetEventBuffer: watch fid %v closed for %v", perFidState.dir)
+			return nil, nil
+		}
 	}
-	db.DPrintf(db.WATCH, "WatchV2 GetEventBuffer: Finished waiting for %v", perFidState.dir)
-
-	//if wo.perFidState[fid] != perFidState {
-	//	db.DPrintf(db.WATCH, "WatchV2 GetEventBuffer: perFidState changed after watching\n")
-	//if wo.perFidState[fid] == nil {
-	//		return nil, serr.NewErr(serr.TErrClosed, "Watch has been closed")
-	//	}
-	//	db.DFatalf("perFidState changed unexpectedly\n")
-	//}
 
 	db.DPrintf(db.WATCH, "WatchV2 GetEventBuffer: %d events for %v", len(perFidState.events), perFidState.dir)
 

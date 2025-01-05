@@ -3,8 +3,8 @@ package dirreader
 import (
 	"path/filepath"
 	db "sigmaos/debug"
-	"sigmaos/fslib"
 	"sigmaos/proc"
+	"sigmaos/sigmaclnt/fslib"
 	"strconv"
 )
 

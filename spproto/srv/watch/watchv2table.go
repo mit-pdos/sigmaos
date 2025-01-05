@@ -2,9 +2,9 @@ package watch
 
 import (
 	db "sigmaos/debug"
-	"sigmaos/protsrv/fid"
-	"sigmaos/protsrv/lockmap"
-	protsrv_proto "sigmaos/protsrv/proto"
+	"sigmaos/spproto/srv/fid"
+	"sigmaos/spproto/srv/lockmap"
+	protsrv_proto "sigmaos/spproto/srv/proto"
 	"sync"
 )
 

@@ -11,11 +11,11 @@ import (
 	"sync"
 
 	db "sigmaos/debug"
-	"sigmaos/fslib"
 	"sigmaos/serr"
+	"sigmaos/sigmaclnt/fslib"
 	sp "sigmaos/sigmap"
 
-	protsrv_proto "sigmaos/protsrv/proto"
+	protsrv_proto "sigmaos/spproto/srv/proto"
 
 	"google.golang.org/protobuf/proto"
 )

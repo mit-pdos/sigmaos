@@ -4,8 +4,8 @@ import (
 	"os"
 
 	db "sigmaos/debug"
-	drtest "sigmaos/fslib/dirreader/test"
 	"sigmaos/proc"
+	drtest "sigmaos/sigmaclnt/fslib/dirreader/test"
 	"sigmaos/util/perf"
 )
 

@@ -2,16 +2,15 @@ package dirreader
 
 import (
 	"path/filepath"
+	db "sigmaos/debug"
+	"sigmaos/serr"
+	"sigmaos/sigmaclnt/fslib"
+	sp "sigmaos/sigmap"
 	"strings"
 	"sync"
-
-	db "sigmaos/debug"
-	"sigmaos/fslib"
-	"sigmaos/serr"
-	sp "sigmaos/sigmap"
 )
 
-type Fwatch func([]*sp.Stat) bool
+type Fwatch func([]*sp.Tstat) bool
 
 // Watch for new entries in a directory. Procs may be
 // removing/creating files concurrently from the directory, which may
@@ -73,7 +72,7 @@ func (dr *DirReaderV1) readDirWatch(watch Fwatch) (bool, error) {
 
 func (dr *DirReaderV1) WaitRemove(file string) error {
 	db.DPrintf(db.WATCH, "WaitRemove: file %v\n", file)
-	_, err := dr.readDirWatch(func(sts []*sp.Stat) bool {
+	_, err := dr.readDirWatch(func(sts []*sp.Tstat) bool {
 		db.DPrintf(db.WATCH, "WaitRemove %v %v\n", sp.Names(sts), file)
 		for _, st := range sts {
 			if st.Name == file {
@@ -87,7 +86,7 @@ func (dr *DirReaderV1) WaitRemove(file string) error {
 
 func (dr *DirReaderV1) WaitCreate(file string) error {
 	db.DPrintf(db.WATCH, "WaitCreate: file %v\n", file)
-	_, err := dr.readDirWatch(func(sts []*sp.Stat) bool {
+	_, err := dr.readDirWatch(func(sts []*sp.Tstat) bool {
 		db.DPrintf(db.WATCH, "WaitCreate %v %v\n", sp.Names(sts), file)
 		for _, st := range sts {
 			if st.Name == file {
@@ -113,7 +112,7 @@ func (dr *DirReaderV1) GetDir() ([]string, error) {
 
 func (dr *DirReaderV1) WaitNEntries(n int) error {
 	db.DPrintf(db.WATCH, "WaitNEntries: pn=%s n=%v\n", dr.pn, n)
-	_, err := dr.readDirWatch(func(sts []*sp.Stat) bool {
+	_, err := dr.readDirWatch(func(sts []*sp.Tstat) bool {
 		for _, st := range sts {
 			if !dr.ents[st.Name] {
 				dr.ents[st.Name] = true
@@ -129,7 +128,7 @@ func (dr *DirReaderV1) WaitNEntries(n int) error {
 }
 
 func (dr *DirReaderV1) WaitEmpty() error {
-	_, err := dr.readDirWatch(func(sts []*sp.Stat) bool {
+	_, err := dr.readDirWatch(func(sts []*sp.Tstat) bool {
 		return len(sts) > 0
 	})
 	if err != nil {
@@ -141,7 +140,7 @@ func (dr *DirReaderV1) WaitEmpty() error {
 func (dr *DirReaderV1) WatchEntriesChangedRelative(present []string, prefixFilters []string) ([]string, bool, error) {
 	db.DPrintf(db.WATCH, "WatchEntriesChangedRelative: %v %v\n", present, prefixFilters)
 	newents := make([]string, 0)
-	ok, err := dr.readDirWatch(func(sts []*sp.Stat) bool {
+	ok, err := dr.readDirWatch(func(sts []*sp.Tstat) bool {
 		unchanged := true
 		for i, st := range sts {
 			if len(prefixFilters) > 0 {
@@ -176,7 +175,7 @@ func (dr *DirReaderV1) WatchEntriesChangedRelative(present []string, prefixFilte
 
 func (dr *DirReaderV1) WatchEntriesChanged() (map[string]bool, error) {
 	ents := make(map[string]bool)
-	_, err := dr.readDirWatch(func(sts []*sp.Stat) bool {
+	_, err := dr.readDirWatch(func(sts []*sp.Tstat) bool {
 		unchanged := true
 		stsMap := make(map[string]bool)
 		for _, st := range sts {
@@ -218,7 +217,7 @@ func (dr *DirReaderV1) GetEntriesAndRename(dst string) ([]string, error) {
 func (dr *DirReaderV1) WatchNewEntriesAndRename(dst string) ([]string, error) {
 	var r error
 	var newents []string
-	_, err := dr.readDirWatch(func(sts []*sp.Stat) bool {
+	_, err := dr.readDirWatch(func(sts []*sp.Tstat) bool {
 		db.DPrintf(db.MR, "readDirWatch: %v\n", sts)
 		newents, r = dr.rename(sts, dst)
 		if r != nil || len(newents) > 0 {
@@ -237,7 +236,7 @@ func (dr *DirReaderV1) WatchNewEntriesAndRename(dst string) ([]string, error) {
 }
 
 // Filter out duplicates and rename
-func (dr *DirReaderV1) rename(sts []*sp.Stat, dst string) ([]string, error) {
+func (dr *DirReaderV1) rename(sts []*sp.Tstat, dst string) ([]string, error) {
 	var r error
 	newents := make([]string, 0)
 	for _, st := range sts {

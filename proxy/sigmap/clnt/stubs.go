@@ -253,8 +253,8 @@ func (scc *SPProxyClnt) DirWatch(fd int) error {
 }
 
 func (scc *SPProxyClnt) DirWatchV2(fd int) (int, error) {
-	req := spproto.SigmaReadRequest{Fd: uint32(fd)}
-	rep := spproto.SigmaFdReply{}
+	req := spproto.SigmaReadReq{Fd: uint32(fd)}
+	rep := spproto.SigmaFdRep{}
 	fd, err := scc.rpcFd("SPProxySrvAPI.DirWatchV2", &req, &rep)
 	db.DPrintf(db.SIGMACLNTCLNT, "DirWatchV2 %v %v %v", req, rep, err)
 	return fd, err

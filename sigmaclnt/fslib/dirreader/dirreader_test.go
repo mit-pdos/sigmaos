@@ -14,8 +14,8 @@ import (
 	"testing"
 	"time"
 
-	"sigmaos/fslib/dirreader"
-	drtest "sigmaos/fslib/dirreader/test"
+	"sigmaos/sigmaclnt/fslib/dirreader"
+	drtest "sigmaos/sigmaclnt/fslib/dirreader/test"
 	sp "sigmaos/sigmap"
 
 	"github.com/mitchellh/mapstructure"

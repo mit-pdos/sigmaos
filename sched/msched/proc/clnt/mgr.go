@@ -12,6 +12,7 @@ import (
 	sprpcclnt "sigmaos/rpc/clnt/sigmap"
 	"sigmaos/serr"
 	"sigmaos/sigmaclnt/fslib"
+	"sigmaos/sigmaclnt/fslib/dirreader"
 	sp "sigmaos/sigmap"
 )
 
@@ -45,7 +46,7 @@ func NewProcdMgr(fsl *fslib.FsLib, kernelId string) *ProcdMgr {
 		// wait for the kernel to start up and advertise itself in a separate
 		// goroutine, and then fill the procd pool
 		for {
-			err := pdm.fsl.WaitCreate(filepath.Join(sp.BOOT, pdm.kernelId))
+			err := dirreader.WaitCreate(pdm.fsl, filepath.Join(sp.BOOT, pdm.kernelId))
 			// Retry if unreachable
 			if serr.IsErrCode(err, serr.TErrUnreachable) {
 				db.DPrintf(db.PROCDMGR, "Boot dir unreachable")

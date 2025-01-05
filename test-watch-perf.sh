@@ -22,7 +22,7 @@ retry_until_success() {
   while [ $retry_count -lt $max_retries ]; do
     ./stop.sh
     ./fsetcd-wipe.sh
-    go test sigmaos/fslib/dirreader -v --start --run "TestPerf" --timeout 15m
+    go test sigmaos/sigmaclnt/fslib/dirreader -v --start --run "TestPerf" --timeout 15m
     if [ $? -eq 0 ]; then
       echo "Test succeeded after $retry_count retries."
       return 0

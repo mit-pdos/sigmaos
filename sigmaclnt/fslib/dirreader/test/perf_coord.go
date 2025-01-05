@@ -4,9 +4,9 @@ import (
 	"bufio"
 	"fmt"
 	"path/filepath"
-	"sigmaos/fslib/dirreader"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
+	"sigmaos/sigmaclnt/fslib/dirreader"
 	"strconv"
 	"time"
 

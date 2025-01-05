@@ -85,20 +85,9 @@ func (wt *WatchV2Table) addWatchEvent(pl *lockmap.PathLock, event *protsrv_proto
 	defer wt.Unlock()
 
 	p := pl.Path()
-
 	ws, ok := wt.watches[p]
 	if !ok {
 		return
 	}
-
-	db.DPrintf(db.WATCH, "WatchV2Table AddWatchEvent '%s' '%v' %v\n", p, event, ws.perFidState)
-
-	for _, perFidState := range ws.perFidState {
-		perFidState.cond.L.Lock()
-
-		perFidState.events = append(perFidState.events, event)
-		perFidState.cond.Broadcast()
-
-		perFidState.cond.L.Unlock()
-	}
+	ws.addEvent(event)
 }

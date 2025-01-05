@@ -17,17 +17,13 @@ import (
 
 func NewFidWatch(fm *fid.FidMap, ctx fs.CtxI, fid sp.Tfid, watch *WatchV2) *fid.Fid {
 	f := fm.NewFid("fidWatch", watch, nil, ctx, 0, sp.Tqid{})
-	watch.perFidState[fid] = &PerFidState{
-		fid:          f,
-		events:       nil,
-		remainingMsg: nil,
-		cond:         sync.NewCond(&sync.Mutex{}),
-	}
+	watch.newWatcher(fid, f)
 	return f
 }
 
 type PerFidState struct {
 	fid          *fid.Fid
+	dir          sp.Tpath
 	events       []*protsrv_proto.WatchEvent
 	remainingMsg []byte
 	cond         *sync.Cond
@@ -35,9 +31,9 @@ type PerFidState struct {
 
 // implements FsObj so that watches can be implemented as fids
 type WatchV2 struct {
-	dir         sp.Tpath
+	dir         sp.Tpath // directory being watched
 	mu          sync.Mutex
-	perFidState map[sp.Tfid]*PerFidState
+	perFidState map[sp.Tfid]*PerFidState // each watcher has an watch fid
 }
 
 func newWatchV2(dir sp.Tpath) *WatchV2 {
@@ -54,66 +50,41 @@ func IsWatch(obj fs.FsObj) bool {
 	return ok
 }
 
+func (wo *WatchV2) lookupFidState(fid sp.Tfid) *PerFidState {
+	wo.mu.Lock()
+	defer wo.mu.Unlock()
+
+	return wo.perFidState[fid]
+}
+
+func (wo *WatchV2) newWatcher(fidn sp.Tfid, f *fid.Fid) {
+	wo.mu.Lock()
+	defer wo.mu.Unlock()
+
+	wo.perFidState[fidn] = &PerFidState{
+		fid:          f,
+		dir:          wo.dir,
+		events:       nil,
+		remainingMsg: nil,
+		cond:         sync.NewCond(&sync.Mutex{}),
+	}
+}
+
+func (wo *WatchV2) addEvent(event *protsrv_proto.WatchEvent) {
+	wo.mu.Lock()
+	defer wo.mu.Unlock()
+
+	db.DPrintf(db.WATCH, "%v: AddWatchEvent %v", wo, event)
+
+	for _, perFidState := range wo.perFidState {
+		perFidState.addEvent(event)
+	}
+}
+
 // creates a buffer with as many events as possible, blocking if there are currently no events
 func (wo *WatchV2) GetEventBuffer(fid sp.Tfid, maxLength int) ([]byte, *serr.Err) {
-	wo.mu.Lock()
-	perFidState := wo.perFidState[fid]
-
-	perFidState.cond.L.Lock()
-	defer perFidState.cond.L.Unlock()
-	if len(perFidState.remainingMsg) > 0 {
-		sendSize := min(maxLength, len(perFidState.remainingMsg))
-		ret := perFidState.remainingMsg[:sendSize]
-		perFidState.remainingMsg = perFidState.remainingMsg[sendSize:]
-		return ret, nil
-	}
-
-	db.DPrintf(db.WATCH, "WatchV2 GetEventBuffer: waiting for %v\n", wo.dir)
-	for wo.perFidState[fid] != nil && len(wo.perFidState[fid].events) == 0 {
-		wo.mu.Unlock()
-		perFidState.cond.Wait()
-		wo.mu.Lock()
-	}
-	db.DPrintf(db.WATCH, "WatchV2 GetEventBuffer: Finished waiting for %s\n", wo.dir)
-
-	if wo.perFidState[fid] != perFidState {
-		db.DPrintf(db.WATCH, "WatchV2 GetEventBuffer: perFidState changed after watching\n")
-		if wo.perFidState[fid] == nil {
-			wo.mu.Unlock()
-			return nil, serr.NewErr(serr.TErrClosed, "Watch has been closed")
-		}
-		wo.mu.Unlock()
-		db.DFatalf("perFidState changed unexpectedly\n")
-	}
-	wo.mu.Unlock()
-
-	db.DPrintf(db.WATCH, "WatchV2 GetEventBuffer: %d events for %s\n", len(perFidState.events), wo.dir)
-
-	msg, err := proto.Marshal(&protsrv_proto.WatchEventList{
-		Events: perFidState.events,
-	})
-
-	if err != nil {
-		db.DFatalf("Error marshalling events: %v\n", err)
-	}
-
-	perFidState.events = nil
-
-	sz := uint32(len(msg))
-	var buf bytes.Buffer
-	err = binary.Write(&buf, binary.LittleEndian, sz)
-	if err != nil {
-		db.DFatalf("Error writing size: %v\n", err)
-	}
-	_, err = buf.Write(msg)
-	if err != nil {
-		db.DFatalf("Error writing message: %v\n", err)
-	}
-
-	fullMsg := buf.Bytes()
-	sendSize := min(maxLength, len(fullMsg))
-	perFidState.remainingMsg = fullMsg[sendSize:]
-	return fullMsg[:sendSize], nil
+	perFidState := wo.lookupFidState(fid)
+	return perFidState.read(maxLength)
 }
 
 func (wo *WatchV2) Dir() sp.Tpath {
@@ -150,4 +121,65 @@ func (wo *WatchV2) Unlink() {
 
 func (wo *WatchV2) IsLeased() bool {
 	return false
+}
+
+func (perFidState *PerFidState) addEvent(event *protsrv_proto.WatchEvent) {
+	perFidState.cond.L.Lock()
+	defer perFidState.cond.L.Unlock()
+
+	perFidState.events = append(perFidState.events, event)
+	perFidState.cond.Broadcast()
+}
+
+func (perFidState *PerFidState) read(maxLength int) ([]byte, *serr.Err) {
+	perFidState.cond.L.Lock()
+	defer perFidState.cond.L.Unlock()
+	if len(perFidState.remainingMsg) > 0 {
+		sendSize := min(maxLength, len(perFidState.remainingMsg))
+		ret := perFidState.remainingMsg[:sendSize]
+		perFidState.remainingMsg = perFidState.remainingMsg[sendSize:]
+		return ret, nil
+	}
+
+	db.DPrintf(db.WATCH, "WatchV2 GetEventBuffer: waiting for %v", perFidState.dir)
+	for len(perFidState.events) == 0 {
+		perFidState.cond.Wait()
+	}
+	db.DPrintf(db.WATCH, "WatchV2 GetEventBuffer: Finished waiting for %v", perFidState.dir)
+
+	//if wo.perFidState[fid] != perFidState {
+	//	db.DPrintf(db.WATCH, "WatchV2 GetEventBuffer: perFidState changed after watching\n")
+	//if wo.perFidState[fid] == nil {
+	//		return nil, serr.NewErr(serr.TErrClosed, "Watch has been closed")
+	//	}
+	//	db.DFatalf("perFidState changed unexpectedly\n")
+	//}
+
+	db.DPrintf(db.WATCH, "WatchV2 GetEventBuffer: %d events for %v", len(perFidState.events), perFidState.dir)
+
+	msg, err := proto.Marshal(&protsrv_proto.WatchEventList{
+		Events: perFidState.events,
+	})
+
+	if err != nil {
+		db.DFatalf("Error marshalling events: %v\n", err)
+	}
+
+	perFidState.events = nil
+
+	sz := uint32(len(msg))
+	var buf bytes.Buffer
+	err = binary.Write(&buf, binary.LittleEndian, sz)
+	if err != nil {
+		db.DFatalf("Error writing size: %v\n", err)
+	}
+	_, err = buf.Write(msg)
+	if err != nil {
+		db.DFatalf("Error writing message: %v\n", err)
+	}
+
+	fullMsg := buf.Bytes()
+	sendSize := min(maxLength, len(fullMsg))
+	perFidState.remainingMsg = fullMsg[sendSize:]
+	return fullMsg[:sendSize], nil
 }

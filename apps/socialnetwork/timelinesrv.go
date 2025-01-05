@@ -2,19 +2,21 @@ package socialnetwork
 
 import (
 	"fmt"
+	"strconv"
+
 	"gopkg.in/mgo.v2/bson"
-	"sigmaos/apps/socialnetwork/proto"
+
+	"sigmaos/api/fs"
 	"sigmaos/apps/cache"
 	cachegrpclnt "sigmaos/apps/cache/cachegrp/clnt"
+	"sigmaos/apps/socialnetwork/proto"
 	dbg "sigmaos/debug"
-	"sigmaos/fs"
-	mongoclnt "sigmaos/mongo/clnt"
-	"sigmaos/util/perf"
 	"sigmaos/proc"
-	"sigmaos/rpcclnt"
-	"sigmaos/sigmarpcchan"
+	mongoclnt "sigmaos/proxy/mongo/clnt"
+	rpcclnt "sigmaos/rpc/clnt"
+	sprpcclnt "sigmaos/rpc/clnt/sigmap"
 	"sigmaos/sigmasrv"
-	"strconv"
+	"sigmaos/util/perf"
 )
 
 // YH:
@@ -45,18 +47,18 @@ func RunTimelineSrv(jobname string) error {
 	}
 	mongoc.EnsureIndex(SN_DB, TIMELINE_COL, []string{"userid"})
 	tlsrv.mongoc = mongoc
-	fsls, err := NewFsLibs(SOCIAL_NETWORK_TIMELINE, ssrv.MemFs.SigmaClnt().GetDialProxyClnt())
+	fsl, err := NewFsLib(SOCIAL_NETWORK_TIMELINE, ssrv.MemFs.SigmaClnt().GetDialProxyClnt())
 	if err != nil {
 		return err
 	}
-	tlsrv.cachec = cachegrpclnt.NewCachedSvcClnt(fsls, jobname)
-	rpcc, err := sigmarpcchan.NewSigmaRPCClnt(fsls, SOCIAL_NETWORK_POST)
+	tlsrv.cachec = cachegrpclnt.NewCachedSvcClnt(fsl, jobname)
+	rpcc, err := sprpcclnt.NewRPCClnt(fsl, SOCIAL_NETWORK_POST)
 	if err != nil {
 		return err
 	}
 	tlsrv.postc = rpcc
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_TIMELINE, "Starting timeline service\n")
-	perf, err := perf.NewPerf(fsls[0].ProcEnv(), perf.SOCIAL_NETWORK_TIMELINE)
+	perf, err := perf.NewPerf(fsl.ProcEnv(), perf.SOCIAL_NETWORK_TIMELINE)
 	if err != nil {
 		dbg.DFatalf("NewPerf err %v\n", err)
 	}
@@ -66,7 +68,7 @@ func RunTimelineSrv(jobname string) error {
 }
 
 func (tlsrv *TimelineSrv) WriteTimeline(
-	ctx fs.CtxI, req proto.WriteTimelineRequest, res *proto.WriteTimelineResponse) error {
+	ctx fs.CtxI, req proto.WriteTimelineReq, res *proto.WriteTimelineRep) error {
 	res.Ok = "No"
 	err := tlsrv.mongoc.Upsert(
 		SN_DB, TIMELINE_COL, bson.M{"userid": req.Userid},
@@ -85,7 +87,7 @@ func (tlsrv *TimelineSrv) WriteTimeline(
 }
 
 func (tlsrv *TimelineSrv) ReadTimeline(
-	ctx fs.CtxI, req proto.ReadTimelineRequest, res *proto.ReadTimelineResponse) error {
+	ctx fs.CtxI, req proto.ReadTimelineReq, res *proto.ReadTimelineRep) error {
 	res.Ok = "No"
 	timeline, err := tlsrv.getUserTimeline(req.Userid)
 	if err != nil {
@@ -107,8 +109,8 @@ func (tlsrv *TimelineSrv) ReadTimeline(
 	for i := start; i < stop; i++ {
 		postids[i-start] = timeline.Postids[nItems-i-1]
 	}
-	readPostReq := proto.ReadPostsRequest{Postids: postids}
-	readPostRes := proto.ReadPostsResponse{}
+	readPostReq := proto.ReadPostsReq{Postids: postids}
+	readPostRes := proto.ReadPostsRep{}
 	if err := tlsrv.postc.RPC("PostSrv.ReadPosts", &readPostReq, &readPostRes); err != nil {
 		return err
 	}

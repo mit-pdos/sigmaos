@@ -25,7 +25,6 @@ type Tmode uint32
 type Taddrs []*Taddr
 
 type TprincipalID string
-type Tsigner string
 type Tplatform string
 
 type TTendpoint uint32

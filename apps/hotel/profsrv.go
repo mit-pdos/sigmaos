@@ -10,15 +10,15 @@ import (
 
 	"github.com/harlow/go-micro-services/data"
 
-	"sigmaos/apps/hotel/proto"
+	"sigmaos/api/fs"
 	"sigmaos/apps/cache"
-	dbclnt "sigmaos/db/clnt"
+	"sigmaos/apps/hotel/proto"
 	db "sigmaos/debug"
-	"sigmaos/fs"
 	"sigmaos/proc"
+	dbclnt "sigmaos/proxy/db/clnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
-	"sigmaos/tracing"
+	"sigmaos/util/tracing"
 )
 
 type ProfSrv struct {
@@ -38,11 +38,11 @@ func RunProfSrv(job string, cache string) error {
 		return err
 	}
 	ps.dbc = dbc
-	fsls, err := NewFsLibs(HOTELPROF, ssrv.MemFs.SigmaClnt().GetDialProxyClnt())
+	fsl, err := NewFsLib(HOTELPROF, ssrv.MemFs.SigmaClnt().GetDialProxyClnt())
 	if err != nil {
 		return err
 	}
-	cachec, err := NewCacheClnt(cache, fsls, job)
+	cachec, err := NewCacheClnt(cache, fsl, job)
 	if err != nil {
 		return err
 	}
@@ -125,7 +125,7 @@ func (ps *ProfSrv) initDB(profs []*Profile) error {
 	return nil
 }
 
-func (ps *ProfSrv) GetProfiles(ctx fs.CtxI, req proto.ProfRequest, res *proto.ProfResult) error {
+func (ps *ProfSrv) GetProfiles(ctx fs.CtxI, req proto.ProfReq, res *proto.ProfRep) error {
 	var sctx context.Context
 	//	var span trace.Span
 	//	if TRACING {

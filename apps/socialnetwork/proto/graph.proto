@@ -3,46 +3,46 @@ syntax = "proto3";
 option go_package = "sigmaos/apps/socialnetwork/proto";
 
 service GraphService {
-	rpc GetFollowers(GetFollowersRequest) returns (GraphGetResponse);
-	rpc GetFollowees(GetFolloweesRequest) returns (GraphGetResponse);
-	rpc Follow(FollowRequest) returns (GraphUpdateResponse);
-	rpc Unfollow(UnfollowRequest) returns (GraphUpdateResponse);
-	rpc FollowWithUname(FollowWithUnameRequest) returns (GraphUpdateResponse);
-	rpc UnfollowWithUname(UnfollowWithUnameRequest) returns (GraphUpdateResponse);
+	rpc GetFollowers(GetFollowersReq) returns (GraphGetRep);
+	rpc GetFollowees(GetFolloweesReq) returns (GraphGetRep);
+	rpc Follow(FollowReq) returns (GraphUpdateRep);
+	rpc Unfollow(UnfollowReq) returns (GraphUpdateRep);
+	rpc FollowWithUname(FollowWithUnameReq) returns (GraphUpdateRep);
+	rpc UnfollowWithUname(UnfollowWithUnameReq) returns (GraphUpdateRep);
 }
 
-message GetFollowersRequest {
+message GetFollowersReq {
 	int64 followeeid = 1;
 }
 
-message GetFolloweesRequest {
+message GetFolloweesReq {
 	int64 followerid = 1;
 }
 
-message GraphGetResponse {
+message GraphGetRep {
 	string ok = 1;
 	repeated int64 userids = 2;
 }
 
-message FollowRequest { int64 followerid = 1;
+message FollowReq { int64 followerid = 1;
 	int64 followeeid = 2;
 }
 
-message UnfollowRequest {
+message UnfollowReq {
 	int64 followerid = 1;
 	int64 followeeid = 2;
 }
 
-message FollowWithUnameRequest {
+message FollowWithUnameReq {
 	string followeruname = 1;
 	string followeeuname = 2;
 }
 
-message UnfollowWithUnameRequest {
+message UnfollowWithUnameReq {
 	string followeruname = 1;
 	string followeeuname = 2;
 }
 
-message GraphUpdateResponse {
+message GraphUpdateRep {
 	string ok = 1;
 }

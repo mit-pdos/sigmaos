@@ -5,8 +5,6 @@ import (
 	"path/filepath"
 )
 
-type Stat = Tstat
-
 type Tstat struct {
 	*TstatProto
 }
@@ -45,7 +43,7 @@ func (st *Tstat) StatProto() *TstatProto {
 	return st.TstatProto
 }
 
-func (st *Stat) String() string {
+func (st *Tstat) String() string {
 	return fmt.Sprintf("{%v mode=%v atime=%v mtime=%v length=%v name=%v uid=%v gid=%v muid=%v}",
 		st.Tqid(), st.Tmode(), st.Atime, st.Mtime, st.Tlength(), st.Name, st.Uid, st.Gid, st.Muid)
 }

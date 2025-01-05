@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+option go_package = "sigmaos/proxy/db/proto";
+
+service DB {
+  rpc Query(DBReq) returns (DBRep);
+  rpc Exec(DBReq) returns (DBRep);
+}
+
+message DBReq {
+  string cmd = 1;
+}
+
+message DBRep {
+  bytes res = 1;
+}

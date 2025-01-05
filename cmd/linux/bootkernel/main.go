@@ -5,14 +5,14 @@ import (
 	"strconv"
 	"strings"
 
-	"sigmaos/auth"
-	"sigmaos/boot"
+	ini "sigmaos/boot/init"
 	db "sigmaos/debug"
 	"sigmaos/kernel"
 	"sigmaos/namesrv/fsetcd"
-	"sigmaos/netsigma"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
+	"sigmaos/util/auth"
+	iputil "sigmaos/util/ip"
 )
 
 func main() {
@@ -40,7 +40,7 @@ func main() {
 	h := sp.SIGMAHOME
 	p := os.Getenv("PATH")
 	os.Setenv("PATH", p+":"+h+"/bin/kernel:"+h+"/bin/linux:"+h+"/bin/user")
-	localIP, err1 := netsigma.LocalIP()
+	localIP, err1 := iputil.LocalIP()
 	if err1 != nil {
 		db.DFatalf("Error local IP: %v", err1)
 	}
@@ -55,7 +55,7 @@ func main() {
 	secrets := map[string]*sp.SecretProto{"s3": s3secrets}
 	pe := proc.NewBootProcEnv(sp.NewPrincipal(sp.TprincipalID(param.KernelID), sp.ROOTREALM), secrets, etcdMnt, localIP, localIP, param.BuildTag)
 	proc.SetSigmaDebugPid(pe.GetPID().String())
-	if err := boot.BootUp(&param, pe); err != nil {
+	if err := ini.BootUp(&param, pe); err != nil {
 		db.DFatalf("%v: boot %v err %v", os.Args[0], os.Args[1:], err)
 	}
 	os.Exit(0)

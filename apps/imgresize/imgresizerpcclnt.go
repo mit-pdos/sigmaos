@@ -6,9 +6,10 @@ import (
 
 	"sigmaos/apps/imgresize/proto"
 	db "sigmaos/debug"
-	"sigmaos/fslib"
-	"sigmaos/rpcclnt"
-	"sigmaos/sigmarpcchan"
+	rpcclnt "sigmaos/rpc/clnt"
+	sprpcclnt "sigmaos/rpc/clnt/sigmap"
+	"sigmaos/sigmaclnt/fslib"
+	sp "sigmaos/sigmap"
 )
 
 type ImgResizeRPCClnt struct {
@@ -16,7 +17,7 @@ type ImgResizeRPCClnt struct {
 }
 
 func NewImgResizeRPCClnt(fsl *fslib.FsLib, job string) (*ImgResizeRPCClnt, error) {
-	rpcc, err := sigmarpcchan.NewSigmaRPCClnt([]*fslib.FsLib{fsl}, filepath.Join(IMG, job))
+	rpcc, err := sprpcclnt.NewRPCClnt(fsl, filepath.Join(sp.IMG, job))
 	if err != nil {
 		db.DPrintf(db.ERROR, "NewSigmaRPCClnt: %v", err)
 		return nil, err
@@ -27,11 +28,11 @@ func NewImgResizeRPCClnt(fsl *fslib.FsLib, job string) (*ImgResizeRPCClnt, error
 }
 
 func (clnt *ImgResizeRPCClnt) Resize(tname, ipath string) error {
-	arg := proto.ImgResizeRequest{
+	arg := proto.ImgResizeReq{
 		TaskName:  tname,
 		InputPath: ipath,
 	}
-	res := proto.ImgResizeResult{}
+	res := proto.ImgResizeRep{}
 	err := clnt.rpcc.RPC("ImgSrvRPC.Resize", &arg, &res)
 	if err != nil {
 		return err
@@ -43,8 +44,8 @@ func (clnt *ImgResizeRPCClnt) Resize(tname, ipath string) error {
 }
 
 func (clnt *ImgResizeRPCClnt) Status() (int64, error) {
-	arg := proto.StatusRequest{}
-	res := proto.StatusResult{}
+	arg := proto.StatusReq{}
+	res := proto.StatusRep{}
 	err := clnt.rpcc.RPC("ImgSrvRPC.Status", &arg, &res)
 	if err != nil {
 		return 0, err

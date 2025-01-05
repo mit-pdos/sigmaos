@@ -1,14 +1,14 @@
 syntax = "proto3";
 
-import "tracing/proto/tracing.proto";
+import "util/tracing/proto/tracing.proto";
 
 option go_package = "sigmaos/apps/hotel/proto";
 
 service Rate {
-  rpc GetRates(RateRequest) returns (RateResult);
+  rpc GetRates(RateReq) returns (RateRep);
 }
 
-message RateRequest {
+message RateReq {
   repeated string hotelIds = 1;
   string inDate = 2;
   string outDate = 3;
@@ -33,6 +33,6 @@ message RatePlan {
   RoomType roomType = 5;
 }
 
-message RateResult {
+message RateRep {
   repeated RatePlan ratePlans = 1;
 }

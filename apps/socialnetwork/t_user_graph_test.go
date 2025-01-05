@@ -4,14 +4,13 @@ import (
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/mgo.v2/bson"
 	"sigmaos/proc"
+	"testing"
 
 	sn "sigmaos/apps/socialnetwork"
 	"sigmaos/apps/socialnetwork/proto"
-	"sigmaos/fslib"
-	"sigmaos/linuxsched"
-	"sigmaos/sigmarpcchan"
+	sprpcclnt "sigmaos/rpc/clnt/sigmap"
 	"sigmaos/test"
-	"testing"
+	linuxsched "sigmaos/util/linux/sched"
 )
 
 func TestUser(t *testing.T) {
@@ -33,23 +32,23 @@ func TestUser(t *testing.T) {
 
 	// create a RPC client and query
 	tssn.dbu.InitUser()
-	rpcc, err := sigmarpcchan.NewSigmaRPCClnt([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_USER)
+	rpcc, err := sprpcclnt.NewRPCClnt(snCfg.FsLib, sn.SOCIAL_NETWORK_USER)
 	if !assert.Nil(t, err, "Err make rpcclnt: %v", err) {
 		return
 	}
 
 	// check user
-	arg_check := proto.CheckUserRequest{Usernames: []string{"test_user"}}
-	res_check := proto.CheckUserResponse{}
+	arg_check := proto.CheckUserReq{Usernames: []string{"test_user"}}
+	res_check := proto.CheckUserRep{}
 	err = rpcc.RPC("UserSrv.CheckUser", &arg_check, &res_check)
 	assert.Nil(t, err)
 	assert.Equal(t, "No", res_check.Ok)
 	assert.Equal(t, int64(-1), res_check.Userids[0])
 
 	// register user
-	arg_reg := proto.RegisterUserRequest{
+	arg_reg := proto.RegisterUserReq{
 		Firstname: "Alice", Lastname: "Test", Username: "user_0", Password: "xxyyzz"}
-	res_reg := proto.UserResponse{}
+	res_reg := proto.UserRep{}
 	err = rpcc.RPC("UserSrv.RegisterUser", &arg_reg, &res_reg)
 	assert.Nil(t, err)
 	assert.Equal(t, "Username user_0 already exist", res_reg.Ok)
@@ -70,8 +69,8 @@ func TestUser(t *testing.T) {
 	assert.Equal(t, int64(2), res_check.Userids[2])
 
 	// new user login
-	arg_login := proto.LoginRequest{Username: "test_user", Password: "xxyy"}
-	res_login := proto.UserResponse{}
+	arg_login := proto.LoginReq{Username: "test_user", Password: "xxyy"}
+	res_login := proto.UserRep{}
 	err = rpcc.RPC("UserSrv.Login", &arg_login, &res_login)
 	assert.Nil(t, err)
 	assert.Equal(t, "Login Failure.", res_login.Ok)
@@ -113,21 +112,21 @@ func TestGraph(t *testing.T) {
 
 	// create a RPC client and query
 	tssn.dbu.InitGraph()
-	rpcc, err := sigmarpcchan.NewSigmaRPCClnt([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_GRAPH)
+	rpcc, err := sprpcclnt.NewRPCClnt(snCfg.FsLib, sn.SOCIAL_NETWORK_GRAPH)
 	if !assert.Nil(t, err, "Err make rpcclnt: %v", err) {
 		return
 	}
 
 	// get follower and followee list
-	arg_get_fler := proto.GetFollowersRequest{}
+	arg_get_fler := proto.GetFollowersReq{}
 	arg_get_fler.Followeeid = 0
-	res_get := proto.GraphGetResponse{}
+	res_get := proto.GraphGetRep{}
 	err = rpcc.RPC("GraphSrv.GetFollowers", &arg_get_fler, &res_get)
 	assert.Nil(t, err)
 	assert.Equal(t, "OK", res_get.Ok)
 	assert.Equal(t, 0, len(res_get.Userids)) // user 0 has no follower
 
-	arg_get_flee := proto.GetFolloweesRequest{}
+	arg_get_flee := proto.GetFolloweesReq{}
 	arg_get_flee.Followerid = 1
 	err = rpcc.RPC("GraphSrv.GetFollowees", &arg_get_flee, &res_get)
 	assert.Nil(t, err)
@@ -136,10 +135,10 @@ func TestGraph(t *testing.T) {
 	assert.Equal(t, int64(2), res_get.Userids[0]) // user 1 has one followee user 2
 
 	// Follow
-	arg_follow := proto.FollowRequest{}
+	arg_follow := proto.FollowReq{}
 	arg_follow.Followerid = 1
 	arg_follow.Followeeid = 0
-	res_update := proto.GraphUpdateResponse{}
+	res_update := proto.GraphUpdateRep{}
 	err = rpcc.RPC("GraphSrv.Follow", &arg_follow, &res_update) // user 1 is now following user 0
 	assert.Nil(t, err, "Follow error :%v", err)
 	assert.Equal(t, "OK", res_update.Ok)
@@ -158,7 +157,7 @@ func TestGraph(t *testing.T) {
 	assert.Equal(t, int64(0), res_get.Userids[1]) // user 1 has two followees user 0 & 2
 
 	// Unfollow
-	arg_unfollow := proto.UnfollowRequest{}
+	arg_unfollow := proto.UnfollowReq{}
 	arg_unfollow.Followerid = 1
 	arg_unfollow.Followeeid = 0
 	err = rpcc.RPC("GraphSrv.Unfollow", &arg_unfollow, &res_update) // user 1 is now unfollowing user 0
@@ -197,21 +196,21 @@ func TestUserAndGraph(t *testing.T) {
 	tssn.dbu.InitGraph()
 	tssn.dbu.InitUser()
 	snCfg := tssn.snCfg
-	rpcc, err := sigmarpcchan.NewSigmaRPCClnt([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_USER)
+	rpcc, err := sprpcclnt.NewRPCClnt(snCfg.FsLib, sn.SOCIAL_NETWORK_USER)
 	if !assert.Nil(t, err, "Err make rpcclnt: %v", err) {
 		return
 	}
-	grpcc, err := sigmarpcchan.NewSigmaRPCClnt([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_GRAPH)
+	grpcc, err := sprpcclnt.NewRPCClnt(snCfg.FsLib, sn.SOCIAL_NETWORK_GRAPH)
 	if !assert.Nil(t, err, "Err make rpcclnt: %v", err) {
 		return
 	}
 
 	// Create two users Alice and Bob
-	arg_reg1 := proto.RegisterUserRequest{
+	arg_reg1 := proto.RegisterUserReq{
 		Firstname: "Alice", Lastname: "Test", Username: "atest", Password: "xyz"}
-	arg_reg2 := proto.RegisterUserRequest{
+	arg_reg2 := proto.RegisterUserReq{
 		Firstname: "Bob", Lastname: "Test", Username: "btest", Password: "zyx"}
-	res_reg := proto.UserResponse{}
+	res_reg := proto.UserRep{}
 	err = rpcc.RPC("UserSrv.RegisterUser", &arg_reg1, &res_reg)
 	assert.Nil(t, err)
 	assert.Equal(t, "OK", res_reg.Ok)
@@ -222,24 +221,24 @@ func TestUserAndGraph(t *testing.T) {
 	buserid := res_reg.Userid
 
 	// Alice follows Bob
-	arg_follow := proto.FollowWithUnameRequest{}
+	arg_follow := proto.FollowWithUnameReq{}
 	arg_follow.Followeruname = "atest"
 	arg_follow.Followeeuname = "btest"
-	res_update := proto.GraphUpdateResponse{}
+	res_update := proto.GraphUpdateRep{}
 	err = grpcc.RPC("GraphSrv.FollowWithUname", &arg_follow, &res_update)
 	assert.Nil(t, err, "Error is: %v", err)
 	assert.Equal(t, "OK", res_update.Ok)
 
-	arg_get_fler := proto.GetFollowersRequest{}
+	arg_get_fler := proto.GetFollowersReq{}
 	arg_get_fler.Followeeid = buserid
-	res_get := proto.GraphGetResponse{}
+	res_get := proto.GraphGetRep{}
 	err = grpcc.RPC("GraphSrv.GetFollowers", &arg_get_fler, &res_get)
 	assert.Nil(t, err)
 	assert.Equal(t, "OK", res_get.Ok)
 	assert.Equal(t, 1, len(res_get.Userids))
 	assert.Equal(t, auserid, res_get.Userids[0])
 
-	arg_get_flee := proto.GetFolloweesRequest{}
+	arg_get_flee := proto.GetFolloweesReq{}
 	arg_get_flee.Followerid = auserid
 	err = grpcc.RPC("GraphSrv.GetFollowees", &arg_get_flee, &res_get)
 	assert.Nil(t, err)
@@ -248,7 +247,7 @@ func TestUserAndGraph(t *testing.T) {
 	assert.Equal(t, buserid, res_get.Userids[0])
 
 	// Alice unfollows Bob
-	arg_unfollow := proto.UnfollowWithUnameRequest{}
+	arg_unfollow := proto.UnfollowWithUnameReq{}
 	arg_unfollow.Followeruname = "atest"
 	arg_unfollow.Followeeuname = "btest"
 	err = grpcc.RPC("GraphSrv.UnfollowWithUname", &arg_unfollow, &res_update)
@@ -281,14 +280,14 @@ func testRPCTime(t *testing.T, mcpu proc.Tmcpu) {
 
 	// create a RPC client and query
 	tssn.dbu.InitUser()
-	rpcc, err := sigmarpcchan.NewSigmaRPCClnt([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_USER)
+	rpcc, err := sprpcclnt.NewRPCClnt(snCfg.FsLib, sn.SOCIAL_NETWORK_USER)
 	if !assert.Nil(t, err, "Err make rpcclnt: %v", err) {
 		return
 	}
 
 	// check user
-	arg_check := proto.CheckUserRequest{Usernames: []string{"user_1"}}
-	res_check := proto.CheckUserResponse{}
+	arg_check := proto.CheckUserReq{Usernames: []string{"user_1"}}
+	res_check := proto.CheckUserRep{}
 	for i := 1; i < 5001; i++ {
 		assert.Nil(t, rpcc.RPC("UserSrv.CheckUser", &arg_check, &res_check))
 		assert.Equal(t, "OK", res_check.Ok)

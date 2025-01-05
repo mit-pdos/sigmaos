@@ -8,16 +8,17 @@ import (
 
 	"google.golang.org/protobuf/proto"
 
-	"sigmaos/apps/kv/kvgrp"
 	"sigmaos/apps/cache"
 	cacheclnt "sigmaos/apps/cache/clnt"
 	cacheproto "sigmaos/apps/cache/proto"
+	"sigmaos/apps/kv/kvgrp"
+	replclnt "sigmaos/apps/kv/repl/clnt"
 	db "sigmaos/debug"
-	"sigmaos/fslib"
-	"sigmaos/replclnt"
+	rpcclnt "sigmaos/rpc/clnt"
 	"sigmaos/serr"
+	"sigmaos/sigmaclnt/fslib"
 	sp "sigmaos/sigmap"
-	tproto "sigmaos/tracing/proto"
+	tproto "sigmaos/util/tracing/proto"
 )
 
 //
@@ -44,6 +45,18 @@ type KvClerk struct {
 	rc   *replclnt.ReplClnt
 }
 
+type TclerkRes struct {
+	Nkeys  int64 `json:"Nkeys"`
+	Nretry int64 `json:"Nretry"`
+	Ms     int64 `json:"Ms"`
+}
+
+func (cr *TclerkRes) Add(cr0 TclerkRes) {
+	cr.Nkeys += cr0.Nkeys
+	cr.Nretry += cr0.Nretry
+	cr.Ms += cr0.Ms
+}
+
 func NewClerkStart(fsl *fslib.FsLib, job string, repl bool) (*KvClerk, error) {
 	return newClerkStart(fsl, job, repl)
 }
@@ -55,13 +68,13 @@ func NewClerkFsLib(fsl *fslib.FsLib, job string, repl bool) *KvClerk {
 func newClerk(fsl *fslib.FsLib, job string, repl bool) *KvClerk {
 	var rc *replclnt.ReplClnt
 	if repl {
-		rc = replclnt.NewReplClnt([]*fslib.FsLib{fsl})
+		rc = replclnt.NewReplClnt(fsl)
 	}
 	kc := &KvClerk{
 		FsLib: fsl,
 		conf:  &Config{},
 		job:   job,
-		cc:    cacheclnt.NewCacheClnt([]*fslib.FsLib{fsl}, job, NSHARD),
+		cc:    cacheclnt.NewCacheClnt(fsl, job, NSHARD),
 		rc:    rc,
 	}
 	return kc
@@ -77,6 +90,10 @@ func (kc *KvClerk) StartClerk() error {
 		return err
 	}
 	return nil
+}
+
+func (kc *KvClerk) Stats() rpcclnt.Tstats {
+	return kc.cc.Stats()
 }
 
 // Detach servers not in kvs
@@ -196,7 +213,7 @@ func (kc *KvClerk) dorepl(o *op, srv string, s cache.Tshard) {
 			req, o.err = kc.cc.NewPut(nil, string(o.k), o.val, &kc.conf.Fence)
 		}
 	}
-	db.DPrintf(db.KVCLERK, "do %v err %v\n", req, o.err)
+	db.DPrintf(db.KVCLERK, "dorepl %v err %v\n", req, o.err)
 	if o.err == nil {
 		var b []byte
 		b, o.err = kc.rc.ReplOp(srv, m, string(o.k), req)
@@ -210,14 +227,14 @@ func (kc *KvClerk) dorepl(o *op, srv string, s cache.Tshard) {
 				o.err = err
 			}
 		case GET:
-			res := &cacheproto.CacheResult{}
+			res := &cacheproto.CacheRep{}
 			o.err = proto.Unmarshal(b, res)
 			if o.err != nil {
 				return
 			}
 			o.err = proto.Unmarshal(res.Value, o.val)
 		case GETVALS:
-			res := &cacheproto.CacheResult{}
+			res := &cacheproto.CacheRep{}
 			o.err = proto.Unmarshal(b, res)
 			if o.err != nil {
 				return
@@ -229,7 +246,7 @@ func (kc *KvClerk) dorepl(o *op, srv string, s cache.Tshard) {
 }
 
 func (kc *KvClerk) do(o *op, srv string, s cache.Tshard) {
-	db.DPrintf(db.KVCLERK, "do %v repl %v\n", o, kc.rc != nil)
+	db.DPrintf(db.KVCLERK, "do %v srv %q repl %v\n", o, srv, kc.rc != nil)
 	if kc.rc != nil {
 		kc.dorepl(o, srv, s)
 	} else {
@@ -291,7 +308,7 @@ func (kc *KvClerk) Delete(k string) error {
 }
 
 func (kc *KvClerk) opShard(op, srv string, shard cache.Tshard, fence *sp.Tfence, vals cache.Tcache) error {
-	req := kc.cc.NewShardRequest(shard, fence, vals)
+	req := kc.cc.NewShardReq(shard, fence, vals)
 	db.DPrintf(db.KVCLERK, "%v start %v %v\n", op, shard, req)
 	b, err := kc.rc.ReplOp(srv, op, "", req)
 	if err != nil {
@@ -304,7 +321,7 @@ func (kc *KvClerk) opShard(op, srv string, shard cache.Tshard, fence *sp.Tfence,
 	return nil
 }
 func (kc *KvClerk) opShardData(op, srv string, shard cache.Tshard, fence *sp.Tfence, vals cache.Tcache) (cache.Tcache, error) {
-	req := kc.cc.NewShardRequest(shard, fence, vals)
+	req := kc.cc.NewShardReq(shard, fence, vals)
 	db.DPrintf(db.KVCLERK, "%v start %v %v\n", op, shard, req)
 	b, err := kc.rc.ReplOp(srv, op, "", req)
 	if err != nil {

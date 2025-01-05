@@ -12,14 +12,14 @@ import (
 
 	"github.com/go-redis/redis/v8"
 
+	"sigmaos/apps/cache"
 	"sigmaos/apps/kv"
 	"sigmaos/apps/kv/proto"
-	"sigmaos/apps/cache"
 	db "sigmaos/debug"
-	"sigmaos/util/perf"
 	"sigmaos/proc"
-	"sigmaos/semclnt"
 	"sigmaos/sigmaclnt"
+	"sigmaos/util/coordination/semaphore"
+	"sigmaos/util/perf"
 )
 
 var done = int32(0)
@@ -96,7 +96,7 @@ func run(sc *sigmaclnt.SigmaClnt, kc *kv.KvClerk, rcli *redis.Client, p *perf.Pe
 	nops := uint64(0)
 	var err error
 	if timed {
-		sclnt := semclnt.NewSemClnt(sc.FsLib, sempath)
+		sclnt := semaphore.NewSemaphore(sc.FsLib, sempath)
 		sclnt.Down()
 		// Run for duration dur, then mark as done.
 		go func() {
@@ -125,7 +125,7 @@ func run(sc *sigmaclnt.SigmaClnt, kc *kv.KvClerk, rcli *redis.Client, p *perf.Pe
 			status = proc.NewStatusInfo(proc.StatusOK, "ops/sec", float64(nops)/d.Seconds())
 		} else {
 			// If this was an unbounded clerk, we should return status evicted.
-			status = proc.NewStatusInfo(proc.StatusEvicted, fmt.Sprintf("ntest %d elapsed %v", ntest, d), nil)
+			status = proc.NewStatusInfo(proc.StatusEvicted, "OK", kv.TclerkRes{int64(ntest * kv.NKEYS), kc.Stats().Nretry, d.Milliseconds()})
 		}
 	}
 	sc.ClntExit(status)

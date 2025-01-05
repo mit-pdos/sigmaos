@@ -4,12 +4,12 @@ import (
 	"encoding/json"
 
 	db "sigmaos/debug"
-	"sigmaos/fs"
-	"sigmaos/memfs/inode"
+	"sigmaos/api/fs"
+	"sigmaos/sigmasrv/memfssrv/memfs/inode"
 	"sigmaos/path"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
-	"sigmaos/stats"
+	"sigmaos/sigmasrv/stats"
 	"sigmaos/util/syncmap"
 )
 
@@ -64,7 +64,7 @@ func (sti *PstatInode) stats() []byte {
 	return data
 }
 
-func (sti *PstatInode) Stat(ctx fs.CtxI) (*sp.Stat, *serr.Err) {
+func (sti *PstatInode) Stat(ctx fs.CtxI) (*sp.Tstat, *serr.Err) {
 	st, err := sti.Inode.NewStat()
 	if err != nil {
 		return nil, err

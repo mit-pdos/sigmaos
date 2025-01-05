@@ -12,7 +12,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/proc"
 	"sigmaos/util/rand"
-	"sigmaos/semclnt"
+	"sigmaos/util/coordination/semaphore"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )
@@ -31,7 +31,7 @@ type WwwJobInstance struct {
 	nreq       int
 	delay      time.Duration
 	ready      chan bool
-	sem        *semclnt.SemClnt
+	sem        *semaphore.Semaphore
 	sempath    string
 	cpids      []sp.Tpid
 	pid        sp.Tpid
@@ -60,7 +60,7 @@ func NewWwwJob(ts *test.RealmTstate, sigmaos bool, wwwmcpu proc.Tmcpu, reqtype s
 	}
 
 	ji.sempath = filepath.Join(www.JobDir(ji.job), "kvclerk-sem")
-	ji.sem = semclnt.NewSemClnt(ts.FsLib, ji.sempath)
+	ji.sem = semaphore.NewSemaphore(ts.FsLib, ji.sempath)
 	err := ji.sem.Init(0)
 	assert.Nil(ji.Ts.T, err, "Sem init: %v", err)
 	assert.Equal(ji.Ts.T, reqtype, "compute")

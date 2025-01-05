@@ -1,14 +1,15 @@
 package socialnetwork_test
 
 import (
+	"testing"
+
 	"github.com/stretchr/testify/assert"
+
 	sn "sigmaos/apps/socialnetwork"
 	"sigmaos/apps/socialnetwork/proto"
-	"sigmaos/fslib"
-	"sigmaos/linuxsched"
-	"sigmaos/sigmarpcchan"
+	sprpcclnt "sigmaos/rpc/clnt/sigmap"
 	"sigmaos/test"
-	"testing"
+	linuxsched "sigmaos/util/linux/sched"
 )
 
 func IsPostEqual(a, b *proto.Post) bool {
@@ -54,7 +55,7 @@ func TestMedia(t *testing.T) {
 	snCfg := tssn.snCfg
 
 	// create a RPC client and query
-	rpcc, err := sigmarpcchan.NewSigmaRPCClnt([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_MEDIA)
+	rpcc, err := sprpcclnt.NewRPCClnt(snCfg.FsLib, sn.SOCIAL_NETWORK_MEDIA)
 	if !assert.Nil(t, err, "Err make rpcclnt: %v", err) {
 		return
 	}
@@ -62,19 +63,19 @@ func TestMedia(t *testing.T) {
 	// store two media
 	mdata1 := []byte{1, 3, 5, 7, 9, 11, 13, 15}
 	mdata2 := []byte{2, 3, 5, 7, 11, 13, 17, 19}
-	arg_store := proto.StoreMediaRequest{Mediatype: "File", Mediadata: mdata1}
-	res_store := proto.StoreMediaResponse{}
+	arg_store := proto.StoreMediaReq{Mediatype: "File", Mediadata: mdata1}
+	res_store := proto.StoreMediaRep{}
 	assert.Nil(t, rpcc.RPC("MediaSrv.StoreMedia", &arg_store, &res_store))
 	assert.Equal(t, "OK", res_store.Ok)
 	mId1 := res_store.Mediaid
-	arg_store = proto.StoreMediaRequest{Mediatype: "Video", Mediadata: mdata2}
+	arg_store = proto.StoreMediaReq{Mediatype: "Video", Mediadata: mdata2}
 	assert.Nil(t, rpcc.RPC("MediaSrv.StoreMedia", &arg_store, &res_store))
 	assert.Equal(t, "OK", res_store.Ok)
 	mId2 := res_store.Mediaid
 
 	// read the medias
-	arg_read := proto.ReadMediaRequest{Mediaids: []int64{mId1, mId2}}
-	res_read := proto.ReadMediaResponse{}
+	arg_read := proto.ReadMediaReq{Mediaids: []int64{mId1, mId2}}
+	res_read := proto.ReadMediaRep{}
 	assert.Nil(t, rpcc.RPC("MediaSrv.ReadMedia", &arg_read, &res_read))
 	assert.Equal(t, "OK", res_read.Ok)
 	assert.Equal(t, 2, len(res_read.Mediatypes))
@@ -103,7 +104,7 @@ func TestPost(t *testing.T) {
 	snCfg := tssn.snCfg
 
 	// create a RPC client and query
-	rpcc, err := sigmarpcchan.NewSigmaRPCClnt([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_POST)
+	rpcc, err := sprpcclnt.NewRPCClnt(snCfg.FsLib, sn.SOCIAL_NETWORK_POST)
 	if !assert.Nil(t, err, "Err make rpcclnt: %v", err) {
 		return
 	}
@@ -130,14 +131,14 @@ func TestPost(t *testing.T) {
 	}
 
 	// store first post
-	arg_store := proto.StorePostRequest{Post: &post1}
-	res_store := proto.StorePostResponse{}
+	arg_store := proto.StorePostReq{Post: &post1}
+	res_store := proto.StorePostRep{}
 	assert.Nil(t, rpcc.RPC("PostSrv.StorePost", &arg_store, &res_store))
 	assert.Equal(t, "OK", res_store.Ok)
 
 	// check for two posts. one missing
-	arg_read := proto.ReadPostsRequest{Postids: []int64{int64(1), int64(2)}}
-	res_read := proto.ReadPostsResponse{}
+	arg_read := proto.ReadPostsReq{Postids: []int64{int64(1), int64(2)}}
+	res_read := proto.ReadPostsRep{}
 	assert.Nil(t, rpcc.RPC("PostSrv.ReadPosts", &arg_read, &res_read))
 	assert.Equal(t, "No. Missing 2.", res_read.Ok)
 

@@ -27,7 +27,6 @@ func (cmgr *CgroupMgr) SetCPUShares(cgroupPath string, n int64) error {
 	defer cmgr.Unlock()
 
 	if err := cmgr.cfs.writeFile(filepath.Join(cgroupPath, "cpu.weight"), uint64(n)); err != nil {
-		db.DPrintf(db.ERROR, "Error writeFile: %v", err)
 		return fmt.Errorf("Error writeFile: %v", err)
 	}
 	return nil

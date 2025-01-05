@@ -2,18 +2,20 @@ package socialnetwork
 
 import (
 	"fmt"
-	"gopkg.in/mgo.v2/bson"
 	"math/rand"
-	"sigmaos/apps/socialnetwork/proto"
-	"sigmaos/apps/cache"
-	cachegrpclnt "sigmaos/apps/cache/cachegrp/clnt"
-	dbg "sigmaos/debug"
-	"sigmaos/fs"
-	mongoclnt "sigmaos/mongo/clnt"
-	"sigmaos/proc"
-	"sigmaos/sigmasrv"
 	"strings"
 	"time"
+
+	"gopkg.in/mgo.v2/bson"
+
+	"sigmaos/api/fs"
+	"sigmaos/apps/cache"
+	cachegrpclnt "sigmaos/apps/cache/cachegrp/clnt"
+	"sigmaos/apps/socialnetwork/proto"
+	dbg "sigmaos/debug"
+	"sigmaos/proc"
+	mongoclnt "sigmaos/proxy/mongo/clnt"
+	"sigmaos/sigmasrv"
 )
 
 // YH:
@@ -47,18 +49,18 @@ func RunUrlSrv(jobname string) error {
 	}
 	mongoc.EnsureIndex(SN_DB, URL_COL, []string{"shorturl"})
 	urlsrv.mongoc = mongoc
-	fsls, err := NewFsLibs(SOCIAL_NETWORK_URL, ssrv.MemFs.SigmaClnt().GetDialProxyClnt())
+	fsl, err := NewFsLib(SOCIAL_NETWORK_URL, ssrv.MemFs.SigmaClnt().GetDialProxyClnt())
 	if err != nil {
 		return err
 	}
-	urlsrv.cachec = cachegrpclnt.NewCachedSvcClnt(fsls, jobname)
+	urlsrv.cachec = cachegrpclnt.NewCachedSvcClnt(fsl, jobname)
 	urlsrv.random = rand.New(rand.NewSource(time.Now().UnixNano()))
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_URL, "Starting url service\n")
 	return ssrv.RunServer()
 }
 
 func (urlsrv *UrlSrv) ComposeUrls(
-	ctx fs.CtxI, req proto.ComposeUrlsRequest, res *proto.ComposeUrlsResponse) error {
+	ctx fs.CtxI, req proto.ComposeUrlsReq, res *proto.ComposeUrlsRep) error {
 	nUrls := len(req.Extendedurls)
 	if nUrls == 0 {
 		res.Ok = "Empty input"
@@ -79,7 +81,7 @@ func (urlsrv *UrlSrv) ComposeUrls(
 }
 
 func (urlsrv *UrlSrv) GetUrls(
-	ctx fs.CtxI, req proto.GetUrlsRequest, res *proto.GetUrlsResponse) error {
+	ctx fs.CtxI, req proto.GetUrlsReq, res *proto.GetUrlsRep) error {
 	res.Ok = "No."
 	extendedurls := make([]string, len(req.Shorturls))
 	missing := false

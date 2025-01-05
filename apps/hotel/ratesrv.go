@@ -13,16 +13,16 @@ import (
 
 	"github.com/harlow/go-micro-services/data"
 
-	"sigmaos/apps/hotel/proto"
+	"sigmaos/api/fs"
 	"sigmaos/apps/cache"
-	dbclnt "sigmaos/db/clnt"
+	"sigmaos/apps/hotel/proto"
 	db "sigmaos/debug"
-	"sigmaos/fs"
-	"sigmaos/util/perf"
 	"sigmaos/proc"
+	dbclnt "sigmaos/proxy/db/clnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
-	"sigmaos/tracing"
+	"sigmaos/util/perf"
+	"sigmaos/util/tracing"
 )
 
 var (
@@ -61,11 +61,11 @@ func RunRateSrv(job string, cache string) error {
 		return err
 	}
 	r.dbc = dbc
-	fsls, err := NewFsLibs(HOTELRATE, ssrv.MemFs.SigmaClnt().GetDialProxyClnt())
+	fsl, err := NewFsLib(HOTELRATE, ssrv.MemFs.SigmaClnt().GetDialProxyClnt())
 	if err != nil {
 		return err
 	}
-	cachec, err := NewCacheClnt(cache, fsls, job)
+	cachec, err := NewCacheClnt(cache, fsl, job)
 	if err != nil {
 		return err
 	}
@@ -94,7 +94,7 @@ func RunRateSrv(job string, cache string) error {
 }
 
 // GetRates gets rates for hotels
-func (s *Rate) GetRates(ctx fs.CtxI, req proto.RateRequest, res *proto.RateResult) error {
+func (s *Rate) GetRates(ctx fs.CtxI, req proto.RateReq, res *proto.RateRep) error {
 	var sctx context.Context
 	//	var span trace.Span
 	//	if TRACING {

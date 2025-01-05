@@ -20,7 +20,7 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-type MakeRequest struct {
+type MakeReq struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
@@ -31,8 +31,8 @@ type MakeRequest struct {
 	NumUX   int64  `protobuf:"varint,4,opt,name=numUX,proto3" json:"numUX,omitempty"`
 }
 
-func (x *MakeRequest) Reset() {
-	*x = MakeRequest{}
+func (x *MakeReq) Reset() {
+	*x = MakeReq{}
 	if protoimpl.UnsafeEnabled {
 		mi := &file_realm_proto_realm_proto_msgTypes[0]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -40,13 +40,13 @@ func (x *MakeRequest) Reset() {
 	}
 }
 
-func (x *MakeRequest) String() string {
+func (x *MakeReq) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*MakeRequest) ProtoMessage() {}
+func (*MakeReq) ProtoMessage() {}
 
-func (x *MakeRequest) ProtoReflect() protoreflect.Message {
+func (x *MakeReq) ProtoReflect() protoreflect.Message {
 	mi := &file_realm_proto_realm_proto_msgTypes[0]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -58,40 +58,40 @@ func (x *MakeRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use MakeRequest.ProtoReflect.Descriptor instead.
-func (*MakeRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use MakeReq.ProtoReflect.Descriptor instead.
+func (*MakeReq) Descriptor() ([]byte, []int) {
 	return file_realm_proto_realm_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *MakeRequest) GetRealm() string {
+func (x *MakeReq) GetRealm() string {
 	if x != nil {
 		return x.Realm
 	}
 	return ""
 }
 
-func (x *MakeRequest) GetNetwork() string {
+func (x *MakeReq) GetNetwork() string {
 	if x != nil {
 		return x.Network
 	}
 	return ""
 }
 
-func (x *MakeRequest) GetNumS3() int64 {
+func (x *MakeReq) GetNumS3() int64 {
 	if x != nil {
 		return x.NumS3
 	}
 	return 0
 }
 
-func (x *MakeRequest) GetNumUX() int64 {
+func (x *MakeReq) GetNumUX() int64 {
 	if x != nil {
 		return x.NumUX
 	}
 	return 0
 }
 
-type MakeResult struct {
+type MakeRep struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
@@ -99,8 +99,8 @@ type MakeResult struct {
 	NamedAddr []string `protobuf:"bytes,1,rep,name=namedAddr,proto3" json:"namedAddr,omitempty"`
 }
 
-func (x *MakeResult) Reset() {
-	*x = MakeResult{}
+func (x *MakeRep) Reset() {
+	*x = MakeRep{}
 	if protoimpl.UnsafeEnabled {
 		mi := &file_realm_proto_realm_proto_msgTypes[1]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -108,13 +108,13 @@ func (x *MakeResult) Reset() {
 	}
 }
 
-func (x *MakeResult) String() string {
+func (x *MakeRep) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*MakeResult) ProtoMessage() {}
+func (*MakeRep) ProtoMessage() {}
 
-func (x *MakeResult) ProtoReflect() protoreflect.Message {
+func (x *MakeRep) ProtoReflect() protoreflect.Message {
 	mi := &file_realm_proto_realm_proto_msgTypes[1]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -126,19 +126,19 @@ func (x *MakeResult) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use MakeResult.ProtoReflect.Descriptor instead.
-func (*MakeResult) Descriptor() ([]byte, []int) {
+// Deprecated: Use MakeRep.ProtoReflect.Descriptor instead.
+func (*MakeRep) Descriptor() ([]byte, []int) {
 	return file_realm_proto_realm_proto_rawDescGZIP(), []int{1}
 }
 
-func (x *MakeResult) GetNamedAddr() []string {
+func (x *MakeRep) GetNamedAddr() []string {
 	if x != nil {
 		return x.NamedAddr
 	}
 	return nil
 }
 
-type RemoveRequest struct {
+type RemoveReq struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
@@ -146,8 +146,8 @@ type RemoveRequest struct {
 	Realm string `protobuf:"bytes,1,opt,name=realm,proto3" json:"realm,omitempty"`
 }
 
-func (x *RemoveRequest) Reset() {
-	*x = RemoveRequest{}
+func (x *RemoveReq) Reset() {
+	*x = RemoveReq{}
 	if protoimpl.UnsafeEnabled {
 		mi := &file_realm_proto_realm_proto_msgTypes[2]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -155,13 +155,13 @@ func (x *RemoveRequest) Reset() {
 	}
 }
 
-func (x *RemoveRequest) String() string {
+func (x *RemoveReq) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*RemoveRequest) ProtoMessage() {}
+func (*RemoveReq) ProtoMessage() {}
 
-func (x *RemoveRequest) ProtoReflect() protoreflect.Message {
+func (x *RemoveReq) ProtoReflect() protoreflect.Message {
 	mi := &file_realm_proto_realm_proto_msgTypes[2]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -173,26 +173,26 @@ func (x *RemoveRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use RemoveRequest.ProtoReflect.Descriptor instead.
-func (*RemoveRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use RemoveReq.ProtoReflect.Descriptor instead.
+func (*RemoveReq) Descriptor() ([]byte, []int) {
 	return file_realm_proto_realm_proto_rawDescGZIP(), []int{2}
 }
 
-func (x *RemoveRequest) GetRealm() string {
+func (x *RemoveReq) GetRealm() string {
 	if x != nil {
 		return x.Realm
 	}
 	return ""
 }
 
-type RemoveResult struct {
+type RemoveRep struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 }
 
-func (x *RemoveResult) Reset() {
-	*x = RemoveResult{}
+func (x *RemoveRep) Reset() {
+	*x = RemoveRep{}
 	if protoimpl.UnsafeEnabled {
 		mi := &file_realm_proto_realm_proto_msgTypes[3]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -200,13 +200,13 @@ func (x *RemoveResult) Reset() {
 	}
 }
 
-func (x *RemoveResult) String() string {
+func (x *RemoveRep) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*RemoveResult) ProtoMessage() {}
+func (*RemoveRep) ProtoMessage() {}
 
-func (x *RemoveResult) ProtoReflect() protoreflect.Message {
+func (x *RemoveRep) ProtoReflect() protoreflect.Message {
 	mi := &file_realm_proto_realm_proto_msgTypes[3]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -218,8 +218,8 @@ func (x *RemoveResult) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use RemoveResult.ProtoReflect.Descriptor instead.
-func (*RemoveResult) Descriptor() ([]byte, []int) {
+// Deprecated: Use RemoveRep.ProtoReflect.Descriptor instead.
+func (*RemoveRep) Descriptor() ([]byte, []int) {
 	return file_realm_proto_realm_proto_rawDescGZIP(), []int{3}
 }
 
@@ -227,22 +227,21 @@ var File_realm_proto_realm_proto protoreflect.FileDescriptor
 
 var file_realm_proto_realm_proto_rawDesc = []byte{
 	0x0a, 0x17, 0x72, 0x65, 0x61, 0x6c, 0x6d, 0x2f, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x2f, 0x72, 0x65,
-	0x61, 0x6c, 0x6d, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x22, 0x69, 0x0a, 0x0b, 0x4d, 0x61, 0x6b,
-	0x65, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x14, 0x0a, 0x05, 0x72, 0x65, 0x61, 0x6c,
-	0x6d, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x05, 0x72, 0x65, 0x61, 0x6c, 0x6d, 0x12, 0x18,
-	0x0a, 0x07, 0x6e, 0x65, 0x74, 0x77, 0x6f, 0x72, 0x6b, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52,
-	0x07, 0x6e, 0x65, 0x74, 0x77, 0x6f, 0x72, 0x6b, 0x12, 0x14, 0x0a, 0x05, 0x6e, 0x75, 0x6d, 0x53,
-	0x33, 0x18, 0x03, 0x20, 0x01, 0x28, 0x03, 0x52, 0x05, 0x6e, 0x75, 0x6d, 0x53, 0x33, 0x12, 0x14,
-	0x0a, 0x05, 0x6e, 0x75, 0x6d, 0x55, 0x58, 0x18, 0x04, 0x20, 0x01, 0x28, 0x03, 0x52, 0x05, 0x6e,
-	0x75, 0x6d, 0x55, 0x58, 0x22, 0x2a, 0x0a, 0x0a, 0x4d, 0x61, 0x6b, 0x65, 0x52, 0x65, 0x73, 0x75,
-	0x6c, 0x74, 0x12, 0x1c, 0x0a, 0x09, 0x6e, 0x61, 0x6d, 0x65, 0x64, 0x41, 0x64, 0x64, 0x72, 0x18,
-	0x01, 0x20, 0x03, 0x28, 0x09, 0x52, 0x09, 0x6e, 0x61, 0x6d, 0x65, 0x64, 0x41, 0x64, 0x64, 0x72,
-	0x22, 0x25, 0x0a, 0x0d, 0x52, 0x65, 0x6d, 0x6f, 0x76, 0x65, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73,
-	0x74, 0x12, 0x14, 0x0a, 0x05, 0x72, 0x65, 0x61, 0x6c, 0x6d, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09,
-	0x52, 0x05, 0x72, 0x65, 0x61, 0x6c, 0x6d, 0x22, 0x0e, 0x0a, 0x0c, 0x52, 0x65, 0x6d, 0x6f, 0x76,
-	0x65, 0x52, 0x65, 0x73, 0x75, 0x6c, 0x74, 0x42, 0x15, 0x5a, 0x13, 0x73, 0x69, 0x67, 0x6d, 0x61,
-	0x6f, 0x73, 0x2f, 0x72, 0x65, 0x61, 0x6c, 0x6d, 0x2f, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x06,
-	0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x61, 0x6c, 0x6d, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x22, 0x65, 0x0a, 0x07, 0x4d, 0x61, 0x6b,
+	0x65, 0x52, 0x65, 0x71, 0x12, 0x14, 0x0a, 0x05, 0x72, 0x65, 0x61, 0x6c, 0x6d, 0x18, 0x01, 0x20,
+	0x01, 0x28, 0x09, 0x52, 0x05, 0x72, 0x65, 0x61, 0x6c, 0x6d, 0x12, 0x18, 0x0a, 0x07, 0x6e, 0x65,
+	0x74, 0x77, 0x6f, 0x72, 0x6b, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x07, 0x6e, 0x65, 0x74,
+	0x77, 0x6f, 0x72, 0x6b, 0x12, 0x14, 0x0a, 0x05, 0x6e, 0x75, 0x6d, 0x53, 0x33, 0x18, 0x03, 0x20,
+	0x01, 0x28, 0x03, 0x52, 0x05, 0x6e, 0x75, 0x6d, 0x53, 0x33, 0x12, 0x14, 0x0a, 0x05, 0x6e, 0x75,
+	0x6d, 0x55, 0x58, 0x18, 0x04, 0x20, 0x01, 0x28, 0x03, 0x52, 0x05, 0x6e, 0x75, 0x6d, 0x55, 0x58,
+	0x22, 0x27, 0x0a, 0x07, 0x4d, 0x61, 0x6b, 0x65, 0x52, 0x65, 0x70, 0x12, 0x1c, 0x0a, 0x09, 0x6e,
+	0x61, 0x6d, 0x65, 0x64, 0x41, 0x64, 0x64, 0x72, 0x18, 0x01, 0x20, 0x03, 0x28, 0x09, 0x52, 0x09,
+	0x6e, 0x61, 0x6d, 0x65, 0x64, 0x41, 0x64, 0x64, 0x72, 0x22, 0x21, 0x0a, 0x09, 0x52, 0x65, 0x6d,
+	0x6f, 0x76, 0x65, 0x52, 0x65, 0x71, 0x12, 0x14, 0x0a, 0x05, 0x72, 0x65, 0x61, 0x6c, 0x6d, 0x18,
+	0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x05, 0x72, 0x65, 0x61, 0x6c, 0x6d, 0x22, 0x0b, 0x0a, 0x09,
+	0x52, 0x65, 0x6d, 0x6f, 0x76, 0x65, 0x52, 0x65, 0x70, 0x42, 0x15, 0x5a, 0x13, 0x73, 0x69, 0x67,
+	0x6d, 0x61, 0x6f, 0x73, 0x2f, 0x72, 0x65, 0x61, 0x6c, 0x6d, 0x2f, 0x70, 0x72, 0x6f, 0x74, 0x6f,
+	0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -259,10 +258,10 @@ func file_realm_proto_realm_proto_rawDescGZIP() []byte {
 
 var file_realm_proto_realm_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
 var file_realm_proto_realm_proto_goTypes = []interface{}{
-	(*MakeRequest)(nil),   // 0: MakeRequest
-	(*MakeResult)(nil),    // 1: MakeResult
-	(*RemoveRequest)(nil), // 2: RemoveRequest
-	(*RemoveResult)(nil),  // 3: RemoveResult
+	(*MakeReq)(nil),   // 0: MakeReq
+	(*MakeRep)(nil),   // 1: MakeRep
+	(*RemoveReq)(nil), // 2: RemoveReq
+	(*RemoveRep)(nil), // 3: RemoveRep
 }
 var file_realm_proto_realm_proto_depIdxs = []int32{
 	0, // [0:0] is the sub-list for method output_type
@@ -279,7 +278,7 @@ func file_realm_proto_realm_proto_init() {
 	}
 	if !protoimpl.UnsafeEnabled {
 		file_realm_proto_realm_proto_msgTypes[0].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*MakeRequest); i {
+			switch v := v.(*MakeReq); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -291,7 +290,7 @@ func file_realm_proto_realm_proto_init() {
 			}
 		}
 		file_realm_proto_realm_proto_msgTypes[1].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*MakeResult); i {
+			switch v := v.(*MakeRep); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -303,7 +302,7 @@ func file_realm_proto_realm_proto_init() {
 			}
 		}
 		file_realm_proto_realm_proto_msgTypes[2].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*RemoveRequest); i {
+			switch v := v.(*RemoveReq); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -315,7 +314,7 @@ func file_realm_proto_realm_proto_init() {
 			}
 		}
 		file_realm_proto_realm_proto_msgTypes[3].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*RemoveResult); i {
+			switch v := v.(*RemoveRep); i {
 			case 0:
 				return &v.state
 			case 1:

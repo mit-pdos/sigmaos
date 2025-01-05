@@ -4,14 +4,14 @@ import (
 	"sync"
 	"time"
 
-	leaseproto "sigmaos/lease/proto"
+	leaseproto "sigmaos/ft/lease/proto"
 
+	"sigmaos/api/fs"
 	db "sigmaos/debug"
-	"sigmaos/fs"
-	"sigmaos/memfssrv"
-	"sigmaos/protsrv/leasedmap"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
+	"sigmaos/sigmasrv/memfssrv"
+	"sigmaos/spproto/srv/leasedmap"
 	"sigmaos/util/syncmap"
 )
 
@@ -43,7 +43,7 @@ func newLeaseSrv(mfs *memfssrv.MemFs) *LeaseSrv {
 	return ls
 }
 
-func (ls *LeaseSrv) AskLease(ctx fs.CtxI, req leaseproto.AskRequest, rep *leaseproto.AskResult) error {
+func (ls *LeaseSrv) AskLease(ctx fs.CtxI, req leaseproto.AskReq, rep *leaseproto.AskRep) error {
 	lid := ls.allocLid()
 	ls.lt.Insert(lid, &lease{ttl: req.TTL, time: req.TTL, lid: lid})
 	rep.LeaseId = uint64(lid)
@@ -51,7 +51,7 @@ func (ls *LeaseSrv) AskLease(ctx fs.CtxI, req leaseproto.AskRequest, rep *leasep
 	return nil
 }
 
-func (ls *LeaseSrv) Extend(ctx fs.CtxI, req leaseproto.ExtendRequest, rep *leaseproto.ExtendResult) error {
+func (ls *LeaseSrv) Extend(ctx fs.CtxI, req leaseproto.ExtendReq, rep *leaseproto.ExtendRep) error {
 	db.DPrintf(db.LEASESRV, "%v: Extend %v\n", ctx.ClntId(), sp.TleaseId(req.LeaseId))
 	li, ok := ls.lt.Lookup(sp.TleaseId(req.LeaseId))
 	if !ok {
@@ -61,7 +61,7 @@ func (ls *LeaseSrv) Extend(ctx fs.CtxI, req leaseproto.ExtendRequest, rep *lease
 	return nil
 }
 
-func (ls *LeaseSrv) End(ctx fs.CtxI, req leaseproto.ExtendRequest, rep *leaseproto.ExtendResult) error {
+func (ls *LeaseSrv) End(ctx fs.CtxI, req leaseproto.ExtendReq, rep *leaseproto.ExtendRep) error {
 	lid := sp.TleaseId(req.LeaseId)
 	db.DPrintf(db.LEASESRV, "%v: End %v\n", ctx.ClntId(), lid)
 	_, ok := ls.lt.Lookup(lid)

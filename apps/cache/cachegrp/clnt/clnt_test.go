@@ -13,9 +13,8 @@ import (
 	cachegrpmgr "sigmaos/apps/cache/cachegrp/mgr"
 	"sigmaos/apps/cache/proto"
 	db "sigmaos/debug"
-	"sigmaos/fslib"
 	"sigmaos/proc"
-	"sigmaos/semclnt"
+	"sigmaos/util/coordination/semaphore"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 	rd "sigmaos/util/rand"
@@ -31,7 +30,7 @@ type Tstate struct {
 	clrks []sp.Tpid
 	job   string
 	sempn string
-	sem   *semclnt.SemClnt
+	sem   *semaphore.Semaphore
 }
 
 func newTstate(t *test.Tstate, nsrv int) *Tstate {
@@ -43,7 +42,7 @@ func newTstate(t *test.Tstate, nsrv int) *Tstate {
 	assert.Nil(t.T, err)
 	ts.cm = cm
 	ts.sempn = cm.SvcDir() + "-cacheclerk-sem"
-	ts.sem = semclnt.NewSemClnt(ts.FsLib, ts.sempn)
+	ts.sem = semaphore.NewSemaphore(ts.FsLib, ts.sempn)
 	err = ts.sem.Init(0)
 	assert.Nil(t.T, err)
 	return ts
@@ -78,7 +77,7 @@ func TestCacheSingle(t *testing.T) {
 		return
 	}
 	ts := newTstate(t1, NSRV)
-	cc := cachegrpclnt.NewCachedSvcClnt([]*fslib.FsLib{ts.FsLib}, ts.job)
+	cc := cachegrpclnt.NewCachedSvcClnt(ts.FsLib, ts.job)
 
 	for k := 0; k < N; k++ {
 		key := strconv.Itoa(k)
@@ -128,7 +127,7 @@ func testCacheSharded(t *testing.T, nsrv int) {
 		return
 	}
 	ts := newTstate(t1, nsrv)
-	cc := cachegrpclnt.NewCachedSvcClnt([]*fslib.FsLib{ts.FsLib}, ts.job)
+	cc := cachegrpclnt.NewCachedSvcClnt(ts.FsLib, ts.job)
 
 	for k := 0; k < N; k++ {
 		key := strconv.Itoa(k)
@@ -185,7 +184,7 @@ func TestCacheConcur(t *testing.T) {
 	}
 	ts := newTstate(t1, NSRV)
 	v := "hello"
-	cc := cachegrpclnt.NewCachedSvcClnt([]*fslib.FsLib{ts.FsLib}, ts.job)
+	cc := cachegrpclnt.NewCachedSvcClnt(ts.FsLib, ts.job)
 	err := cc.Put("x", &proto.CacheString{Val: v})
 	assert.Nil(t, err)
 
@@ -252,7 +251,7 @@ func TestElasticCache(t *testing.T) {
 
 	ts.sem.Up()
 
-	cc := cachegrpclnt.NewCachedSvcClnt([]*fslib.FsLib{ts.FsLib}, ts.job)
+	cc := cachegrpclnt.NewCachedSvcClnt(ts.FsLib, ts.job)
 
 	for i := 0; i < 5; i++ {
 		time.Sleep(5 * time.Second)

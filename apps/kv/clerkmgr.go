@@ -5,15 +5,17 @@ import (
 	"path/filepath"
 	"strconv"
 
+	"github.com/mitchellh/mapstructure"
+
 	proto "sigmaos/apps/cache/proto"
 
-	"sigmaos/apps/kv/kvgrp"
 	"sigmaos/apps/cache"
+	"sigmaos/apps/kv/kvgrp"
 	db "sigmaos/debug"
 	"sigmaos/proc"
-	"sigmaos/semclnt"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
+	"sigmaos/util/coordination/semaphore"
 )
 
 type ClerkMgr struct {
@@ -21,7 +23,7 @@ type ClerkMgr struct {
 	*sigmaclnt.SigmaClnt
 	job     string
 	sempath string
-	sem     *semclnt.SemClnt
+	sem     *semaphore.Semaphore
 	ckmcpu  proc.Tmcpu // Number of exclusive cores allocated to each clerk.
 	clrks   []sp.Tpid
 	repl    bool
@@ -32,7 +34,7 @@ func NewClerkMgr(sc *sigmaclnt.SigmaClnt, job string, mcpu proc.Tmcpu, repl bool
 	clrk := NewClerkFsLib(cm.SigmaClnt.FsLib, cm.job, repl)
 	cm.KvClerk = clrk
 	cm.sempath = filepath.Join(kvgrp.JobDir(job), "kvclerk-sem")
-	cm.sem = semclnt.NewSemClnt(sc.FsLib, cm.sempath)
+	cm.sem = semaphore.NewSemaphore(sc.FsLib, cm.sempath)
 	if err := cm.sem.Init(0); err != nil {
 		return nil, err
 	}
@@ -87,19 +89,25 @@ func (cm *ClerkMgr) AddClerks(dur string, nclerk int) error {
 	return nil
 }
 
-func (cm *ClerkMgr) StopClerks() error {
+func (cm *ClerkMgr) StopClerks() (TclerkRes, error) {
 	db.DPrintf(db.ALWAYS, "clerks to evict %v\n", len(cm.clrks))
+	cr := &TclerkRes{}
 	for _, ck := range cm.clrks {
 		status, err := cm.stopClerk(ck)
 		if err != nil {
-			return err
+			return *cr, err
 		}
-		db.DPrintf(db.ALWAYS, "Clerk exit status %v\n", status)
+		cr0 := TclerkRes{}
+		if err := mapstructure.Decode(status.Data(), &cr0); err != nil {
+			return *cr, err
+		}
+		db.DPrintf(db.ALWAYS, "Clerk %v cr %v\n", status.Msg(), cr0)
 		if !(status.IsStatusEvicted() || status.IsStatusOK()) {
-			return fmt.Errorf("wrong status %v", status)
+			return *cr, fmt.Errorf("wrong status %v", status)
 		}
+		cr.Add(cr0)
 	}
-	return nil
+	return *cr, nil
 }
 
 func (cm *ClerkMgr) WaitForClerks() error {

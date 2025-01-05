@@ -5,39 +5,39 @@ import "apps/socialnetwork/proto/post.proto";
 option go_package = "sigmaos/apps/socialnetwork/proto";
 
 service TimelineService {
-	rpc WriteTimeline(WriteTimelineRequest) returns (WriteTimelineResponse);
-	rpc ReadTimeline(ReadTimelineRequest) returns (ReadTimelineResponse);
+	rpc WriteTimeline(WriteTimelineReq) returns (WriteTimelineRep);
+	rpc ReadTimeline(ReadTimelineReq) returns (ReadTimelineRep);
 }
 
 service HomeService {
-	rpc WriteHomeTimeline(WriteHomeTimelineRequest) returns (WriteTimelineResponse);
-	rpc ReadHomeTimeline(ReadTimelineRequest) returns (ReadTimelineResponse);
+	rpc WriteHomeTimeline(WriteHomeTimelineReq) returns (WriteTimelineRep);
+	rpc ReadHomeTimeline(ReadTimelineReq) returns (ReadTimelineRep);
 }
 
-message WriteTimelineRequest {
+message WriteTimelineReq {
 	int64 userid = 1;
 	int64 postid = 2;
 	int64 timestamp = 3;
 }
 
-message WriteHomeTimelineRequest {
+message WriteHomeTimelineReq {
 	int64          userid = 1;
 	int64          postid = 2;
 	int64          timestamp = 3;
 	repeated int64 usermentionids = 4;
 }
 
-message WriteTimelineResponse {
+message WriteTimelineRep {
 	string ok = 1;
 }
 
-message ReadTimelineRequest {
+message ReadTimelineReq {
 	int64 userid = 1;
 	int32 start = 2;
 	int32 stop = 3;
 }
 
-message ReadTimelineResponse {
+message ReadTimelineRep {
 	string   ok = 1;
 	repeated Post posts = 2;
 }

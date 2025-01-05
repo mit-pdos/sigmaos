@@ -12,20 +12,20 @@ import (
 	"github.com/harlow/go-micro-services/data"
 	// "github.com/harlow/go-micro-services/internal/proto/geo"
 
+	"sigmaos/api/fs"
 	"sigmaos/apps/hotel/proto"
-	"sigmaos/fs"
 	"sigmaos/proc"
 	"sigmaos/sigmasrv"
-	"sigmaos/tracing"
+	"sigmaos/util/tracing"
 )
 
-//	type RecRequest struct {
+//	type RecReq struct {
 //		Require string
 //		Lat     float64
 //		Lon     float64
 //	}
 //
-//	type RecResult struct {
+//	type RecRep struct {
 //		HotelIds []string
 //	}
 
@@ -56,7 +56,7 @@ func RunRecSrv(n string) error {
 }
 
 // GiveRecommendation returns recommendations within a given requirement.
-func (s *Rec) GetRecs(ctx fs.CtxI, req proto.RecRequest, res *proto.RecResult) error {
+func (s *Rec) GetRecs(ctx fs.CtxI, req proto.RecReq, res *proto.RecRep) error {
 	//	var span trace.Span
 	//	if TRACING {
 	//		_, span = s.tracer.StartRPCSpan(&req, "GetRecs")

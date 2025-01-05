@@ -5,14 +5,10 @@ import (
 	"time"
 
 	db "sigmaos/debug"
-	"sigmaos/mem"
+	"sigmaos/util/linux/mem"
 	"sigmaos/proc"
+	sp "sigmaos/sigmap"
 	"sigmaos/util/perf"
-)
-
-const (
-	TARGET_CPU_PCT    = 95
-	UTIL_REFRESH_RATE = 20 * time.Millisecond
 )
 
 type cpuStats struct {
@@ -26,7 +22,7 @@ func (msched *MSched) getCPUUtil() int64 {
 
 func (msched *MSched) monitorCPU() {
 	cm := perf.GetActiveCores()
-	t := time.NewTicker(UTIL_REFRESH_RATE)
+	t := time.NewTicker(sp.Conf.MSched.UTIL_REFRESH_RATE)
 	var oldStats cpuStats
 	for {
 		<-t.C

@@ -5,14 +5,14 @@ import (
 
 	"sigmaos/apps/kv/kvgrp"
 	db "sigmaos/debug"
-	"sigmaos/groupmgr"
+	"sigmaos/ft/procgroupmgr"
 )
 
 func main() {
 	if len(os.Args) != 3 {
 		db.DFatalf("Usage: %v <jobdir> <grp>", os.Args[0])
 	}
-	id, nrepl, err := groupmgr.ParseREPL(os.Getenv("SIGMAREPL"))
+	id, nrepl, err := procgroupmgr.ParseREPL(os.Getenv("SIGMAREPL"))
 	if err != nil {
 		db.DFatalf("%v: err %v\n", os.Args[0], err)
 	}

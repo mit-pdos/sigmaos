@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime/debug"
+	"strings"
 	"time"
 
 	"google.golang.org/protobuf/proto"
@@ -111,10 +112,6 @@ func (p *Proc) AppendEnv(name, val string) {
 	p.Env[name] = val
 }
 
-func (p *Proc) SetEnv(name, val string) {
-	p.Env[name] = val
-}
-
 func (p *Proc) LookupEnv(name string) (string, bool) {
 	s, ok := p.Env[name]
 	return s, ok
@@ -188,11 +185,11 @@ func (p *Proc) PrependSigmaPath(pn string) {
 }
 
 // Finalize env details which can only be set once a physical machine and
-// uprocd container have been chosen.
-func (p *Proc) FinalizeEnv(innerIP sp.Tip, outerIP sp.Tip, uprocdPid sp.Tpid) {
+// procd container have been chosen.
+func (p *Proc) FinalizeEnv(innerIP sp.Tip, outerIP sp.Tip, procdPid sp.Tpid) {
 	p.ProcEnvProto.InnerContainerIPStr = innerIP.String()
 	p.ProcEnvProto.OuterContainerIPStr = outerIP.String()
-	p.ProcEnvProto.SetUprocdPID(uprocdPid)
+	p.ProcEnvProto.SetProcdPID(procdPid)
 	oldr := p.GetRealm()
 	// If a realm switch was requested, perform the realm switch before
 	// marshaling the proc's ProcEnv. A realm switch is only possible if the
@@ -237,9 +234,11 @@ func (p *Proc) String() string {
 		"InnerIP:%v "+
 		"OuterIP:%v "+
 		"Args:%v "+
+		"Env:%v "+
 		"Type:%v "+
 		"Mcpu:%v "+
 		"Mem:%v "+
+		"Kernels:%v "+
 		"}",
 		p.ProcEnvProto.Program,
 		p.ProcEnvProto.Version,
@@ -255,9 +254,11 @@ func (p *Proc) String() string {
 		p.ProcEnvProto.GetInnerContainerIP(),
 		p.ProcEnvProto.GetOuterContainerIP(),
 		p.Args,
+		p.Env,
 		p.GetType(),
 		p.GetMcpu(),
 		p.GetMem(),
+		p.ProcEnvProto.Kernels,
 	)
 }
 
@@ -275,6 +276,7 @@ func (p *Proc) setBaseEnv() {
 	// Pass through debug/performance vars.
 	p.AppendEnv(SIGMAPERF, GetSigmaPerf())
 	p.AppendEnv(SIGMADEBUG, GetSigmaDebug())
+	p.AppendEnv(SIGMAFAIL, GetSigmaFail())
 	p.AppendEnv(SIGMADEBUGPID, p.GetPid().String())
 	if p.IsPrivileged() {
 		p.AppendEnv("PATH", os.Getenv("PATH")) // inherit linux path from boot
@@ -347,18 +349,6 @@ func (p *Proc) GetKernelID() string {
 	return p.ProcEnvProto.KernelID
 }
 
-func (p *Proc) SetCrash(n int64) {
-	p.ProcEnvProto.SetCrash(n)
-}
-
-func (p *Proc) SetPartition(n int64) {
-	p.ProcEnvProto.SetPartition(n)
-}
-
-func (p *Proc) SetNetFail(n int64) {
-	p.ProcEnvProto.SetNetFail(n)
-}
-
 func (p *Proc) SetType(t Ttype) {
 	p.ProcProto.TypeInt = uint32(t)
 }
@@ -369,14 +359,6 @@ func (p *Proc) SetSpawnTime(t time.Time) {
 
 func (p *Proc) GetSpawnTime() time.Time {
 	return p.ProcEnvProto.GetSpawnTime()
-}
-
-func (p *Proc) SetShared(target string) {
-	p.SharedTarget = target
-}
-
-func (p *Proc) GetShared() string {
-	return p.SharedTarget
 }
 
 func (p *Proc) SetHow(n Thow) {
@@ -406,6 +388,15 @@ func (p *Proc) GetEnv() []string {
 		env = append(env, key+"="+envvar)
 	}
 	return env
+}
+
+func (p *Proc) UpdateEnv(env []string) {
+	for _, e := range env {
+		kv := strings.Split(e, "=")
+		if len(kv) == 2 {
+			p.Env[kv[0]] = kv[1]
+		}
+	}
 }
 
 // Set the number of cores on this proc. If > 0, then this proc is LC. For now,

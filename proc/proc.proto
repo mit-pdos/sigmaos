@@ -25,24 +25,22 @@ message ProcEnvProto {
   string buildTag = 11;
   string perf = 12;
   string debug = 13;
-  string uprocdPIDStr = 14;
+  string procdPIDStr = 14;
   bool privileged = 15;
-  int64 netFail = 17;
-  int64 crash = 18;
-  int64 partition = 19;
-  int32 howInt = 20;
-  google.protobuf.Timestamp spawnTimePB = 21;
-  string strace = 22;
-  TendpointProto mSchedEndpointProto = 23;
-  TendpointProto namedEndpointProto = 24;
-  bool useSPProxy = 25;
-  bool useDialProxy = 26;
-  map<string, SecretProto> secretsMap = 27;
-  repeated string sigmaPath = 28;
-  repeated string kernels = 29;
-  string realmSwitchStr = 30;
-  string version = 31;
-  string dirReaderVersion = 32;
+  int32 howInt = 16;
+  google.protobuf.Timestamp spawnTimePB = 17;
+  string strace = 18;
+  TendpointProto mSchedEndpointProto = 19;
+  TendpointProto namedEndpointProto = 20;
+  bool useSPProxy = 21;
+  bool useDialProxy = 22;
+  map<string, SecretProto> secretsMap = 23;
+  repeated string sigmaPath = 24;
+  repeated string kernels = 25;
+  string realmSwitchStr = 26;
+  string version = 27;
+  string fail = 28;
+  string dirReaderVersion = 29;
 }
 
 message ProcProto {
@@ -52,5 +50,4 @@ message ProcProto {
   uint32 typeInt = 4;
   uint32 mcpuInt = 5;
   uint32 memInt = 6;
-  string sharedTarget = 7;
 }

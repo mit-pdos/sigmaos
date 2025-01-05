@@ -6,7 +6,7 @@ import (
 	"time"
 
 	db "sigmaos/debug"
-	"sigmaos/fs"
+	"sigmaos/api/fs"
 	"sigmaos/namesrv/fsetcd"
 	"sigmaos/path"
 	"sigmaos/serr"
@@ -58,7 +58,7 @@ func (o *Obj) Parent() fs.Dir {
 
 // XXX SetParent
 
-func (o *Obj) Stat(ctx fs.CtxI) (*sp.Stat, *serr.Err) {
+func (o *Obj) Stat(ctx fs.CtxI) (*sp.Tstat, *serr.Err) {
 	db.DPrintf(db.NAMED, "Stat: %v\n", o)
 
 	if o.di.Nf == nil {
@@ -78,7 +78,7 @@ func (o *Obj) Stat(ctx fs.CtxI) (*sp.Stat, *serr.Err) {
 	return st, nil
 }
 
-func (o *Obj) NewStat() (*sp.Stat, *serr.Err) {
+func (o *Obj) NewStat() (*sp.Tstat, *serr.Err) {
 	st := sp.NewStatNull()
 	st.Name = o.pn.Base()
 	st.SetQid(sp.NewQidPerm(o.di.Perm, 0, o.di.Path))

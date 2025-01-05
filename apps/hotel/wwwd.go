@@ -7,18 +7,18 @@ import (
 
 	//	"context"
 	//	"go.opentelemetry.io/otel/trace"
-	//	tproto "sigmaos/tracing/proto"
+	//	tproto "sigmaos/util/tracing/proto"
 
 	"sigmaos/apps/hotel/proto"
 	db "sigmaos/debug"
 	"sigmaos/proc"
-	"sigmaos/rpcclnt"
-	"sigmaos/rpcdirclnt"
+	rpcclnt "sigmaos/rpc/clnt"
+	sprpcclnt "sigmaos/rpc/clnt/sigmap"
+	shardedsvcrpcclnt "sigmaos/rpc/shardedsvc/clnt"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
-	"sigmaos/sigmarpcchan"
-	"sigmaos/tracing"
 	"sigmaos/util/perf"
+	"sigmaos/util/tracing"
 )
 
 type Www struct {
@@ -32,7 +32,7 @@ type Www struct {
 	reservec *rpcclnt.RPCClnt
 	profc    *rpcclnt.RPCClnt
 	recc     *rpcclnt.RPCClnt
-	geodc    *rpcdirclnt.RPCDirClnt
+	geodc    *shardedsvcrpcclnt.ShardedSvcRPCClnt
 }
 
 // Run starts the server
@@ -46,36 +46,36 @@ func RunWww(job string) error {
 	}
 	www.SigmaClnt = sc
 
-	fsls, err := NewFsLibs("hotel-wwwd", www.GetDialProxyClnt())
+	fsl, err := NewFsLib("hotel-wwwd", www.GetDialProxyClnt())
 	if err != nil {
 		return err
 	}
-	rpcc, err := sigmarpcchan.NewSigmaRPCClnt(fsls, HOTELUSER)
+	rpcc, err := sprpcclnt.NewRPCClnt(fsl, HOTELUSER)
 	if err != nil {
 		return err
 	}
 	www.userc = rpcc
-	rpcc, err = sigmarpcchan.NewSigmaRPCClnt(fsls, HOTELSEARCH)
+	rpcc, err = sprpcclnt.NewRPCClnt(fsl, HOTELSEARCH)
 	if err != nil {
 		return err
 	}
 	www.searchc = rpcc
-	rpcc, err = sigmarpcchan.NewSigmaRPCClnt(fsls, HOTELPROF)
+	rpcc, err = sprpcclnt.NewRPCClnt(fsl, HOTELPROF)
 	if err != nil {
 		return err
 	}
 	www.profc = rpcc
-	rpcc, err = sigmarpcchan.NewSigmaRPCClnt(fsls, HOTELRESERVE)
+	rpcc, err = sprpcclnt.NewRPCClnt(fsl, HOTELRESERVE)
 	if err != nil {
 		return err
 	}
 	www.reservec = rpcc
-	rpcc, err = sigmarpcchan.NewSigmaRPCClnt(fsls, HOTELREC)
+	rpcc, err = sprpcclnt.NewRPCClnt(fsl, HOTELREC)
 	if err != nil {
 		return err
 	}
 	www.recc = rpcc
-	www.geodc = rpcdirclnt.NewRPCDirClnt(fsls[0], HOTELGEODIR, db.HOTEL_WWW, db.HOTEL_WWW_ERR)
+	www.geodc = shardedsvcrpcclnt.NewShardedSvcRPCClnt(fsl, HOTELGEODIR, db.HOTEL_WWW, db.HOTEL_WWW_ERR)
 
 	//	www.tracer = tracing.Init("wwwd", proc.GetSigmaJaegerIP())
 	var mux *http.ServeMux
@@ -164,10 +164,10 @@ func (s *Www) userHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var res proto.UserResult
+	var res proto.UserRep
 
 	// Check username and password
-	err := s.userc.RPC("Users.CheckUser", &proto.UserRequest{
+	err := s.userc.RPC("Users.CheckUser", &proto.UserReq{
 		Name:              username,
 		Password:          password,
 		SpanContextConfig: nil, //sctx,
@@ -237,8 +237,8 @@ func (s *Www) searchHandler(w http.ResponseWriter, r *http.Request) {
 	//		_, span2 = s.tracer.StartContextSpan(sctx, "Search.Nearby")
 	//		sctx2 = tracing.SpanToContext(span2)
 	//	}
-	var searchRes proto.SearchResult
-	searchReq := &proto.SearchRequest{
+	var searchRes proto.SearchRep
+	searchReq := &proto.SearchReq{
 		Lat:               lat,
 		Lon:               lon,
 		InDate:            inDate,
@@ -263,14 +263,14 @@ func (s *Www) searchHandler(w http.ResponseWriter, r *http.Request) {
 		locale = "en"
 	}
 
-	var reserveRes proto.ReserveResult
+	var reserveRes proto.ReserveRep
 	//	var span3 trace.Span
 	//	var sctx3 *tproto.SpanContextConfig
 	//	if TRACING {
 	//		_, span3 = s.tracer.StartContextSpan(sctx, "Reserve.CheckAvailability")
 	//		sctx3 = tracing.SpanToContext(span3)
 	//	}
-	err = s.reservec.RPC("Reserve.CheckAvailability", &proto.ReserveRequest{
+	err = s.reservec.RPC("Reserve.CheckAvailability", &proto.ReserveReq{
 		CustomerName:      "",
 		HotelId:           searchRes.HotelIds,
 		InDate:            inDate,
@@ -287,14 +287,14 @@ func (s *Www) searchHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// hotel profiles
-	var profRes proto.ProfResult
+	var profRes proto.ProfRep
 	//	var span4 trace.Span
 	//	var sctx4 *tproto.SpanContextConfig
 	//	if TRACING {
 	//		_, span4 = s.tracer.StartContextSpan(sctx, "ProfSrv.GetProfiles")
 	//		sctx4 = tracing.SpanToContext(span4)
 	//	}
-	err = s.profc.RPC("ProfSrv.GetProfiles", &proto.ProfRequest{
+	err = s.profc.RPC("ProfSrv.GetProfiles", &proto.ProfReq{
 		HotelIds:          reserveRes.HotelIds,
 		Locale:            locale,
 		SpanContextConfig: nil, //sctx4,
@@ -345,8 +345,8 @@ func (s *Www) recommendHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// recommend hotels
-	var recResp proto.RecResult
-	err := s.recc.RPC("Rec.GetRecs", &proto.RecRequest{
+	var recResp proto.RecRep
+	err := s.recc.RPC("Rec.GetRecs", &proto.RecReq{
 		Require:           require,
 		Lat:               lat,
 		Lon:               lon,
@@ -365,8 +365,8 @@ func (s *Www) recommendHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// hotel profiles
-	var profResp proto.ProfResult
-	err = s.profc.RPC("ProfSrv.GetProfiles", &proto.ProfRequest{
+	var profResp proto.ProfRep
+	err = s.profc.RPC("ProfSrv.GetProfiles", &proto.ProfReq{
 		HotelIds:          recResp.HotelIds,
 		Locale:            locale,
 		SpanContextConfig: nil, //sctx,
@@ -435,10 +435,10 @@ func (s *Www) reservationHandler(w http.ResponseWriter, r *http.Request) {
 		numberOfRoom, _ = strconv.Atoi(num)
 	}
 
-	var res proto.UserResult
+	var res proto.UserRep
 
 	// Check username and password
-	err := s.userc.RPC("Users.CheckUser", &proto.UserRequest{
+	err := s.userc.RPC("Users.CheckUser", &proto.UserReq{
 		Name:              username,
 		Password:          password,
 		SpanContextConfig: nil, //sctx,
@@ -455,8 +455,8 @@ func (s *Www) reservationHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Make reservation
-	var resResp proto.ReserveResult
-	err = s.reservec.RPC("Reserve.NewReservation", &proto.ReserveRequest{
+	var resResp proto.ReserveRep
+	err = s.reservec.RPC("Reserve.NewReservation", &proto.ReserveReq{
 		CustomerName:      customerName,
 		HotelId:           []string{hotelId},
 		InDate:            inDate,
@@ -493,7 +493,6 @@ func (s *Www) geoHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 
-	//XXX
 	// lan/lon from query params
 	sLat, sLon := r.URL.Query().Get("lat"), r.URL.Query().Get("lon")
 	//	sLat := r.FormValue("lat")
@@ -508,8 +507,8 @@ func (s *Www) geoHandler(w http.ResponseWriter, r *http.Request) {
 	Lon, _ := strconv.ParseFloat(sLon, 64)
 	lon := float32(Lon)
 
-	var gres proto.GeoResult
-	greq := proto.GeoRequest{
+	var gres proto.GeoRep
+	greq := proto.GeoReq{
 		Lat:               lat,
 		Lon:               lon,
 		SpanContextConfig: nil, //sctx,

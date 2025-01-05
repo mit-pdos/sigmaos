@@ -2,11 +2,11 @@ package lcschedclnt
 
 import (
 	db "sigmaos/debug"
-	"sigmaos/fslib"
 	"sigmaos/proc"
-	"sigmaos/rpcdirclnt"
+	shardedsvcrpcclnt "sigmaos/rpc/shardedsvc/clnt"
 	"sigmaos/sched/besched/proto"
 	"sigmaos/serr"
+	"sigmaos/sigmaclnt/fslib"
 	sp "sigmaos/sigmap"
 )
 
@@ -16,13 +16,13 @@ const (
 
 type LCSchedClnt struct {
 	*fslib.FsLib
-	rpcdc *rpcdirclnt.RPCDirClnt
+	rpcdc *shardedsvcrpcclnt.ShardedSvcRPCClnt
 }
 
 func NewLCSchedClnt(fsl *fslib.FsLib) *LCSchedClnt {
 	return &LCSchedClnt{
 		FsLib: fsl,
-		rpcdc: rpcdirclnt.NewRPCDirClnt(fsl, sp.LCSCHED, db.LCSCHEDCLNT, db.LCSCHEDCLNT_ERR),
+		rpcdc: shardedsvcrpcclnt.NewShardedSvcRPCClnt(fsl, sp.LCSCHED, db.LCSCHEDCLNT, db.LCSCHEDCLNT_ERR),
 	}
 }
 
@@ -38,10 +38,10 @@ func (lcs *LCSchedClnt) Enqueue(p *proc.Proc) (string, error) {
 		db.DPrintf(db.ALWAYS, "Error: Can't get lcsched clnt: %v", err)
 		return NOT_ENQ, err
 	}
-	req := &proto.EnqueueRequest{
+	req := &proto.EnqueueReq{
 		ProcProto: p.GetProto(),
 	}
-	res := &proto.EnqueueResponse{}
+	res := &proto.EnqueueRep{}
 	if err := rpcc.RPC("LCSched.Enqueue", req, res); err != nil {
 		db.DPrintf(db.ALWAYS, "LCSched.Enqueue err %v", err)
 		if serr.IsErrCode(err, serr.TErrUnreachable) {

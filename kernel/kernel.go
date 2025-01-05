@@ -11,12 +11,12 @@ import (
 	"time"
 
 	db "sigmaos/debug"
-	"sigmaos/kproc"
-	"sigmaos/netsigma"
 	"sigmaos/proc"
+	"sigmaos/proc/kproc"
 	"sigmaos/serr"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
+	iputil "sigmaos/util/ip"
 )
 
 const (
@@ -43,22 +43,18 @@ type Kernel struct {
 	shuttingDown bool
 }
 
-func newKernel(param *Param) *Kernel {
-	return &Kernel{
-		realms: make(map[sp.Trealm]*sigmaclnt.SigmaClntKernel),
-		Param:  param,
-		svcs:   newServices(),
-	}
-}
-
 func NewKernel(p *Param, pe *proc.ProcEnv) (*Kernel, error) {
-	k := newKernel(p)
-	ip, err := netsigma.LocalIP()
+	ip, err := iputil.LocalIP()
 	if err != nil {
 		return nil, err
 	}
 	db.DPrintf(db.KERNEL, "NewKernel ip %v", ip)
-	k.ip = ip
+	k := &Kernel{
+		realms: make(map[sp.Trealm]*sigmaclnt.SigmaClntKernel),
+		Param:  p,
+		svcs:   newServices(),
+		ip:     ip,
+	}
 	pe.SetInnerContainerIP(ip)
 	pe.SetOuterContainerIP(ip)
 	if p.Services[0] == sp.KNAMED {
@@ -142,9 +138,9 @@ func (k *Kernel) getRealmSigmaClnt(realm sp.Trealm) (*sigmaclnt.SigmaClntKernel,
 // Start kernel services
 func startSrvs(k *Kernel) error {
 	for _, s := range k.Param.Services {
-		_, err := k.BootSub(s, nil, k.Param, sp.ROOTREALM)
+		_, err := k.BootSub(s, nil, nil, k.Param, sp.ROOTREALM)
 		if err != nil {
-			db.DPrintf(db.KERNEL, "StartSRv %v %v err %v\n", s, k.Param, err)
+			db.DPrintf(db.KERNEL, "StartSrv %v %v err %v", s, k.Param, err)
 			return err
 		}
 	}

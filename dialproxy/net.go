@@ -6,7 +6,7 @@ import (
 	"time"
 
 	db "sigmaos/debug"
-	"sigmaos/netsigma"
+	iputil "sigmaos/util/ip"
 	sp "sigmaos/sigmap"
 )
 
@@ -26,7 +26,7 @@ func DialDirect(p *sp.Tprincipal, ep *sp.Tendpoint) (net.Conn, error) {
 		db.DPrintf(db.DIALPROXY_ERR, "[%v] Dial direct addr err %v: err %v", p, ep.Addrs()[0], err)
 	} else {
 		db.DPrintf(db.DIALPROXY, "[%v] Dial direct addr ok %v", p, ep.Addrs()[0])
-		if ep.Type() == sp.INTERNAL_EP {
+		if ep.GetType() == sp.INTERNAL_EP {
 			if err := writeConnPreamble(c, p); err != nil {
 				db.DPrintf(db.DIALPROXY_ERR, "[%v] Write preamble err: %v", p, err)
 				return nil, err
@@ -90,7 +90,7 @@ func AcceptFromAuthorizedPrincipal(l net.Listener, getPrincipal bool, isAuthoriz
 }
 
 func NewEndpoint(ept sp.TTendpoint, ip sp.Tip, l net.Listener) (*sp.Tendpoint, error) {
-	host, port, err := netsigma.QualifyAddrLocalIP(ip, l.Addr().String())
+	host, port, err := iputil.QualifyAddrLocalIP(ip, l.Addr().String())
 	if err != nil {
 		db.DPrintf(db.ERROR, "Error Listen qualify local IP %v: %v", l.Addr().String(), err)
 		db.DPrintf(db.DIALPROXY_ERR, "Error Listen qualify local IP %v: %v", l.Addr().String(), err)

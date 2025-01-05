@@ -1,4 +1,4 @@
-package simschedd
+package simmsched
 
 import (
 	"fmt"
@@ -252,7 +252,7 @@ func newRealm(realm Irealm) *Realm {
 
 type World struct {
 	ntick   Ttick
-	schedds []*Schedd
+	mscheds []*Schedd
 	procqs  []*ProcQ
 	realms  map[TrealmId]*Realm
 	rand    *rand.Rand
@@ -263,10 +263,10 @@ type World struct {
 
 func newWorld(nProcQ, nSchedd int) *World {
 	w := &World{}
-	w.schedds = make([]*Schedd, nSchedd)
+	w.mscheds = make([]*Schedd, nSchedd)
 	w.procqs = make([]*ProcQ, nProcQ)
-	for i := 0; i < len(w.schedds); i++ {
-		w.schedds[i] = newSchedd()
+	for i := 0; i < len(w.mscheds); i++ {
+		w.mscheds[i] = newSchedd()
 	}
 	for i := 0; i < len(w.procqs); i++ {
 		w.procqs[i] = &ProcQ{qs: make(map[TrealmId]*Queue)}
@@ -278,9 +278,9 @@ func newWorld(nProcQ, nSchedd int) *World {
 }
 
 func (w *World) String() string {
-	str := fmt.Sprintf("%d nrealm %d nproc %v ntick/r %v maxq %d avgq %.1f util %.1f%%\n schedds:", w.ntick, len(w.realms), w.nproc, w.fairness(), w.maxq, w.avgq/float64(w.ntick), w.util())
+	str := fmt.Sprintf("%d nrealm %d nproc %v ntick/r %v maxq %d avgq %.1f util %.1f%%\n mscheds:", w.ntick, len(w.realms), w.nproc, w.fairness(), w.maxq, w.avgq/float64(w.ntick), w.util())
 	str += "[\n"
-	for _, sd := range w.schedds {
+	for _, sd := range w.mscheds {
 		str += "  " + sd.String() + ",\n"
 	}
 	str += "  ]\n procQs:"
@@ -294,7 +294,7 @@ func (w *World) addRealm(realm Irealm) {
 	id := realm.Id()
 	w.realms[id] = newRealm(realm)
 	w.nproc[id] = 0
-	for _, sd := range w.schedds {
+	for _, sd := range w.mscheds {
 		sd.addRealm(id)
 	}
 	for _, pq := range w.procqs {
@@ -304,7 +304,7 @@ func (w *World) addRealm(realm Irealm) {
 
 func (w *World) fairness() Ttickmap {
 	ntick := make(Ttickmap)
-	for _, sd := range w.schedds {
+	for _, sd := range w.mscheds {
 		for r, n := range sd.ticks {
 			if _, ok := ntick[r]; ok {
 				ntick[r] += n
@@ -318,7 +318,7 @@ func (w *World) fairness() Ttickmap {
 
 func (w *World) util() float64 {
 	u := float64(0)
-	for _, sd := range w.schedds {
+	for _, sd := range w.mscheds {
 		u += sd.util
 	}
 	return (u / float64(w.ntick)) * float64(100)
@@ -353,7 +353,7 @@ func (w *World) getProcs() {
 	i := 0
 	for capacityAvailable {
 		c := false
-		for _, sd := range w.schedds {
+		for _, sd := range w.mscheds {
 			m := sd.mem()
 			if m < sd.totMem {
 				if p := w.getProc(sd.totMem - m); p != nil {
@@ -365,7 +365,7 @@ func (w *World) getProcs() {
 		capacityAvailable = c
 		i += 1
 	}
-	for _, sd := range w.schedds {
+	for _, sd := range w.mscheds {
 		m := sd.mem()
 		if m < sd.totMem {
 			fmt.Printf("WARNING CAPACITY %v\n", sd)
@@ -374,14 +374,14 @@ func (w *World) getProcs() {
 }
 
 func (w *World) compute() {
-	for _, sd := range w.schedds {
+	for _, sd := range w.mscheds {
 		sd.run()
 	}
 }
 
 func (w *World) zap(r TrealmId) {
 	fmt.Printf("zap a proc from realm %v at %v\n", r, w.ntick)
-	for _, sd := range w.schedds {
+	for _, sd := range w.mscheds {
 		if sd.zap(r) {
 			return
 		}
@@ -390,7 +390,7 @@ func (w *World) zap(r TrealmId) {
 
 func (w *World) utilPerRealm() Ttickmap {
 	rutil := make(Ttickmap)
-	for _, sd := range w.schedds {
+	for _, sd := range w.mscheds {
 		for r, t := range sd.rutil {
 			if _, ok := rutil[r]; ok {
 				rutil[r] += t
@@ -414,7 +414,7 @@ func (w *World) hasWork(lr TrealmId) bool {
 func (w *World) utilRange(rutil Ttickmap) (Tftick, TrealmId, Tftick, TrealmId) {
 	h := Tftick(0)
 	hr := TrealmId(0)
-	l := Tftick(len(w.schedds))
+	l := Tftick(len(w.mscheds))
 	lr := TrealmId(0)
 	for r, u := range rutil {
 		if u > h {
@@ -431,7 +431,7 @@ func (w *World) utilRange(rutil Ttickmap) (Tftick, TrealmId, Tftick, TrealmId) {
 
 func (w *World) zapper() {
 	rutil := w.utilPerRealm()
-	avg := Tftick(len(w.schedds) / len(rutil))
+	avg := Tftick(len(w.mscheds) / len(rutil))
 	h, hr, l, lr := w.utilRange(rutil)
 	// fmt.Printf("rutil %v avg %v h %v hr %v l %v lr %v\n", rutil, avg, h, hr, l, lr)
 	if h-l > avg*1.25 {

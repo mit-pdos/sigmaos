@@ -5,19 +5,19 @@ import (
 	"path/filepath"
 	"sync"
 
-	"sigmaos/chunk"
-	chunkclnt "sigmaos/chunk/clnt"
+	"sigmaos/api/fs"
 	db "sigmaos/debug"
-	"sigmaos/fs"
 	"sigmaos/proc"
-	"sigmaos/procfs"
 	beschedproto "sigmaos/sched/besched/proto"
 	"sigmaos/sched/lcsched/proto"
-	"sigmaos/sched/queue"
 	mschedclnt "sigmaos/sched/msched/clnt"
+	"sigmaos/sched/msched/proc/chunk"
+	chunkclnt "sigmaos/sched/msched/proc/chunk/clnt"
+	"sigmaos/sched/queue"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
+	"sigmaos/util/crash"
 	"sigmaos/util/perf"
 )
 
@@ -27,12 +27,8 @@ type LCSched struct {
 	sc         *sigmaclnt.SigmaClnt
 	mschedclnt *mschedclnt.MSchedClnt
 	qs         map[sp.Trealm]*queue.Queue[string, chan string]
-	schedds    map[string]*Resources
+	mscheds    map[string]*Resources
 	realmbins  *chunkclnt.RealmBinPaths
-}
-
-type QDir struct {
-	lcs *LCSched
 }
 
 func NewLCSched(sc *sigmaclnt.SigmaClnt) *LCSched {
@@ -40,56 +36,14 @@ func NewLCSched(sc *sigmaclnt.SigmaClnt) *LCSched {
 		sc:         sc,
 		mschedclnt: mschedclnt.NewMSchedClnt(sc.FsLib, sp.NOT_SET),
 		qs:         make(map[sp.Trealm]*queue.Queue[string, chan string]),
-		schedds:    make(map[string]*Resources),
+		mscheds:    make(map[string]*Resources),
 		realmbins:  chunkclnt.NewRealmBinPaths(),
 	}
 	lcs.cond = sync.NewCond(&lcs.mu)
 	return lcs
 }
 
-func (qd *QDir) GetProcs() []*proc.Proc {
-	qd.lcs.mu.Lock()
-	defer qd.lcs.mu.Unlock()
-
-	procs := make([]*proc.Proc, 0, qd.lcs.lenL())
-	for _, q := range qd.lcs.qs {
-		pmap := q.GetPMapL()
-		for _, p := range pmap {
-			procs = append(procs, p)
-		}
-	}
-	return procs
-}
-
-func (qd *QDir) Lookup(pid string) (*proc.Proc, bool) {
-	qd.lcs.mu.Lock()
-	defer qd.lcs.mu.Unlock()
-
-	for _, q := range qd.lcs.qs {
-		pmap := q.GetPMapL()
-		if p, ok := pmap[sp.Tpid(pid)]; ok {
-			return p, ok
-		}
-	}
-	return nil, false
-}
-
-func (lcs *LCSched) lenL() int {
-	l := 0
-	for _, q := range lcs.qs {
-		l += q.Len()
-	}
-	return l
-}
-
-func (qd *QDir) Len() int {
-	qd.lcs.mu.Lock()
-	defer qd.lcs.mu.Unlock()
-
-	return qd.lcs.lenL()
-}
-
-func (lcs *LCSched) Enqueue(ctx fs.CtxI, req beschedproto.EnqueueRequest, res *beschedproto.EnqueueResponse) error {
+func (lcs *LCSched) Enqueue(ctx fs.CtxI, req beschedproto.EnqueueReq, res *beschedproto.EnqueueRep) error {
 	p := proc.NewProcFromProto(req.ProcProto)
 	if p.GetRealm() != ctx.Principal().GetRealm() {
 		return fmt.Errorf("Proc realm %v doesn't match principal realm %v", p.GetRealm(), ctx.Principal().GetRealm())
@@ -102,16 +56,16 @@ func (lcs *LCSched) Enqueue(ctx fs.CtxI, req beschedproto.EnqueueRequest, res *b
 	return nil
 }
 
-func (lcs *LCSched) RegisterMSched(ctx fs.CtxI, req proto.RegisterMSchedRequest, res *proto.RegisterMSchedResponse) error {
+func (lcs *LCSched) RegisterMSched(ctx fs.CtxI, req proto.RegisterMSchedReq, res *proto.RegisterMSchedRep) error {
 	lcs.mu.Lock()
 	defer lcs.mu.Unlock()
 
 	db.DPrintf(db.LCSCHED, "Register MSched id:%v mcpu:%v mem:%v", req.KernelID, req.McpuInt, req.MemInt)
-	if _, ok := lcs.schedds[req.KernelID]; ok {
-		db.DPrintf(db.ERROR, "Double-register schedd %v", req.KernelID)
-		return fmt.Errorf("Double-register schedd %v", req.KernelID)
+	if _, ok := lcs.mscheds[req.KernelID]; ok {
+		db.DPrintf(db.ERROR, "Double-register msched %v", req.KernelID)
+		return fmt.Errorf("Double-register msched %v", req.KernelID)
 	}
-	lcs.schedds[req.KernelID] = newResources(req.McpuInt, req.MemInt)
+	lcs.mscheds[req.KernelID] = newResources(req.McpuInt, req.MemInt)
 	lcs.cond.Broadcast()
 	return nil
 }
@@ -125,7 +79,7 @@ func (lcs *LCSched) schedule() {
 		var success bool
 		for realm, q := range lcs.qs {
 			db.DPrintf(db.LCSCHED, "Try to schedule realm %v", realm)
-			for kid, r := range lcs.schedds {
+			for kid, r := range lcs.mscheds {
 				p, ch, _, ok := q.Dequeue(func(p *proc.Proc) bool {
 					return isEligible(p, r.mcpu, r.mem)
 				})
@@ -166,14 +120,14 @@ func (lcs *LCSched) runProc(kernelID string, p *proc.Proc, ch chan string, r *Re
 		lcs.addProc(p, ch)
 		return
 	}
-	// Notify the spawner that a schedd has been chosen.
+	// Notify the spawner that a msched has been chosen.
 	ch <- kernelID
 	// Wait for the proc to exit.
 	lcs.waitProcExit(kernelID, p, r)
 }
 
 func (lcs *LCSched) waitProcExit(kernelID string, p *proc.Proc, r *Resources) {
-	// RPC the schedd this proc was spawned on to wait for the proc to exit.
+	// RPC the msched this proc was spawned on to wait for the proc to exit.
 	db.DPrintf(db.LCSCHED, "WaitExit %v RPC", p.GetPid())
 	if _, err := lcs.mschedclnt.Wait(mschedclnt.EXIT, kernelID, proc.NewProcSeqno(sp.NOT_SET, kernelID, 0, 0), p.GetPid()); err != nil {
 		db.DPrintf(db.ALWAYS, "Error MSched WaitExit: %v", err)
@@ -231,12 +185,9 @@ func Run() {
 		db.DFatalf("Error NewSigmaSrv: %v", err)
 	}
 
-	// export queued procs through procfs. XXX maybe
-	// subdirectory per realm?
-	dir := procfs.NewProcDir(&QDir{lcs})
-	if err := ssrv.MkNod(sp.QUEUE, dir); err != nil {
-		db.DFatalf("Error mknod %v: %v", sp.QUEUE, err)
-	}
+	crash.Failer(sc.FsLib, crash.LCSCHED_CRASH, func(e crash.Tevent) {
+		crash.Crash()
+	})
 
 	// Perf monitoring
 	p, err := perf.NewPerf(sc.ProcEnv(), perf.LCSCHED)

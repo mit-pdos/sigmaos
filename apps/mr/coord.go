@@ -10,18 +10,18 @@ import (
 	"sync/atomic"
 	"time"
 
-	"sigmaos/crash"
 	db "sigmaos/debug"
-	"sigmaos/fttasks"
-	"sigmaos/leaderclnt"
+	"sigmaos/ft/leaderclnt"
+	fttask "sigmaos/ft/task"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
+	"sigmaos/util/crash"
 	"sigmaos/util/rand"
 )
 
 const (
-	NCOORD               = 3
+	NCOORD               = 1
 	RESTART              = "restart" // restart message from reducer
 	MALICIOUS_MAPPER_BIN = "mr-m-malicious"
 )
@@ -44,14 +44,13 @@ const (
 
 type Coord struct {
 	*sigmaclnt.SigmaClnt
-	mft             *fttasks.FtTasks
-	rft             *fttasks.FtTasks
+	mft             *fttask.FtTasks
+	rft             *fttask.FtTasks
 	jobRoot         string
 	job             string
 	nmaptask        int
 	nreducetask     int
 	reduceBinIn     map[string]Bin
-	crash           int64
 	maliciousMapper uint64
 	linesz          string
 	wordsz          string
@@ -62,26 +61,27 @@ type Coord struct {
 	intOutdir       string
 	done            int32
 	memPerTask      proc.Tmem
-	stat            stat
+	stat            Stat
 }
 
-type stat struct {
-	nMap           int
-	nReduce        int
-	nFail          int
-	nRestart       int
-	nRecoverMap    int
-	nRecoverReduce int
+type Stat struct {
+	Ntask          int
+	Nmap           int
+	Nreduce        int
+	Nfail          int
+	Nrestart       int
+	NrecoverMap    int
+	NrecoverReduce int
 }
 
-func (s *stat) String() string {
-	return fmt.Sprintf("{nM %d nR %d nfail %d nrestart %d nrecoverM %d nrecoverR %d}", s.nMap, s.nReduce, s.nFail, s.nRestart, s.nRecoverMap, s.nRecoverReduce)
+func (s *Stat) String() string {
+	return fmt.Sprintf("{nT %d nM %d nR %d nfail %d nrestart %d nrecoverM %d nrecoverR %d}", s.Ntask, s.Nmap, s.Nreduce, s.Nfail, s.Nrestart, s.NrecoverMap, s.NrecoverReduce)
 }
 
 type NewProc func(string) (*proc.Proc, error)
 
 func NewCoord(args []string) (*Coord, error) {
-	if len(args) != 11 {
+	if len(args) != 10 {
 		return nil, errors.New("NewCoord: wrong number of arguments")
 	}
 	c := &Coord{}
@@ -108,22 +108,16 @@ func NewCoord(args []string) (*Coord, error) {
 	c.mapperbin = args[4]
 	c.reducerbin = args[5]
 
-	ctime, err := strconv.Atoi(args[6])
+	malmap, err := strconv.Atoi(args[9])
 	if err != nil {
-		return nil, fmt.Errorf("NewCoord: crash %v isn't int", args[6])
-	}
-	c.crash = int64(ctime)
-
-	malmap, err := strconv.Atoi(args[10])
-	if err != nil {
-		return nil, fmt.Errorf("NewCoord: maliciousMapper %v isn't int", args[10])
+		return nil, fmt.Errorf("NewCoord: maliciousMapper %v isn't int", args[9])
 	}
 	c.maliciousMapper = uint64(malmap)
 
-	c.linesz = args[7]
-	c.wordsz = args[8]
+	c.linesz = args[6]
+	c.wordsz = args[7]
 
-	mem, err := strconv.Atoi(args[9])
+	mem, err := strconv.Atoi(args[8])
 	if err != nil {
 		return nil, fmt.Errorf("NewCoord: nreducetask %v isn't int", args[3])
 	}
@@ -140,15 +134,6 @@ func NewCoord(args []string) (*Coord, error) {
 		db.DFatalf("Error GetFile JobIntOutLink: %v", err)
 	}
 	c.intOutdir = string(b)
-
-	c.mft, err = fttasks.NewFtTasks(c.FsLib, filepath.Dir(JobDir(c.jobRoot, c.job)), filepath.Join(c.job, "/mtasks"))
-	if err != nil {
-		db.DFatalf("NewFtTasks mtasks %v", err)
-	}
-	c.rft, err = fttasks.NewFtTasks(c.FsLib, filepath.Dir(JobDir(c.jobRoot, c.job)), filepath.Join(c.job, "/rtasks"))
-	if err != nil {
-		db.DFatalf("NewFtTasks rtasks %v", err)
-	}
 
 	c.Started()
 
@@ -167,9 +152,6 @@ func (c *Coord) newTask(bin string, args []string, mb proc.Tmem) *proc.Proc {
 	//		p.AppendEnv("GOMEMLIMIT", strconv.Itoa(int(mb)*1024*1024))
 	//	}
 	p.SetMem(mb)
-	if c.crash > 0 {
-		p.SetCrash(c.crash)
-	}
 	return p
 }
 
@@ -190,7 +172,7 @@ func (c *Coord) mapperProc(task string) (*proc.Proc, error) {
 		return nil, err
 	}
 	db.DPrintf(db.ALWAYS, "bin %v", string(bin))
-	c.stat.nMap += 1
+	c.stat.Nmap += 1
 	proc := c.newTask(mapperbin, []string{c.jobRoot, c.job, strconv.Itoa(c.nreducetask), string(bin), c.intOutdir, c.linesz, c.wordsz}, c.memPerTask)
 	return proc, nil
 }
@@ -214,7 +196,7 @@ func (c *Coord) reducerProc(tn string) (*proc.Proc, error) {
 	}
 	outlink := ReduceOut(c.jobRoot, c.job) + t.Task
 	outTarget := ReduceOutTarget(c.outdir, c.job) + t.Task
-	c.stat.nReduce += 1
+	c.stat.Nreduce += 1
 	return c.newTask(c.reducerbin, []string{string(b), outlink, outTarget, strconv.Itoa(c.nmaptask)}, c.memPerTask), nil
 }
 
@@ -226,7 +208,7 @@ type Tresult struct {
 	res *Result
 }
 
-func (c *Coord) waitForTask(ft *fttasks.FtTasks, start time.Time, ch chan Tresult, p *proc.Proc, t string) {
+func (c *Coord) waitForTask(ft *fttask.FtTasks, start time.Time, ch chan Tresult, p *proc.Proc, t string) {
 	// Wait for the task to exit.
 	status, err := c.WaitExit(p.GetPid())
 	// Record end time.
@@ -255,7 +237,7 @@ func (c *Coord) waitForTask(ft *fttasks.FtTasks, start time.Time, ch chan Tresul
 		r.MsOuter = ms
 		ch <- Tresult{t, true, ms, status.Msg(), r}
 	} else { // task failed; make it runnable again
-		c.stat.nFail += 1
+		c.stat.Nfail += 1
 		db.DPrintf(db.MR, "Task failed %v status %v", t, status)
 		if status != nil && status.Msg() == RESTART {
 			// reducer indicates to run some mappers again
@@ -270,7 +252,7 @@ func (c *Coord) waitForTask(ft *fttasks.FtTasks, start time.Time, ch chan Tresul
 	}
 }
 
-func (c *Coord) runTasks(ft *fttasks.FtTasks, ch chan Tresult, taskNames []string, f NewProc) {
+func (c *Coord) runTasks(ft *fttask.FtTasks, ch chan Tresult, taskNames []string, f NewProc) {
 	db.DPrintf(db.MR, "runTasks %v", taskNames)
 	for _, tn := range taskNames {
 		proc, err := f(tn)
@@ -295,7 +277,7 @@ func newStringSlice(data []interface{}) []string {
 	return s
 }
 
-func (c *Coord) startTasks(ft *fttasks.FtTasks, ch chan Tresult, f NewProc) int {
+func (c *Coord) startTasks(ft *fttask.FtTasks, ch chan Tresult, f NewProc) int {
 	start := time.Now()
 	tns, err := ft.AcquireTasks()
 	if err != nil {
@@ -312,18 +294,10 @@ func (c *Coord) startTasks(ft *fttasks.FtTasks, ch chan Tresult, f NewProc) int 
 // restarted, which avoids restarting a mapper several times (because
 // several reducers may ask the mapper to be restarted).
 func (c *Coord) restart(files []string, task string) {
-	db.DPrintf(db.ALWAYS, "restart %v and %v\n", files, task)
+	db.DPrintf(db.ALWAYS, "restart: files %v for %v\n", files, task)
 	for _, f := range files {
-		// Remove symfile so that when coordinator restarts
-		// reducers, they wait for the mappers to make new
-		// symfiles.
-		sym := symname(c.jobRoot, c.job, task, f)
-		if err := c.Remove(sym); err != nil {
-			db.DPrintf(db.ALWAYS, "remove %v err %v\n", sym, err)
-		}
-		// Record that we have to rerun mapper f
-		if err := c.mft.MarkError(f); err != nil {
-			db.DPrintf(db.ALWAYS, "restart %v err %v\n", f, err)
+		if err := c.Remove(f); err != nil {
+			db.DPrintf(db.ALWAYS, "remove %v err %v\n", f, err)
 		}
 	}
 	// Record that we have to rerun reducer task
@@ -334,18 +308,26 @@ func (c *Coord) restart(files []string, task string) {
 
 // Mark all error-ed tasks as runnable
 func (c *Coord) doRestart() bool {
-	n, err := c.mft.Restart()
-	if err != nil {
-		db.DFatalf("Restart mappers err %v\n", err)
-	}
-	m, err := c.rft.Restart()
+	m, err := c.rft.MarkErrorTodo()
 	if err != nil {
 		db.DFatalf("Restart reducers err %v\n", err)
 	}
-	if n+m > 0 {
-		db.DPrintf(db.ALWAYS, "do.Restart(): restarted %d tasks\n", n+m)
+	if m > 0 {
+		// if a reducer couldn't read its input files, mark all
+		// mappers as failed so that they will be restarted.
+		_, err := c.mft.MarkDoneError()
+		if err != nil {
+			db.DFatalf("MarkDoneError err %v\n", err)
+		}
 	}
-	c.stat.nRestart += n + m
+	n, err := c.mft.MarkErrorTodo()
+	if err != nil {
+		db.DFatalf("Restart mappers err %v\n", err)
+	}
+	if n+m > 0 {
+		db.DPrintf(db.ALWAYS, "doRestart(): restart %d tasks\n", n+m)
+	}
+	c.stat.Nrestart += n + m
 	return n+m > 0
 }
 
@@ -354,7 +336,12 @@ func (c *Coord) makeReduceBins() error {
 	if err != nil {
 		return err
 	}
-	rns, err := c.rft.GetTodoTasks()
+	rnsTodo, err := c.rft.GetTodoTasks()
+	if err != nil {
+		return err
+	}
+
+	rnsDone, err := c.rft.GetDoneTasks()
 	if err != nil {
 		return err
 	}
@@ -373,10 +360,7 @@ func (c *Coord) makeReduceBins() error {
 
 	db.DPrintf(db.MR, "Reducers job state %v", rs)
 
-	if len(rns) < c.nreducetask {
-		return nil
-	}
-
+	rns := append(rnsDone, rnsTodo...)
 	for _, n := range rns {
 		c.reduceBinIn[n] = make(Bin, c.nmaptask)
 	}
@@ -445,13 +429,28 @@ func (c *Coord) Work() {
 
 	db.DPrintf(db.ALWAYS, "leader %s nmap %v nreduce %v\n", c.job, c.nmaptask, c.nreducetask)
 
-	crash.CrasherMsg(c.FsLib, c.stat.String)
+	ft, err := fttask.NewFtTasks(c.FsLib, filepath.Dir(JobDir(c.jobRoot, c.job)), filepath.Join(c.job, "/mtasks"))
+	if err != nil {
+		db.DFatalf("NewFtTasks mtasks %v", err)
+	}
+	c.mft = ft
+	c.rft, err = fttask.NewFtTasks(c.FsLib, filepath.Dir(JobDir(c.jobRoot, c.job)), filepath.Join(c.job, "/rtasks"))
+	if err != nil {
+		db.DFatalf("NewFtTasks rtasks %v", err)
+	}
+
+	crash.Failer(c.FsLib, crash.MRCOORD_CRASH, func(e crash.Tevent) {
+		crash.CrashMsg(c.stat.String())
+	})
+	crash.Failer(c.FsLib, crash.MRCOORD_PARTITION, func(e crash.Tevent) {
+		crash.PartitionNamed(c.FsLib)
+	})
 
 	start := time.Now()
 	if n, err := c.mft.RecoverTasks(); err != nil {
 		db.DFatalf("RecoverTasks mapper err %v", err)
 	} else {
-		c.stat.nRecoverMap = n
+		c.stat.NrecoverMap = n
 		db.DPrintf(db.MR, "Recover %d map tasks took %v", n, time.Since(start))
 	}
 
@@ -459,24 +458,27 @@ func (c *Coord) Work() {
 	if n, err := c.rft.RecoverTasks(); err != nil {
 		db.DFatalf("RecoverTasks reducer err %v", err)
 	} else {
-		c.stat.nRecoverReduce = n
+		c.stat.NrecoverReduce = n
 		db.DPrintf(db.MR, "Recover %d reduce tasks took %v", n, time.Since(start))
 	}
+
+	c.stat.Ntask = c.mft.GetStats().Ntask + c.rft.GetStats().Ntask
+
 	start = time.Now()
 	c.doRestart()
 	db.DPrintf(db.MR, "doRestart took %v", time.Since(start))
 	jobStart := time.Now()
 
-	for n := 0; ; {
-		db.DPrintf(db.ALWAYS, "run round %d\n", n)
+	for {
 		//		c.Round("all")
 		start := time.Now()
 		c.Round("map")
-		n, err := c.mft.NTaskDone()
+		m, err := c.mft.NTaskDone()
+		db.DPrintf(db.ALWAYS, "run round %d", m)
 		if err != nil {
 			db.DFatalf("NtaskDone err %v\n", err)
 		}
-		if n == c.nmaptask {
+		if m == c.nmaptask {
 			ms := time.Since(start).Milliseconds()
 			db.DPrintf(db.ALWAYS, "map phase took %vms\n", ms)
 			err := c.makeReduceBins()

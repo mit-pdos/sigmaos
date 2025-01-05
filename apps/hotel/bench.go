@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"sigmaos/apps/hotel/proto"
-	"sigmaos/rpcclnt"
+	rpcclnt "sigmaos/rpc/clnt"
 )
 
 func RandSearchReq(wc *WebClnt, r *rand.Rand) error {
@@ -95,14 +95,14 @@ func RandCheckAvailabilityReq(rpcc *rpcclnt.RPCClnt, r *rand.Rand) error {
 	for i := 0; i < nids; i++ {
 		ids = append(ids, strconv.Itoa(rand.Intn(nhotel-7)+7))
 	}
-	arg := &proto.ReserveRequest{
+	arg := &proto.ReserveReq{
 		HotelId:      ids,
 		CustomerName: "Cornell_0",
 		InDate:       in_date_str,
 		OutDate:      out_date_str,
 		Number:       1,
 	}
-	var res proto.ReserveResult
+	var res proto.ReserveRep
 	return rpcc.RPC("Reserve.CheckAvailability", arg, &res)
 }
 

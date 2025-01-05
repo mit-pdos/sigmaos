@@ -177,6 +177,7 @@ CID=$(docker run -dit \
              -e buildtag=${TAG} \
              -e dialproxy=${DIALPROXY} \
              -e SIGMAPERF=${SIGMAPERF} \
+             -e SIGMAFAIL=${SIGMAFAIL} \
              -e SIGMADEBUG=${SIGMADEBUG} \
              -e reserveMcpu=${RMCPU} \
              sigmaos)

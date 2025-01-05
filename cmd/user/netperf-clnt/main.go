@@ -3,8 +3,8 @@ package main
 import (
 	"os"
 
+	"sigmaos/benchmarks/netperf"
 	db "sigmaos/debug"
-	"sigmaos/netperf"
 )
 
 func main() {

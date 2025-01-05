@@ -6,7 +6,7 @@ import (
 	"sync"
 
 	db "sigmaos/debug"
-	"sigmaos/linuxsched"
+	linuxsched "sigmaos/util/linux/sched"
 )
 
 const (

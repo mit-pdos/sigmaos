@@ -1,0 +1,38 @@
+syntax = "proto3";
+
+import "rpc/proto/rpc.proto";
+import "sigmap/sigmap.proto";
+
+option go_package = "sigmaos/sched/msched/proc/chunk/proto";
+
+message GetFileStatReq {
+  string prog = 1;
+  string realmStr = 2;
+  string pid = 3;
+  repeated string sigmaPath = 4;
+  SecretProto s3Secret = 5;
+  TendpointProto namedEndpointProto = 6;
+}
+
+message GetFileStatRep {
+  TstatProto stat = 1;
+  string path = 2;
+}
+
+message FetchChunkReq {
+  string prog = 1;
+  int32 chunkId = 2;
+  uint64 size = 3;
+  string realm = 4;
+  repeated string sigmaPath = 5;
+  string pid = 6;
+  bool data = 7;
+  SecretProto s3Secret = 8;
+  TendpointProto namedEndpointProto = 9;
+}
+
+message FetchChunkRep {
+  Blob blob = 1;
+  uint64 size = 2;
+  string path = 3;
+}

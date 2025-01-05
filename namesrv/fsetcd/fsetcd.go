@@ -17,12 +17,12 @@ import (
 	"sigmaos/path"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
-	"sigmaos/stats"
+	"sigmaos/sigmasrv/stats"
 )
 
 const (
 	DialTimeout = 5 * time.Second
-	LeaseTTL    = sp.EtcdSessionTTL // 30
+	LeaseTTL    = sp.EtcdSessionTTL
 )
 
 var (
@@ -164,6 +164,7 @@ func (fs *FsEtcd) SetRootNamed(ep *sp.Tendpoint) *serr.Err {
 			db.DPrintf(db.FSETCD, "SetNamed txn %v err %v\n", nf, err)
 			return serr.NewErrError(err)
 		}
+		// XXX return failure if fence check fails
 		db.DPrintf(db.FSETCD, "SetNamed txn %v %v\n", nf, resp)
 		return nil
 	}

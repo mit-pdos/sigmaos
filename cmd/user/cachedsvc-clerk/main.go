@@ -10,16 +10,14 @@ import (
 
 	"github.com/go-redis/redis/v8"
 
+	cachegrpclnt "sigmaos/apps/cache/cachegrp/clnt"
 	cacheclnt "sigmaos/apps/cache/clnt"
 	"sigmaos/apps/cache/proto"
-	cachegrpclnt "sigmaos/apps/cache/cachegrp/clnt"
 	db "sigmaos/debug"
-	"sigmaos/fslib"
-	"sigmaos/util/perf"
 	"sigmaos/proc"
-	"sigmaos/procclnt"
-	"sigmaos/semclnt"
+	"sigmaos/util/coordination/semaphore"
 	"sigmaos/sigmaclnt"
+	"sigmaos/util/perf"
 )
 
 var done = int32(0)
@@ -60,7 +58,7 @@ func main() {
 			DB:       0,
 		})
 	} else {
-		csc = cachegrpclnt.NewCachedSvcClnt([]*fslib.FsLib{sc.FsLib}, os.Args[1])
+		csc = cachegrpclnt.NewCachedSvcClnt(sc.FsLib, os.Args[1])
 	}
 
 	// Record performance.
@@ -74,20 +72,11 @@ func main() {
 	run(sc, csc, rcli, p, dur, nkeys, uint64(keyOffset), sempath)
 }
 
-func waitEvict(csc *cachegrpclnt.CachedSvcClnt, pclnt *procclnt.ProcClnt) {
-	err := pclnt.WaitEvict(pclnt.ProcEnv().GetPID())
-	if err != nil {
-		db.DPrintf(db.CACHECLERK, "Error WaitEvict: %v", err)
-	}
-	db.DPrintf(db.CACHECLERK, "Evict\n")
-	atomic.StoreInt32(&done, 1)
-}
-
 func run(sc *sigmaclnt.SigmaClnt, csc *cachegrpclnt.CachedSvcClnt, rcli *redis.Client, p *perf.Perf, dur time.Duration, nkeys int, keyOffset uint64, sempath string) {
 	ntest := uint64(0)
 	nops := uint64(0)
 	var err error
-	sclnt := semclnt.NewSemClnt(sc.FsLib, sempath)
+	sclnt := semaphore.NewSemaphore(sc.FsLib, sempath)
 	sclnt.Down()
 	// Run for duration dur, then mark as done.
 	go func() {

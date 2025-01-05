@@ -20,7 +20,7 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-type CPUUtilRequest struct {
+type CPUUtilReq struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
@@ -28,8 +28,8 @@ type CPUUtilRequest struct {
 	QoSClass string `protobuf:"bytes,1,opt,name=qoSClass,proto3" json:"qoSClass,omitempty"`
 }
 
-func (x *CPUUtilRequest) Reset() {
-	*x = CPUUtilRequest{}
+func (x *CPUUtilReq) Reset() {
+	*x = CPUUtilReq{}
 	if protoimpl.UnsafeEnabled {
 		mi := &file_util_k8s_proto_k8sutil_proto_msgTypes[0]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -37,13 +37,13 @@ func (x *CPUUtilRequest) Reset() {
 	}
 }
 
-func (x *CPUUtilRequest) String() string {
+func (x *CPUUtilReq) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*CPUUtilRequest) ProtoMessage() {}
+func (*CPUUtilReq) ProtoMessage() {}
 
-func (x *CPUUtilRequest) ProtoReflect() protoreflect.Message {
+func (x *CPUUtilReq) ProtoReflect() protoreflect.Message {
 	mi := &file_util_k8s_proto_k8sutil_proto_msgTypes[0]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -55,19 +55,19 @@ func (x *CPUUtilRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use CPUUtilRequest.ProtoReflect.Descriptor instead.
-func (*CPUUtilRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use CPUUtilReq.ProtoReflect.Descriptor instead.
+func (*CPUUtilReq) Descriptor() ([]byte, []int) {
 	return file_util_k8s_proto_k8sutil_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *CPUUtilRequest) GetQoSClass() string {
+func (x *CPUUtilReq) GetQoSClass() string {
 	if x != nil {
 		return x.QoSClass
 	}
 	return ""
 }
 
-type CPUUtilResult struct {
+type CPUUtilRep struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
@@ -75,8 +75,8 @@ type CPUUtilResult struct {
 	Util float64 `protobuf:"fixed64,1,opt,name=util,proto3" json:"util,omitempty"`
 }
 
-func (x *CPUUtilResult) Reset() {
-	*x = CPUUtilResult{}
+func (x *CPUUtilRep) Reset() {
+	*x = CPUUtilRep{}
 	if protoimpl.UnsafeEnabled {
 		mi := &file_util_k8s_proto_k8sutil_proto_msgTypes[1]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -84,13 +84,13 @@ func (x *CPUUtilResult) Reset() {
 	}
 }
 
-func (x *CPUUtilResult) String() string {
+func (x *CPUUtilRep) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*CPUUtilResult) ProtoMessage() {}
+func (*CPUUtilRep) ProtoMessage() {}
 
-func (x *CPUUtilResult) ProtoReflect() protoreflect.Message {
+func (x *CPUUtilRep) ProtoReflect() protoreflect.Message {
 	mi := &file_util_k8s_proto_k8sutil_proto_msgTypes[1]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -102,12 +102,12 @@ func (x *CPUUtilResult) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use CPUUtilResult.ProtoReflect.Descriptor instead.
-func (*CPUUtilResult) Descriptor() ([]byte, []int) {
+// Deprecated: Use CPUUtilRep.ProtoReflect.Descriptor instead.
+func (*CPUUtilRep) Descriptor() ([]byte, []int) {
 	return file_util_k8s_proto_k8sutil_proto_rawDescGZIP(), []int{1}
 }
 
-func (x *CPUUtilResult) GetUtil() float64 {
+func (x *CPUUtilRep) GetUtil() float64 {
 	if x != nil {
 		return x.Util
 	}
@@ -118,15 +118,14 @@ var File_util_k8s_proto_k8sutil_proto protoreflect.FileDescriptor
 
 var file_util_k8s_proto_k8sutil_proto_rawDesc = []byte{
 	0x0a, 0x1c, 0x75, 0x74, 0x69, 0x6c, 0x2f, 0x6b, 0x38, 0x73, 0x2f, 0x70, 0x72, 0x6f, 0x74, 0x6f,
-	0x2f, 0x6b, 0x38, 0x73, 0x75, 0x74, 0x69, 0x6c, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x22, 0x2c,
-	0x0a, 0x0e, 0x43, 0x50, 0x55, 0x55, 0x74, 0x69, 0x6c, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74,
-	0x12, 0x1a, 0x0a, 0x08, 0x71, 0x6f, 0x53, 0x43, 0x6c, 0x61, 0x73, 0x73, 0x18, 0x01, 0x20, 0x01,
-	0x28, 0x09, 0x52, 0x08, 0x71, 0x6f, 0x53, 0x43, 0x6c, 0x61, 0x73, 0x73, 0x22, 0x23, 0x0a, 0x0d,
-	0x43, 0x50, 0x55, 0x55, 0x74, 0x69, 0x6c, 0x52, 0x65, 0x73, 0x75, 0x6c, 0x74, 0x12, 0x12, 0x0a,
-	0x04, 0x75, 0x74, 0x69, 0x6c, 0x18, 0x01, 0x20, 0x01, 0x28, 0x01, 0x52, 0x04, 0x75, 0x74, 0x69,
-	0x6c, 0x42, 0x18, 0x5a, 0x16, 0x73, 0x69, 0x67, 0x6d, 0x61, 0x6f, 0x73, 0x2f, 0x75, 0x74, 0x69,
-	0x6c, 0x2f, 0x6b, 0x38, 0x73, 0x2f, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x06, 0x70, 0x72, 0x6f,
-	0x74, 0x6f, 0x33,
+	0x2f, 0x6b, 0x38, 0x73, 0x75, 0x74, 0x69, 0x6c, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x22, 0x28,
+	0x0a, 0x0a, 0x43, 0x50, 0x55, 0x55, 0x74, 0x69, 0x6c, 0x52, 0x65, 0x71, 0x12, 0x1a, 0x0a, 0x08,
+	0x71, 0x6f, 0x53, 0x43, 0x6c, 0x61, 0x73, 0x73, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x08,
+	0x71, 0x6f, 0x53, 0x43, 0x6c, 0x61, 0x73, 0x73, 0x22, 0x20, 0x0a, 0x0a, 0x43, 0x50, 0x55, 0x55,
+	0x74, 0x69, 0x6c, 0x52, 0x65, 0x70, 0x12, 0x12, 0x0a, 0x04, 0x75, 0x74, 0x69, 0x6c, 0x18, 0x01,
+	0x20, 0x01, 0x28, 0x01, 0x52, 0x04, 0x75, 0x74, 0x69, 0x6c, 0x42, 0x18, 0x5a, 0x16, 0x73, 0x69,
+	0x67, 0x6d, 0x61, 0x6f, 0x73, 0x2f, 0x75, 0x74, 0x69, 0x6c, 0x2f, 0x6b, 0x38, 0x73, 0x2f, 0x70,
+	0x72, 0x6f, 0x74, 0x6f, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -143,8 +142,8 @@ func file_util_k8s_proto_k8sutil_proto_rawDescGZIP() []byte {
 
 var file_util_k8s_proto_k8sutil_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
 var file_util_k8s_proto_k8sutil_proto_goTypes = []interface{}{
-	(*CPUUtilRequest)(nil), // 0: CPUUtilRequest
-	(*CPUUtilResult)(nil),  // 1: CPUUtilResult
+	(*CPUUtilReq)(nil), // 0: CPUUtilReq
+	(*CPUUtilRep)(nil), // 1: CPUUtilRep
 }
 var file_util_k8s_proto_k8sutil_proto_depIdxs = []int32{
 	0, // [0:0] is the sub-list for method output_type
@@ -161,7 +160,7 @@ func file_util_k8s_proto_k8sutil_proto_init() {
 	}
 	if !protoimpl.UnsafeEnabled {
 		file_util_k8s_proto_k8sutil_proto_msgTypes[0].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*CPUUtilRequest); i {
+			switch v := v.(*CPUUtilReq); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -173,7 +172,7 @@ func file_util_k8s_proto_k8sutil_proto_init() {
 			}
 		}
 		file_util_k8s_proto_k8sutil_proto_msgTypes[1].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*CPUUtilResult); i {
+			switch v := v.(*CPUUtilRep); i {
 			case 0:
 				return &v.state
 			case 1:

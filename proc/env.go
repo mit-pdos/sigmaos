@@ -23,6 +23,8 @@ const (
 	SIGMADEBUG     = "SIGMADEBUG"
 	SIGMACONFIG    = "SIGMACONFIG"
 	SIGMAPRINCIPAL = "SIGMAPRINCIPAL"
+	SIGMAFAIL      = "SIGMAFAIL"
+	SIGMAGEN       = "SIGMAGEN"
 )
 
 const (
@@ -56,6 +58,22 @@ func GetSigmaPerf() string {
 
 func GetSigmaDebug() string {
 	return os.Getenv(SIGMADEBUG)
+}
+
+func GetSigmaFail() string {
+	return os.Getenv(SIGMAFAIL)
+}
+
+func SetSigmaFail(s string) {
+	os.Setenv(SIGMAFAIL, s)
+}
+
+func GetSigmaGen() string {
+	return os.Getenv(SIGMAGEN)
+}
+
+func SetSigmaGen(s string) {
+	os.Setenv(SIGMAGEN, s)
 }
 
 func GetLabelsEnv(envvar string) map[string]bool {
@@ -95,7 +113,8 @@ func NewProcEnv(program string, pid sp.Tpid, realm sp.Trealm, principal *sp.Tpri
 			Perf:                os.Getenv(SIGMAPERF),
 			Strace:              os.Getenv(SIGMASTRACE),
 			Debug:               os.Getenv(SIGMADEBUG),
-			UprocdPIDStr:        sp.NOT_SET,
+			ProcdPIDStr:         sp.NOT_SET,
+			Fail:                os.Getenv(SIGMAFAIL),
 			Privileged:          priv,
 			UseSPProxy:          useSPProxy,
 			UseDialProxy:        useDialProxy,
@@ -255,12 +274,12 @@ func (pe *ProcEnvProto) SetPrincipal(principal *sp.Tprincipal) {
 	pe.Principal = principal
 }
 
-func (pe *ProcEnvProto) SetUprocdPID(pid sp.Tpid) {
-	pe.UprocdPIDStr = string(pid)
+func (pe *ProcEnvProto) SetProcdPID(pid sp.Tpid) {
+	pe.ProcdPIDStr = string(pid)
 }
 
-func (pe *ProcEnvProto) GetUprocdPID() sp.Tpid {
-	return sp.Tpid(pe.UprocdPIDStr)
+func (pe *ProcEnvProto) GetProcdPID() sp.Tpid {
+	return sp.Tpid(pe.ProcdPIDStr)
 }
 
 func (pe *ProcEnv) GetProto() *ProcEnvProto {
@@ -285,20 +304,8 @@ func (pe *ProcEnvProto) ClearNamedEndpoint() {
 	pe.NamedEndpointProto = nil
 }
 
-func (pe *ProcEnvProto) SetNetFail(nf int64) {
-	pe.NetFail = nf
-}
-
 func (pe *ProcEnvProto) SetVersion(v string) {
 	pe.Version = v
-}
-
-func (pe *ProcEnvProto) SetCrash(nf int64) {
-	pe.Crash = nf
-}
-
-func (pe *ProcEnvProto) SetPartition(nf int64) {
-	pe.Partition = nf
 }
 
 func (pe *ProcEnvProto) SetHow(how Thow) {
@@ -333,6 +340,10 @@ func (pe *ProcEnv) GetNamedEndpoint() (*sp.Tendpoint, bool) {
 	return sp.NewEndpointFromProto(mp), true
 }
 
+func (pe *ProcEnv) SetNamedEndpoint(ep *sp.Tendpoint) {
+	pe.ProcEnvProto.NamedEndpointProto = ep.TendpointProto
+}
+
 func (pe *ProcEnv) Marshal() string {
 	b, err := json.Marshal(pe)
 	if err != nil {
@@ -359,7 +370,7 @@ func (pe *ProcEnv) String() string {
 		"Realm:%v "+
 		"Principal:{%v} "+
 		"KernelID:%v "+
-		"UprocdPID:%v "+
+		"ProcdPID:%v "+
 		"ProcDir:%v "+
 		"ParentDir:%v "+
 		"How:%v "+
@@ -368,15 +379,14 @@ func (pe *ProcEnv) String() string {
 		"EtcdMnt:%v "+
 		"InnerIP:%v "+
 		"OuterIP:%v "+
+		"Named:%v "+
 		"BuildTag:%v "+
 		"Privileged:%v "+
-		"Crash:%v "+
-		"Partition:%v "+
-		"NetFail:%v "+
 		"UseSPProxy:%v "+
 		"UseDialProxy:%v "+
 		"SigmaPath:%v "+
 		"RealmSwitch:%v"+
+		"Fail:%v"+
 		"DirReaderVersion:%v"+
 		"}",
 		pe.Program,
@@ -385,7 +395,7 @@ func (pe *ProcEnv) String() string {
 		pe.GetRealm(),
 		pe.GetPrincipal().String(),
 		pe.KernelID,
-		pe.UprocdPIDStr,
+		pe.ProcdPIDStr,
 		pe.ProcDir,
 		pe.ParentDir,
 		Thow(pe.HowInt),
@@ -394,15 +404,14 @@ func (pe *ProcEnv) String() string {
 		pe.GetEtcdEndpoints(),
 		pe.InnerContainerIPStr,
 		pe.OuterContainerIPStr,
+		pe.NamedEndpointProto,
 		pe.BuildTag,
 		pe.Privileged,
-		pe.Crash,
-		pe.Partition,
-		pe.NetFail,
 		pe.UseSPProxy,
 		pe.UseDialProxy,
 		pe.SigmaPath,
 		pe.RealmSwitchStr,
+		pe.Fail,
 		pe.DirReaderVersion,
 	)
 }

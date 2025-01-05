@@ -8,7 +8,7 @@
 
 export DATA_DIR="etcd-data"
 
-if ! docker volume ls | grep -q etcd-data; then
+if ! docker volume ls | grep -q $DATA_DIR; then
     echo "create vol"
     docker volume create --name ${DATA_DIR}
 fi

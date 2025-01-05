@@ -9,35 +9,27 @@ import (
 	"sync"
 	"time"
 
+	"sigmaos/api/fs"
 	db "sigmaos/debug"
 	dialproxyclnt "sigmaos/dialproxy/clnt"
-	"sigmaos/fs"
-	"sigmaos/kernelclnt"
+	kernelclnt "sigmaos/kernel/clnt"
 	"sigmaos/proc"
-	"sigmaos/protsrv"
 	realmpkg "sigmaos/realm"
 	"sigmaos/realm/proto"
 	"sigmaos/rpc"
 	beschedclnt "sigmaos/sched/besched/clnt"
 	mschedclnt "sigmaos/sched/msched/clnt"
-	"sigmaos/semclnt"
 	"sigmaos/serr"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
+	spprotosrv "sigmaos/spproto/srv"
+	"sigmaos/util/coordination/semaphore"
 )
 
 const (
 	MKNET      = "./bin/kernel/create-net.sh"
-	MIN_PORT   = 30000
 	NAMED_MCPU = 0
-)
-
-// Fairness
-const (
-	FAIRNESS_CHECK_PERIOD = time.Second
-	N_SAMPLE              = 2
-	STARVATION_RATIO      = 0.1
 )
 
 type Subsystem struct {
@@ -69,15 +61,14 @@ func (r *Realm) addSubsystem(kernelID string, pid sp.Tpid) {
 }
 
 type RealmSrv struct {
-	mu         sync.Mutex
-	dialproxy  bool
-	realms     map[sp.Trealm]*Realm
-	sc         *sigmaclnt.SigmaClntKernel
-	be         *beschedclnt.BESchedClnt
-	sd         *mschedclnt.MSchedClnt
-	mkc        *kernelclnt.MultiKernelClnt
-	lastNDPort int
-	ch         chan struct{}
+	mu        sync.Mutex
+	dialproxy bool
+	realms    map[sp.Trealm]*Realm
+	sc        *sigmaclnt.SigmaClntKernel
+	be        *beschedclnt.BESchedClnt
+	sd        *mschedclnt.MSchedClnt
+	mkc       *kernelclnt.MultiKernelClnt
+	ch        chan struct{}
 }
 
 func RunRealmSrv(dialproxy bool) error {
@@ -88,19 +79,18 @@ func RunRealmSrv(dialproxy bool) error {
 	}
 	sc.GetDialProxyClnt().AllowConnectionsFromAllRealms()
 	rs := &RealmSrv{
-		dialproxy:  dialproxy,
-		lastNDPort: MIN_PORT,
-		realms:     make(map[sp.Trealm]*Realm),
+		dialproxy: dialproxy,
+		realms:    make(map[sp.Trealm]*Realm),
 	}
 	rs.ch = make(chan struct{})
 	db.DPrintf(db.REALMD, "Run %v %s\n", sp.REALMD, os.Environ())
 	if false {
 		allowedPaths := []string{sp.REALMSREL, rpc.RPC}
-		ssrv, err := sigmasrv.NewSigmaSrvClntAuthFn(sp.REALMD, sc, rs, protsrv.AttachAllowAllPrincipalsSelectPaths(allowedPaths))
+		ssrv, err := sigmasrv.NewSigmaSrvClntAuthFn(sp.REALMD, sc, rs, spprotosrv.AttachAllowAllPrincipalsSelectPaths(allowedPaths))
 		_ = ssrv
 		_ = err
 	}
-	ssrv, err := sigmasrv.NewSigmaSrvClntAuthFn(sp.REALMD, sc, rs, protsrv.AttachAllowAllToAll)
+	ssrv, err := sigmasrv.NewSigmaSrvClntAuthFn(sp.REALMD, sc, rs, spprotosrv.AttachAllowAllToAll)
 	if err != nil {
 		return err
 	}
@@ -134,7 +124,7 @@ func NewNet(net string) error {
 }
 
 // XXX clean up if fail during Make
-func (rm *RealmSrv) Make(ctx fs.CtxI, req proto.MakeRequest, res *proto.MakeResult) error {
+func (rm *RealmSrv) Make(ctx fs.CtxI, req proto.MakeReq, res *proto.MakeRep) error {
 	rm.mu.Lock()
 	defer rm.mu.Unlock()
 
@@ -149,7 +139,7 @@ func (rm *RealmSrv) Make(ctx fs.CtxI, req proto.MakeRequest, res *proto.MakeResu
 		return err
 	}
 	r := newRealm()
-	p := proc.NewProc("named", []string{req.Realm, "0"})
+	p := proc.NewProc("named", []string{req.Realm})
 	// Set up a realm switch: when named runs, it should start as a member of the
 	// new realm.
 	p.SetRealmSwitch(rid)
@@ -170,7 +160,7 @@ func (rm *RealmSrv) Make(ctx fs.CtxI, req proto.MakeRequest, res *proto.MakeResu
 	db.DPrintf(db.REALMD, "RealmSrv.Make %v named started", req.Realm)
 
 	// wait until realm's named is ready to serve
-	sem := semclnt.NewSemClnt(rm.sc.FsLib, filepath.Join(sp.REALMS, req.Realm)+".sem")
+	sem := semaphore.NewSemaphore(rm.sc.FsLib, filepath.Join(sp.REALMS, req.Realm)+".sem")
 	if err := sem.Down(); err != nil {
 		return err
 	}
@@ -239,7 +229,7 @@ func (rm *RealmSrv) Make(ctx fs.CtxI, req proto.MakeRequest, res *proto.MakeResu
 	return nil
 }
 
-func (rm *RealmSrv) Remove(ctx fs.CtxI, req proto.RemoveRequest, res *proto.RemoveResult) error {
+func (rm *RealmSrv) Remove(ctx fs.CtxI, req proto.RemoveReq, res *proto.RemoveRep) error {
 	rm.mu.Lock()
 	defer rm.mu.Unlock()
 
@@ -329,7 +319,7 @@ func (rm *RealmSrv) realmResourceUsage(running map[sp.Trealm][]*proc.Proc) map[s
 
 	rm.mu.Lock()
 	// Initialize from realmmgr's map, since a realm may have never spawn a proc
-	// (and hence not show up in any schedd samples) but may still be starved.
+	// (and hence not show up in any msched samples) but may still be starved.
 	for r, _ := range rm.realms {
 		// Don't consider the root realm when thinking about starvation
 		if r != sp.ROOTREALM {
@@ -371,7 +361,7 @@ func findStarvedRealms(rusage map[sp.Trealm]proc.Tmem) (sp.Trealm, []sp.Trealm) 
 	for r, u := range rusage {
 		// If a realm is using less than STARVATION_RATIO fraction of the max
 		// realm's resources, it is a candidate for a starvation check.
-		if float64(u)/float64(maxUsage) < STARVATION_RATIO {
+		if float64(u)/float64(maxUsage) < sp.Conf.Realm.STARVATION_RATIO {
 			starved = append(starved, r)
 		}
 	}
@@ -401,11 +391,11 @@ func selectVictim(ps []*proc.Proc) *proc.Proc {
 }
 
 func (rm *RealmSrv) enforceResourcePolicy() {
-	t := time.NewTicker(FAIRNESS_CHECK_PERIOD)
+	t := time.NewTicker(sp.Conf.Realm.FAIRNESS_CHECK_PERIOD)
 	for {
 		<-t.C
 		db.DPrintf(db.FAIRNESS, "Check BE resource allocation")
-		running, err := rm.sd.GetRunningProcs(N_SAMPLE)
+		running, err := rm.sd.GetRunningProcs(sp.Conf.Realm.N_SAMPLE)
 		if err != nil {
 			db.DPrintf(db.ERROR, "Err getting running procs: %v", err)
 			continue
@@ -420,7 +410,7 @@ func (rm *RealmSrv) enforceResourcePolicy() {
 			db.DPrintf(db.FAIRNESS, "No starved realms. Fairness achieved.")
 			continue
 		}
-		realmQLens, err := rm.be.GetQueueStats(N_SAMPLE)
+		realmQLens, err := rm.be.GetQueueStats(sp.Conf.Realm.N_SAMPLE)
 		if err != nil {
 			db.DFatalf("Err getting queue stats: %v", err)
 		}

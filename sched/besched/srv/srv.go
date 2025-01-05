@@ -7,22 +7,18 @@ import (
 	"sync/atomic"
 	"time"
 
-	"sigmaos/chunk"
-	chunkclnt "sigmaos/chunk/clnt"
+	"sigmaos/api/fs"
 	db "sigmaos/debug"
-	"sigmaos/fs"
 	"sigmaos/proc"
-	"sigmaos/procfs"
 	"sigmaos/sched/besched/proto"
+	"sigmaos/sched/msched/proc/chunk"
+	chunkclnt "sigmaos/sched/msched/proc/chunk/clnt"
 	"sigmaos/sched/queue"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
+	"sigmaos/util/crash"
 	"sigmaos/util/perf"
-)
-
-const (
-	GET_PROC_TIMEOUT = 50 * time.Millisecond
 )
 
 type BESched struct {
@@ -39,10 +35,6 @@ type BESched struct {
 	realmbins   *chunkclnt.RealmBinPaths
 }
 
-type QDir struct {
-	be *BESched
-}
-
 func NewBESched(sc *sigmaclnt.SigmaClnt) *BESched {
 	be := &BESched{
 		sc:        sc,
@@ -56,52 +48,7 @@ func NewBESched(sc *sigmaclnt.SigmaClnt) *BESched {
 	return be
 }
 
-// XXX Deduplicate with lcsched
-func (qd *QDir) GetProcs() []*proc.Proc {
-	qd.be.mu.Lock()
-	defer qd.be.mu.Unlock()
-
-	procs := make([]*proc.Proc, 0, qd.be.lenL())
-	for _, q := range qd.be.qs {
-		pmap := q.GetPMapL()
-		for _, p := range pmap {
-			procs = append(procs, p)
-		}
-	}
-	return procs
-}
-
-// XXX Deduplicate with lcsched
-func (qd *QDir) Lookup(pid string) (*proc.Proc, bool) {
-	qd.be.mu.Lock()
-	defer qd.be.mu.Unlock()
-
-	for _, q := range qd.be.qs {
-		pmap := q.GetPMapL()
-		if p, ok := pmap[sp.Tpid(pid)]; ok {
-			return p, ok
-		}
-	}
-	return nil, false
-}
-
-// XXX Deduplicate with lcsched
-func (be *BESched) lenL() int {
-	l := 0
-	for _, q := range be.qs {
-		l += q.Len()
-	}
-	return l
-}
-
-func (qd *QDir) Len() int {
-	qd.be.mu.Lock()
-	defer qd.be.mu.Unlock()
-
-	return qd.be.lenL()
-}
-
-func (be *BESched) Enqueue(ctx fs.CtxI, req proto.EnqueueRequest, res *proto.EnqueueResponse) error {
+func (be *BESched) Enqueue(ctx fs.CtxI, req proto.EnqueueReq, res *proto.EnqueueRep) error {
 	p := proc.NewProcFromProto(req.ProcProto)
 	if p.GetRealm() != ctx.Principal().GetRealm() {
 		return fmt.Errorf("Proc realm %v doesn't match principal realm %v", p.GetRealm(), ctx.Principal().GetRealm())
@@ -144,7 +91,7 @@ func (be *BESched) replyToParent(pseqno *proc.ProcSeqno, p *proc.Proc, ch chan *
 	ch <- pseqno
 }
 
-func (be *BESched) GetStats(ctx fs.CtxI, req proto.GetStatsRequest, res *proto.GetStatsResponse) error {
+func (be *BESched) GetStats(ctx fs.CtxI, req proto.GetStatsReq, res *proto.GetStatsRep) error {
 	be.realmMu.RLock()
 	realms := make(map[string]int64, len(be.realms))
 	for _, r := range be.realms {
@@ -160,7 +107,7 @@ func (be *BESched) GetStats(ctx fs.CtxI, req proto.GetStatsRequest, res *proto.G
 	return nil
 }
 
-func (be *BESched) GetProc(ctx fs.CtxI, req proto.GetProcRequest, res *proto.GetProcResponse) error {
+func (be *BESched) GetProc(ctx fs.CtxI, req proto.GetProcReq, res *proto.GetProcRep) error {
 	db.DPrintf(db.BESCHED, "GetProc request by %v mem %v", req.KernelID, req.Mem)
 
 	be.ngetprocReq.Add(1)
@@ -168,7 +115,7 @@ func (be *BESched) GetProc(ctx fs.CtxI, req proto.GetProcRequest, res *proto.Get
 	start := time.Now()
 	// Try until we hit the timeout (which we may hit if the request is for too
 	// few resources).
-	for time.Since(start) < GET_PROC_TIMEOUT {
+	for time.Since(start) < sp.Conf.BESched.GET_PROC_TIMEOUT {
 		lockStart := time.Now()
 		be.mu.Lock()
 		lockDur := time.Since(lockStart)
@@ -209,8 +156,8 @@ func (be *BESched) GetProc(ctx fs.CtxI, req proto.GetProcRequest, res *proto.Get
 				}
 				be.realmbins.SetBinKernelID(p.GetRealm(), p.GetProgram(), req.KernelID)
 
-				// Tell client about schedd chosen to run this proc. Do this
-				// asynchronously so that schedd can proceed with the proc immediately.
+				// Tell client about msched chosen to run this proc. Do this
+				// asynchronously so that msched can proceed with the proc immediately.
 				go be.replyToParent(req.GetProcSeqno(), p, ch, ts)
 				res.ProcProto = p.GetProto()
 				res.OK = true
@@ -226,7 +173,7 @@ func (be *BESched) GetProc(ctx fs.CtxI, req proto.GetProcRequest, res *proto.Get
 		db.DPrintf(db.BESCHED, "GetProc No procs schedulable qs:%v", be.qs)
 		// Releases the lock, so we must re-acquire on the next loop iteration.
 		ok := be.waitOrTimeoutAndUnlock()
-		// If timed out, respond to schedd to have it try another besched.
+		// If timed out, respond to msched to have it try another besched.
 		if !ok {
 			db.DPrintf(db.BESCHED, "Timed out GetProc request from: %v", req.KernelID)
 			res.OK = false
@@ -238,14 +185,14 @@ func (be *BESched) GetProc(ctx fs.CtxI, req proto.GetProcRequest, res *proto.Get
 	return nil
 }
 
-func isEligible(p *proc.Proc, mem proc.Tmem, scheddID string) bool {
+func isEligible(p *proc.Proc, mem proc.Tmem, mschedID string) bool {
 	if p.GetMem() > mem {
 		return false
 	}
 	if p.HasNoKernelPref() {
 		return true
 	}
-	return p.HasKernelPref(scheddID)
+	return p.HasKernelPref(mschedID)
 }
 
 func (be *BESched) getRealmQueue(realm sp.Trealm) *queue.Queue[*proc.ProcSeqno, chan *proc.ProcSeqno] {
@@ -313,15 +260,15 @@ func Run() {
 	}
 	sc.GetDialProxyClnt().AllowConnectionsFromAllRealms()
 	be := NewBESched(sc)
-	ssrv, err := sigmasrv.NewSigmaSrvClnt(filepath.Join(sp.BESCHED, sc.ProcEnv().GetKernelID()), sc, be)
+	ssrv, err := sigmasrv.NewSigmaSrvClnt(filepath.Join(sp.BESCHED, sc.ProcEnv().GetPID().String()), sc, be)
 	if err != nil {
 		db.DFatalf("Error NewSigmaSrv: %v", err)
 	}
-	// export queued procs through procfs. maybe a subdir per realm?
-	dir := procfs.NewProcDir(&QDir{be})
-	if err := ssrv.MkNod(sp.QUEUE, dir); err != nil {
-		db.DFatalf("Error mknod %v: %v", sp.QUEUE, err)
-	}
+
+	crash.Failer(sc.FsLib, crash.BESCHED_CRASH, func(e crash.Tevent) {
+		crash.Crash()
+	})
+
 	// Perf monitoring
 	p, err := perf.NewPerf(sc.ProcEnv(), perf.BESCHED)
 	if err != nil {

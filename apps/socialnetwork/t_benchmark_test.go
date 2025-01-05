@@ -14,7 +14,7 @@ import (
 	sn "sigmaos/apps/socialnetwork"
 	"sigmaos/benchmarks/loadgen"
 	dbg "sigmaos/debug"
-	"sigmaos/linuxsched"
+	linuxsched "sigmaos/util/linux/sched"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 	"strconv"

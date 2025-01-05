@@ -4,23 +4,23 @@ import (
 	//	"context"
 
 	//	"go.opentelemetry.io/otel/trace"
-	//	tproto "sigmaos/tracing/proto"
+	//	tproto "sigmaos/util/tracing/proto"
 
+	"sigmaos/api/fs"
 	"sigmaos/apps/hotel/proto"
 	db "sigmaos/debug"
-	"sigmaos/fs"
-	"sigmaos/util/perf"
 	"sigmaos/proc"
-	"sigmaos/rpcclnt"
-	"sigmaos/rpcdirclnt"
-	"sigmaos/sigmarpcchan"
+	rpcclnt "sigmaos/rpc/clnt"
+	sprpcclnt "sigmaos/rpc/clnt/sigmap"
+	shardedsvcrpcclnt "sigmaos/rpc/shardedsvc/clnt"
 	"sigmaos/sigmasrv"
-	"sigmaos/tracing"
+	"sigmaos/util/perf"
+	"sigmaos/util/tracing"
 )
 
 type Search struct {
 	ratec  *rpcclnt.RPCClnt
-	geodc  *rpcdirclnt.RPCDirClnt
+	geodc  *shardedsvcrpcclnt.ShardedSvcRPCClnt
 	pds    *sigmasrv.SigmaSrv
 	tracer *tracing.Tracer
 }
@@ -32,18 +32,18 @@ func RunSearchSrv(n string) error {
 	if err != nil {
 		return err
 	}
-	fsls, err := NewFsLibs(HOTELSEARCH, ssrv.MemFs.SigmaClnt().GetDialProxyClnt())
+	fsl, err := NewFsLib(HOTELSEARCH, ssrv.MemFs.SigmaClnt().GetDialProxyClnt())
 	if err != nil {
 		return err
 	}
-	rpcc, err := sigmarpcchan.NewSigmaRPCClnt(fsls, HOTELRATE)
+	rpcc, err := sprpcclnt.NewRPCClnt(fsl, HOTELRATE)
 	if err != nil {
 		db.DFatalf("Err new rpcclnt rate: %v", err)
 		return err
 	}
 	s.ratec = rpcc
 
-	s.geodc = rpcdirclnt.NewRPCDirClnt(fsls[0], HOTELGEODIR, db.HOTEL_GEO, db.HOTEL_GEO_ERR)
+	s.geodc = shardedsvcrpcclnt.NewShardedSvcRPCClnt(fsl, HOTELGEODIR, db.HOTEL_GEO, db.HOTEL_GEO_ERR)
 
 	p, err := perf.NewPerf(ssrv.MemFs.SigmaClnt().ProcEnv(), perf.HOTEL_SEARCH)
 	if err != nil {
@@ -57,7 +57,7 @@ func RunSearchSrv(n string) error {
 }
 
 // Nearby returns ids of nearby hotels order by results of ratesrv
-func (s *Search) Nearby(ctx fs.CtxI, req proto.SearchRequest, res *proto.SearchResult) error {
+func (s *Search) Nearby(ctx fs.CtxI, req proto.SearchReq, res *proto.SearchRep) error {
 	//	var sctx context.Context
 	//	var span trace.Span
 	//	if TRACING {
@@ -71,8 +71,8 @@ func (s *Search) Nearby(ctx fs.CtxI, req proto.SearchRequest, res *proto.SearchR
 	//		_, span2 = s.tracer.StartContextSpan(sctx, "Geo.Nearby")
 	//		sctx2 = tracing.SpanToContext(span2)
 	//	}
-	var gres proto.GeoResult
-	greq := &proto.GeoRequest{
+	var gres proto.GeoRep
+	greq := &proto.GeoReq{
 		Lat:               req.Lat,
 		Lon:               req.Lon,
 		SpanContextConfig: nil, //sctx2,
@@ -102,8 +102,8 @@ func (s *Search) Nearby(ctx fs.CtxI, req proto.SearchRequest, res *proto.SearchR
 	//		_, span3 = s.tracer.StartContextSpan(sctx, "Rate.GetRates")
 	//		sctx3 = tracing.SpanToContext(span3)
 	//	}
-	var rres proto.RateResult
-	rreq := &proto.RateRequest{
+	var rres proto.RateRep
+	rreq := &proto.RateReq{
 		HotelIds:          gres.HotelIds,
 		InDate:            req.InDate,
 		OutDate:           req.OutDate,

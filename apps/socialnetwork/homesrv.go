@@ -2,18 +2,20 @@ package socialnetwork
 
 import (
 	"fmt"
+	"strconv"
+
 	"gopkg.in/mgo.v2/bson"
-	"sigmaos/apps/socialnetwork/proto"
+
+	"sigmaos/api/fs"
 	"sigmaos/apps/cache"
 	cachegrpclnt "sigmaos/apps/cache/cachegrp/clnt"
+	"sigmaos/apps/socialnetwork/proto"
 	dbg "sigmaos/debug"
-	"sigmaos/fs"
-	"sigmaos/util/perf"
 	"sigmaos/proc"
-	"sigmaos/rpcclnt"
-	"sigmaos/sigmarpcchan"
+	rpcclnt "sigmaos/rpc/clnt"
+	sprpcclnt "sigmaos/rpc/clnt/sigmap"
 	"sigmaos/sigmasrv"
-	"strconv"
+	"sigmaos/util/perf"
 )
 
 // YH:
@@ -38,23 +40,23 @@ func RunHomeSrv(jobname string) error {
 	if err != nil {
 		return err
 	}
-	fsls, err := NewFsLibs(SOCIAL_NETWORK_HOME, ssrv.MemFs.SigmaClnt().GetDialProxyClnt())
+	fsl, err := NewFsLib(SOCIAL_NETWORK_HOME, ssrv.MemFs.SigmaClnt().GetDialProxyClnt())
 	if err != nil {
 		return err
 	}
-	hsrv.cachec = cachegrpclnt.NewCachedSvcClnt(fsls, jobname)
-	rpcc, err := sigmarpcchan.NewSigmaRPCClnt(fsls, SOCIAL_NETWORK_GRAPH)
+	hsrv.cachec = cachegrpclnt.NewCachedSvcClnt(fsl, jobname)
+	rpcc, err := sprpcclnt.NewRPCClnt(fsl, SOCIAL_NETWORK_GRAPH)
 	if err != nil {
 		return err
 	}
 	hsrv.graphc = rpcc
-	rpcc, err = sigmarpcchan.NewSigmaRPCClnt(fsls, SOCIAL_NETWORK_POST)
+	rpcc, err = sprpcclnt.NewRPCClnt(fsl, SOCIAL_NETWORK_POST)
 	if err != nil {
 		return err
 	}
 	hsrv.postc = rpcc
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_HOME, "Starting home service\n")
-	perf, err := perf.NewPerf(fsls[0].ProcEnv(), perf.SOCIAL_NETWORK_HOME)
+	perf, err := perf.NewPerf(fsl.ProcEnv(), perf.SOCIAL_NETWORK_HOME)
 	if err != nil {
 		dbg.DFatalf("NewPerf err %v\n", err)
 	}
@@ -64,11 +66,11 @@ func RunHomeSrv(jobname string) error {
 }
 
 func (hsrv *HomeSrv) WriteHomeTimeline(
-	ctx fs.CtxI, req proto.WriteHomeTimelineRequest, res *proto.WriteTimelineResponse) error {
+	ctx fs.CtxI, req proto.WriteHomeTimelineReq, res *proto.WriteTimelineRep) error {
 	res.Ok = "No."
 	otherUserIds := make(map[int64]bool, 0)
-	argFollower := proto.GetFollowersRequest{Followeeid: req.Userid}
-	resFollower := proto.GraphGetResponse{}
+	argFollower := proto.GetFollowersReq{Followeeid: req.Userid}
+	resFollower := proto.GraphGetRep{}
 	err := hsrv.graphc.RPC("GraphSrv.GetFollowers", &argFollower, &resFollower)
 	if err != nil {
 		return err
@@ -101,7 +103,7 @@ func (hsrv *HomeSrv) WriteHomeTimeline(
 }
 
 func (hsrv *HomeSrv) ReadHomeTimeline(
-	ctx fs.CtxI, req proto.ReadTimelineRequest, res *proto.ReadTimelineResponse) error {
+	ctx fs.CtxI, req proto.ReadTimelineReq, res *proto.ReadTimelineRep) error {
 	res.Ok = "No"
 	timeline, err := hsrv.getHomeTimeline(req.Userid)
 	if err != nil {
@@ -119,8 +121,8 @@ func (hsrv *HomeSrv) ReadHomeTimeline(
 	for i := start; i < stop; i++ {
 		postids[i-start] = timeline.Postids[nItems-i-1]
 	}
-	readPostReq := proto.ReadPostsRequest{Postids: postids}
-	readPostRes := proto.ReadPostsResponse{}
+	readPostReq := proto.ReadPostsReq{Postids: postids}
+	readPostRes := proto.ReadPostsRep{}
 	if err := hsrv.postc.RPC("PostSrv.ReadPosts", &readPostReq, &readPostRes); err != nil {
 		return err
 	}

@@ -5,13 +5,13 @@ import (
 	"log"
 	"time"
 
+	"sigmaos/api/fs"
 	db "sigmaos/debug"
-	"sigmaos/fs"
 	"sigmaos/path"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
-	"sigmaos/util/sortedmap"
-	"sigmaos/stats"
+	"sigmaos/sigmasrv/stats"
+	"sigmaos/util/sortedmapv1"
 )
 
 // This file implements directory operations on top of etcd.  It
@@ -54,7 +54,7 @@ func (di DirEntInfo) String() string {
 }
 
 type DirInfo struct {
-	Ents *sortedmap.SortedMap[string, *DirEntInfo]
+	Ents *sortedmapv1.SortedMap[string, *DirEntInfo]
 	Perm sp.Tperm
 }
 

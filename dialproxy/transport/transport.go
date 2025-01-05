@@ -12,11 +12,11 @@ import (
 	"golang.org/x/sys/unix"
 
 	db "sigmaos/debug"
-	"sigmaos/demux"
-	"sigmaos/frame"
+	"sigmaos/util/io/demux"
+	"sigmaos/util/io/frame"
 	"sigmaos/proc"
 	"sigmaos/serr"
-	"sigmaos/sessp"
+	sessp "sigmaos/session/proto"
 	sp "sigmaos/sigmap"
 )
 

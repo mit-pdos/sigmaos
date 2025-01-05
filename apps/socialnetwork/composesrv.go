@@ -3,16 +3,17 @@ package socialnetwork
 import (
 	"fmt"
 	"math/rand"
-	"sigmaos/apps/socialnetwork/proto"
-	dbg "sigmaos/debug"
-	"sigmaos/fs"
-	"sigmaos/util/perf"
-	"sigmaos/proc"
-	"sigmaos/rpcclnt"
-	"sigmaos/sigmarpcchan"
-	"sigmaos/sigmasrv"
 	"sync"
 	"time"
+
+	"sigmaos/api/fs"
+	"sigmaos/apps/socialnetwork/proto"
+	dbg "sigmaos/debug"
+	"sigmaos/proc"
+	rpcclnt "sigmaos/rpc/clnt"
+	sprpcclnt "sigmaos/rpc/clnt/sigmap"
+	"sigmaos/sigmasrv"
+	"sigmaos/util/perf"
 )
 
 // YH:
@@ -42,32 +43,32 @@ func RunComposeSrv(jobname string) error {
 	if err != nil {
 		return err
 	}
-	fsls, err := NewFsLibs(SOCIAL_NETWORK_POST, ssrv.MemFs.SigmaClnt().GetDialProxyClnt())
+	fsl, err := NewFsLib(SOCIAL_NETWORK_POST, ssrv.MemFs.SigmaClnt().GetDialProxyClnt())
 	if err != nil {
 		return err
 	}
-	rpcc, err := sigmarpcchan.NewSigmaRPCClnt(fsls, SOCIAL_NETWORK_TEXT)
+	rpcc, err := sprpcclnt.NewRPCClnt(fsl, SOCIAL_NETWORK_TEXT)
 	if err != nil {
 		return err
 	}
 	csrv.textc = rpcc
-	rpcc, err = sigmarpcchan.NewSigmaRPCClnt(fsls, SOCIAL_NETWORK_POST)
+	rpcc, err = sprpcclnt.NewRPCClnt(fsl, SOCIAL_NETWORK_POST)
 	if err != nil {
 		return err
 	}
 	csrv.postc = rpcc
-	rpcc, err = sigmarpcchan.NewSigmaRPCClnt(fsls, SOCIAL_NETWORK_TIMELINE)
+	rpcc, err = sprpcclnt.NewRPCClnt(fsl, SOCIAL_NETWORK_TIMELINE)
 	if err != nil {
 		return err
 	}
 	csrv.tlc = rpcc
-	rpcc, err = sigmarpcchan.NewSigmaRPCClnt(fsls, SOCIAL_NETWORK_HOME)
+	rpcc, err = sprpcclnt.NewRPCClnt(fsl, SOCIAL_NETWORK_HOME)
 	if err != nil {
 		return err
 	}
 	csrv.homec = rpcc
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_COMPOSE, "Starting compose service %v\n", csrv.sid)
-	perf, err := perf.NewPerf(fsls[0].ProcEnv(), perf.SOCIAL_NETWORK_COMPOSE)
+	perf, err := perf.NewPerf(fsl.ProcEnv(), perf.SOCIAL_NETWORK_COMPOSE)
 	if err != nil {
 		dbg.DFatalf("NewPerf err %v\n", err)
 	}
@@ -76,7 +77,7 @@ func RunComposeSrv(jobname string) error {
 }
 
 func (csrv *ComposeSrv) ComposePost(
-	ctx fs.CtxI, req proto.ComposePostRequest, res *proto.ComposePostResponse) error {
+	ctx fs.CtxI, req proto.ComposePostReq, res *proto.ComposePostRep) error {
 	res.Ok = "No"
 	timestamp := time.Now().UnixNano()
 	if req.Text == "" {
@@ -84,8 +85,8 @@ func (csrv *ComposeSrv) ComposePost(
 		return nil
 	}
 	// process text
-	textReq := proto.ProcessTextRequest{Text: req.Text}
-	textRes := proto.ProcessTextResponse{}
+	textReq := proto.ProcessTextReq{Text: req.Text}
+	textRes := proto.ProcessTextRep{}
 	if err := csrv.textc.RPC("TextSrv.ProcessText", &textReq, &textRes); err != nil {
 		return err
 	}
@@ -110,15 +111,15 @@ func (csrv *ComposeSrv) ComposePost(
 
 	var wg sync.WaitGroup
 	var postErr, tlErr, homeErr error
-	postReq := proto.StorePostRequest{Post: post}
-	postRes := proto.StorePostResponse{}
-	tlReq := proto.WriteTimelineRequest{
+	postReq := proto.StorePostReq{Post: post}
+	postRes := proto.StorePostRep{}
+	tlReq := proto.WriteTimelineReq{
 		Userid: req.Userid, Postid: post.Postid, Timestamp: post.Timestamp}
-	tlRes := proto.WriteTimelineResponse{}
-	homeReq := proto.WriteHomeTimelineRequest{
+	tlRes := proto.WriteTimelineRep{}
+	homeReq := proto.WriteHomeTimelineReq{
 		Usermentionids: post.Usermentions, Userid: req.Userid,
 		Postid: post.Postid, Timestamp: post.Timestamp}
-	homeRes := proto.WriteTimelineResponse{}
+	homeRes := proto.WriteTimelineRep{}
 	wg.Add(3)
 	go func() {
 		defer wg.Done()

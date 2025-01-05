@@ -5,10 +5,10 @@ import (
 
 	"go.etcd.io/etcd/client/v3"
 
+	"sigmaos/api/fs"
 	db "sigmaos/debug"
-	"sigmaos/fs"
+	leaseproto "sigmaos/ft/lease/proto"
 	"sigmaos/namesrv/fsetcd"
-	leaseproto "sigmaos/lease/proto"
 	sp "sigmaos/sigmap"
 	"sigmaos/util/syncmap"
 )
@@ -27,7 +27,7 @@ func newLeaseSrv(fs *fsetcd.FsEtcd) *LeaseSrv {
 	}
 }
 
-func (ls *LeaseSrv) AskLease(ctx fs.CtxI, req leaseproto.AskRequest, rep *leaseproto.AskResult) error {
+func (ls *LeaseSrv) AskLease(ctx fs.CtxI, req leaseproto.AskReq, rep *leaseproto.AskRep) error {
 	db.DPrintf(db.LEASESRV, "%v: AskLease %v", ctx.ClntId(), req.TTL)
 	if lid, ok := ls.lt.Lookup(ctx.ClntId()); ok {
 		rep.LeaseId = uint64(lid)
@@ -41,7 +41,7 @@ func (ls *LeaseSrv) AskLease(ctx fs.CtxI, req leaseproto.AskRequest, rep *leasep
 	return nil
 }
 
-func (ls *LeaseSrv) Extend(ctx fs.CtxI, req leaseproto.ExtendRequest, rep *leaseproto.ExtendResult) error {
+func (ls *LeaseSrv) Extend(ctx fs.CtxI, req leaseproto.ExtendReq, rep *leaseproto.ExtendRep) error {
 	db.DPrintf(db.LEASESRV, "%v: Extend %v", ctx.ClntId(), sp.TleaseId(req.LeaseId))
 	resp, err := ls.lc.KeepAliveOnce(context.TODO(), clientv3.LeaseID(req.LeaseId))
 	if err != nil {
@@ -51,7 +51,7 @@ func (ls *LeaseSrv) Extend(ctx fs.CtxI, req leaseproto.ExtendRequest, rep *lease
 	return nil
 }
 
-func (ls *LeaseSrv) End(ctx fs.CtxI, req leaseproto.ExtendRequest, rep *leaseproto.ExtendResult) error {
+func (ls *LeaseSrv) End(ctx fs.CtxI, req leaseproto.ExtendReq, rep *leaseproto.ExtendRep) error {
 	db.DPrintf(db.LEASESRV, "%v: End %v", ctx.ClntId(), sp.TleaseId(req.LeaseId))
 	resp, err := ls.lc.Revoke(context.TODO(), clientv3.LeaseID(req.LeaseId))
 	if err != nil {

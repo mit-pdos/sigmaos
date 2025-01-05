@@ -2,17 +2,19 @@ package socialnetwork
 
 import (
 	"fmt"
+	"strconv"
+
 	"gopkg.in/mgo.v2/bson"
-	"sigmaos/apps/socialnetwork/proto"
+
+	"sigmaos/api/fs"
 	"sigmaos/apps/cache"
 	cachegrpclnt "sigmaos/apps/cache/cachegrp/clnt"
+	"sigmaos/apps/socialnetwork/proto"
 	dbg "sigmaos/debug"
-	"sigmaos/fs"
-	mongoclnt "sigmaos/mongo/clnt"
-	"sigmaos/util/perf"
 	"sigmaos/proc"
+	mongoclnt "sigmaos/proxy/mongo/clnt"
 	"sigmaos/sigmasrv"
-	"strconv"
+	"sigmaos/util/perf"
 )
 
 // YH:
@@ -42,13 +44,13 @@ func RunPostSrv(jobname string) error {
 	}
 	mongoc.EnsureIndex(SN_DB, POST_COL, []string{"postid"})
 	psrv.mongoc = mongoc
-	fsls, err := NewFsLibs(SOCIAL_NETWORK_POST, ssrv.MemFs.SigmaClnt().GetDialProxyClnt())
+	fsl, err := NewFsLib(SOCIAL_NETWORK_POST, ssrv.MemFs.SigmaClnt().GetDialProxyClnt())
 	if err != nil {
 		return err
 	}
-	psrv.cachec = cachegrpclnt.NewCachedSvcClnt(fsls, jobname)
+	psrv.cachec = cachegrpclnt.NewCachedSvcClnt(fsl, jobname)
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_POST, "Starting post service\n")
-	perf, err := perf.NewPerf(fsls[0].ProcEnv(), perf.SOCIAL_NETWORK_POST)
+	perf, err := perf.NewPerf(fsl.ProcEnv(), perf.SOCIAL_NETWORK_POST)
 	if err != nil {
 		dbg.DFatalf("NewPerf err %v\n", err)
 	}
@@ -57,7 +59,7 @@ func RunPostSrv(jobname string) error {
 	return ssrv.RunServer()
 }
 
-func (psrv *PostSrv) StorePost(ctx fs.CtxI, req proto.StorePostRequest, res *proto.StorePostResponse) error {
+func (psrv *PostSrv) StorePost(ctx fs.CtxI, req proto.StorePostReq, res *proto.StorePostRep) error {
 	res.Ok = "No"
 	postBson := postToBson(req.Post)
 	if err := psrv.mongoc.Insert(SN_DB, POST_COL, postBson); err != nil {
@@ -68,7 +70,7 @@ func (psrv *PostSrv) StorePost(ctx fs.CtxI, req proto.StorePostRequest, res *pro
 	return nil
 }
 
-func (psrv *PostSrv) ReadPosts(ctx fs.CtxI, req proto.ReadPostsRequest, res *proto.ReadPostsResponse) error {
+func (psrv *PostSrv) ReadPosts(ctx fs.CtxI, req proto.ReadPostsReq, res *proto.ReadPostsRep) error {
 	res.Ok = "No."
 	posts := make([]*proto.Post, len(req.Postids))
 	missing := false

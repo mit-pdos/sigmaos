@@ -8,20 +8,18 @@ import (
 
 	//	"go.opentelemetry.io/otel/trace"
 
-	"sigmaos/apps/hotel/proto"
+	"sigmaos/api/fs"
 	"sigmaos/apps/cache"
 	cacheproto "sigmaos/apps/cache/proto"
-	dbclnt "sigmaos/db/clnt"
+	"sigmaos/apps/hotel/proto"
 	db "sigmaos/debug"
-	"sigmaos/fs"
-	"sigmaos/util/perf"
 	"sigmaos/proc"
+	dbclnt "sigmaos/proxy/db/clnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
-	"sigmaos/tracing"
+	"sigmaos/util/perf"
+	"sigmaos/util/tracing"
 )
-
-const ()
 
 type Reservation struct {
 	HotelID  string
@@ -97,11 +95,11 @@ func RunReserveSrv(job string, cache string) error {
 		return err
 	}
 	r.dbc = dbc
-	fsls, err := NewFsLibs(HOTELRESERVE, ssrv.MemFs.SigmaClnt().GetDialProxyClnt())
+	fsl, err := NewFsLib(HOTELRESERVE, ssrv.MemFs.SigmaClnt().GetDialProxyClnt())
 	if err != nil {
 		return err
 	}
-	cachec, err := NewCacheClnt(cache, fsls, job)
+	cachec, err := NewCacheClnt(cache, fsl, job)
 	if err != nil {
 		return err
 	}
@@ -123,7 +121,7 @@ func RunReserveSrv(job string, cache string) error {
 }
 
 // checkAvailability checks if given information is available
-func (s *Reserve) checkAvailability(sctx context.Context, hotelId string, req proto.ReserveRequest) (bool, map[string]int, error) {
+func (s *Reserve) checkAvailability(sctx context.Context, hotelId string, req proto.ReserveReq) (bool, map[string]int, error) {
 	inDate, _ := time.Parse(
 		time.RFC3339,
 		req.InDate+"T12:00:00+00:00")
@@ -249,7 +247,7 @@ func (s *Reserve) checkAvailability(sctx context.Context, hotelId string, req pr
 
 // NewReservation news a reservation based on given information
 // XXX make check and reservation atomic
-func (s *Reserve) NewReservation(ctx fs.CtxI, req proto.ReserveRequest, res *proto.ReserveResult) error {
+func (s *Reserve) NewReservation(ctx fs.CtxI, req proto.ReserveReq, res *proto.ReserveRep) error {
 	var sctx context.Context
 	//	var span trace.Span
 	//	if TRACING {
@@ -311,7 +309,7 @@ func (s *Reserve) NewReservation(ctx fs.CtxI, req proto.ReserveRequest, res *pro
 	return nil
 }
 
-func (s *Reserve) CheckAvailability(ctx fs.CtxI, req proto.ReserveRequest, res *proto.ReserveResult) error {
+func (s *Reserve) CheckAvailability(ctx fs.CtxI, req proto.ReserveReq, res *proto.ReserveRep) error {
 	var sctx context.Context
 	//	var span trace.Span
 	//	if TRACING {

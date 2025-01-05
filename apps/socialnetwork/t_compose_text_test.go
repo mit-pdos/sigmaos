@@ -2,15 +2,16 @@ package socialnetwork_test
 
 import (
 	"fmt"
-	"github.com/stretchr/testify/assert"
-	sn "sigmaos/apps/socialnetwork"
-	"sigmaos/apps/socialnetwork/proto"
-	"sigmaos/fslib"
-	"sigmaos/linuxsched"
-	"sigmaos/sigmarpcchan"
-	"sigmaos/test"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+
+	sn "sigmaos/apps/socialnetwork"
+	"sigmaos/apps/socialnetwork/proto"
+	sprpcclnt "sigmaos/rpc/clnt/sigmap"
+	"sigmaos/test"
+	linuxsched "sigmaos/util/linux/sched"
 )
 
 func TestUrl(t *testing.T) {
@@ -31,7 +32,7 @@ func TestUrl(t *testing.T) {
 	snCfg := tssn.snCfg
 
 	// create RPC clients text
-	rpcc, err := sigmarpcchan.NewSigmaRPCClnt([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_URL)
+	rpcc, err := sprpcclnt.NewRPCClnt(snCfg.FsLib, sn.SOCIAL_NETWORK_URL)
 	if !assert.Nil(t, err, "Err make rpcclnt: %v", err) {
 		return
 	}
@@ -39,8 +40,8 @@ func TestUrl(t *testing.T) {
 	// compose urls
 	url1 := "http://www.google.com/q=apple"
 	url2 := "https://www.bing.com"
-	arg_url := proto.ComposeUrlsRequest{Extendedurls: []string{url1, url2}}
-	res_url := proto.ComposeUrlsResponse{}
+	arg_url := proto.ComposeUrlsReq{Extendedurls: []string{url1, url2}}
+	res_url := proto.ComposeUrlsRep{}
 	assert.Nil(t, rpcc.RPC("UrlSrv.ComposeUrls", &arg_url, &res_url))
 	assert.Equal(t, "OK", res_url.Ok)
 	assert.Equal(t, 2, len(res_url.Shorturls))
@@ -48,8 +49,8 @@ func TestUrl(t *testing.T) {
 	// get urls
 	shortUrl1 := res_url.Shorturls[0]
 	shortUrl2 := res_url.Shorturls[1]
-	arg_get := proto.GetUrlsRequest{Shorturls: []string{shortUrl1, shortUrl2}}
-	res_get := proto.GetUrlsResponse{}
+	arg_get := proto.GetUrlsReq{Shorturls: []string{shortUrl1, shortUrl2}}
+	res_get := proto.GetUrlsRep{}
 	assert.Nil(t, rpcc.RPC("UrlSrv.GetUrls", &arg_get, &res_get))
 	assert.Equal(t, "OK", res_get.Ok)
 	assert.Equal(t, 2, len(res_get.Extendedurls))
@@ -79,14 +80,14 @@ func TestText(t *testing.T) {
 
 	// create RPC clients text
 	tssn.dbu.InitUser()
-	rpcc, err := sigmarpcchan.NewSigmaRPCClnt([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_TEXT)
+	rpcc, err := sprpcclnt.NewRPCClnt(snCfg.FsLib, sn.SOCIAL_NETWORK_TEXT)
 	if !assert.Nil(t, err, "Err make rpcclnt: %v", err) {
 		return
 	}
 
 	// process text
-	arg_text := proto.ProcessTextRequest{}
-	res_text := proto.ProcessTextResponse{}
+	arg_text := proto.ProcessTextReq{}
+	res_text := proto.ProcessTextRep{}
 	assert.Nil(t, rpcc.RPC("TextSrv.ProcessText", &arg_text, &res_text))
 	assert.Equal(t, "Cannot process empty text.", res_text.Ok)
 
@@ -142,22 +143,22 @@ func TestCompose(t *testing.T) {
 	// create RPC clients text
 	tssn.dbu.InitUser()
 	tssn.dbu.InitGraph()
-	rpcc, err := sigmarpcchan.NewSigmaRPCClnt([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_COMPOSE)
+	rpcc, err := sprpcclnt.NewRPCClnt(snCfg.FsLib, sn.SOCIAL_NETWORK_COMPOSE)
 	if !assert.Nil(t, err, "Err make rpcclnt: %v", err) {
 		return
 	}
-	trpcc, err := sigmarpcchan.NewSigmaRPCClnt([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_TIMELINE)
+	trpcc, err := sprpcclnt.NewRPCClnt(snCfg.FsLib, sn.SOCIAL_NETWORK_TIMELINE)
 	if !assert.Nil(t, err, "Err make rpcclnt: %v", err) {
 		return
 	}
-	hrpcc, err := sigmarpcchan.NewSigmaRPCClnt([]*fslib.FsLib{snCfg.FsLib}, sn.SOCIAL_NETWORK_HOME)
+	hrpcc, err := sprpcclnt.NewRPCClnt(snCfg.FsLib, sn.SOCIAL_NETWORK_HOME)
 	if !assert.Nil(t, err, "Err make rpcclnt: %v", err) {
 		return
 	}
 
 	// compose empty post not allowed
-	arg_compose := proto.ComposePostRequest{}
-	res_compose := proto.ComposePostResponse{}
+	arg_compose := proto.ComposePostReq{}
+	res_compose := proto.ComposePostRep{}
 	assert.Nil(t, rpcc.RPC("ComposeSrv.ComposePost", &arg_compose, &res_compose))
 	assert.Equal(t, "Cannot compose empty post!", res_compose.Ok)
 
@@ -178,8 +179,8 @@ func TestCompose(t *testing.T) {
 	assert.Equal(t, "OK", res_compose.Ok)
 
 	// check timelines: user_1 has two items
-	arg_tl := proto.ReadTimelineRequest{Userid: int64(1), Start: int32(0), Stop: int32(2)}
-	res_tl := proto.ReadTimelineResponse{}
+	arg_tl := proto.ReadTimelineReq{Userid: int64(1), Start: int32(0), Stop: int32(2)}
+	res_tl := proto.ReadTimelineRep{}
 	assert.Nil(t, trpcc.RPC("TimelineSrv.ReadTimeline", &arg_tl, &res_tl))
 	assert.Equal(t, 2, len(res_tl.Posts))
 	assert.Equal(t, "OK", res_tl.Ok)
@@ -190,20 +191,20 @@ func TestCompose(t *testing.T) {
 
 	// check hometimelines:
 	// user_0 has two items (follower), user_0 and user_3 have one item (mentioned)
-	arg_home := proto.ReadTimelineRequest{Userid: int64(0), Start: int32(0), Stop: int32(2)}
-	res_home := proto.ReadTimelineResponse{}
+	arg_home := proto.ReadTimelineReq{Userid: int64(0), Start: int32(0), Stop: int32(2)}
+	res_home := proto.ReadTimelineRep{}
 	assert.Nil(t, hrpcc.RPC("HomeSrv.ReadHomeTimeline", &arg_home, &res_home))
 	assert.Equal(t, 2, len(res_home.Posts))
 	assert.Equal(t, "OK", res_home.Ok)
 	assert.True(t, IsPostEqual(post2, res_home.Posts[0]))
 	assert.True(t, IsPostEqual(post1, res_home.Posts[1]))
 
-	arg_home = proto.ReadTimelineRequest{Userid: int64(2), Start: int32(0), Stop: int32(1)}
+	arg_home = proto.ReadTimelineReq{Userid: int64(2), Start: int32(0), Stop: int32(1)}
 	assert.Nil(t, hrpcc.RPC("HomeSrv.ReadHomeTimeline", &arg_home, &res_home))
 	assert.Equal(t, "OK", res_home.Ok)
 	assert.True(t, IsPostEqual(post2, res_home.Posts[0]))
 
-	arg_home = proto.ReadTimelineRequest{Userid: int64(3), Start: int32(0), Stop: int32(1)}
+	arg_home = proto.ReadTimelineReq{Userid: int64(3), Start: int32(0), Stop: int32(1)}
 	assert.Nil(t, hrpcc.RPC("HomeSrv.ReadHomeTimeline", &arg_home, &res_home))
 	assert.Equal(t, "OK", res_home.Ok)
 	assert.True(t, IsPostEqual(post1, res_home.Posts[0]))

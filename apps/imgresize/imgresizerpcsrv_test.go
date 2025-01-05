@@ -9,9 +9,9 @@ import (
 	"sigmaos/apps/imgresize"
 	db "sigmaos/debug"
 	"sigmaos/proc"
-	rd "sigmaos/util/rand"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
+	rd "sigmaos/util/rand"
 )
 
 type TstateRPC struct {
@@ -27,7 +27,7 @@ func newTstateRPC(t *test.Tstate) (*TstateRPC, error) {
 	ts.job = rd.String(4)
 	ts.cleanup()
 
-	err := ts.MkDir(imgresize.IMG, 0777)
+	err := ts.MkDir(sp.IMG, 0777)
 	if !assert.Nil(ts.T, err) {
 		return nil, err
 	}
@@ -46,7 +46,7 @@ func newTstateRPC(t *test.Tstate) (*TstateRPC, error) {
 }
 
 func (ts *TstateRPC) cleanup() {
-	ts.RmDir(imgresize.IMG)
+	ts.RmDir(sp.IMG)
 	imgresize.Cleanup(ts.FsLib, filepath.Join(sp.S3, sp.LOCAL, "9ps3/img-save"))
 }
 

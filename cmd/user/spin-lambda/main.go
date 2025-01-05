@@ -6,8 +6,8 @@ import (
 	//	"time"
 
 	"github.com/aws/aws-lambda-go/lambda"
-	//	"sigmaos/fslib"
-	//	"sigmaos/semclnt"
+	//	"sigmaos/sigmaclnt/fslib"
+	//	"sigmaos/util/coordination/semaphore"
 	//	sp "sigmaos/sigmap"
 	db "sigmaos/debug"
 )
@@ -22,7 +22,7 @@ func spin(args []string) error {
 	//		return err
 	//	}
 	//
-	// sem := semclnt.NewSemClnt(fsl, sempath)
+	// sem := semaphore.NewSemaphore(fsl, sempath)
 	// err = sem.Up()
 	//
 	//	if err != nil {

@@ -4,69 +4,54 @@ import "proc/proc.proto";
 
 option go_package = "sigmaos/sched/msched/proto";
 
-service MSched {
-  rpc ForceRun(ForceRunRequest) returns (ForceRunResponse);
-  rpc WaitStart(WaitRequest) returns (WaitResponse);
-  rpc Started(NotifyRequest) returns (NotifyResponse);
-  rpc WaitExit(WaitRequest) returns (WaitResponse);
-  rpc Exited(NotifyRequest) returns (NotifyResponse);
-  rpc WaitEvict(WaitRequest) returns (WaitResponse);
-  rpc Evict(NotifyRequest) returns (NotifyResponse);
-  rpc GetCPUShares(GetCPUSharesRequest) returns (GetCPUSharesResponse);
-  rpc GetRunningProcs(GetRunningProcsRequest) returns (GetRunningProcsResponse);
-  rpc GetMSchedStats(GetMSchedStatsRequest) returns (GetMSchedStatsResponse);
-  rpc WarmCacheBin(WarmCacheBinRequest) returns (WarmCacheBinResponse);
-}
-
-
-message ForceRunRequest {
+message ForceRunReq {
   ProcProto procProto = 1;
   bool memAccountedFor = 2;
 }
 
-message ForceRunResponse {
+message ForceRunRep {
 }
 
-message WaitRequest {
+message WaitReq {
   string pidStr = 1;
   ProcSeqno procSeqno = 2;
 }
 
-message WaitResponse {
+message WaitRep {
   bytes status = 1;
 }
 
-message NotifyRequest {
+message NotifyReq {
   string pidStr = 1;
   bytes status = 2;
 }
 
-message NotifyResponse {
+message NotifyRep {
 }
 
-message GetCPUSharesRequest {
+message GetCPUSharesReq {
 }
 
-message GetCPUSharesResponse {
+message GetCPUSharesRep {
   map<string, int64> shares = 1;
 }
 
-message GetCPUUtilRequest {
+message GetCPUUtilReq {
   string realmStr = 1;
 }
 
-message GetCPUUtilResponse {
+message GetCPUUtilRep {
   double util = 1;
 }
 
-message GetRunningProcsRequest {
+message GetRunningProcsReq {
 }
 
-message GetRunningProcsResponse {
+message GetRunningProcsRep {
   repeated ProcProto procProtos = 1;
 }
 
-message WarmCacheBinRequest {
+message WarmCacheBinReq {
   string pidStr = 1;
   string realmStr = 2;
   string program = 3;
@@ -74,7 +59,7 @@ message WarmCacheBinRequest {
   int32 procType = 5;
 }
 
-message WarmCacheBinResponse {
+message WarmCacheBinRep {
   bool oK = 1;
 }
 
@@ -83,9 +68,9 @@ message RealmStats {
   int64 totalRan = 2; 
 }
 
-message GetMSchedStatsRequest {
+message GetMSchedStatsReq {
 }
 
-message GetMSchedStatsResponse {
+message GetMSchedStatsRep {
   map<string, RealmStats> mSchedStats = 1;
 }

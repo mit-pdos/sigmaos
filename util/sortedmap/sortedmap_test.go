@@ -1,11 +1,15 @@
 package sortedmap
 
 import (
+	"strconv"
 	"testing"
+	"time"
 
+	"github.com/google/btree"
 	"github.com/stretchr/testify/assert"
 
 	db "sigmaos/debug"
+	"sigmaos/util/rand"
 )
 
 var NAMES = []string{"a", "b.txt", "gutenberg", "ls.PDF", "wiki"}
@@ -80,4 +84,42 @@ func TestRR(t *testing.T) {
 	i, ok = sd.RoundRobin()
 	assert.True(t, ok)
 	assert.Equal(t, "gutenberg", i)
+}
+
+func perm(n int) (ns []int) {
+	for i := 0; i < n; i++ {
+		r := rand.Int64(int64(n))
+		ns = append(ns, int(r))
+	}
+	return ns
+}
+
+func TestMany(t *testing.T) {
+	ns := []int{10, 100, 1000, 10_000, 100_000}
+	// ns := []int{10_000}
+	for _, n := range ns {
+		rs := perm(n)
+		sd := NewSortedMap[string, *bool]()
+		s := time.Now()
+		for i := 0; i < n; i++ {
+			sd.Insert("ff"+strconv.Itoa(rs[i]), new(bool))
+		}
+		t := time.Since(s)
+		db.DPrintf(db.TEST, "%d ops %v us/op %v", n, t, float64(t.Microseconds())/float64(n))
+	}
+}
+
+func TestBtree(t *testing.T) {
+	ns := []int{10, 100, 1000, 10_000, 100_000}
+	// ns := []int{10_000}
+	for _, n := range ns {
+		rs := perm(n)
+		tr := btree.NewOrderedG[string](32)
+		s := time.Now()
+		for i := 0; i < n; i++ {
+			tr.ReplaceOrInsert("ff" + strconv.Itoa(rs[i]))
+		}
+		t := time.Since(s)
+		db.DPrintf(db.TEST, "%d ops %v us/op %v", n, t, float64(t.Microseconds())/float64(n))
+	}
 }

@@ -2,18 +2,20 @@ package socialnetwork
 
 import (
 	"fmt"
-	"gopkg.in/mgo.v2/bson"
 	"math/rand"
-	"sigmaos/apps/socialnetwork/proto"
-	"sigmaos/apps/cache"
-	cachegrpclnt "sigmaos/apps/cache/cachegrp/clnt"
-	dbg "sigmaos/debug"
-	"sigmaos/fs"
-	mongoclnt "sigmaos/mongo/clnt"
-	"sigmaos/proc"
-	"sigmaos/sigmasrv"
 	"strconv"
 	"sync"
+
+	"gopkg.in/mgo.v2/bson"
+
+	"sigmaos/api/fs"
+	"sigmaos/apps/cache"
+	cachegrpclnt "sigmaos/apps/cache/cachegrp/clnt"
+	"sigmaos/apps/socialnetwork/proto"
+	dbg "sigmaos/debug"
+	"sigmaos/proc"
+	mongoclnt "sigmaos/proxy/mongo/clnt"
+	"sigmaos/sigmasrv"
 )
 
 // YH:
@@ -46,16 +48,16 @@ func RunMediaSrv(jobname string) error {
 	}
 	mongoc.EnsureIndex(SN_DB, MEDIA_COL, []string{"mediaid"})
 	msrv.mongoc = mongoc
-	fsls, err := NewFsLibs(SOCIAL_NETWORK_MEDIA, ssrv.MemFs.SigmaClnt().GetDialProxyClnt())
+	fsl, err := NewFsLib(SOCIAL_NETWORK_MEDIA, ssrv.MemFs.SigmaClnt().GetDialProxyClnt())
 	if err != nil {
 		return err
 	}
-	msrv.cachec = cachegrpclnt.NewCachedSvcClnt(fsls, jobname)
+	msrv.cachec = cachegrpclnt.NewCachedSvcClnt(fsl, jobname)
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_MEDIA, "Starting media service\n")
 	return ssrv.RunServer()
 }
 
-func (msrv *MediaSrv) StoreMedia(ctx fs.CtxI, req proto.StoreMediaRequest, res *proto.StoreMediaResponse) error {
+func (msrv *MediaSrv) StoreMedia(ctx fs.CtxI, req proto.StoreMediaReq, res *proto.StoreMediaRep) error {
 	res.Ok = "No"
 	mId := msrv.getNextMediaId()
 	newMedia := Media{mId, req.Mediatype, req.Mediadata}
@@ -68,7 +70,7 @@ func (msrv *MediaSrv) StoreMedia(ctx fs.CtxI, req proto.StoreMediaRequest, res *
 	return nil
 }
 
-func (msrv *MediaSrv) ReadMedia(ctx fs.CtxI, req proto.ReadMediaRequest, res *proto.ReadMediaResponse) error {
+func (msrv *MediaSrv) ReadMedia(ctx fs.CtxI, req proto.ReadMediaReq, res *proto.ReadMediaRep) error {
 	res.Ok = "No."
 	mediatypes := make([]string, len(req.Mediaids))
 	mediadatas := make([][]byte, len(req.Mediaids))

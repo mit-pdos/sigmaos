@@ -6,16 +6,17 @@ import (
 	"strings"
 	"time"
 
+	procapi "sigmaos/api/proc"
+	sos "sigmaos/api/sigmaos"
 	db "sigmaos/debug"
 	dialproxyclnt "sigmaos/dialproxy/clnt"
-	"sigmaos/fdclnt"
-	"sigmaos/fidclnt"
-	"sigmaos/fslib"
-	"sigmaos/leaseclnt"
+	leaseclnt "sigmaos/ft/lease/clnt"
 	"sigmaos/proc"
-	"sigmaos/procclnt"
-	sos "sigmaos/sigmaos"
-	spproxyclnt "sigmaos/spproxy/clnt"
+	spproxyclnt "sigmaos/proxy/sigmap/clnt"
+	"sigmaos/sigmaclnt/fidclnt"
+	"sigmaos/sigmaclnt/fsclnt"
+	"sigmaos/sigmaclnt/fslib"
+	"sigmaos/sigmaclnt/procclnt"
 )
 
 func init() {
@@ -32,7 +33,7 @@ func init() {
 
 type SigmaClnt struct {
 	*fslib.FsLib
-	proc.ProcAPI
+	procapi.ProcAPI
 	*leaseclnt.LeaseClnt
 }
 
@@ -43,7 +44,7 @@ type SigmaClntKernel struct {
 	sc *SigmaClnt
 }
 
-// Create FsLib using either sigmacntclnt or fdclnt
+// Create FsLib using either sigmacntclnt or fsclnt
 func newFsLibFidClnt(pe *proc.ProcEnv, fidc *fidclnt.FidClnt) (*fslib.FsLib, error) {
 	var err error
 	var s sos.FileAPI
@@ -54,7 +55,7 @@ func newFsLibFidClnt(pe *proc.ProcEnv, fidc *fidclnt.FidClnt) (*fslib.FsLib, err
 			return nil, err
 		}
 	} else {
-		s = fdclnt.NewFdClient(pe, fidc)
+		s = fsclnt.NewFsClient(pe, fidc)
 	}
 	return fslib.NewFsLibAPI(pe, fidc.GetDialProxyClnt(), s)
 }

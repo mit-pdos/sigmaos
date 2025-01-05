@@ -15,12 +15,11 @@ import (
 	cachegrpmgr "sigmaos/apps/cache/cachegrp/mgr"
 	proto "sigmaos/apps/cache/proto"
 	db "sigmaos/debug"
-	"sigmaos/fslib"
-	"sigmaos/linuxsched"
-	"sigmaos/mem"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
+	"sigmaos/util/linux/mem"
+	linuxsched "sigmaos/util/linux/sched"
 	rd "sigmaos/util/rand"
 )
 
@@ -152,18 +151,18 @@ func (ts *realmTstate) shutdown() {
 
 func TestBasicMultiRealmSingleNode(t *testing.T) {
 	ts := newMultiRealmTstate(t)
-	schedds1, err := ts.ts1.GetDir(sp.MSCHED)
+	mscheds1, err := ts.ts1.GetDir(sp.MSCHED)
 	assert.Nil(t, err)
-	// Only one schedd so far.
-	assert.True(ts.rootts.T, len(schedds1) == 1, "Wrong number schedds %v", schedds1)
+	// Only one msched so far.
+	assert.True(ts.rootts.T, len(mscheds1) == 1, "Wrong number mscheds %v", mscheds1)
 
-	schedds2, err := ts.ts2.GetDir(sp.MSCHED)
+	mscheds2, err := ts.ts2.GetDir(sp.MSCHED)
 	assert.Nil(t, err)
-	// Only one schedd so far.
-	assert.True(ts.rootts.T, len(schedds2) == 1, "Wrong number schedds %v", schedds2)
+	// Only one msched so far.
+	assert.True(ts.rootts.T, len(mscheds2) == 1, "Wrong number mscheds %v", mscheds2)
 
-	for i := range schedds1 {
-		assert.Equal(t, schedds1[i].Name, schedds2[i].Name)
+	for i := range mscheds1 {
+		assert.Equal(t, mscheds1[i].Name, mscheds2[i].Name)
 	}
 	ts.shutdown()
 }
@@ -181,16 +180,16 @@ func TestBasicMultiRealmMultiNode(t *testing.T) {
 	assert.Nil(t, err3, "GetNamedEndpoint: %v", err3)
 	db.DPrintf(db.TEST, "[%v] named addr: %v", REALM2, m2)
 
-	schedds1, err := ts.ts1.GetDir(sp.MSCHED)
+	mscheds1, err := ts.ts1.GetDir(sp.MSCHED)
 	assert.Nil(t, err, "ErrGetDir MSCHED: %v", err)
-	assert.True(ts.rootts.T, len(schedds1) == 2, "Wrong number schedds %v", schedds1)
+	assert.True(ts.rootts.T, len(mscheds1) == 2, "Wrong number mscheds %v", mscheds1)
 
-	schedds2, err := ts.ts2.GetDir(sp.MSCHED)
+	mscheds2, err := ts.ts2.GetDir(sp.MSCHED)
 	assert.Nil(t, err, "ErrGetDir MSCHED: %v", err)
-	assert.True(ts.rootts.T, len(schedds2) == 2, "Wrong number schedds %v", schedds2)
+	assert.True(ts.rootts.T, len(mscheds2) == 2, "Wrong number mscheds %v", mscheds2)
 
-	for i := range schedds1 {
-		assert.Equal(t, schedds1[i].Name, schedds2[i].Name)
+	for i := range mscheds1 {
+		assert.Equal(t, mscheds1[i].Name, mscheds2[i].Name)
 	}
 
 	ts.shutdown()
@@ -471,7 +470,7 @@ func TestKernelIsolationBasic(t *testing.T) {
 	// live in the root named (and are mounted into the tenant's named)
 	sts, err := ts.ts1.GetDir(pn)
 	assert.Nil(t, err, "Unable to GetDir root-mounted union dir %v: %v", pn, err)
-	assert.True(t, len(sts) == 1, "Wrong list of schedds: %v", sp.Names(sts))
+	assert.True(t, len(sts) == 1, "Wrong list of mscheds: %v", sp.Names(sts))
 	sts1, err := ts.ts1.GetDir(filepath.Join(pn, sts[0].Name) + "/")
 	assert.Nil(t, err, "Unable to GetDir root-mounted union dir %v: %v", pn, err)
 	assert.True(t, len(sts1) == 3, "Wrong procq contents: %v", sp.Names(sts1))
@@ -531,14 +530,14 @@ func TestMultiRealmIsolationBasic(t *testing.T) {
 	cm, err := cachegrpmgr.NewCacheMgr(ts.ts1.SigmaClnt, job, 1, 0, true)
 	assert.Nil(t, err)
 
-	cc1 := cachegrpclnt.NewCachedSvcClnt([]*fslib.FsLib{ts.ts1.FsLib}, job)
+	cc1 := cachegrpclnt.NewCachedSvcClnt(ts.ts1.FsLib, job)
 
 	err = cc1.Put("hello", &proto.CacheString{Val: "hello"})
 	assert.Nil(t, err)
 
 	db.DPrintf(db.TEST, "newcacheclnt %v", ts.ts2.FsLib)
 
-	cc2 := cachegrpclnt.NewCachedSvcClnt([]*fslib.FsLib{ts.ts2.FsLib}, job)
+	cc2 := cachegrpclnt.NewCachedSvcClnt(ts.ts2.FsLib, job)
 
 	db.DPrintf(db.TEST, "About to stat srvs")
 
@@ -563,7 +562,7 @@ func TestMultiRealmIsolationEndpoint(t *testing.T) {
 	cm, err := cachegrpmgr.NewCacheMgr(ts.ts1.SigmaClnt, job, 1, 0, true)
 	assert.Nil(t, err)
 
-	cc1 := cachegrpclnt.NewCachedSvcClnt([]*fslib.FsLib{ts.ts1.FsLib}, job)
+	cc1 := cachegrpclnt.NewCachedSvcClnt(ts.ts1.FsLib, job)
 
 	err = cc1.Put("hello", &proto.CacheString{Val: "hello"})
 	assert.Nil(t, err)
@@ -671,7 +670,7 @@ func targetTime(baseline time.Duration, tslowdown float64) time.Duration {
 	return time.Duration(float64(baseline) * tslowdown)
 }
 
-// XXX May fail on Linux systems (especially when they have multiple NUMA
+// May fail on Linux systems (especially when they have multiple NUMA
 // nodes), due to a linux scheduler bug. See:
 // https://www.usenix.org/system/files/login/articles/login_winter16_02_lozi.pdf
 func TestSpinPerfDoubleSlowdown(t *testing.T) {

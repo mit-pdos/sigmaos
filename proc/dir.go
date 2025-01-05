@@ -10,7 +10,7 @@ import (
  * Proc Directory structure:
  *
  * /
- * |- schedd
+ * |- msched
  * |  |
  * |  |- kernel-1
  * |  |  |
@@ -25,7 +25,7 @@ import (
  * |  |               |- start-sem
  * |  |               |- exit-status
  * |  |               |- shared -> link/to/parent/shared/state // Symlink to shared state of parent's choosing, if desired.
- * |  |               |- procdir -> /schedd/kernel-2/pids/1001 // Symlink to child's procdir.
+ * |  |               |- procdir -> /msched/kernel-2/pids/1001 // Symlink to child's procdir.
  * |  |                  |- ...
  * |  |
  * |  |- kernel-2
@@ -34,12 +34,12 @@ import (
  * |        |
  * |        |- 1001
  * |            |
- * |            |- parentdir -> /schedd/kernel-1/pids/1000/children/1001 // Mount of subdir of parent proc.
+ * |            |- parentdir -> /msched/kernel-1/pids/1000/children/1001 // Mount of subdir of parent proc.
  * |            |- ...
  * |
- * |- kpids // Only for kernel procs such as s3, ux, schedd, ...
+ * |- kpids // Only for kernel procs such as s3, ux, msched, ...
  *    |
- *    |- schedd-2000
+ *    |- msched-2000
  *       |
  *       |- kernel-proc // Only present if this is a kernel proc.
  *       |- ... // Same directory structure as regular procs
@@ -53,7 +53,6 @@ const (
 	PARENTDIR = "parentdir"
 
 	// Files/directories in "pids/<pid>":
-	SHARED      = "shared"
 	START_SEM   = "start-sem"
 	EXIT_SEM    = "exit-sem"
 	EVICT_SEM   = "evict-sem"

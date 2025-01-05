@@ -7,8 +7,8 @@ import (
 	"path"
 
 	db "sigmaos/debug"
-	"sigmaos/fs"
-	"sigmaos/pipe"
+	"sigmaos/api/fs"
+	"sigmaos/sigmasrv/pipe"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
@@ -49,7 +49,7 @@ func NewReader(args []string) (*Reader, error) {
 	}
 	r.SigmaClnt = sc
 	r.input = args[1]
-	r.output = path.Join(proc.PARENTDIR, proc.SHARED) + "/"
+	r.output = path.Join(proc.PARENTDIR /*, proc.SHARED*/) + "/"
 	r.Started()
 	return r, nil
 }

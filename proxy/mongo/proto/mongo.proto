@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+option go_package = "sigmaos/proxy/mongo/proto";
+
+/*
+Insert
+Find
+Upsert
+Update
+*/
+
+message MongoReq {
+  string db = 1;
+  string collection = 2;
+  bytes  query = 3;
+  bytes  obj = 4;
+}
+
+message MongoConfigReq {
+  string          db = 1;
+  string          collection = 2;
+  repeated string indexkeys = 3;
+}
+
+message MongoRep {
+  string         ok = 1;
+  repeated bytes objs = 2;
+}
+

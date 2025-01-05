@@ -3,14 +3,15 @@ package socialnetwork
 import (
 	"fmt"
 	"regexp"
+	"sync"
+
+	"sigmaos/api/fs"
 	"sigmaos/apps/socialnetwork/proto"
 	dbg "sigmaos/debug"
-	"sigmaos/fs"
 	"sigmaos/proc"
-	"sigmaos/rpcclnt"
-	"sigmaos/sigmarpcchan"
+	rpcclnt "sigmaos/rpc/clnt"
+	sprpcclnt "sigmaos/rpc/clnt/sigmap"
 	"sigmaos/sigmasrv"
-	"sync"
 )
 
 // YH:
@@ -36,16 +37,16 @@ func RunTextSrv(jobname string) error {
 	if err != nil {
 		return err
 	}
-	fsls, err := NewFsLibs(SOCIAL_NETWORK_TEXT, ssrv.MemFs.SigmaClnt().GetDialProxyClnt())
+	fsl, err := NewFsLib(SOCIAL_NETWORK_TEXT, ssrv.MemFs.SigmaClnt().GetDialProxyClnt())
 	if err != nil {
 		return err
 	}
-	rpcc, err := sigmarpcchan.NewSigmaRPCClnt(fsls, SOCIAL_NETWORK_USER)
+	rpcc, err := sprpcclnt.NewRPCClnt(fsl, SOCIAL_NETWORK_USER)
 	if err != nil {
 		return err
 	}
 	tsrv.userc = rpcc
-	rpcc, err = sigmarpcchan.NewSigmaRPCClnt(fsls, SOCIAL_NETWORK_URL)
+	rpcc, err = sprpcclnt.NewRPCClnt(fsl, SOCIAL_NETWORK_URL)
 	if err != nil {
 		return err
 	}
@@ -55,7 +56,7 @@ func RunTextSrv(jobname string) error {
 }
 
 func (tsrv *TextSrv) ProcessText(
-	ctx fs.CtxI, req proto.ProcessTextRequest, res *proto.ProcessTextResponse) error {
+	ctx fs.CtxI, req proto.ProcessTextReq, res *proto.ProcessTextRep) error {
 	res.Ok = "No. "
 	if req.Text == "" {
 		res.Ok = "Cannot process empty text."
@@ -68,8 +69,8 @@ func (tsrv *TextSrv) ProcessText(
 	for idx, mention := range mentions {
 		usernames[idx] = mention[1:]
 	}
-	userArg := proto.CheckUserRequest{Usernames: usernames}
-	userRes := proto.CheckUserResponse{}
+	userArg := proto.CheckUserReq{Usernames: usernames}
+	userRes := proto.CheckUserRep{}
 
 	urlIndices := urlRegex.FindAllStringIndex(req.Text, -1)
 	urlIndicesL := len(urlIndices)
@@ -77,8 +78,8 @@ func (tsrv *TextSrv) ProcessText(
 	for idx, loc := range urlIndices {
 		extendedUrls[idx] = req.Text[loc[0]:loc[1]]
 	}
-	urlArg := proto.ComposeUrlsRequest{Extendedurls: extendedUrls}
-	urlRes := proto.ComposeUrlsResponse{}
+	urlArg := proto.ComposeUrlsReq{Extendedurls: extendedUrls}
+	urlRes := proto.ComposeUrlsRep{}
 
 	// concurrent RPC calls
 	var wg sync.WaitGroup

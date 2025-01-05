@@ -4,9 +4,9 @@ package ctx
 import (
 	"fmt"
 
-	"sigmaos/clntcond"
-	"sigmaos/fs"
-	"sigmaos/sessp"
+	"sigmaos/sigmasrv/clntcond"
+	"sigmaos/api/fs"
+	sessp "sigmaos/session/proto"
 	sp "sigmaos/sigmap"
 )
 

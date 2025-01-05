@@ -11,12 +11,12 @@ import (
 	"sigmaos/apps/socialnetwork/proto"
 	dbg "sigmaos/debug"
 	"sigmaos/proc"
-	"sigmaos/rpcclnt"
+	rpcclnt "sigmaos/rpc/clnt"
+	sprpcclnt "sigmaos/rpc/clnt/sigmap"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
-	"sigmaos/sigmarpcchan"
-	"sigmaos/tracing"
 	"sigmaos/util/perf"
+	"sigmaos/util/tracing"
 )
 
 type FrontEnd struct {
@@ -53,31 +53,31 @@ func RunFrontendSrv(job string) error {
 		return err
 	}
 	frontend.SigmaClnt = sc
-	fsls, err := NewFsLibs(SERVER_NAME, sc.GetDialProxyClnt())
+	fsl, err := NewFsLib(SERVER_NAME, sc.GetDialProxyClnt())
 	if err != nil {
 		return err
 	}
-	rpcc, err := sigmarpcchan.NewSigmaRPCClnt(fsls, SOCIAL_NETWORK_USER)
+	rpcc, err := sprpcclnt.NewRPCClnt(fsl, SOCIAL_NETWORK_USER)
 	if err != nil {
 		return err
 	}
 	frontend.userc = rpcc
-	rpcc, err = sigmarpcchan.NewSigmaRPCClnt(fsls, SOCIAL_NETWORK_GRAPH)
+	rpcc, err = sprpcclnt.NewRPCClnt(fsl, SOCIAL_NETWORK_GRAPH)
 	if err != nil {
 		return err
 	}
 	frontend.graphc = rpcc
-	rpcc, err = sigmarpcchan.NewSigmaRPCClnt(fsls, SOCIAL_NETWORK_TIMELINE)
+	rpcc, err = sprpcclnt.NewRPCClnt(fsl, SOCIAL_NETWORK_TIMELINE)
 	if err != nil {
 		return err
 	}
 	frontend.tlc = rpcc
-	rpcc, err = sigmarpcchan.NewSigmaRPCClnt(fsls, SOCIAL_NETWORK_HOME)
+	rpcc, err = sprpcclnt.NewRPCClnt(fsl, SOCIAL_NETWORK_HOME)
 	if err != nil {
 		return err
 	}
 	frontend.homec = rpcc
-	rpcc, err = sigmarpcchan.NewSigmaRPCClnt(fsls, SOCIAL_NETWORK_COMPOSE)
+	rpcc, err = sprpcclnt.NewRPCClnt(fsl, SOCIAL_NETWORK_COMPOSE)
 	if err != nil {
 		return err
 	}
@@ -160,9 +160,9 @@ func (s *FrontEnd) userHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Please specify username and password", http.StatusBadRequest)
 		return
 	}
-	var res proto.UserResponse
+	var res proto.UserRep
 	// Check username and password
-	err := s.userc.RPC("UserSrv.Login", &proto.LoginRequest{
+	err := s.userc.RPC("UserSrv.Login", &proto.LoginReq{
 		Username: username,
 		Password: password,
 	}, &res)
@@ -195,10 +195,10 @@ func (s *FrontEnd) composeHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Please specify username or id", http.StatusBadRequest)
 			return
 		}
-		var res proto.CheckUserResponse
+		var res proto.CheckUserRep
 		// retrieve userid
 		err := s.userc.RPC("UserSrv.CheckUser",
-			&proto.CheckUserRequest{Usernames: []string{username}}, &res)
+			&proto.CheckUserReq{Usernames: []string{username}}, &res)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -229,8 +229,8 @@ func (s *FrontEnd) composeHandler(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
-	var res proto.ComposePostResponse
-	err := s.composec.RPC("ComposeSrv.ComposePost", &proto.ComposePostRequest{
+	var res proto.ComposePostRep
+	err := s.composec.RPC("ComposeSrv.ComposePost", &proto.ComposePostReq{
 		Username: username,
 		Userid:   userid,
 		Text:     text,
@@ -290,12 +290,12 @@ func (s *FrontEnd) timelineHandlerInner(w http.ResponseWriter, r *http.Request, 
 		http.Error(w, "bad number format in request", http.StatusBadRequest)
 		return
 	}
-	var res proto.ReadTimelineResponse
+	var res proto.ReadTimelineRep
 	if isHome {
-		err = s.homec.RPC("HomeSrv.ReadHomeTimeline", &proto.ReadTimelineRequest{
+		err = s.homec.RPC("HomeSrv.ReadHomeTimeline", &proto.ReadTimelineReq{
 			Userid: userid, Start: int32(start), Stop: int32(stop)}, &res)
 	} else {
-		err = s.tlc.RPC("TimelineSrv.ReadTimeline", &proto.ReadTimelineRequest{
+		err = s.tlc.RPC("TimelineSrv.ReadTimeline", &proto.ReadTimelineReq{
 			Userid: userid, Start: int32(start), Stop: int32(stop)}, &res)
 	}
 	if err != nil {

@@ -1,12 +1,12 @@
 package sigmasrv
 
 import (
-	"sigmaos/fs"
-	"sigmaos/memfs/inode"
-	"sigmaos/memfssrv"
-	"sigmaos/rpcsrv"
+	"sigmaos/api/fs"
+	"sigmaos/sigmasrv/memfssrv/memfs/inode"
+	"sigmaos/sigmasrv/memfssrv"
+	rpcsrv "sigmaos/rpc/srv"
 	"sigmaos/serr"
-	"sigmaos/sessp"
+	sessp "sigmaos/session/proto"
 	sp "sigmaos/sigmap"
 )
 
@@ -32,7 +32,7 @@ func (rd *rpcDev) newRpcSession(mfs *memfssrv.MemFs, sid sessp.Tsession) (fs.FsO
 	return rpc, nil
 }
 
-func (rpc *rpcSession) Stat(ctx fs.CtxI) (*sp.Stat, *serr.Err) {
+func (rpc *rpcSession) Stat(ctx fs.CtxI) (*sp.Tstat, *serr.Err) {
 	st, err := rpc.Inode.NewStat()
 	if err != nil {
 		return nil, err

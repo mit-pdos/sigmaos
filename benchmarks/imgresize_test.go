@@ -8,13 +8,13 @@ import (
 
 	"sigmaos/apps/imgresize"
 	db "sigmaos/debug"
-	"sigmaos/fttasks"
-	"sigmaos/groupmgr"
-	"sigmaos/util/perf"
+	fttask "sigmaos/ft/task"
+	"sigmaos/ft/procgroupmgr"
 	"sigmaos/proc"
-	rd "sigmaos/util/rand"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
+	"sigmaos/util/perf"
+	rd "sigmaos/util/rand"
 )
 
 type ImgResizeJobInstance struct {
@@ -28,9 +28,9 @@ type ImgResizeJobInstance struct {
 	nrounds  int
 	input    string
 	ready    chan bool
-	imgd     *groupmgr.GroupMgr
+	imgd     *procgroupmgr.ProcGroupMgr
 	p        *perf.Perf
-	ft       *fttasks.FtTasks
+	ft       *fttask.FtTasks
 	*test.RealmTstate
 }
 
@@ -49,9 +49,9 @@ func NewImgResizeJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, input str
 	ji.mem = mem
 	ji.nrounds = nrounds
 
-	ts.RmDir(imgresize.IMG)
+	ts.RmDir(sp.IMG)
 
-	ft, err := fttasks.MkFtTasks(ji.SigmaClnt.FsLib, imgresize.IMG, ji.job)
+	ft, err := fttask.MkFtTasks(ji.SigmaClnt.FsLib, sp.IMG, ji.job)
 	assert.Nil(ts.Ts.T, err, "Error MkDirs: %v", err)
 	ji.ft = ft
 
@@ -71,7 +71,7 @@ func NewImgResizeJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, input str
 		assert.Nil(ji.Ts.T, err, "Error SubmitTask: %v", err)
 	}
 	// Sanity check
-	n, err := ft.NTasksTODO()
+	n, err := ft.NTasksToDo()
 	assert.Nil(ji.Ts.T, err, "Error NTasksTODO: %v", err)
 	assert.Equal(ji.Ts.T, n, ji.ntasks, "Num tasks TODO doesn't match ntasks")
 	db.DPrintf(db.ALWAYS, "Done submitting ImgResize tasks")
@@ -80,7 +80,7 @@ func NewImgResizeJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, input str
 
 func (ji *ImgResizeJobInstance) StartImgResizeJob() {
 	db.DPrintf(db.ALWAYS, "StartImgResizeJob input %v ntasks %v mcpu %v job %v", ji.input, ji.ntasks, ji.mcpu, ji.job)
-	ji.imgd = imgresize.StartImgd(ji.SigmaClnt, ji.job, ji.mcpu, ji.mem, false, ji.nrounds, ji.imgdmcpu)
+	ji.imgd = imgresize.StartImgd(ji.SigmaClnt, ji.job, ji.mcpu, ji.mem, false, ji.nrounds, ji.imgdmcpu, nil)
 	db.DPrintf(db.ALWAYS, "Done starting ImgResizeJob")
 }
 

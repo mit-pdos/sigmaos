@@ -8,7 +8,7 @@ import (
 
 	"github.com/dustin/go-humanize"
 
-	"sigmaos/fslib"
+	"sigmaos/sigmaclnt/fslib"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )

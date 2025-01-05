@@ -8,25 +8,25 @@ import (
 	//	"go.opentelemetry.io/otel/trace"
 	//	"context"
 
+	"sigmaos/api/fs"
 	"sigmaos/apps/hotel/proto"
-	dbclnt "sigmaos/db/clnt"
-	"sigmaos/fs"
 	"sigmaos/proc"
+	dbclnt "sigmaos/proxy/db/clnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
-	"sigmaos/tracing"
+	"sigmaos/util/tracing"
 )
 
 const (
 	NUSER = 500
 )
 
-//type UserRequest struct {
+//type UserReq struct {
 //	Name     string
 //	Password string
 //}
 //
-//type UserResult struct {
+//type UserRep struct {
 //	OK string
 //}
 
@@ -88,7 +88,7 @@ func (s *Users) initDB() error {
 	return nil
 }
 
-func (s *Users) CheckUser(ctx fs.CtxI, req proto.UserRequest, res *proto.UserResult) error {
+func (s *Users) CheckUser(ctx fs.CtxI, req proto.UserReq, res *proto.UserRep) error {
 	//	var sctx context.Context
 	//	var span trace.Span
 	//	if TRACING {

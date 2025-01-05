@@ -85,7 +85,7 @@ func (pss *ProtSrvState) createObj(ctx fs.CtxI, d fs.Dir, dlk *lockmap.PathLock,
 	if err == nil {
 		pss.vt.IncVersion(d.Path())
 		pss.wtv1.WakeupWatch(dlk)
-		pss.wtv2.AddCreateEvent(dlk, name)
+		pss.wtv2.AddCreateEvent(dlk.Path(), name)
 		flk := pss.plt.Acquire(ctx, o1.Path(), lockmap.WLOCK)
 		return o1, flk, nil
 	} else {
@@ -153,7 +153,7 @@ func (pss *ProtSrvState) RemoveObj(ctx fs.CtxI, dir fs.Dir, o fs.FsObj, name str
 
 	pss.vt.IncVersion(dir.Path())
 	pss.wtv1.WakeupWatch(dlk)
-	pss.wtv2.AddRemoveEvent(dlk, name)
+	pss.wtv2.AddRemoveEvent(dlk.Path(), name)
 
 	if leased && pss.lm != nil {
 		if ok := pss.lm.Delete(o.Path()); !ok {
@@ -180,8 +180,8 @@ func (pss *ProtSrvState) RenameObj(f *fid.Fid, name string, fence sp.Tfence) *se
 	pss.vt.IncVersion(f.Parent().Path())
 
 	pss.wtv1.WakeupWatch(dlk)
-	pss.wtv2.AddRemoveEvent(dlk, f.Name())
-	pss.wtv2.AddCreateEvent(dlk, name)
+	pss.wtv2.AddRemoveEvent(dlk.Path(), f.Name())
+	pss.wtv2.AddCreateEvent(dlk.Path(), name)
 
 	if f.Obj().IsLeased() && pss.lm != nil {
 		pss.lm.Rename(f.Path(), name)
@@ -228,7 +228,7 @@ func (pss *ProtSrvState) RenameAtObj(old, new *fid.Fid, dold, dnew fs.Dir, oldna
 
 	pss.wtv1.WakeupWatch(d1lk) // trigger one dir watch
 	pss.wtv1.WakeupWatch(d2lk) // trigger the other dir watch
-	pss.wtv2.AddRemoveEvent(d1lk, oldname)
-	pss.wtv2.AddCreateEvent(d2lk, newname)
+	pss.wtv2.AddRemoveEvent(d1lk.Path(), oldname)
+	pss.wtv2.AddCreateEvent(d2lk.Path(), newname)
 	return nil
 }

@@ -3,7 +3,6 @@ package watch
 import (
 	db "sigmaos/debug"
 	sp "sigmaos/sigmap"
-	"sigmaos/spproto/srv/lockmap"
 	protsrv_proto "sigmaos/spproto/srv/proto"
 	"sync"
 )
@@ -35,41 +34,40 @@ func (wt *WatchV2Table) AllocWatch(dir sp.Tpath) *WatchV2 {
 	return ws
 }
 
+func (wt *WatchV2Table) lookupWatch(dir sp.Tpath) (*WatchV2, bool) {
+	wt.Lock()
+	defer wt.Unlock()
+	ws, ok := wt.watches[dir]
+	return ws, ok
+}
+
 // Close fid and free watch for ws.dir, if no more watchers.  Caller
-// should have pl for ws.dir locked
-func (wt *WatchV2Table) FreeWatch(ws *WatchV2, fid sp.Tfid) {
+// should have acquired pathlock for ws.dir
+func (wt *WatchV2Table) CloseWatcher(ws *WatchV2, fid sp.Tfid) {
 	if ws.closeFid(fid) {
-		db.DPrintf(db.WATCH, "WatchV2Table FreeWatch %v %v", ws, fid)
+		db.DPrintf(db.WATCH, "WatchV2Table CloseWatcher %v for %v", fid, ws.dir)
 		wt.Lock()
 		defer wt.Unlock()
 		delete(wt.watches, ws.dir)
 	}
 }
 
-// Caller should have pl locked
-func (wt *WatchV2Table) AddRemoveEvent(pl *lockmap.PathLock, filename string) {
-	wt.addWatchEvent(pl, &protsrv_proto.WatchEvent{
-		File: filename,
-		Type: protsrv_proto.WatchEventType_REMOVE,
-	})
-}
-
-// Caller should have pl locked
-func (wt *WatchV2Table) AddCreateEvent(pl *lockmap.PathLock, filename string) {
-	wt.addWatchEvent(pl, &protsrv_proto.WatchEvent{
-		File: filename,
-		Type: protsrv_proto.WatchEventType_CREATE,
-	})
-}
-
-func (wt *WatchV2Table) addWatchEvent(pl *lockmap.PathLock, event *protsrv_proto.WatchEvent) {
-	wt.Lock()
-	defer wt.Unlock()
-
-	p := pl.Path()
-	ws, ok := wt.watches[p]
-	if !ok {
-		return
+// Caller should have acquire pathlock for ws.dir
+func (wt *WatchV2Table) AddRemoveEvent(dir sp.Tpath, filename string) {
+	if ws, ok := wt.lookupWatch(dir); ok {
+		ws.addEvent(&protsrv_proto.WatchEvent{
+			File: filename,
+			Type: protsrv_proto.WatchEventType_REMOVE,
+		})
 	}
-	ws.addEvent(event)
+}
+
+// Caller should have acquire pathlock for ws.dir
+func (wt *WatchV2Table) AddCreateEvent(dir sp.Tpath, filename string) {
+	if ws, ok := wt.lookupWatch(dir); ok {
+		ws.addEvent(&protsrv_proto.WatchEvent{
+			File: filename,
+			Type: protsrv_proto.WatchEventType_CREATE,
+		})
+	}
 }

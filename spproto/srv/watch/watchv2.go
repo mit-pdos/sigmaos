@@ -17,13 +17,13 @@ import (
 
 func NewFidWatch(fm *fid.FidMap, ctx fs.CtxI, fid sp.Tfid, watch *WatchV2) *fid.Fid {
 	f := fm.NewFid("fidWatch", watch, nil, ctx, 0, sp.Tqid{})
-	watch.newWatcher(fid, f)
+	watch.newWatcher(fid)
 	return f
 }
 
 type PerFidState struct {
-	fid          *fid.Fid
-	dir          sp.Tpath
+	fid          sp.Tfid  // the fid for watcher
+	dir          sp.Tpath // directory being watched
 	events       []*protsrv_proto.WatchEvent
 	remainingMsg []byte
 	cond         *sync.Cond
@@ -59,12 +59,12 @@ func (wo *WatchV2) lookupFidState(fid sp.Tfid) (*PerFidState, bool) {
 	return f, ok
 }
 
-func (wo *WatchV2) newWatcher(fidn sp.Tfid, f *fid.Fid) {
+func (wo *WatchV2) newWatcher(fid sp.Tfid) {
 	wo.mu.Lock()
 	defer wo.mu.Unlock()
 
-	wo.perFidState[fidn] = &PerFidState{
-		fid:          f,
+	wo.perFidState[fid] = &PerFidState{
+		fid:          fid,
 		dir:          wo.dir,
 		events:       nil,
 		remainingMsg: nil,
@@ -87,6 +87,7 @@ func (wo *WatchV2) GetEventBuffer(fid sp.Tfid, maxLength int) ([]byte, *serr.Err
 	perFidState, ok := wo.lookupFidState(fid)
 	if !ok {
 		db.DPrintf(db.ERROR, "GetEvenBuffer: unknown %v for watching dir %v", fid, wo.dir)
+		return nil, nil
 	}
 	return perFidState.read(maxLength)
 }
@@ -95,6 +96,7 @@ func (wo *WatchV2) closeFid(fid sp.Tfid) bool {
 	perFidState, ok := wo.lookupFidState(fid)
 	if !ok {
 		db.DPrintf(db.ERROR, "closeFid: unknown %v for watching dir %v", fid, wo.dir)
+		return false
 	}
 	perFidState.close()
 
@@ -176,16 +178,16 @@ func (perFidState *PerFidState) read(maxLength int) ([]byte, *serr.Err) {
 		return nil, nil
 	}
 
-	db.DPrintf(db.WATCH, "WatchV2 GetEventBuffer: %v waiting for %v", perFidState.dir)
+	db.DPrintf(db.WATCH, "WatchV2 GetEventBuffer: watcher %v waiting for %v", perFidState.fid, perFidState.dir)
 	for len(perFidState.events) == 0 {
 		perFidState.cond.Wait()
 		if perFidState.closed {
-			db.DPrintf(db.WATCH, "WatchV2 GetEventBuffer: watch fid %v closed for %v", perFidState.dir)
+			db.DPrintf(db.WATCH, "WatchV2 GetEventBuffer: watcher %v closed for %v", perFidState.fid, perFidState.dir)
 			return nil, nil
 		}
 	}
 
-	db.DPrintf(db.WATCH, "WatchV2 GetEventBuffer: %d events for %v", len(perFidState.events), perFidState.dir)
+	db.DPrintf(db.WATCH, "WatchV2 GetEventBuffer: watcher %fid %d events for %v", perFidState.fid, len(perFidState.events), perFidState.dir)
 
 	msg, err := proto.Marshal(&protsrv_proto.WatchEventList{
 		Events: perFidState.events,

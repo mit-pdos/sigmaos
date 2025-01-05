@@ -19,13 +19,13 @@ type Entry struct {
 type LeasedMap struct {
 	sync.Mutex
 	ps   map[sp.Tpath]sp.TleaseId
-	lids map[sp.TleaseId][]Entry
+	lids map[sp.TleaseId][]*Entry
 }
 
 func NewLeasedMap() *LeasedMap {
 	et := &LeasedMap{
 		ps:   make(map[sp.Tpath]sp.TleaseId),
-		lids: make(map[sp.TleaseId][]Entry),
+		lids: make(map[sp.TleaseId][]*Entry),
 	}
 	return et
 }
@@ -41,9 +41,9 @@ func (lm *LeasedMap) Insert(p sp.Tpath, lid sp.TleaseId, n string, o fs.FsObj, d
 	lm.ps[p] = lid
 	v, ok := lm.lids[lid]
 	if !ok {
-		lm.lids[lid] = []Entry{Entry{p, n, o, dir}}
+		lm.lids[lid] = []*Entry{&Entry{p, n, o, dir}}
 	} else {
-		lm.lids[lid] = append(v, Entry{p, n, o, dir})
+		lm.lids[lid] = append(v, &Entry{p, n, o, dir})
 	}
 	db.DPrintf(db.LEASESRV, "Insert %q %v %v\n", p, lid, lm.lids)
 }
@@ -87,7 +87,7 @@ func (lm *LeasedMap) Rename(p sp.Tpath, dst string) bool {
 	return true
 }
 
-func (lm *LeasedMap) Expired(lid sp.TleaseId) []Entry {
+func (lm *LeasedMap) Expired(lid sp.TleaseId) []*Entry {
 	lm.Lock()
 	defer lm.Unlock()
 	ps, _ := lm.lids[lid]

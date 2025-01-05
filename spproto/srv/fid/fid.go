@@ -5,9 +5,6 @@ import (
 	"sync"
 
 	"sigmaos/api/fs"
-	db "sigmaos/debug"
-	"sigmaos/serr"
-	sessp "sigmaos/session/proto"
 	sp "sigmaos/sigmap"
 )
 
@@ -74,63 +71,16 @@ func (f *Fid) Qid() *sp.Tqid {
 	return &f.qid
 }
 
+func (f *Fid) Cursor() int {
+	return f.cursor
+}
+
+func (f *Fid) IncCursor(n int) {
+	f.cursor += n
+}
+
 func (f *Fid) Close() {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.isOpen = false
-}
-
-func (f *Fid) Write(off sp.Toffset, b []byte, fence sp.Tfence) (sp.Tsize, *serr.Err) {
-	var err *serr.Err
-	sz := sp.Tsize(0)
-
-	switch i := f.obj.(type) {
-	case fs.File:
-		sz, err = i.Write(f.ctx, off, b, fence)
-	default:
-		db.DFatalf("Write: obj type %T isn't Dir or File\n", f.obj)
-	}
-	return sz, err
-}
-
-func (f *Fid) WriteRead(req sessp.IoVec) (sessp.IoVec, *serr.Err) {
-	var err *serr.Err
-	var iov sessp.IoVec
-	switch i := f.obj.(type) {
-	case fs.RPC:
-		iov, err = i.WriteRead(f.ctx, req)
-	default:
-		db.DFatalf("Write: obj type %T isn't RPC\n", f.obj)
-	}
-	return iov, err
-}
-
-func (f *Fid) readDir(o fs.FsObj, off sp.Toffset, count sp.Tsize) ([]byte, *serr.Err) {
-	d := o.(fs.Dir)
-	dirents, err := d.ReadDir(f.ctx, f.cursor, count)
-	if err != nil {
-		return nil, err
-	}
-	b, n, err := fs.MarshalDir(count, dirents)
-	if err != nil {
-		return nil, err
-	}
-	f.cursor += n
-	return b, nil
-}
-
-func (f *Fid) Read(off sp.Toffset, count sp.Tsize, fence sp.Tfence) ([]byte, *serr.Err) {
-	switch i := f.obj.(type) {
-	case fs.Dir:
-		return f.readDir(f.obj, off, count)
-	case fs.File:
-		b, err := i.Read(f.ctx, off, count, fence)
-		if err != nil {
-			return nil, err
-		}
-		return b, nil
-	default:
-		db.DFatalf("Read: obj %v type %T isn't Dir or File\n", f.obj, f.obj)
-		return nil, nil
-	}
 }

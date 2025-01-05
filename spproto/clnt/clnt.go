@@ -168,6 +168,19 @@ func (pclnt *SPProtoClnt) Watch(fid sp.Tfid) *serr.Err {
 	return nil
 }
 
+func (pclnt *SPProtoClnt) WatchV2(dirfid sp.Tfid, watchfid sp.Tfid) (*sp.Rwatchv2, *serr.Err) {
+	args := sp.NewTwatchv2(dirfid, watchfid)
+	reply, err := pclnt.Call(args)
+	if err != nil {
+		return nil, err
+	}
+	msg, ok := reply.Msg.(*sp.Rwatchv2)
+	if !ok {
+		return nil, serr.NewErr(serr.TErrBadFcall, "Rwatchv2")
+	}
+	return msg, nil
+}
+
 func (pclnt *SPProtoClnt) ReadF(fid sp.Tfid, offset sp.Toffset, b []byte, f *sp.Tfence) (sp.Tsize, *serr.Err) {
 	args := sp.NewReadF(fid, offset, sp.Tsize(len(b)), f)
 	reply, err := pclnt.CallIoVec(args, nil, sessp.IoVec{b})

@@ -17,6 +17,7 @@ import (
 	"sigmaos/spproto/srv/fid"
 	"sigmaos/spproto/srv/lockmap"
 	"sigmaos/spproto/srv/namei"
+	"sigmaos/spproto/srv/watch"
 )
 
 type GetRootCtxF func(*sp.Tprincipal, map[string]*sp.SecretProto, string, sessp.Tsession, sp.TclntId) (fs.Dir, fs.CtxI)
@@ -221,7 +222,16 @@ func (ps *ProtSrv) clunk(fid sp.Tfid) *sp.Rerror {
 		f.Obj().Close(f.Ctx(), f.Mode())
 		f.Close()
 	}
+
+	watch, ok := f.Obj().(*watch.WatchV2)
+	if ok {
+		watch.LockPl()
+		ps.wtv2.FreeWatch(watch, f)
+		watch.UnlockPl()
+	}
+
 	ps.fm.Free(f)
+
 	return nil
 }
 
@@ -276,7 +286,7 @@ func (ps *ProtSrv) Watch(args *sp.Twatch, rets *sp.Ropen) *sp.Rerror {
 		db.DPrintf(db.PROTSRV, "%v: Watch stale version p %v v %q n %v %v", f.Ctx().ClntId(), f.Path(), f.Name(), f.Qid().Tversion(), v)
 		return sp.NewRerrorSerr(serr.NewErr(serr.TErrVersion, v))
 	}
-	err = ps.wt.WaitWatch(pl, f.Ctx().ClntId())
+	err = ps.wtv1.WaitWatch(pl, f.Ctx().ClntId())
 	if err != nil {
 		return sp.NewRerrorSerr(err)
 	}
@@ -287,18 +297,47 @@ func (ps *ProtSrv) CreateObjFm(ctx fs.CtxI, o fs.FsObj, name string, perm sp.Tpe
 	return ps.CreateObj(ps.fm, ctx, o, name, perm, m, lid, fence, dev)
 }
 
+func (ps *ProtSrv) WatchV2(args *sp.Twatchv2, rets *sp.Rwatchv2) *sp.Rerror {
+	dirf, err := ps.fm.Lookup(args.Tdirfid())
+	if err != nil {
+		return sp.NewRerrorSerr(err)
+	}
+	p := dirf.Obj().Path()
+
+	db.DPrintf(db.PROTSRV, "%v: Watch %v v %v %v", dirf.Ctx().ClntId(), p, dirf.Qid(), args)
+
+	if !dirf.Obj().Perm().IsDir() {
+		return sp.NewRerrorSerr(serr.NewErr(serr.TErrNotDir, dirf.Name()))
+	}
+
+	// Acquire path lock on the directory pn, so that no request can
+	// change the directory while setting a watch on the directory
+	pl := ps.plt.Acquire(dirf.Ctx(), p, lockmap.WLOCK)
+	defer ps.plt.Release(dirf.Ctx(), pl, lockmap.WLOCK)
+
+	w := ps.wtv2.AllocWatch(pl)
+	fid := watch.NewFidWatch(ps.fm, dirf.Ctx(), w)
+
+	err = ps.fm.Insert(args.Twatchfid(), fid)
+	if err != nil {
+		return sp.NewRerrorSerr(err)
+	}
+
+	return nil
+}
+
 func (ps *ProtSrv) Create(args *sp.Tcreate, rets *sp.Rcreate) *sp.Rerror {
 	f, err := ps.fm.Lookup(args.Tfid())
 	if err != nil {
 		return sp.NewRerrorSerr(err)
 	}
-	db.DPrintf(db.PROTSRV, "%v: Create %v n %q args {%v %q %v}", f.Ctx().ClntId(), f.Name(), args.Tfid(), args.Name, args.Tperm())
+	db.DPrintf(db.PROTSRV, "%v: Create %v n %q args {%v %q %v}", f.Ctx().ClntId(), f.Name(), args.Tfid(), args.Name, args.Tperm(), args.TleaseId())
 
 	qid, nf, err := ps.CreateObj(ps.fm, f.Ctx(), f.Obj(), args.Name, args.Tperm(), args.Tmode(), args.TleaseId(), args.Tfence(), nil)
 	if err != nil {
 		return sp.NewRerrorSerr(err)
 	}
-	if ps.fm.Update(args.Tfid(), nf); err != nil {
+	if err := ps.fm.Update(args.Tfid(), nf); err != nil {
 		return sp.NewRerrorSerr(err)
 	}
 	ps.fm.Free(f)
@@ -314,10 +353,12 @@ func (ps *ProtSrv) ReadF(args *sp.TreadF, rets *sp.Rread) ([]byte, *sp.Rerror) {
 
 	db.DPrintf(db.PROTSRV, "%v: ReadF f %v args {%v}\n", f.Ctx().ClntId(), f, args)
 
-	flk := ps.plt.Acquire(f.Ctx(), f.Path(), lockmap.RLOCK)
-	defer ps.plt.Release(f.Ctx(), flk, lockmap.RLOCK)
+	if !watch.IsWatch(f.Obj()) {
+		flk := ps.plt.Acquire(f.Ctx(), f.Path(), lockmap.RLOCK)
+		defer ps.plt.Release(f.Ctx(), flk, lockmap.RLOCK)
+	}
 
-	data, err := f.Read(args.Toffset(), args.Tcount(), args.Tfence())
+	data, err := FidRead(f, args.Toffset(), args.Tcount(), args.Tfence())
 	if err != nil {
 		return nil, sp.NewRerrorSerr(err)
 	}
@@ -331,7 +372,7 @@ func (ps *ProtSrv) WriteRead(args *sp.Twriteread, iov sessp.IoVec, rets *sp.Rrea
 		return nil, sp.NewRerrorSerr(err)
 	}
 	db.DPrintf(db.PROTSRV, "%v: WriteRead %v args {%v} path %d\n", f.Ctx().ClntId(), f.Name(), args, f.Obj().Path())
-	retiov, err := f.WriteRead(iov)
+	retiov, err := FidWriteRead(f, iov)
 	if err != nil {
 		return nil, sp.NewRerrorSerr(err)
 	}
@@ -346,7 +387,10 @@ func (ps *ProtSrv) WriteF(args *sp.TwriteF, data []byte, rets *sp.Rwrite) *sp.Re
 
 	db.DPrintf(db.PROTSRV, "%v: WriteV %v args {%v}", f.Ctx().ClntId(), f, args)
 
-	n, err := f.Write(args.Toffset(), data, args.Tfence())
+	if watch.IsWatch(f.Obj()) {
+		return sp.NewRerrorSerr(serr.NewErr(serr.TErrNowrite, "Cannot write to watch fid"))
+	}
+	n, err := FidWrite(f, args.Toffset(), data, args.Tfence())
 	if err != nil {
 		return sp.NewRerrorSerr(err)
 	}

@@ -176,6 +176,10 @@ func (npc *NpSess) Watch(args *sp.Twatch, rets *sp.Ropen) *sp.Rerror {
 	return nil
 }
 
+func (npc *NpSess) WatchV2(args *sp.Twatchv2, rets *sp.Rwatchv2) *sp.Rerror {
+	return nil
+}
+
 func (npc *NpSess) Create(args *sp.Tcreate, rets *sp.Rcreate) *sp.Rerror {
 	fid, ok := npc.fm.lookup(args.Tfid())
 	if !ok {

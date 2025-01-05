@@ -19,7 +19,8 @@ const N = 10000
 
 type ProtSrvState struct {
 	plt   *lockmap.PathLockTable
-	wt    *watch.WatchTable
+	wtv1  *watch.WatchV1Table
+	wtv2  *watch.WatchV2Table
 	vt    *version.VersionTable
 	stats *stats.StatInode
 	lm    *leasedmap.LeasedMap
@@ -34,7 +35,8 @@ func NewProtSrvState(stats *stats.StatInode) *ProtSrvState {
 		lm:    leasedmap.NewLeasedMap(),
 		plt:   lockmap.NewPathLockTable(),
 		cct:   cct,
-		wt:    watch.NewWatchTable(cct),
+		wtv1:  watch.NewWatchV1Table(cct),
+		wtv2:  watch.NewWatchV2Table(),
 		vt:    version.NewVersionTable(),
 		fidfl: freelist.NewFreeList[fid.Fid](N), // one free list shared by all sessions
 	}
@@ -82,7 +84,8 @@ func (pss *ProtSrvState) createObj(ctx fs.CtxI, d fs.Dir, dlk *lockmap.PathLock,
 	o1, err := d.Create(ctx, name, perm, mode, lid, f, dev)
 	if err == nil {
 		pss.vt.IncVersion(d.Path())
-		pss.wt.WakeupWatch(dlk)
+		pss.wtv1.WakeupWatch(dlk)
+		pss.wtv2.AddCreateEvent(dlk, name)
 		flk := pss.plt.Acquire(ctx, o1.Path(), lockmap.WLOCK)
 		return o1, flk, nil
 	} else {
@@ -149,7 +152,8 @@ func (pss *ProtSrvState) RemoveObj(ctx fs.CtxI, dir fs.Dir, o fs.FsObj, name str
 	}
 
 	pss.vt.IncVersion(dir.Path())
-	pss.wt.WakeupWatch(dlk)
+	pss.wtv1.WakeupWatch(dlk)
+	pss.wtv2.AddRemoveEvent(dlk, name)
 
 	if leased && pss.lm != nil {
 		if ok := pss.lm.Delete(o.Path()); !ok {
@@ -174,7 +178,10 @@ func (pss *ProtSrvState) RenameObj(f *fid.Fid, name string, fence sp.Tfence) *se
 	}
 
 	pss.vt.IncVersion(f.Parent().Path())
-	pss.wt.WakeupWatch(dlk)
+
+	pss.wtv1.WakeupWatch(dlk)
+	pss.wtv2.AddRemoveEvent(dlk, f.Name())
+	pss.wtv2.AddCreateEvent(dlk, name)
 
 	if f.Obj().IsLeased() && pss.lm != nil {
 		pss.lm.Rename(f.Path(), name)
@@ -197,7 +204,6 @@ func lockOrder(d1 fs.FsObj, d2 fs.FsObj) bool {
 
 func (pss *ProtSrvState) RenameAtObj(old, new *fid.Fid, dold, dnew fs.Dir, oldname, newname string, o fs.FsObj, f sp.Tfence) *serr.Err {
 	var d1lk, d2lk *lockmap.PathLock
-
 	if srcfirst := lockOrder(dold, dnew); srcfirst {
 		d1lk = pss.plt.Acquire(old.Ctx(), dold.Path(), lockmap.WLOCK)
 		d2lk = pss.plt.Acquire(new.Ctx(), dnew.Path(), lockmap.WLOCK)
@@ -220,7 +226,9 @@ func (pss *ProtSrvState) RenameAtObj(old, new *fid.Fid, dold, dnew fs.Dir, oldna
 	pss.vt.IncVersion(new.Obj().Path())
 	pss.vt.IncVersion(old.Obj().Path())
 
-	pss.wt.WakeupWatch(d1lk) // trigger one dir watch
-	pss.wt.WakeupWatch(d2lk) // trigger the other dir watch
+	pss.wtv1.WakeupWatch(d1lk) // trigger one dir watch
+	pss.wtv1.WakeupWatch(d2lk) // trigger the other dir watch
+	pss.wtv2.AddRemoveEvent(d1lk, oldname)
+	pss.wtv2.AddCreateEvent(d2lk, newname)
 	return nil
 }

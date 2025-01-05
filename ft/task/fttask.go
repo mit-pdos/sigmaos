@@ -10,6 +10,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/serr"
 	"sigmaos/sigmaclnt/fslib"
+	"sigmaos/sigmaclnt/fslib/dirreader"
 	sp "sigmaos/sigmap"
 	rd "sigmaos/util/rand"
 )
@@ -201,7 +202,10 @@ func (ft *FtTasks) RecoverTasks() (int, error) {
 }
 
 func (ft *FtTasks) WaitForTasks() ([]string, error) {
-	dr := fslib.NewDirReader(ft.FsLib, ft.todo)
+	dr, err := dirreader.NewDirReader(ft.FsLib, ft.todo)
+	if err != nil {
+		return nil, err
+	}
 	fns, err := dr.WatchNewEntriesAndRename(ft.wip)
 	if err != nil {
 		return nil, err
@@ -210,8 +214,11 @@ func (ft *FtTasks) WaitForTasks() ([]string, error) {
 }
 
 func (ft *FtTasks) AcquireTasks() ([]string, error) {
-	dr := fslib.NewDirReader(ft.FsLib, ft.todo)
-	return dr.GetEntriesRename(ft.wip)
+	dr, err := dirreader.NewDirReader(ft.FsLib, ft.todo)
+	if err != nil {
+		return nil, err
+	}
+	return dr.GetEntriesAndRename(ft.wip)
 }
 
 // Read tasks by reading file in one shot

@@ -11,15 +11,15 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	db "sigmaos/debug"
-	"sigmaos/sigmaclnt/fslib"
-	linuxsched "sigmaos/util/linux/sched"
 	"sigmaos/proc"
 	mschedclnt "sigmaos/sched/msched/clnt"
-	"sigmaos/util/coordination/semaphore"
 	"sigmaos/serr"
 	"sigmaos/sigmaclnt"
+	"sigmaos/sigmaclnt/fslib/dirreader"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
+	"sigmaos/util/coordination/semaphore"
+	linuxsched "sigmaos/util/linux/sched"
 	"sigmaos/util/perf"
 	"sigmaos/util/rand"
 )
@@ -404,7 +404,7 @@ func waitForRealmCreation(rootts *test.Tstate, realm sp.Trealm) error {
 		sp.UXREL,
 	}
 	for _, d := range dirs {
-		if err := rootts.WaitCreate(filepath.Join(sp.REALMS, realm.String(), d)); err != nil {
+		if err := dirreader.WaitCreate(rootts.FsLib, filepath.Join(sp.REALMS, realm.String(), d)); err != nil {
 			return err
 		}
 	}
@@ -429,7 +429,8 @@ func waitForClnts(rootts *test.Tstate, n int) {
 	assert.True(rootts.T, err == nil || serr.IsErrCode(err, serr.TErrExists), "Error mkdir: %v", err)
 
 	// Wait for n - 1 clnts to register themselves.
-	dr := fslib.NewDirReader(rootts.FsLib, clidir)
+	dr, err := dirreader.NewDirReader(rootts.FsLib, clidir)
+	assert.Nil(rootts.T, err, "Err NewDirReader: %v", err)
 	err = dr.WaitNEntries(n) // n - 1 + the semaphore
 	assert.Nil(rootts.T, err, "Err WaitNentries: %v", err)
 	sts, err := rootts.GetDir(clidir)

@@ -31,21 +31,21 @@ import (
 	"sigmaos/spproto/srv/lockmap"
 )
 
-type Watch struct {
+type WatchV1 struct {
 	pl   *lockmap.PathLock
 	sc   *clntcond.ClntCond
 	nref int
 }
 
-func newWatch(sct *clntcond.ClntCondTable, pl *lockmap.PathLock) *Watch {
-	w := &Watch{}
+func newWatchV1(sct *clntcond.ClntCondTable, pl *lockmap.PathLock) *WatchV1 {
+	w := &WatchV1{}
 	w.pl = pl
 	w.sc = sct.NewClntCond(pl)
 	return w
 }
 
 // Caller should hold path lock. On return caller has path lock again
-func (ws *Watch) Watch(cid sp.TclntId) *serr.Err {
+func (ws *WatchV1) Watch(cid sp.TclntId) *serr.Err {
 	db.DPrintf(db.WATCH, "%v: Watch '%s'\n", cid, ws.pl.Path())
 	err := ws.sc.Wait(cid)
 	if err != nil {
@@ -54,27 +54,27 @@ func (ws *Watch) Watch(cid sp.TclntId) *serr.Err {
 	return err
 }
 
-func (ws *Watch) Wakeup() {
+func (ws *WatchV1) Wakeup() {
 	ws.sc.Broadcast()
 }
 
-type WatchTable struct {
+type WatchV1Table struct {
 	//      deadlock.Mutex
 	sync.Mutex
-	watches map[sp.Tpath]*Watch
+	watches map[sp.Tpath]*WatchV1
 	sct     *clntcond.ClntCondTable
 }
 
-func NewWatchTable(sct *clntcond.ClntCondTable) *WatchTable {
-	wt := &WatchTable{}
+func NewWatchV1Table(sct *clntcond.ClntCondTable) *WatchV1Table {
+	wt := &WatchV1Table{}
 	wt.sct = sct
-	wt.watches = make(map[sp.Tpath]*Watch)
+	wt.watches = make(map[sp.Tpath]*WatchV1)
 	return wt
 }
 
 // Alloc watch, if doesn't exist allocate one.  Caller must have pl
 // locked.
-func (wt *WatchTable) allocWatch(pl *lockmap.PathLock) *Watch {
+func (wt *WatchV1Table) allocWatch(pl *lockmap.PathLock) *WatchV1 {
 	wt.Lock()
 	defer wt.Unlock()
 
@@ -85,14 +85,14 @@ func (wt *WatchTable) allocWatch(pl *lockmap.PathLock) *Watch {
 	ws, ok := wt.watches[p]
 	if !ok {
 		db.DPrintf(db.WATCH, "newWatch '%s'\n", p)
-		ws = newWatch(wt.sct, pl)
+		ws = newWatchV1(wt.sct, pl)
 		wt.watches[p] = ws
 	}
 	ws.nref++ // ensure ws won't be deleted from table
 	return ws
 }
 
-func (wt *WatchTable) free(ws *Watch) bool {
+func (wt *WatchV1Table) free(ws *WatchV1) bool {
 	wt.Lock()
 	defer wt.Unlock()
 
@@ -120,7 +120,7 @@ func (wt *WatchTable) free(ws *Watch) bool {
 // Free watch for path. Caller should hold path lock. If no thread is
 // using the watch anymore, free the sess cond associated with the
 // watch.
-func (wt *WatchTable) freeWatch(ws *Watch) {
+func (wt *WatchV1Table) freeWatch(ws *WatchV1) {
 	db.DPrintf(db.WATCH, "freeWatch '%s'\n", ws.pl.Path())
 	del := wt.free(ws)
 	if del {
@@ -129,7 +129,7 @@ func (wt *WatchTable) freeWatch(ws *Watch) {
 }
 
 // Caller should have pl locked
-func (wt *WatchTable) WaitWatch(pl *lockmap.PathLock, cid sp.TclntId) *serr.Err {
+func (wt *WatchV1Table) WaitWatch(pl *lockmap.PathLock, cid sp.TclntId) *serr.Err {
 	ws := wt.allocWatch(pl)
 	err := ws.Watch(cid)
 	wt.freeWatch(ws)
@@ -137,7 +137,7 @@ func (wt *WatchTable) WaitWatch(pl *lockmap.PathLock, cid sp.TclntId) *serr.Err 
 }
 
 // Caller should have pl locked
-func (wt *WatchTable) WakeupWatch(pl *lockmap.PathLock) {
+func (wt *WatchV1Table) WakeupWatch(pl *lockmap.PathLock) {
 	wt.Lock()
 	defer wt.Unlock()
 

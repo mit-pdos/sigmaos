@@ -223,11 +223,11 @@ func (ps *ProtSrv) clunk(fid sp.Tfid) *sp.Rerror {
 		f.Close()
 	}
 
-	watch, ok := f.Obj().(*watch.WatchV2)
+	watch, ok := f.Obj().(*watch.Watch)
 	if ok {
 		pl := ps.plt.Acquire(f.Ctx(), watch.Dir(), lockmap.WLOCK)
 		defer ps.plt.Release(f.Ctx(), pl, lockmap.WLOCK)
-		ps.wtv2.CloseWatcher(watch, fid)
+		ps.wt.CloseWatcher(watch, fid)
 	}
 
 	ps.fm.Free(f)
@@ -261,50 +261,18 @@ func (ps *ProtSrv) Open(args *sp.Topen, rets *sp.Ropen) *sp.Rerror {
 	return nil
 }
 
-func (ps *ProtSrv) Watch(args *sp.Twatch, rets *sp.Ropen) *sp.Rerror {
-	f, err := ps.fm.Lookup(args.Tfid())
-	if err != nil {
-		return sp.NewRerrorSerr(err)
-	}
-	p := f.Obj().Path()
-
-	if !f.Obj().Perm().IsDir() {
-		return sp.NewRerrorSerr(serr.NewErr(serr.TErrNotDir, f.Name()))
-	}
-
-	// Acquire path lock on the directory pn, so that no request can
-	// change the directory while setting a watch on it.  to the
-	// directory
-	pl := ps.plt.Acquire(f.Ctx(), p, lockmap.WLOCK)
-	defer ps.plt.Release(f.Ctx(), pl, lockmap.WLOCK)
-
-	v := ps.vt.GetVersion(p)
-
-	db.DPrintf(db.PROTSRV, "%v: Watch p %v pn %q qid %v %v", f.Ctx().ClntId(), f.Path(), f.Name(), f.Qid(), v)
-
-	if !sp.VEq(f.Qid().Tversion(), v) {
-		db.DPrintf(db.PROTSRV, "%v: Watch stale version p %v v %q n %v %v", f.Ctx().ClntId(), f.Path(), f.Name(), f.Qid().Tversion(), v)
-		return sp.NewRerrorSerr(serr.NewErr(serr.TErrVersion, v))
-	}
-	err = ps.wtv1.WaitWatch(pl, f.Ctx().ClntId())
-	if err != nil {
-		return sp.NewRerrorSerr(err)
-	}
-	return nil
-}
-
 func (ps *ProtSrv) CreateObjFm(ctx fs.CtxI, o fs.FsObj, name string, perm sp.Tperm, m sp.Tmode, lid sp.TleaseId, fence sp.Tfence, dev fs.FsObj) (sp.Tqid, *fid.Fid, *serr.Err) {
 	return ps.CreateObj(ps.fm, ctx, o, name, perm, m, lid, fence, dev)
 }
 
-func (ps *ProtSrv) WatchV2(args *sp.Twatchv2, rets *sp.Rwatchv2) *sp.Rerror {
+func (ps *ProtSrv) Watch(args *sp.Twatch, rets *sp.Rwatch) *sp.Rerror {
 	dirf, err := ps.fm.Lookup(args.Tdirfid())
 	if err != nil {
 		return sp.NewRerrorSerr(err)
 	}
 	p := dirf.Path()
 
-	db.DPrintf(db.PROTSRV, "%v: Watchv2 %v %q v %v %v", dirf.Ctx().ClntId(), p, dirf.Name(), dirf.Qid(), args)
+	db.DPrintf(db.PROTSRV, "%v: Watch %v %q v %v %v", dirf.Ctx().ClntId(), p, dirf.Name(), dirf.Qid(), args)
 
 	if !dirf.Obj().Perm().IsDir() {
 		return sp.NewRerrorSerr(serr.NewErr(serr.TErrNotDir, dirf.Name()))
@@ -315,7 +283,7 @@ func (ps *ProtSrv) WatchV2(args *sp.Twatchv2, rets *sp.Rwatchv2) *sp.Rerror {
 	pl := ps.plt.Acquire(dirf.Ctx(), p, lockmap.WLOCK)
 	defer ps.plt.Release(dirf.Ctx(), pl, lockmap.WLOCK)
 
-	w := ps.wtv2.AllocWatch(p)
+	w := ps.wt.AllocWatch(p)
 	fid := watch.NewFidWatch(ps.fm, dirf.Ctx(), args.Twatchfid(), w)
 
 	err = ps.fm.Insert(args.Twatchfid(), fid)

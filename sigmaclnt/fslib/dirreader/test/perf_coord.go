@@ -218,7 +218,7 @@ func (c *PerfCoord) Run() {
 	}
 }
 
-func (c *PerfCoord) handleTrial(trial int, delete bool, responseDirReader dirreader.DirReader) [][]time.Duration {
+func (c *PerfCoord) handleTrial(trial int, delete bool, responseDirReader *dirreader.DirReader) [][]time.Duration {
 	signalPath := filepath.Join(c.signalDir, coordSignalName(trial, delete))
 
 	opType := "create"
@@ -353,7 +353,7 @@ func (c *PerfCoord) getWorkerTimes(trialNum int, deleted bool) [][]time.Time {
 	return times
 }
 
-func (c *PerfCoord) waitResponses(responseDirReader dirreader.DirReader, trialNum int, deleted bool) {
+func (c *PerfCoord) waitResponses(responseDirReader *dirreader.DirReader, trialNum int, deleted bool) {
 	for ix := 0; ix < c.nWorkers; ix++ {
 		err := responseDirReader.WaitCreate(responseName(trialNum, strconv.Itoa(ix), deleted))
 		if err != nil {

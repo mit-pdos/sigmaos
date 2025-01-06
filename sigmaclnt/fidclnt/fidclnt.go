@@ -225,22 +225,14 @@ func (fidc *FidClnt) Open(fid sp.Tfid, mode sp.Tmode) (*sp.Tqid, *serr.Err) {
 	return &qid, nil
 }
 
-func (fidc *FidClnt) Watch(fid sp.Tfid) *serr.Err {
+func (fidc *FidClnt) Watch(fid sp.Tfid) (sp.Tfid, *serr.Err) {
 	ch := fidc.Lookup(fid)
 	if ch == nil {
-		return serr.NewErr(serr.TErrUnreachable, "Watch")
-	}
-	return ch.pc.Watch(fid)
-}
-
-func (fidc *FidClnt) WatchV2(fid sp.Tfid) (sp.Tfid, *serr.Err) {
-	ch := fidc.Lookup(fid)
-	if ch == nil {
-		return 0, serr.NewErr(serr.TErrUnreachable, "WatchV2")
+		return 0, serr.NewErr(serr.TErrUnreachable, "Watch")
 	}
 	watchfid := fidc.allocFid()
-	db.DPrintf(db.FIDCLNT, "WatchV2 %v %v\n", fid, watchfid)
-	_, err := ch.pc.WatchV2(fid, watchfid)
+	db.DPrintf(db.FIDCLNT, "Watch %v %v\n", fid, watchfid)
+	_, err := ch.pc.Watch(fid, watchfid)
 	if err != nil {
 		fidc.freeFid(watchfid)
 		return 0, err

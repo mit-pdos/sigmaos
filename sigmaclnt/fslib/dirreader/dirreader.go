@@ -1,91 +1,379 @@
 package dirreader
 
 import (
+	"bufio"
+	"encoding/binary"
+	"io"
+	"maps"
 	"path/filepath"
 	db "sigmaos/debug"
-	"sigmaos/proc"
 	"sigmaos/sigmaclnt/fslib"
-	"strconv"
+	"slices"
+	"strings"
+	"sync"
+
+	"sigmaos/serr"
+
+	sp "sigmaos/sigmap"
+
+	protsrv_proto "sigmaos/spproto/srv/proto"
+
+	"google.golang.org/protobuf/proto"
 )
 
-type DirReader interface {
-	// Gets the path of the directory being watched
-	GetPath() string
 
-	// Gets the (potentially stale) list of files in the directory
-	GetDir() ([]string, error)
-	Close() error
+type Fwatch func(ents map[string] bool, changes map[string] bool) bool
 
-	// Waits for a file to be removed from the directory
-	WaitRemove(file string) error
-
-	// Waits for a file to be created in the directory
-	WaitCreate(file string) error
-
-	// Waits for n entries to be in the directory
-	// for V1, this does not account for deletions
-	// for V2, this accounts for deletions
-	WaitNEntries(n int) error
-
-	// Waits for the directory to be empty
-	WaitEmpty() error
-
-	// Watch for any directory additions not in present and then return
-	// all added entries. This could include entries in present if they were not
-	// already in the directory. If provided, any file beginning with an
-	// excluded prefix is ignored. present should be sorted.
-  // 
-	// Also returns a boolean indicating whether the initial read of the directory
-	// was successful or not. This is only applicable to V1 and was kept for compatability
-	// purposes. In V2, this is always true
-	WatchEntriesChangedRelative(present []string, excludedPrefixes []string) ([]string, bool, error)
-
-	// Watch for a directory change and then return all directory entry changes since the last call to
-	// a Watch method. For V1, this can have unintended behavior if combined with other Watch methods due to
-	// some methods using the cache differently. For V2, this is not an issue
-	WatchEntriesChanged() (map[string]bool, error)
-
-// Uses rename to move all entries in the directory to dst. If there are no further entries to be renamed,
-// waits for a new entry and then moves it.
-	WatchNewEntriesAndRename(dst string) ([]string, error)
-
-	// Uses rename to move all entries in the directory to dst. Can be potentially stale in V2, so combining it
-	// with other Watch calls may be desired to get the cache up to date.
-	// Does not block if there are no entries to rename
-	GetEntriesAndRename(dst string) ([]string, error)
+type DirReader struct {
+	*fslib.FsLib
+	*sync.Mutex
+	pn string
+	watchFd int
+	ents map[string]bool
+	changes map[string]bool
+	closed bool
+	reader *bufio.Reader
 }
 
-type DirReaderVersion int
+type watchReader struct {
+	*fslib.FsLib
+	watchFd int
+}
 
-const (
-	V1 DirReaderVersion = 1
-	V2 DirReaderVersion = 2
-)
+func (wr watchReader) Read(p []byte) (int, error) {
+	size, err := wr.FsLib.Read(wr.watchFd, p)
+	return int(size), err
+}
 
-func GetDirReaderVersion(pe *proc.ProcEnv) DirReaderVersion {
-	if pe.DirReaderVersion == "" {
-		return V2
-	} else if pe.DirReaderVersion == strconv.Itoa(int(V1)) {
-		return V1
-	} else if pe.DirReaderVersion == strconv.Itoa(int(V2)) {
-		return V2
+func NewDirReader(fslib *fslib.FsLib, pn string) (*DirReader, error) {
+	db.DPrintf(db.WATCH, "NewDirReader: Creating watch on %s", pn)
+
+	fd, err := fslib.Open(pn, sp.OREAD)
+	if err != nil {
+		return nil, err
+	}
+	watchFd, err := fslib.DirWatch(fd)
+	if err != nil {
+		return nil, err
+	}
+
+	db.DPrintf(db.WATCH, "NewDirReader: Created watch on %s with fd=%d", pn, watchFd)
+
+	reader := watchReader {
+		fslib,
+		watchFd,
+	}
+	bufferedReader := bufio.NewReader(reader)
+
+	var mu sync.Mutex
+
+	dr := &DirReader{
+		FsLib:   fslib,
+		Mutex:   &mu,
+		pn:      pn,
+		watchFd: watchFd,
+		ents:    make(map[string]bool),
+		changes: make(map[string]bool),
+		closed:  false,
+		reader:  bufferedReader,
+	}
+
+	sts, _, err := fslib.ReadDir(pn)
+	if err != nil {
+		return nil, err
+	}
+	for _, st := range sts {
+		dr.ents[st.Name] = true
+		dr.changes[st.Name] = true
+	}
+
+	if db.WillBePrinted(db.WATCH) {
+		db.DPrintf(db.WATCH, "NewDirReader: Initial dir contents %v", dr.ents)
+	}
+
+	return dr, nil
+}
+
+// should hold lock for dr
+func (dr *DirReader) isWatchClosed(err error) bool {
+	return err != nil && (dr.closed || serr.IsErrCode(err, serr.TErrClosed) || serr.IsErrCode(err, serr.TErrUnreachable) || serr.IsErrCode(err, serr.TErrUnknownfid) || err == io.ErrUnexpectedEOF)
+}
+
+// should hold lock for dr
+func (dr *DirReader) ReadUpdates() error {
+	var length uint32
+	err := binary.Read(dr.reader, binary.LittleEndian, &length)
+	if dr.isWatchClosed(err) {
+		db.DPrintf(db.WATCH, "DirReader ReadUpdates: watch stream for %s closed %v", dr.pn, err)
+		return serr.NewErr(serr.TErrClosed, "")
+	}
+	if err != nil {
+		db.DFatalf("failed to read length %v", err)
+	}
+	data := make([]byte, length)
+	numRead, err := io.ReadFull(dr.reader, data)
+	if dr.isWatchClosed(err) {
+		db.DPrintf(db.WATCH, "DirReader ReadUpdates: watch stream for %s closed %v", dr.pn, err)
+		return serr.NewErr(serr.TErrClosed, "")
+	}
+	if err != nil {
+		db.DFatalf("watch stream produced err %v", err)
+	}
+
+	if uint32(numRead) != length {
+		db.DFatalf("only received %d bytes, expected %d bytes", numRead, length)
+	}
+
+	eventList := &protsrv_proto.WatchEventList{}
+	err = proto.Unmarshal(data, eventList)
+	if err != nil {
+		db.DFatalf("DirReader: failed to unmarshal data %v", err)
+	}
+	db.DPrintf(db.WATCH, "DirReader ReadUpdates: received %d bytes with %d events", numRead, len(eventList.Events))
+
+	for _, event := range eventList.Events {
+		switch event.Type {
+		case protsrv_proto.WatchEventType_CREATE:
+			dr.ents[event.File] = true
+			dr.changes[event.File] = true
+		case protsrv_proto.WatchEventType_REMOVE:
+			dr.ents[event.File] = false
+			dr.changes[event.File] = false
+		default:
+			db.DFatalf("DirReader: received unknown event type %v", event.Type)
+		}
+	}
+
+	return nil
+}
+
+func filterMap(ents map[string] bool) []string {
+	var result []string
+
+	for filename, exists := range ents {
+		if exists {
+			result = append(result, filename)
+		}
+	}
+	return result
+}
+
+// Gets the path of the directory being watched
+func (dr *DirReader) GetPath() string {
+	return dr.pn
+}
+
+// Gets the list of files in the directory as of the latest watch. Can be stale
+// if changes have been made since the last watch operation
+func (dr *DirReader) GetDir() ([]string, error) {
+	dr.Lock()
+	defer dr.Unlock()
+
+	return filterMap(dr.ents), nil
+}
+
+func (dr *DirReader) Close() error {
+	db.DPrintf(db.WATCH, "DirReader: closing watch on %s", dr.pn)
+	dr.closed = true
+	return dr.CloseFd(dr.watchFd)
+}
+
+// Keep reading dir until wait returns false (e.g., a new file has
+// been created in dir).
+func (dr *DirReader) readDirWatch(watch Fwatch) error {
+	dr.Lock()
+	defer dr.Unlock()
+
+	for watch(dr.ents, dr.changes) {
+		dr.changes = make(map[string]bool)
+		err := dr.ReadUpdates()
+		if err != nil {
+			db.DPrintf(db.WATCH, "DirReader readDirWatch: ReadUpdates failed %v", err)
+			return err
+		}
+	}
+	dr.changes = make(map[string]bool)
+
+	return nil
+}
+
+// Blocks until file exists in the directory
+func (dr *DirReader) WaitCreate(file string) error {
+	db.DPrintf(db.WATCH, "DirReader WaitCreate: dir %s file %s", dr.pn, file)
+
+	err := dr.readDirWatch(func(ents map[string] bool, changes map[string]bool) bool {
+		return !ents[file]
+	})
+	return err
+}
+
+// Blocks until file is no longer in the directory
+func (dr *DirReader) WaitRemove(file string) error {
+	db.DPrintf(db.WATCH, "DirReader WaitRemove: dir %s file %s", dr.pn, file)
+	firstTime := true
+	err := dr.readDirWatch(func(ents map[string] bool, changes map[string]bool) bool {
+		if firstTime {
+			firstTime = false
+			return ents[file]
+		} else {
+			created, ok := changes[file]
+			if !ok {
+				return true
+			}
+			return created
+		}
+	})
+	return err
+}
+
+// Blocks until at least n entries to be in the directory
+func (dr *DirReader) WaitNEntries(n int) error {
+	db.DPrintf(db.WATCH, "DirReader WaitNEntries: dir %s n %d", dr.pn, n)
+	err := dr.readDirWatch(func(ents map[string]bool, changes map[string]bool) bool {
+		return len(filterMap(ents)) < n
+	})
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// Blocks until the directory to be empty
+func (dr *DirReader) WaitEmpty() error {
+	db.DPrintf(db.WATCH, "DirReader WaitEmpty: dir %s", dr.pn)
+	err := dr.readDirWatch(func(ents map[string]bool, changes map[string]bool) bool {
+		return len(filterMap(ents)) > 0
+	})
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// Blocks until a file is added that is not in present. Returns all added entries.
+// This could include entries in present if they were not already in the directory.
+// If provided, any file beginning with an excluded prefix is ignored.
+// present should be sorted.
+func (dr *DirReader) WatchEntriesChangedRelative(present []string, excludedPrefixes []string) ([]string, error) {
+	var files = make([]string, 0)
+	if db.WillBePrinted(db.WATCH) {
+		db.DPrintf(db.WATCH, "DirReader WatchUniqueEntries: dir %v, present: %v, excludedPrefixes %v\n", dr.pn, present, excludedPrefixes)
+	}
+	var ret []string
+	err := dr.readDirWatch(func(ents map[string]bool, changes map[string]bool) bool {
+		unchanged := true
+		files = filterMap(changes)
+		slices.Sort(files)
+		ret = make([]string, 0)
+		ix := 0
+		for _, file := range files {
+			skip := false
+			for _, pf := range excludedPrefixes {
+				if strings.HasPrefix(file, pf) {
+					skip = true
+					break
+				}
+			}
+			if skip {
+				continue
+			}
+			ret = append(ret, file)
+
+			for ix < len(present) && present[ix] < file {
+				ix += 1
+			}
+			if ix >= len(present) || present[ix] != file {
+				unchanged = false
+			}
+		}
+		return unchanged
+	})
+	if err != nil {
+		return nil, err
+	}
+	return ret, nil
+}
+
+// Watch for a directory change and then return all directory entry changes since the last call to
+// a Watch method.
+func (dr *DirReader) WatchEntriesChanged() (map[string]bool, error) {
+	var ret map[string]bool
+	db.DPrintf(db.WATCH, "DirReader WatchEntriesChanged: dir %v\n", dr.pn)
+	err := dr.readDirWatch(func(ents map[string]bool, changes map[string]bool) bool {
+		if len(changes) > 0 {
+			ret = maps.Clone(changes)
+			return false
+		} else {
+			return true
+		}
+	})
+
+	if err != nil {
+		return nil, err
 	} else {
-		db.DFatalf("Unknown DirReaderVersion %v\n", pe.DirReaderVersion)
-		return V2
+		return ret, nil
 	}
 }
 
-func NewDirReader(fslib *fslib.FsLib, pn string) (DirReader, error) {
-	version := GetDirReaderVersion(fslib.ProcEnv())
-	db.DPrintf(db.WATCH, "NewDirReader: version %v\n", version)
-	if version == V1 {
-		return NewDirReaderV1(fslib, pn), nil
-	} else if version == V2 {
-		return NewDirReaderV2(fslib, pn)
-	} else {
-		db.DFatalf("NewDirReader: Unknown DirReaderVersion %v\n", version)
-		return nil, nil
+// Uses rename to move all entries in the directory to dst. If there are no entries to be renamed,
+// blocks until a new entry is added and then moves it.
+func (dr *DirReader) WatchNewEntriesAndRename(dst string) ([]string, error) {
+	var r error
+	presentFiles := filterMap(dr.ents)
+	if db.WillBePrinted(db.WATCH) {
+		db.DPrintf(db.WATCH, "DirReader WatchNewEntriesAndRename: dir %v, present: %v, dst %v\n", dr.pn, presentFiles, dst)
 	}
+	if len(presentFiles) > 0 {
+		return dr.rename(presentFiles, dst)
+	}
+
+	var movedEnts []string
+	err := dr.readDirWatch(func(ents map[string]bool, changes map[string]bool) bool {
+		movedEnts, r = dr.rename(filterMap(changes), dst)
+		if r != nil || len(movedEnts) > 0 {
+			return false
+		}
+		return true
+	})
+	if err != nil {
+		return nil, err
+	}
+	if r != nil {
+		return nil, r
+	}
+	return movedEnts, nil
+}
+
+// Uses rename to move all entries in the directory to dst. Can be potentially stale, so combining it
+// with other Watch calls may be desired to get the cache up to date.
+// Does not block if there are no entries to rename
+func (dr *DirReader) GetEntriesAndRename(dst string) ([]string, error) {
+	presentFiles := filterMap(dr.ents)
+	if db.WillBePrinted(db.WATCH) {
+		db.DPrintf(db.WATCH, "DirReader GetEntriesAndRename: dir %v, present: %v, dst %v\n", dr.pn, presentFiles, dst)
+	}
+	return dr.rename(presentFiles, dst)
+}
+
+// Takes each file and moves them to the dst directory. Returns a list of all
+// files successfully moved
+func (dr *DirReader) rename(files []string, dst string) ([]string, error) {
+	var r error
+	newents := make([]string, 0)
+	for _, file := range files {
+		if dr.ents[file] {
+			if err := dr.Rename(filepath.Join(dr.pn, file), filepath.Join(dst, file)); err == nil {
+				newents = append(newents, file)
+			} else if serr.IsErrCode(err, serr.TErrUnreachable) { // partitioned?
+				r = err
+				break
+			}
+
+			// either we successfully renamed it or another proc renamed it first
+			dr.ents[file] = false
+		}
+	}
+	return newents, r
 }
 
 func WaitRemove(fsl *fslib.FsLib, pn string) error {

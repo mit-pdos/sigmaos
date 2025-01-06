@@ -243,25 +243,11 @@ func (pathc *PathClnt) Open(pn string, principal *sp.Tprincipal, mode sp.Tmode, 
 	return fid, nil
 }
 
-func (pathc *PathClnt) SetDirWatch(fid sp.Tfid, w sos.Watch) error {
+func (pathc *PathClnt) SetDirWatch(fid sp.Tfid) (sp.Tfid, error) {
 	db.DPrintf(db.PATHCLNT, "%v: SetDirWatch %v\n", pathc.cid, fid)
-	go func() {
-		err := pathc.FidClnt.Watch(fid)
-		db.DPrintf(db.PATHCLNT, "%v: SetDirWatch: Watch returns %v %v\n", pathc.cid, fid, err)
-		if err == nil {
-			w(nil)
-		} else {
-			w(err)
-		}
-	}()
-	return nil
-}
-
-func (pathc *PathClnt) SetDirWatchV2(fid sp.Tfid) (sp.Tfid, error) {
-	db.DPrintf(db.PATHCLNT, "%v: SetDirWatchV2 %v\n", pathc.cid, fid)
-	watchfid, err := pathc.FidClnt.WatchV2(fid)
+	watchfid, err := pathc.FidClnt.Watch(fid)
 	if err != nil {
-		db.DPrintf(db.PATHCLNT_ERR, "%v: SetDirWatchV2: setting watch failed %v err %v\n", pathc.cid, fid, err)
+		db.DPrintf(db.PATHCLNT_ERR, "%v: SetDirWatch: setting watch failed %v err %v\n", pathc.cid, fid, err)
 		return sp.NoFid, nil
 	}
 	return watchfid, nil

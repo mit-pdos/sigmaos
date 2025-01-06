@@ -144,23 +144,15 @@ func (wr *Rwrite) Tcount() Tsize {
 	return Tsize(wr.Count)
 }
 
-func NewTwatch(fid Tfid) *Twatch {
-	return &Twatch{Fid: uint32(fid)}
+func NewTwatch(dirfid Tfid, watchfid Tfid) *Twatch {
+	return &Twatch{Dirfid: uint32(dirfid), Watchfid: uint32(watchfid)}
 }
 
-func (w *Twatch) Tfid() Tfid {
-	return Tfid(w.Fid)
-}
-
-func NewTwatchv2(dirfid Tfid, watchfid Tfid) *Twatchv2 {
-	return &Twatchv2{Dirfid: uint32(dirfid), Watchfid: uint32(watchfid)}
-}
-
-func (w *Twatchv2) Tdirfid() Tfid {
+func (w *Twatch) Tdirfid() Tfid {
 	return Tfid(w.Dirfid)
 }
 
-func (w *Twatchv2) Twatchfid() Tfid {
+func (w *Twatch) Twatchfid() Tfid {
 	return Tfid(w.Watchfid)
 }
 
@@ -315,9 +307,8 @@ func (Twalk) Type() sessp.Tfcall    { return sessp.TTwalk }
 func (Rwalk) Type() sessp.Tfcall    { return sessp.TRwalk }
 func (Topen) Type() sessp.Tfcall    { return sessp.TTopen }
 func (Ropen) Type() sessp.Tfcall    { return sessp.TRopen }
-func (Twatch) Type() sessp.Tfcall   { return sessp.TTwatch }
-func (Twatchv2) Type() sessp.Tfcall { return sessp.TTwatchv2 }
-func (Rwatchv2) Type() sessp.Tfcall { return sessp.TRwatchv2 }
+func (Twatch) Type() sessp.Tfcall { return sessp.TTwatch }
+func (Rwatch) Type() sessp.Tfcall { return sessp.TRwatch }
 func (Tcreate) Type() sessp.Tfcall  { return sessp.TTcreate }
 func (Rcreate) Type() sessp.Tfcall  { return sessp.TRcreate }
 func (Rread) Type() sessp.Tfcall    { return sessp.TRread }

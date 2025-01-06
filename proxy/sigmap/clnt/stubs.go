@@ -244,19 +244,11 @@ func (scc *SPProxyClnt) WriteRead(fd int, iniov sessp.IoVec, outiov sessp.IoVec)
 	return err
 }
 
-func (scc *SPProxyClnt) DirWatch(fd int) error {
-	req := spproto.SigmaReadReq{Fd: uint32(fd)}
-	rep := spproto.SigmaErrRep{}
-	err := scc.rpcErr("SPProxySrvAPI.DirWatch", &req, &rep)
-	db.DPrintf(db.SIGMACLNTCLNT, "DirWatch %v %v %v", req, rep, err)
-	return err
-}
-
-func (scc *SPProxyClnt) DirWatchV2(fd int) (int, error) {
+func (scc *SPProxyClnt) DirWatch(fd int) (int, error) {
 	req := spproto.SigmaReadReq{Fd: uint32(fd)}
 	rep := spproto.SigmaFdRep{}
-	fd, err := scc.rpcFd("SPProxySrvAPI.DirWatchV2", &req, &rep)
-	db.DPrintf(db.SIGMACLNTCLNT, "DirWatchV2 %v %v %v", req, rep, err)
+	fd, err := scc.rpcFd("SPProxySrvAPI.DirWatch", &req, &rep)
+	db.DPrintf(db.SIGMACLNTCLNT, "DirWatch %v %v %v", req, rep, err)
 	return fd, err
 }
 

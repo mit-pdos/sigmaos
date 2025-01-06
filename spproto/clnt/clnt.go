@@ -155,28 +155,15 @@ func (pclnt *SPProtoClnt) Open(fid sp.Tfid, mode sp.Tmode) (*sp.Ropen, *serr.Err
 	return msg, nil
 }
 
-func (pclnt *SPProtoClnt) Watch(fid sp.Tfid) *serr.Err {
-	args := sp.NewTwatch(fid)
-	reply, err := pclnt.Call(args)
-	if err != nil {
-		return err
-	}
-	_, ok := reply.Msg.(*sp.Ropen)
-	if !ok {
-		return serr.NewErr(serr.TErrBadFcall, "Rwatch")
-	}
-	return nil
-}
-
-func (pclnt *SPProtoClnt) WatchV2(dirfid sp.Tfid, watchfid sp.Tfid) (*sp.Rwatchv2, *serr.Err) {
-	args := sp.NewTwatchv2(dirfid, watchfid)
+func (pclnt *SPProtoClnt) Watch(dirfid sp.Tfid, watchfid sp.Tfid) (*sp.Rwatch, *serr.Err) {
+	args := sp.NewTwatch(dirfid, watchfid)
 	reply, err := pclnt.Call(args)
 	if err != nil {
 		return nil, err
 	}
-	msg, ok := reply.Msg.(*sp.Rwatchv2)
+	msg, ok := reply.Msg.(*sp.Rwatch)
 	if !ok {
-		return nil, serr.NewErr(serr.TErrBadFcall, "Rwatchv2")
+		return nil, serr.NewErr(serr.TErrBadFcall, "Rwatch")
 	}
 	return msg, nil
 }

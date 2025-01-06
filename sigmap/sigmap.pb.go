@@ -1897,7 +1897,8 @@ type Twatch struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Fid uint32 `protobuf:"varint,1,opt,name=fid,proto3" json:"fid,omitempty"`
+	Dirfid   uint32 `protobuf:"varint,1,opt,name=dirfid,proto3" json:"dirfid,omitempty"`
+	Watchfid uint32 `protobuf:"varint,2,opt,name=watchfid,proto3" json:"watchfid,omitempty"`
 }
 
 func (x *Twatch) Reset() {
@@ -1932,24 +1933,28 @@ func (*Twatch) Descriptor() ([]byte, []int) {
 	return file_sigmap_sigmap_proto_rawDescGZIP(), []int{32}
 }
 
-func (x *Twatch) GetFid() uint32 {
+func (x *Twatch) GetDirfid() uint32 {
 	if x != nil {
-		return x.Fid
+		return x.Dirfid
 	}
 	return 0
 }
 
-type Twatchv2 struct {
+func (x *Twatch) GetWatchfid() uint32 {
+	if x != nil {
+		return x.Watchfid
+	}
+	return 0
+}
+
+type Rwatch struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
-
-	Dirfid   uint32 `protobuf:"varint,1,opt,name=dirfid,proto3" json:"dirfid,omitempty"`
-	Watchfid uint32 `protobuf:"varint,2,opt,name=watchfid,proto3" json:"watchfid,omitempty"`
 }
 
-func (x *Twatchv2) Reset() {
-	*x = Twatchv2{}
+func (x *Rwatch) Reset() {
+	*x = Rwatch{}
 	if protoimpl.UnsafeEnabled {
 		mi := &file_sigmap_sigmap_proto_msgTypes[33]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -1957,13 +1962,13 @@ func (x *Twatchv2) Reset() {
 	}
 }
 
-func (x *Twatchv2) String() string {
+func (x *Rwatch) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*Twatchv2) ProtoMessage() {}
+func (*Rwatch) ProtoMessage() {}
 
-func (x *Twatchv2) ProtoReflect() protoreflect.Message {
+func (x *Rwatch) ProtoReflect() protoreflect.Message {
 	mi := &file_sigmap_sigmap_proto_msgTypes[33]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -1975,61 +1980,9 @@ func (x *Twatchv2) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use Twatchv2.ProtoReflect.Descriptor instead.
-func (*Twatchv2) Descriptor() ([]byte, []int) {
+// Deprecated: Use Rwatch.ProtoReflect.Descriptor instead.
+func (*Rwatch) Descriptor() ([]byte, []int) {
 	return file_sigmap_sigmap_proto_rawDescGZIP(), []int{33}
-}
-
-func (x *Twatchv2) GetDirfid() uint32 {
-	if x != nil {
-		return x.Dirfid
-	}
-	return 0
-}
-
-func (x *Twatchv2) GetWatchfid() uint32 {
-	if x != nil {
-		return x.Watchfid
-	}
-	return 0
-}
-
-type Rwatchv2 struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-}
-
-func (x *Rwatchv2) Reset() {
-	*x = Rwatchv2{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_sigmap_sigmap_proto_msgTypes[34]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *Rwatchv2) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*Rwatchv2) ProtoMessage() {}
-
-func (x *Rwatchv2) ProtoReflect() protoreflect.Message {
-	mi := &file_sigmap_sigmap_proto_msgTypes[34]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use Rwatchv2.ProtoReflect.Descriptor instead.
-func (*Rwatchv2) Descriptor() ([]byte, []int) {
-	return file_sigmap_sigmap_proto_rawDescGZIP(), []int{34}
 }
 
 type Trenameat struct {
@@ -2047,7 +2000,7 @@ type Trenameat struct {
 func (x *Trenameat) Reset() {
 	*x = Trenameat{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_sigmap_sigmap_proto_msgTypes[35]
+		mi := &file_sigmap_sigmap_proto_msgTypes[34]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2060,7 +2013,7 @@ func (x *Trenameat) String() string {
 func (*Trenameat) ProtoMessage() {}
 
 func (x *Trenameat) ProtoReflect() protoreflect.Message {
-	mi := &file_sigmap_sigmap_proto_msgTypes[35]
+	mi := &file_sigmap_sigmap_proto_msgTypes[34]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2073,7 +2026,7 @@ func (x *Trenameat) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Trenameat.ProtoReflect.Descriptor instead.
 func (*Trenameat) Descriptor() ([]byte, []int) {
-	return file_sigmap_sigmap_proto_rawDescGZIP(), []int{35}
+	return file_sigmap_sigmap_proto_rawDescGZIP(), []int{34}
 }
 
 func (x *Trenameat) GetOldFid() uint32 {
@@ -2120,7 +2073,7 @@ type Rrenameat struct {
 func (x *Rrenameat) Reset() {
 	*x = Rrenameat{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_sigmap_sigmap_proto_msgTypes[36]
+		mi := &file_sigmap_sigmap_proto_msgTypes[35]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2133,7 +2086,7 @@ func (x *Rrenameat) String() string {
 func (*Rrenameat) ProtoMessage() {}
 
 func (x *Rrenameat) ProtoReflect() protoreflect.Message {
-	mi := &file_sigmap_sigmap_proto_msgTypes[36]
+	mi := &file_sigmap_sigmap_proto_msgTypes[35]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2146,7 +2099,7 @@ func (x *Rrenameat) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Rrenameat.ProtoReflect.Descriptor instead.
 func (*Rrenameat) Descriptor() ([]byte, []int) {
-	return file_sigmap_sigmap_proto_rawDescGZIP(), []int{36}
+	return file_sigmap_sigmap_proto_rawDescGZIP(), []int{35}
 }
 
 type Tgetfile struct {
@@ -2166,7 +2119,7 @@ type Tgetfile struct {
 func (x *Tgetfile) Reset() {
 	*x = Tgetfile{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_sigmap_sigmap_proto_msgTypes[37]
+		mi := &file_sigmap_sigmap_proto_msgTypes[36]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2179,7 +2132,7 @@ func (x *Tgetfile) String() string {
 func (*Tgetfile) ProtoMessage() {}
 
 func (x *Tgetfile) ProtoReflect() protoreflect.Message {
-	mi := &file_sigmap_sigmap_proto_msgTypes[37]
+	mi := &file_sigmap_sigmap_proto_msgTypes[36]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2192,7 +2145,7 @@ func (x *Tgetfile) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Tgetfile.ProtoReflect.Descriptor instead.
 func (*Tgetfile) Descriptor() ([]byte, []int) {
-	return file_sigmap_sigmap_proto_rawDescGZIP(), []int{37}
+	return file_sigmap_sigmap_proto_rawDescGZIP(), []int{36}
 }
 
 func (x *Tgetfile) GetFid() uint32 {
@@ -2262,7 +2215,7 @@ type Tputfile struct {
 func (x *Tputfile) Reset() {
 	*x = Tputfile{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_sigmap_sigmap_proto_msgTypes[38]
+		mi := &file_sigmap_sigmap_proto_msgTypes[37]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2275,7 +2228,7 @@ func (x *Tputfile) String() string {
 func (*Tputfile) ProtoMessage() {}
 
 func (x *Tputfile) ProtoReflect() protoreflect.Message {
-	mi := &file_sigmap_sigmap_proto_msgTypes[38]
+	mi := &file_sigmap_sigmap_proto_msgTypes[37]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2288,7 +2241,7 @@ func (x *Tputfile) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Tputfile.ProtoReflect.Descriptor instead.
 func (*Tputfile) Descriptor() ([]byte, []int) {
-	return file_sigmap_sigmap_proto_rawDescGZIP(), []int{38}
+	return file_sigmap_sigmap_proto_rawDescGZIP(), []int{37}
 }
 
 func (x *Tputfile) GetFid() uint32 {
@@ -2358,7 +2311,7 @@ type Tdetach struct {
 func (x *Tdetach) Reset() {
 	*x = Tdetach{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_sigmap_sigmap_proto_msgTypes[39]
+		mi := &file_sigmap_sigmap_proto_msgTypes[38]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2371,7 +2324,7 @@ func (x *Tdetach) String() string {
 func (*Tdetach) ProtoMessage() {}
 
 func (x *Tdetach) ProtoReflect() protoreflect.Message {
-	mi := &file_sigmap_sigmap_proto_msgTypes[39]
+	mi := &file_sigmap_sigmap_proto_msgTypes[38]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2384,7 +2337,7 @@ func (x *Tdetach) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Tdetach.ProtoReflect.Descriptor instead.
 func (*Tdetach) Descriptor() ([]byte, []int) {
-	return file_sigmap_sigmap_proto_rawDescGZIP(), []int{39}
+	return file_sigmap_sigmap_proto_rawDescGZIP(), []int{38}
 }
 
 func (x *Tdetach) GetClntId() uint64 {
@@ -2403,7 +2356,7 @@ type Rdetach struct {
 func (x *Rdetach) Reset() {
 	*x = Rdetach{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_sigmap_sigmap_proto_msgTypes[40]
+		mi := &file_sigmap_sigmap_proto_msgTypes[39]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2416,7 +2369,7 @@ func (x *Rdetach) String() string {
 func (*Rdetach) ProtoMessage() {}
 
 func (x *Rdetach) ProtoReflect() protoreflect.Message {
-	mi := &file_sigmap_sigmap_proto_msgTypes[40]
+	mi := &file_sigmap_sigmap_proto_msgTypes[39]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2429,7 +2382,7 @@ func (x *Rdetach) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Rdetach.ProtoReflect.Descriptor instead.
 func (*Rdetach) Descriptor() ([]byte, []int) {
-	return file_sigmap_sigmap_proto_rawDescGZIP(), []int{40}
+	return file_sigmap_sigmap_proto_rawDescGZIP(), []int{39}
 }
 
 type Theartbeat struct {
@@ -2444,7 +2397,7 @@ type Theartbeat struct {
 func (x *Theartbeat) Reset() {
 	*x = Theartbeat{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_sigmap_sigmap_proto_msgTypes[41]
+		mi := &file_sigmap_sigmap_proto_msgTypes[40]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2457,7 +2410,7 @@ func (x *Theartbeat) String() string {
 func (*Theartbeat) ProtoMessage() {}
 
 func (x *Theartbeat) ProtoReflect() protoreflect.Message {
-	mi := &file_sigmap_sigmap_proto_msgTypes[41]
+	mi := &file_sigmap_sigmap_proto_msgTypes[40]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2470,7 +2423,7 @@ func (x *Theartbeat) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Theartbeat.ProtoReflect.Descriptor instead.
 func (*Theartbeat) Descriptor() ([]byte, []int) {
-	return file_sigmap_sigmap_proto_rawDescGZIP(), []int{41}
+	return file_sigmap_sigmap_proto_rawDescGZIP(), []int{40}
 }
 
 func (x *Theartbeat) GetServerSide() bool {
@@ -2498,7 +2451,7 @@ type Rheartbeat struct {
 func (x *Rheartbeat) Reset() {
 	*x = Rheartbeat{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_sigmap_sigmap_proto_msgTypes[42]
+		mi := &file_sigmap_sigmap_proto_msgTypes[41]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2511,7 +2464,7 @@ func (x *Rheartbeat) String() string {
 func (*Rheartbeat) ProtoMessage() {}
 
 func (x *Rheartbeat) ProtoReflect() protoreflect.Message {
-	mi := &file_sigmap_sigmap_proto_msgTypes[42]
+	mi := &file_sigmap_sigmap_proto_msgTypes[41]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2524,7 +2477,7 @@ func (x *Rheartbeat) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Rheartbeat.ProtoReflect.Descriptor instead.
 func (*Rheartbeat) Descriptor() ([]byte, []int) {
-	return file_sigmap_sigmap_proto_rawDescGZIP(), []int{42}
+	return file_sigmap_sigmap_proto_rawDescGZIP(), []int{41}
 }
 
 func (x *Rheartbeat) GetSids() map[uint64]bool {
@@ -2548,7 +2501,7 @@ type Tremovefile struct {
 func (x *Tremovefile) Reset() {
 	*x = Tremovefile{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_sigmap_sigmap_proto_msgTypes[43]
+		mi := &file_sigmap_sigmap_proto_msgTypes[42]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2561,7 +2514,7 @@ func (x *Tremovefile) String() string {
 func (*Tremovefile) ProtoMessage() {}
 
 func (x *Tremovefile) ProtoReflect() protoreflect.Message {
-	mi := &file_sigmap_sigmap_proto_msgTypes[43]
+	mi := &file_sigmap_sigmap_proto_msgTypes[42]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2574,7 +2527,7 @@ func (x *Tremovefile) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Tremovefile.ProtoReflect.Descriptor instead.
 func (*Tremovefile) Descriptor() ([]byte, []int) {
-	return file_sigmap_sigmap_proto_rawDescGZIP(), []int{43}
+	return file_sigmap_sigmap_proto_rawDescGZIP(), []int{42}
 }
 
 func (x *Tremovefile) GetFid() uint32 {
@@ -2616,7 +2569,7 @@ type Twriteread struct {
 func (x *Twriteread) Reset() {
 	*x = Twriteread{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_sigmap_sigmap_proto_msgTypes[44]
+		mi := &file_sigmap_sigmap_proto_msgTypes[43]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2629,7 +2582,7 @@ func (x *Twriteread) String() string {
 func (*Twriteread) ProtoMessage() {}
 
 func (x *Twriteread) ProtoReflect() protoreflect.Message {
-	mi := &file_sigmap_sigmap_proto_msgTypes[44]
+	mi := &file_sigmap_sigmap_proto_msgTypes[43]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2642,7 +2595,7 @@ func (x *Twriteread) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Twriteread.ProtoReflect.Descriptor instead.
 func (*Twriteread) Descriptor() ([]byte, []int) {
-	return file_sigmap_sigmap_proto_rawDescGZIP(), []int{44}
+	return file_sigmap_sigmap_proto_rawDescGZIP(), []int{43}
 }
 
 func (x *Twriteread) GetFid() uint32 {
@@ -2800,14 +2753,12 @@ var file_sigmap_sigmap_proto_rawDesc = []byte{
 	0x74, 0x61, 0x74, 0x50, 0x72, 0x6f, 0x74, 0x6f, 0x52, 0x04, 0x73, 0x74, 0x61, 0x74, 0x12, 0x22,
 	0x0a, 0x05, 0x66, 0x65, 0x6e, 0x63, 0x65, 0x18, 0x03, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x0c, 0x2e,
 	0x54, 0x66, 0x65, 0x6e, 0x63, 0x65, 0x50, 0x72, 0x6f, 0x74, 0x6f, 0x52, 0x05, 0x66, 0x65, 0x6e,
-	0x63, 0x65, 0x22, 0x08, 0x0a, 0x06, 0x52, 0x77, 0x73, 0x74, 0x61, 0x74, 0x22, 0x1a, 0x0a, 0x06,
-	0x54, 0x77, 0x61, 0x74, 0x63, 0x68, 0x12, 0x10, 0x0a, 0x03, 0x66, 0x69, 0x64, 0x18, 0x01, 0x20,
-	0x01, 0x28, 0x0d, 0x52, 0x03, 0x66, 0x69, 0x64, 0x22, 0x3e, 0x0a, 0x08, 0x54, 0x77, 0x61, 0x74,
-	0x63, 0x68, 0x76, 0x32, 0x12, 0x16, 0x0a, 0x06, 0x64, 0x69, 0x72, 0x66, 0x69, 0x64, 0x18, 0x01,
-	0x20, 0x01, 0x28, 0x0d, 0x52, 0x06, 0x64, 0x69, 0x72, 0x66, 0x69, 0x64, 0x12, 0x1a, 0x0a, 0x08,
-	0x77, 0x61, 0x74, 0x63, 0x68, 0x66, 0x69, 0x64, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0d, 0x52, 0x08,
-	0x77, 0x61, 0x74, 0x63, 0x68, 0x66, 0x69, 0x64, 0x22, 0x0a, 0x0a, 0x08, 0x52, 0x77, 0x61, 0x74,
-	0x63, 0x68, 0x76, 0x32, 0x22, 0x93, 0x01, 0x0a, 0x09, 0x54, 0x72, 0x65, 0x6e, 0x61, 0x6d, 0x65,
+	0x63, 0x65, 0x22, 0x08, 0x0a, 0x06, 0x52, 0x77, 0x73, 0x74, 0x61, 0x74, 0x22, 0x3c, 0x0a, 0x06,
+	0x54, 0x77, 0x61, 0x74, 0x63, 0x68, 0x12, 0x16, 0x0a, 0x06, 0x64, 0x69, 0x72, 0x66, 0x69, 0x64,
+	0x18, 0x01, 0x20, 0x01, 0x28, 0x0d, 0x52, 0x06, 0x64, 0x69, 0x72, 0x66, 0x69, 0x64, 0x12, 0x1a,
+	0x0a, 0x08, 0x77, 0x61, 0x74, 0x63, 0x68, 0x66, 0x69, 0x64, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0d,
+	0x52, 0x08, 0x77, 0x61, 0x74, 0x63, 0x68, 0x66, 0x69, 0x64, 0x22, 0x08, 0x0a, 0x06, 0x52, 0x77,
+	0x61, 0x74, 0x63, 0x68, 0x22, 0x93, 0x01, 0x0a, 0x09, 0x54, 0x72, 0x65, 0x6e, 0x61, 0x6d, 0x65,
 	0x61, 0x74, 0x12, 0x16, 0x0a, 0x06, 0x6f, 0x6c, 0x64, 0x46, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01,
 	0x28, 0x0d, 0x52, 0x06, 0x6f, 0x6c, 0x64, 0x46, 0x69, 0x64, 0x12, 0x18, 0x0a, 0x07, 0x6f, 0x6c,
 	0x64, 0x4e, 0x61, 0x6d, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x07, 0x6f, 0x6c, 0x64,
@@ -2886,7 +2837,7 @@ func file_sigmap_sigmap_proto_rawDescGZIP() []byte {
 	return file_sigmap_sigmap_proto_rawDescData
 }
 
-var file_sigmap_sigmap_proto_msgTypes = make([]protoimpl.MessageInfo, 48)
+var file_sigmap_sigmap_proto_msgTypes = make([]protoimpl.MessageInfo, 47)
 var file_sigmap_sigmap_proto_goTypes = []interface{}{
 	(*TqidProto)(nil),      // 0: TqidProto
 	(*Tprincipal)(nil),     // 1: Tprincipal
@@ -2921,28 +2872,27 @@ var file_sigmap_sigmap_proto_goTypes = []interface{}{
 	(*Twstat)(nil),         // 30: Twstat
 	(*Rwstat)(nil),         // 31: Rwstat
 	(*Twatch)(nil),         // 32: Twatch
-	(*Twatchv2)(nil),       // 33: Twatchv2
-	(*Rwatchv2)(nil),       // 34: Rwatchv2
-	(*Trenameat)(nil),      // 35: Trenameat
-	(*Rrenameat)(nil),      // 36: Rrenameat
-	(*Tgetfile)(nil),       // 37: Tgetfile
-	(*Tputfile)(nil),       // 38: Tputfile
-	(*Tdetach)(nil),        // 39: Tdetach
-	(*Rdetach)(nil),        // 40: Rdetach
-	(*Theartbeat)(nil),     // 41: Theartbeat
-	(*Rheartbeat)(nil),     // 42: Rheartbeat
-	(*Tremovefile)(nil),    // 43: Tremovefile
-	(*Twriteread)(nil),     // 44: Twriteread
-	nil,                    // 45: Tattach.SecretsEntry
-	nil,                    // 46: Theartbeat.SidsEntry
-	nil,                    // 47: Rheartbeat.SidsEntry
+	(*Rwatch)(nil),         // 33: Rwatch
+	(*Trenameat)(nil),      // 34: Trenameat
+	(*Rrenameat)(nil),      // 35: Rrenameat
+	(*Tgetfile)(nil),       // 36: Tgetfile
+	(*Tputfile)(nil),       // 37: Tputfile
+	(*Tdetach)(nil),        // 38: Tdetach
+	(*Rdetach)(nil),        // 39: Rdetach
+	(*Theartbeat)(nil),     // 40: Theartbeat
+	(*Rheartbeat)(nil),     // 41: Rheartbeat
+	(*Tremovefile)(nil),    // 42: Tremovefile
+	(*Twriteread)(nil),     // 43: Twriteread
+	nil,                    // 44: Tattach.SecretsEntry
+	nil,                    // 45: Theartbeat.SidsEntry
+	nil,                    // 46: Rheartbeat.SidsEntry
 }
 var file_sigmap_sigmap_proto_depIdxs = []int32{
 	0,  // 0: TstatProto.qid:type_name -> TqidProto
 	3,  // 1: TendpointProto.addr:type_name -> Taddr
 	1,  // 2: Tauth.Principals:type_name -> Tprincipal
 	0,  // 3: Rauth.aqid:type_name -> TqidProto
-	45, // 4: Tattach.secrets:type_name -> Tattach.SecretsEntry
+	44, // 4: Tattach.secrets:type_name -> Tattach.SecretsEntry
 	0,  // 5: Rattach.qid:type_name -> TqidProto
 	0,  // 6: Rwalk.qids:type_name -> TqidProto
 	0,  // 7: Ropen.qid:type_name -> TqidProto
@@ -2957,8 +2907,8 @@ var file_sigmap_sigmap_proto_depIdxs = []int32{
 	6,  // 16: Trenameat.fence:type_name -> TfenceProto
 	6,  // 17: Tgetfile.fence:type_name -> TfenceProto
 	6,  // 18: Tputfile.fence:type_name -> TfenceProto
-	46, // 19: Theartbeat.sids:type_name -> Theartbeat.SidsEntry
-	47, // 20: Rheartbeat.sids:type_name -> Rheartbeat.SidsEntry
+	45, // 19: Theartbeat.sids:type_name -> Theartbeat.SidsEntry
+	46, // 20: Rheartbeat.sids:type_name -> Rheartbeat.SidsEntry
 	6,  // 21: Tremovefile.fence:type_name -> TfenceProto
 	4,  // 22: Tattach.SecretsEntry.value:type_name -> SecretProto
 	23, // [23:23] is the sub-list for method output_type
@@ -3371,7 +3321,7 @@ func file_sigmap_sigmap_proto_init() {
 			}
 		}
 		file_sigmap_sigmap_proto_msgTypes[33].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Twatchv2); i {
+			switch v := v.(*Rwatch); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -3383,18 +3333,6 @@ func file_sigmap_sigmap_proto_init() {
 			}
 		}
 		file_sigmap_sigmap_proto_msgTypes[34].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Rwatchv2); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
-		file_sigmap_sigmap_proto_msgTypes[35].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*Trenameat); i {
 			case 0:
 				return &v.state
@@ -3406,7 +3344,7 @@ func file_sigmap_sigmap_proto_init() {
 				return nil
 			}
 		}
-		file_sigmap_sigmap_proto_msgTypes[36].Exporter = func(v interface{}, i int) interface{} {
+		file_sigmap_sigmap_proto_msgTypes[35].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*Rrenameat); i {
 			case 0:
 				return &v.state
@@ -3418,7 +3356,7 @@ func file_sigmap_sigmap_proto_init() {
 				return nil
 			}
 		}
-		file_sigmap_sigmap_proto_msgTypes[37].Exporter = func(v interface{}, i int) interface{} {
+		file_sigmap_sigmap_proto_msgTypes[36].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*Tgetfile); i {
 			case 0:
 				return &v.state
@@ -3430,7 +3368,7 @@ func file_sigmap_sigmap_proto_init() {
 				return nil
 			}
 		}
-		file_sigmap_sigmap_proto_msgTypes[38].Exporter = func(v interface{}, i int) interface{} {
+		file_sigmap_sigmap_proto_msgTypes[37].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*Tputfile); i {
 			case 0:
 				return &v.state
@@ -3442,7 +3380,7 @@ func file_sigmap_sigmap_proto_init() {
 				return nil
 			}
 		}
-		file_sigmap_sigmap_proto_msgTypes[39].Exporter = func(v interface{}, i int) interface{} {
+		file_sigmap_sigmap_proto_msgTypes[38].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*Tdetach); i {
 			case 0:
 				return &v.state
@@ -3454,7 +3392,7 @@ func file_sigmap_sigmap_proto_init() {
 				return nil
 			}
 		}
-		file_sigmap_sigmap_proto_msgTypes[40].Exporter = func(v interface{}, i int) interface{} {
+		file_sigmap_sigmap_proto_msgTypes[39].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*Rdetach); i {
 			case 0:
 				return &v.state
@@ -3466,7 +3404,7 @@ func file_sigmap_sigmap_proto_init() {
 				return nil
 			}
 		}
-		file_sigmap_sigmap_proto_msgTypes[41].Exporter = func(v interface{}, i int) interface{} {
+		file_sigmap_sigmap_proto_msgTypes[40].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*Theartbeat); i {
 			case 0:
 				return &v.state
@@ -3478,7 +3416,7 @@ func file_sigmap_sigmap_proto_init() {
 				return nil
 			}
 		}
-		file_sigmap_sigmap_proto_msgTypes[42].Exporter = func(v interface{}, i int) interface{} {
+		file_sigmap_sigmap_proto_msgTypes[41].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*Rheartbeat); i {
 			case 0:
 				return &v.state
@@ -3490,7 +3428,7 @@ func file_sigmap_sigmap_proto_init() {
 				return nil
 			}
 		}
-		file_sigmap_sigmap_proto_msgTypes[43].Exporter = func(v interface{}, i int) interface{} {
+		file_sigmap_sigmap_proto_msgTypes[42].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*Tremovefile); i {
 			case 0:
 				return &v.state
@@ -3502,7 +3440,7 @@ func file_sigmap_sigmap_proto_init() {
 				return nil
 			}
 		}
-		file_sigmap_sigmap_proto_msgTypes[44].Exporter = func(v interface{}, i int) interface{} {
+		file_sigmap_sigmap_proto_msgTypes[43].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*Twriteread); i {
 			case 0:
 				return &v.state
@@ -3521,7 +3459,7 @@ func file_sigmap_sigmap_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_sigmap_sigmap_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   48,
+			NumMessages:   47,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

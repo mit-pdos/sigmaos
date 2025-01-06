@@ -172,11 +172,7 @@ func (npc *NpSess) Open(args *sp.Topen, rets *sp.Ropen) *sp.Rerror {
 	return nil
 }
 
-func (npc *NpSess) Watch(args *sp.Twatch, rets *sp.Ropen) *sp.Rerror {
-	return nil
-}
-
-func (npc *NpSess) WatchV2(args *sp.Twatchv2, rets *sp.Rwatchv2) *sp.Rerror {
+func (npc *NpSess) Watch(args *sp.Twatch, rets *sp.Rwatch) *sp.Rerror {
 	return nil
 }
 

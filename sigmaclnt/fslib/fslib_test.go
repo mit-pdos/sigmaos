@@ -844,8 +844,7 @@ func TestWaitCreateRemoveConcur(t *testing.T) {
 		assert.Nil(t, err)
 
 		go func() {
-			var err error
-			dirreader.WaitRemove(fsl, fn)
+			err := dirreader.WaitRemove(fsl, fn)
 			if err == nil {
 				// db.DPrintf(db.TEST, "wait for rm %v\n", i)
 			} else {

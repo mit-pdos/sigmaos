@@ -180,15 +180,11 @@ message Rwstat {
 }
 
 message Twatch {
-        uint32 fid = 1;
-}
-
-message Twatchv2 {
         uint32 dirfid = 1;
         uint32 watchfid = 2;
 }
 
-message Rwatchv2 {
+message Rwatch {
         
 }
 

@@ -50,8 +50,7 @@ type FileAPI interface {
 	WriteRead(fd int, iniov sessp.IoVec, outiov sessp.IoVec) error
 
 	// Watch for directory changes
-	DirWatch(fd int) error
-	DirWatchV2(fd int) (int, error)
+	DirWatch(fd int) (int, error)
 
 	// Mounting
 	MountTree(ep *sp.Tendpoint, tree, mount string) error

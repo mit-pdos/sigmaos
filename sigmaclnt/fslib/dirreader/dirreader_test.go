@@ -112,10 +112,9 @@ func testPerf(t *testing.T, nWorkers int, nStartingFiles int, nTrials int, nFile
 	if measureMode == drtest.IncludeFileOp {
 		measureModeStr = "include_op"
 	}
-	dirreaderVersion := "V" + strconv.Itoa(int(dirreader.GetDirReaderVersion(ts.ProcEnv())))
 
-	fmt.Printf("Running perf test with %d workers, %d starting files, %d trials, %d files per trial, dirreader version %s, measure mode %s, useNamed %t\n",
-		nWorkers, nStartingFiles, nTrials, nFilesPerTrial, dirreaderVersion, measureModeStr, useNamed)
+	fmt.Printf("Running perf test with %d workers, %d starting files, %d trials, %d files per trial, measure mode %s, useNamed %t\n",
+		nWorkers, nStartingFiles, nTrials, nFilesPerTrial, measureModeStr, useNamed)
 
 	measureModeIntStr := strconv.Itoa(int(measureMode))
 
@@ -155,15 +154,14 @@ func testPerf(t *testing.T, nWorkers int, nStartingFiles int, nTrials int, nFile
 			}
 		}
 
-		s3FolderVersioned := filepath.Join(s3Folder, dirreaderVersion)
-		if err := ts.MkDir(s3FolderVersioned, 0777); err != nil {
+		if err := ts.MkDir(s3Folder, 0777); err != nil {
 			if !serr.IsErrCode(err, serr.TErrExists) {
 				assert.Fail(t, "Failed to create s3 folder: %v", err)
 			}
 		}
 
 		filename := fmt.Sprintf("%dwkrs_%dstfi_%dfpt_%s_%s", nWorkers, nStartingFiles, nFilesPerTrial, storageType, measureModeStr)
-		s3Filepath := filepath.Join(s3FolderVersioned, filename)
+		s3Filepath := filepath.Join(s3Folder, filename)
 		fd, err := ts.Create(s3Filepath, 0777, sp.OWRITE)
 		assert.Nil(t, err)
 
@@ -255,7 +253,7 @@ func TestPerf(t *testing.T) {
 	testPerf(t, numWorkers, numStartingFiles, numTrials, numFilesPerTrial, useNamed, measureMode)
 }
 
-func runTest(t *testing.T, f func(*testing.T, *test.Tstate, string, dirreader.DirReader), timeoutSec int) {
+func runTest(t *testing.T, f func(*testing.T, *test.Tstate, string, *dirreader.DirReader), timeoutSec int) {
 	ts, err := test.NewTstateAll(t)
 	assert.Nil(t, err, "Error New Tstate: %v", err)
 
@@ -293,7 +291,7 @@ func runTest(t *testing.T, f func(*testing.T, *test.Tstate, string, dirreader.Di
 }
 
 func TestDirReaderBasic(t *testing.T) {
-	runTest(t, func(t *testing.T, ts *test.Tstate, testdir string, dr dirreader.DirReader) {
+	runTest(t, func(t *testing.T, ts *test.Tstate, testdir string, dr *dirreader.DirReader) {
 		entries, err := dr.GetDir()
 		assert.Nil(t, err)
 		assert.Equal(t, len(entries), 0)
@@ -322,7 +320,7 @@ func TestDirReaderBasic(t *testing.T) {
 }
 
 func TestDirReaderWaitNEntries(t *testing.T) {
-	runTest(t, func(t *testing.T, ts *test.Tstate, testdir string, dr dirreader.DirReader) {
+	runTest(t, func(t *testing.T, ts *test.Tstate, testdir string, dr *dirreader.DirReader) {
 		err := dr.WaitNEntries(0)
 		assert.Nil(t, err)
 
@@ -349,7 +347,7 @@ func TestDirReaderWaitNEntries(t *testing.T) {
 }
 
 func TestDirReaderWaitEmpty(t *testing.T) {
-	runTest(t, func(t *testing.T, ts *test.Tstate, testdir string, dr dirreader.DirReader) {
+	runTest(t, func(t *testing.T, ts *test.Tstate, testdir string, dr *dirreader.DirReader) {
 		err := dr.WaitEmpty()
 		assert.Nil(t, err)
 
@@ -378,14 +376,13 @@ func TestDirReaderWaitEmpty(t *testing.T) {
 }
 
 func TestDirReaderWatchEntriesChangedRelative(t *testing.T) {
-	runTest(t, func(t *testing.T, ts *test.Tstate, testdir string, dr dirreader.DirReader) {
+	runTest(t, func(t *testing.T, ts *test.Tstate, testdir string, dr *dirreader.DirReader) {
 		for _, file := range []string{"a", "b", "c"} {
 			_, err := ts.Create(filepath.Join(testdir, file), 0777, sp.OWRITE)
 			assert.Nil(t, err)
 		}
 
-		entries, ok, err := dr.WatchEntriesChangedRelative([]string{}, []string{})
-		assert.True(t, ok)
+		entries, err := dr.WatchEntriesChangedRelative([]string{}, []string{})
 		assert.Nil(t, err)
 		assert.Equal(t, []string{"a", "b", "c"}, entries)
 
@@ -396,15 +393,13 @@ func TestDirReaderWatchEntriesChangedRelative(t *testing.T) {
 		time.Sleep(1 * time.Second)
 		assert.Nil(t, err)
 
-		entries, ok, err = dr.WatchEntriesChangedRelative([]string{"a", "b", "c"}, []string{"b"})
-		assert.True(t, ok)
+		entries, err = dr.WatchEntriesChangedRelative([]string{"a", "b", "c"}, []string{"b"})
 		assert.Nil(t, err)
 		assert.Equal(t, []string{"cc", "dd"}, entries)
 
 		done := make(chan bool)
 		go func() {
-			entries, ok, err = dr.WatchEntriesChangedRelative([]string{"a", "b", "bb", "c", "cc", "dd", "eee"}, []string{"b"})
-			assert.True(t, ok)
+			entries, err = dr.WatchEntriesChangedRelative([]string{"a", "b", "bb", "c", "cc", "dd", "eee"}, []string{"b"})
 			assert.Nil(t, err)
 			assert.Contains(t, entries, "fff") // could contain or not contain eee depending on whether changes were grouped or not
 			done <- true
@@ -420,7 +415,7 @@ func TestDirReaderWatchEntriesChangedRelative(t *testing.T) {
 }
 
 func TestDirReaderWatchEntriesChanged(t *testing.T) {
-	runTest(t, func(t *testing.T, ts *test.Tstate, testdir string, dr dirreader.DirReader) {
+	runTest(t, func(t *testing.T, ts *test.Tstate, testdir string, dr *dirreader.DirReader) {
 		initialFiles := []string{"file1", "file2", "file3"}
 		for _, file := range initialFiles {
 			_, err := ts.Create(filepath.Join(testdir, file), 0777, sp.OWRITE)
@@ -453,7 +448,7 @@ func TestDirReaderWatchEntriesChanged(t *testing.T) {
 }
 
 func TestDirReaderWatchNewEntriesAndRename(t *testing.T) {
-	runTest(t, func(t *testing.T, ts *test.Tstate, testdir string, dr dirreader.DirReader) {
+	runTest(t, func(t *testing.T, ts *test.Tstate, testdir string, dr *dirreader.DirReader) {
 		dstDir := filepath.Join(sp.NAMED, "dst")
 		err := ts.MkDir(dstDir, 0777)
 		assert.Nil(t, err)
@@ -504,7 +499,7 @@ func TestDirReaderWatchNewEntriesAndRename(t *testing.T) {
 }
 
 func TestDirReaderGetEntriesAndRename(t *testing.T) {
-	runTest(t, func(t *testing.T, ts *test.Tstate, testdir string, dr dirreader.DirReader) {
+	runTest(t, func(t *testing.T, ts *test.Tstate, testdir string, dr *dirreader.DirReader) {
 		dstDir := filepath.Join(sp.NAMED, "dst")
 		err := ts.MkDir(dstDir, 0777)
 		assert.Nil(t, err)
@@ -515,14 +510,9 @@ func TestDirReaderGetEntriesAndRename(t *testing.T) {
 			assert.Nil(t, err)
 		}
 
-		// for V2, we need to wait for the files to be up to date in the cache,
-		// but doing this in V1 will cause V1 to no longer pick up on the files
-		if dirreader.GetDirReaderVersion(ts.ProcEnv()) == dirreader.V1 {
-			time.Sleep(1 * time.Second)
-		} else {
-			err = dr.WaitNEntries(2)
-			assert.Nil(t, err)
-		}
+		// wait for the files to be up to date in the cache
+		err = dr.WaitNEntries(2)
+		assert.Nil(t, err)
 
 		movedFiles, err := dr.GetEntriesAndRename(dstDir)
 		assert.Nil(t, err)

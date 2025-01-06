@@ -18,11 +18,11 @@ type PerfWorker struct {
 	nTrials int;
 	nFilesPerTrial int;
 	watchDir string;
-	watchDirReader dirreader.DirReader;
+	watchDirReader *dirreader.DirReader;
 	responseDir string;
 	tempDir string;
 	signalDir string;
-	signalDirReader dirreader.DirReader;
+	signalDirReader *dirreader.DirReader;
 	measureMode MeasureMode;
 	nStartFiles int;
 }
@@ -155,7 +155,7 @@ func (w *PerfWorker) handleTrial(trial int, deleted bool) {
 
 // wait for a signal from the coord that we should now start watching for the next file
 func (w *PerfWorker) waitForCoordSignal(trial int, deleted bool) {
-	w.waitForFile( w.signalDirReader, coordSignalName(trial, deleted), false)
+	w.waitForFile(w.signalDirReader, coordSignalName(trial, deleted), false)
 }
 
 func (w *PerfWorker) waitForWatchFile(trial int, deleted bool, times []time.Time) {
@@ -197,7 +197,7 @@ func (w *PerfWorker) waitForWatchFile(trial int, deleted bool, times []time.Time
 	}
 }
 
-func (w *PerfWorker) waitForFile(watcher dirreader.DirReader, filename string, deleted bool) {
+func (w *PerfWorker) waitForFile(watcher *dirreader.DirReader, filename string, deleted bool) {
 	db.DPrintf(db.WATCH_PERF, "waitForFile: waiting for %s/%s (deleted = %t)", w.watchDir, filename, deleted)
 
 	var err error

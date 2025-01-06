@@ -239,36 +239,15 @@ func (fsc *FsClient) Seek(fd int, off sp.Toffset) error {
 	return nil
 }
 
-func (fsc *FsClient) DirWatch(fd int) error {
-	fid, _, err := fsc.fds.lookup(fd)
-	if err != nil {
-		return err
-	}
-	db.DPrintf(db.FSCLNT, "DirWatch: watch fd %v\n", fd)
-	ch := make(chan error)
-	if err := fsc.pc.SetDirWatch(fid, func(r error) {
-		db.DPrintf(db.FSCLNT, "SetDirWatch: watch returns %v\n", r)
-		ch <- r
-	}); err != nil {
-		db.DPrintf(db.FSCLNT, "SetDirWatch err %v\n", err)
-		return err
-	}
-	if err := <-ch; err != nil {
-		return err
-	}
-	return nil
-}
-
-
-func (fsc *FsClient) DirWatchV2(fd int) (int, error) {
+func (fsc *FsClient) DirWatch(fd int) (int, error) {
 	fid, _, err := fsc.fds.lookup(fd)
 	if err != nil {
 		return -1, err
 	}
-	db.DPrintf(db.FSCLNT, "DirWatchV2: watch fd %v\n", fd)
-	watchfid, err2 := fsc.pc.SetDirWatchV2(fid)
+	db.DPrintf(db.FSCLNT, "DirWatch: watch fd %v\n", fd)
+	watchfid, err2 := fsc.pc.SetDirWatch(fid)
 	if err2 != nil {
-		db.DPrintf(db.FSCLNT, "SetDirWatchV2 err %v\n", err)
+		db.DPrintf(db.FSCLNT, "SetDirWatch err %v\n", err)
 		return -1, err2
 	}
 

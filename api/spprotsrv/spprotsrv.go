@@ -14,8 +14,7 @@ type ProtSrv interface {
 	Walk(*sp.Twalk, *sp.Rwalk) *sp.Rerror
 	Create(*sp.Tcreate, *sp.Rcreate) *sp.Rerror
 	Open(*sp.Topen, *sp.Ropen) *sp.Rerror
-	Watch(*sp.Twatch, *sp.Ropen) *sp.Rerror
-	WatchV2(*sp.Twatchv2, *sp.Rwatchv2) *sp.Rerror
+	Watch(*sp.Twatch, *sp.Rwatch) *sp.Rerror
 	Clunk(*sp.Tclunk, *sp.Rclunk) *sp.Rerror
 	ReadF(*sp.TreadF, *sp.Rread) ([]byte, *sp.Rerror)
 	WriteF(*sp.TwriteF, []byte, *sp.Rwrite) *sp.Rerror
@@ -68,12 +67,8 @@ func Dispatch(protsrv ProtSrv, msg sessp.Tmsg, iov sessp.IoVec) (sessp.Tmsg, ses
 		err := protsrv.Open(req, reply)
 		return reply, nil, err, TSESS_NONE, sp.NoClntId
 	case *sp.Twatch:
-		reply := &sp.Ropen{}
+		reply := &sp.Rwatch{}
 		err := protsrv.Watch(req, reply)
-		return reply, nil, err, TSESS_NONE, sp.NoClntId
-	case *sp.Twatchv2:
-		reply := &sp.Rwatchv2{}
-		err := protsrv.WatchV2(req, reply)
 		return reply, nil, err, TSESS_NONE, sp.NoClntId
 	case *sp.Tcreate:
 		reply := &sp.Rcreate{}

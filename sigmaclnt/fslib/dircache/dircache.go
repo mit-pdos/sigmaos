@@ -323,22 +323,16 @@ func (dc *DirCache[E]) watchDir(ch chan struct{}) {
 			dc.err = err
 			return
 		}
-		ents, ok, err := dr.WatchEntriesChangedRelative(dc.dir.Keys(), dc.prefixFilters)
+		ents, err := dr.WatchEntriesChangedRelative(dc.dir.Keys(), dc.prefixFilters)
 		dr.Close()
-		if ok { // reset retry?
-			retry = false
-		}
 		if err != nil {
 			if (serr.IsErrorUnreachable(err) || serr.IsErrCode(err, serr.TErrClosed)) && !retry {
 				time.Sleep(sp.Conf.Path.RESOLVE_TIMEOUT)
 				// try again but remember we are already tried reading ReadDir
-				if !ok {
-					retry = true
-				}
-				db.DPrintf(dc.ESelector, "watchDir[%v]: %t %v retry watching", dc.Path, ok, err)
+				db.DPrintf(dc.ESelector, "watchDir[%v]: %v retry watching", dc.Path, err)
 				continue
 			} else { // give up
-				db.DPrintf(dc.ESelector, "watchDir[%v]: %t %v stop watching", dc.Path, ok, err)
+				db.DPrintf(dc.ESelector, "watchDir[%v]: %v stop watching", dc.Path, err)
 				dc.err = err
 				if first {
 					close(ch)

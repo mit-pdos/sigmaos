@@ -46,7 +46,6 @@ type Stats struct {
 	Nclunk      Tcounter
 	Nopen       Tcounter
 	Nwatch      Tcounter
-	Nwatchv2    Tcounter
 	Ncreate     Tcounter
 	Nread       Tcounter
 	Nwrite      Tcounter
@@ -131,8 +130,6 @@ func (si *Stats) Inc(fct sessp.Tfcall, ql int64) {
 		Inc(&si.Nwstat, 1)
 	case sessp.TTwatch:
 		Inc(&si.Nwatch, 1)
-	case sessp.TTwatchv2:
-		Inc(&si.Nwatchv2, 1)
 	case sessp.TTrenameat:
 		Inc(&si.Nrenameat, 1)
 	case sessp.TTgetfile:

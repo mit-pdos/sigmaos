@@ -251,6 +251,9 @@ func (nd *Named) newSrv() (*sp.Tendpoint, error) {
 	}
 	nd.SigmaSrv = ssrv
 
+	// now we have a SigmaSrv read from ephch
+	go nd.watchLeased()
+
 	ep := nd.GetEndpoint()
 	db.DPrintf(db.NAMED_LDR, "newSrv %v %v %v %v %v", nd.realm, addr, ssrv.GetEndpoint(), nd.elect.Key(), ep)
 	return ep, nil

@@ -48,8 +48,6 @@ func (nd *Named) startLeader() error {
 		return err
 	}
 
-	go nd.watchLeased()
-
 	fs.Fence(nd.elect.Key(), nd.elect.Rev())
 
 	db.DPrintf(db.NAMED, "leader %v %v\n", nd.realm, nd.elect.Key())

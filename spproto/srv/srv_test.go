@@ -26,7 +26,7 @@ import (
 	"sigmaos/test"
 )
 
-var srvname string // e.g., memfs
+var srvname string // e.g., memfs or named
 var N int
 var D int
 

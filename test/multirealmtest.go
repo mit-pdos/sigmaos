@@ -1,7 +1,9 @@
 package test
 
 import (
+	bootclnt "sigmaos/boot/clnt"
 	db "sigmaos/debug"
+	kernelclnt "sigmaos/kernel/clnt"
 	"sigmaos/proc"
 	realmpkg "sigmaos/realm"
 	"sigmaos/sigmaclnt"
@@ -12,7 +14,8 @@ import (
 type RealmTstate struct {
 	realm sp.Trealm
 	*sigmaclnt.SigmaClnt
-	Ts *Tstate
+	Ts  *Tstate
+	mkc *kernelclnt.MultiKernelClnt
 }
 
 // Creates a realm, and a tstate relative to that realm.
@@ -49,6 +52,7 @@ func newRealmTstateClnt(ts *Tstate, realm sp.Trealm, newrealm bool, numS3 int64,
 			realm:     realm,
 			SigmaClnt: sc,
 			Ts:        ts,
+			mkc:       kernelclnt.NewMultiKernelClnt(ts.FsLib, db.NEVER, db.TEST),
 		}, nil
 	}
 }
@@ -59,4 +63,21 @@ func (rts *RealmTstate) GetRealm() sp.Trealm {
 
 func (rts *RealmTstate) Remove() error {
 	return rts.Ts.rc.RemoveRealm(rts.realm)
+}
+
+func (rts *RealmTstate) BootNode(n int) error {
+	kids, err := rts.Ts.bootNode(n, bootclnt.BOOT_NODE)
+	if err != nil {
+		return err
+	}
+	for _, kid := range kids {
+		for _, ss := range []string{sp.UXREL, sp.S3REL} {
+			if _, err := rts.mkc.BootInRealm(kid, rts.realm, ss, nil); err != nil {
+				db.DPrintf(db.ALWAYS, "Error boot %v in realm %v on kid %v", ss, rts.realm, kid)
+				return err
+			}
+		}
+	}
+	db.DPrintf(db.BOOT, "Boot additional kernel subsystems for realm %v on kids %v", rts.realm, kids)
+	return nil
 }

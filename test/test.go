@@ -236,26 +236,30 @@ func newSysClnt(t *testing.T, ntype bootclnt.Tboot) (*Tstate, error) {
 }
 
 func (ts *Tstate) BootMinNode(n int) error {
-	return ts.bootNode(n, bootclnt.BOOT_MINNODE)
+	_, err := ts.bootNode(n, bootclnt.BOOT_MINNODE)
+	return err
 }
 
 func (ts *Tstate) BootNode(n int) error {
-	return ts.bootNode(n, bootclnt.BOOT_NODE)
+	_, err := ts.bootNode(n, bootclnt.BOOT_NODE)
+	return err
 }
 
-func (ts *Tstate) bootNode(n int, ntype bootclnt.Tboot) error {
+func (ts *Tstate) bootNode(n int, ntype bootclnt.Tboot) ([]string, error) {
 	useDialProxy := !noDialProxy
+	kids := []string{}
 	// Clear the saved kernel, since the next test may not need an additional
 	// node
 	savedTstate = nil
 	for i := 0; i < n; i++ {
 		kclnt, err := bootclnt.NewKernelClntStart(sp.Tip(EtcdIP), ts.ProcEnv(), ntype, useDialProxy, homeDir, projectRoot, User, netname)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		ts.kclnts = append(ts.kclnts, kclnt)
+		kids = append(kids, kclnt.KernelId())
 	}
-	return nil
+	return kids, nil
 }
 
 func (ts *Tstate) GetKernelClnt(n int) *bootclnt.Kernel {

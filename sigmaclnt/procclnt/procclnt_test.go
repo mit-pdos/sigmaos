@@ -974,7 +974,7 @@ func TestSpawnCrashLCSched(t *testing.T) {
 
 	db.DPrintf(db.TEST, "Crash an lcsched")
 
-	err = crash.SignalFailer(ts.FsLib, fn)
+	err = crash.SignalFailer(ts.Ts.FsLib, fn)
 	assert.Nil(t, err, "Err signalfailer: %v", err)
 	time.Sleep(T * time.Millisecond)
 
@@ -1048,7 +1048,7 @@ func TestMaintainReplicationLevelCrashMSched(t *testing.T) {
 	assert.Equal(t, N_REPL, len(st), "wrong num spinners check #1")
 	db.DPrintf(db.TEST, "Get OutDir")
 
-	err = crash.SignalFailer(ts.FsLib, fn0)
+	err = crash.SignalFailer(ts.Ts.FsLib, fn0)
 	assert.Nil(t, err, "crash msched")
 
 	// Wait for them to respawn.
@@ -1060,7 +1060,7 @@ func TestMaintainReplicationLevelCrashMSched(t *testing.T) {
 	assert.Equal(t, N_REPL, len(st), "wrong num spinners check #2 %v", sp.Names(st))
 	db.DPrintf(db.TEST, "Got out dir again")
 
-	err = crash.SignalFailer(ts.FsLib, fn1)
+	err = crash.SignalFailer(ts.Ts.FsLib, fn1)
 	assert.Nil(t, err, "crash msched1")
 
 	// Wait for them to respawn.

@@ -80,7 +80,7 @@ func RunKNamed(args []string) error {
 		db.DPrintf(db.ALWAYS, "pipe read err %v", err)
 		return err
 	}
-	r.Close()
+	defer r.Close()
 
 	db.DPrintf(db.NAMED, "%v: knamed done %v %v %v\n", pe.GetPID(), nd.realm, ep, string(data))
 

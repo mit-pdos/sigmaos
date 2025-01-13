@@ -283,6 +283,11 @@ func (ps *ProtSrv) Watch(args *sp.Twatch, rets *sp.Rwatch) *sp.Rerror {
 	pl := ps.plt.Acquire(dirf.Ctx(), p, lockmap.WLOCK)
 	defer ps.plt.Release(dirf.Ctx(), pl, lockmap.WLOCK)
 
+	v := ps.vt.GetVersion(p)
+	if !sp.VEq(dirf.Qid().Tversion(), v) {
+		return sp.NewRerrorSerr(serr.NewErr(serr.TErrVersion, v))
+	}
+
 	w := ps.wt.AllocWatch(p)
 	fid := watch.NewFidWatch(ps.fm, dirf.Ctx(), args.Twatchfid(), w)
 

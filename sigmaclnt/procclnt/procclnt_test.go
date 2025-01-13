@@ -750,7 +750,7 @@ func waitExitSimpleMultiKernel(t *testing.T, n int) {
 	}
 	defer ts.Remove()
 
-	err := ts.Ts.BootNode(n)
+	err := ts.BootNode(n)
 	assert.Nil(t, err, "Boot node: %v", err)
 	db.DPrintf(db.TEST, "Done boot node %d", n)
 
@@ -789,7 +789,7 @@ func TestSpawnBurst(t *testing.T) {
 
 	// Start a couple new procds.
 	for i := 0; i < N_NODES; i++ {
-		err := ts.Ts.BootNode(1)
+		err := ts.BootNode(1)
 		assert.Nil(t, err, "BootNode %v", err)
 	}
 
@@ -833,10 +833,10 @@ func TestSpawnManyProcsParallel(t *testing.T) {
 	const N_CONCUR = 5  // 13
 	const N_SPAWNS = 50 // 500
 
-	err := ts.Ts.BootNode(1)
+	err := ts.BootNode(1)
 	assert.Nil(t, err, "BootProcd 1")
 
-	err = ts.Ts.BootNode(1)
+	err = ts.BootNode(1)
 	assert.Nil(t, err, "BootProcd 2")
 
 	done := make(chan int)
@@ -1019,12 +1019,12 @@ func TestMaintainReplicationLevelCrashMSched(t *testing.T) {
 	em = crash.NewTeventMapOne(e1)
 	err = crash.SetSigmaFail(em)
 	assert.Nil(t, err)
-	err = ts.Ts.BootNode(1)
+	err = ts.BootNode(1)
 
 	err = crash.SetSigmaFail(crash.NewTeventMap())
 	assert.Nil(t, err, "BootNode %v", err)
 	db.DPrintf(db.TEST, "Boot node 3")
-	err = ts.Ts.BootNode(1)
+	err = ts.BootNode(1)
 	assert.Nil(t, err, "BootNode %v", err)
 	db.DPrintf(db.TEST, "Done booting nodes")
 

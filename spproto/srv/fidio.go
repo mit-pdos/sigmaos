@@ -62,7 +62,7 @@ func FidRead(fidn sp.Tfid, f *fid.Fid, off sp.Toffset, count sp.Tsize, fence sp.
 		}
 		return b, nil
 	case *watch.Watch:
-		return i.GetEventBuffer(fidn, int(count))
+		return i.GetEventBuffer(f, int(count))
 	default:
 		db.DFatalf("Read: obj %v type %T isn't Dir or File or Watch\n", f.Obj(), f.Obj())
 		return nil, nil

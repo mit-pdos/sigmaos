@@ -14,7 +14,7 @@ import (
 	"sigmaos/serr"
 	"sigmaos/sigmaclnt/fslib"
 	"sigmaos/sigmaclnt/fslib/dirreader"
-	sp "sigmaos/sigmap"
+	protsrv_proto "sigmaos/spproto/srv/proto"
 	"sigmaos/util/sortedmapv1"
 )
 
@@ -57,11 +57,13 @@ func NewDirCacheFilter[E any](fsl *fslib.FsLib, path string, newVal NewValF[E], 
 }
 
 func (dc *DirCache[E]) init() {
-	ch := make(chan struct{})
 	if dc.isInit.Swap(1) == 0 && dc.isDone.Load() == 0 {
-		go dc.watchDir(ch)
+		dw := dc.initReadAndWatch()
+		if dw == nil {
+			return
+		}
+		go dc.watchDir(dw)
 		go dc.watchdog()
-		<-ch // wait until watchDir() has read the directory once
 	}
 }
 
@@ -286,71 +288,67 @@ func (dc *DirCache[E]) checkErr() error {
 	return nil
 }
 
-// Caller must hold mutex
-func (dc *DirCache[E]) updateEntriesL(ents []string) error {
-	db.DPrintf(dc.LSelector, "Update ents %v in %v", ents, dc.dir)
-	entsMap := map[string]bool{}
-	for _, n := range ents {
-		entsMap[n] = true
-		if _, ok := dc.dir.Lookup(n); !ok {
-			dc.dir.InsertKey(n)
-			if dc.ch != nil {
-				go func(n string) {
-					dc.ch <- n
-				}(n)
+func (dc *DirCache[E]) initReadAndWatch() *dirreader.DirWatcher {
+	var initEnts []string
+	var dw *dirreader.DirWatcher
+
+	for dc.isDone.Load() == 0 {
+		var err error
+		initEnts, dw, err = dirreader.NewDirWatcherWithRead(dc.FsLib, dc.Path)
+		if err != nil {
+			if serr.IsErrorUnreachable(err) {
+				continue
+			} else {
+				dc.err = err
+				return nil
 			}
 		}
+
+		break
 	}
-	for _, n := range dc.dir.Keys() {
-		if !entsMap[n] {
-			dc.dir.Delete(n)
+
+	dc.Lock()
+	for _, ent := range initEnts {
+		dc.dir.InsertKey(ent)
+		if dc.ch != nil {
+			go func(ent string) {
+				dc.ch <- ent
+			}(ent)
 		}
 	}
 	if dc.dir.Len() > 0 {
 		dc.hasEntries.Broadcast()
 	}
-	db.DPrintf(dc.LSelector, "Update ents %v done %v", ents, dc.dir)
-	return nil
+	dc.Unlock()
+
+	return dw
 }
 
 // Monitor for changes to the directory and update the cached one
-func (dc *DirCache[E]) watchDir(ch chan struct{}) {
-	retry := false
-	first := true
-	for dc.isDone.Load() == 0 {
-		dr, err := dirreader.NewDirReader(dc.FsLib, dc.Path)
-		if err != nil {
-			dc.err = err
-			return
-		}
-		ents, err := dr.WatchEntriesChangedRelative(dc.dir.Keys(), dc.prefixFilters)
-		dr.Close()
-		if err != nil {
-			if (serr.IsErrorUnreachable(err) || serr.IsErrCode(err, serr.TErrClosed)) && !retry {
-				time.Sleep(sp.Conf.Path.RESOLVE_TIMEOUT)
-				// try again but remember we are already tried reading ReadDir
-				db.DPrintf(dc.ESelector, "watchDir[%v]: %v retry watching", dc.Path, err)
-				continue
-			} else { // give up
-				db.DPrintf(dc.ESelector, "watchDir[%v]: %v stop watching", dc.Path, err)
-				dc.err = err
-				if first {
-					close(ch)
-					first = false
-				}
-				return
-			}
-		}
-		db.DPrintf(dc.LSelector, "watchDir new ents %v", ents)
+func (dc *DirCache[E]) watchDir(dw *dirreader.DirWatcher) {
+	for event := range dw.Events() {
 		dc.Lock()
-		dc.updateEntriesL(ents)
+		var madeChange bool
+		switch event.Type {
+			case protsrv_proto.WatchEventType_CREATE:
+				madeChange = dc.dir.InsertKey(event.File)
+				if madeChange && dc.ch != nil {
+					go func(ent string) {
+						dc.ch <- ent
+					}(event.File)
+				}
+			case protsrv_proto.WatchEventType_REMOVE:
+				madeChange = dc.dir.Delete(event.File)
+				if madeChange {
+					dc.hasEntries.Broadcast()
+				}
+		}
 		dc.Unlock()
-		if first {
-			close(ch)
-			first = false
+		if dc.isDone.Load() != 0 {
+			break
 		}
 	}
-	if dc.ch != nil {
-		close(dc.ch)
-	}
+
+	db.DPrintf(db.ALWAYS, "watchDir: done, closing %v", dw)
+	dw.Close()
 }

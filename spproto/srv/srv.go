@@ -227,7 +227,7 @@ func (ps *ProtSrv) clunk(fid sp.Tfid) *sp.Rerror {
 	if ok {
 		pl := ps.plt.Acquire(f.Ctx(), watch.Dir(), lockmap.WLOCK)
 		defer ps.plt.Release(f.Ctx(), pl, lockmap.WLOCK)
-		ps.wt.CloseWatcher(watch, fid)
+		ps.wt.CloseWatcher(watch, f)
 	}
 
 	ps.fm.Free(f)

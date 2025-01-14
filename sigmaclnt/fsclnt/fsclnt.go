@@ -244,7 +244,7 @@ func (fsc *FsClient) DirWatch(fd int) (int, error) {
 	if err != nil {
 		return -1, err
 	}
-	db.DPrintf(db.FSCLNT, "DirWatch: watch fd %v\n", fd)
+	db.DPrintf(db.FSCLNT, "DirWatch: dir fd %v dir fid %d\n", fd, fid)
 	watchfid, err2 := fsc.pc.SetDirWatch(fid)
 	if err2 != nil {
 		db.DPrintf(db.FSCLNT, "SetDirWatch err %v\n", err)
@@ -252,6 +252,7 @@ func (fsc *FsClient) DirWatch(fd int) (int, error) {
 	}
 
 	watchfd := fsc.fds.allocFd(watchfid, sp.OREAD, fsc.pc, "")
+	db.DPrintf(db.FSCLNT, "DirWatch: watch fd %v watch fid %d\n", watchfd, watchfid)
 
 	return watchfd, nil
 }

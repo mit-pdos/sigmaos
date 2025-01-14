@@ -248,7 +248,7 @@ func (pathc *PathClnt) SetDirWatch(fid sp.Tfid) (sp.Tfid, error) {
 	watchfid, err := pathc.FidClnt.Watch(fid)
 	if err != nil {
 		db.DPrintf(db.PATHCLNT_ERR, "%v: SetDirWatch: setting watch failed %v err %v\n", pathc.cid, fid, err)
-		return sp.NoFid, nil
+		return sp.NoFid, err
 	}
 	return watchfid, nil
 }

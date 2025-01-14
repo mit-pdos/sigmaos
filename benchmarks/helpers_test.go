@@ -404,7 +404,7 @@ func waitForRealmCreation(rootts *test.Tstate, realm sp.Trealm) error {
 		sp.UXREL,
 	}
 	for _, d := range dirs {
-		if err := dirreader.WaitCreate(rootts.FsLib, filepath.Join(sp.REALMS, realm.String(), d)); err != nil {
+		if err := dirreader.WaitCreate2(rootts.FsLib, filepath.Join(sp.REALMS, realm.String(), d)); err != nil {
 			return err
 		}
 	}
@@ -429,9 +429,7 @@ func waitForClnts(rootts *test.Tstate, n int) {
 	assert.True(rootts.T, err == nil || serr.IsErrCode(err, serr.TErrExists), "Error mkdir: %v", err)
 
 	// Wait for n - 1 clnts to register themselves.
-	dr, err := dirreader.NewDirReader(rootts.FsLib, clidir)
-	assert.Nil(rootts.T, err, "Err NewDirReader: %v", err)
-	err = dr.WaitNEntries(n) // n - 1 + the semaphore
+	err = dirreader.WaitNEntries(rootts.FsLib, clidir, n) // n - 1 + the semaphore
 	assert.Nil(rootts.T, err, "Err WaitNentries: %v", err)
 	sts, err := rootts.GetDir(clidir)
 	assert.Nil(rootts.T, err, "Err GetDir: %v", err)

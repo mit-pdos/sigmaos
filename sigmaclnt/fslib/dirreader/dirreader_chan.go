@@ -4,10 +4,10 @@ import (
 	"bufio"
 	"encoding/binary"
 	"io"
+	"path/filepath"
 	db "sigmaos/debug"
 	"sigmaos/serr"
 	"sigmaos/sigmaclnt/fslib"
-	sp "sigmaos/sigmap"
 	"sync/atomic"
 
 	protsrv_proto "sigmaos/spproto/srv/proto"
@@ -24,13 +24,8 @@ type DirWatcher struct {
 	watchFd int
 }
 
-func NewDirWatcher(fslib *fslib.FsLib, pn string) (*DirWatcher, error) {
+func NewDirWatcher(fslib *fslib.FsLib, pn string, fd int) (*DirWatcher, error) {
 	db.DPrintf(db.WATCH, "NewDirWatcher: Creating watch on %s", pn)
-
-	fd, err := fslib.Open(pn, sp.OREAD)
-	if err != nil {
-		return nil, err
-	}
 
 	watchFd, err := fslib.DirWatch(fd)
 	if err != nil {
@@ -67,12 +62,12 @@ func NewDirWatcherWithRead(fslib *fslib.FsLib, pn string) ([]string, *DirWatcher
 	var dw *DirWatcher
 
 	for {
-		sts, _, err := fslib.ReadDir(pn)
+		sts, rdr, err := fslib.ReadDir(pn)
 		if err != nil {
 			return nil, nil, err
 		}
 
-		dw, err = NewDirWatcher(fslib, pn)
+		dw, err = NewDirWatcher(fslib, pn, rdr.Fd())
 		if err != nil {
 			if serr.IsErrCode(err, serr.TErrVersion) {
 				continue
@@ -164,4 +159,89 @@ func (dr *DirWatcher) Close() error {
 
 func (dr *DirWatcher) Events() <-chan *protsrv_proto.WatchEvent {
 	return dr.ch
+}
+
+func waitCond(fsl *fslib.FsLib, pn string, cond func(map[string]bool) bool) error {
+	var dw *DirWatcher
+	var ents map[string]bool
+
+	for {
+		sts, rdr, err := fsl.ReadDir(pn)
+		if err != nil {
+			return err
+		}
+
+		ents = make(map[string]bool)
+		for _, st := range sts {
+			ents[st.Name] = true
+		}
+
+		db.DPrintf(db.WATCH, "waitCond: checking if cond is met with init %v", ents)
+
+		if cond(ents) {
+			return nil
+		}
+
+		dw, err = NewDirWatcher(fsl, pn, rdr.Fd())
+		if err != nil {
+			if serr.IsErrCode(err, serr.TErrVersion) {
+				db.DPrintf(db.WATCH, "waitCond: version mismatch, retrying")
+				continue
+			} else {
+				return err
+			}
+		}
+		break
+	}
+
+	db.DPrintf(db.WATCH, "waitCond: waiting for cond to be met with init %v", ents)
+
+	for event := range dw.Events() {
+		db.DPrintf(db.WATCH, "waitCond: received event %v", event)
+		switch event.Type {
+		case protsrv_proto.WatchEventType_CREATE:
+			ents[event.File] = true
+		case protsrv_proto.WatchEventType_REMOVE:
+			delete(ents, event.File)
+		}
+
+		if cond(ents) {
+			return nil
+		}
+	}
+
+	return serr.NewErr(serr.TErrClosed, "watch closed before cond was met")
+}
+
+func WaitEmpty(fsl *fslib.FsLib, pn string) error {
+	return waitCond(fsl, pn, func(ents map[string]bool) bool {
+		return len(ents) == 0
+	})
+}
+
+func WaitNEntries(fsl *fslib.FsLib, pn string, n int) error {
+	return waitCond(fsl, pn, func(ents map[string]bool) bool {
+		return len(ents) >= n
+	})
+}
+
+func WaitCreate2(fsl *fslib.FsLib, pn string) error {
+	dir := filepath.Dir(pn) + "/"
+	f := filepath.Base(pn)
+
+	return waitCond(fsl, dir, func(ents map[string]bool) bool {
+		return ents[f]
+	})
+}
+
+func WaitRemove2(fsl *fslib.FsLib, pn string) error {
+	dir := filepath.Dir(pn) + "/"
+	f := filepath.Base(pn)
+
+	db.DPrintf(db.WATCH, "WaitRemove2: waiting for %s to be removed", pn)
+
+	return waitCond(fsl, dir, func(ents map[string]bool) bool {
+		db.DPrintf(db.WATCH, "WaitRemove2: checking if %s is removed %v", pn, ents)
+		return !ents[f]
+	})
 }

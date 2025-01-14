@@ -246,9 +246,9 @@ func (c *PerfCoord) handleTrial(trial int, delete bool, responseDirReader *dirre
 
 			// wait for us to see it locally before signaling the worker to watch
 			if !delete {
-				err = dirreader.WaitCreate(c.FsLib, path)
+				err = dirreader.WaitCreate2(c.FsLib, path)
 			} else {
-				err = dirreader.WaitRemove(c.FsLib, path)
+				err = dirreader.WaitRemove2(c.FsLib, path)
 			}
 			if err != nil {
 				db.DFatalf("Run: failed to wait for file creation %v", err)
@@ -367,7 +367,7 @@ func (c *PerfCoord) waitForWorkerSignals(trial int, delete bool) {
 		workerId := strconv.Itoa(ix)
 		signalPath := filepath.Join(c.signalDir, workerSignalName(trial, delete, workerId))
 		db.DPrintf(db.WATCH_PERF, "waitForWorkerSignal: Waiting for signal %s", signalPath)
-		err := dirreader.WaitCreate(c.FsLib, signalPath)
+		err := dirreader.WaitCreate2(c.FsLib, signalPath)
 		if err != nil {
 			db.DFatalf("waitForWorkerSignal: failed to wait for signal %s, %v", signalPath, err)
 		}

@@ -8,8 +8,6 @@ import (
 	"path/filepath"
 	db "sigmaos/debug"
 	"sigmaos/sigmaclnt/fslib"
-	"slices"
-	"strings"
 	"sync"
 
 	"sigmaos/serr"
@@ -250,50 +248,6 @@ func (dr *DirReader) WaitEmpty() error {
 	return nil
 }
 
-// Blocks until a file is added that is not in present. Returns all added entries.
-// This could include entries in present if they were not already in the directory.
-// If provided, any file beginning with an excluded prefix is ignored.
-// present should be sorted.
-func (dr *DirReader) WatchEntriesChangedRelative(present []string, excludedPrefixes []string) ([]string, error) {
-	var files = make([]string, 0)
-	if db.WillBePrinted(db.WATCH) {
-		db.DPrintf(db.WATCH, "DirReader WatchUniqueEntries: dir %v, present: %v, excludedPrefixes %v\n", dr.pn, present, excludedPrefixes)
-	}
-	var ret []string
-	err := dr.readDirWatch(func(ents map[string]bool, changes map[string]bool) bool {
-		unchanged := true
-		files = filterMap(changes)
-		slices.Sort(files)
-		ret = make([]string, 0)
-		ix := 0
-		for _, file := range files {
-			skip := false
-			for _, pf := range excludedPrefixes {
-				if strings.HasPrefix(file, pf) {
-					skip = true
-					break
-				}
-			}
-			if skip {
-				continue
-			}
-			ret = append(ret, file)
-
-			for ix < len(present) && present[ix] < file {
-				ix += 1
-			}
-			if ix >= len(present) || present[ix] != file {
-				unchanged = false
-			}
-		}
-		return unchanged
-	})
-	if err != nil {
-		return nil, err
-	}
-	return ret, nil
-}
-
 // Watch for a directory change and then return all directory entry changes since the last call to
 // a Watch method.
 func (dr *DirReader) WatchEntriesChanged() (map[string]bool, error) {
@@ -374,36 +328,4 @@ func (dr *DirReader) rename(files []string, dst string) ([]string, error) {
 		}
 	}
 	return newents, r
-}
-
-func WaitRemove(fsl *fslib.FsLib, pn string) error {
-	dir := filepath.Dir(pn) + "/"
-	f := filepath.Base(pn)
-	db.DPrintf(db.WATCH, "WaitRemove: waiting for %v in dir %v\n", f, dir)
-	dirreader, err := NewDirReader(fsl, dir)
-	if err != nil {
-		return err
-	}
-	err = dirreader.WaitRemove(f)
-	if err != nil {
-		return err
-	}
-	err = dirreader.Close()
-	return err
-}
-
-func WaitCreate(fsl *fslib.FsLib, pn string) error {
-	dir := filepath.Dir(pn) + "/"
-	f := filepath.Base(pn)
-	db.DPrintf(db.WATCH, "WaitCreate: waiting for %v in dir %v\n", f, dir)
-	dirreader, err := NewDirReader(fsl, dir)
-	if err != nil {
-		return err
-	}
-	err = dirreader.WaitCreate(f)
-	if err != nil {
-		return err
-	}
-	dirreader.Close()
-	return err
 }

@@ -284,6 +284,7 @@ func (ps *ProtSrv) Watch(args *sp.Twatch, rets *sp.Rwatch) *sp.Rerror {
 	defer ps.plt.Release(dirf.Ctx(), pl, lockmap.WLOCK)
 
 	v := ps.vt.GetVersion(p)
+	db.DPrintf(db.WATCH, "Watch: version %v %v", dirf.Qid(), v)
 	if !sp.VEq(dirf.Qid().Tversion(), v) {
 		return sp.NewRerrorSerr(serr.NewErr(serr.TErrVersion, v))
 	}

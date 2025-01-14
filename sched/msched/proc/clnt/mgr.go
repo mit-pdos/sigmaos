@@ -46,7 +46,7 @@ func NewProcdMgr(fsl *fslib.FsLib, kernelId string) *ProcdMgr {
 		// wait for the kernel to start up and advertise itself in a separate
 		// goroutine, and then fill the procd pool
 		for {
-			err := dirreader.WaitCreate(pdm.fsl, filepath.Join(sp.BOOT, pdm.kernelId))
+			err := dirreader.WaitCreate2(pdm.fsl, filepath.Join(sp.BOOT, pdm.kernelId))
 			// Retry if unreachable
 			if serr.IsErrCode(err, serr.TErrUnreachable) || serr.IsErrCode(err, serr.TErrClosed) {
 				db.DPrintf(db.PROCDMGR, "Boot dir unreachable")

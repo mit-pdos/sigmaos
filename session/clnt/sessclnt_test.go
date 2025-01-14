@@ -139,7 +139,7 @@ func TestDisconnectSessSrv(t *testing.T) {
 	assert.Nil(t, err)
 	ch := make(chan *serr.Err)
 	go func() {
-		req := sp.NewTwatch(sp.NoFid)
+		req := sp.NewTwatch(sp.NoFid, sp.NoFid)
 		_, err := ts.clnt.RPC(ts.srv.GetEndpoint(), req, nil, nil)
 		ch <- err
 	}()

@@ -1,8 +1,8 @@
 package opts
 
 import (
-	"sigmaos/simms"
-	"sigmaos/simms/autoscaler"
+	"sigmaos/simulation/simms"
+	"sigmaos/simulation/simms/autoscaler"
 )
 
 type withNoOpAutoscaler struct{}

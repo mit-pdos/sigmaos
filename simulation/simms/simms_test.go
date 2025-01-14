@@ -6,10 +6,10 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	db "sigmaos/debug"
-	"sigmaos/simms"
-	"sigmaos/simms/autoscaler"
-	"sigmaos/simms/opts"
-	"sigmaos/simms/qmgr"
+	"sigmaos/simulation/simms"
+	"sigmaos/simulation/simms/autoscaler"
+	"sigmaos/simulation/simms/opts"
+	"sigmaos/simulation/simms/qmgr"
 )
 
 func TestCompile(t *testing.T) {

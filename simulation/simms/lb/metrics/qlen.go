@@ -1,7 +1,7 @@
 package metrics
 
 import (
-	"sigmaos/simms"
+	"sigmaos/simulation/simms"
 )
 
 type QLen struct {

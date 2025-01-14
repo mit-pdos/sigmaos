@@ -1,9 +1,9 @@
 package opts
 
 import (
-	"sigmaos/simms"
-	"sigmaos/simms/lb"
-	lbmetrics "sigmaos/simms/lb/metrics"
+	"sigmaos/simulation/simms"
+	"sigmaos/simulation/simms/lb"
+	lbmetrics "sigmaos/simulation/simms/lb/metrics"
 )
 
 type withRoundRobinLB struct{}

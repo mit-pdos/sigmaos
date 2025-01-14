@@ -1,7 +1,7 @@
 package qmgr
 
 import (
-	"sigmaos/simms"
+	"sigmaos/simulation/simms"
 )
 
 type Queue struct {

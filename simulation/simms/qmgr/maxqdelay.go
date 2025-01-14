@@ -2,7 +2,7 @@ package qmgr
 
 import (
 	db "sigmaos/debug"
-	"sigmaos/simms"
+	"sigmaos/simulation/simms"
 )
 
 type MaxQDelayQMgr struct {

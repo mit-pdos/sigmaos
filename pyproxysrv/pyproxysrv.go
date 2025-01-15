@@ -56,7 +56,19 @@ func (pps *PyProxySrv) handleNewConn(conn *net.UnixConn) {
 			return
 		}
 
-		db.DPrintf(db.PYPROXYSRV, "reader: received %v", string(line))
+		// if line[:len(line)-1] == "pb" {
+		// 	db.DPrintf(db.PYPROXYSRV, "reader: received initialization request\n", err)
+
+		// 	os.Chmod("/tmp/python", 0777)
+
+		// 	err = os.Mkdir("/tmp/python/superlib", 0755)
+		// 	if err != nil {
+		// 		db.DPrintf(db.PYPROXYSRV_ERR, "reader: mkdir err %v\n", err)
+		// 		return
+		// 	}
+		// }
+
+		db.DPrintf(db.PYPROXYSRV, "reader: received %v", line)
 
 		response := []byte("d")
 		_, err = conn.Write(response)

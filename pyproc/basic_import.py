@@ -1,3 +1,3 @@
-import os
+import shlex
 
-print(os.getenv('PYTHONPATH'))
+print(shlex.join(["Hello", "World"]))

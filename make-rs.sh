@@ -64,13 +64,21 @@ eval $build
 cp cpython3.11/python $OUTPATH/kernel
 cp cpython3.11/pybuilddir.txt $OUTPATH/kernel
 cp -r cpython3.11/Lib $OUTPATH/kernel
-echo "/tmp/python/Lib" > $OUTPATH/kernel/python._pth
-echo -e "home = /tmp/python\ninclude-system-site-packages = false\nversion = 3.11.10" > $OUTPATH/kernel/pyvenv.cfg
+echo "/~~/Lib" > $OUTPATH/kernel/python._pth
+echo -e "home = /~~\ninclude-system-site-packages = false\nversion = 3.11.10" > $OUTPATH/kernel/pyvenv.cfg
 cp cpython3.11/python $OUTPATH/user
 cp cpython3.11/pybuilddir.txt $OUTPATH/user
 cp -r cpython3.11/Lib $OUTPATH/user
-echo "/tmp/python/Lib" > $OUTPATH/user/python._pth
-echo -e "home = /tmp/python\ninclude-system-site-packages = false\nversion = 3.11.10" > $OUTPATH/user/pyvenv.cfg
+echo "/~~/Lib" > $OUTPATH/user/python._pth
+echo -e "home = /~~\ninclude-system-site-packages = false\nversion = 3.11.10" > $OUTPATH/user/pyvenv.cfg
+
+# Hardcode superset
+mkdir $OUTPATH/kernel/superlib
+PACKAGES="$(find $OUTPATH/kernel/Lib/ -mindepth 1 -maxdepth 1 -name '*' | awk -F '/' '{print $NF}')"
+for pkg in $PACKAGES; do
+  touch $OUTPATH/kernel/superlib/$pkg
+done
+touch $OUTPATH/kernel/superlib/numpy
 
 # Copy and inject Python libs
 # cp ./pylib/splib.py Python-3.11.0/Lib

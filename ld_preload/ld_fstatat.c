@@ -32,6 +32,11 @@ const char* get_path(const char *filename)
 
         init_done = 1;
     }
+
+    if (strcmp("/~~/Lib", filename) == 0) {
+      printf("LD_PRELOAD: received request for: %s\n", filename);
+      return "/tmp/python/superlib";
+    }
     
     const char* prefix = "/~~";
     int i = 0;

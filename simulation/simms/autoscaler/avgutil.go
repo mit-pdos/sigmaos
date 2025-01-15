@@ -2,7 +2,7 @@ package autoscaler
 
 import (
 	db "sigmaos/debug"
-	"sigmaos/simms"
+	"sigmaos/simulation/simms"
 )
 
 const (

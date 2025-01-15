@@ -1,7 +1,7 @@
 package lb
 
 import (
-	"sigmaos/simms"
+	"sigmaos/simulation/simms"
 )
 
 // Round-robin load balancer

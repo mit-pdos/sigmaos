@@ -1,11 +1,11 @@
 package opts
 
 import (
-	"sigmaos/simms"
-	"sigmaos/simms/autoscaler"
-	"sigmaos/simms/lb"
-	lbmetrics "sigmaos/simms/lb/metrics"
-	"sigmaos/simms/qmgr"
+	"sigmaos/simulation/simms"
+	"sigmaos/simulation/simms/autoscaler"
+	"sigmaos/simulation/simms/lb"
+	lbmetrics "sigmaos/simulation/simms/lb/metrics"
+	"sigmaos/simulation/simms/qmgr"
 )
 
 var DefaultMicroserviceOpts simms.MicroserviceOpts = simms.MicroserviceOpts{

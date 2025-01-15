@@ -1,7 +1,7 @@
 package lb
 
 import (
-	"sigmaos/simms"
+	"sigmaos/simulation/simms"
 )
 
 // Load balancer with omniscient view of microservice queue lengths, which

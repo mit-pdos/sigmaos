@@ -283,7 +283,7 @@ func (mc *MSchedClnt) getRPCClntMyMSched() (*rpcclnt.RPCClnt, error) {
 		if err != nil {
 			return nil, err
 		}
-		db.DPrintf(db.TEST, "getRPCClntMyMSched %v time %v", mc.kernelID, time.Since(start))
+		db.DPrintf(db.SPAWN_LAT, "getRPCClntMyMSched %v time %v", mc.kernelID, time.Since(start))
 		mc.rpcc = rpcc
 	}
 	return mc.rpcc, nil

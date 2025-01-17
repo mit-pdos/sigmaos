@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"net"
 	"os"
+	"strings"
 
 	db "sigmaos/debug"
 	"sigmaos/proc"
@@ -49,6 +50,8 @@ func (pps *PyProxySrv) Shutdown() {
 
 func (pps *PyProxySrv) handleNewConn(conn *net.UnixConn) {
 	reader := bufio.NewReader(conn)
+	libContents := make(map[string]bool)
+
 	for {
 		line, err := reader.ReadString('\n')
 		if err != nil {
@@ -56,19 +59,37 @@ func (pps *PyProxySrv) handleNewConn(conn *net.UnixConn) {
 			return
 		}
 
-		// if line[:len(line)-1] == "pb" {
-		// 	db.DPrintf(db.PYPROXYSRV, "reader: received initialization request\n", err)
-
-		// 	os.Chmod("/tmp/python", 0777)
-
-		// 	err = os.Mkdir("/tmp/python/superlib", 0755)
-		// 	if err != nil {
-		// 		db.DPrintf(db.PYPROXYSRV_ERR, "reader: mkdir err %v\n", err)
-		// 		return
-		// 	}
-		// }
-
 		db.DPrintf(db.PYPROXYSRV, "reader: received %v", line)
+
+		reqPrefix := line[:2]
+		reqPath := line[2:]
+
+		if reqPrefix == "pb" {
+			// Initialization
+			db.DPrintf(db.PYPROXYSRV, "reader: received initialization request\n", err)
+
+			// Record contents at the Lib directory
+			libFiles, err := os.ReadDir("/tmp/python/Lib")
+			if err != nil {
+				db.DPrintf(db.PYPROXYSRV_ERR, "reader: err reading Python Lib %v\n", err)
+				return
+			}
+
+			for _, file := range libFiles {
+				db.DPrintf(db.PYPROXYSRV, "reader: Lib: %v\n", file.Name())
+				libContents[file.Name()] = true
+			}
+		} else if reqPrefix == "pf" {
+			// Searching for Python file
+			if strings.HasPrefix(reqPath, "/Lib") {
+				// Check that the requested library exists
+				libName := strings.TrimSpace(strings.Split(reqPath, "/")[2])
+				if libContents[libName] == false {
+					db.DPrintf(db.PYPROXYSRV_ERR, "reader: err %v DNE\n", libName)
+					return
+				}
+			}
+		}
 
 		response := []byte("d")
 		_, err = conn.Write(response)

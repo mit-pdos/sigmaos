@@ -34,7 +34,6 @@ const char* get_path(const char *filename)
     }
 
     if (strcmp("/~~/Lib", filename) == 0) {
-      printf("LD_PRELOAD: received request for: %s\n", filename);
       return "/tmp/python/superlib";
     }
     

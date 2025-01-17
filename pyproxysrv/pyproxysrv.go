@@ -2,8 +2,10 @@ package pyproxysrv
 
 import (
 	"bufio"
+	"io/ioutil"
 	"net"
 	"os"
+	"path/filepath"
 	"strings"
 
 	db "sigmaos/debug"
@@ -48,6 +50,58 @@ func (pps *PyProxySrv) Shutdown() {
 	os.Remove(sp.SIGMA_PYPROXY_SOCKET)
 }
 
+// Recursively copies all the contents of currPath to destPath. Does
+// not yet handle concurrent modifications of the source directory.
+func (pps *PyProxySrv) copyLib(currPath string, destPath string) error {
+	db.DPrintf(db.PYPROXYSRV, "Copying %v to %v", currPath, destPath)
+	isDir, err := pps.sc.IsDir(currPath)
+	if err != nil {
+		return err
+	}
+
+	if !isDir {
+		// Copy the file over
+		srcFile, err := pps.sc.GetFile(currPath)
+		if err != nil {
+			return err
+		}
+
+		err = ioutil.WriteFile(destPath, srcFile, 0777)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	}
+
+	os.Mkdir(destPath, 0777)
+
+	_, err = pps.sc.ProcessDir(currPath, func(st *sp.Tstat) (bool, error) {
+		newSrc := filepath.Join(currPath, st.Name)
+		newDst := filepath.Join(destPath, st.Name)
+		return false, pps.copyLib(newSrc, newDst)
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (pps *PyProxySrv) fetchLib(libName string) {
+	db.DPrintf(db.PYPROXYSRV, "Fetching %v", libName)
+	pn := filepath.Join(sp.NAMED, "s3", "~any", "ivy-tutorial-test", libName)
+	libDest := filepath.Join("/tmp", "python", "Lib", libName)
+
+	err := pps.copyLib(pn, libDest)
+	if err != nil {
+		db.DPrintf(db.PYPROXYSRV_ERR, "copyLib: %v", err)
+		return
+	}
+
+	return
+}
+
 func (pps *PyProxySrv) handleNewConn(conn *net.UnixConn) {
 	reader := bufio.NewReader(conn)
 	libContents := make(map[string]bool)
@@ -85,8 +139,9 @@ func (pps *PyProxySrv) handleNewConn(conn *net.UnixConn) {
 				// Check that the requested library exists
 				libName := strings.TrimSpace(strings.Split(reqPath, "/")[2])
 				if libContents[libName] == false {
-					db.DPrintf(db.PYPROXYSRV_ERR, "reader: err %v DNE\n", libName)
-					return
+					// Read all library contents from S3 into local
+					pps.fetchLib(libName)
+					libContents[libName] = true
 				}
 			}
 		}

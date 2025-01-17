@@ -5,8 +5,8 @@ import (
 	"errors"
 	"io"
 
-	sp "sigmaos/sigmap"
 	spcodec "sigmaos/session/codec"
+	sp "sigmaos/sigmap"
 )
 
 // Making rdr a bufio is important because the first read must be >=
@@ -17,7 +17,7 @@ func MkDirEntsReader(rdr io.Reader) *bufio.Reader {
 	return brdr
 }
 
-// Too stop early, f must return true.  Returns true if stopped early.
+// To stop early, f must return true.  Returns true if stopped early.
 func ReadDirEnts(drdr *bufio.Reader, f func(*sp.Tstat) (bool, error)) (bool, error) {
 	for {
 		st, err := spcodec.UnmarshalDirEnt(drdr)

@@ -17,10 +17,10 @@ import (
 	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/docker/go-connections/nat"
 
-	chunksrv "sigmaos/sched/msched/proc/chunk/srv"
 	"sigmaos/dcontainer/cgroup"
 	db "sigmaos/debug"
 	"sigmaos/proc"
+	chunksrv "sigmaos/sched/msched/proc/chunk/srv"
 	sp "sigmaos/sigmap"
 	"sigmaos/util/linux/mem"
 	"sigmaos/util/perf"
@@ -81,7 +81,7 @@ func StartDockerContainer(p *proc.Proc, kernelId string) (*DContainer, error) {
 			Type:     mount.TypeBind,
 			Source:   path.Join("/tmp/python"),
 			Target:   path.Join("/tmp/python"),
-			ReadOnly: true,
+			ReadOnly: false,
 		},
 		// perf output dir
 		mount.Mount{

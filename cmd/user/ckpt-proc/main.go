@@ -15,6 +15,7 @@ import (
 )
 
 func main() {
+	db.DPrintf(db.ALWAYS, "SIGMA_DIALPROXY_FD: %v", os.Getenv("SIGMA_DIALPROXY_FD"))
 	if len(os.Args) < 4 {
 		fmt.Fprintf(os.Stderr, "Usage: %v <runtime> <npages> <ckpt-pn>\n", os.Args[0])
 		os.Exit(1)
@@ -54,7 +55,7 @@ func main() {
 	if err != nil {
 		db.DFatalf("Stat err %v\n", err)
 	}
-
+	db.DPrintf(db.CKPT, "GOING TO CHECKPOINT %d %d %v", sec, npages, ckptpn)
 	sc, err = sc.CheckpointMe(ckptpn)
 	if err != nil {
 		db.DFatalf("Checkpoint me didn't return error", err)

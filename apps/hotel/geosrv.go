@@ -118,13 +118,14 @@ func RunGeoSrv(job string, ckptpn string, nidxStr string, maxSearchRadiusStr str
 		}
 		sc.Close()
 	}
-
+	db.DPrintf(db.ALWAYS, "Making env")
 	pe := proc.GetProcEnv()
 	ssrv, err := sigmasrv.NewSigmaSrv(filepath.Join(HOTELGEODIR, pe.GetPID().String()), geo, pe)
 	if err != nil {
+		db.DPrintf(db.ALWAYS, "Error starting sigmasrv")
 		return err
 	}
-
+	db.DPrintf(db.ALWAYS, "Making perf")
 	p, err := perf.NewPerf(ssrv.MemFs.SigmaClnt().ProcEnv(), perf.HOTEL_GEO)
 	if err != nil {
 		db.DFatalf("NewPerf err %v\n", err)
@@ -134,7 +135,6 @@ func RunGeoSrv(job string, ckptpn string, nidxStr string, maxSearchRadiusStr str
 	//	defer geo.tracer.Flush()
 
 	db.DPrintf(db.ALWAYS, "Geo srv ready to serve time since spawn: %v", time.Since(ssrv.ProcEnv().GetSpawnTime()))
-
 	return ssrv.RunServer()
 }
 

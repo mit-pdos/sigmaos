@@ -57,7 +57,8 @@ func (fsl *FsLib) DownloadFile(spn, lpn string) error {
 	}
 	defer src.Close()
 	rdr := bufio.NewReader(src)
-	wrt, err := os.OpenFile(lpn, os.O_RDWR, 0)
+	// wrt, err := os.OpenFile(lpn, os.O_RDWR, 0)
+	wrt, err := os.OpenFile(lpn, os.O_WRONLY|os.O_CREATE, 0644)
 	if err != nil {
 		return err
 	}

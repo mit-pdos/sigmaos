@@ -37,23 +37,42 @@ func (ps *ProcSrv) Checkpoint(ctx fs.CtxI, req proto.CheckpointProcRequest, res 
 		db.DPrintf(db.PROCD, "Checkpoint no proc for %v\n", pid)
 		return fmt.Errorf("no proc %v\n", spid)
 	}
+	pe.mu.Lock()
+	pe.checkpointStatus = 1
+	pe.mu.Unlock()
 	imgDir := DUMPDIR + spid.String()
+	db.DPrintf(db.CKPT, "making %v,%v", imgDir, os.ModePerm)
 	err := os.MkdirAll(imgDir, os.ModePerm)
 	if err != nil {
 		db.DPrintf(db.CKPT, "CheckpointProc: error creating %v err %v", imgDir, err)
+		pe.mu.Lock()
+		pe.checkpointStatus = 2
+		pe.mu.Unlock()
 		return err
 	}
 	if err := scontainer.CheckpointProc(ps.criuclnt, pid, imgDir, spid, pe.ino); err != nil {
 		return err
+		pe.mu.Lock()
+		pe.checkpointStatus = 2
+		pe.mu.Unlock()
 	}
 	if err := ps.writeCheckpoint(imgDir, req.PathName, CKPTFULL); err != nil {
+		pe.mu.Lock()
+		pe.checkpointStatus = 2
+		pe.mu.Unlock()
 		db.DPrintf(db.PROCD, "writeCheckpoint full %v\n", spid, err)
 		return err
 	}
 	if err := ps.writeCheckpoint(imgDir, req.PathName, CKPTLAZY); err != nil {
+		pe.mu.Lock()
+		pe.checkpointStatus = 2
+		pe.mu.Unlock()
 		db.DPrintf(db.PROCD, "writeCheckpoint lazy %v err %v\n", spid, err)
 		return err
 	}
+	pe.mu.Lock()
+	pe.checkpointStatus = 0
+	pe.mu.Unlock()
 	return nil
 }
 
@@ -71,9 +90,11 @@ func (ps *ProcSrv) writeCheckpoint(chkptLocalDir string, chkptSimgaDir string, c
 		return err
 	}
 	for _, file := range files {
+
 		if ckpt == CKPTLAZY && strings.HasPrefix(file.Name(), "pages-") {
 			continue
 		}
+		//db.DPrintf(db.PROCD, "UploadingFile %v\n", file.Name())
 		if err := ps.ssrv.MemFs.SigmaClnt().UploadFile(filepath.Join(chkptLocalDir, file.Name()), filepath.Join(pn, file.Name())); err != nil {
 			db.DPrintf(db.PROCD, "UploadFile %v err %v\n", file.Name(), err)
 			return err
@@ -127,18 +148,22 @@ func (ps *ProcSrv) readCheckpoint(ckptSigmaDir, localDir, ckpt string) error {
 	files := sp.Names(sts)
 	db.DPrintf(db.PROCD, "Copy file %v to %s\n", files, pn)
 	for _, entry := range files {
+		db.DPrintf(db.CKPT, "copying %s\n", entry)
 		fn := filepath.Join(ckptSigmaDir, ckpt, entry)
 		dstfn := filepath.Join(pn, entry)
 		if err := ps.ssrv.MemFs.SigmaClnt().DownloadFile(fn, dstfn); err != nil {
-			db.DPrintf("DownloadFile %v err %v\n", fn, err)
+			db.DPrintf(db.PROCD, "DownloadFile %v err %v\n", fn, err)
 			return err
 		}
 	}
+	db.DPrintf(db.CKPT, "Almost done %s\n", pn)
 	if ckpt == CKPTLAZY {
 		db.DPrintf(db.CKPT, "Expand %s\n", pn)
 		if err := lazypagessrv.ExpandLazyPages(pn); err != nil {
 			return err
 		}
 	}
+	db.DPrintf(db.CKPT, "Done %s\n", pn)
+
 	return nil
 }

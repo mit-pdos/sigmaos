@@ -18,7 +18,10 @@ type RPCDirClnt struct {
 }
 
 func (rpcdc *RPCDirClnt) newClnt(n string) (*rpcclnt.RPCClnt, error) {
+
 	pn := filepath.Join(rpcdc.Path, n)
+	db.DPrintf(db.CKPT, "newClnt NewSigmaRPCClnt[srvID:%v]", pn)
+	db.DPrintf(db.CKPT, "newClnt NewSigmaRPCClnt[srvID:%v]", pn)
 	rpcc, err := sprpcclnt.NewRPCClnt(rpcdc.FsLib, pn)
 	if err != nil {
 		db.DPrintf(rpcdc.ESelector, "Error NewSigmaRPCClnt[srvID:%v]: %v", pn, err)

@@ -15,7 +15,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use serde::{Deserialize, Serialize};
 
-const VERBOSE: bool = false;
+const VERBOSE: bool = true;
 
 fn print_elapsed_time(/*label: &str,*/ msg: &str, start: SystemTime, ignore_verbose: bool) {
     if ignore_verbose || VERBOSE {
@@ -74,7 +74,9 @@ fn main() {
     let dialproxy_conn_fd = dialproxy_conn.into_raw_fd();
     fcntl::fcntl(dialproxy_conn_fd, FcntlArg::F_SETFD(FdFlag::empty())).unwrap();
     // Pass the dialproxy socket connection FD to the user proc
+    //log::info!("SPAWN_LAT {},us");
     env::set_var("SIGMA_DIALPROXY_FD", dialproxy_conn_fd.to_string());
+    log::info!("SPAWN_LAT SIGMA_DIALPROXY_FD: {}",dialproxy_conn_fd.to_string());
     print_elapsed_time("trampoline.connect_dialproxy", now, false);
     now = SystemTime::now();
     seccomp_proc(dialproxy).expect("seccomp failed");

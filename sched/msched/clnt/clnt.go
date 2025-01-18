@@ -198,17 +198,43 @@ func (mc *MSchedClnt) GetRunningProcs(nsample int) (map[sp.Trealm][]*proc.Proc, 
 
 func (mc *MSchedClnt) Checkpoint(kernelID string, pid sp.Tpid, r sp.Trealm, pn string) error {
 	db.DPrintf(db.CKPT, "Checkpoint kernelId %v pid %v", kernelID, pid)
+	db.DPrintf(db.CKPT, "check %v pid %v", kernelID, pid)
 	rpcc, err := mc.rpcdc.GetClnt(kernelID)
+	db.DPrintf(db.CKPT, "here kernelId %v pid %v", kernelID, pid)
 	if err != nil {
 		return err
 	}
+
 	req := &procproto.CheckpointProcRequest{
 		PidStr:   pid.String(),
 		RealmStr: r.String(),
 		PathName: pn,
 	}
 	res := &procproto.CheckpointProcResponse{}
+	//maxRetries := 5
+	// for attempt := 1; attempt <= maxRetries; attempt++ {
+	// 	db.DPrintf(db.CKPT, "Attempt %v kernelId %v pid %v", attempt, kernelID, pid)
+	// 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*2)
+	// 	defer cancel()
+	// 	done := make(chan error, 1)
+
+	// 	// Perform the RPC call in a goroutine
+	// 	go func() {
+	// 		done <- rpcc.RPC("MSched.CheckpointProc", req, res)
+	// 	}()
+
+	// 	select {
+	// 	case <-ctx.Done(): // Timeout case
+	// 		db.DPrintf(db.CKPT, "TIMEOUT Error attempt: %v pid %v", attempt, pid)
+	// 	case err := <-done: // RPC completed
+	// 		if err == nil {
+	// 			return nil // Success
+	// 		}
+	// 		db.DPrintf(db.CKPT, "MSCHED Error %v pid %v", kernelID, pid)
+	// 		return err
+	// 	}
 	if err := rpcc.RPC("MSched.CheckpointProc", req, res); err != nil {
+		db.DPrintf(db.CKPT, "MSCHED Error %v pid %v", kernelID, pid)
 		return err
 	}
 	return nil

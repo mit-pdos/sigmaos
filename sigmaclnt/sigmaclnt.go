@@ -48,12 +48,14 @@ func newFsLibFidClnt(pe *proc.ProcEnv, fidc *fidclnt.FidClnt) (*fslib.FsLib, err
 	var err error
 	var s sos.FileAPI
 	if pe.UseSPProxy {
+		db.DPrintf(db.ALWAYS, "newSPProxyClnt init from proxy")
 		s, err = spproxyclnt.NewSPProxyClnt(pe, fidc.GetDialProxyClnt())
 		if err != nil {
 			db.DPrintf(db.ALWAYS, "newSPProxyClnt err %v", err)
 			return nil, err
 		}
 	} else {
+		db.DPrintf(db.ALWAYS, "NewFdClint init")
 		s = fdclnt.NewFdClient(pe, fidc)
 	}
 	return fslib.NewFsLibAPI(pe, fidc.GetDialProxyClnt(), s)
@@ -137,6 +139,7 @@ func NewSigmaClntRootInit(pe *proc.ProcEnv) (*SigmaClnt, error) {
 
 func (sc *SigmaClnt) NewProcClnt() error {
 	start := time.Now()
+	db.DPrintf(db.SPAWN_LAT, "[%v] preparing ProcClnt: %v", sc.ProcEnv().GetPID(), time.Since(start))
 	papi, err := procclnt.NewProcClnt(sc.FsLib)
 	if err != nil {
 		db.DPrintf(db.ERROR, "NewProcClnt: %v", err)

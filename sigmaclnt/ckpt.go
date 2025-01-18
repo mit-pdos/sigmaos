@@ -44,7 +44,7 @@ func (sc *SigmaClnt) CheckpointMe(ckptpn string) (*SigmaClnt, error) {
 	syscall.Close(5)
 
 	if err := sc.ProcAPI.(*procclnt.ProcClnt).CheckpointMe(ckptpn); err != nil && serr.IsErrCode(err, serr.TErrUnreachable) {
-		db.DPrintf(db.CKPT, "CheckpointMe err %v\n", err)
+		db.DPrintf(db.CKPT, "CheckpointMe err %v:q\n", err)
 
 		// XXX check that is unreachle error?
 

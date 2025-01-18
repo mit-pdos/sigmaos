@@ -7,7 +7,7 @@ import (
 
 	"google.golang.org/protobuf/proto"
 
-	// db "sigmaos/debug"
+	db "sigmaos/debug"
 	"sigmaos/frame"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
@@ -44,6 +44,7 @@ func MarshalDirEnt(st *sp.Stat, cnt uint64) ([]byte, *serr.Err) {
 func UnmarshalDirEnt(rdr io.Reader) (*sp.Stat, *serr.Err) {
 	st := sp.NewStatNull()
 	b, err := frame.ReadFrame(rdr)
+	db.DPrintf(db.CKPT, "read frame\n")
 	if err != nil {
 		return nil, err
 	}

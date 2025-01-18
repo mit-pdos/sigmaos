@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"sync"
+
 	//	"time"
 
 	db "sigmaos/debug"
@@ -89,7 +90,9 @@ func (fl *FsLib) NewReader(fd int, path string) *FileReader {
 }
 
 func (fl *FsLib) OpenReader(path string) (*FileReader, error) {
+	db.DPrintf(db.CKPT, "attempting to open reader\n")
 	fd, err := fl.Open(path, sp.OREAD)
+	db.DPrintf(db.CKPT, "opened reader\n")
 	if err != nil {
 		return nil, err
 	}

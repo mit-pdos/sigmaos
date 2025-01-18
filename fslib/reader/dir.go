@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 
+	db "sigmaos/debug"
 	sp "sigmaos/sigmap"
 	"sigmaos/spcodec"
 )
@@ -20,6 +21,7 @@ func MkDirEntsReader(rdr io.Reader) *bufio.Reader {
 // Too stop early, f must return true.  Returns true if stopped early.
 func ReadDirEnts(drdr *bufio.Reader, f func(*sp.Stat) (bool, error)) (bool, error) {
 	for {
+		db.DPrintf(db.CKPT, "readDirWatch watch\n")
 		st, err := spcodec.UnmarshalDirEnt(drdr)
 		if err != nil && errors.Is(err, io.EOF) {
 			break

@@ -134,6 +134,7 @@ func (fidc *FidClnt) Clunk(fid sp.Tfid) error {
 }
 
 func (fidc *FidClnt) Attach(secrets map[string]*sp.SecretProto, cid sp.TclntId, ep *sp.Tendpoint, pn path.Tpathname, tree string) (sp.Tfid, *serr.Err) {
+	db.DPrintf(db.ATTACH_LAT, "start attach")
 	s := time.Now()
 	fid := fidc.allocFid()
 	pc := protclnt.NewProtClnt(ep, fidc.sm)

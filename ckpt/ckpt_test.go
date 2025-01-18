@@ -3,7 +3,6 @@ package ckpt_test
 import (
 	"strconv"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 
@@ -43,18 +42,16 @@ func TestSpawnCkptProc(t *testing.T) {
 	assert.Nil(t, err)
 
 	db.DPrintf(db.TEST, "Wait until proc %v has checkpointed itself", ckptProc.GetPid())
-
+	db.DPrintf(db.TEST, "pid %v", pid)
 	status, err := ts.WaitExit(ckptProc.GetPid())
 	assert.Nil(t, err)
 	assert.True(t, status.IsStatusErr())
-
-	time.Sleep(1000 * time.Millisecond)
 
 	pid = sp.GenPid("ckpt-proc-copy")
 
 	db.DPrintf(db.TEST, "Spawn from checkpoint %v", pid)
 
-	restProc := proc.NewProcFromCheckpoint(pid, GEO+"-copy", pn)
+	restProc := proc.NewProcFromCheckpoint(pid, PROGRAM+"-copy", pn)
 	err = ts.Spawn(restProc)
 	assert.Nil(t, err)
 
@@ -92,8 +89,7 @@ func TestSpawnCkptGeo(t *testing.T) {
 	status, err := ts.WaitExit(ckptProc.GetPid())
 	assert.Nil(t, err)
 	assert.True(t, status.IsStatusErr())
-
-	time.Sleep(5 * time.Second)
+	//time.Sleep(100 * time.Millisecond)
 
 	pid = sp.GenPid(GEO + "-copy")
 

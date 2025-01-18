@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"syscall"
+	"time"
 
 	"golang.org/x/sys/unix"
 
@@ -121,9 +122,21 @@ func (lps *lazyPagesSrv) handleConn(conn net.Conn) {
 
 	b := make([]byte, unix.CmsgSpace(4))
 	_, _, _, _, err = unix.Recvmsg(connFd, nil, b, 0)
-	if err != nil {
-		db.DFatalf("Recvmsg err %v", err)
+	cnt := 0
+
+	for err != nil {
+		db.DPrintf(db.ERROR, "Recvmsg err %v try: %v", err, cnt)
+		if cnt > 10 || err != syscall.EAGAIN {
+			db.DFatalf("Recvmsg err %v", err)
+		}
+		time.Sleep(100 * time.Millisecond)
+		_, _, _, _, err = unix.Recvmsg(connFd, nil, b, 0)
+		cnt += 1
 	}
+	// if err != nil {
+
+	// 	db.DFatalf("Recvmsg err %v", err)
+	// }
 	// parse socket control message
 	cmsgs, err := unix.ParseSocketControlMessage(b)
 	if err != nil {
@@ -135,7 +148,6 @@ func (lps *lazyPagesSrv) handleConn(conn net.Conn) {
 	}
 	fd := fds[0]
 	db.DPrintf(db.LAZYPAGESSRV, "Received fd %d\n", fd)
-
 	lpc, ok := lps.pids.Lookup(int(pid))
 	if !ok {
 		db.DFatalf("newLazyPagesConn pid %v no registration", fd, err)

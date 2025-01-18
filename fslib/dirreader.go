@@ -17,7 +17,9 @@ type Fwatch func([]*sp.Stat) bool
 // that caller can learn if the ReadDir failed or the watch failed.
 func (fsl *FsLib) readDirWatch(dir string, watch Fwatch) (bool, error) {
 	for {
+		db.DPrintf(db.WATCH, "readDirWatch start %v\n", dir)
 		sts, rdr, err := fsl.ReadDir(dir)
+		db.DPrintf(db.WATCH, "readDirWatch read dir %v\n", dir)
 		if err != nil {
 			return false, err
 		}

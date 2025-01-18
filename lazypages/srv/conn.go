@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strconv"
 	"syscall"
+	"time"
 	"unsafe"
 
 	"golang.org/x/sys/unix"
@@ -58,12 +59,24 @@ func (lpc *lazyPagesConn) handleReqs() error {
 			}},
 			-1,
 		); err != nil {
+			db.DPrintf(db.ERROR, "Poll err %v", err)
 			return err
 		}
 		buf := make([]byte, unsafe.Sizeof(userfaultfd.UffdMsg{}))
-		if _, err := syscall.Read(lpc.fd, buf); err != nil {
-			return err
+		_, err := syscall.Read(lpc.fd, buf)
+		cnt := 0
+
+		for err != nil {
+			db.DPrintf(db.ERROR, "Read err %v try: %v", err, cnt)
+			if cnt > 10 || err != syscall.EAGAIN {
+
+				return err
+			}
+			time.Sleep(100 * time.Millisecond)
+			_, err = syscall.Read(lpc.fd, buf)
+			cnt += 1
 		}
+		db.DPrintf(db.ALWAYS, "success?")
 		msg := (*(*userfaultfd.UffdMsg)(unsafe.Pointer(&buf[0])))
 		switch userfaultfd.GetMsgEvent(&msg) {
 		case userfaultfd.UFFD_EVENT_PAGEFAULT:
@@ -72,6 +85,7 @@ func (lpc *lazyPagesConn) handleReqs() error {
 			addr := uint64(userfaultfd.GetPagefaultAddress(&pagefault))
 			mask := uint64(^(lpc.lps.pagesz - 1))
 			if err := lpc.pageFault(addr & mask); err != nil {
+				db.DPrintf(db.ERROR, "Page Fault err %v", err)
 				return err
 			}
 		case userfaultfd.UFFD_EVENT_FORK:
@@ -93,7 +107,18 @@ func (lpc *lazyPagesConn) pageFault(addr uint64) error {
 	lpc.nfault += 1
 	if iov == nil {
 		db.DPrintf(db.LAZYPAGESSRV_FAULT, "page fault: zero %d: no iov for %x", lpc.nfault, addr)
-		zeroPage(lpc.fd, addr, lpc.lps.pagesz)
+		err := zeroPage(lpc.fd, addr, lpc.lps.pagesz)
+		cnt := 0
+		for err != nil {
+			db.DPrintf(db.ERROR, "zeroPage err %v try: %v", err, cnt)
+			if cnt > 10 || err != syscall.EAGAIN {
+
+				return err
+			}
+			time.Sleep(100 * time.Millisecond)
+			err = zeroPage(lpc.fd, addr, lpc.lps.pagesz)
+			cnt += 1
+		}
 	} else {
 		pi := lpc.pmi.find(addr)
 		if pi == -1 {
@@ -110,12 +135,30 @@ func (lpc *lazyPagesConn) pageFault(addr uint64) error {
 		if err := lpc.rp(off, buf); err != nil {
 			db.DFatalf("no page content for %x", addr)
 		}
-		copyPages(lpc.fd, addr, buf)
+
+		err := copyPages(lpc.fd, addr, buf)
+		cnt := 0
+		for err != nil {
+			db.DPrintf(db.ERROR, "copyPages err %v try: %v", err, cnt)
+			if cnt > 10 || err != syscall.EAGAIN {
+
+				return err
+			}
+			time.Sleep(100 * time.Millisecond)
+			err = copyPages(lpc.fd, addr, buf)
+			cnt += 1
+		}
+		// if err != nil {
+		// 	db.DPrintf(db.ERROR, "SYS_IOCTL1 err %v", err)
+		// 	// 	time.Sleep(1000 * time.Millisecond)
+		// 	// 	copyPages(lpc.fd, addr, buf)
+
+		//}
 	}
 	return nil
 }
 
-func zeroPage(fd int, addr uint64, pagesz int) {
+func zeroPage(fd int, addr uint64, pagesz int) error {
 	len := uint64(pagesz)
 	zero := userfaultfd.NewUffdioZeroPage(
 		userfaultfd.CULong(addr),
@@ -129,10 +172,12 @@ func zeroPage(fd int, addr uint64, pagesz int) {
 		uintptr(unsafe.Pointer(&zero)),
 	); errno != 0 {
 		db.DPrintf(db.ERROR, "SYS_IOCTL err %v", errno)
+		return errno
 	}
+	return nil
 }
 
-func copyPages(fd int, addr uint64, pages []byte) {
+func copyPages(fd int, addr uint64, pages []byte) error {
 	len := len(pages)
 	cpy := userfaultfd.NewUffdioCopy(
 		pages,
@@ -148,7 +193,9 @@ func copyPages(fd int, addr uint64, pages []byte) {
 		uintptr(unsafe.Pointer(&cpy)),
 	); errno != 0 {
 		db.DPrintf(db.ERROR, "SYS_IOCTL %d(%x) %d err %v", addr, addr, len, errno)
+		return errno
 	}
+	return nil
 }
 
 func readBytesSigma(sc *sigmaclnt.SigmaClnt, fd int, off int64, buf []byte) error {

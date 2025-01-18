@@ -181,7 +181,20 @@ func restoreProc(criuclnt *criu.Criu, proc *proc.Proc, imgDir, workDir, jailPath
 		db.DFatalf("ReadImg fdinfo err %v\n", err)
 	}
 	// XXX 3 is SIGMA_DIALPROXY_FD
-	dstfd := criuDump.Entries[3].Message.(*fdinfo.FdinfoEntry)
+	//3 is the rdr unix socket
+	//dstfd := criuDump.Entries[3].Message.(*fdinfo.FdinfoEntry)
+	var dstfd *fdinfo.FdinfoEntry
+	for _, entry := range criuDump.Entries {
+		entryinfo := entry.Message.(*fdinfo.FdinfoEntry)
+		if entryinfo.GetFd() == 3 {
+			dstfd = entryinfo
+			break
+		}
+		db.DPrintf(db.ALWAYS, "criu entries: %v fd: %v", entry.Message.(*fdinfo.FdinfoEntry).GetId(), entry.Message.(*fdinfo.FdinfoEntry).GetFd())
+	}
+	if dstfd == nil {
+		db.DFatalf("ReadImg usk err fd 3 not dumped%v\n", err)
+	}
 	criuDump, err = lazypagessrv.ReadImg(imgDir, "", "files")
 	if err != nil {
 		db.DFatalf("ReadImg files err %v\n", err)
@@ -189,6 +202,7 @@ func restoreProc(criuclnt *criu.Criu, proc *proc.Proc, imgDir, workDir, jailPath
 	var usk *sk_unix.UnixSkEntry
 	for _, f := range criuDump.Entries {
 		e := f.Message.(*fdinfo.FileEntry)
+		db.DPrintf(db.ALWAYS, "reading: %v | %v | %v | fd: ", e.GetId(), dstfd.GetId(), e.GetUsk(), e.GetEfd())
 		if e.GetId() == dstfd.GetId() {
 			usk = e.GetUsk()
 		}
@@ -220,7 +234,7 @@ func restoreProc(criuclnt *criu.Criu, proc *proc.Proc, imgDir, workDir, jailPath
 	go func() {
 		err = criuclnt.Restore(opts, nil)
 		db.DPrintf(db.CKPT, "restoreProc: Restore err %v", err)
-		if verbose {
+		if verbose || true {
 			dumpLog(workDir + "/restore.log")
 		}
 	}()

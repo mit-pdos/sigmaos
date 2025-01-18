@@ -42,10 +42,11 @@ import (
 // has set it.  To handle this case, procEntry has a condition
 // varialble on which Lookup sleeps until procsrv sets proc.
 type procEntry struct {
-	mu   sync.Mutex
-	cond *sync.Cond
-	proc *proc.Proc
-	ino  uint64
+	mu               sync.Mutex
+	cond             *sync.Cond
+	proc             *proc.Proc
+	ino              uint64
+	checkpointStatus int //0 = no, 1 = inprogress, 2 = err
 }
 
 func newProcEntry(proc *proc.Proc) *procEntry {
@@ -332,6 +333,11 @@ func (ps *ProcSrv) assignToRealm(realm sp.Trealm, upid sp.Tpid, prog string, pat
 	return nil
 }
 
+func (ps *ProcRPCSrv) Checkpoint(ctx fs.CtxI, req proto.CheckpointProcRequest, res *proto.CheckpointProcResponse) error {
+	return ps.ps.Checkpoint(ctx, req, res)
+
+}
+
 func (ps *ProcRPCSrv) Run(ctx fs.CtxI, req proto.RunRequest, res *proto.RunResult) error {
 	return ps.ps.Run(ctx, req, res)
 }
@@ -361,25 +367,45 @@ func (ps *ProcSrv) Run(ctx fs.CtxI, req proto.RunRequest, res *proto.RunResult) 
 	}
 	uproc.FinalizeEnv(ps.pe.GetInnerContainerIP(), ps.pe.GetOuterContainerIP(), ps.pe.GetPID())
 	db.DPrintf(db.SPAWN_LAT, "[%v] Proc Run: spawn time since spawn %v", uproc.GetPid(), time.Since(uproc.GetSpawnTime()))
-	cmd, err := scontainer.StartSigmaContainer(uproc, ps.dialproxy)
-	if err != nil {
+	if uproc.GetCheckpointLocation() != "" {
+		if err := ps.restoreProc(uproc); err != nil {
+			return err
+		}
+		return nil
+	} else {
+		cmd, err := scontainer.StartSigmaContainer(uproc, ps.dialproxy)
+		if err != nil {
+			return err
+		}
+
+		pid := cmd.Pid()
+		db.DPrintf(db.PROCD, "Pid %v -> %d", uproc.GetPid(), pid)
+		pe, alloc := ps.procs.Alloc(pid, newProcEntry(uproc))
+		if !alloc { // it was already inserted
+			pe.insertSignal(uproc)
+		}
+		ps.pids.Insert(uproc.GetPid(), pid)
+		err = cmd.Wait()
+		if err != nil {
+			db.DPrintf(db.PROCD, "[%v] Proc Run cmd.Wait err %v", uproc.GetPid(), err)
+		}
+		pe.mu.Lock()
+		for pe.checkpointStatus == 1 {
+			pe.mu.Unlock()
+			time.Sleep(1 * time.Millisecond)
+			pe.mu.Lock()
+		}
+		if pe.checkpointStatus == 2 {
+			db.DPrintf(db.PROCD, "[%v] Proc Checkpoint Err", uproc.GetPid())
+			return fmt.Errorf("Checkpoint failed")
+		}
+
+		scontainer.CleanupUProc(uproc.GetPid())
+		ps.procs.Delete(pid)
+		// ps.sc.CloseFd(pe.fd)
+
 		return err
 	}
-	pid := cmd.Pid()
-	db.DPrintf(db.PROCD, "Pid %v -> %d", uproc.GetPid(), pid)
-	pe, alloc := ps.procs.Alloc(pid, newProcEntry(uproc))
-	if !alloc { // it was already inserted
-		pe.insertSignal(uproc)
-	}
-	ps.pids.Insert(uproc.GetPid(), pid)
-	err = cmd.Wait()
-	if err != nil {
-		db.DPrintf(db.PROCD, "[%v] Proc Run cmd.Wait err %v", uproc.GetPid(), err)
-	}
-	scontainer.CleanupUProc(uproc.GetPid())
-	ps.procs.Delete(pid)
-	// ps.sc.CloseFd(pe.fd)
-	return err
 }
 
 func (ps *ProcRPCSrv) WarmProcd(ctx fs.CtxI, req proto.WarmBinRequest, res *proto.WarmBinResult) error {

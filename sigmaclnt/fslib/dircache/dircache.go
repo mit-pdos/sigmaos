@@ -26,7 +26,8 @@ type DirCache[E any] struct {
 	hasEntries    *sync.Cond
 	dir           *sortedmapv1.SortedMap[string, E]
 	isDone        atomic.Uint64
-	isInit        atomic.Uint64
+	initState     atomic.Uint64 // 0 = not initialized, 1 = initializing, 2 = initialized
+	initWait      sync.WaitGroup
 	Path          string
 	LSelector     db.Tselector
 	ESelector     db.Tselector
@@ -57,13 +58,24 @@ func NewDirCacheFilter[E any](fsl *fslib.FsLib, path string, newVal NewValF[E], 
 }
 
 func (dc *DirCache[E]) Init() {
-	if dc.isInit.Swap(1) == 0 && dc.isDone.Load() == 0 {
+	if dc.initState.Load() == 2 {
+		return
+	}
+
+	if dc.initState.CompareAndSwap(0, 1) {
+		dc.initWait.Add(1)
+
 		dw := dc.initReadAndWatch()
 		if dw == nil {
 			return
 		}
 		go dc.watchDir(dw)
 		go dc.watchdog()
+
+		dc.initState.Store(2)
+		dc.initWait.Done()
+	} else {
+		dc.initWait.Wait()
 	}
 }
 
@@ -99,6 +111,8 @@ func (dc *DirCache[E]) initReadAndWatch() *dirwatcher.DirWatcher {
 		dc.hasEntries.Broadcast()
 	}
 	dc.Unlock()
+
+	db.DPrintf(dc.LSelector, "initReadAndWatch: %v", dc.dir.Keys())
 
 	return dw
 }

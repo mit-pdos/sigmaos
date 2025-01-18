@@ -13,7 +13,7 @@ import (
 	"sigmaos/namesrv/fsetcd"
 	"sigmaos/serr"
 	"sigmaos/sigmaclnt/fslib"
-	"sigmaos/sigmaclnt/fslib/dirreader"
+	"sigmaos/sigmaclnt/fslib/dirwatcher"
 	protsrv_proto "sigmaos/spproto/srv/proto"
 	"sigmaos/util/sortedmapv1"
 )
@@ -56,7 +56,7 @@ func NewDirCacheFilter[E any](fsl *fslib.FsLib, path string, newVal NewValF[E], 
 	return dc
 }
 
-func (dc *DirCache[E]) init() {
+func (dc *DirCache[E]) Init() {
 	if dc.isInit.Swap(1) == 0 && dc.isDone.Load() == 0 {
 		dw := dc.initReadAndWatch()
 		if dw == nil {
@@ -65,6 +65,70 @@ func (dc *DirCache[E]) init() {
 		go dc.watchDir(dw)
 		go dc.watchdog()
 	}
+}
+
+func (dc *DirCache[E]) initReadAndWatch() *dirwatcher.DirWatcher {
+	var initEnts []string
+	var dw *dirwatcher.DirWatcher
+
+	for dc.isDone.Load() == 0 {
+		var err error
+		initEnts, dw, err = dirwatcher.NewDirWatcherWithRead(dc.FsLib, dc.Path)
+		if err != nil {
+			if serr.IsErrorUnreachable(err) {
+				continue
+			} else {
+				dc.err = err
+				return nil
+			}
+		}
+
+		break
+	}
+
+	dc.Lock()
+	for _, ent := range initEnts {
+		dc.dir.InsertKey(ent)
+		if dc.ch != nil {
+			go func(ent string) {
+				dc.ch <- ent
+			}(ent)
+		}
+	}
+	if dc.dir.Len() > 0 {
+		dc.hasEntries.Broadcast()
+	}
+	dc.Unlock()
+
+	return dw
+}
+
+// Monitor for changes to the directory and update the cached one
+func (dc *DirCache[E]) watchDir(dw *dirwatcher.DirWatcher) {
+	for event := range dw.Events() {
+		dc.Lock()
+		var madeChange bool
+		switch event.Type {
+			case protsrv_proto.WatchEventType_CREATE:
+				madeChange = dc.dir.InsertKey(event.File)
+				if madeChange && dc.ch != nil {
+					go func(ent string) {
+						dc.ch <- ent
+					}(event.File)
+				}
+			case protsrv_proto.WatchEventType_REMOVE:
+				madeChange = dc.dir.Delete(event.File)
+		}
+		if madeChange {
+			dc.hasEntries.Broadcast()
+		}
+		dc.Unlock()
+		if dc.isDone.Load() != 0 {
+			break
+		}
+	}
+
+	dw.Close()
 }
 
 // watchdog thread that wakes up waiters periodically
@@ -81,7 +145,7 @@ func (dc *DirCache[E]) StopWatching() {
 }
 
 func (dc *DirCache[E]) Nentry() (int, error) {
-	dc.init()
+	dc.Init()
 	if err := dc.checkErr(); err != nil {
 		return 0, err
 	}
@@ -89,37 +153,16 @@ func (dc *DirCache[E]) Nentry() (int, error) {
 }
 
 func (dc *DirCache[E]) GetEntries() ([]string, error) {
-	dc.init()
+	dc.Init()
 	if err := dc.checkErr(); err != nil {
 		return nil, err
 	}
 	return dc.dir.Keys(), nil
 }
 
-func (dc *DirCache[E]) WaitTimedEntriesN(n int) (int, error) {
-	dc.init()
-	if err := dc.checkErr(); err != nil {
-		return 0, err
-	}
-	if err := dc.waitTimedEntriesN(n); err != nil {
-		return 0, err
-	}
-	if dc.err != nil {
-		return 0, dc.err
-	}
-	return dc.dir.Len(), nil
-}
-
-func (dc *DirCache[E]) WaitTimedGetEntriesN(n int) ([]string, error) {
-	if _, err := dc.WaitTimedEntriesN(n); err != nil {
-		return nil, err
-	}
-	return dc.dir.Keys(), nil
-}
-
-func (dc *DirCache[E]) GetEntry(n string) (E, error) {
+func (dc *DirCache[E]) getEntry(n string, alloc bool) (E, error) {
 	db.DPrintf(dc.LSelector, "GetEntry for %v", n)
-	dc.init()
+	dc.Init()
 
 	if err := dc.checkErr(); err != nil {
 		var e E
@@ -130,74 +173,21 @@ func (dc *DirCache[E]) GetEntry(n string) (E, error) {
 	kok, e, vok := dc.dir.LookupKeyVal(n)
 	if !kok {
 		db.DPrintf(dc.LSelector, "Done GetEntry for %v kok %v", n, kok)
-		serr.NewErr(serr.TErrNotfound, n)
+		return e, serr.NewErr(serr.TErrNotfound, n)
 	}
-	if !vok {
+	if !vok && alloc {
 		e, err = dc.allocVal(n)
 	}
 	db.DPrintf(dc.LSelector, "Done GetEntry for %v e %v err %v", n, e, err)
 	return e, err
 }
 
-func (dc *DirCache[E]) LookupEntry(n string) error {
-	_, err := dc.GetEntry(n)
-	return err
-}
-
-func (dc *DirCache[E]) RandomEntry() (string, error) {
-	var n string
-	var ok bool
-
-	db.DPrintf(dc.LSelector, "Random")
-	dc.init()
-
-	if err := dc.checkErr(); err != nil {
-		return "", err
-	}
-	defer func(n *string) {
-		db.DPrintf(dc.LSelector, "Done Random %v %t", *n, ok)
-	}(&n)
-	n, ok = dc.dir.Random()
-	if !ok {
-		return "", serr.NewErr(serr.TErrNotfound, "no random entry")
-	}
-	return n, nil
-}
-
-func (dc *DirCache[E]) WaitTimedRandomEntry() (string, error) {
-	dc.init()
-	return dc.waitEntry(dc.RandomEntry)
-}
-
-func (dc *DirCache[E]) RoundRobin() (string, error) {
-	var n string
-	var ok bool
-
-	db.DPrintf(dc.LSelector, "RoundRobin")
-	dc.init()
-
-	if err := dc.checkErr(); err != nil {
-		return "", err
-	}
-
-	defer func(n *string) {
-		db.DPrintf(dc.LSelector, "Done RoundRobin %v %t", *n, ok)
-	}(&n)
-
-	n, ok = dc.dir.RoundRobin()
-	if !ok {
-		return "", serr.NewErr(serr.TErrNotfound, "no next entry")
-	}
-	return n, nil
-}
-
-func (dc *DirCache[E]) WaitTimedRoundRobin() (string, error) {
-	dc.init()
-	return dc.waitEntry(dc.RoundRobin)
+func (dc *DirCache[E]) GetEntry(n string) (E, error) {
+	return dc.getEntry(n, true)
 }
 
 func (dc *DirCache[E]) InvalidateEntry(name string) bool {
-	dc.init()
+	dc.Init()
 	db.DPrintf(dc.LSelector, "InvalidateEntry %v", name)
 	ok := dc.dir.Delete(name)
 	db.DPrintf(dc.LSelector, "Done invalidate entry %v %v", ok, dc.dir)
@@ -234,26 +224,214 @@ func (dc *DirCache[E]) allocVal(n string) (E, error) {
 	return e, nil
 }
 
-func (dc *DirCache[E]) waitEntry(selectF func() (string, error)) (string, error) {
-	db.DPrintf(dc.LSelector, "waitEntry")
-	for {
-		n, err := selectF()
-		if serr.IsErrorNotfound(err) {
-			if sr := dc.waitTimedEntriesN(1); sr == nil {
-				continue
-			} else {
-				err = sr
-			}
-		}
-		db.DPrintf(dc.LSelector, "Done waitEntry %v %v", n, err)
-		if err != nil {
-			return "", err
-		}
-		return n, nil
+
+func (dc *DirCache[E]) LookupEntry(n string) error {
+	_, err := dc.GetEntry(n)
+	return err
+}
+
+func (dc *DirCache[E]) RandomEntry() (string, error) {
+	var n string
+	var ok bool
+
+	db.DPrintf(dc.LSelector, "Random")
+	dc.Init()
+
+	if err := dc.checkErr(); err != nil {
+		return "", err
+	}
+	defer func(n *string) {
+		db.DPrintf(dc.LSelector, "Done Random %v %t", *n, ok)
+	}(&n)
+	n, ok = dc.dir.Random()
+	if !ok {
+		return "", serr.NewErr(serr.TErrNotfound, "no random entry")
+	}
+	return n, nil
+}
+
+func (dc *DirCache[E]) RoundRobin() (string, error) {
+	var n string
+	var ok bool
+
+	db.DPrintf(dc.LSelector, "RoundRobin")
+	dc.Init()
+
+	if err := dc.checkErr(); err != nil {
+		return "", err
+	}
+
+	defer func(n *string) {
+		db.DPrintf(dc.LSelector, "Done RoundRobin %v %t", *n, ok)
+	}(&n)
+
+	n, ok = dc.dir.RoundRobin()
+	if !ok {
+		return "", serr.NewErr(serr.TErrNotfound, "no next entry")
+	}
+	return n, nil
+}
+
+func wrapEntrySelector(f func() (string, error)) func() (bool, string, error) {
+	return func() (bool, string, error) {
+		n, err := f()
+		return serr.IsErrorNotfound(err), n, err
 	}
 }
 
-func (dc *DirCache[E]) waitTimedEntriesN(n int) error {
+func (dc *DirCache[E]) WaitTimedRandomEntry() (string, error) {
+	dc.Init()
+	return dc.waitCond(wrapEntrySelector(dc.RandomEntry), true)
+}
+
+func (dc *DirCache[E]) WaitTimedRoundRobin() (string, error) {
+	dc.Init()
+	return dc.waitCond(wrapEntrySelector(dc.RoundRobin), true)
+}
+
+func (dc *DirCache[E]) WaitEntryCreated(file string, timed bool) (error) {
+	dc.Init()
+	_, err := dc.waitCond(wrapEntrySelector(func() (string, error) {
+		_, err := dc.getEntry(file, false)
+		return file, err
+	}), timed)
+
+	return err
+}
+
+func (dc *DirCache[E]) WaitAllEntriesCreated(files []string, timed bool) (error) {
+	dc.Init()
+	added := make(map[string]bool)
+	_, err := dc.waitCond(func() (bool, string, error) {
+		for _, file := range files {
+			if _, ok := added[file]; ok {
+				continue
+			}
+			_, err := dc.getEntry(file, false)
+			if err == nil {
+				added[file] = true
+				continue
+			}
+
+			if !serr.IsErrorNotfound(err) {
+				return false, "", err
+			}
+		}
+
+		allAdded := len(added) == len(files)
+		return !allAdded, "", nil
+	}, timed)
+
+	return err
+}
+
+func (dc *DirCache[E]) WaitEntryRemoved(file string, timed bool) (error) {
+	dc.Init()
+	_, err := dc.waitCond(wrapEntrySelector(func() (string, error) {
+		_, err := dc.getEntry(file, false)
+		if serr.IsErrorNotfound(err) {
+			return file, nil
+		}
+
+		return file, err
+	}), timed)
+
+	return err
+}
+
+func (dc *DirCache[E]) WaitAllEntriesRemoved(files []string, timed bool) (error) {
+	dc.Init()
+	removed := make(map[string]bool)
+	_, err := dc.waitCond(func() (bool, string, error) {
+		for _, file := range files {
+			if _, ok := removed[file]; ok {
+				continue
+			}
+			_, err := dc.getEntry(file, false)
+			if serr.IsErrorNotfound(err) {
+				removed[file] = true
+				continue
+			}
+
+			if err != nil {
+				return false, "", err
+			}
+		}
+
+		allRemoved := len(removed) == len(files)
+		return !allRemoved, "", nil
+	}, timed)
+
+	return err
+}
+
+
+func (dc *DirCache[E]) WaitEntriesN(n int, timed bool) (int, error) {
+	dc.Init()
+	if err := dc.checkErr(); err != nil {
+		return 0, err
+	}
+	if err := dc.waitEntriesCond(func(curr int) bool {
+		return curr >= n
+	}, timed); err != nil {
+		return 0, err
+	}
+	if dc.err != nil {
+		return 0, dc.err
+	}
+	return dc.dir.Len(), nil
+}
+
+func (dc *DirCache[E]) WaitGetEntriesN(n int, timed bool) ([]string, error) {
+	if _, err := dc.WaitEntriesN(n, timed); err != nil {
+		return nil, err
+	}
+	return dc.dir.Keys(), nil
+}
+
+func (dc *DirCache[E]) WaitEmpty(timed bool) error {
+	dc.Init()
+	if err := dc.checkErr(); err != nil {
+		return err
+	}
+	if err := dc.waitEntriesCond(func(curr int) bool {
+		return curr == 0
+	}, timed); err != nil {
+		return err
+	}
+	return nil
+}
+
+type Fcond func() (retry bool, entry string, err error)
+
+func (dc *DirCache[E]) waitCond(cond Fcond, timed bool) (string, error) {
+	db.DPrintf(dc.LSelector, "waitCond")
+	for {
+		// hacky check, ideally we would compare against the number of entries we had when
+		// cond() is being run but that makes cond() unwieldy
+		dc.RLock()
+		numEntries := dc.dir.Len()
+		dc.RUnlock()
+
+		retry, entry, err := cond()
+		if retry {
+			if err := dc.waitEntriesCond(func(curr int) bool {
+				return curr != numEntries
+			}, timed); err != nil {
+				return entry, err
+			}
+			continue
+		}
+		db.DPrintf(dc.LSelector, "Done waitCond %v %v", entry, err)
+
+		return entry, err
+	}
+}
+
+type FnentriesCond func(curr int) bool
+
+// waits until cond returns true
+func (dc *DirCache[E]) waitEntriesCond(cond FnentriesCond, timed bool) error {
 	const N = 2
 
 	dc.Lock()
@@ -261,7 +439,7 @@ func (dc *DirCache[E]) waitTimedEntriesN(n int) error {
 
 	nretry := 0
 	l := dc.dir.Len()
-	for dc.dir.Len() < n && dc.err == nil && nretry < N {
+	for !cond(dc.dir.Len()) && dc.err == nil && (!timed || nretry < N) {
 		dc.hasEntries.Wait()
 		if dc.dir.Len() == l { // nothing changed; watchdog timeout
 			nretry += 1
@@ -270,8 +448,13 @@ func (dc *DirCache[E]) waitTimedEntriesN(n int) error {
 		l = dc.dir.Len()
 		nretry = 0
 	}
-	if nretry >= N {
-		db.DPrintf(db.TEST, "waitTimedEntriesN: stop waiting %v", dc.LSelector)
+	if dc.err != nil {
+		db.DPrintf(dc.LSelector, "waitEntriesCond: error %v", dc.err)
+		return dc.err
+	}
+
+	if timed && nretry >= N {
+		db.DPrintf(db.TEST, "waitEntriesCond: timed out, stopped waiting %v", dc.LSelector)
 		return serr.NewErr(serr.TErrNotfound, "no entries")
 	}
 	return nil
@@ -286,69 +469,4 @@ func (dc *DirCache[E]) checkErr() error {
 		return dc.err
 	}
 	return nil
-}
-
-func (dc *DirCache[E]) initReadAndWatch() *dirreader.DirWatcher {
-	var initEnts []string
-	var dw *dirreader.DirWatcher
-
-	for dc.isDone.Load() == 0 {
-		var err error
-		initEnts, dw, err = dirreader.NewDirWatcherWithRead(dc.FsLib, dc.Path)
-		if err != nil {
-			if serr.IsErrorUnreachable(err) {
-				continue
-			} else {
-				dc.err = err
-				return nil
-			}
-		}
-
-		break
-	}
-
-	dc.Lock()
-	for _, ent := range initEnts {
-		dc.dir.InsertKey(ent)
-		if dc.ch != nil {
-			go func(ent string) {
-				dc.ch <- ent
-			}(ent)
-		}
-	}
-	if dc.dir.Len() > 0 {
-		dc.hasEntries.Broadcast()
-	}
-	dc.Unlock()
-
-	return dw
-}
-
-// Monitor for changes to the directory and update the cached one
-func (dc *DirCache[E]) watchDir(dw *dirreader.DirWatcher) {
-	for event := range dw.Events() {
-		dc.Lock()
-		var madeChange bool
-		switch event.Type {
-			case protsrv_proto.WatchEventType_CREATE:
-				madeChange = dc.dir.InsertKey(event.File)
-				if madeChange && dc.ch != nil {
-					go func(ent string) {
-						dc.ch <- ent
-					}(event.File)
-				}
-			case protsrv_proto.WatchEventType_REMOVE:
-				madeChange = dc.dir.Delete(event.File)
-				if madeChange {
-					dc.hasEntries.Broadcast()
-				}
-		}
-		dc.Unlock()
-		if dc.isDone.Load() != 0 {
-			break
-		}
-	}
-
-	db.DPrintf(db.ALWAYS, "watchDir: done, closing %v", dw)
-	dw.Close()
 }

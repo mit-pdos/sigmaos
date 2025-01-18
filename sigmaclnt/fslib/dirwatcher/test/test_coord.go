@@ -6,7 +6,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
-	"sigmaos/sigmaclnt/fslib/dirreader"
+	"sigmaos/sigmaclnt/fslib/dirwatcher"
 	"sigmaos/sigmap"
 	"sigmaos/util/rand"
 	"strconv"
@@ -93,21 +93,10 @@ func (c *TestCoord) Run() {
 		}(ix)
 	}
 
-	dirreader, err := dirreader.NewDirReader(c.FsLib, c.readyDir)
+	err := dirwatcher.WaitNEntries(c.FsLib, c.readyDir, c.nWorkers)
 	if err != nil {
-		db.DFatalf("Run: failed to create dir watcher for ready dir %v", err)
+		db.DFatalf("Run: failed to wait for all workers to be ready %v", err)
 	}
-	db.DPrintf(db.WATCH_TEST, "Run: waiting for %d workers", c.nWorkers)
-	err = dirreader.WaitNEntries(c.nWorkers)
-	if err != nil {
-		db.DFatalf("Run: failed to wait for all procs to be ready %v", err)
-	}
-	err = dirreader.Close()
-	db.DPrintf(db.WATCH_TEST, "Run: all workers ready")
-	if err != nil {
-		db.DFatalf("Run: failed to close watcher %v", err)
-	}
-
 	db.DPrintf(db.WATCH_TEST, "Run: creating %d files", c.nFiles)
 	sum := uint64(0)
 	for ix := 0; ix < c.nFiles; ix++ {

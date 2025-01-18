@@ -15,7 +15,7 @@ import (
 	mschedclnt "sigmaos/sched/msched/clnt"
 	"sigmaos/serr"
 	"sigmaos/sigmaclnt"
-	"sigmaos/sigmaclnt/fslib/dirreader"
+	"sigmaos/sigmaclnt/fslib/dirwatcher"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 	"sigmaos/util/coordination/semaphore"
@@ -404,7 +404,7 @@ func waitForRealmCreation(rootts *test.Tstate, realm sp.Trealm) error {
 		sp.UXREL,
 	}
 	for _, d := range dirs {
-		if err := dirreader.WaitCreate2(rootts.FsLib, filepath.Join(sp.REALMS, realm.String(), d)); err != nil {
+		if err := dirwatcher.WaitCreate(rootts.FsLib, filepath.Join(sp.REALMS, realm.String(), d)); err != nil {
 			return err
 		}
 	}
@@ -429,7 +429,7 @@ func waitForClnts(rootts *test.Tstate, n int) {
 	assert.True(rootts.T, err == nil || serr.IsErrCode(err, serr.TErrExists), "Error mkdir: %v", err)
 
 	// Wait for n - 1 clnts to register themselves.
-	err = dirreader.WaitNEntries(rootts.FsLib, clidir, n) // n - 1 + the semaphore
+	err = dirwatcher.WaitNEntries(rootts.FsLib, clidir, n) // n - 1 + the semaphore
 	assert.Nil(rootts.T, err, "Err WaitNentries: %v", err)
 	sts, err := rootts.GetDir(clidir)
 	assert.Nil(rootts.T, err, "Err GetDir: %v", err)

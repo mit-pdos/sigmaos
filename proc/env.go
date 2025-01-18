@@ -28,7 +28,7 @@ const (
 )
 
 const (
-	DIRREADER_VERSION = "DIRREADER_VERSION"
+	dirwatcher_VERSION = "dirwatcher_VERSION"
 )
 
 type ProcEnv struct {

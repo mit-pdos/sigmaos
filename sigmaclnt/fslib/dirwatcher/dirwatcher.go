@@ -1,4 +1,4 @@
-package dirreader
+package dirwatcher
 
 import (
 	"bufio"
@@ -22,6 +22,16 @@ type DirWatcher struct {
 	closed atomic.Bool
 	reader *bufio.Reader
 	watchFd int
+}
+
+type watchReader struct {
+	*fslib.FsLib
+	watchFd int
+}
+
+func (wr watchReader) Read(p []byte) (int, error) {
+	size, err := wr.FsLib.Read(wr.watchFd, p)
+	return int(size), err
 }
 
 func NewDirWatcher(fslib *fslib.FsLib, pn string, fd int) (*DirWatcher, error) {
@@ -161,6 +171,39 @@ func (dr *DirWatcher) Events() <-chan *protsrv_proto.WatchEvent {
 	return dr.ch
 }
 
+func WaitEmpty(fsl *fslib.FsLib, pn string) error {
+	return waitCond(fsl, pn, func(ents map[string]bool) bool {
+		return len(ents) == 0
+	})
+}
+
+func WaitNEntries(fsl *fslib.FsLib, pn string, n int) error {
+	return waitCond(fsl, pn, func(ents map[string]bool) bool {
+		return len(ents) >= n
+	})
+}
+
+func WaitCreate(fsl *fslib.FsLib, pn string) error {
+	dir := filepath.Dir(pn) + "/"
+	f := filepath.Base(pn)
+
+	return waitCond(fsl, dir, func(ents map[string]bool) bool {
+		return ents[f]
+	})
+}
+
+func WaitRemove(fsl *fslib.FsLib, pn string) error {
+	dir := filepath.Dir(pn) + "/"
+	f := filepath.Base(pn)
+
+	db.DPrintf(db.WATCH, "WaitRemove2: waiting for %s to be removed", pn)
+
+	return waitCond(fsl, dir, func(ents map[string]bool) bool {
+		db.DPrintf(db.WATCH, "WaitRemove2: checking if %s is removed %v", pn, ents)
+		return !ents[f]
+	})
+}
+
 func waitCond(fsl *fslib.FsLib, pn string, cond func(map[string]bool) bool) error {
 	var dw *DirWatcher
 	var ents map[string]bool
@@ -206,42 +249,9 @@ func waitCond(fsl *fslib.FsLib, pn string, cond func(map[string]bool) bool) erro
 		}
 
 		if cond(ents) {
-			return nil
+			return dw.Close()
 		}
 	}
 
 	return serr.NewErr(serr.TErrClosed, "watch closed before cond was met")
-}
-
-func WaitEmpty(fsl *fslib.FsLib, pn string) error {
-	return waitCond(fsl, pn, func(ents map[string]bool) bool {
-		return len(ents) == 0
-	})
-}
-
-func WaitNEntries(fsl *fslib.FsLib, pn string, n int) error {
-	return waitCond(fsl, pn, func(ents map[string]bool) bool {
-		return len(ents) >= n
-	})
-}
-
-func WaitCreate2(fsl *fslib.FsLib, pn string) error {
-	dir := filepath.Dir(pn) + "/"
-	f := filepath.Base(pn)
-
-	return waitCond(fsl, dir, func(ents map[string]bool) bool {
-		return ents[f]
-	})
-}
-
-func WaitRemove2(fsl *fslib.FsLib, pn string) error {
-	dir := filepath.Dir(pn) + "/"
-	f := filepath.Base(pn)
-
-	db.DPrintf(db.WATCH, "WaitRemove2: waiting for %s to be removed", pn)
-
-	return waitCond(fsl, dir, func(ents map[string]bool) bool {
-		db.DPrintf(db.WATCH, "WaitRemove2: checking if %s is removed %v", pn, ents)
-		return !ents[f]
-	})
 }

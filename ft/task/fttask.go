@@ -10,8 +10,9 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/serr"
 	"sigmaos/sigmaclnt/fslib"
-	"sigmaos/sigmaclnt/fslib/dirreader"
+	"sigmaos/sigmaclnt/fslib/dirwatcher"
 	sp "sigmaos/sigmap"
+	protsrv_proto "sigmaos/spproto/srv/proto"
 	rd "sigmaos/util/rand"
 )
 
@@ -201,24 +202,57 @@ func (ft *FtTasks) RecoverTasks() (int, error) {
 	return n, err
 }
 
+func (ft *FtTasks) renameTodoToWip(files []string) ([]string, error) {
+	var r error
+	newents := make([]string, 0)
+
+	for _, file := range files {
+		if err := ft.Rename(filepath.Join(ft.todo, file), filepath.Join(ft.wip, file)); err == nil {
+			newents = append(newents, file)
+		} else if serr.IsErrCode(err, serr.TErrUnreachable) { // partitioned?
+			r = err
+			break
+		}
+	}
+	return newents, r
+}
+
 func (ft *FtTasks) WaitForTasks() ([]string, error) {
-	dr, err := dirreader.NewDirReader(ft.FsLib, ft.todo)
+	ents, dw, err := dirwatcher.NewDirWatcherWithRead(ft.FsLib, ft.todo)
+	defer dw.Close()
+
 	if err != nil {
 		return nil, err
 	}
-	fns, err := dr.WatchNewEntriesAndRename(ft.wip)
-	if err != nil {
-		return nil, err
+
+	for {
+		renamed, err := ft.renameTodoToWip(ents)
+		if err != nil {
+			return nil, err
+		}
+		if len(renamed) > 0 {
+			return renamed, nil
+		}
+
+		for event := range dw.Events() {
+			if event.Type == protsrv_proto.WatchEventType_CREATE {
+				ents = []string{event.File}
+				break
+			}
+		}
 	}
-	return fns, nil
 }
 
 func (ft *FtTasks) AcquireTasks() ([]string, error) {
-	dr, err := dirreader.NewDirReader(ft.FsLib, ft.todo)
+	ents := make([]string, 0)
+	sts, err := ft.GetDir(ft.todo)
 	if err != nil {
 		return nil, err
 	}
-	return dr.GetEntriesAndRename(ft.wip)
+	for _, ent := range sts {
+		ents = append(ents, ent.Name)
+	}
+	return ft.renameTodoToWip(ents)
 }
 
 // Read tasks by reading file in one shot

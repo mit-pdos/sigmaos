@@ -5,7 +5,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/proc"
-	drtest "sigmaos/sigmaclnt/fslib/dirreader/test"
+	drtest "sigmaos/sigmaclnt/fslib/dirwatcher/test"
 	"sigmaos/util/perf"
 )
 

@@ -285,7 +285,7 @@ func TestPartitionNamed(t *testing.T) {
 	assert.Nil(t, err)
 
 	// give the first named chance to partition
-	time.Sleep(time.Duration(e.Start+e.MaxInterval) * time.Millisecond)
+	time.Sleep(time.Duration(e.Start+e.MaxInterval+e.Delay) * time.Millisecond)
 
 	// wait until session times out
 	time.Sleep(sp.EtcdSessionTTL * time.Second)

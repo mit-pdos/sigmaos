@@ -28,6 +28,7 @@ type DirCache[E any] struct {
 	isDone        atomic.Uint64
 	initState     atomic.Uint64 // 0 = not initialized, 1 = initializing, 2 = initialized
 	initWait      sync.WaitGroup
+	version       uint64
 	Path          string
 	LSelector     db.Tselector
 	ESelector     db.Tselector
@@ -63,23 +64,28 @@ func (dc *DirCache[E]) Init() {
 	}
 
 	if dc.initState.CompareAndSwap(0, 1) {
-		dc.initWait.Add(1)
-
-		dw := dc.initReadAndWatch()
-		if dw == nil {
-			return
-		}
-		go dc.watchDir(dw)
-		go dc.watchdog()
-
-		dc.initState.Store(2)
-		dc.initWait.Done()
+		dc.doInit()
 	} else {
+		// another thread is init, wait until they finish
 		dc.initWait.Wait()
 	}
 }
 
-func (dc *DirCache[E]) initReadAndWatch() *dirwatcher.DirWatcher {
+func (dc *DirCache[E]) doInit() {
+	dc.initWait.Add(1)
+
+	dw := dc.readDirAndWatch()
+	if dw == nil {
+		return
+	}
+	go dc.watchDir(dw)
+	go dc.watchdog()
+
+	dc.initState.Store(2)
+	dc.initWait.Done()
+}
+
+func (dc *DirCache[E]) readDirAndWatch() *dirwatcher.DirWatcher {
 	var initEnts []string
 	var dw *dirwatcher.DirWatcher
 
@@ -107,12 +113,15 @@ func (dc *DirCache[E]) initReadAndWatch() *dirwatcher.DirWatcher {
 			}(ent)
 		}
 	}
+	dc.version += 1
 	if dc.dir.Len() > 0 {
 		dc.hasEntries.Broadcast()
 	}
 	dc.Unlock()
 
-	db.DPrintf(dc.LSelector, "initReadAndWatch: %v", dc.dir.Keys())
+	if db.WillBePrinted(dc.LSelector) {
+		db.DPrintf(dc.LSelector, "readDirAndWatch: %v", dc.dir.Keys())
+	}
 
 	return dw
 }
@@ -135,6 +144,7 @@ func (dc *DirCache[E]) watchDir(dw *dirwatcher.DirWatcher) {
 		}
 		if madeChange {
 			dc.hasEntries.Broadcast()
+			dc.version += 1
 		}
 		dc.Unlock()
 		if dc.isDone.Load() != 0 {
@@ -142,7 +152,15 @@ func (dc *DirCache[E]) watchDir(dw *dirwatcher.DirWatcher) {
 		}
 	}
 
-	dw.Close()
+	// if watch got interrupted not due to a dircache error, reset watcher
+	if dc.isDone.Load() == 0 && dc.err == nil {
+		db.DPrintf(dc.LSelector, "watchDir: restarting watcher")
+		dw.Close()
+		dc.initState.Store(1)
+		dc.doInit()
+	} else {
+		dw.Close()
+	}
 }
 
 // watchdog thread that wakes up waiters periodically
@@ -174,30 +192,36 @@ func (dc *DirCache[E]) GetEntries() ([]string, error) {
 	return dc.dir.Keys(), nil
 }
 
-func (dc *DirCache[E]) getEntry(n string, alloc bool) (E, error) {
+func (dc *DirCache[E]) getEntry(n string, alloc bool) (E, uint64, error) {
 	db.DPrintf(dc.LSelector, "GetEntry for %v", n)
 	dc.Init()
 
 	if err := dc.checkErr(); err != nil {
 		var e E
 		db.DPrintf(dc.LSelector, "Done GetEntry for %v err %v", n, err)
-		return e, err
+		return e, 0, err
 	}
 	var err error
+
+	dc.Lock()
+	version := dc.version
 	kok, e, vok := dc.dir.LookupKeyVal(n)
+	dc.Unlock()
+
 	if !kok {
 		db.DPrintf(dc.LSelector, "Done GetEntry for %v kok %v", n, kok)
-		return e, serr.NewErr(serr.TErrNotfound, n)
+		return e, version, serr.NewErr(serr.TErrNotfound, n)
 	}
 	if !vok && alloc {
 		e, err = dc.allocVal(n)
 	}
 	db.DPrintf(dc.LSelector, "Done GetEntry for %v e %v err %v", n, e, err)
-	return e, err
+	return e, version, err
 }
 
 func (dc *DirCache[E]) GetEntry(n string) (E, error) {
-	return dc.getEntry(n, true)
+	ent, _, err := dc.getEntry(n, true)
+	return ent, err
 }
 
 func (dc *DirCache[E]) InvalidateEntry(name string) bool {
@@ -244,7 +268,7 @@ func (dc *DirCache[E]) LookupEntry(n string) error {
 	return err
 }
 
-func (dc *DirCache[E]) RandomEntry() (string, error) {
+func (dc *DirCache[E]) randomEntry() (string, uint64, error) {
 	var n string
 	var ok bool
 
@@ -252,19 +276,24 @@ func (dc *DirCache[E]) RandomEntry() (string, error) {
 	dc.Init()
 
 	if err := dc.checkErr(); err != nil {
-		return "", err
+		return "", 0, err
 	}
 	defer func(n *string) {
 		db.DPrintf(dc.LSelector, "Done Random %v %t", *n, ok)
 	}(&n)
+
+	dc.Lock()
+	version := dc.version
 	n, ok = dc.dir.Random()
+	dc.Unlock()
+
 	if !ok {
-		return "", serr.NewErr(serr.TErrNotfound, "no random entry")
+		return "", version, serr.NewErr(serr.TErrNotfound, "no random entry")
 	}
-	return n, nil
+	return n, version, nil
 }
 
-func (dc *DirCache[E]) RoundRobin() (string, error) {
+func (dc *DirCache[E]) roundRobin() (string, uint64, error) {
 	var n string
 	var ok bool
 
@@ -272,128 +301,145 @@ func (dc *DirCache[E]) RoundRobin() (string, error) {
 	dc.Init()
 
 	if err := dc.checkErr(); err != nil {
-		return "", err
+		return "", 0, err
 	}
 
 	defer func(n *string) {
 		db.DPrintf(dc.LSelector, "Done RoundRobin %v %t", *n, ok)
 	}(&n)
 
+	dc.Lock()
+	version := dc.version
 	n, ok = dc.dir.RoundRobin()
-	if !ok {
-		return "", serr.NewErr(serr.TErrNotfound, "no next entry")
-	}
-	return n, nil
-}
+	dc.Unlock()
 
-func wrapEntrySelector(f func() (string, error)) func() (bool, string, error) {
-	return func() (bool, string, error) {
-		n, err := f()
-		return serr.IsErrorNotfound(err), n, err
+	if !ok {
+		return "", version, serr.NewErr(serr.TErrNotfound, "no next entry")
 	}
+	return n, version, nil
 }
 
 func (dc *DirCache[E]) WaitTimedRandomEntry() (string, error) {
-	dc.Init()
-	return dc.waitCond(wrapEntrySelector(dc.RandomEntry), true)
+	var entry string
+	err := dc.waitCond(func() (bool, uint64, error) {
+		var version uint64
+		var err error
+
+		entry, version, err = dc.randomEntry()
+		return serr.IsErrorNotfound(err), version, err
+	}, true)
+
+	return entry, err
 }
 
 func (dc *DirCache[E]) WaitTimedRoundRobin() (string, error) {
-	dc.Init()
-	return dc.waitCond(wrapEntrySelector(dc.RoundRobin), true)
+	var entry string
+	err := dc.waitCond(func() (bool, uint64, error) {
+		var version uint64
+		var err error
+
+		entry, version, err = dc.roundRobin()
+		return serr.IsErrorNotfound(err), version, err
+	}, true)
+
+	return entry, err
 }
 
 func (dc *DirCache[E]) WaitEntryCreated(file string, timed bool) (error) {
-	dc.Init()
-	_, err := dc.waitCond(wrapEntrySelector(func() (string, error) {
-		_, err := dc.getEntry(file, false)
-		return file, err
-	}), timed)
+	return dc.waitCond(func() (bool, uint64, error) {
+		var version uint64
+		var err error
 
-	return err
+		_, version, err = dc.getEntry(file, false)
+		return serr.IsErrorNotfound(err), version, err
+	}, true)
 }
 
 func (dc *DirCache[E]) WaitAllEntriesCreated(files []string, timed bool) (error) {
-	dc.Init()
 	added := make(map[string]bool)
-	_, err := dc.waitCond(func() (bool, string, error) {
+	return dc.waitCond(func() (bool, uint64, error) {
+		var firstVersion = uint64(0)
+
 		for _, file := range files {
 			if _, ok := added[file]; ok {
 				continue
 			}
-			_, err := dc.getEntry(file, false)
+
+			_, version, err := dc.getEntry(file, false)
+			if firstVersion == 0 {
+				firstVersion = version
+			}
+
 			if err == nil {
 				added[file] = true
 				continue
 			}
 
 			if !serr.IsErrorNotfound(err) {
-				return false, "", err
+				return false, 0, err
 			}
 		}
 
 		allAdded := len(added) == len(files)
-		return !allAdded, "", nil
+		return !allAdded, firstVersion, nil
 	}, timed)
-
-	return err
 }
 
 func (dc *DirCache[E]) WaitEntryRemoved(file string, timed bool) (error) {
-	dc.Init()
-	_, err := dc.waitCond(wrapEntrySelector(func() (string, error) {
-		_, err := dc.getEntry(file, false)
+	return dc.waitCond(func() (bool, uint64, error) {
+		var version uint64
+		var err error
+
+		_, version, err = dc.getEntry(file, false)
+
 		if serr.IsErrorNotfound(err) {
-			return file, nil
+			return false, version, nil
 		}
 
-		return file, err
-	}), timed)
-
-	return err
+		return true, version, err
+	}, true)
 }
 
 func (dc *DirCache[E]) WaitAllEntriesRemoved(files []string, timed bool) (error) {
-	dc.Init()
 	removed := make(map[string]bool)
-	_, err := dc.waitCond(func() (bool, string, error) {
+	return dc.waitCond(func() (bool, uint64, error) {
+		var firstVersion = uint64(0)
+
 		for _, file := range files {
 			if _, ok := removed[file]; ok {
 				continue
 			}
-			_, err := dc.getEntry(file, false)
+
+			_, version, err := dc.getEntry(file, false)
+			if firstVersion == 0 {
+				firstVersion = version
+			}
+
 			if serr.IsErrorNotfound(err) {
 				removed[file] = true
 				continue
 			}
 
 			if err != nil {
-				return false, "", err
+				return false, 0, err
 			}
 		}
 
 		allRemoved := len(removed) == len(files)
-		return !allRemoved, "", nil
+		return !allRemoved, firstVersion, nil
 	}, timed)
-
-	return err
 }
 
 
 func (dc *DirCache[E]) WaitEntriesN(n int, timed bool) (int, error) {
-	dc.Init()
-	if err := dc.checkErr(); err != nil {
-		return 0, err
-	}
-	if err := dc.waitEntriesCond(func(curr int) bool {
-		return curr >= n
-	}, timed); err != nil {
-		return 0, err
-	}
-	if dc.err != nil {
-		return 0, dc.err
-	}
-	return dc.dir.Len(), nil
+	return dc.dir.Len(), dc.waitCond(func() (bool, uint64, error) {
+		dc.Lock()
+		numFiles := dc.dir.Len()
+		version := dc.version
+		dc.Unlock()
+
+		return numFiles < n, version, nil
+	}, timed)
 }
 
 func (dc *DirCache[E]) WaitGetEntriesN(n int, timed bool) ([]string, error) {
@@ -404,64 +450,45 @@ func (dc *DirCache[E]) WaitGetEntriesN(n int, timed bool) ([]string, error) {
 }
 
 func (dc *DirCache[E]) WaitEmpty(timed bool) error {
-	dc.Init()
-	if err := dc.checkErr(); err != nil {
-		return err
-	}
-	if err := dc.waitEntriesCond(func(curr int) bool {
-		return curr == 0
-	}, timed); err != nil {
-		return err
-	}
-	return nil
+	return dc.waitCond(func() (bool, uint64, error) {
+		dc.Lock()
+		numFiles := dc.dir.Len()
+		version := dc.version
+		dc.Unlock()
+
+		return numFiles > 0, version, nil
+	}, timed)
 }
 
-type Fcond func() (retry bool, entry string, err error)
+type Fcond func() (retry bool, version uint64, err error)
 
-func (dc *DirCache[E]) waitCond(cond Fcond, timed bool) (string, error) {
-	db.DPrintf(dc.LSelector, "waitCond")
+func (dc *DirCache[E]) waitCond(cond Fcond, timed bool) (error) {
+	dc.Init()
 	for {
-		// hacky check, ideally we would compare against the number of entries we had when
-		// cond() is being run but that makes cond() unwieldy
-		dc.RLock()
-		numEntries := dc.dir.Len()
-		dc.RUnlock()
-
-		retry, entry, err := cond()
+		retry, version, err := cond()
 		if retry {
-			if err := dc.waitEntriesCond(func(curr int) bool {
-				return curr != numEntries
-			}, timed); err != nil {
-				return entry, err
+			if err := dc.waitChange(timed, version); err != nil {
+				return err
 			}
 			continue
 		}
-		db.DPrintf(dc.LSelector, "Done waitCond %v %v", entry, err)
 
-		return entry, err
+		return err
 	}
 }
 
-type FnentriesCond func(curr int) bool
-
-// waits until cond returns true
-func (dc *DirCache[E]) waitEntriesCond(cond FnentriesCond, timed bool) error {
+func (dc *DirCache[E]) waitChange(timed bool, startVersion uint64) error {
 	const N = 2
 
 	dc.Lock()
 	defer dc.Unlock()
 
 	nretry := 0
-	l := dc.dir.Len()
-	for !cond(dc.dir.Len()) && dc.err == nil && (!timed || nretry < N) {
+	for dc.version == startVersion && dc.err == nil && (!timed || nretry < N) {
 		dc.hasEntries.Wait()
-		if dc.dir.Len() == l { // nothing changed; watchdog timeout
-			nretry += 1
-			continue
-		}
-		l = dc.dir.Len()
-		nretry = 0
+		nretry += 1
 	}
+
 	if dc.err != nil {
 		db.DPrintf(dc.LSelector, "waitEntriesCond: error %v", dc.err)
 		return dc.err
@@ -471,7 +498,7 @@ func (dc *DirCache[E]) waitEntriesCond(cond FnentriesCond, timed bool) error {
 		db.DPrintf(db.TEST, "waitEntriesCond: timed out, stopped waiting %v", dc.LSelector)
 		return serr.NewErr(serr.TErrNotfound, "no entries")
 	}
-	return nil
+	return nil	
 }
 
 func (dc *DirCache[E]) checkErr() error {

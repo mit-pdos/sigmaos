@@ -58,7 +58,6 @@ func runTest(t *testing.T, f func(*testing.T, *test.Tstate, *dircache.DirCache[s
 		testdir := filepath.Join(sp.NAMED, "test")
 		err = ts.MkDir(testdir, 0777)
 		assert.Nil(t, err)
-		db.DPrintf(db.ALWAYS, "testdir: %s created", testdir)
 
 		dc := dircache.NewDirCache[struct{}](ts.FsLib, testdir, nil, nil, db.TEST, db.TEST)
 

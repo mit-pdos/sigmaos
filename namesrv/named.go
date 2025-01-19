@@ -212,7 +212,7 @@ func (nd *Named) newSrv() (*sp.Tendpoint, error) {
 	if nd.realm == sp.ROOTREALM {
 		addr = sp.NewTaddr(ip, sp.INNER_CONTAINER_IP, sp.NO_PORT)
 		// Allow all realms to attach to dirs mounted from the root named, as well as RPC dir, since it is needed to take out leases
-		allowedDirs := []string{rpc.RPC}
+		allowedDirs := []string{rpc.RPC, sp.REALMSREL}
 		for s, _ := range sp.RootNamedMountedDirs {
 			allowedDirs = append(allowedDirs, s)
 		}

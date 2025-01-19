@@ -72,14 +72,6 @@ cp -r cpython3.11/Lib $OUTPATH/user
 echo "/~~/Lib" > $OUTPATH/user/python._pth
 echo -e "home = /~~\ninclude-system-site-packages = false\nversion = 3.11.10" > $OUTPATH/user/pyvenv.cfg
 
-# Hardcode superset
-mkdir $OUTPATH/kernel/superlib
-PACKAGES="$(find $OUTPATH/kernel/Lib/ -mindepth 1 -maxdepth 1 -name '*' | awk -F '/' '{print $NF}')"
-for pkg in $PACKAGES; do
-  touch $OUTPATH/kernel/superlib/$pkg
-done
-touch $OUTPATH/kernel/superlib/numpy
-
 # Copy and inject Python libs
 # cp ./pylib/splib.py Python-3.11.0/Lib
 # cp Python-3.11.0/Lib $OUTPATH/kernel/pylib -r

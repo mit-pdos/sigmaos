@@ -1,4 +1,3 @@
-import numpy
+import dummy_package
 
-arr = numpy.array([1, 2, 3])
-print(arr)
+dummy_package.sayHi()

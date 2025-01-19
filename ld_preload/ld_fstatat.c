@@ -28,7 +28,10 @@ const char* get_path(const char *filename)
 
         write(sfd, "pb", 2);
         write(sfd, "\n", 1);
-        read(sfd, x2, 2);
+        read(sfd, x2, 1);
+        while(x2[0] != 'd') {
+            read(sfd, x2, 1);
+        }
 
         init_done = 1;
     }

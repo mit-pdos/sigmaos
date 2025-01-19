@@ -99,6 +99,8 @@ func (pps *PyProxySrv) fetchLib(libName string) {
 		return
 	}
 
+	db.DPrintf(db.PYPROXYSRV, "Finished fetching %v", libName)
+
 	return
 }
 
@@ -122,6 +124,13 @@ func (pps *PyProxySrv) handleNewConn(conn *net.UnixConn) {
 			// Initialization
 			db.DPrintf(db.PYPROXYSRV, "reader: received initialization request\n", err)
 
+			// Set up superlib dummy directory
+			superlibPath := "/tmp/python/superlib"
+			err := os.MkdirAll(superlibPath, 0777)
+			if err != nil {
+				db.DPrintf(db.PYPROXYSRV_ERR, "reader: err creating superlib %v\n", err)
+			}
+
 			// Record contents at the Lib directory
 			libFiles, err := os.ReadDir("/tmp/python/Lib")
 			if err != nil {
@@ -131,8 +140,19 @@ func (pps *PyProxySrv) handleNewConn(conn *net.UnixConn) {
 
 			for _, file := range libFiles {
 				db.DPrintf(db.PYPROXYSRV, "reader: Lib: %v\n", file.Name())
+				err = os.MkdirAll(filepath.Join(superlibPath, file.Name()), 0777)
 				libContents[file.Name()] = true
 			}
+
+			// Add all libraries in the S3 bucket to superlib
+			pn := filepath.Join(sp.NAMED, "s3", "~any", "ivy-tutorial-test")
+			_, err = pps.sc.ProcessDir(pn, func(st *sp.Tstat) (bool, error) {
+				err := os.MkdirAll(filepath.Join(superlibPath, st.Name), 0777)
+				if err != nil {
+					return false, err
+				}
+				return false, nil
+			})
 		} else if reqPrefix == "pf" {
 			// Searching for Python file
 			if strings.HasPrefix(reqPath, "/Lib") {

@@ -27,6 +27,7 @@ func main() {
 type Spinner struct {
 	*sigmaclnt.SigmaClnt
 	outdir string
+	done   bool
 }
 
 func NewSpinner(args []string) (*Spinner, error) {
@@ -43,15 +44,10 @@ func NewSpinner(args []string) (*Spinner, error) {
 
 	db.DPrintf(db.SPINNER, "NewSpinner: %v\n", args)
 
-	li, err := sc.LeaseClnt.AskLease(s.outdir, fsetcd.LeaseTTL)
-	if err != nil {
-		return nil, err
-	}
-	li.KeepExtending()
-
-	if _, err := s.PutLeasedFile(path.Join(s.outdir, s.ProcEnv().GetPID().String()), 0777, sp.OWRITE, li.Lease(), []byte{}); err != nil {
-		db.DFatalf("NewFile error: %v", err)
-	}
+	ch := make(chan bool)
+	// Start a goroutine to create the leased file
+	go s.putFileWatch(ch)
+	<-ch
 
 	err = s.Started()
 	if err != nil {
@@ -60,11 +56,32 @@ func NewSpinner(args []string) (*Spinner, error) {
 	return s, nil
 }
 
+func (s *Spinner) putFileWatch(ch chan bool) {
+	li, err := s.LeaseClnt.AskLease(s.outdir, fsetcd.LeaseTTL)
+	if err != nil {
+		db.DFatalf("Error AskLease: %v", err)
+	}
+	li.KeepExtending()
+
+	pn := path.Join(s.outdir, s.ProcEnv().GetPID().String())
+	if _, err := s.PutLeasedFile(pn, 0777, sp.OWRITE, li.Lease(), []byte{}); err != nil {
+		db.DFatalf("NewFile error: %v", err)
+	}
+	ch <- true
+	close(ch)
+	// Wait for the leased file to be removed:55
+
+	if err := s.WaitRemove(pn); err != nil && !s.done {
+		db.DFatalf("Err WaitRemove %v: %v", pn, err)
+	}
+}
+
 func (s *Spinner) waitEvict() {
 	err := s.WaitEvict(s.ProcEnv().GetPID())
 	if err != nil {
 		db.DFatalf("Error WaitEvict: %v", err)
 	}
+	s.done = true
 	// Remove file
 	s.Remove(path.Join(s.outdir, s.ProcEnv().GetPID().String()))
 	s.ClntExit(proc.NewStatus(proc.StatusEvicted))

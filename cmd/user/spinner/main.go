@@ -64,6 +64,8 @@ func (s *Spinner) putFileWatch(ch chan bool) {
 	li.KeepExtending()
 
 	pn := path.Join(s.outdir, s.ProcEnv().GetPID().String())
+	// Remove file in case it already exists
+	s.Remove(pn)
 	if _, err := s.PutLeasedFile(pn, 0777, sp.OWRITE, li.Lease(), []byte{}); err != nil {
 		db.DFatalf("NewFile error: %v", err)
 	}

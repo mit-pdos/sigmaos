@@ -1044,8 +1044,9 @@ func TestMaintainReplicationLevelCrashMSchedXXX(t *testing.T) {
 
 	// Make sure they spawned correctly.
 	st, err := ts.GetDir(OUTDIR)
-	assert.Nil(t, err, "readdir1")
-	assert.Equal(t, N_REPL, len(st), "wrong num spinners check #1")
+	if assert.Nil(t, err, "readdir1 err: %v", err) {
+		assert.Equal(t, N_REPL, len(st), "wrong num spinners check #1")
+	}
 	db.DPrintf(db.TEST, "Get OutDir")
 
 	err = crash.SignalFailer(ts.Ts.FsLib, fn0)
@@ -1056,7 +1057,7 @@ func TestMaintainReplicationLevelCrashMSchedXXX(t *testing.T) {
 
 	// Make sure they spawned correctly.
 	st, err = ts.GetDir(OUTDIR)
-	if assert.Nil(t, err, "readdir1 err: %v", err) {
+	if assert.Nil(t, err, "readdir2 err: %v", err) {
 		assert.Equal(t, N_REPL, len(st), "wrong num spinners check #2 %v", sp.Names(st))
 	}
 	db.DPrintf(db.TEST, "Got out dir again")
@@ -1069,7 +1070,7 @@ func TestMaintainReplicationLevelCrashMSchedXXX(t *testing.T) {
 
 	// Make sure they spawned correctly.
 	st, err = ts.GetDir(OUTDIR)
-	if assert.Nil(t, err, "readdir2 err: %v", err) {
+	if assert.Nil(t, err, "readdir3 err: %v", err) {
 		assert.Equal(t, N_REPL, len(st), "wrong num spinners check #3")
 	}
 	db.DPrintf(db.TEST, "Got out dir 3")

@@ -28,6 +28,7 @@ func (lm *LeasedMap) Insert(pn string, lid sp.TleaseId) {
 
 	_, ok := lm.pns[pn]
 	if ok {
+		db.DPrintf(db.ERROR, "Insert %v exists %q\n", pn, lm.pns)
 		db.DFatalf("Insert %v exists %q\n", pn, lm.pns)
 	}
 	lm.pns[pn] = lid

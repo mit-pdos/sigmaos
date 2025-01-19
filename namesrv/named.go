@@ -158,7 +158,12 @@ func Run(args []string) error {
 	} else {
 		pn = filepath.Join(sp.REALMS, nd.realm.String())
 		db.DPrintf(db.ALWAYS, "NewEndpointSymlink %v %v lid %v", nd.realm, pn, nd.sess.Lease())
-		if err := nd.MkLeasedEndpoint(pn, ep, nd.sess.Lease()); err != nil {
+		li, err := sc.LeaseClnt.AskLease(pn, fsetcd.LeaseTTL)
+		if err != nil {
+			db.DFatalf("Error AskLease %v: %v", pn, err)
+		}
+		li.KeepExtending()
+		if err := nd.MkLeasedEndpoint(pn, ep, li.Lease()); err != nil {
 			db.DFatalf("MkEndpointFile %v at %v err %v", nd.realm, pn, err)
 			db.DPrintf(db.NAMED, "MkEndpointFile %v at %v err %v", nd.realm, pn, err)
 			return err

@@ -54,21 +54,29 @@ func (pgm *ProcGroupMgr) String() string {
 }
 
 type ProcGroupMgrConfig struct {
-	Program   string
-	Args      []string
-	Job       string
-	Mcpu      proc.Tmcpu
-	NReplicas int
+	Program     string
+	Args        []string
+	Job         string
+	Mcpu        proc.Tmcpu
+	NReplicas   int
+	RealmSwitch sp.Trealm
+	DialProxy   bool
 }
 
 // If n == 0, run only one member (i.e., no hot standby's or replication)
 func NewGroupConfig(n int, bin string, args []string, mcpu proc.Tmcpu, job string) *ProcGroupMgrConfig {
+	return NewGroupConfigRealmSwitch(n, bin, args, mcpu, job, sp.Trealm(sp.NOT_SET), true)
+}
+
+func NewGroupConfigRealmSwitch(n int, bin string, args []string, mcpu proc.Tmcpu, job string, realmSwitch sp.Trealm, dialproxy bool) *ProcGroupMgrConfig {
 	return &ProcGroupMgrConfig{
-		NReplicas: n,
-		Program:   bin,
-		Args:      append([]string{job}, args...),
-		Mcpu:      mcpu,
-		Job:       job,
+		NReplicas:   n,
+		Program:     bin,
+		Args:        append([]string{job}, args...),
+		Mcpu:        mcpu,
+		Job:         job,
+		RealmSwitch: realmSwitch,
+		DialProxy:   dialproxy,
 	}
 }
 
@@ -156,6 +164,10 @@ func newMember(sc *sigmaclnt.SigmaClnt, cfg *ProcGroupMgrConfig, id int) *member
 func (m *member) spawnL() error {
 	p := proc.NewProc(m.Program, m.Args)
 	p.SetMcpu(m.Mcpu)
+	if m.RealmSwitch != sp.NOT_SET {
+		p.SetRealmSwitch(m.RealmSwitch)
+		p.GetProcEnv().UseDialProxy = m.DialProxy
+	}
 
 	p.AppendEnv(proc.SIGMAFAIL, proc.GetSigmaFail())
 	p.AppendEnv(proc.SIGMAGEN, strconv.Itoa(m.gen))

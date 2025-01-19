@@ -19,7 +19,6 @@ import (
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
 	spprotosrv "sigmaos/spproto/srv"
-	"sigmaos/util/coordination/semaphore"
 	"sigmaos/util/crash"
 	"sigmaos/util/perf"
 )
@@ -93,6 +92,9 @@ func Run(args []string) error {
 		if err := sc.MountTree(rootEP, sp.REALMREL, sp.REALM); err != nil {
 			db.DFatalf("Err MountTree realm: ep %v err %v", rootEP, err)
 		}
+		if err := sc.MountTree(rootEP, sp.REALMSREL, sp.REALMS); err != nil {
+			db.DFatalf("Err MountTree realm: ep %v err %v", rootEP, err)
+		}
 		// Must manually mount scheduler dirs, since they will be automatically
 		// scanned by msched-/procq-/lcsched- clnts as soon as the procclnt is
 		// created, but this named won't have posted its endpoint in the namespace
@@ -111,23 +113,6 @@ func Run(args []string) error {
 	// Now that the scheduler dirs are mounted, create a procclnt
 	if err := nd.SigmaClnt.NewProcClnt(); err != nil {
 		db.DFatalf("Error make procclnt: %v", err)
-	}
-
-	pn := filepath.Join(sp.REALMS, nd.realm.String()) + ".sem"
-	sem := semaphore.NewSemaphore(nd.FsLib, pn)
-	if nd.realm != sp.ROOTREALM {
-		// create semaphore to signal realmd when we are the leader
-		// and ready to serve requests.  realmd downs this semaphore.
-		li, err := sc.LeaseClnt.AskLease(pn, fsetcd.LeaseTTL)
-		if err != nil {
-			db.DFatalf("Error AskLease: %v", err)
-			return err
-		}
-		li.KeepExtending()
-		if err := sem.InitLease(0777, li.Lease()); err != nil {
-			db.DFatalf("Error InitLease: %v", err)
-			return err
-		}
 	}
 
 	if err := nd.Started(); err != nil {
@@ -161,7 +146,7 @@ func Run(args []string) error {
 
 	db.DPrintf(db.NAMED_LDR, "newSrv %v ep %v", nd.realm, ep)
 
-	pn = sp.NAMED
+	pn := sp.NAMED
 	if nd.realm == sp.ROOTREALM {
 		// Allow connections from all realms, so that realms can mount the kernel
 		// service union directories
@@ -174,16 +159,11 @@ func Run(args []string) error {
 		pn = filepath.Join(sp.REALMS, nd.realm.String())
 		db.DPrintf(db.ALWAYS, "NewEndpointSymlink %v %v lid %v", nd.realm, pn, nd.sess.Lease())
 		if err := nd.MkLeasedEndpoint(pn, ep, nd.sess.Lease()); err != nil {
+			db.DFatalf("MkEndpointFile %v at %v err %v", nd.realm, pn, err)
 			db.DPrintf(db.NAMED, "MkEndpointFile %v at %v err %v", nd.realm, pn, err)
 			return err
 		}
 		db.DPrintf(db.NAMED, "[%v] named endpoint %v", nd.realm, ep)
-
-		// Signal realmd we are ready
-		if err := sem.Up(); err != nil {
-			db.DPrintf(db.NAMED, "%v sem up %v err %v", nd.realm, sem.String(), err)
-			return err
-		}
 	}
 
 	nd.getRoot(pn + "/")

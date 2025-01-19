@@ -990,7 +990,7 @@ func TestSpawnCrashLCSched(t *testing.T) {
 }
 
 // Make sure this test is still meaningful
-func TestMaintainReplicationLevelCrashMSched(t *testing.T) {
+func TestMaintainReplicationLevelCrashMSchedXXX(t *testing.T) {
 	const T = 1000
 	fn0 := sp.NAMED + "crashms0.sem"
 	e0 := crash.NewEventPath(crash.MSCHED_CRASH, T, 1.0, fn0)
@@ -1056,8 +1056,9 @@ func TestMaintainReplicationLevelCrashMSched(t *testing.T) {
 
 	// Make sure they spawned correctly.
 	st, err = ts.GetDir(OUTDIR)
-	assert.Nil(t, err, "readdir1")
-	assert.Equal(t, N_REPL, len(st), "wrong num spinners check #2 %v", sp.Names(st))
+	if assert.Nil(t, err, "readdir1 err: %v", err) {
+		assert.Equal(t, N_REPL, len(st), "wrong num spinners check #2 %v", sp.Names(st))
+	}
 	db.DPrintf(db.TEST, "Got out dir again")
 
 	err = crash.SignalFailer(ts.Ts.FsLib, fn1)
@@ -1068,8 +1069,9 @@ func TestMaintainReplicationLevelCrashMSched(t *testing.T) {
 
 	// Make sure they spawned correctly.
 	st, err = ts.GetDir(OUTDIR)
-	assert.Nil(t, err, "readdir1")
-	assert.Equal(t, N_REPL, len(st), "wrong num spinners check #3")
+	if assert.Nil(t, err, "readdir2 err: %v", err) {
+		assert.Equal(t, N_REPL, len(st), "wrong num spinners check #3")
+	}
 	db.DPrintf(db.TEST, "Got out dir 3")
 
 	sm.StopGroup()

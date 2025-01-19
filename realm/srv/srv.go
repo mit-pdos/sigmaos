@@ -12,6 +12,7 @@ import (
 	"sigmaos/api/fs"
 	db "sigmaos/debug"
 	dialproxyclnt "sigmaos/dialproxy/clnt"
+	"sigmaos/ft/procgroupmgr"
 	kernelclnt "sigmaos/kernel/clnt"
 	"sigmaos/proc"
 	realmpkg "sigmaos/realm"
@@ -24,7 +25,6 @@ import (
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
 	spprotosrv "sigmaos/spproto/srv"
-	"sigmaos/util/coordination/semaphore"
 )
 
 const (
@@ -39,7 +39,8 @@ type Subsystem struct {
 
 type Realm struct {
 	sync.Mutex
-	named                    *proc.Proc // XXX groupmgr for fault tolerance
+	namedcfg                 *procgroupmgr.ProcGroupMgrConfig
+	namedgrp                 *procgroupmgr.ProcGroupMgr
 	perRealmKernelSubsystems []*Subsystem
 	sc                       *sigmaclnt.SigmaClnt
 }
@@ -85,7 +86,7 @@ func RunRealmSrv(dialproxy bool) error {
 	rs.ch = make(chan struct{})
 	db.DPrintf(db.REALMD, "Run %v %s\n", sp.REALMD, os.Environ())
 	if false {
-		allowedPaths := []string{sp.REALMSREL, rpc.RPC}
+		allowedPaths := []string{rpc.RPC}
 		ssrv, err := sigmasrv.NewSigmaSrvClntAuthFn(sp.REALMD, sc, rs, spprotosrv.AttachAllowAllPrincipalsSelectPaths(allowedPaths))
 		_ = ssrv
 		_ = err
@@ -94,10 +95,10 @@ func RunRealmSrv(dialproxy bool) error {
 	if err != nil {
 		return err
 	}
-	_, serr := ssrv.MemFs.Create(sp.REALMSREL, 0777|sp.DMDIR, sp.OREAD, sp.NoLeaseId)
-	if serr != nil {
-		return serr
-	}
+	//	_, serr := ssrv.MemFs.Create(sp.REALMSREL, 0777|sp.DMDIR, sp.OREAD, sp.NoLeaseId)
+	//	if serr != nil {
+	//		return serr
+	//	}
 	db.DPrintf(db.REALMD, "newsrv ok")
 	rs.sc = sigmaclnt.NewSigmaClntKernel(ssrv.MemFs.SigmaClnt())
 	rs.mkc = kernelclnt.NewMultiKernelClnt(ssrv.MemFs.SigmaClnt().FsLib, db.REALMD, db.REALMD_ERR)
@@ -139,29 +140,17 @@ func (rm *RealmSrv) Make(ctx fs.CtxI, req proto.MakeReq, res *proto.MakeRep) err
 		return err
 	}
 	r := newRealm()
-	p := proc.NewProc("named", []string{req.Realm})
-	// Set up a realm switch: when named runs, it should start as a member of the
-	// new realm.
-	p.SetRealmSwitch(rid)
-	// Make sure named uses dialproxy
-	p.GetProcEnv().UseDialProxy = rm.dialproxy
-	p.SetMcpu(NAMED_MCPU)
-	r.named = p
+	r.namedcfg = procgroupmgr.NewGroupConfigRealmSwitch(1, sp.NAMEDREL, nil, NAMED_MCPU, req.Realm, rid, rm.dialproxy)
 
-	db.DPrintf(db.REALMD, "RealmSrv.Make %v spawn named %v", req.Realm, p)
-	if err := rm.sc.Spawn(p); err != nil {
-		db.DPrintf(db.REALMD_ERR, "Error SpawnBurst: %v", err)
-		return err
-	}
-	if err := rm.sc.WaitStart(p.GetPid()); err != nil {
-		db.DPrintf(db.REALMD_ERR, "Error WaitStart: %v", err)
-		return err
-	}
+	db.DPrintf(db.REALMD, "RealmSrv.Make %v spawn named %v", req.Realm, r.namedcfg)
+	r.namedgrp = r.namedcfg.StartGrpMgr(rm.sc.SigmaClnt())
 	db.DPrintf(db.REALMD, "RealmSrv.Make %v named started", req.Realm)
+	time.Sleep(10 * time.Second)
 
-	// wait until realm's named is ready to serve
-	sem := semaphore.NewSemaphore(rm.sc.FsLib, filepath.Join(sp.REALMS, req.Realm)+".sem")
-	if err := sem.Down(); err != nil {
+	// wait until the realm's named has registered its endpoint and is ready to
+	// serve
+	if _, err := rm.sc.GetFileWatch(filepath.Join(sp.REALMS, req.Realm)); err != nil {
+		db.DPrintf(db.ERROR, "Error GetFileWatch named root: %v", err)
 		return err
 	}
 
@@ -256,12 +245,8 @@ func (rm *RealmSrv) Remove(ctx fs.CtxI, req proto.RemoveReq, res *proto.RemoveRe
 
 	// XXX remove root dir
 
-	if err := rm.sc.Evict(r.named.GetPid()); err != nil {
-		db.DPrintf(db.ERROR, "Error Evict realm named: %v", err)
-		return err
-	}
-	if _, err := rm.sc.WaitExit(r.named.GetPid()); err != nil {
-		db.DPrintf(db.ERROR, "Error WaitExit realm named: %v", err)
+	if _, err := r.namedgrp.StopGroup(); err != nil {
+		db.DPrintf(db.ERROR, "Error stop realm named group: %v", err)
 		return err
 	}
 	delete(rm.realms, rid)

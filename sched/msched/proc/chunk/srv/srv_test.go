@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 
@@ -85,6 +86,7 @@ func (ts *Tstate) fetch(srv string, paths []string, expect []string) int {
 		return 0
 	}
 	assert.True(ts.T, isExpected(path, expect))
+	time.Sleep(100 * time.Millisecond) // give time to prefetch first chunk
 
 	n := (st.Tlength() / sp.Tlength(sp.Conf.Chunk.CHUNK_SZ)) + 1
 	l := 0

@@ -432,7 +432,7 @@ func (dc *DirCache[E]) WaitAllEntriesRemoved(files []string, timed bool) (error)
 
 
 func (dc *DirCache[E]) WaitEntriesN(n int, timed bool) (int, error) {
-	return dc.dir.Len(), dc.waitCond(func() (bool, uint64, error) {
+	err := dc.waitCond(func() (bool, uint64, error) {
 		dc.Lock()
 		numFiles := dc.dir.Len()
 		version := dc.version
@@ -440,6 +440,8 @@ func (dc *DirCache[E]) WaitEntriesN(n int, timed bool) (int, error) {
 
 		return numFiles < n, version, nil
 	}, timed)
+
+	return dc.dir.Len(), err
 }
 
 func (dc *DirCache[E]) WaitGetEntriesN(n int, timed bool) ([]string, error) {

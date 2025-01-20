@@ -65,7 +65,7 @@ func (rts *RealmTstate) GetRealm() sp.Trealm {
 	return rts.realm
 }
 
-func (rts *RealmTstate) Remove() error {
+func (rts *RealmTstate) remove() error {
 	for i, pid := range rts.pkss {
 		if err := rts.mkc.EvictKernelProc(rts.pksskids[i], pid); err != nil {
 			db.DPrintf(db.ALWAYS, "Error evict kernel proc %v kid %v", pid, rts.pksskids[i])

@@ -48,6 +48,13 @@ func (mrts *MultiRealmTstate) AddRealm(r sp.Trealm) error {
 	return nil
 }
 
+func (mrts *MultiRealmTstate) DelRealm(r sp.Trealm) error {
+	ts := mrts.realms[r]
+	err := ts.remove()
+	delete(mrts.realms, r)
+	return err
+}
+
 func (mrts *MultiRealmTstate) AddRealmNumSubsystems(r sp.Trealm, numS3 int64, numUX int64) error {
 	ts, err := NewRealmTstateNumSubsystems(mrts.root, r, numS3, numUX)
 	if err != nil {
@@ -66,11 +73,10 @@ func (mrts *MultiRealmTstate) GetRealm(r sp.Trealm) *RealmTstate {
 }
 
 func (mrts *MultiRealmTstate) Shutdown() {
-	for r, ts := range mrts.realms {
-		if err := ts.Remove(); err != nil {
+	for r := range mrts.realms {
+		if err := mrts.DelRealm(r); err != nil {
 			db.DPrintf(db.ERROR, "Err remove realm[%v]: %v", r, err)
 		}
-		delete(mrts.realms, r)
 	}
 	if mrts.root != nil {
 		mrts.root.Shutdown()

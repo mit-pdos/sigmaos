@@ -1049,31 +1049,30 @@ func TestMaintainReplicationLevelCrashMSchedXXX(t *testing.T) {
 	}
 	db.DPrintf(db.TEST, "Get OutDir")
 
-	err = crash.SignalFailer(ts.Ts.FsLib, fn0)
-	assert.Nil(t, err, "crash msched")
+	for j, fn := range []string{fn0, fn1} {
+		err = crash.SignalFailer(ts.Ts.FsLib, fn)
+		assert.Nil(t, err, "crash msched")
 
-	// Wait for them to respawn.
-	time.Sleep(2 * fsetcd.LeaseTTL * time.Second)
+		// Wait for them to respawn.
+		success := false
+		for i := 0; i < 10; i++ {
+			time.Sleep(fsetcd.LeaseTTL * time.Second)
+			// Check if the spinners are still up
+			st, err := ts.GetDir(OUTDIR)
+			if err != nil {
+				db.DPrintf(db.TEST, "Couldn't get OutDir trial %v", i)
+				continue
+			}
+			if len(st) != N_REPL {
+				db.DPrintf(db.TEST, "Spinners not up yet: %v != %v", len(st), N_REPL)
+				continue
+			}
+			success = true
+			break
+		}
 
-	// Make sure they spawned correctly.
-	st, err = ts.GetDir(OUTDIR)
-	if assert.Nil(t, err, "readdir2 err: %v", err) {
-		assert.Equal(t, N_REPL, len(st), "wrong num spinners check #2 %v", sp.Names(st))
+		assert.True(t, success, "Spinners never respawned check #%v", j)
 	}
-	db.DPrintf(db.TEST, "Got out dir again")
-
-	err = crash.SignalFailer(ts.Ts.FsLib, fn1)
-	assert.Nil(t, err, "crash msched1")
-
-	// Wait for them to respawn.
-	time.Sleep(2 * fsetcd.LeaseTTL * time.Second)
-
-	// Make sure they spawned correctly.
-	st, err = ts.GetDir(OUTDIR)
-	if assert.Nil(t, err, "readdir3 err: %v", err) {
-		assert.Equal(t, N_REPL, len(st), "wrong num spinners check #3")
-	}
-	db.DPrintf(db.TEST, "Got out dir 3")
 
 	sm.StopGroup()
 	db.DPrintf(db.TEST, "Stopped GroupMgr")

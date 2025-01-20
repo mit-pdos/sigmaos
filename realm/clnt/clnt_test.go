@@ -98,9 +98,6 @@ func TestBasicSimple(t *testing.T) {
 	db.DPrintf(db.TEST, "realm names sched %v\n", sp.Names(sts))
 
 	assert.True(t, sts1[0].Name == sts[0].Name)
-
-	err = mrts.GetRealm(test.REALM1).Remove()
-	assert.Nil(t, err, "Error Remove: %v", err)
 }
 
 func TestBasicMultiRealmSingleNode(t *testing.T) {

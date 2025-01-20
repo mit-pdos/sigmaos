@@ -160,7 +160,7 @@ func (s *FrontEnd) userHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Please specify username and password", http.StatusBadRequest)
 		return
 	}
-	var res proto.UserRep
+	var res proto.SNUserRep
 	// Check username and password
 	err := s.userc.RPC("UserSrv.Login", &proto.LoginReq{
 		Username: username,

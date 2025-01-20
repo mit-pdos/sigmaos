@@ -101,11 +101,12 @@ func TestBasicSimple(t *testing.T) {
 }
 
 func TestBasicMultiRealmSingleNode(t *testing.T) {
-	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1, test.REALM2})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
 	defer mrts.Shutdown()
+
 	mscheds1, err := mrts.GetRealm(test.REALM1).GetDir(sp.MSCHED)
 	assert.Nil(t, err)
 	// Only one msched so far.
@@ -127,6 +128,7 @@ func TestBasicMultiRealmMultiNode(t *testing.T) {
 		return
 	}
 	defer mrts.Shutdown()
+
 	mrts.GetRoot().BootNode(1)
 
 	time.Sleep(2 * sp.Conf.Realm.KERNEL_SRV_REFRESH_INTERVAL)
@@ -204,6 +206,7 @@ func TestBasicFairness(t *testing.T) {
 		return
 	}
 	defer mrts.Shutdown()
+
 	time.Sleep(2 * sp.Conf.Realm.KERNEL_SRV_REFRESH_INTERVAL)
 
 	p1 := proc.NewProc("sleeper", []string{"100000s", "name/"})
@@ -251,6 +254,7 @@ func TestWaitExitMultiNode(t *testing.T) {
 		return
 	}
 	defer mrts.Shutdown()
+
 	mrts.GetRoot().BootNode(1)
 	subsysCnts := []int64{1, 2}
 	err1 = mrts.AddRealmNumSubsystems(test.REALM1, subsysCnts[0], subsysCnts[1])
@@ -341,6 +345,7 @@ func TestEvictMultiRealm(t *testing.T) {
 		return
 	}
 	defer mrts.Shutdown()
+
 	sts1, err := mrts.GetRoot().GetDir(sp.MSCHED)
 	assert.Nil(t, err)
 
@@ -459,6 +464,7 @@ func TestMultiRealmIsolationBasic(t *testing.T) {
 		return
 	}
 	defer mrts.Shutdown()
+
 	job := rd.String(16)
 	cm, err := cachegrpmgr.NewCacheMgr(mrts.GetRealm(test.REALM1).SigmaClnt, job, 1, 0, true)
 	assert.Nil(t, err)
@@ -493,6 +499,7 @@ func TestMultiRealmIsolationEndpoint(t *testing.T) {
 		return
 	}
 	defer mrts.Shutdown()
+
 	job := rd.String(16)
 	cm, err := cachegrpmgr.NewCacheMgr(mrts.GetRealm(test.REALM1).SigmaClnt, job, 1, 0, true)
 	assert.Nil(t, err)

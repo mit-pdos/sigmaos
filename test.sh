@@ -153,6 +153,7 @@ if [[ $COMPILE == "--compile" ]]; then
         fi
         run_test $T "go test $VERB sigmaos/$T --run TestCompile"
     done
+    exit 0
 fi
 
 if [[ $BASIC == "--basic" ]]; then

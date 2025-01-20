@@ -5,6 +5,7 @@
 package dircache
 
 import (
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -85,6 +86,15 @@ func (dc *DirCache[E]) doInit() {
 	dc.initWait.Done()
 }
 
+func (dc *DirCache[E]) isKeyValid(k string) bool {
+	for _, prefix := range dc.prefixFilters {
+		if strings.HasPrefix(k, prefix) {
+			return false
+		}
+	}
+	return true
+}
+
 func (dc *DirCache[E]) readDirAndWatch() *dirwatcher.DirWatcher {
 	var initEnts []string
 	var dw *dirwatcher.DirWatcher
@@ -106,6 +116,10 @@ func (dc *DirCache[E]) readDirAndWatch() *dirwatcher.DirWatcher {
 
 	dc.Lock()
 	for _, ent := range initEnts {
+		if !dc.isKeyValid(ent) {
+			continue
+		}
+
 		dc.dir.InsertKey(ent)
 		if dc.ch != nil {
 			go func(ent string) {
@@ -129,6 +143,10 @@ func (dc *DirCache[E]) readDirAndWatch() *dirwatcher.DirWatcher {
 // Monitor for changes to the directory and update the cached one
 func (dc *DirCache[E]) watchDir(dw *dirwatcher.DirWatcher) {
 	for event := range dw.Events() {
+		if !dc.isKeyValid(event.File) {
+			continue
+		}
+
 		dc.Lock()
 		var madeChange bool
 		switch event.Type {

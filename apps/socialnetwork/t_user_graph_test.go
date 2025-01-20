@@ -48,7 +48,7 @@ func TestUser(t *testing.T) {
 	// register user
 	arg_reg := proto.RegisterUserReq{
 		Firstname: "Alice", Lastname: "Test", Username: "user_0", Password: "xxyyzz"}
-	res_reg := proto.UserRep{}
+	res_reg := proto.SNUserRep{}
 	err = rpcc.RPC("UserSrv.RegisterUser", &arg_reg, &res_reg)
 	assert.Nil(t, err)
 	assert.Equal(t, "Username user_0 already exist", res_reg.Ok)
@@ -70,7 +70,7 @@ func TestUser(t *testing.T) {
 
 	// new user login
 	arg_login := proto.LoginReq{Username: "test_user", Password: "xxyy"}
-	res_login := proto.UserRep{}
+	res_login := proto.SNUserRep{}
 	err = rpcc.RPC("UserSrv.Login", &arg_login, &res_login)
 	assert.Nil(t, err)
 	assert.Equal(t, "Login Failure.", res_login.Ok)
@@ -210,7 +210,7 @@ func TestUserAndGraph(t *testing.T) {
 		Firstname: "Alice", Lastname: "Test", Username: "atest", Password: "xyz"}
 	arg_reg2 := proto.RegisterUserReq{
 		Firstname: "Bob", Lastname: "Test", Username: "btest", Password: "zyx"}
-	res_reg := proto.UserRep{}
+	res_reg := proto.SNUserRep{}
 	err = rpcc.RPC("UserSrv.RegisterUser", &arg_reg1, &res_reg)
 	assert.Nil(t, err)
 	assert.Equal(t, "OK", res_reg.Ok)

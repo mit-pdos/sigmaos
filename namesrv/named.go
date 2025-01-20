@@ -95,6 +95,9 @@ func Run(args []string) error {
 		if err := sc.MountTree(rootEP, sp.REALMSREL, sp.REALMS); err != nil {
 			db.DFatalf("Err MountTree realm: ep %v err %v", rootEP, err)
 		}
+		if err := sc.MountTree(rootEP, rpc.RPC, filepath.Join(sp.REALMS, rpc.RPC)); err != nil {
+			db.DFatalf("Err MountTree realm: ep %v err %v", rootEP, err)
+		}
 		// Must manually mount scheduler dirs, since they will be automatically
 		// scanned by msched-/procq-/lcsched- clnts as soon as the procclnt is
 		// created, but this named won't have posted its endpoint in the namespace
@@ -163,6 +166,7 @@ func Run(args []string) error {
 			db.DFatalf("Error AskLease %v: %v", pn, err)
 		}
 		li.KeepExtending()
+
 		if err := nd.MkLeasedEndpoint(pn, ep, li.Lease()); err != nil {
 			db.DFatalf("MkEndpointFile %v at %v err %v", nd.realm, pn, err)
 			db.DPrintf(db.NAMED, "MkEndpointFile %v at %v err %v", nd.realm, pn, err)

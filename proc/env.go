@@ -27,10 +27,6 @@ const (
 	SIGMAGEN       = "SIGMAGEN"
 )
 
-const (
-	dirwatcher_VERSION = "dirwatcher_VERSION"
-)
-
 type ProcEnv struct {
 	*ProcEnvProto
 }

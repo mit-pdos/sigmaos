@@ -57,10 +57,10 @@ func (fl *FsLib) MkDirPath(dir, pn string, perm sp.Tperm) error {
 }
 
 // ProcessDir pages through directories entries, calling f for each
-// one them. Too stop early, f must return true.  ProcessDir returns
+// one them. To stop early, f must return true.  ProcessDir returns
 // true if stopped early.  Note that as ProcessDir pages through dir
 // other procs may add/delete entries, which may cause ProcessDir to
-// see the same file twice.  Use dirwatcher to filter duplicates.
+// see the same file twice. Use DirCache to filter duplicates.
 func (fl *FsLib) ProcessDir(dir string, f func(*sp.Tstat) (bool, error)) (bool, error) {
 	rdr, err := fl.OpenReader(dir)
 	if err != nil {

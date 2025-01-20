@@ -15,7 +15,7 @@ FROM alpine AS base
 
 RUN apk add --no-cache libseccomp gcompat musl-dev strace fuse iptables
 RUN apk add criu-dev --repository=https://dl-cdn.alpinelinux.org/alpine/edge/testing
-RUN apk add py3-criu --repository=https://dl-cdn.alpinelinux.org/alpine/edge/testing
+#RUN apk add py3-criu --repository=https://dl-cdn.alpinelinux.org/alpine/edge/testing
 
 WORKDIR /home/sigmaos
 RUN mkdir bin && \

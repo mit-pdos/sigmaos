@@ -2,20 +2,20 @@
 
 # Program to run
 PROGRAM="go test -v sigmaos/ckpt -start -run CkptProc"  # Replace with the actual path to your program
-STOPPER="./stop.sh"
 # Maximum number of iterations
 MAX_ITERATIONS=200
 
 # Time threshold in seconds
-TIME_THRESHOLD=30
+TIME_THRESHOLD=45
 
 # Loop to run the program
 for ((i=1; i<=MAX_ITERATIONS; i++))
 do
+    ./stop.sh --parallel --nopurge --skipdb
     echo "Running iteration $i..."
 
     # Start the program in the background
-    $PROGRAM &
+    $PROGRAM  2>&1 | tee /tmp/out-xxxx &
     PROGRAM_PID=$!
 
     # Wait for the program to complete with a timeout
@@ -27,6 +27,7 @@ do
             break
         fi
         sleep 1
+        echo $SECONDS
     done
 
     # Check if the program finished successfully
@@ -34,14 +35,15 @@ do
         echo "Iteration $i completed in $SECONDS seconds."
     fi
 
+    if grep -q "Shutdown" /tmp/out-xxxx; then
+      continue
+    fi
+
     # Exit if the program was killed for exceeding the time limit
     if [ $SECONDS -ge $TIME_THRESHOLD ]; then
         echo "Stopping the script because the program exceeded the time threshold."
         break
     fi
-    sleep 5
-    $STOPPER
-    sleep 10
 done
 
 echo "Script completed."

@@ -196,10 +196,7 @@ func WaitRemove(fsl *fslib.FsLib, pn string) error {
 	dir := filepath.Dir(pn) + "/"
 	f := filepath.Base(pn)
 
-	db.DPrintf(db.WATCH, "WaitRemove2: waiting for %s to be removed", pn)
-
 	return waitCond(fsl, dir, func(ents map[string]bool) bool {
-		db.DPrintf(db.WATCH, "WaitRemove2: checking if %s is removed %v", pn, ents)
 		return !ents[f]
 	})
 }
@@ -219,8 +216,6 @@ func waitCond(fsl *fslib.FsLib, pn string, cond func(map[string]bool) bool) erro
 			ents[st.Name] = true
 		}
 
-		db.DPrintf(db.WATCH, "waitCond: checking if cond is met with init %v", ents)
-
 		if cond(ents) {
 			return nil
 		}
@@ -236,8 +231,6 @@ func waitCond(fsl *fslib.FsLib, pn string, cond func(map[string]bool) bool) erro
 		}
 		break
 	}
-
-	db.DPrintf(db.WATCH, "waitCond: waiting for cond to be met with init %v", ents)
 
 	for event := range dw.Events() {
 		db.DPrintf(db.WATCH, "waitCond: received event %v", event)

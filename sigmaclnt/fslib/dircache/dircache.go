@@ -68,7 +68,9 @@ func (dc *DirCache[E]) Init() {
 		dc.doInit()
 	} else {
 		// another thread is init, wait until they finish
-		dc.initWait.Wait()
+		for dc.initState.Load() != 2 {
+			dc.initWait.Wait()
+		}
 	}
 }
 

@@ -48,6 +48,15 @@ func (mrts *MultiRealmTstate) AddRealm(r sp.Trealm) error {
 	return nil
 }
 
+func (mrts *MultiRealmTstate) AddRealmNumSubsystems(r sp.Trealm, numS3 int64, numUX int64) error {
+	ts, err := NewRealmTstateNumSubsystems(mrts.root, r, numS3, numUX)
+	if err != nil {
+		return err
+	}
+	mrts.realms[r] = ts
+	return nil
+}
+
 func (mrts *MultiRealmTstate) GetRoot() *Tstate {
 	return mrts.root
 }

@@ -143,7 +143,7 @@ func NewTstateAll(t *testing.T) (*Tstate, error) {
 	return NewTstatePath(t, "all")
 }
 
-func NewTstateWithRealms(t *testing.T) (*Tstate, error) {
+func newTstateWithRealms(t *testing.T) (*Tstate, error) {
 	ts, err := newSysClnt(t, bootclnt.BOOT_REALM)
 	if err != nil {
 		db.DPrintf(db.ERROR, "NewTstateRealm: %v\n", err)

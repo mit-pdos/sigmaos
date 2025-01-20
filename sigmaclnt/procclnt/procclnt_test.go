@@ -137,92 +137,71 @@ func TestErrStringCrashed(t *testing.T) {
 }
 
 func TestWaitExitSimpleSingleBE(t *testing.T) {
-	rootts, err1 := test.NewTstateWithRealms(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	defer rootts.Shutdown()
-	ts, err1 := test.NewRealmTstate(rootts, REALM1)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
-	defer ts.Remove()
-
-	spawnWaitSleeper(ts, nil)
+	defer mrts.Shutdown()
+	spawnWaitSleeper(mrts.GetRealm(REALM1), nil)
 }
 
 func TestWaitExitSimpleSingleLC(t *testing.T) {
-	rootts, err1 := test.NewTstateWithRealms(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	defer rootts.Shutdown()
-	ts, err1 := test.NewRealmTstate(rootts, REALM1)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
-	defer ts.Remove()
+	defer mrts.Shutdown()
 
 	a := proc.NewProc("sleeper", []string{fmt.Sprintf("%dms", SLEEP_MSECS), "name/"})
 	a.SetMcpu(1000)
 	db.DPrintf(db.TEST, "Pre spawn")
-	err := ts.Spawn(a)
+	err := mrts.GetRealm(test.REALM1).Spawn(a)
 	assert.Nil(t, err, "Spawn")
 	db.DPrintf(db.TEST, "Post spawn")
 
 	db.DPrintf(db.TEST, "Pre waitexit")
-	status, err := ts.WaitExit(a.GetPid())
+	status, err := mrts.GetRealm(test.REALM1).WaitExit(a.GetPid())
 	db.DPrintf(db.TEST, "Post waitexit")
 	assert.Nil(t, err, "WaitExit error")
 	assert.True(t, status != nil && status.IsStatusOK(), "Exit status wrong: %v", status)
 
-	cleanSleeperResult(ts, a.GetPid())
+	cleanSleeperResult(mrts.GetRealm(test.REALM1), a.GetPid())
 }
 
 func TestWaitExitOne(t *testing.T) {
-	rootts, err1 := test.NewTstateWithRealms(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	defer rootts.Shutdown()
-	ts, err1 := test.NewRealmTstate(rootts, REALM1)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
-	defer ts.Remove()
+	defer mrts.Shutdown()
 
 	start := time.Now()
 
-	pid := spawnSleeper(ts)
-	status, err := ts.WaitExit(pid)
+	pid := spawnSleeper(mrts.GetRealm(test.REALM1))
+	status, err := mrts.GetRealm(test.REALM1).WaitExit(pid)
 	assert.Nil(t, err, "WaitExit error")
 	assert.True(t, status != nil && status.IsStatusOK(), "Exit status wrong")
 
 	// cleaned up (may take a bit)
 	time.Sleep(500 * time.Millisecond)
-	_, err = ts.Stat(filepath.Join(sp.MSCHED, sp.LOCAL, sp.PIDS, pid.String()))
+	_, err = mrts.GetRealm(test.REALM1).Stat(filepath.Join(sp.MSCHED, sp.LOCAL, sp.PIDS, pid.String()))
 	assert.NotNil(t, err, "Stat %v", filepath.Join(sp.PIDS, pid.String()))
 
 	end := time.Now()
 
 	assert.True(t, end.Sub(start) > SLEEP_MSECS*time.Millisecond)
 
-	checkSleeperResult(ts, pid)
+	checkSleeperResult(mrts.GetRealm(test.REALM1), pid)
 
-	cleanSleeperResult(ts, pid)
+	cleanSleeperResult(mrts.GetRealm(test.REALM1), pid)
 }
 
 func TestWaitExitN(t *testing.T) {
-	rootts, err1 := test.NewTstateWithRealms(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	defer rootts.Shutdown()
-	ts, err1 := test.NewRealmTstate(rootts, REALM1)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
-	defer ts.Remove()
+	defer mrts.Shutdown()
 
 	nProcs := 100
 	var done sync.WaitGroup
@@ -230,14 +209,14 @@ func TestWaitExitN(t *testing.T) {
 
 	for i := 0; i < nProcs; i++ {
 		go func() {
-			pid := spawnSleeper(ts)
-			status, err := ts.WaitExit(pid)
+			pid := spawnSleeper(mrts.GetRealm(test.REALM1))
+			status, err := mrts.GetRealm(test.REALM1).WaitExit(pid)
 			assert.Nil(t, err, "WaitExit error")
 			assert.True(t, status != nil && status.IsStatusOK(), "Exit status wrong %v", status)
 			db.DPrintf(db.TEST, "Exited %v", pid)
 
-			checkSleeperResult(ts, pid)
-			cleanSleeperResult(ts, pid)
+			checkSleeperResult(mrts.GetRealm(test.REALM1), pid)
+			cleanSleeperResult(mrts.GetRealm(test.REALM1), pid)
 
 			done.Done()
 		}()
@@ -246,28 +225,23 @@ func TestWaitExitN(t *testing.T) {
 }
 
 func TestWaitExitParentRetStat(t *testing.T) {
-	rootts, err1 := test.NewTstateWithRealms(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	defer rootts.Shutdown()
-	ts, err1 := test.NewRealmTstate(rootts, REALM1)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
-	defer ts.Remove()
+	defer mrts.Shutdown()
 
 	start := time.Now()
 
-	pid := spawnSleeper(ts)
+	pid := spawnSleeper(mrts.GetRealm(test.REALM1))
 	time.Sleep(2 * SLEEP_MSECS * time.Millisecond)
-	status, err := ts.WaitExit(pid)
+	status, err := mrts.GetRealm(test.REALM1).WaitExit(pid)
 	assert.Nil(t, err, "WaitExit error")
 	assert.True(t, status != nil && status.IsStatusOK(), "Exit status wrong")
 
 	// cleaned up
 	for {
-		_, err = ts.Stat(filepath.Join(sp.MSCHED, sp.LOCAL, sp.PIDS, pid.String()))
+		_, err = mrts.GetRealm(test.REALM1).Stat(filepath.Join(sp.MSCHED, sp.LOCAL, sp.PIDS, pid.String()))
 		if err != nil {
 			break
 		}
@@ -279,36 +253,31 @@ func TestWaitExitParentRetStat(t *testing.T) {
 
 	assert.True(t, end.Sub(start) > SLEEP_MSECS*time.Millisecond)
 
-	checkSleeperResult(ts, pid)
-	cleanSleeperResult(ts, pid)
+	checkSleeperResult(mrts.GetRealm(test.REALM1), pid)
+	cleanSleeperResult(mrts.GetRealm(test.REALM1), pid)
 }
 
 func TestWaitExitParentAbandons(t *testing.T) {
-	rootts, err1 := test.NewTstateWithRealms(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	defer rootts.Shutdown()
-	ts, err1 := test.NewRealmTstate(rootts, REALM1)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
-	defer ts.Remove()
+	defer mrts.Shutdown()
 
 	start := time.Now()
 
 	cPid := sp.GenPid("sleeper")
-	pid := spawnSpawner(ts, false, cPid, SLEEP_MSECS, nil)
-	err := ts.WaitStart(pid)
+	pid := spawnSpawner(mrts.GetRealm(test.REALM1), false, cPid, SLEEP_MSECS, nil)
+	err := mrts.GetRealm(test.REALM1).WaitStart(pid)
 	assert.Nil(t, err, "WaitStart error")
-	status, err := ts.WaitExit(pid)
+	status, err := mrts.GetRealm(test.REALM1).WaitExit(pid)
 	assert.True(t, status != nil && status.IsStatusOK(), "WaitExit status error")
 	assert.Nil(t, err, "WaitExit error")
 	// Wait for the child to run & finish
 	time.Sleep(2 * SLEEP_MSECS * time.Millisecond)
 
 	// cleaned up
-	_, err = ts.Stat(filepath.Join(sp.MSCHED, sp.LOCAL, sp.PIDS, pid.String()))
+	_, err = mrts.GetRealm(test.REALM1).Stat(filepath.Join(sp.MSCHED, sp.LOCAL, sp.PIDS, pid.String()))
 	assert.NotNil(t, err, "Stat")
 
 	end := time.Now()
@@ -317,16 +286,11 @@ func TestWaitExitParentAbandons(t *testing.T) {
 }
 
 func TestWaitExitParentCrash(t *testing.T) {
-	rootts, err1 := test.NewTstateWithRealms(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	defer rootts.Shutdown()
-	ts, err1 := test.NewRealmTstate(rootts, REALM1)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
-	defer ts.Remove()
+	defer mrts.Shutdown()
 
 	start := time.Now()
 
@@ -336,10 +300,10 @@ func TestWaitExitParentCrash(t *testing.T) {
 	em.Insert(e1)
 
 	cPid := sp.GenPid("spawner")
-	pid := spawnSpawner(ts, true, cPid, SLEEP_MSECS, em)
-	err := ts.WaitStart(pid)
+	pid := spawnSpawner(mrts.GetRealm(test.REALM1), true, cPid, SLEEP_MSECS, em)
+	err := mrts.GetRealm(test.REALM1).WaitStart(pid)
 	assert.Nil(t, err, "WaitStart error")
-	status, err := ts.WaitExit(pid)
+	status, err := mrts.GetRealm(test.REALM1).WaitExit(pid)
 	assert.Nil(t, err, "WaitExit error")
 	assert.True(t, status != nil)
 	assert.True(t, status.IsStatusErr())
@@ -349,7 +313,7 @@ func TestWaitExitParentCrash(t *testing.T) {
 	time.Sleep(2 * SLEEP_MSECS * time.Millisecond)
 
 	// cleaned up
-	_, err = ts.Stat(filepath.Join(sp.MSCHED, sp.LOCAL, sp.PIDS, pid.String()))
+	_, err = mrts.GetRealm(test.REALM1).Stat(filepath.Join(sp.MSCHED, sp.LOCAL, sp.PIDS, pid.String()))
 	assert.NotNil(t, err, "Stat")
 
 	end := time.Now()
@@ -358,50 +322,40 @@ func TestWaitExitParentCrash(t *testing.T) {
 }
 
 func TestWaitStart(t *testing.T) {
-	rootts, err1 := test.NewTstateWithRealms(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	defer rootts.Shutdown()
-	ts, err1 := test.NewRealmTstate(rootts, REALM1)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
-	defer ts.Remove()
+	defer mrts.Shutdown()
 
-	pid := spawnSleeper(ts)
-	err := ts.WaitStart(pid)
+	pid := spawnSleeper(mrts.GetRealm(test.REALM1))
+	err := mrts.GetRealm(test.REALM1).WaitStart(pid)
 	assert.Nil(t, err, "WaitStart error")
 
 	// Make sure the proc hasn't finished yet...
-	checkSleeperResultFalse(ts, pid)
+	checkSleeperResultFalse(mrts.GetRealm(test.REALM1), pid)
 
-	ts.WaitExit(pid)
+	mrts.GetRealm(test.REALM1).WaitExit(pid)
 
 	// Make sure the proc finished...
-	checkSleeperResult(ts, pid)
+	checkSleeperResult(mrts.GetRealm(test.REALM1), pid)
 
-	cleanSleeperResult(ts, pid)
+	cleanSleeperResult(mrts.GetRealm(test.REALM1), pid)
 }
 
 // Should exit immediately
 func TestWaitNonexistentProc(t *testing.T) {
-	rootts, err1 := test.NewTstateWithRealms(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	defer rootts.Shutdown()
-	ts, err1 := test.NewRealmTstate(rootts, REALM1)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
-	defer ts.Remove()
+	defer mrts.Shutdown()
 
 	ch := make(chan bool)
 
 	pid := sp.GenPid("nonexistent")
 	go func() {
-		ts.WaitExit(pid)
+		mrts.GetRealm(test.REALM1).WaitExit(pid)
 		ch <- true
 	}()
 
@@ -412,28 +366,23 @@ func TestWaitNonexistentProc(t *testing.T) {
 }
 
 func TestCrashProcOne(t *testing.T) {
-	rootts, err1 := test.NewTstateWithRealms(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	defer rootts.Shutdown()
-	ts, err1 := test.NewRealmTstate(rootts, REALM1)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
-	defer ts.Remove()
+	defer mrts.Shutdown()
 
 	a := proc.NewProc("crash", []string{})
 	em := crash.NewTeventMapOne(crash.NewEvent(crash.CRASH_CRASH, 0, 1.0))
 	err := em.AppendEnv(a)
 	assert.Nil(t, err)
-	err = ts.Spawn(a)
+	err = mrts.GetRealm(test.REALM1).Spawn(a)
 	assert.Nil(t, err, "Spawn")
 
-	err = ts.WaitStart(a.GetPid())
+	err = mrts.GetRealm(test.REALM1).WaitStart(a.GetPid())
 	assert.Nil(t, err, "WaitStart error")
 
-	status, err := ts.WaitExit(a.GetPid())
+	status, err := mrts.GetRealm(test.REALM1).WaitExit(a.GetPid())
 	assert.Nil(t, err, "WaitExit")
 	assert.True(t, status != nil && status.IsStatusErr(), "Status not err")
 	sr := serr.NewErrString(status.Msg())
@@ -441,28 +390,23 @@ func TestCrashProcOne(t *testing.T) {
 }
 
 func TestPartitionProcOne(t *testing.T) {
-	rootts, err1 := test.NewTstateWithRealms(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	defer rootts.Shutdown()
-	ts, err1 := test.NewRealmTstate(rootts, REALM1)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
-	defer ts.Remove()
+	defer mrts.Shutdown()
 
 	a := proc.NewProc("crash", []string{})
 	em := crash.NewTeventMapOne(crash.NewEvent(crash.CRASH_PARTITION, 0, 1.0))
 	err := em.AppendEnv(a)
 	assert.Nil(t, err)
-	err = ts.Spawn(a)
+	err = mrts.GetRealm(test.REALM1).Spawn(a)
 	assert.Nil(t, err, "Spawn")
 
-	err = ts.WaitStart(a.GetPid())
+	err = mrts.GetRealm(test.REALM1).WaitStart(a.GetPid())
 	assert.Nil(t, err, "WaitStart error")
 
-	status, err := ts.WaitExit(a.GetPid())
+	status, err := mrts.GetRealm(test.REALM1).WaitExit(a.GetPid())
 	assert.Nil(t, err, "WaitExit")
 	assert.True(t, status != nil && status.IsStatusErr(), "Status not err")
 	sr := serr.NewErrString(status.Msg())
@@ -470,55 +414,45 @@ func TestPartitionProcOne(t *testing.T) {
 }
 
 func TestEarlyExit1(t *testing.T) {
-	rootts, err1 := test.NewTstateWithRealms(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	defer rootts.Shutdown()
-	ts, err1 := test.NewRealmTstate(rootts, REALM1)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
-	defer ts.Remove()
+	defer mrts.Shutdown()
 
 	pid1 := sp.GenPid("parentexit")
 	a := proc.NewProc("parentexit", []string{fmt.Sprintf("%dms", SLEEP_MSECS), pid1.String()})
-	err := ts.Spawn(a)
+	err := mrts.GetRealm(test.REALM1).Spawn(a)
 	assert.Nil(t, err, "Spawn")
 
 	// Wait for parent to finish
-	status, err := ts.WaitExit(a.GetPid())
+	status, err := mrts.GetRealm(test.REALM1).WaitExit(a.GetPid())
 	assert.Nil(t, err, "WaitExit")
 	assert.True(t, status != nil && status.IsStatusOK(), "WaitExit")
 
 	// Child should not have terminated yet.
-	checkSleeperResultFalse(ts, pid1)
+	checkSleeperResultFalse(mrts.GetRealm(test.REALM1), pid1)
 
 	time.Sleep(2 * SLEEP_MSECS * time.Millisecond)
 
 	// Child should have exited
-	b, err := ts.GetFile("name/" + pid1.String() + "_out")
+	b, err := mrts.GetRealm(test.REALM1).GetFile("name/" + pid1.String() + "_out")
 	assert.Nil(t, err, "GetFile")
 	assert.Equal(t, "hello", string(b), "Output")
 
 	// .. and cleaned up
-	_, err = ts.Stat(filepath.Join(sp.MSCHED, sp.LOCAL, sp.PIDS, pid1.String()))
+	_, err = mrts.GetRealm(test.REALM1).Stat(filepath.Join(sp.MSCHED, sp.LOCAL, sp.PIDS, pid1.String()))
 	assert.NotNil(t, err, "Stat")
 
-	cleanSleeperResult(ts, pid1)
+	cleanSleeperResult(mrts.GetRealm(test.REALM1), pid1)
 }
 
 func TestEarlyExitN(t *testing.T) {
-	rootts, err1 := test.NewTstateWithRealms(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	defer rootts.Shutdown()
-	ts, err1 := test.NewRealmTstate(rootts, REALM1)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
-	defer ts.Remove()
+	defer mrts.Shutdown()
 
 	nProcs := 50 // 500
 	const MAX_RETRY = 10
@@ -529,11 +463,11 @@ func TestEarlyExitN(t *testing.T) {
 		go func(i int) {
 			pid1 := sp.GenPid("parentexit")
 			a := proc.NewProc("parentexit", []string{fmt.Sprintf("%dms", 0), pid1.String()})
-			err := ts.Spawn(a)
+			err := mrts.GetRealm(test.REALM1).Spawn(a)
 			assert.Nil(t, err, "Spawn")
 
 			// Wait for parent to finish
-			status, err := ts.WaitExit(a.GetPid())
+			status, err := mrts.GetRealm(test.REALM1).WaitExit(a.GetPid())
 			assert.Nil(t, err, "WaitExit err: %v", err)
 			assert.True(t, status != nil && status.IsStatusOK(), "WaitExit: %v", status)
 
@@ -542,7 +476,7 @@ func TestEarlyExitN(t *testing.T) {
 			var b []byte
 			var err2 error
 			for i := 0; i < MAX_RETRY && (!gotfile || !contentsCorrect); i++ {
-				b, err2 = ts.GetFile("name/" + pid1.String() + "_out")
+				b, err2 = mrts.GetRealm(test.REALM1).GetFile("name/" + pid1.String() + "_out")
 				gotfile = gotfile || err2 == nil
 				contentsCorrect = contentsCorrect || string(b) == "hello"
 				time.Sleep(time.Second)
@@ -553,10 +487,10 @@ func TestEarlyExitN(t *testing.T) {
 			assert.True(t, contentsCorrect, "Incorrect file contents: %v", string(b))
 
 			// .. and cleaned up
-			_, err = ts.Stat(filepath.Join(sp.MSCHED, sp.LOCAL, sp.PIDS, pid1.String()))
+			_, err = mrts.GetRealm(test.REALM1).Stat(filepath.Join(sp.MSCHED, sp.LOCAL, sp.PIDS, pid1.String()))
 			assert.NotNil(t, err, "Stat")
 
-			cleanSleeperResult(ts, pid1)
+			cleanSleeperResult(mrts.GetRealm(test.REALM1), pid1)
 
 			done.Done()
 		}(i)
@@ -567,16 +501,11 @@ func TestEarlyExitN(t *testing.T) {
 // Spawn a bunch of procs concurrently, then wait for all of them & check
 // their result
 func TestConcurrentProcs(t *testing.T) {
-	rootts, err1 := test.NewTstateWithRealms(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	defer rootts.Shutdown()
-	ts, err1 := test.NewRealmTstate(rootts, REALM1)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
-	defer ts.Remove()
+	defer mrts.Shutdown()
 
 	nProcs := 8
 	pids := map[sp.Tpid]int{}
@@ -599,7 +528,7 @@ func TestConcurrentProcs(t *testing.T) {
 		go func(pid sp.Tpid, started *sync.WaitGroup, i int) {
 			barrier.Done()
 			barrier.Wait()
-			spawnSleeperWithPid(ts, pid)
+			spawnSleeperWithPid(mrts.GetRealm(test.REALM1), pid)
 			started.Done()
 		}(pid, &started, i)
 	}
@@ -610,11 +539,11 @@ func TestConcurrentProcs(t *testing.T) {
 		_ = i
 		go func(pid sp.Tpid, done *sync.WaitGroup, i int) {
 			defer done.Done()
-			ts.WaitExit(pid)
-			checkSleeperResult(ts, pid)
-			cleanSleeperResult(ts, pid)
+			mrts.GetRealm(test.REALM1).WaitExit(pid)
+			checkSleeperResult(mrts.GetRealm(test.REALM1), pid)
+			cleanSleeperResult(mrts.GetRealm(test.REALM1), pid)
 			time.Sleep(100 * time.Millisecond)
-			_, err := ts.Stat(filepath.Join(sp.MSCHED, sp.LOCAL, sp.PIDS, pid.String()))
+			_, err := mrts.GetRealm(test.REALM1).Stat(filepath.Join(sp.MSCHED, sp.LOCAL, sp.PIDS, pid.String()))
 			assert.NotNil(t, err, "Stat %v", filepath.Join(sp.PIDS, pid.String()))
 		}(pid, &done, i)
 	}
@@ -630,49 +559,39 @@ func evict(ts *test.RealmTstate, pid sp.Tpid) {
 }
 
 func TestEvict(t *testing.T) {
-	rootts, err1 := test.NewTstateWithRealms(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	defer rootts.Shutdown()
-	ts, err1 := test.NewRealmTstate(rootts, REALM1)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
-	defer ts.Remove()
+	defer mrts.Shutdown()
 
-	pid := spawnSpinner(ts)
+	pid := spawnSpinner(mrts.GetRealm(test.REALM1))
 
-	go evict(ts, pid)
+	go evict(mrts.GetRealm(test.REALM1), pid)
 
-	status, err := ts.WaitExit(pid)
+	status, err := mrts.GetRealm(test.REALM1).WaitExit(pid)
 	assert.Nil(t, err, "WaitExit")
 	assert.True(t, status != nil && status.IsStatusEvicted(), "WaitExit status")
 }
 
 func TestEvictN(t *testing.T) {
-	rootts, err1 := test.NewTstateWithRealms(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	defer rootts.Shutdown()
-	ts, err1 := test.NewRealmTstate(rootts, REALM1)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
-	defer ts.Remove()
+	defer mrts.Shutdown()
 
 	N := int(linuxsched.GetNCores())
 
 	pids := []sp.Tpid{}
 	for i := 0; i < N; i++ {
-		pid := spawnSpinner(ts)
+		pid := spawnSpinner(mrts.GetRealm(test.REALM1))
 		pids = append(pids, pid)
-		go evict(ts, pid)
+		go evict(mrts.GetRealm(test.REALM1), pid)
 	}
 
 	for i := 0; i < N; i++ {
-		status, err := ts.WaitExit(pids[i])
+		status, err := mrts.GetRealm(test.REALM1).WaitExit(pids[i])
 		assert.Nil(t, err, "WaitExit")
 		assert.True(t, status != nil && status.IsStatusEvicted(), "WaitExit status")
 	}
@@ -684,50 +603,45 @@ func TestReserveCores(t *testing.T) {
 		return
 	}
 
-	rootts, err1 := test.NewTstateWithRealms(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	defer rootts.Shutdown()
-	ts, err1 := test.NewRealmTstate(rootts, REALM1)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
-	defer ts.Remove()
+	defer mrts.Shutdown()
 
 	start := time.Now()
 	pid := sp.Tpid("sleeper-aaaaaaa")
 	majorityCpu := 1000 * (linuxsched.GetNCores()/2 + 1)
-	spawnSleeperMcpu(ts, pid, proc.Tmcpu(majorityCpu), SLEEP_MSECS)
+	spawnSleeperMcpu(mrts.GetRealm(test.REALM1), pid, proc.Tmcpu(majorityCpu), SLEEP_MSECS)
 
-	err := ts.WaitStart(pid)
+	err := mrts.GetRealm(test.REALM1).WaitStart(pid)
 	assert.Nil(t, err, "WaitStart error")
 
 	// Make sure pid1 is alphabetically sorted after pid, to ensure that this
 	// proc is only picked up *after* the other one.
 	pid1 := sp.Tpid("sleeper-bbbbbb")
-	spawnSleeperMcpu(ts, pid1, proc.Tmcpu(majorityCpu), SLEEP_MSECS)
+	spawnSleeperMcpu(mrts.GetRealm(test.REALM1), pid1, proc.Tmcpu(majorityCpu), SLEEP_MSECS)
 
-	status, err := ts.WaitExit(pid)
+	status, err := mrts.GetRealm(test.REALM1).WaitExit(pid)
 	assert.Nil(t, err, "WaitExit")
 	assert.True(t, status != nil && status.IsStatusOK(), "WaitExit status")
 
 	// Make sure the second proc didn't finish
-	checkSleeperResult(ts, pid)
-	checkSleeperResultFalse(ts, pid1)
+	checkSleeperResult(mrts.GetRealm(test.REALM1), pid)
+	checkSleeperResultFalse(mrts.GetRealm(test.REALM1), pid1)
 
-	cleanSleeperResult(ts, pid)
+	cleanSleeperResult(mrts.GetRealm(test.REALM1), pid)
 
-	status, err = ts.WaitExit(pid1)
+	status, err = mrts.GetRealm(test.REALM1).WaitExit(pid1)
 	assert.Nil(t, err, "WaitExit 2")
 	assert.True(t, status != nil && status.IsStatusOK(), "WaitExit status 2: %v", status)
 	end := time.Now()
 
 	assert.True(t, end.Sub(start) > (SLEEP_MSECS*2)*time.Millisecond, "Parallelized")
 
-	checkSleeperResult(ts, pid1)
+	checkSleeperResult(mrts.GetRealm(test.REALM1), pid1)
 
-	cleanSleeperResult(ts, pid1)
+	cleanSleeperResult(mrts.GetRealm(test.REALM1), pid1)
 }
 
 func TestWaitExitSimpleMultiKernel1(t *testing.T) {
@@ -739,30 +653,25 @@ func TestWaitExitSimpleMultiKernel3(t *testing.T) {
 }
 
 func waitExitSimpleMultiKernel(t *testing.T, n int) {
-	rootts, err1 := test.NewTstateWithRealms(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	defer rootts.Shutdown()
-	ts, err1 := test.NewRealmTstate(rootts, REALM1)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
-	defer ts.Remove()
+	defer mrts.Shutdown()
 
-	err := ts.BootNode(n)
+	err := mrts.GetRealm(test.REALM1).BootNode(n)
 	assert.Nil(t, err, "Boot node: %v", err)
 	db.DPrintf(db.TEST, "Done boot node %d", n)
 
-	sts, err := ts.GetDir(sp.MSCHED)
+	sts, err := mrts.GetRealm(test.REALM1).GetDir(sp.MSCHED)
 	kernels := sp.Names(sts)
 	db.DPrintf(db.TEST, "Kernels %v", kernels)
 
-	p := spawnWaitSleeper(ts, []string{kernels[0]})
+	p := spawnWaitSleeper(mrts.GetRealm(test.REALM1), []string{kernels[0]})
 	assert.Equal(t, kernels[0], p.GetKernelID())
 
 	for i := 1; i < n+1; i++ {
-		p := spawnWaitSleeper(ts, []string{kernels[i]})
+		p := spawnWaitSleeper(mrts.GetRealm(test.REALM1), []string{kernels[i]})
 		assert.Equal(t, kernels[i], p.GetKernelID())
 	}
 }
@@ -773,70 +682,60 @@ func TestSpawnBurst(t *testing.T) {
 		return
 	}
 
-	rootts, err1 := test.NewTstateWithRealms(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	defer rootts.Shutdown()
-	ts, err1 := test.NewRealmTstate(rootts, REALM1)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
-	defer ts.Remove()
+	defer mrts.Shutdown()
 
 	// Number of spinners to burst-spawn
 	N := (linuxsched.GetNCores()) * N_NODES
 
 	// Start a couple new procds.
 	for i := 0; i < N_NODES; i++ {
-		err := ts.BootNode(1)
+		err := mrts.GetRealm(test.REALM1).BootNode(1)
 		assert.Nil(t, err, "BootNode %v", err)
 	}
 
 	db.DPrintf(db.TEST, "Start burst spawn %v", N)
 
-	ps := burstSpawnSpinner(ts, 4)
+	ps := burstSpawnSpinner(mrts.GetRealm(test.REALM1), 4)
 
 	for _, p := range ps {
-		err := ts.WaitStart(p.GetPid())
+		err := mrts.GetRealm(test.REALM1).WaitStart(p.GetPid())
 		assert.Nil(t, err, "WaitStart: %v", err)
 	}
 
 	db.DPrintf(db.TEST, "Evict burst spawn")
 
 	for _, p := range ps {
-		err := ts.Evict(p.GetPid())
+		err := mrts.GetRealm(test.REALM1).Evict(p.GetPid())
 		assert.Nil(t, err, "Evict: %v", err)
 	}
 
 	db.DPrintf(db.TEST, "Evict wait/exit spawn")
 
 	for _, p := range ps {
-		status, err := ts.WaitExit(p.GetPid())
+		status, err := mrts.GetRealm(test.REALM1).WaitExit(p.GetPid())
 		assert.Nil(t, err, "WaitExit: %v", err)
 		assert.True(t, status != nil && status.IsStatusEvicted(), "%v: Wrong status: %v", p.GetPid(), status)
 	}
 }
 
 func TestSpawnManyProcsParallel(t *testing.T) {
-	rootts, err1 := test.NewTstateWithRealms(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	defer rootts.Shutdown()
-	ts, err1 := test.NewRealmTstate(rootts, REALM1)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
-	defer ts.Remove()
+	defer mrts.Shutdown()
 
 	const N_CONCUR = 5  // 13
 	const N_SPAWNS = 50 // 500
 
-	err := ts.BootNode(1)
+	err := mrts.GetRealm(test.REALM1).BootNode(1)
 	assert.Nil(t, err, "BootProcd 1")
 
-	err = ts.BootNode(1)
+	err = mrts.GetRealm(test.REALM1).BootNode(1)
 	assert.Nil(t, err, "BootProcd 2")
 
 	done := make(chan int)
@@ -847,21 +746,21 @@ func TestSpawnManyProcsParallel(t *testing.T) {
 				pid := sp.GenPid("sleeper")
 				db.DPrintf(db.TEST, "Prep spawn %v", pid)
 				a := proc.NewProcPid(pid, "sleeper", []string{"0ms", "name/"})
-				err := ts.Spawn(a)
+				err := mrts.GetRealm(test.REALM1).Spawn(a)
 				assert.Nil(t, err, "Spawn err %v", err)
 				db.DPrintf(db.TEST, "Done spawn %v", pid)
 
 				db.DPrintf(db.TEST, "Prep WaitStart %v", pid)
-				err = ts.WaitStart(a.GetPid())
+				err = mrts.GetRealm(test.REALM1).WaitStart(a.GetPid())
 				db.DPrintf(db.TEST, "Done WaitStart %v", pid)
 				assert.Nil(t, err, "WaitStart error")
 
 				db.DPrintf(db.TEST, "Prep WaitExit %v", pid)
-				status, err := ts.WaitExit(a.GetPid())
+				status, err := mrts.GetRealm(test.REALM1).WaitExit(a.GetPid())
 				db.DPrintf(db.TEST, "Done WaitExit %v", pid)
 				assert.Nil(t, err, "WaitExit")
 				assert.True(t, status != nil && status.IsStatusOK(), "Status not OK: %v", status)
-				cleanSleeperResult(ts, pid)
+				cleanSleeperResult(mrts.GetRealm(test.REALM1), pid)
 			}
 			done <- i
 		}(i)
@@ -873,75 +772,60 @@ func TestSpawnManyProcsParallel(t *testing.T) {
 }
 
 func TestProcManyOK(t *testing.T) {
-	rootts, err1 := test.NewTstateWithRealms(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	defer rootts.Shutdown()
-	ts, err1 := test.NewRealmTstate(rootts, REALM1)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
-	defer ts.Remove()
+	defer mrts.Shutdown()
 
 	a := proc.NewProc("proctest", []string{NPROC, BURST, "sleeper", "1us", ""})
-	err := ts.Spawn(a)
+	err := mrts.GetRealm(test.REALM1).Spawn(a)
 	assert.Nil(t, err, "Spawn")
-	err = ts.WaitStart(a.GetPid())
+	err = mrts.GetRealm(test.REALM1).WaitStart(a.GetPid())
 	assert.Nil(t, err, "WaitStart error")
-	status, err := ts.WaitExit(a.GetPid())
+	status, err := mrts.GetRealm(test.REALM1).WaitExit(a.GetPid())
 	assert.Nil(t, err, "waitexit")
 	assert.True(t, status.IsStatusOK(), status)
 	assert.True(t, status.Data().(float64) == 0)
 }
 
 func TestProcManyCrash(t *testing.T) {
-	rootts, err1 := test.NewTstateWithRealms(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	defer rootts.Shutdown()
-	ts, err1 := test.NewRealmTstate(rootts, REALM1)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
-	defer ts.Remove()
+	defer mrts.Shutdown()
 
 	a := proc.NewProc("proctest", []string{NPROC, BURST, "crash"})
 	em := crash.NewTeventMapOne(crash.NewEvent(crash.CRASH_CRASH, 0, 1.0))
 	err := em.AppendEnv(a)
 	assert.Nil(t, err)
-	err = ts.Spawn(a)
+	err = mrts.GetRealm(test.REALM1).Spawn(a)
 	assert.Nil(t, err, "Spawn")
-	err = ts.WaitStart(a.GetPid())
+	err = mrts.GetRealm(test.REALM1).WaitStart(a.GetPid())
 	assert.Nil(t, err, "WaitStart error")
-	status, err := ts.WaitExit(a.GetPid())
+	status, err := mrts.GetRealm(test.REALM1).WaitExit(a.GetPid())
 	assert.Nil(t, err, "waitexit")
 	assert.True(t, status.IsStatusOK(), status)
 	assert.True(t, status.Data().(float64) > 0)
 }
 
 func TestProcManyPartition(t *testing.T) {
-	rootts, err1 := test.NewTstateWithRealms(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	defer rootts.Shutdown()
-	ts, err1 := test.NewRealmTstate(rootts, REALM1)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
-	defer ts.Remove()
+	defer mrts.Shutdown()
 
 	a := proc.NewProc("proctest", []string{NPROC1, BURST, "crash"})
 	em := crash.NewTeventMapOne(crash.NewEvent(crash.CRASH_PARTITION, 0, 1.0))
 	err := em.AppendEnv(a)
 	assert.Nil(t, err, "Spawn")
-	err = ts.Spawn(a)
+	err = mrts.GetRealm(test.REALM1).Spawn(a)
 	assert.Nil(t, err, "Spawn")
-	err = ts.WaitStart(a.GetPid())
+	err = mrts.GetRealm(test.REALM1).WaitStart(a.GetPid())
 	assert.Nil(t, err, "WaitStart error")
-	status, err := ts.WaitExit(a.GetPid())
+	status, err := mrts.GetRealm(test.REALM1).WaitExit(a.GetPid())
 	assert.Nil(t, err, "waitexit")
 	assert.True(t, status.IsStatusOK(), status)
 	assert.True(t, status.Data().(float64) > 0)
@@ -956,34 +840,29 @@ func TestSpawnCrashLCSched(t *testing.T) {
 	err := crash.SetSigmaFail(em)
 	assert.Nil(t, err)
 
-	rootts, err1 := test.NewTstateWithRealms(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	defer rootts.Shutdown()
-	ts, err1 := test.NewRealmTstate(rootts, REALM1)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
-	defer ts.Remove()
+	defer mrts.Shutdown()
 
 	db.DPrintf(db.TEST, "Spawn proc which will queue forever")
 
 	// Spawn a proc which can't possibly be run by any msched.
-	pid := spawnSpinnerMcpu(ts, proc.Tmcpu(1000*linuxsched.GetNCores()*2))
+	pid := spawnSpinnerMcpu(mrts.GetRealm(test.REALM1), proc.Tmcpu(1000*linuxsched.GetNCores()*2))
 
 	db.DPrintf(db.TEST, "Crash an lcsched")
 
-	err = crash.SignalFailer(ts.Ts.FsLib, fn)
+	err = crash.SignalFailer(mrts.GetRoot().FsLib, fn)
 	assert.Nil(t, err, "Err signalfailer: %v", err)
 	time.Sleep(T * time.Millisecond)
 
-	err = ts.WaitStart(pid)
+	err = mrts.GetRealm(test.REALM1).WaitStart(pid)
 	assert.NotNil(t, err, "WaitStart: %v", err)
 
 	db.DPrintf(db.TEST, "WaitStart done")
 
-	_, err = ts.WaitExit(pid)
+	_, err = mrts.GetRealm(test.REALM1).WaitExit(pid)
 	assert.NotNil(t, err, "WaitExit: %v", err)
 
 	db.DPrintf(db.TEST, "WaitExit done")
@@ -998,16 +877,11 @@ func TestMaintainReplicationLevelCrashMSched(t *testing.T) {
 	err := crash.SetSigmaFail(em)
 	assert.Nil(t, err)
 
-	rootts, err1 := test.NewTstateWithRealms(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	defer rootts.Shutdown()
-	ts, err1 := test.NewRealmTstate(rootts, REALM1)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
-	defer ts.Remove()
+	defer mrts.Shutdown()
 
 	N_REPL := 3
 	OUTDIR := "name/spinner-ephs"
@@ -1019,38 +893,38 @@ func TestMaintainReplicationLevelCrashMSched(t *testing.T) {
 	em = crash.NewTeventMapOne(e1)
 	err = crash.SetSigmaFail(em)
 	assert.Nil(t, err)
-	err = ts.BootNode(1)
+	err = mrts.GetRealm(test.REALM1).BootNode(1)
 
 	err = crash.SetSigmaFail(crash.NewTeventMap())
 	assert.Nil(t, err, "BootNode %v", err)
 	db.DPrintf(db.TEST, "Boot node 3")
-	err = ts.BootNode(1)
+	err = mrts.GetRealm(test.REALM1).BootNode(1)
 	assert.Nil(t, err, "BootNode %v", err)
 	db.DPrintf(db.TEST, "Done booting nodes")
 
-	ts.RmDir(OUTDIR)
-	err = ts.MkDir(OUTDIR, 0777)
+	mrts.GetRealm(test.REALM1).RmDir(OUTDIR)
+	err = mrts.GetRealm(test.REALM1).MkDir(OUTDIR, 0777)
 	assert.Nil(t, err, "Mkdir")
 
 	db.DPrintf(db.TEST, "Rm out dir done")
 
 	// Start a bunch of replicated spinner procs.
 	cfg := procgroupmgr.NewGroupConfig(N_REPL, "spinner", []string{}, 0, OUTDIR)
-	sm := cfg.StartGrpMgr(ts.SigmaClnt)
+	sm := cfg.StartGrpMgr(mrts.GetRealm(test.REALM1).SigmaClnt)
 	db.DPrintf(db.TEST, "GrpMgr started")
 
 	// Wait for them to spawn.
 	time.Sleep(5 * time.Second)
 
 	// Make sure they spawned correctly.
-	st, err := ts.GetDir(OUTDIR)
+	st, err := mrts.GetRealm(test.REALM1).GetDir(OUTDIR)
 	if assert.Nil(t, err, "readdir1 err: %v", err) {
 		assert.Equal(t, N_REPL, len(st), "wrong num spinners check #1")
 	}
 	db.DPrintf(db.TEST, "Get OutDir")
 
 	for j, fn := range []string{fn0, fn1} {
-		err = crash.SignalFailer(ts.Ts.FsLib, fn)
+		err = crash.SignalFailer(mrts.GetRoot().FsLib, fn)
 		assert.Nil(t, err, "crash msched")
 
 		// Wait for them to respawn.
@@ -1058,7 +932,7 @@ func TestMaintainReplicationLevelCrashMSched(t *testing.T) {
 		for i := 0; i < 10; i++ {
 			time.Sleep(fsetcd.LeaseTTL * time.Second)
 			// Check if the spinners are still up
-			st, err := ts.GetDir(OUTDIR)
+			st, err := mrts.GetRealm(test.REALM1).GetDir(OUTDIR)
 			if err != nil {
 				db.DPrintf(db.TEST, "Couldn't get OutDir trial %v", i)
 				continue
@@ -1079,5 +953,5 @@ func TestMaintainReplicationLevelCrashMSched(t *testing.T) {
 
 	// don't check for errors because between seeing the spinner file
 	// exists and deleting it, the lease may have expired.
-	ts.RmDir(OUTDIR)
+	mrts.GetRealm(test.REALM1).RmDir(OUTDIR)
 }

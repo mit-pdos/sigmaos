@@ -990,7 +990,7 @@ func TestSpawnCrashLCSched(t *testing.T) {
 }
 
 // Make sure this test is still meaningful
-func TestMaintainReplicationLevelCrashMSchedXXX(t *testing.T) {
+func TestMaintainReplicationLevelCrashMSched(t *testing.T) {
 	const T = 1000
 	fn0 := sp.NAMED + "crashms0.sem"
 	e0 := crash.NewEventPath(crash.MSCHED_CRASH, T, 1.0, fn0)

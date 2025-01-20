@@ -70,6 +70,7 @@ func (mrts *MultiRealmTstate) Shutdown() {
 		if err := ts.Remove(); err != nil {
 			db.DPrintf(db.ERROR, "Err remove realm[%v]: %v", r, err)
 		}
+		delete(mrts.realms, r)
 	}
 	if mrts.root != nil {
 		mrts.root.Shutdown()

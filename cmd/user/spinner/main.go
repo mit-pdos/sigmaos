@@ -10,6 +10,7 @@ import (
 	"sigmaos/namesrv/fsetcd"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
+	"sigmaos/sigmaclnt/fslib/dirwatcher"
 	sp "sigmaos/sigmap"
 )
 
@@ -71,9 +72,8 @@ func (s *Spinner) putFileWatch(ch chan bool) {
 	}
 	ch <- true
 	close(ch)
-	// Wait for the leased file to be removed:55
-
-	if err := s.WaitRemove(pn); err != nil && !s.done {
+	// Wait for the leased file to be removed
+	if err := dirwatcher.WaitRemove(s.FsLib, pn); err != nil && !s.done {
 		db.DFatalf("Err WaitRemove %v: %v", pn, err)
 	}
 }

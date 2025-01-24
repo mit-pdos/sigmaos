@@ -38,10 +38,19 @@ func (sc *SigmaClnt) CheckpointMe(ckptpn string) (*SigmaClnt, error) {
 	}
 
 	// Criu cannot dump named streaming unix sockets, so close the
-	// connection with spproxyd.sock.  XXX pass this fd through
-	// environment.
-	syscall.Close(4)
-	syscall.Close(5)
+	// connection with spproxyd.sock.
+	dpConn, err := sc.GetDialProxyClnt().GetDialProxyConn().SyscallConn()
+	if err != nil {
+		db.DPrintf(db.ERROR, "Err get dialproxy conn: %v", err)
+		return nil, err
+	}
+	if err := dpConn.Control(func(fd uintptr) {
+		db.DPrintf(db.CKPT, "Close dialproxy conn socket fd %v", fd)
+		syscall.Close(int(fd))
+	}); err != nil {
+		db.DPrintf(db.ERROR, "Err fcntl dialproxy conn: %v", err)
+		return nil, err
+	}
 
 	if err := sc.ProcAPI.(*procclnt.ProcClnt).CheckpointMe(ckptpn); err != nil && serr.IsErrCode(err, serr.TErrUnreachable) {
 		db.DPrintf(db.CKPT, "CheckpointMe err %v:q\n", err)

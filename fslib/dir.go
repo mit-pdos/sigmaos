@@ -81,7 +81,6 @@ func (fl *FsLib) GetDir(dir string) ([]*sp.Stat, error) {
 // Also returns reader.Reader for readDirWatch
 func (fl *FsLib) ReadDir(dir string) ([]*sp.Stat, *FileReader, error) {
 	rdr, err := fl.OpenReader(dir)
-	db.DPrintf(db.CKPT, "readDirWatch opened reader\n")
 	if err != nil {
 		db.DPrintf(db.FSLIB_ERR, "Err ReadDir.OpenReader: %v", err)
 		return nil, nil, err

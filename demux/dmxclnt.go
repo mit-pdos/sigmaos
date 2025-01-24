@@ -6,6 +6,7 @@ package demux
 import (
 	"sync"
 
+	"reflect"
 	db "sigmaos/debug"
 	"sigmaos/serr"
 	"sigmaos/sessp"
@@ -30,6 +31,8 @@ func NewDemuxClnt(trans TransportI, iovm *IoVecMap) *DemuxClnt {
 		iovm:    iovm,
 	}
 	go dmx.reader()
+	db.DPrintf(db.DEMUXCLNT_ERR, "new demuxClnt")
+	printStructFields(*dmx)
 	return dmx
 }
 
@@ -41,11 +44,31 @@ func (dmx *DemuxClnt) reply(tag sessp.Ttag, rep CallI, err *serr.Err) {
 	}
 }
 
+func printStructFields(s interface{}) {
+	// Get the type and value of the struct
+	val := reflect.ValueOf(s)
+	typ := reflect.TypeOf(s)
+
+	// Ensure the input is a struct
+	if typ.Kind() != reflect.Struct {
+		db.DPrintf(db.DEMUXCLNT_ERR, "Provided input is not a struct %v", typ.Kind())
+		return
+	}
+
+	// Iterate through the fields of the struct
+	for i := 0; i < typ.NumField(); i++ {
+		field := typ.Field(i)
+		value := val.Field(i)
+
+		db.DPrintf(db.DEMUXCLNT_ERR, "Field Name: %s, Field Type: %s, Field Value: %v\n", field.Name, field.Type, value)
+	}
+}
 func (dmx *DemuxClnt) reader() {
 	for {
 		c, err := dmx.trans.ReadCall()
 		if err != nil {
 			db.DPrintf(db.DEMUXCLNT_ERR, "reader rf err %v", err)
+			printStructFields(*dmx)
 			dmx.callmap.close()
 			break
 		}
@@ -64,6 +87,7 @@ func (dmx *DemuxClnt) SendReceive(req CallI, outiov sessp.IoVec) (CallI, *serr.E
 	ch := make(chan reply)
 	if err := dmx.callmap.put(req.Tag(), ch); err != nil {
 		db.DPrintf(db.DEMUXCLNT_ERR, "SendReceive: enqueue req %v err %v", req, err)
+		printStructFields(*dmx)
 		return nil, err
 	}
 	if err := dmx.iovm.Put(req.Tag(), outiov); err != nil {
@@ -84,6 +108,7 @@ func (dmx *DemuxClnt) SendReceive(req CallI, outiov sessp.IoVec) (CallI, *serr.E
 }
 
 func (dmx *DemuxClnt) Close() error {
+	db.DPrintf(db.DEMUXCLNT_ERR, "closing")
 	return dmx.callmap.close()
 }
 

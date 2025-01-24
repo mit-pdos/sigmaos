@@ -3,6 +3,7 @@ package ckpt_test
 import (
 	"strconv"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 
@@ -102,7 +103,8 @@ func TestSpawnCkptGeo(t *testing.T) {
 	db.DPrintf(db.TEST, "Wait until start %v", pid)
 
 	err = ts.WaitStart(restProc.GetPid())
+	db.DPrintf(db.TEST, "Started %v", pid)
 	assert.Nil(t, err)
-
+	time.Sleep(1000 * time.Millisecond)
 	ts.Shutdown()
 }

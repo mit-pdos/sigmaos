@@ -58,9 +58,7 @@ func NewDirCacheFilter[E any](fsl *fslib.FsLib, path string, newVal NewValF[E], 
 
 func (dc *DirCache[E]) init() {
 	ch := make(chan struct{})
-	db.DPrintf(db.CKPT, "getting load?? %v", dc.LSelector)
 	if dc.isInit.Swap(1) == 0 && dc.isDone.Load() == 0 {
-		db.DPrintf(db.CKPT, "got load?? %v", dc.LSelector)
 		go dc.watchDir(ch)
 		go dc.watchdog()
 		db.DPrintf(db.CKPT, "waiting?? %v", dc.LSelector)
@@ -121,7 +119,6 @@ func (dc *DirCache[E]) WaitTimedGetEntriesN(n int) ([]string, error) {
 func (dc *DirCache[E]) GetEntry(n string) (E, error) {
 	db.DPrintf(dc.LSelector, "GetEntry1 for %v", n)
 	dc.init()
-	db.DPrintf(db.CKPT, "here entry %v", dc.LSelector)
 	if err := dc.checkErr(); err != nil {
 		var e E
 		db.DPrintf(dc.LSelector, "Done GetEntry for %v err %v", n, err)
@@ -338,7 +335,6 @@ func (dc *DirCache[E]) watchDir(ch chan struct{}) {
 			retry = false
 		}
 		if err != nil {
-			db.DPrintf(db.CKPT, "watchDir here")
 			if serr.IsErrorUnreachable(err) && !retry {
 				time.Sleep(sp.Conf.Path.RESOLVE_TIMEOUT)
 				// try again but remember we are already tried reading ReadDir

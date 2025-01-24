@@ -149,6 +149,7 @@ func NewSigmaSrvRootClntAuthFn(root fs.Dir, addr *sp.Taddr, path string, sc *sig
 	return newSigmaSrv(mfs), nil
 }
 
+// DELETE
 func NewSigmaSrvRoot(root fs.Dir, path string, addr *sp.Taddr, pe *proc.ProcEnv) (*SigmaSrv, error) {
 	sc, err := sigmaclnt.NewSigmaClnt(pe)
 	if err != nil {

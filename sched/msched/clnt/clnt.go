@@ -198,7 +198,6 @@ func (mc *MSchedClnt) GetRunningProcs(nsample int) (map[sp.Trealm][]*proc.Proc, 
 
 func (mc *MSchedClnt) Checkpoint(kernelID string, pid sp.Tpid, r sp.Trealm, pn string) error {
 	db.DPrintf(db.CKPT, "Checkpoint kernelId %v pid %v", kernelID, pid)
-	db.DPrintf(db.CKPT, "check %v pid %v", kernelID, pid)
 	rpcc, err := mc.rpcdc.GetClnt(kernelID)
 	db.DPrintf(db.CKPT, "here kernelId %v pid %v", kernelID, pid)
 	if err != nil {

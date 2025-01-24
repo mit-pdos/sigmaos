@@ -186,11 +186,12 @@ func restoreProc(criuclnt *criu.Criu, proc *proc.Proc, imgDir, workDir, jailPath
 	var dstfd *fdinfo.FdinfoEntry
 	for _, entry := range criuDump.Entries {
 		entryinfo := entry.Message.(*fdinfo.FdinfoEntry)
+		db.DPrintf(db.ALWAYS, "criu entries: %v fd: %v", entry.Message.(*fdinfo.FdinfoEntry).GetId(), entry.Message.(*fdinfo.FdinfoEntry).GetFd())
 		if entryinfo.GetFd() == 3 {
 			dstfd = entryinfo
 			break
 		}
-		db.DPrintf(db.ALWAYS, "criu entries: %v fd: %v", entry.Message.(*fdinfo.FdinfoEntry).GetId(), entry.Message.(*fdinfo.FdinfoEntry).GetFd())
+
 	}
 	if dstfd == nil {
 		db.DFatalf("ReadImg usk err fd 3 not dumped%v\n", err)
@@ -246,7 +247,7 @@ func restoreProc(criuclnt *criu.Criu, proc *proc.Proc, imgDir, workDir, jailPath
 	}
 
 	db.DPrintf(db.CKPT, "restored proc is running")
-
+	db.DPrintf(db.CKPT, "conn: %v", *uconn)
 	if err := sendConn(wrt, uconn); err != nil {
 		db.DFatalf("sendConn err %v\n", err)
 	}

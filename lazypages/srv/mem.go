@@ -21,7 +21,7 @@ import (
 )
 
 const (
-	PREFETCH = 0 // number of pages to prefetch
+	PREFETCH = 1 // number of pages to prefetch
 )
 
 func nPages(start, end uint64, pagesz int) int {
@@ -174,6 +174,17 @@ func (iov *Iov) markFetchLen(addr0 uint64) int {
 		n += 1
 	}
 	return n * iov.pagesz
+}
+
+// unmark pages
+func (iov *Iov) unmarkFetchLen(addr0 uint64, n int) {
+	addr := addr0
+	for a := 0; a < n && addr < iov.end; addr += uint64(iov.pagesz) {
+		i := int(addr-iov.start) / iov.pagesz
+		iov.copied[i] = false
+		a += 1
+	}
+	return
 }
 
 type Iovs struct {

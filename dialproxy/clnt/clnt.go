@@ -438,9 +438,12 @@ func (npc *DialProxyClnt) invalidateNamedEndpointCacheEntry(r sp.Trealm) error {
 			Iov: [][]byte{nil},
 		},
 	}
+	db.DPrintf(db.DIALPROXYCLNT, "rpcing dialproxyclnt %v", r)
 	if err := npc.rpcc.RPC("DialProxySrvStubs.InvalidateNamedEndpointCacheEntry", req, res); err != nil {
+		db.DPrintf(db.DIALPROXYCLNT, "rpced dialproxyclnt %v err %v", r, err)
 		return err
 	}
+	db.DPrintf(db.DIALPROXYCLNT, "rpc dialproxyclnt %v no err", r)
 	if res.Err.ErrCode != 0 {
 		return sp.NewErr(res.Err)
 	} else {
@@ -454,6 +457,7 @@ func (npc *DialProxyClnt) InvalidateNamedEndpointCacheEntry(r sp.Trealm) error {
 	}
 	db.DPrintf(db.DIALPROXYCLNT, "InvalidateNamedEndpointCacheEntry %v", r)
 	err := npc.invalidateNamedEndpointCacheEntry(r)
+	db.DPrintf(db.DIALPROXYCLNT, "InvalidatedNamedEndpointCacheEntry %v", r)
 	if err != nil {
 		db.DPrintf(db.DIALPROXYCLNT_ERR, "InvalidateNamedEndpointCacheEntry %v err %v", r, err)
 		return err

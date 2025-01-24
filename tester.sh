@@ -1,8 +1,10 @@
 #!/bin/bash
 
 # Program to run
-PROGRAM="go test -v sigmaos/ckpt -start -run CkptProc"  # Replace with the actual path to your program
+PROGRAM="go test -v sigmaos/ckpt -start -run Geo"  # Replace with the actual path to your program
+#PROGRAM ="go test -v sigmaos/ckpt -start -run CkptProc"
 STOPPER="./stop.sh"
+LOGS="./logs.sh > logs3.txt"
 # Maximum number of iterations
 MAX_ITERATIONS=200
 
@@ -13,7 +15,6 @@ TIME_THRESHOLD=30
 for ((i=1; i<=MAX_ITERATIONS; i++))
 do
     echo "Running iteration $i..."
-
     # Start the program in the background
     $PROGRAM &
     PROGRAM_PID=$!
@@ -39,9 +40,16 @@ do
         echo "Stopping the script because the program exceeded the time threshold."
         break
     fi
-    sleep 5
+    ./logs.sh > logs.txt
+    # if grep -q "copyPages err resource temporarily unavailable" logs.txt; then
+    #     echo "Pattern found. Exiting the script."
+    #     break
+    # fi
+    # if grep -q "FAIL" logs.txt; then
+    #     echo "FAILED!"
+    #     break
+    # fi
     $STOPPER
-    sleep 10
 done
 
 echo "Script completed."

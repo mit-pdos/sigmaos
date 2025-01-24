@@ -272,7 +272,7 @@ func (c *PerfCoord) getWorkerTimes(trialNum int, deleted bool) [][]time.Time {
 
 func (c *PerfCoord) waitResponses(responseDirCache *dircache.DirCache[struct{}], trialNum int, deleted bool) {
 	for ix := 0; ix < c.nWorkers; ix++ {
-		err := responseDirCache.WaitEntryCreated(responseName(trialNum, strconv.Itoa(ix), deleted), false)
+		err := responseDirCache.WaitEntryCreated(responseName(trialNum, strconv.Itoa(ix), deleted))
 		if err != nil {
 			db.DFatalf("Run: failed to wait for all procs to respond %v", err)
 		}

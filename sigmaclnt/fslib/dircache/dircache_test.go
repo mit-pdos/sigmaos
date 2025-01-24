@@ -87,7 +87,7 @@ func TestDirCacheWaitEntryCreated(t *testing.T) {
 			_, err := ts.Create(filepath.Join(dc.Path, "file0"), 0777, sp.OWRITE)
 			assert.Nil(t, err)
 		}()
-		err := dc.WaitEntryCreated("file0", true)
+		err := dc.WaitEntryCreated("file0")
 		assert.Nil(t, err)
 	}, 10)
 }
@@ -102,7 +102,7 @@ func TestDirCacheWaitAllEntriesCreated(t *testing.T) {
 				assert.Nil(t, err)
 			}
 		}()
-		err := dc.WaitAllEntriesCreated(files, true)
+		err := dc.WaitAllEntriesCreated(files)
 		assert.Nil(t, err)
 	}, 10)
 }
@@ -116,7 +116,7 @@ func TestDirCacheWaitEntryRemoved(t *testing.T) {
 			err := ts.Remove(filepath.Join(dc.Path, "file0"))
 			assert.Nil(t, err)
 		}()
-		err = dc.WaitEntryRemoved("file0", true)
+		err = dc.WaitEntryRemoved("file0")
 		assert.Nil(t, err)
 	}, 10)
 }
@@ -135,7 +135,7 @@ func TestDirCacheWaitAllEntriesRemoved(t *testing.T) {
 				assert.Nil(t, err)
 			}
 		}()
-		err := dc.WaitAllEntriesRemoved(files, true)
+		err := dc.WaitAllEntriesRemoved(files)
 		assert.Nil(t, err)
 	}, 10)
 }
@@ -170,7 +170,7 @@ func TestDirCacheWaitEmpty(t *testing.T) {
 				assert.Nil(t, err)
 			}
 		}()
-		err := dc.WaitEmpty(true)
+		err := dc.WaitEmpty()
 		assert.Nil(t, err)
 	}, 10)
 }

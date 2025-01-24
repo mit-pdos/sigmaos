@@ -19,7 +19,6 @@ func NewProcClnt(fsl *fslib.FsLib) (*ProcClnt, error) {
 	if fsl.ProcEnv().GetPrivileged() {
 		db.DPrintf(db.PROCCLNT, "Mount %v as %v", fsl.ProcEnv().ProcDir, proc.PROCDIR)
 		fsl.NewRootMount(fsl.ProcEnv().ProcDir, proc.PROCDIR)
-
 	}
 	// If a schedd IP was specified for this proc, mount the RPC file directly.
 	if ep, ok := fsl.ProcEnv().GetMSchedEndpoint(); ok {

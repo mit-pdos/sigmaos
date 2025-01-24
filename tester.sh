@@ -9,14 +9,15 @@ LOGS="./logs.sh > logs3.txt"
 MAX_ITERATIONS=200
 
 # Time threshold in seconds
-TIME_THRESHOLD=30
+TIME_THRESHOLD=45
 
 # Loop to run the program
 for ((i=1; i<=MAX_ITERATIONS; i++))
 do
+    ./stop.sh --parallel --nopurge --skipdb
     echo "Running iteration $i..."
     # Start the program in the background
-    $PROGRAM &
+    $PROGRAM  2>&1 | tee /tmp/out-xxxx &
     PROGRAM_PID=$!
 
     # Wait for the program to complete with a timeout
@@ -28,6 +29,7 @@ do
             break
         fi
         sleep 1
+        echo $SECONDS
     done
 
     # Check if the program finished successfully
@@ -35,9 +37,17 @@ do
         echo "Iteration $i completed in $SECONDS seconds."
     fi
 
+    if grep -q "Shutdown" /tmp/out-xxxx; then
+      continue
+    fi
+
     # Exit if the program was killed for exceeding the time limit
     if [ $SECONDS -ge $TIME_THRESHOLD ]; then
         echo "Stopping the script because the program exceeded the time threshold."
+        ./logs.sh > /tmp/out1
+        cp /tmp/sigmaos-perf/log-proc.txt /tmp
+        ./stop.sh --parallel --nopurge --skipdb
+        echo "!!!!!!!! SUCCESS !!!!!!!!"
         break
     fi
     ./logs.sh > logs.txt

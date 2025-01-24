@@ -43,6 +43,11 @@ func NewDialProxyClnt(pe *proc.ProcEnv) *DialProxyClnt {
 	}
 }
 
+// Get the connection underlying the transport to dialproxyd
+func (npc *DialProxyClnt) GetDialProxyConn() *net.UnixConn {
+	return npc.trans.Conn()
+}
+
 func (npc *DialProxyClnt) AllowConnectionsFromAllRealms() {
 	npc.acceptAllRealms = true
 }

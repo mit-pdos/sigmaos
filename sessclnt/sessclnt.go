@@ -13,8 +13,8 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/demux"
-	"sigmaos/netclnt"
 	dialproxyclnt "sigmaos/dialproxy/clnt"
+	"sigmaos/netclnt"
 	"sigmaos/proc"
 	"sigmaos/serr"
 	"sigmaos/sessp"

@@ -39,8 +39,17 @@ func NewMultiRealmTstate(t *testing.T, realms []sp.Trealm) (*MultiRealmTstate, e
 	return mrts, nil
 }
 
+func (mrts *MultiRealmTstate) AddRealmClnt(r sp.Trealm) error {
+	ts, err := newRealmTstateJustClnt(mrts.root, r)
+	if err != nil {
+		return err
+	}
+	mrts.realms[r] = ts
+	return nil
+}
+
 func (mrts *MultiRealmTstate) AddRealm(r sp.Trealm) error {
-	ts, err := NewRealmTstate(mrts.root, r)
+	ts, err := newRealmTstate(mrts.root, r)
 	if err != nil {
 		return err
 	}
@@ -56,7 +65,7 @@ func (mrts *MultiRealmTstate) DelRealm(r sp.Trealm) error {
 }
 
 func (mrts *MultiRealmTstate) AddRealmNumSubsystems(r sp.Trealm, numS3 int64, numUX int64) error {
-	ts, err := NewRealmTstateNumSubsystems(mrts.root, r, numS3, numUX)
+	ts, err := newRealmTstateNumSubsystems(mrts.root, r, numS3, numUX)
 	if err != nil {
 		return err
 	}

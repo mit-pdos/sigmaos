@@ -21,16 +21,16 @@ type RealmTstate struct {
 }
 
 // Creates a realm, and a tstate relative to that realm.
-func NewRealmTstate(ts *Tstate, realm sp.Trealm) (*RealmTstate, error) {
+func newRealmTstate(ts *Tstate, realm sp.Trealm) (*RealmTstate, error) {
 	return newRealmTstateClnt(ts, realm, true, realmpkg.SUBSYSTEM_PER_NODE, realmpkg.SUBSYSTEM_PER_NODE)
 }
 
-func NewRealmTstateNumSubsystems(ts *Tstate, realm sp.Trealm, numS3 int64, numUX int64) (*RealmTstate, error) {
+func newRealmTstateNumSubsystems(ts *Tstate, realm sp.Trealm, numS3 int64, numUX int64) (*RealmTstate, error) {
 	return newRealmTstateClnt(ts, realm, true, numS3, numUX)
 }
 
 // Creates a tstate relative to an existing realm.
-func NewRealmTstateClnt(ts *Tstate, realm sp.Trealm) (*RealmTstate, error) {
+func newRealmTstateJustClnt(ts *Tstate, realm sp.Trealm) (*RealmTstate, error) {
 	return newRealmTstateClnt(ts, realm, false, realmpkg.SUBSYSTEM_PER_NODE, realmpkg.SUBSYSTEM_PER_NODE)
 }
 

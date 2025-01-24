@@ -1255,15 +1255,14 @@ func TestHotelSigmaosJustCliGeo(t *testing.T) {
 	if err1 := waitForRealmCreation(mrts.GetRoot(), REALM1); !assert.Nil(t, err1, "Error waitRealmCreation: %v") {
 		return
 	}
-	ts1, err1 := test.NewRealmTstateClnt(mrts.GetRoot(), REALM1)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+	if err1 := mrts.AddRealmClnt(REALM1); !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
 	rs := benchmarks.NewResults(1, benchmarks.E2E)
 	clientReady(mrts.GetRoot())
 	// Sleep for a bit
 	time.Sleep(SLEEP)
-	jobs, ji := newHotelJobsCli(ts1, true, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, CACHE_TYPE, proc.Tmcpu(HOTEL_CACHE_MCPU), MANUALLY_SCALE_CACHES, SCALE_CACHE_DELAY, N_CACHES_TO_ADD, HOTEL_NGEO, MANUALLY_SCALE_GEO, SCALE_GEO_DELAY, N_GEO_TO_ADD, HOTEL_NGEO_IDX, HOTEL_GEO_SEARCH_RADIUS, HOTEL_GEO_NRESULTS, func(wc *hotel.WebClnt, r *rand.Rand) {
+	jobs, ji := newHotelJobsCli(mrts.GetRealm(REALM1), true, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, CACHE_TYPE, proc.Tmcpu(HOTEL_CACHE_MCPU), MANUALLY_SCALE_CACHES, SCALE_CACHE_DELAY, N_CACHES_TO_ADD, HOTEL_NGEO, MANUALLY_SCALE_GEO, SCALE_GEO_DELAY, N_GEO_TO_ADD, HOTEL_NGEO_IDX, HOTEL_GEO_SEARCH_RADIUS, HOTEL_GEO_NRESULTS, func(wc *hotel.WebClnt, r *rand.Rand) {
 		_, err := hotel.GeoReq(wc)
 		assert.Nil(t, err, "Error geo req: %v", err)
 	})
@@ -1275,7 +1274,7 @@ func TestHotelSigmaosJustCliGeo(t *testing.T) {
 			j.ready <- true
 		}
 	}()
-	runOps(ts1, ji, runHotel, rs)
+	runOps(mrts.GetRealm(REALM1), ji, runHotel, rs)
 	//	printResultSummary(rs)
 	//	jobs[0].requestK8sStats()
 }
@@ -1288,15 +1287,14 @@ func TestHotelSigmaosJustCliSearch(t *testing.T) {
 	if err1 := waitForRealmCreation(mrts.GetRoot(), REALM1); !assert.Nil(t, err1, "Error waitRealmCreation: %v") {
 		return
 	}
-	ts1, err1 := test.NewRealmTstateClnt(mrts.GetRoot(), REALM1)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+	if err1 := mrts.AddRealmClnt(REALM1); !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
 	rs := benchmarks.NewResults(1, benchmarks.E2E)
 	clientReady(mrts.GetRoot())
 	// Sleep for a bit
 	time.Sleep(SLEEP)
-	jobs, ji := newHotelJobsCli(ts1, true, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, CACHE_TYPE, proc.Tmcpu(HOTEL_CACHE_MCPU), MANUALLY_SCALE_CACHES, SCALE_CACHE_DELAY, N_CACHES_TO_ADD, HOTEL_NGEO, MANUALLY_SCALE_GEO, SCALE_GEO_DELAY, N_GEO_TO_ADD, HOTEL_NGEO_IDX, HOTEL_GEO_SEARCH_RADIUS, HOTEL_GEO_NRESULTS, func(wc *hotel.WebClnt, r *rand.Rand) {
+	jobs, ji := newHotelJobsCli(mrts.GetRealm(REALM1), true, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, CACHE_TYPE, proc.Tmcpu(HOTEL_CACHE_MCPU), MANUALLY_SCALE_CACHES, SCALE_CACHE_DELAY, N_CACHES_TO_ADD, HOTEL_NGEO, MANUALLY_SCALE_GEO, SCALE_GEO_DELAY, N_GEO_TO_ADD, HOTEL_NGEO_IDX, HOTEL_GEO_SEARCH_RADIUS, HOTEL_GEO_NRESULTS, func(wc *hotel.WebClnt, r *rand.Rand) {
 		err := hotel.RandSearchReq(wc, r)
 		assert.Nil(t, err, "Error search req: %v", err)
 	})
@@ -1308,7 +1306,7 @@ func TestHotelSigmaosJustCliSearch(t *testing.T) {
 			j.ready <- true
 		}
 	}()
-	runOps(ts1, ji, runHotel, rs)
+	runOps(mrts.GetRealm(REALM1), ji, runHotel, rs)
 	//	printResultSummary(rs)
 	//	jobs[0].requestK8sStats()
 }
@@ -1321,15 +1319,14 @@ func TestHotelK8sJustCliGeo(t *testing.T) {
 	if err1 := waitForRealmCreation(mrts.GetRoot(), REALM1); !assert.Nil(t, err1, "Error waitRealmCreation: %v") {
 		return
 	}
-	ts1, err1 := test.NewRealmTstateClnt(mrts.GetRoot(), REALM1)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+	if err1 := mrts.AddRealmClnt(REALM1); !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
 	rs := benchmarks.NewResults(1, benchmarks.E2E)
 	db.DPrintf(db.ALWAYS, "Clnt ready")
 	clientReady(mrts.GetRoot())
 	db.DPrintf(db.ALWAYS, "Clnt done waiting")
-	jobs, ji := newHotelJobsCli(ts1, false, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, CACHE_TYPE, proc.Tmcpu(HOTEL_CACHE_MCPU), MANUALLY_SCALE_CACHES, SCALE_CACHE_DELAY, N_CACHES_TO_ADD, HOTEL_NGEO, MANUALLY_SCALE_GEO, SCALE_GEO_DELAY, N_GEO_TO_ADD, HOTEL_NGEO_IDX, HOTEL_GEO_SEARCH_RADIUS, HOTEL_GEO_NRESULTS, func(wc *hotel.WebClnt, r *rand.Rand) {
+	jobs, ji := newHotelJobsCli(mrts.GetRealm(REALM1), false, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, CACHE_TYPE, proc.Tmcpu(HOTEL_CACHE_MCPU), MANUALLY_SCALE_CACHES, SCALE_CACHE_DELAY, N_CACHES_TO_ADD, HOTEL_NGEO, MANUALLY_SCALE_GEO, SCALE_GEO_DELAY, N_GEO_TO_ADD, HOTEL_NGEO_IDX, HOTEL_GEO_SEARCH_RADIUS, HOTEL_GEO_NRESULTS, func(wc *hotel.WebClnt, r *rand.Rand) {
 		_, err := hotel.GeoReq(wc)
 		assert.Nil(t, err, "Error geo req: %v", err)
 	})
@@ -1341,7 +1338,7 @@ func TestHotelK8sJustCliGeo(t *testing.T) {
 			j.ready <- true
 		}
 	}()
-	runOps(ts1, ji, runHotel, rs)
+	runOps(mrts.GetRealm(REALM1), ji, runHotel, rs)
 	//	printResultSummary(rs)
 	//	jobs[0].requestK8sStats()
 }
@@ -1354,15 +1351,14 @@ func TestHotelK8sJustCliSearch(t *testing.T) {
 	if err1 := waitForRealmCreation(mrts.GetRoot(), REALM1); !assert.Nil(t, err1, "Error waitRealmCreation: %v") {
 		return
 	}
-	ts1, err1 := test.NewRealmTstateClnt(mrts.GetRoot(), REALM1)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+	if err1 := mrts.AddRealmClnt(REALM1); !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
 	rs := benchmarks.NewResults(1, benchmarks.E2E)
 	db.DPrintf(db.ALWAYS, "Clnt ready")
 	clientReady(mrts.GetRoot())
 	db.DPrintf(db.ALWAYS, "Clnt done waiting")
-	jobs, ji := newHotelJobsCli(ts1, false, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, CACHE_TYPE, proc.Tmcpu(HOTEL_CACHE_MCPU), MANUALLY_SCALE_CACHES, SCALE_CACHE_DELAY, N_CACHES_TO_ADD, HOTEL_NGEO, MANUALLY_SCALE_GEO, SCALE_GEO_DELAY, N_GEO_TO_ADD, HOTEL_NGEO_IDX, HOTEL_GEO_SEARCH_RADIUS, HOTEL_GEO_NRESULTS, func(wc *hotel.WebClnt, r *rand.Rand) {
+	jobs, ji := newHotelJobsCli(mrts.GetRealm(REALM1), false, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, CACHE_TYPE, proc.Tmcpu(HOTEL_CACHE_MCPU), MANUALLY_SCALE_CACHES, SCALE_CACHE_DELAY, N_CACHES_TO_ADD, HOTEL_NGEO, MANUALLY_SCALE_GEO, SCALE_GEO_DELAY, N_GEO_TO_ADD, HOTEL_NGEO_IDX, HOTEL_GEO_SEARCH_RADIUS, HOTEL_GEO_NRESULTS, func(wc *hotel.WebClnt, r *rand.Rand) {
 		err := hotel.RandSearchReq(wc, r)
 		assert.Nil(t, err, "Error search req: %v", err)
 	})
@@ -1374,7 +1370,7 @@ func TestHotelK8sJustCliSearch(t *testing.T) {
 			j.ready <- true
 		}
 	}()
-	runOps(ts1, ji, runHotel, rs)
+	runOps(mrts.GetRealm(REALM1), ji, runHotel, rs)
 	//	printResultSummary(rs)
 	//	jobs[0].requestK8sStats()
 }
@@ -1581,25 +1577,24 @@ func TestK8sImgResize(t *testing.T) {
 		return
 	}
 	defer mrts.Shutdown()
-	ts1, err1 := test.NewRealmTstateClnt(mrts.GetRoot(), sp.ROOTREALM)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+	if err1 := mrts.AddRealmClnt(REALM1); !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
 	if PREWARM_REALM {
-		warmupRealm(ts1, nil)
+		warmupRealm(mrts.GetRealm(REALM1), nil)
 	}
-	sdc := mschedclnt.NewMSchedClnt(ts1.FsLib, sp.NOT_SET)
+	sdc := mschedclnt.NewMSchedClnt(mrts.GetRealm(REALM1).FsLib, sp.NOT_SET)
 	nMSched, err := sdc.NMSched()
-	assert.Nil(ts1.Ts.T, err, "Error nmsched %v", err)
+	assert.Nil(mrts.GetRealm(REALM1).Ts.T, err, "Error nmsched %v", err)
 	rs := benchmarks.NewResults(1, benchmarks.E2E)
-	p := newRealmPerf(ts1)
+	p := newRealmPerf(mrts.GetRealm(REALM1))
 	defer p.Done()
-	err = ts1.MkDir(sp.K8S_SCRAPER, 0777)
-	assert.Nil(ts1.Ts.T, err, "Error mkdir %v", err)
+	err = mrts.GetRealm(REALM1).MkDir(sp.K8S_SCRAPER, 0777)
+	assert.Nil(mrts.GetRealm(REALM1).Ts.T, err, "Error mkdir %v", err)
 	// Start up the stat scraper procs.
 	ps, _ := newNProcs(nMSched, "k8s-stat-scraper", []string{}, nil, proc.Tmcpu(1000*(linuxsched.GetNCores()-1)))
-	spawnBurstProcs(ts1, ps)
-	waitStartProcs(ts1, ps)
+	spawnBurstProcs(mrts.GetRealm(REALM1), ps)
+	waitStartProcs(mrts.GetRealm(REALM1), ps)
 	// NOte start time
 	start := time.Now()
 	// Monitor CPU utilization via the stat scraper procs.
@@ -1610,7 +1605,7 @@ func TestK8sImgResize(t *testing.T) {
 	}
 	rs.Append(time.Since(start), 1)
 	printResultSummary(rs)
-	evictProcs(ts1, ps)
+	evictProcs(mrts.GetRealm(REALM1), ps)
 }
 
 func TestRealmBalanceSimpleImgResize(t *testing.T) {
@@ -1674,11 +1669,10 @@ func TestRealmBalanceSocialNetworkImgResize(t *testing.T) {
 	}
 	defer mrts.Shutdown()
 	blockers := blockMem(mrts.GetRoot(), BLOCK_MEM)
-	ts0, err1 := test.NewRealmTstateClnt(mrts.GetRoot(), "rootrealm")
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+	if err1 := mrts.AddRealmClnt(sp.ROOTREALM); !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	p0 := newRealmPerf(ts0)
+	p0 := newRealmPerf(mrts.GetRealm(sp.ROOTREALM))
 	defer p0.Done()
 	// Structures for image resize
 	rs1 := benchmarks.NewResults(1, benchmarks.E2E)
@@ -1709,7 +1703,7 @@ func TestRealmBalanceSocialNetworkImgResize(t *testing.T) {
 	// Wait for image resize jobs to set up.
 	<-imgJobs[0].ready
 	// Monitor cores for kernel procs
-	monitorCPUUtil(ts0, p0)
+	monitorCPUUtil(mrts.GetRealm(sp.ROOTREALM), p0)
 	monitorCPUUtil(mrts.GetRealm(REALM1), p1)
 	monitorCPUUtil(mrts.GetRealm(REALM2), p2)
 	db.DPrintf(db.TEST, "Image Resize setup done.")
@@ -1738,52 +1732,49 @@ func TestK8sSocialNetworkImgResize(t *testing.T) {
 	defer mrts.Shutdown()
 	blockers := blockMem(mrts.GetRoot(), BLOCK_MEM)
 	// make realm to run k8s scrapper
-	ts0, err1 := test.NewRealmTstateClnt(mrts.GetRoot(), sp.ROOTREALM)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+	if err1 := mrts.AddRealmClnt(sp.ROOTREALM); !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	p0 := newRealmPerf(ts0)
+	p0 := newRealmPerf(mrts.GetRealm(sp.ROOTREALM))
 	defer p0.Done()
 	if PREWARM_REALM {
-		warmupRealm(ts0, nil)
+		warmupRealm(mrts.GetRealm(sp.ROOTREALM), nil)
 	}
-	sdc := mschedclnt.NewMSchedClnt(ts0.SigmaClnt.FsLib, sp.NOT_SET)
+	sdc := mschedclnt.NewMSchedClnt(mrts.GetRealm(sp.ROOTREALM).SigmaClnt.FsLib, sp.NOT_SET)
 	nMSched, err := sdc.NMSched()
-	assert.Nil(ts0.Ts.T, err, "Error nmsched %v", err)
+	assert.Nil(mrts.GetRealm(sp.ROOTREALM).Ts.T, err, "Error nmsched %v", err)
 	rs0 := benchmarks.NewResults(1, benchmarks.E2E)
-	err = ts0.MkDir(sp.K8S_SCRAPER, 0777)
-	assert.Nil(ts0.Ts.T, err, "Error mkdir %v", err)
+	err = mrts.GetRealm(sp.ROOTREALM).MkDir(sp.K8S_SCRAPER, 0777)
+	assert.Nil(mrts.GetRealm(sp.ROOTREALM).Ts.T, err, "Error mkdir %v", err)
 	// Start up the stat scraper procs.
 	//ps, _ := newNProcs(nMSched, "k8s-stat-scraper", []string{}, nil, proc.Tmcpu(1000*(linuxsched.GetNCores()-1)))
 	ps, _ := newNProcs(nMSched, "k8s-stat-scraper", []string{}, nil, 0)
-	spawnBurstProcs(ts0, ps)
-	waitStartProcs(ts0, ps)
+	spawnBurstProcs(mrts.GetRealm(sp.ROOTREALM), ps)
+	waitStartProcs(mrts.GetRealm(sp.ROOTREALM), ps)
 	// Structures for image resize
-	ts1, err1 := test.NewRealmTstate(mrts.GetRoot(), REALM1)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+	if err1 := mrts.AddRealmClnt(REALM1); !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
 	//rs1 := benchmarks.NewResults(1, benchmarks.E2E)
-	p1 := newRealmPerf(ts1)
+	p1 := newRealmPerf(mrts.GetRealm(REALM1))
 	defer p1.Done()
 	// Structure for social network
-	ts2, err1 := test.NewRealmTstate(mrts.GetRoot(), REALM2)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+	if err1 := mrts.AddRealm(REALM2); !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
 	rs2 := benchmarks.NewResults(1, benchmarks.E2E)
-	p2 := newRealmPerf(ts2)
+	p2 := newRealmPerf(mrts.GetRealm(REALM2))
 	defer p2.Done()
 	// Prep image resize job
 
 	// Prep social network job
-	snJobs, snApps := newSocialNetworkJobs(ts2, p2, false, SOCIAL_NETWORK_READ_ONLY, SOCIAL_NETWORK_DURS, SOCIAL_NETWORK_MAX_RPS, 3)
+	snJobs, snApps := newSocialNetworkJobs(mrts.GetRealm(REALM2), p2, false, SOCIAL_NETWORK_READ_ONLY, SOCIAL_NETWORK_DURS, SOCIAL_NETWORK_MAX_RPS, 3)
 	// Monitor cores assigned to image resize.
 	// NOte start time
 	start := time.Now()
 	// Run social network job
 	go func() {
-		runOps(ts2, snApps, runSocialNetwork, rs2)
+		runOps(mrts.GetRealm(REALM2), snApps, runSocialNetwork, rs2)
 		snJobs[0].requestK8sStats()
 		done <- true
 	}()
@@ -1812,7 +1803,7 @@ func TestK8sSocialNetworkImgResize(t *testing.T) {
 	}
 	rs0.Append(time.Since(start), 1)
 	printResultSummary(rs0)
-	evictProcs(ts0, ps)
+	evictProcs(mrts.GetRealm(sp.ROOTREALM), ps)
 	time.Sleep(10 * time.Second)
 	evictMemBlockers(mrts.GetRoot(), blockers)
 }

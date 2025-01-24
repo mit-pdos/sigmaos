@@ -42,6 +42,7 @@ func (dmx *DemuxClnt) reply(tag sessp.Ttag, rep CallI, err *serr.Err) {
 }
 
 func (dmx *DemuxClnt) reader() {
+	db.DPrintf(db.DEMUXCLNT, "[%p] DemuxClnt reader start", dmx)
 	for {
 		c, err := dmx.trans.ReadCall()
 		if err != nil {
@@ -74,7 +75,7 @@ func (dmx *DemuxClnt) SendReceive(req CallI, outiov sessp.IoVec) (CallI, *serr.E
 	err := dmx.trans.WriteCall(req)
 	dmx.mu.Unlock()
 	if err != nil {
-		db.DPrintf(db.DEMUXCLNT_ERR, "WriteCall req %v error %v", req, err)
+		db.DPrintf(db.DEMUXCLNT_ERR, "[%p] WriteCall req %v error %v", dmx, req, err)
 	}
 	// Listen to the reply channel regardless of error status, so the reader
 	// thread doesn't block indefinitely trying to deliver the "TErrUnreachable"

@@ -9,6 +9,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/serr"
 	"sigmaos/sigmaclnt/fslib"
+	"sigmaos/sigmaclnt/fslib/dirwatcher"
 	sp "sigmaos/sigmap"
 )
 
@@ -42,14 +43,14 @@ func (sem *Semaphore) InitLease(perm sp.Tperm, lid sp.TleaseId) error {
 func (sem *Semaphore) Down() error {
 	for i := 0; i < sp.Conf.Path.MAX_RESOLVE_RETRY; i++ {
 		db.DPrintf(db.SEMCLNT, "Down %d %v\n", i, sem.path)
-		err := sem.WaitRemove(sem.path)
+		err := dirwatcher.WaitRemove(sem.FsLib, sem.path)
 		// If err is because file has been removed, then no error: the
 		// semaphore has been "upped".
 		if serr.IsErrCode(err, serr.TErrNotfound) {
 			db.DPrintf(db.SEMCLNT_ERR, "down notfound %v ok err %v\n", sem.path, err)
 			return nil
 		}
-		if serr.IsErrCode(err, serr.TErrUnreachable) {
+		if serr.IsErrCode(err, serr.TErrUnreachable) || serr.IsErrCode(err, serr.TErrClosed) {
 			db.DPrintf(db.SEMCLNT, "down unreachable %v ok err %v\n", sem.path, err)
 			time.Sleep(sp.Conf.Path.RESOLVE_TIMEOUT)
 			continue

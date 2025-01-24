@@ -3,8 +3,8 @@ package namesrv
 import (
 	"time"
 
-	db "sigmaos/debug"
 	"sigmaos/api/fs"
+	db "sigmaos/debug"
 	"sigmaos/namesrv/fsetcd"
 	"sigmaos/path"
 	"sigmaos/serr"
@@ -36,7 +36,7 @@ func (d *Dir) LookupPath(ctx fs.CtxI, pn path.Tpathname) ([]fs.FsObj, fs.FsObj, 
 	pn1 := d.pn.Copy().Append(name)
 	di, err := d.fs.Lookup(&d.Obj.di, pn1)
 	if err == nil {
-		obj := newObjDi(d.fs, pn1, *di, d.Obj.di.Path)
+		obj := newObjDi(d.fs, pn1, *di)
 		var o fs.FsObj
 		if obj.di.Perm.IsDir() {
 			o = newDir(obj)
@@ -55,9 +55,7 @@ func (d *Dir) LookupPath(ctx fs.CtxI, pn path.Tpathname) ([]fs.FsObj, fs.FsObj, 
 }
 
 func (d *Dir) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode, lid sp.TleaseId, f sp.Tfence, dev fs.FsObj) (fs.FsObj, *serr.Err) {
-	if db.WillBePrinted(db.WALK_LAT) {
-		db.DPrintf(db.NAMED, "%v: Create name: %q perm %v lid %v\n", ctx.ClntId(), name, perm, lid)
-	}
+	db.DPrintf(db.NAMED, "%v: Create name %q (perm %v lid %v) in dir %v", ctx.ClntId(), name, perm, lid, d)
 	cid := sp.NoClntId
 	if lid.IsLeased() {
 		cid = ctx.ClntId()
@@ -68,13 +66,13 @@ func (d *Dir) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode, lid sp
 	if r != nil {
 		return nil, serr.NewErrError(r)
 	}
-	di, c, err := d.fs.Create(&d.Obj.di, pn, path, nf, f, cid, lid)
+	di, c, err := d.fs.Create(&d.Obj.di, pn, path, nf, perm, f, cid, lid)
 	d.Obj.fs.PstatUpdate(d.Obj.pn, c)
 	if err != nil {
 		db.DPrintf(db.NAMED, "Create %v %q err %v\n", d, name, err)
 		return nil, err
 	}
-	obj := newObjDi(d.fs, pn, *di, d.Obj.di.Path)
+	obj := newObjDi(d.fs, pn, *di)
 	if obj.di.Perm.IsDir() {
 		return newDir(obj), nil
 	} else if obj.di.Perm.IsDevice() {
@@ -101,7 +99,7 @@ func (d *Dir) ReadDir(ctx fs.CtxI, cursor int, cnt sp.Tsize) ([]*sp.Tstat, *serr
 		var r *serr.Err
 		dir.Ents.Iter(func(n string, di *fsetcd.DirEntInfo) bool {
 			if n != "." {
-				o := newObjDi(d.fs, d.pn.Append(n), *di, d.Obj.di.Path)
+				o := newObjDi(d.fs, d.pn.Append(n), *di)
 				st, err := o.NewStat()
 				if err != nil {
 					r = err
@@ -163,10 +161,6 @@ func (d *Dir) Mtime() int64 {
 	return 0
 }
 
-func (d *Dir) SetParent(di fs.Dir) {
-	db.DFatalf("Unimplemented")
-}
-
 func (d *Dir) Unlink() {
 	db.DFatalf("Unimplemented")
 }
@@ -179,7 +173,7 @@ func (d *Dir) VersionInc() {
 // Helpers
 //
 
-func rootDir(fs *fsetcd.FsEtcd, realm sp.Trealm) *Dir {
+func RootDir(fs *fsetcd.FsEtcd, realm sp.Trealm) *Dir {
 	_, c, err := fs.ReadRootDir()
 	fs.PstatUpdate(path.Tpathname{}, c)
 	if err != nil && err.IsErrNotfound() { // make root dir
@@ -190,7 +184,5 @@ func rootDir(fs *fsetcd.FsEtcd, realm sp.Trealm) *Dir {
 	} else if err != nil {
 		db.DFatalf("rootDir: fsetcd.ReadDir err %v\n", err)
 	}
-	return newDir(newObjDi(fs, path.Tpathname{},
-		*fsetcd.NewDirEntInfoDir(fsetcd.ROOT),
-		fsetcd.ROOT))
+	return newDir(newObjDi(fs, path.Tpathname{}, *fsetcd.NewDirEntInfoDir(fsetcd.ROOT)))
 }

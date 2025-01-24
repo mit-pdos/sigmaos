@@ -6,8 +6,8 @@ import (
 	"time"
 
 	db "sigmaos/debug"
-	iputil "sigmaos/util/ip"
 	sp "sigmaos/sigmap"
+	iputil "sigmaos/util/ip"
 )
 
 type Tlid uint64
@@ -21,7 +21,7 @@ func DialDirect(p *sp.Tprincipal, ep *sp.Tendpoint) (net.Conn, error) {
 	defer func(start time.Time) {
 		db.DPrintf(db.DIALPROXY_LAT, "[%v] Dial DialDirect latency: %v", ep, time.Since(start))
 	}(start)
-	c, err := net.DialTimeout("tcp", ep.Addrs()[0].IPPort(), sp.Conf.Session.TIMEOUT/10)
+	c, err := net.DialTimeout("tcp", ep.Addrs()[0].IPPort(), sp.Conf.Session.TIMEOUT/5)
 	if err != nil {
 		db.DPrintf(db.DIALPROXY_ERR, "[%v] Dial direct addr err %v: err %v", p, ep.Addrs()[0], err)
 	} else {

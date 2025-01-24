@@ -73,7 +73,7 @@ func (dc *Dcache) remove(d sp.Tpath) {
 func (dc *Dcache) update(d sp.Tpath, dir *DirInfo) bool {
 	de, ok := dc.c.Get(d)
 	if ok {
-		db.DPrintf(db.FSETCD, "Update dcache %v %v %v", d, dir, de.v+1)
+		db.DPrintf(db.FSETCD, "Update dcache %v %v v %v", d, dir, de.v+1)
 		de.dir = dir
 		de.v += 1
 		return true

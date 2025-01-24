@@ -231,7 +231,7 @@ func (clnt *ProcClnt) waitStart(pid sp.Tpid, how proc.Thow) error {
 
 	pseqno, err := clnt.cs.GetProcSeqno(pid)
 	if err != nil {
-		return fmt.Errorf("Unknown kernel ID %v", err)
+		return fmt.Errorf("Unknown kernel ID for %v, %v", pid, err)
 	}
 	db.DPrintf(db.PROCCLNT, "WaitStart %v got kid %v", pid, pseqno.GetMSchedID())
 	_, err = clnt.wait(mschedclnt.START, pid, pseqno.GetMSchedID(), pseqno, proc.START_SEM, how)

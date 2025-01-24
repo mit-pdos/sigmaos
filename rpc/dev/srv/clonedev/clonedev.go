@@ -12,15 +12,15 @@ import (
 	"path/filepath"
 	"sync"
 
-	db "sigmaos/debug"
 	"sigmaos/api/fs"
-	"sigmaos/sigmasrv/memfssrv/memfs/inode"
-	"sigmaos/sigmasrv/memfssrv"
-	"sigmaos/serr"
+	sps "sigmaos/api/spprotsrv"
+	db "sigmaos/debug"
 	rpcdev "sigmaos/rpc/dev"
+	"sigmaos/serr"
 	sessp "sigmaos/session/proto"
 	sp "sigmaos/sigmap"
-	sps "sigmaos/api/spprotsrv"
+	"sigmaos/sigmasrv/memfssrv"
+	"sigmaos/sigmasrv/memfssrv/memfs/inode"
 )
 
 type NewSessionF func(*memfssrv.MemFs, sessp.Tsession) *serr.Err
@@ -47,7 +47,7 @@ func newClone(mfs *memfssrv.MemFs, dir string, news NewSessionF, d sps.DetachSes
 		wctl:       w,
 	}
 	pn := dir + "/" + rpcdev.CLONE
-	db.DPrintf(db.CLONEDEV, "newClone %q\n", dir)
+	db.DPrintf(db.CLONEDEV, "newClone %q %v (%p)\n", dir, cl, cl)
 	err := mfs.MkNod(pn, cl) // put clone file into dir <dir>
 	if err != nil {
 		return err

@@ -3,10 +3,14 @@ package fsux
 import (
 	"sync"
 
-	"sigmaos/debug"
 	"sigmaos/api/fs"
-	"sigmaos/util/refmap"
+	"sigmaos/debug"
 	sp "sigmaos/sigmap"
+	"sigmaos/util/refmap"
+)
+
+const (
+	N = 1000
 )
 
 // Objects for which a client has an fid. Several clients may have an
@@ -19,7 +23,7 @@ type ObjTable struct {
 
 func NewObjTable() *ObjTable {
 	ot := &ObjTable{}
-	ot.RefTable = refmap.NewRefTable[sp.Tpath, fs.FsObj](debug.UX)
+	ot.RefTable = refmap.NewRefTable[sp.Tpath, fs.FsObj](N, debug.UX)
 	return ot
 }
 
@@ -28,7 +32,7 @@ func (ot *ObjTable) GetRef(path sp.Tpath) fs.FsObj {
 	defer ot.Unlock()
 
 	if e, ok := ot.RefTable.Lookup(path); ok {
-		return e.(fs.FsObj)
+		return *e
 	}
 	return nil
 }
@@ -36,8 +40,8 @@ func (ot *ObjTable) GetRef(path sp.Tpath) fs.FsObj {
 func (ot *ObjTable) AllocRef(path sp.Tpath, o fs.FsObj) fs.FsObj {
 	ot.Lock()
 	defer ot.Unlock()
-	e, _ := ot.RefTable.Insert(path, func() fs.FsObj { return o })
-	return e.(fs.FsObj)
+	e, _ := ot.RefTable.Insert(path, o)
+	return *e
 }
 
 func (ot *ObjTable) Clunk(p sp.Tpath) {

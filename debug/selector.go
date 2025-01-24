@@ -124,6 +124,12 @@ const (
 	SOCIAL_NETWORK_CLNT               = SOCIAL_NETWORK + "_CLNT"
 )
 
+// Watch
+const (
+	WATCH_TEST = "WATCH_TEST" 
+	WATCH_PERF = "WATCH_PERF"
+)
+
 // System
 const (
 	SYSTEM Tselector = "SYSTEM"

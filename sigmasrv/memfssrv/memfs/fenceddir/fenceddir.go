@@ -4,12 +4,12 @@ package fenceddir
 import (
 	"fmt"
 
-	db "sigmaos/debug"
-	"sigmaos/sigmasrv/fencefs"
 	"sigmaos/api/fs"
+	db "sigmaos/debug"
 	"sigmaos/path"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
+	"sigmaos/sigmasrv/fencefs"
 )
 
 type FencedDir struct {
@@ -47,18 +47,6 @@ func (fdir *FencedDir) LookupPath(ctx fs.CtxI, path path.Tpathname) ([]fs.FsObj,
 		db.DPrintf(db.FENCEFS, "Walk wrap %v %v", path, d)
 		lo = &FencedDir{d}
 	}
-
-	if lo != nil {
-		if d := lo.Parent(); d != nil {
-			switch d.(type) {
-			case *FencedDir:
-			default:
-				db.DPrintf(db.FENCEFS, "Parent wrap %v", d)
-				lo.SetParent(&FencedDir{d})
-			}
-		}
-	}
-
 	return os, lo, p, err
 }
 

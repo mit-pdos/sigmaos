@@ -408,7 +408,7 @@ func (ts *Tstate) crashServers(srv string, l crash.Tselector, em *crash.TeventMa
 	assert.True(ts.T, ok)
 	for i := 0; i < n; i++ {
 		time.Sleep(CRASHSRV * time.Millisecond)
-		e1 := crash.NewEventPath(string(l), 0, 1.0, crashSemPn(l, i+1))
+		e1 := crash.NewEventPath(string(l), 0, float64(1.0), crashSemPn(l, i+1))
 		ts.CrashServer(e0, e1, srv)
 		e0 = e1
 	}
@@ -605,7 +605,7 @@ func TestCrashTaskAndCoord(t *testing.T) {
 }
 
 func TestCrashUx1(t *testing.T) {
-	e0 := crash.NewEventPath(crash.UX_CRASH, 0, 1.0, crashSemPn(crash.UX_CRASH, 0))
+	e0 := crash.NewEventPath(crash.UX_CRASH, 0, float64(1.0), crashSemPn(crash.UX_CRASH, 0))
 	srvs := make(map[string]crash.Tselector)
 	srvs[sp.UXREL] = crash.UX_CRASH
 	repeatTest(t, func() bool {
@@ -615,7 +615,7 @@ func TestCrashUx1(t *testing.T) {
 }
 
 func TestCrashBESched1(t *testing.T) {
-	e0 := crash.NewEventPath(crash.BESCHED_CRASH, CRASHSRV, 1.0, crashSemPn(crash.BESCHED_CRASH, 0))
+	e0 := crash.NewEventPath(crash.BESCHED_CRASH, CRASHSRV, float64(1.0), crashSemPn(crash.BESCHED_CRASH, 0))
 	srvs := make(map[string]crash.Tselector)
 	srvs[sp.BESCHEDREL] = crash.BESCHED_CRASH
 	ntask, _, st := runN(t, crash.NewTeventMapOne(e0), srvs, 0, false)
@@ -623,7 +623,7 @@ func TestCrashBESched1(t *testing.T) {
 }
 
 func TestCrashMSched1(t *testing.T) {
-	e0 := crash.NewEventPath(crash.MSCHED_CRASH, CRASHCOORD, 1.0, crashSemPn(crash.MSCHED_CRASH, 0))
+	e0 := crash.NewEventPath(crash.MSCHED_CRASH, CRASHCOORD, float64(1.0), crashSemPn(crash.MSCHED_CRASH, 0))
 	srvs := make(map[string]crash.Tselector)
 	srvs[sp.MSCHEDREL] = crash.MSCHED_CRASH
 	ntask, _, st := runN(t, crash.NewTeventMapOne(e0), srvs, 0, false)
@@ -631,7 +631,7 @@ func TestCrashMSched1(t *testing.T) {
 }
 
 func TestCrashProcd1(t *testing.T) {
-	e0 := crash.NewEventPath(crash.PROCD_CRASH, CRASHCOORD, 1.0, crashSemPn(crash.PROCD_CRASH, 0))
+	e0 := crash.NewEventPath(crash.PROCD_CRASH, CRASHCOORD, float64(1.0), crashSemPn(crash.PROCD_CRASH, 0))
 	srvs := make(map[string]crash.Tselector)
 	srvs[sp.PROCDREL] = crash.PROCD_CRASH
 	ntask, _, st := runN(t, crash.NewTeventMapOne(e0), srvs, 0, false)
@@ -639,9 +639,9 @@ func TestCrashProcd1(t *testing.T) {
 }
 
 func TestCrashMSchedBESchedUx1(t *testing.T) {
-	e := crash.NewEventPath(crash.UX_CRASH, 0, 1.0, crashSemPn(crash.UX_CRASH, 0))
+	e := crash.NewEventPath(crash.UX_CRASH, 0, float64(1.0), crashSemPn(crash.UX_CRASH, 0))
 	em := crash.NewTeventMapOne(e)
-	e = crash.NewEventPath(crash.MSCHED_CRASH, CRASHCOORD, 1.0, crashSemPn(crash.MSCHED_CRASH, 0))
+	e = crash.NewEventPath(crash.MSCHED_CRASH, CRASHCOORD, float64(1.0), crashSemPn(crash.MSCHED_CRASH, 0))
 	em.Insert(e)
 	srvs := make(map[string]crash.Tselector)
 	srvs[sp.UXREL] = crash.UX_CRASH

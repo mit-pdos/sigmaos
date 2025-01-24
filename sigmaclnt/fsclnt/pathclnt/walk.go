@@ -3,10 +3,10 @@ package pathclnt
 import (
 	"time"
 
+	sos "sigmaos/api/sigmaos"
 	db "sigmaos/debug"
 	"sigmaos/path"
 	"sigmaos/serr"
-	sos "sigmaos/api/sigmaos"
 	sp "sigmaos/sigmap"
 )
 
@@ -242,8 +242,19 @@ func (pathc *PathClnt) setWatch(fid sp.Tfid, p path.Tpathname, r path.Tpathname,
 		db.DFatalf("setWatch %v %v", fid2, fid1)
 	}
 	go func() {
-		err := pathc.FidClnt.Watch(fid1)
+		var err error
+		watchFid, err1 := pathc.FidClnt.Watch(fid1)
+		if err1 == nil {
+			b := make([]byte, 1)
+			_, err = pathc.FidClnt.ReadF(watchFid, 0, b, sp.NullFence())
+		} else {
+			err = err1.Unwrap()
+		}
+
 		pathc.FidClnt.Clunk(fid1)
+		if err1 != nil {
+			pathc.FidClnt.Clunk(watchFid)
+		}
 		db.DPrintf(db.PATHCLNT, "setWatch: Watch returns %v %v", p, err)
 		w(err)
 	}()

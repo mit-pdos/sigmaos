@@ -9,5 +9,9 @@ func (lid TleaseId) IsLeased() bool {
 }
 
 func (lid TleaseId) String() string {
-	return strconv.FormatUint(uint64(lid), 16)
+	if lid == NoLeaseId {
+		return "-1"
+	} else {
+		return strconv.FormatUint(uint64(lid), 16)
+	}
 }

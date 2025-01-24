@@ -122,7 +122,7 @@ func (npc *NpSess) Attach(args *sp.Tattach, rets *sp.Rattach) (sp.TclntId, *sp.R
 		db.DFatalf("Attach: resolve err %v", err)
 		return sp.NoClntId, sp.NewRerrorSerr(serr.NewErrError(err))
 	}
-	rets.Qid = npc.qm.Insert(fid, []*sp.Tqid{npc.fidc.Qid(fid)})[0]
+	rets.Qid = npc.qm.Insert(fid, []sp.Tqid{*npc.fidc.Qid(fid)})[0]
 	npc.fm.mapTo(args.Tfid(), fid)
 	db.DPrintf(db.NPPROXY, "Attach args %v rets %v fid %v", args, rets, fid)
 	return args.TclntId(), nil
@@ -172,7 +172,7 @@ func (npc *NpSess) Open(args *sp.Topen, rets *sp.Ropen) *sp.Rerror {
 	return nil
 }
 
-func (npc *NpSess) Watch(args *sp.Twatch, rets *sp.Ropen) *sp.Rerror {
+func (npc *NpSess) Watch(args *sp.Twatch, rets *sp.Rwatch) *sp.Rerror {
 	return nil
 }
 

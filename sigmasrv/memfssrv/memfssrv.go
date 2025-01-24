@@ -10,12 +10,12 @@ import (
 	"sigmaos/api/fs"
 	"sigmaos/ctx"
 	db "sigmaos/debug"
-	"sigmaos/sigmasrv/memfssrv/memfs/dir"
-	"sigmaos/sigmasrv/memfssrv/memfs/inode"
 	"sigmaos/path"
 	"sigmaos/serr"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
+	"sigmaos/sigmasrv/memfssrv/memfs/dir"
+	"sigmaos/sigmasrv/memfssrv/memfs/inode"
 	"sigmaos/sigmasrv/memfssrv/sigmapsrv"
 	spprotosrv "sigmaos/spproto/srv"
 	"sigmaos/spproto/srv/lockmap"
@@ -71,7 +71,7 @@ func (mfs *MemFs) SigmaClnt() *sigmaclnt.SigmaClnt {
 
 // Note: NewDev() sets parent
 func (mfs *MemFs) NewDevInode() *inode.Inode {
-	return inode.NewInode(mfs.ctx, sp.DMDEVICE, sp.NoLeaseId, nil)
+	return inode.NewInode(mfs.ctx, sp.DMDEVICE, sp.NoLeaseId)
 }
 
 // Returns fid for root and remaining path from root
@@ -81,8 +81,8 @@ func (mfs *MemFs) rootFid(pn string) (sp.Tfid, path.Tpathname, *serr.Err) {
 		return sp.NoFid, path, err
 	}
 	root, rp, rest := mfs.Root(path)
-	db.DPrintf(db.MEMFSSRV, "rootFid: %q root %v rp %q rest %v\n", pn, root, rp, rest)
-	fid, ok := mfs.roots.lookupAlloc(rp.String())
+	db.DPrintf(db.MEMFSSRV, "rootFid: %q root %v rp %q rest '%v'\n", pn, root, rp, rest)
+	fid, ok := mfs.roots.lookupAlloc(rp)
 	if ok {
 		db.DPrintf(db.MEMFSSRV, "rootFid: %q new fid %d\n", pn, fid)
 		mfs.ps.NewRootFid(fid, mfs.ctx, root, rp)
@@ -91,18 +91,18 @@ func (mfs *MemFs) rootFid(pn string) (sp.Tfid, path.Tpathname, *serr.Err) {
 }
 
 // Returns FsObj for pn and the path from the root to FsObj
-func (mfs *MemFs) lookupWalk(pn string) (fs.FsObj, path.Tpathname, *serr.Err) {
+func (mfs *MemFs) lookupWalk(pn string) (fs.Dir, fs.FsObj, string, *serr.Err) {
 	fid, path, err := mfs.rootFid(pn)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, "", err
 	}
 	db.DPrintf(db.MEMFSSRV, "lookupWalk %q %v path %v\n", pn, fid, path)
-	_, _, lo, err := mfs.ps.LookupWalk(fid, path, false, lockmap.RLOCK)
+	_, parent, name, lo, err := mfs.ps.LookupWalkParent(fid, path, false, lockmap.RLOCK)
 	if err != nil {
 		db.DPrintf(db.MEMFSSRV, "LookupWalk %v err %v\n", path.Dir(), err)
-		return nil, nil, err
+		return nil, nil, "", err
 	}
-	return lo, path, err
+	return parent, lo, name, err
 }
 
 func (mfs *MemFs) MkNod(pn string, i fs.FsObj) *serr.Err {
@@ -113,14 +113,14 @@ func (mfs *MemFs) MkNod(pn string, i fs.FsObj) *serr.Err {
 }
 
 func (mfs *MemFs) CreateNod(pn string, p sp.Tperm, m sp.Tmode, lid sp.TleaseId, o fs.FsObj) (fs.FsObj, *serr.Err) {
-	lo, path, err := mfs.lookupWalk(filepath.Dir(pn))
-	db.DPrintf(db.MEMFSSRV, "Create %q dir %v base %q\n", pn, lo, path.Base())
-	_, nf, err := mfs.CreateObj(mfs.ctx, lo, path, filepath.Base(pn), p, m, lid, sp.NoFence(), o)
+	_, lo, name, err := mfs.lookupWalk(filepath.Dir(pn))
+	db.DPrintf(db.MEMFSSRV, "Create %q perm %v dir %v base %q o %v\n", pn, p, lo, name, o)
+	_, nf, err := mfs.ps.CreateObjFm(mfs.ctx, lo, filepath.Base(pn), p, m, lid, sp.NoFence(), o)
 	if err != nil {
 		db.DPrintf(db.MEMFSSRV, "Create: CreateObj %q %v err %v\n", pn, nf, err)
 		return nil, err
 	}
-	return nf.Pobj().Obj(), nil
+	return nf.Obj(), nil
 }
 
 func (mfs *MemFs) Create(pn string, p sp.Tperm, m sp.Tmode, lid sp.TleaseId) (fs.FsObj, *serr.Err) {
@@ -128,16 +128,21 @@ func (mfs *MemFs) Create(pn string, p sp.Tperm, m sp.Tmode, lid sp.TleaseId) (fs
 }
 
 func (mfs *MemFs) Remove(pn string) *serr.Err {
-	lo, path, err := mfs.lookupWalk(pn)
+	parent, lo, name, err := mfs.lookupWalk(pn)
 	if err != nil {
 		return err
 	}
-	db.DPrintf(db.MEMFSSRV, "Remove %q %v %v\n", pn, lo, path.Base())
-	return mfs.RemoveObj(mfs.ctx, lo, path, sp.NoFence(), fs.DEL_EXIST)
+	db.DPrintf(db.MEMFSSRV, "Remove %q %v %v\n", pn, lo, name)
+	return mfs.RemoveObj(mfs.ctx, parent, lo, name, sp.NoFence(), fs.DEL_EXIST)
+}
+
+func (mfs *MemFs) RemoveLease(p sp.Tpath, obj fs.FsObj, name string, dir fs.Dir) *serr.Err {
+	db.DPrintf(db.MEMFSSRV, "RemoveLease p %v o %v name %q dir %v", p, obj, name, dir)
+	return mfs.RemoveObj(mfs.ctx, dir, obj, name, sp.NoFence(), fs.DEL_EXIST)
 }
 
 func (mfs *MemFs) Open(pn string, m sp.Tmode) (fs.FsObj, *serr.Err) {
-	lo, _, err := mfs.lookupWalk(pn)
+	_, lo, _, err := mfs.lookupWalk(pn)
 	if err != nil {
 		return nil, err
 	}
@@ -150,16 +155,16 @@ func (mfs *MemFs) Open(pn string, m sp.Tmode) (fs.FsObj, *serr.Err) {
 // of the change.
 func (mfs *MemFs) Notify(pn path.Tpathname) error {
 	db.DPrintf(db.WATCH, "MemFs.Notify pn %v\n", pn)
-	lo, _, err := mfs.lookupWalk(pn.String())
+	parent, lo, name, err := mfs.lookupWalk(pn.String())
 	if err != nil {
 		return err
 	}
-	return mfs.RemoveObj(mfs.ctx, lo, pn, sp.NoFence(), fs.DEL_EPHEMERAL)
+	return mfs.RemoveObj(mfs.ctx, parent, lo, name, sp.NoFence(), fs.DEL_EPHEMERAL)
 }
 
 func (mfs *MemFs) Dump() error {
 	d, _, path := mfs.Root(rootP)
-	s, err := d.(*dir.DirImpl).Dump()
+	s, err := d.(*dir.DirImpl).DumpTree()
 	if err != nil {
 		return err
 	}

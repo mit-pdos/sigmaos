@@ -155,17 +155,17 @@ func (pclnt *SPProtoClnt) Open(fid sp.Tfid, mode sp.Tmode) (*sp.Ropen, *serr.Err
 	return msg, nil
 }
 
-func (pclnt *SPProtoClnt) Watch(fid sp.Tfid) *serr.Err {
-	args := sp.NewTwatch(fid)
+func (pclnt *SPProtoClnt) Watch(dirfid sp.Tfid, watchfid sp.Tfid) (*sp.Rwatch, *serr.Err) {
+	args := sp.NewTwatch(dirfid, watchfid)
 	reply, err := pclnt.Call(args)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	_, ok := reply.Msg.(*sp.Ropen)
+	msg, ok := reply.Msg.(*sp.Rwatch)
 	if !ok {
-		return serr.NewErr(serr.TErrBadFcall, "Rwatch")
+		return nil, serr.NewErr(serr.TErrBadFcall, "Rwatch")
 	}
-	return nil
+	return msg, nil
 }
 
 func (pclnt *SPProtoClnt) ReadF(fid sp.Tfid, offset sp.Toffset, b []byte, f *sp.Tfence) (sp.Tsize, *serr.Err) {

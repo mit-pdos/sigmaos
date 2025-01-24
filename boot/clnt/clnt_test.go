@@ -168,7 +168,7 @@ func TestSymlink3(t *testing.T) {
 func TestLeased(t *testing.T) {
 	const T = 1000
 	fn := sp.NAMED + "crashms.sem"
-	e := crash.NewEventPath(crash.MSCHED_CRASH, T, 1.0, fn)
+	e := crash.NewEventPath(crash.MSCHED_CRASH, T, float64(1.0), fn)
 	err := crash.SetSigmaFail(crash.NewTeventMapOne(e))
 	assert.Nil(t, err)
 

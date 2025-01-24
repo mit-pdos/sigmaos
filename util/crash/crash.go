@@ -55,7 +55,7 @@ func NewEventStart(l string, s, mi int64, p float64) Tevent {
 	return Tevent{Label: l, Start: s, MaxInterval: mi, Prob: p}
 }
 
-func NewEventStartDelay(l string, s, mi int64, d int64, p float64) Tevent {
+func NewEventStartDelay(l string, s, mi, d int64, p float64) Tevent {
 	return Tevent{Label: l, Start: s, MaxInterval: mi, Delay: d, Prob: p}
 }
 

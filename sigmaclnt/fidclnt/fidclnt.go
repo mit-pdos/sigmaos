@@ -113,7 +113,7 @@ func (fidc *FidClnt) Qid(fid sp.Tfid) *sp.Tqid {
 	return fidc.Lookup(fid).Lastqid()
 }
 
-func (fidc *FidClnt) Qids(fid sp.Tfid) []*sp.Tqid {
+func (fidc *FidClnt) Qids(fid sp.Tfid) []sp.Tqid {
 	return fidc.Lookup(fid).Qids()
 }
 
@@ -143,7 +143,7 @@ func (fidc *FidClnt) Attach(secrets map[string]*sp.SecretProto, cid sp.TclntId, 
 		fidc.freeFid(fid)
 		return sp.NoFid, err
 	}
-	fidc.fids.insert(fid, newChannel(pc, []*sp.Tqid{sp.NewTqid(reply.Qid)}))
+	fidc.fids.insert(fid, newChannel(pc, []sp.Tqid{sp.NewTqid(reply.Qid)}))
 	db.DPrintf(db.ATTACH_LAT, "%v: attach %v pn %q tree %q lat %v\n", cid, ep, pn, tree, time.Since(s))
 	return fid, nil
 }
@@ -221,15 +221,25 @@ func (fidc *FidClnt) Open(fid sp.Tfid, mode sp.Tmode) (*sp.Tqid, *serr.Err) {
 	if err != nil {
 		return nil, err
 	}
-	return sp.NewTqid(reply.Qid), nil
+	qid := sp.NewTqid(reply.Qid)
+	return &qid, nil
 }
 
-func (fidc *FidClnt) Watch(fid sp.Tfid) *serr.Err {
+func (fidc *FidClnt) Watch(fid sp.Tfid) (sp.Tfid, *serr.Err) {
 	ch := fidc.Lookup(fid)
 	if ch == nil {
-		return serr.NewErr(serr.TErrUnreachable, "Watch")
+		return 0, serr.NewErr(serr.TErrUnreachable, "Watch")
 	}
-	return ch.pc.Watch(fid)
+	watchfid := fidc.allocFid()
+	db.DPrintf(db.FIDCLNT, "Watch %v %v\n", fid, watchfid)
+	_, err := ch.pc.Watch(fid, watchfid)
+	if err != nil {
+		fidc.freeFid(watchfid)
+		return 0, err
+	}
+	ch = ch.Copy()
+	fidc.Insert(watchfid, ch)
+	return watchfid, err
 }
 
 func (fidc *FidClnt) Wstat(fid sp.Tfid, st *sp.Tstat, f *sp.Tfence) *serr.Err {

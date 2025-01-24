@@ -6,9 +6,10 @@ import (
 	"fmt"
 	"sync"
 
+	"sigmaos/util/rand"
+
 	"github.com/google/btree"
 	"golang.org/x/exp/constraints"
-	"sigmaos/util/rand"
 )
 
 type kv[K constraints.Ordered, V any] struct {

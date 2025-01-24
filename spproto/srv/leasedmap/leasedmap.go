@@ -4,88 +4,94 @@ package leasedmap
 import (
 	"sync"
 
+	"sigmaos/api/fs"
 	db "sigmaos/debug"
 	sp "sigmaos/sigmap"
 )
 
+type Entry struct {
+	P      sp.Tpath
+	Name   string
+	Obj    fs.FsObj
+	Parent fs.Dir
+}
+
 type LeasedMap struct {
 	sync.Mutex
-	pns  map[string]sp.TleaseId
-	lids map[sp.TleaseId][]string
+	ps   map[sp.Tpath]sp.TleaseId
+	lids map[sp.TleaseId][]*Entry
 }
 
 func NewLeasedMap() *LeasedMap {
 	et := &LeasedMap{
-		pns:  make(map[string]sp.TleaseId),
-		lids: make(map[sp.TleaseId][]string),
+		ps:   make(map[sp.Tpath]sp.TleaseId),
+		lids: make(map[sp.TleaseId][]*Entry),
 	}
 	return et
 }
 
-func (lm *LeasedMap) Insert(pn string, lid sp.TleaseId) {
+func (lm *LeasedMap) Insert(p sp.Tpath, lid sp.TleaseId, n string, o fs.FsObj, dir fs.Dir) {
 	lm.Lock()
 	defer lm.Unlock()
 
-	_, ok := lm.pns[pn]
+	_, ok := lm.ps[p]
 	if ok {
-		db.DPrintf(db.ERROR, "Insert %v exists %q\n", pn, lm.pns)
-		db.DFatalf("Insert %v exists %q\n", pn, lm.pns)
+		db.DPrintf(db.ERROR, "Insert %v exists %q\n", pn, lm.ps)
+		db.DFatalf("Insert %v exists %q\n", pn, lm.ps)
 	}
-	lm.pns[pn] = lid
+	lm.ps[p] = lid
 	v, ok := lm.lids[lid]
 	if !ok {
-		lm.lids[lid] = []string{pn}
+		lm.lids[lid] = []*Entry{&Entry{p, n, o, dir}}
 	} else {
-		lm.lids[lid] = append(v, pn)
+		lm.lids[lid] = append(v, &Entry{p, n, o, dir})
 	}
-	db.DPrintf(db.LEASESRV, "Insert %q %v %v\n", pn, lid, lm.lids)
+	db.DPrintf(db.LEASESRV, "Insert %q %v %v\n", p, lid, lm.lids)
 }
 
-func (lm *LeasedMap) Delete(pn string) bool {
+func (lm *LeasedMap) Delete(p sp.Tpath) bool {
 	lm.Lock()
 	defer lm.Unlock()
 
-	lid, ok := lm.pns[pn]
+	lid, ok := lm.ps[p]
 	if !ok {
-		db.DPrintf(db.LEASESRV, "Delete %v doesn't exist %v\n", pn, lm.pns)
+		db.DPrintf(db.LEASESRV, "Delete %v doesn't exist %v\n", p, lm.ps)
 		return false
 	}
-	delete(lm.pns, pn)
-	for i, v := range lm.lids[lid] {
-		if v == pn {
+	delete(lm.ps, p)
+	for i, e := range lm.lids[lid] {
+		if e.P == p {
 			lm.lids[lid] = append(lm.lids[lid][:i], lm.lids[lid][i+1:]...)
 			break
 		}
 	}
-	db.DPrintf(db.LEASESRV, "Delete %q %v\n", pn, lm.lids)
+	db.DPrintf(db.LEASESRV, "Delete %q %v\n", p, lm.lids)
 	return true
 }
 
-func (lm *LeasedMap) Rename(src, dst string) bool {
+func (lm *LeasedMap) Rename(p sp.Tpath, dst string) bool {
 	lm.Lock()
 	defer lm.Unlock()
 
-	lid, ok := lm.pns[src]
+	lid, ok := lm.ps[p]
 	if !ok {
-		db.DFatalf("Rename src %v doesn't exist %v\n", src, lm.pns)
+		db.DFatalf("Rename %v doesn't exist %v\n", p, lm.ps)
 		return false
 	}
-	delete(lm.pns, src)
-	lm.pns[dst] = lid
-	for i, v := range lm.lids[lid] {
-		if v == src {
-			lm.lids[lid][i] = dst
+	for _, v := range lm.lids[lid] {
+		if v.P == p {
+			v.Name = dst
 			break
 		}
 	}
-	db.DPrintf(db.LEASESRV, "Rename %q %q %v\n", src, dst, lm.lids)
+	db.DPrintf(db.LEASESRV, "Rename %v %q %v\n", p, dst, lm.lids)
 	return true
 }
 
-func (lm *LeasedMap) Expired(lid sp.TleaseId) []string {
+func (lm *LeasedMap) Expired(lid sp.TleaseId) []*Entry {
 	lm.Lock()
 	defer lm.Unlock()
-	pns, _ := lm.lids[lid]
+	ps, _ := lm.lids[lid]
 	delete(lm.lids, lid)
-	return pns
+	return ps
 }

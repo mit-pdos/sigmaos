@@ -36,7 +36,11 @@ func MkDirF(i fs.Inode, no fs.NewFsObjF) fs.FsObj {
 }
 
 func (dir *DirImpl) String() string {
-	str := fmt.Sprintf("{dir %p i %p %T Dir{entries: ", dir, dir.Inode, dir.Inode)
+	return fmt.Sprintf("{dir %p(%v) i %p %T len %d}", dir, dir.Path(), dir.Inode, dir.Inode, dir.dents.Len())
+}
+
+func (dir *DirImpl) Dump() string {
+	str := fmt.Sprintf("{dir %p(%v) i %p %T Dir{entries: ", dir, dir.Path(), dir.Inode, dir.Inode)
 
 	dir.dents.Iter(func(n string, e fs.FsObj) bool {
 		str += fmt.Sprintf("[%v]", n)
@@ -46,7 +50,7 @@ func (dir *DirImpl) String() string {
 	return str
 }
 
-func (dir *DirImpl) Dump() (string, error) {
+func (dir *DirImpl) DumpTree() (string, error) {
 	sts, err := dir.lsL(0)
 	if err != nil {
 		return "", err
@@ -61,7 +65,7 @@ func (dir *DirImpl) Dump() (string, error) {
 			}
 			switch d := i.(type) {
 			case *DirImpl:
-				s1, err := d.Dump()
+				s1, err := d.DumpTree()
 				if err != nil {
 					s += fmt.Sprintf("[%v err %v]", st, err)
 					continue
@@ -76,8 +80,8 @@ func (dir *DirImpl) Dump() (string, error) {
 	return s, nil
 }
 
-func NewRootDir(ctx fs.CtxI, no fs.NewFsObjF, parent fs.Dir) fs.Dir {
-	i, _ := no(ctx, sp.DMDIR, sp.NoLeaseId, 0, parent, MkDirF)
+func NewRootDir(ctx fs.CtxI, no fs.NewFsObjF) fs.Dir {
+	i, _ := no(ctx, sp.DMDIR, sp.NoLeaseId, 0, MkDirF)
 	return i.(fs.Dir)
 }
 
@@ -216,13 +220,11 @@ func (dir *DirImpl) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode, 
 	}
 	newo := dev
 	if dev == nil {
-		no, err := dir.no(ctx, perm, lid, m, dir, MkDirF)
+		no, err := dir.no(ctx, perm, lid, m, MkDirF)
 		if err != nil {
 			return nil, err
 		}
 		newo = no
-	} else {
-		dev.SetParent(dir)
 	}
 	db.DPrintf(db.MEMFS, "Create %v in %v obj %v\n", name, dir, newo)
 	dir.SetMtime(time.Now().Unix())
@@ -328,7 +330,6 @@ func (dir *DirImpl) Renameat(ctx fs.CtxI, old string, nd fs.Dir, new string, f s
 		db.DFatalf("Rename %v createL: %v\n", new, err)
 		return err
 	}
-	ino.SetParent(newdir)
 	return nil
 }
 

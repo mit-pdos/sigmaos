@@ -52,7 +52,7 @@ func TestKillNamed(t *testing.T) {
 	const T = 1000
 	fn := sp.NAMED + "crashnd.sem"
 
-	e := crash.NewEventPath(crash.NAMED_CRASH, T, 1.0, fn)
+	e := crash.NewEventPath(crash.NAMED_CRASH, T, float64(1.0), fn)
 	err := crash.SetSigmaFail(crash.NewTeventMapOne(e))
 	assert.Nil(t, err)
 
@@ -249,7 +249,7 @@ func TestLeaseDelayReboot(t *testing.T) {
 
 // Test if read fails after a named lost leadership
 func TestPartitionNamed(t *testing.T) {
-	e := crash.NewEventStartDelay(crash.NAMED_PARTITION, 2000, 1000, 1.0, 7000)
+	e := crash.NewEventStartDelay(crash.NAMED_PARTITION, 2000, 1000, 7000, float64(1.0))
 	err := crash.SetSigmaFail(crash.NewTeventMapOne(e))
 	assert.Nil(t, err)
 
@@ -285,7 +285,7 @@ func TestPartitionNamed(t *testing.T) {
 	assert.Nil(t, err)
 
 	// give the first named chance to partition
-	time.Sleep(time.Duration(e.Start+e.MaxInterval) * time.Millisecond)
+	time.Sleep(time.Duration(e.Start+e.MaxInterval+e.Delay) * time.Millisecond)
 
 	// wait until session times out
 	time.Sleep(sp.EtcdSessionTTL * time.Second)

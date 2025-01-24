@@ -239,25 +239,24 @@ func (fsc *FsClient) Seek(fd int, off sp.Toffset) error {
 	return nil
 }
 
-func (fsc *FsClient) DirWatch(fd int) error {
+func (fsc *FsClient) DirWatch(fd int) (int, error) {
 	fid, _, err := fsc.fds.lookup(fd)
 	if err != nil {
-		return err
+		return -1, err
 	}
-	db.DPrintf(db.FSCLNT, "DirWatch: watch fd %v\n", fd)
-	ch := make(chan error)
-	if err := fsc.pc.SetDirWatch(fid, func(r error) {
-		db.DPrintf(db.FSCLNT, "SetDirWatch: watch returns %v\n", r)
-		ch <- r
-	}); err != nil {
+	db.DPrintf(db.FSCLNT, "DirWatch: dir fd %v dir fid %d\n", fd, fid)
+	watchfid, err2 := fsc.pc.SetDirWatch(fid)
+	if err2 != nil {
 		db.DPrintf(db.FSCLNT, "SetDirWatch err %v\n", err)
-		return err
+		return -1, err2
 	}
-	if err := <-ch; err != nil {
-		return err
-	}
-	return nil
+
+	watchfd := fsc.fds.allocFd(watchfid, sp.OREAD, fsc.pc, "")
+	db.DPrintf(db.FSCLNT, "DirWatch: watch fd %v watch fid %d\n", watchfd, watchfid)
+
+	return watchfd, nil
 }
+
 
 func (fsc *FsClient) IsLocalMount(ep *sp.Tendpoint) (bool, error) {
 	return fsc.pc.IsLocalMount(ep)

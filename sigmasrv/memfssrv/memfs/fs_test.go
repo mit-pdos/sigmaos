@@ -6,12 +6,12 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"sigmaos/ctx"
 	"sigmaos/api/fs"
-	"sigmaos/sigmasrv/memfssrv/memfs/dir"
+	"sigmaos/ctx"
 	"sigmaos/path"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
+	"sigmaos/sigmasrv/memfssrv/memfs/dir"
 )
 
 type TestState struct {
@@ -24,7 +24,7 @@ func newTest(t *testing.T) *TestState {
 	ts := &TestState{}
 	ts.t = t
 	ts.ctx = ctx.NewCtxNull()
-	ts.rooti = dir.NewRootDir(ts.ctx, NewInode, nil)
+	ts.rooti = dir.NewRootDir(ts.ctx, NewInode)
 	return ts
 }
 

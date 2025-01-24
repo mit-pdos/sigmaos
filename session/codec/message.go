@@ -58,6 +58,8 @@ func NewMsg(typ sessp.Tfcall) (sessp.Tmsg, *serr.Err) {
 		return &sp.Rwstat{}, nil
 	case sessp.TTwatch:
 		return &sp.Twatch{}, nil
+	case sessp.TRwatch:
+		return &sp.Rwatch{}, nil
 	case sessp.TTreadF:
 		return &sp.TreadF{}, nil
 	case sessp.TTwriteF:

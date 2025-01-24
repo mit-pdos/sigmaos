@@ -21,7 +21,7 @@ func NewStatProto(st *TstatProto) *Tstat {
 	return &Tstat{TstatProto: st}
 }
 
-func NewStat(qid *Tqid, perm Tperm, mtime uint32, name, owner string) *Tstat {
+func NewStat(qid Tqid, perm Tperm, mtime uint32, name, owner string) *Tstat {
 	st := &TstatProto{
 		Type:   0, // XXX
 		Qid:    qid.Proto(),
@@ -49,7 +49,7 @@ func (st *Tstat) String() string {
 }
 
 func (st *Tstat) Tqid() *Tqid {
-	return &Tqid{st.Qid}
+	return &Tqid{*st.Qid}
 }
 
 func (st *Tstat) Tlength() Tlength {

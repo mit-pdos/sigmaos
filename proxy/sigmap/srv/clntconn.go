@@ -269,8 +269,9 @@ func (scs *SPProxySrvAPI) WriteFence(ctx fs.CtxI, req scproto.SigmaWriteReq, rep
 	return nil
 }
 
-func (scs *SPProxySrvAPI) DirWatch(ctx fs.CtxI, req scproto.SigmaReadReq, rep *scproto.SigmaErrRep) error {
-	err := scs.sc.DirWatch(int(req.Fd))
+func (scs *SPProxySrvAPI) DirWatch(ctx fs.CtxI, req scproto.SigmaReadReq, rep *scproto.SigmaFdRep) error {
+	fd, err := scs.sc.DirWatch(int(req.Fd))
+	rep.Fd = uint32(fd)
 	rep.Err = scs.setErr(err)
 	db.DPrintf(db.SPPROXYSRV, "%v: DirWatch %v %v", scs.sc.ClntId(), req, rep)
 	return nil

@@ -1,7 +1,7 @@
 package qmgr
 
 import (
-	"sigmaos/simms"
+	"sigmaos/simulation/simms"
 )
 
 type BasicQMgr struct {
@@ -12,7 +12,7 @@ type BasicQMgr struct {
 func NewBasicQMgr(t *uint64, ms *simms.Microservice) simms.QMgr {
 	return &BasicQMgr{
 		t: t,
-		q: NewQueue(t),
+		q: NewQueue(t, false),
 	}
 }
 

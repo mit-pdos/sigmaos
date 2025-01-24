@@ -40,8 +40,8 @@ type Dir struct {
 }
 
 func (d *Dir) String() string {
-	s := d.Obj.String()
-	return s + fmt.Sprintf(" dents %v", d.dents)
+	s := "{dir " + d.Obj.String()
+	return s + fmt.Sprintf(" dents %v}", d.dents)
 }
 
 func newDir(bucket string, key path.Tpathname, perm sp.Tperm) *Dir {
@@ -182,7 +182,7 @@ func newObjs(base *Obj) []fs.FsObj {
 		if i+1 >= len(base.key) {
 			break
 		}
-		os = append(os, newFsObj(base.bucket, sp.DMDIR, base.key[0:i+1]))
+		os = append(os, newDir(base.bucket, base.key[0:i+1], sp.DMDIR))
 	}
 	return os
 }
@@ -209,8 +209,9 @@ func (d *Dir) lookupPath(ctx fs.CtxI, p path.Tpathname) ([]fs.FsObj, fs.FsObj, p
 		db.DPrintf(db.S3, "Lookup %q not found\n", p)
 		return nil, nil, p, serr.NewErr(serr.TErrNotfound, p)
 	}
-	db.DPrintf(db.S3, "Lookup return %q %v\n", p, d1)
-	return append(newObjs(d1.Obj), d1), d1, nil, nil
+	os := append(newObjs(d1.Obj), d1)
+	db.DPrintf(db.S3, "Lookup return %q %v len os %d\n", p, d1, len(os))
+	return os, d1, nil, nil
 }
 
 func (d *Dir) LookupPath(ctx fs.CtxI, p path.Tpathname) ([]fs.FsObj, fs.FsObj, path.Tpathname, *serr.Err) {
@@ -222,7 +223,7 @@ func (d *Dir) LookupPath(ctx fs.CtxI, p path.Tpathname) ([]fs.FsObj, fs.FsObj, p
 			return nil, nil, p, err
 		}
 		d1 := newDir(p[0], path.Tpathname{}, sp.DMDIR|sp.Tperm(0777))
-		return []fs.FsObj{d1.Obj}, d1, p[1:], nil
+		return []fs.FsObj{d1}, d1, p[1:], nil
 	}
 	return d.lookupPath(ctx, p)
 }
@@ -292,7 +293,7 @@ func (d *Dir) CreateDir(ctx fs.CtxI, name string, perm sp.Tperm, dev fs.FsObj) (
 	if err != nil {
 		return nil, serr.NewErrError(err)
 	}
-	o := newFsObj(d.bucket, perm, d.key.Copy().Append(name))
+	o := newFsObj(d.bucket, d.key.Copy().Append(name), perm)
 	return o, nil
 }
 

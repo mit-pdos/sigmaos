@@ -180,7 +180,12 @@ message Rwstat {
 }
 
 message Twatch {
-        uint32 fid = 1;
+        uint32 dirfid = 1;
+        uint32 watchfid = 2;
+}
+
+message Rwatch {
+        
 }
 
 message Trenameat {

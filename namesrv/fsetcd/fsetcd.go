@@ -8,7 +8,7 @@ import (
 	"net"
 	"time"
 
-	"go.etcd.io/etcd/client/v3"
+	clientv3 "go.etcd.io/etcd/client/v3"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/proto"
 
@@ -149,7 +149,7 @@ func (fs *FsEtcd) SetRootNamed(ep *sp.Tendpoint) *serr.Err {
 	if err != nil {
 		return serr.NewErrError(err)
 	}
-	nf := NewEtcdFile(sp.DMSYMLINK, d)
+	nf := NewEtcdFile(d)
 	if b, err := proto.Marshal(nf.EtcdFileProto); err != nil {
 		return serr.NewErrError(err)
 	} else {

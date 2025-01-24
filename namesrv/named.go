@@ -213,7 +213,7 @@ func Run(args []string) error {
 
 func (nd *Named) newSrv() (*sp.Tendpoint, error) {
 	ip := sp.NO_IP
-	root := rootDir(nd.fs, nd.realm)
+	root := RootDir(nd.fs, nd.realm)
 	var addr *sp.Taddr
 	var aaf spprotosrv.AttachAuthF
 	// If this is a root named, don't do
@@ -239,6 +239,9 @@ func (nd *Named) newSrv() (*sp.Tendpoint, error) {
 		return nil, err
 	}
 	nd.SigmaSrv = ssrv
+
+	// now we have a SigmaSrv read from ephch
+	go nd.watchLeased()
 
 	ep := nd.GetEndpoint()
 	db.DPrintf(db.NAMED_LDR, "newSrv %v %v %v %v %v", nd.realm, addr, ssrv.GetEndpoint(), nd.elect.Key(), ep)

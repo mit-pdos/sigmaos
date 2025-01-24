@@ -6,13 +6,13 @@ package fencefs
 import (
 	"sync"
 
+	"sigmaos/api/fs"
 	"sigmaos/ctx"
 	db "sigmaos/debug"
-	"sigmaos/api/fs"
-	"sigmaos/sigmasrv/memfssrv/memfs/dir"
-	"sigmaos/sigmasrv/memfssrv/memfs/inode"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
+	"sigmaos/sigmasrv/memfssrv/memfs/dir"
+	"sigmaos/sigmasrv/memfssrv/memfs/inode"
 )
 
 type Fence struct {
@@ -39,9 +39,9 @@ func (f *Fence) Read(ctx fs.CtxI, off sp.Toffset, sz sp.Tsize, fence sp.Tfence) 
 	return nil, serr.NewErr(serr.TErrNotSupported, "Read")
 }
 
-func newInode(ctx fs.CtxI, p sp.Tperm, lid sp.TleaseId, mode sp.Tmode, parent fs.Dir, new fs.MkDirF) (fs.FsObj, *serr.Err) {
-	db.DPrintf(db.FENCEFS, "newInode %v dir %v", p, parent)
-	i := inode.NewInode(ctx, p, lid, parent)
+func newInode(ctx fs.CtxI, p sp.Tperm, lid sp.TleaseId, mode sp.Tmode, new fs.MkDirF) (fs.FsObj, *serr.Err) {
+	db.DPrintf(db.FENCEFS, "newInode %v", p)
+	i := inode.NewInode(ctx, p, lid)
 	if p.IsDir() {
 		return dir.MkDir(i, newInode), nil
 	} else if p.IsFile() {
@@ -52,7 +52,7 @@ func newInode(ctx fs.CtxI, p sp.Tperm, lid sp.TleaseId, mode sp.Tmode, parent fs
 }
 
 func NewRoot(ctx fs.CtxI, parent fs.Dir) fs.Dir {
-	dir := dir.NewRootDir(ctx, newInode, parent)
+	dir := dir.NewRootDir(ctx, newInode)
 	return dir
 }
 

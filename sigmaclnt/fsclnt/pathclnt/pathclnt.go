@@ -188,7 +188,7 @@ func (pathc *PathClnt) Remove(name string, principal *sp.Tprincipal, f *sp.Tfenc
 		if err != nil {
 			return err
 		}
-		defer pathc.FidClnt.Clunk(fid)
+		// remove will also clunk fid
 		err = pathc.FidClnt.Remove(fid, f)
 	} else if err != nil {
 		return err
@@ -243,18 +243,14 @@ func (pathc *PathClnt) Open(pn string, principal *sp.Tprincipal, mode sp.Tmode, 
 	return fid, nil
 }
 
-func (pathc *PathClnt) SetDirWatch(fid sp.Tfid, w sos.Watch) error {
+func (pathc *PathClnt) SetDirWatch(fid sp.Tfid) (sp.Tfid, error) {
 	db.DPrintf(db.PATHCLNT, "%v: SetDirWatch %v\n", pathc.cid, fid)
-	go func() {
-		err := pathc.FidClnt.Watch(fid)
-		db.DPrintf(db.PATHCLNT, "%v: SetDirWatch: Watch returns %v %v\n", pathc.cid, fid, err)
-		if err == nil {
-			w(nil)
-		} else {
-			w(err)
-		}
-	}()
-	return nil
+	watchfid, err := pathc.FidClnt.Watch(fid)
+	if err != nil {
+		db.DPrintf(db.PATHCLNT_ERR, "%v: SetDirWatch: setting watch failed %v err %v\n", pathc.cid, fid, err)
+		return sp.NoFid, err
+	}
+	return watchfid, nil
 }
 
 func (pathc *PathClnt) GetFile(pn string, principal *sp.Tprincipal, mode sp.Tmode, off sp.Toffset, cnt sp.Tsize, f *sp.Tfence) ([]byte, error) {

@@ -34,30 +34,30 @@ func (qt Qtype) String() string {
 }
 
 type Tqid struct {
-	*TqidProto
+	TqidProto
 }
 
-func NewQid(t Qtype, v TQversion, p Tpath) *Tqid {
-	return &Tqid{&TqidProto{Type: uint32(t), Version: uint32(v), Path: uint64(p)}}
+func NewQid(t Qtype, v TQversion, p Tpath) Tqid {
+	return Tqid{TqidProto{Type: uint32(t), Version: uint32(v), Path: uint64(p)}}
 }
 
-func NewQidPerm(perm Tperm, v TQversion, p Tpath) *Tqid {
+func NewQidPerm(perm Tperm, v TQversion, p Tpath) Tqid {
 	return NewQid(Qtype(perm>>QTYPESHIFT), v, p)
 }
 
-func NewTqid(qid *TqidProto) *Tqid {
-	return &Tqid{qid}
+func NewTqid(qid *TqidProto) Tqid {
+	return Tqid{*qid}
 }
 
-func (qid *Tqid) String() string {
+func (qid Tqid) String() string {
 	return fmt.Sprintf("{%v %v %v}", qid.Ttype(), qid.Tversion(), qid.Tpath())
 }
 
-func (qid *Tqid) Proto() *TqidProto {
-	return qid.TqidProto
+func (qid Tqid) Proto() *TqidProto {
+	return &qid.TqidProto
 }
 
-func NewSliceProto(qids []*Tqid) []*TqidProto {
+func NewSliceProto(qids []Tqid) []*TqidProto {
 	qp := make([]*TqidProto, len(qids))
 	for i, q := range qids {
 		qp[i] = q.Proto()

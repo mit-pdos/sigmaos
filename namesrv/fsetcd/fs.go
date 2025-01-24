@@ -211,7 +211,7 @@ func (fs *FsEtcd) readDirEtcd(dei *DirEntInfo, stat Tstat) (*DirInfo, sp.TQversi
 		stat = TSTAT_STAT
 	}
 
-	di := &DirInfo{dents, nf.Tperm()}
+	di := &DirInfo{dents}
 	if update {
 		nops1, err := fs.updateDir(dei, di, v)
 		stats.Add(&nops, nops1)

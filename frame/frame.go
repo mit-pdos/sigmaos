@@ -70,7 +70,7 @@ func ReadFrames(rd io.Reader) (sessp.IoVec, *serr.Err) {
 	if err != nil {
 		return nil, err
 	}
-	db.DPrintf(db.FRAME, "[%p] ReadFrames %d", rd, nframes)
+	db.DPrintf(db.FRAME, "[%p] ReadFrames nframes %d", rd, nframes)
 	if nframes < 0 {
 		return nil, serr.NewErr(serr.TErrUnreachable, "ReadFrames too short")
 	}
@@ -93,7 +93,7 @@ func WriteFrame(wr io.Writer, frame sessp.Tframe) *serr.Err {
 
 // Write many frames
 func WriteFrames(wr io.Writer, iov sessp.IoVec) *serr.Err {
-	db.DPrintf(db.FRAME, "[%p] WriteFrames %d", wr, len(iov))
+	db.DPrintf(db.FRAME, "[%p] WriteFrames nframes %d", wr, len(iov))
 	if err := WriteNumOfFrames(wr, uint32(len(iov))); err != nil {
 		return err
 	}

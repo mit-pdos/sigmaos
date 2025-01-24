@@ -42,6 +42,10 @@ do
     # Exit if the program was killed for exceeding the time limit
     if [ $SECONDS -ge $TIME_THRESHOLD ]; then
         echo "Stopping the script because the program exceeded the time threshold."
+        ./logs.sh > /tmp/out1
+        cp /tmp/sigmaos-perf/log-proc.txt /tmp
+        ./stop.sh --parallel --nopurge --skipdb
+        echo "!!!!!!!! SUCCESS !!!!!!!!"
         break
     fi
 done

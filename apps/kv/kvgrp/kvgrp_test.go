@@ -43,7 +43,7 @@ func newTstate(t1 *test.Tstate, nrepl int, persist bool) *Tstate {
 	ts.MkDir(kvgrp.KVDIR, 0777)
 	err := ts.MkDir(kvgrp.JobDir(ts.job), 0777)
 	assert.Nil(t1.T, err)
-	mcfg := procgroupmgr.NewGroupConfig(nrepl, "kvd", []string{ts.grp}, 0, ts.job)
+	mcfg := procgroupmgr.NewProcGroupConfig(nrepl, "kvd", []string{ts.grp}, 0, ts.job)
 	if persist {
 		mcfg.Persist(ts.SigmaClnt.FsLib)
 	}

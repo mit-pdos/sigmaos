@@ -26,7 +26,7 @@ func NewTask(fn string) *Ttask {
 
 func StartImgd(sc *sigmaclnt.SigmaClnt, job string, workerMcpu proc.Tmcpu, workerMem proc.Tmem, persist bool, nrounds int, imgdMcpu proc.Tmcpu, em *crash.TeventMap) *procgroupmgr.ProcGroupMgr {
 	crash.SetSigmaFail(em)
-	cfg := procgroupmgr.NewGroupConfig(1, "imgresized", []string{strconv.Itoa(int(workerMcpu)), strconv.Itoa(int(workerMem)), strconv.Itoa(nrounds)}, imgdMcpu, job)
+	cfg := procgroupmgr.NewProcGroupConfig(1, "imgresized", []string{strconv.Itoa(int(workerMcpu)), strconv.Itoa(int(workerMem)), strconv.Itoa(nrounds)}, imgdMcpu, job)
 	if persist {
 		cfg.Persist(sc.FsLib)
 	}

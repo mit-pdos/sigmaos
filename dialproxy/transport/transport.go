@@ -2,6 +2,8 @@ package transport
 
 import (
 	"encoding/json"
+	"syscall"
+
 	//"fmt"
 	"net"
 	"os"
@@ -76,15 +78,31 @@ func GetDialProxydConn(pe *proc.ProcEnv) (*net.UnixConn, error) {
 		// Connect to the dialproxy server using the FD set up by the trampoline
 		// (should be done by user procs)
 		fd, err := strconv.Atoi(fdstr)
+		db.DPrintf(db.ALWAYS, "duping %v for sigmadial %v", fd, fdstr)
 		if err != nil {
 			db.DPrintf(db.ERROR, "Error get dialproxy fd (%v): %v", fdstr, err)
 			return nil, err
 		}
 		conn, err = fdToUnixConn(fd)
+		db.DPrintf(db.ALWAYS, "closing %v for sigmadial, new sigmadial %v", fd)
+
 		if err != nil {
 			db.DPrintf(db.ERROR, "Error connect dialproxy srv")
 			return nil, err
 		}
+		syscall.Close(fd)
+		// dpConn, err := conn.SyscallConn()
+		// if err != nil {
+		// 	db.DPrintf(db.ERROR, "Err for getting syscallConn: %v", err)
+		// 	return nil, err
+		// }
+		// if err := dpConn.Control(func(fd uintptr) {
+		// 	db.DPrintf(db.CKPT, "reset sigma_dialproxy_fd %v uint: %v", fmt.Sprintf("%v", fd), fmt.Sprintf("%x", fd))
+		// 	os.Setenv(SIGMA_DIALPROXY_FD, fmt.Sprintf("%v", fd))
+		// 	//
+		// }); err != nil {
+		// 	db.DPrintf(db.ERROR, "Err for resetting sigma_dialproxy_fd: %v", err)
+		// }
 	}
 	return conn, nil
 }

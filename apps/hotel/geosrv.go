@@ -17,7 +17,6 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/proc"
-	"sigmaos/sigmaclnt"
 	"sigmaos/sigmasrv"
 	"sigmaos/tracing"
 	"sigmaos/util/perf"
@@ -96,13 +95,19 @@ func RunGeoSrv(job string, ckptpn string, nidxStr string, maxSearchRadiusStr str
 	geo.idxs = NewGeoIndexes(nidx, "data/geo.json")
 	db.DPrintf(db.CKPT, "init done %v\n", job)
 	db.DPrintf(db.ALWAYS, "Geo srv done building %v indexes, radius %v nresults %v,  after: %v", nidx, geo.maxSearchRadius, geo.maxSearchResults, time.Since(start))
-
+	pe := proc.GetProcEnv()
+	ssrv, err := sigmasrv.NewSigmaSrv(filepath.Join(HOTELGEODIR, pe.GetPID().String()), geo, pe)
+	if err != nil {
+		db.DPrintf(db.ALWAYS, "Error starting sigmasrv")
+		return err
+	}
 	if ckptpn != "" {
+		sc := ssrv.MemFs.SigmaClnt()
 		// create a sigmaclnt for checkpointing
-		sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
-		if err != nil {
-			db.DFatalf("NewSigmaClnt error %v\n", err)
-		}
+		// sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
+		// if err != nil {
+		// 	db.DFatalf("NewSigmaClnt error %v\n", err)
+		// }
 		err = sc.Started()
 		if err != nil {
 			db.DFatalf("Started error %v\n", err)
@@ -116,15 +121,10 @@ func RunGeoSrv(job string, ckptpn string, nidxStr string, maxSearchRadiusStr str
 		if err != nil {
 			db.DFatalf("Started error %v\n", err)
 		}
-		sc.Close()
+		//	sc.Close()
 	}
 	db.DPrintf(db.ALWAYS, "Making env")
-	pe := proc.GetProcEnv()
-	ssrv, err := sigmasrv.NewSigmaSrv(filepath.Join(HOTELGEODIR, pe.GetPID().String()), geo, pe)
-	if err != nil {
-		db.DPrintf(db.ALWAYS, "Error starting sigmasrv")
-		return err
-	}
+
 	db.DPrintf(db.ALWAYS, "Making perf")
 	p, err := perf.NewPerf(ssrv.MemFs.SigmaClnt().ProcEnv(), perf.HOTEL_GEO)
 	if err != nil {

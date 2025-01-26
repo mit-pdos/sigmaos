@@ -62,7 +62,7 @@ func TestSpawnCkptProc(t *testing.T) {
 	assert.Nil(t, err)
 
 	db.DPrintf(db.TEST, "Started %v", restProc.GetPid())
-
+	//time.Sleep(20000 * time.Millisecond)
 	ts.Shutdown()
 }
 
@@ -105,6 +105,6 @@ func TestSpawnCkptGeo(t *testing.T) {
 	err = ts.WaitStart(restProc.GetPid())
 	db.DPrintf(db.TEST, "Started %v", pid)
 	assert.Nil(t, err)
-	time.Sleep(1000 * time.Millisecond)
+	time.Sleep(10000 * time.Millisecond)
 	ts.Shutdown()
 }

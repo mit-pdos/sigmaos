@@ -21,14 +21,21 @@ import (
 
 type NewValF[E any] func(string) (E, error)
 
+type InitState uint64
+const (
+	NotInitialized InitState = iota
+	InProgress
+	Finished
+)
+
 type DirCache[E any] struct {
 	*fslib.FsLib
 	sync.RWMutex
 	hasEntries    *sync.Cond
 	dir           *sortedmapv1.SortedMap[string, E]
 	isDone        atomic.Uint64
-	initState     atomic.Uint64 // 0 = not initialized, 1 = initializing, 2 = initialized
-	initWait      sync.WaitGroup
+	initState     InitState
+	initCond          sync.Cond
 	version       uint64
 	Path          string
 	LSelector     db.Tselector
@@ -49,6 +56,7 @@ func NewDirCacheFilter[E any](fsl *fslib.FsLib, path string, newVal NewValF[E], 
 		FsLib:         fsl,
 		Path:          path,
 		dir:           sortedmapv1.NewSortedMap[string, E](),
+		initCond:      *sync.NewCond(&sync.Mutex{}),
 		LSelector:     LSelector,
 		ESelector:     ESelector,
 		newVal:        newVal,
@@ -60,32 +68,23 @@ func NewDirCacheFilter[E any](fsl *fslib.FsLib, path string, newVal NewValF[E], 
 }
 
 func (dc *DirCache[E]) Init() {
-	if dc.initState.Load() == 2 {
-		return
-	}
+	dc.initCond.L.Lock()
+	defer dc.initCond.L.Unlock()
 
-	if dc.initState.CompareAndSwap(0, 1) {
-		dc.doInit()
-	} else {
-		// another thread is init, wait until they finish
-		for dc.initState.Load() != 2 {
-			dc.initWait.Wait()
+	if dc.initState == NotInitialized {
+		dc.initState = InProgress
+		dw := dc.readDirAndWatch()
+		if dw == nil {
+			return
+		}
+		go dc.watchDir(dw)
+		go dc.watchdog()
+		dc.initState = Finished
+	} else if dc.initState == InProgress {
+		for dc.initState == InProgress && dc.checkErr() == nil {
+			dc.initCond.Wait()
 		}
 	}
-}
-
-func (dc *DirCache[E]) doInit() {
-	dc.initWait.Add(1)
-
-	dw := dc.readDirAndWatch()
-	if dw == nil {
-		return
-	}
-	go dc.watchDir(dw)
-	go dc.watchdog()
-
-	dc.initState.Store(2)
-	dc.initWait.Done()
 }
 
 func (dc *DirCache[E]) isKeyValid(k string) bool {
@@ -176,8 +175,12 @@ func (dc *DirCache[E]) watchDir(dw *dirwatcher.DirWatcher) {
 	if dc.isDone.Load() == 0 && dc.err == nil {
 		db.DPrintf(dc.LSelector, "watchDir: restarting watcher")
 		dw.Close()
-		dc.initState.Store(1)
-		dc.doInit()
+
+		dc.initCond.L.Lock()
+		dc.initState = NotInitialized
+		dc.initCond.L.Unlock()
+
+		dc.Init()
 	} else {
 		dw.Close()
 	}
@@ -365,17 +368,17 @@ func (dc *DirCache[E]) WaitTimedRoundRobin() (string, error) {
 	return entry, err
 }
 
-func (dc *DirCache[E]) WaitEntryCreated(file string, timed bool) (error) {
+func (dc *DirCache[E]) WaitEntryCreated(file string) (error) {
 	return dc.waitCond(func() (bool, uint64, error) {
 		var version uint64
 		var err error
 
 		_, version, err = dc.getEntry(file, false)
 		return serr.IsErrorNotfound(err), version, err
-	}, true)
+	}, false)
 }
 
-func (dc *DirCache[E]) WaitAllEntriesCreated(files []string, timed bool) (error) {
+func (dc *DirCache[E]) WaitAllEntriesCreated(files []string) (error) {
 	added := make(map[string]bool)
 	return dc.waitCond(func() (bool, uint64, error) {
 		var firstVersion = uint64(0)
@@ -402,10 +405,10 @@ func (dc *DirCache[E]) WaitAllEntriesCreated(files []string, timed bool) (error)
 
 		allAdded := len(added) == len(files)
 		return !allAdded, firstVersion, nil
-	}, timed)
+	}, false)
 }
 
-func (dc *DirCache[E]) WaitEntryRemoved(file string, timed bool) (error) {
+func (dc *DirCache[E]) WaitEntryRemoved(file string) (error) {
 	return dc.waitCond(func() (bool, uint64, error) {
 		var version uint64
 		var err error
@@ -417,10 +420,10 @@ func (dc *DirCache[E]) WaitEntryRemoved(file string, timed bool) (error) {
 		}
 
 		return true, version, err
-	}, true)
+	}, false)
 }
 
-func (dc *DirCache[E]) WaitAllEntriesRemoved(files []string, timed bool) (error) {
+func (dc *DirCache[E]) WaitAllEntriesRemoved(files []string) (error) {
 	removed := make(map[string]bool)
 	return dc.waitCond(func() (bool, uint64, error) {
 		var firstVersion = uint64(0)
@@ -447,7 +450,7 @@ func (dc *DirCache[E]) WaitAllEntriesRemoved(files []string, timed bool) (error)
 
 		allRemoved := len(removed) == len(files)
 		return !allRemoved, firstVersion, nil
-	}, timed)
+	}, false)
 }
 
 
@@ -471,7 +474,7 @@ func (dc *DirCache[E]) WaitGetEntriesN(n int, timed bool) ([]string, error) {
 	return dc.dir.Keys(), nil
 }
 
-func (dc *DirCache[E]) WaitEmpty(timed bool) error {
+func (dc *DirCache[E]) WaitEmpty() error {
 	return dc.waitCond(func() (bool, uint64, error) {
 		dc.Lock()
 		numFiles := dc.dir.Len()
@@ -479,7 +482,7 @@ func (dc *DirCache[E]) WaitEmpty(timed bool) error {
 		dc.Unlock()
 
 		return numFiles > 0, version, nil
-	}, timed)
+	}, false)
 }
 
 type Fcond func() (retry bool, version uint64, err error)

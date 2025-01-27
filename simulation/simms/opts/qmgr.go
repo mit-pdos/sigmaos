@@ -17,16 +17,18 @@ func WithBasicQMgr() simms.MicroserviceOpt {
 
 type withMaxQDelayQMgr struct {
 	maxDelay uint64
+	sorted   bool
 }
 
 func (o withMaxQDelayQMgr) Apply(opts *simms.MicroserviceOpts) {
 	opts.NewQMgr = func(t *uint64, ms *simms.Microservice) simms.QMgr {
-		return qmgr.NewMaxQDelayQMgr(t, o.maxDelay, ms)
+		return qmgr.NewMaxQDelayQMgr(t, o.maxDelay, o.sorted, ms)
 	}
 }
 
-func WithMaxQDelayQMgr(maxDelay uint64) simms.MicroserviceOpt {
+func WithMaxQDelayQMgr(maxDelay uint64, sorted bool) simms.MicroserviceOpt {
 	return &withMaxQDelayQMgr{
 		maxDelay: maxDelay,
+		sorted:   sorted,
 	}
 }

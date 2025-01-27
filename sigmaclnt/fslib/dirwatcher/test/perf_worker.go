@@ -138,9 +138,9 @@ func (w *PerfWorker) waitForWatchFile(trial int, deleted bool, times []time.Time
 	db.DPrintf(db.WATCH_PERF, "waitForWatchFile %s: waiting for %s of all files in trial %d: %v", w.id, opType, trial, allFiles)
 	var err error
 	if !deleted {
-		err = w.watchDirCache.WaitAllEntriesCreated(allFiles, false)
+		err = w.watchDirCache.WaitAllEntriesCreated(allFiles)
 	} else {
-		err = w.watchDirCache.WaitAllEntriesRemoved(allFiles, false)
+		err = w.watchDirCache.WaitAllEntriesRemoved(allFiles)
 	}
 	if err != nil {
 		db.DFatalf("handleTrial %s: failed to wait for %s of all files in trial %d, %v", w.id, opType, trial, err)

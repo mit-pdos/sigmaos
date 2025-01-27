@@ -1,8 +1,8 @@
 package opts
 
 import (
-	"sigmaos/simms"
-	"sigmaos/simms/qmgr"
+	"sigmaos/simulation/simms"
+	"sigmaos/simulation/simms/qmgr"
 )
 
 type withBasicQMgr struct{}

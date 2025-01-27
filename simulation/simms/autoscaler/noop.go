@@ -1,7 +1,7 @@
 package autoscaler
 
 import (
-	"sigmaos/simms"
+	"sigmaos/simulation/simms"
 )
 
 type NoOpAutoscaler struct {

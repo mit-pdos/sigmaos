@@ -2,7 +2,7 @@ package metrics
 
 import (
 	db "sigmaos/debug"
-	"sigmaos/simms"
+	"sigmaos/simulation/simms"
 )
 
 type Unset struct{}

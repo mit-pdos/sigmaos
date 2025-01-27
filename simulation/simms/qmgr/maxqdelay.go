@@ -16,7 +16,7 @@ type MaxQDelayQMgr struct {
 func NewMaxQDelayQMgr(t *uint64, maxDelay uint64, sorted bool, ms *simms.Microservice) simms.QMgr {
 	return &MaxQDelayQMgr{
 		t:        t,
-		q:        NewQueue(t, sorted),
+		q:        NewQueue(t, sorted, 0),
 		ms:       ms,
 		maxDelay: maxDelay,
 		sorted:   sorted,

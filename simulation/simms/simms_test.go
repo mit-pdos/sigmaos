@@ -43,7 +43,7 @@ func TestServiceInstanceNoQueueBuildup(t *testing.T) {
 	db.DPrintf(db.SIM_TEST, "Sim test start")
 	var time uint64 = 0
 	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, 0, STATEFUL)
-	svc := simms.NewServiceInstance(&time, p, 0, qmgr.NewBasicQMgr(&time, nil))
+	svc := simms.NewServiceInstance(&time, p, 0, qmgr.NewBasicQMgr(&time, nil, 0))
 	for ; time < N_TICKS; time++ {
 		// Construct requests
 		reqs := make([]*simms.Request, N_REQ_PER_TICK)
@@ -78,7 +78,7 @@ func TestServiceInstanceNoQueueBuildup10ReqPerTick(t *testing.T) {
 	db.DPrintf(db.SIM_TEST, "Sim test start")
 	var time uint64 = 0
 	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, 0, STATEFUL)
-	svc := simms.NewServiceInstance(&time, p, 0, qmgr.NewBasicQMgr(&time, nil))
+	svc := simms.NewServiceInstance(&time, p, 0, qmgr.NewBasicQMgr(&time, nil, 0))
 	for ; time < N_TICKS; time++ {
 		// Construct requests
 		reqs := make([]*simms.Request, N_REQ_PER_TICK)
@@ -113,7 +113,7 @@ func TestServiceInstanceQueueBuildup10ReqPerTick(t *testing.T) {
 	db.DPrintf(db.SIM_TEST, "Sim test start")
 	var time uint64 = 0
 	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, 0, STATEFUL)
-	svc := simms.NewServiceInstance(&time, p, 0, qmgr.NewBasicQMgr(&time, nil))
+	svc := simms.NewServiceInstance(&time, p, 0, qmgr.NewBasicQMgr(&time, nil, 0))
 	for ; time < N_TICKS; time++ {
 		// Construct requests
 		reqs := make([]*simms.Request, N_REQ_PER_TICK)
@@ -148,7 +148,7 @@ func TestServiceInstanceNoQueueBuildupPTime2(t *testing.T) {
 	db.DPrintf(db.SIM_TEST, "Sim test start")
 	var time uint64 = 0
 	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, 0, STATEFUL)
-	svc := simms.NewServiceInstance(&time, p, 0, qmgr.NewBasicQMgr(&time, nil))
+	svc := simms.NewServiceInstance(&time, p, 0, qmgr.NewBasicQMgr(&time, nil, 0))
 	for ; time < N_TICKS; time++ {
 		// Construct requests
 		reqs := make([]*simms.Request, N_REQ_PER_TICK)
@@ -183,7 +183,7 @@ func TestServiceInstanceQueueBuildupPTime2(t *testing.T) {
 	db.DPrintf(db.SIM_TEST, "Sim test start")
 	var time uint64 = 0
 	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, 0, STATEFUL)
-	svc := simms.NewServiceInstance(&time, p, 0, qmgr.NewBasicQMgr(&time, nil))
+	svc := simms.NewServiceInstance(&time, p, 0, qmgr.NewBasicQMgr(&time, nil, 0))
 	for ; time < N_TICKS; time++ {
 		// Construct requests
 		reqs := make([]*simms.Request, N_REQ_PER_TICK)
@@ -1358,7 +1358,8 @@ func TestBurst5xMaxQDelayQMGrOverscaleLongSvcInitOmniscientQLenLBSigmaOSColdStar
 		SVC_ID              string = "wfe"
 		STATEFUL            bool   = false
 		RECORD_STATS_WINDOW int    = 10
-		MAX_Q_DELAY         uint64 = 50 // Max queueing delay incurred by any request before it is retried (possibly at another replica)
+		MAX_Q_DELAY         uint64 = 50    // Max queueing delay incurred by any request before it is retried (possibly at another replica)
+		SORT_Q                     = false // Don't sort request queue by original request creation time
 		// Scaling params
 		SCALING_DELAY    uint64  = 50  // "short" autoscaling delay of 50ms
 		MAX_N_REPLICAS   int     = 20  // At most 5 instances should be needed to handle max load at target utilization
@@ -1369,7 +1370,7 @@ func TestBurst5xMaxQDelayQMGrOverscaleLongSvcInitOmniscientQLenLBSigmaOSColdStar
 	var time uint64 = 0
 	c := simms.NewClients(CLNT_REQ_MEAN, CLNT_REQ_STD)
 	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, INIT_TIME, STATEFUL)
-	svc := simms.NewMicroservice(&time, p, opts.DefaultMicroserviceOpts, opts.WithOmniscientLB(), opts.WithLoadBalancerQLenMetric(), opts.WithMaxQDelayQMgr(MAX_Q_DELAY, false))
+	svc := simms.NewMicroservice(&time, p, opts.DefaultMicroserviceOpts, opts.WithOmniscientLB(), opts.WithLoadBalancerQLenMetric(), opts.WithMaxQDelayQMgr(MAX_Q_DELAY, SORT_Q))
 	app := simms.NewSingleTierApp(svc)
 	w := simms.NewWorkload(&time, app, c)
 	w.RecordStats(RECORD_STATS_WINDOW)
@@ -1416,7 +1417,8 @@ func TestBurst5xMaxQDelaySortedQMGrOverscaleLongSvcInitOmniscientQLenLBSigmaOSCo
 		SVC_ID              string = "wfe"
 		STATEFUL            bool   = false
 		RECORD_STATS_WINDOW int    = 10
-		MAX_Q_DELAY         uint64 = 50 // Max queueing delay incurred by any request before it is retried (possibly at another replica)
+		MAX_Q_DELAY         uint64 = 50   // Max queueing delay incurred by any request before it is retried (possibly at another replica)
+		SORT_Q              bool   = true // Sort request queue by original request creation time (prioritize old requests)
 		// Scaling params
 		SCALING_DELAY    uint64  = 50  // "short" autoscaling delay of 50ms
 		MAX_N_REPLICAS   int     = 20  // At most 5 instances should be needed to handle max load at target utilization
@@ -1427,7 +1429,65 @@ func TestBurst5xMaxQDelaySortedQMGrOverscaleLongSvcInitOmniscientQLenLBSigmaOSCo
 	var time uint64 = 0
 	c := simms.NewClients(CLNT_REQ_MEAN, CLNT_REQ_STD)
 	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, INIT_TIME, STATEFUL)
-	svc := simms.NewMicroservice(&time, p, opts.DefaultMicroserviceOpts, opts.WithOmniscientLB(), opts.WithLoadBalancerQLenMetric(), opts.WithMaxQDelayQMgr(MAX_Q_DELAY, true))
+	svc := simms.NewMicroservice(&time, p, opts.DefaultMicroserviceOpts, opts.WithOmniscientLB(), opts.WithLoadBalancerQLenMetric(), opts.WithMaxQDelayQMgr(MAX_Q_DELAY, SORT_Q))
+	app := simms.NewSingleTierApp(svc)
+	w := simms.NewWorkload(&time, app, c)
+	w.RecordStats(RECORD_STATS_WINDOW)
+	for ; time < N_TICKS; time++ {
+		if time == BURST_START {
+			c.StartBurst(BURST_MULTIPLIER)
+		}
+		if time == BURST_START+SCALING_DELAY {
+			for i := 0; i < MAX_N_REPLICAS-1; i++ {
+				svc.AddInstance()
+			}
+		}
+		// Run the simulation
+		w.Tick()
+	}
+	stats := w.GetStats()
+	rstats := stats.GetRecordedStats()
+	db.DPrintf(db.SIM_TEST, "Avg latency: %v", stats.AvgLatency())
+	db.DPrintf(db.SIM_RAW_LAT, "Raw latency: %v", stats.GetLatencies())
+	db.DPrintf(db.SIM_LAT_STATS, "Verbose Latency stats over time:\n%v", rstats.VerboseString())
+	db.DPrintf(db.SIM_LAT_STATS, "Latency stats over time: %v", rstats)
+	//	assert.Equal(t, 6, svc.GetAutoscaler().NScaleUpEvents(), "Scaled up wrong number of times")
+	//	assert.Equal(t, 2, svc.GetAutoscaler().NScaleDownEvents(), "Scaled down wrong number of times")
+	db.DPrintf(db.SIM_TEST, "nreqs:%v nreps:%v", svc.GetNReqs(), stats.GetNReps())
+	db.DPrintf(db.SIM_TEST, "Sim test done")
+}
+
+// Simulate a 5x load burst. Overscale to drain built-up queues after a medium
+// delay, an omniscient qlen-based load balancer, and SigmaOS scaling
+// parameters (assuming only cold-starts). Queue managers sort by initial request start time.
+// 1t = 1ms
+func TestBurst5xMaxQLenQMGrOverscaleLongSvcInitOmniscientQLenLBSigmaOSColdStartParams(t *testing.T) {
+	const (
+		N_TICKS uint64 = 250
+		// Clnt params
+		CLNT_REQ_MEAN    float64 = 9 // 9 requests per ms
+		CLNT_REQ_STD     float64 = 0
+		BURST_MULTIPLIER float64 = 5.0 // Burst to 5x the load
+		BURST_START      uint64  = 100 // Start burst 100 ticks in
+		// App params
+		N_SLOTS             int    = 50 // With 9 requests per millisecond, and 5ms to process each request, a server with 50 processing slots should achieve 90% avg utilization.
+		P_TIME              uint64 = 5  // Request processing time is 5ms, which is in-line with many hotel RPCs
+		INIT_TIME           uint64 = 50 // SigmaOS cold-start time, for just the container, is ~7.5ms. Real time to serve requests would be slighlty longer, due to the need to e.g. establish connections, register in the namespace, etc. This is therefore certainly a lower-bound
+		SVC_ID              string = "wfe"
+		STATEFUL            bool   = false
+		RECORD_STATS_WINDOW int    = 10
+		MAX_Q_LEN           int    = 100 // Max queue length at any replica before requests start to be dropped & retried
+		// Scaling params
+		SCALING_DELAY    uint64  = 50  // "short" autoscaling delay of 50ms
+		MAX_N_REPLICAS   int     = 20  // At most 5 instances should be needed to handle max load at target utilization
+		TARGET_UTIL      float64 = 0.9 // Target utilization of 90%
+		UTIL_WINDOW_SIZE uint64  = 10
+	)
+	db.DPrintf(db.SIM_TEST, "Sim test start")
+	var time uint64 = 0
+	c := simms.NewClients(CLNT_REQ_MEAN, CLNT_REQ_STD)
+	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, INIT_TIME, STATEFUL)
+	svc := simms.NewMicroservice(&time, p, opts.DefaultMicroserviceOpts, opts.WithOmniscientLB(), opts.WithLoadBalancerQLenMetric(), opts.WithMaxQLenQMgr(MAX_Q_LEN))
 	app := simms.NewSingleTierApp(svc)
 	w := simms.NewWorkload(&time, app, c)
 	w.RecordStats(RECORD_STATS_WINDOW)

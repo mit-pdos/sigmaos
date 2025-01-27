@@ -1,23 +1,28 @@
 package qmgr
 
 import (
+	db "sigmaos/debug"
 	"sigmaos/simulation/simms"
 )
 
 type BasicQMgr struct {
-	t *uint64
-	q *Queue
+	t  *uint64
+	ms *simms.Microservice
+	q  *Queue
 }
 
-func NewBasicQMgr(t *uint64, ms *simms.Microservice) simms.QMgr {
+func NewBasicQMgr(t *uint64, ms *simms.Microservice, maxQLen int) simms.QMgr {
 	return &BasicQMgr{
-		t: t,
-		q: NewQueue(t, false),
+		t:  t,
+		ms: ms,
+		q:  NewQueue(t, false, maxQLen),
 	}
 }
 
 func (m *BasicQMgr) Tick() {
-	// No-op
+	retries := m.q.TimeoutReqs(0)
+	db.DPrintf(db.SIM_QMGR, "Retry timed-out requests %v", retries)
+	m.ms.Retry(retries)
 }
 
 func (m *BasicQMgr) Enqueue(req []*simms.Request) {

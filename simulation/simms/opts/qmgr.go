@@ -5,14 +5,30 @@ import (
 	"sigmaos/simulation/simms/qmgr"
 )
 
-type withBasicQMgr struct{}
-
-func (withBasicQMgr) Apply(opts *simms.MicroserviceOpts) {
-	opts.NewQMgr = qmgr.NewBasicQMgr
+type withBasicQMgr struct {
+	maxQLen int
 }
 
 func WithBasicQMgr() simms.MicroserviceOpt {
-	return &withBasicQMgr{}
+	return &withBasicQMgr{
+		maxQLen: 0,
+	}
+}
+
+func NewBasicQMgr(t *uint64, ms *simms.Microservice) simms.QMgr {
+	return qmgr.NewBasicQMgr(t, ms, 0)
+}
+
+func (o withBasicQMgr) Apply(opts *simms.MicroserviceOpts) {
+	opts.NewQMgr = func(t *uint64, ms *simms.Microservice) simms.QMgr {
+		return qmgr.NewBasicQMgr(t, ms, o.maxQLen)
+	}
+}
+
+func WithMaxQLenQMgr(maxQLen int) simms.MicroserviceOpt {
+	return &withBasicQMgr{
+		maxQLen: maxQLen,
+	}
 }
 
 type withMaxQDelayQMgr struct {

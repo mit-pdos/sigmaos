@@ -38,12 +38,13 @@ func TestServiceInstanceNoQueueBuildup(t *testing.T) {
 		P_TIME         uint64 = 1
 		N_REQ_PER_TICK int    = 1
 		SVC_ID         string = "svc"
+		KILL           bool   = false
 		STATEFUL       bool   = false
 	)
 	db.DPrintf(db.SIM_TEST, "Sim test start")
 	var time uint64 = 0
-	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, 0, STATEFUL)
-	svc := simms.NewServiceInstance(&time, p, 0, qmgr.NewBasicQMgr(&time, nil, 0))
+	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, 0, KILL, STATEFUL)
+	svc := simms.NewServiceInstance(&time, nil, p, 0, qmgr.NewBasicQMgr(&time, nil, 0))
 	for ; time < N_TICKS; time++ {
 		// Construct requests
 		reqs := make([]*simms.Request, N_REQ_PER_TICK)
@@ -73,12 +74,13 @@ func TestServiceInstanceNoQueueBuildup10ReqPerTick(t *testing.T) {
 		P_TIME         uint64 = 1
 		N_REQ_PER_TICK int    = 10
 		SVC_ID         string = "svc"
+		KILL           bool   = false
 		STATEFUL       bool   = false
 	)
 	db.DPrintf(db.SIM_TEST, "Sim test start")
 	var time uint64 = 0
-	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, 0, STATEFUL)
-	svc := simms.NewServiceInstance(&time, p, 0, qmgr.NewBasicQMgr(&time, nil, 0))
+	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, 0, KILL, STATEFUL)
+	svc := simms.NewServiceInstance(&time, nil, p, 0, qmgr.NewBasicQMgr(&time, nil, 0))
 	for ; time < N_TICKS; time++ {
 		// Construct requests
 		reqs := make([]*simms.Request, N_REQ_PER_TICK)
@@ -108,12 +110,13 @@ func TestServiceInstanceQueueBuildup10ReqPerTick(t *testing.T) {
 		P_TIME         uint64 = 1
 		N_REQ_PER_TICK int    = 2
 		SVC_ID         string = "svc"
+		KILL           bool   = false
 		STATEFUL       bool   = false
 	)
 	db.DPrintf(db.SIM_TEST, "Sim test start")
 	var time uint64 = 0
-	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, 0, STATEFUL)
-	svc := simms.NewServiceInstance(&time, p, 0, qmgr.NewBasicQMgr(&time, nil, 0))
+	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, 0, KILL, STATEFUL)
+	svc := simms.NewServiceInstance(&time, nil, p, 0, qmgr.NewBasicQMgr(&time, nil, 0))
 	for ; time < N_TICKS; time++ {
 		// Construct requests
 		reqs := make([]*simms.Request, N_REQ_PER_TICK)
@@ -143,12 +146,13 @@ func TestServiceInstanceNoQueueBuildupPTime2(t *testing.T) {
 		P_TIME         uint64 = 2
 		N_REQ_PER_TICK int    = 2
 		SVC_ID         string = "svc"
+		KILL           bool   = false
 		STATEFUL       bool   = false
 	)
 	db.DPrintf(db.SIM_TEST, "Sim test start")
 	var time uint64 = 0
-	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, 0, STATEFUL)
-	svc := simms.NewServiceInstance(&time, p, 0, qmgr.NewBasicQMgr(&time, nil, 0))
+	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, 0, KILL, STATEFUL)
+	svc := simms.NewServiceInstance(&time, nil, p, 0, qmgr.NewBasicQMgr(&time, nil, 0))
 	for ; time < N_TICKS; time++ {
 		// Construct requests
 		reqs := make([]*simms.Request, N_REQ_PER_TICK)
@@ -178,12 +182,13 @@ func TestServiceInstanceQueueBuildupPTime2(t *testing.T) {
 		P_TIME         uint64 = 2
 		N_REQ_PER_TICK int    = 1
 		SVC_ID         string = "svc"
+		KILL           bool   = false
 		STATEFUL       bool   = false
 	)
 	db.DPrintf(db.SIM_TEST, "Sim test start")
 	var time uint64 = 0
-	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, 0, STATEFUL)
-	svc := simms.NewServiceInstance(&time, p, 0, qmgr.NewBasicQMgr(&time, nil, 0))
+	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, 0, KILL, STATEFUL)
+	svc := simms.NewServiceInstance(&time, nil, p, 0, qmgr.NewBasicQMgr(&time, nil, 0))
 	for ; time < N_TICKS; time++ {
 		// Construct requests
 		reqs := make([]*simms.Request, N_REQ_PER_TICK)
@@ -217,11 +222,12 @@ func TestAppNoQueueBuildup(t *testing.T) {
 		P_TIME         uint64 = 1
 		N_REQ_PER_TICK int    = 1
 		SVC_ID         string = "wfe"
+		KILL           bool   = false
 		STATEFUL       bool   = false
 	)
 	db.DPrintf(db.SIM_TEST, "Sim test start")
 	var time uint64 = 0
-	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, 0, STATEFUL)
+	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, 0, KILL, STATEFUL)
 	svc := simms.NewMicroservice(&time, p, opts.DefaultMicroserviceOpts)
 	app := simms.NewSingleTierApp(svc)
 	for ; time < N_TICKS; time++ {
@@ -256,12 +262,13 @@ func TestWorkloadNoQueueBuildup(t *testing.T) {
 		N_SLOTS  int    = 1
 		P_TIME   uint64 = 1
 		SVC_ID   string = "wfe"
+		KILL     bool   = false
 		STATEFUL bool   = false
 	)
 	db.DPrintf(db.SIM_TEST, "Sim test start")
 	var time uint64 = 0
 	c := simms.NewClients(CLNT_REQ_MEAN, CLNT_REQ_STD)
-	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, 0, STATEFUL)
+	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, 0, KILL, STATEFUL)
 	svc := simms.NewMicroservice(&time, p, opts.DefaultMicroserviceOpts)
 	app := simms.NewSingleTierApp(svc)
 	w := simms.NewWorkload(&time, app, c)
@@ -288,12 +295,13 @@ func TestWorkloadClntBurst(t *testing.T) {
 		N_SLOTS  int    = 1
 		P_TIME   uint64 = 1
 		SVC_ID   string = "wfe"
+		KILL     bool   = false
 		STATEFUL bool   = false
 	)
 	db.DPrintf(db.SIM_TEST, "Sim test start")
 	var time uint64 = 0
 	c := simms.NewClients(CLNT_REQ_MEAN, CLNT_REQ_STD)
-	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, 0, STATEFUL)
+	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, 0, KILL, STATEFUL)
 	svc := simms.NewMicroservice(&time, p, opts.DefaultMicroserviceOpts)
 	app := simms.NewSingleTierApp(svc)
 	w := simms.NewWorkload(&time, app, c)
@@ -326,12 +334,13 @@ func TestWorkloadClntBurstAddInstance(t *testing.T) {
 		N_SLOTS  int    = 1
 		P_TIME   uint64 = 1
 		SVC_ID   string = "wfe"
+		KILL     bool   = false
 		STATEFUL bool   = false
 	)
 	db.DPrintf(db.SIM_TEST, "Sim test start")
 	var time uint64 = 0
 	c := simms.NewClients(CLNT_REQ_MEAN, CLNT_REQ_STD)
-	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, 0, STATEFUL)
+	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, 0, KILL, STATEFUL)
 	svc := simms.NewMicroservice(&time, p, opts.DefaultMicroserviceOpts)
 	app := simms.NewSingleTierApp(svc)
 	w := simms.NewWorkload(&time, app, c)
@@ -365,6 +374,7 @@ func TestWorkloadClntBurstRemoveInstance(t *testing.T) {
 		N_SLOTS             int    = 1
 		P_TIME              uint64 = 1
 		SVC_ID              string = "wfe"
+		KILL                bool   = false
 		STATEFUL            bool   = false
 		SIZE_UP_TIME        uint64 = 0
 		SIZE_DOWN_TIME      uint64 = 500
@@ -373,7 +383,7 @@ func TestWorkloadClntBurstRemoveInstance(t *testing.T) {
 	db.DPrintf(db.SIM_TEST, "Sim test start")
 	var time uint64 = 0
 	c := simms.NewClients(CLNT_REQ_MEAN, CLNT_REQ_STD)
-	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, 0, STATEFUL)
+	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, 0, KILL, STATEFUL)
 	svc := simms.NewMicroservice(&time, p, opts.DefaultMicroserviceOpts)
 	app := simms.NewSingleTierApp(svc)
 	w := simms.NewWorkload(&time, app, c)
@@ -414,6 +424,7 @@ func TestAvgUtilAutoscaler(t *testing.T) {
 		N_SLOTS             int    = 1
 		P_TIME              uint64 = 1
 		SVC_ID              string = "wfe"
+		KILL                bool   = false
 		STATEFUL            bool   = false
 		SIZE_UP_TIME        uint64 = 0
 		SIZE_DOWN_TIME      uint64 = 500
@@ -428,7 +439,7 @@ func TestAvgUtilAutoscaler(t *testing.T) {
 	db.DPrintf(db.SIM_TEST, "Sim test start")
 	var time uint64 = 0
 	c := simms.NewClients(CLNT_REQ_MEAN, CLNT_REQ_STD)
-	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, 0, STATEFUL)
+	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, 0, KILL, STATEFUL)
 	asp := autoscaler.NewAvgValAutoscalerParams(SCALE_FREQ, TARGET_UTIL, UTIL_WINDOW_SIZE, MAX_N_REPLICAS, autoscaler.AvgUtil)
 	svc := simms.NewMicroservice(&time, p, opts.DefaultMicroserviceOpts, opts.WithAvgValAutoscaler(asp))
 	app := simms.NewSingleTierApp(svc)
@@ -461,6 +472,7 @@ func TestAvgUtilAutoscalerPersistentQueueImbalance(t *testing.T) {
 		N_SLOTS             int    = 10
 		P_TIME              uint64 = 2
 		SVC_ID              string = "wfe"
+		KILL                bool   = false
 		STATEFUL            bool   = false
 		SIZE_UP_TIME        uint64 = 0
 		SIZE_DOWN_TIME      uint64 = 500
@@ -475,7 +487,7 @@ func TestAvgUtilAutoscalerPersistentQueueImbalance(t *testing.T) {
 	db.DPrintf(db.SIM_TEST, "Sim test start")
 	var time uint64 = 0
 	c := simms.NewClients(CLNT_REQ_MEAN, CLNT_REQ_STD)
-	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, 0, STATEFUL)
+	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, 0, KILL, STATEFUL)
 	asp := autoscaler.NewAvgValAutoscalerParams(SCALE_FREQ, TARGET_UTIL, UTIL_WINDOW_SIZE, MAX_N_REPLICAS, autoscaler.AvgUtil)
 	svc := simms.NewMicroservice(&time, p, opts.DefaultMicroserviceOpts, opts.WithAvgValAutoscaler(asp))
 	app := simms.NewSingleTierApp(svc)
@@ -508,6 +520,7 @@ func TestAvgUtilAutoscalerOscillation(t *testing.T) {
 		N_SLOTS             int    = 10
 		P_TIME              uint64 = 2
 		SVC_ID              string = "wfe"
+		KILL                bool   = false
 		STATEFUL            bool   = false
 		SIZE_UP_TIME        uint64 = 0
 		SIZE_DOWN_TIME      uint64 = 500
@@ -522,7 +535,7 @@ func TestAvgUtilAutoscalerOscillation(t *testing.T) {
 	db.DPrintf(db.SIM_TEST, "Sim test start")
 	var time uint64 = 0
 	c := simms.NewClients(CLNT_REQ_MEAN, CLNT_REQ_STD)
-	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, 0, STATEFUL)
+	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, 0, KILL, STATEFUL)
 	asp := autoscaler.NewAvgValAutoscalerParams(SCALE_FREQ, TARGET_UTIL, UTIL_WINDOW_SIZE, MAX_N_REPLICAS, autoscaler.AvgUtil)
 	svc := simms.NewMicroservice(&time, p, opts.DefaultMicroserviceOpts, opts.WithAvgValAutoscaler(asp))
 	app := simms.NewSingleTierApp(svc)
@@ -555,6 +568,7 @@ func TestAvgUtilAutoscalerResolveQueueImbalanceWithOmniscientQLenLB(t *testing.T
 		N_SLOTS             int    = 10
 		P_TIME              uint64 = 2
 		SVC_ID              string = "wfe"
+		KILL                bool   = false
 		STATEFUL            bool   = false
 		SIZE_UP_TIME        uint64 = 0
 		SIZE_DOWN_TIME      uint64 = 500
@@ -569,7 +583,7 @@ func TestAvgUtilAutoscalerResolveQueueImbalanceWithOmniscientQLenLB(t *testing.T
 	db.DPrintf(db.SIM_TEST, "Sim test start")
 	var time uint64 = 0
 	c := simms.NewClients(CLNT_REQ_MEAN, CLNT_REQ_STD)
-	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, 0, STATEFUL)
+	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, 0, KILL, STATEFUL)
 	asp := autoscaler.NewAvgValAutoscalerParams(SCALE_FREQ, TARGET_UTIL, UTIL_WINDOW_SIZE, MAX_N_REPLICAS, autoscaler.AvgUtil)
 	svc := simms.NewMicroservice(&time, p, opts.DefaultMicroserviceOpts, opts.WithAvgValAutoscaler(asp), opts.WithOmniscientLB(), opts.WithLoadBalancerQLenMetric())
 	app := simms.NewSingleTierApp(svc)
@@ -604,6 +618,7 @@ func TestAvgUtilAutoscalerResolveQueueImbalanceWithNRandomQLenLB(t *testing.T) {
 		N_SLOTS             int    = 10
 		P_TIME              uint64 = 2
 		SVC_ID              string = "wfe"
+		KILL                bool   = false
 		STATEFUL            bool   = false
 		SIZE_UP_TIME        uint64 = 0
 		SIZE_DOWN_TIME      uint64 = 500
@@ -620,7 +635,7 @@ func TestAvgUtilAutoscalerResolveQueueImbalanceWithNRandomQLenLB(t *testing.T) {
 	db.DPrintf(db.SIM_TEST, "Sim test start")
 	var time uint64 = 0
 	c := simms.NewClients(CLNT_REQ_MEAN, CLNT_REQ_STD)
-	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, 0, STATEFUL)
+	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, 0, KILL, STATEFUL)
 	asp := autoscaler.NewAvgValAutoscalerParams(SCALE_FREQ, TARGET_UTIL, UTIL_WINDOW_SIZE, MAX_N_REPLICAS, autoscaler.AvgUtil)
 	svc := simms.NewMicroservice(&time, p, opts.DefaultMicroserviceOpts, opts.WithAvgValAutoscaler(asp), opts.WithNRandomChoicesLB(N_RANDOM_CHOICES), opts.WithLoadBalancerQLenMetric())
 	app := simms.NewSingleTierApp(svc)
@@ -660,13 +675,14 @@ func TestImmediateScaleUpWithClientBurstOmniscientQLenLB(t *testing.T) {
 		P_TIME              uint64 = 1
 		SVC_ID              string = "wfe"
 		SVC_INIT_TIME       uint64 = 4
+		KILL                bool   = false
 		STATEFUL            bool   = false
 		RECORD_STATS_WINDOW int    = 10
 	)
 	db.DPrintf(db.SIM_TEST, "Sim test start")
 	var time uint64 = 0
 	c := simms.NewClients(CLNT_REQ_MEAN, CLNT_REQ_STD)
-	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, SVC_INIT_TIME, STATEFUL)
+	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, SVC_INIT_TIME, KILL, STATEFUL)
 	svc := simms.NewMicroservice(&time, p, opts.DefaultMicroserviceOpts, opts.WithOmniscientLB(), opts.WithLoadBalancerQLenMetric())
 	app := simms.NewSingleTierApp(svc)
 	w := simms.NewWorkload(&time, app, c)
@@ -704,6 +720,7 @@ func TestImmediateScaleUpWithClientBurstNRandomChoicesQLenLB(t *testing.T) {
 		P_TIME              uint64 = 1
 		SVC_ID              string = "wfe"
 		SVC_INIT_TIME       uint64 = 4
+		KILL                bool   = false
 		STATEFUL            bool   = false
 		RECORD_STATS_WINDOW int    = 10
 		N_INSTANCES         int    = 10
@@ -713,7 +730,7 @@ func TestImmediateScaleUpWithClientBurstNRandomChoicesQLenLB(t *testing.T) {
 	db.DPrintf(db.SIM_TEST, "Sim test start")
 	var time uint64 = 0
 	c := simms.NewClients(CLNT_REQ_MEAN, CLNT_REQ_STD)
-	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, SVC_INIT_TIME, STATEFUL)
+	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, SVC_INIT_TIME, KILL, STATEFUL)
 	svc := simms.NewMicroservice(&time, p, opts.DefaultMicroserviceOpts, opts.WithNRandomChoicesLB(N_RANDOM_CHOICES), opts.WithLoadBalancerQLenMetric())
 	app := simms.NewSingleTierApp(svc)
 	w := simms.NewWorkload(&time, app, c)
@@ -758,6 +775,7 @@ func TestDelayedScaleUpWithClientBurstNRandomChoicesLB(t *testing.T) {
 		P_TIME              uint64 = 1
 		SVC_ID              string = "wfe"
 		SVC_INIT_TIME       uint64 = 4
+		KILL                bool   = false
 		STATEFUL            bool   = false
 		RECORD_STATS_WINDOW int    = 10
 		N_INSTANCES         int    = 10
@@ -769,7 +787,7 @@ func TestDelayedScaleUpWithClientBurstNRandomChoicesLB(t *testing.T) {
 	db.DPrintf(db.SIM_TEST, "Sim test start")
 	var time uint64 = 0
 	c := simms.NewClients(CLNT_REQ_MEAN, CLNT_REQ_STD)
-	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, SVC_INIT_TIME, STATEFUL)
+	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, SVC_INIT_TIME, KILL, STATEFUL)
 	svc := simms.NewMicroservice(&time, p, opts.DefaultMicroserviceOpts, opts.WithNRandomChoicesLB(N_RANDOM_CHOICES), opts.WithLoadBalancerQLenMetric())
 	app := simms.NewSingleTierApp(svc)
 	w := simms.NewWorkload(&time, app, c)
@@ -812,6 +830,7 @@ func TestAvgUtil50AutoscalerRRLBMatchWithK8s(t *testing.T) {
 		P_TIME              uint64 = 1
 		INIT_TIME           uint64 = 5
 		SVC_ID              string = "wfe"
+		KILL                bool   = false
 		STATEFUL            bool   = false
 		RECORD_STATS_WINDOW int    = 10
 		// Autoscaler params
@@ -824,7 +843,7 @@ func TestAvgUtil50AutoscalerRRLBMatchWithK8s(t *testing.T) {
 	db.DPrintf(db.SIM_TEST, "Sim test start")
 	var time uint64 = 0
 	c := simms.NewClients(CLNT_REQ_MEAN, CLNT_REQ_STD)
-	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, INIT_TIME, STATEFUL)
+	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, INIT_TIME, KILL, STATEFUL)
 	asp := autoscaler.NewAvgValAutoscalerParams(SCALE_FREQ, TARGET_UTIL, UTIL_WINDOW_SIZE, MAX_N_REPLICAS, autoscaler.AvgUtil)
 	svc := simms.NewMicroservice(&time, p, opts.DefaultMicroserviceOpts, opts.WithAvgValAutoscaler(asp))
 	app := simms.NewSingleTierApp(svc)
@@ -860,6 +879,7 @@ func TestAvgUtil90AutoscalerRRLBMatchWithK8s(t *testing.T) {
 		P_TIME              uint64 = 1
 		INIT_TIME           uint64 = 5
 		SVC_ID              string = "wfe"
+		KILL                bool   = false
 		STATEFUL            bool   = false
 		RECORD_STATS_WINDOW int    = 10
 		// Autoscaler params
@@ -872,7 +892,7 @@ func TestAvgUtil90AutoscalerRRLBMatchWithK8s(t *testing.T) {
 	db.DPrintf(db.SIM_TEST, "Sim test start")
 	var time uint64 = 0
 	c := simms.NewClients(CLNT_REQ_MEAN, CLNT_REQ_STD)
-	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, INIT_TIME, STATEFUL)
+	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, INIT_TIME, KILL, STATEFUL)
 	asp := autoscaler.NewAvgValAutoscalerParams(SCALE_FREQ, TARGET_UTIL, UTIL_WINDOW_SIZE, MAX_N_REPLICAS, autoscaler.AvgUtil)
 	svc := simms.NewMicroservice(&time, p, opts.DefaultMicroserviceOpts, opts.WithAvgValAutoscaler(asp))
 	app := simms.NewSingleTierApp(svc)
@@ -908,6 +928,7 @@ func TestAvgUtil90AutoscalerOmniscientQLenLBMatchWithK8s(t *testing.T) {
 		P_TIME              uint64 = 1
 		INIT_TIME           uint64 = 5
 		SVC_ID              string = "wfe"
+		KILL                bool   = false
 		STATEFUL            bool   = false
 		RECORD_STATS_WINDOW int    = 10
 		// Autoscaler params
@@ -920,7 +941,7 @@ func TestAvgUtil90AutoscalerOmniscientQLenLBMatchWithK8s(t *testing.T) {
 	db.DPrintf(db.SIM_TEST, "Sim test start")
 	var time uint64 = 0
 	c := simms.NewClients(CLNT_REQ_MEAN, CLNT_REQ_STD)
-	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, INIT_TIME, STATEFUL)
+	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, INIT_TIME, KILL, STATEFUL)
 	asp := autoscaler.NewAvgValAutoscalerParams(SCALE_FREQ, TARGET_UTIL, UTIL_WINDOW_SIZE, MAX_N_REPLICAS, autoscaler.AvgUtil)
 	svc := simms.NewMicroservice(&time, p, opts.DefaultMicroserviceOpts, opts.WithAvgValAutoscaler(asp), opts.WithOmniscientLB(), opts.WithLoadBalancerQLenMetric())
 	app := simms.NewSingleTierApp(svc)
@@ -961,6 +982,7 @@ func TestBurst5xK8sAvgUtilAutoscalerOmniscientQLenLBSigmaOSColdStartParams(t *te
 		P_TIME              uint64 = 5  // Request processing time is 5ms, which is in-line with many hotel RPCs
 		INIT_TIME           uint64 = 8  // SigmaOS cold-start time, for just the container, is ~7.5ms. Real time to serve requests would be slighlty longer, due to the need to e.g. establish connections, register in the namespace, etc. This is therefore certainly a lower-bound
 		SVC_ID              string = "wfe"
+		KILL                bool   = false
 		STATEFUL            bool   = false
 		RECORD_STATS_WINDOW int    = 10
 		// Autoscaler params
@@ -973,7 +995,7 @@ func TestBurst5xK8sAvgUtilAutoscalerOmniscientQLenLBSigmaOSColdStartParams(t *te
 	db.DPrintf(db.SIM_TEST, "Sim test start")
 	var time uint64 = 0
 	c := simms.NewClients(CLNT_REQ_MEAN, CLNT_REQ_STD)
-	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, INIT_TIME, STATEFUL)
+	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, INIT_TIME, KILL, STATEFUL)
 	asp := autoscaler.NewAvgValAutoscalerParams(SCALE_FREQ, TARGET_UTIL, UTIL_WINDOW_SIZE, MAX_N_REPLICAS, autoscaler.AvgUtil)
 	svc := simms.NewMicroservice(&time, p, opts.DefaultMicroserviceOpts, opts.WithAvgValAutoscaler(asp), opts.WithOmniscientLB(), opts.WithLoadBalancerQLenMetric())
 	app := simms.NewSingleTierApp(svc)
@@ -1017,6 +1039,7 @@ func TestBurst2xK8sAvgUtilAutoscalerOmniscientQLenLBSigmaOSColdStartParams(t *te
 		P_TIME              uint64 = 5  // Request processing time is 5ms, which is in-line with many hotel RPCs
 		INIT_TIME           uint64 = 8  // SigmaOS cold-start time, for just the container, is ~7.5ms. Real time to serve requests would be slighlty longer, due to the need to e.g. establish connections, register in the namespace, etc. This is therefore certainly a lower-bound
 		SVC_ID              string = "wfe"
+		KILL                bool   = false
 		STATEFUL            bool   = false
 		RECORD_STATS_WINDOW int    = 10
 		// Autoscaler params
@@ -1029,7 +1052,7 @@ func TestBurst2xK8sAvgUtilAutoscalerOmniscientQLenLBSigmaOSColdStartParams(t *te
 	db.DPrintf(db.SIM_TEST, "Sim test start")
 	var time uint64 = 0
 	c := simms.NewClients(CLNT_REQ_MEAN, CLNT_REQ_STD)
-	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, INIT_TIME, STATEFUL)
+	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, INIT_TIME, KILL, STATEFUL)
 	asp := autoscaler.NewAvgValAutoscalerParams(SCALE_FREQ, TARGET_UTIL, UTIL_WINDOW_SIZE, MAX_N_REPLICAS, autoscaler.AvgUtil)
 	svc := simms.NewMicroservice(&time, p, opts.DefaultMicroserviceOpts, opts.WithAvgValAutoscaler(asp), opts.WithOmniscientLB(), opts.WithLoadBalancerQLenMetric())
 	app := simms.NewSingleTierApp(svc)
@@ -1074,6 +1097,7 @@ func TestBurst5xOverscale2xK8sAvgUtilAutoscalerOmniscientQLenLBSigmaOSColdStartP
 		P_TIME              uint64 = 5  // Request processing time is 5ms, which is in-line with many hotel RPCs
 		INIT_TIME           uint64 = 8  // SigmaOS cold-start time, for just the container, is ~7.5ms. Real time to serve requests would be slighlty longer, due to the need to e.g. establish connections, register in the namespace, etc. This is therefore certainly a lower-bound
 		SVC_ID              string = "wfe"
+		KILL                bool   = false
 		STATEFUL            bool   = false
 		RECORD_STATS_WINDOW int    = 10
 		// Autoscaler params
@@ -1086,7 +1110,7 @@ func TestBurst5xOverscale2xK8sAvgUtilAutoscalerOmniscientQLenLBSigmaOSColdStartP
 	db.DPrintf(db.SIM_TEST, "Sim test start")
 	var time uint64 = 0
 	c := simms.NewClients(CLNT_REQ_MEAN, CLNT_REQ_STD)
-	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, INIT_TIME, STATEFUL)
+	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, INIT_TIME, KILL, STATEFUL)
 	asp := autoscaler.NewAvgValAutoscalerParams(SCALE_FREQ, TARGET_UTIL, UTIL_WINDOW_SIZE, MAX_N_REPLICAS, autoscaler.AvgUtil)
 	svc := simms.NewMicroservice(&time, p, opts.DefaultMicroserviceOpts, opts.WithAvgValAutoscaler(asp), opts.WithOmniscientLB(), opts.WithLoadBalancerQLenMetric())
 	app := simms.NewSingleTierApp(svc)
@@ -1131,6 +1155,7 @@ func TestBurst2xOverscale2xK8sAvgUtilAutoscalerOmniscientQLenLBSigmaOSColdStartP
 		P_TIME              uint64 = 5  // Request processing time is 5ms, which is in-line with many hotel RPCs
 		INIT_TIME           uint64 = 8  // SigmaOS cold-start time, for just the container, is ~7.5ms. Real time to serve requests would be slighlty longer, due to the need to e.g. establish connections, register in the namespace, etc. This is therefore certainly a lower-bound
 		SVC_ID              string = "wfe"
+		KILL                bool   = false
 		STATEFUL            bool   = false
 		RECORD_STATS_WINDOW int    = 10
 		// Autoscaler params
@@ -1143,7 +1168,7 @@ func TestBurst2xOverscale2xK8sAvgUtilAutoscalerOmniscientQLenLBSigmaOSColdStartP
 	db.DPrintf(db.SIM_TEST, "Sim test start")
 	var time uint64 = 0
 	c := simms.NewClients(CLNT_REQ_MEAN, CLNT_REQ_STD)
-	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, INIT_TIME, STATEFUL)
+	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, INIT_TIME, KILL, STATEFUL)
 	asp := autoscaler.NewAvgValAutoscalerParams(SCALE_FREQ, TARGET_UTIL, UTIL_WINDOW_SIZE, MAX_N_REPLICAS, autoscaler.AvgUtil)
 	svc := simms.NewMicroservice(&time, p, opts.DefaultMicroserviceOpts, opts.WithAvgValAutoscaler(asp), opts.WithOmniscientLB(), opts.WithLoadBalancerQLenMetric())
 	app := simms.NewSingleTierApp(svc)
@@ -1187,6 +1212,7 @@ func TestBurst5xShortDelayedPerfectScaleOmniscientQLenLBSigmaOSColdStartParams(t
 		P_TIME              uint64 = 5  // Request processing time is 5ms, which is in-line with many hotel RPCs
 		INIT_TIME           uint64 = 8  // SigmaOS cold-start time, for just the container, is ~7.5ms. Real time to serve requests would be slighlty longer, due to the need to e.g. establish connections, register in the namespace, etc. This is therefore certainly a lower-bound
 		SVC_ID              string = "wfe"
+		KILL                bool   = false
 		STATEFUL            bool   = false
 		RECORD_STATS_WINDOW int    = 10
 		// Scaling params
@@ -1198,7 +1224,7 @@ func TestBurst5xShortDelayedPerfectScaleOmniscientQLenLBSigmaOSColdStartParams(t
 	db.DPrintf(db.SIM_TEST, "Sim test start")
 	var time uint64 = 0
 	c := simms.NewClients(CLNT_REQ_MEAN, CLNT_REQ_STD)
-	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, INIT_TIME, STATEFUL)
+	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, INIT_TIME, KILL, STATEFUL)
 	svc := simms.NewMicroservice(&time, p, opts.DefaultMicroserviceOpts, opts.WithOmniscientLB(), opts.WithLoadBalancerQLenMetric())
 	app := simms.NewSingleTierApp(svc)
 	w := simms.NewWorkload(&time, app, c)
@@ -1243,6 +1269,7 @@ func TestBurst5xLongDelayedPerfectScaleOmniscientQLenLBSigmaOSColdStartParams(t 
 		P_TIME              uint64 = 5  // Request processing time is 5ms, which is in-line with many hotel RPCs
 		INIT_TIME           uint64 = 8  // SigmaOS cold-start time, for just the container, is ~7.5ms. Real time to serve requests would be slighlty longer, due to the need to e.g. establish connections, register in the namespace, etc. This is therefore certainly a lower-bound
 		SVC_ID              string = "wfe"
+		KILL                bool   = false
 		STATEFUL            bool   = false
 		RECORD_STATS_WINDOW int    = 10
 		// Scaling params
@@ -1254,7 +1281,7 @@ func TestBurst5xLongDelayedPerfectScaleOmniscientQLenLBSigmaOSColdStartParams(t 
 	db.DPrintf(db.SIM_TEST, "Sim test start")
 	var time uint64 = 0
 	c := simms.NewClients(CLNT_REQ_MEAN, CLNT_REQ_STD)
-	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, INIT_TIME, STATEFUL)
+	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, INIT_TIME, KILL, STATEFUL)
 	svc := simms.NewMicroservice(&time, p, opts.DefaultMicroserviceOpts, opts.WithOmniscientLB(), opts.WithLoadBalancerQLenMetric())
 	app := simms.NewSingleTierApp(svc)
 	w := simms.NewWorkload(&time, app, c)
@@ -1299,6 +1326,7 @@ func TestBurst5xLongDelayedMaxQDelayQMGrPerfectScaleOmniscientQLenLBSigmaOSColdS
 		P_TIME              uint64 = 5  // Request processing time is 5ms, which is in-line with many hotel RPCs
 		INIT_TIME           uint64 = 8  // SigmaOS cold-start time, for just the container, is ~7.5ms. Real time to serve requests would be slighlty longer, due to the need to e.g. establish connections, register in the namespace, etc. This is therefore certainly a lower-bound
 		SVC_ID              string = "wfe"
+		KILL                bool   = false
 		STATEFUL            bool   = false
 		RECORD_STATS_WINDOW int    = 10
 		MAX_Q_DELAY         uint64 = 100 // Max queueing delay incurred by any request before it is retried (possibly at another replica)
@@ -1311,7 +1339,7 @@ func TestBurst5xLongDelayedMaxQDelayQMGrPerfectScaleOmniscientQLenLBSigmaOSColdS
 	db.DPrintf(db.SIM_TEST, "Sim test start")
 	var time uint64 = 0
 	c := simms.NewClients(CLNT_REQ_MEAN, CLNT_REQ_STD)
-	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, INIT_TIME, STATEFUL)
+	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, INIT_TIME, KILL, STATEFUL)
 	svc := simms.NewMicroservice(&time, p, opts.DefaultMicroserviceOpts, opts.WithOmniscientLB(), opts.WithLoadBalancerQLenMetric(), opts.WithMaxQDelayQMgr(MAX_Q_DELAY, false))
 	app := simms.NewSingleTierApp(svc)
 	w := simms.NewWorkload(&time, app, c)
@@ -1356,6 +1384,7 @@ func TestBurst5xMaxQDelayQMGrOverscaleLongSvcInitOmniscientQLenLBSigmaOSColdStar
 		P_TIME              uint64 = 5  // Request processing time is 5ms, which is in-line with many hotel RPCs
 		INIT_TIME           uint64 = 50 // SigmaOS cold-start time, for just the container, is ~7.5ms. Real time to serve requests would be slighlty longer, due to the need to e.g. establish connections, register in the namespace, etc. This is therefore certainly a lower-bound
 		SVC_ID              string = "wfe"
+		KILL                bool   = false
 		STATEFUL            bool   = false
 		RECORD_STATS_WINDOW int    = 10
 		MAX_Q_DELAY         uint64 = 50    // Max queueing delay incurred by any request before it is retried (possibly at another replica)
@@ -1369,7 +1398,7 @@ func TestBurst5xMaxQDelayQMGrOverscaleLongSvcInitOmniscientQLenLBSigmaOSColdStar
 	db.DPrintf(db.SIM_TEST, "Sim test start")
 	var time uint64 = 0
 	c := simms.NewClients(CLNT_REQ_MEAN, CLNT_REQ_STD)
-	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, INIT_TIME, STATEFUL)
+	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, INIT_TIME, KILL, STATEFUL)
 	svc := simms.NewMicroservice(&time, p, opts.DefaultMicroserviceOpts, opts.WithOmniscientLB(), opts.WithLoadBalancerQLenMetric(), opts.WithMaxQDelayQMgr(MAX_Q_DELAY, SORT_Q))
 	app := simms.NewSingleTierApp(svc)
 	w := simms.NewWorkload(&time, app, c)
@@ -1415,6 +1444,7 @@ func TestBurst5xMaxQDelaySortedQMGrOverscaleLongSvcInitOmniscientQLenLBSigmaOSCo
 		P_TIME              uint64 = 5  // Request processing time is 5ms, which is in-line with many hotel RPCs
 		INIT_TIME           uint64 = 50 // SigmaOS cold-start time, for just the container, is ~7.5ms. Real time to serve requests would be slighlty longer, due to the need to e.g. establish connections, register in the namespace, etc. This is therefore certainly a lower-bound
 		SVC_ID              string = "wfe"
+		KILL                bool   = false
 		STATEFUL            bool   = false
 		RECORD_STATS_WINDOW int    = 10
 		MAX_Q_DELAY         uint64 = 50   // Max queueing delay incurred by any request before it is retried (possibly at another replica)
@@ -1428,7 +1458,7 @@ func TestBurst5xMaxQDelaySortedQMGrOverscaleLongSvcInitOmniscientQLenLBSigmaOSCo
 	db.DPrintf(db.SIM_TEST, "Sim test start")
 	var time uint64 = 0
 	c := simms.NewClients(CLNT_REQ_MEAN, CLNT_REQ_STD)
-	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, INIT_TIME, STATEFUL)
+	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, INIT_TIME, KILL, STATEFUL)
 	svc := simms.NewMicroservice(&time, p, opts.DefaultMicroserviceOpts, opts.WithOmniscientLB(), opts.WithLoadBalancerQLenMetric(), opts.WithMaxQDelayQMgr(MAX_Q_DELAY, SORT_Q))
 	app := simms.NewSingleTierApp(svc)
 	w := simms.NewWorkload(&time, app, c)
@@ -1474,6 +1504,7 @@ func TestBurst5xMaxQLenQMGrOverscaleLongSvcInitOmniscientQLenLBSigmaOSColdStartP
 		P_TIME              uint64 = 5  // Request processing time is 5ms, which is in-line with many hotel RPCs
 		INIT_TIME           uint64 = 50 // SigmaOS cold-start time, for just the container, is ~7.5ms. Real time to serve requests would be slighlty longer, due to the need to e.g. establish connections, register in the namespace, etc. This is therefore certainly a lower-bound
 		SVC_ID              string = "wfe"
+		KILL                bool   = false
 		STATEFUL            bool   = false
 		RECORD_STATS_WINDOW int    = 10
 		MAX_Q_LEN           int    = 200 // Max queue length at any replica before requests start to be dropped & retried
@@ -1486,7 +1517,7 @@ func TestBurst5xMaxQLenQMGrOverscaleLongSvcInitOmniscientQLenLBSigmaOSColdStartP
 	db.DPrintf(db.SIM_TEST, "Sim test start")
 	var time uint64 = 0
 	c := simms.NewClients(CLNT_REQ_MEAN, CLNT_REQ_STD)
-	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, INIT_TIME, STATEFUL)
+	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, INIT_TIME, KILL, STATEFUL)
 	svc := simms.NewMicroservice(&time, p, opts.DefaultMicroserviceOpts, opts.WithOmniscientLB(), opts.WithLoadBalancerQLenMetric(), opts.WithMaxQLenQMgr(MAX_Q_LEN))
 	app := simms.NewSingleTierApp(svc)
 	w := simms.NewWorkload(&time, app, c)
@@ -1528,6 +1559,7 @@ func TestBurst5xMaxQLenQMgrAutoscaleOmniscientQLenLB(t *testing.T) {
 		P_TIME              uint64 = 5  // Request processing time is 5ms, which is in-line with many hotel RPCs
 		INIT_TIME           uint64 = 50 // SigmaOS cold-start time, for just the container, is ~7.5ms. Real time to serve requests would be slighlty longer, due to the need to e.g. establish connections, register in the namespace, etc. This is therefore certainly a lower-bound
 		SVC_ID              string = "wfe"
+		KILL                bool   = false
 		STATEFUL            bool   = false
 		RECORD_STATS_WINDOW int    = 10
 		MAX_Q_LEN           int    = 100 // Max queue length at any replica before requests start to be dropped & retried
@@ -1541,7 +1573,64 @@ func TestBurst5xMaxQLenQMgrAutoscaleOmniscientQLenLB(t *testing.T) {
 	db.DPrintf(db.SIM_TEST, "Sim test start")
 	var time uint64 = 0
 	c := simms.NewClients(CLNT_REQ_MEAN, CLNT_REQ_STD)
-	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, INIT_TIME, STATEFUL)
+	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, INIT_TIME, KILL, STATEFUL)
+	asp := autoscaler.NewAvgValAutoscalerParams(SCALE_FREQ, TARGET_QDELAY, STAT_WINDOW_SIZE, MAX_N_REPLICAS, autoscaler.AvgQDelay)
+	svc := simms.NewMicroservice(&time, p, opts.DefaultMicroserviceOpts, opts.WithOmniscientLB(), opts.WithLoadBalancerQLenMetric(), opts.WithMaxQLenQMgr(MAX_Q_LEN), opts.WithAvgValAutoscaler(asp))
+	app := simms.NewSingleTierApp(svc)
+	w := simms.NewWorkload(&time, app, c)
+	w.RecordStats(RECORD_STATS_WINDOW)
+	for ; time < N_TICKS; time++ {
+		if time == BURST_START {
+			c.StartBurst(BURST_MULTIPLIER)
+		}
+		if time == AUTOSCALER_LEAD_IN {
+			svc.GetAutoscaler().Start()
+		}
+		// Run the simulation
+		w.Tick()
+	}
+	stats := w.GetStats()
+	rstats := stats.GetRecordedStats()
+	//	db.DPrintf(db.SIM_UTIL_STATS, "Avg util: %v", stats.AvgUtil())
+	//	db.DPrintf(db.SIM_UTIL_STATS, "Raw util:\n%v", stats.GetUtils())
+	db.DPrintf(db.SIM_TEST, "Avg latency: %v", stats.AvgLatency())
+	db.DPrintf(db.SIM_RAW_LAT, "Raw latency: %v", stats.GetLatencies())
+	db.DPrintf(db.SIM_LAT_STATS, "Verbose Latency stats over time:\n%v", rstats.VerboseString())
+	db.DPrintf(db.SIM_LAT_STATS, "Stats over time %v", rstats)
+	//	assert.Equal(t, 6, svc.GetAutoscaler().NScaleUpEvents(), "Scaled up wrong number of times")
+	//	assert.Equal(t, 2, svc.GetAutoscaler().NScaleDownEvents(), "Scaled down wrong number of times")
+	db.DPrintf(db.SIM_TEST, "nreqs:%v nreps:%v", svc.GetNReqs(), stats.GetNReps())
+	db.DPrintf(db.SIM_TEST, "Sim test done")
+}
+
+func TestBurst5xMaxQLenQMgrAutoscaleKillOmniscientQLenLB(t *testing.T) {
+	const (
+		N_TICKS uint64 = 1000
+		// Clnt params
+		CLNT_REQ_MEAN    float64 = 9 // 9 requests per ms
+		CLNT_REQ_STD     float64 = 0
+		BURST_MULTIPLIER float64 = 5.0 // Burst to 5x the load
+		BURST_START      uint64  = 100 // Start burst 100 ticks in
+		// App params
+		N_SLOTS             int    = 50 // With 9 requests per millisecond, and 5ms to process each request, a server with 50 processing slots should achieve 90% avg utilization.
+		P_TIME              uint64 = 5  // Request processing time is 5ms, which is in-line with many hotel RPCs
+		INIT_TIME           uint64 = 50 // SigmaOS cold-start time, for just the container, is ~7.5ms. Real time to serve requests would be slighlty longer, due to the need to e.g. establish connections, register in the namespace, etc. This is therefore certainly a lower-bound
+		SVC_ID              string = "wfe"
+		KILL                bool   = true // Immediately kill an instance when downscaling, causing all of its requests to retry at the client
+		STATEFUL            bool   = false
+		RECORD_STATS_WINDOW int    = 10
+		MAX_Q_LEN           int    = 100 // Max queue length at any replica before requests start to be dropped & retried
+		// Autoscaler params
+		MAX_N_REPLICAS     int     = 400
+		SCALE_FREQ         int     = 50
+		TARGET_QDELAY      float64 = 2.0 // Target average queueing delay
+		STAT_WINDOW_SIZE   uint64  = 10
+		AUTOSCALER_LEAD_IN uint64  = 100 // Number of ticks to wait before starting the autoscaler
+	)
+	db.DPrintf(db.SIM_TEST, "Sim test start")
+	var time uint64 = 0
+	c := simms.NewClients(CLNT_REQ_MEAN, CLNT_REQ_STD)
+	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, INIT_TIME, KILL, STATEFUL)
 	asp := autoscaler.NewAvgValAutoscalerParams(SCALE_FREQ, TARGET_QDELAY, STAT_WINDOW_SIZE, MAX_N_REPLICAS, autoscaler.AvgQDelay)
 	svc := simms.NewMicroservice(&time, p, opts.DefaultMicroserviceOpts, opts.WithOmniscientLB(), opts.WithLoadBalancerQLenMetric(), opts.WithMaxQLenQMgr(MAX_Q_LEN), opts.WithAvgValAutoscaler(asp))
 	app := simms.NewSingleTierApp(svc)

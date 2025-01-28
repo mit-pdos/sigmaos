@@ -12,4 +12,5 @@ var DefaultMicroserviceOpts simms.MicroserviceOpts = simms.MicroserviceOpts{
 	NewAutoscaler:         autoscaler.NewNoOpAutoscaler,
 	NewLoadBalancer:       lb.NewRoundRobinLB,
 	NewLoadBalancerMetric: lbmetrics.NewUnsetMetric,
+	KillRemovedInstances:  false,
 }

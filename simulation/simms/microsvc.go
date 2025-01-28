@@ -5,20 +5,22 @@ import (
 )
 
 type MicroserviceParams struct {
-	ID       string
-	NSlots   int    // Number of slots for processing requests in parallel
-	InitTime uint64 // Time required to initialize a new instance of the microservice
-	PTime    uint64 // Time required to process each request
-	Stateful bool   // If true, microservice is stateful TODO: unimplemented
+	ID                   string
+	NSlots               int    // Number of slots for processing requests in parallel
+	InitTime             uint64 // Time required to initialize a new instance of the microservice
+	PTime                uint64 // Time required to process each request
+	KillRemovedInstances bool   // If true, kill an instance as soon as it is removed & retry any processing/queued requests
+	Stateful             bool   // If true, microservice is stateful TODO: unimplemented
 }
 
-func NewMicroserviceParams(id string, nslots int, ptime uint64, initTime uint64, stateful bool) *MicroserviceParams {
+func NewMicroserviceParams(id string, nslots int, ptime uint64, initTime uint64, killRemovedInstances, stateful bool) *MicroserviceParams {
 	return &MicroserviceParams{
-		ID:       id,
-		NSlots:   nslots,
-		InitTime: initTime,
-		PTime:    ptime,
-		Stateful: stateful,
+		ID:                   id,
+		NSlots:               nslots,
+		InitTime:             initTime,
+		PTime:                ptime,
+		KillRemovedInstances: killRemovedInstances,
+		Stateful:             stateful,
 	}
 }
 
@@ -62,7 +64,7 @@ func (m *Microservice) NInstances() int {
 }
 
 func (m *Microservice) AddInstance() {
-	m.instances = append(m.instances, NewMicroserviceInstance(m.t, m.msp, m.addedInstances, m.qmgrFn(m.t, m), nil, nil))
+	m.instances = append(m.instances, NewMicroserviceInstance(m.t, m, m.msp, m.addedInstances, m.qmgrFn(m.t, m), nil, nil))
 	m.addedInstances++
 }
 
@@ -73,6 +75,11 @@ func (m *Microservice) MarkInstanceReady(idx int) {
 func (m *Microservice) RemoveInstance() {
 	// Mark the instance "not ready"
 	m.instances[m.removedInstances].MarkNotReady()
+	if m.msp.KillRemovedInstances {
+		// "Kill" the removed instance, causing all of its processing & queued
+		// requests to be retried.
+		m.instances[m.removedInstances].Kill()
+	}
 	m.removedInstances++
 }
 
@@ -103,9 +110,12 @@ func (m *Microservice) Tick(reqs []*Request) []*Reply {
 	for i, rs := range steeredReqs {
 		replies = append(replies, m.instances[i].Tick(rs)...)
 	}
-	utils := make([]float64, len(steeredReqs))
+	// Get utilization of active microservice instances
+	utils := []float64{}
 	for i := range steeredReqs {
-		utils[i] = m.instances[i].GetStats().Util[*m.t]
+		if m.instances[i].IsReady() {
+			utils = append(utils, m.instances[i].GetStats().Util[*m.t])
+		}
 	}
 	m.stats.Tick(*m.t, replies, qs, utils)
 	m.autoscaler.Tick()
@@ -142,9 +152,9 @@ type MicroserviceInstance struct {
 	db       *Microservice
 }
 
-func NewMicroserviceInstance(t *uint64, msp *MicroserviceParams, instanceID int, qmgr QMgr, memcache *Microservice, db *Microservice) *MicroserviceInstance {
+func NewMicroserviceInstance(t *uint64, ms *Microservice, msp *MicroserviceParams, instanceID int, qmgr QMgr, memcache *Microservice, db *Microservice) *MicroserviceInstance {
 	return &MicroserviceInstance{
-		svc:      NewServiceInstance(t, msp, instanceID, qmgr),
+		svc:      NewServiceInstance(t, ms, msp, instanceID, qmgr),
 		memcache: memcache,
 		db:       db,
 	}
@@ -152,6 +162,10 @@ func NewMicroserviceInstance(t *uint64, msp *MicroserviceParams, instanceID int,
 
 func (m *MicroserviceInstance) GetStats() *ServiceInstanceStats {
 	return m.svc.GetStats()
+}
+
+func (m *MicroserviceInstance) Kill() {
+	m.svc.Kill()
 }
 
 func (m *MicroserviceInstance) GetQ() Queue {

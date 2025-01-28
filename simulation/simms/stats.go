@@ -11,6 +11,7 @@ import (
 
 type ServiceStats struct {
 	lat    [][]uint64
+	qdelay [][]uint64
 	rstats *RecordedStats
 	nreps  uint64
 }
@@ -18,11 +19,12 @@ type ServiceStats struct {
 func NewServiceStats() *ServiceStats {
 	return &ServiceStats{
 		lat:    [][]uint64{},
+		qdelay: [][]uint64{},
 		rstats: NewRecordedStats(0),
 	}
 }
 
-func (st *ServiceStats) Tick(t uint64, reps []*Reply) {
+func (st *ServiceStats) Tick(t uint64, reps []*Reply, q []Queue) {
 	st.nreps += uint64(len(reps))
 	lats := make([]uint64, 0, len(reps))
 	for _, rep := range reps {

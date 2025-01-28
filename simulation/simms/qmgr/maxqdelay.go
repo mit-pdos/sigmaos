@@ -37,6 +37,10 @@ func (m *MaxQDelayQMgr) Dequeue() (*simms.Request, bool) {
 	return m.q.Dequeue()
 }
 
+func (m *MaxQDelayQMgr) GetQ() simms.Queue {
+	return m.q
+}
+
 func (m *MaxQDelayQMgr) GetQLen() int {
 	return m.q.GetLen()
 }

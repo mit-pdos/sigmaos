@@ -33,6 +33,10 @@ func (m *BasicQMgr) Dequeue() (*simms.Request, bool) {
 	return m.q.Dequeue()
 }
 
+func (m *BasicQMgr) GetQ() simms.Queue {
+	return m.q
+}
+
 func (m *BasicQMgr) GetQLen() int {
 	return m.q.GetLen()
 }

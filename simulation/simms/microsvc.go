@@ -91,9 +91,11 @@ func (m *Microservice) Tick(reqs []*Request) []*Reply {
 	// Steer requests only to instances which haven't been removed
 	steeredReqs := m.lb.SteerRequests(reqs, m.instances)
 	steeredReqsCnt := make([]int, len(steeredReqs))
+	qs := make([]Queue, len(steeredReqs))
 	qlens := make([]int, len(steeredReqs))
 	for i, r := range steeredReqs {
 		steeredReqsCnt[i] = len(r)
+		qs[i] = m.instances[i].GetQ()
 		qlens[i] = m.instances[i].GetQLen()
 	}
 	db.DPrintf(db.SIM_LB, "[t=%v] Steering requests\n\tqlen:%v\n\treqs:%v", *m.t, qlens, steeredReqsCnt)
@@ -101,7 +103,7 @@ func (m *Microservice) Tick(reqs []*Request) []*Reply {
 	for i, rs := range steeredReqs {
 		replies = append(replies, m.instances[i].Tick(rs)...)
 	}
-	m.stats.Tick(*m.t, replies)
+	m.stats.Tick(*m.t, replies, qs)
 	m.autoscaler.Tick()
 	return replies
 }
@@ -146,6 +148,10 @@ func NewMicroserviceInstance(t *uint64, msp *MicroserviceParams, instanceID int,
 
 func (m *MicroserviceInstance) GetStats() *ServiceInstanceStats {
 	return m.svc.GetStats()
+}
+
+func (m *MicroserviceInstance) GetQ() Queue {
+	return m.svc.GetQ()
 }
 
 func (m *MicroserviceInstance) GetQLen() int {

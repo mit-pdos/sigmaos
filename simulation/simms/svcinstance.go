@@ -56,6 +56,10 @@ func (s *ServiceInstance) GetStats() *ServiceInstanceStats {
 	return s.srvStats
 }
 
+func (s *ServiceInstance) GetQ() Queue {
+	return s.qmgr.GetQ()
+}
+
 func (s *ServiceInstance) GetQLen() int {
 	return s.qmgr.GetQLen()
 }

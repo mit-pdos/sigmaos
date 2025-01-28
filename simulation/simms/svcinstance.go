@@ -81,6 +81,7 @@ func (s *ServiceInstance) Kill() {
 	for r, ok := s.qmgr.Dequeue(); ok; r, ok = s.qmgr.Dequeue() {
 		retries = append(retries, r)
 	}
+	db.DPrintf(db.SIM_SVC, "[t=%v,svc=%v] Killed, retrying %v requests", *s.t, s.id, len(retries))
 	s.ms.Retry(retries)
 }
 

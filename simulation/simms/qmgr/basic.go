@@ -21,7 +21,7 @@ func NewBasicQMgr(t *uint64, ms *simms.Microservice, maxQLen int) simms.QMgr {
 
 func (m *BasicQMgr) Tick() {
 	retries := m.q.TimeoutReqs(0)
-	db.DPrintf(db.SIM_QMGR, "Retry timed-out requests %v", retries)
+	db.DPrintf(db.SIM_QMGR_TIMEOUT, "Retry timed-out requests %v", retries)
 	m.ms.Retry(retries)
 }
 

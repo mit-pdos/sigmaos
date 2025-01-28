@@ -28,6 +28,14 @@ func NewQueue(t *uint64, sorted bool, maxQLen int) *Queue {
 	}
 }
 
+func (q *Queue) GetQDelays() []uint64 {
+	qdelay := make([]uint64, 0, len(q.items))
+	for _, qi := range q.items {
+		qdelay = append(qdelay, *q.t-qi.qtime)
+	}
+	return qdelay
+}
+
 func (q *Queue) Enqueue(reqs []*simms.Request) {
 	for _, r := range reqs {
 		q.items = append(q.items, &qItem{

@@ -156,6 +156,7 @@ type ServiceInstanceStats struct {
 	Ready            []bool
 	requestsInFlight []uint64
 	Util             []float64
+	QDelay           [][]uint64
 	latency          [][]uint64
 }
 
@@ -167,11 +168,12 @@ func NewServiceInstanceStats(t *uint64) *ServiceInstanceStats {
 		Ready:            make([]bool, *t+1),
 		requestsInFlight: make([]uint64, *t+1),
 		Util:             make([]float64, *t+1),
+		QDelay:           make([][]uint64, *t+1),
 		latency:          make([][]uint64, *t+1),
 	}
 }
 
-func (sis *ServiceInstanceStats) Tick(ready bool, processing []*Request, nslots int, replies []*Reply) {
+func (sis *ServiceInstanceStats) Tick(ready bool, processing []*Request, nslots int, replies []*Reply, qdelays []uint64) {
 	sis.time = append(sis.time, *sis.t)
 	sis.Ready = append(sis.Ready, ready)
 	sis.requestsInFlight = append(sis.requestsInFlight, uint64(len(processing)))
@@ -181,6 +183,9 @@ func (sis *ServiceInstanceStats) Tick(ready bool, processing []*Request, nslots 
 		lats = append(lats, r.GetLatency())
 	}
 	sis.latency = append(sis.latency, lats)
+	qd := make([]uint64, len(qdelays))
+	copy(qd, qdelays)
+	sis.QDelay = append(sis.QDelay, qd)
 }
 
 type RecordedStats struct {

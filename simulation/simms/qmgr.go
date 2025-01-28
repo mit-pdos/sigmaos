@@ -14,5 +14,6 @@ type Queue interface {
 	Enqueue([]*Request)
 	Dequeue() (*Request, bool)
 	TimeoutReqs(timeout uint64) []*Request
+	GetQDelays() []uint64
 	GetLen() int
 }

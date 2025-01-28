@@ -103,7 +103,11 @@ func (m *Microservice) Tick(reqs []*Request) []*Reply {
 	for i, rs := range steeredReqs {
 		replies = append(replies, m.instances[i].Tick(rs)...)
 	}
-	m.stats.Tick(*m.t, replies, qs)
+	utils := make([]float64, len(steeredReqs))
+	for i := range steeredReqs {
+		utils[i] = m.instances[i].GetStats().Util[*m.t]
+	}
+	m.stats.Tick(*m.t, replies, qs, utils)
 	m.autoscaler.Tick()
 	return replies
 }

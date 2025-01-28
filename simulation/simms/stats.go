@@ -12,6 +12,7 @@ import (
 type ServiceStats struct {
 	lat    [][]uint64
 	qdelay [][]uint64
+	util   [][]float64
 	rstats *RecordedStats
 	nreps  uint64
 }
@@ -20,17 +21,19 @@ func NewServiceStats() *ServiceStats {
 	return &ServiceStats{
 		lat:    [][]uint64{},
 		qdelay: [][]uint64{},
+		util:   [][]float64{},
 		rstats: NewRecordedStats(0),
 	}
 }
 
-func (st *ServiceStats) Tick(t uint64, reps []*Reply, q []Queue) {
+func (st *ServiceStats) Tick(t uint64, reps []*Reply, q []Queue, utils []float64) {
 	st.nreps += uint64(len(reps))
 	lats := make([]uint64, 0, len(reps))
 	for _, rep := range reps {
 		lats = append(lats, rep.GetLatency())
 	}
 	st.lat = append(st.lat, lats)
+	st.util = append(st.util, utils)
 	st.rstats.record(t, st)
 }
 
@@ -92,6 +95,15 @@ func avgLatency(lat [][]uint64) float64 {
 		db.DFatalf("Error calculating mean: %v", err)
 	}
 	return l
+}
+
+// Average latency over requests completed in the last N ticks
+func (st *ServiceStats) AvgUtilLastTick() float64 {
+	u, err := stats.Mean(st.util[len(st.util)-1])
+	if err != nil {
+		db.DFatalf("Error calculating mean: %v", err)
+	}
+	return u
 }
 
 // Average latency over requests completed in the last N ticks
@@ -191,6 +203,7 @@ func (sis *ServiceInstanceStats) Tick(ready bool, processing []*Request, nslots 
 type RecordedStats struct {
 	window     int
 	Time       []uint64
+	AvgUtil    []float64
 	AvgLatency []float64
 	P50Latency []float64
 	P90Latency []float64
@@ -201,6 +214,7 @@ func NewRecordedStats(window int) *RecordedStats {
 	return &RecordedStats{
 		window:     window,
 		Time:       []uint64{},
+		AvgUtil:    []float64{},
 		AvgLatency: []float64{},
 		P50Latency: []float64{},
 		P90Latency: []float64{},
@@ -216,6 +230,7 @@ func roundToHundredth(f float64) float64 {
 func (rst *RecordedStats) record(t uint64, st *ServiceStats) {
 	if rst.window > 0 {
 		rst.Time = append(rst.Time, t)
+		rst.AvgUtil = append(rst.AvgUtil, roundToHundredth(st.AvgUtilLastTick()))
 		rst.AvgLatency = append(rst.AvgLatency, roundToHundredth(st.AvgLatencyLastNTicks(rst.window)))
 		rst.P50Latency = append(rst.P50Latency, roundToHundredth(st.PercentileLatencyLastNTicks(50.0, rst.window)))
 		rst.P90Latency = append(rst.P90Latency, roundToHundredth(st.PercentileLatencyLastNTicks(90.0, rst.window)))
@@ -233,5 +248,5 @@ func (rst *RecordedStats) VerboseString() string {
 }
 
 func (rst *RecordedStats) String() string {
-	return fmt.Sprintf("&{ window:%v\n\tavg:%v\n\tp50:%v\n\tp90:%v\n\tp99:%v\n}", rst.window, rst.AvgLatency, rst.P50Latency, rst.P90Latency, rst.P99Latency)
+	return fmt.Sprintf("&{ util\n\tavg:%v\n\nlatency:\nwindow:%v\n\tavg:%v\n\tp50:%v\n\tp90:%v\n\tp99:%v\n}", rst.AvgUtil, rst.AvgLatency, rst.window, rst.P50Latency, rst.P90Latency, rst.P99Latency)
 }

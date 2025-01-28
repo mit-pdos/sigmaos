@@ -39,5 +39,7 @@ func AvgQDelay(ctx *Ctx, currentT uint64, windowSize uint64, istats []*simms.Ser
 		qdelay += u
 	}
 	qdelay /= float64(len(istats))
-	return qdelay
+	// Add 1 to average queueing delay to make the K8s autoscaling algorithm
+	// stable
+	return 1.0 + qdelay
 }

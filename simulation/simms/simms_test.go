@@ -1515,9 +1515,9 @@ func TestBurst5xMaxQLenQMGrOverscaleLongSvcInitOmniscientQLenLBSigmaOSColdStartP
 	db.DPrintf(db.SIM_TEST, "Sim test done")
 }
 
-func TestBurst5xMaxQLenQMGrAutoscaleLongSvcInitOmniscientQLenLBSigmaOSColdStartParams(t *testing.T) {
+func TestBurst5xMaxQLenQMgrAutoscaleOmniscientQLenLB(t *testing.T) {
 	const (
-		N_TICKS uint64 = 250
+		N_TICKS uint64 = 1000
 		// Clnt params
 		CLNT_REQ_MEAN    float64 = 9 // 9 requests per ms
 		CLNT_REQ_STD     float64 = 0
@@ -1530,18 +1530,20 @@ func TestBurst5xMaxQLenQMGrAutoscaleLongSvcInitOmniscientQLenLBSigmaOSColdStartP
 		SVC_ID              string = "wfe"
 		STATEFUL            bool   = false
 		RECORD_STATS_WINDOW int    = 10
-		MAX_Q_LEN           int    = 200 // Max queue length at any replica before requests start to be dropped & retried
-		// Scaling params
-		SCALING_DELAY    uint64  = 50  // "short" autoscaling delay of 50ms
-		MAX_N_REPLICAS   int     = 20  // At most 5 instances should be needed to handle max load at target utilization
-		TARGET_UTIL      float64 = 0.9 // Target utilization of 90%
-		UTIL_WINDOW_SIZE uint64  = 10
+		MAX_Q_LEN           int    = 100 // Max queue length at any replica before requests start to be dropped & retried
+		// Autoscaler params
+		MAX_N_REPLICAS     int     = 400
+		SCALE_FREQ         int     = 50
+		TARGET_QDELAY      float64 = 1.0 // Target average queueing delay
+		STAT_WINDOW_SIZE   uint64  = 10
+		AUTOSCALER_LEAD_IN uint64  = 100 // Number of ticks to wait before starting the autoscaler
 	)
 	db.DPrintf(db.SIM_TEST, "Sim test start")
 	var time uint64 = 0
 	c := simms.NewClients(CLNT_REQ_MEAN, CLNT_REQ_STD)
 	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, INIT_TIME, STATEFUL)
-	svc := simms.NewMicroservice(&time, p, opts.DefaultMicroserviceOpts, opts.WithOmniscientLB(), opts.WithLoadBalancerQLenMetric(), opts.WithMaxQLenQMgr(MAX_Q_LEN))
+	asp := autoscaler.NewAvgValAutoscalerParams(SCALE_FREQ, TARGET_QDELAY, STAT_WINDOW_SIZE, MAX_N_REPLICAS, autoscaler.AvgQDelay)
+	svc := simms.NewMicroservice(&time, p, opts.DefaultMicroserviceOpts, opts.WithOmniscientLB(), opts.WithLoadBalancerQLenMetric(), opts.WithMaxQLenQMgr(MAX_Q_LEN), opts.WithAvgValAutoscaler(asp))
 	app := simms.NewSingleTierApp(svc)
 	w := simms.NewWorkload(&time, app, c)
 	w.RecordStats(RECORD_STATS_WINDOW)
@@ -1549,10 +1551,8 @@ func TestBurst5xMaxQLenQMGrAutoscaleLongSvcInitOmniscientQLenLBSigmaOSColdStartP
 		if time == BURST_START {
 			c.StartBurst(BURST_MULTIPLIER)
 		}
-		if time == BURST_START+SCALING_DELAY {
-			for i := 0; i < MAX_N_REPLICAS-1; i++ {
-				svc.AddInstance()
-			}
+		if time == AUTOSCALER_LEAD_IN {
+			svc.GetAutoscaler().Start()
 		}
 		// Run the simulation
 		w.Tick()

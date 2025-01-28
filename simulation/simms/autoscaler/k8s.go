@@ -20,5 +20,5 @@ func k8sCalcDesiredNInstances(ctx *Ctx, currentInstances int, currentMetricValue
 		return currentInstances
 	}
 	desiredInstances := math.Ceil(float64(currentInstances) * ratio)
-	return min(int(desiredInstances), maxNReplicas)
+	return max(1, min(int(desiredInstances), maxNReplicas))
 }

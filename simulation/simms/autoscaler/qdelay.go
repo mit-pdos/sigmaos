@@ -13,6 +13,9 @@ func getInstanceAvgQDelay(t uint64, istat *simms.ServiceInstanceStats) float64 {
 	for _, d := range qd {
 		qdelays = append(qdelays, float64(d))
 	}
+	if len(qdelays) == 0 {
+		return 0.0
+	}
 	avg, err := stats.Mean(qdelays)
 	if err != nil {
 		db.DFatalf("Err calculate avg qdelay: %v", err)
@@ -20,21 +23,21 @@ func getInstanceAvgQDelay(t uint64, istat *simms.ServiceInstanceStats) float64 {
 	return avg
 }
 
-// Calculate the average util across a set of ready service instances, for a
+// Calculate the average queueing delay across a set of ready service instances, for a
 // given window of ticks
 func AvgQDelay(ctx *Ctx, currentT uint64, windowSize uint64, istats []*simms.ServiceInstanceStats) float64 {
 	if currentT < windowSize {
 		db.DFatalf("Calculate avg qdelay for window of size > current time: %v > %v", windowSize, currentT)
 	}
-	utils := make([]float64, 0, len(istats))
+	qdelays := make([]float64, 0, len(istats))
 	for _, istat := range istats {
-		utils = append(utils, avgInstanceStatValInWindow(currentT-windowSize, currentT, istat, getInstanceAvgQDelay))
+		qdelays = append(qdelays, avgInstanceStatValInWindow(currentT-windowSize, currentT, istat, getInstanceAvgQDelay))
 	}
-	db.DPrintf(db.SIM_AUTOSCALE, "%v Instance avg qdelays: %v", ctx, utils)
-	util := 0.0
-	for _, u := range utils {
-		util += u
+	db.DPrintf(db.SIM_AUTOSCALE, "%v Instance avg qdelays: %v", ctx, qdelays)
+	qdelay := 0.0
+	for _, u := range qdelays {
+		qdelay += u
 	}
-	util /= float64(len(istats))
-	return util
+	qdelay /= float64(len(istats))
+	return qdelay
 }

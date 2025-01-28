@@ -60,6 +60,9 @@ build="parallel -j$njobs $CARGO \"build --manifest-path=../sigmaos-local/rs/{}/C
 echo $build
 eval $build
 
+# Inject custom Python lib
+cp ../sigmaos-local/pylib/splib.py cpython3.11/Lib
+
 # Copy Python executable
 cp cpython3.11/python $OUTPATH/kernel
 cp cpython3.11/pybuilddir.txt $OUTPATH/kernel
@@ -71,12 +74,6 @@ cp cpython3.11/pybuilddir.txt $OUTPATH/user
 cp -r cpython3.11/Lib $OUTPATH/user
 echo "/~~/Lib" > $OUTPATH/user/python._pth
 echo -e "home = /~~\ninclude-system-site-packages = false\nversion = 3.11.10" > $OUTPATH/user/pyvenv.cfg
-
-# Copy and inject Python libs
-# cp ./pylib/splib.py Python-3.11.0/Lib
-# cp Python-3.11.0/Lib $OUTPATH/kernel/pylib -r
-# cp Python-3.11.0/Lib $OUTPATH/user -r
-# cp Python-3.11.0/Lib $OUTPATH/user/pylib -r
 
 # Copy and inject Python shim
 gcc -Wall -fPIC -shared -o ld_fstatat.so ../sigmaos-local/ld_preload/ld_fstatat.c 

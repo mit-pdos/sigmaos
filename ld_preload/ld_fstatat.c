@@ -36,13 +36,14 @@ const char* get_path(const char *filename)
         init_done = 1;
     }
 
+    // Python's initial call to obtain all present libraries
     if (strcmp("/~~/Lib", filename) == 0) {
-      return "/tmp/python/superlib";
+        return "/tmp/python/superlib";
     }
-    
+
     const char* prefix = "/~~";
     int i = 0;
-    while(filename[i] != 0 && i < 3) {
+    while (filename[i] != 0 && i < 3) {
         if (filename[i] != prefix[i]) {
             return filename;
         }
@@ -50,6 +51,27 @@ const char* get_path(const char *filename)
     }
     
     if (i < 3) return filename;
+
+    const char* apiPrefix = "/~~/api";
+    while (filename[i] != 0 && i < 7) {
+        if (filename[i] != apiPrefix[i]) {
+            break;
+        }
+        i++;
+    }
+
+    // Handle API calls
+    if (i == 7) {
+      write(sfd, "pa", 2);
+      write(sfd, &(filename[7]), strlen(filename) - 7);
+      write(sfd, "\n", 1);
+      printf("LD_PRELOAD: wrote to socket: %s\n", filename);
+      read(sfd, x2, 1);
+      while(x2[0] != 'd') {
+          read(sfd, x2, 1);
+      }
+      return filename;
+    }
 
     fflush(stdout);
     char* x = malloc(512 * sizeof(char));

@@ -50,7 +50,6 @@ func StartSigmaContainer(uproc *proc.Proc, dialproxy bool) (*uprocCmd, error) {
 	uproc.AppendEnv("SIGMA_EXEC_TIME", strconv.FormatInt(time.Now().UnixMicro(), 10))
 	uproc.AppendEnv("SIGMA_SPAWN_TIME", strconv.FormatInt(uproc.GetSpawnTime().UnixMicro(), 10))
 	uproc.AppendEnv(proc.SIGMAPERF, uproc.GetProcEnv().GetPerf())
-	// uproc.AppendEnv("PYTHONHOME", "/tmp/python/Lib")
 	uproc.AppendEnv("PYTHONPATH", "/~~/Lib")
 	uproc.AppendEnv("LD_PRELOAD", "/tmp/python/ld_fstatat.so")
 	// uproc.AppendEnv("RUST_BACKTRACE", "1")

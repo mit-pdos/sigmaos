@@ -63,6 +63,14 @@ func NewProc(program string, args []string) *Proc {
 	return NewProcPid(pid, program, args)
 }
 
+func NewPythonProc(args []string, bucket string) *Proc {
+	program := "python"
+	pid := sp.GenPid(program)
+	p := NewProcPid(pid, program, args)
+	p.AppendEnv("SIGMAPYBUCKET", bucket)
+	return p
+}
+
 func NewPrivProcPid(pid sp.Tpid, program string, args []string, priv bool) *Proc {
 	p := &Proc{}
 	p.ProcProto = &ProcProto{}

@@ -213,13 +213,8 @@ fn jail_proc(pid: &str) -> Result<(), Box<dyn std::error::Error>> {
     // Python
     Mount::builder()
         .fstype("none")
-        .flags(MountFlags::BIND)
+        .flags(MountFlags::BIND | MountFlags::RDONLY)
         .mount("/tmp/python", "tmp/python")?;
-
-    // Mount::builder()
-    //     .fstype("none")
-    //     .flags(MountFlags::BIND | MountFlags::RDONLY)
-    //     .mount("/tmp/python/pylib/Lib", "mnt/binfs/python3.11/Lib")?;
 
     Mount::builder()
         .fstype("none")

@@ -5,19 +5,8 @@ import (
 	"sigmaos/simulation/simms"
 )
 
-// Calculate the average util of an instance within a window [startT, endT]
-func avgInstanceUtilInWindow(startT uint64, endT uint64, istat *simms.ServiceInstanceStats) float64 {
-	n := 0
-	util := 0.0
-	for t := startT; t <= endT; t++ {
-		// If instance was ready at time t, include util info in calculation
-		if istat.Ready[t] {
-			util += istat.Util[t]
-			n++
-		}
-	}
-	util /= float64(n)
-	return util
+func getInstanceUtil(t uint64, istat *simms.ServiceInstanceStats) float64 {
+	return istat.Util[t]
 }
 
 // Calculate the average util across a set of ready service instances, for a
@@ -28,7 +17,7 @@ func AvgUtil(ctx *Ctx, currentT uint64, windowSize uint64, istats []*simms.Servi
 	}
 	utils := make([]float64, 0, len(istats))
 	for _, istat := range istats {
-		utils = append(utils, avgInstanceUtilInWindow(currentT-windowSize, currentT, istat))
+		utils = append(utils, avgInstanceStatValInWindow(currentT-windowSize, currentT, istat, getInstanceUtil))
 	}
 	db.DPrintf(db.SIM_AUTOSCALE, "%v Instance avg utils: %v", ctx, utils)
 	util := 0.0

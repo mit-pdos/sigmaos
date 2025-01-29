@@ -356,7 +356,6 @@ func Unmarshal(pestr string) *ProcEnv {
 	return pe
 }
 
-// TODO: cleanup
 func (pe *ProcEnv) String() string {
 	return fmt.Sprintf("&{ "+
 		"Program:%v "+

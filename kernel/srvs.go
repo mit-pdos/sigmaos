@@ -41,8 +41,6 @@ func (k *Kernel) BootSub(s string, args, env []string, p *Param, realm sp.Trealm
 	var err error
 	var ss Subsystem
 	switch s {
-	case sp.NAMEDREL:
-		ss, err = k.bootNamed(env)
 	case sp.SPPROXYDREL:
 		ss, err = k.bootSPProxyd()
 	case sp.S3REL:
@@ -172,10 +170,6 @@ func (k *Kernel) bootBESched() (Subsystem, error) {
 }
 func (k *Kernel) bootMSched(env []string) (Subsystem, error) {
 	return k.bootSubsystem("msched", []string{k.Param.KernelID, k.Param.ReserveMcpu}, env, sp.ROOTREALM, proc.HLINUX, 0)
-}
-
-func (k *Kernel) bootNamed(env []string) (Subsystem, error) {
-	return k.bootSubsystem("named", []string{sp.ROOTREALM.String()}, env, sp.ROOTREALM, proc.HMSCHED, 0)
 }
 
 func (k *Kernel) bootSPProxyd() (Subsystem, error) {

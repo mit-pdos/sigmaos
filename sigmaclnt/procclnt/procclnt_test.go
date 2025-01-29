@@ -381,7 +381,7 @@ func TestCrashProcOne(t *testing.T) {
 	}
 
 	a := proc.NewProc("crash", []string{})
-	em := crash.NewTeventMapOne(crash.NewEvent(crash.CRASH_CRASH, 0, 1.0))
+	em := crash.NewTeventMapOne(crash.NewEvent(crash.CRASH_CRASH, 0, float64(1.0)))
 	err := em.AppendEnv(a)
 	assert.Nil(t, err)
 	err = ts.Spawn(a)
@@ -406,7 +406,7 @@ func TestPartitionProcOne(t *testing.T) {
 	}
 
 	a := proc.NewProc("crash", []string{})
-	em := crash.NewTeventMapOne(crash.NewEvent(crash.CRASH_PARTITION, 0, 1.0))
+	em := crash.NewTeventMapOne(crash.NewEvent(crash.CRASH_PARTITION, 0, float64(1.0)))
 	err := em.AppendEnv(a)
 	assert.Nil(t, err)
 	err = ts.Spawn(a)
@@ -813,7 +813,7 @@ func TestProcManyCrash(t *testing.T) {
 		return
 	}
 	a := proc.NewProc("proctest", []string{NPROC, BURST, "crash"})
-	em := crash.NewTeventMapOne(crash.NewEvent(crash.CRASH_CRASH, 0, 1.0))
+	em := crash.NewTeventMapOne(crash.NewEvent(crash.CRASH_CRASH, 0, float64(1.0)))
 	err := em.AppendEnv(a)
 	assert.Nil(t, err)
 	err = ts.Spawn(a)
@@ -833,7 +833,7 @@ func TestProcManyPartition(t *testing.T) {
 		return
 	}
 	a := proc.NewProc("proctest", []string{NPROC1, BURST, "crash"})
-	em := crash.NewTeventMapOne(crash.NewEvent(crash.CRASH_PARTITION, 0, 1.0))
+	em := crash.NewTeventMapOne(crash.NewEvent(crash.CRASH_PARTITION, 0, float64(1.0)))
 	err := em.AppendEnv(a)
 	assert.Nil(t, err, "Spawn")
 	err = ts.Spawn(a)
@@ -851,7 +851,7 @@ func TestSpawnCrashLCSched(t *testing.T) {
 	const T = 1000
 	fn := sp.NAMED + "crashlc.sem"
 
-	e := crash.NewEventPath(crash.LCSCHED_CRASH, T, 1.0, fn)
+	e := crash.NewEventPath(crash.LCSCHED_CRASH, T, float64(1.0), fn)
 	em := crash.NewTeventMapOne(e)
 	err := crash.SetSigmaFail(em)
 	assert.Nil(t, err)
@@ -889,7 +889,7 @@ func TestSpawnCrashLCSched(t *testing.T) {
 func TestMaintainReplicationLevelCrashMSched(t *testing.T) {
 	const T = 1000
 	fn0 := sp.NAMED + "crashms0.sem"
-	e0 := crash.NewEventPath(crash.MSCHED_CRASH, T, 1.0, fn0)
+	e0 := crash.NewEventPath(crash.MSCHED_CRASH, T, float64(1.0), fn0)
 	em := crash.NewTeventMapOne(e0)
 	err := crash.SetSigmaFail(em)
 	assert.Nil(t, err)
@@ -905,7 +905,7 @@ func TestMaintainReplicationLevelCrashMSched(t *testing.T) {
 	db.DPrintf(db.TEST, "Boot node 2")
 	// Start a couple new nodes.
 	fn1 := sp.NAMED + "crashms1.sem"
-	e1 := crash.NewEventPath(crash.MSCHED_CRASH, T, 1.0, fn1)
+	e1 := crash.NewEventPath(crash.MSCHED_CRASH, T, float64(1.0), fn1)
 	em = crash.NewTeventMapOne(e1)
 	err = crash.SetSigmaFail(em)
 	assert.Nil(t, err)

@@ -20,6 +20,7 @@ import (
 	"sigmaos/serr"
 	"sigmaos/sigmaclnt"
 	"sigmaos/sigmaclnt/fslib"
+	"sigmaos/sigmaclnt/fslib/dirwatcher"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )
@@ -189,6 +190,10 @@ func TestRemovePath(t *testing.T) {
 
 	err = ts.Remove(fn)
 	assert.Equal(t, nil, err)
+
+	db.DPrintf(db.TEST, "StatFile")
+	_, err = ts.Stat(fn)
+	assert.NotEqual(t, nil, err)
 
 	err = ts.RmDir(d1)
 	assert.Nil(t, err, "RmDir: %v", err)
@@ -707,7 +712,7 @@ func TestWaitRemoveOne(t *testing.T) {
 
 	ch := make(chan bool)
 	go func() {
-		err := ts.WaitRemove(fn)
+		err := dirwatcher.WaitRemove(ts.FsLib, fn)
 		assert.Nil(t, err)
 		ch <- true
 	}()
@@ -742,7 +747,8 @@ func TestDirWatch(t *testing.T) {
 	pn1 := filepath.Join(pn, f)
 	ch := make(chan bool)
 	go func() {
-		err := ts.WaitCreate(pn1)
+		var err error
+		dirwatcher.WaitCreate(ts.FsLib, pn1)
 		assert.Nil(t, err)
 		ch <- true
 	}()
@@ -759,7 +765,7 @@ func TestDirWatch(t *testing.T) {
 
 	<-ch
 
-	db.DPrintf(db.TEST, "ReadDirWatch returned")
+	db.DPrintf(db.TEST, "WaitCreate returned")
 
 	err = ts.RmDir(pn)
 	assert.Nil(t, err, "RmDir: %v", err)
@@ -768,7 +774,7 @@ func TestDirWatch(t *testing.T) {
 }
 
 // Concurrently remove & wait
-func TestWaitRemoveWaitConcur(t *testing.T) {
+func TestWaitRemoveConcur(t *testing.T) {
 	const N = 100 // 10_000
 
 	ts, err1 := test.NewTstatePath(t, pathname)
@@ -779,30 +785,32 @@ func TestWaitRemoveWaitConcur(t *testing.T) {
 	err := ts.MkDir(dn, 0777)
 	assert.Equal(t, nil, err)
 
-	done := make(chan bool)
+	done := make(chan int)
 	pe := proc.NewAddedProcEnv(ts.ProcEnv())
 	fsl, err := sigmaclnt.NewFsLib(pe, dialproxyclnt.NewDialProxyClnt(pe))
 	assert.Nil(t, err)
 	for i := 0; i < N; i++ {
-		fn := filepath.Join(dn, strconv.Itoa(i))
+		fn := filepath.Join(dn, FILE+strconv.Itoa(i))
 		_, err := fsl.PutFile(fn, 0777, sp.OWRITE, nil)
 		assert.Nil(t, err, "Err putfile: %v", err)
 	}
 	for i := 0; i < N; i++ {
-		fn := filepath.Join(dn, strconv.Itoa(i))
-		go func(fn string) {
-			err := ts.WaitRemove(fn)
-			assert.True(ts.T, err == nil, "Unexpected WaitRemove error: %v", err)
-			done <- true
-		}(fn)
-		go func(fn string) {
+		go func(i int) {
+			fn := filepath.Join(dn, FILE+strconv.Itoa(i))
+			err = dirwatcher.WaitRemove(ts.FsLib, fn)
+			assert.Nil(t, err, "Unexpected remove error: %v", err)
+			done <- i
+		}(i)
+		go func(i int) {
+			fn := filepath.Join(dn, FILE+strconv.Itoa(i))
 			err := ts.Remove(fn)
 			assert.Nil(t, err, "Unexpected remove error: %v", err)
-			done <- true
-		}(fn)
+			done <- N + i
+		}(i)
 	}
 	for i := 0; i < 2*N; i++ {
-		<-done
+		j := <-done
+		db.DPrintf(db.TEST, "done  %v", j)
 	}
 	err = fsl.Close()
 	assert.Nil(t, err)
@@ -836,7 +844,7 @@ func TestWaitCreateRemoveConcur(t *testing.T) {
 		assert.Nil(t, err)
 
 		go func() {
-			err = fsl.WaitRemove(fn)
+			err := dirwatcher.WaitRemove(fsl, fn)
 			if err == nil {
 				// db.DPrintf(db.TEST, "wait for rm %v\n", i)
 			} else {

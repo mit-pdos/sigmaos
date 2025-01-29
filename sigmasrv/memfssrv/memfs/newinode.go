@@ -2,13 +2,13 @@ package memfs
 
 import (
 	"sigmaos/api/fs"
-	"sigmaos/sigmasrv/memfssrv/memfs/inode"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
+	"sigmaos/sigmasrv/memfssrv/memfs/inode"
 )
 
-func NewInode(ctx fs.CtxI, p sp.Tperm, lid sp.TleaseId, m sp.Tmode, parent fs.Dir, new fs.MkDirF) (fs.FsObj, *serr.Err) {
-	i := inode.NewInode(ctx, p, lid, parent)
+func NewInode(ctx fs.CtxI, p sp.Tperm, lid sp.TleaseId, m sp.Tmode, new fs.MkDirF) (fs.FsObj, *serr.Err) {
+	i := inode.NewInode(ctx, p, lid)
 	if p.IsDir() {
 		return new(i, NewInode), nil
 	} else if p.IsSymlink() {

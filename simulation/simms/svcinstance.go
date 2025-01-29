@@ -18,11 +18,12 @@ type ServiceInstance struct {
 	stateful        bool                  // Indicates whether or not the service is stateful
 	init            bool                  // Indicates whether or not the service has already initialized
 	ready           bool                  // Indicates whether or not the service is ready to accept requests
+	ms              *Microservice         // Microservice which this is an instance of
 	qmgr            QMgr                  // Queue manager plugin
 	srvStats        *ServiceInstanceStats // Stats of the current service instance
 }
 
-func NewServiceInstance(t *uint64, p *MicroserviceParams, instanceID int, qmgr QMgr) *ServiceInstance {
+func NewServiceInstance(t *uint64, ms *Microservice, p *MicroserviceParams, instanceID int, qmgr QMgr) *ServiceInstance {
 	return &ServiceInstance{
 		id:              p.ID + "-" + strconv.Itoa(instanceID),
 		t:               t,
@@ -35,6 +36,7 @@ func NewServiceInstance(t *uint64, p *MicroserviceParams, instanceID int, qmgr Q
 		stateful:        p.Stateful,
 		init:            p.InitTime == 0,
 		ready:           p.InitTime == 0,
+		ms:              ms,
 		qmgr:            qmgr,
 		srvStats:        NewServiceInstanceStats(t),
 	}
@@ -56,8 +58,31 @@ func (s *ServiceInstance) GetStats() *ServiceInstanceStats {
 	return s.srvStats
 }
 
+func (s *ServiceInstance) GetQ() Queue {
+	return s.qmgr.GetQ()
+}
+
 func (s *ServiceInstance) GetQLen() int {
 	return s.qmgr.GetQLen()
+}
+
+// Kill this instance, retrying all currently processing & queued requests at
+// the client
+func (s *ServiceInstance) Kill() {
+	retries := make([]*Request, 0, len(s.processing)+s.qmgr.GetQLen())
+	// Stop processing existing requests
+	for _, r := range s.processing {
+		retries = append(retries, r)
+	}
+	// Clear processing requests
+	s.processing = []*Request{}
+	s.processingSince = []uint64{}
+	// Dequeue all queued requests
+	for r, ok := s.qmgr.Dequeue(); ok; r, ok = s.qmgr.Dequeue() {
+		retries = append(retries, r)
+	}
+	db.DPrintf(db.SIM_SVC, "[t=%v,svc=%v] Killed, retrying %v requests", *s.t, s.id, len(retries))
+	s.ms.Retry(retries)
 }
 
 func (s *ServiceInstance) Tick(reqs []*Request) []*Reply {
@@ -102,6 +127,6 @@ func (s *ServiceInstance) Tick(reqs []*Request) []*Reply {
 		s.processingSince = append(s.processingSince, *s.t)
 	}
 	s.qmgr.Tick()
-	s.srvStats.Tick(s.IsReady(), s.processing, s.nslots, reps)
+	s.srvStats.Tick(s.IsReady(), s.processing, s.nslots, reps, s.qmgr.GetQ().GetQDelays())
 	return reps
 }

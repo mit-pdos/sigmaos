@@ -14,9 +14,9 @@ import (
 	"sigmaos/apps/cache/cachegrp"
 	cacheclnt "sigmaos/apps/cache/clnt"
 	db "sigmaos/debug"
-	"sigmaos/sigmaclnt/fslib/dircache"
-	"sigmaos/sigmaclnt/fslib"
 	"sigmaos/rpc"
+	"sigmaos/sigmaclnt/fslib"
+	"sigmaos/sigmaclnt/fslib/dircache"
 	sp "sigmaos/sigmap"
 	tproto "sigmaos/util/tracing/proto"
 )
@@ -56,7 +56,7 @@ func (csc *CachedSvcClnt) Server(i int) string {
 }
 
 func (csc *CachedSvcClnt) StatsSrvs() ([]*rpc.RPCStatsSnapshot, error) {
-	n, err := csc.dd.WaitTimedEntriesN(1)
+	n, err := csc.dd.WaitEntriesN(1, true)
 	if err != nil {
 		return nil, err
 	}
@@ -84,7 +84,7 @@ func (csc *CachedSvcClnt) Delete(key string) error {
 }
 
 func (csc *CachedSvcClnt) GetTraced(sctx *tproto.SpanContextConfig, key string, val proto.Message) error {
-	n, err := csc.dd.WaitTimedEntriesN(1)
+	n, err := csc.dd.WaitEntriesN(1, true)
 	if err != nil {
 		return err
 	}
@@ -93,7 +93,7 @@ func (csc *CachedSvcClnt) GetTraced(sctx *tproto.SpanContextConfig, key string, 
 }
 
 func (csc *CachedSvcClnt) PutTraced(sctx *tproto.SpanContextConfig, key string, val proto.Message) error {
-	n, err := csc.dd.WaitTimedEntriesN(1)
+	n, err := csc.dd.WaitEntriesN(1, true)
 	if err != nil {
 		return err
 	}

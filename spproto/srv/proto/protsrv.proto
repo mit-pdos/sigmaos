@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+option go_package = "sigmaos/protsrv/proto";
+
+enum WatchEventType {
+  CREATE = 0;
+  REMOVE = 1;
+}
+
+message WatchEvent {
+  string file = 1;
+  WatchEventType type = 2;
+}
+
+message WatchEventList {
+  repeated WatchEvent events = 1;
+}

@@ -7,6 +7,7 @@ package clntcond
 import (
 	"fmt"
 	"sync"
+
 	// "errors"
 
 	//	"github.com/sasha-s/go-deadlock"

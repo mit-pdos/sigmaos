@@ -5,8 +5,8 @@ import (
 	"hash/fnv"
 	"time"
 
-	db "sigmaos/debug"
 	"sigmaos/api/fs"
+	db "sigmaos/debug"
 	"sigmaos/namesrv/fsetcd"
 	"sigmaos/path"
 	"sigmaos/serr"
@@ -22,20 +22,19 @@ func newTpath(pn path.Tpathname) sp.Tpath {
 
 // An obj is either a directory or file
 type Obj struct {
-	fs     *fsetcd.FsEtcd
-	pn     path.Tpathname
-	di     fsetcd.DirEntInfo
-	parent sp.Tpath
-	mtime  int64
+	fs    *fsetcd.FsEtcd
+	pn    path.Tpathname
+	di    fsetcd.DirEntInfo
+	mtime int64
 }
 
-func newObjDi(fs *fsetcd.FsEtcd, pn path.Tpathname, di fsetcd.DirEntInfo, parent sp.Tpath) *Obj {
-	o := &Obj{fs: fs, pn: pn, di: di, parent: parent}
+func newObjDi(fs *fsetcd.FsEtcd, pn path.Tpathname, di fsetcd.DirEntInfo) *Obj {
+	o := &Obj{fs: fs, pn: pn, di: di}
 	return o
 }
 
 func (o *Obj) String() string {
-	return fmt.Sprintf("pn %q di %v parent %v", o.pn, o.di, o.parent)
+	return fmt.Sprintf("{pn %q di %v}", o.pn, o.di)
 }
 
 func (o *Obj) Path() sp.Tpath {
@@ -49,14 +48,6 @@ func (o *Obj) Perm() sp.Tperm {
 func (o *Obj) IsLeased() bool {
 	return o.di.LeaseId.IsLeased()
 }
-
-// XXX 0 should be o.parent.parent
-func (o *Obj) Parent() fs.Dir {
-	dir := o.pn.Dir()
-	return newDir(newObjDi(o.fs, dir, *fsetcd.NewDirEntInfoDir(o.parent), 0))
-}
-
-// XXX SetParent
 
 func (o *Obj) Stat(ctx fs.CtxI) (*sp.Tstat, *serr.Err) {
 	db.DPrintf(db.NAMED, "Stat: %v\n", o)
@@ -81,14 +72,15 @@ func (o *Obj) Stat(ctx fs.CtxI) (*sp.Tstat, *serr.Err) {
 func (o *Obj) NewStat() (*sp.Tstat, *serr.Err) {
 	st := sp.NewStatNull()
 	st.Name = o.pn.Base()
-	st.SetQid(sp.NewQidPerm(o.di.Perm, 0, o.di.Path))
+	qid := sp.NewQidPerm(o.di.Perm, 0, o.di.Path)
+	st.SetQid(&qid)
 	st.SetMode(o.di.Perm)
 	st.SetLengthInt(len(o.di.Nf.Data))
 	return st, nil
 }
 
 func (o *Obj) putObj(f sp.Tfence, data []byte) *serr.Err {
-	nf := fsetcd.NewEtcdFile(o.di.Perm|0777, data)
+	nf := fsetcd.NewEtcdFile(data)
 	c, err := o.fs.PutFile(&o.di, nf, f)
 	o.fs.PstatUpdate(o.pn, c)
 	return err

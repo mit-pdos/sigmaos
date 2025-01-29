@@ -139,7 +139,7 @@ func TestWriteCrash5x20(t *testing.T) {
 	)
 
 	fn := sp.NAMED + fmt.Sprintf("crashux%d.sem", 0)
-	e0 := crash.NewEventPath(crash.UX_CRASH, 0, 1.0, fn)
+	e0 := crash.NewEventPath(crash.UX_CRASH, 0, float64(1.0), fn)
 	err := crash.SetSigmaFail(crash.NewTeventMapOne(e0))
 	assert.Nil(t, err)
 
@@ -160,7 +160,7 @@ func TestWriteCrash5x20(t *testing.T) {
 		defer wg.Done()
 		for i := 0; i < NCRASH; i++ {
 			fn = sp.NAMED + fmt.Sprintf("crashux%d.sem", i+1)
-			e1 := crash.NewEventPath(crash.UX_CRASH, 0, 1.0, fn)
+			e1 := crash.NewEventPath(crash.UX_CRASH, 0, float64(1.0), fn)
 			ts.CrashServer(e0, e1, sp.UXREL)
 			e0 = e1
 			time.Sleep(T * time.Millisecond)

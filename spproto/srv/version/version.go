@@ -1,3 +1,6 @@
+// Package version maintains a version number for a
+// Tpath. [spproto/srv] uses it to detect if a directory has changed
+// since opening it for reading and setting a watch on it.
 package version
 
 import (
@@ -5,18 +8,20 @@ import (
 	"sync"
 
 	db "sigmaos/debug"
-	"sigmaos/util/refmap"
 	sp "sigmaos/sigmap"
+	"sigmaos/util/refmap"
+)
+
+const (
+	N = 1000
 )
 
 type version struct {
 	V sp.TQversion
 }
 
-func newVersion() *version {
-	v := &version{}
-	v.V = 0
-	return v
+func newVersion() version {
+	return version{}
 }
 
 func (v *version) String() string {
@@ -25,13 +30,19 @@ func (v *version) String() string {
 
 type VersionTable struct {
 	sync.Mutex
-	*refmap.RefTable[sp.Tpath, *version]
+	*refmap.RefTable[sp.Tpath, version]
 }
 
 func NewVersionTable() *VersionTable {
 	vt := &VersionTable{}
-	vt.RefTable = refmap.NewRefTable[sp.Tpath, *version](db.VERSION)
+	vt.RefTable = refmap.NewRefTable[sp.Tpath, version](N, db.VERSION)
 	return vt
+}
+
+func (vt *VersionTable) Len() (int, int) {
+	vt.Lock()
+	defer vt.Unlock()
+	return vt.RefTable.Len()
 }
 
 func (vt *VersionTable) GetVersion(path sp.Tpath) sp.TQversion {
@@ -44,10 +55,11 @@ func (vt *VersionTable) GetVersion(path sp.Tpath) sp.TQversion {
 	return 0
 }
 
-func (vt *VersionTable) Insert(path sp.Tpath) {
+func (vt *VersionTable) Insert(path sp.Tpath) (sp.TQversion, bool) {
 	vt.Lock()
 	defer vt.Unlock()
-	vt.RefTable.Insert(path, newVersion)
+	e, ok := vt.RefTable.Insert(path, newVersion())
+	return e.V, ok
 }
 
 func (vt *VersionTable) Delete(p sp.Tpath) (bool, error) {
@@ -56,13 +68,13 @@ func (vt *VersionTable) Delete(p sp.Tpath) (bool, error) {
 	return vt.RefTable.Delete(p)
 }
 
-func (vt *VersionTable) IncVersion(path sp.Tpath) {
+func (vt *VersionTable) IncVersion(path sp.Tpath) (sp.TQversion, bool) {
 	vt.Lock()
 	defer vt.Unlock()
 
 	if e, ok := vt.RefTable.Lookup(path); ok {
-		v := e
-		v.V += 1
-		return
+		e.V += 1
+		return e.V, true
 	}
+	return 0, false
 }

@@ -88,10 +88,10 @@ func (ls *LeaseSrv) allocLid() sp.TleaseId {
 
 // Delete files that are associated with lid
 func (ls *LeaseSrv) expire(lid sp.TleaseId) {
-	pns := ls.lm.Expired(lid)
-	db.DPrintf(db.ALWAYS, "expire %v %v\n", lid, pns)
-	for _, pn := range pns {
-		ls.mfs.Remove(pn)
+	ps := ls.lm.Expired(lid)
+	db.DPrintf(db.ALWAYS, "expire %v %v\n", lid, ps)
+	for _, e := range ps {
+		ls.mfs.RemoveLease(e.P, e.Obj, e.Name, e.Parent)
 	}
 }
 

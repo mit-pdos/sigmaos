@@ -22,7 +22,7 @@ func newEtcdFile() *EtcdFile {
 }
 
 func (ef *EtcdFile) String() string {
-	return fmt.Sprintf("{%v l %d}", ef.Tperm(), len(ef.Data))
+	return fmt.Sprintf("{l %d}", len(ef.Data))
 }
 
 type EtcdDir struct {
@@ -70,15 +70,15 @@ func marshalDirInfo(dir *DirInfo) ([]byte, *serr.Err) {
 		idx += 1
 		return true
 	})
-	return marshalDir(d, dir.Perm)
+	return marshalDir(d)
 }
 
-func marshalDir(dir *EtcdDirProto, dperm sp.Tperm) ([]byte, *serr.Err) {
+func marshalDir(dir *EtcdDirProto) ([]byte, *serr.Err) {
 	d, err := proto.Marshal(dir)
 	if err != nil {
 		return nil, serr.NewErrError(err)
 	}
-	nfd := &EtcdFileProto{Perm: uint32(dperm), Data: d}
+	nfd := &EtcdFileProto{Data: d}
 	b, err := proto.Marshal(nfd)
 	if err != nil {
 		return nil, serr.NewErrError(err)
@@ -103,12 +103,9 @@ func (dir *EtcdDir) lookup(name string) (*EtcdDirEnt, bool) {
 	return nil, false
 }
 
-func NewEtcdFile(perm sp.Tperm, data []byte) *EtcdFile {
+func NewEtcdFile(data []byte) *EtcdFile {
 	return &EtcdFile{
-		&EtcdFileProto{
-			Perm: uint32(perm),
-			Data: data,
-		},
+		&EtcdFileProto{Data: data},
 	}
 }
 
@@ -131,11 +128,7 @@ func NewEtcdFileDir(perm sp.Tperm, path sp.Tpath, cid sp.TclntId, lid sp.TleaseI
 		}
 		fdata = d
 	}
-	return NewEtcdFile(perm, fdata), nil
-}
-
-func (nf *EtcdFileProto) Tperm() sp.Tperm {
-	return sp.Tperm(nf.Perm)
+	return NewEtcdFile(fdata), nil
 }
 
 func (e *DirEntInfo) LeaseOpts() []clientv3.OpOption {

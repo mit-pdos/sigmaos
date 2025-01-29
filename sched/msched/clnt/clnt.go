@@ -39,7 +39,7 @@ func (mc *MSchedClnt) NMSched() (int, error) {
 }
 
 func (mc *MSchedClnt) GetMScheds() ([]string, error) {
-	return mc.rpcdc.WaitTimedGetEntriesN(1)
+	return mc.rpcdc.WaitGetEntriesN(1, true)
 }
 
 func (mc *MSchedClnt) UnregisterSrv(mschedID string) {

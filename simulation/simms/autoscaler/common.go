@@ -1,43 +1,10 @@
 package autoscaler
 
 import (
-	db "sigmaos/debug"
 	"sigmaos/simulation/simms"
 )
 
-// Calculate the average util of an instance within a window [startT, endT]
-func avgInstanceUtilInWindow(startT uint64, endT uint64, istat *simms.ServiceInstanceStats) float64 {
-	n := 0
-	util := 0.0
-	for t := startT; t <= endT; t++ {
-		// If instance was ready at time t, include util info in calculation
-		if istat.Ready[t] {
-			util += istat.Util[t]
-			n++
-		}
-	}
-	util /= float64(n)
-	return util
-}
-
-// Calculate the average util across a set of ready service instances, for a
-// given window of ticks
-func avgUtil(ctx *Ctx, currentT uint64, windowSize uint64, istats []*simms.ServiceInstanceStats) float64 {
-	if currentT < windowSize {
-		db.DFatalf("Calculate avg util for window of size > current time: %v > %v", windowSize, currentT)
-	}
-	utils := make([]float64, 0, len(istats))
-	for _, istat := range istats {
-		utils = append(utils, avgInstanceUtilInWindow(currentT-windowSize, currentT, istat))
-	}
-	db.DPrintf(db.SIM_AUTOSCALE, "%v Instance avg utils: %v", ctx, utils)
-	util := 0.0
-	for _, u := range utils {
-		util += u
-	}
-	util /= float64(len(istats))
-	return util
-}
+type statFn func(t uint64, istat *simms.ServiceInstanceStats) float64
 
 // Get any instances which are currently marked as ready
 func getReadyInstanceStats(t uint64, istats []*simms.ServiceInstanceStats) []*simms.ServiceInstanceStats {
@@ -48,4 +15,19 @@ func getReadyInstanceStats(t uint64, istats []*simms.ServiceInstanceStats) []*si
 		}
 	}
 	return st
+}
+
+// Calculate the average value of a stat of an instance within a window [startT, endT]
+func avgInstanceStatValInWindow(startT uint64, endT uint64, istat *simms.ServiceInstanceStats, getStat statFn) float64 {
+	n := 0
+	val := 0.0
+	for t := startT; t <= endT; t++ {
+		// If instance was ready at time t, include val info in calculation
+		if istat.Ready[t] {
+			val += getStat(t, istat)
+			n++
+		}
+	}
+	val /= float64(n)
+	return val
 }

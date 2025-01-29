@@ -12,10 +12,10 @@ import (
 
 type Channel struct {
 	pc   *spprotoclnt.SPProtoClnt
-	qids []*sp.Tqid
+	qids []sp.Tqid
 }
 
-func newChannel(pc *spprotoclnt.SPProtoClnt, qs []*sp.Tqid) *Channel {
+func newChannel(pc *spprotoclnt.SPProtoClnt, qs []sp.Tqid) *Channel {
 	c := &Channel{}
 	c.pc = pc
 	c.qids = qs
@@ -31,7 +31,7 @@ func (c *Channel) Version() sp.TQversion {
 }
 
 func (c *Channel) Copy() *Channel {
-	qids := make([]*sp.Tqid, len(c.qids))
+	qids := make([]sp.Tqid, len(c.qids))
 	copy(qids, c.qids)
 	return newChannel(c.pc, qids)
 }
@@ -48,10 +48,10 @@ func (c *Channel) AddQids(qs []*sp.TqidProto) {
 }
 
 func (c *Channel) Lastqid() *sp.Tqid {
-	return c.qids[len(c.qids)-1]
+	return &c.qids[len(c.qids)-1]
 }
 
-func (c *Channel) Qids() []*sp.Tqid {
+func (c *Channel) Qids() []sp.Tqid {
 	return c.qids
 }
 

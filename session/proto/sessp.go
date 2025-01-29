@@ -198,6 +198,7 @@ const (
 	TRread
 	TTwriteF
 	TTwatch
+	TRwatch
 	TRstat
 	TTwstat
 	TTrenameat
@@ -290,6 +291,8 @@ func (fct Tfcall) String() string {
 		return "Tstat"
 	case TTwatch:
 		return "Twatch"
+	case TRwatch:
+		return "Rwatch"
 	case TTrenameat:
 		return "Trenameat"
 	case TRrenameat:

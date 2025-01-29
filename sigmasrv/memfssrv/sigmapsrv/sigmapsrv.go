@@ -48,7 +48,7 @@ func NewSigmaPSrv(pe *proc.ProcEnv, npc *dialproxyclnt.DialProxyClnt, root fs.Di
 		fencefs:     fencefs,
 		attachAuthF: aaf,
 	}
-	psrv.stats = stats.NewStatsDev(psrv.dirover)
+	psrv.stats = stats.NewStatsDev()
 	psrv.ProtSrvState = spprotosrv.NewProtSrvState(psrv.stats)
 	psrv.VersionTable().Insert(psrv.dirover.Path())
 	psrv.dirover.Mount(sp.STATSD, psrv.stats)
@@ -72,19 +72,18 @@ func (psrv *SigmaPSrv) NewSession(p *sp.Tprincipal, sessid sessp.Tsession) sps.P
 	return spprotosrv.NewProtServer(psrv.pe, psrv.ProtSrvState, p, sessid, psrv.GetRootCtx, psrv.attachAuthF)
 }
 
-func (psrv *SigmaPSrv) Root(p path.Tpathname) (fs.Dir, path.Tpathname, path.Tpathname) {
+func (psrv *SigmaPSrv) Root(p path.Tpathname) (fs.Dir, string, path.Tpathname) {
 	d := psrv.dirunder
 	if len(p) > 0 {
 		o, err := psrv.dirover.Lookup(ctx.NewCtxNull(), p[0])
 		if err == nil {
-			return o.(fs.Dir), path.Tpathname{p[0]}, p[1:]
+			return o.(fs.Dir), p[0], p[1:]
 		}
 	}
-	return d, path.Tpathname{}, p
+	return d, "", p
 }
 
 func (psrv *SigmaPSrv) Mount(name string, i fs.FsObj) {
-	i.SetParent(psrv.dirover)
 	psrv.dirover.Mount(name, i)
 }
 

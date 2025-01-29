@@ -19,6 +19,14 @@ func k8sCalcDesiredNInstances(ctx *Ctx, currentInstances int, currentMetricValue
 		db.DPrintf(db.SIM_AUTOSCALE, "%v NInstances within tolerance range", ctx)
 		return currentInstances
 	}
-	desiredInstances := math.Ceil(float64(currentInstances) * ratio)
-	return min(int(desiredInstances), maxNReplicas)
+	desired := math.Ceil(float64(currentInstances) * ratio)
+	desiredInstances := int(desired)
+	if maxNReplicas != UNLIMITED_REPLICAS {
+		desiredInstances = min(desiredInstances, maxNReplicas)
+	}
+	if desiredInstances < 1 {
+		db.DPrintf(db.SIM_AUTOSCALE, "%v Overriding scaling decision to scale to 0 instances: d %v m %v", ctx, desired, maxNReplicas)
+		desiredInstances = 1
+	}
+	return desiredInstances
 }

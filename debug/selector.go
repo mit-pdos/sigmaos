@@ -124,6 +124,12 @@ const (
 	SOCIAL_NETWORK_CLNT               = SOCIAL_NETWORK + "_CLNT"
 )
 
+// Watch
+const (
+	WATCH_TEST = "WATCH_TEST"
+	WATCH_PERF = "WATCH_PERF"
+)
+
 // System
 const (
 	SYSTEM Tselector = "SYSTEM"
@@ -352,12 +358,15 @@ const (
 
 // Simulator
 const (
-	SIM_CLNT      Tselector = "SIM_CLNT"
-	SIM_TEST                = "SIM_TEST"
-	SIM_SVC                 = "SIM_SVC"
-	SIM_QMGR                = "SIM_QMGR"
-	SIM_LB                  = "SIM_LB"
-	SIM_RAW_LAT             = "SIM_RAW_LAT"
-	SIM_LAT_STATS           = "SIM_LAT_STATS"
-	SIM_AUTOSCALE           = "SIM_AUTOSCALE"
+	SIM_CLNT         Tselector = "SIM_CLNT"
+	SIM_TEST                   = "SIM_TEST"
+	SIM_SVC                    = "SIM_SVC"
+	SIM_QMGR                   = "SIM_QMGR"
+	SIM_QMGR_TIMEOUT           = "SIM_QMGR_TIMEOUT"
+	SIM_LB                     = "SIM_LB"
+	SIM_RAW_LAT                = "SIM_RAW_LAT"
+	SIM_LAT_STATS              = "SIM_LAT_STATS"
+	SIM_UTIL_STATS             = "SIM_UTIL_STATS"
+	SIM_RAW_UTIL               = "SIM_RAW_UTIL"
+	SIM_AUTOSCALE              = "SIM_AUTOSCALE"
 )

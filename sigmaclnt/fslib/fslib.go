@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"sync"
 
+	sos "sigmaos/api/sigmaos"
 	db "sigmaos/debug"
 	dialproxyclnt "sigmaos/dialproxy/clnt"
 	"sigmaos/proc"
 	"sigmaos/proxy/s3/s3pathclnt"
 	"sigmaos/serr"
-	sos "sigmaos/api/sigmaos"
 	sp "sigmaos/sigmap"
 )
 

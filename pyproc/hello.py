@@ -1,4 +1,4 @@
 import splib
 
-# splib.started()
+splib.started()
 print("Hello World!")

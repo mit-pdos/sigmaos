@@ -14,7 +14,6 @@ import (
 	dialproxyclnt "sigmaos/dialproxy/clnt"
 	dialproxysrv "sigmaos/dialproxy/srv"
 	"sigmaos/proc"
-	"sigmaos/pyproxysrv"
 	"sigmaos/sigmaclnt/fidclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/util/perf"
@@ -29,7 +28,6 @@ const (
 type SPProxySrv struct {
 	pe   *proc.ProcEnv
 	nps  *dialproxysrv.DialProxySrv
-	pps  *pyproxysrv.PyProxySrv
 	fidc *fidclnt.FidClnt
 }
 
@@ -40,15 +38,9 @@ func newSPProxySrv() (*SPProxySrv, error) {
 		db.DPrintf(db.ERROR, "Error NewDialProxySrv: %v", err)
 		return nil, err
 	}
-	pps, err := pyproxysrv.NewPyProxySrv(pe)
-	if err != nil {
-		db.DPrintf(db.ERROR, "Error NewPyProxySrv: %v", err)
-		return nil, err
-	}
 	scs := &SPProxySrv{
 		pe:   pe,
 		nps:  nps,
-		pps:  pps,
 		fidc: fidclnt.NewFidClnt(pe, dialproxyclnt.NewDialProxyClnt(pe)),
 	}
 	db.DPrintf(db.SPPROXYSRV, "newSPProxySrv ProcEnv:%v", pe)
@@ -80,7 +72,6 @@ func (scs *SPProxySrv) runServer() error {
 		os.Remove(sp.SIGMASOCKET)
 		scs.fidc.Close()
 		scs.nps.Shutdown()
-		scs.pps.Shutdown()
 		os.Exit(0)
 	}()
 

@@ -3,6 +3,7 @@
 package scontainer
 
 import (
+	"errors"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -12,12 +13,14 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/proc"
+	"sigmaos/pyproxysrv"
 	"sigmaos/sched/msched/proc/srv/binsrv"
 	sp "sigmaos/sigmap"
 )
 
 type uprocCmd struct {
 	cmd *exec.Cmd
+	pps *pyproxysrv.PyProxySrv
 }
 
 func (upc *uprocCmd) Wait() error {
@@ -67,6 +70,26 @@ func StartSigmaContainer(uproc *proc.Proc, dialproxy bool) (*uprocCmd, error) {
 	}
 	db.DPrintf(db.CONTAINER, "exec cmd %v", cmd)
 
+	// Extra setup for Python procs
+	uprocCommand := &uprocCmd{cmd: cmd}
+	if uproc.GetProgram() == "python" {
+		bucketName, ok := uproc.LookupEnv("SIGMAPYBUCKET")
+		if !ok {
+			err := errors.New("nil SIGMAPYBUCKET")
+			db.DPrintf(db.PYPROXYSRV_ERR, "No specified AWS bucket: %v", err)
+			CleanupUProc(uproc.GetPid())
+			return nil, err
+		}
+
+		pps, err := pyproxysrv.NewPyProxySrv(uproc.GetProcEnv(), bucketName)
+		if err != nil {
+			db.DPrintf(db.PYPROXYSRV_ERR, "Error NewPyProxySrv: %v", err)
+			CleanupUProc(uproc.GetPid())
+			return nil, err
+		}
+		uprocCommand.pps = pps
+	}
+
 	s := time.Now()
 	if err := cmd.Start(); err != nil {
 		db.DPrintf(db.CONTAINER, "Error start %v %v", cmd, err)
@@ -74,13 +97,14 @@ func StartSigmaContainer(uproc *proc.Proc, dialproxy bool) (*uprocCmd, error) {
 		return nil, err
 	}
 	db.DPrintf(db.SPAWN_LAT, "[%v] UProc cmd.Start %v", uproc.GetPid(), time.Since(s))
-	return &uprocCmd{cmd: cmd}, nil
+	return uprocCommand, nil
 }
 
 func CleanupUProc(pid sp.Tpid) {
 	if err := os.RemoveAll(jailPath(pid)); err != nil {
 		db.DPrintf(db.ALWAYS, "Error cleanupJail: %v", err)
 	}
+	os.RemoveAll(sp.SIGMA_PYPROXY_SOCKET)
 }
 
 func jailPath(pid sp.Tpid) string {

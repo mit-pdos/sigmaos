@@ -18,9 +18,10 @@ import (
 type PyProxySrv struct {
 	pe *proc.ProcEnv
 	sc *sigmaclnt.SigmaClnt
+	bn string // Name of AWS bucket
 }
 
-func NewPyProxySrv(pe *proc.ProcEnv) (*PyProxySrv, error) {
+func NewPyProxySrv(pe *proc.ProcEnv, bn string) (*PyProxySrv, error) {
 	// Create the proxy socket
 	socket, err := net.Listen("unix", sp.SIGMA_PYPROXY_SOCKET)
 	if err != nil {
@@ -33,6 +34,7 @@ func NewPyProxySrv(pe *proc.ProcEnv) (*PyProxySrv, error) {
 
 	pps := &PyProxySrv{
 		pe: pe,
+		bn: bn,
 	}
 	sc, err := sigmaclnt.NewSigmaClnt(pe)
 	if err != nil {
@@ -90,7 +92,7 @@ func (pps *PyProxySrv) copyLib(currPath string, destPath string) error {
 
 func (pps *PyProxySrv) fetchLib(libName string) {
 	db.DPrintf(db.PYPROXYSRV, "Fetching %v", libName)
-	pn := filepath.Join(sp.NAMED, "s3", "~any", "ivy-tutorial-test", libName)
+	pn := filepath.Join(sp.NAMED, "s3", "~any", pps.bn, libName)
 	libDest := filepath.Join("/tmp", "python", "Lib", libName)
 
 	err := pps.copyLib(pn, libDest)
@@ -145,7 +147,7 @@ func (pps *PyProxySrv) handleNewConn(conn *net.UnixConn) {
 			}
 
 			// Add all libraries in the S3 bucket to superlib
-			pn := filepath.Join(sp.NAMED, "s3", "~any", "ivy-tutorial-test")
+			pn := filepath.Join(sp.NAMED, "s3", "~any", pps.bn)
 			_, err = pps.sc.ProcessDir(pn, func(st *sp.Tstat) (bool, error) {
 				err := os.MkdirAll(filepath.Join(superlibPath, st.Name), 0777)
 				if err != nil {

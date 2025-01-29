@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+option go_package = "sigmaos/ft/task/proto";
+
+service FtTaskService {
+  rpc Echo(EchoReq) returns (EchoRep);
+}
+
+message EchoReq {
+  string text = 1;
+  int32 num = 2;
+}
+
+message EchoRep {
+  string text = 1;
+  int32 res = 2;
+}

@@ -9,6 +9,8 @@ import (
 	"sigmaos/apps/mr"
 	db "sigmaos/debug"
 	fttask "sigmaos/ft/task"
+	fttask_clnt "sigmaos/ft/task/clnt"
+	fttask_mgr "sigmaos/ft/task/mgr"
 	"sigmaos/test"
 	rd "sigmaos/util/rand"
 )
@@ -158,4 +160,23 @@ func TestPerf(t *testing.T) {
 	db.DPrintf(db.ALWAYS, "Read all outputs in %v (%v per task)", time.Since(start), time.Since(start) / time.Duration(nTasks))
 
 	ts.shutdown()
+}
+
+func TestRPC(t *testing.T) {
+	ts, err := test.NewTstateAll(t)
+	if !assert.Nil(t, err, "Error New Tstate: %v", err) {
+		return
+	}
+
+	mgr, err := fttask_mgr.NewFtTaskSrvMgr(ts.SigmaClnt, "test")
+	assert.Nil(t, err)
+
+	clnt := fttask_clnt.NewTaskClnt(ts.FsLib, mgr.Id)
+	resp, err := clnt.Echo("hello")
+	assert.Nil(t, err)
+	assert.Equal(t, "hello", resp)
+
+	mgr.Close()
+
+	ts.Shutdown()
 }

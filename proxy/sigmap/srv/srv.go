@@ -57,8 +57,10 @@ func (scs *SPProxySrv) runServer() error {
 	}
 	db.DPrintf(db.TEST, "runServer: spproxyd listening on %v", sp.SIGMASOCKET)
 	if _, err := io.WriteString(os.Stdout, "r"); err != nil {
+		db.DFatalf("Err runServer: %v", err)
 		return err
 	}
+	db.DPrintf(db.TEST, "runServer: wrote ready signal")
 	if err := syscall.Dup2(1, GROW_FD); err != nil {
 		db.DFatalf("Error dup2: %v", err)
 	}
@@ -84,7 +86,7 @@ func (scs *SPProxySrv) runServer() error {
 	}
 }
 
-// The spproxyd process enter here
+// The spproxyd process enters here
 func RunSPProxySrv() error {
 	scs, err := newSPProxySrv()
 	if err != nil {
@@ -125,7 +127,10 @@ func (scsc *SPProxySrvCmd) Evict() error {
 }
 
 func (scsc *SPProxySrvCmd) Wait() error {
-	return scsc.Shutdown()
+	if err := scsc.Shutdown(); err != nil {
+		return err
+	}
+	return scsc.cmd.Wait()
 }
 
 func (scsc *SPProxySrvCmd) Kill() error {

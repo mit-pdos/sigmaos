@@ -21,6 +21,7 @@ type MultiRealmTstate struct {
 
 func NewMultiRealmTstate(t *testing.T, realms []sp.Trealm) (*MultiRealmTstate, error) {
 	mrts := &MultiRealmTstate{
+		T:      t,
 		root:   nil,
 		realms: make(map[sp.Trealm]*RealmTstate),
 	}

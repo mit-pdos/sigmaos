@@ -112,7 +112,7 @@ type Tstate struct {
 	killidx int
 	T       *testing.T
 	proc    *proc.Proc
-	spkc    *bootclnt.Kernel
+	dpp     *DialProxyProvider
 }
 
 func NewTstatePath(t *testing.T, path string) (*Tstate, error) {
@@ -191,6 +191,7 @@ func newSysClnt(t *testing.T, ntype bootclnt.Tboot) (*Tstate, error) {
 		return nil, err
 	}
 	secrets := map[string]*sp.SecretProto{"s3": s3secrets}
+	runningInDocker := User != sp.NOT_SET
 	useDialProxy := !noDialProxy
 	pe := proc.NewTestProcEnv(sp.ROOTREALM, secrets, etcdMnt, localIP, localIP, tag, useSPProxy, useDialProxy)
 	proc.SetSigmaDebugPid(pe.GetPID().String())
@@ -204,18 +205,11 @@ func newSysClnt(t *testing.T, ntype bootclnt.Tboot) (*Tstate, error) {
 			return nil, err
 		}
 	}
-	var spkc *bootclnt.Kernel
+	var dpp *DialProxyProvider
 	if !noBootDialProxy && (useSPProxy || useDialProxy) {
-		db.DPrintf(db.BOOT, "Booting spproxyd: usespproxyd %v usedialproxy %v", useSPProxy, useDialProxy)
-		sckid := sp.SPProxydKernel(bootclnt.GenKernelId())
-		_, err := bootclnt.Start(sckid, sp.Tip(EtcdIP), pe, sp.SPPROXYDREL, useDialProxy, homeDir, projectRoot, User, netname)
-		if err != nil {
-			db.DPrintf(db.ALWAYS, "Error start kernel for spproxyd")
-			return nil, err
-		}
-		spkc, err = bootclnt.NewKernelClnt(sckid, sp.Tip(EtcdIP), pe)
-		if err != nil {
-			db.DPrintf(db.ALWAYS, "Error make kernel clnt for spproxyd")
+		db.DPrintf(db.BOOT, "Booting spproxyd: usespproxyd %v usedialproxy %v asKernel %v", useSPProxy, useDialProxy, !runningInDocker)
+		var err error
+		if dpp, err = NewDialProxyProvider(pe, useDialProxy, !runningInDocker); err != nil {
 			return nil, err
 		}
 	}
@@ -230,7 +224,7 @@ func newSysClnt(t *testing.T, ntype bootclnt.Tboot) (*Tstate, error) {
 		kclnts:    []*bootclnt.Kernel{k},
 		killidx:   0,
 		T:         t,
-		spkc:      spkc,
+		dpp:       dpp,
 	}
 	return savedTstate, nil
 }
@@ -331,11 +325,10 @@ func (ts *Tstate) Shutdown() error {
 			}
 			ts.kclnts[i].Close()
 		}
-		if ts.spkc != nil {
-			if err := ts.spkc.Shutdown(); err != nil {
+		if ts.dpp != nil {
+			if err := ts.dpp.Shutdown(); err != nil {
 				db.DPrintf(db.ALWAYS, "Shutdown spproxyd err %v", err)
 			}
-			ts.spkc.Close()
 		}
 	}
 	return nil

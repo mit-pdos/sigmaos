@@ -104,21 +104,22 @@ func TestWordSpanningChunk(t *testing.T) {
 		WC      = "/tmp/sigmaos/pg-dorian_gray.txt.wc"
 	)
 
-	ts, err1 := test.NewTstateAll(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
+	defer mrts.Shutdown()
 
 	fn := filepath.Join("name/s3/" + sp.ANY + "/9ps3/gutenberg/pg-dorian_gray.txt")
 	fn, ok := sp.S3ClientPath(fn)
 	assert.True(t, ok)
 	s := &api.Split{fn, 0, SPLITSZ}
-	ts.MountS3PathClnt()
+	mrts.GetRealm(test.REALM1).MountS3PathClnt()
 
-	pfr, err := ts.OpenParallelFileReader(s.File, s.Offset, s.Length)
+	pfr, err := mrts.GetRealm(test.REALM1).OpenParallelFileReader(s.File, s.Offset, s.Length)
 	assert.Nil(t, err)
 
-	p, err := perf.NewPerf(ts.ProcEnv(), perf.MRMAPPER)
+	p, err := perf.NewPerf(mrts.GetRealm(test.REALM1).ProcEnv(), perf.MRMAPPER)
 	assert.Nil(t, err)
 
 	ckr := chunkreader.NewChunkReader(LINESZ, WORDSZ, wc.Reduce, p)
@@ -142,8 +143,6 @@ func TestWordSpanningChunk(t *testing.T) {
 		return err
 	})
 	p.Done()
-
-	ts.Shutdown()
 }
 
 type Tdata map[string]uint64
@@ -213,13 +212,15 @@ func TestSeqWc(t *testing.T) {
 
 func TestSplits(t *testing.T) {
 	const SPLITSZ = 10 * sp.MBYTE
-	ts, err1 := test.NewTstateAll(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
+	defer mrts.Shutdown()
+
 	job, err1 = mr.ReadJobConfig(filepath.Join("job-descriptions", app))
 	assert.Nil(t, err1, "Error ReadJobConfig: %v", err1)
-	bins, err := mr.NewBins(ts.FsLib, job.Input, true, sp.Tlength(job.Binsz), SPLITSZ)
+	bins, err := mr.NewBins(mrts.GetRealm(test.REALM1).FsLib, job.Input, true, sp.Tlength(job.Binsz), SPLITSZ)
 	assert.Nil(t, err)
 	sum := sp.Tlength(0)
 	for _, b := range bins {
@@ -231,25 +232,26 @@ func TestSplits(t *testing.T) {
 	}
 	db.DPrintf(db.ALWAYS, "len %d %v sum %v\n", len(bins), bins, humanize.Bytes(uint64(sum)))
 	assert.NotEqual(t, 0, len(bins))
-	ts.Shutdown()
 }
 
 func TestMapperReducer(t *testing.T) {
-	t1, err := test.NewTstateAll(t)
-	if !assert.Nil(t, err, "Error New Tstate: %v", err) {
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts := newTstate(t1, mr.MRDIRTOP, app) // or --app mr-wc-ux.yml or --app mr-ux-wiki1G.yml
+	defer mrts.Shutdown()
+
+	ts := newTstate(mrts, mr.MRDIRTOP, app) // or --app mr-wc-ux.yml or --app mr-ux-wiki1G.yml
 
 	job = mr.JobLocalToAny(job, true, true, true)
 	if job.Local != "" {
-		err := ts.UploadDir(job.Local, job.Input)
-		assert.Nil(t, err, "UploadDir %v %v err %v", job.Local, job.Input, err)
+		err := ts.mrts.GetRealm(test.REALM1).UploadDir(job.Local, job.Input)
+		assert.Nil(ts.mrts.T, err, "UploadDir %v %v err %v", job.Local, job.Input, err)
 	}
 
-	nmap, err := mr.PrepareJob(ts.FsLib, ts.tasks, ts.jobRoot, ts.job, job)
-	assert.Nil(ts.T, err, "PrepareJob err %v: %v", job, err)
-	assert.NotEqual(ts.T, 0, nmap)
+	nmap, err := mr.PrepareJob(ts.mrts.GetRealm(test.REALM1).FsLib, ts.tasks, ts.jobRoot, ts.job, job)
+	assert.Nil(ts.mrts.T, err, "PrepareJob err %v: %v", job, err)
+	assert.NotEqual(ts.mrts.T, 0, nmap)
 
 	mapper := wc.Map
 	reducer := wc.Reduce
@@ -267,13 +269,13 @@ func TestMapperReducer(t *testing.T) {
 	start := time.Now()
 	nin := sp.Tlength(0)
 	nout := sp.Tlength(0)
-	pe := proc.NewAddedProcEnv(ts.ProcEnv())
+	pe := proc.NewAddedProcEnv(ts.mrts.GetRealm(test.REALM1).ProcEnv())
 	nmapper := len(tns)
 	outBins := make([]mr.Bin, nmapper)
 	db.DPrintf(db.TEST, "nmapper: %d %d", nmapper, job.Binsz)
 	for i, task := range tns {
 		input := ts.tasks.Mft.TaskPathName(task)
-		bin, err := ts.GetFile(input)
+		bin, err := ts.mrts.GetRealm(test.REALM1).GetFile(input)
 		assert.Nil(t, err)
 		start := time.Now()
 		sc, err := sigmaclnt.NewSigmaClnt(pe)
@@ -297,7 +299,7 @@ func TestMapperReducer(t *testing.T) {
 	assert.Nil(t, err)
 
 	for i, task := range tns {
-		pe := proc.NewAddedProcEnv(ts.ProcEnv())
+		pe := proc.NewAddedProcEnv(ts.mrts.GetRealm(test.REALM1).ProcEnv())
 		sc, err := sigmaclnt.NewSigmaClnt(pe)
 		assert.Nil(t, err)
 		rt := &mr.TreduceTask{}
@@ -329,23 +331,22 @@ func TestMapperReducer(t *testing.T) {
 	}
 
 	p.Done()
-	ts.Shutdown()
 }
 
 type Tstate struct {
-	*test.Tstate
+	mrts        *test.MultiRealmTstate
 	jobRoot     string
 	job         string
 	nreducetask int
 	tasks       *mr.Tasks
 }
 
-func newTstate(t1 *test.Tstate, jobRoot, app string) *Tstate {
+func newTstate(mrts *test.MultiRealmTstate, jobRoot, app string) *Tstate {
 	ts := &Tstate{}
 	ts.jobRoot = jobRoot
-	ts.Tstate = t1
+	ts.mrts = mrts
 	j, err := mr.ReadJobConfig(filepath.Join("job-descriptions", app))
-	assert.Nil(t1.T, err, "Error ReadJobConfig: %v", err)
+	assert.Nil(mrts.T, err, "Error ReadJobConfig: %v", err)
 	job = j
 	ts.nreducetask = job.Nreduce
 	ts.job = rd.String(4)
@@ -356,8 +357,8 @@ func newTstate(t1 *test.Tstate, jobRoot, app string) *Tstate {
 	// directly through the os for now.
 	os.RemoveAll(filepath.Join(sp.SIGMAHOME, "mr"))
 
-	tasks, err := mr.InitCoordFS(ts.FsLib, ts.jobRoot, ts.job, ts.nreducetask)
-	assert.Nil(t1.T, err, "Error InitCoordFS: %v", err)
+	tasks, err := mr.InitCoordFS(ts.mrts.GetRealm(test.REALM1).FsLib, ts.jobRoot, ts.job, ts.nreducetask)
+	assert.Nil(mrts.T, err, "Error InitCoordFS: %v", err)
 	ts.tasks = tasks
 	os.Remove(OUTPUT)
 
@@ -382,17 +383,17 @@ func (ts *Tstate) compare() bool {
 	}
 	b1 := out1.Bytes()
 	b2 := out2.Bytes()
-	if assert.Equal(ts.T, len(b1), len(b2), "Output files have different length") {
+	if assert.Equal(ts.mrts.T, len(b1), len(b2), "Output files have different length") {
 		// Only do byte-by-byte comparison if output lengths are the same
 		// (otherwise we just crowd the test output)
-		return assert.Equal(ts.T, b1, b2, "Output files have different contents")
+		return assert.Equal(ts.mrts.T, b1, b2, "Output files have different contents")
 	}
 	return false
 }
 
 func (ts *Tstate) checkJob(app string) bool {
-	err := mr.MergeReducerOutput(ts.FsLib, ts.jobRoot, ts.job, OUTPUT, ts.nreducetask)
-	assert.Nil(ts.T, err, "Merge output files: %v", err)
+	err := mr.MergeReducerOutput(ts.mrts.GetRealm(test.REALM1).FsLib, ts.jobRoot, ts.job, OUTPUT, ts.nreducetask)
+	assert.Nil(ts.mrts.T, err, "Merge output files: %v", err)
 	if app == "mr-wc.yml" || app == "mr-ux-wc.yml" || app == MALICIOUS_APP {
 		db.DPrintf(db.TEST, "checkJob %v", app)
 		return ts.compare()
@@ -407,11 +408,12 @@ func crashSemPn(l crash.Tselector, i int) string {
 
 func (ts *Tstate) crashServers(srv string, l crash.Tselector, em *crash.TeventMap, n int) {
 	e0, ok := em.Lookup(l)
-	assert.True(ts.T, ok)
+	assert.True(ts.mrts.T, ok)
 	for i := 0; i < n; i++ {
 		time.Sleep(CRASHSRV * time.Millisecond)
 		e1 := crash.NewEventPath(string(l), 0, float64(1.0), crashSemPn(l, i+1))
-		ts.CrashServer(e0, e1, srv)
+		// XXX use root?
+		ts.mrts.GetRoot().CrashServer(e0, e1, srv)
 		e0 = e1
 	}
 }
@@ -426,7 +428,7 @@ func (ts *Tstate) collectStats(stati []*procgroupmgr.ProcStatus) (int, mr.Stat) 
 			// if st.Status != nil && st.IsStatusOK() {
 			t := mr.Stat{}
 			err := mapstructure.Decode(st.Data(), &t)
-			assert.Nil(ts.T, err)
+			assert.Nil(ts.mrts.T, err)
 			if t.Nmap > 0 || t.Nreduce > 0 {
 				mrst = t
 			}
@@ -454,19 +456,20 @@ func runN(t *testing.T, em *crash.TeventMap, srvs map[string]crash.Tselector, ma
 	err := crash.SetSigmaFail(em)
 	assert.Nil(t, err)
 
-	t1, err1 := test.NewTstateAll(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return 0, 0, nil
 	}
+	defer mrts.Shutdown()
 
-	var sc *sigmaclnt.SigmaClnt = t1.SigmaClnt
+	var sc *sigmaclnt.SigmaClnt = mrts.GetRealm(test.REALM1).SigmaClnt
 	runApp := app
 	if maliciousMapper > 0 {
 		db.DPrintf(db.ALWAYS, "Overriding MR app settting to run on restricted S3 bucket with malicious mapper: %v", MALICIOUS_APP)
 		runApp = MALICIOUS_APP
 
 		// Create a new sigma clnt
-		pe := proc.NewAddedProcEnv(t1.ProcEnv())
+		pe := proc.NewAddedProcEnv(mrts.GetRealm(test.REALM1).ProcEnv())
 		pe.SetPrincipal(sp.NewPrincipal(
 			sp.TprincipalID("mr-restricted-principal"),
 			pe.GetRealm(),
@@ -484,26 +487,26 @@ func runN(t *testing.T, em *crash.TeventMap, srvs map[string]crash.Tselector, ma
 
 	jobRoot := mr.MRDIRTOP
 
-	ts := newTstate(t1, jobRoot, runApp)
+	ts := newTstate(mrts, jobRoot, runApp)
 
 	// Start more nodes to run mappers/reducers in parallel (except
 	// for crash tests).
 	if len(srvs) == 0 {
-		err = ts.BootNode(1)
+		err = ts.mrts.GetRealm(test.REALM1).BootNode(1)
 		assert.Nil(t, err, "BootProcd 1")
-		err = ts.BootNode(1)
+		err = ts.mrts.GetRealm(test.REALM1).BootNode(1)
 		assert.Nil(t, err, "BootProcd 2")
 	}
 
 	sdc := mschedclnt.NewMSchedClnt(sc.FsLib, sp.NOT_SET)
 	if monitor {
-		sdc.MonitorMSchedStats(ts.ProcEnv().GetRealm(), time.Second)
+		sdc.MonitorMSchedStats(ts.mrts.GetRealm(test.REALM1).ProcEnv().GetRealm(), time.Second)
 		defer sdc.Done()
 	}
 
 	nmap, err := mr.PrepareJob(sc.FsLib, ts.tasks, ts.jobRoot, ts.job, job)
-	assert.Nil(ts.T, err, "Err prepare job %v: %v", job, err)
-	assert.NotEqual(ts.T, 0, nmap)
+	assert.Nil(ts.mrts.T, err, "Err prepare job %v: %v", job, err)
+	assert.NotEqual(ts.mrts.T, 0, nmap)
 
 	cm := mr.StartMRJob(sc, ts.jobRoot, ts.job, job, nmap, MEM_REQ, maliciousMapper)
 
@@ -529,20 +532,19 @@ func runN(t *testing.T, em *crash.TeventMap, srvs map[string]crash.Tselector, ma
 	// Check that the malicious mapper didn't succeed (which would cause the
 	// output files not to match)
 	if !ok && maliciousMapper > 0 {
-		assert.False(ts.T, true, "Output files don't match when running with malicious mapper. Suspected security authorization violation. Check error logs.")
+		assert.False(ts.mrts.T, true, "Output files don't match when running with malicious mapper. Suspected security authorization violation. Check error logs.")
 	}
 	db.DPrintf(db.TEST, "Done check Job")
 
-	err = mr.PrintMRStats(ts.FsLib, ts.jobRoot, ts.job)
-	assert.Nil(ts.T, err, "Error print MR stats: %v", err)
+	err = mr.PrintMRStats(ts.mrts.GetRealm(test.REALM1).FsLib, ts.jobRoot, ts.job)
+	assert.Nil(ts.mrts.T, err, "Error print MR stats: %v", err)
 
 	db.DPrintf(db.TEST, "Cleanup tasks state")
 	ts.tasks.Mft.Cleanup()
 	ts.tasks.Rft.Cleanup()
-	err = mr.CleanupMROutputs(ts.FsLib, mr.JobOut(job.Output, ts.job), mr.MapIntermediateDir(ts.job, job.Intermediate), true)
-	assert.Nil(ts.T, err, "Cleanup MR Outputs: %v", err)
+	err = mr.CleanupMROutputs(ts.mrts.GetRealm(test.REALM1).FsLib, mr.JobOut(job.Output, ts.job), mr.MapIntermediateDir(ts.job, job.Intermediate), true)
+	assert.Nil(ts.mrts.T, err, "Cleanup MR Outputs: %v", err)
 	db.DPrintf(db.TEST, "Done cleanup MR outputs")
-	ts.Shutdown()
 	return nmap + ts.nreducetask, nrestart, &mrst
 }
 

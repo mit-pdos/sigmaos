@@ -9,13 +9,13 @@ import (
 	"sigmaos/apps/www"
 	db "sigmaos/debug"
 	"sigmaos/proc"
-	rd "sigmaos/util/rand"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
+	rd "sigmaos/util/rand"
 )
 
 type Tstate struct {
-	*test.Tstate
+	mrts *test.MultiRealmTstate
 	*www.WWWClnt
 	pid sp.Tpid
 	job string
@@ -23,59 +23,62 @@ type Tstate struct {
 
 func spawn(t *testing.T, ts *Tstate) sp.Tpid {
 	a := proc.NewProc("wwwd", []string{ts.job, ""})
-	err := ts.Spawn(a)
+	err := ts.mrts.GetRealm(test.REALM1).Spawn(a)
 	assert.Nil(t, err, "Spawn")
 	return a.GetPid()
 }
 
-func newTstate(t1 *test.Tstate) *Tstate {
+func newTstate(mrts *test.MultiRealmTstate) *Tstate {
 	var err error
 	ts := &Tstate{}
-	ts.Tstate = t1
+	ts.mrts = mrts
 
-	ts.Tstate.MkDir(www.TMP, 0777)
+	ts.mrts.GetRealm(test.REALM1).MkDir(www.TMP, 0777)
 
 	ts.job = rd.String(4)
 
-	err = www.InitWwwFs(ts.Tstate.FsLib, ts.job)
-	assert.Nil(t1.T, err)
+	err = www.InitWwwFs(ts.mrts.GetRealm(test.REALM1).FsLib, ts.job)
+	assert.Nil(mrts.T, err)
 
-	ts.pid = spawn(t1.T, ts)
+	ts.pid = spawn(mrts.T, ts)
 
-	err = ts.WaitStart(ts.pid)
-	assert.Nil(t1.T, err)
+	err = ts.mrts.GetRealm(test.REALM1).WaitStart(ts.pid)
+	assert.Nil(mrts.T, err)
 
-	clnt, err := www.NewWWWClnt(ts.Tstate.FsLib, ts.job)
-	assert.Nil(t1.T, err)
+	clnt, err := www.NewWWWClnt(ts.mrts.GetRealm(test.REALM1).FsLib, ts.job)
+	assert.Nil(mrts.T, err)
 	ts.WWWClnt = clnt
 
 	return ts
 }
 
 func (ts *Tstate) waitWww() {
-	err := ts.StopServer(ts.ProcAPI, ts.pid)
-	assert.Nil(ts.T, err)
-	ts.Shutdown()
+	err := ts.StopServer(ts.mrts.GetRealm(test.REALM1).ProcAPI, ts.pid)
+	assert.Nil(ts.mrts.T, err)
 }
 
 func TestCompile(t *testing.T) {
 }
 
 func TestSandbox(t *testing.T) {
-	t1, err1 := test.NewTstateAll(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts := newTstate(t1)
+	defer mrts.Shutdown()
+
+	ts := newTstate(mrts)
 	ts.waitWww()
 }
 
 func TestStatic(t *testing.T) {
-	t1, err1 := test.NewTstateAll(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts := newTstate(t1)
+	defer mrts.Shutdown()
+
+	ts := newTstate(mrts)
 
 	out, err := ts.GetStatic("hello.html")
 	assert.Nil(t, err)
@@ -88,14 +91,14 @@ func TestStatic(t *testing.T) {
 }
 
 func matmulClnt(ts *Tstate, matsize, clntid, nreq int, avgslp time.Duration, done chan bool) {
-	clnt, err := www.NewWWWClnt(ts.Tstate.FsLib, ts.job)
-	assert.Nil(ts.T, err, "Err WWWClnt: %v", err)
+	clnt, err := www.NewWWWClnt(ts.mrts.GetRealm(test.REALM1).FsLib, ts.job)
+	assert.Nil(ts.mrts.T, err, "Err WWWClnt: %v", err)
 	for i := 0; i < nreq; i++ {
 		slp := avgslp * time.Duration(rd.Uint64()%100) / 100
 		db.DPrintf(db.TEST, "[%v] iteration %v Random sleep %v", clntid, i, slp)
 		time.Sleep(slp)
 		err := clnt.MatMul(matsize)
-		assert.Nil(ts.T, err, "Error matmul: %v", err)
+		assert.Nil(ts.mrts.T, err, "Error matmul: %v", err)
 	}
 	db.DPrintf(db.TEST, "[%v] done", clntid)
 	done <- true
@@ -104,11 +107,13 @@ func matmulClnt(ts *Tstate, matsize, clntid, nreq int, avgslp time.Duration, don
 const N = 100
 
 func TestMatMul(t *testing.T) {
-	t1, err1 := test.NewTstateAll(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts := newTstate(t1)
+	defer mrts.Shutdown()
+
+	ts := newTstate(mrts)
 
 	done := make(chan bool)
 	go matmulClnt(ts, N, 0, 1, 0, done)
@@ -118,11 +123,13 @@ func TestMatMul(t *testing.T) {
 }
 
 func TestMatMulConcurrent(t *testing.T) {
-	t1, err1 := test.NewTstateAll(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts := newTstate(t1)
+	defer mrts.Shutdown()
+
+	ts := newTstate(mrts)
 
 	N_CLNT := 5
 	done := make(chan bool)

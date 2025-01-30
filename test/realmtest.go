@@ -1,6 +1,10 @@
 package test
 
 import (
+	"time"
+
+	"github.com/stretchr/testify/assert"
+
 	bootclnt "sigmaos/boot/clnt"
 	db "sigmaos/debug"
 	kernelclnt "sigmaos/kernel/clnt"
@@ -8,6 +12,7 @@ import (
 	realmpkg "sigmaos/realm"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
+	"sigmaos/util/crash"
 )
 
 // Tstate relative to a realm.
@@ -93,4 +98,26 @@ func (rts *RealmTstate) BootNode(n int) error {
 	}
 	db.DPrintf(db.BOOT, "Boot additional kernel subsystems for realm %v on kids %v", rts.realm, kids)
 	return nil
+}
+
+func (rts *RealmTstate) CrashServer(e0, e1 crash.Tevent, srv string) {
+	db.DPrintf(db.ALWAYS, "Crash %v srv %v", e0.Path, srv)
+	err := crash.SignalFailer(rts.Ts.FsLib, e0.Path)
+	if !assert.Nil(rts.Ts.T, err) {
+		db.DPrintf(db.TEST, "SignalFailer %v err %v", e0.Path, err)
+	}
+	em := crash.NewTeventMapOne(e1)
+	s, err := em.Events2String()
+	assert.Nil(rts.Ts.T, err)
+	time.Sleep(5 * time.Second)
+	switch srv {
+	case sp.MSCHEDREL, sp.PROCDREL, sp.UXREL:
+		// a crashed msched and procd causes several kernel services
+		// to exit, so start a new node.
+		err = rts.BootNode(1)
+	default:
+		err = rts.Ts.BootEnv(srv, []string{"SIGMAFAIL=" + s})
+	}
+	assert.Nil(rts.Ts.T, err, "Error Boot: %v", err)
+	db.DPrintf(db.ALWAYS, "Booted %v %v", e1.Path, em)
 }

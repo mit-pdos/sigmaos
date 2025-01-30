@@ -15,30 +15,30 @@ import (
 )
 
 type TstateRPC struct {
-	job string
-	*test.Tstate
+	job     string
+	mrts    *test.MultiRealmTstate
 	srvProc *proc.Proc
 	rpcc    *imgresize.ImgResizeRPCClnt
 }
 
-func newTstateRPC(t *test.Tstate) (*TstateRPC, error) {
+func newTstateRPC(mrts *test.MultiRealmTstate) (*TstateRPC, error) {
 	ts := &TstateRPC{}
-	ts.Tstate = t
+	ts.mrts = mrts
 	ts.job = rd.String(4)
 	ts.cleanup()
 
-	err := ts.MkDir(sp.IMG, 0777)
-	if !assert.Nil(ts.T, err) {
+	err := ts.mrts.GetRealm(test.REALM1).MkDir(sp.IMG, 0777)
+	if !assert.Nil(ts.mrts.T, err) {
 		return nil, err
 	}
-	p, err := imgresize.StartImgRPCd(ts.SigmaClnt, ts.job, IMG_RESIZE_MCPU, IMG_RESIZE_MEM, 1, 0)
-	if !assert.Nil(ts.T, err) {
+	p, err := imgresize.StartImgRPCd(ts.mrts.GetRealm(test.REALM1).SigmaClnt, ts.job, IMG_RESIZE_MCPU, IMG_RESIZE_MEM, 1, 0)
+	if !assert.Nil(ts.mrts.T, err) {
 		return nil, err
 	}
 	db.DPrintf(db.TEST, "Started imgd RPC server")
 	ts.srvProc = p
-	rpcc, err := imgresize.NewImgResizeRPCClnt(ts.SigmaClnt.FsLib, ts.job)
-	if !assert.Nil(ts.T, err) {
+	rpcc, err := imgresize.NewImgResizeRPCClnt(ts.mrts.GetRealm(test.REALM1).SigmaClnt.FsLib, ts.job)
+	if !assert.Nil(ts.mrts.T, err) {
 		return nil, err
 	}
 	ts.rpcc = rpcc
@@ -46,39 +46,39 @@ func newTstateRPC(t *test.Tstate) (*TstateRPC, error) {
 }
 
 func (ts *TstateRPC) cleanup() {
-	ts.RmDir(sp.IMG)
-	imgresize.Cleanup(ts.FsLib, filepath.Join(sp.S3, sp.LOCAL, "9ps3/img-save"))
+	ts.mrts.GetRealm(test.REALM1).RmDir(sp.IMG)
+	imgresize.Cleanup(ts.mrts.GetRealm(test.REALM1).FsLib, filepath.Join(sp.S3, sp.LOCAL, "9ps3/img-save"))
 }
 
 func (ts *TstateRPC) shutdown() {
-	err := ts.Evict(ts.srvProc.GetPid())
-	assert.Nil(ts.T, err)
-	status, err := ts.WaitExit(ts.srvProc.GetPid())
-	if assert.Nil(ts.T, err) {
-		assert.True(ts.T, status.IsStatusEvicted(), "Wrong status: %v", status)
+	err := ts.mrts.GetRealm(test.REALM1).Evict(ts.srvProc.GetPid())
+	assert.Nil(ts.mrts.T, err)
+	status, err := ts.mrts.GetRealm(test.REALM1).WaitExit(ts.srvProc.GetPid())
+	if assert.Nil(ts.mrts.T, err) {
+		assert.True(ts.mrts.T, status.IsStatusEvicted(), "Wrong status: %v", status)
 	}
-	ts.Shutdown()
 }
 
 func TestImgdRPC(t *testing.T) {
-	t1, err1 := test.NewTstateAll(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts, err1 := newTstateRPC(t1)
+	defer mrts.Shutdown()
+
+	ts, err1 := newTstateRPC(mrts)
 	if !assert.Nil(t, err1, "Error New Tstate2: %v", err1) {
-		t1.Shutdown()
 		return
 	}
 
-	err := ts.BootNode(1)
+	err := ts.mrts.GetRealm(test.REALM1).BootNode(1)
 	assert.Nil(t, err, "BootProcd 1")
 
-	err = ts.BootNode(1)
+	err = ts.mrts.GetRealm(test.REALM1).BootNode(1)
 	assert.Nil(t, err, "BootProcd 2")
 
 	in := filepath.Join(sp.S3, sp.LOCAL, "9ps3/img-save/6.jpg")
 	err = ts.rpcc.Resize("resize-rpc-test", in)
-	assert.Nil(ts.T, err)
+	assert.Nil(ts.mrts.T, err)
 	ts.shutdown()
 }

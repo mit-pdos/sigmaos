@@ -412,8 +412,7 @@ func (ts *Tstate) crashServers(srv string, l crash.Tselector, em *crash.TeventMa
 	for i := 0; i < n; i++ {
 		time.Sleep(CRASHSRV * time.Millisecond)
 		e1 := crash.NewEventPath(string(l), 0, float64(1.0), crashSemPn(l, i+1))
-		// XXX use root?
-		ts.mrts.GetRoot().CrashServer(e0, e1, srv)
+		ts.mrts.GetRealm(test.REALM1).CrashServer(e0, e1, srv)
 		e0 = e1
 	}
 }

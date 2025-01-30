@@ -204,7 +204,14 @@ if [[ $BASIC == "--basic" ]]; then
     # test some support package
     #
 
-    for T in path serr util/linux/sched util/perf sigmap sortedmap; do
+    for T in \
+      path \
+      serr \
+      util/linux/sched \
+      util/perf \
+      sigmap \
+      sortedmap; \
+      do
         if ! [ -z "$SKIPTO" ]; then
           if [[ "$SKIPTO" == "$T" ]]; then
             # Stop skipping
@@ -238,7 +245,15 @@ if [[ $BASIC == "--basic" ]]; then
     # test with a kernel with just named
     #
 
-    for T in sigmaclnt/fslib/reader sigmaclnt/fslib/writer sigmasrv/stats dialproxy sigmaclnt/fslib ft/leaderclnt/electclnt sigmaclnt/fslib/dircache; do
+    for T in \
+      sigmaclnt/fslib/reader \
+      sigmaclnt/fslib/writer \
+      sigmasrv/stats \
+      dialproxy \
+      sigmaclnt/fslib \
+      ft/leaderclnt/electclnt \
+      sigmaclnt/fslib/dircache; \
+      do
         if ! [ -z "$SKIPTO" ]; then
           if [[ "$SKIPTO" == "$T" ]]; then
             # Stop skipping
@@ -261,7 +276,15 @@ if [[ $BASIC == "--basic" ]]; then
     # tests a full kernel using root realm
     #
 
-    for T in namesrv util/coordination/semaphore sched/msched/proc/chunk/srv proxy/ux boot/clnt proxy/s3 realm/clnt; do
+    for T in \
+      namesrv \
+      util/coordination/semaphore \
+      sched/msched/proc/chunk/srv \
+      proxy/ux \
+      boot/clnt \
+      proxy/s3 \
+      realm/clnt; \
+      do
         if ! [ -z "$SKIPTO" ]; then
           if [[ "$SKIPTO" == "$T" ]]; then
             # Stop skipping
@@ -278,7 +301,13 @@ if [[ $BASIC == "--basic" ]]; then
     # test realms
     #
 
-    for T in sigmaclnt/procclnt ft/leaderclnt ft/leadertest apps/kv/kvgrp apps/cache/cachegrp/clnt; do
+    for T in \
+      sigmaclnt/procclnt \
+      ft/leaderclnt \
+      ft/leadertest \
+      apps/kv/kvgrp \
+      apps/cache/cachegrp/clnt; \
+      do
         if ! [ -z "$SKIPTO" ]; then
           if [[ "$SKIPTO" == "$T" ]]; then
             # Stop skipping
@@ -354,7 +383,13 @@ if [[ $APPS == "--apps" ]]; then
 #       	go test $VERB sigmaos/apps/socialnetwork -start $SPPROXYD $DIALPROXY -run TestCompose
 #        cleanup
     else
-        for T in apps/imgresize apps/mr apps/hotel apps/socialnetwork apps/www; do
+        for T in \
+          apps/imgresize \
+          apps/mr \
+          apps/hotel \
+          apps/socialnetwork \
+          apps/www; \
+          do
             if ! [ -z "$SKIPTO" ]; then
               if [[ "$SKIPTO" == "$T" ]]; then
                 # Stop skipping

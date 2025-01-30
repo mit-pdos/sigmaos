@@ -78,8 +78,5 @@ func TestPythonAWSImport(t *testing.T) {
 	assert.Nil(t, err)
 	duration3 := time.Since(start)
 	fmt.Printf("cold spawn %v, start %v, exit %v\n", duration, duration2, duration3)
-
-	return
-
 	ts.Shutdown()
 }

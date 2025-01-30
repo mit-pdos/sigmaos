@@ -161,9 +161,6 @@ func (pps *PyProxySrv) handleNewConn(conn *net.UnixConn) {
 			}
 		} else if reqPrefix == "pa" {
 			db.DPrintf(db.PYPROXYSRV, "reader: received API request: %v", reqPath)
-			db.DPrintf(db.PYPROXYSRV, "reader: proc settings: %v %v %v\n", pps.pe.KernelID, pps.pe.Program, pps.pe.ProcdPIDStr)
-			db.DPrintf(db.PYPROXYSRV, "reader: new proc settings: %v %v %v\n", proc.GetProcEnv().KernelID, proc.GetProcEnv().Program, proc.GetProcEnv().PidStr)
-			db.DPrintf(db.PYPROXYSRV, "reader: other proc: %v %v %v\n", pps.sc.ProcEnv().KernelID, pps.sc.ProcEnv().Program, pps.sc.ProcEnv().PidStr)
 			if strings.HasPrefix(reqPath, "/Started") {
 				db.DPrintf(db.PYPROXYSRV, "reader: Started called")
 				err := pps.sc.ProcAPI.Started()
@@ -173,7 +170,7 @@ func (pps *PyProxySrv) handleNewConn(conn *net.UnixConn) {
 				}
 				db.DPrintf(db.PYPROXYSRV, "reader: Started finished")
 			} else if strings.HasPrefix(reqPath, "/Exited") {
-				// pps.sc.Exited(0)
+				pps.sc.ProcAPI.Exited(proc.NewStatus(proc.StatusOK))
 			}
 		} else if reqPrefix == "pf" {
 			// Searching for Python file

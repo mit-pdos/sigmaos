@@ -48,24 +48,24 @@ func init() {
 }
 
 type Tstate struct {
-	*test.Tstate
+	mrts  *test.MultiRealmTstate
 	job   string
 	hotel *hotel.HotelJob
 }
 
-func newTstate(t1 *test.Tstate, srvs []*hotel.Srv, nserver int, geoNIndex, geoSearchRadius, geoNResults int) *Tstate {
+func newTstate(mrts *test.MultiRealmTstate, srvs []*hotel.Srv, nserver int, geoNIndex, geoSearchRadius, geoNResults int) *Tstate {
 	var err error
 	ts := &Tstate{}
 	ts.job = rd.String(8)
-	ts.Tstate = t1
+	ts.mrts = mrts
 	n := 0
 	for i := 1; int(linuxsched.GetNCores())*i < len(srvs)*2+nserver*2; i++ {
 		n += 1
 	}
-	err = ts.BootNode(n)
-	assert.Nil(ts.T, err)
-	ts.hotel, err = hotel.NewHotelJob(ts.SigmaClnt, ts.job, srvs, 80, cache, proc.Tmcpu(2000), nserver, true, 0, 1, geoNIndex, geoSearchRadius, geoNResults)
-	assert.Nil(ts.T, err)
+	err = ts.mrts.GetRealm(test.REALM1).BootNode(n)
+	assert.Nil(ts.mrts.T, err)
+	ts.hotel, err = hotel.NewHotelJob(ts.mrts.GetRealm(test.REALM1).SigmaClnt, ts.job, srvs, 80, cache, proc.Tmcpu(2000), nserver, true, 0, 1, geoNIndex, geoSearchRadius, geoNResults)
+	assert.Nil(ts.mrts.T, err)
 	return ts
 }
 
@@ -77,24 +77,24 @@ func (ts *Tstate) PrintStats(lg *loadgen.LoadGenerator) {
 		ts.statsSrv(s)
 	}
 	cs, err := ts.hotel.StatsSrv()
-	assert.Nil(ts.T, err)
+	assert.Nil(ts.mrts.T, err)
 	for i, cstat := range cs {
 		fmt.Printf("= cache-%v: %v\n", i, cstat)
 	}
 }
 
 func (ts *Tstate) statsSrv(fn string) {
-	stats, err := ts.ReadRPCStats(fn)
-	assert.Nil(ts.T, err, "error get stats %v", err)
+	stats, err := ts.mrts.GetRealm(test.REALM1).ReadRPCStats(fn)
+	assert.Nil(ts.mrts.T, err, "error get stats %v", err)
 	fmt.Printf("= %s: %v\n", fn, stats)
 }
 
 func (ts *Tstate) stop() {
 	err := ts.hotel.Stop()
-	assert.Nil(ts.T, err, "Stop: %v", err)
-	sts, err := ts.GetDir(sp.DBD)
-	assert.Nil(ts.T, err, "Error GetDir: %v", err)
-	assert.True(ts.T, len(sts) < 10)
+	assert.Nil(ts.mrts.T, err, "Stop: %v", err)
+	sts, err := ts.mrts.GetRealm(test.REALM1).GetDir(sp.DBD)
+	assert.Nil(ts.mrts.T, err, "Error GetDir: %v", err)
+	assert.True(ts.mrts.T, len(sts) < 10)
 }
 
 func TestCompile(t *testing.T) {
@@ -105,15 +105,16 @@ func TestGeoSingle(t *testing.T) {
 	if !assert.False(t, linuxsched.GetNCores() > 10, "SpawnBurst test will fail because machine has >10 cores, which causes cgroups settings to fail") {
 		return
 	}
-	t1, err1 := test.NewTstateAll(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts := newTstate(t1, []*hotel.Srv{&hotel.Srv{Name: "hotel-geod", Args: []string{"1000", "10", "20"}}}, 0, DEF_GEO_N_IDX, DEF_GEO_SEARCH_RADIUS, DEF_GEO_N_RESULTS)
-	defer ts.Shutdown()
+	defer mrts.Shutdown()
+
+	ts := newTstate(mrts, []*hotel.Srv{&hotel.Srv{Name: "hotel-geod", Args: []string{"1000", "10", "20"}}}, 0, DEF_GEO_N_IDX, DEF_GEO_SEARCH_RADIUS, DEF_GEO_N_RESULTS)
 	defer ts.stop()
 
-	rpcdc := shardedsvcrpcclnt.NewShardedSvcRPCClnt(ts.FsLib, hotel.HOTELGEODIR, db.TEST, db.TEST)
+	rpcdc := shardedsvcrpcclnt.NewShardedSvcRPCClnt(ts.mrts.GetRealm(test.REALM1).FsLib, hotel.HOTELGEODIR, db.TEST, db.TEST)
 	geoID, err := rpcdc.WaitTimedRandomEntry()
 	if !assert.Nil(t, err, "Err get geo server ID: %v", err) {
 		return
@@ -138,14 +139,15 @@ func TestRateSingle(t *testing.T) {
 	if !assert.False(t, linuxsched.GetNCores() > 10, "SpawnBurst test will fail because machine has >10 cores, which causes cgroups settings to fail") {
 		return
 	}
-	t1, err1 := test.NewTstateAll(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts := newTstate(t1, []*hotel.Srv{&hotel.Srv{Name: "hotel-rated"}}, NCACHESRV, DEF_GEO_N_IDX, DEF_GEO_SEARCH_RADIUS, DEF_GEO_N_RESULTS)
-	defer ts.Shutdown()
+	defer mrts.Shutdown()
+
+	ts := newTstate(mrts, []*hotel.Srv{&hotel.Srv{Name: "hotel-rated"}}, NCACHESRV, DEF_GEO_N_IDX, DEF_GEO_SEARCH_RADIUS, DEF_GEO_N_RESULTS)
 	defer ts.stop()
-	rpcc, err := sprpcclnt.NewRPCClnt(ts.FsLib, hotel.HOTELRATE)
+	rpcc, err := sprpcclnt.NewRPCClnt(ts.mrts.GetRealm(test.REALM1).FsLib, hotel.HOTELRATE)
 	if !assert.Nil(t, err, "Err make rpcclnt: %v", err) {
 		return
 	}
@@ -168,14 +170,15 @@ func TestRecSingle(t *testing.T) {
 	if !assert.False(t, linuxsched.GetNCores() > 10, "SpawnBurst test will fail because machine has >10 cores, which causes cgroups settings to fail") {
 		return
 	}
-	t1, err1 := test.NewTstateAll(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts := newTstate(t1, []*hotel.Srv{&hotel.Srv{Name: "hotel-recd"}}, 0, DEF_GEO_N_IDX, DEF_GEO_SEARCH_RADIUS, DEF_GEO_N_RESULTS)
-	defer ts.Shutdown()
+	defer mrts.Shutdown()
+
+	ts := newTstate(mrts, []*hotel.Srv{&hotel.Srv{Name: "hotel-recd"}}, 0, DEF_GEO_N_IDX, DEF_GEO_SEARCH_RADIUS, DEF_GEO_N_RESULTS)
 	defer ts.stop()
-	rpcc, err := sprpcclnt.NewRPCClnt(ts.FsLib, hotel.HOTELREC)
+	rpcc, err := sprpcclnt.NewRPCClnt(ts.mrts.GetRealm(test.REALM1).FsLib, hotel.HOTELREC)
 	if !assert.Nil(t, err, "Err make rpcclnt: %v", err) {
 		return
 	}
@@ -196,14 +199,15 @@ func TestUserSingle(t *testing.T) {
 	if !assert.False(t, linuxsched.GetNCores() > 10, "SpawnBurst test will fail because machine has >10 cores, which causes cgroups settings to fail") {
 		return
 	}
-	t1, err1 := test.NewTstateAll(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts := newTstate(t1, []*hotel.Srv{&hotel.Srv{Name: "hotel-userd"}}, 0, DEF_GEO_N_IDX, DEF_GEO_SEARCH_RADIUS, DEF_GEO_N_RESULTS)
-	defer ts.Shutdown()
+	defer mrts.Shutdown()
+
+	ts := newTstate(mrts, []*hotel.Srv{&hotel.Srv{Name: "hotel-userd"}}, 0, DEF_GEO_N_IDX, DEF_GEO_SEARCH_RADIUS, DEF_GEO_N_RESULTS)
 	defer ts.stop()
-	rpcc, err := sprpcclnt.NewRPCClnt(ts.FsLib, hotel.HOTELUSER)
+	rpcc, err := sprpcclnt.NewRPCClnt(ts.mrts.GetRealm(test.REALM1).FsLib, hotel.HOTELUSER)
 	if !assert.Nil(t, err, "Err make rpcclnt: %v", err) {
 		return
 	}
@@ -222,14 +226,15 @@ func TestProfile(t *testing.T) {
 	if !assert.False(t, linuxsched.GetNCores() > 10, "SpawnBurst test will fail because machine has >10 cores, which causes cgroups settings to fail") {
 		return
 	}
-	t1, err1 := test.NewTstateAll(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts := newTstate(t1, []*hotel.Srv{&hotel.Srv{Name: "hotel-profd"}}, NCACHESRV, DEF_GEO_N_IDX, DEF_GEO_SEARCH_RADIUS, DEF_GEO_N_RESULTS)
-	defer ts.Shutdown()
+	defer mrts.Shutdown()
+
+	ts := newTstate(mrts, []*hotel.Srv{&hotel.Srv{Name: "hotel-profd"}}, NCACHESRV, DEF_GEO_N_IDX, DEF_GEO_SEARCH_RADIUS, DEF_GEO_N_RESULTS)
 	defer ts.stop()
-	rpcc, err := sprpcclnt.NewRPCClnt(ts.FsLib, hotel.HOTELPROF)
+	rpcc, err := sprpcclnt.NewRPCClnt(ts.mrts.GetRealm(test.REALM1).FsLib, hotel.HOTELPROF)
 	if !assert.Nil(t, err, "Err make rpcclnt: %v", err) {
 		return
 	}
@@ -252,15 +257,15 @@ func TestCheck(t *testing.T) {
 	if !assert.False(t, linuxsched.GetNCores() > 10, "SpawnBurst test will fail because machine has >10 cores, which causes cgroups settings to fail") {
 		return
 	}
-	t1, err1 := test.NewTstateAll(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
+	defer mrts.Shutdown()
 
-	ts := newTstate(t1, []*hotel.Srv{&hotel.Srv{Name: "hotel-reserved"}}, NCACHESRV, DEF_GEO_N_IDX, DEF_GEO_SEARCH_RADIUS, DEF_GEO_N_RESULTS)
-	defer ts.Shutdown()
+	ts := newTstate(mrts, []*hotel.Srv{&hotel.Srv{Name: "hotel-reserved"}}, NCACHESRV, DEF_GEO_N_IDX, DEF_GEO_SEARCH_RADIUS, DEF_GEO_N_RESULTS)
 	defer ts.stop()
-	rpcc, err := sprpcclnt.NewRPCClnt(ts.FsLib, hotel.HOTELRESERVE)
+	rpcc, err := sprpcclnt.NewRPCClnt(ts.mrts.GetRealm(test.REALM1).FsLib, hotel.HOTELRESERVE)
 	if !assert.Nil(t, err, "Err make rpcclnt: %v", err) {
 		return
 	}
@@ -285,15 +290,15 @@ func TestReserve(t *testing.T) {
 	if !assert.False(t, linuxsched.GetNCores() > 10, "SpawnBurst test will fail because machine has >10 cores, which causes cgroups settings to fail") {
 		return
 	}
-	t1, err1 := test.NewTstateAll(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
+	defer mrts.Shutdown()
 
-	ts := newTstate(t1, []*hotel.Srv{&hotel.Srv{Name: "hotel-reserved"}}, NCACHESRV, DEF_GEO_N_IDX, DEF_GEO_SEARCH_RADIUS, DEF_GEO_N_RESULTS)
-	defer ts.Shutdown()
+	ts := newTstate(mrts, []*hotel.Srv{&hotel.Srv{Name: "hotel-reserved"}}, NCACHESRV, DEF_GEO_N_IDX, DEF_GEO_SEARCH_RADIUS, DEF_GEO_N_RESULTS)
 	defer ts.stop()
-	rpcc, err := sprpcclnt.NewRPCClnt(ts.FsLib, hotel.HOTELRESERVE)
+	rpcc, err := sprpcclnt.NewRPCClnt(ts.mrts.GetRealm(test.REALM1).FsLib, hotel.HOTELRESERVE)
 	if !assert.Nil(t, err, "Err make rpcclnt: %v", err) {
 		return
 	}
@@ -320,12 +325,13 @@ func TestQueryDev(t *testing.T) {
 	if !assert.False(t, linuxsched.GetNCores() > 10, "SpawnBurst test will fail because machine has >10 cores, which causes cgroups settings to fail") {
 		return
 	}
-	ts, err1 := test.NewTstateAll(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	defer ts.Shutdown()
-	dbc, err := dbclnt.NewDbClnt(ts.FsLib, sp.DBD)
+	defer mrts.Shutdown()
+
+	dbc, err := dbclnt.NewDbClnt(mrts.GetRealm(test.REALM1).FsLib, sp.DBD)
 	if !assert.Nil(t, err, "Err make rpcclnt: %v", err) {
 		return
 	}
@@ -342,14 +348,15 @@ func TestSingleSearch(t *testing.T) {
 	if !assert.False(t, linuxsched.GetNCores() > 10, "SpawnBurst test will fail because machine has >10 cores, which causes cgroups settings to fail") {
 		return
 	}
-	t1, err1 := test.NewTstateAll(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts := newTstate(t1, []*hotel.Srv{&hotel.Srv{Name: "hotel-geod", Args: []string{"1", "10", "5"}}, &hotel.Srv{Name: "hotel-rated"}, &hotel.Srv{Name: "hotel-searchd"}}, NCACHESRV, DEF_GEO_N_IDX, DEF_GEO_SEARCH_RADIUS, DEF_GEO_N_RESULTS)
-	defer ts.Shutdown()
+	defer mrts.Shutdown()
+
+	ts := newTstate(mrts, []*hotel.Srv{&hotel.Srv{Name: "hotel-geod", Args: []string{"1", "10", "5"}}, &hotel.Srv{Name: "hotel-rated"}, &hotel.Srv{Name: "hotel-searchd"}}, NCACHESRV, DEF_GEO_N_IDX, DEF_GEO_SEARCH_RADIUS, DEF_GEO_N_RESULTS)
 	defer ts.stop()
-	rpcc, err := sprpcclnt.NewRPCClnt(ts.FsLib, hotel.HOTELSEARCH)
+	rpcc, err := sprpcclnt.NewRPCClnt(ts.mrts.GetRealm(test.REALM1).FsLib, hotel.HOTELSEARCH)
 	if !assert.Nil(t, err, "Err make rpcclnt: %v", err) {
 		return
 	}
@@ -373,13 +380,15 @@ func TestWww(t *testing.T) {
 	if !assert.False(t, linuxsched.GetNCores() > 10, "SpawnBurst test will fail because machine has >10 cores, which causes cgroups settings to fail") {
 		return
 	}
-	t1, err1 := test.NewTstateAll(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts := newTstate(t1, hotel.NewHotelSvc(), NCACHESRV, DEF_GEO_N_IDX, DEF_GEO_SEARCH_RADIUS, DEF_GEO_N_RESULTS)
+	defer mrts.Shutdown()
 
-	wc, err1 := hotel.NewWebClnt(ts.FsLib, ts.job)
+	ts := newTstate(mrts, hotel.NewHotelSvc(), NCACHESRV, DEF_GEO_N_IDX, DEF_GEO_SEARCH_RADIUS, DEF_GEO_N_RESULTS)
+
+	wc, err1 := hotel.NewWebClnt(ts.mrts.GetRealm(test.REALM1).FsLib, ts.job)
 	assert.Nil(t, err1, "Error NewWebClnt: %v", err1)
 
 	s, err := wc.Login("Cornell_0", hotel.NewPassword("0"))
@@ -401,7 +410,6 @@ func TestWww(t *testing.T) {
 	assert.Equal(t, "Geo!", s)
 
 	ts.stop()
-	ts.Shutdown()
 }
 
 func runSearch(t *testing.T, wc *hotel.WebClnt, r *rand.Rand) {
@@ -437,18 +445,19 @@ func TestBenchDeathStarSingle(t *testing.T) {
 	if !assert.False(t, linuxsched.GetNCores() > 10, "SpawnBurst test will fail because machine has >10 cores, which causes cgroups settings to fail") {
 		return
 	}
-	t1, err1 := test.NewTstateAll(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts := newTstate(t1, hotel.NewHotelSvc(), NCACHESRV, DEF_GEO_N_IDX, DEF_GEO_SEARCH_RADIUS, DEF_GEO_N_RESULTS)
-	wc, err1 := hotel.NewWebClnt(ts.FsLib, ts.job)
+	defer mrts.Shutdown()
+
+	ts := newTstate(mrts, hotel.NewHotelSvc(), NCACHESRV, DEF_GEO_N_IDX, DEF_GEO_SEARCH_RADIUS, DEF_GEO_N_RESULTS)
+	wc, err1 := hotel.NewWebClnt(ts.mrts.GetRealm(test.REALM1).FsLib, ts.job)
 	assert.Nil(t, err1, "Error NewWebClnt: %v", err1)
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	hotel.RunDSB(t, 1000, wc, r)
 	ts.PrintStats(nil)
 	ts.stop()
-	ts.Shutdown()
 }
 
 func TestBenchDeathStarSingleK8s(t *testing.T) {
@@ -461,20 +470,21 @@ func TestBenchDeathStarSingleK8s(t *testing.T) {
 		db.DPrintf(db.ALWAYS, "No k8s addr supplied")
 		return
 	}
-	t1, err1 := test.NewTstateAll(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts := newTstate(t1, nil, 0, DEF_GEO_N_IDX, DEF_GEO_SEARCH_RADIUS, DEF_GEO_N_RESULTS)
+	defer mrts.Shutdown()
+
+	ts := newTstate(mrts, nil, 0, DEF_GEO_N_IDX, DEF_GEO_SEARCH_RADIUS, DEF_GEO_N_RESULTS)
 
 	err1 = setupK8sState(ts)
 	assert.Nil(t, err1, "Error setupK8sState: %v", err1)
 
-	wc, err1 := hotel.NewWebClnt(ts.FsLib, ts.job)
+	wc, err1 := hotel.NewWebClnt(ts.mrts.GetRealm(test.REALM1).FsLib, ts.job)
 	assert.Nil(t, err1, "Error NewWebClnt: %v", err1)
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	hotel.RunDSB(t, 1000, wc, r)
-	ts.Shutdown()
 }
 
 func TestBenchSearchSigma(t *testing.T) {
@@ -482,38 +492,39 @@ func TestBenchSearchSigma(t *testing.T) {
 	if !assert.False(t, linuxsched.GetNCores() > 10, "SpawnBurst test will fail because machine has >10 cores, which causes cgroups settings to fail") {
 		return
 	}
-	t1, err1 := test.NewTstateAll(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts := newTstate(t1, hotel.NewHotelSvc(), NCACHESRV, DEF_GEO_N_IDX, DEF_GEO_SEARCH_RADIUS, DEF_GEO_N_RESULTS)
-	wc, err1 := hotel.NewWebClnt(ts.FsLib, ts.job)
+	defer mrts.Shutdown()
+
+	ts := newTstate(mrts, hotel.NewHotelSvc(), NCACHESRV, DEF_GEO_N_IDX, DEF_GEO_SEARCH_RADIUS, DEF_GEO_N_RESULTS)
+	wc, err1 := hotel.NewWebClnt(ts.mrts.GetRealm(test.REALM1).FsLib, ts.job)
 	assert.Nil(t, err1, "Error NewWebClnt: %v", err1)
-	p, err := perf.NewPerf(ts.ProcEnv(), perf.TEST)
+	p, err := perf.NewPerf(ts.mrts.GetRealm(test.REALM1).ProcEnv(), perf.TEST)
 	assert.Nil(t, err)
 	defer p.Done()
 	lg := loadgen.NewLoadGenerator(DURATION, MAX_RPS, func(r *rand.Rand) (time.Duration, bool) {
-		runSearch(ts.T, wc, r)
+		runSearch(ts.mrts.T, wc, r)
 		return 0, false
 	})
 	lg.Calibrate()
 	lg.Run()
 	ts.PrintStats(lg)
 	ts.stop()
-	ts.Shutdown()
 }
 
 func setupK8sState(ts *Tstate) error {
 	// Advertise server address
 	p := hotel.JobHTTPAddrsPath(ts.job)
 	h, po, err := net.SplitHostPort(K8S_ADDR)
-	assert.Nil(ts.T, err, "Err split host port %v: %v", K8S_ADDR, err)
+	assert.Nil(ts.mrts.T, err, "Err split host port %v: %v", K8S_ADDR, err)
 	port, err := strconv.Atoi(po)
-	assert.Nil(ts.T, err, "Err parse port %v: %v", po, err)
+	assert.Nil(ts.mrts.T, err, "Err parse port %v: %v", po, err)
 	addr := sp.NewTaddrRealm(sp.Tip(h), sp.INNER_CONTAINER_IP, sp.Tport(port))
 	mnt := sp.NewEndpoint(sp.EXTERNAL_EP, []*sp.Taddr{addr})
-	err = ts.MkEndpointFile(p, mnt)
-	if !assert.Nil(ts.T, err) {
+	err = ts.mrts.GetRealm(test.REALM1).MkEndpointFile(p, mnt)
+	if !assert.Nil(ts.mrts.T, err) {
 		db.DPrintf(db.ERROR, "MkEndpointFile %v", err)
 		return err
 	}
@@ -530,25 +541,26 @@ func TestBenchSearchK8s(t *testing.T) {
 		db.DPrintf(db.ALWAYS, "No k8s addr supplied")
 		return
 	}
-	t1, err1 := test.NewTstateAll(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts := newTstate(t1, nil, 0, DEF_GEO_N_IDX, DEF_GEO_SEARCH_RADIUS, DEF_GEO_N_RESULTS)
+	defer mrts.Shutdown()
+
+	ts := newTstate(mrts, nil, 0, DEF_GEO_N_IDX, DEF_GEO_SEARCH_RADIUS, DEF_GEO_N_RESULTS)
 	err1 = setupK8sState(ts)
 	assert.Nil(t, err1, "Error setupK8sState: %v", err1)
-	wc, err1 := hotel.NewWebClnt(ts.FsLib, ts.job)
+	wc, err1 := hotel.NewWebClnt(ts.mrts.GetRealm(test.REALM1).FsLib, ts.job)
 	assert.Nil(t, err1, "Error NewWebClnt: %v", err1)
-	pf, err := perf.NewPerf(ts.ProcEnv(), perf.TEST)
+	pf, err := perf.NewPerf(ts.mrts.GetRealm(test.REALM1).ProcEnv(), perf.TEST)
 	assert.Nil(t, err)
 	defer pf.Done()
 	lg := loadgen.NewLoadGenerator(DURATION, MAX_RPS, func(r *rand.Rand) (time.Duration, bool) {
-		runSearch(ts.T, wc, r)
+		runSearch(ts.mrts.T, wc, r)
 		return 0, false
 	})
 	lg.Calibrate()
 	lg.Run()
-	ts.Shutdown()
 }
 
 func TestBenchGeoSigma(t *testing.T) {
@@ -556,25 +568,26 @@ func TestBenchGeoSigma(t *testing.T) {
 	if !assert.False(t, linuxsched.GetNCores() > 10, "SpawnBurst test will fail because machine has >10 cores, which causes cgroups settings to fail") {
 		return
 	}
-	t1, err1 := test.NewTstateAll(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts := newTstate(t1, hotel.NewHotelSvc(), NCACHESRV, 1, 20, 500)
-	wc, err1 := hotel.NewWebClnt(ts.FsLib, ts.job)
+	defer mrts.Shutdown()
+
+	ts := newTstate(mrts, hotel.NewHotelSvc(), NCACHESRV, 1, 20, 500)
+	wc, err1 := hotel.NewWebClnt(ts.mrts.GetRealm(test.REALM1).FsLib, ts.job)
 	assert.Nil(t, err1, "Error NewWebClnt: %v", err1)
-	p, err := perf.NewPerf(ts.ProcEnv(), perf.TEST)
+	p, err := perf.NewPerf(ts.mrts.GetRealm(test.REALM1).ProcEnv(), perf.TEST)
 	assert.Nil(t, err)
 	defer p.Done()
 	lg := loadgen.NewLoadGenerator(DURATION, MAX_RPS, func(r *rand.Rand) (time.Duration, bool) {
-		runGeo(ts.T, wc, r)
+		runGeo(ts.mrts.T, wc, r)
 		return 0, false
 	})
 	lg.Calibrate()
 	lg.Run()
 	ts.PrintStats(lg)
 	ts.stop()
-	ts.Shutdown()
 }
 
 func TestBenchGeoK8s(t *testing.T) {
@@ -587,37 +600,40 @@ func TestBenchGeoK8s(t *testing.T) {
 		db.DPrintf(db.ALWAYS, "No k8s addr supplied")
 		return
 	}
-	t1, err1 := test.NewTstateAll(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts := newTstate(t1, nil, 0, DEF_GEO_N_IDX, DEF_GEO_SEARCH_RADIUS, DEF_GEO_N_RESULTS)
+	defer mrts.Shutdown()
+
+	ts := newTstate(mrts, nil, 0, DEF_GEO_N_IDX, DEF_GEO_SEARCH_RADIUS, DEF_GEO_N_RESULTS)
 	err1 = setupK8sState(ts)
 	assert.Nil(t, err1, "Error setupK8sState: %v", err1)
-	wc, err1 := hotel.NewWebClnt(ts.FsLib, ts.job)
+	wc, err1 := hotel.NewWebClnt(ts.mrts.GetRealm(test.REALM1).FsLib, ts.job)
 	assert.Nil(t, err1, "Error NewWebClnt: %v", err1)
-	pf, err := perf.NewPerf(ts.ProcEnv(), perf.TEST)
+	pf, err := perf.NewPerf(ts.mrts.GetRealm(test.REALM1).ProcEnv(), perf.TEST)
 	assert.Nil(t, err)
 	defer pf.Done()
 	lg := loadgen.NewLoadGenerator(DURATION, MAX_RPS, func(r *rand.Rand) (time.Duration, bool) {
-		runGeo(ts.T, wc, r)
+		runGeo(ts.mrts.T, wc, r)
 		return 0, false
 	})
 	lg.Calibrate()
 	lg.Run()
-	ts.Shutdown()
 }
 
 func testMultiSearch(t *testing.T, nthread int) {
 	const (
 		N = 1000
 	)
-	t1, err1 := test.NewTstateAll(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts := newTstate(t1, hotel.NewHotelSvc(), NCACHESRV, DEF_GEO_N_IDX, DEF_GEO_SEARCH_RADIUS, DEF_GEO_N_RESULTS)
-	wc, err1 := hotel.NewWebClnt(ts.FsLib, ts.job)
+	defer mrts.Shutdown()
+
+	ts := newTstate(mrts, hotel.NewHotelSvc(), NCACHESRV, DEF_GEO_N_IDX, DEF_GEO_SEARCH_RADIUS, DEF_GEO_N_RESULTS)
+	wc, err1 := hotel.NewWebClnt(ts.mrts.GetRealm(test.REALM1).FsLib, ts.job)
 	assert.Nil(t, err1, "Error NewWebClnt: %v", err1)
 	ch := make(chan bool)
 	start := time.Now()
@@ -625,7 +641,7 @@ func testMultiSearch(t *testing.T, nthread int) {
 		r := rand.New(rand.NewSource(time.Now().UnixNano()))
 		go func() {
 			for i := 0; i < N; i++ {
-				runSearch(ts.T, wc, r)
+				runSearch(ts.mrts.T, wc, r)
 			}
 			ch <- true
 		}()
@@ -636,7 +652,6 @@ func testMultiSearch(t *testing.T, nthread int) {
 	db.DPrintf(db.TEST, "TestBenchMultiSearch nthread=%d N=%d %dms\n", nthread, N, time.Since(start).Milliseconds())
 	ts.PrintStats(nil)
 	ts.stop()
-	ts.Shutdown()
 }
 
 func TestMultiSearch(t *testing.T) {
@@ -659,15 +674,17 @@ func TestAuthK8s(t *testing.T) {
 		db.DPrintf(db.ALWAYS, "Not testing auth, skipping auth test")
 		return
 	}
-	t1, err1 := test.NewTstateAll(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts := newTstate(t1, nil, 0, DEF_GEO_N_IDX, DEF_GEO_SEARCH_RADIUS, DEF_GEO_N_RESULTS)
+	defer mrts.Shutdown()
+
+	ts := newTstate(mrts, nil, 0, DEF_GEO_N_IDX, DEF_GEO_SEARCH_RADIUS, DEF_GEO_N_RESULTS)
 	err1 = setupK8sState(ts)
 	assert.Nil(t, err1, "Error setupK8sState: %v", err1)
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
-	wc, err1 := hotel.NewWebClnt(ts.FsLib, ts.job)
+	wc, err1 := hotel.NewWebClnt(ts.mrts.GetRealm(test.REALM1).FsLib, ts.job)
 	assert.Nil(t, err1, "Error NewWebClnt: %v", err1)
 	allowedUID := 10
 	s, err := hotel.RandReserveReqUser(wc, r, allowedUID)
@@ -680,5 +697,4 @@ func TestAuthK8s(t *testing.T) {
 	s, err = hotel.RandLoginReq(wc, r)
 	assert.Nil(t, err)
 	assert.Equal(t, "Login successfully!", s)
-	ts.Shutdown()
 }

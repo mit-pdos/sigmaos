@@ -138,6 +138,7 @@ func TestImgdFatalError(t *testing.T) {
 		return
 	}
 	defer mrts.Shutdown()
+
 	ts, err1 := newTstate(mrts)
 	if !assert.Nil(t, err1, "Error New Tstate2: %v", err1) {
 		return

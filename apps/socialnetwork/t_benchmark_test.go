@@ -45,7 +45,9 @@ func init() {
 
 func initUserAndGraph(t *testing.T, mongoUrl string) {
 	session, err := mgo.Dial(mongoUrl)
-	assert.Nil(t, err, "Cannot connect to Mongo: %v", err)
+	if !assert.Nil(t, err, "Cannot connect to Mongo: %v", err) {
+		return
+	}
 	// insert users
 	session.DB(sn.SN_DB).C(sn.USER_COL).EnsureIndexKey("username")
 	dbg.DPrintf(dbg.TEST, "Inserting users")

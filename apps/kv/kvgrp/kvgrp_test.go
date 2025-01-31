@@ -31,25 +31,28 @@ const (
 var EvP = crash.NewEvent(crash.KVD_PARTITION, PARTITION, 0.33)
 
 type Tstate struct {
-	*test.Tstate
-	grp string
-	gm  *procgroupmgr.ProcGroupMgr
-	job string
+	mrts *test.MultiRealmTstate
+	grp  string
+	gm   *procgroupmgr.ProcGroupMgr
+	job  string
 }
 
-func newTstate(t1 *test.Tstate, nrepl int, persist bool) *Tstate {
-	ts := &Tstate{job: rand.Name(), grp: GRP}
-	ts.Tstate = t1
-	ts.MkDir(kvgrp.KVDIR, 0777)
-	err := ts.MkDir(kvgrp.JobDir(ts.job), 0777)
-	assert.Nil(t1.T, err)
+func newTstate(mrts *test.MultiRealmTstate, nrepl int, persist bool) *Tstate {
+	ts := &Tstate{
+		job:  rand.Name(),
+		grp:  GRP,
+		mrts: mrts,
+	}
+	ts.mrts.GetRealm(test.REALM1).MkDir(kvgrp.KVDIR, 0777)
+	err := ts.mrts.GetRealm(test.REALM1).MkDir(kvgrp.JobDir(ts.job), 0777)
+	assert.Nil(mrts.T, err)
 	mcfg := procgroupmgr.NewGroupConfig(nrepl, "kvd", []string{ts.grp}, 0, ts.job)
 	if persist {
-		mcfg.Persist(ts.SigmaClnt.FsLib)
+		mcfg.Persist(ts.mrts.GetRealm(test.REALM1).SigmaClnt.FsLib)
 	}
-	ts.gm = mcfg.StartGrpMgr(ts.SigmaClnt)
-	cfg, err := kvgrp.WaitStarted(ts.SigmaClnt.FsLib, kvgrp.JobDir(ts.job), ts.grp)
-	assert.Nil(t1.T, err)
+	ts.gm = mcfg.StartGrpMgr(ts.mrts.GetRealm(test.REALM1).SigmaClnt)
+	cfg, err := kvgrp.WaitStarted(ts.mrts.GetRealm(test.REALM1).SigmaClnt.FsLib, kvgrp.JobDir(ts.job), ts.grp)
+	assert.Nil(mrts.T, err)
 	db.DPrintf(db.TEST, "cfg %v\n", cfg)
 	return ts
 }
@@ -57,96 +60,104 @@ func newTstate(t1 *test.Tstate, nrepl int, persist bool) *Tstate {
 func (ts *Tstate) Shutdown(crash bool) {
 	if crash {
 		err := ts.gm.Crash()
-		assert.Nil(ts.T, err)
+		assert.Nil(ts.mrts.T, err)
 	}
-	ts.Tstate.Shutdown()
+	ts.mrts.Shutdown()
 }
 
 func TestCompile(t *testing.T) {
 }
 
 func TestStartStopRepl0(t *testing.T) {
-	t1, err1 := test.NewTstateAll(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts := newTstate(t1, kv.KVD_NO_REPL, false)
 
-	sts, _, err := ts.ReadDir(kvgrp.GrpPath(kvgrp.JobDir(ts.job), ts.grp) + "/")
+	ts := newTstate(mrts, kv.KVD_NO_REPL, false)
+
+	sts, _, err := ts.mrts.GetRealm(test.REALM1).ReadDir(kvgrp.GrpPath(kvgrp.JobDir(ts.job), ts.grp) + "/")
 	db.DPrintf(db.TEST, "Stat: %v %v\n", sp.Names(sts), err)
 	assert.Nil(t, err, "stat")
 
 	time.Sleep(2 * fsetcd.LeaseTTL * time.Second)
 
-	_, err = ts.GetFile(kvgrp.GrpPath(kvgrp.JobDir(ts.job), ts.grp))
+	_, err = ts.mrts.GetRealm(test.REALM1).GetFile(kvgrp.GrpPath(kvgrp.JobDir(ts.job), ts.grp))
 	assert.Nil(t, err, "GetFile")
 
 	_, err = ts.gm.StopGroup()
-	assert.Nil(ts.T, err, "Stop")
+	assert.Nil(ts.mrts.T, err, "Stop")
 	ts.Shutdown(false)
 }
 
 func TestStartStopReplN(t *testing.T) {
-	t1, err1 := test.NewTstateAll(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts := newTstate(t1, kv.KVD_REPL_LEVEL, false)
+
+	ts := newTstate(mrts, kv.KVD_REPL_LEVEL, false)
 
 	time.Sleep(2 * fsetcd.LeaseTTL * time.Second)
 
-	_, err := ts.GetFile(kvgrp.GrpPath(kvgrp.JobDir(ts.job), ts.grp))
+	_, err := ts.mrts.GetRealm(test.REALM1).GetFile(kvgrp.GrpPath(kvgrp.JobDir(ts.job), ts.grp))
 	assert.Nil(t, err, "GetFile")
 
 	_, err = ts.gm.StopGroup()
-	assert.Nil(ts.T, err, "Stop")
+	assert.Nil(ts.mrts.T, err, "Stop")
 	ts.Shutdown(false)
 }
 
+// XXX TODO shutdown?
 func (ts *Tstate) testRecover() {
 	ts.Shutdown(true)
 	time.Sleep(2 * fsetcd.LeaseTTL * time.Second)
-	t1, err1 := test.NewTstateAll(ts.T)
-	if !assert.Nil(ts.T, err1, "Error New Tstate: %v", err1) {
+	mrts, err1 := test.NewMultiRealmTstate(ts.mrts.T, []sp.Trealm{test.REALM1})
+	if !assert.Nil(ts.mrts.T, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts.Tstate = t1
-	gms, err := procgroupmgr.Recover(ts.SigmaClnt)
-	assert.Nil(ts.T, err, "Recover")
-	assert.Equal(ts.T, 1, len(gms))
-	cfg, err := kvgrp.WaitStarted(ts.SigmaClnt.FsLib, kvgrp.JobDir(ts.job), ts.grp)
-	assert.Nil(ts.T, err)
+
+	ts.mrts = mrts
+	gms, err := procgroupmgr.Recover(ts.mrts.GetRealm(test.REALM1).SigmaClnt)
+	assert.Nil(ts.mrts.T, err, "Recover")
+	assert.Equal(ts.mrts.T, 1, len(gms))
+	cfg, err := kvgrp.WaitStarted(ts.mrts.GetRealm(test.REALM1).SigmaClnt.FsLib, kvgrp.JobDir(ts.job), ts.grp)
+	assert.Nil(ts.mrts.T, err)
 	time.Sleep(1 * fsetcd.LeaseTTL * time.Second)
 	db.DPrintf(db.TEST, "cfg %v\n", cfg)
 	time.Sleep(1 * fsetcd.LeaseTTL * time.Second)
 	gms[0].StopGroup()
-	ts.RmDir(procgroupmgr.GRPMGRDIR)
+	ts.mrts.GetRealm(test.REALM1).RmDir(procgroupmgr.GRPMGRDIR)
 	ts.Shutdown(false)
 }
 
 func TestRestartRepl0(t *testing.T) {
-	t1, err1 := test.NewTstateAll(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts := newTstate(t1, kv.KVD_NO_REPL, true)
+
+	ts := newTstate(mrts, kv.KVD_NO_REPL, true)
 	ts.testRecover()
+	ts.mrts.Shutdown()
 }
 
 func TestRestartReplN(t *testing.T) {
-	t1, err1 := test.NewTstateAll(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts := newTstate(t1, kv.KVD_REPL_LEVEL, true)
+
+	ts := newTstate(mrts, kv.KVD_REPL_LEVEL, true)
 	ts.testRecover()
+	ts.mrts.Shutdown()
 }
 
 // kvd crashes storing a semaphore. The test's down() will return a
 // not-found for the semaphore, which is interpreted as a successful
 // down by the semaphore.
 func TestServerCrash(t *testing.T) {
-	t1, err1 := test.NewTstateAll(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
@@ -154,9 +165,9 @@ func TestServerCrash(t *testing.T) {
 	e0 := crash.NewEvent(crash.KVD_CRASH, kvgrp.CRASH, 0.33)
 	err := crash.SetSigmaFail(crash.NewTeventMapOne(e0))
 
-	ts := newTstate(t1, kv.KVD_NO_REPL, false)
+	ts := newTstate(mrts, kv.KVD_NO_REPL, false)
 
-	sem := semaphore.NewSemaphore(ts.FsLib, kvgrp.GrpPath(kvgrp.JobDir(ts.job), ts.grp)+"/sem")
+	sem := semaphore.NewSemaphore(ts.mrts.GetRealm(test.REALM1).FsLib, kvgrp.GrpPath(kvgrp.JobDir(ts.job), ts.grp)+"/sem")
 	err = sem.Init(0)
 	assert.Nil(t, err)
 
@@ -164,7 +175,7 @@ func TestServerCrash(t *testing.T) {
 
 	ch := make(chan error)
 	go func() {
-		pe := proc.NewAddedProcEnv(ts.ProcEnv())
+		pe := proc.NewAddedProcEnv(ts.mrts.GetRealm(test.REALM1).ProcEnv())
 		fsl, err := sigmaclnt.NewFsLib(pe, dialproxyclnt.NewDialProxyClnt(pe))
 		assert.Nil(t, err)
 		sem := semaphore.NewSemaphore(fsl, kvgrp.GrpPath(kvgrp.JobDir(ts.job), ts.grp)+"/sem")
@@ -173,7 +184,7 @@ func TestServerCrash(t *testing.T) {
 	}()
 
 	err = <-ch
-	assert.Nil(ts.T, err, "down")
+	assert.Nil(ts.mrts.T, err, "down")
 
 	ts.gm.StopGroup()
 
@@ -182,7 +193,7 @@ func TestServerCrash(t *testing.T) {
 
 func TestReconnectSimple(t *testing.T) {
 	const N = 100
-	t1, err1 := test.NewTstateAll(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
@@ -190,11 +201,11 @@ func TestReconnectSimple(t *testing.T) {
 	e0 := crash.NewEvent(crash.KVD_NETFAIL, NETFAIL, 0.33)
 	err := crash.SetSigmaFail(crash.NewTeventMapOne(e0))
 
-	ts := newTstate(t1, kv.KVD_NO_REPL, false)
+	ts := newTstate(mrts, kv.KVD_NO_REPL, false)
 
 	ch := make(chan error)
 	go func() {
-		pe := proc.NewAddedProcEnv(ts.ProcEnv())
+		pe := proc.NewAddedProcEnv(ts.mrts.GetRealm(test.REALM1).ProcEnv())
 		fsl, err := sigmaclnt.NewFsLib(pe, dialproxyclnt.NewDialProxyClnt(pe))
 		assert.Nil(t, err)
 		for i := 0; i < N; i++ {
@@ -209,13 +220,13 @@ func TestReconnectSimple(t *testing.T) {
 	}()
 
 	err = <-ch
-	assert.Nil(ts.T, err, "fsl1")
+	assert.Nil(ts.mrts.T, err, "fsl1")
 	ts.gm.StopGroup()
 	ts.Shutdown(false)
 }
 
 func (ts *Tstate) stat(t *testing.T, i int, ch chan error) {
-	pe := proc.NewAddedProcEnv(ts.ProcEnv())
+	pe := proc.NewAddedProcEnv(ts.mrts.GetRealm(test.REALM1).ProcEnv())
 	fsl, err := sigmaclnt.NewFsLib(pe, dialproxyclnt.NewDialProxyClnt(pe))
 	assert.Nil(t, err)
 	for true {
@@ -233,20 +244,20 @@ func (ts *Tstate) stat(t *testing.T, i int, ch chan error) {
 func TestServerPartitionNonBlockingSimple(t *testing.T) {
 	const N = 3
 
-	t1, err1 := test.NewTstateAll(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
 
 	err := crash.SetSigmaFail(crash.NewTeventMapOne(EvP))
 	assert.Nil(t, err)
-	ts := newTstate(t1, kv.KVD_NO_REPL, false)
+	ts := newTstate(mrts, kv.KVD_NO_REPL, false)
 
 	ch := make(chan error)
 	for i := 0; i < N; i++ {
 		go ts.stat(t, i, ch)
 		err := <-ch
-		assert.NotNil(ts.T, err, "stat")
+		assert.NotNil(ts.mrts.T, err, "stat")
 	}
 	db.DPrintf(db.TEST, "Stopping group")
 	ts.gm.StopGroup()
@@ -256,20 +267,21 @@ func TestServerPartitionNonBlockingSimple(t *testing.T) {
 func TestServerPartitionNonBlockingConcur(t *testing.T) {
 	const N = sesssrv.NLAST
 
-	t1, err1 := test.NewTstateAll(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
+
 	err := crash.SetSigmaFail(crash.NewTeventMapOne(EvP))
 	assert.Nil(t, err)
-	ts := newTstate(t1, kv.KVD_NO_REPL, false)
+	ts := newTstate(mrts, kv.KVD_NO_REPL, false)
 	ch := make(chan error)
 	for i := 0; i < N; i++ {
 		go ts.stat(t, i, ch)
 	}
 	for i := 0; i < N; i++ {
 		err := <-ch
-		assert.NotNil(ts.T, err, "stat")
+		assert.NotNil(ts.mrts.T, err, "stat")
 	}
 	db.DPrintf(db.TEST, "Stopping group")
 	ts.gm.StopGroup()
@@ -279,7 +291,7 @@ func TestServerPartitionNonBlockingConcur(t *testing.T) {
 func TestServerPartitionBlocking(t *testing.T) {
 	const N = 10
 
-	t1, err1 := test.NewTstateAll(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
@@ -287,12 +299,12 @@ func TestServerPartitionBlocking(t *testing.T) {
 	err := crash.SetSigmaFail(crash.NewTeventMapOne(EvP))
 	assert.Nil(t, err)
 
-	ts := newTstate(t1, kv.KVD_NO_REPL, false)
+	ts := newTstate(mrts, kv.KVD_NO_REPL, false)
 
 	for i := 0; i < N; i++ {
 		ch := make(chan error)
 		go func(i int) {
-			pe := proc.NewAddedProcEnv(ts.ProcEnv())
+			pe := proc.NewAddedProcEnv(ts.mrts.GetRealm(test.REALM1).ProcEnv())
 			fsl, err := sigmaclnt.NewFsLib(pe, dialproxyclnt.NewDialProxyClnt(pe))
 			assert.Nil(t, err)
 			sem := semaphore.NewSemaphore(fsl, kvgrp.GrpPath(kvgrp.JobDir(ts.job), ts.grp)+"/sem")
@@ -303,7 +315,7 @@ func TestServerPartitionBlocking(t *testing.T) {
 		}(i)
 
 		err := <-ch
-		assert.NotNil(ts.T, err, "down")
+		assert.NotNil(ts.mrts.T, err, "down")
 	}
 	ts.gm.StopGroup()
 	ts.Shutdown(false)

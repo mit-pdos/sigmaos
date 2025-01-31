@@ -9,6 +9,7 @@ import (
 	sn "sigmaos/apps/socialnetwork"
 	"sigmaos/apps/socialnetwork/proto"
 	sprpcclnt "sigmaos/rpc/clnt/sigmap"
+	sp "sigmaos/sigmap"
 	"sigmaos/test"
 	linuxsched "sigmaos/util/linux/sched"
 )
@@ -19,11 +20,12 @@ func TestUser(t *testing.T) {
 		return
 	}
 	// start server
-	t1, err1 := test.NewTstateAll(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	tssn, err := newTstateSN(t1, []sn.Srv{sn.Srv{"socialnetwork-user", nil, 1000}}, NCACHESRV)
+	defer mrts.Shutdown()
+	tssn, err := newTstateSN(mrts, []sn.Srv{sn.Srv{"socialnetwork-user", nil, 1000}}, NCACHESRV)
 	defer assert.Nil(t, tssn.Shutdown())
 	if err != nil {
 		return
@@ -97,11 +99,12 @@ func TestGraph(t *testing.T) {
 		return
 	}
 	// start server
-	t1, err1 := test.NewTstateAll(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	tssn, err := newTstateSN(t1, []sn.Srv{
+	defer mrts.Shutdown()
+	tssn, err := newTstateSN(mrts, []sn.Srv{
 		sn.Srv{"socialnetwork-user", nil, 1000},
 		sn.Srv{"socialnetwork-graph", nil, 1000}}, NCACHESRV)
 	defer assert.Nil(t, tssn.Shutdown())
@@ -182,11 +185,13 @@ func TestUserAndGraph(t *testing.T) {
 		return
 	}
 	// start server
-	t1, err1 := test.NewTstateAll(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	tssn, err := newTstateSN(t1, []sn.Srv{
+	defer mrts.Shutdown()
+
+	tssn, err := newTstateSN(mrts, []sn.Srv{
 		sn.Srv{"socialnetwork-user", nil, 1000},
 		sn.Srv{"socialnetwork-graph", nil, 1000}}, NCACHESRV)
 	defer assert.Nil(t, tssn.Shutdown())
@@ -267,11 +272,13 @@ func TestUserAndGraph(t *testing.T) {
 
 func testRPCTime(t *testing.T, mcpu proc.Tmcpu) {
 	// start server
-	t1, err1 := test.NewTstateAll(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	tssn, err := newTstateSN(t1, []sn.Srv{sn.Srv{"socialnetwork-user", nil, mcpu}}, 1)
+	defer mrts.Shutdown()
+
+	tssn, err := newTstateSN(mrts, []sn.Srv{sn.Srv{"socialnetwork-user", nil, mcpu}}, 1)
 	defer assert.Nil(t, tssn.Shutdown())
 	if err != nil {
 		return

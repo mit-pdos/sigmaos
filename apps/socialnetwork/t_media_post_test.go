@@ -8,6 +8,7 @@ import (
 	sn "sigmaos/apps/socialnetwork"
 	"sigmaos/apps/socialnetwork/proto"
 	sprpcclnt "sigmaos/rpc/clnt/sigmap"
+	sp "sigmaos/sigmap"
 	"sigmaos/test"
 	linuxsched "sigmaos/util/linux/sched"
 )
@@ -43,11 +44,13 @@ func TestMedia(t *testing.T) {
 		return
 	}
 	// start server
-	t1, err1 := test.NewTstateAll(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	tssn, err := newTstateSN(t1, []sn.Srv{sn.Srv{"socialnetwork-media", nil, 1000}}, NCACHESRV)
+	defer mrts.Shutdown()
+
+	tssn, err := newTstateSN(mrts, []sn.Srv{sn.Srv{"socialnetwork-media", nil, 1000}}, NCACHESRV)
 	defer assert.Nil(t, tssn.Shutdown())
 	if err != nil {
 		return
@@ -92,11 +95,13 @@ func TestPost(t *testing.T) {
 		return
 	}
 	// start server
-	t1, err1 := test.NewTstateAll(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	tssn, err := newTstateSN(t1, []sn.Srv{sn.Srv{"socialnetwork-post", nil, 1000}}, NCACHESRV)
+	defer mrts.Shutdown()
+
+	tssn, err := newTstateSN(mrts, []sn.Srv{sn.Srv{"socialnetwork-post", nil, 1000}}, NCACHESRV)
 	defer assert.Nil(t, tssn.Shutdown())
 	if err != nil {
 		return

@@ -10,6 +10,7 @@ import (
 	"sigmaos/apps/socialnetwork/proto"
 	rpcclnt "sigmaos/rpc/clnt"
 	sprpcclnt "sigmaos/rpc/clnt/sigmap"
+	sp "sigmaos/sigmap"
 	"sigmaos/test"
 	linuxsched "sigmaos/util/linux/sched"
 )
@@ -61,11 +62,13 @@ func TestTimeline(t *testing.T) {
 		return
 	}
 	// start server
-	t1, err1 := test.NewTstateAll(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	tssn, err := newTstateSN(t1, []sn.Srv{
+	defer mrts.Shutdown()
+
+	tssn, err := newTstateSN(mrts, []sn.Srv{
 		sn.Srv{"socialnetwork-post", nil, 1000},
 		sn.Srv{"socialnetwork-timeline", nil, 1000}}, NCACHESRV)
 	defer assert.Nil(t, tssn.Shutdown())
@@ -122,11 +125,12 @@ func TestHome(t *testing.T) {
 		return
 	}
 	// start server
-	t1, err1 := test.NewTstateAll(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	tssn, err := newTstateSN(t1, []sn.Srv{
+	defer mrts.Shutdown()
+	tssn, err := newTstateSN(mrts, []sn.Srv{
 		sn.Srv{"socialnetwork-user", nil, 1000},
 		sn.Srv{"socialnetwork-graph", nil, 1000},
 		sn.Srv{"socialnetwork-post", nil, 1000},

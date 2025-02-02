@@ -160,6 +160,7 @@ then
   cpufrequtils \
   apparmor-utils \
   mysql-client \
+  mariadb-client \
   docker-buildx
 
   # For hadoop

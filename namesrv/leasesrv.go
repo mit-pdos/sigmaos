@@ -39,7 +39,7 @@ func (ls *LeaseSrv) AskLease(ctx fs.CtxI, req leaseproto.AskReq, rep *leaseproto
 	if err != nil {
 		return err
 	}
-	db.DPrintf(db.LEASESRV, "Grant lease lid %v lat %v", uint64(resp.ID), time.Since(start))
+	db.DPrintf(db.LEASESRV, "Grant lease lid %x lat %v", uint64(resp.ID), time.Since(start))
 	rep.LeaseId = uint64(resp.ID)
 	return nil
 }

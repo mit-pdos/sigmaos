@@ -21,10 +21,8 @@ require (
 	github.com/go-sql-driver/mysql v1.6.0
 	github.com/hailocab/go-geoindex v0.0.0-20160127134810-64631bfe9711
 	github.com/harlow/go-micro-services v0.0.0-20210513051106-5e6a90aabee6
-	github.com/klauspost/readahead v1.4.0
 	github.com/mitchellh/mapstructure v1.1.2
 	github.com/montanaflynn/stats v0.6.6
-	github.com/seccomp/libseccomp-golang v0.10.0
 	github.com/stretchr/testify v1.8.4
 	github.com/thanhpk/randstr v1.0.6
 	go.etcd.io/etcd/server/v3 v3.5.13
@@ -37,16 +35,16 @@ require (
 
 require (
 	github.com/aws/aws-sdk-go-v2/credentials v1.17.13
-	github.com/bradfitz/gomemcache v0.0.0-20230124162541-5f7a7d875746
 	github.com/docker/docker v23.0.1+incompatible
 	github.com/docker/go-connections v0.4.0
-	github.com/golang-jwt/jwt v3.2.2+incompatible
+	github.com/fmstephe/unsafeutil v1.0.0
 	github.com/golang/protobuf v1.5.4
 	github.com/google/btree v1.1.3
 	github.com/hanwen/go-fuse/v2 v2.5.0
 	github.com/hashicorp/golang-lru/v2 v2.0.7
 	github.com/mit-pdos/go-geoindex v0.0.0-20230316114931-aab59857d7c8
 	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646
+	github.com/rogpeppe/go-internal v1.10.0
 	github.com/shirou/gopsutil v2.21.11+incompatible
 	go.etcd.io/etcd/client/pkg/v3 v3.5.13
 	go.etcd.io/etcd/client/v3 v3.5.13
@@ -85,7 +83,6 @@ require (
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/docker/distribution v2.8.1+incompatible // indirect
 	github.com/docker/go-units v0.5.0 // indirect
-	github.com/fmstephe/unsafeutil v1.0.0 // indirect
 	github.com/go-logr/logr v1.3.0 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect

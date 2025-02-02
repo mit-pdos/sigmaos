@@ -67,7 +67,7 @@ func NewPythonProc(args []string, bucket string) *Proc {
 	program := "python"
 	pid := sp.GenPid(program)
 	p := NewProcPid(pid, program, args)
-	p.AppendEnv("SIGMAPYBUCKET", bucket)
+	p.AppendEnv(SIGMAPYBUCKET, bucket)
 	return p
 }
 

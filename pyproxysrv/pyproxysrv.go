@@ -2,6 +2,9 @@ package pyproxysrv
 
 import (
 	"bufio"
+	"crypto/sha256"
+	"fmt"
+	"io"
 	"io/ioutil"
 	"net"
 	"os"
@@ -12,6 +15,16 @@ import (
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
+
+	"github.com/rogpeppe/go-internal/dirhash"
+)
+
+const (
+	CHECKSUM         = "sigmaos-checksum"
+	CHECKSUMOVERRIDE = "sigmaos-checksum-override"
+
+	LIB      = "/tmp/python/Lib"
+	SUPERLIB = "/tmp/python/superlib"
 )
 
 // PyProxySrv maintains the state of the pyproxysrv.
@@ -21,6 +34,8 @@ type PyProxySrv struct {
 	bn string // Name of AWS bucket
 }
 
+// Creates and returns a new PyProxySrv object to be used by Python programs
+// for fetching Python libraries and interacting with the SigmaOS API.
 func NewPyProxySrv(pe *proc.ProcEnv, bn string) (*PyProxySrv, error) {
 	// Create the proxy socket
 	socket, err := net.Listen("unix", sp.SIGMA_PYPROXY_SOCKET)
@@ -50,6 +65,42 @@ func NewPyProxySrv(pe *proc.ProcEnv, bn string) (*PyProxySrv, error) {
 func (pps *PyProxySrv) Shutdown() {
 	db.DPrintf(db.PYPROXYSRV, "Shutdown")
 	os.Remove(sp.SIGMA_PYPROXY_SOCKET)
+}
+
+// Computes the checksum for the given file
+func (pp *PyProxySrv) libFileChecksum(filePath string) (string, error) {
+	file, err := os.Open(filePath)
+	if err != nil {
+		db.DPrintf(db.PYPROXYSRV_ERR, "Err opening %v: %v", filePath, err)
+		return "", err
+	}
+	defer file.Close()
+
+	hasher := sha256.New()
+	_, err = io.Copy(hasher, file)
+	if err != nil {
+		db.DPrintf(db.PYPROXYSRV_ERR, "Err hashing: %v", err)
+		return "", err
+	}
+
+	return fmt.Sprintf("%x", hasher.Sum(nil)), nil
+}
+
+// Computes the checksum for the given directory
+func (pps *PyProxySrv) libDirChecksum(dirPath string) (string, error) {
+	hash, err := dirhash.HashDir(dirPath, "", dirhash.Hash1)
+	if err != nil {
+		db.DPrintf(db.PYPROXYSRV_ERR, "Err hashing directory %v: %v", dirPath, err)
+		return "", err
+	}
+
+	checksumPath := filepath.Join(dirPath, CHECKSUM)
+	checksum := []byte(hash)
+	err = ioutil.WriteFile(checksumPath, checksum, 0777)
+	if err != nil {
+		return "", err
+	}
+	return hash, nil
 }
 
 // Recursively copies all the contents of currPath to destPath. Does
@@ -90,10 +141,11 @@ func (pps *PyProxySrv) copyLib(currPath string, destPath string) error {
 	return nil
 }
 
+// Wrapper to fetch the specified library from the user's AWS bucket.
 func (pps *PyProxySrv) fetchLib(libName string) {
 	db.DPrintf(db.PYPROXYSRV, "Fetching %v", libName)
 	pn := filepath.Join(sp.NAMED, "s3", "~any", pps.bn, libName)
-	libDest := filepath.Join("/tmp", "python", "Lib", libName)
+	libDest := filepath.Join(LIB, libName)
 
 	err := pps.copyLib(pn, libDest)
 	if err != nil {
@@ -103,9 +155,44 @@ func (pps *PyProxySrv) fetchLib(libName string) {
 
 	db.DPrintf(db.PYPROXYSRV, "Finished fetching %v", libName)
 
+	// Calculate hash
+	fileInfo, err := os.Stat(libDest)
+	if err != nil {
+		db.DPrintf(db.PYPROXYSRV_ERR, "Err checking for %v: %v", libDest, err)
+		return
+	}
+	isDir := fileInfo.IsDir()
+	if isDir {
+		hash, err := pps.libDirChecksum(libDest)
+		if err != nil {
+			db.DPrintf(db.PYPROXYSRV_ERR, "Err hashing %v: %v", libDest, err)
+			return
+		}
+
+		err = ioutil.WriteFile(filepath.Join(libDest, CHECKSUM), []byte(hash), 0777)
+		if err != nil {
+			db.DPrintf(db.PYPROXYSRV_ERR, "Err writing hash %v: %v", libDest, err)
+			return
+		}
+	} else {
+		hash, err := pps.libFileChecksum(libDest)
+		if err != nil {
+			db.DPrintf(db.PYPROXYSRV_ERR, "Err hashing %v: %v", libDest, err)
+			return
+		}
+
+		checksumDest := strings.TrimSuffix(libDest, ".py") + "-" + CHECKSUM
+		err = ioutil.WriteFile(checksumDest, []byte(hash), 0777)
+		if err != nil {
+			db.DPrintf(db.PYPROXYSRV_ERR, "Err writing hash %v: %v", libDest, err)
+			return
+		}
+	}
+
 	return
 }
 
+// Main proxy body to handle all Python program requests.
 func (pps *PyProxySrv) handleNewConn(conn *net.UnixConn) {
 	reader := bufio.NewReader(conn)
 	libContents := make(map[string]bool)
@@ -124,32 +211,60 @@ func (pps *PyProxySrv) handleNewConn(conn *net.UnixConn) {
 
 		if reqPrefix == "pb" {
 			// Initialization
-			db.DPrintf(db.PYPROXYSRV, "reader: received initialization request\n", err)
+			db.DPrintf(db.PYPROXYSRV, "reader: received initialization request\n")
 
 			// Set up superlib dummy directory
-			superlibPath := "/tmp/python/superlib"
-			err := os.MkdirAll(superlibPath, 0777)
+			err := os.MkdirAll(SUPERLIB, 0777)
 			if err != nil {
 				db.DPrintf(db.PYPROXYSRV_ERR, "reader: err creating superlib %v\n", err)
 			}
 
 			// Record contents at the Lib directory
-			libFiles, err := os.ReadDir("/tmp/python/Lib")
+			libFiles, err := os.ReadDir(LIB)
 			if err != nil {
 				db.DPrintf(db.PYPROXYSRV_ERR, "reader: err reading Python Lib %v\n", err)
 				return
 			}
 
 			for _, file := range libFiles {
+				// Ensure file name is not a checksum/override
+				if strings.HasSuffix(file.Name(), CHECKSUM) || strings.HasSuffix(file.Name(), CHECKSUMOVERRIDE) {
+					continue
+				}
+
 				db.DPrintf(db.PYPROXYSRV, "reader: Lib: %v\n", file.Name())
-				err = os.MkdirAll(filepath.Join(superlibPath, file.Name()), 0777)
+
+				// Check for checksum's presence
+				if file.IsDir() {
+					_, checksumErr := os.Stat(filepath.Join(LIB, file.Name(), CHECKSUM))
+					_, overrideErr := os.Stat(filepath.Join(LIB, file.Name(), CHECKSUMOVERRIDE))
+					if (checksumErr != nil) && (overrideErr != nil) {
+						continue
+					}
+				} else {
+					libName := strings.TrimSuffix(file.Name(), ".py")
+					_, checksumErr := os.Stat(filepath.Join(LIB, libName+"-"+CHECKSUM))
+					_, overrideErr := os.Stat(filepath.Join(LIB, libName+"-"+CHECKSUMOVERRIDE))
+					if (checksumErr != nil) && (overrideErr != nil) {
+						continue
+					}
+				}
+
+				err = os.WriteFile(filepath.Join(SUPERLIB, file.Name()), []byte(""), 0777)
+				if err != nil {
+					err = os.MkdirAll(filepath.Join(SUPERLIB, file.Name()), 0777)
+					if err != nil {
+						db.DPrintf(db.PYPROXYSRV_ERR, "reader: err reading local lib %v]n", err)
+						return
+					}
+				}
 				libContents[file.Name()] = true
 			}
 
 			// Add all libraries in the S3 bucket to superlib
 			pn := filepath.Join(sp.NAMED, "s3", "~any", pps.bn)
 			_, err = pps.sc.ProcessDir(pn, func(st *sp.Tstat) (bool, error) {
-				err := os.MkdirAll(filepath.Join(superlibPath, st.Name), 0777)
+				err := os.MkdirAll(filepath.Join(SUPERLIB, st.Name), 0777)
 				if err != nil {
 					return false, err
 				}
@@ -168,7 +283,6 @@ func (pps *PyProxySrv) handleNewConn(conn *net.UnixConn) {
 					db.DPrintf(db.PYPROXYSRV_ERR, "reader: err starting %v", err)
 					return
 				}
-				db.DPrintf(db.PYPROXYSRV, "reader: Started finished")
 			} else if strings.HasPrefix(reqPath, "/Exited") {
 				pps.sc.ProcAPI.Exited(proc.NewStatus(proc.StatusOK))
 			}

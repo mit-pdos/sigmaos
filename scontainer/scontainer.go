@@ -73,7 +73,7 @@ func StartSigmaContainer(uproc *proc.Proc, dialproxy bool) (*uprocCmd, error) {
 	// Extra setup for Python procs
 	uprocCommand := &uprocCmd{cmd: cmd}
 	if uproc.GetProgram() == "python" {
-		bucketName, ok := uproc.LookupEnv("SIGMAPYBUCKET")
+		bucketName, ok := uproc.LookupEnv(proc.SIGMAPYBUCKET)
 		if !ok {
 			err := errors.New("nil SIGMAPYBUCKET")
 			db.DPrintf(db.PYPROXYSRV_ERR, "No specified AWS bucket: %v", err)

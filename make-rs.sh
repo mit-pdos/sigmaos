@@ -61,7 +61,21 @@ echo $build
 eval $build
 
 # Inject custom Python lib
-cp ../sigmaos-local/pylib/splib.py cpython3.11/Lib
+LIBDIR="cpython3.11/Lib"
+cp ../sigmaos-local/pylib/splib.py $LIBDIR
+
+# Add checksum overrides for default libraries
+OVERRIDEFILE="sigmaos-checksum-override"
+for entry in "$LIBDIR"/*; do
+  if [ -e "$entry" ]; then
+    if [ -d "$entry" ]; then
+      touch "$entry/$OVERRIDEFILE"
+    elif [ -f "$entry" ]; then
+      filename=$(basename "$entry" .py)
+      touch "$LIBDIR/$filename-$OVERRIDEFILE"
+    fi
+  fi
+done
 
 # Copy Python executable
 cp cpython3.11/python $OUTPATH/kernel

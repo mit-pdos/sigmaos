@@ -123,7 +123,7 @@ func (psrv *SigmaPSrv) postMount(sc *sigmaclnt.SigmaClnt, pn string) (string, er
 	if err != nil {
 		return "", err
 	}
-	db.DPrintf(db.SPAWN_LAT, "postMount AskLease: %v", time.Since(start))
+	db.DPrintf(db.SPAWN_LAT, "postMount AskLease[%v]: %v", time.Since(start), li.Lease())
 	start = time.Now()
 	li.KeepExtending()
 	db.DPrintf(db.SPAWN_LAT, "postMount KeepExtending: %v", time.Since(start))

@@ -161,6 +161,7 @@ then
   apparmor-utils \
   mysql-client \
   mariadb-client \
+  parallel \
   docker-buildx
 
   # For hadoop

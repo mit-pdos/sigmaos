@@ -9,6 +9,8 @@
 package sigmapsrv
 
 import (
+	"time"
+
 	"sigmaos/api/fs"
 	sps "sigmaos/api/spprotsrv"
 	"sigmaos/ctx"
@@ -57,7 +59,13 @@ func NewSigmaPSrv(pe *proc.ProcEnv, npc *dialproxyclnt.DialProxyClnt, root fs.Di
 }
 
 func NewSigmaPSrvPost(root fs.Dir, pn string, addr *sp.Taddr, sc *sigmaclnt.SigmaClnt, fencefs fs.Dir, aaf spprotosrv.AttachAuthF) (*SigmaPSrv, string, error) {
+	start := time.Now()
 	psrv := NewSigmaPSrv(sc.ProcEnv(), sc.GetDialProxyClnt(), root, addr, fencefs, aaf)
+	db.DPrintf(db.SPAWN_LAT, "NewSigmaPSrvPost NewSigmaPSrv: %v", time.Since(start))
+	start = time.Now()
+	defer func() {
+		db.DPrintf(db.SPAWN_LAT, "NewMemFsRootPortClntFenceAuth postMount: %v", time.Since(start))
+	}()
 	if len(pn) > 0 {
 		if mpn, err := psrv.postMount(sc, pn); err != nil {
 			return nil, "", err
@@ -96,6 +104,7 @@ func (psrv *SigmaPSrv) GetSigmaPSrvEndpoint() *sp.Tendpoint {
 }
 
 func (psrv *SigmaPSrv) postMount(sc *sigmaclnt.SigmaClnt, pn string) (string, error) {
+	start := time.Now()
 	ep := psrv.GetEndpoint()
 	psrv.srvep = ep
 	db.DPrintf(db.BOOT, "Advertise %s at %v\n", pn, ep)
@@ -114,7 +123,11 @@ func (psrv *SigmaPSrv) postMount(sc *sigmaclnt.SigmaClnt, pn string) (string, er
 	if err != nil {
 		return "", err
 	}
+	db.DPrintf(db.SPAWN_LAT, "postMount AskLease: %v", time.Since(start))
+	start = time.Now()
 	li.KeepExtending()
+	db.DPrintf(db.SPAWN_LAT, "postMount KeepExtending: %v", time.Since(start))
+	start = time.Now()
 
 	if sc.ProcEnv().GetPrivileged() && sc.ProcEnv().GetHow() != proc.HMSCHED {
 		// Make kproc semaphores here, so that they are leased (and don't cause hangs
@@ -124,6 +137,10 @@ func (psrv *SigmaPSrv) postMount(sc *sigmaclnt.SigmaClnt, pn string) (string, er
 			return "", err
 		}
 	}
+	start = time.Now()
+	defer func() {
+		db.DPrintf(db.SPAWN_LAT, "postMount MKLeasedEndpoint: %v", time.Since(start))
+	}()
 
 	if err := sc.MkLeasedEndpoint(pn, ep, li.Lease()); err != nil {
 		return "", err

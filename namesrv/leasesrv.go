@@ -2,6 +2,7 @@ package namesrv
 
 import (
 	"context"
+	"time"
 
 	"go.etcd.io/etcd/client/v3"
 
@@ -33,10 +34,12 @@ func (ls *LeaseSrv) AskLease(ctx fs.CtxI, req leaseproto.AskReq, rep *leaseproto
 		rep.LeaseId = uint64(lid)
 		return nil
 	}
+	start := time.Now()
 	resp, err := ls.lc.Grant(context.TODO(), int64(req.TTL))
 	if err != nil {
 		return err
 	}
+	db.DPrintf(db.LEASESRV, "Grant lease lid %v lat %v", uint64(resp.ID), time.Since(start))
 	rep.LeaseId = uint64(resp.ID)
 	return nil
 }

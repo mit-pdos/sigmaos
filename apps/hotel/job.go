@@ -10,10 +10,10 @@ import (
 	"sigmaos/apps/kv"
 	db "sigmaos/debug"
 	dialproxyclnt "sigmaos/dialproxy/clnt"
-	"sigmaos/sigmaclnt/fslib"
 	"sigmaos/proc"
 	"sigmaos/rpc"
 	"sigmaos/sigmaclnt"
+	"sigmaos/sigmaclnt/fslib"
 	sp "sigmaos/sigmap"
 )
 
@@ -236,6 +236,7 @@ func (hj *HotelJob) AddGeoSrv() error {
 	p.AppendEnv("HOTEL_IMG_SZ_MB", strconv.Itoa(imgSizeMB))
 	p.SetMcpu(geo.Mcpu)
 	db.DPrintf(db.TEST, "Hotel spawn additional %v", geo.Name)
+	db.DPrintf(db.TEST, "Hotel spawn additional %v %v", geo.Name, p)
 	if err := hj.Spawn(p); err != nil {
 		db.DPrintf(db.ERROR, "Error spawn proc %v: %v", p, err)
 		return err

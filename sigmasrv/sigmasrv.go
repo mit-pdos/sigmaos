@@ -7,6 +7,7 @@ package sigmasrv
 
 import (
 	"runtime/debug"
+	"time"
 
 	"sigmaos/api/fs"
 	"sigmaos/ctx"
@@ -37,11 +38,17 @@ func NewSigmaSrv(fn string, svci any, pe *proc.ProcEnv) (*SigmaSrv, error) {
 	db.DPrintf(db.SIGMASRV, "NewSigmaSrv %T", svci)
 	defer db.DPrintf(db.SIGMASRV, "NewSigmaSrv done %T", svci)
 
+	start := time.Now()
 	mfs, error := memfssrv.NewMemFs(fn, pe, spprotosrv.AttachAllowAllToAll)
 	if error != nil {
 		db.DPrintf(db.ERROR, "NewSigmaSrv %v err %v", fn, error)
 		return nil, error
 	}
+	db.DPrintf(db.SPAWN_LAT, "NewSigmaSrv NewMemFs latency: %v", time.Since(start))
+	start = time.Now()
+	defer func() {
+		db.DPrintf(db.SPAWN_LAT, "NewSigmaSrv newSigmaSrvMemFs latency: %v", time.Since(start))
+	}()
 	return newSigmaSrvMemFs(mfs, svci)
 }
 

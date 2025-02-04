@@ -20,17 +20,69 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-type EchoReq struct {
+type TaskStatus int32
+
+const (
+	TaskStatus_TODO  TaskStatus = 0
+	TaskStatus_WIP   TaskStatus = 1
+	TaskStatus_DONE  TaskStatus = 2
+	TaskStatus_ERROR TaskStatus = 3
+)
+
+// Enum value maps for TaskStatus.
+var (
+	TaskStatus_name = map[int32]string{
+		0: "TODO",
+		1: "WIP",
+		2: "DONE",
+		3: "ERROR",
+	}
+	TaskStatus_value = map[string]int32{
+		"TODO":  0,
+		"WIP":   1,
+		"DONE":  2,
+		"ERROR": 3,
+	}
+)
+
+func (x TaskStatus) Enum() *TaskStatus {
+	p := new(TaskStatus)
+	*p = x
+	return p
+}
+
+func (x TaskStatus) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (TaskStatus) Descriptor() protoreflect.EnumDescriptor {
+	return file_ft_task_proto_fttask_proto_enumTypes[0].Descriptor()
+}
+
+func (TaskStatus) Type() protoreflect.EnumType {
+	return &file_ft_task_proto_fttask_proto_enumTypes[0]
+}
+
+func (x TaskStatus) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use TaskStatus.Descriptor instead.
+func (TaskStatus) EnumDescriptor() ([]byte, []int) {
+	return file_ft_task_proto_fttask_proto_rawDescGZIP(), []int{0}
+}
+
+type Task struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Text string `protobuf:"bytes,1,opt,name=text,proto3" json:"text,omitempty"`
-	Num  int32  `protobuf:"varint,2,opt,name=num,proto3" json:"num,omitempty"`
+	Id   int32  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	Data []byte `protobuf:"bytes,2,opt,name=data,proto3" json:"data,omitempty"`
 }
 
-func (x *EchoReq) Reset() {
-	*x = EchoReq{}
+func (x *Task) Reset() {
+	*x = Task{}
 	if protoimpl.UnsafeEnabled {
 		mi := &file_ft_task_proto_fttask_proto_msgTypes[0]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -38,13 +90,13 @@ func (x *EchoReq) Reset() {
 	}
 }
 
-func (x *EchoReq) String() string {
+func (x *Task) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*EchoReq) ProtoMessage() {}
+func (*Task) ProtoMessage() {}
 
-func (x *EchoReq) ProtoReflect() protoreflect.Message {
+func (x *Task) ProtoReflect() protoreflect.Message {
 	mi := &file_ft_task_proto_fttask_proto_msgTypes[0]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -56,36 +108,35 @@ func (x *EchoReq) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use EchoReq.ProtoReflect.Descriptor instead.
-func (*EchoReq) Descriptor() ([]byte, []int) {
+// Deprecated: Use Task.ProtoReflect.Descriptor instead.
+func (*Task) Descriptor() ([]byte, []int) {
 	return file_ft_task_proto_fttask_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *EchoReq) GetText() string {
+func (x *Task) GetId() int32 {
 	if x != nil {
-		return x.Text
-	}
-	return ""
-}
-
-func (x *EchoReq) GetNum() int32 {
-	if x != nil {
-		return x.Num
+		return x.Id
 	}
 	return 0
 }
 
-type EchoRep struct {
+func (x *Task) GetData() []byte {
+	if x != nil {
+		return x.Data
+	}
+	return nil
+}
+
+type SubmitTasksReq struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Text string `protobuf:"bytes,1,opt,name=text,proto3" json:"text,omitempty"`
-	Res  int32  `protobuf:"varint,2,opt,name=res,proto3" json:"res,omitempty"`
+	Tasks []*Task `protobuf:"bytes,1,rep,name=tasks,proto3" json:"tasks,omitempty"`
 }
 
-func (x *EchoRep) Reset() {
-	*x = EchoRep{}
+func (x *SubmitTasksReq) Reset() {
+	*x = SubmitTasksReq{}
 	if protoimpl.UnsafeEnabled {
 		mi := &file_ft_task_proto_fttask_proto_msgTypes[1]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -93,13 +144,13 @@ func (x *EchoRep) Reset() {
 	}
 }
 
-func (x *EchoRep) String() string {
+func (x *SubmitTasksReq) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*EchoRep) ProtoMessage() {}
+func (*SubmitTasksReq) ProtoMessage() {}
 
-func (x *EchoRep) ProtoReflect() protoreflect.Message {
+func (x *SubmitTasksReq) ProtoReflect() protoreflect.Message {
 	mi := &file_ft_task_proto_fttask_proto_msgTypes[1]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -111,41 +162,946 @@ func (x *EchoRep) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use EchoRep.ProtoReflect.Descriptor instead.
-func (*EchoRep) Descriptor() ([]byte, []int) {
+// Deprecated: Use SubmitTasksReq.ProtoReflect.Descriptor instead.
+func (*SubmitTasksReq) Descriptor() ([]byte, []int) {
 	return file_ft_task_proto_fttask_proto_rawDescGZIP(), []int{1}
 }
 
-func (x *EchoRep) GetText() string {
+func (x *SubmitTasksReq) GetTasks() []*Task {
 	if x != nil {
-		return x.Text
+		return x.Tasks
 	}
-	return ""
+	return nil
 }
 
-func (x *EchoRep) GetRes() int32 {
+type SubmitTasksRep struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Existing []int32 `protobuf:"varint,1,rep,packed,name=existing,proto3" json:"existing,omitempty"`
+}
+
+func (x *SubmitTasksRep) Reset() {
+	*x = SubmitTasksRep{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_ft_task_proto_fttask_proto_msgTypes[2]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *SubmitTasksRep) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SubmitTasksRep) ProtoMessage() {}
+
+func (x *SubmitTasksRep) ProtoReflect() protoreflect.Message {
+	mi := &file_ft_task_proto_fttask_proto_msgTypes[2]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SubmitTasksRep.ProtoReflect.Descriptor instead.
+func (*SubmitTasksRep) Descriptor() ([]byte, []int) {
+	return file_ft_task_proto_fttask_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *SubmitTasksRep) GetExisting() []int32 {
 	if x != nil {
-		return x.Res
+		return x.Existing
+	}
+	return nil
+}
+
+type GetTasksByStatusReq struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Status TaskStatus `protobuf:"varint,1,opt,name=status,proto3,enum=TaskStatus" json:"status,omitempty"`
+}
+
+func (x *GetTasksByStatusReq) Reset() {
+	*x = GetTasksByStatusReq{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_ft_task_proto_fttask_proto_msgTypes[3]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *GetTasksByStatusReq) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetTasksByStatusReq) ProtoMessage() {}
+
+func (x *GetTasksByStatusReq) ProtoReflect() protoreflect.Message {
+	mi := &file_ft_task_proto_fttask_proto_msgTypes[3]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetTasksByStatusReq.ProtoReflect.Descriptor instead.
+func (*GetTasksByStatusReq) Descriptor() ([]byte, []int) {
+	return file_ft_task_proto_fttask_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *GetTasksByStatusReq) GetStatus() TaskStatus {
+	if x != nil {
+		return x.Status
+	}
+	return TaskStatus_TODO
+}
+
+type GetTasksByStatusRep struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Ids []int32 `protobuf:"varint,1,rep,packed,name=ids,proto3" json:"ids,omitempty"`
+}
+
+func (x *GetTasksByStatusRep) Reset() {
+	*x = GetTasksByStatusRep{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_ft_task_proto_fttask_proto_msgTypes[4]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *GetTasksByStatusRep) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetTasksByStatusRep) ProtoMessage() {}
+
+func (x *GetTasksByStatusRep) ProtoReflect() protoreflect.Message {
+	mi := &file_ft_task_proto_fttask_proto_msgTypes[4]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetTasksByStatusRep.ProtoReflect.Descriptor instead.
+func (*GetTasksByStatusRep) Descriptor() ([]byte, []int) {
+	return file_ft_task_proto_fttask_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *GetTasksByStatusRep) GetIds() []int32 {
+	if x != nil {
+		return x.Ids
+	}
+	return nil
+}
+
+type ReadTasksReq struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Ids []int32 `protobuf:"varint,1,rep,packed,name=ids,proto3" json:"ids,omitempty"`
+}
+
+func (x *ReadTasksReq) Reset() {
+	*x = ReadTasksReq{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_ft_task_proto_fttask_proto_msgTypes[5]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *ReadTasksReq) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReadTasksReq) ProtoMessage() {}
+
+func (x *ReadTasksReq) ProtoReflect() protoreflect.Message {
+	mi := &file_ft_task_proto_fttask_proto_msgTypes[5]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReadTasksReq.ProtoReflect.Descriptor instead.
+func (*ReadTasksReq) Descriptor() ([]byte, []int) {
+	return file_ft_task_proto_fttask_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *ReadTasksReq) GetIds() []int32 {
+	if x != nil {
+		return x.Ids
+	}
+	return nil
+}
+
+type ReadTasksRep struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Tasks []*Task `protobuf:"bytes,1,rep,name=tasks,proto3" json:"tasks,omitempty"`
+}
+
+func (x *ReadTasksRep) Reset() {
+	*x = ReadTasksRep{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_ft_task_proto_fttask_proto_msgTypes[6]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *ReadTasksRep) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReadTasksRep) ProtoMessage() {}
+
+func (x *ReadTasksRep) ProtoReflect() protoreflect.Message {
+	mi := &file_ft_task_proto_fttask_proto_msgTypes[6]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReadTasksRep.ProtoReflect.Descriptor instead.
+func (*ReadTasksRep) Descriptor() ([]byte, []int) {
+	return file_ft_task_proto_fttask_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *ReadTasksRep) GetTasks() []*Task {
+	if x != nil {
+		return x.Tasks
+	}
+	return nil
+}
+
+type MoveTasksReq struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Ids []int32    `protobuf:"varint,1,rep,packed,name=ids,proto3" json:"ids,omitempty"`
+	To  TaskStatus `protobuf:"varint,2,opt,name=to,proto3,enum=TaskStatus" json:"to,omitempty"`
+}
+
+func (x *MoveTasksReq) Reset() {
+	*x = MoveTasksReq{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_ft_task_proto_fttask_proto_msgTypes[7]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *MoveTasksReq) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MoveTasksReq) ProtoMessage() {}
+
+func (x *MoveTasksReq) ProtoReflect() protoreflect.Message {
+	mi := &file_ft_task_proto_fttask_proto_msgTypes[7]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MoveTasksReq.ProtoReflect.Descriptor instead.
+func (*MoveTasksReq) Descriptor() ([]byte, []int) {
+	return file_ft_task_proto_fttask_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *MoveTasksReq) GetIds() []int32 {
+	if x != nil {
+		return x.Ids
+	}
+	return nil
+}
+
+func (x *MoveTasksReq) GetTo() TaskStatus {
+	if x != nil {
+		return x.To
+	}
+	return TaskStatus_TODO
+}
+
+type MoveTasksRep struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+}
+
+func (x *MoveTasksRep) Reset() {
+	*x = MoveTasksRep{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_ft_task_proto_fttask_proto_msgTypes[8]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *MoveTasksRep) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MoveTasksRep) ProtoMessage() {}
+
+func (x *MoveTasksRep) ProtoReflect() protoreflect.Message {
+	mi := &file_ft_task_proto_fttask_proto_msgTypes[8]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MoveTasksRep.ProtoReflect.Descriptor instead.
+func (*MoveTasksRep) Descriptor() ([]byte, []int) {
+	return file_ft_task_proto_fttask_proto_rawDescGZIP(), []int{8}
+}
+
+type MoveTasksByStatusReq struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	From TaskStatus `protobuf:"varint,1,opt,name=from,proto3,enum=TaskStatus" json:"from,omitempty"`
+	To   TaskStatus `protobuf:"varint,2,opt,name=to,proto3,enum=TaskStatus" json:"to,omitempty"`
+}
+
+func (x *MoveTasksByStatusReq) Reset() {
+	*x = MoveTasksByStatusReq{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_ft_task_proto_fttask_proto_msgTypes[9]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *MoveTasksByStatusReq) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MoveTasksByStatusReq) ProtoMessage() {}
+
+func (x *MoveTasksByStatusReq) ProtoReflect() protoreflect.Message {
+	mi := &file_ft_task_proto_fttask_proto_msgTypes[9]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MoveTasksByStatusReq.ProtoReflect.Descriptor instead.
+func (*MoveTasksByStatusReq) Descriptor() ([]byte, []int) {
+	return file_ft_task_proto_fttask_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *MoveTasksByStatusReq) GetFrom() TaskStatus {
+	if x != nil {
+		return x.From
+	}
+	return TaskStatus_TODO
+}
+
+func (x *MoveTasksByStatusReq) GetTo() TaskStatus {
+	if x != nil {
+		return x.To
+	}
+	return TaskStatus_TODO
+}
+
+type MoveTasksByStatusRep struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+}
+
+func (x *MoveTasksByStatusRep) Reset() {
+	*x = MoveTasksByStatusRep{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_ft_task_proto_fttask_proto_msgTypes[10]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *MoveTasksByStatusRep) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MoveTasksByStatusRep) ProtoMessage() {}
+
+func (x *MoveTasksByStatusRep) ProtoReflect() protoreflect.Message {
+	mi := &file_ft_task_proto_fttask_proto_msgTypes[10]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MoveTasksByStatusRep.ProtoReflect.Descriptor instead.
+func (*MoveTasksByStatusRep) Descriptor() ([]byte, []int) {
+	return file_ft_task_proto_fttask_proto_rawDescGZIP(), []int{10}
+}
+
+type AcquireTasksReq struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Wait bool `protobuf:"varint,1,opt,name=wait,proto3" json:"wait,omitempty"`
+}
+
+func (x *AcquireTasksReq) Reset() {
+	*x = AcquireTasksReq{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_ft_task_proto_fttask_proto_msgTypes[11]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *AcquireTasksReq) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AcquireTasksReq) ProtoMessage() {}
+
+func (x *AcquireTasksReq) ProtoReflect() protoreflect.Message {
+	mi := &file_ft_task_proto_fttask_proto_msgTypes[11]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AcquireTasksReq.ProtoReflect.Descriptor instead.
+func (*AcquireTasksReq) Descriptor() ([]byte, []int) {
+	return file_ft_task_proto_fttask_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *AcquireTasksReq) GetWait() bool {
+	if x != nil {
+		return x.Wait
+	}
+	return false
+}
+
+type AcquireTasksRep struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Ids []int32 `protobuf:"varint,1,rep,packed,name=ids,proto3" json:"ids,omitempty"`
+}
+
+func (x *AcquireTasksRep) Reset() {
+	*x = AcquireTasksRep{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_ft_task_proto_fttask_proto_msgTypes[12]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *AcquireTasksRep) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AcquireTasksRep) ProtoMessage() {}
+
+func (x *AcquireTasksRep) ProtoReflect() protoreflect.Message {
+	mi := &file_ft_task_proto_fttask_proto_msgTypes[12]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AcquireTasksRep.ProtoReflect.Descriptor instead.
+func (*AcquireTasksRep) Descriptor() ([]byte, []int) {
+	return file_ft_task_proto_fttask_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *AcquireTasksRep) GetIds() []int32 {
+	if x != nil {
+		return x.Ids
+	}
+	return nil
+}
+
+type AddTaskOutputsReq struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Ids     []int32  `protobuf:"varint,1,rep,packed,name=ids,proto3" json:"ids,omitempty"`
+	Outputs [][]byte `protobuf:"bytes,2,rep,name=outputs,proto3" json:"outputs,omitempty"`
+}
+
+func (x *AddTaskOutputsReq) Reset() {
+	*x = AddTaskOutputsReq{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_ft_task_proto_fttask_proto_msgTypes[13]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *AddTaskOutputsReq) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AddTaskOutputsReq) ProtoMessage() {}
+
+func (x *AddTaskOutputsReq) ProtoReflect() protoreflect.Message {
+	mi := &file_ft_task_proto_fttask_proto_msgTypes[13]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AddTaskOutputsReq.ProtoReflect.Descriptor instead.
+func (*AddTaskOutputsReq) Descriptor() ([]byte, []int) {
+	return file_ft_task_proto_fttask_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *AddTaskOutputsReq) GetIds() []int32 {
+	if x != nil {
+		return x.Ids
+	}
+	return nil
+}
+
+func (x *AddTaskOutputsReq) GetOutputs() [][]byte {
+	if x != nil {
+		return x.Outputs
+	}
+	return nil
+}
+
+type AddTaskOutputsRep struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+}
+
+func (x *AddTaskOutputsRep) Reset() {
+	*x = AddTaskOutputsRep{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_ft_task_proto_fttask_proto_msgTypes[14]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *AddTaskOutputsRep) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AddTaskOutputsRep) ProtoMessage() {}
+
+func (x *AddTaskOutputsRep) ProtoReflect() protoreflect.Message {
+	mi := &file_ft_task_proto_fttask_proto_msgTypes[14]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AddTaskOutputsRep.ProtoReflect.Descriptor instead.
+func (*AddTaskOutputsRep) Descriptor() ([]byte, []int) {
+	return file_ft_task_proto_fttask_proto_rawDescGZIP(), []int{14}
+}
+
+type GetTaskOutputsReq struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Ids []int32 `protobuf:"varint,1,rep,packed,name=ids,proto3" json:"ids,omitempty"`
+}
+
+func (x *GetTaskOutputsReq) Reset() {
+	*x = GetTaskOutputsReq{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_ft_task_proto_fttask_proto_msgTypes[15]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *GetTaskOutputsReq) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetTaskOutputsReq) ProtoMessage() {}
+
+func (x *GetTaskOutputsReq) ProtoReflect() protoreflect.Message {
+	mi := &file_ft_task_proto_fttask_proto_msgTypes[15]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetTaskOutputsReq.ProtoReflect.Descriptor instead.
+func (*GetTaskOutputsReq) Descriptor() ([]byte, []int) {
+	return file_ft_task_proto_fttask_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *GetTaskOutputsReq) GetIds() []int32 {
+	if x != nil {
+		return x.Ids
+	}
+	return nil
+}
+
+type GetTaskOutputsRep struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Outputs [][]byte `protobuf:"bytes,2,rep,name=outputs,proto3" json:"outputs,omitempty"`
+}
+
+func (x *GetTaskOutputsRep) Reset() {
+	*x = GetTaskOutputsRep{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_ft_task_proto_fttask_proto_msgTypes[16]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *GetTaskOutputsRep) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetTaskOutputsRep) ProtoMessage() {}
+
+func (x *GetTaskOutputsRep) ProtoReflect() protoreflect.Message {
+	mi := &file_ft_task_proto_fttask_proto_msgTypes[16]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetTaskOutputsRep.ProtoReflect.Descriptor instead.
+func (*GetTaskOutputsRep) Descriptor() ([]byte, []int) {
+	return file_ft_task_proto_fttask_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *GetTaskOutputsRep) GetOutputs() [][]byte {
+	if x != nil {
+		return x.Outputs
+	}
+	return nil
+}
+
+type TaskStats struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	NumTodo  int32 `protobuf:"varint,1,opt,name=numTodo,proto3" json:"numTodo,omitempty"`
+	NumWip   int32 `protobuf:"varint,2,opt,name=numWip,proto3" json:"numWip,omitempty"`
+	NumDone  int32 `protobuf:"varint,3,opt,name=numDone,proto3" json:"numDone,omitempty"`
+	NumError int32 `protobuf:"varint,4,opt,name=numError,proto3" json:"numError,omitempty"`
+}
+
+func (x *TaskStats) Reset() {
+	*x = TaskStats{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_ft_task_proto_fttask_proto_msgTypes[17]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *TaskStats) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TaskStats) ProtoMessage() {}
+
+func (x *TaskStats) ProtoReflect() protoreflect.Message {
+	mi := &file_ft_task_proto_fttask_proto_msgTypes[17]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TaskStats.ProtoReflect.Descriptor instead.
+func (*TaskStats) Descriptor() ([]byte, []int) {
+	return file_ft_task_proto_fttask_proto_rawDescGZIP(), []int{17}
+}
+
+func (x *TaskStats) GetNumTodo() int32 {
+	if x != nil {
+		return x.NumTodo
 	}
 	return 0
+}
+
+func (x *TaskStats) GetNumWip() int32 {
+	if x != nil {
+		return x.NumWip
+	}
+	return 0
+}
+
+func (x *TaskStats) GetNumDone() int32 {
+	if x != nil {
+		return x.NumDone
+	}
+	return 0
+}
+
+func (x *TaskStats) GetNumError() int32 {
+	if x != nil {
+		return x.NumError
+	}
+	return 0
+}
+
+type GetTaskStatsReq struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+}
+
+func (x *GetTaskStatsReq) Reset() {
+	*x = GetTaskStatsReq{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_ft_task_proto_fttask_proto_msgTypes[18]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *GetTaskStatsReq) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetTaskStatsReq) ProtoMessage() {}
+
+func (x *GetTaskStatsReq) ProtoReflect() protoreflect.Message {
+	mi := &file_ft_task_proto_fttask_proto_msgTypes[18]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetTaskStatsReq.ProtoReflect.Descriptor instead.
+func (*GetTaskStatsReq) Descriptor() ([]byte, []int) {
+	return file_ft_task_proto_fttask_proto_rawDescGZIP(), []int{18}
+}
+
+type GetTaskStatsRep struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Stats *TaskStats `protobuf:"bytes,1,opt,name=stats,proto3" json:"stats,omitempty"`
+}
+
+func (x *GetTaskStatsRep) Reset() {
+	*x = GetTaskStatsRep{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_ft_task_proto_fttask_proto_msgTypes[19]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *GetTaskStatsRep) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetTaskStatsRep) ProtoMessage() {}
+
+func (x *GetTaskStatsRep) ProtoReflect() protoreflect.Message {
+	mi := &file_ft_task_proto_fttask_proto_msgTypes[19]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetTaskStatsRep.ProtoReflect.Descriptor instead.
+func (*GetTaskStatsRep) Descriptor() ([]byte, []int) {
+	return file_ft_task_proto_fttask_proto_rawDescGZIP(), []int{19}
+}
+
+func (x *GetTaskStatsRep) GetStats() *TaskStats {
+	if x != nil {
+		return x.Stats
+	}
+	return nil
 }
 
 var File_ft_task_proto_fttask_proto protoreflect.FileDescriptor
 
 var file_ft_task_proto_fttask_proto_rawDesc = []byte{
 	0x0a, 0x1a, 0x66, 0x74, 0x2f, 0x74, 0x61, 0x73, 0x6b, 0x2f, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x2f,
-	0x66, 0x74, 0x74, 0x61, 0x73, 0x6b, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x22, 0x2f, 0x0a, 0x07,
-	0x45, 0x63, 0x68, 0x6f, 0x52, 0x65, 0x71, 0x12, 0x12, 0x0a, 0x04, 0x74, 0x65, 0x78, 0x74, 0x18,
-	0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x74, 0x65, 0x78, 0x74, 0x12, 0x10, 0x0a, 0x03, 0x6e,
-	0x75, 0x6d, 0x18, 0x02, 0x20, 0x01, 0x28, 0x05, 0x52, 0x03, 0x6e, 0x75, 0x6d, 0x22, 0x2f, 0x0a,
-	0x07, 0x45, 0x63, 0x68, 0x6f, 0x52, 0x65, 0x70, 0x12, 0x12, 0x0a, 0x04, 0x74, 0x65, 0x78, 0x74,
-	0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x74, 0x65, 0x78, 0x74, 0x12, 0x10, 0x0a, 0x03,
-	0x72, 0x65, 0x73, 0x18, 0x02, 0x20, 0x01, 0x28, 0x05, 0x52, 0x03, 0x72, 0x65, 0x73, 0x32, 0x2b,
-	0x0a, 0x0d, 0x46, 0x74, 0x54, 0x61, 0x73, 0x6b, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x12,
-	0x1a, 0x0a, 0x04, 0x45, 0x63, 0x68, 0x6f, 0x12, 0x08, 0x2e, 0x45, 0x63, 0x68, 0x6f, 0x52, 0x65,
-	0x71, 0x1a, 0x08, 0x2e, 0x45, 0x63, 0x68, 0x6f, 0x52, 0x65, 0x70, 0x42, 0x17, 0x5a, 0x15, 0x73,
-	0x69, 0x67, 0x6d, 0x61, 0x6f, 0x73, 0x2f, 0x66, 0x74, 0x2f, 0x74, 0x61, 0x73, 0x6b, 0x2f, 0x70,
-	0x72, 0x6f, 0x74, 0x6f, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x66, 0x74, 0x74, 0x61, 0x73, 0x6b, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x22, 0x2a, 0x0a, 0x04,
+	0x54, 0x61, 0x73, 0x6b, 0x12, 0x0e, 0x0a, 0x02, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x05,
+	0x52, 0x02, 0x69, 0x64, 0x12, 0x12, 0x0a, 0x04, 0x64, 0x61, 0x74, 0x61, 0x18, 0x02, 0x20, 0x01,
+	0x28, 0x0c, 0x52, 0x04, 0x64, 0x61, 0x74, 0x61, 0x22, 0x2d, 0x0a, 0x0e, 0x53, 0x75, 0x62, 0x6d,
+	0x69, 0x74, 0x54, 0x61, 0x73, 0x6b, 0x73, 0x52, 0x65, 0x71, 0x12, 0x1b, 0x0a, 0x05, 0x74, 0x61,
+	0x73, 0x6b, 0x73, 0x18, 0x01, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x05, 0x2e, 0x54, 0x61, 0x73, 0x6b,
+	0x52, 0x05, 0x74, 0x61, 0x73, 0x6b, 0x73, 0x22, 0x2c, 0x0a, 0x0e, 0x53, 0x75, 0x62, 0x6d, 0x69,
+	0x74, 0x54, 0x61, 0x73, 0x6b, 0x73, 0x52, 0x65, 0x70, 0x12, 0x1a, 0x0a, 0x08, 0x65, 0x78, 0x69,
+	0x73, 0x74, 0x69, 0x6e, 0x67, 0x18, 0x01, 0x20, 0x03, 0x28, 0x05, 0x52, 0x08, 0x65, 0x78, 0x69,
+	0x73, 0x74, 0x69, 0x6e, 0x67, 0x22, 0x3a, 0x0a, 0x13, 0x47, 0x65, 0x74, 0x54, 0x61, 0x73, 0x6b,
+	0x73, 0x42, 0x79, 0x53, 0x74, 0x61, 0x74, 0x75, 0x73, 0x52, 0x65, 0x71, 0x12, 0x23, 0x0a, 0x06,
+	0x73, 0x74, 0x61, 0x74, 0x75, 0x73, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0e, 0x32, 0x0b, 0x2e, 0x54,
+	0x61, 0x73, 0x6b, 0x53, 0x74, 0x61, 0x74, 0x75, 0x73, 0x52, 0x06, 0x73, 0x74, 0x61, 0x74, 0x75,
+	0x73, 0x22, 0x27, 0x0a, 0x13, 0x47, 0x65, 0x74, 0x54, 0x61, 0x73, 0x6b, 0x73, 0x42, 0x79, 0x53,
+	0x74, 0x61, 0x74, 0x75, 0x73, 0x52, 0x65, 0x70, 0x12, 0x10, 0x0a, 0x03, 0x69, 0x64, 0x73, 0x18,
+	0x01, 0x20, 0x03, 0x28, 0x05, 0x52, 0x03, 0x69, 0x64, 0x73, 0x22, 0x20, 0x0a, 0x0c, 0x52, 0x65,
+	0x61, 0x64, 0x54, 0x61, 0x73, 0x6b, 0x73, 0x52, 0x65, 0x71, 0x12, 0x10, 0x0a, 0x03, 0x69, 0x64,
+	0x73, 0x18, 0x01, 0x20, 0x03, 0x28, 0x05, 0x52, 0x03, 0x69, 0x64, 0x73, 0x22, 0x2b, 0x0a, 0x0c,
+	0x52, 0x65, 0x61, 0x64, 0x54, 0x61, 0x73, 0x6b, 0x73, 0x52, 0x65, 0x70, 0x12, 0x1b, 0x0a, 0x05,
+	0x74, 0x61, 0x73, 0x6b, 0x73, 0x18, 0x01, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x05, 0x2e, 0x54, 0x61,
+	0x73, 0x6b, 0x52, 0x05, 0x74, 0x61, 0x73, 0x6b, 0x73, 0x22, 0x3d, 0x0a, 0x0c, 0x4d, 0x6f, 0x76,
+	0x65, 0x54, 0x61, 0x73, 0x6b, 0x73, 0x52, 0x65, 0x71, 0x12, 0x10, 0x0a, 0x03, 0x69, 0x64, 0x73,
+	0x18, 0x01, 0x20, 0x03, 0x28, 0x05, 0x52, 0x03, 0x69, 0x64, 0x73, 0x12, 0x1b, 0x0a, 0x02, 0x74,
+	0x6f, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0e, 0x32, 0x0b, 0x2e, 0x54, 0x61, 0x73, 0x6b, 0x53, 0x74,
+	0x61, 0x74, 0x75, 0x73, 0x52, 0x02, 0x74, 0x6f, 0x22, 0x0e, 0x0a, 0x0c, 0x4d, 0x6f, 0x76, 0x65,
+	0x54, 0x61, 0x73, 0x6b, 0x73, 0x52, 0x65, 0x70, 0x22, 0x54, 0x0a, 0x14, 0x4d, 0x6f, 0x76, 0x65,
+	0x54, 0x61, 0x73, 0x6b, 0x73, 0x42, 0x79, 0x53, 0x74, 0x61, 0x74, 0x75, 0x73, 0x52, 0x65, 0x71,
+	0x12, 0x1f, 0x0a, 0x04, 0x66, 0x72, 0x6f, 0x6d, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0e, 0x32, 0x0b,
+	0x2e, 0x54, 0x61, 0x73, 0x6b, 0x53, 0x74, 0x61, 0x74, 0x75, 0x73, 0x52, 0x04, 0x66, 0x72, 0x6f,
+	0x6d, 0x12, 0x1b, 0x0a, 0x02, 0x74, 0x6f, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0e, 0x32, 0x0b, 0x2e,
+	0x54, 0x61, 0x73, 0x6b, 0x53, 0x74, 0x61, 0x74, 0x75, 0x73, 0x52, 0x02, 0x74, 0x6f, 0x22, 0x16,
+	0x0a, 0x14, 0x4d, 0x6f, 0x76, 0x65, 0x54, 0x61, 0x73, 0x6b, 0x73, 0x42, 0x79, 0x53, 0x74, 0x61,
+	0x74, 0x75, 0x73, 0x52, 0x65, 0x70, 0x22, 0x25, 0x0a, 0x0f, 0x41, 0x63, 0x71, 0x75, 0x69, 0x72,
+	0x65, 0x54, 0x61, 0x73, 0x6b, 0x73, 0x52, 0x65, 0x71, 0x12, 0x12, 0x0a, 0x04, 0x77, 0x61, 0x69,
+	0x74, 0x18, 0x01, 0x20, 0x01, 0x28, 0x08, 0x52, 0x04, 0x77, 0x61, 0x69, 0x74, 0x22, 0x23, 0x0a,
+	0x0f, 0x41, 0x63, 0x71, 0x75, 0x69, 0x72, 0x65, 0x54, 0x61, 0x73, 0x6b, 0x73, 0x52, 0x65, 0x70,
+	0x12, 0x10, 0x0a, 0x03, 0x69, 0x64, 0x73, 0x18, 0x01, 0x20, 0x03, 0x28, 0x05, 0x52, 0x03, 0x69,
+	0x64, 0x73, 0x22, 0x3f, 0x0a, 0x11, 0x41, 0x64, 0x64, 0x54, 0x61, 0x73, 0x6b, 0x4f, 0x75, 0x74,
+	0x70, 0x75, 0x74, 0x73, 0x52, 0x65, 0x71, 0x12, 0x10, 0x0a, 0x03, 0x69, 0x64, 0x73, 0x18, 0x01,
+	0x20, 0x03, 0x28, 0x05, 0x52, 0x03, 0x69, 0x64, 0x73, 0x12, 0x18, 0x0a, 0x07, 0x6f, 0x75, 0x74,
+	0x70, 0x75, 0x74, 0x73, 0x18, 0x02, 0x20, 0x03, 0x28, 0x0c, 0x52, 0x07, 0x6f, 0x75, 0x74, 0x70,
+	0x75, 0x74, 0x73, 0x22, 0x13, 0x0a, 0x11, 0x41, 0x64, 0x64, 0x54, 0x61, 0x73, 0x6b, 0x4f, 0x75,
+	0x74, 0x70, 0x75, 0x74, 0x73, 0x52, 0x65, 0x70, 0x22, 0x25, 0x0a, 0x11, 0x47, 0x65, 0x74, 0x54,
+	0x61, 0x73, 0x6b, 0x4f, 0x75, 0x74, 0x70, 0x75, 0x74, 0x73, 0x52, 0x65, 0x71, 0x12, 0x10, 0x0a,
+	0x03, 0x69, 0x64, 0x73, 0x18, 0x01, 0x20, 0x03, 0x28, 0x05, 0x52, 0x03, 0x69, 0x64, 0x73, 0x22,
+	0x2d, 0x0a, 0x11, 0x47, 0x65, 0x74, 0x54, 0x61, 0x73, 0x6b, 0x4f, 0x75, 0x74, 0x70, 0x75, 0x74,
+	0x73, 0x52, 0x65, 0x70, 0x12, 0x18, 0x0a, 0x07, 0x6f, 0x75, 0x74, 0x70, 0x75, 0x74, 0x73, 0x18,
+	0x02, 0x20, 0x03, 0x28, 0x0c, 0x52, 0x07, 0x6f, 0x75, 0x74, 0x70, 0x75, 0x74, 0x73, 0x22, 0x73,
+	0x0a, 0x09, 0x54, 0x61, 0x73, 0x6b, 0x53, 0x74, 0x61, 0x74, 0x73, 0x12, 0x18, 0x0a, 0x07, 0x6e,
+	0x75, 0x6d, 0x54, 0x6f, 0x64, 0x6f, 0x18, 0x01, 0x20, 0x01, 0x28, 0x05, 0x52, 0x07, 0x6e, 0x75,
+	0x6d, 0x54, 0x6f, 0x64, 0x6f, 0x12, 0x16, 0x0a, 0x06, 0x6e, 0x75, 0x6d, 0x57, 0x69, 0x70, 0x18,
+	0x02, 0x20, 0x01, 0x28, 0x05, 0x52, 0x06, 0x6e, 0x75, 0x6d, 0x57, 0x69, 0x70, 0x12, 0x18, 0x0a,
+	0x07, 0x6e, 0x75, 0x6d, 0x44, 0x6f, 0x6e, 0x65, 0x18, 0x03, 0x20, 0x01, 0x28, 0x05, 0x52, 0x07,
+	0x6e, 0x75, 0x6d, 0x44, 0x6f, 0x6e, 0x65, 0x12, 0x1a, 0x0a, 0x08, 0x6e, 0x75, 0x6d, 0x45, 0x72,
+	0x72, 0x6f, 0x72, 0x18, 0x04, 0x20, 0x01, 0x28, 0x05, 0x52, 0x08, 0x6e, 0x75, 0x6d, 0x45, 0x72,
+	0x72, 0x6f, 0x72, 0x22, 0x11, 0x0a, 0x0f, 0x47, 0x65, 0x74, 0x54, 0x61, 0x73, 0x6b, 0x53, 0x74,
+	0x61, 0x74, 0x73, 0x52, 0x65, 0x71, 0x22, 0x33, 0x0a, 0x0f, 0x47, 0x65, 0x74, 0x54, 0x61, 0x73,
+	0x6b, 0x53, 0x74, 0x61, 0x74, 0x73, 0x52, 0x65, 0x70, 0x12, 0x20, 0x0a, 0x05, 0x73, 0x74, 0x61,
+	0x74, 0x73, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x0a, 0x2e, 0x54, 0x61, 0x73, 0x6b, 0x53,
+	0x74, 0x61, 0x74, 0x73, 0x52, 0x05, 0x73, 0x74, 0x61, 0x74, 0x73, 0x2a, 0x34, 0x0a, 0x0a, 0x54,
+	0x61, 0x73, 0x6b, 0x53, 0x74, 0x61, 0x74, 0x75, 0x73, 0x12, 0x08, 0x0a, 0x04, 0x54, 0x4f, 0x44,
+	0x4f, 0x10, 0x00, 0x12, 0x07, 0x0a, 0x03, 0x57, 0x49, 0x50, 0x10, 0x01, 0x12, 0x08, 0x0a, 0x04,
+	0x44, 0x4f, 0x4e, 0x45, 0x10, 0x02, 0x12, 0x09, 0x0a, 0x05, 0x45, 0x52, 0x52, 0x4f, 0x52, 0x10,
+	0x03, 0x42, 0x17, 0x5a, 0x15, 0x73, 0x69, 0x67, 0x6d, 0x61, 0x6f, 0x73, 0x2f, 0x66, 0x74, 0x2f,
+	0x74, 0x61, 0x73, 0x6b, 0x2f, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74,
+	0x6f, 0x33,
 }
 
 var (
@@ -160,19 +1116,44 @@ func file_ft_task_proto_fttask_proto_rawDescGZIP() []byte {
 	return file_ft_task_proto_fttask_proto_rawDescData
 }
 
-var file_ft_task_proto_fttask_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
+var file_ft_task_proto_fttask_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
+var file_ft_task_proto_fttask_proto_msgTypes = make([]protoimpl.MessageInfo, 20)
 var file_ft_task_proto_fttask_proto_goTypes = []interface{}{
-	(*EchoReq)(nil), // 0: EchoReq
-	(*EchoRep)(nil), // 1: EchoRep
+	(TaskStatus)(0),              // 0: TaskStatus
+	(*Task)(nil),                 // 1: Task
+	(*SubmitTasksReq)(nil),       // 2: SubmitTasksReq
+	(*SubmitTasksRep)(nil),       // 3: SubmitTasksRep
+	(*GetTasksByStatusReq)(nil),  // 4: GetTasksByStatusReq
+	(*GetTasksByStatusRep)(nil),  // 5: GetTasksByStatusRep
+	(*ReadTasksReq)(nil),         // 6: ReadTasksReq
+	(*ReadTasksRep)(nil),         // 7: ReadTasksRep
+	(*MoveTasksReq)(nil),         // 8: MoveTasksReq
+	(*MoveTasksRep)(nil),         // 9: MoveTasksRep
+	(*MoveTasksByStatusReq)(nil), // 10: MoveTasksByStatusReq
+	(*MoveTasksByStatusRep)(nil), // 11: MoveTasksByStatusRep
+	(*AcquireTasksReq)(nil),      // 12: AcquireTasksReq
+	(*AcquireTasksRep)(nil),      // 13: AcquireTasksRep
+	(*AddTaskOutputsReq)(nil),    // 14: AddTaskOutputsReq
+	(*AddTaskOutputsRep)(nil),    // 15: AddTaskOutputsRep
+	(*GetTaskOutputsReq)(nil),    // 16: GetTaskOutputsReq
+	(*GetTaskOutputsRep)(nil),    // 17: GetTaskOutputsRep
+	(*TaskStats)(nil),            // 18: TaskStats
+	(*GetTaskStatsReq)(nil),      // 19: GetTaskStatsReq
+	(*GetTaskStatsRep)(nil),      // 20: GetTaskStatsRep
 }
 var file_ft_task_proto_fttask_proto_depIdxs = []int32{
-	0, // 0: FtTaskService.Echo:input_type -> EchoReq
-	1, // 1: FtTaskService.Echo:output_type -> EchoRep
-	1, // [1:2] is the sub-list for method output_type
-	0, // [0:1] is the sub-list for method input_type
-	0, // [0:0] is the sub-list for extension type_name
-	0, // [0:0] is the sub-list for extension extendee
-	0, // [0:0] is the sub-list for field type_name
+	1,  // 0: SubmitTasksReq.tasks:type_name -> Task
+	0,  // 1: GetTasksByStatusReq.status:type_name -> TaskStatus
+	1,  // 2: ReadTasksRep.tasks:type_name -> Task
+	0,  // 3: MoveTasksReq.to:type_name -> TaskStatus
+	0,  // 4: MoveTasksByStatusReq.from:type_name -> TaskStatus
+	0,  // 5: MoveTasksByStatusReq.to:type_name -> TaskStatus
+	18, // 6: GetTaskStatsRep.stats:type_name -> TaskStats
+	7,  // [7:7] is the sub-list for method output_type
+	7,  // [7:7] is the sub-list for method input_type
+	7,  // [7:7] is the sub-list for extension type_name
+	7,  // [7:7] is the sub-list for extension extendee
+	0,  // [0:7] is the sub-list for field type_name
 }
 
 func init() { file_ft_task_proto_fttask_proto_init() }
@@ -182,7 +1163,7 @@ func file_ft_task_proto_fttask_proto_init() {
 	}
 	if !protoimpl.UnsafeEnabled {
 		file_ft_task_proto_fttask_proto_msgTypes[0].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*EchoReq); i {
+			switch v := v.(*Task); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -194,7 +1175,223 @@ func file_ft_task_proto_fttask_proto_init() {
 			}
 		}
 		file_ft_task_proto_fttask_proto_msgTypes[1].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*EchoRep); i {
+			switch v := v.(*SubmitTasksReq); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_ft_task_proto_fttask_proto_msgTypes[2].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*SubmitTasksRep); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_ft_task_proto_fttask_proto_msgTypes[3].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*GetTasksByStatusReq); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_ft_task_proto_fttask_proto_msgTypes[4].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*GetTasksByStatusRep); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_ft_task_proto_fttask_proto_msgTypes[5].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*ReadTasksReq); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_ft_task_proto_fttask_proto_msgTypes[6].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*ReadTasksRep); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_ft_task_proto_fttask_proto_msgTypes[7].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*MoveTasksReq); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_ft_task_proto_fttask_proto_msgTypes[8].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*MoveTasksRep); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_ft_task_proto_fttask_proto_msgTypes[9].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*MoveTasksByStatusReq); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_ft_task_proto_fttask_proto_msgTypes[10].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*MoveTasksByStatusRep); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_ft_task_proto_fttask_proto_msgTypes[11].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*AcquireTasksReq); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_ft_task_proto_fttask_proto_msgTypes[12].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*AcquireTasksRep); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_ft_task_proto_fttask_proto_msgTypes[13].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*AddTaskOutputsReq); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_ft_task_proto_fttask_proto_msgTypes[14].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*AddTaskOutputsRep); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_ft_task_proto_fttask_proto_msgTypes[15].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*GetTaskOutputsReq); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_ft_task_proto_fttask_proto_msgTypes[16].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*GetTaskOutputsRep); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_ft_task_proto_fttask_proto_msgTypes[17].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*TaskStats); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_ft_task_proto_fttask_proto_msgTypes[18].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*GetTaskStatsReq); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_ft_task_proto_fttask_proto_msgTypes[19].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*GetTaskStatsRep); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -211,13 +1408,14 @@ func file_ft_task_proto_fttask_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_ft_task_proto_fttask_proto_rawDesc,
-			NumEnums:      0,
-			NumMessages:   2,
+			NumEnums:      1,
+			NumMessages:   20,
 			NumExtensions: 0,
-			NumServices:   1,
+			NumServices:   0,
 		},
 		GoTypes:           file_ft_task_proto_fttask_proto_goTypes,
 		DependencyIndexes: file_ft_task_proto_fttask_proto_depIdxs,
+		EnumInfos:         file_ft_task_proto_fttask_proto_enumTypes,
 		MessageInfos:      file_ft_task_proto_fttask_proto_msgTypes,
 	}.Build()
 	File_ft_task_proto_fttask_proto = out.File

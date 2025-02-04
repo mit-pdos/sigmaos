@@ -2,16 +2,96 @@ syntax = "proto3";
 
 option go_package = "sigmaos/ft/task/proto";
 
-service FtTaskService {
-  rpc Echo(EchoReq) returns (EchoRep);
+enum TaskStatus {
+  TODO = 0;
+  WIP = 1;
+  DONE = 2;
+  ERROR = 3;
 }
 
-message EchoReq {
-  string text = 1;
-  int32 num = 2;
+message Task {
+  int32 id = 1;
+  bytes data = 2;
 }
 
-message EchoRep {
-  string text = 1;
-  int32 res = 2;
+message SubmitTasksReq {
+  repeated Task tasks = 1;
+}
+
+message SubmitTasksRep {
+  repeated int32 existing = 1;
+}
+
+message GetTasksByStatusReq {
+  TaskStatus status = 1;
+}
+
+message GetTasksByStatusRep {
+  repeated int32 ids = 1;
+}
+
+message ReadTasksReq {
+  repeated int32 ids = 1;
+}
+
+message ReadTasksRep {
+  repeated Task tasks = 1;
+}
+
+message MoveTasksReq {
+  repeated int32 ids = 1;
+  TaskStatus to = 2;
+}
+
+message MoveTasksRep {
+  
+}
+
+message MoveTasksByStatusReq {
+  TaskStatus from = 1;
+  TaskStatus to = 2;
+}
+
+message MoveTasksByStatusRep {
+
+}
+
+message AcquireTasksReq {
+  bool wait = 1;
+}
+
+message AcquireTasksRep {
+  repeated int32 ids = 1;
+}
+
+message AddTaskOutputsReq {
+  repeated int32 ids = 1;
+  repeated bytes outputs = 2;
+}
+
+message AddTaskOutputsRep {
+  
+}
+
+message GetTaskOutputsReq {
+  repeated int32 ids = 1;
+}
+
+message GetTaskOutputsRep {
+  repeated bytes outputs = 2;
+}
+
+message TaskStats {
+  int32 numTodo = 1;
+  int32 numWip = 2;
+  int32 numDone = 3;
+  int32 numError = 4;
+}
+
+message GetTaskStatsReq {
+
+}
+
+message GetTaskStatsRep {
+  TaskStats stats = 1;
 }

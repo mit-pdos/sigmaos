@@ -172,6 +172,7 @@ func (pdm *ProcdMgr) delProcClnt(realm sp.Trealm, ptype proc.Ttype) error {
 	pdcm, ok1 := pdm.upcs[realm]
 	rpcc, ok2 := pdcm[ptype]
 	if !ok1 || !ok2 {
+		db.DPrintf(db.ERROR, "delProcClnt %v %v", realm, ptype)
 		db.DFatalf("delProcClnt %v %v", realm, ptype)
 	}
 	delete(pdcm, ptype)

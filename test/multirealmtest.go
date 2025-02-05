@@ -84,6 +84,7 @@ func (mrts *MultiRealmTstate) GetRealm(r sp.Trealm) *RealmTstate {
 
 func (mrts *MultiRealmTstate) Shutdown() {
 	for r := range mrts.realms {
+		db.DPrintf(db.TEST, "Shut down realm %v", r)
 		if err := mrts.DelRealm(r); err != nil {
 			db.DPrintf(db.ERROR, "Err remove realm[%v]: %v", r, err)
 		}

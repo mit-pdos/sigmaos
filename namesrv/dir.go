@@ -134,7 +134,7 @@ func (d *Dir) Remove(ctx fs.CtxI, name string, f sp.Tfence, del fs.Tdel) *serr.E
 }
 
 func (d *Dir) Rename(ctx fs.CtxI, from, to string, f sp.Tfence) *serr.Err {
-	db.DPrintf(db.NAMED, "%v: Rename %v: %v %v\n", ctx.ClntId(), d, from, to)
+	db.DPrintf(db.NAMED, "%v: Rename %v: %v -> %v", ctx.ClntId(), d, from, to)
 	c, err := d.fs.Rename(&d.Obj.di, from, to, d.pn.Append(to), f)
 	d.Obj.fs.PstatUpdate(d.pn.Append(to), c)
 	return err

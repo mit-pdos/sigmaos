@@ -295,13 +295,13 @@ func (fs *FsEtcd) create(dei *DirEntInfo, dir *DirInfo, v sp.TQversion, new *Dir
 	}
 	stats.Inc(&c, 1)
 	resp, err := fs.Clnt().Txn(context.TODO()).If(cmp...).Then(ops...).Else(ops1...).Commit()
-	db.DPrintf(db.FSETCD, "Create new %v dei %v v %v %v err %v\n", new, dei, v, resp, err)
+	db.DPrintf(db.FSETCD, "Create new %v dei %v v %v %v err %v", new, dei, v, resp, err)
 	if err != nil {
 		return c, serr.NewErrError(err)
 	}
 	if !resp.Succeeded {
 		if len(resp.Responses[0].GetResponseRange().Kvs) != 1 {
-			db.DPrintf(db.FSETCD, "create %v stale\n", fs.fencekey)
+			db.DPrintf(db.FSETCD, "create %v stale", fs.fencekey)
 			return c, serr.NewErr(serr.TErrUnreachable, fs.fencekey)
 		}
 		if fenced && len(resp.Responses[3].GetResponseRange().Kvs) != 1 {
@@ -309,10 +309,10 @@ func (fs *FsEtcd) create(dei *DirEntInfo, dir *DirInfo, v sp.TQversion, new *Dir
 			return c, serr.NewErr(serr.TErrStale, f.PathName)
 		}
 		if len(resp.Responses[1].GetResponseRange().Kvs) == 1 {
-			db.DPrintf(db.FSETCD, "create %v exists %v\n", dir, new)
+			db.DPrintf(db.FSETCD, "create %v exists %v", dir, new)
 			return c, serr.NewErr(serr.TErrExists, fmt.Sprintf("path exists %v", fs.path2key(fs.realm, new)))
 		}
-		db.DPrintf(db.FSETCD, "create %v version mismatch %v %v\n", dei, v, resp.Responses[2])
+		db.DPrintf(db.FSETCD, "create %v version mismatch %v %v", dei, v, resp.Responses[2])
 		return c, serr.NewErr(serr.TErrVersion, dei.Path)
 	}
 	return c, nil

@@ -61,6 +61,14 @@ const (
 	CACHEDSVCCLNT           = "CACHEDSVCCLNT"
 )
 
+// EPCache
+const (
+	EPCACHE         Tselector = "EPCACHE"
+	EPCACHE_ERR               = EPCACHE + ERR
+	EPCACHECLNT               = "EPCACHECLNT"
+	EPCACHECLNT_ERR           = EPCACHECLNT + ERR
+)
+
 // Hotel
 const (
 	HOTEL_CLNT      Tselector = "HOTEL_CLNT"

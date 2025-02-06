@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+import "sigmap/sigmap.proto";
+
+option go_package = "sigmaos/apps/epcache/proto";
+
+message RegisterEndpointReq {
+  string serviceName = 1;
+  TendpointProto endpointProto = 2;
+}
+
+message RegisterEndpointRep {
+  bool ok = 1;
+}
+
+message GetEndpointsReq {
+  string serviceName = 1;
+}
+
+message GetEndpointsRep {
+  repeated TendpointProto endpointProto = 1;
+  uint64 version = 2;
+}
+
+message WaitForUpdatesReq {
+  string serviceName = 1;
+  uint64 version = 2;
+}
+
+message WaitForUpdatesReqRep {
+  repeated TendpointProto endpointProto = 1;
+  uint64 version = 2;
+}

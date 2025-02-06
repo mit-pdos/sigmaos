@@ -49,7 +49,7 @@ const (
 	SEQWC               = "SEQWC"
 )
 
-// mr
+// imgresize
 const (
 	THUMBNAIL Tselector = "THUMBNAIL"
 )
@@ -57,6 +57,11 @@ const (
 // kv
 const (
 	KVCLERK Tselector = "KVCLERK"
+)
+
+// epcache
+const (
+	EPCACHE Tselector = "EPCACHE"
 )
 
 // hotel

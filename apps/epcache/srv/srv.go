@@ -34,3 +34,21 @@ func (srv *EPCacheSrv) RegisterEndpoint(ctx fs.CtxI, req proto.RegisterEndpointR
 	db.DFatalf("Unimplemented")
 	return nil
 }
+
+func (srv *EPCacheSrv) DeregisterEndpoint(ctx fs.CtxI, req proto.DeregisterEndpointReq, rep *proto.DeregisterEndpointRep) error {
+	db.DPrintf(db.EPCACHE, "DeregisterEndpoint %v", req)
+	db.DFatalf("Unimplemented")
+	return nil
+}
+
+func (srv *EPCacheSrv) GetEndpoints(ctx fs.CtxI, req proto.GetEndpointsReq, rep *proto.GetEndpointsRep) error {
+	db.DPrintf(db.EPCACHE, "GetEndpoints %v", req)
+	db.DFatalf("Unimplemented")
+	return nil
+}
+
+func (srv *EPCacheSrv) WaitForUpdates(ctx fs.CtxI, req proto.WaitForUpdatesReq, rep *proto.WaitForUpdatesRep) error {
+	db.DPrintf(db.EPCACHE, "WaitForUpdates %v", req)
+	db.DFatalf("Unimplemented")
+	return nil
+}

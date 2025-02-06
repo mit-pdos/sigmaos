@@ -123,6 +123,108 @@ func (x *RegisterEndpointRep) GetOk() bool {
 	return false
 }
 
+type DeregisterEndpointReq struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	ServiceName   string                 `protobuf:"bytes,1,opt,name=serviceName,proto3" json:"serviceName,omitempty"`
+	EndpointProto *sigmap.TendpointProto `protobuf:"bytes,2,opt,name=endpointProto,proto3" json:"endpointProto,omitempty"`
+}
+
+func (x *DeregisterEndpointReq) Reset() {
+	*x = DeregisterEndpointReq{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_apps_epcache_proto_epcache_proto_msgTypes[2]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *DeregisterEndpointReq) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeregisterEndpointReq) ProtoMessage() {}
+
+func (x *DeregisterEndpointReq) ProtoReflect() protoreflect.Message {
+	mi := &file_apps_epcache_proto_epcache_proto_msgTypes[2]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeregisterEndpointReq.ProtoReflect.Descriptor instead.
+func (*DeregisterEndpointReq) Descriptor() ([]byte, []int) {
+	return file_apps_epcache_proto_epcache_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *DeregisterEndpointReq) GetServiceName() string {
+	if x != nil {
+		return x.ServiceName
+	}
+	return ""
+}
+
+func (x *DeregisterEndpointReq) GetEndpointProto() *sigmap.TendpointProto {
+	if x != nil {
+		return x.EndpointProto
+	}
+	return nil
+}
+
+type DeregisterEndpointRep struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Ok bool `protobuf:"varint,1,opt,name=ok,proto3" json:"ok,omitempty"`
+}
+
+func (x *DeregisterEndpointRep) Reset() {
+	*x = DeregisterEndpointRep{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_apps_epcache_proto_epcache_proto_msgTypes[3]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *DeregisterEndpointRep) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeregisterEndpointRep) ProtoMessage() {}
+
+func (x *DeregisterEndpointRep) ProtoReflect() protoreflect.Message {
+	mi := &file_apps_epcache_proto_epcache_proto_msgTypes[3]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeregisterEndpointRep.ProtoReflect.Descriptor instead.
+func (*DeregisterEndpointRep) Descriptor() ([]byte, []int) {
+	return file_apps_epcache_proto_epcache_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *DeregisterEndpointRep) GetOk() bool {
+	if x != nil {
+		return x.Ok
+	}
+	return false
+}
+
 type GetEndpointsReq struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -134,7 +236,7 @@ type GetEndpointsReq struct {
 func (x *GetEndpointsReq) Reset() {
 	*x = GetEndpointsReq{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_apps_epcache_proto_epcache_proto_msgTypes[2]
+		mi := &file_apps_epcache_proto_epcache_proto_msgTypes[4]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -147,7 +249,7 @@ func (x *GetEndpointsReq) String() string {
 func (*GetEndpointsReq) ProtoMessage() {}
 
 func (x *GetEndpointsReq) ProtoReflect() protoreflect.Message {
-	mi := &file_apps_epcache_proto_epcache_proto_msgTypes[2]
+	mi := &file_apps_epcache_proto_epcache_proto_msgTypes[4]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -160,7 +262,7 @@ func (x *GetEndpointsReq) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetEndpointsReq.ProtoReflect.Descriptor instead.
 func (*GetEndpointsReq) Descriptor() ([]byte, []int) {
-	return file_apps_epcache_proto_epcache_proto_rawDescGZIP(), []int{2}
+	return file_apps_epcache_proto_epcache_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *GetEndpointsReq) GetServiceName() string {
@@ -182,7 +284,7 @@ type GetEndpointsRep struct {
 func (x *GetEndpointsRep) Reset() {
 	*x = GetEndpointsRep{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_apps_epcache_proto_epcache_proto_msgTypes[3]
+		mi := &file_apps_epcache_proto_epcache_proto_msgTypes[5]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -195,7 +297,7 @@ func (x *GetEndpointsRep) String() string {
 func (*GetEndpointsRep) ProtoMessage() {}
 
 func (x *GetEndpointsRep) ProtoReflect() protoreflect.Message {
-	mi := &file_apps_epcache_proto_epcache_proto_msgTypes[3]
+	mi := &file_apps_epcache_proto_epcache_proto_msgTypes[5]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -208,7 +310,7 @@ func (x *GetEndpointsRep) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetEndpointsRep.ProtoReflect.Descriptor instead.
 func (*GetEndpointsRep) Descriptor() ([]byte, []int) {
-	return file_apps_epcache_proto_epcache_proto_rawDescGZIP(), []int{3}
+	return file_apps_epcache_proto_epcache_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *GetEndpointsRep) GetEndpointProto() []*sigmap.TendpointProto {
@@ -237,7 +339,7 @@ type WaitForUpdatesReq struct {
 func (x *WaitForUpdatesReq) Reset() {
 	*x = WaitForUpdatesReq{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_apps_epcache_proto_epcache_proto_msgTypes[4]
+		mi := &file_apps_epcache_proto_epcache_proto_msgTypes[6]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -250,7 +352,7 @@ func (x *WaitForUpdatesReq) String() string {
 func (*WaitForUpdatesReq) ProtoMessage() {}
 
 func (x *WaitForUpdatesReq) ProtoReflect() protoreflect.Message {
-	mi := &file_apps_epcache_proto_epcache_proto_msgTypes[4]
+	mi := &file_apps_epcache_proto_epcache_proto_msgTypes[6]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -263,7 +365,7 @@ func (x *WaitForUpdatesReq) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WaitForUpdatesReq.ProtoReflect.Descriptor instead.
 func (*WaitForUpdatesReq) Descriptor() ([]byte, []int) {
-	return file_apps_epcache_proto_epcache_proto_rawDescGZIP(), []int{4}
+	return file_apps_epcache_proto_epcache_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *WaitForUpdatesReq) GetServiceName() string {
@@ -280,7 +382,7 @@ func (x *WaitForUpdatesReq) GetVersion() uint64 {
 	return 0
 }
 
-type WaitForUpdatesReqRep struct {
+type WaitForUpdatesRep struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
@@ -289,23 +391,23 @@ type WaitForUpdatesReqRep struct {
 	Version       uint64                   `protobuf:"varint,2,opt,name=version,proto3" json:"version,omitempty"`
 }
 
-func (x *WaitForUpdatesReqRep) Reset() {
-	*x = WaitForUpdatesReqRep{}
+func (x *WaitForUpdatesRep) Reset() {
+	*x = WaitForUpdatesRep{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_apps_epcache_proto_epcache_proto_msgTypes[5]
+		mi := &file_apps_epcache_proto_epcache_proto_msgTypes[7]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
 }
 
-func (x *WaitForUpdatesReqRep) String() string {
+func (x *WaitForUpdatesRep) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*WaitForUpdatesReqRep) ProtoMessage() {}
+func (*WaitForUpdatesRep) ProtoMessage() {}
 
-func (x *WaitForUpdatesReqRep) ProtoReflect() protoreflect.Message {
-	mi := &file_apps_epcache_proto_epcache_proto_msgTypes[5]
+func (x *WaitForUpdatesRep) ProtoReflect() protoreflect.Message {
+	mi := &file_apps_epcache_proto_epcache_proto_msgTypes[7]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -316,19 +418,19 @@ func (x *WaitForUpdatesReqRep) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use WaitForUpdatesReqRep.ProtoReflect.Descriptor instead.
-func (*WaitForUpdatesReqRep) Descriptor() ([]byte, []int) {
-	return file_apps_epcache_proto_epcache_proto_rawDescGZIP(), []int{5}
+// Deprecated: Use WaitForUpdatesRep.ProtoReflect.Descriptor instead.
+func (*WaitForUpdatesRep) Descriptor() ([]byte, []int) {
+	return file_apps_epcache_proto_epcache_proto_rawDescGZIP(), []int{7}
 }
 
-func (x *WaitForUpdatesReqRep) GetEndpointProto() []*sigmap.TendpointProto {
+func (x *WaitForUpdatesRep) GetEndpointProto() []*sigmap.TendpointProto {
 	if x != nil {
 		return x.EndpointProto
 	}
 	return nil
 }
 
-func (x *WaitForUpdatesReqRep) GetVersion() uint64 {
+func (x *WaitForUpdatesRep) GetVersion() uint64 {
 	if x != nil {
 		return x.Version
 	}
@@ -350,31 +452,40 @@ var file_apps_epcache_proto_epcache_proto_rawDesc = []byte{
 	0x69, 0x6e, 0x74, 0x50, 0x72, 0x6f, 0x74, 0x6f, 0x52, 0x0d, 0x65, 0x6e, 0x64, 0x70, 0x6f, 0x69,
 	0x6e, 0x74, 0x50, 0x72, 0x6f, 0x74, 0x6f, 0x22, 0x25, 0x0a, 0x13, 0x52, 0x65, 0x67, 0x69, 0x73,
 	0x74, 0x65, 0x72, 0x45, 0x6e, 0x64, 0x70, 0x6f, 0x69, 0x6e, 0x74, 0x52, 0x65, 0x70, 0x12, 0x0e,
-	0x0a, 0x02, 0x6f, 0x6b, 0x18, 0x01, 0x20, 0x01, 0x28, 0x08, 0x52, 0x02, 0x6f, 0x6b, 0x22, 0x33,
-	0x0a, 0x0f, 0x47, 0x65, 0x74, 0x45, 0x6e, 0x64, 0x70, 0x6f, 0x69, 0x6e, 0x74, 0x73, 0x52, 0x65,
-	0x71, 0x12, 0x20, 0x0a, 0x0b, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x4e, 0x61, 0x6d, 0x65,
-	0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0b, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x4e,
-	0x61, 0x6d, 0x65, 0x22, 0x62, 0x0a, 0x0f, 0x47, 0x65, 0x74, 0x45, 0x6e, 0x64, 0x70, 0x6f, 0x69,
-	0x6e, 0x74, 0x73, 0x52, 0x65, 0x70, 0x12, 0x35, 0x0a, 0x0d, 0x65, 0x6e, 0x64, 0x70, 0x6f, 0x69,
-	0x6e, 0x74, 0x50, 0x72, 0x6f, 0x74, 0x6f, 0x18, 0x01, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x0f, 0x2e,
-	0x54, 0x65, 0x6e, 0x64, 0x70, 0x6f, 0x69, 0x6e, 0x74, 0x50, 0x72, 0x6f, 0x74, 0x6f, 0x52, 0x0d,
-	0x65, 0x6e, 0x64, 0x70, 0x6f, 0x69, 0x6e, 0x74, 0x50, 0x72, 0x6f, 0x74, 0x6f, 0x12, 0x18, 0x0a,
-	0x07, 0x76, 0x65, 0x72, 0x73, 0x69, 0x6f, 0x6e, 0x18, 0x02, 0x20, 0x01, 0x28, 0x04, 0x52, 0x07,
-	0x76, 0x65, 0x72, 0x73, 0x69, 0x6f, 0x6e, 0x22, 0x4f, 0x0a, 0x11, 0x57, 0x61, 0x69, 0x74, 0x46,
-	0x6f, 0x72, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x73, 0x52, 0x65, 0x71, 0x12, 0x20, 0x0a, 0x0b,
+	0x0a, 0x02, 0x6f, 0x6b, 0x18, 0x01, 0x20, 0x01, 0x28, 0x08, 0x52, 0x02, 0x6f, 0x6b, 0x22, 0x70,
+	0x0a, 0x15, 0x44, 0x65, 0x72, 0x65, 0x67, 0x69, 0x73, 0x74, 0x65, 0x72, 0x45, 0x6e, 0x64, 0x70,
+	0x6f, 0x69, 0x6e, 0x74, 0x52, 0x65, 0x71, 0x12, 0x20, 0x0a, 0x0b, 0x73, 0x65, 0x72, 0x76, 0x69,
+	0x63, 0x65, 0x4e, 0x61, 0x6d, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0b, 0x73, 0x65,
+	0x72, 0x76, 0x69, 0x63, 0x65, 0x4e, 0x61, 0x6d, 0x65, 0x12, 0x35, 0x0a, 0x0d, 0x65, 0x6e, 0x64,
+	0x70, 0x6f, 0x69, 0x6e, 0x74, 0x50, 0x72, 0x6f, 0x74, 0x6f, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0b,
+	0x32, 0x0f, 0x2e, 0x54, 0x65, 0x6e, 0x64, 0x70, 0x6f, 0x69, 0x6e, 0x74, 0x50, 0x72, 0x6f, 0x74,
+	0x6f, 0x52, 0x0d, 0x65, 0x6e, 0x64, 0x70, 0x6f, 0x69, 0x6e, 0x74, 0x50, 0x72, 0x6f, 0x74, 0x6f,
+	0x22, 0x27, 0x0a, 0x15, 0x44, 0x65, 0x72, 0x65, 0x67, 0x69, 0x73, 0x74, 0x65, 0x72, 0x45, 0x6e,
+	0x64, 0x70, 0x6f, 0x69, 0x6e, 0x74, 0x52, 0x65, 0x70, 0x12, 0x0e, 0x0a, 0x02, 0x6f, 0x6b, 0x18,
+	0x01, 0x20, 0x01, 0x28, 0x08, 0x52, 0x02, 0x6f, 0x6b, 0x22, 0x33, 0x0a, 0x0f, 0x47, 0x65, 0x74,
+	0x45, 0x6e, 0x64, 0x70, 0x6f, 0x69, 0x6e, 0x74, 0x73, 0x52, 0x65, 0x71, 0x12, 0x20, 0x0a, 0x0b,
 	0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x4e, 0x61, 0x6d, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28,
-	0x09, 0x52, 0x0b, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x4e, 0x61, 0x6d, 0x65, 0x12, 0x18,
-	0x0a, 0x07, 0x76, 0x65, 0x72, 0x73, 0x69, 0x6f, 0x6e, 0x18, 0x02, 0x20, 0x01, 0x28, 0x04, 0x52,
-	0x07, 0x76, 0x65, 0x72, 0x73, 0x69, 0x6f, 0x6e, 0x22, 0x67, 0x0a, 0x14, 0x57, 0x61, 0x69, 0x74,
-	0x46, 0x6f, 0x72, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x73, 0x52, 0x65, 0x71, 0x52, 0x65, 0x70,
-	0x12, 0x35, 0x0a, 0x0d, 0x65, 0x6e, 0x64, 0x70, 0x6f, 0x69, 0x6e, 0x74, 0x50, 0x72, 0x6f, 0x74,
-	0x6f, 0x18, 0x01, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x0f, 0x2e, 0x54, 0x65, 0x6e, 0x64, 0x70, 0x6f,
-	0x69, 0x6e, 0x74, 0x50, 0x72, 0x6f, 0x74, 0x6f, 0x52, 0x0d, 0x65, 0x6e, 0x64, 0x70, 0x6f, 0x69,
-	0x6e, 0x74, 0x50, 0x72, 0x6f, 0x74, 0x6f, 0x12, 0x18, 0x0a, 0x07, 0x76, 0x65, 0x72, 0x73, 0x69,
-	0x6f, 0x6e, 0x18, 0x02, 0x20, 0x01, 0x28, 0x04, 0x52, 0x07, 0x76, 0x65, 0x72, 0x73, 0x69, 0x6f,
-	0x6e, 0x42, 0x1c, 0x5a, 0x1a, 0x73, 0x69, 0x67, 0x6d, 0x61, 0x6f, 0x73, 0x2f, 0x61, 0x70, 0x70,
-	0x73, 0x2f, 0x65, 0x70, 0x63, 0x61, 0x63, 0x68, 0x65, 0x2f, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62,
-	0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x09, 0x52, 0x0b, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x4e, 0x61, 0x6d, 0x65, 0x22, 0x62,
+	0x0a, 0x0f, 0x47, 0x65, 0x74, 0x45, 0x6e, 0x64, 0x70, 0x6f, 0x69, 0x6e, 0x74, 0x73, 0x52, 0x65,
+	0x70, 0x12, 0x35, 0x0a, 0x0d, 0x65, 0x6e, 0x64, 0x70, 0x6f, 0x69, 0x6e, 0x74, 0x50, 0x72, 0x6f,
+	0x74, 0x6f, 0x18, 0x01, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x0f, 0x2e, 0x54, 0x65, 0x6e, 0x64, 0x70,
+	0x6f, 0x69, 0x6e, 0x74, 0x50, 0x72, 0x6f, 0x74, 0x6f, 0x52, 0x0d, 0x65, 0x6e, 0x64, 0x70, 0x6f,
+	0x69, 0x6e, 0x74, 0x50, 0x72, 0x6f, 0x74, 0x6f, 0x12, 0x18, 0x0a, 0x07, 0x76, 0x65, 0x72, 0x73,
+	0x69, 0x6f, 0x6e, 0x18, 0x02, 0x20, 0x01, 0x28, 0x04, 0x52, 0x07, 0x76, 0x65, 0x72, 0x73, 0x69,
+	0x6f, 0x6e, 0x22, 0x4f, 0x0a, 0x11, 0x57, 0x61, 0x69, 0x74, 0x46, 0x6f, 0x72, 0x55, 0x70, 0x64,
+	0x61, 0x74, 0x65, 0x73, 0x52, 0x65, 0x71, 0x12, 0x20, 0x0a, 0x0b, 0x73, 0x65, 0x72, 0x76, 0x69,
+	0x63, 0x65, 0x4e, 0x61, 0x6d, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0b, 0x73, 0x65,
+	0x72, 0x76, 0x69, 0x63, 0x65, 0x4e, 0x61, 0x6d, 0x65, 0x12, 0x18, 0x0a, 0x07, 0x76, 0x65, 0x72,
+	0x73, 0x69, 0x6f, 0x6e, 0x18, 0x02, 0x20, 0x01, 0x28, 0x04, 0x52, 0x07, 0x76, 0x65, 0x72, 0x73,
+	0x69, 0x6f, 0x6e, 0x22, 0x64, 0x0a, 0x11, 0x57, 0x61, 0x69, 0x74, 0x46, 0x6f, 0x72, 0x55, 0x70,
+	0x64, 0x61, 0x74, 0x65, 0x73, 0x52, 0x65, 0x70, 0x12, 0x35, 0x0a, 0x0d, 0x65, 0x6e, 0x64, 0x70,
+	0x6f, 0x69, 0x6e, 0x74, 0x50, 0x72, 0x6f, 0x74, 0x6f, 0x18, 0x01, 0x20, 0x03, 0x28, 0x0b, 0x32,
+	0x0f, 0x2e, 0x54, 0x65, 0x6e, 0x64, 0x70, 0x6f, 0x69, 0x6e, 0x74, 0x50, 0x72, 0x6f, 0x74, 0x6f,
+	0x52, 0x0d, 0x65, 0x6e, 0x64, 0x70, 0x6f, 0x69, 0x6e, 0x74, 0x50, 0x72, 0x6f, 0x74, 0x6f, 0x12,
+	0x18, 0x0a, 0x07, 0x76, 0x65, 0x72, 0x73, 0x69, 0x6f, 0x6e, 0x18, 0x02, 0x20, 0x01, 0x28, 0x04,
+	0x52, 0x07, 0x76, 0x65, 0x72, 0x73, 0x69, 0x6f, 0x6e, 0x42, 0x1c, 0x5a, 0x1a, 0x73, 0x69, 0x67,
+	0x6d, 0x61, 0x6f, 0x73, 0x2f, 0x61, 0x70, 0x70, 0x73, 0x2f, 0x65, 0x70, 0x63, 0x61, 0x63, 0x68,
+	0x65, 0x2f, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -389,25 +500,28 @@ func file_apps_epcache_proto_epcache_proto_rawDescGZIP() []byte {
 	return file_apps_epcache_proto_epcache_proto_rawDescData
 }
 
-var file_apps_epcache_proto_epcache_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
+var file_apps_epcache_proto_epcache_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
 var file_apps_epcache_proto_epcache_proto_goTypes = []interface{}{
 	(*RegisterEndpointReq)(nil),   // 0: RegisterEndpointReq
 	(*RegisterEndpointRep)(nil),   // 1: RegisterEndpointRep
-	(*GetEndpointsReq)(nil),       // 2: GetEndpointsReq
-	(*GetEndpointsRep)(nil),       // 3: GetEndpointsRep
-	(*WaitForUpdatesReq)(nil),     // 4: WaitForUpdatesReq
-	(*WaitForUpdatesReqRep)(nil),  // 5: WaitForUpdatesReqRep
-	(*sigmap.TendpointProto)(nil), // 6: TendpointProto
+	(*DeregisterEndpointReq)(nil), // 2: DeregisterEndpointReq
+	(*DeregisterEndpointRep)(nil), // 3: DeregisterEndpointRep
+	(*GetEndpointsReq)(nil),       // 4: GetEndpointsReq
+	(*GetEndpointsRep)(nil),       // 5: GetEndpointsRep
+	(*WaitForUpdatesReq)(nil),     // 6: WaitForUpdatesReq
+	(*WaitForUpdatesRep)(nil),     // 7: WaitForUpdatesRep
+	(*sigmap.TendpointProto)(nil), // 8: TendpointProto
 }
 var file_apps_epcache_proto_epcache_proto_depIdxs = []int32{
-	6, // 0: RegisterEndpointReq.endpointProto:type_name -> TendpointProto
-	6, // 1: GetEndpointsRep.endpointProto:type_name -> TendpointProto
-	6, // 2: WaitForUpdatesReqRep.endpointProto:type_name -> TendpointProto
-	3, // [3:3] is the sub-list for method output_type
-	3, // [3:3] is the sub-list for method input_type
-	3, // [3:3] is the sub-list for extension type_name
-	3, // [3:3] is the sub-list for extension extendee
-	0, // [0:3] is the sub-list for field type_name
+	8, // 0: RegisterEndpointReq.endpointProto:type_name -> TendpointProto
+	8, // 1: DeregisterEndpointReq.endpointProto:type_name -> TendpointProto
+	8, // 2: GetEndpointsRep.endpointProto:type_name -> TendpointProto
+	8, // 3: WaitForUpdatesRep.endpointProto:type_name -> TendpointProto
+	4, // [4:4] is the sub-list for method output_type
+	4, // [4:4] is the sub-list for method input_type
+	4, // [4:4] is the sub-list for extension type_name
+	4, // [4:4] is the sub-list for extension extendee
+	0, // [0:4] is the sub-list for field type_name
 }
 
 func init() { file_apps_epcache_proto_epcache_proto_init() }
@@ -441,7 +555,7 @@ func file_apps_epcache_proto_epcache_proto_init() {
 			}
 		}
 		file_apps_epcache_proto_epcache_proto_msgTypes[2].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*GetEndpointsReq); i {
+			switch v := v.(*DeregisterEndpointReq); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -453,7 +567,7 @@ func file_apps_epcache_proto_epcache_proto_init() {
 			}
 		}
 		file_apps_epcache_proto_epcache_proto_msgTypes[3].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*GetEndpointsRep); i {
+			switch v := v.(*DeregisterEndpointRep); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -465,7 +579,7 @@ func file_apps_epcache_proto_epcache_proto_init() {
 			}
 		}
 		file_apps_epcache_proto_epcache_proto_msgTypes[4].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*WaitForUpdatesReq); i {
+			switch v := v.(*GetEndpointsReq); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -477,7 +591,31 @@ func file_apps_epcache_proto_epcache_proto_init() {
 			}
 		}
 		file_apps_epcache_proto_epcache_proto_msgTypes[5].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*WaitForUpdatesReqRep); i {
+			switch v := v.(*GetEndpointsRep); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_apps_epcache_proto_epcache_proto_msgTypes[6].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*WaitForUpdatesReq); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_apps_epcache_proto_epcache_proto_msgTypes[7].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*WaitForUpdatesRep); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -495,7 +633,7 @@ func file_apps_epcache_proto_epcache_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_apps_epcache_proto_epcache_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   6,
+			NumMessages:   8,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

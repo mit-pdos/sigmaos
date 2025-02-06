@@ -37,3 +37,42 @@ func (clnt *EndpointCacheClnt) RegisterEndpoint(name string, ep *sp.Tendpoint) e
 	}
 	return nil
 }
+
+func (clnt *EndpointCacheClnt) DeregisterEndpoint(name string, ep *sp.Tendpoint) error {
+	var res proto.DeregisterEndpointRep
+	req := &proto.DeregisterEndpointReq{
+		ServiceName:   name,
+		EndpointProto: ep.GetProto(),
+	}
+	err := clnt.rpcc.RPC("EPCacheSrv.DeregisterEndpoint", req, &res)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (clnt *EndpointCacheClnt) GetEndpoints(name string, ep *sp.Tendpoint) error {
+	var res proto.GetEndpointsRep
+	req := &proto.GetEndpointsReq{
+		ServiceName:   name,
+		EndpointProto: ep.GetProto(),
+	}
+	err := clnt.rpcc.RPC("EPCacheSrv.GetEndpoints", req, &res)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (clnt *EndpointCacheClnt) WaitForUpdates(name string, ep *sp.Tendpoint) error {
+	var res proto.WaitForUpdatesRep
+	req := &proto.WaitForUpdatesReq{
+		ServiceName:   name,
+		EndpointProto: ep.GetProto(),
+	}
+	err := clnt.rpcc.RPC("EPCacheSrv.WaitForUpdates", req, &res)
+	if err != nil {
+		return err
+	}
+	return nil
+}

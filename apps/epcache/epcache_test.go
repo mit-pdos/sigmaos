@@ -8,7 +8,13 @@ import (
 	epclnt "sigmaos/apps/epcache/clnt"
 	db "sigmaos/debug"
 	"sigmaos/proc"
+	sp "sigmaos/sigmap"
 	"sigmaos/test"
+)
+
+const (
+	IP   = "123.123.123.123"
+	PORT = 4567
 )
 
 type Tstate struct {
@@ -64,4 +70,6 @@ func TestRegister(t *testing.T) {
 	}
 	defer ts.shutdown()
 	db.DPrintf(db.TEST, "Started srv")
+	ep := sp.NewEndpoint(sp.INTERNAL_EP, []*sp.Taddr{sp.NewTaddr(IP, sp.OUTER_CONTAINER_IP, PORT)})
+	db.DPrintf(db.TEST, "Registered EP: %v", ep)
 }

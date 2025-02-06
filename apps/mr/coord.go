@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"sync/atomic"
 	"time"
@@ -190,6 +191,7 @@ func (c *Coord) reducerProc(tn string) (*proc.Proc, error) {
 	if !ok {
 		db.DFatalf("reducerProc: no input for %v", tn)
 	}
+	db.DPrintf(db.MR, "tn %s t %v bin %v", tn, t, bin)
 	b, err := json.Marshal(bin)
 	if err != nil {
 		db.DFatalf("reducerProc: %v err %v", tn, err)
@@ -360,7 +362,11 @@ func (c *Coord) makeReduceBins() error {
 
 	db.DPrintf(db.MR, "Reducers job state %v", rs)
 
+	// get all reducers (including those that succeeded in previous rounds) in sorted order to ensure
+	// any restarted reducers are given the exact same files as before
 	rns := append(rnsDone, rnsTodo...)
+	sort.Strings(rns)
+
 	for _, n := range rns {
 		c.reduceBinIn[n] = make(Bin, c.nmaptask)
 	}
@@ -481,6 +487,7 @@ func (c *Coord) Work() {
 		if m == c.nmaptask {
 			ms := time.Since(start).Milliseconds()
 			db.DPrintf(db.ALWAYS, "map phase took %vms\n", ms)
+
 			err := c.makeReduceBins()
 			if err != nil {
 				db.DFatalf("ReduceBins err %v", err)

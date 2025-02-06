@@ -1,6 +1,7 @@
 package srv
 
 import (
+	"fmt"
 	"sync"
 
 	"sigmaos/api/fs"
@@ -81,15 +82,12 @@ func RunSrv() error {
 
 // Caller holds lock
 func (srv *EPCacheSrv) addEP(svcName string, ep *sp.Tendpoint) {
-	var svc *svc
-	var ok bool
-	svc, ok = srv.svcs[svcName]
+	svc, ok := srv.svcs[svcName]
 	if !ok {
 		svc = newSvc(&srv.mu, svcName)
 		srv.svcs[svcName] = svc
 	}
-	key := ep.String()
-	svc.eps[key] = ep
+	svc.add(ep)
 }
 
 // Caller holds lock
@@ -100,6 +98,28 @@ func (srv *EPCacheSrv) delEP(svcName string, ep *sp.Tendpoint) bool {
 		return false
 	}
 	return svc.del(ep)
+}
+
+// Caller holds lock
+func (srv *EPCacheSrv) getEPs(svcName string, v1 epcache.Tversion) (epcache.Tversion, []*sp.TendpointProto, error) {
+	svc, ok := srv.svcs[svcName]
+	if !ok {
+		db.DPrintf(db.EPCACHE_ERR, "Try get unknown SVC svc %v %v", svcName, v1)
+		return epcache.NO_VERSION, nil, fmt.Errorf("Unkown svc %v", svcName)
+	}
+	if v1 != epcache.NO_VERSION {
+		// If this is a versioned get, wait until v > v1
+		for svc.v < v1 {
+			svc.cond.Wait()
+		}
+	}
+	// Either this was an unversioned get, or the wait has terminated. It is now
+	// safe to return
+	eps := make([]*sp.TendpointProto, 0, len(svc.eps))
+	for _, ep := range svc.eps {
+		eps = append(eps, ep.GetProto())
+	}
+	return svc.v, eps, nil
 }
 
 func (srv *EPCacheSrv) RegisterEndpoint(ctx fs.CtxI, req proto.RegisterEndpointReq, rep *proto.RegisterEndpointRep) error {
@@ -131,7 +151,12 @@ func (srv *EPCacheSrv) GetEndpoints(ctx fs.CtxI, req proto.GetEndpointsReq, rep 
 	srv.mu.Lock()
 	defer srv.mu.Unlock()
 
-	db.DFatalf("Unimplemented")
+	v, eps, err := srv.getEPs(req.ServiceName, epcache.Tversion(req.Version))
+	if err != nil {
+		return err
+	}
+	rep.Version = uint64(v)
+	rep.EndpointProtos = eps
 	db.DPrintf(db.EPCACHE, "GetEndpoints done req:%v rep:%v", req, rep)
 	return nil
 }

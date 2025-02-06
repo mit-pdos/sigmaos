@@ -159,7 +159,10 @@ then
   docker.io \
   cpufrequtils \
   apparmor-utils \
-  mysql-client
+  mysql-client \
+  mariadb-client \
+  parallel \
+  docker-buildx
 
   # For hadoop
 #  yes | sudo apt install openjdk-8-jdk \

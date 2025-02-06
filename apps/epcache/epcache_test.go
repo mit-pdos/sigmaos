@@ -126,11 +126,11 @@ func TestBasic(t *testing.T) {
 		assert.False(ts.T, true, "Err Get returned early")
 	}
 
-	db.DPrintf(db.TEST, "Wait didn't return early")
+	db.DPrintf(db.TEST, "Wait didn't return early 1")
 
 	// Add another EP to the existing service
 	ep3 := sp.NewEndpoint(sp.INTERNAL_EP, []*sp.Taddr{sp.NewTaddr(IP3, sp.OUTER_CONTAINER_IP, PORT3)})
-	err = ts.clnt.RegisterEndpoint(SVC1, ep2)
+	err = ts.clnt.RegisterEndpoint(SVC1, ep3)
 	if !assert.Nil(ts.T, err, "Err RegisterEndpoint: %v", err) {
 		return
 	}
@@ -152,19 +152,38 @@ func TestBasic(t *testing.T) {
 		assert.Equal(ts.T, strEPs[i], origStrEPs[i], "Returned EP doesn't match: %v != %v", strEPs[i], origStrEPs[i])
 	}
 
+	// Start a goroutine to wait for the next version
+	nextV++
+	go func(v epcache.Tversion, ch chan epcache.Tversion, ch2 chan []*sp.Tendpoint) {
+		db.DPrintf(db.TEST, "Get & wait for EP [%v:%v]", SVC1, nextV)
+		eps, v2, err := ts.clnt.GetEndpoints(SVC1, v)
+		assert.Nil(ts.T, err, "Err GetEndpoints: %v", err)
+		assert.Equal(ts.T, v, v2, "Got back wrong version: %v != %v", v, v2)
+		db.DPrintf(db.TEST, "Got EP after wait [%v:%v]: %v", SVC1, v2, eps)
+		ch <- v2
+		ch2 <- eps
+	}(nextV, ch, ch2)
+
+	select {
+	case <-time.After(2 * time.Second):
+	case <-ch:
+		assert.False(ts.T, true, "Err Get returned early")
+	}
+
+	db.DPrintf(db.TEST, "Wait didn't return early 2")
+
 	err = ts.clnt.DeregisterEndpoint(SVC1, ep1)
 	if !assert.Nil(ts.T, err, "Err DeregisterEndpoint: %v", err) {
 		return
 	}
 	db.DPrintf(db.TEST, "Deregistered EP [%v]: %v", SVC1, ep1)
-	eps, v, err = ts.clnt.GetEndpoints(SVC1, epcache.NO_VERSION)
-	if !assert.Nil(ts.T, err, "Err GetEndpoints: %v", err) {
+
+	v3 := <-ch
+	assert.Equal(ts.T, nextV, v3, "Got back wrong version: %v != %v", nextV, v3)
+	eps = <-ch2
+	if !assert.Equal(ts.T, len(eps), 1, "Got back wrong num EPs after wait/deregister: %v", len(eps)) {
 		return
 	}
-	assert.Equal(ts.T, v, nextV+1, "Got back wrong version after deregister: %v != %v", v, nextV+1)
-	if !assert.Equal(ts.T, len(eps), 1, "Got back wrong num EPs: %v", len(eps)) {
-		return
-	}
-	assert.Equal(ts.T, eps[0].String(), ep1.String(), "Got back wrong EP: %v != %v", eps[0], ep1)
+	assert.Equal(ts.T, eps[0].String(), ep3.String(), "Got back wrong EP: %v != %v", eps[0], ep3)
 	db.DPrintf(db.TEST, "Got EP [%v:%v]: %v", SVC1, v, ep1)
 }

@@ -393,7 +393,9 @@ func (ts *Tstate) compare() bool {
 
 func (ts *Tstate) checkJob(app string) bool {
 	err := mr.MergeReducerOutput(ts.mrts.GetRealm(test.REALM1).FsLib, ts.jobRoot, ts.job, OUTPUT, ts.nreducetask)
-	assert.Nil(ts.mrts.T, err, "Merge output files: %v", err)
+	if !assert.Nil(ts.mrts.T, err, "Merge output files: %v", err) {
+		return false
+	}
 	if app == "mr-wc.yml" || app == "mr-ux-wc.yml" || app == MALICIOUS_APP {
 		db.DPrintf(db.TEST, "checkJob %v", app)
 		return ts.compare()

@@ -8,9 +8,8 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"sigmaos/apps/epcache"
-	epclnt "sigmaos/apps/epcache/clnt"
+	epsrv "sigmaos/apps/epcache/srv"
 	db "sigmaos/debug"
-	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )
@@ -28,39 +27,16 @@ const (
 
 type Tstate struct {
 	*test.Tstate
-	srvProc *proc.Proc
-	clnt    *epclnt.EndpointCacheClnt
+	j *epsrv.EPCacheJob
 }
 
 func newTstate(t1 *test.Tstate) (*Tstate, error) {
-	ts := &Tstate{
-		Tstate:  t1,
-		srvProc: proc.NewProc("epcached", []string{}),
-	}
-	if err := ts.Spawn(ts.srvProc); !assert.Nil(ts.T, err, "Err Spawn: %v", err) {
-		return ts, err
-	}
-	if err := ts.WaitStart(ts.srvProc.GetPid()); !assert.Nil(ts.T, err, "Err WaitStart: %v", err) {
-		return ts, err
-	}
-	clnt, err := epclnt.NewEndpointCacheClnt(ts.FsLib)
-	if !assert.Nil(ts.T, err, "Err NewClnt: %v", err) {
-		return ts, err
-	}
-	ts.clnt = clnt
-	return ts, nil
-}
-
-func (ts *Tstate) shutdown() {
-	err := ts.Evict(ts.srvProc.GetPid())
-	if assert.Nil(ts.T, err, "Err evict: %v", err) {
-		return
-	}
-	status, err := ts.WaitExit(ts.srvProc.GetPid())
-	if assert.Nil(ts.T, err, "Err evict: %v", err) {
-		assert.True(ts.T, status.IsStatusEvicted(), "Unexpected exit status: %v", status)
-	}
-	db.DPrintf(db.TEST, "Stopped srv")
+	j, err := epsrv.NewEPCacheJob(t1.SigmaClnt)
+	assert.Nil(t1.T, err, "Err EPCacheJob: %v", err)
+	return &Tstate{
+		Tstate: t1,
+		j:      j,
+	}, nil
 }
 
 func TestCompile(t *testing.T) {
@@ -77,15 +53,15 @@ func TestBasic(t *testing.T) {
 	if !assert.Nil(ts.T, err, "Err newTstate: %v", err) {
 		return
 	}
-	defer ts.shutdown()
+	defer ts.j.Stop()
 	db.DPrintf(db.TEST, "Started srv")
 	ep1 := sp.NewEndpoint(sp.INTERNAL_EP, []*sp.Taddr{sp.NewTaddr(IP1, sp.OUTER_CONTAINER_IP, PORT1)})
-	err = ts.clnt.RegisterEndpoint(SVC1, ep1)
+	err = ts.j.Clnt.RegisterEndpoint(SVC1, ep1)
 	if !assert.Nil(ts.T, err, "Err RegisterEndpoint: %v", err) {
 		return
 	}
 	db.DPrintf(db.TEST, "Registered EP [%v]: %v", SVC1, ep1)
-	eps, v, err := ts.clnt.GetEndpoints(SVC1, epcache.NO_VERSION)
+	eps, v, err := ts.j.Clnt.GetEndpoints(SVC1, epcache.NO_VERSION)
 	if !assert.Nil(ts.T, err, "Err RegisterEndpoint: %v", err) {
 		return
 	}
@@ -104,7 +80,7 @@ func TestBasic(t *testing.T) {
 	// Start a goroutine to wait for the next version
 	go func(v epcache.Tversion, ch chan epcache.Tversion, ch2 chan []*sp.Tendpoint) {
 		db.DPrintf(db.TEST, "Get & wait for EP [%v:%v]", SVC1, nextV)
-		eps, v2, err := ts.clnt.GetEndpoints(SVC1, v)
+		eps, v2, err := ts.j.Clnt.GetEndpoints(SVC1, v)
 		assert.Nil(ts.T, err, "Err GetEndpoints: %v", err)
 		assert.Equal(ts.T, v, v2, "Got back wrong version: %v != %v", v, v2)
 		db.DPrintf(db.TEST, "Got EP after wait [%v:%v]: %v", SVC1, v2, eps)
@@ -114,7 +90,7 @@ func TestBasic(t *testing.T) {
 
 	// Add an EP to a different service
 	ep2 := sp.NewEndpoint(sp.INTERNAL_EP, []*sp.Taddr{sp.NewTaddr(IP2, sp.OUTER_CONTAINER_IP, PORT2)})
-	err = ts.clnt.RegisterEndpoint(SVC2, ep2)
+	err = ts.j.Clnt.RegisterEndpoint(SVC2, ep2)
 	if !assert.Nil(ts.T, err, "Err RegisterEndpoint: %v", err) {
 		return
 	}
@@ -130,7 +106,7 @@ func TestBasic(t *testing.T) {
 
 	// Add another EP to the existing service
 	ep3 := sp.NewEndpoint(sp.INTERNAL_EP, []*sp.Taddr{sp.NewTaddr(IP3, sp.OUTER_CONTAINER_IP, PORT3)})
-	err = ts.clnt.RegisterEndpoint(SVC1, ep3)
+	err = ts.j.Clnt.RegisterEndpoint(SVC1, ep3)
 	if !assert.Nil(ts.T, err, "Err RegisterEndpoint: %v", err) {
 		return
 	}
@@ -156,7 +132,7 @@ func TestBasic(t *testing.T) {
 	nextV++
 	go func(v epcache.Tversion, ch chan epcache.Tversion, ch2 chan []*sp.Tendpoint) {
 		db.DPrintf(db.TEST, "Get & wait for EP [%v:%v]", SVC1, nextV)
-		eps, v2, err := ts.clnt.GetEndpoints(SVC1, v)
+		eps, v2, err := ts.j.Clnt.GetEndpoints(SVC1, v)
 		assert.Nil(ts.T, err, "Err GetEndpoints: %v", err)
 		assert.Equal(ts.T, v, v2, "Got back wrong version: %v != %v", v, v2)
 		db.DPrintf(db.TEST, "Got EP after wait [%v:%v]: %v", SVC1, v2, eps)
@@ -172,7 +148,7 @@ func TestBasic(t *testing.T) {
 
 	db.DPrintf(db.TEST, "Wait didn't return early 2")
 
-	err = ts.clnt.DeregisterEndpoint(SVC1, ep1)
+	err = ts.j.Clnt.DeregisterEndpoint(SVC1, ep1)
 	if !assert.Nil(ts.T, err, "Err DeregisterEndpoint: %v", err) {
 		return
 	}

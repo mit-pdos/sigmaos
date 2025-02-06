@@ -13,7 +13,7 @@ import (
 
 func TestPythonSmall(t *testing.T) { // TODO: modify to kill the python interpreter
 	ts, _ := test.NewTstateAll(t)
-	p := proc.NewPythonProc([]string{}, "ivy-tutorial-test")
+	p := proc.NewPythonProc([]string{}, "ivywu")
 	start := time.Now()
 	err := ts.Spawn(p)
 	assert.Nil(ts.T, err)
@@ -30,7 +30,7 @@ func TestPythonSmall(t *testing.T) { // TODO: modify to kill the python interpre
 
 func TestPythonLaunch(t *testing.T) {
 	ts, _ := test.NewTstateAll(t)
-	p := proc.NewPythonProc([]string{"/~~/pyproc/hello.py"}, "ivy-tutorial-test")
+	p := proc.NewPythonProc([]string{"/~~/pyproc/hello.py"}, "ivywu")
 	start := time.Now()
 	err := ts.Spawn(p)
 	assert.Nil(ts.T, err)
@@ -48,7 +48,7 @@ func TestPythonLaunch(t *testing.T) {
 
 func TestPythonBasicImport(t *testing.T) {
 	ts, _ := test.NewTstateAll(t)
-	p := proc.NewPythonProc([]string{"/~~/pyproc/basic_import.py"}, "ivy-tutorial-test")
+	p := proc.NewPythonProc([]string{"/~~/pyproc/basic_import.py"}, "ivywu")
 	start := time.Now()
 	err := ts.Spawn(p)
 	assert.Nil(ts.T, err)
@@ -65,7 +65,24 @@ func TestPythonBasicImport(t *testing.T) {
 
 func TestPythonAWSImport(t *testing.T) {
 	ts, _ := test.NewTstateAll(t)
-	p := proc.NewPythonProc([]string{"/~~/pyproc/aws_import.py"}, "ivy-tutorial-test")
+	p := proc.NewPythonProc([]string{"/~~/pyproc/aws_import.py"}, "ivywu")
+	start := time.Now()
+	err := ts.Spawn(p)
+	assert.Nil(ts.T, err)
+	duration := time.Since(start)
+	err = ts.WaitStart(p.GetPid())
+	assert.Nil(ts.T, err, "Error waitstart: %v", err)
+	duration2 := time.Since(start)
+	_, err = ts.WaitExit(p.GetPid())
+	assert.Nil(t, err)
+	duration3 := time.Since(start)
+	fmt.Printf("cold spawn %v, start %v, exit %v\n", duration, duration2, duration3)
+	ts.Shutdown()
+}
+
+func TestPythonNeighborImport(t *testing.T) {
+	ts, _ := test.NewTstateAll(t)
+	p := proc.NewPythonProc([]string{"/~~/pyproc/neighbor_import/neighbor_import.py"}, "ivywu")
 	start := time.Now()
 	err := ts.Spawn(p)
 	assert.Nil(ts.T, err)
@@ -83,7 +100,7 @@ func TestPythonAWSImport(t *testing.T) {
 func TestPythonChecksumVerification(t *testing.T) {
 	fmt.Printf("Starting 1st proc...\n")
 	ts, _ := test.NewTstateAll(t)
-	p := proc.NewPythonProc([]string{"/~~/pyproc/aws_import.py"}, "ivy-tutorial-test")
+	p := proc.NewPythonProc([]string{"/~~/pyproc/aws_import.py"}, "ivywu")
 	start := time.Now()
 	err := ts.Spawn(p)
 	assert.Nil(ts.T, err)
@@ -103,7 +120,7 @@ func TestPythonChecksumVerification(t *testing.T) {
 
 	fmt.Printf("Starting 2nd proc (cached lib)...\n")
 	ts, _ = test.NewTstateAll(t)
-	p2 := proc.NewPythonProc([]string{"/~~/pyproc/aws_import.py"}, "ivy-tutorial-test")
+	p2 := proc.NewPythonProc([]string{"/~~/pyproc/aws_import.py"}, "ivywu")
 	start2 := time.Now()
 	err = ts.Spawn(p2)
 	assert.Nil(ts.T, err)
@@ -126,7 +143,7 @@ func TestPythonChecksumVerification(t *testing.T) {
 
 	fmt.Printf("Starting 3rd proc (invalid cache)...\n")
 	ts, _ = test.NewTstateAll(t)
-	p3 := proc.NewPythonProc([]string{"/~~/pyproc/aws_import.py"}, "ivy-tutorial-test")
+	p3 := proc.NewPythonProc([]string{"/~~/pyproc/aws_import.py"}, "ivywu")
 	start3 := time.Now()
 	err = ts.Spawn(p3)
 	assert.Nil(ts.T, err)

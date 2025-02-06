@@ -10,7 +10,7 @@ message RegisterEndpointReq {
 }
 
 message RegisterEndpointRep {
-  bool ok = 1;
+  bool oK = 1;
 }
 
 message DeregisterEndpointReq {
@@ -19,24 +19,15 @@ message DeregisterEndpointReq {
 }
 
 message DeregisterEndpointRep {
-  bool ok = 1;
+  bool oK = 1;
 }
 
 message GetEndpointsReq {
   string serviceName = 1;
+  uint64 version = 2;
 }
 
 message GetEndpointsRep {
-  repeated TendpointProto endpointProto = 1;
-  uint64 version = 2;
-}
-
-message WaitForUpdatesReq {
-  string serviceName = 1;
-  uint64 version = 2;
-}
-
-message WaitForUpdatesRep {
-  repeated TendpointProto endpointProto = 1;
+  repeated TendpointProto endpointProtos = 1;
   uint64 version = 2;
 }

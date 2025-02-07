@@ -3,7 +3,6 @@ package hotel
 import (
 	"encoding/json"
 	"log"
-	"path/filepath"
 	"strconv"
 	"sync"
 	"time"
@@ -14,6 +13,7 @@ import (
 	"github.com/mit-pdos/go-geoindex"
 
 	"sigmaos/api/fs"
+	epclnt "sigmaos/apps/epcache/clnt"
 	"sigmaos/apps/hotel/proto"
 	db "sigmaos/debug"
 	"sigmaos/proc"
@@ -99,11 +99,30 @@ func RunGeoSrv(job string, nidxStr string, maxSearchRadiusStr string, maxSearchR
 	db.DPrintf(db.SPAWN_LAT, "Geo.NewGeoIndexes: sinceSpawn:%v op:%v", time.Since(pe.GetSpawnTime()), time.Since(start))
 	db.DPrintf(db.ALWAYS, "Geo srv done building %v indexes, radius %v nresults %v,  after: %v", nidx, geo.maxSearchRadius, geo.maxSearchReps, time.Since(start))
 	start = time.Now()
-	ssrv, err := sigmasrv.NewSigmaSrv(filepath.Join(HOTELGEODIR, pe.GetPID().String()), geo, pe)
+	// Don't post the geo srv in the namespace
+	ssrv, err := sigmasrv.NewSigmaSrv("", geo, pe)
 	if err != nil {
 		return err
 	}
 	db.DPrintf(db.SPAWN_LAT, "Geo.NewSigmaSrv: sinceSpawn:%v op:%v", time.Since(pe.GetSpawnTime()), time.Since(start))
+	start = time.Now()
+
+	epcc, err := epclnt.NewEndpointCacheClnt(ssrv.MemFs.SigmaClnt().FsLib)
+	if err != nil {
+		db.DFatalf("Err EPCC: %v", err)
+	}
+
+	db.DPrintf(db.SPAWN_LAT, "Geo.NewEPCC: sinceSpawn:%v op:%v", time.Since(pe.GetSpawnTime()), time.Since(start))
+	start = time.Now()
+
+	ep := ssrv.MemFs.GetSigmaPSrvEndpoint()
+
+	if err := epcc.RegisterEndpoint(HOTELGEODIR, ep); err != nil {
+		db.DFatalf("Err RegisterEP: %v", err)
+	}
+
+	db.DPrintf(db.SPAWN_LAT, "Geo.RegisterEP: sinceSpawn:%v op:%v", time.Since(pe.GetSpawnTime()), time.Since(start))
+	start = time.Now()
 
 	p, err := perf.NewPerf(ssrv.MemFs.SigmaClnt().ProcEnv(), perf.HOTEL_GEO)
 	if err != nil {

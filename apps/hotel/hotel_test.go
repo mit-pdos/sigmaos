@@ -5,18 +5,21 @@ import (
 	"fmt"
 	"math/rand"
 	"net"
+	"path/filepath"
 	"strconv"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 
+	"sigmaos/apps/epcache"
 	"sigmaos/apps/hotel"
 	"sigmaos/apps/hotel/proto"
 	"sigmaos/benchmarks/loadgen"
 	db "sigmaos/debug"
 	"sigmaos/proc"
 	dbclnt "sigmaos/proxy/db/clnt"
+	"sigmaos/rpc"
 	sprpcclnt "sigmaos/rpc/clnt/sigmap"
 	shardedsvcrpcclnt "sigmaos/rpc/shardedsvc/clnt"
 	sp "sigmaos/sigmap"
@@ -453,15 +456,26 @@ func TestBenchSpawnGeo(t *testing.T) {
 		return
 	}
 
-	rpcdc := shardedsvcrpcclnt.NewShardedSvcRPCClnt(ts.FsLib, hotel.HOTELGEODIR, db.TEST, db.TEST)
-	geoID, err := rpcdc.WaitTimedRandomEntry()
-	if !assert.Nil(t, err, "Err get geo server ID: %v", err) {
+	eps, _, err := ts.hotel.EPCacheJob.Clnt.GetEndpoints(hotel.HOTELGEODIR, epcache.NO_VERSION)
+	if !assert.Nil(t, err, "Err getEndpoints: %v", err) {
 		return
 	}
-	rpcc, err := rpcdc.GetClnt(geoID)
+
+	if !assert.Equal(t, len(eps), 1, "Wrong num eps: %v", len(eps)) {
+		return
+	}
+
+	pn := "name/geosrv"
+	db.DPrintf(db.ALWAYS, "Mount start")
+	if err := ts.FsLib.MountTree(eps[0], rpc.RPC, filepath.Join(pn, rpc.RPC)); !assert.Nil(t, err, "Err mount geo srv: %v", err) {
+		return
+	}
+
+	rpcc, err := sprpcclnt.NewRPCClnt(ts.FsLib, pn)
 	if !assert.Nil(t, err, "Err get geo clnt: %v", err) {
 		return
 	}
+
 	arg := proto.GeoReq{
 		Lat: 37.7749,
 		Lon: -122.4194,

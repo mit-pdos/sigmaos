@@ -16,5 +16,8 @@ const (
 type Tversion uint64
 
 func (v Tversion) String() string {
+	if v == NO_VERSION {
+		return "vNONE"
+	}
 	return fmt.Sprintf("v%v", uint64(v))
 }

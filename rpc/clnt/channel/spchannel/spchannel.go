@@ -6,11 +6,11 @@ import (
 	"time"
 
 	db "sigmaos/debug"
-	"sigmaos/sigmaclnt/fslib"
 	"sigmaos/rpc"
 	"sigmaos/rpc/clnt/channel"
 	rpcdevclnt "sigmaos/rpc/dev/clnt"
 	sessp "sigmaos/session/proto"
+	"sigmaos/sigmaclnt/fslib"
 	sp "sigmaos/sigmap"
 )
 
@@ -38,6 +38,7 @@ func NewSPChannel(fsl *fslib.FsLib, pn string) (channel.RPCChannel, error) {
 	if err != nil {
 		return nil, err
 	}
+	db.DPrintf(db.RPCCLNT, "Open %v", sdc.DataPn())
 	fd, err := fsl.Open(sdc.DataPn(), sp.ORDWR)
 	if err != nil {
 		return nil, err

@@ -9,8 +9,8 @@ import (
 	"path/filepath"
 
 	db "sigmaos/debug"
-	"sigmaos/sigmaclnt/fslib"
 	rpcdev "sigmaos/rpc/dev"
+	"sigmaos/sigmaclnt/fslib"
 )
 
 type SessDevClnt struct {
@@ -25,9 +25,10 @@ func NewSessDevClnt(fsl *fslib.FsLib, pn string) (*SessDevClnt, error) {
 	sdc := &SessDevClnt{FsLib: fsl, pn: pn}
 
 	clone := sdc.pn + "/" + rpcdev.CLONE
-	db.DPrintf(db.SESSDEVCLNT, "NewSessDevClnt: %q\n", clone)
+	db.DPrintf(db.SESSDEVCLNT, "NewSessDevClnt: %v", clone)
 	b, err := sdc.GetFile(clone)
 	if err != nil {
+		db.DPrintf(db.SESSDEVCLNT_ERR, "NewSessDevClnt [%v] err: %v", clone, err)
 		return nil, err
 	}
 	sdc.sid = string(b)

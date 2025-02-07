@@ -254,7 +254,7 @@ func (pathc *PathClnt) SetDirWatch(fid sp.Tfid) (sp.Tfid, error) {
 }
 
 func (pathc *PathClnt) GetFile(pn string, principal *sp.Tprincipal, mode sp.Tmode, off sp.Toffset, cnt sp.Tsize, f *sp.Tfence) ([]byte, error) {
-	db.DPrintf(db.PATHCLNT, "%v: GetFile %v %v\n", pathc.cid, pn, mode)
+	db.DPrintf(db.PATHCLNT, "%v: GetFile %v %v", pathc.cid, pn, mode)
 	p, err := serr.PathSplitErr(pn)
 	if err != nil {
 		return nil, err
@@ -263,7 +263,9 @@ func (pathc *PathClnt) GetFile(pn string, principal *sp.Tprincipal, mode sp.Tmod
 	if err != nil {
 		return nil, err
 	}
+	db.DPrintf(db.PATHCLNT, "%v: GetFile resolve success p %v fid %v rest %v", pathc.cid, p, fid, rest)
 	data, err := pathc.FidClnt.GetFile(fid, rest, mode, off, cnt, path.EndSlash(pn), f)
+	db.DPrintf(db.PATHCLNT, "%v: GetFile fidclnt.GetFile fid %v rest %v err %v", pathc.cid, fid, rest, err)
 	if serr.Retry(err) {
 		fid, err = pathc.walk(p, principal, path.EndSlash(pn), nil)
 		if err != nil {

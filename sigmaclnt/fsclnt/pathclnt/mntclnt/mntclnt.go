@@ -51,14 +51,17 @@ func (mc *MntClnt) Resolve(p path.Tpathname, principal *sp.Tprincipal, resolve b
 	if err, ok := mc.resolveRoot(p); err != nil {
 		db.DPrintf(db.ALWAYS, "%v: resolveRoot %v err %v b %v\n", mc.cid, p, err, ok)
 	}
+	db.DPrintf(db.MOUNT, "%v: Resolve success resolveRoot %v", mc.cid, p)
 	return mc.ResolveMnt(p, resolve)
 }
 
 func (mc *MntClnt) ResolveMnt(p path.Tpathname, resolve bool) (sp.Tfid, path.Tpathname, *serr.Err) {
+	db.DPrintf(db.MOUNT, "%v: ResolveMnt p %v resolve %v", mc.cid, p, resolve)
 	for {
 		pnt, path, err := mc.mnt.resolveMnt(p, resolve)
 		db.DPrintf(db.MOUNT, "%v: resolveMnt path %v resolve %v mnt %v", mc.cid, path, resolve, pnt)
 		if err != nil {
+			db.DPrintf(db.MOUNT, "%v: resolveMnt path %v resolve %v err %v", mc.cid, path, resolve, err)
 			return sp.NoFid, path, err
 		}
 		fid, ok := pnt.getFid()

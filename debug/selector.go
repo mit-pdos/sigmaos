@@ -265,10 +265,11 @@ const (
 
 // RPC Client Libraries
 const (
-	DEMUXCLNT     Tselector = "DEMUXCLNT"
-	DEMUXCLNT_ERR           = "DEMUXCLNT" + ERR
-	SESSDEVCLNT             = "SESSDEVCLNT"
-	RPCCLNT                 = "RPCCLNT"
+	DEMUXCLNT       Tselector = "DEMUXCLNT"
+	DEMUXCLNT_ERR             = "DEMUXCLNT" + ERR
+	SESSDEVCLNT               = "SESSDEVCLNT"
+	SESSDEVCLNT_ERR           = "SESSDEVCLNT" + ERR
+	RPCCLNT                   = "RPCCLNT"
 )
 
 // External service libraries

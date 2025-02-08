@@ -117,7 +117,7 @@ func RunGeoSrv(job string, nidxStr string, maxSearchRadiusStr string, maxSearchR
 
 	ep := ssrv.MemFs.GetSigmaPSrvEndpoint()
 
-	if err := epcc.RegisterEndpoint(HOTELGEODIR, ep); err != nil {
+	if err := epcc.RegisterEndpoint(HOTELGEODIR, pe.GetPID().String(), ep); err != nil {
 		db.DFatalf("Err RegisterEP: %v", err)
 	}
 

@@ -29,12 +29,15 @@ func NewEndpointCacheClnt(fsl *fslib.FsLib) (*EndpointCacheClnt, error) {
 }
 
 // Register a service's endpoint
-func (clnt *EndpointCacheClnt) RegisterEndpoint(svcName string, ep *sp.Tendpoint) error {
+func (clnt *EndpointCacheClnt) RegisterEndpoint(svcName string, instanceID string, ep *sp.Tendpoint) error {
 	db.DPrintf(db.EPCACHECLNT, "RegisterEndpoint: %v -> %v", svcName, ep)
 	var res proto.RegisterEndpointRep
 	req := &proto.RegisterEndpointReq{
-		ServiceName:   svcName,
-		EndpointProto: ep.GetProto(),
+		ServiceName: svcName,
+		Instance: &proto.Instance{
+			ID:            instanceID,
+			EndpointProto: ep.GetProto(),
+		},
 	}
 	err := clnt.rpcc.RPC("EPCacheSrv.RegisterEndpoint", req, &res)
 	if err != nil {
@@ -49,12 +52,12 @@ func (clnt *EndpointCacheClnt) RegisterEndpoint(svcName string, ep *sp.Tendpoint
 }
 
 // Deregister a service endpoint
-func (clnt *EndpointCacheClnt) DeregisterEndpoint(svcName string, ep *sp.Tendpoint) error {
-	db.DPrintf(db.EPCACHECLNT, "DeregisterEndpoint done: %v -> %v", svcName, ep)
+func (clnt *EndpointCacheClnt) DeregisterEndpoint(svcName string, instanceID string) error {
+	db.DPrintf(db.EPCACHECLNT, "DeregisterEndpoint done: %v -> %v", svcName, instanceID)
 	var res proto.DeregisterEndpointRep
 	req := &proto.DeregisterEndpointReq{
-		ServiceName:   svcName,
-		EndpointProto: ep.GetProto(),
+		ServiceName: svcName,
+		InstanceID:  instanceID,
 	}
 	err := clnt.rpcc.RPC("EPCacheSrv.DeregisterEndpoint", req, &res)
 	if err != nil {
@@ -64,14 +67,14 @@ func (clnt *EndpointCacheClnt) DeregisterEndpoint(svcName string, ep *sp.Tendpoi
 	if !res.OK {
 		return fmt.Errorf("Deregister failed")
 	}
-	db.DPrintf(db.EPCACHECLNT, "DeregisterEndpoint ok: %v -> %v", svcName, ep)
+	db.DPrintf(db.EPCACHECLNT, "DeregisterEndpoint ok: %v -> %v", svcName, instanceID)
 	return nil
 }
 
 // Get set of endpoints which back a service. If v == NO_VERSION, return the
 // current set of endpoints immediately. Otherwise, block until the version of
 // the service's set of endpoints is >v, and then return those endpoints.
-func (clnt *EndpointCacheClnt) GetEndpoints(svcName string, v1 epcache.Tversion) ([]*sp.Tendpoint, epcache.Tversion, error) {
+func (clnt *EndpointCacheClnt) GetEndpoints(svcName string, v1 epcache.Tversion) ([]*proto.Instance, epcache.Tversion, error) {
 	db.DPrintf(db.EPCACHECLNT, "GetEndpoints: %v %v", svcName, v1)
 	var res proto.GetEndpointsRep
 	req := &proto.GetEndpointsReq{
@@ -84,10 +87,6 @@ func (clnt *EndpointCacheClnt) GetEndpoints(svcName string, v1 epcache.Tversion)
 		return nil, epcache.NO_VERSION, err
 	}
 	v2 := epcache.Tversion(res.Version)
-	eps := make([]*sp.Tendpoint, len(res.EndpointProtos))
-	for i := 0; i < len(eps); i++ {
-		eps[i] = sp.NewEndpointFromProto(res.EndpointProtos[i])
-	}
-	db.DPrintf(db.EPCACHECLNT, "GetEndpoints ok: %v %v -> %v %v", svcName, v1, v2, eps)
-	return eps, v2, nil
+	db.DPrintf(db.EPCACHECLNT, "GetEndpoints ok: %v %v -> %v %v", svcName, v1, v2, res.Instances)
+	return res.Instances, v2, nil
 }

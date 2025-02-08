@@ -4,9 +4,14 @@ import "sigmap/sigmap.proto";
 
 option go_package = "sigmaos/apps/epcache/proto";
 
+message Instance {
+  string iD = 1;
+  TendpointProto endpointProto = 2;
+}
+
 message RegisterEndpointReq {
   string serviceName = 1;
-  TendpointProto endpointProto = 2;
+  Instance instance = 2;
 }
 
 message RegisterEndpointRep {
@@ -15,7 +20,7 @@ message RegisterEndpointRep {
 
 message DeregisterEndpointReq {
   string serviceName = 1;
-  TendpointProto endpointProto = 2;
+  string instanceID = 2;
 }
 
 message DeregisterEndpointRep {
@@ -28,6 +33,6 @@ message GetEndpointsReq {
 }
 
 message GetEndpointsRep {
-  repeated TendpointProto endpointProtos = 1;
+  repeated Instance instances = 1;
   uint64 version = 2;
 }

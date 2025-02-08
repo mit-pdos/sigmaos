@@ -9,7 +9,6 @@ import (
 	"sigmaos/apps/epcache/proto"
 	db "sigmaos/debug"
 	"sigmaos/proc"
-	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
 	"sigmaos/util/perf"
 )
@@ -20,46 +19,61 @@ type EPCacheSrv struct {
 }
 
 type svc struct {
-	cond *sync.Cond
-	name string
-	v    epcache.Tversion
-	eps  map[string]*sp.Tendpoint
+	cond      *sync.Cond
+	name      string
+	v         epcache.Tversion
+	instances map[string]*proto.Instance
 }
 
 func newSvc(mu sync.Locker, name string) *svc {
 	return &svc{
-		cond: sync.NewCond(mu),
-		name: name,
-		v:    epcache.Tversion(1),
-		eps:  make(map[string]*sp.Tendpoint),
+		cond:      sync.NewCond(mu),
+		name:      name,
+		v:         epcache.Tversion(1),
+		instances: make(map[string]*proto.Instance),
 	}
 }
 
-func (svc *svc) add(ep *sp.Tendpoint) {
+func (svc *svc) add(i *proto.Instance) {
 	// Store new EP
-	svc.eps[ep.String()] = ep
+	svc.instances[i.GetID()] = i
 	// Bump version
 	svc.v++
-	db.DPrintf(db.EPCACHE, "Add svc %v %v ep %v result:", svc.name, svc.v, ep, svc.eps)
+	db.DPrintf(db.EPCACHE, "Add svc %v %v i %v result:", svc.name, svc.v, i, svc.instances)
 	// Wake up waiters
 	svc.cond.Broadcast()
 }
 
-func (svc *svc) del(ep *sp.Tendpoint) bool {
-	key := ep.String()
-	_, ok := svc.eps[key]
+func (svc *svc) del(instanceID string) bool {
+	_, ok := svc.instances[instanceID]
 	// Delete EP
 	if !ok {
-		db.DPrintf(db.EPCACHE_ERR, "Try del unknown EP svc %v ep %v", svc.name, ep)
+		db.DPrintf(db.EPCACHE_ERR, "Try del unknown EP svc %v id %v", svc.name, instanceID)
 		return false
 	}
-	delete(svc.eps, key)
+	delete(svc.instances, instanceID)
 	// Bump version
 	svc.v++
-	db.DPrintf(db.EPCACHE, "Del svc %v %v ep %v result: %v", svc.name, svc.v, ep, svc.eps)
+	db.DPrintf(db.EPCACHE, "Del svc %v %v instanceID %v result: %v", svc.name, svc.v, instanceID, svc.instances)
 	// Wake up waiters
 	svc.cond.Broadcast()
 	return true
+}
+
+func (svc *svc) get(v1 epcache.Tversion) []*proto.Instance {
+	db.DPrintf(db.EPCACHE, "Get svc %v current:%v requested:%v", svc.name, svc.v, v1)
+	if v1 != epcache.NO_VERSION {
+		// If this is a versioned get, wait until v > v1
+		for svc.v < v1 {
+			svc.cond.Wait()
+		}
+	}
+	db.DPrintf(db.EPCACHE, "Get svc %v %v >= %v result: %v", svc.name, svc.v, v1, svc.instances)
+	is := make([]*proto.Instance, 0, len(svc.instances))
+	for _, i := range svc.instances {
+		is = append(is, i)
+	}
+	return is
 }
 
 func RunSrv() error {
@@ -81,45 +95,36 @@ func RunSrv() error {
 }
 
 // Caller holds lock
-func (srv *EPCacheSrv) addEP(svcName string, ep *sp.Tendpoint) {
+func (srv *EPCacheSrv) addInstance(svcName string, i *proto.Instance) {
 	svc, ok := srv.svcs[svcName]
 	if !ok {
 		svc = newSvc(&srv.mu, svcName)
 		srv.svcs[svcName] = svc
 	}
-	svc.add(ep)
+	svc.add(i)
 }
 
 // Caller holds lock
-func (srv *EPCacheSrv) delEP(svcName string, ep *sp.Tendpoint) bool {
+func (srv *EPCacheSrv) delInstance(svcName string, instanceID string) bool {
 	svc, ok := srv.svcs[svcName]
 	if !ok {
-		db.DPrintf(db.EPCACHE_ERR, "Try del unknown SVC svc %v ep %v", svc.name, ep)
+		db.DPrintf(db.EPCACHE_ERR, "Try del unknown SVC svc %v instanceID %v", svc.name, instanceID)
 		return false
 	}
-	return svc.del(ep)
+	return svc.del(instanceID)
 }
 
 // Caller holds lock
-func (srv *EPCacheSrv) getEPs(svcName string, v1 epcache.Tversion) (epcache.Tversion, []*sp.TendpointProto, error) {
+func (srv *EPCacheSrv) getInstances(svcName string, v1 epcache.Tversion) (epcache.Tversion, []*proto.Instance, error) {
 	svc, ok := srv.svcs[svcName]
 	if !ok {
 		db.DPrintf(db.EPCACHE_ERR, "Try get unknown SVC svc %v %v", svcName, v1)
 		return epcache.NO_VERSION, nil, fmt.Errorf("Unkown svc %v", svcName)
 	}
-	if v1 != epcache.NO_VERSION {
-		// If this is a versioned get, wait until v > v1
-		for svc.v < v1 {
-			svc.cond.Wait()
-		}
-	}
+	instances := svc.get(v1)
 	// Either this was an unversioned get, or the wait has terminated. It is now
 	// safe to return
-	eps := make([]*sp.TendpointProto, 0, len(svc.eps))
-	for _, ep := range svc.eps {
-		eps = append(eps, ep.GetProto())
-	}
-	return svc.v, eps, nil
+	return svc.v, instances, nil
 }
 
 func (srv *EPCacheSrv) RegisterEndpoint(ctx fs.CtxI, req proto.RegisterEndpointReq, rep *proto.RegisterEndpointRep) error {
@@ -128,7 +133,7 @@ func (srv *EPCacheSrv) RegisterEndpoint(ctx fs.CtxI, req proto.RegisterEndpointR
 	srv.mu.Lock()
 	defer srv.mu.Unlock()
 
-	srv.addEP(req.ServiceName, sp.NewEndpointFromProto(req.EndpointProto))
+	srv.addInstance(req.ServiceName, req.Instance)
 	rep.OK = true
 	db.DPrintf(db.EPCACHE, "RegisterEndpoint done req:%v rep:%v", req, rep)
 	return nil
@@ -140,7 +145,7 @@ func (srv *EPCacheSrv) DeregisterEndpoint(ctx fs.CtxI, req proto.DeregisterEndpo
 	srv.mu.Lock()
 	defer srv.mu.Unlock()
 
-	rep.OK = srv.delEP(req.ServiceName, sp.NewEndpointFromProto(req.EndpointProto))
+	rep.OK = srv.delInstance(req.ServiceName, req.InstanceID)
 	db.DPrintf(db.EPCACHE, "DeregisterEndpoint done req:%v rep:%v", req, rep)
 	return nil
 }
@@ -151,12 +156,12 @@ func (srv *EPCacheSrv) GetEndpoints(ctx fs.CtxI, req proto.GetEndpointsReq, rep 
 	srv.mu.Lock()
 	defer srv.mu.Unlock()
 
-	v, eps, err := srv.getEPs(req.ServiceName, epcache.Tversion(req.Version))
+	v, instances, err := srv.getInstances(req.ServiceName, epcache.Tversion(req.Version))
 	if err != nil {
 		return err
 	}
 	rep.Version = uint64(v)
-	rep.EndpointProtos = eps
+	rep.Instances = instances
 	db.DPrintf(db.EPCACHE, "GetEndpoints done req:%v rep:%v", req, rep)
 	return nil
 }

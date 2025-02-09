@@ -10,9 +10,9 @@ import (
 	"sigmaos/apps/mr"
 	db "sigmaos/debug"
 	fttask "sigmaos/ft/task"
-	fttask_clnt "sigmaos/ft/task/clnt"
-	fttask_mgr "sigmaos/ft/task/mgr"
+	fttaskclnt "sigmaos/ft/task/clnt"
 	"sigmaos/ft/task/proto"
+	fttasksrv "sigmaos/ft/task/srv"
 	"sigmaos/test"
 	rd "sigmaos/util/rand"
 )
@@ -76,6 +76,7 @@ func TestBasic(t *testing.T) {
 	assert.Nil(t, err)
 	db.DPrintf(db.TEST, "JobState %v", s)
 	err = ts.ft.ReadTaskOutput(tns[0], &b)
+	assert.Nil(t, err)
 	db.DPrintf(db.TEST, "Output %v", b)
 	ts.shutdown()
 }
@@ -164,7 +165,7 @@ func TestPerf(t *testing.T) {
 	ts.shutdown()
 }
 
-func testServerContents[Data any, Output any](t *testing.T, clnt *fttask_clnt.TaskClnt[Data, Output], todo []int32, wip []int32, done []int32, err []int32) {
+func testServerContents[Data any, Output any](t *testing.T, clnt *fttaskclnt.FtTaskClnt[Data, Output], todo []int32, wip []int32, done []int32, err []int32) {
 	allExpected := [][]int32{todo, wip, done, err}
 	statuses := []proto.TaskStatus{proto.TaskStatus_TODO, proto.TaskStatus_WIP, proto.TaskStatus_DONE, proto.TaskStatus_ERROR}
 
@@ -206,13 +207,13 @@ func TestServerMoveTasksByStatus(t *testing.T) {
 	}
 
 	db.DPrintf(db.TEST, "Making fttasks server")
-	mgr, err := fttask_mgr.NewFtTaskSrvMgr(ts.SigmaClnt, "test")
+	mgr, err := fttasksrv.NewFtTaskSrvMgr(ts.SigmaClnt, "test")
 	assert.Nil(t, err)
 
-	clnt := fttask_clnt.NewTaskClnt[struct{}, struct{}](ts.FsLib, mgr.Id)
-	tasks := make([]*fttask_clnt.Task[struct{}], 0)
+	clnt := fttaskclnt.NewFtTaskClnt[struct{}, struct{}](ts.FsLib, mgr.Id)
+	tasks := make([]*fttaskclnt.Task[struct{}], 0)
 	for i := 0; i < ntasks; i++ {
-		tasks = append(tasks, &fttask_clnt.Task[struct{}]{
+		tasks = append(tasks, &fttaskclnt.Task[struct{}]{
 			Id: int32(ids[i]),
 			Data: struct{}{},
 		})
@@ -230,8 +231,9 @@ func TestServerMoveTasksByStatus(t *testing.T) {
 	)
 
 	db.DPrintf(db.TEST, "Acquiring tasks")
-	received, err := clnt.AcquireTasks(false)
+	received, stopped, err := clnt.AcquireTasks(false)
 	assert.Nil(t, err)
+	assert.False(t, stopped)
 	for i := 0; i < ntasks; i++ {
 		found := false
 		for _, id := range received {
@@ -281,13 +283,13 @@ func TestServerMoveTasksById(t *testing.T) {
 	}
 
 	db.DPrintf(db.TEST, "Making fttasks server")
-	mgr, err := fttask_mgr.NewFtTaskSrvMgr(ts.SigmaClnt, "test")
+	mgr, err := fttasksrv.NewFtTaskSrvMgr(ts.SigmaClnt, "test")
 	assert.Nil(t, err)
 
-	clnt := fttask_clnt.NewTaskClnt[struct{}, struct{}](ts.FsLib, mgr.Id)
-	tasks := make([]*fttask_clnt.Task[struct{}], 0)
+	clnt := fttaskclnt.NewFtTaskClnt[struct{}, struct{}](ts.FsLib, mgr.Id)
+	tasks := make([]*fttaskclnt.Task[struct{}], 0)
 	for i := 0; i < 5; i++ {
-		tasks = append(tasks, &fttask_clnt.Task[struct{}]{
+		tasks = append(tasks, &fttaskclnt.Task[struct{}]{
 			Id: int32(i),
 			Data: struct{}{},
 		})
@@ -348,16 +350,16 @@ func TestServerData(t *testing.T) {
 
 	ntasks := 5
 
-	mgr, err := fttask_mgr.NewFtTaskSrvMgr(ts.SigmaClnt, "test")
+	mgr, err := fttasksrv.NewFtTaskSrvMgr(ts.SigmaClnt, "test")
 	assert.Nil(t, err)
 
-	clnt := fttask_clnt.NewTaskClnt[mr.Bin, string](ts.FsLib, mgr.Id)
-	tasks := make([]*fttask_clnt.Task[mr.Bin], 0)
+	clnt := fttaskclnt.NewFtTaskClnt[mr.Bin, string](ts.FsLib, mgr.Id)
+	tasks := make([]*fttaskclnt.Task[mr.Bin], 0)
 	for i := 0; i < ntasks; i++ {
 		bin := make(mr.Bin, 1)
 		bin[0].File = fmt.Sprintf("hello_%d", i)
 
-		tasks = append(tasks, &fttask_clnt.Task[mr.Bin]{
+		tasks = append(tasks, &fttaskclnt.Task[mr.Bin]{
 			Id: int32(i),
 			Data: bin,
 		})
@@ -367,8 +369,9 @@ func TestServerData(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, 0, len(existing))
 
-	ids, err := clnt.AcquireTasks(false)
+	ids, stopped, err := clnt.AcquireTasks(false)
 	assert.Nil(t, err)
+	assert.False(t, stopped)
 	assert.Equal(t, ntasks, len(ids))
 
 	read, err := clnt.ReadTasks(ids)
@@ -411,16 +414,16 @@ func TestServerWait(t *testing.T) {
 
 	ntasks := 5
 
-	mgr, err := fttask_mgr.NewFtTaskSrvMgr(ts.SigmaClnt, "test")
+	mgr, err := fttasksrv.NewFtTaskSrvMgr(ts.SigmaClnt, "test")
 	assert.Nil(t, err)
 
-	clnt := fttask_clnt.NewTaskClnt[mr.Bin, string](ts.FsLib, mgr.Id)
-	tasks := make([]*fttask_clnt.Task[mr.Bin], 0)
+	clnt := fttaskclnt.NewFtTaskClnt[mr.Bin, string](ts.FsLib, mgr.Id)
+	tasks := make([]*fttaskclnt.Task[mr.Bin], 0)
 	for i := 0; i < ntasks; i++ {
 		bin := make(mr.Bin, 1)
 		bin[0].File = fmt.Sprintf("hello_%d", i)
 
-		tasks = append(tasks, &fttask_clnt.Task[mr.Bin]{
+		tasks = append(tasks, &fttaskclnt.Task[mr.Bin]{
 			Id: int32(i),
 			Data: bin,
 		})
@@ -433,8 +436,9 @@ func TestServerWait(t *testing.T) {
 		assert.Equal(t, 0, len(existing))
 	}()
 
-	ids, err := clnt.AcquireTasks(true)
+	ids, stopped, err := clnt.AcquireTasks(true)
 	assert.Nil(t, err)
+	assert.False(t, stopped)
 	assert.Equal(t, ntasks, len(ids))
 
 	err = mgr.Stop()
@@ -451,13 +455,13 @@ func TestServerErrors(t *testing.T) {
 
 	ntasks := 5
 
-	mgr, err := fttask_mgr.NewFtTaskSrvMgr(ts.SigmaClnt, "test")
+	mgr, err := fttasksrv.NewFtTaskSrvMgr(ts.SigmaClnt, "test")
 	assert.Nil(t, err)
 
-	clnt := fttask_clnt.NewTaskClnt[interface{}, interface{}](ts.FsLib, mgr.Id)
-	tasks := make([]*fttask_clnt.Task[interface{}], 0)
+	clnt := fttaskclnt.NewFtTaskClnt[interface{}, interface{}](ts.FsLib, mgr.Id)
+	tasks := make([]*fttaskclnt.Task[interface{}], 0)
 	for i := 0; i < ntasks; i++ {
-		tasks = append(tasks, &fttask_clnt.Task[interface{}]{
+		tasks = append(tasks, &fttaskclnt.Task[interface{}]{
 			Id: int32(i),
 			Data: struct{}{},
 		})

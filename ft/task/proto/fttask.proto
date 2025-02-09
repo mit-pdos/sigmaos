@@ -2,6 +2,8 @@ syntax = "proto3";
 
 option go_package = "sigmaos/ft/task/proto";
 
+import "sigmap/sigmap.proto";
+
 enum TaskStatus {
   TODO = 0;
   WIP = 1;
@@ -16,6 +18,7 @@ message Task {
 
 message SubmitTasksReq {
   repeated Task tasks = 1;
+  TfenceProto fence = 2;
 }
 
 message SubmitTasksRep {
@@ -24,6 +27,7 @@ message SubmitTasksRep {
 
 message GetTasksByStatusReq {
   TaskStatus status = 1;
+  TfenceProto fence = 2;
 }
 
 message GetTasksByStatusRep {
@@ -32,6 +36,7 @@ message GetTasksByStatusRep {
 
 message ReadTasksReq {
   repeated int32 ids = 1;
+  TfenceProto fence = 2;
 }
 
 message ReadTasksRep {
@@ -41,6 +46,7 @@ message ReadTasksRep {
 message MoveTasksReq {
   repeated int32 ids = 1;
   TaskStatus to = 2;
+  TfenceProto fence = 3;
 }
 
 message MoveTasksRep {
@@ -50,6 +56,7 @@ message MoveTasksRep {
 message MoveTasksByStatusReq {
   TaskStatus from = 1;
   TaskStatus to = 2;
+  TfenceProto fence = 3;
 }
 
 message MoveTasksByStatusRep {
@@ -58,15 +65,18 @@ message MoveTasksByStatusRep {
 
 message AcquireTasksReq {
   bool wait = 1;
+  TfenceProto fence = 2;
 }
 
 message AcquireTasksRep {
   repeated int32 ids = 1;
+  bool stopped = 2;
 }
 
 message AddTaskOutputsReq {
   repeated int32 ids = 1;
   repeated bytes outputs = 2;
+  TfenceProto fence = 3;
 }
 
 message AddTaskOutputsRep {
@@ -75,6 +85,7 @@ message AddTaskOutputsRep {
 
 message GetTaskOutputsReq {
   repeated int32 ids = 1;
+  TfenceProto fence = 2;
 }
 
 message GetTaskOutputsRep {
@@ -89,9 +100,25 @@ message TaskStats {
 }
 
 message GetTaskStatsReq {
-
+  
 }
 
 message GetTaskStatsRep {
   TaskStats stats = 1;
+}
+
+message SubmitStopReq {
+  TfenceProto fence = 2;
+}
+
+message SubmitStopRep {
+
+}
+
+message FenceReq {
+  TfenceProto fence = 1;
+}
+
+message FenceRep {
+
 }

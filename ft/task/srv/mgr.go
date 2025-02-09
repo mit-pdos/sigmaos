@@ -1,4 +1,4 @@
-package fttaskmgr
+package srv
 
 import (
 	"sigmaos/proc"
@@ -7,9 +7,11 @@ import (
 	sp "sigmaos/sigmap"
 )
 
+type FtTaskSrvId string
+
 type FtTaskSrvMgr struct {
-	*sigmaclnt.SigmaClnt
-	Id string
+	sc *sigmaclnt.SigmaClnt
+	Id FtTaskSrvId
 	p *proc.Proc
 }
 
@@ -27,14 +29,14 @@ func NewFtTaskSrvMgr(sc *sigmaclnt.SigmaClnt, id string) (*FtTaskSrvMgr, error) 
 	if err := sc.WaitStart(p.GetPid()); err != nil {
 		return nil, err
 	}
-	return &FtTaskSrvMgr{sc, id, p}, nil
+	return &FtTaskSrvMgr{sc, FtTaskSrvId(id), p}, nil
 }
 
 func (ft *FtTaskSrvMgr) Stop() error {
-	if err := ft.Evict(ft.p.GetPid()); err != nil {
+	if err := ft.sc.Evict(ft.p.GetPid()); err != nil {
 		return err
 	}
 
-	_, err := ft.SigmaClnt.WaitExit(ft.p.GetPid())
+	_, err := ft.sc.WaitExit(ft.p.GetPid())
 	return err
 }

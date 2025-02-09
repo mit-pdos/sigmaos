@@ -14,7 +14,8 @@ import (
 	"sigmaos/apps/imgresize"
 	db "sigmaos/debug"
 	"sigmaos/ft/procgroupmgr"
-	fttask "sigmaos/ft/task"
+	fttask_clnt "sigmaos/ft/task/clnt"
+	fttask_srv "sigmaos/ft/task/srv"
 	"sigmaos/namesrv/fsetcd"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
@@ -77,7 +78,8 @@ type Tstate struct {
 	job string
 	*test.Tstate
 	ch chan bool
-	ft *fttask.FtTasks
+	ftsrv *fttask_srv.FtTaskSrvMgr
+	ftclnt *fttask_clnt.FtTaskClnt[imgresize.Ttask, any]
 }
 
 func newTstate(t *test.Tstate) (*Tstate, error) {
@@ -87,11 +89,13 @@ func newTstate(t *test.Tstate) (*Tstate, error) {
 	ts.ch = make(chan bool)
 	ts.cleanup()
 
-	ft, err := fttask.MkFtTasks(ts.SigmaClnt.FsLib, sp.IMG, ts.job)
+	var err error
+	ts.ftsrv, err = fttask_srv.NewFtTaskSrvMgr(ts.SigmaClnt, fmt.Sprintf("imgresize-%s", ts.job))
 	if !assert.Nil(ts.T, err) {
 		return nil, err
 	}
-	ts.ft = ft
+	ts.ftclnt = fttask_clnt.NewFtTaskClnt[imgresize.Ttask, any](ts.SigmaClnt.FsLib, ts.ftsrv.Id)
+
 	return ts, nil
 }
 
@@ -101,9 +105,11 @@ func (ts *Tstate) restartTstate() {
 		return
 	}
 	ts.Tstate = ts1
-	ft, err := fttask.NewFtTasks(ts.SigmaClnt.FsLib, sp.IMG, ts.job)
+
+	ts.ftsrv.Stop()
+	ts.ftsrv, err = fttask_srv.NewFtTaskSrvMgr(ts.SigmaClnt, fmt.Sprintf("imgresize-%s", ts.job))
 	assert.Nil(ts.T, err)
-	ts.ft = ft
+	ts.ftclnt = fttask_clnt.NewFtTaskClnt[imgresize.Ttask, any](ts.SigmaClnt.FsLib, ts.ftsrv.Id)
 }
 
 func (ts *Tstate) cleanup() {
@@ -117,12 +123,12 @@ func (ts *Tstate) shutdown() {
 }
 
 func (ts *Tstate) progress() {
-	for true {
+	for {
 		select {
 		case <-ts.ch:
 			return
 		case <-time.After(1 * time.Second):
-			if n, err := ts.ft.NTaskDone(); err != nil {
+			if n, err := ts.ftclnt.GetNTasks(fttask_clnt.DONE); err != nil {
 				assert.Nil(ts.T, err)
 			} else {
 				fmt.Printf("%d..", n)
@@ -142,15 +148,16 @@ func TestImgdFatalError(t *testing.T) {
 		return
 	}
 
-	imgd := imgresize.StartImgd(ts.SigmaClnt, ts.job, IMG_RESIZE_MCPU, IMG_RESIZE_MEM, false, 1, 0, nil)
+	imgd := imgresize.StartImgd(ts.SigmaClnt, ts.ftclnt.ServerId, IMG_RESIZE_MCPU, IMG_RESIZE_MEM, false, 1, 0, nil)
 
 	// a non-existing file
 	fn := filepath.Join(sp.S3, sp.LOCAL, "9ps3/img-save/", "yyy.jpg")
 
-	err := ts.ft.SubmitTask(0, imgresize.NewTask(fn))
+	existing, err := ts.ftclnt.SubmitTasks([]*fttask_clnt.Task[imgresize.Ttask]{{Id: 0, Data: *imgresize.NewTask(fn)}})
 	assert.Nil(ts.T, err)
+	assert.Empty(ts.T, existing)
 
-	err = ts.ft.SubmitStop()
+	err = ts.ftclnt.SubmitStop()
 	assert.Nil(ts.T, err)
 
 	gs := imgd.WaitGroup()
@@ -160,15 +167,18 @@ func TestImgdFatalError(t *testing.T) {
 }
 
 func (ts *Tstate) imgdJob(paths []string, em *crash.TeventMap) {
-	imgd := imgresize.StartImgd(ts.SigmaClnt, ts.job, IMG_RESIZE_MCPU, IMG_RESIZE_MEM, false, 1, 0, em)
+	imgd := imgresize.StartImgd(ts.SigmaClnt, ts.ftclnt.ServerId, IMG_RESIZE_MCPU, IMG_RESIZE_MEM, false, 1, 0, em)
 
+	tasks := make([]*fttask_clnt.Task[imgresize.Ttask], len(paths))
 	for i, pn := range paths {
-		db.DPrintf(db.TEST, "submit %v\n", pn)
-		err := ts.ft.SubmitTask(i, imgresize.NewTask(pn))
-		assert.Nil(ts.T, err)
+		tasks[i] = &fttask_clnt.Task[imgresize.Ttask]{Id: fttask_clnt.TaskId(i), Data: *imgresize.NewTask(pn)}
 	}
 
-	err := ts.ft.SubmitStop()
+	existing, err := ts.ftclnt.SubmitTasks(tasks)
+	assert.Nil(ts.T, err)
+	assert.Empty(ts.T, existing)
+
+	err = ts.ftclnt.SubmitStop()
 	assert.Nil(ts.T, err)
 
 	go ts.progress()
@@ -256,10 +266,11 @@ func TestImgdRestart(t *testing.T) {
 
 	fn := filepath.Join(sp.S3, sp.LOCAL, "9ps3/img-save/1.jpg")
 
-	err := ts.ft.SubmitTask(0, imgresize.NewTask(fn))
+	existing, err := ts.ftclnt.SubmitTasks([]*fttask_clnt.Task[imgresize.Ttask]{{Id: 0, Data: *imgresize.NewTask(fn)}})
 	assert.Nil(t, err)
+	assert.Empty(t, existing)
 
-	imgd := imgresize.StartImgd(ts.SigmaClnt, ts.job, IMG_RESIZE_MCPU, IMG_RESIZE_MEM, true, 1, 0, nil)
+	imgd := imgresize.StartImgd(ts.SigmaClnt, ts.ftclnt.ServerId, IMG_RESIZE_MCPU, IMG_RESIZE_MEM, true, 1, 0, nil)
 
 	time.Sleep(2 * time.Second)
 
@@ -277,7 +288,7 @@ func TestImgdRestart(t *testing.T) {
 	assert.Nil(ts.T, err, "Recover")
 	assert.Equal(ts.T, 1, len(gms))
 
-	err = ts.ft.SubmitStop()
+	err = ts.ftclnt.SubmitStop()
 	assert.Nil(t, err)
 
 	go ts.progress()

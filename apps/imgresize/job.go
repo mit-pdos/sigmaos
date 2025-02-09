@@ -7,7 +7,9 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/ft/procgroupmgr"
+	fttask_clnt "sigmaos/ft/task/clnt"
 	fttaskmgr "sigmaos/ft/task/mgr"
+	fttask_srv "sigmaos/ft/task/srv"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
 	"sigmaos/sigmaclnt/fslib"
@@ -24,9 +26,9 @@ func NewTask(fn string) *Ttask {
 	return &Ttask{fn}
 }
 
-func StartImgd(sc *sigmaclnt.SigmaClnt, job string, workerMcpu proc.Tmcpu, workerMem proc.Tmem, persist bool, nrounds int, imgdMcpu proc.Tmcpu, em *crash.TeventMap) *procgroupmgr.ProcGroupMgr {
+func StartImgd(sc *sigmaclnt.SigmaClnt, srvId fttask_srv.FtTaskSrvId, workerMcpu proc.Tmcpu, workerMem proc.Tmem, persist bool, nrounds int, imgdMcpu proc.Tmcpu, em *crash.TeventMap) *procgroupmgr.ProcGroupMgr {
 	crash.SetSigmaFail(em)
-	cfg := procgroupmgr.NewProcGroupConfig(1, "imgresized", []string{strconv.Itoa(int(workerMcpu)), strconv.Itoa(int(workerMem)), strconv.Itoa(nrounds)}, imgdMcpu, job)
+	cfg := procgroupmgr.NewProcGroupConfig(1, "imgresized", []string{strconv.Itoa(int(workerMcpu)), strconv.Itoa(int(workerMem)), strconv.Itoa(nrounds)}, imgdMcpu, string(srvId))
 	if persist {
 		cfg.Persist(sc.FsLib)
 	}
@@ -72,12 +74,11 @@ func IsThumbNail(fn string) bool {
 	return strings.Contains(fn, "-thumb")
 }
 
-func getMkProcFn(job string, nrounds int, workerMcpu proc.Tmcpu, workerMem proc.Tmem) fttaskmgr.TmkProc {
-	return func(tn string, t interface{}) *proc.Proc {
-		task := *t.(*Ttask)
-		db.DPrintf(db.IMGD, "mkProc %s %v", tn, task)
-		fn := task.FileName
-		p := proc.NewProcPid(sp.GenPid(job), "imgresize", []string{fn, ThumbName(fn), strconv.Itoa(nrounds)})
+func getMkProcFn(serverId fttask_srv.FtTaskSrvId, nrounds int, workerMcpu proc.Tmcpu, workerMem proc.Tmem) fttaskmgr.NewTmkProc[Ttask] {
+	return func(task fttask_clnt.Task[Ttask]) *proc.Proc {
+		db.DPrintf(db.IMGD, "mkProc %v", task)
+		fn := task.Data.FileName
+		p := proc.NewProcPid(sp.GenPid(string(serverId)), "imgresize", []string{fn, ThumbName(fn), strconv.Itoa(nrounds)})
 		p.SetMcpu(workerMcpu)
 		p.SetMem(workerMem)
 		return p

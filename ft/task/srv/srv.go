@@ -1,6 +1,7 @@
 package srv
 
 import (
+	"fmt"
 	"path/filepath"
 	"sigmaos/api/fs"
 	"sigmaos/ft/task/proto"
@@ -24,6 +25,9 @@ type TaskSrv struct {
 	wip      map[int32]bool
 	done     map[int32]bool
 	errored  map[int32]bool
+
+	stopped  bool 
+	fence    *sp.Tfence
 }
 
 func RunTaskSrv(args []string) error {
@@ -85,9 +89,26 @@ func (s *TaskSrv) get(status proto.TaskStatus) []int32 {
 	return ret
 }
 
+func (s *TaskSrv) checkFence(fence *sp.TfenceProto) error {
+	db.DPrintf(db.FTTASKS, "checkFence: curr: %v req: %v", s.fence, fence)
+	if s.fence == nil {
+		return nil
+	}
+
+	if fence == nil || s.fence.Epoch > fence.Tfence().Epoch {
+		return serr.NewErr(serr.TErrInval, fmt.Sprintf("fence %v is not after %v", fence, s.fence))
+	}
+
+	return nil
+}
+
 func (s *TaskSrv) SubmitTasks(ctx fs.CtxI, req proto.SubmitTasksReq, rep *proto.SubmitTasksRep) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+
+	if err := s.checkFence(req.Fence); err != nil {
+		return err
+	}
 
 	existing := make([]int32, 0)
 	for _, task := range req.Tasks {
@@ -105,6 +126,8 @@ func (s *TaskSrv) SubmitTasks(ctx fs.CtxI, req proto.SubmitTasksReq, rep *proto.
 	rep.Existing = existing
 	s.todoCond.Broadcast()
 
+	db.DPrintf(db.FTTASKS, "SubmitTasks: total: %d, exist: %d", len(req.Tasks), len(existing))
+
 	return nil
 }
 
@@ -112,17 +135,27 @@ func (s *TaskSrv) GetTasksByStatus(ctx fs.CtxI, req proto.GetTasksByStatusReq, r
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
+	if err := s.checkFence(req.Fence); err != nil {
+		return err
+	}
+
 	rep.Ids = s.get(req.Status)
 
 	if rep.Ids == nil {
 		return serr.NewErr(serr.TErrInval, req.Status)
 	}
+
+	db.DPrintf(db.FTTASKS, "GetTasksByStatus: %v n: %d", req.Status, len(rep.Ids))
 	return nil
 }
 
 func (s *TaskSrv) ReadTasks(ctx fs.CtxI, req proto.ReadTasksReq, rep *proto.ReadTasksRep) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+
+	if err := s.checkFence(req.Fence); err != nil {
+		return err
+	}
 
 	rep.Tasks = make([]*proto.Task, 0)
 	for _, id := range req.Ids {
@@ -142,6 +175,10 @@ func (s *TaskSrv) ReadTasks(ctx fs.CtxI, req proto.ReadTasksReq, rep *proto.Read
 func (s *TaskSrv) MoveTasks(ctx fs.CtxI, req proto.MoveTasksReq, rep *proto.MoveTasksRep) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+
+	if err := s.checkFence(req.Fence); err != nil {
+		return err
+	}
 
 	to := s.getMap(req.To)
 	if to == nil {
@@ -178,12 +215,18 @@ func (s *TaskSrv) MoveTasks(ctx fs.CtxI, req proto.MoveTasksReq, rep *proto.Move
 		s.todoCond.Broadcast()
 	}
 
+	db.DPrintf(db.FTTASKS, "MoveTasks: n: %d, to: %v", len(req.Ids), req.To)
+
 	return nil
 }
 
 func (s *TaskSrv) MoveTasksByStatus(ctx fs.CtxI, req proto.MoveTasksByStatusReq, rep *proto.MoveTasksByStatusRep) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+
+	if err := s.checkFence(req.Fence); err != nil {
+		return err
+	}
 
 	from := s.getMap(req.From)
 	to := s.getMap(req.To)
@@ -205,11 +248,14 @@ func (s *TaskSrv) MoveTasksByStatus(ctx fs.CtxI, req proto.MoveTasksByStatusReq,
 		s.status[id] = req.To
 	}
 
+	n := len(*from)
 	*from = make(map[int32]bool)
 
 	if req.To == proto.TaskStatus_TODO {
 		s.todoCond.Broadcast()
 	}
+
+	db.DPrintf(db.FTTASKS, "MoveTasks: n: %d, from: %v, to: %v", n, req.From, req.To)
 
 	return nil
 }
@@ -217,6 +263,10 @@ func (s *TaskSrv) MoveTasksByStatus(ctx fs.CtxI, req proto.MoveTasksByStatusReq,
 func (s *TaskSrv) GetTaskOutputs(ctx fs.CtxI, req proto.GetTaskOutputsReq, rep *proto.GetTaskOutputsRep) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+
+	if err := s.checkFence(req.Fence); err != nil {
+		return err
+	}
 
 	rep.Outputs = make([][]byte, len(req.Ids))
 	for ix, id := range req.Ids {
@@ -235,6 +285,10 @@ func (s *TaskSrv) AddTaskOutputs(ctx fs.CtxI, req proto.AddTaskOutputsReq, rep *
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
+	if err := s.checkFence(req.Fence); err != nil {
+		return err
+	}
+
   for ix, id := range req.Ids {
 		output := req.Outputs[ix]
 		s.output[id] = output
@@ -247,10 +301,20 @@ func (s *TaskSrv) AcquireTasks(ctx fs.CtxI, req proto.AcquireTasksReq, rep *prot
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
+	if err := s.checkFence(req.Fence); err != nil {
+		return err
+	}
+
+	fence := s.fence
 	rep.Ids = s.get(proto.TaskStatus_TODO)
-	for req.Wait && len(rep.Ids) == 0 {
+	for req.Wait && len(rep.Ids) == 0 && !s.stopped && fence == s.fence {
+		db.DPrintf(db.FTTASKS, "AcquireTasks: waiting for tasks...")
 		s.todoCond.Wait()
 		rep.Ids = s.get(proto.TaskStatus_TODO)
+	}
+
+	if fence != s.fence {
+		return serr.NewErr(serr.TErrInval, fmt.Sprintf("fence changed from %v to %v", fence, s.fence))
 	}
 
 	for _, id := range rep.Ids {
@@ -264,6 +328,10 @@ func (s *TaskSrv) AcquireTasks(ctx fs.CtxI, req proto.AcquireTasksReq, rep *prot
 		s.wip[id] = true
 		s.status[id] = proto.TaskStatus_WIP
 	}
+
+	rep.Stopped = s.stopped
+
+	db.DPrintf(db.FTTASKS, "AcquireTasks: n: %d stopped: %t", len(rep.Ids), rep.Stopped)
 
 	return nil
 }
@@ -279,5 +347,36 @@ func (s *TaskSrv) GetTaskStats(ctx fs.CtxI, req proto.GetTaskStatsReq, rep *prot
 		NumError: int32(len(s.errored)),
 	}
 
+	return nil
+}
+
+func (s *TaskSrv) SubmitStop(ctx fs.CtxI, req proto.SubmitStopReq, rep *proto.SubmitStopRep) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if err := s.checkFence(req.Fence); err != nil {
+		return err
+	}
+
+	db.DPrintf(db.FTTASKS, "stop received")
+
+	s.stopped = true
+	s.todoCond.Broadcast()
+
+	return nil
+}
+
+func (s *TaskSrv) Fence(ctx fs.CtxI, req proto.FenceReq, rep *proto.FenceRep) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	fence := req.Fence.Tfence()
+	if s.fence != nil && s.fence.Epoch >= fence.Epoch {
+		return serr.NewErr(serr.TErrInval, fmt.Sprintf("fence already set with epoch %v, attempted to set with %v", fence.Epoch, s.fence.Epoch))
+	}
+
+	db.DPrintf(db.FTTASKS, "fence: added fence %v to replace %v", fence, s.fence)
+
+	s.fence = &fence
 	return nil
 }

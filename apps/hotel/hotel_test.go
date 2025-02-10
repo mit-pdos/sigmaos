@@ -467,7 +467,7 @@ func TestBenchSpawnGeo(t *testing.T) {
 
 	pn := "name/geosrv"
 	db.DPrintf(db.ALWAYS, "Mount start")
-	if err := ts.FsLib.MountTree(eps[0], rpc.RPC, filepath.Join(pn, rpc.RPC)); !assert.Nil(t, err, "Err mount geo srv: %v", err) {
+	if err := ts.FsLib.MountTree(sp.NewEndpointFromProto(eps[0].EndpointProto), rpc.RPC, filepath.Join(pn, rpc.RPC)); !assert.Nil(t, err, "Err mount geo srv: %v", err) {
 		return
 	}
 

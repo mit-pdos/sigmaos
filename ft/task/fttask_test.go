@@ -13,6 +13,7 @@ import (
 	fttaskclnt "sigmaos/ft/task/clnt"
 	"sigmaos/ft/task/proto"
 	fttasksrv "sigmaos/ft/task/srv"
+	"sigmaos/sigmap"
 	"sigmaos/test"
 	rd "sigmaos/util/rand"
 )
@@ -75,9 +76,10 @@ func TestBasic(t *testing.T) {
 	s, err = ts.ft.JobState()
 	assert.Nil(t, err)
 	db.DPrintf(db.TEST, "JobState %v", s)
-	err = ts.ft.ReadTaskOutput(tns[0], &b)
+	var o string
+	err = ts.ft.ReadTaskOutput(tns[0], &o)
 	assert.Nil(t, err)
-	db.DPrintf(db.TEST, "Output %v", b)
+	db.DPrintf(db.TEST, "Output %v", o)
 	ts.shutdown()
 }
 
@@ -193,6 +195,143 @@ func testServerContents[Data any, Output any](t *testing.T, clnt *fttaskclnt.FtT
 	assert.Equal(t, int32(len(done)), stats.NumDone)
 	assert.Equal(t, int32(len(err)),  stats.NumError)
 }
+
+func TestServerPerf(t *testing.T) {
+	ts, err := test.NewTstateAll(t)
+	if !assert.Nil(t, err, "Error New Tstate: %v", err) {
+		return
+	}
+
+	nTasks := 1000
+
+	mgr, err := fttasksrv.NewFtTaskSrvMgr(ts.SigmaClnt, "test")
+	assert.Nil(t, err)
+
+	clnt := fttaskclnt.NewFtTaskClnt[mr.Bin, string](ts.FsLib, mgr.Id)
+
+	start := time.Now()
+	for i := 0; i < nTasks; i++ {
+		tasks := []*fttaskclnt.Task[mr.Bin]{
+			{
+				Id: int32(i),
+				Data: mr.Bin{
+					{
+						File: "hello",
+					},
+				},
+			},
+		}
+		existing, err := clnt.SubmitTasks(tasks)
+		assert.Nil(t, err)
+		assert.Empty(t, existing)
+	}
+	db.DPrintf(db.ALWAYS, "Submitting tasks took %v (%v per task)", time.Since(start), time.Since(start) / time.Duration(nTasks))
+
+	start = time.Now()
+	ids, _, err := clnt.AcquireTasks(false)
+	db.DPrintf(db.ALWAYS, "Acquired tasks in %v (%v per task)", time.Since(start), time.Since(start) / time.Duration(nTasks))
+	assert.Nil(t, err)
+	assert.Equal(t, nTasks, len(ids))
+
+	start = time.Now()
+	for _, id := range ids {
+		b, err := clnt.ReadTasks([]fttaskclnt.TaskId{id})
+		assert.Nil(t, err)
+		assert.Equal(t, 1, len(b))
+		assert.Equal(t, "hello", b[0].Data[0].File)
+	}
+	db.DPrintf(db.ALWAYS, "Read tasks in %v (%v per task)", time.Since(start), time.Since(start) / time.Duration(nTasks))
+
+	start = time.Now()
+	for _, id := range ids {
+		err = clnt.AddTaskOutputs([]fttaskclnt.TaskId{id}, []string{"bye"})
+		assert.Nil(t, err)
+		err = clnt.MoveTasks([]fttaskclnt.TaskId{id}, fttaskclnt.DONE)
+		assert.Nil(t, err)
+	}
+	db.DPrintf(db.ALWAYS, "Marked all tasks done in %v (%v per task)", time.Since(start), time.Since(start) / time.Duration(nTasks))
+
+	start = time.Now()
+	for _, id := range ids {
+		output, err := clnt.GetTaskOutputs([]fttaskclnt.TaskId{id})
+		assert.Nil(t, err)
+		assert.Equal(t, 1, len(output))
+		assert.Equal(t, "bye", output[0])
+	}
+	db.DPrintf(db.ALWAYS, "Read all outputs in %v (%v per task)", time.Since(start), time.Since(start) / time.Duration(nTasks))
+
+	ts.Shutdown()
+}
+
+func TestServerBatchedPerf(t *testing.T) {
+	ts, err := test.NewTstateAll(t)
+	if !assert.Nil(t, err, "Error New Tstate: %v", err) {
+		return
+	}
+
+	nTasks := 1000
+
+	mgr, err := fttasksrv.NewFtTaskSrvMgr(ts.SigmaClnt, "test")
+	assert.Nil(t, err)
+
+	clnt := fttaskclnt.NewFtTaskClnt[mr.Bin, string](ts.FsLib, mgr.Id)
+
+	tasks := make([]*fttaskclnt.Task[mr.Bin], nTasks)
+	for i := 0; i < nTasks; i++ {
+		tasks[i] = &fttaskclnt.Task[mr.Bin]{
+			Id: int32(i),
+			Data: mr.Bin{
+				{
+					File: "hello",
+				},
+			},
+		}
+	}
+
+	start := time.Now()
+	existing, err := clnt.SubmitTasks(tasks)
+	assert.Nil(t, err)
+	assert.Empty(t, existing)
+	db.DPrintf(db.ALWAYS, "Submitting tasks took %v (%v per task)", time.Since(start), time.Since(start)/time.Duration(nTasks))
+
+	start = time.Now()
+	ids, _, err := clnt.AcquireTasks(false)
+	db.DPrintf(db.ALWAYS, "Acquired tasks in %v (%v per task)", time.Since(start), time.Since(start)/time.Duration(nTasks))
+	assert.Nil(t, err)
+	assert.Equal(t, nTasks, len(ids))
+
+	start = time.Now()
+	b, err := clnt.ReadTasks(ids)
+	db.DPrintf(db.ALWAYS, "Read tasks in %v (%v per task)", time.Since(start), time.Since(start)/time.Duration(nTasks))
+	assert.Nil(t, err)
+	assert.Equal(t, nTasks, len(b))
+	for _, task := range b {
+		assert.Equal(t, "hello", task.Data[0].File)
+	}
+
+	start = time.Now()
+	outputs := make([]string, nTasks)
+	for i := 0; i < nTasks; i++ {
+		outputs[i] = "bye"
+	}
+	err = clnt.AddTaskOutputs(ids, outputs)
+	assert.Nil(t, err)
+	err = clnt.MoveTasks(ids, fttaskclnt.DONE)
+	assert.Nil(t, err)
+	db.DPrintf(db.ALWAYS, "Marked all tasks done in %v (%v per task)", time.Since(start), time.Since(start)/time.Duration(nTasks))
+
+	start = time.Now()
+	output, err := clnt.GetTaskOutputs(ids)
+	db.DPrintf(db.ALWAYS, "Read all outputs in %v (%v per task)", time.Since(start), time.Since(start)/time.Duration(nTasks))
+	assert.Nil(t, err)
+	assert.Equal(t, nTasks, len(output))
+	for _, out := range output {
+		assert.Equal(t, "bye", out)
+	}
+
+	ts.Shutdown()
+}
+
 
 func TestServerMoveTasksByStatus(t *testing.T) {
 	ts, err := test.NewTstateAll(t)
@@ -485,6 +624,86 @@ func TestServerErrors(t *testing.T) {
 	assert.NotNil(t, err)
 
 	_, err = clnt.GetTaskOutputs([]int32{6})
+	assert.NotNil(t, err)
+
+	err = mgr.Stop()
+	assert.Nil(t, err)
+
+	ts.Shutdown()
+}
+
+func TestServerStop(t *testing.T) {
+	ts, err := test.NewTstateAll(t)
+	if !assert.Nil(t, err, "Error New Tstate: %v", err) {
+		return
+	}
+
+	mgr, err := fttasksrv.NewFtTaskSrvMgr(ts.SigmaClnt, "test")
+	assert.Nil(t, err)
+
+	clnt := fttaskclnt.NewFtTaskClnt[interface{}, interface{}](ts.FsLib, mgr.Id)
+	existing, err := clnt.SubmitTasks([]*fttaskclnt.Task[interface{}] {
+		{
+			Id: int32(0),
+			Data: struct{}{},
+		},
+	})
+	assert.Nil(t, err)
+	assert.Equal(t, 0, len(existing))
+
+	_, stopped, err := clnt.AcquireTasks(true)
+	assert.Nil(t, err)
+	assert.False(t, stopped)
+
+	existing, err = clnt.SubmitTasks([]*fttaskclnt.Task[interface{}] {
+		{
+			Id: int32(1),
+			Data: struct{}{},
+		},
+	})
+	assert.Nil(t, err)
+	assert.Equal(t, 0, len(existing))
+
+	err = clnt.MoveTasksByStatus(fttaskclnt.WIP, fttaskclnt.TODO)
+	assert.Nil(t, err)
+	err = clnt.SubmitStop()
+	assert.Nil(t, err)
+
+	_, stopped, err = clnt.AcquireTasks(true)
+	assert.Nil(t, err)
+	assert.True(t, stopped)
+	assert.Equal(t, 0, len(existing))
+
+	err = mgr.Stop()
+	assert.Nil(t, err)
+
+	ts.Shutdown()
+}
+
+func TestServerFence(t *testing.T) {
+	ts, err := test.NewTstateAll(t)
+	if !assert.Nil(t, err, "Error New Tstate: %v", err) {
+		return
+	}
+
+	mgr, err := fttasksrv.NewFtTaskSrvMgr(ts.SigmaClnt, "test")
+	assert.Nil(t, err)
+
+	clnt := fttaskclnt.NewFtTaskClnt[interface{}, interface{}](ts.FsLib, mgr.Id)
+	err = clnt.MoveTasksByStatus(fttaskclnt.WIP, fttaskclnt.TODO)
+	assert.Nil(t, err)
+
+	fence := &sigmap.Tfence{ PathName: "test", Epoch: 1, Seqno: 0 }
+	clnt.SetFence(fence)
+	err = clnt.MoveTasksByStatus(fttaskclnt.WIP, fttaskclnt.TODO)
+	assert.Nil(t, err)
+
+	clnt.Fence(fence)
+	err = clnt.MoveTasksByStatus(fttaskclnt.WIP, fttaskclnt.TODO)
+	assert.Nil(t, err)
+
+	clnt.SetFence(sigmap.NullFence())
+	err = clnt.MoveTasksByStatus(fttaskclnt.WIP, fttaskclnt.TODO)
 	assert.NotNil(t, err)
 
 	err = mgr.Stop()

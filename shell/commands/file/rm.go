@@ -44,7 +44,7 @@ func (c *RmCommand) Execute(ctx *shellctx.ShellContext, args []string, stdin io.
 
 	isDir, err := ctx.Tstate.IsDir(shellctx.FILEPATH_OFFSET + fullPath)
 	if err != nil {
-		fmt.Fprintf(stderr, "Error checking path: %v\n", err)
+		fmt.Fprintf(stderr, "Error removing %v %v\n", path, err)
 		return false
 	}
 
@@ -69,7 +69,7 @@ func (c *RmCommand) Execute(ctx *shellctx.ShellContext, args []string, stdin io.
 		itemType = "Directory"
 	}
 
-	_, err = fmt.Fprintf(stdout, "%s removed successfully: %s\n", itemType, path)
+	_, err = fmt.Fprintf(stdout, "%s %s removed successfully\n", itemType, path)
 	if err != nil {
 		fmt.Fprintf(stderr, "error writing to stdout: %v", err)
 		return false

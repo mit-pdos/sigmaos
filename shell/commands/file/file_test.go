@@ -398,6 +398,386 @@ func TestLsCommand(t *testing.T) {
 	}
 }
 
+func TestMkdirCommand(t *testing.T) {
+	ts, err := shellctx.NewTstateAll()
+	if err != nil {
+		t.Fatalf("Error NewTstateAll: %v", err)
+	}
+	tests := []struct {
+		name           string
+		args           []string
+		expectedOutput string
+		expectedError  string
+		expectedResult bool
+	}{
+		{
+			name:           "Create directory",
+			args:           []string{"testdir"},
+			expectedResult: true,
+		},
+		{
+			name:           "Directory already exists",
+			args:           []string{"kpids"},
+			expectedError:  "Error creating directory: {Err: \"file exists\" Obj: \"kpids\" ()}\n",
+			expectedResult: false,
+		},
+		{
+			name:           "Invalid number of arguments",
+			args:           []string{"testdir1", "testdir2"},
+			expectedError:  "Invalid number of arguments\n mkdir <directory_name>",
+			expectedResult: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cmd := NewMkdirCommand()
+			ctx, _ := shellctx.NewShellContext(ts)
+
+			var stdout, stderr bytes.Buffer
+			result := cmd.Execute(ctx, tt.args, nil, &stdout, &stderr)
+
+			if result != tt.expectedResult {
+				t.Errorf("Expected result %v, got %v", tt.expectedResult, result)
+			}
+
+			if stderr.String() != tt.expectedError {
+				t.Errorf("Expected error %q, got %q", tt.expectedError, stderr.String())
+			}
+		})
+	}
+}
+
+func TestMvCommand(t *testing.T) {
+	ts, err := shellctx.NewTstateAll()
+	if err != nil {
+		t.Fatalf("Error NewTstateAll: %v", err)
+	}
+	// create a test dir with test file
+
+	testDir := "name/testdir"
+	err = ts.MkDir(testDir, 0777)
+	if err != nil {
+		t.Fatalf("Error creating test directory: %v", err)
+	}
+
+	testFile := "name/testdir/test.txt"
+	_, err = ts.PutFile(testFile, 0777, sp.OWRITE, []byte("Hello, World!"))
+	if err != nil {
+		t.Fatalf("Error creating test file: %v", err)
+	}
+
+	tests := []struct {
+		name           string
+		args           []string
+		expectedOutput string
+		expectedError  string
+		expectedResult bool
+	}{
+		{
+			name:           "Move valid file",
+			args:           []string{"/testdir/test.txt", "/testdir/test2.txt"},
+			expectedResult: true,
+			expectedOutput: "File moved successfully from /testdir/test.txt to /testdir/test2.txt\n",
+		},
+		// {
+		// 	name:           "Move valid directory",
+		// 	args:           []string{"/testdir", "/testdir_move"},
+		// 	expectedOutput: "Directory moved successfully from /testdir to /testdir_move\n",
+		// 	expectedResult: true,
+		// },
+		{
+			name:           "Source file not found",
+			args:           []string{"/nonexistent.txt", "/test_move.txt"},
+			expectedError:  "Error checking source: {Err: \"file not found\" Obj: \"nonexistent.txt\" ()}\n",
+			expectedResult: false,
+		},
+		{
+			name:           "Invalid number of arguments",
+			args:           []string{},
+			expectedError:  "Invalid number of arguments\n mv <source> <destination>",
+			expectedResult: false,
+		},
+		{
+			name:           "Help command",
+			args:           []string{"--help"},
+			expectedOutput: "mv <source> <destination>\n",
+			expectedResult: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cmd := NewMvCommand()
+			ctx, _ := shellctx.NewShellContext(ts)
+
+			var stdout, stderr bytes.Buffer
+			result := cmd.Execute(ctx, tt.args, nil, &stdout, &stderr)
+
+			if result != tt.expectedResult {
+				t.Errorf("Expected result %v, got %v", tt.expectedResult, result)
+			}
+
+			if stdout.String() != tt.expectedOutput {
+				t.Errorf("Expected output %q, got %q", tt.expectedOutput, stdout.String())
+			}
+
+			if stderr.String() != tt.expectedError {
+				t.Errorf("Expected error %q, got %q", tt.expectedError, stderr.String())
+			}
+
+			// Verify file/directory copy
+			if tt.expectedResult && len(tt.args) == 2 {
+				srcPath := "name" + tt.args[0]
+				dstPath := "name" + tt.args[1]
+
+				// Check if destination exists
+				_, dstErr := ts.Stat(dstPath)
+				if dstErr != nil {
+					t.Errorf("Destination %s does not exist after move: %v", dstPath, dstErr)
+				}
+
+				// For file copy, check content
+				if tt.name == "Move valid file" {
+					_, err := ts.GetFile(srcPath)
+					if err == nil {
+						t.Errorf("Source file %s still exists after move", srcPath)
+					}
+					dstContent, readErr := ts.GetFile(dstPath)
+					if readErr != nil {
+						t.Errorf("Error reading moved file: %v", readErr)
+					}
+					if string("Hello, World!") != string(dstContent) {
+						t.Errorf("Moved file content mismatch. Expected %q, got %q", string("Hello, World!"), string(dstContent))
+					}
+				}
+
+				// For directory copy, check if it's a directory
+				if tt.name == "Move valid directory" {
+					if isDir, err := ts.IsDir(dstPath); !isDir || err != nil {
+						t.Errorf("Moved directory %s is not a directory", dstPath)
+					}
+				}
+			}
+		})
+	}
+}
+
+func TestPwdCommand(t *testing.T) {
+	ts, err := shellctx.NewTstateAll()
+	if err != nil {
+		t.Fatalf("Error NewTstateAll: %v", err)
+	}
+
+	tests := []struct {
+		name           string
+		initialDir     string
+		expectedOutput string
+		expectedError  string
+		expectedResult bool
+	}{
+		{
+			name:           "Current directory is root",
+			initialDir:     "/",
+			expectedOutput: "/\n",
+			expectedResult: true,
+		},
+		{
+			name:           "Current directory is subdirectory",
+			initialDir:     "/testdir",
+			expectedOutput: "/testdir\n",
+			expectedResult: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cmd := NewPwdCommand()
+			ctx, _ := shellctx.NewShellContext(ts)
+			ctx.CurrentDir = tt.initialDir
+
+			var stdout, stderr bytes.Buffer
+			result := cmd.Execute(ctx, nil, nil, &stdout, &stderr)
+
+			if result != tt.expectedResult {
+				t.Errorf("Expected result %v, got %v", tt.expectedResult, result)
+			}
+
+			if stdout.String() != tt.expectedOutput {
+				t.Errorf("Expected output %q, got %q", tt.expectedOutput, stdout.String())
+			}
+
+			if stderr.String() != tt.expectedError {
+				t.Errorf("Expected error %q, got %q", tt.expectedError, stderr.String())
+			}
+		})
+	}
+}
+
+func TestRmCommand(t *testing.T) {
+	ts, err := shellctx.NewTstateAll()
+	if err != nil {
+		t.Fatalf("Error NewTstateAll: %v", err)
+	}
+
+	filePath := "name/test.txt"
+	dirPath := "name/testdir"
+
+	// Create test file and directory
+	_, err = ts.PutFile(filePath, 0777, sp.OWRITE, []byte("Hello"))
+	if err != nil {
+		t.Fatalf("Error creating test file: %v", err)
+	}
+	err = ts.MkDir(dirPath, 0777)
+	if err != nil {
+		t.Fatalf("Error creating test directory: %v", err)
+	}
+
+	tests := []struct {
+		name           string
+		args           []string
+		expectedOutput string
+		expectedError  string
+		expectedResult bool
+	}{
+		{
+			name:           "Remove valid file",
+			args:           []string{"/test.txt"},
+			expectedOutput: "File /test.txt removed successfully\n",
+			expectedResult: true,
+		},
+		{
+			name:           "Remove valid directory",
+			args:           []string{"-r", "/testdir"},
+			expectedOutput: "Directory /testdir removed successfully\n",
+			expectedResult: true,
+		},
+		{
+			name:           "File not found",
+			args:           []string{"/nonexistent.txt"},
+			expectedError:  "Error removing /nonexistent.txt {Err: \"file not found\" Obj: \"nonexistent.txt\" ()}\n",
+			expectedResult: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cmd := NewRmCommand()
+			ctx, _ := shellctx.NewShellContext(ts)
+
+			var stdout, stderr bytes.Buffer
+			result := cmd.Execute(ctx, tt.args, nil, &stdout, &stderr)
+
+			if result != tt.expectedResult {
+				t.Errorf("Expected result %v, got %v", tt.expectedResult, result)
+			}
+
+			if stdout.String() != tt.expectedOutput {
+				t.Errorf("Expected output %q, got %q", tt.expectedOutput, stdout.String())
+			}
+
+			if stderr.String() != tt.expectedError {
+				t.Errorf("Expected error %q, got %q", tt.expectedError, stderr.String())
+			}
+
+			// Verify file/directory removal
+			if tt.expectedResult && len(tt.args) == 1 {
+				path := "name" + tt.args[0]
+				_, statErr := ts.Stat(path)
+				if statErr == nil {
+					t.Errorf("Path %s still exists after removal", path)
+				}
+			}
+		})
+	}
+}
+
+func TestScpCommand(t *testing.T) {
+	// TODO
+}
+
+func TestTouchCommand(t *testing.T) {
+	ts, err := shellctx.NewTstateAll()
+	if err != nil {
+		t.Fatalf("Error NewTstateAll: %v", err)
+	}
+
+	tests := []struct {
+		name           string
+		args           []string
+		expectedOutput string
+		expectedError  string
+		expectedResult bool
+		verifyFile     string
+	}{
+		{
+			name:           "Create new file",
+			args:           []string{"/newfile.txt"},
+			expectedOutput: "File /newfile.txt created or updated successfully\n",
+			expectedResult: true,
+			verifyFile:     "/newfile.txt",
+		},
+		{
+			name:           "Update existing file",
+			args:           []string{"/existingfile.txt"},
+			expectedOutput: "File /existingfile.txt created or updated successfully\n",
+			expectedResult: true,
+			verifyFile:     "/existingfile.txt",
+		},
+		{
+			name:           "Invalid number of arguments",
+			args:           []string{},
+			expectedError:  "Invalid number of arguments\n touch <filename> [content]",
+			expectedResult: false,
+		},
+		{
+			name:           "Help command",
+			args:           []string{"--help"},
+			expectedOutput: "touch <filename> [content]\n",
+			expectedResult: true,
+		},
+	}
+
+	// Pre-create an existing file for testing
+	existingFile := "name/existingfile.txt"
+	_, err = ts.PutFile(existingFile, 0777, sp.OWRITE, []byte("Existing content"))
+	if err != nil {
+		t.Fatalf("Error creating existing test file: %v", err)
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cmd := NewTouchCommand()
+			ctx, _ := shellctx.NewShellContext(ts)
+
+			var stdout, stderr bytes.Buffer
+			result := cmd.Execute(ctx, tt.args, nil, &stdout, &stderr)
+
+			if result != tt.expectedResult {
+				t.Errorf("Expected result %v, got %v", tt.expectedResult, result)
+			}
+
+			if stdout.String() != tt.expectedOutput {
+				t.Errorf("Expected output %q, got %q", tt.expectedOutput, stdout.String())
+			}
+
+			if stderr.String() != tt.expectedError {
+				t.Errorf("Expected error %q, got %q", tt.expectedError, stderr.String())
+			}
+
+			if tt.verifyFile != "" && tt.expectedResult {
+				filePath := "name" + tt.verifyFile
+
+				_, statErr := ts.Stat(filePath)
+				if statErr != nil {
+					t.Errorf("Expected file %s to exist but it does not: %v", filePath, statErr)
+				} else if isDir, _ := ts.IsDir(filePath); isDir {
+					t.Errorf("Expected %s to be a file but it is a directory", filePath)
+				}
+			}
+		})
+	}
+}
+
 func stringSlicesEqual(a, b []string) bool {
 	if len(a) != len(b) {
 		return false

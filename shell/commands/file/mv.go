@@ -23,13 +23,14 @@ func (c *MvCommand) Usage() string {
 }
 
 func (c *MvCommand) Execute(ctx *shellctx.ShellContext, args []string, stdin io.Reader, stdout io.Writer, stderr io.Writer) bool {
+	if len(args) == 1 && args[0] == "--help" {
+		fmt.Fprintln(stdout, c.Usage())
+		return true
+	}
+
 	if len(args) != 2 {
 		fmt.Fprintf(stderr, "Invalid number of arguments\n %v", c.Usage())
 		return false
-	}
-	if args[0] == "--help" {
-		fmt.Fprintln(stdout, c.Usage())
-		return true
 	}
 
 	src := util.ResolvePath(ctx, args[0])

@@ -3,9 +3,9 @@ package proc
 import (
 	"fmt"
 	"io"
-	"sigmaos/shell/shellctx"
+	"sigmaos/proc"
 	mschedclnt "sigmaos/sched/msched/clnt"
-	sp "sigmaos/sigmap"
+	"sigmaos/shell/shellctx"
 )
 
 type PsCommand struct{}
@@ -27,16 +27,19 @@ func (c *PsCommand) Execute(ctx *shellctx.ShellContext, args []string, stdin io.
 		fmt.Fprintf(stderr, "Invalid number of arguments\n %v", c.Usage())
 		return false
 	}
-	for _, k := range ctx.Tstate.Kclnts {
-		fmt.Println(k.KernelId())
-	}
-	sdc := mschedclnt.NewMSchedClnt(ctx.Tstate.FsLib, ctx.Tstate.Kclnts[0].KernelId())
-	ans, _ := sdc.GetRunningProcs(sp.Conf.Realm.N_SAMPLE)
-	fmt.Println(ans)
-	sts, _ := ctx.Tstate.GetDir("name/kpids")
+	realm := ctx.Tstate.ProcEnv().GetRealm()
+	runningProcsInRealm := make([]*proc.Proc, 0)
 
-	for _, filename := range sp.Names(sts) {
-		fmt.Fprintln(stdout, filename)
+	for _, k := range ctx.Tstate.Kclnts {
+		sdc := mschedclnt.NewMSchedClnt(ctx.Tstate.FsLib, k.KernelId())
+		runningProcsInKernel, err := sdc.GetRunningProcs(1)
+		if err != nil {
+			fmt.Fprintf(stderr, "Error getting running procs for kernel:%v %v\n", err, k.KernelId())
+		}
+		runningProcsInRealm = append(runningProcsInRealm, runningProcsInKernel[realm]...)
+	}
+	for _, proc := range runningProcsInRealm {
+		fmt.Fprintf(stdout, "id:%v dir:%v mem: %v, cpu: %v, type:%v, kernel id:%v \n", proc.GetPid(), proc.GetParentDir(), proc.GetMem(), proc.GetMcpu(), proc.GetType(), proc.GetKernelID())
 	}
 	return true
 }

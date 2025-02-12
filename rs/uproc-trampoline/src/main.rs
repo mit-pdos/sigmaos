@@ -88,7 +88,6 @@ fn main() {
     print_elapsed_time("trampoline.seccomp_proc", now, false);
     now = SystemTime::now();
 
-
     if aa {
         apply_apparmor("sigmaos-uproc").expect("apparmor failed");
         print_elapsed_time("trampoline.apply_apparmor", now, false);
@@ -343,7 +342,7 @@ fn seccomp_proc(dialproxy: String) -> Result<(), Box<dyn std::error::Error>> {
         ScmpSyscall::new("write"),
         ScmpSyscall::new("writev"),
         ScmpSyscall::new("readlink"), // Needed for MUSL/Alpine
-        ScmpSyscall::new("getcwd"), // Needed for Python
+        ScmpSyscall::new("getcwd"),   // Needed for Python
         ScmpSyscall::new("gettid"),
         ScmpSyscall::new("stat"),
         ScmpSyscall::new("readv"),

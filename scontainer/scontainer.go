@@ -43,9 +43,15 @@ func StartSigmaContainer(uproc *proc.Proc, dialproxy bool) (*uprocCmd, error) {
 	}
 	pn := binsrv.BinPath(stringProg)
 	// Optionally strace the proc
+	stracing := false
 	if straceProcs[uproc.GetProgram()] {
+		stracing = true
 		db.DPrintf(db.CONTAINER, "strace %v", uproc.GetProgram())
-		cmd = exec.Command("strace", append([]string{"-D", "-f", "uproc-trampoline", uproc.GetPid().String(), pn, strconv.FormatBool(dialproxy)}, uproc.Args...)...)
+		straceArgs := append([]string{"-D", "-f", "uproc-trampoline", uproc.GetPid().String(), pn, strconv.FormatBool(dialproxy)}, uproc.Args...)
+		if uproc.GetProgram() == "python" {
+			straceArgs = append([]string{"-E", "LD_PRELOAD=/tmp/python/ld_fstatat.so"}, straceArgs...)
+		}
+		cmd = exec.Command("strace", straceArgs...)
 	} else {
 		cmd = exec.Command("uproc-trampoline", append([]string{uproc.GetPid().String(), pn, strconv.FormatBool(dialproxy)}, uproc.Args...)...)
 	}
@@ -54,7 +60,9 @@ func StartSigmaContainer(uproc *proc.Proc, dialproxy bool) (*uprocCmd, error) {
 	uproc.AppendEnv("SIGMA_SPAWN_TIME", strconv.FormatInt(uproc.GetSpawnTime().UnixMicro(), 10))
 	uproc.AppendEnv(proc.SIGMAPERF, uproc.GetProcEnv().GetPerf())
 	uproc.AppendEnv("PYTHONPATH", "/~~/Lib")
-	uproc.AppendEnv("LD_PRELOAD", "/tmp/python/ld_fstatat.so")
+	if uproc.GetProgram() == "python" && !stracing {
+		uproc.AppendEnv("LD_PRELOAD", "/tmp/python/ld_fstatat.so")
+	}
 	// uproc.AppendEnv("RUST_BACKTRACE", "1")
 	cmd.Env = uproc.GetEnv()
 

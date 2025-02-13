@@ -4,6 +4,7 @@ package dcontainer
 
 import (
 	"context"
+	"io"
 	"os"
 	"path"
 	"path/filepath"
@@ -46,6 +47,52 @@ type cpustats struct {
 	util                float64
 }
 
+func copyFile(src string, dst string) error {
+	srcFile, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer srcFile.Close()
+
+	dstFile, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+	defer dstFile.Close()
+
+	_, err = io.Copy(dstFile, srcFile)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func copyLib(src string, dst string) error {
+	err := os.MkdirAll(dst, 0777)
+	if err != nil {
+		return err
+	}
+
+	entries, err := os.ReadDir(src)
+	if err != nil {
+		return err
+	}
+
+	for _, entry := range entries {
+		srcPath := filepath.Join(src, entry.Name())
+		dstPath := filepath.Join(dst, entry.Name())
+		if entry.IsDir() {
+			err = copyLib(srcPath, dstPath)
+			if err != nil {
+				return err
+			}
+		} else {
+			copyFile(srcPath, dstPath)
+		}
+	}
+	return nil
+}
+
 func StartDockerContainer(p *proc.Proc, kernelId string) (*DContainer, error) {
 	image := "sigmauser"
 	ctx := context.Background()
@@ -67,6 +114,39 @@ func StartDockerContainer(p *proc.Proc, kernelId string) (*DContainer, error) {
 	db.DPrintf(db.CONTAINER, "ContainerCreate %v %v s %v\n", cmd, p.GetEnv(), score)
 
 	db.DPrintf(db.CONTAINER, "Running procd with Docker")
+	db.DPrintf(db.CONTAINER, "Realm: %v", p.GetRealm())
+
+	realmName := p.GetRealm()
+	realmDir := filepath.Join("/tmp/python", realmName.String())
+	_, err = os.Stat(realmDir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			// Create the directory
+			err = os.MkdirAll(realmDir, 0777)
+			if err != nil {
+				return nil, err
+			}
+			// Copy over all lib contents
+			err = copyLib("/tmp/python/Lib", filepath.Join(realmDir, "Lib"))
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			return nil, err
+		}
+	}
+
+	// Copy over changeable content
+	os.RemoveAll(filepath.Join(realmDir, "pyproc/"))
+	os.RemoveAll(filepath.Join(realmDir, "ld_fstatat.so"))
+	err = copyLib("/tmp/python/pyproc", filepath.Join(realmDir, "pyproc"))
+	if err != nil {
+		return nil, err
+	}
+	err = copyFile("/tmp/python/ld_fstatat.so", filepath.Join(realmDir, "ld_fstatat.so"))
+	if err != nil {
+		return nil, err
+	}
 
 	// Set up default mounts.
 	mnts := []mount.Mount{
@@ -77,9 +157,10 @@ func StartDockerContainer(p *proc.Proc, kernelId string) (*DContainer, error) {
 			Target:   chunksrv.ROOTBINCONTAINER,
 			ReadOnly: false,
 		},
+		// Python dirs
 		mount.Mount{
 			Type:     mount.TypeBind,
-			Source:   path.Join("/tmp/python"),
+			Source:   realmDir,
 			Target:   path.Join("/tmp/python"),
 			ReadOnly: false,
 		},

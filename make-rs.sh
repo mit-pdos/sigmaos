@@ -81,12 +81,12 @@ done
 cp cpython3.11/python $OUTPATH/kernel
 cp cpython3.11/pybuilddir.txt $OUTPATH/kernel
 cp -r cpython3.11/Lib $OUTPATH/kernel
-echo "/~~/Lib" > $OUTPATH/kernel/python._pth
+echo "/~~/Lib" > $OUTPATH/kernel/python.pth
 echo -e "home = /~~\ninclude-system-site-packages = false\nversion = 3.11.10" > $OUTPATH/kernel/pyvenv.cfg
 cp cpython3.11/python $OUTPATH/user
 cp cpython3.11/pybuilddir.txt $OUTPATH/user
 cp -r cpython3.11/Lib $OUTPATH/user
-echo "/~~/Lib" > $OUTPATH/user/python._pth
+echo "/~~/Lib" > $OUTPATH/user/python.pth
 echo -e "home = /~~\ninclude-system-site-packages = false\nversion = 3.11.10" > $OUTPATH/user/pyvenv.cfg
 
 # Copy and inject Python shim

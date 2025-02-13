@@ -1,8 +1,8 @@
 import splib
-import sys
-sys.path.append('/~~/pyproc')
-from neighbor_import import custom_lib
+import custom_lib
+from nested_import import utils
 
 splib.started()
 custom_lib.sayHi()
+print("The square of 5 is:", utils.square(5))
 splib.exited()

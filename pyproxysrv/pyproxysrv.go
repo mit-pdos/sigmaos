@@ -23,15 +23,17 @@ const (
 	CHECKSUM         = "sigmaos-checksum"
 	CHECKSUMOVERRIDE = "sigmaos-checksum-override"
 
+	PYTHON   = "/tmp/python"
 	LIB      = "/tmp/python/Lib"
 	SUPERLIB = "/tmp/python/superlib"
 )
 
 // PyProxySrv maintains the state of the pyproxysrv.
 type PyProxySrv struct {
-	pe *proc.ProcEnv
-	sc *sigmaclnt.SigmaClnt
-	bn string // Name of AWS bucket
+	pe         *proc.ProcEnv
+	sc         *sigmaclnt.SigmaClnt
+	bn         string // Name of AWS bucket
+	relImports bool
 }
 
 // Creates and returns a new PyProxySrv object to be used by Python programs
@@ -48,8 +50,9 @@ func NewPyProxySrv(pe *proc.ProcEnv, bn string) (*PyProxySrv, error) {
 	db.DPrintf(db.TEST, "runServer: pyproxysrv listening on %v", sp.SIGMA_PYPROXY_SOCKET)
 
 	pps := &PyProxySrv{
-		pe: pe,
-		bn: bn,
+		pe:         pe,
+		bn:         bn,
+		relImports: false,
 	}
 	sc, err := sigmaclnt.NewSigmaClnt(pe)
 	if err != nil {

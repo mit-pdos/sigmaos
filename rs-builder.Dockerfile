@@ -4,6 +4,7 @@ FROM alpine
 
 RUN apk add --no-cache libseccomp \
   gcompat \
+  libffi-dev \
   musl-dev \
   curl \
   bash \
@@ -12,6 +13,7 @@ RUN apk add --no-cache libseccomp \
   parallel \
   libseccomp-static \
   make \
+  python3-dev \
   git
 
 RUN echo 'will cite' | parallel --citation || true

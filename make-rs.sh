@@ -78,20 +78,30 @@ for entry in "$LIBDIR"/*; do
 done
 
 # Copy Python executable
-cp cpython3.11/python $OUTPATH/kernel
-cp cpython3.11/pybuilddir.txt $OUTPATH/kernel
-cp -r cpython3.11/Lib $OUTPATH/kernel
+# cp cpython3.11/python $OUTPATH/kernel
+# cp cpython3.11/pybuilddir.txt $OUTPATH/kernel
+# cp -r cpython3.11/Lib $OUTPATH/kernel
+# cp -r cpython3.11/build $OUTPATH/kernel
+# cp -r cpython3.11/Modules $OUTPATH/kernel
+cp -r cpython3.11 $OUTPATH/kernel
 echo "/~~/Lib" > $OUTPATH/kernel/python.pth
 echo -e "home = /~~\ninclude-system-site-packages = false\nversion = 3.11.10" > $OUTPATH/kernel/pyvenv.cfg
-cp cpython3.11/python $OUTPATH/user
-cp cpython3.11/pybuilddir.txt $OUTPATH/user
-cp -r cpython3.11/Lib $OUTPATH/user
+# cp cpython3.11/python $OUTPATH/user
+# cp cpython3.11/pybuilddir.txt $OUTPATH/user
+# cp -r cpython3.11/Lib $OUTPATH/user
+# cp -r cpython3.11/build $OUTPATH/user
+# cp -r cpython3.11/Modules $OUTPATH/kernel
+cp -r cpython3.11 $OUTPATH/kernel
 echo "/~~/Lib" > $OUTPATH/user/python.pth
 echo -e "home = /~~\ninclude-system-site-packages = false\nversion = 3.11.10" > $OUTPATH/user/pyvenv.cfg
 
 # Copy and inject Python shim
 gcc -Wall -fPIC -shared -o ld_fstatat.so ../sigmaos-local/ld_preload/ld_fstatat.c 
 cp ld_fstatat.so $OUTPATH/kernel
+
+# Build Python library
+gcc -Wall -fPIC -shared -o clntlib.so ../sigmaos-local/pylib/clntlib.c
+cp clntlib.so $OUTPATH/kernel
 
 # Copy Python user processes
 cp -r pyproc $OUTPATH/kernel

@@ -116,37 +116,55 @@ func StartDockerContainer(p *proc.Proc, kernelId string) (*DContainer, error) {
 	db.DPrintf(db.CONTAINER, "Running procd with Docker")
 	db.DPrintf(db.CONTAINER, "Realm: %v", p.GetRealm())
 
-	realmName := p.GetRealm()
-	realmDir := filepath.Join("/tmp/python", realmName.String())
-	_, err = os.Stat(realmDir)
-	if err != nil {
-		if os.IsNotExist(err) {
-			// Create the directory
-			err = os.MkdirAll(realmDir, 0777)
-			if err != nil {
-				return nil, err
-			}
-			// Copy over all lib contents
-			err = copyLib("/tmp/python/Lib", filepath.Join(realmDir, "Lib"))
-			if err != nil {
-				return nil, err
-			}
-		} else {
-			return nil, err
-		}
-	}
+	// realmName := p.GetRealm()
+	// realmDir := filepath.Join("/tmp/python", realmName.String())
+	// _, err = os.Stat(realmDir)
+	// if err != nil {
+	// 	if os.IsNotExist(err) {
+	// 		// Create the directory
+	// 		err = os.MkdirAll(realmDir, 0777)
+	// 		if err != nil {
+	// 			return nil, err
+	// 		}
+	// 		// Copy over all lib contents
+	// 		err = copyLib("/tmp/python/Lib", filepath.Join(realmDir, "Lib"))
+	// 		if err != nil {
+	// 			return nil, err
+	// 		}
+	// 		err = copyLib("/tmp/python/build", filepath.Join(realmDir, "build"))
+	// 		if err != nil {
+	// 			return nil, err
+	// 		}
+	// 		err = copyLib("/tmp/python/Modules", filepath.Join(realmDir, "build"))
+	// 		if err != nil {
+	// 			return nil, err
+	// 		}
+	// 	} else {
+	// 		return nil, err
+	// 	}
+	// }
 
-	// Copy over changeable content
-	os.RemoveAll(filepath.Join(realmDir, "pyproc/"))
-	os.RemoveAll(filepath.Join(realmDir, "ld_fstatat.so"))
-	err = copyLib("/tmp/python/pyproc", filepath.Join(realmDir, "pyproc"))
-	if err != nil {
-		return nil, err
-	}
-	err = copyFile("/tmp/python/ld_fstatat.so", filepath.Join(realmDir, "ld_fstatat.so"))
-	if err != nil {
-		return nil, err
-	}
+	// // Copy over changeable content
+	// os.RemoveAll(filepath.Join(realmDir, "pyproc/"))
+	// os.RemoveAll(filepath.Join(realmDir, "ld_fstatat.so"))
+	// os.RemoveAll(filepath.Join(realmDir, "clntlib.so"))
+	// os.RemoveAll(filepath.Join(realmDir, "Lib", "splib.py"))
+	// err = copyLib("/tmp/python/pyproc", filepath.Join(realmDir, "pyproc"))
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// err = copyFile("/tmp/python/ld_fstatat.so", filepath.Join(realmDir, "ld_fstatat.so"))
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// err = copyFile("/tmp/python/clntlib.so", filepath.Join(realmDir, "clntlib.so"))
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// err = copyFile("/tmp/python/Lib/splib.py", filepath.Join(realmDir, "Lib", "splib.py"))
+	// if err != nil {
+	// 	return nil, err
+	// }
 
 	// Set up default mounts.
 	mnts := []mount.Mount{
@@ -160,7 +178,7 @@ func StartDockerContainer(p *proc.Proc, kernelId string) (*DContainer, error) {
 		// Python dirs
 		mount.Mount{
 			Type:     mount.TypeBind,
-			Source:   realmDir,
+			Source:   path.Join("/tmp/python"), // realmDir,
 			Target:   path.Join("/tmp/python"),
 			ReadOnly: false,
 		},

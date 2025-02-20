@@ -1,11 +1,11 @@
+import ctypes
+
+so_file = "/tmp/python/clntlib.so"
+lib_funcs = ctypes.CDLL(so_file)
+
 def started():
-    try:
-        open("/~~/api/Started")
-    except: 
-        pass # Should always fail due to non-existent file
+    lib_funcs.init_socket()
+    lib_funcs.started()
 
 def exited():
-    try:
-        open("/~~/api/Exited")
-    except:
-        pass # Should always fail due to non-existent file
+    lib_funcs.exited()

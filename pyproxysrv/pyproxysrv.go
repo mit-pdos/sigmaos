@@ -26,6 +26,7 @@ const (
 	PYTHON   = "/tmp/python"
 	LIB      = "/tmp/python/Lib"
 	SUPERLIB = "/tmp/python/superlib"
+	BUILDLIB = "/tmp/python/build/lib.linux-x86_64-3.11"
 )
 
 // PyProxySrv maintains the state of the pyproxysrv.
@@ -47,7 +48,17 @@ func NewPyProxySrv(pe *proc.ProcEnv, bn string) (*PyProxySrv, error) {
 	if err := os.Chmod(sp.SIGMA_PYPROXY_SOCKET, 0777); err != nil {
 		db.DFatalf("Err chmod sigmasocket: %v", err)
 	}
-	db.DPrintf(db.TEST, "runServer: pyproxysrv listening on %v", sp.SIGMA_PYPROXY_SOCKET)
+	db.DPrintf(db.TEST, "runServer: pyproxysrv listening on %v\n", sp.SIGMA_PYPROXY_SOCKET)
+
+	// Create the API socket
+	apiSocket, err := net.Listen("unix", sp.SIGMA_PYAPI_SOCKET)
+	if err != nil {
+		return nil, err
+	}
+	if err := os.Chmod(sp.SIGMA_PYAPI_SOCKET, 0777); err != nil {
+		db.DFatalf("Err chmod sigmasocket: %v", err)
+	}
+	db.DPrintf(db.TEST, "runServer: pyproxysrv API listening on %v\n", sp.SIGMA_PYAPI_SOCKET)
 
 	pps := &PyProxySrv{
 		pe:         pe,
@@ -61,6 +72,7 @@ func NewPyProxySrv(pe *proc.ProcEnv, bn string) (*PyProxySrv, error) {
 	pps.sc = sc
 
 	go pps.runServer(socket)
+	go pps.runAPIServer(apiSocket)
 
 	return pps, nil
 }
@@ -277,18 +289,6 @@ func (pps *PyProxySrv) handleNewConn(conn *net.UnixConn) {
 				db.DPrintf(db.PYPROXYSRV_ERR, "reader: err adding S3 libs %v", err)
 				return
 			}
-		} else if reqPrefix == "pa" {
-			db.DPrintf(db.PYPROXYSRV, "reader: received API request: %v", reqPath)
-			if strings.HasPrefix(reqPath, "/Started") {
-				db.DPrintf(db.PYPROXYSRV, "reader: Started called")
-				err := pps.sc.ProcAPI.Started()
-				if err != nil {
-					db.DPrintf(db.PYPROXYSRV_ERR, "reader: err starting %v", err)
-					return
-				}
-			} else if strings.HasPrefix(reqPath, "/Exited") {
-				pps.sc.ProcAPI.Exited(proc.NewStatus(proc.StatusOK))
-			}
 		} else if reqPrefix == "pf" {
 			// Searching for Python file
 			if strings.HasPrefix(reqPath, "/Lib") {
@@ -311,6 +311,47 @@ func (pps *PyProxySrv) handleNewConn(conn *net.UnixConn) {
 	}
 }
 
+// Main proxy API body to handle all Python program requests.
+func (pps *PyProxySrv) handleNewAPIConn(conn *net.UnixConn) {
+	reader := bufio.NewReader(conn)
+
+	for {
+		line, err := reader.ReadString('\n')
+		if err != nil {
+			db.DPrintf(db.PYPROXYSRV_ERR, "api reader: rf err %v\n", err)
+			return
+		}
+
+		db.DPrintf(db.PYPROXYSRV, "api reader: received %v", line)
+
+		reqType := line[:3]
+		reqArg := line[4:]
+
+		if reqType == "api" {
+			db.DPrintf(db.PYPROXYSRV, "api reader: received API request: %v", line)
+			if strings.HasPrefix(reqArg, "started") {
+				db.DPrintf(db.PYPROXYSRV, "api reader: Started called")
+				err := pps.sc.ProcAPI.Started()
+				if err != nil {
+					db.DPrintf(db.PYPROXYSRV_ERR, "api reader: err starting %v", err)
+					return
+				}
+			} else if strings.HasPrefix(reqArg, "exited") {
+				pps.sc.ProcAPI.Exited(proc.NewStatus(proc.StatusOK))
+			}
+		} else if reqType == "fsl" {
+			// TODO_PYTHON
+		}
+
+		response := []byte("d")
+		_, err = conn.Write(response)
+		if err != nil {
+			db.DPrintf(db.PYPROXYSRV_ERR, "api reader: wf err %v\n", err)
+			return
+		}
+	}
+}
+
 func (pps *PyProxySrv) runServer(l net.Listener) {
 	db.DPrintf(db.PYPROXYSRV, "pyproxysrv running")
 	for {
@@ -321,5 +362,18 @@ func (pps *PyProxySrv) runServer(l net.Listener) {
 		}
 		// Handle incoming connection
 		go pps.handleNewConn(conn.(*net.UnixConn))
+	}
+}
+
+func (pps *PyProxySrv) runAPIServer(l net.Listener) {
+	db.DPrintf(db.PYPROXYSRV, "pyproxysrv API running")
+	for {
+		conn, err := l.Accept()
+		if err != nil {
+			db.DFatalf("Error pyproxysrv API Accept: %v", err)
+			return
+		}
+		// Handle incoming connection
+		go pps.handleNewAPIConn(conn.(*net.UnixConn))
 	}
 }

@@ -84,6 +84,13 @@ fn main() {
     env::set_var("SIGMA_PYPROXY_FD", pyproxy_conn_fd.to_string());
     print_elapsed_time("trampoline.connect_pyproxy", now, false);
     now = SystemTime::now();
+    // Connect to the pyapi socket
+    let pyapi_conn = UnixStream::connect("/tmp/spproxyd/spproxyd-pyapi.sock").unwrap();
+    let pyapi_conn_fd = pyapi_conn.into_raw_fd();
+    fcntl::fcntl(pyapi_conn_fd, FcntlArg::F_SETFD(FdFlag::empty())).unwrap();
+    env::set_var("SIGMA_PYAPI_FD", pyapi_conn_fd.to_string());
+    print_elapsed_time("trampoline.connect_api", now, false);
+    now = SystemTime::now();
     seccomp_proc(dialproxy).expect("seccomp failed");
     print_elapsed_time("trampoline.seccomp_proc", now, false);
     now = SystemTime::now();

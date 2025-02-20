@@ -71,7 +71,7 @@ func NewPythonProc(args []string, bucket string) *Proc {
 
 	// Calculate PYTHONPATH for the relevant file
 	var filename string
-	pythonPath := "/~~/Lib"
+	pythonPath := "/tmp/python/build/lib.linux-x86_64-3.11:/~~/Lib"
 
 	for _, arg := range args {
 		if strings.HasSuffix(arg, ".py") {
@@ -93,6 +93,7 @@ func NewPythonProc(args []string, bucket string) *Proc {
 	}
 
 	p.AppendEnv("PYTHONPATH", pythonPath)
+	p.AppendEnv("LD_LIBRARY_PATH", "/usr/lib")
 	return p
 }
 

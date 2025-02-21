@@ -90,6 +90,17 @@ func startNamed(ts *test.Tstate, nd *proc.Proc) error {
 	return nil
 }
 
+func stopNamed(ts *test.Tstate, nd *proc.Proc) error {
+	// Evict the new named
+	err := ts.Evict(nd.GetPid())
+	assert.Nil(ts.T, err, "Err evict named: %v", err)
+	status, err := ts.WaitExit(nd.GetPid())
+	if assert.Nil(ts.T, err, "Err WaitExit named: %v", err) {
+		assert.True(ts.T, status.IsStatusEvicted(), "Wrong exit status: %v", status)
+	}
+	return err
+}
+
 func TestKillNamed(t *testing.T) {
 	const T = 1000
 	fn := sp.NAMED + "crashnd.sem"
@@ -155,35 +166,44 @@ func TestKillNamed(t *testing.T) {
 	assert.Nil(t, err, "Get named dir post-crash")
 	db.DPrintf(db.TEST, "named %v", sp.Names(sts))
 
-	// Evict the new named
-	err = ts.Evict(nd2.GetPid())
-	assert.Nil(ts.T, err, "Err evict named: %v", err)
-	status, err := ts.WaitExit(nd2.GetPid())
-	if assert.Nil(ts.T, err, "Err WaitExit named: %v", err) {
-		assert.True(ts.T, status.IsStatusEvicted(), "Wrong exit status: %v", status)
+	if err := stopNamed(ts, nd2); !assert.Nil(ts.T, err, "Err stop named: %v", err) {
+		return
 	}
 }
 
 // Create a leased file and then reboot
 func reboot(t *testing.T, dn string, f func(*test.Tstate, string), d time.Duration, quick bool) {
-	ts, err1 := test.NewTstatePath(t, sp.NAMED)
+	ts, err1 := test.NewTstateAll(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
 
+	nd1 := newNamedProc(MCPU, test.REALM1, ts.ProcEnv().UseDialProxy, true)
+	if err := startNamed(ts, nd1); !assert.Nil(ts.T, err, "Err startNamed: %v", err) {
+		return
+	}
+
+	pe := proc.NewDifferentRealmProcEnv(ts.ProcEnv(), test.REALM1)
+	sc, err := sigmaclnt.NewSigmaClnt(pe)
+	if !assert.Nil(ts.T, err, "Err new sigmaclnt realm: %v", err) {
+		return
+	}
+	db.DPrintf(db.TEST, "Made new realm sigmaclnt")
+
 	fn := filepath.Join(dn, "leasedf")
 
-	li, err := ts.LeaseClnt.AskLease(fn, fsetcd.LeaseTTL)
+	li, err := sc.LeaseClnt.AskLease(fn, fsetcd.LeaseTTL)
 	assert.Nil(t, err, "Error AskLease: %v", err)
 
-	_, err = ts.PutLeasedFile(fn, 0777, sp.OWRITE, li.Lease(), nil)
+	_, err = sc.PutLeasedFile(fn, 0777, sp.OWRITE, li.Lease(), nil)
 	assert.Nil(t, err, "Err PutLeasedFile: %v", err)
 
-	sts, err := ts.GetDir(dn)
-	assert.Nil(t, err)
+	sts, err := sc.GetDir(dn)
+	assert.Nil(ts.T, err)
 
-	assert.Equal(t, 1, len(sts))
+	assert.Equal(ts.T, 1, len(sts))
 
+	stopNamed(ts, nd1)
 	ts.Shutdown()
 
 	if !quick {
@@ -191,8 +211,14 @@ func reboot(t *testing.T, dn string, f func(*test.Tstate, string), d time.Durati
 		time.Sleep(d)
 	}
 
-	ts, err1 = test.NewTstatePath(t, sp.NAMED)
+	ts, err1 = test.NewTstateAll(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	defer ts.Shutdown()
+
+	nd2 := newNamedProc(MCPU, test.REALM1, ts.ProcEnv().UseDialProxy, true)
+	if err := startNamed(ts, nd2); !assert.Nil(ts.T, err, "Err startNamed: %v", err) {
 		return
 	}
 
@@ -205,22 +231,38 @@ func reboot(t *testing.T, dn string, f func(*test.Tstate, string), d time.Durati
 
 	ts.Remove(fn)
 
-	ts.Shutdown()
+	stopNamed(ts, nd2)
 }
 
 // In these tests named will receive notification from etcd that
 // leased file has expired.
 func TestLeaseQuickReboot(t *testing.T) {
-	ts, err1 := test.NewTstatePath(t, sp.NAMED)
+	ts, err1 := test.NewTstateAll(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	dn := filepath.Join(sp.NAMED, "dir")
-	ts.RmDir(dn)
-	err := ts.MkDir(dn, 0777)
-	assert.Nil(ts.T, err, "dir")
 
+	nd1 := newNamedProc(MCPU, test.REALM1, ts.ProcEnv().UseDialProxy, true)
+	if err := startNamed(ts, nd1); !assert.Nil(ts.T, err, "Err startNamed: %v", err) {
+		return
+	}
+
+	pe := proc.NewDifferentRealmProcEnv(ts.ProcEnv(), test.REALM1)
+	sc, err := sigmaclnt.NewSigmaClnt(pe)
+	if !assert.Nil(ts.T, err, "Err new sigmaclnt realm: %v", err) {
+		return
+	}
+	db.DPrintf(db.TEST, "Made new realm sigmaclnt")
+
+	dn := filepath.Join(sp.NAMED, "dir")
+	sc.RmDir(dn)
+	err = sc.MkDir(dn, 0777)
+	assert.Nil(ts.T, err, "dir")
+	err = stopNamed(ts, nd1)
 	ts.Shutdown()
+	if !assert.Nil(ts.T, err, "Err stop named: %v", err) {
+		return
+	}
 
 	delay := 2 * fsetcd.LeaseTTL * time.Second
 

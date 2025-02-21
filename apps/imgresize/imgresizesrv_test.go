@@ -79,7 +79,7 @@ type Tstate struct {
 	*test.Tstate
 	ch chan bool
 	ftsrv *fttask_srv.FtTaskSrvMgr
-	ftclnt *fttask_clnt.FtTaskClnt[imgresize.Ttask, any]
+	ftclnt fttask_clnt.FtTaskClnt[imgresize.Ttask, any]
 }
 
 func newTstate(t *test.Tstate) (*Tstate, error) {
@@ -148,7 +148,7 @@ func TestImgdFatalError(t *testing.T) {
 		return
 	}
 
-	imgd := imgresize.StartImgd(ts.SigmaClnt, ts.ftclnt.ServerId, IMG_RESIZE_MCPU, IMG_RESIZE_MEM, false, 1, 0, nil)
+	imgd := imgresize.StartImgd(ts.SigmaClnt, ts.ftclnt.ServerId(), IMG_RESIZE_MCPU, IMG_RESIZE_MEM, false, 1, 0, nil)
 
 	// a non-existing file
 	fn := filepath.Join(sp.S3, sp.LOCAL, "9ps3/img-save/", "yyy.jpg")
@@ -167,7 +167,7 @@ func TestImgdFatalError(t *testing.T) {
 }
 
 func (ts *Tstate) imgdJob(paths []string, em *crash.TeventMap) {
-	imgd := imgresize.StartImgd(ts.SigmaClnt, ts.ftclnt.ServerId, IMG_RESIZE_MCPU, IMG_RESIZE_MEM, false, 1, 0, em)
+	imgd := imgresize.StartImgd(ts.SigmaClnt, ts.ftclnt.ServerId(), IMG_RESIZE_MCPU, IMG_RESIZE_MEM, false, 1, 0, em)
 
 	tasks := make([]*fttask_clnt.Task[imgresize.Ttask], len(paths))
 	for i, pn := range paths {
@@ -270,7 +270,7 @@ func TestImgdRestart(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Empty(t, existing)
 
-	imgd := imgresize.StartImgd(ts.SigmaClnt, ts.ftclnt.ServerId, IMG_RESIZE_MCPU, IMG_RESIZE_MEM, true, 1, 0, nil)
+	imgd := imgresize.StartImgd(ts.SigmaClnt, ts.ftclnt.ServerId(), IMG_RESIZE_MCPU, IMG_RESIZE_MEM, true, 1, 0, nil)
 
 	time.Sleep(2 * time.Second)
 

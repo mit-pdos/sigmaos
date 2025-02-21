@@ -20,7 +20,7 @@ import (
 
 type ImgSrv struct {
 	*sigmaclnt.SigmaClnt
-	ftclnt     *fttask_clnt.FtTaskClnt[Ttask, any]
+	ftclnt     fttask_clnt.FtTaskClnt[Ttask, any]
 	nrounds    int
 	workerMcpu proc.Tmcpu
 	workerMem  proc.Tmem
@@ -60,7 +60,7 @@ func NewImgSrv(args []string) (*ImgSrv, error) {
 
 	imgd.Started()
 
-	folder := filepath.Join(sp.IMG, string(imgd.ftclnt.ServerId))
+	folder := filepath.Join(sp.IMG, string(imgd.ftclnt.ServerId()))
 	imgd.leaderclnt, err = leaderclnt.NewLeaderClnt(imgd.FsLib, filepath.Join(folder, "imgd-leader"), 0777)
 	if err != nil {
 		return nil, fmt.Errorf("NewLeaderclnt err %v", err)
@@ -78,15 +78,15 @@ func NewImgSrv(args []string) (*ImgSrv, error) {
 }
 
 func (imgd *ImgSrv) Work() {
-	db.DPrintf(db.IMGD, "Try acquire leadership coord %v server %v", imgd.ProcEnv().GetPID(), imgd.ftclnt.ServerId)
+	db.DPrintf(db.IMGD, "Try acquire leadership coord %v server %v", imgd.ProcEnv().GetPID(), imgd.ftclnt.ServerId())
 
-	if err := imgd.MkDirPath(sp.NAMED, filepath.Join(sp.IMGREL, string(imgd.ftclnt.ServerId)), 0777); err != nil && !serr.IsErrorExists(err) {
+	if err := imgd.MkDirPath(sp.NAMED, filepath.Join(sp.IMGREL, string(imgd.ftclnt.ServerId())), 0777); err != nil && !serr.IsErrorExists(err) {
 		db.DFatalf("MkDirPath err %v", err)
 	}
 
 	// Try to become the leading coordinator.
-	if err := imgd.leaderclnt.LeadAndFence(nil, []string{filepath.Join(sp.IMG, string(imgd.ftclnt.ServerId))}); err != nil {
-		sts, _, err2 := imgd.ReadDir(filepath.Join(sp.IMG, string(imgd.ftclnt.ServerId)))
+	if err := imgd.leaderclnt.LeadAndFence(nil, []string{filepath.Join(sp.IMG, string(imgd.ftclnt.ServerId()))}); err != nil {
+		sts, _, err2 := imgd.ReadDir(filepath.Join(sp.IMG, string(imgd.ftclnt.ServerId())))
 		db.DFatalf("LeadAndFence err %v sts %v err2 %v", err, sp.Names(sts), err2)
 	}
 
@@ -96,13 +96,13 @@ func (imgd *ImgSrv) Work() {
 		db.DFatalf("FtTaskClnt.Fence err %v", err)
 	}
 
-	db.DPrintf(db.ALWAYS, "leader %s fail %q", imgd.ftclnt.ServerId, proc.GetSigmaFail())
+	db.DPrintf(db.ALWAYS, "leader %s fail %q", imgd.ftclnt.ServerId(), proc.GetSigmaFail())
 
 	ftm, err := fttaskmgr.NewNewTaskMgr(imgd.SigmaClnt.ProcAPI, imgd.ftclnt)
 	if err != nil {
 		db.DFatalf("NewTaskMgr err %v", err)
 	}
-	status := ftm.ExecuteTasks(func() Ttask { return *new(Ttask) }, getMkProcFn(imgd.ftclnt.ServerId, imgd.nrounds, imgd.workerMcpu, imgd.workerMem))
+	status := ftm.ExecuteTasks(func() Ttask { return *new(Ttask) }, getMkProcFn(imgd.ftclnt.ServerId(), imgd.nrounds, imgd.workerMcpu, imgd.workerMem))
 	db.DPrintf(db.ALWAYS, "imgresized exit")
 	imgd.exited = true
 	if status == nil {

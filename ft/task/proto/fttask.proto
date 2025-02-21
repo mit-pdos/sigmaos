@@ -60,7 +60,7 @@ message MoveTasksByStatusReq {
 }
 
 message MoveTasksByStatusRep {
-
+  int32 numMoved = 1;
 }
 
 message AcquireTasksReq {

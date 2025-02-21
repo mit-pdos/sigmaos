@@ -33,7 +33,7 @@ type ImgResizeJobInstance struct {
 	imgd     *procgroupmgr.ProcGroupMgr
 	p        *perf.Perf
 	ftmgr    *fttask_srv.FtTaskSrvMgr
-	ftclnt   *fttask_clnt.FtTaskClnt[imgresize.Ttask, any]
+	ftclnt   fttask_clnt.FtTaskClnt[imgresize.Ttask, any]
 	*test.RealmTstate
 }
 
@@ -89,7 +89,7 @@ func NewImgResizeJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, input str
 
 func (ji *ImgResizeJobInstance) StartImgResizeJob() {
 	db.DPrintf(db.ALWAYS, "StartImgResizeJob input %v ntasks %v mcpu %v job %v", ji.input, ji.ntasks, ji.mcpu, ji.job)
-	ji.imgd = imgresize.StartImgd(ji.SigmaClnt, ji.ftclnt.ServerId, ji.mcpu, ji.mem, false, ji.nrounds, ji.imgdmcpu, nil)
+	ji.imgd = imgresize.StartImgd(ji.SigmaClnt, ji.ftclnt.ServerId(), ji.mcpu, ji.mem, false, ji.nrounds, ji.imgdmcpu, nil)
 	db.DPrintf(db.ALWAYS, "Done starting ImgResizeJob")
 }
 

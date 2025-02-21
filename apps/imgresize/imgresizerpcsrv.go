@@ -20,7 +20,7 @@ import (
 )
 
 type ImgSrvRPC struct {
-	ftclnt     *fttask_clnt.FtTaskClnt[Ttask, any]
+	ftclnt     fttask_clnt.FtTaskClnt[Ttask, any]
 	nrounds    int
 	workerMcpu proc.Tmcpu
 	workerMem  proc.Tmem
@@ -61,7 +61,7 @@ func NewImgSrvRPC(args []string) (*ImgSrvRPC, error) {
 	if err != nil {
 		db.DFatalf("Error parse nrounds: %v", err)
 	}
-	imgd.mkProc = getMkProcFn(imgd.ftclnt.ServerId, imgd.nrounds, imgd.workerMcpu, imgd.workerMem)
+	imgd.mkProc = getMkProcFn(imgd.ftclnt.ServerId(), imgd.nrounds, imgd.workerMcpu, imgd.workerMem)
 	return imgd, nil
 }
 
@@ -105,7 +105,7 @@ func (imgd *ImgSrvRPC) Resize(ctx fs.CtxI, req proto.ImgResizeReq, rep *proto.Im
 }
 
 func (imgd *ImgSrvRPC) Work() {
-	db.DPrintf(db.IMGD, "Run imgd RPC server server %v", imgd.ftclnt.ServerId)
+	db.DPrintf(db.IMGD, "Run imgd RPC server server %v", imgd.ftclnt.ServerId())
 	if err := imgd.ssrv.RunServer(); err != nil {
 		db.DFatalf("RunServer: %v", err)
 	}

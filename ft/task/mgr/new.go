@@ -10,7 +10,7 @@ import (
 )
 
 type NewFtTaskMgr[Data any, Output any] struct {
-	*ftclnt.FtTaskClnt[Data, Output]
+	ftclnt.FtTaskClnt[Data, Output]
 	procapi.ProcAPI
 	nTasksRunning atomic.Int32
 }
@@ -25,8 +25,8 @@ type NewTresult struct {
 type NewTnew[Data any] func() Data
 type NewTmkProc[Data any] func(ftclnt.Task[Data]) *proc.Proc
 
-func NewNewTaskMgr[Data any, Output any](pclnt procapi.ProcAPI, ft *ftclnt.FtTaskClnt[Data, Output]) (*NewFtTaskMgr[Data, Output], error) {
-	if err := ft.MoveTasksByStatus(ftclnt.WIP, ftclnt.TODO); err != nil {
+func NewNewTaskMgr[Data any, Output any](pclnt procapi.ProcAPI, ft ftclnt.FtTaskClnt[Data, Output]) (*NewFtTaskMgr[Data, Output], error) {
+	if _, err := ft.MoveTasksByStatus(ftclnt.WIP, ftclnt.TODO); err != nil {
 		return nil, err
 	}
 

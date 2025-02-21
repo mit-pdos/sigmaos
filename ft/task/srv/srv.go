@@ -15,17 +15,17 @@ import (
 )
 
 type TaskSrv struct {
-	mu       *sync.Mutex
 	data     map[int32][]byte
 	output   map[int32][]byte
 	status   map[int32]proto.TaskStatus
 
 	todo     map[int32]bool
-	todoCond *sync.Cond
 	wip      map[int32]bool
 	done     map[int32]bool
 	errored  map[int32]bool
 
+	mu       *sync.Mutex
+	todoCond *sync.Cond
 	stopped  bool 
 	fence    *sp.Tfence
 }
@@ -249,6 +249,7 @@ func (s *TaskSrv) MoveTasksByStatus(ctx fs.CtxI, req proto.MoveTasksByStatusReq,
 	}
 
 	n := len(*from)
+	rep.NumMoved = int32(n)
 	*from = make(map[int32]bool)
 
 	if req.To == proto.TaskStatus_TODO {
@@ -346,6 +347,8 @@ func (s *TaskSrv) GetTaskStats(ctx fs.CtxI, req proto.GetTaskStatsReq, rep *prot
 		NumDone: int32(len(s.done)),
 		NumError: int32(len(s.errored)),
 	}
+
+	db.DPrintf(db.FTTASKS, "GetTaskStats: %v", rep.Stats)
 
 	return nil
 }

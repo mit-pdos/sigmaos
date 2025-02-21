@@ -8,6 +8,7 @@ import (
 	"sigmaos/apps/mr"
 	db "sigmaos/debug"
 	"sigmaos/ft/procgroupmgr"
+	fttask_srv "sigmaos/ft/task/srv"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
@@ -23,9 +24,10 @@ type MRJobInstance struct {
 	jobname string
 	nmap    int
 	memreq  proc.Tmem
-	done    int32
 	job     *mr.Job
 	cm      *procgroupmgr.ProcGroupMgr
+	mftid   fttask_srv.FtTaskSrvId
+	rftid   fttask_srv.FtTaskSrvId
 }
 
 func NewMRJobInstance(ts *test.RealmTstate, p *perf.Perf, app, jobRoot, jobname string, memreq proc.Tmem) *MRJobInstance {
@@ -46,8 +48,10 @@ func (ji *MRJobInstance) PrepareMRJob() {
 	ji.job = jobf
 	db.DPrintf(db.TEST, "MR job description: %v", ji.job)
 	db.DPrintf(db.TEST, "Prepare MR FS %v", ji.jobname)
-	tasks, err := mr.InitCoordFS(ji.FsLib, ji.jobRoot, ji.jobname, ji.job.Nreduce)
+	tasks, err := mr.InitCoordFS(ji.SigmaClnt, ji.jobRoot, ji.jobname, ji.job.Nreduce)
 	assert.Nil(ji.Ts.T, err, "Error InitCoordFS: %v", err)
+	ji.mftid = tasks.Mftsrv.Id
+	ji.rftid = tasks.Rftsrv.Id
 	db.DPrintf(db.TEST, "Done prepare MR FS %v", ji.jobname)
 	db.DPrintf(db.TEST, "Prepare MR job %v %v", ji.jobname, ji.job)
 	nmap, err := mr.PrepareJob(ji.FsLib, tasks, ji.jobRoot, ji.jobname, ji.job)
@@ -59,7 +63,7 @@ func (ji *MRJobInstance) PrepareMRJob() {
 
 func (ji *MRJobInstance) StartMRJob() {
 	db.DPrintf(db.TEST, "Start MR job %v %v", ji.jobname, ji.job)
-	ji.cm = mr.StartMRJob(ji.SigmaClnt, ji.jobRoot, ji.jobname, ji.job, ji.nmap, ji.memreq, 0)
+	ji.cm = mr.StartMRJob(ji.SigmaClnt, ji.jobRoot, ji.jobname, ji.job, ji.nmap, ji.memreq, 0, ji.mftid, ji.rftid)
 }
 
 func (ji *MRJobInstance) Wait() {

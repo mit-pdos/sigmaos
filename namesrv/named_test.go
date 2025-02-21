@@ -98,6 +98,8 @@ func stopNamed(ts *test.Tstate, nd *proc.Proc) error {
 	if assert.Nil(ts.T, err, "Err WaitExit named: %v", err) {
 		assert.True(ts.T, status.IsStatusEvicted(), "Wrong exit status: %v", status)
 	}
+	// Make sure the named EP has been removed
+	ts.Remove(filepath.Join(sp.REALMS, test.REALM1.String()))
 	return err
 }
 
@@ -172,7 +174,7 @@ func TestKillNamed(t *testing.T) {
 }
 
 // Create a leased file and then reboot
-func reboot(t *testing.T, dn string, f func(*test.Tstate, string), d time.Duration, quick bool) {
+func reboot(t *testing.T, dn string, f func(*test.Tstate, *sigmaclnt.SigmaClnt, string), d time.Duration, quick bool) {
 	ts, err1 := test.NewTstateAll(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
@@ -227,7 +229,13 @@ func reboot(t *testing.T, dn string, f func(*test.Tstate, string), d time.Durati
 		time.Sleep(d)
 	}
 
-	f(ts, fn)
+	pe2 := proc.NewDifferentRealmProcEnv(ts.ProcEnv(), test.REALM1)
+	sc2, err := sigmaclnt.NewSigmaClnt(pe2)
+	if !assert.Nil(ts.T, err, "Err new sigmaclnt realm: %v", err) {
+		return
+	}
+
+	f(ts, sc2, fn)
 
 	ts.Remove(fn)
 
@@ -258,7 +266,12 @@ func TestLeaseQuickReboot(t *testing.T) {
 	sc.RmDir(dn)
 	err = sc.MkDir(dn, 0777)
 	assert.Nil(ts.T, err, "dir")
+	// Verify the dir was made correctly
+	sts, err := sc.GetDir(dn)
+	assert.Nil(t, err, "Err GetDir: %v", err)
+	assert.Equal(t, 0, len(sts))
 	err = stopNamed(ts, nd1)
+	// Shut down regardless of whether or not stopping named was successful
 	ts.Shutdown()
 	if !assert.Nil(ts.T, err, "Err stop named: %v", err) {
 		return
@@ -266,44 +279,44 @@ func TestLeaseQuickReboot(t *testing.T) {
 
 	delay := 2 * fsetcd.LeaseTTL * time.Second
 
-	reboot(t, dn, func(ts *test.Tstate, fn string) {
-		sts, err := ts.GetDir(dn)
-		assert.Nil(t, err)
+	reboot(t, dn, func(ts *test.Tstate, sc *sigmaclnt.SigmaClnt, fn string) {
+		sts, err := sc.GetDir(dn)
+		assert.Nil(t, err, "Err GetDir: %v", err)
 		assert.Equal(t, 0, len(sts))
 		db.DPrintf(db.TEST, "GetDir after expire err %v", err)
 	}, delay, true)
 
-	reboot(t, dn, func(ts *test.Tstate, fn string) {
-		fd, err := ts.Create(fn, 0777, sp.OREAD)
-		assert.Nil(ts.T, err)
+	reboot(t, dn, func(ts *test.Tstate, sc *sigmaclnt.SigmaClnt, fn string) {
+		fd, err := sc.Create(fn, 0777, sp.OREAD)
+		assert.Nil(ts.T, err, "Err Create: %v", err)
 		db.DPrintf(db.TEST, "Create after expire err %v", err)
-		ts.CloseFd(fd)
+		sc.CloseFd(fd)
 	}, delay, true)
 
-	reboot(t, dn, func(ts *test.Tstate, fn string) {
-		fd, err := ts.Create(fn, 0777, sp.OREAD)
-		assert.NotNil(ts.T, err)
+	reboot(t, dn, func(ts *test.Tstate, sc *sigmaclnt.SigmaClnt, fn string) {
+		fd, err := sc.Create(fn, 0777, sp.OREAD)
+		assert.NotNil(ts.T, err, "Unexpected nil err create")
 		db.DPrintf(db.TEST, "Create before expire err %v", err)
-		ts.CloseFd(fd)
+		sc.CloseFd(fd)
 	}, (fsetcd.LeaseTTL-3)*time.Second, true)
 
-	reboot(t, dn, func(ts *test.Tstate, fn string) {
-		err := ts.Remove(fn)
-		assert.NotNil(ts.T, err)
+	reboot(t, dn, func(ts *test.Tstate, sc *sigmaclnt.SigmaClnt, fn string) {
+		err := sc.Remove(fn)
+		assert.NotNil(ts.T, err, "Unexpected nil err remove")
 		db.DPrintf(db.TEST, "Remove after expire err %v", err)
 	}, delay, true)
 
-	reboot(t, dn, func(ts *test.Tstate, fn string) {
-		err := ts.Rename(fn, fn+"x")
-		assert.NotNil(ts.T, err)
+	reboot(t, dn, func(ts *test.Tstate, sc *sigmaclnt.SigmaClnt, fn string) {
+		err := sc.Rename(fn, fn+"x")
+		assert.NotNil(ts.T, err, "Unexpected nil err rename")
 		db.DPrintf(db.TEST, "Rename after expire err %v", err)
 	}, delay, true)
 
-	reboot(t, dn, func(ts *test.Tstate, fn string) {
-		_, err = ts.Open(fn, sp.OREAD)
-		assert.NotNil(ts.T, err)
+	reboot(t, dn, func(ts *test.Tstate, sc *sigmaclnt.SigmaClnt, fn string) {
+		_, err = sc.Open(fn, sp.OREAD)
+		assert.NotNil(ts.T, err, "Unexpected nil err open")
 		db.DPrintf(db.TEST, "Open after expire err %v", err)
-		ts.Remove(fn)
+		sc.Remove(fn)
 	}, delay, true)
 }
 
@@ -311,7 +324,7 @@ func TestLeaseQuickReboot(t *testing.T) {
 // leased file expires, but discovers it when reading from etcd and
 // call updateDir.
 func TestLeaseDelayReboot(t *testing.T) {
-	ts, err1 := test.NewTstatePath(t, sp.NAMED)
+	ts, err1 := test.NewTstateAll(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
@@ -324,37 +337,37 @@ func TestLeaseDelayReboot(t *testing.T) {
 
 	delay := 2 * fsetcd.LeaseTTL * time.Second
 
-	reboot(t, dn, func(ts *test.Tstate, fn string) {
-		sts, err := ts.GetDir(dn)
+	reboot(t, dn, func(ts *test.Tstate, sc *sigmaclnt.SigmaClnt, fn string) {
+		sts, err := sc.GetDir(dn)
 		assert.Nil(t, err)
 		assert.Equal(t, 0, len(sts))
 		db.DPrintf(db.TEST, "GetDir after expire err %v", err)
 	}, delay, false)
 
-	reboot(t, dn, func(ts *test.Tstate, fn string) {
-		fd, err := ts.Create(fn, 0777, sp.OREAD)
+	reboot(t, dn, func(ts *test.Tstate, sc *sigmaclnt.SigmaClnt, fn string) {
+		fd, err := sc.Create(fn, 0777, sp.OREAD)
 		assert.Nil(ts.T, err)
 		db.DPrintf(db.TEST, "Create after expire err %v", err)
-		ts.CloseFd(fd)
+		sc.CloseFd(fd)
 	}, delay, false)
 
-	reboot(t, dn, func(ts *test.Tstate, fn string) {
-		err := ts.Remove(fn)
+	reboot(t, dn, func(ts *test.Tstate, sc *sigmaclnt.SigmaClnt, fn string) {
+		err := sc.Remove(fn)
 		assert.NotNil(ts.T, err)
 		db.DPrintf(db.TEST, "Remove after expire err %v", err)
 	}, delay, false)
 
-	reboot(t, dn, func(ts *test.Tstate, fn string) {
-		err := ts.Rename(fn, fn+"x")
+	reboot(t, dn, func(ts *test.Tstate, sc *sigmaclnt.SigmaClnt, fn string) {
+		err := sc.Rename(fn, fn+"x")
 		assert.NotNil(ts.T, err)
 		db.DPrintf(db.TEST, "Rename after expire err %v", err)
 	}, delay, false)
 
-	reboot(t, dn, func(ts *test.Tstate, fn string) {
-		_, err = ts.Open(fn, sp.OREAD)
+	reboot(t, dn, func(ts *test.Tstate, sc *sigmaclnt.SigmaClnt, fn string) {
+		_, err = sc.Open(fn, sp.OREAD)
 		assert.NotNil(ts.T, err)
 		db.DPrintf(db.TEST, "Open after expire err %v", err)
-		ts.Remove(fn)
+		sc.Remove(fn)
 	}, delay, false)
 }
 

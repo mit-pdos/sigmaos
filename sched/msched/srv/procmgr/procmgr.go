@@ -123,7 +123,7 @@ func (mgr *ProcMgr) procCrashed(p *proc.Proc, err error) {
 	db.DPrintf(db.PROCDMGR_ERR, "Proc %v finished with error: %v", p, err)
 	// Mark the proc as exited due to a crash, and record the error exit status.
 	firstTimeCalled := mgr.pstate.exited(p.GetPid(), proc.NewStatusErr(err.Error(), nil).Marshal())
-	if firstTimeCalled {
+	if firstTimeCalled && p.IsPrivileged() {
 		// Only write the exit status to the FS if the proc hadn't already called
 		// exited before. For example, UX/S3 may call Exited during shutdown, then
 		// crash because the named they were talking to is killed. MSched should
@@ -149,11 +149,13 @@ func (mgr *ProcMgr) getSigmaClntL(realm sp.Trealm) *sigmaclnt.SigmaClntKernel {
 		} else {
 			pe := proc.NewDifferentRealmProcEnv(mgr.rootsc.ProcEnv(), realm)
 			if sc, err := sigmaclnt.NewSigmaClnt(pe); err != nil {
+				db.DPrintf(db.ERROR, "Err NewSigmaClntRealm: %v", err)
 				db.DFatalf("Err NewSigmaClntRealm: %v", err)
 			} else {
 				// Endpoint KPIDS.
 				clnt = sigmaclnt.NewSigmaClntKernel(sc)
 				if err := pc.MountPids(clnt.FsLib); err != nil {
+					db.DPrintf(db.ERROR, "Err MountPids: %v", err)
 					db.DFatalf("Error MountPids: %v", err)
 				}
 			}

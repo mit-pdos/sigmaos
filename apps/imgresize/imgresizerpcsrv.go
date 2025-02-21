@@ -26,7 +26,7 @@ type ImgSrvRPC struct {
 	workerMem  proc.Tmem
 	ssrv       *sigmasrv.SigmaSrv
 	ndone      atomic.Int64
-	mkProc     fttaskmgr.NewTmkProc[Ttask]
+	mkProc     fttaskmgr.TmkProc[Ttask]
 	sc         *sigmaclnt.SigmaClnt
 }
 

@@ -98,7 +98,7 @@ func (imgd *ImgSrv) Work() {
 
 	db.DPrintf(db.ALWAYS, "leader %s fail %q", imgd.ftclnt.ServerId(), proc.GetSigmaFail())
 
-	ftm, err := fttaskmgr.NewNewTaskMgr(imgd.SigmaClnt.ProcAPI, imgd.ftclnt)
+	ftm, err := fttaskmgr.NewTaskMgr(imgd.SigmaClnt.ProcAPI, imgd.ftclnt)
 	if err != nil {
 		db.DFatalf("NewTaskMgr err %v", err)
 	}

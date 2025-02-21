@@ -53,7 +53,6 @@ func (mc *MntClnt) getNamedEndpointRealm(realm sp.Trealm) (*sp.Tendpoint, *serr.
 	db.DPrintf(db.MOUNT, "getNamedEndpointRealm %v [%v] %v", mc.cid, realm, ep)
 	db.DPrintf(db.WALK_LAT, "getNamedEndpointRealm %v %v %v", mc.cid, ep, time.Since(s))
 	return ep, nil
-
 }
 
 // Get named enpoint directly

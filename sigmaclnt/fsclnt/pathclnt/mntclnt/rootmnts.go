@@ -110,6 +110,11 @@ func (mc *MntClnt) resolveRoot(pn path.Tpathname) (*serr.Err, bool) {
 			return serr.NewErr(serr.TErrUnreachable, fmt.Sprintf("%v (closed root)", pn[0])), false
 		}
 		if pn[0] == sp.NAME {
+			sr := mc.mountNamed(mc.pe.GetRealm(), sp.NAME, "")
+			if sr == nil {
+				return sr, true
+			}
+			// Retry in the event that the cached named EP was bad
 			return mc.mountNamed(mc.pe.GetRealm(), sp.NAME, ""), true
 		} else {
 			db.DPrintf(db.MOUNT, "resolveRoot: remount %v at %v\n", sm, pn[0])

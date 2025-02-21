@@ -168,8 +168,8 @@ func Run(args []string) error {
 		li.KeepExtending()
 
 		if err := nd.MkLeasedEndpoint(pn, ep, li.Lease()); err != nil {
+			db.DPrintf(db.ERROR, "MkEndpointFile %v at %v err %v", nd.realm, pn, err)
 			db.DFatalf("MkEndpointFile %v at %v err %v", nd.realm, pn, err)
-			db.DPrintf(db.NAMED, "MkEndpointFile %v at %v err %v", nd.realm, pn, err)
 			return err
 		}
 		db.DPrintf(db.NAMED, "[%v] named endpoint %v", nd.realm, ep)

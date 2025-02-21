@@ -55,12 +55,12 @@ func (scs *SPProxySrv) runServer() error {
 	if err := os.Chmod(sp.SIGMASOCKET, 0777); err != nil {
 		db.DFatalf("Err chmod sigmasocket: %v", err)
 	}
-	db.DPrintf(db.TEST, "runServer: spproxyd listening on %v", sp.SIGMASOCKET)
+	db.DPrintf(db.SPPROXYSRV, "runServer: spproxyd listening on %v", sp.SIGMASOCKET)
 	if _, err := io.WriteString(os.Stdout, "r"); err != nil {
 		db.DFatalf("Err runServer: %v", err)
 		return err
 	}
-	db.DPrintf(db.TEST, "runServer: wrote ready signal")
+	db.DPrintf(db.SPPROXYSRV, "runServer: wrote ready signal")
 	if err := syscall.Dup2(1, GROW_FD); err != nil {
 		db.DFatalf("Error dup2: %v", err)
 	}

@@ -1,6 +1,7 @@
 package test
 
 import (
+	"path/filepath"
 	"time"
 
 	"github.com/stretchr/testify/assert"
@@ -81,9 +82,23 @@ func (rts *RealmTstate) remove() error {
 }
 
 func (rts *RealmTstate) BootNode(n int) error {
+	return rts.bootNode(n, false)
+}
+func (rts *RealmTstate) bootNode(n int, waitForNamed bool) error {
 	kids, err := rts.Ts.bootNode(n, bootclnt.BOOT_NODE)
 	if err != nil {
 		return err
+	}
+	db.DPrintf(db.TEST, "Booted additional kernels: %v", kids)
+	if waitForNamed {
+		db.DPrintf(db.TEST, "Wait for realm %v named to come up", rts.realm)
+		// wait until the realm's named has registered its endpoint and is ready to
+		// serve
+		if _, err := rts.Ts.GetFileWatch(filepath.Join(sp.REALMS, rts.realm.String())); err != nil {
+			db.DPrintf(db.ERROR, "Error GetFileWatch waiting for named: %v", err)
+			return err
+		}
+		db.DPrintf(db.TEST, "Done wait for realm %v named to come up", rts.realm)
 	}
 	for _, kid := range kids {
 		for _, ss := range []string{sp.UXREL, sp.S3REL} {
@@ -101,7 +116,7 @@ func (rts *RealmTstate) BootNode(n int) error {
 }
 
 func (rts *RealmTstate) CrashServer(e0, e1 crash.Tevent, srv string) {
-	db.DPrintf(db.ALWAYS, "Crash %v srv %v", e0.Path, srv)
+	db.DPrintf(db.ALWAYS, "Crash %v srv %v realm", e0.Path, srv)
 	err := crash.SignalFailer(rts.Ts.FsLib, e0.Path)
 	if !assert.Nil(rts.Ts.T, err) {
 		db.DPrintf(db.TEST, "SignalFailer %v err %v", e0.Path, err)
@@ -109,12 +124,19 @@ func (rts *RealmTstate) CrashServer(e0, e1 crash.Tevent, srv string) {
 	em := crash.NewTeventMapOne(e1)
 	s, err := em.Events2String()
 	assert.Nil(rts.Ts.T, err)
-	time.Sleep(5 * time.Second)
 	switch srv {
 	case sp.MSCHEDREL, sp.PROCDREL, sp.UXREL:
+		if srv == sp.MSCHEDREL || srv == sp.PROCDREL {
+			db.DPrintf(db.TEST, "Waiting for named's lease to (potentially) expire")
+			time.Sleep(2 * sp.EtcdSessionTTL * time.Second)
+			db.DPrintf(db.TEST, "Done waiting for named's lease to (potentially) expire")
+		}
 		// a crashed msched and procd causes several kernel services
 		// to exit, so start a new node.
-		err = rts.BootNode(1)
+		// Since this realm's named may go down along with the original node,
+		// we may need to wait for the new named to come up during the boot
+		// process.
+		err = rts.bootNode(1, true)
 	default:
 		err = rts.Ts.BootEnv(srv, []string{"SIGMAFAIL=" + s})
 	}

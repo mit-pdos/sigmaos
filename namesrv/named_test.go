@@ -18,6 +18,12 @@ import (
 	"sigmaos/util/crash"
 )
 
+const (
+	MCPU            proc.Tmcpu    = 1000
+	DELAY           time.Duration = 2 * fsetcd.LeaseTTL * time.Second
+	CRASH_SEM_DELAY               = 5 * time.Second
+)
+
 func TestCompile(t *testing.T) {
 }
 
@@ -29,7 +35,7 @@ func TestBootNamed(t *testing.T) {
 
 	sts, err := ts.GetDir(sp.NAMED + "/")
 	assert.Nil(t, err)
-	db.DPrintf(db.TEST, "named %v\n", sp.Names(sts))
+	db.DPrintf(db.TEST, "named %v", sp.Names(sts))
 
 	assert.True(t, sp.Present(sts, namesrv.InitRootDir), "initfs")
 
@@ -43,9 +49,45 @@ func TestPstats(t *testing.T) {
 	}
 	st, err := ts.ReadPstats()
 	assert.Nil(t, err)
-	db.DPrintf(db.TEST, "pstats %v\n", st)
+	db.DPrintf(db.TEST, "pstats %v", st)
 
 	ts.Shutdown()
+}
+
+func newNamedProc(mcpu proc.Tmcpu, realm sp.Trealm, dialproxy bool, canFail bool) *proc.Proc {
+	p := proc.NewProc(sp.NAMEDREL, []string{realm.String()})
+	p.SetMcpu(mcpu)
+	p.SetRealmSwitch(realm)
+	p.GetProcEnv().UseDialProxy = dialproxy
+	if !canFail {
+		p.AppendEnv("SIGMAFAIL", "")
+	} else {
+		p.AppendEnv(proc.SIGMAFAIL, proc.GetSigmaFail())
+	}
+	return p
+}
+
+func startNamed(ts *test.Tstate, nd *proc.Proc) error {
+	// Spawn the named proc
+	if err := ts.Spawn(nd); !assert.Nil(ts.T, err, "Err spawn named: %v", err) {
+		return err
+	}
+	db.DPrintf(db.TEST, "New named spawned: %v", nd.GetPid())
+
+	// Wait for the proc to start
+	if err := ts.WaitStart(nd.GetPid()); !assert.Nil(ts.T, err, "Err WaitStart named: %v", err) {
+		return err
+	}
+	db.DPrintf(db.TEST, "New named started")
+
+	// Wait for the named to start up
+	_, err := ts.GetFileWatch(filepath.Join(sp.REALMS, test.REALM1.String()))
+	// wait until the named has registered its endpoint and is ready to serve
+	if !assert.Nil(ts.T, err, "Err GetFileWatch: %v", err) {
+		return err
+	}
+	db.DPrintf(db.TEST, "New named ready to serve")
+	return nil
 }
 
 func TestKillNamed(t *testing.T) {
@@ -60,39 +102,66 @@ func TestKillNamed(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
+	defer ts.Shutdown()
 
-	sts, err := ts.GetDir(sp.NAMED + "/")
+	nd1 := newNamedProc(MCPU, test.REALM1, ts.ProcEnv().UseDialProxy, true)
+	if err := startNamed(ts, nd1); !assert.Nil(ts.T, err, "Err startNamed: %v", err) {
+		return
+	}
+
+	pe := proc.NewDifferentRealmProcEnv(ts.ProcEnv(), test.REALM1)
+	sc, err := sigmaclnt.NewSigmaClnt(pe)
+	if !assert.Nil(ts.T, err, "Err new sigmaclnt realm: %v", err) {
+		return
+	}
+	db.DPrintf(db.TEST, "Made new realm sigmaclnt")
+
+	sts, err := sc.GetDir(sp.NAMED + "/")
 	assert.Nil(t, err)
+	db.DPrintf(db.TEST, "New realm sigmaclnt contents: %v", sp.Names(sts))
 
-	db.DPrintf(db.TEST, "named %v\n", sp.Names(sts))
-
-	err = ts.BootEnv(sp.NAMEDREL, []string{"SIGMAFAIL="})
-	assert.Nil(t, err)
+	db.DPrintf(db.TEST, "named %v", sp.Names(sts))
 
 	sts, err = ts.GetDir(sp.NAMED + "/")
 	assert.Nil(t, err)
-	db.DPrintf(db.TEST, "named %v\n", sp.Names(sts))
+	db.DPrintf(db.TEST, "New realm sigmaclnt contents: %v", sp.Names(sts))
 
-	db.DPrintf(db.TEST, "Crash named..\n")
+	db.DPrintf(db.TEST, "named root %v", sp.Names(sts))
 
-	err = crash.SignalFailer(ts.FsLib, fn)
-	assert.Nil(t, err)
-	time.Sleep(T * time.Millisecond)
+	// Wait for a bit for the crash semaphore to be crated
+	time.Sleep(CRASH_SEM_DELAY)
 
-	db.DPrintf(db.TEST, "GetDir..\n")
+	// Crash named
+	db.DPrintf(db.TEST, "Crashing named %v", sp.Names(sts))
+	err = crash.SignalFailer(sc.FsLib, fn)
+	assert.Nil(t, err, "Err crash: %v", err)
+	time.Sleep(DELAY)
 
-	n := 0
-	for i := 0; i < sp.Conf.Path.MAX_RESOLVE_RETRY; i++ {
-		n = i
-		sts, err = ts.GetDir(sp.NAMED + "/")
-		if err == nil {
-			break
-		}
+	db.DPrintf(db.TEST, "named should be dead & buried")
+
+	_, err = sc.GetDir(sp.NAMED)
+	assert.NotNil(t, err)
+
+	db.DPrintf(db.TEST, "named unreachable, as expected")
+
+	// Start a new named
+	nd2 := newNamedProc(MCPU, test.REALM1, ts.ProcEnv().UseDialProxy, false)
+	db.DPrintf(db.TEST, "Starting a new named: %v", nd2.GetPid())
+	if err := startNamed(ts, nd2); !assert.Nil(ts.T, err, "Err startNamed 2: %v", err) {
+		return
 	}
-	assert.Nil(t, err, "Err GetDir: %v", err)
-	db.DPrintf(db.TEST, "named tries %d %v\n", n, sp.Names(sts))
 
-	ts.Shutdown()
+	sts, err = sc.GetDir(sp.NAMED + "/")
+	assert.Nil(t, err, "Get named dir post-crash")
+	db.DPrintf(db.TEST, "named %v", sp.Names(sts))
+
+	// Evict the new named
+	err = ts.Evict(nd2.GetPid())
+	assert.Nil(ts.T, err, "Err evict named: %v", err)
+	status, err := ts.WaitExit(nd2.GetPid())
+	if assert.Nil(ts.T, err, "Err WaitExit named: %v", err) {
+		assert.True(ts.T, status.IsStatusEvicted(), "Wrong exit status: %v", status)
+	}
 }
 
 // Create a leased file and then reboot
@@ -159,39 +228,39 @@ func TestLeaseQuickReboot(t *testing.T) {
 		sts, err := ts.GetDir(dn)
 		assert.Nil(t, err)
 		assert.Equal(t, 0, len(sts))
-		db.DPrintf(db.TEST, "GetDir after expire err %v\n", err)
+		db.DPrintf(db.TEST, "GetDir after expire err %v", err)
 	}, delay, true)
 
 	reboot(t, dn, func(ts *test.Tstate, fn string) {
 		fd, err := ts.Create(fn, 0777, sp.OREAD)
 		assert.Nil(ts.T, err)
-		db.DPrintf(db.TEST, "Create after expire err %v\n", err)
+		db.DPrintf(db.TEST, "Create after expire err %v", err)
 		ts.CloseFd(fd)
 	}, delay, true)
 
 	reboot(t, dn, func(ts *test.Tstate, fn string) {
 		fd, err := ts.Create(fn, 0777, sp.OREAD)
 		assert.NotNil(ts.T, err)
-		db.DPrintf(db.TEST, "Create before expire err %v\n", err)
+		db.DPrintf(db.TEST, "Create before expire err %v", err)
 		ts.CloseFd(fd)
 	}, (fsetcd.LeaseTTL-3)*time.Second, true)
 
 	reboot(t, dn, func(ts *test.Tstate, fn string) {
 		err := ts.Remove(fn)
 		assert.NotNil(ts.T, err)
-		db.DPrintf(db.TEST, "Remove after expire err %v\n", err)
+		db.DPrintf(db.TEST, "Remove after expire err %v", err)
 	}, delay, true)
 
 	reboot(t, dn, func(ts *test.Tstate, fn string) {
 		err := ts.Rename(fn, fn+"x")
 		assert.NotNil(ts.T, err)
-		db.DPrintf(db.TEST, "Rename after expire err %v\n", err)
+		db.DPrintf(db.TEST, "Rename after expire err %v", err)
 	}, delay, true)
 
 	reboot(t, dn, func(ts *test.Tstate, fn string) {
 		_, err = ts.Open(fn, sp.OREAD)
 		assert.NotNil(ts.T, err)
-		db.DPrintf(db.TEST, "Open after expire err %v\n", err)
+		db.DPrintf(db.TEST, "Open after expire err %v", err)
 		ts.Remove(fn)
 	}, delay, true)
 }
@@ -217,32 +286,32 @@ func TestLeaseDelayReboot(t *testing.T) {
 		sts, err := ts.GetDir(dn)
 		assert.Nil(t, err)
 		assert.Equal(t, 0, len(sts))
-		db.DPrintf(db.TEST, "GetDir after expire err %v\n", err)
+		db.DPrintf(db.TEST, "GetDir after expire err %v", err)
 	}, delay, false)
 
 	reboot(t, dn, func(ts *test.Tstate, fn string) {
 		fd, err := ts.Create(fn, 0777, sp.OREAD)
 		assert.Nil(ts.T, err)
-		db.DPrintf(db.TEST, "Create after expire err %v\n", err)
+		db.DPrintf(db.TEST, "Create after expire err %v", err)
 		ts.CloseFd(fd)
 	}, delay, false)
 
 	reboot(t, dn, func(ts *test.Tstate, fn string) {
 		err := ts.Remove(fn)
 		assert.NotNil(ts.T, err)
-		db.DPrintf(db.TEST, "Remove after expire err %v\n", err)
+		db.DPrintf(db.TEST, "Remove after expire err %v", err)
 	}, delay, false)
 
 	reboot(t, dn, func(ts *test.Tstate, fn string) {
 		err := ts.Rename(fn, fn+"x")
 		assert.NotNil(ts.T, err)
-		db.DPrintf(db.TEST, "Rename after expire err %v\n", err)
+		db.DPrintf(db.TEST, "Rename after expire err %v", err)
 	}, delay, false)
 
 	reboot(t, dn, func(ts *test.Tstate, fn string) {
 		_, err = ts.Open(fn, sp.OREAD)
 		assert.NotNil(ts.T, err)
-		db.DPrintf(db.TEST, "Open after expire err %v\n", err)
+		db.DPrintf(db.TEST, "Open after expire err %v", err)
 		ts.Remove(fn)
 	}, delay, false)
 }

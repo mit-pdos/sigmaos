@@ -379,8 +379,8 @@ func (pe *ProcEnv) String() string {
 		"UseSPProxy:%v "+
 		"UseDialProxy:%v "+
 		"SigmaPath:%v "+
-		"RealmSwitch:%v"+
-		"Fail:%v"+
+		"RealmSwitch:%v "+
+		"Fail:%v "+
 		"}",
 		pe.Program,
 		pe.Version,

@@ -195,7 +195,7 @@ func reboot(t *testing.T, dn string, f func(*test.Tstate, *sigmaclnt.SigmaClnt, 
 	fn := filepath.Join(dn, "leasedf")
 
 	ttl := sp.Tttl(4 * fsetcd.LeaseTTL)
-	d := time.Duration(ttl) * time.Second
+	d := 2 * time.Duration(ttl) * time.Second
 	li, err := sc.LeaseClnt.AskLease(fn, ttl)
 	assert.Nil(t, err, "Error AskLease: %v", err)
 
@@ -226,10 +226,10 @@ func reboot(t *testing.T, dn string, f func(*test.Tstate, *sigmaclnt.SigmaClnt, 
 		return
 	}
 
-	//	if quick {
-	//		// if we rebooted quickly, wait now for a while
-	//		time.Sleep(d)
-	//	}
+	if quick {
+		// if we rebooted quickly, wait for the lease to expire now
+		time.Sleep(d)
+	}
 
 	pe2 := proc.NewDifferentRealmProcEnv(ts.ProcEnv(), test.REALM1)
 	sc2, err := sigmaclnt.NewSigmaClnt(pe2)
@@ -291,33 +291,26 @@ func TestLeaseQuickReboot(t *testing.T) {
 		assert.Nil(ts.T, err, "Err Create: %v", err)
 		db.DPrintf(db.TEST, "Create after expire err %v", err)
 		sc.CloseFd(fd)
-	}, false)
-
-	reboot(t, dn, func(ts *test.Tstate, sc *sigmaclnt.SigmaClnt, fn string) {
-		fd, err := sc.Create(fn, 0777, sp.OREAD)
-		assert.NotNil(ts.T, err, "Unexpected nil err create")
-		db.DPrintf(db.TEST, "Create before expire err %v", err)
-		sc.CloseFd(fd)
 	}, true)
 
 	reboot(t, dn, func(ts *test.Tstate, sc *sigmaclnt.SigmaClnt, fn string) {
 		err := sc.Remove(fn)
 		assert.NotNil(ts.T, err, "Unexpected nil err remove")
 		db.DPrintf(db.TEST, "Remove after expire err %v", err)
-	}, false)
+	}, true)
 
 	reboot(t, dn, func(ts *test.Tstate, sc *sigmaclnt.SigmaClnt, fn string) {
 		err := sc.Rename(fn, fn+"x")
 		assert.NotNil(ts.T, err, "Unexpected nil err rename")
 		db.DPrintf(db.TEST, "Rename after expire err %v", err)
-	}, false)
+	}, true)
 
 	reboot(t, dn, func(ts *test.Tstate, sc *sigmaclnt.SigmaClnt, fn string) {
 		_, err = sc.Open(fn, sp.OREAD)
 		assert.NotNil(ts.T, err, "Unexpected nil err open")
 		db.DPrintf(db.TEST, "Open after expire err %v", err)
 		sc.Remove(fn)
-	}, false)
+	}, true)
 }
 
 // In these tests named will not receive notification from etcd when

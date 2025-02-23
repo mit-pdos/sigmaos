@@ -321,14 +321,33 @@ func TestLeaseDelayReboot(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
+
+	nd1 := newNamedProc(MCPU, test.REALM1, ts.ProcEnv().UseDialProxy, true)
+	if err := startNamed(ts, nd1); !assert.Nil(ts.T, err, "Err startNamed: %v", err) {
+		return
+	}
+
+	pe := proc.NewDifferentRealmProcEnv(ts.ProcEnv(), test.REALM1)
+	sc, err := sigmaclnt.NewSigmaClnt(pe)
+	if !assert.Nil(ts.T, err, "Err new sigmaclnt realm: %v", err) {
+		return
+	}
+	db.DPrintf(db.TEST, "Made new realm sigmaclnt")
+
 	dn := filepath.Join(sp.NAMED, "ddd")
-	ts.RmDir(dn)
-	err := ts.MkDir(dn, 0777)
+	sc.RmDir(dn)
+	err = sc.MkDir(dn, 0777)
 	assert.Nil(ts.T, err, "dir")
-
+	// Verify the dir was made correctly
+	sts, err := sc.GetDir(dn)
+	assert.Nil(t, err, "Err GetDir: %v", err)
+	assert.Equal(t, 0, len(sts))
+	err = stopNamed(ts, nd1)
+	// Shut down regardless of whether or not stopping named was successful
 	ts.Shutdown()
-
-	// XXX delay := 2 * fsetcd.LeaseTTL * time.Second
+	if !assert.Nil(ts.T, err, "Err stop named: %v", err) {
+		return
+	}
 
 	reboot(t, dn, func(ts *test.Tstate, sc *sigmaclnt.SigmaClnt, fn string) {
 		sts, err := sc.GetDir(dn)

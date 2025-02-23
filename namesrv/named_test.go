@@ -174,7 +174,7 @@ func TestKillNamed(t *testing.T) {
 }
 
 // Create a leased file and then reboot
-func reboot(t *testing.T, dn string, f func(*test.Tstate, *sigmaclnt.SigmaClnt, string), d time.Duration, quick bool) {
+func reboot(t *testing.T, dn string, f func(*test.Tstate, *sigmaclnt.SigmaClnt, string), quick bool) {
 	ts, err1 := test.NewTstateAll(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
@@ -194,7 +194,9 @@ func reboot(t *testing.T, dn string, f func(*test.Tstate, *sigmaclnt.SigmaClnt, 
 
 	fn := filepath.Join(dn, "leasedf")
 
-	li, err := sc.LeaseClnt.AskLease(fn, fsetcd.LeaseTTL)
+	ttl := sp.Tttl(4 * fsetcd.LeaseTTL)
+	d := time.Duration(ttl) * time.Second
+	li, err := sc.LeaseClnt.AskLease(fn, ttl)
 	assert.Nil(t, err, "Error AskLease: %v", err)
 
 	_, err = sc.PutLeasedFile(fn, 0777, sp.OWRITE, li.Lease(), nil)
@@ -209,7 +211,7 @@ func reboot(t *testing.T, dn string, f func(*test.Tstate, *sigmaclnt.SigmaClnt, 
 	ts.Shutdown()
 
 	if !quick {
-		// reboot after a while
+		// Wait for the lease to expire before rebooting
 		time.Sleep(d)
 	}
 
@@ -224,10 +226,10 @@ func reboot(t *testing.T, dn string, f func(*test.Tstate, *sigmaclnt.SigmaClnt, 
 		return
 	}
 
-	if quick {
-		// if we rebooted quickly, wait now for a while
-		time.Sleep(d)
-	}
+	//	if quick {
+	//		// if we rebooted quickly, wait now for a while
+	//		time.Sleep(d)
+	//	}
 
 	pe2 := proc.NewDifferentRealmProcEnv(ts.ProcEnv(), test.REALM1)
 	sc2, err := sigmaclnt.NewSigmaClnt(pe2)
@@ -277,47 +279,45 @@ func TestLeaseQuickReboot(t *testing.T) {
 		return
 	}
 
-	delay := 2 * fsetcd.LeaseTTL * time.Second
-
 	reboot(t, dn, func(ts *test.Tstate, sc *sigmaclnt.SigmaClnt, fn string) {
 		sts, err := sc.GetDir(dn)
 		assert.Nil(t, err, "Err GetDir: %v", err)
 		assert.Equal(t, 0, len(sts))
 		db.DPrintf(db.TEST, "GetDir after expire err %v", err)
-	}, delay, true)
+	}, true)
 
 	reboot(t, dn, func(ts *test.Tstate, sc *sigmaclnt.SigmaClnt, fn string) {
 		fd, err := sc.Create(fn, 0777, sp.OREAD)
 		assert.Nil(ts.T, err, "Err Create: %v", err)
 		db.DPrintf(db.TEST, "Create after expire err %v", err)
 		sc.CloseFd(fd)
-	}, delay, true)
+	}, false)
 
 	reboot(t, dn, func(ts *test.Tstate, sc *sigmaclnt.SigmaClnt, fn string) {
 		fd, err := sc.Create(fn, 0777, sp.OREAD)
 		assert.NotNil(ts.T, err, "Unexpected nil err create")
 		db.DPrintf(db.TEST, "Create before expire err %v", err)
 		sc.CloseFd(fd)
-	}, (fsetcd.LeaseTTL-3)*time.Second, true)
+	}, true)
 
 	reboot(t, dn, func(ts *test.Tstate, sc *sigmaclnt.SigmaClnt, fn string) {
 		err := sc.Remove(fn)
 		assert.NotNil(ts.T, err, "Unexpected nil err remove")
 		db.DPrintf(db.TEST, "Remove after expire err %v", err)
-	}, delay, true)
+	}, false)
 
 	reboot(t, dn, func(ts *test.Tstate, sc *sigmaclnt.SigmaClnt, fn string) {
 		err := sc.Rename(fn, fn+"x")
 		assert.NotNil(ts.T, err, "Unexpected nil err rename")
 		db.DPrintf(db.TEST, "Rename after expire err %v", err)
-	}, delay, true)
+	}, false)
 
 	reboot(t, dn, func(ts *test.Tstate, sc *sigmaclnt.SigmaClnt, fn string) {
 		_, err = sc.Open(fn, sp.OREAD)
 		assert.NotNil(ts.T, err, "Unexpected nil err open")
 		db.DPrintf(db.TEST, "Open after expire err %v", err)
 		sc.Remove(fn)
-	}, delay, true)
+	}, false)
 }
 
 // In these tests named will not receive notification from etcd when
@@ -335,40 +335,40 @@ func TestLeaseDelayReboot(t *testing.T) {
 
 	ts.Shutdown()
 
-	delay := 2 * fsetcd.LeaseTTL * time.Second
+	// XXX delay := 2 * fsetcd.LeaseTTL * time.Second
 
 	reboot(t, dn, func(ts *test.Tstate, sc *sigmaclnt.SigmaClnt, fn string) {
 		sts, err := sc.GetDir(dn)
 		assert.Nil(t, err)
 		assert.Equal(t, 0, len(sts))
 		db.DPrintf(db.TEST, "GetDir after expire err %v", err)
-	}, delay, false)
+	}, false)
 
 	reboot(t, dn, func(ts *test.Tstate, sc *sigmaclnt.SigmaClnt, fn string) {
 		fd, err := sc.Create(fn, 0777, sp.OREAD)
 		assert.Nil(ts.T, err)
 		db.DPrintf(db.TEST, "Create after expire err %v", err)
 		sc.CloseFd(fd)
-	}, delay, false)
+	}, false)
 
 	reboot(t, dn, func(ts *test.Tstate, sc *sigmaclnt.SigmaClnt, fn string) {
 		err := sc.Remove(fn)
 		assert.NotNil(ts.T, err)
 		db.DPrintf(db.TEST, "Remove after expire err %v", err)
-	}, delay, false)
+	}, false)
 
 	reboot(t, dn, func(ts *test.Tstate, sc *sigmaclnt.SigmaClnt, fn string) {
 		err := sc.Rename(fn, fn+"x")
 		assert.NotNil(ts.T, err)
 		db.DPrintf(db.TEST, "Rename after expire err %v", err)
-	}, delay, false)
+	}, false)
 
 	reboot(t, dn, func(ts *test.Tstate, sc *sigmaclnt.SigmaClnt, fn string) {
 		_, err = sc.Open(fn, sp.OREAD)
 		assert.NotNil(ts.T, err)
 		db.DPrintf(db.TEST, "Open after expire err %v", err)
 		sc.Remove(fn)
-	}, delay, false)
+	}, false)
 }
 
 // Test if read fails after a named lost leadership

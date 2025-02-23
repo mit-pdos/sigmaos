@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-option go_package = "sigmaos/protsrv/proto";
+option go_package = "sigmaos/spproto/srv/proto";
 
 enum WatchEventType {
   CREATE = 0;

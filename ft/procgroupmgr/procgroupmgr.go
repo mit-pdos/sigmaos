@@ -265,6 +265,24 @@ func (pgm *ProcGroupMgr) WaitGroup() []*ProcStatus {
 	return statuses
 }
 
+// takes the lock to ensure group members don't change while waiting
+func (pgm *ProcGroupMgr) WaitStart() error {
+	db.DPrintf(db.GROUPMGR, "ProcGroupMgr Wait Started")
+
+	pgm.Lock()
+	defer pgm.Unlock()
+
+	for _, member := range pgm.members {
+		pid := member.pid
+		if err := pgm.SigmaClnt.WaitStart(pid); err != nil {
+			db.DPrintf(db.GROUPMGR, "WaitStart %v\n", err)
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (pgm *ProcGroupMgr) evictGroupMembers() error {
 	// Take the lock, to ensure that the group members don't change after running
 	// is set to false

@@ -11,6 +11,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/ft/procgroupmgr"
+	"sigmaos/ft/task"
 	"sigmaos/proc"
 	"sigmaos/serr"
 	"sigmaos/sigmaclnt"
@@ -261,7 +262,7 @@ func CreateMapperIntOutDirUx(fsl *fslib.FsLib, job, intOutput string) error {
 	return nil
 }
 
-func StartMRJob(sc *sigmaclnt.SigmaClnt, jobRoot, jobName string, job *Job, nmap int, memPerTask proc.Tmem, maliciousMapper int, mftid fttask_srv.FtTaskSrvId, rftid fttask_srv.FtTaskSrvId) *procgroupmgr.ProcGroupMgr {
+func StartMRJob(sc *sigmaclnt.SigmaClnt, jobRoot, jobName string, job *Job, nmap int, memPerTask proc.Tmem, maliciousMapper int, mftid task.FtTaskSrvId, rftid task.FtTaskSrvId) *procgroupmgr.ProcGroupMgr {
 	cfg := procgroupmgr.NewProcGroupConfig(NCOORD, "mr-coord",
 		[]string{
 			jobRoot,

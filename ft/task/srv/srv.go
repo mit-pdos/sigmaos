@@ -1,17 +1,26 @@
 package srv
 
 import (
+	"context"
 	"fmt"
+	"net"
 	"path/filepath"
 	"sigmaos/api/fs"
+	"sigmaos/ft/leaderclnt/electclnt"
 	"sigmaos/ft/task/proto"
 	"sigmaos/proc"
 	"sigmaos/serr"
 	"sigmaos/sigmasrv"
+	"strconv"
+	"strings"
 	"sync"
+	"time"
 
 	db "sigmaos/debug"
 	sp "sigmaos/sigmap"
+
+	clientv3 "go.etcd.io/etcd/client/v3"
+	"google.golang.org/grpc"
 )
 
 type TaskSrv struct {
@@ -28,9 +37,41 @@ type TaskSrv struct {
 	todoCond *sync.Cond
 	stopped  bool 
 	fence    *sp.Tfence
+	srvId    string
+
+	etcdClient *clientv3.Client
+	electclnt  *electclnt.ElectClnt
+}
+
+const (
+	ETCD_STATUS = "status"
+	ETCD_DATA   = "data"
+	ETCD_OUTPUT = "output"
+	ETCD_SRV_FENCE  = "srv_fence"
+	ETCD_CLNT_FENCE  = "clnt_fence"
+	ETCD_STOPPED = "stopped"
+)
+
+const (
+	// etcd limits the number of operations per transaction to 128 by default
+	OPS_PER_TXN = 128
+)
+
+func (s *TaskSrv) root() string {
+	return fmt.Sprintf("%s:/fttask/%s/", proc.GetProcEnv().GetRealm(), s.srvId)
+}
+
+func (s *TaskSrv) keyPrefix(prefix string) string {
+	return s.root() + prefix + "/"
+}
+
+func (s *TaskSrv) key(taskId int32, prefix string) string {
+	return s.keyPrefix(prefix) + strconv.FormatInt(int64(taskId), 10)
 }
 
 func RunTaskSrv(args []string) error {
+	id := args[0]
+
 	pe := proc.GetProcEnv()
 	mu := &sync.Mutex{}
 	s := &TaskSrv{
@@ -43,9 +84,11 @@ func RunTaskSrv(args []string) error {
 		wip: make(map[int32]bool),
 		done: make(map[int32]bool),
 		errored: make(map[int32]bool),
+		srvId: id,
 	}
 
-	id := args[0]
+	// prevent the server from serving any requests until everything has been initialized
+	s.mu.Lock()
 
 	ssrv, err := sigmasrv.NewSigmaSrv(filepath.Join(sp.NAMED, "fttask", id), s, pe)
 	if err != nil {
@@ -54,7 +97,153 @@ func RunTaskSrv(args []string) error {
 
 	db.DPrintf(db.FTTASKS, "Created fttask srv with args %v", args)
 
+	etcdMnts := pe.GetEtcdEndpoints()
+	dial := ssrv.SigmaClnt().GetDialProxyClnt().Dial
+
+	endpoints := []string{}
+	for addr := range etcdMnts {
+		endpoints = append(endpoints, addr)
+	}
+
+	etcdClient, err := clientv3.New(clientv3.Config{
+		Endpoints: endpoints,
+		DialTimeout: 5 * time.Second,
+		DialOptions: []grpc.DialOption{grpc.WithContextDialer(func(ctx context.Context, addr string) (net.Conn, error) {
+			ep, ok := etcdMnts[addr]
+			// Check that the endpoint is in the map
+			if !ok {
+				db.DFatalf("Unknown fsetcd endpoint proto: addr %v eps %v", addr, etcdMnts)
+			}
+			return dial(sp.NewEndpointFromProto(ep))
+		})},
+	})
+	if err != nil {
+		return err
+	}
+	s.etcdClient = etcdClient
+
+	if err := s.acquireLeadership(ssrv); err != nil {
+		return err
+	}
+
+	if err := s.readEtcd(); err != nil {
+		return err
+	}
+
+	s.mu.Unlock()
+
 	return ssrv.RunServer()
+}
+
+func (s *TaskSrv) acquireLeadership(ssrv *sigmasrv.SigmaSrv) error {
+	electclnt, err := electclnt.NewElectClnt(ssrv.SigmaClnt().FsLib, filepath.Join(sp.NAMED, "fttask", s.srvId + "-leader"), sp.Tperm(0777))
+	if err != nil {
+		return err
+	}
+	s.electclnt = electclnt
+
+	if err := electclnt.AcquireLeadership([]byte("")); err != nil {
+		return err
+	}
+
+	db.DPrintf(db.FTTASKS, "Acquired leadership with fence %v", s.electclnt.Fence())
+
+	// create server fence epoch if it doesn't exist
+	_, _ = s.etcdClient.Txn(context.TODO()).If(
+		clientv3.Compare(clientv3.CreateRevision(s.root() + ETCD_SRV_FENCE), "=", 0),
+	).Then(
+		clientv3.OpPut(s.root() + ETCD_SRV_FENCE, "-1"),
+	).Commit()
+
+	resp, err := s.etcdClient.Txn(context.TODO()).If(
+		clientv3.Compare(clientv3.Value(s.root() + ETCD_SRV_FENCE), "<", strconv.FormatUint(uint64(s.electclnt.Fence().Epoch), 10)),
+	).Then(
+		clientv3.OpPut(s.root() + ETCD_SRV_FENCE, strconv.FormatInt(int64(s.electclnt.Fence().Epoch), 10)),
+	).Commit()
+
+	if err != nil {
+		db.DPrintf(db.FTTASKS, "Failed to write fence to etcd upon election %v", err)
+		return err
+	}
+
+	if !resp.Succeeded {
+		db.DPrintf(db.FTTASKS, "Failed to write fence to etcd upon election with err = nil, %v", resp)
+		return serr.NewErr(serr.TErrError, "etcd txn failed")
+	}
+
+	return nil
+}
+
+func (s *TaskSrv) parseStatus(val string) (proto.TaskStatus, error) {
+	switch val {
+		case proto.TaskStatus_TODO.String():
+			return proto.TaskStatus_TODO, nil
+		case proto.TaskStatus_WIP.String():
+			return proto.TaskStatus_WIP, nil
+		case proto.TaskStatus_DONE.String():
+			return proto.TaskStatus_DONE, nil
+		case proto.TaskStatus_ERROR.String():
+			return proto.TaskStatus_ERROR, nil
+		default:
+			return proto.TaskStatus_TODO, serr.NewErr(serr.TErrInval, val)
+	}
+}
+
+func (s *TaskSrv) readEtcd() error {
+	resp, err := s.etcdClient.Get(context.TODO(), s.root(), clientv3.WithPrefix())
+	if err != nil {
+		return err
+	}
+
+	for _, kv := range resp.Kvs {
+		key := string(kv.Key)
+		val := string(kv.Value)
+		db.DPrintf(db.FTTASKS, "ReadEtcd: key %v val %v", key, val)
+
+		if strings.HasPrefix(key, s.keyPrefix(ETCD_STATUS)) {
+			id, err := strconv.ParseInt(strings.TrimPrefix(key, s.keyPrefix(ETCD_STATUS)), 10, 32)
+			if err != nil {
+				return err
+			}
+
+			status, err := s.parseStatus(val)
+			if err != nil {
+				return err
+			}
+
+			s.status[int32(id)] = status
+		} else if strings.HasPrefix(key, s.keyPrefix(ETCD_DATA)) {
+			id, err := strconv.ParseInt(strings.TrimPrefix(key, s.keyPrefix(ETCD_DATA)), 10, 32)
+			if err != nil {
+				return err
+			}
+
+			s.data[int32(id)] = []byte(val)
+		} else if strings.HasPrefix(key, s.keyPrefix(ETCD_OUTPUT)) {
+			id, err := strconv.ParseInt(strings.TrimPrefix(key, s.keyPrefix(ETCD_OUTPUT)), 10, 32)
+			if err != nil {
+				return err
+			}
+
+			s.output[int32(id)] = []byte(val)
+		} else if key == s.root() + ETCD_SRV_FENCE {
+			// ignore
+		} else if key == s.root() + ETCD_CLNT_FENCE {
+			epoch, err := strconv.ParseInt(val, 10, 64)
+			if err != nil {
+				return err
+			}
+
+			s.fence = &sp.Tfence{Epoch: sp.Tepoch(epoch)}
+		} else if key == s.root() + ETCD_STOPPED {
+			s.stopped = true
+		} else {
+			db.DPrintf(db.ERROR, "Unknown key type %v", key)
+			return serr.NewErr(serr.TErrInval, key)
+		}
+	}
+
+	return nil
 }
 
 // must hold lock
@@ -74,6 +263,134 @@ func (s *TaskSrv) getMap(status proto.TaskStatus) *map[int32]bool {
 	}
 }
 
+type change struct {
+	status proto.TaskStatus
+	data   []byte
+	output []byte
+	added  bool
+}
+
+// must hold lock
+func (s *TaskSrv) applyChanges(changes map[int32]change) error {
+	// validate changes
+	for id, change := range changes {
+		if !change.added {
+			from := s.status[id]
+			to := change.status
+
+			if from == to {
+				continue
+			}
+
+			fromMap := s.getMap(from)
+			toMap := s.getMap(to)
+			if fromMap == nil || toMap == nil {
+				return serr.NewErr(serr.TErrInval, fmt.Sprintf("invalid status %v -> %v", from, to))
+			}
+
+			if (*toMap)[id] {
+				db.DFatalf("Task %v already in %v when trying to move it there", id, to)
+			}
+		}
+	}
+
+	// write changes to etcd
+	ops := make([]clientv3.Op, 0, OPS_PER_TXN)
+
+	commitTxn := func() error {
+		db.DPrintf(db.FTTASKS, "WriteChanges: writing to db with %d ops", len(ops))
+		resp, err := s.etcdClient.Txn(context.TODO()).If(
+			clientv3.Compare(clientv3.Value(s.root() + ETCD_SRV_FENCE), "=", strconv.FormatUint(uint64(s.electclnt.Fence().Epoch), 10)),
+		).Then(ops...).Commit()
+
+		if err != nil {
+			db.DPrintf(db.FTTASKS, "WriteChanges: error with txn %v", err)
+			return err
+		}
+		if !resp.Succeeded {
+			db.DPrintf(db.ERROR, "WriteChanges: txn failed %v", resp)
+			return serr.NewErr(serr.TErrError, "etcd txn failed")
+		}
+		db.DPrintf(db.FTTASKS, "WriteChanges: wrote to db with resp %v", resp)
+		return nil
+	}
+
+	for id, change := range changes {
+		from := s.status[id]
+		if from != change.status {
+			ops = append(ops, clientv3.OpPut(s.key(id, ETCD_STATUS), change.status.String()))
+		}
+		if change.data != nil {
+			ops = append(ops, clientv3.OpPut(s.key(id, ETCD_DATA), string(change.data)))
+		}
+		if change.output != nil {
+			ops = append(ops, clientv3.OpPut(s.key(id, ETCD_OUTPUT), string(change.output)))
+		}
+
+		if len(ops) >= OPS_PER_TXN {
+			if err := commitTxn(); err != nil {
+				// return early if a txn fails
+				return err 
+			}
+			// reset slice for the next batch
+			ops = ops[:0] 
+		}
+	}
+
+	// commit any remaining operations
+	if len(ops) > 0 {
+		if err := commitTxn(); err != nil {
+			return err
+		}
+	}
+
+	// update local cache
+	addedTodo := false
+	for id, change := range changes {
+		db.DPrintf(db.FTTASKS, "WriteChanges: writing change %v", change)
+		if change.added {
+			s.status[id] = change.status
+			(*s.getMap(change.status))[id] = true
+
+			if change.status == proto.TaskStatus_TODO {
+				addedTodo = true
+			}
+		} else {
+			currStatus, ok := s.status[id]
+			if !ok {
+				db.DFatalf("Task %v not found", id)
+			}
+
+			if currStatus != change.status {
+				db.DPrintf(db.FTTASKS, "WriteChanges: moving task %v from %v to %v", id, currStatus, change.status)
+				s.status[id] = change.status
+				delete(*s.getMap(currStatus), id)
+				(*s.getMap(change.status))[id] = true
+
+				if change.status == proto.TaskStatus_TODO {
+					addedTodo = true
+				}
+			}
+		}
+
+		if change.data != nil {
+			s.data[id] = change.data
+		}
+
+		if change.output != nil {
+			s.output[id] = change.output
+		}
+	}
+
+	if addedTodo {
+		s.todoCond.Broadcast()
+	}
+
+	db.DPrintf(db.FTTASKS, "WriteChanges: wrote changes to local cache")
+
+	return nil
+}
+
 // must hold lock
 func (s *TaskSrv) get(status proto.TaskStatus) []int32 {
 	m := s.getMap(status)
@@ -89,13 +406,14 @@ func (s *TaskSrv) get(status proto.TaskStatus) []int32 {
 	return ret
 }
 
+// must hold lock
 func (s *TaskSrv) checkFence(fence *sp.TfenceProto) error {
-	db.DPrintf(db.FTTASKS, "checkFence: curr: %v req: %v", s.fence, fence)
 	if s.fence == nil {
 		return nil
 	}
 
 	if fence == nil || s.fence.Epoch > fence.Tfence().Epoch {
+		db.DPrintf(db.FTTASKS, "checkFence: failed curr: %v req: %v", s.fence, fence)
 		return serr.NewErr(serr.TErrInval, fmt.Sprintf("fence %v is not after %v", fence, s.fence))
 	}
 
@@ -117,14 +435,20 @@ func (s *TaskSrv) SubmitTasks(ctx fs.CtxI, req proto.SubmitTasksReq, rep *proto.
 		}
 	}
 
+	changes := make(map[int32]change)
 	for _, task := range req.Tasks {
-		s.todo[task.Id] = true
-		s.data[task.Id] = task.Data
-		s.status[task.Id] = proto.TaskStatus_TODO
+		changes[task.Id] = change{
+			status: proto.TaskStatus_TODO,
+			data: task.Data,
+			added: true,
+		}
+	}
+
+	if err := s.applyChanges(changes); err != nil {
+		return err
 	}
 
 	rep.Existing = existing
-	s.todoCond.Broadcast()
 
 	db.DPrintf(db.FTTASKS, "SubmitTasks: total: %d, exist: %d", len(req.Tasks), len(existing))
 
@@ -180,39 +504,11 @@ func (s *TaskSrv) MoveTasks(ctx fs.CtxI, req proto.MoveTasksReq, rep *proto.Move
 		return err
 	}
 
-	to := s.getMap(req.To)
-	if to == nil {
-		return serr.NewErr(serr.TErrInval, req.To)
-	}
-
+	changes := make(map[int32]change)
 	for _, id := range req.Ids {
-		if _, ok := s.status[id]; !ok {
-			return serr.NewErr(serr.TErrNotfound, id)
+		changes[id] = change{
+			status: req.To,
 		}
-
-		from := s.getMap(s.status[id])
-		if from == nil {
-			return serr.NewErr(serr.TErrInval, s.status[id])
-		}
-
-		if (*to)[id] && s.status[id] != req.To {
-			db.DFatalf("Task %v found in both %v and %v", id, s.status[id], req.To)
-		}
-	}
-
-	for _, id := range req.Ids {
-		if s.status[id] == req.To {
-			continue
-		}
-
-		(*to)[id] = true
-		from := s.getMap(s.status[id])
-		delete(*from, id)
-		s.status[id] = req.To
-	}
-
-	if req.To == proto.TaskStatus_TODO {
-		s.todoCond.Broadcast()
 	}
 
 	db.DPrintf(db.FTTASKS, "MoveTasks: n: %d, to: %v", len(req.Ids), req.To)
@@ -229,32 +525,24 @@ func (s *TaskSrv) MoveTasksByStatus(ctx fs.CtxI, req proto.MoveTasksByStatusReq,
 	}
 
 	from := s.getMap(req.From)
-	to := s.getMap(req.To)
-
 	if from == nil {
 		return serr.NewErr(serr.TErrInval, req.From)
 	}
 
-	if to == nil {
-		return serr.NewErr(serr.TErrInval, req.To)
-	}
-
+	changes := make(map[int32]change)
 	for id := range *from {
-		if (*to)[id] {
-			db.DFatalf("Task %v already in %v", id, req.To)
+		changes[id] = change{
+			status: req.To,
 		}
-
-		(*to)[id] = true
-		s.status[id] = req.To
 	}
 
 	n := len(*from)
-	rep.NumMoved = int32(n)
-	*from = make(map[int32]bool)
 
-	if req.To == proto.TaskStatus_TODO {
-		s.todoCond.Broadcast()
+	if err := s.applyChanges(changes); err != nil {
+		return err
 	}
+
+	rep.NumMoved = int32(n)
 
 	db.DPrintf(db.FTTASKS, "MoveTasks: n: %d, from: %v, to: %v", n, req.From, req.To)
 
@@ -290,9 +578,15 @@ func (s *TaskSrv) AddTaskOutputs(ctx fs.CtxI, req proto.AddTaskOutputsReq, rep *
 		return err
 	}
 
+	changes := make(map[int32]change)
   for ix, id := range req.Ids {
-		output := req.Outputs[ix]
-		s.output[id] = output
+		changes[id] = change{
+			output: req.Outputs[ix],
+		}
+	}
+
+	if err := s.applyChanges(changes); err != nil {
+		return err
 	}
 
 	return nil
@@ -307,30 +601,30 @@ func (s *TaskSrv) AcquireTasks(ctx fs.CtxI, req proto.AcquireTasksReq, rep *prot
 	}
 
 	fence := s.fence
-	rep.Ids = s.get(proto.TaskStatus_TODO)
-	for req.Wait && len(rep.Ids) == 0 && !s.stopped && fence == s.fence {
+	ids := s.get(proto.TaskStatus_TODO)
+	for req.Wait && len(ids) == 0 && !s.stopped && fence == s.fence {
 		db.DPrintf(db.FTTASKS, "AcquireTasks: waiting for tasks...")
 		s.todoCond.Wait()
-		rep.Ids = s.get(proto.TaskStatus_TODO)
+		ids = s.get(proto.TaskStatus_TODO)
 	}
 
 	if fence != s.fence {
 		return serr.NewErr(serr.TErrInval, fmt.Sprintf("fence changed from %v to %v", fence, s.fence))
 	}
 
-	for _, id := range rep.Ids {
-		if s.wip[id] {
-			db.DFatalf("Task %v already WIP", id)
+	changes := make(map[int32]change)
+  for _, id := range ids {
+		changes[id] = change{
+			status: proto.TaskStatus_WIP,
 		}
 	}
 
-	s.todo = make(map[int32]bool)
-	for _, id := range rep.Ids {
-		s.wip[id] = true
-		s.status[id] = proto.TaskStatus_WIP
+	if err := s.applyChanges(changes); err != nil {
+		return err
 	}
 
 	rep.Stopped = s.stopped
+	rep.Ids = ids
 
 	db.DPrintf(db.FTTASKS, "AcquireTasks: n: %d stopped: %t", len(rep.Ids), rep.Stopped)
 
@@ -363,6 +657,23 @@ func (s *TaskSrv) SubmitStop(ctx fs.CtxI, req proto.SubmitStopReq, rep *proto.Su
 
 	db.DPrintf(db.FTTASKS, "stop received")
 
+	resp, err := s.etcdClient.Txn(context.TODO()).If(
+		clientv3.Compare(clientv3.Value(s.root() + ETCD_SRV_FENCE), "=", strconv.FormatUint(uint64(s.electclnt.Fence().Epoch), 10)),
+	).Then(
+		clientv3.OpPut(s.root() + ETCD_STOPPED, "1"),
+	).Commit()
+
+	if err != nil {
+		db.DPrintf(db.FTTASKS, "Fence: error writing to etcd %v", err)
+		return err
+	}
+
+	if !resp.Succeeded {
+		db.DPrintf(db.FTTASKS, "Fence: txn failed %v", resp)
+		return serr.NewErr(serr.TErrError, "etcd txn failed")
+	}
+
+
 	s.stopped = true
 	s.todoCond.Broadcast()
 
@@ -378,8 +689,49 @@ func (s *TaskSrv) Fence(ctx fs.CtxI, req proto.FenceReq, rep *proto.FenceRep) er
 		return serr.NewErr(serr.TErrInval, fmt.Sprintf("fence already set with epoch %v, attempted to set with %v", fence.Epoch, s.fence.Epoch))
 	}
 
-	db.DPrintf(db.FTTASKS, "fence: added fence %v to replace %v", fence, s.fence)
+	resp, err := s.etcdClient.Txn(context.TODO()).If(
+		clientv3.Compare(clientv3.Value(s.root() + ETCD_SRV_FENCE), "=", strconv.FormatUint(uint64(s.electclnt.Fence().Epoch), 10)),
+	).Then(
+		clientv3.OpPut(s.root() + ETCD_CLNT_FENCE, strconv.FormatUint(req.Fence.Epoch, 10)),
+	).Commit()
+
+	if err != nil {
+		db.DPrintf(db.FTTASKS, "Fence: error writing to etcd %v", err)
+		return err
+	}
+
+	if !resp.Succeeded {
+		db.DPrintf(db.FTTASKS, "Fence: txn failed %v", resp)
+		return serr.NewErr(serr.TErrError, "etcd txn failed")
+	}
 
 	s.fence = &fence
+
+	db.DPrintf(db.FTTASKS, "fence: added fence %v to replace %v", fence, s.fence)
+
+	return nil
+}
+
+func (s *TaskSrv) ClearEtcd(ctx fs.CtxI, req proto.ClearEtcdReq, rep *proto.ClearEtcdRep) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	db.DPrintf(db.FTTASKS, "Shutdown: shutting down")
+	resp, err := s.etcdClient.Txn(context.TODO()).
+		If(clientv3.Compare(clientv3.Value(s.root() + ETCD_SRV_FENCE), "=", strconv.FormatUint(uint64(s.electclnt.Fence().Epoch), 10))).
+		Then(clientv3.OpDelete(s.root(), clientv3.WithPrefix())).
+		Commit()
+	if err != nil {
+		db.DPrintf(db.FTTASKS, "Shutdown: error deleting keys %v", err)
+		return err
+	}
+
+	if !resp.OpResponse().Txn().Succeeded {
+		db.DPrintf(db.FTTASKS, "Shutdown: txn failed %v", resp)
+		return serr.NewErr(serr.TErrError, "etcd txn failed")
+	}
+
+	db.DPrintf(db.FTTASKS, "Shutdown: deleted keys %v", resp)
+
 	return nil
 }

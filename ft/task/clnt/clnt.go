@@ -3,8 +3,8 @@ package clnt
 import (
 	"bytes"
 	"encoding/json"
+	"sigmaos/ft/task"
 	"sigmaos/ft/task/proto"
-	fttask_srv "sigmaos/ft/task/srv"
 	"sigmaos/sigmaclnt/fslib"
 )
 
@@ -22,7 +22,7 @@ func Decode[T any] (encoded []byte) (T, error) {
 	return data, err
 }
 
-func NewFtTaskClnt[Data any, Output any](fsl *fslib.FsLib, serverId fttask_srv.FtTaskSrvId) FtTaskClnt[Data, Output] {
+func NewFtTaskClnt[Data any, Output any](fsl *fslib.FsLib, serverId task.FtTaskSrvId) FtTaskClnt[Data, Output] {
 	raw := newRawFtTaskClnt(fsl, serverId)
 	tc := &ftTaskClnt[Data, Output]{
 		raw,

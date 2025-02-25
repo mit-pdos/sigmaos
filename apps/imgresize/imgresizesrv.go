@@ -102,7 +102,7 @@ func (imgd *ImgSrv) Work() {
 	if err != nil {
 		db.DFatalf("NewTaskMgr err %v", err)
 	}
-	status := ftm.ExecuteTasks(func() Ttask { return *new(Ttask) }, getMkProcFn(imgd.ftclnt.ServerId(), imgd.nrounds, imgd.workerMcpu, imgd.workerMem))
+	status := ftm.ExecuteTasks(getMkProcFn(imgd.ftclnt.ServerId(), imgd.nrounds, imgd.workerMcpu, imgd.workerMem))
 	db.DPrintf(db.ALWAYS, "imgresized exit")
 	imgd.exited = true
 	if status == nil {

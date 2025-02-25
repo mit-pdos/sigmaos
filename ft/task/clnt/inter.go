@@ -1,8 +1,8 @@
 package clnt
 
 import (
+	"sigmaos/ft/task"
 	"sigmaos/ft/task/proto"
-	fttask_srv "sigmaos/ft/task/srv"
 	sp "sigmaos/sigmap"
 )
 
@@ -36,6 +36,7 @@ type FtTaskClnt[Data any, Output any] interface {
 	SetFence(fence *sp.Tfence)
 	GetFence() *sp.Tfence
 	Fence(fence *sp.Tfence) error
+	ClearEtcd() error
 	Raw() FtTaskClnt[[]byte, []byte]
-	ServerId() fttask_srv.FtTaskSrvId
+	ServerId() task.FtTaskSrvId
 }

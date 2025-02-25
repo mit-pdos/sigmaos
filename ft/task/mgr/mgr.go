@@ -15,7 +15,7 @@ type FtTaskMgr[Data any, Output any] struct {
 	nTasksRunning atomic.Int32
 }
 
-type NewTresult struct {
+type Tresult struct {
 	id     ftclnt.TaskId
 	ok     bool
 	ms     int64
@@ -33,9 +33,9 @@ func NewTaskMgr[Data any, Output any](pclnt procapi.ProcAPI, ft ftclnt.FtTaskCln
 	return &FtTaskMgr[Data, Output]{ProcAPI: pclnt, FtTaskClnt: ft}, nil
 }
 
-func (ftm *FtTaskMgr[Data, Output]) ExecuteTasks(new Tnew[Data], mkProc TmkProc[Data]) *proc.Status {
-	var r *NewTresult
-	chRes := make(chan NewTresult)
+func (ftm *FtTaskMgr[Data, Output]) ExecuteTasks(mkProc TmkProc[Data]) *proc.Status {
+	var r *Tresult
+	chRes := make(chan Tresult)
 	chTask := make(chan []ftclnt.TaskId)
 	chStop := make(chan bool)
 
@@ -67,7 +67,7 @@ func (ftm *FtTaskMgr[Data, Output]) ExecuteTasks(new Tnew[Data], mkProc TmkProc[
 				break
 			}
 		case tasks := <-chTask:
-			err := ftm.startTasks(tasks, chRes, new, mkProc)
+			err := ftm.startTasks(tasks, chRes, mkProc)
 			if err != nil {
 				db.DFatalf("StartTasks %v err %v", tasks, err)
 			}
@@ -101,7 +101,7 @@ func (ftm *FtTaskMgr[Data, Output]) getTasks(chTask chan<- []ftclnt.TaskId, chSt
 	}
 }
 
-func (ftm *FtTaskMgr[Data, Output]) startTasks(tasks []ftclnt.TaskId, ch chan NewTresult, new Tnew[Data], mkProc TmkProc[Data]) error {
+func (ftm *FtTaskMgr[Data, Output]) startTasks(tasks []ftclnt.TaskId, ch chan Tresult, mkProc TmkProc[Data]) error {
 	ntask := 0
 	tasksData, err := ftm.ReadTasks(tasks)
 	if err != nil {
@@ -120,13 +120,13 @@ func (ftm *FtTaskMgr[Data, Output]) startTasks(tasks []ftclnt.TaskId, ch chan Ne
 	return nil
 }
 
-func (ftm *FtTaskMgr[Data, Output]) runTask(p *proc.Proc, t ftclnt.TaskId, ch chan<- NewTresult) {
+func (ftm *FtTaskMgr[Data, Output]) runTask(p *proc.Proc, t ftclnt.TaskId, ch chan<- Tresult) {
 	db.DPrintf(db.FTTASKMGR, "prep to spawn task %v %v", p.GetPid(), p.Args)
 	start := time.Now()
 	err := ftm.Spawn(p)
 	if err != nil {
 		db.DPrintf(db.ALWAYS, "Couldn't spawn a task %v, err: %v", t, err)
-		ch <- NewTresult{t, false, 0, nil}
+		ch <- Tresult{t, false, 0, nil}
 	} else {
 		db.DPrintf(db.FTTASKMGR, "spawned task %v %v", p.GetPid(), p.Args)
 		res := ftm.waitForTask(start, p, t)
@@ -134,7 +134,7 @@ func (ftm *FtTaskMgr[Data, Output]) runTask(p *proc.Proc, t ftclnt.TaskId, ch ch
 	}
 }
 
-func (ftm *FtTaskMgr[Data, Output]) waitForTask(start time.Time, p *proc.Proc, id ftclnt.TaskId) NewTresult {
+func (ftm *FtTaskMgr[Data, Output]) waitForTask(start time.Time, p *proc.Proc, id ftclnt.TaskId) Tresult {
 	ftm.WaitStart(p.GetPid())
 	db.DPrintf(db.ALWAYS, "Start Latency %v", time.Since(start))
 	status, err := ftm.WaitExit(p.GetPid())
@@ -143,19 +143,19 @@ func (ftm *FtTaskMgr[Data, Output]) waitForTask(start time.Time, p *proc.Proc, i
 		if err := ftm.MoveTasks([]ftclnt.TaskId{id}, ftclnt.DONE); err != nil {
 			db.DFatalf("MarkDone %v done err %v", id, err)
 		}
-		return NewTresult{id, true, ms, status}
+		return Tresult{id, true, ms, status}
 	} else if err == nil && status.IsStatusErr() && !status.IsCrashed() {
 		db.DPrintf(db.ALWAYS, "task %v errored status %v msg %v", id, status, status.Msg())
 		// mark task as done, but return error
 		if err := ftm.MoveTasks([]ftclnt.TaskId{id}, ftclnt.DONE); err != nil {
 			db.DFatalf("MarkDone %v done err %v", id, err)
 		}
-		return NewTresult{id, false, ms, status}
+		return Tresult{id, false, ms, status}
 	} else { // an error, task crashed, or was evicted; make it runnable again
 		db.DPrintf(db.FTTASKMGR, "task %v failed %v err %v msg %q", id, status, err, status.Msg())
 		if err := ftm.MoveTasks([]ftclnt.TaskId{id}, ftclnt.TODO); err != nil {
 			db.DFatalf("MarkRunnable %v err %v", id, err)
 		}
-		return NewTresult{id, false, ms, nil}
+		return Tresult{id, false, ms, nil}
 	}
 }

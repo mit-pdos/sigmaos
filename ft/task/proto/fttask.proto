@@ -122,3 +122,11 @@ message FenceReq {
 message FenceRep {
 
 }
+
+message ClearEtcdReq {
+
+}
+
+message ClearEtcdRep {
+
+}

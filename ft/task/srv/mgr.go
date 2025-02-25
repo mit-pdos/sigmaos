@@ -1,18 +1,18 @@
 package srv
 
 import (
-	"sigmaos/proc"
+	"sigmaos/ft/procgroupmgr"
+	"sigmaos/ft/task"
+	fttask_clnt "sigmaos/ft/task/clnt"
 	"sigmaos/serr"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 )
 
-type FtTaskSrvId string
-
 type FtTaskSrvMgr struct {
 	sc *sigmaclnt.SigmaClnt
-	Id FtTaskSrvId
-	p *proc.Proc
+	Id task.FtTaskSrvId
+	p *procgroupmgr.ProcGroupMgr
 }
 
 func NewFtTaskSrvMgr(sc *sigmaclnt.SigmaClnt, id string) (*FtTaskSrvMgr, error) {
@@ -21,22 +21,22 @@ func NewFtTaskSrvMgr(sc *sigmaclnt.SigmaClnt, id string) (*FtTaskSrvMgr, error) 
 		return nil, err
 	}
 
-	p := proc.NewProc("fttask", []string{id})
+	config := procgroupmgr.NewProcGroupConfig(1, "fttask", []string{id}, 0, id)
+	p := config.StartGrpMgr(sc)
+	err = p.WaitStart()
+	if err != nil {
+		return nil, err
+	}
 
-	if err := sc.Spawn(p); err != nil {
-		return nil, err
-	}
-	if err := sc.WaitStart(p.GetPid()); err != nil {
-		return nil, err
-	}
-	return &FtTaskSrvMgr{sc, FtTaskSrvId(id), p}, nil
+	return &FtTaskSrvMgr{sc, task.FtTaskSrvId(id), p}, nil
 }
 
 func (ft *FtTaskSrvMgr) Stop() error {
-	if err := ft.sc.Evict(ft.p.GetPid()); err != nil {
-		return err
-	}
-
-	_, err := ft.sc.WaitExit(ft.p.GetPid())
+	// lock to ensure it doesn't change while we clear the db
+	ft.p.Lock()
+	clnt := fttask_clnt.NewFtTaskClnt[any, any](ft.sc.FsLib, ft.Id)
+	clnt.ClearEtcd()
+	ft.p.Unlock()
+	_, err := ft.p.StopGroup()
 	return err
 }

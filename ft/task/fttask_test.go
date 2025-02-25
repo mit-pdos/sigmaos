@@ -116,6 +116,9 @@ func TestServerPerf(t *testing.T) {
 	}
 	db.DPrintf(db.ALWAYS, "Read all outputs in %v (%v per task)", time.Since(start), time.Since(start) / time.Duration(nTasks))
 
+	err = mgr.Stop()
+	assert.Nil(t, err)
+
 	ts.Shutdown()
 }
 
@@ -185,6 +188,9 @@ func TestServerBatchedPerf(t *testing.T) {
 		assert.Equal(t, "bye", out)
 	}
 
+	err = mgr.Stop()
+	assert.Nil(t, err)
+
 	ts.Shutdown()
 }
 
@@ -248,7 +254,7 @@ func TestServerMoveTasksByStatus(t *testing.T) {
 	db.DPrintf(db.TEST, "Marking tasks as done")
 	n, err := clnt.MoveTasksByStatus(proto.TaskStatus_WIP, proto.TaskStatus_DONE)
 	assert.Nil(t, err)
-	assert.Equal(t, ntasks, n)
+	assert.Equal(t, ntasks, int(n))
 	testServerContents(t, clnt,
 		[]int32{},
 		[]int32{},
@@ -259,7 +265,7 @@ func TestServerMoveTasksByStatus(t *testing.T) {
 	db.DPrintf(db.TEST, "Marking tasks as errored")
 	n, err = clnt.MoveTasksByStatus(proto.TaskStatus_DONE, proto.TaskStatus_ERROR)
 	assert.Nil(t, err)
-	assert.Equal(t, ntasks, n)
+	assert.Equal(t, ntasks, int(n))
 	testServerContents(t, clnt,
 		[]int32{},
 		[]int32{},
@@ -388,7 +394,7 @@ func TestServerData(t *testing.T) {
 	assert.Nil(t, err)
 
 	n, err := clnt.MoveTasksByStatus(proto.TaskStatus_WIP, proto.TaskStatus_DONE)
-	assert.Equal(t, ntasks, n)
+	assert.Equal(t, ntasks, int(n))
 	assert.Nil(t, err)
 
 	readOutputs, err := clnt.GetTaskOutputs(ids)
@@ -525,7 +531,7 @@ func TestServerStop(t *testing.T) {
 
 	n, err := clnt.MoveTasksByStatus(fttask_clnt.WIP, fttask_clnt.TODO)
 	assert.Nil(t, err)
-	assert.Equal(t, 1, n)
+	assert.Equal(t, 1, int(n))
 	err = clnt.SubmitStop()
 	assert.Nil(t, err)
 
@@ -552,18 +558,18 @@ func TestServerFence(t *testing.T) {
 	clnt := fttask_clnt.NewFtTaskClnt[interface{}, interface{}](ts.FsLib, mgr.Id)
 	n, err := clnt.MoveTasksByStatus(fttask_clnt.WIP, fttask_clnt.TODO)
 	assert.Nil(t, err)
-	assert.Equal(t, 0, n)
+	assert.Equal(t, 0, int(n))
 
 	fence := &sigmap.Tfence{ PathName: "test", Epoch: 1, Seqno: 0 }
 	clnt.SetFence(fence)
 	n, err = clnt.MoveTasksByStatus(fttask_clnt.WIP, fttask_clnt.TODO)
 	assert.Nil(t, err)
-	assert.Equal(t, 0, n)
+	assert.Equal(t, 0, int(n))
 
 	clnt.Fence(fence)
 	n, err = clnt.MoveTasksByStatus(fttask_clnt.WIP, fttask_clnt.TODO)
 	assert.Nil(t, err)
-	assert.Equal(t, 0, n)
+	assert.Equal(t, 0, int(n))
 
 	clnt.SetFence(sigmap.NullFence())
 	_, err = clnt.MoveTasksByStatus(fttask_clnt.WIP, fttask_clnt.TODO)

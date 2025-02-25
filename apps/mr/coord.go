@@ -12,8 +12,8 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/ft/leaderclnt"
+	"sigmaos/ft/task"
 	fttask_clnt "sigmaos/ft/task/clnt"
-	fttask_srv "sigmaos/ft/task/srv"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
@@ -45,8 +45,8 @@ const (
 
 type Coord struct {
 	*sigmaclnt.SigmaClnt
-	mftid           fttask_srv.FtTaskSrvId
-	rftid           fttask_srv.FtTaskSrvId
+	mftid           task.FtTaskSrvId
+	rftid           task.FtTaskSrvId
 	mftclnt         fttask_clnt.FtTaskClnt[Bin, Bin]
 	rftclnt         fttask_clnt.FtTaskClnt[TreduceTask, Bin]
 	jobRoot         string
@@ -145,8 +145,8 @@ func NewCoord(args []string) (*Coord, error) {
 		return nil, fmt.Errorf("NewCoord: NewLeaderclnt err %v", err)
 	}
 
-	c.mftid = fttask_srv.FtTaskSrvId(args[10])
-	c.rftid = fttask_srv.FtTaskSrvId(args[11])
+	c.mftid = task.FtTaskSrvId(args[10])
+	c.rftid = task.FtTaskSrvId(args[11])
 
 	return c, nil
 }

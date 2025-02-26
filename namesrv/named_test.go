@@ -194,8 +194,8 @@ func reboot(t *testing.T, dn string, f func(*test.Tstate, *sigmaclnt.SigmaClnt, 
 
 	fn := filepath.Join(dn, "leasedf")
 
-	ttl := sp.Tttl(4 * fsetcd.LeaseTTL)
-	d := 2 * time.Duration(ttl) * time.Second
+	ttl := sp.Tttl(7 * fsetcd.LeaseTTL)
+	d := time.Duration(ttl+1) * time.Second
 	li, err := sc.LeaseClnt.AskLease(fn, ttl)
 	assert.Nil(t, err, "Error AskLease: %v", err)
 
@@ -226,15 +226,28 @@ func reboot(t *testing.T, dn string, f func(*test.Tstate, *sigmaclnt.SigmaClnt, 
 		return
 	}
 
-	if quick {
-		// if we rebooted quickly, wait for the lease to expire now
-		time.Sleep(d)
-	}
-
 	pe2 := proc.NewDifferentRealmProcEnv(ts.ProcEnv(), test.REALM1)
 	sc2, err := sigmaclnt.NewSigmaClnt(pe2)
 	if !assert.Nil(ts.T, err, "Err new sigmaclnt realm: %v", err) {
 		return
+	}
+
+	if quick {
+		// Make sure the leased file still exists
+		sts, err := sc2.GetDir(dn)
+		assert.Nil(t, err, "Err GetDir: %v", err)
+		assert.Equal(t, 1, len(sts), "Leased file expired during reboot (before expected)")
+		// if we rebooted quickly, wait for the lease to expire now
+		time.Sleep(d)
+		pe3 := proc.NewDifferentRealmProcEnv(ts.ProcEnv(), test.REALM1)
+		sc3, err := sigmaclnt.NewSigmaClnt(pe3)
+		if !assert.Nil(ts.T, err, "Err new sigmaclnt realm: %v", err) {
+			return
+		}
+		// Make sure the leased file no longer exists
+		_, err = sc3.GetFile(fn)
+		assert.NotNil(t, err, "Err GetFile: %v", err)
+		db.DPrintf(db.TEST, "Err GetFile: %v", err)
 	}
 
 	f(ts, sc2, fn)
@@ -381,6 +394,53 @@ func TestLeaseDelayReboot(t *testing.T) {
 		db.DPrintf(db.TEST, "Open after expire err %v", err)
 		sc.Remove(fn)
 	}, false)
+}
+
+// In these tests named will not receive notification from etcd when
+// leased file expires, but discovers it when reading from etcd and
+// call updateDir.
+func TestLeaseGetDirReboot(t *testing.T) {
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+
+	nd1 := newNamedProc(MCPU, test.REALM1, ts.ProcEnv().UseDialProxy, true)
+	if err := startNamed(ts, nd1); !assert.Nil(ts.T, err, "Err startNamed: %v", err) {
+		return
+	}
+
+	pe := proc.NewDifferentRealmProcEnv(ts.ProcEnv(), test.REALM1)
+	sc, err := sigmaclnt.NewSigmaClnt(pe)
+	if !assert.Nil(ts.T, err, "Err new sigmaclnt realm: %v", err) {
+		return
+	}
+	db.DPrintf(db.TEST, "Made new realm sigmaclnt")
+
+	dn := filepath.Join(sp.NAMED, "thedir")
+	sc.RmDir(dn)
+	err = sc.MkDir(dn, 0777)
+	assert.Nil(ts.T, err, "dir")
+	// Verify the dir was made correctly
+	sts, err := sc.GetDir(dn)
+	assert.Nil(t, err, "Err GetDir: %v", err)
+	assert.Equal(t, 0, len(sts))
+	err = stopNamed(ts, nd1)
+	// Shut down regardless of whether or not stopping named was successful
+	ts.Shutdown()
+	if !assert.Nil(ts.T, err, "Err stop named: %v", err) {
+		return
+	}
+
+	reboot(t, dn, func(ts *test.Tstate, sc *sigmaclnt.SigmaClnt, fn string) {
+		sts, err := sc.GetDir(dn)
+		assert.Nil(t, err)
+		assert.Equal(t, 0, len(sts))
+		sts, err = sc.GetDir(dn)
+		assert.Nil(t, err)
+		assert.Equal(t, 0, len(sts))
+		db.DPrintf(db.TEST, "GetDir after expire ok")
+	}, true)
 }
 
 // Test if read fails after a named lost leadership

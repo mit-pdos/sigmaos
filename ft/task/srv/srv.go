@@ -263,34 +263,29 @@ func (s *TaskSrv) getMap(status proto.TaskStatus) *map[int32]bool {
 	}
 }
 
-type change struct {
-	status proto.TaskStatus
-	data   []byte
-	output []byte
-	added  bool
-}
-
 // must hold lock
-func (s *TaskSrv) applyChanges(changes map[int32]change) error {
+func (s *TaskSrv) applyChanges(added map[int32]bool, status map[int32]proto.TaskStatus, data map[int32][]byte, outputs map[int32][]byte) error {
 	// validate changes
-	for id, change := range changes {
-		if !change.added {
-			from := s.status[id]
-			to := change.status
+	for id, newStatus := range status {
+		from, ok := s.status[id]
+		if !ok {
+			return serr.NewErr(serr.TErrNotfound, id)
+		}
+		to := newStatus
 
-			if from == to {
-				continue
-			}
+		if from == to {
+			continue
+		}
 
-			fromMap := s.getMap(from)
-			toMap := s.getMap(to)
-			if fromMap == nil || toMap == nil {
-				return serr.NewErr(serr.TErrInval, fmt.Sprintf("invalid status %v -> %v", from, to))
-			}
+		fromMap := s.getMap(from)
+		toMap := s.getMap(to)
+		if fromMap == nil || toMap == nil {
+			return serr.NewErr(serr.TErrInval, fmt.Sprintf("invalid status %v -> %v", from, to))
+		}
 
-			if (*toMap)[id] {
-				db.DFatalf("Task %v already in %v when trying to move it there", id, to)
-			}
+		// we already checked if from == to so if this is true, then something is wrong with our server state
+		if (*toMap)[id] {
+			db.DFatalf("Task %v already in %v when trying to move it there", id, to)
 		}
 	}
 
@@ -315,18 +310,8 @@ func (s *TaskSrv) applyChanges(changes map[int32]change) error {
 		return nil
 	}
 
-	for id, change := range changes {
-		from := s.status[id]
-		if from != change.status {
-			ops = append(ops, clientv3.OpPut(s.key(id, ETCD_STATUS), change.status.String()))
-		}
-		if change.data != nil {
-			ops = append(ops, clientv3.OpPut(s.key(id, ETCD_DATA), string(change.data)))
-		}
-		if change.output != nil {
-			ops = append(ops, clientv3.OpPut(s.key(id, ETCD_OUTPUT), string(change.output)))
-		}
-
+	addOp := func(op clientv3.Op) error {
+		ops = append(ops, op)
 		if len(ops) >= OPS_PER_TXN {
 			if err := commitTxn(); err != nil {
 				// return early if a txn fails
@@ -334,6 +319,32 @@ func (s *TaskSrv) applyChanges(changes map[int32]change) error {
 			}
 			// reset slice for the next batch
 			ops = ops[:0] 
+		}
+
+		return nil
+	}
+
+	for id := range added {
+		if err := addOp(clientv3.OpPut(s.key(id, ETCD_STATUS), proto.TaskStatus_TODO.String())); err != nil {
+			return err
+		}
+	}
+
+	for id, newStatus := range status {
+		if err := addOp(clientv3.OpPut(s.key(id, ETCD_STATUS), newStatus.String())); err != nil {
+			return err
+		}
+	}
+
+	for id, d := range data {
+		if err := addOp(clientv3.OpPut(s.key(id, ETCD_DATA), string(d))); err != nil {
+			return err
+		}
+	}
+
+	for id, output := range outputs {
+		if err := addOp(clientv3.OpPut(s.key(id, ETCD_OUTPUT), string(output))); err != nil {
+			return err
 		}
 	}
 
@@ -346,40 +357,32 @@ func (s *TaskSrv) applyChanges(changes map[int32]change) error {
 
 	// update local cache
 	addedTodo := false
-	for id, change := range changes {
-		db.DPrintf(db.FTTASKS, "WriteChanges: writing change %v", change)
-		if change.added {
-			s.status[id] = change.status
-			(*s.getMap(change.status))[id] = true
+	for id := range added {
+		s.status[id] = proto.TaskStatus_TODO
+		(*s.getMap(proto.TaskStatus_TODO))[id] = true
+		addedTodo = true
+	}
 
-			if change.status == proto.TaskStatus_TODO {
+	for id, newStatus := range status {
+		from := s.status[id]
+		to := newStatus
+		if from != to {
+			s.status[id] = to
+			delete(*s.getMap(from), id)
+			(*s.getMap(to))[id] = true
+
+			if to == proto.TaskStatus_TODO {
 				addedTodo = true
 			}
-		} else {
-			currStatus, ok := s.status[id]
-			if !ok {
-				db.DFatalf("Task %v not found", id)
-			}
-
-			if currStatus != change.status {
-				db.DPrintf(db.FTTASKS, "WriteChanges: moving task %v from %v to %v", id, currStatus, change.status)
-				s.status[id] = change.status
-				delete(*s.getMap(currStatus), id)
-				(*s.getMap(change.status))[id] = true
-
-				if change.status == proto.TaskStatus_TODO {
-					addedTodo = true
-				}
-			}
 		}
+	}
 
-		if change.data != nil {
-			s.data[id] = change.data
-		}
+	for id, d := range data {
+		s.data[id] = d
+	}
 
-		if change.output != nil {
-			s.output[id] = change.output
-		}
+	for id, output := range outputs {
+		s.output[id] = output
 	}
 
 	if addedTodo {
@@ -435,16 +438,14 @@ func (s *TaskSrv) SubmitTasks(ctx fs.CtxI, req proto.SubmitTasksReq, rep *proto.
 		}
 	}
 
-	changes := make(map[int32]change)
+	added := make(map[int32]bool)
+	data := make(map[int32][]byte)
 	for _, task := range req.Tasks {
-		changes[task.Id] = change{
-			status: proto.TaskStatus_TODO,
-			data: task.Data,
-			added: true,
-		}
+		added[task.Id] = true
+		data[task.Id] = task.Data
 	}
 
-	if err := s.applyChanges(changes); err != nil {
+	if err := s.applyChanges(added, nil, data, nil); err != nil {
 		return err
 	}
 
@@ -504,11 +505,13 @@ func (s *TaskSrv) MoveTasks(ctx fs.CtxI, req proto.MoveTasksReq, rep *proto.Move
 		return err
 	}
 
-	changes := make(map[int32]change)
+	status := make(map[int32]proto.TaskStatus)
 	for _, id := range req.Ids {
-		changes[id] = change{
-			status: req.To,
-		}
+		status[id] = req.To
+	}
+
+	if err := s.applyChanges(nil, status, nil, nil); err != nil {
+		return err
 	}
 
 	db.DPrintf(db.FTTASKS, "MoveTasks: n: %d, to: %v", len(req.Ids), req.To)
@@ -529,22 +532,24 @@ func (s *TaskSrv) MoveTasksByStatus(ctx fs.CtxI, req proto.MoveTasksByStatusReq,
 		return serr.NewErr(serr.TErrInval, req.From)
 	}
 
-	changes := make(map[int32]change)
+	db.DPrintf(db.FTTASKS, "MoveTasksByStatus: %v, from: %v, to: %v", *from, req.From, req.To)
+
+	status := make(map[int32]proto.TaskStatus)
 	for id := range *from {
-		changes[id] = change{
-			status: req.To,
-		}
+		status[id] = req.To
 	}
+
+	db.DPrintf(db.FTTASKS, "MoveTasksByStatus: %v, from: %v, to: %v", *from, req.From, req.To)
 
 	n := len(*from)
 
-	if err := s.applyChanges(changes); err != nil {
+	if err := s.applyChanges(nil, status, nil, nil); err != nil {
 		return err
 	}
 
 	rep.NumMoved = int32(n)
 
-	db.DPrintf(db.FTTASKS, "MoveTasks: n: %d, from: %v, to: %v", n, req.From, req.To)
+	db.DPrintf(db.FTTASKS, "MoveTasksByStatus: n: %d, from: %v, to: %v", n, req.From, req.To)
 
 	return nil
 }
@@ -578,14 +583,12 @@ func (s *TaskSrv) AddTaskOutputs(ctx fs.CtxI, req proto.AddTaskOutputsReq, rep *
 		return err
 	}
 
-	changes := make(map[int32]change)
+	outputs := make(map[int32][]byte)
   for ix, id := range req.Ids {
-		changes[id] = change{
-			output: req.Outputs[ix],
-		}
+		outputs[id] = req.Outputs[ix]
 	}
 
-	if err := s.applyChanges(changes); err != nil {
+	if err := s.applyChanges(nil, nil, nil, outputs); err != nil {
 		return err
 	}
 
@@ -612,14 +615,12 @@ func (s *TaskSrv) AcquireTasks(ctx fs.CtxI, req proto.AcquireTasksReq, rep *prot
 		return serr.NewErr(serr.TErrInval, fmt.Sprintf("fence changed from %v to %v", fence, s.fence))
 	}
 
-	changes := make(map[int32]change)
+	status := make(map[int32]proto.TaskStatus)
   for _, id := range ids {
-		changes[id] = change{
-			status: proto.TaskStatus_WIP,
-		}
+		status[id] = proto.TaskStatus_WIP
 	}
 
-	if err := s.applyChanges(changes); err != nil {
+	if err := s.applyChanges(nil, status, nil, nil); err != nil {
 		return err
 	}
 

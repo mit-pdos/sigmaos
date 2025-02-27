@@ -90,7 +90,7 @@ func newTstate(t *test.Tstate) (*Tstate, error) {
 	ts.cleanup()
 
 	var err error
-	ts.ftsrv, err = fttask_srv.NewFtTaskSrvMgr(ts.SigmaClnt, fmt.Sprintf("imgresize-%s", ts.job))
+	ts.ftsrv, err = fttask_srv.NewFtTaskSrvMgr(ts.SigmaClnt, fmt.Sprintf("imgresize-%s", ts.job), nil)
 	if !assert.Nil(ts.T, err) {
 		return nil, err
 	}
@@ -106,8 +106,8 @@ func (ts *Tstate) restartTstate() {
 	}
 	ts.Tstate = ts1
 
-	ts.ftsrv.Stop()
-	ts.ftsrv, err = fttask_srv.NewFtTaskSrvMgr(ts.SigmaClnt, fmt.Sprintf("imgresize-%s", ts.job))
+	ts.ftsrv.Stop(false)
+	ts.ftsrv, err = fttask_srv.NewFtTaskSrvMgr(ts.SigmaClnt, fmt.Sprintf("imgresize-%s", ts.job), nil)
 	assert.Nil(ts.T, err)
 	ts.ftclnt = fttask_clnt.NewFtTaskClnt[imgresize.Ttask, any](ts.SigmaClnt.FsLib, ts.ftsrv.Id)
 }
@@ -119,6 +119,7 @@ func (ts *Tstate) cleanup() {
 
 func (ts *Tstate) shutdown() {
 	ts.ch <- true
+	ts.ftsrv.Stop(true)
 	ts.Shutdown()
 }
 

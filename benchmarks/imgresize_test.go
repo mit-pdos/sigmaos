@@ -55,7 +55,7 @@ func NewImgResizeJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, input str
 	ts.RmDir(sp.IMG)
 
 	ftid := fmt.Sprintf("imgresize-%s", ji.job)
-	ftmgr, err := fttask_srv.NewFtTaskSrvMgr(ji.SigmaClnt, ftid)
+	ftmgr, err := fttask_srv.NewFtTaskSrvMgr(ji.SigmaClnt, ftid, nil)
 	assert.Nil(ts.Ts.T, err, "Error new fttasksrvmgr: %v", err)
 
 	ji.ftmgr = ftmgr

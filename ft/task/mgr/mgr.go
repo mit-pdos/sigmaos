@@ -90,13 +90,13 @@ func (ftm *FtTaskMgr[Data, Output]) getTasks(chTask chan<- []ftclnt.TaskId, chSt
 			db.DFatalf("AcquireTasks err %v", err)
 		}
 
+		if len(tasks) != 0 {
+			chTask <- tasks
+		}
+
 		if stopped {
 			chStop <- true
 			break
-		}
-
-		if len(tasks) != 0 {
-			chTask <- tasks
 		}
 	}
 }

@@ -10,9 +10,9 @@ import (
 	"sigmaos/api/fs"
 	"sigmaos/apps/imgresize/proto"
 	db "sigmaos/debug"
+	"sigmaos/ft/task"
 	fttask_clnt "sigmaos/ft/task/clnt"
 	fttaskmgr "sigmaos/ft/task/mgr"
-	fttask_srv "sigmaos/ft/task/srv"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
@@ -45,7 +45,7 @@ func NewImgSrvRPC(args []string) (*ImgSrvRPC, error) {
 	imgd.sc = ssrv.SigmaClnt()
 	imgd.ssrv = ssrv
 
-	imgd.ftclnt = fttask_clnt.NewFtTaskClnt[Ttask, any](imgd.sc.FsLib, fttask_srv.FtTaskSrvId(serverId))
+	imgd.ftclnt = fttask_clnt.NewFtTaskClnt[Ttask, any](imgd.sc.FsLib, task.FtTaskSrvId(serverId))
 	db.DPrintf(db.IMGD, "Made imgd connected to %v", serverId)
 	mcpu, err := strconv.Atoi(args[1])
 	if err != nil {

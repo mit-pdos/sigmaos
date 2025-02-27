@@ -7,9 +7,9 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/ft/procgroupmgr"
+	"sigmaos/ft/task"
 	fttask_clnt "sigmaos/ft/task/clnt"
 	fttaskmgr "sigmaos/ft/task/mgr"
-	fttask_srv "sigmaos/ft/task/srv"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
 	"sigmaos/sigmaclnt/fslib"
@@ -26,7 +26,7 @@ func NewTask(fn string) *Ttask {
 	return &Ttask{fn}
 }
 
-func StartImgd(sc *sigmaclnt.SigmaClnt, srvId fttask_srv.FtTaskSrvId, workerMcpu proc.Tmcpu, workerMem proc.Tmem, persist bool, nrounds int, imgdMcpu proc.Tmcpu, em *crash.TeventMap) *procgroupmgr.ProcGroupMgr {
+func StartImgd(sc *sigmaclnt.SigmaClnt, srvId task.FtTaskSrvId, workerMcpu proc.Tmcpu, workerMem proc.Tmem, persist bool, nrounds int, imgdMcpu proc.Tmcpu, em *crash.TeventMap) *procgroupmgr.ProcGroupMgr {
 	crash.SetSigmaFail(em)
 	cfg := procgroupmgr.NewProcGroupConfig(1, "imgresized", []string{strconv.Itoa(int(workerMcpu)), strconv.Itoa(int(workerMem)), strconv.Itoa(nrounds)}, imgdMcpu, string(srvId))
 	if persist {
@@ -74,7 +74,7 @@ func IsThumbNail(fn string) bool {
 	return strings.Contains(fn, "-thumb")
 }
 
-func getMkProcFn(serverId fttask_srv.FtTaskSrvId, nrounds int, workerMcpu proc.Tmcpu, workerMem proc.Tmem) fttaskmgr.TmkProc[Ttask] {
+func getMkProcFn(serverId task.FtTaskSrvId, nrounds int, workerMcpu proc.Tmcpu, workerMem proc.Tmem) fttaskmgr.TmkProc[Ttask] {
 	return func(task fttask_clnt.Task[Ttask]) *proc.Proc {
 		db.DPrintf(db.IMGD, "mkProc %v", task)
 		fn := task.Data.FileName

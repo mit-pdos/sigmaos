@@ -11,6 +11,7 @@ import (
 	"sigmaos/proc"
 	"sigmaos/serr"
 	"sigmaos/sigmasrv"
+	"sigmaos/util/crash"
 	"strconv"
 	"strings"
 	"sync"
@@ -96,6 +97,13 @@ func RunTaskSrv(args []string) error {
 	}
 
 	db.DPrintf(db.FTTASKS, "Created fttask srv with args %v", args)
+
+	crash.Failer(ssrv.SigmaClnt().FsLib, crash.FTTASKS_CRASH, func(e crash.Tevent) {
+		crash.CrashMsg("crash")
+	})
+	crash.Failer(ssrv.SigmaClnt().FsLib, crash.FTTASKS_PARTITION, func(e crash.Tevent) {
+		crash.PartitionNamed(ssrv.SigmaClnt().FsLib)
+	})
 
 	etcdMnts := pe.GetEtcdEndpoints()
 	dial := ssrv.SigmaClnt().GetDialProxyClnt().Dial
@@ -212,6 +220,7 @@ func (s *TaskSrv) readEtcd() error {
 			}
 
 			s.status[int32(id)] = status
+			(*s.getMap(status))[int32(id)] = true
 		} else if strings.HasPrefix(key, s.keyPrefix(ETCD_DATA)) {
 			id, err := strconv.ParseInt(strings.TrimPrefix(key, s.keyPrefix(ETCD_DATA)), 10, 32)
 			if err != nil {

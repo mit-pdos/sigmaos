@@ -14,6 +14,7 @@ import (
 	fttasksrv "sigmaos/ft/task/srv"
 	"sigmaos/sigmap"
 	"sigmaos/test"
+	"sigmaos/util/crash"
 )
 
 const (
@@ -60,7 +61,7 @@ func TestServerPerf(t *testing.T) {
 
 	nTasks := 1000
 
-	mgr, err := fttasksrv.NewFtTaskSrvMgr(ts.SigmaClnt, "test")
+	mgr, err := fttasksrv.NewFtTaskSrvMgr(ts.SigmaClnt, "test", nil)
 	assert.Nil(t, err)
 
 	clnt := fttask_clnt.NewFtTaskClnt[mr.Bin, string](ts.FsLib, mgr.Id)
@@ -116,7 +117,7 @@ func TestServerPerf(t *testing.T) {
 	}
 	db.DPrintf(db.ALWAYS, "Read all outputs in %v (%v per task)", time.Since(start), time.Since(start) / time.Duration(nTasks))
 
-	err = mgr.Stop()
+	err = mgr.Stop(true)
 	assert.Nil(t, err)
 
 	ts.Shutdown()
@@ -130,7 +131,7 @@ func TestServerBatchedPerf(t *testing.T) {
 
 	nTasks := 1000
 
-	mgr, err := fttasksrv.NewFtTaskSrvMgr(ts.SigmaClnt, "test")
+	mgr, err := fttasksrv.NewFtTaskSrvMgr(ts.SigmaClnt, "test", nil)
 	assert.Nil(t, err)
 
 	clnt := fttask_clnt.NewFtTaskClnt[mr.Bin, string](ts.FsLib, mgr.Id)
@@ -188,7 +189,7 @@ func TestServerBatchedPerf(t *testing.T) {
 		assert.Equal(t, "bye", out)
 	}
 
-	err = mgr.Stop()
+	err = mgr.Stop(true)
 	assert.Nil(t, err)
 
 	ts.Shutdown()
@@ -208,7 +209,7 @@ func TestServerMoveTasksByStatus(t *testing.T) {
 	}
 
 	db.DPrintf(db.TEST, "Making fttasks server")
-	mgr, err := fttasksrv.NewFtTaskSrvMgr(ts.SigmaClnt, "test")
+	mgr, err := fttasksrv.NewFtTaskSrvMgr(ts.SigmaClnt, "test", nil)
 	assert.Nil(t, err)
 
 	clnt := fttask_clnt.NewFtTaskClnt[struct{}, struct{}](ts.FsLib, mgr.Id)
@@ -273,7 +274,7 @@ func TestServerMoveTasksByStatus(t *testing.T) {
 		ids,
 	)
 
-	err = mgr.Stop()
+	err = mgr.Stop(true)
 	assert.Nil(t, err)
 
 	ts.Shutdown()
@@ -286,7 +287,7 @@ func TestServerMoveTasksById(t *testing.T) {
 	}
 
 	db.DPrintf(db.TEST, "Making fttasks server")
-	mgr, err := fttasksrv.NewFtTaskSrvMgr(ts.SigmaClnt, "test")
+	mgr, err := fttasksrv.NewFtTaskSrvMgr(ts.SigmaClnt, "test", nil)
 	assert.Nil(t, err)
 
 	clnt := fttask_clnt.NewFtTaskClnt[struct{}, struct{}](ts.FsLib, mgr.Id)
@@ -339,72 +340,7 @@ func TestServerMoveTasksById(t *testing.T) {
 		[]int32{0},
 	)
 
-	err = mgr.Stop()
-	assert.Nil(t, err)
-
-	ts.Shutdown()
-}
-
-func TestServerData(t *testing.T) {
-	ts, err := test.NewTstateAll(t)
-	if !assert.Nil(t, err, "Error New Tstate: %v", err) {
-		return
-	}
-
-	ntasks := 5
-
-	mgr, err := fttasksrv.NewFtTaskSrvMgr(ts.SigmaClnt, "test")
-	assert.Nil(t, err)
-
-	clnt := fttask_clnt.NewFtTaskClnt[mr.Bin, string](ts.FsLib, mgr.Id)
-	tasks := make([]*fttask_clnt.Task[mr.Bin], 0)
-	for i := 0; i < ntasks; i++ {
-		bin := make(mr.Bin, 1)
-		bin[0].File = fmt.Sprintf("hello_%d", i)
-
-		tasks = append(tasks, &fttask_clnt.Task[mr.Bin]{
-			Id: int32(i),
-			Data: bin,
-		})
-	}
-
-	existing, err := clnt.SubmitTasks(tasks)
-	assert.Nil(t, err)
-	assert.Equal(t, 0, len(existing))
-
-	ids, stopped, err := clnt.AcquireTasks(false)
-	assert.Nil(t, err)
-	assert.False(t, stopped)
-	assert.Equal(t, ntasks, len(ids))
-
-	read, err := clnt.ReadTasks(ids)
-	assert.Nil(t, err)
-	assert.Equal(t, ntasks, len(read))
-	for i := 0; i < ntasks; i++ {
-		id := read[i].Id
-		file := read[i].Data[0].File
-		assert.Equal(t, fmt.Sprintf("hello_%d", id), file)
-	}
-
-	outputs := make([]string, len(ids))
-	for i := 0; i < ntasks; i++ {
-		outputs[i] = fmt.Sprintf("output_%d", i)
-	}
-	err = clnt.AddTaskOutputs(ids, outputs)
-	assert.Nil(t, err)
-
-	n, err := clnt.MoveTasksByStatus(proto.TaskStatus_WIP, proto.TaskStatus_DONE)
-	assert.Equal(t, ntasks, int(n))
-	assert.Nil(t, err)
-
-	readOutputs, err := clnt.GetTaskOutputs(ids)
-	assert.Nil(t, err)
-	assert.Equal(t, ntasks, len(outputs))
-	for i := 0; i < ntasks; i++ {
-		assert.Equal(t, outputs[i], readOutputs[i])
-	}
-
-	err = mgr.Stop()
+	err = mgr.Stop(true)
 	assert.Nil(t, err)
 
 	ts.Shutdown()
@@ -418,7 +354,7 @@ func TestServerWait(t *testing.T) {
 
 	ntasks := 5
 
-	mgr, err := fttasksrv.NewFtTaskSrvMgr(ts.SigmaClnt, "test")
+	mgr, err := fttasksrv.NewFtTaskSrvMgr(ts.SigmaClnt, "test", nil)
 	assert.Nil(t, err)
 
 	clnt := fttask_clnt.NewFtTaskClnt[mr.Bin, string](ts.FsLib, mgr.Id)
@@ -445,7 +381,7 @@ func TestServerWait(t *testing.T) {
 	assert.False(t, stopped)
 	assert.Equal(t, ntasks, len(ids))
 
-	err = mgr.Stop()
+	err = mgr.Stop(true)
 	assert.Nil(t, err)
 
 	ts.Shutdown()
@@ -459,7 +395,7 @@ func TestServerErrors(t *testing.T) {
 
 	ntasks := 5
 
-	mgr, err := fttasksrv.NewFtTaskSrvMgr(ts.SigmaClnt, "test")
+	mgr, err := fttasksrv.NewFtTaskSrvMgr(ts.SigmaClnt, "test", nil)
 	assert.Nil(t, err)
 
 	clnt := fttask_clnt.NewFtTaskClnt[interface{}, interface{}](ts.FsLib, mgr.Id)
@@ -491,7 +427,7 @@ func TestServerErrors(t *testing.T) {
 	_, err = clnt.GetTaskOutputs([]int32{6})
 	assert.NotNil(t, err)
 
-	err = mgr.Stop()
+	err = mgr.Stop(true)
 	assert.Nil(t, err)
 
 	ts.Shutdown()
@@ -503,7 +439,7 @@ func TestServerStop(t *testing.T) {
 		return
 	}
 
-	mgr, err := fttasksrv.NewFtTaskSrvMgr(ts.SigmaClnt, "test")
+	mgr, err := fttasksrv.NewFtTaskSrvMgr(ts.SigmaClnt, "test", nil)
 	assert.Nil(t, err)
 
 	clnt := fttask_clnt.NewFtTaskClnt[interface{}, interface{}](ts.FsLib, mgr.Id)
@@ -540,7 +476,7 @@ func TestServerStop(t *testing.T) {
 	assert.True(t, stopped)
 	assert.Equal(t, 0, len(existing))
 
-	err = mgr.Stop()
+	err = mgr.Stop(true)
 	assert.Nil(t, err)
 
 	ts.Shutdown()
@@ -552,7 +488,7 @@ func TestServerFence(t *testing.T) {
 		return
 	}
 
-	mgr, err := fttasksrv.NewFtTaskSrvMgr(ts.SigmaClnt, "test")
+	mgr, err := fttasksrv.NewFtTaskSrvMgr(ts.SigmaClnt, "test", nil)
 	assert.Nil(t, err)
 
 	clnt := fttask_clnt.NewFtTaskClnt[interface{}, interface{}](ts.FsLib, mgr.Id)
@@ -575,8 +511,98 @@ func TestServerFence(t *testing.T) {
 	_, err = clnt.MoveTasksByStatus(fttask_clnt.WIP, fttask_clnt.TODO)
 	assert.NotNil(t, err)
 
-	err = mgr.Stop()
+	err = mgr.Stop(true)
 	assert.Nil(t, err)
 
 	ts.Shutdown()
+}
+
+func runTestServerData(t *testing.T, em *crash.TeventMap) {
+	ts, err := test.NewTstateAll(t)
+	if !assert.Nil(t, err, "Error New Tstate: %v", err) {
+		return
+	}
+
+	ntasks := 5
+
+	mgr, err := fttasksrv.NewFtTaskSrvMgr(ts.SigmaClnt, "test", em)
+	assert.Nil(t, err)
+
+	clnt := fttask_clnt.NewFtTaskClnt[mr.Bin, string](ts.FsLib, mgr.Id)
+	tasks := make([]*fttask_clnt.Task[mr.Bin], 0)
+	for i := 0; i < ntasks; i++ {
+		bin := make(mr.Bin, 1)
+		bin[0].File = fmt.Sprintf("hello_%d", i)
+
+		tasks = append(tasks, &fttask_clnt.Task[mr.Bin]{
+			Id: int32(i),
+			Data: bin,
+		})
+	}
+
+	existing, err := clnt.SubmitTasks(tasks)
+	assert.Nil(t, err)
+	assert.Equal(t, 0, len(existing))
+
+	time.Sleep(1000 * time.Millisecond)
+
+	ids, stopped, err := clnt.AcquireTasks(false)
+	assert.Nil(t, err)
+	assert.False(t, stopped)
+	assert.Equal(t, ntasks, len(ids))
+
+	read, err := clnt.ReadTasks(ids)
+	assert.Nil(t, err)
+	assert.Equal(t, ntasks, len(read))
+	for i := 0; i < ntasks; i++ {
+		id := read[i].Id
+		file := read[i].Data[0].File
+		assert.Equal(t, fmt.Sprintf("hello_%d", id), file)
+	}
+
+	outputs := make([]string, len(ids))
+	for i := 0; i < ntasks; i++ {
+		outputs[i] = fmt.Sprintf("output_%d", i)
+	}
+	err = clnt.AddTaskOutputs(ids, outputs)
+	assert.Nil(t, err)
+
+	n, err := clnt.MoveTasksByStatus(proto.TaskStatus_WIP, proto.TaskStatus_DONE)
+	assert.Equal(t, ntasks, int(n))
+	assert.Nil(t, err)
+
+	readOutputs, err := clnt.GetTaskOutputs(ids)
+	assert.Nil(t, err)
+	assert.Equal(t, ntasks, len(outputs))
+	for i := 0; i < ntasks; i++ {
+		assert.Equal(t, outputs[i], readOutputs[i])
+	}
+
+	err = mgr.Stop(true)
+	assert.Nil(t, err)
+
+	ts.Shutdown()
+}
+
+func TestServerData(t *testing.T) {
+	runTestServerData(t, nil)
+}
+
+func TestServerCrash(t *testing.T) {
+	e0 := crash.NewEventStart(crash.FTTASKS_CRASH, 1000, 0, 1.0)
+	runTestServerData(t, crash.NewTeventMapOne(e0))
+}
+
+func TestServerPartition(t *testing.T) {
+	e0 := crash.NewEventStart(crash.FTTASKS_CRASH, 100, 2000, 0.3)
+	runTestServerData(t, crash.NewTeventMapOne(e0))
+}
+
+func TestServerBothCrashPartition(t *testing.T) {
+	e0 := crash.NewEventStart(crash.FTTASKS_CRASH, 100, 2000, 0.3)
+	e1 := crash.NewEventStart(crash.FTTASKS_PARTITION, 100, 2000, 0.3)
+	m := crash.NewTeventMap()
+	m.Insert(e0)
+	m.Insert(e1)
+	runTestServerData(t, m)
 }

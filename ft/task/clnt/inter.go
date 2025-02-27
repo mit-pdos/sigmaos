@@ -4,6 +4,8 @@ import (
 	"sigmaos/ft/task"
 	"sigmaos/ft/task/proto"
 	sp "sigmaos/sigmap"
+
+	protobuf "google.golang.org/protobuf/proto"
 )
 
 type TaskStatus = proto.TaskStatus
@@ -39,4 +41,6 @@ type FtTaskClnt[Data any, Output any] interface {
 	ClearEtcd() error
 	Raw() FtTaskClnt[[]byte, []byte]
 	ServerId() task.FtTaskSrvId
+	
+	rpc(method string, arg protobuf.Message, res protobuf.Message) error
 }

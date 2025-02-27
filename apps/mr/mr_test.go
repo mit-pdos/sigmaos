@@ -534,8 +534,8 @@ func runN(t *testing.T, em *crash.TeventMap, srvs map[string]crash.Tselector, ma
 	assert.Nil(ts.T, err, "Error print MR stats: %v", err)
 
 	db.DPrintf(db.TEST, "Cleanup tasks state")
-	ts.tasks.Mftsrv.Stop()
-	ts.tasks.Rftsrv.Stop()
+	ts.tasks.Mftsrv.Stop(true)
+	ts.tasks.Rftsrv.Stop(true)
 	mr.CleanupMROutputs(ts.FsLib, mr.JobOut(job.Output, ts.job), mr.MapIntermediateDir(ts.job, job.Intermediate))
 	db.DPrintf(db.TEST, "Done cleanup MR outputs")
 	ts.Shutdown()

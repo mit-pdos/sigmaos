@@ -9,9 +9,9 @@ import (
 	// "sigmaos/util/crash"
 	db "sigmaos/debug"
 	"sigmaos/ft/leaderclnt"
+	"sigmaos/ft/task"
 	fttask_clnt "sigmaos/ft/task/clnt"
 	fttaskmgr "sigmaos/ft/task/mgr"
-	fttask_srv "sigmaos/ft/task/srv"
 	"sigmaos/proc"
 	"sigmaos/serr"
 	"sigmaos/sigmaclnt"
@@ -42,7 +42,7 @@ func NewImgSrv(args []string) (*ImgSrv, error) {
 	serverId := args[0]
 	db.DPrintf(db.IMGD, "Made imgd connected to %v", serverId)
 
-	imgd.ftclnt = fttask_clnt.NewFtTaskClnt[Ttask, any](sc.FsLib, fttask_srv.FtTaskSrvId(serverId))
+	imgd.ftclnt = fttask_clnt.NewFtTaskClnt[Ttask, any](sc.FsLib, task.FtTaskSrvId(serverId))
 	mcpu, err := strconv.Atoi(args[1])
 	if err != nil {
 		return nil, fmt.Errorf("NewImgSrv: Error parse MCPU %v", err)

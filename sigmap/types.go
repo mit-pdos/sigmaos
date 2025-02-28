@@ -27,3 +27,5 @@ type TprincipalID string
 type Tplatform string
 
 type TTendpoint uint32
+
+type Tsigmapath = string

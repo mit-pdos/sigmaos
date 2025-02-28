@@ -301,6 +301,17 @@ func (fse *FsEtcd) Renameat(deif *DirEntInfo, from path.Tpathname, deit *DirEntI
 	if err == nil {
 		fse.dc.update(deif.Path, dirf)
 		fse.dc.update(deit.Path, dirt)
+		// If the source directory was cached with TSTAT_NONE, note that the
+		// destination directory will have to be re-stat-ed now.
+		dcf, ok := fse.dc.lookup(deif.Path)
+		if ok {
+			dct, ok := fse.dc.lookup(deit.Path)
+			if ok {
+				if dcf.stat == TSTAT_NONE {
+					dct.stat = TSTAT_NONE
+				}
+			}
+		}
 		return nops, nil
 	} else {
 		if difrom.LeaseId.IsLeased() && err.IsErrNotfound() {

@@ -65,6 +65,10 @@ type ProcGroupMgrConfig struct {
 
 // If n == 0, run only one member (i.e., no hot standby's or replication)
 func NewProcGroupConfig(n int, bin string, args []string, mcpu proc.Tmcpu, job string) *ProcGroupMgrConfig {
+	return NewProcGroupConfigRealmSwitch(n, bin, args, mcpu, job, sp.Trealm(sp.NOT_SET), true)
+}
+
+func NewProcGroupConfigRealmSwitch(n int, bin string, args []string, mcpu proc.Tmcpu, job string, realmSwitch sp.Trealm, dialproxy bool) *ProcGroupMgrConfig {
 	return &ProcGroupMgrConfig{
 		NReplicas:   n,
 		Program:     bin,

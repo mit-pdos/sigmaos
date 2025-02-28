@@ -140,7 +140,7 @@ func (rm *RealmSrv) Make(ctx fs.CtxI, req proto.MakeReq, res *proto.MakeRep) err
 		return err
 	}
 	r := newRealm()
-	r.namedcfg = procgroupmgr.NewGroupConfigRealmSwitch(1, sp.NAMEDREL, nil, NAMED_MCPU, req.Realm, rid, rm.dialproxy)
+	r.namedcfg = procgroupmgr.NewProcGroupConfigRealmSwitch(1, sp.NAMEDREL, nil, NAMED_MCPU, req.Realm, rid, rm.dialproxy)
 
 	db.DPrintf(db.REALMD, "RealmSrv.Make %v spawn named %v", req.Realm, r.namedcfg)
 	r.namedgrp = r.namedcfg.StartGrpMgr(rm.sc.SigmaClnt())

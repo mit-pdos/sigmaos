@@ -10,24 +10,24 @@ import (
 	"sigmaos/util/rand"
 )
 
-func (fsl *FsLib) PutFileAtomic(fname string, perm sp.Tperm, data []byte) error {
-	tmpName := fname + rand.Name()
+func (fsl *FsLib) PutFileAtomic(pn sp.Tsigmapath, perm sp.Tperm, data []byte) error {
+	tmpName := pn + rand.Name()
 	if _, err := fsl.PutFile(tmpName, perm, sp.OWRITE|sp.OEXCL, data); err != nil {
 		debug.PrintStack()
-		db.DPrintf(db.ERROR, "PutFileAtomic %v %v err %v", fname, tmpName, err)
+		db.DPrintf(db.ERROR, "PutFileAtomic %v %v err %v", pn, tmpName, err)
 		return err
 	}
-	if err := fsl.Rename(tmpName, fname); err != nil {
-		db.DPrintf(db.ERROR, "PutFileAtomic rename %v -> %v: err %v", tmpName, fname, err)
+	if err := fsl.Rename(tmpName, pn); err != nil {
+		db.DPrintf(db.ERROR, "PutFileAtomic rename %v -> %v: err %v", tmpName, pn, err)
 		return err
 	}
 	return nil
 }
 
-func (fsl *FsLib) PutFileJsonAtomic(fname string, perm sp.Tperm, i interface{}) error {
+func (fsl *FsLib) PutFileJsonAtomic(pn sp.Tsigmapath, perm sp.Tperm, i interface{}) error {
 	data, err := json.Marshal(i)
 	if err != nil {
 		return fmt.Errorf("PutFileJsonAtomic marshal err %v", err)
 	}
-	return fsl.PutFileAtomic(fname, perm, data)
+	return fsl.PutFileAtomic(pn, perm, data)
 }

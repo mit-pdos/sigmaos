@@ -4,10 +4,10 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-func (fl *FsLib) NewPipe(name string, lperm sp.Tperm) error {
+func (fl *FsLib) NewPipe(pn sp.Tsigmapath, lperm sp.Tperm) error {
 	lperm = lperm | sp.DMNAMEDPIPE
 	// ORDWR so that close doesn't do anything to the pipe state
-	fd, err := fl.Create(name, lperm, sp.ORDWR)
+	fd, err := fl.Create(pn, lperm, sp.ORDWR)
 	if err != nil {
 		return err
 	}

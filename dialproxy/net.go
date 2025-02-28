@@ -96,7 +96,7 @@ func NewEndpoint(ept sp.TTendpoint, ip sp.Tip, l net.Listener) (*sp.Tendpoint, e
 		db.DPrintf(db.DIALPROXY_ERR, "Error Listen qualify local IP %v: %v", l.Addr().String(), err)
 		return nil, err
 	}
-	return sp.NewEndpoint(ept, sp.Taddrs{sp.NewTaddrRealm(host, sp.INNER_CONTAINER_IP, port)}), nil
+	return sp.NewEndpoint(ept, sp.Taddrs{sp.NewTaddr(host, sp.INNER_CONTAINER_IP, port)}), nil
 }
 
 // Returns true if the client principal, cliP, is authorized to connect to the server principal, srvP

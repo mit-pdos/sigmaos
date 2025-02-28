@@ -45,7 +45,7 @@ func (a *Taddr) GetPort() Tport {
 }
 
 func NewTaddrAnyPort(iptype Tiptype) *Taddr {
-	return NewTaddrRealm(NO_IP, iptype, NO_PORT)
+	return NewTaddr(NO_IP, iptype, NO_PORT)
 }
 
 func NewTaddrFromString(address string, iptype Tiptype) (*Taddr, error) {
@@ -57,18 +57,10 @@ func NewTaddrFromString(address string, iptype Tiptype) (*Taddr, error) {
 	if err != nil {
 		return nil, err
 	}
-	return NewTaddrRealm(Tip(h), iptype, Tport(port)), nil
+	return NewTaddr(Tip(h), iptype, Tport(port)), nil
 }
 
 func NewTaddr(ip Tip, iptype Tiptype, port Tport) *Taddr {
-	return &Taddr{
-		IPStr:     string(ip),
-		IPTypeInt: uint32(iptype),
-		PortInt:   uint32(port),
-	}
-}
-
-func NewTaddrRealm(ip Tip, iptype Tiptype, port Tport) *Taddr {
 	return &Taddr{
 		IPStr:     string(ip),
 		IPTypeInt: uint32(iptype),

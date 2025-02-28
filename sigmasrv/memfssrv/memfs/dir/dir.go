@@ -312,7 +312,7 @@ func (dir *DirImpl) Renameat(ctx fs.CtxI, old string, nd fs.Dir, new string, f s
 	lockOrdered(dir, newdir)
 	defer unlockOrdered(dir, newdir)
 
-	db.DPrintf(db.MEMFS, "Renameat %v %v to %v %v\n", dir, old, newdir, new)
+	db.DPrintf(db.MEMFS, "Renameat dir %v old %v to newdir %v %v", dir, old, newdir, new)
 	ino, err := dir.lookup(old)
 	if err != nil {
 		return serr.NewErr(serr.TErrNotfound, old)

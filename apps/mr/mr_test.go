@@ -610,7 +610,7 @@ func TestCrashTaskAndCoord(t *testing.T) {
 	assert.True(t, st.Ntask > ntask)
 }
 
-func TestCrashUx1(t *testing.T) {
+func TestCrashInfraUx1(t *testing.T) {
 	e0 := crash.NewEventPath(crash.UX_CRASH, 0, float64(1.0), crashSemPn(crash.UX_CRASH, 0))
 	srvs := make(map[string]crash.Tselector)
 	srvs[sp.UXREL] = crash.UX_CRASH
@@ -620,7 +620,7 @@ func TestCrashUx1(t *testing.T) {
 	})
 }
 
-func TestCrashBESched1(t *testing.T) {
+func TestCrashInfraBESched1(t *testing.T) {
 	e0 := crash.NewEventPath(crash.BESCHED_CRASH, CRASHSRV, float64(1.0), crashSemPn(crash.BESCHED_CRASH, 0))
 	srvs := make(map[string]crash.Tselector)
 	srvs[sp.BESCHEDREL] = crash.BESCHED_CRASH
@@ -628,7 +628,7 @@ func TestCrashBESched1(t *testing.T) {
 	assert.True(t, st.Ntask >= ntask || st.Nfail >= 0)
 }
 
-func TestCrashMSched1(t *testing.T) {
+func TestCrashInfraMSched1(t *testing.T) {
 	e0 := crash.NewEventPath(crash.MSCHED_CRASH, CRASHCOORD, float64(1.0), crashSemPn(crash.MSCHED_CRASH, 0))
 	srvs := make(map[string]crash.Tselector)
 	srvs[sp.MSCHEDREL] = crash.MSCHED_CRASH
@@ -636,7 +636,7 @@ func TestCrashMSched1(t *testing.T) {
 	assert.True(t, st.Ntask > ntask || st.Nfail > 0)
 }
 
-func TestCrashProcd1(t *testing.T) {
+func TestCrashInfraProcd1(t *testing.T) {
 	e0 := crash.NewEventPath(crash.PROCD_CRASH, CRASHCOORD, float64(1.0), crashSemPn(crash.PROCD_CRASH, 0))
 	srvs := make(map[string]crash.Tselector)
 	srvs[sp.PROCDREL] = crash.PROCD_CRASH
@@ -644,7 +644,7 @@ func TestCrashProcd1(t *testing.T) {
 	assert.True(t, st.Ntask > ntask || st.Nfail > 0)
 }
 
-func TestCrashMSchedBESchedUx1(t *testing.T) {
+func TestCrashInfraMSchedBESchedUx1(t *testing.T) {
 	e := crash.NewEventPath(crash.UX_CRASH, 0, float64(1.0), crashSemPn(crash.UX_CRASH, 0))
 	em := crash.NewTeventMapOne(e)
 	e = crash.NewEventPath(crash.MSCHED_CRASH, CRASHCOORD, float64(1.0), crashSemPn(crash.MSCHED_CRASH, 0))

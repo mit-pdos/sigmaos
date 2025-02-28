@@ -37,7 +37,7 @@ func main() {
 		sp.ROOTREALM,
 	))
 	db.DPrintf(db.NPPROXY, "Proxy env: %v", pe)
-	addr := sp.NewTaddr(sp.NO_IP, sp.INNER_CONTAINER_IP, 1110)
+	addr := sp.NewTaddr(sp.NO_IP, 1110)
 	npc := dialproxyclnt.NewDialProxyClnt(pe)
 	npd := npproxysrv.NewNpd(pe, npc, lip)
 	netsrv.NewNetServerEPType(pe, npc, addr, sp.EXTERNAL_EP, npd)

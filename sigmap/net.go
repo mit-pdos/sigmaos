@@ -7,18 +7,6 @@ import (
 	"strconv"
 )
 
-func (iptype Tiptype) String() string {
-	switch iptype {
-	case INNER_CONTAINER_IP:
-		return "innerIP"
-	case OUTER_CONTAINER_IP:
-		return "outerIP"
-	default:
-		log.Fatalf("Error unkown ip type: %v", uint32(iptype))
-		return "unknown"
-	}
-}
-
 func (p Tport) String() string {
 	return strconv.FormatUint(uint64(p), 10)
 }
@@ -44,11 +32,11 @@ func (a *Taddr) GetPort() Tport {
 	return Tport(a.PortInt)
 }
 
-func NewTaddrAnyPort(iptype Tiptype) *Taddr {
-	return NewTaddr(NO_IP, iptype, NO_PORT)
+func NewTaddrAnyPort() *Taddr {
+	return NewTaddr(NO_IP, NO_PORT)
 }
 
-func NewTaddrFromString(address string, iptype Tiptype) (*Taddr, error) {
+func NewTaddrFromString(address string) (*Taddr, error) {
 	h, po, err := net.SplitHostPort(address)
 	if err != nil {
 		return nil, err
@@ -57,14 +45,13 @@ func NewTaddrFromString(address string, iptype Tiptype) (*Taddr, error) {
 	if err != nil {
 		return nil, err
 	}
-	return NewTaddr(Tip(h), iptype, Tport(port)), nil
+	return NewTaddr(Tip(h), Tport(port)), nil
 }
 
-func NewTaddr(ip Tip, iptype Tiptype, port Tport) *Taddr {
+func NewTaddr(ip Tip, port Tport) *Taddr {
 	return &Taddr{
-		IPStr:     string(ip),
-		IPTypeInt: uint32(iptype),
-		PortInt:   uint32(port),
+		IPStr:   string(ip),
+		PortInt: uint32(port),
 	}
 }
 

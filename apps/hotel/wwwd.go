@@ -97,7 +97,7 @@ func RunWww(job string) error {
 	mux.HandleFunc("/startrecording", www.startRecordingHandler)
 	//	}
 
-	ep, l, err := www.GetDialProxyClnt().Listen(sp.EXTERNAL_EP, sp.NewTaddr(sp.NO_IP, sp.INNER_CONTAINER_IP, sp.NO_PORT))
+	ep, l, err := www.GetDialProxyClnt().Listen(sp.EXTERNAL_EP, sp.NewTaddr(sp.NO_IP, sp.NO_PORT))
 	if err != nil {
 		db.DFatalf("Error Listen: %v", err)
 	}

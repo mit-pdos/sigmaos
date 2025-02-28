@@ -14,7 +14,6 @@ type TclntId uint64
 type TleaseId uint64
 type Tttl uint64
 type Tip string
-type Tiptype uint32
 type Tport uint32
 
 type Qtype uint32

@@ -29,6 +29,18 @@ const (
 	LEASEPREFIX = "_l-"
 )
 
+func (st Tstat) String() string {
+	switch st {
+	case TSTAT_NONE:
+		return "stat_none"
+	case TSTAT_STAT:
+		return "stat_stat"
+	default:
+		db.DFatalf("Unknown stat: %v", int(st))
+		return "unknown-stat"
+	}
+}
+
 type LeasedKey struct {
 	Realm sp.Trealm
 	Path  sp.Tpath
@@ -142,7 +154,7 @@ func (fs *FsEtcd) PutFile(dei *DirEntInfo, nf *EtcdFile, f sp.Tfence) (stats.Tco
 
 func (fs *FsEtcd) readDir(dei *DirEntInfo, stat Tstat) (*DirInfo, sp.TQversion, stats.Tcounter, *serr.Err) {
 	if de, ok := fs.dc.lookup(dei.Path); ok && (stat == TSTAT_NONE || de.stat == TSTAT_STAT) {
-		db.DPrintf(db.FSETCD, "fsetcd.readDir %v\n", de.dir)
+		db.DPrintf(db.FSETCD, "fsetcd.readDir path %v %v", dei.Path, de.dir)
 		return de.dir, de.v, stats.NewCounter(0), nil
 	}
 	s := time.Now()
@@ -151,7 +163,7 @@ func (fs *FsEtcd) readDir(dei *DirEntInfo, stat Tstat) (*DirInfo, sp.TQversion, 
 		return nil, v, nops, err
 	}
 	db.DPrintf(db.FSETCD_LAT, "readDirEtcd %v lat %v", dei.Path, time.Since(s))
-	fs.dc.insert(dei.Path, &dcEntry{dir, v, stat})
+	fs.dc.insert(dei.Path, newDCEntry(dir, v, stat))
 	return dir, v, nops, nil
 }
 
@@ -211,7 +223,9 @@ func (fs *FsEtcd) readDirEtcd(dei *DirEntInfo, stat Tstat) (*DirInfo, sp.TQversi
 		stat = TSTAT_STAT
 	}
 
-	di := &DirInfo{dents}
+	di := &DirInfo{
+		Ents: dents,
+	}
 	if update {
 		nops1, err := fs.updateDir(dei, di, v)
 		stats.Add(&nops, nops1)

@@ -99,6 +99,7 @@ func (d *Dir) ReadDir(ctx fs.CtxI, cursor int, cnt sp.Tsize) ([]*sp.Tstat, *serr
 		var r *serr.Err
 		dir.Ents.Iter(func(n string, di *fsetcd.DirEntInfo) bool {
 			if n != "." {
+				db.DPrintf(db.NAMED, "%v: ReadDir iter dir %v di %p di.Nf %p", ctx.ClntId(), dir, di, di.Nf)
 				o := newObjDi(d.fs, d.pn.Append(n), *di)
 				st, err := o.NewStat()
 				if err != nil {

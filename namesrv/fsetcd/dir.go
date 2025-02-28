@@ -34,7 +34,13 @@ type DirEntInfo struct {
 }
 
 func NewDirEntInfoNf(nf *EtcdFile, p sp.Tpath, perm sp.Tperm, cid sp.TclntId, lid sp.TleaseId) *DirEntInfo {
-	return &DirEntInfo{Nf: nf, Path: p, Perm: perm, ClntId: cid, LeaseId: lid}
+	return &DirEntInfo{
+		Nf:      nf,
+		Path:    p,
+		Perm:    perm,
+		ClntId:  cid,
+		LeaseId: lid,
+	}
 }
 
 func NewDirEntInfo(p sp.Tpath, perm sp.Tperm, cid sp.TclntId, lid sp.TleaseId) *DirEntInfo {
@@ -47,9 +53,9 @@ func NewDirEntInfoDir(p sp.Tpath) *DirEntInfo {
 
 func (di *DirEntInfo) String() string {
 	if di.Nf != nil {
-		return fmt.Sprintf("{p %v perm %v cid %v lid %v len %d}", di.Path, di.Perm, di.ClntId, di.LeaseId, len(di.Nf.Data))
+		return fmt.Sprintf("&{p %v perm %v cid %v lid %v len %d}", di.Path, di.Perm, di.ClntId, di.LeaseId, len(di.Nf.Data))
 	} else {
-		return fmt.Sprintf("{p %v perm %v cid %v lid %v}", di.Path, di.Perm, di.ClntId, di.LeaseId)
+		return fmt.Sprintf("&{p %v perm %v cid %v lid %v}", di.Path, di.Perm, di.ClntId, di.LeaseId)
 	}
 }
 
@@ -268,11 +274,12 @@ func (fse *FsEtcd) Renameat(deif *DirEntInfo, from path.Tpathname, deit *DirEntI
 	if err != nil {
 		return nops, err
 	}
-	db.DPrintf(db.FSETCD, "Renameat %v dir: %v %v %v %v\n", deif.Path, dirf, dirt, vt, vf)
+	db.DPrintf(db.FSETCD, "Renameat %v -> %v p %v dir: %v %v %v %v", from, to, deif.Path, dirf, dirt, vf, vt)
 	difrom, ok := dirf.Ents.Lookup(from.Base())
 	if !ok {
 		return nops, serr.NewErr(serr.TErrNotfound, from)
 	}
+	db.DPrintf(db.FSETCD, "Renameat %v dir: %v %v %v %v difrom %p difrom.Nf %v", deif.Path, dirf, dirt, vf, vt, difrom, difrom.Nf)
 	dito, ok := dirt.Ents.Lookup(to.Base())
 	if ok {
 		empty, nops1, err := fse.isEmpty(dito)

@@ -110,7 +110,7 @@ func NewSocialNetworkJob(
 		assert.Nil(ts.Ts.T, err, "Err split host port %v: %v", ji.k8ssrvaddr, err)
 		port, err := strconv.Atoi(po)
 		assert.Nil(ts.Ts.T, err, "Err parse port %v: %v", po, err)
-		addr := sp.NewTaddrRealm(sp.Tip(h), sp.INNER_CONTAINER_IP, sp.Tport(port))
+		addr := sp.NewTaddr(sp.Tip(h), sp.INNER_CONTAINER_IP, sp.Tport(port))
 		mnt := sp.NewEndpoint(sp.EXTERNAL_EP, []*sp.Taddr{addr})
 		assert.Nil(ts.Ts.T, ts.MkEndpointFile(p, mnt))
 		// forward mongo port and init users and graphs.

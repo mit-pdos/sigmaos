@@ -11,10 +11,10 @@ import (
 	"sigmaos/apps/www"
 	db "sigmaos/debug"
 	"sigmaos/proc"
-	"sigmaos/util/rand"
-	"sigmaos/util/coordination/semaphore"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
+	"sigmaos/util/coordination/semaphore"
+	"sigmaos/util/rand"
 )
 
 const (
@@ -78,7 +78,7 @@ func (ji *WwwJobInstance) RunClient(j int, ch chan time.Duration) {
 		assert.Nil(ji.Ts.T, err, "Err split host port %v: %v", K8S_ADDR, err)
 		port, err := strconv.Atoi(po)
 		assert.Nil(ji.Ts.T, err, "Err parse port %v: %v", po, err)
-		addr := sp.NewTaddrRealm(sp.Tip(h), sp.INNER_CONTAINER_IP, sp.Tport(port))
+		addr := sp.NewTaddr(sp.Tip(h), sp.INNER_CONTAINER_IP, sp.Tport(port))
 		clnt = www.NewWWWClntAddr([]*sp.Taddr{addr})
 	}
 	var latency time.Duration

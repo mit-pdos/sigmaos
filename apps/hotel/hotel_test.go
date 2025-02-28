@@ -449,19 +449,19 @@ func TestBenchSpawnGeo(t *testing.T) {
 	if !assert.False(t, linuxsched.GetNCores() > 10, "SpawnBurst test will fail because machine has >10 cores, which causes cgroups settings to fail") {
 		return
 	}
-	t1, err1 := test.NewTstateAll(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts := newTstate(t1, []*hotel.Srv{&hotel.Srv{Name: "hotel-geod", Args: []string{"2", "10", "20"}}}, 0, 2, DEF_GEO_SEARCH_RADIUS, DEF_GEO_N_RESULTS)
-	defer ts.Shutdown()
+	ts := newTstate(mrts, []*hotel.Srv{&hotel.Srv{Name: "hotel-geod", Args: []string{"2", "10", "20"}}}, 0, 2, DEF_GEO_SEARCH_RADIUS, DEF_GEO_N_RESULTS)
+	defer mrts.Shutdown()
 	defer ts.stop()
 
-	if err := ts.BootNode(N_NODE); !assert.Nil(t, err, "Err boot: %v", err) {
+	if err := mrts.GetRealm(test.REALM1).BootNode(N_NODE); !assert.Nil(t, err, "Err boot: %v", err) {
 		return
 	}
 
-	rpcdc := shardedsvcrpcclnt.NewShardedSvcRPCClnt(ts.FsLib, hotel.HOTELGEODIR, db.TEST, db.TEST)
+	rpcdc := shardedsvcrpcclnt.NewShardedSvcRPCClnt(mrts.GetRealm(test.REALM1).FsLib, hotel.HOTELGEODIR, db.TEST, db.TEST)
 	geoID, err := rpcdc.WaitTimedRandomEntry()
 	if !assert.Nil(t, err, "Err get geo server ID: %v", err) {
 		return
@@ -484,7 +484,7 @@ func TestBenchSpawnGeo(t *testing.T) {
 	for i := 0; i < N_GEO; i++ {
 		go func(c chan bool) {
 			err := ts.hotel.AddGeoSrv()
-			assert.Nil(ts.T, err, "Err add geo srv: %v")
+			assert.Nil(mrts.T, err, "Err add geo srv: %v")
 			c <- true
 		}(c)
 	}

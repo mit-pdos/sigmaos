@@ -434,7 +434,7 @@ func (ps *ProtSrv) Renameat(args *sp.Trenameat, rets *sp.Rrenameat) *sp.Rerror {
 	if err != nil {
 		return sp.NewRerrorSerr(err)
 	}
-	db.DPrintf(db.PROTSRV, "%v: Renameat oldf %v oldf.Path %v newf %v newf.Path %v", oldf.Ctx().ClntId(), oldf, oldf.Path(), newf, newf.Path(), args)
+	db.DPrintf(db.PROTSRV, "%v: Renameat oldf %v oldf.Path %v newf %v newf.Path %v args %v", oldf.Ctx().ClntId(), oldf, oldf.Path(), newf, newf.Path(), args)
 	oo := oldf.Obj()
 	no := newf.Obj()
 	switch d1 := oo.(type) {

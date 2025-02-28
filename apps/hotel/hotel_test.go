@@ -440,6 +440,60 @@ func runGeo(t *testing.T, wc *hotel.WebClnt, r *rand.Rand) {
 	assert.Equal(t, "Geo!", s)
 }
 
+func TestBenchSpawnGeo(t *testing.T) {
+	const (
+		N_GEO  = 15
+		N_NODE = 3
+	)
+	// Bail out early if machine has too many cores (which messes with the cgroups setting)
+	if !assert.False(t, linuxsched.GetNCores() > 10, "SpawnBurst test will fail because machine has >10 cores, which causes cgroups settings to fail") {
+		return
+	}
+	t1, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	ts := newTstate(t1, []*hotel.Srv{&hotel.Srv{Name: "hotel-geod", Args: []string{"2", "10", "20"}}}, 0, 2, DEF_GEO_SEARCH_RADIUS, DEF_GEO_N_RESULTS)
+	defer ts.Shutdown()
+	defer ts.stop()
+
+	if err := ts.BootNode(N_NODE); !assert.Nil(t, err, "Err boot: %v", err) {
+		return
+	}
+
+	rpcdc := shardedsvcrpcclnt.NewShardedSvcRPCClnt(ts.FsLib, hotel.HOTELGEODIR, db.TEST, db.TEST)
+	geoID, err := rpcdc.WaitTimedRandomEntry()
+	if !assert.Nil(t, err, "Err get geo server ID: %v", err) {
+		return
+	}
+	rpcc, err := rpcdc.GetClnt(geoID)
+	if !assert.Nil(t, err, "Err get geo clnt: %v", err) {
+		return
+	}
+	arg := proto.GeoReq{
+		Lat: 37.7749,
+		Lon: -122.4194,
+	}
+	res := proto.GeoRep{}
+	err = rpcc.RPC("Geo.Nearby", &arg, &res)
+	assert.Nil(t, err)
+	db.DPrintf(db.TEST, "res %v\n", res.HotelIds)
+	assert.Equal(t, 9, len(res.HotelIds))
+	db.DPrintf(db.TEST, "Spawning %v additional geos", N_GEO)
+	c := make(chan bool)
+	for i := 0; i < N_GEO; i++ {
+		go func(c chan bool) {
+			err := ts.hotel.AddGeoSrv()
+			assert.Nil(ts.T, err, "Err add geo srv: %v")
+			c <- true
+		}(c)
+	}
+	for i := 0; i < N_GEO; i++ {
+		<-c
+	}
+	db.DPrintf(db.TEST, "Done spawning %v additional geos", N_GEO)
+}
+
 func TestBenchDeathStarSingle(t *testing.T) {
 	// Bail out early if machine has too many cores (which messes with the cgroups setting)
 	if !assert.False(t, linuxsched.GetNCores() > 10, "SpawnBurst test will fail because machine has >10 cores, which causes cgroups settings to fail") {
@@ -521,7 +575,7 @@ func setupK8sState(ts *Tstate) error {
 	assert.Nil(ts.mrts.T, err, "Err split host port %v: %v", K8S_ADDR, err)
 	port, err := strconv.Atoi(po)
 	assert.Nil(ts.mrts.T, err, "Err parse port %v: %v", po, err)
-	addr := sp.NewTaddrRealm(sp.Tip(h), sp.INNER_CONTAINER_IP, sp.Tport(port))
+	addr := sp.NewTaddr(sp.Tip(h), sp.Tport(port))
 	mnt := sp.NewEndpoint(sp.EXTERNAL_EP, []*sp.Taddr{addr})
 	err = ts.mrts.GetRealm(test.REALM1).MkEndpointFile(p, mnt)
 	if !assert.Nil(ts.mrts.T, err) {

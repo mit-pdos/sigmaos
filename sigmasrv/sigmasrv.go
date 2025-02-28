@@ -7,6 +7,7 @@ package sigmasrv
 
 import (
 	"runtime/debug"
+	"time"
 
 	"sigmaos/api/fs"
 	"sigmaos/ctx"
@@ -37,11 +38,17 @@ func NewSigmaSrv(fn string, svci any, pe *proc.ProcEnv) (*SigmaSrv, error) {
 	db.DPrintf(db.SIGMASRV, "NewSigmaSrv %T", svci)
 	defer db.DPrintf(db.SIGMASRV, "NewSigmaSrv done %T", svci)
 
+	start := time.Now()
 	mfs, error := memfssrv.NewMemFs(fn, pe, spprotosrv.AttachAllowAllToAll)
 	if error != nil {
 		db.DPrintf(db.ERROR, "NewSigmaSrv %v err %v", fn, error)
 		return nil, error
 	}
+	db.DPrintf(db.SPAWN_LAT, "NewSigmaSrv NewMemFs latency: %v", time.Since(start))
+	start = time.Now()
+	defer func() {
+		db.DPrintf(db.SPAWN_LAT, "NewSigmaSrv newSigmaSrvMemFs latency: %v", time.Since(start))
+	}()
 	return newSigmaSrvMemFs(mfs, svci)
 }
 
@@ -67,7 +74,7 @@ func NewSigmaSrvClnt(fn string, sc *sigmaclnt.SigmaClnt, svci any) (*SigmaSrv, e
 }
 
 func NewSigmaSrvClntAuthFn(fn string, sc *sigmaclnt.SigmaClnt, svci any, aaf spprotosrv.AttachAuthF) (*SigmaSrv, error) {
-	mfs, error := memfssrv.NewMemFsPortClnt(fn, sp.NewTaddrAnyPort(sp.INNER_CONTAINER_IP), sc, aaf)
+	mfs, error := memfssrv.NewMemFsPortClnt(fn, sp.NewTaddrAnyPort(), sc, aaf)
 	if error != nil {
 		db.DPrintf(db.ERROR, "NewSigmaSrvClnt %v err %v", fn, error)
 		return nil, error
@@ -78,7 +85,7 @@ func NewSigmaSrvClntAuthFn(fn string, sc *sigmaclnt.SigmaClnt, svci any, aaf spp
 // For an memfs server: memfs, lease srv, and fences
 func NewSigmaSrvClntFence(fn string, sc *sigmaclnt.SigmaClnt) (*SigmaSrv, error) {
 	ffs := fencefs.NewRoot(ctx.NewCtxNull(), nil)
-	mfs, error := memfssrv.NewMemFsPortClntFenceAuth(fn, sp.NewTaddrAnyPort(sp.INNER_CONTAINER_IP), sc, ffs, spprotosrv.AttachAllowAllToAll)
+	mfs, error := memfssrv.NewMemFsPortClntFenceAuth(fn, sp.NewTaddrAnyPort(), sc, ffs, spprotosrv.AttachAllowAllToAll)
 	if error != nil {
 		db.DPrintf(db.ERROR, "NewSigmaSrvClntFence %v err %v", fn, error)
 		return nil, error
@@ -94,7 +101,7 @@ func NewSigmaSrvClntFence(fn string, sc *sigmaclnt.SigmaClnt) (*SigmaSrv, error)
 }
 
 func NewSigmaSrvClntNoRPC(fn string, sc *sigmaclnt.SigmaClnt) (*SigmaSrv, error) {
-	mfs, err := memfssrv.NewMemFsPortClnt(fn, sp.NewTaddrAnyPort(sp.INNER_CONTAINER_IP), sc, spprotosrv.AttachAllowAllToAll)
+	mfs, err := memfssrv.NewMemFsPortClnt(fn, sp.NewTaddrAnyPort(), sc, spprotosrv.AttachAllowAllToAll)
 	if err != nil {
 		db.DPrintf(db.ERROR, "NewMemFsPortClnt %v err %v", fn, err)
 		return nil, err

@@ -110,7 +110,7 @@ func newTstateSrvAddr(t *testing.T, addr *sp.Taddr, crash int) *TstateSrv {
 }
 
 func newTstateSrv(t *testing.T, crash int) *TstateSrv {
-	addr := sp.NewTaddr(sp.NO_IP, sp.INNER_CONTAINER_IP, 1110)
+	addr := sp.NewTaddr(sp.NO_IP, 1110)
 	return newTstateSrvAddr(t, addr, crash)
 }
 
@@ -333,7 +333,7 @@ func TestPerfSessSrvAsyncSrv(t *testing.T) {
 	p, err := sp.ParsePort(pstr)
 	assert.Nil(t, err, "Err parse port: %v", err)
 
-	addr := sp.NewTaddr(sp.Tip(h), sp.OUTER_CONTAINER_IP, p)
+	addr := sp.NewTaddr(sp.Tip(h), p)
 
 	ts := newTstateSrvAddr(t, addr, 0)
 	defer ts.srv.CloseListener()
@@ -352,7 +352,7 @@ func TestPerfSessSrvAsyncClnt(t *testing.T) {
 	p, err := sp.ParsePort(pstr)
 	assert.Nil(t, err, "Err parse port: %v", err)
 
-	addr := sp.NewTaddr(sp.Tip(h), sp.OUTER_CONTAINER_IP, p)
+	addr := sp.NewTaddr(sp.Tip(h), p)
 	ts := newTstateClntAddr(t, addr, 0)
 	aw := NewAwriter(1, ts.clnt, ts.srv.GetEndpoint())
 	buf := test.NewBuf(REQBUFSZ)
@@ -405,7 +405,7 @@ func TestPerfSessSrvSyncSrv(t *testing.T) {
 	p, err := sp.ParsePort(pstr)
 	assert.Nil(t, err, "Err parse port: %v", err)
 
-	addr := sp.NewTaddr(sp.Tip(h), sp.OUTER_CONTAINER_IP, p)
+	addr := sp.NewTaddr(sp.Tip(h), p)
 
 	ts := newTstateSrvAddr(t, addr, 0)
 	defer ts.srv.CloseListener()
@@ -423,7 +423,7 @@ func TestPerfSessSrvSyncClnt(t *testing.T) {
 	p, err := sp.ParsePort(pstr)
 	assert.Nil(t, err, "Err parse port: %v", err)
 
-	addr := sp.NewTaddr(sp.Tip(h), sp.OUTER_CONTAINER_IP, p)
+	addr := sp.NewTaddr(sp.Tip(h), p)
 
 	ts := newTstateClntAddr(t, addr, 0)
 	buf := test.NewBuf(REQBUFSZ)

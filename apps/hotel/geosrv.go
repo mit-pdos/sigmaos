@@ -74,6 +74,10 @@ type Geo struct {
 
 // Run starts the server
 func RunGeoSrv(job string, nidxStr string, maxSearchRadiusStr string, maxSearchRepsStr string) error {
+	startRun := time.Now()
+	start := time.Now()
+	pe := proc.GetProcEnv()
+	db.DPrintf(db.SPAWN_LAT, "Geo.RunGeoSrv: sinceSpawn:%v op:%v", time.Since(pe.GetSpawnTime()), time.Since(start))
 	nidx, err := strconv.Atoi(nidxStr)
 	if err != nil {
 		db.DFatalf("Invalid nidx: %v", err)
@@ -90,14 +94,16 @@ func RunGeoSrv(job string, nidxStr string, maxSearchRadiusStr string, maxSearchR
 		maxSearchRadius: float64(maxSearchRadius),
 		maxSearchReps:   maxSearchReps,
 	}
-	start := time.Now()
+	start = time.Now()
 	geo.idxs = NewGeoIndexes(nidx, "data/geo.json")
+	db.DPrintf(db.SPAWN_LAT, "Geo.NewGeoIndexes: sinceSpawn:%v op:%v", time.Since(pe.GetSpawnTime()), time.Since(start))
 	db.DPrintf(db.ALWAYS, "Geo srv done building %v indexes, radius %v nresults %v,  after: %v", nidx, geo.maxSearchRadius, geo.maxSearchReps, time.Since(start))
-	pe := proc.GetProcEnv()
+	start = time.Now()
 	ssrv, err := sigmasrv.NewSigmaSrv(filepath.Join(HOTELGEODIR, pe.GetPID().String()), geo, pe)
 	if err != nil {
 		return err
 	}
+	db.DPrintf(db.SPAWN_LAT, "Geo.NewSigmaSrv: sinceSpawn:%v op:%v", time.Since(pe.GetSpawnTime()), time.Since(start))
 
 	p, err := perf.NewPerf(ssrv.MemFs.SigmaClnt().ProcEnv(), perf.HOTEL_GEO)
 	if err != nil {
@@ -107,6 +113,7 @@ func RunGeoSrv(job string, nidxStr string, maxSearchRadiusStr string, maxSearchR
 	//	geo.tracer = tracing.Init("geo", proc.GetSigmaJaegerIP())
 	//	defer geo.tracer.Flush()
 
+	db.DPrintf(db.SPAWN_LAT, "Geo.Ready: sinceSpawn:%v op:%v", time.Since(pe.GetSpawnTime()), time.Since(startRun))
 	db.DPrintf(db.ALWAYS, "Geo srv ready to serve time since spawn: %v", time.Since(ssrv.ProcEnv().GetSpawnTime()))
 
 	return ssrv.RunServer()

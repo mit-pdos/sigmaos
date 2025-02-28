@@ -112,7 +112,7 @@ func setupK8sState(mrts *test.MultiRealmTstate) (*TstateSN, error) {
 	assert.Nil(tssn.mrts.T, err, "Err split host port %v: %v", K8S_ADDR, err)
 	port, err := strconv.Atoi(p)
 	assert.Nil(tssn.mrts.T, err, "Err parse port %v: %v", p, err)
-	addr := sp.NewTaddrRealm(sp.Tip(h), sp.INNER_CONTAINER_IP, sp.Tport(port))
+	addr := sp.NewTaddr(sp.Tip(h), sp.Tport(port))
 	mnt := sp.NewEndpoint(sp.EXTERNAL_EP, []*sp.Taddr{addr})
 	assert.Nil(mrts.T, tssn.mrts.GetRealm(test.REALM1).MkEndpointFile(p, mnt))
 	// forward mongo port and init users and graphs.

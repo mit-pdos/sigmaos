@@ -1,6 +1,8 @@
 package memfssrv
 
 import (
+	"time"
+
 	"sigmaos/api/fs"
 	"sigmaos/ctx"
 	db "sigmaos/debug"
@@ -16,7 +18,7 @@ import (
 
 // Make an MemFs and advertise it at pn
 func NewMemFs(pn string, pe *proc.ProcEnv, aaf spprotosrv.AttachAuthF) (*MemFs, error) {
-	return NewMemFsAddr(pn, sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, sp.NO_PORT), pe, aaf)
+	return NewMemFsAddr(pn, sp.NewTaddr(sp.NO_IP, sp.NO_PORT), pe, aaf)
 }
 
 func NewMemFsAddrClnt(pn string, addr *sp.Taddr, sc *sigmaclnt.SigmaClnt, aaf spprotosrv.AttachAuthF) (*MemFs, error) {
@@ -26,10 +28,16 @@ func NewMemFsAddrClnt(pn string, addr *sp.Taddr, sc *sigmaclnt.SigmaClnt, aaf sp
 
 // Make an MemFs for a specific port and advertise it at pn
 func NewMemFsAddr(pn string, addr *sp.Taddr, pe *proc.ProcEnv, aaf spprotosrv.AttachAuthF) (*MemFs, error) {
+	start := time.Now()
 	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
 	if err != nil {
 		return nil, err
 	}
+	db.DPrintf(db.SPAWN_LAT, "NewMemFsAddr NewSigmaClnt: %v", time.Since(start))
+	start = time.Now()
+	defer func() {
+		db.DPrintf(db.SPAWN_LAT, "NewMemFsAddr NewMemFsAddrClnt: %v", time.Since(start))
+	}()
 	return NewMemFsAddrClnt(pn, addr, sc, aaf)
 }
 
@@ -46,10 +54,16 @@ func NewMemFsPortClntFenceAuth(pn string, addr *sp.Taddr, sc *sigmaclnt.SigmaCln
 }
 
 func NewMemFsRootPortClntFenceAuth(root fs.Dir, srvpath string, addr *sp.Taddr, sc *sigmaclnt.SigmaClnt, fencefs fs.Dir, aaf spprotosrv.AttachAuthF) (*MemFs, error) {
+	start := time.Now()
 	srv, mpn, err := sigmapsrv.NewSigmaPSrvPost(root, srvpath, addr, sc, fencefs, aaf)
 	if err != nil {
 		return nil, err
 	}
+	db.DPrintf(db.SPAWN_LAT, "NewMemFsRootPortClntFenceAuth NewSigmaPSrvPost: %v", time.Since(start))
+	start = time.Now()
+	defer func() {
+		db.DPrintf(db.SPAWN_LAT, "NewMemFsRootPortClntFenceAuth NewMemFsSrv: %v", time.Since(start))
+	}()
 	mfs := NewMemFsSrv(mpn, srv, sc, nil)
 	return mfs, nil
 }

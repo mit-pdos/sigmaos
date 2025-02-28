@@ -909,7 +909,7 @@ func TestMaintainReplicationLevelCrashMSched(t *testing.T) {
 	db.DPrintf(db.TEST, "Rm out dir done")
 
 	// Start a bunch of replicated spinner procs.
-	cfg := procgroupmgr.NewGroupConfig(N_REPL, "spinner", []string{}, 0, OUTDIR)
+	cfg := procgroupmgr.NewProcGroupConfig(N_REPL, "spinner", []string{}, 0, OUTDIR)
 	sm := cfg.StartGrpMgr(mrts.GetRealm(test.REALM1).SigmaClnt)
 	db.DPrintf(db.TEST, "GrpMgr started")
 

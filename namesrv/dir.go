@@ -56,6 +56,10 @@ func (d *Dir) LookupPath(ctx fs.CtxI, pn path.Tpathname) ([]fs.FsObj, fs.FsObj, 
 
 func (d *Dir) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode, lid sp.TleaseId, f sp.Tfence, dev fs.FsObj) (fs.FsObj, *serr.Err) {
 	db.DPrintf(db.NAMED, "%v: Create name %q (perm %v lid %v) in dir %v", ctx.ClntId(), name, perm, lid, d)
+	start := time.Now()
+	defer func(start time.Time) {
+		db.DPrintf(db.NAMED, "%v: Create latency %v name %q (perm %v lid %v) in dir %v", ctx.ClntId(), time.Since(start), name, perm, lid, d)
+	}(start)
 	cid := sp.NoClntId
 	if lid.IsLeased() {
 		cid = ctx.ClntId()

@@ -46,7 +46,7 @@ func newTstate(mrts *test.MultiRealmTstate, nrepl int, persist bool) *Tstate {
 	ts.mrts.GetRealm(test.REALM1).MkDir(kvgrp.KVDIR, 0777)
 	err := ts.mrts.GetRealm(test.REALM1).MkDir(kvgrp.JobDir(ts.job), 0777)
 	assert.Nil(mrts.T, err)
-	mcfg := procgroupmgr.NewGroupConfig(nrepl, "kvd", []string{ts.grp}, 0, ts.job)
+	mcfg := procgroupmgr.NewProcGroupConfig(nrepl, "kvd", []string{ts.grp}, 0, ts.job)
 	if persist {
 		mcfg.Persist(ts.mrts.GetRealm(test.REALM1).SigmaClnt.FsLib)
 	}

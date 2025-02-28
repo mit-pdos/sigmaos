@@ -308,8 +308,9 @@ func (fs *FsEtcd) create(dei *DirEntInfo, dir *DirInfo, v sp.TQversion, new *Dir
 
 	}
 	stats.Inc(&c, 1)
+	start := time.Now()
 	resp, err := fs.Clnt().Txn(context.TODO()).If(cmp...).Then(ops...).Else(ops1...).Commit()
-	db.DPrintf(db.FSETCD, "Create new %v dei %v v %v %v err %v", new, dei, v, resp, err)
+	db.DPrintf(db.FSETCD, "Create new %v dei %v v %v %v err %v lat %v", new, dei, v, resp, err, time.Since(start))
 	if err != nil {
 		return c, serr.NewErrError(err)
 	}

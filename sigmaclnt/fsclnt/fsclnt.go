@@ -263,7 +263,7 @@ func (fsc *FsClient) IsLocalMount(ep *sp.Tendpoint) (bool, error) {
 }
 
 func (fsc *FsClient) SetLocalMount(ep *sp.Tendpoint, port sp.Tport) {
-	ep.SetAddr([]*sp.Taddr{sp.NewTaddr(fsc.pe.GetInnerContainerIP(), sp.INNER_CONTAINER_IP, port)})
+	ep.SetAddr([]*sp.Taddr{sp.NewTaddr(fsc.pe.GetInnerContainerIP(), port)})
 }
 
 func (fsc *FsClient) PathLastMount(pn string) (path.Tpathname, path.Tpathname, error) {

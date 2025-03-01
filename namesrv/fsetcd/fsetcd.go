@@ -43,7 +43,7 @@ type FsEtcd struct {
 func NewFsEtcdEndpoint(ip sp.Tip) (TetcdEndpoints, error) {
 	eps := map[string]*sp.TendpointProto{}
 	for i := range endpointPorts {
-		addr := sp.NewTaddr(ip, sp.INNER_CONTAINER_IP, endpointPorts[i])
+		addr := sp.NewTaddr(ip, endpointPorts[i])
 		ep := sp.NewEndpoint(sp.EXTERNAL_EP, []*sp.Taddr{addr})
 		eps[addr.IPPort()] = ep.GetProto()
 	}

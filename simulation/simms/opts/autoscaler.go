@@ -1,8 +1,8 @@
 package opts
 
 import (
-	"sigmaos/simms"
-	"sigmaos/simms/autoscaler"
+	"sigmaos/simulation/simms"
+	"sigmaos/simulation/simms/autoscaler"
 )
 
 type withNoOpAutoscaler struct{}
@@ -15,18 +15,18 @@ func WithNoOpAutoscaler() simms.MicroserviceOpt {
 	return &withNoOpAutoscaler{}
 }
 
-type withAvgUtilAutoscaler struct {
-	asp *autoscaler.AvgUtilAutoscalerParams
+type withAvgValAutoscaler struct {
+	asp *autoscaler.AvgValAutoscalerParams
 }
 
-func (o withAvgUtilAutoscaler) Apply(opts *simms.MicroserviceOpts) {
+func (o withAvgValAutoscaler) Apply(opts *simms.MicroserviceOpts) {
 	opts.NewAutoscaler = func(t *uint64, svc *simms.Microservice) simms.Autoscaler {
-		return autoscaler.NewAvgUtilAutoscaler(t, o.asp, svc)
+		return autoscaler.NewAvgValAutoscaler(t, o.asp, svc)
 	}
 }
 
-func WithAvgUtilAutoscaler(asp *autoscaler.AvgUtilAutoscalerParams) simms.MicroserviceOpt {
-	return &withAvgUtilAutoscaler{
+func WithAvgValAutoscaler(asp *autoscaler.AvgValAutoscalerParams) simms.MicroserviceOpt {
+	return &withAvgValAutoscaler{
 		asp: asp,
 	}
 }

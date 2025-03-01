@@ -227,7 +227,7 @@ func (ps *ProtSrv) clunk(fid sp.Tfid) *sp.Rerror {
 	if ok {
 		pl := ps.plt.Acquire(f.Ctx(), watch.Dir(), lockmap.WLOCK)
 		defer ps.plt.Release(f.Ctx(), pl, lockmap.WLOCK)
-		ps.wt.CloseWatcher(watch, fid)
+		ps.wt.CloseWatcher(watch, f)
 	}
 
 	ps.fm.Free(f)
@@ -282,6 +282,12 @@ func (ps *ProtSrv) Watch(args *sp.Twatch, rets *sp.Rwatch) *sp.Rerror {
 	// change the directory while setting a watch on the directory
 	pl := ps.plt.Acquire(dirf.Ctx(), p, lockmap.WLOCK)
 	defer ps.plt.Release(dirf.Ctx(), pl, lockmap.WLOCK)
+
+	v := ps.vt.GetVersion(p)
+	db.DPrintf(db.WATCH, "Watch: version %v %v", dirf.Qid(), v)
+	if !sp.VEq(dirf.Qid().Tversion(), v) {
+		return sp.NewRerrorSerr(serr.NewErr(serr.TErrVersion, v))
+	}
 
 	w := ps.wt.AllocWatch(p)
 	fid := watch.NewFidWatch(ps.fm, dirf.Ctx(), args.Twatchfid(), w)

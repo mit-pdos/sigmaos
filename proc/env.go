@@ -27,10 +27,6 @@ const (
 	SIGMAGEN       = "SIGMAGEN"
 )
 
-const (
-	DIRREADER_VERSION = "DIRREADER_VERSION"
-)
-
 type ProcEnv struct {
 	*ProcEnvProto
 }
@@ -121,7 +117,6 @@ func NewProcEnv(program string, pid sp.Tpid, realm sp.Trealm, principal *sp.Tpri
 			SecretsMap:          nil,
 			SigmaPath:           []string{},
 			RealmSwitchStr:      sp.NOT_SET,
-			DirReaderVersion:    os.Getenv(DIRREADER_VERSION),
 		},
 	}
 }
@@ -387,7 +382,6 @@ func (pe *ProcEnv) String() string {
 		"SigmaPath:%v "+
 		"RealmSwitch:%v"+
 		"Fail:%v"+
-		"DirReaderVersion:%v"+
 		"}",
 		pe.Program,
 		pe.Version,
@@ -412,6 +406,5 @@ func (pe *ProcEnv) String() string {
 		pe.SigmaPath,
 		pe.RealmSwitchStr,
 		pe.Fail,
-		pe.DirReaderVersion,
 	)
 }

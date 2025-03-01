@@ -116,22 +116,33 @@ func (fse *FsEtcd) Lookup(dei *DirEntInfo, pn path.Tpathname) (*DirEntInfo, *ser
 // OEXCL: should only succeed if file doesn't exist
 func (fse *FsEtcd) Create(dei *DirEntInfo, pn path.Tpathname, path sp.Tpath, nf *EtcdFile, perm sp.Tperm, f sp.Tfence, cid sp.TclntId, lid sp.TleaseId) (*DirEntInfo, stats.Tcounter, *serr.Err) {
 	name := pn.Base()
+	start := time.Now()
+	db.DPrintf(db.FSETCD, "%v: Create start pn %v lid %v", cid, pn, lid)
 	dir, v, nops, err := fse.readDir(dei, TSTAT_NONE)
 	if err != nil {
 		return nil, stats.NewCounter(0), err
 	}
+	db.DPrintf(db.FSETCD, "%v: Create readDir pn %v lid %v lat %v", cid, pn, lid, time.Since(start))
+	start = time.Now()
 	_, ok := dir.Ents.Lookup(name)
 	if ok {
 		return nil, nops, serr.NewErr(serr.TErrExists, name)
 	}
+	db.DPrintf(db.FSETCD, "%v: Create Lookup pn %v lid %v lat %v", cid, pn, lid, time.Since(start))
+	start = time.Now()
 	// Insert name into dir so that fse.create() will write the updated
 	// directory to etcd, but undo the Insert if create fails.
 	di := NewDirEntInfoNf(nf, path, perm, cid, lid)
 	dir.Ents.Insert(name, di)
+	db.DPrintf(db.FSETCD, "%v: Create Insert pn %v lid %v lat %v", cid, pn, lid, time.Since(start))
+	start = time.Now()
 	db.DPrintf(db.FSETCD, "Create %q(%v) di %v f %v\n", name, pn, di, f)
 	if nops1, err := fse.create(dei, dir, v, di, pn, f); err == nil {
 		stats.Add(&nops, nops1)
+		db.DPrintf(db.FSETCD, "%v: Create create pn %v lid %v lat %v", cid, pn, lid, time.Since(start))
+		start = time.Now()
 		fse.dc.update(dei.Path, dir)
+		db.DPrintf(db.FSETCD, "%v: Create dc.update pn %v lid %v lat %v", cid, pn, lid, time.Since(start))
 		return di, nops, nil
 	} else {
 		db.DPrintf(db.FSETCD, "Create %q di %v err %v", name, di, err)

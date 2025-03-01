@@ -6,7 +6,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
-	"sigmaos/sigmaclnt/fslib/dirreader"
+	"sigmaos/sigmaclnt/fslib/dircache"
 	"sigmaos/sigmap"
 	"strconv"
 )
@@ -57,68 +57,33 @@ func (w *TestWorker) Run() {
 		db.DFatalf("RunWorker %s: failed to create id file %v", w.id, err)
 	}
 
-	workDirFd, err := w.Open(w.workDir, 0777)
-	if err != nil {
-		db.DFatalf("RunWorker %s: failed to open workDir %s: %v", w.id, w.workDir, err)
-	}
-
 	sum := uint64(0)
 	seen := make(map[string]bool)
-	dr, err := dirreader.NewDirReader(w.FsLib, w.workDir)
-	if err != nil {
-		db.DFatalf("RunWorker %s: failed to create dir watcher for %s: %v", w.id, w.workDir, err)
-	}
-	initFiles, err := dr.GetDir()
-	if err != nil {
-		db.DFatalf("RunWorker %s: failed to get initial files for %s: %v", w.id, w.workDir, err)
-	}
 
-	db.DPrintf(db.WATCH_TEST, "RunWorker %s: summing initial files %v", w.id, initFiles)
-	for _, file := range initFiles {
-		if !seen[file] {
-			sum += w.readFile(filepath.Join(w.workDir, file))
-			seen[file] = true
-		} else {
-			db.DPrintf(db.WATCH_TEST, "RunWorker %s: found duplicate %s", w.id, file)
-		}
-	}
-	for {
-		db.DPrintf(db.WATCH_TEST, "RunWorker %s: waiting for files", w.id)
-		changed, err := dr.WatchEntriesChanged()
-		if err != nil {
-			db.DFatalf("RunWorker %s: failed to watch for entries changed %v", w.id, err)
-		}
-		addedFiles := make([]string, 0)
-		for file, created := range changed {
-			if created {
-				addedFiles = append(addedFiles, file)
-			}
-		}
-		db.DPrintf(db.WATCH_TEST, "RunWorker %s: added files: %v", w.id, addedFiles)
+	ch := make(chan string)
+	dc := dircache.NewDirCache(w.FsLib, w.workDir, func(_ string) (struct{}, error) {
+		return struct{}{}, nil
+	}, ch, db.WATCH_TEST, db.WATCH_TEST)
+	dc.Init()
 
-		for _, file := range addedFiles {
-			if !seen[file] {
-				sum += w.readFile(filepath.Join(w.workDir, file))
-				seen[file] = true
-			} else {
-				db.DPrintf(db.WATCH_TEST, "RunWorker %s: found duplicate %s", w.id, file)
-			}
+	for file := range ch {
+		db.DPrintf(db.WATCH_TEST, "RunWorker %s: processing file %s", w.id, file)
+		if seen[file] {
+			db.DFatalf("RunWorker %s: found duplicate %s", w.id, file)
 		}
+		sum += w.readFile(filepath.Join(w.workDir, file))
+		seen[file] = true
 
 		if len(seen) >= w.nfiles {
 			break
 		}
 	}
 
-	err = dr.Close()
-	if err != nil {
-		db.DFatalf("RunWorker %s: failed to close dir watcher", err)
+	if len(seen) != w.nfiles {
+		db.DFatalf("RunWorker %s: found %d files, expected %d", w.id, len(seen), w.nfiles)
 	}
 
-	err = w.CloseFd(workDirFd)
-	if err != nil {
-		db.DFatalf("RunWorker %s: failed to close fd for workDir %v", w.id, err)
-	}
+	dc.StopWatching()
 	
 	err = w.CloseFd(idFileFd)
 	if err != nil {

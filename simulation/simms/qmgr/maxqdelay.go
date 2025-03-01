@@ -2,7 +2,7 @@ package qmgr
 
 import (
 	db "sigmaos/debug"
-	"sigmaos/simms"
+	"sigmaos/simulation/simms"
 )
 
 type MaxQDelayQMgr struct {
@@ -10,14 +10,16 @@ type MaxQDelayQMgr struct {
 	q        *Queue
 	ms       *simms.Microservice
 	maxDelay uint64
+	sorted   bool
 }
 
-func NewMaxQDelayQMgr(t *uint64, maxDelay uint64, ms *simms.Microservice) simms.QMgr {
+func NewMaxQDelayQMgr(t *uint64, maxDelay uint64, sorted bool, ms *simms.Microservice) simms.QMgr {
 	return &MaxQDelayQMgr{
 		t:        t,
-		q:        NewQueue(t),
+		q:        NewQueue(t, sorted, 0),
 		ms:       ms,
 		maxDelay: maxDelay,
+		sorted:   sorted,
 	}
 }
 
@@ -33,6 +35,10 @@ func (m *MaxQDelayQMgr) Enqueue(req []*simms.Request) {
 
 func (m *MaxQDelayQMgr) Dequeue() (*simms.Request, bool) {
 	return m.q.Dequeue()
+}
+
+func (m *MaxQDelayQMgr) GetQ() simms.Queue {
+	return m.q
 }
 
 func (m *MaxQDelayQMgr) GetQLen() int {

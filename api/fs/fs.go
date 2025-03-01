@@ -58,11 +58,11 @@ type Dir interface {
 	Inode
 	Stat(CtxI) (*sp.Tstat, *serr.Err)
 	LookupPath(CtxI, path.Tpathname) ([]FsObj, FsObj, path.Tpathname, *serr.Err)
-	Create(CtxI, string, sp.Tperm, sp.Tmode, sp.TleaseId, sp.Tfence, FsObj) (FsObj, *serr.Err)
+	Create(CtxI, sp.Tsigmapath, sp.Tperm, sp.Tmode, sp.TleaseId, sp.Tfence, FsObj) (FsObj, *serr.Err)
 	ReadDir(CtxI, int, sp.Tsize) ([]*sp.Tstat, *serr.Err)
-	Remove(CtxI, string, sp.Tfence, Tdel) *serr.Err
-	Rename(CtxI, string, string, sp.Tfence) *serr.Err
-	Renameat(CtxI, string, Dir, string, sp.Tfence) *serr.Err
+	Remove(CtxI, sp.Tsigmapath, sp.Tfence, Tdel) *serr.Err
+	Rename(CtxI, sp.Tsigmapath, sp.Tsigmapath, sp.Tfence) *serr.Err
+	Renameat(CtxI, sp.Tsigmapath, Dir, sp.Tsigmapath, sp.Tfence) *serr.Err
 }
 
 type Inode interface {

@@ -3,6 +3,7 @@ package watch
 import (
 	db "sigmaos/debug"
 	sp "sigmaos/sigmap"
+	"sigmaos/spproto/srv/fid"
 	protsrv_proto "sigmaos/spproto/srv/proto"
 	"sync"
 )
@@ -43,7 +44,7 @@ func (wt *WatchTable) lookupWatch(dir sp.Tpath) (*Watch, bool) {
 
 // Close fid and free watch for ws.dir, if no more watchers.  Caller
 // should have acquired pathlock for ws.dir
-func (wt *WatchTable) CloseWatcher(ws *Watch, fid sp.Tfid) {
+func (wt *WatchTable) CloseWatcher(ws *Watch, fid *fid.Fid) {
 	if ws.closeFid(fid) {
 		db.DPrintf(db.WATCH, "WatchTable CloseWatcher %v for %v", fid, ws.dir)
 		wt.Lock()

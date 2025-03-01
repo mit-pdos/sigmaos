@@ -54,11 +54,11 @@ func (fsc *FsClient) CloseFd(fd int) error {
 	return nil
 }
 
-func (fsc *FsClient) Stat(name string) (*sp.Tstat, error) {
-	return fsc.pc.Stat(name, fsc.pe.GetPrincipal())
+func (fsc *FsClient) Stat(pn sp.Tsigmapath) (*sp.Tstat, error) {
+	return fsc.pc.Stat(pn, fsc.pe.GetPrincipal())
 }
 
-func (fsc *FsClient) Create(pn string, perm sp.Tperm, mode sp.Tmode) (int, error) {
+func (fsc *FsClient) Create(pn sp.Tsigmapath, perm sp.Tperm, mode sp.Tmode) (int, error) {
 	pc, err := fsc.mntLookup(pn)
 	if err != nil {
 		return -1, err
@@ -72,7 +72,7 @@ func (fsc *FsClient) Create(pn string, perm sp.Tperm, mode sp.Tmode) (int, error
 	return fd, nil
 }
 
-func (fsc *FsClient) CreateLeased(pn string, perm sp.Tperm, mode sp.Tmode, lid sp.TleaseId, f sp.Tfence) (int, error) {
+func (fsc *FsClient) CreateLeased(pn sp.Tsigmapath, perm sp.Tperm, mode sp.Tmode, lid sp.TleaseId, f sp.Tfence) (int, error) {
 	fid, err := fsc.pc.Create(pn, fsc.pe.GetPrincipal(), perm, mode, lid, &f)
 	if err != nil {
 		return -1, err
@@ -81,7 +81,7 @@ func (fsc *FsClient) CreateLeased(pn string, perm sp.Tperm, mode sp.Tmode, lid s
 	return fd, nil
 }
 
-func (fsc *FsClient) openWait(pc sos.PathClntAPI, pn string, mode sp.Tmode) (int, error) {
+func (fsc *FsClient) openWait(pc sos.PathClntAPI, pn sp.Tsigmapath, mode sp.Tmode) (int, error) {
 	ch := make(chan error)
 	fd := -1
 	for {
@@ -105,7 +105,7 @@ func (fsc *FsClient) openWait(pc sos.PathClntAPI, pn string, mode sp.Tmode) (int
 	return fd, nil
 }
 
-func (fsc *FsClient) Open(pn string, mode sp.Tmode, w sos.Twait) (int, error) {
+func (fsc *FsClient) Open(pn sp.Tsigmapath, mode sp.Tmode, w sos.Twait) (int, error) {
 	pc, err := fsc.mntLookup(pn)
 	if err != nil {
 		return -1, err
@@ -122,24 +122,24 @@ func (fsc *FsClient) Open(pn string, mode sp.Tmode, w sos.Twait) (int, error) {
 	}
 }
 
-func (fsc *FsClient) Rename(old, new string) error {
+func (fsc *FsClient) Rename(old, new sp.Tsigmapath) error {
 	f := fsc.ft.lookup(old)
 	return fsc.pc.Rename(old, new, fsc.pe.GetPrincipal(), f)
 }
 
-func (fsc *FsClient) Remove(pn string) error {
+func (fsc *FsClient) Remove(pn sp.Tsigmapath) error {
 	f := fsc.ft.lookup(pn)
 	return fsc.pc.Remove(pn, fsc.pe.GetPrincipal(), f)
 }
 
-func (fsc *FsClient) GetFile(pn string) ([]byte, error) {
+func (fsc *FsClient) GetFile(pn sp.Tsigmapath) ([]byte, error) {
 	f := fsc.ft.lookup(pn)
 	return fsc.pc.GetFile(pn, fsc.pe.GetPrincipal(), sp.OREAD, 0, sp.MAXGETSET, f)
 }
 
-func (fsc *FsClient) PutFile(fname string, perm sp.Tperm, mode sp.Tmode, data []byte, off sp.Toffset, lid sp.TleaseId) (sp.Tsize, error) {
-	f := fsc.ft.lookup(fname)
-	return fsc.pc.PutFile(fname, fsc.pe.GetPrincipal(), mode|sp.OWRITE, perm, data, off, lid, f)
+func (fsc *FsClient) PutFile(pn string, perm sp.Tperm, mode sp.Tmode, data []byte, off sp.Toffset, lid sp.TleaseId) (sp.Tsize, error) {
+	f := fsc.ft.lookup(pn)
+	return fsc.pc.PutFile(pn, fsc.pe.GetPrincipal(), mode|sp.OWRITE, perm, data, off, lid, f)
 }
 
 func (fsc *FsClient) readFid(fd int, pc sos.PathClntAPI, fid sp.Tfid, off sp.Toffset, b []byte) (sp.Tsize, error) {
@@ -244,7 +244,7 @@ func (fsc *FsClient) DirWatch(fd int) (int, error) {
 	if err != nil {
 		return -1, err
 	}
-	db.DPrintf(db.FSCLNT, "DirWatch: watch fd %v\n", fd)
+	db.DPrintf(db.FSCLNT, "DirWatch: dir fd %v dir fid %d\n", fd, fid)
 	watchfid, err2 := fsc.pc.SetDirWatch(fid)
 	if err2 != nil {
 		db.DPrintf(db.FSCLNT, "SetDirWatch err %v\n", err)
@@ -252,24 +252,24 @@ func (fsc *FsClient) DirWatch(fd int) (int, error) {
 	}
 
 	watchfd := fsc.fds.allocFd(watchfid, sp.OREAD, fsc.pc, "")
+	db.DPrintf(db.FSCLNT, "DirWatch: watch fd %v watch fid %d\n", watchfd, watchfid)
 
 	return watchfd, nil
 }
-
 
 func (fsc *FsClient) IsLocalMount(ep *sp.Tendpoint) (bool, error) {
 	return fsc.pc.IsLocalMount(ep)
 }
 
 func (fsc *FsClient) SetLocalMount(ep *sp.Tendpoint, port sp.Tport) {
-	ep.SetAddr([]*sp.Taddr{sp.NewTaddr(fsc.pe.GetInnerContainerIP(), sp.INNER_CONTAINER_IP, port)})
+	ep.SetAddr([]*sp.Taddr{sp.NewTaddr(fsc.pe.GetInnerContainerIP(), port)})
 }
 
-func (fsc *FsClient) PathLastMount(pn string) (path.Tpathname, path.Tpathname, error) {
+func (fsc *FsClient) PathLastMount(pn sp.Tsigmapath) (path.Tpathname, path.Tpathname, error) {
 	return fsc.pc.MntClnt().PathLastMount(pn, fsc.pe.GetPrincipal())
 }
 
-func (fsc *FsClient) MountTree(ep *sp.Tendpoint, tree, mount string) error {
+func (fsc *FsClient) MountTree(ep *sp.Tendpoint, tree, mount sp.Tsigmapath) error {
 	return fsc.pc.MntClnt().MountTree(fsc.pe.GetSecrets(), ep, tree, mount)
 }
 
@@ -285,16 +285,16 @@ func (fsc *FsClient) GetNamedEndpointRealm(realm sp.Trealm) (*sp.Tendpoint, erro
 	return fsc.pc.MntClnt().GetNamedEndpointRealm(realm)
 }
 
-func (fsc *FsClient) NewRootMount(pn, epname string) error {
+func (fsc *FsClient) NewRootMount(pn, epname sp.Tsigmapath) error {
 	return fsc.pc.MntClnt().NewRootMount(fsc.pe.GetPrincipal(), pn, epname)
 }
 
-func (fsc *FsClient) MountPathClnt(mnt string, clnt sos.PathClntAPI) error {
+func (fsc *FsClient) MountPathClnt(mnt sp.Tsigmapath, clnt sos.PathClntAPI) error {
 	fsc.mnts.Insert(mnt, clnt)
 	return nil
 }
 
-func (fsc *FsClient) Mounts() []string {
+func (fsc *FsClient) Mounts() []sp.Tsigmapath {
 	return fsc.pc.MntClnt().MountedPaths()
 }
 
@@ -302,7 +302,7 @@ func (fsc *FsClient) ClntId() sp.TclntId {
 	return fsc.pc.ClntId()
 }
 
-func (fsc *FsClient) FenceDir(pn string, fence sp.Tfence) error {
+func (fsc *FsClient) FenceDir(pn sp.Tsigmapath, fence sp.Tfence) error {
 	return fsc.ft.insert(pn, fence)
 }
 
@@ -310,12 +310,12 @@ func (fsc *FsClient) Disconnected() bool {
 	return fsc.disconnected
 }
 
-func (fsc *FsClient) Disconnect(pn string) error {
+func (fsc *FsClient) Disconnect(pn sp.Tsigmapath) error {
 	fsc.disconnected = true
 	return fsc.pc.Disconnect(pn)
 }
 
-func (fsc *FsClient) Detach(pn string) error {
+func (fsc *FsClient) Detach(pn sp.Tsigmapath) error {
 	return fsc.pc.MntClnt().Detach(pn)
 }
 
@@ -323,7 +323,7 @@ func (fsc *FsClient) Close() error {
 	return fsc.pc.Close()
 }
 
-func (fsc *FsClient) mntLookup(pn string) (sos.PathClntAPI, error) {
+func (fsc *FsClient) mntLookup(pn sp.Tsigmapath) (sos.PathClntAPI, error) {
 	p := path.Split(pn)
 	if len(p) == 0 {
 		return nil, serr.NewErr(serr.TErrInval, pn[0])

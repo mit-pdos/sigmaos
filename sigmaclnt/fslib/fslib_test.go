@@ -20,7 +20,7 @@ import (
 	"sigmaos/serr"
 	"sigmaos/sigmaclnt"
 	"sigmaos/sigmaclnt/fslib"
-	"sigmaos/sigmaclnt/fslib/dirreader"
+	"sigmaos/sigmaclnt/fslib/dirwatcher"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )
@@ -712,7 +712,7 @@ func TestWaitRemoveOne(t *testing.T) {
 
 	ch := make(chan bool)
 	go func() {
-		err := dirreader.WaitRemove(ts.FsLib, fn)
+		err := dirwatcher.WaitRemove(ts.FsLib, fn)
 		assert.Nil(t, err)
 		ch <- true
 	}()
@@ -748,7 +748,7 @@ func TestDirWatch(t *testing.T) {
 	ch := make(chan bool)
 	go func() {
 		var err error
-		dirreader.WaitCreate(ts.FsLib, pn1)
+		dirwatcher.WaitCreate(ts.FsLib, pn1)
 		assert.Nil(t, err)
 		ch <- true
 	}()
@@ -797,7 +797,7 @@ func TestWaitRemoveConcur(t *testing.T) {
 	for i := 0; i < N; i++ {
 		go func(i int) {
 			fn := filepath.Join(dn, FILE+strconv.Itoa(i))
-			err = dirreader.WaitRemove(ts.FsLib, fn)
+			err = dirwatcher.WaitRemove(ts.FsLib, fn)
 			assert.Nil(t, err, "Unexpected remove error: %v", err)
 			done <- i
 		}(i)
@@ -844,7 +844,7 @@ func TestWaitCreateRemoveConcur(t *testing.T) {
 		assert.Nil(t, err)
 
 		go func() {
-			err := dirreader.WaitRemove(fsl, fn)
+			err := dirwatcher.WaitRemove(fsl, fn)
 			if err == nil {
 				// db.DPrintf(db.TEST, "wait for rm %v\n", i)
 			} else {
@@ -1153,7 +1153,7 @@ func TestUnionDir(t *testing.T) {
 	err = ts.MkEndpointFile(filepath.Join(pathname, DIR1, "namedself0"), newEndpoint(t, ts, pathname))
 	assert.Nil(ts.T, err, "MkEndpointFile")
 
-	newep := sp.NewEndpoint(sp.INTERNAL_EP, []*sp.Taddr{sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, 2222)})
+	newep := sp.NewEndpoint(sp.INTERNAL_EP, []*sp.Taddr{sp.NewTaddr(sp.NO_IP, 2222)})
 	err = ts.MkEndpointFile(filepath.Join(pathname, DIR1, "namedself1"), newep)
 	assert.Nil(ts.T, err, "EndpointService")
 
@@ -1191,7 +1191,7 @@ func TestUnionRoot(t *testing.T) {
 	pn1 := filepath.Join(pathname, "namedself1")
 	err := ts.MkEndpointFile(pn0, newEndpoint(t, ts, pathname))
 	assert.Nil(ts.T, err, "MkEndpointFile")
-	newep := sp.NewEndpoint(sp.INTERNAL_EP, []*sp.Taddr{sp.NewTaddr("xxx", sp.INNER_CONTAINER_IP, sp.NO_PORT)})
+	newep := sp.NewEndpoint(sp.INTERNAL_EP, []*sp.Taddr{sp.NewTaddr("xxx", sp.NO_PORT)})
 	err = ts.MkEndpointFile(pn1, newep)
 	assert.Nil(ts.T, err, "MkEndpointFile")
 
@@ -1355,7 +1355,7 @@ func TestEndpointUnion(t *testing.T) {
 	err := ts.MkDir(dn, 0777)
 	assert.Nil(ts.T, err, DIR1)
 
-	newep := sp.NewEndpoint(sp.INTERNAL_EP, []*sp.Taddr{sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, 1111)})
+	newep := sp.NewEndpoint(sp.INTERNAL_EP, []*sp.Taddr{sp.NewTaddr(sp.NO_IP, 1111)})
 	err = ts.MkEndpointFile(filepath.Join(pathname, DIR1, "namedself0"), newep)
 	assert.Nil(ts.T, err, "MkEndpointFile")
 

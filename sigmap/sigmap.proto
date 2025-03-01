@@ -32,8 +32,7 @@ message TstatProto {
 
 message Taddr {
         string iPStr = 1;
-        uint32 iPTypeInt = 2; // inner container or outer container
-        uint32 portInt = 3;
+        uint32 portInt = 2;
 }
 
 message SecretProto {

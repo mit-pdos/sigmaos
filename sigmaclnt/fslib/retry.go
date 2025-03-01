@@ -8,7 +8,7 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-func retryLoop(i int, f func(i int, pn string) error, src string) error {
+func retryLoop(i int, f func(i int, pn sp.Tsigmapath) error, src sp.Tsigmapath) error {
 	var r error
 	for i := 0; i < sp.Conf.FsLib.MAX_RETRY; i++ {
 		// Return if successful. Else, retry
@@ -25,7 +25,7 @@ func retryLoop(i int, f func(i int, pn string) error, src string) error {
 	return fmt.Errorf("retryLoop: couldn't do %T for %q in %d retries err %v", f, src, sp.Conf.FsLib.MAX_RETRY, r)
 }
 
-func RetryPaths(paths []string, f func(i int, pn string) error) error {
+func RetryPaths(paths []sp.Tsigmapath, f func(i int, pn sp.Tsigmapath) error) error {
 	var r error
 	for i, pp := range paths {
 		if err := retryLoop(i, f, pp); err == nil {

@@ -62,7 +62,7 @@ type ProcGroupMgrConfig struct {
 }
 
 // If n == 0, run only one member (i.e., no hot standby's or replication)
-func NewGroupConfig(n int, bin string, args []string, mcpu proc.Tmcpu, job string) *ProcGroupMgrConfig {
+func NewProcGroupConfig(n int, bin string, args []string, mcpu proc.Tmcpu, job string) *ProcGroupMgrConfig {
 	return &ProcGroupMgrConfig{
 		NReplicas: n,
 		Program:   bin,

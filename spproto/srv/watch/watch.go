@@ -17,12 +17,12 @@ import (
 
 func NewFidWatch(fm *fid.FidMap, ctx fs.CtxI, fid sp.Tfid, watch *Watch) *fid.Fid {
 	f := fm.NewFid("fidWatch", watch, nil, ctx, 0, sp.Tqid{})
-	watch.newWatcher(fid)
+	watch.newWatcher(f)
 	return f
 }
 
 type PerFidState struct {
-	fid          sp.Tfid  // the fid for watcher
+	fid          *fid.Fid  // the fid for watcher
 	dir          sp.Tpath // directory being watched
 	events       []*protsrv_proto.WatchEvent
 	remainingMsg []byte
@@ -34,14 +34,14 @@ type PerFidState struct {
 type Watch struct {
 	dir         sp.Tpath // directory being watched
 	mu          sync.Mutex
-	perFidState map[sp.Tfid]*PerFidState // each watcher has an watch fid
+	perFidState map[*fid.Fid]*PerFidState // each watcher has an watch fid
 }
 
 func newWatch(dir sp.Tpath) *Watch {
 	w := &Watch{
 		dir:         dir,
 		mu:          sync.Mutex{},
-		perFidState: make(map[sp.Tfid]*PerFidState),
+		perFidState: make(map[*fid.Fid]*PerFidState),
 	}
 	return w
 }
@@ -51,7 +51,7 @@ func IsWatch(obj fs.FsObj) bool {
 	return ok
 }
 
-func (wo *Watch) lookupFidState(fid sp.Tfid) (*PerFidState, bool) {
+func (wo *Watch) lookupFidState(fid *fid.Fid) (*PerFidState, bool) {
 	wo.mu.Lock()
 	defer wo.mu.Unlock()
 
@@ -59,7 +59,7 @@ func (wo *Watch) lookupFidState(fid sp.Tfid) (*PerFidState, bool) {
 	return f, ok
 }
 
-func (wo *Watch) newWatcher(fid sp.Tfid) {
+func (wo *Watch) newWatcher(fid *fid.Fid) {
 	wo.mu.Lock()
 	defer wo.mu.Unlock()
 
@@ -83,19 +83,19 @@ func (wo *Watch) addEvent(event *protsrv_proto.WatchEvent) {
 	}
 }
 
-func (wo *Watch) GetEventBuffer(fid sp.Tfid, maxLength int) ([]byte, *serr.Err) {
+func (wo *Watch) GetEventBuffer(fid *fid.Fid, maxLength int) ([]byte, *serr.Err) {
 	perFidState, ok := wo.lookupFidState(fid)
 	if !ok {
-		db.DPrintf(db.ERROR, "GetEvenBuffer: unknown %v for watching dir %v", fid, wo.dir)
-		return nil, nil
+		return nil, serr.NewErr(serr.TErrClosed, "fid not found in associated watch")
 	}
 	return perFidState.read(maxLength)
 }
 
-func (wo *Watch) closeFid(fid sp.Tfid) bool {
+func (wo *Watch) closeFid(fid *fid.Fid) bool {
 	perFidState, ok := wo.lookupFidState(fid)
+	db.DPrintf(db.WATCH, "closeFid: %v", fid)
 	if !ok {
-		db.DPrintf(db.ERROR, "closeFid: unknown %v for watching dir %v", fid, wo.dir)
+		db.DPrintf(db.ERROR, "closeFid: unknown %v for watching dir %v", fid, wo.Path())
 		return false
 	}
 	perFidState.close()
@@ -104,10 +104,7 @@ func (wo *Watch) closeFid(fid sp.Tfid) bool {
 	defer wo.mu.Unlock()
 
 	delete(wo.perFidState, fid)
-	if len(wo.perFidState) == 0 {
-		return true
-	}
-	return false
+	return len(wo.perFidState) == 0
 }
 
 func (wo *Watch) Dir() sp.Tpath {

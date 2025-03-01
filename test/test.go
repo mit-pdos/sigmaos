@@ -90,7 +90,7 @@ func NewTstateMinAddr(t *testing.T, addr *sp.Taddr) *TstateMin {
 }
 
 func NewTstateMin(t *testing.T) *TstateMin {
-	addr := sp.NewTaddr(sp.NO_IP, sp.INNER_CONTAINER_IP, 1110)
+	addr := sp.NewTaddr(sp.NO_IP, 1110)
 	return NewTstateMinAddr(t, addr)
 }
 

@@ -82,7 +82,7 @@ func (pathc *PathClnt) detachAll() error {
 	return err
 }
 
-func (pathc *PathClnt) Create(pn string, principal *sp.Tprincipal, perm sp.Tperm, mode sp.Tmode, lid sp.TleaseId, f *sp.Tfence) (sp.Tfid, error) {
+func (pathc *PathClnt) Create(pn sp.Tsigmapath, principal *sp.Tprincipal, perm sp.Tperm, mode sp.Tmode, lid sp.TleaseId, f *sp.Tfence) (sp.Tfid, error) {
 	db.DPrintf(db.PATHCLNT, "%v: Create %v perm %v lid %v\n", pathc.cid, pn, perm, lid)
 	if filepath.Base(pn) == sp.LOCAL || filepath.Base(pn) == sp.ANY {
 		return sp.NoFid, fmt.Errorf("Can't create %v or %v: %v", sp.LOCAL, sp.ANY, pn)
@@ -108,7 +108,7 @@ func (pathc *PathClnt) Create(pn string, principal *sp.Tprincipal, perm sp.Tperm
 
 // Rename using renameat() for across directories or using wstat()
 // for within a directory.
-func (pathc *PathClnt) Rename(old, new string, principal *sp.Tprincipal, f *sp.Tfence) error {
+func (pathc *PathClnt) Rename(old, new sp.Tsigmapath, principal *sp.Tprincipal, f *sp.Tfence) error {
 	db.DPrintf(db.PATHCLNT, "%v: Rename %v %v\n", pathc.cid, old, new)
 	opath, err := serr.PathSplitErr(old)
 	if err != nil {
@@ -147,7 +147,7 @@ func (pathc *PathClnt) Rename(old, new string, principal *sp.Tprincipal, f *sp.T
 }
 
 // Rename across directories of a single server using Renameat
-func (pathc *PathClnt) renameat(old, new string, principal *sp.Tprincipal, f *sp.Tfence) *serr.Err {
+func (pathc *PathClnt) renameat(old, new sp.Tsigmapath, principal *sp.Tprincipal, f *sp.Tfence) *serr.Err {
 	db.DPrintf(db.PATHCLNT, "%v: Renameat %v %v\n", pathc.cid, old, new)
 	opath, err := serr.PathSplitErr(old)
 	if err != nil {
@@ -172,20 +172,20 @@ func (pathc *PathClnt) renameat(old, new string, principal *sp.Tprincipal, f *sp
 	return pathc.FidClnt.Renameat(fid, o, fid1, n, f)
 }
 
-func (pathc *PathClnt) Remove(name string, principal *sp.Tprincipal, f *sp.Tfence) error {
-	db.DPrintf(db.PATHCLNT, "%v: Remove %v\n", pathc.cid, name)
+func (pathc *PathClnt) Remove(pn sp.Tsigmapath, principal *sp.Tprincipal, f *sp.Tfence) error {
+	db.DPrintf(db.PATHCLNT, "%v: Remove %v\n", pathc.cid, pn)
 
-	pn, err := serr.PathSplitErr(name)
+	splitPN, err := serr.PathSplitErr(pn)
 	if err != nil {
 		return err
 	}
-	fid, rest, err := pathc.mntclnt.Resolve(pn, principal, path.EndSlash(name))
+	fid, rest, err := pathc.mntclnt.Resolve(splitPN, principal, path.EndSlash(pn))
 	if err != nil {
 		return err
 	}
-	err = pathc.FidClnt.RemoveFile(fid, rest, path.EndSlash(name), f)
+	err = pathc.FidClnt.RemoveFile(fid, rest, path.EndSlash(pn), f)
 	if serr.Retry(err) {
-		fid, err = pathc.open(pn, principal, path.EndSlash(name), nil)
+		fid, err = pathc.open(spitPN, principal, path.EndSlash(name), nil)
 		if err != nil {
 			return err
 		}
@@ -197,23 +197,23 @@ func (pathc *PathClnt) Remove(name string, principal *sp.Tprincipal, f *sp.Tfenc
 	return nil
 }
 
-func (pathc *PathClnt) Stat(name string, principal *sp.Tprincipal) (*sp.Tstat, error) {
-	db.DPrintf(db.PATHCLNT, "%v: Stat %v\n", pathc.cid, name)
-	pn, err := serr.PathSplitErr(name)
+func (pathc *PathClnt) Stat(pn sp.Tsigmapath, principal *sp.Tprincipal) (*sp.Tstat, error) {
+	db.DPrintf(db.PATHCLNT, "%v: Stat %v\n", pathc.cid, pn)
+	splitPN, err := serr.PathSplitErr(pn)
 	if err != nil {
 		return nil, err
 	}
-	target, rest, err := pathc.mntclnt.Resolve(pn, principal, true)
+	target, rest, err := pathc.mntclnt.Resolve(splitPN, principal, true)
 	if err != nil {
-		db.DPrintf(db.ALWAYS, "%v: Stat resolve %v err %v\n", pathc.cid, pn, err)
+		db.DPrintf(db.ALWAYS, "%v: Stat resolve %v err %v\n", pathc.cid, splitPN, err)
 	}
-	db.DPrintf(db.PATHCLNT, "%v: Stat resolve %v target %v rest %v\n", pathc.cid, pn, target, rest)
-	if len(rest) == 0 && !path.EndSlash(name) {
+	db.DPrintf(db.PATHCLNT, "%v: Stat resolve %v target %v rest %v\n", pathc.cid, splitPN, target, rest)
+	if len(rest) == 0 && !path.EndSlash(pn) {
 		st := sp.NewStatNull()
 		st.Name = pathc.FidClnt.Lookup(target).Endpoint().String()
 		return st, nil
 	} else {
-		fid, err := pathc.open(pn, principal, path.EndSlash(name), nil)
+		fid, err := pathc.open(splitPN, principal, path.EndSlash(pn), nil)
 		if err != nil {
 			return nil, err
 		}
@@ -263,7 +263,7 @@ func (pathc *PathClnt) open(path path.Tpathname, principal *sp.Tprincipal, resol
 	return sp.NoFid, serr.NewErr(serr.TErrUnreachable, path)
 }
 
-func (pathc *PathClnt) Open(pn string, principal *sp.Tprincipal, mode sp.Tmode, w sos.Watch) (sp.Tfid, error) {
+func (pathc *PathClnt) Open(pn sp.Tsigmapath, principal *sp.Tprincipal, mode sp.Tmode, w sos.Watch) (sp.Tfid, error) {
 	db.DPrintf(db.PATHCLNT, "%v: Open %v %v %v\n", pathc.cid, pn, mode, w)
 	p, err := serr.PathSplitErr(pn)
 	if err != nil {
@@ -286,12 +286,12 @@ func (pathc *PathClnt) SetDirWatch(fid sp.Tfid) (sp.Tfid, error) {
 	watchfid, err := pathc.FidClnt.Watch(fid)
 	if err != nil {
 		db.DPrintf(db.PATHCLNT_ERR, "%v: SetDirWatch: setting watch failed %v err %v\n", pathc.cid, fid, err)
-		return sp.NoFid, nil
+		return sp.NoFid, err
 	}
 	return watchfid, nil
 }
 
-func (pathc *PathClnt) GetFile(pn string, principal *sp.Tprincipal, mode sp.Tmode, off sp.Toffset, cnt sp.Tsize, f *sp.Tfence) ([]byte, error) {
+func (pathc *PathClnt) GetFile(pn sp.Tsigmapath, principal *sp.Tprincipal, mode sp.Tmode, off sp.Toffset, cnt sp.Tsize, f *sp.Tfence) ([]byte, error) {
 	db.DPrintf(db.PATHCLNT, "%v: GetFile %v %v\n", pathc.cid, pn, mode)
 	p, err := serr.PathSplitErr(pn)
 	if err != nil {
@@ -319,7 +319,7 @@ func (pathc *PathClnt) GetFile(pn string, principal *sp.Tprincipal, mode sp.Tmod
 }
 
 // Create or open file and write it
-func (pathc *PathClnt) PutFile(pn string, principal *sp.Tprincipal, mode sp.Tmode, perm sp.Tperm, data []byte, off sp.Toffset, lid sp.TleaseId, f *sp.Tfence) (sp.Tsize, error) {
+func (pathc *PathClnt) PutFile(pn sp.Tsigmapath, principal *sp.Tprincipal, mode sp.Tmode, perm sp.Tperm, data []byte, off sp.Toffset, lid sp.TleaseId, f *sp.Tfence) (sp.Tsize, error) {
 	db.DPrintf(db.PATHCLNT, "%v: PutFile %v %v %v\n", pathc.cid, pn, mode, lid)
 	if filepath.Base(pn) == sp.LOCAL || filepath.Base(pn) == sp.ANY {
 		return 0, fmt.Errorf("Can't create %v or %v: %v", sp.LOCAL, sp.ANY, pn)
@@ -379,7 +379,7 @@ func (pathc *PathClnt) Disconnected() bool {
 
 // Disconnect client from server permanently to simulate network
 // partition to server that exports pn
-func (pathc *PathClnt) Disconnect(pn string) error {
+func (pathc *PathClnt) Disconnect(pn sp.Tsigmapath) error {
 	db.DPrintf(db.CRASH, "Disconnect %q\n", pn)
 	pathc.disconnected = true
 	return pathc.mntclnt.Disconnect(pn)

@@ -1,16 +1,16 @@
 package opts
 
 import (
-	"sigmaos/simms"
-	"sigmaos/simms/autoscaler"
-	"sigmaos/simms/lb"
-	lbmetrics "sigmaos/simms/lb/metrics"
-	"sigmaos/simms/qmgr"
+	"sigmaos/simulation/simms"
+	"sigmaos/simulation/simms/autoscaler"
+	"sigmaos/simulation/simms/lb"
+	lbmetrics "sigmaos/simulation/simms/lb/metrics"
 )
 
 var DefaultMicroserviceOpts simms.MicroserviceOpts = simms.MicroserviceOpts{
-	NewQMgr:               qmgr.NewBasicQMgr,
+	NewQMgr:               NewBasicQMgr,
 	NewAutoscaler:         autoscaler.NewNoOpAutoscaler,
 	NewLoadBalancer:       lb.NewRoundRobinLB,
 	NewLoadBalancerMetric: lbmetrics.NewUnsetMetric,
+	KillRemovedInstances:  false,
 }

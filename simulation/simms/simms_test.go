@@ -1605,7 +1605,7 @@ func TestBurst5xMaxQLenQMgrAutoscaleOmniscientQLenLB(t *testing.T) {
 
 func TestBurst5xMaxQLenQMgrAutoscaleKillOmniscientQLenLB(t *testing.T) {
 	const (
-		N_TICKS uint64 = 1000
+		N_TICKS uint64 = 10000
 		// Clnt params
 		CLNT_REQ_MEAN    float64 = 9 // 9 requests per ms
 		CLNT_REQ_STD     float64 = 0
@@ -1619,11 +1619,11 @@ func TestBurst5xMaxQLenQMgrAutoscaleKillOmniscientQLenLB(t *testing.T) {
 		KILL                bool   = true // Immediately kill an instance when downscaling, causing all of its requests to retry at the client
 		STATEFUL            bool   = false
 		RECORD_STATS_WINDOW int    = 10
-		MAX_Q_LEN           int    = 100 // Max queue length at any replica before requests start to be dropped & retried
+		MAX_Q_LEN           int    = 50 // Max queue length at any replica before requests start to be dropped & retried
 		// Autoscaler params
 		MAX_N_REPLICAS     int     = 400
 		SCALE_FREQ         int     = 50
-		TARGET_QDELAY      float64 = 2.0 // Target average queueing delay
+		TARGET_QDELAY      float64 = 1.25 // Target average queueing delay
 		STAT_WINDOW_SIZE   uint64  = 10
 		AUTOSCALER_LEAD_IN uint64  = 100 // Number of ticks to wait before starting the autoscaler
 	)

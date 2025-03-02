@@ -397,7 +397,7 @@ func (rm *RealmSrv) enforceResourcePolicy() {
 		}
 		realmQLens, err := rm.be.GetQueueStats(sp.Conf.Realm.N_SAMPLE)
 		if err != nil {
-			db.DFatalf("Err getting queue stats: %v", err)
+			db.DPrintf(db.ERROR, "Err getting queue stats: %v", err)
 		}
 		db.DPrintf(db.FAIRNESS, "Realm qlens: %v", realmQLens)
 		if !queueBuildup(starvedRealms, realmQLens) {

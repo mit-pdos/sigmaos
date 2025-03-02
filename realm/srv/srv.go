@@ -238,8 +238,7 @@ func (rm *RealmSrv) Remove(ctx fs.CtxI, req proto.RemoveReq, res *proto.RemoveRe
 
 	for _, ss := range r.perRealmKernelSubsystems {
 		if err := rm.mkc.EvictKernelProc(ss.kernelID, ss.pid); err != nil {
-			db.DPrintf(db.ERROR, "Error Evict per-realm kernel subsystem: %v", err)
-			return err
+			db.DPrintf(db.REALMD_ERR, "Error Evict per-realm kernel subsystem: %v", err)
 		}
 	}
 

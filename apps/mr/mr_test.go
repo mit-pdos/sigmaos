@@ -411,6 +411,7 @@ func crashSemPn(l crash.Tselector, i int) string {
 func (ts *Tstate) crashServers(srv string, l crash.Tselector, em *crash.TeventMap, n int) {
 	e0, ok := em.Lookup(l)
 	assert.True(ts.mrts.T, ok)
+	db.DPrintf(db.TEST, "crashServers srv %v event %v", srv, e0)
 	for i := 0; i < n; i++ {
 		time.Sleep(CRASHSRV * time.Millisecond)
 		e1 := crash.NewEventPath(string(l), 0, float64(1.0), crashSemPn(l, i+1))
@@ -514,10 +515,10 @@ func runN(t *testing.T, em *crash.TeventMap, srvs map[string]crash.Tselector, ma
 	var wg sync.WaitGroup
 	for k, v := range srvs {
 		wg.Add(1)
-		go func() {
+		go func(k string, v crash.Tselector) {
 			ts.crashServers(k, v, em, 1)
 			wg.Done()
-		}()
+		}(k, v)
 	}
 	wg.Wait()
 

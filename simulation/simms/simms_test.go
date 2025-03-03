@@ -1632,7 +1632,7 @@ func TestBurst5xMaxQLenQMgrAutoscaleKillOmniscientQLenLB(t *testing.T) {
 	db.DPrintf(db.SIM_TEST, "Sim test done")
 }
 
-func TestFewShardsOmniscientQLenLB(t *testing.T) {
+func TestNonOverlappingShardedOmniscientQLenLB(t *testing.T) {
 	const (
 		N_TICKS uint64 = 1000
 		// Clnt params
@@ -1648,12 +1648,14 @@ func TestFewShardsOmniscientQLenLB(t *testing.T) {
 		STATEFUL            bool   = false
 		RECORD_STATS_WINDOW int    = 10
 		MAX_Q_LEN           int    = 50 // Max queue length at any replica before requests start to be dropped & retried
+		// LB params
+		N_SHARD int = 1
 	)
 	db.DPrintf(db.SIM_TEST, "Sim test start")
 	var time uint64 = 0
 	c := simms.NewClients(CLNT_REQ_MEAN, CLNT_REQ_STD)
 	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, INIT_TIME, KILL, STATEFUL)
-	svc := simms.NewMicroservice(&time, p, opts.DefaultMicroserviceOpts, opts.WithOmniscientLB(), opts.WithLoadBalancerQLenMetric(), opts.WithMaxQLenQMgr(MAX_Q_LEN))
+	svc := simms.NewMicroservice(&time, p, opts.DefaultMicroserviceOpts, opts.WithOmniscientLB(), opts.WithLoadBalancerQLenMetric(), opts.WithMaxQLenQMgr(MAX_Q_LEN), opts.WithRandomNonOverlappingLBShards(N_SHARD))
 	app := simms.NewSingleTierApp(svc)
 	w := simms.NewWorkload(&time, app, c)
 	w.RecordStats(RECORD_STATS_WINDOW)

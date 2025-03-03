@@ -67,3 +67,27 @@ func (o withSingleLBShard) Apply(opts *simms.MicroserviceOpts) {
 func WithSingleLBShard() simms.MicroserviceOpt {
 	return &withSingleLBShard{}
 }
+
+type withRandomLBShards struct {
+	shard simms.NewLoadBalancerShardingFn
+}
+
+func (o withRandomLBShards) Apply(opts *simms.MicroserviceOpts) {
+	opts.NewLoadBalancerSharding = o.shard
+}
+
+func WithRandomNonOverlappingLBShards(nshards int) simms.MicroserviceOpt {
+	return &withRandomLBShards{
+		shard: func(instances []*simms.MicroserviceInstance) [][]int {
+			return lbshard.SelectNonOverlappingRandomShards(instances, nshards)
+		},
+	}
+}
+
+func WithRandomOverlappingLBShards(nshards int, nInstancesPerShard int) simms.MicroserviceOpt {
+	return &withRandomLBShards{
+		shard: func(instances []*simms.MicroserviceInstance) [][]int {
+			return lbshard.SelectOverlappingRandomShards(instances, nshards, nInstancesPerShard)
+		},
+	}
+}

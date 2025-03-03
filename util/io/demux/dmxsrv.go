@@ -39,9 +39,12 @@ func NewDemuxSrv(srv ServerI, trans TransportI) *DemuxSrv {
 
 func (dmx *DemuxSrv) reader() {
 	for {
+		if dmx.IsClosed() {
+			break
+		}
 		c, err := dmx.trans.ReadCall()
 		if err != nil {
-			db.DPrintf(db.DEMUXSRV_ERR, "reader: rf err %v\n", err)
+			db.DPrintf(db.DEMUXSRV_ERR, "reader: %p ReadCall err %v\n", dmx, err)
 			dmx.srv.ReportError(err)
 			break
 		}
@@ -56,7 +59,7 @@ func (dmx *DemuxSrv) reader() {
 			}
 			dmx.mu.Unlock()
 			if err != nil {
-				db.DPrintf(db.DEMUXSRV_ERR, "wf reply %v error %v\n", rep, err)
+				db.DPrintf(db.DEMUXSRV_ERR, "reader: %p WriteCall reply %v error %v\n", dmx, rep, err)
 			}
 		}(c)
 	}
@@ -66,11 +69,14 @@ func (dmx *DemuxSrv) Close() error {
 	dmx.mu.Lock()
 	defer dmx.mu.Unlock()
 
-	if err := dmx.trans.Close(); err != nil {
-		db.DPrintf(db.DEMUXSRV_ERR, "Close trans err %d", err)
+	db.DPrintf(db.DEMUXSRV, "Close dmx %p %d closed? %t\n", dmx, dmx.nreq, dmx.closed)
+	if dmx.closed {
+		return nil
 	}
 	dmx.closed = true
-	db.DPrintf(db.DEMUXSRV, "Close %d\n", dmx.nreq)
+	if err := dmx.trans.Close(); err != nil {
+		db.DPrintf(db.DEMUXSRV_ERR, "Close trans dmx %p err %v", dmx, err)
+	}
 	return nil
 }
 

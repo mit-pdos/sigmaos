@@ -22,12 +22,15 @@ func NewOmniscientLB(m simms.NewLoadBalancerMetricFn, s simms.NewLoadBalancerSha
 }
 
 func (lb *OmniscientLB) SteerRequests(reqs []*simms.Request, instances []*simms.MicroserviceInstance) [][]*simms.Request {
-	steeredReqs := make([][]*simms.Request, len(instances))
-	for i := range steeredReqs {
-		steeredReqs[i] = []*simms.Request{}
-	}
-	m := lb.newMetric(steeredReqs, instances)
 	instanceShards := lb.newShards(instances)
+	steeredReqsPerShard := make([][][]*simms.Request, len(instanceShards))
+	for i := range instanceShards {
+		steeredReqsPerShard[i] = make([][]*simms.Request, len(instances))
+		for j := range instances {
+			steeredReqsPerShard[i][j] = []*simms.Request{}
+		}
+	}
+	m := lb.newMetric(steeredReqsPerShard, instances)
 	instanceShardIdx := 0
 	// For each request
 	for _, r := range reqs {
@@ -36,10 +39,10 @@ func (lb *OmniscientLB) SteerRequests(reqs []*simms.Request, instances []*simms.
 		// Choose the instance in this shard which is the best fit to handle the
 		// request
 		bestFitIdx := lb.chooseInstance(m, shardIdx, instanceShards)
-		// Steer request to instance with shortest queue
-		steeredReqs[bestFitIdx] = append(steeredReqs[bestFitIdx], r)
+		// Steer request to instance with best fit
+		steeredReqsPerShard[shardIdx][bestFitIdx] = append(steeredReqsPerShard[shardIdx][bestFitIdx], r)
 		// Move on to the next instance shard
 		instanceShardIdx++
 	}
-	return steeredReqs
+	return mergeSteeredReqsPerShard(len(instanceShards), steeredReqsPerShard)
 }

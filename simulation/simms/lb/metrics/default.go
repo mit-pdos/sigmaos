@@ -7,11 +7,11 @@ import (
 
 type Unset struct{}
 
-func NewUnsetMetric(steeredReqs [][]*simms.Request, instances []*simms.MicroserviceInstance) simms.LoadBalancerMetric {
+func NewUnsetMetric(steeredReqsPerShard [][][]*simms.Request, instances []*simms.MicroserviceInstance) simms.LoadBalancerMetric {
 	return &Unset{}
 }
 
-func (m *Unset) Less(i, j int) bool {
+func (m *Unset) Less(shard, i, j int) bool {
 	db.DFatalf("Load balancer metrics unset")
 	return false
 }

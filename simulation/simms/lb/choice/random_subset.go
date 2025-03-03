@@ -24,7 +24,7 @@ func RandomSubset(m simms.LoadBalancerMetric, shardIdx int, shards [][]int, ncho
 	// Sample (up to) N random choices
 	for i := 0; i < nchoices && i < len(instanceIdxs); i++ {
 		idx := instanceIdxs[i]
-		if m.Less(idx, smallestIdx) {
+		if m.Less(shardIdx, idx, smallestIdx) {
 			smallestIdx = idx
 		}
 	}

@@ -185,7 +185,7 @@ func (pathc *PathClnt) Remove(pn sp.Tsigmapath, principal *sp.Tprincipal, f *sp.
 	}
 	err = pathc.FidClnt.RemoveFile(fid, rest, path.EndSlash(pn), f)
 	if serr.Retry(err) {
-		fid, err = pathc.open(spitPN, principal, path.EndSlash(name), nil)
+		fid, err = pathc.open(splitPN, principal, path.EndSlash(pn), nil)
 		if err != nil {
 			return err
 		}
@@ -234,11 +234,11 @@ func (pathc *PathClnt) Stat(pn sp.Tsigmapath, principal *sp.Tprincipal) (*sp.Tst
 func (pathc *PathClnt) open(path path.Tpathname, principal *sp.Tprincipal, resolve bool, w sos.Watch) (sp.Tfid, *serr.Err) {
 	for i := 0; i < sp.Conf.Path.MAX_RESOLVE_RETRY; i++ {
 		if err, cont := pathc.mntclnt.ResolveRoot(path); err != nil {
+			db.DPrintf(db.PATHCLNT_ERR, "open: resolveRoot %v err %v cont %t", path, err, cont)
 			if cont && err.IsErrUnreachable() {
 				time.Sleep(sp.Conf.Path.RESOLVE_TIMEOUT)
 				continue
 			}
-			db.DPrintf(db.PATHCLNT_ERR, "open: resolveRoot %v err %v", path, err)
 			return sp.NoFid, err
 		}
 		start := time.Now()

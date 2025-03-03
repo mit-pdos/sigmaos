@@ -862,8 +862,6 @@ func TestAvgUtil50AutoscalerRRLBMatchWithK8s(t *testing.T) {
 	db.DPrintf(db.SIM_RAW_LAT, "Raw latency: %v", stats.GetLatencies())
 	db.DPrintf(db.SIM_LAT_STATS, "Verbose Latency stats over time:\n%v", rstats.VerboseString())
 	db.DPrintf(db.SIM_LAT_STATS, "Stats over time %v", rstats)
-	//	assert.Equal(t, 6, svc.GetAutoscaler().NScaleUpEvents(), "Scaled up wrong number of times")
-	//	assert.Equal(t, 2, svc.GetAutoscaler().NScaleDownEvents(), "Scaled down wrong number of times")
 	db.DPrintf(db.SIM_TEST, "nreqs:%v nreps:%v", svc.GetNReqs(), stats.GetNReps())
 	db.DPrintf(db.SIM_TEST, "Sim test done")
 }
@@ -911,8 +909,6 @@ func TestAvgUtil90AutoscalerRRLBMatchWithK8s(t *testing.T) {
 	db.DPrintf(db.SIM_RAW_LAT, "Raw latency: %v", stats.GetLatencies())
 	db.DPrintf(db.SIM_LAT_STATS, "Verbose Latency stats over time:\n%v", rstats.VerboseString())
 	db.DPrintf(db.SIM_LAT_STATS, "Stats over time %v", rstats)
-	//	assert.Equal(t, 6, svc.GetAutoscaler().NScaleUpEvents(), "Scaled up wrong number of times")
-	//	assert.Equal(t, 2, svc.GetAutoscaler().NScaleDownEvents(), "Scaled down wrong number of times")
 	db.DPrintf(db.SIM_TEST, "nreqs:%v nreps:%v", svc.GetNReqs(), stats.GetNReps())
 	db.DPrintf(db.SIM_TEST, "Sim test done")
 }
@@ -960,8 +956,6 @@ func TestAvgUtil90AutoscalerOmniscientQLenLBMatchWithK8s(t *testing.T) {
 	db.DPrintf(db.SIM_RAW_LAT, "Raw latency: %v", stats.GetLatencies())
 	db.DPrintf(db.SIM_LAT_STATS, "Verbose Latency stats over time:\n%v", rstats.VerboseString())
 	db.DPrintf(db.SIM_LAT_STATS, "Stats over time %v", rstats)
-	//	assert.Equal(t, 6, svc.GetAutoscaler().NScaleUpEvents(), "Scaled up wrong number of times")
-	//	assert.Equal(t, 2, svc.GetAutoscaler().NScaleDownEvents(), "Scaled down wrong number of times")
 	db.DPrintf(db.SIM_TEST, "nreqs:%v nreps:%v", svc.GetNReqs(), stats.GetNReps())
 	db.DPrintf(db.SIM_TEST, "Sim test done")
 }
@@ -1017,8 +1011,6 @@ func TestBurst5xK8sAvgUtilAutoscalerOmniscientQLenLBSigmaOSColdStartParams(t *te
 	db.DPrintf(db.SIM_RAW_LAT, "Raw latency: %v", stats.GetLatencies())
 	db.DPrintf(db.SIM_LAT_STATS, "Verbose Latency stats over time:\n%v", rstats.VerboseString())
 	db.DPrintf(db.SIM_LAT_STATS, "Stats over time %v", rstats)
-	//	assert.Equal(t, 6, svc.GetAutoscaler().NScaleUpEvents(), "Scaled up wrong number of times")
-	//	assert.Equal(t, 2, svc.GetAutoscaler().NScaleDownEvents(), "Scaled down wrong number of times")
 	db.DPrintf(db.SIM_TEST, "nreqs:%v nreps:%v", svc.GetNReqs(), stats.GetNReps())
 	db.DPrintf(db.SIM_TEST, "Sim test done")
 }
@@ -1074,8 +1066,6 @@ func TestBurst2xK8sAvgUtilAutoscalerOmniscientQLenLBSigmaOSColdStartParams(t *te
 	db.DPrintf(db.SIM_RAW_LAT, "Raw latency: %v", stats.GetLatencies())
 	db.DPrintf(db.SIM_LAT_STATS, "Verbose Latency stats over time:\n%v", rstats.VerboseString())
 	db.DPrintf(db.SIM_LAT_STATS, "Stats over time %v", rstats)
-	//	assert.Equal(t, 6, svc.GetAutoscaler().NScaleUpEvents(), "Scaled up wrong number of times")
-	//	assert.Equal(t, 2, svc.GetAutoscaler().NScaleDownEvents(), "Scaled down wrong number of times")
 	db.DPrintf(db.SIM_TEST, "nreqs:%v nreps:%v", svc.GetNReqs(), stats.GetNReps())
 	db.DPrintf(db.SIM_TEST, "Sim test done")
 }
@@ -1132,8 +1122,6 @@ func TestBurst5xOverscale2xK8sAvgUtilAutoscalerOmniscientQLenLBSigmaOSColdStartP
 	db.DPrintf(db.SIM_RAW_LAT, "Raw latency: %v", stats.GetLatencies())
 	db.DPrintf(db.SIM_LAT_STATS, "Verbose Latency stats over time:\n%v", rstats.VerboseString())
 	db.DPrintf(db.SIM_LAT_STATS, "Stats over time %v", rstats)
-	//	assert.Equal(t, 6, svc.GetAutoscaler().NScaleUpEvents(), "Scaled up wrong number of times")
-	//	assert.Equal(t, 2, svc.GetAutoscaler().NScaleDownEvents(), "Scaled down wrong number of times")
 	db.DPrintf(db.SIM_TEST, "nreqs:%v nreps:%v", svc.GetNReqs(), stats.GetNReps())
 	db.DPrintf(db.SIM_TEST, "Sim test done")
 }
@@ -1190,8 +1178,6 @@ func TestBurst2xOverscale2xK8sAvgUtilAutoscalerOmniscientQLenLBSigmaOSColdStartP
 	db.DPrintf(db.SIM_RAW_LAT, "Raw latency: %v", stats.GetLatencies())
 	db.DPrintf(db.SIM_LAT_STATS, "Verbose Latency stats over time:\n%v", rstats.VerboseString())
 	db.DPrintf(db.SIM_LAT_STATS, "Stats over time %v", rstats)
-	//	assert.Equal(t, 6, svc.GetAutoscaler().NScaleUpEvents(), "Scaled up wrong number of times")
-	//	assert.Equal(t, 2, svc.GetAutoscaler().NScaleDownEvents(), "Scaled down wrong number of times")
 	db.DPrintf(db.SIM_TEST, "nreqs:%v nreps:%v", svc.GetNReqs(), stats.GetNReps())
 	db.DPrintf(db.SIM_TEST, "Sim test done")
 }
@@ -1304,8 +1290,6 @@ func TestBurst5xLongDelayedPerfectScaleOmniscientQLenLBSigmaOSColdStartParams(t 
 	db.DPrintf(db.SIM_RAW_LAT, "Raw latency: %v", stats.GetLatencies())
 	db.DPrintf(db.SIM_LAT_STATS, "Verbose Latency stats over time:\n%v", rstats.VerboseString())
 	db.DPrintf(db.SIM_LAT_STATS, "Stats over time %v", rstats)
-	//	assert.Equal(t, 6, svc.GetAutoscaler().NScaleUpEvents(), "Scaled up wrong number of times")
-	//	assert.Equal(t, 2, svc.GetAutoscaler().NScaleDownEvents(), "Scaled down wrong number of times")
 	db.DPrintf(db.SIM_TEST, "nreqs:%v nreps:%v", svc.GetNReqs(), stats.GetNReps())
 	db.DPrintf(db.SIM_TEST, "Sim test done")
 }
@@ -1362,8 +1346,6 @@ func TestBurst5xLongDelayedMaxQDelayQMGrPerfectScaleOmniscientQLenLBSigmaOSColdS
 	db.DPrintf(db.SIM_RAW_LAT, "Raw latency: %v", stats.GetLatencies())
 	db.DPrintf(db.SIM_LAT_STATS, "Verbose Latency stats over time:\n%v", rstats.VerboseString())
 	db.DPrintf(db.SIM_LAT_STATS, "Stats over time %v", rstats)
-	//	assert.Equal(t, 6, svc.GetAutoscaler().NScaleUpEvents(), "Scaled up wrong number of times")
-	//	assert.Equal(t, 2, svc.GetAutoscaler().NScaleDownEvents(), "Scaled down wrong number of times")
 	db.DPrintf(db.SIM_TEST, "nreqs:%v nreps:%v", svc.GetNReqs(), stats.GetNReps())
 	db.DPrintf(db.SIM_TEST, "Sim test done")
 }
@@ -1421,8 +1403,6 @@ func TestBurst5xMaxQDelayQMGrOverscaleLongSvcInitOmniscientQLenLBSigmaOSColdStar
 	db.DPrintf(db.SIM_RAW_LAT, "Raw latency: %v", stats.GetLatencies())
 	db.DPrintf(db.SIM_LAT_STATS, "Verbose Latency stats over time:\n%v", rstats.VerboseString())
 	db.DPrintf(db.SIM_LAT_STATS, "Stats over time %v", rstats)
-	//	assert.Equal(t, 6, svc.GetAutoscaler().NScaleUpEvents(), "Scaled up wrong number of times")
-	//	assert.Equal(t, 2, svc.GetAutoscaler().NScaleDownEvents(), "Scaled down wrong number of times")
 	db.DPrintf(db.SIM_TEST, "nreqs:%v nreps:%v", svc.GetNReqs(), stats.GetNReps())
 	db.DPrintf(db.SIM_TEST, "Sim test done")
 }
@@ -1481,8 +1461,6 @@ func TestBurst5xMaxQDelaySortedQMGrOverscaleLongSvcInitOmniscientQLenLBSigmaOSCo
 	db.DPrintf(db.SIM_RAW_LAT, "Raw latency: %v", stats.GetLatencies())
 	db.DPrintf(db.SIM_LAT_STATS, "Verbose Latency stats over time:\n%v", rstats.VerboseString())
 	db.DPrintf(db.SIM_LAT_STATS, "Stats over time %v", rstats)
-	//	assert.Equal(t, 6, svc.GetAutoscaler().NScaleUpEvents(), "Scaled up wrong number of times")
-	//	assert.Equal(t, 2, svc.GetAutoscaler().NScaleDownEvents(), "Scaled down wrong number of times")
 	db.DPrintf(db.SIM_TEST, "nreqs:%v nreps:%v", svc.GetNReqs(), stats.GetNReps())
 	db.DPrintf(db.SIM_TEST, "Sim test done")
 }
@@ -1540,8 +1518,6 @@ func TestBurst5xMaxQLenQMGrOverscaleLongSvcInitOmniscientQLenLBSigmaOSColdStartP
 	db.DPrintf(db.SIM_RAW_LAT, "Raw latency: %v", stats.GetLatencies())
 	db.DPrintf(db.SIM_LAT_STATS, "Verbose Latency stats over time:\n%v", rstats.VerboseString())
 	db.DPrintf(db.SIM_LAT_STATS, "Stats over time %v", rstats)
-	//	assert.Equal(t, 6, svc.GetAutoscaler().NScaleUpEvents(), "Scaled up wrong number of times")
-	//	assert.Equal(t, 2, svc.GetAutoscaler().NScaleDownEvents(), "Scaled down wrong number of times")
 	db.DPrintf(db.SIM_TEST, "nreqs:%v nreps:%v", svc.GetNReqs(), stats.GetNReps())
 	db.DPrintf(db.SIM_TEST, "Sim test done")
 }
@@ -1597,8 +1573,6 @@ func TestBurst5xMaxQLenQMgrAutoscaleOmniscientQLenLB(t *testing.T) {
 	db.DPrintf(db.SIM_RAW_LAT, "Raw latency: %v", stats.GetLatencies())
 	db.DPrintf(db.SIM_LAT_STATS, "Verbose Latency stats over time:\n%v", rstats.VerboseString())
 	db.DPrintf(db.SIM_LAT_STATS, "Stats over time %v", rstats)
-	//	assert.Equal(t, 6, svc.GetAutoscaler().NScaleUpEvents(), "Scaled up wrong number of times")
-	//	assert.Equal(t, 2, svc.GetAutoscaler().NScaleDownEvents(), "Scaled down wrong number of times")
 	db.DPrintf(db.SIM_TEST, "nreqs:%v nreps:%v", svc.GetNReqs(), stats.GetNReps())
 	db.DPrintf(db.SIM_TEST, "Sim test done")
 }
@@ -1654,8 +1628,46 @@ func TestBurst5xMaxQLenQMgrAutoscaleKillOmniscientQLenLB(t *testing.T) {
 	db.DPrintf(db.SIM_RAW_LAT, "Raw latency: %v", stats.GetLatencies())
 	db.DPrintf(db.SIM_LAT_STATS, "Verbose Latency stats over time:\n%v", rstats.VerboseString())
 	db.DPrintf(db.SIM_LAT_STATS, "Stats over time %v", rstats)
-	//	assert.Equal(t, 6, svc.GetAutoscaler().NScaleUpEvents(), "Scaled up wrong number of times")
-	//	assert.Equal(t, 2, svc.GetAutoscaler().NScaleDownEvents(), "Scaled down wrong number of times")
+	db.DPrintf(db.SIM_TEST, "nreqs:%v nreps:%v", svc.GetNReqs(), stats.GetNReps())
+	db.DPrintf(db.SIM_TEST, "Sim test done")
+}
+
+func TestFewShardsOmniscientQLenLB(t *testing.T) {
+	const (
+		N_TICKS uint64 = 1000
+		// Clnt params
+		CLNT_REQ_MEAN float64 = 9 // 9 requests per ms
+		CLNT_REQ_STD  float64 = 0
+		// App params
+		N_SLOTS             int    = 50 // With 9 requests per millisecond, and 5ms to process each request, a server with 50 processing slots should achieve 90% avg utilization.
+		P_TIME              uint64 = 5  // Request processing time is 5ms, which is in-line with many hotel RPCs
+		INIT_TIME           uint64 = 50 // SigmaOS cold-start time, for just the container, is ~7.5ms. Real time to serve requests would be slighlty longer, due to the need to e.g. establish connections, register in the namespace, etc. This is therefore certainly a lower-bound
+		SVC_ID              string = "wfe"
+		KILL                bool   = true // Immediately kill an instance when downscaling, causing all of its requests to retry at the client
+		STATEFUL            bool   = false
+		RECORD_STATS_WINDOW int    = 10
+		MAX_Q_LEN           int    = 50 // Max queue length at any replica before requests start to be dropped & retried
+	)
+	db.DPrintf(db.SIM_TEST, "Sim test start")
+	var time uint64 = 0
+	c := simms.NewClients(CLNT_REQ_MEAN, CLNT_REQ_STD)
+	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, INIT_TIME, KILL, STATEFUL)
+	svc := simms.NewMicroservice(&time, p, opts.DefaultMicroserviceOpts, opts.WithOmniscientLB(), opts.WithLoadBalancerQLenMetric(), opts.WithMaxQLenQMgr(MAX_Q_LEN))
+	app := simms.NewSingleTierApp(svc)
+	w := simms.NewWorkload(&time, app, c)
+	w.RecordStats(RECORD_STATS_WINDOW)
+	for ; time < N_TICKS; time++ {
+		// Run the simulation
+		w.Tick()
+	}
+	stats := w.GetStats()
+	rstats := stats.GetRecordedStats()
+	//	db.DPrintf(db.SIM_UTIL_STATS, "Avg util: %v", stats.AvgUtil())
+	//	db.DPrintf(db.SIM_UTIL_STATS, "Raw util:\n%v", stats.GetUtils())
+	db.DPrintf(db.SIM_TEST, "Avg latency: %v", stats.AvgLatency())
+	db.DPrintf(db.SIM_RAW_LAT, "Raw latency: %v", stats.GetLatencies())
+	db.DPrintf(db.SIM_LAT_STATS, "Verbose Latency stats over time:\n%v", rstats.VerboseString())
+	db.DPrintf(db.SIM_LAT_STATS, "Stats over time %v", rstats)
 	db.DPrintf(db.SIM_TEST, "nreqs:%v nreps:%v", svc.GetNReqs(), stats.GetNReps())
 	db.DPrintf(db.SIM_TEST, "Sim test done")
 }

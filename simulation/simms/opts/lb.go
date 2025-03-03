@@ -3,6 +3,7 @@ package opts
 import (
 	"sigmaos/simulation/simms"
 	"sigmaos/simulation/simms/lb"
+	lbchoice "sigmaos/simulation/simms/lb/choice"
 	lbmetrics "sigmaos/simulation/simms/lb/metrics"
 	lbshard "sigmaos/simulation/simms/lb/shard"
 )
@@ -30,7 +31,9 @@ func WithLoadBalancerQLenMetric() simms.MicroserviceOpt {
 type withOmniscientLB struct{}
 
 func (withOmniscientLB) Apply(opts *simms.MicroserviceOpts) {
-	opts.NewLoadBalancer = lb.NewOmniscientLB
+	opts.NewLoadBalancer = func(newMetric simms.NewLoadBalancerMetricFn, shard simms.NewLoadBalancerShardingFn) simms.LoadBalancer {
+		return lb.NewOmniscientLB(newMetric, shard, lbchoice.FullScan)
+	}
 }
 
 func WithOmniscientLB() simms.MicroserviceOpt {
@@ -43,7 +46,9 @@ type withNRandomChoicesLB struct {
 
 func (o withNRandomChoicesLB) Apply(opts *simms.MicroserviceOpts) {
 	opts.NewLoadBalancer = func(newMetric simms.NewLoadBalancerMetricFn, shard simms.NewLoadBalancerShardingFn) simms.LoadBalancer {
-		return lb.NewNRandomChoicesLB(newMetric, shard, o.n)
+		return lb.NewOmniscientLB(newMetric, shard, func(m simms.LoadBalancerMetric, shardIdx int, shards [][]int) int {
+			return lbchoice.RandomSubset(m, shardIdx, shards, o.n)
+		})
 	}
 }
 

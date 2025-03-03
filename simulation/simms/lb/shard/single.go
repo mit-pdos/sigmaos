@@ -6,5 +6,5 @@ import (
 
 // Group all instances into a single shard
 func SingleShard(instances []*simms.MicroserviceInstance) [][]int {
-	return SelectRandomShards(instances, 1)
+	return SelectNonOverlappingRandomShards(instances, 1)
 }

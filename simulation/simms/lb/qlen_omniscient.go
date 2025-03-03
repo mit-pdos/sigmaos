@@ -1,7 +1,6 @@
 package lb
 
 import (
-	db "sigmaos/debug"
 	"sigmaos/simulation/simms"
 )
 
@@ -9,14 +8,16 @@ import (
 // distributes requests to microservice instances with the shortes queue
 // lengths
 type OmniscientLB struct {
-	newMetric  simms.NewLoadBalancerMetricFn
-	shardingFn simms.NewLoadBalancerShardingFn
+	newMetric      simms.NewLoadBalancerMetricFn
+	newShards      simms.NewLoadBalancerShardingFn
+	chooseInstance simms.LoadBalancerInstanceChoiceFn
 }
 
-func NewOmniscientLB(m simms.NewLoadBalancerMetricFn, s simms.NewLoadBalancerShardingFn) simms.LoadBalancer {
+func NewOmniscientLB(m simms.NewLoadBalancerMetricFn, s simms.NewLoadBalancerShardingFn, c simms.LoadBalancerInstanceChoiceFn) simms.LoadBalancer {
 	return &OmniscientLB{
-		newMetric:  m,
-		shardingFn: s,
+		newMetric:      m,
+		newShards:      s,
+		chooseInstance: c,
 	}
 }
 
@@ -26,27 +27,17 @@ func (lb *OmniscientLB) SteerRequests(reqs []*simms.Request, instances []*simms.
 		steeredReqs[i] = []*simms.Request{}
 	}
 	m := lb.newMetric(steeredReqs, instances)
-	instanceShards := lb.shardingFn(instances)
+	instanceShards := lb.newShards(instances)
 	instanceShardIdx := 0
 	// For each request
 	for _, r := range reqs {
-		// Get index of ready instance with smallest queue
-		smallestIdx := 0
 		// Select a shard of instances to consider
-		instanceShard := instanceShards[instanceShardIdx%len(instanceShards)]
-		// Iterate each instance in the shard
-		for _, idx := range instanceShard {
-			// Sanity check
-			if !instances[idx].IsReady() {
-				db.DFatalf("Unready instance included in shard selection: idx %v", idx)
-			}
-			// Check if this shard's instance is more suitable
-			if m.Less(idx, smallestIdx) {
-				smallestIdx = idx
-			}
-		}
+		shardIdx := instanceShardIdx % len(instanceShards)
+		// Choose the instance in this shard which is the best fit to handle the
+		// request
+		bestFitIdx := lb.chooseInstance(m, shardIdx, instanceShards)
 		// Steer request to instance with shortest queue
-		steeredReqs[smallestIdx] = append(steeredReqs[smallestIdx], r)
+		steeredReqs[bestFitIdx] = append(steeredReqs[bestFitIdx], r)
 		// Move on to the next instance shard
 		instanceShardIdx++
 	}

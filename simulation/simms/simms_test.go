@@ -1636,12 +1636,13 @@ func TestFewShardsOmniscientQLenLB(t *testing.T) {
 	const (
 		N_TICKS uint64 = 1000
 		// Clnt params
-		CLNT_REQ_MEAN float64 = 9 // 9 requests per ms
+		CLNT_REQ_MEAN float64 = 900 // 9 requests per ms
 		CLNT_REQ_STD  float64 = 0
 		// App params
-		N_SLOTS             int    = 50 // With 9 requests per millisecond, and 5ms to process each request, a server with 50 processing slots should achieve 90% avg utilization.
-		P_TIME              uint64 = 5  // Request processing time is 5ms, which is in-line with many hotel RPCs
-		INIT_TIME           uint64 = 50 // SigmaOS cold-start time, for just the container, is ~7.5ms. Real time to serve requests would be slighlty longer, due to the need to e.g. establish connections, register in the namespace, etc. This is therefore certainly a lower-bound
+		N_INSTANCES         int    = 100 // Number of instances
+		N_SLOTS             int    = 50  // With 9 requests per millisecond, and 5ms to process each request, a server with 50 processing slots should achieve 90% avg utilization.
+		P_TIME              uint64 = 5   // Request processing time is 5ms, which is in-line with many hotel RPCs
+		INIT_TIME           uint64 = 50  // SigmaOS cold-start time, for just the container, is ~7.5ms. Real time to serve requests would be slighlty longer, due to the need to e.g. establish connections, register in the namespace, etc. This is therefore certainly a lower-bound
 		SVC_ID              string = "wfe"
 		KILL                bool   = true // Immediately kill an instance when downscaling, causing all of its requests to retry at the client
 		STATEFUL            bool   = false
@@ -1656,6 +1657,11 @@ func TestFewShardsOmniscientQLenLB(t *testing.T) {
 	app := simms.NewSingleTierApp(svc)
 	w := simms.NewWorkload(&time, app, c)
 	w.RecordStats(RECORD_STATS_WINDOW)
+	// Add a bunch of instances
+	for i := 1; i < N_INSTANCES; i++ {
+		svc.AddInstance()
+		svc.MarkInstanceReady(i)
+	}
 	for ; time < N_TICKS; time++ {
 		// Run the simulation
 		w.Tick()

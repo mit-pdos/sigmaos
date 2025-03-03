@@ -8,11 +8,11 @@ import (
 	//	"runtime/debug"
 
 	db "sigmaos/debug"
-	"sigmaos/util/io/demux"
-	"sigmaos/util/io/frame"
 	"sigmaos/serr"
 	sessp "sigmaos/session/proto"
 	sp "sigmaos/sigmap"
+	"sigmaos/util/io/demux"
+	"sigmaos/util/io/frame"
 )
 
 type Call struct {
@@ -32,6 +32,7 @@ type Transport struct {
 	rdr  io.Reader
 	wrt  *bufio.Writer
 	iovm *demux.IoVecMap
+	conn net.Conn
 }
 
 func NewTransport(conn net.Conn, iovm *demux.IoVecMap) *Transport {
@@ -39,7 +40,13 @@ func NewTransport(conn net.Conn, iovm *demux.IoVecMap) *Transport {
 		rdr:  bufio.NewReaderSize(conn, sp.Conf.Conn.MSG_LEN),
 		wrt:  bufio.NewWriterSize(conn, sp.Conf.Conn.MSG_LEN),
 		iovm: iovm,
+		conn: conn,
 	}
+}
+
+func (t *Transport) Close() error {
+	return t.conn.Close()
+
 }
 
 func (t *Transport) WriteCall(c demux.CallI) *serr.Err {

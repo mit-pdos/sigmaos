@@ -15,6 +15,7 @@ type CallI interface {
 type TransportI interface {
 	ReadCall() (CallI, *serr.Err)
 	WriteCall(CallI) *serr.Err
+	Close() error
 }
 
 type ServerI interface {
@@ -50,7 +51,9 @@ func (dmx *DemuxSrv) reader() {
 				return
 			}
 			dmx.mu.Lock()
-			err = dmx.trans.WriteCall(rep)
+			if !dmx.closed {
+				err = dmx.trans.WriteCall(rep)
+			}
 			dmx.mu.Unlock()
 			if err != nil {
 				db.DPrintf(db.DEMUXSRV_ERR, "wf reply %v error %v\n", rep, err)
@@ -63,6 +66,9 @@ func (dmx *DemuxSrv) Close() error {
 	dmx.mu.Lock()
 	defer dmx.mu.Unlock()
 
+	if err := dmx.trans.Close(); err != nil {
+		db.DPrintf(db.DEMUXSRV_ERR, "Close trans err %d", err)
+	}
 	dmx.closed = true
 	db.DPrintf(db.DEMUXSRV, "Close %d\n", dmx.nreq)
 	return nil

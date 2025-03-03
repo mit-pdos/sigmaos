@@ -70,7 +70,7 @@ func (sess *Session) CloseConn() {
 	}
 	sess.Unlock()
 	if conn != nil {
-		conn.CloseConnTest()
+		conn.Close()
 	}
 }
 

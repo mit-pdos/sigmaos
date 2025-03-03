@@ -38,7 +38,6 @@ func (sm *sessionMgr) DisconnectClient() {
 func (sm *sessionMgr) CloseConn() {
 	sess := sm.st.lastSession()
 	if sess != nil {
-		db.DPrintf(db.CRASH, "%v: CloseConn", sess.Sid)
 		sess.CloseConn()
 	}
 }

@@ -42,7 +42,6 @@ func (nc *netConn) setSess(sess *Session) {
 }
 
 func (nc *netConn) Close() error {
-	db.DPrintf(db.SESSSRV, "Close %v\n", nc)
 	return nc.dmx.Close()
 }
 

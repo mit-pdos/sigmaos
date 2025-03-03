@@ -60,10 +60,6 @@ const (
 	CHILDREN    = "children" // directory with children's pids and symlinks
 )
 
-func GetChildProcDir(procdir string, cpid sp.Tpid) string {
-	return filepath.Join(procdir, CHILDREN, cpid.String(), PROCDIR)
-}
-
 func KProcDir(pid sp.Tpid) string {
 	return filepath.Join(sp.KPIDS, pid.String())
 }

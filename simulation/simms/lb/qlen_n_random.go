@@ -10,14 +10,17 @@ import (
 // distributes requests to microservice instances with the shortes queue
 // lengths
 type NRandomChoicesLB struct {
-	n         int
-	newMetric simms.NewLoadBalancerMetricFn
+	n          int
+	newMetric  simms.NewLoadBalancerMetricFn
+	shardingFn simms.NewLoadBalancerShardingFn
 }
 
-func NewNRandomChoicesLB(m simms.NewLoadBalancerMetricFn, n int) simms.LoadBalancer {
+// TODO: use sharding
+func NewNRandomChoicesLB(m simms.NewLoadBalancerMetricFn, s simms.NewLoadBalancerShardingFn, n int) simms.LoadBalancer {
 	return &NRandomChoicesLB{
-		n:         n,
-		newMetric: m,
+		n:          n,
+		newMetric:  m,
+		shardingFn: s,
 	}
 }
 

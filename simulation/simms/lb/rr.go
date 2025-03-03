@@ -8,7 +8,8 @@ import (
 type RoundRobinLB struct {
 }
 
-func NewRoundRobinLB(simms.NewLoadBalancerMetricFn) simms.LoadBalancer {
+// TODO: use sharding fn
+func NewRoundRobinLB(m simms.NewLoadBalancerMetricFn, s simms.NewLoadBalancerShardingFn) simms.LoadBalancer {
 	return &RoundRobinLB{}
 }
 

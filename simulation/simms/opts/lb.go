@@ -4,6 +4,7 @@ import (
 	"sigmaos/simulation/simms"
 	"sigmaos/simulation/simms/lb"
 	lbmetrics "sigmaos/simulation/simms/lb/metrics"
+	lbshard "sigmaos/simulation/simms/lb/shard"
 )
 
 type withRoundRobinLB struct{}
@@ -41,8 +42,8 @@ type withNRandomChoicesLB struct {
 }
 
 func (o withNRandomChoicesLB) Apply(opts *simms.MicroserviceOpts) {
-	opts.NewLoadBalancer = func(newMetric simms.NewLoadBalancerMetricFn) simms.LoadBalancer {
-		return lb.NewNRandomChoicesLB(newMetric, o.n)
+	opts.NewLoadBalancer = func(newMetric simms.NewLoadBalancerMetricFn, shard simms.NewLoadBalancerShardingFn) simms.LoadBalancer {
+		return lb.NewNRandomChoicesLB(newMetric, shard, o.n)
 	}
 }
 
@@ -50,4 +51,14 @@ func WithNRandomChoicesLB(n int) simms.MicroserviceOpt {
 	return &withNRandomChoicesLB{
 		n: n,
 	}
+}
+
+type withSingleLBShard struct{}
+
+func (o withSingleLBShard) Apply(opts *simms.MicroserviceOpts) {
+	opts.NewLoadBalancerSharding = lbshard.SingleShard
+}
+
+func WithSingleLBShard() simms.MicroserviceOpt {
+	return &withSingleLBShard{}
 }

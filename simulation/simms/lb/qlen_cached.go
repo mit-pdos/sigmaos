@@ -7,13 +7,14 @@ import (
 // Load balancer with omniscient view of microservice queue lengths, which
 // distributes requests to microservice instances with the shortes queue
 // lengths
-type OmniscientLB struct {
+type CachedStateLB struct {
+	qlenStateCache simms.LoadBalancerStateCache
 	newMetric      simms.NewLoadBalancerMetricFn
 	newShards      simms.NewLoadBalancerShardingFn
 	chooseInstance simms.LoadBalancerInstanceChoiceFn
 }
 
-func NewOmniscientLB(m simms.NewLoadBalancerMetricFn, s simms.NewLoadBalancerShardingFn, c simms.LoadBalancerInstanceChoiceFn) simms.LoadBalancer {
+func NewCachedStateLB(m simms.NewLoadBalancerMetricFn, s simms.NewLoadBalancerShardingFn, c simms.LoadBalancerInstanceChoiceFn) simms.LoadBalancer {
 	return &OmniscientLB{
 		newMetric:      m,
 		newShards:      s,
@@ -21,7 +22,7 @@ func NewOmniscientLB(m simms.NewLoadBalancerMetricFn, s simms.NewLoadBalancerSha
 	}
 }
 
-func (lb *OmniscientLB) SteerRequests(reqs []*simms.Request, instances []*simms.MicroserviceInstance) [][]*simms.Request {
+func (lb *CachedStateLB) SteerRequests(reqs []*simms.Request, instances []*simms.MicroserviceInstance) [][]*simms.Request {
 	instanceShards := lb.newShards(instances)
 	steeredReqsPerShard := make([][][]*simms.Request, len(instanceShards))
 	for i := range instanceShards {
@@ -30,7 +31,7 @@ func (lb *OmniscientLB) SteerRequests(reqs []*simms.Request, instances []*simms.
 			steeredReqsPerShard[i][j] = []*simms.Request{}
 		}
 	}
-	m := lb.newMetric(nil, steeredReqsPerShard, instances)
+	m := lb.newMetric(lb.qlenStateCache, steeredReqsPerShard, instances)
 	instanceShardIdx := 0
 	// For each request
 	for _, r := range reqs {

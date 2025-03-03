@@ -36,8 +36,36 @@ func (withOmniscientLB) Apply(opts *simms.MicroserviceOpts) {
 	}
 }
 
+type withLoadBalancerQLenCachedMetric struct{}
+
+func (o withLoadBalancerQLenCachedMetric) Apply(opts *simms.MicroserviceOpts) {
+	opts.NewLoadBalancerMetric = lbmetrics.NewQLenCachedMetric
+}
+
+func WithLoadBalancerQLenCachedMetric() simms.MicroserviceOpt {
+	return &withLoadBalancerQLenCachedMetric{}
+}
+
 func WithOmniscientLB() simms.MicroserviceOpt {
 	return &withOmniscientLB{}
+}
+
+type withCachedStateLB struct {
+	probesPerTick int
+}
+
+func (o withCachedStateLB) Apply(opts *simms.MicroserviceOpts) {
+	opts.NewLoadBalancer = func(newMetric simms.NewLoadBalancerMetricFn, shard simms.NewLoadBalancerShardingFn) simms.LoadBalancer {
+		return lb.NewCachedStateLB(newMetric, shard, func(m simms.LoadBalancerMetric, shardIdx int, shards [][]int) int {
+			return lbchoice.RandomSubset(m, shardIdx, shards, o.probesPerTick)
+		})
+	}
+}
+
+func WithCachedStateLB(probesPerTick int) simms.MicroserviceOpt {
+	return &withCachedStateLB{
+		probesPerTick: probesPerTick,
+	}
 }
 
 type withNRandomChoicesLB struct {

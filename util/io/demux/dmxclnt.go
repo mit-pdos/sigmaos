@@ -85,6 +85,12 @@ func (dmx *DemuxClnt) SendReceive(req CallI, outiov sessp.IoVec) (CallI, *serr.E
 }
 
 func (dmx *DemuxClnt) Close() error {
+	if dmx.callmap.isClosed() {
+		return nil
+	}
+	if err := dmx.trans.Close(); err != nil {
+		db.DPrintf(db.DEMUXCLNT_ERR, "Close trans err %v", err)
+	}
 	return dmx.callmap.close()
 }
 

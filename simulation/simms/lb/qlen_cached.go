@@ -9,14 +9,16 @@ import (
 // distributes requests to microservice instances with the shortes queue
 // lengths
 type CachedStateLB struct {
+	t              *uint64
 	qlenStateCache simms.LoadBalancerStateCache
 	newMetric      simms.NewLoadBalancerMetricFn
 	newShards      simms.NewLoadBalancerShardingFn
 	chooseInstance simms.LoadBalancerInstanceChoiceFn
 }
 
-func NewCachedStateLB(m simms.NewLoadBalancerMetricFn, s simms.NewLoadBalancerShardingFn, c simms.LoadBalancerInstanceChoiceFn) simms.LoadBalancer {
+func NewCachedStateLB(t *uint64, m simms.NewLoadBalancerMetricFn, s simms.NewLoadBalancerShardingFn, c simms.LoadBalancerInstanceChoiceFn) simms.LoadBalancer {
 	return &OmniscientLB{
+		t:              t,
 		newMetric:      m,
 		newShards:      s,
 		chooseInstance: c,

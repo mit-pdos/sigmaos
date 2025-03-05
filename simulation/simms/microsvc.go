@@ -46,7 +46,7 @@ func NewMicroservice(t *uint64, msp *MicroserviceParams, defaultOpts Microservic
 		msp:       msp,
 		instances: []*MicroserviceInstance{},
 		qmgrFn:    opts.NewQMgr,
-		lb:        opts.NewLoadBalancer(opts.NewLoadBalancerMetric, opts.NewLoadBalancerSharding),
+		lb:        opts.NewLoadBalancer(t, opts.NewLoadBalancerMetric, opts.NewLoadBalancerSharding),
 		stats:     NewServiceStats(),
 		toRetry:   []*Request{},
 	}

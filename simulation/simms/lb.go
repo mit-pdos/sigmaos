@@ -1,6 +1,6 @@
 package simms
 
-type NewLoadBalancerFn func(NewLoadBalancerMetricFn, NewLoadBalancerShardingFn) LoadBalancer
+type NewLoadBalancerFn func(*uint64, NewLoadBalancerMetricFn, NewLoadBalancerShardingFn) LoadBalancer
 
 type LoadBalancer interface {
 	SteerRequests([]*Request, []*MicroserviceInstance) [][]*Request

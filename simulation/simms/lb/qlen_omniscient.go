@@ -9,13 +9,15 @@ import (
 // distributes requests to microservice instances with the shortes queue
 // lengths
 type OmniscientLB struct {
+	t              *uint64
 	newMetric      simms.NewLoadBalancerMetricFn
 	newShards      simms.NewLoadBalancerShardingFn
 	chooseInstance simms.LoadBalancerInstanceChoiceFn
 }
 
-func NewOmniscientLB(m simms.NewLoadBalancerMetricFn, s simms.NewLoadBalancerShardingFn, c simms.LoadBalancerInstanceChoiceFn) simms.LoadBalancer {
+func NewOmniscientLB(t *uint64, m simms.NewLoadBalancerMetricFn, s simms.NewLoadBalancerShardingFn, c simms.LoadBalancerInstanceChoiceFn) simms.LoadBalancer {
 	return &OmniscientLB{
+		t:              t,
 		newMetric:      m,
 		newShards:      s,
 		chooseInstance: c,

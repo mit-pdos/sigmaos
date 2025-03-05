@@ -4,6 +4,7 @@ package dcontainer
 
 import (
 	"context"
+	"errors"
 	"io"
 	"os"
 	"path"
@@ -47,52 +48,6 @@ type cpustats struct {
 	util                float64
 }
 
-func copyFile(src string, dst string) error {
-	srcFile, err := os.Open(src)
-	if err != nil {
-		return err
-	}
-	defer srcFile.Close()
-
-	dstFile, err := os.Create(dst)
-	if err != nil {
-		return err
-	}
-	defer dstFile.Close()
-
-	_, err = io.Copy(dstFile, srcFile)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func copyLib(src string, dst string) error {
-	err := os.MkdirAll(dst, 0777)
-	if err != nil {
-		return err
-	}
-
-	entries, err := os.ReadDir(src)
-	if err != nil {
-		return err
-	}
-
-	for _, entry := range entries {
-		srcPath := filepath.Join(src, entry.Name())
-		dstPath := filepath.Join(dst, entry.Name())
-		if entry.IsDir() {
-			err = copyLib(srcPath, dstPath)
-			if err != nil {
-				return err
-			}
-		} else {
-			copyFile(srcPath, dstPath)
-		}
-	}
-	return nil
-}
-
 func StartDockerContainer(p *proc.Proc, kernelId string) (*DContainer, error) {
 	image := "sigmauser"
 	ctx := context.Background()
@@ -116,56 +71,6 @@ func StartDockerContainer(p *proc.Proc, kernelId string) (*DContainer, error) {
 	db.DPrintf(db.CONTAINER, "Running procd with Docker")
 	db.DPrintf(db.CONTAINER, "Realm: %v", p.GetRealm())
 
-	// realmName := p.GetRealm()
-	// realmDir := filepath.Join("/tmp/python", realmName.String())
-	// _, err = os.Stat(realmDir)
-	// if err != nil {
-	// 	if os.IsNotExist(err) {
-	// 		// Create the directory
-	// 		err = os.MkdirAll(realmDir, 0777)
-	// 		if err != nil {
-	// 			return nil, err
-	// 		}
-	// 		// Copy over all lib contents
-	// 		err = copyLib("/tmp/python/Lib", filepath.Join(realmDir, "Lib"))
-	// 		if err != nil {
-	// 			return nil, err
-	// 		}
-	// 		err = copyLib("/tmp/python/build", filepath.Join(realmDir, "build"))
-	// 		if err != nil {
-	// 			return nil, err
-	// 		}
-	// 		err = copyLib("/tmp/python/Modules", filepath.Join(realmDir, "build"))
-	// 		if err != nil {
-	// 			return nil, err
-	// 		}
-	// 	} else {
-	// 		return nil, err
-	// 	}
-	// }
-
-	// // Copy over changeable content
-	// os.RemoveAll(filepath.Join(realmDir, "pyproc/"))
-	// os.RemoveAll(filepath.Join(realmDir, "ld_fstatat.so"))
-	// os.RemoveAll(filepath.Join(realmDir, "clntlib.so"))
-	// os.RemoveAll(filepath.Join(realmDir, "Lib", "splib.py"))
-	// err = copyLib("/tmp/python/pyproc", filepath.Join(realmDir, "pyproc"))
-	// if err != nil {
-	// 	return nil, err
-	// }
-	// err = copyFile("/tmp/python/ld_fstatat.so", filepath.Join(realmDir, "ld_fstatat.so"))
-	// if err != nil {
-	// 	return nil, err
-	// }
-	// err = copyFile("/tmp/python/clntlib.so", filepath.Join(realmDir, "clntlib.so"))
-	// if err != nil {
-	// 	return nil, err
-	// }
-	// err = copyFile("/tmp/python/Lib/splib.py", filepath.Join(realmDir, "Lib", "splib.py"))
-	// if err != nil {
-	// 	return nil, err
-	// }
-
 	// Set up default mounts.
 	mnts := []mount.Mount{
 		// user bin dir.
@@ -175,12 +80,18 @@ func StartDockerContainer(p *proc.Proc, kernelId string) (*DContainer, error) {
 			Target:   chunksrv.ROOTBINCONTAINER,
 			ReadOnly: false,
 		},
-		// Python dirs
+		// Python mounts
 		mount.Mount{
 			Type:     mount.TypeBind,
-			Source:   path.Join("/tmp/python"), // realmDir,
-			Target:   path.Join("/tmp/python"),
+			Source:   path.Join("/tmp", kernelId, "python"),
+			Target:   path.Join("/python"), // Parent of upper/work directory must not be an overlay
 			ReadOnly: false,
+		},
+		mount.Mount{
+			Type:     mount.TypeBind,
+			Source:   path.Join("/tmp/python"),
+			Target:   path.Join("/python/lower"),
+			ReadOnly: true,
 		},
 		// perf output dir
 		mount.Mount{
@@ -230,6 +141,36 @@ func StartDockerContainer(p *proc.Proc, kernelId string) (*DContainer, error) {
 	if err := cli.ContainerStart(ctx, resp.ID, types.ContainerStartOptions{}); err != nil {
 		db.DPrintf(db.CONTAINER, "ContainerStart err %v\n", err)
 		return nil, err
+	}
+
+	// Set up Python overlay dir
+	overlayCmd := "mkdir -p /python/lower /python/upper /python/work /tmp/python && mount -t overlay overlay -o lowerdir=/python/lower,upperdir=/python/upper,workdir=/python/work /tmp/python"
+	execResp, err := cli.ContainerExecCreate(ctx, resp.ID, types.ExecConfig{
+		Cmd:          []string{"sh", "-c", overlayCmd},
+		AttachStdout: true,
+		AttachStderr: true,
+	})
+	if err != nil {
+		db.DPrintf(db.CONTAINER, "ExecCreate err %v\n", err)
+		return nil, err
+	}
+	attachResp, err := cli.ContainerExecAttach(ctx, execResp.ID, types.ExecStartCheck{})
+	if err != nil {
+		db.DPrintf(db.CONTAINER, "ExecStart err %v\n", err)
+		return nil, err
+	}
+	defer attachResp.Close()
+
+	io.Copy(os.Stdout, attachResp.Reader)
+
+	execInspect, err := cli.ContainerExecInspect(ctx, execResp.ID)
+	if err != nil {
+		db.DPrintf(db.CONTAINER, "ExecInspect err %v\n", err)
+		return nil, err
+	}
+	if execInspect.ExitCode != 0 {
+		db.DPrintf(db.CONTAINER, "ExecInspect failure with exit code %v\n", execInspect.ExitCode)
+		return nil, errors.New("ExecInspect failure")
 	}
 
 	json, err1 := cli.ContainerInspect(ctx, resp.ID)

@@ -247,8 +247,6 @@ func (pps *PyProxySrv) handleNewConn(conn *net.UnixConn) {
 					continue
 				}
 
-				db.DPrintf(db.PYPROXYSRV, "reader: Lib: %v\n", file.Name())
-
 				// Check for checksum's presence
 				if file.IsDir() {
 					_, checksumErr := os.Stat(filepath.Join(LIB, file.Name(), CHECKSUM))
@@ -265,6 +263,7 @@ func (pps *PyProxySrv) handleNewConn(conn *net.UnixConn) {
 					}
 				}
 
+				db.DPrintf(db.PYPROXYSRV, "reader: Lib: %v\n", file.Name())
 				err = os.WriteFile(filepath.Join(SUPERLIB, file.Name()), []byte(""), 0777)
 				if err != nil {
 					err = os.MkdirAll(filepath.Join(SUPERLIB, file.Name()), 0777)

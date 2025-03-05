@@ -215,13 +215,11 @@ if [ "${TARGET}" == "local" ]; then
   cp $KERNELBIN/procd $PROCD_BIN/
   cp $KERNELBIN/spproxyd $PROCD_BIN/
   cp $KERNELBIN/uproc-trampoline $PROCD_BIN/
-  cp $KERNELBIN/cpython3.11/python $PROCD_BIN/
-  # cp -r $KERNELBIN/Lib $PYTHON/
-  # cp -r $KERNELBIN/build $PYTHON/
-  # cp -r $KERNELBIN/Modules $PYTHON/
-  sudo rm -rf /tmp/python
+  cp $KERNELBIN/python $PROCD_BIN/
+  # PYTHON
+  sudo rm -rf $PYTHON
   cp -r $KERNELBIN/cpython3.11 /tmp/
-  mv /tmp/cpython3.11 /tmp/python
+  mv /tmp/cpython3.11 $PYTHON
   cp -r $KERNELBIN/pyproc $PYTHON/
   cp $KERNELBIN/ld_fstatat.so $PYTHON/
   cp $KERNELBIN/clntlib.so $PYTHON/

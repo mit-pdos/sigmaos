@@ -70,7 +70,7 @@ for entry in "$LIBDIR"/*; do
   if [ -e "$entry" ]; then
     if [ -d "$entry" ]; then
       touch "$entry/$OVERRIDEFILE"
-    elif [ -f "$entry" ]; then
+    elif [[ -f "$entry" && "$entry" == *.py ]]; then
       filename=$(basename "$entry" .py)
       touch "$LIBDIR/$filename-$OVERRIDEFILE"
     fi
@@ -78,20 +78,12 @@ for entry in "$LIBDIR"/*; do
 done
 
 # Copy Python executable
-# cp cpython3.11/python $OUTPATH/kernel
-# cp cpython3.11/pybuilddir.txt $OUTPATH/kernel
-# cp -r cpython3.11/Lib $OUTPATH/kernel
-# cp -r cpython3.11/build $OUTPATH/kernel
-# cp -r cpython3.11/Modules $OUTPATH/kernel
+cp cpython3.11/python $OUTPATH/kernel
 cp -r cpython3.11 $OUTPATH/kernel
 echo "/~~/Lib" > $OUTPATH/kernel/python.pth
 echo -e "home = /~~\ninclude-system-site-packages = false\nversion = 3.11.10" > $OUTPATH/kernel/pyvenv.cfg
-# cp cpython3.11/python $OUTPATH/user
-# cp cpython3.11/pybuilddir.txt $OUTPATH/user
-# cp -r cpython3.11/Lib $OUTPATH/user
-# cp -r cpython3.11/build $OUTPATH/user
-# cp -r cpython3.11/Modules $OUTPATH/kernel
-cp -r cpython3.11 $OUTPATH/kernel
+cp cpython3.11/python $OUTPATH/user
+cp -r cpython3.11 $OUTPATH/user
 echo "/~~/Lib" > $OUTPATH/user/python.pth
 echo -e "home = /~~\ninclude-system-site-packages = false\nversion = 3.11.10" > $OUTPATH/user/pyvenv.cfg
 

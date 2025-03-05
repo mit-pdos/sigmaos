@@ -7,7 +7,7 @@ import (
 
 type Unset struct{}
 
-func NewUnsetMetric(lbStateCache simms.LoadBalancerStateCache, steeredReqsPerShard [][][]*simms.Request, instances []*simms.MicroserviceInstance) simms.LoadBalancerMetric {
+func NewUnsetMetric(lbStateCache simms.LoadBalancerStateCache, steeredReqsPerShard [][][]*simms.Request) simms.LoadBalancerMetric {
 	return &Unset{}
 }
 

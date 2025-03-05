@@ -7,10 +7,10 @@ type LoadBalancer interface {
 }
 
 type LoadBalancerStateCache interface {
-	GetStat(shard int, t int) int
+	GetStat(shard, instanceIdx int) int
 }
 
-type NewLoadBalancerMetricFn func(lbStateCache LoadBalancerStateCache, steeredReqsPerShard [][][]*Request, instances []*MicroserviceInstance) LoadBalancerMetric
+type NewLoadBalancerMetricFn func(lbStateCache LoadBalancerStateCache, steeredReqsPerShard [][][]*Request) LoadBalancerMetric
 
 type LoadBalancerMetric interface {
 	Less(shard, i, j int) bool

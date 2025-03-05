@@ -2,6 +2,7 @@ package lb
 
 import (
 	"sigmaos/simulation/simms"
+	lbstate "sigmaos/simulation/simms/lb/state"
 )
 
 // Load balancer with omniscient view of microservice queue lengths, which
@@ -31,7 +32,9 @@ func (lb *CachedStateLB) SteerRequests(reqs []*simms.Request, instances []*simms
 			steeredReqsPerShard[i][j] = []*simms.Request{}
 		}
 	}
-	m := lb.newMetric(lb.qlenStateCache, steeredReqsPerShard, instances)
+	// TODO: real state cache
+	stateCache := lbstate.NewOmniscientStateCache(instances)
+	m := lb.newMetric(stateCache, steeredReqsPerShard)
 	instanceShardIdx := 0
 	// For each request
 	for _, r := range reqs {

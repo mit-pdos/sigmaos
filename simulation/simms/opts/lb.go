@@ -36,16 +36,6 @@ func (withOmniscientLB) Apply(opts *simms.MicroserviceOpts) {
 	}
 }
 
-type withLoadBalancerQLenCachedMetric struct{}
-
-func (o withLoadBalancerQLenCachedMetric) Apply(opts *simms.MicroserviceOpts) {
-	opts.NewLoadBalancerMetric = lbmetrics.NewQLenCachedMetric
-}
-
-func WithLoadBalancerQLenCachedMetric() simms.MicroserviceOpt {
-	return &withLoadBalancerQLenCachedMetric{}
-}
-
 func WithOmniscientLB() simms.MicroserviceOpt {
 	return &withOmniscientLB{}
 }

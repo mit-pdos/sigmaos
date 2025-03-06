@@ -37,34 +37,55 @@ const char* get_path(const char *filename)
     }
 
     // Python's initial call to obtain all present libraries
-    if (strcmp("/~~/Lib", filename) == 0) {
+    if (strcmp("/~~/Lib", filename) == 0) { // Figure out why this is still necessary?
+        return "/tmp/python/superlib";
+    }
+    if (strcmp("/tmp/python/Lib", filename) == 0) {
         return "/tmp/python/superlib";
     }
 
+    // Catch /~~ prefix (only used by Python files -- not libs!)
     const char* prefix = "/~~";
     int i = 0;
     while (filename[i] != 0 && i < 3) {
         if (filename[i] != prefix[i]) {
-            return filename;
+            break;
         }
         i++;
     }
+
+    // Catch /tmp/python/Lib prefix
+    const char* pathPrefix = "/tmp/python/Lib";
+    int j = 0;
+    while (filename[j] != 0 && j < 15) {
+        if (filename[j] != pathPrefix[j]) {
+            break;
+        }
+        j++;
+    }
     
-    if (i < 3) return filename;
+    if (i != 3 && j != 15) return filename;
 
     fflush(stdout);
     char* x = malloc(512 * sizeof(char));
-    sprintf(x, "%s%s", "/tmp/python", &(filename[3]));
+
+    if (i == 3) {
+        sprintf(x, "%s%s", "/tmp/python", &(filename[3]));
+    } else {
+        sprintf(x, "%s", filename);
+    }
 
     write(sfd, "pf", 2);
-    write(sfd, &(filename[3]), strlen(filename) - 3);
+    if (i == 3) {
+        write(sfd, &(filename[3]), strlen(filename) - 3);
+    } else {
+        write(sfd, &(filename[11]), strlen(filename) - 11);
+    }
     write(sfd, "\n", 1);
-    // printf("LD_PRELOAD: wrote to socket: %s\n", filename);
     read(sfd, x2, 1);
     while(x2[0] != 'd') {
         read(sfd, x2, 1);
     }
-    // printf("LD_PRELOAD: finished\n");
     return x;
 }
 

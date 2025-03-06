@@ -80,11 +80,11 @@ done
 # Copy Python executable
 cp cpython3.11/python $OUTPATH/kernel
 cp -r cpython3.11 $OUTPATH/kernel
-echo "/~~/Lib" > $OUTPATH/kernel/python.pth
+echo "/tmp/python/Lib" > $OUTPATH/kernel/python.pth # Dummy PYTHONPATH -- not used by actual program
 echo -e "home = /~~\ninclude-system-site-packages = false\nversion = 3.11.10" > $OUTPATH/kernel/pyvenv.cfg
 cp cpython3.11/python $OUTPATH/user
 cp -r cpython3.11 $OUTPATH/user
-echo "/~~/Lib" > $OUTPATH/user/python.pth
+echo "/tmp/python/Lib" > $OUTPATH/user/python.pth
 echo -e "home = /~~\ninclude-system-site-packages = false\nversion = 3.11.10" > $OUTPATH/user/pyvenv.cfg
 
 # Copy and inject Python shim

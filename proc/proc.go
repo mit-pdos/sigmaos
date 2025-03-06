@@ -71,7 +71,7 @@ func NewPythonProc(args []string, bucket string) *Proc {
 
 	// Calculate PYTHONPATH for the relevant file
 	var filename string
-	pythonPath := "/tmp/python/build/lib.linux-x86_64-3.11:/~~/Lib"
+	pythonPath := "/tmp/python/build/lib.linux-x86_64-3.11:/tmp/python/Lib"
 
 	for _, arg := range args {
 		if strings.HasSuffix(arg, ".py") {

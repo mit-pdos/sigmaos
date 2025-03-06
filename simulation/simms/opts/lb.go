@@ -5,7 +5,9 @@ import (
 	"sigmaos/simulation/simms/lb"
 	lbchoice "sigmaos/simulation/simms/lb/choice"
 	lbmetrics "sigmaos/simulation/simms/lb/metrics"
+	lbprobe "sigmaos/simulation/simms/lb/probe"
 	lbshard "sigmaos/simulation/simms/lb/shard"
+	lbstate "sigmaos/simulation/simms/lb/state"
 )
 
 type withRoundRobinLB struct{}
@@ -31,8 +33,8 @@ func WithLoadBalancerQLenMetric() simms.MicroserviceOpt {
 type withOmniscientLB struct{}
 
 func (withOmniscientLB) Apply(opts *simms.MicroserviceOpts) {
-	opts.NewLoadBalancer = func(t *uint64, newMetric simms.NewLoadBalancerMetricFn, shard simms.NewLoadBalancerShardingFn) simms.LoadBalancer {
-		return lb.NewOmniscientLB(t, newMetric, shard, lbchoice.FullScan)
+	opts.NewLoadBalancer = func(t *uint64, lbStateCache simms.LoadBalancerStateCache, newMetric simms.NewLoadBalancerMetricFn) simms.LoadBalancer {
+		return lb.NewOmniscientLB(t, lbStateCache, newMetric, lbchoice.FullScan)
 	}
 }
 
@@ -45,8 +47,8 @@ type withCachedStateLB struct {
 }
 
 func (o withCachedStateLB) Apply(opts *simms.MicroserviceOpts) {
-	opts.NewLoadBalancer = func(t *uint64, newMetric simms.NewLoadBalancerMetricFn, shard simms.NewLoadBalancerShardingFn) simms.LoadBalancer {
-		return lb.NewCachedStateLB(t, newMetric, shard, func(m simms.LoadBalancerMetric, shardIdx int, shards [][]int) int {
+	opts.NewLoadBalancer = func(t *uint64, lbStateCache simms.LoadBalancerStateCache, newMetric simms.NewLoadBalancerMetricFn) simms.LoadBalancer {
+		return lb.NewCachedStateLB(t, lbStateCache, newMetric, func(m simms.LoadBalancerMetric, shardIdx int, shards [][]int) int {
 			return lbchoice.RandomSubset(m, shardIdx, shards, o.probesPerTick)
 		})
 	}
@@ -63,8 +65,8 @@ type withNRandomChoicesLB struct {
 }
 
 func (o withNRandomChoicesLB) Apply(opts *simms.MicroserviceOpts) {
-	opts.NewLoadBalancer = func(t *uint64, newMetric simms.NewLoadBalancerMetricFn, shard simms.NewLoadBalancerShardingFn) simms.LoadBalancer {
-		return lb.NewOmniscientLB(t, newMetric, shard, func(m simms.LoadBalancerMetric, shardIdx int, shards [][]int) int {
+	opts.NewLoadBalancer = func(t *uint64, lbStateCache simms.LoadBalancerStateCache, newMetric simms.NewLoadBalancerMetricFn) simms.LoadBalancer {
+		return lb.NewOmniscientLB(t, lbStateCache, newMetric, func(m simms.LoadBalancerMetric, shardIdx int, shards [][]int) int {
 			return lbchoice.RandomSubset(m, shardIdx, shards, o.n)
 		})
 	}
@@ -76,22 +78,12 @@ func WithNRandomChoicesLB(n int) simms.MicroserviceOpt {
 	}
 }
 
-type withSingleLBShard struct{}
-
-func (o withSingleLBShard) Apply(opts *simms.MicroserviceOpts) {
-	opts.NewLoadBalancerSharding = lbshard.SingleShard
-}
-
-func WithSingleLBShard() simms.MicroserviceOpt {
-	return &withSingleLBShard{}
-}
-
 type withRandomLBShards struct {
-	shard simms.NewLoadBalancerShardingFn
+	shard simms.LoadBalancerShardFn
 }
 
 func (o withRandomLBShards) Apply(opts *simms.MicroserviceOpts) {
-	opts.NewLoadBalancerSharding = o.shard
+	opts.LoadBalancerShard = o.shard
 }
 
 func WithRandomNonOverlappingLBShards(nshards int) simms.MicroserviceOpt {
@@ -107,5 +99,37 @@ func WithRandomOverlappingLBShards(nshards int, nInstancesPerShard int) simms.Mi
 		shard: func(instances []*simms.MicroserviceInstance) [][]int {
 			return lbshard.SelectOverlappingRandomShards(instances, nshards, nInstancesPerShard)
 		},
+	}
+}
+
+type withTopNLBStateCache struct {
+	n int
+}
+
+func (o withTopNLBStateCache) Apply(opts *simms.MicroserviceOpts) {
+	opts.NewLoadBalancerStateCache = func(t *uint64, shard simms.LoadBalancerShardFn, probe simms.LoadBalancerProbeFn, getMetric simms.LoadBalancerMetricProbeFn) simms.LoadBalancerStateCache {
+		return lbstate.NewTopNStateCache(t, o.n, shard, probe, getMetric)
+	}
+}
+
+func WithTopNLBStateCache(n int) simms.MicroserviceOpt {
+	return &withTopNLBStateCache{
+		n: n,
+	}
+}
+
+type withNNewLBProbes struct {
+	n int
+}
+
+func (o withNNewLBProbes) Apply(opts *simms.MicroserviceOpts) {
+	opts.LoadBalancerProbe = func(m simms.LoadBalancerMetricProbeFn, instances []*simms.MicroserviceInstance, shards [][]int) [][]*simms.LoadBalancerProbeResult {
+		return lbprobe.ProbeAllPlusNNew(o.n, m, instances, shards)
+	}
+}
+
+func WithNNewLBProbes(n int) simms.MicroserviceOpt {
+	return &withNNewLBProbes{
+		n: n,
 	}
 }

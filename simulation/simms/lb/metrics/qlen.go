@@ -26,3 +26,7 @@ func (m *QLen) Less(shard, i, j int) bool {
 	jQLen := m.lbStateCache.GetStat(shard, j) + len(m.steeredReqsPerShard[shard][j])
 	return iQLen < jQLen
 }
+
+func GetQLen(i *simms.MicroserviceInstance) int {
+	return i.GetQLen()
+}

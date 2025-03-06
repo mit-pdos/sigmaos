@@ -9,7 +9,10 @@ type MicroserviceOpts struct {
 	NewAutoscaler              NewAutoscalerFn
 	NewLoadBalancer            NewLoadBalancerFn
 	NewLoadBalancerMetric      NewLoadBalancerMetricFn
-	NewLoadBalancerSharding    NewLoadBalancerShardingFn
+	LoadBalancerMetricProbe    LoadBalancerMetricProbeFn
+	NewLoadBalancerStateCache  NewLoadBalancerStateCacheFn
+	LoadBalancerShard          LoadBalancerShardFn
+	LoadBalancerProbe          LoadBalancerProbeFn
 	LoadBalancerInstanceChoice LoadBalancerInstanceChoiceFn
 	KillRemovedInstances       bool // Immediately kill removed instances (instead of draining them/waiting for them to finish before shutting an instance down)
 }

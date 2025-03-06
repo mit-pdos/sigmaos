@@ -2,7 +2,6 @@ package lb
 
 import (
 	"sigmaos/simulation/simms"
-	lbstate "sigmaos/simulation/simms/lb/state"
 )
 
 // Load balancer with omniscient view of microservice queue lengths, which
@@ -10,22 +9,25 @@ import (
 // lengths
 type OmniscientLB struct {
 	t              *uint64
+	stateCache     simms.LoadBalancerStateCache
 	newMetric      simms.NewLoadBalancerMetricFn
-	newShards      simms.NewLoadBalancerShardingFn
 	chooseInstance simms.LoadBalancerInstanceChoiceFn
 }
 
-func NewOmniscientLB(t *uint64, m simms.NewLoadBalancerMetricFn, s simms.NewLoadBalancerShardingFn, c simms.LoadBalancerInstanceChoiceFn) simms.LoadBalancer {
+func NewOmniscientLB(t *uint64, stateCache simms.LoadBalancerStateCache, m simms.NewLoadBalancerMetricFn, c simms.LoadBalancerInstanceChoiceFn) simms.LoadBalancer {
 	return &OmniscientLB{
 		t:              t,
+		stateCache:     stateCache,
 		newMetric:      m,
-		newShards:      s,
 		chooseInstance: c,
 	}
 }
 
 func (lb *OmniscientLB) SteerRequests(reqs []*simms.Request, instances []*simms.MicroserviceInstance) [][]*simms.Request {
-	instanceShards := lb.newShards(instances)
+	// Probe instances, and adjust shards as necessary
+	lb.stateCache.RunProbes(instances)
+	// Get the assignment of instances to shards
+	instanceShards := lb.stateCache.GetShards()
 	steeredReqsPerShard := make([][][]*simms.Request, len(instanceShards))
 	for i := range instanceShards {
 		steeredReqsPerShard[i] = make([][]*simms.Request, len(instances))
@@ -33,8 +35,7 @@ func (lb *OmniscientLB) SteerRequests(reqs []*simms.Request, instances []*simms.
 			steeredReqsPerShard[i][j] = []*simms.Request{}
 		}
 	}
-	stateCache := lbstate.NewOmniscientStateCache(instances)
-	m := lb.newMetric(stateCache, steeredReqsPerShard)
+	m := lb.newMetric(lb.stateCache, steeredReqsPerShard)
 	instanceShardIdx := 0
 	// For each request
 	for _, r := range reqs {
@@ -48,5 +49,5 @@ func (lb *OmniscientLB) SteerRequests(reqs []*simms.Request, instances []*simms.
 		// Move on to the next instance shard
 		instanceShardIdx++
 	}
-	return mergeSteeredReqsPerShard(len(instanceShards), steeredReqsPerShard)
+	return mergeSteeredReqsPerShard(len(instances), steeredReqsPerShard)
 }

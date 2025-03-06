@@ -1743,7 +1743,6 @@ func TestOverlappingShardedNRandomChoicesQLenLB(t *testing.T) {
 		CLNT_REQ_MEAN float64 = 950 // 950 requests per ms
 		CLNT_REQ_STD  float64 = 0
 		// App params
-		//		N_INSTANCES         int    = 100 // Number of instances
 		N_INSTANCES         int    = 100 // Number of instances
 		N_SLOTS             int    = 50  // With 9.5 requests per millisecond, and 5ms to process each request, a server with 50 processing slots should achieve 95% avg utilization.
 		P_TIME              uint64 = 5   // Request processing time is 5ms, which is in-line with many hotel RPCs
@@ -1755,7 +1754,7 @@ func TestOverlappingShardedNRandomChoicesQLenLB(t *testing.T) {
 		MAX_Q_LEN           int    = 50 // Max queue length at any replica before requests start to be dropped & retried
 		// LB params
 		N_RANDOM_CHOICES int     = 3   // Number of random choices/metrics queries for instances which may run a request
-		N_SHARD          int     = 10  // Number of load balancer shards.
+		N_SHARD          int     = 6   // Number of load balancer shards.
 		OVERLAP_PCT      float64 = 1.0 // Percentage of overlap between instance shards
 	)
 	var (
@@ -1768,8 +1767,128 @@ func TestOverlappingShardedNRandomChoicesQLenLB(t *testing.T) {
 	svc := simms.NewMicroservice(&time, p, opts.DefaultMicroserviceOpts,
 		opts.WithNRandomChoicesLB(N_RANDOM_CHOICES),
 		opts.WithLoadBalancerQLenMetric(),
-		opts.WithMaxQLenQMgr(MAX_Q_LEN),
+		//		opts.WithMaxQLenQMgr(MAX_Q_LEN),
 		opts.WithRandomOverlappingLBShards(N_SHARD, N_INSTANCES_PER_LB_SHARD),
+	)
+	app := simms.NewSingleTierApp(svc)
+	w := simms.NewWorkload(&time, app, c)
+	w.RecordStats(RECORD_STATS_WINDOW)
+	// Add a bunch of instances
+	for i := 1; i < N_INSTANCES; i++ {
+		svc.AddInstance()
+		svc.MarkInstanceReady(i)
+	}
+	for ; time < N_TICKS; time++ {
+		// Run the simulation
+		w.Tick()
+	}
+	stats := w.GetStats()
+	rstats := stats.GetRecordedStats()
+	db.DPrintf(db.SIM_TEST, "Avg latency: %v", stats.AvgLatency())
+	db.DPrintf(db.SIM_RAW_LAT, "Raw latency: %v", stats.GetLatencies())
+	db.DPrintf(db.SIM_LAT_STATS, "Verbose Latency stats over time:\n%v", rstats.VerboseString())
+	db.DPrintf(db.SIM_LAT_STATS, "Stats over time %v", rstats)
+	db.DPrintf(db.SIM_TEST, "nreqs:%v nreps:%v", svc.GetNReqs(), stats.GetNReps())
+	db.DPrintf(db.SIM_TEST, "Sim test done")
+	db.DPrintf(db.ALWAYS, "N instances per shard: %v", N_INSTANCES_PER_LB_SHARD)
+}
+
+func TestOverlappingShardedNRandomChoicesCacheQLenLB(t *testing.T) {
+	const (
+		N_TICKS uint64 = 1000
+		// Clnt params
+		CLNT_REQ_MEAN float64 = 950 // 950 requests per ms
+		CLNT_REQ_STD  float64 = 0
+		// App params
+		N_INSTANCES         int    = 100 // Number of instances
+		N_SLOTS             int    = 50  // With 9.5 requests per millisecond, and 5ms to process each request, a server with 50 processing slots should achieve 95% avg utilization.
+		P_TIME              uint64 = 5   // Request processing time is 5ms, which is in-line with many hotel RPCs
+		INIT_TIME           uint64 = 50  // SigmaOS cold-start time, for just the container, is ~7.5ms. Real time to serve requests would be slighlty longer, due to the need to e.g. establish connections, register in the namespace, etc. This is therefore certainly a lower-bound
+		SVC_ID              string = "wfe"
+		KILL                bool   = true // Immediately kill an instance when downscaling, causing all of its requests to retry at the client
+		STATEFUL            bool   = false
+		RECORD_STATS_WINDOW int    = 10
+		MAX_Q_LEN           int    = 50 // Max queue length at any replica before requests start to be dropped & retried
+		// LB params
+		N_RANDOM_CHOICES int     = 3   // Number of random choices/metrics queries for instances which may run a request
+		N_SHARD          int     = 6   // Number of load balancer shards.
+		OVERLAP_PCT      float64 = 1.0 // Percentage of overlap between instance shards
+	)
+	var (
+		N_INSTANCES_PER_LB_SHARD int = int(math.Ceil(float64(N_INSTANCES/N_SHARD) * OVERLAP_PCT)) // Number of instances in each LB shard
+		STATE_CACHE_SIZE             = N_INSTANCES_PER_LB_SHARD                                   // Number of top-quality probe results kept around by the load-balancer per-shard state cache
+	)
+	db.DPrintf(db.SIM_TEST, "Sim test start")
+	var time uint64 = 0
+	c := simms.NewClients(CLNT_REQ_MEAN, CLNT_REQ_STD)
+	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, INIT_TIME, KILL, STATEFUL)
+	svc := simms.NewMicroservice(&time, p, opts.DefaultMicroserviceOpts,
+		opts.WithNRandomChoicesLB(N_RANDOM_CHOICES),
+		opts.WithLoadBalancerQLenMetric(),
+		//		opts.WithMaxQLenQMgr(MAX_Q_LEN),
+		opts.WithRandomOverlappingLBShards(N_SHARD, N_INSTANCES_PER_LB_SHARD),
+		opts.WithTopNLBStateCache(STATE_CACHE_SIZE),
+	)
+	app := simms.NewSingleTierApp(svc)
+	w := simms.NewWorkload(&time, app, c)
+	w.RecordStats(RECORD_STATS_WINDOW)
+	// Add a bunch of instances
+	for i := 1; i < N_INSTANCES; i++ {
+		svc.AddInstance()
+		svc.MarkInstanceReady(i)
+	}
+	for ; time < N_TICKS; time++ {
+		// Run the simulation
+		w.Tick()
+	}
+	stats := w.GetStats()
+	rstats := stats.GetRecordedStats()
+	db.DPrintf(db.SIM_TEST, "Avg latency: %v", stats.AvgLatency())
+	db.DPrintf(db.SIM_RAW_LAT, "Raw latency: %v", stats.GetLatencies())
+	db.DPrintf(db.SIM_LAT_STATS, "Verbose Latency stats over time:\n%v", rstats.VerboseString())
+	db.DPrintf(db.SIM_LAT_STATS, "Stats over time %v", rstats)
+	db.DPrintf(db.SIM_TEST, "nreqs:%v nreps:%v", svc.GetNReqs(), stats.GetNReps())
+	db.DPrintf(db.SIM_TEST, "Sim test done")
+	db.DPrintf(db.ALWAYS, "N instances per shard: %v", N_INSTANCES_PER_LB_SHARD)
+}
+
+func TestOverlappingShardedCachedStatePlusNNewProbeCacheQLenLB(t *testing.T) {
+	const (
+		N_TICKS uint64 = 1000
+		// Clnt params
+		CLNT_REQ_MEAN float64 = 950 // 950 requests per ms
+		CLNT_REQ_STD  float64 = 0
+		// App params
+		N_INSTANCES         int    = 100 // Number of instances
+		N_SLOTS             int    = 50  // With 9.5 requests per millisecond, and 5ms to process each request, a server with 50 processing slots should achieve 95% avg utilization.
+		P_TIME              uint64 = 5   // Request processing time is 5ms, which is in-line with many hotel RPCs
+		INIT_TIME           uint64 = 50  // SigmaOS cold-start time, for just the container, is ~7.5ms. Real time to serve requests would be slighlty longer, due to the need to e.g. establish connections, register in the namespace, etc. This is therefore certainly a lower-bound
+		SVC_ID              string = "wfe"
+		KILL                bool   = true // Immediately kill an instance when downscaling, causing all of its requests to retry at the client
+		STATEFUL            bool   = false
+		RECORD_STATS_WINDOW int    = 10
+		MAX_Q_LEN           int    = 50 // Max queue length at any replica before requests start to be dropped & retried
+		// LB params
+		N_RANDOM_CHOICES int     = 3   // Number of random choices/metrics queries for instances which may run a request
+		N_SHARD          int     = 6   // Number of load balancer shards.
+		OVERLAP_PCT      float64 = 1.0 // Percentage of overlap between instance shards
+		N_NEW_PROBES     int     = 2   // Additional number of probes of instances outside of each shard which the load balancer state cache can make
+	)
+	var (
+		N_INSTANCES_PER_LB_SHARD int = int(math.Ceil(float64(N_INSTANCES/N_SHARD) * OVERLAP_PCT)) // Number of instances in each LB shard
+		STATE_CACHE_SIZE             = N_INSTANCES_PER_LB_SHARD                                   // Number of top-quality probe results kept around by the load-balancer per-shard state cache
+	)
+	db.DPrintf(db.SIM_TEST, "Sim test start")
+	var time uint64 = 0
+	c := simms.NewClients(CLNT_REQ_MEAN, CLNT_REQ_STD)
+	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, INIT_TIME, KILL, STATEFUL)
+	svc := simms.NewMicroservice(&time, p, opts.DefaultMicroserviceOpts,
+		opts.WithCachedStateLB(1),
+		opts.WithLoadBalancerQLenMetric(),
+		//		opts.WithMaxQLenQMgr(MAX_Q_LEN),
+		opts.WithRandomOverlappingLBShards(N_SHARD, N_INSTANCES_PER_LB_SHARD),
+		opts.WithTopNLBStateCache(STATE_CACHE_SIZE),
+		opts.WithNNewLBProbes(N_NEW_PROBES),
 	)
 	app := simms.NewSingleTierApp(svc)
 	w := simms.NewWorkload(&time, app, c)

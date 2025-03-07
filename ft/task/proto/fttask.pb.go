@@ -1360,6 +1360,82 @@ func (*ClearEtcdRep) Descriptor() ([]byte, []int) {
 	return file_ft_task_proto_fttask_proto_rawDescGZIP(), []int{25}
 }
 
+type PartitionReq struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+}
+
+func (x *PartitionReq) Reset() {
+	*x = PartitionReq{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_ft_task_proto_fttask_proto_msgTypes[26]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *PartitionReq) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PartitionReq) ProtoMessage() {}
+
+func (x *PartitionReq) ProtoReflect() protoreflect.Message {
+	mi := &file_ft_task_proto_fttask_proto_msgTypes[26]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PartitionReq.ProtoReflect.Descriptor instead.
+func (*PartitionReq) Descriptor() ([]byte, []int) {
+	return file_ft_task_proto_fttask_proto_rawDescGZIP(), []int{26}
+}
+
+type PartitionRep struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+}
+
+func (x *PartitionRep) Reset() {
+	*x = PartitionRep{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_ft_task_proto_fttask_proto_msgTypes[27]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *PartitionRep) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PartitionRep) ProtoMessage() {}
+
+func (x *PartitionRep) ProtoReflect() protoreflect.Message {
+	mi := &file_ft_task_proto_fttask_proto_msgTypes[27]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PartitionRep.ProtoReflect.Descriptor instead.
+func (*PartitionRep) Descriptor() ([]byte, []int) {
+	return file_ft_task_proto_fttask_proto_rawDescGZIP(), []int{27}
+}
+
 var File_ft_task_proto_fttask_proto protoreflect.FileDescriptor
 
 var file_ft_task_proto_fttask_proto_rawDesc = []byte{
@@ -1456,7 +1532,9 @@ var file_ft_task_proto_fttask_proto_rawDesc = []byte{
 	0x50, 0x72, 0x6f, 0x74, 0x6f, 0x52, 0x05, 0x66, 0x65, 0x6e, 0x63, 0x65, 0x22, 0x0a, 0x0a, 0x08,
 	0x46, 0x65, 0x6e, 0x63, 0x65, 0x52, 0x65, 0x70, 0x22, 0x0e, 0x0a, 0x0c, 0x43, 0x6c, 0x65, 0x61,
 	0x72, 0x45, 0x74, 0x63, 0x64, 0x52, 0x65, 0x71, 0x22, 0x0e, 0x0a, 0x0c, 0x43, 0x6c, 0x65, 0x61,
-	0x72, 0x45, 0x74, 0x63, 0x64, 0x52, 0x65, 0x70, 0x2a, 0x34, 0x0a, 0x0a, 0x54, 0x61, 0x73, 0x6b,
+	0x72, 0x45, 0x74, 0x63, 0x64, 0x52, 0x65, 0x70, 0x22, 0x0e, 0x0a, 0x0c, 0x50, 0x61, 0x72, 0x74,
+	0x69, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x65, 0x71, 0x22, 0x0e, 0x0a, 0x0c, 0x50, 0x61, 0x72, 0x74,
+	0x69, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x65, 0x70, 0x2a, 0x34, 0x0a, 0x0a, 0x54, 0x61, 0x73, 0x6b,
 	0x53, 0x74, 0x61, 0x74, 0x75, 0x73, 0x12, 0x08, 0x0a, 0x04, 0x54, 0x4f, 0x44, 0x4f, 0x10, 0x00,
 	0x12, 0x07, 0x0a, 0x03, 0x57, 0x49, 0x50, 0x10, 0x01, 0x12, 0x08, 0x0a, 0x04, 0x44, 0x4f, 0x4e,
 	0x45, 0x10, 0x02, 0x12, 0x09, 0x0a, 0x05, 0x45, 0x52, 0x52, 0x4f, 0x52, 0x10, 0x03, 0x42, 0x17,
@@ -1477,7 +1555,7 @@ func file_ft_task_proto_fttask_proto_rawDescGZIP() []byte {
 }
 
 var file_ft_task_proto_fttask_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_ft_task_proto_fttask_proto_msgTypes = make([]protoimpl.MessageInfo, 26)
+var file_ft_task_proto_fttask_proto_msgTypes = make([]protoimpl.MessageInfo, 28)
 var file_ft_task_proto_fttask_proto_goTypes = []interface{}{
 	(TaskStatus)(0),              // 0: TaskStatus
 	(*Task)(nil),                 // 1: Task
@@ -1506,26 +1584,28 @@ var file_ft_task_proto_fttask_proto_goTypes = []interface{}{
 	(*FenceRep)(nil),             // 24: FenceRep
 	(*ClearEtcdReq)(nil),         // 25: ClearEtcdReq
 	(*ClearEtcdRep)(nil),         // 26: ClearEtcdRep
-	(*sigmap.TfenceProto)(nil),   // 27: TfenceProto
+	(*PartitionReq)(nil),         // 27: PartitionReq
+	(*PartitionRep)(nil),         // 28: PartitionRep
+	(*sigmap.TfenceProto)(nil),   // 29: TfenceProto
 }
 var file_ft_task_proto_fttask_proto_depIdxs = []int32{
 	1,  // 0: SubmitTasksReq.tasks:type_name -> Task
-	27, // 1: SubmitTasksReq.fence:type_name -> TfenceProto
+	29, // 1: SubmitTasksReq.fence:type_name -> TfenceProto
 	0,  // 2: GetTasksByStatusReq.status:type_name -> TaskStatus
-	27, // 3: GetTasksByStatusReq.fence:type_name -> TfenceProto
-	27, // 4: ReadTasksReq.fence:type_name -> TfenceProto
+	29, // 3: GetTasksByStatusReq.fence:type_name -> TfenceProto
+	29, // 4: ReadTasksReq.fence:type_name -> TfenceProto
 	1,  // 5: ReadTasksRep.tasks:type_name -> Task
 	0,  // 6: MoveTasksReq.to:type_name -> TaskStatus
-	27, // 7: MoveTasksReq.fence:type_name -> TfenceProto
+	29, // 7: MoveTasksReq.fence:type_name -> TfenceProto
 	0,  // 8: MoveTasksByStatusReq.from:type_name -> TaskStatus
 	0,  // 9: MoveTasksByStatusReq.to:type_name -> TaskStatus
-	27, // 10: MoveTasksByStatusReq.fence:type_name -> TfenceProto
-	27, // 11: AcquireTasksReq.fence:type_name -> TfenceProto
-	27, // 12: AddTaskOutputsReq.fence:type_name -> TfenceProto
-	27, // 13: GetTaskOutputsReq.fence:type_name -> TfenceProto
+	29, // 10: MoveTasksByStatusReq.fence:type_name -> TfenceProto
+	29, // 11: AcquireTasksReq.fence:type_name -> TfenceProto
+	29, // 12: AddTaskOutputsReq.fence:type_name -> TfenceProto
+	29, // 13: GetTaskOutputsReq.fence:type_name -> TfenceProto
 	18, // 14: GetTaskStatsRep.stats:type_name -> TaskStats
-	27, // 15: SubmitStopReq.fence:type_name -> TfenceProto
-	27, // 16: FenceReq.fence:type_name -> TfenceProto
+	29, // 15: SubmitStopReq.fence:type_name -> TfenceProto
+	29, // 16: FenceReq.fence:type_name -> TfenceProto
 	17, // [17:17] is the sub-list for method output_type
 	17, // [17:17] is the sub-list for method input_type
 	17, // [17:17] is the sub-list for extension type_name
@@ -1851,6 +1931,30 @@ func file_ft_task_proto_fttask_proto_init() {
 				return nil
 			}
 		}
+		file_ft_task_proto_fttask_proto_msgTypes[26].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*PartitionReq); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_ft_task_proto_fttask_proto_msgTypes[27].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*PartitionRep); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -1858,7 +1962,7 @@ func file_ft_task_proto_fttask_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_ft_task_proto_fttask_proto_rawDesc,
 			NumEnums:      1,
-			NumMessages:   26,
+			NumMessages:   28,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

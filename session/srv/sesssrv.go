@@ -8,15 +8,15 @@ import (
 
 	sps "sigmaos/api/spprotsrv"
 	db "sigmaos/debug"
-	"sigmaos/util/io/demux"
 	dialproxyclnt "sigmaos/dialproxy/clnt"
 	netsrv "sigmaos/net/srv"
 	"sigmaos/proc"
 	"sigmaos/serr"
+	spcodec "sigmaos/session/codec"
 	sessp "sigmaos/session/proto"
 	sp "sigmaos/sigmap"
-	spcodec "sigmaos/session/codec"
 	"sigmaos/sigmasrv/stats"
+	"sigmaos/util/io/demux"
 )
 
 type NewSessionI interface {
@@ -141,4 +141,8 @@ func (ssrv *SessSrv) PartitionClient(permanent bool) {
 	} else {
 		ssrv.sm.CloseConn()
 	}
+}
+
+func (ssrv *SessSrv) PartitionAllClient() {
+	ssrv.sm.DisconnectAllClients()
 }

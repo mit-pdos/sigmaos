@@ -1,23 +1,33 @@
 package srv
 
 import (
+	"path/filepath"
+	db "sigmaos/debug"
 	"sigmaos/ft/procgroupmgr"
 	"sigmaos/ft/task"
 	fttask_clnt "sigmaos/ft/task/clnt"
+	"sigmaos/namesrv/fsetcd"
 	"sigmaos/serr"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/util/crash"
+	"time"
 )
 
 type FtTaskSrvMgr struct {
 	sc *sigmaclnt.SigmaClnt
 	Id task.FtTaskSrvId
+	clnt fttask_clnt.FtTaskClnt[any, any]
 	p *procgroupmgr.ProcGroupMgr
 }
 
 func NewFtTaskSrvMgr(sc *sigmaclnt.SigmaClnt, id string, em *crash.TeventMap) (*FtTaskSrvMgr, error) {
 	err := sc.MkDir(sp.FTTASK, 0777)
+	if err != nil && !serr.IsErrorExists(err) {
+		return nil, err
+	}
+
+	err = sc.MkDir(filepath.Join(sp.FTTASK, id), 0777)
 	if err != nil && !serr.IsErrorExists(err) {
 		return nil, err
 	}
@@ -34,20 +44,68 @@ func NewFtTaskSrvMgr(sc *sigmaclnt.SigmaClnt, id string, em *crash.TeventMap) (*
 		return nil, err
 	}
 
-	return &FtTaskSrvMgr{sc, task.FtTaskSrvId(id), p}, nil
+	clnt := fttask_clnt.NewFtTaskClnt[any, any](sc.FsLib, task.FtTaskSrvId(id))
+
+	ft := &FtTaskSrvMgr{sc, task.FtTaskSrvId(id), clnt, p}
+	go ft.monitor()
+
+	return ft, nil
 }
 
-func (ft *FtTaskSrvMgr) Stop(clearStore bool) error {
+func (ft *FtTaskSrvMgr) monitor() {
+	nfail := 0
+	for ft.p.IsRunning() {
+		err := ft.clnt.Ping()
+		if serr.IsErrorUnavailable(err) {
+			if !ft.p.IsRunning() {
+				return
+			}
+			nfail += 1
+
+			if nfail >= 2 {
+				db.DPrintf(db.FTTASKS, "Failed to ping server three times, restarting group")
+				time.Sleep(2 * fsetcd.LeaseTTL)
+				err = ft.p.RestartGroup(true)
+				if err != nil {
+					db.DPrintf(db.FTTASKS, "Failed to restart group: %v", err)
+				}
+				nfail = 0
+			}
+		} else {
+			db.DPrintf(db.FTTASKS, "Ping successful")
+			nfail = 0
+		}
+
+		time.Sleep(500 * time.Millisecond)
+	}
+}
+
+// for testing purposes
+func (ft *FtTaskSrvMgr) Partition() error {
+	ft.p.Lock()
+	defer ft.p.Unlock()
+
+	currInstance, err := ft.clnt.Partition()
+	if err != nil {
+		return err
+	}
+
+	db.DPrintf(db.FTTASKS, "Partitioned instance %v", currInstance)
+	return ft.sc.Disconnect(filepath.Join(ft.Id.ServerPath(), currInstance))
+}
+
+func (ft *FtTaskSrvMgr) Stop(clearStore bool) ([]*procgroupmgr.ProcStatus, error) {
 	if clearStore {
+		db.DPrintf(db.FTTASKS, "Sending request to clear backing store")
 		// lock to ensure group members don't change while we clear the db
 		ft.p.Lock()
-		clnt := fttask_clnt.NewFtTaskClnt[any, any](ft.sc.FsLib, ft.Id)
-		err := clnt.ClearEtcd()
+		err := ft.clnt.ClearEtcd()
 		ft.p.Unlock()
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
-	_, err := ft.p.StopGroup()
-	return err
+	db.DPrintf(db.FTTASKS, "Stopping group")
+	stats, err := ft.p.StopGroup()
+	return stats, err
 }

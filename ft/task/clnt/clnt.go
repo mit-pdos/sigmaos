@@ -48,7 +48,7 @@ func (tc *ftTaskClnt[Data, Output]) SubmitTasks(tasks []*Task[Data]) ([]TaskId, 
 	arg := proto.SubmitTasksReq{Tasks: protoTasks, Fence: tc.fenceProto()}
 	res := proto.SubmitTasksRep{}
 
-	err := tc.rpc("TaskSrv.SubmitTasks", &arg, &res)
+	err := tc.rpc("TaskSrv.SubmitTasks", &arg, &res, true)
 	return res.Existing, err
 }
 
@@ -56,7 +56,7 @@ func (tc *ftTaskClnt[Data, Output]) ReadTasks(ids []TaskId) ([]Task[Data], error
 	arg := proto.ReadTasksReq{Ids: ids, Fence: tc.fenceProto()}
 	res := proto.ReadTasksRep{}
 
-	err := tc.rpc("TaskSrv.ReadTasks", &arg, &res)
+	err := tc.rpc("TaskSrv.ReadTasks", &arg, &res, true)
 	if err != nil {
 		return nil, err
 	}
@@ -80,7 +80,7 @@ func (tc *ftTaskClnt[Data, Output]) GetTaskOutputs(ids []TaskId) ([]Output, erro
 	arg := proto.GetTaskOutputsReq{Ids: ids, Fence: tc.fenceProto()}
 	res := proto.GetTaskOutputsRep{}
 
-	err := tc.rpc("TaskSrv.GetTaskOutputs", &arg, &res)
+	err := tc.rpc("TaskSrv.GetTaskOutputs", &arg, &res, true)
 	if err != nil {
 		return nil, err
 	}
@@ -110,7 +110,7 @@ func (tc *ftTaskClnt[Data, Output]) AddTaskOutputs(ids []TaskId, outputs []Outpu
 	arg := proto.AddTaskOutputsReq{Ids: ids, Outputs: encoded, Fence: tc.fenceProto()}
 	res := proto.AddTaskOutputsRep{}
 
-	err = tc.rpc("TaskSrv.AddTaskOutputs", &arg, &res)
+	err = tc.rpc("TaskSrv.AddTaskOutputs", &arg, &res, true)
 	return err
 }
 

@@ -235,3 +235,8 @@ func (ssrv *SigmaSrv) Serve() {
 		db.DPrintf(db.ALWAYS, "Error WaitEvict: %v", err)
 	}
 }
+
+// for testing network partitions; causes all RPCs to return unavailable
+func (ssrv *SigmaSrv) Partition() {
+	ssrv.rpcs.Partition()
+}

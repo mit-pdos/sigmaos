@@ -21,6 +21,7 @@ import (
 type RPCSrv struct {
 	svc *svcMap
 	sti *rpc.StatInfo
+	partitioned bool // testing
 }
 
 func NewRPCSrv(svci any, si *rpc.StatInfo) *RPCSrv {
@@ -34,6 +35,10 @@ func (rpcs *RPCSrv) RegisterService(svci any) {
 }
 
 func (rpcs *RPCSrv) WriteRead(ctx fs.CtxI, iov sessp.IoVec) (sessp.IoVec, *serr.Err) {
+	if rpcs.partitioned {
+		return nil, serr.NewErr(serr.TErrUnreachable, "partitioned")
+	}
+
 	var start time.Time
 	if rpcs.sti != nil {
 		start = time.Now()
@@ -62,9 +67,13 @@ func (rpcs *RPCSrv) WriteRead(ctx fs.CtxI, iov sessp.IoVec) (sessp.IoVec, *serr.
 }
 
 func (rpcs *RPCSrv) ServeRPC(ctx fs.CtxI, m string, iov sessp.IoVec) (sessp.IoVec, *serr.Err) {
+	if rpcs.partitioned {
+		return nil, serr.NewErr(serr.TErrUnreachable, "partitioned")
+	}
+
 	dot := strings.LastIndex(m, ".")
 	if dot <= 0 {
-		return nil, serr.NewErrError(fmt.Errorf("Invalid method %q", m))
+		return nil, serr.NewErrError(fmt.Errorf("invalid method %q", m))
 	}
 	method := m[dot+1:]
 	tname := m[:dot]
@@ -130,11 +139,16 @@ func (svc *service) dispatch(ctx fs.CtxI, methname string, iov sessp.IoVec) (pro
 		return repmsg, nil
 	} else {
 		choices := []string{}
-		for k, _ := range svc.methods {
+		for k := range svc.methods {
 			choices = append(choices, k)
 		}
 		db.DPrintf(db.ALWAYS, "rpcDev.dispatch(): unknown method %v in %v; expecting one of %v\n",
 			methname, name, choices)
 		return nil, serr.NewErr(serr.TErrNotfound, methname)
 	}
+}
+
+// for testing network partitions
+func (rpcs *RPCSrv) Partition() {
+	rpcs.partitioned = true
 }

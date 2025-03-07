@@ -106,7 +106,6 @@ func (ts *Tstate) restartTstate() {
 	}
 	ts.Tstate = ts1
 
-	ts.ftsrv.Stop(false)
 	ts.ftsrv, err = fttask_srv.NewFtTaskSrvMgr(ts.SigmaClnt, fmt.Sprintf("imgresize-%s", ts.job), nil)
 	assert.Nil(ts.T, err)
 	ts.ftclnt = fttask_clnt.NewFtTaskClnt[imgresize.Ttask, any](ts.SigmaClnt.FsLib, ts.ftsrv.Id)
@@ -271,6 +270,9 @@ func TestImgdRestart(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Empty(t, existing)
 
+	err = ts.ftclnt.SubmitStop()
+	assert.Nil(t, err)
+
 	imgd := imgresize.StartImgd(ts.SigmaClnt, ts.ftclnt.ServerId(), IMG_RESIZE_MCPU, IMG_RESIZE_MEM, true, 1, 0, nil)
 
 	time.Sleep(2 * time.Second)
@@ -288,9 +290,6 @@ func TestImgdRestart(t *testing.T) {
 	gms, err := procgroupmgr.Recover(ts.SigmaClnt)
 	assert.Nil(ts.T, err, "Recover")
 	assert.Equal(ts.T, 1, len(gms))
-
-	err = ts.ftclnt.SubmitStop()
-	assert.Nil(t, err)
 
 	go ts.progress()
 

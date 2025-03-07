@@ -41,6 +41,8 @@ type FtTaskClnt[Data any, Output any] interface {
 	ClearEtcd() error
 	Raw() FtTaskClnt[[]byte, []byte]
 	ServerId() task.FtTaskSrvId
+	Ping() error
+	Partition() (string, error) // for testing purposes; partitions the server from named so its lease expires
 	
-	rpc(method string, arg protobuf.Message, res protobuf.Message) error
+	rpc(method string, arg protobuf.Message, res protobuf.Message, wait bool) error
 }

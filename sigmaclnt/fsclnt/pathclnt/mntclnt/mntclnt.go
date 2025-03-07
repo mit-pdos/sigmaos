@@ -205,7 +205,6 @@ func (mc *MntClnt) Disconnect(pn string) error {
 			return serr.NewErr(serr.TErrUnreachable, pnt.path)
 		}
 	}
-	return nil
 }
 
 func (mc *MntClnt) disconnectMnt(pnt *Point) error {

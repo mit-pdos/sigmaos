@@ -130,3 +130,11 @@ message ClearEtcdReq {
 message ClearEtcdRep {
 
 }
+
+message PartitionReq {
+
+}
+
+message PartitionRep {
+
+}

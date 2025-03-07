@@ -9,9 +9,11 @@ import (
 
 	"sigmaos/apps/mr"
 	db "sigmaos/debug"
+	"sigmaos/ft/procgroupmgr"
 	fttask_clnt "sigmaos/ft/task/clnt"
 	"sigmaos/ft/task/proto"
 	fttasksrv "sigmaos/ft/task/srv"
+	"sigmaos/namesrv/fsetcd"
 	"sigmaos/sigmap"
 	"sigmaos/test"
 	"sigmaos/util/crash"
@@ -117,7 +119,7 @@ func TestServerPerf(t *testing.T) {
 	}
 	db.DPrintf(db.ALWAYS, "Read all outputs in %v (%v per task)", time.Since(start), time.Since(start) / time.Duration(nTasks))
 
-	err = mgr.Stop(true)
+	_, err = mgr.Stop(true)
 	assert.Nil(t, err)
 
 	ts.Shutdown()
@@ -189,7 +191,7 @@ func TestServerBatchedPerf(t *testing.T) {
 		assert.Equal(t, "bye", out)
 	}
 
-	err = mgr.Stop(true)
+	_, err = mgr.Stop(true)
 	assert.Nil(t, err)
 
 	ts.Shutdown()
@@ -274,7 +276,7 @@ func TestServerMoveTasksByStatus(t *testing.T) {
 		ids,
 	)
 
-	err = mgr.Stop(true)
+	_, err = mgr.Stop(true)
 	assert.Nil(t, err)
 
 	ts.Shutdown()
@@ -340,7 +342,7 @@ func TestServerMoveTasksById(t *testing.T) {
 		[]int32{0},
 	)
 
-	err = mgr.Stop(true)
+	_, err = mgr.Stop(true)
 	assert.Nil(t, err)
 
 	ts.Shutdown()
@@ -381,7 +383,7 @@ func TestServerWait(t *testing.T) {
 	assert.False(t, stopped)
 	assert.Equal(t, ntasks, len(ids))
 
-	err = mgr.Stop(true)
+	_, err = mgr.Stop(true)
 	assert.Nil(t, err)
 
 	ts.Shutdown()
@@ -427,7 +429,7 @@ func TestServerErrors(t *testing.T) {
 	_, err = clnt.GetTaskOutputs([]int32{6})
 	assert.NotNil(t, err)
 
-	err = mgr.Stop(true)
+	_, err = mgr.Stop(true)
 	assert.Nil(t, err)
 
 	ts.Shutdown()
@@ -476,7 +478,7 @@ func TestServerStop(t *testing.T) {
 	assert.True(t, stopped)
 	assert.Equal(t, 0, len(existing))
 
-	err = mgr.Stop(true)
+	_, err = mgr.Stop(true)
 	assert.Nil(t, err)
 
 	ts.Shutdown()
@@ -511,16 +513,16 @@ func TestServerFence(t *testing.T) {
 	_, err = clnt.MoveTasksByStatus(fttask_clnt.WIP, fttask_clnt.TODO)
 	assert.NotNil(t, err)
 
-	err = mgr.Stop(true)
+	_, err = mgr.Stop(true)
 	assert.Nil(t, err)
 
 	ts.Shutdown()
 }
 
-func runTestServerData(t *testing.T, em *crash.TeventMap) {
+func runTestServerData(t *testing.T, em *crash.TeventMap) []*procgroupmgr.ProcStatus {
 	ts, err := test.NewTstateAll(t)
 	if !assert.Nil(t, err, "Error New Tstate: %v", err) {
-		return
+		return nil
 	}
 
 	ntasks := 5
@@ -544,12 +546,18 @@ func runTestServerData(t *testing.T, em *crash.TeventMap) {
 	assert.Nil(t, err)
 	assert.Equal(t, 0, len(existing))
 
-	time.Sleep(1000 * time.Millisecond)
+	if em != nil {
+		time.Sleep(30 * time.Millisecond)
+	}
 
 	ids, stopped, err := clnt.AcquireTasks(false)
 	assert.Nil(t, err)
 	assert.False(t, stopped)
 	assert.Equal(t, ntasks, len(ids))
+
+	if em != nil {
+		time.Sleep(30 * time.Millisecond)
+	}
 
 	read, err := clnt.ReadTasks(ids)
 	assert.Nil(t, err)
@@ -560,6 +568,10 @@ func runTestServerData(t *testing.T, em *crash.TeventMap) {
 		assert.Equal(t, fmt.Sprintf("hello_%d", id), file)
 	}
 
+	if em != nil {
+		time.Sleep(30 * time.Millisecond)
+	}
+
 	outputs := make([]string, len(ids))
 	for i := 0; i < ntasks; i++ {
 		outputs[i] = fmt.Sprintf("output_%d", i)
@@ -567,9 +579,17 @@ func runTestServerData(t *testing.T, em *crash.TeventMap) {
 	err = clnt.AddTaskOutputs(ids, outputs)
 	assert.Nil(t, err)
 
+	if em != nil {
+		time.Sleep(30 * time.Millisecond)
+	}
+
 	n, err := clnt.MoveTasksByStatus(proto.TaskStatus_WIP, proto.TaskStatus_DONE)
 	assert.Equal(t, ntasks, int(n))
 	assert.Nil(t, err)
+
+	if em != nil {
+		time.Sleep(30 * time.Millisecond)
+	}
 
 	readOutputs, err := clnt.GetTaskOutputs(ids)
 	assert.Nil(t, err)
@@ -578,10 +598,12 @@ func runTestServerData(t *testing.T, em *crash.TeventMap) {
 		assert.Equal(t, outputs[i], readOutputs[i])
 	}
 
-	err = mgr.Stop(true)
+	stats, err := mgr.Stop(true)
 	assert.Nil(t, err)
 
 	ts.Shutdown()
+
+	return stats
 }
 
 func TestServerData(t *testing.T) {
@@ -589,20 +611,43 @@ func TestServerData(t *testing.T) {
 }
 
 func TestServerCrash(t *testing.T) {
-	e0 := crash.NewEventStart(crash.FTTASKS_CRASH, 1000, 0, 1.0)
-	runTestServerData(t, crash.NewTeventMapOne(e0))
+	e0 := crash.NewEventStart(crash.FTTASKS_CRASH, 50, 150, 1.0)
+	stats := runTestServerData(t, crash.NewTeventMapOne(e0))
+	db.DPrintf(db.ALWAYS, "restarted %d times", stats[0].Nrestart)
+	assert.Greater(t, stats[0].Nrestart, int32(1))
 }
 
 func TestServerPartition(t *testing.T) {
-	e0 := crash.NewEventStart(crash.FTTASKS_CRASH, 100, 2000, 0.3)
-	runTestServerData(t, crash.NewTeventMapOne(e0))
+	e1 := crash.NewEventStart(crash.FTTASKS_PARTITION, 10000, 0, 1.0)
+	stats := runTestServerData(t, crash.NewTeventMapOne(e1))
+	db.DPrintf(db.ALWAYS, "restarted %d times", stats[0].Nrestart)
+	assert.Greater(t, stats[0].Nrestart, int32(1))
 }
 
-func TestServerBothCrashPartition(t *testing.T) {
-	e0 := crash.NewEventStart(crash.FTTASKS_CRASH, 100, 2000, 0.3)
-	e1 := crash.NewEventStart(crash.FTTASKS_PARTITION, 100, 2000, 0.3)
-	m := crash.NewTeventMap()
-	m.Insert(e0)
-	m.Insert(e1)
-	runTestServerData(t, m)
+func TestPartitioning(t *testing.T) {
+	ts, err := test.NewTstateAll(t)
+	assert.Nil(t, err, "Error New Tstate: %v", err)
+
+	mgr, err := fttasksrv.NewFtTaskSrvMgr(ts.SigmaClnt, "test", nil)
+	assert.Nil(t, err)
+
+	clnt := fttask_clnt.NewFtTaskClnt[mr.Bin, string](ts.FsLib, mgr.Id)
+
+	err = mgr.Partition()
+	assert.Nil(t, err)
+
+	// wait for lease to expire and for replacement to be up
+	time.Sleep(2 * fsetcd.LeaseTTL * time.Second)
+
+	db.DPrintf(db.ALWAYS, "Acquiring tasks...")
+	_,  _, err = clnt.AcquireTasks(false)
+	assert.Nil(t, err)
+
+	db.DPrintf(db.ALWAYS, "Stopping server")
+
+	_, err = mgr.Stop(true)
+	assert.Nil(t, err)
+	
+	err = ts.Shutdown()
+	assert.Nil(t, err)
 }

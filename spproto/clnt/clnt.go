@@ -271,6 +271,7 @@ func (pclnt *SPProtoClnt) Renameat(oldfid sp.Tfid, oldname string, newfid sp.Tfi
 
 func (pclnt *SPProtoClnt) GetFile(fid sp.Tfid, path path.Tpathname, mode sp.Tmode, offset sp.Toffset, cnt sp.Tsize, resolve bool, f *sp.Tfence) ([]byte, *serr.Err) {
 	args := sp.NewTgetfile(fid, mode, offset, cnt, path, resolve, f)
+	db.DPrintf(db.PROTCLNT, "GetFile %v", args)
 	reply, err := pclnt.Call(args)
 	if err != nil {
 		return nil, err

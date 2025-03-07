@@ -92,6 +92,17 @@ func (rootmt *RootMountTable) isRootMount(mntName string) bool {
 	return false
 }
 
+func (rootmt *RootMountTable) delete(name string) error {
+	rootmt.Lock()
+	defer rootmt.Unlock()
+	_, ok := rootmt.mounts[name]
+	db.DPrintf(db.CRASH, "RootMountTable.delete %v ok %v", name, ok)
+	if ok {
+		delete(rootmt.mounts, name)
+	}
+	return serr.NewErr(serr.TErrNotfound, fmt.Sprintf("%v (no root mount)", name))
+}
+
 // Resolve pn that names a server's root (e.g., name/ux, name)
 func (mc *MntClnt) resolveRoot(pn path.Tpathname) (*serr.Err, bool) {
 	db.DPrintf(db.MOUNT, "resolveRoot %v", pn)

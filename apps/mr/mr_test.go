@@ -77,7 +77,7 @@ func init() {
 	e1 = crash.NewEventStart(crash.MRREDUCE_PARTITION, 0, CRASHREDUCE, 0.33)
 	reduceEv = crash.NewTeventMapOne(e0)
 	reduceEv.Insert(e1)
-	e0 = crash.NewEventStart(crash.MRCOORD_CRASH, 100, CRASHCOORD, 0.33)
+	// e0 = crash.NewEventStart(crash.MRCOORD_CRASH, 100, CRASHCOORD, 0.33)
 	e1 = crash.NewEventStart(crash.MRCOORD_PARTITION, 100, CRASHCOORD, 0.33)
 	coordEv = crash.NewTeventMapOne(e0)
 	coordEv.Insert(e1)

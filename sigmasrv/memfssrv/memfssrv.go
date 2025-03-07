@@ -157,9 +157,12 @@ func (mfs *MemFs) Notify(pn path.Tpathname) error {
 	db.DPrintf(db.WATCH, "MemFs.Notify pn %v\n", pn)
 	parent, lo, name, err := mfs.lookupWalk(pn.String())
 	if err != nil {
+		db.DPrintf(db.WATCH, "MemFs.Notify lookupWalk %v err %v\n", pn, err)
 		return err
 	}
-	return mfs.RemoveObj(mfs.ctx, parent, lo, name, sp.NoFence(), fs.DEL_EPHEMERAL)
+	err = mfs.RemoveObj(mfs.ctx, parent, lo, name, sp.NoFence(), fs.DEL_EPHEMERAL)
+	db.DPrintf(db.WATCH, "MemFs.Notify RemoveObj %v err %v\n", pn, err)
+	return err
 }
 
 func (mfs *MemFs) Dump() error {

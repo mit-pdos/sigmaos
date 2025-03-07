@@ -10,11 +10,14 @@ import (
 	"sigmaos/ft/task/proto"
 	"sigmaos/proc"
 	"sigmaos/serr"
+	"sigmaos/sigmaclnt/fslib"
 	"sigmaos/sigmasrv"
 	"sigmaos/util/crash"
+	"sigmaos/util/rand"
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	db "sigmaos/debug"
@@ -38,10 +41,12 @@ type TaskSrv struct {
 	todoCond *sync.Cond
 	stopped  bool 
 	fence    *sp.Tfence
-	srvId    string
+	fttaskId    string
+	partitioned *atomic.Bool
 
 	etcdClient *clientv3.Client
 	electclnt  *electclnt.ElectClnt
+	fsl        *fslib.FsLib
 }
 
 const (
@@ -59,7 +64,7 @@ const (
 )
 
 func (s *TaskSrv) root() string {
-	return fmt.Sprintf("%s:/fttask/%s/", proc.GetProcEnv().GetRealm(), s.srvId)
+	return fmt.Sprintf("%s:/fttask/%s/", proc.GetProcEnv().GetRealm(), s.fttaskId)
 }
 
 func (s *TaskSrv) keyPrefix(prefix string) string {
@@ -70,8 +75,33 @@ func (s *TaskSrv) key(taskId int32, prefix string) string {
 	return s.keyPrefix(prefix) + strconv.FormatInt(int64(taskId), 10)
 }
 
+type InterceptorConn struct {
+	net.Conn
+	dropTraffic *atomic.Bool
+}
+
+func (c *InterceptorConn) Write(b []byte) (n int, err error) {
+	if c.dropTraffic.Load() {
+		db.DPrintf(db.ALWAYS, "attempting to write but BLOCKED")
+		return 0, fmt.Errorf("simulated network partition: write blocked")
+	}
+	return c.Conn.Write(b)
+}
+
+func (c *InterceptorConn) Read(b []byte) (n int, err error) {
+	if c.dropTraffic.Load() {
+		db.DPrintf(db.ALWAYS, "attempting to read but BLOCKED")
+		return 0, fmt.Errorf("simulated network partition: read blocked")
+	}
+	return c.Conn.Read(b)
+}
+
+func (c *InterceptorConn) SetPartitioned(partitioned bool) {
+	c.dropTraffic.Store(partitioned)
+}
+
 func RunTaskSrv(args []string) error {
-	id := args[0]
+	fttaskId := args[0]
 
 	pe := proc.GetProcEnv()
 	mu := &sync.Mutex{}
@@ -85,24 +115,33 @@ func RunTaskSrv(args []string) error {
 		wip: make(map[int32]bool),
 		done: make(map[int32]bool),
 		errored: make(map[int32]bool),
-		srvId: id,
+		fttaskId: fttaskId,
+		partitioned: &atomic.Bool{},
 	}
 
 	// prevent the server from serving any requests until everything has been initialized
 	s.mu.Lock()
 
-	ssrv, err := sigmasrv.NewSigmaSrv(filepath.Join(sp.NAMED, "fttask", id), s, pe)
-	if err != nil {
-		return err
+	var ssrv *sigmasrv.SigmaSrv
+
+	for {
+		var err error
+		srvId := rand.String(4)
+		ssrv, err = sigmasrv.NewSigmaSrv(filepath.Join(sp.NAMED, "fttask", fttaskId, srvId), s, pe)
+		if serr.IsErrorExists(err) {
+			continue
+		} else if err != nil {
+			return err
+		} else {
+			break
+		}
 	}
 
 	db.DPrintf(db.FTTASKS, "Created fttask srv with args %v", args)
 
-	crash.Failer(ssrv.SigmaClnt().FsLib, crash.FTTASKS_CRASH, func(e crash.Tevent) {
+	s.fsl = ssrv.SigmaClnt().FsLib
+	crash.Failer(s.fsl, crash.FTTASKS_CRASH, func(e crash.Tevent) {
 		crash.CrashMsg("crash")
-	})
-	crash.Failer(ssrv.SigmaClnt().FsLib, crash.FTTASKS_PARTITION, func(e crash.Tevent) {
-		crash.PartitionNamed(ssrv.SigmaClnt().FsLib)
 	})
 
 	etcdMnts := pe.GetEtcdEndpoints()
@@ -122,7 +161,13 @@ func RunTaskSrv(args []string) error {
 			if !ok {
 				db.DFatalf("Unknown fsetcd endpoint proto: addr %v eps %v", addr, etcdMnts)
 			}
-			return dial(sp.NewEndpointFromProto(ep))
+
+			conn, err := dial(sp.NewEndpointFromProto(ep))
+			if err != nil {
+				return nil, err
+			}
+
+			return &InterceptorConn{Conn: conn, dropTraffic: s.partitioned}, nil
 		})},
 	})
 	if err != nil {
@@ -144,12 +189,14 @@ func RunTaskSrv(args []string) error {
 }
 
 func (s *TaskSrv) acquireLeadership(ssrv *sigmasrv.SigmaSrv) error {
-	electclnt, err := electclnt.NewElectClnt(ssrv.SigmaClnt().FsLib, filepath.Join(sp.NAMED, "fttask", s.srvId + "-leader"), sp.Tperm(0777))
+	electclnt, err := electclnt.NewElectClnt(ssrv.SigmaClnt().FsLib, filepath.Join(sp.NAMED, "fttask", s.fttaskId + "-leader"), sp.Tperm(0777))
 	if err != nil {
 		return err
 	}
 	s.electclnt = electclnt
 
+	db.DPrintf(db.FTTASKS, "Acquiring leadership...")
+	time.Sleep(2 * sp.EtcdSessionTTL * time.Second)
 	if err := electclnt.AcquireLeadership([]byte("")); err != nil {
 		return err
 	}
@@ -170,7 +217,7 @@ func (s *TaskSrv) acquireLeadership(ssrv *sigmasrv.SigmaSrv) error {
 	).Commit()
 
 	if err != nil {
-		db.DPrintf(db.FTTASKS, "Failed to write fence to etcd upon election %v", err)
+		db.DPrintf(db.FTTASKS, "Failed to write fence to etcd upon election %+v", err)
 		return err
 	}
 
@@ -742,6 +789,20 @@ func (s *TaskSrv) ClearEtcd(ctx fs.CtxI, req proto.ClearEtcdReq, rep *proto.Clea
 	}
 
 	db.DPrintf(db.FTTASKS, "Shutdown: deleted keys %v", resp)
+
+	return nil
+}
+
+func (s *TaskSrv) Partition(ctx fs.CtxI, req proto.PartitionReq, rep *proto.PartitionRep) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	db.DPrintf(db.FTTASKS, "Partition: partitioning")
+
+	s.partitioned.Store(true)
+	crash.PartitionNamed(s.fsl)
+	s.etcdClient.Close()
+	s.electclnt.CloseSession()
 
 	return nil
 }

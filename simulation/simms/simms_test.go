@@ -1852,7 +1852,7 @@ func TestOverlappingShardedNRandomChoicesCacheQLenLB(t *testing.T) {
 	db.DPrintf(db.ALWAYS, "N instances per shard: %v", N_INSTANCES_PER_LB_SHARD)
 }
 
-func TestOverlappingShardedCachedStatePlusNNewProbeCacheQLenLB(t *testing.T) {
+func TestDeterministicallyShardedCachedStateNOldPlusNNewProbeCacheQLenLB(t *testing.T) {
 	const (
 		N_TICKS uint64 = 1000
 		// Clnt params
@@ -1869,25 +1869,28 @@ func TestOverlappingShardedCachedStatePlusNNewProbeCacheQLenLB(t *testing.T) {
 		RECORD_STATS_WINDOW int    = 10
 		MAX_Q_LEN           int    = 50 // Max queue length at any replica before requests start to be dropped & retried
 		// LB params
-		N_RANDOM_CHOICES int     = 3   // Number of random choices/metrics queries for instances which may run a request
-		N_SHARD          int     = 20  // Number of load balancer shards.
-		OVERLAP_PCT      float64 = 1.1 // Percentage of overlap between instance shards
-		N_NEW_PROBES     int     = 2   // Additional number of probes of instances outside of each shard which the load balancer state cache can make
+		N_RANDOM_CHOICES         int = 3  // Number of random choices/metrics queries for instances which may run a request
+		N_SHARD                  int = 5  // Number of load balancer shards.
+		N_INSTANCES_PER_LB_SHARD int = 24 // Number of instances in each load balancer shard.
+		//		OVERLAP_PCT      float64 = 1.3 // Percentage of overlap between instance shards
+		N_OLD_PROBES    int = 15 // Number of probes of instances in each shard which the load balancer state cache can make each tick
+		N_NEW_PROBES    int = 0  // Additional number of probes of instances outside of each shard which the load balancer state cache can make each tick
+		PROBES_PER_TICK int = 1  // Not yet used
 	)
 	var (
-		N_INSTANCES_PER_LB_SHARD int = int(math.Ceil(float64(N_INSTANCES/N_SHARD) * OVERLAP_PCT)) // Number of instances in each LB shard
-		STATE_CACHE_SIZE             = N_INSTANCES_PER_LB_SHARD                                   // Number of top-quality probe results kept around by the load-balancer per-shard state cache
+		//		N_INSTANCES_PER_LB_SHARD int = int(math.Ceil(float64(N_INSTANCES/N_SHARD) * OVERLAP_PCT)) // Number of instances in each LB shard
+		STATE_CACHE_SIZE = N_INSTANCES_PER_LB_SHARD // Number of top-quality probe results kept around by the load-balancer per-shard state cache
 	)
 	db.DPrintf(db.SIM_TEST, "Sim test start")
 	var time uint64 = 0
 	c := simms.NewClients(CLNT_REQ_MEAN, CLNT_REQ_STD)
 	p := simms.NewMicroserviceParams(SVC_ID, N_SLOTS, P_TIME, INIT_TIME, KILL, STATEFUL)
 	svc := simms.NewMicroservice(&time, p, opts.DefaultMicroserviceOpts,
-		opts.WithCachedStateLB(1),
+		opts.WithCachedStateLB(PROBES_PER_TICK),
 		opts.WithLoadBalancerQLenMetric(),
-		opts.WithRandomOverlappingLBShards(N_SHARD, N_INSTANCES_PER_LB_SHARD),
+		opts.WithDeterministicSubsettingLBShards(N_SHARD, N_INSTANCES_PER_LB_SHARD),
 		opts.WithTopNLBStateCache(STATE_CACHE_SIZE),
-		// XXX
+		opts.WithNOldPlusNNewLBProbes(N_OLD_PROBES, N_NEW_PROBES),
 		//		opts.WithNNewLBProbes(N_NEW_PROBES),
 		//		opts.WithMaxQLenQMgr(MAX_Q_LEN),
 	)

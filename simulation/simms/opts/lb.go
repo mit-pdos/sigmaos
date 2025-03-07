@@ -76,6 +76,22 @@ func WithNRandomChoicesLB(n int) simms.MicroserviceOpt {
 	}
 }
 
+type withDeterministicSubsettingLBShards struct {
+	shard simms.LoadBalancerShardFn
+}
+
+func (o withDeterministicSubsettingLBShards) Apply(opts *simms.MicroserviceOpts) {
+	opts.LoadBalancerShard = o.shard
+}
+
+func WithDeterministicSubsettingLBShards(nshards, nInstancesPerShard int) simms.MicroserviceOpt {
+	return &withDeterministicSubsettingLBShards{
+		shard: func(instances []*simms.MicroserviceInstance) [][]int {
+			return lbshard.SelectDeterministicSubsettingShards(instances, nshards, nInstancesPerShard)
+		},
+	}
+}
+
 type withRandomLBShards struct {
 	shard simms.LoadBalancerShardFn
 }
@@ -117,18 +133,34 @@ func WithTopNLBStateCache(n int) simms.MicroserviceOpt {
 	}
 }
 
-type withNNewLBProbes struct {
-	n int
+type withNOldNNewLBProbes struct {
+	all  bool
+	nOld int
+	nNew int
 }
 
-func (o withNNewLBProbes) Apply(opts *simms.MicroserviceOpts) {
+func (o withNOldNNewLBProbes) Apply(opts *simms.MicroserviceOpts) {
 	opts.LoadBalancerProbe = func(m simms.LoadBalancerMetricProbeFn, instances []*simms.MicroserviceInstance, shards [][]int) [][]*simms.LoadBalancerProbeResult {
-		return lbprobe.ProbeAllPlusNNew(o.n, m, instances, shards)
+		if o.all {
+			return lbprobe.ProbeAllPlusNNew(o.nNew, m, instances, shards)
+		} else {
+		}
+		return lbprobe.ProbeNOldPlusNNew(o.nOld, o.nNew, m, instances, shards)
+	}
+}
+
+func WithNOldPlusNNewLBProbes(nOld int, nNew int) simms.MicroserviceOpt {
+	return &withNOldNNewLBProbes{
+		all:  false,
+		nOld: nOld,
+		nNew: nNew,
 	}
 }
 
 func WithNNewLBProbes(n int) simms.MicroserviceOpt {
-	return &withNNewLBProbes{
-		n: n,
+	return &withNOldNNewLBProbes{
+		all:  true,
+		nNew: n,
+		nOld: -1,
 	}
 }

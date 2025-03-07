@@ -93,3 +93,50 @@ func SelectOverlappingRandomShards(instances []*simms.MicroserviceInstance, nsha
 	}
 	return shards
 }
+
+// Given a set of instances, split any ready instances into
+// (potentially-overlapping) shards. Shards are initially randomized, but split
+// deterministically. Return the shard selections, where each shard is
+// represented by a slice of indices into the input instances slice.
+//
+// Taken from Google's deterministic subsetting algorithm: https://sre.google/sre-book/load-balancing-datacenter/
+func SelectDeterministicSubsettingShards(instances []*simms.MicroserviceInstance, nshard int, nInstancesPerShard int) [][]int {
+	// Set up a slice to hold the shard selections
+	shards := make([][]int, nshard)
+	// Create slice of indices of ready instances
+	nready := 0
+	instanceIdxs := []int{}
+	for i, r := range instances {
+		if r.IsReady() {
+			nready++
+			instanceIdxs = append(instanceIdxs, i)
+		}
+	}
+	subsetSize := nInstancesPerShard
+	subsetCnt := len(instanceIdxs) / subsetSize
+	db.DPrintf(db.ALWAYS, "SubsetSz: %v", subsetSize)
+	// Place instances into shards
+	for shardIdx := 0; shardIdx < len(shards); shardIdx++ {
+		// Shuffle once we have fully subsetted this random assignment of instances
+		if shardIdx%subsetCnt == 0 {
+			// Shuffle the instances
+			rand.Shuffle(len(instanceIdxs), func(i, j int) {
+				instanceIdxs[i], instanceIdxs[j] = instanceIdxs[j], instanceIdxs[i]
+			})
+		}
+		// Select the first N instances to be part of this shard
+		shards[shardIdx] = make([]int, subsetSize)
+		subsetID := shardIdx % subsetCnt
+		start := subsetID * subsetSize
+		copy(shards[shardIdx], instanceIdxs[start:start+subsetSize])
+	}
+	// Sanity check
+	for _, s := range shards {
+		for _, idx := range s {
+			if !instances[idx].IsReady() {
+				db.DFatalf("Unready instance included in shard selection: idx %v", idx)
+			}
+		}
+	}
+	return shards
+}

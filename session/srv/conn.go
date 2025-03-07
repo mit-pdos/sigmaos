@@ -46,7 +46,7 @@ func (nc *netConn) Close() error {
 }
 
 func (nc *netConn) IsClosed() bool {
-	db.DPrintf(db.NETSRV, "IsClosed %v\n", nc.sessid)
+	db.DPrintf(db.SESSSRV, "IsClosed %v\n", nc.sessid)
 	return nc.dmx.IsClosed()
 }
 

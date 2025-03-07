@@ -799,9 +799,8 @@ func (s *TaskSrv) Partition(ctx fs.CtxI, req proto.PartitionReq, rep *proto.Part
 
 	db.DPrintf(db.FTTASKS, "Partition: partitioning")
 
-	s.partitioned.Store(true)
+	// s.partitioned.Store(true)
 	crash.PartitionNamed(s.fsl)
-	s.etcdClient.Close()
 	s.electclnt.CloseSession()
 
 	return nil

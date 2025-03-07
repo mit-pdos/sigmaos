@@ -12,6 +12,7 @@ import (
 	"sigmaos/serr"
 	"sigmaos/sigmaclnt/fslib"
 	sp "sigmaos/sigmap"
+	"sync"
 	"time"
 
 	protobuf "google.golang.org/protobuf/proto"
@@ -28,13 +29,17 @@ type RawFtTaskClnt struct {
 	serverId        task.FtTaskSrvId
 	currInstance    string
 	fence           *sp.Tfence
+	mu              sync.Mutex
 }
 
 func newRawFtTaskClnt(fsl *fslib.FsLib, serverId task.FtTaskSrvId) *RawFtTaskClnt {
 	tc := &RawFtTaskClnt{
-		fsl:        fsl,
-		rpcclntc:   rpcclnt.NewRPCClntCache(sprpcclnt.WithSPChannel(fsl)),
-		serverId:   serverId,
+		fsl:          fsl,
+		rpcclntc:     rpcclnt.NewRPCClntCache(sprpcclnt.WithSPChannel(fsl)),
+		serverId:     serverId,
+		currInstance: "",
+		fence:        nil,
+		mu:   			  sync.Mutex{},
 	}
 	return tc
 }
@@ -58,8 +63,12 @@ func (tc *RawFtTaskClnt) getAvailableInstances() ([]string, error) {
 }
 
 func (tc *RawFtTaskClnt) rpc(method string, arg protobuf.Message, res protobuf.Message, wait bool) error {
-	db.DPrintf(db.FTTASKS, "rpc to %s %s", tc.serverId.ServerPath(), tc.currInstance)
-	if tc.currInstance != "" {
+	tc.mu.Lock()
+	currInstance := tc.currInstance
+	tc.mu.Unlock()
+
+	db.DPrintf(db.FTTASKS, "rpc to %s %s", tc.serverId.ServerPath(), currInstance)
+	if currInstance != "" {
 		err := tc.rpcclntc.RPC(filepath.Join(tc.serverId.ServerPath(), tc.currInstance), method, arg, res)
 		if err == nil {
 			return nil
@@ -70,7 +79,7 @@ func (tc *RawFtTaskClnt) rpc(method string, arg protobuf.Message, res protobuf.M
 
   // if unavailable, client should wait for the procgroupmgr to restart the instance
 	// procgroupmgr itself shouldn't wait so Ping has wait = false
-	if wait && tc.currInstance != "" {
+	if wait && currInstance != "" {
 		time.Sleep(2 * fsetcd.LeaseTTL * time.Second)
 	}
 	
@@ -82,18 +91,23 @@ func (tc *RawFtTaskClnt) rpc(method string, arg protobuf.Message, res protobuf.M
 	}
 
 	for _, instance := range instances {
-		if instance == tc.currInstance {
+		if instance == currInstance {
 			continue
 		}
 
 		err := tc.rpcclntc.RPC(filepath.Join(tc.serverId.ServerPath(), instance), method, arg, res)
 		if err == nil {
+			tc.mu.Lock()
 			tc.currInstance = instance
+			tc.mu.Unlock()
 			return nil
 		}
 	}
 
+	tc.mu.Lock()
 	tc.currInstance = ""
+	tc.mu.Unlock()
+
 	db.DPrintf(db.FTTASKS, "rpc to all instances failed: %v", err)
 	return serr.NewErr(serr.TErrUnreachable, fmt.Sprintf("no instances available, %v all failed", instances))
 }

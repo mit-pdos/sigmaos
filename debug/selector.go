@@ -362,6 +362,7 @@ const (
 	SIM_QMGR                   = "SIM_QMGR"
 	SIM_QMGR_TIMEOUT           = "SIM_QMGR_TIMEOUT"
 	SIM_LB                     = "SIM_LB"
+	SIM_LB_SHARD               = "SIM_LB_SHARD"
 	SIM_RAW_LAT                = "SIM_RAW_LAT"
 	SIM_LAT_STATS              = "SIM_LAT_STATS"
 	SIM_UTIL_STATS             = "SIM_UTIL_STATS"

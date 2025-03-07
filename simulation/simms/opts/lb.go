@@ -33,8 +33,8 @@ func WithLoadBalancerQLenMetric() simms.MicroserviceOpt {
 type withOmniscientLB struct{}
 
 func (withOmniscientLB) Apply(opts *simms.MicroserviceOpts) {
-	opts.NewLoadBalancer = func(t *uint64, lbStateCache simms.LoadBalancerStateCache, newMetric simms.NewLoadBalancerMetricFn) simms.LoadBalancer {
-		return lb.NewOmniscientLB(t, lbStateCache, newMetric, lbchoice.FullScan)
+	opts.NewLoadBalancer = func(t *uint64, lbStateCache simms.LoadBalancerStateCache, newMetric simms.NewLoadBalancerMetricFn, assignReqs simms.AssignRequestsToLoadBalancerShardsFn) simms.LoadBalancer {
+		return lb.NewOmniscientLB(t, lbStateCache, newMetric, lbchoice.FullScan, assignReqs)
 	}
 }
 
@@ -47,8 +47,8 @@ type withCachedStateLB struct {
 }
 
 func (o withCachedStateLB) Apply(opts *simms.MicroserviceOpts) {
-	opts.NewLoadBalancer = func(t *uint64, lbStateCache simms.LoadBalancerStateCache, newMetric simms.NewLoadBalancerMetricFn) simms.LoadBalancer {
-		return lb.NewCachedStateLB(t, lbStateCache, newMetric, lbchoice.FullScan)
+	opts.NewLoadBalancer = func(t *uint64, lbStateCache simms.LoadBalancerStateCache, newMetric simms.NewLoadBalancerMetricFn, assignReqs simms.AssignRequestsToLoadBalancerShardsFn) simms.LoadBalancer {
+		return lb.NewCachedStateLB(t, lbStateCache, newMetric, lbchoice.FullScan, assignReqs)
 	}
 }
 
@@ -63,10 +63,10 @@ type withNRandomChoicesLB struct {
 }
 
 func (o withNRandomChoicesLB) Apply(opts *simms.MicroserviceOpts) {
-	opts.NewLoadBalancer = func(t *uint64, lbStateCache simms.LoadBalancerStateCache, newMetric simms.NewLoadBalancerMetricFn) simms.LoadBalancer {
+	opts.NewLoadBalancer = func(t *uint64, lbStateCache simms.LoadBalancerStateCache, newMetric simms.NewLoadBalancerMetricFn, assignReqs simms.AssignRequestsToLoadBalancerShardsFn) simms.LoadBalancer {
 		return lb.NewOmniscientLB(t, lbStateCache, newMetric, func(m simms.LoadBalancerMetric, shardIdx int, shards [][]int) int {
 			return lbchoice.RandomSubset(m, shardIdx, shards, o.n)
-		})
+		}, assignReqs)
 	}
 }
 

@@ -12,14 +12,15 @@ import (
 )
 
 var DefaultMicroserviceOpts simms.MicroserviceOpts = simms.MicroserviceOpts{
-	NewQMgr:                    NewBasicQMgr,
-	NewAutoscaler:              autoscaler.NewNoOpAutoscaler,
-	NewLoadBalancer:            lb.NewRoundRobinLB,
-	NewLoadBalancerMetric:      lbmetrics.NewUnsetMetric,
-	LoadBalancerMetricProbe:    lbmetrics.GetQLen,
-	NewLoadBalancerStateCache:  lbstate.NewOmniscientReshardingStateCache,
-	LoadBalancerShard:          lbshard.SingleShard,
-	LoadBalancerProbe:          lbprobe.ProbeAll,
-	LoadBalancerInstanceChoice: lbchoice.FullScan,
-	KillRemovedInstances:       false,
+	NewQMgr:                            NewBasicQMgr,
+	NewAutoscaler:                      autoscaler.NewNoOpAutoscaler,
+	NewLoadBalancer:                    lb.NewRoundRobinLB,
+	NewLoadBalancerMetric:              lbmetrics.NewUnsetMetric,
+	LoadBalancerMetricProbe:            lbmetrics.GetQLen,
+	NewLoadBalancerStateCache:          lbstate.NewOmniscientReshardingStateCache,
+	LoadBalancerShard:                  lbshard.SingleShard,
+	LoadBalancerProbe:                  lbprobe.ProbeAll,
+	LoadBalancerInstanceChoice:         lbchoice.FullScan,
+	AssignRequestsToLoadBalancerShards: lbshard.AssignRequestsToShardsEvenlyDistributed,
+	KillRemovedInstances:               false,
 }

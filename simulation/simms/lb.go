@@ -4,7 +4,7 @@ import (
 	"fmt"
 )
 
-type NewLoadBalancerFn func(*uint64, LoadBalancerStateCache, NewLoadBalancerMetricFn) LoadBalancer
+type NewLoadBalancerFn func(*uint64, LoadBalancerStateCache, NewLoadBalancerMetricFn, AssignRequestsToLoadBalancerShardsFn) LoadBalancer
 
 type LoadBalancer interface {
 	SteerRequests([]*Request, []*MicroserviceInstance) [][]*Request
@@ -49,3 +49,5 @@ type LoadBalancerMetricProbeFn func(*MicroserviceInstance) int
 type LoadBalancerProbeFn func(m LoadBalancerMetricProbeFn, instances []*MicroserviceInstance, shards [][]int) [][]*LoadBalancerProbeResult
 
 type NewLoadBalancerStateCacheFn func(t *uint64, shard LoadBalancerShardFn, probe LoadBalancerProbeFn, m LoadBalancerMetricProbeFn) LoadBalancerStateCache
+
+type AssignRequestsToLoadBalancerShardsFn func(reqs []*Request, nshards int) []int

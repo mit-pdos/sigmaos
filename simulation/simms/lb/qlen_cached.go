@@ -12,14 +12,16 @@ type CachedStateLB struct {
 	stateCache     simms.LoadBalancerStateCache
 	newMetric      simms.NewLoadBalancerMetricFn
 	chooseInstance simms.LoadBalancerInstanceChoiceFn
+	assignReqs     simms.AssignRequestsToLoadBalancerShardsFn
 }
 
-func NewCachedStateLB(t *uint64, stateCache simms.LoadBalancerStateCache, m simms.NewLoadBalancerMetricFn, c simms.LoadBalancerInstanceChoiceFn) simms.LoadBalancer {
+func NewCachedStateLB(t *uint64, stateCache simms.LoadBalancerStateCache, m simms.NewLoadBalancerMetricFn, c simms.LoadBalancerInstanceChoiceFn, assignReqs simms.AssignRequestsToLoadBalancerShardsFn) simms.LoadBalancer {
 	return &CachedStateLB{
 		t:              t,
 		stateCache:     stateCache,
 		newMetric:      m,
 		chooseInstance: c,
+		assignReqs:     assignReqs,
 	}
 }
 
@@ -36,11 +38,12 @@ func (lb *CachedStateLB) SteerRequests(reqs []*simms.Request, instances []*simms
 		}
 	}
 	m := lb.newMetric(lb.stateCache, steeredReqsPerShard)
+	reqShardAssignments := lb.assignReqs(reqs, len(instanceShards))
 	instanceShardIdx := 0
 	// For each request
-	for _, r := range reqs {
+	for reqIdx, r := range reqs {
 		// Select a shard of instances to consider
-		shardIdx := instanceShardIdx % len(instanceShards)
+		shardIdx := reqShardAssignments[reqIdx]
 		// Choose the instance in this shard which is the best fit to handle the
 		// request
 		bestFitIdx := lb.chooseInstance(m, shardIdx, instanceShards)

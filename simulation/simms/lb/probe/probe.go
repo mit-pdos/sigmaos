@@ -3,6 +3,7 @@ package probe
 import (
 	"math/rand"
 
+	db "sigmaos/debug"
 	"sigmaos/simulation/simms"
 )
 
@@ -32,7 +33,6 @@ func ProbeAllPlusNNew(nNew int, m simms.LoadBalancerMetricProbeFn, instances []*
 			readyInstances = append(readyInstances, i)
 		}
 	}
-
 	probeResults := make([][]*simms.LoadBalancerProbeResult, len(shards))
 	for shardIdx := range probeResults {
 		shard := shards[shardIdx]
@@ -55,6 +55,7 @@ func ProbeAllPlusNNew(nNew int, m simms.LoadBalancerMetricProbeFn, instances []*
 			// If the instance is not already in the shard, probe it
 			if ok := instancesInShard[instanceIdx]; !ok {
 				probeResults[shardIdx] = append(probeResults[shardIdx], simms.NewLoadBalancerProbeResult(instanceIdx, m(instances[instanceIdx])))
+				db.DPrintf(db.SIM_LB_PROBE, "shard %v additional probe %v", shardIdx, instanceIdx)
 			}
 		}
 	}
@@ -72,7 +73,6 @@ func ProbeNPlusNNew(nToProbe int, nNew int, m simms.LoadBalancerMetricProbeFn, i
 			readyInstances = append(readyInstances, i)
 		}
 	}
-
 	probeResults := make([][]*simms.LoadBalancerProbeResult, len(shards))
 	for shardIdx := range probeResults {
 		shard := shards[shardIdx]

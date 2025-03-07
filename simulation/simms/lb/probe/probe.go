@@ -62,7 +62,7 @@ func ProbeAllPlusNNew(nNew int, m simms.LoadBalancerMetricProbeFn, instances []*
 	return probeResults
 }
 
-func ProbeNPlusNNew(nToProbe int, nNew int, m simms.LoadBalancerMetricProbeFn, instances []*simms.MicroserviceInstance, shards [][]int) [][]*simms.LoadBalancerProbeResult {
+func ProbeNOldPlusNNew(nOld int, nNew int, m simms.LoadBalancerMetricProbeFn, instances []*simms.MicroserviceInstance, shards [][]int) [][]*simms.LoadBalancerProbeResult {
 	// TODO: dedup this code with sharding
 	// Get slice of ready instances
 	nready := 0
@@ -77,15 +77,25 @@ func ProbeNPlusNNew(nToProbe int, nNew int, m simms.LoadBalancerMetricProbeFn, i
 	for shardIdx := range probeResults {
 		shard := shards[shardIdx]
 		// Store the probe results for this shard
-		probeResults[shardIdx] = make([]*simms.LoadBalancerProbeResult, 0, len(shard)+nNew)
+		probeResults[shardIdx] = make([]*simms.LoadBalancerProbeResult, 0, nOld+nNew)
 		// Record which instances are in this shard
 		instancesInShard := make(map[int]bool)
 		for i := range shard {
 			instanceIdx := shard[i]
 			instancesInShard[instanceIdx] = true
+		}
+		// Shuffle the shard instances
+		shuffledShard := make([]int, len(shard))
+		copy(shuffledShard, shard)
+		rand.Shuffle(len(shuffledShard), func(i, j int) {
+			shuffledShard[i], shuffledShard[j] = shuffledShard[j], shuffledShard[i]
+		})
+		// Probe a random nOld instances in the shard
+		for i := 0; i < nOld; i++ {
+			instanceIdx := shuffledShard[i]
 			probeResults[shardIdx] = append(probeResults[shardIdx], simms.NewLoadBalancerProbeResult(instanceIdx, m(instances[instanceIdx])))
 		}
-		// Shuffle the instances
+		// Shuffle the full set of ready instances
 		rand.Shuffle(len(readyInstances), func(i, j int) {
 			readyInstances[i], readyInstances[j] = readyInstances[j], readyInstances[i]
 		})

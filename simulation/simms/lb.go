@@ -1,5 +1,9 @@
 package simms
 
+import (
+	"fmt"
+)
+
 type NewLoadBalancerFn func(*uint64, LoadBalancerStateCache, NewLoadBalancerMetricFn) LoadBalancer
 
 type LoadBalancer interface {
@@ -24,6 +28,10 @@ type LoadBalancerStateCache interface {
 type LoadBalancerProbeResult struct {
 	InstanceIdx int
 	Stat        int
+}
+
+func (pr *LoadBalancerProbeResult) String() string {
+	return fmt.Sprintf("&{ instance:%v stat:%v }", pr.InstanceIdx, pr.Stat)
 }
 
 func NewLoadBalancerProbeResult(instanceIdx int, stat int) *LoadBalancerProbeResult {

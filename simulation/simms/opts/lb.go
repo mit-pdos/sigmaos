@@ -164,3 +164,14 @@ func WithNNewLBProbes(n int) simms.MicroserviceOpt {
 		nOld: -1,
 	}
 }
+
+type withGaussianRequestToLBShardAssignment struct {
+}
+
+func (o withGaussianRequestToLBShardAssignment) Apply(opts *simms.MicroserviceOpts) {
+	opts.AssignRequestsToLoadBalancerShards = lbshard.AssignRequestsToShardsGaussian
+}
+
+func WithGaussianRequestToLBShardAssignment() simms.MicroserviceOpt {
+	return &withGaussianRequestToLBShardAssignment{}
+}

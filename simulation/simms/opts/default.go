@@ -21,6 +21,6 @@ var DefaultMicroserviceOpts simms.MicroserviceOpts = simms.MicroserviceOpts{
 	LoadBalancerShard:                  lbshard.SingleShard,
 	LoadBalancerProbe:                  lbprobe.ProbeAll,
 	LoadBalancerInstanceChoice:         lbchoice.FullScan,
-	AssignRequestsToLoadBalancerShards: lbshard.AssignRequestsToShardsEvenlyDistributed,
+	AssignRequestsToLoadBalancerShards: lbshard.AssignRequestsToShardsUniformly,
 	KillRemovedInstances:               false,
 }

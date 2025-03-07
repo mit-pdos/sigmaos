@@ -16,14 +16,15 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	db "sigmaos/debug"
-	"sigmaos/util/io/demux"
-	"sigmaos/netclnt"
-	"sigmaos/netsrv"
+	dialproxyclnt "sigmaos/dialproxy/clnt"
+	"sigmaos/net/clnt"
+	"sigmaos/net/srv"
 	"sigmaos/serr"
+	spcodec "sigmaos/session/codec"
 	sessp "sigmaos/session/proto"
 	sp "sigmaos/sigmap"
-	spcodec "sigmaos/session/codec"
 	"sigmaos/test"
+	"sigmaos/util/io/demux"
 )
 
 var srvaddr string
@@ -43,6 +44,9 @@ const (
 	REPBUFSZ = 10
 	TOTAL    = 1000 * sp.MBYTE
 )
+
+func TestCompile(t *testing.T) {
+}
 
 func measureProtobuf(t *testing.T, fc *sessp.FcallMsg) {
 	const N = 100000
@@ -167,6 +171,10 @@ func (t *transport) WriteCall(c demux.CallI) *serr.Err {
 	return nil
 }
 
+func (t *transport) Close() error {
+	return nil
+}
+
 type netConn struct {
 	conn net.Conn
 }
@@ -200,13 +208,13 @@ func (nc *netConn) ReportError(err error) {
 
 type TstateNet struct {
 	*test.TstateMin
-	srv     *netsrv.NetServer
-	clnt    *netclnt.NetClnt
+	srv     *srv.NetServer
+	clnt    *clnt.NetClnt
 	dmx     *demux.DemuxClnt
 	mktrans func(net.Conn, *demux.IoVecMap) demux.TransportI
 }
 
-func (ts *TstateNet) NewConn(conn net.Conn) *demux.DemuxSrv {
+func (ts *TstateNet) NewConn(p *sp.Tprincipal, conn net.Conn) *demux.DemuxSrv {
 	nc := &netConn{conn}
 	iovm := demux.NewIoVecMap()
 	return demux.NewDemuxSrv(nc, ts.mktrans(conn, iovm))
@@ -217,14 +225,14 @@ func newTstateNet(t *testing.T, mktrans func(net.Conn, *demux.IoVecMap) demux.Tr
 		TstateMin: test.NewTstateMin(t),
 		mktrans:   mktrans,
 	}
-	ts.srv = netsrv.NewNetServer(ts.PE, ts.Addr, ts)
+	ts.srv = srv.NewNetServer(ts.PE, dialproxyclnt.NewDialProxyClnt(ts.PE), ts.Addr, ts)
 
-	db.DPrintf(db.TEST, "srv %v\n", ts.srv.MyAddr())
+	db.DPrintf(db.TEST, "srv %v\n", ts.srv.GetEndpoint())
 
-	nc, err := netclnt.NewNetClnt(sp.ROOTREALM.String(), sp.Taddrs{ts.srv.MyAddr()})
+	conn, err := clnt.NewNetClnt(ts.PE, dialproxyclnt.NewDialProxyClnt(ts.PE), ts.srv.GetEndpoint())
 	assert.Nil(t, err)
 	iovm := demux.NewIoVecMap()
-	ts.dmx = demux.NewDemuxClnt(mktrans(nc.Conn(), iovm), iovm)
+	ts.dmx = demux.NewDemuxClnt(mktrans(conn, iovm), iovm)
 	return ts
 }
 

@@ -95,7 +95,8 @@ func WithRandomNonOverlappingLBShards(nshards int) simms.MicroserviceOpt {
 func WithRandomOverlappingLBShards(nshards int, nInstancesPerShard int) simms.MicroserviceOpt {
 	return &withRandomLBShards{
 		shard: func(instances []*simms.MicroserviceInstance) [][]int {
-			return lbshard.SelectOverlappingRandomShards(instances, nshards, nInstancesPerShard)
+			shardSize := min(nInstancesPerShard, len(instances))
+			return lbshard.SelectOverlappingRandomShards(instances, nshards, shardSize)
 		},
 	}
 }

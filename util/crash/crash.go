@@ -149,13 +149,13 @@ func Rand50() bool {
 	return rand.Int64(ONE) < FIFTY
 }
 
-func randSleep(c int64) uint64 {
+func RandSleep(c int64) uint64 {
 	ms := uint64(0)
 	if c > 0 {
 		ms = rand.Int64(c)
 	}
 	r := rand.Int64(ONE)
-	// db.DPrintf(db.CRASH, "randSleep %dms r %d\n", ms, r)
+	// db.DPrintf(db.CRASH, "RandSleep %dms r %d\n", ms, r)
 	time.Sleep(time.Duration(ms) * time.Millisecond)
 	return r
 }
@@ -229,7 +229,7 @@ func Failer(fsl *fslib.FsLib, label Tselector, f Teventf) {
 				if e.MaxInterval < 0 {
 					t = -t
 				}
-				r := randSleep(t)
+				r := RandSleep(t)
 				if r < uint64(e.Prob*ONE) {
 					db.DPrintf(db.CRASH, "Raise event %v r %d %v", label, r, e)
 					f(e)

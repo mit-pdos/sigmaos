@@ -114,7 +114,6 @@ func SelectDeterministicSubsettingShards(instances []*simms.MicroserviceInstance
 	}
 	subsetSize := nInstancesPerShard
 	subsetCnt := len(instanceIdxs) / subsetSize
-	db.DPrintf(db.ALWAYS, "SubsetSz: %v", subsetSize)
 	// Place instances into shards
 	for shardIdx := 0; shardIdx < len(shards); shardIdx++ {
 		// Shuffle once we have fully subsetted this random assignment of instances

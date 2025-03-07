@@ -48,9 +48,7 @@ type withCachedStateLB struct {
 
 func (o withCachedStateLB) Apply(opts *simms.MicroserviceOpts) {
 	opts.NewLoadBalancer = func(t *uint64, lbStateCache simms.LoadBalancerStateCache, newMetric simms.NewLoadBalancerMetricFn) simms.LoadBalancer {
-		return lb.NewCachedStateLB(t, lbStateCache, newMetric, func(m simms.LoadBalancerMetric, shardIdx int, shards [][]int) int {
-			return lbchoice.RandomSubset(m, shardIdx, shards, o.probesPerTick)
-		})
+		return lb.NewCachedStateLB(t, lbStateCache, newMetric, lbchoice.FullScan)
 	}
 }
 

@@ -1870,8 +1870,8 @@ func TestOverlappingShardedCachedStatePlusNNewProbeCacheQLenLB(t *testing.T) {
 		MAX_Q_LEN           int    = 50 // Max queue length at any replica before requests start to be dropped & retried
 		// LB params
 		N_RANDOM_CHOICES int     = 3   // Number of random choices/metrics queries for instances which may run a request
-		N_SHARD          int     = 6   // Number of load balancer shards.
-		OVERLAP_PCT      float64 = 1.0 // Percentage of overlap between instance shards
+		N_SHARD          int     = 20  // Number of load balancer shards.
+		OVERLAP_PCT      float64 = 1.1 // Percentage of overlap between instance shards
 		N_NEW_PROBES     int     = 2   // Additional number of probes of instances outside of each shard which the load balancer state cache can make
 	)
 	var (
@@ -1885,10 +1885,11 @@ func TestOverlappingShardedCachedStatePlusNNewProbeCacheQLenLB(t *testing.T) {
 	svc := simms.NewMicroservice(&time, p, opts.DefaultMicroserviceOpts,
 		opts.WithCachedStateLB(1),
 		opts.WithLoadBalancerQLenMetric(),
-		//		opts.WithMaxQLenQMgr(MAX_Q_LEN),
 		opts.WithRandomOverlappingLBShards(N_SHARD, N_INSTANCES_PER_LB_SHARD),
 		opts.WithTopNLBStateCache(STATE_CACHE_SIZE),
-		opts.WithNNewLBProbes(N_NEW_PROBES),
+		// XXX
+		//		opts.WithNNewLBProbes(N_NEW_PROBES),
+		//		opts.WithMaxQLenQMgr(MAX_Q_LEN),
 	)
 	app := simms.NewSingleTierApp(svc)
 	w := simms.NewWorkload(&time, app, c)

@@ -20,7 +20,7 @@ func RandomSubset(m simms.LoadBalancerMetric, shardIdx int, shards [][]int, ncho
 		})
 	}
 	// Get index of ready instance with smallest queue
-	smallestIdx := 0
+	smallestIdx := instanceIdxs[0]
 	// Sample (up to) N random choices
 	for i := 0; i < nchoices && i < len(instanceIdxs); i++ {
 		idx := instanceIdxs[i]

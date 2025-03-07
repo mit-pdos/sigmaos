@@ -15,7 +15,7 @@ type CachedStateLB struct {
 }
 
 func NewCachedStateLB(t *uint64, stateCache simms.LoadBalancerStateCache, m simms.NewLoadBalancerMetricFn, c simms.LoadBalancerInstanceChoiceFn) simms.LoadBalancer {
-	return &OmniscientLB{
+	return &CachedStateLB{
 		t:              t,
 		stateCache:     stateCache,
 		newMetric:      m,

@@ -85,11 +85,12 @@ func (c *TopNStateCache) updateShard(shardIdx int, shardResults []*simms.LoadBal
 		c.shards[shardIdx][idx] = res.InstanceIdx
 		idx++
 	}
+	// Sort for readability
 	slices.Sort(c.shards[shardIdx])
 }
 
-func (c *TopNStateCache) GetStat(shard, instanceIdx int) int {
-	return c.getMetric(c.instances[instanceIdx])
+func (c *TopNStateCache) GetStat(shardIdx, instanceIdx int) int {
+	return c.shardProbeResults[shardIdx][instanceIdx].Stat
 }
 
 func (c *TopNStateCache) RunProbes(instances []*simms.MicroserviceInstance) {
@@ -103,7 +104,7 @@ func (c *TopNStateCache) RunProbes(instances []*simms.MicroserviceInstance) {
 		for shardIdx := range probeResults {
 			c.updateShard(shardIdx, probeResults[shardIdx])
 		}
-		db.DPrintf(db.ALWAYS, "Shards: %v", c.shards)
+		db.DPrintf(db.SIM_LB_SHARD, "TopN Shard after probe:\n%v", c.shards)
 	}
 }
 

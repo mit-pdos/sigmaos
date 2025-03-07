@@ -50,7 +50,7 @@ func ProbeAllPlusNNew(nNew int, m simms.LoadBalancerMetricProbeFn, instances []*
 			readyInstances[i], readyInstances[j] = readyInstances[j], readyInstances[i]
 		})
 		// Add N additional probes to the results
-		for i := len(shard); i < len(shard)+nNew; i++ {
+		for i := len(shard); i < len(shard)+nNew && i < len(readyInstances); i++ {
 			instanceIdx := readyInstances[i]
 			// If the instance is not already in the shard, probe it
 			if ok := instancesInShard[instanceIdx]; !ok {

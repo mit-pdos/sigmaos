@@ -216,7 +216,6 @@ type TstateNet struct {
 	*test.TstateMin
 	srv     *srv.NetServer
 	clnt    *clnt.NetClnt
-	dmx     *demux.DemuxClnt
 	mktrans func(net.Conn, *demux.IoVecMap) demux.TransportI
 
 	mu sync.Mutex
@@ -249,21 +248,17 @@ func newTstateNet(t *testing.T, mktrans func(net.Conn, *demux.IoVecMap) demux.Tr
 		mktrans:   mktrans,
 	}
 	ts.srv = srv.NewNetServer(ts.PE, dialproxyclnt.NewDialProxyClnt(ts.PE), ts.Addr, ts)
-
 	db.DPrintf(db.TEST, "srv %v\n", ts.srv.GetEndpoint())
-	err := ts.connect()
-	assert.Nil(t, err)
 	return ts
 }
 
-func (ts *TstateNet) connect() error {
+func (ts *TstateNet) connect() (*demux.DemuxClnt, error) {
 	conn, err := clnt.NewNetClnt(ts.PE, dialproxyclnt.NewDialProxyClnt(ts.PE), ts.srv.GetEndpoint())
 	if err != nil {
-		return err
+		return nil, err
 	}
 	iovm := demux.NewIoVecMap()
-	ts.dmx = demux.NewDemuxClnt(ts.mktrans(conn, iovm), iovm)
-	return nil
+	return demux.NewDemuxClnt(ts.mktrans(conn, iovm), iovm), nil
 }
 
 func (ts *TstateNet) failer(ch chan struct{}) {
@@ -293,16 +288,19 @@ func TestNetFail(t *testing.T) {
 	go ts.failer(ch)
 
 	t0 := time.Now()
+	dmx, err := ts.connect()
+	assert.Nil(t, err)
 	for !time.Now().After(t0.Add(NSEC * time.Second)) {
 		//db.DPrintf(db.ALWAYS, "send c")
-		d, err := ts.dmx.SendReceive(c, nil)
+		d, err := dmx.SendReceive(c, nil)
 		if err == nil {
 			call := d.(*call)
 			assert.True(t, len(call.buf) == REPBUFSZ)
 		} else {
+			var err error
 			db.DPrintf(db.ALWAYS, "SendReceive err %v", err)
-			ts.dmx.Close()
-			err := ts.connect()
+			dmx.Close()
+			dmx, err = ts.connect()
 			assert.Nil(t, err)
 		}
 	}
@@ -316,8 +314,10 @@ func TestNetClntPerfFrame(t *testing.T) {
 
 	t0 := time.Now()
 	n := TOTAL / REQBUFSZ
+	dmx, err := ts.connect()
+	assert.Nil(t, err)
 	for i := 0; i < n; i++ {
-		d, err := ts.dmx.SendReceive(c, nil)
+		d, err := dmx.SendReceive(c, nil)
 		assert.Nil(t, err)
 		call := d.(*call)
 		assert.True(t, len(call.buf) == REPBUFSZ)
@@ -337,8 +337,10 @@ func TestNetClntPerfFcall(t *testing.T) {
 	pfcm := spcodec.NewPartMarshaledMsg(fcm)
 	t0 := time.Now()
 	n := TOTAL / REQBUFSZ
+	dmx, err := ts.connect()
+	assert.Nil(t, err)
 	for i := 0; i < n; i++ {
-		c, err := ts.dmx.SendReceive(pfcm, nil)
+		c, err := dmx.SendReceive(pfcm, nil)
 		assert.Nil(t, err)
 		fcm := c.(*sessp.PartMarshaledMsg)
 		assert.True(t, len(fcm.Fcm.Iov[0]) == REPBUFSZ)

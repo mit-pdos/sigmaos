@@ -72,7 +72,6 @@ func (ft *FtTaskSrvMgr) monitor() {
 				nfail = 0
 			}
 		} else {
-			db.DPrintf(db.FTTASKS, "Ping successful")
 			nfail = 0
 		}
 
@@ -80,17 +79,22 @@ func (ft *FtTaskSrvMgr) monitor() {
 	}
 }
 
-// for testing purposes
+// for testing a permanent network partition between client
+// and currently running instance
+// mgr will eventually notice the partition and restart the group
 func (ft *FtTaskSrvMgr) Partition() error {
 	ft.p.Lock()
 	defer ft.p.Unlock()
 
+	// tell server to partition from named and etcd
 	currInstance, err := ft.clnt.Partition()
 	if err != nil {
 		return err
 	}
 
-	db.DPrintf(db.FTTASKS, "Partitioned instance %v", currInstance)
+	db.DPrintf(db.FTTASKS, "Partitioning instance %v", currInstance)
+
+	// prevent client from connecting to the partitioned instance
 	return ft.sc.Disconnect(filepath.Join(ft.Id.ServerPath(), currInstance))
 }
 

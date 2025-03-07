@@ -618,13 +618,6 @@ func TestServerCrash(t *testing.T) {
 }
 
 func TestServerPartition(t *testing.T) {
-	e1 := crash.NewEventStart(crash.FTTASKS_PARTITION, 10000, 0, 1.0)
-	stats := runTestServerData(t, crash.NewTeventMapOne(e1))
-	db.DPrintf(db.ALWAYS, "restarted %d times", stats[0].Nrestart)
-	assert.Greater(t, stats[0].Nrestart, int32(1))
-}
-
-func TestPartitioning(t *testing.T) {
 	ts, err := test.NewTstateAll(t)
 	assert.Nil(t, err, "Error New Tstate: %v", err)
 
@@ -639,15 +632,14 @@ func TestPartitioning(t *testing.T) {
 	// wait for lease to expire and for replacement to be up
 	time.Sleep(2 * fsetcd.LeaseTTL * time.Second)
 
-	db.DPrintf(db.ALWAYS, "Acquiring tasks...")
 	_,  _, err = clnt.AcquireTasks(false)
 	assert.Nil(t, err)
 
-	db.DPrintf(db.ALWAYS, "Stopping server")
-
-	_, err = mgr.Stop(true)
+	stats, err := mgr.Stop(true)
 	assert.Nil(t, err)
 	
 	err = ts.Shutdown()
 	assert.Nil(t, err)
+
+	assert.Greater(t, stats[0].Nrestart, int32(1))
 }

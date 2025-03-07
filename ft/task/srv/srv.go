@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"sigmaos/api/fs"
 	"sigmaos/ft/leaderclnt/electclnt"
+	fttask "sigmaos/ft/task"
 	"sigmaos/ft/task/proto"
 	"sigmaos/proc"
 	"sigmaos/serr"
@@ -41,7 +42,7 @@ type TaskSrv struct {
 	todoCond *sync.Cond
 	stopped  bool 
 	fence    *sp.Tfence
-	fttaskId    string
+	rootId      fttask.FtTaskSrvId
 	partitioned *atomic.Bool
 
 	etcdClient *clientv3.Client
@@ -53,8 +54,8 @@ const (
 	ETCD_STATUS = "status"
 	ETCD_DATA   = "data"
 	ETCD_OUTPUT = "output"
-	ETCD_SRV_FENCE  = "srv_fence"
-	ETCD_CLNT_FENCE  = "clnt_fence"
+	ETCD_SRV_FENCE  = "srv_fence"    // ensures only the most recently elected fttask srv can write to etcd
+	ETCD_CLNT_FENCE  = "clnt_fence"  // ensures only the most recently elected client can write to server
 	ETCD_STOPPED = "stopped"
 )
 
@@ -64,7 +65,7 @@ const (
 )
 
 func (s *TaskSrv) root() string {
-	return fmt.Sprintf("%s:/fttask/%s/", proc.GetProcEnv().GetRealm(), s.fttaskId)
+	return fmt.Sprintf("%s:/fttask/%s/", proc.GetProcEnv().GetRealm(), s.rootId.String())
 }
 
 func (s *TaskSrv) keyPrefix(prefix string) string {
@@ -73,31 +74,6 @@ func (s *TaskSrv) keyPrefix(prefix string) string {
 
 func (s *TaskSrv) key(taskId int32, prefix string) string {
 	return s.keyPrefix(prefix) + strconv.FormatInt(int64(taskId), 10)
-}
-
-type InterceptorConn struct {
-	net.Conn
-	dropTraffic *atomic.Bool
-}
-
-func (c *InterceptorConn) Write(b []byte) (n int, err error) {
-	if c.dropTraffic.Load() {
-		db.DPrintf(db.ALWAYS, "attempting to write but BLOCKED")
-		return 0, fmt.Errorf("simulated network partition: write blocked")
-	}
-	return c.Conn.Write(b)
-}
-
-func (c *InterceptorConn) Read(b []byte) (n int, err error) {
-	if c.dropTraffic.Load() {
-		db.DPrintf(db.ALWAYS, "attempting to read but BLOCKED")
-		return 0, fmt.Errorf("simulated network partition: read blocked")
-	}
-	return c.Conn.Read(b)
-}
-
-func (c *InterceptorConn) SetPartitioned(partitioned bool) {
-	c.dropTraffic.Store(partitioned)
 }
 
 func RunTaskSrv(args []string) error {
@@ -115,7 +91,7 @@ func RunTaskSrv(args []string) error {
 		wip: make(map[int32]bool),
 		done: make(map[int32]bool),
 		errored: make(map[int32]bool),
-		fttaskId: fttaskId,
+		rootId: fttask.FtTaskSrvId(fttaskId),
 		partitioned: &atomic.Bool{},
 	}
 
@@ -127,7 +103,7 @@ func RunTaskSrv(args []string) error {
 	for {
 		var err error
 		srvId := rand.String(4)
-		ssrv, err = sigmasrv.NewSigmaSrv(filepath.Join(sp.NAMED, "fttask", fttaskId, srvId), s, pe)
+		ssrv, err = sigmasrv.NewSigmaSrv(filepath.Join(fttask.FtTaskSrvId(fttaskId).ServerPath(), srvId), s, pe)
 		if serr.IsErrorExists(err) {
 			continue
 		} else if err != nil {
@@ -162,12 +138,7 @@ func RunTaskSrv(args []string) error {
 				db.DFatalf("Unknown fsetcd endpoint proto: addr %v eps %v", addr, etcdMnts)
 			}
 
-			conn, err := dial(sp.NewEndpointFromProto(ep))
-			if err != nil {
-				return nil, err
-			}
-
-			return &InterceptorConn{Conn: conn, dropTraffic: s.partitioned}, nil
+			return dial(sp.NewEndpointFromProto(ep))
 		})},
 	})
 	if err != nil {
@@ -189,7 +160,7 @@ func RunTaskSrv(args []string) error {
 }
 
 func (s *TaskSrv) acquireLeadership(ssrv *sigmasrv.SigmaSrv) error {
-	electclnt, err := electclnt.NewElectClnt(ssrv.SigmaClnt().FsLib, filepath.Join(sp.NAMED, "fttask", s.fttaskId + "-leader"), sp.Tperm(0777))
+	electclnt, err := electclnt.NewElectClnt(ssrv.SigmaClnt().FsLib, filepath.Join(sp.NAMED, "fttask", s.rootId.String() + "-leader"), sp.Tperm(0777))
 	if err != nil {
 		return err
 	}
@@ -210,6 +181,7 @@ func (s *TaskSrv) acquireLeadership(ssrv *sigmasrv.SigmaSrv) error {
 		clientv3.OpPut(s.root() + ETCD_SRV_FENCE, "-1"),
 	).Commit()
 
+	// write new fence to etcd with election results
 	resp, err := s.etcdClient.Txn(context.TODO()).If(
 		clientv3.Compare(clientv3.Value(s.root() + ETCD_SRV_FENCE), "<", strconv.FormatUint(uint64(s.electclnt.Fence().Epoch), 10)),
 	).Then(
@@ -799,8 +771,10 @@ func (s *TaskSrv) Partition(ctx fs.CtxI, req proto.PartitionReq, rep *proto.Part
 
 	db.DPrintf(db.FTTASKS, "Partition: partitioning")
 
-	// s.partitioned.Store(true)
+	// revoke lease to named to remove mount
 	crash.PartitionNamed(s.fsl)
+
+	// revoke lease to etcd allow new leader to be elected
 	s.electclnt.CloseSession()
 
 	return nil

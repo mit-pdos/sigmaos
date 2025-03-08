@@ -92,6 +92,7 @@ func (ssrv *SessSrv) NewConn(p *sp.Tprincipal, conn net.Conn) *demux.DemuxSrv {
 		ssrv:   ssrv,
 		sessid: sessp.NoSession,
 	}
+	db.DPrintf(db.SESSSRV, "NewConn %v %v", p, conn)
 	iovm := demux.NewIoVecMap()
 	nc.dmx = demux.NewDemuxSrv(nc, spcodec.NewTransport(conn, iovm))
 	return nc.dmx

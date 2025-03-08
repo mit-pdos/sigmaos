@@ -1935,12 +1935,12 @@ func TestDeterministicallyShardedGaussianRequestDistributionCachedStateNOldPlusN
 		MAX_Q_LEN           int    = 50 // Max queue length at any replica before requests start to be dropped & retried
 		// LB params
 		N_RANDOM_CHOICES         int = 3  // Number of random choices/metrics queries for instances which may run a request
-		N_SHARD                  int = 10 // Number of load balancer shards.
+		N_SHARD                  int = 50 // Number of load balancer shards.
 		N_INSTANCES_PER_LB_SHARD int = 24 // Number of instances in each load balancer shard.
 		//		OVERLAP_PCT      float64 = 1.3 // Percentage of overlap between instance shards
-		N_OLD_PROBES    int = 10 // Number of probes of instances in each shard which the load balancer state cache can make each tick
-		N_NEW_PROBES    int = 0  // Additional number of probes of instances outside of each shard which the load balancer state cache can make each tick
-		PROBES_PER_TICK int = 1  // Not yet used
+		N_OLD_PROBES    int = 3 // Number of probes of instances in each shard which the load balancer state cache can make each tick
+		N_NEW_PROBES    int = 0 // Additional number of probes of instances outside of each shard which the load balancer state cache can make each tick
+		PROBES_PER_TICK int = 1 // Not yet used
 	)
 	var (
 		//		N_INSTANCES_PER_LB_SHARD int = int(math.Ceil(float64(N_INSTANCES/N_SHARD) * OVERLAP_PCT)) // Number of instances in each LB shard

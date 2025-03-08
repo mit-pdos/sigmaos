@@ -279,7 +279,7 @@ func (ts *TstateNet) failer(ch chan struct{}) {
 }
 
 func TestNetFail(t *testing.T) {
-	const NSEC = 10
+	const NSEC = 30
 
 	ts := newTstateNet(t, newTransport)
 	c := &call{buf: test.NewBuf(REQSMALLBUFSZ)}
@@ -292,13 +292,14 @@ func TestNetFail(t *testing.T) {
 	assert.Nil(t, err)
 	for !time.Now().After(t0.Add(NSEC * time.Second)) {
 		//db.DPrintf(db.ALWAYS, "send c")
+		time.Sleep(10 * time.Millisecond)
 		d, err := dmx.SendReceive(c, nil)
 		if err == nil {
 			call := d.(*call)
 			assert.True(t, len(call.buf) == REPBUFSZ)
 		} else {
-			var err error
 			db.DPrintf(db.ALWAYS, "SendReceive err %v", err)
+			var err error
 			dmx.Close()
 			dmx, err = ts.connect()
 			assert.Nil(t, err)

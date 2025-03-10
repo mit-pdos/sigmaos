@@ -36,7 +36,7 @@ func TestDial(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	addr := sp.NewTaddr(IP, sp.INNER_CONTAINER_IP, PORT)
+	addr := sp.NewTaddr(IP, PORT)
 	ep := sp.NewEndpoint(sp.EXTERNAL_EP, sp.Taddrs{addr})
 	npc := ts.GetDialProxyClnt()
 	c := make(chan bool)
@@ -71,7 +71,7 @@ func TestFailedDial(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	addr := sp.NewTaddr(IP, sp.INNER_CONTAINER_IP, PORT)
+	addr := sp.NewTaddr(IP, PORT)
 	ep := sp.NewEndpoint(sp.INTERNAL_EP, sp.Taddrs{addr})
 	npc := ts.GetDialProxyClnt()
 	// Dial an address with no corresponding listener
@@ -86,7 +86,7 @@ func TestListen(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	addr := sp.NewTaddr(IP, sp.INNER_CONTAINER_IP, PORT)
+	addr := sp.NewTaddr(IP, PORT)
 	npc := ts.GetDialProxyClnt()
 	// Create a listener via dialproxy
 	_, _, err := npc.Listen(sp.INTERNAL_EP, addr)
@@ -100,7 +100,7 @@ func TestFailedListen(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	addr := sp.NewTaddr("123.456.789.000", sp.INNER_CONTAINER_IP, PORT)
+	addr := sp.NewTaddr("123.456.789.000", PORT)
 	npc := ts.GetDialProxyClnt()
 	// Create a listener via dialproxy
 	_, _, err := npc.Listen(sp.INTERNAL_EP, addr)
@@ -114,7 +114,7 @@ func TestClose(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	addr := sp.NewTaddr(IP, sp.INNER_CONTAINER_IP, PORT)
+	addr := sp.NewTaddr(IP, PORT)
 	npc := ts.GetDialProxyClnt()
 	// Create a listener via dialproxy
 	ep, l, err := npc.Listen(sp.INTERNAL_EP, addr)
@@ -133,7 +133,7 @@ func TestFailedClose(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	addr := sp.NewTaddr(IP, sp.INNER_CONTAINER_IP, PORT)
+	addr := sp.NewTaddr(IP, PORT)
 	ep := sp.NewEndpoint(sp.INTERNAL_EP, sp.Taddrs{addr})
 	npc := ts.GetDialProxyClnt()
 	l := dialproxyclnt.NewListener(npc, 1000, ep)
@@ -148,7 +148,7 @@ func TestAccept(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	addr := sp.NewTaddr(IP, sp.INNER_CONTAINER_IP, PORT)
+	addr := sp.NewTaddr(IP, PORT)
 	npc := ts.GetDialProxyClnt()
 	c := make(chan bool)
 	// Create a listener via dialproxy
@@ -182,7 +182,7 @@ func TestFailedAccept(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	addr := sp.NewTaddr(IP, sp.INNER_CONTAINER_IP, PORT)
+	addr := sp.NewTaddr(IP, PORT)
 	ep := sp.NewEndpoint(sp.INTERNAL_EP, sp.Taddrs{addr})
 	npc := ts.GetDialProxyClnt()
 	l := dialproxyclnt.NewListener(npc, 1000, ep)

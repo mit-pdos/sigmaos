@@ -23,8 +23,8 @@ func TestString(t *testing.T) {
 
 func TestNamedAddrs(t *testing.T) {
 	addrs := make(sp.Taddrs, 2)
-	addrs[0] = sp.NewTaddrRealm(sp.Tip("10.x.x.x"), sp.INNER_CONTAINER_IP, 1111)
-	addrs[1] = sp.NewTaddrRealm(sp.Tip("192.y.y.y"), sp.INNER_CONTAINER_IP, 1111)
+	addrs[0] = sp.NewTaddr(sp.Tip("10.x.x.x"), 1111)
+	addrs[1] = sp.NewTaddr(sp.Tip("192.y.y.y"), 1111)
 	s, err := addrs.Taddrs2String()
 	assert.Nil(t, err)
 	as, err := sp.String2Taddrs(s)

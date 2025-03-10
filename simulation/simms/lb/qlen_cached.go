@@ -7,7 +7,7 @@ import (
 // Load balancer with omniscient view of microservice queue lengths, which
 // distributes requests to microservice instances with the shortes queue
 // lengths
-type OmniscientLB struct {
+type CachedStateLB struct {
 	t              *uint64
 	stateCache     simms.LoadBalancerStateCache
 	newMetric      simms.NewLoadBalancerMetricFn
@@ -15,8 +15,8 @@ type OmniscientLB struct {
 	assignReqs     simms.AssignRequestsToLoadBalancerShardsFn
 }
 
-func NewOmniscientLB(t *uint64, stateCache simms.LoadBalancerStateCache, m simms.NewLoadBalancerMetricFn, c simms.LoadBalancerInstanceChoiceFn, assignReqs simms.AssignRequestsToLoadBalancerShardsFn) simms.LoadBalancer {
-	return &OmniscientLB{
+func NewCachedStateLB(t *uint64, stateCache simms.LoadBalancerStateCache, m simms.NewLoadBalancerMetricFn, c simms.LoadBalancerInstanceChoiceFn, assignReqs simms.AssignRequestsToLoadBalancerShardsFn) simms.LoadBalancer {
+	return &CachedStateLB{
 		t:              t,
 		stateCache:     stateCache,
 		newMetric:      m,
@@ -25,7 +25,7 @@ func NewOmniscientLB(t *uint64, stateCache simms.LoadBalancerStateCache, m simms
 	}
 }
 
-func (lb *OmniscientLB) SteerRequests(reqs []*simms.Request, instances []*simms.MicroserviceInstance) [][]*simms.Request {
+func (lb *CachedStateLB) SteerRequests(reqs []*simms.Request, instances []*simms.MicroserviceInstance) [][]*simms.Request {
 	// Probe instances, and adjust shards as necessary
 	lb.stateCache.RunProbes(instances)
 	// Get the assignment of instances to shards

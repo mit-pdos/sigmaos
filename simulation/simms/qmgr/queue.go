@@ -31,7 +31,7 @@ func NewQueue(t *uint64, sorted bool, maxQLen int) *Queue {
 func (q *Queue) GetQDelays() []uint64 {
 	qdelay := make([]uint64, 0, len(q.items))
 	for _, qi := range q.items {
-		qdelay = append(qdelay, *q.t-qi.qtime)
+		qdelay = append(qdelay, *q.t-qi.req.GetStart())
 	}
 	return qdelay
 }

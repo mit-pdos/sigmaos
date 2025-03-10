@@ -8,16 +8,16 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 
-	"sigmaos/util/auth"
-	db "sigmaos/debug"
 	"sigmaos/api/fs"
+	db "sigmaos/debug"
 	"sigmaos/path"
-	"sigmaos/util/perf"
 	proc "sigmaos/proc"
 	"sigmaos/serr"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
+	"sigmaos/util/auth"
+	"sigmaos/util/perf"
 )
 
 var fss3 *Fss3
@@ -70,7 +70,7 @@ func RunFss3() {
 		clients: make(map[sp.TprincipalID]*s3.Client),
 	}
 	root := newDir("", path.Tpathname{}, sp.DMDIR)
-	addr := sp.NewTaddrAnyPort(sp.INNER_CONTAINER_IP)
+	addr := sp.NewTaddrAnyPort()
 	ssrv, err := sigmasrv.NewSigmaSrvRootClnt(root, addr, sp.ProxyPathname(sp.S3, pe.GetKernelID()), sc)
 	if err != nil {
 		db.DFatalf("Error NewSigmaSrv: %v", err)

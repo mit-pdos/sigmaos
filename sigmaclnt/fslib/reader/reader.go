@@ -51,6 +51,6 @@ func (rdr *Reader) Close() error {
 	return nil
 }
 
-func NewReader(rdr ReadOffsetI, path string) *Reader {
+func NewReader(rdr ReadOffsetI, pn sp.Tsigmapath) *Reader {
 	return &Reader{rdr, 0, false}
 }

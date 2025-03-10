@@ -14,9 +14,9 @@ import (
 	sn "sigmaos/apps/socialnetwork"
 	"sigmaos/benchmarks/loadgen"
 	dbg "sigmaos/debug"
-	linuxsched "sigmaos/util/linux/sched"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
+	linuxsched "sigmaos/util/linux/sched"
 	"strconv"
 	"strings"
 	"testing"
@@ -110,7 +110,7 @@ func setupK8sState(t1 *test.Tstate) (*TstateSN, error) {
 	assert.Nil(tssn.T, err, "Err split host port %v: %v", K8S_ADDR, err)
 	port, err := strconv.Atoi(p)
 	assert.Nil(tssn.T, err, "Err parse port %v: %v", p, err)
-	addr := sp.NewTaddrRealm(sp.Tip(h), sp.INNER_CONTAINER_IP, sp.Tport(port))
+	addr := sp.NewTaddr(sp.Tip(h), sp.Tport(port))
 	mnt := sp.NewEndpoint(sp.EXTERNAL_EP, []*sp.Taddr{addr})
 	assert.Nil(t1.T, tssn.MkEndpointFile(p, mnt))
 	// forward mongo port and init users and graphs.

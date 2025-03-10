@@ -9,43 +9,43 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-func (fl *FsLib) GetFileJson(name string, i interface{}) error {
-	b, err := fl.GetFile(name)
+func (fl *FsLib) GetFileJson(pn sp.Tsigmapath, i interface{}) error {
+	b, err := fl.GetFile(pn)
 	if err != nil {
 		return err
 	}
 	return json.Unmarshal(b, i)
 }
 
-func (fl *FsLib) SetFileJson(fname string, i interface{}) error {
+func (fl *FsLib) SetFileJson(pn sp.Tsigmapath, i interface{}) error {
 	data, err := json.Marshal(i)
 	if err != nil {
 		return fmt.Errorf("Marshal error %v", err)
 	}
-	_, err = fl.SetFile(fname, data, sp.OWRITE, 0)
+	_, err = fl.SetFile(pn, data, sp.OWRITE, 0)
 	return err
 }
 
-func (fl *FsLib) AppendFileJson(fname string, i interface{}) error {
+func (fl *FsLib) AppendFileJson(pn sp.Tsigmapath, i interface{}) error {
 	data, err := json.Marshal(i)
 	if err != nil {
 		return fmt.Errorf("Marshal error %v", err)
 	}
-	_, err = fl.SetFile(fname, data, sp.OAPPEND, sp.NoOffset)
+	_, err = fl.SetFile(pn, data, sp.OAPPEND, sp.NoOffset)
 	return err
 }
 
-func (fl *FsLib) PutFileJson(fname string, perm sp.Tperm, i interface{}) error {
+func (fl *FsLib) PutFileJson(pn sp.Tsigmapath, perm sp.Tperm, i interface{}) error {
 	data, err := json.Marshal(i)
 	if err != nil {
 		return fmt.Errorf("Marshal error %v", err)
 	}
-	_, err = fl.PutFile(fname, perm, sp.OWRITE, data)
+	_, err = fl.PutFile(pn, perm, sp.OWRITE, data)
 	return err
 }
 
-func (fl *FsLib) GetFileJsonWatch(name string, i interface{}) error {
-	b, err := fl.GetFileWatch(name)
+func (fl *FsLib) GetFileJsonWatch(pn sp.Tsigmapath, i interface{}) error {
+	b, err := fl.GetFileWatch(pn)
 	if err != nil {
 		return err
 	}

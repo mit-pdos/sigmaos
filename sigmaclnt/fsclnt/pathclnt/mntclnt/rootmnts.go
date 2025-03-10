@@ -25,12 +25,12 @@ func (rm *RootMount) String() string {
 
 type RootMountTable struct {
 	sync.Mutex
-	mounts map[string]*RootMount
+	mounts map[sp.Tsigmapath]*RootMount
 }
 
 func newRootMountTable(pe *proc.ProcEnv) *RootMountTable {
 	mt := &RootMountTable{}
-	mt.mounts = make(map[string]*RootMount)
+	mt.mounts = make(map[sp.Tsigmapath]*RootMount)
 	mt.add(sp.NoPrincipal(), nil, nil, sp.NAME)
 	db.DPrintf(db.MOUNT, "Initial RootMntTable: %v", mt.mounts)
 	return mt
@@ -40,7 +40,7 @@ func (rootmt *RootMountTable) String() string {
 	return fmt.Sprintf("{mnts %v}", rootmt.mounts)
 }
 
-func (rootmt *RootMountTable) lookup(mntName string) (*RootMount, *serr.Err) {
+func (rootmt *RootMountTable) lookup(mntName sp.Tsigmapath) (*RootMount, *serr.Err) {
 	rootmt.Lock()
 	defer rootmt.Unlock()
 
@@ -53,7 +53,7 @@ func (rootmt *RootMountTable) lookup(mntName string) (*RootMount, *serr.Err) {
 	return nil, serr.NewErr(serr.TErrNotfound, fmt.Sprintf("%v (no root mount)", mntName))
 }
 
-func (rootmt *RootMountTable) disconnect(name string) error {
+func (rootmt *RootMountTable) disconnect(name sp.Tsigmapath) error {
 	rootmt.Lock()
 	defer rootmt.Unlock()
 	sm, ok := rootmt.mounts[name]
@@ -65,7 +65,7 @@ func (rootmt *RootMountTable) disconnect(name string) error {
 	return serr.NewErr(serr.TErrNotfound, fmt.Sprintf("%v (no root mount)", name))
 }
 
-func (rootmt *RootMountTable) add(principal *sp.Tprincipal, svcpn, tree path.Tpathname, mntname string) *serr.Err {
+func (rootmt *RootMountTable) add(principal *sp.Tprincipal, svcpn, tree path.Tpathname, mntname sp.Tsigmapath) *serr.Err {
 	rootmt.Lock()
 	defer rootmt.Unlock()
 
@@ -80,7 +80,7 @@ func (rootmt *RootMountTable) add(principal *sp.Tprincipal, svcpn, tree path.Tpa
 	return nil
 }
 
-func (rootmt *RootMountTable) isRootMount(mntName string) bool {
+func (rootmt *RootMountTable) isRootMount(mntName sp.Tsigmapath) bool {
 	rootmt.Lock()
 	defer rootmt.Unlock()
 
@@ -128,7 +128,7 @@ func (mc *MntClnt) resolveRoot(pn path.Tpathname) (*serr.Err, bool) {
 	return nil, false
 }
 
-func (mc *MntClnt) NewRootMount(principal *sp.Tprincipal, pn, mntname string) error {
+func (mc *MntClnt) NewRootMount(principal *sp.Tprincipal, pn, mntname sp.Tsigmapath) error {
 	if !strings.HasPrefix(pn, sp.NAME) {
 		pn = sp.NAMED + pn
 	}
@@ -148,7 +148,7 @@ func (mc *MntClnt) NewRootMount(principal *sp.Tprincipal, pn, mntname string) er
 	return nil
 }
 
-func (mc *MntClnt) mountRoot(svc, rest path.Tpathname, mntname string) *serr.Err {
+func (mc *MntClnt) mountRoot(svc, rest path.Tpathname, mntname sp.Tsigmapath) *serr.Err {
 	db.DPrintf(db.MOUNT, "mountRoot: %v %v %v\n", svc, rest, mntname)
 	fid, _, err := mc.ResolveMnt(svc, true)
 	if err != nil {

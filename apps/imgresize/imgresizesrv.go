@@ -98,11 +98,11 @@ func (imgd *ImgSrv) Work() {
 
 	db.DPrintf(db.ALWAYS, "leader %s fail %q", imgd.ftclnt.ServerId(), proc.GetSigmaFail())
 
-	ftm, err := fttask_coord.NewFtTaskCoord(imgd.SigmaClnt.ProcAPI, imgd.ftclnt)
+	ftc, err := fttask_coord.NewFtTaskCoord(imgd.SigmaClnt.ProcAPI, imgd.ftclnt)
 	if err != nil {
 		db.DFatalf("NewTaskMgr err %v", err)
 	}
-	status := ftm.ExecuteTasks(getMkProcFn(imgd.ftclnt.ServerId(), imgd.nrounds, imgd.workerMcpu, imgd.workerMem))
+	status := ftc.ExecuteTasks(getMkProcFn(imgd.ftclnt.ServerId(), imgd.nrounds, imgd.workerMcpu, imgd.workerMem))
 	db.DPrintf(db.ALWAYS, "imgresized exit")
 	imgd.exited = true
 	if status == nil {

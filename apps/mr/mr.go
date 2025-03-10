@@ -76,7 +76,11 @@ func NewBins(fsl *fslib.FsLib, dir string, maxbinsz, splitsz sp.Tlength) ([]Bin,
 			if i+n > st.LengthUint64() {
 				n = st.LengthUint64() - i
 			}
-			split := mr.Split{dir + "/" + st.Name, sp.Toffset(i), sp.Tlength(n)}
+			split := mr.Split {
+				File: dir + "/" + st.Name,
+				Offset: sp.Toffset(i),
+				Length: sp.Tlength(n),
+			}
 			bin = append(bin, split)
 			binsz += n
 			if binsz+uint64(splitsz) > uint64(maxbinsz) { // bin full?

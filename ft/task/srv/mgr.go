@@ -5,7 +5,6 @@ import (
 	"path/filepath"
 	db "sigmaos/debug"
 	"sigmaos/ft/procgroupmgr"
-	"sigmaos/ft/task"
 	fttask "sigmaos/ft/task"
 	fttask_clnt "sigmaos/ft/task/clnt"
 	"sigmaos/serr"
@@ -17,12 +16,14 @@ import (
 
 type FtTaskSrvMgr struct {
 	sc *sigmaclnt.SigmaClnt
-	Id task.FtTaskSrvId
+	Id fttask.FtTaskSrvId
 	clnt fttask_clnt.FtTaskClnt[any, any]
 	p *procgroupmgr.ProcGroupMgr
 }
 
-func NewFtTaskSrvMgr(sc *sigmaclnt.SigmaClnt, id string, em *crash.TeventMap) (*FtTaskSrvMgr, error) {
+// when testing partitions, we don't want to evict unresponsive instances to test new instances
+// can coexist with old ones
+func NewFtTaskSrvMgr(sc *sigmaclnt.SigmaClnt, id string, em *crash.TeventMap, evictUnresponsive bool) (*FtTaskSrvMgr, error) {
 	err := sc.MkDir(sp.FTTASK, 0777)
 	if err != nil && !serr.IsErrorExists(err) {
 		return nil, err
@@ -45,15 +46,16 @@ func NewFtTaskSrvMgr(sc *sigmaclnt.SigmaClnt, id string, em *crash.TeventMap) (*
 		return nil, err
 	}
 
-	clnt := fttask_clnt.NewFtTaskClnt[any, any](sc.FsLib, task.FtTaskSrvId(id))
+	clnt := fttask_clnt.NewFtTaskClnt[any, any](sc.FsLib, fttask.FtTaskSrvId(id))
 
-	ft := &FtTaskSrvMgr{sc, task.FtTaskSrvId(id), clnt, p}
-	go ft.monitor()
+	ft := &FtTaskSrvMgr{sc, fttask.FtTaskSrvId(id), clnt, p}
+
+	go ft.monitor(evictUnresponsive)
 
 	return ft, nil
 }
 
-func (ft *FtTaskSrvMgr) monitor() {
+func (ft *FtTaskSrvMgr) monitor(evictUnresponsive bool) {
 	nfail := 0
 	for ft.p.IsRunning() {
 		err := ft.clnt.Ping()
@@ -65,7 +67,7 @@ func (ft *FtTaskSrvMgr) monitor() {
 
 			if nfail >= fttask.MGR_NUM_FAILS_UNTIL_RESTART {
 				db.DPrintf(db.FTTASKS, "Failed to ping server %d times, restarting group", fttask.MGR_NUM_FAILS_UNTIL_RESTART)
-				err = ft.p.RestartGroup(true)
+				err = ft.p.RestartGroup(evictUnresponsive)
 				time.Sleep(fttask.MGR_RESTART_TIMEOUT)
 				if err != nil {
 					db.DPrintf(db.FTTASKS, "Failed to restart group: %v", err)

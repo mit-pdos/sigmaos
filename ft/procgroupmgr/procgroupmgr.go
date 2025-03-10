@@ -325,15 +325,15 @@ func (pgm *ProcGroupMgr) StopGroup() ([]*ProcStatus, error) {
 	return gstatus, err
 }
 
-func (pgm *ProcGroupMgr) RestartGroup(partitioned bool) error {
+func (pgm *ProcGroupMgr) RestartGroup(evict bool) error {
 	db.DPrintf(db.GROUPMGR, "ProcGroupMgr Restart")
 
-	// if !partitioned {
-	// 	err := pgm.evictGroupMembers()
-	// 	if err != nil {
-	// 		db.DPrintf(db.GROUPMGR, "evictGroupMembers failed err %v", err)
-	// 	}
-	// }
+	if evict {
+		err := pgm.evictGroupMembers()
+		if err != nil {
+			db.DPrintf(db.GROUPMGR, "evictGroupMembers failed err %v", err)
+		}
+	}
 
 	pgm.Lock()
 	defer pgm.Unlock()

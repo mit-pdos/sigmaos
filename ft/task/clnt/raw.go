@@ -78,7 +78,7 @@ func (tc *RawFtTaskClnt) rpc(method string, arg protobuf.Message, res protobuf.M
 
 	numRetries := fttask.CLNT_NUM_RETRIES
 	if isPing {
-		numRetries = 5
+		numRetries = fttask.CLNT_NUM_RETRIES_PING
 	}
 
 	var instances []string

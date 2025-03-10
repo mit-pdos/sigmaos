@@ -1,4 +1,4 @@
-// Handles the creation and auto-restart of a fault tolerant server
+// Handles the creation and auto-restart of a fault tolerant task server
 package srv
 
 import (
@@ -21,8 +21,8 @@ type FtTaskSrvMgr struct {
 	p *procgroupmgr.ProcGroupMgr
 }
 
-// when testing partitions, we don't want to evict unresponsive instances to test new instances
-// can coexist with old ones
+// when testing partitions, we don't want to evict unresponsive instances
+// to test if new instances can coexist with old ones
 func NewFtTaskSrvMgr(sc *sigmaclnt.SigmaClnt, id string, em *crash.TeventMap, evictUnresponsive bool) (*FtTaskSrvMgr, error) {
 	err := sc.MkDir(sp.FTTASK, 0777)
 	if err != nil && !serr.IsErrorExists(err) {
@@ -68,10 +68,10 @@ func (ft *FtTaskSrvMgr) monitor(evictUnresponsive bool) {
 			if nfail >= fttask.MGR_NUM_FAILS_UNTIL_RESTART {
 				db.DPrintf(db.FTTASKS, "Failed to ping server %d times, restarting group", fttask.MGR_NUM_FAILS_UNTIL_RESTART)
 				err = ft.p.RestartGroup(evictUnresponsive)
-				time.Sleep(fttask.MGR_RESTART_TIMEOUT)
 				if err != nil {
 					db.DPrintf(db.FTTASKS, "Failed to restart group: %v", err)
 				}
+				time.Sleep(fttask.MGR_RESTART_TIMEOUT)
 				nfail = 0
 			}
 		} else {

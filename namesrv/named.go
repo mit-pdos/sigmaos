@@ -306,7 +306,6 @@ func (nd *Named) waitExit(ch chan struct{}) {
 
 func (nd *Named) watchLeased() {
 	for pn := range nd.ephch {
-		db.DPrintf(db.ALWAYS, "watchLeased: %v", pn)
 		nd.SigmaSrv.Notify(pn)
 	}
 }

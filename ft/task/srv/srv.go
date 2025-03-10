@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"os"
 	"path/filepath"
 	"sigmaos/api/fs"
 	"sigmaos/ft/leaderclnt/electclnt"
@@ -18,7 +19,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	db "sigmaos/debug"
@@ -38,12 +38,11 @@ type TaskSrv struct {
 	done     map[int32]bool
 	errored  map[int32]bool
 
-	mu       *sync.Mutex
-	todoCond *sync.Cond
-	stopped  bool 
-	fence    *sp.Tfence
-	rootId      fttask.FtTaskSrvId
-	partitioned *atomic.Bool
+	mu         *sync.Mutex
+	todoCond   *sync.Cond
+	stopped    bool 
+	fence      *sp.Tfence
+	rootId     fttask.FtTaskSrvId
 
 	etcdClient *clientv3.Client
 	electclnt  *electclnt.ElectClnt
@@ -51,12 +50,12 @@ type TaskSrv struct {
 }
 
 const (
-	ETCD_STATUS = "status"
-	ETCD_DATA   = "data"
-	ETCD_OUTPUT = "output"
-	ETCD_SRV_FENCE  = "srv_fence"    // ensures only the most recently elected fttask srv can write to etcd
+	ETCD_STATUS      = "status"
+	ETCD_DATA        = "data"
+	ETCD_OUTPUT      = "output"
+	ETCD_SRV_FENCE   = "srv_fence"    // ensures only the most recently elected fttask srv can write to etcd
 	ETCD_CLNT_FENCE  = "clnt_fence"  // ensures only the most recently elected client can write to server
-	ETCD_STOPPED = "stopped"
+	ETCD_STOPPED     = "stopped"
 )
 
 const (
@@ -92,17 +91,17 @@ func RunTaskSrv(args []string) error {
 		done: make(map[int32]bool),
 		errored: make(map[int32]bool),
 		rootId: fttask.FtTaskSrvId(fttaskId),
-		partitioned: &atomic.Bool{},
 	}
 
 	// prevent the server from serving any requests until everything has been initialized
 	s.mu.Lock()
 
 	var ssrv *sigmasrv.SigmaSrv
+	var srvId string
 
 	for {
 		var err error
-		srvId := rand.String(4)
+		srvId = rand.String(4)
 		ssrv, err = sigmasrv.NewSigmaSrv(filepath.Join(fttask.FtTaskSrvId(fttaskId).ServerPath(), srvId), s, pe)
 		if serr.IsErrorExists(err) {
 			continue
@@ -113,7 +112,12 @@ func RunTaskSrv(args []string) error {
 		}
 	}
 
-	db.DPrintf(db.FTTASKS, "Created fttask srv with args %v", args)
+	db.DPrintf(db.FTTASKS, "Created fttask srv with id %s, args %v", srvId, args)
+
+	// wait for any previous servers to relinquish leadership
+	if os.Getenv(proc.SIGMAGEN) != "1" {
+		time.Sleep(fttask.SRV_RESTART_TIMEOUT)
+	}
 
 	s.fsl = ssrv.SigmaClnt().FsLib
 	crash.Failer(s.fsl, crash.FTTASKS_CRASH, func(e crash.Tevent) {
@@ -167,7 +171,7 @@ func (s *TaskSrv) acquireLeadership(ssrv *sigmasrv.SigmaSrv) error {
 	s.electclnt = electclnt
 
 	db.DPrintf(db.FTTASKS, "Acquiring leadership...")
-	time.Sleep(2 * sp.EtcdSessionTTL * time.Second)
+	// time.Sleep(2 * sp.EtcdSessionTTL * time.Second)
 	if err := electclnt.AcquireLeadership([]byte("")); err != nil {
 		return err
 	}

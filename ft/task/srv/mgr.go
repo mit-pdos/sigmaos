@@ -1,3 +1,4 @@
+// Handles the creation and auto-restart of a fault tolerant server
 package srv
 
 import (
@@ -5,8 +6,8 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/ft/procgroupmgr"
 	"sigmaos/ft/task"
+	fttask "sigmaos/ft/task"
 	fttask_clnt "sigmaos/ft/task/clnt"
-	"sigmaos/namesrv/fsetcd"
 	"sigmaos/serr"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
@@ -37,7 +38,7 @@ func NewFtTaskSrvMgr(sc *sigmaclnt.SigmaClnt, id string, em *crash.TeventMap) (*
 		return nil, err
 	}
 
-	config := procgroupmgr.NewProcGroupConfig(1, "fttask", []string{id}, 0, id)
+	config := procgroupmgr.NewProcGroupConfig(1, "fttask-srv", []string{}, 0, id)
 	p := config.StartGrpMgr(sc)
 	err = p.WaitStart()
 	if err != nil {
@@ -62,10 +63,10 @@ func (ft *FtTaskSrvMgr) monitor() {
 			}
 			nfail += 1
 
-			if nfail >= 2 {
-				db.DPrintf(db.FTTASKS, "Failed to ping server three times, restarting group")
-				time.Sleep(2 * fsetcd.LeaseTTL)
+			if nfail >= fttask.MGR_NUM_FAILS_UNTIL_RESTART {
+				db.DPrintf(db.FTTASKS, "Failed to ping server %d times, restarting group", fttask.MGR_NUM_FAILS_UNTIL_RESTART)
 				err = ft.p.RestartGroup(true)
+				time.Sleep(fttask.MGR_RESTART_TIMEOUT)
 				if err != nil {
 					db.DPrintf(db.FTTASKS, "Failed to restart group: %v", err)
 				}
@@ -75,7 +76,7 @@ func (ft *FtTaskSrvMgr) monitor() {
 			nfail = 0
 		}
 
-		time.Sleep(500 * time.Millisecond)
+		time.Sleep(fttask.MGR_PING_TIMEOUT)
 	}
 }
 

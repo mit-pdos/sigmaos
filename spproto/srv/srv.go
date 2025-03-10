@@ -4,8 +4,6 @@
 package srv
 
 import (
-	"runtime/debug"
-	"strings"
 	"time"
 
 	"sigmaos/api/fs"
@@ -570,14 +568,6 @@ func (ps *ProtSrv) lookupPathOpen(f *fid.Fid, dir fs.Dir, name string, mode sp.T
 
 // Create file or open file , and write data to it
 func (ps *ProtSrv) PutFile(args *sp.Tputfile, data []byte, rets *sp.Rwrite) *sp.Rerror {
-	alert := false
-	for _, name := range args.Wnames {
-		if strings.Contains(name, "fttask") {
-			db.DPrintf(db.ALWAYS, "PutFile %v", args)
-			alert = true
-			break
-		}
-	}
 	db.DPrintf(db.PROTSRV, "%v: PutFile start args {%v}", ps.sid, args)
 	if sp.Tsize(len(data)) > sp.MAXGETSET {
 		return sp.NewRerrorSerr(serr.NewErr(serr.TErrInval, "too large"))
@@ -612,10 +602,6 @@ func (ps *ProtSrv) PutFile(args *sp.Tputfile, data []byte, rets *sp.Rwrite) *sp.
 		// try to create file, which will fail if it exists
 		dir = lo.(fs.Dir)
 		lo, flk, err = ps.createObj(f.Ctx(), dir, dlk, name, args.Tperm(), args.Tmode(), args.TleaseId(), args.Tfence(), nil)
-		if alert {
-			db.DPrintf(db.ALWAYS, "%s", debug.Stack())
-			db.DPrintf(db.ALWAYS, "ALERT %v %v %v", name, lo, err)
-		}
 		if err != nil {
 			if err.Code() != serr.TErrExists {
 				return sp.NewRerrorSerr(err)
@@ -653,9 +639,6 @@ func (ps *ProtSrv) PutFile(args *sp.Tputfile, data []byte, rets *sp.Rwrite) *sp.
 	qid := ps.newQid(lo.Perm(), lo.Path())
 	f = ps.newFid(ps.fm, f.Ctx(), dir, name, lo, args.TleaseId(), qid)
 	i, err := fs.Obj2File(lo, name)
-	if alert {
-		db.DPrintf(db.ALWAYS, "ALERT2 AHHH %v %v", f, err)
-	}
 	if err != nil {
 		return sp.NewRerrorSerr(err)
 	}

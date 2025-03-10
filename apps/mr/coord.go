@@ -419,13 +419,13 @@ func (c *Coord) Round(ttype string) {
 	ch := make(chan Tresult)
 	for m := 0; ; m-- {
 		if ttype == "map" {
-			m += c.startTasks(c.mftclnt.Raw(), ch, c.mapperProc)
+			m += c.startTasks(c.mftclnt.AsRawClnt(), ch, c.mapperProc)
 		} else if ttype == "reduce" {
-			m += c.startTasks(c.rftclnt.Raw(), ch, c.reducerProc)
+			m += c.startTasks(c.rftclnt.AsRawClnt(), ch, c.reducerProc)
 		} else if ttype == "all" {
-			m += c.startTasks(c.mftclnt.Raw(), ch, c.mapperProc)
+			m += c.startTasks(c.mftclnt.AsRawClnt(), ch, c.mapperProc)
 			db.DPrintf(db.MR, "startTasks mappers %v", m)
-			m += c.startTasks(c.rftclnt.Raw(), ch, c.reducerProc)
+			m += c.startTasks(c.rftclnt.AsRawClnt(), ch, c.reducerProc)
 			db.DPrintf(db.MR, "startTasks add reducers %v", m)
 		} else {
 			db.DFatalf("Unknown ttype: %v", ttype)

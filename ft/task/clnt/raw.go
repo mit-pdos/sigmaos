@@ -1,3 +1,4 @@
+// Defines fttask client that sends just tasks as raw bytes
 package clnt
 
 import (
@@ -5,8 +6,8 @@ import (
 	"path/filepath"
 	db "sigmaos/debug"
 	"sigmaos/ft/task"
+	fttask "sigmaos/ft/task"
 	"sigmaos/ft/task/proto"
-	"sigmaos/namesrv/fsetcd"
 	rpcclnt "sigmaos/rpc/clnt"
 	sprpcclnt "sigmaos/rpc/clnt/sigmap"
 	"sigmaos/serr"
@@ -18,21 +19,16 @@ import (
 	protobuf "google.golang.org/protobuf/proto"
 )
 
-const (
-	MAX_RETRIES = 5
-	TIME_BETWEEN_RETRIES = 1 * time.Second
-)
-
 type RawFtTaskClnt struct {
 	rpcclntc        *rpcclnt.ClntCache
 	fsl             *fslib.FsLib
-	serverId        task.FtTaskSrvId
+	serverId        fttask.FtTaskSrvId
 	currInstance    string
 	fence           *sp.Tfence
 	mu              sync.Mutex
 }
 
-func newRawFtTaskClnt(fsl *fslib.FsLib, serverId task.FtTaskSrvId) *RawFtTaskClnt {
+func newRawFtTaskClnt(fsl *fslib.FsLib, serverId fttask.FtTaskSrvId) *RawFtTaskClnt {
 	tc := &RawFtTaskClnt{
 		fsl:          fsl,
 		rpcclntc:     rpcclnt.NewRPCClntCache(sprpcclnt.WithSPChannel(fsl)),
@@ -62,53 +58,57 @@ func (tc *RawFtTaskClnt) getAvailableInstances() ([]string, error) {
 	return instanceIds, err
 }
 
-func (tc *RawFtTaskClnt) rpc(method string, arg protobuf.Message, res protobuf.Message, wait bool) error {
+func (tc *RawFtTaskClnt) rpc(method string, arg protobuf.Message, res protobuf.Message, isPing bool) error {
+	// lock to protect tc.currInstance
 	tc.mu.Lock()
 	currInstance := tc.currInstance
 	tc.mu.Unlock()
 
-	db.DPrintf(db.FTTASKS, "rpc to %s %s", tc.serverId.ServerPath(), currInstance)
 	if currInstance != "" {
-		err := tc.rpcclntc.RPC(filepath.Join(tc.serverId.ServerPath(), tc.currInstance), method, arg, res)
-		if err == nil {
-			return nil
+		serverPath := filepath.Join(tc.serverId.ServerPath(), currInstance)
+		err := tc.rpcclntc.RPC(serverPath, method, arg, res)
+
+		// if this is an error unrelated to finding the server, return it
+		if !(serr.IsErrorUnavailable(err) && (err.(*serr.Err).Obj == serverPath || err.(*serr.Err).Obj == currInstance)) {
+			return err
 		}
 
 		db.DPrintf(db.FTTASKS, "rpc to last known instance %s failed: %v", tc.currInstance, err)
 	}
 
-  // if unavailable, client should wait for the procgroupmgr to restart the instance
-	// procgroupmgr itself shouldn't wait so Ping has wait = false
-	if wait && currInstance != "" {
-		time.Sleep(2 * fsetcd.LeaseTTL * time.Second)
-	}
-	
-	instances, err := tc.getAvailableInstances()
-	db.DPrintf(db.FTTASKS, "available instances: %v", instances)
-
-	if err != nil {
-		return err
+	numRetries := fttask.CLNT_NUM_RETRIES
+	if isPing {
+		numRetries = 5
 	}
 
-	for _, instance := range instances {
-		if instance == currInstance {
-			continue
+	var instances []string
+	for i := 0; i < numRetries; i++ {
+		var err error
+
+		instances, err = tc.getAvailableInstances()
+		if err != nil {
+			return err
 		}
 
-		err := tc.rpcclntc.RPC(filepath.Join(tc.serverId.ServerPath(), instance), method, arg, res)
-		if err == nil {
-			tc.mu.Lock()
-			tc.currInstance = instance
-			tc.mu.Unlock()
-			return nil
+		for _, instance := range instances {
+			if instance == currInstance {
+				continue
+			}
+
+			err := tc.rpcclntc.RPC(filepath.Join(tc.serverId.ServerPath(), instance), method, arg, res)
+			if err == nil {
+				tc.mu.Lock()
+				tc.currInstance = instance
+				tc.mu.Unlock()
+				return nil
+			}
+			db.DPrintf(db.FTTASKS, "rpc %s to %s failed: %v", method, instance, err)
 		}
+
+		db.DPrintf(db.FTTASKS, "rpc %s to all instances %v failed", method, instances)
+		time.Sleep(fttask.CLNT_RETRY_TIMEOUT)
 	}
-
-	tc.mu.Lock()
-	tc.currInstance = ""
-	tc.mu.Unlock()
-
-	db.DPrintf(db.FTTASKS, "rpc to all instances failed: %v", err)
+	db.DPrintf(db.FTTASKS, "rpc %s to all instances %v failed %d times", method, instances, numRetries)
 	return serr.NewErr(serr.TErrUnreachable, fmt.Sprintf("no instances available, %v all failed", instances))
 }
 
@@ -125,7 +125,7 @@ func (tc *RawFtTaskClnt) SubmitTasks(tasks []*Task[[]byte]) ([]TaskId, error) {
 	arg := proto.SubmitTasksReq{Tasks: protoTasks, Fence: tc.fenceProto()}
 	res := proto.SubmitTasksRep{}
 
-	err := tc.rpc("TaskSrv.SubmitTasks", &arg, &res, true)
+	err := tc.rpc("TaskSrv.SubmitTasks", &arg, &res, false)
 	return res.Existing, err
 }
 
@@ -133,7 +133,7 @@ func (tc *RawFtTaskClnt) GetTasksByStatus(taskStatus TaskStatus) ([]TaskId, erro
 	arg := proto.GetTasksByStatusReq{Status: taskStatus, Fence: tc.fenceProto()}
 	res := proto.GetTasksByStatusRep{}
 
-	err := tc.rpc("TaskSrv.GetTasksByStatus", &arg, &res, true)
+	err := tc.rpc("TaskSrv.GetTasksByStatus", &arg, &res, false)
 	return res.Ids, err
 }
 
@@ -141,7 +141,7 @@ func (tc *RawFtTaskClnt) ReadTasks(ids []TaskId) ([]Task[[]byte], error) {
 	arg := proto.ReadTasksReq{Ids: ids, Fence: tc.fenceProto()}
 	res := proto.ReadTasksRep{}
 
-	err := tc.rpc("TaskSrv.ReadTasks", &arg, &res, true)
+	err := tc.rpc("TaskSrv.ReadTasks", &arg, &res, false)
 	if err != nil {
 		return nil, err
 	}
@@ -158,7 +158,7 @@ func (tc *RawFtTaskClnt) MoveTasks(ids []TaskId, to TaskStatus) error {
 	arg := proto.MoveTasksReq{Ids: ids, To: to, Fence: tc.fenceProto()}
 	res := proto.MoveTasksRep{}
 
-	err := tc.rpc("TaskSrv.MoveTasks", &arg, &res, true)
+	err := tc.rpc("TaskSrv.MoveTasks", &arg, &res, false)
 	return err
 }
 
@@ -166,7 +166,7 @@ func (tc *RawFtTaskClnt) MoveTasksByStatus(from, to TaskStatus) (int32, error) {
 	arg := proto.MoveTasksByStatusReq{From: from, To: to, Fence: tc.fenceProto()}
 	res := proto.MoveTasksByStatusRep{}
 
-	err := tc.rpc("TaskSrv.MoveTasksByStatus", &arg, &res, true)
+	err := tc.rpc("TaskSrv.MoveTasksByStatus", &arg, &res, false)
 	return res.NumMoved, err
 }
 
@@ -174,7 +174,7 @@ func (tc *RawFtTaskClnt) GetTaskOutputs(ids []TaskId) ([][]byte, error) {
 	arg := proto.GetTaskOutputsReq{Ids: ids, Fence: tc.fenceProto()}
 	res := proto.GetTaskOutputsRep{}
 
-	err := tc.rpc("TaskSrv.GetTaskOutputs", &arg, &res, true)
+	err := tc.rpc("TaskSrv.GetTaskOutputs", &arg, &res, false)
 	if err != nil {
 		return nil, err
 	}
@@ -186,7 +186,7 @@ func (tc *RawFtTaskClnt) AddTaskOutputs(ids []TaskId, outputs [][]byte) error {
 	arg := proto.AddTaskOutputsReq{Ids: ids, Outputs: outputs, Fence: tc.fenceProto()}
 	res := proto.AddTaskOutputsRep{}
 
-	err := tc.rpc("TaskSrv.AddTaskOutputs", &arg, &res, true)
+	err := tc.rpc("TaskSrv.AddTaskOutputs", &arg, &res, false)
 	return err
 }
 
@@ -194,7 +194,7 @@ func (tc *RawFtTaskClnt) AcquireTasks(wait bool) ([]TaskId, bool, error) {
 	arg := proto.AcquireTasksReq{Wait: wait, Fence: tc.fenceProto()}
 	res := proto.AcquireTasksRep{}
 
-	err := tc.rpc("TaskSrv.AcquireTasks", &arg, &res, true)
+	err := tc.rpc("TaskSrv.AcquireTasks", &arg, &res, false)
 	return res.Ids, res.Stopped, err
 }
 
@@ -202,7 +202,7 @@ func (tc *RawFtTaskClnt) Stats() (*proto.TaskStats, error) {
 	arg := proto.GetTaskStatsReq{}
 	res := proto.GetTaskStatsRep{}
 
-	err := tc.rpc("TaskSrv.GetTaskStats", &arg, &res, true)
+	err := tc.rpc("TaskSrv.GetTaskStats", &arg, &res, false)
 	return res.Stats, err
 }
 
@@ -230,7 +230,7 @@ func (tc *RawFtTaskClnt) SubmitStop() error {
 	arg := proto.SubmitStopReq{Fence: tc.fenceProto()}
 	res := proto.SubmitStopRep{}
 
-	err := tc.rpc("TaskSrv.SubmitStop", &arg, &res, true)
+	err := tc.rpc("TaskSrv.SubmitStop", &arg, &res, false)
 	return err
 }
 
@@ -248,7 +248,7 @@ func (tc *RawFtTaskClnt) Fence(fence *sp.Tfence) error {
 	arg := proto.FenceReq{Fence: tc.fenceProto()}
 	res := proto.FenceRep{}
 
-	err := tc.rpc("TaskSrv.Fence", &arg, &res, true)
+	err := tc.rpc("TaskSrv.Fence", &arg, &res, false)
 	return err
 }
 
@@ -256,7 +256,7 @@ func (tc *RawFtTaskClnt) ClearEtcd() error {
 	arg := proto.ClearEtcdReq{}
 	res := proto.ClearEtcdRep{}
 
-	err := tc.rpc("TaskSrv.ClearEtcd", &arg, &res, true)
+	err := tc.rpc("TaskSrv.ClearEtcd", &arg, &res, false)
 	return err
 }
 
@@ -266,7 +266,7 @@ func (tc *RawFtTaskClnt) Ping() error {
 	res := proto.GetTaskStatsRep{}
 
 	// bypass the rpc wrapper to avoid retrying
-	err := tc.rpc("TaskSrv.GetTaskStats", &arg, &res, false)
+	err := tc.rpc("TaskSrv.GetTaskStats", &arg, &res, true)
 	return err
 }
 
@@ -274,11 +274,11 @@ func (tc *RawFtTaskClnt) Partition() (string, error) {
 	arg := proto.PartitionReq{}
 	res := proto.PartitionRep{}
 
-	err := tc.rpc("TaskSrv.Partition", &arg, &res, true)
+	err := tc.rpc("TaskSrv.Partition", &arg, &res, false)
 	return tc.currInstance, err
 }
 
-func (tc *RawFtTaskClnt) Raw() FtTaskClnt[[]byte, []byte] {
+func (tc *RawFtTaskClnt) AsRawClnt() FtTaskClnt[[]byte, []byte] {
 	return tc
 }
 

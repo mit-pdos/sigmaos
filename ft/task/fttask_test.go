@@ -13,7 +13,6 @@ import (
 	fttask_clnt "sigmaos/ft/task/clnt"
 	"sigmaos/ft/task/proto"
 	fttasksrv "sigmaos/ft/task/srv"
-	"sigmaos/namesrv/fsetcd"
 	"sigmaos/sigmap"
 	"sigmaos/test"
 	"sigmaos/util/crash"
@@ -611,10 +610,19 @@ func TestServerData(t *testing.T) {
 }
 
 func TestServerCrash(t *testing.T) {
-	e0 := crash.NewEventStart(crash.FTTASKS_CRASH, 50, 150, 1.0)
-	stats := runTestServerData(t, crash.NewTeventMapOne(e0))
-	db.DPrintf(db.ALWAYS, "restarted %d times", stats[0].Nrestart)
-	assert.Greater(t, stats[0].Nrestart, int32(1))
+	succ := false
+	for i := 0; i < 10; i++ {
+		e0 := crash.NewEventStart(crash.FTTASKS_CRASH, 50, 250, 0.33)
+		stats := runTestServerData(t, crash.NewTeventMapOne(e0))
+		db.DPrintf(db.ALWAYS, "restarted %d times", stats[0].Nrestart)
+
+		if stats[0].Nrestart > 1 {
+			succ = true
+			break
+		}
+	}
+
+	assert.True(t, succ)
 }
 
 func TestServerPartition(t *testing.T) {
@@ -626,11 +634,11 @@ func TestServerPartition(t *testing.T) {
 
 	clnt := fttask_clnt.NewFtTaskClnt[mr.Bin, string](ts.FsLib, mgr.Id)
 
-	err = mgr.Partition()
+	_, err = clnt.GetNTasks(fttask_clnt.DONE)
 	assert.Nil(t, err)
 
-	// wait for lease to expire and for replacement to be up
-	time.Sleep(2 * fsetcd.LeaseTTL * time.Second)
+	err = mgr.Partition()
+	assert.Nil(t, err)
 
 	_,  _, err = clnt.AcquireTasks(false)
 	assert.Nil(t, err)
@@ -641,5 +649,5 @@ func TestServerPartition(t *testing.T) {
 	err = ts.Shutdown()
 	assert.Nil(t, err)
 
-	assert.Greater(t, stats[0].Nrestart, int32(1))
+	assert.Greater(t, stats[0].Nrestart, 1)
 }

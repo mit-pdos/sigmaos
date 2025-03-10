@@ -11,7 +11,7 @@ import (
 	"sigmaos/ft/leaderclnt"
 	"sigmaos/ft/task"
 	fttask_clnt "sigmaos/ft/task/clnt"
-	fttaskmgr "sigmaos/ft/task/mgr"
+	fttask_coord "sigmaos/ft/task/coord"
 	"sigmaos/proc"
 	"sigmaos/serr"
 	"sigmaos/sigmaclnt"
@@ -98,7 +98,7 @@ func (imgd *ImgSrv) Work() {
 
 	db.DPrintf(db.ALWAYS, "leader %s fail %q", imgd.ftclnt.ServerId(), proc.GetSigmaFail())
 
-	ftm, err := fttaskmgr.NewTaskMgr(imgd.SigmaClnt.ProcAPI, imgd.ftclnt)
+	ftm, err := fttask_coord.NewFtTaskCoord(imgd.SigmaClnt.ProcAPI, imgd.ftclnt)
 	if err != nil {
 		db.DFatalf("NewTaskMgr err %v", err)
 	}

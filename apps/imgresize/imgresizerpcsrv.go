@@ -12,7 +12,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/ft/task"
 	fttask_clnt "sigmaos/ft/task/clnt"
-	fttaskmgr "sigmaos/ft/task/mgr"
+	fttask_coord "sigmaos/ft/task/coord"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
@@ -26,7 +26,7 @@ type ImgSrvRPC struct {
 	workerMem  proc.Tmem
 	ssrv       *sigmasrv.SigmaSrv
 	ndone      atomic.Int64
-	mkProc     fttaskmgr.TmkProc[Ttask]
+	mkProc     fttask_coord.TmkProc[Ttask]
 	sc         *sigmaclnt.SigmaClnt
 }
 

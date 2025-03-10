@@ -1,119 +1,49 @@
+// Defines client interface for interacting with fault tolerant task server
 package clnt
 
 import (
-	"bytes"
-	"encoding/json"
 	"sigmaos/ft/task"
 	"sigmaos/ft/task/proto"
-	"sigmaos/sigmaclnt/fslib"
+	sp "sigmaos/sigmap"
+
+	protobuf "google.golang.org/protobuf/proto"
 )
 
-type ftTaskClnt[Data any, Output any] struct {
-	*RawFtTaskClnt
+type TaskStatus = proto.TaskStatus
+type TaskId = int32
+
+const (
+	TODO = proto.TaskStatus_TODO
+	WIP = proto.TaskStatus_WIP
+	DONE = proto.TaskStatus_DONE
+	ERROR = proto.TaskStatus_ERROR
+)
+
+type Task[Data any] struct {
+	Id   TaskId
+	Data Data
 }
 
-func Encode[T any] (data T) ([]byte, error) {
-	return json.Marshal(data)
-}
-
-func Decode[T any] (encoded []byte) (T, error) {
-	var data T
-	err := json.Unmarshal(encoded, &data)
-	return data, err
-}
-
-func NewFtTaskClnt[Data any, Output any](fsl *fslib.FsLib, serverId task.FtTaskSrvId) FtTaskClnt[Data, Output] {
-	raw := newRawFtTaskClnt(fsl, serverId)
-	tc := &ftTaskClnt[Data, Output]{
-		raw,
-	}
-	return tc
-}
-
-func (tc *ftTaskClnt[Data, Output]) SubmitTasks(tasks []*Task[Data]) ([]TaskId, error) {
-	var protoTasks []*proto.Task
-
-	for _, task := range tasks {
-		encoded, err := Encode(task.Data)
-		if err != nil {
-			return nil, err
-		}
-
-		protoTasks = append(protoTasks, &proto.Task{
-			Id:   task.Id,
-			Data: encoded,
-		})
-	}
-
-	arg := proto.SubmitTasksReq{Tasks: protoTasks, Fence: tc.fenceProto()}
-	res := proto.SubmitTasksRep{}
-
-	err := tc.rpc("TaskSrv.SubmitTasks", &arg, &res, true)
-	return res.Existing, err
-}
-
-func (tc *ftTaskClnt[Data, Output]) ReadTasks(ids []TaskId) ([]Task[Data], error) {
-	arg := proto.ReadTasksReq{Ids: ids, Fence: tc.fenceProto()}
-	res := proto.ReadTasksRep{}
-
-	err := tc.rpc("TaskSrv.ReadTasks", &arg, &res, true)
-	if err != nil {
-		return nil, err
-	}
-
-	var tasks []Task[Data]
-
-	for _, protoTask := range res.Tasks {
-		var data Data
-		err := json.NewDecoder(bytes.NewReader(protoTask.Data)).Decode(&data)
-		if err != nil {
-			return nil, err
-		}
-
-		tasks = append(tasks, Task[Data]{Id: protoTask.Id, Data: data})
-	}
-
-	return tasks, nil
-}
-
-func (tc *ftTaskClnt[Data, Output]) GetTaskOutputs(ids []TaskId) ([]Output, error) {
-	arg := proto.GetTaskOutputsReq{Ids: ids, Fence: tc.fenceProto()}
-	res := proto.GetTaskOutputsRep{}
-
-	err := tc.rpc("TaskSrv.GetTaskOutputs", &arg, &res, true)
-	if err != nil {
-		return nil, err
-	}
-
-	outputs := make([]Output, len(ids))
-	for ix, output := range res.Outputs {
-		outputs[ix], err = Decode[Output](output)
-
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return outputs, nil
-}
-
-func (tc *ftTaskClnt[Data, Output]) AddTaskOutputs(ids []TaskId, outputs []Output) error {
-	encoded := make([][]byte, len(outputs))
-	var err error
-	for ix, output := range outputs {
-		encoded[ix], err = Encode(output)
-		if err != nil {
-			return err
-		}
-	}
-
-	arg := proto.AddTaskOutputsReq{Ids: ids, Outputs: encoded, Fence: tc.fenceProto()}
-	res := proto.AddTaskOutputsRep{}
-
-	err = tc.rpc("TaskSrv.AddTaskOutputs", &arg, &res, true)
-	return err
-}
-
-func (tc *ftTaskClnt[Data, Output]) Raw() FtTaskClnt[[]byte, []byte] {
-	return tc.RawFtTaskClnt
+type FtTaskClnt[Data any, Output any] interface {
+	SubmitTasks(tasks []*Task[Data]) ([]TaskId, error)
+	GetTasksByStatus(taskStatus TaskStatus) ([]TaskId, error)
+	ReadTasks(ids []TaskId) ([]Task[Data], error)
+	MoveTasks(ids []TaskId, to TaskStatus) error
+	MoveTasksByStatus(from, to TaskStatus) (int32, error)
+	GetTaskOutputs(ids []TaskId) ([]Output, error)
+	AddTaskOutputs(ids []TaskId, outputs []Output) error
+	AcquireTasks(wait bool) ([]TaskId, bool, error)
+	Stats() (*proto.TaskStats, error)
+	GetNTasks(status TaskStatus) (int32, error)
+	SubmitStop() error
+	SetFence(fence *sp.Tfence)
+	GetFence() *sp.Tfence
+	Fence(fence *sp.Tfence) error
+	ClearEtcd() error
+	AsRawClnt() FtTaskClnt[[]byte, []byte]
+	ServerId() task.FtTaskSrvId
+	Ping() error
+	Partition() (string, error) // for testing purposes; partitions the server from named so its lease expires
+	
+	rpc(method string, arg protobuf.Message, res protobuf.Message, isPing bool) error
 }

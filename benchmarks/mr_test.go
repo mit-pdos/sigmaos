@@ -8,7 +8,7 @@ import (
 	"sigmaos/apps/mr"
 	db "sigmaos/debug"
 	"sigmaos/ft/procgroupmgr"
-	fttask_srv "sigmaos/ft/task/srv"
+	fttask "sigmaos/ft/task"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
@@ -26,8 +26,8 @@ type MRJobInstance struct {
 	memreq  proc.Tmem
 	job     *mr.Job
 	cm      *procgroupmgr.ProcGroupMgr
-	mftid   fttask_srv.FtTaskSrvId
-	rftid   fttask_srv.FtTaskSrvId
+	mftid   fttask.FtTaskSrvId
+	rftid   fttask.FtTaskSrvId
 }
 
 func NewMRJobInstance(ts *test.RealmTstate, p *perf.Perf, app, jobRoot, jobname string, memreq proc.Tmem) *MRJobInstance {

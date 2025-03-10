@@ -68,12 +68,14 @@ fi
 
 TMP=/tmp/sigmaos
 BUILD_LOG=/tmp/sigmaos-build
+PYTHON_DEPENDENCIES=/tmp/pysl
 PYTHON=/tmp/python
 PROCD_BIN=/tmp/sigmaos-procd-bin
 
 # tests uses hosts /tmp, which mounted in kernel container.
 mkdir -p $TMP
 mkdir -p $BUILD_LOG
+mkdir -p $PYTHON_DEPENDENCIES
 mkdir -p $PYTHON
 
 # Make a dir to hold user proc build output
@@ -215,8 +217,10 @@ if [ "${TARGET}" == "local" ]; then
   cp $KERNELBIN/procd $PROCD_BIN/
   cp $KERNELBIN/spproxyd $PROCD_BIN/
   cp $KERNELBIN/uproc-trampoline $PROCD_BIN/
-  cp $KERNELBIN/python $PROCD_BIN/
+  # OpenBLAS
+  cp $KERNELBIN/libopenblas64_p-r0.3.23.so $PYTHON_DEPENDENCIES/libopenblas64_p-r0-25e23498.3.23.so
   # PYTHON
+  cp $KERNELBIN/python $PROCD_BIN/
   sudo rm -rf $PYTHON
   cp -r $KERNELBIN/cpython3.11 /tmp/
   mv /tmp/cpython3.11 $PYTHON

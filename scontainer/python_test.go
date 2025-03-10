@@ -102,9 +102,9 @@ func TestPythonNeighborImport(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestPythonLargeImport(t *testing.T) {
+func TestPythonNumpyImport(t *testing.T) {
 	ts, _ := test.NewTstateAll(t)
-	p := proc.NewPythonProc([]string{"/~~/pyproc/large_import.py"}, "ivywu")
+	p := proc.NewPythonProc([]string{"/~~/pyproc/numpy_import.py"}, "ivywu")
 	start := time.Now()
 	err := ts.Spawn(p)
 	assert.Nil(ts.T, err)

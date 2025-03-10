@@ -60,6 +60,9 @@ build="parallel -j$njobs $CARGO \"build --manifest-path=../sigmaos-local/rs/{}/C
 echo $build
 eval $build
 
+# Copy OpenBLAS-0.3.23
+cp OpenBLAS-0.3.23/libopenblas64_p-r0.3.23.so $OUTPATH/kernel
+
 # Inject custom Python lib
 LIBDIR="cpython3.11/Lib"
 cp ../sigmaos-local/pylib/splib.py $LIBDIR

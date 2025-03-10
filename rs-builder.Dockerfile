@@ -3,6 +3,7 @@
 FROM alpine
 
 RUN apk add --no-cache libseccomp \
+  gfortran \
   gcompat \
   libffi-dev \
   musl-dev \
@@ -23,6 +24,13 @@ RUN echo 'will cite' | parallel --citation || true
 WORKDIR /home/sigmaos
 RUN mkdir -p bin/kernel && \
   mkdir -p bin/user
+
+# Install specific version of OpenBLAS
+RUN wget https://github.com/xianyi/OpenBLAS/releases/download/v0.3.23/OpenBLAS-0.3.23.tar.gz && \
+  tar -xzf OpenBLAS-0.3.23.tar.gz && \
+  rm OpenBLAS-0.3.23.tar.gz && \
+  cd OpenBLAS-0.3.23 && \
+  make USE_THREAD=1 INTERFACE64=1 DYNAMIC_ARCH=1 SYMBOLSUFFIX=64_
 
 # Install Python
 RUN git clone https://github.com/ivywu2003/cpython.git cpython3.11 && \

@@ -153,6 +153,7 @@ MOUNTS="--mount type=bind,src=/var/run/docker.sock,dst=/var/run/docker.sock \
   --mount type=bind,src=/tmp/spproxyd,dst=/tmp/spproxyd \
   --mount type=bind,src=/tmp/sigmaos-data,dst=/home/sigmaos/data \
   --mount type=bind,src=/tmp/sigmaos-bin/${KERNELID},dst=/home/sigmaos/bin/user/realms \
+  --mount type=bind,src=/tmp/pysl,dst=/tmp/pysl \
   --mount type=bind,src=/tmp/python,dst=/tmp/python \
   --mount type=bind,src=/tmp/${KERNELID}/python,dst=/python \
   --mount type=bind,src=/tmp/sigmaos-perf,dst=/tmp/sigmaos-perf \

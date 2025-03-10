@@ -93,7 +93,6 @@ func NewPythonProc(args []string, bucket string) *Proc {
 	}
 
 	p.AppendEnv("PYTHONPATH", pythonPath)
-	p.AppendEnv("LD_LIBRARY_PATH", "/usr/lib")
 	return p
 }
 

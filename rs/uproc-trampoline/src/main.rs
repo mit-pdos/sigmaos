@@ -279,7 +279,7 @@ fn seccomp_proc(dialproxy: String) -> Result<(), Box<dyn std::error::Error>> {
     // XXX Should really be 64 syscalls. We can remove ioctl, poll, and lstat,
     // but the mini rust proc for our spawn latency microbenchmarks requires
     // it.
-    const ALLOWED_SYSCALLS: [ScmpSyscall; 73] = [
+    const ALLOWED_SYSCALLS: [ScmpSyscall; 74] = [
         ScmpSyscall::new("ioctl"), // XXX Only needed for rust proc spawn microbenchmark
         ScmpSyscall::new("poll"),  // XXX Only needed for rust proc spawn microbenchmark
         ScmpSyscall::new("lstat"), // XXX Only needed for rust proc spawn microbenchmark
@@ -353,6 +353,7 @@ fn seccomp_proc(dialproxy: String) -> Result<(), Box<dyn std::error::Error>> {
         ScmpSyscall::new("gettid"),
         ScmpSyscall::new("stat"),
         ScmpSyscall::new("readv"),
+        ScmpSyscall::new("uname"), // Numpy
     ];
 
     const NODIALPROXY_ALLOWED_SYSCALLS: [ScmpSyscall; 3] = [

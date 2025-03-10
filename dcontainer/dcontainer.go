@@ -80,6 +80,13 @@ func StartDockerContainer(p *proc.Proc, kernelId string) (*DContainer, error) {
 			Target:   chunksrv.ROOTBINCONTAINER,
 			ReadOnly: false,
 		},
+		// Python shared libraries
+		mount.Mount{
+			Type:     mount.TypeBind,
+			Source:   path.Join("/tmp/pysl"),
+			Target:   path.Join("/tmp/pysl"),
+			ReadOnly: false,
+		},
 		// Python mounts
 		mount.Mount{
 			Type:     mount.TypeBind,
@@ -170,6 +177,36 @@ func StartDockerContainer(p *proc.Proc, kernelId string) (*DContainer, error) {
 	}
 	if execInspect.ExitCode != 0 {
 		db.DPrintf(db.CONTAINER, "ExecInspect failure with exit code %v\n", execInspect.ExitCode)
+		return nil, errors.New("ExecInspect failure")
+	}
+
+	// Set up OpenBLAS and GCC libraries for numpy
+	slCmd := "cp /tmp/pysl/* /usr/lib && cp /usr/lib/libgcc_s.so.1 /usr/lib/libgcc_s-a04fdf82.so.1"
+	slResp, err := cli.ContainerExecCreate(ctx, resp.ID, types.ExecConfig{
+		Cmd:          []string{"sh", "-c", slCmd},
+		AttachStdout: true,
+		AttachStderr: true,
+	})
+	if err != nil {
+		db.DPrintf(db.CONTAINER, "ExecCreate err %v\n", err)
+		return nil, err
+	}
+	slAttachResp, err := cli.ContainerExecAttach(ctx, slResp.ID, types.ExecStartCheck{})
+	if err != nil {
+		db.DPrintf(db.CONTAINER, "ExecStart err %v\n", err)
+		return nil, err
+	}
+	defer slAttachResp.Close()
+
+	io.Copy(os.Stdout, slAttachResp.Reader)
+
+	slInspect, err := cli.ContainerExecInspect(ctx, slResp.ID)
+	if err != nil {
+		db.DPrintf(db.CONTAINER, "ExecInspect err %v\n", err)
+		return nil, err
+	}
+	if slInspect.ExitCode != 0 {
+		db.DPrintf(db.CONTAINER, "ExecInspect failure with exit code %v\n", slInspect.ExitCode)
 		return nil, errors.New("ExecInspect failure")
 	}
 

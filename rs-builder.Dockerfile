@@ -17,6 +17,7 @@ RUN apk add --no-cache libseccomp \
   python3-dev \
   openblas \
   lapack \
+  tiff-dev \
   git
 
 RUN echo 'will cite' | parallel --citation || true

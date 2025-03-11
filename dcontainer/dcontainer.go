@@ -48,6 +48,38 @@ type cpustats struct {
 	util                float64
 }
 
+func execInContainer(ctx context.Context, cli *client.Client, containerID string, cmd string) error {
+	execResp, err := cli.ContainerExecCreate(ctx, containerID, types.ExecConfig{
+		Cmd:          []string{"sh", "-c", cmd},
+		AttachStdout: true,
+		AttachStderr: true,
+	})
+	if err != nil {
+		db.DPrintf(db.CONTAINER, "ExecCreate err %v\n", err)
+		return err
+	}
+	attachResp, err := cli.ContainerExecAttach(ctx, execResp.ID, types.ExecStartCheck{})
+	if err != nil {
+		db.DPrintf(db.CONTAINER, "ExecStart err %v\n", err)
+		return err
+	}
+	defer attachResp.Close()
+
+	io.Copy(os.Stdout, attachResp.Reader)
+
+	execInspect, err := cli.ContainerExecInspect(ctx, execResp.ID)
+	if err != nil {
+		db.DPrintf(db.CONTAINER, "ExecInspect err %v\n", err)
+		return err
+	}
+	if execInspect.ExitCode != 0 {
+		db.DPrintf(db.CONTAINER, "ExecInspect failure with exit code %v\n", execInspect.ExitCode)
+		return errors.New("ExecInspect failure")
+	}
+
+	return nil
+}
+
 func StartDockerContainer(p *proc.Proc, kernelId string) (*DContainer, error) {
 	image := "sigmauser"
 	ctx := context.Background()
@@ -152,62 +184,23 @@ func StartDockerContainer(p *proc.Proc, kernelId string) (*DContainer, error) {
 
 	// Set up Python overlay dir
 	overlayCmd := "mkdir -p /python/lower /python/upper /python/work /tmp/python && mount -t overlay overlay -o lowerdir=/python/lower,upperdir=/python/upper,workdir=/python/work /tmp/python"
-	execResp, err := cli.ContainerExecCreate(ctx, resp.ID, types.ExecConfig{
-		Cmd:          []string{"sh", "-c", overlayCmd},
-		AttachStdout: true,
-		AttachStderr: true,
-	})
+	err = execInContainer(ctx, cli, resp.ID, overlayCmd)
 	if err != nil {
-		db.DPrintf(db.CONTAINER, "ExecCreate err %v\n", err)
 		return nil, err
-	}
-	attachResp, err := cli.ContainerExecAttach(ctx, execResp.ID, types.ExecStartCheck{})
-	if err != nil {
-		db.DPrintf(db.CONTAINER, "ExecStart err %v\n", err)
-		return nil, err
-	}
-	defer attachResp.Close()
-
-	io.Copy(os.Stdout, attachResp.Reader)
-
-	execInspect, err := cli.ContainerExecInspect(ctx, execResp.ID)
-	if err != nil {
-		db.DPrintf(db.CONTAINER, "ExecInspect err %v\n", err)
-		return nil, err
-	}
-	if execInspect.ExitCode != 0 {
-		db.DPrintf(db.CONTAINER, "ExecInspect failure with exit code %v\n", execInspect.ExitCode)
-		return nil, errors.New("ExecInspect failure")
 	}
 
 	// Set up OpenBLAS and GCC libraries for numpy
-	slCmd := "cp /tmp/pysl/* /usr/lib && cp /usr/lib/libgcc_s.so.1 /usr/lib/libgcc_s-a04fdf82.so.1"
-	slResp, err := cli.ContainerExecCreate(ctx, resp.ID, types.ExecConfig{
-		Cmd:          []string{"sh", "-c", slCmd},
-		AttachStdout: true,
-		AttachStderr: true,
-	})
+	numpyCmd := "cp /tmp/pysl/* /usr/lib && cp /usr/lib/libgcc_s.so.1 /usr/lib/libgcc_s-a04fdf82.so.1"
+	err = execInContainer(ctx, cli, resp.ID, numpyCmd)
 	if err != nil {
-		db.DPrintf(db.CONTAINER, "ExecCreate err %v\n", err)
 		return nil, err
 	}
-	slAttachResp, err := cli.ContainerExecAttach(ctx, slResp.ID, types.ExecStartCheck{})
-	if err != nil {
-		db.DPrintf(db.CONTAINER, "ExecStart err %v\n", err)
-		return nil, err
-	}
-	defer slAttachResp.Close()
 
-	io.Copy(os.Stdout, slAttachResp.Reader)
-
-	slInspect, err := cli.ContainerExecInspect(ctx, slResp.ID)
+	// PIL setup
+	pilCmd := "ln -s /usr/lib/libtiff.so.6.1.0 /usr/lib/libtiff-f7c4a081.so.6.0.2 && ln -s /usr/lib/libjpeg.so.8.3.2 /usr/lib/libjpeg-fd78c7ba.so.62.4.0 && ln -s /usr/lib/libopenjp2.so.2.5.2 /usr/lib/libopenjp2-88597bfd.so.2.5.3 && ln -s /usr/lib/libxcb.so.1.1.0 /usr/lib/libxcb-b63aee95.so.1.1.0"
+	err = execInContainer(ctx, cli, resp.ID, pilCmd)
 	if err != nil {
-		db.DPrintf(db.CONTAINER, "ExecInspect err %v\n", err)
 		return nil, err
-	}
-	if slInspect.ExitCode != 0 {
-		db.DPrintf(db.CONTAINER, "ExecInspect failure with exit code %v\n", slInspect.ExitCode)
-		return nil, errors.New("ExecInspect failure")
 	}
 
 	json, err1 := cli.ContainerInspect(ctx, resp.ID)

@@ -50,8 +50,16 @@ func (k *Kernel) BootSub(s string, args, env []string, p *Param, realm sp.Trealm
 	case sp.UXREL:
 		ss, err = k.bootUxd(realm, env)
 	case sp.DBREL:
+		// Skip booting db proxy if db IP not set
+		if p.Dbip == "x.x.x.x" {
+			return sp.NO_PID, nil
+		}
 		ss, err = k.bootDbd(p.Dbip)
 	case sp.MONGOREL:
+		// Skip booting mongo proxy if db IP not set
+		if p.Mongoip == "x.x.x.x" {
+			return sp.NO_PID, nil
+		}
 		ss, err = k.bootMongod(p.Mongoip)
 	case sp.LCSCHEDREL:
 		ss, err = k.bootLCSched()

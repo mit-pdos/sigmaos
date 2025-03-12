@@ -57,12 +57,16 @@ func newTstate(mrts *test.MultiRealmTstate, nrepl int, persist bool) *Tstate {
 	return ts
 }
 
-func (ts *Tstate) Shutdown(crash bool) {
+func (ts *Tstate) Shutdown(crash bool, reboot bool) {
 	if crash {
 		err := ts.gm.Crash()
 		assert.Nil(ts.mrts.T, err)
 	}
-	ts.mrts.Shutdown()
+	if reboot {
+		ts.mrts.ShutdownForReboot()
+	} else {
+		ts.mrts.Shutdown()
+	}
 }
 
 func TestCompile(t *testing.T) {
@@ -87,7 +91,7 @@ func TestStartStopRepl0(t *testing.T) {
 
 	_, err = ts.gm.StopGroup()
 	assert.Nil(ts.mrts.T, err, "Stop")
-	ts.Shutdown(false)
+	ts.Shutdown(false, false)
 }
 
 func TestStartStopReplN(t *testing.T) {
@@ -105,12 +109,12 @@ func TestStartStopReplN(t *testing.T) {
 
 	_, err = ts.gm.StopGroup()
 	assert.Nil(ts.mrts.T, err, "Stop")
-	ts.Shutdown(false)
+	ts.Shutdown(false, false)
 }
 
 // XXX TODO shutdown?
 func (ts *Tstate) testRecover() {
-	ts.Shutdown(true)
+	ts.Shutdown(true, true)
 	time.Sleep(2 * fsetcd.LeaseTTL * time.Second)
 	mrts, err1 := test.NewMultiRealmTstate(ts.mrts.T, []sp.Trealm{test.REALM1})
 	if !assert.Nil(ts.mrts.T, err1, "Error New Tstate: %v", err1) {
@@ -128,7 +132,7 @@ func (ts *Tstate) testRecover() {
 	time.Sleep(1 * fsetcd.LeaseTTL * time.Second)
 	gms[0].StopGroup()
 	ts.mrts.GetRealm(test.REALM1).RmDir(procgroupmgr.GRPMGRDIR)
-	ts.Shutdown(false)
+	ts.Shutdown(false, false)
 }
 
 func TestRestartRepl0(t *testing.T) {
@@ -188,7 +192,7 @@ func TestServerCrash(t *testing.T) {
 
 	ts.gm.StopGroup()
 
-	ts.Shutdown(false)
+	ts.Shutdown(false, false)
 }
 
 func TestReconnectSimple(t *testing.T) {
@@ -222,7 +226,7 @@ func TestReconnectSimple(t *testing.T) {
 	err = <-ch
 	assert.Nil(ts.mrts.T, err, "fsl1")
 	ts.gm.StopGroup()
-	ts.Shutdown(false)
+	ts.Shutdown(false, false)
 }
 
 func (ts *Tstate) stat(t *testing.T, i int, ch chan error) {
@@ -261,7 +265,7 @@ func TestServerPartitionNonBlockingSimple(t *testing.T) {
 	}
 	db.DPrintf(db.TEST, "Stopping group")
 	ts.gm.StopGroup()
-	ts.Shutdown(false)
+	ts.Shutdown(false, false)
 }
 
 func TestServerPartitionNonBlockingConcur(t *testing.T) {
@@ -285,7 +289,7 @@ func TestServerPartitionNonBlockingConcur(t *testing.T) {
 	}
 	db.DPrintf(db.TEST, "Stopping group")
 	ts.gm.StopGroup()
-	ts.Shutdown(false)
+	ts.Shutdown(false, false)
 }
 
 func TestServerPartitionBlocking(t *testing.T) {
@@ -318,5 +322,5 @@ func TestServerPartitionBlocking(t *testing.T) {
 		assert.NotNil(ts.mrts.T, err, "down")
 	}
 	ts.gm.StopGroup()
-	ts.Shutdown(false)
+	ts.Shutdown(false, false)
 }

@@ -25,7 +25,7 @@ if [ $# -gt 0 ]; then
 fi
 
 if [[ "$REALM" != "" ]] ; then
-    ./test-in-docker.sh --pkg namesrv/fsetcd --run Dump --args "--realm \"$REALM\""
+    ./test-in-docker.sh --pkg namesrv/fsetcd --run Dump --args "--realm $REALM"
 else
     ./test-in-docker.sh --pkg namesrv/fsetcd --run Dump
 fi

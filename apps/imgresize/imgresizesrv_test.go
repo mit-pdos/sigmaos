@@ -96,16 +96,28 @@ func newTstate(mrts *test.MultiRealmTstate) (*Tstate, error) {
 	return ts, nil
 }
 
-func (ts *Tstate) restartTstate() {
+func (ts *Tstate) restartTstate() error {
 	mrts, err1 := test.NewMultiRealmTstate(ts.mrts.T, []sp.Trealm{test.REALM1})
 	if !assert.Nil(ts.mrts.T, err1, "Error New Tstate: %v", err1) {
-		return
+		return err1
 	}
 
 	ts.mrts = mrts
+	db.DPrintf(db.TEST, "Get named contents post-shutdown")
+	sts, err := ts.mrts.GetRealm(test.REALM1).GetDir(sp.NAMED)
+	if !assert.Nil(ts.mrts.T, err, "Err GetDir: %v", err) {
+		return err
+	}
+
+	db.DPrintf(db.TEST, "%v named contents post-shutdown: %v", test.REALM1, sp.Names(sts))
+
+	db.DPrintf(db.TEST, "New FtTasks")
 	ft, err := fttask.NewFtTasks(ts.mrts.GetRealm(test.REALM1).SigmaClnt.FsLib, sp.IMG, ts.job)
-	assert.Nil(ts.mrts.T, err, "Err new ft tasks: %v", err)
+	if !assert.Nil(ts.mrts.T, err, "Err new ft tasks: %v", err) {
+		return err
+	}
 	ts.ft = ft
+	return nil
 }
 
 func (ts *Tstate) cleanup() {
@@ -253,7 +265,6 @@ func TestImgdRestart(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	defer mrts.Shutdown()
 
 	ts, err1 := newTstate(mrts)
 	if !assert.Nil(t, err1, "Error New Tstate2: %v", err1) {
@@ -267,18 +278,26 @@ func TestImgdRestart(t *testing.T) {
 
 	imgd := imgresize.StartImgd(ts.mrts.GetRealm(test.REALM1).SigmaClnt, ts.job, IMG_RESIZE_MCPU, IMG_RESIZE_MEM, true, 1, 0, nil)
 
+	db.DPrintf(db.TEST, "Get named contents pre-shutdown")
+	sts, err := ts.mrts.GetRealm(test.REALM1).GetDir(sp.NAMED)
+	assert.Nil(ts.mrts.T, err, "Err GetDir: %v", err)
+	db.DPrintf(db.TEST, "%v named contents pre-shutdown: %v", test.REALM1, sp.Names(sts))
+
 	time.Sleep(2 * time.Second)
 
 	imgd.StopGroup()
 
-	ts.mrts.Shutdown()
+	ts.mrts.ShutdownForReboot()
 
 	time.Sleep(2 * fsetcd.LeaseTTL * time.Second)
 
 	db.DPrintf(db.TEST, "Restart")
 
-	ts.restartTstate()
+	err = ts.restartTstate()
 	defer ts.mrts.Shutdown()
+	if err != nil {
+		return
+	}
 
 	gms, err := procgroupmgr.Recover(ts.mrts.GetRealm(test.REALM1).SigmaClnt)
 	assert.Nil(ts.mrts.T, err, "Recover")

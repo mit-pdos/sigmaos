@@ -84,7 +84,7 @@ func RunRealmSrv(dialproxy bool) error {
 		realms:    make(map[sp.Trealm]*Realm),
 	}
 	rs.ch = make(chan struct{})
-	db.DPrintf(db.REALMD, "Run %v %s\n", sp.REALMD, os.Environ())
+	db.DPrintf(db.REALMD, "Run %v %s", sp.REALMD, os.Environ())
 	if false {
 		allowedPaths := []string{rpc.RPC}
 		ssrv, err := sigmasrv.NewSigmaSrvClntAuthFn(sp.REALMD, sc, rs, spprotosrv.AttachAllowAllPrincipalsSelectPaths(allowedPaths))
@@ -117,10 +117,10 @@ func NewNet(net string) error {
 	args := []string{"sigmanet-" + net}
 	out, err := exec.Command(MKNET, args...).Output()
 	if err != nil {
-		db.DPrintf(db.REALMD, "NewNet: %v %s err %v\n", net, string(out), err)
+		db.DPrintf(db.REALMD, "NewNet: %v %s err %v", net, string(out), err)
 		return err
 	}
-	db.DPrintf(db.REALMD, "NewNet: %v\n", string(out))
+	db.DPrintf(db.REALMD, "NewNet: %v", string(out))
 	return nil
 }
 
@@ -174,9 +174,9 @@ func (rm *RealmSrv) Make(ctx fs.CtxI, req proto.MakeReq, res *proto.MakeRep) err
 		pn := filepath.Join(sp.NAMED, s)
 		ep := sp.NewEndpoint(sp.INTERNAL_EP, rootNamedEP.Addrs())
 		ep.SetTree(s)
-		db.DPrintf(db.REALMD, "Link %v at %s\n", ep, pn)
+		db.DPrintf(db.REALMD, "Link %v at %s", ep, pn)
 		if err := sc.MkEndpointFile(pn, ep); err != nil {
-			db.DPrintf(db.ERROR, "EndpointService %v err %v\n", pn, err)
+			db.DPrintf(db.ERROR, "EndpointService %v err %v", pn, err)
 			return err
 		}
 	}
@@ -185,7 +185,7 @@ func (rm *RealmSrv) Make(ctx fs.CtxI, req proto.MakeReq, res *proto.MakeRep) err
 		pn := filepath.Join(sp.NAMED, s)
 		db.DPrintf(db.REALMD, "Mkdir %v", pn)
 		if err := sc.MkDir(pn, 0777); err != nil {
-			db.DPrintf(db.REALMD, "EndpointService %v err %v\n", pn, err)
+			db.DPrintf(db.REALMD, "EndpointService %v err %v", pn, err)
 			return err
 		}
 	}
@@ -222,16 +222,37 @@ func (rm *RealmSrv) Remove(ctx fs.CtxI, req proto.RemoveReq, res *proto.RemoveRe
 	rm.mu.Lock()
 	defer rm.mu.Unlock()
 
-	db.DPrintf(db.REALMD, "RealmSrv.Remove %v\n", req.Realm)
+	db.DPrintf(db.REALMD, "RealmSrv.Remove %v namedState %v", req.Realm, req.RemoveNamedState)
 	rid := sp.Trealm(req.Realm)
 	r, ok := rm.realms[rid]
 	if !ok {
 		return serr.NewErr(serr.TErrNotfound, rid)
 	}
 
-	if err := r.sc.RmDirEntries(sp.NAMED); err != nil {
-		db.DPrintf(db.ERROR, "Error remove NAMED: %v", err)
-		return err
+	if req.RemoveNamedState {
+		// If removing named state, remove the realm's name/*
+		if err := r.sc.RmDirEntries(sp.NAMED); err != nil {
+			db.DPrintf(db.ERROR, "Error remove NAMED: %v", err)
+			return err
+		}
+	} else {
+		// Otherwise, just remove the default directories and EP mounts from the
+		// root named
+		dirsToRemove := []string{sp.KPIDSREL, sp.S3REL, sp.UXREL}
+		for _, d := range dirsToRemove {
+			pn := filepath.Join(sp.NAMED, d)
+			if err := r.sc.RmDir(pn); err != nil {
+				db.DPrintf(db.ERROR, "Error remove %v: %v", d, err)
+				return err
+			}
+		}
+		for s, _ := range sp.RootNamedMountedDirs {
+			pn := filepath.Join(sp.NAMED, s)
+			if err := r.sc.Remove(pn); err != nil {
+				db.DPrintf(db.ERROR, "Error remove root EP mount %v err %v", pn, err)
+				return err
+			}
+		}
 	}
 
 	db.DPrintf(db.REALMD, "[%v] Remove realm, subsystems %v", rid, r.perRealmKernelSubsystems)
@@ -256,7 +277,7 @@ func (rm *RealmSrv) bootPerRealmKernelSubsystems(r *Realm, realm sp.Trealm, ss s
 	db.DPrintf(db.REALMD, "[%v] boot per-kernel subsystems [%v] n %v", realm, ss, n)
 	defer db.DPrintf(db.REALMD, "[%v] boot per-kernel subsystems done [%v] n %v", realm, ss, n)
 	kernels, err := rm.mkc.GetGeneralKernels()
-	db.DPrintf(db.REALMD, "%v: [%v] kernels %v %v\n", realm, ss, kernels, err)
+	db.DPrintf(db.REALMD, "%v: [%v] kernels %v %v", realm, ss, kernels, err)
 	if err != nil {
 		return err
 	}

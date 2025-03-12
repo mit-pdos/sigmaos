@@ -15,8 +15,8 @@ message MakeRep {
 
 message RemoveReq {
   string realm = 1;
+  bool removeNamedState = 2;
 }
 
 message RemoveRep {
 }
-

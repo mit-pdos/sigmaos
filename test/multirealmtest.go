@@ -58,9 +58,9 @@ func (mrts *MultiRealmTstate) AddRealm(r sp.Trealm) error {
 	return nil
 }
 
-func (mrts *MultiRealmTstate) DelRealm(r sp.Trealm) error {
+func (mrts *MultiRealmTstate) DelRealm(r sp.Trealm, removeNamedState bool) error {
 	ts := mrts.realms[r]
-	err := ts.remove()
+	err := ts.remove(removeNamedState)
 	delete(mrts.realms, r)
 	return err
 }
@@ -82,10 +82,18 @@ func (mrts *MultiRealmTstate) GetRealm(r sp.Trealm) *RealmTstate {
 	return mrts.realms[r]
 }
 
+func (mrts *MultiRealmTstate) ShutdownForReboot() {
+	mrts.shutdown(true)
+}
+
 func (mrts *MultiRealmTstate) Shutdown() {
+	mrts.shutdown(false)
+}
+
+func (mrts *MultiRealmTstate) shutdown(willReboot bool) {
 	for r := range mrts.realms {
-		db.DPrintf(db.TEST, "Shut down realm %v", r)
-		if err := mrts.DelRealm(r); err != nil {
+		db.DPrintf(db.TEST, "Shut down realm %v namedState %v", r, !willReboot)
+		if err := mrts.DelRealm(r, !willReboot); err != nil {
 			db.DPrintf(db.ERROR, "Err remove realm[%v]: %v", r, err)
 		}
 	}

@@ -15,7 +15,6 @@ import (
 	cachegrpmgr "sigmaos/apps/cache/cachegrp/mgr"
 	proto "sigmaos/apps/cache/proto"
 	db "sigmaos/debug"
-	"sigmaos/namesrv/fsetcd"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
@@ -116,7 +115,7 @@ func TestBasicRestart(t *testing.T) {
 	assert.Nil(t, err, "Err GetDir: %v", err)
 
 	// Shut everything down
-	mrts.Shutdown()
+	mrts.ShutdownForReboot()
 
 	// Start everything up again
 	mrts, err1 = test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})

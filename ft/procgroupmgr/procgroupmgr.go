@@ -11,7 +11,6 @@ package procgroupmgr
 
 import (
 	"fmt"
-	"log"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -97,7 +96,7 @@ func Recover(sc *sigmaclnt.SigmaClnt) ([]*ProcGroupMgr, error) {
 		if err := sc.GetFileJson(pn, cfg); err != nil {
 			return true, err
 		}
-		log.Printf("cfg %v\n", cfg)
+		db.DPrintf(db.ALWAYS, "cfg %v\n", cfg)
 		pgms = append(pgms, cfg.StartGrpMgr(sc))
 		return false, nil
 

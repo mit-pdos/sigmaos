@@ -100,6 +100,35 @@ func TestBasicSimple(t *testing.T) {
 	assert.True(t, sts1[0].Name == sts[0].Name)
 }
 
+func TestBasicRestart(t *testing.T) {
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+
+	dn := "testdir123"
+	err := mrts.GetRealm(test.REALM1).MkDir(filepath.Join(sp.NAMED, dn), 0777)
+	assert.Nil(t, err, "Err MkDir: %v", err)
+
+	sts, err := mrts.GetRoot().GetDir(sp.NAMED)
+	assert.Nil(t, err, "Err GetDir: %v", err)
+	assert.True(t, sp.Present(sts, []string{dn}), "Dir %v not present", dn)
+
+	// Shut everything down
+	mrts.Shutdown()
+
+	// Start everything up again
+	mrts, err1 = test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	defer mrts.Shutdown()
+
+	sts, err = mrts.GetRoot().GetDir(sp.NAMED)
+	assert.Nil(t, err, "Err GetDir: %v", err)
+	assert.True(t, sp.Present(sts, []string{dn}), "Dir %v not present after restart", dn)
+}
+
 func TestBasicMultiRealmSingleNode(t *testing.T) {
 	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1, test.REALM2})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {

@@ -220,7 +220,6 @@ func TestReconnectSimple(t *testing.T) {
 		}
 		ch <- nil
 	}()
-
 	err = <-ch
 	assert.Nil(ts.mrts.T, err, "fsl1")
 	ts.gm.StopGroup()

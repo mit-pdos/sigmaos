@@ -148,6 +148,7 @@ if [[ $COMPILE == "--compile" ]]; then
       util/perf \
       sigmap \
       dialproxy \
+      net/clnt \
       session/clnt \
       proxy/ninep \
       sigmaclnt/fslib/reader \
@@ -228,7 +229,7 @@ if [[ $BASIC == "--basic" ]]; then
     # test sessions
     #
     
-    for T in session/clnt; do
+    for T in net/clnt session/clnt; do
         if ! [ -z "$SKIPTO" ]; then
           if [[ "$SKIPTO" == "$T" ]]; then
             # Stop skipping

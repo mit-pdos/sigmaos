@@ -12,7 +12,7 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-func (fl *FsLib) MkDir(path string, perm sp.Tperm) error {
+func (fl *FsLib) MkDir(path sp.Tsigmapath, perm sp.Tperm) error {
 	perm = perm | sp.DMDIR
 	start := time.Now()
 	fd, err := fl.Create(path, perm, sp.ORDWR)
@@ -28,8 +28,8 @@ func (fl *FsLib) MkDir(path string, perm sp.Tperm) error {
 	return nil
 }
 
-func (fl *FsLib) IsDir(name string) (bool, error) {
-	st, err := fl.FileAPI.Stat(name)
+func (fl *FsLib) IsDir(pn sp.Tsigmapath) (bool, error) {
+	st, err := fl.FileAPI.Stat(pn)
 	if err != nil {
 		return false, err
 	}
@@ -38,7 +38,7 @@ func (fl *FsLib) IsDir(name string) (bool, error) {
 
 // Create all parent dirs in pn if they don't exist.  If the last one
 // exists, return error.
-func (fl *FsLib) MkDirPath(dir, pn string, perm sp.Tperm) error {
+func (fl *FsLib) MkDirPath(dir, pn sp.Tsigmapath, perm sp.Tperm) error {
 	p := path.Split(pn)
 	for i, c := range p {
 		dir = filepath.Join(dir, c)
@@ -61,7 +61,7 @@ func (fl *FsLib) MkDirPath(dir, pn string, perm sp.Tperm) error {
 // true if stopped early.  Note that as ProcessDir pages through dir
 // other procs may add/delete entries, which may cause ProcessDir to
 // see the same file twice. Use DirCache to filter duplicates.
-func (fl *FsLib) ProcessDir(dir string, f func(*sp.Tstat) (bool, error)) (bool, error) {
+func (fl *FsLib) ProcessDir(dir sp.Tsigmapath, f func(*sp.Tstat) (bool, error)) (bool, error) {
 	rdr, err := fl.OpenReader(dir)
 	if err != nil {
 		return false, err
@@ -70,7 +70,7 @@ func (fl *FsLib) ProcessDir(dir string, f func(*sp.Tstat) (bool, error)) (bool, 
 	return reader.ReadDirEnts(reader.MkDirEntsReader(rdr), f)
 }
 
-func (fl *FsLib) GetDir(dir string) ([]*sp.Tstat, error) {
+func (fl *FsLib) GetDir(dir sp.Tsigmapath) ([]*sp.Tstat, error) {
 	st, rdr, err := fl.ReadDir(dir)
 	if rdr != nil {
 		rdr.Close()
@@ -79,7 +79,7 @@ func (fl *FsLib) GetDir(dir string) ([]*sp.Tstat, error) {
 }
 
 // Also returns reader.Reader for readDirWatch
-func (fl *FsLib) ReadDir(dir string) ([]*sp.Tstat, *FileReader, error) {
+func (fl *FsLib) ReadDir(dir sp.Tsigmapath) ([]*sp.Tstat, *FileReader, error) {
 	rdr, err := fl.OpenReader(dir)
 	if err != nil {
 		db.DPrintf(db.FSLIB_ERR, "Err ReadDir.OpenReader: %v", err)
@@ -96,7 +96,7 @@ func (fl *FsLib) ReadDir(dir string) ([]*sp.Tstat, *FileReader, error) {
 	return dirents, rdr, error
 }
 
-func (fl *FsLib) CopyDir(src, dst string) error {
+func (fl *FsLib) CopyDir(src, dst sp.Tsigmapath) error {
 	_, err := fl.ProcessDir(src, func(st *sp.Tstat) (bool, error) {
 		s := filepath.Join(src, st.Name)
 		d := filepath.Join(dst, st.Name)
@@ -114,7 +114,7 @@ func (fl *FsLib) CopyDir(src, dst string) error {
 	return err
 }
 
-func (fl *FsLib) MoveDirEntries(src, dst string) (int, error) {
+func (fl *FsLib) MoveDirEntries(src, dst sp.Tsigmapath) (int, error) {
 	sts, err := fl.GetDir(src) // XXX handle one entry at the time?
 	if err != nil {
 		return 0, err
@@ -131,14 +131,14 @@ func (fl *FsLib) MoveDirEntries(src, dst string) (int, error) {
 	return n, nil
 }
 
-func (fsl *FsLib) RmDir(dir string) error {
+func (fsl *FsLib) RmDir(dir sp.Tsigmapath) error {
 	if err := fsl.RmDirEntries(dir); err != nil {
 		return err
 	}
 	return fsl.Remove(dir)
 }
 
-func (fsl *FsLib) RmDirEntries(dir string) error {
+func (fsl *FsLib) RmDirEntries(dir sp.Tsigmapath) error {
 	sts, err := fsl.GetDir(dir)
 	if err != nil {
 		return err
@@ -157,7 +157,7 @@ func (fsl *FsLib) RmDirEntries(dir string) error {
 	return nil
 }
 
-func (fsl *FsLib) SprintfDir(d string) (string, error) {
+func (fsl *FsLib) SprintfDir(d sp.Tsigmapath) (string, error) {
 	s := fmt.Sprintf("dir %v:\n", d)
 	s1, err := fsl.sprintfDirIndent(d, "")
 	if err != nil {

@@ -6,23 +6,29 @@ import (
 	"net"
 
 	db "sigmaos/debug"
-	"sigmaos/util/io/demux"
-	"sigmaos/util/io/frame"
 	"sigmaos/serr"
 	sessp "sigmaos/session/proto"
 	sp "sigmaos/sigmap"
+	"sigmaos/util/io/demux"
+	"sigmaos/util/io/frame"
 )
 
 type Transport struct {
-	rdr io.Reader
-	wrt *bufio.Writer
+	rdr  io.Reader
+	wrt  *bufio.Writer
+	conn net.Conn
 }
 
 func NewTransport(conn net.Conn) demux.TransportI {
 	return &Transport{
-		rdr: bufio.NewReaderSize(conn, sp.Conf.Conn.MSG_LEN),
-		wrt: bufio.NewWriterSize(conn, sp.Conf.Conn.MSG_LEN),
+		rdr:  bufio.NewReaderSize(conn, sp.Conf.Conn.MSG_LEN),
+		wrt:  bufio.NewWriterSize(conn, sp.Conf.Conn.MSG_LEN),
+		conn: conn,
 	}
+}
+
+func (t *Transport) Close() error {
+	return t.conn.Close()
 }
 
 func marshalFrame(fcm *sessp.FcallMsg) (sessp.Tframe, *serr.Err) {

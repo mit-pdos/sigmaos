@@ -12,12 +12,12 @@ import (
 	"golang.org/x/sys/unix"
 
 	db "sigmaos/debug"
-	"sigmaos/util/io/demux"
-	"sigmaos/util/io/frame"
 	"sigmaos/proc"
 	"sigmaos/serr"
 	sessp "sigmaos/session/proto"
 	sp "sigmaos/sigmap"
+	"sigmaos/util/io/demux"
+	"sigmaos/util/io/frame"
 )
 
 const (
@@ -91,6 +91,10 @@ func GetDialProxydConn(pe *proc.ProcEnv) (*net.UnixConn, error) {
 
 func (trans *DialProxyTrans) Conn() *net.UnixConn {
 	return trans.conn
+}
+
+func (trans *DialProxyTrans) Close() error {
+	return trans.conn.Close()
 }
 
 func (trans *DialProxyTrans) ReadCall() (demux.CallI, *serr.Err) {

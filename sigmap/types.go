@@ -27,3 +27,6 @@ type TprincipalID string
 type Tplatform string
 
 type TTendpoint uint32
+
+// XXX make its own type?
+type Tsigmapath = string

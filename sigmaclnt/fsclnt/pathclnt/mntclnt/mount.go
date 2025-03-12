@@ -162,11 +162,11 @@ func (mnt *MntTable) isMountedAt(path path.Tpathname) (*Point, bool) {
 	return nil, false
 }
 
-func (mnt *MntTable) mountedPaths() []string {
+func (mnt *MntTable) mountedPaths() []sp.Tsigmapath {
 	mnt.Lock()
 	defer mnt.Unlock()
 
-	paths := make([]string, 0, len(mnt.mounts))
+	paths := make([]sp.Tsigmapath, 0, len(mnt.mounts))
 	for _, p := range mnt.mounts {
 		paths = append(paths, p.path.String())
 	}

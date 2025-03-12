@@ -10,43 +10,6 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-// WalkPath walks path and, on success, returns the fd walked to; it
-// is the caller's responsibility to clunk the fd.  If a server is
-// unreachable, it umounts the path it walked to, and starts over
-// again, perhaps switching to another replica.  (Note:
-// TestMaintainReplicationLevelCrashProcd test the fail-over case.)
-func (pathc *PathClnt) walk(path path.Tpathname, principal *sp.Tprincipal, resolve bool, w sos.Watch) (sp.Tfid, *serr.Err) {
-	for i := 0; i < sp.Conf.Path.MAX_RESOLVE_RETRY; i++ {
-		if err, cont := pathc.mntclnt.ResolveRoot(path); err != nil {
-			if cont && err.IsErrUnreachable() {
-				time.Sleep(sp.Conf.Path.RESOLVE_TIMEOUT)
-				continue
-			}
-			db.DPrintf(db.PATHCLNT_ERR, "WalkPath: resolveRoot %v err %v", path, err)
-			return sp.NoFid, err
-		}
-		start := time.Now()
-		fid, path1, left, err := pathc.walkPath(path, resolve, w)
-		db.DPrintf(db.WALK_LAT, "walkPath %v %v -> (%v, %v  %v, %v) lat: %v", pathc.cid, path, fid, path1, left, err, time.Since(start))
-		if serr.Retry(err) {
-			done := len(path1) - len(left)
-			db.DPrintf(db.WALK_ERR, "Walk retry p %v %v l %v d %v err %v by umount %v", path, path1, left, done, err, path1[0:done])
-			if e := pathc.mntclnt.UmountPrefix(path1[0:done]); e != nil {
-				return sp.NoFid, e
-			}
-			// try again
-			db.DPrintf(db.WALK_ERR, "walkPathUmount: retry p %v r %v", path, resolve)
-			time.Sleep(sp.Conf.Path.RESOLVE_TIMEOUT)
-			continue
-		}
-		if err != nil {
-			return sp.NoFid, err
-		}
-		return fid, nil
-	}
-	return sp.NoFid, serr.NewErr(serr.TErrUnreachable, path)
-}
-
 // Walks path. If success, returns the fid for the path.  If failure,
 // it returns NoFid and the rest of path that it wasn't able to walk.
 // walkPath first walks the mount table, finding the server with the

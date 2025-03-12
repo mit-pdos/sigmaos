@@ -15,6 +15,7 @@ import (
 	cachegrpmgr "sigmaos/apps/cache/cachegrp/mgr"
 	proto "sigmaos/apps/cache/proto"
 	db "sigmaos/debug"
+	"sigmaos/namesrv/fsetcd"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
@@ -107,12 +108,12 @@ func TestBasicRestart(t *testing.T) {
 	}
 
 	dn := "testdir123"
-	err := mrts.GetRealm(test.REALM1).MkDir(filepath.Join(sp.NAMED, dn), 0777)
+	dpath := filepath.Join(sp.NAMED, dn)
+	err := mrts.GetRealm(test.REALM1).MkDir(dpath, 0777)
 	assert.Nil(t, err, "Err MkDir: %v", err)
 
-	sts, err := mrts.GetRoot().GetDir(sp.NAMED)
+	_, err = mrts.GetRealm(test.REALM1).GetDir(dpath)
 	assert.Nil(t, err, "Err GetDir: %v", err)
-	assert.True(t, sp.Present(sts, []string{dn}), "Dir %v not present", dn)
 
 	// Shut everything down
 	mrts.Shutdown()
@@ -124,9 +125,8 @@ func TestBasicRestart(t *testing.T) {
 	}
 	defer mrts.Shutdown()
 
-	sts, err = mrts.GetRoot().GetDir(sp.NAMED)
+	_, err = mrts.GetRealm(test.REALM1).GetDir(dpath)
 	assert.Nil(t, err, "Err GetDir: %v", err)
-	assert.True(t, sp.Present(sts, []string{dn}), "Dir %v not present after restart", dn)
 }
 
 func TestBasicMultiRealmSingleNode(t *testing.T) {

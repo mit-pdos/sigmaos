@@ -375,6 +375,8 @@ func TestLeaseDelayReboot(t *testing.T) {
 		assert.Nil(ts.T, err)
 		db.DPrintf(db.TEST, "Create after expire err %v", err)
 		sc.CloseFd(fd)
+		err = sc.Remove(fn)
+		assert.Nil(ts.T, err, "Err remove: %v", err)
 	}, false)
 
 	reboot(t, dn, func(ts *test.Tstate, sc *sigmaclnt.SigmaClnt, fn string) {

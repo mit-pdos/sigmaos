@@ -246,8 +246,7 @@ func reboot(t *testing.T, dn string, f func(*test.Tstate, *sigmaclnt.SigmaClnt, 
 		}
 		// Make sure the leased file no longer exists
 		_, err = sc3.GetFile(fn)
-		assert.NotNil(t, err, "Err GetFile: %v", err)
-		db.DPrintf(db.TEST, "Err GetFile: %v", err)
+		assert.NotNil(t, err, "GetFile err should not be nil: %v", err)
 	}
 
 	f(ts, sc2, fn)
@@ -304,6 +303,8 @@ func TestLeaseQuickReboot(t *testing.T) {
 		assert.Nil(ts.T, err, "Err Create: %v", err)
 		db.DPrintf(db.TEST, "Create after expire err %v", err)
 		sc.CloseFd(fd)
+		err = sc.Remove(fn)
+		assert.Nil(ts.T, err, "Err remove: %v", err)
 	}, true)
 
 	reboot(t, dn, func(ts *test.Tstate, sc *sigmaclnt.SigmaClnt, fn string) {

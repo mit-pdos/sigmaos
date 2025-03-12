@@ -143,7 +143,6 @@ func TestRestartRepl0(t *testing.T) {
 
 	ts := newTstate(mrts, kv.KVD_NO_REPL, true)
 	ts.testRecover()
-	ts.mrts.Shutdown()
 }
 
 func TestRestartReplN(t *testing.T) {
@@ -154,7 +153,6 @@ func TestRestartReplN(t *testing.T) {
 
 	ts := newTstate(mrts, kv.KVD_REPL_LEVEL, true)
 	ts.testRecover()
-	ts.mrts.Shutdown()
 }
 
 // kvd crashes storing a semaphore. The test's down() will return a

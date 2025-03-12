@@ -27,7 +27,7 @@ func newDir(o *Obj) *Dir {
 func (d *Dir) LookupPath(ctx fs.CtxI, pn path.Tpathname) ([]fs.FsObj, fs.FsObj, path.Tpathname, *serr.Err) {
 	s := time.Now()
 	if db.WillBePrinted(db.NAMED) {
-		db.DPrintf(db.NAMED, "%v: Dir.Lookup %v o %v\n", ctx.ClntId(), pn, d)
+		db.DPrintf(db.NAMED, "%v: Dir.Lookup %v o %v", ctx.ClntId(), pn, d)
 	}
 	name := pn[0]
 	if path.IsUnionElem(pn[0]) {
@@ -46,7 +46,7 @@ func (d *Dir) LookupPath(ctx fs.CtxI, pn path.Tpathname) ([]fs.FsObj, fs.FsObj, 
 			o = newFile(obj)
 		}
 		if db.WillBePrinted(db.WALK_LAT) {
-			db.DPrintf(db.WALK_LAT, "Lookup %v %q %v lat %v\n", ctx.ClntId(), name, d, time.Since(s))
+			db.DPrintf(db.WALK_LAT, "Lookup %v %q %v lat %v", ctx.ClntId(), name, d, time.Since(s))
 		}
 
 		return []fs.FsObj{o}, o, pn[1:], nil
@@ -73,7 +73,7 @@ func (d *Dir) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode, lid sp
 	di, c, err := d.fs.Create(&d.Obj.di, pn, path, nf, perm, f, cid, lid)
 	d.Obj.fs.PstatUpdate(d.Obj.pn, c)
 	if err != nil {
-		db.DPrintf(db.NAMED, "Create %v %q err %v\n", d, name, err)
+		db.DPrintf(db.NAMED, "Create %v %q err %v", d, name, err)
 		return nil, err
 	}
 	obj := newObjDi(d.fs, pn, *di)
@@ -93,7 +93,7 @@ func (d *Dir) ReadDir(ctx fs.CtxI, cursor int, cnt sp.Tsize) ([]*sp.Tstat, *serr
 		return nil, err
 	}
 	if db.WillBePrinted(db.NAMED) {
-		db.DPrintf(db.NAMED, "%v: fsetcd.ReadDir %d %v\n", ctx.ClntId(), cursor, dir)
+		db.DPrintf(db.NAMED, "%v: fsetcd.ReadDir %d %v", ctx.ClntId(), cursor, dir)
 	}
 	len := dir.Ents.Len() - 1 // ignore "."
 	if cursor > len {
@@ -122,17 +122,17 @@ func (d *Dir) ReadDir(ctx fs.CtxI, cursor int, cnt sp.Tsize) ([]*sp.Tstat, *serr
 }
 
 func (d *Dir) Open(ctx fs.CtxI, m sp.Tmode) (fs.FsObj, *serr.Err) {
-	db.DPrintf(db.NAMED, "%p: Open dir %v\n", d, m)
+	db.DPrintf(db.NAMED, "%p: Open dir %v", d, m)
 	return nil, nil
 }
 
 func (d *Dir) Close(ctx fs.CtxI, m sp.Tmode) *serr.Err {
-	db.DPrintf(db.NAMED, "%p: Close dir %v %v\n", d, d, m)
+	db.DPrintf(db.NAMED, "%p: Close dir %v %v", d, d, m)
 	return nil
 }
 
 func (d *Dir) Remove(ctx fs.CtxI, name string, f sp.Tfence, del fs.Tdel) *serr.Err {
-	db.DPrintf(db.NAMED, "%v: Remove %v name %v\n", ctx.ClntId(), d, name)
+	db.DPrintf(db.NAMED, "%v: Remove %v name %v", ctx.ClntId(), d, name)
 	c, err := d.fs.Remove(&d.Obj.di, name, f, del)
 	d.Obj.fs.PstatUpdate(d.pn.Append(name), c)
 	return err
@@ -146,7 +146,7 @@ func (d *Dir) Rename(ctx fs.CtxI, from, to string, f sp.Tfence) *serr.Err {
 }
 
 func (d *Dir) Renameat(ctx fs.CtxI, from string, od fs.Dir, to string, f sp.Tfence) *serr.Err {
-	db.DPrintf(db.NAMED, "%v: Renameat %v: %v %v\n", ctx.ClntId(), d, from, to)
+	db.DPrintf(db.NAMED, "%v: Renameat %v: %v %v", ctx.ClntId(), d, from, to)
 	dt := od.(*Dir)
 	old := d.pn.Append(from)
 	new := dt.pn.Append(to)

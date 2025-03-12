@@ -110,11 +110,13 @@ func (fse *FsEtcd) Lookup(dei *DirEntInfo, pn path.Tpathname) (*DirEntInfo, *ser
 		fse.PstatUpdate(pn, nops)
 		return nil, err
 	}
-	db.DPrintf(db.FSETCD, "Lookup %q %v %v\n", name, dei.Path, dir)
+	db.DPrintf(db.FSETCD, "Lookup %q %v %v", name, dei.Path, dir)
 	e, ok := dir.Ents.Lookup(name)
 	if ok {
+		db.DPrintf(db.FSETCD, "Lookup ok %q %v %v", name, dei.Path, dir)
 		return e, nil
 	}
+	db.DPrintf(db.FSETCD, "Lookup Notfound %q %v %v", name, dei.Path, dir)
 	db.DPrintf(db.FSETCD_LAT, "Lookup %v %v lat %v", name, dei.Path, time.Since(start))
 	return nil, serr.NewErr(serr.TErrNotfound, name)
 }

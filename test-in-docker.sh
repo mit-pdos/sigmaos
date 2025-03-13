@@ -53,6 +53,11 @@ fi
 ROOT=$(dirname $(realpath $0))
 source $ROOT/env/env.sh
 
+if [ -z "$SIGMAUSER" ] || [[ "$SIGMAUSER" == "NOT_SET" ]] ; then
+  echo "SIGMAUSER must be set in $ROOT/env/env.sh in order to run tests in docker"
+  exit 1
+fi
+
 TMP_BASE="/tmp"
 TESTER_NAME="sig-tester"
 TESTER_NETWORK="sigmanet-testuser"
@@ -81,10 +86,10 @@ $ROOT/create-net.sh $TESTER_NETWORK
 
 # Start up etcd, if it isn't already running
 if ! docker ps -a | grep -qw $ETCD_CTR_NAME ; then
-  $ROOT/start-etcd.sh
+  $ROOT/start-etcd.sh --testindocker
 fi
 
-testercid=$(docker ps -a | grep -w $TESTER_NAME | cut -d " " -f1)
+testercid=$(docker ps -a | grep -E " $TESTER_NAME " | cut -d " " -f1)
 
 if [[ $REBUILD_TESTER == "true" ]]; then
   if ! [ -z "$testercid" ]; then
@@ -118,7 +123,7 @@ if [ -z "$testercid" ]; then
     --mount type=bind,src=$DATA_DIR,dst=$DATA_DIR \
     --mount type=bind,src=$PERF_DIR,dst=$PERF_DIR \
     $TESTER_NAME 
-  testercid=$(docker ps -a | grep -w $TESTER_NAME | cut -d " " -f1)
+  testercid=$(docker ps -a | grep -E " $TESTER_NAME " | cut -d " " -f1)
   until [ "`docker inspect -f {{.State.Running}} $testercid`"=="true" ]; do
       echo -n "." 1>&2
       sleep 0.1;

@@ -102,8 +102,8 @@ if [ "${TARGET}" != "remote" ]; then
 fi
 
 # Check if a builder is running already
-buildercid=$(docker ps -a | grep -w $BUILDER_NAME | cut -d " " -f1)
-rsbuildercid=$(docker ps -a | grep -w $RS_BUILDER_NAME | cut -d " " -f1)
+buildercid=$(docker ps -a | grep -E " $BUILDER_NAME " | cut -d " " -f1)
+rsbuildercid=$(docker ps -a | grep -E " $RS_BUILDER_NAME " | cut -d " " -f1)
 
 # Optionally stop any existing builder container, so it will be rebuilt and
 # restarted.
@@ -133,7 +133,7 @@ if [ -z "$buildercid" ]; then
     --name $BUILDER_NAME \
     --mount type=bind,src=$ROOT,dst=/home/sigmaos/ \
     $BUILDER_NAME 
-  buildercid=$(docker ps -a | grep -w $BUILDER_NAME | cut -d " " -f1)
+  buildercid=$(docker ps -a | grep -E " $BUILDER_NAME " | cut -d " " -f1)
   until [ "`docker inspect -f {{.State.Running}} $buildercid`"=="true" ]; do
       echo -n "." 1>&2
       sleep 0.1;
@@ -152,7 +152,7 @@ if [ -z "$rsbuildercid" ]; then
     --name $RS_BUILDER_NAME \
     --mount type=bind,src=$ROOT,dst=/home/sigmaos/ \
     $RS_BUILDER_NAME
-  rsbuildercid=$(docker ps -a | grep -w $RS_BUILDER_NAME | cut -d " " -f1)
+  rsbuildercid=$(docker ps -a | grep -E " $RS_BUILDER_NAME " | cut -d " " -f1)
   until [ "`docker inspect -f {{.State.Running}} $rsbuildercid`"=="true" ]; do
       echo -n "." 1>&2
       sleep 0.1;

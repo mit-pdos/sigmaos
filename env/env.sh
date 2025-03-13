@@ -8,4 +8,4 @@
 
 # to find proxyd
 export PATH=$PATH:$PWD/bin/linux/:$PWD/bin/kernel
-# export SIGMAUSER="ariel" # uncomment to enable development on shared machines
+# export SIGMAUSER="NOT_SET" # uncomment and change to your username to enable development on shared machines

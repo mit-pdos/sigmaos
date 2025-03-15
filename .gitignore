@@ -16,3 +16,4 @@ scratch.sh
 run-until-fail.sh
 # Artifact evaluation credential files
 *.priv
+.junction-install

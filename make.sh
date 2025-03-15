@@ -159,5 +159,7 @@ if [[ $WHAT == "kernel linux" ]]; then
     ./scripts/build.sh && \
       echo "Junction is built\!"
     touch /home/sigmaos/.junction-install
+  else
+    echo "Skip rebuilding junction"
   fi
 fi

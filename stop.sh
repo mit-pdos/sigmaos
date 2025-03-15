@@ -40,7 +40,7 @@ if mount | grep -q 9p; then
 fi
 
 pgrep -x npproxyd > /dev/null && killall -9 npproxyd
-pgrep -x spproxyd > /dev/null && killall -9 spproxyd
+pgrep -x spproxyd > /dev/null && sudo killall -9 spproxyd
 
 sudo rm -f /tmp/spproxyd/spproxyd.sock
 sudo rm -f /tmp/spproxyd/spproxyd-dialproxy.sock

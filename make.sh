@@ -143,17 +143,17 @@ for k in $WHAT; do
 done
 
 if [[ $WHAT == "kernel linux" ]]; then
-  cd junction
-  git config --global user.email sigmaos@mit.edu
-  git config --global user.name "SigmaOS"
-  git config --global --add safe.directory /home/sigmaos/junction
-  git config --global --add safe.directory /home/sigmaos/junction/lib/caladan
-  git config --global --add safe.directory /home/sigmaos/junction/lib/glibc
-  git config --global --add safe.directory /home/sigmaos/junction/lib/flatbuffers
-  apt install -y curl
-  curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-  echo "Run junction install.sh"
   if ! [ -f /home/sigmaos/.junction-install ]; then
+    cd junction
+    git config --global user.email sigmaos@mit.edu
+    git config --global user.name "SigmaOS"
+    git config --global --add safe.directory /home/sigmaos/junction
+    git config --global --add safe.directory /home/sigmaos/junction/lib/caladan
+    git config --global --add safe.directory /home/sigmaos/junction/lib/glibc
+    git config --global --add safe.directory /home/sigmaos/junction/lib/flatbuffers
+    apt install -y curl
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+    echo "Run junction install.sh"
     ./scripts/install.sh
     echo "Run junction build.sh"
     ./scripts/build.sh && \

@@ -205,6 +205,8 @@ echo "========== Done building Rust bins =========="
 echo "========== Copying kernel bins for procd =========="
 if [ "${TARGET}" == "local" ]; then
   sudo cp $ROOT/create-net.sh $KERNELBIN/
+  cp $ROOT/junction/build/junction/junction_run $KERNELBIN
+  cp $ROOT/junction/build/junction/caladan_test.config $KERNELBIN
   cp $KERNELBIN/procd $PROCD_BIN/
   cp $KERNELBIN/spproxyd $PROCD_BIN/
   cp $KERNELBIN/uproc-trampoline $PROCD_BIN/

@@ -295,7 +295,7 @@ if [[ $BASIC == "--basic" ]]; then
             continue
           fi
         fi
-        run_test $T "./test-in-docker.sh --pkg $T --args \"$VERB $SPPROXYD $DIALPROXY $REUSEKERNEL\""
+        run_test $T "./test-in-docker.sh --pkg $T --args \"--timeout 20m $VERB $SPPROXYD $DIALPROXY $REUSEKERNEL\""
     done
 
     #

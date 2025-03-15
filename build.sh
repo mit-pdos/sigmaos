@@ -205,19 +205,23 @@ echo "========== Done building Rust bins =========="
 echo "========== Copying kernel bins for procd =========="
 if [ "${TARGET}" == "local" ]; then
   sudo cp $ROOT/create-net.sh $KERNELBIN/
-  cp $ROOT/junction/build/junction/junction_run $KERNELBIN
-  cp $ROOT/junction/build/junction/caladan_test.config $KERNELBIN
+  if ! [ -f $KERNELBIN/junction_run ]; then
+    sudo cp $ROOT/junction/build/junction/junction_run $KERNELBIN/
+    sudo cp $ROOT/junction/build/junction/caladan_test.config $KERNELBIN/
+  fi
   # Only copy if not already done, because copying can be slow and kills the
   # Docker build cache
-  if ! [ -f $KERNELBIN/junction ]; then
-    cp -r $ROOT/junction $KERNELBIN
+  if ! [ -d $KERNELBIN/junction ]; then
+    sudo cp -r $ROOT/junction $KERNELBIN/
   fi
-  if ! [ -f $PROCD_BIN/junction ]; then
+  if ! [ -d $PROCD_BIN/junction ]; then
     cp -r $KERNELBIN/junction $PROCD_BIN/
   fi
+  if ! [ -f $PROCD_BIN/junction_run ]; then
+    cp $ROOT/junction/build/junction/junction_run $PROCD_BIN/
+    cp $ROOT/junction/build/junction/caladan_test.config $PROCD_BIN/
+  fi
   cp $KERNELBIN/procd $PROCD_BIN/
-  cp $ROOT/junction/build/junction/junction_run $PROCD_BIN/
-  cp $ROOT/junction/build/junction/caladan_test.config $PROCD_BIN/
   cp $KERNELBIN/spproxyd $PROCD_BIN/
   cp $KERNELBIN/uproc-trampoline $PROCD_BIN/
 fi

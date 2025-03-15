@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1-experimental
 
-FROM alpine AS base
+FROM ubuntu:24.04 AS base
 
 # Install some apt packages for debugging.
 #RUN \
@@ -13,10 +13,20 @@ FROM alpine AS base
 #  apt autoremove && \
 #  rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-RUN apk add --no-cache libseccomp gcompat musl-dev strace fuse
+#RUN apk add --no-cache libseccomp gcompat musl-dev strace fuse
+RUN apt update && \
+  apt install -y libseccomp-dev strace fuse docker.io \
+  libnl-3-dev libnl-route-3-dev libboost-dev libboost-program-options-dev
+
+RUN apt install -y perl libboost-dev libboost-program-options-dev bison gcc-12 g++-12 gawk
+RUN apt install -y clang-tidy-16 clang-format-16 || true
+RUN apt install -y make cmake pkg-config libnl-3-dev libnl-route-3-dev libnuma-dev uuid-dev libssl-dev libaio-dev libcunit1-dev libclang-dev libncurses-dev meson python3-pyelftools
 
 WORKDIR /home/sigmaos
-RUN mkdir bin && \
+
+COPY junction ./junction
+
+RUN mkdir -p bin && \
     mkdir all-realm-bin && \
     mkdir bin/user && \
     mkdir bin/kernel && \
@@ -45,8 +55,8 @@ ENV dbip x.x.x.x
 ENV mongoip x.x.x.x
 ENV buildtag "local-build"
 ENV dialproxy "false"
-# Install docker-cli
-RUN apk add --update docker openrc
+## Install docker-cli
+#RUN apk add --update docker openrc
 ENV reserveMcpu "0"
 
 # Make a directory for binaries shared between realms.

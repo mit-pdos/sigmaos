@@ -5,7 +5,7 @@ FROM ubuntu:24.04
 #RUN pacman --noconfirm -Syu
 #RUN pacman --noconfirm -Sy git libseccomp wget gcc pkg-config parallel time
 RUN apt update && \
-  apt install -y git libseccomp-dev wget gcc pkg-config parallel time
+  apt install -y git libseccomp-dev wget gcc pkg-config parallel time curl
 
 # Download an initial version of Go
 RUN wget "https://go.dev/dl/go1.22.2.linux-amd64.tar.gz" && \
@@ -23,6 +23,8 @@ RUN git clone https://github.com/ArielSzekely/go.git go-custom && \
   cd src && \
   ./make.bash && \
   /go-custom/bin/go version
+
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
 WORKDIR /home/sigmaos
 

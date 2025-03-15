@@ -153,8 +153,11 @@ if [[ $WHAT == "kernel linux" ]]; then
   apt install -y curl
   curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
   echo "Run junction install.sh"
-#  ./scripts/install.sh
-  echo "Run junction build.sh"
-  ./scripts/build.sh && \
-    echo "Junction is built\!"
+  if ! [ -f /home/sigmaos/.junction-install ]; then
+    ./scripts/install.sh
+    echo "Run junction build.sh"
+    ./scripts/build.sh && \
+      echo "Junction is built\!"
+    touch /home/sigmaos/.junction-install
+  fi
 fi

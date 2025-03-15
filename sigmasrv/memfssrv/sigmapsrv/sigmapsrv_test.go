@@ -14,17 +14,17 @@ import (
 
 	db "sigmaos/debug"
 	dialproxyclnt "sigmaos/dialproxy/clnt"
-	"sigmaos/sigmaclnt/fslib"
 	"sigmaos/namesrv/fsetcd"
 	"sigmaos/proc"
 	"sigmaos/rpc"
 	"sigmaos/sigmaclnt"
+	"sigmaos/sigmaclnt/fslib"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 	"sigmaos/util/perf"
 )
 
-var pathname string // e.g., --path "name/ux/sp.LOCAL/"
+var pathname string // e.g., --path "name/ux/sp.ANY/"
 var withmarshal bool
 
 func init() {
@@ -781,7 +781,7 @@ func TestColdPathMicro(t *testing.T) {
 	pe := proc.NewAddedProcEnv(ts.ProcEnv())
 	pe.KernelID = sts[0].Name
 
-	pn := filepath.Join(sp.UX, sp.LOCAL, "mr-intermediate")
+	pn := filepath.Join(sp.UX, sp.ANY, "mr-intermediate")
 
 	var max time.Duration
 	var tot time.Duration

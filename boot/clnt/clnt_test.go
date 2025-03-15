@@ -30,7 +30,7 @@ func TestSymlink1(t *testing.T) {
 	}
 
 	// Make a target file
-	targetPath := sp.UX + "/" + sp.LOCAL + "/symlink-test-file"
+	targetPath := sp.UX + "/" + sp.ANY + "/symlink-test-file"
 	contents := "symlink test!"
 	ts.Remove(targetPath)
 	_, err := ts.PutFile(targetPath, 0777, sp.OWRITE, []byte(contents))
@@ -78,7 +78,7 @@ func TestSymlink2(t *testing.T) {
 	}
 
 	// Make a target file
-	targetDirPath := sp.UX + "/" + sp.LOCAL + "/dir1"
+	targetDirPath := sp.UX + "/" + sp.ANY + "/dir1"
 	targetPath := targetDirPath + "/symlink-test-file"
 	contents := "symlink test!"
 	ts.Remove(targetPath)

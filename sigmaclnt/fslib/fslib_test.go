@@ -1165,11 +1165,11 @@ func TestUnionDir(t *testing.T) {
 	assert.Equal(t, nil, err)
 	assert.True(t, sp.Present(sts, path.Tpathname{"namedself0", "namedself1"}), DIR1)
 
-	sts, err = ts.GetDir(filepath.Join(pathname, DIR1, sp.LOCAL) + "/")
+	sts, err = ts.GetDir(filepath.Join(pathname, DIR1, sp.ANY) + "/")
 	assert.Equal(t, nil, err)
 	assert.True(t, sp.Present(sts, path.Tpathname{DIR1}), DIR1)
 
-	pn, err := ts.ResolveMounts(filepath.Join(pathname, DIR1, sp.LOCAL))
+	pn, err := ts.ResolveMounts(filepath.Join(pathname, DIR1, sp.ANY))
 	assert.Equal(t, nil, err)
 	sts, err = ts.GetDir(pn)
 	assert.Nil(t, err)

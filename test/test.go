@@ -125,7 +125,7 @@ func NewTstatePath(t *testing.T, path string) (*Tstate, error) {
 		err := ts.MountS3PathClnt()
 		assert.Nil(t, err, "MountS3PathClnt")
 	}
-	if path == filepath.Join(sp.MEMFS, sp.LOCAL)+"/" {
+	if path == filepath.Join(sp.MEMFS, sp.ANY)+"/" || path == filepath.Join(sp.MEMFS, sp.LOCAL)+"/" {
 		ts.memfs = proc.NewProc("memfsd", []string{})
 		err := ts.Spawn(ts.memfs)
 		assert.Nil(t, err)

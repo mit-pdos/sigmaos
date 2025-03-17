@@ -167,6 +167,7 @@ CID=$(docker run -dit \
              $MOUNTS \
              --pid host \
              --privileged \
+             --device=/dev/mem:/dev/mem \
              --network ${NET} \
              --name ${KERNELID} \
              -e kernelid=${KERNELID} \

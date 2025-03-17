@@ -16,10 +16,10 @@ import (
 	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/docker/go-connections/nat"
 
-	chunksrv "sigmaos/sched/msched/proc/chunk/srv"
 	"sigmaos/dcontainer/cgroup"
 	db "sigmaos/debug"
 	"sigmaos/proc"
+	chunksrv "sigmaos/sched/msched/proc/chunk/srv"
 	sp "sigmaos/sigmap"
 	"sigmaos/util/linux/mem"
 	"sigmaos/util/perf"
@@ -108,9 +108,17 @@ func StartDockerContainer(p *proc.Proc, kernelId string) (*DContainer, error) {
 			Env:          p.GetEnv(),
 			ExposedPorts: pset,
 		}, &container.HostConfig{
-			Runtime:      "runc",
-			NetworkMode:  container.NetworkMode(netmode),
-			Mounts:       mnts,
+			Runtime:     "runc",
+			NetworkMode: container.NetworkMode(netmode),
+			Mounts:      mnts,
+			Resources: container.Resources{
+				Devices: []container.DeviceMapping{
+					container.DeviceMapping{
+						PathOnHost:      "/dev/mem",
+						PathInContainer: "/dev/mem",
+					},
+				},
+			},
 			Privileged:   true,
 			PortBindings: pmap,
 			OomScoreAdj:  score,

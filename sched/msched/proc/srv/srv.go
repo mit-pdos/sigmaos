@@ -35,6 +35,12 @@ import (
 	"sigmaos/util/syncmap"
 )
 
+const (
+	//	USE_JUNCTION = false
+
+	USE_JUNCTION = true
+)
+
 // Lookup may try to read proc in a proc's procEntry before procsrv
 // has set it.  To handle this case, procEntry has a condition
 // varialble on which Lookup sleeps until procsrv sets proc.
@@ -105,6 +111,12 @@ func RunProcSrv(kernelId string, dialproxy bool, spproxydPID sp.Tpid) error {
 		procs:       syncmap.NewSyncMap[int, *procEntry](),
 	}
 
+	if USE_JUNCTION {
+		ch := make(chan bool)
+		go scontainer.StartCaladanIOKernel(ch)
+		<-ch
+	}
+
 	// Set inner container IP as soon as uprocsrv starts up
 	innerIP, err := iputil.LocalIP()
 	if err != nil {
@@ -126,9 +138,9 @@ func RunProcSrv(kernelId string, dialproxy bool, spproxydPID sp.Tpid) error {
 		db.DFatalf("Error sigmasrvclnt: %v %v", pn, err)
 		return err
 	}
-	if err := shrinkMountTable(); err != nil {
-		db.DFatalf("Error shrinking mount table: %v", err)
-	}
+	//	if err := shrinkMountTable(); err != nil {
+	//		db.DFatalf("Error shrinking mount table: %v", err)
+	//	}
 	ps.ssrv = ssrv
 
 	crash.Failer(sc.FsLib, crash.PROCD_CRASH, func(e crash.Tevent) {
@@ -332,7 +344,7 @@ func (ps *ProcSrv) Run(ctx fs.CtxI, req proto.RunReq, res *proto.RunRep) error {
 	}
 	uproc.FinalizeEnv(ps.pe.GetInnerContainerIP(), ps.pe.GetOuterContainerIP(), ps.pe.GetPID())
 	db.DPrintf(db.SPAWN_LAT, "[%v] Proc Run: spawn time since spawn %v", uproc.GetPid(), time.Since(uproc.GetSpawnTime()))
-	cmd, err := scontainer.StartSigmaContainer(uproc, ps.dialproxy)
+	cmd, err := scontainer.StartSigmaContainer(uproc, ps.dialproxy, USE_JUNCTION)
 	if err != nil {
 		return err
 	}

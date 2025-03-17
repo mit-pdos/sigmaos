@@ -225,7 +225,7 @@ if [ "${TARGET}" == "local" ]; then
   cp $KERNELBIN/spproxyd $PROCD_BIN/
   cp $KERNELBIN/uproc-trampoline $PROCD_BIN/
 fi
-echo "========== Done copying kernel bins for uproc =========="
+echo "========== Done copying kernel bins for procd =========="
 
 # Now, prepare to build final containers which will actually run.
 targets="sigmauser-remote sigmaos-remote"

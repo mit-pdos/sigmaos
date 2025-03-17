@@ -65,7 +65,7 @@ if mount | grep -q 9p; then
 fi
 
 pgrep -x npproxyd > /dev/null && killall -9 npproxyd
-pgrep -x spproxyd > /dev/null && killall -9 spproxyd
+pgrep -x spproxyd > /dev/null && sudo killall -9 spproxyd
 pgrep -x start-kernel.sh > /dev/null && killall -9 start-kernel.sh
 
 sudo rm -f $TMP_BASE/spproxyd/spproxyd.sock

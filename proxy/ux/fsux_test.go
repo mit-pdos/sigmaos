@@ -91,7 +91,7 @@ func TestDir(t *testing.T) {
 	ts.Shutdown()
 }
 
-func writer(t *testing.T, ch chan struct{}, pe *proc.ProcEnv, idx int) {
+func writer(t *testing.T, ch chan struct{}, ch2 chan struct{}, pe *proc.ProcEnv, idx int) {
 	fsl, err := sigmaclnt.NewFsLib(pe, dialproxyclnt.NewDialProxyClnt(pe))
 	assert.Nil(t, err)
 	fn := sp.UX + sp.ANY + "/file-" + string(pe.GetPrincipal().GetID()) + "-" + strconv.Itoa(idx)
@@ -128,7 +128,7 @@ func writer(t *testing.T, ch chan struct{}, pe *proc.ProcEnv, idx int) {
 	assert.True(t, ncrash >= 1)
 	fsl.Remove(fn)
 	fsl.Close()
-	ch <- struct{}{}
+	ch2 <- struct{}{}
 }
 
 func TestWriteCrash5x20(t *testing.T) {
@@ -150,9 +150,10 @@ func TestWriteCrash5x20(t *testing.T) {
 	}
 
 	ch := make(chan struct{})
+	ch2 := make(chan struct{})
 	for i := 0; i < N; i++ {
 		pe := proc.NewAddedProcEnv(ts.ProcEnv())
-		go writer(ts.T, ch, pe, i)
+		go writer(ts.T, ch, ch2, pe, i)
 	}
 
 	var wg sync.WaitGroup
@@ -176,7 +177,7 @@ func TestWriteCrash5x20(t *testing.T) {
 	}
 
 	for i := 0; i < N; i++ {
-		<-ch
+		<-ch2
 	}
 
 	ts.Shutdown()

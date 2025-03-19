@@ -145,5 +145,8 @@ func (c *SessClnt) Close() error {
 	if !c.ownClosed() {
 		return nil
 	}
+	if c.dmx == nil {
+		return nil
+	}
 	return c.dmx.Close()
 }

@@ -11,7 +11,7 @@ import (
 func (ts *Tstate) CrashServer(e0, e1 crash.Tevent, srv string) {
 	db.DPrintf(db.ALWAYS, "Crash %v srv %v", e0.Path, srv)
 	err := crash.SignalFailer(ts.FsLib, e0.Path)
-	if !assert.Nil(ts.T, err) {
+	if !assert.Nil(ts.T, err, "Err SignalFailer: %v", err) {
 		db.DPrintf(db.TEST, "SignalFailer %v err %v", e0.Path, err)
 	}
 	em := crash.NewTeventMapOne(e1)

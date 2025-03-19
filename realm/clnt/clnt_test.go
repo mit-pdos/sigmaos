@@ -404,7 +404,7 @@ func TestEvictMultiRealm(t *testing.T) {
 	assert.True(t, status.IsStatusEvicted(), "Exit status wrong: %v", status)
 }
 
-func spawndirwatcher(r *test.RealmTstate, pn string) *proc.Status {
+func spawndirreader(r *test.RealmTstate, pn string) *proc.Status {
 	a := proc.NewProc("dirreader", []string{pn})
 	err := r.Spawn(a)
 	assert.Nil(r.Ts.T, err, "Error spawn: %v", err)
@@ -552,7 +552,7 @@ func TestMultiRealmIsolationEndpoint(t *testing.T) {
 	assert.Nil(t, err)
 	pn = pn + "/"
 
-	status := spawndirwatcher(mrts.GetRealm(test.REALM2), pn)
+	status := spawndirreader(mrts.GetRealm(test.REALM2), pn)
 	assert.True(t, status.IsStatusErr(), "Status is: %v", status)
 	db.DPrintf(db.TEST, "status %v %v\n", status.Msg(), status.Data())
 
@@ -593,13 +593,13 @@ func TestMultiRealmIsolationNamed(t *testing.T) {
 	assert.Nil(t, err)
 
 	pn = filepath.Join(sp.NAMED, "named1"+"/")
-	status := spawndirwatcher(mrts.GetRealm(test.REALM1), pn)
+	status := spawndirreader(mrts.GetRealm(test.REALM1), pn)
 	assert.True(t, status.IsStatusOK(), "%v: Status is: %v", pn, status)
 	db.DPrintf(db.TEST, "status %v %v\n", status.Msg(), status.Data())
 
 	for _, f := range []string{"rootnamed", "named1"} {
 		pn := filepath.Join(sp.NAMED, f) + "/"
-		status := spawndirwatcher(mrts.GetRealm(test.REALM2), pn)
+		status := spawndirreader(mrts.GetRealm(test.REALM2), pn)
 		assert.True(t, status.IsStatusErr(), "%v: Status is: %v", pn, status)
 		db.DPrintf(db.TEST, "status %v %v\n", status.Msg(), status.Data())
 		sts, err := mrts.GetRealm(test.REALM2).GetDir(pn)

@@ -405,7 +405,7 @@ func TestEvictMultiRealm(t *testing.T) {
 }
 
 func spawndirwatcher(r *test.RealmTstate, pn string) *proc.Status {
-	a := proc.NewProc("dirwatcher", []string{pn})
+	a := proc.NewProc("dirreader", []string{pn})
 	err := r.Spawn(a)
 	assert.Nil(r.Ts.T, err, "Error spawn: %v", err)
 	err = r.WaitStart(a.GetPid())

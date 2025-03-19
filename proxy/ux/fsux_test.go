@@ -128,6 +128,7 @@ func writer(t *testing.T, ch chan struct{}, pe *proc.ProcEnv, idx int) {
 	assert.True(t, ncrash >= 1)
 	fsl.Remove(fn)
 	fsl.Close()
+	ch <- struct{}{}
 }
 
 func TestWriteCrash5x20(t *testing.T) {
@@ -172,6 +173,10 @@ func TestWriteCrash5x20(t *testing.T) {
 
 	for i := 0; i < N; i++ {
 		ch <- struct{}{}
+	}
+
+	for i := 0; i < N; i++ {
+		<-ch
 	}
 
 	ts.Shutdown()

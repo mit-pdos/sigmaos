@@ -129,12 +129,7 @@ func TestMemfs(t *testing.T) {
 		return
 	}
 
-	nd1 := newNamedProc(MCPU, test.REALM1, ts.ProcEnv().UseDialProxy, true)
-	if err := startNamed(ts, nd1); !assert.Nil(ts.T, err, "Err startNamed: %v", err) {
-		return
-	}
-
-	l := leaderclnt.OldleaderTest(ts, dir+DIR, "", test.REALM1)
+	l := leaderclnt.OldleaderTest(ts, dir+DIR, "", sp.ROOTREALM)
 
 	sts, err := l.GetFences(fencedir)
 	assert.Nil(ts.T, err, "GetFences")
@@ -152,10 +147,6 @@ func TestMemfs(t *testing.T) {
 	db.DPrintf(db.TEST, "fences %v\n", sp.Names(sts))
 
 	l.ReleaseLeadership()
-
-	if err := stopNamed(ts, nd1); !assert.Nil(ts.T, err, "Err stop named: %v", err) {
-		return
-	}
 
 	ts.Shutdown()
 }

@@ -22,19 +22,23 @@ const (
 	leadername = "name/leader"
 )
 
-func OldleaderTest(ts *test.Tstate, pn string, crashfn string) *LeaderClnt {
-	ts.MkDir(pn, 0777)
-	ts.Remove(pn + "/fff")
-	ts.Remove(pn + "/ggg")
-	ts.Remove(pn + "/sss")
-	ts.Remove(pn + "/ttt")
-	ts.Remove(pn + "/uuu")
+func OldleaderTest(ts *test.Tstate, pn string, crashfn string, realm sp.Trealm) *LeaderClnt {
+	pe := proc.NewDifferentRealmProcEnv(ts.ProcEnv(), realm)
+	fsl, err := sigmaclnt.NewFsLib(pe, ts.GetDialProxyClnt())
+	assert.Nil(ts.T, err, "NewFsLib")
+	fsl.MkDir(pn, 0777)
+	fsl.Remove(pn + "/fff")
+	fsl.Remove(pn + "/ggg")
+	fsl.Remove(pn + "/sss")
+	fsl.Remove(pn + "/ttt")
+	fsl.Remove(pn + "/uuu")
 
 	ch := make(chan bool)
 	go func() {
 		// Make a new fsl for this test, because we want to use ts.FsLib
 		// to shutdown the system.
-		pe := proc.NewAddedProcEnv(ts.ProcEnv())
+		//		pe := proc.NewAddedProcEnv(ts.ProcEnv())
+		pe := proc.NewDifferentRealmProcEnv(ts.ProcEnv(), realm)
 		fsl2, err := sigmaclnt.NewFsLib(pe, ts.GetDialProxyClnt())
 		assert.Nil(ts.T, err, "NewFsLib")
 
@@ -106,7 +110,7 @@ func OldleaderTest(ts *test.Tstate, pn string, crashfn string) *LeaderClnt {
 
 	db.DPrintf(db.TEST, "Become leader...")
 
-	l, err := NewLeaderClnt(ts.FsLib, leadername, 0777)
+	l, err := NewLeaderClnt(fsl, leadername, 0777)
 	assert.Nil(ts.T, err)
 	// When other thread resigns, we become leader and start new epoch
 	err = l.LeadAndFence(nil, []string{pn})
@@ -115,13 +119,13 @@ func OldleaderTest(ts *test.Tstate, pn string, crashfn string) *LeaderClnt {
 	db.DPrintf(db.TEST, "fence new leader %v", l.Fence())
 
 	// Do some op so that server becomes aware of new epoch
-	_, err = ts.PutFile(pn+"/ggg", 0777, sp.OWRITE, []byte(strconv.Itoa(0)))
+	_, err = fsl.PutFile(pn+"/ggg", 0777, sp.OWRITE, []byte(strconv.Itoa(0)))
 	assert.Nil(ts.T, err, "PutFile")
 
 	if crashfn != "" {
 		db.DPrintf(db.TEST, "Crash named...")
-		err := crash.SignalFailer(ts.FsLib, crashfn)
-		assert.Nil(ts.T, err)
+		err := crash.SignalFailer(fsl, crashfn)
+		assert.Nil(ts.T, err, "Err failer: %v", err)
 	}
 
 	// let old leader run
@@ -131,13 +135,13 @@ func OldleaderTest(ts *test.Tstate, pn string, crashfn string) *LeaderClnt {
 
 	<-ch
 
-	fd, err := ts.Open(pn+"/fff", sp.OREAD)
+	fd, err := fsl.Open(pn+"/fff", sp.OREAD)
 	assert.Nil(ts.T, err, "Open err %v", err)
 	b := make([]byte, 100)
-	cnt, err := ts.Read(fd, b)
+	cnt, err := fsl.Read(fd, b)
 	assert.Equal(ts.T, sp.Tsize(0), cnt, "buf %v", string(b))
 
-	_, err = ts.Stat(pn + "/sss")
+	_, err = fsl.Stat(pn + "/sss")
 	assert.Nil(ts.T, err, "Stat err %v", err)
 
 	return l

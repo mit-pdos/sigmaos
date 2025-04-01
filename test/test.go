@@ -118,7 +118,7 @@ type Tstate struct {
 func NewTstatePath(t *testing.T, path string) (*Tstate, error) {
 	ts, err := newSysClntPath(t, path)
 	if err != nil {
-		db.DPrintf(db.ERROR, "NewTstatePath: %v\n", err)
+		db.DPrintf(db.ERROR, "NewTstatePath: %v", err)
 		return nil, err
 	}
 	if Withs3pathclnt {
@@ -146,12 +146,12 @@ func NewTstateAll(t *testing.T) (*Tstate, error) {
 func newTstateWithRealms(t *testing.T) (*Tstate, error) {
 	ts, err := newSysClnt(t, bootclnt.BOOT_REALM)
 	if err != nil {
-		db.DPrintf(db.ERROR, "NewTstateRealm: %v\n", err)
+		db.DPrintf(db.ERROR, "NewTstateRealm: %v", err)
 		return nil, err
 	}
 	rc, err := realmclnt.NewRealmClnt(ts.FsLib)
 	if err != nil {
-		db.DPrintf(db.ERROR, "NewRealmClnt make realmclnt: %v\n", err)
+		db.DPrintf(db.ERROR, "NewRealmClnt make realmclnt: %v", err)
 		return nil, err
 	}
 	ts.rc = rc

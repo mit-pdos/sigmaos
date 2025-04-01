@@ -68,7 +68,7 @@ func Start(kernelId string, etcdIP sp.Tip, pe *proc.ProcEnv, ntype Tboot, dialpr
 	cmd.Stdout = ofile
 	cmd.Stderr = efile
 	if err := cmd.Run(); err != nil {
-		db.DPrintf(db.BOOT, "Boot: run err %v", err)
+		db.DPrintf(db.BOOT, "Boot: run err %v\n\tCommand: %v", err, cmd)
 		return "", err
 	}
 	if err := ofile.Sync(); err != nil {

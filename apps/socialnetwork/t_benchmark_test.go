@@ -34,12 +34,11 @@ const (
 )
 
 var K8S_ADDR string
-var MONGO_URL string
+
 var BENCH_TEST bool
 
 func init() {
 	flag.StringVar(&K8S_ADDR, "k8saddr", "", "Addr of k8s frontend.")
-	flag.StringVar(&MONGO_URL, "mongourl", "127.0.0.1:4407", "Addr of mongo server.")
 	flag.BoolVar(&BENCH_TEST, "benchtest", false, "Is this a benchmark test?")
 }
 
@@ -97,7 +96,11 @@ func setupSigmaState(mrts *test.MultiRealmTstate) (*TstateSN, error) {
 	if err != nil {
 		return tssn, err
 	}
-	initUserAndGraph(mrts.T, MONGO_URL)
+	mongourl, err := tssn.dbu.GetURL()
+	if !assert.Nil(mrts.T, err, "Err get url: %v", err) {
+		return tssn, err
+	}
+	initUserAndGraph(mrts.T, mongourl)
 	return tssn, nil
 }
 

@@ -19,7 +19,7 @@ func RunClnt(args []string) error {
 		return err
 	}
 	op := args[0]
-	addr, err := sp.NewTaddrFromString(args[1], sp.INNER_CONTAINER_IP)
+	addr, err := sp.NewTaddrFromString(args[1])
 	if err != nil {
 		db.DFatalf("Err NewAddr: %v", err)
 	}

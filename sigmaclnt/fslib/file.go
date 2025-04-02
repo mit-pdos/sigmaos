@@ -8,10 +8,10 @@ import (
 
 	//	"time"
 
+	sos "sigmaos/api/sigmaos"
 	db "sigmaos/debug"
 	"sigmaos/sigmaclnt/fslib/reader"
 	"sigmaos/sigmaclnt/fslib/writer"
-	sos "sigmaos/api/sigmaos"
 	sp "sigmaos/sigmap"
 )
 
@@ -19,24 +19,24 @@ import (
 // Wrappers
 //
 
-func (fsl *FsLib) Open(path string, m sp.Tmode) (int, error) {
-	return fsl.FileAPI.Open(path, m, sos.O_NOW)
+func (fsl *FsLib) Open(pn sp.Tsigmapath, m sp.Tmode) (int, error) {
+	return fsl.FileAPI.Open(pn, m, sos.O_NOW)
 }
 
-func (fsl *FsLib) OpenWait(path string, m sp.Tmode) (int, error) {
-	return fsl.FileAPI.Open(path, m, sos.O_WAIT)
+func (fsl *FsLib) OpenWait(pn sp.Tsigmapath, m sp.Tmode) (int, error) {
+	return fsl.FileAPI.Open(pn, m, sos.O_WAIT)
 }
 
-func (fl *FsLib) SetFile(fname string, data []byte, m sp.Tmode, off sp.Toffset) (sp.Tsize, error) {
-	return fl.FileAPI.PutFile(fname, 0777, m, data, off, sp.NoLeaseId)
+func (fl *FsLib) SetFile(pn sp.Tsigmapath, data []byte, m sp.Tmode, off sp.Toffset) (sp.Tsize, error) {
+	return fl.FileAPI.PutFile(pn, 0777, m, data, off, sp.NoLeaseId)
 }
 
-func (fl *FsLib) PutFile(fname string, perm sp.Tperm, mode sp.Tmode, data []byte) (sp.Tsize, error) {
-	return fl.FileAPI.PutFile(fname, perm, mode, data, 0, sp.NoLeaseId)
+func (fl *FsLib) PutFile(pn sp.Tsigmapath, perm sp.Tperm, mode sp.Tmode, data []byte) (sp.Tsize, error) {
+	return fl.FileAPI.PutFile(pn, perm, mode, data, 0, sp.NoLeaseId)
 }
 
-func (fl *FsLib) PutLeasedFile(fname string, perm sp.Tperm, mode sp.Tmode, lid sp.TleaseId, data []byte) (sp.Tsize, error) {
-	return fl.FileAPI.PutFile(fname, perm, mode, data, 0, lid)
+func (fl *FsLib) PutLeasedFile(pn sp.Tsigmapath, perm sp.Tperm, mode sp.Tmode, lid sp.TleaseId, data []byte) (sp.Tsize, error) {
+	return fl.FileAPI.PutFile(pn, perm, mode, data, 0, lid)
 }
 
 //
@@ -50,10 +50,10 @@ type FileReader struct {
 	fd  int
 	len sp.Tlength
 	n   sp.Tlength
-	pn  string
+	pn  sp.Tsigmapath
 }
 
-func newFileReader(rdr *reader.Reader, fd int, len sp.Tlength, pn string) *FileReader {
+func newFileReader(rdr *reader.Reader, fd int, len sp.Tlength, pn sp.Tsigmapath) *FileReader {
 	return &FileReader{rdr, fd, len, 0, pn}
 }
 
@@ -79,31 +79,31 @@ func (rd *FileReader) Nbytes() sp.Tlength {
 	return rd.n
 }
 
-func (fl *FsLib) NewReaderRegion(fd int, path string, len sp.Tlength) *FileReader {
+func (fl *FsLib) NewReaderRegion(fd int, pn sp.Tsigmapath, len sp.Tlength) *FileReader {
 	fdrdr := newFdReader(fl.FileAPI, fd)
-	rdr := reader.NewReader(fdrdr, path)
-	return newFileReader(rdr, fd, len, path)
+	rdr := reader.NewReader(fdrdr, pn)
+	return newFileReader(rdr, fd, len, pn)
 }
 
-func (fl *FsLib) NewReader(fd int, path string) *FileReader {
-	return fl.NewReaderRegion(fd, path, 0)
+func (fl *FsLib) NewReader(fd int, pn sp.Tsigmapath) *FileReader {
+	return fl.NewReaderRegion(fd, pn, 0)
 }
 
-func (fl *FsLib) OpenReader(path string) (*FileReader, error) {
-	fd, err := fl.Open(path, sp.OREAD)
+func (fl *FsLib) OpenReader(pn sp.Tsigmapath) (*FileReader, error) {
+	fd, err := fl.Open(pn, sp.OREAD)
 	if err != nil {
 		return nil, err
 	}
-	return fl.NewReader(fd, path), nil
+	return fl.NewReader(fd, pn), nil
 }
 
-func (fl *FsLib) OpenReaderRegion(path string, offset sp.Toffset, len sp.Tlength) (*FileReader, error) {
-	fd, err := fl.Open(path, sp.OREAD)
+func (fl *FsLib) OpenReaderRegion(pn sp.Tsigmapath, offset sp.Toffset, len sp.Tlength) (*FileReader, error) {
+	fd, err := fl.Open(pn, sp.OREAD)
 	if err != nil {
 		return nil, err
 	}
 	fl.Seek(fd, offset)
-	return fl.NewReaderRegion(fd, path, len), nil
+	return fl.NewReaderRegion(fd, pn, len), nil
 }
 
 type BufFileReader struct {
@@ -122,12 +122,12 @@ func (rdr *BufFileReader) Read(p []byte) (n int, err error) {
 	return rdr.brdr.Read(p)
 }
 
-func (fl *FsLib) OpenBufReader(path string) (*BufFileReader, error) {
-	fd, err := fl.Open(path, sp.OREAD)
+func (fl *FsLib) OpenBufReader(pn sp.Tsigmapath) (*BufFileReader, error) {
+	fd, err := fl.Open(pn, sp.OREAD)
 	if err != nil {
 		return nil, err
 	}
-	rdr := fl.NewReader(fd, path)
+	rdr := fl.NewReader(fd, pn)
 	brdr := bufio.NewReaderSize(rdr, sp.BUFSZ)
 	return &BufFileReader{rdr, brdr}, nil
 }
@@ -142,8 +142,8 @@ type ParallelFileReader struct {
 	off sp.Toffset // next offset to consume
 }
 
-func (fl *FsLib) OpenParallelFileReader(path string, offset sp.Toffset, l sp.Tlength) (*ParallelFileReader, error) {
-	fd, err := fl.Open(path, sp.OREAD)
+func (fl *FsLib) OpenParallelFileReader(pn sp.Tsigmapath, offset sp.Toffset, l sp.Tlength) (*ParallelFileReader, error) {
+	fd, err := fl.Open(pn, sp.OREAD)
 	if err != nil {
 		return nil, err
 	}
@@ -188,17 +188,17 @@ func (pfr *ParallelFileReader) Close() error {
 	return pfr.sof.CloseFd(pfr.fd)
 }
 
-func (fl *FsLib) OpenWaitReader(path string) (int, error) {
-	fd, err := fl.FileAPI.Open(path, sp.OREAD, sos.O_WAIT)
-	db.DPrintf(db.FSLIB, "OpenWaitReader %v err %v\n", path, err)
+func (fl *FsLib) OpenWaitReader(pn sp.Tsigmapath) (int, error) {
+	fd, err := fl.FileAPI.Open(pn, sp.OREAD, sos.O_WAIT)
+	db.DPrintf(db.FSLIB, "OpenWaitReader %v err %v\n", pn, err)
 	if err != nil {
 		return 0, err
 	}
 	return fd, nil
 }
 
-func (fl *FsLib) GetFileWatch(path string) ([]byte, error) {
-	fd, err := fl.OpenWaitReader(path)
+func (fl *FsLib) GetFileWatch(pn sp.Tsigmapath) ([]byte, error) {
+	fd, err := fl.OpenWaitReader(pn)
 	if err != nil {
 		return nil, err
 	}
@@ -274,32 +274,32 @@ func (wrt *FileWriter) Nbytes() sp.Tlength {
 	return wrt.wrt.Nbytes()
 }
 
-func (fl *FsLib) CreateWriter(fname string, perm sp.Tperm, mode sp.Tmode) (*FileWriter, error) {
-	fd, err := fl.Create(fname, perm, mode)
+func (fl *FsLib) CreateWriter(pn sp.Tsigmapath, perm sp.Tperm, mode sp.Tmode) (*FileWriter, error) {
+	fd, err := fl.Create(pn, perm, mode)
 	if err != nil {
 		return nil, err
 	}
 	return fl.newFileWriter(fd), nil
 }
 
-func (fl *FsLib) OpenWriter(fname string) (*FileWriter, error) {
-	fd, err := fl.Open(fname, sp.OWRITE)
+func (fl *FsLib) OpenWriter(pn sp.Tsigmapath) (*FileWriter, error) {
+	fd, err := fl.Open(pn, sp.OWRITE)
 	if err != nil {
 		return nil, err
 	}
 	return fl.newFileWriter(fd), nil
 }
 
-func (fl *FsLib) CreateBufWriter(fname string, perm sp.Tperm) (*FileWriter, error) {
-	fd, err := fl.Create(fname, perm, sp.OWRITE)
+func (fl *FsLib) CreateBufWriter(pn sp.Tsigmapath, perm sp.Tperm) (*FileWriter, error) {
+	fd, err := fl.Create(pn, perm, sp.OWRITE)
 	if err != nil {
 		return nil, err
 	}
 	return fl.newBufFileWriter(fd), nil
 }
 
-func (fl *FsLib) OpenBufWriter(fname string, mode sp.Tmode) (*FileWriter, error) {
-	fd, err := fl.Open(fname, mode)
+func (fl *FsLib) OpenBufWriter(pn sp.Tsigmapath, mode sp.Tmode) (*FileWriter, error) {
+	fd, err := fl.Open(pn, mode)
 	if err != nil {
 		return nil, err
 	}
@@ -310,7 +310,7 @@ func (fl *FsLib) OpenBufWriter(fname string, mode sp.Tmode) (*FileWriter, error)
 // Util
 //
 
-func (fl *FsLib) CopyFile(src, dst string) error {
+func (fl *FsLib) CopyFile(src, dst sp.Tsigmapath) error {
 	//	start := time.Now()
 	//	defer func(t *time.Time) {
 	//		db.DPrintf(db.ALWAYS, "Time reading + writing in copyFile: %v", time.Since(*t))

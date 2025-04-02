@@ -14,8 +14,8 @@ import (
 )
 
 type MntClntAPI interface {
-	GetFile(pn string, principal *sp.Tprincipal, mode sp.Tmode, off sp.Toffset, cnt sp.Tsize, f *sp.Tfence) ([]byte, error)
-	Stat(pn string, principal *sp.Tprincipal) (*sp.Tstat, error)
+	GetFile(pn sp.Tsigmapath, principal *sp.Tprincipal, mode sp.Tmode, off sp.Toffset, cnt sp.Tsize, f *sp.Tfence) ([]byte, error)
+	Stat(pn sp.Tsigmapath, principal *sp.Tprincipal) (*sp.Tstat, error)
 }
 
 type MntClnt struct {
@@ -72,7 +72,7 @@ func (mc *MntClnt) ResolveMnt(p path.Tpathname, resolve bool) (sp.Tfid, path.Tpa
 	}
 }
 
-func (mc *MntClnt) LastMount(pn string, principal *sp.Tprincipal) (path.Tpathname, path.Tpathname, error) {
+func (mc *MntClnt) LastMount(pn sp.Tsigmapath, principal *sp.Tprincipal) (path.Tpathname, path.Tpathname, error) {
 	p, err := serr.PathSplitErr(pn)
 	if err != nil {
 		return nil, nil, err
@@ -98,7 +98,7 @@ func (mc *MntClnt) ResolveRoot(pn path.Tpathname) (*serr.Err, bool) {
 
 // Return path through the last mounted server and the rest of the
 // path on the server.
-func (mc *MntClnt) PathLastMount(pn string, principal *sp.Tprincipal) (path.Tpathname, path.Tpathname, error) {
+func (mc *MntClnt) PathLastMount(pn sp.Tsigmapath, principal *sp.Tprincipal) (path.Tpathname, path.Tpathname, error) {
 	// Automount the longest prefix of pn; if pn exist, then the
 	// server holding the directory/file correspending to pn.
 	if _, err := mc.pathc.Stat(pn+"/", principal); err != nil {
@@ -107,7 +107,7 @@ func (mc *MntClnt) PathLastMount(pn string, principal *sp.Tprincipal) (path.Tpat
 	return mc.LastMount(pn, principal)
 }
 
-func (mc *MntClnt) MountTree(secrets map[string]*sp.SecretProto, ep *sp.Tendpoint, tree, mntname string) error {
+func (mc *MntClnt) MountTree(secrets map[string]*sp.SecretProto, ep *sp.Tendpoint, tree, mntname sp.Tsigmapath) error {
 	pn, err := serr.PathSplitErr(mntname)
 	if err != nil {
 		return err
@@ -145,7 +145,7 @@ func (mc *MntClnt) MountTree(secrets map[string]*sp.SecretProto, ep *sp.Tendpoin
 }
 
 // Detach from server
-func (mc *MntClnt) Detach(pn string) error {
+func (mc *MntClnt) Detach(pn sp.Tsigmapath) error {
 	p, err := serr.PathSplitErr(pn)
 	if err != nil {
 		return err
@@ -177,13 +177,13 @@ func (mc *MntClnt) UmountPrefix(path []string) *serr.Err {
 	}
 }
 
-func (mc *MntClnt) MountedPaths() []string {
+func (mc *MntClnt) MountedPaths() []sp.Tsigmapath {
 	return mc.mnt.mountedPaths()
 }
 
 // Disconnect client pn to simulate partition to partition to server
 // that exports pn.  If pn is "", disconnect from all mounted servers.
-func (mc *MntClnt) Disconnect(pn string) error {
+func (mc *MntClnt) Disconnect(pn sp.Tsigmapath) error {
 	if pn == "" { // disconnect from all servers?
 		pnts := mc.mnt.mountedPoints()
 		var r error

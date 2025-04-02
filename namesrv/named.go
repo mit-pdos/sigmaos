@@ -230,7 +230,7 @@ func (nd *Named) newSrv() (*sp.Tendpoint, error) {
 	// If this is a root named, don't do
 	// anything special.
 	if nd.realm == sp.ROOTREALM {
-		addr = sp.NewTaddr(ip, sp.INNER_CONTAINER_IP, sp.NO_PORT)
+		addr = sp.NewTaddr(ip, sp.NO_PORT)
 		// Allow all realms to attach to dirs mounted from the root named, as well as RPC dir, since it is needed to take out leases
 		allowedDirs := []string{rpc.RPC}
 		for s, _ := range sp.RootNamedMountedDirs {
@@ -238,7 +238,7 @@ func (nd *Named) newSrv() (*sp.Tendpoint, error) {
 		}
 		aaf = spprotosrv.AttachAllowAllPrincipalsSelectPaths(allowedDirs)
 	} else {
-		addr = sp.NewTaddr(ip, sp.INNER_CONTAINER_IP, sp.NO_PORT)
+		addr = sp.NewTaddr(ip, sp.NO_PORT)
 		aaf = spprotosrv.AttachAllowAllToAll
 	}
 	ssrv, err := sigmasrv.NewSigmaSrvRootClntAuthFn(root, addr, "", nd.SigmaClnt, aaf)

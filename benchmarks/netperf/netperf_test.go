@@ -77,7 +77,7 @@ func TestProcDialDialProxy(t *testing.T) {
 // Client-side stub to measure performance of dialing using the DialProxy for
 // internal EPs. Useful for running cross-machine performance benchmarks.
 func TestClntDialDialProxyInternal(t *testing.T) {
-	addr, err := sp.NewTaddrFromString(srvaddr, sp.INNER_CONTAINER_IP)
+	addr, err := sp.NewTaddrFromString(srvaddr)
 	assert.Nil(t, err, "Err parse addr: %v", err)
 	ep := sp.NewEndpoint(sp.INTERNAL_EP, sp.Taddrs{addr})
 	clntDialDialProxy(t, ep)
@@ -86,7 +86,7 @@ func TestClntDialDialProxyInternal(t *testing.T) {
 // Server-side stub to measure performance of dialing using the DialProxy for
 // internal EPs. Useful for running cross-machine performance benchmarks.
 func TestSrvDialDialProxyInternal(t *testing.T) {
-	addr, err := sp.NewTaddrFromString(srvaddr, sp.INNER_CONTAINER_IP)
+	addr, err := sp.NewTaddrFromString(srvaddr)
 	assert.Nil(t, err, "Err parse addr: %v", err)
 	srvDialDialProxy(t, addr, sp.INTERNAL_EP)
 }
@@ -94,7 +94,7 @@ func TestSrvDialDialProxyInternal(t *testing.T) {
 // Client-side stub to measure performance of dialing using the DialProxy for
 // external EPs. Useful for running cross-machine performance benchmarks.
 func TestClntDialDialProxyExternal(t *testing.T) {
-	addr, err := sp.NewTaddrFromString(srvaddr, sp.INNER_CONTAINER_IP)
+	addr, err := sp.NewTaddrFromString(srvaddr)
 	assert.Nil(t, err, "Err parse addr: %v", err)
 	ep := sp.NewEndpoint(sp.EXTERNAL_EP, sp.Taddrs{addr})
 	clntDialDialProxy(t, ep)
@@ -103,7 +103,7 @@ func TestClntDialDialProxyExternal(t *testing.T) {
 // Server-side stub to measure performance of dialing using the DialProxy for
 // external EPs. Useful for running cross-machine performance benchmarks.
 func TestSrvDialDialProxyExternal(t *testing.T) {
-	addr, err := sp.NewTaddrFromString(srvaddr, sp.INNER_CONTAINER_IP)
+	addr, err := sp.NewTaddrFromString(srvaddr)
 	assert.Nil(t, err, "Err parse addr: %v", err)
 	srvDialDialProxy(t, addr, sp.EXTERNAL_EP)
 }
@@ -111,7 +111,7 @@ func TestSrvDialDialProxyExternal(t *testing.T) {
 // Client-side stub to measure network throughput using the DialProxy.
 // Useful for running cross-machine performance benchmarks.
 func TestClntThroughputDialProxy(t *testing.T) {
-	addr, err := sp.NewTaddrFromString(srvaddr, sp.INNER_CONTAINER_IP)
+	addr, err := sp.NewTaddrFromString(srvaddr)
 	assert.Nil(t, err, "Err parse addr: %v", err)
 	ep := sp.NewEndpoint(sp.INTERNAL_EP, sp.Taddrs{addr})
 
@@ -131,7 +131,7 @@ func TestClntThroughputDialProxy(t *testing.T) {
 // Server-side stub to measure network throughput using the DialProxy.
 // Useful for running cross-machine performance benchmarks.
 func TestSrvThroughputDialProxy(t *testing.T) {
-	addr, err := sp.NewTaddrFromString(srvaddr, sp.INNER_CONTAINER_IP)
+	addr, err := sp.NewTaddrFromString(srvaddr)
 	assert.Nil(t, err, "Err parse addr: %v", err)
 	ts, err1 := test.NewTstateAll(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
@@ -151,7 +151,7 @@ func TestSrvThroughputDialProxy(t *testing.T) {
 // Client-side stub to measure network TCP RTT using the DialProxy.
 // Useful for running cross-machine performance benchmarks.
 func TestClntRTTDialProxy(t *testing.T) {
-	addr, err := sp.NewTaddrFromString(srvaddr, sp.INNER_CONTAINER_IP)
+	addr, err := sp.NewTaddrFromString(srvaddr)
 	assert.Nil(t, err, "Err parse addr: %v", err)
 	ep := sp.NewEndpoint(sp.INTERNAL_EP, sp.Taddrs{addr})
 
@@ -171,7 +171,7 @@ func TestClntRTTDialProxy(t *testing.T) {
 // Server-side stub to measure network TCP RTT using the DialProxy.
 // Useful for running cross-machine performance benchmarks.
 func TestSrvRTTDialProxy(t *testing.T) {
-	addr, err := sp.NewTaddrFromString(srvaddr, sp.INNER_CONTAINER_IP)
+	addr, err := sp.NewTaddrFromString(srvaddr)
 	assert.Nil(t, err, "Err parse addr: %v", err)
 	ts, err1 := test.NewTstateAll(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {

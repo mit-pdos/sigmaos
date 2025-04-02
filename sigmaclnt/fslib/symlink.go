@@ -4,7 +4,7 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-func (fl *FsLib) Symlink(target []byte, link string, lperm sp.Tperm) error {
+func (fl *FsLib) Symlink(target []byte, link sp.Tsigmapath, lperm sp.Tperm) error {
 	lperm = lperm | sp.DMSYMLINK
 	fd, err := fl.Create(link, lperm, sp.OWRITE)
 	if err != nil {

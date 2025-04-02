@@ -12,13 +12,13 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 
-	"sigmaos/util/auth"
+	sos "sigmaos/api/sigmaos"
 	db "sigmaos/debug"
 	dialproxyclnt "sigmaos/dialproxy/clnt"
 	"sigmaos/path"
 	"sigmaos/serr"
-	sos "sigmaos/api/sigmaos"
 	sp "sigmaos/sigmap"
+	"sigmaos/util/auth"
 	"sigmaos/util/syncmap"
 )
 
@@ -136,7 +136,7 @@ func getS3Client(s3secrets *sp.SecretProto, npc *dialproxyclnt.DialProxyClnt) (*
 	clnt := s3.NewFromConfig(cfg, func(o *s3.Options) {
 		hclnt := awshttp.NewBuildableClient().WithTransportOptions(func(t *http.Transport) {
 			t.DialContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
-				a, err := sp.NewTaddrFromString(addr, sp.OUTER_CONTAINER_IP)
+				a, err := sp.NewTaddrFromString(addr)
 				if err != nil {
 					return nil, err
 				}

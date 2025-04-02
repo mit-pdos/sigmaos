@@ -70,6 +70,7 @@ func (bc *bincache) lookup(pn string, pid uint32) (*sp.Tstat, error) {
 		st, err := bc.pds.Lookup(int(pid), pn)
 		if err != nil {
 			db.DPrintf(db.ERROR, "Error pds lookup bin: %v", err)
+			bc.cache.Delete(pn)
 			return nil, err
 		}
 		if st == nil {

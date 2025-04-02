@@ -17,6 +17,7 @@ import (
 	"sigmaos/apps/mr/mr"
 	db "sigmaos/debug"
 	"sigmaos/proc"
+	"sigmaos/serr"
 	"sigmaos/sigmaclnt"
 	"sigmaos/sigmaclnt/fslib"
 	sp "sigmaos/sigmap"
@@ -254,9 +255,16 @@ func (r *Reducer) DoReduce() *proc.Status {
 	// Include time spent writing output.
 	rtot.d += time.Since(start)
 
-	// Create symlink atomically.
-	if err := r.PutFileAtomic(r.outlink, 0777|sp.DMSYMLINK, []byte(r.tmp)); err != nil {
-		return proc.NewStatusErr(fmt.Sprintf("%v: put symlink %v -> %v err %v\n", r.ProcEnv().GetPID(), r.outlink, r.tmp, err), nil)
+	// Create symlink atomically. Retry on version issues
+	for {
+		if err := r.PutFileAtomic(r.outlink, 0777|sp.DMSYMLINK, []byte(r.tmp)); err != nil {
+			if se, ok := serr.IsErr(err); ok && se.IsErrVersion() {
+				db.DPrintf(db.MR, "Version err PutFileAtomic: retrying")
+				continue
+			}
+			return proc.NewStatusErr(fmt.Sprintf("%v: put symlink %v -> %v err %v\n", r.ProcEnv().GetPID(), r.outlink, r.tmp, err), nil)
+		}
+		break
 	}
 	return proc.NewStatusInfo(proc.StatusOK, "OK",
 		Result{false, r.ProcEnv().GetPID().String(), rtot.n, nbyte, Bin{}, rtot.d.Milliseconds(), 0, r.ProcEnv().GetKernelID()})

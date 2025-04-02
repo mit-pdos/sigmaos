@@ -53,7 +53,6 @@ func (mc *MntClnt) getNamedEndpointRealm(realm sp.Trealm) (*sp.Tendpoint, *serr.
 	db.DPrintf(db.MOUNT, "getNamedEndpointRealm %v [%v] %v", mc.cid, realm, ep)
 	db.DPrintf(db.WALK_LAT, "getNamedEndpointRealm %v %v %v", mc.cid, ep, time.Since(s))
 	return ep, nil
-
 }
 
 // Get named enpoint directly
@@ -74,16 +73,16 @@ func (mc *MntClnt) getNamedEndpointDirect(realm sp.Trealm) (*sp.Tendpoint, *serr
 	} else {
 		// Otherwise, walk through the root named to find this named's mount.
 		s := time.Now()
-		if _, rest, err := mc.ResolveMnt(path.Tpathname{sp.ROOT, sp.REALMREL}, true); err != nil && len(rest) >= 1 {
+		if _, rest, err := mc.ResolveMnt(path.Tpathname{sp.ROOT, sp.REALMSREL}, true); err != nil && len(rest) >= 1 {
 			// Mount the realm dir from the root named
-			if err := mc.mountNamed(sp.ROOTREALM, filepath.Join(sp.ROOT, sp.REALMREL), sp.REALMREL); err != nil {
+			if err := mc.mountNamed(sp.ROOTREALM, filepath.Join(sp.ROOT, sp.REALMSREL), sp.REALMSREL); err != nil {
 				db.DPrintf(db.MOUNT_ERR, "getNamedEndpointDirect [%v] err mounting root named %v", realm, err)
 				return &sp.Tendpoint{}, err
 			}
 		}
 		db.DPrintf(db.WALK_LAT, "getNamedEndpointDirect %v mount %v %v", mc.cid, sp.ROOTREALM, time.Since(s))
 		s = time.Now()
-		pn := filepath.Join(sp.ROOT, sp.REALMREL, sp.REALMDREL, sp.REALMSREL, realm.String())
+		pn := filepath.Join(sp.ROOT, sp.REALMSREL, realm.String())
 		target, err := mc.pathc.GetFile(pn, mc.pe.GetPrincipal(), sp.OREAD, 0, sp.MAXGETSET, sp.NullFence())
 		if err != nil {
 			db.DPrintf(db.MOUNT_ERR, "getNamedEndpointDirect [%v] GetFile err %v", realm, err)
@@ -109,7 +108,7 @@ func (mc *MntClnt) invalidateNamedMountCacheEntry(realm sp.Trealm) error {
 	return nil
 }
 
-func (mc *MntClnt) mountNamed(realm sp.Trealm, mntName, tree string) *serr.Err {
+func (mc *MntClnt) mountNamed(realm sp.Trealm, mntName, tree sp.Tsigmapath) *serr.Err {
 	db.DPrintf(db.MOUNT, "mountNamed [%v] at %v tree \"%v\"", realm, mntName, tree)
 	s := time.Now()
 	ep, err := mc.getNamedEndpointRealm(realm)

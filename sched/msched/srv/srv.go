@@ -385,6 +385,7 @@ func RunMSched(kernelID string, reserveMcpu uint) error {
 	crash.Failer(sc.FsLib, crash.MSCHED_CRASH, func(e crash.Tevent) {
 		crash.Crash()
 	})
+	db.DPrintf(db.MSCHED, "MSched EP: %v", ssrv.GetEndpoint())
 	// Perf monitoring
 	p, err := perf.NewPerf(sc.ProcEnv(), perf.MSCHED)
 	if err != nil {

@@ -9,7 +9,7 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-func (fsl *FsLib) MkLeasedEndpoint(pn string, ep *sp.Tendpoint, lid sp.TleaseId) error {
+func (fsl *FsLib) MkLeasedEndpoint(pn sp.Tsigmapath, ep *sp.Tendpoint, lid sp.TleaseId) error {
 	b, err := ep.Marshal()
 	if err != nil {
 		return err
@@ -21,7 +21,7 @@ func (fsl *FsLib) MkLeasedEndpoint(pn string, ep *sp.Tendpoint, lid sp.TleaseId)
 	return nil
 }
 
-func (fsl *FsLib) MkEndpointFile(pn string, ep *sp.Tendpoint) error {
+func (fsl *FsLib) MkEndpointFile(pn sp.Tsigmapath, ep *sp.Tendpoint) error {
 	b, err := ep.Marshal()
 	if err != nil {
 		return err
@@ -33,7 +33,7 @@ func (fsl *FsLib) MkEndpointFile(pn string, ep *sp.Tendpoint) error {
 	return nil
 }
 
-func (fsl *FsLib) WriteEndpointFile(pn string, ep *sp.Tendpoint) error {
+func (fsl *FsLib) WriteEndpointFile(pn sp.Tsigmapath, ep *sp.Tendpoint) error {
 	b, err := ep.Marshal()
 	if err != nil {
 		return err
@@ -47,7 +47,7 @@ func (fsl *FsLib) WriteEndpointFile(pn string, ep *sp.Tendpoint) error {
 
 // Return pn, replacing first LOCAL/ANY with a endpoint point for a specific
 // server.
-func (fsl *FsLib) ResolveMount(pn string) (string, bool, error) {
+func (fsl *FsLib) ResolveMount(pn sp.Tsigmapath) (sp.Tsigmapath, bool, error) {
 	p := path.Split(pn)
 	d, left, ok := p.IsUnion()
 	if ok {
@@ -63,7 +63,7 @@ func (fsl *FsLib) ResolveMount(pn string) (string, bool, error) {
 
 // Return pn but with all LOCAL and ANY's replaced with endpoint points for a
 // specific server.
-func (fsl *FsLib) ResolveMounts(pn string) (string, error) {
+func (fsl *FsLib) ResolveMounts(pn sp.Tsigmapath) (sp.Tsigmapath, error) {
 	for {
 		npn, ok, err := fsl.ResolveMount(pn)
 		if err != nil {
@@ -76,7 +76,7 @@ func (fsl *FsLib) ResolveMounts(pn string) (string, error) {
 	}
 }
 
-func (fsl *FsLib) ReadEndpoint(pn string) (*sp.Tendpoint, error) {
+func (fsl *FsLib) ReadEndpoint(pn sp.Tsigmapath) (*sp.Tendpoint, error) {
 	target, err := fsl.GetFile(pn)
 	if err != nil {
 		return &sp.Tendpoint{}, err
@@ -90,7 +90,7 @@ func (fsl *FsLib) ReadEndpoint(pn string) (*sp.Tendpoint, error) {
 
 // Make copy of root endpoint or first endpoint in pn. Return the
 // content of endpoint and the endpoint file's name.
-func (fsl *FsLib) CopyEndpoint(pn string) (*sp.Tendpoint, string, error) {
+func (fsl *FsLib) CopyEndpoint(pn sp.Tsigmapath) (*sp.Tendpoint, sp.Tsigmapath, error) {
 	if pn == sp.NAMED {
 		ep, err := fsl.FileAPI.GetNamedEndpoint()
 		return ep, "", err
@@ -111,7 +111,7 @@ func (fsl *FsLib) CopyEndpoint(pn string) (*sp.Tendpoint, string, error) {
 	return nil, "", serr.NewErr(serr.TErrInval, pn)
 }
 
-func (fsl *FsLib) isLocal(pn string) (bool, *sp.Tendpoint, error) {
+func (fsl *FsLib) isLocal(pn sp.Tsigmapath) (bool, *sp.Tendpoint, error) {
 	b, err := fsl.GetFile(pn)
 	if err != nil {
 		return false, nil, err
@@ -127,7 +127,7 @@ func (fsl *FsLib) isLocal(pn string) (bool, *sp.Tendpoint, error) {
 	return ok, ep, nil
 }
 
-func (fsl *FsLib) resolveMount0(d string, q string) (string, *sp.Tendpoint, error) {
+func (fsl *FsLib) resolveMount0(d sp.Tsigmapath, q sp.Tsigmapath) (sp.Tsigmapath, *sp.Tendpoint, error) {
 	var rep *sp.Tendpoint
 	rname := ""
 	// Make sure to resolve d in case it is a symlink or endpoint point.
@@ -150,7 +150,7 @@ func (fsl *FsLib) resolveMount0(d string, q string) (string, *sp.Tendpoint, erro
 	return rname, rep, serr.NewErr(serr.TErrNotfound, d)
 }
 
-func (fsl *FsLib) resolveMount(d string, q string) (string, *sp.Tendpoint, error) {
+func (fsl *FsLib) resolveMount(d sp.Tsigmapath, q sp.Tsigmapath) (sp.Tsigmapath, *sp.Tendpoint, error) {
 	rname := ""
 
 	if fsl.pe.GetKernelID() != sp.NOT_SET {
@@ -170,7 +170,7 @@ func (fsl *FsLib) resolveMount(d string, q string) (string, *sp.Tendpoint, error
 }
 
 // For code running using /mnt/9p, which doesn't support PutFile.
-func (fsl *FsLib) NewMount9P(pn string, ep *sp.Tendpoint) error {
+func (fsl *FsLib) NewMount9P(pn sp.Tsigmapath, ep *sp.Tendpoint) error {
 	b, err := ep.Marshal()
 	if err != nil {
 		return err

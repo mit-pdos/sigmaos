@@ -6,10 +6,12 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"sigmaos/test"
 	linuxsched "sigmaos/util/linux/sched"
 )
 
 func TestCompile(t *testing.T) {
+	assert.NotNil(t, test.User)
 }
 
 func TestBasic(t *testing.T) {

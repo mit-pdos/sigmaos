@@ -36,6 +36,7 @@ func (lm *LeasedMap) Insert(p sp.Tpath, lid sp.TleaseId, n string, o fs.FsObj, d
 
 	_, ok := lm.ps[p]
 	if ok {
+		db.DPrintf(db.ERROR, "Insert %v exists %q\n", p, lm.ps)
 		db.DFatalf("Insert %v exists %q\n", p, lm.ps)
 	}
 	lm.ps[p] = lid

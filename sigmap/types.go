@@ -14,7 +14,6 @@ type TclntId uint64
 type TleaseId uint64
 type Tttl uint64
 type Tip string
-type Tiptype uint32
 type Tport uint32
 
 type Qtype uint32
@@ -28,3 +27,6 @@ type TprincipalID string
 type Tplatform string
 
 type TTendpoint uint32
+
+// XXX make its own type?
+type Tsigmapath = string

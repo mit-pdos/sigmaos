@@ -356,7 +356,6 @@ func Unmarshal(pestr string) *ProcEnv {
 	return pe
 }
 
-// TODO: cleanup
 func (pe *ProcEnv) String() string {
 	return fmt.Sprintf("&{ "+
 		"Program:%v "+
@@ -380,8 +379,8 @@ func (pe *ProcEnv) String() string {
 		"UseSPProxy:%v "+
 		"UseDialProxy:%v "+
 		"SigmaPath:%v "+
-		"RealmSwitch:%v"+
-		"Fail:%v"+
+		"RealmSwitch:%v "+
+		"Fail:%v "+
 		"}",
 		pe.Program,
 		pe.Version,

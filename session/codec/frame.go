@@ -10,17 +10,18 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	db "sigmaos/debug"
-	"sigmaos/util/io/demux"
-	"sigmaos/util/io/frame"
 	"sigmaos/serr"
 	sessp "sigmaos/session/proto"
 	sp "sigmaos/sigmap"
+	"sigmaos/util/io/demux"
+	"sigmaos/util/io/frame"
 )
 
 type Transport struct {
 	rdr  io.Reader
 	wrt  *bufio.Writer
 	iovm *demux.IoVecMap
+	conn net.Conn
 }
 
 func NewTransport(conn net.Conn, iovm *demux.IoVecMap) demux.TransportI {
@@ -28,7 +29,12 @@ func NewTransport(conn net.Conn, iovm *demux.IoVecMap) demux.TransportI {
 		rdr:  bufio.NewReaderSize(conn, sp.Conf.Conn.MSG_LEN),
 		wrt:  bufio.NewWriterSize(conn, sp.Conf.Conn.MSG_LEN),
 		iovm: iovm,
+		conn: conn,
 	}
+}
+
+func (t *Transport) Close() error {
+	return t.conn.Close()
 }
 
 func (t *Transport) ReadCall() (demux.CallI, *serr.Err) {

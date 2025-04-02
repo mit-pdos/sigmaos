@@ -51,6 +51,7 @@ func (st *sessionTable) Alloc(p *sp.Tprincipal, sid sessp.Tsession, nc *netConn)
 	defer st.mu.Unlock()
 
 	if sess, ok := st.sessions[sid]; ok {
+		sess.conn = nc
 		return sess
 	}
 	sess := newSession(st.newSess.NewSession(p, sid), sid, nc)

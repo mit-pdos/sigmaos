@@ -101,7 +101,7 @@ func RunFrontendSrv(job string) error {
 	mux.HandleFunc("/home", frontend.homeHandler)
 	mux.HandleFunc("/startrecording", frontend.startRecordingHandler)
 	//	}
-	ep, l, err := sc.GetDialProxyClnt().Listen(sp.EXTERNAL_EP, sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, sp.NO_PORT))
+	ep, l, err := sc.GetDialProxyClnt().Listen(sp.EXTERNAL_EP, sp.NewTaddr(sp.NO_IP, sp.NO_PORT))
 	if err != nil {
 		dbg.DFatalf("Error Listen: %v", err)
 	}
@@ -160,7 +160,7 @@ func (s *FrontEnd) userHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Please specify username and password", http.StatusBadRequest)
 		return
 	}
-	var res proto.UserRep
+	var res proto.SNUserRep
 	// Check username and password
 	err := s.userc.RPC("UserSrv.Login", &proto.LoginReq{
 		Username: username,

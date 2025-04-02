@@ -7,7 +7,7 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-func (fsl *FsLib) CreateLeaderFile(pn string, b []byte, lid sp.TleaseId, f sp.Tfence) error {
+func (fsl *FsLib) CreateLeaderFile(pn sp.Tsigmapath, b []byte, lid sp.TleaseId, f sp.Tfence) error {
 	if err := fsl.MkDir(filepath.Dir(pn), 0777); err != nil && !serr.IsErrCode(err, serr.TErrExists) {
 		return err
 	}

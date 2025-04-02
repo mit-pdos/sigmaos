@@ -15,6 +15,7 @@ import (
 	chunkclnt "sigmaos/sched/msched/proc/chunk/clnt"
 	"sigmaos/sched/queue"
 	"sigmaos/sigmaclnt"
+	"sigmaos/sigmaclnt/fslib/dirwatcher"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
 	"sigmaos/util/crash"
@@ -67,7 +68,24 @@ func (lcs *LCSched) RegisterMSched(ctx fs.CtxI, req proto.RegisterMSchedReq, res
 	}
 	lcs.mscheds[req.KernelID] = newResources(req.McpuInt, req.MemInt)
 	lcs.cond.Broadcast()
+	// Monitor the msched
+	go lcs.monitorMSched(req.KernelID)
 	return nil
+}
+
+func (lcs *LCSched) monitorMSched(kernelID string) {
+	// Wait for the msched to be removed
+	if err := dirwatcher.WaitRemove(lcs.sc.FsLib, filepath.Join(sp.MSCHED, kernelID)); err != nil {
+		db.DPrintf(db.ERROR, "WaitRemove msched %v", kernelID)
+	}
+
+	lcs.mu.Lock()
+	defer lcs.mu.Unlock()
+
+	db.DPrintf(db.LCSCHED, "Deregister MSched %v", kernelID)
+
+	// Deregister the msched
+	delete(lcs.mscheds, kernelID)
 }
 
 func (lcs *LCSched) schedule() {

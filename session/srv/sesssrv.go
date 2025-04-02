@@ -8,15 +8,15 @@ import (
 
 	sps "sigmaos/api/spprotsrv"
 	db "sigmaos/debug"
-	"sigmaos/util/io/demux"
 	dialproxyclnt "sigmaos/dialproxy/clnt"
 	netsrv "sigmaos/net/srv"
 	"sigmaos/proc"
 	"sigmaos/serr"
+	spcodec "sigmaos/session/codec"
 	sessp "sigmaos/session/proto"
 	sp "sigmaos/sigmap"
-	spcodec "sigmaos/session/codec"
 	"sigmaos/sigmasrv/stats"
+	"sigmaos/util/io/demux"
 )
 
 type NewSessionI interface {
@@ -89,10 +89,10 @@ func (ssrv *SessSrv) GetSessionTable() *sessionTable {
 func (ssrv *SessSrv) NewConn(p *sp.Tprincipal, conn net.Conn) *demux.DemuxSrv {
 	nc := &netConn{
 		p:      p,
-		conn:   conn,
 		ssrv:   ssrv,
 		sessid: sessp.NoSession,
 	}
+	db.DPrintf(db.SESSSRV, "NewConn %v %v", p, conn)
 	iovm := demux.NewIoVecMap()
 	nc.dmx = demux.NewDemuxSrv(nc, spcodec.NewTransport(conn, iovm))
 	return nc.dmx

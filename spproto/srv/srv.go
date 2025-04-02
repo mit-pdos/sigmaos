@@ -325,11 +325,13 @@ func (ps *ProtSrv) ReadF(args *sp.TreadF, rets *sp.Rread) ([]byte, *sp.Rerror) {
 		return nil, sp.NewRerrorSerr(err)
 	}
 
-	db.DPrintf(db.PROTSRV, "%v: ReadF f %v args {%v}\n", f.Ctx().ClntId(), f, args)
+	db.DPrintf(db.PROTSRV, "%v: ReadF f %v path %v args {%v}\n", f.Ctx().ClntId(), f, f.Path(), args)
 
 	if !watch.IsWatch(f.Obj()) {
 		flk := ps.plt.Acquire(f.Ctx(), f.Path(), lockmap.RLOCK)
 		defer ps.plt.Release(f.Ctx(), flk, lockmap.RLOCK)
+	} else {
+		db.DPrintf(db.PROTSRV, "%v: Watched ReadF (skip locking) f %v path %v args {%v}\n", f.Ctx().ClntId(), f, f.Path(), args)
 	}
 
 	data, err := FidRead(args.Tfid(), f, args.Toffset(), args.Tcount(), args.Tfence())
@@ -432,7 +434,7 @@ func (ps *ProtSrv) Renameat(args *sp.Trenameat, rets *sp.Rrenameat) *sp.Rerror {
 	if err != nil {
 		return sp.NewRerrorSerr(err)
 	}
-	db.DPrintf(db.PROTSRV, "%v: Renameat %v %v %v", oldf.Ctx().ClntId(), oldf, newf, args)
+	db.DPrintf(db.PROTSRV, "%v: Renameat oldf %v oldf.Path %v newf %v newf.Path %v args %v", oldf.Ctx().ClntId(), oldf, oldf.Path(), newf, newf.Path(), args)
 	oo := oldf.Obj()
 	no := newf.Obj()
 	switch d1 := oo.(type) {
@@ -449,6 +451,7 @@ func (ps *ProtSrv) Renameat(args *sp.Trenameat, rets *sp.Rrenameat) *sp.Rerror {
 		if err != nil {
 			return sp.NewRerrorSerr(serr.NewErr(serr.TErrNotfound, args.OldName))
 		}
+		db.DPrintf(db.PROTSRV, "%v: Renameat oldf %v dold.Path %v newf %v dnew.Path %v args %v", oldf.Ctx().ClntId(), oldf, d1.Path(), newf, d2.Path(), args)
 		if err := ps.RenameAtObj(oldf, newf, d1, d2, args.OldName, args.NewName, o, args.Tfence()); err != nil {
 			return sp.NewRerrorSerr(err)
 		}

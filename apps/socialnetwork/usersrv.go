@@ -97,7 +97,7 @@ func (usrv *UserSrv) CheckUser(ctx fs.CtxI, req proto.CheckUserReq, res *proto.C
 	return nil
 }
 
-func (usrv *UserSrv) RegisterUser(ctx fs.CtxI, req proto.RegisterUserReq, res *proto.UserRep) error {
+func (usrv *UserSrv) RegisterUser(ctx fs.CtxI, req proto.RegisterUserReq, res *proto.SNUserRep) error {
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_USER, "Register user at %v: %v\n", usrv.sid, req)
 	res.Ok = "No"
 	user, err := usrv.getUserbyUname(req.Username)
@@ -136,7 +136,7 @@ func (usrv *UserSrv) getNextUserId() int64 {
 	return int64(usrv.sid)*1e10 + int64(usrv.incCountSafe())
 }
 
-func (usrv *UserSrv) Login(ctx fs.CtxI, req proto.LoginReq, res *proto.UserRep) error {
+func (usrv *UserSrv) Login(ctx fs.CtxI, req proto.LoginReq, res *proto.SNUserRep) error {
 	t0 := time.Now()
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_USER, "User login with %v: %v\n", usrv.sid, req)
 	res.Ok = "Login Failure."

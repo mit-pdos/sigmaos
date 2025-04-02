@@ -3,6 +3,8 @@ package mr
 import (
 	"fmt"
 	"hash/fnv"
+	"path/filepath"
+	"strings"
 
 	"github.com/dustin/go-humanize"
 	"github.com/mitchellh/mapstructure"
@@ -61,11 +63,15 @@ func NewResult(data interface{}) (*Result, error) {
 
 // Each bin has a slice of splits.  Assign splits of files to a bin
 // until the bin is full
-func NewBins(fsl *fslib.FsLib, dir string, maxbinsz, splitsz sp.Tlength) ([]Bin, error) {
+func NewBins(fsl *fslib.FsLib, inputDir string, swapLocalForAny bool, maxbinsz, splitsz sp.Tlength) ([]Bin, error) {
 	bins := make([]Bin, 0)
 	binsz := uint64(0)
 	bin := Bin{}
 
+	dir := inputDir
+	if swapLocalForAny {
+		dir = strings.ReplaceAll(dir, sp.LOCAL, sp.ANY)
+	}
 	sts, err := fsl.GetDir(dir)
 	if err != nil {
 		return nil, err
@@ -76,7 +82,7 @@ func NewBins(fsl *fslib.FsLib, dir string, maxbinsz, splitsz sp.Tlength) ([]Bin,
 			if i+n > st.LengthUint64() {
 				n = st.LengthUint64() - i
 			}
-			split := mr.Split{dir + "/" + st.Name, sp.Toffset(i), sp.Tlength(n)}
+			split := mr.Split{filepath.Join(inputDir, st.Name), sp.Toffset(i), sp.Tlength(n)}
 			bin = append(bin, split)
 			binsz += n
 			if binsz+uint64(splitsz) > uint64(maxbinsz) { // bin full?

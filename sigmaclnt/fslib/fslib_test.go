@@ -1153,7 +1153,7 @@ func TestUnionDir(t *testing.T) {
 	err = ts.MkEndpointFile(filepath.Join(pathname, DIR1, "namedself0"), newEndpoint(t, ts, pathname))
 	assert.Nil(ts.T, err, "MkEndpointFile")
 
-	newep := sp.NewEndpoint(sp.INTERNAL_EP, []*sp.Taddr{sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, 2222)})
+	newep := sp.NewEndpoint(sp.INTERNAL_EP, []*sp.Taddr{sp.NewTaddr(sp.NO_IP, 2222)})
 	err = ts.MkEndpointFile(filepath.Join(pathname, DIR1, "namedself1"), newep)
 	assert.Nil(ts.T, err, "EndpointService")
 
@@ -1165,11 +1165,11 @@ func TestUnionDir(t *testing.T) {
 	assert.Equal(t, nil, err)
 	assert.True(t, sp.Present(sts, path.Tpathname{"namedself0", "namedself1"}), DIR1)
 
-	sts, err = ts.GetDir(filepath.Join(pathname, DIR1, sp.LOCAL) + "/")
+	sts, err = ts.GetDir(filepath.Join(pathname, DIR1, sp.ANY) + "/")
 	assert.Equal(t, nil, err)
 	assert.True(t, sp.Present(sts, path.Tpathname{DIR1}), DIR1)
 
-	pn, err := ts.ResolveMounts(filepath.Join(pathname, DIR1, sp.LOCAL))
+	pn, err := ts.ResolveMounts(filepath.Join(pathname, DIR1, sp.ANY))
 	assert.Equal(t, nil, err)
 	sts, err = ts.GetDir(pn)
 	assert.Nil(t, err)
@@ -1191,7 +1191,7 @@ func TestUnionRoot(t *testing.T) {
 	pn1 := filepath.Join(pathname, "namedself1")
 	err := ts.MkEndpointFile(pn0, newEndpoint(t, ts, pathname))
 	assert.Nil(ts.T, err, "MkEndpointFile")
-	newep := sp.NewEndpoint(sp.INTERNAL_EP, []*sp.Taddr{sp.NewTaddr("xxx", sp.INNER_CONTAINER_IP, sp.NO_PORT)})
+	newep := sp.NewEndpoint(sp.INTERNAL_EP, []*sp.Taddr{sp.NewTaddr("xxx", sp.NO_PORT)})
 	err = ts.MkEndpointFile(pn1, newep)
 	assert.Nil(ts.T, err, "MkEndpointFile")
 
@@ -1355,7 +1355,7 @@ func TestEndpointUnion(t *testing.T) {
 	err := ts.MkDir(dn, 0777)
 	assert.Nil(ts.T, err, DIR1)
 
-	newep := sp.NewEndpoint(sp.INTERNAL_EP, []*sp.Taddr{sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, 1111)})
+	newep := sp.NewEndpoint(sp.INTERNAL_EP, []*sp.Taddr{sp.NewTaddr(sp.NO_IP, 1111)})
 	err = ts.MkEndpointFile(filepath.Join(pathname, DIR1, "namedself0"), newep)
 	assert.Nil(ts.T, err, "MkEndpointFile")
 

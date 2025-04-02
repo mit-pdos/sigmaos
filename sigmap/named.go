@@ -24,7 +24,7 @@ const (
 	REALMDREL   = "realmd"
 	REALMD      = NAMED + REALMREL + "/" + REALMDREL
 	REALMSREL   = "realms"
-	REALMS      = REALMD + "/" + REALMSREL
+	REALMS      = NAMED + "/" + REALMSREL
 	BOOTREL     = "boot"
 	BOOT        = NAMED + BOOTREL + "/"
 	PROCDREL    = "procd"

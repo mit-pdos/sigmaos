@@ -13,12 +13,12 @@ import (
 	"sigmaos/apps/hotel"
 	"sigmaos/benchmarks"
 	db "sigmaos/debug"
-	linuxsched "sigmaos/util/linux/sched"
 	"sigmaos/proc"
 	mschedclnt "sigmaos/sched/msched/clnt"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
+	linuxsched "sigmaos/util/linux/sched"
 	"sigmaos/util/perf"
 	"strconv"
 	"testing"
@@ -203,99 +203,83 @@ func TestCompile(t *testing.T) {
 
 // Test how long it takes to init a semaphore.
 func TestMicroInitSemaphore(t *testing.T) {
-	rootts, err1 := test.NewTstateWithRealms(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts1, err1 := test.NewRealmTstate(rootts, REALM1)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
+	defer mrts.Shutdown()
+
 	rs := benchmarks.NewResults(N_TRIALS, benchmarks.OPS)
-	newOutDir(ts1)
-	_, is := newNSemaphores(ts1, N_TRIALS)
-	runOps(ts1, is, initSemaphore, rs)
+	newOutDir(mrts.GetRealm(REALM1))
+	_, is := newNSemaphores(mrts.GetRealm(REALM1), N_TRIALS)
+	runOps(mrts.GetRealm(REALM1), is, initSemaphore, rs)
 	printResultSummary(rs)
-	rmOutDir(ts1)
-	rootts.Shutdown()
+	rmOutDir(mrts.GetRealm(REALM1))
 }
 
 // Test how long it takes to up a semaphore.
 func TestMicroUpSemaphore(t *testing.T) {
-	rootts, err1 := test.NewTstateWithRealms(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts1, err1 := test.NewRealmTstate(rootts, REALM1)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
+	defer mrts.Shutdown()
 	rs := benchmarks.NewResults(N_TRIALS, benchmarks.OPS)
-	newOutDir(ts1)
-	_, is := newNSemaphores(ts1, N_TRIALS)
+	newOutDir(mrts.GetRealm(REALM1))
+	_, is := newNSemaphores(mrts.GetRealm(REALM1), N_TRIALS)
 	// Init semaphores first.
 	for _, i := range is {
-		initSemaphore(ts1, i)
+		initSemaphore(mrts.GetRealm(REALM1), i)
 	}
-	runOps(ts1, is, upSemaphore, rs)
+	runOps(mrts.GetRealm(REALM1), is, upSemaphore, rs)
 	printResultSummary(rs)
-	rmOutDir(ts1)
-	rootts.Shutdown()
+	rmOutDir(mrts.GetRealm(REALM1))
 }
 
 // Test how long it takes to down a semaphore.
 func TestMicroDownSemaphore(t *testing.T) {
-	rootts, err1 := test.NewTstateWithRealms(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts1, err1 := test.NewRealmTstate(rootts, REALM1)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
+	defer mrts.Shutdown()
 	rs := benchmarks.NewResults(N_TRIALS, benchmarks.OPS)
-	newOutDir(ts1)
-	_, is := newNSemaphores(ts1, N_TRIALS)
+	newOutDir(mrts.GetRealm(REALM1))
+	_, is := newNSemaphores(mrts.GetRealm(REALM1), N_TRIALS)
 	// Init semaphores first.
 	for _, i := range is {
-		initSemaphore(ts1, i)
-		upSemaphore(ts1, i)
+		initSemaphore(mrts.GetRealm(REALM1), i)
+		upSemaphore(mrts.GetRealm(REALM1), i)
 	}
-	runOps(ts1, is, downSemaphore, rs)
+	runOps(mrts.GetRealm(REALM1), is, downSemaphore, rs)
 	printResultSummary(rs)
-	rmOutDir(ts1)
-	rootts.Shutdown()
+	rmOutDir(mrts.GetRealm(REALM1))
 }
 
 // Test how long it takes to cold Spawn and run the first instruction of
 // hello-world proc
 func TestMicroSpawnWaitStartRealm(t *testing.T) {
-	rootts, err1 := test.NewTstateWithRealms(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-
-	ts1, err1 := test.NewRealmTstate(rootts, REALM1)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
+	defer mrts.Shutdown()
 
 	if PREWARM_REALM {
 		rs0 := benchmarks.NewResults(N_TRIALS, benchmarks.OPS)
 		ps, is := newNProcs(N_TRIALS, "sleeper", []string{"1us", OUT_DIR}, nil, proc.Tmcpu(0))
-		runOps(ts1, is, spawnWaitStartProc, rs0)
-		waitExitProcs(ts1, ps)
+		runOps(mrts.GetRealm(REALM1), is, spawnWaitStartProc, rs0)
+		waitExitProcs(mrts.GetRealm(REALM1), ps)
 	}
 
 	rs := benchmarks.NewResults(N_TRIALS, benchmarks.OPS)
-	newOutDir(ts1)
+	newOutDir(mrts.GetRealm(REALM1))
 	ps, is := newNProcs(N_TRIALS, "spawn-latency", []string{"1us", OUT_DIR}, nil, proc.Tmcpu(0))
-	runOps(ts1, is, spawnWaitStartProc, rs)
-	waitExitProcs(ts1, ps)
+	runOps(mrts.GetRealm(REALM1), is, spawnWaitStartProc, rs)
+	waitExitProcs(mrts.GetRealm(REALM1), ps)
 	db.DPrintf(db.BENCH, "Results:\n%v", rs)
 	printResultSummary(rs)
-	rmOutDir(ts1)
-	rootts.Shutdown()
+	rmOutDir(mrts.GetRealm(REALM1))
 }
 
 // Test how long it takes to cold Spawn, run, and WaitExit the rust
@@ -306,24 +290,21 @@ func TestMicroSpawnWaitStartNode(t *testing.T) {
 	// const PROG = "sleeper"
 	const PROG = "spawn-latency"
 
-	rootts, err1 := test.NewTstateWithRealms(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts1, err1 := test.NewRealmTstate(rootts, REALM1)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
+	defer mrts.Shutdown()
 
-	sts, err := rootts.GetDir(sp.MSCHED)
+	sts, err := mrts.GetRoot().GetDir(sp.MSCHED)
 	kernels := sp.Names(sts)
 	kernel0 := kernels[0]
 
-	err = rootts.BootMinNode(N)
+	err = mrts.GetRoot().BootMinNode(N)
 	assert.Nil(t, err, "Boot node: %v", err)
 	db.DPrintf(db.TEST, "Done boot node %d", N)
 
-	sts, err = rootts.GetDir(sp.MSCHED)
+	sts, err = mrts.GetRoot().GetDir(sp.MSCHED)
 	kernels = sp.Names(sts)
 	kernel1 := ""
 	for _, n := range kernels {
@@ -337,9 +318,9 @@ func TestMicroSpawnWaitStartNode(t *testing.T) {
 		db.DPrintf(db.TEST, "prewarm: spawn on %v\n", kernel0)
 		p := proc.NewProc(PROG, []string{"1us", OUT_DIR})
 		p.SetKernels([]string{kernel0})
-		err := ts1.Spawn(p)
+		err := mrts.GetRealm(REALM1).Spawn(p)
 		assert.Nil(t, err, "Spawn")
-		_, err = ts1.WaitExit(p.GetPid())
+		_, err = mrts.GetRealm(REALM1).WaitExit(p.GetPid())
 		assert.Nil(t, err, "WaitExit")
 	}
 
@@ -349,80 +330,67 @@ func TestMicroSpawnWaitStartNode(t *testing.T) {
 	s := time.Now()
 	p := proc.NewProc(PROG, []string{"1us", OUT_DIR})
 	p.SetKernels([]string{kernel1})
-	err = ts1.Spawn(p)
+	err = mrts.GetRealm(REALM1).Spawn(p)
 	assert.Nil(t, err, "Spawn")
-	_, err = ts1.WaitExit(p.GetPid())
+	_, err = mrts.GetRealm(REALM1).WaitExit(p.GetPid())
 	assert.Nil(t, err, "WaitExit")
 	db.DPrintf(db.BENCH, "Results: %v Cold start %v", kernel1, time.Since(s))
-
-	rootts.Shutdown()
 }
 
 // Test how long it takes to Spawn, run, and WaitExit a 5ms proc.
 func TestMicroSpawnWaitExit5msSleeper(t *testing.T) {
-	rootts, err1 := test.NewTstateWithRealms(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts1, err1 := test.NewRealmTstate(rootts, REALM1)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
+	defer mrts.Shutdown()
+
 	if PREWARM_REALM {
-		warmupRealm(ts1, []string{"sleeper"})
+		warmupRealm(mrts.GetRealm(REALM1), []string{"sleeper"})
 	}
 	rs := benchmarks.NewResults(N_TRIALS, benchmarks.OPS)
-	newOutDir(ts1)
+	newOutDir(mrts.GetRealm(REALM1))
 	_, ps := newNProcs(N_TRIALS, "sleeper", []string{"5000us", OUT_DIR}, nil, 1)
-	runOps(ts1, ps, runProc, rs)
+	runOps(mrts.GetRealm(REALM1), ps, runProc, rs)
 	printResultSummary(rs)
-	rmOutDir(ts1)
-	rootts.Shutdown()
+	rmOutDir(mrts.GetRealm(REALM1))
 }
 
 // Test the throughput of spawning procs.
 func TestMicroSpawnBurstTpt(t *testing.T) {
-	rootts, err1 := test.NewTstateWithRealms(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts1, err1 := test.NewRealmTstate(rootts, REALM1)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
+	defer mrts.Shutdown()
+
 	rs := benchmarks.NewResults(N_TRIALS, benchmarks.OPS)
 	db.DPrintf(db.ALWAYS, "SpawnBursting %v procs (ncore=%v) with max parallelism %v", N_PROC, MCPU, MAX_PARALLEL)
 	ps, _ := newNProcs(N_PROC, "sleeper", []string{"0s", ""}, nil, proc.Tmcpu(MCPU))
-	runOps(ts1, []interface{}{ps}, spawnBurstWaitStartProcs, rs)
+	runOps(mrts.GetRealm(REALM1), []interface{}{ps}, spawnBurstWaitStartProcs, rs)
 	printResultSummary(rs)
-	waitExitProcs(ts1, ps)
-	rootts.Shutdown()
+	waitExitProcs(mrts.GetRealm(REALM1), ps)
 }
 
 func TestMicroWarmupRealm(t *testing.T) {
-	rootts, err1 := test.NewTstateWithRealms(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts1, err1 := test.NewRealmTstate(rootts, REALM1)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
+	defer mrts.Shutdown()
+
 	rs := benchmarks.NewResults(1, benchmarks.OPS)
-	runOps(ts1, []interface{}{"spawn-latency"}, warmupRealmBench, rs)
+	runOps(mrts.GetRealm(REALM1), []interface{}{"spawn-latency"}, warmupRealmBench, rs)
 	printResultSummary(rs)
-	rootts.Shutdown()
 }
 
 func TestMicroMSchedSpawn(t *testing.T) {
-	rootts, err1 := test.NewTstateWithRealms(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts1, err1 := test.NewRealmTstate(rootts, REALM1)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
+	defer mrts.Shutdown()
+
 	rs := benchmarks.NewResults(1, benchmarks.OPS)
 
 	db.DPrintf(db.BENCH, "rust %v ux %v dummy %v lc %v prewarm %v kpref %v nclnt %v durs %v rps %v skipstats %v", USE_RUST_PROC, DOWNLOAD_FROM_UX, USE_DUMMY_PROC, SPAWN_BENCH_LC_PROC, PREWARM_REALM, WITH_KERNEL_PREF, N_CLNT, MSCHED_DURS, MSCHED_MAX_RPS, SKIPSTATS)
@@ -439,8 +407,8 @@ func TestMicroMSchedSpawn(t *testing.T) {
 		prog = sp.DUMMY_PROG
 	}
 
-	sts, err := rootts.GetDir(sp.MSCHED)
-	assert.Nil(rootts.T, err, "Err GetDir msched: %v", err)
+	sts, err := mrts.GetRoot().GetDir(sp.MSCHED)
+	assert.Nil(mrts.GetRoot().T, err, "Err GetDir msched: %v", err)
 	kernels := sp.Names(sts)
 	db.DPrintf(db.TEST, "Kernels %v", kernels)
 
@@ -450,12 +418,12 @@ func TestMicroMSchedSpawn(t *testing.T) {
 	p1 := proc.NewProc("sleeper", []string{"1ms", "name/"})
 	p1.SetKernels([]string{kernels[0]})
 	p1s := []*proc.Proc{p1}
-	spawnProcs(ts1, p1s)
-	waitStartProcs(ts1, p1s)
-	waitExitProcs(ts1, p1s)
+	spawnProcs(mrts.GetRealm(REALM1), p1s)
+	waitStartProcs(mrts.GetRealm(REALM1), p1s)
+	waitExitProcs(mrts.GetRealm(REALM1), p1s)
 	if PREWARM_REALM {
 		db.DPrintf(db.TEST, "Warm up remainder of the realm for sleeper")
-		warmupRealm(ts1, []string{"sleeper"})
+		warmupRealm(mrts.GetRealm(REALM1), []string{"sleeper"})
 	}
 	if !USE_DUMMY_PROC {
 		// Cold-start the first target proc to download the bin from S3
@@ -463,10 +431,10 @@ func TestMicroMSchedSpawn(t *testing.T) {
 		p2 := proc.NewProc(prog, nil)
 		p2.SetKernels([]string{kernels[0]})
 		p2s := []*proc.Proc{p2}
-		spawnProcs(ts1, p2s)
-		waitStartProcs(ts1, p2s)
+		spawnProcs(mrts.GetRealm(REALM1), p2s)
+		waitStartProcs(mrts.GetRealm(REALM1), p2s)
 		if PREWARM_REALM {
-			warmupRealm(ts1, []string{prog})
+			warmupRealm(mrts.GetRealm(REALM1), []string{prog})
 		}
 	}
 
@@ -475,18 +443,18 @@ func TestMicroMSchedSpawn(t *testing.T) {
 
 	done := make(chan bool)
 	// Prep MSched job
-	mschedJobs, ji := newMSchedJobs(ts1, N_CLNT, MSCHED_DURS, MSCHED_MAX_RPS, prog, func(sc *sigmaclnt.SigmaClnt, pid sp.Tpid, kernelpref []string) time.Duration {
+	mschedJobs, ji := newMSchedJobs(mrts.GetRealm(REALM1), N_CLNT, MSCHED_DURS, MSCHED_MAX_RPS, prog, func(sc *sigmaclnt.SigmaClnt, pid sp.Tpid, kernelpref []string) time.Duration {
 		if USE_RUST_PROC {
-			return runRustSpawnBenchProc(ts1, sc, prog, pid, kernelpref)
+			return runRustSpawnBenchProc(mrts.GetRealm(REALM1), sc, prog, pid, kernelpref)
 		} else if USE_DUMMY_PROC {
-			return runDummySpawnBenchProc(ts1, sc, pid, SPAWN_BENCH_LC_PROC)
+			return runDummySpawnBenchProc(mrts.GetRealm(REALM1), sc, pid, SPAWN_BENCH_LC_PROC)
 		} else {
-			return runSpawnBenchProc(ts1, sc, pid, kernelpref)
+			return runSpawnBenchProc(mrts.GetRealm(REALM1), sc, pid, kernelpref)
 		}
 	}, kernels, WITH_KERNEL_PREF, SKIPSTATS)
 	// Run MSched job
 	go func() {
-		runOps(ts1, ji, runMSched, rs)
+		runOps(mrts.GetRealm(REALM1), ji, runMSched, rs)
 		done <- true
 	}()
 	// Wait for msched jobs to set up.
@@ -501,7 +469,6 @@ func TestMicroMSchedSpawn(t *testing.T) {
 	db.DPrintf(db.TEST, "MSched load bench done.")
 
 	printResultSummary(rs)
-	rootts.Shutdown()
 }
 
 // Test the throughput of spawning procs.
@@ -510,21 +477,19 @@ func TestMicroHTTPLoadGen(t *testing.T) {
 }
 
 func TestAppMR(t *testing.T) {
-	rootts, err1 := test.NewTstateWithRealms(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts1, err1 := test.NewRealmTstate(rootts, REALM1)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
+	defer mrts.Shutdown()
+
 	if PREWARM_REALM {
-		warmupRealm(ts1, []string{"mr-coord", "mr-m-grep", "mr-r-grep", "mr-m-wc", "mr-r-wc"})
+		warmupRealm(mrts.GetRealm(REALM1), []string{"mr-coord", "mr-m-grep", "mr-r-grep", "mr-m-wc", "mr-r-wc"})
 	}
 	rs := benchmarks.NewResults(1, benchmarks.E2E)
-	p := newRealmPerf(ts1)
+	p := newRealmPerf(mrts.GetRealm(REALM1))
 	defer p.Done()
-	jobs, apps := newNMRJobs(ts1, p, 1, MR_APP, chooseMRJobRoot(ts1), proc.Tmem(MR_MEM_REQ))
+	jobs, apps := newNMRJobs(mrts.GetRealm(REALM1), p, 1, MR_APP, chooseMRJobRoot(mrts.GetRealm(REALM1)), proc.Tmem(MR_MEM_REQ))
 	go func() {
 		for _, j := range jobs {
 			// Wait until ready
@@ -533,27 +498,24 @@ func TestAppMR(t *testing.T) {
 			j.ready <- true
 		}
 	}()
-	monitorCPUUtil(ts1, p)
-	runOps(ts1, apps, runMR, rs)
+	monitorCPUUtil(mrts.GetRealm(REALM1), p)
+	runOps(mrts.GetRealm(REALM1), apps, runMR, rs)
 	printResultSummary(rs)
-	rootts.Shutdown()
 }
 
 func runKVTest(t *testing.T, nReplicas int) {
-	rootts, err1 := test.NewTstateWithRealms(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts1, err1 := test.NewRealmTstate(rootts, REALM1)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
+	defer mrts.Shutdown()
+
 	rs := benchmarks.NewResults(1, benchmarks.E2E)
-	p := newRealmPerf(ts1)
+	p := newRealmPerf(mrts.GetRealm(REALM1))
 	defer p.Done()
 	nclerks := []int{N_CLERK}
 	db.DPrintf(db.ALWAYS, "Running with %v clerks", N_CLERK)
-	jobs, ji := newNKVJobs(ts1, 1, N_KVD, nReplicas, nclerks, nil, CLERK_DURATION, proc.Tmcpu(KVD_MCPU), proc.Tmcpu(CLERK_MCPU), KV_AUTO, REDIS_ADDR)
+	jobs, ji := newNKVJobs(mrts.GetRealm(REALM1), 1, N_KVD, nReplicas, nclerks, nil, CLERK_DURATION, proc.Tmcpu(KVD_MCPU), proc.Tmcpu(CLERK_MCPU), KV_AUTO, REDIS_ADDR)
 	go func() {
 		for _, j := range jobs {
 			// Wait until ready
@@ -562,11 +524,10 @@ func runKVTest(t *testing.T, nReplicas int) {
 			j.ready <- true
 		}
 	}()
-	monitorCPUUtil(ts1, p)
+	monitorCPUUtil(mrts.GetRealm(REALM1), p)
 	db.DPrintf(db.TEST, "runOps")
-	runOps(ts1, ji, runKV, rs)
+	runOps(mrts.GetRealm(REALM1), ji, runKV, rs)
 	printResultSummary(rs)
-	rootts.Shutdown()
 }
 
 func TestAppKVUnrepl(t *testing.T) {
@@ -578,20 +539,18 @@ func TestAppKVRepl(t *testing.T) {
 }
 
 func TestAppCached(t *testing.T) {
-	rootts, err1 := test.NewTstateWithRealms(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts1, err1 := test.NewRealmTstate(rootts, REALM1)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
+	defer mrts.Shutdown()
+
 	rs := benchmarks.NewResults(1, benchmarks.E2E)
-	p := newRealmPerf(ts1)
+	p := newRealmPerf(mrts.GetRealm(REALM1))
 	defer p.Done()
 	const NKEYS = 100
 	db.DPrintf(db.ALWAYS, "Running with %v clerks", N_CLERK)
-	jobs, ji := newNCachedJobs(ts1, 1, NKEYS, N_KVD, N_CLERK, CLERK_DURATION, proc.Tmcpu(CLERK_MCPU), proc.Tmcpu(KVD_MCPU))
+	jobs, ji := newNCachedJobs(mrts.GetRealm(REALM1), 1, NKEYS, N_KVD, N_CLERK, CLERK_DURATION, proc.Tmcpu(CLERK_MCPU), proc.Tmcpu(KVD_MCPU))
 	go func() {
 		for _, j := range jobs {
 			// Wait until ready
@@ -600,86 +559,76 @@ func TestAppCached(t *testing.T) {
 			j.ready <- true
 		}
 	}()
-	monitorCPUUtil(ts1, p)
-	runOps(ts1, ji, runCached, rs)
+	monitorCPUUtil(mrts.GetRealm(REALM1), p)
+	runOps(mrts.GetRealm(REALM1), ji, runCached, rs)
 	printResultSummary(rs)
-	rootts.Shutdown()
 }
 
 // Burst a bunch of spinning procs, and see how long it takes for all of them
 // to start.
 func TestRealmBurst(t *testing.T) {
-	rootts, err1 := test.NewTstateWithRealms(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts1, err1 := test.NewRealmTstate(rootts, REALM1)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
-	ncores := countClusterCores(rootts) - 1
+	defer mrts.Shutdown()
+
+	ncores := countClusterCores(mrts.GetRoot()) - 1
 	rs := benchmarks.NewResults(1, benchmarks.E2E)
-	newOutDir(ts1)
+	newOutDir(mrts.GetRealm(REALM1))
 	// Find the total number of cores available for spinners across all machines.
 	// We need to get this in order to find out how many spinners to start.
 	db.DPrintf(db.ALWAYS, "Bursting %v spinning procs", ncores)
 	ps, _ := newNProcs(int(ncores), "spinner", []string{OUT_DIR}, nil, 1)
-	p := newRealmPerf(ts1)
+	p := newRealmPerf(mrts.GetRealm(REALM1))
 	defer p.Done()
-	monitorCPUUtil(ts1, p)
-	runOps(ts1, []interface{}{ps}, spawnBurstWaitStartProcs, rs)
+	monitorCPUUtil(mrts.GetRealm(REALM1), p)
+	runOps(mrts.GetRealm(REALM1), []interface{}{ps}, spawnBurstWaitStartProcs, rs)
 	printResultSummary(rs)
-	evictProcs(ts1, ps)
-	rmOutDir(ts1)
-	rootts.Shutdown()
+	evictProcs(mrts.GetRealm(REALM1), ps)
+	rmOutDir(mrts.GetRealm(REALM1))
 }
 
 func TestLambdaBurst(t *testing.T) {
-	rootts, err1 := test.NewTstateWithRealms(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts1, err1 := test.NewRealmTstate(rootts, REALM1)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
+	defer mrts.Shutdown()
+
 	rs := benchmarks.NewResults(1, benchmarks.E2E)
-	newOutDir(ts1)
+	newOutDir(mrts.GetRealm(REALM1))
 	N_LAMBDAS := 720
 	db.DPrintf(db.ALWAYS, "Invoking %v lambdas", N_LAMBDAS)
-	ss, is := newNSemaphores(ts1, N_LAMBDAS)
+	ss, is := newNSemaphores(mrts.GetRealm(REALM1), N_LAMBDAS)
 	// Init semaphores first.
 	for _, i := range is {
-		initSemaphore(ts1, i)
+		initSemaphore(mrts.GetRealm(REALM1), i)
 	}
-	runOps(ts1, []interface{}{ss}, invokeWaitStartLambdas, rs)
+	runOps(mrts.GetRealm(REALM1), []interface{}{ss}, invokeWaitStartLambdas, rs)
 	printResultSummary(rs)
-	rmOutDir(ts1)
-	rootts.Shutdown()
+	rmOutDir(mrts.GetRealm(REALM1))
 }
 
 func TestLambdaInvokeWaitStart(t *testing.T) {
-	rootts, err1 := test.NewTstateWithRealms(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts1, err1 := test.NewRealmTstate(rootts, REALM1)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
+	defer mrts.Shutdown()
+
 	rs := benchmarks.NewResults(720, benchmarks.E2E)
-	newOutDir(ts1)
+	newOutDir(mrts.GetRealm(REALM1))
 	N_LAMBDAS := 640
 	db.DPrintf(db.ALWAYS, "Invoking %v lambdas", N_LAMBDAS)
-	_, is := newNSemaphores(ts1, N_LAMBDAS)
+	_, is := newNSemaphores(mrts.GetRealm(REALM1), N_LAMBDAS)
 	// Init semaphores first.
 	for _, i := range is {
-		initSemaphore(ts1, i)
+		initSemaphore(mrts.GetRealm(REALM1), i)
 	}
-	runOps(ts1, is, invokeWaitStartOneLambda, rs)
+	runOps(mrts.GetRealm(REALM1), is, invokeWaitStartOneLambda, rs)
 	printResultSummary(rs)
-	rmOutDir(ts1)
-	rootts.Shutdown()
+	rmOutDir(mrts.GetRealm(REALM1))
 }
 
 // Start a realm with a long-running BE mr job. Then, start a realm with an LC
@@ -687,42 +636,35 @@ func TestLambdaInvokeWaitStart(t *testing.T) {
 // watch the realm-level software balance resource requests across realms.
 func TestRealmBalanceMRHotel(t *testing.T) {
 	done := make(chan bool)
-	rootts, err1 := test.NewTstateWithRealms(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{REALM2, REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	blockers := blockMem(rootts, BLOCK_MEM)
+	defer mrts.Shutdown()
+	blockers := blockMem(mrts.GetRoot(), BLOCK_MEM)
 	// Structures for mr
-	ts1, err1 := test.NewRealmTstate(rootts, REALM2)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
 	rs1 := benchmarks.NewResults(1, benchmarks.E2E)
-	p1 := newRealmPerf(ts1)
+	p1 := newRealmPerf(mrts.GetRealm(REALM2))
 	defer p1.Done()
 	// Structure for hotel
-	ts2, err1 := test.NewRealmTstate(rootts, REALM1)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
 	rs2 := benchmarks.NewResults(1, benchmarks.E2E)
-	p2 := newRealmPerf(ts2)
+	p2 := newRealmPerf(mrts.GetRealm(REALM1))
 	defer p2.Done()
 	// Prep MR job
-	mrjobs, mrapps := newNMRJobs(ts1, p1, 1, MR_APP, chooseMRJobRoot(ts1), proc.Tmem(MR_MEM_REQ))
+	mrjobs, mrapps := newNMRJobs(mrts.GetRealm(REALM2), p1, 1, MR_APP, chooseMRJobRoot(mrts.GetRealm(REALM2)), proc.Tmem(MR_MEM_REQ))
 	// Prep Hotel job
-	hotelJobs, ji := newHotelJobs(ts2, p2, true, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, CACHE_TYPE, proc.Tmcpu(HOTEL_CACHE_MCPU), MANUALLY_SCALE_CACHES, SCALE_CACHE_DELAY, N_CACHES_TO_ADD, HOTEL_NGEO, MANUALLY_SCALE_GEO, SCALE_GEO_DELAY, N_GEO_TO_ADD, HOTEL_NGEO_IDX, HOTEL_GEO_SEARCH_RADIUS, HOTEL_GEO_NRESULTS, func(wc *hotel.WebClnt, r *rand.Rand) {
-		//		hotel.RunDSB(ts2.T, 1, wc, r)
+	hotelJobs, ji := newHotelJobs(mrts.GetRealm(REALM1), p2, true, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, CACHE_TYPE, proc.Tmcpu(HOTEL_CACHE_MCPU), MANUALLY_SCALE_CACHES, SCALE_CACHE_DELAY, N_CACHES_TO_ADD, HOTEL_NGEO, MANUALLY_SCALE_GEO, SCALE_GEO_DELAY, N_GEO_TO_ADD, HOTEL_NGEO_IDX, HOTEL_GEO_SEARCH_RADIUS, HOTEL_GEO_NRESULTS, func(wc *hotel.WebClnt, r *rand.Rand) {
+		//		hotel.RunDSB(mrts.GetRealm(REALM1).T, 1, wc, r)
 		err := hotel.RandSearchReq(wc, r)
 		assert.Nil(t, err, "SearchReq %v", err)
 	})
 	// Monitor cores assigned to MR.
-	monitorCPUUtil(ts1, p1)
+	monitorCPUUtil(mrts.GetRealm(REALM2), p1)
 	// Monitor cores assigned to Hotel.
-	monitorCPUUtil(ts2, p2)
+	monitorCPUUtil(mrts.GetRealm(REALM1), p2)
 	// Run Hotel job
 	go func() {
-		runOps(ts2, ji, runHotel, rs2)
+		runOps(mrts.GetRealm(REALM1), ji, runHotel, rs2)
 		done <- true
 	}()
 	// Wait for hotel jobs to set up.
@@ -730,7 +672,7 @@ func TestRealmBalanceMRHotel(t *testing.T) {
 	db.DPrintf(db.TEST, "Hotel setup done.")
 	// Run MR job
 	go func() {
-		runOps(ts1, mrapps, runMR, rs1)
+		runOps(mrts.GetRealm(REALM2), mrapps, runMR, rs1)
 		done <- true
 	}()
 	// Wait for MR jobs to set up.
@@ -740,7 +682,7 @@ func TestRealmBalanceMRHotel(t *testing.T) {
 	if N_CLNT > 1 {
 		// Wait for hotel clients to start up on other machines.
 		db.DPrintf(db.ALWAYS, "Leader waiting for %v clnts", N_CLNT)
-		waitForClnts(rootts, N_CLNT)
+		waitForClnts(mrts.GetRoot(), N_CLNT)
 		db.DPrintf(db.ALWAYS, "Leader done waiting for clnts")
 	}
 	db.DPrintf(db.TEST, "Done waiting for hotel clnts.")
@@ -756,8 +698,7 @@ func TestRealmBalanceMRHotel(t *testing.T) {
 	db.DPrintf(db.TEST, "MR and Hotel done.")
 	printResultSummary(rs1)
 	time.Sleep(20 * time.Second)
-	evictMemBlockers(rootts, blockers)
-	rootts.Shutdown()
+	evictMemBlockers(mrts.GetRoot(), blockers)
 }
 
 // Start a realm with a long-running BE mr job. Then, start a realm with an LC
@@ -765,45 +706,46 @@ func TestRealmBalanceMRHotel(t *testing.T) {
 // watch the realm-level software balance resource requests across realms.
 func TestRealmBalanceHotelRPCImgResize(t *testing.T) {
 	done := make(chan bool)
-	rootts, err1 := test.NewTstateWithRealms(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{REALM2, REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	blockers := blockMem(rootts, BLOCK_MEM)
+	defer mrts.Shutdown()
+	blockers := blockMem(mrts.GetRoot(), BLOCK_MEM)
 	// Structures for imgresize
-	ts1, err1 := test.NewRealmTstate(rootts, REALM2)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
+	//	mrts.GetRealm(REALM2), err1 := test.NewRealmTstate(mrts.GetRoot(), REALM2)
+	//	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+	//		return
+	//	}
 	rs1 := benchmarks.NewResults(1, benchmarks.E2E)
-	p1 := newRealmPerf(ts1)
+	p1 := newRealmPerf(mrts.GetRealm(REALM2))
 	defer p1.Done()
 	if PREWARM_REALM {
-		warmupRealm(ts1, []string{"imgresize", "imgresized"})
+		warmupRealm(mrts.GetRealm(REALM2), []string{"imgresize", "imgresized"})
 	}
 	// Structure for hotel
-	ts2, err1 := test.NewRealmTstate(rootts, REALM1)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
+	//	mrts.GetRealm(REALM1), err1 := test.NewRealmTstate(mrts.GetRoot(), REALM1)
+	//	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+	//		return
+	//	}
 	rs2 := benchmarks.NewResults(1, benchmarks.E2E)
-	p2 := newRealmPerf(ts2)
+	p2 := newRealmPerf(mrts.GetRealm(REALM1))
 	defer p2.Done()
 	// Prep ImgResize job
-	imgJobs, imgApps := newImgResizeRPCJob(ts1, p1, true, IMG_RESIZE_INPUT_PATH, N_IMG_RESIZE_TASKS_PER_SECOND, IMG_RESIZE_DUR, proc.Tmcpu(IMG_RESIZE_MCPU), proc.Tmem(IMG_RESIZE_MEM_MB), IMG_RESIZE_N_ROUNDS, proc.Tmcpu(1000))
+	imgJobs, imgApps := newImgResizeRPCJob(mrts.GetRealm(REALM2), p1, true, IMG_RESIZE_INPUT_PATH, N_IMG_RESIZE_TASKS_PER_SECOND, IMG_RESIZE_DUR, proc.Tmcpu(IMG_RESIZE_MCPU), proc.Tmem(IMG_RESIZE_MEM_MB), IMG_RESIZE_N_ROUNDS, proc.Tmcpu(1000))
 	// Prep Hotel job
-	hotelJobs, ji := newHotelJobs(ts2, p2, true, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, CACHE_TYPE, proc.Tmcpu(HOTEL_CACHE_MCPU), MANUALLY_SCALE_CACHES, SCALE_CACHE_DELAY, N_CACHES_TO_ADD, HOTEL_NGEO, MANUALLY_SCALE_GEO, SCALE_GEO_DELAY, N_GEO_TO_ADD, HOTEL_NGEO_IDX, HOTEL_GEO_SEARCH_RADIUS, HOTEL_GEO_NRESULTS, func(wc *hotel.WebClnt, r *rand.Rand) {
-		//		hotel.RunDSB(ts2.T, 1, wc, r)
+	hotelJobs, ji := newHotelJobs(mrts.GetRealm(REALM1), p2, true, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, CACHE_TYPE, proc.Tmcpu(HOTEL_CACHE_MCPU), MANUALLY_SCALE_CACHES, SCALE_CACHE_DELAY, N_CACHES_TO_ADD, HOTEL_NGEO, MANUALLY_SCALE_GEO, SCALE_GEO_DELAY, N_GEO_TO_ADD, HOTEL_NGEO_IDX, HOTEL_GEO_SEARCH_RADIUS, HOTEL_GEO_NRESULTS, func(wc *hotel.WebClnt, r *rand.Rand) {
+		//		hotel.RunDSB(mrts.GetRealm(REALM1).T, 1, wc, r)
 		err := hotel.RandSearchReq(wc, r)
 		assert.Nil(t, err, "SearchReq %v", err)
 	})
 	// Monitor cores assigned to ImgResize.
-	monitorCPUUtil(ts1, p1)
+	monitorCPUUtil(mrts.GetRealm(REALM2), p1)
 	// Monitor cores assigned to Hotel.
-	monitorCPUUtil(ts2, p2)
+	monitorCPUUtil(mrts.GetRealm(REALM1), p2)
 	// Run Hotel job
 	go func() {
-		runOps(ts2, ji, runHotel, rs2)
+		runOps(mrts.GetRealm(REALM1), ji, runHotel, rs2)
 		done <- true
 	}()
 	// Wait for hotel jobs to set up.
@@ -811,7 +753,7 @@ func TestRealmBalanceHotelRPCImgResize(t *testing.T) {
 	db.DPrintf(db.TEST, "Hotel setup done.")
 	// Run ImgResize job
 	go func() {
-		runOps(ts1, imgApps, runImgResizeRPC, rs1)
+		runOps(mrts.GetRealm(REALM2), imgApps, runImgResizeRPC, rs1)
 		done <- true
 	}()
 	// Wait for imgResize jobs to set up.
@@ -821,7 +763,7 @@ func TestRealmBalanceHotelRPCImgResize(t *testing.T) {
 	if N_CLNT > 1 {
 		// Wait for hotel clients to start up on other machines.
 		db.DPrintf(db.ALWAYS, "Leader waiting for %v clnts", N_CLNT)
-		waitForClnts(rootts, N_CLNT)
+		waitForClnts(mrts.GetRoot(), N_CLNT)
 		db.DPrintf(db.ALWAYS, "Leader done waiting for clnts")
 	}
 	db.DPrintf(db.TEST, "Done waiting for hotel clnts.")
@@ -837,8 +779,7 @@ func TestRealmBalanceHotelRPCImgResize(t *testing.T) {
 	db.DPrintf(db.TEST, "Hotel and ImgResize done.")
 	printResultSummary(rs1)
 	time.Sleep(20 * time.Second)
-	evictMemBlockers(rootts, blockers)
-	rootts.Shutdown()
+	evictMemBlockers(mrts.GetRoot(), blockers)
 }
 
 // Start a realm with a long-running BE mr job. Then, start a realm with an LC
@@ -846,45 +787,38 @@ func TestRealmBalanceHotelRPCImgResize(t *testing.T) {
 // watch the realm-level software balance resource requests across realms.
 func TestRealmBalanceHotelImgResize(t *testing.T) {
 	done := make(chan bool)
-	rootts, err1 := test.NewTstateWithRealms(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{REALM2, REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	blockers := blockMem(rootts, BLOCK_MEM)
+	defer mrts.Shutdown()
+	blockers := blockMem(mrts.GetRoot(), BLOCK_MEM)
 	// Structures for imgresize
-	ts1, err1 := test.NewRealmTstate(rootts, REALM2)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
 	rs1 := benchmarks.NewResults(1, benchmarks.E2E)
-	p1 := newRealmPerf(ts1)
+	p1 := newRealmPerf(mrts.GetRealm(REALM2))
 	defer p1.Done()
 	if PREWARM_REALM {
-		warmupRealm(ts1, []string{"imgresize", "imgresized"})
+		warmupRealm(mrts.GetRealm(REALM2), []string{"imgresize", "imgresized"})
 	}
 	// Structure for hotel
-	ts2, err1 := test.NewRealmTstate(rootts, REALM1)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
 	rs2 := benchmarks.NewResults(1, benchmarks.E2E)
-	p2 := newRealmPerf(ts2)
+	p2 := newRealmPerf(mrts.GetRealm(REALM1))
 	defer p2.Done()
 	// Prep ImgResize job
-	imgJobs, imgApps := newImgResizeJob(ts1, p1, true, IMG_RESIZE_INPUT_PATH, N_IMG_RESIZE_TASKS, N_IMG_RESIZE_INPUTS_PER_TASK, proc.Tmcpu(IMG_RESIZE_MCPU), proc.Tmem(IMG_RESIZE_MEM_MB), IMG_RESIZE_N_ROUNDS, 0)
+	imgJobs, imgApps := newImgResizeJob(mrts.GetRealm(REALM2), p1, true, IMG_RESIZE_INPUT_PATH, N_IMG_RESIZE_TASKS, N_IMG_RESIZE_INPUTS_PER_TASK, proc.Tmcpu(IMG_RESIZE_MCPU), proc.Tmem(IMG_RESIZE_MEM_MB), IMG_RESIZE_N_ROUNDS, 0)
 	// Prep Hotel job
-	hotelJobs, ji := newHotelJobs(ts2, p2, true, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, CACHE_TYPE, proc.Tmcpu(HOTEL_CACHE_MCPU), MANUALLY_SCALE_CACHES, SCALE_CACHE_DELAY, N_CACHES_TO_ADD, HOTEL_NGEO, MANUALLY_SCALE_GEO, SCALE_GEO_DELAY, N_GEO_TO_ADD, HOTEL_NGEO_IDX, HOTEL_GEO_SEARCH_RADIUS, HOTEL_GEO_NRESULTS, func(wc *hotel.WebClnt, r *rand.Rand) {
-		//		hotel.RunDSB(ts2.T, 1, wc, r)
+	hotelJobs, ji := newHotelJobs(mrts.GetRealm(REALM1), p2, true, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, CACHE_TYPE, proc.Tmcpu(HOTEL_CACHE_MCPU), MANUALLY_SCALE_CACHES, SCALE_CACHE_DELAY, N_CACHES_TO_ADD, HOTEL_NGEO, MANUALLY_SCALE_GEO, SCALE_GEO_DELAY, N_GEO_TO_ADD, HOTEL_NGEO_IDX, HOTEL_GEO_SEARCH_RADIUS, HOTEL_GEO_NRESULTS, func(wc *hotel.WebClnt, r *rand.Rand) {
+		//		hotel.RunDSB(mrts.GetRealm(REALM1).T, 1, wc, r)
 		err := hotel.RandSearchReq(wc, r)
 		assert.Nil(t, err, "SearchReq %v", err)
 	})
 	// Monitor cores assigned to ImgResize.
-	monitorCPUUtil(ts1, p1)
+	monitorCPUUtil(mrts.GetRealm(REALM2), p1)
 	// Monitor cores assigned to Hotel.
-	monitorCPUUtil(ts2, p2)
+	monitorCPUUtil(mrts.GetRealm(REALM1), p2)
 	// Run Hotel job
 	go func() {
-		runOps(ts2, ji, runHotel, rs2)
+		runOps(mrts.GetRealm(REALM1), ji, runHotel, rs2)
 		done <- true
 	}()
 	// Wait for hotel jobs to set up.
@@ -892,7 +826,7 @@ func TestRealmBalanceHotelImgResize(t *testing.T) {
 	db.DPrintf(db.TEST, "Hotel setup done.")
 	// Run ImgResize job
 	go func() {
-		runOps(ts1, imgApps, runImgResize, rs1)
+		runOps(mrts.GetRealm(REALM2), imgApps, runImgResize, rs1)
 		done <- true
 	}()
 	// Wait for imgResize jobs to set up.
@@ -902,7 +836,7 @@ func TestRealmBalanceHotelImgResize(t *testing.T) {
 	if N_CLNT > 1 {
 		// Wait for hotel clients to start up on other machines.
 		db.DPrintf(db.ALWAYS, "Leader waiting for %v clnts", N_CLNT)
-		waitForClnts(rootts, N_CLNT)
+		waitForClnts(mrts.GetRoot(), N_CLNT)
 		db.DPrintf(db.ALWAYS, "Leader done waiting for clnts")
 	}
 	db.DPrintf(db.TEST, "Done waiting for hotel clnts.")
@@ -918,8 +852,7 @@ func TestRealmBalanceHotelImgResize(t *testing.T) {
 	db.DPrintf(db.TEST, "Hotel and ImgResize done.")
 	printResultSummary(rs1)
 	time.Sleep(20 * time.Second)
-	evictMemBlockers(rootts, blockers)
-	rootts.Shutdown()
+	evictMemBlockers(mrts.GetRoot(), blockers)
 }
 
 // Start a realm with a long-running BE mr job. Then, start a realm with an LC
@@ -927,45 +860,44 @@ func TestRealmBalanceHotelImgResize(t *testing.T) {
 // watch the realm-level software balance resource requests across realms.
 func TestRealmBalanceMRMR(t *testing.T) {
 	done := make(chan bool)
-	rootts, err1 := test.NewTstateWithRealms(t)
+	realms := []sp.Trealm{}
+	for i := 0; i < N_REALM; i++ {
+		realms = append(realms, sp.Trealm(REALM_BASENAME.String()+strconv.Itoa(i+1)))
+	}
+	mrts, err1 := test.NewMultiRealmTstate(t, realms)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	tses := make([]*test.RealmTstate, N_REALM)
+	defer mrts.Shutdown()
 	rses := make([]*benchmarks.Results, N_REALM)
 	ps := make([]*perf.Perf, N_REALM)
 	mrjobs := make([][]*MRJobInstance, N_REALM)
 	mrapps := make([][]interface{}, N_REALM)
 	// Create structures for MR jobs.
-	for i := range tses {
-		tsn, err1 := test.NewRealmTstate(rootts, sp.Trealm(REALM_BASENAME.String()+strconv.Itoa(i+1)))
-		if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-			return
-		}
-		tses[i] = tsn
+	for i := range realms {
 		rses[i] = benchmarks.NewResults(1, benchmarks.E2E)
-		ps[i] = newRealmPerf(tses[i])
+		ps[i] = newRealmPerf(mrts.GetRealm(realms[i]))
 		defer ps[i].Done()
-		mrjob, mrapp := newNMRJobs(tses[i], ps[i], 1, MR_APP, chooseMRJobRoot(tses[i]), proc.Tmem(MR_MEM_REQ))
+		mrjob, mrapp := newNMRJobs(mrts.GetRealm(realms[i]), ps[i], 1, MR_APP, chooseMRJobRoot(mrts.GetRealm(realms[i])), proc.Tmem(MR_MEM_REQ))
 		mrjobs[i] = mrjob
 		mrapps[i] = mrapp
 	}
 	// Start CPU utilization monitoring.
-	for i := range tses {
-		monitorCPUUtil(tses[i], ps[i])
+	for i := range realms {
+		monitorCPUUtil(mrts.GetRealm(realms[i]), ps[i])
 	}
 	// Initialize MR jobs.
-	for i := range tses {
+	for i := range realms {
 		// Start MR job initialization.
 		go func(ts *test.RealmTstate, mrapp []interface{}, rs *benchmarks.Results) {
 			runOps(ts, mrapp, runMR, rs)
 			done <- true
-		}(tses[i], mrapps[i], rses[i])
+		}(mrts.GetRealm(realms[i]), mrapps[i], rses[i])
 		// Wait for MR job to set up.
 		<-mrjobs[i][0].ready
 	}
 	// Start jobs running, with a small delay between each job start.
-	for i := range tses {
+	for i := range realms {
 		// Kick off MR jobs.
 		mrjobs[i][0].ready <- true
 		db.DPrintf(db.TEST, "Start MR job %v", i+1)
@@ -973,12 +905,11 @@ func TestRealmBalanceMRMR(t *testing.T) {
 		time.Sleep(SLEEP)
 	}
 	// Wait for both jobs to finish.
-	for i := range tses {
+	for i := range realms {
 		<-done
 		db.DPrintf(db.TEST, "Done MR job %v", i+1)
 	}
 	printResultSummary(rses[0])
-	rootts.Shutdown()
 }
 
 // Start a realm with a long-running BE mr job. Then, start a realm with an LC
@@ -986,45 +917,44 @@ func TestRealmBalanceMRMR(t *testing.T) {
 // watch the realm-level software balance resource requests across realms.
 func TestRealmBalanceImgResizeRPCImgResizeRPC(t *testing.T) {
 	done := make(chan bool)
-	rootts, err1 := test.NewTstateWithRealms(t)
+	realms := []sp.Trealm{}
+	for i := 0; i < N_REALM; i++ {
+		realms = append(realms, sp.Trealm(REALM_BASENAME.String()+strconv.Itoa(i+1)))
+	}
+	mrts, err1 := test.NewMultiRealmTstate(t, realms)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	tses := make([]*test.RealmTstate, N_REALM)
+	defer mrts.Shutdown()
 	rses := make([]*benchmarks.Results, N_REALM)
 	ps := make([]*perf.Perf, N_REALM)
 	imgjobs := make([][]*ImgResizeRPCJobInstance, N_REALM)
 	imgapps := make([][]interface{}, N_REALM)
 	// Create structures for imgresize jobs.
-	for i := range tses {
-		tsn, err1 := test.NewRealmTstate(rootts, sp.Trealm(REALM_BASENAME.String()+strconv.Itoa(i+1)))
-		if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-			return
-		}
-		tses[i] = tsn
+	for i := range realms {
 		rses[i] = benchmarks.NewResults(1, benchmarks.E2E)
-		ps[i] = newRealmPerf(tses[i])
+		ps[i] = newRealmPerf(mrts.GetRealm(realms[i]))
 		defer ps[i].Done()
-		imgjob, imgapp := newImgResizeRPCJob(tses[i], ps[i], true, IMG_RESIZE_INPUT_PATH, N_IMG_RESIZE_TASKS_PER_SECOND, IMG_RESIZE_DUR, proc.Tmcpu(IMG_RESIZE_MCPU), proc.Tmem(IMG_RESIZE_MEM_MB), IMG_RESIZE_N_ROUNDS, proc.Tmcpu(1000))
+		imgjob, imgapp := newImgResizeRPCJob(mrts.GetRealm(realms[i]), ps[i], true, IMG_RESIZE_INPUT_PATH, N_IMG_RESIZE_TASKS_PER_SECOND, IMG_RESIZE_DUR, proc.Tmcpu(IMG_RESIZE_MCPU), proc.Tmem(IMG_RESIZE_MEM_MB), IMG_RESIZE_N_ROUNDS, proc.Tmcpu(1000))
 		imgjobs[i] = imgjob
 		imgapps[i] = imgapp
 	}
 	// Start CPU utilization monitoring.
-	for i := range tses {
-		monitorCPUUtil(tses[i], ps[i])
+	for i := range realms {
+		monitorCPUUtil(mrts.GetRealm(realms[i]), ps[i])
 	}
 	// Initialize ImgResizeRPC jobs.
-	for i := range tses {
+	for i := range realms {
 		// Start ImgResizeRPCjob initialization.
 		go func(ts *test.RealmTstate, imgapp []interface{}, rs *benchmarks.Results) {
 			runOps(ts, imgapp, runImgResizeRPC, rs)
 			done <- true
-		}(tses[i], imgapps[i], rses[i])
+		}(mrts.GetRealm(realms[i]), imgapps[i], rses[i])
 		// Wait for ImgResizeRPC job to set up.
 		<-imgjobs[i][0].ready
 	}
 	// Start jobs running, with a small delay between each job start.
-	for i := range tses {
+	for i := range realms {
 		// Kick off ImgResizeRPC jobs.
 		imgjobs[i][0].ready <- true
 		db.DPrintf(db.TEST, "Start ImgResizeRPC job %v", i+1)
@@ -1032,12 +962,11 @@ func TestRealmBalanceImgResizeRPCImgResizeRPC(t *testing.T) {
 		time.Sleep(SLEEP)
 	}
 	// Wait for both jobs to finish.
-	for i := range tses {
+	for i := range realms {
 		<-done
 		db.DPrintf(db.TEST, "Done ImgResizeRPC job %v", i+1)
 	}
 	printResultSummary(rses[0])
-	rootts.Shutdown()
 }
 
 // Start a realm with a long-running BE mr job. Then, start a realm with an LC
@@ -1045,45 +974,44 @@ func TestRealmBalanceImgResizeRPCImgResizeRPC(t *testing.T) {
 // watch the realm-level software balance resource requests across realms.
 func TestRealmBalanceImgResizeImgResize(t *testing.T) {
 	done := make(chan bool)
-	rootts, err1 := test.NewTstateWithRealms(t)
+	realms := []sp.Trealm{}
+	for i := 0; i < N_REALM; i++ {
+		realms = append(realms, sp.Trealm(REALM_BASENAME.String()+strconv.Itoa(i+1)))
+	}
+	mrts, err1 := test.NewMultiRealmTstate(t, realms)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	tses := make([]*test.RealmTstate, N_REALM)
+	defer mrts.Shutdown()
 	rses := make([]*benchmarks.Results, N_REALM)
 	ps := make([]*perf.Perf, N_REALM)
 	imgjobs := make([][]*ImgResizeJobInstance, N_REALM)
 	imgapps := make([][]interface{}, N_REALM)
 	// Create structures for imgresize jobs.
-	for i := range tses {
-		tsn, err1 := test.NewRealmTstate(rootts, sp.Trealm(REALM_BASENAME.String()+strconv.Itoa(i+1)))
-		if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-			return
-		}
-		tses[i] = tsn
+	for i := range realms {
 		rses[i] = benchmarks.NewResults(1, benchmarks.E2E)
-		ps[i] = newRealmPerf(tses[i])
+		ps[i] = newRealmPerf(mrts.GetRealm(realms[i]))
 		defer ps[i].Done()
-		imgjob, imgapp := newImgResizeJob(tses[i], ps[i], true, IMG_RESIZE_INPUT_PATH, N_IMG_RESIZE_TASKS, N_IMG_RESIZE_INPUTS_PER_TASK, proc.Tmcpu(IMG_RESIZE_MCPU), proc.Tmem(IMG_RESIZE_MEM_MB), IMG_RESIZE_N_ROUNDS, proc.Tmcpu(1000))
+		imgjob, imgapp := newImgResizeJob(mrts.GetRealm(realms[i]), ps[i], true, IMG_RESIZE_INPUT_PATH, N_IMG_RESIZE_TASKS, N_IMG_RESIZE_INPUTS_PER_TASK, proc.Tmcpu(IMG_RESIZE_MCPU), proc.Tmem(IMG_RESIZE_MEM_MB), IMG_RESIZE_N_ROUNDS, proc.Tmcpu(1000))
 		imgjobs[i] = imgjob
 		imgapps[i] = imgapp
 	}
 	// Start CPU utilization monitoring.
-	for i := range tses {
-		monitorCPUUtil(tses[i], ps[i])
+	for i := range realms {
+		monitorCPUUtil(mrts.GetRealm(realms[i]), ps[i])
 	}
 	// Initialize ImgResize jobs.
-	for i := range tses {
+	for i := range realms {
 		// Start ImgResize job initialization.
 		go func(ts *test.RealmTstate, imgapp []interface{}, rs *benchmarks.Results) {
 			runOps(ts, imgapp, runImgResize, rs)
 			done <- true
-		}(tses[i], imgapps[i], rses[i])
+		}(mrts.GetRealm(realms[i]), imgapps[i], rses[i])
 		// Wait for ImgResize job to set up.
 		<-imgjobs[i][0].ready
 	}
 	// Start jobs running, with a small delay between each job start.
-	for i := range tses {
+	for i := range realms {
 		// Kick off ImgResize jobs.
 		imgjobs[i][0].ready <- true
 		db.DPrintf(db.TEST, "Start ImgResize job %v", i+1)
@@ -1091,12 +1019,11 @@ func TestRealmBalanceImgResizeImgResize(t *testing.T) {
 		time.Sleep(SLEEP)
 	}
 	// Wait for both jobs to finish.
-	for i := range tses {
+	for i := range realms {
 		<-done
 		db.DPrintf(db.TEST, "Done ImgResize job %v", i+1)
 	}
 	printResultSummary(rses[0])
-	rootts.Shutdown()
 }
 
 // Old realm balance benchmark involving KV & MR.
@@ -1105,43 +1032,36 @@ func TestRealmBalanceImgResizeImgResize(t *testing.T) {
 // realm-level software balance resource requests across realms.
 func TestKVMRRRB(t *testing.T) {
 	done := make(chan bool)
-	rootts, err1 := test.NewTstateWithRealms(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{REALM1, REALM2})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
+	defer mrts.Shutdown()
 	// Structures for mr
-	ts1, err1 := test.NewRealmTstate(rootts, REALM1)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
 	rs1 := benchmarks.NewResults(1, benchmarks.E2E)
-	p1 := newRealmPerf(ts1)
+	p1 := newRealmPerf(mrts.GetRealm(REALM1))
 	defer p1.Done()
 	// Structure for kv
-	ts2, err1 := test.NewRealmTstate(rootts, REALM2)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
 	rs2 := benchmarks.NewResults(1, benchmarks.E2E)
-	p2 := newRealmPerf(ts2)
+	p2 := newRealmPerf(mrts.GetRealm(REALM2))
 	defer p2.Done()
 	// Prep MR job
-	mrjobs, mrapps := newNMRJobs(ts1, p1, 1, MR_APP, chooseMRJobRoot(ts1), proc.Tmem(MR_MEM_REQ))
+	mrjobs, mrapps := newNMRJobs(mrts.GetRealm(REALM1), p1, 1, MR_APP, chooseMRJobRoot(mrts.GetRealm(REALM1)), proc.Tmem(MR_MEM_REQ))
 	// Prep KV job
 	nclerks := []int{N_CLERK}
-	kvjobs, ji := newNKVJobs(ts2, 1, N_KVD, 0, nclerks, nil, CLERK_DURATION, proc.Tmcpu(KVD_MCPU), proc.Tmcpu(CLERK_MCPU), KV_AUTO, REDIS_ADDR)
-	monitorCPUUtil(ts1, p1)
-	monitorCPUUtil(ts2, p2)
+	kvjobs, ji := newNKVJobs(mrts.GetRealm(REALM2), 1, N_KVD, 0, nclerks, nil, CLERK_DURATION, proc.Tmcpu(KVD_MCPU), proc.Tmcpu(CLERK_MCPU), KV_AUTO, REDIS_ADDR)
+	monitorCPUUtil(mrts.GetRealm(REALM1), p1)
+	monitorCPUUtil(mrts.GetRealm(REALM2), p2)
 	// Run KV job
 	go func() {
-		runOps(ts2, ji, runKV, rs2)
+		runOps(mrts.GetRealm(REALM2), ji, runKV, rs2)
 		done <- true
 	}()
 	// Wait for KV jobs to set up.
 	<-kvjobs[0].ready
 	// Run MR job
 	go func() {
-		runOps(ts1, mrapps, runMR, rs1)
+		runOps(mrts.GetRealm(REALM1), mrapps, runMR, rs1)
 		done <- true
 	}()
 	// Wait for MR jobs to set up.
@@ -1157,21 +1077,21 @@ func TestKVMRRRB(t *testing.T) {
 	<-done
 	printResultSummary(rs1)
 	printResultSummary(rs2)
-	rootts.Shutdown()
 }
 
 func testWww(t *testing.T, sigmaos bool) {
-	rootts, err1 := test.NewTstateWithRealms(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts1, err1 := test.NewRealmTstate(rootts, REALM1)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
+	defer func() {
+		if sigmaos {
+			mrts.Shutdown()
+		}
+	}()
 	rs := benchmarks.NewResults(1, benchmarks.E2E)
 	db.DPrintf(db.ALWAYS, "Running with %d clients", N_CLNT)
-	jobs, ji := newWwwJobs(ts1, sigmaos, 1, proc.Tmcpu(WWWD_MCPU), WWWD_REQ_TYPE, N_TRIALS, N_CLNT, N_CLNT_REQ, WWWD_REQ_DELAY)
+	jobs, ji := newWwwJobs(mrts.GetRealm(REALM1), sigmaos, 1, proc.Tmcpu(WWWD_MCPU), WWWD_REQ_TYPE, N_TRIALS, N_CLNT, N_CLNT_REQ, WWWD_REQ_DELAY)
 	go func() {
 		for _, j := range jobs {
 			// Wait until ready
@@ -1181,15 +1101,12 @@ func testWww(t *testing.T, sigmaos bool) {
 		}
 	}()
 	if sigmaos {
-		p := newRealmPerf(ts1)
+		p := newRealmPerf(mrts.GetRealm(REALM1))
 		defer p.Done()
-		monitorCPUUtil(ts1, p)
+		monitorCPUUtil(mrts.GetRealm(REALM1), p)
 	}
-	runOps(ts1, ji, runWww, rs)
+	runOps(mrts.GetRealm(REALM1), ji, runWww, rs)
 	printResultSummary(rs)
-	if sigmaos {
-		rootts.Shutdown()
-	}
 }
 
 func TestWwwSigmaos(t *testing.T) {
@@ -1261,44 +1178,38 @@ func testSocialNet(rootts *test.Tstate, ts1 *test.RealmTstate, p *perf.Perf, sig
 }
 
 func TestSocialNetSigmaos(t *testing.T) {
-	rootts, err1 := test.NewTstateWithRealms(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts1, err1 := test.NewRealmTstate(rootts, REALM1)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
-	p1 := newRealmPerf(ts1)
+	defer mrts.Shutdown()
+
+	p1 := newRealmPerf(mrts.GetRealm(REALM1))
 	defer p1.Done()
-	testSocialNet(rootts, ts1, p1, true)
+	testSocialNet(mrts.GetRoot(), mrts.GetRealm(REALM1), p1, true)
 }
 
 func TestSocialNetK8s(t *testing.T) {
-	rootts, err1 := test.NewTstateWithRealms(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts1, err1 := test.NewRealmTstate(rootts, REALM1)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
-	p1 := newRealmPerf(ts1)
+	defer mrts.Shutdown()
+
+	p1 := newRealmPerf(mrts.GetRealm(REALM1))
 	defer p1.Done()
-	testSocialNet(rootts, ts1, p1, false)
+	testSocialNet(mrts.GetRoot(), mrts.GetRealm(REALM1), p1, false)
 }
 
 func TestHotelSigmaosGeo(t *testing.T) {
 	db.DPrintf(db.ALWAYS, "scaleGeo %v delay %v n2a %v", MANUALLY_SCALE_GEO, SCALE_GEO_DELAY, N_GEO_TO_ADD)
-	rootts, err1 := test.NewTstateWithRealms(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts1, err1 := test.NewRealmTstate(rootts, REALM1)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
-	testHotel(rootts, ts1, nil, true, func(wc *hotel.WebClnt, r *rand.Rand) {
+	defer mrts.Shutdown()
+
+	testHotel(mrts.GetRoot(), mrts.GetRealm(REALM1), nil, true, func(wc *hotel.WebClnt, r *rand.Rand) {
 		_, err := hotel.GeoReq(wc)
 		assert.Nil(t, err, "Error search req: %v", err)
 	})
@@ -1306,57 +1217,52 @@ func TestHotelSigmaosGeo(t *testing.T) {
 
 func TestHotelSigmaosSearch(t *testing.T) {
 	db.DPrintf(db.ALWAYS, "scaleGeo %v delay %v n2a %v", MANUALLY_SCALE_GEO, SCALE_GEO_DELAY, N_GEO_TO_ADD)
-	rootts, err1 := test.NewTstateWithRealms(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts1, err1 := test.NewRealmTstate(rootts, REALM1)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
-	testHotel(rootts, ts1, nil, true, func(wc *hotel.WebClnt, r *rand.Rand) {
+	defer mrts.Shutdown()
+
+	testHotel(mrts.GetRoot(), mrts.GetRealm(REALM1), nil, true, func(wc *hotel.WebClnt, r *rand.Rand) {
 		err := hotel.RandSearchReq(wc, r)
 		assert.Nil(t, err, "Error search req: %v", err)
 	})
 }
 
 func TestHotelDevSigmaosSearchScaleCache(t *testing.T) {
-	rootts, err1 := test.NewTstateWithRealms(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts1, err1 := test.NewRealmTstate(rootts, REALM1)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
+	defer mrts.Shutdown()
+
 	N := 3
-	err := rootts.BootMinNode(N)
+	err := mrts.GetRoot().BootMinNode(N)
 	assert.Nil(t, err, "Boot node: %v", err)
 	db.DPrintf(db.TEST, "Done boot node %d", N)
 	db.DPrintf(db.TEST, "Done boot node %d", N)
-	testHotel(rootts, ts1, nil, true, func(wc *hotel.WebClnt, r *rand.Rand) {
+	testHotel(mrts.GetRoot(), mrts.GetRealm(REALM1), nil, true, func(wc *hotel.WebClnt, r *rand.Rand) {
 		err := hotel.RandSearchReq(wc, r)
 		assert.Nil(t, err, "Error search req: %v", err)
 	})
 }
 
 func TestHotelSigmaosJustCliGeo(t *testing.T) {
-	rootts, err1 := test.NewTstateWithRealms(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	if err1 := waitForRealmCreation(rootts, REALM1); !assert.Nil(t, err1, "Error waitRealmCreation: %v") {
+	if err1 := waitForRealmCreation(mrts.GetRoot(), REALM1); !assert.Nil(t, err1, "Error waitRealmCreation: %v") {
 		return
 	}
-	ts1, err1 := test.NewRealmTstateClnt(rootts, REALM1)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+	if err1 := mrts.AddRealmClnt(REALM1); !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
 	rs := benchmarks.NewResults(1, benchmarks.E2E)
-	clientReady(rootts)
+	clientReady(mrts.GetRoot())
 	// Sleep for a bit
 	time.Sleep(SLEEP)
-	jobs, ji := newHotelJobsCli(ts1, true, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, CACHE_TYPE, proc.Tmcpu(HOTEL_CACHE_MCPU), MANUALLY_SCALE_CACHES, SCALE_CACHE_DELAY, N_CACHES_TO_ADD, HOTEL_NGEO, MANUALLY_SCALE_GEO, SCALE_GEO_DELAY, N_GEO_TO_ADD, HOTEL_NGEO_IDX, HOTEL_GEO_SEARCH_RADIUS, HOTEL_GEO_NRESULTS, func(wc *hotel.WebClnt, r *rand.Rand) {
+	jobs, ji := newHotelJobsCli(mrts.GetRealm(REALM1), true, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, CACHE_TYPE, proc.Tmcpu(HOTEL_CACHE_MCPU), MANUALLY_SCALE_CACHES, SCALE_CACHE_DELAY, N_CACHES_TO_ADD, HOTEL_NGEO, MANUALLY_SCALE_GEO, SCALE_GEO_DELAY, N_GEO_TO_ADD, HOTEL_NGEO_IDX, HOTEL_GEO_SEARCH_RADIUS, HOTEL_GEO_NRESULTS, func(wc *hotel.WebClnt, r *rand.Rand) {
 		_, err := hotel.GeoReq(wc)
 		assert.Nil(t, err, "Error geo req: %v", err)
 	})
@@ -1368,28 +1274,27 @@ func TestHotelSigmaosJustCliGeo(t *testing.T) {
 			j.ready <- true
 		}
 	}()
-	runOps(ts1, ji, runHotel, rs)
+	runOps(mrts.GetRealm(REALM1), ji, runHotel, rs)
 	//	printResultSummary(rs)
 	//	jobs[0].requestK8sStats()
 }
 
 func TestHotelSigmaosJustCliSearch(t *testing.T) {
-	rootts, err1 := test.NewTstateWithRealms(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	if err1 := waitForRealmCreation(rootts, REALM1); !assert.Nil(t, err1, "Error waitRealmCreation: %v") {
+	if err1 := waitForRealmCreation(mrts.GetRoot(), REALM1); !assert.Nil(t, err1, "Error waitRealmCreation: %v") {
 		return
 	}
-	ts1, err1 := test.NewRealmTstateClnt(rootts, REALM1)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+	if err1 := mrts.AddRealmClnt(REALM1); !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
 	rs := benchmarks.NewResults(1, benchmarks.E2E)
-	clientReady(rootts)
+	clientReady(mrts.GetRoot())
 	// Sleep for a bit
 	time.Sleep(SLEEP)
-	jobs, ji := newHotelJobsCli(ts1, true, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, CACHE_TYPE, proc.Tmcpu(HOTEL_CACHE_MCPU), MANUALLY_SCALE_CACHES, SCALE_CACHE_DELAY, N_CACHES_TO_ADD, HOTEL_NGEO, MANUALLY_SCALE_GEO, SCALE_GEO_DELAY, N_GEO_TO_ADD, HOTEL_NGEO_IDX, HOTEL_GEO_SEARCH_RADIUS, HOTEL_GEO_NRESULTS, func(wc *hotel.WebClnt, r *rand.Rand) {
+	jobs, ji := newHotelJobsCli(mrts.GetRealm(REALM1), true, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, CACHE_TYPE, proc.Tmcpu(HOTEL_CACHE_MCPU), MANUALLY_SCALE_CACHES, SCALE_CACHE_DELAY, N_CACHES_TO_ADD, HOTEL_NGEO, MANUALLY_SCALE_GEO, SCALE_GEO_DELAY, N_GEO_TO_ADD, HOTEL_NGEO_IDX, HOTEL_GEO_SEARCH_RADIUS, HOTEL_GEO_NRESULTS, func(wc *hotel.WebClnt, r *rand.Rand) {
 		err := hotel.RandSearchReq(wc, r)
 		assert.Nil(t, err, "Error search req: %v", err)
 	})
@@ -1401,28 +1306,27 @@ func TestHotelSigmaosJustCliSearch(t *testing.T) {
 			j.ready <- true
 		}
 	}()
-	runOps(ts1, ji, runHotel, rs)
+	runOps(mrts.GetRealm(REALM1), ji, runHotel, rs)
 	//	printResultSummary(rs)
 	//	jobs[0].requestK8sStats()
 }
 
 func TestHotelK8sJustCliGeo(t *testing.T) {
-	rootts, err1 := test.NewTstateWithRealms(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	if err1 := waitForRealmCreation(rootts, REALM1); !assert.Nil(t, err1, "Error waitRealmCreation: %v") {
+	if err1 := waitForRealmCreation(mrts.GetRoot(), REALM1); !assert.Nil(t, err1, "Error waitRealmCreation: %v") {
 		return
 	}
-	ts1, err1 := test.NewRealmTstateClnt(rootts, REALM1)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+	if err1 := mrts.AddRealmClnt(REALM1); !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
 	rs := benchmarks.NewResults(1, benchmarks.E2E)
 	db.DPrintf(db.ALWAYS, "Clnt ready")
-	clientReady(rootts)
+	clientReady(mrts.GetRoot())
 	db.DPrintf(db.ALWAYS, "Clnt done waiting")
-	jobs, ji := newHotelJobsCli(ts1, false, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, CACHE_TYPE, proc.Tmcpu(HOTEL_CACHE_MCPU), MANUALLY_SCALE_CACHES, SCALE_CACHE_DELAY, N_CACHES_TO_ADD, HOTEL_NGEO, MANUALLY_SCALE_GEO, SCALE_GEO_DELAY, N_GEO_TO_ADD, HOTEL_NGEO_IDX, HOTEL_GEO_SEARCH_RADIUS, HOTEL_GEO_NRESULTS, func(wc *hotel.WebClnt, r *rand.Rand) {
+	jobs, ji := newHotelJobsCli(mrts.GetRealm(REALM1), false, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, CACHE_TYPE, proc.Tmcpu(HOTEL_CACHE_MCPU), MANUALLY_SCALE_CACHES, SCALE_CACHE_DELAY, N_CACHES_TO_ADD, HOTEL_NGEO, MANUALLY_SCALE_GEO, SCALE_GEO_DELAY, N_GEO_TO_ADD, HOTEL_NGEO_IDX, HOTEL_GEO_SEARCH_RADIUS, HOTEL_GEO_NRESULTS, func(wc *hotel.WebClnt, r *rand.Rand) {
 		_, err := hotel.GeoReq(wc)
 		assert.Nil(t, err, "Error geo req: %v", err)
 	})
@@ -1434,28 +1338,27 @@ func TestHotelK8sJustCliGeo(t *testing.T) {
 			j.ready <- true
 		}
 	}()
-	runOps(ts1, ji, runHotel, rs)
+	runOps(mrts.GetRealm(REALM1), ji, runHotel, rs)
 	//	printResultSummary(rs)
 	//	jobs[0].requestK8sStats()
 }
 
 func TestHotelK8sJustCliSearch(t *testing.T) {
-	rootts, err1 := test.NewTstateWithRealms(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	if err1 := waitForRealmCreation(rootts, REALM1); !assert.Nil(t, err1, "Error waitRealmCreation: %v") {
+	if err1 := waitForRealmCreation(mrts.GetRoot(), REALM1); !assert.Nil(t, err1, "Error waitRealmCreation: %v") {
 		return
 	}
-	ts1, err1 := test.NewRealmTstateClnt(rootts, REALM1)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+	if err1 := mrts.AddRealmClnt(REALM1); !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
 	rs := benchmarks.NewResults(1, benchmarks.E2E)
 	db.DPrintf(db.ALWAYS, "Clnt ready")
-	clientReady(rootts)
+	clientReady(mrts.GetRoot())
 	db.DPrintf(db.ALWAYS, "Clnt done waiting")
-	jobs, ji := newHotelJobsCli(ts1, false, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, CACHE_TYPE, proc.Tmcpu(HOTEL_CACHE_MCPU), MANUALLY_SCALE_CACHES, SCALE_CACHE_DELAY, N_CACHES_TO_ADD, HOTEL_NGEO, MANUALLY_SCALE_GEO, SCALE_GEO_DELAY, N_GEO_TO_ADD, HOTEL_NGEO_IDX, HOTEL_GEO_SEARCH_RADIUS, HOTEL_GEO_NRESULTS, func(wc *hotel.WebClnt, r *rand.Rand) {
+	jobs, ji := newHotelJobsCli(mrts.GetRealm(REALM1), false, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, CACHE_TYPE, proc.Tmcpu(HOTEL_CACHE_MCPU), MANUALLY_SCALE_CACHES, SCALE_CACHE_DELAY, N_CACHES_TO_ADD, HOTEL_NGEO, MANUALLY_SCALE_GEO, SCALE_GEO_DELAY, N_GEO_TO_ADD, HOTEL_NGEO_IDX, HOTEL_GEO_SEARCH_RADIUS, HOTEL_GEO_NRESULTS, func(wc *hotel.WebClnt, r *rand.Rand) {
 		err := hotel.RandSearchReq(wc, r)
 		assert.Nil(t, err, "Error search req: %v", err)
 	})
@@ -1467,143 +1370,134 @@ func TestHotelK8sJustCliSearch(t *testing.T) {
 			j.ready <- true
 		}
 	}()
-	runOps(ts1, ji, runHotel, rs)
+	runOps(mrts.GetRealm(REALM1), ji, runHotel, rs)
 	//	printResultSummary(rs)
 	//	jobs[0].requestK8sStats()
 }
 
 func TestHotelK8sGeo(t *testing.T) {
-	rootts, err1 := test.NewTstateWithRealms(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts1, err1 := test.NewRealmTstate(rootts, REALM1)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
-	testHotel(rootts, ts1, nil, false, func(wc *hotel.WebClnt, r *rand.Rand) {
+	defer mrts.Shutdown()
+
+	testHotel(mrts.GetRoot(), mrts.GetRealm(REALM1), nil, false, func(wc *hotel.WebClnt, r *rand.Rand) {
 		_, err := hotel.GeoReq(wc)
 		assert.Nil(t, err, "Error geo req: %v", err)
 	})
-	downloadS3Results(rootts, filepath.Join("name/s3/~any/9ps3/", "hotelperf/k8s"), HOSTTMP+"sigmaos-perf")
+	downloadS3Results(mrts.GetRoot(), filepath.Join("name/s3/~any/9ps3/", "hotelperf/k8s"), HOSTTMP+"sigmaos-perf")
 }
 
 func TestHotelK8sSearch(t *testing.T) {
-	rootts, err1 := test.NewTstateWithRealms(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts1, err1 := test.NewRealmTstate(rootts, REALM1)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
-	testHotel(rootts, ts1, nil, false, func(wc *hotel.WebClnt, r *rand.Rand) {
+	defer mrts.Shutdown()
+
+	testHotel(mrts.GetRoot(), mrts.GetRealm(REALM1), nil, false, func(wc *hotel.WebClnt, r *rand.Rand) {
 		err := hotel.RandSearchReq(wc, r)
 		assert.Nil(t, err, "Error search req: %v", err)
 	})
-	downloadS3Results(rootts, filepath.Join("name/s3/~any/9ps3/", "hotelperf/k8s"), HOSTTMP+"sigmaos-perf")
+	downloadS3Results(mrts.GetRoot(), filepath.Join("name/s3/~any/9ps3/", "hotelperf/k8s"), HOSTTMP+"sigmaos-perf")
 }
 
 func TestHotelSigmaosAll(t *testing.T) {
-	rootts, err1 := test.NewTstateWithRealms(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts1, err1 := test.NewRealmTstate(rootts, REALM1)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
-	testHotel(rootts, ts1, nil, true, func(wc *hotel.WebClnt, r *rand.Rand) {
-		hotel.RunDSB(rootts.T, 1, wc, r)
+	defer mrts.Shutdown()
+
+	testHotel(mrts.GetRoot(), mrts.GetRealm(REALM1), nil, true, func(wc *hotel.WebClnt, r *rand.Rand) {
+		hotel.RunDSB(mrts.GetRoot().T, 1, wc, r)
 	})
 }
 
 func TestHotelK8sAll(t *testing.T) {
-	rootts, err1 := test.NewTstateWithRealms(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts1, err1 := test.NewRealmTstate(rootts, REALM1)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
-	testHotel(rootts, ts1, nil, false, func(wc *hotel.WebClnt, r *rand.Rand) {
-		hotel.RunDSB(rootts.T, 1, wc, r)
+	defer mrts.Shutdown()
+
+	testHotel(mrts.GetRoot(), mrts.GetRealm(REALM1), nil, false, func(wc *hotel.WebClnt, r *rand.Rand) {
+		hotel.RunDSB(mrts.GetRoot().T, 1, wc, r)
 	})
 }
 
 func TestMRK8s(t *testing.T) {
-	rootts, err1 := test.NewTstateWithRealms(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	assert.NotEqual(rootts.T, K8S_LEADER_NODE_IP, "", "Must pass k8s leader node ip")
-	assert.NotEqual(rootts.T, S3_RES_DIR, "", "Must pass s3 reulst dir")
+	defer mrts.Shutdown()
+	assert.NotEqual(mrts.GetRoot().T, K8S_LEADER_NODE_IP, "", "Must pass k8s leader node ip")
+	assert.NotEqual(mrts.GetRoot().T, S3_RES_DIR, "", "Must pass s3 reulst dir")
 	if K8S_LEADER_NODE_IP == "" || S3_RES_DIR == "" {
 		db.DPrintf(db.ALWAYS, "Skipping mr k8s")
 		return
 	}
-	c := startK8sMR(rootts, k8sMRAddr(K8S_LEADER_NODE_IP, MR_K8S_INIT_PORT))
-	waitK8sMR(rootts, c)
-	downloadS3Results(rootts, filepath.Join("name/s3/~any/9ps3/", S3_RES_DIR), HOSTTMP+"sigmaos-perf")
+	c := startK8sMR(mrts.GetRoot(), k8sMRAddr(K8S_LEADER_NODE_IP, MR_K8S_INIT_PORT))
+	waitK8sMR(mrts.GetRoot(), c)
+	downloadS3Results(mrts.GetRoot(), filepath.Join("name/s3/~any/9ps3/", S3_RES_DIR), HOSTTMP+"sigmaos-perf")
 }
 
 func TestK8sMRMulti(t *testing.T) {
-	rootts, err1 := test.NewTstateWithRealms(t)
+	realms := []sp.Trealm{}
+	for i := 0; i < N_REALM; i++ {
+		realms = append(realms, sp.Trealm(REALM_BASENAME.String()+strconv.Itoa(i+1)))
+	}
+	mrts, err1 := test.NewMultiRealmTstate(t, realms)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	assert.NotEqual(rootts.T, K8S_LEADER_NODE_IP, "", "Must pass k8s leader node ip")
-	assert.NotEqual(rootts.T, S3_RES_DIR, "", "Must pass s3 result dir")
+	defer mrts.Shutdown()
+	assert.NotEqual(mrts.GetRoot().T, K8S_LEADER_NODE_IP, "", "Must pass k8s leader node ip")
+	assert.NotEqual(mrts.GetRoot().T, S3_RES_DIR, "", "Must pass s3 result dir")
 	if K8S_LEADER_NODE_IP == "" || S3_RES_DIR == "" {
 		db.DPrintf(db.ALWAYS, "Skipping mr k8s")
 		return
 	}
 	// Create realm structures.
-	ts := make([]*test.RealmTstate, 0, N_REALM)
 	ps := make([]*perf.Perf, 0, N_REALM)
 	for i := 0; i < N_REALM; i++ {
-		rName := sp.Trealm(REALM_BASENAME.String() + strconv.Itoa(i+1))
-		db.DPrintf(db.TEST, "Create realm srtructs for %v", rName)
-		tsn, err1 := test.NewRealmTstate(rootts, rName)
-		if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-			return
-		}
-		ts = append(ts, tsn)
-		ps = append(ps, newRealmPerf(ts[i]))
+		db.DPrintf(db.TEST, "Create realm srtructs for %v", realms[i])
+		ps = append(ps, newRealmPerf(mrts.GetRealm(realms[i])))
 		defer ps[i].Done()
 	}
 	db.DPrintf(db.TEST, "Done creating realm srtructs")
-	err := ts[0].MkDir(sp.K8S_SCRAPER, 0777)
-	assert.Nil(rootts.T, err, "Error mkdir %v", err)
+	err := mrts.GetRealm(realms[0]).MkDir(sp.K8S_SCRAPER, 0777)
+	assert.Nil(mrts.GetRoot().T, err, "Error mkdir %v", err)
 	// Start up the stat scraper procs.
-	sdc := mschedclnt.NewMSchedClnt(ts[0].SigmaClnt.FsLib, sp.NOT_SET)
+	sdc := mschedclnt.NewMSchedClnt(mrts.GetRealm(realms[0]).SigmaClnt.FsLib, sp.NOT_SET)
 	nMSched, err := sdc.NMSched()
 	ps2, _ := newNProcs(nMSched, "k8s-stat-scraper", []string{}, nil, proc.Tmcpu(1000*(linuxsched.GetNCores()-1)))
-	spawnBurstProcs(ts[0], ps2)
-	waitStartProcs(ts[0], ps2)
+	spawnBurstProcs(mrts.GetRealm(realms[0]), ps2)
+	waitStartProcs(mrts.GetRealm(realms[0]), ps2)
 
 	cs := make([]*rpc.Client, 0, N_REALM)
 	for i := 0; i < N_REALM; i++ {
 		rName := sp.Trealm(REALM_BASENAME.String() + strconv.Itoa(i+1))
 		db.DPrintf(db.TEST, "Starting MR job for realm %v", rName)
 		// Start the next k8s job.
-		cs = append(cs, startK8sMR(rootts, k8sMRAddr(K8S_LEADER_NODE_IP, MR_K8S_INIT_PORT+i+1)))
+		cs = append(cs, startK8sMR(mrts.GetRoot(), k8sMRAddr(K8S_LEADER_NODE_IP, MR_K8S_INIT_PORT+i+1)))
 		// Monitor cores assigned to this realm.
 		//		monitorK8sCPUUtil(ts[i], ps[i], "mr", rName)
-		monitorK8sCPUUtilScraperTS(ts[0], ps[i], "Guaranteed")
+		monitorK8sCPUUtilScraperTS(mrts.GetRealm(realms[0]), ps[i], "Guaranteed")
 		// Sleep for a bit before starting the next job
 		time.Sleep(SLEEP)
 	}
 	db.DPrintf(db.TEST, "Done starting MR jobs")
 	for i, c := range cs {
-		waitK8sMR(rootts, c)
+		waitK8sMR(mrts.GetRoot(), c)
 		db.DPrintf(db.TEST, "MR job %v finished", i)
 	}
 	db.DPrintf(db.TEST, "Done waiting for MR jobs.")
 	for i := 0; i < N_REALM; i++ {
 		downloadS3ResultsRealm(
-			rootts,
+			mrts.GetRoot(),
 			filepath.Join("name/s3/~any/9ps3/", S3_RES_DIR+"-"+strconv.Itoa(i+1)),
 			HOSTTMP+"sigmaos-perf",
 			sp.Trealm(REALM_BASENAME.String()+strconv.Itoa(i+1)),
@@ -1613,34 +1507,27 @@ func TestK8sMRMulti(t *testing.T) {
 }
 
 func TestK8sBalanceHotelMR(t *testing.T) {
-	rootts, err1 := test.NewTstateWithRealms(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{REALM2, REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
+	defer mrts.Shutdown()
 	// Structures for mr
-	ts1, err1 := test.NewRealmTstate(rootts, REALM2)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
-	p1 := newRealmPerf(ts1)
+	p1 := newRealmPerf(mrts.GetRealm(REALM2))
 	defer p1.Done()
 	// Structure for hotel
-	ts2, err1 := test.NewRealmTstate(rootts, REALM1)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
-	p2 := newRealmPerf(ts2)
+	p2 := newRealmPerf(mrts.GetRealm(REALM1))
 	defer p2.Done()
 	// Monitor cores assigned to MR.
-	monitorK8sCPUUtil(ts1, p1, "mr", "")
+	monitorK8sCPUUtil(mrts.GetRealm(REALM2), p1, "mr", "")
 	// Monitor cores assigned to Hotel.
-	monitorK8sCPUUtil(ts2, p2, "hotel", "")
-	assert.NotEqual(rootts.T, K8S_LEADER_NODE_IP, "", "Must pass k8s leader node ip")
-	assert.NotEqual(rootts.T, S3_RES_DIR, "", "Must pass k8s leader node ip")
+	monitorK8sCPUUtil(mrts.GetRealm(REALM1), p2, "hotel", "")
+	assert.NotEqual(mrts.GetRoot().T, K8S_LEADER_NODE_IP, "", "Must pass k8s leader node ip")
+	assert.NotEqual(mrts.GetRoot().T, S3_RES_DIR, "", "Must pass k8s leader node ip")
 	db.DPrintf(db.TEST, "Starting hotel")
 	done := make(chan bool)
 	go func() {
-		testHotel(rootts, ts2, nil, false, func(wc *hotel.WebClnt, r *rand.Rand) {
+		testHotel(mrts.GetRoot(), mrts.GetRealm(REALM1), nil, false, func(wc *hotel.WebClnt, r *rand.Rand) {
 			hotel.RandSearchReq(wc, r)
 		})
 		done <- true
@@ -1650,30 +1537,27 @@ func TestK8sBalanceHotelMR(t *testing.T) {
 		db.DPrintf(db.ALWAYS, "Skipping mr k8s")
 		return
 	}
-	c := startK8sMR(rootts, k8sMRAddr(K8S_LEADER_NODE_IP, MR_K8S_INIT_PORT))
-	waitK8sMR(rootts, c)
+	c := startK8sMR(mrts.GetRoot(), k8sMRAddr(K8S_LEADER_NODE_IP, MR_K8S_INIT_PORT))
+	waitK8sMR(mrts.GetRoot(), c)
 	<-done
 	db.DPrintf(db.TEST, "Downloading results")
-	downloadS3Results(rootts, filepath.Join("name/s3/~any/9ps3/", S3_RES_DIR), HOSTTMP+"sigmaos-perf")
-	downloadS3Results(rootts, filepath.Join("name/s3/~any/9ps3/", "hotelperf/k8s"), HOSTTMP+"sigmaos-perf")
+	downloadS3Results(mrts.GetRoot(), filepath.Join("name/s3/~any/9ps3/", S3_RES_DIR), HOSTTMP+"sigmaos-perf")
+	downloadS3Results(mrts.GetRoot(), filepath.Join("name/s3/~any/9ps3/", "hotelperf/k8s"), HOSTTMP+"sigmaos-perf")
 }
 
 func TestImgResize(t *testing.T) {
-	rootts, err1 := test.NewTstateWithRealms(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts1, err1 := test.NewRealmTstate(rootts, REALM1)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
+	defer mrts.Shutdown()
 	if PREWARM_REALM {
-		warmupRealm(ts1, []string{"imgresize", "imgresized"})
+		warmupRealm(mrts.GetRealm(REALM1), []string{"imgresize", "imgresized"})
 	}
 	rs := benchmarks.NewResults(1, benchmarks.E2E)
-	p := newRealmPerf(ts1)
+	p := newRealmPerf(mrts.GetRealm(REALM1))
 	defer p.Done()
-	jobs, apps := newImgResizeJob(ts1, p, true, IMG_RESIZE_INPUT_PATH, N_IMG_RESIZE_TASKS, N_IMG_RESIZE_INPUTS_PER_TASK, proc.Tmcpu(IMG_RESIZE_MCPU), proc.Tmem(IMG_RESIZE_MEM_MB), IMG_RESIZE_N_ROUNDS, proc.Tmcpu(1000))
+	jobs, apps := newImgResizeJob(mrts.GetRealm(REALM1), p, true, IMG_RESIZE_INPUT_PATH, N_IMG_RESIZE_TASKS, N_IMG_RESIZE_INPUTS_PER_TASK, proc.Tmcpu(IMG_RESIZE_MCPU), proc.Tmem(IMG_RESIZE_MEM_MB), IMG_RESIZE_N_ROUNDS, proc.Tmcpu(1000))
 	go func() {
 		for _, j := range jobs {
 			// Wait until ready
@@ -1682,86 +1566,77 @@ func TestImgResize(t *testing.T) {
 			j.ready <- true
 		}
 	}()
-	monitorCPUUtil(ts1, p)
-	runOps(ts1, apps, runImgResize, rs)
+	monitorCPUUtil(mrts.GetRealm(REALM1), p)
+	runOps(mrts.GetRealm(REALM1), apps, runImgResize, rs)
 	printResultSummary(rs)
-	rootts.Shutdown()
 }
 
 func TestK8sImgResize(t *testing.T) {
-	rootts, err1 := test.NewTstateWithRealms(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts1, err1 := test.NewRealmTstateClnt(rootts, sp.ROOTREALM)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+	defer mrts.Shutdown()
+	if err1 := mrts.AddRealmClnt(REALM1); !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
 	if PREWARM_REALM {
-		warmupRealm(ts1, nil)
+		warmupRealm(mrts.GetRealm(REALM1), nil)
 	}
-	sdc := mschedclnt.NewMSchedClnt(ts1.FsLib, sp.NOT_SET)
+	sdc := mschedclnt.NewMSchedClnt(mrts.GetRealm(REALM1).FsLib, sp.NOT_SET)
 	nMSched, err := sdc.NMSched()
-	assert.Nil(ts1.Ts.T, err, "Error nmsched %v", err)
+	assert.Nil(mrts.GetRealm(REALM1).Ts.T, err, "Error nmsched %v", err)
 	rs := benchmarks.NewResults(1, benchmarks.E2E)
-	p := newRealmPerf(ts1)
+	p := newRealmPerf(mrts.GetRealm(REALM1))
 	defer p.Done()
-	err = ts1.MkDir(sp.K8S_SCRAPER, 0777)
-	assert.Nil(ts1.Ts.T, err, "Error mkdir %v", err)
+	err = mrts.GetRealm(REALM1).MkDir(sp.K8S_SCRAPER, 0777)
+	assert.Nil(mrts.GetRealm(REALM1).Ts.T, err, "Error mkdir %v", err)
 	// Start up the stat scraper procs.
 	ps, _ := newNProcs(nMSched, "k8s-stat-scraper", []string{}, nil, proc.Tmcpu(1000*(linuxsched.GetNCores()-1)))
-	spawnBurstProcs(ts1, ps)
-	waitStartProcs(ts1, ps)
+	spawnBurstProcs(mrts.GetRealm(REALM1), ps)
+	waitStartProcs(mrts.GetRealm(REALM1), ps)
 	// NOte start time
 	start := time.Now()
 	// Monitor CPU utilization via the stat scraper procs.
-	monitorK8sCPUUtilScraper(rootts, p, "BestEffort")
+	monitorK8sCPUUtilScraper(mrts.GetRoot(), p, "BestEffort")
 	exec.Command("kubectl", "apply", "-Rf", "/tmp/thumbnail.yaml").Start()
 	for !k8sJobHasCompleted(K8S_JOB_NAME) {
 		time.Sleep(500 * time.Millisecond)
 	}
 	rs.Append(time.Since(start), 1)
 	printResultSummary(rs)
-	evictProcs(ts1, ps)
-	rootts.Shutdown()
+	evictProcs(mrts.GetRealm(REALM1), ps)
 }
 
 func TestRealmBalanceSimpleImgResize(t *testing.T) {
 	done := make(chan bool)
-	rootts, err1 := test.NewTstateWithRealms(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{REALM1, REALM2})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	blockers := blockMem(rootts, BLOCK_MEM)
+	defer mrts.Shutdown()
+	blockers := blockMem(mrts.GetRoot(), BLOCK_MEM)
 	// Structures for BE image resize
-	ts1, err1 := test.NewRealmTstate(rootts, REALM1)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
 	rs1 := benchmarks.NewResults(1, benchmarks.E2E)
-	p1 := newRealmPerf(ts1)
+	p1 := newRealmPerf(mrts.GetRealm(REALM1))
 	defer p1.Done()
 	// Structure for LC image resize
-	ts2, err1 := test.NewRealmTstate(rootts, REALM2)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
 	rs2 := benchmarks.NewResults(1, benchmarks.E2E)
-	p2 := newRealmPerf(ts2)
+	p2 := newRealmPerf(mrts.GetRealm(REALM2))
 	defer p2.Done()
 	// Prep resize jobs
 	imgJobsBE, imgAppsBE := newImgResizeJob(
-		ts1, p1, true, IMG_RESIZE_INPUT_PATH, N_IMG_RESIZE_TASKS, N_IMG_RESIZE_INPUTS_PER_TASK, 0, proc.Tmem(IMG_RESIZE_MEM_MB), IMG_RESIZE_N_ROUNDS, proc.Tmcpu(1000))
+		mrts.GetRealm(REALM1), p1, true, IMG_RESIZE_INPUT_PATH, N_IMG_RESIZE_TASKS, N_IMG_RESIZE_INPUTS_PER_TASK, 0, proc.Tmem(IMG_RESIZE_MEM_MB), IMG_RESIZE_N_ROUNDS, proc.Tmcpu(1000))
 	imgJobsLC, imgAppsLC := newImgResizeJob(
-		ts2, p2, true, IMG_RESIZE_INPUT_PATH, N_IMG_RESIZE_TASKS, N_IMG_RESIZE_INPUTS_PER_TASK, proc.Tmcpu(IMG_RESIZE_MCPU), proc.Tmem(IMG_RESIZE_MEM_MB), IMG_RESIZE_N_ROUNDS, proc.Tmcpu(1000))
+		mrts.GetRealm(REALM2), p2, true, IMG_RESIZE_INPUT_PATH, N_IMG_RESIZE_TASKS, N_IMG_RESIZE_INPUTS_PER_TASK, proc.Tmcpu(IMG_RESIZE_MCPU), proc.Tmem(IMG_RESIZE_MEM_MB), IMG_RESIZE_N_ROUNDS, proc.Tmcpu(1000))
 
 	// Run image resize jobs
 	go func() {
-		runOps(ts1, imgAppsBE, runImgResize, rs1)
+		runOps(mrts.GetRealm(REALM1), imgAppsBE, runImgResize, rs1)
 		done <- true
 	}()
 	go func() {
-		runOps(ts2, imgAppsLC, runImgResize, rs2)
+		runOps(mrts.GetRealm(REALM2), imgAppsLC, runImgResize, rs2)
 		done <- true
 	}()
 	// Wait for image resize jobs to set up.
@@ -1769,8 +1644,8 @@ func TestRealmBalanceSimpleImgResize(t *testing.T) {
 	<-imgJobsLC[0].ready
 
 	// Monitor cores for kernel procs
-	monitorCPUUtil(ts1, p1)
-	monitorCPUUtil(ts2, p2)
+	monitorCPUUtil(mrts.GetRealm(REALM1), p1)
+	monitorCPUUtil(mrts.GetRealm(REALM2), p2)
 	db.DPrintf(db.TEST, "Image Resize setup done.")
 	// Kick off image resize jobs.
 	imgJobsBE[0].ready <- true
@@ -1783,47 +1658,38 @@ func TestRealmBalanceSimpleImgResize(t *testing.T) {
 	<-done
 	db.DPrintf(db.TEST, "Image Resize Done.")
 	printResultSummary(rs1)
-	evictMemBlockers(rootts, blockers)
-	rootts.Shutdown()
+	evictMemBlockers(mrts.GetRoot(), blockers)
 }
 
 func TestRealmBalanceSocialNetworkImgResize(t *testing.T) {
 	done := make(chan bool)
-	rootts, err1 := test.NewTstateWithRealms(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{REALM1, REALM2})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	blockers := blockMem(rootts, BLOCK_MEM)
-	ts0, err1 := test.NewRealmTstateClnt(rootts, "rootrealm")
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+	defer mrts.Shutdown()
+	blockers := blockMem(mrts.GetRoot(), BLOCK_MEM)
+	if err1 := mrts.AddRealmClnt(sp.ROOTREALM); !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	p0 := newRealmPerf(ts0)
+	p0 := newRealmPerf(mrts.GetRealm(sp.ROOTREALM))
 	defer p0.Done()
 	// Structures for image resize
-	ts1, err1 := test.NewRealmTstate(rootts, REALM1)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
 	rs1 := benchmarks.NewResults(1, benchmarks.E2E)
-	p1 := newRealmPerf(ts1)
+	p1 := newRealmPerf(mrts.GetRealm(REALM1))
 	defer p1.Done()
 	// Structure for social network
-	ts2, err1 := test.NewRealmTstate(rootts, REALM2)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
 	rs2 := benchmarks.NewResults(1, benchmarks.E2E)
-	p2 := newRealmPerf(ts2)
+	p2 := newRealmPerf(mrts.GetRealm(REALM2))
 	defer p2.Done()
 	// Prep image resize job
 	imgJobs, imgApps := newImgResizeJob(
-		ts1, p1, true, IMG_RESIZE_INPUT_PATH, N_IMG_RESIZE_TASKS, N_IMG_RESIZE_INPUTS_PER_TASK, 0, proc.Tmem(IMG_RESIZE_MEM_MB), IMG_RESIZE_N_ROUNDS, 0)
+		mrts.GetRealm(REALM1), p1, true, IMG_RESIZE_INPUT_PATH, N_IMG_RESIZE_TASKS, N_IMG_RESIZE_INPUTS_PER_TASK, 0, proc.Tmem(IMG_RESIZE_MEM_MB), IMG_RESIZE_N_ROUNDS, 0)
 	// Prep social network job
-	snJobs, snApps := newSocialNetworkJobs(ts2, p2, true, SOCIAL_NETWORK_READ_ONLY, SOCIAL_NETWORK_DURS, SOCIAL_NETWORK_MAX_RPS, 3)
+	snJobs, snApps := newSocialNetworkJobs(mrts.GetRealm(REALM2), p2, true, SOCIAL_NETWORK_READ_ONLY, SOCIAL_NETWORK_DURS, SOCIAL_NETWORK_MAX_RPS, 3)
 	// Run social network job
 	go func() {
-		runOps(ts2, snApps, runSocialNetwork, rs2)
+		runOps(mrts.GetRealm(REALM2), snApps, runSocialNetwork, rs2)
 		done <- true
 	}()
 	// Wait for social network jobs to set up.
@@ -1831,15 +1697,15 @@ func TestRealmBalanceSocialNetworkImgResize(t *testing.T) {
 	db.DPrintf(db.TEST, "Social Network setup done.")
 	// Run image resize job
 	go func() {
-		runOps(ts1, imgApps, runImgResize, rs1)
+		runOps(mrts.GetRealm(REALM1), imgApps, runImgResize, rs1)
 		done <- true
 	}()
 	// Wait for image resize jobs to set up.
 	<-imgJobs[0].ready
 	// Monitor cores for kernel procs
-	monitorCPUUtil(ts0, p0)
-	monitorCPUUtil(ts1, p1)
-	monitorCPUUtil(ts2, p2)
+	monitorCPUUtil(mrts.GetRealm(sp.ROOTREALM), p0)
+	monitorCPUUtil(mrts.GetRealm(REALM1), p1)
+	monitorCPUUtil(mrts.GetRealm(REALM2), p2)
 	db.DPrintf(db.TEST, "Image Resize setup done.")
 	db.DPrintf(db.TEST, "Setup phase done.")
 	// Kick off image resize jobs.
@@ -1854,64 +1720,61 @@ func TestRealmBalanceSocialNetworkImgResize(t *testing.T) {
 	db.DPrintf(db.TEST, "Image Resize and Social Network Done.")
 	printResultSummary(rs1)
 	time.Sleep(5 * time.Second)
-	evictMemBlockers(rootts, blockers)
-	rootts.Shutdown()
+	evictMemBlockers(mrts.GetRoot(), blockers)
 }
 
 func TestK8sSocialNetworkImgResize(t *testing.T) {
 	done := make(chan bool)
-	rootts, err1 := test.NewTstateWithRealms(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	blockers := blockMem(rootts, BLOCK_MEM)
+	defer mrts.Shutdown()
+	blockers := blockMem(mrts.GetRoot(), BLOCK_MEM)
 	// make realm to run k8s scrapper
-	ts0, err1 := test.NewRealmTstateClnt(rootts, sp.ROOTREALM)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+	if err1 := mrts.AddRealmClnt(sp.ROOTREALM); !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	p0 := newRealmPerf(ts0)
+	p0 := newRealmPerf(mrts.GetRealm(sp.ROOTREALM))
 	defer p0.Done()
 	if PREWARM_REALM {
-		warmupRealm(ts0, nil)
+		warmupRealm(mrts.GetRealm(sp.ROOTREALM), nil)
 	}
-	sdc := mschedclnt.NewMSchedClnt(ts0.SigmaClnt.FsLib, sp.NOT_SET)
+	sdc := mschedclnt.NewMSchedClnt(mrts.GetRealm(sp.ROOTREALM).SigmaClnt.FsLib, sp.NOT_SET)
 	nMSched, err := sdc.NMSched()
-	assert.Nil(ts0.Ts.T, err, "Error nmsched %v", err)
+	assert.Nil(mrts.GetRealm(sp.ROOTREALM).Ts.T, err, "Error nmsched %v", err)
 	rs0 := benchmarks.NewResults(1, benchmarks.E2E)
-	err = ts0.MkDir(sp.K8S_SCRAPER, 0777)
-	assert.Nil(ts0.Ts.T, err, "Error mkdir %v", err)
+	err = mrts.GetRealm(sp.ROOTREALM).MkDir(sp.K8S_SCRAPER, 0777)
+	assert.Nil(mrts.GetRealm(sp.ROOTREALM).Ts.T, err, "Error mkdir %v", err)
 	// Start up the stat scraper procs.
 	//ps, _ := newNProcs(nMSched, "k8s-stat-scraper", []string{}, nil, proc.Tmcpu(1000*(linuxsched.GetNCores()-1)))
 	ps, _ := newNProcs(nMSched, "k8s-stat-scraper", []string{}, nil, 0)
-	spawnBurstProcs(ts0, ps)
-	waitStartProcs(ts0, ps)
+	spawnBurstProcs(mrts.GetRealm(sp.ROOTREALM), ps)
+	waitStartProcs(mrts.GetRealm(sp.ROOTREALM), ps)
 	// Structures for image resize
-	ts1, err1 := test.NewRealmTstate(rootts, REALM1)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+	if err1 := mrts.AddRealmClnt(REALM1); !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
 	//rs1 := benchmarks.NewResults(1, benchmarks.E2E)
-	p1 := newRealmPerf(ts1)
+	p1 := newRealmPerf(mrts.GetRealm(REALM1))
 	defer p1.Done()
 	// Structure for social network
-	ts2, err1 := test.NewRealmTstate(rootts, REALM2)
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+	if err1 := mrts.AddRealm(REALM2); !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
 	rs2 := benchmarks.NewResults(1, benchmarks.E2E)
-	p2 := newRealmPerf(ts2)
+	p2 := newRealmPerf(mrts.GetRealm(REALM2))
 	defer p2.Done()
 	// Prep image resize job
 
 	// Prep social network job
-	snJobs, snApps := newSocialNetworkJobs(ts2, p2, false, SOCIAL_NETWORK_READ_ONLY, SOCIAL_NETWORK_DURS, SOCIAL_NETWORK_MAX_RPS, 3)
+	snJobs, snApps := newSocialNetworkJobs(mrts.GetRealm(REALM2), p2, false, SOCIAL_NETWORK_READ_ONLY, SOCIAL_NETWORK_DURS, SOCIAL_NETWORK_MAX_RPS, 3)
 	// Monitor cores assigned to image resize.
 	// NOte start time
 	start := time.Now()
 	// Run social network job
 	go func() {
-		runOps(ts2, snApps, runSocialNetwork, rs2)
+		runOps(mrts.GetRealm(REALM2), snApps, runSocialNetwork, rs2)
 		snJobs[0].requestK8sStats()
 		done <- true
 	}()
@@ -1919,8 +1782,8 @@ func TestK8sSocialNetworkImgResize(t *testing.T) {
 	<-snJobs[0].ready
 	db.DPrintf(db.TEST, "Social Network setup done.")
 	// Monitor CPU utilization via the stat scraper procs.
-	monitorK8sCPUUtilScraper(rootts, p2, "Burstable")
-	monitorK8sCPUUtilScraper(rootts, p1, "BestEffort")
+	monitorK8sCPUUtilScraper(mrts.GetRoot(), p2, "Burstable")
+	monitorK8sCPUUtilScraper(mrts.GetRoot(), p1, "BestEffort")
 	// Run image resize job
 	exec.Command("kubectl", "apply", "-Rf", "/tmp/thumbnail-heavy/").Start()
 	// Wait for image resize jobs to set up.
@@ -1933,15 +1796,14 @@ func TestK8sSocialNetworkImgResize(t *testing.T) {
 	// Wait for both jobs to finish.
 	<-done
 	db.DPrintf(db.TEST, "Downloading results")
-	downloadS3Results(rootts, filepath.Join("name/s3/~any/9ps3/", "social-network-perf/k8s"), HOSTTMP+"sigmaos-perf")
+	downloadS3Results(mrts.GetRoot(), filepath.Join("name/s3/~any/9ps3/", "social-network-perf/k8s"), HOSTTMP+"sigmaos-perf")
 	for !(k8sJobHasCompleted("thumbnail1-benchrealm1") && k8sJobHasCompleted("thumbnail2-benchrealm1") &&
 		k8sJobHasCompleted("thumbnail3-benchrealm1") && k8sJobHasCompleted("thumbnail4-benchrealm1")) {
 		time.Sleep(500 * time.Millisecond)
 	}
 	rs0.Append(time.Since(start), 1)
 	printResultSummary(rs0)
-	evictProcs(ts0, ps)
+	evictProcs(mrts.GetRealm(sp.ROOTREALM), ps)
 	time.Sleep(10 * time.Second)
-	evictMemBlockers(rootts, blockers)
-	rootts.Shutdown()
+	evictMemBlockers(mrts.GetRoot(), blockers)
 }

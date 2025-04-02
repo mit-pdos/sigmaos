@@ -20,7 +20,7 @@ import (
 	"sigmaos/util/crash"
 	"sigmaos/util/rand"
 
-	// sp "sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )
 
@@ -99,31 +99,31 @@ func TestRegex(t *testing.T) {
 }
 
 type Tstate struct {
-	*test.Tstate
-	kvf *kv.KVFleet
-	cm  *kv.ClerkMgr
-	job string
+	mrts *test.MultiRealmTstate
+	kvf  *kv.KVFleet
+	cm   *kv.ClerkMgr
+	job  string
 }
 
-func newTstate(t1 *test.Tstate, em *crash.TeventMap, auto string, repl int) *Tstate {
+func newTstate(mrts *test.MultiRealmTstate, em *crash.TeventMap, auto string, repl int) *Tstate {
 	ts := &Tstate{job: rand.String(4)}
-	ts.Tstate = t1
+	ts.mrts = mrts
 
 	// XXX maybe in pe
 	err := crash.SetSigmaFail(em)
-	assert.Nil(t1.T, err)
+	assert.Nil(mrts.T, err)
 
-	kvf, err := kv.NewKvdFleet(ts.SigmaClnt, ts.job, 1, repl, 0, auto)
-	assert.Nil(t1.T, err)
+	kvf, err := kv.NewKvdFleet(ts.mrts.GetRealm(test.REALM1).SigmaClnt, ts.job, 1, repl, 0, auto)
+	assert.Nil(mrts.T, err)
 	ts.kvf = kvf
-	ts.cm, err = kv.NewClerkMgr(ts.SigmaClnt, ts.job, 0, repl > 0)
-	assert.Nil(t1.T, err)
+	ts.cm, err = kv.NewClerkMgr(ts.mrts.GetRealm(test.REALM1).SigmaClnt, ts.job, 0, repl > 0)
+	assert.Nil(mrts.T, err)
 	err = ts.kvf.Start()
-	assert.Nil(t1.T, err)
+	assert.Nil(mrts.T, err)
 	err = ts.cm.StartCmClerk()
-	assert.Nil(t1.T, err)
+	assert.Nil(mrts.T, err)
 	err = ts.cm.InitKeys(kv.NKEYS)
-	assert.Nil(t1.T, err)
+	assert.Nil(mrts.T, err)
 	return ts
 }
 
@@ -132,40 +132,43 @@ func (ts *Tstate) done() {
 	ts.cm.StopClerks()
 	db.DPrintf(db.TEST, "Stop KVFleet")
 	ts.kvf.Stop()
-	ts.Shutdown()
 }
 
 func TestMiss(t *testing.T) {
-	t1, err1 := test.NewTstateAll(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts := newTstate(t1, nil, "manual", kv.KVD_NO_REPL)
+	defer mrts.Shutdown()
+
+	ts := newTstate(mrts, nil, "manual", kv.KVD_NO_REPL)
 	err := ts.cm.Get(cache.NewKey(kv.NKEYS+1), &cproto.CacheString{})
 	assert.True(t, cache.IsMiss(err))
 	ts.done()
 }
 
 func TestGetPut0(t *testing.T) {
-	t1, err1 := test.NewTstateAll(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts := newTstate(t1, nil, "manual", kv.KVD_NO_REPL)
+	defer mrts.Shutdown()
+
+	ts := newTstate(mrts, nil, "manual", kv.KVD_NO_REPL)
 
 	err := ts.cm.Get(cache.NewKey(kv.NKEYS+1), &cproto.CacheString{})
-	assert.NotNil(ts.T, err, "Get")
+	assert.NotNil(ts.mrts.T, err, "Get")
 
 	err = ts.cm.Put(cache.NewKey(kv.NKEYS+1), &cproto.CacheString{Val: ""})
-	assert.Nil(ts.T, err, "Put")
+	assert.Nil(ts.mrts.T, err, "Put")
 
 	err = ts.cm.Put(cache.NewKey(0), &cproto.CacheString{Val: ""})
-	assert.Nil(ts.T, err, "Put")
+	assert.Nil(ts.mrts.T, err, "Put")
 
 	for i := uint64(0); i < kv.NKEYS; i++ {
 		key := cache.NewKey(i)
 		err := ts.cm.Get(key, &cproto.CacheString{})
-		assert.Nil(ts.T, err, "Get "+key)
+		assert.Nil(ts.mrts.T, err, "Get "+key)
 	}
 
 	ts.done()
@@ -174,14 +177,16 @@ func TestGetPut0(t *testing.T) {
 func TestPutGetRepl(t *testing.T) {
 	const TIME = 100
 
-	t1, err1 := test.NewTstateAll(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts := newTstate(t1, nil, "manual", kv.KVD_REPL_LEVEL)
+	defer mrts.Shutdown()
+
+	ts := newTstate(mrts, nil, "manual", kv.KVD_REPL_LEVEL)
 
 	err := ts.cm.StartClerks("", 1)
-	assert.Nil(ts.T, err, "Error StartClerk: %v", err)
+	assert.Nil(ts.mrts.T, err, "Error StartClerk: %v", err)
 
 	start := time.Now()
 	end := start.Add(10 * time.Second)
@@ -196,16 +201,17 @@ func TestPutGetRepl(t *testing.T) {
 func TestPutGetCrashKVD1(t *testing.T) {
 	const TIME = 100
 
-	t1, err1 := test.NewTstateAll(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
+	defer mrts.Shutdown()
 
 	e0 := crash.NewEvent(crash.KVD_CRASH, kvgrp.CRASH, 0.33)
-	ts := newTstate(t1, crash.NewTeventMapOne(e0), "manual", kv.KVD_REPL_LEVEL)
+	ts := newTstate(mrts, crash.NewTeventMapOne(e0), "manual", kv.KVD_REPL_LEVEL)
 
 	err := ts.cm.StartClerks("", 1)
-	assert.Nil(ts.T, err, "Error StartClerk: %v", err)
+	assert.Nil(ts.mrts.T, err, "Error StartClerk: %v", err)
 
 	start := time.Now()
 	end := start.Add(10 * time.Second)
@@ -220,21 +226,22 @@ func TestPutGetCrashKVD1(t *testing.T) {
 func concurN(t *testing.T, nclerk int, em *crash.TeventMap, repl int) (int, int, kv.TclerkRes) {
 	const TIME = 100
 
-	t1, err1 := test.NewTstateAll(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return 0, 0, kv.TclerkRes{}
 	}
+	defer mrts.Shutdown()
 
-	ts := newTstate(t1, em, "manual", repl)
+	ts := newTstate(mrts, em, "manual", repl)
 
 	err := ts.cm.StartClerks("", nclerk)
-	assert.Nil(ts.T, err, "Error StartClerk: %v", err)
+	assert.Nil(ts.mrts.T, err, "Error StartClerk: %v", err)
 
 	db.DPrintf(db.TEST, "Done StartClerks")
 
 	for i := 0; i < kv.NKVGRP; i++ {
 		err := ts.kvf.AddKVDGroup()
-		assert.Nil(ts.T, err, "AddKVDGroup")
+		assert.Nil(ts.mrts.T, err, "AddKVDGroup")
 		// allow some puts/gets
 		time.Sleep(TIME * time.Millisecond)
 	}
@@ -243,7 +250,7 @@ func concurN(t *testing.T, nclerk int, em *crash.TeventMap, repl int) (int, int,
 
 	for i := 0; i < kv.NKVGRP; i++ {
 		err := ts.kvf.RemoveKVDGroup()
-		assert.Nil(ts.T, err, "RemoveKVDGroup")
+		assert.Nil(ts.mrts.T, err, "RemoveKVDGroup")
 		// allow some puts/gets
 		time.Sleep(TIME * time.Millisecond)
 	}
@@ -260,15 +267,13 @@ func concurN(t *testing.T, nclerk int, em *crash.TeventMap, repl int) (int, int,
 	time.Sleep(100 * time.Millisecond)
 
 	conf := &kv.Config{}
-	err = ts.GetFileJson(kv.KVConfig(ts.job), conf)
+	err = ts.mrts.GetRealm(test.REALM1).GetFileJson(kv.KVConfig(ts.job), conf)
 	assert.Nil(t, err)
 
 	db.DPrintf(db.TEST, "Job stats %v", conf)
 
 	err = ts.kvf.Stop()
 	assert.Nil(t, err)
-
-	ts.Shutdown()
 
 	return int(conf.Ncoord), int(conf.Nretry), cr
 }
@@ -400,26 +405,25 @@ func XTestReplCrashN(t *testing.T) {
 }
 
 func TestAuto(t *testing.T) {
-	t1, err1 := test.NewTstateAll(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
+	defer mrts.Shutdown()
 
-	ts := newTstate(t1, nil, "auto", kv.KVD_NO_REPL)
+	ts := newTstate(mrts, nil, "auto", kv.KVD_NO_REPL)
 
 	for i := 0; i < 0; i++ {
 		err := ts.kvf.AddKVDGroup()
-		assert.Nil(ts.T, err, "Error AddKVDGroup: %v", err)
+		assert.Nil(ts.mrts.T, err, "Error AddKVDGroup: %v", err)
 	}
 
 	err := ts.cm.StartClerks("10s", NCLERK)
-	assert.Nil(ts.T, err, "Error StartClerks: %v", err)
+	assert.Nil(ts.mrts.T, err, "Error StartClerks: %v", err)
 
 	ts.cm.WaitForClerks()
 
 	time.Sleep(100 * time.Millisecond)
 
 	ts.kvf.Stop()
-
-	ts.Shutdown()
 }

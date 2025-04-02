@@ -5,7 +5,7 @@
 #
 
 usage() {
-    echo "Usage: $0 [--pull TAG] [--boot all|all_no_besched|node|node_no_besched|minnode|besched_node|named|realm_no_besched|spproxyd] [--named ADDRs] [--dbip DBIP] [--mongoip MONGOIP] [--host] [--usedialproxy] [--reserveMcpu rmcpu] kernelid"  1>&2
+    echo "Usage: $0 [--pull TAG] [--boot all|all_no_besched|node|node_no_besched|minnode|besched_node|named|realm_no_besched|spproxyd] [--named ADDRs] [--dbip DBIP] [--mongoip MONGOIP] [--usedialproxy] [--reserveMcpu rmcpu] [--homedir HOMEDIR] [--projectroot PROJECT_ROOT] [--sigmauser SIGMAUSER] kernelid"  1>&2
 }
 
 UPDATE=""
@@ -18,16 +18,19 @@ NET="host"
 KERNELID=""
 DIALPROXY="false"
 RMCPU="0"
+HOMEDIR=$HOME
+PROJECT_ROOT=$(realpath $(dirname $0))
+SIGMAUSER="NOT_SET"
 while [[ "$#" -gt 1 ]]; do
   case "$1" in
   --boot)
     shift
     case "$1" in
         "all")
-            BOOT="knamed;besched;lcsched;msched;ux;s3;chunkd;db;mongo;named"
+            BOOT="knamed;besched;lcsched;msched;ux;s3;chunkd;db;mongo"
             ;;
         "all_no_besched")
-            BOOT="knamed;lcsched;msched;ux;s3;chunkd;db;mongo;named"
+            BOOT="knamed;lcsched;msched;ux;s3;chunkd;db;mongo"
             ;;
         "node")
             BOOT="besched;msched;ux;s3;db;chunkd;mongo"
@@ -48,10 +51,10 @@ while [[ "$#" -gt 1 ]]; do
             BOOT="spproxyd"
             ;;
         "realm")
-            BOOT="knamed;besched;lcsched;msched;realmd;ux;s3;chunkd;db;mongo;named"
+            BOOT="knamed;besched;lcsched;msched;realmd;ux;s3;chunkd;db;mongo"
             ;;
         "realm_no_besched")
-            BOOT="knamed;lcsched;msched;realmd;ux;s3;chunkd;db;mongo;named"
+            BOOT="knamed;lcsched;msched;realmd;ux;s3;chunkd;db;mongo"
             ;;
         *)
             echo "unexpected argument $1 to boot"
@@ -66,9 +69,15 @@ while [[ "$#" -gt 1 ]]; do
     TAG=$1
     shift
     ;;
-  --host)
+  --net)
     shift
-    NET="host"
+    NET=$1
+    shift
+    ;;
+  --sigmauser)
+    shift
+    SIGMAUSER=$1
+    shift
     ;;
   --usedialproxy)
     shift
@@ -94,6 +103,16 @@ while [[ "$#" -gt 1 ]]; do
     RMCPU=$1
     shift
     ;;
+  --homedir)
+    shift
+    HOMEDIR=$1
+    shift
+    ;;
+  --projectroot)
+    shift
+    PROJECT_ROOT=$1
+    shift
+    ;;
   -help)
     usage
     exit 0
@@ -112,15 +131,30 @@ if [ $# -ne 1 ]; then
 fi
 KERNELID=$1
 
-mkdir -p /tmp/sigmaos
-# Perhaps /tmp/spproxyd should not always be mounted/should not be mounted by
-# every kernel instance on a machine?
-mkdir -p /tmp/spproxyd
-mkdir -p /tmp/sigmaos-bin
-mkdir -p /tmp/sigmaos-bin/$KERNELID
-mkdir -p /tmp/sigmaos-perf
-mkdir -p /tmp/sigmaos-data
-chmod a+w /tmp/sigmaos-perf
+KERNEL_IMAGE_NAME="sigmaos"
+DB_IMAGE_NAME="sigmadb"
+MONGO_IMAGE_NAME="sigmamongo"
+TMP_BASE="/tmp"
+if [[ "$SIGMAUSER" != "NOT_SET" ]]; then
+  TMP_BASE=$TMP_BASE/$SIGMAUSER
+  KERNEL_IMAGE_NAME=$KERNEL_IMAGE_NAME-$SIGMAUSER
+  DB_IMAGE_NAME=$DB_IMAGE_NAME-$SIGMAUSER
+  MONGO_IMAGE_NAME=$MONGO_IMAGE_NAME-$SIGMAUSER
+fi
+
+HOST_BIN_CACHE="${TMP_BASE}/sigmaos-bin"
+DATA_DIR="${TMP_BASE}/sigmaos-data"
+PERF_DIR="${TMP_BASE}/sigmaos-perf"
+KERNEL_DIR="${TMP_BASE}/sigmaos"
+SPPROXY_DIR="${TMP_BASE}/spproxyd"
+
+mkdir -p $SPPROXY_DIR
+mkdir -p $HOST_BIN_CACHE
+mkdir -p $HOST_BIN_CACHE/$KERNELID
+mkdir -p $DATA_DIR
+mkdir -p $PERF_DIR
+chmod a+w $PERF_DIR
+mkdir -p $KERNEL_DIR
 
 # Pull latest docker images, if not running a local build.
 if [ "$TAG" != "local-build" ]; then
@@ -134,25 +168,23 @@ if [ "$NAMED" == ":1111" ] && ! docker ps | grep -q etcd ; then
   ./start-etcd.sh
 fi
 
-if [ "$DBIP" == "x.x.x.x" ] && docker ps | grep -q sigmadb; then
-  DBIP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' sigmadb):3306
+if [ "$DBIP" == "x.x.x.x" ] && docker ps | grep -q $DB_IMAGE_NAME; then
+  DBIP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $DB_IMAGE_NAME):3306
 fi
 
-if [ "$MONGOIP" == "x.x.x.x" ] && docker ps | grep -q sigmamongo; then
-  MONGOIP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' sigmamongo):27017
+if [ "$MONGOIP" == "x.x.x.x" ] && docker ps | grep -q $MONGO_IMAGE_NAME; then
+  MONGOIP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $MONGO_IMAGE_NAME):27017
 fi
-
-PROJECT_ROOT=$(realpath $(dirname $0))
 
 # If running in local configuration, mount bin directory.
 MOUNTS="--mount type=bind,src=/var/run/docker.sock,dst=/var/run/docker.sock \
   --mount type=bind,src=/sys/fs/cgroup,dst=/cgroup \
-  --mount type=bind,src=/tmp/sigmaos,dst=/tmp/sigmaos \
-  --mount type=bind,src=/tmp/spproxyd,dst=/tmp/spproxyd \
-  --mount type=bind,src=/tmp/sigmaos-data,dst=/home/sigmaos/data \
-  --mount type=bind,src=/tmp/sigmaos-bin/${KERNELID},dst=/home/sigmaos/bin/user/realms \
-  --mount type=bind,src=/tmp/sigmaos-perf,dst=/tmp/sigmaos-perf \
-  --mount type=bind,src=${HOME}/.aws,dst=/home/sigmaos/.aws"
+  --mount type=bind,src=$KERNEL_DIR,dst=/tmp/sigmaos \
+  --mount type=bind,src=$SPPROXY_DIR,dst=/tmp/spproxyd \
+  --mount type=bind,src=$DATA_DIR,dst=/home/sigmaos/data \
+  --mount type=bind,src=$HOST_BIN_CACHE/${KERNELID},dst=/home/sigmaos/bin/user/realms \
+  --mount type=bind,src=$PERF_DIR,dst=/tmp/sigmaos-perf \
+  --mount type=bind,src=$HOMEDIR/.aws,dst=/home/sigmaos/.aws"
 if [ "$TAG" == "local-build" ]; then
   MOUNTS="$MOUNTS\
     --mount type=bind,src=$PROJECT_ROOT/bin/user,dst=/home/sigmaos/bin/user/common \
@@ -180,7 +212,9 @@ CID=$(docker run -dit \
              -e SIGMAFAIL=${SIGMAFAIL} \
              -e SIGMADEBUG=${SIGMADEBUG} \
              -e reserveMcpu=${RMCPU} \
-             sigmaos)
+             -e netmode=${NET} \
+             -e sigmauser=${SIGMAUSER} \
+             $KERNEL_IMAGE_NAME)
 
 if [ -z ${CID} ]; then
     echo "Docker run failed $?"  1>&2
@@ -199,11 +233,11 @@ until [ "`docker inspect -f {{.State.Running}} ${CID}`"=="true" ]; do
 done;
 
 # Wait until kernel is ready
-while [ ! -f "/tmp/sigmaos/${KERNELID}" ]; do
+while [ ! -f "${KERNEL_DIR}/${KERNELID}" ]; do
     echo -n "." 1>&2
     sleep 0.1
 done;
-rm -f "/tmp/sigmaos/${KERNELID}"
+rm -f "${KERNEL_DIR}/${KERNELID}"
 
 echo "nproc: $(nproc)"
 echo "booted: $BOOT"

@@ -33,6 +33,10 @@ func (st *ServiceStats) Tick(t uint64, reps []*Reply, q []Queue, utils []float64
 		lats = append(lats, rep.GetLatency())
 	}
 	st.lat = append(st.lat, lats)
+	// Sanity check
+	if len(utils) == 0 {
+		db.DFatalf("No utilizations stats")
+	}
 	st.util = append(st.util, utils)
 	st.rstats.record(t, st)
 }
@@ -248,5 +252,5 @@ func (rst *RecordedStats) VerboseString() string {
 }
 
 func (rst *RecordedStats) String() string {
-	return fmt.Sprintf("&{ util\n\tavg:%v\n\nlatency:\nwindow:%v\n\tavg:%v\n\tp50:%v\n\tp90:%v\n\tp99:%v\n}", rst.AvgUtil, rst.AvgLatency, rst.window, rst.P50Latency, rst.P90Latency, rst.P99Latency)
+	return fmt.Sprintf("&{ util\n\tavg:%v\n\nlatency:\nwindow:%v\n\tavg:%v\n\tp50:%v\n\tp90:%v\n\tp99:%v\n}", rst.AvgUtil, rst.window, rst.AvgLatency, rst.P50Latency, rst.P90Latency, rst.P99Latency)
 }

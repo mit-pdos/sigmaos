@@ -55,65 +55,78 @@ func TestResizeImg(t *testing.T) {
 }
 
 func TestResizeProc(t *testing.T) {
-	ts, err1 := test.NewTstateAll(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
+	defer mrts.Shutdown()
+
 	in := filepath.Join(sp.S3, sp.LOCAL, "9ps3/img-save/6.jpg")
 	out := filepath.Join(sp.S3, sp.LOCAL, "9ps3/img/6-thumb-xxx.jpg")
-	ts.Remove(out)
+	mrts.GetRealm(test.REALM1).Remove(out)
 	p := proc.NewProc("imgresize", []string{in, out, "1"})
-	err := ts.Spawn(p)
+	err := mrts.GetRealm(test.REALM1).Spawn(p)
 	assert.Nil(t, err, "Spawn")
-	err = ts.WaitStart(p.GetPid())
+	err = mrts.GetRealm(test.REALM1).WaitStart(p.GetPid())
 	assert.Nil(t, err, "WaitStart error")
-	status, err := ts.WaitExit(p.GetPid())
+	status, err := mrts.GetRealm(test.REALM1).WaitExit(p.GetPid())
 	assert.Nil(t, err, "WaitExit error %v", err)
 	assert.True(t, status.IsStatusOK(), "WaitExit status error: %v", status)
-	ts.Shutdown()
 }
 
 type Tstate struct {
-	job string
-	*test.Tstate
-	ch chan bool
-	ft *fttask.FtTasks
+	job  string
+	mrts *test.MultiRealmTstate
+	ch   chan bool
+	ft   *fttask.FtTasks
 }
 
-func newTstate(t *test.Tstate) (*Tstate, error) {
+func newTstate(mrts *test.MultiRealmTstate) (*Tstate, error) {
 	ts := &Tstate{}
-	ts.Tstate = t
+	ts.mrts = mrts
 	ts.job = rd.String(4)
 	ts.ch = make(chan bool)
 	ts.cleanup()
 
-	ft, err := fttask.MkFtTasks(ts.SigmaClnt.FsLib, sp.IMG, ts.job)
-	if !assert.Nil(ts.T, err) {
+	ft, err := fttask.MkFtTasks(ts.mrts.GetRealm(test.REALM1).SigmaClnt.FsLib, sp.IMG, ts.job)
+	if !assert.Nil(ts.mrts.T, err) {
 		return nil, err
 	}
 	ts.ft = ft
 	return ts, nil
 }
 
-func (ts *Tstate) restartTstate() {
-	ts1, err := test.NewTstateAll(ts.T)
-	if !assert.Nil(ts.T, err, "Error New Tstate: %v", err) {
-		return
+func (ts *Tstate) restartTstate() error {
+	mrts, err1 := test.NewMultiRealmTstate(ts.mrts.T, []sp.Trealm{test.REALM1})
+	if !assert.Nil(ts.mrts.T, err1, "Error New Tstate: %v", err1) {
+		return err1
 	}
-	ts.Tstate = ts1
-	ft, err := fttask.NewFtTasks(ts.SigmaClnt.FsLib, sp.IMG, ts.job)
-	assert.Nil(ts.T, err)
+
+	ts.mrts = mrts
+	db.DPrintf(db.TEST, "Get named contents post-shutdown")
+	sts, err := ts.mrts.GetRealm(test.REALM1).GetDir(sp.NAMED)
+	if !assert.Nil(ts.mrts.T, err, "Err GetDir: %v", err) {
+		return err
+	}
+
+	db.DPrintf(db.TEST, "%v named contents post-shutdown: %v", test.REALM1, sp.Names(sts))
+
+	db.DPrintf(db.TEST, "New FtTasks")
+	ft, err := fttask.NewFtTasks(ts.mrts.GetRealm(test.REALM1).SigmaClnt.FsLib, sp.IMG, ts.job)
+	if !assert.Nil(ts.mrts.T, err, "Err new ft tasks: %v", err) {
+		return err
+	}
 	ts.ft = ft
+	return nil
 }
 
 func (ts *Tstate) cleanup() {
-	ts.RmDir(sp.IMG)
-	imgresize.Cleanup(ts.FsLib, filepath.Join(sp.S3, sp.LOCAL, "9ps3/img-save"))
+	ts.mrts.GetRealm(test.REALM1).RmDir(sp.IMG)
+	imgresize.Cleanup(ts.mrts.GetRealm(test.REALM1).FsLib, filepath.Join(sp.S3, sp.LOCAL, "9ps3/img-save"))
 }
 
 func (ts *Tstate) shutdown() {
 	ts.ch <- true
-	ts.Shutdown()
 }
 
 func (ts *Tstate) progress() {
@@ -123,7 +136,7 @@ func (ts *Tstate) progress() {
 			return
 		case <-time.After(1 * time.Second):
 			if n, err := ts.ft.NTaskDone(); err != nil {
-				assert.Nil(ts.T, err)
+				assert.Nil(ts.mrts.T, err)
 			} else {
 				fmt.Printf("%d..", n)
 			}
@@ -132,61 +145,63 @@ func (ts *Tstate) progress() {
 }
 
 func TestImgdFatalError(t *testing.T) {
-	t1, err1 := test.NewTstateAll(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	defer t1.Shutdown()
-	ts, err1 := newTstate(t1)
+	defer mrts.Shutdown()
+
+	ts, err1 := newTstate(mrts)
 	if !assert.Nil(t, err1, "Error New Tstate2: %v", err1) {
 		return
 	}
 
-	imgd := imgresize.StartImgd(ts.SigmaClnt, ts.job, IMG_RESIZE_MCPU, IMG_RESIZE_MEM, false, 1, 0, nil)
+	imgd := imgresize.StartImgd(ts.mrts.GetRealm(test.REALM1).SigmaClnt, ts.job, IMG_RESIZE_MCPU, IMG_RESIZE_MEM, false, 1, 0, nil)
 
 	// a non-existing file
 	fn := filepath.Join(sp.S3, sp.LOCAL, "9ps3/img-save/", "yyy.jpg")
 
 	err := ts.ft.SubmitTask(0, imgresize.NewTask(fn))
-	assert.Nil(ts.T, err)
+	assert.Nil(ts.mrts.T, err)
 
 	err = ts.ft.SubmitStop()
-	assert.Nil(ts.T, err)
+	assert.Nil(ts.mrts.T, err)
 
 	gs := imgd.WaitGroup()
 	for _, s := range gs {
-		assert.True(ts.T, s.IsStatusFatal(), s)
+		assert.True(ts.mrts.T, s.IsStatusFatal(), s)
 	}
 }
 
 func (ts *Tstate) imgdJob(paths []string, em *crash.TeventMap) {
-	imgd := imgresize.StartImgd(ts.SigmaClnt, ts.job, IMG_RESIZE_MCPU, IMG_RESIZE_MEM, false, 1, 0, em)
+	imgd := imgresize.StartImgd(ts.mrts.GetRealm(test.REALM1).SigmaClnt, ts.job, IMG_RESIZE_MCPU, IMG_RESIZE_MEM, false, 1, 0, em)
 
 	for i, pn := range paths {
 		db.DPrintf(db.TEST, "submit %v\n", pn)
 		err := ts.ft.SubmitTask(i, imgresize.NewTask(pn))
-		assert.Nil(ts.T, err)
+		assert.Nil(ts.mrts.T, err)
 	}
 
 	err := ts.ft.SubmitStop()
-	assert.Nil(ts.T, err)
+	assert.Nil(ts.mrts.T, err)
 
 	go ts.progress()
 
 	gs := imgd.WaitGroup()
 	for _, s := range gs {
-		assert.True(ts.T, s.IsStatusOK(), s)
+		assert.True(ts.mrts.T, s.IsStatusOK(), s)
 	}
 }
 
 func TestImgdOneOK(t *testing.T) {
-	t1, err1 := test.NewTstateAll(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts, err1 := newTstate(t1)
+	defer mrts.Shutdown()
+
+	ts, err1 := newTstate(mrts)
 	if !assert.Nil(t, err1, "Error New Tstate2: %v", err1) {
-		t1.Shutdown()
 		return
 	}
 
@@ -198,13 +213,14 @@ func TestImgdOneOK(t *testing.T) {
 func TestImgdOneCrash(t *testing.T) {
 	e0 := crash.NewEventStart(crash.IMGRESIZE_CRASH, 100, CRASHIMG, 0.3)
 
-	t1, err1 := test.NewTstateAll(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts, err1 := newTstate(t1)
+	defer mrts.Shutdown()
+
+	ts, err1 := newTstate(mrts)
 	if !assert.Nil(t, err1, "Error New Tstate2: %v", err1) {
-		t1.Shutdown()
 		return
 	}
 
@@ -214,23 +230,24 @@ func TestImgdOneCrash(t *testing.T) {
 }
 
 func TestImgdManyOK(t *testing.T) {
-	t1, err1 := test.NewTstateAll(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts, err1 := newTstate(t1)
+	defer mrts.Shutdown()
+
+	ts, err1 := newTstate(mrts)
 	if !assert.Nil(t, err1, "Error New Tstate2: %v", err1) {
-		t1.Shutdown()
 		return
 	}
 
-	err := ts.BootNode(1)
+	err := ts.mrts.GetRealm(test.REALM1).BootNode(1)
 	assert.Nil(t, err, "BootProcd 1")
 
-	err = ts.BootNode(1)
+	err = ts.mrts.GetRealm(test.REALM1).BootNode(1)
 	assert.Nil(t, err, "BootProcd 2")
 
-	sts, err1 := ts.GetDir(filepath.Join(sp.S3, sp.LOCAL, "9ps3/img-save"))
+	sts, err1 := ts.mrts.GetRealm(test.REALM1).GetDir(filepath.Join(sp.S3, sp.LOCAL, "9ps3/img-save"))
 	assert.Nil(t, err)
 
 	paths := make([]string, 0, len(sts))
@@ -244,13 +261,13 @@ func TestImgdManyOK(t *testing.T) {
 }
 
 func TestImgdRestart(t *testing.T) {
-	t1, err1 := test.NewTstateAll(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts, err1 := newTstate(t1)
+
+	ts, err1 := newTstate(mrts)
 	if !assert.Nil(t, err1, "Error New Tstate2: %v", err1) {
-		t1.Shutdown()
 		return
 	}
 
@@ -259,23 +276,32 @@ func TestImgdRestart(t *testing.T) {
 	err := ts.ft.SubmitTask(0, imgresize.NewTask(fn))
 	assert.Nil(t, err)
 
-	imgd := imgresize.StartImgd(ts.SigmaClnt, ts.job, IMG_RESIZE_MCPU, IMG_RESIZE_MEM, true, 1, 0, nil)
+	imgd := imgresize.StartImgd(ts.mrts.GetRealm(test.REALM1).SigmaClnt, ts.job, IMG_RESIZE_MCPU, IMG_RESIZE_MEM, true, 1, 0, nil)
+
+	db.DPrintf(db.TEST, "Get named contents pre-shutdown")
+	sts, err := ts.mrts.GetRealm(test.REALM1).GetDir(sp.NAMED)
+	assert.Nil(ts.mrts.T, err, "Err GetDir: %v", err)
+	db.DPrintf(db.TEST, "%v named contents pre-shutdown: %v", test.REALM1, sp.Names(sts))
 
 	time.Sleep(2 * time.Second)
 
 	imgd.StopGroup()
 
-	ts.Shutdown()
+	ts.mrts.ShutdownForReboot()
 
 	time.Sleep(2 * fsetcd.LeaseTTL * time.Second)
 
 	db.DPrintf(db.TEST, "Restart")
 
-	ts.restartTstate()
+	err = ts.restartTstate()
+	defer ts.mrts.Shutdown()
+	if err != nil {
+		return
+	}
 
-	gms, err := procgroupmgr.Recover(ts.SigmaClnt)
-	assert.Nil(ts.T, err, "Recover")
-	assert.Equal(ts.T, 1, len(gms))
+	gms, err := procgroupmgr.Recover(ts.mrts.GetRealm(test.REALM1).SigmaClnt)
+	assert.Nil(ts.mrts.T, err, "Recover")
+	assert.Equal(ts.mrts.T, 1, len(gms))
 
 	err = ts.ft.SubmitStop()
 	assert.Nil(t, err)

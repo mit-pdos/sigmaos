@@ -37,9 +37,10 @@ func NewProcClnt(fsl *fslib.FsLib) (*ProcClnt, error) {
 		err := fsl.MountTree(ep, "", sp.NAMED)
 		if err != nil {
 			db.DPrintf(db.ERROR, "Err MountTree: ep %v err %v", ep, err)
-			return nil, err
+			//			return nil, err
+		} else {
+			db.DPrintf(db.SPAWN_LAT, "Mount named [%v] time %v", ep, time.Since(start))
 		}
-		db.DPrintf(db.SPAWN_LAT, "Mount named [%v] time %v", ep, time.Since(start))
 	}
 	return newProcClnt(fsl, fsl.ProcEnv().GetPID(), fsl.ProcEnv().GetPrivileged(), fsl.ProcEnv().GetKernelID()), nil
 }

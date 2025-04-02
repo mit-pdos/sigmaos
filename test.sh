@@ -103,7 +103,7 @@ run_test() {
     ./logs.sh > $PROC_LOG_PATH 2>&1
     printf "  Done saving $pkg_name proc logs\n\tLog path: $PROC_LOG_PATH\n"
   else
-    $cmd
+    eval "$cmd"
   fi
   cleanup
 }
@@ -141,7 +141,50 @@ if [[ $COMPILE == "--compile" ]]; then
     # test if test packages compile
     #
 
-    for T in path serr util/linux/sched util/perf sigmap dialproxy session/clnt proxy/ninep sigmaclnt/fslib/reader sigmaclnt/fslib/writer sigmasrv/stats spproto/srv sigmaclnt/fslib util/coordination/semaphore sched/msched/proc/chunk/srv ft/leaderclnt/electclnt sigmaclnt/fslib/dircache sigmasrv/memfssrv/memfs namesrv namesrv/fsetcd sigmaclnt/procclnt proxy/ux proxy/s3 boot/clnt ft/leaderclnt ft/leadertest apps/kv/kvgrp apps/cache/cachegrp/clnt apps/www sigmasrv/memfssrv/sigmapsrv realm/clnt apps/mr apps/imgresize apps/kv apps/hotel apps/socialnetwork benchmarks benchmarks/remote example example/example_echo_server benchmarks/netperf; do
+    for T in \
+      path \
+      serr \
+      util/linux/sched \
+      util/perf \
+      sigmap \
+      dialproxy \
+      net/clnt \
+      session/clnt \
+      proxy/ninep \
+      sigmaclnt/fslib/reader \
+      sigmaclnt/fslib/writer \
+      sigmasrv/stats \
+      spproto/srv \
+      sigmaclnt/fslib \
+      util/coordination/semaphore \
+      sched/msched/proc/chunk/srv \
+      ft/leaderclnt/electclnt \
+      sigmaclnt/fslib/dircache \
+      sigmasrv/memfssrv/memfs \
+      namesrv \
+      namesrv/fsetcd \
+      sigmaclnt/procclnt \
+      proxy/ux \
+      proxy/s3 \
+      boot/clnt \
+      ft/leaderclnt \
+      ft/leadertest \
+      apps/kv/kvgrp \
+      apps/cache/cachegrp/clnt \
+      apps/www \
+      sigmasrv/memfssrv/sigmapsrv \
+      realm/clnt \
+      apps/mr \
+      apps/imgresize \
+      apps/kv \
+      apps/hotel \
+      apps/socialnetwork \
+      benchmarks \
+      benchmarks/remote \
+      example \
+      example/example_echo_server \
+      benchmarks/netperf; \
+      do
         if ! [ -z "$SKIPTO" ]; then
           if [[ "$SKIPTO" == "$T" ]]; then
             # Stop skipping
@@ -153,6 +196,7 @@ if [[ $COMPILE == "--compile" ]]; then
         fi
         run_test $T "go test $VERB sigmaos/$T --run TestCompile"
     done
+    exit 0
 fi
 
 if [[ $BASIC == "--basic" ]]; then
@@ -161,7 +205,14 @@ if [[ $BASIC == "--basic" ]]; then
     # test some support package
     #
 
-    for T in path serr util/linux/sched util/perf sigmap sortedmap; do
+    for T in \
+      path \
+      serr \
+      util/linux/sched \
+      util/perf \
+      sigmap \
+      sortedmap; \
+      do
         if ! [ -z "$SKIPTO" ]; then
           if [[ "$SKIPTO" == "$T" ]]; then
             # Stop skipping
@@ -171,14 +222,14 @@ if [[ $BASIC == "--basic" ]]; then
             continue
           fi
         fi
-        run_test $T "go test $VERB sigmaos/$T"
+        run_test $T "./test-in-docker.sh --pkg $T --no-start --args \"$VERB\""
     done
 
     #
     # test sessions
     #
     
-    for T in session/clnt; do
+    for T in net/clnt session/clnt; do
         if ! [ -z "$SKIPTO" ]; then
           if [[ "$SKIPTO" == "$T" ]]; then
             # Stop skipping
@@ -188,14 +239,22 @@ if [[ $BASIC == "--basic" ]]; then
             continue
           fi
         fi
-        run_test $T "go test $VERB sigmaos/$T"
+        run_test $T "./test-in-docker.sh --pkg $T --args \"$VERB\""
     done
 
     #
     # test with a kernel with just named
     #
 
-    for T in sigmaclnt/fslib/reader sigmaclnt/fslib/writer sigmasrv/stats dialproxy sigmaclnt/fslib ft/leaderclnt/electclnt sigmaclnt/fslib/dircache; do
+    for T in \
+      sigmaclnt/fslib/reader \
+      sigmaclnt/fslib/writer \
+      sigmasrv/stats \
+      dialproxy \
+      sigmaclnt/fslib \
+      ft/leaderclnt/electclnt \
+      sigmaclnt/fslib/dircache; \
+      do
         if ! [ -z "$SKIPTO" ]; then
           if [[ "$SKIPTO" == "$T" ]]; then
             # Stop skipping
@@ -205,20 +264,28 @@ if [[ $BASIC == "--basic" ]]; then
             continue
           fi
         fi
-        run_test $T "go test $VERB -timeout 20m sigmaos/$T -start $SPPROXYD $DIALPROXY $REUSEKERNEL"
+        run_test $T "./test-in-docker.sh --pkg $T --args \"$VERB --timeout 20m $SPPROXYD $DIALPROXY $REUSEKERNEL\""
     done
 
     # run_test $sigmapsrv "go test $VERB sigmaos/sigmapsrv -start"  # no perf
 
     # test memfs
-    run_test "memfs/local" "go test $VERB sigmaos/sigmaclnt/fslib -start -path "name/memfs/~local/"  $SPPROXYD $DIALPROXY $REUSEKERNEL"
-    run_test "memfs/start" "go test $VERB sigmaos/memfs -start $SPPROXYD $DIALPROXY $REUSEKERNEL"
+    run_test "memfs/local" "./test-in-docker.sh --pkg sigmaclnt/fslib --args \"$VERB -path name/memfs/~any/ $SPPROXYD $DIALPROXY $REUSEKERNEL\""
+    run_test "memfs/start" "./test-in-docker.sh --pkg sigmasrv/memfssrv/memfs --args \"$VERB -path name/memfs/~any/ $SPPROXYD $DIALPROXY $REUSEKERNEL\""
 
     #
     # tests a full kernel using root realm
     #
 
-    for T in namesrv util/coordination/semaphore sched/msched/proc/chunk/srv sigmaclnt/procclnt proxy/ux boot/clnt proxy/s3 ft/leaderclnt ft/leadertest apps/kv/kvgrp apps/cache/cachegrp/clnt; do
+    for T in \
+      namesrv \
+      util/coordination/semaphore \
+      sched/msched/proc/chunk/srv \
+      proxy/ux \
+      boot/clnt \
+      proxy/s3 \
+      realm/clnt; \
+      do
         if ! [ -z "$SKIPTO" ]; then
           if [[ "$SKIPTO" == "$T" ]]; then
             # Stop skipping
@@ -228,8 +295,33 @@ if [[ $BASIC == "--basic" ]]; then
             continue
           fi
         fi
-        run_test $T "go test $VERB sigmaos/$T -start $SPPROXYD $DIALPROXY $REUSEKERNEL"
+        run_test $T "./test-in-docker.sh --pkg $T --args \"--timeout 20m $VERB $SPPROXYD $DIALPROXY $REUSEKERNEL\""
     done
+
+    #
+    # test realms
+    #
+
+    for T in \
+      sigmaclnt/procclnt \
+      ft/leaderclnt \
+      ft/leadertest \
+      apps/kv/kvgrp \
+      apps/cache/cachegrp/clnt; \
+      do
+        if ! [ -z "$SKIPTO" ]; then
+          if [[ "$SKIPTO" == "$T" ]]; then
+            # Stop skipping
+            SKIPTO=""
+          else
+            # Skip
+            continue
+          fi
+        fi
+      run_test $T "./test-in-docker.sh --pkg $T --args \"$VERB $SPPROXYD $DIALPROXY $REUSEKERNEL\""
+  done
+fi
+
 
     #
     # test ninep proxy with just named and full kernel
@@ -245,32 +337,13 @@ if [[ $BASIC == "--basic" ]]; then
             continue
           fi
         fi
-        run_test $T "go test $VERB sigmaos/$T -start"
+        run_test $T "./test-in-docker.sh --pkg $T --args \"$VERB --timeout 20m $SPPROXYD $DIALPROXY $REUSEKERNEL\""
     done
 
 
-    run_test "sigmapsrv/ux" "go test $VERB sigmaos/sigmasrv/memfssrv/sigmapsrv -start -path "name/ux/~local/" -run ReadPerf"
-    run_test "sigmapsrv/s3" "go test $VERB sigmaos/sigmasrv/memfssrvsigmapsrv -start -path "name/s3/~local/9ps3/" -run ReadPerf"
-    run_test "sigmapsrv/s3pathclnt" "go test $VERB sigmaos/sigmasrv/memfssrvsigmapsrv --withs3pathclnt -start -path "name/s3/~local/9ps3/" -run ReadFilePerfSingle"
-    
-
-    #
-    # test with realms
-    #
-
-    for T in realm/clnt; do
-        if ! [ -z "$SKIPTO" ]; then
-          if [[ "$SKIPTO" == "$T" ]]; then
-            # Stop skipping
-            SKIPTO=""
-          else
-            # Skip
-            continue
-          fi
-        fi
-      run_test $T "go test $VERB sigmaos/$T -start $SPPROXYD $DIALPROXY $REUSEKERNEL"
-  done
-fi
+    run_test "sigmapsrv/ux" "./test-in-docker.sh --pkg sigmasrv/memfssrv/sigmapsrv --run ReadPerf --args \"$VERB --path name/ux/~any/ $SPPROXYD $DIALPROXY $REUSEKERNEL\""
+    run_test "sigmapsrv/s3" "./test-in-docker.sh --pkg sigmasrv/memfssrv/sigmapsrv --run ReadPerf --args \"$VERB --path name/s3/~any/9ps3/ $SPPROXYD $DIALPROXY $REUSEKERNEL\""
+    run_test "sigmapsrv/s3pathclnt" "./test-in-docker.sh --pkg sigmasrv/memfssrv/sigmapsrv --run ReadFilePerfSingle --args \"$VERB --path name/s3/~any/9ps3/ --withs3pathclnt $SPPROXYD $DIALPROXY $REUSEKERNEL\""
 
 #
 # app tests
@@ -295,23 +368,17 @@ if [[ $APPS == "--apps" ]]; then
           if [[ "${NEED_DB[$i]}" == "true" ]]; then
             ./start-db.sh
           fi
-          run_test $T "go test $VERB sigmaos/$T -start $SPPROXYD $DIALPROXY -run ${TNAMES[$i]}"
+          run_test $T "./test-in-docker.sh --pkg $T --run '${TNAMES[$i]}' --args \"$VERB $SPPROXYD $DIALPROXY\""
           i=$(($i+1))
         done
-#        go test $VERB sigmaos/apps/mr -start $SPPROXYD $DIALPROXY -run MRJob
-#        cleanup
-#        go test $VERB sigmaos/apps/imgresize -start $SPPROXYD $DIALPROXY -run ImgdOne
-#        cleanup
-#        go test $VERB sigmaos/apps/kv -start $SPPROXYD $DIALPROXY -run KVOKN
-#        cleanup
-#        ./start-db.sh
-#        go test $VERB sigmaos/apps/hotel -start $SPPROXYD $DIALPROXY -run TestBenchDeathStarSingle
-#        cleanup
-#        ./start-db.sh
-#       	go test $VERB sigmaos/apps/socialnetwork -start $SPPROXYD $DIALPROXY -run TestCompose
-#        cleanup
     else
-        for T in apps/imgresize apps/mr apps/hotel apps/socialnetwork apps/www; do
+        for T in \
+          apps/imgresize \
+          apps/mr \
+          apps/hotel \
+          apps/socialnetwork \
+          apps/www; \
+          do
             if ! [ -z "$SKIPTO" ]; then
               if [[ "$SKIPTO" == "$T" ]]; then
                 # Stop skipping
@@ -322,7 +389,7 @@ if [[ $APPS == "--apps" ]]; then
               fi
             fi
             ./start-db.sh
-            run_test $T "go test -timeout 20m $VERB sigmaos/$T -start $SPPROXYD $DIALPROXY $REUSEKERNEL"
+            run_test $T "./test-in-docker.sh --pkg $T --args \"$VERB --timeout 20m $SPPROXYD $DIALPROXY $REUSEKERNEL\""
         done
         # On machines with many cores, kv tests may take a long time.
         for T in apps/kv; do
@@ -336,7 +403,7 @@ if [[ $APPS == "--apps" ]]; then
               fi
             fi
             ./start-db.sh
-            run_test $T "go test -timeout 50m $VERB sigmaos/$T -start $SPPROXYD $DIALPROXY $REUSEKERNEL"
+            run_test $T "./test-in-docker.sh --pkg $T --args \"$VERB --timeout 50m $SPPROXYD $DIALPROXY $REUSEKERNEL\""
         done
     fi
 fi
@@ -346,7 +413,7 @@ fi
 #
 
 if [[ $CONTAINER == "--container" ]] ; then
-    run_test $T "go test $VERB sigmaos/scontainer -start"
+    run_test $T "./test-in-docker.sh --pkg scontainer --args \"$VERB\""
 fi
 
 cleanup

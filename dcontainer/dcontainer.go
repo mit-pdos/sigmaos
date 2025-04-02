@@ -45,8 +45,15 @@ type cpustats struct {
 	util                float64
 }
 
-func StartDockerContainer(p *proc.Proc, kernelId string) (*DContainer, error) {
+func StartDockerContainer(p *proc.Proc, kernelId, user, netmode string) (*DContainer, error) {
 	image := "sigmauser"
+	tmpBase := "/tmp"
+	if user != sp.NOT_SET {
+		image += "-" + user
+		tmpBase = filepath.Join(tmpBase, user)
+	}
+	procdBin := filepath.Join(tmpBase, "sigmaos-procd-bin")
+	perfOutputPath := filepath.Join(tmpBase, perf.OUTPUT_DIR)
 	ctx := context.Background()
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {
@@ -60,7 +67,6 @@ func StartDockerContainer(p *proc.Proc, kernelId string) (*DContainer, error) {
 
 	pset := nat.PortSet{} // Ports to expose
 	pmap := nat.PortMap{} // NAT mappings for exposed ports
-	netmode := "host"
 	var endpoints map[string]*network.EndpointSettings
 	cmd := append([]string{p.GetProgram()}, p.Args...)
 	db.DPrintf(db.CONTAINER, "ContainerCreate %v %v s %v\n", cmd, p.GetEnv(), score)
@@ -72,14 +78,14 @@ func StartDockerContainer(p *proc.Proc, kernelId string) (*DContainer, error) {
 		// user bin dir.
 		mount.Mount{
 			Type:     mount.TypeBind,
-			Source:   chunksrv.PathHostKernel(kernelId),
+			Source:   chunksrv.PathHostKernel(user, kernelId),
 			Target:   chunksrv.ROOTBINCONTAINER,
 			ReadOnly: false,
 		},
 		// perf output dir
 		mount.Mount{
 			Type:     mount.TypeBind,
-			Source:   perf.OUTPUT_PATH,
+			Source:   perfOutputPath,
 			Target:   perf.OUTPUT_PATH,
 			ReadOnly: false,
 		},
@@ -93,7 +99,7 @@ func StartDockerContainer(p *proc.Proc, kernelId string) (*DContainer, error) {
 		mnts = append(mnts,
 			mount.Mount{
 				Type:     mount.TypeBind,
-				Source:   filepath.Join("/tmp/sigmaos-procd-bin"),
+				Source:   procdBin,
 				Target:   filepath.Join(sp.SIGMAHOME, "bin/kernel"),
 				ReadOnly: true,
 			},

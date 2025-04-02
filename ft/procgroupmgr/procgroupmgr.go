@@ -11,7 +11,6 @@ package procgroupmgr
 
 import (
 	"fmt"
-	"log"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -54,21 +53,29 @@ func (pgm *ProcGroupMgr) String() string {
 }
 
 type ProcGroupMgrConfig struct {
-	Program   string
-	Args      []string
-	Job       string
-	Mcpu      proc.Tmcpu
-	NReplicas int
+	Program     string
+	Args        []string
+	Job         string
+	Mcpu        proc.Tmcpu
+	NReplicas   int
+	RealmSwitch sp.Trealm
+	DialProxy   bool
 }
 
 // If n == 0, run only one member (i.e., no hot standby's or replication)
 func NewProcGroupConfig(n int, bin string, args []string, mcpu proc.Tmcpu, job string) *ProcGroupMgrConfig {
+	return NewProcGroupConfigRealmSwitch(n, bin, args, mcpu, job, sp.Trealm(sp.NOT_SET), true)
+}
+
+func NewProcGroupConfigRealmSwitch(n int, bin string, args []string, mcpu proc.Tmcpu, job string, realmSwitch sp.Trealm, dialproxy bool) *ProcGroupMgrConfig {
 	return &ProcGroupMgrConfig{
-		NReplicas: n,
-		Program:   bin,
-		Args:      append([]string{job}, args...),
-		Mcpu:      mcpu,
-		Job:       job,
+		NReplicas:   n,
+		Program:     bin,
+		Args:        append([]string{job}, args...),
+		Mcpu:        mcpu,
+		Job:         job,
+		RealmSwitch: realmSwitch,
+		DialProxy:   dialproxy,
 	}
 }
 
@@ -89,7 +96,7 @@ func Recover(sc *sigmaclnt.SigmaClnt) ([]*ProcGroupMgr, error) {
 		if err := sc.GetFileJson(pn, cfg); err != nil {
 			return true, err
 		}
-		log.Printf("cfg %v\n", cfg)
+		db.DPrintf(db.ALWAYS, "cfg %v\n", cfg)
 		pgms = append(pgms, cfg.StartGrpMgr(sc))
 		return false, nil
 
@@ -156,6 +163,10 @@ func newMember(sc *sigmaclnt.SigmaClnt, cfg *ProcGroupMgrConfig, id int) *member
 func (m *member) spawnL() error {
 	p := proc.NewProc(m.Program, m.Args)
 	p.SetMcpu(m.Mcpu)
+	if m.RealmSwitch != sp.NOT_SET {
+		p.SetRealmSwitch(m.RealmSwitch)
+		p.GetProcEnv().UseDialProxy = m.DialProxy
+	}
 
 	p.AppendEnv(proc.SIGMAFAIL, proc.GetSigmaFail())
 	p.AppendEnv(proc.SIGMAGEN, strconv.Itoa(m.gen))

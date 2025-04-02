@@ -14,42 +14,39 @@ const (
 )
 
 type TstateSN struct {
-	*test.Tstate
+	mrts    *test.MultiRealmTstate
 	jobname string
 	snCfg   *sn.SocialNetworkConfig
 	dbu     *sn.DBUtil
 }
 
-func newTstateSN(t *test.Tstate, srvs []sn.Srv, nsrv int) (*TstateSN, error) {
+func newTstateSN(mrts *test.MultiRealmTstate, srvs []sn.Srv, nsrv int) (*TstateSN, error) {
 	var err error
 	tssn := &TstateSN{}
 	tssn.jobname = rand.Name()
-	tssn.Tstate = t
+	tssn.mrts = mrts
 	if test.Start {
 		nMoreKernel := ((len(srvs)*2 + NCACHESRV) - 1) / int(linuxsched.GetNCores())
 		if nMoreKernel > 0 {
 			dbg.DPrintf(dbg.ALWAYS, "(%v - 1) / %v = %v more kernels are needed",
 				len(srvs)*2+NCACHESRV, linuxsched.GetNCores(), nMoreKernel)
-			err = tssn.BootNode(nMoreKernel)
-			assert.Nil(tssn.T, err)
+			err = tssn.mrts.GetRealm(test.REALM1).BootNode(nMoreKernel)
+			assert.Nil(tssn.mrts.T, err)
 		}
 	}
-	tssn.snCfg, err = sn.NewConfig(tssn.SigmaClnt, tssn.jobname, srvs, nsrv, false)
-	assert.Nil(tssn.T, err, "config should initialize properly.")
-	tssn.dbu, err = sn.NewDBUtil(tssn.SigmaClnt)
-	if !assert.Nil(tssn.T, err, "Err create mongoc: %v", err) {
+	tssn.snCfg, err = sn.NewConfig(tssn.mrts.GetRealm(test.REALM1).SigmaClnt, tssn.jobname, srvs, nsrv, false)
+	assert.Nil(tssn.mrts.T, err, "config should initialize properly.")
+	tssn.dbu, err = sn.NewDBUtil(tssn.mrts.GetRealm(test.REALM1).SigmaClnt)
+	if !assert.Nil(tssn.mrts.T, err, "Err create mongoc: %v", err) {
 		return tssn, err
 	}
 	err = tssn.dbu.Clear()
-	if !assert.Nil(tssn.T, err, "Err clear mongoc: %v", err) {
+	if !assert.Nil(tssn.mrts.T, err, "Err clear mongoc: %v", err) {
 		return tssn, err
 	}
 	return tssn, nil
 }
 
 func (tssn *TstateSN) Shutdown() error {
-	if stopErr := tssn.snCfg.Stop(); stopErr != nil {
-		return stopErr
-	}
-	return tssn.Tstate.Shutdown()
+	return tssn.snCfg.Stop()
 }

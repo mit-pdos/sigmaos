@@ -6,7 +6,6 @@ package clnt
 import (
 	db "sigmaos/debug"
 	leaseproto "sigmaos/ft/lease/proto"
-	"sigmaos/namesrv/fsetcd"
 	rpcclnt "sigmaos/rpc/clnt"
 	sprpcclnt "sigmaos/rpc/clnt/sigmap"
 	"sigmaos/sigmaclnt/fslib"
@@ -39,9 +38,12 @@ func (lmc *LeaseClnt) AskLease(pn string, ttl sp.Tttl) (*Lease, error) {
 		return li, nil
 	}
 	var res leaseproto.AskRep
-	if err := lmc.cc.RPC(srv.String(), "LeaseSrv.AskLease", &leaseproto.AskReq{
-		ClntId: uint64(lmc.ClntId()),
-		TTL:    fsetcd.LeaseTTL}, &res); err == nil {
+	if err := lmc.cc.RPC(srv.String(), "LeaseSrv.AskLease",
+		&leaseproto.AskReq{
+			ClntId: uint64(lmc.ClntId()),
+			TTL:    uint64(ttl),
+		},
+		&res); err == nil {
 		li := &Lease{
 			ch:  make(chan struct{}),
 			srv: srv.String(),

@@ -26,7 +26,8 @@ const (
 )
 
 var (
-	endpointPorts = []sp.Tport{3379, 3380, 3381, 3382, 3383}
+	//	endpointPorts = []sp.Tport{3379, 3380, 3381, 3382, 3383} // For use when running on the same machine as K8s
+	endpointPorts = []sp.Tport{2379, 2380, 2381, 2382, 2383}
 )
 
 type TetcdEndpoints map[string]*sp.TendpointProto
@@ -43,7 +44,7 @@ type FsEtcd struct {
 func NewFsEtcdEndpoint(ip sp.Tip) (TetcdEndpoints, error) {
 	eps := map[string]*sp.TendpointProto{}
 	for i := range endpointPorts {
-		addr := sp.NewTaddr(ip, sp.INNER_CONTAINER_IP, endpointPorts[i])
+		addr := sp.NewTaddr(ip, endpointPorts[i])
 		ep := sp.NewEndpoint(sp.EXTERNAL_EP, []*sp.Taddr{addr})
 		eps[addr.IPPort()] = ep.GetProto()
 	}

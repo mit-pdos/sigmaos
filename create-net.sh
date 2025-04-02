@@ -9,6 +9,6 @@ if [ $# -ne 1 ]; then
     exit 1
 fi
 
-if ! docker network ls | grep -q "$1"; then
+if ! docker network ls | grep -qE " $1 " ; then
     docker network create --driver overlay $1 --attachable    
 fi

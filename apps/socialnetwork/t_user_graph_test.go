@@ -9,6 +9,7 @@ import (
 	sn "sigmaos/apps/socialnetwork"
 	"sigmaos/apps/socialnetwork/proto"
 	sprpcclnt "sigmaos/rpc/clnt/sigmap"
+	sp "sigmaos/sigmap"
 	"sigmaos/test"
 	linuxsched "sigmaos/util/linux/sched"
 )
@@ -19,11 +20,12 @@ func TestUser(t *testing.T) {
 		return
 	}
 	// start server
-	t1, err1 := test.NewTstateAll(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	tssn, err := newTstateSN(t1, []sn.Srv{sn.Srv{"socialnetwork-user", nil, 1000}}, NCACHESRV)
+	defer mrts.Shutdown()
+	tssn, err := newTstateSN(mrts, []sn.Srv{sn.Srv{"socialnetwork-user", nil, 1000}}, NCACHESRV)
 	defer assert.Nil(t, tssn.Shutdown())
 	if err != nil {
 		return
@@ -48,7 +50,7 @@ func TestUser(t *testing.T) {
 	// register user
 	arg_reg := proto.RegisterUserReq{
 		Firstname: "Alice", Lastname: "Test", Username: "user_0", Password: "xxyyzz"}
-	res_reg := proto.UserRep{}
+	res_reg := proto.SNUserRep{}
 	err = rpcc.RPC("UserSrv.RegisterUser", &arg_reg, &res_reg)
 	assert.Nil(t, err)
 	assert.Equal(t, "Username user_0 already exist", res_reg.Ok)
@@ -70,7 +72,7 @@ func TestUser(t *testing.T) {
 
 	// new user login
 	arg_login := proto.LoginReq{Username: "test_user", Password: "xxyy"}
-	res_login := proto.UserRep{}
+	res_login := proto.SNUserRep{}
 	err = rpcc.RPC("UserSrv.Login", &arg_login, &res_login)
 	assert.Nil(t, err)
 	assert.Equal(t, "Login Failure.", res_login.Ok)
@@ -97,11 +99,12 @@ func TestGraph(t *testing.T) {
 		return
 	}
 	// start server
-	t1, err1 := test.NewTstateAll(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	tssn, err := newTstateSN(t1, []sn.Srv{
+	defer mrts.Shutdown()
+	tssn, err := newTstateSN(mrts, []sn.Srv{
 		sn.Srv{"socialnetwork-user", nil, 1000},
 		sn.Srv{"socialnetwork-graph", nil, 1000}}, NCACHESRV)
 	defer assert.Nil(t, tssn.Shutdown())
@@ -182,11 +185,13 @@ func TestUserAndGraph(t *testing.T) {
 		return
 	}
 	// start server
-	t1, err1 := test.NewTstateAll(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	tssn, err := newTstateSN(t1, []sn.Srv{
+	defer mrts.Shutdown()
+
+	tssn, err := newTstateSN(mrts, []sn.Srv{
 		sn.Srv{"socialnetwork-user", nil, 1000},
 		sn.Srv{"socialnetwork-graph", nil, 1000}}, NCACHESRV)
 	defer assert.Nil(t, tssn.Shutdown())
@@ -210,7 +215,7 @@ func TestUserAndGraph(t *testing.T) {
 		Firstname: "Alice", Lastname: "Test", Username: "atest", Password: "xyz"}
 	arg_reg2 := proto.RegisterUserReq{
 		Firstname: "Bob", Lastname: "Test", Username: "btest", Password: "zyx"}
-	res_reg := proto.UserRep{}
+	res_reg := proto.SNUserRep{}
 	err = rpcc.RPC("UserSrv.RegisterUser", &arg_reg1, &res_reg)
 	assert.Nil(t, err)
 	assert.Equal(t, "OK", res_reg.Ok)
@@ -267,11 +272,13 @@ func TestUserAndGraph(t *testing.T) {
 
 func testRPCTime(t *testing.T, mcpu proc.Tmcpu) {
 	// start server
-	t1, err1 := test.NewTstateAll(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	tssn, err := newTstateSN(t1, []sn.Srv{sn.Srv{"socialnetwork-user", nil, mcpu}}, 1)
+	defer mrts.Shutdown()
+
+	tssn, err := newTstateSN(mrts, []sn.Srv{sn.Srv{"socialnetwork-user", nil, mcpu}}, 1)
 	defer assert.Nil(t, tssn.Shutdown())
 	if err != nil {
 		return

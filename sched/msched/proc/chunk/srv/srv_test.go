@@ -49,7 +49,7 @@ func newTstate(t *testing.T, n int) *Tstate {
 	db.DPrintf(db.TEST, "Chunksrvs  %v", ts.srvs)
 
 	for _, srv := range srvs {
-		pn := chunksrv.PathHostKernelRealm(srv, sp.ROOTREALM)
+		pn := chunksrv.PathHostKernelRealm(test.User, srv, sp.ROOTREALM)
 		os.Mkdir(pn, 0700)
 	}
 	return ts
@@ -61,7 +61,7 @@ func (ts *Tstate) shutdown() {
 }
 
 func (ts *Tstate) check(srv string, st *sp.Tstat) {
-	pn := chunksrv.PathHostKernelRealm(srv, sp.ROOTREALM)
+	pn := chunksrv.PathHostKernelRealm(test.User, srv, sp.ROOTREALM)
 	pn = filepath.Join(pn, PROG)
 	fi, err := os.Stat(pn)
 	assert.Nil(ts.T, err)

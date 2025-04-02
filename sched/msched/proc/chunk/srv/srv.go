@@ -33,7 +33,10 @@ const (
 	SEEK_DATA = 3
 	SEEK_HOLE = 4
 
-	ROOTHOSTCACHE = "/tmp/sigmaos-bin"
+	// Depending on whether developing in multi-user or single-user mode, the
+	// host bin cache will be mounted at either /tmp/sigmaos-bin or
+	// /tmp/$SIGMAUSER/sigmaos-bin
+	ROOTHOSTCACHE_DIR = "sigmaos-bin"
 
 	// start-kernel.sh mounts /tmp/sigmaos-bin/${KERNELID} as
 	// ROOTBINCACHE, given each kernel its own directory in the local
@@ -52,14 +55,19 @@ const (
 )
 
 // The path on the host where a kernel caches its binaries
-func PathHostKernel(kernelId string) string {
-	return filepath.Join(ROOTHOSTCACHE, kernelId)
+func PathHostKernel(user, kernelId string) string {
+	tmpBase := "/tmp"
+	if user != sp.NOT_SET {
+		tmpBase = filepath.Join(tmpBase, user)
+	}
+	rootHostCache := filepath.Join(tmpBase, ROOTHOSTCACHE_DIR)
+	return filepath.Join(rootHostCache, kernelId)
 }
 
 // For testing: the path on the host where a kernel caches its
 // binaries for a realm.
-func PathHostKernelRealm(kernelId string, realm sp.Trealm) string {
-	return filepath.Join(PathHostKernel(kernelId), realm.String())
+func PathHostKernelRealm(user, kernelId string, realm sp.Trealm) string {
+	return filepath.Join(PathHostKernel(user, kernelId), realm.String())
 }
 
 // The path where chunksrv caches binaries in the local file system.

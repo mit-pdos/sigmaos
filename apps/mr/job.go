@@ -182,14 +182,37 @@ func InitCoordFS(fsl *fslib.FsLib, jobRoot, jobname string, nreducetask int) (*T
 }
 
 // Clean up all old MR outputs
-func CleanupMROutputs(fsl *fslib.FsLib, outputDir, intOutputDir string) {
+func CleanupMROutputs(fsl *fslib.FsLib, outputDir, intOutputDir string, swapLocalForAny bool) error {
 	db.DPrintf(db.MR, "Clean up MR outputs: %v %v", outputDir, intOutputDir)
-	fsl.RmDir(outputDir)
+	defer db.DPrintf(db.MR, "Clean up MR outputs done")
+
 	fsl.RmDir(intOutputDir)
-	db.DPrintf(db.MR, "Clean up MR outputs done")
+	oDir := outputDir
+	if swapLocalForAny {
+		oDir = strings.ReplaceAll(oDir, sp.LOCAL, sp.ANY)
+	}
+	return fsl.RmDir(oDir)
 }
 
-func PrepareJob(fsl *fslib.FsLib, ts *Tasks, jobRoot, jobName string, job *Job) (int, error) {
+func JobLocalToAny(j *Job, input, intermediate, output bool) *Job {
+	// Make a copy of the job struct so we can adjust some paths (e.g., replace
+	// ~local with ~any), for the test program
+	job := &Job{}
+	*job = *j
+	if input && strings.Contains(job.Input, sp.LOCAL) {
+		job.Input = strings.ReplaceAll(job.Input, sp.LOCAL, sp.ANY)
+	}
+	if intermediate && strings.Contains(job.Intermediate, sp.LOCAL) {
+		job.Intermediate = strings.ReplaceAll(job.Intermediate, sp.LOCAL, sp.ANY)
+	}
+	if output && strings.Contains(job.Output, sp.LOCAL) {
+		job.Output = strings.ReplaceAll(job.Output, sp.LOCAL, sp.ANY)
+	}
+	return job
+}
+
+func PrepareJob(fsl *fslib.FsLib, ts *Tasks, jobRoot, jobName string, j *Job) (int, error) {
+	job := JobLocalToAny(j, false, false, true)
 	db.DPrintf(db.TEST, "job %v", job)
 	if job.Output == "" || job.Intermediate == "" {
 		return 0, fmt.Errorf("Err job output (\"%v\") or intermediate (\"%v\") not supplied", job.Output, job.Intermediate)
@@ -224,7 +247,7 @@ func PrepareJob(fsl *fslib.FsLib, ts *Tasks, jobRoot, jobName string, job *Job) 
 
 	splitsz := sp.Tlength(SPLITSZ)
 
-	bins, err := NewBins(fsl, job.Input, sp.Tlength(job.Binsz), splitsz)
+	bins, err := NewBins(fsl, job.Input, true, sp.Tlength(job.Binsz), splitsz)
 	if err != nil || len(bins) == 0 {
 		return len(bins), err
 	}

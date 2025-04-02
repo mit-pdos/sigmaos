@@ -29,9 +29,9 @@ func NewSPChannelEndpoint(fsl *fslib.FsLib, pn string, ep *sp.Tendpoint) (channe
 
 func NewSPChannel(fsl *fslib.FsLib, pn string) (channel.RPCChannel, error) {
 	s := time.Now()
-	defer func() {
-		db.DPrintf(db.ATTACH_LAT, "NewSigmaRPCClnt %q lat %v", pn, time.Since(s))
-	}()
+	defer func(s time.Time) {
+		db.DPrintf(db.ATTACH_LAT, "NewSigmaPRPCChannel E2e %q lat %v", pn, time.Since(s))
+	}(s)
 
 	pn0 := filepath.Join(pn, rpc.RPC)
 	sdc, err := rpcdevclnt.NewSessDevClnt(fsl, pn0)
@@ -39,10 +39,12 @@ func NewSPChannel(fsl *fslib.FsLib, pn string) (channel.RPCChannel, error) {
 		return nil, err
 	}
 	db.DPrintf(db.RPCCLNT, "Open %v", sdc.DataPn())
+	s = time.Now()
 	fd, err := fsl.Open(sdc.DataPn(), sp.ORDWR)
 	if err != nil {
 		return nil, err
 	}
+	db.DPrintf(db.ATTACH_LAT, "NewSigmaPRPCChannel Open %q lat %v", pn, time.Since(s))
 	return &SPChannel{
 		fsl: fsl,
 		fd:  fd,

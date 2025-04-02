@@ -371,18 +371,6 @@ if [[ $APPS == "--apps" ]]; then
           run_test $T "./test-in-docker.sh --pkg $T --run '${TNAMES[$i]}' --args \"$VERB $SPPROXYD $DIALPROXY\""
           i=$(($i+1))
         done
-#        go test $VERB sigmaos/apps/mr -start $SPPROXYD $DIALPROXY -run MRJob
-#        cleanup
-#        go test $VERB sigmaos/apps/imgresize -start $SPPROXYD $DIALPROXY -run ImgdOne
-#        cleanup
-#        go test $VERB sigmaos/apps/kv -start $SPPROXYD $DIALPROXY -run KVOKN
-#        cleanup
-#        ./start-db.sh
-#        go test $VERB sigmaos/apps/hotel -start $SPPROXYD $DIALPROXY -run TestBenchDeathStarSingle
-#        cleanup
-#        ./start-db.sh
-#       	go test $VERB sigmaos/apps/socialnetwork -start $SPPROXYD $DIALPROXY -run TestCompose
-#        cleanup
     else
         for T in \
           apps/imgresize \

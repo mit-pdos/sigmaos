@@ -32,10 +32,11 @@ else
   docker run --rm -d \
     --name $ETCD_CTR_NAME \
     --env ALLOW_NONE_AUTHENTICATION=yes \
-    --publish 3379:2379 \
-    --publish 3380:2380 \
-    --publish 3381:2381 \
-    --publish 3382:2382 \
-    --publish 3383:2383 \
+    --network host \
     bitnami/etcd:latest
+#    --publish 3379:2379 \
+#    --publish 3380:2380 \
+#    --publish 3381:2381 \
+#    --publish 3382:2382 \
+#    --publish 3383:2383 \
 fi

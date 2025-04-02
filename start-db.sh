@@ -25,7 +25,7 @@ source $ROOT/env/env.sh
 DB_IMAGE_NAME="sigmadb"
 MONGO_IMAGE_NAME="sigmamongo"
 TESTER_NETWORK="host"
-if [[ "$SIGMAUSER" != "NOT_SET" ]]; then
+if ! [ -z "$SIGMAUSER" ]; then
   DB_IMAGE_NAME=$DB_IMAGE_NAME-$SIGMAUSER
   MONGO_IMAGE_NAME=$MONGO_IMAGE_NAME-$SIGMAUSER
   TESTER_NETWORK="sigmanet-testuser-${SIGMAUSER}"

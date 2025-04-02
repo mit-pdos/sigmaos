@@ -443,7 +443,7 @@ func runGeo(t *testing.T, wc *hotel.WebClnt, r *rand.Rand) {
 func TestBenchSpawnGeo(t *testing.T) {
 	const (
 		N_GEO  = 15
-		N_NODE = 3
+		N_NODE = 5
 	)
 	// Bail out early if machine has too many cores (which messes with the cgroups setting)
 	if !assert.False(t, linuxsched.GetNCores() > 10, "SpawnBurst test will fail because machine has >10 cores, which causes cgroups settings to fail") {

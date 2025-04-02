@@ -37,6 +37,7 @@ if ! docker ps | grep -q $DB_IMAGE_NAME; then
     docker run \
     --name $DB_IMAGE_NAME \
     -e MYSQL_ROOT_PASSWORD=sigmadb \
+    --network $TESTER_NETWORK \
     -d mariadb
 #    -p $PORT:3306 \
 fi

@@ -8,7 +8,8 @@ import (
 type RoundRobinLB struct {
 }
 
-func NewRoundRobinLB(simms.NewLoadBalancerMetricFn) simms.LoadBalancer {
+// TODO: fix, and eventually subsume into OmniscientLB
+func NewRoundRobinLB(*uint64, simms.LoadBalancerStateCache, simms.NewLoadBalancerMetricFn, simms.AssignRequestsToLoadBalancerShardsFn) simms.LoadBalancer {
 	return &RoundRobinLB{}
 }
 

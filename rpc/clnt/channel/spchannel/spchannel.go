@@ -34,10 +34,12 @@ func NewSPChannel(fsl *fslib.FsLib, pn string) (channel.RPCChannel, error) {
 	}(s)
 
 	pn0 := filepath.Join(pn, rpc.RPC)
+	s = time.Now()
 	sdc, err := rpcdevclnt.NewSessDevClnt(fsl, pn0)
 	if err != nil {
 		return nil, err
 	}
+	db.DPrintf(db.ATTACH_LAT, "NewSigmaPRPCChannel NewSessDevClnt %q lat %v", pn, time.Since(s))
 	db.DPrintf(db.RPCCLNT, "Open %v", sdc.DataPn())
 	s = time.Now()
 	fd, err := fsl.Open(sdc.DataPn(), sp.ORDWR)

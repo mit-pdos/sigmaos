@@ -7,6 +7,7 @@ package clnt
 
 import (
 	"path/filepath"
+	"time"
 
 	db "sigmaos/debug"
 	rpcdev "sigmaos/rpc/dev"
@@ -26,11 +27,13 @@ func NewSessDevClnt(fsl *fslib.FsLib, pn string) (*SessDevClnt, error) {
 
 	clone := sdc.pn + "/" + rpcdev.CLONE
 	db.DPrintf(db.SESSDEVCLNT, "NewSessDevClnt: %v", clone)
+	start := time.Now()
 	b, err := sdc.GetFile(clone)
 	if err != nil {
 		db.DPrintf(db.SESSDEVCLNT_ERR, "NewSessDevClnt [%v] err: %v", clone, err)
 		return nil, err
 	}
+	db.DPrintf(db.ATTACH_LAT, "NewSessDevClnt GetFile %q lat %v", clone, time.Since(start))
 	sdc.sid = string(b)
 	sdc.ctl = filepath.Join(sdc.pn, sdc.sid, rpcdev.CTL)
 	sdc.data = filepath.Join(sdc.pn, sdc.sid, rpcdev.DATA)

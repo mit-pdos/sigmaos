@@ -7,6 +7,7 @@ import (
 
 	cachegrpclnt "sigmaos/apps/cache/cachegrp/clnt"
 	cachegrpmgr "sigmaos/apps/cache/cachegrp/mgr"
+	"sigmaos/apps/epcache"
 	epsrv "sigmaos/apps/epcache/srv"
 	"sigmaos/apps/kv"
 	db "sigmaos/debug"
@@ -150,6 +151,7 @@ type HotelJob struct {
 	cache           string
 	kvf             *kv.KVFleet
 	job             string
+	epcsrvEP        *sp.Tendpoint
 }
 
 func NewHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []*Srv, nhotel int, cache string, cacheMcpu proc.Tmcpu, ncache int, gc bool, imgSizeMB int, ngeo int, ngeoidx int, geoSearchRadius int, geoNResults int) (*HotelJob, error) {
@@ -171,6 +173,17 @@ func NewHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []*Srv, nhotel int, c
 
 	// Create epcache job
 	epcj, err := epsrv.NewEPCacheJob(sc)
+	if err != nil {
+		return nil, err
+	}
+
+	// Read the endpoint of the endpoint cache server
+	epcsrvEPB, err := sc.GetFile(epcache.EPCACHE)
+	if err != nil {
+		return nil, err
+	}
+
+	epcsrvEP, err := sp.NewEndpointFromBytes(epcsrvEPB)
 	if err != nil {
 		return nil, err
 	}
@@ -235,6 +248,7 @@ func NewHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []*Srv, nhotel int, c
 		cache:           cache,
 		kvf:             kvf,
 		job:             job,
+		epcsrvEP:        epcsrvEP,
 	}
 
 	if ngeo > 1 {
@@ -250,6 +264,7 @@ func NewHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []*Srv, nhotel int, c
 
 func (hj *HotelJob) AddGeoSrv() error {
 	p := proc.NewProc(geo.Name, append([]string{hj.job, hj.cache}, geo.Args...))
+	p.SetCachedEndpoint(epcache.EPCACHE, hj.epcsrvEP)
 	p.AppendEnv("NHOTEL", strconv.Itoa(nhotel))
 	p.AppendEnv("HOTEL_IMG_SZ_MB", strconv.Itoa(imgSizeMB))
 	p.SetMcpu(geo.Mcpu)

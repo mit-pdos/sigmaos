@@ -9,6 +9,10 @@ import (
 	"sigmaos/sigmaclnt"
 )
 
+const (
+	SRV_MCPU proc.Tmcpu = 1000
+)
+
 type EPCacheJob struct {
 	sc      *sigmaclnt.SigmaClnt
 	srvProc *proc.Proc
@@ -20,7 +24,7 @@ func NewEPCacheJob(sc *sigmaclnt.SigmaClnt) (*EPCacheJob, error) {
 		sc:      sc,
 		srvProc: proc.NewProc("epcached", []string{}),
 	}
-	j.srvProc.SetMcpu(1000)
+	j.srvProc.SetMcpu(SRV_MCPU)
 	if err := sc.Spawn(j.srvProc); err != nil {
 		db.DPrintf(db.TEST, "Err Spawn EPCache: %v", err)
 		return nil, err

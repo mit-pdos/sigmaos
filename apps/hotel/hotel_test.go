@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"sigmaos/apps/epcache"
+	epcachesrv "sigmaos/apps/epcache/srv"
 	"sigmaos/apps/hotel"
 	"sigmaos/apps/hotel/proto"
 	"sigmaos/benchmarks/loadgen"
@@ -63,7 +64,7 @@ func newTstate(mrts *test.MultiRealmTstate, srvs []*hotel.Srv, nserver int, geoN
 	ts.mrts = mrts
 	n := 0
 	// Avg of 2 cores per service, + epcache core
-	for i := 1; int(linuxsched.GetNCores())*i < len(srvs)*2+nserver*2+1; i++ {
+	for i := 1; int(linuxsched.GetNCores())*i < len(srvs)*2+nserver*2+(epcachesrv.SRV_MCPU/1000); i++ {
 		n += 1
 	}
 	err = ts.mrts.GetRealm(test.REALM1).BootNode(n)

@@ -445,8 +445,9 @@ func runGeo(t *testing.T, wc *hotel.WebClnt, r *rand.Rand) {
 
 func TestBenchSpawnGeo(t *testing.T) {
 	const (
-		N_GEO  = 15
-		N_NODE = 8
+		N_GEO      = 15
+		N_NODE     = 8
+		N_PARALLEL = 2
 	)
 	// Bail out early if machine has too many cores (which messes with the cgroups setting)
 	if !assert.False(t, linuxsched.GetNCores() > 10, "SpawnBurst test will fail because machine has >10 cores, which causes cgroups settings to fail") {
@@ -494,13 +495,20 @@ func TestBenchSpawnGeo(t *testing.T) {
 	db.DPrintf(db.TEST, "res %v\n", res.HotelIds)
 	assert.Equal(t, 9, len(res.HotelIds))
 	db.DPrintf(db.TEST, "Spawning %v additional geos", N_GEO)
+	// Control amount of parallelism
+	p := make(chan bool, N_PARALLEL)
+	for i := 0; i < N_PARALLEL; i++ {
+		p <- true
+	}
 	c := make(chan bool)
 	for i := 0; i < N_GEO; i++ {
-		go func(c chan bool) {
+		go func(c chan bool, p chan bool) {
+			<-p
 			err := ts.hotel.AddGeoSrv()
 			assert.Nil(mrts.T, err, "Err add geo srv: %v")
+			p <- true
 			c <- true
-		}(c)
+		}(c, p)
 	}
 	for i := 0; i < N_GEO; i++ {
 		<-c

@@ -218,10 +218,10 @@ func (ps *ProtSrv) clunk(fid sp.Tfid) *sp.Rerror {
 	if err != nil {
 		return sp.NewRerrorSerr(err)
 	}
-	db.DPrintf(db.WALK_LAT, "ProtSrv.Clunk lookupDel %v %v lat %v", f.Ctx().ClntId(), fid, time.Since(s))
+	db.DPrintf(db.CLUNK_LAT, "ProtSrv.Clunk lookupDel %v %v lat %v", f.Ctx().ClntId(), fid, time.Since(s))
 
 	defer func(s time.Time) {
-		db.DPrintf(db.WALK_LAT, "ProtSrv.Clunk E2E %v %v lat %v", f.Ctx().ClntId(), fid, time.Since(s))
+		db.DPrintf(db.CLUNK_LAT, "ProtSrv.Clunk E2E %v %v lat %v", f.Ctx().ClntId(), fid, time.Since(s))
 	}(s)
 
 	db.DPrintf(db.PROTSRV, "%v: Clunk %v f %v", f.Ctx().ClntId(), fid, f)
@@ -230,13 +230,8 @@ func (ps *ProtSrv) clunk(fid sp.Tfid) *sp.Rerror {
 		if _, err := ps.vt.Delete(f.Obj().Path()); err != nil {
 			db.DFatalf("%v: clunk %v vt del failed %v err %v\n", f.Ctx().ClntId(), fid, f.Obj(), err)
 		}
-		db.DPrintf(db.WALK_LAT, "ProtSrv.Clunk vt.Delete %v %v lat %v", f.Ctx().ClntId(), fid, time.Since(s))
-		s = time.Now()
 		f.Obj().Close(f.Ctx(), f.Mode())
-		db.DPrintf(db.WALK_LAT, "ProtSrv.Clunk Obj().Close() %v %v lat %v", f.Ctx().ClntId(), fid, time.Since(s))
-		s = time.Now()
 		f.Close()
-		db.DPrintf(db.WALK_LAT, "ProtSrv.Clunk f.Close() %v %v lat %v", f.Ctx().ClntId(), fid, time.Since(s))
 	}
 
 	watch, ok := f.Obj().(*watch.Watch)

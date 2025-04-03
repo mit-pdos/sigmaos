@@ -39,6 +39,8 @@ func (ps *ProtSrv) lookupObj(ctx fs.CtxI, f *fid.Fid, target path.Tpathname, lty
 	if err == nil {
 		name = target[len(os)-1]
 	}
-	db.DPrintf(db.WALK_LAT, "ProtSrv lookupObj namei.Walk %v %v lat %v", f.Ctx().ClntId(), target, time.Since(s))
+	if db.WillBePrinted(db.WALK_LAT) {
+		db.DPrintf(db.WALK_LAT, "ProtSrv lookupObj namei.Walk %v %v lat %v", f.Ctx().ClntId(), target, time.Since(s))
+	}
 	return os, lo, lk, name, err
 }

@@ -62,7 +62,8 @@ func newTstate(mrts *test.MultiRealmTstate, srvs []*hotel.Srv, nserver int, geoN
 	ts.job = rd.String(8)
 	ts.mrts = mrts
 	n := 0
-	for i := 1; int(linuxsched.GetNCores())*i < len(srvs)*2+nserver*2; i++ {
+	// Avg of 2 cores per service, + epcache core
+	for i := 1; int(linuxsched.GetNCores())*i < len(srvs)*2+nserver*2+1; i++ {
 		n += 1
 	}
 	err = ts.mrts.GetRealm(test.REALM1).BootNode(n)

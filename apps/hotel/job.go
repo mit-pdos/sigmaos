@@ -223,6 +223,7 @@ func NewHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []*Srv, nhotel int, c
 	for _, srv := range srvs {
 		db.DPrintf(db.TEST, "Hotel spawn %v", srv.Name)
 		p := proc.NewProc(srv.Name, append([]string{job, cache}, srv.Args...))
+		p.SetCachedEndpoint(epcache.EPCACHE, epcsrvEP)
 		p.AppendEnv("NHOTEL", strconv.Itoa(nhotel))
 		p.AppendEnv("HOTEL_IMG_SZ_MB", strconv.Itoa(imgSizeMB))
 		p.SetMcpu(srv.Mcpu)

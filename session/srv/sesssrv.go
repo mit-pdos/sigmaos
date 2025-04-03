@@ -110,7 +110,7 @@ func (ssrv *SessSrv) serve(sess *Session, fc *sessp.FcallMsg) *sessp.FcallMsg {
 	qlen := ssrv.QueueLen()
 	ssrv.stats.Stats().Inc(fc.Msg.Type(), qlen)
 
-	if fc.Msg.Type() == sessp.TTclunk {
+	if fc.Msg.Type() == sessp.TTclunk && db.WillBePrinted(db.WALK_LAT) {
 		db.DPrintf(db.WALK_LAT, "Clunk sid %v about to be dispatched", sess.Sid)
 	}
 	db.DPrintf(db.SESSSRV, "Dispatch request %v", fc)

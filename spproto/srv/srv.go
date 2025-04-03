@@ -213,10 +213,17 @@ func (ps *ProtSrv) Walk(args *sp.Twalk, rets *sp.Rwalk) *sp.Rerror {
 }
 
 func (ps *ProtSrv) clunk(fid sp.Tfid) *sp.Rerror {
+	s := time.Now()
 	f, err := ps.fm.LookupDel(fid)
 	if err != nil {
 		return sp.NewRerrorSerr(err)
 	}
+	db.DPrintf(db.WALK_LAT, "ProtSrv.Clunk lookupDel %v %v lat %v", f.Ctx().ClntId(), fid, time.Since(s))
+
+	defer func(s time.Time) {
+		db.DPrintf(db.WALK_LAT, "ProtSrv.Clunk E2E %v %v lat %v", f.Ctx().ClntId(), fid, time.Since(s))
+	}(s)
+
 	db.DPrintf(db.PROTSRV, "%v: Clunk %v f %v", f.Ctx().ClntId(), fid, f)
 	if f.IsOpen() { // has the fid been opened?
 		if _, err := ps.vt.Delete(f.Obj().Path()); err != nil {

@@ -82,7 +82,7 @@ func (sc *Mgr) RPC(ep *sp.Tendpoint, req sessp.Tmsg, iniov sessp.IoVec, outiov s
 	rep, err := sess.RPC(req, iniov, outiov)
 
 	if db.WillBePrinted(db.RPC_LAT) {
-		db.DPrintf(db.RPC_LAT, "RPC time %v [%v] alloc %v tot %v\n", req.Type(), req, time.Since(start), time.Since(s))
+		db.DPrintf(db.RPC_LAT, "RPC time %v [%v] alloc %v tot %v", req.Type(), req, time.Since(start), time.Since(s))
 	}
 
 	return rep, err

@@ -88,7 +88,7 @@ func (s *Users) initDB() error {
 	return nil
 }
 
-func (s *Users) CheckUser(ctx fs.CtxI, req proto.UserReq, res *proto.UserRep) error {
+func (s *Users) CheckUser(ctx fs.CtxI, req proto.UserReq, res *proto.HotelUserRep) error {
 	//	var sctx context.Context
 	//	var span trace.Span
 	//	if TRACING {

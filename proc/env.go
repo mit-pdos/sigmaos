@@ -227,6 +227,25 @@ func (pe *ProcEnvProto) SetInnerContainerIP(ip sp.Tip) {
 	pe.InnerContainerIPStr = ip.String()
 }
 
+func (pe *ProcEnvProto) GetCachedEndpoint(pn string) (*sp.Tendpoint, bool) {
+	epProto, ok := pe.CachedEndpoints[pn]
+	if !ok {
+		return nil, false
+	}
+	return sp.NewEndpointFromProto(epProto), true
+}
+
+func (pe *ProcEnvProto) SetCachedEndpoint(pn string, ep *sp.Tendpoint) {
+	if pe.CachedEndpoints == nil {
+		pe.CachedEndpoints = make(map[string]*sp.TendpointProto)
+	}
+	pe.CachedEndpoints[pn] = ep.GetProto()
+}
+
+func (pe *ProcEnvProto) ClearCachedEndpoint(pn string) {
+	delete(pe.CachedEndpoints, pn)
+}
+
 func (pe *ProcEnvProto) SetSigmaPath(buildTag string) {
 	if buildTag == sp.LOCAL_BUILD {
 		pe.SigmaPath = append(pe.SigmaPath, filepath.Join(sp.UX, sp.LOCAL, "bin/user/common"))
@@ -381,6 +400,7 @@ func (pe *ProcEnv) String() string {
 		"SigmaPath:%v "+
 		"RealmSwitch:%v "+
 		"Fail:%v "+
+		"CachedEPs:%v "+
 		"}",
 		pe.Program,
 		pe.Version,
@@ -405,5 +425,6 @@ func (pe *ProcEnv) String() string {
 		pe.SigmaPath,
 		pe.RealmSwitchStr,
 		pe.Fail,
+		pe.CachedEndpoints,
 	)
 }

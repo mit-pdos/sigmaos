@@ -376,6 +376,14 @@ func (p *Proc) SetNamedEndpoint(ep *sp.Tendpoint) {
 	p.ProcEnvProto.NamedEndpointProto = ep.TendpointProto
 }
 
+func (p *Proc) SetCachedEndpoint(pn string, ep *sp.Tendpoint) {
+	p.ProcEnvProto.SetCachedEndpoint(pn, ep)
+}
+
+func (p *Proc) ClearCachedEndpoint(pn string) {
+	p.ProcEnvProto.ClearCachedEndpoint(pn)
+}
+
 func (p *Proc) GetNamedEndpoint() *sp.TendpointProto {
 	return p.ProcEnvProto.NamedEndpointProto
 }

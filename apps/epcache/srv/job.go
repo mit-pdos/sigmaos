@@ -20,7 +20,7 @@ func NewEPCacheJob(sc *sigmaclnt.SigmaClnt) (*EPCacheJob, error) {
 		sc:      sc,
 		srvProc: proc.NewProc("epcached", []string{}),
 	}
-	j.srvProc.AppendEnv("GOGC", "off")
+	j.srvProc.SetMcpu(1000)
 	if err := sc.Spawn(j.srvProc); err != nil {
 		db.DPrintf(db.TEST, "Err Spawn EPCache: %v", err)
 		return nil, err

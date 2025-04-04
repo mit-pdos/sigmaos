@@ -137,6 +137,7 @@ func (fidc *FidClnt) Attach(secrets map[string]*sp.SecretProto, cid sp.TclntId, 
 	s := time.Now()
 	fid := fidc.allocFid()
 	pc := spprotoclnt.NewSPProtoClnt(ep, fidc.sm)
+	db.DPrintf(db.ATTACH_LAT, "%v: attach NewSPProtoClnt %v pn %q tree %q lat %v", cid, ep, pn, tree, time.Since(s))
 	reply, err := pc.Attach(secrets, cid, fid, path.Split(tree))
 	if err != nil {
 		db.DPrintf(db.FIDCLNT_ERR, "Error attach %v: %v", ep, err)
@@ -144,7 +145,7 @@ func (fidc *FidClnt) Attach(secrets map[string]*sp.SecretProto, cid sp.TclntId, 
 		return sp.NoFid, err
 	}
 	fidc.fids.insert(fid, newChannel(pc, []sp.Tqid{sp.NewTqid(reply.Qid)}))
-	db.DPrintf(db.ATTACH_LAT, "%v: attach %v pn %q tree %q lat %v\n", cid, ep, pn, tree, time.Since(s))
+	db.DPrintf(db.ATTACH_LAT, "%v: attach E2E %v pn %q tree %q lat %v", cid, ep, pn, tree, time.Since(s))
 	return fid, nil
 }
 

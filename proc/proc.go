@@ -369,11 +369,11 @@ func (p *Proc) GetHow() Thow {
 }
 
 func (p *Proc) SetMSchedEndpoint(ep *sp.Tendpoint) {
-	p.ProcEnvProto.MSchedEndpointProto = ep.GetProto()
+	p.SetCachedEndpoint(sp.MSCHEDREL, ep)
 }
 
 func (p *Proc) SetNamedEndpoint(ep *sp.Tendpoint) {
-	p.ProcEnvProto.NamedEndpointProto = ep.TendpointProto
+	p.SetCachedEndpoint(sp.NAMEDREL, ep)
 }
 
 func (p *Proc) SetCachedEndpoint(pn string, ep *sp.Tendpoint) {
@@ -385,7 +385,8 @@ func (p *Proc) ClearCachedEndpoint(pn string) {
 }
 
 func (p *Proc) GetNamedEndpoint() *sp.TendpointProto {
-	return p.ProcEnvProto.NamedEndpointProto
+	ep, _ := p.ProcEnvProto.GetNamedEndpoint()
+	return ep.GetProto()
 }
 
 // Return Env map as a []string

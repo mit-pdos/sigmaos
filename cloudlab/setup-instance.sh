@@ -153,13 +153,11 @@ then
   libssl-dev \
   git-lfs \
   libseccomp-dev \
-  awscli \
   htop \
   jq \
   docker.io \
   cpufrequtils \
   apparmor-utils \
-  mysql-client \
   mariadb-client \
   parallel \
   docker-buildx

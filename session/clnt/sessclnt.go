@@ -94,7 +94,7 @@ func (c *SessClnt) RPC(req sessp.Tmsg, iniov sessp.IoVec, outiov sessp.IoVec) (*
 	if err := spcodec.UnmarshalMsg(r); err != nil {
 		return nil, err
 	}
-	db.DPrintf(db.NET_LAT, "RPC req %v fm %v marshalLat %v lat %v", fc, r.Fcm, marshalLat, unmarshalLat, time.Since(s))
+	db.DPrintf(db.NET_LAT, "RPC req %v fm %v marshalLat %v lat %v", fc, r.Fcm, marshalLat, time.Since(s))
 	return r.Fcm, nil
 }
 

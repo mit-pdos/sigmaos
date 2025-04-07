@@ -78,10 +78,11 @@ func (sc *Mgr) RPC(ep *sp.Tendpoint, req sessp.Tmsg, iniov sessp.IoVec, outiov s
 		db.DPrintf(db.SESSCLNT, "Unable to alloc sess for req %v %v err %v to %v", req.Type(), req, err, ep)
 		return nil, err
 	}
+	allocLat := time.Since(s)
 	start := time.Now()
 	rep, err := sess.RPC(req, iniov, outiov)
 	if db.WillBePrinted(db.RPC_LAT) {
-		db.DPrintf(db.RPC_LAT, "RPC time %v [%v] started (%v) alloc %v tot %v", req.Type(), req, start, time.Since(start), time.Since(s))
+		db.DPrintf(db.RPC_LAT, "RPC time %v [%v] started (%v) alloc %v rpc %v tot %v", req.Type(), req, start, allocLat, time.Since(start), time.Since(s))
 	}
 
 	return rep, err

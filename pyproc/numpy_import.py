@@ -1,6 +1,6 @@
 import splib
 import numpy
 
-splib.started()
+splib.Started()
 print(numpy.array([1, 2, 3]))
-splib.exited()
+splib.Exited()

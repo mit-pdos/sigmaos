@@ -1,6 +1,6 @@
 import splib
 import dummy_package
 
-splib.started()
+splib.Started()
 dummy_package.sayHi()
-splib.exited()
+splib.Exited()

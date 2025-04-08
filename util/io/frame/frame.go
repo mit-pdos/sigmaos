@@ -126,10 +126,12 @@ func WriteSeqno(seqno sessp.Tseqno, wr io.Writer) *serr.Err {
 
 // Read the sequence number of the next RPC to be read
 func ReadSeqno(rdr io.Reader) (sessp.Tseqno, *serr.Err) {
+	db.DPrintf(db.PYPROXYSRV, "ReadSeqno called\n")
 	var sn uint64
 	if err := binary.Read(rdr, binary.LittleEndian, &sn); err != nil {
 		return 0, serr.NewErr(serr.TErrUnreachable, err.Error())
 	}
+	db.DPrintf(db.PYPROXYSRV, "ReadSeqno success: %v\n", sn)
 	return sessp.Tseqno(sn), nil
 }
 

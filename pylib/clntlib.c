@@ -9,35 +9,83 @@
 #include <string.h>
 #include <unistd.h>
 #include <errno.h>
+#include <stdint.h>
 
-const char* apiSocketEnvVar = "SIGMA_PYAPI_FD";
-int apiSfd = 0; 
+const char* api_socket_env_var = "SIGMA_PYAPI_FD";
+int api_sfd = 0; 
+
+const char* spproxy_env_var = "SIGMA_SPPROXY_FD";
+int spproxy_sfd = 0;
+
+uint64_t seqno;
+
+/************
+ * Proc API *
+ ************/
 
 void init_socket() 
 {
-  const char* sfd_str = getenv(apiSocketEnvVar);
+  const char* sfd_str = getenv(api_socket_env_var);
   if (sfd_str == NULL) {
     exit(-1);
   }
-  apiSfd = atoi(sfd_str);
+  api_sfd = atoi(sfd_str);
+
+  const char* spproxy_sfd_str = getenv(spproxy_env_var);
+  if (spproxy_sfd_str == NULL) {
+    exit(-1);
+  }
+  spproxy_sfd = atoi(spproxy_sfd_str);
+
+  seqno = 0;
 }
 
 void started()
 {
   char response[2];
-  write(apiSfd, "api/started\n", 12);
-  read(apiSfd, response, 1);
+  write(api_sfd, "api/started\n", 12);
+  read(api_sfd, response, 1);
   while (response[0] != 'd') {
-    read(apiSfd, response, 1);
+    read(api_sfd, response, 1);
   }
 }
 
 void exited()
 {
   char response[2];
-  write(apiSfd, "api/exited\n", 11);
-  read(apiSfd, response, 1);
+  write(api_sfd, "api/exited\n", 11);
+  read(api_sfd, response, 1);
   while (response[0] != 'd') {
-    read(apiSfd, response, 1);
+    read(api_sfd, response, 1);
   }
 }
+
+/***********
+ * SPProxy *
+ ***********/
+
+void write_raw_buffer(const char* buf) {
+  int buf_len = strlen(buf);
+  printf("Writing %s to SFD %d\n", buf, spproxy_sfd);
+  write(spproxy_sfd, buf, buf_len);
+}
+
+void write_seqno(uint64_t seqno) {
+  // Convert to little Endian
+  uint8_t bytes[8];
+  for (int i = 0; i < 8; i++) {
+    bytes[i] = (seqno >> (i * 8)) & 0xFF;
+  }
+
+  write(spproxy_sfd, bytes, 8);
+}
+
+// void write_seqno(uint64_t seqno) {
+//   std::ostringstream buffer(std::ios::binary);  
+//   buffer.write(
+// }
+// 
+// void transport_write_call() {
+//   std::ostringstream buffer(std::ios::binary);
+//   buffer.write(reinterpret_cast<const char*>(&seqno), sizeof(seqno));
+// }

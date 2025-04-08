@@ -99,7 +99,7 @@ gcc -Wall -fPIC -shared -o clntlib.so ../sigmaos-local/pylib/clntlib.c
 cp clntlib.so $OUTPATH/kernel
 
 # Copy Python user processes
-cp -r pyproc $OUTPATH/kernel
+cp -r ../sigmaos-local/pyproc $OUTPATH/kernel
 
 # Copy rust bins
 cp ../sigmaos-local/rs/uproc-trampoline/target/release/uproc-trampoline $OUTPATH/kernel

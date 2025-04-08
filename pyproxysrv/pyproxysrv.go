@@ -339,7 +339,9 @@ func (pps *PyProxySrv) handleNewAPIConn(conn *net.UnixConn) {
 				pps.sc.ProcAPI.Exited(proc.NewStatus(proc.StatusOK))
 			}
 		} else if reqType == "fsl" {
-			// TODO_PYTHON
+			db.DPrintf(db.PYPROXYSRV, "api reader: received FSL request: %v", line)
+			if strings.HasPrefix(reqArg, "GetFile") {
+			}
 		}
 
 		response := []byte("d")

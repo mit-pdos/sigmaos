@@ -1,5 +1,5 @@
 import splib
 
-splib.started()
+splib.Started()
 print("Hello World!")
-splib.exited()
+splib.Exited()

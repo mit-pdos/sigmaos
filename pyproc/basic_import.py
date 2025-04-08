@@ -1,6 +1,6 @@
 import splib
 import shlex
 
-splib.started()
+splib.Started()
 print(shlex.join(["Hello", "World"]))
-splib.exited()
+splib.Exited()

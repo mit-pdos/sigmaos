@@ -77,6 +77,13 @@ fn main() {
     env::set_var("SIGMA_DIALPROXY_FD", dialproxy_conn_fd.to_string());
     print_elapsed_time("trampoline.connect_dialproxy", now, false);
     now = SystemTime::now();
+    // Connect to the spproxy socket
+    let spproxy_conn = UnixStream::connect("/tmp/spproxyd/spproxyd.sock").unwrap();
+    let spproxy_conn_fd = spproxy_conn.into_raw_fd();
+    fcntl::fcntl(spproxy_conn_fd, FcntlArg::F_SETFD(FdFlag::empty())).unwrap();
+    env::set_var("SIGMA_SPPROXY_FD", spproxy_conn_fd.to_string());
+    print_elapsed_time("trampoline.connect_spproxy", now, false);
+    now = SystemTime::now();
     // Connect to the pyproxy socket
     let pyproxy_conn = UnixStream::connect("/tmp/spproxyd/spproxyd-pyproxy.sock").unwrap();
     let pyproxy_conn_fd = pyproxy_conn.into_raw_fd();

@@ -11,6 +11,7 @@ import (
 	pc "sigmaos/sigmaclnt/procclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
+	"sigmaos/util/perf"
 )
 
 type ProcMgr struct {
@@ -39,7 +40,7 @@ func NewProcMgr(sc *sigmaclnt.SigmaClnt, kernelId string) *ProcMgr {
 
 // Proc has been spawned.
 func (mgr *ProcMgr) Spawn(p *proc.Proc) {
-	db.DPrintf(db.SPAWN_LAT, "[%v] MSched proc time since spawn %v", p.GetPid(), time.Since(p.GetSpawnTime()))
+	perf.LogSpawnLatency("MSched.ProcMgr.Spawn", p.GetPid(), p.GetSpawnTime(), perf.TIME_NOT_SET)
 	mgr.pstate.spawn(p)
 }
 

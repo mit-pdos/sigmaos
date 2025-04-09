@@ -175,6 +175,7 @@ const (
 	MSCHED_ERR               = "MSCHED" + ERR
 	MSCHEDCLNT               = "MSCHEDCLNT"
 	MSCHEDCLNT_ERR           = "MSCHEDCLNT" + ERR
+	MSCHED_PERF              = "MSCHED_PERF"
 	CGROUP                   = "CGROUP"
 	CGROUP_ERR               = "CGROUP" + ERR
 )
@@ -191,6 +192,7 @@ const (
 const (
 	BESCHED         Tselector = "BESCHED"
 	BESCHED_ERR               = "BESCHED" + ERR
+	BESCHED_PERF              = "BESCHED_PERF"
 	BESCHEDCLNT               = "BESCHEDCLNT"
 	BESCHEDCLNT_ERR           = "BESCHEDCLNT" + ERR
 )

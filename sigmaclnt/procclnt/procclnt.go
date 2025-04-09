@@ -22,6 +22,7 @@ import (
 	sp "sigmaos/sigmap"
 	"sigmaos/util/coordination/semaphore"
 	"sigmaos/util/crash"
+	"sigmaos/util/perf"
 )
 
 type ProcClnt struct {
@@ -161,7 +162,7 @@ func (clnt *ProcClnt) forceRunViaMSched(kernelID string, p *proc.Proc) error {
 func (clnt *ProcClnt) enqueueViaBESched(p *proc.Proc) (string, *proc.ProcSeqno, error) {
 	start := time.Now()
 	defer func(start time.Time) {
-		db.DPrintf(db.SPAWN_LAT, "[%v] time enqueueViaBESched: %v", p.GetPid(), time.Since(start))
+		perf.LogSpawnLatency("enqueueViaBESched", p.GetPid(), p.GetSpawnTime(), start)
 	}(start)
 	return clnt.beschedclnt.Enqueue(p)
 }
@@ -169,13 +170,13 @@ func (clnt *ProcClnt) enqueueViaBESched(p *proc.Proc) (string, *proc.ProcSeqno, 
 func (clnt *ProcClnt) enqueueViaLCSched(p *proc.Proc) (string, error) {
 	start := time.Now()
 	defer func(start time.Time) {
-		db.DPrintf(db.SPAWN_LAT, "[%v] time enqueueViaLCSched: %v", p.GetPid(), time.Since(start))
+		perf.LogSpawnLatency("enqueueViaLCSched", p.GetPid(), p.GetSpawnTime(), start)
 	}(start)
 	return clnt.lcschedclnt.Enqueue(p)
 }
 
 func (clnt *ProcClnt) spawnRetry(kernelId string, p *proc.Proc) (*proc.ProcSeqno, error) {
-	s := time.Now()
+	start := time.Now()
 	var pseqno *proc.ProcSeqno
 	for i := 0; i < sp.Conf.Path.MAX_RESOLVE_RETRY; i++ {
 		var err error
@@ -193,7 +194,7 @@ func (clnt *ProcClnt) spawnRetry(kernelId string, p *proc.Proc) (*proc.ProcSeqno
 					db.DPrintf(db.PROCCLNT, "spawn: SetBinKernelId proc %v seqno %v", p.GetProgram(), pseqno)
 					start := time.Now()
 					clnt.bins.SetBinKernelID(p.GetProgram(), pseqno.GetMSchedID())
-					db.DPrintf(db.SPAWN_LAT, "[%v] time SetBinKernelID: %v", p.GetPid(), time.Since(start))
+					perf.LogSpawnLatency("SetBinKernelID", p.GetPid(), p.GetSpawnTime(), start)
 					p.SetKernelID(pseqno.GetMSchedID(), false)
 				} else if serr.IsErrorUnavailable(err) {
 					clnt.bins.DelBinKernelID(p.GetProgram(), mschedID)
@@ -216,7 +217,7 @@ func (clnt *ProcClnt) spawnRetry(kernelId string, p *proc.Proc) (*proc.ProcSeqno
 			db.DPrintf(db.PROCCLNT_ERR, "spawnRetry failed err %v proc %v", err, p)
 			return nil, err
 		}
-		db.DPrintf(db.SPAWN_LAT, "[%v] E2E Spawn RPC %v nretry %v", p.GetPid(), time.Since(s), i)
+		perf.LogSpawnLatency("spawnRetry", p.GetPid(), p.GetSpawnTime(), start)
 		return pseqno, nil
 	}
 	db.DPrintf(db.PROCCLNT_ERR, "spawnRetry failed, too many retries (%v): %v", sp.Conf.Path.MAX_RESOLVE_RETRY, p)
@@ -226,8 +227,10 @@ func (clnt *ProcClnt) spawnRetry(kernelId string, p *proc.Proc) (*proc.ProcSeqno
 // ========== WAIT ==========
 
 func (clnt *ProcClnt) waitStart(pid sp.Tpid, how proc.Thow) error {
-	s := time.Now()
-	defer func() { db.DPrintf(db.SPAWN_LAT, "[%v] E2E WaitStart %v", pid, time.Since(s)) }()
+	start := time.Now()
+	defer func() {
+		perf.LogSpawnLatency("WaitStart", pid, perf.TIME_NOT_SET, start)
+	}()
 
 	pseqno, err := clnt.cs.GetProcSeqno(pid)
 	if err != nil {
@@ -301,7 +304,7 @@ func (clnt *ProcClnt) WaitEvict(pid sp.Tpid) error {
 
 // Proc pid marks itself as started.
 func (clnt *ProcClnt) Started() error {
-	db.DPrintf(db.SPAWN_LAT, "[%v] Proc calls procclnt.Started; time since spawn %v", clnt.ProcEnv().GetPID(), time.Since(clnt.ProcEnv().GetSpawnTime()))
+	perf.LogSpawnLatency("procclnt.Started called", clnt.ProcEnv().GetPID(), clnt.ProcEnv().GetSpawnTime(), perf.TIME_NOT_SET)
 	return clnt.notify(mschedclnt.START, clnt.ProcEnv().GetPID(), clnt.ProcEnv().GetKernelID(), proc.START_SEM, clnt.ProcEnv().GetHow(), nil, false)
 }
 

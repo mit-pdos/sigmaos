@@ -11,6 +11,7 @@ import (
 	"sigmaos/serr"
 	"sigmaos/sigmaclnt/fslib"
 	sp "sigmaos/sigmap"
+	"sigmaos/util/perf"
 )
 
 const (
@@ -37,10 +38,10 @@ func NewBESchedClntMSched(fsl *fslib.FsLib, nextEpoch shardedsvcrpcclnt.AllocFn,
 	}
 }
 
-func (besc *BESchedClnt) chooseBESched(pid sp.Tpid) (string, error) {
+func (besc *BESchedClnt) chooseBESched(p *proc.Proc) (string, error) {
 	s := time.Now()
 	besId, err := besc.rpcdc.WaitTimedRandomEntry()
-	db.DPrintf(db.SPAWN_LAT, "[%v] BESchedClnt get BESched[%v] latency: %v", pid, besId, time.Since(s))
+	perf.LogSpawnLatency("BESchedClnt.GetProc.chooseBESched", p.GetPid(), p.GetSpawnTime(), s)
 	return besId, err
 }
 
@@ -49,9 +50,9 @@ func (besc *BESchedClnt) chooseBESched(pid sp.Tpid) (string, error) {
 func (besc *BESchedClnt) Enqueue(p *proc.Proc) (string, *proc.ProcSeqno, error) {
 	start := time.Now()
 	defer func(start time.Time) {
-		db.DPrintf(db.SPAWN_LAT, "[%v] beschedclnt.Enqueue: %v", p.GetPid(), time.Since(start))
+		perf.LogSpawnLatency("BESchedClnt.Enqueue", p.GetPid(), p.GetSpawnTime(), start)
 	}(start)
-	besID, err := besc.chooseBESched(p.GetPid())
+	besID, err := besc.chooseBESched(p)
 	if err != nil {
 		return NOT_ENQ, nil, err
 	}
@@ -61,7 +62,7 @@ func (besc *BESchedClnt) Enqueue(p *proc.Proc) (string, *proc.ProcSeqno, error) 
 		db.DPrintf(db.ALWAYS, "Error: Can't get besched clnt: %v", err)
 		return NOT_ENQ, nil, err
 	}
-	db.DPrintf(db.SPAWN_LAT, "[%v] BESchedClnt make clnt %v %v", p.GetPid(), besID, time.Since(s))
+	perf.LogSpawnLatency("BESchedClnt.Enqueue.GetClnt", p.GetPid(), p.GetSpawnTime(), s)
 	req := &proto.EnqueueReq{
 		ProcProto: p.GetProto(),
 	}
@@ -76,7 +77,7 @@ func (besc *BESchedClnt) Enqueue(p *proc.Proc) (string, *proc.ProcSeqno, error) 
 		return NOT_ENQ, nil, err
 	}
 	db.DPrintf(db.BESCHEDCLNT, "[%v] Enqueued Proc %v", p.GetRealm(), p)
-	db.DPrintf(db.SPAWN_LAT, "[%v] BESchedClnt client-side RPC latency %v", p.GetPid(), time.Since(s))
+	perf.LogSpawnLatency("BESchedClnt.Enqueue RPC", p.GetPid(), p.GetSpawnTime(), s)
 	return res.MSchedID, res.ProcSeqno, nil
 }
 

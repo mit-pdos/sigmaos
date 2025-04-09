@@ -24,6 +24,7 @@ import (
 	"sigmaos/sigmasrv/memfssrv/memfs"
 	"sigmaos/sigmasrv/memfssrv/memfs/dir"
 	spprotosrv "sigmaos/spproto/srv"
+	"sigmaos/util/perf"
 )
 
 type SigmaSrv struct {
@@ -44,10 +45,10 @@ func NewSigmaSrv(fn string, svci any, pe *proc.ProcEnv) (*SigmaSrv, error) {
 		db.DPrintf(db.ERROR, "NewSigmaSrv %v err %v", fn, error)
 		return nil, error
 	}
-	db.DPrintf(db.SPAWN_LAT, "NewSigmaSrv NewMemFs latency: %v", time.Since(start))
+	perf.LogSpawnLatency("NewSigmaSrv.NewMemFs", pe.GetPID(), pe.GetSpawnTime(), start)
 	start = time.Now()
 	defer func() {
-		db.DPrintf(db.SPAWN_LAT, "NewSigmaSrv newSigmaSrvMemFs latency: %v", time.Since(start))
+		perf.LogSpawnLatency("NewSigmaSrv.newSigmaSrvMemFs", pe.GetPID(), pe.GetSpawnTime(), start)
 	}()
 	return newSigmaSrvMemFs(mfs, svci)
 }

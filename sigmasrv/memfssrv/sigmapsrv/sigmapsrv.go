@@ -28,6 +28,7 @@ import (
 	"sigmaos/sigmasrv/memfssrv/sigmapsrv/overlaydir"
 	"sigmaos/sigmasrv/stats"
 	spprotosrv "sigmaos/spproto/srv"
+	"sigmaos/util/perf"
 )
 
 type SigmaPSrv struct {
@@ -62,10 +63,10 @@ func NewSigmaPSrv(pe *proc.ProcEnv, npc *dialproxyclnt.DialProxyClnt, root fs.Di
 func NewSigmaPSrvPost(root fs.Dir, pn string, addr *sp.Taddr, sc *sigmaclnt.SigmaClnt, fencefs fs.Dir, aaf spprotosrv.AttachAuthF) (*SigmaPSrv, string, error) {
 	start := time.Now()
 	psrv := NewSigmaPSrv(sc.ProcEnv(), sc.GetDialProxyClnt(), root, addr, fencefs, aaf)
-	db.DPrintf(db.SPAWN_LAT, "NewSigmaPSrvPost NewSigmaPSrv: %v", time.Since(start))
+	perf.LogSpawnLatency("NewSigmaPSrv", sc.ProcEnv().GetPID(), sc.ProcEnv().GetSpawnTime(), start)
 	start = time.Now()
 	defer func() {
-		db.DPrintf(db.SPAWN_LAT, "NewMemFsRootPortClntFenceAuth postMount: %v", time.Since(start))
+		perf.LogSpawnLatency("NewSigmaPSrvPost", sc.ProcEnv().GetPID(), sc.ProcEnv().GetSpawnTime(), start)
 	}()
 	if len(pn) > 0 {
 		if mpn, err := psrv.postMount(sc, pn); err != nil {
@@ -124,10 +125,11 @@ func (psrv *SigmaPSrv) postMount(sc *sigmaclnt.SigmaClnt, pn string) (string, er
 	if err != nil {
 		return "", err
 	}
-	db.DPrintf(db.SPAWN_LAT, "postMount AskLease[%v]: %v", time.Since(start), li.Lease())
+	db.DPrintf(db.BOOT, "postMount AskLease[%v]: %v", time.Since(start), li.Lease())
+	perf.LogSpawnLatency("SigmaPSrv.postMount.AskLease", sc.ProcEnv().GetPID(), sc.ProcEnv().GetSpawnTime(), start)
 	start = time.Now()
 	li.KeepExtending()
-	db.DPrintf(db.SPAWN_LAT, "postMount KeepExtending: %v", time.Since(start))
+	perf.LogSpawnLatency("SigmaPSrv.postMount.KeepExtending", sc.ProcEnv().GetPID(), sc.ProcEnv().GetSpawnTime(), start)
 	start = time.Now()
 
 	if sc.ProcEnv().GetPrivileged() && sc.ProcEnv().GetHow() != proc.HMSCHED {
@@ -140,7 +142,7 @@ func (psrv *SigmaPSrv) postMount(sc *sigmaclnt.SigmaClnt, pn string) (string, er
 	}
 	start = time.Now()
 	defer func() {
-		db.DPrintf(db.SPAWN_LAT, "postMount MKLeasedEndpoint: %v", time.Since(start))
+		perf.LogSpawnLatency("SigmaPSrv.postMount.MkLeasedEndpoint", sc.ProcEnv().GetPID(), sc.ProcEnv().GetSpawnTime(), start)
 	}()
 
 	if err := sc.MkLeasedEndpoint(pn, ep, li.Lease()); err != nil {

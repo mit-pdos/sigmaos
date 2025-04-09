@@ -6,11 +6,12 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/proc"
 	"sigmaos/proc/kproc"
+	"sigmaos/util/perf"
 )
 
 func (mgr *ProcMgr) runProc(p *proc.Proc) error {
-	db.DPrintf(db.PROCDMGR, "Procd run: %v time since spawn %v", p, time.Since(p.GetSpawnTime()))
-	db.DPrintf(db.SPAWN_LAT, "Procd run: %v time since spawn %v", p.GetPid(), time.Since(p.GetSpawnTime()))
+	db.DPrintf(db.PROCDMGR, "MSched.ProcMgr.runProc: %v time since spawn %v", p, time.Since(p.GetSpawnTime()))
+	perf.LogSpawnLatency("MSched.ProcMgr.runProc", p.GetPid(), p.GetSpawnTime(), perf.TIME_NOT_SET)
 	var err error
 	if p.IsPrivileged() {
 		err = mgr.runPrivilegedProc(p)

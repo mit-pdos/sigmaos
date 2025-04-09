@@ -106,7 +106,7 @@ func (msched *MSched) ForceRun(ctx fs.CtxI, req proto.ForceRunReq, res *proto.Fo
 	start := time.Now()
 	// Run the proc
 	msched.spawnAndRunProc(p, nil)
-	db.DPrintf(db.SPAWN_LAT, "[%v] MSched.ForceRun internal latency: %v", p.GetPid(), time.Since(start))
+	perf.LogSpawnLatency("MSched.ForceRun", p.GetPid(), p.GetSpawnTime(), start)
 	db.DPrintf(db.MSCHED, "[%v] %v ForceRun done %v", p.GetRealm(), msched.kernelID, p.GetPid())
 	return nil
 }
@@ -129,7 +129,7 @@ func (msched *MSched) Started(ctx fs.CtxI, req proto.NotifyReq, res *proto.Notif
 	db.DPrintf(db.MSCHED, "Started %v", req.PidStr)
 	start := time.Now()
 	msched.pmgr.Started(sp.Tpid(req.PidStr))
-	db.DPrintf(db.SPAWN_LAT, "[%v] MSched.Started internal latency: %v", req.PidStr, time.Since(start))
+	perf.LogSpawnLatency("MSched.Started", sp.Tpid(req.PidStr), perf.TIME_NOT_SET, start)
 	return nil
 }
 
@@ -259,9 +259,9 @@ func (msched *MSched) getQueuedProcs() {
 		}
 		db.DPrintf(db.MSCHED, "[%v] GetProc result pseqno %v procMem %v qlen %v ok %v", msched.kernelID, pseqno, pmem, qlen, ok)
 		if ok {
-			db.DPrintf(db.SPAWN_LAT, "GetProc latency: %v", time.Since(start))
+			db.DPrintf(db.MSCHED_PERF, "GetProc latency: %v", time.Since(start))
 		} else {
-			db.DPrintf(db.SPAWN_LAT, "GetProc timeout")
+			db.DPrintf(db.MSCHED_PERF, "GetProc timeout")
 		}
 		if err != nil {
 			db.DPrintf(db.MSCHED_ERR, "Error GetProc: %v", err)

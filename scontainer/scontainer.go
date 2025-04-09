@@ -14,6 +14,7 @@ import (
 	"sigmaos/proc"
 	"sigmaos/sched/msched/proc/srv/binsrv"
 	sp "sigmaos/sigmap"
+	"sigmaos/util/perf"
 )
 
 type uprocCmd struct {
@@ -66,7 +67,7 @@ func StartSigmaContainer(uproc *proc.Proc, dialproxy bool) (*uprocCmd, error) {
 		CleanupUProc(uproc.GetPid())
 		return nil, err
 	}
-	db.DPrintf(db.SPAWN_LAT, "[%v] UProc cmd.Start %v", uproc.GetPid(), time.Since(s))
+	perf.LogSpawnLatency("StartSigmaContainer cmd.Start", uproc.GetPid(), uproc.GetSpawnTime(), s)
 	return &uprocCmd{cmd: cmd}, nil
 }
 

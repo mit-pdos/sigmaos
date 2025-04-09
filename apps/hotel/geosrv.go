@@ -80,7 +80,7 @@ func RunGeoSrv(job string, nidxStr string, maxSearchRadiusStr string, maxSearchR
 	startRun := time.Now()
 	start := time.Now()
 	pe := proc.GetProcEnv()
-	db.DPrintf(db.SPAWN_LAT, "Geo.RunGeoSrv: sinceSpawn:%v op:%v", time.Since(pe.GetSpawnTime()), time.Since(start))
+	perf.LogSpawnLatency("Geo.RunGeoSrv start", pe.GetPID(), pe.GetSpawnTime(), perf.TIME_NOT_SET)
 	nidx, err := strconv.Atoi(nidxStr)
 	if err != nil {
 		db.DFatalf("Invalid nidx: %v", err)
@@ -99,7 +99,7 @@ func RunGeoSrv(job string, nidxStr string, maxSearchRadiusStr string, maxSearchR
 	}
 	start = time.Now()
 	geo.idxs = NewGeoIndexes(nidx, "data/geo.json")
-	db.DPrintf(db.SPAWN_LAT, "Geo.NewGeoIndexes: sinceSpawn:%v op:%v", time.Since(pe.GetSpawnTime()), time.Since(start))
+	perf.LogSpawnLatency("Geo.NewGeoIndexes", pe.GetPID(), pe.GetSpawnTime(), start)
 	db.DPrintf(db.ALWAYS, "Geo srv done building %v indexes, radius %v nresults %v,  after: %v", nidx, geo.maxSearchRadius, geo.maxSearchReps, time.Since(start))
 	start = time.Now()
 	// Don't post the geo srv in the namespace
@@ -107,7 +107,7 @@ func RunGeoSrv(job string, nidxStr string, maxSearchRadiusStr string, maxSearchR
 	if err != nil {
 		return err
 	}
-	db.DPrintf(db.SPAWN_LAT, "Geo.NewSigmaSrv: sinceSpawn:%v op:%v", time.Since(pe.GetSpawnTime()), time.Since(start))
+	perf.LogSpawnLatency("Geo.NewSigmaSrv", pe.GetPID(), pe.GetSpawnTime(), start)
 
 	start = time.Now()
 	if epcsrvEP, ok := pe.GetCachedEndpoint(epcache.EPCACHE); ok {
@@ -143,7 +143,7 @@ func RunGeoSrv(job string, nidxStr string, maxSearchRadiusStr string, maxSearchR
 	//	geo.tracer = tracing.Init("geo", proc.GetSigmaJaegerIP())
 	//	defer geo.tracer.Flush()
 
-	db.DPrintf(db.SPAWN_LAT, "Geo.Ready: sinceSpawn:%v op:%v", time.Since(pe.GetSpawnTime()), time.Since(startRun))
+	perf.LogSpawnLatency("Geo.Ready", pe.GetPID(), pe.GetSpawnTime(), startRun)
 	db.DPrintf(db.ALWAYS, "Geo srv ready to serve time since spawn: %v", time.Since(ssrv.ProcEnv().GetSpawnTime()))
 
 	return ssrv.RunServer()

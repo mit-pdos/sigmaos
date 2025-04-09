@@ -238,7 +238,7 @@ func (ps *ProcSrv) setSchedPolicy(upid sp.Tpid, ptype proc.Ttype) error {
 
 	start := time.Now()
 	defer func(start time.Time) {
-		db.DPrintf(db.SPAWN_LAT, "[%v] uprocsrv.setSchedPolicy: %v", upid, time.Since(start))
+		perf.LogSpawnLatency("ProcSrv.setSchedPolicy", upid, perf.TIME_NOT_SET, start)
 	}(start)
 
 	// Set sched policy to SCHED_IDLE if running BE procs
@@ -287,7 +287,7 @@ func (ps *ProcSrv) assignToRealm(realm sp.Trealm, upid sp.Tpid, prog string, pat
 
 	start := time.Now()
 	defer func(start time.Time) {
-		db.DPrintf(db.SPAWN_LAT, "[%v] uprocsrv.assignToRealm: %v", upid, time.Since(start))
+		perf.LogSpawnLatency("ProcSrv.assignToRealm", upid, perf.TIME_NOT_SET, start)
 	}(start)
 
 	// Prefetch file stats
@@ -296,7 +296,7 @@ func (ps *ProcSrv) assignToRealm(realm sp.Trealm, upid sp.Tpid, prog string, pat
 		if _, _, err := ps.ckclnt.GetFileStat(ps.kernelId, prog, upid, realm, s3secret, path, ep); err != nil {
 			db.DPrintf(db.PROCD, "GetFileStat %v %v err %v", ps.kernelId, realm, err)
 		}
-		db.DPrintf(db.SPAWN_LAT, "[%v] prefetch %v lat %v", upid, prog, time.Since(s))
+		perf.LogSpawnLatency("ProcSrv.prefetch", upid, perf.TIME_NOT_SET, s)
 	}()
 	start = time.Now()
 	db.DPrintf(db.PROCD, "Assign Procd to realm %v", realm)
@@ -304,7 +304,7 @@ func (ps *ProcSrv) assignToRealm(realm sp.Trealm, upid sp.Tpid, prog string, pat
 	if err := mountRealmBinDir(realm); err != nil {
 		db.DFatalf("Error mount realm bin dir: %v", err)
 	}
-	db.DPrintf(db.SPAWN_LAT, "[%v] uprocsrv.mountRealmBinDir: %v", upid, time.Since(start))
+	perf.LogSpawnLatency("ProcSrv.mountRealmBinDir", upid, perf.TIME_NOT_SET, start)
 
 	db.DPrintf(db.PROCD, "Assign Procd to realm %v done", realm)
 	// Note that the uprocsrv has been assigned.
@@ -325,10 +325,10 @@ func (ps *ProcRPCSrv) Run(ctx fs.CtxI, req proto.RunReq, res *proto.RunRep) erro
 func (ps *ProcSrv) Run(ctx fs.CtxI, req proto.RunReq, res *proto.RunRep) error {
 	uproc := proc.NewProcFromProto(req.ProcProto)
 	db.DPrintf(db.PROCD, "Run uproc %v", uproc)
-	db.DPrintf(db.SPAWN_LAT, "[%v] ProcSrv.Run recvd proc time since spawn %v", uproc.GetPid(), time.Since(uproc.GetSpawnTime()))
+	perf.LogSpawnLatency("ProcSrv.Run recvd proc", uproc.GetPid(), uproc.GetSpawnTime(), perf.TIME_NOT_SET)
 	// Spawn, but don't actually run the dummy proc
 	if uproc.GetProgram() == sp.DUMMY_PROG {
-		db.DPrintf(db.SPAWN_LAT, "[%v] Proc Run dummy proc: spawn time since spawn %v", uproc.GetPid(), time.Since(uproc.GetSpawnTime()))
+		perf.LogSpawnLatency("ProcSrv.Run dummy proc", uproc.GetPid(), uproc.GetSpawnTime(), perf.TIME_NOT_SET)
 		db.DPrintf(db.ALWAYS, "[%v] Proc Run dummy proc: spawn time since spawn %v", uproc.GetPid(), time.Since(uproc.GetSpawnTime()))
 		// Return an error, so that the waitStart/waitExit infrastructure still
 		// works
@@ -343,7 +343,7 @@ func (ps *ProcSrv) Run(ctx fs.CtxI, req proto.RunReq, res *proto.RunRep) error {
 		db.DFatalf("Err set sched policy: %v", err)
 	}
 	uproc.FinalizeEnv(ps.pe.GetInnerContainerIP(), ps.pe.GetOuterContainerIP(), ps.pe.GetPID())
-	db.DPrintf(db.SPAWN_LAT, "[%v] Proc Run: spawn time since spawn %v", uproc.GetPid(), time.Since(uproc.GetSpawnTime()))
+	perf.LogSpawnLatency("ProcSrv.Run StartSigmaContainer", uproc.GetPid(), uproc.GetSpawnTime(), perf.TIME_NOT_SET)
 	cmd, err := scontainer.StartSigmaContainer(uproc, ps.dialproxy)
 	if err != nil {
 		return err
@@ -407,7 +407,7 @@ func (ps *ProcSrv) Fetch(pid, cid int, prog string, sz sp.Tsize) (sp.Tsize, erro
 		db.DFatalf("Fetch: procs.Lookup %v %v\n", pid, prog)
 	}
 
-	db.DPrintf(db.SPAWN_LAT, "[%v] Fetch start: %q ck %d path %v time since spawn %v", pe.proc.GetPid(), ps.kernelId, cid, pe.proc.GetSigmaPath(), time.Since(pe.proc.GetSpawnTime()))
+	perf.LogSpawnLatency("ProcSrv.Fetch start ck %d path %s", pe.proc.GetPid(), pe.proc.GetSpawnTime(), perf.TIME_NOT_SET, cid, pe.proc.GetSigmaPath())
 
 	s3secret, ok := pe.proc.GetSecrets()["s3"]
 	if !ok {
@@ -417,12 +417,12 @@ func (ps *ProcSrv) Fetch(pid, cid int, prog string, sz sp.Tsize) (sp.Tsize, erro
 	start := time.Now()
 	sz, path, err := ps.ckclnt.Fetch(ps.kernelId, prog, pe.proc.GetPid(), ps.realm, s3secret, cid, sz, pe.proc.GetSigmaPath(), pe.proc.GetNamedEndpoint())
 
-	db.DPrintf(db.SPAWN_LAT, "[%v] Fetch done: %q ck %d sz %d path %q fetch lat %v; time since spawn %v", pe.proc.GetPid(), ps.kernelId, cid, sz, path, time.Since(start), time.Since(pe.proc.GetSpawnTime()))
+	perf.LogSpawnLatency("ProcSrv.Fetch done ck %d sz %d path %s", pe.proc.GetPid(), pe.proc.GetSpawnTime(), start, cid, sz, path)
 	return sz, err
 }
 
 func (ps *ProcSrv) lookupProc(proc *proc.Proc, prog string) (*sp.Tstat, error) {
-	db.DPrintf(db.SPAWN_LAT, "[%v] Lookup start %v paths %v; time since spawn %v", proc.GetPid(), ps.kernelId, proc.GetSigmaPath(), time.Since(proc.GetSpawnTime()))
+	perf.LogSpawnLatency("ProcSrv.lookupProc path %s", proc.GetPid(), proc.GetSpawnTime(), perf.TIME_NOT_SET, proc.GetSigmaPath())
 
 	paths := proc.GetSigmaPath()
 	s3secret, ok := proc.GetSecrets()["s3"]
@@ -432,18 +432,25 @@ func (ps *ProcSrv) lookupProc(proc *proc.Proc, prog string) (*sp.Tstat, error) {
 
 	s := time.Now()
 	st, path, err := ps.ckclnt.GetFileStat(ps.kernelId, prog, proc.GetPid(), proc.GetRealm(), s3secret, paths, proc.GetNamedEndpoint())
-	db.DPrintf(db.SPAWN_LAT, "[%v] Lookup done %v path %q GetFileStat lat %v; time since spawn %v", proc.GetPid(), ps.kernelId, path, time.Since(s), time.Since(proc.GetSpawnTime()))
+	perf.LogSpawnLatency("ProcSrv.lookupProc done path %s", proc.GetPid(), proc.GetSpawnTime(), s, path)
 	if err != nil {
 		return nil, err
 	}
 	return st, nil
 }
 
-func (ps *ProcSrv) Lookup(pid int, prog string) (*sp.Tstat, error) {
+func (ps *ProcSrv) LookupProc(pid int) *proc.Proc {
 	pe, alloc := ps.procs.Alloc(pid, newProcEntry(nil))
 	if alloc {
-		db.DPrintf(db.PROCD, "Lookup wait for pid %v proc %v\n", pid, pe)
+		db.DPrintf(db.PROCD, "LookupProc wait for pid %v proc %v", pid, pe)
 		pe.procWait()
 	}
-	return ps.lookupProc(pe.proc, prog)
+	return pe.proc
+}
+
+func (ps *ProcSrv) LookupStat(pid int, prog string) (*proc.Proc, *sp.Tstat, error) {
+	p := ps.LookupProc(pid)
+	db.DPrintf(db.PROCD, "LookupStat for pid %v proc %v", pid, p)
+	st, err := ps.lookupProc(p, prog)
+	return p, st, err
 }

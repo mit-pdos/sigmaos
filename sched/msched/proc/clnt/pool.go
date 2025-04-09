@@ -2,9 +2,11 @@ package clnt
 
 import (
 	"sync"
+	"time"
 
 	db "sigmaos/debug"
 	sp "sigmaos/sigmap"
+	"sigmaos/util/perf"
 )
 
 // A pool of booted, but unused, procds.
@@ -55,8 +57,9 @@ func (p *pool) get() (sp.Tpid, *ProcClnt) {
 	// Wait for there to be available procds in the pool.
 	for len(p.clnts) == 0 {
 		db.DPrintf(db.PROCDMGR, "Wait for procd pool to be filled len %v", len(p.clnts))
-		db.DPrintf(db.SPAWN_LAT, "Wait for procd pool to be filled len %v", len(p.clnts))
+		start := time.Now()
 		p.cond.Wait()
+		perf.LogSpawnLatency("ProcdMgr.startBalanceShares", sp.NOT_SET, perf.TIME_NOT_SET, start)
 	}
 	db.DPrintf(db.PROCDMGR, "Pop from procd pool")
 

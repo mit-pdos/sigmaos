@@ -14,6 +14,7 @@ import (
 	"sigmaos/sigmaclnt/fslib"
 	"sigmaos/sigmaclnt/fslib/dirwatcher"
 	sp "sigmaos/sigmap"
+	"sigmaos/util/perf"
 )
 
 type startProcdFn func() (sp.Tpid, *ProcClnt)
@@ -131,7 +132,7 @@ func (pdm *ProcdMgr) GetCPUUtil(realm sp.Trealm) float64 {
 func (pdm *ProcdMgr) startProcd() (sp.Tpid, *ProcClnt) {
 	s := time.Now()
 	pid, err := pdm.kclnt.Boot("procd", []string{pdm.kernelId}, []string{})
-	db.DPrintf(db.SPAWN_LAT, "Boot procd latency: %v", time.Since(s))
+	perf.LogSpawnLatency("ProcdMgr.BootProcd", sp.NOT_SET, perf.TIME_NOT_SET, s)
 	if err != nil {
 		db.DFatalf("Error Boot Procd: %v", err)
 	}
@@ -203,12 +204,13 @@ func (pdm *ProcdMgr) RunUProc(uproc *proc.Proc) (uprocErr error, childErr error)
 	}
 	// run and exit do resource accounting and share rebalancing for the
 	// procds.
+	start := time.Now()
 	if err := pdm.startBalanceShares(uproc); err != nil {
 		db.DPrintf(db.PROCDMGR, "[RunUProc.startBalanceShares %v] delProcClnt %v due to err: %v", uproc.GetRealm(), uproc, err)
 		pdm.delProcClnt(uproc.GetRealm(), uproc.GetType())
 		return err, nil
 	}
-	db.DPrintf(db.SPAWN_LAT, "[%v] Balance Procd shares time since spawn %v", uproc.GetPid(), time.Since(uproc.GetSpawnTime()))
+	perf.LogSpawnLatency("ProcdMgr.startBalanceShares", uproc.GetPid(), uproc.GetSpawnTime(), start)
 	if err0, err1 := rpcc.RunProc(uproc); err0 != nil {
 		db.DPrintf(db.PROCDMGR, "[RunUProc.RunProc %v] delProcClnt %v due to err: %v", uproc.GetRealm(), uproc, err)
 		pdm.delProcClnt(uproc.GetRealm(), uproc.GetType())

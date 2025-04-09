@@ -43,7 +43,7 @@ func NewMRJobInstance(ts *test.RealmTstate, p *perf.Perf, app, jobRoot, jobname 
 }
 
 func (ji *MRJobInstance) PrepareMRJob() {
-	jobf, err := mr.ReadJobConfig(filepath.Join("..", "mr/job-descriptions", ji.app))
+	jobf, err := mr.ReadJobConfig(filepath.Join("..", "apps/mr/job-descriptions", ji.app))
 	assert.Nil(ji.Ts.T, err, "Error ReadJobConfig: %v", err)
 	ji.job = jobf
 	db.DPrintf(db.TEST, "MR job description: %v", ji.job)

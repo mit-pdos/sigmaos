@@ -24,7 +24,7 @@ func GetInitFSCmd(bcfg *BenchConfig, ccfg *ClusterConfig) string {
 		overlays = "--overlays"
 	}
 	return fmt.Sprintf("export SIGMADEBUG=%s; go clean -testcache; "+
-		"go test -v sigmaos/fslib -timeout 0 --no-shutdown %s %s --etcdIP %s --tag %s "+
+		"go test -v sigmaos/sigmaclnt/fslib -timeout 0 --no-shutdown %s %s --etcdIP %s --tag %s "+
 		"--run InitFs "+
 		"> /tmp/bench.out 2>&1",
 		debugSelectors,
@@ -67,7 +67,7 @@ func GetStartCmdConstructor(rps int, dur time.Duration, dummyProc, lcProc, prewa
 		return fmt.Sprintf("export SIGMADEBUG=%s; go clean -testcache; "+
 			"./set-cores.sh --set 1 --start 2 --end 39 > /dev/null 2>&1 ; "+
 			"go test -v sigmaos/benchmarks -timeout 0 --no-shutdown %s %s --etcdIP %s --tag %s "+
-			"--run TestMicroScheddSpawn "+
+			"--run TestMicroMSchedSpawn "+
 			"%s "+ // proc
 			"--nclnt 50 "+
 			"%s "+ // skipStats

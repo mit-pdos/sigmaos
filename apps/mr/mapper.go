@@ -322,7 +322,7 @@ func RunMapper(mapf mr.MapT, combinef mr.ReduceT, args []string) {
 	}
 	execTime := time.UnixMicro(execTimeMicro)
 	pe := proc.GetProcEnv()
-	perf.LogSpawnLatency("Mapper exec", pe.GetPID(), pe.GetSpawnTime(), execTime)
+	perf.LogSpawnLatency("Mapper.Exec", pe.GetPID(), pe.GetSpawnTime(), execTime)
 	db.DPrintf(db.ALWAYS, "[%v] Proc exec latency: %v", proc.GetSigmaDebugPid(), time.Since(execTime))
 
 	init := time.Now()

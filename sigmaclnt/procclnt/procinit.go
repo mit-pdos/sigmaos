@@ -12,6 +12,7 @@ import (
 	"sigmaos/serr"
 	"sigmaos/sigmaclnt/fslib"
 	sp "sigmaos/sigmap"
+	"sigmaos/util/perf"
 )
 
 // Called by a sigmaOS process after being spawned
@@ -30,7 +31,7 @@ func NewProcClnt(fsl *fslib.FsLib) (*ProcClnt, error) {
 			db.DPrintf(db.ERROR, "Err MountTree: ep %v err %v", ep, err)
 			return nil, err
 		}
-		db.DPrintf(db.SPAWN_LAT, "[%v] MountTree latency: %v", fsl.ProcEnv().GetPID(), time.Since(start))
+		perf.LogSpawnLatency("Mount schedd RPC clnt", fsl.ProcEnv().GetPID(), fsl.ProcEnv().GetSpawnTime(), start)
 	}
 	if ep, ok := fsl.ProcEnv().GetNamedEndpoint(); ok {
 		start := time.Now()
@@ -39,7 +40,7 @@ func NewProcClnt(fsl *fslib.FsLib) (*ProcClnt, error) {
 			db.DPrintf(db.ERROR, "Err MountTree: ep %v err %v", ep, err)
 			//			return nil, err
 		} else {
-			db.DPrintf(db.SPAWN_LAT, "Mount named [%v] time %v", ep, time.Since(start))
+			perf.LogSpawnLatency("Mount named", fsl.ProcEnv().GetPID(), fsl.ProcEnv().GetSpawnTime(), start)
 		}
 	}
 	return newProcClnt(fsl, fsl.ProcEnv().GetPID(), fsl.ProcEnv().GetPrivileged(), fsl.ProcEnv().GetKernelID()), nil

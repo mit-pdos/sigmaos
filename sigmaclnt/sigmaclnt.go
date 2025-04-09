@@ -119,6 +119,7 @@ func NewSigmaClnt(pe *proc.ProcEnv) (*SigmaClnt, error) {
 	if err := sc.NewProcClnt(); err != nil {
 		return nil, err
 	}
+	perf.LogSpawnLatency("NewSigmaClnt", pe.GetPID(), pe.GetSpawnTime(), start)
 	return sc, nil
 }
 

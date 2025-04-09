@@ -16,10 +16,10 @@ import (
 	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/docker/go-connections/nat"
 
-	chunksrv "sigmaos/sched/msched/proc/chunk/srv"
 	"sigmaos/dcontainer/cgroup"
 	db "sigmaos/debug"
 	"sigmaos/proc"
+	chunksrv "sigmaos/sched/msched/proc/chunk/srv"
 	sp "sigmaos/sigmap"
 	"sigmaos/util/linux/mem"
 	"sigmaos/util/perf"
@@ -170,7 +170,7 @@ func (c *DContainer) GetCPUUtil() (float64, error) {
 func (c *DContainer) SetCPUShares(cpu int64) error {
 	s := time.Now()
 	err := c.cmgr.SetCPUShares(c.cgroupPath, cpu)
-	db.DPrintf(db.SPAWN_LAT, "DContainer.SetCPUShares %v", time.Since(s))
+	perf.LogSpawnLatency("DContainter.SetCPUShares", sp.NOT_SET, perf.TIME_NOT_SET, s)
 	return err
 }
 

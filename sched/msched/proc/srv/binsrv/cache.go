@@ -7,7 +7,8 @@ import (
 	"github.com/hanwen/go-fuse/v2/fs"
 
 	db "sigmaos/debug"
-	"sigmaos/sched/msched/proc"
+	"sigmaos/proc"
+	schedproc "sigmaos/sched/msched/proc"
 	sp "sigmaos/sigmap"
 	"sigmaos/util/syncmap"
 )
@@ -40,15 +41,16 @@ type entry struct {
 	mu sync.Mutex
 	st *sp.Tstat
 	dl *downloader
+	p  *proc.Proc
 }
 
 type bincache struct {
 	kernelId string
 	cache    *syncmap.SyncMap[string, *entry]
-	pds      proc.ProcSrv
+	pds      schedproc.ProcSrv
 }
 
-func newBinCache(pds proc.ProcSrv) *bincache {
+func newBinCache(pds schedproc.ProcSrv) *bincache {
 	bc := &bincache{
 		cache: syncmap.NewSyncMap[string, *entry](),
 		pds:   pds,
@@ -57,30 +59,31 @@ func newBinCache(pds proc.ProcSrv) *bincache {
 }
 
 // Check cache first. If not present, get stat from procd
-func (bc *bincache) lookup(pn string, pid uint32) (*sp.Tstat, error) {
+func (bc *bincache) lookup(pn string, pid uint32) (*proc.Proc, *sp.Tstat, error) {
 	e, ok := bc.cache.Lookup(pn)
 	if ok {
-		return e.st, nil
+		return e.dl.p, e.st, nil
 	}
 	e, _ = bc.cache.Alloc(pn, &entry{})
 	db.DPrintf(db.BINSRV, "alloc %q\n", pn)
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	if e.st == nil {
-		st, err := bc.pds.Lookup(int(pid), pn)
+		p, st, err := bc.pds.LookupStat(int(pid), pn)
 		if err != nil {
 			db.DPrintf(db.ERROR, "Error pds lookup bin: %v", err)
 			bc.cache.Delete(pn)
-			return nil, err
+			return nil, nil, err
 		}
 		if st == nil {
 			db.DFatalf("Error st is nil from lookup pn %v pid %v", pn, pid)
 		}
 		e.st = st
+		e.p = p
 	}
-	return e.st, nil
+	return e.p, e.st, nil
 }
 
-func (bc *bincache) getDownload(pn string, sz sp.Tsize, pid uint32) *downloader {
-	return newDownloader(pn, bc.pds, sz, pid)
+func (bc *bincache) getDownload(pn string, sz sp.Tsize, p *proc.Proc, pid uint32) *downloader {
+	return newDownloader(pn, bc.pds, sz, p, pid)
 }

@@ -439,11 +439,18 @@ func (ps *ProcSrv) lookupProc(proc *proc.Proc, prog string) (*sp.Tstat, error) {
 	return st, nil
 }
 
-func (ps *ProcSrv) Lookup(pid int, prog string) (*sp.Tstat, error) {
+func (ps *ProcSrv) LookupProc(pid int) *proc.Proc {
 	pe, alloc := ps.procs.Alloc(pid, newProcEntry(nil))
 	if alloc {
-		db.DPrintf(db.PROCD, "Lookup wait for pid %v proc %v\n", pid, pe)
+		db.DPrintf(db.PROCD, "LookupProc wait for pid %v proc %v", pid, pe)
 		pe.procWait()
 	}
-	return ps.lookupProc(pe.proc, prog)
+	return pe.proc
+}
+
+func (ps *ProcSrv) LookupStat(pid int, prog string) (*proc.Proc, *sp.Tstat, error) {
+	p := ps.LookupProc(pid)
+	db.DPrintf(db.PROCD, "LookupStat for pid %v proc %v", pid, p)
+	st, err := ps.lookupProc(p, prog)
+	return p, st, err
 }

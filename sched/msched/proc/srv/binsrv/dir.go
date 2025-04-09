@@ -5,11 +5,13 @@ import (
 	"os"
 	"path/filepath"
 	"syscall"
+	"time"
 
 	"github.com/hanwen/go-fuse/v2/fs"
 	"github.com/hanwen/go-fuse/v2/fuse"
 
 	db "sigmaos/debug"
+	"sigmaos/util/perf"
 )
 
 var _ = (fs.NodeStatfser)((*binFsNode)(nil))
@@ -40,12 +42,13 @@ func (n *binFsNode) Lookup(ctx context.Context, name string, out *fuse.EntryOut)
 
 	pn := filepath.Join(n.path(), name)
 
-	db.DPrintf(db.SPAWN_LAT, "[%v] Lookup pid %v", pn, c.Pid)
+	start := time.Now()
 
-	sst, err := n.RootData.bincache.lookup(pn, c.Pid)
+	p, sst, err := n.RootData.bincache.lookup(pn, c.Pid)
 	if err != nil {
 		return nil, fs.ToErrno(os.ErrNotExist)
 	}
+	perf.LogSpawnLatency("BinSrv.binFsNode.Lookup", p.GetPid(), p.GetSpawnTime(), start)
 	ust := syscall.Stat_t{}
 	toUstat(sst, &ust)
 	out.Attr.FromStat(&ust)
@@ -64,11 +67,13 @@ func (n *binFsNode) Open(ctx context.Context, flags uint32) (fh fs.FileHandle, f
 	p := n.path()
 
 	c := ctx.(*fuse.Context).Caller
-	db.DPrintf(db.SPAWN_LAT, "[%v] Open pid %d", p, c.Pid)
 
 	db.DPrintf(db.BINSRV, "%v: Open pid %d path %q", n, c.Pid, p)
 
-	dl := n.RootData.bincache.getDownload(p, n.sz, c.Pid)
+	start := time.Now()
+	pr := n.RootData.bincache.pds.LookupProc(int(c.Pid))
+	dl := n.RootData.bincache.getDownload(p, n.sz, pr, c.Pid)
+	perf.LogSpawnLatency("BinSrv.binFsNode.getDownload", dl.p.GetPid(), dl.p.GetSpawnTime(), start)
 	lf := newBinFsFile(p, dl)
 	return lf, fuse.FOPEN_KEEP_CACHE, 0
 }
@@ -95,7 +100,7 @@ var _ = (fs.NodeGetattrer)((*binFsNode)(nil))
 func (n *binFsNode) Getattr(ctx context.Context, f fs.FileHandle, out *fuse.AttrOut) syscall.Errno {
 	c := ctx.(*fuse.Context).Caller
 	pn := n.path()
-	sst, err := n.RootData.bincache.lookup(pn, c.Pid)
+	_, sst, err := n.RootData.bincache.lookup(pn, c.Pid)
 	if err != nil {
 		return fs.ToErrno(os.ErrNotExist)
 	}

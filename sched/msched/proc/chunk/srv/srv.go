@@ -27,6 +27,7 @@ import (
 	"sigmaos/sigmaclnt/fslib"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
+	"sigmaos/util/perf"
 )
 
 const (
@@ -212,7 +213,7 @@ func (cksrv *ChunkSrv) fetchOrigin(r sp.Trealm, prog string, pid sp.Tpid, s3secr
 		be.path = path0
 		fd = fd0
 		path = path0
-		db.DPrintf(db.SPAWN_LAT, "[%v] getFd %q open lat %v", be.prog, paths, time.Since(s))
+		perf.LogSpawnLatency("ChunkSrv.fetchOrigin.open", pid, perf.TIME_NOT_SET, s)
 	}
 	sz, err := sc.Pread(fd, b, sp.Toffset(chunk.ChunkOff(ck)))
 	if err != nil {
@@ -279,7 +280,7 @@ func (cksrv *ChunkSrv) fetch(realm sp.Trealm, prog string, pid sp.Tpid, s3secret
 	db.DPrintf(db.CHUNKSRV, "%v: Fetch: pid %v %v", cksrv.kernelId, pid, prog)
 	s := time.Now()
 	defer func() {
-		db.DPrintf(db.SPAWN_LAT, "%v: Fetch: %v ck %d lat %v", cksrv.kernelId, prog, ck, time.Since(s))
+		perf.LogSpawnLatency(fmt.Sprintf("ChunkSrv.Fetch chunk %d", ck), pid, perf.TIME_NOT_SET, s)
 	}()
 
 	ckid := int(ck)
@@ -343,14 +344,14 @@ func (cksrv *ChunkSrv) Fetch(ctx fs.CtxI, req proto.FetchChunkReq, res *proto.Fe
 // Handle a GetFileStatReq
 //
 
-func (cksrv *ChunkSrv) getOrigin(r sp.Trealm, prog string, paths []string, s3secret *sp.SecretProto, ep *sp.Tendpoint) (*sp.Tstat, string, error) {
+func (cksrv *ChunkSrv) getOrigin(r sp.Trealm, pid sp.Tpid, prog string, paths []string, s3secret *sp.SecretProto, ep *sp.Tendpoint) (*sp.Tstat, string, error) {
 	db.DPrintf(db.CHUNKSRV, "%v: getOrigin %v %v", cksrv.kernelId, prog, paths)
 	sc, err := cksrv.getSc(r, s3secret, ep)
 	if err != nil {
 		db.DPrintf(db.ERROR, "Error get realm (%v) sigma clnt: %v", r, err)
 		return nil, "", err
 	}
-	st, path, err := cksrv.lookup(sc, prog, paths)
+	st, path, err := cksrv.lookup(sc, pid, prog, paths)
 	if err != nil {
 		return nil, "", err
 	}
@@ -389,8 +390,8 @@ func (cksrv *ChunkSrv) getFileStat(r sp.Trealm, prog string, pid sp.Tpid, paths 
 
 	s := time.Now()
 	// paths = replaceLocal(paths, cksrv.kernelId)
-	st, srv, err := cksrv.getOrigin(r, prog, paths, s3secret, ep)
-	db.DPrintf(db.SPAWN_LAT, "[%v] getFileStat lat %v: origin %v err %v", pid, time.Since(s), paths, err)
+	st, srv, err := cksrv.getOrigin(r, pid, prog, paths, s3secret, ep)
+	perf.LogSpawnLatency(fmt.Sprintf("ChunkSrv.getFileStat.getOrigin %v", paths), pid, perf.TIME_NOT_SET, s)
 	if err != nil {
 		return nil, "", err
 	}
@@ -399,10 +400,9 @@ func (cksrv *ChunkSrv) getFileStat(r sp.Trealm, prog string, pid sp.Tpid, paths 
 
 func (cksrv *ChunkSrv) GetFileStat(ctx fs.CtxI, req proto.GetFileStatReq, res *proto.GetFileStatRep) error {
 	db.DPrintf(db.CHUNKSRV, "%v: GetFileStat: %v", cksrv.kernelId, req)
-	db.DPrintf(db.SPAWN_LAT, "%v: GetFileStat: %v", cksrv.kernelId, req)
 	s := time.Now()
 	defer func() {
-		db.DPrintf(db.SPAWN_LAT, "%v: GetFileStat pid %v done: %v lat %v", cksrv.kernelId, req.GetPid(), req, time.Since(s))
+		perf.LogSpawnLatency(fmt.Sprintf("ChunkSrv.GetFileStat %s", cksrv.kernelId), sp.Tpid(req.GetPid()), perf.TIME_NOT_SET, s)
 	}()
 
 	r := sp.Trealm(req.GetRealmStr())
@@ -440,7 +440,7 @@ func (cksrv *ChunkSrv) GetFileStat(ctx fs.CtxI, req proto.GetFileStatReq, res *p
 
 	// Prefetch first chunk
 	go func() {
-		db.DPrintf(db.SPAWN_LAT, "Prefetch chunk 0 %v %v %v", req.GetProg(), req.GetPid(), req.GetSigmaPath())
+		perf.LogSpawnLatency("ChunkSrv.prefetchChunk start", sp.Tpid(req.GetPid()), perf.TIME_NOT_SET, perf.TIME_NOT_SET)
 		cksrv.fetch(r, be.prog, sp.Tpid(req.Pid), req.GetS3Secret(), 0, sp.Tsize(sp.Conf.Chunk.CHUNK_SZ), req.GetSigmaPath(), true, ep)
 	}()
 
@@ -454,7 +454,7 @@ func (cksrv *ChunkSrv) GetFileStat(ctx fs.CtxI, req proto.GetFileStatReq, res *p
 	return nil
 }
 
-func (cksrv *ChunkSrv) lookup(sc *sigmaclnt.SigmaClnt, prog string, paths []string) (*sp.Tstat, string, error) {
+func (cksrv *ChunkSrv) lookup(sc *sigmaclnt.SigmaClnt, pid sp.Tpid, prog string, paths []string) (*sp.Tstat, string, error) {
 	db.DPrintf(db.CHUNKSRV, "lookup %q %v", prog, paths)
 
 	var st *sp.Tstat
@@ -463,7 +463,7 @@ func (cksrv *ChunkSrv) lookup(sc *sigmaclnt.SigmaClnt, prog string, paths []stri
 		db.DPrintf(db.CHUNKSRV, "Stat '%v/%v'", pn, prog)
 		s := time.Now()
 		sst, err := sc.Stat(pn + "/" + prog)
-		db.DPrintf(db.SPAWN_LAT, "Stat '%v/%v' lat %v", pn, prog, time.Since(s))
+		perf.LogSpawnLatency("ChunkSrv.lookup.Stat", pid, perf.TIME_NOT_SET, s)
 		if err == nil {
 			sst.Dev = uint32(i)
 			st = sst

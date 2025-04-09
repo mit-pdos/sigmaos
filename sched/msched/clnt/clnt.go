@@ -14,6 +14,7 @@ import (
 	"sigmaos/sched/msched/proto"
 	"sigmaos/sigmaclnt/fslib"
 	sp "sigmaos/sigmap"
+	"sigmaos/util/perf"
 )
 
 type MSchedClnt struct {
@@ -98,7 +99,7 @@ func (mc *MSchedClnt) ForceRun(kernelID string, memAccountedFor bool, p *proc.Pr
 	if err != nil {
 		return err
 	}
-	db.DPrintf(db.SPAWN_LAT, "[%v] GetMSchedClnt time %v", p.GetPid(), time.Since(start))
+	perf.LogSpawnLatency("GetMSchedClnt", p.GetPid(), p.GetSpawnTime(), start)
 	req := &proto.ForceRunReq{
 		ProcProto:       p.GetProto(),
 		MemAccountedFor: memAccountedFor,
@@ -135,7 +136,7 @@ func (mc *MSchedClnt) Notify(method Tmethod, kernelID string, pid sp.Tpid, statu
 		return err
 	}
 	if method == START {
-		db.DPrintf(db.SPAWN_LAT, "[%v] mschedclnt.Notify Started rpcdc.GetClnt latency: %v", pid, time.Since(start))
+		perf.LogSpawnLatency("MSchedClnt.Notify started GetClnt", pid, perf.TIME_NOT_SET, start)
 	}
 	var b []byte
 	if status != nil {
@@ -151,7 +152,7 @@ func (mc *MSchedClnt) Notify(method Tmethod, kernelID string, pid sp.Tpid, statu
 		return err
 	}
 	if method == START {
-		db.DPrintf(db.SPAWN_LAT, "[%v] Notify RPC latency: %v", pid, time.Since(start))
+		perf.LogSpawnLatency("MSchedClnt.Notify started RPC", pid, perf.TIME_NOT_SET, start)
 	}
 	return nil
 }
@@ -283,7 +284,7 @@ func (mc *MSchedClnt) getRPCClntMyMSched() (*rpcclnt.RPCClnt, error) {
 		if err != nil {
 			return nil, err
 		}
-		db.DPrintf(db.SPAWN_LAT, "getRPCClntMyMSched %v time %v", mc.kernelID, time.Since(start))
+		perf.LogSpawnLatency("MSchedClnt.getRPCClntMyMSched", sp.NOT_SET, perf.TIME_NOT_SET, start)
 		mc.rpcc = rpcc
 	}
 	return mc.rpcc, nil

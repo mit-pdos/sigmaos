@@ -142,6 +142,7 @@ type Tasks struct {
 func InitCoordFS(sc *sigmaclnt.SigmaClnt, jobRoot, jobname string, nreducetask int) (*Tasks, error) {
 	sc.FsLib.MkDir(MRDIRTOP, 0777)
 	sc.FsLib.MkDir(MRDIRELECT, 0777)
+	sc.FsLib.MkDirPath("/", jobRoot, 0777)
 
 	mftsrv, err := fttask_srv.NewFtTaskSrvMgr(sc, jobname + "-mtasks", nil, true)
 	if err != nil {

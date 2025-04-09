@@ -17,6 +17,7 @@ import (
 	"sigmaos/sigmaclnt/fsclnt"
 	"sigmaos/sigmaclnt/fslib"
 	"sigmaos/sigmaclnt/procclnt"
+	"sigmaos/util/perf"
 )
 
 func init() {
@@ -27,7 +28,7 @@ func init() {
 			return
 		}
 		pe := proc.GetProcEnv()
-		db.DPrintf(db.SPAWN_LAT, "[%v] SigmaClnt pkg init. E2e spawn latency: %v", pe.GetPID(), time.Since(pe.GetSpawnTime()))
+		perf.LogSpawnLatency("sigmaclnt pkg init", pe.GetPID(), pe.GetSpawnTime(), perf.TIME_NOT_SET)
 	}
 }
 
@@ -114,7 +115,7 @@ func NewSigmaClnt(pe *proc.ProcEnv) (*SigmaClnt, error) {
 		db.DPrintf(db.ERROR, "NewSigmaClnt: %v", err)
 		return nil, err
 	}
-	db.DPrintf(db.SPAWN_LAT, "[%v] Make FsLib: %v", pe.GetPID(), time.Since(start))
+	perf.LogSpawnLatency("NewSigmaClnt.NewFsLib", pe.GetPID(), pe.GetSpawnTime(), start)
 	if err := sc.NewProcClnt(); err != nil {
 		return nil, err
 	}
@@ -144,7 +145,7 @@ func (sc *SigmaClnt) NewProcClnt() error {
 		return err
 	}
 	sc.ProcAPI = papi
-	db.DPrintf(db.SPAWN_LAT, "[%v] Make ProcClnt: %v", sc.ProcEnv().GetPID(), time.Since(start))
+	perf.LogSpawnLatency("NewSigmaClnt.NewProcClnt", sc.ProcEnv().GetPID(), sc.ProcEnv().GetSpawnTime(), start)
 	return nil
 }
 

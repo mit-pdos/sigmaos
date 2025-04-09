@@ -80,12 +80,11 @@ func NewSpawnBench(pe *proc.ProcEnv, execLat time.Duration, spawnLat time.Durati
 }
 
 func (s *SpawnBench) Work() {
-	start := time.Now()
 	err := s.Started()
 	if err != nil {
 		db.DFatalf("Started error: %v", err)
 	}
-	start = time.Now()
+	start := time.Now()
 	s.ClntExit(proc.NewStatusInfo(proc.StatusOK, "Spawn latency until main", s.spawnLat))
-	perf.LogSpawnLatency("SpawnBench.Exited", s.ProcEnv().GetPID(), s.ProcEnv().GetSpawnTime(), execTime)
+	perf.LogSpawnLatency("SpawnBench.Exited", s.ProcEnv().GetPID(), s.ProcEnv().GetSpawnTime(), start)
 }

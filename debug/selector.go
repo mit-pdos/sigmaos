@@ -183,6 +183,7 @@ const (
 const (
 	BESCHED         Tselector = "BESCHED"
 	BESCHED_ERR               = "BESCHED" + ERR
+	BESCHED_PERF              = "BESCHED_PERF"
 	BESCHEDCLNT               = "BESCHEDCLNT"
 	BESCHEDCLNT_ERR           = "BESCHEDCLNT" + ERR
 )

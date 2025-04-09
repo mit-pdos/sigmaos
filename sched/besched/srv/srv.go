@@ -49,17 +49,19 @@ func NewBESched(sc *sigmaclnt.SigmaClnt) *BESched {
 }
 
 func (be *BESched) Enqueue(ctx fs.CtxI, req proto.EnqueueReq, res *proto.EnqueueRep) error {
+	start := time.Now()
 	p := proc.NewProcFromProto(req.ProcProto)
 	if p.GetRealm() != ctx.Principal().GetRealm() {
 		return fmt.Errorf("Proc realm %v doesn't match principal realm %v", p.GetRealm(), ctx.Principal().GetRealm())
 	}
 	db.DPrintf(db.BESCHED, "[%v] Enqueue %v", p.GetRealm(), p)
-	db.DPrintf(db.SPAWN_LAT, "[%v] RPC to beschedsrv; time since spawn %v", p.GetPid(), time.Since(p.GetSpawnTime()))
+	perf.LogSpawnLatency("BESched.Enqueue start", p.GetPid(), p.GetSpawnTime(), perf.TIME_NOT_SET)
 	ch := make(chan *proc.ProcSeqno)
 	be.addProc(p, ch)
 	db.DPrintf(db.BESCHED, "[%v] Enqueued %v", p.GetRealm(), p)
 	seqno := <-ch
 	res.ProcSeqno = seqno
+	perf.LogSpawnLatency("BESched.Enqueue", p.GetPid(), p.GetSpawnTime(), start)
 	return nil
 }
 
@@ -69,7 +71,7 @@ func (be *BESched) addProc(p *proc.Proc, ch chan *proc.ProcSeqno) {
 	be.mu.Lock()
 	defer be.mu.Unlock()
 
-	db.DPrintf(db.SPAWN_LAT, "Time to acquire lock in addProc: %v", time.Since(lockStart))
+	perf.LogSpawnLatency("BESched.addProc.Lock", p.GetPid(), p.GetSpawnTime(), lockStart)
 
 	// Increase aggregate queue length.
 	be.qlen++
@@ -86,7 +88,7 @@ func (be *BESched) addProc(p *proc.Proc, ch chan *proc.ProcSeqno) {
 }
 
 func (be *BESched) replyToParent(pseqno *proc.ProcSeqno, p *proc.Proc, ch chan *proc.ProcSeqno, enqTS time.Time) {
-	db.DPrintf(db.SPAWN_LAT, "[%v] Internal beschedsrv Proc queueing time %v", p.GetPid(), time.Since(enqTS))
+	perf.LogSpawnLatency("BESched.replyToParent internalQTime", p.GetPid(), p.GetSpawnTime(), enqTS)
 	db.DPrintf(db.BESCHED, "replyToParent child is on kid %v", pseqno.GetMSchedID())
 	ch <- pseqno
 }
@@ -118,8 +120,7 @@ func (be *BESched) GetProc(ctx fs.CtxI, req proto.GetProcReq, res *proto.GetProc
 	for time.Since(start) < sp.Conf.BESched.GET_PROC_TIMEOUT {
 		lockStart := time.Now()
 		be.mu.Lock()
-		lockDur := time.Since(lockStart)
-		db.DPrintf(db.SPAWN_LAT, "Time to acquire lock in GetProc: %v", lockDur)
+		db.DPrintf(db.BESCHED_PERF, "GetProc Lock acquisition time: %v", time.Since(lockStart))
 		scanStart := time.Now()
 		// Get the next realm with procs queued, globally round-robin
 		r, keepScanning := be.rr.GetNextRealm(sp.NO_REALM)
@@ -134,11 +135,10 @@ func (be *BESched) GetProc(ctx fs.CtxI, req proto.GetProcReq, res *proto.GetProc
 			p, ch, ts, ok := q.Dequeue(func(p *proc.Proc) bool {
 				return isEligible(p, proc.Tmem(req.Mem), req.KernelID)
 			})
-			dequeueDur := time.Since(dequeueStart)
 			db.DPrintf(db.BESCHED, "[%v] GetProc Done Try to dequeue %v", r, req.KernelID)
 			if ok {
-				scanDur := time.Since(scanStart)
-				db.DPrintf(db.SPAWN_LAT, "[%v] Queue scan time: %v dequeue time %v lock time %v", p.GetPid(), scanDur, dequeueDur, lockDur)
+				db.DPrintf(db.BESCHED_PERF, "GetProc scan time: %v", time.Since(scanStart))
+				perf.LogSpawnLatency("BESched.GetProc.Dequeue", p.GetPid(), p.GetSpawnTime(), dequeueStart)
 				postDequeueStart := time.Now()
 				if q.Len() == 0 {
 					// Realm's queue is now empty
@@ -162,7 +162,7 @@ func (be *BESched) GetProc(ctx fs.CtxI, req proto.GetProcReq, res *proto.GetProc
 				res.ProcProto = p.GetProto()
 				res.OK = true
 				res.QLen = uint32(be.qlen)
-				db.DPrintf(db.SPAWN_LAT, "[%v] Post-dequeue time: %v Queue scan time %v dequeue time %v lock time %v", p.GetPid(), time.Since(postDequeueStart), scanDur, dequeueDur, lockDur)
+				perf.LogSpawnLatency("BESched.GetProc.dequeueEpilogue", p.GetPid(), p.GetSpawnTime(), postDequeueStart)
 				db.DPrintf(db.BESCHED, "assign %v BinKernelId %v to %v\n", p.GetPid(), p, req.KernelID)
 				be.mu.Unlock()
 				return nil
@@ -240,14 +240,14 @@ func (be *BESched) stats() {
 }
 
 func (be *BESched) getprocStats() {
-	if !db.WillBePrinted(db.SPAWN_LAT) {
+	if !db.WillBePrinted(db.BESCHED_PERF) {
 		return
 	}
 	for {
 		ngp1 := be.ngetprocReq.Load()
 		time.Sleep(5 * time.Second)
 		ngp2 := be.ngetprocReq.Load()
-		db.DPrintf(db.SPAWN_LAT, "Stats ngetproc: %v/s", (ngp2-ngp1)/5)
+		db.DPrintf(db.BESCHED_PERF, "Stats ngetproc: %v/s", (ngp2-ngp1)/5)
 	}
 }
 

@@ -62,7 +62,12 @@ func newBinCache(pds schedproc.ProcSrv) *bincache {
 func (bc *bincache) lookup(pn string, pid uint32) (*proc.Proc, *sp.Tstat, error) {
 	e, ok := bc.cache.Lookup(pn)
 	if ok {
-		return e.dl.p, e.st, nil
+		e.mu.Lock()
+		defer e.mu.Unlock()
+		if e.p == nil {
+			e.p = bc.pds.LookupProc(int(pid))
+		}
+		return e.p, e.st, nil
 	}
 	e, _ = bc.cache.Alloc(pn, &entry{})
 	db.DPrintf(db.BINSRV, "alloc %q\n", pn)

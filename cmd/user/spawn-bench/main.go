@@ -87,5 +87,5 @@ func (s *SpawnBench) Work() {
 	}
 	start = time.Now()
 	s.ClntExit(proc.NewStatusInfo(proc.StatusOK, "Spawn latency until main", s.spawnLat))
-	perf.LogSpawnLatency("SpawnBench.Exited", s.ProcEnv().GetPID(), s..ProcEnv().GetSpawnTime(), execTime)
+	perf.LogSpawnLatency("SpawnBench.Exited", s.ProcEnv().GetPID(), s.ProcEnv().GetSpawnTime(), execTime)
 }

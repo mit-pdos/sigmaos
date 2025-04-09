@@ -407,7 +407,7 @@ func (ps *ProcSrv) Fetch(pid, cid int, prog string, sz sp.Tsize) (sp.Tsize, erro
 		db.DFatalf("Fetch: procs.Lookup %v %v\n", pid, prog)
 	}
 
-	perf.LogSpawnLatency(fmt.Sprintf("ProcSrv.Fetch start ck %d path %s", cid, pe.proc.GetSigmaPath()), pe.proc.GetPid(), pe.proc.GetSpawnTime(), perf.TIME_NOT_SET)
+	perf.LogSpawnLatency("ProcSrv.Fetch start ck %d path %s", pe.proc.GetPid(), pe.proc.GetSpawnTime(), perf.TIME_NOT_SET, cid, pe.proc.GetSigmaPath())
 
 	s3secret, ok := pe.proc.GetSecrets()["s3"]
 	if !ok {
@@ -417,12 +417,12 @@ func (ps *ProcSrv) Fetch(pid, cid int, prog string, sz sp.Tsize) (sp.Tsize, erro
 	start := time.Now()
 	sz, path, err := ps.ckclnt.Fetch(ps.kernelId, prog, pe.proc.GetPid(), ps.realm, s3secret, cid, sz, pe.proc.GetSigmaPath(), pe.proc.GetNamedEndpoint())
 
-	perf.LogSpawnLatency(fmt.Sprintf("ProcSrv.Fetch done ck %d sz %d path %s", cid, sz, path), pe.proc.GetPid(), pe.proc.GetSpawnTime(), start)
+	perf.LogSpawnLatency("ProcSrv.Fetch done ck %d sz %d path %s", pe.proc.GetPid(), pe.proc.GetSpawnTime(), start, cid, sz, path)
 	return sz, err
 }
 
 func (ps *ProcSrv) lookupProc(proc *proc.Proc, prog string) (*sp.Tstat, error) {
-	perf.LogSpawnLatency(fmt.Sprintf("ProcSrv.lookupProc path %s", proc.GetSigmaPath()), proc.GetPid(), proc.GetSpawnTime(), perf.TIME_NOT_SET)
+	perf.LogSpawnLatency("ProcSrv.lookupProc path %s", proc.GetPid(), proc.GetSpawnTime(), perf.TIME_NOT_SET, proc.GetSigmaPath())
 
 	paths := proc.GetSigmaPath()
 	s3secret, ok := proc.GetSecrets()["s3"]
@@ -432,7 +432,7 @@ func (ps *ProcSrv) lookupProc(proc *proc.Proc, prog string) (*sp.Tstat, error) {
 
 	s := time.Now()
 	st, path, err := ps.ckclnt.GetFileStat(ps.kernelId, prog, proc.GetPid(), proc.GetRealm(), s3secret, paths, proc.GetNamedEndpoint())
-	perf.LogSpawnLatency(fmt.Sprintf("ProcSrv.lookupProc done path %s", path), proc.GetPid(), proc.GetSpawnTime(), s)
+	perf.LogSpawnLatency("ProcSrv.lookupProc done path %s", proc.GetPid(), proc.GetSpawnTime(), s, path)
 	if err != nil {
 		return nil, err
 	}

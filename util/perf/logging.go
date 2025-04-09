@@ -1,6 +1,7 @@
 package perf
 
 import (
+	"fmt"
 	"time"
 
 	db "sigmaos/debug"
@@ -12,7 +13,7 @@ var (
 )
 
 // Some convenience functions for logging performance-related data
-func LogSpawnLatency(msg string, pid sp.Tpid, spawnTime time.Time, opStart time.Time) {
+func LogSpawnLatency(format string, pid sp.Tpid, spawnTime time.Time, opStart time.Time, v ...interface{}) {
 	// Bail out early if not logging
 	if !db.WillBePrinted(db.SPAWN_LAT) {
 		return
@@ -25,5 +26,5 @@ func LogSpawnLatency(msg string, pid sp.Tpid, spawnTime time.Time, opStart time.
 	if opStart != TIME_NOT_SET {
 		sinceOpStart = time.Since(opStart)
 	}
-	db.DPrintf(db.SPAWN_LAT, "[%s] %s op:%v sinceSpawn:%v", pid, msg, sinceOpStart, sinceSpawn)
+	db.DPrintf(db.SPAWN_LAT, "[%s] %s op:%v sinceSpawn:%v", pid, fmt.Sprintf(format, v...), sinceOpStart, sinceSpawn)
 }

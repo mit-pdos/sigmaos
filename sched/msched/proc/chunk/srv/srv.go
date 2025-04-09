@@ -280,7 +280,7 @@ func (cksrv *ChunkSrv) fetch(realm sp.Trealm, prog string, pid sp.Tpid, s3secret
 	db.DPrintf(db.CHUNKSRV, "%v: Fetch: pid %v %v", cksrv.kernelId, pid, prog)
 	s := time.Now()
 	defer func() {
-		perf.LogSpawnLatency(fmt.Sprintf("ChunkSrv.Fetch chunk %d", ck), pid, perf.TIME_NOT_SET, s)
+		perf.LogSpawnLatency("ChunkSrv.Fetch chunk %d", pid, perf.TIME_NOT_SET, s, ck)
 	}()
 
 	ckid := int(ck)
@@ -391,7 +391,7 @@ func (cksrv *ChunkSrv) getFileStat(r sp.Trealm, prog string, pid sp.Tpid, paths 
 	s := time.Now()
 	// paths = replaceLocal(paths, cksrv.kernelId)
 	st, srv, err := cksrv.getOrigin(r, pid, prog, paths, s3secret, ep)
-	perf.LogSpawnLatency(fmt.Sprintf("ChunkSrv.getFileStat.getOrigin %v", paths), pid, perf.TIME_NOT_SET, s)
+	perf.LogSpawnLatency("ChunkSrv.getFileStat.getOrigin %v", pid, perf.TIME_NOT_SET, s, paths)
 	if err != nil {
 		return nil, "", err
 	}
@@ -402,7 +402,7 @@ func (cksrv *ChunkSrv) GetFileStat(ctx fs.CtxI, req proto.GetFileStatReq, res *p
 	db.DPrintf(db.CHUNKSRV, "%v: GetFileStat: %v", cksrv.kernelId, req)
 	s := time.Now()
 	defer func() {
-		perf.LogSpawnLatency(fmt.Sprintf("ChunkSrv.GetFileStat %s", cksrv.kernelId), sp.Tpid(req.GetPid()), perf.TIME_NOT_SET, s)
+		perf.LogSpawnLatency("ChunkSrv.GetFileStat %s", sp.Tpid(req.GetPid()), perf.TIME_NOT_SET, s, cksrv.kernelId)
 	}()
 
 	r := sp.Trealm(req.GetRealmStr())

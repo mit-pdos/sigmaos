@@ -166,6 +166,7 @@ const (
 	MSCHED_ERR               = "MSCHED" + ERR
 	MSCHEDCLNT               = "MSCHEDCLNT"
 	MSCHEDCLNT_ERR           = "MSCHEDCLNT" + ERR
+	MSCHED_PERF              = "MSCHED_PERF"
 	CGROUP                   = "CGROUP"
 	CGROUP_ERR               = "CGROUP" + ERR
 )

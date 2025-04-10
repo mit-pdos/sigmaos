@@ -94,10 +94,6 @@ func ReadKVs(rdr io.Reader, kvm *kvmap.KVMap, reducef mr.ReduceT) error {
 			if err == io.EOF {
 				break
 			}
-			if err != nil {
-				return err
-				break
-			}
 		} else {
 			if err := kvm.Combine(k, v, reducef); err != nil {
 				return err

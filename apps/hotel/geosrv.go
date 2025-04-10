@@ -115,7 +115,7 @@ func RunGeoSrv(job string, nidxStr string, maxSearchRadiusStr string, maxSearchR
 			db.DFatalf("Err mount epcache srv: %v", err)
 		}
 	}
-	db.DPrintf(db.SPAWN_LAT, "Geo.Mount EPCC: sinceSpawn:%v op:%v", time.Since(pe.GetSpawnTime()), time.Since(start))
+	perf.LogSpawnLatency("Geo.MountEPCacheSrv", pe.GetPID(), pe.GetSpawnTime(), start)
 
 	start = time.Now()
 	epcc, err := epclnt.NewEndpointCacheClnt(ssrv.MemFs.SigmaClnt().FsLib)
@@ -123,7 +123,7 @@ func RunGeoSrv(job string, nidxStr string, maxSearchRadiusStr string, maxSearchR
 		db.DFatalf("Err EPCC: %v", err)
 	}
 
-	db.DPrintf(db.SPAWN_LAT, "Geo.NewEPCC: sinceSpawn:%v op:%v", time.Since(pe.GetSpawnTime()), time.Since(start))
+	perf.LogSpawnLatency("Geo.NewEPCacheClnt", pe.GetPID(), pe.GetSpawnTime(), start)
 	start = time.Now()
 
 	ep := ssrv.MemFs.GetSigmaPSrvEndpoint()
@@ -132,7 +132,7 @@ func RunGeoSrv(job string, nidxStr string, maxSearchRadiusStr string, maxSearchR
 		db.DFatalf("Err RegisterEP: %v", err)
 	}
 
-	db.DPrintf(db.SPAWN_LAT, "Geo.RegisterEP: sinceSpawn:%v op:%v", time.Since(pe.GetSpawnTime()), time.Since(start))
+	perf.LogSpawnLatency("Geo.RegisterEP", pe.GetPID(), pe.GetSpawnTime(), start)
 	start = time.Now()
 
 	p, err := perf.NewPerf(ssrv.MemFs.SigmaClnt().ProcEnv(), perf.HOTEL_GEO)

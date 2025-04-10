@@ -16,6 +16,7 @@ import (
 	epcachesrv "sigmaos/apps/epcache/srv"
 	"sigmaos/apps/hotel"
 	"sigmaos/apps/hotel/proto"
+	"sigmaos/benchmarks"
 	"sigmaos/benchmarks/loadgen"
 	db "sigmaos/debug"
 	"sigmaos/proc"
@@ -35,6 +36,7 @@ var MAX_RPS int
 var DURATION time.Duration
 var cache string
 var TEST_AUTH bool
+var prewarm bool
 
 const (
 	NCACHESRV             = 6
@@ -47,6 +49,7 @@ func init() {
 	flag.StringVar(&K8S_ADDR, "k8saddr", "", "Addr of k8s frontend.")
 	flag.IntVar(&MAX_RPS, "maxrps", 1000, "Max number of requests/sec.")
 	flag.BoolVar(&TEST_AUTH, "auth", false, "Testing k8s auth")
+	flag.BoolVar(&prewarm, "prewarm", false, "Prewarm bins (only implemented for some tests)")
 	flag.DurationVar(&DURATION, "duration", 10*time.Second, "Duration of load generation benchmarks.")
 	flag.StringVar(&cache, "cache", "cached", "Cache service")
 }
@@ -465,6 +468,10 @@ func TestBenchSpawnGeo(t *testing.T) {
 
 	if err := mrts.GetRealm(test.REALM1).BootNode(N_NODE); !assert.Nil(t, err, "Err boot: %v", err) {
 		return
+	}
+
+	if prewarm {
+		benchmarks.WarmupRealm(mrts.GetRealm(test.REALM1), []string{"hotel-geod"})
 	}
 
 	eps, _, err := ts.hotel.EPCacheJob.Clnt.GetEndpoints(hotel.HOTELGEODIR, epcache.NO_VERSION)

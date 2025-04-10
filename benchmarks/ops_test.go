@@ -9,9 +9,9 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/proc"
 	mschedclnt "sigmaos/sched/msched/clnt"
-	"sigmaos/util/coordination/semaphore"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
+	"sigmaos/util/coordination/semaphore"
 )
 
 //
@@ -46,7 +46,7 @@ func downSemaphore(ts *test.RealmTstate, i interface{}) (time.Duration, float64)
 
 func warmupRealmBench(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
 	prog := i.(string)
-	start, nDL := warmupRealm(ts, []string{prog})
+	start, nDL := WarmupRealm(ts, []string{prog})
 	return time.Since(start), float64(nDL)
 }
 

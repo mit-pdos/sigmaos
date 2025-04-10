@@ -21,28 +21,42 @@ func NewProcClnt(fsl *fslib.FsLib) (*ProcClnt, error) {
 		db.DPrintf(db.PROCCLNT, "Mount %v as %v", fsl.ProcEnv().ProcDir, proc.PROCDIR)
 		fsl.NewRootMount(fsl.ProcEnv().ProcDir, proc.PROCDIR)
 	}
-	// If a msched IP was specified for this proc, mount the RPC file directly.
-	if ep, ok := fsl.ProcEnv().GetMSchedEndpoint(); ok {
-		pn := filepath.Join(sp.MSCHED, fsl.ProcEnv().GetKernelID(), rpc.RPC)
-		db.DPrintf(db.PROCCLNT, "Mount[%v] %v as %v", ep, rpc.RPC, pn)
-		start := time.Now()
-		err := fsl.MountTree(ep, rpc.RPC, pn)
-		if err != nil {
-			db.DPrintf(db.ERROR, "Err MountTree: ep %v err %v", ep, err)
-			return nil, err
+	mschedC := make(chan error)
+	go func() {
+		// If a msched IP was specified for this proc, mount the RPC file directly.
+		if ep, ok := fsl.ProcEnv().GetMSchedEndpoint(); ok {
+			pn := filepath.Join(sp.MSCHED, fsl.ProcEnv().GetKernelID(), rpc.RPC)
+			db.DPrintf(db.PROCCLNT, "Mount[%v] %v as %v", ep, rpc.RPC, pn)
+			start := time.Now()
+			err := fsl.MountTree(ep, rpc.RPC, pn)
+			if err != nil {
+				db.DPrintf(db.ERROR, "Err MountTree: ep %v err %v", ep, err)
+				mschedC <- err
+				return
+			}
+			perf.LogSpawnLatency("Mount schedd RPC clnt", fsl.ProcEnv().GetPID(), fsl.ProcEnv().GetSpawnTime(), start)
 		}
-		perf.LogSpawnLatency("Mount schedd RPC clnt", fsl.ProcEnv().GetPID(), fsl.ProcEnv().GetSpawnTime(), start)
+		mschedC <- nil
+	}()
+	err := <-mschedC
+	if err != nil {
+		return nil, err
 	}
-	if ep, ok := fsl.ProcEnv().GetNamedEndpoint(); ok {
-		start := time.Now()
-		err := fsl.MountTree(ep, "", sp.NAMED)
-		if err != nil {
-			db.DPrintf(db.ERROR, "Err MountTree: ep %v err %v", ep, err)
-			//			return nil, err
-		} else {
-			perf.LogSpawnLatency("Mount named", fsl.ProcEnv().GetPID(), fsl.ProcEnv().GetSpawnTime(), start)
+	namedC := make(chan error)
+	go func() {
+		if ep, ok := fsl.ProcEnv().GetNamedEndpoint(); ok {
+			start := time.Now()
+			err := fsl.MountTree(ep, "", sp.NAMED)
+			if err != nil {
+				db.DPrintf(db.ERROR, "Err MountTree: ep %v err %v", ep, err)
+				//			return nil, err
+			} else {
+				perf.LogSpawnLatency("Mount named", fsl.ProcEnv().GetPID(), fsl.ProcEnv().GetSpawnTime(), start)
+			}
 		}
-	}
+		namedC <- nil
+	}()
+	<-namedC
 	return newProcClnt(fsl, fsl.ProcEnv().GetPID(), fsl.ProcEnv().GetPrivileged(), fsl.ProcEnv().GetKernelID()), nil
 }
 

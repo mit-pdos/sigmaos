@@ -346,7 +346,7 @@ func TestMicroSpawnWaitExit5msSleeper(t *testing.T) {
 	defer mrts.Shutdown()
 
 	if PREWARM_REALM {
-		warmupRealm(mrts.GetRealm(REALM1), []string{"sleeper"})
+		benchmarks.WarmupRealm(mrts.GetRealm(REALM1), []string{"sleeper"})
 	}
 	rs := benchmarks.NewResults(N_TRIALS, benchmarks.OPS)
 	newOutDir(mrts.GetRealm(REALM1))
@@ -372,7 +372,7 @@ func TestMicroSpawnBurstTpt(t *testing.T) {
 	waitExitProcs(mrts.GetRealm(REALM1), ps)
 }
 
-func TestMicroWarmupRealm(t *testing.T) {
+func TestMicrobenchmarks.WarmupRealm(t *testing.T) {
 	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
@@ -423,7 +423,7 @@ func TestMicroMSchedSpawn(t *testing.T) {
 	waitExitProcs(mrts.GetRealm(REALM1), p1s)
 	if PREWARM_REALM {
 		db.DPrintf(db.TEST, "Warm up remainder of the realm for sleeper")
-		warmupRealm(mrts.GetRealm(REALM1), []string{"sleeper"})
+		benchmarks.WarmupRealm(mrts.GetRealm(REALM1), []string{"sleeper"})
 	}
 	if !USE_DUMMY_PROC {
 		// Cold-start the first target proc to download the bin from S3
@@ -434,7 +434,7 @@ func TestMicroMSchedSpawn(t *testing.T) {
 		spawnProcs(mrts.GetRealm(REALM1), p2s)
 		waitStartProcs(mrts.GetRealm(REALM1), p2s)
 		if PREWARM_REALM {
-			warmupRealm(mrts.GetRealm(REALM1), []string{prog})
+			benchmarks.WarmupRealm(mrts.GetRealm(REALM1), []string{prog})
 		}
 	}
 
@@ -484,7 +484,7 @@ func TestAppMR(t *testing.T) {
 	defer mrts.Shutdown()
 
 	if PREWARM_REALM {
-		warmupRealm(mrts.GetRealm(REALM1), []string{"mr-coord", "mr-m-grep", "mr-r-grep", "mr-m-wc", "mr-r-wc"})
+		benchmarks.WarmupRealm(mrts.GetRealm(REALM1), []string{"mr-coord", "mr-m-grep", "mr-r-grep", "mr-m-wc", "mr-r-wc"})
 	}
 	rs := benchmarks.NewResults(1, benchmarks.E2E)
 	p := newRealmPerf(mrts.GetRealm(REALM1))
@@ -721,7 +721,7 @@ func TestRealmBalanceHotelRPCImgResize(t *testing.T) {
 	p1 := newRealmPerf(mrts.GetRealm(REALM2))
 	defer p1.Done()
 	if PREWARM_REALM {
-		warmupRealm(mrts.GetRealm(REALM2), []string{"imgresize", "imgresized"})
+		benchmarks.WarmupRealm(mrts.GetRealm(REALM2), []string{"imgresize", "imgresized"})
 	}
 	// Structure for hotel
 	//	mrts.GetRealm(REALM1), err1 := test.NewRealmTstate(mrts.GetRoot(), REALM1)
@@ -798,7 +798,7 @@ func TestRealmBalanceHotelImgResize(t *testing.T) {
 	p1 := newRealmPerf(mrts.GetRealm(REALM2))
 	defer p1.Done()
 	if PREWARM_REALM {
-		warmupRealm(mrts.GetRealm(REALM2), []string{"imgresize", "imgresized"})
+		benchmarks.WarmupRealm(mrts.GetRealm(REALM2), []string{"imgresize", "imgresized"})
 	}
 	// Structure for hotel
 	rs2 := benchmarks.NewResults(1, benchmarks.E2E)
@@ -1552,7 +1552,7 @@ func TestImgResize(t *testing.T) {
 	}
 	defer mrts.Shutdown()
 	if PREWARM_REALM {
-		warmupRealm(mrts.GetRealm(REALM1), []string{"imgresize", "imgresized"})
+		benchmarks.WarmupRealm(mrts.GetRealm(REALM1), []string{"imgresize", "imgresized"})
 	}
 	rs := benchmarks.NewResults(1, benchmarks.E2E)
 	p := newRealmPerf(mrts.GetRealm(REALM1))
@@ -1581,7 +1581,7 @@ func TestK8sImgResize(t *testing.T) {
 		return
 	}
 	if PREWARM_REALM {
-		warmupRealm(mrts.GetRealm(REALM1), nil)
+		benchmarks.WarmupRealm(mrts.GetRealm(REALM1), nil)
 	}
 	sdc := mschedclnt.NewMSchedClnt(mrts.GetRealm(REALM1).FsLib, sp.NOT_SET)
 	nMSched, err := sdc.NMSched()
@@ -1738,7 +1738,7 @@ func TestK8sSocialNetworkImgResize(t *testing.T) {
 	p0 := newRealmPerf(mrts.GetRealm(sp.ROOTREALM))
 	defer p0.Done()
 	if PREWARM_REALM {
-		warmupRealm(mrts.GetRealm(sp.ROOTREALM), nil)
+		benchmarks.WarmupRealm(mrts.GetRealm(sp.ROOTREALM), nil)
 	}
 	sdc := mschedclnt.NewMSchedClnt(mrts.GetRealm(sp.ROOTREALM).SigmaClnt.FsLib, sp.NOT_SET)
 	nMSched, err := sdc.NMSched()

@@ -97,10 +97,12 @@ func RunGeoSrv(job string, nidxStr string, maxSearchRadiusStr string, maxSearchR
 		maxSearchRadius: float64(maxSearchRadius),
 		maxSearchReps:   maxSearchReps,
 	}
+
 	start = time.Now()
 	geo.idxs = NewGeoIndexes(nidx, "data/geo.json")
 	perf.LogSpawnLatency("Geo.NewGeoIndexes", pe.GetPID(), pe.GetSpawnTime(), start)
 	db.DPrintf(db.ALWAYS, "Geo srv done building %v indexes, radius %v nresults %v,  after: %v", nidx, geo.maxSearchRadius, geo.maxSearchReps, time.Since(start))
+
 	start = time.Now()
 	// Don't post the geo srv in the namespace
 	ssrv, err := sigmasrv.NewSigmaSrv("", geo, pe)

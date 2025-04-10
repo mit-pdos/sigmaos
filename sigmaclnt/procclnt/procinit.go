@@ -38,10 +38,6 @@ func NewProcClnt(fsl *fslib.FsLib) (*ProcClnt, error) {
 		}
 		mschedC <- nil
 	}()
-	err := <-mschedC
-	if err != nil {
-		return nil, err
-	}
 	namedC := make(chan error)
 	go func() {
 		if ep, ok := fsl.ProcEnv().GetNamedEndpoint(); ok {
@@ -57,6 +53,10 @@ func NewProcClnt(fsl *fslib.FsLib) (*ProcClnt, error) {
 		namedC <- nil
 	}()
 	<-namedC
+	err := <-mschedC
+	if err != nil {
+		return nil, err
+	}
 	return newProcClnt(fsl, fsl.ProcEnv().GetPID(), fsl.ProcEnv().GetPrivileged(), fsl.ProcEnv().GetKernelID()), nil
 }
 

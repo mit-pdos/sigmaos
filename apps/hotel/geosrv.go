@@ -111,7 +111,8 @@ func RunGeoSrv(job string, nidxStr string, maxSearchRadiusStr string, maxSearchR
 
 	start = time.Now()
 	if epcsrvEP, ok := pe.GetCachedEndpoint(epcache.EPCACHE); ok {
-		if err := ssrv.MemFs.SigmaClnt().FsLib.MountTree(epcsrvEP, rpc.RPC, filepath.Join(epcache.EPCACHE, rpc.RPC)); err != nil {
+		pn := filepath.Join(epcache.EPCACHE, rpc.RPC)
+		if err := ssrv.MemFs.SigmaClnt().FsLib.MountTree(epcsrvEP, rpc.RPC, pn); err != nil {
 			db.DFatalf("Err mount epcache srv: %v", err)
 		}
 	}

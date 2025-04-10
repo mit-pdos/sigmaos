@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"sync"
+	"syscall"
 	"time"
 
 	//	"go.opentelemetry.io/otel/trace"
@@ -77,10 +78,15 @@ type Geo struct {
 
 // Run starts the server
 func RunGeoSrv(job string, nidxStr string, maxSearchRadiusStr string, maxSearchRepsStr string) error {
+	ru := &syscall.Rusage{}
+	err := syscall.Getrusage(syscall.RUSAGE_SELF, ru)
+	if err != nil {
+		db.DFatalf("Err getrusage: %v", err)
+	}
 	startRun := time.Now()
 	start := time.Now()
 	pe := proc.GetProcEnv()
-	perf.LogSpawnLatency("Geo.RunGeoSrv start", pe.GetPID(), pe.GetSpawnTime(), perf.TIME_NOT_SET)
+	perf.LogSpawnLatency("Geo.RunGeoSrv start minpf:%d majpf:%d", pe.GetPID(), pe.GetSpawnTime(), perf.TIME_NOT_SET, ru.Minflt, ru.Majflt)
 	nidx, err := strconv.Atoi(nidxStr)
 	if err != nil {
 		db.DFatalf("Invalid nidx: %v", err)

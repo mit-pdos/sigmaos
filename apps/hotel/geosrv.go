@@ -140,7 +140,7 @@ func RunGeoSrv(job string, nidxStr string, maxSearchRadiusStr string, maxSearchR
 		db.DFatalf("NewPerf err %v\n", err)
 	}
 	defer p.Done()
-	perf.LogSpawnLatency("Geo.NewPerf", pe.GetPID(), pe.GetSpawnTime(), startRun)
+	perf.LogSpawnLatency("Geo.NewPerf", pe.GetPID(), pe.GetSpawnTime(), start)
 	//	geo.tracer = tracing.Init("geo", proc.GetSigmaJaegerIP())
 	//	defer geo.tracer.Flush()
 

@@ -183,6 +183,9 @@ for vm in $vms; do
   if ! [ -f ~/wiki-2G/enwiki ]; then
     aws s3 --profile sigmaos cp s3://9ps3/wiki-2G/enwiki ~/wiki-2G/
   fi
+  if ! [ -f ~/wiki-20G/enwiki ]; then
+    aws s3 --profile sigmaos cp s3://9ps3/wiki-20G/enwiki-latest-pages-articles-multistream-augmented.xml ~/wiki-20G/enwiki
+  fi
 
   cd sigmaos
   sudo ./load-apparmor.sh
@@ -205,6 +208,8 @@ for vm in $vms; do
 #    docker cp ~/7.jpg ${KERNELID}:/home/sigmaos/7.jpg
     docker exec ${KERNELID} sh -c 'mkdir -p /home/sigmaos/wiki-2G'
     docker cp ~/wiki-2G/enwiki ${KERNELID}:/home/sigmaos/wiki-2G/enwiki
+    docker exec ${KERNELID} sh -c 'mkdir -p /home/sigmaos/wiki-20G'
+    docker cp ~/wiki-2G/enwiki ${KERNELID}:/home/sigmaos/wiki-20G/enwiki
   else
     echo "JOIN ${SIGMASTART} ${KERNELID}"
     ${TOKEN} 2>&1 > /dev/null
@@ -214,6 +219,8 @@ for vm in $vms; do
 #    docker cp ~/7.jpg ${KERNELID}:/home/sigmaos/7.jpg
     docker exec ${KERNELID} sh -c 'mkdir -p /home/sigmaos/wiki-2G'
     docker cp ~/wiki-2G/enwiki ${KERNELID}:/home/sigmaos/wiki-2G/enwiki
+    docker exec ${KERNELID} sh -c 'mkdir -p /home/sigmaos/wiki-20G'
+    docker cp ~/wiki-2G/enwiki ${KERNELID}:/home/sigmaos/wiki-20G/enwiki
   fi
 ENDSSH
   if [ "${vm}" = "${MAIN}" ]; then

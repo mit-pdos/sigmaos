@@ -109,7 +109,10 @@ if [ -d "sigmaos" ]
 then
   ssh-agent bash -c 'ssh-add ~/.ssh/aws-sigmaos; (cd sigmaos; git pull;)'
 else
-  ssh-agent bash -c 'ssh-add ~/.ssh/aws-sigmaos; git clone git@g.csail.mit.edu:sigmaos; (cd sigmaos; go mod download;)'
+  git clone https://github.com/mit-pdos/sigmaos.git
+  cd sigmaos
+  go mod download
+  cd ..
   # Indicate that sigma has not been build yet on this instance
   touch ~/.nobuild
 fi

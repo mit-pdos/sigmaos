@@ -53,7 +53,7 @@ func TestInitFS(t *testing.T) {
 	// Cluster configuration parameters
 	const (
 		driverVM          int  = 0
-		numNodes          int  = 4
+		numNodes          int  = 10
 		numCoresPerNode   uint = 4
 		numFullNodes      int  = numNodes
 		numProcqOnlyNodes int  = 0
@@ -111,9 +111,9 @@ func TestSingleMachineMaxTpt(t *testing.T) {
 	)
 	// Cluster configuration parameters
 	const (
-		driverVM          int  = 3
-		numNodes          int  = 2
-		numProcqOnlyNodes int  = 1
+		driverVM          int  = 0
+		numNodes          int  = 1
+		numProcqOnlyNodes int  = 0
 		numFullNodes      int  = numNodes - numProcqOnlyNodes
 		turboBoost        bool = true
 	)
@@ -130,8 +130,8 @@ func TestSingleMachineMaxTpt(t *testing.T) {
 		lcProc        bool          = false
 		prewarmRealm  bool          = true
 		skipStats     bool          = true
-		rps           []int         = []int{1600, 1200, 800, 400}
-		nCoresPerNode []uint        = []uint{40, 32, 16, 8, 4, 2}
+		rps           []int         = []int{400}
+		nCoresPerNode []uint        = []uint{2}
 		dur           time.Duration = 5 * time.Second
 	)
 	db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
@@ -262,7 +262,7 @@ func TestMR(t *testing.T) {
 	// Cluster configuration parameters
 	const (
 		driverVM          int  = 0
-		numProcqOnlyNodes int  = 2
+		numProcqOnlyNodes int  = 1
 		turboBoost        bool = true
 	)
 	type MRExperimentConfig struct {
@@ -274,17 +274,32 @@ func TestMR(t *testing.T) {
 	// Variable MR benchmark configuration parameters
 	var (
 		mrApps []*MRExperimentConfig = []*MRExperimentConfig{
-			&MRExperimentConfig{"mr-grep-wiki2G-bench-s3.yml", 10, 4, 7000},
-			&MRExperimentConfig{"mr-grep-wiki2G-granular-bench-s3.yml", 54, 4, 7000},
-			&MRExperimentConfig{"mr-wc-wiki2G-bench.yml", 10, 4, 7000},
-			&MRExperimentConfig{"mr-wc-wiki2G-bench-s3.yml", 10, 4, 7000},
+			// &MRExperimentConfig{"ryan-mr-grep-s3-wiki2G.yml", 10, 4, 7000},
+			// &MRExperimentConfig{"ryan-mr-wc-s3-wiki2G.yml", 10, 4, 7000},
+
+			&MRExperimentConfig{"ryan-mr-grep-ux-wiki2G.yml", 10, 4, 7000},
+			&MRExperimentConfig{"ryan-mr-grep-ux-granular-wiki2G.yml", 10, 4, 7000},
+			&MRExperimentConfig{"ryan-mr-wc-ux-wiki2G.yml", 10, 4, 7000},
+			&MRExperimentConfig{"ryan-mr-wc-ux-granular-wiki2G.yml", 10, 4, 7000},
+
+			&MRExperimentConfig{"ryan-mr-grep-ux-large-wiki20G.yml", 10, 4, 7000},
+			&MRExperimentConfig{"ryan-mr-grep-ux-medium-wiki20G.yml", 10, 4, 7000},
+			&MRExperimentConfig{"ryan-mr-grep-ux-small-wiki20G.yml", 10, 4, 7000},
+
+			&MRExperimentConfig{"ryan-mr-wc-ux-large-wiki20G.yml", 10, 4, 7000},
+			&MRExperimentConfig{"ryan-mr-wc-ux-medium-wiki20G.yml", 10, 4, 7000},
+			&MRExperimentConfig{"ryan-mr-wc-ux-small-wiki20G.yml", 10, 4, 7000},
+			// &MRExperimentConfig{"mr-grep-wiki2G-bench-s3.yml", 10, 4, 7000},
+			// &MRExperimentConfig{"mr-grep-wiki2G-granular-bench-s3.yml", 54, 4, 7000},
+			// &MRExperimentConfig{"mr-wc-wiki2G-bench.yml", 10, 4, 7000},
+			// &MRExperimentConfig{"mr-wc-wiki2G-bench-s3.yml", 10, 4, 7000},
 		}
 		prewarmRealms []bool = []bool{true}
 		//		prewarmRealms []bool   = []bool{true, false}
 	)
 	// Constant MR benchmark configuration parameters
 	const (
-		measureTpt bool = false
+		measureTpt bool = true
 	)
 	ts, err := NewTstate(t)
 	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {

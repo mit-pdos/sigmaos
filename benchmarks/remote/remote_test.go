@@ -274,32 +274,26 @@ func TestMR(t *testing.T) {
 	// Variable MR benchmark configuration parameters
 	var (
 		mrApps []*MRExperimentConfig = []*MRExperimentConfig{
-			// &MRExperimentConfig{"ryan-mr-grep-s3-wiki2G.yml", 10, 4, 7000},
-			// &MRExperimentConfig{"ryan-mr-wc-s3-wiki2G.yml", 10, 4, 7000},
+			&MRExperimentConfig{"ryan-mr-wiki2G-grep-ux.yml", 10, 4, 7000},
+			&MRExperimentConfig{"ryan-mr-wiki2G-grep-ux-granular.yml", 10, 4, 7000},
+			&MRExperimentConfig{"ryan-mr-wiki2G-wc-ux.yml", 10, 4, 7000},
+			&MRExperimentConfig{"ryan-mr-wiki2G-wc-ux-granular.yml", 10, 4, 7000},
 
-			&MRExperimentConfig{"ryan-mr-grep-ux-wiki2G.yml", 10, 4, 7000},
-			&MRExperimentConfig{"ryan-mr-grep-ux-granular-wiki2G.yml", 10, 4, 7000},
-			&MRExperimentConfig{"ryan-mr-wc-ux-wiki2G.yml", 10, 4, 7000},
-			&MRExperimentConfig{"ryan-mr-wc-ux-granular-wiki2G.yml", 10, 4, 7000},
+			&MRExperimentConfig{"ryan-mr-wiki20G-grep-ux-large.yml", 10, 4, 7000},
+			&MRExperimentConfig{"ryan-mr-wiki20G-grep-ux-medium.yml", 10, 4, 7000},
+			&MRExperimentConfig{"ryan-mr-wiki20G-grep-ux-small.yml", 10, 4, 7000},
 
-			&MRExperimentConfig{"ryan-mr-grep-ux-large-wiki20G.yml", 10, 4, 7000},
-			&MRExperimentConfig{"ryan-mr-grep-ux-medium-wiki20G.yml", 10, 4, 7000},
-			&MRExperimentConfig{"ryan-mr-grep-ux-small-wiki20G.yml", 10, 4, 7000},
-
-			&MRExperimentConfig{"ryan-mr-wc-ux-large-wiki20G.yml", 10, 4, 7000},
-			&MRExperimentConfig{"ryan-mr-wc-ux-medium-wiki20G.yml", 10, 4, 7000},
-			&MRExperimentConfig{"ryan-mr-wc-ux-small-wiki20G.yml", 10, 4, 7000},
-			// &MRExperimentConfig{"mr-grep-wiki2G-bench-s3.yml", 10, 4, 7000},
-			// &MRExperimentConfig{"mr-grep-wiki2G-granular-bench-s3.yml", 54, 4, 7000},
-			// &MRExperimentConfig{"mr-wc-wiki2G-bench.yml", 10, 4, 7000},
-			// &MRExperimentConfig{"mr-wc-wiki2G-bench-s3.yml", 10, 4, 7000},
+			&MRExperimentConfig{"ryan-mr-wiki20G-wc-ux-large.yml", 10, 4, 7000},
+			&MRExperimentConfig{"ryan-mr-wiki20G-wc-ux-medium.yml", 10, 4, 7000},
+			&MRExperimentConfig{"ryan-mr-wiki20G-wc-ux-small.yml", 10, 4, 7000},
 		}
+
 		prewarmRealms []bool = []bool{true}
 		//		prewarmRealms []bool   = []bool{true, false}
 	)
 	// Constant MR benchmark configuration parameters
 	const (
-		measureTpt bool = true
+		measureTpt bool = false
 	)
 	ts, err := NewTstate(t)
 	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {

@@ -93,7 +93,7 @@ elif [[ $WHAT == "user" ]]; then
     mkdir -p $OUTPATH/user
     # Prepend version string prefix "-v" for user procs
     VERSION="-v$VERSION"
-    $GO build -ldflags="$LDF" $RACE -buildmode=plugin -o $OUTPATH/user/hotel-geod$VERSION-plugin cmd/user/hotel-geod/main.go
+    $GO build -ldflags="$LDF" $RACE -buildmode=plugin -o $OUTPATH/user/hotel-geod-plugin$VERSION cmd/user/hotel-geod/main.go
 elif [[ $WHAT == "npproxy" ]]; then
     mkdir -p $OUTPATH/npproxy
     # Clear version string, which only applies to user procs

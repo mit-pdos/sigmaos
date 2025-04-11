@@ -1,7 +1,7 @@
 app: "wc"
 nreduce: 15
 binsz: 10485760
-input: "name/ux/~local/wiki-2G/"
+input: "name/ux/~local/wiki-20G/"
 intermediate: "name/ux/~local/mr-intermediate"
 output: "name/s3/~local/9ps3/mr-out"
 linesz: 2097152  # the longest line in wiki is just shorter than 2MB

@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 	"strconv"
 	"sync"
-	"syscall"
 	"time"
 
 	//	"go.opentelemetry.io/otel/trace"
@@ -78,19 +77,10 @@ type Geo struct {
 
 // Run starts the server
 func RunGeoSrv(job string, nidxStr string, maxSearchRadiusStr string, maxSearchRepsStr string) error {
-	ru := &syscall.Rusage{}
-	err := syscall.Getrusage(syscall.RUSAGE_SELF, ru)
-	if err != nil {
-		db.DFatalf("Err getrusage: %v", err)
-	}
-	db.DPrintf(db.ALWAYS, "Start geo, minpf:%d majpf:%d", ru.Minflt, ru.Majflt)
-	if job == "" && nidxStr == "" && maxSearchRadiusStr == "" && maxSearchRepsStr == "" {
-		return nil
-	}
 	startRun := time.Now()
 	start := time.Now()
 	pe := proc.GetProcEnv()
-	perf.LogSpawnLatency("Geo.RunGeoSrv start minpf:%d majpf:%d", pe.GetPID(), pe.GetSpawnTime(), perf.TIME_NOT_SET, ru.Minflt, ru.Majflt)
+	perf.LogSpawnLatency("Geo.RunGeoSrv start", pe.GetPID(), pe.GetSpawnTime(), perf.TIME_NOT_SET)
 	nidx, err := strconv.Atoi(nidxStr)
 	if err != nil {
 		db.DFatalf("Invalid nidx: %v", err)
@@ -159,12 +149,6 @@ func RunGeoSrv(job string, nidxStr string, maxSearchRadiusStr string, maxSearchR
 
 	perf.LogSpawnLatency("Geo.Ready", pe.GetPID(), pe.GetSpawnTime(), startRun)
 	db.DPrintf(db.ALWAYS, "Geo srv ready to serve time since spawn: %v", time.Since(ssrv.ProcEnv().GetSpawnTime()))
-
-	err = syscall.Getrusage(syscall.RUSAGE_SELF, ru)
-	if err != nil {
-		db.DFatalf("Err getrusage: %v", err)
-	}
-	db.DPrintf(db.ALWAYS, "Done, minpf:%d majpf:%d", ru.Minflt, ru.Majflt)
 
 	return ssrv.RunServer()
 }

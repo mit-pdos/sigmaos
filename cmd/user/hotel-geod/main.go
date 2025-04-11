@@ -7,12 +7,6 @@ import (
 	db "sigmaos/debug"
 )
 
-func F() {
-	if err := hotel.RunGeoSrv("", "", "", ""); err != nil {
-		db.DFatalf("RunGeoSrv %v err %v\n", os.Args[0], err)
-	}
-}
-
 func main() {
 	if len(os.Args) != 6 {
 		db.DFatalf("Usage: %v jobname cache nindex maxRadius maxNumResults", os.Args[0])

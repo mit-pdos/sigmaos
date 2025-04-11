@@ -83,6 +83,10 @@ func RunGeoSrv(job string, nidxStr string, maxSearchRadiusStr string, maxSearchR
 	if err != nil {
 		db.DFatalf("Err getrusage: %v", err)
 	}
+	db.DPrintf(db.ALWAYS, "Start geo, minpf:%d majpf:%d", ru.Minflt, ru.Majflt)
+	if job == "" && nidxStr == "" && maxSearchRadiusStr == "" && maxSearchRepsStr == "" {
+		return nil
+	}
 	startRun := time.Now()
 	start := time.Now()
 	pe := proc.GetProcEnv()
@@ -155,6 +159,12 @@ func RunGeoSrv(job string, nidxStr string, maxSearchRadiusStr string, maxSearchR
 
 	perf.LogSpawnLatency("Geo.Ready", pe.GetPID(), pe.GetSpawnTime(), startRun)
 	db.DPrintf(db.ALWAYS, "Geo srv ready to serve time since spawn: %v", time.Since(ssrv.ProcEnv().GetSpawnTime()))
+
+	err = syscall.Getrusage(syscall.RUSAGE_SELF, ru)
+	if err != nil {
+		db.DFatalf("Err getrusage: %v", err)
+	}
+	db.DPrintf(db.ALWAYS, "Done, minpf:%d majpf:%d", ru.Minflt, ru.Majflt)
 
 	return ssrv.RunServer()
 }

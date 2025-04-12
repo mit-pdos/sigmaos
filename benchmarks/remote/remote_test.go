@@ -314,6 +314,9 @@ func TestMR(t *testing.T) {
 				} else {
 					benchName += "-cold"
 				}
+				if perf {
+					benchName += "-perf"
+				}
 				numFullNodes := mrEP.numNodes - numProcqOnlyNodes
 				ts.RunStandardBenchmark(benchName, driverVM, GetMRCmdConstructor(mrEP.benchName, mrEP.memReq, prewarmRealm, measureTpt, perf), mrEP.numNodes, mrEP.numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost)
 			}

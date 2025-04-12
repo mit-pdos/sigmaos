@@ -274,18 +274,19 @@ func TestMR(t *testing.T) {
 	// Variable MR benchmark configuration parameters
 	var (
 		mrApps []*MRExperimentConfig = []*MRExperimentConfig{
-			&MRExperimentConfig{"ryan-mr-wiki2G-grep-ux.yml", 10, 4, 7000},
-			&MRExperimentConfig{"ryan-mr-wiki2G-grep-ux-granular.yml", 10, 4, 7000},
-			&MRExperimentConfig{"ryan-mr-wiki2G-wc-ux.yml", 10, 4, 7000},
-			&MRExperimentConfig{"ryan-mr-wiki2G-wc-ux-granular.yml", 10, 4, 7000},
+			&MRExperimentConfig{"ryan-mr-wiki20G-grep-ux-512.yml", 10, 4, 7000},
+			&MRExperimentConfig{"ryan-mr-wiki20G-grep-ux-256.yml", 10, 4, 7000},
+			&MRExperimentConfig{"ryan-mr-wiki20G-grep-ux-128.yml", 10, 4, 7000},
+			&MRExperimentConfig{"ryan-mr-wiki20G-grep-ux-64.yml", 10, 4, 7000},
+			&MRExperimentConfig{"ryan-mr-wiki20G-grep-ux-32.yml", 10, 4, 7000},
+			&MRExperimentConfig{"ryan-mr-wiki20G-grep-ux-10.yml", 10, 4, 7000},
 
-			&MRExperimentConfig{"ryan-mr-wiki20G-grep-ux-large.yml", 10, 4, 7000},
-			&MRExperimentConfig{"ryan-mr-wiki20G-grep-ux-medium.yml", 10, 4, 7000},
-			&MRExperimentConfig{"ryan-mr-wiki20G-grep-ux-small.yml", 10, 4, 7000},
-
-			&MRExperimentConfig{"ryan-mr-wiki20G-wc-ux-large.yml", 10, 4, 7000},
-			&MRExperimentConfig{"ryan-mr-wiki20G-wc-ux-medium.yml", 10, 4, 7000},
-			&MRExperimentConfig{"ryan-mr-wiki20G-wc-ux-small.yml", 10, 4, 7000},
+			&MRExperimentConfig{"ryan-mr-wiki20G-wc-ux-512.yml", 10, 4, 7000},
+			&MRExperimentConfig{"ryan-mr-wiki20G-wc-ux-256.yml", 10, 4, 7000},
+			&MRExperimentConfig{"ryan-mr-wiki20G-wc-ux-128.yml", 10, 4, 7000},
+			&MRExperimentConfig{"ryan-mr-wiki20G-wc-ux-64.yml", 10, 4, 7000},
+			&MRExperimentConfig{"ryan-mr-wiki20G-wc-ux-32.yml", 10, 4, 7000},
+			&MRExperimentConfig{"ryan-mr-wiki20G-wc-ux-10.yml", 10, 4, 7000},
 		}
 
 		prewarmRealms []bool = []bool{true}

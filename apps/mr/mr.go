@@ -76,6 +76,9 @@ func NewBins(fsl *fslib.FsLib, dir string, maxbinsz, splitsz sp.Tlength) ([]Bin,
 			if i+n > st.LengthUint64() {
 				n = st.LengthUint64() - i
 			}
+			if n == 0 {
+				break
+			}
 			split := mr.Split {
 				File: dir + "/" + st.Name,
 				Offset: sp.Toffset(i),

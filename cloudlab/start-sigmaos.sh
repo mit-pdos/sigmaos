@@ -209,7 +209,7 @@ for vm in $vms; do
     docker exec ${KERNELID} sh -c 'mkdir -p /home/sigmaos/wiki-2G'
     docker cp ~/wiki-2G/enwiki ${KERNELID}:/home/sigmaos/wiki-2G/enwiki
     docker exec ${KERNELID} sh -c 'mkdir -p /home/sigmaos/wiki-20G'
-    docker cp ~/wiki-2G/enwiki ${KERNELID}:/home/sigmaos/wiki-20G/enwiki
+    docker cp ~/wiki-20G/enwiki ${KERNELID}:/home/sigmaos/wiki-20G/enwiki
   else
     echo "JOIN ${SIGMASTART} ${KERNELID}"
     ${TOKEN} 2>&1 > /dev/null
@@ -220,7 +220,7 @@ for vm in $vms; do
     docker exec ${KERNELID} sh -c 'mkdir -p /home/sigmaos/wiki-2G'
     docker cp ~/wiki-2G/enwiki ${KERNELID}:/home/sigmaos/wiki-2G/enwiki
     docker exec ${KERNELID} sh -c 'mkdir -p /home/sigmaos/wiki-20G'
-    docker cp ~/wiki-2G/enwiki ${KERNELID}:/home/sigmaos/wiki-20G/enwiki
+    docker cp ~/wiki-20G/enwiki ${KERNELID}:/home/sigmaos/wiki-20G/enwiki
   fi
 ENDSSH
   if [ "${vm}" = "${MAIN}" ]; then

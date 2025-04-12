@@ -77,7 +77,7 @@ func init() {
 	e1 = crash.NewEventStart(crash.MRREDUCE_PARTITION, 0, CRASHREDUCE, 0.33)
 	reduceEv = crash.NewTeventMapOne(e0)
 	reduceEv.Insert(e1)
-	// e0 = crash.NewEventStart(crash.MRCOORD_CRASH, 100, CRASHCOORD, 0.33)
+	e0 = crash.NewEventStart(crash.MRCOORD_CRASH, 100, CRASHCOORD, 0.33)
 	e1 = crash.NewEventStart(crash.MRCOORD_PARTITION, 100, CRASHCOORD, 0.33)
 	coordEv = crash.NewTeventMapOne(e0)
 	coordEv.Insert(e1)
@@ -259,7 +259,7 @@ func TestMapperReducer(t *testing.T) {
 	p, err := perf.NewPerf(proc.NewTestProcEnv(sp.ROOTREALM, nil, nil, sp.NO_IP, sp.NO_IP, "", false, false), perf.MRMAPPER)
 	assert.Nil(t, err)
 
-	tns, _, err := ts.tasks.Mftclnt.AcquireTasks(false)
+	tns, err := ts.tasks.Mft.AcquireTasks()
 	assert.Nil(t, err)
 
 	start := time.Now()
@@ -269,18 +269,16 @@ func TestMapperReducer(t *testing.T) {
 	nmapper := len(tns)
 	outBins := make([]mr.Bin, nmapper)
 	db.DPrintf(db.TEST, "nmapper: %d %d", nmapper, job.Binsz)
-	bins, err := ts.tasks.Mftclnt.ReadTasks(tns)
-	for i, bin := range bins {
+	for i, task := range tns {
+		input := ts.tasks.Mft.TaskPathName(task)
+		bin, err := ts.GetFile(input)
 		assert.Nil(t, err)
 		start := time.Now()
 		sc, err := sigmaclnt.NewSigmaClnt(pe)
 		assert.Nil(t, err, "NewSC: %v", err)
 		db.DPrintf(db.TEST, "NewSigmaClnt %v", time.Since(start))
 		start = time.Now()
-
-		binData, err := json.Marshal(bin.Data)
-		assert.Nil(t, err, "json %v", err)
-		m, err := mr.NewMapper(sc, mapper, reducer, ts.jobRoot, ts.job, p, job.Nreduce, job.Linesz, job.Wordsz, string(binData), job.Intermediate)
+		m, err := mr.NewMapper(sc, mapper, reducer, ts.jobRoot, ts.job, p, job.Nreduce, job.Linesz, job.Wordsz, string(bin), job.Intermediate)
 		assert.Nil(t, err, "NewMapper %v", err)
 		db.DPrintf(db.TEST, "Newmapper %v", time.Since(start))
 		start = time.Now()
@@ -289,18 +287,21 @@ func TestMapperReducer(t *testing.T) {
 		outBins[i] = obin
 		nin += in
 		nout += out
-		db.DPrintf(db.ALWAYS, "map %d: in %s out %s tot %s %vms (%s)\n", bin.Id, humanize.Bytes(uint64(in)), humanize.Bytes(uint64(out)), humanize.Bytes(uint64(in+out)), time.Since(start).Milliseconds(), test.TputStr(in+out, time.Since(start).Milliseconds()))
+		db.DPrintf(db.ALWAYS, "map %s: in %s out %s tot %s %vms (%s)\n", input, humanize.Bytes(uint64(in)), humanize.Bytes(uint64(out)), humanize.Bytes(uint64(in+out)), time.Since(start).Milliseconds(), test.TputStr(in+out, time.Since(start).Milliseconds()))
 	}
 	db.DPrintf(db.ALWAYS, "map %s total: in %s out %s tot %s %vms (%s)\n", job.Input, humanize.Bytes(uint64(nin)), humanize.Bytes(uint64(nout)), humanize.Bytes(uint64(nin+nout)), time.Since(start).Milliseconds(), test.TputStr(nin+nout, time.Since(start).Milliseconds()))
 
-	tns, _, err = ts.tasks.Rftclnt.AcquireTasks(false)
+	tns, err = ts.tasks.Rft.AcquireTasks()
 	assert.Nil(t, err)
 
-	rts, err := ts.tasks.Rftclnt.ReadTasks(tns)
-	for i, rt := range rts {
+	for i, task := range tns {
 		pe := proc.NewAddedProcEnv(ts.ProcEnv())
 		sc, err := sigmaclnt.NewSigmaClnt(pe)
 		assert.Nil(t, err)
+		rt := &mr.TreduceTask{}
+		err = ts.tasks.Rft.ReadTask(task, rt)
+		assert.Nil(t, err)
+
 		b := make(mr.Bin, nmapper)
 		for j := 0; j < len(b); j++ {
 			b[j] = outBins[j][i]
@@ -309,8 +310,8 @@ func TestMapperReducer(t *testing.T) {
 		d, err := json.Marshal(b)
 		assert.Nil(t, err)
 
-		outlink := mr.ReduceOut(ts.jobRoot, ts.job) + rt.Data.Task
-		outTarget := mr.ReduceOutTarget(job.Output, ts.job) + rt.Data.Task
+		outlink := mr.ReduceOut(ts.jobRoot, ts.job) + rt.Task
+		outTarget := mr.ReduceOutTarget(job.Output, ts.job) + rt.Task
 
 		r, err := mr.NewReducer(sc, reducer, []string{string(d), outlink, outTarget, strconv.Itoa(nmap), "true"}, p)
 		assert.Nil(t, err)
@@ -353,7 +354,7 @@ func newTstate(t1 *test.Tstate, jobRoot, app string) *Tstate {
 	// directly through the os for now.
 	os.RemoveAll(filepath.Join(sp.SIGMAHOME, "mr"))
 
-	tasks, err := mr.InitCoordFS(ts.SigmaClnt, ts.jobRoot, ts.job, ts.nreducetask)
+	tasks, err := mr.InitCoordFS(ts.FsLib, ts.jobRoot, ts.job, ts.nreducetask)
 	assert.Nil(t1.T, err, "Error InitCoordFS: %v", err)
 	ts.tasks = tasks
 	os.Remove(OUTPUT)
@@ -502,15 +503,15 @@ func runN(t *testing.T, em *crash.TeventMap, srvs map[string]crash.Tselector, ma
 	assert.Nil(ts.T, err, "Err prepare job %v: %v", job, err)
 	assert.NotEqual(ts.T, 0, nmap)
 
-	cm := mr.StartMRJob(sc, ts.jobRoot, ts.job, job, nmap, MEM_REQ, maliciousMapper, ts.tasks.Mftsrv.Id, ts.tasks.Rftsrv.Id)
+	cm := mr.StartMRJob(sc, ts.jobRoot, ts.job, job, nmap, MEM_REQ, maliciousMapper)
 
 	var wg sync.WaitGroup
 	for k, v := range srvs {
 		wg.Add(1)
-		go func(k string, v crash.Tselector) {
+		go func() {
 			ts.crashServers(k, v, em, 1)
 			wg.Done()
-		}(k, v)
+		}()
 	}
 	wg.Wait()
 
@@ -534,8 +535,8 @@ func runN(t *testing.T, em *crash.TeventMap, srvs map[string]crash.Tselector, ma
 	assert.Nil(ts.T, err, "Error print MR stats: %v", err)
 
 	db.DPrintf(db.TEST, "Cleanup tasks state")
-	ts.tasks.Mftsrv.Stop(true)
-	ts.tasks.Rftsrv.Stop(true)
+	ts.tasks.Mft.Cleanup()
+	ts.tasks.Rft.Cleanup()
 	mr.CleanupMROutputs(ts.FsLib, mr.JobOut(job.Output, ts.job), mr.MapIntermediateDir(ts.job, job.Intermediate))
 	db.DPrintf(db.TEST, "Done cleanup MR outputs")
 	ts.Shutdown()

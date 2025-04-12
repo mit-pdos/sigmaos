@@ -174,7 +174,7 @@ func GetBEImgResizeRPCMultiplexingCmd(bcfg *BenchConfig, ccfg *ClusterConfig) st
 // instantaneous throughput. This is an optional parameter because it adds
 // non-insignificant overhead to the MR computation, which unfairly penalizes
 // the SigmaOS implementation when comparing to Corral.
-func GetMRCmdConstructor(mrApp string, memReq proc.Tmem, prewarmRealm, measureTpt bool) GetBenchCmdFn {
+func GetMRCmdConstructor(mrApp string, memReq proc.Tmem, prewarmRealm, measureTpt bool, perf bool) GetBenchCmdFn {
 	return func(bcfg *BenchConfig, ccfg *ClusterConfig) string {
 		const (
 			debugSelectors        string = "\"\""
@@ -185,6 +185,9 @@ func GetMRCmdConstructor(mrApp string, memReq proc.Tmem, prewarmRealm, measureTp
 		perfSelectors := "\"\""
 		if measureTpt {
 			perfSelectors = optionalPerfSelectors
+		}
+		if perf {
+			perfSelectors = "\"MRMAPPER;MRREDUCER;MRCOORD\""
 		}
 		prewarm := ""
 		if prewarmRealm {

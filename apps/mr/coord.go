@@ -17,6 +17,7 @@ import (
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/util/crash"
+	"sigmaos/util/perf"
 	"sigmaos/util/rand"
 )
 
@@ -62,6 +63,7 @@ type Coord struct {
 	done            int32
 	memPerTask      proc.Tmem
 	stat            Stat
+	perf            *perf.Perf
 }
 
 type Stat struct {
@@ -92,6 +94,8 @@ func NewCoord(args []string) (*Coord, error) {
 	if err != nil {
 		return nil, err
 	}
+	perf, _ := perf.NewPerf(proc.GetProcEnv(), perf.MRCOORD)
+	c.perf = perf
 	db.DPrintf(db.MR, "Made fslib job %v", c.job)
 	c.SigmaClnt = sc
 	m, err := strconv.Atoi(args[2])
@@ -512,6 +516,8 @@ func (c *Coord) Work() {
 
 	db.DPrintf(db.ALWAYS, "E2e bench took %v", time.Since(jobStart))
 	JobDone(c.FsLib, c.jobRoot, c.job)
+
+	defer c.perf.Done()
 
 	c.ClntExit(proc.NewStatusInfo(proc.StatusOK, "OK", c.stat))
 }

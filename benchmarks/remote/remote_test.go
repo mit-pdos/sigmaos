@@ -279,14 +279,14 @@ func TestMR(t *testing.T) {
 			{"ryan-mr-wiki20G-grep-ux-128.yml", 10, 4, 7000},
 			{"ryan-mr-wiki20G-grep-ux-64.yml", 10, 4, 7000},
 			{"ryan-mr-wiki20G-grep-ux-32.yml", 10, 4, 7000},
-			{"ryan-mr-wiki20G-grep-ux-10.yml", 10, 4, 7000},
+			{"ryan-mr-wiki20G-grep-ux-16.yml", 10, 4, 7000},
 
 			{"ryan-mr-wiki20G-wc-ux-512.yml", 10, 4, 7000},
 			{"ryan-mr-wiki20G-wc-ux-256.yml", 10, 4, 7000},
 			{"ryan-mr-wiki20G-wc-ux-128.yml", 10, 4, 7000},
 			{"ryan-mr-wiki20G-wc-ux-64.yml", 10, 4, 7000},
 			{"ryan-mr-wiki20G-wc-ux-32.yml", 10, 4, 7000},
-			{"ryan-mr-wiki20G-wc-ux-10.yml", 10, 4, 7000},
+			{"ryan-mr-wiki20G-wc-ux-16.yml", 10, 4, 7000},
 		}
 
 		prewarmRealms []bool = []bool{true}

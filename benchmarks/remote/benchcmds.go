@@ -177,7 +177,7 @@ func GetBEImgResizeRPCMultiplexingCmd(bcfg *BenchConfig, ccfg *ClusterConfig) st
 func GetMRCmdConstructor(mrApp string, memReq proc.Tmem, prewarmRealm, measureTpt bool, perf bool) GetBenchCmdFn {
 	return func(bcfg *BenchConfig, ccfg *ClusterConfig) string {
 		const (
-			debugSelectors        string = "\"\""
+			debugSelectors        string = "\"TEST;BENCH\""
 			// debugSelectors        string = "\"TEST;BENCH;MR;\""
 			optionalPerfSelectors string = "\"TEST_TPT;BENCH_TPT;\""
 		)
@@ -187,7 +187,7 @@ func GetMRCmdConstructor(mrApp string, memReq proc.Tmem, prewarmRealm, measureTp
 			perfSelectors = optionalPerfSelectors
 		}
 		if perf {
-			perfSelectors = "\"MRMAPPER_PPROF;MRREDUCER_PPROF;MRCOORD_PPROF\""
+			perfSelectors = "\"MRREDUCER_PPROF;MRCOORD_PPROF;MRREDUCER_PPROF_MEM\""
 		}
 		prewarm := ""
 		if prewarmRealm {

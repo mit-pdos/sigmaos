@@ -48,7 +48,7 @@ func newKVDecoder(rd io.Reader, maxkey, maxvalue int) *kvdecoder {
 		key:     make([]byte, 0, maxkey),
 		value:   make([]byte, 0, maxvalue),
 		padding: make([]byte, 0, len(jsonPadding)),
-		buffer:  make([]byte, 8),
+		buffer:  make([]byte, 16),
 	}
 }
 
@@ -59,12 +59,8 @@ func (kvd *kvdecoder) decode() ([]byte, string, error) {
 	if _, err := io.ReadFull(kvd.rd, kvd.buffer); err != nil {
 		return nil, "", err
 	}
-	l1 = int64(binary.LittleEndian.Uint64(kvd.buffer))
-
-	if _, err := io.ReadFull(kvd.rd, kvd.buffer); err != nil {
-		return nil, "", err
-	}
-	l2 = int64(binary.LittleEndian.Uint64(kvd.buffer))
+	l1 = int64(binary.LittleEndian.Uint64(kvd.buffer[0:8]))
+	l2 = int64(binary.LittleEndian.Uint64(kvd.buffer[8:16]))
 
 	// Resize read buffer if necessary
 	if int(l1) > kvd.keylen {

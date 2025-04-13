@@ -187,7 +187,7 @@ func GetMRCmdConstructor(mrApp string, memReq proc.Tmem, prewarmRealm, measureTp
 			perfSelectors = optionalPerfSelectors
 		}
 		if perf {
-			perfSelectors = "\"MRMAPPER_PPROF;MRREDUCER_PPROF;MRCOORD_PPROF\""
+			perfSelectors = "\"MRREDUCER_PPROF;MRCOORD_PPROF;MRREDUCER_PPROF_MEM\""
 		}
 		prewarm := ""
 		if prewarmRealm {

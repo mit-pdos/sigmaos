@@ -80,12 +80,26 @@ void write_seqno(uint64_t seqno) {
   write(spproxy_sfd, bytes, 8);
 }
 
-// void write_seqno(uint64_t seqno) {
-//   std::ostringstream buffer(std::ios::binary);  
-//   buffer.write(
-// }
-// 
-// void transport_write_call() {
-//   std::ostringstream buffer(std::ios::binary);
-//   buffer.write(reinterpret_cast<const char*>(&seqno), sizeof(seqno));
-// }
+void write_frame(const char* frame, uint64_t frame_len) {
+  // Write frame_len + 4
+  uint8_t bytes[4];
+  for (int i = 0; i < 4; i++) {
+    bytes[i] = ((frame_len + 4) >> (i * 8)) & 0xFF;
+  }
+  write(spproxy_sfd, bytes, 4);
+
+  write_raw_buffer(frame);
+}
+
+void write_frames(const char** frames, uint32_t num_frames, const uint64_t* frame_lens) {
+  // Write num_frames
+  uint8_t bytes[4];
+  for (int i = 0; i < 4; i++) {
+    bytes[i] = ((num_frames + 4) >> (i * 8)) & 0xFF;
+  }
+  write(spproxy_sfd, bytes, 4);
+
+  for (uint64_t i = 0; i < num_frames; i++) {
+    write_frame(frames[i], frame_lens[i]);
+  }
+}

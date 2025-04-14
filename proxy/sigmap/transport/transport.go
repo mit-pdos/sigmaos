@@ -66,9 +66,15 @@ func (t *Transport) ReadCall() (demux.CallI, *serr.Err) {
 	iov, _ := t.iovm.Get(sessp.Ttag(seqno))
 	if len(iov) == 0 {
 		// Read frames, creating an IO vec
+		if int(seqno) == 593 {
+			db.DPrintf(db.PYPROXYSRV, "ReadFrames() called\n")
+		}
 		iov, err = frame.ReadFrames(t.rdr)
 	} else {
 		var n uint32
+		if int(seqno) == 593 {
+			db.DPrintf(db.PYPROXYSRV, "ReadNumOfFrames() called\n")
+		}
 		n, err = frame.ReadNumOfFrames(t.rdr)
 		if err != nil {
 			return nil, err

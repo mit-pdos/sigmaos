@@ -5,6 +5,6 @@ from time import time
 
 splib.Started()
 print("IVY: A")
-splib.writeSeqno(547)
+splib.writeCall(593, ["hello", "world"])
 print("IVY: C")
 splib.Exited()

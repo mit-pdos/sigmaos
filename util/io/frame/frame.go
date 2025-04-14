@@ -38,6 +38,9 @@ func ReadFrameInto(rd io.Reader, frame *sessp.Tframe) *serr.Err {
 	// Only read the first nbyte bytes
 	*frame = (*frame)[:nbyte]
 	n, e := io.ReadFull(rd, *frame)
+	if n == 5 {
+		db.DPrintf(db.PYPROXYSRV, "Frame of len %v: %v\n", n, *frame)
+	}
 	if n != int(nbyte) {
 		return serr.NewErr(serr.TErrUnreachable, e)
 	}
@@ -141,6 +144,7 @@ func ReadNumOfFrames(rd io.Reader) (uint32, *serr.Err) {
 	if err := binary.Read(rd, binary.LittleEndian, &nframes); err != nil {
 		return 0, serr.NewErr(serr.TErrUnreachable, err)
 	}
+	db.DPrintf(db.PYPROXYSRV, "ReadNumOfFrames: %v\n", nframes)
 	return nframes, nil
 }
 

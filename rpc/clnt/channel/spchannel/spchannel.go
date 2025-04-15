@@ -50,11 +50,12 @@ func NewSPChannel(fsl *fslib.FsLib, pn string) (channel.RPCChannel, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &SPChannel{
+	ch := &SPChannel{
 		fsl: fsl,
 		fd:  fd,
 		pn:  pn,
-	}, nil
+	}
+	return ch, nil
 }
 
 func (ch *SPChannel) SendReceive(iniov sessp.IoVec, outiov sessp.IoVec) error {

@@ -4,9 +4,11 @@
 package demux
 
 import (
+	"bytes"
+	"fmt"
+	"runtime"
 	"sync"
 
-	"reflect"
 	db "sigmaos/debug"
 	"sigmaos/serr"
 	"sigmaos/sessp"
@@ -24,6 +26,16 @@ type reply struct {
 	err *serr.Err
 }
 
+func getGoroutineID() int {
+	buf := make([]byte, 64)
+	buf = buf[:runtime.Stack(buf, false)]
+	// The first line of the stack trace has the format: "goroutine 1 [running]:"
+	// We extract the goroutine ID from it.
+	var id int
+	fmt.Sscanf(string(bytes.Split(buf, []byte("\n"))[0]), "goroutine %d", &id)
+	return id
+}
+
 func NewDemuxClnt(trans TransportI, iovm *IoVecMap) *DemuxClnt {
 	dmx := &DemuxClnt{
 		callmap: newCallMap(),
@@ -31,8 +43,8 @@ func NewDemuxClnt(trans TransportI, iovm *IoVecMap) *DemuxClnt {
 		iovm:    iovm,
 	}
 	go dmx.reader()
-	db.DPrintf(db.DEMUXCLNT_ERR, "new demuxClnt")
-	printStructFields(*dmx)
+	//db.DPrintf(db.DEMUXCLNT, "new demuxClnt %p", dmx)
+
 	return dmx
 }
 
@@ -44,32 +56,12 @@ func (dmx *DemuxClnt) reply(tag sessp.Ttag, rep CallI, err *serr.Err) {
 	}
 }
 
-func printStructFields(s interface{}) {
-	// Get the type and value of the struct
-	val := reflect.ValueOf(s)
-	typ := reflect.TypeOf(s)
-
-	// Ensure the input is a struct
-	if typ.Kind() != reflect.Struct {
-		db.DPrintf(db.DEMUXCLNT_ERR, "Provided input is not a struct %v", typ.Kind())
-		return
-	}
-
-	// Iterate through the fields of the struct
-	for i := 0; i < typ.NumField(); i++ {
-		field := typ.Field(i)
-		value := val.Field(i)
-
-		db.DPrintf(db.DEMUXCLNT_ERR, "Field Name: %s, Field Type: %s, Field Value: %v\n", field.Name, field.Type, value)
-	}
-}
 func (dmx *DemuxClnt) reader() {
 	db.DPrintf(db.DEMUXCLNT, "[%p] DemuxClnt reader start", dmx)
 	for {
 		c, err := dmx.trans.ReadCall()
 		if err != nil {
 			db.DPrintf(db.DEMUXCLNT_ERR, "reader rf err %v", err)
-			printStructFields(*dmx)
 			dmx.callmap.close()
 			break
 		}
@@ -86,13 +78,14 @@ func (dmx *DemuxClnt) reader() {
 
 func (dmx *DemuxClnt) SendReceive(req CallI, outiov sessp.IoVec) (CallI, *serr.Err) {
 	ch := make(chan reply)
+	//	db.DPrintf(db.DEMUXCLNT, "SendReceive: request %p id: %d outiov %p", dmx, getGoroutineID(), outiov)
 	if err := dmx.callmap.put(req.Tag(), ch); err != nil {
-		db.DPrintf(db.DEMUXCLNT_ERR, "SendReceive: enqueue req %v err %v", req, err)
-		printStructFields(*dmx)
+		//db.DPrintf(db.CKPT, "SendReceive: enqueue req %v err %v", req, err)
+		//	db.DPrintf(db.DEMUXCLNT_ERR, "SendReceive: enqueue req %v err %v", req, err)
 		return nil, err
 	}
 	if err := dmx.iovm.Put(req.Tag(), outiov); err != nil {
-		db.DPrintf(db.DEMUXCLNT_ERR, "SendReceive: iovm enqueue req %v err %v", req, err)
+		//db.DPrintf(db.DEMUXCLNT_ERR, "SendReceive: iovm enqueue req %v err %v", req, err)
 		return nil, err
 	}
 	dmx.mu.Lock()

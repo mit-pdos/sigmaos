@@ -61,7 +61,6 @@ func (dc *DirCache[E]) init() {
 	if dc.isInit.Swap(1) == 0 && dc.isDone.Load() == 0 {
 		go dc.watchDir(ch)
 		go dc.watchdog()
-		db.DPrintf(db.CKPT, "waiting?? %v", dc.LSelector)
 		<-ch
 	}
 }
@@ -70,12 +69,16 @@ func (dc *DirCache[E]) init() {
 func (dc *DirCache[E]) watchdog() {
 	for dc.isDone.Load() == 0 {
 		time.Sleep(fsetcd.LeaseTTL * time.Second)
-		db.DPrintf(dc.LSelector, "watchdog: broadcast")
+		db.DPrintf(dc.LSelector, "watchdog: broadcast %p %s", dc, dc.Path)
 		dc.hasEntries.Broadcast()
 	}
 }
 
+// 0xc0001934a0
 func (dc *DirCache[E]) StopWatching() {
+	//dc.FsLib.Mutex.Lock()
+	//dc.FsLib.Stop = true
+	//dc.FsLib.Mutex.Unlock()
 	dc.isDone.Add(1)
 }
 
@@ -125,14 +128,12 @@ func (dc *DirCache[E]) GetEntry(n string) (E, error) {
 		return e, err
 	}
 	var err error
-	db.DPrintf(db.CKPT, "getting entry %v", dc.LSelector)
 	kok, e, vok := dc.dir.LookupKeyVal(n)
 	if !kok {
 		db.DPrintf(dc.LSelector, "Done GetEntry for %v kok %v", n, kok)
 		serr.NewErr(serr.TErrNotfound, n)
 	}
 	if !vok {
-		db.DPrintf(db.CKPT, "alloc val for %v kok %v", n, kok)
 		e, err = dc.allocVal(n)
 	}
 	db.DPrintf(dc.LSelector, "Done GetEntry for %v e %v err %v", n, e, err)
@@ -214,31 +215,22 @@ func (dc *DirCache[E]) allocVal(n string) (E, error) {
 	_, e, vok := dc.dir.LookupKeyVal(n)
 	if !vok {
 		dc.RUnlock()
-		db.DPrintf(db.CKPT, "acquiring dcLock %v", n)
 		dc.Lock()
-		db.DPrintf(db.CKPT, "acquired dcLock %v", n)
 		_, e, vok = dc.dir.LookupKeyVal(n)
-		db.DPrintf(db.CKPT, "looked up keyvalue %v", n)
 		if !vok {
-			db.DPrintf(db.CKPT, "making new keyvalue %v", n)
 			e1, err := dc.newVal(n)
-			db.DPrintf(db.CKPT, "made new keyvalue %v", n)
 			if err != nil {
-				db.DPrintf(db.CKPT, "sad dcLock")
 				dc.Unlock()
 				dc.RLock()
 				return e1, err
 			}
 			e = e1
 			dc.dir.Insert(n, e)
-			db.DPrintf(db.CKPT, "inserted %v", n)
 		}
 
 		dc.Unlock()
-		db.DPrintf(db.CKPT, "reacquire read lock %v", n)
 		dc.RLock()
 	}
-	db.DPrintf(db.CKPT, "done alloc val %v", n)
 	return e, nil
 }
 
@@ -327,7 +319,6 @@ func (dc *DirCache[E]) updateEntriesL(ents []string) error {
 func (dc *DirCache[E]) watchDir(ch chan struct{}) {
 	retry := false
 	first := true
-	db.DPrintf(db.CKPT, "watchDir started")
 	for dc.isDone.Load() == 0 {
 		dr := fslib.NewDirReader(dc.FsLib, dc.Path)
 		ents, ok, err := dr.WatchUniqueEntries(dc.dir.Keys(0), dc.prefixFilters)
@@ -341,6 +332,7 @@ func (dc *DirCache[E]) watchDir(ch chan struct{}) {
 				if !ok {
 					retry = true
 				}
+				//	db.DPrintf(db.CKPT, "watchDir[%v]: %t %v retry watching", dc.Path, ok, err)
 				db.DPrintf(dc.ESelector, "watchDir[%v]: %t %v retry watching", dc.Path, ok, err)
 				continue
 			} else { // give up
@@ -363,7 +355,6 @@ func (dc *DirCache[E]) watchDir(ch chan struct{}) {
 
 		}
 	}
-	db.DPrintf(db.CKPT, "watchDir done")
 	if dc.ch != nil {
 		close(dc.ch)
 	}

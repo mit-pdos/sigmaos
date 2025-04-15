@@ -159,7 +159,8 @@ func (msched *MSched) WaitExit(ctx fs.CtxI, req proto.WaitRequest, res *proto.Wa
 
 // Wait for a proc to mark itself as exited.
 func (msched *MSched) Exited(ctx fs.CtxI, req proto.NotifyRequest, res *proto.NotifyResponse) error {
-	db.DPrintf(db.MSCHED, "Exited %v", req.PidStr)
+	db.DPrintf(db.ALWAYS, "Exited %v", req.PidStr)
+	//db.DPrintf(db.MSCHED, "Exited %v", req.PidStr)
 	msched.pmgr.Exited(sp.Tpid(req.PidStr), req.Status)
 	return nil
 }

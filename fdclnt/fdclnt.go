@@ -106,7 +106,6 @@ func (fdc *FdClient) openWait(pc sos.PathClntAPI, pn string, mode sp.Tmode) (int
 }
 
 func (fdc *FdClient) Open(pn string, mode sp.Tmode, w sos.Twait) (int, error) {
-	db.DPrintf(db.CKPT, "fdClnt open wait: %v\n", w)
 	pc, err := fdc.mntLookup(pn)
 	if err != nil {
 		return -1, err
@@ -114,14 +113,11 @@ func (fdc *FdClient) Open(pn string, mode sp.Tmode, w sos.Twait) (int, error) {
 	if w {
 		return fdc.openWait(pc, pn, mode)
 	} else {
-		db.DPrintf(db.CKPT, "path client open\n")
 		fid, err := pc.Open(pn, fdc.pe.GetPrincipal(), mode, nil)
-		db.DPrintf(db.CKPT, "path client opened\n")
 		if err != nil {
 			return -1, err
 		}
 		fd := fdc.fds.allocFd(fid, mode, pc, pn)
-		db.DPrintf(db.CKPT, "fdclnt done\n")
 		return fd, nil
 	}
 }

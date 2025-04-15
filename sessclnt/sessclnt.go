@@ -6,7 +6,10 @@
 package sessclnt
 
 import (
+	"fmt"
+	"net"
 	"sync"
+	"syscall"
 	"time"
 
 	//	"github.com/sasha-s/go-deadlock"
@@ -35,6 +38,24 @@ type SessClnt struct {
 	dmx     *demux.DemuxClnt
 }
 
+func getFileDescriptor(conn net.Conn) (int, error) {
+	rawConn, ok := conn.(syscall.Conn)
+	if !ok {
+		return -1, fmt.Errorf("not a syscall.Conn")
+	}
+
+	var fd int
+	conn2, _ := rawConn.SyscallConn()
+	err := conn2.Control(func(descriptor uintptr) {
+		fd = int(descriptor) // Capture the file descriptor
+	})
+
+	if err != nil {
+		return -1, err
+	}
+
+	return fd, nil
+}
 func newSessClnt(pe *proc.ProcEnv, npc *dialproxyclnt.DialProxyClnt, mnt *sp.Tendpoint) (*SessClnt, *serr.Err) {
 	c := &SessClnt{
 		sid:     sessp.Tsession(rand.Uint64()),
@@ -43,10 +64,15 @@ func newSessClnt(pe *proc.ProcEnv, npc *dialproxyclnt.DialProxyClnt, mnt *sp.Ten
 		mnt:     mnt,
 		seqcntr: new(sessp.Tseqcntr),
 	}
-	db.DPrintf(db.SESSCLNT, "Make session %v to srvs %v", c.sid, mnt)
+
 	if err := c.getConn(); err != nil {
 		return nil, err
 	}
+	//db.DPrintf(db.CKPT, "Make session %v to srvs %v", c.sid, mnt)
+	// fd, err := getFileDescriptor(c.netClnt().Conn())
+	// if err == nil {
+	// 	db.DPrintf(db.CKPT, "fd to conn: %d", fd)
+	// }
 	return c, nil
 }
 
@@ -83,15 +109,16 @@ func (c *SessClnt) RPC(req sessp.Tmsg, iniov sessp.IoVec, outiov sessp.IoVec) (*
 	if nc == nil {
 		return nil, serr.NewErr(serr.TErrUnreachable, c.mnt)
 	}
-	if db.WillBePrinted(db.SESSCLNT) {
-		db.DPrintf(db.SESSCLNT, "sess %v RPC req %v", c.sid, fc)
-	}
+	//	if db.WillBePrinted(db.SESSCLNT) {
+	//db.DPrintf(db.SESSCLNT, "sess %v RPC req %v", c.sid, fc)
+	//	}
 	rep, err := c.dmx.SendReceive(pmfc, outiov)
-	if db.WillBePrinted(db.SESSCLNT) {
-		db.DPrintf(db.SESSCLNT, "sess %v RPC req %v rep %v err %v", c.sid, fc, rep, err)
-	}
+	//	if db.WillBePrinted(db.SESSCLNT) {
+	//db.DPrintf(db.SESSCLNT, "sess %v RPC req %v rep %v err %v", c.sid, fc, rep, err)
+	//	}
 
 	if err != nil {
+		//db.DPrintf(db.CKPT, "sess %v RPC req fail", c.sid)
 		return nil, err
 	}
 

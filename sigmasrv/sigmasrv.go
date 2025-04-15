@@ -6,8 +6,6 @@
 package sigmasrv
 
 import (
-	"runtime/debug"
-
 	"sigmaos/ctx"
 	db "sigmaos/debug"
 	"sigmaos/fencefs"
@@ -222,7 +220,7 @@ func (ssrv *SigmaSrv) SrvExit(status *proc.Status) error {
 
 func (ssrv *SigmaSrv) Serve() {
 	if err := ssrv.MemFs.SigmaClnt().Started(); err != nil {
-		debug.PrintStack()
+		//	debug.PrintStack()
 		db.DPrintf(db.ALWAYS, "Error Started: %v", err)
 	}
 	if err := ssrv.MemFs.SigmaClnt().WaitEvict(ssrv.SigmaClnt().ProcEnv().GetPID()); err != nil {

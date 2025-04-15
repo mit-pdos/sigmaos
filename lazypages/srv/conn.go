@@ -42,6 +42,9 @@ func (lps *lazyPagesSrv) newLazyPagesConn(pid int, imgdir, pages string) (*lazyP
 	if err != nil {
 		return nil, err
 	}
+	//	for _, vma := range mm.Vmas {
+	// 	db.DPrintf(db.ALWAYS, "vma start: %x end: %x", *vma.Start, *vma.End)
+	// }
 	lpc.mm = mm
 	npages := 0
 	lpc.iovs, npages, lpc.maxIovLen = mm.collectIovs(pmi)
@@ -51,6 +54,7 @@ func (lps *lazyPagesSrv) newLazyPagesConn(pid int, imgdir, pages string) (*lazyP
 }
 
 func (lpc *lazyPagesConn) handleReqs() error {
+	cnter := 0
 	for {
 		n, err2 := unix.Poll(
 			[]unix.PollFd{{
@@ -59,9 +63,17 @@ func (lpc *lazyPagesConn) handleReqs() error {
 			}},
 			-1,
 		)
+
 		if err2 != nil {
+
 			db.DPrintf(db.ERROR, "Poll err %v", err2)
+			if err2 == syscall.EINTR && cnter < 10 {
+				cnter += 1
+				continue
+			}
 			return err2
+		} else {
+			cnter = 0
 		}
 		// if n, err := unix.Poll(
 		// 	[]unix.PollFd{{
@@ -91,7 +103,7 @@ func (lpc *lazyPagesConn) handleReqs() error {
 			_, err = syscall.Read(lpc.fd, buf)
 			cnt += 1
 		}
-		db.DPrintf(db.ALWAYS, "success?")
+		//db.DPrintf(db.ALWAYS, "success?")
 		msg := (*(*userfaultfd.UffdMsg)(unsafe.Pointer(&buf[0])))
 		switch userfaultfd.GetMsgEvent(&msg) {
 		case userfaultfd.UFFD_EVENT_PAGEFAULT:
@@ -118,15 +130,20 @@ func (lpc *lazyPagesConn) handleReqs() error {
 }
 
 func (lpc *lazyPagesConn) pageFault(addr uint64) error {
-	iov := lpc.iovs.find(addr)
+	//iov := lpc.iovs.find(addr)
+	iov := lpc.iovs.findBinSearch(addr)
 	lpc.nfault += 1
 	if iov == nil {
 		db.DPrintf(db.LAZYPAGESSRV_FAULT, "page fault: zero %d: no iov for %x", lpc.nfault, addr)
 		err := zeroPage(lpc.fd, addr, lpc.lps.pagesz)
 		cnt := 0
 		for err != nil {
+
 			db.DPrintf(db.ERROR, "zeroPage err %v try: %v", err, cnt)
-			if cnt > 10 || err != syscall.EAGAIN {
+			if err == syscall.EEXIST {
+				return nil
+			}
+			if cnt > 10 || (err != syscall.EAGAIN) {
 
 				return err
 			}
@@ -151,13 +168,13 @@ func (lpc *lazyPagesConn) pageFault(addr uint64) error {
 		db.DPrintf(db.LAZYPAGESSRV_FAULT, "page fault: copy %d: %d(%x) -> %v pi %d(%d,%d,%d)", lpc.nfault, addr, addr, iov, pi, n, nPages(0, uint64(n), lpc.pmi.pagesz), len(buf))
 		off := int64(pi * lpc.pmi.pagesz)
 		if err := lpc.rp(off, buf); err != nil {
-			db.DFatalf("no page content for %x", addr)
+			db.DFatalf("no page content for %x err: %v", addr, err)
 		}
 
 		err := copyPages(lpc.fd, addr, buf)
 		cnt := 0
 		for err != nil {
-			db.DPrintf(db.ERROR, "copyPages err %v try: %v int: %v", err, cnt, unsafe.Sizeof(int(0)))
+			db.DPrintf(db.ERROR, "copyPages err %v try: %v", err, cnt)
 			if err == syscall.ENOENT {
 
 				if n <= lpc.pmi.pagesz {
@@ -181,6 +198,7 @@ func (lpc *lazyPagesConn) pageFault(addr uint64) error {
 				return err
 			}
 			if err == syscall.EAGAIN {
+				iov.unmarkFetchLen(addr, n)
 				return nil
 			}
 

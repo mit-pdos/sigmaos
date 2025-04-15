@@ -69,7 +69,7 @@ func NewProcClntInit(pid sp.Tpid, fsl *fslib.FsLib, program string) (*ProcClnt, 
 	if err := clnt.MakeProcDir(pid, fsl.ProcEnv().ProcDir, false, proc.HMSCHED); err != nil {
 		// If the error is not ErrExists, bail out.
 		if !serr.IsErrCode(err, serr.TErrExists) {
-			debug.PrintStack()
+			//	debug.PrintStack()
 			db.DPrintf(db.ERROR, "Error MakeProcDir mkdir pid %v procdir %v err %v stack\n%v", pid, fsl.ProcEnv().ProcDir, err, string(debug.Stack()))
 			return nil, err
 		}

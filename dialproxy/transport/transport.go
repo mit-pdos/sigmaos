@@ -2,7 +2,7 @@ package transport
 
 import (
 	"encoding/json"
-	"syscall"
+	"fmt"
 
 	//"fmt"
 	"net"
@@ -43,29 +43,31 @@ func NewDialProxyTrans(conn *net.UnixConn, iovm *demux.IoVecMap) *DialProxyTrans
 	}
 }
 
-func GetDialProxydConn(pe *proc.ProcEnv) (*net.UnixConn, error) {
+// returns conn, file desc, error
+func GetDialProxydConn(pe *proc.ProcEnv) (*net.UnixConn, int, error) {
 	var conn *net.UnixConn
 	fdstr := os.Getenv(SIGMA_DIALPROXY_FD)
+	//TODO: find fd of this
 	if fdstr == "" {
 		// Connect to the dialproxy server by dialing the unix socket (should only
 		// be done by the test program)
 		uconn, err := net.Dial("unix", sp.SIGMA_DIALPROXY_SOCKET)
 		if err != nil {
 			db.DPrintf(db.ERROR, "Error connect dialproxy srv")
-			return nil, err
+			return nil, 0, err
 		}
 		conn = uconn.(*net.UnixConn)
 		b, err := json.Marshal(pe.GetPrincipal())
 		if err != nil {
 			db.DFatalf("Error marshal principal: %v", err)
-			return nil, err
+			return nil, 0, err
 		}
 		// Write the principal ID to the server, so that the server
 		// knows the principal associated with this connection. For non-test
 		// programs, this will be done by the trampoline.
 		if err := frame.WriteFrame(conn, b); err != nil {
 			db.DPrintf(db.ERROR, "Error WriteFrame principal: %v", err)
-			return nil, err
+			return nil, 0, err
 		}
 	} else {
 		// Sanity check that a proc only has one DialProxyClnt, since using the fd
@@ -81,30 +83,31 @@ func GetDialProxydConn(pe *proc.ProcEnv) (*net.UnixConn, error) {
 		db.DPrintf(db.ALWAYS, "duping %v for sigmadial %v", fd, fdstr)
 		if err != nil {
 			db.DPrintf(db.ERROR, "Error get dialproxy fd (%v): %v", fdstr, err)
-			return nil, err
+			return nil, 0, err
 		}
 		conn, err = fdToUnixConn(fd)
 		db.DPrintf(db.ALWAYS, "closing %v for sigmadial, new sigmadial %v", fd)
 
 		if err != nil {
 			db.DPrintf(db.ERROR, "Error connect dialproxy srv")
-			return nil, err
+			return nil, 0, err
 		}
-		syscall.Close(fd)
-		// dpConn, err := conn.SyscallConn()
-		// if err != nil {
-		// 	db.DPrintf(db.ERROR, "Err for getting syscallConn: %v", err)
-		// 	return nil, err
-		// }
-		// if err := dpConn.Control(func(fd uintptr) {
-		// 	db.DPrintf(db.CKPT, "reset sigma_dialproxy_fd %v uint: %v", fmt.Sprintf("%v", fd), fmt.Sprintf("%x", fd))
-		// 	os.Setenv(SIGMA_DIALPROXY_FD, fmt.Sprintf("%v", fd))
-		// 	//
-		// }); err != nil {
-		// 	db.DPrintf(db.ERROR, "Err for resetting sigma_dialproxy_fd: %v", err)
-		// }
+		//syscall.Close(fd)
+		dpConn, err := conn.SyscallConn()
+		if err != nil {
+			db.DPrintf(db.ERROR, "Err for getting syscallConn: %v", err)
+			return nil, 0, err
+		}
+		if err := dpConn.Control(func(fd uintptr) {
+			db.DPrintf(db.CKPT, "reset sigma_dialproxy_fd %d uint: %d conn %p", fd, fd, conn)
+			os.Setenv(SIGMA_DIALPROXY_FD, fmt.Sprintf("%v", fd))
+			//
+		}); err != nil {
+			db.DPrintf(db.ERROR, "Err for resetting sigma_dialproxy_fd: %v", err)
+		}
 	}
-	return conn, nil
+	newfd, _ := strconv.Atoi(os.Getenv(SIGMA_DIALPROXY_FD))
+	return conn, newfd, nil
 }
 
 func (trans *DialProxyTrans) Conn() *net.UnixConn {
@@ -112,7 +115,7 @@ func (trans *DialProxyTrans) Conn() *net.UnixConn {
 }
 
 func (trans *DialProxyTrans) ReadCall() (demux.CallI, *serr.Err) {
-	db.DPrintf(db.DIALPROXYTRANS, "ReadCall trans conn [%p]", trans.conn)
+	db.DPrintf(db.DIALPROXYTRANS, "ReadCall trans conn [%p] trans: %p", trans.conn, trans)
 	seqno, err := frame.ReadSeqno(trans.conn)
 	if err != nil {
 		db.DPrintf(db.DIALPROXYTRANS_ERR, "Error ReadSeqno: %v", err)
@@ -137,6 +140,7 @@ func (trans *DialProxyTrans) ReadCall() (demux.CallI, *serr.Err) {
 		}
 		db.DPrintf(db.DIALPROXYTRANS, "[%p] Read n frames: %v", trans.conn, len(iov))
 		if err := frame.ReadNFramesInto(trans.conn, iov); err != nil {
+			err.Obj += fmt.Sprintf(" tag: %x", seqno)
 			db.DPrintf(db.DIALPROXYTRANS_ERR, "Error ReadNFramesInto: %v", err)
 			return nil, err
 		}
@@ -158,6 +162,7 @@ func (trans *DialProxyTrans) ReadCall() (demux.CallI, *serr.Err) {
 
 func (trans *DialProxyTrans) WriteCall(call demux.CallI) *serr.Err {
 	db.DPrintf(db.DIALPROXYTRANS, "[%p] WriteCall trans %v", trans.conn, call)
+
 	pc := call.(*ProxyCall)
 	if err := frame.WriteSeqno(pc.Seqno, trans.conn); err != nil {
 		db.DPrintf(db.DIALPROXYTRANS_ERR, "Error WriteSeqno: %v", err)

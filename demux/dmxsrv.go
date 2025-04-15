@@ -40,7 +40,7 @@ func (dmx *DemuxSrv) reader() {
 	for {
 		c, err := dmx.trans.ReadCall()
 		if err != nil {
-			db.DPrintf(db.DEMUXSRV_ERR, "reader: rf err %v\n", err)
+			//db.DPrintf(db.DEMUXSRV_ERR, "reader: rf err %v c: %c trans %v dmx: %p\n", err, c, dmx.trans, dmx)
 			dmx.srv.ReportError(err)
 			break
 		}

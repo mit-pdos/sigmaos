@@ -4,22 +4,24 @@ import (
 	"encoding/json"
 	"log"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"sync"
 	"time"
 
 	//	"go.opentelemetry.io/otel/trace"
 
-	"github.com/harlow/go-micro-services/data"
-	"github.com/mit-pdos/go-geoindex"
-
 	"sigmaos/apps/hotel/proto"
 	db "sigmaos/debug"
 	"sigmaos/fs"
 	"sigmaos/proc"
+	"sigmaos/sigmaclnt"
 	"sigmaos/sigmasrv"
 	"sigmaos/tracing"
 	"sigmaos/util/perf"
+
+	"github.com/harlow/go-micro-services/data"
+	"github.com/mit-pdos/go-geoindex"
 )
 
 type GeoIndexes struct {
@@ -72,9 +74,17 @@ type Geo struct {
 	maxSearchResults int
 }
 
+func printAllStacks() {
+	db.DPrintf(db.ALWAYS, "Printing Stacks")
+
+	buf := make([]byte, 1<<20) // 1 MB buffer to hold stack traces
+	n := runtime.Stack(buf, true)
+	db.DPrintf(db.ALWAYS, "%s", string(buf[:n]))
+}
+
 // Run starts the server
 func RunGeoSrv(job string, ckptpn string, nidxStr string, maxSearchRadiusStr string, maxSearchResultsStr string) error {
-	db.DPrintf(db.CKPT, "start %v %v\n", job, ckptpn)
+	db.DPrintf(db.CKPT, "GeoSrv start %v %v\n", job, ckptpn)
 	nidx, err := strconv.Atoi(nidxStr)
 	if err != nil {
 		db.DFatalf("Invalid nidx: %v", err)
@@ -96,13 +106,15 @@ func RunGeoSrv(job string, ckptpn string, nidxStr string, maxSearchRadiusStr str
 	db.DPrintf(db.CKPT, "init done %v\n", job)
 	db.DPrintf(db.ALWAYS, "Geo srv done building %v indexes, radius %v nresults %v,  after: %v", nidx, geo.maxSearchRadius, geo.maxSearchResults, time.Since(start))
 	pe := proc.GetProcEnv()
-	ssrv, err := sigmasrv.NewSigmaSrv(filepath.Join(HOTELGEODIR, pe.GetPID().String()), geo, pe)
+
+	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
 	if err != nil {
-		db.DPrintf(db.ALWAYS, "Error starting sigmasrv")
-		return err
+		db.DFatalf("NewSigmaClnt error %v\n", err)
 	}
+	db.DPrintf(db.ALWAYS, "I'm here")
+	//printAllStacks()
 	if ckptpn != "" {
-		sc := ssrv.MemFs.SigmaClnt()
+		//	sc := ssrv.MemFs.SigmaClnt()
 		// create a sigmaclnt for checkpointing
 		// sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
 		// if err != nil {
@@ -123,9 +135,13 @@ func RunGeoSrv(job string, ckptpn string, nidxStr string, maxSearchRadiusStr str
 		}
 		//	sc.Close()
 	}
-	db.DPrintf(db.ALWAYS, "Making env")
+	//ssrv, err := sigmasrv.NewSigmaSrv(filepath.Join(HOTELGEODIR, pe.GetPID().String()), geo, pe)
+	ssrv, err := sigmasrv.NewSigmaSrvClnt(filepath.Join(HOTELGEODIR, pe.GetPID().String()), sc, geo)
+	if err != nil {
+		db.DPrintf(db.ALWAYS, "Error starting sigmasrv")
+		return err
+	}
 
-	db.DPrintf(db.ALWAYS, "Making perf")
 	p, err := perf.NewPerf(ssrv.MemFs.SigmaClnt().ProcEnv(), perf.HOTEL_GEO)
 	if err != nil {
 		db.DFatalf("NewPerf err %v\n", err)
@@ -135,6 +151,7 @@ func RunGeoSrv(job string, ckptpn string, nidxStr string, maxSearchRadiusStr str
 	//	defer geo.tracer.Flush()
 
 	db.DPrintf(db.ALWAYS, "Geo srv ready to serve time since spawn: %v", time.Since(ssrv.ProcEnv().GetSpawnTime()))
+	//Stacks()
 	return ssrv.RunServer()
 }
 

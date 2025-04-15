@@ -232,14 +232,13 @@ func restoreProc(criuclnt *criu.Criu, proc *proc.Proc, imgDir, workDir, jailPath
 		opts.LogFile = proto.String("restore.log")
 	}
 
-	go func() {
-		err = criuclnt.Restore(opts, nil)
-		db.DPrintf(db.CKPT, "restoreProc: Restore err %v", err)
-		if verbose || true {
-			dumpLog(workDir + "/restore.log")
-		}
-	}()
-
+	//go func() {
+	err = criuclnt.Restore(opts, nil)
+	db.DPrintf(db.CKPT, "restoreProc: Restore err %v", err)
+	if verbose {
+		dumpLog(workDir + "/restore.log")
+	}
+	//	}()
 	// wait for restored proc to check in
 	b = make([]byte, 1)
 	if _, err := wrt.Read(b); err != nil {
@@ -268,6 +267,7 @@ func dumpLog(pn string) error {
 		return err
 	}
 	db.DPrintf(db.CKPT, "dumpLog %q: %s", pn, string(b))
+
 	return nil
 }
 

@@ -94,6 +94,8 @@ func NewSigmaClntFsLibFidClnt(pe *proc.ProcEnv, fidc *fidclnt.FidClnt) (*SigmaCl
 		return nil, err
 	}
 	lmc, err := leaseclnt.NewLeaseClnt(fsl)
+	//0xc0031a6aa0
+	db.DPrintf(db.ALWAYS, "New LeaseClnt %p", lmc)
 	if err != nil {
 		return nil, err
 	}
@@ -151,8 +153,8 @@ func (sc *SigmaClnt) NewProcClnt() error {
 }
 
 func (sc *SigmaClnt) ClntExit(status *proc.Status) error {
+	db.DPrintf(db.SIGMACLNT, "Exiting %v", status)
 	sc.ProcAPI.Exited(status)
-	db.DPrintf(db.SIGMACLNT, "Exited done")
 	if sc.LeaseClnt != nil {
 		sc.LeaseClnt.EndLeases()
 	}
@@ -161,6 +163,31 @@ func (sc *SigmaClnt) ClntExit(status *proc.Status) error {
 	return sc.FsLib.Close()
 }
 
+func (sc *SigmaClnt) CloseNew() error {
+	status := proc.NewStatus(proc.StatusOK)
+	db.DPrintf(db.SIGMACLNT, "Closing %v", status)
+	sc.ProcAPI.Exited(status)
+	//if sc.LeaseClnt != nil {
+	//		sc.LeaseClnt.EndLeases()
+	//	}
+	//	db.DPrintf(db.SIGMACLNT, "EndLeases done")
+	defer db.DPrintf(db.SIGMACLNT, "ClntExit done")
+	return sc.FsLib.Close()
+}
+
+// must  have lease clnt in newsc
+func (sc *SigmaClnt) Close2(newsc *SigmaClnt) error {
+	status := proc.NewStatus(proc.StatusOK)
+	db.DPrintf(db.SIGMACLNT, "Closing %v", status)
+	sc.ProcAPI.Exited(status)
+	if sc.LeaseClnt != nil {
+		sc.LeaseClnt.EndLeases()
+		//sc.LeaseClnt.EndLeasesNewClient(newsc.LeaseClnt)
+	}
+	//	db.DPrintf(db.SIGMACLNT, "EndLeases done")
+	defer db.DPrintf(db.SIGMACLNT, "ClntExit done")
+	return sc.FsLib.Close()
+}
 func (sc *SigmaClnt) ClntExitOK() {
 	sc.ClntExit(proc.NewStatus(proc.StatusOK))
 }

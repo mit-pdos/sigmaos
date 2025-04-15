@@ -118,8 +118,10 @@ func (lps *lazyPagesSrv) handleConn(conn net.Conn) {
 		db.DFatalf("Read pid err %v", err)
 	}
 
-	db.DPrintf(db.LAZYPAGESSRV, "pid %d\n", pid)
-
+	// db.DPrintf(db.LAZYPAGESSRV, "pid %d\n", pid)
+	flags, err := unix.FcntlInt(uintptr(connFd), unix.F_GETFL, 0)
+	newFlags := flags &^ unix.O_NONBLOCK
+	_, err = unix.FcntlInt(uintptr(connFd), unix.F_SETFL, newFlags)
 	b := make([]byte, unix.CmsgSpace(4))
 	_, _, _, _, err = unix.Recvmsg(connFd, nil, b, 0)
 	cnt := 0
@@ -150,7 +152,7 @@ func (lps *lazyPagesSrv) handleConn(conn net.Conn) {
 	db.DPrintf(db.LAZYPAGESSRV, "Received fd %d\n", fd)
 	lpc, ok := lps.pids.Lookup(int(pid))
 	if !ok {
-		db.DFatalf("newLazyPagesConn pid %v no registration", fd, err)
+		db.DFatalf("newLazyPagesConn pid %v no registration", pid, err)
 	}
 
 	fdpages, err := lps.Open(lpc.pages, sp.OREAD)
@@ -176,6 +178,7 @@ func (lps *lazyPagesSrv) register(pid int, imgdir, pages string) error {
 		return err
 	}
 	ok := lps.pids.Insert(pid, lpc)
+	db.DPrintf(db.LAZYPAGESSRV, "registering %v", pid)
 	if !ok {
 		db.DFatalf("Insert: exists %d", pid)
 	}

@@ -6,14 +6,21 @@ import (
 	"os"
 	"strconv"
 
+	"runtime"
 	db "sigmaos/debug"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
-
 	"time"
 )
 
+func printAllStacks() {
+	db.DPrintf(db.ALWAYS, "Printing Stacks")
+
+	buf := make([]byte, 1<<20) // 1 MB buffer to hold stack traces
+	n := runtime.Stack(buf, true)
+	db.DPrintf(db.ALWAYS, "%s", string(buf[:n]))
+}
 func main() {
 	db.DPrintf(db.ALWAYS, "SIGMA_DIALPROXY_FD: %v", os.Getenv("SIGMA_DIALPROXY_FD"))
 	if len(os.Args) < 4 {
@@ -55,6 +62,7 @@ func main() {
 	if err != nil {
 		db.DFatalf("Stat err %v\n", err)
 	}
+	//printAllStacks()
 	db.DPrintf(db.CKPT, "GOING TO CHECKPOINT %d %d %v", sec, npages, ckptpn)
 	sc, err = sc.CheckpointMe(ckptpn)
 	if err != nil {
@@ -62,7 +70,9 @@ func main() {
 	}
 
 	db.DPrintf(db.ALWAYS, "Mark started")
+
 	err = sc.Started()
+	//printAllStacks()
 	if err != nil {
 		db.DFatalf("Started error %v\n", err)
 	}
@@ -71,6 +81,7 @@ func main() {
 		select {
 		case <-timer.C:
 			db.DPrintf(db.ALWAYS, "ClntExit")
+			//printAllStacks()
 			sc.ClntExitOK()
 			return
 		default:

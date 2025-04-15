@@ -43,9 +43,10 @@ func (clnt *ProcClnt) RunProc(uproc *proc.Proc) (uprocErr error, childErr error)
 	}
 	res := &proto.RunResult{}
 	if err := clnt.RPC("ProcRPCSrv.Run", req, res); serr.IsErrCode(err, serr.TErrUnreachable) {
+		db.DPrintf(db.PROCDMGR_ERR, "Err %v unreachable %v", uproc, err)
 		return err, nil
 	} else {
-		db.DPrintf(db.PROCDMGR_ERR, "Err child %v", err)
+		db.DPrintf(db.PROCDMGR_ERR, "run %v Err child %v", uproc, err)
 		return nil, err
 	}
 }

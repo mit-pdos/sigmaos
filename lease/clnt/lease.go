@@ -83,9 +83,11 @@ func (l *Lease) End() error {
 	l.expired = true
 
 	// Send on, and then close the cahnnel to stop the extender thread
+	db.DPrintf(db.LEASECLNT, "End send on channel %v", l)
 	l.ch <- struct{}{}
+	db.DPrintf(db.LEASECLNT, "End sent on channel %v", l)
 	close(l.ch)
-
+	db.DPrintf(db.LEASECLNT, "End closed channel %v", l)
 	// Tell the server to end the lease.
 	var res leaseproto.EndResult
 	return l.lmc.cc.RPC(l.srv, "LeaseSrv.End", &leaseproto.EndRequest{LeaseId: uint64(l.lid)}, &res)

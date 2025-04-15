@@ -102,6 +102,7 @@ func (mc *MntClnt) getNamedEndpointDirect(realm sp.Trealm) (*sp.Tendpoint, *serr
 }
 
 func (mc *MntClnt) invalidateNamedMountCacheEntry(realm sp.Trealm) error {
+	db.DPrintf(db.MOUNT, "invalidating with mntclnt: %p", mc.npc)
 	mc.ndMntCache.Invalidate(realm)
 	if mc.pe.UseDialProxy {
 		return mc.npc.InvalidateNamedEndpointCacheEntry(realm)
@@ -121,6 +122,7 @@ func (mc *MntClnt) mountNamed(realm sp.Trealm, mntName, tree string) *serr.Err {
 		db.DPrintf(db.MOUNT_ERR, "mountNamed: MountTree err %v", err)
 		// If mounting failed, the named is unreachable. Invalidate the cache entry
 		// for this realm.
+		_ = mc.MountTree(mc.pe.GetSecrets(), ep, tree, mntName)
 		if err := mc.invalidateNamedMountCacheEntry(realm); err != nil {
 			db.DPrintf(db.MOUNT, "Error invalidating named mount cache entry: %v", err)
 		}

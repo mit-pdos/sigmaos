@@ -30,6 +30,7 @@ type MntClnt struct {
 }
 
 func NewMntClnt(pathc MntClntAPI, fidc *fidclnt.FidClnt, cid sp.TclntId, pe *proc.ProcEnv, npc *dialproxyclnt.DialProxyClnt) *MntClnt {
+	db.DPrintf(db.MOUNT, "new MountClnt dialproxy: %p", npc)
 	mc := &MntClnt{
 		cid:        cid,
 		mnt:        newMntTable(),
@@ -48,6 +49,7 @@ func (mc *MntClnt) String() string {
 }
 
 func (mc *MntClnt) Resolve(p path.Tpathname, principal *sp.Tprincipal, resolve bool) (sp.Tfid, path.Tpathname, *serr.Err) {
+	db.DPrintf(db.ALWAYS, "Resolve %p\n", mc.npc)
 	if err, ok := mc.resolveRoot(p); err != nil {
 		db.DPrintf(db.ALWAYS, "%v: resolveRoot %v err %v b %v\n", mc.cid, p, err, ok)
 	}
@@ -88,6 +90,10 @@ func (mc *MntClnt) LastMount(pn string, principal *sp.Tprincipal) (path.Tpathnam
 
 func (mc *MntClnt) ResolveRoot(pn path.Tpathname) (*serr.Err, bool) {
 	s := time.Now()
+	//db.DPrintf(db.ALWAYS, "ResolveRoot %p", mc.npc)
+	// buf := make([]byte, 1024)
+	// n := runtime.Stack(buf, false)
+	// db.DPrintf(db.ALWAYS, "Stack Trace: %s\n", string(buf[:n]))
 	err, ok := mc.resolveRoot(pn)
 	db.DPrintf(db.WALK_LAT, "ResolveRoot %v %v lat %v\n", mc.cid, pn, time.Since(s))
 	if err != nil {
@@ -132,7 +138,6 @@ func (mc *MntClnt) MountTree(secrets map[string]*sp.SecretProto, ep *sp.Tendpoin
 	s := time.Now()
 	fid, err := mc.fidc.Attach(secrets, mc.cid, ep, pn, tree)
 	if err != nil {
-		db.DPrintf(db.MOUNT_ERR, "%v: MountTree Attach [%v]/%v err %v", mc.cid, ep, tree, err)
 		mc.mnt.umount(pn, true)
 	}
 	db.DPrintf(db.MOUNT, "%v: MountTree pn %q err %v Attach lat %v\n", mc.cid, mntname, err, time.Since(s))

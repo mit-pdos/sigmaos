@@ -89,12 +89,19 @@ type TpagemapImg struct {
 	pagesz         int
 	PageMapHead    *crit.CriuEntry
 	PagemapEntries []*crit.CriuEntry
+	pagePrefix     []int
 }
 
 func newTpagemapImg(imgdir, id string) (*TpagemapImg, error) {
 	img, err := ReadImg(imgdir, id, "pagemap")
 	if err != nil {
 		return nil, err
+	}
+	prefix := make([]int, len(img.Entries)-1)
+	sm := 0
+	for i, pme := range img.Entries[1:] {
+		prefix[i] = sm
+		sm += int(pme.Message.(*pagemap.PagemapEntry).GetNrPages())
 	}
 	return &TpagemapImg{
 			pagesz:         os.Getpagesize(),
@@ -103,7 +110,41 @@ func newTpagemapImg(imgdir, id string) (*TpagemapImg, error) {
 		nil
 }
 
+func (pmi *TpagemapImg) findBinSearch(addr uint64) int {
+	low := 0
+	high := len(pmi.PagemapEntries) - 1
+	for low <= high {
+
+		mid := (low + high) >> 1
+		pm := pmi.PagemapEntries[mid].Message.(*pagemap.PagemapEntry)
+		n := pm.GetNrPages()
+		start := pm.GetVaddr()
+		if start > addr {
+			high = mid - 1
+		} else if start+uint64(n*uint32(pmi.pagesz)) <= addr {
+			low = mid + 1
+		} else {
+			return pmi.pagePrefix[mid] + (int)((addr-start)/uint64(pmi.pagesz))
+		}
+	}
+	// pi := 0
+	// for _, pme := range pmi.PagemapEntries {
+	// 	pm := pme.Message.(*pagemap.PagemapEntry)
+	// 	start := pm.GetVaddr()
+	// 	n := pm.GetNrPages()
+	// 	end := start + uint64(n*uint32(pmi.pagesz))
+	// 	if addr >= start && addr < end {
+	// 		m := (addr - start) / uint64(pmi.pagesz)
+	// 		pi = pi + int(m)
+	// 		return pi
+	// 	}
+	// 	pi += int(n)
+	// }
+	return -1
+}
+
 // Find page index for addr
+
 func (pmi *TpagemapImg) find(addr uint64) int {
 	pi := 0
 	for _, pme := range pmi.PagemapEntries {
@@ -166,10 +207,12 @@ func (iov *Iov) markFetchLen(addr0 uint64) int {
 	n := 0
 	addr := addr0
 	for ; n < max && addr < iov.end; addr += uint64(iov.pagesz) {
+
 		i := int(addr-iov.start) / iov.pagesz
 		if iov.copied[i] {
 			break
 		}
+		db.DPrintf(db.ALWAYS, "addr: %x end %x n:%d", addr, iov.end, n+1)
 		iov.copied[i] = true
 		n += 1
 	}
@@ -213,6 +256,28 @@ func (iovs *Iovs) find(addr uint64) *Iov {
 	return nil
 }
 
+func (iovs *Iovs) findBinSearch(addr uint64) *Iov {
+
+	low := 0
+	high := len(iovs.iovs) - 1
+	for low <= high {
+		mid := (low + high) >> 1
+		if iovs.iovs[mid].start > addr {
+			high = mid - 1
+		} else if iovs.iovs[mid].end <= addr {
+			low = mid + 1
+		} else {
+			return iovs.iovs[mid]
+		}
+	}
+	// for _, iov := range iovs.iovs {
+	// 	if iov.start <= addr && addr < iov.end {
+	// 		return iov
+	// 	}
+	// }
+	return nil
+}
+
 // From criu/uffd.c: Create a list of IOVs that can be handled using
 // userfaultfd. The IOVs generally correspond to lazy pagemap entries,
 // except the cases when a single pagemap entry covers several
@@ -220,7 +285,7 @@ func (iovs *Iovs) find(addr uint64) *Iov {
 // UFFDIO_COPY may be done only inside a single VMA.  We assume here
 // that pagemaps and VMAs are sorted.
 func (mm *Tmm) collectIovs(pmi *TpagemapImg) (*Iovs, int, int) {
-	db.DPrintf(db.TEST, "mmInfo %d\n", len(mm.Vmas))
+	db.DPrintf(db.TEST, "mmInfo %d pmes %d\n", len(mm.Vmas), len(pmi.PagemapEntries))
 
 	iovs := newIovs()
 	end := uint64(mm.pagesz)
@@ -229,28 +294,29 @@ func (mm *Tmm) collectIovs(pmi *TpagemapImg) (*Iovs, int, int) {
 	maxIovLen := start
 	nvma := 0
 
-	ph := pmi.PageMapHead.Message.(*pagemap.PagemapHead)
-	db.DPrintf(db.TEST, "ph %v", ph)
-
 	for _, pme := range pmi.PagemapEntries[1:] {
 		pm := pme.Message.(*pagemap.PagemapEntry)
 
 		start = pm.GetVaddr()
 		end = start + uint64(pm.GetNrPages()*uint32(mm.pagesz))
 		npages += pm.GetNrPages()
-
+		db.DPrintf(db.ALWAYS, "pme start %x end %x", start, end)
 		for ; nvma < len(mm.Vmas); nvma++ {
 			vma := mm.Vmas[nvma]
-			if start >= vma.GetStart() {
+			// if start >= vma.GetStart() {
+			// 	continue
+			// }
+			if start >= vma.GetEnd() {
 				continue
 			}
 			vend := vma.GetEnd()
 			len := end
 			if vend < end {
-				end = vend
+				len = vend
 			}
 			len = len - start
 			iov := newIov(mm.pagesz, start, start+len, start)
+			//db.DPrintf(db.ALWAYS, "iov start %x end %x vend %v", iov.start, iov.end, vend)
 			iovs.append(iov)
 
 			if len > maxIovLen {
@@ -263,6 +329,7 @@ func (mm *Tmm) collectIovs(pmi *TpagemapImg) (*Iovs, int, int) {
 			start = vend
 		}
 	}
+	db.DPrintf(db.TEST, "iovs %d\n", len(iovs.iovs))
 	return iovs, int(npages), int(maxIovLen)
 }
 

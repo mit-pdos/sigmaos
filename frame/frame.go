@@ -23,7 +23,16 @@ func ReadFrameInto(rd io.Reader, frame *sessp.Tframe) *serr.Err {
 	}
 	if nbyte < 4 {
 		db.DPrintf(db.FRAME, "[%p] Error ReadFrameInto nbyte too short %d", rd, nbyte)
-		return serr.NewErr(serr.TErrUnreachable, fmt.Errorf("readMsg too short (%v)", nbyte))
+		var nbyte2 uint32
+		if err := binary.Read(rd, binary.LittleEndian, &nbyte2); err != nil {
+			// EOFs are handled differently from other errors, which indicate the
+			// sender is Unreachable
+			if err == io.EOF {
+				return serr.NewErrError(err)
+			}
+			return serr.NewErr(serr.TErrUnreachable, err)
+		}
+		return serr.NewErr(serr.TErrUnreachable, fmt.Errorf("readMsg too short (%v)", nbyte2))
 	}
 	nbyte = nbyte - 4
 	db.DPrintf(db.FRAME, "[%p] ReadFrameInto nbyte %d", rd, nbyte)

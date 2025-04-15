@@ -17,49 +17,41 @@ do
     ./stop.sh --parallel --nopurge --skipdb
     echo "Running iteration $i..."
     # Start the program in the background
-    $PROGRAM  2>&1 | tee /tmp/out-xxxx &
+    $PROGRAM 2>&1 | tee /tmp/out-xxxx &
     PROGRAM_PID=$!
-
     # Wait for the program to complete with a timeout
     SECONDS=0
     while kill -0 $PROGRAM_PID 2>/dev/null; do
         if [ $SECONDS -ge $TIME_THRESHOLD ]; then
             echo "Program is taking too long (>$TIME_THRESHOLD seconds). Killing it."
-            kill -9 $PROGRAM_PID 2>/dev/null
-            break
+         #   kill -9 $PROGRAM_PID 2>/dev/null
+           # break
+            sleep 100
         fi
         sleep 1
-        echo $SECONDS
+        echo "Second: $SECONDS"
     done
-
-    # Check if the program finished successfully
-    if ! kill -0 $PROGRAM_PID 2>/dev/null; then
-        echo "Iteration $i completed in $SECONDS seconds."
-    fi
-
-    if grep -q "Shutdown" /tmp/out-xxxx; then
-      continue
-    fi
 
     # Exit if the program was killed for exceeding the time limit
     if [ $SECONDS -ge $TIME_THRESHOLD ]; then
-        echo "Stopping the script because the program exceeded the time threshold."
-        ./logs.sh > /tmp/out1
-        cp /tmp/sigmaos-perf/log-proc.txt /tmp
-        ./stop.sh --parallel --nopurge --skipdb
+        echo "Stopping the script because the program exceeded the time threshold. On iteration $i"
+       # ./logs.sh > /tmp/out1
         echo "!!!!!!!! SUCCESS !!!!!!!!"
         break
     fi
-    ./logs.sh > logs.txt
-    # if grep -q "copyPages err resource temporarily unavailable" logs.txt; then
-    #     echo "Pattern found. Exiting the script."
-    #     break
-    # fi
+   #  ./logs.sh > logs.txt
+    # #copyPages err
+    #  if grep -q "Bad sid" logs.txt; then
+    #      echo "Pattern found. Exiting the script."
+    #      break
+    #  fi
     # if grep -q "FAIL" logs.txt; then
     #     echo "FAILED!"
     #     break
     # fi
+
     $STOPPER
+    echo "Ran iteration $i..."
 done
 
 echo "Script completed."

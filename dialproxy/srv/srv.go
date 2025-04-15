@@ -10,11 +10,11 @@ import (
 	"sigmaos/ctx"
 	db "sigmaos/debug"
 	"sigmaos/demux"
+	"sigmaos/dialproxy"
+	netproto "sigmaos/dialproxy/proto"
 	dialproxytrans "sigmaos/dialproxy/transport"
 	"sigmaos/frame"
 	"sigmaos/fs"
-	"sigmaos/dialproxy"
-	netproto "sigmaos/dialproxy/proto"
 	"sigmaos/proc"
 	"sigmaos/rpc"
 	rpcproto "sigmaos/rpc/proto"
@@ -87,7 +87,7 @@ func (nps *DialProxySrv) handleNewConn(conn *net.UnixConn) {
 		db.DPrintf(db.ERROR, "Error Unmarshal PrincipalID: %v", err)
 		return
 	}
-	db.DPrintf(db.DIALPROXYSRV, "Handle connection [%p] from principal %v", conn, p)
+	db.DPrintf(db.DIALPROXYSRV, "Handle connection from principal %v", conn)
 
 	npsc := &DialProxySrvConn{
 		trans:   dialproxytrans.NewDialProxyTrans(conn, demux.NewIoVecMap()),

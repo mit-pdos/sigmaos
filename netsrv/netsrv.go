@@ -65,7 +65,9 @@ func (srv *NetServer) runsrv(l *dialproxyclnt.Listener) {
 			return
 		}
 		db.DPrintf(db.NETSRV, "accept %v %v\n", l, conn)
-		srv.newConn.NewConn(p, conn)
+		dmx := srv.newConn.NewConn(p, conn)
+		db.DPrintf(db.NETSRV, "accepted %v\n", dmx)
+
 	}
 }
 

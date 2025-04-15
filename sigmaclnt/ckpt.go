@@ -22,6 +22,9 @@ import (
 // the proc.  The parent can spawn a new proc from the checkpoint; the
 // new proc resumes in CheckpointMe and return a new SigmaClnt to the
 // new proc.
+func (sc *SigmaClnt) List() {
+	listOpenfiles()
+}
 func (sc *SigmaClnt) CheckpointMe(ckptpn string) (*SigmaClnt, error) {
 	os.Stdin.Close() // XXX close in StartUproc?
 
@@ -45,7 +48,7 @@ func (sc *SigmaClnt) CheckpointMe(ckptpn string) (*SigmaClnt, error) {
 		return nil, err
 	}
 	if err := dpConn.Control(func(fd uintptr) {
-		db.DPrintf(db.CKPT, "Close dialproxy conn socket fd %v", fd)
+		//db.DPrintf(db.CKPT, "Close dialproxy conn socket fd %v", fd)
 		syscall.Close(int(fd))
 	}); err != nil {
 		db.DPrintf(db.ERROR, "Err fcntl dialproxy conn: %v", err)
@@ -54,90 +57,100 @@ func (sc *SigmaClnt) CheckpointMe(ckptpn string) (*SigmaClnt, error) {
 
 	if err := sc.ProcAPI.(*procclnt.ProcClnt).CheckpointMe(ckptpn); err != nil && serr.IsErrCode(err, serr.TErrUnreachable) {
 		db.DPrintf(db.CKPT, "CheckpointMe err %v:q\n", err)
-
+		sc.LeaseClnt.PrintLeases()
 		// XXX check that is unreachle error?
 
 		// Close old sigmaclnt
-		sc.Close()
+		//sc.Close()
 
 		if _, err := rdr.Write([]byte("r")); err != nil {
 			db.DFatalf("Write run err %v\n", err)
 		}
 
 		// Receive the spproxyd conn from RestoreProc()
-		conn, err := receiveConn(rdr)
+		err := receiveConn(rdr)
 		if err != nil {
 			db.DFatalf("receiveConn err %v\n", err)
 		}
-
 		// Receive the new procenv from RestoreProc()
 		if err := receiveProcEnv(rdr); err != nil {
 			db.DFatalf("receiveProcEnv pe %v err %v\n", err)
 		}
 
-		db.DPrintf(db.CKPT, "conn %v ProcEnv %v", conn, proc.GetProcEnv())
+		db.DPrintf(db.CKPT, "ProcEnv %v", proc.GetProcEnv())
 
 		// Initialize new sigmaclnt
-		sc, err = NewSigmaClnt(proc.GetProcEnv())
+		//sc.CloseNew()
+		db.DPrintf(db.CKPT, "making new Sigmaclnt")
+		newsc, err := NewSigmaClnt(proc.GetProcEnv())
 		if err != nil {
+
 			return nil, err
 		}
-		return sc, nil
+		db.DPrintf(db.CKPT, "made new Sigmaclnt")
+		err = sc.Close2(newsc)
+
+		//newsc, err := NewSigmaClntFsLib(proc.GetProcEnv(), sc.GetDialProxyClnt())
+		// if err != nil {
+
+		// 	return nil, err
+		// }
+		return newsc, nil
 	} else {
 		return nil, fmt.Errorf("Checkpoint failed")
 	}
 }
 
-func receiveConn(rdr *os.File) (net.Conn, error) {
+func receiveConn(rdr *os.File) error {
 	conn, err := net.FileConn(rdr)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	uconn, ok := conn.(*net.UnixConn)
 	if !ok {
-		return nil, fmt.Errorf("not a unix conn")
+		return fmt.Errorf("not a unix conn")
 	}
-	c, err := rcvConn(uconn)
+	err = rcvConn(uconn)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return c, err
+	return err
 }
 
-func rcvConn(uconn *net.UnixConn) (net.Conn, error) {
+func rcvConn(uconn *net.UnixConn) error {
 	var (
 		b   [32]byte
 		oob [32]byte
 	)
 	_, oobn, _, _, err := uconn.ReadMsgUnix(b[:], oob[:])
 	if err != nil {
-		return nil, err
+		return err
 	}
 	messages, err := syscall.ParseSocketControlMessage(oob[:oobn])
 	if err != nil {
-		return nil, err
+		return err
 	}
 	if len(messages) != 1 {
-		return nil, fmt.Errorf("expect 1 message, got %#v", messages)
+		return fmt.Errorf("expect 1 message, got %#v", messages)
 	}
 	message := messages[0]
 	fds, err := syscall.ParseUnixRights(&message)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	if len(fds) != 1 {
-		return nil, fmt.Errorf("expect 1 fd, got %#v", fds)
+		return fmt.Errorf("expect 1 fd, got %#v", fds)
 	}
 	db.DPrintf(db.CKPT, "spproxyd fd %d\n", fds[0])
 
 	os.Setenv(dialproxytrans.SIGMA_DIALPROXY_FD, strconv.Itoa(fds[0]))
 
-	f := os.NewFile(uintptr(fds[0]), "spproxyd")
-	conn, err := net.FileConn(f)
-	if err != nil {
-		return nil, fmt.Errorf("FileConn %v err %v", fds[0], err)
-	}
-	return conn, nil
+	//	f := os.NewFile(uintptr(fds[0]), "spproxyd")
+	// conn, err := net.FileConn(f)
+	// if err != nil {
+	// 	return nil, fmt.Errorf("FileConn %v err %v", fds[0], err)
+	// }
+	return nil
 }
 
 func receiveProcEnv(rdr *os.File) error {
@@ -149,11 +162,13 @@ func receiveProcEnv(rdr *os.File) error {
 	if !ok {
 		return fmt.Errorf("not a unix conn")
 	}
+	db.DPrintf(db.CKPT, "reading from frame for ProcEnv")
 	b, sr := frame.ReadFrame(uconn)
 	if sr != nil {
 		return err
 	}
 	proc.SetProcEnv(string(b))
+	db.DPrintf(db.CKPT, "received ProcEnv")
 	return nil
 }
 

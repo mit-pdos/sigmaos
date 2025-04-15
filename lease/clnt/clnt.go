@@ -34,7 +34,7 @@ func NewLeaseClnt(fsl *fslib.FsLib) (*LeaseClnt, error) {
 func (lmc *LeaseClnt) AskLease(pn string, ttl sp.Tttl) (*Lease, error) {
 	lmc.askedForLease = true
 	srv, rest, err := lmc.PathLastMount(pn)
-	db.DPrintf(db.LEASECLNT, "AskLease %v: %v %v err %v\n", pn, srv, rest, err)
+	db.DPrintf(db.LEASECLNT, "AskLease %v: %v %v err %v my ptr %p\n", pn, srv, rest, err, lmc)
 	if li, ok := lmc.lm.Lookup(srv.String()); ok {
 		return li, nil
 	}
@@ -68,6 +68,24 @@ func (lmgr *LeaseClnt) EndLeases() error {
 	return nil
 }
 
+func (lmgr *LeaseClnt) PrintLeases() error {
+	for _, li := range lmgr.lm.Values() {
+		db.DPrintf(db.LEASECLNT, "lease %v", li)
+	}
+	return nil
+}
 func (lmgr *LeaseClnt) AskedForLease() bool {
 	return lmgr.askedForLease
+}
+
+func (lmgr *LeaseClnt) EndLeasesNewClient(newlmgr *LeaseClnt) error {
+	db.DPrintf(db.LEASECLNT, "EndLeasesNewConn")
+	defer db.DPrintf(db.LEASECLNT, "EndLeasesNewConn done")
+	for _, li := range lmgr.lm.Values() {
+		li.lmc = newlmgr
+		db.DPrintf(db.LEASECLNT, "EndLeases %v", li)
+		li.End()
+		db.DPrintf(db.LEASECLNT, "EndLeases %v done", li)
+	}
+	return nil
 }

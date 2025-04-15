@@ -38,7 +38,7 @@ func ConnToFile(proxyConn net.Conn) (*os.File, error) {
 
 func fdToUnixConn(fd int) (*net.UnixConn, error) {
 	// Create a FileConn from the file descriptor
-	conn, err := fdToConn(fd)
+	conn, err := fdToConn2(fd)
 	if err != nil {
 		db.DFatalf("Error make FileConn: %v", err)
 	}
@@ -64,6 +64,23 @@ func fdToConn(fd int) (net.Conn, error) {
 	conn, err := net.FileConn(f)
 	if err != nil {
 		db.DFatalf("Error make FileConn (%v): %v", fd, err)
+	}
+	return conn, nil
+}
+func fdToConn2(fd int) (net.Conn, error) {
+	// Make the  FD into a Golang file object
+	f := os.NewFile(uintptr(fd), "dialproxy-conn")
+	if f == nil {
+		db.DFatalf("Error new file")
+	}
+	// Create a FileConn from the file
+	conn, err := net.FileConn(f)
+	if err != nil {
+		db.DFatalf("Error make FileConn (%v): %v", fd, err)
+	}
+	err = f.Close()
+	if err != nil {
+		db.DFatalf("Error closing (%v): %v", fd, err)
 	}
 	return conn, nil
 }

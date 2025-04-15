@@ -19,7 +19,8 @@ type FsLib struct {
 	sos.FileAPI
 
 	sync.Mutex
-	s3c *s3pathclnt.S3PathClnt
+	s3c  *s3pathclnt.S3PathClnt
+	Stop bool
 }
 
 func NewFsLibAPI(pe *proc.ProcEnv, npc *dialproxyclnt.DialProxyClnt, sos sos.FileAPI) (*FsLib, error) {

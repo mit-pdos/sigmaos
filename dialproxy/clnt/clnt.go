@@ -2,7 +2,10 @@ package clnt
 
 import (
 	"fmt"
+	"math/rand"
 	"net"
+	"os"
+	"strconv"
 	"sync"
 	"time"
 
@@ -32,9 +35,12 @@ type DialProxyClnt struct {
 	dmx             *demux.DemuxClnt
 	rpcc            *rpcclnt.RPCClnt
 	acceptAllRealms bool // If true, and this dialproxyclnt belongs to a kernel proc, accept all realms' connections
+	fd              int
 }
 
 func NewDialProxyClnt(pe *proc.ProcEnv) *DialProxyClnt {
+	db.DPrintf(db.DIALPROXYCLNT, "making new dialproxyclient")
+	rand.Seed(time.Now().UnixNano())
 	return &DialProxyClnt{
 		pe:              pe,
 		seqcntr:         new(sessp.Tseqcntr),
@@ -61,7 +67,7 @@ func (npc *DialProxyClnt) Dial(ep *sp.Tendpoint) (net.Conn, error) {
 	var err error
 	start := time.Now()
 	if npc.useProxy() {
-		db.DPrintf(db.DIALPROXYCLNT, "[%v] proxyDial %v", npc.pe.GetPrincipal(), ep)
+		db.DPrintf(db.DIALPROXYCLNT, "[%v] proxyDial %v pe: %v", npc.pe.GetPrincipal(), ep, npc.pe)
 		c, err = npc.proxyDial(ep)
 		db.DPrintf(db.DIALPROXYCLNT, "[%v] proxyDial %v done ok:%v", npc.pe.GetPrincipal(), ep, err == nil)
 	} else {
@@ -158,17 +164,24 @@ func (npc *DialProxyClnt) init() error {
 
 	// If rpc clnt has already been initialized, bail out
 	if npc.rpcc != nil {
+		potfd, _ := strconv.Atoi(os.Getenv("SIGMA_DIALPROXY_FD"))
+		if potfd != npc.fd {
+			return fmt.Errorf("old dialproxyclnt")
+		}
 		return nil
 	}
-
-	db.DPrintf(db.DIALPROXYCLNT, "[%v] Init dialproxyclnt %p", npc.pe.GetPrincipal(), npc)
+	//0xc0000dc900
+	db.DPrintf(db.DIALPROXYCLNT, "[%v] Init dialproxyclnt fd:  %v %p", npc.pe.GetPrincipal(), npc.fd, npc)
 	defer db.DPrintf(db.DIALPROXYCLNT, "[%v] Init dialproxyclnt %p done", npc.pe.GetPrincipal(), npc)
 	iovm := demux.NewIoVecMap()
-	conn, err := dialproxytrans.GetDialProxydConn(npc.pe)
+	conn, f, err := dialproxytrans.GetDialProxydConn(npc.pe)
+	npc.fd = f
+	db.DPrintf(db.DIALPROXYCLNT, "[%v] Init dialproxyclnt conn %p", npc.pe.GetPrincipal(), conn)
 	if err != nil {
 		return err
 	}
-	// Connect to the dialproxy server
+
+	// Connect to the dialproxy se:q:qrver
 	trans := dialproxytrans.NewDialProxyTrans(conn, iovm)
 	npc.trans = trans
 	npc.dmx = demux.NewDemuxClnt(trans, iovm)

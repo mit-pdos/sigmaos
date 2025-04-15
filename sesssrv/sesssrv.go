@@ -6,7 +6,6 @@ package sesssrv
 import (
 	"net"
 
-	db "sigmaos/debug"
 	"sigmaos/demux"
 	dialproxyclnt "sigmaos/dialproxy/clnt"
 	"sigmaos/netsrv"
@@ -46,7 +45,7 @@ func NewSessSrv(pe *proc.ProcEnv, npc *dialproxyclnt.DialProxyClnt, addr *sp.Tad
 	}
 	ssrv.srv = netsrv.NewNetServer(pe, npc, addr, ssrv)
 	ssrv.sm = newSessionMgr(ssrv.st, ssrv.srvFcall)
-	db.DPrintf(db.SESSSRV, "Listen on address: %v", ssrv.srv.GetEndpoint())
+	//db.DPrintf(db.SESSSRV, "%p Listen on address: %v", ssrv, ssrv.srv.GetEndpoint())
 	return ssrv
 }
 
@@ -95,6 +94,7 @@ func (ssrv *SessSrv) NewConn(p *sp.Tprincipal, conn net.Conn) *demux.DemuxSrv {
 	}
 	iovm := demux.NewIoVecMap()
 	nc.dmx = demux.NewDemuxSrv(nc, spcodec.NewTransport(conn, iovm))
+	//db.DPrintf(db.SESSSRV, "%p has newConn %v", ssrv, conn)
 	return nc.dmx
 }
 
@@ -110,12 +110,12 @@ func (ssrv *SessSrv) serve(sess *Session, fc *sessp.FcallMsg) *sessp.FcallMsg {
 	qlen := ssrv.QueueLen()
 	ssrv.stats.Stats().Inc(fc.Msg.Type(), qlen)
 
-	db.DPrintf(db.SESSSRV, "Dispatch request %v", fc)
+	//	db.DPrintf(db.SESSSRV, "%p Dispatch request %v", ssrv, fc)
 	msg, iov, rerror, op, clntid := sess.Dispatch(fc.Msg, fc.Iov)
-	db.DPrintf(db.SESSSRV, "Done dispatch request %v", fc)
+	//	db.DPrintf(db.SESSSRV, "%p Done dispatch request %v", ssrv, fc)
 
 	if rerror != nil {
-		db.DPrintf(db.SESSSRV, "%v: Dispatch %v rerror %v", sess.Sid, fc, rerror)
+		//db.DPrintf(db.SESSSRV, "%p sid: %v: Dispatch %v rerror %v", ssrv, sess.Sid, fc, rerror)
 		msg = rerror
 	}
 

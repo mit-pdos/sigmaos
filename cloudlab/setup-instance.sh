@@ -153,16 +153,18 @@ then
   libssl-dev \
   git-lfs \
   libseccomp-dev \
-  awscli \
   htop \
   jq \
   docker.io \
   cpufrequtils \
   apparmor-utils \
-  mysql-client \
   mariadb-client \
   parallel \
   docker-buildx
+
+  curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+  unzip awscliv2.zip
+  sudo ./aws/install
 
   # For hadoop
 #  yes | sudo apt install openjdk-8-jdk \

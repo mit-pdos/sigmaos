@@ -35,6 +35,7 @@ docker pull mariadb:10.4
 if ! docker ps | grep -q $DB_IMAGE_NAME; then
     echo "start db"
     docker run \
+    --network $TESTER_NETWORK \
     --name $DB_IMAGE_NAME \
     -e MYSQL_ROOT_PASSWORD=sigmadb \
     -d mariadb

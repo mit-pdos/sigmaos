@@ -47,7 +47,11 @@ until [ "`docker inspect -f {{.State.Running}} $DB_IMAGE_NAME`"=="true" ]; do
     sleep 0.1;
 done;
 
-ip=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $DB_IMAGE_NAME)
+if [[ "$TESTER_NETWORK" == "host" ]]; then
+  ip=127.0.0.1
+else
+  ip=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $DB_IMAGE_NAME)
+fi
 
 echo "db IP: $ip"
 

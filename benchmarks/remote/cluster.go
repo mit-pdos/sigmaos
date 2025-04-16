@@ -16,7 +16,7 @@ type ClusterConfig struct {
 	NumNodes          int    `json:"num_nodes"`
 	NumCoresPerNode   uint   `json:"num_cores_per_node"`
 	NumFullNodes      int    `json:"num_full_nodes"`
-	NumProcqOnlyNodes int    `json:"num_procq_only_nodes"`
+	NumProcqOnlyNodes int    `json:"num_besched_only_nodes"`
 	TurboBoost        bool   `json:"turbo_boost"`
 }
 
@@ -58,7 +58,7 @@ func (ccfg *ClusterConfig) StartSigmaOSCluster() error {
 		args = append(args, "--turbo")
 	}
 	args = append(args, "--numfullnode", strconv.Itoa(ccfg.NumFullNodes))
-	args = append(args, "--numprocqnode", strconv.Itoa(ccfg.NumProcqOnlyNodes))
+	args = append(args, "--numbeschednode", strconv.Itoa(ccfg.NumProcqOnlyNodes))
 	err := ccfg.lcfg.RunScriptRedirectOutputFile("./start-sigmaos.sh", CLUSTER_INIT_LOG, args...)
 	if err != nil {
 		return fmt.Errorf("Err StopSigmaOSCluster: %v", err)

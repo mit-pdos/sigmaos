@@ -6,6 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"sigmaos/apps/mr"
+	"sigmaos/benchmarks"
 	db "sigmaos/debug"
 	"sigmaos/proc"
 	mschedclnt "sigmaos/sched/msched/clnt"
@@ -46,7 +47,7 @@ func downSemaphore(ts *test.RealmTstate, i interface{}) (time.Duration, float64)
 
 func warmupRealmBench(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
 	prog := i.(string)
-	start, nDL := WarmupRealm(ts, []string{prog})
+	start, nDL := benchmarks.WarmupRealm(ts, []string{prog})
 	return time.Since(start), float64(nDL)
 }
 

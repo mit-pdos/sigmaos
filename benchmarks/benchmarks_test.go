@@ -372,7 +372,7 @@ func TestMicroSpawnBurstTpt(t *testing.T) {
 	waitExitProcs(mrts.GetRealm(REALM1), ps)
 }
 
-func TestMicrobenchmarks.WarmupRealm(t *testing.T) {
+func TestMicrobenchmarksWarmupRealm(t *testing.T) {
 	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return

@@ -251,7 +251,7 @@ func GetCorralCmdConstructor() GetBenchCmdFn {
 //
 // - clientDelay specifies the delay for which the client should wait before
 // starting to send requests.
-func GetHotelClientCmdConstructor(hotelReqName string, leader bool, numClients int, rps []int, dur []time.Duration, numCaches int, cacheType string, scaleCache bool, clientDelay time.Duration, manuallyScaleCaches bool, scaleCacheDelay time.Duration, numCachesToAdd int, numGeo int, geoNIdx int, geoSearchRadius int, geoNResults int, manuallyScaleGeo bool, scaleGeoDelay time.Duration, numGeoToAdd int) GetBenchCmdFn {
+func GetHotelClientCmdConstructor(hotelReqName string, leader bool, numClients int, rps []int, dur []time.Duration, numCaches int, cacheType string, scaleCache bool, clientDelay time.Duration, manuallyScaleCaches bool, scaleCacheDelay time.Duration, numCachesToAdd int, numGeo int, geoNIdx int, geoSearchRadius int, geoNResults int, manuallyScaleGeo bool, scaleGeoDelay time.Duration, numGeoToAdd int, nSpinIter uint64) GetBenchCmdFn {
 	return func(bcfg *BenchConfig, ccfg *ClusterConfig) string {
 		const (
 			//			debugSelectors string = "\"TEST;THROUGHPUT;CPU_UTIL;\""
@@ -325,6 +325,7 @@ func GetHotelClientCmdConstructor(hotelReqName string, leader bool, numClients i
 			"--hotel_ngeo_idx %s "+
 			"--hotel_geo_search_radius %s "+
 			"--hotel_geo_nresults %s "+
+			"--hotel_n_spin_per_req %s"+
 			"%s "+ // manually_scale_geo
 			"--scale_geo_delay %s "+
 			"--n_geo_to_add %s "+
@@ -353,6 +354,7 @@ func GetHotelClientCmdConstructor(hotelReqName string, leader bool, numClients i
 			strconv.Itoa(geoNIdx),
 			strconv.Itoa(geoSearchRadius),
 			strconv.Itoa(geoNResults),
+			strconv.FormatUint(nSpinIter, 10),
 			scalegeo,
 			scaleGeoDelay.String(),
 			strconv.Itoa(numGeoToAdd),
@@ -559,6 +561,80 @@ func GetLCBEHotelImgResizeRPCMultiplexingCmdConstructor(numClients int, rps []in
 			ccfg.LeaderNodeIP,
 			bcfg.Tag,
 			strconv.Itoa(numClients),
+			cacheType,
+			autoscaleCache,
+			dursToString(dur),
+			rpsToString(rps),
+			sleep.String(),
+		)
+	}
+}
+
+// Construct command string to run hotel benchmark's load-generating client
+//
+// - numClients specifies the total number of client machines which will make
+// requests to the hotel application
+//
+// - rps specifies the number of requests-per-second this client should execute
+// in each phase of the benchmark.
+//
+// - dur specifies the duration for which each rps period should last.
+//
+// - cacheType specifies the type of cache service that hotel should use (e.g.,
+// cached vs kvd vs memcached).
+//
+// - If scaleCache is true, the cache autoscales.
+//
+// - sleep specifies the amount of time the hotel benchmark should sleep before
+// starting to run.
+func GetLCBEHotelSpinImgResizeRPCMultiplexingCmdConstructor(numClients int, rps []int, dur []time.Duration, cacheType string, scaleCache bool, sleep time.Duration, nSpinIter uint64) GetBenchCmdFn {
+	return func(bcfg *BenchConfig, ccfg *ClusterConfig) string {
+		const (
+			debugSelectors string = "\"TEST;BENCH;CPU_UTIL;IMGD;GROUPMGR;\""
+			perfSelectors  string = "\"THUMBNAIL_TPT;TEST_TPT;BENCH_TPT;HOTEL_WWW_TPT;\""
+		)
+		autoscaleCache := ""
+		if scaleCache {
+			autoscaleCache = "--hotel_cache_autoscale"
+		}
+		dialproxy := ""
+		if bcfg.NoNetproxy {
+			dialproxy = "--nodialproxy"
+		}
+		overlays := ""
+		if bcfg.Overlays {
+			overlays = "--overlays"
+		}
+		return fmt.Sprintf("export SIGMADEBUG=%s; export SIGMAPERF=%s; go clean -testcache; "+
+			"ulimit -n 100000; "+
+			"./set-cores.sh --set 1 --start 2 --end 39 > /dev/null 2>&1 ; "+
+			"go test -v sigmaos/benchmarks -timeout 0 --no-shutdown %s %s --etcdIP %s --tag %s "+
+			"--run RealmBalanceHotelSpinRPCImgResize "+
+			"--nclnt %s "+
+			"--hotel_ncache 3 "+
+			"--hotel_cache_mcpu 2000 "+
+			"--hotel_n_spin_per_req %s"+
+			"--cache_type %s "+
+			"%s "+ // scaleCache
+			"--hotel_dur %s "+
+			"--hotel_max_rps %s "+
+			"--sleep %s "+
+			"--imgresize_tps 150 "+
+			"--imgresize_dur 50s "+
+			"--imgresize_nround 43 "+
+			"--imgresize_path name/ux/~local/8.jpg "+
+			"--imgresize_mcpu 0 "+
+			"--imgresize_mem 2500 "+
+			"--prewarm_realm "+
+			"> /tmp/bench.out 2>&1",
+			debugSelectors,
+			perfSelectors,
+			dialproxy,
+			overlays,
+			ccfg.LeaderNodeIP,
+			bcfg.Tag,
+			strconv.Itoa(numClients),
+			strconv.FormatUint(nSpinIter, 10),
 			cacheType,
 			autoscaleCache,
 			dursToString(dur),

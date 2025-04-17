@@ -43,7 +43,7 @@ const (
 func init() {
 	flag.StringVar(&K8S_ADDR, "k8saddr", "", "Addr of k8s frontend.")
 	flag.IntVar(&MAX_RPS, "maxrps", 1000, "Max number of requests/sec.")
-	flag.Uint64Var(&N_SPIN, "nspin", 1000000, "Number of spins per request")
+	flag.Uint64Var(&N_SPIN, "nspin", 5000000, "Number of spins per request")
 	flag.BoolVar(&TEST_AUTH, "auth", false, "Testing k8s auth")
 	flag.DurationVar(&DURATION, "duration", 10*time.Second, "Duration of load generation benchmarks.")
 	flag.StringVar(&cache, "cache", "cached", "Cache service")

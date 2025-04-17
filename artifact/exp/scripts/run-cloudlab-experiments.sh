@@ -58,9 +58,9 @@ mkdir -p $LOG_DIR
 if [ $EXP == "all" ] || [ $EXP == "cgroups" ]; then
   if [ $RERUN == "true" ]; then
     echo "Clearing any cached cgroups experiment data..."
-    rm -rf benchmarks/results/$VERSION/lc_be_hotel_imgresize_rpc_multiplexing
+    rm -rf benchmarks/results/$VERSION/lc_be_hotel_spin_imgresize_rpc_multiplexing
   fi
   echo "Generating cgroups experiment data..."
-  go clean -testcache; go test -v -timeout 0 sigmaos/benchmarks/remote --run TestLCBEHotelImgResizeRPCMultiplexing --parallelize --platform cloudlab --vpc none --tag $TAG --no-shutdown --version $VERSION --branch $BRANCH 2>&1 | tee $LOG_DIR/cgroups.out
+  go clean -testcache; go test -v -timeout 0 sigmaos/benchmarks/remote --run TestLCBEHotelSpinImgResizeRPCMultiplexing --parallelize --platform cloudlab --vpc none --tag $TAG --no-shutdown --version $VERSION --branch $BRANCH 2>&1 | tee $LOG_DIR/cgroups.out
   echo "Done generating cgroups experiment data..."
 fi

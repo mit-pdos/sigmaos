@@ -784,7 +784,7 @@ func TestLCBEHotelImgResizeRPCMultiplexing(t *testing.T) {
 		manuallyScaleGeo    bool            = false
 		scaleGeoDelay       time.Duration   = 0 * time.Second
 		numGeoToAdd         int             = 0
-		nSpinIter           uint64          = 5000000
+		nSpinIter           uint64          = 4000000
 	)
 	ts, err := NewTstate(t)
 	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {
@@ -814,7 +814,9 @@ func TestLCBEHotelSpinImgResizeRPCMultiplexing(t *testing.T) {
 	)
 	// Hotel benchmark configuration parameters
 	var (
-		rps                 []int           = []int{250, 500, 1000, 1500, 2000, 1000}
+		//		rps                 []int           = []int{250, 500, 1000, 1500, 2000, 1000}
+		//		rps                 []int           = []int{250, 500, 750, 1000, 1250, 1000}
+		rps                 []int           = []int{50, 75, 100, 150, 200, 150}
 		dur                 []time.Duration = []time.Duration{5 * time.Second, 5 * time.Second, 10 * time.Second, 15 * time.Second, 20 * time.Second, 15 * time.Second}
 		numCaches           int             = 3
 		cacheType           string          = "cached"

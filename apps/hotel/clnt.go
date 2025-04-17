@@ -152,6 +152,22 @@ func (wc *WebClnt) Geo(lat, lon float64) (string, error) {
 	return repl["message"].(string), nil
 }
 
+func (wc *WebClnt) Spin(nIter uint64) (string, error) {
+	vals := url.Values{}
+	vals.Set("n", strconv.FormatUint(nIter, 10))
+	db.DPrintf(db.HOTEL_CLNT, "Spin vals %v", vals)
+	body, err := wc.request("/spin", vals)
+	if err != nil {
+		return "", err
+	}
+	repl := make(map[string]interface{})
+	err = json.Unmarshal(body, &repl)
+	if err != nil {
+		return "", err
+	}
+	return repl["message"].(string), nil
+}
+
 func (wc *WebClnt) SaveResults() (string, error) {
 	vals := url.Values{}
 	body, err := wc.request("/saveresults", vals)

@@ -30,6 +30,10 @@ func RandSearchReq(wc *WebClnt, r *rand.Rand) error {
 	return wc.Search(in_date_str, out_date_str, lat, lon)
 }
 
+func SpinReq(wc *WebClnt, nIter uint64) (string, error) {
+	return wc.Spin(nIter)
+}
+
 func RandRecsReq(wc *WebClnt, r *rand.Rand) error {
 	coin := toss(r)
 	req := ""

@@ -28,6 +28,7 @@ import (
 
 var K8S_ADDR string
 var MAX_RPS int
+var N_SPIN uint64
 var DURATION time.Duration
 var cache string
 var TEST_AUTH bool
@@ -42,6 +43,7 @@ const (
 func init() {
 	flag.StringVar(&K8S_ADDR, "k8saddr", "", "Addr of k8s frontend.")
 	flag.IntVar(&MAX_RPS, "maxrps", 1000, "Max number of requests/sec.")
+	flag.Uint64Var(&N_SPIN, "nspin", 1000000, "Number of spins per request")
 	flag.BoolVar(&TEST_AUTH, "auth", false, "Testing k8s auth")
 	flag.DurationVar(&DURATION, "duration", 10*time.Second, "Duration of load generation benchmarks.")
 	flag.StringVar(&cache, "cache", "cached", "Cache service")
@@ -417,6 +419,14 @@ func runSearch(t *testing.T, wc *hotel.WebClnt, r *rand.Rand) {
 	assert.Nil(t, err, "Err search %v", err)
 }
 
+func runSpin(t *testing.T, wc *hotel.WebClnt, r *rand.Rand) {
+	msg, err := hotel.SpinReq(wc, N_SPIN)
+	assert.Nil(t, err, "Err spin %v", err)
+	if false {
+		db.DPrintf("Spin rep %v", msg)
+	}
+}
+
 func runRecommend(t *testing.T, wc *hotel.WebClnt, r *rand.Rand) {
 	err := hotel.RandRecsReq(wc, r)
 	assert.Nil(t, err)
@@ -560,6 +570,33 @@ func TestBenchSearchSigma(t *testing.T) {
 	defer p.Done()
 	lg := loadgen.NewLoadGenerator(DURATION, MAX_RPS, func(r *rand.Rand) (time.Duration, bool) {
 		runSearch(ts.mrts.T, wc, r)
+		return 0, false
+	})
+	lg.Calibrate()
+	lg.Run()
+	ts.PrintStats(lg)
+	ts.stop()
+}
+
+func TestBenchSpinSigma(t *testing.T) {
+	// Bail out early if machine has too many cores (which messes with the cgroups setting)
+	if !assert.False(t, linuxsched.GetNCores() > 10, "SpawnBurst test will fail because machine has >10 cores, which causes cgroups settings to fail") {
+		return
+	}
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	defer mrts.Shutdown()
+
+	ts := newTstate(mrts, hotel.NewHotelSvc(), NCACHESRV, DEF_GEO_N_IDX, DEF_GEO_SEARCH_RADIUS, DEF_GEO_N_RESULTS)
+	wc, err1 := hotel.NewWebClnt(ts.mrts.GetRealm(test.REALM1).FsLib, ts.job)
+	assert.Nil(t, err1, "Error NewWebClnt: %v", err1)
+	p, err := perf.NewPerf(ts.mrts.GetRealm(test.REALM1).ProcEnv(), perf.TEST)
+	assert.Nil(t, err)
+	defer p.Done()
+	lg := loadgen.NewLoadGenerator(DURATION, MAX_RPS, func(r *rand.Rand) (time.Duration, bool) {
+		runSpin(ts.mrts.T, wc, r)
 		return 0, false
 	})
 	lg.Calibrate()

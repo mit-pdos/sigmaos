@@ -2,8 +2,10 @@ package hotel
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
+	"time"
 
 	//	"context"
 	//	"go.opentelemetry.io/otel/trace"
@@ -94,6 +96,7 @@ func RunWww(job string) error {
 	mux.HandleFunc("/recommendations", www.recommendHandler)
 	mux.HandleFunc("/reservation", www.reservationHandler)
 	mux.HandleFunc("/geo", www.geoHandler)
+	mux.HandleFunc("/spin", www.spinHandler)
 	mux.HandleFunc("/startrecording", www.startRecordingHandler)
 	//	}
 
@@ -534,6 +537,53 @@ func (s *Www) geoHandler(w http.ResponseWriter, r *http.Request) {
 	db.DPrintf(db.HOTEL_WWW, "Geo Nearby: %v %v\n", greq, gres)
 
 	str := "Geo!"
+
+	reply := map[string]interface{}{
+		"message": str,
+	}
+
+	json.NewEncoder(w).Encode(reply)
+}
+
+func (s *Www) spinHandler(w http.ResponseWriter, r *http.Request) {
+	if s.record {
+		defer s.p.TptTick(1.0)
+	}
+	//	var span trace.Span
+	//	var sctx *tproto.SpanContextConfig
+	//	if TRACING {
+	//		_, span = s.tracer.StartContextSpan(r.Context(), "Geo")
+	//		defer span.End()
+	//		sctx = tracing.SpanToContext(span)
+	//	}
+
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+
+	// lan/lon from query params
+	sNIter := r.URL.Query().Get("n")
+	//	sLat := r.FormValue("lat")
+	//	sLon := r.FormValue("lon")
+	if sNIter == "" {
+		http.Error(w, "Please specify number of spin iterations", http.StatusBadRequest)
+		return
+	}
+
+	nIter, err := strconv.ParseUint(sNIter, 10, 64)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Err parsing num iterations: %v", err), http.StatusBadRequest)
+		return
+	}
+
+	db.DPrintf(db.HOTEL_WWW, "spin n %v", nIter)
+	start := time.Now()
+	x := uint64(0)
+	for i := uint64(1); i < nIter; i++ {
+		x += i*x + 1
+	}
+	dur := time.Since(start)
+	db.DPrintf(db.HOTEL_WWW, "spin done n %v in %v", nIter, dur)
+
+	str := fmt.Sprintf("Done in %v res %v", dur, x)
 
 	reply := map[string]interface{}{
 		"message": str,

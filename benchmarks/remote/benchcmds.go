@@ -325,7 +325,7 @@ func GetHotelClientCmdConstructor(hotelReqName string, leader bool, numClients i
 			"--hotel_ngeo_idx %s "+
 			"--hotel_geo_search_radius %s "+
 			"--hotel_geo_nresults %s "+
-			"--hotel_n_spin_per_req %s"+
+			"--hotel_n_spin_per_req %s "+
 			"%s "+ // manually_scale_geo
 			"--scale_geo_delay %s "+
 			"--n_geo_to_add %s "+
@@ -613,7 +613,7 @@ func GetLCBEHotelSpinImgResizeRPCMultiplexingCmdConstructor(numClients int, rps 
 			"--nclnt %s "+
 			"--hotel_ncache 3 "+
 			"--hotel_cache_mcpu 2000 "+
-			"--hotel_n_spin_per_req %s"+
+			"--hotel_n_spin_per_req %s "+
 			"--cache_type %s "+
 			"%s "+ // scaleCache
 			"--hotel_dur %s "+

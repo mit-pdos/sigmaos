@@ -27,6 +27,7 @@ type Www struct {
 	*sigmaclnt.SigmaClnt
 	p        *perf.Perf
 	record   bool
+	onlyWWW  bool
 	job      string
 	tracer   *tracing.Tracer
 	userc    *rpcclnt.RPCClnt
@@ -47,6 +48,7 @@ func RunWww(job string, onlyWWW bool) error {
 		return err
 	}
 	www.SigmaClnt = sc
+	www.onlyWWW = onlyWWW
 
 	fsl, err := NewFsLib("hotel-wwwd", www.GetDialProxyClnt())
 	if err != nil {
@@ -134,12 +136,14 @@ func (s *Www) done() error {
 	if err := s.WaitEvict(s.ProcEnv().GetPID()); err != nil {
 		return err
 	}
-	db.DPrintf(db.HOTEL_WWW_STATS, "\nUserc %v", s.userc.StatsClnt())
-	db.DPrintf(db.HOTEL_WWW_STATS, "\nSearchc %v", s.searchc.StatsClnt())
-	db.DPrintf(db.HOTEL_WWW_STATS, "\nReservec %v", s.reservec.StatsClnt())
-	db.DPrintf(db.HOTEL_WWW_STATS, "\nProfc %v", s.profc.StatsClnt())
-	db.DPrintf(db.HOTEL_WWW_STATS, "\nRecc %v", s.recc.StatsClnt())
-	db.DPrintf(db.HOTEL_WWW, "Www %v evicted", s.ProcEnv().GetPID())
+	if !s.onlyWWW {
+		db.DPrintf(db.HOTEL_WWW_STATS, "\nUserc %v", s.userc.StatsClnt())
+		db.DPrintf(db.HOTEL_WWW_STATS, "\nSearchc %v", s.searchc.StatsClnt())
+		db.DPrintf(db.HOTEL_WWW_STATS, "\nReservec %v", s.reservec.StatsClnt())
+		db.DPrintf(db.HOTEL_WWW_STATS, "\nProfc %v", s.profc.StatsClnt())
+		db.DPrintf(db.HOTEL_WWW_STATS, "\nRecc %v", s.recc.StatsClnt())
+		db.DPrintf(db.HOTEL_WWW, "Www %v evicted", s.ProcEnv().GetPID())
+	}
 	//	s.tracer.Flush()
 	s.p.Done()
 	s.ClntExit(proc.NewStatus(proc.StatusEvicted))

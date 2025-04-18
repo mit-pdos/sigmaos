@@ -802,7 +802,7 @@ func TestLCBEHotelImgResizeRPCMultiplexing(t *testing.T) {
 func TestLCBEHotelSpinImgResizeRPCMultiplexing(t *testing.T) {
 	var (
 		benchName string = "lc_be_hotel_spin_imgresize_rpc_multiplexing"
-		driverVMs []int  = []int{8, 9, 10, 11}
+		driverVMs []int  = []int{8} //, 9, 10, 11}
 	)
 	// Cluster configuration parameters
 	const (
@@ -816,13 +816,13 @@ func TestLCBEHotelSpinImgResizeRPCMultiplexing(t *testing.T) {
 	var (
 		//		rps                 []int           = []int{250, 500, 1000, 1500, 2000, 1000}
 		//		rps                 []int           = []int{250, 500, 750, 1000, 1250, 1000}
-		rps                 []int           = []int{50, 75, 100, 150, 200, 150}
-		dur                 []time.Duration = []time.Duration{5 * time.Second, 5 * time.Second, 10 * time.Second, 15 * time.Second, 20 * time.Second, 15 * time.Second}
+		rps                 []int           = []int{200, 600, 800}
+		dur                 []time.Duration = []time.Duration{5 * time.Second, 5 * time.Second, 40 * time.Second}
 		numCaches           int             = 3
 		cacheType           string          = "cached"
 		scaleCache          bool            = false
 		clientDelay         time.Duration   = 60 * time.Second
-		sleep               time.Duration   = 10 * time.Second
+		sleep               time.Duration   = 20 * time.Second
 		manuallyScaleCaches bool            = false
 		scaleCacheDelay     time.Duration   = 0 * time.Second
 		numCachesToAdd      int             = 0
@@ -833,7 +833,9 @@ func TestLCBEHotelSpinImgResizeRPCMultiplexing(t *testing.T) {
 		manuallyScaleGeo    bool            = false
 		scaleGeoDelay       time.Duration   = 0 * time.Second
 		numGeoToAdd         int             = 0
-		nSpinIter           uint64          = 5000000
+		//		nSpinIter           uint64          = 4000000 // Produces ~9ms requests when running alone
+		//		nSpinIter uint64 = 1000000 // Produces 5-7ms tail latency requests
+		nSpinIter uint64 = 1500000
 	)
 	ts, err := NewTstate(t)
 	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {

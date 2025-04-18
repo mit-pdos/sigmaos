@@ -71,12 +71,14 @@ func newTstate(mrts *test.MultiRealmTstate, srvs []*hotel.Srv, nserver int, geoN
 	return ts
 }
 
-func (ts *Tstate) PrintStats(lg *loadgen.LoadGenerator) {
+func (ts *Tstate) PrintStats(lg *loadgen.LoadGenerator, svcStats bool) {
 	if lg != nil {
 		lg.Stats()
 	}
-	for _, s := range hotel.HOTELSVC {
-		ts.statsSrv(s)
+	if svcStats {
+		for _, s := range hotel.HOTELSVC {
+			ts.statsSrv(s)
+		}
 	}
 	cs, err := ts.hotel.StatsSrv()
 	assert.Nil(ts.mrts.T, err)
@@ -520,7 +522,7 @@ func TestBenchDeathStarSingle(t *testing.T) {
 	assert.Nil(t, err1, "Error NewWebClnt: %v", err1)
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	hotel.RunDSB(t, 1000, wc, r)
-	ts.PrintStats(nil)
+	ts.PrintStats(nil, true)
 	ts.stop()
 }
 
@@ -574,7 +576,7 @@ func TestBenchSearchSigma(t *testing.T) {
 	})
 	lg.Calibrate()
 	lg.Run()
-	ts.PrintStats(lg)
+	ts.PrintStats(lg, true)
 	ts.stop()
 }
 
@@ -589,7 +591,7 @@ func TestBenchSpinSigma(t *testing.T) {
 	}
 	defer mrts.Shutdown()
 
-	ts := newTstate(mrts, hotel.NewHotelSvc(), NCACHESRV, DEF_GEO_N_IDX, DEF_GEO_SEARCH_RADIUS, DEF_GEO_N_RESULTS)
+	ts := newTstate(mrts, hotel.NewHotelSvcOnlyWWW(), NCACHESRV, DEF_GEO_N_IDX, DEF_GEO_SEARCH_RADIUS, DEF_GEO_N_RESULTS)
 	wc, err1 := hotel.NewWebClnt(ts.mrts.GetRealm(test.REALM1).FsLib, ts.job)
 	assert.Nil(t, err1, "Error NewWebClnt: %v", err1)
 	p, err := perf.NewPerf(ts.mrts.GetRealm(test.REALM1).ProcEnv(), perf.TEST)
@@ -601,7 +603,7 @@ func TestBenchSpinSigma(t *testing.T) {
 	})
 	lg.Calibrate()
 	lg.Run()
-	ts.PrintStats(lg)
+	ts.PrintStats(lg, false)
 	ts.stop()
 }
 
@@ -677,7 +679,7 @@ func TestBenchGeoSigma(t *testing.T) {
 	})
 	lg.Calibrate()
 	lg.Run()
-	ts.PrintStats(lg)
+	ts.PrintStats(lg, true)
 	ts.stop()
 }
 
@@ -741,7 +743,7 @@ func testMultiSearch(t *testing.T, nthread int) {
 		<-ch
 	}
 	db.DPrintf(db.TEST, "TestBenchMultiSearch nthread=%d N=%d %dms\n", nthread, N, time.Since(start).Milliseconds())
-	ts.PrintStats(nil)
+	ts.PrintStats(nil, true)
 	ts.stop()
 }
 

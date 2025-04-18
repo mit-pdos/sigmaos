@@ -139,6 +139,13 @@ func NewHotelSvc() []*Srv {
 	}
 }
 
+// XXX searchd only needs 2, but in order to make spawns work out we need to have it run with 3.
+func NewHotelSvcOnlyWWW() []*Srv {
+	return []*Srv{
+		&Srv{"hotel-wwwd", []string{"only-www"}, 3000},
+	}
+}
+
 type HotelJob struct {
 	*sigmaclnt.SigmaClnt
 	cacheClnt       *cachegrpclnt.CachedSvcClnt

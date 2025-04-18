@@ -38,7 +38,7 @@ type Www struct {
 }
 
 // Run starts the server
-func RunWww(job string) error {
+func RunWww(job string, onlyWWW bool) error {
 	www := &Www{}
 	www.record = true
 	www.job = job
@@ -52,32 +52,34 @@ func RunWww(job string) error {
 	if err != nil {
 		return err
 	}
-	rpcc, err := sprpcclnt.NewRPCClnt(fsl, HOTELUSER)
-	if err != nil {
-		return err
+	if !onlyWWW {
+		rpcc, err := sprpcclnt.NewRPCClnt(fsl, HOTELUSER)
+		if err != nil {
+			return err
+		}
+		www.userc = rpcc
+		rpcc, err = sprpcclnt.NewRPCClnt(fsl, HOTELSEARCH)
+		if err != nil {
+			return err
+		}
+		www.searchc = rpcc
+		rpcc, err = sprpcclnt.NewRPCClnt(fsl, HOTELPROF)
+		if err != nil {
+			return err
+		}
+		www.profc = rpcc
+		rpcc, err = sprpcclnt.NewRPCClnt(fsl, HOTELRESERVE)
+		if err != nil {
+			return err
+		}
+		www.reservec = rpcc
+		rpcc, err = sprpcclnt.NewRPCClnt(fsl, HOTELREC)
+		if err != nil {
+			return err
+		}
+		www.recc = rpcc
+		www.geodc = shardedsvcrpcclnt.NewShardedSvcRPCClnt(fsl, HOTELGEODIR, db.HOTEL_WWW, db.HOTEL_WWW_ERR)
 	}
-	www.userc = rpcc
-	rpcc, err = sprpcclnt.NewRPCClnt(fsl, HOTELSEARCH)
-	if err != nil {
-		return err
-	}
-	www.searchc = rpcc
-	rpcc, err = sprpcclnt.NewRPCClnt(fsl, HOTELPROF)
-	if err != nil {
-		return err
-	}
-	www.profc = rpcc
-	rpcc, err = sprpcclnt.NewRPCClnt(fsl, HOTELRESERVE)
-	if err != nil {
-		return err
-	}
-	www.reservec = rpcc
-	rpcc, err = sprpcclnt.NewRPCClnt(fsl, HOTELREC)
-	if err != nil {
-		return err
-	}
-	www.recc = rpcc
-	www.geodc = shardedsvcrpcclnt.NewShardedSvcRPCClnt(fsl, HOTELGEODIR, db.HOTEL_WWW, db.HOTEL_WWW_ERR)
 
 	//	www.tracer = tracing.Init("wwwd", proc.GetSigmaJaegerIP())
 	var mux *http.ServeMux

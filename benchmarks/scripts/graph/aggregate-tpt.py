@@ -229,7 +229,10 @@ def setup_graph(nplots, units, total_ncore):
       ax2 = ax.twinx()
       coresax.append(ax2)
   for ax in coresax:
-    ax.set_ylim((0, total_ncore + 5))
+    if total_ncore == 4:
+      ax.set_ylim((0, total_ncore + 1))
+    else:
+      ax.set_ylim((0, total_ncore + 5))
     ax.set_ylabel("Cores Utilized")
     if total_ncore > 4:
       ax.set_yticks([0, 16, 32])

@@ -46,6 +46,7 @@ type HotelJobInstance struct {
 	geoNIdx             int
 	geoSearchRadius     int
 	geoNResults         int
+	justWFE             bool
 	ready               chan bool
 	fn                  hotelFn
 	hj                  *hotel.HotelJob
@@ -76,6 +77,7 @@ func NewHotelJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, durs string, 
 	ji.geoNIdx = geoNIndex
 	ji.geoSearchRadius = geoSearchRadius
 	ji.geoNResults = geoNResults
+	ji.justWFE = justWFE
 
 	durslice := strings.Split(durs, ",")
 	maxrpsslice := strings.Split(maxrpss, ",")
@@ -96,7 +98,7 @@ func NewHotelJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, durs string, 
 	var err error
 	var svcs []*hotel.Srv
 	if sigmaos {
-		if justWFE {
+		if ji.justWFE {
 			svcs = hotel.NewHotelSvcOnlyWWW()
 		} else {
 			svcs = hotel.NewHotelSvc()
@@ -217,10 +219,12 @@ func (ji *HotelJobInstance) StartHotelJob() {
 
 func (ji *HotelJobInstance) printStats() {
 	if ji.sigmaos && !ji.justCli {
-		for _, s := range hotel.HOTELSVC {
-			stats, err := ji.ReadStats(s)
-			assert.Nil(ji.Ts.T, err, "error get stats [%v] %v", s, err)
-			fmt.Printf("= %s: %v\n", s, stats)
+		if !ji.justWFE {
+			for _, s := range hotel.HOTELSVC {
+				stats, err := ji.ReadStats(s)
+				assert.Nil(ji.Ts.T, err, "error get stats [%v] %v", s, err)
+				fmt.Printf("= %s: %v\n", s, stats)
+			}
 		}
 		cs, err := ji.hj.StatsSrv()
 		assert.Nil(ji.Ts.T, err)

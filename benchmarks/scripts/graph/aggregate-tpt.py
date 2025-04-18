@@ -231,7 +231,10 @@ def setup_graph(nplots, units, total_ncore):
   for ax in coresax:
     ax.set_ylim((0, total_ncore + 5))
     ax.set_ylabel("Cores Utilized")
-    ax.set_yticks([0, 16, 32])
+    if total_ncore > 4:
+      ax.set_yticks([0, 16, 32])
+    else:
+      ax.set_yticks([0, 2, 4])
   return fig, tptax, coresax
 
 def graph_data(input_dir, title, out, hotel_realm, be_realm, prefix, units, total_ncore, percentile, k8s, xmin, xmax, legend_on_right):

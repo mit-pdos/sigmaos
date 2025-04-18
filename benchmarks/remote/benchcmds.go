@@ -619,9 +619,9 @@ func GetLCBEHotelSpinImgResizeRPCMultiplexingCmdConstructor(numClients int, rps 
 			"--hotel_dur %s "+
 			"--hotel_max_rps %s "+
 			"--sleep %s "+
-			"--imgresize_tps 150 "+
+			"--imgresize_tps 75 "+
 			"--imgresize_dur 20s "+
-			"--imgresize_nround 43 "+
+			"--imgresize_nround 86 "+
 			"--imgresize_path name/ux/~local/8.jpg "+
 			"--imgresize_mcpu 0 "+
 			"--imgresize_mem 2500 "+

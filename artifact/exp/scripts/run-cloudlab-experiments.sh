@@ -47,7 +47,7 @@ if [ $EXP != "all" ] && [ $EXP != "cgroups" ]; then
 fi
 
 VERSION="CGROUPS"
-BRANCH="test-in-docker"
+BRANCH="cgroups-exploration"
 TAG="arielck"
 
 LOG_DIR=/tmp/sigmaos-experiment-logs

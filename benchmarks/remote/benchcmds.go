@@ -611,17 +611,19 @@ func GetLCBEHotelSpinImgResizeRPCMultiplexingCmdConstructor(numClients int, rps 
 			"go test -v sigmaos/benchmarks -timeout 0 --no-shutdown %s %s --etcdIP %s --tag %s "+
 			"--run RealmBalanceHotelSpinRPCImgResize "+
 			"--nclnt %s "+
-			"--hotel_ncache 3 "+
-			"--hotel_cache_mcpu 2000 "+
+			"--hotel_ncache 0 "+
+			"--hotel_cache_mcpu 0 "+
 			"--hotel_n_spin_per_req %s "+
 			"--cache_type %s "+
 			"%s "+ // scaleCache
 			"--hotel_dur %s "+
 			"--hotel_max_rps %s "+
 			"--sleep %s "+
-			"--imgresize_tps 75 "+
-			"--imgresize_dur 20s "+
-			"--imgresize_nround 86 "+
+			"--imgresize_tps 2 "+
+			"--imgresize_dur 10s "+
+			"--imgresize_nround 500 "+
+			//			"--imgresize_tps 75 "+ // Produces more constant utilization
+			//			"--imgresize_nround 86 "+
 			"--imgresize_path name/ux/~local/8.jpg "+
 			"--imgresize_mcpu 0 "+
 			"--imgresize_mem 2500 "+

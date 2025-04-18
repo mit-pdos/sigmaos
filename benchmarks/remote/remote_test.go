@@ -806,7 +806,7 @@ func TestLCBEHotelSpinImgResizeRPCMultiplexing(t *testing.T) {
 	)
 	// Cluster configuration parameters
 	const (
-		numNodes          int  = 8
+		numNodes          int  = 1
 		numCoresPerNode   uint = 4
 		numProcqOnlyNodes int  = 0
 		numFullNodes      int  = numNodes - numProcqOnlyNodes

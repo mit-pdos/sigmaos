@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+import "pylib/proto/sigmap.proto";
+
+message Req {
+        string method = 1;
+}
+
+message Rep {
+        Rerror err = 1;
+}
+
+// Users of rpc package can use Blob to pass data directly through to
+// the transport without the rpc package marshaling it.
+message Blob {
+        repeated bytes iov = 1;
+}

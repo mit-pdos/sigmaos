@@ -5,6 +5,6 @@ from time import time
 
 splib.Started()
 print("IVY: A")
-splib.writeCall(593, ["hello", "world"])
+splib.Stat("idrc/boo")
 print("IVY: C")
 splib.Exited()

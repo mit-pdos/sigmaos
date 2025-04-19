@@ -18,6 +18,8 @@ RUN apk add --no-cache libseccomp \
   openblas \
   lapack \
   tiff-dev \
+  protobuf-c-dev \
+  protobuf-c \
   git
 
 RUN echo 'will cite' | parallel --citation || true

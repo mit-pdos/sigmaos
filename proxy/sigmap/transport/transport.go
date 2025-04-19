@@ -45,6 +45,9 @@ func NewTransport(conn net.Conn, iovm *demux.IoVecMap) *Transport {
 func (t *Transport) WriteCall(c demux.CallI) *serr.Err {
 	fc := c.(*Call)
 	// db.DPrintf(db.TEST, "writecall %v\n", c)
+	if int(fc.Seqno) == 593 {
+		db.DPrintf(db.PYPROXYSRV, "WriteCall for 593: %v\n", fc.Iov)
+	}
 	if err := frame.WriteSeqno(fc.Seqno, t.wrt); err != nil {
 		return err
 	}
@@ -58,7 +61,6 @@ func (t *Transport) WriteCall(c demux.CallI) *serr.Err {
 }
 
 func (t *Transport) ReadCall() (demux.CallI, *serr.Err) {
-	db.DPrintf(db.PYPROXYSRV, "ReadCall() called\n")
 	seqno, err := frame.ReadSeqno(t.rdr)
 	if err != nil {
 		return nil, err

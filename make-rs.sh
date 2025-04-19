@@ -95,7 +95,7 @@ gcc -Wall -fPIC -shared -o ld_fstatat.so ../sigmaos-local/ld_preload/ld_fstatat.
 cp ld_fstatat.so $OUTPATH/kernel
 
 # Build Python library
-gcc -Wall -fPIC -shared -o clntlib.so ../sigmaos-local/pylib/clntlib.c
+gcc -I../sigmaos-local -Wall -fPIC -shared -L/usr/lib -lprotobuf-c -o clntlib.so ../sigmaos-local/pylib/clntlib.c /usr/lib/libprotobuf-c.a ../sigmaos-local/pylib/proto/proc.pb-c.c ../sigmaos-local/pylib/proto/rpc.pb-c.c ../sigmaos-local/pylib/proto/sessp.pb-c.c ../sigmaos-local/pylib/proto/sigmap.pb-c.c ../sigmaos-local/pylib/proto/spproxy.pb-c.c ../sigmaos-local/pylib/proto/timestamp.pb-c.c
 cp clntlib.so $OUTPATH/kernel
 
 # Copy Python user processes

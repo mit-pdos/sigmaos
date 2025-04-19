@@ -1,0 +1,245 @@
+syntax = "proto3";
+
+// A Qid is the server's unique identification for the file being
+// accessed: two files on the same server hierarchy are the same if
+// and only if their qids are the same.
+message TqidProto {
+        uint32  type = 1;
+        uint32  version = 2;
+        uint64  path = 3;
+};
+
+message Tprincipal {
+        string iDStr = 1;
+        string realmStr = 2;
+}
+
+message TstatProto {
+        uint32 type = 1;
+        uint32 dev = 2;
+        TqidProto qid = 3;
+        uint32 mode = 4;
+        uint32 atime = 5;   // last access time in seconds
+        uint32 mtime = 6;   // last modified time in seconds
+        uint64 length = 7;  // file length in bytes
+        string name = 8;    // file name
+        string uid = 9;     // owner name
+        string gid = 10;     // group name
+        string muid = 11;    // name of the last user that modified the file
+}
+
+message Taddr {
+        string iPStr = 1;
+        uint32 portInt = 2;
+}
+
+message SecretProto {
+  string iD = 1;
+  string key = 2;
+  string metadata = 3;
+}
+
+message TendpointProto {
+        uint32   type = 1; // Type of endpoint (e.g. internal vs external)
+        repeated Taddr addr = 2;
+        string root = 3;
+}
+
+message TfenceProto {
+        string pathName = 1; 
+        uint64 epoch = 2;
+        uint64 seqno = 3;
+}
+
+message Tversion {
+        uint32 msize = 1;
+        string version = 2;
+}
+
+message Rversion {
+        uint32 msize = 1;
+        string version = 2;
+}
+
+message Tauth {
+        uint32 afid = 1;
+        repeated Tprincipal Principals = 2;
+        repeated string Anames = 3;
+}
+
+message Rauth {
+       TqidProto aqid = 1;
+}
+
+message Tattach {
+        uint32 fid = 1;
+        uint32 afid = 2;
+        map<string, SecretProto> secrets = 3;
+        string aname = 4;
+        uint64 clntId = 5;
+}
+
+message Rattach {
+        TqidProto qid = 1;        
+}
+
+message Rerror {
+        uint32 errCode = 1;
+        string obj = 2;
+        string err = 3;
+}
+
+message Twalk {
+        uint32 fid = 1;
+        uint32 newFid = 2;
+        repeated string wnames = 3;
+}
+
+message Rwalk {
+        repeated TqidProto qids = 1;
+}
+
+message Topen {
+        uint32 fid = 1;
+        uint32 mode = 2;
+}
+
+message Ropen {
+        TqidProto qid = 1;
+        uint32 iounit = 2;
+}
+
+message Tcreate {
+        uint32 fid = 1;
+        string name = 2;
+        uint32 perm = 3;
+        uint32 mode = 4;
+        uint64 lease = 5;
+        TfenceProto fence = 6;
+}
+
+message Rcreate {
+        TqidProto qid = 1;
+        uint32 iounit = 2;
+}
+
+message TreadF {
+        uint32 fid = 1;
+        uint64 offset = 2;
+        uint32 count = 3;
+        TfenceProto fence = 4;
+}
+
+message Rread {
+        uint32 count = 1;
+}
+
+message TwriteF {
+        uint32 fid = 1;
+        uint64 offset = 2;
+        TfenceProto fence = 3;
+}
+
+message Rwrite {
+        uint32 count = 1;
+}
+
+message Tclunk {
+        uint32 fid = 1;
+}
+
+message Rclunk {
+}
+
+message Tremove {
+        uint32 fid = 1;
+        TfenceProto fence = 2;
+}
+
+message Rremove {
+}
+
+message Trstat {
+        uint32 fid = 1;
+}
+
+message Rrstat {
+        TstatProto stat = 1;
+}
+
+message Twstat {
+        uint32 fid = 1;
+        TstatProto stat = 2;
+        TfenceProto fence = 3;
+}
+
+message Rwstat {
+}
+
+message Twatch {
+        uint32 dirfid = 1;
+        uint32 watchfid = 2;
+}
+
+message Rwatch {
+        
+}
+
+message Trenameat {
+        uint32 oldFid = 1;
+        string oldName = 2;
+        uint32 newFid = 3;
+        string newName = 4;
+        TfenceProto fence = 5;
+}
+
+message Rrenameat {
+}
+
+message Tgetfile {
+        uint32 fid = 1;
+        uint32 mode = 2;
+        uint64 offset = 3;
+        uint32 count = 4;
+        repeated string wnames = 5;
+        bool resolve = 6;
+        TfenceProto fence = 7;
+}
+
+message Tputfile {
+        uint32 fid = 1;
+        uint32 mode = 2;
+        uint32 perm = 3;
+        uint64 offset = 4;
+        repeated string Wnames = 5;
+        bool resolve = 6;
+        uint64 lease = 7;
+        TfenceProto fence = 8;
+}
+
+message Tdetach {
+        uint64 clntId = 1;
+}
+
+message Rdetach {
+}
+
+message Theartbeat {
+        bool serverSide = 1;
+        map<uint64, bool> sids = 2;
+}
+
+message Rheartbeat {
+        map<uint64, bool> sids = 1;
+}
+
+message Tremovefile {
+        uint32 fid = 1;
+        repeated string Wnames = 2;
+        bool resolve = 3;
+        TfenceProto fence = 4;
+}
+
+message Twriteread {
+        uint32 fid = 1;
+}

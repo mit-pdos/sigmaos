@@ -38,6 +38,7 @@ func NewDemuxSrv(srv ServerI, trans TransportI) *DemuxSrv {
 
 func (dmx *DemuxSrv) reader() {
 	for {
+		// db.DPrintf(db.PYPROXYSRV, "DemuxSrv ReadCall()\n")
 		c, err := dmx.trans.ReadCall()
 		if err != nil {
 			db.DPrintf(db.DEMUXSRV_ERR, "reader: rf err %v\n", err)

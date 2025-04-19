@@ -13,7 +13,7 @@ FROM alpine AS base
 #  apt autoremove && \
 #  rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-RUN apk add --no-cache libseccomp gfortran gcompat musl-dev strace fuse libffi-dev python3-dev openblas lapack tiff-dev libjpeg openjpeg libxcb
+RUN apk add --no-cache libseccomp gfortran gcompat musl-dev strace fuse libffi-dev python3-dev openblas lapack tiff-dev libjpeg openjpeg libxcb protobuf-c-dev protobuf-c
 
 WORKDIR /home/sigmaos
 RUN mkdir bin && \

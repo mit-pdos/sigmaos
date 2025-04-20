@@ -105,7 +105,7 @@ mkdir -p $BUILD_LOG
 if [ -z "$testercid" ]; then
   # Build tester
   echo "========== Build tester image =========="
-  DOCKER_BUILDKIT=1 docker build --progress=plain -f tester.Dockerfile -t $TESTER_NAME . 2>&1 | tee $BUILD_LOG/sig-tester.out
+  DOCKER_BUILDKIT=1 docker build --progress=plain -f docker/tester.Dockerfile -t $TESTER_NAME . 2>&1 | tee $BUILD_LOG/sig-tester.out
   echo "========== Done building tester =========="
   # Start tester
   echo "========== Starting tester container =========="

@@ -624,7 +624,7 @@ func GetLCBEHotelSpinImgResizeRPCMultiplexingCmdConstructor(numClients int, rps 
 			"--imgresize_nround 500 "+
 			//			"--imgresize_tps 75 "+ // Produces more constant utilization
 			//			"--imgresize_nround 86 "+
-			"--imgresize_path name/ux/~local/8.jpg "+
+			"--imgresize_path /tmp/sigmaos-perf/8.jpg "+
 			"--imgresize_mcpu 0 "+
 			"--imgresize_mem 2500 "+
 			"--prewarm_realm "+

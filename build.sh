@@ -125,7 +125,7 @@ fi
 if [ -z "$buildercid" ]; then
   # Build builder
   echo "========== Build builder image =========="
-  DOCKER_BUILDKIT=1 docker build --progress=plain -f builder.Dockerfile -t $BUILDER_NAME . 2>&1 | tee $BUILD_LOG/sig-builder.out
+  DOCKER_BUILDKIT=1 docker build --progress=plain -f docker/builder.Dockerfile -t $BUILDER_NAME . 2>&1 | tee $BUILD_LOG/sig-builder.out
   echo "========== Done building builder =========="
   # Start builder
   echo "========== Starting builder container =========="
@@ -144,7 +144,7 @@ fi
 if [ -z "$rsbuildercid" ]; then
   # Build builder
   echo "========== Build Rust builder image =========="
-  DOCKER_BUILDKIT=1 docker build --progress=plain -f rs-builder.Dockerfile -t $RS_BUILDER_NAME . 2>&1 | tee $BUILD_LOG/sig-rs-builder.out
+  DOCKER_BUILDKIT=1 docker build --progress=plain -f docker/rs-builder.Dockerfile -t $RS_BUILDER_NAME . 2>&1 | tee $BUILD_LOG/sig-rs-builder.out
   echo "========== Done building Rust builder =========="
   # Start builder
   echo "========== Starting Rust builder container =========="
@@ -239,7 +239,7 @@ if ! [ -z "$PARALLEL" ]; then
   njobs=$(echo $targets | wc -w)
 fi
 
-build_targets="parallel -j$njobs \"DOCKER_BUILDKIT=1 docker build --progress=plain -f target.Dockerfile --target {} -t {}$BUILD_TARGET_SUFFIX . 2>&1 | tee $BUILD_LOG/{}.out\" ::: $targets"
+build_targets="parallel -j$njobs \"DOCKER_BUILDKIT=1 docker build --progress=plain -f docker/target.Dockerfile --target {} -t {}$BUILD_TARGET_SUFFIX . 2>&1 | tee $BUILD_LOG/{}.out\" ::: $targets"
 
 printf "\nBuilding Docker image targets\n$build_targets\n\n"
 echo "========== Start Docker targets build =========="

@@ -204,6 +204,7 @@ for vm in $vms; do
 #    docker cp ~/6.jpg ${KERNELID}:/home/sigmaos/6.jpg
 #    docker cp ~/7.jpg ${KERNELID}:/home/sigmaos/7.jpg
     docker cp ~/8.jpg ${KERNELID}:/home/sigmaos/8.jpg
+    cp ~/8.jpg /tmp/sigmaos-perf/
   else
     echo "JOIN ${SIGMASTART} ${KERNELID}"
     ${TOKEN} 2>&1 > /dev/null

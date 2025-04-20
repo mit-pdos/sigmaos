@@ -1,9 +1,10 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"image/jpeg"
-	//	"io"
+	"io"
 	"math/rand"
 	"os"
 	"strconv"
@@ -96,14 +97,20 @@ func (t *Trans) Work(i int, output string) *proc.Status {
 	do := time.Now()
 
 	db.DPrintf(db.ALWAYS, "Resize (%v/%v) %v", i, len(t.inputs), t.inputs[i])
-	var rdr *fslib.FileReader // io.Reader
+
+	var rdr io.Reader
 	var err error
-	//	if t.readFromOS {
-	//
-	//		//	brdr := bufio.NewReaderSize(rdr, sp.BUFSZ)
-	//	} else {
-	rdr, err = t.OpenReader(t.inputs[i])
-	//	}
+	// Read from local OS instead of SigmaOS?
+	localOS := strings.HasPrefix(t.inputs[i], "/tmp/")
+	if localOS {
+		f, err := os.Open(t.inputs[i])
+		if err != nil {
+			db.DFatalf("Err OpenFile: %v", err)
+		}
+		rdr = bufio.NewReaderSize(f, sp.BUFSZ)
+	} else {
+		rdr, err = t.OpenReader(t.inputs[i])
+	}
 	if err != nil {
 		return proc.NewStatusErr(fmt.Sprintf("File %v not found kid %v err %v", t.inputs[i], t.ProcEnv().GetKernelID(), err), err)
 	}
@@ -111,7 +118,9 @@ func (t *Trans) Work(i int, output string) *proc.Status {
 	db.DPrintf(db.ALWAYS, "Time %v open: %v", t.inputs[i], time.Since(do))
 	var dc time.Time
 	defer func() {
-		rdr.Close()
+		if !localOS {
+			rdr.(*fslib.FileReader).Close()
+		}
 		db.DPrintf(db.ALWAYS, "Time %v close reader: %v", t.inputs[i], time.Since(dc))
 	}()
 
@@ -133,20 +142,23 @@ func (t *Trans) Work(i int, output string) *proc.Status {
 	t.p.TptTick(float64(imgSizeB))
 	db.DPrintf(db.ALWAYS, "Time %v resize: %v", t.inputs[i], time.Since(dr))
 
-	dcw := time.Now()
-	wrt, err := t.CreateWriter(output, 0777, sp.OWRITE)
-	if err != nil {
-		return proc.NewStatusErr(fmt.Sprintf("Open output failed %v", output), err)
-	}
-	//	pwrt := perf.NewPerfWriter(wrt, t.p)
-	db.DPrintf(db.ALWAYS, "Time %v create writer: %v", t.inputs[i], time.Since(dcw))
-	dw := time.Now()
-	defer func() {
-		wrt.Close()
-		db.DPrintf(db.ALWAYS, "Time %v write/encode: %v", t.inputs[i], time.Since(dw))
-		dc = time.Now()
-	}()
+	// Only write back output if reading from SigmaOS
+	if !localOS {
+		dcw := time.Now()
+		wrt, err := t.CreateWriter(output, 0777, sp.OWRITE)
+		if err != nil {
+			return proc.NewStatusErr(fmt.Sprintf("Open output failed %v", output), err)
+		}
+		//	pwrt := perf.NewPerfWriter(wrt, t.p)
+		db.DPrintf(db.ALWAYS, "Time %v create writer: %v", t.inputs[i], time.Since(dcw))
+		dw := time.Now()
+		defer func() {
+			wrt.Close()
+			db.DPrintf(db.ALWAYS, "Time %v write/encode: %v", t.inputs[i], time.Since(dw))
+			dc = time.Now()
+		}()
 
-	jpeg.Encode(wrt, img1, nil)
+		jpeg.Encode(wrt, img1, nil)
+	}
 	return proc.NewStatus(proc.StatusOK)
 }

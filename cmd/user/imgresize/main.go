@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"image/jpeg"
+	//	"io"
 	"math/rand"
 	"os"
 	"strconv"
@@ -15,6 +16,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
+	"sigmaos/sigmaclnt/fslib"
 	sp "sigmaos/sigmap"
 	"sigmaos/util/crash"
 	"sigmaos/util/perf"
@@ -94,9 +96,16 @@ func (t *Trans) Work(i int, output string) *proc.Status {
 	do := time.Now()
 
 	db.DPrintf(db.ALWAYS, "Resize (%v/%v) %v", i, len(t.inputs), t.inputs[i])
-	rdr, err := t.OpenReader(t.inputs[i])
+	var rdr *fslib.FileReader // io.Reader
+	var err error
+	//	if t.readFromOS {
+	//
+	//		//	brdr := bufio.NewReaderSize(rdr, sp.BUFSZ)
+	//	} else {
+	rdr, err = t.OpenReader(t.inputs[i])
+	//	}
 	if err != nil {
-		return proc.NewStatusErr(fmt.Sprintf("File %v not found kid %v", t.inputs[i], t.ProcEnv().GetKernelID()), err)
+		return proc.NewStatusErr(fmt.Sprintf("File %v not found kid %v err %v", t.inputs[i], t.ProcEnv().GetKernelID(), err), err)
 	}
 	//	prdr := perf.NewPerfReader(rdr, t.p)
 	db.DPrintf(db.ALWAYS, "Time %v open: %v", t.inputs[i], time.Since(do))

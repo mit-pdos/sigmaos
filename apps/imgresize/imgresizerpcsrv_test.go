@@ -59,7 +59,7 @@ func (ts *TstateRPC) shutdown() {
 	}
 }
 
-func TestImgdRPC(t *testing.T) {
+func TestImgdRPCSigmaOS(t *testing.T) {
 	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
@@ -98,7 +98,7 @@ func TestImgdRPCOS(t *testing.T) {
 	// Test expects 6.jpg to already be ibn /tmp/sigmaos-perf
 
 	in := filepath.Join("/tmp/sigmaos-perf/6.jpg")
-	err = ts.rpcc.Resize("resize-rpc-test", in)
+	err := ts.rpcc.Resize("resize-rpc-test", in)
 	assert.Nil(ts.mrts.T, err)
 	ts.shutdown()
 }

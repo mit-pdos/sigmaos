@@ -620,13 +620,13 @@ func GetLCBEHotelSpinImgResizeRPCMultiplexingCmdConstructor(numClients int, rps 
 			"--hotel_max_rps %s "+
 			"--sleep %s "+
 			"--imgresize_tps 2 "+
-			"--imgresize_dur 10s "+
-			"--imgresize_nround 500 "+
+			"--imgresize_dur 1s "+
+			"--imgresize_nround 5000 "+
 			//			"--imgresize_tps 75 "+ // Produces more constant utilization
 			//			"--imgresize_nround 86 "+
 			"--imgresize_path /tmp/sigmaos-perf/8.jpg "+
 			"--imgresize_mcpu 0 "+
-			"--imgresize_mem 2500 "+
+			"--imgresize_mem 1500 "+
 			"--prewarm_realm "+
 			"> /tmp/bench.out 2>&1",
 			debugSelectors,

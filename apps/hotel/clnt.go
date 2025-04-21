@@ -195,3 +195,17 @@ func (wc *WebClnt) StartRecording() (string, error) {
 	}
 	return repl["message"].(string), nil
 }
+
+func (wc *WebClnt) StopRecording() (string, error) {
+	vals := url.Values{}
+	body, err := wc.request("/stoprecording", vals)
+	if err != nil {
+		return "", err
+	}
+	repl := make(map[string]interface{})
+	err = json.Unmarshal(body, &repl)
+	if err != nil {
+		return "", err
+	}
+	return repl["message"].(string), nil
+}

@@ -103,6 +103,7 @@ func RunWww(job string, onlyWWW, runningInDocker bool) error {
 	mux.HandleFunc("/geo", www.geoHandler)
 	mux.HandleFunc("/spin", www.spinHandler)
 	mux.HandleFunc("/startrecording", www.startRecordingHandler)
+	mux.HandleFunc("/stoprecording", www.stopRecordingHandler)
 	//	}
 
 	ep, l, err := www.GetDialProxyClnt().Listen(sp.EXTERNAL_EP, sp.NewTaddr(sp.NO_IP, sp.NO_PORT))
@@ -626,6 +627,25 @@ func (s *Www) startRecordingHandler(w http.ResponseWriter, r *http.Request) {
 	reply := map[string]interface{}{
 		"message": str,
 	}
+
+	json.NewEncoder(w).Encode(reply)
+}
+
+func (s *Www) stopRecordingHandler(w http.ResponseWriter, r *http.Request) {
+	s.record = false
+
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+
+	db.DPrintf(db.HOTEL_WWW, "Stop recording")
+
+	str := "Stopped recording!"
+
+	reply := map[string]interface{}{
+		"message": str,
+	}
+
+	// Save results
+	s.p.Done()
 
 	json.NewEncoder(w).Encode(reply)
 }

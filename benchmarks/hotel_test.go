@@ -219,15 +219,15 @@ func (ji *HotelJobInstance) StartHotelJob() {
 
 func (ji *HotelJobInstance) printStats() {
 	if ji.sigmaos && !ji.justCli {
-		if !ji.justWFE {
+		if SPAWN_VIA_DOCKER {
+			_, err := ji.wc.StopRecording()
+			assert.Nil(ji.Ts.T, err, "error stop recording www: %v", err)
+		} else {
 			for _, s := range hotel.HOTELSVC {
 				stats, err := ji.ReadStats(s)
 				assert.Nil(ji.Ts.T, err, "error get stats [%v] %v", s, err)
 				fmt.Printf("= %s: %v\n", s, stats)
 			}
-		} else {
-			_, err := ji.wc.StopRecording()
-			assert.Nil(ji.Ts.T, err, "error stop recording www: %v", err)
 		}
 		cs, err := ji.hj.StatsSrv()
 		assert.Nil(ji.Ts.T, err)

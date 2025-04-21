@@ -56,24 +56,32 @@ func main() {
 		s = t.Work(i, output)
 		db.DPrintf(db.ALWAYS, "Time %v e2e resize[%v]: %v", os.Args, i, time.Since(start))
 	}
-	t.ClntExit(s)
+	if !t.runningInDocker {
+		t.ClntExit(s)
+	}
 }
 
 type Trans struct {
 	*sigmaclnt.SigmaClnt
-	inputs  []string
-	output  string
-	ctx     fs.CtxI
-	nrounds int
-	p       *perf.Perf
+	inputs          []string
+	output          string
+	ctx             fs.CtxI
+	nrounds         int
+	runningInDocker bool
+	p               *perf.Perf
 }
 
 func NewTrans(pe *proc.ProcEnv, args []string, p *perf.Perf) (*Trans, error) {
-	if len(args) != 4 {
-		return nil, fmt.Errorf("NewTrans: too few arguments: %v", args)
+	if len(args) != 4 && len(args) != 5 {
+		return nil, fmt.Errorf("NewTrans: wrong number of arguments: %v", args)
+	}
+	runningInDocker := len(args) == 5 && args[4] == "running-in-docker"
+	if runningInDocker {
+		db.DPrintf(db.ALWAYS, "Running in docker")
 	}
 	t := &Trans{
-		p: p,
+		p:               p,
+		runningInDocker: runningInDocker,
 	}
 	db.DPrintf(db.ALWAYS, "E2e spawn time since spawn until main: %v", time.Since(pe.GetSpawnTime()))
 	sc, err := sigmaclnt.NewSigmaClnt(pe)
@@ -88,7 +96,9 @@ func NewTrans(pe *proc.ProcEnv, args []string, p *perf.Perf) (*Trans, error) {
 	if err != nil {
 		db.DFatalf("Err convert nrounds: %v", err)
 	}
-	t.Started()
+	if !t.runningInDocker {
+		t.Started()
+	}
 	crash.FailersDefault(sc.FsLib, []crash.Tselector{crash.IMGRESIZE_CRASH})
 	return t, nil
 }

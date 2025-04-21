@@ -105,3 +105,19 @@ func TestImgdRPCOS(t *testing.T) {
 
 	ts.shutdown()
 }
+
+func TestImgdDockerOS(t *testing.T) {
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	defer mrts.Shutdown()
+
+	// Test expects 6.jpg to already be ibn /tmp/sigmaos-perf
+	if _, err := os.Stat("/tmp/sigmaos-perf/6.jpg"); err == nil {
+		in := filepath.Join("/tmp/sigmaos-perf/6.jpg")
+		if err := imgresize.RunImgresizeProcViaDocker(mrts.GetRealm(test.REALM1).ProcEnv(), in, 1); !assert.Nil(t, err, "Err run via docker: %v", err) {
+			return
+		}
+	}
+}

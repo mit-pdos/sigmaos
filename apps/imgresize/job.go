@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"strings"
 
+	"sigmaos/dcontainer/exp"
 	db "sigmaos/debug"
 	"sigmaos/ft/procgroupmgr"
 	fttaskmgr "sigmaos/ft/task/mgr"
@@ -22,6 +23,15 @@ type Ttask struct {
 
 func NewTask(fn string) *Ttask {
 	return &Ttask{fn}
+}
+
+func RunImgresizeProcViaDocker(parentProcEnv *proc.ProcEnv, input string, n int) error {
+	p := proc.NewProc("imgresize", []string{input, "xxx", strconv.Itoa(n)})
+	if err := exp.SpawnViaDocker(p, parentProcEnv); err != nil {
+		db.DPrintf(db.ERROR, "Error spawn proc via docker %v: %v", p, err)
+		return err
+	}
+	return nil
 }
 
 func StartImgd(sc *sigmaclnt.SigmaClnt, job string, workerMcpu proc.Tmcpu, workerMem proc.Tmem, persist bool, nrounds int, imgdMcpu proc.Tmcpu, em *crash.TeventMap) *procgroupmgr.ProcGroupMgr {

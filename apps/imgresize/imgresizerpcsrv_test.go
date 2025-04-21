@@ -1,6 +1,7 @@
 package imgresize_test
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -96,9 +97,11 @@ func TestImgdRPCOS(t *testing.T) {
 	}
 
 	// Test expects 6.jpg to already be ibn /tmp/sigmaos-perf
+	if _, err := os.Stat("/tmp/sigmaos-perf/6.jpg"); err == nil {
+		in := filepath.Join("/tmp/sigmaos-perf/6.jpg")
+		err := ts.rpcc.Resize("resize-rpc-test", in)
+		assert.Nil(ts.mrts.T, err)
+	}
 
-	in := filepath.Join("/tmp/sigmaos-perf/6.jpg")
-	err := ts.rpcc.Resize("resize-rpc-test", in)
-	assert.Nil(ts.mrts.T, err)
 	ts.shutdown()
 }

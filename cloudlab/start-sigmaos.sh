@@ -21,7 +21,7 @@ while [[ $# -gt 0 ]]; do
   key="$1"
   case $key in
   --parallel)
-    PARALLEL=1
+    # PARALLEL=1 (seems unstable for now, commenting it out)
     shift
     ;;
   --vpc)
@@ -233,6 +233,7 @@ ENDSSH
 run_vm 1 "${KERNELIDS[0]}"
 
 echo "$(date "+%Y-%m-%d %H:%M:%S") Waiting for all follower nodes to be up..."
+echo "PARALLEL: $PARALLEL"
 # Run follower nodes in parallel
 for ((i = 2; i <= N_VM; i++)); do
   if [ $PARALLEL -eq 1 ]; then

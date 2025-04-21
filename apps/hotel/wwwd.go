@@ -39,7 +39,8 @@ type Www struct {
 }
 
 // Run starts the server
-func RunWww(job string, onlyWWW bool) error {
+func RunWww(job string, onlyWWW, runningInDocker bool) error {
+	db.DPrintf(db.ALWAYS, "onlyWWW %v runningInDocker %v", onlyWWW, runningInDocker)
 	www := &Www{}
 	www.record = true
 	www.job = job
@@ -124,6 +125,13 @@ func RunWww(job string, onlyWWW bool) error {
 		db.DFatalf("NewPerf err %v\n", err)
 	}
 	www.p = perf
+
+	if runningInDocker {
+		// If running in Docker (not as a true SigmaOS proc), spin indefinitely
+		for {
+			time.Sleep(1000 * time.Second)
+		}
+	}
 
 	if err := www.Started(); err != nil {
 		return err

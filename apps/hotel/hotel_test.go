@@ -32,6 +32,7 @@ var N_SPIN uint64
 var DURATION time.Duration
 var cache string
 var TEST_AUTH bool
+var spawnViaDocker bool
 
 const (
 	NCACHESRV             = 6
@@ -45,6 +46,7 @@ func init() {
 	flag.IntVar(&MAX_RPS, "maxrps", 1000, "Max number of requests/sec.")
 	flag.Uint64Var(&N_SPIN, "nspin", 5000000, "Number of spins per request")
 	flag.BoolVar(&TEST_AUTH, "auth", false, "Testing k8s auth")
+	flag.BoolVar(&spawnViaDocker, "spawn-via-docker", false, "Spawn hotel frontend in a docker container, instead of spawning via SigmaOS")
 	flag.DurationVar(&DURATION, "duration", 10*time.Second, "Duration of load generation benchmarks.")
 	flag.StringVar(&cache, "cache", "cached", "Cache service")
 }
@@ -591,7 +593,7 @@ func TestBenchSpinSigma(t *testing.T) {
 	}
 	defer mrts.Shutdown()
 
-	ts := newTstate(mrts, hotel.NewHotelSvcOnlyWWW(), NCACHESRV, DEF_GEO_N_IDX, DEF_GEO_SEARCH_RADIUS, DEF_GEO_N_RESULTS)
+	ts := newTstate(mrts, hotel.NewHotelSvcOnlyWWW(spawnViaDocker), NCACHESRV, DEF_GEO_N_IDX, DEF_GEO_SEARCH_RADIUS, DEF_GEO_N_RESULTS)
 	wc, err1 := hotel.NewWebClnt(ts.mrts.GetRealm(test.REALM1).FsLib, ts.job)
 	assert.Nil(t, err1, "Error NewWebClnt: %v", err1)
 	p, err := perf.NewPerf(ts.mrts.GetRealm(test.REALM1).ProcEnv(), perf.TEST)

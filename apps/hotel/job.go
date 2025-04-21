@@ -4,10 +4,12 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"time"
 
 	cachegrpclnt "sigmaos/apps/cache/cachegrp/clnt"
 	cachegrpmgr "sigmaos/apps/cache/cachegrp/mgr"
 	"sigmaos/apps/kv"
+	"sigmaos/dcontainer/exp"
 	db "sigmaos/debug"
 	dialproxyclnt "sigmaos/dialproxy/clnt"
 	"sigmaos/proc"
@@ -118,31 +120,32 @@ func InitHotelFs(fsl *fslib.FsLib, jobname string) error {
 }
 
 type Srv struct {
-	Name string
-	Args []string
-	Mcpu proc.Tmcpu
+	Name           string
+	Args           []string
+	Mcpu           proc.Tmcpu
+	SpawnViaDocker bool
 }
 
-var geo *Srv = &Srv{"hotel-geod", nil, 2000}
+var geo *Srv = &Srv{"hotel-geod", nil, 2000, false}
 
 // XXX searchd only needs 2, but in order to make spawns work out we need to have it run with 3.
 func NewHotelSvc() []*Srv {
 	return []*Srv{
-		&Srv{"hotel-userd", nil, 0},
-		&Srv{"hotel-rated", nil, 2000},
+		&Srv{"hotel-userd", nil, 0, false},
+		&Srv{"hotel-rated", nil, 2000, false},
 		geo,
-		&Srv{"hotel-profd", nil, 2000},
-		&Srv{"hotel-searchd", nil, 3000},
-		&Srv{"hotel-reserved", nil, 3000},
-		&Srv{"hotel-recd", nil, 0},
-		&Srv{"hotel-wwwd", nil, 3000},
+		&Srv{"hotel-profd", nil, 2000, false},
+		&Srv{"hotel-searchd", nil, 3000, false},
+		&Srv{"hotel-reserved", nil, 3000, false},
+		&Srv{"hotel-recd", nil, 0, false},
+		&Srv{"hotel-wwwd", nil, 3000, false},
 	}
 }
 
 // XXX searchd only needs 2, but in order to make spawns work out we need to have it run with 3.
-func NewHotelSvcOnlyWWW() []*Srv {
+func NewHotelSvcOnlyWWW(spawnViaDocker bool) []*Srv {
 	return []*Srv{
-		&Srv{"hotel-wwwd", []string{"only-www"}, 3000},
+		&Srv{"hotel-wwwd", []string{"only-www"}, 3000, spawnViaDocker},
 	}
 }
 
@@ -204,7 +207,7 @@ func NewHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []*Srv, nhotel int, c
 		}
 	}
 
-	pids := make([]sp.Tpid, 0, len(srvs))
+	hj := &HotelJob{sc, cc, cm, ca, make([]sp.Tpid, 0, len(srvs)), cache, kvf, job}
 
 	for _, srv := range srvs {
 		db.DPrintf(db.TEST, "Hotel spawn %v", srv.Name)
@@ -212,19 +215,25 @@ func NewHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []*Srv, nhotel int, c
 		p.AppendEnv("NHOTEL", strconv.Itoa(nhotel))
 		p.AppendEnv("HOTEL_IMG_SZ_MB", strconv.Itoa(imgSizeMB))
 		p.SetMcpu(srv.Mcpu)
-		if err := sc.Spawn(p); err != nil {
-			db.DPrintf(db.ERROR, "Error spawn proc %v: %v", p, err)
-			return nil, err
+		if srv.SpawnViaDocker {
+			if err := exp.SpawnViaDocker(p, hj.ProcEnv()); err != nil {
+				db.DPrintf(db.ERROR, "Error spawn proc via docker %v: %v", p, err)
+				return nil, err
+			}
+			time.Sleep(20 * time.Second)
+		} else {
+			if err := sc.Spawn(p); err != nil {
+				db.DPrintf(db.ERROR, "Error spawn proc %v: %v", p, err)
+				return nil, err
+			}
+			if err = sc.WaitStart(p.GetPid()); err != nil {
+				db.DPrintf(db.ERROR, "Error start proc %v: %v", p, err)
+				return nil, err
+			}
+			hj.pids = append(hj.pids, p.GetPid())
 		}
-		if err = sc.WaitStart(p.GetPid()); err != nil {
-			db.DPrintf(db.ERROR, "Error start proc %v: %v", p, err)
-			return nil, err
-		}
-		pids = append(pids, p.GetPid())
 		db.DPrintf(db.TEST, "Hotel started %v", srv.Name)
 	}
-
-	hj := &HotelJob{sc, cc, cm, ca, pids, cache, kvf, job}
 
 	if ngeo > 1 {
 		for i := 0; i < ngeo-1; i++ {

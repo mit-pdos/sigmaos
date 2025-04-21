@@ -208,7 +208,7 @@ func GetMRCmdConstructor(mrApp string, memReq proc.Tmem, prewarmRealm, measureTp
 			"%s "+ // prewarm
 			"--mr_mem_req %s "+
 			"--mrapp %s "+
-			"--mr_n_trials %d" +
+			"--mr_n_trials %d " +
 			"> /tmp/bench.out 2>&1",
 			debugSelectors,
 			perfSelectors,

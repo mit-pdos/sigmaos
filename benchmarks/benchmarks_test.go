@@ -13,12 +13,12 @@ import (
 	"sigmaos/apps/hotel"
 	"sigmaos/benchmarks"
 	db "sigmaos/debug"
-	linuxsched "sigmaos/util/linux/sched"
 	"sigmaos/proc"
 	mschedclnt "sigmaos/sched/msched/clnt"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
+	linuxsched "sigmaos/util/linux/sched"
 	"sigmaos/util/perf"
 	"strconv"
 	"testing"
@@ -43,6 +43,7 @@ var PREWARM_REALM bool
 var SKIPSTATS bool
 var MR_APP string
 var MR_MEM_REQ int
+var MR_N_TRIALS int
 var KV_AUTO string
 var N_KVD int
 var N_CLERK int
@@ -123,6 +124,7 @@ func init() {
 	flag.BoolVar(&SKIPSTATS, "skipstats", false, "Skip printing stats.")
 	flag.StringVar(&MR_APP, "mrapp", "mr-wc-wiki1.8G.yml", "Name of mr yaml file.")
 	flag.IntVar(&MR_MEM_REQ, "mr_mem_req", 4000, "Amount of memory (in MB) required for each MR task.")
+	flag.IntVar(&MR_N_TRIALS, "mr_n_trials", 1, "Number of times the MR job should be run.")
 	flag.StringVar(&KV_AUTO, "kvauto", "manual", "KV auto-growing/shrinking.")
 	flag.IntVar(&N_KVD, "nkvd", 1, "Number of kvds.")
 	flag.IntVar(&N_CLERK, "nclerk", 1, "Number of clerks.")
@@ -521,10 +523,10 @@ func TestAppMR(t *testing.T) {
 	if PREWARM_REALM {
 		warmupRealm(ts1, []string{"mr-coord", "mr-m-grep", "mr-r-grep", "mr-m-wc", "mr-r-wc"})
 	}
-	rs := benchmarks.NewResults(1, benchmarks.E2E)
+	rs := benchmarks.NewResults(MR_N_TRIALS, benchmarks.E2E)
 	p := newRealmPerf(ts1)
 	defer p.Done()
-	jobs, apps := newNMRJobs(ts1, p, 1, MR_APP, chooseMRJobRoot(ts1), proc.Tmem(MR_MEM_REQ))
+	jobs, apps := newNMRJobs(ts1, p, MR_N_TRIALS, MR_APP, chooseMRJobRoot(ts1), proc.Tmem(MR_MEM_REQ))
 	go func() {
 		for _, j := range jobs {
 			// Wait until ready

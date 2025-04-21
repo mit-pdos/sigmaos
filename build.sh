@@ -265,10 +265,17 @@ echo "========== Building proxy =========="
 /usr/bin/time -f "Build time: %e sec" ./make.sh --norace $PARALLEL npproxy 
 echo "========== Done building proxy =========="
 
+# Build container for imgresized/hotel-www
+echo "========== Build cgroups experimental container =========="
+DOCKER_BUILDKIT=1 docker build --progress=plain -f docker/cgroups-hotel-imgresize.Dockerfile -t cgroups-hotel-imgresize . 2>&1 | tee $BUILD_LOG/cgroups-hotel-imgresize.out
+echo "========== Done building cgroups experimental container =========="
+
 if ! [ -z "$TAG" ]; then
   echo "========== Pushing container images to DockerHub =========="
   docker tag sigmaos arielszekely/sigmaos:$TAG
   docker push arielszekely/sigmaos:$TAG
   docker tag sigmauser arielszekely/sigmauser:$TAG
   docker push arielszekely/sigmauser:$TAG
+  docker tag cgroups-hotel-imgresize arielszekely/cgroups-hotel-imgresize:$TAG
+  docker push arielszekely/cgroups-hotel-imgresize:$TAG
 fi

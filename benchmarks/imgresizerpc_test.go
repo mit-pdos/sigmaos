@@ -66,8 +66,14 @@ func NewImgResizeRPCJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, input 
 func (ji *ImgResizeRPCJobInstance) runTask(wg *sync.WaitGroup, idx int) {
 	defer wg.Done()
 
-	err := ji.rpcc.Resize(strconv.Itoa(idx), ji.input)
-	assert.Nil(ji.Ts.T, err, "Err Resize: %v", err)
+	if SPAWN_VIA_DOCKER {
+		err := imgresize.RunImgresizeProcViaDocker(ji.ProcEnv(), ji.input, ji.nrounds)
+		assert.Nil(ji.Ts.T, err, "Err Resize: %v", err)
+		time.Sleep(40 * time.Second)
+	} else {
+		err := ji.rpcc.Resize(strconv.Itoa(idx), ji.input)
+		assert.Nil(ji.Ts.T, err, "Err Resize: %v", err)
+	}
 }
 
 func (ji *ImgResizeRPCJobInstance) runTasks() {
@@ -84,12 +90,15 @@ func (ji *ImgResizeRPCJobInstance) runTasks() {
 
 func (ji *ImgResizeRPCJobInstance) StartImgResizeRPCJob() {
 	db.DPrintf(db.ALWAYS, "StartImgResizeRPC server input %v tps %v dur %v mcpu %v job %v", ji.input, ji.tasksPerSecond, ji.dur, ji.mcpu, ji.job)
-	p, err := imgresize.StartImgRPCd(ji.SigmaClnt, ji.job, ji.mcpu, ji.mem, ji.nrounds, ji.imgdmcpu)
-	assert.Nil(ji.Ts.T, err, "StartImgRPCd: %v", err)
-	ji.srvProc = p
-	rpcc, err := imgresize.NewImgResizeRPCClnt(ji.SigmaClnt.FsLib, ji.job)
-	assert.Nil(ji.Ts.T, err)
-	ji.rpcc = rpcc
+	// If spawning via docker, don't start the imgresize server (just spawn the procs directly)
+	if !SPAWN_VIA_DOCKER {
+		p, err := imgresize.StartImgRPCd(ji.SigmaClnt, ji.job, ji.mcpu, ji.mem, ji.nrounds, ji.imgdmcpu)
+		assert.Nil(ji.Ts.T, err, "StartImgRPCd: %v", err)
+		ji.srvProc = p
+		rpcc, err := imgresize.NewImgResizeRPCClnt(ji.SigmaClnt.FsLib, ji.job)
+		assert.Nil(ji.Ts.T, err)
+		ji.rpcc = rpcc
+	}
 	go ji.runTasks()
 	db.DPrintf(db.ALWAYS, "Done starting ImgResizeRPC server")
 }
@@ -97,14 +106,16 @@ func (ji *ImgResizeRPCJobInstance) StartImgResizeRPCJob() {
 func (ji *ImgResizeRPCJobInstance) Wait() {
 	db.DPrintf(db.TEST, "Waiting for ImgResizeRPCJob to finish")
 	<-ji.runningTasks
-	ndone, err := ji.rpcc.Status()
-	assert.Nil(ji.Ts.T, err, "Status: %v", err)
-	db.DPrintf(db.TEST, "[%v] Done waiting for ImgResizeRPCJob to finish. Completed %v tasks", ji.GetRealm(), ndone)
-	err = ji.Evict(ji.srvProc.GetPid())
-	assert.Nil(ji.Ts.T, err)
-	status, err := ji.WaitExit(ji.srvProc.GetPid())
-	if assert.Nil(ji.Ts.T, err) {
-		assert.True(ji.Ts.T, status.IsStatusEvicted(), "Wrong status: %v", status)
+	if !SPAWN_VIA_DOCKER {
+		ndone, err := ji.rpcc.Status()
+		assert.Nil(ji.Ts.T, err, "Status: %v", err)
+		db.DPrintf(db.TEST, "[%v] Done waiting for ImgResizeRPCJob to finish. Completed %v tasks", ji.GetRealm(), ndone)
+		err = ji.Evict(ji.srvProc.GetPid())
+		assert.Nil(ji.Ts.T, err)
+		status, err := ji.WaitExit(ji.srvProc.GetPid())
+		if assert.Nil(ji.Ts.T, err) {
+			assert.True(ji.Ts.T, status.IsStatusEvicted(), "Wrong status: %v", status)
+		}
 	}
 	db.DPrintf(db.TEST, "[%v] Imgd shutdown", ji.GetRealm())
 }

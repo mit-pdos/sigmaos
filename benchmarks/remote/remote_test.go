@@ -802,7 +802,8 @@ func TestLCBEHotelImgResizeRPCMultiplexing(t *testing.T) {
 func TestLCBEHotelSpinImgResizeRPCMultiplexing(t *testing.T) {
 	var (
 		benchName string = "lc_be_hotel_spin_imgresize_rpc_multiplexing"
-		driverVMs []int  = []int{8} //, 9, 10, 11}
+		//		driverVMs []int  = []int{0} //, 9, 10, 11}
+		driverVMs []int = []int{0, 8} //, 9, 10, 11} // driver 0 kicks off the docker containers, driver 8 provides the client load
 	)
 	// Cluster configuration parameters
 	const (
@@ -816,13 +817,15 @@ func TestLCBEHotelSpinImgResizeRPCMultiplexing(t *testing.T) {
 	var (
 		//		rps                 []int           = []int{250, 500, 1000, 1500, 2000, 1000}
 		//		rps                 []int           = []int{250, 500, 750, 1000, 1250, 1000}
+		rpsLeader           []int           = []int{1, 1, 1}
 		rps                 []int           = []int{200, 600, 800}
 		dur                 []time.Duration = []time.Duration{5 * time.Second, 5 * time.Second, 40 * time.Second}
 		numCaches           int             = 3
 		cacheType           string          = "cached"
 		scaleCache          bool            = false
-		clientDelay         time.Duration   = 60 * time.Second
-		sleep               time.Duration   = 20 * time.Second
+		clientDelay         time.Duration   = 10 * time.Second
+		hotelAddedClntSleep time.Duration   = 10 * time.Second
+		sleep               time.Duration   = 35 * time.Second
 		manuallyScaleCaches bool            = false
 		scaleCacheDelay     time.Duration   = 0 * time.Second
 		numCachesToAdd      int             = 0
@@ -845,7 +848,7 @@ func TestLCBEHotelSpinImgResizeRPCMultiplexing(t *testing.T) {
 		return
 	}
 	db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
-	getLeaderCmd := GetLCBEHotelSpinImgResizeRPCMultiplexingCmdConstructor(len(driverVMs), rps, dur, cacheType, scaleCache, sleep, nSpinIter)
-	getFollowerCmd := GetHotelClientCmdConstructor("Spin", false, len(driverVMs), rps, dur, numCaches, cacheType, scaleCache, sleep, manuallyScaleCaches, scaleCacheDelay, numCachesToAdd, numGeo, numGeoIdx, geoSearchRadius, geoNResults, manuallyScaleGeo, scaleGeoDelay, numGeoToAdd, nSpinIter)
+	getLeaderCmd := GetLCBEHotelSpinImgResizeRPCMultiplexingCmdConstructor(len(driverVMs), rpsLeader, dur, cacheType, scaleCache, sleep, nSpinIter)
+	getFollowerCmd := GetHotelClientCmdConstructor("Spin", false, len(driverVMs), rps, dur, numCaches, cacheType, scaleCache, hotelAddedClntSleep, manuallyScaleCaches, scaleCacheDelay, numCachesToAdd, numGeo, numGeoIdx, geoSearchRadius, geoNResults, manuallyScaleGeo, scaleGeoDelay, numGeoToAdd, nSpinIter)
 	ts.RunParallelClientBenchmark(benchName, driverVMs, getLeaderCmd, getFollowerCmd, nil, nil, clientDelay, numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost)
 }

@@ -607,7 +607,7 @@ func GetLCBEHotelSpinImgResizeRPCMultiplexingCmdConstructor(numClients int, rps 
 		}
 		return fmt.Sprintf("export SIGMADEBUG=%s; export SIGMAPERF=%s; go clean -testcache; "+
 			"ulimit -n 100000; "+
-			"./set-cores.sh --set 1 --start 2 --end 39 > /dev/null 2>&1 ; "+
+			//	"./set-cores.sh --set 1 --start 2 --end 39 > /dev/null 2>&1 ; "+
 			"go test -v sigmaos/benchmarks -timeout 0 --no-shutdown %s %s --etcdIP %s --tag %s "+
 			"--run RealmBalanceHotelSpinRPCImgResize "+
 			"--nclnt %s "+

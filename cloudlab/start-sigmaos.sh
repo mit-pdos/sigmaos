@@ -16,10 +16,12 @@ TOKEN=""
 TURBO=""
 RMCPU="0"
 BRANCH="master"
+PARALLEL=true
 while [[ $# -gt 0 ]]; do
   key="$1"
   case $key in
   --parallel)
+    PARALLEL=true
     shift
     ;;
   --vpc)
@@ -133,17 +135,38 @@ vm_ncores=$(ssh -i $DIR/keys/cloudlab-sigmaos $LOGIN@$MAIN nproc --all)
 first_core_off=$NCORES
 last_core=$(($vm_ncores - 1))
 
-i=0
-for vm in $vms; do
-  i=$(($i+1))
-  FOLLOWER_NODE="$FULL_NODE"
+VMS=($vms)
+declare -a KERNELIDS
+
+# Generate all kernel IDs first, so we can reuse them later
+for ((i = 1; i <= N_VM; i++)); do
+  vm=${VMS[$((i - 1))]}
+  VM_NAME=$(ssh -i $DIR/keys/cloudlab-sigmaos $LOGIN@$vm hostname -s)
+
+  KERNELID_PREFIX=""
+  if [ $NUM_BESCHED_NODE -gt 0 ]; then
+    # If this is a besched-only follower node, prefix the kernel ID to denote
+    # this so that realmd doesn't try to start per-realm services (like UX)
+    # on it.
+    if [ $i -le $(($NUM_BESCHED_NODE + 1)) ] && [ $i -gt 1 ]; then
+      KERNELID_PREFIX="kernel-besched-"
+    fi
+  fi
+
+  KERNELID="${KERNELID_PREFIX}sigma-$VM_NAME-$(echo $RANDOM | md5sum | head -c 3)"
+  KERNELIDS+=("$KERNELID")
+done
+
+run_vm() {
+  local i=$1
+  local KERNELID=$2
+  local vm=${VMS[$((i - 1))]}
+
+  local FOLLOWER_NODE="$FULL_NODE"
   if [ $NUM_FULL_NODE -gt 0 ] && [ $i -gt $NUM_FULL_NODE ]; then
     FOLLOWER_NODE="node_no_besched"
   fi
-  KERNELID_PREFIX=""
-  # If running with besched-only nodes, then node 0 is the leader node, the
-  # following NUM_BESCHED_NODE nodes are the besched-only nodes, and the remainder
-  # are nodes without bescheds.
+
   if [ $NUM_BESCHED_NODE -gt 0 ]; then
     if [ $i -gt $(($NUM_BESCHED_NODE + 1)) ]; then
       FOLLOWER_NODE="node_no_besched"
@@ -151,9 +174,6 @@ for vm in $vms; do
       # If this is a besched-only follower node, prefix the kernel ID to denote
       # this so that realmd doesn't try to start per-realm services (like UX)
       # on it.
-      if [ $i -gt 1 ]; then
-        KERNELID_PREFIX="kernel-besched-"
-      fi
       FOLLOWER_NODE="besched_node"
     fi
   fi
@@ -164,8 +184,6 @@ for vm in $vms; do
   fi
   $DIR/setup-for-benchmarking.sh $vm $TURBO
   # Get hostname.
-  VM_NAME=$(ssh -i $DIR/keys/cloudlab-sigmaos $LOGIN@$vm hostname -s)
-  KERNELID="${KERNELID_PREFIX}sigma-$VM_NAME-$(echo $RANDOM | md5sum | head -c 3)"
   ssh -i $DIR/keys/cloudlab-sigmaos $LOGIN@$vm <<ENDSSH
   mkdir -p /tmp/sigmaos
   export SIGMAPERF="$SIGMAPERF"
@@ -176,10 +194,7 @@ for vm in $vms; do
   if [ $NCORES -ne $vm_ncores ]; then
     ./sigmaos/set-cores.sh --set 0 --start $first_core_off --end $last_core > /dev/null
   fi
-  
-#  aws s3 --profile sigmaos cp s3://9ps3/img-save/1.jpg ~/
-#  aws s3 --profile sigmaos cp s3://9ps3/img-save/6.jpg ~/
-#  aws s3 --profile sigmaos cp s3://9ps3/img-save/7.jpg ~/
+
   if ! [ -f ~/wiki-2G/enwiki ]; then
     aws s3 --profile sigmaos cp s3://9ps3/wiki-2G/enwiki ~/wiki-2G/
   fi
@@ -203,27 +218,48 @@ for vm in $vms; do
       ./start-etcd.sh
     fi
     ./start-kernel.sh --boot $LEADER_NODE --named ${SIGMASTART_PRIVADDR} --pull ${TAG} --reserveMcpu ${RMCPU} --dbip ${MAIN_PRIVADDR}:4406 --mongoip ${MAIN_PRIVADDR}:4407 ${DIALPROXY} ${KERNELID} 2>&1 | tee /tmp/start.out
-#    docker cp ~/1.jpg ${KERNELID}:/home/sigmaos/1.jpg
-#    docker cp ~/6.jpg ${KERNELID}:/home/sigmaos/6.jpg
-#    docker cp ~/7.jpg ${KERNELID}:/home/sigmaos/7.jpg
-    docker exec ${KERNELID} sh -c 'mkdir -p /home/sigmaos/wiki-2G'
-    docker cp ~/wiki-2G/enwiki ${KERNELID}:/home/sigmaos/wiki-2G/enwiki
-    docker exec ${KERNELID} sh -c 'mkdir -p /home/sigmaos/wiki-20G'
-    docker cp ~/wiki-20G/enwiki ${KERNELID}:/home/sigmaos/wiki-20G/enwiki
   else
     echo "JOIN ${SIGMASTART} ${KERNELID}"
     ${TOKEN} 2>&1 > /dev/null
     ./start-kernel.sh --boot $FOLLOWER_NODE --named ${SIGMASTART_PRIVADDR} --pull ${TAG} --dbip ${MAIN_PRIVADDR}:4406 --mongoip ${MAIN_PRIVADDR}:4407 ${DIALPROXY} ${KERNELID} 2>&1 | tee /tmp/join.out
-#    docker cp ~/1.jpg ${KERNELID}:/home/sigmaos/1.jpg
-#    docker cp ~/6.jpg ${KERNELID}:/home/sigmaos/6.jpg
-#    docker cp ~/7.jpg ${KERNELID}:/home/sigmaos/7.jpg
-    docker exec ${KERNELID} sh -c 'mkdir -p /home/sigmaos/wiki-2G'
-    docker cp ~/wiki-2G/enwiki ${KERNELID}:/home/sigmaos/wiki-2G/enwiki
-    docker exec ${KERNELID} sh -c 'mkdir -p /home/sigmaos/wiki-20G'
-    docker cp ~/wiki-20G/enwiki ${KERNELID}:/home/sigmaos/wiki-20G/enwiki
   fi
 ENDSSH
   if [ "${vm}" = "${MAIN}" ]; then
     TOKEN=$(ssh -i $DIR/keys/cloudlab-sigmaos $LOGIN@$vm docker swarm join-token worker | grep docker)
-  fi   
+  fi
+}
+
+# Run leader node synchronously
+run_vm 1 "${KERNELIDS[0]}"
+
+echo "$(date "+%Y-%m-%d %H:%M:%S") Waiting for all follower nodes to be up..."
+# Run follower nodes in parallel
+for ((i = 2; i <= N_VM; i++)); do
+  if [ "$PARALLEL" = true ]; then
+    run_vm $i "${KERNELIDS[$((i - 1))]}" &
+  else
+    run_vm $i "${KERNELIDS[$((i - 1))]}"
+  fi
 done
+
+wait
+echo "$(date "+%Y-%m-%d %H:%M:%S") All follower nodes are up"
+
+# Copy MR input files in parallel
+for index in "${!KERNELIDS[@]}"; do
+  vm="${VMS[$index]}"
+  kernelid="${KERNELIDS[$index]}"
+  echo "$(date "+%Y-%m-%d %H:%M:%S") Copying MR input files to $vm with kernel ID $kernelid"
+  (
+    ssh -i $DIR/keys/cloudlab-sigmaos $LOGIN@$vm <<ENDSSH
+    docker exec ${kernelid} sh -c 'mkdir -p /home/sigmaos/wiki-2G'
+    docker cp ~/wiki-2G/enwiki ${kernelid}:/home/sigmaos/wiki-2G/enwiki
+    docker exec ${kernelid} sh -c 'mkdir -p /home/sigmaos/wiki-20G'
+    docker cp ~/wiki-20G/enwiki ${kernelid}:/home/sigmaos/wiki-20G/enwiki
+ENDSSH
+  ) &
+done
+
+echo "$(date "+%Y-%m-%d %H:%M:%S") Waiting for all nodes to copy MR input files..."
+wait
+echo "$(date "+%Y-%m-%d %H:%M:%S") All nodes have copied MR input files"

@@ -162,6 +162,8 @@ if [ "$TAG" != "local-build" ]; then
   docker tag arielszekely/sigmaos:$TAG sigmaos > /dev/null
   docker pull arielszekely/sigmauser:$TAG > /dev/null
   docker tag arielszekely/sigmauser:$TAG sigmauser > /dev/null
+  docker pull arielszekely/cgroups-hotel-imgresize:$TAG > /dev/null
+  docker tag arielszekely/cgroups-hotel-imgresize:$TAG cgroups-hotel-imgresize  > /dev/null
 fi
 
 if [ "$NAMED" == ":1111" ] && ! docker ps | grep -q etcd ; then

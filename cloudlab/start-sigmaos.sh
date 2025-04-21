@@ -16,12 +16,12 @@ TOKEN=""
 TURBO=""
 RMCPU="0"
 BRANCH="master"
-PARALLEL=false
+PARALLEL=0
 while [[ $# -gt 0 ]]; do
   key="$1"
   case $key in
   --parallel)
-    PARALLEL=true
+    PARALLEL=1
     shift
     ;;
   --vpc)
@@ -235,7 +235,7 @@ run_vm 1 "${KERNELIDS[0]}"
 echo "$(date "+%Y-%m-%d %H:%M:%S") Waiting for all follower nodes to be up..."
 # Run follower nodes in parallel
 for ((i = 2; i <= N_VM; i++)); do
-  if [ "$PARALLEL" = true ]; then
+  if [ $PARALLEL -eq 1 ]; then
     run_vm $i "${KERNELIDS[$((i - 1))]}" &
   else
     run_vm $i "${KERNELIDS[$((i - 1))]}"

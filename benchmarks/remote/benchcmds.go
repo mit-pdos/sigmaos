@@ -628,6 +628,7 @@ func GetLCBEHotelSpinImgResizeRPCMultiplexingCmdConstructor(numClients int, rps 
 			"--imgresize_mcpu 0 "+
 			"--imgresize_mem 1500 "+
 			"--prewarm_realm "+
+			"--spawn-via-docker "+
 			"> /tmp/bench.out 2>&1",
 			debugSelectors,
 			perfSelectors,

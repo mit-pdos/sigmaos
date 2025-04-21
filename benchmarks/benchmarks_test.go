@@ -82,6 +82,7 @@ var CACHE_GC bool
 var BLOCK_MEM string
 var N_REALM int
 var ASYNCRW bool
+var SPAWN_VIA_DOCKER bool
 
 var MEMCACHED_ADDRS string
 var HTTP_URL string
@@ -120,6 +121,7 @@ func init() {
 	flag.IntVar(&N_REALM, "nrealm", 2, "Number of realms (relevant to BE balance benchmarks).")
 	flag.IntVar(&N_TRIALS, "ntrials", 1, "Number of trials.")
 	flag.IntVar(&N_THREADS, "nthreads", 1, "Number of threads.")
+	flag.BoolVar(&SPAWN_VIA_DOCKER, "spawn-via-docker", false, "Run procs as fake procs via docker, where possible")
 	flag.BoolVar(&PREWARM_REALM, "prewarm_realm", false, "Pre-warm realm, starting a BE and an LC uprocd on every machine in the cluster.")
 	flag.BoolVar(&SKIPSTATS, "skipstats", false, "Skip printing stats.")
 	flag.StringVar(&MR_APP, "mrapp", "mr-wc-wiki1.8G.yml", "Name of mr yaml file.")

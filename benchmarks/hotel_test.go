@@ -99,7 +99,7 @@ func NewHotelJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, durs string, 
 	var svcs []*hotel.Srv
 	if sigmaos {
 		if ji.justWFE {
-			svcs = hotel.NewHotelSvcOnlyWWW()
+			svcs = hotel.NewHotelSvcOnlyWWW(SPAWN_VIA_DOCKER)
 		} else {
 			svcs = hotel.NewHotelSvc()
 		}

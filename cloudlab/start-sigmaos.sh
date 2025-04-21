@@ -16,7 +16,7 @@ TOKEN=""
 TURBO=""
 RMCPU="0"
 BRANCH="master"
-PARALLEL=true
+PARALLEL=false
 while [[ $# -gt 0 ]]; do
   key="$1"
   case $key in

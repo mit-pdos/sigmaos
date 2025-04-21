@@ -225,6 +225,9 @@ func (ji *HotelJobInstance) printStats() {
 				assert.Nil(ji.Ts.T, err, "error get stats [%v] %v", s, err)
 				fmt.Printf("= %s: %v\n", s, stats)
 			}
+		} else {
+			_, err := ji.wc.StopRecording()
+			assert.Nil(ji.Ts.T, err, "error stop recording www: %v", err)
 		}
 		cs, err := ji.hj.StatsSrv()
 		assert.Nil(ji.Ts.T, err)

@@ -39,8 +39,6 @@ func SpawnViaDocker(p *proc.Proc, parentProcEnv *proc.ProcEnv) error {
 	cmd := append([]string{filepath.Join("/home/sigmaos/bin", p.GetVersionedProgram())}, p.Args...)
 	db.DPrintf(db.TEST, "ContainerCreate %v %v", cmd, p.GetEnv())
 
-	db.DPrintf(db.TEST, "Running %v with Docker", p.GetProgram())
-
 	// Set up perf mount.
 	mnts := []mount.Mount{
 		// perf output dir
@@ -96,6 +94,7 @@ func SpawnViaDocker(p *proc.Proc, parentProcEnv *proc.ProcEnv) error {
 		db.DPrintf(db.ERROR, "Err get homedir: %v", err)
 		return err
 	}
+	db.DPrintf(db.TEST, "Running %v with Docker cpu shares %v", p.GetProgram(), cpu)
 	// XXX Probably shouldn't hard-code the sigmaos project root path
 	SIGMAOS_PROJECT_ROOT := filepath.Join(home, "sigmaos/set-cgroups.sh")
 	// Set the cgroups CPU shares for the proc's container

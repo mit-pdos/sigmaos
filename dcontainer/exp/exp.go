@@ -15,6 +15,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/proc"
+	procsrv "sigmaos/sched/msched/proc/clnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/util/perf"
 )
@@ -82,7 +83,13 @@ func SpawnViaDocker(p *proc.Proc, parentProcEnv *proc.ProcEnv) error {
 
 	db.DPrintf(db.TEST, "network setting: ip %v secondaryIPAddrs %v nets %v ", ip, json.NetworkSettings.SecondaryIPAddresses, json.NetworkSettings.Networks)
 	const SHARE_PER_CORE = 1000
-	cpu := (SHARE_PER_CORE * int64(p.GetMcpu())) / 1000
+	var cpu int64
+	if p.GetType() == proc.T_LC {
+		cpu = (SHARE_PER_CORE * int64(p.GetMcpu())) / 1000
+	} else {
+		// XXX MIN_SHARE?
+		cpu = int64(procsrv.BE_SHARES)
+	}
 	cgroupPath := filepath.Join("/sys/fs/cgroup/system.slice", "docker-"+resp.ID+".scope", "cpu.weight")
 	home, err := os.UserHomeDir()
 	if err != nil {
@@ -91,6 +98,7 @@ func SpawnViaDocker(p *proc.Proc, parentProcEnv *proc.ProcEnv) error {
 	}
 	// XXX Probably shouldn't hard-code the sigmaos project root path
 	SIGMAOS_PROJECT_ROOT := filepath.Join(home, "sigmaos/set-cgroups.sh")
+	// Set the cgroups CPU shares for the proc's container
 	cmd2 := exec.Command(SIGMAOS_PROJECT_ROOT, cgroupPath, strconv.Itoa(int(cpu)))
 	cmd2.Stdout = os.Stdout
 	cmd2.Stderr = os.Stderr

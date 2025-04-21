@@ -1,0 +1,212 @@
+01:03:51.202328  SPAWN_LAT [] debug init pkg: 4.62µs
+=== RUN   TestSpawnCkptGeo
+01:03:53.716308 test-7b9801a2fc9969c7 ALWAYS NewFdClint init
+01:03:53.716387 test-7b9801a2fc9969c7 TEST New cid 544274abb4d8c6fc rootrealm
+01:03:53.729612 test-7b9801a2fc9969c7 CKPT fdClnt open wait: false
+01:03:53.729632 test-7b9801a2fc9969c7 CKPT path client open
+01:03:53.730720 test-7b9801a2fc9969c7 CKPT path client opened
+01:03:53.730768 test-7b9801a2fc9969c7 CKPT fdclnt done
+01:03:53.730790 test-7b9801a2fc9969c7 ALWAYS NewFdClint init
+01:03:53.730839 test-7b9801a2fc9969c7 TEST New cid 358faaff9b35dc0d rootrealm
+01:03:53.740531 test-7b9801a2fc9969c7 CKPT fdClnt open wait: false
+01:03:53.740546 test-7b9801a2fc9969c7 CKPT path client open
+01:03:53.741189 test-7b9801a2fc9969c7 CKPT path client opened
+01:03:53.741194 test-7b9801a2fc9969c7 CKPT fdclnt done
+01:03:53.754739 test-7b9801a2fc9969c7 TEST Spawn proc 6545e4a5 name/ux/~any/hotel-geod-50823b35bf521fa4/
+01:03:53.754821 test-7b9801a2fc9969c7 CKPT getting load?? BESCHEDCLNT
+01:03:53.754873 test-7b9801a2fc9969c7 CKPT got load?? BESCHEDCLNT
+01:03:53.754887 test-7b9801a2fc9969c7 CKPT waiting?? BESCHEDCLNT
+01:03:53.754904 test-7b9801a2fc9969c7 CKPT watchDir started
+01:03:53.754910 test-7b9801a2fc9969c7 WATCH readDirWatch start name/besched/
+01:03:53.754915 test-7b9801a2fc9969c7 CKPT attempting to open reader
+01:03:53.754919 test-7b9801a2fc9969c7 CKPT fdClnt open wait: false
+01:03:53.754923 test-7b9801a2fc9969c7 CKPT path client open
+01:03:53.755886 test-7b9801a2fc9969c7 CKPT path client opened
+01:03:53.755897 test-7b9801a2fc9969c7 CKPT fdclnt done
+01:03:53.755901 test-7b9801a2fc9969c7 CKPT opened reader
+01:03:53.755905 test-7b9801a2fc9969c7 CKPT readDirWatch opened reader
+01:03:53.755916 test-7b9801a2fc9969c7 CKPT readDirWatch watch
+01:03:53.756164 test-7b9801a2fc9969c7 CKPT read frame
+01:03:53.756188 test-7b9801a2fc9969c7 CKPT readDirWatch watch
+01:03:53.756365 test-7b9801a2fc9969c7 CKPT read frame
+01:03:53.756418 test-7b9801a2fc9969c7 WATCH readDirWatch read dir name/besched/
+01:03:53.757111 test-7b9801a2fc9969c7 BESCHEDCLNT watchDir new ents [sigma-4783]
+01:03:53.757138 test-7b9801a2fc9969c7 BESCHEDCLNT Update ents [sigma-4783] in []
+01:03:53.757169 test-7b9801a2fc9969c7 BESCHEDCLNT Update ents [sigma-4783] done [sigma-4783 , ]
+01:03:53.757181 test-7b9801a2fc9969c7 WATCH readDirWatch start name/besched/
+01:03:53.757185 test-7b9801a2fc9969c7 CKPT attempting to open reader
+01:03:53.757189 test-7b9801a2fc9969c7 CKPT fdClnt open wait: false
+01:03:53.757195 test-7b9801a2fc9969c7 CKPT path client open
+01:03:53.757228 test-7b9801a2fc9969c7 BESCHEDCLNT waitEntry
+01:03:53.757237 test-7b9801a2fc9969c7 BESCHEDCLNT Random
+01:03:53.757241 test-7b9801a2fc9969c7 CKPT getting load?? BESCHEDCLNT
+01:03:53.757248 test-7b9801a2fc9969c7 BESCHEDCLNT Done Random sigma-4783 true
+01:03:53.757252 test-7b9801a2fc9969c7 BESCHEDCLNT Done waitEntry sigma-4783 <nil>
+01:03:53.757267 test-7b9801a2fc9969c7 SPAWN_LAT [hotel-geod-50823b35bf521fa4] BESchedClnt get BESched[sigma-4783] latency: 2.436046ms
+01:03:53.757272 test-7b9801a2fc9969c7 BESCHEDCLNT GetEntry1 for sigma-4783
+01:03:53.757275 test-7b9801a2fc9969c7 CKPT getting load?? BESCHEDCLNT
+01:03:53.757278 test-7b9801a2fc9969c7 CKPT here entry BESCHEDCLNT
+01:03:53.757283 test-7b9801a2fc9969c7 CKPT getting entry BESCHEDCLNT
+01:03:53.757288 test-7b9801a2fc9969c7 CKPT alloc val for sigma-4783 kok true
+01:03:53.757291 test-7b9801a2fc9969c7 BESCHEDCLNT GetEntryAlloc for sigma-4783
+01:03:53.757294 test-7b9801a2fc9969c7 CKPT acquiring dcLock sigma-4783
+01:03:53.757298 test-7b9801a2fc9969c7 CKPT acquired dcLock sigma-4783
+01:03:53.757301 test-7b9801a2fc9969c7 CKPT looked up keyvalue sigma-4783
+01:03:53.757304 test-7b9801a2fc9969c7 CKPT making new keyvalue sigma-4783
+01:03:53.757310 test-7b9801a2fc9969c7 CKPT newClnt NewSigmaRPCClnt[srvID:name/besched/sigma-4783]
+01:03:53.757313 test-7b9801a2fc9969c7 CKPT newClnt NewSigmaRPCClnt[srvID:name/besched/sigma-4783]
+01:03:53.758401 test-7b9801a2fc9969c7 CKPT path client opened
+01:03:53.758410 test-7b9801a2fc9969c7 CKPT fdclnt done
+01:03:53.758414 test-7b9801a2fc9969c7 CKPT opened reader
+01:03:53.758417 test-7b9801a2fc9969c7 CKPT readDirWatch opened reader
+01:03:53.758424 test-7b9801a2fc9969c7 CKPT readDirWatch watch
+01:03:53.758679 test-7b9801a2fc9969c7 CKPT read frame
+01:03:53.758703 test-7b9801a2fc9969c7 CKPT readDirWatch watch
+01:03:53.758998 test-7b9801a2fc9969c7 CKPT read frame
+01:03:53.759008 test-7b9801a2fc9969c7 WATCH readDirWatch read dir name/besched/
+01:03:53.759023 test-7b9801a2fc9969c7 WATCH readDirWatch watch name/besched/
+01:03:53.761205 test-7b9801a2fc9969c7 CKPT fdClnt open wait: false
+01:03:53.761272 test-7b9801a2fc9969c7 CKPT path client open
+01:03:53.761857 test-7b9801a2fc9969c7 CKPT path client opened
+01:03:53.761866 test-7b9801a2fc9969c7 CKPT fdclnt done
+01:03:53.761877 test-7b9801a2fc9969c7 BESCHEDCLNT newClnt NewSigmaRPCClnt[srvID:name/besched/sigma-4783]: &{0xc00039cbe0 0xc0000635c0}
+01:03:53.761879 test-7b9801a2fc9969c7 CKPT made new keyvalue sigma-4783
+01:03:53.761882 test-7b9801a2fc9969c7 CKPT inserted sigma-4783
+01:03:53.761884 test-7b9801a2fc9969c7 CKPT reacquire read lock sigma-4783
+01:03:53.761887 test-7b9801a2fc9969c7 CKPT done alloc val sigma-4783
+01:03:53.761888 test-7b9801a2fc9969c7 BESCHEDCLNT Done GetEntryAlloc for sigma-4783
+01:03:53.761892 test-7b9801a2fc9969c7 BESCHEDCLNT Done GetEntry for sigma-4783 e &{0xc00039cbe0 0xc0000635c0} err <nil>
+01:03:53.761897 test-7b9801a2fc9969c7 SPAWN_LAT [hotel-geod-50823b35bf521fa4] BESchedClnt make clnt sigma-4783 4.623139ms
+01:03:53.762942 test-7b9801a2fc9969c7 BESCHEDCLNT [rootrealm] Enqueued Proc &{ Program:hotel-geod Version:1.0 Pid:hotel-geod-50823b35bf521fa4 Tag:local-build Priv:false SigmaPath:[name/ux/~local/bin/user/common] KernelId:NOT_SET UseSPProxy:false UseDialProxy:true Realm:rootrealm Perf: InnerIP:NOT_SET OuterIP:NOT_SET Args:[6545e4a5 name/ux/~any/hotel-geod-50823b35bf521fa4/ 1000 10 20] Env:map[SIGMADEBUG:TEST;CKPT;PROCD;LAZYPAGESSRV;LAZYPAGESSRV_FAULT;SPAWN_LAT;BESCHEDCLNT;ERROR;MSCHED;MSCHEDCLNT;WATCH;FSLIB_ERR SIGMADEBUGPID:hotel-geod-50823b35bf521fa4 SIGMAFAIL: SIGMAPERF:] Type:T_BE Mcpu:0 Mem:0 }
+01:03:53.762954 test-7b9801a2fc9969c7 SPAWN_LAT [hotel-geod-50823b35bf521fa4] BESchedClnt client-side RPC latency 1.05185ms
+01:03:53.762957 test-7b9801a2fc9969c7 SPAWN_LAT [hotel-geod-50823b35bf521fa4] beschedclnt.Enqueue: 8.137883ms
+01:03:53.762960 test-7b9801a2fc9969c7 SPAWN_LAT [hotel-geod-50823b35bf521fa4] time enqueueViaBESched: 8.1504ms
+01:03:53.762965 test-7b9801a2fc9969c7 SPAWN_LAT [hotel-geod-50823b35bf521fa4] time SetBinKernelID: 2.029µs
+01:03:53.762968 test-7b9801a2fc9969c7 SPAWN_LAT [hotel-geod-50823b35bf521fa4] E2E Spawn RPC 8.157862ms nretry 0
+01:03:53.762981 test-7b9801a2fc9969c7 MSCHEDCLNT GetEntry1 for sigma-4783
+01:03:53.762985 test-7b9801a2fc9969c7 CKPT getting load?? MSCHEDCLNT
+01:03:53.762989 test-7b9801a2fc9969c7 CKPT got load?? MSCHEDCLNT
+01:03:53.762997 test-7b9801a2fc9969c7 CKPT waiting?? MSCHEDCLNT
+01:03:53.763003 test-7b9801a2fc9969c7 CKPT watchDir started
+01:03:53.763023 test-7b9801a2fc9969c7 WATCH readDirWatch start name/msched/
+01:03:53.763026 test-7b9801a2fc9969c7 CKPT attempting to open reader
+01:03:53.763031 test-7b9801a2fc9969c7 CKPT fdClnt open wait: false
+01:03:53.763036 test-7b9801a2fc9969c7 CKPT path client open
+01:03:53.763835 test-7b9801a2fc9969c7 CKPT path client opened
+01:03:53.763845 test-7b9801a2fc9969c7 CKPT fdclnt done
+01:03:53.763848 test-7b9801a2fc9969c7 CKPT opened reader
+01:03:53.763852 test-7b9801a2fc9969c7 CKPT readDirWatch opened reader
+01:03:53.763958 test-7b9801a2fc9969c7 CKPT readDirWatch watch
+01:03:53.767832 test-7b9801a2fc9969c7 CKPT read frame
+01:03:53.767975 test-7b9801a2fc9969c7 CKPT readDirWatch watch
+01:03:53.770501 test-7b9801a2fc9969c7 CKPT read frame
+01:03:53.770524 test-7b9801a2fc9969c7 WATCH readDirWatch read dir name/msched/
+01:03:53.770707 test-7b9801a2fc9969c7 MSCHEDCLNT watchDir new ents [sigma-4783]
+01:03:53.770770 test-7b9801a2fc9969c7 MSCHEDCLNT Update ents [sigma-4783] in []
+01:03:53.770779 test-7b9801a2fc9969c7 MSCHEDCLNT Update ents [sigma-4783] done [sigma-4783 , ]
+01:03:53.770787 test-7b9801a2fc9969c7 WATCH readDirWatch start name/msched/
+01:03:53.770789 test-7b9801a2fc9969c7 CKPT attempting to open reader
+01:03:53.770792 test-7b9801a2fc9969c7 CKPT fdClnt open wait: false
+01:03:53.770797 test-7b9801a2fc9969c7 CKPT path client open
+01:03:53.770934 test-7b9801a2fc9969c7 CKPT here entry MSCHEDCLNT
+01:03:53.770942 test-7b9801a2fc9969c7 CKPT getting entry MSCHEDCLNT
+01:03:53.770946 test-7b9801a2fc9969c7 CKPT alloc val for sigma-4783 kok true
+01:03:53.770950 test-7b9801a2fc9969c7 MSCHEDCLNT GetEntryAlloc for sigma-4783
+01:03:53.770953 test-7b9801a2fc9969c7 CKPT acquiring dcLock sigma-4783
+01:03:53.770956 test-7b9801a2fc9969c7 CKPT acquired dcLock sigma-4783
+01:03:53.770959 test-7b9801a2fc9969c7 CKPT looked up keyvalue sigma-4783
+01:03:53.770961 test-7b9801a2fc9969c7 CKPT making new keyvalue sigma-4783
+01:03:53.770967 test-7b9801a2fc9969c7 CKPT newClnt NewSigmaRPCClnt[srvID:name/msched/sigma-4783]
+01:03:53.770970 test-7b9801a2fc9969c7 CKPT newClnt NewSigmaRPCClnt[srvID:name/msched/sigma-4783]
+01:03:53.771717 test-7b9801a2fc9969c7 CKPT path client opened
+01:03:53.771727 test-7b9801a2fc9969c7 CKPT fdclnt done
+01:03:53.771730 test-7b9801a2fc9969c7 CKPT opened reader
+01:03:53.771734 test-7b9801a2fc9969c7 CKPT readDirWatch opened reader
+01:03:53.771739 test-7b9801a2fc9969c7 CKPT readDirWatch watch
+01:03:53.776382 test-7b9801a2fc9969c7 CKPT read frame
+01:03:53.776401 test-7b9801a2fc9969c7 CKPT readDirWatch watch
+01:03:53.780288 test-7b9801a2fc9969c7 CKPT fdClnt open wait: false
+01:03:53.780305 test-7b9801a2fc9969c7 CKPT path client open
+01:03:53.781286 test-7b9801a2fc9969c7 CKPT path client opened
+01:03:53.781330 test-7b9801a2fc9969c7 CKPT fdclnt done
+01:03:53.781342 test-7b9801a2fc9969c7 MSCHEDCLNT newClnt NewSigmaRPCClnt[srvID:name/msched/sigma-4783]: &{0xc0001304c8 0xc000174820}
+01:03:53.781346 test-7b9801a2fc9969c7 CKPT made new keyvalue sigma-4783
+01:03:53.781349 test-7b9801a2fc9969c7 CKPT inserted sigma-4783
+01:03:53.781351 test-7b9801a2fc9969c7 CKPT reacquire read lock sigma-4783
+01:03:53.781353 test-7b9801a2fc9969c7 CKPT done alloc val sigma-4783
+01:03:53.781355 test-7b9801a2fc9969c7 MSCHEDCLNT Done GetEntryAlloc for sigma-4783
+01:03:53.781359 test-7b9801a2fc9969c7 MSCHEDCLNT Done GetEntry for sigma-4783 e &{0xc0001304c8 0xc000174820} err <nil>
+01:03:53.782034 test-7b9801a2fc9969c7 CKPT read frame
+01:03:53.782065 test-7b9801a2fc9969c7 WATCH readDirWatch read dir name/msched/
+01:03:53.782071 test-7b9801a2fc9969c7 WATCH readDirWatch watch name/msched/
+01:03:54.374204 test-7b9801a2fc9969c7 SPAWN_LAT [hotel-geod-50823b35bf521fa4] E2E WaitStart 619.382645ms
+01:03:54.374223 test-7b9801a2fc9969c7 TEST Wait until proc hotel-geod-50823b35bf521fa4 has checkpointed itself
+01:03:54.374231 test-7b9801a2fc9969c7 MSCHEDCLNT GetEntry1 for sigma-4783
+01:03:54.374236 test-7b9801a2fc9969c7 CKPT getting load?? MSCHEDCLNT
+01:03:54.374239 test-7b9801a2fc9969c7 CKPT here entry MSCHEDCLNT
+01:03:54.374243 test-7b9801a2fc9969c7 CKPT getting entry MSCHEDCLNT
+01:03:54.374254 test-7b9801a2fc9969c7 MSCHEDCLNT Done GetEntry for sigma-4783 e &{0xc0001304c8 0xc000174820} err <nil>
+01:03:54.374919 test-7b9801a2fc9969c7 SPAWN_LAT [hotel-geod-50823b35bf521fa4] E2E WaitStart 663.325µs
+01:03:54.375010 test-7b9801a2fc9969c7 MSCHEDCLNT GetEntry1 for sigma-4783
+01:03:54.375108 test-7b9801a2fc9969c7 CKPT getting load?? MSCHEDCLNT
+01:03:54.375133 test-7b9801a2fc9969c7 CKPT here entry MSCHEDCLNT
+01:03:54.375139 test-7b9801a2fc9969c7 CKPT getting entry MSCHEDCLNT
+01:03:54.375149 test-7b9801a2fc9969c7 MSCHEDCLNT Done GetEntry for sigma-4783 e &{0xc0001304c8 0xc000174820} err <nil>
+01:03:55.008701 test-7b9801a2fc9969c7 TEST Spawn from checkpoint hotel-geod-copy-b50a6e21b0ea2184
+01:03:55.008748 test-7b9801a2fc9969c7 TEST Wait until start hotel-geod-copy-b50a6e21b0ea2184
+01:03:55.008770 test-7b9801a2fc9969c7 CKPT getting load?? BESCHEDCLNT
+01:03:55.008845 test-7b9801a2fc9969c7 BESCHEDCLNT waitEntry
+01:03:55.008847 test-7b9801a2fc9969c7 BESCHEDCLNT Random
+01:03:55.008850 test-7b9801a2fc9969c7 CKPT getting load?? BESCHEDCLNT
+01:03:55.008856 test-7b9801a2fc9969c7 BESCHEDCLNT Done Random sigma-4783 true
+01:03:55.008860 test-7b9801a2fc9969c7 BESCHEDCLNT Done waitEntry sigma-4783 <nil>
+01:03:55.008866 test-7b9801a2fc9969c7 SPAWN_LAT [hotel-geod-copy-b50a6e21b0ea2184] BESchedClnt get BESched[sigma-4783] latency: 95.817µs
+01:03:55.008869 test-7b9801a2fc9969c7 BESCHEDCLNT GetEntry1 for sigma-4783
+01:03:55.008872 test-7b9801a2fc9969c7 CKPT getting load?? BESCHEDCLNT
+01:03:55.008875 test-7b9801a2fc9969c7 CKPT here entry BESCHEDCLNT
+01:03:55.008878 test-7b9801a2fc9969c7 CKPT getting entry BESCHEDCLNT
+01:03:55.008889 test-7b9801a2fc9969c7 BESCHEDCLNT Done GetEntry for sigma-4783 e &{0xc00039cbe0 0xc0000635c0} err <nil>
+01:03:55.008897 test-7b9801a2fc9969c7 SPAWN_LAT [hotel-geod-copy-b50a6e21b0ea2184] BESchedClnt make clnt sigma-4783 26.309µs
+01:03:55.010180 test-7b9801a2fc9969c7 BESCHEDCLNT [rootrealm] Enqueued Proc &{ Program:hotel-geod-copy Version:1.0 Pid:hotel-geod-copy-b50a6e21b0ea2184 Tag:local-build Priv:false SigmaPath:[name/ux/~local/bin/user/common] KernelId:NOT_SET UseSPProxy:false UseDialProxy:true Realm:rootrealm Perf: InnerIP:NOT_SET OuterIP:NOT_SET Args:[] Env:map[SIGMADEBUG:TEST;CKPT;PROCD;LAZYPAGESSRV;LAZYPAGESSRV_FAULT;SPAWN_LAT;BESCHEDCLNT;ERROR;MSCHED;MSCHEDCLNT;WATCH;FSLIB_ERR SIGMADEBUGPID:hotel-geod-copy-b50a6e21b0ea2184 SIGMAFAIL: SIGMAPERF:] Type:T_BE Mcpu:0 Mem:0 }
+01:03:55.010197 test-7b9801a2fc9969c7 SPAWN_LAT [hotel-geod-copy-b50a6e21b0ea2184] BESchedClnt client-side RPC latency 1.293613ms
+01:03:55.010202 test-7b9801a2fc9969c7 SPAWN_LAT [hotel-geod-copy-b50a6e21b0ea2184] beschedclnt.Enqueue: 1.433954ms
+01:03:55.010206 test-7b9801a2fc9969c7 SPAWN_LAT [hotel-geod-copy-b50a6e21b0ea2184] time enqueueViaBESched: 1.450006ms
+01:03:55.010213 test-7b9801a2fc9969c7 SPAWN_LAT [hotel-geod-copy-b50a6e21b0ea2184] time SetBinKernelID: 3.26µs
+01:03:55.010217 test-7b9801a2fc9969c7 SPAWN_LAT [hotel-geod-copy-b50a6e21b0ea2184] E2E Spawn RPC 1.461322ms nretry 0
+01:03:55.010228 test-7b9801a2fc9969c7 MSCHEDCLNT GetEntry1 for sigma-4783
+01:03:55.010232 test-7b9801a2fc9969c7 CKPT getting load?? MSCHEDCLNT
+01:03:55.010235 test-7b9801a2fc9969c7 CKPT here entry MSCHEDCLNT
+01:03:55.010238 test-7b9801a2fc9969c7 CKPT getting entry MSCHEDCLNT
+01:03:55.010247 test-7b9801a2fc9969c7 MSCHEDCLNT Done GetEntry for sigma-4783 e &{0xc0001304c8 0xc000174820} err <nil>
+01:03:55.190799 test-7b9801a2fc9969c7 SPAWN_LAT [hotel-geod-copy-b50a6e21b0ea2184] E2E WaitStart 182.012556ms
+01:03:55.190840 test-7b9801a2fc9969c7 TEST Shutdown
+01:03:55.190847 test-7b9801a2fc9969c7 CKPT attempting to open reader
+01:03:55.190852 test-7b9801a2fc9969c7 CKPT fdClnt open wait: false
+01:03:55.190862 test-7b9801a2fc9969c7 CKPT path client open
+01:03:55.192902 test-7b9801a2fc9969c7 CKPT path client opened
+01:03:55.192918 test-7b9801a2fc9969c7 CKPT fdclnt done
+01:03:55.192922 test-7b9801a2fc9969c7 CKPT opened reader
+01:03:55.192927 test-7b9801a2fc9969c7 CKPT readDirWatch opened reader
+01:03:55.192934 test-7b9801a2fc9969c7 CKPT readDirWatch watch
+01:03:55.193217 test-7b9801a2fc9969c7 CKPT read frame
+01:03:55.251334 test-7b9801a2fc9969c7 WATCH DirWatch name/besched/ returned
+01:03:55.251352 test-7b9801a2fc9969c7 WATCH readDirWatch start name/besched/
+01:03:55.251356 test-7b9801a2fc9969c7 CKPT attempting to open reader
+01:03:55.251363 test-7b9801a2fc9969c7 CKPT fdClnt open wait: false
+01:03:55.251373 test-7b9801a2fc9969c7 CKPT path client open
+01:03:55.252018 test-7b9801a2fc9969c7 CKPT path client opened
+01:03:55.252032 test-7b9801a2fc9969c7 CKPT fdclnt done
+01:03:55.252036 test-7b9801a2fc9969c7 CKPT opened reader
+01:03:55.252056 test-7b9801a2fc9969c7 CKPT readDirWatch opened reader
+01:03:55.252063 test-7b9801a2fc9969c7 CKPT readDirWatch watch
+01:03:55.252265 test-7b9801a2fc9969c7 CKPT read frame
+01:03:55.252279 test-7b9801a2fc9969c7 WATCH readDirWatch read dir name/besched/
+01:03:55.252283 test-7b9801a2fc9969c7 WATCH readDirWatch watch name/besched/
+01:03:55.350515 test-7b9801a2fc9969c7 CKPT watchDir here
+01:03:55.350579 test-7b9801a2fc9969c7 CKPT watchDir here
+01:03:55.551098 test-7b9801a2fc9969c7 CKPT watchDir done
+01:03:55.551157 test-7b9801a2fc9969c7 CKPT watchDir done
+01:03:56.198248 test-7b9801a2fc9969c7 TEST Done Shutdown
+--- PASS: TestSpawnCkptGeo (4.99s)
+PASS
+ok  	sigmaos/ckpt	5.009s

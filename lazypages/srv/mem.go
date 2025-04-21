@@ -21,7 +21,7 @@ import (
 )
 
 const (
-	PREFETCH = 1 // number of pages to prefetch
+	PREFETCH = 6 // number of pages to prefetch
 )
 
 func nPages(start, end uint64, pagesz int) int {
@@ -256,8 +256,8 @@ func (iovs *Iovs) find(addr uint64) *Iov {
 	return nil
 }
 
+// func (iovs *Iovs) findBinSearch(addr uint64) int {
 func (iovs *Iovs) findBinSearch(addr uint64) *Iov {
-
 	low := 0
 	high := len(iovs.iovs) - 1
 	for low <= high {
@@ -267,6 +267,7 @@ func (iovs *Iovs) findBinSearch(addr uint64) *Iov {
 		} else if iovs.iovs[mid].end <= addr {
 			low = mid + 1
 		} else {
+			//return mid
 			return iovs.iovs[mid]
 		}
 	}

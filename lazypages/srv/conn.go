@@ -27,6 +27,7 @@ type lazyPagesConn struct {
 	iovs      *Iovs
 	maxIovLen int
 	nfault    int
+	npages    int
 	data      []byte
 }
 
@@ -164,8 +165,10 @@ func (lpc *lazyPagesConn) pageFault(addr uint64) error {
 			db.DPrintf(db.LAZYPAGESSRV_FAULT, "fault page: delivered %d: %d(%x) -> %v pi %d(%d,%d)", lpc.nfault, addr, addr, iov, pi, n, nPages(0, uint64(n), lpc.pmi.pagesz))
 			return nil
 		}
+		//lpc.npages += n / 4096
+		lpc.npages += 1
 		buf := lpc.data[0:n]
-		db.DPrintf(db.LAZYPAGESSRV_FAULT, "page fault: copy %d: %d(%x) -> %v pi %d(%d,%d,%d)", lpc.nfault, addr, addr, iov, pi, n, nPages(0, uint64(n), lpc.pmi.pagesz), len(buf))
+		db.DPrintf(db.LAZYPAGESSRV_FAULT, "page fault: copy %d: %d(%x) -> %v pi %d(%d,%d,%d) npages(%d)", lpc.nfault, addr, addr, iov, pi, n, nPages(0, uint64(n), lpc.pmi.pagesz), len(buf), lpc.npages)
 		off := int64(pi * lpc.pmi.pagesz)
 		if err := lpc.rp(off, buf); err != nil {
 			db.DFatalf("no page content for %x err: %v", addr, err)

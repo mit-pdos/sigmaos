@@ -1,0 +1,340 @@
+// package srv
+
+// import (
+// 	"fmt"
+// 	"strconv"
+// 	"syscall"
+// 	"time"
+// 	"unsafe"
+
+// 	"golang.org/x/sys/unix"
+
+// 	db "sigmaos/debug"
+// 	"sigmaos/sigmaclnt"
+// 	sp "sigmaos/sigmap"
+// 	"sigmaos/userfaultfd"
+// )
+
+// type lazyPagesConn struct {
+// 	lps       *lazyPagesSrv
+// 	pid       int
+// 	imgdir    string
+// 	pages     string // sigma path for pages file
+// 	fd        int    // userfauldfd
+// 	rp        func(int64, []byte) error
+// 	pmi       *TpagemapImg
+// 	mm        *Tmm
+// 	iovs      *Iovs
+// 	maxIovLen int
+// 	nfault    int
+// 	npages    int
+// 	data      []byte
+// 	hist      []int64
+// 	path      string
+// 	cache     map[int]map[int][]byte
+// 	sent      []bool
+// }
+
+// func (lps *lazyPagesSrv) newLazyPagesConn(pid int, imgdir, pages string) (*lazyPagesConn, error) {
+// 	lpc := &lazyPagesConn{lps: lps, pid: pid, imgdir: imgdir, pages: pages}
+// 	pidstr := strconv.Itoa(pid)
+// 	pmi, err := newTpagemapImg(lpc.imgdir, pidstr)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	lpc.pmi = pmi
+// 	mm, err := newTmm(lpc.imgdir, pidstr)
+
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	//	for _, vma := range mm.Vmas {
+// 	// 	db.DPrintf(db.ALWAYS, "vma start: %x end: %x", *vma.Start, *vma.End)
+// 	// }
+// 	lpc.mm = mm
+// 	npages := 0
+// 	lpc.iovs, npages, lpc.maxIovLen = mm.collectIovs(pmi)
+// 	//lpc.cache = make(map[int]map[int][]byte)
+// 	lpc.data = make([]byte, lpc.maxIovLen)
+// 	db.DPrintf(db.ALWAYS, "newLazyPagesConn: img %v pages %v pid %d iovs %d npages %d maxIovLen %d", lpc.imgdir, lpc.pages, pid, lpc.iovs.len(), npages, lpc.maxIovLen)
+// 	return lpc, nil
+// }
+
+// func (lpc *lazyPagesConn) handleReqs() error {
+// 	cnter := 0
+// 	for {
+// 		n, err2 := unix.Poll(
+// 			[]unix.PollFd{{
+// 				Fd:     int32(lpc.fd),
+// 				Events: unix.POLLIN,
+// 			}},
+// 			-1,
+// 		)
+
+// 		if err2 != nil {
+
+// 			db.DPrintf(db.ERROR, "Poll err %v", err2)
+// 			if err2 == syscall.EINTR && cnter < 10 {
+// 				cnter += 1
+// 				continue
+// 			}
+// 			return err2
+// 		} else {
+// 			cnter = 0
+// 		}
+// 		// if n, err := unix.Poll(
+// 		// 	[]unix.PollFd{{
+// 		// 		Fd:     int32(lpc.fd),
+// 		// 		Events: unix.POLLIN,
+// 		// 	}},
+// 		// 	-1,
+// 		// ); err != nil {
+// 		// 	db.DPrintf(db.ERROR, "Poll err %v", err)
+// 		// 	return err
+// 		// }
+// 		buf := make([]byte, unsafe.Sizeof(userfaultfd.UffdMsg{}))
+// 		n2, err := syscall.Read(lpc.fd, buf)
+// 		cnt := 0
+
+// 		for err != nil {
+// 			db.DPrintf(db.ERROR, "Read err %v try: %v n: %v n2: %v", err, cnt, n, n2)
+// 			if err == syscall.ENOENT {
+
+// 				return nil
+// 			}
+// 			if cnt > 10 || err != syscall.EAGAIN {
+
+// 				return err
+// 			}
+// 			time.Sleep(100 * time.Millisecond)
+// 			_, err = syscall.Read(lpc.fd, buf)
+// 			cnt += 1
+// 		}
+// 		//db.DPrintf(db.ALWAYS, "success?")
+// 		msg := (*(*userfaultfd.UffdMsg)(unsafe.Pointer(&buf[0])))
+// 		switch userfaultfd.GetMsgEvent(&msg) {
+// 		case userfaultfd.UFFD_EVENT_PAGEFAULT:
+// 			arg := userfaultfd.GetMsgArg(&msg)
+// 			pagefault := (*(*userfaultfd.UffdPagefault)(unsafe.Pointer(&arg[0])))
+// 			addr := uint64(userfaultfd.GetPagefaultAddress(&pagefault))
+// 			mask := uint64(^(lpc.lps.pagesz - 1))
+// 			if err := lpc.pageFault(addr & mask); err != nil {
+// 				db.DPrintf(db.ERROR, "Page Fault err %v", err)
+// 				return err
+// 			}
+// 		case userfaultfd.UFFD_EVENT_FORK:
+// 			db.DPrintf(db.ERROR, "Fork event %v", userfaultfd.GetMsgEvent(&msg))
+// 		case userfaultfd.UFFD_EVENT_REMAP:
+// 			db.DPrintf(db.ERROR, "Remap event %v", userfaultfd.GetMsgEvent(&msg))
+// 		case userfaultfd.UFFD_EVENT_REMOVE:
+// 			db.DPrintf(db.ERROR, "Remove event %v", userfaultfd.GetMsgEvent(&msg))
+// 		case userfaultfd.UFFD_EVENT_UNMAP:
+// 			db.DPrintf(db.ERROR, "Unmap event %v", userfaultfd.GetMsgEvent(&msg))
+// 		default:
+// 			return fmt.Errorf("Unknown event %x", userfaultfd.GetMsgEvent(&msg))
+// 		}
+// 	}
+// }
+
+// func (lpc *lazyPagesConn) preFetch(iov *Iov) {
+
+// }
+
+// func (lpc *lazyPagesConn) markAndLoad(iovno int, iov *Iov, pi int, addr0 uint64) (buf []byte) {
+// 	THRESH := 1 + PREFETCH
+// 	n := 0
+// 	addr := addr0
+// 	loaded := -1
+// 	for ; n < THRESH && addr < iov.end; addr += uint64(iov.pagesz) {
+
+// 		i := int(addr-iov.start) / iov.pagesz
+// 		if iov.copied[i] {
+// 			break
+// 		}
+// 		_, exists := lpc.cache[iovno][i]
+// 		if exists && loaded == -1 {
+// 			loaded = i
+// 		}
+// 		if !exists && loaded != -1 {
+// 			break
+// 		}
+// 		db.DPrintf(db.ALWAYS, "addr: %x end %x n:%d", addr, iov.end, n+1)
+// 		iov.copied[i] = true
+// 		n += 1
+// 	}
+// 	//is this true?
+// 	off := int64(pi * iov.pagesz)
+// 	buf = make([]byte, n*iov.pagesz)
+// 	if n == 0 {
+// 		//db.DPrintf(db.LAZYPAGESSRV_FAULT, "fault page: delivered %d: %d(%x) -> %v pi %d(%d,%d)", lpc.nfault, addr, addr, iov, pi, n, nPages(0, uint64(n), lpc.pmi.pagesz))
+// 		return
+// 	}
+// 	db.DPrintf(db.LAZYPAGESSRV_FAULT, "page fault: copy %d: %d(%x) -> %v pi %d(%d,%d,%d) npages(%d)", lpc.nfault, addr, addr, iov, pi, n, nPages(0, uint64(n), lpc.pmi.pagesz), len(buf), lpc.npages)
+
+// 	if loaded > 0 || loaded == -1 {
+// 		if err := lpc.rp(off, buf[:max(loaded*iov.pagesz, n*iov.pagesz)]); err != nil {
+// 			db.DFatalf("no page content for %x err: %v", addr, err)
+// 		}
+// 	}
+// 	if loaded != -1 {
+// 		for i := loaded; i < n; i++ {
+
+// 			page, exists := lpc.cache[iovno][i]
+// 			if exists {
+// 				copy(buf[i*iov.pagesz:(i+1)*iov.pagesz], page)
+// 				iov.copied[i] = true
+// 			} else {
+// 				db.DFatalf("unloaded page for %x err: %v", addr, exists)
+// 			}
+// 		}
+// 	}
+// 	return
+// }
+// func (lpc *lazyPagesConn) pageFault(addr uint64) error {
+// 	//iov := lpc.iovs.find(addr)
+// 	iov := lpc.iovs.findBinSearch(addr)
+// 	// iovno := lpc.iovs.findBinSearch(addr)
+// 	// var iov *Iov = nil
+// 	// if iovno != -1 {
+// 	// 	iov = lpc.iovs.iovs[iovno]
+// 	// }
+// 	// lpc.nfault += 1
+// 	if iov == nil {
+// 		db.DPrintf(db.LAZYPAGESSRV_FAULT, "page fault: zero %d: no iov for %x", lpc.nfault, addr)
+// 		err := zeroPage(lpc.fd, addr, lpc.lps.pagesz)
+// 		cnt := 0
+// 		for err != nil {
+
+// 			db.DPrintf(db.ERROR, "zeroPage err %v try: %v", err, cnt)
+// 			if err == syscall.EEXIST {
+// 				return nil
+// 			}
+// 			if cnt > 10 || (err != syscall.EAGAIN) {
+
+// 				return err
+// 			}
+// 			if err == syscall.EAGAIN {
+// 				return nil
+// 			}
+// 			time.Sleep(100 * time.Millisecond)
+// 			err = zeroPage(lpc.fd, addr, lpc.lps.pagesz)
+// 			cnt += 1
+// 		}
+// 	} else {
+// 		pi := lpc.pmi.find(addr)
+// 		if pi == -1 {
+// 			db.DFatalf("no page for %x", addr)
+// 		}
+// 		//n := int(iov.end - iov.start)
+// 		//buf := lpc.markAndLoad(iovno, iov, pi, addr)
+// 		n := iov.markFetchLen(addr)
+// 		//if len(buf) == 0 {
+// 		if n == 0 {
+// 			db.DPrintf(db.LAZYPAGESSRV_FAULT, "fault page: delivered %d: %d(%x) -> %v pi %d(%d,%d)", lpc.nfault, addr, addr, iov, pi, n, nPages(0, uint64(n), lpc.pmi.pagesz))
+// 			return nil
+// 		}
+// 		//lpc.sent[iovno] = true
+// 		//lpc.npages += n / 4096
+// 		lpc.npages += 1
+// 		buf := lpc.data[0:n]
+// 		db.DPrintf(db.LAZYPAGESSRV_FAULT, "page fault: copy %d: %d(%x) -> %v pi %d(%d,%d,%d) npages(%d)", lpc.nfault, addr, addr, iov, pi, n, nPages(0, uint64(n), lpc.pmi.pagesz), len(buf), lpc.npages)
+
+// 		off := int64(pi * lpc.pmi.pagesz)
+// 		if err := lpc.rp(off, buf); err != nil {
+// 			db.DFatalf("no page content for %x err: %v", addr, err)
+// 		}
+
+// 		err := copyPages(lpc.fd, addr, buf)
+// 		cnt := 0
+// 		for err != nil {
+// 			db.DPrintf(db.ERROR, "copyPages err %v try: %v", err, cnt)
+// 			if err == syscall.ENOENT {
+
+// 				if n <= lpc.pmi.pagesz {
+// 					return err
+// 				}
+// 				n -= lpc.pmi.pagesz
+// 				iov.unmarkFetchLen(addr+uint64(n), 1)
+// 				buf = lpc.data[0:n]
+// 				off := int64(pi * lpc.pmi.pagesz)
+// 				if err := lpc.rp(off, buf); err != nil {
+// 					db.DFatalf("no page content for %x", addr)
+// 				}
+// 				db.DPrintf(db.LAZYPAGESSRV_FAULT, "page fault: copy %d: %d(%x) -> %v pi %d(%d,%d,%d)", lpc.nfault, addr, addr, iov, pi, n, nPages(0, uint64(n), lpc.pmi.pagesz), len(buf))
+// 				err = copyPages(lpc.fd, addr, buf)
+// 				//		iov.unmarkFetchLen(addr, n)
+
+// 				continue
+// 			}
+// 			if cnt > 10 || (err != syscall.EAGAIN && err != syscall.ENOENT) {
+
+// 				return err
+// 			}
+// 			if err == syscall.EAGAIN {
+// 				iov.unmarkFetchLen(addr, n)
+// 				return nil
+// 			}
+
+// 			time.Sleep(100 * time.Millisecond)
+// 			err = copyPages(lpc.fd, addr, buf)
+// 			cnt += 1
+// 		}
+// 		// if err != nil {
+// 		// 	db.DPrintf(db.ERROR, "SYS_IOCTL1 err %v", err)
+// 		// 	// 	time.Sleep(1000 * time.Millisecond)
+// 		// 	// 	copyPages(lpc.fd, addr, buf)
+
+// 		//}
+// 	}
+// 	return nil
+// }
+
+// func zeroPage(fd int, addr uint64, pagesz int) error {
+// 	len := uint64(pagesz)
+// 	zero := userfaultfd.NewUffdioZeroPage(
+// 		userfaultfd.CULong(addr),
+// 		userfaultfd.CULong(len),
+// 		0,
+// 	)
+// 	if _, _, errno := syscall.Syscall(
+// 		syscall.SYS_IOCTL,
+// 		uintptr(fd),
+// 		userfaultfd.UFFDIO_ZEROPAGE,
+// 		uintptr(unsafe.Pointer(&zero)),
+// 	); errno != 0 {
+// 		db.DPrintf(db.ERROR, "SYS_IOCTL err %v", errno)
+// 		return errno
+// 	}
+// 	return nil
+// }
+
+// func copyPages(fd int, addr uint64, pages []byte) error {
+// 	len := len(pages)
+// 	cpy := userfaultfd.NewUffdioCopy(
+// 		pages,
+// 		userfaultfd.CULong(addr),
+// 		userfaultfd.CULong(len),
+// 		0,
+// 		0,
+// 	)
+// 	if _, _, errno := syscall.Syscall(
+// 		syscall.SYS_IOCTL,
+// 		uintptr(fd),
+// 		userfaultfd.UFFDIO_COPY,
+// 		uintptr(unsafe.Pointer(&cpy)),
+// 	); errno != 0 {
+// 		db.DPrintf(db.ERROR, "SYS_IOCTL %d(%x) %d err %v copy %v", addr, addr, len, errno, cpy)
+// 		return errno
+// 	}
+// 	db.DPrintf(db.LAZYPAGESSRV_FAULT, "SYS_IOCTL %d(%x) %d copy %v", addr, addr, len, cpy)
+// 	return nil
+// }
+
+// func readBytesSigma(sc *sigmaclnt.SigmaClnt, fd int, off int64, buf []byte) error {
+// 	if n, err := sc.Pread(fd, buf, sp.Toffset(off)); err != nil {
+// 		return err
+// 	} else if int(n) != len(buf) {
+// 		db.DPrintf(db.LAZYPAGESSRV, "read %d n = %d", len(buf), n)
+// 	}
+// 	return nil
+// }

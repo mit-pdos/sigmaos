@@ -1,0 +1,22 @@
+b4e02dba5c81
+b4e02dba5c81
+8cf1dc51b515
+8cf1dc51b515
+9f5ad7a56ecf
+9f5ad7a56ecf
+897c81b7f92c
+897c81b7f92c
+44fb6fef4269
+44fb6fef4269
+69d90458e66a
+69d90458e66a
+WARNING! This will remove:
+  - all stopped containers
+  - all networks not used by at least one container
+  - all dangling images
+  - unused build cache
+
+Are you sure you want to continue? [y/N] Total reclaimed space: 0B
+WARNING! This will remove anonymous local volumes not used by at least one container.
+Are you sure you want to continue? [y/N] Total reclaimed space: 0B
+73

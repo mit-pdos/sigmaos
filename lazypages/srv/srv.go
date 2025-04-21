@@ -156,6 +156,8 @@ func (lps *lazyPagesSrv) handleConn(conn net.Conn) {
 	}
 
 	fdpages, err := lps.Open(lpc.pages, sp.OREAD)
+	//fullpages, err := os.Open(filepath.Join(lazypages.WorkDir(proc.GetProcEnv().GetPID()), "fullpages-"+strconv.Itoa(int(pid))+".img"))
+
 	if err != nil {
 		db.DPrintf(db.LAZYPAGESSRV, "Open %v err %v\n", lpc.pages, err)
 		return
@@ -163,6 +165,8 @@ func (lps *lazyPagesSrv) handleConn(conn net.Conn) {
 	defer lps.CloseFd(fd)
 	rp := func(off int64, pages []byte) error {
 		return readBytesSigma(lps.SigmaClnt, fdpages, off, pages)
+		//_, err := fullpages.ReadAt(pages, off)
+		//return err
 	}
 	lpc.fd = fd
 	lpc.rp = rp
@@ -173,6 +177,11 @@ func (lps *lazyPagesSrv) handleConn(conn net.Conn) {
 }
 
 func (lps *lazyPagesSrv) register(pid int, imgdir, pages string) error {
+	// if err := lps.DownloadFile(pages, filepath.Join(lazypages.WorkDir(proc.GetProcEnv().GetPID()), "fullpages-"+strconv.Itoa(pid)+".img")); err != nil {
+	// 	db.DPrintf(db.PROCD, "DownloadFile pages err %v\n", err)
+	// 	return err
+	// }
+
 	lpc, err := lps.newLazyPagesConn(pid, imgdir, pages)
 	if err != nil {
 		return err

@@ -1,0 +1,34 @@
+=== RUN   TestSpawnCkptGeo
+16:09:36.927730 test-eb35fa49b5d7b1fe ALWAYS NewFdClint init
+16:09:36.928396 test-eb35fa49b5d7b1fe TEST New cid 5335b322b086c8a0 rootrealm
+16:09:36.928450 test-eb35fa49b5d7b1fe ALWAYS New LeaseClnt 0xc000382cc0
+16:09:36.928678 test-eb35fa49b5d7b1fe ALWAYS Resolve 0xc000187360
+16:09:36.934762 test-eb35fa49b5d7b1fe ALWAYS Resolve 0xc000187360
+16:09:36.935089 test-eb35fa49b5d7b1fe ALWAYS Resolve 0xc000187360
+16:09:36.935921 test-eb35fa49b5d7b1fe ALWAYS Resolve 0xc000187360
+16:09:36.936171 test-eb35fa49b5d7b1fe ALWAYS Resolve 0xc000187360
+16:09:36.936743 test-eb35fa49b5d7b1fe ALWAYS Resolve 0xc000187360
+16:09:36.941338 test-eb35fa49b5d7b1fe ALWAYS Resolve 0xc000187360
+16:09:36.946929 test-eb35fa49b5d7b1fe ALWAYS NewFdClint init
+16:09:36.946960 test-eb35fa49b5d7b1fe TEST New cid 1ebffd9ed2058a68 rootrealm
+16:09:36.946970 test-eb35fa49b5d7b1fe ALWAYS New LeaseClnt 0xc000062e80
+16:09:36.946979 test-eb35fa49b5d7b1fe ALWAYS Resolve 0xc00035ae60
+16:09:36.950186 test-eb35fa49b5d7b1fe ALWAYS Resolve 0xc00035ae60
+16:09:36.950705 test-eb35fa49b5d7b1fe ALWAYS Resolve 0xc00035ae60
+16:09:36.951653 test-eb35fa49b5d7b1fe ALWAYS Resolve 0xc00035ae60
+16:09:36.951957 test-eb35fa49b5d7b1fe ALWAYS Resolve 0xc00035ae60
+16:09:36.955479 test-eb35fa49b5d7b1fe ALWAYS Resolve 0xc00035ae60
+16:09:36.971113 test-eb35fa49b5d7b1fe ALWAYS Resolve 0xc00035ae60
+16:09:36.998449 test-eb35fa49b5d7b1fe TEST Spawn proc eaa347a8 name/ux/~any/hotel-geod-3f20771bcd553cce/
+16:09:36.999896 test-eb35fa49b5d7b1fe ALWAYS Resolve 0xc00035ae60
+16:09:37.052649 test-eb35fa49b5d7b1fe ALWAYS Resolve 0xc00035ae60
+16:09:37.809369 test-eb35fa49b5d7b1fe TEST Wait until proc hotel-geod-3f20771bcd553cce has checkpointed itself
+16:09:39.174482 test-eb35fa49b5d7b1fe TEST Spawn from checkpoint hotel-geod-copy-2dbf60bcb315eac4
+16:09:39.174531 test-eb35fa49b5d7b1fe TEST Wait until start hotel-geod-copy-2dbf60bcb315eac4
+16:09:39.444032 test-eb35fa49b5d7b1fe TEST Started hotel-geod-copy-2dbf60bcb315eac4
+16:09:39.444051 test-eb35fa49b5d7b1fe TEST Shutdown
+16:09:39.447772 test-eb35fa49b5d7b1fe ALWAYS Resolve 0xc00035ae60
+16:09:40.644161 test-eb35fa49b5d7b1fe TEST Done Shutdown
+--- PASS: TestSpawnCkptGeo (6.79s)
+PASS
+ok  	sigmaos/ckpt	6.890s

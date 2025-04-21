@@ -15,7 +15,7 @@ for ((i = 0; i < ${#patterns[@]}; i++)); do
 done
 # Run the tests and capture the logs with timestamps
 # echo "Running tests and capturing logs..."
-
+total_faults=0
 for ((run = 1; run <= num_runs; run++)); do
     echo "Running iteration $run..."
     go test -v sigmaos/ckpt -start -run Geo >stdlog.txt
@@ -69,7 +69,17 @@ for ((run = 1; run <= num_runs; run++)); do
 
     times[0]=$first_timestamp  # Store the first timestamp from stdout
 
+    FILE="logs.txt"
 
+    # Extract last occurrence of npages(number)
+    last_npages=$(grep -o 'npages([0-9]\+)' "$FILE" | tail -n 1 | grep -o '[0-9]\+')
+    total_faults=$((total_faults + last_npages))
+    # Output result
+    # if [ -n "$last_npages" ]; then
+    # echo "Last npages value: $last_npages"
+    # else
+    # echo "No npages(number) found in the file."
+    # fi
         
     for pattern in "${patterns[@]}"; do
         found=false
@@ -109,8 +119,8 @@ for ((run = 1; run <= num_runs; run++)); do
         done
     ./stop.sh > /dev/null 2>&1
 done
-
-
+average=$(echo "scale=2; $total_faults / $num_runs" | bc)
+echo "Average npages $average"
 
 for ((i = 0; i < ${#patterns[@]}; i++)); do
     #avg_ms=$((total_times[$i] / num_runs))

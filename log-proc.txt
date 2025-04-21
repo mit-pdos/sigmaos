@@ -1,0 +1,313 @@
+19:22:02.643375 ckpt-proc-d1298e55bfc18a82 SPAWN_LAT trampoline.exec_trampoline: 4485us
+19:22:02.643646 ckpt-proc-d1298e55bfc18a82 SPAWN_LAT Check apparmor enabled: 57us
+19:22:02.646080 ckpt-proc-d1298e55bfc18a82 SPAWN_LAT trampoline.fs_jail_proc create_dir_all: 2422us
+19:22:02.646098 ckpt-proc-d1298e55bfc18a82 mount newroot /home/sigmaos/jail/ckpt-proc-d1298e55bfc18a82/
+19:22:02.646228 ckpt-proc-d1298e55bfc18a82 PERF mounting perf dir
+19:22:02.646234 ckpt-proc-d1298e55bfc18a82 SPAWN_LAT trampoline.fs_jail_proc mount dirs: 135us
+19:22:02.648579 ckpt-proc-d1298e55bfc18a82 SPAWN_LAT trampoline.fs_jail_proc pivot_root: 2339us
+19:22:02.648611 ckpt-proc-d1298e55bfc18a82 SPAWN_LAT trampoline.fs_jail_proc chdir: 6us
+19:22:02.648701 ckpt-proc-d1298e55bfc18a82 SPAWN_LAT trampoline.fs_jail_proc umount: 85us
+19:22:02.648885 ckpt-proc-d1298e55bfc18a82 SPAWN_LAT trampoline.fs_jail_proc rmdir: 176us
+19:22:02.648895 ckpt-proc-d1298e55bfc18a82 SPAWN_LAT trampoline.fs_jail_proc: 5238us
+19:22:02.648935 ckpt-proc-d1298e55bfc18a82 Current permitted caps: {}.
+19:22:02.648941 ckpt-proc-d1298e55bfc18a82 SPAWN_LAT trampoline.setcap_proc: 41us
+19:22:02.649017 ckpt-proc-d1298e55bfc18a82 SPAWN_LAT SIGMA_DIALPROXY_FD: 4
+19:22:02.649022 ckpt-proc-d1298e55bfc18a82 SPAWN_LAT trampoline.connect_dialproxy: 77us
+19:22:02.654324 ckpt-proc-d1298e55bfc18a82 SPAWN_LAT trampoline.seccomp_proc load: 2673us
+19:22:02.654519 ckpt-proc-d1298e55bfc18a82 SPAWN_LAT trampoline.seccomp_proc: 5493us
+19:22:02.654614 ckpt-proc-d1298e55bfc18a82 SPAWN_LAT trampoline.apply_apparmor: 85us
+19:22:02.655372 ckpt-proc-d1298e55bfc18a82 exec: /mnt/binfs/ckpt-proc-v1.0 ["5", "1000", "name/ux/~any/ckpt-proc-d1298e55bfc18a82/"]
+19:22:02.914546 ckpt-proc-d1298e55bfc18a82 ALWAYS SIGMA_DIALPROXY_FD: 4
+19:22:02.914606 ckpt-proc-d1298e55bfc18a82 ALWAYS Running 5 1000 name/ux/~any/ckpt-proc-d1298e55bfc18a82/
+19:22:02.915337 ckpt-proc-d1298e55bfc18a82 ALWAYS NewFdClint init
+19:22:02.915382 ckpt-proc-d1298e55bfc18a82 TEST New cid d7b45db50066d955 rootrealm
+19:22:02.915389 ckpt-proc-d1298e55bfc18a82 ALWAYS New LeaseClnt 0xc0001bbc20
+19:22:02.915593 ckpt-proc-d1298e55bfc18a82 PROCCLNT Mount[{ type:I addr:[iPStr:"10.0.112.141" iPTypeInt:1 portInt:35291] root: }] rpc as name/msched/sigma-47ce/rpc
+19:22:02.915622 ckpt-proc-d1298e55bfc18a82 ALWAYS duping 4 for sigmadial 4
+19:22:02.915863 ckpt-proc-d1298e55bfc18a82 ALWAYS closing 4 for sigmadial, new sigmadial %!v(MISSING)
+19:22:02.916092 ckpt-proc-d1298e55bfc18a82 CKPT reset sigma_dialproxy_fd 5 uint: 5
+19:22:02.916419 ckpt-proc-d1298e55bfc18a82 CKPT new demuxClnt 0xc000373470
+19:22:02.918565 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive: request 0xc000373470 req 1
+19:22:02.922992 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive done: request 0xc000373470 req 1
+19:22:02.923160 ckpt-proc-d1298e55bfc18a82 CKPT new demuxClnt 0xc00042e510
+19:22:02.923185 ckpt-proc-d1298e55bfc18a82 CKPT Make session 1e2d88d3897df6a0 to srvs { type:I addr:[iPStr:"10.0.112.141" iPTypeInt:1 portInt:35291] root: }
+19:22:02.923381 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive: request 0xc00042e510 req 1
+19:22:02.923874 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive done: request 0xc00042e510 req 1
+19:22:02.924052 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive: request 0xc000373470 req 2
+19:22:02.924928 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive done: request 0xc000373470 req 2
+19:22:02.925093 ckpt-proc-d1298e55bfc18a82 CKPT new demuxClnt 0xc00010a8a0
+19:22:02.925120 ckpt-proc-d1298e55bfc18a82 CKPT Make session d24e7ca92819ff01 to srvs { type:I addr:[iPStr:"10.0.112.141" iPTypeInt:1 portInt:34127] root: }
+19:22:02.925132 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive: request 0xc00010a8a0 req 1
+19:22:02.925490 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive done: request 0xc00010a8a0 req 1
+19:22:02.925784 ckpt-proc-d1298e55bfc18a82 PROCCLNT Start ckpt-proc-d1298e55bfc18a82
+19:22:02.925800 ckpt-proc-d1298e55bfc18a82 PROCCLNT Start ckpt-proc-d1298e55bfc18a82 RPC
+19:22:02.925814 ckpt-proc-d1298e55bfc18a82 ALWAYS Resolve 0xc0001c14f0
+19:22:02.925877 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive: request 0xc00042e510 req 2
+19:22:02.926176 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive done: request 0xc00042e510 req 2
+19:22:02.926219 ckpt-proc-d1298e55bfc18a82 CKPT fdClnt open wait: false
+19:22:02.926226 ckpt-proc-d1298e55bfc18a82 CKPT path client open
+19:22:02.926230 ckpt-proc-d1298e55bfc18a82 ALWAYS ResolveRoot 0xc0001c14f0
+19:22:02.926291 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive: request 0xc00042e510 req 3
+19:22:02.926443 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive done: request 0xc00042e510 req 3
+19:22:02.926497 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive: request 0xc00042e510 req 4
+19:22:02.926659 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive done: request 0xc00042e510 req 4
+19:22:02.926706 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive: request 0xc00042e510 req 5
+19:22:02.926843 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive done: request 0xc00042e510 req 5
+19:22:02.926895 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive: request 0xc00042e510 req 6
+19:22:02.927019 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive done: request 0xc00042e510 req 6
+19:22:02.927080 ckpt-proc-d1298e55bfc18a82 CKPT path client opened
+19:22:02.927089 ckpt-proc-d1298e55bfc18a82 CKPT fdclnt done
+19:22:02.927092 ckpt-proc-d1298e55bfc18a82 CKPT new weirdchannel 0xc000434660
+19:22:02.927100 ckpt-proc-d1298e55bfc18a82 TEST getRPCClntMyMSched sigma-47ce time 1.29334ms
+19:22:02.927196 ckpt-proc-d1298e55bfc18a82 CKPT 0xc000434660 sendreceive weirdchannel 0xc0004665a0
+19:22:02.927216 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive: request 0xc00042e510 req 7
+19:22:02.927378 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive done: request 0xc00042e510 req 7
+19:22:02.927405 ckpt-proc-d1298e55bfc18a82 PROCCLNT Start done ckpt-proc-d1298e55bfc18a82
+19:22:02.941809 ckpt-proc-d1298e55bfc18a82 ALWAYS Resolve 0xc0001c14f0
+19:22:02.941846 ckpt-proc-d1298e55bfc18a82 ALWAYS ResolveRoot 0xc0001c14f0
+19:22:02.941866 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive: request 0xc00010a8a0 req 2
+19:22:02.942280 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive done: request 0xc00010a8a0 req 2
+19:22:02.942330 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive: request 0xc00010a8a0 req 3
+19:22:02.942583 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive done: request 0xc00010a8a0 req 3
+19:22:02.942604 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive: request 0xc00010a8a0 req 4
+19:22:02.942741 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive done: request 0xc00010a8a0 req 4
+19:22:02.942758 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive: request 0xc00010a8a0 req 5
+19:22:02.944124 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive done: request 0xc00010a8a0 req 5
+19:22:02.944205 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive: request 0xc00010a8a0 req 6
+19:22:02.945648 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive done: request 0xc00010a8a0 req 6
+19:22:02.945842 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive: request 0xc00010a8a0 req 7
+19:22:02.946096 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive done: request 0xc00010a8a0 req 7
+19:22:02.946121 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive: request 0xc00010a8a0 req 8
+19:22:02.946385 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive done: request 0xc00010a8a0 req 8
+19:22:02.946438 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive: request 0xc00010a8a0 req 9
+19:22:02.946782 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive done: request 0xc00010a8a0 req 9
+19:22:02.946804 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive: request 0xc00010a8a0 req 10
+19:22:02.947055 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive done: request 0xc00010a8a0 req 10
+19:22:02.947073 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive: request 0xc00010a8a0 req 11
+19:22:02.947177 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive done: request 0xc00010a8a0 req 11
+19:22:02.947198 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive: request 0xc00010a8a0 req 12
+19:22:02.947482 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive done: request 0xc00010a8a0 req 12
+19:22:02.947598 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive: request 0xc000373470 req 3
+19:22:02.949964 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive done: request 0xc000373470 req 3
+19:22:02.950376 ckpt-proc-d1298e55bfc18a82 CKPT new demuxClnt 0xc000228bd0
+19:22:02.950441 ckpt-proc-d1298e55bfc18a82 CKPT Make session 40fab8bb6591c9a2 to srvs { type:I addr:[iPStr:"10.0.112.141" iPTypeInt:1 portInt:40319] root: }
+19:22:02.950464 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive: request 0xc000228bd0 req 1
+19:22:02.950891 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive done: request 0xc000228bd0 req 1
+19:22:02.950909 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive: request 0xc00010a8a0 req 13
+19:22:02.951081 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive done: request 0xc00010a8a0 req 13
+19:22:02.951104 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive: request 0xc000228bd0 req 2
+19:22:02.951410 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive done: request 0xc000228bd0 req 2
+19:22:02.951431 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive: request 0xc000228bd0 req 3
+19:22:02.951559 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive done: request 0xc000228bd0 req 3
+19:22:02.951574 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive: request 0xc000228bd0 req 4
+19:22:02.951745 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive done: request 0xc000228bd0 req 4
+19:22:02.951829 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive: request 0xc000228bd0 req 5
+19:22:02.951938 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive done: request 0xc000228bd0 req 5
+19:22:02.951990 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive: request 0xc000228bd0 req 6
+19:22:02.952119 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive done: request 0xc000228bd0 req 6
+19:22:02.952130 ckpt-proc-d1298e55bfc18a82 CKPT GOING TO CHECKPOINT 5 1000 name/ux/~any/ckpt-proc-d1298e55bfc18a82/
+listOpenfiles:
+listOpenfiles 0: err readlink /proc/1/fd/0: no such file or directory
+1: &{1 64 134218176 {952004517 63877404122 0x19e73e0} {108 77443084 1 41408 0 0 0 0 64 1024 0 {1741807322 952004517} {1741807322 952004517} {1741807322 952004517} [0 0 0]}} : /tmp/sigmaos-perf/log-proc.txt
+10: &{10 64 134218176 {952004517 63877404122 0x19e73e0} {108 77443093 1 41408 0 0 0 0 64 1024 0 {1741807322 952004517} {1741807322 952004517} {1741807322 952004517} [0 0 0]}} : socket:[77440814]
+11: &{11 64 134218176 {952004517 63877404122 0x19e73e0} {108 77443094 1 41408 0 0 0 0 64 1024 0 {1741807322 952004517} {1741807322 952004517} {1741807322 952004517} [0 0 0]}} : socket:[77440812]
+18: &{18 64 134218176 {952004517 63877404122 0x19e73e0} {108 77443095 1 41408 0 0 0 0 64 1024 0 {1741807322 952004517} {1741807322 952004517} {1741807322 952004517} [0 0 0]}} : socket:[77442610]
+19: &{19 64 134218176 {952004517 63877404122 0x19e73e0} {108 77443096 1 41408 0 0 0 0 64 1024 0 {1741807322 952004517} {1741807322 952004517} {1741807322 952004517} [0 0 0]}} : socket:[77442611]
+2: &{2 64 134218176 {952004517 63877404122 0x19e73e0} {108 77443085 1 41408 0 0 0 0 64 1024 0 {1741807322 952004517} {1741807322 952004517} {1741807322 952004517} [0 0 0]}} : /tmp/sigmaos-perf/log-proc.txt
+3: &{3 64 134218176 {952004517 63877404122 0x19e73e0} {108 77443086 1 41408 0 0 0 0 64 1024 0 {1741807322 952004517} {1741807322 952004517} {1741807322 952004517} [0 0 0]}} : socket:[77442610]
+4: &{4 64 134218176 {952004517 63877404122 0x19e73e0} {108 77443087 1 41408 0 0 0 0 64 1024 0 {1741807322 952004517} {1741807322 952004517} {1741807322 952004517} [0 0 0]}} : socket:[77440814]
+5: &{5 64 134218176 {952004517 63877404122 0x19e73e0} {108 77443088 1 41408 0 0 0 0 64 1024 0 {1741807322 952004517} {1741807322 952004517} {1741807322 952004517} [0 0 0]}} : socket:[77439977]
+6: &{6 64 134218176 {952004517 63877404122 0x19e73e0} {108 77443089 1 41408 0 0 0 0 64 1024 0 {1741807322 952004517} {1741807322 952004517} {1741807322 952004517} [0 0 0]}} : anon_inode:[eventpoll]
+7: &{7 64 134218048 {952004517 63877404122 0x19e73e0} {108 77443090 1 41280 0 0 0 0 64 1024 0 {1741807322 952004517} {1741807322 952004517} {1741807322 952004517} [0 0 0]}} : pipe:[77442665]
+8: &{8 64 134217920 {952004517 63877404122 0x19e73e0} {108 77443091 1 41152 0 0 0 0 64 1024 0 {1741807322 952004517} {1741807322 952004517} {1741807322 952004517} [0 0 0]}} : pipe:[77442665]
+9: &{9 64 134218176 {952004517 63877404122 0x19e73e0} {108 77443092 1 41408 0 0 0 0 64 1024 0 {1741807322 952004517} {1741807322 952004517} {1741807322 952004517} [0 0 0]}} : socket:[77441738]
+19:22:02.953393 ckpt-proc-d1298e55bfc18a82 ALWAYS Resolve 0xc0001c14f0
+19:22:02.953400 ckpt-proc-d1298e55bfc18a82 ALWAYS ResolveRoot 0xc0001c14f0
+19:22:02.953410 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive: request 0xc000228bd0 req 7
+19:22:02.953535 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive done: request 0xc000228bd0 req 7
+19:22:02.953550 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive: request 0xc000228bd0 req 8
+19:22:02.953658 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive done: request 0xc000228bd0 req 8
+19:22:02.953671 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive: request 0xc000228bd0 req 9
+19:22:02.953797 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive done: request 0xc000228bd0 req 9
+19:22:02.953812 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive: request 0xc000228bd0 req 10
+19:22:02.953925 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive done: request 0xc000228bd0 req 10
+19:22:02.953942 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive: request 0xc000228bd0 req 11
+19:22:02.954023 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive done: request 0xc000228bd0 req 11
+19:22:02.954033 ckpt-proc-d1298e55bfc18a82 CKPT Close dialproxy conn socket fd 5
+19:22:02.954055 ckpt-proc-d1298e55bfc18a82 CKPT Checkpoint kernelId sigma-47ce pid ckpt-proc-d1298e55bfc18a82
+19:22:02.955420 ckpt-proc-d1298e55bfc18a82 CKPT waiting?? MSCHEDCLNT name/msched/
+19:22:02.955436 ckpt-proc-d1298e55bfc18a82 CKPT watchDir started 0xc00045c4d0
+19:22:02.955440 ckpt-proc-d1298e55bfc18a82 CKPT watchDir watching 0xc00045c4d0
+19:22:02.955447 ckpt-proc-d1298e55bfc18a82 CKPT fdClnt open wait: false
+19:22:02.955491 ckpt-proc-d1298e55bfc18a82 CKPT path client open
+19:22:02.955497 ckpt-proc-d1298e55bfc18a82 ALWAYS ResolveRoot 0xc0001c14f0
+19:22:02.955509 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive: request 0xc00010a8a0 req 14
+19:22:02.955689 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive done: request 0xc00010a8a0 req 14
+19:22:02.955703 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive: request 0xc00010a8a0 req 15
+19:22:02.956047 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive done: request 0xc00010a8a0 req 15
+19:22:02.956067 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive: request 0xc00010a8a0 req 16
+19:22:02.956372 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive done: request 0xc00010a8a0 req 16
+19:22:02.956424 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive: request 0xc00010a8a0 req 17
+19:22:02.956738 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive done: request 0xc00010a8a0 req 17
+19:22:02.956750 ckpt-proc-d1298e55bfc18a82 CKPT path client opened
+19:22:02.956754 ckpt-proc-d1298e55bfc18a82 CKPT fdclnt done
+19:22:02.956822 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive: request 0xc00010a8a0 req 18
+19:22:02.977551 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive done: request 0xc00010a8a0 req 18
+19:22:02.977620 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive: request 0xc00010a8a0 req 19
+19:22:02.980107 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive done: request 0xc00010a8a0 req 19
+19:22:02.983990 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive: request 0xc00010a8a0 req 20
+19:22:02.984516 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive done: request 0xc00010a8a0 req 20
+19:22:02.984552 ckpt-proc-d1298e55bfc18a82 CKPT watchDir watching 0xc00045c4d0
+19:22:02.984561 ckpt-proc-d1298e55bfc18a82 CKPT fdClnt open wait: false
+19:22:02.984569 ckpt-proc-d1298e55bfc18a82 CKPT path client open
+19:22:02.984575 ckpt-proc-d1298e55bfc18a82 ALWAYS ResolveRoot 0xc0001c14f0
+19:22:02.984589 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive: request 0xc00010a8a0 req 21
+19:22:02.984626 ckpt-proc-d1298e55bfc18a82 CKPT getting entry MSCHEDCLNT
+19:22:02.984629 ckpt-proc-d1298e55bfc18a82 CKPT alloc val for sigma-47ce kok true
+19:22:02.984633 ckpt-proc-d1298e55bfc18a82 CKPT acquiring dcLock sigma-47ce
+19:22:02.984636 ckpt-proc-d1298e55bfc18a82 CKPT acquired dcLock sigma-47ce
+19:22:02.984638 ckpt-proc-d1298e55bfc18a82 CKPT looked up keyvalue sigma-47ce
+19:22:02.984640 ckpt-proc-d1298e55bfc18a82 CKPT making new keyvalue sigma-47ce
+19:22:02.984652 ckpt-proc-d1298e55bfc18a82 ALWAYS Resolve 0xc0001c14f0
+19:22:02.984674 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive: request 0xc00042e510 req 8
+19:22:02.984715 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive done: request 0xc00010a8a0 req 21
+19:22:02.984727 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive: request 0xc00010a8a0 req 22
+19:22:02.984979 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive done: request 0xc00042e510 req 8
+19:22:02.985004 ckpt-proc-d1298e55bfc18a82 CKPT fdClnt open wait: false
+19:22:02.985009 ckpt-proc-d1298e55bfc18a82 CKPT path client open
+19:22:02.985014 ckpt-proc-d1298e55bfc18a82 ALWAYS ResolveRoot 0xc0001c14f0
+19:22:02.985022 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive: request 0xc00042e510 req 9
+19:22:02.985056 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive done: request 0xc00010a8a0 req 22
+19:22:02.985077 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive: request 0xc00010a8a0 req 23
+19:22:02.985152 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive done: request 0xc00042e510 req 9
+19:22:02.985181 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive: request 0xc00042e510 req 10
+19:22:02.985532 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive done: request 0xc00042e510 req 10
+19:22:02.985590 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive: request 0xc00042e510 req 11
+19:22:02.985671 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive done: request 0xc00010a8a0 req 23
+19:22:02.985701 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive: request 0xc00010a8a0 req 24
+19:22:02.985721 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive done: request 0xc00042e510 req 11
+19:22:02.985741 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive: request 0xc00042e510 req 12
+19:22:02.985900 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive done: request 0xc00042e510 req 12
+19:22:02.985911 ckpt-proc-d1298e55bfc18a82 CKPT path client opened
+19:22:02.985914 ckpt-proc-d1298e55bfc18a82 CKPT fdclnt done
+19:22:02.985900 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive done: request 0xc00010a8a0 req 24
+19:22:02.985933 ckpt-proc-d1298e55bfc18a82 CKPT path client opened
+19:22:02.985937 ckpt-proc-d1298e55bfc18a82 CKPT fdclnt done
+19:22:02.985921 ckpt-proc-d1298e55bfc18a82 CKPT new weirdchannel 0xc0001ba4e0
+19:22:02.985949 ckpt-proc-d1298e55bfc18a82 CKPT made new keyvalue sigma-47ce
+19:22:02.985953 ckpt-proc-d1298e55bfc18a82 CKPT inserted sigma-47ce
+19:22:02.986009 ckpt-proc-d1298e55bfc18a82 CKPT reacquire read lock sigma-47ce
+19:22:02.986013 ckpt-proc-d1298e55bfc18a82 CKPT done alloc val sigma-47ce
+19:22:02.986019 ckpt-proc-d1298e55bfc18a82 CKPT here kernelId sigma-47ce pid ckpt-proc-d1298e55bfc18a82
+19:22:02.985973 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive: request 0xc00010a8a0 req 25
+19:22:02.986169 ckpt-proc-d1298e55bfc18a82 CKPT 0xc0001ba4e0 sendreceive weirdchannel 0xc000187c50
+19:22:02.986195 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive: request 0xc00042e510 req 13
+19:22:02.989929 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive done: request 0xc00010a8a0 req 25
+19:22:02.989979 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive: request 0xc00010a8a0 req 26
+19:22:02.992854 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive done: request 0xc00010a8a0 req 26
+19:22:02.993541 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive: request 0xc00010a8a0 req 27
+19:22:03.863186 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive done: request 0xc00010a8a0 req 27
+19:22:03.862850 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive done: request 0xc00042e510 req 13
+19:22:03.921884 ckpt-proc-d1298e55bfc18a82 CKPT MSCHED Error sigma-47ce pid ckpt-proc-d1298e55bfc18a82
+19:22:03.930124 ckpt-proc-d1298e55bfc18a82 CKPT CheckpointMe err {Err: "Unreachable" Obj: "reader" (<nil>)}:q
+19:22:03.947817 ckpt-proc-d1298e55bfc18a82 CKPT spproxyd fd 5
+19:22:03.949844 ckpt-proc-d1298e55bfc18a82 CKPT reading from frame for ProcEnv
+19:22:03.950764 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive: request 0xc00010a8a0 req 28
+19:22:03.955408 ckpt-proc-d1298e55bfc18a82 CKPT received ProcEnv
+19:22:04.078732 ckpt-proc-d1298e55bfc18a82 CKPT ProcEnv &{ Program:ckpt-proc-copy Version:1.0 Pid:ckpt-proc-copy-cd217a67f7b03f02 Realm:rootrealm Principal:{iDStr:"ckpt-proc-copy-cd217a67f7b03f02" realmStr:"rootrealm"} KernelID:sigma-47ce ProcdPID:procd-90ce1456343fa7f3 ProcDir:name/msched/sigma-47ce/pids/ckpt-proc-copy-cd217a67f7b03f02 ParentDir:name/kpids/test-d8f9a7d1e44aa30d/children/ckpt-proc-copy-cd217a67f7b03f02 How:msched Perf: Debug:TEST;CKPT;SIGMACLNT;PROCCLNT;PROCDMGR_ERR;PROCCLNT_ERR;SESSSRV EtcdMnt:map[127.0.0.1:3379:type:2 addr:{iPStr:"127.0.0.1" iPTypeInt:1 portInt:3379} 127.0.0.1:3380:type:2 addr:{iPStr:"127.0.0.1" iPTypeInt:1 portInt:3380} 127.0.0.1:3381:type:2 addr:{iPStr:"127.0.0.1" iPTypeInt:1 portInt:3381} 127.0.0.1:3382:type:2 addr:{iPStr:"127.0.0.1" iPTypeInt:1 portInt:3382} 127.0.0.1:3383:type:2 addr:{iPStr:"127.0.0.1" iPTypeInt:1 portInt:3383}] InnerIP:10.0.112.141 OuterIP:10.0.112.141 Named:type:1 addr:{iPStr:"10.0.112.141" iPTypeInt:1 portInt:34127} BuildTag:local-build Privileged:false Crash:0 Partition:0 NetFail:0 UseSPProxy:false UseDialProxy:true SigmaPath:[name/ux/~local/bin/user/common] RealmSwitch:NOT_SET Fail:}
+19:22:04.078799 ckpt-proc-d1298e55bfc18a82 CKPT making new Sigmaclnt
+19:22:04.093734 ckpt-proc-d1298e55bfc18a82 ALWAYS NewFdClint init
+19:22:04.094603 ckpt-proc-d1298e55bfc18a82 TEST New cid e596847a88a422d2 rootrealm
+19:22:04.094617 ckpt-proc-d1298e55bfc18a82 ALWAYS New LeaseClnt 0xc0001ba940
+19:22:04.097040 ckpt-proc-d1298e55bfc18a82 PROCCLNT Mount[{ type:I addr:[iPStr:"10.0.112.141" iPTypeInt:1 portInt:35291] root: }] rpc as name/msched/sigma-47ce/rpc
+19:22:04.103310 ckpt-proc-d1298e55bfc18a82 ALWAYS duping 5 for sigmadial 5
+19:22:04.104595 ckpt-proc-d1298e55bfc18a82 ALWAYS closing 5 for sigmadial, new sigmadial %!v(MISSING)
+19:22:04.104615 ckpt-proc-d1298e55bfc18a82 CKPT reset sigma_dialproxy_fd 13 uint: 13
+19:22:04.104632 ckpt-proc-d1298e55bfc18a82 CKPT new demuxClnt 0xc0003724b0
+19:22:04.127479 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive: request 0xc0003724b0 req 1
+19:22:04.137679 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive done: request 0xc0003724b0 req 1
+19:22:04.156559 ckpt-proc-d1298e55bfc18a82 CKPT new demuxClnt 0xc000372c60
+19:22:04.156622 ckpt-proc-d1298e55bfc18a82 CKPT Make session 535ca853bef68f84 to srvs { type:I addr:[iPStr:"10.0.112.141" iPTypeInt:1 portInt:35291] root: }
+19:22:04.157188 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive: request 0xc000372c60 req 1
+19:22:04.157526 ckpt-proc-d1298e55bfc18a82 CKPT watchDir watching 0xc00045c4d0
+19:22:04.157791 ckpt-proc-d1298e55bfc18a82 CKPT fdClnt open wait: false
+19:22:04.157839 ckpt-proc-d1298e55bfc18a82 CKPT path client open
+19:22:04.157847 ckpt-proc-d1298e55bfc18a82 ALWAYS ResolveRoot 0xc0001c14f0
+19:22:04.158073 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive: request 0xc00010a8a0 req 29
+19:22:04.170743 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive done: request 0xc000372c60 req 1
+19:22:04.202126 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive: request 0xc0003724b0 req 2
+19:22:04.212123 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive done: request 0xc0003724b0 req 2
+19:22:04.223919 ckpt-proc-d1298e55bfc18a82 CKPT new demuxClnt 0xc00087d140
+19:22:04.224214 ckpt-proc-d1298e55bfc18a82 CKPT Make session a9da9f8b7119db9 to srvs { type:I addr:[iPStr:"10.0.112.141" iPTypeInt:1 portInt:34127] root: }
+19:22:04.227317 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive: request 0xc00087d140 req 1
+19:22:04.232824 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive done: request 0xc00087d140 req 1
+19:22:04.232869 ckpt-proc-d1298e55bfc18a82 CKPT made new Sigmaclnt
+19:22:04.234418 ckpt-proc-d1298e55bfc18a82 SIGMACLNT Closing &{ statuscode:OK msg: data:<nil> }
+19:22:04.239315 ckpt-proc-d1298e55bfc18a82 PROCCLNT Exited normally name/msched/sigma-47ce/pids/ckpt-proc-d1298e55bfc18a82 parent name/kpids/test-d8f9a7d1e44aa30d/children/ckpt-proc-d1298e55bfc18a82 pid ckpt-proc-d1298e55bfc18a82 status &{ statuscode:OK msg: data:<nil> }
+19:22:04.239693 ckpt-proc-d1298e55bfc18a82 PROCCLNT Watching stopped
+19:22:04.239701 ckpt-proc-d1298e55bfc18a82 PROCCLNT Set exited
+19:22:04.239718 ckpt-proc-d1298e55bfc18a82 PROCCLNT Exit ckpt-proc-d1298e55bfc18a82
+19:22:04.241566 ckpt-proc-d1298e55bfc18a82 PROCCLNT Exit ckpt-proc-d1298e55bfc18a82 RPC
+19:22:04.252180 ckpt-proc-d1298e55bfc18a82 CKPT 0xc000434660 sendreceive weirdchannel 0xc00087d650
+19:22:04.253154 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive: request 0xc00042e510 req 14
+19:22:04.253188 ckpt-proc-d1298e55bfc18a82 PROCCLNT_ERR Error schedd Exit: {Err: "Unreachable" Obj: "dmxclnt" (<nil>)}
+19:22:04.253196 ckpt-proc-d1298e55bfc18a82 PROCCLNT Exit done ckpt-proc-d1298e55bfc18a82
+19:22:04.253201 ckpt-proc-d1298e55bfc18a82 PROCCLNT_ERR Error notify exited: {Err: "Unreachable" Obj: "dmxclnt" (<nil>)}
+19:22:04.253204 ckpt-proc-d1298e55bfc18a82 PROCCLNT Done Exited normally
+19:22:04.254310 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive: request 0xc00042e510 req 15
+19:22:04.255007 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive: request 0xc000228bd0 req 12
+19:22:04.255021 ckpt-proc-d1298e55bfc18a82 SIGMACLNT ClntExit done
+19:22:04.255024 ckpt-proc-d1298e55bfc18a82 ALWAYS Mark started
+19:22:04.255032 ckpt-proc-d1298e55bfc18a82 PROCCLNT Start ckpt-proc-copy-cd217a67f7b03f02
+19:22:04.255035 ckpt-proc-d1298e55bfc18a82 PROCCLNT Start ckpt-proc-copy-cd217a67f7b03f02 RPC
+19:22:04.255050 ckpt-proc-d1298e55bfc18a82 ALWAYS Resolve 0xc00087b590
+19:22:04.255064 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive: request 0xc000372c60 req 2
+19:22:04.255453 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive done: request 0xc000372c60 req 2
+19:22:04.255992 ckpt-proc-d1298e55bfc18a82 CKPT fdClnt open wait: false
+19:22:04.256007 ckpt-proc-d1298e55bfc18a82 CKPT path client open
+19:22:04.256012 ckpt-proc-d1298e55bfc18a82 ALWAYS ResolveRoot 0xc00087b590
+19:22:04.256065 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive: request 0xc000372c60 req 3
+19:22:04.257503 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive done: request 0xc000372c60 req 3
+19:22:04.257587 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive: request 0xc000372c60 req 4
+19:22:04.262523 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive done: request 0xc000372c60 req 4
+19:22:04.268808 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive: request 0xc000372c60 req 5
+19:22:04.269142 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive done: request 0xc000372c60 req 5
+19:22:04.269166 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive: request 0xc000372c60 req 6
+19:22:04.272149 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive done: request 0xc000372c60 req 6
+19:22:04.272217 ckpt-proc-d1298e55bfc18a82 CKPT path client opened
+19:22:04.272224 ckpt-proc-d1298e55bfc18a82 CKPT fdclnt done
+19:22:04.272230 ckpt-proc-d1298e55bfc18a82 CKPT new weirdchannel 0xc00087eac0
+19:22:04.272240 ckpt-proc-d1298e55bfc18a82 TEST getRPCClntMyMSched sigma-47ce time 17.196822ms
+19:22:04.272281 ckpt-proc-d1298e55bfc18a82 CKPT 0xc00087eac0 sendreceive weirdchannel 0xc00087dc80
+19:22:04.272296 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive: request 0xc000372c60 req 7
+19:22:04.273144 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive done: request 0xc000372c60 req 7
+19:22:04.273175 ckpt-proc-d1298e55bfc18a82 PROCCLNT Start done ckpt-proc-copy-cd217a67f7b03f02
+19:22:04.273181 ckpt-proc-d1298e55bfc18a82 ALWAYS Write page 871
+19:22:04.358371 ckpt-proc-d1298e55bfc18a82 ALWAYS ResolveRoot 0xc0001c14f0
+19:22:04.359124 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive: request 0xc00010a8a0 req 30
+19:22:04.361107 ckpt-proc-d1298e55bfc18a82 CKPT d7b45db50066d955: MountTree Attach [{ type:I addr:[iPStr:"10.0.112.141" iPTypeInt:1 portInt:34127] root: }]/ err {Err: "Unreachable" Obj: "dmxclnt" (<nil>)}
+19:22:04.361198 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive: request 0xc00010a8a0 req 31
+19:22:04.361325 ckpt-proc-d1298e55bfc18a82 CKPT d7b45db50066d955: MountTree Attach [{ type:I addr:[iPStr:"10.0.112.141" iPTypeInt:1 portInt:34127] root: }]/ err {Err: "Unreachable" Obj: "dmxclnt" (<nil>)}
+19:22:04.369432 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive: request 0xc000373470 req 4
+19:22:05.280330 ckpt-proc-d1298e55bfc18a82 ALWAYS Write page 408
+19:22:06.283384 ckpt-proc-d1298e55bfc18a82 ALWAYS Write page 803
+19:22:07.285378 ckpt-proc-d1298e55bfc18a82 ALWAYS Write page 561
+19:22:08.286193 ckpt-proc-d1298e55bfc18a82 ALWAYS Write page 633
+19:22:09.287311 ckpt-proc-d1298e55bfc18a82 ALWAYS ClntExit
+19:22:09.287350 ckpt-proc-d1298e55bfc18a82 SIGMACLNT Exiting &{ statuscode:OK msg: data:<nil> }
+19:22:09.287505 ckpt-proc-d1298e55bfc18a82 PROCCLNT Exited normally name/msched/sigma-47ce/pids/ckpt-proc-copy-cd217a67f7b03f02 parent name/kpids/test-d8f9a7d1e44aa30d/children/ckpt-proc-copy-cd217a67f7b03f02 pid ckpt-proc-copy-cd217a67f7b03f02 status &{ statuscode:OK msg: data:<nil> }
+19:22:09.287515 ckpt-proc-d1298e55bfc18a82 PROCCLNT Watching stopped
+19:22:09.287519 ckpt-proc-d1298e55bfc18a82 PROCCLNT Set exited
+19:22:09.287526 ckpt-proc-d1298e55bfc18a82 PROCCLNT Exit ckpt-proc-copy-cd217a67f7b03f02
+19:22:09.287530 ckpt-proc-d1298e55bfc18a82 PROCCLNT Exit ckpt-proc-copy-cd217a67f7b03f02 RPC
+19:22:09.287570 ckpt-proc-d1298e55bfc18a82 CKPT 0xc00087eac0 sendreceive weirdchannel 0xc00042eea0
+19:22:09.287585 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive: request 0xc000372c60 req 8
+19:22:09.287596 ckpt-proc-d1298e55bfc18a82 PROCCLNT_ERR Error schedd Exit: {Err: "Unreachable" Obj: "dmxclnt" (<nil>)}
+19:22:09.287601 ckpt-proc-d1298e55bfc18a82 PROCCLNT Exit done ckpt-proc-copy-cd217a67f7b03f02
+19:22:09.287605 ckpt-proc-d1298e55bfc18a82 PROCCLNT_ERR Error notify exited: {Err: "Unreachable" Obj: "dmxclnt" (<nil>)}
+19:22:09.287609 ckpt-proc-d1298e55bfc18a82 PROCCLNT Done Exited normally
+19:22:09.287614 ckpt-proc-d1298e55bfc18a82 SIGMACLNT EndLeases done
+19:22:09.287630 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive: request 0xc000372c60 req 9
+19:22:09.287639 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive: request 0xc00087d140 req 2
+19:22:09.288001 ckpt-proc-d1298e55bfc18a82 CKPT SendReceive done: request 0xc00087d140 req 2
+19:22:09.288108 ckpt-proc-d1298e55bfc18a82 SIGMACLNT ClntExit done

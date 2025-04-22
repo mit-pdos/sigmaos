@@ -17,3 +17,4 @@ run-until-fail.sh
 env/user.sh
 # Artifact evaluation credential files
 *.priv
+cpp/build

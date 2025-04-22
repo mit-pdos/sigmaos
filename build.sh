@@ -67,6 +67,7 @@ source $ROOT/env/env.sh
 TMP_BASE="/tmp"
 BUILDER_NAME="sig-builder"
 RS_BUILDER_NAME="sig-rs-builder"
+CPP_BUILDER_NAME="sig-cpp-builder"
 USER_IMAGE_NAME="sigmauser"
 KERNEL_IMAGE_NAME="sigmaos"
 BUILD_TARGET_SUFFIX=""
@@ -74,6 +75,7 @@ if ! [ -z "$SIGMAUSER" ]; then
   TMP_BASE=$TMP_BASE/$SIGMAUSER
   BUILDER_NAME=$BUILDER_NAME-$SIGMAUSER
   RS_BUILDER_NAME=$RS_BUILDER_NAME-$SIGMAUSER
+  CPP_BUILDER_NAME=$CPP_BUILDER_NAME-$SIGMAUSER
   USER_IMAGE_NAME=$USER_IMAGE_NAME-$SIGMAUSER
   KERNEL_IMAGE_NAME=$KERNEL_IMAGE_NAME-$SIGMAUSER
   BUILD_TARGET_SUFFIX="-$SIGMAUSER"
@@ -104,6 +106,7 @@ fi
 # Check if a builder is running already
 buildercid=$(docker ps -a | grep -E " $BUILDER_NAME " | cut -d " " -f1)
 rsbuildercid=$(docker ps -a | grep -E " $RS_BUILDER_NAME " | cut -d " " -f1)
+cppbuildercid=$(docker ps -a | grep -E " $CPP_BUILDER_NAME " | cut -d " " -f1)
 
 # Optionally stop any existing builder container, so it will be rebuilt and
 # restarted.
@@ -119,6 +122,12 @@ if [[ $REBUILD_BUILDER == "true" ]]; then
     docker stop $rsbuildercid
     # Reset builder container ID
     rsbuildercid=""
+  fi
+  if ! [ -z "$cppbuildercid" ]; then
+    echo "========== Stopping old CPP builder container $cppbuildercid =========="
+    docker stop $cppbuildercid
+    # Reset builder container ID
+    cppbuildercid=""
   fi
 fi
 
@@ -158,6 +167,25 @@ if [ -z "$rsbuildercid" ]; then
       sleep 0.1;
   done
   echo "========== Done starting Rust builder ========== "
+fi
+
+if [ -z "$cppbuildercid" ]; then
+  # Build builder
+  echo "========== Build CPP builder image =========="
+  DOCKER_BUILDKIT=1 docker build --progress=plain -f docker/cpp-builder.Dockerfile -t $CPP_BUILDER_NAME . 2>&1 | tee $BUILD_LOG/sig-cpp-builder.out
+  echo "========== Done building CPP builder =========="
+  # Start builder
+  echo "========== Starting CPP builder container =========="
+  docker run --rm -d -it \
+    --name $CPP_BUILDER_NAME \
+    --mount type=bind,src=$ROOT,dst=/home/sigmaos/ \
+    $CPP_BUILDER_NAME
+  cppbuildercid=$(docker ps -a | grep -E " $CPP_BUILDER_NAME " | cut -d " " -f1)
+  until [ "`docker inspect -f {{.State.Running}} $cppbuildercid`"=="true" ]; do
+      echo -n "." 1>&2
+      sleep 0.1;
+  done
+  echo "========== Done starting CPP builder ========== "
 fi
 
 BUILD_ARGS="--norace \
@@ -217,6 +245,25 @@ docker exec -it $rsbuildercid \
     exit 1
   fi
 echo "========== Done building Rust bins =========="
+
+echo "========== Building CPP bins =========="
+BUILD_OUT_FILE=$BUILD_LOG/make-user-cpp.out
+docker exec -it $cppbuildercid \
+  /usr/bin/time -f "Build time: %e sec" \
+  ./make-cpp.sh $CPP_BUILD_ARGS --version $VERSION \
+  2>&1 | tee $BUILD_OUT_FILE && \
+  if [ ${PIPESTATUS[0]} -ne 0 ]; then
+    printf "\n!!!!!!!!!! BUILD ERROR !!!!!!!!!!\nLogs in: $BUILD_OUT_FILE\n" \
+      | tee -a $BUILD_OUT_FILE;
+  fi;
+  if [ $(grep -q "BUILD ERROR" $BUILD_OUT_FILE; echo $?) -eq 0 ]; then
+    echo "!!!!!!!!!! ABORTING BUILD !!!!!!!!!!"
+    exit 1
+  fi
+echo "========== Done building CPP bins =========="
+
+exit
+
 
 echo "========== Copying kernel bins for procd =========="
 if [ "${TARGET}" == "local" ]; then

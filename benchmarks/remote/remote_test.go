@@ -280,7 +280,7 @@ func TestMR(t *testing.T) {
 			// {"ryan-mr-wiki20G-grep-ux-64.yml", 10, 4, 7000},
 			// {"ryan-mr-wiki20G-grep-ux-32.yml", 10, 4, 7000},
 
-			{"ryan-mr-wiki20G-wc-ux-32-45.yml", 10, 4, 7000},
+			{"ryan-mr-wiki20G-wc-ux-512.yml", 10, 4, 7000},
 			// {"ryan-mr-wiki20G-wc-ux-512-45.yml", 10, 4, 7000},
 			// {"ryan-mr-wiki20G-wc-ux-256-45.yml", 10, 4, 7000},
 			// {"ryan-mr-wiki20G-wc-ux-128.yml", 10, 4, 7000},
@@ -297,7 +297,6 @@ func TestMR(t *testing.T) {
 	// Constant MR benchmark configuration parameters
 	const (
 		measureTpt bool = false
-		numTrials  int  = 5
 	)
 	ts, err := NewTstate(t)
 	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {
@@ -320,7 +319,7 @@ func TestMR(t *testing.T) {
 					benchName += "-perf"
 				}
 				numFullNodes := mrEP.numNodes - numProcqOnlyNodes
-				ts.RunStandardBenchmark(benchName, driverVM, GetMRCmdConstructor(mrEP.benchName, mrEP.memReq, prewarmRealm, measureTpt, perf, numTrials), mrEP.numNodes, mrEP.numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost)
+				ts.RunStandardBenchmark(benchName, driverVM, GetMRCmdConstructor(mrEP.benchName, mrEP.memReq, prewarmRealm, measureTpt, perf), mrEP.numNodes, mrEP.numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost)
 			}
 		}
 	}

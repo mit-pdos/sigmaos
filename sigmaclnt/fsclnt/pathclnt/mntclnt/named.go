@@ -109,7 +109,7 @@ func (mc *MntClnt) invalidateNamedMountCacheEntry(realm sp.Trealm) error {
 	return nil
 }
 
-func (mc *MntClnt) mountNamed(realm sp.Trealm, mntName, tree string) *serr.Err {
+func (mc *MntClnt) mountNamed(realm sp.Trealm, mntName, tree sp.Tsigmapath) *serr.Err {
 	db.DPrintf(db.MOUNT, "mountNamed [%v] at %v tree \"%v\"", realm, mntName, tree)
 	s := time.Now()
 	ep, err := mc.getNamedEndpointRealm(realm)

@@ -11,7 +11,7 @@ import (
 )
 
 // Upload lpn into sigma a spn
-func (fsl *FsLib) UploadFile(lpn, spn string) error {
+func (fsl *FsLib) UploadFile(lpn, spn sp.Tsigmapath) error {
 	src, err := os.OpenFile(lpn, os.O_RDONLY, 0)
 	if err != nil {
 		return err
@@ -32,7 +32,7 @@ func (fsl *FsLib) UploadFile(lpn, spn string) error {
 }
 
 // Upload lpn dir into sigma at spn
-func (fsl *FsLib) UploadDir(lpn, spn string) error {
+func (fsl *FsLib) UploadDir(lpn, spn sp.Tsigmapath) error {
 	fsl.MkDir(spn, 0777)
 	files, err := os.ReadDir(lpn)
 	if err != nil {

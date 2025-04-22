@@ -17,7 +17,7 @@ type FdState struct {
 	fid    sp.Tfid
 	mode   sp.Tmode
 	pc     sos.PathClntAPI
-	pn     string
+	pn     sp.Tsigmapath
 }
 
 type FdTable struct {
@@ -33,7 +33,7 @@ func newFdTable() *FdTable {
 	return fdt
 }
 
-func (fdt *FdTable) allocFd(nfid sp.Tfid, m sp.Tmode, pc sos.PathClntAPI, pn string) int {
+func (fdt *FdTable) allocFd(nfid sp.Tfid, m sp.Tmode, pc sos.PathClntAPI, pn sp.Tsigmapath) int {
 	fdt.Lock()
 	defer fdt.Unlock()
 
@@ -84,7 +84,7 @@ func (fdt *FdTable) lookup(fd int) (sp.Tfid, sos.PathClntAPI, *serr.Err) {
 	return st.fid, st.pc, nil
 }
 
-func (fdt *FdTable) lookupPn(fd int) (string, *serr.Err) {
+func (fdt *FdTable) lookupPn(fd int) (sp.Tsigmapath, *serr.Err) {
 	fdt.Lock()
 	defer fdt.Unlock()
 

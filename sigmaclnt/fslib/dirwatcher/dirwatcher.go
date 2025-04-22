@@ -5,22 +5,23 @@ import (
 	"encoding/binary"
 	"io"
 	"path/filepath"
+
+	"google.golang.org/protobuf/proto"
+
 	db "sigmaos/debug"
 	"sigmaos/serr"
 	"sigmaos/sigmaclnt/fslib"
-	"sync/atomic"
-
+	sp "sigmaos/sigmap"
 	protsrv_proto "sigmaos/spproto/srv/proto"
-
-	"google.golang.org/protobuf/proto"
+	"sync/atomic"
 )
 
 type DirWatcher struct {
 	*fslib.FsLib
-	ch chan *protsrv_proto.WatchEvent
-	pn string
-	closed atomic.Bool
-	reader *bufio.Reader
+	ch      chan *protsrv_proto.WatchEvent
+	pn      sp.Tsigmapath
+	closed  atomic.Bool
+	reader  *bufio.Reader
 	watchFd int
 }
 
@@ -34,7 +35,7 @@ func (wr watchReader) Read(p []byte) (int, error) {
 	return int(size), err
 }
 
-func NewDirWatcher(fslib *fslib.FsLib, pn string, fd int) (*DirWatcher, error) {
+func NewDirWatcher(fslib *fslib.FsLib, pn sp.Tsigmapath, fd int) (*DirWatcher, error) {
 	db.DPrintf(db.WATCH, "NewDirWatcher: Creating watch on %s", pn)
 
 	watchFd, err := fslib.DirWatch(fd)
@@ -46,7 +47,7 @@ func NewDirWatcher(fslib *fslib.FsLib, pn string, fd int) (*DirWatcher, error) {
 
 	ch := make(chan *protsrv_proto.WatchEvent)
 
-	reader := watchReader {
+	reader := watchReader{
 		fslib,
 		watchFd,
 	}
@@ -67,8 +68,8 @@ func NewDirWatcher(fslib *fslib.FsLib, pn string, fd int) (*DirWatcher, error) {
 	return dr, nil
 }
 
-func NewDirWatcherWithRead(fslib *fslib.FsLib, pn string) ([]string, *DirWatcher, error) {
-	var ents []string
+func NewDirWatcherWithRead(fslib *fslib.FsLib, pn sp.Tsigmapath) ([]sp.Tsigmapath, *DirWatcher, error) {
+	var ents []sp.Tsigmapath
 	var dw *DirWatcher
 
 	for {
@@ -171,39 +172,39 @@ func (dr *DirWatcher) Events() <-chan *protsrv_proto.WatchEvent {
 	return dr.ch
 }
 
-func WaitEmpty(fsl *fslib.FsLib, pn string) error {
-	return waitCond(fsl, pn, func(ents map[string]bool) bool {
+func WaitEmpty(fsl *fslib.FsLib, pn sp.Tsigmapath) error {
+	return waitCond(fsl, pn, func(ents map[sp.Tsigmapath]bool) bool {
 		return len(ents) == 0
 	})
 }
 
-func WaitNEntries(fsl *fslib.FsLib, pn string, n int) error {
-	return waitCond(fsl, pn, func(ents map[string]bool) bool {
+func WaitNEntries(fsl *fslib.FsLib, pn sp.Tsigmapath, n int) error {
+	return waitCond(fsl, pn, func(ents map[sp.Tsigmapath]bool) bool {
 		return len(ents) >= n
 	})
 }
 
-func WaitCreate(fsl *fslib.FsLib, pn string) error {
+func WaitCreate(fsl *fslib.FsLib, pn sp.Tsigmapath) error {
 	dir := filepath.Dir(pn) + "/"
 	f := filepath.Base(pn)
 
-	return waitCond(fsl, dir, func(ents map[string]bool) bool {
+	return waitCond(fsl, dir, func(ents map[sp.Tsigmapath]bool) bool {
 		return ents[f]
 	})
 }
 
-func WaitRemove(fsl *fslib.FsLib, pn string) error {
+func WaitRemove(fsl *fslib.FsLib, pn sp.Tsigmapath) error {
 	dir := filepath.Dir(pn) + "/"
 	f := filepath.Base(pn)
 
-	return waitCond(fsl, dir, func(ents map[string]bool) bool {
+	return waitCond(fsl, dir, func(ents map[sp.Tsigmapath]bool) bool {
 		return !ents[f]
 	})
 }
 
-func waitCond(fsl *fslib.FsLib, pn string, cond func(map[string]bool) bool) error {
+func waitCond(fsl *fslib.FsLib, pn sp.Tsigmapath, cond func(map[sp.Tsigmapath]bool) bool) error {
 	var dw *DirWatcher
-	var ents map[string]bool
+	var ents map[sp.Tsigmapath]bool
 
 	for {
 		sts, rdr, err := fsl.ReadDir(pn)
@@ -211,7 +212,7 @@ func waitCond(fsl *fslib.FsLib, pn string, cond func(map[string]bool) bool) erro
 			return err
 		}
 
-		ents = make(map[string]bool)
+		ents = make(map[sp.Tsigmapath]bool)
 		for _, st := range sts {
 			ents[st.Name] = true
 		}

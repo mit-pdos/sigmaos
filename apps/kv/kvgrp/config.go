@@ -4,13 +4,13 @@ import (
 	"fmt"
 
 	cachesrv "sigmaos/apps/cache/srv"
-	db "sigmaos/debug"
 	"sigmaos/apps/kv/repl/raft"
 	replsrv "sigmaos/apps/kv/repl/srv"
-	"sigmaos/util/coordination/semaphore"
+	db "sigmaos/debug"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
+	"sigmaos/util/coordination/semaphore"
 )
 
 type GroupConfig struct {
@@ -125,7 +125,7 @@ func (g *Group) newRaftCfg(cfg *GroupConfig, myid, nrepl int) (*GroupConfig, *ra
 	initial := false
 	if ep == nil {
 		initial = true
-		addr = sp.NewTaddrRealm(sp.NO_IP, sp.INNER_CONTAINER_IP, sp.NO_PORT)
+		addr = sp.NewTaddr(sp.NO_IP, sp.NO_PORT)
 	} else {
 		addr = ep.Addrs()[0]
 	}

@@ -15,13 +15,15 @@ import (
 	"sigmaos/serr"
 	"sigmaos/sigmaclnt/fslib"
 	"sigmaos/sigmaclnt/fslib/dirwatcher"
+	sp "sigmaos/sigmap"
 	protsrv_proto "sigmaos/spproto/srv/proto"
 	"sigmaos/util/sortedmapv1"
 )
 
-type NewValF[E any] func(string) (E, error)
+type NewValF[E any] func(sp.Tsigmapath) (E, error)
 
 type InitState uint64
+
 const (
 	NotInitialized InitState = iota
 	InProgress
@@ -32,30 +34,30 @@ type DirCache[E any] struct {
 	*fslib.FsLib
 	sync.RWMutex
 	hasEntries    *sync.Cond
-	dir           *sortedmapv1.SortedMap[string, E]
+	dir           *sortedmapv1.SortedMap[sp.Tsigmapath, E]
 	isDone        atomic.Uint64
 	initState     InitState
-	initCond          sync.Cond
+	initCond      sync.Cond
 	version       uint64
-	Path          string
+	Path          sp.Tsigmapath
 	LSelector     db.Tselector
 	ESelector     db.Tselector
 	newVal        NewValF[E]
-	prefixFilters []string
+	prefixFilters []sp.Tsigmapath
 	err           error
 	ch            chan string
 }
 
-func NewDirCache[E any](fsl *fslib.FsLib, path string, newVal NewValF[E], ch chan string, lSelector db.Tselector, ESelector db.Tselector) *DirCache[E] {
+func NewDirCache[E any](fsl *fslib.FsLib, path sp.Tsigmapath, newVal NewValF[E], ch chan string, lSelector db.Tselector, ESelector db.Tselector) *DirCache[E] {
 	return NewDirCacheFilter(fsl, path, newVal, ch, lSelector, ESelector, nil)
 }
 
 // filter entries starting with prefix
-func NewDirCacheFilter[E any](fsl *fslib.FsLib, path string, newVal NewValF[E], ch chan string, LSelector db.Tselector, ESelector db.Tselector, prefixes []string) *DirCache[E] {
+func NewDirCacheFilter[E any](fsl *fslib.FsLib, path sp.Tsigmapath, newVal NewValF[E], ch chan string, LSelector db.Tselector, ESelector db.Tselector, prefixes []sp.Tsigmapath) *DirCache[E] {
 	dc := &DirCache[E]{
 		FsLib:         fsl,
 		Path:          path,
-		dir:           sortedmapv1.NewSortedMap[string, E](),
+		dir:           sortedmapv1.NewSortedMap[sp.Tsigmapath, E](),
 		initCond:      *sync.NewCond(&sync.Mutex{}),
 		LSelector:     LSelector,
 		ESelector:     ESelector,
@@ -87,7 +89,7 @@ func (dc *DirCache[E]) Init() {
 	}
 }
 
-func (dc *DirCache[E]) isKeyValid(k string) bool {
+func (dc *DirCache[E]) isKeyValid(k sp.Tsigmapath) bool {
 	for _, prefix := range dc.prefixFilters {
 		if strings.HasPrefix(k, prefix) {
 			return false
@@ -151,15 +153,15 @@ func (dc *DirCache[E]) watchDir(dw *dirwatcher.DirWatcher) {
 		dc.Lock()
 		var madeChange bool
 		switch event.Type {
-			case protsrv_proto.WatchEventType_CREATE:
-				madeChange = dc.dir.InsertKey(event.File)
-				if madeChange && dc.ch != nil {
-					go func(ent string) {
-						dc.ch <- ent
-					}(event.File)
-				}
-			case protsrv_proto.WatchEventType_REMOVE:
-				madeChange = dc.dir.Delete(event.File)
+		case protsrv_proto.WatchEventType_CREATE:
+			madeChange = dc.dir.InsertKey(event.File)
+			if madeChange && dc.ch != nil {
+				go func(ent string) {
+					dc.ch <- ent
+				}(event.File)
+			}
+		case protsrv_proto.WatchEventType_REMOVE:
+			madeChange = dc.dir.Delete(event.File)
 		}
 		if madeChange {
 			dc.hasEntries.Broadcast()
@@ -207,7 +209,7 @@ func (dc *DirCache[E]) Nentry() (int, error) {
 	return dc.dir.Len(), nil
 }
 
-func (dc *DirCache[E]) GetEntries() ([]string, error) {
+func (dc *DirCache[E]) GetEntries() ([]sp.Tsigmapath, error) {
 	dc.Init()
 	if err := dc.checkErr(); err != nil {
 		return nil, err
@@ -215,7 +217,7 @@ func (dc *DirCache[E]) GetEntries() ([]string, error) {
 	return dc.dir.Keys(), nil
 }
 
-func (dc *DirCache[E]) getEntry(n string, alloc bool) (E, uint64, error) {
+func (dc *DirCache[E]) getEntry(n sp.Tsigmapath, alloc bool) (E, uint64, error) {
 	db.DPrintf(dc.LSelector, "GetEntry for %v", n)
 	dc.Init()
 
@@ -242,12 +244,12 @@ func (dc *DirCache[E]) getEntry(n string, alloc bool) (E, uint64, error) {
 	return e, version, err
 }
 
-func (dc *DirCache[E]) GetEntry(n string) (E, error) {
+func (dc *DirCache[E]) GetEntry(n sp.Tsigmapath) (E, error) {
 	ent, _, err := dc.getEntry(n, true)
 	return ent, err
 }
 
-func (dc *DirCache[E]) InvalidateEntry(name string) bool {
+func (dc *DirCache[E]) InvalidateEntry(name sp.Tsigmapath) bool {
 	dc.Init()
 	db.DPrintf(dc.LSelector, "InvalidateEntry %v", name)
 	ok := dc.dir.Delete(name)
@@ -255,7 +257,7 @@ func (dc *DirCache[E]) InvalidateEntry(name string) bool {
 	return ok
 }
 
-func (dc *DirCache[E]) allocVal(n string) (E, error) {
+func (dc *DirCache[E]) allocVal(n sp.Tsigmapath) (E, error) {
 	dc.RLock()
 	defer dc.RUnlock()
 
@@ -285,14 +287,13 @@ func (dc *DirCache[E]) allocVal(n string) (E, error) {
 	return e, nil
 }
 
-
-func (dc *DirCache[E]) LookupEntry(n string) error {
+func (dc *DirCache[E]) LookupEntry(n sp.Tsigmapath) error {
 	_, err := dc.GetEntry(n)
 	return err
 }
 
-func (dc *DirCache[E]) randomEntry() (string, uint64, error) {
-	var n string
+func (dc *DirCache[E]) randomEntry() (sp.Tsigmapath, uint64, error) {
+	var n sp.Tsigmapath
 	var ok bool
 
 	db.DPrintf(dc.LSelector, "Random")
@@ -301,7 +302,7 @@ func (dc *DirCache[E]) randomEntry() (string, uint64, error) {
 	if err := dc.checkErr(); err != nil {
 		return "", 0, err
 	}
-	defer func(n *string) {
+	defer func(n *sp.Tsigmapath) {
 		db.DPrintf(dc.LSelector, "Done Random %v %t", *n, ok)
 	}(&n)
 
@@ -316,8 +317,8 @@ func (dc *DirCache[E]) randomEntry() (string, uint64, error) {
 	return n, version, nil
 }
 
-func (dc *DirCache[E]) roundRobin() (string, uint64, error) {
-	var n string
+func (dc *DirCache[E]) roundRobin() (sp.Tsigmapath, uint64, error) {
+	var n sp.Tsigmapath
 	var ok bool
 
 	db.DPrintf(dc.LSelector, "RoundRobin")
@@ -327,7 +328,7 @@ func (dc *DirCache[E]) roundRobin() (string, uint64, error) {
 		return "", 0, err
 	}
 
-	defer func(n *string) {
+	defer func(n *sp.Tsigmapath) {
 		db.DPrintf(dc.LSelector, "Done RoundRobin %v %t", *n, ok)
 	}(&n)
 
@@ -342,8 +343,8 @@ func (dc *DirCache[E]) roundRobin() (string, uint64, error) {
 	return n, version, nil
 }
 
-func (dc *DirCache[E]) WaitTimedRandomEntry() (string, error) {
-	var entry string
+func (dc *DirCache[E]) WaitTimedRandomEntry() (sp.Tsigmapath, error) {
+	var entry sp.Tsigmapath
 	err := dc.waitCond(func() (bool, uint64, error) {
 		var version uint64
 		var err error
@@ -355,8 +356,8 @@ func (dc *DirCache[E]) WaitTimedRandomEntry() (string, error) {
 	return entry, err
 }
 
-func (dc *DirCache[E]) WaitTimedRoundRobin() (string, error) {
-	var entry string
+func (dc *DirCache[E]) WaitTimedRoundRobin() (sp.Tsigmapath, error) {
+	var entry sp.Tsigmapath
 	err := dc.waitCond(func() (bool, uint64, error) {
 		var version uint64
 		var err error
@@ -368,7 +369,7 @@ func (dc *DirCache[E]) WaitTimedRoundRobin() (string, error) {
 	return entry, err
 }
 
-func (dc *DirCache[E]) WaitEntryCreated(file string) (error) {
+func (dc *DirCache[E]) WaitEntryCreated(file sp.Tsigmapath) error {
 	return dc.waitCond(func() (bool, uint64, error) {
 		var version uint64
 		var err error
@@ -378,8 +379,8 @@ func (dc *DirCache[E]) WaitEntryCreated(file string) (error) {
 	}, false)
 }
 
-func (dc *DirCache[E]) WaitAllEntriesCreated(files []string) (error) {
-	added := make(map[string]bool)
+func (dc *DirCache[E]) WaitAllEntriesCreated(files []sp.Tsigmapath) error {
+	added := make(map[sp.Tsigmapath]bool)
 	return dc.waitCond(func() (bool, uint64, error) {
 		var firstVersion = uint64(0)
 
@@ -408,7 +409,7 @@ func (dc *DirCache[E]) WaitAllEntriesCreated(files []string) (error) {
 	}, false)
 }
 
-func (dc *DirCache[E]) WaitEntryRemoved(file string) (error) {
+func (dc *DirCache[E]) WaitEntryRemoved(file sp.Tsigmapath) error {
 	return dc.waitCond(func() (bool, uint64, error) {
 		var version uint64
 		var err error
@@ -423,8 +424,8 @@ func (dc *DirCache[E]) WaitEntryRemoved(file string) (error) {
 	}, false)
 }
 
-func (dc *DirCache[E]) WaitAllEntriesRemoved(files []string) (error) {
-	removed := make(map[string]bool)
+func (dc *DirCache[E]) WaitAllEntriesRemoved(files []sp.Tsigmapath) error {
+	removed := make(map[sp.Tsigmapath]bool)
 	return dc.waitCond(func() (bool, uint64, error) {
 		var firstVersion = uint64(0)
 
@@ -453,7 +454,6 @@ func (dc *DirCache[E]) WaitAllEntriesRemoved(files []string) (error) {
 	}, false)
 }
 
-
 func (dc *DirCache[E]) WaitEntriesN(n int, timed bool) (int, error) {
 	err := dc.waitCond(func() (bool, uint64, error) {
 		dc.Lock()
@@ -467,7 +467,7 @@ func (dc *DirCache[E]) WaitEntriesN(n int, timed bool) (int, error) {
 	return dc.dir.Len(), err
 }
 
-func (dc *DirCache[E]) WaitGetEntriesN(n int, timed bool) ([]string, error) {
+func (dc *DirCache[E]) WaitGetEntriesN(n int, timed bool) ([]sp.Tsigmapath, error) {
 	if _, err := dc.WaitEntriesN(n, timed); err != nil {
 		return nil, err
 	}
@@ -487,7 +487,7 @@ func (dc *DirCache[E]) WaitEmpty() error {
 
 type Fcond func() (retry bool, version uint64, err error)
 
-func (dc *DirCache[E]) waitCond(cond Fcond, timed bool) (error) {
+func (dc *DirCache[E]) waitCond(cond Fcond, timed bool) error {
 	dc.Init()
 	for {
 		retry, version, err := cond()
@@ -523,7 +523,7 @@ func (dc *DirCache[E]) waitChange(timed bool, startVersion uint64) error {
 		db.DPrintf(db.TEST, "waitEntriesCond: timed out, stopped waiting %v", dc.LSelector)
 		return serr.NewErr(serr.TErrNotfound, "no entries")
 	}
-	return nil	
+	return nil
 }
 
 func (dc *DirCache[E]) checkErr() error {

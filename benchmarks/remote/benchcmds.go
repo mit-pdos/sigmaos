@@ -217,7 +217,6 @@ func GetMRCmdConstructor(mrApp string, memReq proc.Tmem, prewarmRealm, measureTp
 			prewarm,
 			strconv.Itoa(int(memReq)),
 			mrApp,
-			ntrials,
 		)
 	}
 }

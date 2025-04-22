@@ -26,6 +26,7 @@ type Task[Data any] struct {
 
 type FtTaskClnt[Data any, Output any] interface {
 	SubmitTasks(tasks []*Task[Data]) ([]TaskId, error)
+	EditTasks(tasks []*Task[Data]) ([]TaskId, error)
 	GetTasksByStatus(taskStatus TaskStatus) ([]TaskId, error)
 	ReadTasks(ids []TaskId) ([]Task[Data], error)
 	MoveTasks(ids []TaskId, to TaskStatus) error

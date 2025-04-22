@@ -178,7 +178,7 @@ func InitCoordFS(sc *sigmaclnt.SigmaClnt, jobRoot, jobname string, nreducetask i
 	// Submit reduce task
 	rTasks := make([]*fttask_clnt.Task[TreduceTask], nreducetask)
 	for r := 0; r < nreducetask; r++ {
-		t := TreduceTask{strconv.Itoa(r)}
+		t := TreduceTask{strconv.Itoa(r), nil}
 		rTasks[r] = &fttask_clnt.Task[TreduceTask]{Id: fttask_clnt.TaskId(r), Data: t}
 	}
 	_, err = rftclnt.SubmitTasks(rTasks)

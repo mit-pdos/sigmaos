@@ -44,6 +44,11 @@ const (
 // the task.  If the coordinator fails, another coordinator will take
 // over and claim tasks.
 
+type TreduceTask struct {
+	Task string `json:"Task"`
+	Input Bin
+}
+
 type Coord struct {
 	*sigmaclnt.SigmaClnt
 	mftid           task.FtTaskSrvId
@@ -54,7 +59,6 @@ type Coord struct {
 	job             string
 	nmaptask        int
 	nreducetask     int
-	reduceBinIn     map[fttask_clnt.TaskId]Bin
 	maliciousMapper uint64
 	linesz          string
 	wordsz          string
@@ -110,7 +114,6 @@ func NewCoord(args []string) (*Coord, error) {
 	}
 	c.nmaptask = m
 	c.nreducetask = n
-	c.reduceBinIn = make(map[fttask_clnt.TaskId]Bin, c.nreducetask)
 
 	c.mapperbin = args[4]
 	c.reducerbin = args[5]
@@ -191,20 +194,8 @@ func (c *Coord) mapperProc(t fttask_clnt.Task[[]byte]) (*proc.Proc, error) {
 	return proc, nil
 }
 
-type TreduceTask struct {
-	Task string `json:"Task"`
-}
-
 func (c *Coord) reducerProc(t fttask_clnt.Task[[]byte]) (*proc.Proc, error) {
-	bin, ok := c.reduceBinIn[t.Id]
-	if !ok {
-		db.DFatalf("reducerProc: no input for %v", t.Id)
-	}
-	db.DPrintf(db.MR_COORD, "tn %v t %v bin %v", t.Id, t, bin)
-	b, err := json.Marshal(bin)
-	if err != nil {
-		db.DFatalf("reducerProc: %v err %v", t.Id, err)
-	}
+	db.DPrintf(db.MR_COORD, "tn %v t %v bin %v", t.Id, t)
 
 	data, err := fttask_clnt.Decode[TreduceTask](t.Data)
 	if err != nil {
@@ -214,7 +205,7 @@ func (c *Coord) reducerProc(t fttask_clnt.Task[[]byte]) (*proc.Proc, error) {
 	outlink := ReduceOut(c.jobRoot, c.job) + data.Task
 	outTarget := ReduceOutTarget(c.outdir, c.job) + data.Task
 	c.stat.Nreduce += 1
-	return c.newTask(c.reducerbin, []string{string(b), outlink, outTarget, strconv.Itoa(c.nmaptask)}, c.memPerTask), nil
+	return c.newTask(c.reducerbin, []string{string(t.Id), string(c.rftclnt.ServerId()), outlink, outTarget, strconv.Itoa(c.nmaptask)}, c.memPerTask), nil
 }
 
 type Tresult struct {
@@ -396,11 +387,11 @@ func (c *Coord) makeReduceBins() error {
 		return rns[i] < rns[j]
 	})
 
-	for _, n := range rns {
-		c.reduceBinIn[n] = make(Bin, c.nmaptask)
-	}
+	reduceBinIn := make(map[fttask_clnt.TaskId]Bin, c.nreducetask)
 
-	db.DPrintf(db.MR_COORD, "makeReduceBins: tasks done %v todo %v %v", mns, rns, c.reduceBinIn)
+	for _, n := range rns {
+		reduceBinIn[n] = make(Bin, c.nmaptask)
+	}
 
 	obins, err := c.mftclnt.GetTaskOutputs(mns)
 	if err != nil {
@@ -409,10 +400,36 @@ func (c *Coord) makeReduceBins() error {
 
 	for j, obin := range obins {
 		for i, s := range obin {
-			c.reduceBinIn[rns[i]][j] = s
+			reduceBinIn[rns[i]][j] = s
 		}
 	}
-	db.DPrintf(db.MR_COORD, "makeReduceBins: reduceBinIn %v", c.reduceBinIn)
+
+	db.DPrintf(db.MR_COORD, "makeReduceBins: reduceBinIn %v", reduceBinIn)
+
+	rtaskData, err := c.rftclnt.ReadTasks(rnsTodo)
+	if err != nil {
+		db.DPrintf(db.MR_COORD, "ReadTasks %v err %v", rns, err)
+		return err
+	}
+
+	for _, t := range rtaskData {
+		if _, ok := reduceBinIn[t.Id]; !ok {
+			db.DPrintf(db.MR_COORD, "makeReduceBins: no input for %v", t.Id)
+			continue
+		}
+		t.Data.Input = reduceBinIn[t.Id]
+	}
+
+	rtaskDataP := make([]*fttask_clnt.Task[TreduceTask], len(rtaskData))
+	for i, t := range rtaskData {
+		rtaskDataP[i] = &t
+	}
+
+	_, err = c.rftclnt.EditTasks(rtaskDataP)
+	if err != nil {
+		db.DPrintf(db.MR_COORD, "EditTasks %v err %v", rnsTodo, err)
+	}
+
 	return nil
 }
 

@@ -488,6 +488,37 @@ func (s *TaskSrv) SubmitTasks(ctx fs.CtxI, req proto.SubmitTasksReq, rep *proto.
 	return nil
 }
 
+func (s *TaskSrv) EditTasks(ctx fs.CtxI, req proto.EditTasksReq, rep *proto.EditTasksRep) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if err := s.checkFence(req.Fence); err != nil {
+		return err
+	}
+
+	unknown := make([]int32, 0)
+	for _, task := range req.Tasks {
+		if _, ok := s.data[task.Id]; !ok {
+			unknown = append(unknown, task.Id)
+		}
+	}
+
+	data := make(map[int32][]byte)
+	for _, task := range req.Tasks {
+		data[task.Id] = task.Data
+	}
+
+	if err := s.applyChanges(nil, nil, data, nil); err != nil {
+		return err
+	}
+
+	rep.Unknown = unknown
+
+	db.DPrintf(db.FTTASKS, "EditTasks: total: %d, unknown: %d", len(req.Tasks), len(unknown))
+
+	return nil
+}
+
 func (s *TaskSrv) GetTasksByStatus(ctx fs.CtxI, req proto.GetTasksByStatusReq, rep *proto.GetTasksByStatusRep) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()

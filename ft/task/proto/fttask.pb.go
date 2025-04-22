@@ -230,6 +230,108 @@ func (x *SubmitTasksRep) GetExisting() []int32 {
 	return nil
 }
 
+type EditTasksReq struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Tasks []*Task             `protobuf:"bytes,1,rep,name=tasks,proto3" json:"tasks,omitempty"`
+	Fence *sigmap.TfenceProto `protobuf:"bytes,2,opt,name=fence,proto3" json:"fence,omitempty"`
+}
+
+func (x *EditTasksReq) Reset() {
+	*x = EditTasksReq{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_ft_task_proto_fttask_proto_msgTypes[3]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *EditTasksReq) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*EditTasksReq) ProtoMessage() {}
+
+func (x *EditTasksReq) ProtoReflect() protoreflect.Message {
+	mi := &file_ft_task_proto_fttask_proto_msgTypes[3]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use EditTasksReq.ProtoReflect.Descriptor instead.
+func (*EditTasksReq) Descriptor() ([]byte, []int) {
+	return file_ft_task_proto_fttask_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *EditTasksReq) GetTasks() []*Task {
+	if x != nil {
+		return x.Tasks
+	}
+	return nil
+}
+
+func (x *EditTasksReq) GetFence() *sigmap.TfenceProto {
+	if x != nil {
+		return x.Fence
+	}
+	return nil
+}
+
+type EditTasksRep struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Unknown []int32 `protobuf:"varint,1,rep,packed,name=unknown,proto3" json:"unknown,omitempty"`
+}
+
+func (x *EditTasksRep) Reset() {
+	*x = EditTasksRep{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_ft_task_proto_fttask_proto_msgTypes[4]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *EditTasksRep) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*EditTasksRep) ProtoMessage() {}
+
+func (x *EditTasksRep) ProtoReflect() protoreflect.Message {
+	mi := &file_ft_task_proto_fttask_proto_msgTypes[4]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use EditTasksRep.ProtoReflect.Descriptor instead.
+func (*EditTasksRep) Descriptor() ([]byte, []int) {
+	return file_ft_task_proto_fttask_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *EditTasksRep) GetUnknown() []int32 {
+	if x != nil {
+		return x.Unknown
+	}
+	return nil
+}
+
 type GetTasksByStatusReq struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -242,7 +344,7 @@ type GetTasksByStatusReq struct {
 func (x *GetTasksByStatusReq) Reset() {
 	*x = GetTasksByStatusReq{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_ft_task_proto_fttask_proto_msgTypes[3]
+		mi := &file_ft_task_proto_fttask_proto_msgTypes[5]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -255,7 +357,7 @@ func (x *GetTasksByStatusReq) String() string {
 func (*GetTasksByStatusReq) ProtoMessage() {}
 
 func (x *GetTasksByStatusReq) ProtoReflect() protoreflect.Message {
-	mi := &file_ft_task_proto_fttask_proto_msgTypes[3]
+	mi := &file_ft_task_proto_fttask_proto_msgTypes[5]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -268,7 +370,7 @@ func (x *GetTasksByStatusReq) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetTasksByStatusReq.ProtoReflect.Descriptor instead.
 func (*GetTasksByStatusReq) Descriptor() ([]byte, []int) {
-	return file_ft_task_proto_fttask_proto_rawDescGZIP(), []int{3}
+	return file_ft_task_proto_fttask_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *GetTasksByStatusReq) GetStatus() TaskStatus {
@@ -296,7 +398,7 @@ type GetTasksByStatusRep struct {
 func (x *GetTasksByStatusRep) Reset() {
 	*x = GetTasksByStatusRep{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_ft_task_proto_fttask_proto_msgTypes[4]
+		mi := &file_ft_task_proto_fttask_proto_msgTypes[6]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -309,7 +411,7 @@ func (x *GetTasksByStatusRep) String() string {
 func (*GetTasksByStatusRep) ProtoMessage() {}
 
 func (x *GetTasksByStatusRep) ProtoReflect() protoreflect.Message {
-	mi := &file_ft_task_proto_fttask_proto_msgTypes[4]
+	mi := &file_ft_task_proto_fttask_proto_msgTypes[6]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -322,7 +424,7 @@ func (x *GetTasksByStatusRep) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetTasksByStatusRep.ProtoReflect.Descriptor instead.
 func (*GetTasksByStatusRep) Descriptor() ([]byte, []int) {
-	return file_ft_task_proto_fttask_proto_rawDescGZIP(), []int{4}
+	return file_ft_task_proto_fttask_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *GetTasksByStatusRep) GetIds() []int32 {
@@ -344,7 +446,7 @@ type ReadTasksReq struct {
 func (x *ReadTasksReq) Reset() {
 	*x = ReadTasksReq{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_ft_task_proto_fttask_proto_msgTypes[5]
+		mi := &file_ft_task_proto_fttask_proto_msgTypes[7]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -357,7 +459,7 @@ func (x *ReadTasksReq) String() string {
 func (*ReadTasksReq) ProtoMessage() {}
 
 func (x *ReadTasksReq) ProtoReflect() protoreflect.Message {
-	mi := &file_ft_task_proto_fttask_proto_msgTypes[5]
+	mi := &file_ft_task_proto_fttask_proto_msgTypes[7]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -370,7 +472,7 @@ func (x *ReadTasksReq) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReadTasksReq.ProtoReflect.Descriptor instead.
 func (*ReadTasksReq) Descriptor() ([]byte, []int) {
-	return file_ft_task_proto_fttask_proto_rawDescGZIP(), []int{5}
+	return file_ft_task_proto_fttask_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *ReadTasksReq) GetIds() []int32 {
@@ -398,7 +500,7 @@ type ReadTasksRep struct {
 func (x *ReadTasksRep) Reset() {
 	*x = ReadTasksRep{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_ft_task_proto_fttask_proto_msgTypes[6]
+		mi := &file_ft_task_proto_fttask_proto_msgTypes[8]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -411,7 +513,7 @@ func (x *ReadTasksRep) String() string {
 func (*ReadTasksRep) ProtoMessage() {}
 
 func (x *ReadTasksRep) ProtoReflect() protoreflect.Message {
-	mi := &file_ft_task_proto_fttask_proto_msgTypes[6]
+	mi := &file_ft_task_proto_fttask_proto_msgTypes[8]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -424,7 +526,7 @@ func (x *ReadTasksRep) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReadTasksRep.ProtoReflect.Descriptor instead.
 func (*ReadTasksRep) Descriptor() ([]byte, []int) {
-	return file_ft_task_proto_fttask_proto_rawDescGZIP(), []int{6}
+	return file_ft_task_proto_fttask_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *ReadTasksRep) GetTasks() []*Task {
@@ -447,7 +549,7 @@ type MoveTasksReq struct {
 func (x *MoveTasksReq) Reset() {
 	*x = MoveTasksReq{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_ft_task_proto_fttask_proto_msgTypes[7]
+		mi := &file_ft_task_proto_fttask_proto_msgTypes[9]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -460,7 +562,7 @@ func (x *MoveTasksReq) String() string {
 func (*MoveTasksReq) ProtoMessage() {}
 
 func (x *MoveTasksReq) ProtoReflect() protoreflect.Message {
-	mi := &file_ft_task_proto_fttask_proto_msgTypes[7]
+	mi := &file_ft_task_proto_fttask_proto_msgTypes[9]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -473,7 +575,7 @@ func (x *MoveTasksReq) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MoveTasksReq.ProtoReflect.Descriptor instead.
 func (*MoveTasksReq) Descriptor() ([]byte, []int) {
-	return file_ft_task_proto_fttask_proto_rawDescGZIP(), []int{7}
+	return file_ft_task_proto_fttask_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *MoveTasksReq) GetIds() []int32 {
@@ -506,7 +608,7 @@ type MoveTasksRep struct {
 func (x *MoveTasksRep) Reset() {
 	*x = MoveTasksRep{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_ft_task_proto_fttask_proto_msgTypes[8]
+		mi := &file_ft_task_proto_fttask_proto_msgTypes[10]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -519,7 +621,7 @@ func (x *MoveTasksRep) String() string {
 func (*MoveTasksRep) ProtoMessage() {}
 
 func (x *MoveTasksRep) ProtoReflect() protoreflect.Message {
-	mi := &file_ft_task_proto_fttask_proto_msgTypes[8]
+	mi := &file_ft_task_proto_fttask_proto_msgTypes[10]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -532,7 +634,7 @@ func (x *MoveTasksRep) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MoveTasksRep.ProtoReflect.Descriptor instead.
 func (*MoveTasksRep) Descriptor() ([]byte, []int) {
-	return file_ft_task_proto_fttask_proto_rawDescGZIP(), []int{8}
+	return file_ft_task_proto_fttask_proto_rawDescGZIP(), []int{10}
 }
 
 type MoveTasksByStatusReq struct {
@@ -548,7 +650,7 @@ type MoveTasksByStatusReq struct {
 func (x *MoveTasksByStatusReq) Reset() {
 	*x = MoveTasksByStatusReq{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_ft_task_proto_fttask_proto_msgTypes[9]
+		mi := &file_ft_task_proto_fttask_proto_msgTypes[11]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -561,7 +663,7 @@ func (x *MoveTasksByStatusReq) String() string {
 func (*MoveTasksByStatusReq) ProtoMessage() {}
 
 func (x *MoveTasksByStatusReq) ProtoReflect() protoreflect.Message {
-	mi := &file_ft_task_proto_fttask_proto_msgTypes[9]
+	mi := &file_ft_task_proto_fttask_proto_msgTypes[11]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -574,7 +676,7 @@ func (x *MoveTasksByStatusReq) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MoveTasksByStatusReq.ProtoReflect.Descriptor instead.
 func (*MoveTasksByStatusReq) Descriptor() ([]byte, []int) {
-	return file_ft_task_proto_fttask_proto_rawDescGZIP(), []int{9}
+	return file_ft_task_proto_fttask_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *MoveTasksByStatusReq) GetFrom() TaskStatus {
@@ -609,7 +711,7 @@ type MoveTasksByStatusRep struct {
 func (x *MoveTasksByStatusRep) Reset() {
 	*x = MoveTasksByStatusRep{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_ft_task_proto_fttask_proto_msgTypes[10]
+		mi := &file_ft_task_proto_fttask_proto_msgTypes[12]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -622,7 +724,7 @@ func (x *MoveTasksByStatusRep) String() string {
 func (*MoveTasksByStatusRep) ProtoMessage() {}
 
 func (x *MoveTasksByStatusRep) ProtoReflect() protoreflect.Message {
-	mi := &file_ft_task_proto_fttask_proto_msgTypes[10]
+	mi := &file_ft_task_proto_fttask_proto_msgTypes[12]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -635,7 +737,7 @@ func (x *MoveTasksByStatusRep) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MoveTasksByStatusRep.ProtoReflect.Descriptor instead.
 func (*MoveTasksByStatusRep) Descriptor() ([]byte, []int) {
-	return file_ft_task_proto_fttask_proto_rawDescGZIP(), []int{10}
+	return file_ft_task_proto_fttask_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *MoveTasksByStatusRep) GetNumMoved() int32 {
@@ -657,7 +759,7 @@ type AcquireTasksReq struct {
 func (x *AcquireTasksReq) Reset() {
 	*x = AcquireTasksReq{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_ft_task_proto_fttask_proto_msgTypes[11]
+		mi := &file_ft_task_proto_fttask_proto_msgTypes[13]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -670,7 +772,7 @@ func (x *AcquireTasksReq) String() string {
 func (*AcquireTasksReq) ProtoMessage() {}
 
 func (x *AcquireTasksReq) ProtoReflect() protoreflect.Message {
-	mi := &file_ft_task_proto_fttask_proto_msgTypes[11]
+	mi := &file_ft_task_proto_fttask_proto_msgTypes[13]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -683,7 +785,7 @@ func (x *AcquireTasksReq) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AcquireTasksReq.ProtoReflect.Descriptor instead.
 func (*AcquireTasksReq) Descriptor() ([]byte, []int) {
-	return file_ft_task_proto_fttask_proto_rawDescGZIP(), []int{11}
+	return file_ft_task_proto_fttask_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *AcquireTasksReq) GetWait() bool {
@@ -712,7 +814,7 @@ type AcquireTasksRep struct {
 func (x *AcquireTasksRep) Reset() {
 	*x = AcquireTasksRep{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_ft_task_proto_fttask_proto_msgTypes[12]
+		mi := &file_ft_task_proto_fttask_proto_msgTypes[14]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -725,7 +827,7 @@ func (x *AcquireTasksRep) String() string {
 func (*AcquireTasksRep) ProtoMessage() {}
 
 func (x *AcquireTasksRep) ProtoReflect() protoreflect.Message {
-	mi := &file_ft_task_proto_fttask_proto_msgTypes[12]
+	mi := &file_ft_task_proto_fttask_proto_msgTypes[14]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -738,7 +840,7 @@ func (x *AcquireTasksRep) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AcquireTasksRep.ProtoReflect.Descriptor instead.
 func (*AcquireTasksRep) Descriptor() ([]byte, []int) {
-	return file_ft_task_proto_fttask_proto_rawDescGZIP(), []int{12}
+	return file_ft_task_proto_fttask_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *AcquireTasksRep) GetIds() []int32 {
@@ -768,7 +870,7 @@ type AddTaskOutputsReq struct {
 func (x *AddTaskOutputsReq) Reset() {
 	*x = AddTaskOutputsReq{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_ft_task_proto_fttask_proto_msgTypes[13]
+		mi := &file_ft_task_proto_fttask_proto_msgTypes[15]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -781,7 +883,7 @@ func (x *AddTaskOutputsReq) String() string {
 func (*AddTaskOutputsReq) ProtoMessage() {}
 
 func (x *AddTaskOutputsReq) ProtoReflect() protoreflect.Message {
-	mi := &file_ft_task_proto_fttask_proto_msgTypes[13]
+	mi := &file_ft_task_proto_fttask_proto_msgTypes[15]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -794,7 +896,7 @@ func (x *AddTaskOutputsReq) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AddTaskOutputsReq.ProtoReflect.Descriptor instead.
 func (*AddTaskOutputsReq) Descriptor() ([]byte, []int) {
-	return file_ft_task_proto_fttask_proto_rawDescGZIP(), []int{13}
+	return file_ft_task_proto_fttask_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *AddTaskOutputsReq) GetIds() []int32 {
@@ -827,7 +929,7 @@ type AddTaskOutputsRep struct {
 func (x *AddTaskOutputsRep) Reset() {
 	*x = AddTaskOutputsRep{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_ft_task_proto_fttask_proto_msgTypes[14]
+		mi := &file_ft_task_proto_fttask_proto_msgTypes[16]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -840,7 +942,7 @@ func (x *AddTaskOutputsRep) String() string {
 func (*AddTaskOutputsRep) ProtoMessage() {}
 
 func (x *AddTaskOutputsRep) ProtoReflect() protoreflect.Message {
-	mi := &file_ft_task_proto_fttask_proto_msgTypes[14]
+	mi := &file_ft_task_proto_fttask_proto_msgTypes[16]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -853,7 +955,7 @@ func (x *AddTaskOutputsRep) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AddTaskOutputsRep.ProtoReflect.Descriptor instead.
 func (*AddTaskOutputsRep) Descriptor() ([]byte, []int) {
-	return file_ft_task_proto_fttask_proto_rawDescGZIP(), []int{14}
+	return file_ft_task_proto_fttask_proto_rawDescGZIP(), []int{16}
 }
 
 type GetTaskOutputsReq struct {
@@ -868,7 +970,7 @@ type GetTaskOutputsReq struct {
 func (x *GetTaskOutputsReq) Reset() {
 	*x = GetTaskOutputsReq{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_ft_task_proto_fttask_proto_msgTypes[15]
+		mi := &file_ft_task_proto_fttask_proto_msgTypes[17]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -881,7 +983,7 @@ func (x *GetTaskOutputsReq) String() string {
 func (*GetTaskOutputsReq) ProtoMessage() {}
 
 func (x *GetTaskOutputsReq) ProtoReflect() protoreflect.Message {
-	mi := &file_ft_task_proto_fttask_proto_msgTypes[15]
+	mi := &file_ft_task_proto_fttask_proto_msgTypes[17]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -894,7 +996,7 @@ func (x *GetTaskOutputsReq) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetTaskOutputsReq.ProtoReflect.Descriptor instead.
 func (*GetTaskOutputsReq) Descriptor() ([]byte, []int) {
-	return file_ft_task_proto_fttask_proto_rawDescGZIP(), []int{15}
+	return file_ft_task_proto_fttask_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *GetTaskOutputsReq) GetIds() []int32 {
@@ -922,7 +1024,7 @@ type GetTaskOutputsRep struct {
 func (x *GetTaskOutputsRep) Reset() {
 	*x = GetTaskOutputsRep{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_ft_task_proto_fttask_proto_msgTypes[16]
+		mi := &file_ft_task_proto_fttask_proto_msgTypes[18]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -935,7 +1037,7 @@ func (x *GetTaskOutputsRep) String() string {
 func (*GetTaskOutputsRep) ProtoMessage() {}
 
 func (x *GetTaskOutputsRep) ProtoReflect() protoreflect.Message {
-	mi := &file_ft_task_proto_fttask_proto_msgTypes[16]
+	mi := &file_ft_task_proto_fttask_proto_msgTypes[18]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -948,7 +1050,7 @@ func (x *GetTaskOutputsRep) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetTaskOutputsRep.ProtoReflect.Descriptor instead.
 func (*GetTaskOutputsRep) Descriptor() ([]byte, []int) {
-	return file_ft_task_proto_fttask_proto_rawDescGZIP(), []int{16}
+	return file_ft_task_proto_fttask_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *GetTaskOutputsRep) GetOutputs() [][]byte {
@@ -972,7 +1074,7 @@ type TaskStats struct {
 func (x *TaskStats) Reset() {
 	*x = TaskStats{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_ft_task_proto_fttask_proto_msgTypes[17]
+		mi := &file_ft_task_proto_fttask_proto_msgTypes[19]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -985,7 +1087,7 @@ func (x *TaskStats) String() string {
 func (*TaskStats) ProtoMessage() {}
 
 func (x *TaskStats) ProtoReflect() protoreflect.Message {
-	mi := &file_ft_task_proto_fttask_proto_msgTypes[17]
+	mi := &file_ft_task_proto_fttask_proto_msgTypes[19]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -998,7 +1100,7 @@ func (x *TaskStats) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TaskStats.ProtoReflect.Descriptor instead.
 func (*TaskStats) Descriptor() ([]byte, []int) {
-	return file_ft_task_proto_fttask_proto_rawDescGZIP(), []int{17}
+	return file_ft_task_proto_fttask_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *TaskStats) GetNumTodo() int32 {
@@ -1038,7 +1140,7 @@ type GetTaskStatsReq struct {
 func (x *GetTaskStatsReq) Reset() {
 	*x = GetTaskStatsReq{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_ft_task_proto_fttask_proto_msgTypes[18]
+		mi := &file_ft_task_proto_fttask_proto_msgTypes[20]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1051,7 +1153,7 @@ func (x *GetTaskStatsReq) String() string {
 func (*GetTaskStatsReq) ProtoMessage() {}
 
 func (x *GetTaskStatsReq) ProtoReflect() protoreflect.Message {
-	mi := &file_ft_task_proto_fttask_proto_msgTypes[18]
+	mi := &file_ft_task_proto_fttask_proto_msgTypes[20]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1064,7 +1166,7 @@ func (x *GetTaskStatsReq) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetTaskStatsReq.ProtoReflect.Descriptor instead.
 func (*GetTaskStatsReq) Descriptor() ([]byte, []int) {
-	return file_ft_task_proto_fttask_proto_rawDescGZIP(), []int{18}
+	return file_ft_task_proto_fttask_proto_rawDescGZIP(), []int{20}
 }
 
 type GetTaskStatsRep struct {
@@ -1078,7 +1180,7 @@ type GetTaskStatsRep struct {
 func (x *GetTaskStatsRep) Reset() {
 	*x = GetTaskStatsRep{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_ft_task_proto_fttask_proto_msgTypes[19]
+		mi := &file_ft_task_proto_fttask_proto_msgTypes[21]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1091,7 +1193,7 @@ func (x *GetTaskStatsRep) String() string {
 func (*GetTaskStatsRep) ProtoMessage() {}
 
 func (x *GetTaskStatsRep) ProtoReflect() protoreflect.Message {
-	mi := &file_ft_task_proto_fttask_proto_msgTypes[19]
+	mi := &file_ft_task_proto_fttask_proto_msgTypes[21]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1104,7 +1206,7 @@ func (x *GetTaskStatsRep) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetTaskStatsRep.ProtoReflect.Descriptor instead.
 func (*GetTaskStatsRep) Descriptor() ([]byte, []int) {
-	return file_ft_task_proto_fttask_proto_rawDescGZIP(), []int{19}
+	return file_ft_task_proto_fttask_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *GetTaskStatsRep) GetStats() *TaskStats {
@@ -1125,7 +1227,7 @@ type SubmitStopReq struct {
 func (x *SubmitStopReq) Reset() {
 	*x = SubmitStopReq{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_ft_task_proto_fttask_proto_msgTypes[20]
+		mi := &file_ft_task_proto_fttask_proto_msgTypes[22]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1138,7 +1240,7 @@ func (x *SubmitStopReq) String() string {
 func (*SubmitStopReq) ProtoMessage() {}
 
 func (x *SubmitStopReq) ProtoReflect() protoreflect.Message {
-	mi := &file_ft_task_proto_fttask_proto_msgTypes[20]
+	mi := &file_ft_task_proto_fttask_proto_msgTypes[22]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1151,7 +1253,7 @@ func (x *SubmitStopReq) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SubmitStopReq.ProtoReflect.Descriptor instead.
 func (*SubmitStopReq) Descriptor() ([]byte, []int) {
-	return file_ft_task_proto_fttask_proto_rawDescGZIP(), []int{20}
+	return file_ft_task_proto_fttask_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *SubmitStopReq) GetFence() *sigmap.TfenceProto {
@@ -1170,7 +1272,7 @@ type SubmitStopRep struct {
 func (x *SubmitStopRep) Reset() {
 	*x = SubmitStopRep{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_ft_task_proto_fttask_proto_msgTypes[21]
+		mi := &file_ft_task_proto_fttask_proto_msgTypes[23]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1183,7 +1285,7 @@ func (x *SubmitStopRep) String() string {
 func (*SubmitStopRep) ProtoMessage() {}
 
 func (x *SubmitStopRep) ProtoReflect() protoreflect.Message {
-	mi := &file_ft_task_proto_fttask_proto_msgTypes[21]
+	mi := &file_ft_task_proto_fttask_proto_msgTypes[23]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1196,7 +1298,7 @@ func (x *SubmitStopRep) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SubmitStopRep.ProtoReflect.Descriptor instead.
 func (*SubmitStopRep) Descriptor() ([]byte, []int) {
-	return file_ft_task_proto_fttask_proto_rawDescGZIP(), []int{21}
+	return file_ft_task_proto_fttask_proto_rawDescGZIP(), []int{23}
 }
 
 type FenceReq struct {
@@ -1210,7 +1312,7 @@ type FenceReq struct {
 func (x *FenceReq) Reset() {
 	*x = FenceReq{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_ft_task_proto_fttask_proto_msgTypes[22]
+		mi := &file_ft_task_proto_fttask_proto_msgTypes[24]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1223,7 +1325,7 @@ func (x *FenceReq) String() string {
 func (*FenceReq) ProtoMessage() {}
 
 func (x *FenceReq) ProtoReflect() protoreflect.Message {
-	mi := &file_ft_task_proto_fttask_proto_msgTypes[22]
+	mi := &file_ft_task_proto_fttask_proto_msgTypes[24]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1236,7 +1338,7 @@ func (x *FenceReq) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FenceReq.ProtoReflect.Descriptor instead.
 func (*FenceReq) Descriptor() ([]byte, []int) {
-	return file_ft_task_proto_fttask_proto_rawDescGZIP(), []int{22}
+	return file_ft_task_proto_fttask_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *FenceReq) GetFence() *sigmap.TfenceProto {
@@ -1255,7 +1357,7 @@ type FenceRep struct {
 func (x *FenceRep) Reset() {
 	*x = FenceRep{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_ft_task_proto_fttask_proto_msgTypes[23]
+		mi := &file_ft_task_proto_fttask_proto_msgTypes[25]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1268,7 +1370,7 @@ func (x *FenceRep) String() string {
 func (*FenceRep) ProtoMessage() {}
 
 func (x *FenceRep) ProtoReflect() protoreflect.Message {
-	mi := &file_ft_task_proto_fttask_proto_msgTypes[23]
+	mi := &file_ft_task_proto_fttask_proto_msgTypes[25]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1281,7 +1383,7 @@ func (x *FenceRep) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FenceRep.ProtoReflect.Descriptor instead.
 func (*FenceRep) Descriptor() ([]byte, []int) {
-	return file_ft_task_proto_fttask_proto_rawDescGZIP(), []int{23}
+	return file_ft_task_proto_fttask_proto_rawDescGZIP(), []int{25}
 }
 
 type ClearEtcdReq struct {
@@ -1293,7 +1395,7 @@ type ClearEtcdReq struct {
 func (x *ClearEtcdReq) Reset() {
 	*x = ClearEtcdReq{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_ft_task_proto_fttask_proto_msgTypes[24]
+		mi := &file_ft_task_proto_fttask_proto_msgTypes[26]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1306,7 +1408,7 @@ func (x *ClearEtcdReq) String() string {
 func (*ClearEtcdReq) ProtoMessage() {}
 
 func (x *ClearEtcdReq) ProtoReflect() protoreflect.Message {
-	mi := &file_ft_task_proto_fttask_proto_msgTypes[24]
+	mi := &file_ft_task_proto_fttask_proto_msgTypes[26]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1319,7 +1421,7 @@ func (x *ClearEtcdReq) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ClearEtcdReq.ProtoReflect.Descriptor instead.
 func (*ClearEtcdReq) Descriptor() ([]byte, []int) {
-	return file_ft_task_proto_fttask_proto_rawDescGZIP(), []int{24}
+	return file_ft_task_proto_fttask_proto_rawDescGZIP(), []int{26}
 }
 
 type ClearEtcdRep struct {
@@ -1331,7 +1433,7 @@ type ClearEtcdRep struct {
 func (x *ClearEtcdRep) Reset() {
 	*x = ClearEtcdRep{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_ft_task_proto_fttask_proto_msgTypes[25]
+		mi := &file_ft_task_proto_fttask_proto_msgTypes[27]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1344,7 +1446,7 @@ func (x *ClearEtcdRep) String() string {
 func (*ClearEtcdRep) ProtoMessage() {}
 
 func (x *ClearEtcdRep) ProtoReflect() protoreflect.Message {
-	mi := &file_ft_task_proto_fttask_proto_msgTypes[25]
+	mi := &file_ft_task_proto_fttask_proto_msgTypes[27]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1357,7 +1459,7 @@ func (x *ClearEtcdRep) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ClearEtcdRep.ProtoReflect.Descriptor instead.
 func (*ClearEtcdRep) Descriptor() ([]byte, []int) {
-	return file_ft_task_proto_fttask_proto_rawDescGZIP(), []int{25}
+	return file_ft_task_proto_fttask_proto_rawDescGZIP(), []int{27}
 }
 
 type PartitionReq struct {
@@ -1369,7 +1471,7 @@ type PartitionReq struct {
 func (x *PartitionReq) Reset() {
 	*x = PartitionReq{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_ft_task_proto_fttask_proto_msgTypes[26]
+		mi := &file_ft_task_proto_fttask_proto_msgTypes[28]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1382,7 +1484,7 @@ func (x *PartitionReq) String() string {
 func (*PartitionReq) ProtoMessage() {}
 
 func (x *PartitionReq) ProtoReflect() protoreflect.Message {
-	mi := &file_ft_task_proto_fttask_proto_msgTypes[26]
+	mi := &file_ft_task_proto_fttask_proto_msgTypes[28]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1395,7 +1497,7 @@ func (x *PartitionReq) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PartitionReq.ProtoReflect.Descriptor instead.
 func (*PartitionReq) Descriptor() ([]byte, []int) {
-	return file_ft_task_proto_fttask_proto_rawDescGZIP(), []int{26}
+	return file_ft_task_proto_fttask_proto_rawDescGZIP(), []int{28}
 }
 
 type PartitionRep struct {
@@ -1407,7 +1509,7 @@ type PartitionRep struct {
 func (x *PartitionRep) Reset() {
 	*x = PartitionRep{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_ft_task_proto_fttask_proto_msgTypes[27]
+		mi := &file_ft_task_proto_fttask_proto_msgTypes[29]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1420,7 +1522,7 @@ func (x *PartitionRep) String() string {
 func (*PartitionRep) ProtoMessage() {}
 
 func (x *PartitionRep) ProtoReflect() protoreflect.Message {
-	mi := &file_ft_task_proto_fttask_proto_msgTypes[27]
+	mi := &file_ft_task_proto_fttask_proto_msgTypes[29]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1433,7 +1535,7 @@ func (x *PartitionRep) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PartitionRep.ProtoReflect.Descriptor instead.
 func (*PartitionRep) Descriptor() ([]byte, []int) {
-	return file_ft_task_proto_fttask_proto_rawDescGZIP(), []int{27}
+	return file_ft_task_proto_fttask_proto_rawDescGZIP(), []int{29}
 }
 
 var File_ft_task_proto_fttask_proto protoreflect.FileDescriptor
@@ -1452,94 +1554,102 @@ var file_ft_task_proto_fttask_proto_rawDesc = []byte{
 	0x65, 0x6e, 0x63, 0x65, 0x50, 0x72, 0x6f, 0x74, 0x6f, 0x52, 0x05, 0x66, 0x65, 0x6e, 0x63, 0x65,
 	0x22, 0x2c, 0x0a, 0x0e, 0x53, 0x75, 0x62, 0x6d, 0x69, 0x74, 0x54, 0x61, 0x73, 0x6b, 0x73, 0x52,
 	0x65, 0x70, 0x12, 0x1a, 0x0a, 0x08, 0x65, 0x78, 0x69, 0x73, 0x74, 0x69, 0x6e, 0x67, 0x18, 0x01,
-	0x20, 0x03, 0x28, 0x05, 0x52, 0x08, 0x65, 0x78, 0x69, 0x73, 0x74, 0x69, 0x6e, 0x67, 0x22, 0x5e,
-	0x0a, 0x13, 0x47, 0x65, 0x74, 0x54, 0x61, 0x73, 0x6b, 0x73, 0x42, 0x79, 0x53, 0x74, 0x61, 0x74,
-	0x75, 0x73, 0x52, 0x65, 0x71, 0x12, 0x23, 0x0a, 0x06, 0x73, 0x74, 0x61, 0x74, 0x75, 0x73, 0x18,
-	0x01, 0x20, 0x01, 0x28, 0x0e, 0x32, 0x0b, 0x2e, 0x54, 0x61, 0x73, 0x6b, 0x53, 0x74, 0x61, 0x74,
-	0x75, 0x73, 0x52, 0x06, 0x73, 0x74, 0x61, 0x74, 0x75, 0x73, 0x12, 0x22, 0x0a, 0x05, 0x66, 0x65,
-	0x6e, 0x63, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x0c, 0x2e, 0x54, 0x66, 0x65, 0x6e,
-	0x63, 0x65, 0x50, 0x72, 0x6f, 0x74, 0x6f, 0x52, 0x05, 0x66, 0x65, 0x6e, 0x63, 0x65, 0x22, 0x27,
-	0x0a, 0x13, 0x47, 0x65, 0x74, 0x54, 0x61, 0x73, 0x6b, 0x73, 0x42, 0x79, 0x53, 0x74, 0x61, 0x74,
-	0x75, 0x73, 0x52, 0x65, 0x70, 0x12, 0x10, 0x0a, 0x03, 0x69, 0x64, 0x73, 0x18, 0x01, 0x20, 0x03,
-	0x28, 0x05, 0x52, 0x03, 0x69, 0x64, 0x73, 0x22, 0x44, 0x0a, 0x0c, 0x52, 0x65, 0x61, 0x64, 0x54,
-	0x61, 0x73, 0x6b, 0x73, 0x52, 0x65, 0x71, 0x12, 0x10, 0x0a, 0x03, 0x69, 0x64, 0x73, 0x18, 0x01,
-	0x20, 0x03, 0x28, 0x05, 0x52, 0x03, 0x69, 0x64, 0x73, 0x12, 0x22, 0x0a, 0x05, 0x66, 0x65, 0x6e,
-	0x63, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x0c, 0x2e, 0x54, 0x66, 0x65, 0x6e, 0x63,
-	0x65, 0x50, 0x72, 0x6f, 0x74, 0x6f, 0x52, 0x05, 0x66, 0x65, 0x6e, 0x63, 0x65, 0x22, 0x2b, 0x0a,
-	0x0c, 0x52, 0x65, 0x61, 0x64, 0x54, 0x61, 0x73, 0x6b, 0x73, 0x52, 0x65, 0x70, 0x12, 0x1b, 0x0a,
-	0x05, 0x74, 0x61, 0x73, 0x6b, 0x73, 0x18, 0x01, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x05, 0x2e, 0x54,
-	0x61, 0x73, 0x6b, 0x52, 0x05, 0x74, 0x61, 0x73, 0x6b, 0x73, 0x22, 0x61, 0x0a, 0x0c, 0x4d, 0x6f,
-	0x76, 0x65, 0x54, 0x61, 0x73, 0x6b, 0x73, 0x52, 0x65, 0x71, 0x12, 0x10, 0x0a, 0x03, 0x69, 0x64,
-	0x73, 0x18, 0x01, 0x20, 0x03, 0x28, 0x05, 0x52, 0x03, 0x69, 0x64, 0x73, 0x12, 0x1b, 0x0a, 0x02,
-	0x74, 0x6f, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0e, 0x32, 0x0b, 0x2e, 0x54, 0x61, 0x73, 0x6b, 0x53,
-	0x74, 0x61, 0x74, 0x75, 0x73, 0x52, 0x02, 0x74, 0x6f, 0x12, 0x22, 0x0a, 0x05, 0x66, 0x65, 0x6e,
-	0x63, 0x65, 0x18, 0x03, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x0c, 0x2e, 0x54, 0x66, 0x65, 0x6e, 0x63,
-	0x65, 0x50, 0x72, 0x6f, 0x74, 0x6f, 0x52, 0x05, 0x66, 0x65, 0x6e, 0x63, 0x65, 0x22, 0x0e, 0x0a,
-	0x0c, 0x4d, 0x6f, 0x76, 0x65, 0x54, 0x61, 0x73, 0x6b, 0x73, 0x52, 0x65, 0x70, 0x22, 0x78, 0x0a,
-	0x14, 0x4d, 0x6f, 0x76, 0x65, 0x54, 0x61, 0x73, 0x6b, 0x73, 0x42, 0x79, 0x53, 0x74, 0x61, 0x74,
-	0x75, 0x73, 0x52, 0x65, 0x71, 0x12, 0x1f, 0x0a, 0x04, 0x66, 0x72, 0x6f, 0x6d, 0x18, 0x01, 0x20,
+	0x20, 0x03, 0x28, 0x05, 0x52, 0x08, 0x65, 0x78, 0x69, 0x73, 0x74, 0x69, 0x6e, 0x67, 0x22, 0x4f,
+	0x0a, 0x0c, 0x45, 0x64, 0x69, 0x74, 0x54, 0x61, 0x73, 0x6b, 0x73, 0x52, 0x65, 0x71, 0x12, 0x1b,
+	0x0a, 0x05, 0x74, 0x61, 0x73, 0x6b, 0x73, 0x18, 0x01, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x05, 0x2e,
+	0x54, 0x61, 0x73, 0x6b, 0x52, 0x05, 0x74, 0x61, 0x73, 0x6b, 0x73, 0x12, 0x22, 0x0a, 0x05, 0x66,
+	0x65, 0x6e, 0x63, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x0c, 0x2e, 0x54, 0x66, 0x65,
+	0x6e, 0x63, 0x65, 0x50, 0x72, 0x6f, 0x74, 0x6f, 0x52, 0x05, 0x66, 0x65, 0x6e, 0x63, 0x65, 0x22,
+	0x28, 0x0a, 0x0c, 0x45, 0x64, 0x69, 0x74, 0x54, 0x61, 0x73, 0x6b, 0x73, 0x52, 0x65, 0x70, 0x12,
+	0x18, 0x0a, 0x07, 0x75, 0x6e, 0x6b, 0x6e, 0x6f, 0x77, 0x6e, 0x18, 0x01, 0x20, 0x03, 0x28, 0x05,
+	0x52, 0x07, 0x75, 0x6e, 0x6b, 0x6e, 0x6f, 0x77, 0x6e, 0x22, 0x5e, 0x0a, 0x13, 0x47, 0x65, 0x74,
+	0x54, 0x61, 0x73, 0x6b, 0x73, 0x42, 0x79, 0x53, 0x74, 0x61, 0x74, 0x75, 0x73, 0x52, 0x65, 0x71,
+	0x12, 0x23, 0x0a, 0x06, 0x73, 0x74, 0x61, 0x74, 0x75, 0x73, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0e,
+	0x32, 0x0b, 0x2e, 0x54, 0x61, 0x73, 0x6b, 0x53, 0x74, 0x61, 0x74, 0x75, 0x73, 0x52, 0x06, 0x73,
+	0x74, 0x61, 0x74, 0x75, 0x73, 0x12, 0x22, 0x0a, 0x05, 0x66, 0x65, 0x6e, 0x63, 0x65, 0x18, 0x02,
+	0x20, 0x01, 0x28, 0x0b, 0x32, 0x0c, 0x2e, 0x54, 0x66, 0x65, 0x6e, 0x63, 0x65, 0x50, 0x72, 0x6f,
+	0x74, 0x6f, 0x52, 0x05, 0x66, 0x65, 0x6e, 0x63, 0x65, 0x22, 0x27, 0x0a, 0x13, 0x47, 0x65, 0x74,
+	0x54, 0x61, 0x73, 0x6b, 0x73, 0x42, 0x79, 0x53, 0x74, 0x61, 0x74, 0x75, 0x73, 0x52, 0x65, 0x70,
+	0x12, 0x10, 0x0a, 0x03, 0x69, 0x64, 0x73, 0x18, 0x01, 0x20, 0x03, 0x28, 0x05, 0x52, 0x03, 0x69,
+	0x64, 0x73, 0x22, 0x44, 0x0a, 0x0c, 0x52, 0x65, 0x61, 0x64, 0x54, 0x61, 0x73, 0x6b, 0x73, 0x52,
+	0x65, 0x71, 0x12, 0x10, 0x0a, 0x03, 0x69, 0x64, 0x73, 0x18, 0x01, 0x20, 0x03, 0x28, 0x05, 0x52,
+	0x03, 0x69, 0x64, 0x73, 0x12, 0x22, 0x0a, 0x05, 0x66, 0x65, 0x6e, 0x63, 0x65, 0x18, 0x02, 0x20,
+	0x01, 0x28, 0x0b, 0x32, 0x0c, 0x2e, 0x54, 0x66, 0x65, 0x6e, 0x63, 0x65, 0x50, 0x72, 0x6f, 0x74,
+	0x6f, 0x52, 0x05, 0x66, 0x65, 0x6e, 0x63, 0x65, 0x22, 0x2b, 0x0a, 0x0c, 0x52, 0x65, 0x61, 0x64,
+	0x54, 0x61, 0x73, 0x6b, 0x73, 0x52, 0x65, 0x70, 0x12, 0x1b, 0x0a, 0x05, 0x74, 0x61, 0x73, 0x6b,
+	0x73, 0x18, 0x01, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x05, 0x2e, 0x54, 0x61, 0x73, 0x6b, 0x52, 0x05,
+	0x74, 0x61, 0x73, 0x6b, 0x73, 0x22, 0x61, 0x0a, 0x0c, 0x4d, 0x6f, 0x76, 0x65, 0x54, 0x61, 0x73,
+	0x6b, 0x73, 0x52, 0x65, 0x71, 0x12, 0x10, 0x0a, 0x03, 0x69, 0x64, 0x73, 0x18, 0x01, 0x20, 0x03,
+	0x28, 0x05, 0x52, 0x03, 0x69, 0x64, 0x73, 0x12, 0x1b, 0x0a, 0x02, 0x74, 0x6f, 0x18, 0x02, 0x20,
 	0x01, 0x28, 0x0e, 0x32, 0x0b, 0x2e, 0x54, 0x61, 0x73, 0x6b, 0x53, 0x74, 0x61, 0x74, 0x75, 0x73,
-	0x52, 0x04, 0x66, 0x72, 0x6f, 0x6d, 0x12, 0x1b, 0x0a, 0x02, 0x74, 0x6f, 0x18, 0x02, 0x20, 0x01,
-	0x28, 0x0e, 0x32, 0x0b, 0x2e, 0x54, 0x61, 0x73, 0x6b, 0x53, 0x74, 0x61, 0x74, 0x75, 0x73, 0x52,
-	0x02, 0x74, 0x6f, 0x12, 0x22, 0x0a, 0x05, 0x66, 0x65, 0x6e, 0x63, 0x65, 0x18, 0x03, 0x20, 0x01,
-	0x28, 0x0b, 0x32, 0x0c, 0x2e, 0x54, 0x66, 0x65, 0x6e, 0x63, 0x65, 0x50, 0x72, 0x6f, 0x74, 0x6f,
-	0x52, 0x05, 0x66, 0x65, 0x6e, 0x63, 0x65, 0x22, 0x32, 0x0a, 0x14, 0x4d, 0x6f, 0x76, 0x65, 0x54,
-	0x61, 0x73, 0x6b, 0x73, 0x42, 0x79, 0x53, 0x74, 0x61, 0x74, 0x75, 0x73, 0x52, 0x65, 0x70, 0x12,
-	0x1a, 0x0a, 0x08, 0x6e, 0x75, 0x6d, 0x4d, 0x6f, 0x76, 0x65, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28,
-	0x05, 0x52, 0x08, 0x6e, 0x75, 0x6d, 0x4d, 0x6f, 0x76, 0x65, 0x64, 0x22, 0x49, 0x0a, 0x0f, 0x41,
-	0x63, 0x71, 0x75, 0x69, 0x72, 0x65, 0x54, 0x61, 0x73, 0x6b, 0x73, 0x52, 0x65, 0x71, 0x12, 0x12,
-	0x0a, 0x04, 0x77, 0x61, 0x69, 0x74, 0x18, 0x01, 0x20, 0x01, 0x28, 0x08, 0x52, 0x04, 0x77, 0x61,
-	0x69, 0x74, 0x12, 0x22, 0x0a, 0x05, 0x66, 0x65, 0x6e, 0x63, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28,
+	0x52, 0x02, 0x74, 0x6f, 0x12, 0x22, 0x0a, 0x05, 0x66, 0x65, 0x6e, 0x63, 0x65, 0x18, 0x03, 0x20,
+	0x01, 0x28, 0x0b, 0x32, 0x0c, 0x2e, 0x54, 0x66, 0x65, 0x6e, 0x63, 0x65, 0x50, 0x72, 0x6f, 0x74,
+	0x6f, 0x52, 0x05, 0x66, 0x65, 0x6e, 0x63, 0x65, 0x22, 0x0e, 0x0a, 0x0c, 0x4d, 0x6f, 0x76, 0x65,
+	0x54, 0x61, 0x73, 0x6b, 0x73, 0x52, 0x65, 0x70, 0x22, 0x78, 0x0a, 0x14, 0x4d, 0x6f, 0x76, 0x65,
+	0x54, 0x61, 0x73, 0x6b, 0x73, 0x42, 0x79, 0x53, 0x74, 0x61, 0x74, 0x75, 0x73, 0x52, 0x65, 0x71,
+	0x12, 0x1f, 0x0a, 0x04, 0x66, 0x72, 0x6f, 0x6d, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0e, 0x32, 0x0b,
+	0x2e, 0x54, 0x61, 0x73, 0x6b, 0x53, 0x74, 0x61, 0x74, 0x75, 0x73, 0x52, 0x04, 0x66, 0x72, 0x6f,
+	0x6d, 0x12, 0x1b, 0x0a, 0x02, 0x74, 0x6f, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0e, 0x32, 0x0b, 0x2e,
+	0x54, 0x61, 0x73, 0x6b, 0x53, 0x74, 0x61, 0x74, 0x75, 0x73, 0x52, 0x02, 0x74, 0x6f, 0x12, 0x22,
+	0x0a, 0x05, 0x66, 0x65, 0x6e, 0x63, 0x65, 0x18, 0x03, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x0c, 0x2e,
+	0x54, 0x66, 0x65, 0x6e, 0x63, 0x65, 0x50, 0x72, 0x6f, 0x74, 0x6f, 0x52, 0x05, 0x66, 0x65, 0x6e,
+	0x63, 0x65, 0x22, 0x32, 0x0a, 0x14, 0x4d, 0x6f, 0x76, 0x65, 0x54, 0x61, 0x73, 0x6b, 0x73, 0x42,
+	0x79, 0x53, 0x74, 0x61, 0x74, 0x75, 0x73, 0x52, 0x65, 0x70, 0x12, 0x1a, 0x0a, 0x08, 0x6e, 0x75,
+	0x6d, 0x4d, 0x6f, 0x76, 0x65, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x05, 0x52, 0x08, 0x6e, 0x75,
+	0x6d, 0x4d, 0x6f, 0x76, 0x65, 0x64, 0x22, 0x49, 0x0a, 0x0f, 0x41, 0x63, 0x71, 0x75, 0x69, 0x72,
+	0x65, 0x54, 0x61, 0x73, 0x6b, 0x73, 0x52, 0x65, 0x71, 0x12, 0x12, 0x0a, 0x04, 0x77, 0x61, 0x69,
+	0x74, 0x18, 0x01, 0x20, 0x01, 0x28, 0x08, 0x52, 0x04, 0x77, 0x61, 0x69, 0x74, 0x12, 0x22, 0x0a,
+	0x05, 0x66, 0x65, 0x6e, 0x63, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x0c, 0x2e, 0x54,
+	0x66, 0x65, 0x6e, 0x63, 0x65, 0x50, 0x72, 0x6f, 0x74, 0x6f, 0x52, 0x05, 0x66, 0x65, 0x6e, 0x63,
+	0x65, 0x22, 0x3d, 0x0a, 0x0f, 0x41, 0x63, 0x71, 0x75, 0x69, 0x72, 0x65, 0x54, 0x61, 0x73, 0x6b,
+	0x73, 0x52, 0x65, 0x70, 0x12, 0x10, 0x0a, 0x03, 0x69, 0x64, 0x73, 0x18, 0x01, 0x20, 0x03, 0x28,
+	0x05, 0x52, 0x03, 0x69, 0x64, 0x73, 0x12, 0x18, 0x0a, 0x07, 0x73, 0x74, 0x6f, 0x70, 0x70, 0x65,
+	0x64, 0x18, 0x02, 0x20, 0x01, 0x28, 0x08, 0x52, 0x07, 0x73, 0x74, 0x6f, 0x70, 0x70, 0x65, 0x64,
+	0x22, 0x63, 0x0a, 0x11, 0x41, 0x64, 0x64, 0x54, 0x61, 0x73, 0x6b, 0x4f, 0x75, 0x74, 0x70, 0x75,
+	0x74, 0x73, 0x52, 0x65, 0x71, 0x12, 0x10, 0x0a, 0x03, 0x69, 0x64, 0x73, 0x18, 0x01, 0x20, 0x03,
+	0x28, 0x05, 0x52, 0x03, 0x69, 0x64, 0x73, 0x12, 0x18, 0x0a, 0x07, 0x6f, 0x75, 0x74, 0x70, 0x75,
+	0x74, 0x73, 0x18, 0x02, 0x20, 0x03, 0x28, 0x0c, 0x52, 0x07, 0x6f, 0x75, 0x74, 0x70, 0x75, 0x74,
+	0x73, 0x12, 0x22, 0x0a, 0x05, 0x66, 0x65, 0x6e, 0x63, 0x65, 0x18, 0x03, 0x20, 0x01, 0x28, 0x0b,
+	0x32, 0x0c, 0x2e, 0x54, 0x66, 0x65, 0x6e, 0x63, 0x65, 0x50, 0x72, 0x6f, 0x74, 0x6f, 0x52, 0x05,
+	0x66, 0x65, 0x6e, 0x63, 0x65, 0x22, 0x13, 0x0a, 0x11, 0x41, 0x64, 0x64, 0x54, 0x61, 0x73, 0x6b,
+	0x4f, 0x75, 0x74, 0x70, 0x75, 0x74, 0x73, 0x52, 0x65, 0x70, 0x22, 0x49, 0x0a, 0x11, 0x47, 0x65,
+	0x74, 0x54, 0x61, 0x73, 0x6b, 0x4f, 0x75, 0x74, 0x70, 0x75, 0x74, 0x73, 0x52, 0x65, 0x71, 0x12,
+	0x10, 0x0a, 0x03, 0x69, 0x64, 0x73, 0x18, 0x01, 0x20, 0x03, 0x28, 0x05, 0x52, 0x03, 0x69, 0x64,
+	0x73, 0x12, 0x22, 0x0a, 0x05, 0x66, 0x65, 0x6e, 0x63, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0b,
+	0x32, 0x0c, 0x2e, 0x54, 0x66, 0x65, 0x6e, 0x63, 0x65, 0x50, 0x72, 0x6f, 0x74, 0x6f, 0x52, 0x05,
+	0x66, 0x65, 0x6e, 0x63, 0x65, 0x22, 0x2d, 0x0a, 0x11, 0x47, 0x65, 0x74, 0x54, 0x61, 0x73, 0x6b,
+	0x4f, 0x75, 0x74, 0x70, 0x75, 0x74, 0x73, 0x52, 0x65, 0x70, 0x12, 0x18, 0x0a, 0x07, 0x6f, 0x75,
+	0x74, 0x70, 0x75, 0x74, 0x73, 0x18, 0x02, 0x20, 0x03, 0x28, 0x0c, 0x52, 0x07, 0x6f, 0x75, 0x74,
+	0x70, 0x75, 0x74, 0x73, 0x22, 0x73, 0x0a, 0x09, 0x54, 0x61, 0x73, 0x6b, 0x53, 0x74, 0x61, 0x74,
+	0x73, 0x12, 0x18, 0x0a, 0x07, 0x6e, 0x75, 0x6d, 0x54, 0x6f, 0x64, 0x6f, 0x18, 0x01, 0x20, 0x01,
+	0x28, 0x05, 0x52, 0x07, 0x6e, 0x75, 0x6d, 0x54, 0x6f, 0x64, 0x6f, 0x12, 0x16, 0x0a, 0x06, 0x6e,
+	0x75, 0x6d, 0x57, 0x69, 0x70, 0x18, 0x02, 0x20, 0x01, 0x28, 0x05, 0x52, 0x06, 0x6e, 0x75, 0x6d,
+	0x57, 0x69, 0x70, 0x12, 0x18, 0x0a, 0x07, 0x6e, 0x75, 0x6d, 0x44, 0x6f, 0x6e, 0x65, 0x18, 0x03,
+	0x20, 0x01, 0x28, 0x05, 0x52, 0x07, 0x6e, 0x75, 0x6d, 0x44, 0x6f, 0x6e, 0x65, 0x12, 0x1a, 0x0a,
+	0x08, 0x6e, 0x75, 0x6d, 0x45, 0x72, 0x72, 0x6f, 0x72, 0x18, 0x04, 0x20, 0x01, 0x28, 0x05, 0x52,
+	0x08, 0x6e, 0x75, 0x6d, 0x45, 0x72, 0x72, 0x6f, 0x72, 0x22, 0x11, 0x0a, 0x0f, 0x47, 0x65, 0x74,
+	0x54, 0x61, 0x73, 0x6b, 0x53, 0x74, 0x61, 0x74, 0x73, 0x52, 0x65, 0x71, 0x22, 0x33, 0x0a, 0x0f,
+	0x47, 0x65, 0x74, 0x54, 0x61, 0x73, 0x6b, 0x53, 0x74, 0x61, 0x74, 0x73, 0x52, 0x65, 0x70, 0x12,
+	0x20, 0x0a, 0x05, 0x73, 0x74, 0x61, 0x74, 0x73, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x0a,
+	0x2e, 0x54, 0x61, 0x73, 0x6b, 0x53, 0x74, 0x61, 0x74, 0x73, 0x52, 0x05, 0x73, 0x74, 0x61, 0x74,
+	0x73, 0x22, 0x33, 0x0a, 0x0d, 0x53, 0x75, 0x62, 0x6d, 0x69, 0x74, 0x53, 0x74, 0x6f, 0x70, 0x52,
+	0x65, 0x71, 0x12, 0x22, 0x0a, 0x05, 0x66, 0x65, 0x6e, 0x63, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28,
 	0x0b, 0x32, 0x0c, 0x2e, 0x54, 0x66, 0x65, 0x6e, 0x63, 0x65, 0x50, 0x72, 0x6f, 0x74, 0x6f, 0x52,
-	0x05, 0x66, 0x65, 0x6e, 0x63, 0x65, 0x22, 0x3d, 0x0a, 0x0f, 0x41, 0x63, 0x71, 0x75, 0x69, 0x72,
-	0x65, 0x54, 0x61, 0x73, 0x6b, 0x73, 0x52, 0x65, 0x70, 0x12, 0x10, 0x0a, 0x03, 0x69, 0x64, 0x73,
-	0x18, 0x01, 0x20, 0x03, 0x28, 0x05, 0x52, 0x03, 0x69, 0x64, 0x73, 0x12, 0x18, 0x0a, 0x07, 0x73,
-	0x74, 0x6f, 0x70, 0x70, 0x65, 0x64, 0x18, 0x02, 0x20, 0x01, 0x28, 0x08, 0x52, 0x07, 0x73, 0x74,
-	0x6f, 0x70, 0x70, 0x65, 0x64, 0x22, 0x63, 0x0a, 0x11, 0x41, 0x64, 0x64, 0x54, 0x61, 0x73, 0x6b,
-	0x4f, 0x75, 0x74, 0x70, 0x75, 0x74, 0x73, 0x52, 0x65, 0x71, 0x12, 0x10, 0x0a, 0x03, 0x69, 0x64,
-	0x73, 0x18, 0x01, 0x20, 0x03, 0x28, 0x05, 0x52, 0x03, 0x69, 0x64, 0x73, 0x12, 0x18, 0x0a, 0x07,
-	0x6f, 0x75, 0x74, 0x70, 0x75, 0x74, 0x73, 0x18, 0x02, 0x20, 0x03, 0x28, 0x0c, 0x52, 0x07, 0x6f,
-	0x75, 0x74, 0x70, 0x75, 0x74, 0x73, 0x12, 0x22, 0x0a, 0x05, 0x66, 0x65, 0x6e, 0x63, 0x65, 0x18,
-	0x03, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x0c, 0x2e, 0x54, 0x66, 0x65, 0x6e, 0x63, 0x65, 0x50, 0x72,
-	0x6f, 0x74, 0x6f, 0x52, 0x05, 0x66, 0x65, 0x6e, 0x63, 0x65, 0x22, 0x13, 0x0a, 0x11, 0x41, 0x64,
-	0x64, 0x54, 0x61, 0x73, 0x6b, 0x4f, 0x75, 0x74, 0x70, 0x75, 0x74, 0x73, 0x52, 0x65, 0x70, 0x22,
-	0x49, 0x0a, 0x11, 0x47, 0x65, 0x74, 0x54, 0x61, 0x73, 0x6b, 0x4f, 0x75, 0x74, 0x70, 0x75, 0x74,
-	0x73, 0x52, 0x65, 0x71, 0x12, 0x10, 0x0a, 0x03, 0x69, 0x64, 0x73, 0x18, 0x01, 0x20, 0x03, 0x28,
-	0x05, 0x52, 0x03, 0x69, 0x64, 0x73, 0x12, 0x22, 0x0a, 0x05, 0x66, 0x65, 0x6e, 0x63, 0x65, 0x18,
-	0x02, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x0c, 0x2e, 0x54, 0x66, 0x65, 0x6e, 0x63, 0x65, 0x50, 0x72,
-	0x6f, 0x74, 0x6f, 0x52, 0x05, 0x66, 0x65, 0x6e, 0x63, 0x65, 0x22, 0x2d, 0x0a, 0x11, 0x47, 0x65,
-	0x74, 0x54, 0x61, 0x73, 0x6b, 0x4f, 0x75, 0x74, 0x70, 0x75, 0x74, 0x73, 0x52, 0x65, 0x70, 0x12,
-	0x18, 0x0a, 0x07, 0x6f, 0x75, 0x74, 0x70, 0x75, 0x74, 0x73, 0x18, 0x02, 0x20, 0x03, 0x28, 0x0c,
-	0x52, 0x07, 0x6f, 0x75, 0x74, 0x70, 0x75, 0x74, 0x73, 0x22, 0x73, 0x0a, 0x09, 0x54, 0x61, 0x73,
-	0x6b, 0x53, 0x74, 0x61, 0x74, 0x73, 0x12, 0x18, 0x0a, 0x07, 0x6e, 0x75, 0x6d, 0x54, 0x6f, 0x64,
-	0x6f, 0x18, 0x01, 0x20, 0x01, 0x28, 0x05, 0x52, 0x07, 0x6e, 0x75, 0x6d, 0x54, 0x6f, 0x64, 0x6f,
-	0x12, 0x16, 0x0a, 0x06, 0x6e, 0x75, 0x6d, 0x57, 0x69, 0x70, 0x18, 0x02, 0x20, 0x01, 0x28, 0x05,
-	0x52, 0x06, 0x6e, 0x75, 0x6d, 0x57, 0x69, 0x70, 0x12, 0x18, 0x0a, 0x07, 0x6e, 0x75, 0x6d, 0x44,
-	0x6f, 0x6e, 0x65, 0x18, 0x03, 0x20, 0x01, 0x28, 0x05, 0x52, 0x07, 0x6e, 0x75, 0x6d, 0x44, 0x6f,
-	0x6e, 0x65, 0x12, 0x1a, 0x0a, 0x08, 0x6e, 0x75, 0x6d, 0x45, 0x72, 0x72, 0x6f, 0x72, 0x18, 0x04,
-	0x20, 0x01, 0x28, 0x05, 0x52, 0x08, 0x6e, 0x75, 0x6d, 0x45, 0x72, 0x72, 0x6f, 0x72, 0x22, 0x11,
-	0x0a, 0x0f, 0x47, 0x65, 0x74, 0x54, 0x61, 0x73, 0x6b, 0x53, 0x74, 0x61, 0x74, 0x73, 0x52, 0x65,
-	0x71, 0x22, 0x33, 0x0a, 0x0f, 0x47, 0x65, 0x74, 0x54, 0x61, 0x73, 0x6b, 0x53, 0x74, 0x61, 0x74,
-	0x73, 0x52, 0x65, 0x70, 0x12, 0x20, 0x0a, 0x05, 0x73, 0x74, 0x61, 0x74, 0x73, 0x18, 0x01, 0x20,
-	0x01, 0x28, 0x0b, 0x32, 0x0a, 0x2e, 0x54, 0x61, 0x73, 0x6b, 0x53, 0x74, 0x61, 0x74, 0x73, 0x52,
-	0x05, 0x73, 0x74, 0x61, 0x74, 0x73, 0x22, 0x33, 0x0a, 0x0d, 0x53, 0x75, 0x62, 0x6d, 0x69, 0x74,
-	0x53, 0x74, 0x6f, 0x70, 0x52, 0x65, 0x71, 0x12, 0x22, 0x0a, 0x05, 0x66, 0x65, 0x6e, 0x63, 0x65,
-	0x18, 0x02, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x0c, 0x2e, 0x54, 0x66, 0x65, 0x6e, 0x63, 0x65, 0x50,
-	0x72, 0x6f, 0x74, 0x6f, 0x52, 0x05, 0x66, 0x65, 0x6e, 0x63, 0x65, 0x22, 0x0f, 0x0a, 0x0d, 0x53,
-	0x75, 0x62, 0x6d, 0x69, 0x74, 0x53, 0x74, 0x6f, 0x70, 0x52, 0x65, 0x70, 0x22, 0x2e, 0x0a, 0x08,
-	0x46, 0x65, 0x6e, 0x63, 0x65, 0x52, 0x65, 0x71, 0x12, 0x22, 0x0a, 0x05, 0x66, 0x65, 0x6e, 0x63,
-	0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x0c, 0x2e, 0x54, 0x66, 0x65, 0x6e, 0x63, 0x65,
-	0x50, 0x72, 0x6f, 0x74, 0x6f, 0x52, 0x05, 0x66, 0x65, 0x6e, 0x63, 0x65, 0x22, 0x0a, 0x0a, 0x08,
-	0x46, 0x65, 0x6e, 0x63, 0x65, 0x52, 0x65, 0x70, 0x22, 0x0e, 0x0a, 0x0c, 0x43, 0x6c, 0x65, 0x61,
-	0x72, 0x45, 0x74, 0x63, 0x64, 0x52, 0x65, 0x71, 0x22, 0x0e, 0x0a, 0x0c, 0x43, 0x6c, 0x65, 0x61,
-	0x72, 0x45, 0x74, 0x63, 0x64, 0x52, 0x65, 0x70, 0x22, 0x0e, 0x0a, 0x0c, 0x50, 0x61, 0x72, 0x74,
-	0x69, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x65, 0x71, 0x22, 0x0e, 0x0a, 0x0c, 0x50, 0x61, 0x72, 0x74,
-	0x69, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x65, 0x70, 0x2a, 0x34, 0x0a, 0x0a, 0x54, 0x61, 0x73, 0x6b,
-	0x53, 0x74, 0x61, 0x74, 0x75, 0x73, 0x12, 0x08, 0x0a, 0x04, 0x54, 0x4f, 0x44, 0x4f, 0x10, 0x00,
-	0x12, 0x07, 0x0a, 0x03, 0x57, 0x49, 0x50, 0x10, 0x01, 0x12, 0x08, 0x0a, 0x04, 0x44, 0x4f, 0x4e,
-	0x45, 0x10, 0x02, 0x12, 0x09, 0x0a, 0x05, 0x45, 0x52, 0x52, 0x4f, 0x52, 0x10, 0x03, 0x42, 0x17,
-	0x5a, 0x15, 0x73, 0x69, 0x67, 0x6d, 0x61, 0x6f, 0x73, 0x2f, 0x66, 0x74, 0x2f, 0x74, 0x61, 0x73,
-	0x6b, 0x2f, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x05, 0x66, 0x65, 0x6e, 0x63, 0x65, 0x22, 0x0f, 0x0a, 0x0d, 0x53, 0x75, 0x62, 0x6d, 0x69, 0x74,
+	0x53, 0x74, 0x6f, 0x70, 0x52, 0x65, 0x70, 0x22, 0x2e, 0x0a, 0x08, 0x46, 0x65, 0x6e, 0x63, 0x65,
+	0x52, 0x65, 0x71, 0x12, 0x22, 0x0a, 0x05, 0x66, 0x65, 0x6e, 0x63, 0x65, 0x18, 0x01, 0x20, 0x01,
+	0x28, 0x0b, 0x32, 0x0c, 0x2e, 0x54, 0x66, 0x65, 0x6e, 0x63, 0x65, 0x50, 0x72, 0x6f, 0x74, 0x6f,
+	0x52, 0x05, 0x66, 0x65, 0x6e, 0x63, 0x65, 0x22, 0x0a, 0x0a, 0x08, 0x46, 0x65, 0x6e, 0x63, 0x65,
+	0x52, 0x65, 0x70, 0x22, 0x0e, 0x0a, 0x0c, 0x43, 0x6c, 0x65, 0x61, 0x72, 0x45, 0x74, 0x63, 0x64,
+	0x52, 0x65, 0x71, 0x22, 0x0e, 0x0a, 0x0c, 0x43, 0x6c, 0x65, 0x61, 0x72, 0x45, 0x74, 0x63, 0x64,
+	0x52, 0x65, 0x70, 0x22, 0x0e, 0x0a, 0x0c, 0x50, 0x61, 0x72, 0x74, 0x69, 0x74, 0x69, 0x6f, 0x6e,
+	0x52, 0x65, 0x71, 0x22, 0x0e, 0x0a, 0x0c, 0x50, 0x61, 0x72, 0x74, 0x69, 0x74, 0x69, 0x6f, 0x6e,
+	0x52, 0x65, 0x70, 0x2a, 0x34, 0x0a, 0x0a, 0x54, 0x61, 0x73, 0x6b, 0x53, 0x74, 0x61, 0x74, 0x75,
+	0x73, 0x12, 0x08, 0x0a, 0x04, 0x54, 0x4f, 0x44, 0x4f, 0x10, 0x00, 0x12, 0x07, 0x0a, 0x03, 0x57,
+	0x49, 0x50, 0x10, 0x01, 0x12, 0x08, 0x0a, 0x04, 0x44, 0x4f, 0x4e, 0x45, 0x10, 0x02, 0x12, 0x09,
+	0x0a, 0x05, 0x45, 0x52, 0x52, 0x4f, 0x52, 0x10, 0x03, 0x42, 0x17, 0x5a, 0x15, 0x73, 0x69, 0x67,
+	0x6d, 0x61, 0x6f, 0x73, 0x2f, 0x66, 0x74, 0x2f, 0x74, 0x61, 0x73, 0x6b, 0x2f, 0x70, 0x72, 0x6f,
+	0x74, 0x6f, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -1555,62 +1665,66 @@ func file_ft_task_proto_fttask_proto_rawDescGZIP() []byte {
 }
 
 var file_ft_task_proto_fttask_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_ft_task_proto_fttask_proto_msgTypes = make([]protoimpl.MessageInfo, 28)
+var file_ft_task_proto_fttask_proto_msgTypes = make([]protoimpl.MessageInfo, 30)
 var file_ft_task_proto_fttask_proto_goTypes = []interface{}{
 	(TaskStatus)(0),              // 0: TaskStatus
 	(*Task)(nil),                 // 1: Task
 	(*SubmitTasksReq)(nil),       // 2: SubmitTasksReq
 	(*SubmitTasksRep)(nil),       // 3: SubmitTasksRep
-	(*GetTasksByStatusReq)(nil),  // 4: GetTasksByStatusReq
-	(*GetTasksByStatusRep)(nil),  // 5: GetTasksByStatusRep
-	(*ReadTasksReq)(nil),         // 6: ReadTasksReq
-	(*ReadTasksRep)(nil),         // 7: ReadTasksRep
-	(*MoveTasksReq)(nil),         // 8: MoveTasksReq
-	(*MoveTasksRep)(nil),         // 9: MoveTasksRep
-	(*MoveTasksByStatusReq)(nil), // 10: MoveTasksByStatusReq
-	(*MoveTasksByStatusRep)(nil), // 11: MoveTasksByStatusRep
-	(*AcquireTasksReq)(nil),      // 12: AcquireTasksReq
-	(*AcquireTasksRep)(nil),      // 13: AcquireTasksRep
-	(*AddTaskOutputsReq)(nil),    // 14: AddTaskOutputsReq
-	(*AddTaskOutputsRep)(nil),    // 15: AddTaskOutputsRep
-	(*GetTaskOutputsReq)(nil),    // 16: GetTaskOutputsReq
-	(*GetTaskOutputsRep)(nil),    // 17: GetTaskOutputsRep
-	(*TaskStats)(nil),            // 18: TaskStats
-	(*GetTaskStatsReq)(nil),      // 19: GetTaskStatsReq
-	(*GetTaskStatsRep)(nil),      // 20: GetTaskStatsRep
-	(*SubmitStopReq)(nil),        // 21: SubmitStopReq
-	(*SubmitStopRep)(nil),        // 22: SubmitStopRep
-	(*FenceReq)(nil),             // 23: FenceReq
-	(*FenceRep)(nil),             // 24: FenceRep
-	(*ClearEtcdReq)(nil),         // 25: ClearEtcdReq
-	(*ClearEtcdRep)(nil),         // 26: ClearEtcdRep
-	(*PartitionReq)(nil),         // 27: PartitionReq
-	(*PartitionRep)(nil),         // 28: PartitionRep
-	(*sigmap.TfenceProto)(nil),   // 29: TfenceProto
+	(*EditTasksReq)(nil),         // 4: EditTasksReq
+	(*EditTasksRep)(nil),         // 5: EditTasksRep
+	(*GetTasksByStatusReq)(nil),  // 6: GetTasksByStatusReq
+	(*GetTasksByStatusRep)(nil),  // 7: GetTasksByStatusRep
+	(*ReadTasksReq)(nil),         // 8: ReadTasksReq
+	(*ReadTasksRep)(nil),         // 9: ReadTasksRep
+	(*MoveTasksReq)(nil),         // 10: MoveTasksReq
+	(*MoveTasksRep)(nil),         // 11: MoveTasksRep
+	(*MoveTasksByStatusReq)(nil), // 12: MoveTasksByStatusReq
+	(*MoveTasksByStatusRep)(nil), // 13: MoveTasksByStatusRep
+	(*AcquireTasksReq)(nil),      // 14: AcquireTasksReq
+	(*AcquireTasksRep)(nil),      // 15: AcquireTasksRep
+	(*AddTaskOutputsReq)(nil),    // 16: AddTaskOutputsReq
+	(*AddTaskOutputsRep)(nil),    // 17: AddTaskOutputsRep
+	(*GetTaskOutputsReq)(nil),    // 18: GetTaskOutputsReq
+	(*GetTaskOutputsRep)(nil),    // 19: GetTaskOutputsRep
+	(*TaskStats)(nil),            // 20: TaskStats
+	(*GetTaskStatsReq)(nil),      // 21: GetTaskStatsReq
+	(*GetTaskStatsRep)(nil),      // 22: GetTaskStatsRep
+	(*SubmitStopReq)(nil),        // 23: SubmitStopReq
+	(*SubmitStopRep)(nil),        // 24: SubmitStopRep
+	(*FenceReq)(nil),             // 25: FenceReq
+	(*FenceRep)(nil),             // 26: FenceRep
+	(*ClearEtcdReq)(nil),         // 27: ClearEtcdReq
+	(*ClearEtcdRep)(nil),         // 28: ClearEtcdRep
+	(*PartitionReq)(nil),         // 29: PartitionReq
+	(*PartitionRep)(nil),         // 30: PartitionRep
+	(*sigmap.TfenceProto)(nil),   // 31: TfenceProto
 }
 var file_ft_task_proto_fttask_proto_depIdxs = []int32{
 	1,  // 0: SubmitTasksReq.tasks:type_name -> Task
-	29, // 1: SubmitTasksReq.fence:type_name -> TfenceProto
-	0,  // 2: GetTasksByStatusReq.status:type_name -> TaskStatus
-	29, // 3: GetTasksByStatusReq.fence:type_name -> TfenceProto
-	29, // 4: ReadTasksReq.fence:type_name -> TfenceProto
-	1,  // 5: ReadTasksRep.tasks:type_name -> Task
-	0,  // 6: MoveTasksReq.to:type_name -> TaskStatus
-	29, // 7: MoveTasksReq.fence:type_name -> TfenceProto
-	0,  // 8: MoveTasksByStatusReq.from:type_name -> TaskStatus
-	0,  // 9: MoveTasksByStatusReq.to:type_name -> TaskStatus
-	29, // 10: MoveTasksByStatusReq.fence:type_name -> TfenceProto
-	29, // 11: AcquireTasksReq.fence:type_name -> TfenceProto
-	29, // 12: AddTaskOutputsReq.fence:type_name -> TfenceProto
-	29, // 13: GetTaskOutputsReq.fence:type_name -> TfenceProto
-	18, // 14: GetTaskStatsRep.stats:type_name -> TaskStats
-	29, // 15: SubmitStopReq.fence:type_name -> TfenceProto
-	29, // 16: FenceReq.fence:type_name -> TfenceProto
-	17, // [17:17] is the sub-list for method output_type
-	17, // [17:17] is the sub-list for method input_type
-	17, // [17:17] is the sub-list for extension type_name
-	17, // [17:17] is the sub-list for extension extendee
-	0,  // [0:17] is the sub-list for field type_name
+	31, // 1: SubmitTasksReq.fence:type_name -> TfenceProto
+	1,  // 2: EditTasksReq.tasks:type_name -> Task
+	31, // 3: EditTasksReq.fence:type_name -> TfenceProto
+	0,  // 4: GetTasksByStatusReq.status:type_name -> TaskStatus
+	31, // 5: GetTasksByStatusReq.fence:type_name -> TfenceProto
+	31, // 6: ReadTasksReq.fence:type_name -> TfenceProto
+	1,  // 7: ReadTasksRep.tasks:type_name -> Task
+	0,  // 8: MoveTasksReq.to:type_name -> TaskStatus
+	31, // 9: MoveTasksReq.fence:type_name -> TfenceProto
+	0,  // 10: MoveTasksByStatusReq.from:type_name -> TaskStatus
+	0,  // 11: MoveTasksByStatusReq.to:type_name -> TaskStatus
+	31, // 12: MoveTasksByStatusReq.fence:type_name -> TfenceProto
+	31, // 13: AcquireTasksReq.fence:type_name -> TfenceProto
+	31, // 14: AddTaskOutputsReq.fence:type_name -> TfenceProto
+	31, // 15: GetTaskOutputsReq.fence:type_name -> TfenceProto
+	20, // 16: GetTaskStatsRep.stats:type_name -> TaskStats
+	31, // 17: SubmitStopReq.fence:type_name -> TfenceProto
+	31, // 18: FenceReq.fence:type_name -> TfenceProto
+	19, // [19:19] is the sub-list for method output_type
+	19, // [19:19] is the sub-list for method input_type
+	19, // [19:19] is the sub-list for extension type_name
+	19, // [19:19] is the sub-list for extension extendee
+	0,  // [0:19] is the sub-list for field type_name
 }
 
 func init() { file_ft_task_proto_fttask_proto_init() }
@@ -1656,7 +1770,7 @@ func file_ft_task_proto_fttask_proto_init() {
 			}
 		}
 		file_ft_task_proto_fttask_proto_msgTypes[3].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*GetTasksByStatusReq); i {
+			switch v := v.(*EditTasksReq); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1668,7 +1782,7 @@ func file_ft_task_proto_fttask_proto_init() {
 			}
 		}
 		file_ft_task_proto_fttask_proto_msgTypes[4].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*GetTasksByStatusRep); i {
+			switch v := v.(*EditTasksRep); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1680,7 +1794,7 @@ func file_ft_task_proto_fttask_proto_init() {
 			}
 		}
 		file_ft_task_proto_fttask_proto_msgTypes[5].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ReadTasksReq); i {
+			switch v := v.(*GetTasksByStatusReq); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1692,7 +1806,7 @@ func file_ft_task_proto_fttask_proto_init() {
 			}
 		}
 		file_ft_task_proto_fttask_proto_msgTypes[6].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ReadTasksRep); i {
+			switch v := v.(*GetTasksByStatusRep); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1704,7 +1818,7 @@ func file_ft_task_proto_fttask_proto_init() {
 			}
 		}
 		file_ft_task_proto_fttask_proto_msgTypes[7].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*MoveTasksReq); i {
+			switch v := v.(*ReadTasksReq); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1716,7 +1830,7 @@ func file_ft_task_proto_fttask_proto_init() {
 			}
 		}
 		file_ft_task_proto_fttask_proto_msgTypes[8].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*MoveTasksRep); i {
+			switch v := v.(*ReadTasksRep); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1728,7 +1842,7 @@ func file_ft_task_proto_fttask_proto_init() {
 			}
 		}
 		file_ft_task_proto_fttask_proto_msgTypes[9].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*MoveTasksByStatusReq); i {
+			switch v := v.(*MoveTasksReq); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1740,7 +1854,7 @@ func file_ft_task_proto_fttask_proto_init() {
 			}
 		}
 		file_ft_task_proto_fttask_proto_msgTypes[10].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*MoveTasksByStatusRep); i {
+			switch v := v.(*MoveTasksRep); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1752,7 +1866,7 @@ func file_ft_task_proto_fttask_proto_init() {
 			}
 		}
 		file_ft_task_proto_fttask_proto_msgTypes[11].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*AcquireTasksReq); i {
+			switch v := v.(*MoveTasksByStatusReq); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1764,7 +1878,7 @@ func file_ft_task_proto_fttask_proto_init() {
 			}
 		}
 		file_ft_task_proto_fttask_proto_msgTypes[12].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*AcquireTasksRep); i {
+			switch v := v.(*MoveTasksByStatusRep); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1776,7 +1890,7 @@ func file_ft_task_proto_fttask_proto_init() {
 			}
 		}
 		file_ft_task_proto_fttask_proto_msgTypes[13].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*AddTaskOutputsReq); i {
+			switch v := v.(*AcquireTasksReq); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1788,7 +1902,7 @@ func file_ft_task_proto_fttask_proto_init() {
 			}
 		}
 		file_ft_task_proto_fttask_proto_msgTypes[14].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*AddTaskOutputsRep); i {
+			switch v := v.(*AcquireTasksRep); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1800,7 +1914,7 @@ func file_ft_task_proto_fttask_proto_init() {
 			}
 		}
 		file_ft_task_proto_fttask_proto_msgTypes[15].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*GetTaskOutputsReq); i {
+			switch v := v.(*AddTaskOutputsReq); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1812,7 +1926,7 @@ func file_ft_task_proto_fttask_proto_init() {
 			}
 		}
 		file_ft_task_proto_fttask_proto_msgTypes[16].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*GetTaskOutputsRep); i {
+			switch v := v.(*AddTaskOutputsRep); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1824,7 +1938,7 @@ func file_ft_task_proto_fttask_proto_init() {
 			}
 		}
 		file_ft_task_proto_fttask_proto_msgTypes[17].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*TaskStats); i {
+			switch v := v.(*GetTaskOutputsReq); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1836,7 +1950,7 @@ func file_ft_task_proto_fttask_proto_init() {
 			}
 		}
 		file_ft_task_proto_fttask_proto_msgTypes[18].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*GetTaskStatsReq); i {
+			switch v := v.(*GetTaskOutputsRep); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1848,7 +1962,7 @@ func file_ft_task_proto_fttask_proto_init() {
 			}
 		}
 		file_ft_task_proto_fttask_proto_msgTypes[19].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*GetTaskStatsRep); i {
+			switch v := v.(*TaskStats); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1860,7 +1974,7 @@ func file_ft_task_proto_fttask_proto_init() {
 			}
 		}
 		file_ft_task_proto_fttask_proto_msgTypes[20].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*SubmitStopReq); i {
+			switch v := v.(*GetTaskStatsReq); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1872,7 +1986,7 @@ func file_ft_task_proto_fttask_proto_init() {
 			}
 		}
 		file_ft_task_proto_fttask_proto_msgTypes[21].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*SubmitStopRep); i {
+			switch v := v.(*GetTaskStatsRep); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1884,7 +1998,7 @@ func file_ft_task_proto_fttask_proto_init() {
 			}
 		}
 		file_ft_task_proto_fttask_proto_msgTypes[22].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*FenceReq); i {
+			switch v := v.(*SubmitStopReq); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1896,7 +2010,7 @@ func file_ft_task_proto_fttask_proto_init() {
 			}
 		}
 		file_ft_task_proto_fttask_proto_msgTypes[23].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*FenceRep); i {
+			switch v := v.(*SubmitStopRep); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1908,7 +2022,7 @@ func file_ft_task_proto_fttask_proto_init() {
 			}
 		}
 		file_ft_task_proto_fttask_proto_msgTypes[24].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ClearEtcdReq); i {
+			switch v := v.(*FenceReq); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1920,7 +2034,7 @@ func file_ft_task_proto_fttask_proto_init() {
 			}
 		}
 		file_ft_task_proto_fttask_proto_msgTypes[25].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ClearEtcdRep); i {
+			switch v := v.(*FenceRep); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1932,7 +2046,7 @@ func file_ft_task_proto_fttask_proto_init() {
 			}
 		}
 		file_ft_task_proto_fttask_proto_msgTypes[26].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*PartitionReq); i {
+			switch v := v.(*ClearEtcdReq); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1944,6 +2058,30 @@ func file_ft_task_proto_fttask_proto_init() {
 			}
 		}
 		file_ft_task_proto_fttask_proto_msgTypes[27].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*ClearEtcdRep); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_ft_task_proto_fttask_proto_msgTypes[28].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*PartitionReq); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_ft_task_proto_fttask_proto_msgTypes[29].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*PartitionRep); i {
 			case 0:
 				return &v.state
@@ -1962,7 +2100,7 @@ func file_ft_task_proto_fttask_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_ft_task_proto_fttask_proto_rawDesc,
 			NumEnums:      1,
-			NumMessages:   28,
+			NumMessages:   30,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

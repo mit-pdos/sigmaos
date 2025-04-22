@@ -16,6 +16,8 @@ import (
 	"sigmaos/apps/mr/kvmap"
 	"sigmaos/apps/mr/mr"
 	db "sigmaos/debug"
+	fttask "sigmaos/ft/task"
+	fttask_clnt "sigmaos/ft/task/clnt"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
 	"sigmaos/sigmaclnt/fslib"
@@ -46,12 +48,28 @@ type Reducer struct {
 
 func NewReducer(sc *sigmaclnt.SigmaClnt, reducef mr.ReduceT, args []string, p *perf.Perf) (*Reducer, error) {
 	r := &Reducer{
-		outlink:      args[1],
-		outputTarget: args[2],
+		outlink:      args[2],
+		outputTarget: args[3],
 		reducef:      reducef,
 		SigmaClnt:    sc,
 		perf:         p,
 	}
+	id, err := strconv.ParseInt(args[0], 10, 32)
+	if err != nil {
+		return nil, fmt.Errorf("Reducer: id %v isn't int %v", args[0], err)
+	}
+	srvId := fttask.FtTaskSrvId(args[1])
+
+	ftclnt := fttask_clnt.NewFtTaskClnt[TreduceTask, Bin](sc.FsLib, srvId)
+	data, err := ftclnt.ReadTasks([]fttask_clnt.TaskId{fttask_clnt.TaskId(id)})
+	if err != nil {
+		return nil, fmt.Errorf("Reducer: ReadTasks %v err %v", id, err)
+	}
+	if len(data) != 1 {
+		return nil, fmt.Errorf("Reducer: ReadTasks %v len %d != 1", id, len(data))
+	}
+	r.input = data[0].Data.Input
+
 	if err := json.Unmarshal([]byte(args[0]), &r.input); err != nil {
 		db.DPrintf(db.MR, "NewReducer %s: unmarshal err %v\n", args[0], err)
 		return nil, err
@@ -60,9 +78,9 @@ func NewReducer(sc *sigmaclnt.SigmaClnt, reducef mr.ReduceT, args []string, p *p
 
 	db.DPrintf(db.MR, "Reducer outputting to %v", r.tmp)
 
-	m, err := strconv.Atoi(args[3])
+	m, err := strconv.Atoi(args[4])
 	if err != nil {
-		return nil, fmt.Errorf("Reducer: nmaptask %v isn't int", args[2])
+		return nil, fmt.Errorf("Reducer: nmaptask %v isn't int", args[4])
 	}
 	r.nmaptask = m
 

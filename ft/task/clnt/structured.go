@@ -53,6 +53,28 @@ func (tc *ftTaskClnt[Data, Output]) SubmitTasks(tasks []*Task[Data]) ([]TaskId, 
 	return res.Existing, err
 }
 
+func (tc *ftTaskClnt[Data, Output]) EditTasks(tasks []*Task[Data]) ([]TaskId, error) {
+	var protoTasks []*proto.Task
+
+	for _, task := range tasks {
+		encoded, err := Encode(task.Data)
+		if err != nil {
+			return nil, err
+		}
+
+		protoTasks = append(protoTasks, &proto.Task{
+			Id:   task.Id,
+			Data: encoded,
+		})
+	}
+
+	arg := proto.EditTasksReq{Tasks: protoTasks, Fence: tc.fenceProto()}
+	res := proto.EditTasksRep{}
+
+	err := tc.rpc("TaskSrv.EditTasks", &arg, &res, false)
+	return res.Unknown, err
+}
+
 func (tc *ftTaskClnt[Data, Output]) ReadTasks(ids []TaskId) ([]Task[Data], error) {
 	arg := proto.ReadTasksReq{Ids: ids, Fence: tc.fenceProto()}
 	res := proto.ReadTasksRep{}

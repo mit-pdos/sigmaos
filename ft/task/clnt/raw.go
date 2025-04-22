@@ -129,6 +129,23 @@ func (tc *RawFtTaskClnt) SubmitTasks(tasks []*Task[[]byte]) ([]TaskId, error) {
 	return res.Existing, err
 }
 
+func (tc *RawFtTaskClnt) EditTasks(tasks []*Task[[]byte]) ([]TaskId, error) {
+	var protoTasks []*proto.Task
+
+	for _, task := range tasks {
+		protoTasks = append(protoTasks, &proto.Task{
+			Id:   task.Id,
+			Data: task.Data,
+		})
+	}
+
+	arg := proto.EditTasksReq{Tasks: protoTasks, Fence: tc.fenceProto()}
+	res := proto.EditTasksRep{}
+
+	err := tc.rpc("TaskSrv.EditTasks", &arg, &res, false)
+	return res.Unknown, err
+}
+
 func (tc *RawFtTaskClnt) GetTasksByStatus(taskStatus TaskStatus) ([]TaskId, error) {
 	arg := proto.GetTasksByStatusReq{Status: taskStatus, Fence: tc.fenceProto()}
 	res := proto.GetTasksByStatusRep{}

@@ -25,6 +25,15 @@ message SubmitTasksRep {
   repeated int32 existing = 1;
 }
 
+message EditTasksReq {
+  repeated Task tasks = 1;
+  TfenceProto fence = 2;
+}
+
+message EditTasksRep {
+  repeated int32 unknown = 1;
+}
+
 message GetTasksByStatusReq {
   TaskStatus status = 1;
   TfenceProto fence = 2;

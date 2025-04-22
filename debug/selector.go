@@ -91,8 +91,9 @@ const (
 
 // MR
 const (
-	MR     Tselector = "MR"
-	MR_TPT           = "MR_TPT"
+	MR       Tselector = "MR"
+	MR_COORD Tselector = "MR_COORD"
+	MR_TPT             = "MR_TPT"
 )
 
 // KV

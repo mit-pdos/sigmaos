@@ -98,7 +98,7 @@ func NewCoord(args []string) (*Coord, error) {
 	}
 	perf, _ := perf.NewPerf(proc.GetProcEnv(), perf.MRCOORD)
 	c.perf = perf
-	db.DPrintf(db.MR, "Made fslib job %v", c.job)
+	db.DPrintf(db.MR_COORD, "Made fslib job %v", c.job)
 	c.SigmaClnt = sc
 	m, err := strconv.Atoi(args[2])
 	if err != nil {
@@ -200,7 +200,7 @@ func (c *Coord) reducerProc(t fttask_clnt.Task[[]byte]) (*proc.Proc, error) {
 	if !ok {
 		db.DFatalf("reducerProc: no input for %v", t.Id)
 	}
-	db.DPrintf(db.MR, "tn %v t %v bin %v", t.Id, t, bin)
+	db.DPrintf(db.MR_COORD, "tn %v t %v bin %v", t.Id, t, bin)
 	b, err := json.Marshal(bin)
 	if err != nil {
 		db.DFatalf("reducerProc: %v err %v", t.Id, err)
@@ -257,12 +257,12 @@ func (c *Coord) waitForTask(ftclnt fttask_clnt.FtTaskClnt[[]byte, []byte], start
 		if err := ftclnt.MoveTasks([]fttask_clnt.TaskId{t}, fttask_clnt.DONE); err != nil {
 			db.DFatalf("MarkDone %v done err %v", t, err)
 		}
-		db.DPrintf(db.MR, "MarkDone latency: %v %v", time.Since(start), r)
+		db.DPrintf(db.MR_COORD, "MarkDone latency: %v %v", time.Since(start), r)
 		r.MsOuter = ms
 		ch <- Tresult{t, true, ms, status.Msg(), r}
 	} else { // task failed; make it runnable again
 		c.stat.Nfail += 1
-		db.DPrintf(db.MR, "Task failed %v status %v", t, status)
+		db.DPrintf(db.MR_COORD, "Task failed %v status %v", t, status)
 		if status != nil && status.Msg() == RESTART {
 			// reducer indicates to run some mappers again
 			s := newStringSlice(status.Data().([]interface{}))
@@ -277,7 +277,7 @@ func (c *Coord) waitForTask(ftclnt fttask_clnt.FtTaskClnt[[]byte, []byte], start
 }
 
 func (c *Coord) runTasks(ftclnt fttask_clnt.FtTaskClnt[[]byte, []byte], ch chan Tresult, ids []fttask_clnt.TaskId, f NewProc) {
-	db.DPrintf(db.MR, "runTasks %v", ids)
+	db.DPrintf(db.MR_COORD, "runTasks %v", ids)
 	tasks, err := ftclnt.ReadTasks(ids)
 	if err != nil {
 		db.DFatalf("ReadTasks %v err %v", ids, err)
@@ -288,7 +288,7 @@ func (c *Coord) runTasks(ftclnt fttask_clnt.FtTaskClnt[[]byte, []byte], ch chan 
 		if err != nil {
 			db.DFatalf("Err spawn task: %v", err)
 		}
-		db.DPrintf(db.MR, "prep to spawn proc %v %v", proc.GetPid(), proc.Args)
+		db.DPrintf(db.MR_COORD, "prep to spawn proc %v %v", proc.GetPid(), proc.Args)
 		start := time.Now()
 		err = c.Spawn(proc)
 		if err != nil {
@@ -312,7 +312,7 @@ func (c *Coord) startTasks(ft fttask_clnt.FtTaskClnt[[]byte, []byte], ch chan Tr
 	if err != nil {
 		db.DFatalf("startTasks err %v\n", err)
 	}
-	db.DPrintf(db.MR, "startTasks %v time: %v", tns, time.Since(start))
+	db.DPrintf(db.MR_COORD, "startTasks %v time: %v", tns, time.Since(start))
 	c.runTasks(ft, ch, tns, f)
 	return len(tns)
 }
@@ -380,14 +380,14 @@ func (c *Coord) makeReduceBins() error {
 	// 	return err
 	// }
 
-	// db.DPrintf(db.MR, "Mappers job state %v", ms)
+	// db.DPrintf(db.MR_COORD, "Mappers job state %v", ms)
 
 	// rs, err := c.rft.JobState()
 	// if err != nil {
 	// 	return err
 	// }
 
-	// db.DPrintf(db.MR, "Reducers job state %v", rs)
+	// db.DPrintf(db.MR_COORD, "Reducers job state %v", rs)
 
 	// get all reducers (including those that succeeded in previous rounds) in sorted order to ensure
 	// any restarted reducers are given the exact same files as before
@@ -400,7 +400,7 @@ func (c *Coord) makeReduceBins() error {
 		c.reduceBinIn[n] = make(Bin, c.nmaptask)
 	}
 
-	db.DPrintf(db.MR, "makeReduceBins: tasks done %v todo %v %v", mns, rns, c.reduceBinIn)
+	db.DPrintf(db.MR_COORD, "makeReduceBins: tasks done %v todo %v %v", mns, rns, c.reduceBinIn)
 
 	obins, err := c.mftclnt.GetTaskOutputs(mns)
 	if err != nil {
@@ -412,7 +412,7 @@ func (c *Coord) makeReduceBins() error {
 			c.reduceBinIn[rns[i]][j] = s
 		}
 	}
-	db.DPrintf(db.MR, "makeReduceBins: reduceBinIn %v", c.reduceBinIn)
+	db.DPrintf(db.MR_COORD, "makeReduceBins: reduceBinIn %v", c.reduceBinIn)
 	return nil
 }
 
@@ -428,9 +428,9 @@ func (c *Coord) Round(ttype string) {
 			m += c.startTasks(c.rftclnt.AsRawClnt(), ch, c.reducerProc)
 		} else if ttype == "all" {
 			m += c.startTasks(c.mftclnt.AsRawClnt(), ch, c.mapperProc)
-			db.DPrintf(db.MR, "startTasks mappers %v", m)
+			db.DPrintf(db.MR_COORD, "startTasks mappers %v", m)
 			m += c.startTasks(c.rftclnt.AsRawClnt(), ch, c.reducerProc)
-			db.DPrintf(db.MR, "startTasks add reducers %v", m)
+			db.DPrintf(db.MR_COORD, "startTasks add reducers %v", m)
 		} else {
 			db.DFatalf("Unknown ttype: %v", ttype)
 		}
@@ -438,9 +438,9 @@ func (c *Coord) Round(ttype string) {
 			break
 		}
 		res := <-ch
-		db.DPrintf(db.MR, "Round: task done %v ok %v msg %v", res.t, res.ok, res.msg)
+		db.DPrintf(db.MR_COORD, "Round: task done %v ok %v msg %v", res.t, res.ok, res.msg)
 		if res.res != nil {
-			db.DPrintf(db.MR, "Round: task %v res: msInner %d msOuter %d res %v\n", res.t, res.res.MsInner, res.res.MsOuter, res.res)
+			db.DPrintf(db.MR_COORD, "Round: task %v res: msInner %d msOuter %d res %v\n", res.t, res.res.MsInner, res.res.MsOuter, res.res)
 		}
 		if res.ok {
 			if err := c.AppendFileJson(MRstats(c.jobRoot, c.job), res.res); err != nil {
@@ -456,7 +456,7 @@ func (c *Coord) Round(ttype string) {
 }
 
 func (c *Coord) Work() {
-	db.DPrintf(db.MR, "Try acquire leadership coord %v job %v", c.ProcEnv().GetPID(), c.job)
+	db.DPrintf(db.MR_COORD, "Try acquire leadership coord %v job %v", c.ProcEnv().GetPID(), c.job)
 
 	// Try to become the leading coordinator.
 	if err := c.leaderclnt.LeadAndFence(nil, []string{JobDir(c.jobRoot, c.job)}); err != nil {
@@ -481,7 +481,7 @@ func (c *Coord) Work() {
 		db.DFatalf("RecoverTasks mapper err %v", err)
 	} else {
 		c.stat.NrecoverMap = int(n)
-		db.DPrintf(db.MR, "Recover %d map tasks took %v", n, time.Since(start))
+		db.DPrintf(db.MR_COORD, "Recover %d map tasks took %v", n, time.Since(start))
 	}
 
 	start = time.Now()
@@ -489,7 +489,7 @@ func (c *Coord) Work() {
 		db.DFatalf("RecoverTasks reducer err %v", err)
 	} else {
 		c.stat.NrecoverReduce = int(n)
-		db.DPrintf(db.MR, "Recover %d reduce tasks took %v", n, time.Since(start))
+		db.DPrintf(db.MR_COORD, "Recover %d reduce tasks took %v", n, time.Since(start))
 	}
 
 	mftStats, err := c.mftclnt.Stats()
@@ -504,7 +504,7 @@ func (c *Coord) Work() {
 
 	start = time.Now()
 	c.doRestart()
-	db.DPrintf(db.MR, "doRestart took %v", time.Since(start))
+	db.DPrintf(db.MR_COORD, "doRestart took %v", time.Since(start))
 	jobStart := time.Now()
 
 	for {

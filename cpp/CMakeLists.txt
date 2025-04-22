@@ -8,6 +8,6 @@ if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Release)
 endif()
 
-#include_directories()
+add_subdirectory(proxy)
 
 add_subdirectory(user)

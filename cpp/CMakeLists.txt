@@ -9,5 +9,4 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 
 add_subdirectory(proxy)
-
 add_subdirectory(user)

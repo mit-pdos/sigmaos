@@ -297,6 +297,10 @@ func (s *TaskSrv) getMap(status proto.TaskStatus) *map[int32]bool {
 
 // must hold lock
 func (s *TaskSrv) applyChanges(added map[int32]bool, status map[int32]proto.TaskStatus, data map[int32][]byte, outputs map[int32][]byte) error {
+	if len(added) + len(status) + len(data) + len(outputs) == 0 {
+		return nil
+	}
+
 	// validate changes
 	for id, newStatus := range status {
 		from, ok := s.status[id]
@@ -620,7 +624,14 @@ func (s *TaskSrv) AddTaskOutputs(ctx fs.CtxI, req proto.AddTaskOutputsReq, rep *
 		outputs[id] = req.Outputs[ix]
 	}
 
-	if err := s.applyChanges(nil, nil, nil, outputs); err != nil {
+	status := make(map[int32]proto.TaskStatus)
+	if req.MarkDone {
+		for _, id := range req.Ids {
+			status[id] = proto.TaskStatus_DONE
+		}
+	}
+
+	if err := s.applyChanges(nil, status, nil, outputs); err != nil {
 		return err
 	}
 

@@ -76,7 +76,8 @@ message AcquireTasksRep {
 message AddTaskOutputsReq {
   repeated int32 ids = 1;
   repeated bytes outputs = 2;
-  TfenceProto fence = 3;
+  bool markDone = 3;
+  TfenceProto fence = 4;
 }
 
 message AddTaskOutputsRep {

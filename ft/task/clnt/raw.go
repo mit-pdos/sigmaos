@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"path/filepath"
 	db "sigmaos/debug"
-	"sigmaos/ft/task"
 	fttask "sigmaos/ft/task"
 	"sigmaos/ft/task/proto"
 	rpcclnt "sigmaos/rpc/clnt"
@@ -182,8 +181,8 @@ func (tc *RawFtTaskClnt) GetTaskOutputs(ids []TaskId) ([][]byte, error) {
 	return res.Outputs, nil
 }
 
-func (tc *RawFtTaskClnt) AddTaskOutputs(ids []TaskId, outputs [][]byte) error {
-	arg := proto.AddTaskOutputsReq{Ids: ids, Outputs: outputs, Fence: tc.fenceProto()}
+func (tc *RawFtTaskClnt) AddTaskOutputs(ids []TaskId, outputs [][]byte, markDone bool) error {
+	arg := proto.AddTaskOutputsReq{Ids: ids, Outputs: outputs, MarkDone: markDone, Fence: tc.fenceProto()}
 	res := proto.AddTaskOutputsRep{}
 
 	err := tc.rpc("TaskSrv.AddTaskOutputs", &arg, &res, false)
@@ -282,6 +281,6 @@ func (tc *RawFtTaskClnt) AsRawClnt() FtTaskClnt[[]byte, []byte] {
 	return tc
 }
 
-func (tc *RawFtTaskClnt) ServerId() task.FtTaskSrvId {
+func (tc *RawFtTaskClnt) ServerId() fttask.FtTaskSrvId {
 	return tc.serverId
 }

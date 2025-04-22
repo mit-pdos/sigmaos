@@ -102,9 +102,7 @@ func TestServerPerf(t *testing.T) {
 
 	start = time.Now()
 	for _, id := range ids {
-		err = clnt.AddTaskOutputs([]fttask_clnt.TaskId{id}, []string{"bye"})
-		assert.Nil(t, err)
-		err = clnt.MoveTasks([]fttask_clnt.TaskId{id}, fttask_clnt.DONE)
+		err = clnt.AddTaskOutputs([]fttask_clnt.TaskId{id}, []string{"bye"}, true)
 		assert.Nil(t, err)
 	}
 	db.DPrintf(db.ALWAYS, "Marked all tasks done in %v (%v per task)", time.Since(start), time.Since(start) / time.Duration(nTasks))
@@ -175,9 +173,7 @@ func TestServerBatchedPerf(t *testing.T) {
 	for i := 0; i < nTasks; i++ {
 		outputs[i] = "bye"
 	}
-	err = clnt.AddTaskOutputs(ids, outputs)
-	assert.Nil(t, err)
-	err = clnt.MoveTasks(ids, fttask_clnt.DONE)
+	err = clnt.AddTaskOutputs(ids, outputs, true)
 	assert.Nil(t, err)
 	db.DPrintf(db.ALWAYS, "Marked all tasks done in %v (%v per task)", time.Since(start), time.Since(start)/time.Duration(nTasks))
 
@@ -575,7 +571,7 @@ func runTestServerData(t *testing.T, em *crash.TeventMap) []*procgroupmgr.ProcSt
 	for i := 0; i < ntasks; i++ {
 		outputs[i] = fmt.Sprintf("output_%d", i)
 	}
-	err = clnt.AddTaskOutputs(ids, outputs)
+	err = clnt.AddTaskOutputs(ids, outputs, false)
 	assert.Nil(t, err)
 
 	if em != nil {

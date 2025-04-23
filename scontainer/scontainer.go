@@ -38,6 +38,7 @@ func StartSigmaContainer(uproc *proc.Proc, dialproxy bool) (*uprocCmd, error) {
 	pn := binsrv.BinPath(uproc.GetVersionedProgram())
 	// Optionally strace the proc
 	if straceProcs[uproc.GetProgram()] {
+		// "--signal=!SIGSEGV",
 		cmd = exec.Command("strace", append([]string{"-D", "-f", "uproc-trampoline", uproc.GetPid().String(), pn, strconv.FormatBool(dialproxy)}, uproc.Args...)...)
 	} else {
 		cmd = exec.Command("uproc-trampoline", append([]string{uproc.GetPid().String(), pn, strconv.FormatBool(dialproxy)}, uproc.Args...)...)

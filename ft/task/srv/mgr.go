@@ -39,7 +39,7 @@ func NewFtTaskSrvMgr(sc *sigmaclnt.SigmaClnt, id string, em *crash.TeventMap, ev
 		return nil, err
 	}
 
-	config := procgroupmgr.NewProcGroupConfig(1, "fttask-srv", []string{}, 0, id)
+	config := procgroupmgr.NewProcGroupConfig(1, "fttask-srv", []string{}, 1000, id)
 	p := config.StartGrpMgr(sc)
 	err = p.WaitStart()
 	if err != nil {

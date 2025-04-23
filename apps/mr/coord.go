@@ -411,14 +411,42 @@ func (c *Coord) makeReduceBins() error {
 		}
 	}
 
-	rtaskDataP := make([]*fttask_clnt.Task[TreduceTask], len(rtaskData))
+	// if we have a lot of mappers, this can be a lot of data, whihc exceeds the 2MB limit per gRPC
+	// message and/or the 1MB limit for etcd, so we break it up into batches and use 900 KB messages
+	// to be safe
+	const (
+		maxBatchSize = 900 * 1024      // 900 KB
+		taskOverhead = 64              // Proto overhead estimate
+	)
+
+	batched := make([]*fttask_clnt.Task[TreduceTask], 0, len(rtaskData))
+	currentBatchSize := 0
+
 	for i := range rtaskData {
-		rtaskDataP[i] = &rtaskData[i]
+		task := &rtaskData[i]
+		b, err := json.Marshal(task)
+		if err != nil {
+			db.DFatalf("json.Marshal %v err %v", task, err)
+		}
+		estSize := len(b) + taskOverhead
+
+		if currentBatchSize + estSize > maxBatchSize && len(batched) > 0 {
+			if _, err = c.rftclnt.EditTasks(batched); err != nil {
+				db.DPrintf(db.MR_COORD, "EditTasks batch err %v", err)
+			}
+			batched = nil
+			currentBatchSize = 0
+		}
+
+		batched = append(batched, task)
+		currentBatchSize += estSize
 	}
 
-	_, err = c.rftclnt.EditTasks(rtaskDataP)
-	if err != nil {
-		db.DPrintf(db.MR_COORD, "EditTasks %v err %v", rnsTodo, err)
+	// Send remaining tasks
+	if len(batched) > 0 {
+		if _, err = c.rftclnt.EditTasks(batched); err != nil {
+			db.DPrintf(db.MR_COORD, "EditTasks final batch err %v", err)
+		}
 	}
 
 	return nil

@@ -7,4 +7,5 @@ Dockerfile.*
 !make.sh
 !create-net.sh
 rs/*/target/
+cpp/build
 */*_test.go

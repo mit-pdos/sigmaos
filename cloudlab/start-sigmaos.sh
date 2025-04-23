@@ -21,7 +21,7 @@ while [[ $# -gt 0 ]]; do
   key="$1"
   case $key in
   --parallel)
-    PARALLEL=1 # (seems unstable for now, commenting it out)
+    PARALLEL=1
     shift
     ;;
   --vpc)

@@ -73,8 +73,6 @@ for vm in $vms; do
   cmd4="tar -xzf $PERF_DIR/$vm_hostname-perf.tar.gz -C $PERF_DIR; rm $PERF_DIR/$vm_hostname-perf.tar.gz"
   # scp the bench.out file.
   cmd5="scp -C -i $DIR/keys/cloudlab-sigmaos $LOGIN@$vm:/tmp/bench.out $PERF_DIR/bench.out.$idx"
-  # scp the outfile.
-  cmd6="scp -C -i $DIR/keys/cloudlab-sigmaos $LOGIN@$vm:$outfile $LOG_DIR/sj-$vm_hostname-$vm.out"
   idx=$((idx+1)) 
   if [ -z "$PARALLEL" ]; then
     eval "$cmd1"
@@ -82,7 +80,6 @@ for vm in $vms; do
     eval "$cmd3"
     eval "$cmd4"
     eval "$cmd5"
-    eval "$cmd6"
   else
     (
       eval "$cmd1"
@@ -90,7 +87,6 @@ for vm in $vms; do
       eval "$cmd3"
       eval "$cmd4"
       eval "$cmd5"
-      eval "$cmd6"
     ) &
   fi
 done

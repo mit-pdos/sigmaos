@@ -60,6 +60,8 @@ func NewReducer(sc *sigmaclnt.SigmaClnt, reducef mr.ReduceT, args []string, p *p
 	srvId := fttask.FtTaskSrvId(args[1])
 
 	ftclnt := fttask_clnt.NewFtTaskClnt[TreduceTask, Bin](sc.FsLib, srvId)
+
+	start := time.Now()
 	data, err := ftclnt.ReadTasks([]fttask_clnt.TaskId{fttask_clnt.TaskId(id)})
 	if err != nil {
 		return nil, fmt.Errorf("Reducer: ReadTasks %v err %v", id, err)
@@ -67,7 +69,7 @@ func NewReducer(sc *sigmaclnt.SigmaClnt, reducef mr.ReduceT, args []string, p *p
 	if len(data) != 1 {
 		return nil, fmt.Errorf("Reducer: ReadTasks %v len %d != 1", id, len(data))
 	}
-	db.DPrintf(db.MR, "Reducer: ReadTasks %v %v", id, len(data))
+	db.DPrintf(db.MR_COORD, "Reducer: ReadTasks %v %v in %v", id, len(data), time.Since(start))
 	r.input = data[0].Data.Input
 	r.tmp = r.outputTarget + rand.Name()
 
@@ -225,7 +227,7 @@ func (r *Reducer) emit(key []byte, value string) error {
 }
 
 func (r *Reducer) DoReduce() *proc.Status {
-	db.DPrintf(db.ALWAYS, "DoReduce in %v out %v nmap %v\n", r.input, r.outlink, r.nmaptask)
+	db.DPrintf(db.ALWAYS, "DoReduce in %v out %v nmap %v\n", len(r.input), r.outlink, r.nmaptask)
 	rtot := readResult{
 		kvm:        kvmap.NewKVMap(chunkreader.MINCAP, chunkreader.MAXCAP),
 		mapsFailed: []string{},
@@ -239,7 +241,7 @@ func (r *Reducer) DoReduce() *proc.Status {
 	}
 
 	ms := rtot.d.Milliseconds()
-	db.DPrintf(db.MR, "DoReduce: Readfiles %s: in %s %vms (%s)\n", r.input, humanize.Bytes(uint64(rtot.n)), ms, test.TputStr(rtot.n, ms))
+	db.DPrintf(db.MR, "DoReduce: Readfiles %v: in %s %vms (%s)\n", len(r.input), humanize.Bytes(uint64(rtot.n)), ms, test.TputStr(rtot.n, ms))
 
 	start := time.Now()
 

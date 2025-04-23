@@ -243,7 +243,7 @@ func (c *Coord) waitForTask(ftclnt fttask_clnt.FtTaskClnt[[]byte, []byte], start
 		if err := ftclnt.AddTaskOutputs([]fttask_clnt.TaskId{t}, [][]byte{encoded}, true); err != nil {
 			db.DFatalf("MarkDone %v done err %v", t, err)
 		}
-		db.DPrintf(db.MR_COORD, "MarkDone latency: %v %v", time.Since(start), r)
+		db.DPrintf(db.MR_COORD, "MarkDone latency: lat %v inner %v task %s", time.Since(start), r.MsInner, r.Task)
 		r.MsOuter = ms
 		ch <- Tresult{t, true, ms, status.Msg(), r}
 	} else { // task failed; make it runnable again
@@ -263,11 +263,13 @@ func (c *Coord) waitForTask(ftclnt fttask_clnt.FtTaskClnt[[]byte, []byte], start
 }
 
 func (c *Coord) runTasks(ftclnt fttask_clnt.FtTaskClnt[[]byte, []byte], ch chan Tresult, ids []fttask_clnt.TaskId, f NewProc) {
-	db.DPrintf(db.MR_COORD, "runTasks %v", ids)
+	db.DPrintf(db.MR_COORD, "runTasks %v", len(ids))
+	start := time.Now()
 	tasks, err := ftclnt.ReadTasks(ids)
 	if err != nil {
 		db.DFatalf("ReadTasks %v err %v", ids, err)
 	}
+	db.DPrintf(db.MR_COORD, "runTasks: read tasks %v time: %v", len(tasks), time.Since(start))
 
 	// create all proc objects first so we can spawn them all in
 	// quick succession to try to balance load across machines
@@ -283,7 +285,7 @@ func (c *Coord) runTasks(ftclnt fttask_clnt.FtTaskClnt[[]byte, []byte], ch chan 
 
 	for i, t := range tasks {
 		proc := procs[i]
-		db.DPrintf(db.MR_COORD, "prep to spawn proc %v %v", proc.GetPid(), proc.Args)
+		db.DPrintf(db.MR_COORD, "prep to spawn proc %v", proc.GetPid())
 		start := time.Now()
 		err = c.Spawn(proc)
 		if err != nil {
@@ -307,7 +309,7 @@ func (c *Coord) startTasks(ft fttask_clnt.FtTaskClnt[[]byte, []byte], ch chan Tr
 	if err != nil {
 		db.DFatalf("startTasks err %v\n", err)
 	}
-	db.DPrintf(db.MR_COORD, "startTasks %v time: %v", tns, time.Since(start))
+	db.DPrintf(db.MR_COORD, "startTasks %v time: %v", len(tns), time.Since(start))
 	c.runTasks(ft, ch, tns, f)
 	return len(tns)
 }
@@ -396,11 +398,13 @@ func (c *Coord) makeReduceBins() error {
 
 	// db.DPrintf(db.MR_COORD, "makeReduceBins: reduceBinIn %v", reduceBinIn)
 
+	start := time.Now()
 	rtaskData, err := c.rftclnt.ReadTasks(rnsTodo)
 	if err != nil {
 		db.DPrintf(db.MR_COORD, "ReadTasks %v err %v", rns, err)
 		return err
 	}
+	db.DPrintf(db.MR_COORD, "makeReduceBins: read %v tasks %v", len(rtaskData), time.Since(start))
 
 	for i, t := range rtaskData {
 		if reduceBin, ok := reduceBinIn[t.Id]; ok {
@@ -422,6 +426,7 @@ func (c *Coord) makeReduceBins() error {
 	batched := make([]*fttask_clnt.Task[TreduceTask], 0, len(rtaskData))
 	currentBatchSize := 0
 
+	start = time.Now()
 	for i := range rtaskData {
 		task := &rtaskData[i]
 		b, err := json.Marshal(task)
@@ -434,6 +439,8 @@ func (c *Coord) makeReduceBins() error {
 			if _, err = c.rftclnt.EditTasks(batched); err != nil {
 				db.DPrintf(db.MR_COORD, "EditTasks batch err %v", err)
 			}
+			db.DPrintf(db.MR_COORD, "makeReduceBins: EditTasks %v tasks %v", len(batched), time.Since(start))
+			start = time.Now()
 			batched = nil
 			currentBatchSize = 0
 		}
@@ -447,6 +454,7 @@ func (c *Coord) makeReduceBins() error {
 		if _, err = c.rftclnt.EditTasks(batched); err != nil {
 			db.DPrintf(db.MR_COORD, "EditTasks final batch err %v", err)
 		}
+		db.DPrintf(db.MR_COORD, "makeReduceBins: EditTasks %v tasks %v", len(batched), time.Since(start))
 	}
 
 	return nil

@@ -394,7 +394,7 @@ func (c *Coord) makeReduceBins() error {
 		}
 	}
 
-	db.DPrintf(db.MR_COORD, "makeReduceBins: reduceBinIn %v", reduceBinIn)
+	// db.DPrintf(db.MR_COORD, "makeReduceBins: reduceBinIn %v", reduceBinIn)
 
 	rtaskData, err := c.rftclnt.ReadTasks(rnsTodo)
 	if err != nil {

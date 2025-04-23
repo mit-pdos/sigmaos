@@ -67,7 +67,7 @@ func NewReducer(sc *sigmaclnt.SigmaClnt, reducef mr.ReduceT, args []string, p *p
 	if len(data) != 1 {
 		return nil, fmt.Errorf("Reducer: ReadTasks %v len %d != 1", id, len(data))
 	}
-	db.DPrintf(db.MR, "Reducer: ReadTasks %v %v", id, data)
+	db.DPrintf(db.MR, "Reducer: ReadTasks %v %v", id, len(data))
 	r.input = data[0].Data.Input
 	r.tmp = r.outputTarget + rand.Name()
 

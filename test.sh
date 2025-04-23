@@ -166,6 +166,7 @@ if [[ $COMPILE == "--compile" ]]; then
       sigmaclnt/procclnt \
       proxy/ux \
       proxy/s3 \
+      proxy/cpp \
       boot/clnt \
       ft/leaderclnt \
       ft/leadertest \
@@ -284,6 +285,7 @@ if [[ $BASIC == "--basic" ]]; then
       proxy/ux \
       boot/clnt \
       proxy/s3 \
+      proxy/cpp \
       realm/clnt; \
       do
         if ! [ -z "$SKIPTO" ]; then

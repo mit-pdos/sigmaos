@@ -1,19 +1,19 @@
 # syntax=docker/dockerfile:1-experimental
 
-FROM alpine AS base
+FROM archlinux AS base
 
-# Install some apt packages for debugging.
-#RUN \
-#  apt-get update && \
-#  apt-get --no-install-recommends --yes install iputils-ping && \
-#  apt-get --no-install-recommends --yes install iproute2 && \
-#  apt-get --no-install-recommends --yes install netcat-traditional && \
-#  apt clean && \
-#  apt autoclean && \
-#  apt autoremove && \
-#  rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+RUN pacman-key --init
+RUN pacman-key --refresh-keys
+RUN pacman-key -u
+RUN pacman-key --populate
+RUN pacman-key --init && \
+  pacman-key --refresh-keys && \
+  pacman-key -u && \
+  pacman-key --populate && \
+  pacman --noconfirm -Sy archlinux-keyring
 
-RUN apk add --no-cache libseccomp gcompat musl-dev strace fuse libstdc++ libgcc 
+
+RUN pacman --noconfirm -Sy libseccomp strace fuse gcc-libs
 
 WORKDIR /home/sigmaos
 RUN mkdir bin && \
@@ -46,7 +46,7 @@ ENV mongoip x.x.x.x
 ENV buildtag "local-build"
 ENV dialproxy "false"
 # Install docker-cli
-RUN apk add --update docker openrc
+RUN pacman --noconfirm -Sy docker
 ENV reserveMcpu "0"
 ENV netmode "host"
 ENV sigmauser "NOT_SET"

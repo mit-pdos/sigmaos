@@ -195,8 +195,6 @@ func (c *Coord) mapperProc(t fttask_clnt.Task[[]byte]) (*proc.Proc, error) {
 }
 
 func (c *Coord) reducerProc(t fttask_clnt.Task[[]byte]) (*proc.Proc, error) {
-	db.DPrintf(db.MR_COORD, "tn %v t %v bin %v", t.Id, t)
-
 	data, err := fttask_clnt.Decode[TreduceTask](t.Data)
 	if err != nil {
 		db.DFatalf("reducerProc: failed to convert data to task %v %v", t.Data, err)
@@ -242,10 +240,7 @@ func (c *Coord) waitForTask(ftclnt fttask_clnt.FtTaskClnt[[]byte, []byte], start
 		if err != nil {
 			db.DFatalf("Encode %v err %v", r.OutBin, err)
 		}
-		if err := ftclnt.AddTaskOutputs([]fttask_clnt.TaskId{t}, [][]byte{encoded}); err != nil {
-			db.DFatalf("MarkDone %v done err %v", t, err)
-		}
-		if err := ftclnt.MoveTasks([]fttask_clnt.TaskId{t}, fttask_clnt.DONE); err != nil {
+		if err := ftclnt.AddTaskOutputs([]fttask_clnt.TaskId{t}, [][]byte{encoded}, true); err != nil {
 			db.DFatalf("MarkDone %v done err %v", t, err)
 		}
 		db.DPrintf(db.MR_COORD, "MarkDone latency: %v %v", time.Since(start), r)
@@ -274,11 +269,20 @@ func (c *Coord) runTasks(ftclnt fttask_clnt.FtTaskClnt[[]byte, []byte], ch chan 
 		db.DFatalf("ReadTasks %v err %v", ids, err)
 	}
 
-	for _, t := range tasks {
+	// create all proc objects first so we can spawn them all in
+	// quick succession to try to balance load across machines
+	procs := make([]*proc.Proc, len(tasks))
+	for i, t := range tasks {
 		proc, err := f(t)
 		if err != nil {
 			db.DFatalf("Err spawn task: %v", err)
 		}
+
+		procs[i] = proc
+	}
+
+	for i, t := range tasks {
+		proc := procs[i]
 		db.DPrintf(db.MR_COORD, "prep to spawn proc %v %v", proc.GetPid(), proc.Args)
 		start := time.Now()
 		err = c.Spawn(proc)

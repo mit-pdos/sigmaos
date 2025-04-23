@@ -32,7 +32,7 @@ type FtTaskClnt[Data any, Output any] interface {
 	MoveTasks(ids []TaskId, to TaskStatus) error
 	MoveTasksByStatus(from, to TaskStatus) (int32, error)
 	GetTaskOutputs(ids []TaskId) ([]Output, error)
-	AddTaskOutputs(ids []TaskId, outputs []Output) error
+	AddTaskOutputs(ids []TaskId, outputs []Output, markDone bool) error
 	AcquireTasks(wait bool) ([]TaskId, bool, error)
 	Stats() (*proto.TaskStats, error)
 	GetNTasks(status TaskStatus) (int32, error)

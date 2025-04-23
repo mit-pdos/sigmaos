@@ -120,7 +120,7 @@ func (tc *ftTaskClnt[Data, Output]) GetTaskOutputs(ids []TaskId) ([]Output, erro
 	return outputs, nil
 }
 
-func (tc *ftTaskClnt[Data, Output]) AddTaskOutputs(ids []TaskId, outputs []Output) error {
+func (tc *ftTaskClnt[Data, Output]) AddTaskOutputs(ids []TaskId, outputs []Output, markDone bool) error {
 	encoded := make([][]byte, len(outputs))
 	var err error
 	for ix, output := range outputs {
@@ -130,7 +130,7 @@ func (tc *ftTaskClnt[Data, Output]) AddTaskOutputs(ids []TaskId, outputs []Outpu
 		}
 	}
 
-	arg := proto.AddTaskOutputsReq{Ids: ids, Outputs: encoded, Fence: tc.fenceProto()}
+	arg := proto.AddTaskOutputsReq{Ids: ids, Outputs: encoded, MarkDone: markDone, Fence: tc.fenceProto()}
 	res := proto.AddTaskOutputsRep{}
 
 	err = tc.rpc("TaskSrv.AddTaskOutputs", &arg, &res, false)

@@ -262,9 +262,6 @@ docker exec -it $cppbuildercid \
   fi
 echo "========== Done building CPP bins =========="
 
-exit
-
-
 echo "========== Copying kernel bins for procd =========="
 if [ "${TARGET}" == "local" ]; then
   sudo cp $ROOT/create-net.sh $KERNELBIN/

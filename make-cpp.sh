@@ -1,5 +1,36 @@
 #!/bin/bash
 
+usage() {
+  echo "Usage: $0 [--version VERSION]" 1>&2
+}
+
+VERSION="1.0"
+while [[ "$#" -gt 0 ]]; do
+  case "$1" in
+  --version)
+    shift
+    VERSION="$1"
+    shift
+    ;;
+  -help)
+    usage
+    exit 0
+    ;;
+  *)
+   echo "unexpected argument $1"
+   usage
+   exit 1
+  esac
+done
+
+if [ $# -gt 0 ]; then
+    usage
+    exit 1
+fi
+
+ROOT=$(pwd)
+USERBIN=$ROOT/bin/user
+
 # Compile protobufs
 for P in sigmap proc ; do
   echo "protoc $P cpp"
@@ -31,3 +62,16 @@ cmake ..
 
 # Run the build
 make -j$(nproc)
+
+# Copy to bins
+cd $ROOT
+USERBUILD=$ROOT/cpp/build/user
+for p in $USERBUILD/* ; do
+  name=$(basename $p)
+  # Skip non-directories, and CMakefiles directory
+  if ! [ -d $p ] || [[ "$name" == "CMakeFiles" ]] ; then
+    continue
+  fi
+  # Copy to userbin
+  cp $p/$name $USERBIN/$name-v$VERSION
+done

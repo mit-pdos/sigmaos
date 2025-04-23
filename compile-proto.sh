@@ -15,17 +15,3 @@ for PP in session dialproxy rpc ft/lease kernel sched/besched sched/lcsched sche
     protoc -I=. --go_out=../ $P
   done
 done
-
-echo "=== Compile cpp proto ===" 
-
-for P in proc ; do
-  echo "protoc $P cpp"
-  protoc -I=. --cpp_out=./cpp $P/$P.proto
-done
-
-for PP in proxy/sigmap ; do
-  for P in $PP/proto/*.proto ; do
-    echo "protoc $P cpp"
-    protoc -I=. --cpp_out=./cpp $P
-  done
-done

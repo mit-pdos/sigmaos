@@ -1,6 +1,6 @@
 #include <iostream>
 
-#include "sigmap.h"
+#include <proxy/sigmap/sigmap.h>
 
 int main() {
   std::cout << "Running" << std::endl;

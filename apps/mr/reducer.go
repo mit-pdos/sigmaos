@@ -98,13 +98,6 @@ func NewReducer(sc *sigmaclnt.SigmaClnt, reducef mr.ReduceT, args []string, p *p
 	return r, nil
 }
 
-type result struct {
-	kvs  []*mr.KeyValue
-	name string
-	ok   bool
-	n    sp.Tlength
-}
-
 func ReadKVs(rdr io.Reader, kvm *kvmap.KVMap, reducef mr.ReduceT) error {
 	kvd := newKVDecoder(rdr, DEFAULT_KEY_BUF_SZ, DEFAULT_VAL_BUF_SZ)
 	for {

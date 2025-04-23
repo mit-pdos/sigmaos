@@ -142,7 +142,7 @@ func TestWaitExitSimpleSingleBE(t *testing.T) {
 		return
 	}
 	defer mrts.Shutdown()
-	spawnWaitSleeper(mrts.GetRealm(REALM1), nil)
+	spawnWaitSleeper(mrts.GetRealm(test.REALM1), nil)
 }
 
 func TestWaitExitSimpleSingleLC(t *testing.T) {

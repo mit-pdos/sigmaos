@@ -77,7 +77,7 @@ fn main() {
     env::set_var("SIGMA_DIALPROXY_FD", dialproxy_conn_fd.to_string());
     print_elapsed_time("trampoline.connect_dialproxy", now, false);
     now = SystemTime::now();
-    seccomp_proc(dialproxy).expect("seccomp failed");
+    //    seccomp_proc(dialproxy).expect("seccomp failed");
     print_elapsed_time("trampoline.seccomp_proc", now, false);
     now = SystemTime::now();
 

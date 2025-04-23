@@ -509,7 +509,9 @@ func (s *TaskSrv) EditTasks(ctx fs.CtxI, req proto.EditTasksReq, rep *proto.Edit
 
 	data := make(map[int32][]byte)
 	for _, task := range req.Tasks {
-		data[task.Id] = task.Data
+		if _, ok := s.data[task.Id]; ok {
+			data[task.Id] = task.Data
+		}
 	}
 
 	if err := s.applyChanges(nil, nil, data, nil); err != nil {
@@ -560,6 +562,8 @@ func (s *TaskSrv) ReadTasks(ctx fs.CtxI, req proto.ReadTasksReq, rep *proto.Read
 			Data: s.data[id],
 		})
 	}
+
+	db.DPrintf(db.FTTASKS, "ReadTasks: n: %d", len(rep.Tasks))
 
 	return nil
 }

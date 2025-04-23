@@ -203,7 +203,7 @@ func (c *Coord) reducerProc(t fttask_clnt.Task[[]byte]) (*proc.Proc, error) {
 	outlink := ReduceOut(c.jobRoot, c.job) + data.Task
 	outTarget := ReduceOutTarget(c.outdir, c.job) + data.Task
 	c.stat.Nreduce += 1
-	return c.newTask(c.reducerbin, []string{string(t.Id), string(c.rftclnt.ServerId()), outlink, outTarget, strconv.Itoa(c.nmaptask)}, c.memPerTask), nil
+	return c.newTask(c.reducerbin, []string{strconv.Itoa(int(t.Id)), string(c.rftclnt.ServerId()), outlink, outTarget, strconv.Itoa(c.nmaptask)}, c.memPerTask), nil
 }
 
 type Tresult struct {
@@ -370,20 +370,6 @@ func (c *Coord) makeReduceBins() error {
 		return err
 	}
 
-	// ms, err := c.mftclnt.JobState()
-	// if err != nil {
-	// 	return err
-	// }
-
-	// db.DPrintf(db.MR_COORD, "Mappers job state %v", ms)
-
-	// rs, err := c.rft.JobState()
-	// if err != nil {
-	// 	return err
-	// }
-
-	// db.DPrintf(db.MR_COORD, "Reducers job state %v", rs)
-
 	// get all reducers (including those that succeeded in previous rounds) in sorted order to ensure
 	// any restarted reducers are given the exact same files as before
 	rns := append(rnsDone, rnsTodo...)
@@ -416,17 +402,18 @@ func (c *Coord) makeReduceBins() error {
 		return err
 	}
 
-	for _, t := range rtaskData {
-		if _, ok := reduceBinIn[t.Id]; !ok {
+	for i, t := range rtaskData {
+		if reduceBin, ok := reduceBinIn[t.Id]; ok {
+			rtaskData[i].Data.Input = reduceBin
+		} else {
 			db.DPrintf(db.MR_COORD, "makeReduceBins: no input for %v", t.Id)
 			continue
 		}
-		t.Data.Input = reduceBinIn[t.Id]
 	}
 
 	rtaskDataP := make([]*fttask_clnt.Task[TreduceTask], len(rtaskData))
-	for i, t := range rtaskData {
-		rtaskDataP[i] = &t
+	for i := range rtaskData {
+		rtaskDataP[i] = &rtaskData[i]
 	}
 
 	_, err = c.rftclnt.EditTasks(rtaskDataP)

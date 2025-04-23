@@ -25,6 +25,7 @@ import (
 	mrscanner "sigmaos/apps/mr/scanner"
 	db "sigmaos/debug"
 	"sigmaos/ft/procgroupmgr"
+	"sigmaos/ft/task/clnt"
 	"sigmaos/proc"
 	mschedclnt "sigmaos/sched/msched/clnt"
 	"sigmaos/sigmaclnt"
@@ -297,6 +298,7 @@ func TestMapperReducer(t *testing.T) {
 	assert.Nil(t, err)
 
 	rts, err := ts.tasks.Rftclnt.ReadTasks(tns)
+	assert.Nil(t, err)
 	for i, rt := range rts {
 		pe := proc.NewAddedProcEnv(ts.ProcEnv())
 		sc, err := sigmaclnt.NewSigmaClnt(pe)
@@ -305,14 +307,17 @@ func TestMapperReducer(t *testing.T) {
 		for j := 0; j < len(b); j++ {
 			b[j] = outBins[j][i]
 		}
+		rt.Data.Input = b
+		_, err = ts.tasks.Rftclnt.EditTasks([]*clnt.Task[mr.TreduceTask]{
+			&rt,
+		})
 		db.DPrintf(db.TEST, "reducer %d: %v", i, b)
-		d, err := json.Marshal(b)
 		assert.Nil(t, err)
 
 		outlink := mr.ReduceOut(ts.jobRoot, ts.job) + rt.Data.Task
 		outTarget := mr.ReduceOutTarget(job.Output, ts.job) + rt.Data.Task
 
-		r, err := mr.NewReducer(sc, reducer, []string{string(d), outlink, outTarget, strconv.Itoa(nmap), "true"}, p)
+		r, err := mr.NewReducer(sc, reducer, []string{strconv.Itoa(int(rt.Id)), string(ts.tasks.Rftclnt.ServerId()), outlink, outTarget, strconv.Itoa(nmap), "true"}, p)
 		assert.Nil(t, err)
 		status := r.DoReduce()
 		assert.True(t, status.IsStatusOK(), "status %v", status)

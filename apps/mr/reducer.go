@@ -1,7 +1,6 @@
 package mr
 
 import (
-	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -54,7 +53,7 @@ func NewReducer(sc *sigmaclnt.SigmaClnt, reducef mr.ReduceT, args []string, p *p
 		SigmaClnt:    sc,
 		perf:         p,
 	}
-	id, err := strconv.ParseInt(args[0], 10, 32)
+	id, err := strconv.Atoi(args[0])
 	if err != nil {
 		return nil, fmt.Errorf("Reducer: id %v isn't int %v", args[0], err)
 	}
@@ -68,12 +67,8 @@ func NewReducer(sc *sigmaclnt.SigmaClnt, reducef mr.ReduceT, args []string, p *p
 	if len(data) != 1 {
 		return nil, fmt.Errorf("Reducer: ReadTasks %v len %d != 1", id, len(data))
 	}
+	db.DPrintf(db.MR, "Reducer: ReadTasks %v %v", id, data)
 	r.input = data[0].Data.Input
-
-	if err := json.Unmarshal([]byte(args[0]), &r.input); err != nil {
-		db.DPrintf(db.MR, "NewReducer %s: unmarshal err %v\n", args[0], err)
-		return nil, err
-	}
 	r.tmp = r.outputTarget + rand.Name()
 
 	db.DPrintf(db.MR, "Reducer outputting to %v", r.tmp)

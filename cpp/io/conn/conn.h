@@ -32,8 +32,8 @@ class UnixConn {
   }
 
   // Read/Write a buffer
-  std::expected<int, std::string> Read(std::vector<unsigned char> b);
-  std::expected<int, std::string> Write(std::vector<unsigned char> b);
+  std::expected<int, std::string> Read(std::vector<unsigned char> &b);
+  std::expected<int, std::string> Write(const std::vector<unsigned char> &b);
 
   // Read/Write a number
   std::expected<uint32_t, std::string> ReadUint32();
@@ -41,14 +41,19 @@ class UnixConn {
   std::expected<uint64_t, std::string> ReadUint64();
   std::expected<int, std::string> WriteUint64(uint64_t i);
 
-  ~UnixConn() {}
+  ~UnixConn() {
+    int err = close(sockfd);
+    if (err) {
+      throw std::runtime_error(std::format("Error close sockfd: {}", err));
+    }
+  }
 
   private:
   int sockfd;
   sockaddr_un addr;
 
   std::expected<int, std::string> read_bytes(unsigned char *b, size_t size);
-  std::expected<int, std::string> write_bytes(unsigned char *b, size_t size);
+  std::expected<int, std::string> write_bytes(const unsigned char *b, size_t size);
 };
 
 };

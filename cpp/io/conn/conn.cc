@@ -43,11 +43,11 @@ void uint64_to_bytes(unsigned char *b, uint64_t i) {
 	b[7] = (unsigned char) (i >> 56);
 }
 
-std::expected<int, std::string> UnixConn::Read(std::vector<unsigned char> b) {
+std::expected<int, std::string> UnixConn::Read(std::vector<unsigned char> &b) {
   return read_bytes(b.data(), b.size());
 }
 
-std::expected<int, std::string> UnixConn::Write(std::vector<unsigned char> b) {
+std::expected<int, std::string> UnixConn::Write(const std::vector<unsigned char> &b) {
   return write_bytes(b.data(), b.size());
 }
 
@@ -56,7 +56,7 @@ std::expected<uint64_t, std::string> UnixConn::ReadUint64() {
   unsigned char b[size];
   auto res = read_bytes(b, size);
   if (!res.has_value()) {
-    return std::unexpected(res.error());
+    return res;
   }
   return bytes_to_uint64(b);
 }
@@ -67,7 +67,7 @@ std::expected<int, std::string> UnixConn::WriteUint64(uint64_t i) {
   uint64_to_bytes(b, i);
   auto res = write_bytes(b, size);
   if (!res.has_value()) {
-    return std::unexpected(res.error());
+    return res;
   }
   return size;
 }
@@ -77,7 +77,7 @@ std::expected<uint32_t, std::string> UnixConn::ReadUint32() {
   unsigned char b[size];
   auto res = read_bytes(b, size);
   if (!res.has_value()) {
-    return std::unexpected(res.error());
+    return res;
   }
   return bytes_to_uint32(b);
 }
@@ -88,7 +88,7 @@ std::expected<int, std::string> UnixConn::WriteUint32(uint32_t i) {
   uint32_to_bytes(b, i);
   auto res = write_bytes(b, size);
   if (!res.has_value()) {
-    return std::unexpected(res.error());
+    return res;
   }
   return size;
 }
@@ -102,7 +102,7 @@ std::expected<int, std::string> UnixConn::read_bytes(unsigned char *b, size_t si
   return n;
 }
 
-std::expected<int, std::string> UnixConn::write_bytes(unsigned char *b, size_t size) {
+std::expected<int, std::string> UnixConn::write_bytes(const unsigned char *b, size_t size) {
   int n = write(sockfd, b, size);
   if (n != size) {
     return std::unexpected(std::format("wrote wrong num bytes: {} != {}", n, size));

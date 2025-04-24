@@ -12,10 +12,10 @@ endif()
 find_package(Protobuf REQUIRED)
 
 # SigmaOS packages
+add_subdirectory(io)
 add_subdirectory(proxy)
 add_subdirectory(sigmap)
 add_subdirectory(rpc)
-add_subdirectory(io)
 
 # Procs
 add_subdirectory(user)

@@ -71,6 +71,7 @@ func NewBins(fsl *fslib.FsLib, dir string, maxbinsz, splitsz sp.Tlength) ([]Bin,
 		return nil, err
 	}
 	for _, st := range sts {
+		db.DPrintf(db.ALWAYS, "APPS MR MAKING BINS: %v", st)
 		for i := uint64(0); ; {
 			n := uint64(splitsz)
 			if i+n > st.LengthUint64() {

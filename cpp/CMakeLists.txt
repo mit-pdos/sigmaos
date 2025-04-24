@@ -15,6 +15,7 @@ find_package(Protobuf REQUIRED)
 add_subdirectory(proxy)
 add_subdirectory(sigmap)
 add_subdirectory(rpc)
+add_subdirectory(io)
 
 # Procs
 add_subdirectory(user)

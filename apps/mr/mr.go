@@ -70,33 +70,31 @@ func NewBins(fsl *fslib.FsLib, dir string, maxbinsz, splitsz sp.Tlength) ([]Bin,
 	if err != nil {
 		return nil, err
 	}
-	for x := 0; x < 3; x++ {
-		for _, st := range sts {
-			for i := uint64(0); ; {
-				n := uint64(splitsz)
-				if i+n > st.LengthUint64() {
-					n = st.LengthUint64() - i
-				}
-				if n == 0 {
-					break
-				}
-				split := mr.Split {
-					File: dir + "/" + st.Name,
-					Offset: sp.Toffset(i),
-					Length: sp.Tlength(n),
-				}
-				bin = append(bin, split)
-				binsz += n
-				if binsz+uint64(splitsz) > uint64(maxbinsz) { // bin full?
-					bins = append(bins, bin)
-					bin = Bin{}
-					binsz = uint64(0)
-				}
-				if n < uint64(splitsz) { // next file
-					break
-				}
-				i += n
+	for _, st := range sts {
+		for i := uint64(0); ; {
+			n := uint64(splitsz)
+			if i+n > st.LengthUint64() {
+				n = st.LengthUint64() - i
 			}
+			if n == 0 {
+				break
+			}
+			split := mr.Split {
+				File: dir + "/" + st.Name,
+				Offset: sp.Toffset(i),
+				Length: sp.Tlength(n),
+			}
+			bin = append(bin, split)
+			binsz += n
+			if binsz+uint64(splitsz) > uint64(maxbinsz) { // bin full?
+				bins = append(bins, bin)
+				bin = Bin{}
+				binsz = uint64(0)
+			}
+			if n < uint64(splitsz) { // next file
+				break
+			}
+			i += n
 		}
 	}
 	if binsz > 0 {

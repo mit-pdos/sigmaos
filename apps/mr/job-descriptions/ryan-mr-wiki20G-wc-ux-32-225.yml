@@ -1,5 +1,5 @@
 app: "wc"
-nreduce: 90
+nreduce: 225
 binsz: 33554432
 input: "name/ux/~local/wiki-20G/"
 intermediate: "name/ux/~local/mr-intermediate"

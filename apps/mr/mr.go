@@ -70,6 +70,7 @@ func NewBins(fsl *fslib.FsLib, dir string, maxbinsz, splitsz sp.Tlength) ([]Bin,
 	if err != nil {
 		return nil, err
 	}
+	for x := 0; x < 3; x++ {
 	for _, st := range sts {
 		for i := uint64(0); ; {
 			n := uint64(splitsz)
@@ -96,6 +97,7 @@ func NewBins(fsl *fslib.FsLib, dir string, maxbinsz, splitsz sp.Tlength) ([]Bin,
 			}
 			i += n
 		}
+	}
 	}
 	if binsz > 0 {
 		bins = append(bins, bin)

@@ -70,7 +70,10 @@ for ((run = 1; run <= num_runs; run++)); do
     times[0]=$first_timestamp  # Store the first timestamp from stdout
 
     FILE="logs.txt"
-
+    if grep -q "copyPages err|zeroPage err|Read err|Poll err|Recvmsg err" logs.txt; then
+         echo "Pattern found. Exiting the script."
+         break
+     fi
     # Extract last occurrence of npages(number)
     last_npages=$(grep -o 'npages([0-9]\+)' "$FILE" | tail -n 1 | grep -o '[0-9]\+')
     total_faults=$((total_faults + last_npages))

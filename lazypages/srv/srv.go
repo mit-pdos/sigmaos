@@ -8,6 +8,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"strconv"
 	"syscall"
 	"time"
 
@@ -181,8 +182,8 @@ func (lps *lazyPagesSrv) register(pid int, imgdir, pages string) error {
 	// 	db.DPrintf(db.PROCD, "DownloadFile pages err %v\n", err)
 	// 	return err
 	// }
-
-	lpc, err := lps.newLazyPagesConn(pid, imgdir, pages)
+	fullpages := filepath.Join(lazypages.WorkDir(proc.GetProcEnv().GetPID()), "fullpages-"+strconv.Itoa(pid)+".img")
+	lpc, err := lps.newLazyPagesConn(pid, imgdir, pages, fullpages)
 	if err != nil {
 		return err
 	}

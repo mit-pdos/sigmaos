@@ -21,7 +21,11 @@ std::expected<uint64_t, std::string> ReadSeqno(std::unique_ptr<sigmaos::io::conn
 }
 
 std::expected<uint32_t, std::string> ReadNumFrames(std::unique_ptr<sigmaos::io::conn::UnixConn> conn) {
-  throw std::runtime_error("unimplemented");
+  auto res = conn->ReadUint32();
+  if (!res.has_value()) {
+    return std::unexpected(res.error());
+  }
+  return res.value();
 }
 
 // Write frames
@@ -42,5 +46,9 @@ std::expected<int, std::string> WriteSeqno(std::unique_ptr<sigmaos::io::conn::Un
 }
 
 std::expected<int, std::string> WriteNumFrames(std::unique_ptr<sigmaos::io::conn::UnixConn> conn, uint32_t nframes) {
-  throw std::runtime_error("unimplemented");
+  auto res = conn->WriteUint32(nframes);
+  if (!res.has_value()) {
+    return std::unexpected(res.error());
+  }
+  return res.value();
 }

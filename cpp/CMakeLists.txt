@@ -13,6 +13,7 @@ find_package(Protobuf REQUIRED)
 
 # SigmaOS packages
 add_subdirectory(io)
+add_subdirectory(util)
 add_subdirectory(proxy)
 add_subdirectory(sigmap)
 add_subdirectory(rpc)

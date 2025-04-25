@@ -425,10 +425,10 @@ func (ts *Tstate) crashServers(srv string, l crash.Tselector, em *crash.TeventMa
 
 func (ts *Tstate) collectStats(stati []*procgroupmgr.ProcStatus) (int, mr.Stat) {
 	mrst := mr.Stat{}
-	nrestart := 0
+	nstart := 0
 	for _, st := range stati {
-		nrestart += st.Nrestart
-		db.DPrintf(db.TEST, "grpmgr stat: %v", st)
+		nstart += st.Nstart
+		db.DPrintf(db.TEST, "grpmgr stat: ncoord %d %v", st.Nstart, st)
 		if st.IsStatusOK() {
 			// if st.Status != nil && st.IsStatusOK() {
 			t := mr.Stat{}
@@ -442,7 +442,7 @@ func (ts *Tstate) collectStats(stati []*procgroupmgr.ProcStatus) (int, mr.Stat) 
 			}
 		}
 	}
-	return nrestart, mrst
+	return nstart, mrst
 }
 
 func runN(t *testing.T, em *crash.TeventMap, srvs map[string]crash.Tselector, maliciousMapper int, monitor bool) (int, int, *mr.Stat) {
@@ -528,9 +528,9 @@ func runN(t *testing.T, em *crash.TeventMap, srvs map[string]crash.Tselector, ma
 	db.DPrintf(db.TEST, "WaitGroup")
 
 	stati := cm.WaitGroup()
-	nrestart, mrst := ts.collectStats(stati)
+	nstart, mrst := ts.collectStats(stati)
 
-	db.DPrintf(db.TEST, "Done WaitGroup %d %v", nrestart, &mrst)
+	db.DPrintf(db.TEST, "Done WaitGroup %d %v", nstart, &mrst)
 
 	db.DPrintf(db.TEST, "Check Job")
 	ok := ts.checkJob(runApp)
@@ -550,7 +550,7 @@ func runN(t *testing.T, em *crash.TeventMap, srvs map[string]crash.Tselector, ma
 	err = mr.CleanupMROutputs(ts.mrts.GetRealm(test.REALM1).FsLib, mr.JobOut(job.Output, ts.job), mr.MapIntermediateDir(ts.job, job.Intermediate), true)
 	assert.Nil(ts.mrts.T, err, "Cleanup MR Outputs: %v", err)
 	db.DPrintf(db.TEST, "Done cleanup MR outputs")
-	return nmap + ts.nreducetask, nrestart, &mrst
+	return nmap + ts.nreducetask, nstart, &mrst
 }
 
 // if f returns true, repeat test

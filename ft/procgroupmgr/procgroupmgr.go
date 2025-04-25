@@ -31,7 +31,7 @@ const (
 )
 
 type ProcStatus struct {
-	Nrestart int
+	Nstart int
 	*proc.Status
 }
 

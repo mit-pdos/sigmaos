@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"hash/fnv"
 
-	"sigmaos/util/rand"
-
 	"github.com/dustin/go-humanize"
 	"github.com/mitchellh/mapstructure"
 
@@ -75,14 +73,15 @@ func NewBins(fsl *fslib.FsLib, dir string, maxbinsz, splitsz sp.Tlength) ([]Bin,
 
 	currMaxBinSz := maxbinsz
 	genNewBinSz := func() {
-		double := rand.Int64(10) == 0
-		if double {
-			currMaxBinSz = maxbinsz * 10
-		} else {
-			currMaxBinSz = maxbinsz
-		}
+		// double := rand.Int64(10) == 0
+		// if double {
+		// 	currMaxBinSz = maxbinsz * 10
+		// } else {
+		// 	currMaxBinSz = maxbinsz
+		// }
 	}
 	genNewBinSz()
+	for x := 0; x < 10; x++ {
 	for _, st := range sts {
 		for i := uint64(0); ; {
 			n := uint64(splitsz)
@@ -111,6 +110,7 @@ func NewBins(fsl *fslib.FsLib, dir string, maxbinsz, splitsz sp.Tlength) ([]Bin,
 			}
 			i += n
 		}
+	}
 	}
 	if binsz > 0 {
 		bins = append(bins, bin)

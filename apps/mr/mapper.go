@@ -344,12 +344,6 @@ func RunMapper(mapf mr.MapT, combinef mr.ReduceT, args []string) {
 	start := time.Now()
 	nin, nout, outbin, err := m.DoMap()
 	db.DPrintf(db.MR_TPT, "%s: in %s out %v tot %v %vms (%s)\n", "map", humanize.Bytes(uint64(nin)), humanize.Bytes(uint64(nout)), test.Mbyte(nin+nout), time.Since(start).Milliseconds(), test.TputStr(nin+nout, time.Since(start).Milliseconds()))
-
-	// 25s (25000ms) for 39MB, so ~641ms per MB
-	delayPerMB := 641.0
-	chunkMB := float64(nin) / (1024.0 * 1024.0)
-	jitterMs := rand.Int64(int64(0.3 * delayPerMB * chunkMB))
-	time.Sleep(time.Duration(jitterMs) * time.Millisecond)
 	if err == nil {
 		m.ClntExit(proc.NewStatusInfo(proc.StatusOK, "OK",
 			Result{true, m.ProcEnv().GetPID().String(), nin, nout, outbin, time.Since(start).Milliseconds(), 0, m.ProcEnv().GetKernelID()}))

@@ -75,7 +75,7 @@ func NewBins(fsl *fslib.FsLib, dir string, maxbinsz, splitsz sp.Tlength) ([]Bin,
 
 	currMaxBinSz := maxbinsz
 	genNewBinSz := func() {
-		double := rand.Int64(10) < 2
+		double := rand.Int64(10) == 0
 		if double {
 			currMaxBinSz = maxbinsz * 10
 		} else {

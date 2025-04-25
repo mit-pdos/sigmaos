@@ -81,7 +81,7 @@ func NewBins(fsl *fslib.FsLib, dir string, maxbinsz, splitsz sp.Tlength) ([]Bin,
 		// }
 	}
 	genNewBinSz()
-	for x := 0; x < 10; x++ {
+	for x := 0; x < 5; x++ {
 	for _, st := range sts {
 		for i := uint64(0); ; {
 			n := uint64(splitsz)

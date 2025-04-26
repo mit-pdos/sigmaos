@@ -17,6 +17,7 @@ class Clnt {
   public:
   Clnt(std::shared_ptr<sigmaos::io::transport::Transport> trans) : trans(trans) {
     std::cout << "New demux clnt" << std::endl;
+  // TODO: start reader thread
   }
 
   ~Clnt() {
@@ -25,8 +26,8 @@ class Clnt {
   }
 
   // TODO: Call type?
-  std::expected<bool, std::string> SendReceive(const void *call, std::vector<std::vector<unsigned char>> outiov);
-  std::expected<bool, std::string> Close();
+  std::expected<std::shared_ptr<sigmaos::io::transport::Call>, std::string> SendReceive(const sigmaos::io::transport::Call &call, std::vector<std::vector<unsigned char>> outiov);
+  std::expected<int, std::string> Close();
   bool IsClosed();
 
   private:

@@ -19,7 +19,7 @@ class Clnt {
   public:
   Clnt() {
     std::cout << "New sigmap proxy clnt" << std::endl;
-    conn = std::make_shared<sigmaos::io::conn::UnixConn>(SPPROXY_SOCKET_PN);
+    _conn = std::make_shared<sigmaos::io::conn::UnixConn>(SPPROXY_SOCKET_PN);
     std::cout << "Established conn to spproxyd" << std::endl;
   }
 
@@ -30,7 +30,7 @@ class Clnt {
   std::expected<int, std::string> Test();
 
   private:
-  std::shared_ptr<sigmaos::io::conn::UnixConn> conn;
+  std::shared_ptr<sigmaos::io::conn::UnixConn> _conn;
 };
 
 };

@@ -11,7 +11,7 @@ namespace rpc {
 
 class Clnt {
   public:
-  Clnt(std::shared_ptr<sigmaos::io::demux::Clnt> demux) : demux(demux) {}
+  Clnt(std::shared_ptr<sigmaos::io::demux::Clnt> demux) : _demux(demux) {}
   ~Clnt() { throw std::runtime_error("unimplemented"); }
 
   std::expected<int, std::string> RPC(std::string method, const google::protobuf::Message &req, google::protobuf::Message &res);

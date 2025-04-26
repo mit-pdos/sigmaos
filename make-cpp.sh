@@ -59,9 +59,17 @@ mkdir -p build
 # Generate build files
 cd build
 cmake ..
+export EXIT_STATUS=$?
+if [ $EXIT_STATUS  -ne 0 ]; then
+  exit $EXIT_STATUS
+fi
 
 # Run the build
 make -j$(nproc)
+export EXIT_STATUS=$?
+if [ $EXIT_STATUS  -ne 0 ]; then
+  exit $EXIT_STATUS
+fi
 
 # Copy to bins
 cd $ROOT

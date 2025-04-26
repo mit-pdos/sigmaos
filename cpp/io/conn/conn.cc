@@ -58,6 +58,13 @@ std::expected<int, std::string> UnixConn::WriteUint32(uint32_t i) {
   return size;
 }
 
+std::expected<int, std::string> UnixConn::Close() {
+  int err = close(sockfd);
+  if (err) {
+    throw std::runtime_error(std::format("Error close sockfd: {}", err));
+  }
+  return 0;
+}
 
 std::expected<int, std::string> UnixConn::read_bytes(unsigned char *b, size_t size) {
   int n = read(sockfd, b, size);

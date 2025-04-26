@@ -41,12 +41,10 @@ class UnixConn {
   std::expected<uint64_t, std::string> ReadUint64();
   std::expected<int, std::string> WriteUint64(uint64_t i);
 
-  ~UnixConn() {
-    int err = close(sockfd);
-    if (err) {
-      throw std::runtime_error(std::format("Error close sockfd: {}", err));
-    }
-  }
+  // Close a connection
+  std::expected<int, std::string> Close();
+
+  ~UnixConn() { Close(); }
 
   private:
   int sockfd;

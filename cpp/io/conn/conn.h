@@ -18,15 +18,15 @@ class UnixConn {
   // Create a unix socket connection
   UnixConn(std::string pn) {
     std::cout << "New socket connection" << std::endl;
-    sockfd = socket(AF_UNIX, SOCK_STREAM, 0);
-    if (sockfd == -1) {
+    _sockfd = socket(AF_UNIX, SOCK_STREAM, 0);
+    if (_sockfd == -1) {
       throw std::runtime_error("Failed to create spproxy socket fd");
     }
-    addr.sun_family = AF_UNIX;
-    strncpy(addr.sun_path, pn.c_str(), sizeof(addr.sun_path) - 1);
-    addr.sun_path[sizeof(addr.sun_path) - 1] = '\0';
-    if (connect(sockfd, (struct sockaddr*)&addr, sizeof(addr)) == -1) {
-      close(sockfd);
+    _addr.sun_family = AF_UNIX;
+    strncpy(_addr.sun_path, pn.c_str(), sizeof(_addr.sun_path) - 1);
+    _addr.sun_path[sizeof(_addr.sun_path) - 1] = '\0';
+    if (connect(_sockfd, (struct sockaddr *) &_addr, sizeof(_addr)) == -1) {
+      close(_sockfd);
       throw std::runtime_error("Failed to connect to spproxy socket");
     }
   }
@@ -47,8 +47,8 @@ class UnixConn {
   ~UnixConn() { Close(); }
 
   private:
-  int sockfd;
-  sockaddr_un addr;
+  int _sockfd;
+  sockaddr_un _addr;
 
   std::expected<int, std::string> read_bytes(unsigned char *b, size_t size);
   std::expected<int, std::string> write_bytes(const unsigned char *b, size_t size);

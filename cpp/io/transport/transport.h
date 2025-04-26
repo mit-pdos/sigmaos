@@ -29,7 +29,7 @@ class Call {
 
 class Transport {
   public:
-  Transport(std::shared_ptr<sigmaos::io::conn::UnixConn> conn) : conn(conn) {
+  Transport(std::shared_ptr<sigmaos::io::conn::UnixConn> conn) : _conn(conn) {
     std::cout << "New demux clnt" << std::endl;
   }
 
@@ -40,10 +40,10 @@ class Transport {
 
   std::expected<int, std::string> WriteCall(const Call &c);
   std::expected<std::shared_ptr<Call>, std::string> ReadCall(std::vector<std::vector<unsigned char>> &iov);
-  std::expected<int, std::string> Close() { return conn->Close(); }
+  std::expected<int, std::string> Close() { return _conn->Close(); }
 
   private:
-  std::shared_ptr<sigmaos::io::conn::UnixConn> conn;
+  std::shared_ptr<sigmaos::io::conn::UnixConn> _conn;
 };
 
 };

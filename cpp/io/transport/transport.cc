@@ -6,11 +6,11 @@ namespace sigmaos {
 namespace io::transport {
 
 std::expected<int, std::string> Transport::WriteCall(const Call &c) {
-  auto res = sigmaos::io::frame::WriteSeqno(conn, c.GetSeqno());
+  auto res = sigmaos::io::frame::WriteSeqno(_conn, c.GetSeqno());
   if (!res.has_value()) {
     return res;
   }
-  res = sigmaos::io::frame::WriteFrames(conn, c.GetIOVec());
+  res = sigmaos::io::frame::WriteFrames(_conn, c.GetIOVec());
   if (!res.has_value()) {
     return res;
   }
@@ -21,14 +21,14 @@ std::expected<std::shared_ptr<Call>, std::string> Transport::ReadCall(std::vecto
   uint64_t seqno;
   uint32_t nframes;
   {
-    auto res = sigmaos::io::frame::ReadSeqno(conn);
+    auto res = sigmaos::io::frame::ReadSeqno(_conn);
     if (!res.has_value()) {
       return std::unexpected(res.error());
     }
     seqno = res.value();
   }
   {
-    auto res = sigmaos::io::frame::ReadNumFrames(conn);
+    auto res = sigmaos::io::frame::ReadNumFrames(_conn);
     if (!res.has_value()) {
       return std::unexpected(res.error());
     }
@@ -36,7 +36,7 @@ std::expected<std::shared_ptr<Call>, std::string> Transport::ReadCall(std::vecto
   }
   // Resize the iov according to the incoming number of frames
   iov.resize(nframes);
-  auto res = sigmaos::io::frame::ReadFramesIntoIOVec(conn, iov);
+  auto res = sigmaos::io::frame::ReadFramesIntoIOVec(_conn, iov);
   if (!res.has_value()) {
     return std::unexpected(res.error());
   }

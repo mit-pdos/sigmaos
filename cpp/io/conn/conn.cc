@@ -59,7 +59,7 @@ std::expected<int, std::string> UnixConn::WriteUint32(uint32_t i) {
 }
 
 std::expected<int, std::string> UnixConn::Close() {
-  int err = close(sockfd);
+  int err = close(_sockfd);
   if (err) {
     throw std::runtime_error(std::format("Error close sockfd: {}", err));
   }
@@ -67,7 +67,7 @@ std::expected<int, std::string> UnixConn::Close() {
 }
 
 std::expected<int, std::string> UnixConn::read_bytes(unsigned char *b, size_t size) {
-  int n = read(sockfd, b, size);
+  int n = read(_sockfd, b, size);
   if (n != size) {
     return std::unexpected(std::format("read wrong num bytes: {} != {}", n, size));
   }
@@ -75,7 +75,7 @@ std::expected<int, std::string> UnixConn::read_bytes(unsigned char *b, size_t si
 }
 
 std::expected<int, std::string> UnixConn::write_bytes(const unsigned char *b, size_t size) {
-  int n = write(sockfd, b, size);
+  int n = write(_sockfd, b, size);
   if (n != size) {
     return std::unexpected(std::format("wrote wrong num bytes: {} != {}", n, size));
   }

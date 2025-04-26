@@ -19,13 +19,13 @@ std::expected<std::shared_ptr<sigmaos::io::transport::Call>, std::string> Clnt::
 //	dmx.mu.Lock()
   // TODO: convert request to callI
   {
-  	auto res = trans->WriteCall(call);
+  	auto res = _trans->WriteCall(call);
   //	dmx.mu.Unlock()
     if (!res.has_value()) {
       return std::unexpected(res.error());
     }
   }
-  return trans->ReadCall(outiov);
+  return _trans->ReadCall(outiov);
   
   // TODO: wait for reader to return a result via the channel
 	// Listen to the reply channel regardless of error status, so the reader

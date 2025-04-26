@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"strconv"
+	"strings"
 
 	db "sigmaos/debug"
 	"sigmaos/serr"
@@ -74,6 +75,15 @@ func NewFtTasks(fsl *fslib.FsLib, dir, job string) (*FtTasks, error) {
 		return nil, err
 	}
 	return ft, nil
+}
+
+func GetId(tid string) int {
+	ids := strings.Split(tid, "-")
+	id, err := strconv.Atoi(ids[0])
+	if err != nil {
+		db.DFatalf("GetId err %v", err)
+	}
+	return id
 }
 
 func (ft *FtTasks) Cleanup() error {

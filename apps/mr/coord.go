@@ -50,7 +50,7 @@ type Coord struct {
 	job             string
 	nmaptask        int
 	nreducetask     int
-	reduceBinIn     map[string]Bin
+	reduceBinIn     []Bin
 	maliciousMapper uint64
 	linesz          string
 	wordsz          string
@@ -103,7 +103,7 @@ func NewCoord(args []string) (*Coord, error) {
 	}
 	c.nmaptask = m
 	c.nreducetask = n
-	c.reduceBinIn = make(map[string]Bin, c.nreducetask)
+	c.reduceBinIn = make([]Bin, c.nreducetask)
 
 	c.mapperbin = args[4]
 	c.reducerbin = args[5]
@@ -186,10 +186,7 @@ func (c *Coord) reducerProc(tn string) (*proc.Proc, error) {
 	if err := c.rft.ReadTask(tn, t); err != nil {
 		db.DFatalf("ReadTask %v err %v", tn, err)
 	}
-	bin, ok := c.reduceBinIn[tn]
-	if !ok {
-		db.DFatalf("reducerProc: no input for %v", tn)
-	}
+	bin := c.reduceBinIn[fttask.GetId(tn)]
 	b, err := json.Marshal(bin)
 	if err != nil {
 		db.DFatalf("reducerProc: %v err %v", tn, err)
@@ -346,13 +343,6 @@ func (c *Coord) makeReduceBins() error {
 		return err
 	}
 
-	ms, err := c.mft.JobState()
-	if err != nil {
-		return err
-	}
-
-	db.DPrintf(db.MR, "Mappers job state %v", ms)
-
 	rs, err := c.rft.JobState()
 	if err != nil {
 		return err
@@ -361,19 +351,22 @@ func (c *Coord) makeReduceBins() error {
 	db.DPrintf(db.MR, "Reducers job state %v", rs)
 
 	rns := append(rnsDone, rnsTodo...)
-	for _, n := range rns {
-		c.reduceBinIn[n] = make(Bin, c.nmaptask)
+	for i, _ := range rns {
+		c.reduceBinIn[i] = make(Bin, c.nmaptask)
 	}
 
-	db.DPrintf(db.MR, "makeReduceBins: tasks done %v todo %v %v", mns, rns, c.reduceBinIn)
+	// XXX rns must be in order of reduce #: rns[i] should reduce task i
+
+	db.DPrintf(db.MR, "makeReduceBins: map tasks %v reduce tasks %v", mns, rns)
 
 	for j, m := range mns {
 		var obin Bin
 		if err := c.mft.ReadTaskOutput(m, &obin); err != nil {
 			return err
 		}
+		// obin[i] is for reducer i
 		for i, s := range obin {
-			c.reduceBinIn[rns[i]][j] = s
+			c.reduceBinIn[i][j] = s
 		}
 	}
 	db.DPrintf(db.MR, "makeReduceBins: reduceBinIn %v", c.reduceBinIn)

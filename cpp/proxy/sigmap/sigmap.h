@@ -9,6 +9,8 @@
 #include <expected>
 
 #include <io/conn/conn.h>
+#include <io/transport/transport.h>
+#include <io/demux/demux.h>
 
 namespace sigmaos {
 namespace proxy::sigmap {
@@ -20,6 +22,8 @@ class Clnt {
   Clnt() {
     std::cout << "New sigmap proxy clnt" << std::endl;
     _conn = std::make_shared<sigmaos::io::conn::UnixConn>(SPPROXY_SOCKET_PN);
+    _trans = std::make_shared<sigmaos::io::transport::Transport>(_conn);
+    _demux = std::make_shared<sigmaos::io::demux::Clnt>(_trans);
     std::cout << "Established conn to spproxyd" << std::endl;
   }
 
@@ -31,6 +35,8 @@ class Clnt {
 
   private:
   std::shared_ptr<sigmaos::io::conn::UnixConn> _conn;
+  std::shared_ptr<sigmaos::io::transport::Transport> _trans;
+  std::shared_ptr<sigmaos::io::demux::Clnt> _demux;
 };
 
 };

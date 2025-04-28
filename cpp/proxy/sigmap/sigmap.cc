@@ -21,6 +21,7 @@ std::expected<int, std::string> Clnt::Test() {
       throw std::runtime_error(std::format("init rpc error: {}", rep.err().DebugString()));
     }
     std::cout << "Init RPC successful!" << std::endl;
+    req.release_procenvproto();
   }
   {
     std::cout << "Init RPC successful!" << std::endl;

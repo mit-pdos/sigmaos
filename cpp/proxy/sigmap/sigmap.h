@@ -12,6 +12,7 @@
 #include <io/transport/transport.h>
 #include <io/demux/demux.h>
 #include <rpc/rpc.h>
+#include <proc/proc.h>
 
 namespace sigmaos {
 namespace proxy::sigmap {
@@ -27,6 +28,7 @@ class Clnt {
     _demux = std::make_shared<sigmaos::io::demux::Clnt>(_trans);
     _rpcc = std::make_shared<sigmaos::rpc::Clnt>(_demux);
     std::cout << "Established conn to spproxyd" << std::endl;
+    _env = sigmaos::proc::GetProcEnv();
   }
 
   ~Clnt() {
@@ -40,6 +42,7 @@ class Clnt {
   std::shared_ptr<sigmaos::io::transport::Transport> _trans;
   std::shared_ptr<sigmaos::io::demux::Clnt> _demux;
   std::shared_ptr<sigmaos::rpc::Clnt> _rpcc;
+  std::shared_ptr<sigmaos::proc::ProcEnv> _env;
 };
 
 };

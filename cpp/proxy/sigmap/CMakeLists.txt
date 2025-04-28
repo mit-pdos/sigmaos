@@ -6,6 +6,8 @@ add_library(sigmap_proxy STATIC sigmap.cc)
 
 target_link_libraries(sigmap_proxy PUBLIC
   rpc 
+  proc
+  proc_proto
   sigmap_proxy_proto
   io_conn
   io_frame

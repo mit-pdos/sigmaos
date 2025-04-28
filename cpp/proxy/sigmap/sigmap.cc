@@ -7,14 +7,28 @@ namespace sigmaos {
 namespace proxy::sigmap {
 
 std::expected<int, std::string> Clnt::Test() {
-  SigmaNullReq req;
-  SigmaClntIdRep rep;
-  auto res = _rpcc->RPC("SPProxySrvAPI.ClntId", req, rep);
-  if (!res.has_value()) {
-    std::cout << "Err RPC: " << res.error() << std::endl;
-    return res;
+  {
+    SigmaInitReq req;
+    SigmaErrRep rep;
+    req.set_allocated_procenvproto(_env->GetProto());
+    auto res = _rpcc->RPC("SPProxySrvAPI.Init", req, rep);
+    if (!res.has_value()) {
+      std::cout << "Err RPC: " << res.error() << std::endl;
+      return res;
+    }
+//    if (rep.Rerror
+    std::cout << "Init RPC successful!" << std::endl;
   }
-  std::cout << "RPC successful! rep" << std::endl;
+  {
+    SigmaNullReq req;
+    SigmaClntIdRep rep;
+    auto res = _rpcc->RPC("SPProxySrvAPI.ClntId", req, rep);
+    if (!res.has_value()) {
+      std::cout << "Err RPC: " << res.error() << std::endl;
+      return res;
+    }
+    std::cout << "ClntID RPC successful! rep " << rep.clntid() << std::endl;
+  }
 //  std::string msg = "hello!";
 //  auto b = std::vector<unsigned char>((unsigned char *) msg.data(), (unsigned char *) msg.data() + msg.length());
 //  sigmaos::io::frame::WriteFrame(_conn, b);

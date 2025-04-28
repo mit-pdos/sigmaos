@@ -61,7 +61,6 @@ std::expected<Rep, std::string> Clnt::wrap_and_run_rpc(std::string method, const
   Req req;
   std::string wrapper_req_data;
   std::vector<std::vector<unsigned char>> wrapped_out_iov;
-  // TODO: make ptr?
   Rep rep;
   std::string wrapper_rep_data;
 

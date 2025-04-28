@@ -56,7 +56,6 @@ std::expected<int, std::string> Clnt::RPC(std::string method, const google::prot
 }
 
 std::expected<Rep, std::string> Clnt::wrap_and_run_rpc(std::string method, const std::vector<std::vector<unsigned char>> &in_iov, std::vector<std::vector<unsigned char>> &out_iov) {
-  // TODO: atomically choose a seqno
   uint64_t seqno = _seqno++;
   std::vector<std::vector<unsigned char>> wrapped_in_iov;
   Req req;

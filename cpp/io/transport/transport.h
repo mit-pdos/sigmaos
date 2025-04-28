@@ -14,17 +14,17 @@ namespace io::transport {
 
 class Call {
   public:
-  Call(uint64_t seqno, std::vector<std::vector<unsigned char>> iov) : 
-    seqno(seqno), iov(iov) {}
+  Call(uint64_t seqno, std::vector<std::vector<unsigned char>> &iov) : 
+    seqno(seqno), _iov(iov) {}
   ~Call() {}
 
   uint64_t GetSeqno() const { return seqno; }
-  const std::vector<std::vector<unsigned char>> &GetIOVec() const { return iov; }
+  const std::vector<std::vector<unsigned char>> &GetIOVec() const { return _iov; }
 
   private:
   uint64_t seqno;
   // TODO: does this need to be a ptr?
-  std::vector<std::vector<unsigned char>> &iov;
+  std::vector<std::vector<unsigned char>> &_iov;
 };
 
 class Transport {

@@ -51,7 +51,6 @@ std::expected<int, std::string> UnixConn::WriteUint32(uint32_t i) {
   size_t size = sizeof(uint32_t);
   unsigned char b[size];
   sigmaos::util::codec::uint32_to_bytes(b, i);
-  std::cout << "uint32 litte-endian conversion: i=" << i << " size=" << size << " b[0]=" << int(b[0]) << " b[1]=" << int(b[1]) << " b[2]=" << int(b[2]) << " b[3]=" << int(b[3]) << std::endl;
   auto res = write_bytes(b, size);
   if (!res.has_value()) {
     return res;

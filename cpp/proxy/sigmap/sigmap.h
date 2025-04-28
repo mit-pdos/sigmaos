@@ -31,24 +31,7 @@ class Clnt {
     std::cout << "Established conn to spproxyd" << std::endl;
     std::cout << "Initializing conn to spproxyd" << std::endl;
     // Initialize the sigmaproxyd connection
-    {
-      SigmaInitReq req;
-      SigmaErrRep rep;
-      // Set the proc env proto
-      req.set_allocated_procenvproto(_env->GetProto());
-      // Execute the RPC
-      auto res = _rpcc->RPC("SPProxySrvAPI.Init", req, rep);
-      if (!res.has_value()) {
-        std::cout << "Err RPC: " << res.error() << std::endl;
-        return res;
-      }
-      if (rep.err().errcode() != 0) {
-        throw std::runtime_error(std::format("init rpc error: {}", rep.err().DebugString()));
-      }
-      std::cout << "Init RPC successful!" << std::endl;
-      // Make sure to release the proc env proto pointer so it isn't destroyed
-      req.release_procenvproto();
-    }
+    init_conn();
   }
 
   ~Clnt() {
@@ -63,6 +46,8 @@ class Clnt {
   std::shared_ptr<sigmaos::io::demux::Clnt> _demux;
   std::shared_ptr<sigmaos::rpc::Clnt> _rpcc;
   std::shared_ptr<sigmaos::proc::ProcEnv> _env;
+
+  void init_conn();
 };
 
 };

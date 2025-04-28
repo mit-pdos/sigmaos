@@ -11,7 +11,9 @@ std::expected<int, std::string> Clnt::Test() {
   {
     SigmaInitReq req;
     SigmaErrRep rep;
+    // Set the proc env proto
     req.set_allocated_procenvproto(_env->GetProto());
+    // Execute the RPC
     auto res = _rpcc->RPC("SPProxySrvAPI.Init", req, rep);
     if (!res.has_value()) {
       std::cout << "Err RPC: " << res.error() << std::endl;
@@ -21,6 +23,7 @@ std::expected<int, std::string> Clnt::Test() {
       throw std::runtime_error(std::format("init rpc error: {}", rep.err().DebugString()));
     }
     std::cout << "Init RPC successful!" << std::endl;
+    // Make sure to release the proc env proto pointer so it isn't destroyed
     req.release_procenvproto();
   }
   {

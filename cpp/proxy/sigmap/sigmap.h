@@ -22,13 +22,13 @@ const std::string SPPROXY_SOCKET_PN = "/tmp/spproxyd/spproxyd.sock"; // sigmap/s
 class Clnt {
   public:
   Clnt() {
-    std::cout << "New sigmap proxy clnt" << std::endl;
+    _env = sigmaos::proc::GetProcEnv();
+    std::cout << "New sigmap proxy clnt " << _env->String() << std::endl;
     _conn = std::make_shared<sigmaos::io::conn::UnixConn>(SPPROXY_SOCKET_PN);
     _trans = std::make_shared<sigmaos::io::transport::Transport>(_conn);
     _demux = std::make_shared<sigmaos::io::demux::Clnt>(_trans);
     _rpcc = std::make_shared<sigmaos::rpc::Clnt>(_demux);
     std::cout << "Established conn to spproxyd" << std::endl;
-    _env = sigmaos::proc::GetProcEnv();
   }
 
   ~Clnt() {

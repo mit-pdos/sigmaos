@@ -8,7 +8,6 @@ namespace proxy::sigmap {
 
 std::expected<int, std::string> Clnt::Test() {
   {
-    std::cout << "Init RPC successful!" << std::endl;
     SigmaNullReq req;
     SigmaClntIdRep rep;
     auto res = _rpcc->RPC("SPProxySrvAPI.ClntId", req, rep);

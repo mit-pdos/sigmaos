@@ -3,7 +3,6 @@
 namespace sigmaos {
 namespace rpc {
 
-
 std::expected<int, std::string> Clnt::RPC(std::string method, const google::protobuf::Message &req, google::protobuf::Message &rep) {
   // TODO: get blob
 //	inblob := rpc.GetBlob(arg)

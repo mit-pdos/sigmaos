@@ -3,7 +3,7 @@
 namespace sigmaos {
 namespace io::demux {
 
-std::expected<std::shared_ptr<sigmaos::io::transport::Call>, std::string> Clnt::SendReceive(const sigmaos::io::transport::Call &call, std::vector<std::vector<unsigned char>> outiov) {
+std::expected<std::shared_ptr<sigmaos::io::transport::Call>, std::string> Clnt::SendReceive(const sigmaos::io::transport::Call &call, std::vector<std::vector<unsigned char>> &outiov) {
 // TODO: make a channel & add it to a callmap (with the appropriate tag)
 //	ch := make(chan reply)
 //	if err := dmx.callmap.put(req.Tag(), ch); err != nil {

@@ -26,7 +26,7 @@ class Clnt {
   }
 
   // TODO: Call type?
-  std::expected<std::shared_ptr<sigmaos::io::transport::Call>, std::string> SendReceive(const sigmaos::io::transport::Call &call, std::vector<std::vector<unsigned char>> outiov);
+  std::expected<std::shared_ptr<sigmaos::io::transport::Call>, std::string> SendReceive(const sigmaos::io::transport::Call &call, std::vector<std::vector<unsigned char>> &outiov);
   std::expected<int, std::string> Close();
   bool IsClosed();
 

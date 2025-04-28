@@ -6,10 +6,12 @@ namespace sigmaos {
 namespace io::transport {
 
 std::expected<int, std::string> Transport::WriteCall(const Call &c) {
+  std::cout << "Transport::WriteCall seqno " << c.GetSeqno() << std::endl;
   auto res = sigmaos::io::frame::WriteSeqno(_conn, c.GetSeqno());
   if (!res.has_value()) {
     return res;
   }
+  std::cout << "Transport::WriteCall iovec len " << c.GetIOVec().size() << std::endl;
   res = sigmaos::io::frame::WriteFrames(_conn, c.GetIOVec());
   if (!res.has_value()) {
     return res;

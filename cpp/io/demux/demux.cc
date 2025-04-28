@@ -18,7 +18,9 @@ std::expected<std::shared_ptr<sigmaos::io::transport::Call>, std::string> Clnt::
 // TODO: lock & unlock
 //	dmx.mu.Lock()
   // TODO: convert request to callI
+  std::cout << "wrapped in iov demxuclnt.SendReceive call 1 len " << call.GetIOVec().size() << " call ptr " << &call << std::endl;
   {
+    std::cout << "wrapped in iov demxuclnt.SendReceive call 2 len " << call.GetIOVec().size() << std::endl;
   	auto res = _trans->WriteCall(call);
   //	dmx.mu.Unlock()
     if (!res.has_value()) {

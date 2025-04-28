@@ -75,10 +75,13 @@ std::expected<Rep, std::string> Clnt::wrap_and_run_rpc(std::string method, const
   wrapped_in_iov.push_back(std::vector<unsigned char>(wrapper_req_data.begin(), wrapper_req_data.end()));
   wrapped_in_iov.resize(in_iov.size() + 1);
   wrapped_in_iov.insert(std::next(wrapped_in_iov.begin()), in_iov.begin(), in_iov.end());
+  std::cout << "wrapped in iov len " << wrapped_in_iov.size() << std::endl;
 
   // Create the call object to be sent, and perform the RPC.
   io::transport::Call wrapped_call(seqno, wrapped_in_iov);
+  std::cout << "wrapped in iov call len " << wrapped_call.GetIOVec().size() << " call ptr " << &wrapped_call  << std::endl;
   auto res = _demux->SendReceive(wrapped_call, out_iov);
+  std::cout << "wrapped in iov call len (post sendreceive) " << wrapped_call.GetIOVec().size() << std::endl;
   if (!res.has_value()) {
     return std::unexpected(res.error());
   }

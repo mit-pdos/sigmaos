@@ -9,6 +9,12 @@ namespace proxy::sigmap {
 std::expected<int, std::string> Clnt::Test() {
   SigmaNullReq req;
   SigmaClntIdRep rep;
+  auto res = _rpcc->RPC("SPProxySrvAPI.ClntId", req, rep);
+  if (!res.has_value()) {
+    std::cout << "Err RPC: " << res.error() << std::endl;
+    return res;
+  }
+  std::cout << "RPC successful! rep" << std::endl;
 //  std::string msg = "hello!";
 //  auto b = std::vector<unsigned char>((unsigned char *) msg.data(), (unsigned char *) msg.data() + msg.length());
 //  sigmaos::io::frame::WriteFrame(_conn, b);

@@ -66,6 +66,7 @@ std::expected<uint32_t, std::string> ReadNumFrames(std::shared_ptr<sigmaos::io::
 std::expected<int, std::string> WriteFrame(std::shared_ptr<sigmaos::io::conn::UnixConn> conn, const std::vector<unsigned char> &b) {
   uint32_t nbyte = b.size() + 4;
 
+  std::cout << "frame::WriteFrame frame sz " << nbyte << std::endl;
   auto res = conn->WriteUint32(nbyte);
   if (!res.has_value()) {
     return res;
@@ -74,13 +75,15 @@ std::expected<int, std::string> WriteFrame(std::shared_ptr<sigmaos::io::conn::Un
 }
 
 std::expected<int, std::string> WriteFrames(std::shared_ptr<sigmaos::io::conn::UnixConn> conn, const std::vector<std::vector<unsigned char>> &iov) {
+  std::cout << "frame::WriteFrames num frames " << iov.size() << std::endl;
   // Write the number of frames
   auto res = conn->WriteUint32(iov.size());
   if (!res.has_value()) {
     return res;
   }
-  for (const auto b : iov) {
-  auto res = conn->Write(b);
+  for (const auto &b : iov) {
+    std::cout << "frame::WriteFrames next frame len " << b.size() << std::endl;
+    auto res = WriteFrame(conn, b);
     if (!res.has_value()) {
       return res;
     }

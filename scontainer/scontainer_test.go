@@ -9,9 +9,9 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	db "sigmaos/debug"
-	"sigmaos/util/linux/mem"
 	"sigmaos/proc"
 	"sigmaos/test"
+	"sigmaos/util/linux/mem"
 )
 
 func TestCompile(t *testing.T) {

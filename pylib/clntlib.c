@@ -108,13 +108,77 @@ void write_frames(char** frames, uint32_t num_frames, uint32_t* frame_lens) {
   // Write num_frames
   uint8_t bytes[4];
   for (int i = 0; i < 4; i++) {
-    bytes[i] = ((num_frames + 4) >> (i * 8)) & 0xFF;
+    bytes[i] = (num_frames >> (i * 8)) & 0xFF;
   }
   write(spproxy_sfd, bytes, 4);
 
   for (uint64_t i = 0; i < num_frames; i++) {
     write_frame(frames[i], frame_lens[i]);
   }
+}
+
+/*
+ * util/io/frame/frame.go: ReadSeqno(rdr io.Reader) (sessp.Tseqno, *serr.Err)
+ */
+uint64_t read_seqno() {
+  uint8_t bytes[8];
+  ssize_t bytes_read = read(spproxy_sfd, bytes, 8);
+  if ((uint64_t) bytes_read < 8) {
+    printf("PYLIB: bytes_read: %lu\n", bytes_read);
+    return -1;
+  }
+
+  uint64_t seqno = 0;
+  for (int i = 0; i < 8; i++) {
+    seqno |= ((uint64_t) bytes[i]) << (i * 8);
+  }
+  return seqno;
+}
+
+/*
+ * util/io/frame/frame.go: ReadFrames(rd io.Reader) (sessp.IoVec, *serr.Err)
+ */
+ProtobufCBinaryData* read_frames() {
+  // ReadNumOfFrames
+  uint8_t bytes[4];
+  ssize_t bytes_read = read(spproxy_sfd, bytes, 4);
+  if ((uint64_t) bytes_read < 4) {
+    return NULL;
+  }
+  uint32_t nframes = 0;
+  for (int i = 0; i < 4; i++) {
+    nframes |= ((uint32_t) bytes[i]) << (i * 8);
+  }
+
+  ProtobufCBinaryData* frames = malloc(nframes * sizeof(ProtobufCBinaryData));
+  for (uint32_t i = 0; i < nframes; i++) {
+    // ReadFrameInto
+    uint32_t nbyte = 0;
+    bytes_read = read(spproxy_sfd, bytes, 4);
+    if ((uint64_t) bytes_read < 4) {
+      return NULL;
+    }
+    for (int j = 0; j < 4; j++) {
+      nbyte |= ((uint32_t) bytes[i]) << (i * 8);
+    }
+    if (nbyte < 4) {
+      return NULL;
+    }
+
+    nbyte -= 4;
+    char* frame = malloc(nbyte);
+    bytes_read = read(spproxy_sfd, frame, nbyte);
+    if (bytes_read < nbyte) {
+      return NULL;
+    }
+
+    ProtobufCBinaryData a;
+    a.data = (uint8_t *) frame;
+    a.len = nbyte;
+    frames[i] = a;
+  }
+
+  return frames;
 }
 
 /*
@@ -155,6 +219,7 @@ Blob* get_blob(ProtobufCMessage* msg) {
  * rpc/clnt/clnt.go: RPC(method string, arg proto.Message, res proto.Message) error
  */
 void rpc(char* method, ProtobufCMessage* arg, ProtobufCMessage* res) {
+  printf("PYLIB: rpc called\n");
   Blob* inblob = get_blob(arg);
   ProtobufCBinaryData* iniov = NULL;
   size_t n_iniov = 0;
@@ -205,7 +270,35 @@ void rpc(char* method, ProtobufCMessage* arg, ProtobufCMessage* res) {
     rpc_iniov[i + 2] = iniov[i];
   }
 
+  printf("PYLIB: Calling write_call\n");
   write_call(rpc_iniov, n_iniov + 2);
+  printf("PYLIB: write_call finished\n");
+
+  // ReadCall
+  uint64_t ret_seqno = read_seqno();
+  printf("PYLIB: ReadSeqno: %lu\n", ret_seqno);
+  // ProtobufCBinaryData* frames = read_frames();
+  // if (frames == NULL) {
+  //   printf("PYLIB: ReadCall failed\n");
+  // }
+  // Rep* rep = rep__unpack(NULL, frames[0].len, frames[0].data); 
+  // printf("PYLIB: rep: %p\n", rep);
+
+  // // Unpack frames[1] by type
+  // if (strcmp(method, "SPProxySrvAPI.Stat") == 0) {
+  //   res = (ProtobufCMessage *) sigma_stat_rep__unpack(NULL, frames[1].len, frames[1].data); 
+  // } else {
+  //   printf("PYLIB: Unknown message type: %s\n", method);
+  // }
+
+  // // Get blob
+  // if (outblob != NULL) {
+  //   outblob = get_blob(res);
+  //   outblob->n_iov = n_outiov - 2;
+  //   for (size_t i = 0; i < outblob->n_iov; i++) {
+  //     outblob->iov[i] = frames[i + 2];
+  //   }
+  // }
 }
 
 /***************
@@ -218,4 +311,5 @@ void stat_stub(char* path) {
   req.path = path;
   SigmaStatRep rep = SIGMA_STAT_REP__INIT;
   rpc("SPProxySrvAPI.Stat", (ProtobufCMessage *) &req, (ProtobufCMessage *) &rep);
+  printf("PYLIB: Stat result: %p\n", rep.stat);
 }

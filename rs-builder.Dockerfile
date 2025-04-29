@@ -10,6 +10,7 @@ RUN apk add --no-cache libseccomp \
   curl \
   bash \
   gcc \
+  g++ \
   libc-dev \
   parallel \
   libseccomp-static \

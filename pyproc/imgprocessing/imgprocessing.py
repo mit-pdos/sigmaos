@@ -5,6 +5,6 @@ from time import time
 
 splib.Started()
 print("IVY: A")
-splib.Stat("idrc/boo")
+splib.Stat("name/")
 print("IVY: C")
 splib.Exited()

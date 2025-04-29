@@ -145,7 +145,7 @@ func (rm *RealmSrv) Make(ctx fs.CtxI, req proto.MakeReq, res *proto.MakeRep) err
 	db.DPrintf(db.REALMD, "RealmSrv.Make %v spawn named %v", req.Realm, r.namedcfg)
 	r.namedgrp = r.namedcfg.StartGrpMgr(rm.sc.SigmaClnt())
 	db.DPrintf(db.REALMD, "RealmSrv.Make %v named started", req.Realm)
-	time.Sleep(10 * time.Second)
+	//time.Sleep(10 * time.Second)
 
 	// wait until the realm's named has registered its endpoint and is ready to
 	// serve

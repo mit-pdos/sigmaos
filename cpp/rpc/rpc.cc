@@ -39,7 +39,7 @@ std::expected<int, std::string> Clnt::RPC(std::string method, const google::prot
     return std::unexpected(std::format("rpc error: {}", wrapped_rep.err().DebugString()));
   }
   // Deserialize the reply
-  rep_data = std::string(out_iov[1].begin(), out_iov[1].end());
+  rep_data = std::string(out_iov[0].begin(), out_iov[0].end());
   // TODO: deserialize directly from stream (should we be using strings at all?)
   rep.ParseFromString(rep_data);
   // TODO: handle blobs
@@ -84,6 +84,8 @@ std::expected<Rep, std::string> Clnt::wrap_and_run_rpc(std::string method, const
   wrapper_rep_data = std::string(wrapped_out_iov[0].begin(), wrapped_out_iov[0].end());
   // TODO: deserialize directly from stream (should we be using strings at all?)
   rep.ParseFromString(wrapper_rep_data);
+  out_iov.resize(wrapped_out_iov.size() - 1);
+  out_iov.insert(out_iov.begin(), std::next(wrapped_out_iov.begin()), wrapped_out_iov.end());
 	// TODO: Record stats
 //	rpcc.si.Stat(method, time.Since(start).Microseconds())
   return rep;

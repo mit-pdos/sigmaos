@@ -43,6 +43,9 @@ class Clnt {
   std::expected<int, std::string> Test();
   void Close() { _rpcc->Close(); }
 
+  // Stubs
+  // TODO
+
   private:
   std::shared_ptr<sigmaos::io::conn::UnixConn> _conn;
   std::shared_ptr<sigmaos::io::transport::Transport> _trans;

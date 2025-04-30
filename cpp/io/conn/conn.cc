@@ -60,6 +60,9 @@ std::expected<int, std::string> UnixConn::WriteUint32(uint32_t i) {
 
 std::expected<int, std::string> UnixConn::Close() {
   std::cout << "Closing conn" << std::endl;
+  // Close the socket FD
+  // TODO: have the reader actually close the FD, or else it may block
+  // indefinitely, since closing while reading is UB.
   int err = close(_sockfd);
   if (err) {
     throw std::runtime_error(std::format("Error close sockfd: {}", err));

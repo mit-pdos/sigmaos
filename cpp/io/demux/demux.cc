@@ -47,10 +47,14 @@ std::expected<int, std::string> Clnt::Close() {
   std::cout << "Done closing callmap" << std::endl;
   // Join the reader thread
   std::cout << "Join demuxclnt reader thread" << std::endl;
-  _reader_thread.join();
+  // TODO: join the reader thread. In order to do so, we need to switch the
+  // underlying connection's Read syscalls to polling, so that the reader
+  // thread can find out we are closing the connection and safely close the
+  // underlying connection FD.
+  // _reader_thread.join();
   std::cout << "Done join demuxclnt reader thread" << std::endl;
   std::cout << "Done closing demux clnt" << std::endl;
-  return res;
+  return 0;
 }
 
 bool Clnt::IsClosed() {
@@ -61,6 +65,7 @@ void Clnt::read_responses() {
   while(true) {
     // Read a response
     auto res = _trans->ReadCall();
+    std::cout << "Return from read call has value? " << res.has_value() << std::endl;
     if (!res.has_value()) {
       std::cout << "Error demuxclnt read_responses: " << res.error() << std::endl;
       _callmap.Close();

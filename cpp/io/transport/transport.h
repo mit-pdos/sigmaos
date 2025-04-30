@@ -20,10 +20,7 @@ class Transport {
     std::cout << "New demux clnt" << std::endl;
   }
 
-  ~Transport() {
-    std::cout << "Close transport" << std::endl;
-    throw std::runtime_error("unimplemented");
-  }
+  ~Transport() { _conn->Close(); }
 
   std::expected<int, std::string> WriteCall(std::shared_ptr<Call> call);
   std::expected<std::shared_ptr<Call>, std::string> ReadCall();

@@ -7,31 +7,39 @@
 #include <iostream>
 #include <memory>
 #include <expected>
+#include <future>
 
 #include <io/transport/transport.h>
+#include <io/transport/call.h>
+#include <io/demux/callmap.h>
 
 namespace sigmaos {
 namespace io::demux {
 
 class Clnt {
   public:
-  Clnt(std::shared_ptr<sigmaos::io::transport::Transport> trans) : _trans(trans) {
+  Clnt(std::shared_ptr<sigmaos::io::transport::Transport> trans) : _trans(trans), _callmap(), _reader_thread(std::thread(&Clnt::read_responses, this)) {
     std::cout << "New demux clnt" << std::endl;
-  // TODO: start reader thread
   }
 
   ~Clnt() {
     std::cout << "Close demux clnt" << std::endl;
     Close();
+    // Join the reader thread
+    _reader_thread.join();
   }
 
   // TODO: Call type?
-  std::expected<std::shared_ptr<sigmaos::io::transport::Call>, std::string> SendReceive(const sigmaos::io::transport::Call &call, std::vector<std::vector<unsigned char>> &outiov);
+  std::expected<std::shared_ptr<sigmaos::io::transport::Call>, std::string> SendReceive(std::shared_ptr<sigmaos::io::transport::Call> call);
   std::expected<int, std::string> Close();
   bool IsClosed();
 
   private:
   std::shared_ptr<sigmaos::io::transport::Transport> _trans;
+  sigmaos::io::demux::internal::CallMap _callmap;
+  std::thread _reader_thread;
+
+  void read_responses();
 };
 
 };

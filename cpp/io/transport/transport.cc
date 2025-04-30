@@ -5,21 +5,25 @@
 namespace sigmaos {
 namespace io::transport {
 
-std::expected<int, std::string> Transport::WriteCall(const Call &c) {
-  std::cout << "Transport::WriteCall seqno " << c.GetSeqno() << std::endl;
-  auto res = sigmaos::io::frame::WriteSeqno(_conn, c.GetSeqno());
+std::expected<int, std::string> Transport::WriteCall(std::shared_ptr<Call> call) {
+  auto res = _calls.Put(call->GetSeqno(), call);
   if (!res.has_value()) {
     return res;
   }
-  std::cout << "Transport::WriteCall iovec len " << c.GetIOVec().size() << std::endl;
-  res = sigmaos::io::frame::WriteFrames(_conn, c.GetIOVec());
+  std::cout << "Transport::WriteCall seqno " << call->GetSeqno() << std::endl;
+  res = sigmaos::io::frame::WriteSeqno(_conn, call->GetSeqno());
+  if (!res.has_value()) {
+    return res;
+  }
+  std::cout << "Transport::WriteCall iovec len " << call->GetInIOVec().size() << std::endl;
+  res = sigmaos::io::frame::WriteFrames(_conn, call->GetInIOVec());
   if (!res.has_value()) {
     return res;
   }
   return 0;
 }
 
-std::expected<std::shared_ptr<Call>, std::string> Transport::ReadCall(std::vector<std::vector<unsigned char>> &iov) {
+std::expected<std::shared_ptr<Call>, std::string> Transport::ReadCall() {
   uint64_t seqno;
   uint32_t nframes;
   {
@@ -36,13 +40,20 @@ std::expected<std::shared_ptr<Call>, std::string> Transport::ReadCall(std::vecto
     }
     nframes = res.value();
   }
+  auto call = _calls.Remove(seqno).value();
   // Resize the iov according to the incoming number of frames
-  iov.resize(nframes);
-  auto res = sigmaos::io::frame::ReadFramesIntoIOVec(_conn, iov);
+  call->GetOutIOVec().resize(nframes);
+  auto res = sigmaos::io::frame::ReadFramesIntoIOVec(_conn, call->GetOutIOVec());
   if (!res.has_value()) {
     return std::unexpected(res.error());
   }
-  return std::make_shared<Call>(seqno, iov);
+  return call;
+}
+
+
+std::expected<int, std::string> Transport::Close() {
+//  _calls.Close(); // XXX never called in the go implementation
+  return _conn->Close();
 }
 
 };

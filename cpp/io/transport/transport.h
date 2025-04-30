@@ -8,28 +8,15 @@
 #include <expected>
 
 #include <io/conn/conn.h>
+#include <io/transport/call.h>
+#include <io/transport/callmap.h>
 
 namespace sigmaos {
 namespace io::transport {
 
-class Call {
-  public:
-  Call(uint64_t seqno, std::vector<std::vector<unsigned char>> &iov) : 
-    seqno(seqno), _iov(iov) {}
-  ~Call() {}
-
-  uint64_t GetSeqno() const { return seqno; }
-  const std::vector<std::vector<unsigned char>> &GetIOVec() const { return _iov; }
-
-  private:
-  uint64_t seqno;
-  // TODO: does this need to be a ptr?
-  std::vector<std::vector<unsigned char>> &_iov;
-};
-
 class Transport {
   public:
-  Transport(std::shared_ptr<sigmaos::io::conn::UnixConn> conn) : _conn(conn) {
+  Transport(std::shared_ptr<sigmaos::io::conn::UnixConn> conn) : _conn(conn), _calls() {
     std::cout << "New demux clnt" << std::endl;
   }
 
@@ -38,12 +25,13 @@ class Transport {
     throw std::runtime_error("unimplemented");
   }
 
-  std::expected<int, std::string> WriteCall(const Call &c);
-  std::expected<std::shared_ptr<Call>, std::string> ReadCall(std::vector<std::vector<unsigned char>> &iov);
-  std::expected<int, std::string> Close() { return _conn->Close(); }
+  std::expected<int, std::string> WriteCall(std::shared_ptr<Call> call);
+  std::expected<std::shared_ptr<Call>, std::string> ReadCall();
+  std::expected<int, std::string> Close();
 
   private:
   std::shared_ptr<sigmaos::io::conn::UnixConn> _conn;
+  sigmaos::io::transport::internal::CallMap _calls;
 };
 
 };

@@ -1,6 +1,9 @@
 message(STATUS "Building transport library")
 
-add_library(io_transport STATIC transport.cc)
+add_library(io_transport STATIC
+  transport.cc
+  callmap.cc
+)
 
 target_link_libraries(io_transport PUBLIC io_frame)
 

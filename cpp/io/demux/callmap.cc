@@ -9,6 +9,7 @@ std::expected<int, std::string> CallMap::Put(uint64_t seqno, std::unique_ptr<std
     return std::unexpected("Err: demux closed");
   }
   _calls[seqno] = std::move(p);
+  return 0;
 }
 
 std::optional<std::unique_ptr<std::promise<std::expected<std::shared_ptr<sigmaos::io::transport::Call>, std::string>>>> CallMap::Remove(uint64_t seqno) {

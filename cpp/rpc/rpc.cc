@@ -74,12 +74,12 @@ std::expected<Rep, std::string> Clnt::wrap_and_run_rpc(std::string method, const
   wrapped_in_iov.insert(std::next(wrapped_in_iov.begin()), in_iov.begin(), in_iov.end());
 
   // Create the call object to be sent, and perform the RPC.
-  io::transport::Call wrapped_call(seqno, wrapped_in_iov);
-  auto res = _demux->SendReceive(wrapped_call, out_iov);
+  auto wrapped_call = std::make_shared<io::transport::Call>(seqno, wrapped_in_iov, wrapped_out_iov);
+  auto res = _demux->SendReceive(wrapped_call);
   if (!res.has_value()) {
     return std::unexpected(res.error());
   }
-  wrapped_out_iov = res.value()->GetIOVec();
+  wrapped_out_iov = res.value()->GetOutIOVec();
   // Deserialize the wrapper
   wrapper_rep_data = std::string(wrapped_out_iov[0].begin(), wrapped_out_iov[0].end());
   // TODO: deserialize directly from stream (should we be using strings at all?)

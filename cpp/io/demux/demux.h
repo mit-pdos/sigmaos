@@ -18,7 +18,7 @@ namespace io::demux {
 
 class Clnt {
   public:
-  Clnt(std::shared_ptr<sigmaos::io::transport::Transport> trans) : _trans(trans), _callmap(), _reader_thread(std::thread(&Clnt::read_responses, this)) {
+  Clnt(std::shared_ptr<sigmaos::io::transport::Transport> trans) : _mu(), _trans(trans), _callmap(), _reader_thread(std::thread(&Clnt::read_responses, this)) {
     std::cout << "New demux clnt" << std::endl;
   }
 
@@ -35,6 +35,7 @@ class Clnt {
   bool IsClosed();
 
   private:
+  std::mutex _mu;
   std::shared_ptr<sigmaos::io::transport::Transport> _trans;
   sigmaos::io::demux::internal::CallMap _callmap;
   std::thread _reader_thread;

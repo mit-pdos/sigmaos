@@ -15,12 +15,10 @@ std::expected<std::shared_ptr<sigmaos::io::transport::Call>, std::string> Clnt::
       return std::unexpected(res.error());
     }
   }
-// TODO: lock & unlock
-//	dmx.mu.Lock()
-  // TODO: take a lock?
   {
+    // Take a lock so that writes are atomic
+    std::lock_guard<std::mutex> guard(_mu);
   	auto res = _trans->WriteCall(call);
-  //	dmx.mu.Unlock()
     if (!res.has_value()) {
       return std::unexpected(res.error());
     }

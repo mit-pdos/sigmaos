@@ -25,19 +25,30 @@ std::expected<std::shared_ptr<sigmaos::io::transport::Call>, std::string> Clnt::
   }
   // Wait for the reader thread to materialize the response
   f.wait();
+  std::cout << "Got resopnse" << std::endl;
   // Get and return the result
   return f.get();
 }
 
 std::expected<int, std::string> Clnt::Close() {
+  std::cout << "Closing demux clnt" << std::endl;
 	if (_callmap.IsClosed()) {
+    std::cout << "DemuxClnt already closed" << std::endl;
     return 0;
 	}
-  auto res = _trans->Close();
-  if (!res.has_value()) {
-    std::cout << "Error DemuxClnt close trans: " << res.error() << std::endl;
+  {
+    auto res = _trans->Close();
+    if (!res.has_value()) {
+      std::cout << "Error DemuxClnt close trans: " << res.error() << std::endl;
+    }
   }
-  return _callmap.Close();
+  auto res = _callmap.Close();
+  // Join the reader thread
+  std::cout << "Join demuxclnt reader thread" << std::endl;
+  _reader_thread.join();
+  std::cout << "Done join demuxclnt reader thread" << std::endl;
+  std::cout << "Done closing demux clnt" << std::endl;
+  return res;
 }
 
 bool Clnt::IsClosed() {

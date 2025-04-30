@@ -22,12 +22,7 @@ class Clnt {
     std::cout << "New demux clnt" << std::endl;
   }
 
-  ~Clnt() {
-    std::cout << "Close demux clnt" << std::endl;
-    Close();
-    // Join the reader thread
-    _reader_thread.join();
-  }
+  ~Clnt() { Close(); }
 
   // TODO: Call type?
   std::expected<std::shared_ptr<sigmaos::io::transport::Call>, std::string> SendReceive(std::shared_ptr<sigmaos::io::transport::Call> call);

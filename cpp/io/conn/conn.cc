@@ -59,10 +59,12 @@ std::expected<int, std::string> UnixConn::WriteUint32(uint32_t i) {
 }
 
 std::expected<int, std::string> UnixConn::Close() {
+  std::cout << "Closing conn" << std::endl;
   int err = close(_sockfd);
   if (err) {
     throw std::runtime_error(std::format("Error close sockfd: {}", err));
   }
+  std::cout << "Done closing conn" << std::endl;
   return 0;
 }
 

@@ -36,9 +36,12 @@ class Clnt {
 
   ~Clnt() {
     std::cout << "Closing sigmap proxy clnt" << std::endl;
+    Close();
+    std::cout << "Done closing sigmap proxy clnt" << std::endl;
   }
 
   std::expected<int, std::string> Test();
+  void Close() { _rpcc->Close(); }
 
   private:
   std::shared_ptr<sigmaos::io::conn::UnixConn> _conn;

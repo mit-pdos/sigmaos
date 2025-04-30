@@ -14,9 +14,14 @@ namespace rpc {
 class Clnt {
   public:
   Clnt(std::shared_ptr<sigmaos::io::demux::Clnt> demux) : _seqno(1), _demux(demux) {}
-  ~Clnt() { _demux->Close(); }
+  ~Clnt() { Close(); }
 
   std::expected<int, std::string> RPC(std::string method, const google::protobuf::Message &req, google::protobuf::Message &res);
+  void Close() { 
+    std::cout << "Closing RPC clnt" << std::endl;
+    _demux->Close(); 
+    std::cout << "Done closing RPC clnt" << std::endl;
+  }
   private:
   std::atomic<uint64_t> _seqno;
   std::shared_ptr<sigmaos::io::demux::Clnt> _demux;

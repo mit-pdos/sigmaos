@@ -53,7 +53,10 @@ std::expected<std::shared_ptr<Call>, std::string> Transport::ReadCall() {
 
 std::expected<int, std::string> Transport::Close() {
 //  _calls.Close(); // XXX never called in the go implementation
-  return _conn->Close();
+  std::cout << "Closing transport" << std::endl;
+  auto res = _conn->Close();
+  std::cout << "Done closing transport" << std::endl;
+  return res;
 }
 
 };

@@ -47,7 +47,6 @@ bool Clnt::IsClosed() {
 }
 
 void Clnt::read_responses() {
-  throw std::runtime_error("unimplmented");
   while(true) {
     // Read a response
     auto res = _trans->ReadCall();

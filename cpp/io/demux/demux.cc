@@ -42,7 +42,9 @@ std::expected<int, std::string> Clnt::Close() {
       std::cout << "Error DemuxClnt close trans: " << res.error() << std::endl;
     }
   }
-  auto res = _callmap.Close();
+  std::cout << "Close callmap" << std::endl;
+  _callmap.Close();
+  std::cout << "Done closing callmap" << std::endl;
   // Join the reader thread
   std::cout << "Join demuxclnt reader thread" << std::endl;
   _reader_thread.join();

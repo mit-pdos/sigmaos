@@ -24,7 +24,7 @@ class CallMap {
   std::expected<int, std::string> Put(uint64_t seqno, std::unique_ptr<std::promise<std::expected<std::shared_ptr<sigmaos::io::transport::Call>, std::string>>> future);
   std::optional<std::unique_ptr<std::promise<std::expected<std::shared_ptr<sigmaos::io::transport::Call>, std::string>>>> Remove(uint64_t seqno);
   std::vector<uint64_t> Outstanding();
-  std::expected<int, std::string> Close();
+  void Close();
   bool IsClosed();
 
   private:

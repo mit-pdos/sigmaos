@@ -24,7 +24,6 @@ class Clnt {
 
   ~Clnt() { Close(); }
 
-  // TODO: Call type?
   std::expected<std::shared_ptr<sigmaos::io::transport::Call>, std::string> SendReceive(std::shared_ptr<sigmaos::io::transport::Call> call);
   std::expected<int, std::string> Close();
   bool IsClosed();

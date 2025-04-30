@@ -29,7 +29,7 @@ std::vector<uint64_t> CallMap::Outstanding() {
   return outstanding;
 }
 
-std::expected<int, std::string> CallMap::Close() {
+void CallMap::Close() {
   std::lock_guard<std::mutex> guard(_mu);
   _closed = true;
 }

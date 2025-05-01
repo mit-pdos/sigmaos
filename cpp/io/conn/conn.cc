@@ -8,6 +8,9 @@
 namespace sigmaos {
 namespace io::conn {
 
+bool UnixConn::_l = sigmaos::util::log::init_logger(CONN);
+bool UnixConn::_l_e = sigmaos::util::log::init_logger(CONN_ERR);
+
 std::expected<int, std::string> UnixConn::Read(std::vector<unsigned char> &b) {
   return read_bytes(b.data(), b.size());
 }
@@ -59,7 +62,7 @@ std::expected<int, std::string> UnixConn::WriteUint32(uint32_t i) {
 }
 
 std::expected<int, std::string> UnixConn::Close() {
-  std::cout << "Closing conn" << std::endl;
+  log(CONN, "Closing unix conn");
   // Close the socket FD
   // TODO: have the reader actually close the FD, or else it may block
   // indefinitely, since closing while reading is UB.
@@ -67,7 +70,7 @@ std::expected<int, std::string> UnixConn::Close() {
   if (err) {
     throw std::runtime_error(std::format("Error close sockfd: {}", err));
   }
-  std::cout << "Done closing conn" << std::endl;
+  log(CONN, "Done closing unix conn");
   return 0;
 }
 

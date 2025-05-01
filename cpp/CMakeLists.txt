@@ -12,6 +12,7 @@ endif()
 # External packages
 find_package(Protobuf REQUIRED)
 find_package(absl REQUIRED)
+find_package(spdlog REQUIRED)
 
 # SigmaOS packages
 add_subdirectory(io)

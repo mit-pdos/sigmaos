@@ -7,5 +7,6 @@ add_executable(spawn-latency-cpp
 )
 
 target_link_libraries(spawn-latency-cpp PRIVATE 
+  util_log
   sigmap_proxy
 )

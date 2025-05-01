@@ -9,12 +9,16 @@
 #include <vector>
 #include <expected>
 
+#include <util/log/log.h>
+
 namespace sigmaos {
 namespace io::conn {
 
+const std::string CONN = "CONN";
+const std::string CONN_ERR = "CONN_ERR";
+
 class UnixConn {
   public:
-
   // Create a unix socket connection
   UnixConn(std::string pn) {
     std::cout << "New socket connection" << std::endl;
@@ -49,6 +53,9 @@ class UnixConn {
   private:
   int _sockfd;
   sockaddr_un _addr;
+  // Used for logger initialization
+  static bool _l;
+  static bool _l_e;
 
   std::expected<int, std::string> read_bytes(unsigned char *b, size_t size);
   std::expected<int, std::string> write_bytes(const unsigned char *b, size_t size);

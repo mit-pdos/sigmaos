@@ -8,7 +8,7 @@ RUN pacman-key --init && \
   pacman-key --populate && \
   pacman --noconfirm -Sy archlinux-keyring
 
-RUN pacman --noconfirm -Sy git libseccomp wget gcc pkg-config parallel time make cmake protobuf
+RUN pacman --noconfirm -Sy git libseccomp wget gcc pkg-config parallel time make cmake protobuf spdlog
 
 WORKDIR /home/sigmaos
 

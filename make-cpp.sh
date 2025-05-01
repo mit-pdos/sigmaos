@@ -46,7 +46,7 @@ done
 
 for PP in rpc ; do
   for P in $PP/proto/*.proto ; do
-    echo "protoc $P golang"
+    echo "protoc $P cpp"
     protoc -I=. --cpp_out=./cpp $P
   done
 done

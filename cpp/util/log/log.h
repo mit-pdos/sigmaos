@@ -16,6 +16,10 @@ void log(std::string selector, spdlog::format_string_t<Args...> fmt, Args &&...a
   spdlog::get(selector)->info(fmt, std::forward<Args>(args)...);
 }
 
+// Some common debug selectors
+const std::string TEST = "TEST";
+const std::string SPAWN_LAT = "SPAWN_LAT";
+
 namespace sigmaos {
 namespace util::log {
 
@@ -58,6 +62,16 @@ class sigmadebug_sink : public spdlog::sinks::base_sink<std::mutex> {
   private:
   bool _enabled;
   std::shared_ptr<spdlog::sinks::stdout_sink_mt> _stdout_sink;
+};
+
+// Used to initialize some common debug selectors
+class _log {
+  public:
+  _log();
+  ~_log();
+  private:
+  static bool _l_test;
+  static bool _l_spawn_lat;
 };
 
 };

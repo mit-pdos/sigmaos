@@ -3,6 +3,9 @@
 namespace sigmaos {
 namespace util::log {
 
+bool _log::_l_test = init_logger(TEST);
+bool _log::_l_spawn_lat = init_logger(SPAWN_LAT);
+
 std::mutex _mu;
 
 bool init_logger(std::string selector) {

@@ -23,7 +23,7 @@ const std::string DEMUXCLNT_ERR = DEMUXCLNT + sigmaos::util::log::ERR;
 class Clnt {
   public:
   Clnt(std::shared_ptr<sigmaos::io::transport::Transport> trans) : _mu(), _trans(trans), _callmap(), _reader_thread(std::thread(&Clnt::read_responses, this)) {
-    std::cout << "New demux clnt" << std::endl;
+    log(DEMUXCLNT, "New demux clnt");
   }
 
   ~Clnt() { Close(); }

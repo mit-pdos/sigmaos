@@ -21,7 +21,7 @@ class UnixConn {
   public:
   // Create a unix socket connection
   UnixConn(std::string pn) {
-    std::cout << "New socket connection" << std::endl;
+    log(CONN, "New unix connection {}", pn);
     _sockfd = socket(AF_UNIX, SOCK_STREAM, 0);
     if (_sockfd == -1) {
       throw std::runtime_error("Failed to create spproxy socket fd");

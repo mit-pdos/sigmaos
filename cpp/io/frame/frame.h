@@ -4,9 +4,23 @@
 #include <expected>
 
 #include <io/conn/conn.h>
+#include <util/log/log.h>
 
 namespace sigmaos {
 namespace io::frame {
+
+const std::string FRAME = "FRAME";
+const std::string FRAME_ERR = "FRAME" + sigmaos::util::log::ERR;
+
+class Frame {
+  public:
+  Frame() {};
+  ~Frame() {};
+  private:
+  // Used for logger initialization
+  static bool _l;
+  static bool _l_e;
+};
 
 // Read frames
 std::expected<int, std::string> ReadFrameIntoVec(std::shared_ptr<sigmaos::io::conn::UnixConn> conn, std::vector<unsigned char> &b);

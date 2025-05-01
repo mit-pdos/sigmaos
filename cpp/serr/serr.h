@@ -94,5 +94,3 @@ struct fmt::formatter<sigmaos::serr::Error>: fmt::formatter<string_view> {
     return std::ranges::copy(std::move(out).str(), ctx.out()).out;
   }
 };
-
-

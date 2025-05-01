@@ -8,6 +8,7 @@
 #include <memory>
 #include <expected>
 
+#include <util/log/log.h>
 #include <io/conn/conn.h>
 #include <io/transport/transport.h>
 #include <io/demux/demux.h>
@@ -18,30 +19,31 @@ namespace sigmaos {
 namespace proxy::sigmap {
 
 const std::string SPPROXY_SOCKET_PN = "/tmp/spproxyd/spproxyd.sock"; // sigmap/sigmap.go SIGMASOCKET
+const std::string SPPROXYCLNT = "SPPROXYCLNT";
+const std::string SPPROXYCLNT_ERR = "SPPROXYCLNT" + sigmaos::util::log::ERR;
 
 class Clnt {
   public:
   Clnt() {
     _env = sigmaos::proc::GetProcEnv();
-    std::cout << "New sigmap proxy clnt " << _env->String() << std::endl;
+    log(SPPROXYCLNT, "New clnt {}", _env->String());
     _conn = std::make_shared<sigmaos::io::conn::UnixConn>(SPPROXY_SOCKET_PN);
     _trans = std::make_shared<sigmaos::io::transport::Transport>(_conn);
     _demux = std::make_shared<sigmaos::io::demux::Clnt>(_trans);
     _rpcc = std::make_shared<sigmaos::rpc::Clnt>(_demux);
-    std::cout << "Established conn to spproxyd" << std::endl;
-    std::cout << "Initializing conn to spproxyd" << std::endl;
+    log(SPPROXYCLNT, "Initializing proxy conn");
     // Initialize the sigmaproxyd connection
     init_conn();
   }
 
-  ~Clnt() {
-    std::cout << "Closing sigmap proxy clnt" << std::endl;
-    Close();
-    std::cout << "Done closing sigmap proxy clnt" << std::endl;
-  }
+  ~Clnt() { Close(); }
 
   std::expected<int, std::string> Test();
-  void Close() { _rpcc->Close(); }
+  void Close() { 
+    log(SPPROXYCLNT, "Close");
+    _rpcc->Close(); 
+    log(SPPROXYCLNT, "Done close");
+  }
 
   // Stubs
   // TODO
@@ -52,6 +54,9 @@ class Clnt {
   std::shared_ptr<sigmaos::io::demux::Clnt> _demux;
   std::shared_ptr<sigmaos::rpc::Clnt> _rpcc;
   std::shared_ptr<sigmaos::proc::ProcEnv> _env;
+  // Used for logger initialization
+  static bool _l;
+  static bool _l_e;
 
   void init_conn();
 };

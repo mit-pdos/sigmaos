@@ -11,7 +11,7 @@
 
 #include <io/transport/transport.h>
 #include <io/transport/call.h>
-#include <io/demux/callmap.h>
+#include <io/demux/internal/callmap.h>
 #include <util/log/log.h>
 
 namespace sigmaos {

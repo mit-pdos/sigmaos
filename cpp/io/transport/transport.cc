@@ -5,17 +5,20 @@
 namespace sigmaos {
 namespace io::transport {
 
+bool Transport::_l = sigmaos::util::log::init_logger(TRANSPORT);
+bool Transport::_l_e = sigmaos::util::log::init_logger(TRANSPORT_ERR);
+
 std::expected<int, std::string> Transport::WriteCall(std::shared_ptr<Call> call) {
   auto res = _calls.Put(call->GetSeqno(), call);
   if (!res.has_value()) {
     return res;
   }
-  std::cout << "Transport::WriteCall seqno " << call->GetSeqno() << std::endl;
+  log(TRANSPORT, "WriteCall seqno {}", call->GetSeqno());
   res = sigmaos::io::frame::WriteSeqno(_conn, call->GetSeqno());
   if (!res.has_value()) {
     return res;
   }
-  std::cout << "Transport::WriteCall iovec len " << call->GetInIOVec().size() << std::endl;
+  log(TRANSPORT, "WriteCall iniov len {}", call->GetInIOVec().size());
   res = sigmaos::io::frame::WriteFrames(_conn, call->GetInIOVec());
   if (!res.has_value()) {
     return res;
@@ -53,9 +56,9 @@ std::expected<std::shared_ptr<Call>, std::string> Transport::ReadCall() {
 
 std::expected<int, std::string> Transport::Close() {
 //  _calls.Close(); // XXX never called in the go implementation
-  std::cout << "Closing transport" << std::endl;
+  log(TRANSPORT, "Close");
   auto res = _conn->Close();
-  std::cout << "Done closing transport" << std::endl;
+  log(TRANSPORT, "Done close");
   return res;
 }
 

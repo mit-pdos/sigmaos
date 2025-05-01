@@ -3,6 +3,9 @@
 namespace sigmaos {
 namespace rpc {
 
+bool Clnt::_l = sigmaos::util::log::init_logger(RPCCLNT);
+bool Clnt::_l_e = sigmaos::util::log::init_logger(RPCCLNT_ERR);
+
 std::expected<int, std::string> Clnt::RPC(std::string method, const google::protobuf::Message &req, google::protobuf::Message &rep) {
   // TODO: get blob
 //	inblob := rpc.GetBlob(arg)

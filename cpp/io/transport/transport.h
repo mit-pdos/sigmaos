@@ -10,7 +10,7 @@
 #include <util/log/log.h>
 #include <io/conn/conn.h>
 #include <io/transport/call.h>
-#include <io/transport/callmap.h>
+#include <io/transport/internal/callmap.h>
 
 namespace sigmaos {
 namespace io::transport {

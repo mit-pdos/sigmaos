@@ -8,6 +8,7 @@ add_library(io_transport STATIC
 
 target_link_libraries(io_transport PUBLIC
   util_log
+  io_transport_internal
   io_frame
 )
 

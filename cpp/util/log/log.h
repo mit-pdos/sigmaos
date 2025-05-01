@@ -3,14 +3,16 @@
 #include <mutex>
 #include <memory>
 #include <format>
+#include <string>
 
 #include <spdlog/sinks/base_sink.h>
 #include <spdlog/sinks/stdout_sinks.h>
 #include <spdlog/spdlog.h>
+#include <spdlog/common.h>
 
 // Write a log line given a selector
 template <typename... Args>
-void log(std::string selector, std::string fmt, Args &&...args) {
+void log(std::string selector, spdlog::format_string_t<Args...> fmt, Args &&...args) {
   spdlog::get(selector)->info(fmt, std::forward<Args>(args)...);
 }
 
@@ -19,6 +21,8 @@ namespace util::log {
 
 // Initialize a logger with a debug selector
 bool init_logger(std::string selector);
+
+const std::string ERR = "_ERR";
 
 class sigmadebug_sink : public spdlog::sinks::base_sink<std::mutex> {
   public:

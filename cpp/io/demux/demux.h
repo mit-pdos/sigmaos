@@ -12,9 +12,13 @@
 #include <io/transport/transport.h>
 #include <io/transport/call.h>
 #include <io/demux/callmap.h>
+#include <util/log/log.h>
 
 namespace sigmaos {
 namespace io::demux {
+
+const std::string DEMUXCLNT = "DEMUXCLNT";
+const std::string DEMUXCLNT_ERR = DEMUXCLNT + sigmaos::util::log::ERR;
 
 class Clnt {
   public:
@@ -33,6 +37,9 @@ class Clnt {
   std::shared_ptr<sigmaos::io::transport::Transport> _trans;
   sigmaos::io::demux::internal::CallMap _callmap;
   std::thread _reader_thread;
+  // Used for logger initialization
+  static bool _l;
+  static bool _l_e;
 
   void read_responses();
 };

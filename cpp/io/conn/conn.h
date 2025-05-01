@@ -15,7 +15,7 @@ namespace sigmaos {
 namespace io::conn {
 
 const std::string CONN = "CONN";
-const std::string CONN_ERR = "CONN_ERR";
+const std::string CONN_ERR = "CONN" + sigmaos::util::log::ERR;
 
 class UnixConn {
   public:

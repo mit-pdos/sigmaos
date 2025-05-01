@@ -3,6 +3,9 @@
 namespace sigmaos {
 namespace io::demux {
 
+bool Clnt::_l = sigmaos::util::log::init_logger(DEMUXCLNT);
+bool Clnt::_l_e = sigmaos::util::log::init_logger(DEMUXCLNT_ERR);
+
 std::expected<std::shared_ptr<sigmaos::io::transport::Call>, std::string> Clnt::SendReceive(std::shared_ptr<sigmaos::io::transport::Call> call) {
   // Create a promise
   auto p = std::make_unique<std::promise<std::expected<std::shared_ptr<sigmaos::io::transport::Call>, std::string>>>();
@@ -25,35 +28,35 @@ std::expected<std::shared_ptr<sigmaos::io::transport::Call>, std::string> Clnt::
   }
   // Wait for the reader thread to materialize the response
   f.wait();
-  std::cout << "Got resopnse" << std::endl;
+  log(DEMUXCLNT, "Got response seqno {}", call->GetSeqno());
   // Get and return the result
   return f.get();
 }
 
 std::expected<int, std::string> Clnt::Close() {
-  std::cout << "Closing demux clnt" << std::endl;
+  log(DEMUXCLNT, "Close");
 	if (_callmap.IsClosed()) {
-    std::cout << "DemuxClnt already closed" << std::endl;
+    log(DEMUXCLNT, "Close: already closed");
     return 0;
 	}
   {
     auto res = _trans->Close();
     if (!res.has_value()) {
-      std::cout << "Error DemuxClnt close trans: " << res.error() << std::endl;
+      log(DEMUXCLNT_ERR, "Err close trans: {}", res.error());
     }
   }
-  std::cout << "Close callmap" << std::endl;
+  log(DEMUXCLNT, "Close callmap");
   _callmap.Close();
-  std::cout << "Done closing callmap" << std::endl;
+  log(DEMUXCLNT, "Done closing callmap");
   // Join the reader thread
-  std::cout << "Join demuxclnt reader thread" << std::endl;
+  log(DEMUXCLNT, "Join reader thread");
   // TODO: join the reader thread. In order to do so, we need to switch the
   // underlying connection's Read syscalls to polling, so that the reader
   // thread can find out we are closing the connection and safely close the
   // underlying connection FD.
   // _reader_thread.join();
-  std::cout << "Done join demuxclnt reader thread" << std::endl;
-  std::cout << "Done closing demux clnt" << std::endl;
+  log(DEMUXCLNT, "Done join reader thread");
+  log(DEMUXCLNT, "Done Close");
   return 0;
 }
 
@@ -65,9 +68,8 @@ void Clnt::read_responses() {
   while(true) {
     // Read a response
     auto res = _trans->ReadCall();
-    std::cout << "Return from read call has value? " << res.has_value() << std::endl;
     if (!res.has_value()) {
-      std::cout << "Error demuxclnt read_responses: " << res.error() << std::endl;
+      log(DEMUXCLNT_ERR, "Err reader: {}", res.error());
       _callmap.Close();
       return;
     }

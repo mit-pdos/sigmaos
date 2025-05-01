@@ -15,6 +15,7 @@ find_package(absl REQUIRED)
 find_package(spdlog REQUIRED)
 
 # SigmaOS packages
+add_subdirectory(serr)
 add_subdirectory(io)
 add_subdirectory(util)
 add_subdirectory(proc)

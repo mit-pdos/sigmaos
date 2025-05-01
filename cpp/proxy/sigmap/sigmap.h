@@ -12,6 +12,7 @@
 #include <io/conn/conn.h>
 #include <io/transport/transport.h>
 #include <io/demux/demux.h>
+#include <serr/serr.h>
 #include <rpc/rpc.h>
 #include <proc/proc.h>
 

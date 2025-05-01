@@ -5,6 +5,7 @@ add_subdirectory(proto)
 add_library(sigmap_proxy STATIC sigmap.cc)
 
 target_link_libraries(sigmap_proxy PUBLIC
+  serr
   util_log
   rpc 
   proc

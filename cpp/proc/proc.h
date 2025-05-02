@@ -24,6 +24,8 @@ class ProcEnv {
   ProcEnvProto *GetProto() { return &_proto; }
   std::string String() { return _proto.DebugString(); }
 
+  std::string GetRealm() { return _proto.realmstr(); }
+
   private:
   ProcEnvProto _proto;
 };

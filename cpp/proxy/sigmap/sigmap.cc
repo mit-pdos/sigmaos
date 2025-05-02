@@ -25,7 +25,7 @@ void Clnt::init_conn() {
   }
   log(SPPROXYCLNT, "Init RPC successful");
   // Make sure to release the proc env proto pointer so it isn't destroyed
-  req.release_procenvproto();
+  auto _ = req.release_procenvproto();
 }
 
 std::expected<int, sigmaos::serr::Error> Clnt::Test() {
@@ -309,7 +309,7 @@ std::expected<int, sigmaos::serr::Error> Clnt::MountTree(std::shared_ptr<Tendpoi
   if (rep.err().errcode() != sigmaos::serr::Terror::TErrNoError) {
     return std::unexpected(sigmaos::serr::Error((sigmaos::serr::Terror) rep.err().errcode(), rep.err().obj()));
   }
-  req.release_endpoint();
+  auto _ = req.release_endpoint();
   log(SPPROXYCLNT, "MountTree done: {} {} {}", ep->DebugString(), tree, mount);
   return 0;
 }
@@ -327,7 +327,7 @@ std::expected<bool, sigmaos::serr::Error> Clnt::IsLocalMount(std::shared_ptr<Ten
   if (rep.err().errcode() != sigmaos::serr::Terror::TErrNoError) {
     return std::unexpected(sigmaos::serr::Error((sigmaos::serr::Terror) rep.err().errcode(), rep.err().obj()));
   }
-  req.release_endpoint();
+  auto _ = req.release_endpoint();
   log(SPPROXYCLNT, "IsLocalMount done: {}", ep->DebugString());
   return rep.local();
 }

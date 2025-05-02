@@ -17,7 +17,10 @@ std::shared_ptr<ProcEnv> GetProcEnv();
 class ProcEnv {
   public:
   ProcEnv(std::string pe_str) {
-    google::protobuf::json::JsonStringToMessage(pe_str, &_proto);
+    auto res = google::protobuf::json::JsonStringToMessage(pe_str, &_proto);
+    if (!res.ok()) {
+      throw std::runtime_error(std::format("Error parse proc env str: {}", pe_str));
+    }
   }
   ~ProcEnv() {}
 

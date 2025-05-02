@@ -42,6 +42,7 @@ std::expected<int, sigmaos::serr::Error> Clnt::CloseFD(int fd) {
   log(SPPROXYCLNT, "CloseFD: {}", fd);
   SigmaCloseReq req;
   SigmaErrRep rep;
+  req.set_fd(fd);
   auto res = _rpcc->RPC("SPProxySrvAPI.CloseFd", req, rep);
   if (!res.has_value()) {
     log(SPPROXYCLNT_ERR, "Err RPC: {}", res.error());
@@ -55,7 +56,20 @@ std::expected<int, sigmaos::serr::Error> Clnt::CloseFD(int fd) {
 }
 
 std::expected<std::shared_ptr<TstatProto>, sigmaos::serr::Error> Clnt::Stat(std::string pn) {
-  throw std::runtime_error("unimplemented");
+  log(SPPROXYCLNT, "Stat: {}", pn);
+  SigmaPathReq req;
+  SigmaStatRep rep;
+  req.set_path(pn);
+  auto res = _rpcc->RPC("SPProxySrvAPI.Stat", req, rep);
+  if (!res.has_value()) {
+    log(SPPROXYCLNT_ERR, "Err RPC: {}", res.error());
+    return std::unexpected(res.error());
+  }
+  if (rep.err().errcode() != sigmaos::serr::Terror::TErrNoError) {
+    return std::unexpected(sigmaos::serr::Error((sigmaos::serr::Terror) rep.err().errcode(), rep.err().obj()));
+  }
+  log(SPPROXYCLNT, "Stat done: {}", pn);
+  return std::make_shared<TstatProto>(rep.stat());
 }
 
 std::expected<int, sigmaos::serr::Error> Clnt::Create(std::string pn, int perm, int mode) {
@@ -183,7 +197,6 @@ std::expected<bool, sigmaos::serr::Error> Clnt::Disconnected() {
 std::expected<int, sigmaos::serr::Error> Clnt::Disconnect(std::string pn) {
   throw std::runtime_error("unimplemented");
 }
-
 
 };
 };

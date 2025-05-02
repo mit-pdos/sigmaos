@@ -146,34 +146,82 @@ std::expected<int, sigmaos::serr::Error> Clnt::Remove(std::string pn) {
 }
 
 std::expected<std::vector<unsigned char>, sigmaos::serr::Error> Clnt::GetFile(std::string pn) {
-  throw std::runtime_error("unimplemented");
+  log(SPPROXYCLNT, "GetFile: {}", pn);
+  SigmaPathReq req;
+  SigmaDataRep rep;
+  req.set_path(pn);
+  auto res = _rpcc->RPC("SPProxySrvAPI.GetFile", req, rep);
+  if (!res.has_value()) {
+    log(SPPROXYCLNT_ERR, "Err RPC: {}", res.error());
+    return std::unexpected(res.error());
+  }
+  if (rep.err().errcode() != sigmaos::serr::Terror::TErrNoError) {
+    return std::unexpected(sigmaos::serr::Error((sigmaos::serr::Terror) rep.err().errcode(), rep.err().obj()));
+  }
+  log(SPPROXYCLNT, "GetFile done: {}", pn);
+  // TODO: implement blobs
+  throw std::runtime_error("unimplemented: blobs");
+  std::vector<unsigned char> b;
+  return b;
 }
 
 std::expected<uint32_t, sigmaos::serr::Error> Clnt::PutFile(std::string pn, int perm, int mode, std::vector<unsigned char> data, uint64_t offset, uint64_t leaseID) {
-  throw std::runtime_error("unimplemented");
+  throw std::runtime_error("unimplemented: blobs");
 }
 
 std::expected<uint32_t, sigmaos::serr::Error> Clnt::Read(int fd, std::vector<unsigned char> b) {
-  throw std::runtime_error("unimplemented");
+  throw std::runtime_error("unimplemented: blobs");
 }
 
 std::expected<uint32_t, sigmaos::serr::Error> Clnt::Pread(int fd, std::vector<unsigned char> b, uint64_t offset) {
-  throw std::runtime_error("unimplemented");
+  throw std::runtime_error("unimplemented: blobs");
 }
 
 // TODO: support PreadRdr?
 //func (scc *SPProxyClnt) PreadRdr(fd int, o sp.Toffset, sz sp.Tsize) (io.ReadCloser, error) {
 std::expected<uint32_t, sigmaos::serr::Error> Clnt::Write(int fd, std::vector<unsigned char> b) {
-  throw std::runtime_error("unimplemented");
+  throw std::runtime_error("unimplemented: blobs");
 }
 
 std::expected<int, sigmaos::serr::Error> Clnt::Seek(int fd, uint64_t offset) {
-  throw std::runtime_error("unimplemented");
+  log(SPPROXYCLNT, "Seek: {} {}", fd, offset);
+  SigmaSeekReq req;
+  SigmaErrRep rep;
+  req.set_fd(fd);
+  req.set_offset(offset);
+  auto res = _rpcc->RPC("SPProxySrvAPI.Seek", req, rep);
+  if (!res.has_value()) {
+    log(SPPROXYCLNT_ERR, "Err RPC: {}", res.error());
+    return std::unexpected(res.error());
+  }
+  if (rep.err().errcode() != sigmaos::serr::Terror::TErrNoError) {
+    return std::unexpected(sigmaos::serr::Error((sigmaos::serr::Terror) rep.err().errcode(), rep.err().obj()));
+  }
+  log(SPPROXYCLNT, "Seek done: {} {}", fd, offset);
+  return 0;
 }
 
 // TODO: fence type in CreateLeased?
-std::expected<int, sigmaos::serr::Error> Clnt::CreateLeased(std::string path, int perm, int mode, uint64_t leaseID/*, f sp.Tfence*/) {
-  throw std::runtime_error("unimplemented");
+std::expected<int, sigmaos::serr::Error> Clnt::CreateLeased(std::string pn, int perm, int mode, uint64_t leaseID/*, f sp.Tfence*/) {
+  throw std::runtime_error("unimplemented: tfence");
+  log(SPPROXYCLNT, "CreateLeased: {} {} {} {}", pn, perm, mode, leaseID);
+  SigmaCreateReq req;
+  SigmaFdRep rep;
+  req.set_path(pn);
+  req.set_perm(perm);
+  req.set_mode(mode);
+  req.set_mode(mode);
+  req.set_leaseid(leaseID);
+  auto res = _rpcc->RPC("SPProxySrvAPI.CreateLeased", req, rep);
+  if (!res.has_value()) {
+    log(SPPROXYCLNT_ERR, "Err RPC: {}", res.error());
+    return std::unexpected(res.error());
+  }
+  if (rep.err().errcode() != sigmaos::serr::Terror::TErrNoError) {
+    return std::unexpected(sigmaos::serr::Error((sigmaos::serr::Terror) rep.err().errcode(), rep.err().obj()));
+  }
+  log(SPPROXYCLNT, "CreateLeased done: {} {} {} {}", pn, perm, mode, leaseID);
+  return 0;
 }
 
 std::expected<uint64_t, sigmaos::serr::Error> Clnt::ClntID() {
@@ -191,21 +239,79 @@ std::expected<uint64_t, sigmaos::serr::Error> Clnt::ClntID() {
 
 // TODO: fence type in FenceDir?
 std::expected<int, sigmaos::serr::Error> Clnt::FenceDir(std::string pn/*, f sp.Tfence*/) {
-  throw std::runtime_error("unimplemented");
+  throw std::runtime_error("unimplemented: tfence");
+  log(SPPROXYCLNT, "FenceDir: {}", pn);
+  SigmaFenceReq req;
+  SigmaErrRep rep;
+  req.set_path(pn);
+  auto res = _rpcc->RPC("SPProxySrvAPI.FenceDir", req, rep);
+  if (!res.has_value()) {
+    log(SPPROXYCLNT_ERR, "Err RPC: {}", res.error());
+    return std::unexpected(res.error());
+  }
+  if (rep.err().errcode() != sigmaos::serr::Terror::TErrNoError) {
+    return std::unexpected(sigmaos::serr::Error((sigmaos::serr::Terror) rep.err().errcode(), rep.err().obj()));
+  }
+  log(SPPROXYCLNT, "FenceDir done: {}", pn);
+  return 0;
 }
 
 // TODO: support WriteFence?
 //func (scc *SPProxyClnt) WriteFence(fd int, d []byte, f sp.Tfence) (sp.Tsize, error) {
+
 std::expected<int, sigmaos::serr::Error> Clnt::WriteRead(int fd, std::vector<std::vector<unsigned char>> in_iov, std::vector<std::vector<unsigned char>> out_iov) {
-  throw std::runtime_error("unimplemented");
+  throw std::runtime_error("unimplemented: blob");
+  log(SPPROXYCLNT, "WriteRead: {}", fd);
+  SigmaWriteReq req;
+  SigmaDataRep rep;
+  req.set_fd(fd);
+  auto res = _rpcc->RPC("SPProxySrvAPI.WriteRead", req, rep);
+  if (!res.has_value()) {
+    log(SPPROXYCLNT_ERR, "Err RPC: {}", res.error());
+    return std::unexpected(res.error());
+  }
+  if (rep.err().errcode() != sigmaos::serr::Terror::TErrNoError) {
+    return std::unexpected(sigmaos::serr::Error((sigmaos::serr::Terror) rep.err().errcode(), rep.err().obj()));
+  }
+  log(SPPROXYCLNT, "WriteRead done: {}", fd);
+  return 0;
 }
 
 std::expected<int, sigmaos::serr::Error> Clnt::DirWatch(int fd) {
-  throw std::runtime_error("unimplemented");
+  log(SPPROXYCLNT, "DirWatch: {}", fd);
+  SigmaReadReq req;
+  SigmaFdRep rep;
+  req.set_fd(fd);
+  auto res = _rpcc->RPC("SPProxySrvAPI.DirWatch", req, rep);
+  if (!res.has_value()) {
+    log(SPPROXYCLNT_ERR, "Err RPC: {}", res.error());
+    return std::unexpected(res.error());
+  }
+  if (rep.err().errcode() != sigmaos::serr::Terror::TErrNoError) {
+    return std::unexpected(sigmaos::serr::Error((sigmaos::serr::Terror) rep.err().errcode(), rep.err().obj()));
+  }
+  log(SPPROXYCLNT, "DirWatch done: {}", fd);
+  return 0;
 }
 
 std::expected<int, sigmaos::serr::Error> Clnt::MountTree(std::shared_ptr<TendpointProto> ep, std::string tree, std::string mount) {
-  throw std::runtime_error("unimplemented");
+  log(SPPROXYCLNT, "MountTree: {} {} {}", ep->DebugString(), tree, mount);
+  SigmaMountTreeReq req;
+  SigmaErrRep rep;
+  req.set_allocated_endpoint(ep.get());
+  req.set_tree(tree);
+  req.set_mountname(mount);
+  auto res = _rpcc->RPC("SPProxySrvAPI.MountTree", req, rep);
+  if (!res.has_value()) {
+    log(SPPROXYCLNT_ERR, "Err RPC: {}", res.error());
+    return std::unexpected(res.error());
+  }
+  if (rep.err().errcode() != sigmaos::serr::Terror::TErrNoError) {
+    return std::unexpected(sigmaos::serr::Error((sigmaos::serr::Terror) rep.err().errcode(), rep.err().obj()));
+  }
+  req.release_endpoint();
+  log(SPPROXYCLNT, "MountTree done: {} {} {}", ep->DebugString(), tree, mount);
+  return 0;
 }
 
 std::expected<bool, sigmaos::serr::Error> Clnt::IsLocalMount(std::shared_ptr<TendpointProto> ep) {

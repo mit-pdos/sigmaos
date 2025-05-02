@@ -53,7 +53,7 @@ func NewSPProxyClnt(pe *proc.ProcEnv, npc *dialproxyclnt.DialProxyClnt) (*SPProx
 	}
 	scc.rpcc = rpcc
 	// Initialize the server-side component of sigmaclnt by sending the proc env
-	db.DPrintf(db.SIGMACLNTCLNT, "Init sigmaclntclnt for %v", pe.GetPID())
+	db.DPrintf(db.SPPROXYCLNT, "Init sigmaclntclnt for %v", pe.GetPID())
 	if err := scc.Init(); err != nil {
 		db.DPrintf(db.ERROR, "Error init sigmaclnt: %v", err)
 		return nil, err
@@ -91,7 +91,7 @@ func (scc *SPProxyClnt) Shutdown() error {
 	req := spproto.SigmaNullReq{}
 	rep := spproto.SigmaErrRep{}
 	err := scc.rpcErr("SPProxySrvAPI.Shutdown", &req, &rep)
-	db.DPrintf(db.SIGMACLNTCLNT, "Shutdown %v %v %v", req, rep, err)
+	db.DPrintf(db.SPPROXYCLNT, "Shutdown %v %v %v", req, rep, err)
 	return err
 }
 

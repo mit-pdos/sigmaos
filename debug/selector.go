@@ -224,21 +224,21 @@ const (
 
 // Client Libraries
 const (
-	WRITER_ERR    Tselector = "WRITER" + ERR
-	SIGMACLNT               = "SIGMACLNT"
-	READER_ERR              = "READER" + ERR
-	AWRITER                 = "AWRITER"
-	PREADER                 = "PREADER"
-	FSLIB                   = "FSLIB"
-	FSLIB_ERR               = "FSLIB" + ERR
-	FIDCLNT                 = "FIDCLNT"
-	FIDCLNT_ERR             = FIDCLNT + ERR
-	FSCLNT                  = "FSCLNT"
-	SEMCLNT                 = "SEMCLNT"
-	SEMCLNT_ERR             = SEMCLNT + ERR
-	PROCCLNT                = "PROCCLNT"
-	PROCCLNT_ERR            = "PROCCLNT" + ERR
-	SIGMACLNTCLNT           = "SIGMACLNTCLNT"
+	WRITER_ERR   Tselector = "WRITER" + ERR
+	SIGMACLNT              = "SIGMACLNT"
+	READER_ERR             = "READER" + ERR
+	AWRITER                = "AWRITER"
+	PREADER                = "PREADER"
+	FSLIB                  = "FSLIB"
+	FSLIB_ERR              = "FSLIB" + ERR
+	FIDCLNT                = "FIDCLNT"
+	FIDCLNT_ERR            = FIDCLNT + ERR
+	FSCLNT                 = "FSCLNT"
+	SEMCLNT                = "SEMCLNT"
+	SEMCLNT_ERR            = SEMCLNT + ERR
+	PROCCLNT               = "PROCCLNT"
+	PROCCLNT_ERR           = "PROCCLNT" + ERR
+	SPPROXYCLNT            = "SPPROXYCLNT"
 )
 
 // Fault-tolerance

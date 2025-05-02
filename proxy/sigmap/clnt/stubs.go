@@ -65,7 +65,7 @@ func (scc *SPProxyClnt) Init() error {
 	req := spproto.SigmaInitReq{ProcEnvProto: scc.pe.GetProto()}
 	rep := spproto.SigmaErrRep{}
 	err := scc.rpcErr("SPProxySrvAPI.Init", &req, &rep)
-	db.DPrintf(db.SIGMACLNTCLNT, "Init %v %v %v", req, rep, err)
+	db.DPrintf(db.SPPROXYCLNT, "Init %v %v %v", req, rep, err)
 	return err
 }
 
@@ -73,7 +73,7 @@ func (scc *SPProxyClnt) CloseFd(fd int) error {
 	req := spproto.SigmaCloseReq{Fd: uint32(fd)}
 	rep := spproto.SigmaErrRep{}
 	err := scc.rpcErr("SPProxySrvAPI.CloseFd", &req, &rep)
-	db.DPrintf(db.SIGMACLNTCLNT, "CloseFd %v %v %v", req, rep, err)
+	db.DPrintf(db.SPPROXYCLNT, "CloseFd %v %v %v", req, rep, err)
 	return err
 }
 
@@ -81,7 +81,7 @@ func (scc *SPProxyClnt) Stat(path string) (*sp.Tstat, error) {
 	req := spproto.SigmaPathReq{Path: path}
 	rep := spproto.SigmaStatRep{}
 	err := scc.rpcc.RPC("SPProxySrvAPI.Stat", &req, &rep)
-	db.DPrintf(db.SIGMACLNTCLNT, "Stat %v %v %v", req, rep, err)
+	db.DPrintf(db.SPPROXYCLNT, "Stat %v %v %v", req, rep, err)
 	if err != nil {
 		return nil, err
 	}
@@ -95,7 +95,7 @@ func (scc *SPProxyClnt) Create(path string, p sp.Tperm, m sp.Tmode) (int, error)
 	req := spproto.SigmaCreateReq{Path: path, Perm: uint32(p), Mode: uint32(m)}
 	rep := spproto.SigmaFdRep{}
 	fd, err := scc.rpcFd("SPProxySrvAPI.Create", &req, &rep)
-	db.DPrintf(db.SIGMACLNTCLNT, "Create %v %v fd %v err %v", req, rep, fd, err)
+	db.DPrintf(db.SPPROXYCLNT, "Create %v %v fd %v err %v", req, rep, fd, err)
 	return fd, err
 }
 
@@ -103,7 +103,7 @@ func (scc *SPProxyClnt) Open(path string, m sp.Tmode, w sos.Twait) (int, error) 
 	req := spproto.SigmaCreateReq{Path: path, Mode: uint32(m), Wait: bool(w)}
 	rep := spproto.SigmaFdRep{}
 	fd, err := scc.rpcFd("SPProxySrvAPI.Open", &req, &rep)
-	db.DPrintf(db.SIGMACLNTCLNT, "Open %v %v %v %v", req, rep, fd, err)
+	db.DPrintf(db.SPPROXYCLNT, "Open %v %v %v %v", req, rep, fd, err)
 	return fd, err
 }
 
@@ -111,7 +111,7 @@ func (scc *SPProxyClnt) Rename(src, dst string) error {
 	req := spproto.SigmaRenameReq{Src: src, Dst: dst}
 	rep := spproto.SigmaErrRep{}
 	err := scc.rpcErr("SPProxySrvAPI.Rename", &req, &rep)
-	db.DPrintf(db.SIGMACLNTCLNT, "Rename %v %v %v", req, rep, err)
+	db.DPrintf(db.SPPROXYCLNT, "Rename %v %v %v", req, rep, err)
 	return err
 }
 
@@ -119,7 +119,7 @@ func (scc *SPProxyClnt) Remove(path string) error {
 	req := spproto.SigmaPathReq{Path: path}
 	rep := spproto.SigmaErrRep{}
 	err := scc.rpcErr("SPProxySrvAPI.Remove", &req, &rep)
-	db.DPrintf(db.SIGMACLNTCLNT, "Remove %v %v %v", req, rep, err)
+	db.DPrintf(db.SPPROXYCLNT, "Remove %v %v %v", req, rep, err)
 	return err
 }
 
@@ -128,7 +128,7 @@ func (scc *SPProxyClnt) GetFile(path string) ([]byte, error) {
 	rep := spproto.SigmaDataRep{}
 	rep.Blob = &rpcproto.Blob{Iov: [][]byte{nil}}
 	d, err := scc.rpcData("SPProxySrvAPI.GetFile", &req, &rep)
-	db.DPrintf(db.SIGMACLNTCLNT, "GetFile %v %v %v", req, d, err)
+	db.DPrintf(db.SPPROXYCLNT, "GetFile %v %v %v", req, d, err)
 	if err != nil {
 		return nil, err
 	}
@@ -140,7 +140,7 @@ func (scc *SPProxyClnt) PutFile(path string, p sp.Tperm, m sp.Tmode, data []byte
 	req := spproto.SigmaPutFileReq{Path: path, Perm: uint32(p), Mode: uint32(m), Offset: uint64(o), LeaseId: uint64(l), Blob: blob}
 	rep := spproto.SigmaSizeRep{}
 	sz, err := scc.rpcSize("SPProxySrvAPI.PutFile", &req, &rep)
-	db.DPrintf(db.SIGMACLNTCLNT, "PutFile %q %v %v sz %v %v", req.Path, len(data), rep, sz, err)
+	db.DPrintf(db.SPPROXYCLNT, "PutFile %q %v %v sz %v %v", req.Path, len(data), rep, sz, err)
 	return sz, err
 }
 
@@ -149,7 +149,7 @@ func (scc *SPProxyClnt) Read(fd int, b []byte) (sp.Tsize, error) {
 	rep := spproto.SigmaDataRep{}
 	rep.Blob = &rpcproto.Blob{Iov: [][]byte{b}}
 	d, err := scc.rpcData("SPProxySrvAPI.Read", &req, &rep)
-	db.DPrintf(db.SIGMACLNTCLNT, "Read %v size %v niov %v err %v", req, req.Size, len(d), err)
+	db.DPrintf(db.SPPROXYCLNT, "Read %v size %v niov %v err %v", req, req.Size, len(d), err)
 	if err != nil {
 		return 0, err
 	}
@@ -161,7 +161,7 @@ func (scc *SPProxyClnt) Pread(fd int, b []byte, o sp.Toffset) (sp.Tsize, error) 
 	rep := spproto.SigmaDataRep{}
 	rep.Blob = &rpcproto.Blob{Iov: [][]byte{b}}
 	d, err := scc.rpcData("SPProxySrvAPI.Read", &req, &rep)
-	db.DPrintf(db.SIGMACLNTCLNT, "Read %v size %v niov %v err %v", req, req.Size, len(d), err)
+	db.DPrintf(db.SPPROXYCLNT, "Read %v size %v niov %v err %v", req, req.Size, len(d), err)
 	if err != nil {
 		return 0, err
 	}
@@ -177,9 +177,9 @@ func (scc *SPProxyClnt) Write(fd int, data []byte) (sp.Tsize, error) {
 	blob := &rpcproto.Blob{Iov: [][]byte{data}}
 	req := spproto.SigmaWriteReq{Fd: uint32(fd), Blob: blob}
 	rep := spproto.SigmaSizeRep{}
-	db.DPrintf(db.SIGMACLNTCLNT, "Write begin %v %v", req.Fd, len(data))
+	db.DPrintf(db.SPPROXYCLNT, "Write begin %v %v", req.Fd, len(data))
 	sz, err := scc.rpcSize("SPProxySrvAPI.Write", &req, &rep)
-	db.DPrintf(db.SIGMACLNTCLNT, "Write returned %v %v %v %v", req.Fd, len(data), rep, err)
+	db.DPrintf(db.SPPROXYCLNT, "Write returned %v %v %v %v", req.Fd, len(data), rep, err)
 	return sz, err
 }
 
@@ -187,7 +187,7 @@ func (scc *SPProxyClnt) Seek(fd int, off sp.Toffset) error {
 	req := spproto.SigmaSeekReq{Fd: uint32(fd), Offset: uint64(off)}
 	rep := spproto.SigmaErrRep{}
 	err := scc.rpcErr("SPProxySrvAPI.Seek", &req, &rep)
-	db.DPrintf(db.SIGMACLNTCLNT, "Seek %v %v %v", req, rep, err)
+	db.DPrintf(db.SPPROXYCLNT, "Seek %v %v %v", req, rep, err)
 	return err
 }
 
@@ -195,7 +195,7 @@ func (scc *SPProxyClnt) CreateLeased(path string, p sp.Tperm, m sp.Tmode, l sp.T
 	req := spproto.SigmaCreateReq{Path: path, Perm: uint32(p), Mode: uint32(m), LeaseId: uint64(l), Fence: f.FenceProto()}
 	rep := spproto.SigmaFdRep{}
 	fd, err := scc.rpcFd("SPProxySrvAPI.CreateLeased", &req, &rep)
-	db.DPrintf(db.SIGMACLNTCLNT, "CreateLeased %v %v %v", req, rep, err)
+	db.DPrintf(db.SPPROXYCLNT, "CreateLeased %v %v %v", req, rep, err)
 	return fd, err
 }
 
@@ -203,7 +203,7 @@ func (scc *SPProxyClnt) ClntId() sp.TclntId {
 	req := spproto.SigmaNullReq{}
 	rep := spproto.SigmaClntIdRep{}
 	err := scc.rpcc.RPC("SPProxySrvAPI.ClntId", &req, &rep)
-	db.DPrintf(db.SIGMACLNTCLNT, "ClntId %v %v", rep, err)
+	db.DPrintf(db.SPPROXYCLNT, "ClntId %v %v", rep, err)
 	if err != nil {
 		return 0
 	}
@@ -217,7 +217,7 @@ func (scc *SPProxyClnt) FenceDir(path string, f sp.Tfence) error {
 	req := spproto.SigmaFenceReq{Path: path, Fence: f.FenceProto()}
 	rep := spproto.SigmaErrRep{}
 	err := scc.rpcc.RPC("SPProxySrvAPI.FenceDir", &req, &rep)
-	db.DPrintf(db.SIGMACLNTCLNT, "FenceDir %v %v %v", req, rep, err)
+	db.DPrintf(db.SPPROXYCLNT, "FenceDir %v %v %v", req, rep, err)
 	return err
 }
 
@@ -226,7 +226,7 @@ func (scc *SPProxyClnt) WriteFence(fd int, d []byte, f sp.Tfence) (sp.Tsize, err
 	req := spproto.SigmaWriteReq{Fd: uint32(fd), Blob: blob, Fence: f.FenceProto()}
 	rep := spproto.SigmaSizeRep{}
 	sz, err := scc.rpcSize("SPProxySrvAPI.Write", &req, &rep)
-	db.DPrintf(db.SIGMACLNTCLNT, "WriteFence %v %v %v", req, rep, err)
+	db.DPrintf(db.SPPROXYCLNT, "WriteFence %v %v %v", req, rep, err)
 	return sz, err
 }
 
@@ -236,7 +236,7 @@ func (scc *SPProxyClnt) WriteRead(fd int, iniov sessp.IoVec, outiov sessp.IoVec)
 	req := spproto.SigmaWriteReq{Fd: uint32(fd), Blob: inblob, NOutVec: uint32(len(outiov))}
 	rep := spproto.SigmaDataRep{Blob: outblob}
 	d, err := scc.rpcData("SPProxySrvAPI.WriteRead", &req, &rep)
-	db.DPrintf(db.SIGMACLNTCLNT, "WriteRead %v %v %v %v", req.Fd, len(iniov), len(d), err)
+	db.DPrintf(db.SPPROXYCLNT, "WriteRead %v %v %v %v", req.Fd, len(iniov), len(d), err)
 	if err == nil && len(outiov) != len(d) {
 		return fmt.Errorf("sigmaclntclnt outiov len wrong: supplied %v != %v returned", len(outiov), len(d))
 	}
@@ -248,7 +248,7 @@ func (scc *SPProxyClnt) DirWatch(fd int) (int, error) {
 	req := spproto.SigmaReadReq{Fd: uint32(fd)}
 	rep := spproto.SigmaFdRep{}
 	fd, err := scc.rpcFd("SPProxySrvAPI.DirWatch", &req, &rep)
-	db.DPrintf(db.SIGMACLNTCLNT, "DirWatch %v %v %v", req, rep, err)
+	db.DPrintf(db.SPPROXYCLNT, "DirWatch %v %v %v", req, rep, err)
 	return fd, err
 }
 
@@ -256,7 +256,7 @@ func (scc *SPProxyClnt) MountTree(ep *sp.Tendpoint, tree, mount string) error {
 	req := spproto.SigmaMountTreeReq{Endpoint: ep.GetProto(), Tree: tree, MountName: mount}
 	rep := spproto.SigmaErrRep{}
 	err := scc.rpcErr("SPProxySrvAPI.MountTree", &req, &rep)
-	db.DPrintf(db.SIGMACLNTCLNT, "MountTree %v %v %v", req, rep, err)
+	db.DPrintf(db.SPPROXYCLNT, "MountTree %v %v %v", req, rep, err)
 	return err
 }
 
@@ -264,7 +264,7 @@ func (scc *SPProxyClnt) IsLocalMount(ep *sp.Tendpoint) (bool, error) {
 	req := spproto.SigmaMountReq{Endpoint: ep.GetProto()}
 	rep := spproto.SigmaMountRep{}
 	err := scc.rpcc.RPC("SPProxySrvAPI.IsLocalMount", &req, &rep)
-	db.DPrintf(db.SIGMACLNTCLNT, "IsLocalMount %v %v %v", req, rep, err)
+	db.DPrintf(db.SPPROXYCLNT, "IsLocalMount %v %v %v", req, rep, err)
 	if err != nil {
 		return false, err
 	}
@@ -278,7 +278,7 @@ func (scc *SPProxyClnt) PathLastMount(pn string) (path.Tpathname, path.Tpathname
 	req := spproto.SigmaPathReq{Path: pn}
 	rep := spproto.SigmaLastMountRep{}
 	err := scc.rpcc.RPC("SPProxySrvAPI.PathLastMount", &req, &rep)
-	db.DPrintf(db.SIGMACLNTCLNT, "PathLastMount %v %v %v", req, rep, err)
+	db.DPrintf(db.SPPROXYCLNT, "PathLastMount %v %v %v", req, rep, err)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -296,7 +296,7 @@ func (scc *SPProxyClnt) InvalidateNamedEndpointCacheEntryRealm(realm sp.Trealm) 
 	req := spproto.SigmaRealmReq{RealmStr: realm.String()}
 	rep := spproto.SigmaMountRep{}
 	err := scc.rpcc.RPC("SPProxySrvAPI.InvalidateNamedEndpointCacheEntryRealm", &req, &rep)
-	db.DPrintf(db.SIGMACLNTCLNT, "InvalidateNamedEndpointCacheEntryRealm %v %v %v", req, rep, err)
+	db.DPrintf(db.SPPROXYCLNT, "InvalidateNamedEndpointCacheEntryRealm %v %v %v", req, rep, err)
 	if err != nil {
 		return nil
 	}
@@ -310,7 +310,7 @@ func (scc *SPProxyClnt) GetNamedEndpointRealm(realm sp.Trealm) (*sp.Tendpoint, e
 	req := spproto.SigmaRealmReq{RealmStr: realm.String()}
 	rep := spproto.SigmaMountRep{}
 	err := scc.rpcc.RPC("SPProxySrvAPI.GetNamedEndpointRealm", &req, &rep)
-	db.DPrintf(db.SIGMACLNTCLNT, "GetNamedEndpointRealm %v %v %v", req, rep, err)
+	db.DPrintf(db.SPPROXYCLNT, "GetNamedEndpointRealm %v %v %v", req, rep, err)
 	if err != nil {
 		return nil, nil
 	}
@@ -324,7 +324,7 @@ func (scc *SPProxyClnt) NewRootMount(pn, mntname string) error {
 	req := spproto.SigmaMountTreeReq{Tree: pn, MountName: mntname}
 	rep := spproto.SigmaErrRep{}
 	err := scc.rpcErr("SPProxySrvAPI.NewRootMount", &req, &rep)
-	db.DPrintf(db.SIGMACLNTCLNT, "NewRootMount %v %v", req, rep)
+	db.DPrintf(db.SPPROXYCLNT, "NewRootMount %v %v", req, rep)
 	return err
 }
 
@@ -332,7 +332,7 @@ func (scc *SPProxyClnt) Mounts() []string {
 	req := spproto.SigmaNullReq{}
 	rep := spproto.SigmaMountsRep{}
 	err := scc.rpcc.RPC("SPProxySrvAPI.Mounts", &req, &rep)
-	db.DPrintf(db.SIGMACLNTCLNT, "Mounts %v %v %v", req, rep, err)
+	db.DPrintf(db.SPPROXYCLNT, "Mounts %v %v %v", req, rep, err)
 	if err != nil {
 		return nil
 	}
@@ -354,7 +354,7 @@ func (scc *SPProxyClnt) Detach(path string) error {
 	req := spproto.SigmaPathReq{Path: path}
 	rep := spproto.SigmaErrRep{}
 	err := scc.rpcErr("SPProxySrvAPI.Detach", &req, &rep)
-	db.DPrintf(db.SIGMACLNTCLNT, "Detach %v %v %v", req, rep, err)
+	db.DPrintf(db.SPPROXYCLNT, "Detach %v %v %v", req, rep, err)
 	return err
 }
 
@@ -367,7 +367,7 @@ func (scc *SPProxyClnt) Disconnect(path string) error {
 	req := spproto.SigmaPathReq{Path: path}
 	rep := spproto.SigmaErrRep{}
 	err := scc.rpcErr("SPProxySrvAPI.Disconnect", &req, &rep)
-	db.DPrintf(db.SIGMACLNTCLNT, "Disconnect %v %v %v", req, rep, err)
+	db.DPrintf(db.SPPROXYCLNT, "Disconnect %v %v %v", req, rep, err)
 	return err
 }
 
@@ -375,7 +375,7 @@ func (scc *SPProxyClnt) Close() error {
 	req := spproto.SigmaNullReq{}
 	rep := spproto.SigmaErrRep{}
 	err := scc.rpcErr("SPProxySrvAPI.Close", &req, &rep)
-	db.DPrintf(db.SIGMACLNTCLNT, "Close %v %v %v", req, rep, err)
+	db.DPrintf(db.SPPROXYCLNT, "Close %v %v %v", req, rep, err)
 	scc.close()
 	return err
 }

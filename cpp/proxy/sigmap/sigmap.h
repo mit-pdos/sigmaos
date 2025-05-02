@@ -48,7 +48,7 @@ class Clnt {
 
   // Stubs
 
-  std::expected<uint64_t, sigmaos::serr::Error> CloseFD(int fd);
+  std::expected<int, sigmaos::serr::Error> CloseFD(int fd);
   std::expected<std::shared_ptr<TstatProto>, sigmaos::serr::Error> Stat(std::string pn);
   std::expected<int, sigmaos::serr::Error> Create(std::string pn, int perm, int mode);
   // TODO: wait type in Open?

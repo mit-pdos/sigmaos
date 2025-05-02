@@ -20,7 +20,7 @@ void Clnt::init_conn() {
     log(SPPROXYCLNT_ERR, "Err RPC: {}", res.error());
     throw std::runtime_error(std::format("Err rpc: {}", res.error().String()));
   }
-  if (rep.err().errcode() != 0) {
+  if (rep.err().errcode() != sigmaos::serr::Terror::TErrNoError) {
     throw std::runtime_error(std::format("init rpc error: {}", rep.err().DebugString()));
   }
   log(SPPROXYCLNT, "Init RPC successful");
@@ -38,8 +38,20 @@ std::expected<int, sigmaos::serr::Error> Clnt::Test() {
   return 0;
 }
 
-std::expected<uint64_t, sigmaos::serr::Error> Clnt::CloseFD(int fd) {
-  throw std::runtime_error("unimplemented");
+std::expected<int, sigmaos::serr::Error> Clnt::CloseFD(int fd) {
+  log(SPPROXYCLNT, "CloseFD: {}", fd);
+  SigmaCloseReq req;
+  SigmaErrRep rep;
+  auto res = _rpcc->RPC("SPProxySrvAPI.CloseFd", req, rep);
+  if (!res.has_value()) {
+    log(SPPROXYCLNT_ERR, "Err RPC: {}", res.error());
+    return std::unexpected(res.error());
+  }
+  if (rep.err().errcode() != sigmaos::serr::Terror::TErrNoError) {
+    return std::unexpected(sigmaos::serr::Error((sigmaos::serr::Terror) rep.err().errcode(), rep.err().obj()));
+  }
+  log(SPPROXYCLNT, "CloseFD done: {}", fd);
+  return 0;
 }
 
 std::expected<std::shared_ptr<TstatProto>, sigmaos::serr::Error> Clnt::Stat(std::string pn) {
@@ -95,6 +107,7 @@ std::expected<int, sigmaos::serr::Error> Clnt::CreateLeased(std::string path, in
 }
 
 std::expected<uint64_t, sigmaos::serr::Error> Clnt::ClntID() {
+  log(SPPROXYCLNT, "ClntID");
   SigmaNullReq req;
   SigmaClntIdRep rep;
   auto res = _rpcc->RPC("SPProxySrvAPI.ClntId", req, rep);
@@ -102,7 +115,7 @@ std::expected<uint64_t, sigmaos::serr::Error> Clnt::ClntID() {
     log(SPPROXYCLNT_ERR, "Err RPC: {}", res.error());
     return std::unexpected(res.error());
   }
-  log(SPPROXYCLNT, "ClntID RPC successful: {}", rep.clntid());
+  log(SPPROXYCLNT, "ClntID done: {}", rep.clntid());
   return rep.clntid();
 }
 

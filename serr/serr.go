@@ -14,56 +14,56 @@ import (
 type Terror uint32
 
 const (
-	TErrNoError Terror = iota
-	TErrBadattach
-	TErrBadoffset
-	TErrBadcount
-	TErrBotch
-	TErrCreatenondir
-	TErrDupfid
-	TErrDuptag
-	TErrIsdir
-	TErrNocreate
-	TErrNomem
-	TErrNoremove
-	TErrNostat
-	TErrNotfound
-	TErrNowrite
-	TErrNowstat
-	TErrPerm
-	TErrUnknownfid
-	TErrBaddir
-	TErrWalknodir
+	TErrNoError      Terror = 1
+	TErrBadattach           = 2
+	TErrBadoffset           = 3
+	TErrBadcount            = 4
+	TErrBotch               = 5
+	TErrCreatenondir        = 6
+	TErrDupfid              = 7
+	TErrDuptag              = 8
+	TErrIsdir               = 9
+	TErrNocreate            = 10
+	TErrNomem               = 11
+	TErrNoremove            = 12
+	TErrNostat              = 13
+	TErrNotfound            = 14
+	TErrNowrite             = 15
+	TErrNowstat             = 16
+	TErrPerm                = 17
+	TErrUnknownfid          = 18
+	TErrBaddir              = 19
+	TErrWalknodir           = 20
 
 	//
 	// sigma protocol errors
 	//
 
-	TErrUnreachable
-	TErrNotSupported
-	TErrInval
-	TErrUnknownMsg
-	TErrNotDir
-	TErrNotFile
-	TErrNotSymlink
-	TErrNotEmpty
-	TErrVersion
-	TErrStale
-	TErrExists
-	TErrClosed // for closed sessions and pipes.
-	TErrBadFcall
+	TErrUnreachable  = 21
+	TErrNotSupported = 22
+	TErrInval        = 23
+	TErrUnknownMsg   = 24
+	TErrNotDir       = 25
+	TErrNotFile      = 26
+	TErrNotSymlink   = 27
+	TErrNotEmpty     = 28
+	TErrVersion      = 29
+	TErrStale        = 30
+	TErrExists       = 31
+	TErrClosed       = 32 // for closed sessions and pipes.
+	TErrBadFcall     = 33
 
 	//
 	// sigma OS errors
 	//
 
-	TErrRetry // tell client to retry
+	TErrRetry = 34 // tell client to retry
 
 	//
 	// To propagate non-sigma errors.
 	// Must be *last* for String2Err()
 	//
-	TErrError
+	TErrError = 35
 )
 
 // Several calls optimistically connect to a recently-mounted server
@@ -178,7 +178,8 @@ func NewErrString(err string) *Err {
 	re := regexp.MustCompile(`{Err: "(.*)" Obj: "(.*)" \((.*)\)}`)
 	s := re.FindStringSubmatch(err)
 	if len(s) == 4 {
-		for c := TErrBadattach; c <= TErrError; c++ {
+		for ci := TErrBadattach; ci <= TErrError; ci++ {
+			c := Terror(ci)
 			if c.String() == s[1] {
 				return &Err{ErrCode: c, Obj: s[2], Err: fmt.Errorf("%s", s[3])}
 			}

@@ -9,57 +9,57 @@
 namespace sigmaos {
 namespace serr {
 
-enum Terror {
-	TErrNoError, 
-	TErrBadattach,
-	TErrBadoffset,
-	TErrBadcount,
-	TErrBotch,
-	TErrCreatenondir,
-	TErrDupfid,
-	TErrDuptag,
-	TErrIsdir,
-	TErrNocreate,
-	TErrNomem,
-	TErrNoremove,
-	TErrNostat,
-	TErrNotfound,
-	TErrNowrite,
-	TErrNowstat,
-	TErrPerm,
-	TErrUnknownfid,
-	TErrBaddir,
-	TErrWalknodir,
+enum Terror : int {
+	TErrNoError = 0, 
+	TErrBadattach = 1,
+	TErrBadoffset = 2,
+	TErrBadcount = 3,
+	TErrBotch = 4,
+	TErrCreatenondir = 5,
+	TErrDupfid = 6,
+	TErrDuptag = 7,
+	TErrIsdir = 8,
+  TErrNocreate = 9,
+	TErrNomem = 10,
+	TErrNoremove = 11,
+	TErrNostat = 12,
+	TErrNotfound = 13,
+	TErrNowrite = 14,
+	TErrNowstat = 15,
+	TErrPerm = 16,
+	TErrUnknownfid = 17,
+	TErrBaddir = 18,
+	TErrWalknodir = 19,
 
 	//
 	// sigma protocol errors
 	//
 
-	TErrUnreachable,
-	TErrNotSupported,
-	TErrInval,
-	TErrUnknownMsg,
-	TErrNotDir,
-	TErrNotFile,
-	TErrNotSymlink,
-	TErrNotEmpty,
-	TErrVersion,
-	TErrStale,
-	TErrExists,
-	TErrClosed, // for closed sessions and pipes.
-	TErrBadFcall,
+	TErrUnreachable = 20,
+	TErrNotSupported = 21,
+	TErrInval = 22,
+	TErrUnknownMsg = 23,
+	TErrNotDir = 24,
+	TErrNotFile = 25,
+	TErrNotSymlink = 26,
+	TErrNotEmpty = 27,
+	TErrVersion = 28,
+	TErrStale = 29,
+	TErrExists = 30,
+	TErrClosed = 31, // for closed sessions and pipes.
+	TErrBadFcall = 32,
 
 	//
 	// sigma OS errors
 	//
 
-	TErrRetry, // tell client to retry
+	TErrRetry = 33, // tell client to retry
 
 	//
 	// To propagate non-sigma errors.
 	// Must be *last* for String2Err()
 	//
-	TErrError,
+	TErrError = 34,
 };
 
 std::string TerrorToString(Terror e);

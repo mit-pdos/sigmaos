@@ -14,56 +14,55 @@ import (
 type Terror uint32
 
 const (
-	TErrNoError      Terror = 1
-	TErrBadattach           = 2
-	TErrBadoffset           = 3
-	TErrBadcount            = 4
-	TErrBotch               = 5
-	TErrCreatenondir        = 6
-	TErrDupfid              = 7
-	TErrDuptag              = 8
-	TErrIsdir               = 9
-	TErrNocreate            = 10
-	TErrNomem               = 11
-	TErrNoremove            = 12
-	TErrNostat              = 13
-	TErrNotfound            = 14
-	TErrNowrite             = 15
-	TErrNowstat             = 16
-	TErrPerm                = 17
-	TErrUnknownfid          = 18
-	TErrBaddir              = 19
-	TErrWalknodir           = 20
+	TErrNoError      Terror = 0
+	TErrBadattach           = 1
+	TErrBadoffset           = 2
+	TErrBadcount            = 3
+	TErrBotch               = 4
+	TErrCreatenondir        = 5
+	TErrDupfid              = 6
+	TErrDuptag              = 7
+	TErrIsdir               = 8
+	TErrNocreate            = 9
+	TErrNomem               = 10
+	TErrNoremove            = 11
+	TErrNostat              = 12
+	TErrNotfound            = 13
+	TErrNowrite             = 14
+	TErrNowstat             = 15
+	TErrPerm                = 16
+	TErrUnknownfid          = 17
+	TErrBaddir              = 18
+	TErrWalknodir           = 19
 
 	//
 	// sigma protocol errors
 	//
 
-	TErrUnreachable  = 21
-	TErrNotSupported = 22
-	TErrInval        = 23
-	TErrUnknownMsg   = 24
-	TErrNotDir       = 25
-	TErrNotFile      = 26
-	TErrNotSymlink   = 27
-	TErrNotEmpty     = 28
-	TErrVersion      = 29
-	TErrStale        = 30
-	TErrExists       = 31
-	TErrClosed       = 32 // for closed sessions and pipes.
-	TErrBadFcall     = 33
-
+	TErrUnreachable  = 20
+	TErrNotSupported = 21
+	TErrInval        = 22
+	TErrUnknownMsg   = 23
+	TErrNotDir       = 24
+	TErrNotFile      = 25
+	TErrNotSymlink   = 26
+	TErrNotEmpty     = 27
+	TErrVersion      = 28
+	TErrStale        = 29
+	TErrExists       = 30
+	TErrClosed       = 31 // for closed sessions and pipes.
+	TErrBadFcall     = 32
 	//
 	// sigma OS errors
 	//
 
-	TErrRetry = 34 // tell client to retry
+	TErrRetry = 33 // tell client to retry
 
 	//
 	// To propagate non-sigma errors.
 	// Must be *last* for String2Err()
 	//
-	TErrError = 35
+	TErrError = 34
 )
 
 // Several calls optimistically connect to a recently-mounted server

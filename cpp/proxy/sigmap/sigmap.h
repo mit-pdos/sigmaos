@@ -51,8 +51,7 @@ class Clnt {
   std::expected<int, sigmaos::serr::Error> CloseFD(int fd);
   std::expected<std::shared_ptr<TstatProto>, sigmaos::serr::Error> Stat(std::string pn);
   std::expected<int, sigmaos::serr::Error> Create(std::string pn, int perm, int mode);
-  // TODO: wait type in Open?
-  std::expected<int, sigmaos::serr::Error> Open(std::string pn, int mode /*, w sos.Twait*/);
+  std::expected<int, sigmaos::serr::Error> Open(std::string pn, int mode, bool wait);
   std::expected<int, sigmaos::serr::Error> Rename(std::string src, std::string dst);
   std::expected<int, sigmaos::serr::Error> Remove(std::string pn);
   std::expected<std::vector<unsigned char>, sigmaos::serr::Error> GetFile(std::string pn);

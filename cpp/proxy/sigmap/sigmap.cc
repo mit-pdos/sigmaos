@@ -73,12 +73,42 @@ std::expected<std::shared_ptr<TstatProto>, sigmaos::serr::Error> Clnt::Stat(std:
 }
 
 std::expected<int, sigmaos::serr::Error> Clnt::Create(std::string pn, int perm, int mode) {
-  throw std::runtime_error("unimplemented");
+  log(SPPROXYCLNT, "Create: {} {} {}", pn, perm, mode);
+  SigmaCreateReq req;
+  SigmaFdRep rep;
+  req.set_path(pn);
+  req.set_perm(perm);
+  req.set_mode(mode);
+  auto res = _rpcc->RPC("SPProxySrvAPI.Create", req, rep);
+  if (!res.has_value()) {
+    log(SPPROXYCLNT_ERR, "Err RPC: {}", res.error());
+    return std::unexpected(res.error());
+  }
+  if (rep.err().errcode() != sigmaos::serr::Terror::TErrNoError) {
+    return std::unexpected(sigmaos::serr::Error((sigmaos::serr::Terror) rep.err().errcode(), rep.err().obj()));
+  }
+  log(SPPROXYCLNT, "Create done: {} {} {}", pn, perm, mode);
+  return rep.fd();
 }
 
-// TODO: wait type in Open?
-std::expected<int, sigmaos::serr::Error> Clnt::Open(std::string pn, int mode /*, w sos.Twait*/) {
+std::expected<int, sigmaos::serr::Error> Clnt::Open(std::string pn, int mode, bool wait) {
   throw std::runtime_error("unimplemented");
+  log(SPPROXYCLNT, "Open: {} {} {}", pn, mode, wait);
+  SigmaCreateReq req;
+  SigmaFdRep rep;
+  req.set_path(pn);
+  req.set_mode(mode);
+  req.set_wait(wait);
+  auto res = _rpcc->RPC("SPProxySrvAPI.Wait", req, rep);
+  if (!res.has_value()) {
+    log(SPPROXYCLNT_ERR, "Err RPC: {}", res.error());
+    return std::unexpected(res.error());
+  }
+  if (rep.err().errcode() != sigmaos::serr::Terror::TErrNoError) {
+    return std::unexpected(sigmaos::serr::Error((sigmaos::serr::Terror) rep.err().errcode(), rep.err().obj()));
+  }
+  log(SPPROXYCLNT, "Open done: {} {} {}", pn, mode, wait);
+  return rep.fd();
 }
 
 std::expected<int, sigmaos::serr::Error> Clnt::Rename(std::string src, std::string dst) {

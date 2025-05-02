@@ -92,14 +92,13 @@ std::expected<int, sigmaos::serr::Error> Clnt::Create(std::string pn, int perm, 
 }
 
 std::expected<int, sigmaos::serr::Error> Clnt::Open(std::string pn, int mode, bool wait) {
-  throw std::runtime_error("unimplemented");
   log(SPPROXYCLNT, "Open: {} {} {}", pn, mode, wait);
   SigmaCreateReq req;
   SigmaFdRep rep;
   req.set_path(pn);
   req.set_mode(mode);
   req.set_wait(wait);
-  auto res = _rpcc->RPC("SPProxySrvAPI.Wait", req, rep);
+  auto res = _rpcc->RPC("SPProxySrvAPI.Open", req, rep);
   if (!res.has_value()) {
     log(SPPROXYCLNT_ERR, "Err RPC: {}", res.error());
     return std::unexpected(res.error());
@@ -112,7 +111,21 @@ std::expected<int, sigmaos::serr::Error> Clnt::Open(std::string pn, int mode, bo
 }
 
 std::expected<int, sigmaos::serr::Error> Clnt::Rename(std::string src, std::string dst) {
-  throw std::runtime_error("unimplemented");
+  log(SPPROXYCLNT, "Rename: {} {}", src, dst);
+  SigmaRenameReq req;
+  SigmaErrRep rep;
+  req.set_src(src);
+  req.set_dst(dst);
+  auto res = _rpcc->RPC("SPProxySrvAPI.Rename", req, rep);
+  if (!res.has_value()) {
+    log(SPPROXYCLNT_ERR, "Err RPC: {}", res.error());
+    return std::unexpected(res.error());
+  }
+  if (rep.err().errcode() != sigmaos::serr::Terror::TErrNoError) {
+    return std::unexpected(sigmaos::serr::Error((sigmaos::serr::Terror) rep.err().errcode(), rep.err().obj()));
+  }
+  log(SPPROXYCLNT, "Rename done: {} {}", src, dst);
+  return 0;
 }
 
 std::expected<int, sigmaos::serr::Error> Clnt::Remove(std::string pn) {

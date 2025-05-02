@@ -25,7 +25,7 @@ const std::string SPPROXYCLNT_ERR = "SPPROXYCLNT" + sigmaos::util::log::ERR;
 
 class Clnt {
   public:
-  Clnt() {
+  Clnt() : _disconnected(false) {
     _env = sigmaos::proc::GetProcEnv();
     log(SPPROXYCLNT, "New clnt {}", _env->String());
     _conn = std::make_shared<sigmaos::io::conn::UnixConn>(SPPROXY_SOCKET_PN);
@@ -75,7 +75,7 @@ class Clnt {
   std::expected<bool, sigmaos::serr::Error> IsLocalMount(std::shared_ptr<TendpointProto> ep);
   std::expected<std::pair<std::vector<std::string>, std::vector<std::string>>, sigmaos::serr::Error> PathLastMount(std::string pn);
   std::expected<std::shared_ptr<TendpointProto>, sigmaos::serr::Error> GetNamedEndpoint();
-  std::expected<int, sigmaos::serr::Error> InvalidateNamedEndpointCacheEntryRealn(std::string realm);
+  std::expected<int, sigmaos::serr::Error> InvalidateNamedEndpointCacheEntryRealm(std::string realm);
   std::expected<std::shared_ptr<TendpointProto>, sigmaos::serr::Error> GetNamedEndpointRealm(std::string realm);
   std::expected<int, sigmaos::serr::Error> NewRootMount(std::string pn, std::string mntname);
   std::expected<std::vector<std::string>, sigmaos::serr::Error> Mounts();
@@ -92,6 +92,7 @@ class Clnt {
   std::shared_ptr<sigmaos::io::demux::Clnt> _demux;
   std::shared_ptr<sigmaos::rpc::Clnt> _rpcc;
   std::shared_ptr<sigmaos::proc::ProcEnv> _env;
+  bool _disconnected;
   // Used for logger initialization
   static bool _l;
   static bool _l_e;

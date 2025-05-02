@@ -358,41 +358,124 @@ std::expected<std::pair<std::vector<std::string>, std::vector<std::string>>, sig
 }
 
 std::expected<std::shared_ptr<TendpointProto>, sigmaos::serr::Error> Clnt::GetNamedEndpoint() {
-  throw std::runtime_error("unimplemented");
+  return GetNamedEndpointRealm(_env->GetRealm());
 }
 
-std::expected<int, sigmaos::serr::Error> Clnt::InvalidateNamedEndpointCacheEntryRealn(std::string realm) {
-  throw std::runtime_error("unimplemented");
+std::expected<int, sigmaos::serr::Error> Clnt::InvalidateNamedEndpointCacheEntryRealm(std::string realm) {
+  log(SPPROXYCLNT, "InvalidateNamedEndpointCacheEntryRealm: {}", realm);
+  SigmaRealmReq req;
+  SigmaMountRep rep;
+  req.set_realmstr(realm);
+  auto res = _rpcc->RPC("SPProxySrvAPI.InvalidateNamedEndpointCacheEntryRealm", req, rep);
+  if (!res.has_value()) {
+    log(SPPROXYCLNT_ERR, "Err RPC: {}", res.error());
+    return std::unexpected(res.error());
+  }
+  if (rep.err().errcode() != sigmaos::serr::Terror::TErrNoError) {
+    return std::unexpected(sigmaos::serr::Error((sigmaos::serr::Terror) rep.err().errcode(), rep.err().obj()));
+  }
+  log(SPPROXYCLNT, "InvalidateNamedEndpointCacheEntryRealm done: {}", realm);
+  return 0;
 }
 
 std::expected<std::shared_ptr<TendpointProto>, sigmaos::serr::Error> Clnt::GetNamedEndpointRealm(std::string realm) {
-  throw std::runtime_error("unimplemented");
+  log(SPPROXYCLNT, "GetNamedEndpointRealm: {}", realm);
+  SigmaRealmReq req;
+  SigmaMountRep rep;
+  req.set_realmstr(realm);
+  auto res = _rpcc->RPC("SPProxySrvAPI.GetNamedEndpointRealm", req, rep);
+  if (!res.has_value()) {
+    log(SPPROXYCLNT_ERR, "Err RPC: {}", res.error());
+    return std::unexpected(res.error());
+  }
+  if (rep.err().errcode() != sigmaos::serr::Terror::TErrNoError) {
+    return std::unexpected(sigmaos::serr::Error((sigmaos::serr::Terror) rep.err().errcode(), rep.err().obj()));
+  }
+  log(SPPROXYCLNT, "GetNamedEndpointRealm done: {}", realm);
+  return std::make_shared<TendpointProto>(rep.endpoint());
 }
 
 std::expected<int, sigmaos::serr::Error> Clnt::NewRootMount(std::string pn, std::string mntname) {
-  throw std::runtime_error("unimplemented");
+  log(SPPROXYCLNT, "NewRootMount: {} {}", pn, mntname);
+  SigmaMountTreeReq req;
+  SigmaErrRep rep;
+  req.set_tree(pn);
+  req.set_mountname(mntname);
+  auto res = _rpcc->RPC("SPProxySrvAPI.NewRootMount", req, rep);
+  if (!res.has_value()) {
+    log(SPPROXYCLNT_ERR, "Err RPC: {}", res.error());
+    return std::unexpected(res.error());
+  }
+  if (rep.err().errcode() != sigmaos::serr::Terror::TErrNoError) {
+    return std::unexpected(sigmaos::serr::Error((sigmaos::serr::Terror) rep.err().errcode(), rep.err().obj()));
+  }
+  log(SPPROXYCLNT, "NewRootMount done: {} {}", pn, mntname);
+  return 0;
 }
 
 std::expected<std::vector<std::string>, sigmaos::serr::Error> Clnt::Mounts() {
-  throw std::runtime_error("unimplemented");
+  log(SPPROXYCLNT, "Mounts");
+  SigmaNullReq req;
+  SigmaMountsRep rep;
+  auto res = _rpcc->RPC("SPProxySrvAPI.Mounts", req, rep);
+  if (!res.has_value()) {
+    log(SPPROXYCLNT_ERR, "Err RPC: {}", res.error());
+    return std::unexpected(res.error());
+  }
+  if (rep.err().errcode() != sigmaos::serr::Terror::TErrNoError) {
+    return std::unexpected(sigmaos::serr::Error((sigmaos::serr::Terror) rep.err().errcode(), rep.err().obj()));
+  }
+  log(SPPROXYCLNT, "Mounts done");
+  std::vector<std::string> mounts(rep.endpoints().size());
+  for (int i = 0; i < rep.endpoints().size(); i++) {
+    mounts[i] = rep.endpoints().Get(i);
+  }
+  return mounts;
 }
 
 std::expected<int, sigmaos::serr::Error> Clnt::SetLocalMount(std::shared_ptr<TendpointProto>, int port) {
-  throw std::runtime_error("unimplemented");
+  throw std::runtime_error("unimplemented (in go version too)");
 }
 
 // TODO: support MountPathClnt?
 //func (scc *SPProxyClnt) MountPathClnt(path string, clnt sos.PathClntAPI) error {
 std::expected<int, sigmaos::serr::Error> Clnt::Detach(std::string pn) {
-  throw std::runtime_error("unimplemented");
+  log(SPPROXYCLNT, "Detach {}", pn);
+  SigmaPathReq req;
+  SigmaErrRep rep;
+  req.set_path(pn);
+  auto res = _rpcc->RPC("SPProxySrvAPI.Detach", req, rep);
+  if (!res.has_value()) {
+    log(SPPROXYCLNT_ERR, "Err RPC: {}", res.error());
+    return std::unexpected(res.error());
+  }
+  if (rep.err().errcode() != sigmaos::serr::Terror::TErrNoError) {
+    return std::unexpected(sigmaos::serr::Error((sigmaos::serr::Terror) rep.err().errcode(), rep.err().obj()));
+  }
+  log(SPPROXYCLNT, "Detach done");
+  return 0;
 }
 
 std::expected<bool, sigmaos::serr::Error> Clnt::Disconnected() {
-  throw std::runtime_error("unimplemented");
+  return _disconnected;
 }
 
 std::expected<int, sigmaos::serr::Error> Clnt::Disconnect(std::string pn) {
-  throw std::runtime_error("unimplemented");
+  _disconnected = true;
+  log(SPPROXYCLNT, "Disconnect {}", pn);
+  SigmaPathReq req;
+  SigmaErrRep rep;
+  req.set_path(pn);
+  auto res = _rpcc->RPC("SPProxySrvAPI.Disconnect", req, rep);
+  if (!res.has_value()) {
+    log(SPPROXYCLNT_ERR, "Err RPC: {}", res.error());
+    return std::unexpected(res.error());
+  }
+  if (rep.err().errcode() != sigmaos::serr::Terror::TErrNoError) {
+    return std::unexpected(sigmaos::serr::Error((sigmaos::serr::Terror) rep.err().errcode(), rep.err().obj()));
+  }
+  log(SPPROXYCLNT, "Disconnect done {}", pn);
+  return 0;
 }
 
 };

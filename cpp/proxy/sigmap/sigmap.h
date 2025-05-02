@@ -38,16 +38,54 @@ class Clnt {
   }
 
   ~Clnt() { Close(); }
-
-  std::expected<int, sigmaos::serr::Error> Test();
   void Close() { 
     log(SPPROXYCLNT, "Close");
     _rpcc->Close(); 
     log(SPPROXYCLNT, "Done close");
   }
 
+  std::expected<int, sigmaos::serr::Error> Test();
+
   // Stubs
-  // TODO
+
+  std::expected<uint64_t, sigmaos::serr::Error> CloseFD(int fd);
+  std::expected<std::shared_ptr<TstatProto>, sigmaos::serr::Error> Stat(std::string pn);
+  std::expected<int, sigmaos::serr::Error> Create(std::string pn, int perm, int mode);
+  // TODO: wait type in Open?
+  std::expected<int, sigmaos::serr::Error> Open(std::string pn, int mode /*, w sos.Twait*/);
+  std::expected<int, sigmaos::serr::Error> Rename(std::string src, std::string dst);
+  std::expected<int, sigmaos::serr::Error> Remove(std::string pn);
+  std::expected<std::vector<unsigned char>, sigmaos::serr::Error> GetFile(std::string pn);
+  std::expected<uint32_t, sigmaos::serr::Error> PutFile(std::string pn, int perm, int mode, std::vector<unsigned char> data, uint64_t offset, uint64_t leaseID);
+  std::expected<uint32_t, sigmaos::serr::Error> Read(int fd, std::vector<unsigned char> b);
+  std::expected<uint32_t, sigmaos::serr::Error> Pread(int fd, std::vector<unsigned char> b, uint64_t offset);
+  // TODO: support PreadRdr?
+  //func (scc *SPProxyClnt) PreadRdr(fd int, o sp.Toffset, sz sp.Tsize) (io.ReadCloser, error) {
+  std::expected<uint32_t, sigmaos::serr::Error> Write(int fd, std::vector<unsigned char> b);
+  std::expected<int, sigmaos::serr::Error> Seek(int fd, uint64_t offset);
+  // TODO: fence type in CreateLeased?
+  std::expected<int, sigmaos::serr::Error> CreateLeased(std::string path, int perm, int mode, uint64_t leaseID/*, f sp.Tfence*/);
+  std::expected<uint64_t, sigmaos::serr::Error> ClntID();
+  // TODO: fence type in FenceDir?
+  std::expected<int, sigmaos::serr::Error> FenceDir(std::string pn/*, f sp.Tfence*/);
+  // TODO: support WriteFence?
+  //func (scc *SPProxyClnt) WriteFence(fd int, d []byte, f sp.Tfence) (sp.Tsize, error) {
+  std::expected<int, sigmaos::serr::Error> WriteRead(int fd, std::vector<std::vector<unsigned char>> in_iov, std::vector<std::vector<unsigned char>> out_iov);
+  std::expected<int, sigmaos::serr::Error> DirWatch(int fd);
+  std::expected<int, sigmaos::serr::Error> MountTree(std::shared_ptr<TendpointProto> ep, std::string tree, std::string mount);
+  std::expected<bool, sigmaos::serr::Error> IsLocalMount(std::shared_ptr<TendpointProto> ep);
+  std::expected<std::pair<std::string, std::string>, sigmaos::serr::Error> PathLastMount(std::string pn);
+  std::expected<std::shared_ptr<TendpointProto>, sigmaos::serr::Error> GetNamedEndpoint();
+  std::expected<int, sigmaos::serr::Error> InvalidateNamedEndpointCacheEntryRealn(std::string realm);
+  std::expected<std::shared_ptr<TendpointProto>, sigmaos::serr::Error> GetNamedEndpointRealm(std::string realm);
+  std::expected<int, sigmaos::serr::Error> NewRootMount(std::string pn, std::string mntname);
+  std::expected<std::vector<std::string>, sigmaos::serr::Error> Mounts();
+  std::expected<int, sigmaos::serr::Error> SetLocalMount(std::shared_ptr<TendpointProto>, int port);
+  // TODO: support MountPathClnt?
+  //func (scc *SPProxyClnt) MountPathClnt(path string, clnt sos.PathClntAPI) error {
+  std::expected<int, sigmaos::serr::Error> Detach(std::string pn);
+  std::expected<bool, sigmaos::serr::Error> Disconnected();
+  std::expected<int, sigmaos::serr::Error> Disconnect(std::string pn);
 
   private:
   std::shared_ptr<sigmaos::io::conn::UnixConn> _conn;

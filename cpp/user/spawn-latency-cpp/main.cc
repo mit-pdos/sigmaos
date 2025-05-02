@@ -18,6 +18,6 @@ int main() {
   log(CPP_USER_PROC, "Test");
   sp_clnt->Test();
   log(CPP_USER_PROC, "Done testing");
-  return 1;
+  std::exit(1);
   return 0;
 }

@@ -129,7 +129,20 @@ std::expected<int, sigmaos::serr::Error> Clnt::Rename(std::string src, std::stri
 }
 
 std::expected<int, sigmaos::serr::Error> Clnt::Remove(std::string pn) {
-  throw std::runtime_error("unimplemented");
+  log(SPPROXYCLNT, "Remove: {}", pn);
+  SigmaPathReq req;
+  SigmaErrRep rep;
+  req.set_path(pn);
+  auto res = _rpcc->RPC("SPProxySrvAPI.Remove", req, rep);
+  if (!res.has_value()) {
+    log(SPPROXYCLNT_ERR, "Err RPC: {}", res.error());
+    return std::unexpected(res.error());
+  }
+  if (rep.err().errcode() != sigmaos::serr::Terror::TErrNoError) {
+    return std::unexpected(sigmaos::serr::Error((sigmaos::serr::Terror) rep.err().errcode(), rep.err().obj()));
+  }
+  log(SPPROXYCLNT, "Remove done: {}", pn);
+  return 0;
 }
 
 std::expected<std::vector<unsigned char>, sigmaos::serr::Error> Clnt::GetFile(std::string pn) {

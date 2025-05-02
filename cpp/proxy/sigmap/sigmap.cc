@@ -315,11 +315,46 @@ std::expected<int, sigmaos::serr::Error> Clnt::MountTree(std::shared_ptr<Tendpoi
 }
 
 std::expected<bool, sigmaos::serr::Error> Clnt::IsLocalMount(std::shared_ptr<TendpointProto> ep) {
-  throw std::runtime_error("unimplemented");
+  log(SPPROXYCLNT, "IsLocalMount: {}", ep->DebugString());
+  SigmaMountReq req;
+  SigmaMountRep rep;
+  req.set_allocated_endpoint(ep.get());
+  auto res = _rpcc->RPC("SPProxySrvAPI.IsLocalMount", req, rep);
+  if (!res.has_value()) {
+    log(SPPROXYCLNT_ERR, "Err RPC: {}", res.error());
+    return std::unexpected(res.error());
+  }
+  if (rep.err().errcode() != sigmaos::serr::Terror::TErrNoError) {
+    return std::unexpected(sigmaos::serr::Error((sigmaos::serr::Terror) rep.err().errcode(), rep.err().obj()));
+  }
+  req.release_endpoint();
+  log(SPPROXYCLNT, "IsLocalMount done: {}", ep->DebugString());
+  return rep.local();
 }
 
-std::expected<std::pair<std::string, std::string>, sigmaos::serr::Error> Clnt::PathLastMount(std::string pn) {
-  throw std::runtime_error("unimplemented");
+std::expected<std::pair<std::vector<std::string>, std::vector<std::string>>, sigmaos::serr::Error> Clnt::PathLastMount(std::string pn) {
+  log(SPPROXYCLNT, "PathLastMount: {}", pn);
+  SigmaPathReq req;
+  SigmaLastMountRep rep;
+  req.set_path(pn);
+  auto res = _rpcc->RPC("SPProxySrvAPI.PathLastMount", req, rep);
+  if (!res.has_value()) {
+    log(SPPROXYCLNT_ERR, "Err RPC: {}", res.error());
+    return std::unexpected(res.error());
+  }
+  if (rep.err().errcode() != sigmaos::serr::Terror::TErrNoError) {
+    return std::unexpected(sigmaos::serr::Error((sigmaos::serr::Terror) rep.err().errcode(), rep.err().obj()));
+  }
+  log(SPPROXYCLNT, "PathLastMount done: {}", pn);
+  std::vector<std::string> p1(rep.path1().size());
+  for (int i = 0; i < rep.path1().size(); i++) {
+    p1[i] = std::string(rep.path1().Get(i));
+  }
+  std::vector<std::string> p2(rep.path2().size());
+  for (int i = 0; i < rep.path2().size(); i++) {
+    p2[i] = std::string(rep.path2().Get(i));
+  }
+  return std::make_pair(p1, p2);
 }
 
 std::expected<std::shared_ptr<TendpointProto>, sigmaos::serr::Error> Clnt::GetNamedEndpoint() {

@@ -73,7 +73,7 @@ class Clnt {
   std::expected<int, sigmaos::serr::Error> DirWatch(int fd);
   std::expected<int, sigmaos::serr::Error> MountTree(std::shared_ptr<TendpointProto> ep, std::string tree, std::string mount);
   std::expected<bool, sigmaos::serr::Error> IsLocalMount(std::shared_ptr<TendpointProto> ep);
-  std::expected<std::pair<std::string, std::string>, sigmaos::serr::Error> PathLastMount(std::string pn);
+  std::expected<std::pair<std::vector<std::string>, std::vector<std::string>>, sigmaos::serr::Error> PathLastMount(std::string pn);
   std::expected<std::shared_ptr<TendpointProto>, sigmaos::serr::Error> GetNamedEndpoint();
   std::expected<int, sigmaos::serr::Error> InvalidateNamedEndpointCacheEntryRealn(std::string realm);
   std::expected<std::shared_ptr<TendpointProto>, sigmaos::serr::Error> GetNamedEndpointRealm(std::string realm);

@@ -6,6 +6,7 @@
 #include <expected>
 #include <optional>
 
+#include <serr/serr.h>
 #include <io/transport/call.h>
 
 namespace sigmaos {
@@ -16,9 +17,9 @@ class CallMap {
   CallMap() : _mu(), _closed(false), _calls() {}
   ~CallMap() {}
 
-  std::expected<int, std::string> Put(uint64_t seqno, std::shared_ptr<sigmaos::io::transport::Call> call);
+  std::expected<int, sigmaos::serr::Error> Put(uint64_t seqno, std::shared_ptr<sigmaos::io::transport::Call> call);
   std::optional<std::shared_ptr<sigmaos::io::transport::Call>> Remove(uint64_t seqno);
-  std::expected<int, std::string> Close();
+  std::expected<int, sigmaos::serr::Error> Close();
   bool IsClosed();
 
   private:

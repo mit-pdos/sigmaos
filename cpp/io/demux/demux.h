@@ -9,10 +9,11 @@
 #include <expected>
 #include <future>
 
+#include <util/log/log.h>
+#include <serr/serr.h>
 #include <io/transport/transport.h>
 #include <io/transport/call.h>
 #include <io/demux/internal/callmap.h>
-#include <util/log/log.h>
 
 namespace sigmaos {
 namespace io::demux {
@@ -28,8 +29,8 @@ class Clnt {
 
   ~Clnt() { Close(); }
 
-  std::expected<std::shared_ptr<sigmaos::io::transport::Call>, std::string> SendReceive(std::shared_ptr<sigmaos::io::transport::Call> call);
-  std::expected<int, std::string> Close();
+  std::expected<std::shared_ptr<sigmaos::io::transport::Call>, sigmaos::serr::Error> SendReceive(std::shared_ptr<sigmaos::io::transport::Call> call);
+  std::expected<int, sigmaos::serr::Error> Close();
   bool IsClosed();
 
   private:

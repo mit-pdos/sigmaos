@@ -8,6 +8,7 @@
 #include <expected>
 
 #include <util/log/log.h>
+#include <serr/serr.h>
 #include <io/conn/conn.h>
 #include <io/transport/call.h>
 #include <io/transport/internal/callmap.h>
@@ -26,9 +27,9 @@ class Transport {
 
   ~Transport() { _conn->Close(); }
 
-  std::expected<int, std::string> WriteCall(std::shared_ptr<Call> call);
-  std::expected<std::shared_ptr<Call>, std::string> ReadCall();
-  std::expected<int, std::string> Close();
+  std::expected<int, sigmaos::serr::Error> WriteCall(std::shared_ptr<Call> call);
+  std::expected<std::shared_ptr<Call>, sigmaos::serr::Error> ReadCall();
+  std::expected<int, sigmaos::serr::Error> Close();
 
   private:
   std::shared_ptr<sigmaos::io::conn::UnixConn> _conn;

@@ -3,6 +3,7 @@ message(STATUS "Building conn library")
 add_library(io_conn STATIC conn.cc)
 
 target_link_libraries(io_conn PUBLIC
+  serr
   util_codec
   util_log
 )

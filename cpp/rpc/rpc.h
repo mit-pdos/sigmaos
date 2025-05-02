@@ -6,6 +6,7 @@
 #include <google/protobuf/message.h>
 
 #include <util/log/log.h>
+#include <serr/serr.h>
 #include <io/demux/demux.h>
 #include <rpc/proto/rpc.pb.h>
 
@@ -20,7 +21,7 @@ class Clnt {
   Clnt(std::shared_ptr<sigmaos::io::demux::Clnt> demux) : _seqno(1), _demux(demux) {}
   ~Clnt() { Close(); }
 
-  std::expected<int, std::string> RPC(std::string method, const google::protobuf::Message &req, google::protobuf::Message &res);
+  std::expected<int, sigmaos::serr::Error> RPC(std::string method, const google::protobuf::Message &req, google::protobuf::Message &res);
   void Close() { 
     log(RPCCLNT, "Close");
     _demux->Close(); 
@@ -33,7 +34,7 @@ class Clnt {
   static bool _l;
   static bool _l_e;
 
-  std::expected<Rep, std::string> wrap_and_run_rpc(std::string method, const std::vector<std::vector<unsigned char>> &in_iov, std::vector<std::vector<unsigned char>> &out_iov);
+  std::expected<Rep, sigmaos::serr::Error> wrap_and_run_rpc(std::string method, const std::vector<std::vector<unsigned char>> &in_iov, std::vector<std::vector<unsigned char>> &out_iov);
 };
 
 };

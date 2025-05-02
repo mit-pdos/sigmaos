@@ -8,7 +8,7 @@ namespace io::transport {
 bool Transport::_l = sigmaos::util::log::init_logger(TRANSPORT);
 bool Transport::_l_e = sigmaos::util::log::init_logger(TRANSPORT_ERR);
 
-std::expected<int, std::string> Transport::WriteCall(std::shared_ptr<Call> call) {
+std::expected<int, sigmaos::serr::Error> Transport::WriteCall(std::shared_ptr<Call> call) {
   auto res = _calls.Put(call->GetSeqno(), call);
   if (!res.has_value()) {
     return res;
@@ -26,7 +26,7 @@ std::expected<int, std::string> Transport::WriteCall(std::shared_ptr<Call> call)
   return 0;
 }
 
-std::expected<std::shared_ptr<Call>, std::string> Transport::ReadCall() {
+std::expected<std::shared_ptr<Call>, sigmaos::serr::Error> Transport::ReadCall() {
   uint64_t seqno;
   uint32_t nframes;
   {
@@ -54,7 +54,7 @@ std::expected<std::shared_ptr<Call>, std::string> Transport::ReadCall() {
 }
 
 
-std::expected<int, std::string> Transport::Close() {
+std::expected<int, sigmaos::serr::Error> Transport::Close() {
 //  _calls.Close(); // XXX never called in the go implementation
   log(TRANSPORT, "Close");
   auto res = _conn->Close();

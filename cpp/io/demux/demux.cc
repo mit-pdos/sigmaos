@@ -6,9 +6,9 @@ namespace io::demux {
 bool Clnt::_l = sigmaos::util::log::init_logger(DEMUXCLNT);
 bool Clnt::_l_e = sigmaos::util::log::init_logger(DEMUXCLNT_ERR);
 
-std::expected<std::shared_ptr<sigmaos::io::transport::Call>, std::string> Clnt::SendReceive(std::shared_ptr<sigmaos::io::transport::Call> call) {
+std::expected<std::shared_ptr<sigmaos::io::transport::Call>, sigmaos::serr::Error> Clnt::SendReceive(std::shared_ptr<sigmaos::io::transport::Call> call) {
   // Create a promise
-  auto p = std::make_unique<std::promise<std::expected<std::shared_ptr<sigmaos::io::transport::Call>, std::string>>>();
+  auto p = std::make_unique<std::promise<std::expected<std::shared_ptr<sigmaos::io::transport::Call>, sigmaos::serr::Error>>>();
   // Get the corresponding future
   auto f = p->get_future();
   {
@@ -33,7 +33,7 @@ std::expected<std::shared_ptr<sigmaos::io::transport::Call>, std::string> Clnt::
   return f.get();
 }
 
-std::expected<int, std::string> Clnt::Close() {
+std::expected<int, sigmaos::serr::Error> Clnt::Close() {
   log(DEMUXCLNT, "Close");
 	if (_callmap.IsClosed()) {
     log(DEMUXCLNT, "Close: already closed");

@@ -71,6 +71,11 @@ class Error {
 
   Terror GetError() { return _err; }
   std::string GetMsg() { return _msg; }
+  std::string String() {
+    std::ostringstream out;
+    out << "{Err: \"" << sigmaos::serr::TerrorToString(_err) << "\" Obj: \"" << _msg << "\" (<nil>)}";
+    return out.str();
+  }
 
   private:
 	Terror _err;

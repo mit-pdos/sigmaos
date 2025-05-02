@@ -9,7 +9,7 @@ namespace proxy::sigmap {
 bool Clnt::_l = sigmaos::util::log::init_logger(SPPROXYCLNT);
 bool Clnt::_l_e = sigmaos::util::log::init_logger(SPPROXYCLNT_ERR);
 
-std::expected<int, std::string> Clnt::Test() {
+std::expected<int, sigmaos::serr::Error> Clnt::Test() {
   {
     SigmaNullReq req;
     SigmaClntIdRep rep;
@@ -32,7 +32,7 @@ void Clnt::init_conn() {
   auto res = _rpcc->RPC("SPProxySrvAPI.Init", req, rep);
   if (!res.has_value()) {
     log(SPPROXYCLNT_ERR, "Err RPC: {}", res.error());
-    throw std::runtime_error(std::format("Err rpc: {}", res.error()));
+    throw std::runtime_error(std::format("Err rpc: {}", res.error().String()));
   }
   if (rep.err().errcode() != 0) {
     throw std::runtime_error(std::format("init rpc error: {}", rep.err().DebugString()));

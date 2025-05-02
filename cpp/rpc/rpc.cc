@@ -6,7 +6,7 @@ namespace rpc {
 bool Clnt::_l = sigmaos::util::log::init_logger(RPCCLNT);
 bool Clnt::_l_e = sigmaos::util::log::init_logger(RPCCLNT_ERR);
 
-std::expected<int, std::string> Clnt::RPC(std::string method, const google::protobuf::Message &req, google::protobuf::Message &rep) {
+std::expected<int, sigmaos::serr::Error> Clnt::RPC(std::string method, const google::protobuf::Message &req, google::protobuf::Message &rep) {
   // TODO: get blob
 //	inblob := rpc.GetBlob(arg)
 //	var iniov sessp.IoVec
@@ -39,7 +39,7 @@ std::expected<int, std::string> Clnt::RPC(std::string method, const google::prot
   }
   wrapped_rep = res.value();
   if (wrapped_rep.err().errcode() != 0) {
-    return std::unexpected(std::format("rpc error: {}", wrapped_rep.err().DebugString()));
+    return std::unexpected(sigmaos::serr::Error(sigmaos::serr::TErrUnreachable, std::format("rpc error: {}", wrapped_rep.err().DebugString())));
   }
   // Deserialize the reply
   rep_data = std::string(out_iov[0].begin(), out_iov[0].end());
@@ -58,7 +58,7 @@ std::expected<int, std::string> Clnt::RPC(std::string method, const google::prot
   return 0;
 }
 
-std::expected<Rep, std::string> Clnt::wrap_and_run_rpc(std::string method, const std::vector<std::vector<unsigned char>> &in_iov, std::vector<std::vector<unsigned char>> &out_iov) {
+std::expected<Rep, sigmaos::serr::Error> Clnt::wrap_and_run_rpc(std::string method, const std::vector<std::vector<unsigned char>> &in_iov, std::vector<std::vector<unsigned char>> &out_iov) {
   uint64_t seqno = _seqno++;
   std::vector<std::vector<unsigned char>> wrapped_in_iov;
   Req req;

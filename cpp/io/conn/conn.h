@@ -10,6 +10,7 @@
 #include <expected>
 
 #include <util/log/log.h>
+#include <serr/serr.h>
 
 namespace sigmaos {
 namespace io::conn {
@@ -36,17 +37,17 @@ class UnixConn {
   }
 
   // Read/Write a buffer
-  std::expected<int, std::string> Read(std::vector<unsigned char> &b);
-  std::expected<int, std::string> Write(const std::vector<unsigned char> &b);
+  std::expected<int, sigmaos::serr::Error> Read(std::vector<unsigned char> &b);
+  std::expected<int, sigmaos::serr::Error> Write(const std::vector<unsigned char> &b);
 
   // Read/Write a number
-  std::expected<uint32_t, std::string> ReadUint32();
-  std::expected<int, std::string> WriteUint32(uint32_t i);
-  std::expected<uint64_t, std::string> ReadUint64();
-  std::expected<int, std::string> WriteUint64(uint64_t i);
+  std::expected<uint32_t, sigmaos::serr::Error> ReadUint32();
+  std::expected<int, sigmaos::serr::Error> WriteUint32(uint32_t i);
+  std::expected<uint64_t, sigmaos::serr::Error> ReadUint64();
+  std::expected<int, sigmaos::serr::Error> WriteUint64(uint64_t i);
 
   // Close a connection
-  std::expected<int, std::string> Close();
+  std::expected<int, sigmaos::serr::Error> Close();
 
   ~UnixConn() { Close(); }
 
@@ -57,8 +58,8 @@ class UnixConn {
   static bool _l;
   static bool _l_e;
 
-  std::expected<int, std::string> read_bytes(unsigned char *b, size_t size);
-  std::expected<int, std::string> write_bytes(const unsigned char *b, size_t size);
+  std::expected<int, sigmaos::serr::Error> read_bytes(unsigned char *b, size_t size);
+  std::expected<int, sigmaos::serr::Error> write_bytes(const unsigned char *b, size_t size);
 };
 
 };

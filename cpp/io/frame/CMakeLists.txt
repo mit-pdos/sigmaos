@@ -3,6 +3,7 @@ message(STATUS "Building frame library")
 add_library(io_frame STATIC frame.cc)
 
 target_link_libraries(io_frame PUBLIC
+  serr
   util_log
   io_conn
 )

@@ -39,7 +39,7 @@ class Clnt {
 
   ~Clnt() { Close(); }
 
-  std::expected<int, std::string> Test();
+  std::expected<int, sigmaos::serr::Error> Test();
   void Close() { 
     log(SPPROXYCLNT, "Close");
     _rpcc->Close(); 

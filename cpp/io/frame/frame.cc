@@ -7,7 +7,7 @@ bool Frame::_l = sigmaos::util::log::init_logger(FRAME);
 bool Frame::_l_e = sigmaos::util::log::init_logger(FRAME_ERR);
 
 // Read frames
-std::expected<int, std::string> ReadFrameIntoVec(std::shared_ptr<sigmaos::io::conn::UnixConn> conn, std::vector<unsigned char> &b) {
+std::expected<int, sigmaos::serr::Error> ReadFrameIntoVec(std::shared_ptr<sigmaos::io::conn::UnixConn> conn, std::vector<unsigned char> &b) {
   uint32_t nbyte = 0;
 
   auto res = conn->ReadUint32();
@@ -16,7 +16,7 @@ std::expected<int, std::string> ReadFrameIntoVec(std::shared_ptr<sigmaos::io::co
   }
   nbyte = res.value();
   if (nbyte < 4) {
-    return std::unexpected("nbyte < 4");
+    return std::unexpected(sigmaos::serr::Error(sigmaos::serr::TErrUnreachable, "nbyte < 4"));
   }
   nbyte -= 4;
   // If the vector passed in had no underlying buffer, resize it
@@ -33,12 +33,12 @@ std::expected<int, std::string> ReadFrameIntoVec(std::shared_ptr<sigmaos::io::co
     return res;
   }
   if (res.value() != nbyte) {
-    return std::unexpected(std::format("Read wrong number of bytes: {} != {}", nbyte, res.value()));
+    return std::unexpected(sigmaos::serr::Error(sigmaos::serr::TErrUnreachable, std::format("Read wrong number of bytes: {} != {}", nbyte, res.value())));
   }
   return nbyte;
 }
 
-std::expected<int, std::string> ReadFramesIntoIOVec(std::shared_ptr<sigmaos::io::conn::UnixConn> conn, std::vector<std::vector<unsigned char>> &iov) {
+std::expected<int, sigmaos::serr::Error> ReadFramesIntoIOVec(std::shared_ptr<sigmaos::io::conn::UnixConn> conn, std::vector<std::vector<unsigned char>> &iov) {
   for (auto &b : iov) {
     auto res = ReadFrameIntoVec(conn, b);
     if (!res.has_value()) {
@@ -49,7 +49,7 @@ std::expected<int, std::string> ReadFramesIntoIOVec(std::shared_ptr<sigmaos::io:
 }
 
 
-std::expected<uint64_t, std::string> ReadSeqno(std::shared_ptr<sigmaos::io::conn::UnixConn> conn) {
+std::expected<uint64_t, sigmaos::serr::Error> ReadSeqno(std::shared_ptr<sigmaos::io::conn::UnixConn> conn) {
   auto res = conn->ReadUint64();
   if (!res.has_value()) {
     return res;
@@ -57,7 +57,7 @@ std::expected<uint64_t, std::string> ReadSeqno(std::shared_ptr<sigmaos::io::conn
   return res.value();
 }
 
-std::expected<uint32_t, std::string> ReadNumFrames(std::shared_ptr<sigmaos::io::conn::UnixConn> conn) {
+std::expected<uint32_t, sigmaos::serr::Error> ReadNumFrames(std::shared_ptr<sigmaos::io::conn::UnixConn> conn) {
   auto res = conn->ReadUint32();
   if (!res.has_value()) {
     return res;
@@ -66,7 +66,7 @@ std::expected<uint32_t, std::string> ReadNumFrames(std::shared_ptr<sigmaos::io::
 }
 
 // Write frames
-std::expected<int, std::string> WriteFrame(std::shared_ptr<sigmaos::io::conn::UnixConn> conn, const std::vector<unsigned char> &b) {
+std::expected<int, sigmaos::serr::Error> WriteFrame(std::shared_ptr<sigmaos::io::conn::UnixConn> conn, const std::vector<unsigned char> &b) {
   uint32_t nbyte = b.size() + 4;
 
   log(FRAME, "WriteFrame sz {}", nbyte);
@@ -77,7 +77,7 @@ std::expected<int, std::string> WriteFrame(std::shared_ptr<sigmaos::io::conn::Un
   return conn->Write(b);
 }
 
-std::expected<int, std::string> WriteFrames(std::shared_ptr<sigmaos::io::conn::UnixConn> conn, const std::vector<std::vector<unsigned char>> &iov) {
+std::expected<int, sigmaos::serr::Error> WriteFrames(std::shared_ptr<sigmaos::io::conn::UnixConn> conn, const std::vector<std::vector<unsigned char>> &iov) {
   log(FRAME, "WriteFrames numFrames {}", iov.size());
   // Write the number of frames
   auto res = conn->WriteUint32(iov.size());
@@ -94,7 +94,7 @@ std::expected<int, std::string> WriteFrames(std::shared_ptr<sigmaos::io::conn::U
   return 0;
 }
 
-std::expected<int, std::string> WriteSeqno(std::shared_ptr<sigmaos::io::conn::UnixConn> conn, uint64_t seqno) {
+std::expected<int, sigmaos::serr::Error> WriteSeqno(std::shared_ptr<sigmaos::io::conn::UnixConn> conn, uint64_t seqno) {
   auto res = conn->WriteUint64(seqno);
   if (!res.has_value()) {
     return res;
@@ -102,7 +102,7 @@ std::expected<int, std::string> WriteSeqno(std::shared_ptr<sigmaos::io::conn::Un
   return res.value();
 }
 
-std::expected<int, std::string> WriteNumFrames(std::shared_ptr<sigmaos::io::conn::UnixConn> conn, uint32_t nframes) {
+std::expected<int, sigmaos::serr::Error> WriteNumFrames(std::shared_ptr<sigmaos::io::conn::UnixConn> conn, uint32_t nframes) {
   auto res = conn->WriteUint32(nframes);
   if (!res.has_value()) {
     return res;

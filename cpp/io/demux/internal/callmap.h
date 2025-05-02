@@ -11,6 +11,7 @@
 #include <future>
 #include <mutex>
 
+#include <serr/serr.h>
 #include <io/transport/call.h>
 
 namespace sigmaos {
@@ -21,8 +22,8 @@ class CallMap {
   CallMap() : _mu(), _closed(false), _calls() {}
   ~CallMap() {}
 
-  std::expected<int, std::string> Put(uint64_t seqno, std::unique_ptr<std::promise<std::expected<std::shared_ptr<sigmaos::io::transport::Call>, std::string>>> future);
-  std::optional<std::unique_ptr<std::promise<std::expected<std::shared_ptr<sigmaos::io::transport::Call>, std::string>>>> Remove(uint64_t seqno);
+  std::expected<int, sigmaos::serr::Error> Put(uint64_t seqno, std::unique_ptr<std::promise<std::expected<std::shared_ptr<sigmaos::io::transport::Call>, sigmaos::serr::Error>>> future);
+  std::optional<std::unique_ptr<std::promise<std::expected<std::shared_ptr<sigmaos::io::transport::Call>, sigmaos::serr::Error>>>> Remove(uint64_t seqno);
   std::vector<uint64_t> Outstanding();
   void Close();
   bool IsClosed();
@@ -30,7 +31,7 @@ class CallMap {
   private:
   std::mutex _mu;
   bool _closed;
-  std::map<uint64_t, std::unique_ptr<std::promise<std::expected<std::shared_ptr<sigmaos::io::transport::Call>, std::string>>>> _calls;
+  std::map<uint64_t, std::unique_ptr<std::promise<std::expected<std::shared_ptr<sigmaos::io::transport::Call>, sigmaos::serr::Error>>>> _calls;
 };
 
 };

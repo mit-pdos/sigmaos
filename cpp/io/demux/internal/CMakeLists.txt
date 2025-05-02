@@ -5,6 +5,7 @@ add_library(io_demux_internal STATIC
 )
 
 target_link_libraries(io_demux_internal PUBLIC
+  serr
   io_transport
 )
 

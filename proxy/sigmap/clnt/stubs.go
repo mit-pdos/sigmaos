@@ -397,3 +397,11 @@ func (scc *SPProxyClnt) Exited(status proc.Tstatus, msg string) error {
 	db.DPrintf(db.SPPROXYCLNT, "Exited %v %v %v", req, rep, err)
 	return err
 }
+
+func (scc *SPProxyClnt) WaitEvict() error {
+	req := spproto.SigmaNullReq{}
+	rep := spproto.SigmaErrRep{}
+	err := scc.rpcErr("SPProxySrvAPI.WaitEvict", &req, &rep)
+	db.DPrintf(db.SPPROXYCLNT, "WaitEvict %v %v %v", req, rep, err)
+	return err
+}

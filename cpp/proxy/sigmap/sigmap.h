@@ -91,6 +91,8 @@ class Clnt {
   std::expected<int, sigmaos::serr::Error> Started();
   std::expected<int, sigmaos::serr::Error> Exited(sigmaos::proc::Tstatus status, std::string &msg);
 
+  std::expected<int, sigmaos::serr::Error> WaitEvict();
+
   private:
   std::shared_ptr<sigmaos::io::conn::UnixConn> _conn;
   std::shared_ptr<sigmaos::io::transport::Transport> _trans;

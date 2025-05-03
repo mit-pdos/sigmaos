@@ -414,3 +414,15 @@ func (scs *SPProxySrvAPI) Exited(ctx fs.CtxI, req scproto.SigmaExitedReq, rep *s
 	db.DPrintf(db.SPPROXYSRV, "%v: Exited done %v %v", scs.sc.ClntId(), req, rep)
 	return nil
 }
+
+func (scs *SPProxySrvAPI) WaitEvict(ctx fs.CtxI, req scproto.SigmaNullReq, rep *scproto.SigmaErrRep) error {
+	db.DPrintf(db.SPPROXYSRV, "%v: WaitEvict %v", scs.sc.ClntId())
+	err := scs.initProcClnt()
+	rep.Err = scs.setErr(err)
+	if err != nil {
+		return nil
+	}
+	scs.sc.WaitEvict(scs.sc.ProcEnv().GetPID())
+	db.DPrintf(db.SPPROXYSRV, "%v: WaitEvict done %v %v", scs.sc.ClntId(), req, rep)
+	return nil
+}

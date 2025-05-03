@@ -507,5 +507,18 @@ std::expected<int, sigmaos::serr::Error> Clnt::Exited(sigmaos::proc::Tstatus sta
   return 0;
 }
 
+std::expected<int, sigmaos::serr::Error> Clnt::WaitEvict() {
+  log(SPPROXYCLNT, "WaitEvict");
+  SigmaNullReq req;
+  SigmaErrRep rep;
+  auto res = _rpcc->RPC("SPProxySrvAPI.WaitEvict", req, rep);
+  if (!res.has_value()) {
+    log(SPPROXYCLNT_ERR, "Err RPC: {}", res.error());
+    return std::unexpected(res.error());
+  }
+  log(SPPROXYCLNT, "WaitEvict done");
+  return 0;
+}
+
 };
 };

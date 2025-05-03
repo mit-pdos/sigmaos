@@ -25,7 +25,8 @@ int main() {
   log(CPP_USER_PROC, "Done testing");
   {
     // TODO: exit with status
-    auto res = sp_clnt->Exited(sigmaos::proc::Tstatus::StatusOK, "Exited normally!");
+    std::string msg("Exited normally!");
+    auto res = sp_clnt->Exited(sigmaos::proc::Tstatus::StatusOK, msg);
     if (!res.has_value()) {
       log(CPP_USER_PROC, "Error started: {}", res.error());
     }

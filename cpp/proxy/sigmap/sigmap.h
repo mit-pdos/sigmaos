@@ -86,6 +86,9 @@ class Clnt {
   std::expected<bool, sigmaos::serr::Error> Disconnected();
   std::expected<int, sigmaos::serr::Error> Disconnect(std::string pn);
 
+  // ========== ProcClnt API ==========
+  std::expected<int, sigmaos::serr::Error> Started();
+
   private:
   std::shared_ptr<sigmaos::io::conn::UnixConn> _conn;
   std::shared_ptr<sigmaos::io::transport::Transport> _trans;

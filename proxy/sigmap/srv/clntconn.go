@@ -80,10 +80,11 @@ func (scc *SigmaClntConn) close() error {
 // SPProxySrvAPI exports the RPC methods that the server proxies.  The
 // RPC methods correspond to the functions in the sigmaos interface.
 type SPProxySrvAPI struct {
-	mu     sync.Mutex
-	closed bool
-	fidc   *fidclnt.FidClnt
-	sc     *sigmaclnt.SigmaClnt
+	mu          sync.Mutex
+	closed      bool
+	hasProcClnt bool
+	fidc        *fidclnt.FidClnt
+	sc          *sigmaclnt.SigmaClnt
 }
 
 func (scc *SPProxySrvAPI) testAndSetClosed() bool {
@@ -364,5 +365,33 @@ func (scs *SPProxySrvAPI) Close(ctx fs.CtxI, req scproto.SigmaNullReq, rep *scpr
 	}
 	rep.Err = scs.setErr(err)
 	db.DPrintf(db.SPPROXYSRV, "%v: Close %v %v", scs.sc.ClntId(), req, rep)
+	return nil
+}
+
+// Procclnt API calls
+func (scs *SPProxySrvAPI) Started(ctx fs.CtxI, req scproto.SigmaNullReq, rep *scproto.SigmaErrRep) error {
+	db.DPrintf(db.SPPROXYSRV, "%v: Started", scs.sc.ClntId(), scs)
+	var err error
+
+	scs.mu.Lock()
+	// Make a procclnt if we haven't already
+	if !scs.hasProcClnt {
+		scs.hasProcClnt = true
+		err = scs.sc.NewProcClnt()
+	}
+	scs.mu.Unlock()
+
+	// If unsuccessful, bail out
+	if err != nil {
+		db.DPrintf(db.SPPROXYSRV_ERR, "%v: Started failed to create procclnt: %v", scs.sc.ClntId(), err)
+		rep.Err = scs.setErr(err)
+		return nil
+	}
+	err = scs.sc.Started()
+	if err != nil {
+		db.DPrintf(db.SPPROXYSRV_ERR, "%v: Started err: %v", scs.sc.ClntId(), err)
+	}
+	rep.Err = scs.setErr(err)
+	db.DPrintf(db.SPPROXYSRV, "%v: Started done %v %v", scs.sc.ClntId(), req, rep)
 	return nil
 }

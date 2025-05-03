@@ -379,3 +379,12 @@ func (scc *SPProxyClnt) Close() error {
 	scc.close()
 	return err
 }
+
+// Procclnt API calls
+func (scc *SPProxyClnt) Started() error {
+	req := spproto.SigmaNullReq{}
+	rep := spproto.SigmaErrRep{}
+	err := scc.rpcErr("SPProxySrvAPI.Started", &req, &rep)
+	db.DPrintf(db.SPPROXYCLNT, "Started %v %v %v", req, rep, err)
+	return err
+}

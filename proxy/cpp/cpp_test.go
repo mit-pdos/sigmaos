@@ -15,8 +15,11 @@ func runSpawnLatency(ts *test.RealmTstate, kernels []string) *proc.Proc {
 	p := proc.NewProc("spawn-latency-cpp", []string{})
 	err := ts.Spawn(p)
 	assert.Nil(ts.Ts.T, err, "Spawn")
-
+	err = ts.WaitStart(p.GetPid())
+	assert.Nil(ts.Ts.T, err, "Start")
+	db.DPrintf(db.TEST, "CPP proc started")
 	status, err := ts.WaitExit(p.GetPid())
+	db.DPrintf(db.TEST, "CPP proc exited")
 	assert.Nil(ts.Ts.T, err, "WaitExit error")
 	assert.True(ts.Ts.T, status != nil && status.IsStatusOK(), "Exit status wrong: %v", status)
 	return p

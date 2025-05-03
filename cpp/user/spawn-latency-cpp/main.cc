@@ -24,7 +24,6 @@ int main() {
   sp_clnt->Test();
   log(CPP_USER_PROC, "Done testing");
   {
-    // TODO: exit with status
     std::string msg("Exited normally!");
     auto res = sp_clnt->Exited(sigmaos::proc::Tstatus::StatusOK, msg);
     if (!res.has_value()) {

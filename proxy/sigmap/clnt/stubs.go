@@ -9,6 +9,7 @@ import (
 	sos "sigmaos/api/sigmaos"
 	db "sigmaos/debug"
 	"sigmaos/path"
+	"sigmaos/proc"
 	spproto "sigmaos/proxy/sigmap/proto"
 	rpcproto "sigmaos/rpc/proto"
 	"sigmaos/serr"
@@ -389,8 +390,8 @@ func (scc *SPProxyClnt) Started() error {
 	return err
 }
 
-func (scc *SPProxyClnt) Exited() error {
-	req := spproto.SigmaNullReq{}
+func (scc *SPProxyClnt) Exited(status proc.Tstatus, msg string) error {
+	req := spproto.SigmaExitedReq{Status: uint32(status), Msg: msg}
 	rep := spproto.SigmaErrRep{}
 	err := scc.rpcErr("SPProxySrvAPI.Exited", &req, &rep)
 	db.DPrintf(db.SPPROXYCLNT, "Exited %v %v %v", req, rep, err)

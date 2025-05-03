@@ -3,6 +3,7 @@
 #include <util/log/log.h>
 #include <proxy/sigmap/sigmap.h>
 #include <serr/serr.h>
+#include <proc/proc.h>
 
 const std::string CPP_USER_PROC = "CPP_USER_PROC";
 
@@ -22,9 +23,9 @@ int main() {
   log(CPP_USER_PROC, "Test");
   sp_clnt->Test();
   log(CPP_USER_PROC, "Done testing");
-  // TODO: exit with status
   {
-    auto res = sp_clnt->Exited();
+    // TODO: exit with status
+    auto res = sp_clnt->Exited(sigmaos::proc::Tstatus::StatusOK, "Exited normally!");
     if (!res.has_value()) {
       log(CPP_USER_PROC, "Error started: {}", res.error());
     }

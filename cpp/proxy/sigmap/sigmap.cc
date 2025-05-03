@@ -492,10 +492,12 @@ std::expected<int, sigmaos::serr::Error> Clnt::Started() {
   return 0;
 }
 
-std::expected<int, sigmaos::serr::Error> Clnt::Exited() {
+std::expected<int, sigmaos::serr::Error> Clnt::Exited(sigmaos::proc::Tstatus status, std::string &msg) {
   log(SPPROXYCLNT, "Exited");
-  SigmaNullReq req;
+  SigmaExitedReq req;
   SigmaErrRep rep;
+  req.set_status(status);
+  req.set_msg(msg);
   auto res = _rpcc->RPC("SPProxySrvAPI.Exited", req, rep);
   if (!res.has_value()) {
     log(SPPROXYCLNT_ERR, "Err RPC: {}", res.error());

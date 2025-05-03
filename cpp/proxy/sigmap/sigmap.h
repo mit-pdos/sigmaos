@@ -15,6 +15,7 @@
 #include <serr/serr.h>
 #include <rpc/rpc.h>
 #include <proc/proc.h>
+#include <proc/status.h>
 
 namespace sigmaos {
 namespace proxy::sigmap {
@@ -88,7 +89,7 @@ class Clnt {
 
   // ========== ProcClnt API ==========
   std::expected<int, sigmaos::serr::Error> Started();
-  std::expected<int, sigmaos::serr::Error> Exited();
+  std::expected<int, sigmaos::serr::Error> Exited(sigmaos::proc::Tstatus status, std::string &msg);
 
   private:
   std::shared_ptr<sigmaos::io::conn::UnixConn> _conn;

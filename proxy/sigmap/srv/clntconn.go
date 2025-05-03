@@ -387,7 +387,7 @@ func (scs *SPProxySrvAPI) initProcClnt() error {
 }
 
 func (scs *SPProxySrvAPI) Started(ctx fs.CtxI, req scproto.SigmaNullReq, rep *scproto.SigmaErrRep) error {
-	db.DPrintf(db.SPPROXYSRV, "%v: Started", scs.sc.ClntId(), scs)
+	db.DPrintf(db.SPPROXYSRV, "%v: Started", scs.sc.ClntId())
 	err := scs.initProcClnt()
 	if err != nil {
 		rep.Err = scs.setErr(err)
@@ -402,14 +402,15 @@ func (scs *SPProxySrvAPI) Started(ctx fs.CtxI, req scproto.SigmaNullReq, rep *sc
 	return nil
 }
 
-func (scs *SPProxySrvAPI) Exited(ctx fs.CtxI, req scproto.SigmaNullReq, rep *scproto.SigmaErrRep) error {
-	db.DPrintf(db.SPPROXYSRV, "%v: Exited", scs.sc.ClntId(), scs)
+func (scs *SPProxySrvAPI) Exited(ctx fs.CtxI, req scproto.SigmaExitedReq, rep *scproto.SigmaErrRep) error {
+	status := proc.Tstatus(req.Status)
+	db.DPrintf(db.SPPROXYSRV, "%v: Exited %v", scs.sc.ClntId(), status, req.Msg)
 	err := scs.initProcClnt()
 	rep.Err = scs.setErr(err)
 	if err != nil {
 		return nil
 	}
-	scs.sc.Exited(proc.NewStatus(proc.StatusOK))
+	scs.sc.Exited(proc.NewStatusInfo(proc.StatusOK, req.Msg, nil))
 	db.DPrintf(db.SPPROXYSRV, "%v: Exited done %v %v", scs.sc.ClntId(), req, rep)
 	return nil
 }

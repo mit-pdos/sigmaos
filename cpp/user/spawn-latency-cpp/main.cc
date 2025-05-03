@@ -30,5 +30,4 @@ int main() {
     }
   }
   std::exit(0);
-  return 0;
 }

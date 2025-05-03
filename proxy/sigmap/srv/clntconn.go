@@ -368,22 +368,28 @@ func (scs *SPProxySrvAPI) Close(ctx fs.CtxI, req scproto.SigmaNullReq, rep *scpr
 	return nil
 }
 
-// Procclnt API calls
-func (scs *SPProxySrvAPI) Started(ctx fs.CtxI, req scproto.SigmaNullReq, rep *scproto.SigmaErrRep) error {
-	db.DPrintf(db.SPPROXYSRV, "%v: Started", scs.sc.ClntId(), scs)
-	var err error
-
+// ========== Procclnt API ==========
+func (scs *SPProxySrvAPI) initProcClnt() error {
 	scs.mu.Lock()
+	defer scs.mu.Unlock()
+
+	var err error
 	// Make a procclnt if we haven't already
 	if !scs.hasProcClnt {
 		scs.hasProcClnt = true
 		err = scs.sc.NewProcClnt()
 	}
-	scs.mu.Unlock()
-
 	// If unsuccessful, bail out
 	if err != nil {
-		db.DPrintf(db.SPPROXYSRV_ERR, "%v: Started failed to create procclnt: %v", scs.sc.ClntId(), err)
+		db.DPrintf(db.SPPROXYSRV_ERR, "%v: Failed to create procclnt: %v", scs.sc.ClntId(), err)
+	}
+	return err
+}
+
+func (scs *SPProxySrvAPI) Started(ctx fs.CtxI, req scproto.SigmaNullReq, rep *scproto.SigmaErrRep) error {
+	db.DPrintf(db.SPPROXYSRV, "%v: Started", scs.sc.ClntId(), scs)
+	err := scs.initProcClnt()
+	if err != nil {
 		rep.Err = scs.setErr(err)
 		return nil
 	}
@@ -393,5 +399,17 @@ func (scs *SPProxySrvAPI) Started(ctx fs.CtxI, req scproto.SigmaNullReq, rep *sc
 	}
 	rep.Err = scs.setErr(err)
 	db.DPrintf(db.SPPROXYSRV, "%v: Started done %v %v", scs.sc.ClntId(), req, rep)
+	return nil
+}
+
+func (scs *SPProxySrvAPI) Exited(ctx fs.CtxI, req scproto.SigmaNullReq, rep *scproto.SigmaErrRep) error {
+	db.DPrintf(db.SPPROXYSRV, "%v: Exited", scs.sc.ClntId(), scs)
+	err := scs.initProcClnt()
+	rep.Err = scs.setErr(err)
+	if err != nil {
+		return nil
+	}
+	scs.sc.Exited(proc.NewStatus(proc.StatusOK))
+	db.DPrintf(db.SPPROXYSRV, "%v: Exited done %v %v", scs.sc.ClntId(), req, rep)
 	return nil
 }

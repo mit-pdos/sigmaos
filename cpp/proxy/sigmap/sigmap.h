@@ -88,6 +88,7 @@ class Clnt {
 
   // ========== ProcClnt API ==========
   std::expected<int, sigmaos::serr::Error> Started();
+  std::expected<int, sigmaos::serr::Error> Exited();
 
   private:
   std::shared_ptr<sigmaos::io::conn::UnixConn> _conn;

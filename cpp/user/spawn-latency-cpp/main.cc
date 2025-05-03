@@ -11,15 +11,24 @@ int main() {
   log(CPP_USER_PROC, "Running");
   auto sp_clnt = std::make_unique<sigmaos::proxy::sigmap::Clnt>();
 
-  auto res = sp_clnt->Started();
-  if (!res.has_value()) {
-    log(CPP_USER_PROC, "Error started: {}", res.error());
+  {
+    auto res = sp_clnt->Started();
+    if (!res.has_value()) {
+      log(CPP_USER_PROC, "Error started: {}", res.error());
+    }
   }
 
   // Test connection to spproxyd
   log(CPP_USER_PROC, "Test");
   sp_clnt->Test();
   log(CPP_USER_PROC, "Done testing");
-  std::exit(1);
+  // TODO: exit with status
+  {
+    auto res = sp_clnt->Exited();
+    if (!res.has_value()) {
+      log(CPP_USER_PROC, "Error started: {}", res.error());
+    }
+  }
+  std::exit(0);
   return 0;
 }

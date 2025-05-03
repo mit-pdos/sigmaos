@@ -27,7 +27,7 @@ func runSpawnLatency(ts *test.RealmTstate, kernels []string, evict bool) *proc.P
 	var evicted bool
 	go func() {
 		time.Sleep(SLEEP)
-		evict = true
+		evicted = true
 		err := ts.Evict(p.GetPid())
 		assert.Nil(ts.Ts.T, err, "Evict")
 	}()

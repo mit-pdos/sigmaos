@@ -410,7 +410,7 @@ func (scs *SPProxySrvAPI) Exited(ctx fs.CtxI, req scproto.SigmaExitedReq, rep *s
 	if err != nil {
 		return nil
 	}
-	scs.sc.Exited(proc.NewStatusInfo(proc.StatusOK, req.Msg, nil))
+	scs.sc.Exited(proc.NewStatusInfo(proc.Tstatus(req.Status), req.Msg, nil))
 	db.DPrintf(db.SPPROXYSRV, "%v: Exited done %v %v", scs.sc.ClntId(), req, rep)
 	return nil
 }

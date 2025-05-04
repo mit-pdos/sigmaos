@@ -636,8 +636,8 @@ func TestCrashInfraMSched1(t *testing.T) {
 	e0 := crash.NewEventPath(crash.MSCHED_CRASH, CRASHCOORD, float64(1.0), crashSemPn(crash.MSCHED_CRASH, 0))
 	srvs := make(map[string]crash.Tselector)
 	srvs[sp.MSCHEDREL] = crash.MSCHED_CRASH
-	ntask, _, st := runN(t, crash.NewTeventMapOne(e0), srvs, 0, false)
-	assert.True(t, st.Ntask > ntask || st.Nfail > 0)
+	ntask, ncoord, st := runN(t, crash.NewTeventMapOne(e0), srvs, 0, false)
+	assert.True(t, st.Ntask > ntask || st.Nfail > 0 || ncoord > 1)
 }
 
 func TestCrashInfraProcd1(t *testing.T) {

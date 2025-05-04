@@ -21,7 +21,7 @@ void Clnt::init_conn() {
     throw std::runtime_error(std::format("Err rpc: {}", res.error().String()));
   }
   if (rep.err().errcode() != sigmaos::serr::Terror::TErrNoError) {
-    throw std::runtime_error(std::format("init rpc error: {}", rep.err().DebugString()));
+    throw std::runtime_error(std::format("init rpc error: {}", rep.err().ShortDebugString()));
   }
   log(SPPROXYCLNT, "Init RPC successful");
   // Make sure to release the proc env proto pointer so it isn't destroyed
@@ -295,7 +295,7 @@ std::expected<int, sigmaos::serr::Error> Clnt::DirWatch(int fd) {
 }
 
 std::expected<int, sigmaos::serr::Error> Clnt::MountTree(std::shared_ptr<TendpointProto> ep, std::string tree, std::string mount) {
-  log(SPPROXYCLNT, "MountTree: {} {} {}", ep->DebugString(), tree, mount);
+  log(SPPROXYCLNT, "MountTree: {} {} {}", ep->ShortDebugString(), tree, mount);
   SigmaMountTreeReq req;
   SigmaErrRep rep;
   req.set_allocated_endpoint(ep.get());
@@ -310,12 +310,12 @@ std::expected<int, sigmaos::serr::Error> Clnt::MountTree(std::shared_ptr<Tendpoi
     return std::unexpected(sigmaos::serr::Error((sigmaos::serr::Terror) rep.err().errcode(), rep.err().obj()));
   }
   auto _ = req.release_endpoint();
-  log(SPPROXYCLNT, "MountTree done: {} {} {}", ep->DebugString(), tree, mount);
+  log(SPPROXYCLNT, "MountTree done: {} {} {}", ep->ShortDebugString(), tree, mount);
   return 0;
 }
 
 std::expected<bool, sigmaos::serr::Error> Clnt::IsLocalMount(std::shared_ptr<TendpointProto> ep) {
-  log(SPPROXYCLNT, "IsLocalMount: {}", ep->DebugString());
+  log(SPPROXYCLNT, "IsLocalMount: {}", ep->ShortDebugString());
   SigmaMountReq req;
   SigmaMountRep rep;
   req.set_allocated_endpoint(ep.get());
@@ -328,7 +328,7 @@ std::expected<bool, sigmaos::serr::Error> Clnt::IsLocalMount(std::shared_ptr<Ten
     return std::unexpected(sigmaos::serr::Error((sigmaos::serr::Terror) rep.err().errcode(), rep.err().obj()));
   }
   auto _ = req.release_endpoint();
-  log(SPPROXYCLNT, "IsLocalMount done: {}", ep->DebugString());
+  log(SPPROXYCLNT, "IsLocalMount done: {}", ep->ShortDebugString());
   return rep.local();
 }
 

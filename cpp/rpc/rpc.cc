@@ -39,7 +39,7 @@ std::expected<int, sigmaos::serr::Error> Clnt::RPC(std::string method, const goo
   }
   wrapped_rep = res.value();
   if (wrapped_rep.err().errcode() != 0) {
-    return std::unexpected(sigmaos::serr::Error(sigmaos::serr::TErrUnreachable, std::format("rpc error: {}", wrapped_rep.err().DebugString())));
+    return std::unexpected(sigmaos::serr::Error(sigmaos::serr::TErrUnreachable, std::format("rpc error: {}", wrapped_rep.err().ShortDebugString())));
   }
   // Deserialize the reply
   rep_data = std::string(out_iov[0].begin(), out_iov[0].end());

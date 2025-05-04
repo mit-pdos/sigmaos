@@ -84,6 +84,7 @@ func (rts *RealmTstate) remove(removeNamedState bool) error {
 func (rts *RealmTstate) BootNode(n int) error {
 	return rts.bootNode(n, false)
 }
+
 func (rts *RealmTstate) bootNode(n int, waitForNamed bool) error {
 	kids, err := rts.Ts.bootNode(n, bootclnt.BOOT_NODE)
 	if err != nil {
@@ -93,8 +94,9 @@ func (rts *RealmTstate) bootNode(n int, waitForNamed bool) error {
 	if waitForNamed {
 		db.DPrintf(db.TEST, "Wait for realm %v named to come up", rts.realm)
 		// wait until the realm's named has registered its endpoint and is ready to
-		// serve
-		if _, err := rts.Ts.GetFileWatch(filepath.Join(sp.REALMS, rts.realm.String())); err != nil {
+		// serve. force connection with new named by appending "/"
+		fn := filepath.Join(sp.REALMS, rts.realm.String()) + "/"
+		if _, err := rts.Ts.GetFileWatch(fn); err != nil {
 			db.DPrintf(db.ERROR, "Error GetFileWatch waiting for named: %v", err)
 			return err
 		}

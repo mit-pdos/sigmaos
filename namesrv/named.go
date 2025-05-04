@@ -147,7 +147,7 @@ func Run(args []string) error {
 
 	nd.SigmaSrv.Mount(sp.PSTATSD, nd.pstats)
 
-	db.DPrintf(db.NAMED_LDR, "newSrv %v ep %v", nd.realm, ep)
+	db.DPrintf(db.NAMED_LDR, "newSrv %v -> ep %v", nd.realm, ep)
 
 	pn := sp.NAMED
 	if nd.realm == sp.ROOTREALM {
@@ -172,7 +172,7 @@ func Run(args []string) error {
 			db.DFatalf("MkEndpointFile %v at %v err %v", nd.realm, pn, err)
 			return err
 		}
-		db.DPrintf(db.NAMED, "[%v] named endpoint %v", nd.realm, ep)
+		db.DPrintf(db.NAMED_LDR, "[%v] named endpoint %v", nd.realm, ep)
 	}
 
 	nd.getRoot(pn + "/")

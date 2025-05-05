@@ -262,7 +262,7 @@ func TestRemoveSymlink(t *testing.T) {
 	err = ts.MkEndpointFile(fn, ep)
 	assert.Nil(t, err, "MkEndpointFile: %v", err)
 
-	sts, err := ts.GetDir(fn + "/")
+	sts, err := ts.GetDir(path.MarkResolve(fn))
 	assert.Nil(t, err, "GetDir: %v", err)
 	assert.True(t, sp.Present(sts, namesrv.InitRootDir))
 
@@ -291,7 +291,7 @@ func TestRmDirWithSymlink(t *testing.T) {
 	err = ts.MkEndpointFile(fn, ep)
 	assert.Nil(t, err, "MkEndpointFile: %v", err)
 
-	sts, err := ts.GetDir(fn + "/")
+	sts, err := ts.GetDir(path.MarkResolve(fn))
 	assert.Nil(t, err, "GetDir: %v", err)
 	assert.True(t, sp.Present(sts, namesrv.InitRootDir))
 
@@ -317,7 +317,7 @@ func TestReadSymlink(t *testing.T) {
 	err = ts.MkEndpointFile(fn, ep)
 	assert.Nil(t, err, "MkEndpointFile: %v", err)
 
-	_, err = ts.GetDir(fn + "/")
+	_, err = ts.GetDir(path.MarkResolve(fn))
 	assert.Nil(t, err, "GetDir: %v", err)
 
 	ep1, err := ts.ReadEndpoint(fn)
@@ -1095,7 +1095,7 @@ func TestSymlinkPath(t *testing.T) {
 	err = ts.Symlink([]byte(pathname), fn, 0777)
 	assert.Nil(ts.T, err, "Symlink")
 
-	sts, err := ts.GetDir(fn + "/")
+	sts, err := ts.GetDir(path.MarkResolve(fn))
 	assert.Equal(t, nil, err)
 	assert.True(t, sp.Present(sts, path.Tpathname{DIR1}), DIR1)
 
@@ -1130,7 +1130,7 @@ func TestEndpointSimple(t *testing.T) {
 	pn := filepath.Join(dn, "namedself")
 	err = ts.MkEndpointFile(pn, newEndpoint(t, ts, pathname))
 	assert.Nil(ts.T, err, "MkEndpointFile")
-	sts, err := ts.GetDir(pn + "/")
+	sts, err := ts.GetDir(path.MarkResolve(pn))
 	assert.Equal(t, nil, err)
 	assert.True(t, sp.Present(sts, path.Tpathname{DIR1}), DIR1)
 
@@ -1273,7 +1273,7 @@ func TestUnionSymlinkPut(t *testing.T) {
 	_, err = ts.PutFile(fn1, 0777, sp.OWRITE, b)
 	assert.Equal(t, nil, err)
 
-	sts, err := ts.GetDir(filepath.Join(basepn, "namedself0") + "/")
+	sts, err := ts.GetDir(path.MarkResolve(filepath.Join(basepn, "namedself0")))
 	assert.Equal(t, nil, err)
 	assert.True(t, sp.Present(sts, path.Tpathname{FILE, FILE1}), "root wrong")
 
@@ -1368,7 +1368,7 @@ func TestEndpointUnion(t *testing.T) {
 		eppn = filepath.Join(eppn, sp.ANY)
 	}
 
-	sts, err := ts.GetDir(filepath.Join(pathname, eppn) + "/")
+	sts, err := ts.GetDir(path.MarkResolve(filepath.Join(pathname, eppn)))
 	assert.Equal(t, nil, err)
 	assert.True(t, sp.Present(sts, path.Tpathname{DIR1}), DIR1)
 

@@ -28,7 +28,9 @@ int main(int argc, char *argv[]) {
     }
   }
 
-  std::thread evict_thread(wait_for_eviction, sp_clnt);
+  if (false) {
+    std::thread evict_thread(wait_for_eviction, sp_clnt);
+  }
 
   // Test connection to spproxyd
   log(CPP_USER_PROC, "Test");
@@ -39,7 +41,7 @@ int main(int argc, char *argv[]) {
   sigmaos::proc::Tstatus exit_status = sigmaos::proc::Tstatus::StatusOK;
   // Possibly wait for eviction
   if (argc > 1 && std::string(argv[1]) == "waitEvict") {
-    evict_thread.join();
+//    evict_thread.join();
     msg = "Evicted!";
     exit_status = sigmaos::proc::Tstatus::StatusEvicted;
   }

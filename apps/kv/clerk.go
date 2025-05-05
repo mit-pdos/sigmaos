@@ -14,6 +14,7 @@ import (
 	"sigmaos/apps/kv/kvgrp"
 	replclnt "sigmaos/apps/kv/repl/clnt"
 	db "sigmaos/debug"
+	"sigmaos/path"
 	rpcclnt "sigmaos/rpc/clnt"
 	"sigmaos/serr"
 	"sigmaos/sigmaclnt/fslib"
@@ -102,7 +103,7 @@ func (kc *KvClerk) DetachKVs(kvs *KvSet) {
 	for _, ep := range eps {
 		db.DPrintf(db.KVCLERK, "ep kv %v", ep)
 		if strings.HasPrefix(ep, kvgrp.JobDir(kc.job)+"/grp") {
-			kvd := strings.TrimPrefix(ep, kvgrp.JobDir(kc.job)+"/")
+			kvd := strings.TrimPrefix(ep, path.MarkResolve(kvgrp.JobDir(kc.job)))
 			if !kvs.present(kvd) {
 				db.DPrintf(db.KVCLERK, "Detach kv %v", kvd)
 				kc.Detach(kvGrpPath(kc.job, kvd))

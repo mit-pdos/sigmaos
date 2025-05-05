@@ -8,6 +8,7 @@ import (
 
 	db "sigmaos/debug"
 	kernelclnt "sigmaos/kernel/clnt"
+	"sigmaos/path"
 	"sigmaos/proc"
 	sprpcclnt "sigmaos/rpc/clnt/sigmap"
 	"sigmaos/serr"
@@ -58,7 +59,7 @@ func NewProcdMgr(fsl *fslib.FsLib, kernelId string) *ProcdMgr {
 			}
 			break
 		}
-		kclnt, err := kernelclnt.NewKernelClnt(pdm.fsl, filepath.Join(sp.BOOT, pdm.kernelId)+"/")
+		kclnt, err := kernelclnt.NewKernelClnt(pdm.fsl, path.MarkResolve(filepath.Join(sp.BOOT, pdm.kernelId)))
 		if err != nil {
 			db.DFatalf("Err ProcdMgr Can't make kernelclnt: %v", err)
 		}

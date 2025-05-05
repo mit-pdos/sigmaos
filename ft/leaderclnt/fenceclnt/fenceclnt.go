@@ -1,6 +1,8 @@
 package fenceclnt
 
 import (
+	"path/filepath"
+
 	db "sigmaos/debug"
 	"sigmaos/sigmaclnt/fslib"
 	sp "sigmaos/sigmap"
@@ -55,7 +57,7 @@ func (fc *FenceClnt) GetFences(p string) ([]*sp.Tstat, error) {
 		db.DPrintf(db.FENCECLNT_ERR, "PathLastMount %v err %v", p, err)
 		return nil, err
 	}
-	dn := srv.String() + "/" + sp.FENCEDIR
+	dn := filepath.Join(srv.String(), sp.FENCEDIR)
 	sts, err := fc.GetDir(dn)
 	if err != nil {
 		db.DPrintf(db.FENCECLNT_ERR, "GetDir %v err %v", dn, err)
@@ -70,7 +72,7 @@ func (fc *FenceClnt) RemoveFence(dirs []string) error {
 			db.DPrintf(db.FENCECLNT_ERR, "PathLastMount %v err %v", d, err)
 			return err
 		}
-		fn := srv.String() + "/" + sp.FENCEDIR + "/" + fc.fence.Name()
+		fn := filepath.Join(srv.String(), sp.FENCEDIR, fc.fence.Name())
 		if err := fc.Remove(fn); err != nil {
 			db.DPrintf(db.FENCECLNT_ERR, "Remove %v err %v", fn, err)
 			return err

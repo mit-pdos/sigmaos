@@ -8,6 +8,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/ft/leaderclnt"
+	"sigmaos/path"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
@@ -121,7 +122,7 @@ func TestOldLeaderCrash(t *testing.T) {
 }
 
 func TestMemfs(t *testing.T) {
-	dir := sp.MEMFS + sp.ANY + "/"
+	dir := path.MarkResolve(filepath.Join(sp.MEMFS, sp.ANY))
 	fencedir := filepath.Join(dir, sp.FENCEDIR)
 
 	ts, err1 := test.NewTstatePath(t, dir)

@@ -33,7 +33,7 @@ func TestBootNamed(t *testing.T) {
 		return
 	}
 
-	sts, err := ts.GetDir(sp.NAMED + "/")
+	sts, err := ts.GetDir(sp.NAMED)
 	assert.Nil(t, err)
 	db.DPrintf(db.TEST, "named %v", sp.Names(sts))
 
@@ -129,13 +129,13 @@ func TestKillNamed(t *testing.T) {
 	}
 	db.DPrintf(db.TEST, "Made new realm sigmaclnt")
 
-	sts, err := sc.GetDir(sp.NAMED + "/")
+	sts, err := sc.GetDir(sp.NAMED)
 	assert.Nil(t, err)
 	db.DPrintf(db.TEST, "New realm sigmaclnt contents: %v", sp.Names(sts))
 
 	db.DPrintf(db.TEST, "named %v", sp.Names(sts))
 
-	sts, err = ts.GetDir(sp.NAMED + "/")
+	sts, err = ts.GetDir(sp.NAMED)
 	assert.Nil(t, err)
 	db.DPrintf(db.TEST, "New realm sigmaclnt contents: %v", sp.Names(sts))
 
@@ -164,7 +164,7 @@ func TestKillNamed(t *testing.T) {
 		return
 	}
 
-	sts, err = sc.GetDir(sp.NAMED + "/")
+	sts, err = sc.GetDir(sp.NAMED)
 	assert.Nil(t, err, "Get named dir post-crash")
 	db.DPrintf(db.TEST, "named %v", sp.Names(sts))
 

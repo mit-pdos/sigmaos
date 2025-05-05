@@ -175,7 +175,7 @@ func Run(args []string) error {
 		db.DPrintf(db.NAMED_LDR, "[%v] named endpoint %v", nd.realm, ep)
 	}
 
-	nd.getRoot(pn + "/")
+	nd.getRoot(path.MarkResolve(pn))
 
 	if err := nd.CreateLeaderFile(filepath.Join(sp.NAME, nd.elect.Key()), nil, sp.TleaseId(nd.sess.Lease()), nd.elect.Fence()); err != nil {
 		db.DPrintf(db.NAMED, "CreateElectionInfo %v err %v", nd.elect.Key(), err)

@@ -1157,15 +1157,15 @@ func TestUnionDir(t *testing.T) {
 	err = ts.MkEndpointFile(filepath.Join(pathname, DIR1, "namedself1"), newep)
 	assert.Nil(ts.T, err, "EndpointService")
 
-	sts, err := ts.GetDir(filepath.Join(pathname, DIR1, sp.ANY) + "/")
+	sts, err := ts.GetDir(path.MarkResolve(filepath.Join(pathname, DIR1, sp.ANY)))
 	assert.Equal(t, nil, err)
 	assert.True(t, sp.Present(sts, path.Tpathname{DIR1}), DIR1)
 
-	sts, err = ts.GetDir(filepath.Join(pathname, DIR1, sp.ANY, DIR1) + "/")
+	sts, err = ts.GetDir(filepath.Join(pathname, DIR1, sp.ANY, DIR1))
 	assert.Equal(t, nil, err)
 	assert.True(t, sp.Present(sts, path.Tpathname{"namedself0", "namedself1"}), DIR1)
 
-	sts, err = ts.GetDir(filepath.Join(pathname, DIR1, sp.ANY) + "/")
+	sts, err = ts.GetDir(path.MarkResolve(filepath.Join(pathname, DIR1, sp.ANY)))
 	assert.Equal(t, nil, err)
 	assert.True(t, sp.Present(sts, path.Tpathname{DIR1}), DIR1)
 
@@ -1199,7 +1199,7 @@ func TestUnionRoot(t *testing.T) {
 	if pathname != sp.NAMED && pathname != "name/memfs/"+sp.LOCAL+"/" {
 		pn = filepath.Join(pathname, sp.ANY)
 	}
-	sts, err := ts.GetDir(pn + "/")
+	sts, err := ts.GetDir(path.MarkResolve(pn))
 	assert.Equal(t, nil, err)
 	assert.True(t, sp.Present(sts, path.Tpathname{"namedself0", "namedself1"}), "dir: %v", sp.Names(sts))
 
@@ -1233,11 +1233,11 @@ func TestUnionSymlinkRead(t *testing.T) {
 	if pathname != sp.NAMED && pathname != "name/memfs/"+sp.LOCAL+"/" {
 		basepn = filepath.Join(pathname, sp.ANY)
 	}
-	sts, err := ts.GetDir(filepath.Join(basepn, DIR1, "namedself1") + "/")
+	sts, err := ts.GetDir(path.MarkResolve(filepath.Join(basepn, DIR1, "namedself1")))
 	assert.Equal(t, nil, err)
 	assert.True(t, sp.Present(sts, path.Tpathname{DIR1, "namedself0"}), "root wrong")
 
-	sts, err = ts.GetDir(filepath.Join(basepn, DIR1, "namedself1", DIR1) + "/")
+	sts, err = ts.GetDir(filepath.Join(basepn, DIR1, "namedself1", DIR1))
 	assert.Equal(t, nil, err)
 	assert.True(t, sp.Present(sts, path.Tpathname{"namedself1"}), "d wrong")
 

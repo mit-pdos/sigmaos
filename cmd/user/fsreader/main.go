@@ -4,14 +4,15 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path"
+	"path/filepath"
 
-	db "sigmaos/debug"
 	"sigmaos/api/fs"
-	"sigmaos/sigmasrv/pipe"
+	db "sigmaos/debug"
+	"sigmaos/path"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
+	"sigmaos/sigmasrv/pipe"
 )
 
 //
@@ -49,7 +50,7 @@ func NewReader(args []string) (*Reader, error) {
 	}
 	r.SigmaClnt = sc
 	r.input = args[1]
-	r.output = path.Join(proc.PARENTDIR /*, proc.SHARED*/) + "/"
+	r.output = path.MarkResolve(filepath.Join(proc.PARENTDIR /*, proc.SHARED*/))
 	r.Started()
 	return r, nil
 }

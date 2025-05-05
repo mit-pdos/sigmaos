@@ -4,6 +4,7 @@ import (
 	"os"
 
 	db "sigmaos/debug"
+	"sigmaos/path"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
@@ -20,7 +21,7 @@ func main() {
 	if err := sc.Started(); err != nil {
 		db.DFatalf("Started: error %v\n", err)
 	}
-	sts, err := sc.GetDir(os.Args[1] + "/")
+	sts, err := sc.GetDir(path.MarkResolve(os.Args[1]))
 	if err != nil {
 		sc.ClntExit(proc.NewStatusErr(err.Error(), nil))
 	} else {

@@ -120,7 +120,7 @@ func (mc *MntClnt) resolveRoot(pn path.Tpathname) (*serr.Err, bool) {
 			db.DPrintf(db.MOUNT, "resolveRoot: remount %v at %v\n", sm, pn[0])
 			// this may remount the service that this root is relying on
 			// and repair this root mount
-			if _, err := mc.pathc.Stat(sm.svcpn.String()+"/", mc.pe.GetPrincipal()); err != nil {
+			if _, err := mc.pathc.Stat(path.MarkResolve(sm.svcpn.String()), mc.pe.GetPrincipal()); err != nil {
 				if sr, ok := serr.IsErr(err); ok {
 					return sr, false
 				} else {

@@ -12,6 +12,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/ft/procgroupmgr"
 	fttask "sigmaos/ft/task"
+	"sigmaos/path"
 	"sigmaos/proc"
 	"sigmaos/serr"
 	"sigmaos/sigmaclnt"
@@ -298,9 +299,9 @@ func MergeReducerOutput(fsl *fslib.FsLib, jobRoot, jobName, out string, nreduce 
 	wrt := bufio.NewWriter(file)
 	for i := 0; i < nreduce; i++ {
 		r := strconv.Itoa(i)
-		rdr, err := fsl.OpenReader(ReduceOut(jobRoot, jobName) + r + "/")
+		rdr, err := fsl.OpenReader(path.MarkResolve(ReduceOut(jobRoot, jobName) + r))
 		if err != nil {
-			db.DPrintf(db.MR, "Error OpenReader [%v]: %v", ReduceOut(jobRoot, jobName)+r+"/", err)
+			db.DPrintf(db.MR, "Error OpenReader [%v]: %v", ReduceOut(jobRoot, jobName)+r, err)
 			return err
 		}
 		if _, err := io.Copy(wrt, rdr); err != nil {

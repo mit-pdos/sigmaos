@@ -16,8 +16,6 @@ namespace rpc {
 const std::string RPCCLNT = "RPCCLNT";
 const std::string RPCCLNT_ERR = "RPCCLNT" + sigmaos::util::log::ERR;
 
-void extract_blob_iov(google::protobuf::Message &msg, std::vector<std::vector<unsigned char>> *dst);
-
 class Clnt {
   public:
   Clnt(std::shared_ptr<sigmaos::io::demux::Clnt> demux) : _seqno(1), _demux(demux) {}
@@ -36,7 +34,7 @@ class Clnt {
   static bool _l;
   static bool _l_e;
 
-  std::expected<Rep, sigmaos::serr::Error> wrap_and_run_rpc(std::string method, const std::vector<std::vector<unsigned char>> &in_iov, std::vector<std::vector<unsigned char>> &out_iov);
+  std::expected<Rep, sigmaos::serr::Error> wrap_and_run_rpc(std::string method, const std::vector<std::string *> &in_iov, std::vector<std::string *> &out_iov);
 };
 
 };

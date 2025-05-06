@@ -37,8 +37,8 @@ class UnixConn {
   }
 
   // Read/Write a buffer
-  std::expected<int, sigmaos::serr::Error> Read(std::vector<unsigned char> &b);
-  std::expected<int, sigmaos::serr::Error> Write(const std::vector<unsigned char> &b);
+  std::expected<int, sigmaos::serr::Error> Read(std::string *b);
+  std::expected<int, sigmaos::serr::Error> Write(const std::string *b);
 
   // Read/Write a number
   std::expected<uint32_t, sigmaos::serr::Error> ReadUint32();
@@ -58,8 +58,8 @@ class UnixConn {
   static bool _l;
   static bool _l_e;
 
-  std::expected<int, sigmaos::serr::Error> read_bytes(unsigned char *b, size_t size);
-  std::expected<int, sigmaos::serr::Error> write_bytes(const unsigned char *b, size_t size);
+  std::expected<int, sigmaos::serr::Error> read_bytes(char *b, size_t size);
+  std::expected<int, sigmaos::serr::Error> write_bytes(const char *b, size_t size);
 };
 
 };

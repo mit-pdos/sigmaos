@@ -55,13 +55,13 @@ class Clnt {
   std::expected<int, sigmaos::serr::Error> Open(std::string pn, int mode, bool wait);
   std::expected<int, sigmaos::serr::Error> Rename(std::string src, std::string dst);
   std::expected<int, sigmaos::serr::Error> Remove(std::string pn);
-  std::expected<std::vector<unsigned char>, sigmaos::serr::Error> GetFile(std::string pn);
-  std::expected<uint32_t, sigmaos::serr::Error> PutFile(std::string pn, int perm, int mode, std::vector<unsigned char> data, uint64_t offset, uint64_t leaseID);
-  std::expected<uint32_t, sigmaos::serr::Error> Read(int fd, std::vector<unsigned char> b);
-  std::expected<uint32_t, sigmaos::serr::Error> Pread(int fd, std::vector<unsigned char> b, uint64_t offset);
+  std::expected<std::string *, sigmaos::serr::Error> GetFile(std::string pn);
+  std::expected<uint32_t, sigmaos::serr::Error> PutFile(std::string pn, int perm, int mode, std::string *data, uint64_t offset, uint64_t leaseID);
+  std::expected<uint32_t, sigmaos::serr::Error> Read(int fd, std::string *b);
+  std::expected<uint32_t, sigmaos::serr::Error> Pread(int fd, std::string *b, uint64_t offset);
   // TODO: support PreadRdr?
   //func (scc *SPProxyClnt) PreadRdr(fd int, o sp.Toffset, sz sp.Tsize) (io.ReadCloser, error) {
-  std::expected<uint32_t, sigmaos::serr::Error> Write(int fd, std::vector<unsigned char> b);
+  std::expected<uint32_t, sigmaos::serr::Error> Write(int fd, std::string *b);
   std::expected<int, sigmaos::serr::Error> Seek(int fd, uint64_t offset);
   // TODO: fence type in CreateLeased?
   std::expected<int, sigmaos::serr::Error> CreateLeased(std::string path, int perm, int mode, uint64_t leaseID/*, f sp.Tfence*/);
@@ -70,7 +70,7 @@ class Clnt {
   std::expected<int, sigmaos::serr::Error> FenceDir(std::string pn/*, f sp.Tfence*/);
   // TODO: support WriteFence?
   //func (scc *SPProxyClnt) WriteFence(fd int, d []byte, f sp.Tfence) (sp.Tsize, error) {
-  std::expected<int, sigmaos::serr::Error> WriteRead(int fd, std::vector<std::vector<unsigned char>> in_iov, std::vector<std::vector<unsigned char>> out_iov);
+  std::expected<int, sigmaos::serr::Error> WriteRead(int fd, std::vector<std::string *> in_iov, std::vector<std::string *> out_iov);
   std::expected<int, sigmaos::serr::Error> DirWatch(int fd);
   std::expected<int, sigmaos::serr::Error> MountTree(std::shared_ptr<TendpointProto> ep, std::string tree, std::string mount);
   std::expected<bool, sigmaos::serr::Error> IsLocalMount(std::shared_ptr<TendpointProto> ep);

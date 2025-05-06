@@ -40,7 +40,7 @@ std::expected<int, sigmaos::serr::Error> Clnt::Test() {
   {
     std::string msg("Hello world! I'm a CPP proc!");
     log(TEST, "PutFile message \"{}\" length {}", msg, msg.size());
-    auto res = PutFile("name/s3/~local/9ps3/hello-cpp-1", 0777, 0, std::vector<unsigned char>(msg.begin(), msg.end()), 0, 0);
+    auto res = PutFile("name/s3/~local/9ps3/hello-cpp-1", 0777, 0, &msg, 0, 0);
     if (!res.has_value()) {
       log(SPPROXYCLNT_ERR, "Err RPC: {}", res.error());
       return std::unexpected(res.error());
@@ -56,8 +56,7 @@ std::expected<int, sigmaos::serr::Error> Clnt::Test() {
       return std::unexpected(res.error());
     }
     auto b = res.value();
-    std::string msg(b.begin(), b.end());
-    log(TEST, "GetFile successful {}: \"{}\"", pn, msg);
+    log(TEST, "GetFile successful {}: \"{}\"", pn, *b);
   }
   log(TEST, "Test successful");
   return 0;
@@ -170,16 +169,17 @@ std::expected<int, sigmaos::serr::Error> Clnt::Remove(std::string pn) {
   return 0;
 }
 
-std::expected<std::vector<unsigned char>, sigmaos::serr::Error> Clnt::GetFile(std::string pn) {
+std::expected<std::string *, sigmaos::serr::Error> Clnt::GetFile(std::string pn) {
   log(SPPROXYCLNT, "GetFile: {}", pn);
   SigmaPathReq req;
   SigmaDataRep rep;
   req.set_path(pn);
   Blob blob;
   auto iov = blob.mutable_iov();
+  // TODO: return a smart ptr
   // TODO: What if size is wrong?
-  std::string s(1000, '\0');
-  iov->AddAllocated(&s);
+  std::string *s = new std::string(1000, '\0');
+  iov->AddAllocated(s);
   rep.set_allocated_blob(&blob);
   auto res = _rpcc->RPC("SPProxySrvAPI.GetFile", req, rep);
   if (!res.has_value()) {
@@ -190,20 +190,17 @@ std::expected<std::vector<unsigned char>, sigmaos::serr::Error> Clnt::GetFile(st
     return std::unexpected(sigmaos::serr::Error((sigmaos::serr::Terror) rep.err().errcode(), rep.err().obj()));
   }
   log(SPPROXYCLNT, "GetFile done: {}", pn);
-  log(SPPROXYCLNT, "GetFile done addr: {:x} first byte: {}", (uint64_t) s.c_str(), char(s[0]));
+  log(SPPROXYCLNT, "GetFile done addr: {:x} first byte: {}", (uint64_t) s->c_str(), char(s->at(0)));
   auto _ = iov->ReleaseLast();
   auto _ = rep.release_blob();
-  std::vector<unsigned char> b(1000);
-  return b;
+  return s;
 }
 
-std::expected<uint32_t, sigmaos::serr::Error> Clnt::PutFile(std::string pn, int perm, int mode, std::vector<unsigned char> data, uint64_t offset, uint64_t leaseID) {
-  log(SPPROXYCLNT, "PutFile: {} {} {} {} {} {}", pn, perm, mode, data.size(), offset, leaseID);
+std::expected<uint32_t, sigmaos::serr::Error> Clnt::PutFile(std::string pn, int perm, int mode, std::string *data, uint64_t offset, uint64_t leaseID) {
+  log(SPPROXYCLNT, "PutFile: {} {} {} {} {} {}", pn, perm, mode, data->size(), offset, leaseID);
   Blob blob;
   auto iov = blob.mutable_iov();
-  // TODO: actually do zero-copy
-  // TODO: convenience fn to do this conversion
-  iov->Add(std::string(data.begin(), data.end()));
+  iov->AddAllocated(data);
   SigmaPutFileReq req;
   SigmaSizeRep rep;
   req.set_path(pn);
@@ -220,7 +217,7 @@ std::expected<uint32_t, sigmaos::serr::Error> Clnt::PutFile(std::string pn, int 
   if (rep.err().errcode() != sigmaos::serr::Terror::TErrNoError) {
     return std::unexpected(sigmaos::serr::Error((sigmaos::serr::Terror) rep.err().errcode(), rep.err().obj()));
   }
-  log(SPPROXYCLNT, "PutFile done: {} {} {} {} {} {}", pn, perm, mode, data.size(), offset, leaseID);
+  log(SPPROXYCLNT, "PutFile done: {} {} {} {} {} {}", pn, perm, mode, data->size(), offset, leaseID);
   // Clear the iov
   auto _ = iov->ReleaseLast();
   auto _ = req.release_blob();
@@ -228,17 +225,17 @@ std::expected<uint32_t, sigmaos::serr::Error> Clnt::PutFile(std::string pn, int 
 
 }
 
-std::expected<uint32_t, sigmaos::serr::Error> Clnt::Read(int fd, std::vector<unsigned char> b) {
+std::expected<uint32_t, sigmaos::serr::Error> Clnt::Read(int fd, std::string *b) {
   throw std::runtime_error("unimplemented: blobs");
 }
 
-std::expected<uint32_t, sigmaos::serr::Error> Clnt::Pread(int fd, std::vector<unsigned char> b, uint64_t offset) {
+std::expected<uint32_t, sigmaos::serr::Error> Clnt::Pread(int fd, std::string *b, uint64_t offset) {
   throw std::runtime_error("unimplemented: blobs");
 }
 
 // TODO: support PreadRdr?
 //func (scc *SPProxyClnt) PreadRdr(fd int, o sp.Toffset, sz sp.Tsize) (io.ReadCloser, error) {
-std::expected<uint32_t, sigmaos::serr::Error> Clnt::Write(int fd, std::vector<unsigned char> b) {
+std::expected<uint32_t, sigmaos::serr::Error> Clnt::Write(int fd, std::string *b) {
   throw std::runtime_error("unimplemented: blobs");
 }
 
@@ -318,7 +315,7 @@ std::expected<int, sigmaos::serr::Error> Clnt::FenceDir(std::string pn/*, f sp.T
 // TODO: support WriteFence?
 //func (scc *SPProxyClnt) WriteFence(fd int, d []byte, f sp.Tfence) (sp.Tsize, error) {
 
-std::expected<int, sigmaos::serr::Error> Clnt::WriteRead(int fd, std::vector<std::vector<unsigned char>> in_iov, std::vector<std::vector<unsigned char>> out_iov) {
+std::expected<int, sigmaos::serr::Error> Clnt::WriteRead(int fd, std::vector<std::string *> in_iov, std::vector<std::string *> out_iov) {
   throw std::runtime_error("unimplemented: blob");
   log(SPPROXYCLNT, "WriteRead: {}", fd);
   SigmaWriteReq req;

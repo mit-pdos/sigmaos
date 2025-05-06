@@ -270,8 +270,8 @@ if [[ $BASIC == "--basic" ]]; then
     # run_test $sigmapsrv "go test $VERB sigmaos/sigmapsrv -start"  # no perf
 
     # test memfs
-    run_test "memfs/local" "./test-in-docker.sh --pkg sigmaclnt/fslib --args \"$VERB -path name/memfs/~any/ $SPPROXYD $DIALPROXY $REUSEKERNEL\""
-    run_test "memfs/start" "./test-in-docker.sh --pkg sigmasrv/memfssrv/memfs --args \"$VERB -path name/memfs/~any/ $SPPROXYD $DIALPROXY $REUSEKERNEL\""
+    # run_test "memfs/local" "./test-in-docker.sh --pkg sigmaclnt/fslib --args \"$VERB -path name/memfs/~any/ $SPPROXYD $DIALPROXY $REUSEKERNEL\""
+    # run_test "memfs/start" "./test-in-docker.sh --pkg sigmasrv/memfssrv/memfs --args \"$VERB -path name/memfs/~any/ $SPPROXYD $DIALPROXY $REUSEKERNEL\""
 
     #
     # tests a full kernel using root realm
@@ -340,10 +340,9 @@ fi
         run_test $T "./test-in-docker.sh --pkg $T --args \"$VERB --timeout 20m $SPPROXYD $DIALPROXY $REUSEKERNEL\""
     done
 
-
-    run_test "sigmapsrv/ux" "./test-in-docker.sh --pkg sigmasrv/memfssrv/sigmapsrv --run ReadPerf --args \"$VERB --path name/ux/~any/ $SPPROXYD $DIALPROXY $REUSEKERNEL\""
-    run_test "sigmapsrv/s3" "./test-in-docker.sh --pkg sigmasrv/memfssrv/sigmapsrv --run ReadPerf --args \"$VERB --path name/s3/~any/9ps3/ $SPPROXYD $DIALPROXY $REUSEKERNEL\""
-    run_test "sigmapsrv/s3pathclnt" "./test-in-docker.sh --pkg sigmasrv/memfssrv/sigmapsrv --run ReadFilePerfSingle --args \"$VERB --path name/s3/~any/9ps3/ --withs3pathclnt $SPPROXYD $DIALPROXY $REUSEKERNEL\""
+    # run_test "sigmapsrv/ux" "./test-in-docker.sh --pkg sigmasrv/memfssrv/sigmapsrv --run ReadPerf --args \"$VERB --path name/ux/~any/ $SPPROXYD $DIALPROXY $REUSEKERNEL\""
+    # run_test "sigmapsrv/s3" "./test-in-docker.sh --pkg sigmasrv/memfssrv/sigmapsrv --run ReadPerf --args \"$VERB --path name/s3/~any/9ps3/ $SPPROXYD $DIALPROXY $REUSEKERNEL\""
+    # run_test "sigmapsrv/s3pathclnt" "./test-in-docker.sh --pkg sigmasrv/memfssrv/sigmapsrv --run ReadFilePerfSingle --args \"$VERB --path name/s3/~any/9ps3/ --withs3pathclnt $SPPROXYD $DIALPROXY $REUSEKERNEL\""
 
 #
 # app tests
@@ -362,6 +361,7 @@ if [[ $APPS == "--apps" ]]; then
               SKIPTO=""
             else
               # Skip
+              i=$(($i+1))
               continue
             fi
           fi

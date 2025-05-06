@@ -12,6 +12,7 @@ import (
 	dialproxyclnt "sigmaos/dialproxy/clnt"
 	"sigmaos/ft/procgroupmgr"
 	"sigmaos/namesrv/fsetcd"
+	"sigmaos/path"
 	"sigmaos/proc"
 	sesssrv "sigmaos/session/srv"
 	"sigmaos/sigmaclnt"

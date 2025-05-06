@@ -17,15 +17,15 @@ void extract_blob_iov(google::protobuf::Message &msg, std::vector<std::vector<un
   for (auto fd : fields) {
     // If one of the fields is a blob, get it & return it
     if (fd->name() == "blob") {
-      log(TEST, "RPC {} has blob: {}", msg.GetTypeName(), fd->full_name());
+      log(RPCCLNT, "RPC {} has blob: {}", msg.GetTypeName(), fd->full_name());
       google::protobuf::Message *bmsg;
       // Clear the existing blob object if desired, and return ownership of the
       // blob to the caller. Otherwise, return a mutable reference to the blob,
       // still owned by the original message.
       bmsg = r->MutableMessage(&msg, fd);
-      log(TEST, "RPC {} blob type: {}", msg.GetTypeName(), bmsg->GetTypeName());
+      log(RPCCLNT, "RPC {} blob type: {}", msg.GetTypeName(), bmsg->GetTypeName());
       blob = dynamic_cast<Blob *>(bmsg);
-      log(TEST, "RPC {} blob type casted, resulting ptr: 0x{:x}", msg.GetTypeName(), (uint64_t) blob);
+      log(RPCCLNT, "RPC {} blob type casted, resulting ptr: 0x{:x}", msg.GetTypeName(), (uint64_t) blob);
       has_blob = true;
       break;
     }
@@ -41,15 +41,61 @@ void extract_blob_iov(google::protobuf::Message &msg, std::vector<std::vector<un
   int prevsz = dst->size();
   dst->resize(prevsz + extracted_bufs.size());
   for (int i = 0; i < extracted_bufs.size(); i++) {
+    log(RPCCLNT, "Extracting buf starting at 0x{:x}", (uint64_t) &(extracted_bufs.at(i)->front()));
     dst->at(prevsz + i) = std::vector<unsigned char>(extracted_bufs.at(i)->begin(), extracted_bufs.at(i)->end());
+//    dst->at(prevsz + i) = std::vector<unsigned char>((unsigned char *) &(extracted_bufs.at(i)->front()), extracted_bufs.at(i)->size());
   }
   // Clear the extracted buffer vector so that it doesn't free the underlying
   // buffer memory when it is deleted. The memory is now owned by dst.
   extracted_bufs.clear();
 }
 
+// If the given RPC has a blob field, extract its IOVecs.
+void set_blob_iov(std::vector<std::vector<unsigned char>> *src, google::protobuf::Message &msg) {
+  Blob *blob = nullptr;
+  bool has_blob = false;
+  auto r = msg.GetReflection();
+  std::vector<const google::protobuf::FieldDescriptor *> fields;
+  // List the protobuf's fields
+  r->ListFields(msg, &fields);
+  for (auto fd : fields) {
+    // If one of the fields is a blob, get it & return it
+    if (fd->name() == "blob") {
+      log(RPCCLNT, "RPC {} has blob: {}", msg.GetTypeName(), fd->full_name());
+      google::protobuf::Message *bmsg;
+      // Clear the existing blob object if desired, and return ownership of the
+      // blob to the caller. Otherwise, return a mutable reference to the blob,
+      // still owned by the original message.
+      bmsg = r->MutableMessage(&msg, fd);
+      log(RPCCLNT, "RPC {} blob type: {}", msg.GetTypeName(), bmsg->GetTypeName());
+      blob = dynamic_cast<Blob *>(bmsg);
+      log(RPCCLNT, "RPC {} blob type casted, resulting ptr: 0x{:x}", msg.GetTypeName(), (uint64_t) blob);
+      has_blob = true;
+      break;
+    }
+  }
+  // Bail out if no blob was found
+  if (!has_blob) {
+    return;
+  }
+  log(RPCCLNT, "RPC src buf num iov: {}", src->size());
+  // Get a pointer to the blob IOV
+  auto blob_iov = blob->mutable_iov();
+  // TODO: factor the above into its own fn
+  for (auto src_buf : *src) {
+    log(RPCCLNT, "RPC src buf len: {}", src_buf.size());
+    log(RPCCLNT, "RPC src buf 1st byte: {}", (char) src_buf[0]);
+    log(RPCCLNT, "RPC src buf addr: {:x}", (uint64_t) &(src_buf.front()));
+    std::string *buf = new std::string(src_buf.begin(), src_buf.end());
+    log(RPCCLNT, "RPC src buf before alloc");
+    blob_iov->AddAllocated(buf);
+    log(RPCCLNT, "RPC src buf after alloc");
+  }
+  log(RPCCLNT, "done with set iov");
+}
+
 std::expected<int, sigmaos::serr::Error> Clnt::RPC(std::string method, google::protobuf::Message &req, google::protobuf::Message &rep) {
-  log(TEST, "Get in_blob {}", method);
+  log(RPCCLNT, "Get in_blob {}", method);
   // Create a vector with a space for the serialized request protobuf
   std::vector<std::vector<unsigned char>> in_iov(1);
   // Extract any input IOVecs from the request RPC
@@ -61,18 +107,15 @@ std::expected<int, sigmaos::serr::Error> Clnt::RPC(std::string method, google::p
   // TODO: serialize directly to ostream
   req.SerializeToString(&req_data);
   in_iov.at(0) = std::vector<unsigned char>(req_data.begin(), req_data.end());
-  // TODO: handle iovec output buffers
-//	// Prepend 2 empty slots to the out iovec: one for the rpcproto.Rep
-//	// wrapper, and one for the marshaled res proto.Message
-//	outiov := make(sessp.IoVec, 2)
-//	outblob := rpc.GetBlob(res)
-//	if outblob != nil { // handle blob
-//		// Get the reply's blob, if it has one, so that data can be read directly
-//		// into buffers in its IoVec
-//		outiov = append(outiov, outblob.GetIoVec()...)
-//	}
-  std::vector<std::vector<unsigned char>> out_iov;
+	// Prepend 2 empty slots to the out iovec: one for the rpcproto.Rep
+	// wrapper, and one for the marshaled res proto.Message
+  std::vector<std::vector<unsigned char>> out_iov(2);
+  log(RPCCLNT, "Get out_blob {}", method);
+  // Extract any output IOVecs from the response RPC
+  extract_blob_iov(rep, &out_iov);
+  log(RPCCLNT, "out_iov len {}", out_iov.size());
   auto res = wrap_and_run_rpc(method, in_iov, out_iov);
+  log(RPCCLNT, "out_iov len post {}", out_iov.size());
   if (!res.has_value()) {
     return std::unexpected(res.error());
   }
@@ -84,20 +127,19 @@ std::expected<int, sigmaos::serr::Error> Clnt::RPC(std::string method, google::p
   rep_data = std::string(out_iov[0].begin(), out_iov[0].end());
   // TODO: deserialize directly from stream (should we be using strings at all?)
   rep.ParseFromString(rep_data);
-  log(TEST, "Get outblob {}", method);
+  // Remove the first element in iov, which contains the serialized reply
+  // message
+  out_iov.erase(out_iov.begin());
+  // Set the reply's blob's IOV to point to the returned data, if applicable.
+  set_blob_iov(&out_iov, rep);
+  log(RPCCLNT, "Clear out iov");
+  // Clear the output iov buffer, so that the memory is now exclusively owned
+  // by the reply protobuf object.
+// TODO: clear iov?
+//  out_iov.clear();
+  // Set out blob again
 //  Blob *out_blob = GetBlob(rep, false);
-  // TODO: make sure out blob iovec isn't reset after deserializing
-  // TODO: handle blobs
-//	if outblob != nil {
-//		// Need to get the blob again, because its value will be reset during
-//		// unmarshaling
-//		outblob = rpc.GetBlob(res)
-//		// Set the IoVec to handle replies with blobs
-//		outblob.SetIoVec(outiov[2:])
-//	}
-//	return nil
-//
-  log(TEST, "Returning from RPC fn");
+  log(RPCCLNT, "Returning from RPC fn");
   return 0;
 }
 
@@ -106,6 +148,7 @@ std::expected<Rep, sigmaos::serr::Error> Clnt::wrap_and_run_rpc(std::string meth
   std::vector<std::vector<unsigned char>> wrapped_in_iov;
   Req req;
   std::string wrapper_req_data;
+  // TODO: we aren't actually doing 0-copy here
   std::vector<std::vector<unsigned char>> wrapped_out_iov;
   Rep rep;
   std::string wrapper_rep_data;
@@ -126,15 +169,19 @@ std::expected<Rep, sigmaos::serr::Error> Clnt::wrap_and_run_rpc(std::string meth
     return std::unexpected(res.error());
   }
   wrapped_out_iov = res.value()->GetOutIOVec();
+  log(RPCCLNT, "Wrapped out iov len post-rpc: {}", wrapped_out_iov.size());
   // Deserialize the wrapper
   wrapper_rep_data = std::string(wrapped_out_iov[0].begin(), wrapped_out_iov[0].end());
   // TODO: deserialize directly from stream (should we be using strings at all?)
   rep.ParseFromString(wrapper_rep_data);
+  // Copy out the resulting out iovs
   out_iov.resize(wrapped_out_iov.size() - 1);
-  out_iov.insert(out_iov.begin(), std::next(wrapped_out_iov.begin()), wrapped_out_iov.end());
+  for (int i = 0; i < out_iov.size(); i++) {
+    out_iov.at(i) = wrapped_out_iov.at(i + 1);
+  }
 	// TODO: Record stats
 //	rpcc.si.Stat(method, time.Since(start).Microseconds())
-  log(TEST, "Returning from wrapped RPC");
+  log(RPCCLNT, "Returning from wrapped RPC");
   return rep;
 }
   

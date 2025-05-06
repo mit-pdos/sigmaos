@@ -39,16 +39,25 @@ std::expected<int, sigmaos::serr::Error> Clnt::Test() {
   }
   {
     std::string msg("Hello world! I'm a CPP proc!");
-    log(TEST, "Going to write a message of length {}", msg.size());
+    log(TEST, "PutFile message \"{}\" length {}", msg, msg.size());
     auto res = PutFile("name/s3/~local/9ps3/hello-cpp-1", 0777, 0, std::vector<unsigned char>(msg.begin(), msg.end()), 0, 0);
     if (!res.has_value()) {
       log(SPPROXYCLNT_ERR, "Err RPC: {}", res.error());
       return std::unexpected(res.error());
     }
-//    auto b = res.value();
-//    std::string msg(b.begin(), b.end());
-//    log(TEST, "GetFile successful: {}", msg);
     log(TEST, "PutFile successful");
+  }
+  {
+    std::string pn("name/s3/~local/9ps3/hello-cpp");
+    log(TEST, "GetFile {}", pn);
+    auto res = GetFile(pn);
+    if (!res.has_value()) {
+      log(SPPROXYCLNT_ERR, "Err RPC: {}", res.error());
+      return std::unexpected(res.error());
+    }
+    auto b = res.value();
+    std::string msg(b.begin(), b.end());
+    log(TEST, "GetFile successful {}: \"{}\"", pn, msg);
   }
   log(TEST, "Test successful");
   return 0;
@@ -166,6 +175,12 @@ std::expected<std::vector<unsigned char>, sigmaos::serr::Error> Clnt::GetFile(st
   SigmaPathReq req;
   SigmaDataRep rep;
   req.set_path(pn);
+  Blob blob;
+  auto iov = blob.mutable_iov();
+  // TODO: What if size is wrong?
+  std::string s(1000, '\0');
+  iov->AddAllocated(&s);
+  rep.set_allocated_blob(&blob);
   auto res = _rpcc->RPC("SPProxySrvAPI.GetFile", req, rep);
   if (!res.has_value()) {
     log(SPPROXYCLNT_ERR, "Err RPC: {}", res.error());
@@ -175,9 +190,10 @@ std::expected<std::vector<unsigned char>, sigmaos::serr::Error> Clnt::GetFile(st
     return std::unexpected(sigmaos::serr::Error((sigmaos::serr::Terror) rep.err().errcode(), rep.err().obj()));
   }
   log(SPPROXYCLNT, "GetFile done: {}", pn);
-  // TODO: implement blobs
-  throw std::runtime_error("unimplemented: blobs");
-  std::vector<unsigned char> b;
+  log(SPPROXYCLNT, "GetFile done addr: {:x} first byte: {}", (uint64_t) s.c_str(), char(s[0]));
+  auto _ = iov->ReleaseLast();
+  auto _ = rep.release_blob();
+  std::vector<unsigned char> b(1000);
   return b;
 }
 
@@ -185,6 +201,7 @@ std::expected<uint32_t, sigmaos::serr::Error> Clnt::PutFile(std::string pn, int 
   log(SPPROXYCLNT, "PutFile: {} {} {} {} {} {}", pn, perm, mode, data.size(), offset, leaseID);
   Blob blob;
   auto iov = blob.mutable_iov();
+  // TODO: actually do zero-copy
   // TODO: convenience fn to do this conversion
   iov->Add(std::string(data.begin(), data.end()));
   SigmaPutFileReq req;
@@ -204,7 +221,6 @@ std::expected<uint32_t, sigmaos::serr::Error> Clnt::PutFile(std::string pn, int 
     return std::unexpected(sigmaos::serr::Error((sigmaos::serr::Terror) rep.err().errcode(), rep.err().obj()));
   }
   log(SPPROXYCLNT, "PutFile done: {} {} {} {} {} {}", pn, perm, mode, data.size(), offset, leaseID);
-  // TODO: check we are doing this right
   // Clear the iov
   auto _ = iov->ReleaseLast();
   auto _ = req.release_blob();

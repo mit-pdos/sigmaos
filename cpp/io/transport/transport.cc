@@ -35,6 +35,7 @@ std::expected<std::shared_ptr<Call>, sigmaos::serr::Error> Transport::ReadCall()
       return std::unexpected(res.error());
     }
     seqno = res.value();
+    log(TRANSPORT, "ReadCall seqno {}", seqno);
   }
   {
     auto res = sigmaos::io::frame::ReadNumFrames(_conn);
@@ -42,6 +43,7 @@ std::expected<std::shared_ptr<Call>, sigmaos::serr::Error> Transport::ReadCall()
       return std::unexpected(res.error());
     }
     nframes = res.value();
+    log(TRANSPORT, "ReadCall seqno {} nframes {}", seqno, nframes);
   }
   auto call = _calls.Remove(seqno).value();
   // Resize the iov according to the incoming number of frames

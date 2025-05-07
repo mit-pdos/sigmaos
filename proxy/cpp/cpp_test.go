@@ -25,15 +25,17 @@ func runSpawnLatency(ts *test.RealmTstate, kernels []string, evict bool) *proc.P
 	SLEEP := 2 * time.Second
 	start := time.Now()
 	var evicted bool
-	go func() {
-		time.Sleep(SLEEP)
-		evicted = true
-		err := ts.Evict(p.GetPid())
-		assert.Nil(ts.Ts.T, err, "Evict")
-	}()
+	if evict {
+		go func() {
+			time.Sleep(SLEEP)
+			evicted = true
+			err := ts.Evict(p.GetPid())
+			assert.Nil(ts.Ts.T, err, "Evict")
+		}()
+	}
 	db.DPrintf(db.TEST, "CPP proc started")
 	status, err := ts.WaitExit(p.GetPid())
-	db.DPrintf(db.TEST, "CPP proc exited")
+	db.DPrintf(db.TEST, "CPP proc exited, status: %v", status)
 	assert.Nil(ts.Ts.T, err, "WaitExit error")
 	if evict {
 		assert.True(ts.Ts.T, evicted && time.Since(start) >= SLEEP, "Exited too fast %v %v", evicted, time.Since(start))

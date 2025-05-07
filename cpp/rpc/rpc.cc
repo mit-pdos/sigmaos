@@ -6,8 +6,7 @@ namespace rpc {
 bool Clnt::_l = sigmaos::util::log::init_logger(RPCCLNT);
 bool Clnt::_l_e = sigmaos::util::log::init_logger(RPCCLNT_ERR);
 
-// If the given RPC has a blob field, extract its IOVecs.
-void extract_blob_iov(google::protobuf::Message &msg, std::vector<std::string *> *dst) {
+std::pair<Blob *, bool> extract_blob(google::protobuf::Message &msg) {
   Blob *blob = nullptr;
   bool has_blob = false;
   auto r = msg.GetReflection();
@@ -30,6 +29,14 @@ void extract_blob_iov(google::protobuf::Message &msg, std::vector<std::string *>
       break;
     }
   }
+  return std::make_pair(blob, has_blob);
+}
+
+// If the given RPC has a blob field, extract its IOVecs.
+void extract_blob_iov(google::protobuf::Message &msg, std::vector<std::string *> *dst) {
+  auto p = extract_blob(msg);
+  Blob *blob = p.first;
+  bool has_blob = p.second;
   // Bail out if no blob was found
   if (!has_blob) {
     return;
@@ -52,28 +59,9 @@ void extract_blob_iov(google::protobuf::Message &msg, std::vector<std::string *>
 
 // If the given RPC has a blob field, extract its IOVecs.
 void set_blob_iov(std::vector<std::string *> *src, google::protobuf::Message &msg) {
-  Blob *blob = nullptr;
-  bool has_blob = false;
-  auto r = msg.GetReflection();
-  std::vector<const google::protobuf::FieldDescriptor *> fields;
-  // List the protobuf's fields
-  r->ListFields(msg, &fields);
-  for (auto fd : fields) {
-    // If one of the fields is a blob, get it & return it
-    if (fd->name() == "blob") {
-      log(RPCCLNT, "RPC {} has blob: {}", msg.GetTypeName(), fd->full_name());
-      google::protobuf::Message *bmsg;
-      // Clear the existing blob object if desired, and return ownership of the
-      // blob to the caller. Otherwise, return a mutable reference to the blob,
-      // still owned by the original message.
-      bmsg = r->MutableMessage(&msg, fd);
-      log(RPCCLNT, "RPC {} blob type: {}", msg.GetTypeName(), bmsg->GetTypeName());
-      blob = dynamic_cast<Blob *>(bmsg);
-      log(RPCCLNT, "RPC {} blob type casted, resulting ptr: 0x{:x}", msg.GetTypeName(), (uint64_t) blob);
-      has_blob = true;
-      break;
-    }
-  }
+  auto p = extract_blob(msg);
+  Blob *blob = p.first;
+  bool has_blob = p.second;
   // Bail out if no blob was found
   if (!has_blob) {
     return;
@@ -116,7 +104,7 @@ std::expected<int, sigmaos::serr::Error> Clnt::RPC(std::string method, google::p
     return std::unexpected(sigmaos::serr::Error(sigmaos::serr::TErrUnreachable, std::format("rpc error: {}", wrapped_rep.err().ShortDebugString())));
   }
   // Deserialize the reply
-  rep_data = out_iov[0];
+  rep_data = out_iov.at(0);
   // TODO: deserialize directly from stream (should we be using strings at all?)
   rep.ParseFromString(*rep_data);
   // Remove the first element in iov, which contains the serialized reply
@@ -158,7 +146,7 @@ std::expected<Rep, sigmaos::serr::Error> Clnt::wrap_and_run_rpc(std::string meth
     return std::unexpected(res.error());
   }
   // Deserialize the wrapper
-  wrapper_rep_data = out_iov[0];
+  wrapper_rep_data = out_iov.at(0);
   // TODO: deserialize directly from stream
   rep.ParseFromString(*wrapper_rep_data);
   // Remove the wrapper from the out IOVec

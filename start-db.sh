@@ -16,9 +16,6 @@ usage() {
   echo "Usage: $0 yml..."
 }
 
-PORT=4406  # use non-default port number on host
-MONGO_PORT=4407
-
 ROOT=$(dirname $(realpath $0))
 source $ROOT/env/env.sh
 
@@ -35,11 +32,9 @@ docker pull mariadb:10.4
 if ! docker ps | grep -q $DB_IMAGE_NAME; then
     echo "start db"
     docker run \
-    --network $TESTER_NETWORK \
     --name $DB_IMAGE_NAME \
     -e MYSQL_ROOT_PASSWORD=sigmadb \
     -d mariadb
-#    -p $PORT:3306 \
 fi
 
 until [ "`docker inspect -f {{.State.Running}} $DB_IMAGE_NAME`"=="true" ]; do
@@ -84,6 +79,7 @@ fi
 if [[ "$TESTER_NETWORK" != "host" ]]; then
   docker network connect $TESTER_NETWORK $DB_IMAGE_NAME
   docker network disconnect bridge $DB_IMAGE_NAME
+  ip=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $DB_IMAGE_NAME)
 fi
 
 echo "db IP post reconnect: $ip"
@@ -95,7 +91,6 @@ if ! docker ps | grep -q $MONGO_IMAGE_NAME; then
       --name $MONGO_IMAGE_NAME \
       --network $TESTER_NETWORK \
       -d mongo:4.4.6
-#      -p $MONGO_PORT:27017 \
 fi
 
 until [ "`docker inspect -f {{.State.Running}} $MONGO_IMAGE_NAME`"=="true" ]; do

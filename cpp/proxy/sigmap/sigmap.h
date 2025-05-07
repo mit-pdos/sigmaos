@@ -59,8 +59,6 @@ class Clnt {
   std::expected<uint32_t, sigmaos::serr::Error> PutFile(std::string pn, int perm, int mode, std::string *data, uint64_t offset, uint64_t leaseID);
   std::expected<uint32_t, sigmaos::serr::Error> Read(int fd, std::string *b);
   std::expected<uint32_t, sigmaos::serr::Error> Pread(int fd, std::string *b, uint64_t offset);
-  // TODO: support PreadRdr?
-  //func (scc *SPProxyClnt) PreadRdr(fd int, o sp.Toffset, sz sp.Tsize) (io.ReadCloser, error) {
   std::expected<uint32_t, sigmaos::serr::Error> Write(int fd, std::string *b);
   std::expected<int, sigmaos::serr::Error> Seek(int fd, uint64_t offset);
   // TODO: fence type in CreateLeased?

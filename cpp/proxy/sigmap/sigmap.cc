@@ -234,7 +234,34 @@ std::expected<uint32_t, sigmaos::serr::Error> Clnt::PutFile(std::string pn, int 
 }
 
 std::expected<uint32_t, sigmaos::serr::Error> Clnt::Read(int fd, std::string *b) {
-  return Pread(fd, b, ~0);
+  log(SPPROXYCLNT, "Read: {} {} {}", fd, b->size(), offset);
+  SigmaReadReq req;
+  SigmaDataRep rep;
+  req.set_fd(fd);
+  req.set_size(b->size());
+  req.set_off(~0);
+  Blob blob;
+  auto iov = blob.mutable_iov();
+  iov->AddAllocated(b);
+  rep.set_allocated_blob(&blob);
+  auto res = _rpcc->RPC("SPProxySrvAPI.Read", req, rep);
+  if (!res.has_value()) {
+    log(SPPROXYCLNT_ERR, "Err RPC: {}", res.error());
+    return std::unexpected(res.error());
+  }
+  if (rep.err().errcode() != sigmaos::serr::Terror::TErrNoError) {
+    return std::unexpected(sigmaos::serr::Error((sigmaos::serr::Terror) rep.err().errcode(), rep.err().obj()));
+  }
+  log(SPPROXYCLNT, "Read done: {} {} {}", fd, b->size(), offset);
+  // Remove the data buffer from the protobuf's IOV in order to regain
+  // ownership of its underlying memory.
+  {
+    auto _ = iov->ReleaseLast();
+  }
+  {
+    auto _ = rep.release_blob();
+  }
+  return b->size();
 }
 
 std::expected<uint32_t, sigmaos::serr::Error> Clnt::Pread(int fd, std::string *b, uint64_t offset) {
@@ -248,7 +275,7 @@ std::expected<uint32_t, sigmaos::serr::Error> Clnt::Pread(int fd, std::string *b
   auto iov = blob.mutable_iov();
   iov->AddAllocated(b);
   rep.set_allocated_blob(&blob);
-  auto res = _rpcc->RPC("SPProxySrvAPI.GetFile", req, rep);
+  auto res = _rpcc->RPC("SPProxySrvAPI.Pread", req, rep);
   if (!res.has_value()) {
     log(SPPROXYCLNT_ERR, "Err RPC: {}", res.error());
     return std::unexpected(res.error());
@@ -268,10 +295,34 @@ std::expected<uint32_t, sigmaos::serr::Error> Clnt::Pread(int fd, std::string *b
   return b->size();
 }
 
-// TODO: support PreadRdr?
-//func (scc *SPProxyClnt) PreadRdr(fd int, o sp.Toffset, sz sp.Tsize) (io.ReadCloser, error) {
 std::expected<uint32_t, sigmaos::serr::Error> Clnt::Write(int fd, std::string *b) {
   throw std::runtime_error("unimplemented: blobs");
+  log(SPPROXYCLNT, "Write: {} {}", fd, b->size());
+  Blob blob;
+  auto iov = blob.mutable_iov();
+  iov->AddAllocated(data);
+  SigmaWriteReq req;
+  SigmaSizeRep rep;
+  req.set_fd(fd);
+  req.set_allocated_blob(&blob);
+  auto res = _rpcc->RPC("SPProxySrvAPI.Write", req, rep);
+  if (!res.has_value()) {
+    log(SPPROXYCLNT_ERR, "Err RPC: {}", res.error());
+    return std::unexpected(res.error());
+  }
+  if (rep.err().errcode() != sigmaos::serr::Terror::TErrNoError) {
+    return std::unexpected(sigmaos::serr::Error((sigmaos::serr::Terror) rep.err().errcode(), rep.err().obj()));
+  }
+  log(SPPROXYCLNT, "Write done: {} {}", fd, b->size());
+  // Remove the data buffer from the protobuf's IOV in order to regain
+  // ownership of its underlying memory.
+  {
+    auto _ = iov->ReleaseLast();
+  }
+  {
+    auto _ = req.release_blob();
+  }
+  return rep.size();
 }
 
 std::expected<int, sigmaos::serr::Error> Clnt::Seek(int fd, uint64_t offset) {

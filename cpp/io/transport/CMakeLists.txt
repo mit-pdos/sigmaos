@@ -11,6 +11,7 @@ target_link_libraries(io_transport PUBLIC
   util_log
   io_transport_internal
   io_frame
+  io_iovec
 )
 
 target_include_directories(io_transport PUBLIC ${CMAKE_SOURCE_DIR})

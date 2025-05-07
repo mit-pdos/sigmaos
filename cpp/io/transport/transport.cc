@@ -18,7 +18,7 @@ std::expected<int, sigmaos::serr::Error> Transport::WriteCall(std::shared_ptr<Ca
   if (!res.has_value()) {
     return res;
   }
-  log(TRANSPORT, "WriteCall iniov len {}", call->GetInIOVec().size());
+  log(TRANSPORT, "WriteCall iniov len {}", call->GetInIOVec()->Size());
   res = sigmaos::io::frame::WriteFrames(_conn, call->GetInIOVec());
   if (!res.has_value()) {
     return res;
@@ -46,9 +46,12 @@ std::expected<std::shared_ptr<Call>, sigmaos::serr::Error> Transport::ReadCall()
     log(TRANSPORT, "ReadCall seqno {} nframes {}", seqno, nframes);
   }
   auto call = _calls.Remove(seqno).value();
-  // Resize the iov according to the incoming number of frames
-  call->GetOutIOVec().resize(nframes);
-  auto res = sigmaos::io::frame::ReadFramesIntoIOVec(_conn, call->GetOutIOVec());
+  auto out_iov = call->GetOutIOVec();
+  if (out_iov->Size() != nframes) {
+    log(TRANSPORT_ERR, "Size of out_iov ({}) doesn't match number of frames to be read ({})", out_iov->Size(), nframes);
+    throw std::runtime_error(std::format("Size of out_iov ({}) doesn't match number of frames to be read ({})", out_iov->Size(), nframes));
+  }
+  auto res = sigmaos::io::frame::ReadFramesIntoIOVec(_conn, out_iov);
   if (!res.has_value()) {
     return std::unexpected(res.error());
   }

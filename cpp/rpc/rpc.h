@@ -8,6 +8,7 @@
 #include <util/log/log.h>
 #include <serr/serr.h>
 #include <io/demux/demux.h>
+#include <io/iovec/iovec.h>
 #include <rpc/proto/rpc.pb.h>
 
 namespace sigmaos {
@@ -34,7 +35,7 @@ class Clnt {
   static bool _l;
   static bool _l_e;
 
-  std::expected<Rep, sigmaos::serr::Error> wrap_and_run_rpc(std::string method, const std::vector<std::string *> &in_iov, std::vector<std::string *> &out_iov);
+  std::expected<Rep, sigmaos::serr::Error> wrap_and_run_rpc(std::string method, const std::shared_ptr<sigmaos::io::iovec::IOVec> in_iov, std::shared_ptr<sigmaos::io::iovec::IOVec> out_iov);
 };
 
 };

@@ -6,6 +6,7 @@
 #include <util/log/log.h>
 #include <serr/serr.h>
 #include <io/conn/conn.h>
+#include <io/iovec/iovec.h>
 
 namespace sigmaos {
 namespace io::frame {
@@ -24,14 +25,14 @@ class Frame {
 };
 
 // Read frames
-std::expected<int, sigmaos::serr::Error> ReadFrameIntoVec(std::shared_ptr<sigmaos::io::conn::UnixConn> conn, std::string *b);
-std::expected<int, sigmaos::serr::Error> ReadFramesIntoIOVec(std::shared_ptr<sigmaos::io::conn::UnixConn> conn, std::vector<std::string *> &iov);
+std::expected<int, sigmaos::serr::Error> ReadFrameIntoBuf(std::shared_ptr<sigmaos::io::conn::UnixConn> conn, std::shared_ptr<sigmaos::io::iovec::Buffer> buf);
+std::expected<int, sigmaos::serr::Error> ReadFramesIntoIOVec(std::shared_ptr<sigmaos::io::conn::UnixConn> conn, std::shared_ptr<sigmaos::io::iovec::IOVec> iov);
 std::expected<uint64_t, sigmaos::serr::Error> ReadSeqno(std::shared_ptr<sigmaos::io::conn::UnixConn> conn);
 std::expected<uint32_t, sigmaos::serr::Error> ReadNumFrames(std::shared_ptr<sigmaos::io::conn::UnixConn> conn);
 
 // Write frames
-std::expected<int, sigmaos::serr::Error> WriteFrame(std::shared_ptr<sigmaos::io::conn::UnixConn> conn, const std::string *b);
-std::expected<int, sigmaos::serr::Error> WriteFrames(std::shared_ptr<sigmaos::io::conn::UnixConn> conn, const std::vector<std::string *> &iov);
+std::expected<int, sigmaos::serr::Error> WriteFrame(std::shared_ptr<sigmaos::io::conn::UnixConn> conn, const std::shared_ptr<sigmaos::io::iovec::Buffer> buf);
+std::expected<int, sigmaos::serr::Error> WriteFrames(std::shared_ptr<sigmaos::io::conn::UnixConn> conn, const std::shared_ptr<sigmaos::io::iovec::IOVec> iov);
 std::expected<int, sigmaos::serr::Error> WriteSeqno(std::shared_ptr<sigmaos::io::conn::UnixConn> conn, uint64_t seqno);
 std::expected<int, sigmaos::serr::Error> WriteNumFrames(std::shared_ptr<sigmaos::io::conn::UnixConn> conn, uint32_t nframes);
 

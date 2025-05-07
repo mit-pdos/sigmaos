@@ -7,9 +7,9 @@ bool Frame::_l = sigmaos::util::log::init_logger(FRAME);
 bool Frame::_l_e = sigmaos::util::log::init_logger(FRAME_ERR);
 
 // Read frames
-std::expected<int, sigmaos::serr::Error> ReadFrameIntoVec(std::shared_ptr<sigmaos::io::conn::UnixConn> conn, std::string *b) {
+std::expected<int, sigmaos::serr::Error> ReadFrameIntoBuf(std::shared_ptr<sigmaos::io::conn::UnixConn> conn, std::shared_ptr<sigmaos::io::iovec::Buffer> buf) {
+  std::string *b = buf->Get();
   uint32_t nbyte = 0;
-
   auto res = conn->ReadUint32();
   if (!res.has_value()) {
     return res;
@@ -19,7 +19,7 @@ std::expected<int, sigmaos::serr::Error> ReadFrameIntoVec(std::shared_ptr<sigmao
     return std::unexpected(sigmaos::serr::Error(sigmaos::serr::TErrUnreachable, "nbyte < 4"));
   }
   nbyte -= 4;
-  log(FRAME, "ReadFrameIntoVec nbyte {} iov 0x{:x}", nbyte, (uint64_t) b);
+  log(FRAME, "ReadFrameIntoBuf nbyte {} iov 0x{:x}", nbyte, (uint64_t) b->data());
   // If the vector passed in had no underlying buffer, resize it
   if (b->size() == 0) {
     b->resize(nbyte);
@@ -39,9 +39,9 @@ std::expected<int, sigmaos::serr::Error> ReadFrameIntoVec(std::shared_ptr<sigmao
   return nbyte;
 }
 
-std::expected<int, sigmaos::serr::Error> ReadFramesIntoIOVec(std::shared_ptr<sigmaos::io::conn::UnixConn> conn, std::vector<std::string *> &iov) {
-  for (auto &b : iov) {
-    auto res = ReadFrameIntoVec(conn, b);
+std::expected<int, sigmaos::serr::Error> ReadFramesIntoIOVec(std::shared_ptr<sigmaos::io::conn::UnixConn> conn, std::shared_ptr<sigmaos::io::iovec::IOVec> iov) {
+  for (int i = 0; i < iov->Size(); i++) {
+    auto res = ReadFrameIntoBuf(conn, iov->GetBuffer(i));
     if (!res.has_value()) {
       return res;
     }
@@ -71,7 +71,8 @@ std::expected<uint32_t, sigmaos::serr::Error> ReadNumFrames(std::shared_ptr<sigm
 }
 
 // Write frames
-std::expected<int, sigmaos::serr::Error> WriteFrame(std::shared_ptr<sigmaos::io::conn::UnixConn> conn, const std::string *b) {
+std::expected<int, sigmaos::serr::Error> WriteFrame(std::shared_ptr<sigmaos::io::conn::UnixConn> conn, const std::shared_ptr<sigmaos::io::iovec::Buffer> buf) {
+  auto b = buf->Get();
   uint32_t nbyte = b->size() + 4;
 
   log(FRAME, "WriteFrame sz {}", nbyte);
@@ -82,16 +83,17 @@ std::expected<int, sigmaos::serr::Error> WriteFrame(std::shared_ptr<sigmaos::io:
   return conn->Write(b);
 }
 
-std::expected<int, sigmaos::serr::Error> WriteFrames(std::shared_ptr<sigmaos::io::conn::UnixConn> conn, const std::vector<std::string *> &iov) {
-  log(FRAME, "WriteFrames numFrames {}", iov.size());
+std::expected<int, sigmaos::serr::Error> WriteFrames(std::shared_ptr<sigmaos::io::conn::UnixConn> conn, std::shared_ptr<sigmaos::io::iovec::IOVec> iov) {
+  log(FRAME, "WriteFrames numFrames {}", iov->Size());
   // Write the number of frames
-  auto res = conn->WriteUint32(iov.size());
+  auto res = conn->WriteUint32(iov->Size());
   if (!res.has_value()) {
     return res;
   }
-  for (const auto &b : iov) {
-    log(FRAME, "WriteFrames next frame len {}", b->size());
-    auto res = WriteFrame(conn, b);
+  for (int i = 0; i < iov->Size(); i++) {
+    auto buf = iov->GetBuffer(i);
+    log(FRAME, "WriteFrames next frame len {}", buf->Size());
+    auto res = WriteFrame(conn, buf);
     if (!res.has_value()) {
       return res;
     }

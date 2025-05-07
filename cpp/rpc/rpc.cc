@@ -33,7 +33,7 @@ std::pair<Blob *, bool> extract_blob(google::protobuf::Message &msg) {
 }
 
 // If the given RPC has a blob field, extract its IOVecs.
-void extract_blob_iov(google::protobuf::Message &msg, std::vector<std::string *> *dst) {
+void extract_blob_iov(google::protobuf::Message &msg, std::shared_ptr<sigmaos::io::iovec::IOVec> dst) {
   auto p = extract_blob(msg);
   Blob *blob = p.first;
   bool has_blob = p.second;
@@ -45,12 +45,11 @@ void extract_blob_iov(google::protobuf::Message &msg, std::vector<std::string *>
   auto blob_iov = blob->mutable_iov();
   std::vector<std::string *> extracted_bufs(blob_iov->size());
   blob_iov->ExtractSubrange(0, blob_iov->size(), &(extracted_bufs.front()));
-  int prevsz = dst->size();
-  dst->resize(prevsz + extracted_bufs.size());
+  int prevsz = dst->Size();
+  dst->Resize(prevsz + extracted_bufs.size());
   for (int i = 0; i < extracted_bufs.size(); i++) {
     log(RPCCLNT, "Extracting buf starting at 0x{:x}", (uint64_t) &(extracted_bufs.at(i)->front()));
-    dst->at(prevsz + i) = extracted_bufs.at(i);
-//    dst->at(prevsz + i) = std::vector<unsigned char>((unsigned char *) &(extracted_bufs.at(i)->front()), extracted_bufs.at(i)->size());
+    dst->SetBuffer(prevsz + i, std::make_shared<sigmaos::io::iovec::Buffer>(extracted_bufs.at(i)));
   }
   // Clear the extracted buffer vector so that it doesn't free the underlying
   // buffer memory when it is deleted. The memory is now owned by dst.
@@ -58,7 +57,7 @@ void extract_blob_iov(google::protobuf::Message &msg, std::vector<std::string *>
 }
 
 // If the given RPC has a blob field, extract its IOVecs.
-void set_blob_iov(std::vector<std::string *> *src, google::protobuf::Message &msg) {
+void set_blob_iov(std::shared_ptr<sigmaos::io::iovec::IOVec> src, google::protobuf::Message &msg) {
   auto p = extract_blob(msg);
   Blob *blob = p.first;
   bool has_blob = p.second;
@@ -68,75 +67,71 @@ void set_blob_iov(std::vector<std::string *> *src, google::protobuf::Message &ms
   }
   // Get a pointer to the blob IOV
   auto blob_iov = blob->mutable_iov();
-  // TODO: factor the above into its own fn
-  for (auto src_buf : *src) {
-    blob_iov->AddAllocated(src_buf);
+  for (int i = 0; i < src->Size(); i++) {
+    auto src_buf = src->GetBuffer(i);
+    // Sanity check: output buffers passed to proto library shouldn't be ref
+    // counted at this layer
+    if (src_buf->IsRefCounted()) {
+      throw std::runtime_error("Ref counted buffer moved to protobuf");
+    }
+    blob_iov->AddAllocated(src_buf->Get());
   }
 }
 
 std::expected<int, sigmaos::serr::Error> Clnt::RPC(std::string method, google::protobuf::Message &req, google::protobuf::Message &rep) {
   log(RPCCLNT, "Get in_blob {}", method);
-  // Create a vector with a space for the serialized request protobuf
-  std::vector<std::string *> in_iov(1);
+  // Create an IOV for RPC inputs
+  auto in_iov = std::make_shared<sigmaos::io::iovec::IOVec>();
+  auto req_data = std::make_shared<std::string>();
+  // Serialize the request and append it to the IOV
+  req.SerializeToString(req_data.get());
+  in_iov->AppendBuffer(std::make_shared<sigmaos::io::iovec::Buffer>(req_data)); 
   // Extract any input IOVecs from the request RPC
-  extract_blob_iov(req, &in_iov);
-  std::string req_data;
-  std::string *rep_data;
-  Rep wrapped_rep;
-  // Serialize the request
-  // TODO: serialize directly to ostream
-  req.SerializeToString(&req_data);
-  in_iov.at(0) = &req_data; 
+  extract_blob_iov(req, in_iov);
+  auto out_iov = std::make_shared<sigmaos::io::iovec::IOVec>();
 	// Prepend 2 empty slots to the out iovec: one for the rpcproto.Rep
 	// wrapper, and one for the marshaled res proto.Message
-  // TODO: memory leaks?
-  std::vector<std::string *> out_iov = {new std::string(), new std::string()};
+  out_iov->AddBuffers(2);
   log(RPCCLNT, "Get out_blob {}", method);
   // Extract any output IOVecs from the response RPC
-  extract_blob_iov(rep, &out_iov);
-  log(RPCCLNT, "out_iov len {}", out_iov.size());
+  extract_blob_iov(rep, out_iov);
+  log(RPCCLNT, "out_iov len {}", out_iov->Size());
+  // Wrap the RPC and execute it
   auto res = wrap_and_run_rpc(method, in_iov, out_iov);
   if (!res.has_value()) {
     return std::unexpected(res.error());
   }
-  wrapped_rep = res.value();
+  // Get the response
+  auto wrapped_rep = res.value();
+  // If there was an error in the RPC stack, bail out
   if (wrapped_rep.err().errcode() != 0) {
     return std::unexpected(sigmaos::serr::Error(sigmaos::serr::TErrUnreachable, std::format("rpc error: {}", wrapped_rep.err().ShortDebugString())));
   }
   // Deserialize the reply
-  rep_data = out_iov.at(0);
-  // TODO: deserialize directly from stream (should we be using strings at all?)
-  rep.ParseFromString(*rep_data);
+  auto rep_data_buf = out_iov->GetBuffer(0);
+  rep.ParseFromString(*rep_data_buf->Get());
   // Remove the first element in iov, which contains the serialized reply
   // message
-  // TODO: free?
-  out_iov.erase(out_iov.begin());
+  out_iov->RemoveBuffer(0);
   // Set the reply's blob's IOV to point to the returned data, if applicable.
-  set_blob_iov(&out_iov, rep);
-// TODO: clear iov?
-//  out_iov.clear();
-  // Set out blob again
-//  Blob *out_blob = GetBlob(rep, false);
+  set_blob_iov(out_iov, rep);
   return 0;
 }
 
-std::expected<Rep, sigmaos::serr::Error> Clnt::wrap_and_run_rpc(std::string method, const std::vector<std::string *> &in_iov, std::vector<std::string *> &out_iov) {
+std::expected<Rep, sigmaos::serr::Error> Clnt::wrap_and_run_rpc(std::string method, const std::shared_ptr<sigmaos::io::iovec::IOVec> in_iov, std::shared_ptr<sigmaos::io::iovec::IOVec> out_iov) {
   uint64_t seqno = _seqno++;
-  std::vector<std::string *> wrapped_in_iov;
+  auto wrapped_in_iov = std::make_shared<sigmaos::io::iovec::IOVec>();
   Req req;
-  std::string wrapper_req_data;
-  Rep rep;
-  std::string *wrapper_rep_data;
-
+  auto wrapper_req_data = std::make_shared<std::string>();
   req.set_method(method);
   // Wrap the request, serialize the wrapper, and write it together with the
   // request data.
   // TODO: serialize directly to ostream
-  req.SerializeToString(&wrapper_req_data);
-  wrapped_in_iov.push_back(&wrapper_req_data);
-  wrapped_in_iov.resize(in_iov.size() + 1);
-  for (int i = 0; i < in_iov.size(); i++) {
-    wrapped_in_iov.at(i + 1) = in_iov.at(i);
+  req.SerializeToString(wrapper_req_data.get());
+  wrapped_in_iov->AppendBuffer(std::make_shared<sigmaos::io::iovec::Buffer>(wrapper_req_data));
+  wrapped_in_iov->Resize(in_iov->Size() + 1);
+  for (int i = 0; i < in_iov->Size(); i++) {
+    wrapped_in_iov->SetBuffer(i + 1, in_iov->GetBuffer(i));
   }
 
   // Create the call object to be sent, and perform the RPC.
@@ -145,15 +140,13 @@ std::expected<Rep, sigmaos::serr::Error> Clnt::wrap_and_run_rpc(std::string meth
   if (!res.has_value()) {
     return std::unexpected(res.error());
   }
+  Rep rep;
   // Deserialize the wrapper
-  wrapper_rep_data = out_iov.at(0);
+  auto wrapper_rep_buf = out_iov->GetBuffer(0);
   // TODO: deserialize directly from stream
-  rep.ParseFromString(*wrapper_rep_data);
+  rep.ParseFromString(*wrapper_rep_buf->Get());
   // Remove the wrapper from the out IOVec
-  for (int i = 0; i < out_iov.size() - 1; i++) {
-    out_iov.at(i) = out_iov.at(i + 1);
-  }
-  out_iov.resize(out_iov.size() - 1);
+  out_iov->RemoveBuffer(0);
 	// TODO: Record stats
 //	rpcc.si.Stat(method, time.Since(start).Microseconds())
   return rep;

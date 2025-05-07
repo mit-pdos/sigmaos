@@ -3,7 +3,7 @@ package clnt_test
 import (
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/mgo.v2/bson"
-	"sigmaos/proxy/mongoclnt"
+	"sigmaos/proxy/mongo/clnt"
 	"sigmaos/test"
 	"testing"
 )
@@ -19,7 +19,7 @@ func TestMongoClnt(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	mongoc, err := mongoclnt.NewMongoClnt(ts.FsLib)
+	mongoc, err := clnt.NewMongoClnt(ts.FsLib)
 	assert.Nil(t, err)
 	assert.NotNil(t, mongoc)
 

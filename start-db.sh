@@ -16,7 +16,7 @@ usage() {
   echo "Usage: $0 yml..."
 }
 
-PORT=4406  # use non-default port number on host
+PORT=3306  # use non-default port number on host
 MONGO_PORT=4407
 
 ROOT=$(dirname $(realpath $0))
@@ -33,13 +33,13 @@ fi
 
 docker pull mariadb:10.4
 if ! docker ps | grep -q $DB_IMAGE_NAME; then
-    echo "start db"
+    echo "start db $TESTER_NETWORK $PORT $DB_IMAGE_NAME"
     docker run \
     --network $TESTER_NETWORK \
     --name $DB_IMAGE_NAME \
     -e MYSQL_ROOT_PASSWORD=sigmadb \
+    -p $PORT:3306 \
     -d mariadb
-#    -p $PORT:3306 \
 fi
 
 until [ "`docker inspect -f {{.State.Running}} $DB_IMAGE_NAME`"=="true" ]; do
@@ -48,14 +48,15 @@ until [ "`docker inspect -f {{.State.Running}} $DB_IMAGE_NAME`"=="true" ]; do
 done;
 
 if [[ "$TESTER_NETWORK" == "host" ]]; then
-  ip=127.0.0.1
+    ip=127.0.0.1
 else
-  ip=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $DB_IMAGE_NAME)
+    # ip=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $DB_IMAGE_NAME)
+    ip=127.0.0.1
 fi
 
-echo "db IP: $ip"
+echo "db net: $TESTER_NETWORK IP: $ip"
 
-until mariadb-show --skip-ssl -h $ip -u root -psigmadb 2> /dev/null; do
+until mariadb-show --skip-ssl -h $ip -P $PORT -u root -psigmadb 2> /dev/null; do
     echo -n "." 1>&2
     sleep 0.1;
 done;    
@@ -94,8 +95,8 @@ if ! docker ps | grep -q $MONGO_IMAGE_NAME; then
     docker run \
       --name $MONGO_IMAGE_NAME \
       --network $TESTER_NETWORK \
+      -p $MONGO_PORT:27017 \
       -d mongo:4.4.6
-#      -p $MONGO_PORT:27017 \
 fi
 
 until [ "`docker inspect -f {{.State.Running}} $MONGO_IMAGE_NAME`"=="true" ]; do

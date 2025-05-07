@@ -70,7 +70,7 @@ class Clnt {
   std::expected<int, sigmaos::serr::Error> FenceDir(std::string pn/*, f sp.Tfence*/);
   // TODO: support WriteFence?
   //func (scc *SPProxyClnt) WriteFence(fd int, d []byte, f sp.Tfence) (sp.Tsize, error) {
-  std::expected<int, sigmaos::serr::Error> WriteRead(int fd, std::vector<std::string *> in_iov, std::vector<std::string *> out_iov);
+  std::expected<int, sigmaos::serr::Error> WriteRead(int fd, std::shared_ptr<sigmaos::io::iovec::IOVec> in_iov, std::shared_ptr<sigmaos::io::iovec::IOVec> out_iov);
   std::expected<int, sigmaos::serr::Error> DirWatch(int fd);
   std::expected<int, sigmaos::serr::Error> MountTree(std::shared_ptr<TendpointProto> ep, std::string tree, std::string mount);
   std::expected<bool, sigmaos::serr::Error> IsLocalMount(std::shared_ptr<TendpointProto> ep);

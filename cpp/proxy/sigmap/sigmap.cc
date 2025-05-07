@@ -189,9 +189,14 @@ std::expected<std::shared_ptr<std::string>, sigmaos::serr::Error> Clnt::GetFile(
     return std::unexpected(sigmaos::serr::Error((sigmaos::serr::Terror) rep.err().errcode(), rep.err().obj()));
   }
   log(SPPROXYCLNT, "GetFile done: {}", pn);
-  log(SPPROXYCLNT, "GetFile done addr: {:x} first byte: {}", (uint64_t) s->c_str(), char(s->at(0)));
-  auto _ = iov->ReleaseLast();
-  auto _ = rep.release_blob();
+  // Remove the data buffer from the protobuf's IOV in order to regain
+  // ownership of its underlying memory.
+  {
+    auto _ = iov->ReleaseLast();
+  }
+  {
+    auto _ = rep.release_blob();
+  }
   return s;
 }
 
@@ -217,19 +222,50 @@ std::expected<uint32_t, sigmaos::serr::Error> Clnt::PutFile(std::string pn, int 
     return std::unexpected(sigmaos::serr::Error((sigmaos::serr::Terror) rep.err().errcode(), rep.err().obj()));
   }
   log(SPPROXYCLNT, "PutFile done: {} {} {} {} {} {}", pn, perm, mode, data->size(), offset, leaseID);
-  // Clear the iov
-  auto _ = iov->ReleaseLast();
-  auto _ = req.release_blob();
+  // Remove the data buffer from the protobuf's IOV in order to regain
+  // ownership of its underlying memory.
+  {
+    auto _ = iov->ReleaseLast();
+  }
+  {
+    auto _ = req.release_blob();
+  }
   return rep.size();
-
 }
 
 std::expected<uint32_t, sigmaos::serr::Error> Clnt::Read(int fd, std::string *b) {
-  throw std::runtime_error("unimplemented: blobs");
+  return Pread(fd, b, ~0);
 }
 
 std::expected<uint32_t, sigmaos::serr::Error> Clnt::Pread(int fd, std::string *b, uint64_t offset) {
-  throw std::runtime_error("unimplemented: blobs");
+  log(SPPROXYCLNT, "Pread: {} {} {}", fd, b->size(), offset);
+  SigmaReadReq req;
+  SigmaDataRep rep;
+  req.set_fd(fd);
+  req.set_size(b->size());
+  req.set_off(offset);
+  Blob blob;
+  auto iov = blob.mutable_iov();
+  iov->AddAllocated(b);
+  rep.set_allocated_blob(&blob);
+  auto res = _rpcc->RPC("SPProxySrvAPI.GetFile", req, rep);
+  if (!res.has_value()) {
+    log(SPPROXYCLNT_ERR, "Err RPC: {}", res.error());
+    return std::unexpected(res.error());
+  }
+  if (rep.err().errcode() != sigmaos::serr::Terror::TErrNoError) {
+    return std::unexpected(sigmaos::serr::Error((sigmaos::serr::Terror) rep.err().errcode(), rep.err().obj()));
+  }
+  log(SPPROXYCLNT, "Pread done: {} {} {}", fd, b->size(), offset);
+  // Remove the data buffer from the protobuf's IOV in order to regain
+  // ownership of its underlying memory.
+  {
+    auto _ = iov->ReleaseLast();
+  }
+  {
+    auto _ = rep.release_blob();
+  }
+  return b->size();
 }
 
 // TODO: support PreadRdr?
@@ -314,22 +350,22 @@ std::expected<int, sigmaos::serr::Error> Clnt::FenceDir(std::string pn/*, f sp.T
 // TODO: support WriteFence?
 //func (scc *SPProxyClnt) WriteFence(fd int, d []byte, f sp.Tfence) (sp.Tsize, error) {
 
-std::expected<int, sigmaos::serr::Error> Clnt::WriteRead(int fd, std::vector<std::string *> in_iov, std::vector<std::string *> out_iov) {
+std::expected<int, sigmaos::serr::Error> WriteRead(int fd, std::shared_ptr<sigmaos::io::iovec::IOVec> in_iov, std::shared_ptr<sigmaos::io::iovec::IOVec> out_iov) {
   throw std::runtime_error("unimplemented: blob");
-  log(SPPROXYCLNT, "WriteRead: {}", fd);
-  SigmaWriteReq req;
-  SigmaDataRep rep;
-  req.set_fd(fd);
-  auto res = _rpcc->RPC("SPProxySrvAPI.WriteRead", req, rep);
-  if (!res.has_value()) {
-    log(SPPROXYCLNT_ERR, "Err RPC: {}", res.error());
-    return std::unexpected(res.error());
-  }
-  if (rep.err().errcode() != sigmaos::serr::Terror::TErrNoError) {
-    return std::unexpected(sigmaos::serr::Error((sigmaos::serr::Terror) rep.err().errcode(), rep.err().obj()));
-  }
-  log(SPPROXYCLNT, "WriteRead done: {}", fd);
-  return 0;
+//  log(SPPROXYCLNT, "WriteRead: {}", fd);
+//  SigmaWriteReq req;
+//  SigmaDataRep rep;
+//  req.set_fd(fd);
+//  auto res = _rpcc->RPC("SPProxySrvAPI.WriteRead", req, rep);
+//  if (!res.has_value()) {
+//    log(SPPROXYCLNT_ERR, "Err RPC: {}", res.error());
+//    return std::unexpected(res.error());
+//  }
+//  if (rep.err().errcode() != sigmaos::serr::Terror::TErrNoError) {
+//    return std::unexpected(sigmaos::serr::Error((sigmaos::serr::Terror) rep.err().errcode(), rep.err().obj()));
+//  }
+//  log(SPPROXYCLNT, "WriteRead done: {}", fd);
+//  return 0;
 }
 
 std::expected<int, sigmaos::serr::Error> Clnt::DirWatch(int fd) {

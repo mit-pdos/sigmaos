@@ -15,6 +15,7 @@ import (
 	"sigmaos/apps/hotel/proto"
 	"sigmaos/benchmarks/loadgen"
 	db "sigmaos/debug"
+	"sigmaos/path"
 	"sigmaos/proc"
 	dbclnt "sigmaos/proxy/db/clnt"
 	sprpcclnt "sigmaos/rpc/clnt/sigmap"
@@ -92,7 +93,7 @@ func (ts *Tstate) statsSrv(fn string) {
 func (ts *Tstate) stop() {
 	err := ts.hotel.Stop()
 	assert.Nil(ts.mrts.T, err, "Stop: %v", err)
-	sts, err := ts.mrts.GetRealm(test.REALM1).GetDir(sp.DBD)
+	sts, err := ts.mrts.GetRealm(test.REALM1).GetDir(path.MarkResolve(sp.DBD))
 	assert.Nil(ts.mrts.T, err, "Error GetDir: %v", err)
 	assert.True(ts.mrts.T, len(sts) < 10)
 }

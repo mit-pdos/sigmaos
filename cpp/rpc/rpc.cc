@@ -22,9 +22,7 @@ std::pair<Blob *, bool> extract_blob(google::protobuf::Message &msg) {
       // blob to the caller. Otherwise, return a mutable reference to the blob,
       // still owned by the original message.
       bmsg = r->MutableMessage(&msg, fd);
-      log(RPCCLNT, "RPC {} blob type: {}", msg.GetTypeName(), bmsg->GetTypeName());
       blob = dynamic_cast<Blob *>(bmsg);
-      log(RPCCLNT, "RPC {} blob type casted, resulting ptr: 0x{:x}", msg.GetTypeName(), (uint64_t) blob);
       has_blob = true;
       break;
     }
@@ -79,7 +77,6 @@ void set_blob_iov(std::shared_ptr<sigmaos::io::iovec::IOVec> src, google::protob
 }
 
 std::expected<int, sigmaos::serr::Error> Clnt::RPC(std::string method, google::protobuf::Message &req, google::protobuf::Message &rep) {
-  log(RPCCLNT, "Get in_blob {}", method);
   // Create an IOV for RPC inputs
   auto in_iov = std::make_shared<sigmaos::io::iovec::IOVec>();
   auto req_data = std::make_shared<std::string>();
@@ -92,7 +89,6 @@ std::expected<int, sigmaos::serr::Error> Clnt::RPC(std::string method, google::p
 	// Prepend 2 empty slots to the out iovec: one for the rpcproto.Rep
 	// wrapper, and one for the marshaled res proto.Message
   out_iov->AddBuffers(2);
-  log(RPCCLNT, "Get out_blob {}", method);
   // Extract any output IOVecs from the response RPC
   extract_blob_iov(rep, out_iov);
   log(RPCCLNT, "out_iov len {}", out_iov->Size());

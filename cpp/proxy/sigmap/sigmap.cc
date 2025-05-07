@@ -176,7 +176,6 @@ std::expected<std::shared_ptr<std::string>, sigmaos::serr::Error> Clnt::GetFile(
   req.set_path(pn);
   Blob blob;
   auto iov = blob.mutable_iov();
-  // TODO: return a smart ptr
   // TODO: What if size is wrong?
   auto s = std::make_shared<std::string>(1000, '\0');
   iov->AddAllocated(s.get());

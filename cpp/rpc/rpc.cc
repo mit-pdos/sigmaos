@@ -126,7 +126,6 @@ std::expected<Rep, sigmaos::serr::Error> Clnt::wrap_and_run_rpc(std::string meth
   req.set_method(method);
   // Wrap the request, serialize the wrapper, and write it together with the
   // request data.
-  // TODO: serialize directly to ostream
   req.SerializeToString(wrapper_req_data.get());
   wrapped_in_iov->AppendBuffer(std::make_shared<sigmaos::io::iovec::Buffer>(wrapper_req_data));
   wrapped_in_iov->Resize(in_iov->Size() + 1);
@@ -143,7 +142,6 @@ std::expected<Rep, sigmaos::serr::Error> Clnt::wrap_and_run_rpc(std::string meth
   Rep rep;
   // Deserialize the wrapper
   auto wrapper_rep_buf = out_iov->GetBuffer(0);
-  // TODO: deserialize directly from stream
   rep.ParseFromString(*wrapper_rep_buf->Get());
   // Remove the wrapper from the out IOVec
   out_iov->RemoveBuffer(0);

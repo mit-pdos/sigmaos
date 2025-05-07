@@ -19,7 +19,6 @@ class Call {
 
   private:
   uint64_t seqno;
-  // TODO: does this need to be a ptr?
   std::shared_ptr<sigmaos::io::iovec::IOVec> &_in_iov;
   std::shared_ptr<sigmaos::io::iovec::IOVec> &_out_iov;
 };

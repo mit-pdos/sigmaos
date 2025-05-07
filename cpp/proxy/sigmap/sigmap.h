@@ -55,7 +55,7 @@ class Clnt {
   std::expected<int, sigmaos::serr::Error> Open(std::string pn, int mode, bool wait);
   std::expected<int, sigmaos::serr::Error> Rename(std::string src, std::string dst);
   std::expected<int, sigmaos::serr::Error> Remove(std::string pn);
-  std::expected<std::string *, sigmaos::serr::Error> GetFile(std::string pn);
+  std::expected<std::shared_ptr<std::string>, sigmaos::serr::Error> GetFile(std::string pn);
   std::expected<uint32_t, sigmaos::serr::Error> PutFile(std::string pn, int perm, int mode, std::string *data, uint64_t offset, uint64_t leaseID);
   std::expected<uint32_t, sigmaos::serr::Error> Read(int fd, std::string *b);
   std::expected<uint32_t, sigmaos::serr::Error> Pread(int fd, std::string *b, uint64_t offset);

@@ -169,7 +169,7 @@ std::expected<int, sigmaos::serr::Error> Clnt::Remove(std::string pn) {
   return 0;
 }
 
-std::expected<std::string *, sigmaos::serr::Error> Clnt::GetFile(std::string pn) {
+std::expected<std::shared_ptr<std::string>, sigmaos::serr::Error> Clnt::GetFile(std::string pn) {
   log(SPPROXYCLNT, "GetFile: {}", pn);
   SigmaPathReq req;
   SigmaDataRep rep;
@@ -178,8 +178,8 @@ std::expected<std::string *, sigmaos::serr::Error> Clnt::GetFile(std::string pn)
   auto iov = blob.mutable_iov();
   // TODO: return a smart ptr
   // TODO: What if size is wrong?
-  std::string *s = new std::string(1000, '\0');
-  iov->AddAllocated(s);
+  auto s = std::make_shared<std::string>(1000, '\0');
+  iov->AddAllocated(s.get());
   rep.set_allocated_blob(&blob);
   auto res = _rpcc->RPC("SPProxySrvAPI.GetFile", req, rep);
   if (!res.has_value()) {

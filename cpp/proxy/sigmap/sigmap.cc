@@ -234,7 +234,7 @@ std::expected<uint32_t, sigmaos::serr::Error> Clnt::PutFile(std::string pn, int 
 }
 
 std::expected<uint32_t, sigmaos::serr::Error> Clnt::Read(int fd, std::string *b) {
-  log(SPPROXYCLNT, "Read: {} {} {}", fd, b->size(), offset);
+  log(SPPROXYCLNT, "Read: {} {}", fd, b->size());
   SigmaReadReq req;
   SigmaDataRep rep;
   req.set_fd(fd);
@@ -252,7 +252,7 @@ std::expected<uint32_t, sigmaos::serr::Error> Clnt::Read(int fd, std::string *b)
   if (rep.err().errcode() != sigmaos::serr::Terror::TErrNoError) {
     return std::unexpected(sigmaos::serr::Error((sigmaos::serr::Terror) rep.err().errcode(), rep.err().obj()));
   }
-  log(SPPROXYCLNT, "Read done: {} {} {}", fd, b->size(), offset);
+  log(SPPROXYCLNT, "Read done: {} {}", fd, b->size());
   // Remove the data buffer from the protobuf's IOV in order to regain
   // ownership of its underlying memory.
   {

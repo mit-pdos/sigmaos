@@ -296,7 +296,6 @@ std::expected<uint32_t, sigmaos::serr::Error> Clnt::Pread(int fd, std::string *b
 }
 
 std::expected<uint32_t, sigmaos::serr::Error> Clnt::Write(int fd, std::string *b) {
-  throw std::runtime_error("unimplemented: blobs");
   log(SPPROXYCLNT, "Write: {} {}", fd, b->size());
   Blob blob;
   auto iov = blob.mutable_iov();

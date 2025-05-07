@@ -300,7 +300,7 @@ std::expected<uint32_t, sigmaos::serr::Error> Clnt::Write(int fd, std::string *b
   log(SPPROXYCLNT, "Write: {} {}", fd, b->size());
   Blob blob;
   auto iov = blob.mutable_iov();
-  iov->AddAllocated(data);
+  iov->AddAllocated(b);
   SigmaWriteReq req;
   SigmaSizeRep rep;
   req.set_fd(fd);

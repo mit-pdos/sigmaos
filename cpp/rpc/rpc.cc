@@ -78,19 +78,12 @@ void set_blob_iov(std::vector<std::string *> *src, google::protobuf::Message &ms
   if (!has_blob) {
     return;
   }
-  log(RPCCLNT, "RPC src buf num iov: {}", src->size());
   // Get a pointer to the blob IOV
   auto blob_iov = blob->mutable_iov();
   // TODO: factor the above into its own fn
   for (auto src_buf : *src) {
-    log(RPCCLNT, "RPC src buf len: {}", src_buf->size());
-    log(RPCCLNT, "RPC src buf 1st byte: {}", (char) src_buf->at(0));
-    log(RPCCLNT, "RPC src buf addr: {:x}", (uint64_t) &(src_buf->front()));
-    log(RPCCLNT, "RPC src buf before alloc");
     blob_iov->AddAllocated(src_buf);
-    log(RPCCLNT, "RPC src buf after alloc");
   }
-  log(RPCCLNT, "done with set iov");
 }
 
 std::expected<int, sigmaos::serr::Error> Clnt::RPC(std::string method, google::protobuf::Message &req, google::protobuf::Message &rep) {
@@ -115,7 +108,6 @@ std::expected<int, sigmaos::serr::Error> Clnt::RPC(std::string method, google::p
   extract_blob_iov(rep, &out_iov);
   log(RPCCLNT, "out_iov len {}", out_iov.size());
   auto res = wrap_and_run_rpc(method, in_iov, out_iov);
-  log(RPCCLNT, "out_iov len post {}", out_iov.size());
   if (!res.has_value()) {
     return std::unexpected(res.error());
   }
@@ -133,12 +125,10 @@ std::expected<int, sigmaos::serr::Error> Clnt::RPC(std::string method, google::p
   out_iov.erase(out_iov.begin());
   // Set the reply's blob's IOV to point to the returned data, if applicable.
   set_blob_iov(&out_iov, rep);
-  log(RPCCLNT, "Clear out iov");
 // TODO: clear iov?
 //  out_iov.clear();
   // Set out blob again
 //  Blob *out_blob = GetBlob(rep, false);
-  log(RPCCLNT, "Returning from RPC fn");
   return 0;
 }
 
@@ -167,7 +157,6 @@ std::expected<Rep, sigmaos::serr::Error> Clnt::wrap_and_run_rpc(std::string meth
   if (!res.has_value()) {
     return std::unexpected(res.error());
   }
-  log(RPCCLNT, "Wrapped out iov len post-rpc: {}", out_iov.size());
   // Deserialize the wrapper
   wrapper_rep_data = out_iov[0];
   // TODO: deserialize directly from stream
@@ -179,7 +168,6 @@ std::expected<Rep, sigmaos::serr::Error> Clnt::wrap_and_run_rpc(std::string meth
   out_iov.resize(out_iov.size() - 1);
 	// TODO: Record stats
 //	rpcc.si.Stat(method, time.Since(start).Microseconds())
-  log(RPCCLNT, "Returning from wrapped RPC");
   return rep;
 }
   

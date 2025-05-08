@@ -16,6 +16,7 @@
 #include <rpc/rpc.h>
 #include <proc/proc.h>
 #include <proc/status.h>
+#include <sigmap/types.h>
 
 namespace sigmaos {
 namespace proxy::sigmap {
@@ -51,18 +52,18 @@ class Clnt {
 
   std::expected<int, sigmaos::serr::Error> CloseFD(int fd);
   std::expected<std::shared_ptr<TstatProto>, sigmaos::serr::Error> Stat(std::string pn);
-  std::expected<int, sigmaos::serr::Error> Create(std::string pn, int perm, int mode);
-  std::expected<int, sigmaos::serr::Error> Open(std::string pn, int mode, bool wait);
+  std::expected<int, sigmaos::serr::Error> Create(std::string pn, sigmaos::sigmap::types::Tperm perm, sigmaos::sigmap::types::Tmode mode);
+  std::expected<int, sigmaos::serr::Error> Open(std::string pn, sigmaos::sigmap::types::Tmode mode, bool wait);
   std::expected<int, sigmaos::serr::Error> Rename(std::string src, std::string dst);
   std::expected<int, sigmaos::serr::Error> Remove(std::string pn);
   std::expected<std::shared_ptr<std::string>, sigmaos::serr::Error> GetFile(std::string pn);
-  std::expected<uint32_t, sigmaos::serr::Error> PutFile(std::string pn, int perm, int mode, std::string *data, uint64_t offset, uint64_t leaseID);
+  std::expected<uint32_t, sigmaos::serr::Error> PutFile(std::string pn, sigmaos::sigmap::types::Tperm perm, sigmaos::sigmap::types::Tmode mode, std::string *data, uint64_t offset, uint64_t leaseID);
   std::expected<uint32_t, sigmaos::serr::Error> Read(int fd, std::string *b);
   std::expected<uint32_t, sigmaos::serr::Error> Pread(int fd, std::string *b, uint64_t offset);
   std::expected<uint32_t, sigmaos::serr::Error> Write(int fd, std::string *b);
   std::expected<int, sigmaos::serr::Error> Seek(int fd, uint64_t offset);
   // TODO: fence type in CreateLeased?
-  std::expected<int, sigmaos::serr::Error> CreateLeased(std::string path, int perm, int mode, uint64_t leaseID/*, f sp.Tfence*/);
+  std::expected<int, sigmaos::serr::Error> CreateLeased(std::string path, sigmaos::sigmap::types::Tperm perm, sigmaos::sigmap::types::Tmode mode, uint64_t leaseID/*, f sp.Tfence*/);
   std::expected<uint64_t, sigmaos::serr::Error> ClntID();
   // TODO: fence type in FenceDir?
   std::expected<int, sigmaos::serr::Error> FenceDir(std::string pn/*, f sp.Tfence*/);

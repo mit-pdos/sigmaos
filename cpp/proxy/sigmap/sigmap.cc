@@ -96,7 +96,7 @@ std::expected<std::shared_ptr<TstatProto>, sigmaos::serr::Error> Clnt::Stat(std:
   return std::make_shared<TstatProto>(rep.stat());
 }
 
-std::expected<int, sigmaos::serr::Error> Clnt::Create(std::string pn, int perm, int mode) {
+std::expected<int, sigmaos::serr::Error> Clnt::Create(std::string pn, sigmaos::sigmap::types::Tperm perm, sigmaos::sigmap::types::Tmode mode) {
   log(SPPROXYCLNT, "Create: {} {} {}", pn, perm, mode);
   SigmaCreateReq req;
   SigmaFdRep rep;
@@ -115,7 +115,7 @@ std::expected<int, sigmaos::serr::Error> Clnt::Create(std::string pn, int perm, 
   return rep.fd();
 }
 
-std::expected<int, sigmaos::serr::Error> Clnt::Open(std::string pn, int mode, bool wait) {
+std::expected<int, sigmaos::serr::Error> Clnt::Open(std::string pn, sigmaos::sigmap::types::Tmode mode, bool wait) {
   log(SPPROXYCLNT, "Open: {} {} {}", pn, mode, wait);
   SigmaCreateReq req;
   SigmaFdRep rep;
@@ -200,7 +200,7 @@ std::expected<std::shared_ptr<std::string>, sigmaos::serr::Error> Clnt::GetFile(
   return s;
 }
 
-std::expected<uint32_t, sigmaos::serr::Error> Clnt::PutFile(std::string pn, int perm, int mode, std::string *data, uint64_t offset, uint64_t leaseID) {
+std::expected<uint32_t, sigmaos::serr::Error> Clnt::PutFile(std::string pn, sigmaos::sigmap::types::Tperm perm, sigmaos::sigmap::types::Tmode mode, std::string *data, uint64_t offset, uint64_t leaseID) {
   log(SPPROXYCLNT, "PutFile: {} {} {} {} {} {}", pn, perm, mode, data->size(), offset, leaseID);
   Blob blob;
   auto iov = blob.mutable_iov();
@@ -343,7 +343,7 @@ std::expected<int, sigmaos::serr::Error> Clnt::Seek(int fd, uint64_t offset) {
 }
 
 // TODO: fence type in CreateLeased?
-std::expected<int, sigmaos::serr::Error> Clnt::CreateLeased(std::string pn, int perm, int mode, uint64_t leaseID/*, f sp.Tfence*/) {
+std::expected<int, sigmaos::serr::Error> Clnt::CreateLeased(std::string pn, sigmaos::sigmap::types::Tperm perm, sigmaos::sigmap::types::Tmode mode, uint64_t leaseID/*, f sp.Tfence*/) {
   throw std::runtime_error("unimplemented: tfence");
   log(SPPROXYCLNT, "CreateLeased: {} {} {} {}", pn, perm, mode, leaseID);
   SigmaCreateReq req;

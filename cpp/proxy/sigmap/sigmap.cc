@@ -365,7 +365,7 @@ std::expected<int, sigmaos::serr::Error> Clnt::CreateLeased(std::string pn, sigm
   return 0;
 }
 
-std::expected<uint64_t, sigmaos::serr::Error> Clnt::ClntID() {
+std::expected<sigmaos::sigmap::types::TclntID, sigmaos::serr::Error> Clnt::ClntID() {
   log(SPPROXYCLNT, "ClntID");
   SigmaNullReq req;
   SigmaClntIdRep rep;

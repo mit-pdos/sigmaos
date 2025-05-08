@@ -64,7 +64,7 @@ class Clnt {
   std::expected<int, sigmaos::serr::Error> Seek(int fd, sigmaos::sigmap::types::Toffset offset);
   // TODO: fence type in CreateLeased?
   std::expected<int, sigmaos::serr::Error> CreateLeased(std::string path, sigmaos::sigmap::types::Tperm perm, sigmaos::sigmap::types::Tmode mode, sigmaos::sigmap::types::TleaseID leaseID/*, f sp.Tfence*/);
-  std::expected<uint64_t, sigmaos::serr::Error> ClntID();
+  std::expected<sigmaos::sigmap::types::TclntID, sigmaos::serr::Error> ClntID();
   // TODO: fence type in FenceDir?
   std::expected<int, sigmaos::serr::Error> FenceDir(std::string pn/*, f sp.Tfence*/);
   // TODO: support WriteFence?

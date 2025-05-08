@@ -76,11 +76,33 @@ const	sigmaos::sigmap::types::Tttl EtcdSessionTTL = 5;
 
 // Realm consts
 const	sigmaos::sigmap::types::Trealm ROOTREALM = "rootrealm";
-const	sigmaos::sigmap::types::Trealm NO_REALM  = "no-realm";
+const	sigmaos::sigmap::types::Trealm NO_REALM  = "NO_REALM";
 
 // PID consts
 const	sigmaos::sigmap::types::Tpid NO_PID = "no-pid";
 
+// AWS Profile consts
+const std::string AWS_PROFILE               = "sigmaos";
+const std::string AWS_S3_RESTRICTED_PROFILE = "sigmaos-mr-restricted";
+
+// Networking consts
+const	sigmaos::sigmap::types::Tip NO_IP      = "";
+const	sigmaos::sigmap::types::Tip LOCALHOST  = "127.0.0.1";
+const	sigmaos::sigmap::types::Tport NO_PORT    = 0;
+
+// Endpoint consts
+const	sigmaos::sigmap::types::TTendpoint INTERNAL_EP = 1;
+const	sigmaos::sigmap::types::TTendpoint EXTERNAL_EP = 2;
+
+// Platform consts
+const	sigmaos::sigmap::types::Tplatform PLATFORM_AWS       = "aws";
+const	sigmaos::sigmap::types::Tplatform PLATFORM_CLOUDLAB  = "cloudlab";
+
+const	sigmaos::sigmap::types::Tplatform PLATFORM_AWS       = "aws";
+const	sigmaos::sigmap::types::Tplatform PLATFORM_CLOUDLAB  = "cloudlab";
+
+// Auth consts
+const	sigmaos::sigmap::types::TprincipalID NO_PRINCIPAL_ID  = "NO_PRINCIPAL_ID";
 
 };
 };

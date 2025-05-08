@@ -101,7 +101,7 @@ func RunProcSrv(kernelId string, dialproxy bool, spproxydPID sp.Tpid) error {
 		ch:          make(chan struct{}),
 		pe:          pe,
 		spproxydPID: spproxydPID,
-		realm:       sp.NOREALM,
+		realm:       sp.NO_REALM,
 		procs:       syncmap.NewSyncMap[int, *procEntry](),
 	}
 
@@ -271,7 +271,7 @@ func (ps *ProcSrv) assignToRealm(realm sp.Trealm, upid sp.Tpid, prog string, pat
 	defer ps.mu.RUnlock()
 
 	// If already assigned, bail out
-	if ps.realm != sp.NOREALM {
+	if ps.realm != sp.NO_REALM {
 		return nil
 	}
 
@@ -279,7 +279,7 @@ func (ps *ProcSrv) assignToRealm(realm sp.Trealm, upid sp.Tpid, prog string, pat
 	ps.mu.RUnlock()
 	ps.mu.Lock()
 	// If already assigned, demote lock & bail out
-	if ps.realm != sp.NOREALM {
+	if ps.realm != sp.NO_REALM {
 		ps.mu.Unlock()
 		ps.mu.RLock()
 		return nil

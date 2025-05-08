@@ -32,5 +32,44 @@ const sigmaos::sigmap::types::Qtype QTTMP     = 0x04;
 const sigmaos::sigmap::types::Qtype QTSYMLINK = 0x02;
 const sigmaos::sigmap::types::Qtype QTFILE    = 0x00;
 
+// Flags for the mode field in Topen and Tcreate messages
+const sigmaos::sigmap::types::Tmode OREAD   = 0;    // read-only
+const sigmaos::sigmap::types::Tmode OWRITE  = 0x01; // write-only
+const sigmaos::sigmap::types::Tmode ORDWR   = 0x02; // read-write
+const sigmaos::sigmap::types::Tmode OEXEC   = 0x03; // execute (implies OREAD)
+const sigmaos::sigmap::types::Tmode OEXCL   = 0x04; // exclusive
+const sigmaos::sigmap::types::Tmode OTRUNC  = 0x10; // or truncate file first
+const sigmaos::sigmap::types::Tmode OCEXEC  = 0x20; // or close on exec
+const sigmaos::sigmap::types::Tmode ORCLOSE = 0x40; // remove on close
+const sigmaos::sigmap::types::Tmode OAPPEND = 0x80; // append
+
+// Permissions
+const sigmaos::sigmap::types::Tperm DMDIR    = 0x80000000; // directory
+const sigmaos::sigmap::types::Tperm DMAPPEND = 0x40000000; // append only file
+const sigmaos::sigmap::types::Tperm DMEXCL   = 0x20000000; // exclusive use file
+const sigmaos::sigmap::types::Tperm DMMOUNT  = 0x10000000; // mounted channel
+const sigmaos::sigmap::types::Tperm DMAUTH   = 0x08000000; // authentication file
+const sigmaos::sigmap::types::Tperm DMTMP    = 0x04000000; // non-backed-up file
+
+const sigmaos::sigmap::types::Tperm DMREAD  = 0x4; // mode bit for read permission
+const sigmaos::sigmap::types::Tperm DMWRITE = 0x2; // mode bit for write permission
+const sigmaos::sigmap::types::Tperm DMEXEC  = 0x1; // mode bit for execute permission
+
+// 9P2000.u extensions
+// A few are used by sigmaos, but not supported in driver/proxy,
+// so sigmaos mounts on Linux without these extensions.
+const sigmaos::sigmap::types::Tperm DMSYMLINK   = 0x02000000;
+const sigmaos::sigmap::types::Tperm DMLINK      = 0x010000000
+const sigmaos::sigmap::types::Tperm DMDEVICE    = 0x008000000
+const sigmaos::sigmap::types::Tperm DMREPL      = 0x004000000
+const sigmaos::sigmap::types::Tperm DMNAMEDPIPE = 0x002000000
+const sigmaos::sigmap::types::Tperm DMSOCKET    = 0x001000000
+const sigmaos::sigmap::types::Tperm DMSETUID    = 0x000800000
+const sigmaos::sigmap::types::Tperm DMSETGID    = 0x000400000
+const sigmaos::sigmap::types::Tperm DMSETVTX    = 0x000100000
+
+// Generic constants
+const std::string NOT_SET = "NOT_SET";
+
 };
 };

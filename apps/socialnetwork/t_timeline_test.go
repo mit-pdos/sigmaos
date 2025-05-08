@@ -71,7 +71,9 @@ func TestTimeline(t *testing.T) {
 	tssn, err := newTstateSN(mrts, []sn.Srv{
 		sn.Srv{"socialnetwork-post", nil, 1000},
 		sn.Srv{"socialnetwork-timeline", nil, 1000}}, NCACHESRV)
-	defer assert.Nil(t, tssn.Shutdown())
+	defer func() {
+		assert.Nil(t, tssn.Shutdown())
+	}()
 	if err != nil {
 		return
 	}
@@ -135,7 +137,9 @@ func TestHome(t *testing.T) {
 		sn.Srv{"socialnetwork-graph", nil, 1000},
 		sn.Srv{"socialnetwork-post", nil, 1000},
 		sn.Srv{"socialnetwork-home", nil, 1000}}, NCACHESRV)
-	defer assert.Nil(t, tssn.Shutdown())
+	defer func() {
+		assert.Nil(t, tssn.Shutdown())
+	}()
 	if err != nil {
 		return
 	}

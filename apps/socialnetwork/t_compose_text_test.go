@@ -28,7 +28,9 @@ func TestUrl(t *testing.T) {
 	defer mrts.Shutdown()
 
 	tssn, err := newTstateSN(mrts, []sn.Srv{sn.Srv{"socialnetwork-url", nil, 1000}}, NCACHESRV)
-	defer assert.Nil(t, tssn.Shutdown())
+	defer func() {
+		assert.Nil(t, tssn.Shutdown())
+	}()
 	if err != nil {
 		return
 	}
@@ -77,7 +79,9 @@ func TestText(t *testing.T) {
 		sn.Srv{"socialnetwork-user", nil, 1000},
 		sn.Srv{"socialnetwork-url", nil, 1000},
 		sn.Srv{"socialnetwork-text", nil, 1000}}, NCACHESRV)
-	defer assert.Nil(t, tssn.Shutdown())
+	defer func() {
+		assert.Nil(t, tssn.Shutdown())
+	}()
 	if err != nil {
 		return
 	}

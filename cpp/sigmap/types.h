@@ -16,7 +16,7 @@ typedef uint32_t Tgid;
 typedef std::string Trealm;
 typedef std::string Tpid;
 typedef uint64_t TclntId;
-typedef uint64_t TleaseId;
+typedef uint64_t TleaseID;
 typedef uint64_t Tttl;
 typedef std::string Tip;
 typedef uint32_t Tport;

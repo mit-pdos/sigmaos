@@ -200,7 +200,7 @@ std::expected<std::shared_ptr<std::string>, sigmaos::serr::Error> Clnt::GetFile(
   return s;
 }
 
-std::expected<uint32_t, sigmaos::serr::Error> Clnt::PutFile(std::string pn, sigmaos::sigmap::types::Tperm perm, sigmaos::sigmap::types::Tmode mode, std::string *data, uint64_t offset, uint64_t leaseID) {
+std::expected<uint32_t, sigmaos::serr::Error> Clnt::PutFile(std::string pn, sigmaos::sigmap::types::Tperm perm, sigmaos::sigmap::types::Tmode mode, std::string *data, sigmaos::sigmap::types::Toffset offset, sigmaos::sigmap::types::TleaseID leaseID) {
   log(SPPROXYCLNT, "PutFile: {} {} {} {} {} {}", pn, perm, mode, data->size(), offset, leaseID);
   Blob blob;
   auto iov = blob.mutable_iov();
@@ -264,7 +264,7 @@ std::expected<uint32_t, sigmaos::serr::Error> Clnt::Read(int fd, std::string *b)
   return b->size();
 }
 
-std::expected<uint32_t, sigmaos::serr::Error> Clnt::Pread(int fd, std::string *b, uint64_t offset) {
+std::expected<uint32_t, sigmaos::serr::Error> Clnt::Pread(int fd, std::string *b, sigmaos::sigmap::types::Toffset offset) {
   log(SPPROXYCLNT, "Pread: {} {} {}", fd, b->size(), offset);
   SigmaReadReq req;
   SigmaDataRep rep;
@@ -324,7 +324,7 @@ std::expected<uint32_t, sigmaos::serr::Error> Clnt::Write(int fd, std::string *b
   return rep.size();
 }
 
-std::expected<int, sigmaos::serr::Error> Clnt::Seek(int fd, uint64_t offset) {
+std::expected<int, sigmaos::serr::Error> Clnt::Seek(int fd, sigmaos::sigmap::types::Toffset offset) {
   log(SPPROXYCLNT, "Seek: {} {}", fd, offset);
   SigmaSeekReq req;
   SigmaErrRep rep;
@@ -343,7 +343,7 @@ std::expected<int, sigmaos::serr::Error> Clnt::Seek(int fd, uint64_t offset) {
 }
 
 // TODO: fence type in CreateLeased?
-std::expected<int, sigmaos::serr::Error> Clnt::CreateLeased(std::string pn, sigmaos::sigmap::types::Tperm perm, sigmaos::sigmap::types::Tmode mode, uint64_t leaseID/*, f sp.Tfence*/) {
+std::expected<int, sigmaos::serr::Error> Clnt::CreateLeased(std::string pn, sigmaos::sigmap::types::Tperm perm, sigmaos::sigmap::types::Tmode mode, sigmaos::sigmap::types::TleaseID leaseID/*, f sp.Tfence*/) {
   throw std::runtime_error("unimplemented: tfence");
   log(SPPROXYCLNT, "CreateLeased: {} {} {} {}", pn, perm, mode, leaseID);
   SigmaCreateReq req;
@@ -502,7 +502,7 @@ std::expected<std::shared_ptr<TendpointProto>, sigmaos::serr::Error> Clnt::GetNa
   return GetNamedEndpointRealm(_env->GetRealm());
 }
 
-std::expected<int, sigmaos::serr::Error> Clnt::InvalidateNamedEndpointCacheEntryRealm(std::string realm) {
+std::expected<int, sigmaos::serr::Error> Clnt::InvalidateNamedEndpointCacheEntryRealm(sigmaos::sigmap::types::Trealm realm) {
   log(SPPROXYCLNT, "InvalidateNamedEndpointCacheEntryRealm: {}", realm);
   SigmaRealmReq req;
   SigmaMountRep rep;
@@ -519,7 +519,7 @@ std::expected<int, sigmaos::serr::Error> Clnt::InvalidateNamedEndpointCacheEntry
   return 0;
 }
 
-std::expected<std::shared_ptr<TendpointProto>, sigmaos::serr::Error> Clnt::GetNamedEndpointRealm(std::string realm) {
+std::expected<std::shared_ptr<TendpointProto>, sigmaos::serr::Error> Clnt::GetNamedEndpointRealm(sigmaos::sigmap::types::Trealm realm) {
   log(SPPROXYCLNT, "GetNamedEndpointRealm: {}", realm);
   SigmaRealmReq req;
   SigmaMountRep rep;
@@ -574,7 +574,7 @@ std::expected<std::vector<std::string>, sigmaos::serr::Error> Clnt::Mounts() {
   return mounts;
 }
 
-std::expected<int, sigmaos::serr::Error> Clnt::SetLocalMount(std::shared_ptr<TendpointProto>, int port) {
+std::expected<int, sigmaos::serr::Error> Clnt::SetLocalMount(std::shared_ptr<TendpointProto>, sigmaos::sigmap::types::Tport port) {
   throw std::runtime_error("unimplemented (in go version too)");
 }
 

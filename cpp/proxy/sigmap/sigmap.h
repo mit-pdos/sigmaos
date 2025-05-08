@@ -57,13 +57,13 @@ class Clnt {
   std::expected<int, sigmaos::serr::Error> Rename(std::string src, std::string dst);
   std::expected<int, sigmaos::serr::Error> Remove(std::string pn);
   std::expected<std::shared_ptr<std::string>, sigmaos::serr::Error> GetFile(std::string pn);
-  std::expected<uint32_t, sigmaos::serr::Error> PutFile(std::string pn, sigmaos::sigmap::types::Tperm perm, sigmaos::sigmap::types::Tmode mode, std::string *data, uint64_t offset, uint64_t leaseID);
+  std::expected<uint32_t, sigmaos::serr::Error> PutFile(std::string pn, sigmaos::sigmap::types::Tperm perm, sigmaos::sigmap::types::Tmode mode, std::string *data, sigmaos::sigmap::types::Toffset offset, sigmaos::sigmap::types::TleaseID leaseID);
   std::expected<uint32_t, sigmaos::serr::Error> Read(int fd, std::string *b);
-  std::expected<uint32_t, sigmaos::serr::Error> Pread(int fd, std::string *b, uint64_t offset);
+  std::expected<uint32_t, sigmaos::serr::Error> Pread(int fd, std::string *b, sigmaos::sigmap::types::Toffset offset);
   std::expected<uint32_t, sigmaos::serr::Error> Write(int fd, std::string *b);
-  std::expected<int, sigmaos::serr::Error> Seek(int fd, uint64_t offset);
+  std::expected<int, sigmaos::serr::Error> Seek(int fd, sigmaos::sigmap::types::Toffset offset);
   // TODO: fence type in CreateLeased?
-  std::expected<int, sigmaos::serr::Error> CreateLeased(std::string path, sigmaos::sigmap::types::Tperm perm, sigmaos::sigmap::types::Tmode mode, uint64_t leaseID/*, f sp.Tfence*/);
+  std::expected<int, sigmaos::serr::Error> CreateLeased(std::string path, sigmaos::sigmap::types::Tperm perm, sigmaos::sigmap::types::Tmode mode, sigmaos::sigmap::types::TleaseID leaseID/*, f sp.Tfence*/);
   std::expected<uint64_t, sigmaos::serr::Error> ClntID();
   // TODO: fence type in FenceDir?
   std::expected<int, sigmaos::serr::Error> FenceDir(std::string pn/*, f sp.Tfence*/);
@@ -75,11 +75,11 @@ class Clnt {
   std::expected<bool, sigmaos::serr::Error> IsLocalMount(std::shared_ptr<TendpointProto> ep);
   std::expected<std::pair<std::vector<std::string>, std::vector<std::string>>, sigmaos::serr::Error> PathLastMount(std::string pn);
   std::expected<std::shared_ptr<TendpointProto>, sigmaos::serr::Error> GetNamedEndpoint();
-  std::expected<int, sigmaos::serr::Error> InvalidateNamedEndpointCacheEntryRealm(std::string realm);
-  std::expected<std::shared_ptr<TendpointProto>, sigmaos::serr::Error> GetNamedEndpointRealm(std::string realm);
+  std::expected<int, sigmaos::serr::Error> InvalidateNamedEndpointCacheEntryRealm(sigmaos::sigmap::types::Trealm realm);
+  std::expected<std::shared_ptr<TendpointProto>, sigmaos::serr::Error> GetNamedEndpointRealm(sigmaos::sigmap::types::Trealm realm);
   std::expected<int, sigmaos::serr::Error> NewRootMount(std::string pn, std::string mntname);
   std::expected<std::vector<std::string>, sigmaos::serr::Error> Mounts();
-  std::expected<int, sigmaos::serr::Error> SetLocalMount(std::shared_ptr<TendpointProto>, int port);
+  std::expected<int, sigmaos::serr::Error> SetLocalMount(std::shared_ptr<TendpointProto>, sigmaos::sigmap::types::Tport port);
   // TODO: support MountPathClnt?
   //func (scc *SPProxyClnt) MountPathClnt(path string, clnt sos.PathClntAPI) error {
   std::expected<int, sigmaos::serr::Error> Detach(std::string pn);

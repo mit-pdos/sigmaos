@@ -17,6 +17,7 @@
 #include <proc/proc.h>
 #include <proc/status.h>
 #include <sigmap/types.h>
+#include <sigmap/const.h>
 
 namespace sigmaos {
 namespace proxy::sigmap {

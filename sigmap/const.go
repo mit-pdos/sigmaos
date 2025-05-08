@@ -101,7 +101,6 @@ const (
 // Realm consts
 const (
 	ROOTREALM Trealm = "rootrealm"
-	NOREALM   Trealm = "no-realm"
 )
 
 // PID consts
@@ -129,8 +128,8 @@ const (
 
 // Endpoint consts
 const (
-	INTERNAL_EP TTendpoint = iota + 1
-	EXTERNAL_EP
+	INTERNAL_EP TTendpoint = 1
+	EXTERNAL_EP            = 2
 )
 
 // Platform consts

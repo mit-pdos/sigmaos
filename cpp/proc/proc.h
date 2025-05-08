@@ -6,6 +6,7 @@
 #include <google/protobuf/util/json_util.h>
 
 #include <proc/proc.pb.h>
+#include <sigmap/types.h>
 
 namespace sigmaos {
 namespace proc {
@@ -27,7 +28,8 @@ class ProcEnv {
   ProcEnvProto *GetProto() { return &_proto; }
   std::string String() { return _proto.ShortDebugString(); }
 
-  std::string GetRealm() { return _proto.realmstr(); }
+  sigmaos::sigmap::types::Trealm GetRealm() { return _proto.realmstr(); }
+  sigmaos::sigmap::types::Tpid GetPID() { return _proto.pidstr(); }
 
   private:
   ProcEnvProto _proto;

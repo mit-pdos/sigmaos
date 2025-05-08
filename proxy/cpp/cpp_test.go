@@ -1,6 +1,8 @@
 package cpp_test
 
 import (
+	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -57,8 +59,12 @@ func TestSpawnWaitExit(t *testing.T) {
 	defer mrts.Shutdown()
 
 	db.DPrintf(db.TEST, "Running proc")
-	runSpawnLatency(mrts.GetRealm(test.REALM1), nil, false)
+	p := runSpawnLatency(mrts.GetRealm(test.REALM1), nil, false)
 	db.DPrintf(db.TEST, "Proc done")
+
+	b, err := mrts.GetRealm(test.REALM1).GetFile(filepath.Join(sp.S3, sp.LOCAL, "9ps3/hello-cpp-1"))
+	assert.Nil(mrts.T, err, "Err GetFile: %v", err)
+	assert.True(mrts.T, strings.Contains(string(b), p.GetPid().String()), "Proc output not in file")
 }
 
 func TestSpawnWaitEvict(t *testing.T) {

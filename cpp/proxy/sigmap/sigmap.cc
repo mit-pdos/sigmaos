@@ -38,7 +38,7 @@ std::expected<int, sigmaos::serr::Error> Clnt::Test() {
     log(TEST, "ClntID successful");
   }
   {
-    std::string msg("Hello world! I'm a CPP proc!");
+    std::string msg = std::format("Hello world! I'm a CPP proc! pid:{}", _env->GetPID());
     log(TEST, "PutFile message \"{}\" length {}", msg, msg.size());
     auto res = PutFile("name/s3/~local/9ps3/hello-cpp-1", 0777, 0, &msg, 0, 0);
     if (!res.has_value()) {

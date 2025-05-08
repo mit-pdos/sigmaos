@@ -98,9 +98,6 @@ const	sigmaos::sigmap::types::TTendpoint EXTERNAL_EP = 2;
 const	sigmaos::sigmap::types::Tplatform PLATFORM_AWS       = "aws";
 const	sigmaos::sigmap::types::Tplatform PLATFORM_CLOUDLAB  = "cloudlab";
 
-const	sigmaos::sigmap::types::Tplatform PLATFORM_AWS       = "aws";
-const	sigmaos::sigmap::types::Tplatform PLATFORM_CLOUDLAB  = "cloudlab";
-
 // Auth consts
 const	sigmaos::sigmap::types::TprincipalID NO_PRINCIPAL_ID  = "NO_PRINCIPAL_ID";
 

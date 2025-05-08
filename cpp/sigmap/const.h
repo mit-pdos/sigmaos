@@ -74,5 +74,13 @@ const std::string NOT_SET = "NOT_SET";
 // FSETCD consts
 const	sigmaos::sigmap::types::Tttl EtcdSessionTTL = 5;
 
+// Realm consts
+const	sigmaos::sigmap::types::Trealm ROOTREALM = "rootrealm";
+const	sigmaos::sigmap::types::Trealm NO_REALM  = "no-realm";
+
+// PID consts
+const	sigmaos::sigmap::types::Tpid NO_PID = "no-pid";
+
+
 };
 };

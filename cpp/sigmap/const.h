@@ -59,17 +59,20 @@ const sigmaos::sigmap::types::Tperm DMEXEC  = 0x1; // mode bit for execute permi
 // A few are used by sigmaos, but not supported in driver/proxy,
 // so sigmaos mounts on Linux without these extensions.
 const sigmaos::sigmap::types::Tperm DMSYMLINK   = 0x02000000;
-const sigmaos::sigmap::types::Tperm DMLINK      = 0x010000000
-const sigmaos::sigmap::types::Tperm DMDEVICE    = 0x008000000
-const sigmaos::sigmap::types::Tperm DMREPL      = 0x004000000
-const sigmaos::sigmap::types::Tperm DMNAMEDPIPE = 0x002000000
-const sigmaos::sigmap::types::Tperm DMSOCKET    = 0x001000000
-const sigmaos::sigmap::types::Tperm DMSETUID    = 0x000800000
-const sigmaos::sigmap::types::Tperm DMSETGID    = 0x000400000
-const sigmaos::sigmap::types::Tperm DMSETVTX    = 0x000100000
+const sigmaos::sigmap::types::Tperm DMLINK      = 0x01000000;
+const sigmaos::sigmap::types::Tperm DMDEVICE    = 0x00800000;
+const sigmaos::sigmap::types::Tperm DMREPL      = 0x00400000;
+const sigmaos::sigmap::types::Tperm DMNAMEDPIPE = 0x00200000;
+const sigmaos::sigmap::types::Tperm DMSOCKET    = 0x00100000;
+const sigmaos::sigmap::types::Tperm DMSETUID    = 0x00080000;
+const sigmaos::sigmap::types::Tperm DMSETGID    = 0x00040000;
+const sigmaos::sigmap::types::Tperm DMSETVTX    = 0x00010000;
 
 // Generic constants
 const std::string NOT_SET = "NOT_SET";
+
+// FSETCD consts
+const	sigmaos::sigmap::types::Tttl EtcdSessionTTL = 5;
 
 };
 };

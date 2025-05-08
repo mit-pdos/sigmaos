@@ -239,7 +239,7 @@ std::expected<uint32_t, sigmaos::serr::Error> Clnt::Read(int fd, std::string *b)
   SigmaDataRep rep;
   req.set_fd(fd);
   req.set_size(b->size());
-  req.set_off(~0);
+  req.set_off(sigmaos::sigmap::constants::NO_OFFSET);
   Blob blob;
   auto iov = blob.mutable_iov();
   iov->AddAllocated(b);

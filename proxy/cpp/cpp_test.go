@@ -104,6 +104,8 @@ func TestSpawnLatency(t *testing.T) {
 		return
 	}
 
+	runSpawnLatency(mrts.GetRealm(test.REALM1), nil, false, 2000)
+
 	db.DPrintf(db.TEST, "Running procs")
 	c := make(chan bool)
 	for i := 0; i < N_PROC; i++ {

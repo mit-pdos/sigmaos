@@ -12,7 +12,7 @@ RUN pacman-key --init && \
   pacman-key --populate && \
   pacman --noconfirm -Sy archlinux-keyring
 
-RUN pacman --noconfirm -Sy libseccomp strace fuse gcc-libs protobuf spdlog
+RUN pacman --noconfirm -Sy libseccomp strace fuse gcc-libs spdlog protobuf=30.2
 
 WORKDIR /home/sigmaos
 RUN mkdir bin && \

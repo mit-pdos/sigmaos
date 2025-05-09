@@ -17,6 +17,20 @@
 namespace sigmaos {
 namespace io::demux::internal {
 
+class CallPromise {
+  public:
+  CallPromise(std::unique_ptr<std::promise<std::expected<std::shared_ptr<sigmaos::io::transport::Call>, sigmaos::serr::Error>>> p) : _p(std::move(p)) {}
+  ~CallPromise() {}
+
+  std::unique_ptr<std::promise<std::expected<std::shared_ptr<sigmaos::io::transport::Call>, sigmaos::serr::Error>>> Get() {
+    auto p = std::move(_p);
+    _p = nullptr;
+    return std::move(p);
+  }
+  private:
+  std::unique_ptr<std::promise<std::expected<std::shared_ptr<sigmaos::io::transport::Call>, sigmaos::serr::Error>>> _p;
+};
+
 class CallMap {
   public:
   CallMap() : _mu(), _closed(false), _calls() {}
@@ -31,7 +45,7 @@ class CallMap {
   private:
   std::mutex _mu;
   bool _closed;
-  std::map<uint64_t, std::unique_ptr<std::promise<std::expected<std::shared_ptr<sigmaos::io::transport::Call>, sigmaos::serr::Error>>>> _calls;
+  std::map<int, std::unique_ptr<CallPromise>> _calls;
 };
 
 };

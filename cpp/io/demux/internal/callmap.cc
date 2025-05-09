@@ -8,7 +8,7 @@ std::expected<int, sigmaos::serr::Error> CallMap::Put(uint64_t seqno, std::uniqu
   if (_closed) {
     return std::unexpected(sigmaos::serr::Error(sigmaos::serr::TErrUnreachable, "Err: demux closed"));
   }
-  _calls[seqno] = std::move(p);
+  _calls[seqno] = std::make_unique<CallPromise>(std::move(p));
   return 0;
 }
 
@@ -16,7 +16,7 @@ std::optional<std::unique_ptr<std::promise<std::expected<std::shared_ptr<sigmaos
   if (!_calls.contains(seqno)) {
     return std::nullopt;
   }
-  auto call = std::move(_calls.extract(seqno).mapped());
+  auto call = std::move(_calls.extract(seqno).mapped())->Get();
   return call;
 }
 

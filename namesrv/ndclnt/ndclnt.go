@@ -1,4 +1,4 @@
-package clnt
+package ndclnt
 
 import (
 	"fmt"

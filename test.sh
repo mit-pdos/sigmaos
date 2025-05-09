@@ -163,6 +163,7 @@ if [[ $COMPILE == "--compile" ]]; then
       sigmasrv/memfssrv/memfs \
       namesrv \
       namesrv/fsetcd \
+      namesrv/ndclnt \
       sigmaclnt/procclnt \
       proxy/ux \
       proxy/s3 \
@@ -278,7 +279,7 @@ if [[ $BASIC == "--basic" ]]; then
     #
 
     for T in \
-      namesrv \
+      namesrv/ndclnt \
       util/coordination/semaphore \
       sched/msched/proc/chunk/srv \
       proxy/ux \

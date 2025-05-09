@@ -1,4 +1,4 @@
-package namesrv_test
+package ndclnt_test
 
 import (
 	"path/filepath"
@@ -11,6 +11,7 @@ import (
 	dialproxyclnt "sigmaos/dialproxy/clnt"
 	"sigmaos/namesrv"
 	"sigmaos/namesrv/fsetcd"
+	"sigmaos/namesrv/ndclnt"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
@@ -54,55 +55,6 @@ func TestPstats(t *testing.T) {
 	ts.Shutdown()
 }
 
-func newNamedProc(mcpu proc.Tmcpu, realm sp.Trealm, dialproxy bool, canFail bool) *proc.Proc {
-	p := proc.NewProc(sp.NAMEDREL, []string{realm.String()})
-	p.SetMcpu(mcpu)
-	p.SetRealmSwitch(realm)
-	p.GetProcEnv().UseDialProxy = dialproxy
-	if !canFail {
-		p.AppendEnv("SIGMAFAIL", "")
-	} else {
-		p.AppendEnv(proc.SIGMAFAIL, proc.GetSigmaFail())
-	}
-	return p
-}
-
-func startNamed(ts *test.Tstate, nd *proc.Proc) error {
-	// Spawn the named proc
-	if err := ts.Spawn(nd); !assert.Nil(ts.T, err, "Err spawn named: %v", err) {
-		return err
-	}
-	db.DPrintf(db.TEST, "New named spawned: %v", nd.GetPid())
-
-	// Wait for the proc to start
-	if err := ts.WaitStart(nd.GetPid()); !assert.Nil(ts.T, err, "Err WaitStart named: %v", err) {
-		return err
-	}
-	db.DPrintf(db.TEST, "New named started")
-
-	// Wait for the named to start up
-	_, err := ts.GetFileWatch(filepath.Join(sp.REALMS, test.REALM1.String()))
-	// wait until the named has registered its endpoint and is ready to serve
-	if !assert.Nil(ts.T, err, "Err GetFileWatch: %v", err) {
-		return err
-	}
-	db.DPrintf(db.TEST, "New named ready to serve")
-	return nil
-}
-
-func stopNamed(ts *test.Tstate, nd *proc.Proc) error {
-	// Evict the new named
-	err := ts.Evict(nd.GetPid())
-	assert.Nil(ts.T, err, "Err evict named: %v", err)
-	status, err := ts.WaitExit(nd.GetPid())
-	if assert.Nil(ts.T, err, "Err WaitExit named: %v", err) {
-		assert.True(ts.T, status.IsStatusEvicted(), "Wrong exit status: %v", status)
-	}
-	// Make sure the named EP has been removed
-	ts.Remove(filepath.Join(sp.REALMS, test.REALM1.String()))
-	return err
-}
-
 func TestKillNamed(t *testing.T) {
 	const T = 1000
 	fn := sp.NAMED + "crashnd.sem"
@@ -117,8 +69,8 @@ func TestKillNamed(t *testing.T) {
 	}
 	defer ts.Shutdown()
 
-	nd1 := newNamedProc(MCPU, test.REALM1, ts.ProcEnv().UseDialProxy, true)
-	if err := startNamed(ts, nd1); !assert.Nil(ts.T, err, "Err startNamed: %v", err) {
+	nd1 := ndclnt.NewNamedProc(test.REALM1, ts.ProcEnv().UseDialProxy, true)
+	if err := ndclnt.StartNamed(ts.SigmaClnt, nd1); !assert.Nil(ts.T, err, "Err startNamed: %v", err) {
 		return
 	}
 
@@ -141,7 +93,7 @@ func TestKillNamed(t *testing.T) {
 
 	db.DPrintf(db.TEST, "named root %v", sp.Names(sts))
 
-	// Wait for a bit for the crash semaphore to be crated
+	// Wait for a bit for the crash semaphore to be created
 	time.Sleep(CRASH_SEM_DELAY)
 
 	// Crash named
@@ -158,9 +110,9 @@ func TestKillNamed(t *testing.T) {
 	db.DPrintf(db.TEST, "named unreachable, as expected")
 
 	// Start a new named
-	nd2 := newNamedProc(MCPU, test.REALM1, ts.ProcEnv().UseDialProxy, false)
+	nd2 := ndclnt.NewNamedProc(test.REALM1, ts.ProcEnv().UseDialProxy, false)
 	db.DPrintf(db.TEST, "Starting a new named: %v", nd2.GetPid())
-	if err := startNamed(ts, nd2); !assert.Nil(ts.T, err, "Err startNamed 2: %v", err) {
+	if err := ndclnt.StartNamed(ts.SigmaClnt, nd2); !assert.Nil(ts.T, err, "Err startNamed 2: %v", err) {
 		return
 	}
 
@@ -168,7 +120,7 @@ func TestKillNamed(t *testing.T) {
 	assert.Nil(t, err, "Get named dir post-crash")
 	db.DPrintf(db.TEST, "named %v", sp.Names(sts))
 
-	if err := stopNamed(ts, nd2); !assert.Nil(ts.T, err, "Err stop named: %v", err) {
+	if err := ndclnt.StopNamed(ts.SigmaClnt, nd2); !assert.Nil(ts.T, err, "Err stop named: %v", err) {
 		return
 	}
 }
@@ -180,8 +132,8 @@ func reboot(t *testing.T, dn string, f func(*test.Tstate, *sigmaclnt.SigmaClnt, 
 		return
 	}
 
-	nd1 := newNamedProc(MCPU, test.REALM1, ts.ProcEnv().UseDialProxy, true)
-	if err := startNamed(ts, nd1); !assert.Nil(ts.T, err, "Err startNamed: %v", err) {
+	nd1 := ndclnt.NewNamedProc(test.REALM1, ts.ProcEnv().UseDialProxy, true)
+	if err := ndclnt.StartNamed(ts.SigmaClnt, nd1); !assert.Nil(ts.T, err, "Err startNamed: %v", err) {
 		return
 	}
 
@@ -207,7 +159,7 @@ func reboot(t *testing.T, dn string, f func(*test.Tstate, *sigmaclnt.SigmaClnt, 
 
 	assert.Equal(ts.T, 1, len(sts))
 
-	stopNamed(ts, nd1)
+	ndclnt.StopNamed(ts.SigmaClnt, nd1)
 	ts.Shutdown()
 
 	if !quick {
@@ -221,8 +173,8 @@ func reboot(t *testing.T, dn string, f func(*test.Tstate, *sigmaclnt.SigmaClnt, 
 	}
 	defer ts.Shutdown()
 
-	nd2 := newNamedProc(MCPU, test.REALM1, ts.ProcEnv().UseDialProxy, true)
-	if err := startNamed(ts, nd2); !assert.Nil(ts.T, err, "Err startNamed: %v", err) {
+	nd2 := ndclnt.NewNamedProc(test.REALM1, ts.ProcEnv().UseDialProxy, true)
+	if err := ndclnt.StartNamed(ts.SigmaClnt, nd2); !assert.Nil(ts.T, err, "Err startNamed: %v", err) {
 		return
 	}
 
@@ -253,7 +205,7 @@ func reboot(t *testing.T, dn string, f func(*test.Tstate, *sigmaclnt.SigmaClnt, 
 
 	ts.Remove(fn)
 
-	stopNamed(ts, nd2)
+	ndclnt.StopNamed(ts.SigmaClnt, nd2)
 }
 
 // In these tests named will receive notification from etcd that
@@ -264,8 +216,8 @@ func TestLeaseQuickReboot(t *testing.T) {
 		return
 	}
 
-	nd1 := newNamedProc(MCPU, test.REALM1, ts.ProcEnv().UseDialProxy, true)
-	if err := startNamed(ts, nd1); !assert.Nil(ts.T, err, "Err startNamed: %v", err) {
+	nd1 := ndclnt.NewNamedProc(test.REALM1, ts.ProcEnv().UseDialProxy, true)
+	if err := ndclnt.StartNamed(ts.SigmaClnt, nd1); !assert.Nil(ts.T, err, "Err startNamed: %v", err) {
 		return
 	}
 
@@ -284,7 +236,7 @@ func TestLeaseQuickReboot(t *testing.T) {
 	sts, err := sc.GetDir(dn)
 	assert.Nil(t, err, "Err GetDir: %v", err)
 	assert.Equal(t, 0, len(sts))
-	err = stopNamed(ts, nd1)
+	err = ndclnt.StopNamed(ts.SigmaClnt, nd1)
 	// Shut down regardless of whether or not stopping named was successful
 	ts.Shutdown()
 	if !assert.Nil(ts.T, err, "Err stop named: %v", err) {
@@ -336,8 +288,8 @@ func TestLeaseDelayReboot(t *testing.T) {
 		return
 	}
 
-	nd1 := newNamedProc(MCPU, test.REALM1, ts.ProcEnv().UseDialProxy, true)
-	if err := startNamed(ts, nd1); !assert.Nil(ts.T, err, "Err startNamed: %v", err) {
+	nd1 := ndclnt.NewNamedProc(test.REALM1, ts.ProcEnv().UseDialProxy, true)
+	if err := ndclnt.StartNamed(ts.SigmaClnt, nd1); !assert.Nil(ts.T, err, "Err startNamed: %v", err) {
 		return
 	}
 
@@ -356,7 +308,7 @@ func TestLeaseDelayReboot(t *testing.T) {
 	sts, err := sc.GetDir(dn)
 	assert.Nil(t, err, "Err GetDir: %v", err)
 	assert.Equal(t, 0, len(sts))
-	err = stopNamed(ts, nd1)
+	err = ndclnt.StopNamed(ts.SigmaClnt, nd1)
 	// Shut down regardless of whether or not stopping named was successful
 	ts.Shutdown()
 	if !assert.Nil(ts.T, err, "Err stop named: %v", err) {
@@ -408,8 +360,8 @@ func TestLeaseGetDirReboot(t *testing.T) {
 		return
 	}
 
-	nd1 := newNamedProc(MCPU, test.REALM1, ts.ProcEnv().UseDialProxy, true)
-	if err := startNamed(ts, nd1); !assert.Nil(ts.T, err, "Err startNamed: %v", err) {
+	nd1 := ndclnt.NewNamedProc(test.REALM1, ts.ProcEnv().UseDialProxy, true)
+	if err := ndclnt.StartNamed(ts.SigmaClnt, nd1); !assert.Nil(ts.T, err, "Err startNamed: %v", err) {
 		return
 	}
 
@@ -428,7 +380,7 @@ func TestLeaseGetDirReboot(t *testing.T) {
 	sts, err := sc.GetDir(dn)
 	assert.Nil(t, err, "Err GetDir: %v", err)
 	assert.Equal(t, 0, len(sts))
-	err = stopNamed(ts, nd1)
+	err = ndclnt.StopNamed(ts.SigmaClnt, nd1)
 	// Shut down regardless of whether or not stopping named was successful
 	ts.Shutdown()
 	if !assert.Nil(ts.T, err, "Err stop named: %v", err) {

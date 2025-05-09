@@ -8,7 +8,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/ft/leaderclnt"
-	"sigmaos/namesrv/clnt"
+	"sigmaos/namesrv/ndclnt"
 	"sigmaos/path"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
@@ -48,15 +48,15 @@ func TestOldLeaderCrash(t *testing.T) {
 		return
 	}
 
-	nd1 := clnt.NewNamedProc(test.REALM1, ts.ProcEnv().UseDialProxy, true)
-	if err := clnt.StartNamed(ts.SigmaClnt, nd1); !assert.Nil(ts.T, err, "Err startNamed: %v", err) {
+	nd1 := ndclnt.NewNamedProc(test.REALM1, ts.ProcEnv().UseDialProxy, true)
+	if err := ndclnt.StartNamed(ts.SigmaClnt, nd1); !assert.Nil(ts.T, err, "Err startNamed: %v", err) {
 		return
 	}
 
 	// Start a new named
-	nd2 := clnt.NewNamedProc(test.REALM1, ts.ProcEnv().UseDialProxy, false)
+	nd2 := ndclnt.NewNamedProc(test.REALM1, ts.ProcEnv().UseDialProxy, false)
 	db.DPrintf(db.TEST, "Starting a new named: %v", nd2.GetPid())
-	if err := clnt.StartNamed(ts.SigmaClnt, nd2); !assert.Nil(ts.T, err, "Err startNamed 2: %v", err) {
+	if err := ndclnt.StartNamed(ts.SigmaClnt, nd2); !assert.Nil(ts.T, err, "Err startNamed 2: %v", err) {
 		return
 	}
 
@@ -64,7 +64,7 @@ func TestOldLeaderCrash(t *testing.T) {
 
 	l.ReleaseLeadership()
 
-	if err := clnt.StopNamed(ts.SigmaClnt, nd2); !assert.Nil(ts.T, err, "Err stop named: %v", err) {
+	if err := ndclnt.StopNamed(ts.SigmaClnt, nd2); !assert.Nil(ts.T, err, "Err stop named: %v", err) {
 		return
 	}
 

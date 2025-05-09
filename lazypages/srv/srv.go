@@ -3,12 +3,14 @@
 package srv
 
 import (
+	"bufio"
 	"encoding/binary"
 	"io"
 	"net"
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
@@ -156,34 +158,85 @@ func (lps *lazyPagesSrv) handleConn(conn net.Conn) {
 		db.DFatalf("newLazyPagesConn pid %v no registration", pid, err)
 	}
 
-	fdpages, err := lps.Open(lpc.pages, sp.OREAD)
-	//fullpages, err := os.Open(filepath.Join(lazypages.WorkDir(proc.GetProcEnv().GetPID()), "fullpages-"+strconv.Itoa(int(pid))+".img"))
+	// fdpages, err := lps.Open(lpc.pages, sp.OREAD)
+	// //fullpages, err := os.Open(filepath.Join(lazypages.WorkDir(proc.GetProcEnv().GetPID()), "fullpages-"+strconv.Itoa(int(pid))+".img"))
 
-	if err != nil {
-		db.DPrintf(db.LAZYPAGESSRV, "Open %v err %v\n", lpc.pages, err)
-		return
-	}
-	defer lps.CloseFd(fd)
-	rp := func(off int64, pages []byte) error {
-		return readBytesSigma(lps.SigmaClnt, fdpages, off, pages)
-		//_, err := fullpages.ReadAt(pages, off)
-		//return err
-	}
+	// if err != nil {
+	// 	db.DPrintf(db.LAZYPAGESSRV, "Open %v err %v\n", lpc.pages, err)
+	// 	return
+	// }
+	// defer lps.CloseFd(fd)
+	// rp := func(off int64, pages []byte) error {
+	// 	return readBytesSigma(lps.SigmaClnt, fdpages, off, pages)
+	// 	//_, err := fullpages.ReadAt(pages, off)
+	// 	//return err
+	// }
 	lpc.fd = fd
-	lpc.rp = rp
+	//lpc.rp = rp
+	lps.pids.Delete(int(pid))
 	if err := lpc.handleReqs(); err != nil {
 		db.DFatalf("handle pid %v err %v", pid, err)
 	}
-	lps.pids.Delete(int(pid))
+	//lps.pids.Delete(int(pid))
 }
 
-func (lps *lazyPagesSrv) register(pid int, imgdir, pages string) error {
+func (lps *lazyPagesSrv) readPreloads(path string) [][]uint64 {
+	file, err := os.Open(path)
+	if err != nil {
+		panic(err)
+	}
+	defer file.Close()
+
+	var result [][]uint64
+	scanner := bufio.NewScanner(file)
+
+	for scanner.Scan() {
+		fields := strings.Fields(scanner.Text())
+		if len(fields) != 2 {
+			continue // or handle error
+		}
+
+		hexVal, err1 := strconv.ParseUint(fields[0], 0, 64) // "0" base auto-detects hex
+		decVal, err2 := strconv.ParseUint(fields[1], 10, 64)
+		if err1 != nil || err2 != nil {
+			db.DPrintf(db.ERROR, "Skipping invalid line: %s\n", scanner.Text())
+			continue
+		}
+
+		result = append(result, []uint64{hexVal, decVal})
+	}
+
+	if err := scanner.Err(); err != nil {
+		panic(err)
+	}
+	return result
+
+}
+func (lps *lazyPagesSrv) register(pid int, imgdir, pages string, ckptDir string, firstInstance bool) error {
 	// if err := lps.DownloadFile(pages, filepath.Join(lazypages.WorkDir(proc.GetProcEnv().GetPID()), "fullpages-"+strconv.Itoa(pid)+".img")); err != nil {
 	// 	db.DPrintf(db.PROCD, "DownloadFile pages err %v\n", err)
 	// 	return err
 	// }
 	fullpages := filepath.Join(lazypages.WorkDir(proc.GetProcEnv().GetPID()), "fullpages-"+strconv.Itoa(pid)+".img")
-	lpc, err := lps.newLazyPagesConn(pid, imgdir, pages, fullpages)
+	histFD := -1
+	var err error
+	preloads := make([][]uint64, 0)
+	if firstInstance {
+
+		//XXXXXXXXX fix name to identify process since pid is 1
+		histFn := filepath.Join(ckptDir, "preloads-"+strconv.Itoa(pid)+".txt")
+		_, err = lps.Create(histFn, 0777, 0)
+		if err != nil {
+			return err
+		}
+		histFD, err = lps.Open(histFn, sp.OWRITE)
+		if err != nil {
+			return err
+		}
+	} else {
+		preloads = lps.readPreloads(filepath.Join(imgdir, "preloads-"+strconv.Itoa(pid)+".txt"))
+	}
+	lpc, err := lps.newLazyPagesConn(pid, imgdir, pages, fullpages, histFD)
 	if err != nil {
 		return err
 	}
@@ -192,6 +245,20 @@ func (lps *lazyPagesSrv) register(pid int, imgdir, pages string) error {
 	if !ok {
 		db.DFatalf("Insert: exists %d", pid)
 	}
+	fdpages, err := lps.Open(lpc.pages, sp.OREAD)
+	//fullpages, err := os.Open(filepath.Join(lazypages.WorkDir(proc.GetProcEnv().GetPID()), "fullpages-"+strconv.Itoa(int(pid))+".img"))
+
+	if err != nil {
+		db.DPrintf(db.LAZYPAGESSRV, "Open %v err %v\n", lpc.pages, err)
+		return err
+	}
+	rp := func(off int64, pages []byte) error {
+		return readBytesSigma(lps.SigmaClnt, fdpages, off, pages)
+		//_, err := fullpages.ReadAt(pages, off)
+		//return err
+	}
+	lpc.rp = rp
+	go lpc.preFetch(preloads)
 	return nil
 }
 

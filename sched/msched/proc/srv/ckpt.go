@@ -588,9 +588,13 @@ func (ps *ProcSrv) readCheckpointAndRegister(ckptSigmaDir, localDir, ckpt string
 
 	sts, err := ps.ssrv.MemFs.SigmaClnt().GetDir(filepath.Join(ckptSigmaDir, ckpt))
 	files := sp.Names(sts)
+	firstInstance := true
 	for _, entry := range files {
 		db.DPrintf(db.CKPT, "SEE %s\n", entry)
-		if strings.HasPrefix(entry, "pagemap") || strings.HasPrefix(entry, "mm-") {
+		if strings.HasPrefix(entry, "preloads") {
+			firstInstance = false
+		}
+		if strings.HasPrefix(entry, "pagemap") || strings.HasPrefix(entry, "mm-") || strings.HasPrefix(entry, "preloads") {
 			db.DPrintf(db.PROCD, "DownloadFile %s\n", entry)
 			fn := filepath.Join(ckptSigmaDir, ckpt, entry)
 			dstfn := filepath.Join(pn, entry)
@@ -599,11 +603,12 @@ func (ps *ProcSrv) readCheckpointAndRegister(ckptSigmaDir, localDir, ckpt string
 				return err
 			}
 		}
+
 	}
 	go func() {
 		pages := filepath.Join(ckptSigmaDir, CKPTFULL, "pages-"+strconv.Itoa(pid)+".img")
 		db.DPrintf(db.CKPT, "restoreProc: Register %d %v", pid, pages)
-		if err := ps.lpc.Register(pid, pn, pages); err != nil {
+		if err := ps.lpc.Register(pid, pn, pages, filepath.Join(ckptSigmaDir, ckpt), firstInstance); err != nil {
 			db.DPrintf(db.CKPT, "restoreProc: Register %d %v err %v", pid, pages, err)
 			return
 		}
@@ -692,7 +697,7 @@ func (ps *ProcSrv) readCheckpointAndRegisterLz4(ckptSigmaDir, localDir, ckpt str
 	go func() {
 		pages := filepath.Join(ckptSigmaDir, CKPTFULL, "pages-"+strconv.Itoa(pid)+".img")
 		db.DPrintf(db.CKPT, "restoreProc: Register %d %v", pid, pages)
-		if err := ps.lpc.Register(pid, pn, pages); err != nil {
+		if err := ps.lpc.Register(pid, pn, pages, filepath.Join(ckptSigmaDir, CKPTFULL), false); err != nil {
 			db.DPrintf(db.CKPT, "restoreProc: Register %d %v err %v", pid, pages, err)
 			return
 		}

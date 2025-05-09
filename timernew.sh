@@ -25,21 +25,19 @@ for ((run = 1; run <= num_runs; run++)); do
     # # Define the patterns to search for
     patterns=(
         "Spawn from checkpoint"
-        "CheckpointMe err"
-        "restoreProc: Register"
+        "restoreProc: Register "
         "restoreProc: Registered"
         "readCheckpoint"
         "Done readCheckpoint"
         "Invoke restore"
         "restoreProc: Restore err"
-        "LAZYPAGESSRV_FAULT page fault"
         "restored proc is running"
         "sendConn: sent"
         "TEST Started"
     )
 
     # Initialize line counter
-    line_num=2
+    line_num=1
     # Capture stdout and extract timestamp for the first pattern
     first_timestamp=""
     last_timetamp=""
@@ -57,14 +55,6 @@ for ((run = 1; run <= num_runs; run++)); do
         fi
     done < stdlog.txt
 
-    while IFS= read -r line; do
-        #echo 
-        if [[ "$line" == *"${patterns[1]}"* ]]; then
-            
-            times[1]=$(echo "$line" | awk '{print $1}')  # Extract timestamp
-            #break
-        fi
-    done < /tmp/sigmaos-perf/log-proc.txt
     ./logs.sh > logs.txt
 
     times[0]=$first_timestamp  # Store the first timestamp from stdout
@@ -89,7 +79,7 @@ for ((run = 1; run <= num_runs; run++)); do
     # echo "No npages(number) found in the file."
     # fi
         
-    for pattern in "${patterns[@]}"; do
+    for pattern in "${patterns[@]:1:${#patterns[@]}-2}"; do
         found=false
         pat="Recvmsg err"
         while IFS= read -r line; do
@@ -98,28 +88,34 @@ for ((run = 1; run <= num_runs; run++)); do
                 # Extract the timestamp and store it
                 timestamp=$(echo "$line" | awk '{print $1}')  # Extract timestamp from logs.txt
                 times[$line_num]=$timestamp
-                line_num=$((line_num + 1))
-                break
+                
+         #       break
             fi
             if [[ "$line" == *"$pat"* ]]; then
                 echo "FOUND BAD"
                 found=true
             fi
+        
         done < logs.txt  # Make sure to reference logs.txt
+       # echo "line $line_num $pattern"
+        line_num=$((line_num + 1))
+        
         if $found; then
+            echo "not found $pattern"
             break
         fi
     done    
 
     times[$line_num]=$last_timestamp
     # Ensure we have all the required timestamps
-    if [ "${#times[@]}" -ne ${#patterns[@]} ]; then
-        echo "Error: Could not find all required patterns in logs.txt ${#times[@]} <${#patterns[@]}"
-        ./stop.sh > /dev/null 2>&1
-        exit 1
-    fi
+    # if [ "${#times[@]}" -ne ${#patterns[@]} ]; then
+    #     echo "Error: Could not find all required patterns in logs.txt ${#times[@]} <${#patterns[@]}"
+    #     ./stop.sh > /dev/null 2>&1
+    #     exit 1
+    # fi
     for ((i = 0; i < ${#patterns[@]}; i++)); do
             if [[ -n "${times[$i]}" ]]; then
+                echo "$i ${patterns[$i]} ${times[$i]}"
                 ms=$(timestamp_to_ms "${times[$i]}")
                 
                 total_times[$i]=$((total_times[$i] + ms))

@@ -11,10 +11,10 @@ package sigmapsrv
 import (
 	"sigmaos/ctx"
 	db "sigmaos/debug"
+	dialproxyclnt "sigmaos/dialproxy/clnt"
 	"sigmaos/fs"
 	"sigmaos/namesrv/fsetcd"
-	dialproxyclnt "sigmaos/dialproxy/clnt"
-	"sigmaos/overlaydir"
+	overlay "sigmaos/overlaydir"
 	"sigmaos/path"
 	"sigmaos/proc"
 	"sigmaos/protsrv"

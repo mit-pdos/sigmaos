@@ -18,10 +18,16 @@ import (
 )
 
 type Req struct {
-	iov     int
-	nopages int
-	index   int
-	addr    uint64
+	iov      int
+	nopages  int
+	index    int
+	addr     uint64
+	realaddr uint64
+}
+
+type Range struct {
+	lb uint64
+	ub uint64
 }
 
 type lazyPagesConn struct {
@@ -38,16 +44,19 @@ type lazyPagesConn struct {
 	nfault    int
 	npages    int
 	data      []byte
-	//	hist      []int64
-	cache     map[int][]bool
-	cachedata []byte
-	queue     []Req
-	mu        sync.Mutex
-	cond      *sync.Cond
-	hits      int
+	//hist      []Range
+	//cache     map[int][]bool
+	cache         [][]bool
+	cachedata     []byte
+	queue         []Req
+	mu            sync.Mutex
+	cond          *sync.Cond
+	hits          int
+	firstInstance bool
+	histFD        int
 }
 
-func (lps *lazyPagesSrv) newLazyPagesConn(pid int, imgdir, pages string, fullpages string) (*lazyPagesConn, error) {
+func (lps *lazyPagesSrv) newLazyPagesConn(pid int, imgdir, pages string, fullpages string, histFd int) (*lazyPagesConn, error) {
 	lpc := &lazyPagesConn{lps: lps, pid: pid, imgdir: imgdir, pages: pages}
 	pidstr := strconv.Itoa(pid)
 	pmi, err := newTpagemapImg(lpc.imgdir, pidstr)
@@ -65,8 +74,18 @@ func (lps *lazyPagesSrv) newLazyPagesConn(pid int, imgdir, pages string, fullpag
 	// }
 	lpc.mm = mm
 	npages := 0
+	//lpc.hist = make([]Range, 0)
 	lpc.iovs, npages, lpc.maxIovLen = mm.collectIovs(pmi)
-	lpc.cache = make(map[int][]bool)
+	//lpc.cache = make(map[int][]bool)
+	lpc.cache = make([][]bool, len(lpc.iovs.iovs))
+	for i, iov := range lpc.iovs.iovs {
+		lpc.cache[i] = make([]bool, int(iov.end-iov.start)/iov.pagesz)
+	}
+
+	if histFd != -1 {
+		lpc.firstInstance = true
+		lpc.histFD = histFd
+	}
 	// if err := lps.DownloadFile(pages, fullpages); err != nil {
 	// 	db.DPrintf(db.PROCD, "DownloadFile pages err %v\n", err)
 	// 	return nil, err
@@ -88,6 +107,9 @@ func (lps *lazyPagesSrv) newLazyPagesConn(pid int, imgdir, pages string, fullpag
 }
 
 func (lpc *lazyPagesConn) handleReqs() error {
+	if lpc.firstInstance {
+		defer lpc.lps.CloseFd(lpc.histFD)
+	}
 	cnter := 0
 	for {
 		n, err2 := unix.Poll(
@@ -122,7 +144,7 @@ func (lpc *lazyPagesConn) handleReqs() error {
 		buf := make([]byte, unsafe.Sizeof(userfaultfd.UffdMsg{}))
 		n2, err := syscall.Read(lpc.fd, buf)
 		cnt := 0
-		go lpc.preFetch()
+
 		for err != nil {
 			db.DPrintf(db.ERROR, "Read err %v try: %v n: %v n2: %v", err, cnt, n, n2)
 			if err == syscall.ENOENT {
@@ -133,7 +155,7 @@ func (lpc *lazyPagesConn) handleReqs() error {
 
 				return err
 			}
-			time.Sleep(100 * time.Millisecond)
+			time.Sleep(1 * time.Millisecond)
 			_, err = syscall.Read(lpc.fd, buf)
 			cnt += 1
 		}
@@ -163,16 +185,51 @@ func (lpc *lazyPagesConn) handleReqs() error {
 	}
 }
 
-func (lpc *lazyPagesConn) preFetch() {
-	for {
-		lpc.mu.Lock()
+func reverse[T any](s []T) {
+	for i, j := 0, len(s)-1; i < j; i, j = i+1, j-1 {
+		s[i], s[j] = s[j], s[i]
+	}
+}
+func (lpc *lazyPagesConn) preFetch(saved_addresses [][]uint64) {
+	lpc.mu.Lock()
+	//mp := make(map[int]bool)
+	for _, pair := range saved_addresses {
+		addr := pair[0]
+		nopages := int(pair[1])
+		iovno := lpc.iovs.findBinSearch(addr)
 
+		if iovno != -1 {
+			// if _, ok := mp[iovno]; ok {
+			// 	continue
+			// }
+			//			mp[iovno] = true
+
+			iov := lpc.iovs.iovs[iovno]
+			pi := lpc.pmi.findBinSearch(addr)
+			index := int(addr-iov.start) / (iov.pagesz)
+			iovlen := int(iov.end-iov.start) / iov.pagesz
+			nopages := min(iovlen-index, nopages)
+			//begin := max(0, index-PREFETCH/4)
+
+			//lpc.queue = append(lpc.queue, Req{iov: iovno, nopages: min(iovlen-begin, PREFETCH/4), index: begin, addr: uint64((pi - (index - begin)) * iov.pagesz), realaddr: addr - uint64(pi*(index-begin))})
+
+			lpc.queue = append(lpc.queue, Req{iov: iovno, nopages: nopages, index: index, addr: uint64(pi * iov.pagesz), realaddr: addr})
+		}
+	}
+	db.DPrintf(db.LAZYPAGESSRV_FAULT, "QUEUE length %v saved len:%v", len(lpc.queue), len(saved_addresses))
+	lpc.mu.Unlock()
+	for {
+		//	break
+		lpc.mu.Lock()
 		for len(lpc.queue) == 0 {
+			db.DPrintf(db.LAZYPAGESSRV_FAULT, "sleeping")
 			lpc.cond.Wait() // Wait until something is appended
 		}
+
 		// Pop the first element
 		lpc.hits += 1
 		request := lpc.queue[0]
+
 		lpc.queue = lpc.queue[1:]
 		iov := lpc.iovs.iovs[request.iov]
 		curriov := iov
@@ -189,11 +246,13 @@ func (lpc *lazyPagesConn) preFetch() {
 				ind = 0
 			}
 			if (curriov.copied[ind] || lpc.cache[curriovno][ind]) && pref {
+
 				request.nopages--
 				request.addr += uint64(iov.pagesz)
 				request.index = ind + 1
 				if curriovno > request.iov {
 					request.iov++
+					iov = lpc.iovs.iovs[request.iov]
 				}
 			} else {
 				pref = false
@@ -209,6 +268,7 @@ func (lpc *lazyPagesConn) preFetch() {
 		if err := lpc.rp(int64(request.addr), buf); err != nil {
 			db.DFatalf("no page content for %x err: %v", request.addr, err)
 		}
+		db.DPrintf(db.LAZYPAGESSRV_FAULT, "fetched addr %x hits %v", request.realaddr, lpc.hits)
 		lpc.mu.Lock()
 		curriovno = request.iov
 		iovlen = int(iov.end-iov.start) / iov.pagesz
@@ -227,40 +287,6 @@ func (lpc *lazyPagesConn) preFetch() {
 	}
 }
 
-// func (lpc *lazyPagesConn) preFetch() {
-// 	for {
-// 		lpc.mu.Lock()
-
-// 		for len(lpc.queue) == 0 {
-// 			lpc.cond.Wait() // Wait until something is appended
-// 		}
-// 		// Pop the first element
-
-// 		request := lpc.queue[0]
-// 		lpc.queue = lpc.queue[1:]
-// 		iov := lpc.iovs.iovs[request.iov]
-// 		iovlen := int(iov.end-iov.start) / iov.pagesz
-// 		for i := request.index; i < iovlen; i++ {
-// 			if iov.copied[i] {
-// 				request.nopages = i - request.index
-// 				break
-// 			}
-// 		}
-// 		lpc.mu.Unlock()
-
-// 		buf := lpc.cachedata[request.addr : request.addr+uint64(request.nopages*iov.pagesz)]
-// 		if err := lpc.rp(int64(request.addr), buf); err != nil {
-// 			db.DFatalf("no page content for %x err: %v", request.addr, err)
-// 		}
-// 		lpc.mu.Lock()
-// 		for i := request.index; i < request.index+request.nopages; i++ {
-// 			lpc.cache[request.iov][i] = true
-// 		}
-// 		lpc.mu.Unlock()
-// 	}
-// }
-
-// returns n,pi
 func (lpc *lazyPagesConn) markAndLoad(iovno int, iov *Iov, pi int, addr0 uint64) (int, uint64) {
 	THRESH := 1 + PREFETCH/2
 	n := 0
@@ -279,9 +305,9 @@ func (lpc *lazyPagesConn) markAndLoad(iovno int, iov *Iov, pi int, addr0 uint64)
 		if iov.copied[i] {
 			break
 		}
-		if _, ok := lpc.cache[iovno]; !ok {
-			lpc.cache[iovno] = make([]bool, iovlen)
-		}
+		// if _, ok := lpc.cache[iovno]; !ok {
+		// 	lpc.cache[iovno] = make([]bool, iovlen)
+		// }
 		exists := lpc.cache[iovno][i]
 
 		if exists && loaded == -1 {
@@ -326,14 +352,20 @@ func (lpc *lazyPagesConn) markAndLoad(iovno int, iov *Iov, pi int, addr0 uint64)
 
 		buf = lpc.data[:n*iov.pagesz]
 		if newloaded != -1 {
+			start := time.Now()
 			copy(buf[:(newloaded-startIndex)*iov.pagesz], lpc.cachedata[off:off+int64((newloaded-startIndex)*iov.pagesz)])
+			duration := time.Since(start)
+			db.DPrintf(db.LAZYPAGESSRV_FAULT, "copy time taken %v pages: %v ", duration.Microseconds(), newloaded-startIndex)
 		} else {
 			newloaded = startIndex
 		}
 		//copy(buf[:min(loaded*iov.pagesz, n*iov.pagesz)], lpc.cachedata[off:off+int64(n*iov.pagesz)])
+		start := time.Now()
 		if err := lpc.rp(off+int64((newloaded-startIndex)*iov.pagesz), buf[(newloaded-startIndex)*iov.pagesz:n*iov.pagesz]); err != nil {
 			db.DFatalf("no page content for %x err: %v", addr, err)
 		}
+		duration := time.Since(start)
+		db.DPrintf(db.LAZYPAGESSRV_FAULT, "rp time taken %v pages: %v", duration.Microseconds(), n-(newloaded-startIndex))
 	} else {
 		if loaded > 0 {
 			newloaded := -1
@@ -357,17 +389,24 @@ func (lpc *lazyPagesConn) markAndLoad(iovno int, iov *Iov, pi int, addr0 uint64)
 			}
 			buf = lpc.data[:n*iov.pagesz]
 			if newloaded != -1 {
+				start := time.Now()
 				copy(buf[:(newloaded-startIndex)*iov.pagesz], lpc.cachedata[off:off+int64((newloaded-startIndex)*iov.pagesz)])
+				duration := time.Since(start)
+				db.DPrintf(db.LAZYPAGESSRV_FAULT, "copy time taken %v pages: %v ", duration.Microseconds(), newloaded-startIndex)
 			} else {
 				newloaded = startIndex
 			}
 			//copy(buf[:min(loaded*iov.pagesz, n*iov.pagesz)], lpc.cachedata[off:off+int64(n*iov.pagesz)])
+			start := time.Now()
 			if err := lpc.rp(off+int64((newloaded-startIndex)*iov.pagesz), buf[(newloaded-startIndex)*iov.pagesz:loaded*iov.pagesz]); err != nil {
 				db.DFatalf("no page content for %x err: %v", addr, err)
 			}
+			duration := time.Since(start)
+			db.DPrintf(db.LAZYPAGESSRV_FAULT, "rp time taken %v pages: %v", duration.Microseconds(), loaded-(newloaded-startIndex))
 		} else {
 			oldStartIndex := startIndex
 			for ; startIndex > max(0, oldStartIndex-PREFETCH/2); addr -= uint64(iov.pagesz) {
+				//for ; startIndex > 0; addr -= uint64(iov.pagesz) {
 				exists := lpc.cache[iovno][startIndex-1]
 
 				if !exists || iov.copied[startIndex-1] {
@@ -380,8 +419,11 @@ func (lpc *lazyPagesConn) markAndLoad(iovno int, iov *Iov, pi int, addr0 uint64)
 			}
 			buf = lpc.data[:n*iov.pagesz]
 		}
-		db.DPrintf(db.LAZYPAGESSRV_FAULT, "Preloading! %v-%v: total %v", loaded, n, iovlen-startIndex)
+		//db.DPrintf(db.LAZYPAGESSRV_FAULT, "Preloading! %v-%v: total %v", loaded, n, iovlen-startIndex)
+		start := time.Now()
 		copy(buf[loaded*iov.pagesz:n*iov.pagesz], lpc.cachedata[int64(loaded*iov.pagesz)+off:off+int64(n*iov.pagesz)])
+		duration := time.Since(start)
+		db.DPrintf(db.LAZYPAGESSRV_FAULT, "skip copy time taken %v pages: %v ", duration.Microseconds(), n-loaded)
 		// for i := loaded; i < n; i++ {
 
 		// 	page, exists := lpc.cache[iovno][i]
@@ -393,39 +435,63 @@ func (lpc *lazyPagesConn) markAndLoad(iovno int, iov *Iov, pi int, addr0 uint64)
 		// 	}
 		// }
 	}
-	db.DPrintf(db.LAZYPAGESSRV_FAULT, "iov %v faulting copy %x->(%x), bounds: %v-%v, len: %v, preloaded? %v", iovno, addr0, addr, startIndex, startIndex+n, iovlen, lpc.cache[iovno][startIndex])
+	//if ()
+	if lpc.firstInstance {
+		db.DPrintf(db.LAZYPAGESSRV_FAULT, "hist: %v writing %s", lpc.histFD, fmt.Sprintf("0x%x %v\n", addr, n))
+		_, err := lpc.lps.Write(lpc.histFD, []byte(fmt.Sprintf("0x%x %d\n", addr, n)))
+		if err != nil {
+			db.DPrintf(db.ERROR, "error hist: %v", err)
+		}
+	} else {
+		db.DPrintf(db.LAZYPAGESSRV_FAULT, "iov %v faulting copy %x->(%x), bounds: %v-%v, iovlen %v, len: %v, preloaded? %v", iovno, addr, addr, startIndex, startIndex+n, iovlen, n, loaded)
+
+	}
+	return n * iov.pagesz, addr
 	if n+startIndex < iovlen {
 		lpc.mu.Lock()
 		nopages := min(PREFETCH/2, iovlen-n-startIndex)
-		if len(lpc.iovs.iovs) > iovno+1 && iovlen-n-startIndex < PREFETCH/2 {
+		// if len(lpc.iovs.iovs) > iovno+1 && iovlen-n-startIndex < PREFETCH/2 {
 
-			iovlen2 := int(lpc.iovs.iovs[iovno+1].end-lpc.iovs.iovs[iovno+1].start) / iov.pagesz
-			if _, ok := lpc.cache[iovno+1]; !ok {
-				lpc.cache[iovno+1] = make([]bool, iovlen2)
-			}
-			nopages += min(PREFETCH/2, iovlen2)
-		}
+		// 	iovlen2 := int(lpc.iovs.iovs[iovno+1].end-lpc.iovs.iovs[iovno+1].start) / iov.pagesz
+		// 	nopages += min(PREFETCH/2, iovlen2)
+		// }
 		lpc.queue = append(lpc.queue, Req{iov: iovno, nopages: nopages, index: n + startIndex, addr: uint64(int(off) + n*iov.pagesz)})
-		lpc.mu.Unlock()
-	} else if len(lpc.iovs.iovs) > iovno+1 && n+startIndex == iovlen {
-		//db.DPrintf(db.LAZYPAGESSRV_FAULT, "Preload next iov! %v", iovlen-n-startIndex)
-		lpc.mu.Lock()
-		iovlen2 := int(lpc.iovs.iovs[iovno+1].end-lpc.iovs.iovs[iovno+1].start) / iov.pagesz
-		if _, ok := lpc.cache[iovno+1]; !ok {
-			lpc.cache[iovno+1] = make([]bool, iovlen2)
-		}
-		lpc.queue = append(lpc.queue, Req{iov: iovno + 1, nopages: min(PREFETCH/2, iovlen2), index: 0, addr: uint64(int(off) + (iovlen-startIndex)*iov.pagesz)})
-
+		lpc.cond.Signal()
 		lpc.mu.Unlock()
 	}
+	// } else if len(lpc.iovs.iovs) > iovno+1 && n+startIndex == iovlen {
+	// 	//db.DPrintf(db.LAZYPAGESSRV_FAULT, "Preload next iov! %v", iovlen-n-startIndex)
+	// 	lpc.mu.Lock()
+	// 	iovlen2 := int(lpc.iovs.iovs[iovno+1].end-lpc.iovs.iovs[iovno+1].start) / iov.pagesz
+	// 	lpc.queue = append(lpc.queue, Req{iov: iovno + 1, nopages: min(PREFETCH/2, iovlen2), index: 0, addr: uint64(int(off) + (iovlen-startIndex)*iov.pagesz)})
+	// 	lpc.cond.Signal()
+	// 	lpc.mu.Unlock()
+	// }
 	if startIndex > 0 {
 		lpc.mu.Lock()
 		nopages := min(PREFETCH/2, startIndex)
+		// if iovno > 0 && startIndex < PREFETCH/2 {
+		// 	iovlen2 := int(lpc.iovs.iovs[iovno-1].end-lpc.iovs.iovs[iovno-1].start) / iov.pagesz
+		// 	nopages = min(PREFETCH/2, iovlen2)
+		// 	lpc.queue = append(lpc.queue, Req{iov: iovno - 1, nopages: nopages + startIndex, index: iovlen2 - nopages, addr: uint64(int(off) - (startIndex+nopages)*iov.pagesz)})
+
+		// } else {
 		//db.DPrintf(db.LAZYPAGESSRV_FAULT, "Preload prev! %v-%v", startIndex-nopages, startIndex)
 		lpc.queue = append(lpc.queue, Req{iov: iovno, nopages: nopages, index: startIndex - nopages, addr: uint64(int(off) - nopages*iov.pagesz)})
-
+		//}
+		//db.DPrintf(db.LAZYPAGESSRV_FAULT, "Queued up down %v len: %v\n", iovno, len(lpc.queue))
+		lpc.cond.Signal()
 		lpc.mu.Unlock()
 	}
+	//	} else if iovno > 0 {
+	// 	lpc.mu.Lock()
+	// 	iovlen2 := int(lpc.iovs.iovs[iovno-1].end-lpc.iovs.iovs[iovno-1].start) / iov.pagesz
+	// 	nopages := min(PREFETCH/2, iovlen2)
+	// 	lpc.queue = append(lpc.queue, Req{iov: iovno - 1, nopages: nopages, index: iovlen2 - nopages, addr: uint64(int(off) - nopages*iov.pagesz)})
+	// 	//db.DPrintf(db.LAZYPAGESSRV_FAULT, "Queued up down %v len: %v\n", iovno-1, len(lpc.queue))
+	// 	lpc.cond.Signal()
+	// 	lpc.mu.Unlock()
+	// }
 	// if iovno > 0 && iovlen-n-startIndex < PREFETCH/2 {
 	// 	lpc.mu.Lock()
 	// 	iovlen2 := int(lpc.iovs.iovs[iovno-1].end-lpc.iovs.iovs[iovno-1].start) / iov.pagesz
@@ -449,7 +515,37 @@ func (lpc *lazyPagesConn) pageFault(addr uint64) error {
 	}
 	// lpc.nfault += 1
 	if iov == nil {
-		db.DPrintf(db.LAZYPAGESSRV_FAULT, "page fault: zero %d: no iov for %x", lpc.nfault, addr)
+		//limitl := addr - uint64(lpc.pmi.pagesz*PREFETCH/2)
+		//limitu := addr + uint64(lpc.pmi.pagesz*PREFETCH/2)
+		//limitl := addr
+		//limitu := addr + uint64(lpc.pmi.pagesz)
+		// for _, bound := range lpc.hist {
+
+		// 	if bound.ub <= addr {
+		// 		limitl = max(limitl, bound.ub)
+		// 		if bound.ub > addr {
+		// 			return nil
+		// 		}
+		// 	} else if bound.lb > addr {
+		// 		limitu = min(limitu, bound.lb)
+		// 	}
+		// }
+		lowerbound := addr
+		// for ; lowerbound > 0 && lowerbound > limitl; lowerbound -= uint64(lpc.pmi.pagesz) {
+		// 	if lpc.iovs.findBinSearch(lowerbound-uint64(lpc.pmi.pagesz)) != -1 {
+		// 		break
+		// 	}
+
+		// }
+		upperbound := addr + uint64(lpc.pmi.pagesz)
+		// for ; upperbound < limitu; upperbound += uint64(lpc.pmi.pagesz) {
+		// 	if lpc.iovs.findBinSearch(upperbound) != -1 {
+		// 		break
+		// 	}
+		// }
+
+		db.DPrintf(db.LAZYPAGESSRV_FAULT, "page fault: zero %d: no iov for %x, lb: %x ub: %x", lpc.nfault, addr, lowerbound, upperbound)
+		//err := zeroLen(lpc.fd, lowerbound, upperbound-lowerbound)
 		err := zeroPage(lpc.fd, addr, lpc.lps.pagesz)
 		cnt := 0
 		for err != nil {
@@ -458,20 +554,24 @@ func (lpc *lazyPagesConn) pageFault(addr uint64) error {
 			if err == syscall.EEXIST {
 				return nil
 			}
-			if cnt > 10 || (err != syscall.EAGAIN) {
+			if cnt > 10 || (err != syscall.EAGAIN && err != syscall.ENOENT) {
 
 				return err
 			}
 			if err == syscall.EAGAIN {
 				return nil
 			}
-			time.Sleep(100 * time.Millisecond)
+			time.Sleep(1 * time.Millisecond)
+
 			err = zeroPage(lpc.fd, addr, lpc.lps.pagesz)
+			//err = zeroLen(lpc.fd, lowerbound, upperbound-lowerbound)
 			cnt += 1
 		}
+		//	lpc.hist = append(lpc.hist, Range{lb: lowerbound, ub: upperbound})
 	} else {
 		//addr := iov.start
-		pi := lpc.pmi.find(addr)
+		//pi := lpc.pmi.find(addr)
+		pi := lpc.pmi.findBinSearch(addr)
 		addr0 := addr
 		if pi == -1 {
 			db.DFatalf("no page for %x", addr)
@@ -496,7 +596,7 @@ func (lpc *lazyPagesConn) pageFault(addr uint64) error {
 		err := copyPages(lpc.fd, addr, buf)
 		cnt := 0
 		for err != nil {
-			db.DPrintf(db.ERROR, "copyPages err %v try: %v", err, cnt)
+			db.DPrintf(db.ERROR, "copyPages err %v try: %v %v", err, cnt, err != syscall.EBUSY)
 			if err == syscall.ENOENT {
 
 				if n <= lpc.pmi.pagesz {
@@ -515,7 +615,7 @@ func (lpc *lazyPagesConn) pageFault(addr uint64) error {
 
 				continue
 			}
-			if cnt > 10 || (err != syscall.EAGAIN && err != syscall.ENOENT) {
+			if cnt > 10 || (err != syscall.EBUSY && err != syscall.ENOENT) {
 
 				return err
 			}
@@ -524,7 +624,7 @@ func (lpc *lazyPagesConn) pageFault(addr uint64) error {
 				return nil
 			}
 
-			time.Sleep(100 * time.Millisecond)
+			//	time.Sleep(100 * time.Millisecond)
 			err = copyPages(lpc.fd, addr, buf)
 			cnt += 1
 		}
@@ -534,6 +634,24 @@ func (lpc *lazyPagesConn) pageFault(addr uint64) error {
 		// 	// 	copyPages(lpc.fd, addr, buf)
 
 		//}
+	}
+	return nil
+}
+
+func zeroLen(fd int, addr uint64, len uint64) error {
+	zero := userfaultfd.NewUffdioZeroPage(
+		userfaultfd.CULong(addr),
+		userfaultfd.CULong(len),
+		0,
+	)
+	if _, _, errno := syscall.Syscall(
+		syscall.SYS_IOCTL,
+		uintptr(fd),
+		userfaultfd.UFFDIO_ZEROPAGE,
+		uintptr(unsafe.Pointer(&zero)),
+	); errno != 0 {
+		db.DPrintf(db.ERROR, "SYS_IOCTL err %v", errno)
+		return errno
 	}
 	return nil
 }

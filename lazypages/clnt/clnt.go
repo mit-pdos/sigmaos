@@ -29,11 +29,13 @@ func (lpc *LazyPagesClnt) WorkDir() string {
 	return lpc.wd
 }
 
-func (lpc *LazyPagesClnt) Register(pid int, imgdir string, pages string) error {
+func (lpc *LazyPagesClnt) Register(pid int, imgdir string, pages string, ckptDir string, firstInstance bool) error {
 	req := &proto.RegisterRequest{
-		Pid:    uint32(pid),
-		ImgDir: imgdir,
-		Pages:  pages,
+		Pid:           uint32(pid),
+		ImgDir:        imgdir,
+		Pages:         pages,
+		CkptDir:       ckptDir,
+		FirstInstance: firstInstance,
 	}
 	res := &proto.RegisterResult{}
 	if err := lpc.RPC("LazyPagesSvc.Register", req, res); err != nil {

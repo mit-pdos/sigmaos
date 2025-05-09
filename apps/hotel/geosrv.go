@@ -19,6 +19,7 @@ import (
 	"sigmaos/sigmasrv"
 	"sigmaos/tracing"
 	"sigmaos/util/perf"
+	rd "sigmaos/util/rand"
 
 	"github.com/harlow/go-micro-services/data"
 	"github.com/mit-pdos/go-geoindex"
@@ -107,7 +108,7 @@ func RunGeoSrv(job string, ckptpn string, nidxStr string, maxSearchRadiusStr str
 	db.DPrintf(db.ALWAYS, "Geo srv done building %v indexes, radius %v nresults %v,  after: %v", nidx, geo.maxSearchRadius, geo.maxSearchResults, time.Since(start))
 	pe := proc.GetProcEnv()
 
-	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
+	sc, err := sigmaclnt.NewSigmaClnt(pe)
 	if err != nil {
 		db.DFatalf("NewSigmaClnt error %v\n", err)
 	}
@@ -135,8 +136,8 @@ func RunGeoSrv(job string, ckptpn string, nidxStr string, maxSearchRadiusStr str
 		}
 		//	sc.Close()
 	}
-	//ssrv, err := sigmasrv.NewSigmaSrv(filepath.Join(HOTELGEODIR, pe.GetPID().String()), geo, pe)
-	ssrv, err := sigmasrv.NewSigmaSrvClnt(filepath.Join(HOTELGEODIR, pe.GetPID().String()), sc, geo)
+	ssrv, err := sigmasrv.NewSigmaSrvClnt(filepath.Join(HOTELGEODIR, rd.String(8)), sc, geo)
+	//ssrv, err := sigmasrv.NewSigmaSrvClnt(filepath.Join(HOTELGEODIR, pe.GetPID().String()), sc, geo)
 	if err != nil {
 		db.DPrintf(db.ALWAYS, "Error starting sigmasrv")
 		return err
@@ -152,7 +153,12 @@ func RunGeoSrv(job string, ckptpn string, nidxStr string, maxSearchRadiusStr str
 
 	db.DPrintf(db.ALWAYS, "Geo srv ready to serve time since spawn: %v", time.Since(ssrv.ProcEnv().GetSpawnTime()))
 	//Stacks()
+	go func() {
+		time.Sleep(time.Millisecond)
+		sc.ClntExit(proc.NewStatus(proc.StatusOK))
+	}()
 	return ssrv.RunServer()
+
 }
 
 // Nearby returns all hotels within a given distance.

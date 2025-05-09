@@ -203,6 +203,8 @@ func TestSpawnCkptGeo(t *testing.T) {
 
 	job := rd.String(8)
 	err = hotel.InitHotelFs(ts.FsLib, job)
+	//ts.MkDir(filepath.Join("name/hotel/geo", job), 0777)
+
 	assert.Nil(t, err)
 
 	//db.DPrintf(db.TEST, "Spawn proc %v %v", job, pn)
@@ -224,15 +226,29 @@ func TestSpawnCkptGeo(t *testing.T) {
 
 	pid = sp.GenPid(GEO + "-copy")
 
-	db.DPrintf(db.TEST, "Spawn from checkpoint %v", pid)
+	//db.DPrintf(db.TEST, "Spawn from checkpoint %v", pid)
 
 	restProc := proc.NewProcFromCheckpoint(pid, GEO+"-copy", pn)
 	err = ts.Spawn(restProc)
 	assert.Nil(t, err)
 
-	db.DPrintf(db.TEST, "Wait until start %v", pid)
+	//db.DPrintf(db.TEST, "Wait until start %v", pid)
 
 	err = ts.WaitStart(restProc.GetPid())
+	assert.Nil(t, err)
+	//	db.DPrintf(db.TEST, "Started %v", pid)
+	//time.Sleep(2000 * time.Millisecond)
+	status, err = ts.WaitExit(restProc.GetPid())
+	db.DPrintf(db.TEST, "exited %v", status)
+	db.DPrintf(db.TEST, "Spawn from checkpoint")
+	pid = sp.GenPid(GEO + "-copy2")
+	restProc2 := proc.NewProcFromCheckpoint(pid, GEO+"-copy2", pn)
+	err = ts.Spawn(restProc2)
+	assert.Nil(t, err)
+
+	db.DPrintf(db.TEST, "Wait until start again %v", pid)
+
+	err = ts.WaitStart(restProc2.GetPid())
 	db.DPrintf(db.TEST, "Started %v", pid)
 	//time.Sleep(200000 * time.Millisecond)
 	assert.Nil(t, err)

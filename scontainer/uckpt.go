@@ -2,6 +2,8 @@ package scontainer
 
 import (
 	"encoding/json"
+	"fmt"
+	"io"
 	"net"
 	"os"
 	"path/filepath"
@@ -70,11 +72,52 @@ func CheckpointProc(c *criu.Criu, pid int, imgDir string, spid sp.Tpid, ino uint
 
 func mkMount(mnt, dst, t string, flags uintptr) error {
 	os.Mkdir(dst, 0755)
+	db.DPrintf(db.CKPT, "Mount mnt %s", mnt)
 	if err := syscall.Mount(mnt, dst, t, flags, ""); err != nil {
 		db.DPrintf(db.CKPT, "Mount mnt %s dst %s t %s err %v", mnt, dst, t, err)
 		return err
 	}
 	return nil
+}
+
+func copyDir(src string, dst string) error {
+	srcInfo, err := os.Stat(src)
+	if err != nil {
+		return err
+	}
+	if err := os.MkdirAll(dst, srcInfo.Mode()); err != nil {
+		return err
+	}
+	return filepath.Walk(src, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		relPath, err := filepath.Rel(src, path)
+		if err != nil {
+			return err
+		}
+		dstPath := filepath.Join(dst, relPath)
+
+		if info.IsDir() {
+			return os.MkdirAll(dstPath, info.Mode())
+		}
+
+		// Copy file
+		srcFile, err := os.Open(path)
+		if err != nil {
+			return err
+		}
+		defer srcFile.Close()
+
+		dstFile, err := os.OpenFile(dstPath, os.O_CREATE|os.O_WRONLY, info.Mode())
+		if err != nil {
+			return err
+		}
+		defer dstFile.Close()
+
+		_, err = io.Copy(dstFile, srcFile)
+		return err
+	})
 }
 
 func restoreMounts(sigmaPid sp.Tpid) error {
@@ -111,9 +154,31 @@ func restoreMounts(sigmaPid sp.Tpid) error {
 	}
 	// Mount perf dir
 	os.Mkdir(jailPath+"tmp", 0755)
+	//randNum := rand.Intn(100000) // pick a large enough range to avoid collisions
+	randNum := sigmaPid.String()
+	dst := fmt.Sprintf("/tmp/sigmaos-perf%s", randNum)
+	err := copyDir("/tmp/sigmaos-perf", dst)
+	if err != nil {
+		db.DPrintf(db.ERROR, "Copy failed: %v", err)
+	} else {
+		db.DPrintf(db.ALWAYS, "Copy Succeeded: %v", err)
+	}
+	// if err := mkMount(dst, jailPath+"tmp/sigmaos-perf", "none", syscall.MS_BIND); err != nil {
+	// 	return err
+	// }
+	//_ = os.Truncate("/tmp/sigmaos-perf/log-proc.txt", 0)
 	if err := mkMount("/tmp/sigmaos-perf", jailPath+"tmp/sigmaos-perf", "none", syscall.MS_BIND); err != nil {
 		return err
 	}
+	// syscall.Unmount(jailPath+"/tmp/sigmaos-perf", 0)
+	// if err := mkMount(dst, jailPath+"tmp/sigmaos-perf", "none", syscall.MS_BIND); err != nil {
+	// 	return err
+	// }
+	// if err != nil {
+	// 	db.DPrintf(db.ERROR, "umount failed: %v", err)
+	// } else {
+	// 	db.DPrintf(db.ALWAYS, "umount Succeeded: %v", err)
+	// }
 	if err := mkMount("/mnt", jailPath+"mnt", "none", syscall.MS_BIND|syscall.MS_RDONLY); err != nil {
 		return err
 	}
@@ -203,7 +268,7 @@ func restoreProc(criuclnt *criu.Criu, proc *proc.Proc, imgDir, workDir, jailPath
 	var usk *sk_unix.UnixSkEntry
 	for _, f := range criuDump.Entries {
 		e := f.Message.(*fdinfo.FileEntry)
-		db.DPrintf(db.ALWAYS, "reading: %v | %v | %v | fd: ", e.GetId(), dstfd.GetId(), e.GetUsk(), e.GetEfd())
+		db.DPrintf(db.ALWAYS, "reading: %v | %v | %v |%v| fd: ", e.GetId(), dstfd.GetId(), e.GetUsk(), e.GetEfd())
 		if e.GetId() == dstfd.GetId() {
 			usk = e.GetUsk()
 		}
@@ -223,9 +288,11 @@ func restoreProc(criuclnt *criu.Criu, proc *proc.Proc, imgDir, workDir, jailPath
 		WorkDirFd:   proto.Int32(int32(wd.Fd())),
 		Root:        proto.String(jailPath),
 		TcpClose:    proto.Bool(true),
-		External:    []string{"mnt[libMount]:/lib", "mnt[lib64Mount]:/lib64", "mnt[usrMount]:/usr", "mnt[etcMount]:/etc", "mnt[binMount]:/home/sigmaos/bin/user", "mnt[devMount]:/dev", "mnt[tmpMount]:/tmp", "mnt[perfMount]:/tmp/sigmaos-perf", "mnt[mntMount]:/mnt", "mnt[binfsMount]:/mnt/binfs"},
-		LazyPages:   proto.Bool(LAZY),
-		InheritFd:   ifds,
+		//External:    []string{"mnt[libMount]:/lib", "mnt[lib64Mount]:/lib64", "mnt[usrMount]:/usr", "mnt[etcMount]:/etc", "mnt[binMount]:/home/sigmaos/bin/user", "mnt[devMount]:/dev", "mnt[tmpMount]:/tmp", "mnt[perfMount]:/tmp/sigmaos-perf", "mnt[mntMount]:/mnt", "mnt[binfsMount]:/mnt/binfs"},
+		External: []string{"mnt[libMount]:/lib", "mnt[lib64Mount]:/lib64", "mnt[usrMount]:/usr", "mnt[etcMount]:/etc", "mnt[binMount]:/home/sigmaos/bin/user", "mnt[devMount]:/dev", "mnt[tmpMount]:/tmp", "mnt[perfMount]:/tmp/sigmaos-perf" + proc.GetPid().String(), "mnt[mntMount]:/mnt", "mnt[binfsMount]:/mnt/binfs"},
+
+		LazyPages: proto.Bool(LAZY),
+		InheritFd: ifds,
 	}
 	if verbose {
 		opts.LogLevel = proto.Int32(4)

@@ -6,6 +6,8 @@ message RegisterRequest {
   uint32    Pid = 1;
   string imgDir = 2;
   string pages = 3;
+  string CkptDir = 4;
+  bool  first_instance = 5;
 }
 
 message RegisterResult {

@@ -17,5 +17,5 @@ type LazyPagesSvc struct {
 
 func (lps *LazyPagesSvc) Register(ctx fs.CtxI, req proto.RegisterRequest, res *proto.RegisterResult) error {
 	db.DPrintf(db.LAZYPAGESSRV, "Register %v", req)
-	return lps.lps.register(int(req.Pid), req.ImgDir, req.Pages)
+	return lps.lps.register(int(req.Pid), req.ImgDir, req.Pages, req.CkptDir, req.FirstInstance)
 }

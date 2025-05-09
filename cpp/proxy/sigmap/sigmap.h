@@ -10,6 +10,7 @@
 
 #include <util/log/log.h>
 #include <io/conn/conn.h>
+#include <io/conn/unix/unix.h>
 #include <io/transport/transport.h>
 #include <io/demux/demux.h>
 #include <serr/serr.h>
@@ -32,7 +33,7 @@ class Clnt {
   Clnt() : _disconnected(false) {
     _env = sigmaos::proc::GetProcEnv();
     log(SPPROXYCLNT, "New clnt {}", _env->String());
-    _conn = std::make_shared<sigmaos::io::conn::UnixConn>(SPPROXY_SOCKET_PN);
+    _conn = std::make_shared<sigmaos::io::conn::unixconn::Conn>(SPPROXY_SOCKET_PN);
     _trans = std::make_shared<sigmaos::io::transport::Transport>(_conn);
     _demux = std::make_shared<sigmaos::io::demux::Clnt>(_trans);
     _rpcc = std::make_shared<sigmaos::rpc::Clnt>(_demux);
@@ -95,7 +96,7 @@ class Clnt {
   std::expected<int, sigmaos::serr::Error> WaitEvict();
 
   private:
-  std::shared_ptr<sigmaos::io::conn::UnixConn> _conn;
+  std::shared_ptr<sigmaos::io::conn::Conn> _conn;
   std::shared_ptr<sigmaos::io::transport::Transport> _trans;
   std::shared_ptr<sigmaos::io::demux::Clnt> _demux;
   std::shared_ptr<sigmaos::rpc::Clnt> _rpcc;

@@ -159,7 +159,7 @@ func Run(args []string) error {
 			db.DFatalf("SetNamed: %v", err)
 		}
 	} else {
-		pn = filepath.Join(sp.REALMS, nd.realm.String())
+		pn = path.MarkResolve(filepath.Join(sp.REALMS, nd.realm.String()))
 		db.DPrintf(db.ALWAYS, "NewEndpointSymlink %v %v lid %v", nd.realm, pn, nd.sess.Lease())
 		li, err := sc.LeaseClnt.AskLease(pn, fsetcd.LeaseTTL)
 		if err != nil {

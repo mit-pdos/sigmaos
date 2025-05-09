@@ -15,7 +15,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use serde::{Deserialize, Serialize};
 
-const VERBOSE: bool = false;
+const VERBOSE: bool = true;
 
 fn print_elapsed_time(/*label: &str,*/ msg: &str, start: SystemTime, ignore_verbose: bool) {
     if ignore_verbose || VERBOSE {
@@ -77,18 +77,20 @@ fn main() {
     env::set_var("SIGMA_DIALPROXY_FD", dialproxy_conn_fd.to_string());
     print_elapsed_time("trampoline.connect_dialproxy", now, false);
     now = SystemTime::now();
-    // Connect to the spproxy socket
-    let spproxy_conn = UnixStream::connect("/tmp/spproxyd/spproxyd.sock").unwrap();
-    let spproxy_conn_fd = spproxy_conn.into_raw_fd();
-    fcntl::fcntl(spproxy_conn_fd, FcntlArg::F_SETFD(FdFlag::empty())).unwrap();
-    env::set_var("SIGMA_SPPROXY_FD", spproxy_conn_fd.to_string());
-    print_elapsed_time("trampoline.connect_spproxy", now, false);
-    now = SystemTime::now();
+    // // Connect to the spproxy socket
+    // let spproxy_conn = UnixStream::connect("/tmp/spproxyd/spproxyd.sock").unwrap();
+    // let spproxy_conn_fd = spproxy_conn.into_raw_fd();
+    // fcntl::fcntl(spproxy_conn_fd, FcntlArg::F_SETFD(FdFlag::empty())).unwrap();
+    // env::set_var("SIGMA_SPPROXY_FD", spproxy_conn_fd.to_string());
+    // log::info!("SPPROXY_FD: {}", spproxy_conn_fd.to_string());
+    // print_elapsed_time("trampoline.connect_spproxy", now, true);
+    // now = SystemTime::now();
     // Connect to the pyproxy socket
     let pyproxy_conn = UnixStream::connect("/tmp/spproxyd/spproxyd-pyproxy.sock").unwrap();
     let pyproxy_conn_fd = pyproxy_conn.into_raw_fd();
     fcntl::fcntl(pyproxy_conn_fd, FcntlArg::F_SETFD(FdFlag::empty())).unwrap();
     env::set_var("SIGMA_PYPROXY_FD", pyproxy_conn_fd.to_string());
+    log::info!("PYPROXY_FD: {}", pyproxy_conn_fd.to_string());
     print_elapsed_time("trampoline.connect_pyproxy", now, false);
     now = SystemTime::now();
     // Connect to the pyapi socket
@@ -96,6 +98,7 @@ fn main() {
     let pyapi_conn_fd = pyapi_conn.into_raw_fd();
     fcntl::fcntl(pyapi_conn_fd, FcntlArg::F_SETFD(FdFlag::empty())).unwrap();
     env::set_var("SIGMA_PYAPI_FD", pyapi_conn_fd.to_string());
+    log::info!("PYAPI_FD: {}", pyapi_conn_fd.to_string());
     print_elapsed_time("trampoline.connect_api", now, false);
     now = SystemTime::now();
     seccomp_proc(dialproxy).expect("seccomp failed");
@@ -131,6 +134,7 @@ fn main() {
 }
 
 fn jail_proc(pid: &str) -> Result<(), Box<dyn std::error::Error>> {
+    return Ok(());
     let mut now = SystemTime::now();
     extern crate sys_mount;
     use nix::unistd::pivot_root;
@@ -281,6 +285,7 @@ struct Cond {
 }
 
 fn seccomp_proc(dialproxy: String) -> Result<(), Box<dyn std::error::Error>> {
+    return Ok(());
     use libseccomp::*;
 
     // XXX Should really be 64 syscalls. We can remove ioctl, poll, and lstat,

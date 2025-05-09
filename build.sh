@@ -162,7 +162,7 @@ echo "========== Building kernel bins =========="
 BUILD_OUT_FILE=$BUILD_LOG/make-kernel.out
 docker exec -it $buildercid \
   /usr/bin/time -f "Build time: %e sec" \
-  ./make.sh $BUILD_ARGS kernel \
+  sh -c './make.sh $BUILD_ARGS kernel && ./make-python.sh && ./make-cpp.sh $CPP_BUILD_ARGS --version $VERSION' \
   2>&1 | tee $BUILD_OUT_FILE && \
   if [ ${PIPESTATUS[0]} -ne 0 ]; then
     printf "\n!!!!!!!!!! BUILD ERROR !!!!!!!!!!\nLogs in: $BUILD_OUT_FILE\n" \

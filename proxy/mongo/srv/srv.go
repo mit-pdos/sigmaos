@@ -29,11 +29,14 @@ const (
 )
 
 type MongoSrv struct {
+	url   string
 	mclnt *mongo.Client
 }
 
 func newServer(mongodUrl string) (*MongoSrv, error) {
-	s := &MongoSrv{}
+	s := &MongoSrv{
+		url: mongodUrl,
+	}
 	uri := "mongodb://" + mongodUrl
 	ctx, _ := context.WithTimeout(context.Background(), DIAL_TIMEOUT_SEC*time.Second)
 	client, err := mongo.Connect(ctx, options.Client().ApplyURI(uri).SetMaxPoolSize(POOL_SIZE))
@@ -66,6 +69,11 @@ func RunMongod(mongodUrl string) error {
 		return err
 	}
 	return ssrv.RunServer()
+}
+
+func (s *MongoSrv) GetURL(ctx fs.CtxI, req proto.MongoURLReq, res *proto.MongoURLRep) error {
+	res.URL = s.url
+	return nil
 }
 
 func (s *MongoSrv) Insert(ctx fs.CtxI, req proto.MongoReq, res *proto.MongoRep) error {

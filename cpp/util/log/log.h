@@ -1,0 +1,78 @@
+#pragma once
+
+#include <mutex>
+#include <memory>
+#include <format>
+#include <string>
+
+#include <spdlog/sinks/base_sink.h>
+#include <spdlog/sinks/stdout_sinks.h>
+#include <spdlog/spdlog.h>
+#include <spdlog/common.h>
+
+// Write a log line given a selector
+template <typename... Args>
+void log(std::string selector, spdlog::format_string_t<Args...> fmt, Args &&...args) {
+  spdlog::get(selector)->info(fmt, std::forward<Args>(args)...);
+}
+
+// Some common debug selectors
+const std::string TEST = "TEST";
+const std::string SPAWN_LAT = "SPAWN_LAT";
+
+namespace sigmaos {
+namespace util::log {
+
+// Initialize a logger with a debug selector
+bool init_logger(std::string selector);
+
+const std::string ERR = "_ERR";
+
+class sigmadebug_sink : public spdlog::sinks::base_sink<std::mutex> {
+  public:
+  sigmadebug_sink(std::string selector) : _enabled(false), _stdout_sink(std::make_shared<spdlog::sinks::stdout_sink_mt>()) {
+    std::string sigmadebug(std::getenv("SIGMADEBUG"));
+    std::string pid(std::getenv("SIGMADEBUGPID"));
+    _stdout_sink->set_pattern(std::format("%H:%M:%S.%f {} {} %v", pid, selector));
+    int nextpos = sigmadebug.find(selector);
+    while (nextpos != std::string::npos) {
+      // Save current pos
+      int pos = nextpos;
+      // Advance nextpos
+      nextpos = sigmadebug.find(selector, pos + 1);
+      // Check that the selector is delimited on either side. If not, continue
+      if (!(pos == 0 || sigmadebug[pos - 1] == ';')) {
+        continue;
+      }
+      if (!(pos + selector.length() == sigmadebug.length() || sigmadebug[pos + selector.length()] == ';')) {
+        continue;
+      }
+      _enabled = true;
+      break;
+    }
+  }
+  void sink_it_(const spdlog::details::log_msg& msg) override {
+    if (_enabled) {
+      _stdout_sink->log(msg);
+    }
+  }
+  void flush_() override { _stdout_sink->flush(); }
+
+  protected:
+  private:
+  bool _enabled;
+  std::shared_ptr<spdlog::sinks::stdout_sink_mt> _stdout_sink;
+};
+
+// Used to initialize some common debug selectors
+class _log {
+  public:
+  _log();
+  ~_log();
+  private:
+  static bool _l_test;
+  static bool _l_spawn_lat;
+};
+
+};
+};

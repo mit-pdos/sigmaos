@@ -127,3 +127,8 @@ message SigmaMountsRep {
         repeated string endpoints = 1;
         Rerror err = 2;
 }
+
+message SigmaExitedReq {
+        uint32 status = 1;
+        string msg = 2;
+}

@@ -80,10 +80,11 @@ func (scc *SigmaClntConn) close() error {
 // SPProxySrvAPI exports the RPC methods that the server proxies.  The
 // RPC methods correspond to the functions in the sigmaos interface.
 type SPProxySrvAPI struct {
-	mu     sync.Mutex
-	closed bool
-	fidc   *fidclnt.FidClnt
-	sc     *sigmaclnt.SigmaClnt
+	mu          sync.Mutex
+	closed      bool
+	hasProcClnt bool
+	fidc        *fidclnt.FidClnt
+	sc          *sigmaclnt.SigmaClnt
 }
 
 func (scc *SPProxySrvAPI) testAndSetClosed() bool {
@@ -124,6 +125,7 @@ func (scs *SPProxySrvAPI) Init(ctx fs.CtxI, req scproto.SigmaInitReq, rep *scpro
 	pe := proc.NewProcEnvFromProto(req.ProcEnvProto)
 	pe.UseSPProxy = false
 	pe.UseDialProxy = false
+	db.DPrintf(db.SPPROXYSRV, "Init pe %v", pe)
 	sc, err := sigmaclnt.NewSigmaClntFsLibFidClnt(pe, scs.fidc)
 	if err != nil {
 		rep.Err = scs.setErr(fmt.Errorf("Error init SPProxySrvAPI: %v pe %v", err, pe))
@@ -189,6 +191,7 @@ func (scs *SPProxySrvAPI) GetFile(ctx fs.CtxI, req scproto.SigmaPathReq, rep *sc
 }
 
 func (scs *SPProxySrvAPI) PutFile(ctx fs.CtxI, req scproto.SigmaPutFileReq, rep *scproto.SigmaSizeRep) error {
+	db.DPrintf(db.SPPROXYSRV, "%v: PutFile req %v %v", scs.sc.ClntId(), req.Path, len(req.Blob.Iov), rep)
 	sz, err := scs.sc.FileAPI.PutFile(req.Path, sp.Tperm(req.Perm), sp.Tmode(req.Mode), req.Blob.Iov[0], sp.Toffset(req.Offset), sp.TleaseId(req.LeaseId))
 	rep.Size = uint64(sz)
 	rep.Err = scs.setErr(err)
@@ -363,5 +366,64 @@ func (scs *SPProxySrvAPI) Close(ctx fs.CtxI, req scproto.SigmaNullReq, rep *scpr
 	}
 	rep.Err = scs.setErr(err)
 	db.DPrintf(db.SPPROXYSRV, "%v: Close %v %v", scs.sc.ClntId(), req, rep)
+	return nil
+}
+
+// ========== Procclnt API ==========
+func (scs *SPProxySrvAPI) initProcClnt() error {
+	scs.mu.Lock()
+	defer scs.mu.Unlock()
+
+	var err error
+	// Make a procclnt if we haven't already
+	if !scs.hasProcClnt {
+		scs.hasProcClnt = true
+		err = scs.sc.NewProcClnt()
+	}
+	// If unsuccessful, bail out
+	if err != nil {
+		db.DPrintf(db.SPPROXYSRV_ERR, "%v: Failed to create procclnt: %v", scs.sc.ClntId(), err)
+	}
+	return err
+}
+
+func (scs *SPProxySrvAPI) Started(ctx fs.CtxI, req scproto.SigmaNullReq, rep *scproto.SigmaErrRep) error {
+	db.DPrintf(db.SPPROXYSRV, "%v: Started", scs.sc.ClntId())
+	err := scs.initProcClnt()
+	if err != nil {
+		rep.Err = scs.setErr(err)
+		return nil
+	}
+	err = scs.sc.Started()
+	if err != nil {
+		db.DPrintf(db.SPPROXYSRV_ERR, "%v: Started err: %v", scs.sc.ClntId(), err)
+	}
+	rep.Err = scs.setErr(err)
+	db.DPrintf(db.SPPROXYSRV, "%v: Started done %v %v", scs.sc.ClntId(), req, rep)
+	return nil
+}
+
+func (scs *SPProxySrvAPI) Exited(ctx fs.CtxI, req scproto.SigmaExitedReq, rep *scproto.SigmaErrRep) error {
+	status := proc.Tstatus(req.Status)
+	db.DPrintf(db.SPPROXYSRV, "%v: Exited %v", scs.sc.ClntId(), status, req.Msg)
+	err := scs.initProcClnt()
+	rep.Err = scs.setErr(err)
+	if err != nil {
+		return nil
+	}
+	scs.sc.Exited(proc.NewStatusInfo(proc.Tstatus(req.Status), req.Msg, nil))
+	db.DPrintf(db.SPPROXYSRV, "%v: Exited done %v %v", scs.sc.ClntId(), req, rep)
+	return nil
+}
+
+func (scs *SPProxySrvAPI) WaitEvict(ctx fs.CtxI, req scproto.SigmaNullReq, rep *scproto.SigmaErrRep) error {
+	db.DPrintf(db.SPPROXYSRV, "%v: WaitEvict %v", scs.sc.ClntId())
+	err := scs.initProcClnt()
+	rep.Err = scs.setErr(err)
+	if err != nil {
+		return nil
+	}
+	scs.sc.WaitEvict(scs.sc.ProcEnv().GetPID())
+	db.DPrintf(db.SPPROXYSRV, "%v: WaitEvict done %v %v", scs.sc.ClntId(), req, rep)
 	return nil
 }

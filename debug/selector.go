@@ -237,6 +237,7 @@ const (
 	PROCCLNT                = "PROCCLNT"
 	PROCCLNT_ERR            = "PROCCLNT" + ERR
 	SIGMACLNTCLNT           = "SIGMACLNTCLNT"
+	SPPROXYCLNT             = "SPPROXYCLNT"
 )
 
 // Fault-tolerance

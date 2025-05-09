@@ -120,6 +120,7 @@ FILE * fopen( const char * filename,
     FILE * res = fopen_func(get_path(filename), mode);
     return res;
 }
+
 int openat(int dirfd, const char *pathname, int flags, mode_t mode)
 {
     static int (*open_func)(int, const char*, int, mode_t) = NULL;
@@ -127,10 +128,67 @@ int openat(int dirfd, const char *pathname, int flags, mode_t mode)
     int res = open_func(dirfd, get_path(pathname), flags, mode);
     return res;
 }
+
 DIR * opendir(const char* name)
 {
     static DIR * (*opendir_func)(const char*) = NULL;
     opendir_func = (DIR*(*)(const char*)) dlsym(RTLD_NEXT, "opendir");
     DIR* res = opendir_func(get_path(name));
+    return res;
+}
+
+int newfstatat(int dirfd, const char *pathname, struct stat *statbuf, int flags) {
+    static int (*newfstatat_func)(int, const char *, struct stat *, int) = NULL;
+    newfstatat_func = (int (*)(int, const char *, struct stat *, int)) dlsym(RTLD_NEXT, "newfstatat");
+    int res = newfstatat_func(dirfd, get_path(pathname), statbuf, flags);
+    return res;
+}
+
+int fstatat(int dirfd, const char *pathname, struct stat *statbuf, int flags) {
+    static int (*fstatat_func)(int, const char *, struct stat *, int) = NULL;
+    fstatat_func = (int (*)(int, const char *, struct stat *, int)) dlsym(RTLD_NEXT, "fstatat");
+    int res = fstatat_func(dirfd, get_path(pathname), statbuf, flags);
+    return res;
+}
+
+int lstat(const char *pathname, struct stat *statbuf) {
+    static int (*lstat_func)(const char *, struct stat *) = NULL;
+    lstat_func = (int (*)(const char *, struct stat *)) dlsym(RTLD_NEXT, "lstat");
+    int res = lstat_func(get_path(pathname), statbuf);
+    return res;
+}
+
+ssize_t readlink(const char *pathname, char *buf, size_t bufsiz) {
+    static ssize_t (*readlink_func)(const char *, char *, size_t) = NULL;
+    readlink_func = (ssize_t (*)(const char *, char *, size_t)) dlsym(RTLD_NEXT, "readlink");
+    ssize_t res = readlink_func(get_path(pathname), buf, bufsiz);
+    return res;
+}
+
+int creat(const char *pathname, mode_t mode) {
+    static int (*creat_func)(const char *, mode_t) = NULL;
+    creat_func = (int (*)(const char *, mode_t)) dlsym(RTLD_NEXT, "creat");
+    int res = creat_func(get_path(pathname), mode);
+    return res;
+}
+
+FILE *fopen64(const char *pathname, const char *mode) {
+    static FILE *(*fopen64_func)(const char *, const char *) = NULL;
+    fopen64_func = (FILE* (*)(const char *, const char *)) dlsym(RTLD_NEXT, "fopen64");
+    FILE * res = fopen64_func(get_path(pathname), mode);
+    return res;
+}
+
+int open64(const char *pathname, int flags, mode_t mode) {
+    static int (*open64_func)(const char *, int, mode_t) = NULL;
+    open64_func = (int (*)(const char *, int, mode_t)) dlsym(RTLD_NEXT, "open64");
+    int res = open64_func(get_path(pathname), flags, mode);
+    return res;
+}
+
+int stat64(const char *pathname, struct stat64 *statbuf) {
+    static int (*stat64_func)(const char *, struct stat64 *) = NULL;
+    stat64_func = (int (*)(const char *, struct stat64 *)) dlsym(RTLD_NEXT, "stat64");
+    int res = stat64_func(get_path(pathname), statbuf);
     return res;
 }

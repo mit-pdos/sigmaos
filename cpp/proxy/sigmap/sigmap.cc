@@ -176,8 +176,7 @@ std::expected<std::shared_ptr<std::string>, sigmaos::serr::Error> Clnt::GetFile(
   req.set_path(pn);
   Blob blob;
   auto iov = blob.mutable_iov();
-  // TODO: What if size is wrong?
-  auto s = std::make_shared<std::string>(1000, '\0');
+  auto s = std::make_shared<std::string>();
   iov->AddAllocated(s.get());
   rep.set_allocated_blob(&blob);
   auto res = _rpcc->RPC("SPProxySrvAPI.GetFile", req, rep);

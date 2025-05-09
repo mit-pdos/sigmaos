@@ -352,20 +352,20 @@ func (lpc *lazyPagesConn) markAndLoad(iovno int, iov *Iov, pi int, addr0 uint64)
 
 		buf = lpc.data[:n*iov.pagesz]
 		if newloaded != -1 {
-			start := time.Now()
+			//		start := time.Now()
 			copy(buf[:(newloaded-startIndex)*iov.pagesz], lpc.cachedata[off:off+int64((newloaded-startIndex)*iov.pagesz)])
-			duration := time.Since(start)
-			db.DPrintf(db.LAZYPAGESSRV_FAULT, "copy time taken %v pages: %v ", duration.Microseconds(), newloaded-startIndex)
+			//		duration := time.Since(start)
+			//		db.DPrintf(db.LAZYPAGESSRV_FAULT, "copy time taken %v pages: %v ", duration.Microseconds(), newloaded-startIndex)
 		} else {
 			newloaded = startIndex
 		}
 		//copy(buf[:min(loaded*iov.pagesz, n*iov.pagesz)], lpc.cachedata[off:off+int64(n*iov.pagesz)])
-		start := time.Now()
+		//start := time.Now()
 		if err := lpc.rp(off+int64((newloaded-startIndex)*iov.pagesz), buf[(newloaded-startIndex)*iov.pagesz:n*iov.pagesz]); err != nil {
 			db.DFatalf("no page content for %x err: %v", addr, err)
 		}
-		duration := time.Since(start)
-		db.DPrintf(db.LAZYPAGESSRV_FAULT, "rp time taken %v pages: %v", duration.Microseconds(), n-(newloaded-startIndex))
+		//duration := time.Since(start)
+		//	db.DPrintf(db.LAZYPAGESSRV_FAULT, "rp time taken %v pages: %v", duration.Microseconds(), n-(newloaded-startIndex))
 	} else {
 		if loaded > 0 {
 			newloaded := -1
@@ -389,20 +389,20 @@ func (lpc *lazyPagesConn) markAndLoad(iovno int, iov *Iov, pi int, addr0 uint64)
 			}
 			buf = lpc.data[:n*iov.pagesz]
 			if newloaded != -1 {
-				start := time.Now()
+				//	start := time.Now()
 				copy(buf[:(newloaded-startIndex)*iov.pagesz], lpc.cachedata[off:off+int64((newloaded-startIndex)*iov.pagesz)])
-				duration := time.Since(start)
-				db.DPrintf(db.LAZYPAGESSRV_FAULT, "copy time taken %v pages: %v ", duration.Microseconds(), newloaded-startIndex)
+				//	duration := time.Since(start)
+				//	db.DPrintf(db.LAZYPAGESSRV_FAULT, "copy time taken %v pages: %v ", duration.Microseconds(), newloaded-startIndex)
 			} else {
 				newloaded = startIndex
 			}
 			//copy(buf[:min(loaded*iov.pagesz, n*iov.pagesz)], lpc.cachedata[off:off+int64(n*iov.pagesz)])
-			start := time.Now()
+			//	start := time.Now()
 			if err := lpc.rp(off+int64((newloaded-startIndex)*iov.pagesz), buf[(newloaded-startIndex)*iov.pagesz:loaded*iov.pagesz]); err != nil {
 				db.DFatalf("no page content for %x err: %v", addr, err)
 			}
-			duration := time.Since(start)
-			db.DPrintf(db.LAZYPAGESSRV_FAULT, "rp time taken %v pages: %v", duration.Microseconds(), loaded-(newloaded-startIndex))
+			//	duration := time.Since(start)
+			//	db.DPrintf(db.LAZYPAGESSRV_FAULT, "rp time taken %v pages: %v", duration.Microseconds(), loaded-(newloaded-startIndex))
 		} else {
 			oldStartIndex := startIndex
 			for ; startIndex > max(0, oldStartIndex-PREFETCH/2); addr -= uint64(iov.pagesz) {
@@ -420,10 +420,10 @@ func (lpc *lazyPagesConn) markAndLoad(iovno int, iov *Iov, pi int, addr0 uint64)
 			buf = lpc.data[:n*iov.pagesz]
 		}
 		//db.DPrintf(db.LAZYPAGESSRV_FAULT, "Preloading! %v-%v: total %v", loaded, n, iovlen-startIndex)
-		start := time.Now()
+		//	start := time.Now()
 		copy(buf[loaded*iov.pagesz:n*iov.pagesz], lpc.cachedata[int64(loaded*iov.pagesz)+off:off+int64(n*iov.pagesz)])
-		duration := time.Since(start)
-		db.DPrintf(db.LAZYPAGESSRV_FAULT, "skip copy time taken %v pages: %v ", duration.Microseconds(), n-loaded)
+		//	duration := time.Since(start)
+		//	db.DPrintf(db.LAZYPAGESSRV_FAULT, "skip copy time taken %v pages: %v ", duration.Microseconds(), n-loaded)
 		// for i := loaded; i < n; i++ {
 
 		// 	page, exists := lpc.cache[iovno][i]
@@ -551,6 +551,9 @@ func (lpc *lazyPagesConn) pageFault(addr uint64) error {
 		for err != nil {
 
 			db.DPrintf(db.ERROR, "zeroPage err %v try: %v", err, cnt)
+			if err == syscall.ESRCH {
+				return nil
+			}
 			if err == syscall.EEXIST {
 				return nil
 			}
@@ -597,6 +600,9 @@ func (lpc *lazyPagesConn) pageFault(addr uint64) error {
 		cnt := 0
 		for err != nil {
 			db.DPrintf(db.ERROR, "copyPages err %v try: %v %v", err, cnt, err != syscall.EBUSY)
+			if err == syscall.ESRCH {
+				return nil
+			}
 			if err == syscall.ENOENT {
 
 				if n <= lpc.pmi.pagesz {
@@ -624,7 +630,7 @@ func (lpc *lazyPagesConn) pageFault(addr uint64) error {
 				return nil
 			}
 
-			//	time.Sleep(100 * time.Millisecond)
+			time.Sleep(5 * time.Millisecond)
 			err = copyPages(lpc.fd, addr, buf)
 			cnt += 1
 		}

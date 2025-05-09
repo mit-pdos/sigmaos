@@ -134,7 +134,6 @@ fn main() {
 }
 
 fn jail_proc(pid: &str) -> Result<(), Box<dyn std::error::Error>> {
-    return Ok(());
     let mut now = SystemTime::now();
     extern crate sys_mount;
     use nix::unistd::pivot_root;

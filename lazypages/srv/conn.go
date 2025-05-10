@@ -192,23 +192,36 @@ func reverse[T any](s []T) {
 }
 func (lpc *lazyPagesConn) preFetch(saved_addresses [][]uint64) {
 	lpc.mu.Lock()
-	//mp := make(map[int]bool)
+	mp := make(map[int]int)
 	for _, pair := range saved_addresses {
 		addr := pair[0]
 		nopages := int(pair[1])
 		iovno := lpc.iovs.findBinSearch(addr)
 
 		if iovno != -1 {
-			// if _, ok := mp[iovno]; ok {
-			// 	continue
-			// }
-			//			mp[iovno] = true
 
 			iov := lpc.iovs.iovs[iovno]
 			pi := lpc.pmi.findBinSearch(addr)
 			index := int(addr-iov.start) / (iov.pagesz)
 			iovlen := int(iov.end-iov.start) / iov.pagesz
 			nopages := min(iovlen-index, nopages)
+			if i, ok := mp[iovno]; ok {
+				db.DPrintf(db.LAZYPAGESSRV_FAULT, "extended : %v -> %v+%v", lpc.queue[i].index, index, nopages)
+				if lpc.queue[i].index > index {
+					lpc.queue[i].addr = uint64(pi * iov.pagesz)
+					lpc.queue[i].nopages += lpc.queue[i].index - index
+					lpc.queue[i].realaddr = addr
+					lpc.queue[i].index = index
+				} else if lpc.queue[i].index < index {
+					if lpc.queue[i].index+lpc.queue[i].nopages < index+nopages {
+						lpc.queue[i].nopages = index + nopages - lpc.queue[i].index
+					}
+
+				}
+				continue
+			}
+			mp[iovno] = len(lpc.queue)
+
 			//begin := max(0, index-PREFETCH/4)
 
 			//lpc.queue = append(lpc.queue, Req{iov: iovno, nopages: min(iovlen-begin, PREFETCH/4), index: begin, addr: uint64((pi - (index - begin)) * iov.pagesz), realaddr: addr - uint64(pi*(index-begin))})

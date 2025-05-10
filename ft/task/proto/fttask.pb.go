@@ -1470,14 +1470,14 @@ func (*ClearEtcdRep) Descriptor() ([]byte, []int) {
 	return file_ft_task_proto_fttask_proto_rawDescGZIP(), []int{27}
 }
 
-type PartitionReq struct {
+type PingReq struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 }
 
-func (x *PartitionReq) Reset() {
-	*x = PartitionReq{}
+func (x *PingReq) Reset() {
+	*x = PingReq{}
 	if protoimpl.UnsafeEnabled {
 		mi := &file_ft_task_proto_fttask_proto_msgTypes[28]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -1485,13 +1485,13 @@ func (x *PartitionReq) Reset() {
 	}
 }
 
-func (x *PartitionReq) String() string {
+func (x *PingReq) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*PartitionReq) ProtoMessage() {}
+func (*PingReq) ProtoMessage() {}
 
-func (x *PartitionReq) ProtoReflect() protoreflect.Message {
+func (x *PingReq) ProtoReflect() protoreflect.Message {
 	mi := &file_ft_task_proto_fttask_proto_msgTypes[28]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -1503,19 +1503,19 @@ func (x *PartitionReq) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use PartitionReq.ProtoReflect.Descriptor instead.
-func (*PartitionReq) Descriptor() ([]byte, []int) {
+// Deprecated: Use PingReq.ProtoReflect.Descriptor instead.
+func (*PingReq) Descriptor() ([]byte, []int) {
 	return file_ft_task_proto_fttask_proto_rawDescGZIP(), []int{28}
 }
 
-type PartitionRep struct {
+type PingRep struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 }
 
-func (x *PartitionRep) Reset() {
-	*x = PartitionRep{}
+func (x *PingRep) Reset() {
+	*x = PingRep{}
 	if protoimpl.UnsafeEnabled {
 		mi := &file_ft_task_proto_fttask_proto_msgTypes[29]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -1523,13 +1523,13 @@ func (x *PartitionRep) Reset() {
 	}
 }
 
-func (x *PartitionRep) String() string {
+func (x *PingRep) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*PartitionRep) ProtoMessage() {}
+func (*PingRep) ProtoMessage() {}
 
-func (x *PartitionRep) ProtoReflect() protoreflect.Message {
+func (x *PingRep) ProtoReflect() protoreflect.Message {
 	mi := &file_ft_task_proto_fttask_proto_msgTypes[29]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -1541,8 +1541,8 @@ func (x *PartitionRep) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use PartitionRep.ProtoReflect.Descriptor instead.
-func (*PartitionRep) Descriptor() ([]byte, []int) {
+// Deprecated: Use PingRep.ProtoReflect.Descriptor instead.
+func (*PingRep) Descriptor() ([]byte, []int) {
 	return file_ft_task_proto_fttask_proto_rawDescGZIP(), []int{29}
 }
 
@@ -1652,14 +1652,13 @@ var file_ft_task_proto_fttask_proto_rawDesc = []byte{
 	0x6e, 0x63, 0x65, 0x22, 0x0a, 0x0a, 0x08, 0x46, 0x65, 0x6e, 0x63, 0x65, 0x52, 0x65, 0x70, 0x22,
 	0x0e, 0x0a, 0x0c, 0x43, 0x6c, 0x65, 0x61, 0x72, 0x45, 0x74, 0x63, 0x64, 0x52, 0x65, 0x71, 0x22,
 	0x0e, 0x0a, 0x0c, 0x43, 0x6c, 0x65, 0x61, 0x72, 0x45, 0x74, 0x63, 0x64, 0x52, 0x65, 0x70, 0x22,
-	0x0e, 0x0a, 0x0c, 0x50, 0x61, 0x72, 0x74, 0x69, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x65, 0x71, 0x22,
-	0x0e, 0x0a, 0x0c, 0x50, 0x61, 0x72, 0x74, 0x69, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x65, 0x70, 0x2a,
-	0x34, 0x0a, 0x0a, 0x54, 0x61, 0x73, 0x6b, 0x53, 0x74, 0x61, 0x74, 0x75, 0x73, 0x12, 0x08, 0x0a,
-	0x04, 0x54, 0x4f, 0x44, 0x4f, 0x10, 0x00, 0x12, 0x07, 0x0a, 0x03, 0x57, 0x49, 0x50, 0x10, 0x01,
-	0x12, 0x08, 0x0a, 0x04, 0x44, 0x4f, 0x4e, 0x45, 0x10, 0x02, 0x12, 0x09, 0x0a, 0x05, 0x45, 0x52,
-	0x52, 0x4f, 0x52, 0x10, 0x03, 0x42, 0x17, 0x5a, 0x15, 0x73, 0x69, 0x67, 0x6d, 0x61, 0x6f, 0x73,
-	0x2f, 0x66, 0x74, 0x2f, 0x74, 0x61, 0x73, 0x6b, 0x2f, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x06,
-	0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x09, 0x0a, 0x07, 0x50, 0x69, 0x6e, 0x67, 0x52, 0x65, 0x71, 0x22, 0x09, 0x0a, 0x07, 0x50, 0x69,
+	0x6e, 0x67, 0x52, 0x65, 0x70, 0x2a, 0x34, 0x0a, 0x0a, 0x54, 0x61, 0x73, 0x6b, 0x53, 0x74, 0x61,
+	0x74, 0x75, 0x73, 0x12, 0x08, 0x0a, 0x04, 0x54, 0x4f, 0x44, 0x4f, 0x10, 0x00, 0x12, 0x07, 0x0a,
+	0x03, 0x57, 0x49, 0x50, 0x10, 0x01, 0x12, 0x08, 0x0a, 0x04, 0x44, 0x4f, 0x4e, 0x45, 0x10, 0x02,
+	0x12, 0x09, 0x0a, 0x05, 0x45, 0x52, 0x52, 0x4f, 0x52, 0x10, 0x03, 0x42, 0x17, 0x5a, 0x15, 0x73,
+	0x69, 0x67, 0x6d, 0x61, 0x6f, 0x73, 0x2f, 0x66, 0x74, 0x2f, 0x74, 0x61, 0x73, 0x6b, 0x2f, 0x70,
+	0x72, 0x6f, 0x74, 0x6f, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -1706,8 +1705,8 @@ var file_ft_task_proto_fttask_proto_goTypes = []interface{}{
 	(*FenceRep)(nil),             // 26: FenceRep
 	(*ClearEtcdReq)(nil),         // 27: ClearEtcdReq
 	(*ClearEtcdRep)(nil),         // 28: ClearEtcdRep
-	(*PartitionReq)(nil),         // 29: PartitionReq
-	(*PartitionRep)(nil),         // 30: PartitionRep
+	(*PingReq)(nil),              // 29: PingReq
+	(*PingRep)(nil),              // 30: PingRep
 	(*sigmap.TfenceProto)(nil),   // 31: TfenceProto
 }
 var file_ft_task_proto_fttask_proto_depIdxs = []int32{
@@ -2080,7 +2079,7 @@ func file_ft_task_proto_fttask_proto_init() {
 			}
 		}
 		file_ft_task_proto_fttask_proto_msgTypes[28].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*PartitionReq); i {
+			switch v := v.(*PingReq); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -2092,7 +2091,7 @@ func file_ft_task_proto_fttask_proto_init() {
 			}
 		}
 		file_ft_task_proto_fttask_proto_msgTypes[29].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*PartitionRep); i {
+			switch v := v.(*PingRep); i {
 			case 0:
 				return &v.state
 			case 1:

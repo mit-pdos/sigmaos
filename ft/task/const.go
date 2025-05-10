@@ -1,18 +1,16 @@
 package task
 
 import (
-	"sigmaos/namesrv/fsetcd"
 	"time"
 )
 
 const (
-	// server has to wait for any previous leaders to have their lease expire in etcd
-	SRV_RESTART_TIMEOUT         = fsetcd.LeaseTTL * time.Second
+	SRV_MAX_MISSING_PINGS = 3
 )
 
 const (
 	// time between manager respawning a server and starting to ping it again to avoid pinging while server is restarting
-	MGR_RESTART_TIMEOUT         = SRV_RESTART_TIMEOUT + 500 * time.Millisecond
+	MGR_RESTART_TIMEOUT         = 500 * time.Millisecond
 	MGR_PING_TIMEOUT            = 500 * time.Millisecond
 	MGR_NUM_FAILS_UNTIL_RESTART = 2
 )

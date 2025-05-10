@@ -16,6 +16,7 @@ import (
 
 type FtTaskSrvMgr struct {
 	sc *sigmaclnt.SigmaClnt
+	stopped bool
 	Id fttask.FtTaskSrvId
 	clnt fttask_clnt.FtTaskClnt[any, any]
 	p *procgroupmgr.ProcGroupMgr
@@ -48,7 +49,7 @@ func NewFtTaskSrvMgr(sc *sigmaclnt.SigmaClnt, id string, em *crash.TeventMap, ev
 
 	clnt := fttask_clnt.NewFtTaskClnt[any, any](sc.FsLib, fttask.FtTaskSrvId(id))
 
-	ft := &FtTaskSrvMgr{sc, fttask.FtTaskSrvId(id), clnt, p}
+	ft := &FtTaskSrvMgr{sc, false, fttask.FtTaskSrvId(id), clnt, p}
 
 	go ft.monitor(evictUnresponsive)
 
@@ -57,10 +58,10 @@ func NewFtTaskSrvMgr(sc *sigmaclnt.SigmaClnt, id string, em *crash.TeventMap, ev
 
 func (ft *FtTaskSrvMgr) monitor(evictUnresponsive bool) {
 	nfail := 0
-	for ft.p.IsRunning() {
+	for !ft.stopped {
 		err := ft.clnt.Ping()
 		if serr.IsErrorUnavailable(err) {
-			if !ft.p.IsRunning() {
+			if ft.stopped {
 				return
 			}
 			nfail += 1
@@ -89,12 +90,7 @@ func (ft *FtTaskSrvMgr) Partition() error {
 	ft.p.Lock()
 	defer ft.p.Unlock()
 
-	// tell server to partition from named and etcd
-	currInstance, err := ft.clnt.Partition()
-	if err != nil {
-		return err
-	}
-
+	currInstance := ft.clnt.CurrInstance()
 	db.DPrintf(db.FTTASKS, "Partitioning instance %v", currInstance)
 
 	// prevent client from connecting to the partitioned instance
@@ -102,6 +98,7 @@ func (ft *FtTaskSrvMgr) Partition() error {
 }
 
 func (ft *FtTaskSrvMgr) Stop(clearStore bool) ([]*procgroupmgr.ProcStatus, error) {
+	ft.stopped = true
 	if clearStore {
 		db.DPrintf(db.FTTASKS, "Sending request to clear backing store")
 		// lock to ensure group members don't change while we clear the db

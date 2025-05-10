@@ -57,6 +57,7 @@ func (tc *RawFtTaskClnt) getAvailableInstances() ([]string, error) {
 	return instanceIds, err
 }
 
+// if this is a ping, we lower the amouunt of retries
 func (tc *RawFtTaskClnt) rpc(method string, arg protobuf.Message, res protobuf.Message, isPing bool) error {
 	// lock to protect tc.currInstance
 	tc.mu.Lock()
@@ -278,20 +279,17 @@ func (tc *RawFtTaskClnt) ClearEtcd() error {
 
 // does a call to GetTaskStats since this is a simple status check that also bypasses fence
 func (tc *RawFtTaskClnt) Ping() error {
-	arg := proto.GetTaskStatsReq{}
-	res := proto.GetTaskStatsRep{}
+	arg := proto.PingRep{}
+	res := proto.PingReq{}
 
-	// bypass the rpc wrapper to avoid retrying
-	err := tc.rpc("TaskSrv.GetTaskStats", &arg, &res, true)
+	err := tc.rpc("TaskSrv.Ping", &arg, &res, true)
 	return err
 }
 
-func (tc *RawFtTaskClnt) Partition() (string, error) {
-	arg := proto.PartitionReq{}
-	res := proto.PartitionRep{}
-
-	err := tc.rpc("TaskSrv.Partition", &arg, &res, false)
-	return tc.currInstance, err
+func (tc *RawFtTaskClnt) CurrInstance() string {
+	tc.mu.Lock()
+	defer tc.mu.Unlock()
+	return tc.currInstance
 }
 
 func (tc *RawFtTaskClnt) AsRawClnt() FtTaskClnt[[]byte, []byte] {

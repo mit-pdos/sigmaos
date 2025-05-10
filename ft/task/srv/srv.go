@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net"
-	"os"
 	"path/filepath"
 	"sigmaos/api/fs"
 	"sigmaos/ft/leaderclnt/electclnt"
@@ -47,6 +46,9 @@ type TaskSrv struct {
 	etcdClient *clientv3.Client
 	electclnt  *electclnt.ElectClnt
 	fsl        *fslib.FsLib
+
+	lastPingTime   time.Time
+	lastPingTimeMu sync.Mutex
 }
 
 const (
@@ -91,6 +93,8 @@ func RunTaskSrv(args []string) error {
 		done: make(map[int32]bool),
 		errored: make(map[int32]bool),
 		rootId: fttask.FtTaskSrvId(fttaskId),
+		lastPingTime: time.Now(),
+		lastPingTimeMu: sync.Mutex{},
 	}
 
 	// prevent the server from serving any requests until everything has been initialized
@@ -113,11 +117,6 @@ func RunTaskSrv(args []string) error {
 	}
 
 	db.DPrintf(db.FTTASKS, "Created fttask srv with id %s, args %v", srvId, args)
-
-	// wait for any previous servers to relinquish leadership
-	if os.Getenv(proc.SIGMAGEN) != "1" {
-		time.Sleep(fttask.SRV_RESTART_TIMEOUT)
-	}
 
 	s.fsl = ssrv.SigmaClnt().FsLib
 	crash.Failer(s.fsl, crash.FTTASKS_CRASH, func(e crash.Tevent) {
@@ -159,6 +158,20 @@ func RunTaskSrv(args []string) error {
 	}
 
 	s.mu.Unlock()
+
+	go func() {
+		for {
+			s.lastPingTimeMu.Lock()
+			// if we haven't heard a ping in a while, exit and release leadership
+			if time.Since(s.lastPingTime) >= fttask.SRV_MAX_MISSING_PINGS * fttask.MGR_PING_TIMEOUT {
+				db.DPrintf(db.FTTASKS, "Ping timeout, exiting...")
+				s.electclnt.ReleaseLeadership()
+				ssrv.SrvExit(proc.NewStatusErr("ping timeout", ""))
+			}
+			s.lastPingTimeMu.Unlock()
+			time.Sleep(fttask.MGR_PING_TIMEOUT)
+		}
+	}()
 
 	return ssrv.RunServer()
 }
@@ -710,6 +723,15 @@ func (s *TaskSrv) AcquireTasks(ctx fs.CtxI, req proto.AcquireTasksReq, rep *prot
 	return nil
 }
 
+func (s *TaskSrv) Ping(ctx fs.CtxI, req proto.PingReq, rep *proto.PingRep) error {
+	// use a separate lock in case we under a lot of load and the default mutex is highly contested
+	s.lastPingTimeMu.Lock()
+	s.lastPingTime = time.Now()
+	s.lastPingTimeMu.Unlock()
+
+	return nil
+}
+
 func (s *TaskSrv) GetTaskStats(ctx fs.CtxI, req proto.GetTaskStatsReq, rep *proto.GetTaskStatsRep) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -811,21 +833,6 @@ func (s *TaskSrv) ClearEtcd(ctx fs.CtxI, req proto.ClearEtcdReq, rep *proto.Clea
 	}
 
 	db.DPrintf(db.FTTASKS, "Shutdown: deleted keys %v", resp)
-
-	return nil
-}
-
-func (s *TaskSrv) Partition(ctx fs.CtxI, req proto.PartitionReq, rep *proto.PartitionRep) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	db.DPrintf(db.FTTASKS, "Partition: partitioning")
-
-	// revoke lease to named to remove mount
-	crash.PartitionNamed(s.fsl)
-
-	// revoke lease to etcd allow new leader to be elected
-	s.electclnt.CloseSession()
 
 	return nil
 }

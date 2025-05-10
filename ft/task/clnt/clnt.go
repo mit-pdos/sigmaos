@@ -44,7 +44,7 @@ type FtTaskClnt[Data any, Output any] interface {
 	AsRawClnt() FtTaskClnt[[]byte, []byte]
 	ServerId() task.FtTaskSrvId
 	Ping() error
-	Partition() (string, error) // for testing purposes; partitions the server from named so its lease expires
+	CurrInstance() string
 	
 	rpc(method string, arg protobuf.Message, res protobuf.Message, isPing bool) error
 }

@@ -119,3 +119,35 @@ func TestSpawnLatency(t *testing.T) {
 	}
 	db.DPrintf(db.TEST, "Procs done")
 }
+
+func TestServerProc(t *testing.T) {
+	const (
+		SERVER_PROC_MCPU proc.Tmcpu = 1000
+	)
+
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	defer mrts.Shutdown()
+
+	p := proc.NewProc("echo-srv-cpp", nil)
+	p.SetMcpu(SERVER_PROC_MCPU)
+	db.DPrintf(db.TEST, "Spawn server proc %v", p)
+	start := time.Now()
+	err := mrts.GetRealm(test.REALM1).Spawn(p)
+	assert.Nil(mrts.GetRealm(test.REALM1).Ts.T, err, "Spawn")
+	err = mrts.GetRealm(test.REALM1).WaitStart(p.GetPid())
+	assert.Nil(mrts.GetRealm(test.REALM1).Ts.T, err, "Start")
+	db.DPrintf(db.TEST, "CPP server proc started (lat=%v)", time.Since(start))
+
+	// TODO: do an RPC
+	err = mrts.GetRealm(test.REALM1).Evict(p.GetPid())
+	assert.Nil(mrts.GetRealm(test.REALM1).Ts.T, err, "Evict")
+
+	status, err := mrts.GetRealm(test.REALM1).WaitExit(p.GetPid())
+	db.DPrintf(db.TEST, "CPP proc exited, status: %v", status)
+	assert.Nil(mrts.GetRealm(test.REALM1).Ts.T, err, "WaitExit error")
+	assert.True(mrts.GetRealm(test.REALM1).Ts.T, status != nil && status.IsStatusEvicted(), "Exit status wrong: %v", status)
+	db.DPrintf(db.TEST, "Proc done")
+}

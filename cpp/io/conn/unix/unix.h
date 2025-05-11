@@ -23,44 +23,29 @@ class Conn : public sigmaos::io::conn::Conn {
   public:
   // Create a unix socket connection
   Conn(std::string pn) {
+    int sockfd;
     log(UNIXCONN, "New unix connection {}", pn);
-    _sockfd = socket(AF_UNIX, SOCK_STREAM, 0);
-    if (_sockfd == -1) {
+    sockfd = socket(AF_UNIX, SOCK_STREAM, 0);
+    if (sockfd == -1) {
       throw std::runtime_error("Failed to create spproxy socket fd");
     }
     _addr.sun_family = AF_UNIX;
     strncpy(_addr.sun_path, pn.c_str(), sizeof(_addr.sun_path) - 1);
     _addr.sun_path[sizeof(_addr.sun_path) - 1] = '\0';
-    if (connect(_sockfd, (struct sockaddr *) &_addr, sizeof(_addr)) == -1) {
-      close(_sockfd);
+    if (connect(sockfd, (struct sockaddr *) &_addr, sizeof(_addr)) == -1) {
+      close(sockfd);
       throw std::runtime_error("Failed to connect to spproxy socket");
     }
+    set_sockfd(sockfd);
   }
 
-  // Read/Write a buffer
-  std::expected<int, sigmaos::serr::Error> Read(std::string *b);
-  std::expected<int, sigmaos::serr::Error> Write(const std::string *b);
-
-  // Read/Write a number
-  std::expected<uint32_t, sigmaos::serr::Error> ReadUint32();
-  std::expected<int, sigmaos::serr::Error> WriteUint32(uint32_t i);
-  std::expected<uint64_t, sigmaos::serr::Error> ReadUint64();
-  std::expected<int, sigmaos::serr::Error> WriteUint64(uint64_t i);
-
-  // Close a connection
-  std::expected<int, sigmaos::serr::Error> Close();
-
-  ~Conn() { Close(); }
+  ~Conn() {}
 
   private:
-  int _sockfd;
   sockaddr_un _addr;
   // Used for logger initialization
   static bool _l;
   static bool _l_e;
-
-  std::expected<int, sigmaos::serr::Error> read_bytes(char *b, size_t size);
-  std::expected<int, sigmaos::serr::Error> write_bytes(const char *b, size_t size);
 };
 
 };

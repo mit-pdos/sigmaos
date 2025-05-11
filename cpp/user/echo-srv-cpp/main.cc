@@ -25,7 +25,7 @@ int main(int argc, char *argv[]) {
   std::thread evict_thread(wait_for_eviction, sp_clnt);
 
   log(ECHOSRV, "Starting TCP server");
-  auto srv = sigmaos::io::conn::tcpconn::Conn();
+  auto l = sigmaos::io::conn::tcpconn::Listener();
   log(ECHOSRV, "TCP server started");
   {
     auto res = sp_clnt->Started();

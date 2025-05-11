@@ -11,6 +11,7 @@ namespace io::conn {
 class Conn {
 public:
   Conn() : _sockfd(-1) {}
+  Conn(int sockfd) : _sockfd(sockfd) {}
   ~Conn() {}
 
   // Read/Write a buffer
@@ -28,7 +29,6 @@ public:
 protected:
   std::expected<int, sigmaos::serr::Error> read_bytes(char *b, size_t size);
   std::expected<int, sigmaos::serr::Error> write_bytes(const char *b, size_t size);
-  void set_sockfd(int sockfd) { _sockfd = sockfd; }
 
 private:
   int _sockfd;

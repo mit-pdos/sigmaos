@@ -22,23 +22,8 @@ const std::string UNIXCONN_ERR = UNIXCONN + sigmaos::util::log::ERR;
 class Conn : public sigmaos::io::conn::Conn {
   public:
   // Create a unix socket connection
-  Conn(std::string pn) {
-    int sockfd;
-    log(UNIXCONN, "New unix connection {}", pn);
-    sockfd = socket(AF_UNIX, SOCK_STREAM, 0);
-    if (sockfd == -1) {
-      throw std::runtime_error("Failed to create spproxy socket fd");
-    }
-    _addr.sun_family = AF_UNIX;
-    strncpy(_addr.sun_path, pn.c_str(), sizeof(_addr.sun_path) - 1);
-    _addr.sun_path[sizeof(_addr.sun_path) - 1] = '\0';
-    if (connect(sockfd, (struct sockaddr *) &_addr, sizeof(_addr)) == -1) {
-      close(sockfd);
-      throw std::runtime_error("Failed to connect to spproxy socket");
-    }
-    set_sockfd(sockfd);
-  }
-
+  Conn() : sigmaos::io::conn::Conn(), _addr({0}) {}
+  Conn(int sockfd, sockaddr_un addr) : sigmaos::io::conn::Conn(sockfd), _addr(addr) {}
   ~Conn() {}
 
   private:
@@ -46,6 +31,29 @@ class Conn : public sigmaos::io::conn::Conn {
   // Used for logger initialization
   static bool _l;
   static bool _l_e;
+};
+
+class ClntConn : public Conn {
+  public:
+  ClntConn(std::string pn) {
+    int sockfd;
+    sockaddr_un addr;
+    log(UNIXCONN, "New unix client connection {}", pn);
+    sockfd = socket(AF_UNIX, SOCK_STREAM, 0);
+    if (sockfd == -1) {
+      throw std::runtime_error("Failed to create spproxy socket fd");
+    }
+    addr.sun_family = AF_UNIX;
+    strncpy(addr.sun_path, pn.c_str(), sizeof(addr.sun_path) - 1);
+    addr.sun_path[sizeof(addr.sun_path) - 1] = '\0';
+    if (connect(sockfd, (struct sockaddr *) &addr, sizeof(addr)) == -1) {
+      close(sockfd);
+      throw std::runtime_error("Failed to connect to spproxy socket");
+    }
+    Conn(sockfd, addr);
+  }
+  ~ClntConn() {}
+  private:
 };
 
 };

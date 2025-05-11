@@ -33,7 +33,7 @@ class Clnt {
   Clnt() : _disconnected(false) {
     _env = sigmaos::proc::GetProcEnv();
     log(SPPROXYCLNT, "New clnt {}", _env->String());
-    _conn = std::make_shared<sigmaos::io::conn::unixconn::Conn>(SPPROXY_SOCKET_PN);
+    _conn = std::make_shared<sigmaos::io::conn::unixconn::ClntConn>(SPPROXY_SOCKET_PN);
     _trans = std::make_shared<sigmaos::io::transport::Transport>(_conn);
     _demux = std::make_shared<sigmaos::io::demux::Clnt>(_trans);
     _rpcc = std::make_shared<sigmaos::rpc::Clnt>(_demux);

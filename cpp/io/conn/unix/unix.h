@@ -23,8 +23,13 @@ class Conn : public sigmaos::io::conn::Conn {
   public:
   // Create a unix socket connection
   Conn() : sigmaos::io::conn::Conn(), _addr({0}) {}
-  Conn(int sockfd, sockaddr_un addr) : sigmaos::io::conn::Conn(sockfd), _addr(addr) {}
   ~Conn() {}
+
+  protected:
+  void init(int sockfd, sockaddr_un addr) {
+    _addr = addr;
+    sigmaos::io::conn::Conn::init(sockfd);
+  }
 
   private:
   sockaddr_un _addr;
@@ -50,7 +55,7 @@ class ClntConn : public Conn {
       close(sockfd);
       throw std::runtime_error("Failed to connect to spproxy socket");
     }
-    Conn(sockfd, addr);
+    init(sockfd, addr);
   }
   ~ClntConn() {}
   private:

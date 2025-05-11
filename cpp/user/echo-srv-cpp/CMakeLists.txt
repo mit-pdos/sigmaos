@@ -6,6 +6,7 @@ add_executable(echo-srv-cpp
 
 target_link_libraries(echo-srv-cpp PRIVATE 
   io_conn_tcp
+  io_conn_unix
   util_log
   sigmap_proxy
 )

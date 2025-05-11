@@ -27,6 +27,7 @@ public:
   // Close a connection
   std::expected<int, sigmaos::serr::Error> Close();
 protected:
+  void init(int sockfd) { _sockfd = sockfd; }
   std::expected<int, sigmaos::serr::Error> read_bytes(char *b, size_t size);
   std::expected<int, sigmaos::serr::Error> write_bytes(const char *b, size_t size);
 

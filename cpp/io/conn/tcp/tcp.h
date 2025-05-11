@@ -31,6 +31,12 @@ class Conn : public sigmaos::io::conn::Conn {
   Conn(int sockfd, struct sockaddr_in addr) : sigmaos::io::conn::Conn(sockfd), _addr(addr) {}
   ~Conn() {}
 
+  protected:
+  void init(int sockfd, sockaddr_in addr) {
+    _addr = addr;
+    sigmaos::io::conn::Conn::init(sockfd);
+  }
+
   private:
   sockaddr_in _addr;
   // Used for logger initialization
@@ -60,9 +66,10 @@ class ClntConn : public Conn {
       log(TCPCONN_ERR, "Failed to connect client TCP socket", srv_addr, port);
       throw std::runtime_error("Failed to connect client TCP socket");
     }
-    Conn(sockfd, addr);
+    init(sockfd, addr);
   }
   ~ClntConn();
+
   private:
 };
 

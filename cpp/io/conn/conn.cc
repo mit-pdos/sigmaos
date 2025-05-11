@@ -74,6 +74,7 @@ std::expected<int, sigmaos::serr::Error> Conn::Close() {
 std::expected<int, sigmaos::serr::Error> Conn::read_bytes(char *b, size_t size) {
   int n = read(_sockfd, b, size);
   if (n != size) {
+    log(CONN_ERR, "Err read_bytes fd {}", _sockfd);
     return std::unexpected(sigmaos::serr::Error(sigmaos::serr::Terror::TErrUnreachable, std::format("read wrong num bytes: {} != {}", n, size)));
   }
   return n;
@@ -82,6 +83,7 @@ std::expected<int, sigmaos::serr::Error> Conn::read_bytes(char *b, size_t size) 
 std::expected<int, sigmaos::serr::Error> Conn::write_bytes(const char *b, size_t size) {
   int n = write(_sockfd, b, size);
   if (n != size) {
+    log(CONN_ERR, "Err write_bytes fd {}", _sockfd);
     return std::unexpected(sigmaos::serr::Error(sigmaos::serr::Terror::TErrUnreachable, std::format("wrote wrong num bytes: {} != {}", n, size)));
   }
   return n;

@@ -4,7 +4,6 @@ add_library(io_conn_unix STATIC unix.cc)
 
 target_link_libraries(io_conn_unix PUBLIC
   serr
-  util_codec
   util_log
 )
 

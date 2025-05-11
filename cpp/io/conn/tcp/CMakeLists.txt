@@ -4,7 +4,6 @@ add_library(io_conn_tcp STATIC tcp.cc)
 
 target_link_libraries(io_conn_tcp PUBLIC
   serr
-  util_codec
   util_log
 )
 

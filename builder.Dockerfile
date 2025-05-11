@@ -47,6 +47,6 @@ RUN git clone https://github.com/ivywu2003/cpython.git /cpython3.11 && \
 WORKDIR /home/sigmaos
 
 # Copy python user programs
-COPY pyproc pyproc
+# COPY pyproc pyproc
 
 CMD [ "/bin/bash", "-l" ]

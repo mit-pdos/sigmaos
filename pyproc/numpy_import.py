@@ -3,4 +3,4 @@ import numpy
 
 splib.Started()
 print(numpy.array([1, 2, 3]))
-splib.Exited()
+splib.Exited(1, "Exited normally!")

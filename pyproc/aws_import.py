@@ -3,4 +3,4 @@ import dummy_package
 
 splib.Started()
 dummy_package.sayHi()
-splib.Exited()
+splib.Exited(1, "Exited normally!")

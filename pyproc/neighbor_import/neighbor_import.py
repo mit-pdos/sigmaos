@@ -5,4 +5,4 @@ from nested_import import utils
 splib.Started()
 custom_lib.sayHi()
 print("The square of 5 is:", utils.square(5))
-splib.Exited()
+splib.Exited(1, "Exited normally!")

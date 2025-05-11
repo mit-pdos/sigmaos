@@ -3,4 +3,4 @@ import shlex
 
 splib.Started()
 print(shlex.join(["Hello", "World"]))
-splib.Exited()
+splib.Exited(1, "Exited normally!")

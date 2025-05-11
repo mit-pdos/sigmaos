@@ -44,7 +44,6 @@ func TestPythonLaunch(t *testing.T) {
 	assert.True(t, status.IsStatusOK(), "Bad exit status: %v", status)
 	duration3 := time.Since(start)
 	fmt.Printf("cold spawn %v, start %v, exit %v\n", duration, duration2, duration3)
-	return
 	ts.Shutdown()
 }
 
@@ -201,5 +200,43 @@ func TestPythonChecksumVerification(t *testing.T) {
 	assert.True(t, status.IsStatusOK(), "Bad exit status: %v", status)
 	duration9 := time.Since(start3)
 	fmt.Printf("warm spawn %v, start %v, exit %v\n", duration7, duration8, duration9)
+	ts.Shutdown()
+}
+
+// SigmaOS API Tests
+
+func TestPythonStat(t *testing.T) {
+	ts, _ := test.NewTstateAll(t)
+	p := proc.NewPythonProc([]string{"/~~/pyproc/stat_test.py"}, "ivywu")
+	start := time.Now()
+	err := ts.Spawn(p)
+	assert.Nil(ts.T, err)
+	duration := time.Since(start)
+	err = ts.WaitStart(p.GetPid())
+	assert.Nil(ts.T, err, "Error waitstart: %v", err)
+	duration2 := time.Since(start)
+	status, err := ts.WaitExit(p.GetPid())
+	assert.Nil(t, err)
+	assert.True(t, status.IsStatusOK(), "Bad exit status: %v", status)
+	duration3 := time.Since(start)
+	fmt.Printf("cold spawn %v, start %v, exit %v\n", duration, duration2, duration3)
+	ts.Shutdown()
+}
+
+func TestPythonFiles(t *testing.T) {
+	ts, _ := test.NewTstateAll(t)
+	p := proc.NewPythonProc([]string{"/~~/pyproc/file_test.py"}, "ivywu")
+	start := time.Now()
+	err := ts.Spawn(p)
+	assert.Nil(ts.T, err)
+	duration := time.Since(start)
+	err = ts.WaitStart(p.GetPid())
+	assert.Nil(ts.T, err, "Error waitstart: %v", err)
+	duration2 := time.Since(start)
+	status, err := ts.WaitExit(p.GetPid())
+	assert.Nil(t, err)
+	assert.True(t, status.IsStatusOK(), "Bad exit status: %v", status)
+	duration3 := time.Since(start)
+	fmt.Printf("cold spawn %v, start %v, exit %v\n", duration, duration2, duration3)
 	ts.Shutdown()
 }

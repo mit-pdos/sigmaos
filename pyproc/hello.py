@@ -2,4 +2,4 @@ import splib
 
 splib.Started()
 print("Hello World!")
-splib.Exited()
+splib.Exited(1, "Exited normally!")

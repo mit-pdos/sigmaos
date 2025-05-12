@@ -322,14 +322,16 @@ func (lpc *lazyPagesConn) markAndLoad(iovno int, iov *Iov, pi int, addr0 uint64)
 		// 	lpc.cache[iovno] = make([]bool, iovlen)
 		// }
 		exists := lpc.cache[iovno][i]
-
+		// if exists {
+		// 	THRESH++
+		// }
 		if exists && loaded == -1 {
 			loaded = i - startIndex
 		}
 		if !exists && loaded != -1 {
 			break
 		}
-		iov.copied[i] = true
+		//iov.copied[i] = true
 		n += 1
 	}
 	lpc.mu.Unlock()
@@ -359,7 +361,7 @@ func (lpc *lazyPagesConn) markAndLoad(iovno int, iov *Iov, pi int, addr0 uint64)
 
 			startIndex--
 			n++
-			iov.copied[startIndex] = true
+			//iov.copied[startIndex] = true
 			off -= int64(iov.pagesz)
 		}
 
@@ -397,7 +399,7 @@ func (lpc *lazyPagesConn) markAndLoad(iovno int, iov *Iov, pi int, addr0 uint64)
 				startIndex--
 				n++
 				loaded++
-				iov.copied[startIndex] = true
+				//	iov.copied[startIndex] = true
 				off -= int64(iov.pagesz)
 			}
 			buf = lpc.data[:n*iov.pagesz]
@@ -427,7 +429,7 @@ func (lpc *lazyPagesConn) markAndLoad(iovno int, iov *Iov, pi int, addr0 uint64)
 				}
 				startIndex--
 				n++
-				iov.copied[startIndex] = true
+				//	iov.copied[startIndex] = true
 				off -= int64(iov.pagesz)
 			}
 			buf = lpc.data[:n*iov.pagesz]
@@ -612,40 +614,44 @@ func (lpc *lazyPagesConn) pageFault(addr uint64) error {
 		err := copyPages(lpc.fd, addr, buf)
 		cnt := 0
 		for err != nil {
-			db.DPrintf(db.ERROR, "copyPages err %v try: %v %v", err, cnt, err != syscall.EBUSY)
+			db.DPrintf(db.ERROR, "copyPages err %v try: %v busy:%v ESRCH: %v", err, cnt, err == syscall.EBUSY, err == syscall.ESRCH)
 			if err == syscall.ESRCH {
 				return nil
 			}
-			if err == syscall.ENOENT {
+			// if err == syscall.ENOENT {
 
-				if n <= lpc.pmi.pagesz {
-					return err
-				}
-				n -= lpc.pmi.pagesz
-				iov.unmarkFetchLen(addr+uint64(n), 1)
-				buf = lpc.data[0:n]
-				off := int64(pi * lpc.pmi.pagesz)
-				if err := lpc.rp(off, buf); err != nil {
-					db.DFatalf("no page content for %x", addr)
-				}
-				db.DPrintf(db.LAZYPAGESSRV_FAULT, "page fault: copy %x: %d(%x) -> %v pi %d(%d,%d,%d)", lpc.nfault, addr, addr, iov, pi, n, nPages(0, uint64(n), lpc.pmi.pagesz), len(buf))
-				err = copyPages(lpc.fd, addr, buf)
-				//		iov.unmarkFetchLen(addr, n)
+			// 	if n <= lpc.pmi.pagesz {
+			// 		return err
+			// 	}
+			// 	n -= lpc.pmi.pagesz
+			// 	iov.unmarkFetchLen(addr+uint64(n), 1)
+			// 	buf = lpc.data[0:n]
+			// 	off := int64(pi * lpc.pmi.pagesz)
+			// 	if err := lpc.rp(off, buf); err != nil {
+			// 		db.DFatalf("no page content for %x", addr)
+			// 	}
+			// 	db.DPrintf(db.LAZYPAGESSRV_FAULT, "page fault: copy %x: %d(%x) -> %v pi %d(%d,%d,%d)", lpc.nfault, addr, addr, iov, pi, n, nPages(0, uint64(n), lpc.pmi.pagesz), len(buf))
+			// 	err = copyPages(lpc.fd, addr, buf)
+			// 	//		iov.unmarkFetchLen(addr, n)
 
-				continue
-			}
-			if cnt > 10 || (err != syscall.EBUSY && err != syscall.ENOENT) {
+			// 	continue
+			// }
+			if cnt > 10 || (err != syscall.EBUSY && err != syscall.ENOENT && err != syscall.EAGAIN) {
 
 				return err
 			}
 			if err == syscall.EAGAIN {
-				iov.unmarkFetchLen(addr, n)
+				//	iov.unmarkFetchLen(addr, n)
 				return nil
 			}
 
 			time.Sleep(5 * time.Millisecond)
 			err = copyPages(lpc.fd, addr, buf)
 			cnt += 1
+		}
+		sindex := (addr - iov.start) / uint64(iov.pagesz)
+		for index := sindex; index < sindex+uint64(n/iov.pagesz); index++ {
+			iov.copied[index] = true
 		}
 		// if err != nil {
 		// 	db.DPrintf(db.ERROR, "SYS_IOCTL1 err %v", err)
@@ -654,6 +660,7 @@ func (lpc *lazyPagesConn) pageFault(addr uint64) error {
 
 		//}
 	}
+
 	return nil
 }
 

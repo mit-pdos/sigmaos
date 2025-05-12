@@ -3,6 +3,7 @@ package hotel
 import (
 	"encoding/json"
 	"log"
+	"os"
 	"path/filepath"
 	"runtime"
 	"strconv"
@@ -156,6 +157,8 @@ func RunGeoSrv(job string, ckptpn string, nidxStr string, maxSearchRadiusStr str
 	go func() {
 		time.Sleep(time.Millisecond)
 		sc.ClntExit(proc.NewStatus(proc.StatusOK))
+		os.Exit(0)
+		//sc.ClntExit(proc.NewStatus(proc.StatusOK))
 	}()
 	return ssrv.RunServer()
 

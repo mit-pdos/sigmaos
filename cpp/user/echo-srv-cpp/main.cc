@@ -4,7 +4,8 @@
 #include <proxy/sigmap/sigmap.h>
 #include <serr/serr.h>
 #include <proc/proc.h>
-#include <io/conn/tcp/tcp.h>
+#include <io/net/srv.h>
+#include <sigmap/const.h>
 
 const std::string ECHOSRV = "ECHOSRV";
 
@@ -24,13 +25,26 @@ int main(int argc, char *argv[]) {
 
   std::thread evict_thread(wait_for_eviction, sp_clnt);
 
-  log(ECHOSRV, "Starting TCP server");
-  auto l = sigmaos::io::conn::tcpconn::Listener();
-  log(ECHOSRV, "TCP server started");
+  log(ECHOSRV, "Starting net server");
+  auto srv = std::make_shared<sigmaos::io::net::Srv>();
+  int port = srv->GetPort();
+  log(ECHOSRV, "Net server started with port {}", port);
+  {
+    auto ep = std::make_shared<TendpointProto>();
+    auto addr = ep->add_addr();
+    addr->set_ipstr("127.0.0.1");
+    addr->set_portint(port);
+    ep->set_type(sigmaos::sigmap::constants::EXTERNAL_EP);
+    auto res = sp_clnt->RegisterEP("name/echo-srv-cpp", ep);
+    if (!res.has_value()) {
+      log(ECHOSRV, "Error RegisterEP: {}", res.error());
+    }
+  }
+  log(ECHOSRV, "Echosrv registered ep");
   {
     auto res = sp_clnt->Started();
     if (!res.has_value()) {
-      log(ECHOSRV, "Error started: {}", res.error());
+      log(ECHOSRV, "Error Started: {}", res.error());
     }
   }
   log(ECHOSRV, "Server started");

@@ -561,6 +561,34 @@ struct SigmaStatRepDefaultTypeInternal {
 PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT
     PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 SigmaStatRepDefaultTypeInternal _SigmaStatRep_default_instance_;
 
+inline constexpr SigmaRegisterEPReq::Impl_::Impl_(
+    ::_pbi::ConstantInitialized) noexcept
+      : _cached_size_{0},
+        path_(
+            &::google::protobuf::internal::fixed_address_empty_string,
+            ::_pbi::ConstantInitialized()),
+        endpoint_{nullptr} {}
+
+template <typename>
+PROTOBUF_CONSTEXPR SigmaRegisterEPReq::SigmaRegisterEPReq(::_pbi::ConstantInitialized)
+#if defined(PROTOBUF_CUSTOM_VTABLE)
+    : ::google::protobuf::Message(SigmaRegisterEPReq_class_data_.base()),
+#else   // PROTOBUF_CUSTOM_VTABLE
+    : ::google::protobuf::Message(),
+#endif  // PROTOBUF_CUSTOM_VTABLE
+      _impl_(::_pbi::ConstantInitialized()) {
+}
+struct SigmaRegisterEPReqDefaultTypeInternal {
+  PROTOBUF_CONSTEXPR SigmaRegisterEPReqDefaultTypeInternal() : _instance(::_pbi::ConstantInitialized{}) {}
+  ~SigmaRegisterEPReqDefaultTypeInternal() {}
+  union {
+    SigmaRegisterEPReq _instance;
+  };
+};
+
+PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT
+    PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 SigmaRegisterEPReqDefaultTypeInternal _SigmaRegisterEPReq_default_instance_;
+
 inline constexpr SigmaMountTreeReq::Impl_::Impl_(
     ::_pbi::ConstantInitialized) noexcept
       : _cached_size_{0},
@@ -968,6 +996,18 @@ const ::uint32_t
         PROTOBUF_FIELD_OFFSET(::SigmaMountsRep, _impl_.err_),
         ~0u,
         0,
+        PROTOBUF_FIELD_OFFSET(::SigmaRegisterEPReq, _impl_._has_bits_),
+        PROTOBUF_FIELD_OFFSET(::SigmaRegisterEPReq, _internal_metadata_),
+        ~0u,  // no _extensions_
+        ~0u,  // no _oneof_case_
+        ~0u,  // no _weak_field_map_
+        ~0u,  // no _inlined_string_donated_
+        ~0u,  // no _split_
+        ~0u,  // no sizeof(Split)
+        PROTOBUF_FIELD_OFFSET(::SigmaRegisterEPReq, _impl_.path_),
+        PROTOBUF_FIELD_OFFSET(::SigmaRegisterEPReq, _impl_.endpoint_),
+        0,
+        1,
         PROTOBUF_FIELD_OFFSET(::SigmaExitedReq, _impl_._has_bits_),
         PROTOBUF_FIELD_OFFSET(::SigmaExitedReq, _internal_metadata_),
         ~0u,  // no _extensions_
@@ -1007,7 +1047,8 @@ static const ::_pbi::MigrationSchema
         {252, 262, -1, sizeof(::SigmaMountReq)},
         {264, 275, -1, sizeof(::SigmaMountRep)},
         {278, 288, -1, sizeof(::SigmaMountsRep)},
-        {290, 300, -1, sizeof(::SigmaExitedReq)},
+        {290, 300, -1, sizeof(::SigmaRegisterEPReq)},
+        {302, 312, -1, sizeof(::SigmaExitedReq)},
 };
 static const ::_pb::Message* PROTOBUF_NONNULL const file_default_instances[] = {
     &::_SigmaInitReq_default_instance_._instance,
@@ -1033,6 +1074,7 @@ static const ::_pb::Message* PROTOBUF_NONNULL const file_default_instances[] = {
     &::_SigmaMountReq_default_instance_._instance,
     &::_SigmaMountRep_default_instance_._instance,
     &::_SigmaMountsRep_default_instance_._instance,
+    &::_SigmaRegisterEPReq_default_instance_._instance,
     &::_SigmaExitedReq_default_instance_._instance,
 };
 const char descriptor_table_protodef_proxy_2fsigmap_2fproto_2fspproxy_2eproto[] ABSL_ATTRIBUTE_SECTION_VARIABLE(
@@ -1074,9 +1116,10 @@ const char descriptor_table_protodef_proxy_2fsigmap_2fproto_2fspproxy_2eproto[] 
     "oint\030\001 \001(\0132\017.TendpointProto\022\r\n\005local\030\002 \001"
     "(\010\022\024\n\003err\030\003 \001(\0132\007.Rerror\"9\n\016SigmaMountsR"
     "ep\022\021\n\tendpoints\030\001 \003(\t\022\024\n\003err\030\002 \001(\0132\007.Rer"
-    "ror\"-\n\016SigmaExitedReq\022\016\n\006status\030\001 \001(\r\022\013\n"
-    "\003msg\030\002 \001(\tB\034Z\032sigmaos/proxy/sigmap/proto"
-    "b\006proto3"
+    "ror\"E\n\022SigmaRegisterEPReq\022\014\n\004path\030\001 \001(\t\022"
+    "!\n\010endpoint\030\002 \001(\0132\017.TendpointProto\"-\n\016Si"
+    "gmaExitedReq\022\016\n\006status\030\001 \001(\r\022\013\n\003msg\030\002 \001("
+    "\tB\034Z\032sigmaos/proxy/sigmap/protob\006proto3"
 };
 static const ::_pbi::DescriptorTable* PROTOBUF_NONNULL const
     descriptor_table_proxy_2fsigmap_2fproto_2fspproxy_2eproto_deps[3] = {
@@ -1088,13 +1131,13 @@ static ::absl::once_flag descriptor_table_proxy_2fsigmap_2fproto_2fspproxy_2epro
 PROTOBUF_CONSTINIT const ::_pbi::DescriptorTable descriptor_table_proxy_2fsigmap_2fproto_2fspproxy_2eproto = {
     false,
     false,
-    1568,
+    1639,
     descriptor_table_protodef_proxy_2fsigmap_2fproto_2fspproxy_2eproto,
     "proxy/sigmap/proto/spproxy.proto",
     &descriptor_table_proxy_2fsigmap_2fproto_2fspproxy_2eproto_once,
     descriptor_table_proxy_2fsigmap_2fproto_2fspproxy_2eproto_deps,
     3,
-    24,
+    25,
     schemas,
     file_default_instances,
     TableStruct_proxy_2fsigmap_2fproto_2fspproxy_2eproto::offsets,
@@ -8179,6 +8222,318 @@ void SigmaMountsRep::InternalSwap(SigmaMountsRep* PROTOBUF_RESTRICT PROTOBUF_NON
 }
 
 ::google::protobuf::Metadata SigmaMountsRep::GetMetadata() const {
+  return ::google::protobuf::Message::GetMetadataImpl(GetClassData()->full());
+}
+// ===================================================================
+
+class SigmaRegisterEPReq::_Internal {
+ public:
+  using HasBits =
+      decltype(std::declval<SigmaRegisterEPReq>()._impl_._has_bits_);
+  static constexpr ::int32_t kHasBitsOffset =
+      8 * PROTOBUF_FIELD_OFFSET(SigmaRegisterEPReq, _impl_._has_bits_);
+};
+
+void SigmaRegisterEPReq::clear_endpoint() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  if (_impl_.endpoint_ != nullptr) _impl_.endpoint_->Clear();
+  _impl_._has_bits_[0] &= ~0x00000002u;
+}
+SigmaRegisterEPReq::SigmaRegisterEPReq(::google::protobuf::Arena* PROTOBUF_NULLABLE arena)
+#if defined(PROTOBUF_CUSTOM_VTABLE)
+    : ::google::protobuf::Message(arena, SigmaRegisterEPReq_class_data_.base()) {
+#else   // PROTOBUF_CUSTOM_VTABLE
+    : ::google::protobuf::Message(arena) {
+#endif  // PROTOBUF_CUSTOM_VTABLE
+  SharedCtor(arena);
+  // @@protoc_insertion_point(arena_constructor:SigmaRegisterEPReq)
+}
+PROTOBUF_NDEBUG_INLINE SigmaRegisterEPReq::Impl_::Impl_(
+    ::google::protobuf::internal::InternalVisibility visibility,
+    ::google::protobuf::Arena* PROTOBUF_NULLABLE arena, const Impl_& from,
+    const ::SigmaRegisterEPReq& from_msg)
+      : _has_bits_{from._has_bits_},
+        _cached_size_{0},
+        path_(arena, from.path_) {}
+
+SigmaRegisterEPReq::SigmaRegisterEPReq(
+    ::google::protobuf::Arena* PROTOBUF_NULLABLE arena,
+    const SigmaRegisterEPReq& from)
+#if defined(PROTOBUF_CUSTOM_VTABLE)
+    : ::google::protobuf::Message(arena, SigmaRegisterEPReq_class_data_.base()) {
+#else   // PROTOBUF_CUSTOM_VTABLE
+    : ::google::protobuf::Message(arena) {
+#endif  // PROTOBUF_CUSTOM_VTABLE
+  SigmaRegisterEPReq* const _this = this;
+  (void)_this;
+  _internal_metadata_.MergeFrom<::google::protobuf::UnknownFieldSet>(
+      from._internal_metadata_);
+  new (&_impl_) Impl_(internal_visibility(), arena, from._impl_, from);
+  ::uint32_t cached_has_bits = _impl_._has_bits_[0];
+  _impl_.endpoint_ = ((cached_has_bits & 0x00000002u) != 0)
+                ? ::google::protobuf::Message::CopyConstruct(arena, *from._impl_.endpoint_)
+                : nullptr;
+
+  // @@protoc_insertion_point(copy_constructor:SigmaRegisterEPReq)
+}
+PROTOBUF_NDEBUG_INLINE SigmaRegisterEPReq::Impl_::Impl_(
+    ::google::protobuf::internal::InternalVisibility visibility,
+    ::google::protobuf::Arena* PROTOBUF_NULLABLE arena)
+      : _cached_size_{0},
+        path_(arena) {}
+
+inline void SigmaRegisterEPReq::SharedCtor(::_pb::Arena* PROTOBUF_NULLABLE arena) {
+  new (&_impl_) Impl_(internal_visibility(), arena);
+  _impl_.endpoint_ = {};
+}
+SigmaRegisterEPReq::~SigmaRegisterEPReq() {
+  // @@protoc_insertion_point(destructor:SigmaRegisterEPReq)
+  SharedDtor(*this);
+}
+inline void SigmaRegisterEPReq::SharedDtor(MessageLite& self) {
+  SigmaRegisterEPReq& this_ = static_cast<SigmaRegisterEPReq&>(self);
+  this_._internal_metadata_.Delete<::google::protobuf::UnknownFieldSet>();
+  ABSL_DCHECK(this_.GetArena() == nullptr);
+  this_._impl_.path_.Destroy();
+  delete this_._impl_.endpoint_;
+  this_._impl_.~Impl_();
+}
+
+inline void* PROTOBUF_NONNULL SigmaRegisterEPReq::PlacementNew_(
+    const void* PROTOBUF_NONNULL, void* PROTOBUF_NONNULL mem,
+    ::google::protobuf::Arena* PROTOBUF_NULLABLE arena) {
+  return ::new (mem) SigmaRegisterEPReq(arena);
+}
+constexpr auto SigmaRegisterEPReq::InternalNewImpl_() {
+  return ::google::protobuf::internal::MessageCreator::CopyInit(sizeof(SigmaRegisterEPReq),
+                                            alignof(SigmaRegisterEPReq));
+}
+constexpr auto SigmaRegisterEPReq::InternalGenerateClassData_() {
+  return ::google::protobuf::internal::ClassDataFull{
+      ::google::protobuf::internal::ClassData{
+          &_SigmaRegisterEPReq_default_instance_._instance,
+          &_table_.header,
+          nullptr,  // OnDemandRegisterArenaDtor
+          nullptr,  // IsInitialized
+          &SigmaRegisterEPReq::MergeImpl,
+          ::google::protobuf::Message::GetNewImpl<SigmaRegisterEPReq>(),
+#if defined(PROTOBUF_CUSTOM_VTABLE)
+          &SigmaRegisterEPReq::SharedDtor,
+          ::google::protobuf::Message::GetClearImpl<SigmaRegisterEPReq>(), &SigmaRegisterEPReq::ByteSizeLong,
+              &SigmaRegisterEPReq::_InternalSerialize,
+#endif  // PROTOBUF_CUSTOM_VTABLE
+          PROTOBUF_FIELD_OFFSET(SigmaRegisterEPReq, _impl_._cached_size_),
+          false,
+      },
+      &SigmaRegisterEPReq::kDescriptorMethods,
+      &descriptor_table_proxy_2fsigmap_2fproto_2fspproxy_2eproto,
+      nullptr,  // tracker
+  };
+}
+
+PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 const
+    ::google::protobuf::internal::ClassDataFull SigmaRegisterEPReq_class_data_ =
+        SigmaRegisterEPReq::InternalGenerateClassData_();
+
+const ::google::protobuf::internal::ClassData* PROTOBUF_NONNULL SigmaRegisterEPReq::GetClassData() const {
+  ::google::protobuf::internal::PrefetchToLocalCache(&SigmaRegisterEPReq_class_data_);
+  ::google::protobuf::internal::PrefetchToLocalCache(SigmaRegisterEPReq_class_data_.tc_table);
+  return SigmaRegisterEPReq_class_data_.base();
+}
+PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1
+const ::_pbi::TcParseTable<1, 2, 1, 31, 2>
+SigmaRegisterEPReq::_table_ = {
+  {
+    PROTOBUF_FIELD_OFFSET(SigmaRegisterEPReq, _impl_._has_bits_),
+    0, // no _extensions_
+    2, 8,  // max_field_number, fast_idx_mask
+    offsetof(decltype(_table_), field_lookup_table),
+    4294967292,  // skipmap
+    offsetof(decltype(_table_), field_entries),
+    2,  // num_field_entries
+    1,  // num_aux_entries
+    offsetof(decltype(_table_), aux_entries),
+    SigmaRegisterEPReq_class_data_.base(),
+    nullptr,  // post_loop_handler
+    ::_pbi::TcParser::GenericFallback,  // fallback
+    #ifdef PROTOBUF_PREFETCH_PARSE_TABLE
+    ::_pbi::TcParser::GetTable<::SigmaRegisterEPReq>(),  // to_prefetch
+    #endif  // PROTOBUF_PREFETCH_PARSE_TABLE
+  }, {{
+    // .TendpointProto endpoint = 2;
+    {::_pbi::TcParser::FastMtS1,
+     {18, 1, 0, PROTOBUF_FIELD_OFFSET(SigmaRegisterEPReq, _impl_.endpoint_)}},
+    // string path = 1;
+    {::_pbi::TcParser::FastUS1,
+     {10, 0, 0, PROTOBUF_FIELD_OFFSET(SigmaRegisterEPReq, _impl_.path_)}},
+  }}, {{
+    65535, 65535
+  }}, {{
+    // string path = 1;
+    {PROTOBUF_FIELD_OFFSET(SigmaRegisterEPReq, _impl_.path_), _Internal::kHasBitsOffset + 0, 0,
+    (0 | ::_fl::kFcOptional | ::_fl::kUtf8String | ::_fl::kRepAString)},
+    // .TendpointProto endpoint = 2;
+    {PROTOBUF_FIELD_OFFSET(SigmaRegisterEPReq, _impl_.endpoint_), _Internal::kHasBitsOffset + 1, 0,
+    (0 | ::_fl::kFcOptional | ::_fl::kMessage | ::_fl::kTvTable)},
+  }},
+  {{
+      {::_pbi::TcParser::GetTable<::TendpointProto>()},
+  }},
+  {{
+    "\22\4\0\0\0\0\0\0"
+    "SigmaRegisterEPReq"
+    "path"
+  }},
+};
+PROTOBUF_NOINLINE void SigmaRegisterEPReq::Clear() {
+// @@protoc_insertion_point(message_clear_start:SigmaRegisterEPReq)
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  ::uint32_t cached_has_bits = 0;
+  // Prevent compiler warnings about cached_has_bits being unused
+  (void) cached_has_bits;
+
+  cached_has_bits = _impl_._has_bits_[0];
+  if ((cached_has_bits & 0x00000003u) != 0) {
+    if ((cached_has_bits & 0x00000001u) != 0) {
+      _impl_.path_.ClearNonDefaultToEmpty();
+    }
+    if ((cached_has_bits & 0x00000002u) != 0) {
+      ABSL_DCHECK(_impl_.endpoint_ != nullptr);
+      _impl_.endpoint_->Clear();
+    }
+  }
+  _impl_._has_bits_.Clear();
+  _internal_metadata_.Clear<::google::protobuf::UnknownFieldSet>();
+}
+
+#if defined(PROTOBUF_CUSTOM_VTABLE)
+::uint8_t* PROTOBUF_NONNULL SigmaRegisterEPReq::_InternalSerialize(
+    const ::google::protobuf::MessageLite& base, ::uint8_t* PROTOBUF_NONNULL target,
+    ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream) {
+  const SigmaRegisterEPReq& this_ = static_cast<const SigmaRegisterEPReq&>(base);
+#else   // PROTOBUF_CUSTOM_VTABLE
+::uint8_t* PROTOBUF_NONNULL SigmaRegisterEPReq::_InternalSerialize(
+    ::uint8_t* PROTOBUF_NONNULL target,
+    ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream) const {
+  const SigmaRegisterEPReq& this_ = *this;
+#endif  // PROTOBUF_CUSTOM_VTABLE
+  // @@protoc_insertion_point(serialize_to_array_start:SigmaRegisterEPReq)
+  ::uint32_t cached_has_bits = 0;
+  (void)cached_has_bits;
+
+  // string path = 1;
+  if ((this_._impl_._has_bits_[0] & 0x00000001u) != 0) {
+    if (!this_._internal_path().empty()) {
+      const std::string& _s = this_._internal_path();
+      ::google::protobuf::internal::WireFormatLite::VerifyUtf8String(
+          _s.data(), static_cast<int>(_s.length()), ::google::protobuf::internal::WireFormatLite::SERIALIZE, "SigmaRegisterEPReq.path");
+      target = stream->WriteStringMaybeAliased(1, _s, target);
+    }
+  }
+
+  cached_has_bits = this_._impl_._has_bits_[0];
+  // .TendpointProto endpoint = 2;
+  if ((cached_has_bits & 0x00000002u) != 0) {
+    target = ::google::protobuf::internal::WireFormatLite::InternalWriteMessage(
+        2, *this_._impl_.endpoint_, this_._impl_.endpoint_->GetCachedSize(), target,
+        stream);
+  }
+
+  if (ABSL_PREDICT_FALSE(this_._internal_metadata_.have_unknown_fields())) {
+    target =
+        ::_pbi::WireFormat::InternalSerializeUnknownFieldsToArray(
+            this_._internal_metadata_.unknown_fields<::google::protobuf::UnknownFieldSet>(::google::protobuf::UnknownFieldSet::default_instance), target, stream);
+  }
+  // @@protoc_insertion_point(serialize_to_array_end:SigmaRegisterEPReq)
+  return target;
+}
+
+#if defined(PROTOBUF_CUSTOM_VTABLE)
+::size_t SigmaRegisterEPReq::ByteSizeLong(const MessageLite& base) {
+  const SigmaRegisterEPReq& this_ = static_cast<const SigmaRegisterEPReq&>(base);
+#else   // PROTOBUF_CUSTOM_VTABLE
+::size_t SigmaRegisterEPReq::ByteSizeLong() const {
+  const SigmaRegisterEPReq& this_ = *this;
+#endif  // PROTOBUF_CUSTOM_VTABLE
+  // @@protoc_insertion_point(message_byte_size_start:SigmaRegisterEPReq)
+  ::size_t total_size = 0;
+
+  ::uint32_t cached_has_bits = 0;
+  // Prevent compiler warnings about cached_has_bits being unused
+  (void)cached_has_bits;
+
+  ::_pbi::Prefetch5LinesFrom7Lines(&this_);
+  cached_has_bits = this_._impl_._has_bits_[0];
+  if ((cached_has_bits & 0x00000003u) != 0) {
+    // string path = 1;
+    if ((cached_has_bits & 0x00000001u) != 0) {
+      if (!this_._internal_path().empty()) {
+        total_size += 1 + ::google::protobuf::internal::WireFormatLite::StringSize(
+                                        this_._internal_path());
+      }
+    }
+    // .TendpointProto endpoint = 2;
+    if ((cached_has_bits & 0x00000002u) != 0) {
+      total_size += 1 +
+                    ::google::protobuf::internal::WireFormatLite::MessageSize(*this_._impl_.endpoint_);
+    }
+  }
+  return this_.MaybeComputeUnknownFieldsSize(total_size,
+                                             &this_._impl_._cached_size_);
+}
+
+void SigmaRegisterEPReq::MergeImpl(::google::protobuf::MessageLite& to_msg, const ::google::protobuf::MessageLite& from_msg) {
+  auto* const _this = static_cast<SigmaRegisterEPReq*>(&to_msg);
+  auto& from = static_cast<const SigmaRegisterEPReq&>(from_msg);
+  ::google::protobuf::Arena* arena = _this->GetArena();
+  // @@protoc_insertion_point(class_specific_merge_from_start:SigmaRegisterEPReq)
+  ABSL_DCHECK_NE(&from, _this);
+  ::uint32_t cached_has_bits = 0;
+  (void) cached_has_bits;
+
+  cached_has_bits = from._impl_._has_bits_[0];
+  if ((cached_has_bits & 0x00000003u) != 0) {
+    if ((cached_has_bits & 0x00000001u) != 0) {
+      if (!from._internal_path().empty()) {
+        _this->_internal_set_path(from._internal_path());
+      } else {
+        if (_this->_impl_.path_.IsDefault()) {
+          _this->_internal_set_path("");
+        }
+      }
+    }
+    if ((cached_has_bits & 0x00000002u) != 0) {
+      ABSL_DCHECK(from._impl_.endpoint_ != nullptr);
+      if (_this->_impl_.endpoint_ == nullptr) {
+        _this->_impl_.endpoint_ = ::google::protobuf::Message::CopyConstruct(arena, *from._impl_.endpoint_);
+      } else {
+        _this->_impl_.endpoint_->MergeFrom(*from._impl_.endpoint_);
+      }
+    }
+  }
+  _this->_impl_._has_bits_[0] |= cached_has_bits;
+  _this->_internal_metadata_.MergeFrom<::google::protobuf::UnknownFieldSet>(from._internal_metadata_);
+}
+
+void SigmaRegisterEPReq::CopyFrom(const SigmaRegisterEPReq& from) {
+// @@protoc_insertion_point(class_specific_copy_from_start:SigmaRegisterEPReq)
+  if (&from == this) return;
+  Clear();
+  MergeFrom(from);
+}
+
+
+void SigmaRegisterEPReq::InternalSwap(SigmaRegisterEPReq* PROTOBUF_RESTRICT PROTOBUF_NONNULL other) {
+  using std::swap;
+  auto* arena = GetArena();
+  ABSL_DCHECK_EQ(arena, other->GetArena());
+  _internal_metadata_.InternalSwap(&other->_internal_metadata_);
+  swap(_impl_._has_bits_[0], other->_impl_._has_bits_[0]);
+  ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.path_, &other->_impl_.path_, arena);
+  swap(_impl_.endpoint_, other->_impl_.endpoint_);
+}
+
+::google::protobuf::Metadata SigmaRegisterEPReq::GetMetadata() const {
   return ::google::protobuf::Message::GetMetadataImpl(GetClassData()->full());
 }
 // ===================================================================

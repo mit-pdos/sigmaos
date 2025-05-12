@@ -142,6 +142,11 @@ func TestServerProc(t *testing.T) {
 	db.DPrintf(db.TEST, "CPP server proc started (lat=%v)", time.Since(start))
 
 	// TODO: do an RPC
+
+	ep, err := mrts.GetRealm(test.REALM1).ReadEndpoint("name/echo-srv-cpp")
+	assert.Nil(mrts.GetRealm(test.REALM1).Ts.T, err, "Evict")
+	db.DPrintf(db.TEST, "CPP Echo srv EP: %v", ep)
+
 	err = mrts.GetRealm(test.REALM1).Evict(p.GetPid())
 	assert.Nil(mrts.GetRealm(test.REALM1).Ts.T, err, "Evict")
 

@@ -89,6 +89,9 @@ class Clnt {
   std::expected<bool, sigmaos::serr::Error> Disconnected();
   std::expected<int, sigmaos::serr::Error> Disconnect(std::string pn);
 
+  // ========== Endpoint manipulation ==========
+  std::expected<int, sigmaos::serr::Error> RegisterEP(std::string pn, std::shared_ptr<TendpointProto> ep);
+
   // ========== ProcClnt API ==========
   std::expected<int, sigmaos::serr::Error> Started();
   std::expected<int, sigmaos::serr::Error> Exited(sigmaos::proc::Tstatus status, std::string &msg);

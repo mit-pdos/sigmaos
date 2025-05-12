@@ -128,6 +128,11 @@ message SigmaMountsRep {
         Rerror err = 2;
 }
 
+message SigmaRegisterEPReq {
+        string path = 1;
+        TendpointProto endpoint = 2;
+}
+
 message SigmaExitedReq {
         uint32 status = 1;
         string msg = 2;

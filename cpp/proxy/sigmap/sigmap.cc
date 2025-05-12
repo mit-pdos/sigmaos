@@ -618,6 +618,24 @@ std::expected<int, sigmaos::serr::Error> Clnt::Disconnect(std::string pn) {
   return 0;
 }
 
+std::expected<int, sigmaos::serr::Error> Clnt::RegisterEP(std::string pn, std::shared_ptr<TendpointProto> ep) {
+  log(SPPROXYCLNT, "RegisterEP: {} -> {}", pn, ep->ShortDebugString());
+  SigmaRegisterEPReq req;
+  SigmaErrRep rep;
+  req.set_path(pn);
+  req.set_allocated_endpoint(ep.get());
+  auto res = _rpcc->RPC("SPProxySrvAPI.RegisterEP", req, rep);
+  if (!res.has_value()) {
+    log(SPPROXYCLNT_ERR, "Err RPC: {}", res.error());
+    return std::unexpected(res.error());
+  }
+  if (rep.err().errcode() != sigmaos::serr::Terror::TErrNoError) {
+    return std::unexpected(sigmaos::serr::Error((sigmaos::serr::Terror) rep.err().errcode(), rep.err().obj()));
+  }
+  auto _ = req.release_endpoint();
+  log(SPPROXYCLNT, "RegisterEP done: {} -> {}", pn, ep->ShortDebugString());
+  return 0;
+}
 
 std::expected<int, sigmaos::serr::Error> Clnt::Started() {
   log(SPPROXYCLNT, "Started");

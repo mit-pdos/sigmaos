@@ -132,6 +132,10 @@ class SigmaRealmReq;
 struct SigmaRealmReqDefaultTypeInternal;
 extern SigmaRealmReqDefaultTypeInternal _SigmaRealmReq_default_instance_;
 extern const ::google::protobuf::internal::ClassDataFull SigmaRealmReq_class_data_;
+class SigmaRegisterEPReq;
+struct SigmaRegisterEPReqDefaultTypeInternal;
+extern SigmaRegisterEPReqDefaultTypeInternal _SigmaRegisterEPReq_default_instance_;
+extern const ::google::protobuf::internal::ClassDataFull SigmaRegisterEPReq_class_data_;
 class SigmaRenameReq;
 struct SigmaRenameReqDefaultTypeInternal;
 extern SigmaRenameReqDefaultTypeInternal _SigmaRenameReq_default_instance_;
@@ -1387,7 +1391,7 @@ class SigmaExitedReq final : public ::google::protobuf::Message
     return *reinterpret_cast<const SigmaExitedReq*>(
         &_SigmaExitedReq_default_instance_);
   }
-  static constexpr int kIndexInFileMessages = 23;
+  static constexpr int kIndexInFileMessages = 24;
   friend void swap(SigmaExitedReq& a, SigmaExitedReq& b) { a.Swap(&b); }
   inline void Swap(SigmaExitedReq* PROTOBUF_NONNULL other) {
     if (other == this) return;
@@ -4411,6 +4415,219 @@ class SigmaStatRep final : public ::google::protobuf::Message
 };
 
 extern const ::google::protobuf::internal::ClassDataFull SigmaStatRep_class_data_;
+// -------------------------------------------------------------------
+
+class SigmaRegisterEPReq final : public ::google::protobuf::Message
+/* @@protoc_insertion_point(class_definition:SigmaRegisterEPReq) */ {
+ public:
+  inline SigmaRegisterEPReq() : SigmaRegisterEPReq(nullptr) {}
+  ~SigmaRegisterEPReq() PROTOBUF_FINAL;
+
+#if defined(PROTOBUF_CUSTOM_VTABLE)
+  void operator delete(SigmaRegisterEPReq* PROTOBUF_NONNULL msg, std::destroying_delete_t) {
+    SharedDtor(*msg);
+    ::google::protobuf::internal::SizedDelete(msg, sizeof(SigmaRegisterEPReq));
+  }
+#endif
+
+  template <typename = void>
+  explicit PROTOBUF_CONSTEXPR SigmaRegisterEPReq(::google::protobuf::internal::ConstantInitialized);
+
+  inline SigmaRegisterEPReq(const SigmaRegisterEPReq& from) : SigmaRegisterEPReq(nullptr, from) {}
+  inline SigmaRegisterEPReq(SigmaRegisterEPReq&& from) noexcept
+      : SigmaRegisterEPReq(nullptr, std::move(from)) {}
+  inline SigmaRegisterEPReq& operator=(const SigmaRegisterEPReq& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  inline SigmaRegisterEPReq& operator=(SigmaRegisterEPReq&& from) noexcept {
+    if (this == &from) return *this;
+    if (::google::protobuf::internal::CanMoveWithInternalSwap(GetArena(), from.GetArena())) {
+      InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+
+  inline const ::google::protobuf::UnknownFieldSet& unknown_fields() const
+      ABSL_ATTRIBUTE_LIFETIME_BOUND {
+    return _internal_metadata_.unknown_fields<::google::protobuf::UnknownFieldSet>(::google::protobuf::UnknownFieldSet::default_instance);
+  }
+  inline ::google::protobuf::UnknownFieldSet* PROTOBUF_NONNULL mutable_unknown_fields()
+      ABSL_ATTRIBUTE_LIFETIME_BOUND {
+    return _internal_metadata_.mutable_unknown_fields<::google::protobuf::UnknownFieldSet>();
+  }
+
+  static const ::google::protobuf::Descriptor* PROTOBUF_NONNULL descriptor() {
+    return GetDescriptor();
+  }
+  static const ::google::protobuf::Descriptor* PROTOBUF_NONNULL GetDescriptor() {
+    return default_instance().GetMetadata().descriptor;
+  }
+  static const ::google::protobuf::Reflection* PROTOBUF_NONNULL GetReflection() {
+    return default_instance().GetMetadata().reflection;
+  }
+  static const SigmaRegisterEPReq& default_instance() {
+    return *reinterpret_cast<const SigmaRegisterEPReq*>(
+        &_SigmaRegisterEPReq_default_instance_);
+  }
+  static constexpr int kIndexInFileMessages = 23;
+  friend void swap(SigmaRegisterEPReq& a, SigmaRegisterEPReq& b) { a.Swap(&b); }
+  inline void Swap(SigmaRegisterEPReq* PROTOBUF_NONNULL other) {
+    if (other == this) return;
+    if (::google::protobuf::internal::CanUseInternalSwap(GetArena(), other->GetArena())) {
+      InternalSwap(other);
+    } else {
+      ::google::protobuf::internal::GenericSwap(this, other);
+    }
+  }
+  void UnsafeArenaSwap(SigmaRegisterEPReq* PROTOBUF_NONNULL other) {
+    if (other == this) return;
+    ABSL_DCHECK(GetArena() == other->GetArena());
+    InternalSwap(other);
+  }
+
+  // implements Message ----------------------------------------------
+
+  SigmaRegisterEPReq* PROTOBUF_NONNULL New(::google::protobuf::Arena* PROTOBUF_NULLABLE arena = nullptr) const {
+    return ::google::protobuf::Message::DefaultConstruct<SigmaRegisterEPReq>(arena);
+  }
+  using ::google::protobuf::Message::CopyFrom;
+  void CopyFrom(const SigmaRegisterEPReq& from);
+  using ::google::protobuf::Message::MergeFrom;
+  void MergeFrom(const SigmaRegisterEPReq& from) { SigmaRegisterEPReq::MergeImpl(*this, from); }
+
+  private:
+  static void MergeImpl(::google::protobuf::MessageLite& to_msg,
+                        const ::google::protobuf::MessageLite& from_msg);
+
+  public:
+  bool IsInitialized() const {
+    return true;
+  }
+  ABSL_ATTRIBUTE_REINITIALIZES void Clear() PROTOBUF_FINAL;
+  #if defined(PROTOBUF_CUSTOM_VTABLE)
+  private:
+  static ::size_t ByteSizeLong(const ::google::protobuf::MessageLite& msg);
+  static ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
+      const ::google::protobuf::MessageLite& msg, ::uint8_t* PROTOBUF_NONNULL target,
+      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream);
+
+  public:
+  ::size_t ByteSizeLong() const { return ByteSizeLong(*this); }
+  ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
+      ::uint8_t* PROTOBUF_NONNULL target,
+      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream) const {
+    return _InternalSerialize(*this, target, stream);
+  }
+  #else   // PROTOBUF_CUSTOM_VTABLE
+  ::size_t ByteSizeLong() const final;
+  ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
+      ::uint8_t* PROTOBUF_NONNULL target,
+      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream) const final;
+  #endif  // PROTOBUF_CUSTOM_VTABLE
+  int GetCachedSize() const { return _impl_._cached_size_.Get(); }
+
+  private:
+  void SharedCtor(::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+  static void SharedDtor(MessageLite& self);
+  void InternalSwap(SigmaRegisterEPReq* PROTOBUF_NONNULL other);
+ private:
+  template <typename T>
+  friend ::absl::string_view(::google::protobuf::internal::GetAnyMessageName)();
+  static ::absl::string_view FullMessageName() { return "SigmaRegisterEPReq"; }
+
+ protected:
+  explicit SigmaRegisterEPReq(::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+  SigmaRegisterEPReq(::google::protobuf::Arena* PROTOBUF_NULLABLE arena, const SigmaRegisterEPReq& from);
+  SigmaRegisterEPReq(
+      ::google::protobuf::Arena* PROTOBUF_NULLABLE arena, SigmaRegisterEPReq&& from) noexcept
+      : SigmaRegisterEPReq(arena) {
+    *this = ::std::move(from);
+  }
+  const ::google::protobuf::internal::ClassData* PROTOBUF_NONNULL GetClassData() const PROTOBUF_FINAL;
+  static void* PROTOBUF_NONNULL PlacementNew_(
+      const void* PROTOBUF_NONNULL, void* PROTOBUF_NONNULL mem,
+      ::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+  static constexpr auto InternalNewImpl_();
+
+ public:
+  static constexpr auto InternalGenerateClassData_();
+
+  ::google::protobuf::Metadata GetMetadata() const;
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+  enum : int {
+    kPathFieldNumber = 1,
+    kEndpointFieldNumber = 2,
+  };
+  // string path = 1;
+  void clear_path() ;
+  const std::string& path() const;
+  template <typename Arg_ = const std::string&, typename... Args_>
+  void set_path(Arg_&& arg, Args_... args);
+  std::string* PROTOBUF_NONNULL mutable_path();
+  [[nodiscard]] std::string* PROTOBUF_NULLABLE release_path();
+  void set_allocated_path(std::string* PROTOBUF_NULLABLE value);
+
+  private:
+  const std::string& _internal_path() const;
+  PROTOBUF_ALWAYS_INLINE void _internal_set_path(const std::string& value);
+  std::string* PROTOBUF_NONNULL _internal_mutable_path();
+
+  public:
+  // .TendpointProto endpoint = 2;
+  bool has_endpoint() const;
+  void clear_endpoint() ;
+  const ::TendpointProto& endpoint() const;
+  [[nodiscard]] ::TendpointProto* PROTOBUF_NULLABLE release_endpoint();
+  ::TendpointProto* PROTOBUF_NONNULL mutable_endpoint();
+  void set_allocated_endpoint(::TendpointProto* PROTOBUF_NULLABLE value);
+  void unsafe_arena_set_allocated_endpoint(::TendpointProto* PROTOBUF_NULLABLE value);
+  ::TendpointProto* PROTOBUF_NULLABLE unsafe_arena_release_endpoint();
+
+  private:
+  const ::TendpointProto& _internal_endpoint() const;
+  ::TendpointProto* PROTOBUF_NONNULL _internal_mutable_endpoint();
+
+  public:
+  // @@protoc_insertion_point(class_scope:SigmaRegisterEPReq)
+ private:
+  class _Internal;
+  friend class ::google::protobuf::internal::TcParser;
+  static const ::google::protobuf::internal::TcParseTable<1, 2,
+                                   1, 31,
+                                   2>
+      _table_;
+
+  friend class ::google::protobuf::MessageLite;
+  friend class ::google::protobuf::Arena;
+  template <typename T>
+  friend class ::google::protobuf::Arena::InternalHelper;
+  using InternalArenaConstructable_ = void;
+  using DestructorSkippable_ = void;
+  struct Impl_ {
+    inline explicit constexpr Impl_(::google::protobuf::internal::ConstantInitialized) noexcept;
+    inline explicit Impl_(
+        ::google::protobuf::internal::InternalVisibility visibility,
+        ::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+    inline explicit Impl_(
+        ::google::protobuf::internal::InternalVisibility visibility,
+        ::google::protobuf::Arena* PROTOBUF_NULLABLE arena, const Impl_& from,
+        const SigmaRegisterEPReq& from_msg);
+    ::google::protobuf::internal::HasBits<1> _has_bits_;
+    ::google::protobuf::internal::CachedSize _cached_size_;
+    ::google::protobuf::internal::ArenaStringPtr path_;
+    ::TendpointProto* PROTOBUF_NULLABLE endpoint_;
+    PROTOBUF_TSAN_DECLARE_MEMBER
+  };
+  union { Impl_ _impl_; };
+  friend struct ::TableStruct_proxy_2fsigmap_2fproto_2fspproxy_2eproto;
+};
+
+extern const ::google::protobuf::internal::ClassDataFull SigmaRegisterEPReq_class_data_;
 // -------------------------------------------------------------------
 
 class SigmaMountTreeReq final : public ::google::protobuf::Message
@@ -8560,6 +8777,168 @@ inline void SigmaMountsRep::set_allocated_err(::Rerror* PROTOBUF_NULLABLE value)
 
   _impl_.err_ = reinterpret_cast<::Rerror*>(value);
   // @@protoc_insertion_point(field_set_allocated:SigmaMountsRep.err)
+}
+
+// -------------------------------------------------------------------
+
+// SigmaRegisterEPReq
+
+// string path = 1;
+inline void SigmaRegisterEPReq::clear_path() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.path_.ClearToEmpty();
+  _impl_._has_bits_[0] &= ~0x00000001u;
+}
+inline const std::string& SigmaRegisterEPReq::path() const
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_get:SigmaRegisterEPReq.path)
+  return _internal_path();
+}
+template <typename Arg_, typename... Args_>
+PROTOBUF_ALWAYS_INLINE void SigmaRegisterEPReq::set_path(Arg_&& arg, Args_... args) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_._has_bits_[0] |= 0x00000001u;
+  _impl_.path_.Set(static_cast<Arg_&&>(arg), args..., GetArena());
+  // @@protoc_insertion_point(field_set:SigmaRegisterEPReq.path)
+}
+inline std::string* PROTOBUF_NONNULL SigmaRegisterEPReq::mutable_path()
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  std::string* _s = _internal_mutable_path();
+  // @@protoc_insertion_point(field_mutable:SigmaRegisterEPReq.path)
+  return _s;
+}
+inline const std::string& SigmaRegisterEPReq::_internal_path() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.path_.Get();
+}
+inline void SigmaRegisterEPReq::_internal_set_path(const std::string& value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_._has_bits_[0] |= 0x00000001u;
+  _impl_.path_.Set(value, GetArena());
+}
+inline std::string* PROTOBUF_NONNULL SigmaRegisterEPReq::_internal_mutable_path() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_._has_bits_[0] |= 0x00000001u;
+  return _impl_.path_.Mutable( GetArena());
+}
+inline std::string* PROTOBUF_NULLABLE SigmaRegisterEPReq::release_path() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  // @@protoc_insertion_point(field_release:SigmaRegisterEPReq.path)
+  if ((_impl_._has_bits_[0] & 0x00000001u) == 0) {
+    return nullptr;
+  }
+  _impl_._has_bits_[0] &= ~0x00000001u;
+  auto* released = _impl_.path_.Release();
+  if (::google::protobuf::internal::DebugHardenForceCopyDefaultString()) {
+    _impl_.path_.Set("", GetArena());
+  }
+  return released;
+}
+inline void SigmaRegisterEPReq::set_allocated_path(std::string* PROTOBUF_NULLABLE value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  if (value != nullptr) {
+    _impl_._has_bits_[0] |= 0x00000001u;
+  } else {
+    _impl_._has_bits_[0] &= ~0x00000001u;
+  }
+  _impl_.path_.SetAllocated(value, GetArena());
+  if (::google::protobuf::internal::DebugHardenForceCopyDefaultString() && _impl_.path_.IsDefault()) {
+    _impl_.path_.Set("", GetArena());
+  }
+  // @@protoc_insertion_point(field_set_allocated:SigmaRegisterEPReq.path)
+}
+
+// .TendpointProto endpoint = 2;
+inline bool SigmaRegisterEPReq::has_endpoint() const {
+  bool value = (_impl_._has_bits_[0] & 0x00000002u) != 0;
+  PROTOBUF_ASSUME(!value || _impl_.endpoint_ != nullptr);
+  return value;
+}
+inline const ::TendpointProto& SigmaRegisterEPReq::_internal_endpoint() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  const ::TendpointProto* p = _impl_.endpoint_;
+  return p != nullptr ? *p : reinterpret_cast<const ::TendpointProto&>(::_TendpointProto_default_instance_);
+}
+inline const ::TendpointProto& SigmaRegisterEPReq::endpoint() const ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_get:SigmaRegisterEPReq.endpoint)
+  return _internal_endpoint();
+}
+inline void SigmaRegisterEPReq::unsafe_arena_set_allocated_endpoint(
+    ::TendpointProto* PROTOBUF_NULLABLE value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  if (GetArena() == nullptr) {
+    delete reinterpret_cast<::google::protobuf::MessageLite*>(_impl_.endpoint_);
+  }
+  _impl_.endpoint_ = reinterpret_cast<::TendpointProto*>(value);
+  if (value != nullptr) {
+    _impl_._has_bits_[0] |= 0x00000002u;
+  } else {
+    _impl_._has_bits_[0] &= ~0x00000002u;
+  }
+  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:SigmaRegisterEPReq.endpoint)
+}
+inline ::TendpointProto* PROTOBUF_NULLABLE SigmaRegisterEPReq::release_endpoint() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+
+  _impl_._has_bits_[0] &= ~0x00000002u;
+  ::TendpointProto* released = _impl_.endpoint_;
+  _impl_.endpoint_ = nullptr;
+  if (::google::protobuf::internal::DebugHardenForceCopyInRelease()) {
+    auto* old = reinterpret_cast<::google::protobuf::MessageLite*>(released);
+    released = ::google::protobuf::internal::DuplicateIfNonNull(released);
+    if (GetArena() == nullptr) {
+      delete old;
+    }
+  } else {
+    if (GetArena() != nullptr) {
+      released = ::google::protobuf::internal::DuplicateIfNonNull(released);
+    }
+  }
+  return released;
+}
+inline ::TendpointProto* PROTOBUF_NULLABLE SigmaRegisterEPReq::unsafe_arena_release_endpoint() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  // @@protoc_insertion_point(field_release:SigmaRegisterEPReq.endpoint)
+
+  _impl_._has_bits_[0] &= ~0x00000002u;
+  ::TendpointProto* temp = _impl_.endpoint_;
+  _impl_.endpoint_ = nullptr;
+  return temp;
+}
+inline ::TendpointProto* PROTOBUF_NONNULL SigmaRegisterEPReq::_internal_mutable_endpoint() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  if (_impl_.endpoint_ == nullptr) {
+    auto* p = ::google::protobuf::Message::DefaultConstruct<::TendpointProto>(GetArena());
+    _impl_.endpoint_ = reinterpret_cast<::TendpointProto*>(p);
+  }
+  return _impl_.endpoint_;
+}
+inline ::TendpointProto* PROTOBUF_NONNULL SigmaRegisterEPReq::mutable_endpoint()
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  _impl_._has_bits_[0] |= 0x00000002u;
+  ::TendpointProto* _msg = _internal_mutable_endpoint();
+  // @@protoc_insertion_point(field_mutable:SigmaRegisterEPReq.endpoint)
+  return _msg;
+}
+inline void SigmaRegisterEPReq::set_allocated_endpoint(::TendpointProto* PROTOBUF_NULLABLE value) {
+  ::google::protobuf::Arena* message_arena = GetArena();
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  if (message_arena == nullptr) {
+    delete reinterpret_cast<::google::protobuf::MessageLite*>(_impl_.endpoint_);
+  }
+
+  if (value != nullptr) {
+    ::google::protobuf::Arena* submessage_arena = reinterpret_cast<::google::protobuf::Message*>(value)->GetArena();
+    if (message_arena != submessage_arena) {
+      value = ::google::protobuf::internal::GetOwnedMessage(message_arena, value, submessage_arena);
+    }
+    _impl_._has_bits_[0] |= 0x00000002u;
+  } else {
+    _impl_._has_bits_[0] &= ~0x00000002u;
+  }
+
+  _impl_.endpoint_ = reinterpret_cast<::TendpointProto*>(value);
+  // @@protoc_insertion_point(field_set_allocated:SigmaRegisterEPReq.endpoint)
 }
 
 // -------------------------------------------------------------------

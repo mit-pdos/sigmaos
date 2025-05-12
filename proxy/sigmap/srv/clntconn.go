@@ -369,6 +369,19 @@ func (scs *SPProxySrvAPI) Close(ctx fs.CtxI, req scproto.SigmaNullReq, rep *scpr
 	return nil
 }
 
+// ========== EP Manipulation =========
+func (scs *SPProxySrvAPI) RegisterEP(ctx fs.CtxI, req scproto.SigmaRegisterEPReq, rep *scproto.SigmaErrRep) error {
+	ep := sp.NewEndpointFromProto(req.Endpoint)
+	db.DPrintf(db.SPPROXYSRV, "%v: RegisterEP %v -> %v", scs.sc.ClntId(), req.Path, ep)
+	err := scs.sc.MkEndpointFile(req.Path, ep)
+	if err != nil {
+		db.DPrintf(db.SPPROXYSRV_ERR, "%v: RegisterEP err: %v", scs.sc.ClntId(), err)
+	}
+	rep.Err = scs.setErr(err)
+	db.DPrintf(db.SPPROXYSRV, "%v: RegisterEP done %v %v", scs.sc.ClntId(), req, rep)
+	return nil
+}
+
 // ========== Procclnt API ==========
 func (scs *SPProxySrvAPI) initProcClnt() error {
 	scs.mu.Lock()

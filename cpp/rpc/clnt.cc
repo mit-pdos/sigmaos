@@ -1,4 +1,4 @@
-#include <rpc/rpc.h>
+#include <rpc/clnt.h>
 
 namespace sigmaos {
 namespace rpc {

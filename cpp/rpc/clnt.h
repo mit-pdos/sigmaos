@@ -7,7 +7,7 @@
 
 #include <util/log/log.h>
 #include <serr/serr.h>
-#include <io/demux/demux.h>
+#include <io/demux/clnt.h>
 #include <io/iovec/iovec.h>
 #include <rpc/proto/rpc.pb.h>
 

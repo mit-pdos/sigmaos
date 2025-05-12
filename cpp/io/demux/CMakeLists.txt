@@ -3,7 +3,8 @@ message(STATUS "Building demux library")
 add_subdirectory(internal)
 
 add_library(io_demux STATIC
-  demux.cc
+  clnt.cc
+  srv.cc
 )
 
 target_link_libraries(io_demux PUBLIC

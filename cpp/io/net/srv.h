@@ -1,12 +1,14 @@
 #pragma once
 
 #include <memory>
+#include <vector>
 #include <expected>
 #include <format>
 
 #include <util/log/log.h>
 #include <io/conn/conn.h>
 #include <io/conn/tcp/tcp.h>
+#include <io/demux/srv.h>
 #include <serr/serr.h>
 
 namespace sigmaos {
@@ -17,7 +19,7 @@ const std::string NETSRV_ERR = NETSRV + sigmaos::util::log::ERR;
 
 class Srv {
   public:
-  Srv() : _done(false) {
+  Srv(sigmaos::io::demux::RequestHandler serve_request) : _done(false), _serve_request(serve_request), _sessions() {
     log(NETSRV, "Starting net server");
     _lis = std::make_shared<sigmaos::io::conn::tcpconn::Listener>();
     log(NETSRV, "TCP server started");
@@ -33,6 +35,8 @@ class Srv {
   }
   private:
   bool _done;
+  sigmaos::io::demux::RequestHandler _serve_request;
+  std::vector<std::shared_ptr<sigmaos::io::demux::Srv>> _sessions;
   std::shared_ptr<sigmaos::io::conn::tcpconn::Listener> _lis;
   std::thread connection_handler;
   // Used for logger initialization

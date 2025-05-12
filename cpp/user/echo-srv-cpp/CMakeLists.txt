@@ -10,4 +10,5 @@ target_link_libraries(echo-srv-cpp PRIVATE
   io_conn_unix
   util_log
   sigmap_proxy
+  sess_srv
 )

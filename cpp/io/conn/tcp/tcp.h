@@ -92,16 +92,16 @@ class Listener {
       throw std::runtime_error("listen failed");
     }
     socklen_t addr_len = sizeof(_addr);
-    if (getsockname(_sockfd, (sockaddr *) &_addr, &addr_len)) {
+    if (getsockname(_sockfd, (struct sockaddr *) &_addr, &addr_len)) {
       throw std::runtime_error("getsockname failed");
     }
-    log(TCPCONN, "Listener addr: {}:{}", _addr.sin_addr.s_addr, _addr.sin_port);
+    log(TCPCONN, "Listener addr: {}:{}", _addr.sin_addr.s_addr, htons(_addr.sin_port));
   }
   ~Listener() { Close(); }
 
   std::expected<std::shared_ptr<Conn>, sigmaos::serr::Error> Accept();
   std::expected<int, sigmaos::serr::Error> Close();
-  int GetPort() { return _addr.sin_port; }
+  int GetPort() { return htons(_addr.sin_port); }
 
   private:
   int _sockfd;

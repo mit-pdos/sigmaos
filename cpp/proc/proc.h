@@ -30,6 +30,7 @@ class ProcEnv {
 
   sigmaos::sigmap::types::Trealm GetRealm() { return _proto.realmstr(); }
   sigmaos::sigmap::types::Tpid GetPID() { return _proto.pidstr(); }
+  sigmaos::sigmap::types::Tip GetOuterContainerIP() { return _proto.outercontaineripstr(); }
 
   private:
   ProcEnvProto _proto;

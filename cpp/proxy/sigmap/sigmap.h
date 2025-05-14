@@ -50,6 +50,7 @@ class Clnt {
   }
 
   std::expected<int, sigmaos::serr::Error> Test();
+  std::shared_ptr<sigmaos::proc::ProcEnv> ProcEnv() { return _env; }
 
   // Stubs
 

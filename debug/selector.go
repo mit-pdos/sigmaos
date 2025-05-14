@@ -263,6 +263,7 @@ const (
 	DEMUXCLNT_ERR           = "DEMUXCLNT" + ERR
 	SESSDEVCLNT             = "SESSDEVCLNT"
 	RPCCLNT                 = "RPCCLNT"
+	RPCCHAN                 = "RPCCHAN"
 )
 
 // External service libraries

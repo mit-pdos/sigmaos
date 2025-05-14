@@ -7,9 +7,15 @@ import (
 	"testing"
 	"time"
 
+	"net"
+	rpcclnt "sigmaos/rpc/clnt"
+	"sigmaos/rpc/clnt/channel/rpcchannel"
+	rpcclntopts "sigmaos/rpc/clnt/opts"
+
 	"github.com/stretchr/testify/assert"
 
 	db "sigmaos/debug"
+	echoproto "sigmaos/example/example_echo_server/proto"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
@@ -123,6 +129,7 @@ func TestSpawnLatency(t *testing.T) {
 func TestServerProc(t *testing.T) {
 	const (
 		SERVER_PROC_MCPU proc.Tmcpu = 1000
+		SRV_PN           string     = "name/echo-srv-cpp"
 	)
 
 	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
@@ -141,14 +148,27 @@ func TestServerProc(t *testing.T) {
 	assert.Nil(mrts.GetRealm(test.REALM1).Ts.T, err, "Start")
 	db.DPrintf(db.TEST, "CPP server proc started (lat=%v)", time.Since(start))
 
-	// TODO: do an RPC
-
-	ep, err := mrts.GetRealm(test.REALM1).ReadEndpoint("name/echo-srv-cpp")
-	assert.Nil(mrts.GetRealm(test.REALM1).Ts.T, err, "Evict")
+	// Verify the endpoint has been correctly posted
+	ep, err := mrts.GetRealm(test.REALM1).ReadEndpoint(SRV_PN)
+	assert.Nil(mrts.GetRealm(test.REALM1).Ts.T, err, "ReadEndpoint: %v", err)
 	db.DPrintf(db.TEST, "CPP Echo srv EP: %v", ep)
 
-	err = mrts.GetRealm(test.REALM1).Evict(p.GetPid())
-	assert.Nil(mrts.GetRealm(test.REALM1).Ts.T, err, "Evict")
+	conn, err := net.Dial("tcp", ep.Addrs()[0].IPPort())
+	if assert.Nil(mrts.GetRealm(test.REALM1).Ts.T, err, "Dial: %v", err) {
+		ch := rpcchannel.NewRPCChannel(conn)
+		rpcc, err := rpcclnt.NewRPCClnt("echosrv", rpcclntopts.WithRPCChannel(ch))
+		if assert.Nil(mrts.GetRealm(test.REALM1).Ts.T, err, "New RPCClnt") {
+			arg := &echoproto.EchoReq{
+				Text: "Hello there!",
+			}
+			var res echoproto.EchoRep
+			err = rpcc.RPC("EchoSrv.Echo", arg, &res)
+			assert.Nil(mrts.GetRealm(test.REALM1).Ts.T, err, "Error echo RPC: %v", err)
+		}
+	}
+
+	//	err = mrts.GetRealm(test.REALM1).Evict(p.GetPid())
+	//	assert.Nil(mrts.GetRealm(test.REALM1).Ts.T, err, "Evict")
 
 	status, err := mrts.GetRealm(test.REALM1).WaitExit(p.GetPid())
 	db.DPrintf(db.TEST, "CPP proc exited, status: %v", status)

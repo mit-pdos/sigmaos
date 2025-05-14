@@ -4,16 +4,15 @@
 package clnt
 
 import (
-	"fmt"
 	"net"
 
 	db "sigmaos/debug"
 	dialproxyclnt "sigmaos/dialproxy/clnt"
 	"sigmaos/proc"
 	spproto "sigmaos/proxy/sigmap/proto"
-	"sigmaos/proxy/sigmap/transport"
 	"sigmaos/rpc"
 	rpcclnt "sigmaos/rpc/clnt"
+	"sigmaos/rpc/clnt/channel/rpcchannel"
 	rpcclntopts "sigmaos/rpc/clnt/opts"
 	sessp "sigmaos/session/proto"
 	sp "sigmaos/sigmap"
@@ -45,9 +44,8 @@ func NewSPProxyClnt(pe *proc.ProcEnv, npc *dialproxyclnt.DialProxyClnt) (*SPProx
 		disconnected: false,
 	}
 
-	iovm := demux.NewIoVecMap()
-	scc.dmx = demux.NewDemuxClnt(transport.NewTransport(conn, iovm), iovm)
-	rpcc, err := rpcclnt.NewRPCClnt("spproxy", rpcclntopts.WithRPCChannel(scc))
+	ch := rpcchannel.NewRPCChannel(conn)
+	rpcc, err := rpcclnt.NewRPCClnt("spproxy", rpcclntopts.WithRPCChannel(ch))
 	if err != nil {
 		return nil, err
 	}
@@ -61,29 +59,8 @@ func NewSPProxyClnt(pe *proc.ProcEnv, npc *dialproxyclnt.DialProxyClnt) (*SPProx
 	return scc, nil
 }
 
-func (scc *SPProxyClnt) SendReceive(iniov sessp.IoVec, outiov sessp.IoVec) error {
-	c := transport.NewCall(sessp.NextSeqno(scc.seqcntr), iniov)
-	rep, err := scc.dmx.SendReceive(c, outiov)
-	if err != nil {
-		return err
-	} else {
-		c := rep.(*transport.Call)
-		if len(outiov) != len(c.Iov) {
-			return fmt.Errorf("sigmaclntclnt outiov len wrong: %v != %v", len(outiov), len(c.Iov))
-		}
-		return nil
-	}
-}
-
 func (scc *SPProxyClnt) StatsSrv() (*rpc.RPCStatsSnapshot, error) {
 	return nil, nil
-}
-
-func (scc *SPProxyClnt) ReportError(err error) {
-	db.DPrintf(db.DEMUXCLNT, "ReportError %v", err)
-	go func() {
-		scc.close()
-	}()
 }
 
 // Tell spproxyd to shut down

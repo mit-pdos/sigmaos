@@ -418,7 +418,7 @@ func (scs *SPProxySrvAPI) Started(ctx fs.CtxI, req scproto.SigmaNullReq, rep *sc
 
 func (scs *SPProxySrvAPI) Exited(ctx fs.CtxI, req scproto.SigmaExitedReq, rep *scproto.SigmaErrRep) error {
 	status := proc.Tstatus(req.Status)
-	db.DPrintf(db.SPPROXYSRV, "%v: Exited %v", scs.sc.ClntId(), status, req.Msg)
+	db.DPrintf(db.SPPROXYSRV, "%v: Exited status %v  msg %v", scs.sc.ClntId(), status, req.Msg)
 	err := scs.initProcClnt()
 	rep.Err = scs.setErr(err)
 	if err != nil {

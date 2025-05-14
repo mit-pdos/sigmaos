@@ -4,7 +4,7 @@
 #include <proxy/sigmap/sigmap.h>
 #include <serr/serr.h>
 #include <proc/proc.h>
-#include <session/srv/srv.h>
+#include <rpc/srv.h>
 #include <sigmap/const.h>
 
 const std::string ECHOSRV = "ECHOSRV";
@@ -26,7 +26,7 @@ int main(int argc, char *argv[]) {
   std::thread evict_thread(wait_for_eviction, sp_clnt);
 
   log(ECHOSRV, "Starting sesssrv");
-  auto srv = std::make_shared<sigmaos::session::srv::Srv>();
+  auto srv = std::make_shared<sigmaos::rpc::srv::Srv>(sp_clnt);
   log(ECHOSRV, "Sesssrv started");
   {
     auto ep = srv->GetEndpoint();

@@ -12,22 +12,22 @@ results.append(("Started", ms_end - ms_start))
 # Local
 
 ms_start = time.time() * 1000.0
-splib.PutFile("name/pystat_file", 777, 0, "Hello World!", 0, 0)
+splib.PutFile("name/ux/~local/pystat_file", 777, 0, "Hello World!", 0, 0)
 ms_end = time.time() * 1000.0
 results.append(("PutFile_Local", ms_end - ms_start))
 
 ms_start = time.time() * 1000.0
-file_contents = splib.GetFile("name/pystat_file")
+file_contents = splib.GetFile("name/ux/~local/pystat_file")
 ms_end = time.time() * 1000.0
 results.append(("GetFile_Local", ms_end - ms_start))
 
 ms_start = time.time() * 1000.0
-splib.Stat("name/pystat_file")
+splib.Stat("name/ux/~local/pystat_file")
 ms_end = time.time() * 1000.0
 results.append(("Stat_Local", ms_end - ms_start))
 
 ms_start = time.time() * 1000.0
-fd = splib.Create("name/pystat_file_2", 777, 2)
+fd = splib.Create("name/ux/~local/pystat_file_2", 777, 2)
 ms_end = time.time() * 1000.0
 results.append(("Create_Local", ms_end - ms_start))
 
@@ -42,7 +42,7 @@ ms_end = time.time() * 1000.0
 results.append(("CloseFD_Local", ms_end - ms_start))
 
 ms_start = time.time() * 1000.0
-fd = splib.Open("name/pystat_file_2", 2, False)
+fd = splib.Open("name/ux/~local/pystat_file_2", 2, False)
 ms_end = time.time() * 1000.0
 results.append(("Open_Local", ms_end - ms_start))
 
@@ -63,12 +63,12 @@ ms_end = time.time() * 1000.0
 results.append(("CloseFD_Local", ms_end - ms_start))
 
 ms_start = time.time() * 1000.0
-splib.Remove("name/pystat_file")
+splib.Remove("name/ux/~local/pystat_file")
 ms_end = time.time() * 1000.0
 results.append(("Remove_Local", ms_end - ms_start))
 
 ms_start = time.time() * 1000.0
-splib.Remove("name/pystat_file_2")
+splib.Remove("name/ux/~local/pystat_file_2")
 ms_end = time.time() * 1000.0
 results.append(("Remove_Local", ms_end - ms_start))
 

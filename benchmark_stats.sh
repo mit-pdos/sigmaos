@@ -1,7 +1,7 @@
 #!/bin/bash
 
-COUNT=50
-folder="../05140026-logs"
+COUNT=1
+folder="../05150008-logs"
 mkdir -p "$folder"
 echo "$folder"
 for ((i = 1; i <= COUNT; i++)); do

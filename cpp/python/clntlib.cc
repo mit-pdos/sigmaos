@@ -175,6 +175,15 @@ void seek_stub(int fd, uint64_t o) {
   clnt->Seek(fd, offset);
 }
 
+uint64_t clnt_id_stub() {
+  auto result = clnt->ClntID();
+  if (result.has_value()) {
+    return result.value();
+  }
+
+  return -1;
+}
+
 // ========== ProcClnt API ==========
 
 void started() 

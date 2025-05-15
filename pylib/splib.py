@@ -96,3 +96,7 @@ def Write(fd, b):
 lib_funcs.seek_stub.argtypes = [ctypes.c_int, ctypes.c_uint64]
 def Seek(fd, offset):
     lib_funcs.seek_stub(ctypes.c_int(fd), ctypes.c_uint64(offset))
+
+lib_funcs.clnt_id_stub.restype = ctypes.c_uint64
+def ClntID():
+    return lib_funcs.clnt_id_stub()

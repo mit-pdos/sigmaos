@@ -55,6 +55,7 @@ extern "C" {
   uint32_t pread_stub(int fd, char* b, uint64_t o);
   uint32_t write_stub(int fd, char* b);
   void seek_stub(int fd, uint64_t o);
+  uint64_t clnt_id_stub();
   // TODO: everything after Seek in cpp/proxy/sigmap/sigmap.h
   // ProcClnt API
   void started();

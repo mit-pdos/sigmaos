@@ -22,6 +22,11 @@ results.append(("Started", ms_end - ms_start))
 # Local
 
 ms_start = time.time() * 1000.0
+splib.ClntID()
+ms_end = time.time() * 1000.0
+results.append(("ClntID", ms_end - ms_start))
+
+ms_start = time.time() * 1000.0
 splib.PutFile("name/ux/~local/pystat_file", 777, 0, "Hello World!", 0, 0)
 ms_end = time.time() * 1000.0
 results.append(("PutFile_Local", ms_end - ms_start))

@@ -131,8 +131,19 @@ func (scs *SPProxySrvAPI) Init(ctx fs.CtxI, req scproto.SigmaInitReq, rep *scpro
 		rep.Err = scs.setErr(fmt.Errorf("Error init SPProxySrvAPI: %v pe %v", err, pe))
 		return err
 	}
-	sc.GetDir("name/ux/~local/")
-	sc.GetDir("name/msched/~local/")
+	// // Make a procclnt if we haven't already
+	// if !scs.hasProcClnt {
+	// 	scs.hasProcClnt = true
+	// 	err = sc.NewProcClnt()
+	// }
+	// // If unsuccessful, bail out
+	// if err != nil {
+	// 	db.DPrintf(db.SPPROXYSRV_ERR, "%v: Failed to create procclnt: %v", scs.sc.ClntId(), err)
+	// 	rep.Err = scs.setErr(err)
+	// 	return nil
+	// }
+	// sc.GetDir("name/ux/~local/")
+	// sc.GetDir("name/msched/~local/")
 	scs.sc = sc
 	db.DPrintf(db.SPPROXYSRV, "%v: Init %v err %v", scs.sc.ClntId(), pe, err)
 	rep.Err = scs.setErr(nil)
@@ -391,12 +402,8 @@ func (scs *SPProxySrvAPI) initProcClnt() error {
 
 func (scs *SPProxySrvAPI) Started(ctx fs.CtxI, req scproto.SigmaNullReq, rep *scproto.SigmaErrRep) error {
 	db.DPrintf(db.SPPROXYSRV, "%v: Started", scs.sc.ClntId())
-	err := scs.initProcClnt()
-	if err != nil {
-		rep.Err = scs.setErr(err)
-		return nil
-	}
-	err = scs.sc.Started()
+	scs.initProcClnt()
+	err := scs.sc.Started()
 	if err != nil {
 		db.DPrintf(db.SPPROXYSRV_ERR, "%v: Started err: %v", scs.sc.ClntId(), err)
 	}

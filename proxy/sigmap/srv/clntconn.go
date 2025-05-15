@@ -131,6 +131,8 @@ func (scs *SPProxySrvAPI) Init(ctx fs.CtxI, req scproto.SigmaInitReq, rep *scpro
 		rep.Err = scs.setErr(fmt.Errorf("Error init SPProxySrvAPI: %v pe %v", err, pe))
 		return err
 	}
+	sc.GetDir("name/ux/~local/")
+	sc.GetDir("name/msched/~local/")
 	scs.sc = sc
 	db.DPrintf(db.SPPROXYSRV, "%v: Init %v err %v", scs.sc.ClntId(), pe, err)
 	rep.Err = scs.setErr(nil)

@@ -4,6 +4,16 @@ import ctypes
 
 results = []
 
+# ms_start = time.time() * 1000.0
+# splib.Open("name/msched/~local/", 2, False)
+# ms_end = time.time() * 1000.0
+# results.append(("GetDirLocal", ms_end - ms_start))
+
+# ms_start = time.time() * 1000.0
+# splib.Open("name/ux/~local/", 2, False)
+# ms_end = time.time() * 1000.0
+# results.append(("GetDirUx", ms_end - ms_start))
+
 ms_start = time.time() * 1000.0
 splib.Started()
 ms_end = time.time() * 1000.0

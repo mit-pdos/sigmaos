@@ -45,7 +45,21 @@ std::expected<std::shared_ptr<Call>, sigmaos::serr::Error> Transport::ReadCall()
     nframes = res.value();
     log(TRANSPORT, "ReadCall seqno {} nframes {}", seqno, nframes);
   }
-  auto call = _calls.Remove(seqno).value();
+  std::shared_ptr<Call> call;
+  {
+    auto res = _calls.Remove(seqno);
+    // If no existing call was present, then create one (this must be a reader
+    // thread for demuxsrv)
+    if (!res.has_value()) {
+      auto in_iov = std::make_shared<sigmaos::io::iovec::IOVec>();
+      auto out_iov = std::make_shared<sigmaos::io::iovec::IOVec>();
+      // Make room in the iovec to read the buffers
+      out_iov->AddBuffers(nframes);
+      call = std::make_shared<Call>(seqno, in_iov, out_iov);
+    } else {
+      call = res.value();
+    }
+  }
   auto out_iov = call->GetOutIOVec();
   if (out_iov->Size() != nframes) {
     log(TRANSPORT_ERR, "Size of out_iov ({}) doesn't match number of frames to be read ({})", out_iov->Size(), nframes);

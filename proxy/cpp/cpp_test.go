@@ -7,9 +7,15 @@ import (
 	"testing"
 	"time"
 
+	"net"
+	rpcclnt "sigmaos/rpc/clnt"
+	"sigmaos/rpc/clnt/channel/rpcchannel"
+	rpcclntopts "sigmaos/rpc/clnt/opts"
+
 	"github.com/stretchr/testify/assert"
 
 	db "sigmaos/debug"
+	echoproto "sigmaos/example/example_echo_server/proto"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
@@ -118,4 +124,55 @@ func TestSpawnLatency(t *testing.T) {
 		<-c
 	}
 	db.DPrintf(db.TEST, "Procs done")
+}
+
+func TestServerProc(t *testing.T) {
+	const (
+		SERVER_PROC_MCPU proc.Tmcpu = 1000
+		SRV_PN           string     = "name/echo-srv-cpp"
+	)
+
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	defer mrts.Shutdown()
+
+	p := proc.NewProc("echo-srv-cpp", nil)
+	p.SetMcpu(SERVER_PROC_MCPU)
+	db.DPrintf(db.TEST, "Spawn server proc %v", p)
+	start := time.Now()
+	err := mrts.GetRealm(test.REALM1).Spawn(p)
+	assert.Nil(mrts.GetRealm(test.REALM1).Ts.T, err, "Spawn")
+	err = mrts.GetRealm(test.REALM1).WaitStart(p.GetPid())
+	assert.Nil(mrts.GetRealm(test.REALM1).Ts.T, err, "Start")
+	db.DPrintf(db.TEST, "CPP server proc started (lat=%v)", time.Since(start))
+
+	// Verify the endpoint has been correctly posted
+	ep, err := mrts.GetRealm(test.REALM1).ReadEndpoint(SRV_PN)
+	assert.Nil(mrts.GetRealm(test.REALM1).Ts.T, err, "ReadEndpoint: %v", err)
+	db.DPrintf(db.TEST, "CPP Echo srv EP: %v", ep)
+
+	conn, err := net.Dial("tcp", ep.Addrs()[0].IPPort())
+	if assert.Nil(mrts.GetRealm(test.REALM1).Ts.T, err, "Dial: %v", err) {
+		ch := rpcchannel.NewRPCChannel(conn)
+		rpcc, err := rpcclnt.NewRPCClnt("echosrv", rpcclntopts.WithRPCChannel(ch))
+		if assert.Nil(mrts.GetRealm(test.REALM1).Ts.T, err, "New RPCClnt") {
+			arg := &echoproto.EchoReq{
+				Text: "Hello there!",
+			}
+			var res echoproto.EchoRep
+			err = rpcc.RPC("EchoSrv.Echo", arg, &res)
+			assert.Nil(mrts.GetRealm(test.REALM1).Ts.T, err, "Error echo RPC: %v", err)
+		}
+	}
+
+	//	err = mrts.GetRealm(test.REALM1).Evict(p.GetPid())
+	//	assert.Nil(mrts.GetRealm(test.REALM1).Ts.T, err, "Evict")
+
+	status, err := mrts.GetRealm(test.REALM1).WaitExit(p.GetPid())
+	db.DPrintf(db.TEST, "CPP proc exited, status: %v", status)
+	assert.Nil(mrts.GetRealm(test.REALM1).Ts.T, err, "WaitExit error")
+	assert.True(mrts.GetRealm(test.REALM1).Ts.T, status != nil && status.IsStatusEvicted(), "Exit status wrong: %v", status)
+	db.DPrintf(db.TEST, "Proc done")
 }

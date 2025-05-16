@@ -1,25 +1,22 @@
 #include <io/conn/conn.h>
 
-#include <unistd.h>
-#include <format>
-
 #include <util/codec/codec.h>
 
 namespace sigmaos {
 namespace io::conn {
 
-bool UnixConn::_l = sigmaos::util::log::init_logger(CONN);
-bool UnixConn::_l_e = sigmaos::util::log::init_logger(CONN_ERR);
+const std::string CONN = "CONN";
+const std::string CONN_ERR = CONN + sigmaos::util::log::ERR;
 
-std::expected<int, sigmaos::serr::Error> UnixConn::Read(std::string *b) {
+std::expected<int, sigmaos::serr::Error> Conn::Read(std::string *b) {
   return read_bytes(b->data(), b->size());
 }
 
-std::expected<int, sigmaos::serr::Error> UnixConn::Write(const std::string *b) {
+std::expected<int, sigmaos::serr::Error> Conn::Write(const std::string *b) {
   return write_bytes(b->data(), b->size());
 }
 
-std::expected<uint64_t, sigmaos::serr::Error> UnixConn::ReadUint64() {
+std::expected<uint64_t, sigmaos::serr::Error> Conn::ReadUint64() {
   size_t size = sizeof(uint64_t);
   char b[size];
   auto res = read_bytes(b, size);
@@ -29,7 +26,7 @@ std::expected<uint64_t, sigmaos::serr::Error> UnixConn::ReadUint64() {
   return sigmaos::util::codec::bytes_to_uint64(b);
 }
 
-std::expected<int, sigmaos::serr::Error> UnixConn::WriteUint64(uint64_t i) {
+std::expected<int, sigmaos::serr::Error> Conn::WriteUint64(uint64_t i) {
   size_t size = sizeof(uint64_t);
   char b[size];
   sigmaos::util::codec::uint64_to_bytes(b, i);
@@ -40,7 +37,7 @@ std::expected<int, sigmaos::serr::Error> UnixConn::WriteUint64(uint64_t i) {
   return size;
 }
 
-std::expected<uint32_t, sigmaos::serr::Error> UnixConn::ReadUint32() {
+std::expected<uint32_t, sigmaos::serr::Error> Conn::ReadUint32() {
   size_t size = sizeof(uint32_t);
   char b[size];
   auto res = read_bytes(b, size);
@@ -50,7 +47,7 @@ std::expected<uint32_t, sigmaos::serr::Error> UnixConn::ReadUint32() {
   return sigmaos::util::codec::bytes_to_uint32(b);
 }
 
-std::expected<int, sigmaos::serr::Error> UnixConn::WriteUint32(uint32_t i) {
+std::expected<int, sigmaos::serr::Error> Conn::WriteUint32(uint32_t i) {
   size_t size = sizeof(uint32_t);
   char b[size];
   sigmaos::util::codec::uint32_to_bytes(b, i);
@@ -61,7 +58,7 @@ std::expected<int, sigmaos::serr::Error> UnixConn::WriteUint32(uint32_t i) {
   return size;
 }
 
-std::expected<int, sigmaos::serr::Error> UnixConn::Close() {
+std::expected<int, sigmaos::serr::Error> Conn::Close() {
   log(CONN, "Closing unix conn");
   // Close the socket FD
   // TODO: have the reader actually close the FD, or else it may block
@@ -74,17 +71,19 @@ std::expected<int, sigmaos::serr::Error> UnixConn::Close() {
   return 0;
 }
 
-std::expected<int, sigmaos::serr::Error> UnixConn::read_bytes(char *b, size_t size) {
+std::expected<int, sigmaos::serr::Error> Conn::read_bytes(char *b, size_t size) {
   int n = read(_sockfd, b, size);
   if (n != size) {
+    log(CONN_ERR, "Err read_bytes fd {}", _sockfd);
     return std::unexpected(sigmaos::serr::Error(sigmaos::serr::Terror::TErrUnreachable, std::format("read wrong num bytes: {} != {}", n, size)));
   }
   return n;
 }
 
-std::expected<int, sigmaos::serr::Error> UnixConn::write_bytes(const char *b, size_t size) {
+std::expected<int, sigmaos::serr::Error> Conn::write_bytes(const char *b, size_t size) {
   int n = write(_sockfd, b, size);
   if (n != size) {
+    log(CONN_ERR, "Err write_bytes fd {}", _sockfd);
     return std::unexpected(sigmaos::serr::Error(sigmaos::serr::Terror::TErrUnreachable, std::format("wrote wrong num bytes: {} != {}", n, size)));
   }
   return n;

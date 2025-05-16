@@ -2,7 +2,10 @@ message(STATUS "Building rpc library")
 
 add_subdirectory(proto)
 
-add_library(rpc STATIC rpc.cc)
+add_library(rpc STATIC
+  clnt.cc
+  srv.cc
+)
 
 target_link_libraries(rpc PUBLIC
   serr

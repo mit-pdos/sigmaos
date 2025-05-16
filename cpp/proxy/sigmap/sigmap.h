@@ -10,10 +10,11 @@
 
 #include <util/log/log.h>
 #include <io/conn/conn.h>
+#include <io/conn/unix/unix.h>
 #include <io/transport/transport.h>
-#include <io/demux/demux.h>
+#include <io/demux/clnt.h>
 #include <serr/serr.h>
-#include <rpc/rpc.h>
+#include <rpc/clnt.h>
 #include <proc/proc.h>
 #include <proc/status.h>
 #include <sigmap/types.h>
@@ -32,7 +33,7 @@ class Clnt {
   Clnt() : _disconnected(false) {
     _env = sigmaos::proc::GetProcEnv();
     log(SPPROXYCLNT, "New clnt {}", _env->String());
-    _conn = std::make_shared<sigmaos::io::conn::UnixConn>(SPPROXY_SOCKET_PN);
+    _conn = std::make_shared<sigmaos::io::conn::unixconn::ClntConn>(SPPROXY_SOCKET_PN);
     _trans = std::make_shared<sigmaos::io::transport::Transport>(_conn);
     _demux = std::make_shared<sigmaos::io::demux::Clnt>(_trans);
     _rpcc = std::make_shared<sigmaos::rpc::Clnt>(_demux);
@@ -49,6 +50,7 @@ class Clnt {
   }
 
   std::expected<int, sigmaos::serr::Error> Test();
+  std::shared_ptr<sigmaos::proc::ProcEnv> ProcEnv() { return _env; }
 
   // Stubs
 
@@ -88,6 +90,9 @@ class Clnt {
   std::expected<bool, sigmaos::serr::Error> Disconnected();
   std::expected<int, sigmaos::serr::Error> Disconnect(std::string pn);
 
+  // ========== Endpoint manipulation ==========
+  std::expected<int, sigmaos::serr::Error> RegisterEP(std::string pn, std::shared_ptr<TendpointProto> ep);
+
   // ========== ProcClnt API ==========
   std::expected<int, sigmaos::serr::Error> Started();
   std::expected<int, sigmaos::serr::Error> Exited(sigmaos::proc::Tstatus status, std::string &msg);
@@ -95,9 +100,8 @@ class Clnt {
   std::expected<int, sigmaos::serr::Error> WaitEvict();
 
   private:
-  std::shared_ptr<sigmaos::io::conn::UnixConn> _conn;
-  std::shared_ptr<sigmaos::io::transport::Transport> _trans;
-  std::shared_ptr<sigmaos::io::demux::Clnt> _demux;
+  std::shared_ptr<sigmaos::io::conn::Conn> _conn;
+  std::shared_ptr<sigmaos::io::transport::Transport> _trans; std::shared_ptr<sigmaos::io::demux::Clnt> _demux;
   std::shared_ptr<sigmaos::rpc::Clnt> _rpcc;
   std::shared_ptr<sigmaos::proc::ProcEnv> _env;
   bool _disconnected;

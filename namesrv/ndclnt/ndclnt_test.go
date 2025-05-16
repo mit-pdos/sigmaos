@@ -12,6 +12,7 @@ import (
 	"sigmaos/namesrv"
 	"sigmaos/namesrv/fsetcd"
 	"sigmaos/namesrv/ndclnt"
+	"sigmaos/path"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
@@ -20,9 +21,8 @@ import (
 )
 
 const (
-	MCPU            proc.Tmcpu    = 1000
-	DELAY           time.Duration = 2 * fsetcd.LeaseTTL * time.Second
-	CRASH_SEM_DELAY               = 5 * time.Second
+	MCPU            proc.Tmcpu = 1000
+	CRASH_SEM_DELAY            = 100 * time.Millisecond
 )
 
 func TestCompile(t *testing.T) {
@@ -57,9 +57,9 @@ func TestPstats(t *testing.T) {
 
 func TestKillNamed(t *testing.T) {
 	const T = 1000
-	fn := sp.NAMED + "crashnd.sem"
+	crashpn := sp.NAMED + "crashnd.sem"
 
-	e := crash.NewEventPath(crash.NAMED_CRASH, T, float64(1.0), fn)
+	e := crash.NewEventPath(crash.NAMED_CRASH, T, float64(1.0), crashpn)
 	err := crash.SetSigmaFail(crash.NewTeventMapOne(e))
 	assert.Nil(t, err)
 
@@ -79,32 +79,33 @@ func TestKillNamed(t *testing.T) {
 	if !assert.Nil(ts.T, err, "Err new sigmaclnt realm: %v", err) {
 		return
 	}
-	db.DPrintf(db.TEST, "Made new realm sigmaclnt")
+
+	fn := filepath.Join(sp.NAMED, "fff")
+	_, err = sc.PutFile(fn, 0777, sp.OREAD, nil)
+	assert.Nil(t, err)
 
 	sts, err := sc.GetDir(sp.NAMED)
 	assert.Nil(t, err)
 	db.DPrintf(db.TEST, "New realm sigmaclnt contents: %v", sp.Names(sts))
 
-	db.DPrintf(db.TEST, "named %v", sp.Names(sts))
-
 	sts, err = ts.GetDir(sp.NAMED)
 	assert.Nil(t, err)
-	db.DPrintf(db.TEST, "New realm sigmaclnt contents: %v", sp.Names(sts))
-
-	db.DPrintf(db.TEST, "named root %v", sp.Names(sts))
+	db.DPrintf(db.TEST, "Root realm sigmaclnt contents: %v", sp.Names(sts))
 
 	// Wait for a bit for the crash semaphore to be created
 	time.Sleep(CRASH_SEM_DELAY)
 
-	// Crash named
-	db.DPrintf(db.TEST, "Crashing named %v", sp.Names(sts))
-	err = crash.SignalFailer(sc.FsLib, fn)
+	// Tell named to crash
+	db.DPrintf(db.TEST, "Crashing named")
+	err = crash.SignalFailer(sc.FsLib, crashpn)
 	assert.Nil(t, err, "Err crash: %v", err)
-	time.Sleep(DELAY)
+
+	// Allow the crashing named time to crash
+	time.Sleep(T * time.Millisecond)
 
 	db.DPrintf(db.TEST, "named should be dead & buried")
 
-	_, err = sc.GetDir(sp.NAMED)
+	_, err = sc.GetDir(path.MarkResolve(sp.NAMED))
 	assert.NotNil(t, err)
 
 	db.DPrintf(db.TEST, "named unreachable, as expected")
@@ -116,9 +117,18 @@ func TestKillNamed(t *testing.T) {
 		return
 	}
 
-	sts, err = sc.GetDir(sp.NAMED)
+	fn1 := filepath.Join(sp.NAMED, "ggg")
+	_, err = sc.PutFile(fn1, 0777, sp.OREAD, nil)
+	assert.Nil(t, err)
+
+	sts, err = sc.GetDir(path.MarkResolve(sp.NAMED))
 	assert.Nil(t, err, "Get named dir post-crash")
-	db.DPrintf(db.TEST, "named %v", sp.Names(sts))
+	db.DPrintf(db.TEST, "New realm's new named %v", sp.Names(sts))
+
+	err = sc.Remove(fn)
+	assert.Equal(t, nil, err)
+	err = sc.Remove(fn1)
+	assert.Equal(t, nil, err)
 
 	if err := ndclnt.StopNamed(ts.SigmaClnt, nd2); !assert.Nil(ts.T, err, "Err stop named: %v", err) {
 		return

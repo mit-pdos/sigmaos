@@ -29,8 +29,10 @@ class CTstatProto(ctypes.Structure):
 #     Proc API     #
 ####################
 
-def Started():
+def InitSocket():
     lib_funcs.init_socket()
+
+def Started():
     lib_funcs.started()
 
 lib_funcs.exited.argtypes = [ctypes.c_uint32, ctypes.c_char_p]

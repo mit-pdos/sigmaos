@@ -50,7 +50,7 @@ func (nd *Named) startLeader() error {
 
 	fs.Fence(nd.elect.Key(), nd.elect.Rev())
 
-	db.DPrintf(db.NAMED, "leader %v %v\n", nd.realm, nd.elect.Key())
+	db.DPrintf(db.NAMED_LDR, "leader %v %v\n", nd.realm, nd.elect.Key())
 
 	return nil
 }

@@ -147,8 +147,6 @@ func Run(args []string) error {
 
 	nd.SigmaSrv.Mount(sp.PSTATSD, nd.pstats)
 
-	db.DPrintf(db.NAMED_LDR, "newSrv %v -> ep %v", nd.realm, ep)
-
 	pn := sp.NAMED
 	if nd.realm == sp.ROOTREALM {
 		// Allow connections from all realms, so that realms can mount the kernel

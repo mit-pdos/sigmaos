@@ -52,7 +52,8 @@ std::expected<std::shared_ptr<sigmaos::io::transport::Call>, sigmaos::serr::Erro
   // Parse the RPC input protobuf
   auto req_proto = rpce->GetInput();
   req_proto->ParseFromString(*(in_iov->GetBuffer(0)->Get()));
-  // TODO: deal with input blobs 
+  // Set the request's blob's IOV to point to the input data, if applicable.
+  set_blob_iov(in_iov, *req_proto);
   auto rep_proto = rpce->GetOutput();
   auto res = rpce->GetFunction()(req_proto, rep_proto);
   if (!res.has_value()) {
@@ -60,11 +61,12 @@ std::expected<std::shared_ptr<sigmaos::io::transport::Call>, sigmaos::serr::Erro
     return std::unexpected(res.error());
   }
   auto out_iov = req->GetOutIOVec();
+  // Extract any input IOVecs from the reply RPC
+  extract_blob_iov(*rep_proto, out_iov);
   out_iov->AddBuffers(2);
   auto serialized_rep_buf = out_iov->GetBuffer(1);
   // Serialize the reply 
   rep_proto->SerializeToString(serialized_rep_buf->Get());
-  // TODO: deal with output blobs
   return req;
 }
 

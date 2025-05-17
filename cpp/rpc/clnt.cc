@@ -100,7 +100,7 @@ std::expected<int, sigmaos::serr::Error> Clnt::RPC(std::string method, google::p
   // Get the response
   auto wrapped_rep = res.value();
   // If there was an error in the RPC stack, bail out
-  if (wrapped_rep.err().errcode() != 0) {
+  if (wrapped_rep.err().errcode() != sigmaos::serr::TErrNoError) {
     return std::unexpected(sigmaos::serr::Error(sigmaos::serr::TErrUnreachable, std::format("rpc error: {}", wrapped_rep.err().ShortDebugString())));
   }
   // Deserialize the reply

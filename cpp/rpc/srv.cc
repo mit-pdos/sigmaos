@@ -7,18 +7,81 @@ bool Srv::_l = sigmaos::util::log::init_logger(RPCSRV);
 bool Srv::_l_e = sigmaos::util::log::init_logger(RPCSRV_ERR);
 
 std::expected<std::shared_ptr<sigmaos::io::transport::Call>, sigmaos::serr::Error> Srv::serve_request(std::shared_ptr<sigmaos::io::transport::Call> req) {
-  log(RPCSRV, "session::Srv::serve_request");
-  throw std::runtime_error("unimplemented");
+  log(RPCSRV, "rpc::Srv::serve_request");
+  Rerror err;
+  std::shared_ptr<sigmaos::io::transport::Call> rep;
+  Rep wrapper_rep;
+  wrapper_rep.set_allocated_err(&err);
+  auto res = unwrap_and_run_rpc(req);
+  if (!res.has_value()) {
+    auto rerr = res.error();
+    err.set_errcode(rerr.GetError());
+    err.set_obj(rerr.GetMsg());
+    // Reuse the request input for output if an error occurred
+    rep = req;
+    // In the event of an error, no output buffers will be appended, so we need
+    // to append one for the wrapper
+    rep->GetOutIOVec()->AddBuffers(1);
+  } else {
+    rep = res.value();
+    err.set_errcode(sigmaos::serr::TErrNoError);
+  }
+  auto serialized_wrapper_rep_buf = rep->GetOutIOVec()->GetBuffer(0)->Get();
+  wrapper_rep.SerializeToString(serialized_wrapper_rep_buf);
+  // Release err since its memory is owned by the stack of this function call.
+  {
+    auto _ = wrapper_rep.release_err();
+  }
+  return rep;
+}
+
+std::expected<std::shared_ptr<sigmaos::io::transport::Call>, sigmaos::serr::Error> Srv::unwrap_and_run_rpc(std::shared_ptr<sigmaos::io::transport::Call> req) {
+  auto err = new Rerror();
+  auto in_iov = req->GetInIOVec();
+  Req wrapper_req;
+  // Deserialize the wrapper
+  auto wrapper_req_buf = in_iov->GetBuffer(0);
+  wrapper_req.ParseFromString(*(wrapper_req_buf->Get()));
+  // Remove the wrapper from the out IOVec
+  in_iov->RemoveBuffer(0);
+  if (!_rpc_endpoints.contains(wrapper_req.method())) {
+    log(RPCSRV_ERR, "rpc::Srv unknown endpoint: {}", wrapper_req.method());
+    return std::unexpected(sigmaos::serr::Error(sigmaos::serr::Terror::TErrError, std::format("Invalid method %v", wrapper_req.method())));
+  }
+  auto rpce = _rpc_endpoints.at(wrapper_req.method());
+  // Parse the RPC input protobuf
+  auto req_proto = rpce->GetInput();
+  req_proto->ParseFromString(*(in_iov->GetBuffer(0)->Get()));
+  // TODO: deal with input blobs 
+  auto rep_proto = rpce->GetOutput();
+  auto res = rpce->GetFunction()(req_proto, rep_proto);
+  if (!res.has_value()) {
+    log(RPCSRV_ERR, "rpc::Srv unwrap_and_run_req Run function: {}", res.error());
+    return std::unexpected(res.error());
+  }
+  auto out_iov = req->GetOutIOVec();
+  out_iov->AddBuffers(2);
+  auto serialized_rep_buf = out_iov->GetBuffer(1);
+  // Serialize the reply 
+  rep_proto->SerializeToString(serialized_rep_buf->Get());
+  // TODO: deal with output blobs
+  return req;
 }
 
 std::shared_ptr<TendpointProto> Srv::GetEndpoint() {
   auto ep = std::make_shared<TendpointProto>();
   auto addr = ep->add_addr();
-  // TODO: other IP addresses?
   addr->set_ipstr(_sp_clnt->ProcEnv()->GetOuterContainerIP());
   addr->set_portint(_netsrv->GetPort());
   ep->set_type(sigmaos::sigmap::constants::EXTERNAL_EP);
   return ep;
+}
+
+void Srv::RegisterRPCEndpoint(std::shared_ptr<RPCEndpoint> rpce) {
+  if (_rpc_endpoints.contains(rpce->GetMethod())) {
+    throw std::runtime_error(std::format("Double-register method {}", rpce->GetMethod()));
+  }
+  _rpc_endpoints[rpce->GetMethod()] = rpce;
 }
 
 };

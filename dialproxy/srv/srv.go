@@ -236,6 +236,8 @@ func (nps *DialProxySrvStubs) Accept(c fs.CtxI, req netproto.AcceptReq, res *net
 	if err != nil {
 		db.DFatalf("Error convert conn to FD: %v", err)
 	}
+	// Close proxyConn; ConnToFile() dupped the fd for proxyConn
+	proxyConn.Close()
 	// Link conn FD to context so that it stays in scope and doesn't get GC-ed
 	// before it can be sent back to the client
 	ctx.SetConn(file)

@@ -65,6 +65,8 @@ func fdToConn(fd int) (net.Conn, error) {
 	if err != nil {
 		db.DFatalf("Error make FileConn (%v): %v", fd, err)
 	}
+	// Close f since FileConn calls dup()
+	f.Close()
 	return conn, nil
 }
 

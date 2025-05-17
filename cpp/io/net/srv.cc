@@ -9,8 +9,10 @@ bool Srv::_l_e = sigmaos::util::log::init_logger(NETSRV_ERR);
 void Srv::handle_connection(std::shared_ptr<sigmaos::io::conn::Conn> conn) {
   log(NETSRV, "Handling connection!");
   // TODO: Make transport
-  std::shared_ptr<sigmaos::io::transport::Transport> trans;
+  auto trans = std::make_shared<sigmaos::io::transport::Transport>(conn);
+  log(NETSRV, "Made transport");
   _sessions.push_back(std::make_shared<sigmaos::io::demux::Srv>(trans, _serve_request));
+  log(NETSRV, "Made demuxsrv");
 }
 
 void Srv::handle_connections() {
@@ -21,8 +23,10 @@ void Srv::handle_connections() {
     }
     auto conn = res.value();
     log(NETSRV, "Accepted connection");
+    // TODO: do this in another thread
+    handle_connection(conn);
     // TODO: use thread pool
-    std::thread(&Srv::handle_connection, this, conn);
+//    std::thread(&Srv::handle_connection, this, conn);
   }
 }
 

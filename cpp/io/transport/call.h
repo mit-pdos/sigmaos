@@ -16,6 +16,13 @@ class Call {
   uint64_t GetSeqno() const { return seqno; }
   const std::shared_ptr<sigmaos::io::iovec::IOVec> GetInIOVec() const { return _in_iov; }
   std::shared_ptr<sigmaos::io::iovec::IOVec> GetOutIOVec() const { return _out_iov; }
+  // Swap IOVecs
+  void SwapIOVecs() {
+    auto old_out = _out_iov;
+    auto old_in = _in_iov;
+    _in_iov = old_out;
+    _out_iov = old_in;
+  }
 
   private:
   uint64_t seqno;

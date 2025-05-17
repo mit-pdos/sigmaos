@@ -18,21 +18,42 @@ void Srv::read_requests() {
       // TODO: report error
       break;
     }
+    log(DEMUXSRV, "demuxsrv done reading call");
+    auto req = res.value();
+    // Swap input/output IOV, because transport package is written from the
+    // client perspective.
+    req->SwapIOVecs();
+    log(DEMUXSRV, "demuxsrv done reading call {}, handle request", req->GetSeqno());
     // TODO: handle request in a thread pool
-    std::thread(&Srv::handle_request, this, res.value());
+    handle_request(req);
+//    std::thread(&Srv::handle_request, this, res.value());
   }
 }
 
 void Srv::handle_request(std::shared_ptr<sigmaos::io::transport::Call> req) {
-  auto rep = _serve_request(req);
-  if (!rep.has_value()) {
-    log(DEMUXSRV_ERR, "demuxsrv serve_request error: {}", rep.error().String());
-    return;
+  log(DEMUXSRV, "demuxsrv handle request seqno: {}", req->GetSeqno());
+  std::shared_ptr<sigmaos::io::transport::Call> rep;
+  {
+    // Serve the request
+    auto res = _serve_request(req);
+    if (!res.has_value()) {
+      log(DEMUXSRV_ERR, "demuxsrv serve_request error: {}", res.error().String());
+      throw std::runtime_error("serve request error unimplemented");
+      // TODO: should we return here?
+      return;
+    }
+    rep = res.value();
   }
-  std::lock_guard<std::mutex> guard(_mu);
-  auto res = _trans->WriteCall(rep.value());
-  if (!res.has_value()) {
-    log(DEMUXSRV_ERR, "demuxsrv WriteCall error: {}", res.error().String());
+  {
+    // Swap input/output IOV, because transport package is written from the
+    // client perspective.
+    rep->SwapIOVecs();
+    // Write the reply
+    std::lock_guard<std::mutex> guard(_mu);
+    auto res = _trans->WriteCall(rep);
+    if (!res.has_value()) {
+      log(DEMUXSRV_ERR, "demuxsrv WriteCall error: {}", res.error().String());
+    }
   }
 }
 

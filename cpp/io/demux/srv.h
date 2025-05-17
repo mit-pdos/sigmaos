@@ -14,7 +14,6 @@ namespace io::demux {
 const std::string DEMUXSRV = "DEMUXSRV";
 const std::string DEMUXSRV_ERR = DEMUXSRV + sigmaos::util::log::ERR;
 
-// TODO: move to sesssrv pkg
 typedef std::function<std::expected<std::shared_ptr<sigmaos::io::transport::Call>, sigmaos::serr::Error>(std::shared_ptr<sigmaos::io::transport::Call>)> RequestHandler;
 
 class Srv {

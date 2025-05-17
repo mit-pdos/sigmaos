@@ -151,6 +151,8 @@ func (nps *DialProxySrvStubs) Dial(c fs.CtxI, req netproto.DialReq, res *netprot
 	if err != nil {
 		db.DFatalf("Error convert conn to FD: %v", err)
 	}
+	// Close proxyConn; ConnToFile() dupped the fd for proxyConn
+	proxyConn.Close()
 	db.DPrintf(db.DIALPROXY_LAT, "[%v] Dial ConnToFile latency: %v", ep, time.Since(start))
 	// Link conn FD to context so that it stays in scope and doesn't get GC-ed
 	// before it can be sent back to the client

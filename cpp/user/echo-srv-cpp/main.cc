@@ -6,6 +6,7 @@
 #include <proc/proc.h>
 #include <rpc/srv.h>
 #include <sigmap/const.h>
+#include <apps/echo/proto/example_echo_server.pb.h>
 
 const std::string ECHOSRV = "ECHOSRV";
 
@@ -16,6 +17,14 @@ void wait_for_eviction(std::shared_ptr<sigmaos::proxy::sigmap::Clnt> sp_clnt) {
     log(ECHOSRV, "Error WaitEvict: {}", res.error());
   }
   log(ECHOSRV, "Done waiting for eviction");
+}
+
+std::expected<int, sigmaos::serr::Error> Echo(std::shared_ptr<google::protobuf::Message> preq, std::shared_ptr<google::protobuf::Message> prep) {
+  auto req = dynamic_pointer_cast<EchoReq>(preq);
+  auto rep = dynamic_pointer_cast<EchoRep>(prep);
+  log(ECHOSRV, "Echo msg {}", req->text());
+  rep->set_text(req->text());
+  return 0;
 }
 
 int main(int argc, char *argv[]) {
@@ -35,6 +44,8 @@ int main(int argc, char *argv[]) {
       log(ECHOSRV, "Error RegisterEP: {}", res.error());
     }
   }
+  auto rpce = std::make_shared<sigmaos::rpc::srv::RPCEndpoint>("EchoSrv.Echo", std::make_shared<EchoReq>(), std::make_shared<EchoRep>(), Echo);
+  srv->RegisterRPCEndpoint(rpce);
   log(ECHOSRV, "Echosrv registered ep");
   {
     auto res = sp_clnt->Started();
@@ -43,6 +54,8 @@ int main(int argc, char *argv[]) {
     }
   }
   log(ECHOSRV, "Server started");
+
+  evict_thread.join();
 
   std::string msg("Evicted! Done serving.");
   sigmaos::proc::Tstatus exit_status = sigmaos::proc::Tstatus::StatusEvicted;

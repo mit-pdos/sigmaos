@@ -164,11 +164,12 @@ func TestServerProc(t *testing.T) {
 			var res echoproto.EchoRep
 			err = rpcc.RPC("EchoSrv.Echo", arg, &res)
 			assert.Nil(mrts.GetRealm(test.REALM1).Ts.T, err, "Error echo RPC: %v", err)
+			assert.Equal(mrts.T, arg.Text, res.Text, "Didn't echo correctly")
 		}
 	}
 
-	//	err = mrts.GetRealm(test.REALM1).Evict(p.GetPid())
-	//	assert.Nil(mrts.GetRealm(test.REALM1).Ts.T, err, "Evict")
+	err = mrts.GetRealm(test.REALM1).Evict(p.GetPid())
+	assert.Nil(mrts.GetRealm(test.REALM1).Ts.T, err, "Evict")
 
 	status, err := mrts.GetRealm(test.REALM1).WaitExit(p.GetPid())
 	db.DPrintf(db.TEST, "CPP proc exited, status: %v", status)

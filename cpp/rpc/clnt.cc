@@ -1,5 +1,7 @@
 #include <rpc/clnt.h>
 
+#include <rpc/blob.h>
+
 namespace sigmaos {
 namespace rpc {
 

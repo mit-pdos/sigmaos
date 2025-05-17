@@ -10,7 +10,6 @@
 #include <io/demux/clnt.h>
 #include <io/iovec/iovec.h>
 #include <rpc/proto/rpc.pb.h>
-#include <rpc/blob.h>
 
 namespace sigmaos {
 namespace rpc {

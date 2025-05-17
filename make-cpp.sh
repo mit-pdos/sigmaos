@@ -51,6 +51,8 @@ for PP in rpc ; do
   done
 done
 
+protoc -I=. --cpp_out="./cpp/apps/echo/proto" --proto_path example/example_echo_server/proto example_echo_server.proto
+
 cd cpp
 
 # Make a build directory

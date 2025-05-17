@@ -55,7 +55,7 @@ func TestPstats(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestKillNamed(t *testing.T) {
+func TestKillNamedAlone(t *testing.T) {
 	const T = 1000
 	crashpn := sp.NAMED + "crashnd.sem"
 
@@ -86,11 +86,12 @@ func TestKillNamed(t *testing.T) {
 
 	sts, err := sc.GetDir(sp.NAMED)
 	assert.Nil(t, err)
-	db.DPrintf(db.TEST, "New realm sigmaclnt contents: %v", sp.Names(sts))
+	assert.True(t, sp.Present(sts, []string{"fff"}))
 
 	sts, err = ts.GetDir(sp.NAMED)
 	assert.Nil(t, err)
-	db.DPrintf(db.TEST, "Root realm sigmaclnt contents: %v", sp.Names(sts))
+	// db.DPrintf(db.TEST, "Root realm sigmaclnt contents: %v", sp.Names(sts))
+	assert.True(t, sp.Present(sts, []string{"chunkd"}))
 
 	// Wait for a bit for the crash semaphore to be created
 	time.Sleep(CRASH_SEM_DELAY)
@@ -123,7 +124,8 @@ func TestKillNamed(t *testing.T) {
 
 	sts, err = sc.GetDir(path.MarkResolve(sp.NAMED))
 	assert.Nil(t, err, "Get named dir post-crash")
-	db.DPrintf(db.TEST, "New realm's new named %v", sp.Names(sts))
+	assert.True(t, sp.Present(sts, []string{"fff"}))
+	assert.True(t, sp.Present(sts, []string{"ggg"}))
 
 	err = sc.Remove(fn)
 	assert.Equal(t, nil, err)
@@ -409,7 +411,8 @@ func TestLeaseGetDirReboot(t *testing.T) {
 }
 
 // Test if read fails after a named lost leadership
-func TestPartitionNamed(t *testing.T) {
+// XXX commented out until etcd fix
+func xTestPartitionNamed(t *testing.T) {
 	e := crash.NewEventStartDelay(crash.NAMED_PARTITION, 2000, 1000, 7000, float64(1.0))
 	err := crash.SetSigmaFail(crash.NewTeventMapOne(e))
 	assert.Nil(t, err)

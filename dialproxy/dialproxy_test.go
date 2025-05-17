@@ -3,6 +3,7 @@ package dialproxy_test
 import (
 	"net"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 
@@ -222,6 +223,8 @@ func TestServerFail(t *testing.T) {
 		n, err := conn.Read(b)
 		assert.Nil(t, err, "Err read: %v", err)
 		assert.Equal(t, len(b), n, "Err read nbyte: %v != %v", len(b), n)
+		conn.Close()
+		db.DPrintf(db.TEST, "Server close %v", addr)
 		l.Close()
 	}(l)
 	// Dial the listener
@@ -230,11 +233,11 @@ func TestServerFail(t *testing.T) {
 	n, err := conn.Write([]byte(TEST_MSG))
 	if assert.Nil(t, err, "Err Write: %v", err) {
 		assert.Equal(t, len(TEST_MSG), n, "Err Write nbyte: %v != %v", len(TEST_MSG), n)
+		s := time.Now()
 		b := make([]byte, len(TEST_MSG))
-		db.DPrintf(db.TEST, "read")
 		_, err := conn.Read(b)
-		db.DPrintf(db.TEST, "read returned %v", err)
 		assert.NotNil(t, err)
+		assert.True(t, time.Since(s).Seconds() < 2)
 	}
 	ts.Shutdown()
 }

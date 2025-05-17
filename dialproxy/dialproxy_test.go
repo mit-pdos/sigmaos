@@ -202,3 +202,39 @@ func TestNamedEndpoint(t *testing.T) {
 	db.DPrintf(db.TEST, "endpoint %v\n", ep)
 	ts.Shutdown()
 }
+
+// Make sure client sees server failure works
+func TestServerFail(t *testing.T) {
+	ts, err1 := test.NewTstate(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	addr := sp.NewTaddr(IP, PORT)
+	npc := ts.GetDialProxyClnt()
+	// Create a listener via dialproxy
+	ep, l, err := npc.Listen(sp.INTERNAL_EP, addr)
+	assert.Nil(t, err, "Err Listen: %v", err)
+	go func(l net.Listener) {
+		b := make([]byte, len(TEST_MSG))
+		// Accept connections
+		conn, err := l.Accept()
+		assert.Nil(t, err, "Err accept: %v", err)
+		n, err := conn.Read(b)
+		assert.Nil(t, err, "Err read: %v", err)
+		assert.Equal(t, len(b), n, "Err read nbyte: %v != %v", len(b), n)
+		l.Close()
+	}(l)
+	// Dial the listener
+	conn, err := npc.Dial(ep)
+	assert.Nil(t, err, "Err Dial: %v", err)
+	n, err := conn.Write([]byte(TEST_MSG))
+	if assert.Nil(t, err, "Err Write: %v", err) {
+		assert.Equal(t, len(TEST_MSG), n, "Err Write nbyte: %v != %v", len(TEST_MSG), n)
+		b := make([]byte, len(TEST_MSG))
+		db.DPrintf(db.TEST, "read")
+		_, err := conn.Read(b)
+		db.DPrintf(db.TEST, "read returned %v", err)
+		assert.NotNil(t, err)
+	}
+	ts.Shutdown()
+}

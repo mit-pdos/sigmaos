@@ -165,6 +165,8 @@ func TestServerProc(t *testing.T) {
 			err = rpcc.RPC("EchoSrv.Echo", arg, &res)
 			assert.Nil(mrts.GetRealm(test.REALM1).Ts.T, err, "Error echo RPC: %v", err)
 			assert.Equal(mrts.T, arg.Text, res.Text, "Didn't echo correctly")
+			err = rpcc.RPC("EchoSrv.Echo234", arg, &res)
+			assert.NotNil(mrts.GetRealm(test.REALM1).Ts.T, err, "Unexpectedly succeeded unknown RPC: %v", err)
 		}
 	}
 

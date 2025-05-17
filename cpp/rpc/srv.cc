@@ -23,7 +23,7 @@ std::expected<std::shared_ptr<sigmaos::io::transport::Call>, sigmaos::serr::Erro
     rep = req;
     // In the event of an error, no output buffers will be appended, so we need
     // to append one for the wrapper
-    rep->GetOutIOVec()->AddBuffers(1);
+    rep->GetOutIOVec()->AddBuffers(2);
   } else {
     rep = res.value();
     err.set_errcode(sigmaos::serr::TErrNoError);

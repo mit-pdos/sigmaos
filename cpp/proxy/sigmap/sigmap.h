@@ -96,8 +96,10 @@ class Clnt {
   // ========== ProcClnt API ==========
   std::expected<int, sigmaos::serr::Error> Started();
   std::expected<int, sigmaos::serr::Error> Exited(sigmaos::proc::Tstatus status, std::string &msg);
-
   std::expected<int, sigmaos::serr::Error> WaitEvict();
+
+  // ========== Utility functions ==========
+  std::thread StartWaitEvictThread();
 
   private:
   std::shared_ptr<sigmaos::io::conn::Conn> _conn;
@@ -110,6 +112,7 @@ class Clnt {
   static bool _l_e;
 
   void init_conn();
+  void wait_for_eviction();
 };
 
 };

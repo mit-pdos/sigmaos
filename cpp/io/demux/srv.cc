@@ -7,6 +7,7 @@ bool Srv::_l = sigmaos::util::log::init_logger(DEMUXSRV);
 bool Srv::_l_e = sigmaos::util::log::init_logger(DEMUXSRV_ERR);
 
 void Srv::read_requests() {
+  std::vector<std::thread> threads;
   while (true) {
     if (IsClosed()) {
       log(DEMUXSRV, "demuxsrv closed, reader thread exiting");
@@ -24,9 +25,7 @@ void Srv::read_requests() {
     // client perspective.
     req->SwapIOVecs();
     log(DEMUXSRV, "demuxsrv done reading call {}, handle request", req->GetSeqno());
-    // TODO: handle request in a thread pool
-    handle_request(req);
-//    std::thread(&Srv::handle_request, this, res.value());
+    threads.push_back(std::thread(&Srv::handle_request, this, res.value()));
   }
 }
 

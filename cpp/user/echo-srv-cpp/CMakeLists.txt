@@ -11,5 +11,6 @@ target_link_libraries(echo-srv-cpp PRIVATE
   util_log
   sigmap_proxy
   echo_proto
+  app_echo
   rpc
 )

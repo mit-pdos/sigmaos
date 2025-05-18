@@ -126,7 +126,7 @@ func TestSpawnLatency(t *testing.T) {
 	db.DPrintf(db.TEST, "Procs done")
 }
 
-func TestServerProc(t *testing.T) {
+func TestEchoServerProc(t *testing.T) {
 	const (
 		SERVER_PROC_MCPU proc.Tmcpu = 1000
 		SRV_PN           string     = "name/echo-srv-cpp"
@@ -160,11 +160,14 @@ func TestServerProc(t *testing.T) {
 		if assert.Nil(mrts.GetRealm(test.REALM1).Ts.T, err, "New RPCClnt") {
 			arg := &echoproto.EchoReq{
 				Text: "Hello there!",
+				Num1: 1,
+				Num2: 2,
 			}
 			var res echoproto.EchoRep
 			err = rpcc.RPC("EchoSrv.Echo", arg, &res)
 			assert.Nil(mrts.GetRealm(test.REALM1).Ts.T, err, "Error echo RPC: %v", err)
 			assert.Equal(mrts.T, arg.Text, res.Text, "Didn't echo correctly")
+			assert.Equal(mrts.T, arg.Num1+arg.Num2, res.Res, "Didn't add correctly: %v + %v != %v", arg.Num1, arg.Num2, res.Res)
 			err = rpcc.RPC("EchoSrv.Echo234", arg, &res)
 			assert.NotNil(mrts.GetRealm(test.REALM1).Ts.T, err, "Unexpectedly succeeded unknown RPC: %v", err)
 		}

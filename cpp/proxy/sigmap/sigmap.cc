@@ -678,5 +678,18 @@ std::expected<int, sigmaos::serr::Error> Clnt::WaitEvict() {
   return 0;
 }
 
+void Clnt::wait_for_eviction() {
+  log(SPPROXYCLNT, "Waiting for eviction");
+  auto res = WaitEvict();
+  if (!res.has_value()) {
+    log(SPPROXYCLNT_ERR, "Error WaitEvict: {}", res.error());
+  }
+  log(SPPROXYCLNT, "Done waiting for eviction");
+}
+
+std::thread Clnt::StartWaitEvictThread() {
+  return std::thread(std::bind(&Clnt::wait_for_eviction, this));
+}
+
 };
 };

@@ -88,5 +88,33 @@ void Srv::RegisterRPCEndpoint(std::shared_ptr<RPCEndpoint> rpce) {
   _rpc_endpoints[rpce->GetMethod()] = rpce;
 }
 
+
+[[noreturn]] void Srv::Run() {
+  // Mark server as started
+  {
+    auto res = _sp_clnt->Started();
+    if (!res.has_value()) {
+      log(RPCSRV, "Error Started: {}", res.error());
+    }
+  }
+  log(RPCSRV, "Started");
+  // Start a new thread to wait for the eviction signal
+  auto evict_thread = _sp_clnt->StartWaitEvictThread();
+  // Join the thread
+  evict_thread.join();
+  log(RPCSRV, "Evicted");
+  // Mark server as exited
+  {
+    std::string msg = "Evicted! Done serving.";
+    auto res = _sp_clnt->Exited(sigmaos::proc::Tstatus::StatusEvicted, msg);
+    if (!res.has_value()) {
+      log(RPCSRV_ERR, "Error exited: {}", res.error());
+    }
+  }
+  log(RPCSRV, "Exited");
+  // exit
+  std::exit(0);
+}
+
 };
 };

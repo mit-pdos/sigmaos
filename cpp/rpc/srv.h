@@ -60,6 +60,9 @@ class Srv {
     return _netsrv->Close();
   }
 
+  // Mark self as started, run, block until evicted, and exit once evicted.
+  [[noreturn]] void Run();
+
   private:
   bool _done;
   std::shared_ptr<sigmaos::proxy::sigmap::Clnt> _sp_clnt;

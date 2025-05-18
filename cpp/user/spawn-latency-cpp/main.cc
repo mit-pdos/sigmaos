@@ -27,7 +27,7 @@ int main(int argc, char *argv[]) {
       log(CPP_USER_PROC, "Error started: {}", res.error());
     }
   }
-  std::thread evict_thread(wait_for_eviction, sp_clnt);
+  auto evict_thread = sp_clnt->StartWaitEvictThread();
   // Test connection to spproxyd
   log(CPP_USER_PROC, "Test");
   sp_clnt->Test();

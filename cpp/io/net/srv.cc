@@ -19,7 +19,7 @@ void Srv::handle_connections() {
   while(!_done) {
     auto res = _lis->Accept();
     if (!res.has_value()) {
-      throw std::runtime_error(std::format("Error accept TCP connection: {}", res.error().String()));
+      fatal("Error accept TCP connection: {}", res.error().String());
     }
     auto conn = res.value();
     log(NETSRV, "Accepted connection");

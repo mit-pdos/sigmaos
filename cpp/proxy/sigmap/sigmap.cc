@@ -18,10 +18,10 @@ void Clnt::init_conn() {
   auto res = _rpcc->RPC("SPProxySrvAPI.Init", req, rep);
   if (!res.has_value()) {
     log(SPPROXYCLNT_ERR, "Err RPC: {}", res.error());
-    throw std::runtime_error(std::format("Err rpc: {}", res.error().String()));
+    fatal("Err rpc: {}", res.error().String());
   }
   if (rep.err().errcode() != sigmaos::serr::Terror::TErrNoError) {
-    throw std::runtime_error(std::format("init rpc error: {}", rep.err().ShortDebugString()));
+    fatal("init rpc error: {}", rep.err().ShortDebugString());
   }
   log(SPPROXYCLNT, "Init RPC successful");
   // Make sure to release the proc env proto pointer so it isn't destroyed
@@ -343,7 +343,7 @@ std::expected<int, sigmaos::serr::Error> Clnt::Seek(int fd, sigmaos::sigmap::typ
 
 // TODO: fence type in CreateLeased?
 std::expected<int, sigmaos::serr::Error> Clnt::CreateLeased(std::string pn, sigmaos::sigmap::types::Tperm perm, sigmaos::sigmap::types::Tmode mode, sigmaos::sigmap::types::TleaseID leaseID/*, f sp.Tfence*/) {
-  throw std::runtime_error("unimplemented: tfence");
+  fatal("unimplemented: tfence");
   log(SPPROXYCLNT, "CreateLeased: {} {} {} {}", pn, perm, mode, leaseID);
   SigmaCreateReq req;
   SigmaFdRep rep;
@@ -379,7 +379,7 @@ std::expected<sigmaos::sigmap::types::TclntID, sigmaos::serr::Error> Clnt::ClntI
 
 // TODO: fence type in FenceDir?
 std::expected<int, sigmaos::serr::Error> Clnt::FenceDir(std::string pn/*, f sp.Tfence*/) {
-  throw std::runtime_error("unimplemented: tfence");
+  fatal("unimplemented: tfence");
   log(SPPROXYCLNT, "FenceDir: {}", pn);
   SigmaFenceReq req;
   SigmaErrRep rep;
@@ -400,7 +400,7 @@ std::expected<int, sigmaos::serr::Error> Clnt::FenceDir(std::string pn/*, f sp.T
 //func (scc *SPProxyClnt) WriteFence(fd int, d []byte, f sp.Tfence) (sp.Tsize, error) {
 
 std::expected<int, sigmaos::serr::Error> WriteRead(int fd, std::shared_ptr<sigmaos::io::iovec::IOVec> in_iov, std::shared_ptr<sigmaos::io::iovec::IOVec> out_iov) {
-  throw std::runtime_error("unimplemented: blob");
+  fatal("unimplemented: blob");
 //  log(SPPROXYCLNT, "WriteRead: {}", fd);
 //  SigmaWriteReq req;
 //  SigmaDataRep rep;
@@ -574,7 +574,7 @@ std::expected<std::vector<std::string>, sigmaos::serr::Error> Clnt::Mounts() {
 }
 
 std::expected<int, sigmaos::serr::Error> Clnt::SetLocalMount(std::shared_ptr<TendpointProto>, sigmaos::sigmap::types::Tport port) {
-  throw std::runtime_error("unimplemented (in go version too)");
+  fatal("unimplemented (in go version too)");
 }
 
 // TODO: support MountPathClnt?

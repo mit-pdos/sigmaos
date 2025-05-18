@@ -39,7 +39,7 @@ class Srv {
       auto res = _srv->RegisterEP(ECHOSRV_REALM_PN);
       if (!res.has_value()) {
         log(ECHOSRV_ERR, "Error RegisterEP: {}", res.error());
-        throw std::runtime_error(std::format("Error RegisterEP: {}", res.error().String()));
+        fatal("Error RegisterEP: {}", res.error().String());
       }
       log(ECHOSRV, "Registered sigmaEP");
     }

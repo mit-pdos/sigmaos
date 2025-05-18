@@ -11,7 +11,7 @@ std::shared_ptr<ProcEnv> GetProcEnv() {
   }
   std::string pe_str(std::getenv("SIGMACONFIG"));
   if (pe_str.length() == 0) {
-    throw std::runtime_error("Empty proc env");
+    fatal("Empty proc env");
   }
   _env = std::make_shared<ProcEnv>(pe_str);
   return _env;

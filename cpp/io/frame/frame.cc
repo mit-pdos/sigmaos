@@ -25,7 +25,7 @@ std::expected<int, sigmaos::serr::Error> ReadFrameIntoBuf(std::shared_ptr<sigmao
     b->resize(nbyte);
   }
   if (nbyte > b->size()) {
-    throw std::runtime_error(std::format("Try to read {} bytes into a {}-byte buffer", nbyte, b->size()));
+    fatal("Try to read {} bytes into a {}-byte buffer", nbyte, b->size());
   }
   // Shrink the buffer to the right size
   b->resize(nbyte);

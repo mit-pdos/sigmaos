@@ -83,7 +83,7 @@ std::shared_ptr<TendpointProto> Srv::GetEndpoint() {
 
 void Srv::ExposeRPCHandler(std::shared_ptr<RPCEndpoint> rpce) {
   if (_rpc_endpoints.contains(rpce->GetMethod())) {
-    throw std::runtime_error(std::format("Double-register method {}", rpce->GetMethod()));
+    fatal("Double-register method {}", rpce->GetMethod());
   }
   _rpc_endpoints[rpce->GetMethod()] = rpce;
 }

@@ -37,7 +37,7 @@ void Srv::handle_request(std::shared_ptr<sigmaos::io::transport::Call> req) {
     auto res = _serve_request(req);
     if (!res.has_value()) {
       log(DEMUXSRV_ERR, "demuxsrv serve_request error: {}", res.error().String());
-      throw std::runtime_error("serve request error unimplemented");
+      fatal("demuxsrv serve_request unimplemented: {}", res.error().String());
       // TODO: should we return here?
       return;
     }

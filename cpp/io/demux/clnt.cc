@@ -80,7 +80,7 @@ void Clnt::read_responses() {
         auto p = std::move(res.value());
         p->set_value(call);
       } else {
-        throw std::runtime_error("reply with no matching req");
+        fatal("reply with no matching req");
       }
     }
   }

@@ -56,7 +56,7 @@ class ClntConn : public Conn {
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd == -1) {
       log(TCPCONN_ERR, "Failed to create client TCP socket fd", srv_addr, port);
-      throw std::runtime_error("Failed to create client TCP socket fd");
+      fatal("Failed to create client TCP socket fd");
     }
     addr.sin_family = AF_INET;
     addr.sin_addr.s_addr = inet_addr(srv_addr.c_str());
@@ -64,7 +64,7 @@ class ClntConn : public Conn {
     if (connect(sockfd, (struct sockaddr *) &addr, sizeof(addr)) == -1) {
       close(sockfd);
       log(TCPCONN_ERR, "Failed to connect client TCP socket", srv_addr, port);
-      throw std::runtime_error("Failed to connect client TCP socket");
+      fatal("Failed to connect client TCP socket");
     }
     init(sockfd, addr);
   }
@@ -79,21 +79,21 @@ class Listener {
     log(TCPCONN, "New TCP listener");
     _sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (_sockfd == -1) {
-      throw std::runtime_error("failed to create TCP listener socket");
+      fatal("failed to create TCP listener socket");
     }
     _addr.sin_family = AF_INET;
     _addr.sin_addr.s_addr = htonl(INADDR_ANY);
     _addr.sin_port = 0;
     if (bind(_sockfd, (struct sockaddr *) &_addr, sizeof(_addr))) {
-      throw std::runtime_error("bind failed");
+      fatal("bind failed");
     }
     log(TCPCONN, "Bound socket addr");
     if (listen(_sockfd, SOCK_BACKLOG)) {
-      throw std::runtime_error("listen failed");
+      fatal("listen failed");
     }
     socklen_t addr_len = sizeof(_addr);
     if (getsockname(_sockfd, (struct sockaddr *) &_addr, &addr_len)) {
-      throw std::runtime_error("getsockname failed");
+      fatal("getsockname failed");
     }
     log(TCPCONN, "Listener addr: {}:{}", _addr.sin_addr.s_addr, htons(_addr.sin_port));
   }

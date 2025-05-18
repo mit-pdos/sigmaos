@@ -65,7 +65,7 @@ void set_blob_iov(std::shared_ptr<sigmaos::io::iovec::IOVec> src, google::protob
     // Sanity check: output buffers passed to proto library shouldn't be ref
     // counted at this layer
     if (src_buf->IsRefCounted()) {
-      throw std::runtime_error("Ref counted buffer moved to protobuf");
+      fatal("Ref counted buffer moved to protobuf");
     }
     blob_iov->AddAllocated(src_buf->Get());
   }

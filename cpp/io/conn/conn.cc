@@ -65,7 +65,7 @@ std::expected<int, sigmaos::serr::Error> Conn::Close() {
   // indefinitely, since closing while reading is UB.
   int err = close(_sockfd);
   if (err) {
-    throw std::runtime_error(std::format("Error close sockfd: {}", err));
+    fatal("Error close sockfd: {}", err);
   }
   log(CONN, "Done closing unix conn");
   return 0;

@@ -6,6 +6,7 @@
 #include <google/protobuf/util/json_util.h>
 
 #include <proc/proc.pb.h>
+#include <util/log/log.h>
 #include <sigmap/types.h>
 
 namespace sigmaos {
@@ -20,7 +21,7 @@ class ProcEnv {
   ProcEnv(std::string pe_str) {
     auto res = google::protobuf::json::JsonStringToMessage(pe_str, &_proto);
     if (!res.ok()) {
-      throw std::runtime_error(std::format("Error parse proc env str: {}", pe_str));
+      fatal("Error parse proc env str: {}", pe_str);
     }
   }
   ~ProcEnv() {}

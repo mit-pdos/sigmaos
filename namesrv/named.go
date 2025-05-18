@@ -159,7 +159,10 @@ func Run(args []string) error {
 	} else {
 		pn = path.MarkResolve(filepath.Join(sp.REALMS, nd.realm.String()))
 		db.DPrintf(db.ALWAYS, "NewEndpointSymlink %v %v lid %v", nd.realm, pn, nd.sess.Lease())
-		li, err := sc.LeaseClnt.AskLease(pn, fsetcd.LeaseTTL)
+		// Set lease shorter than fsetcd.LeaseTTL so that when new
+		// leading named is elected the old named's endpoint file has
+		// been deleted.
+		li, err := sc.LeaseClnt.AskLease(pn, fsetcd.LeaseTTL-1)
 		if err != nil {
 			db.DFatalf("Error AskLease %v: %v", pn, err)
 		}
@@ -299,6 +302,7 @@ func (nd *Named) waitExit(ch chan struct{}) {
 
 func (nd *Named) watchLeased() {
 	for pn := range nd.ephch {
+		db.DPrintf(db.NAMED_LDR, "Expired pn %v", pn)
 		nd.SigmaSrv.Notify(pn)
 	}
 }

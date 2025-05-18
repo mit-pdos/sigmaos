@@ -137,6 +137,83 @@ func TestKillNamedAlone(t *testing.T) {
 	}
 }
 
+func TestKillNamedClient(t *testing.T) {
+	const T = 1000
+	crashpn := sp.NAMED + "crashnd.sem"
+
+	e := crash.NewEventPath(crash.NAMED_CRASH, T, float64(1.0), crashpn)
+	err := crash.SetSigmaFail(crash.NewTeventMapOne(e))
+	assert.Nil(t, err)
+
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	defer ts.Shutdown()
+
+	nd1 := ndclnt.NewNamedProc(test.REALM1, ts.ProcEnv().UseDialProxy, true)
+	if err := ndclnt.StartNamed(ts.SigmaClnt, nd1); !assert.Nil(ts.T, err, "Err startNamed: %v", err) {
+		return
+	}
+
+	pe := proc.NewDifferentRealmProcEnv(ts.ProcEnv(), test.REALM1)
+	sc, err := sigmaclnt.NewSigmaClnt(pe)
+	if !assert.Nil(ts.T, err, "Err new sigmaclnt realm: %v", err) {
+		return
+	}
+
+	ch := make(chan bool)
+	go func(ch chan bool) {
+		done := false
+		for !done {
+			select {
+			case <-ch:
+				db.DPrintf(db.TEST, "done")
+				done = true
+			default:
+				time.Sleep(1 * time.Second)
+				db.DPrintf(db.TEST, "Create")
+				fn := filepath.Join(sp.NAMED, "fff")
+				_, err = sc.PutFile(fn, 0777, sp.OREAD, nil)
+				assert.Nil(t, err)
+				sts, err := sc.GetDir(sp.NAMED)
+				assert.Nil(t, err)
+				assert.True(t, sp.Present(sts, []string{fn}))
+				err = sc.Remove(fn)
+				assert.Equal(t, nil, err)
+			}
+		}
+		ch <- true
+	}(ch)
+
+	time.Sleep(3 * time.Second)
+
+	// Start a new named
+	nd2 := ndclnt.NewNamedProc(test.REALM1, ts.ProcEnv().UseDialProxy, false)
+	db.DPrintf(db.TEST, "Starting a new named: %v", nd2.GetPid())
+	if err := ndclnt.StartNamed(ts.SigmaClnt, nd2); !assert.Nil(ts.T, err, "Err startNamed 2: %v", err) {
+		return
+	}
+	// Tell named to old crash
+	db.DPrintf(db.TEST, "Crashing named")
+	err = crash.SignalFailer(sc.FsLib, crashpn)
+	assert.Nil(t, err, "Err crash: %v", err)
+
+	// Allow the crashing named time to crash
+	time.Sleep(T * time.Millisecond)
+
+	db.DPrintf(db.TEST, "named should be dead & buried")
+
+	ch <- true
+	<-ch
+
+	db.DPrintf(db.TEST, "client finished")
+
+	if err := ndclnt.StopNamed(ts.SigmaClnt, nd2); !assert.Nil(ts.T, err, "Err stop named: %v", err) {
+		return
+	}
+}
+
 // Create a leased file and then reboot
 func reboot(t *testing.T, dn string, f func(*test.Tstate, *sigmaclnt.SigmaClnt, string), quick bool) {
 	ts, err1 := test.NewTstateAll(t)

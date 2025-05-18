@@ -14,6 +14,7 @@ import (
 	dialproxyclnt "sigmaos/dialproxy/clnt"
 	"sigmaos/ft/procgroupmgr"
 	kernelclnt "sigmaos/kernel/clnt"
+	"sigmaos/path"
 	"sigmaos/proc"
 	realmpkg "sigmaos/realm"
 	"sigmaos/realm/proto"
@@ -149,7 +150,7 @@ func (rm *RealmSrv) Make(ctx fs.CtxI, req proto.MakeReq, res *proto.MakeRep) err
 
 	// wait until the realm's named has registered its endpoint and is ready to
 	// serve
-	if _, err := rm.sc.GetFileWatch(filepath.Join(sp.REALMS, req.Realm)); err != nil {
+	if _, err := rm.sc.GetFileWatch(path.MarkResolve(filepath.Join(sp.REALMS, req.Realm))); err != nil {
 		db.DPrintf(db.ERROR, "Error GetFileWatch named root: %v", err)
 		return err
 	}

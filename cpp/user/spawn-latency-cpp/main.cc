@@ -7,15 +7,6 @@
 
 const std::string CPP_USER_PROC = "CPP_USER_PROC";
 
-void wait_for_eviction(std::shared_ptr<sigmaos::proxy::sigmap::Clnt> sp_clnt) {
-  log(CPP_USER_PROC, "Waiting for eviction");
-  auto res = sp_clnt->WaitEvict();
-  if (!res.has_value()) {
-    log(CPP_USER_PROC, "Error WaitEvict: {}", res.error());
-  }
-  log(CPP_USER_PROC, "Done waiting for eviction");
-}
-
 int main(int argc, char *argv[]) {
   sigmaos::util::log::init_logger(CPP_USER_PROC);
   log(CPP_USER_PROC, "Running");

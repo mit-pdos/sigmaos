@@ -9,7 +9,7 @@ import (
 
 	"net"
 	rpcclnt "sigmaos/rpc/clnt"
-	"sigmaos/rpc/clnt/channel/rpcchannel"
+	rpcchannel "sigmaos/rpc/clnt/channel/connchannel"
 	rpcclntopts "sigmaos/rpc/clnt/opts"
 
 	"github.com/stretchr/testify/assert"
@@ -153,9 +153,8 @@ func TestEchoServerProc(t *testing.T) {
 	assert.Nil(mrts.GetRealm(test.REALM1).Ts.T, err, "ReadEndpoint: %v", err)
 	db.DPrintf(db.TEST, "CPP Echo srv EP: %v", ep)
 
-	conn, err := net.Dial("tcp", ep.Addrs()[0].IPPort())
+	ch, err := rpcchannel.NewTCPConnChannel(ep)
 	if assert.Nil(mrts.GetRealm(test.REALM1).Ts.T, err, "Dial: %v", err) {
-		ch := rpcchannel.NewRPCChannel(conn)
 		rpcc, err := rpcclnt.NewRPCClnt("echosrv", rpcclntopts.WithRPCChannel(ch))
 		if assert.Nil(mrts.GetRealm(test.REALM1).Ts.T, err, "New RPCClnt") {
 			arg := &echoproto.EchoReq{

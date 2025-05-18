@@ -57,3 +57,7 @@ func (ch *RPCChannel) ReportError(err error) {
 func (ch *RPCChannel) close() error {
 	return ch.conn.Close()
 }
+
+func (ch *RPCChannel) Conn() net.Conn {
+	return ch.conn
+}

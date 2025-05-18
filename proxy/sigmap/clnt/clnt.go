@@ -30,7 +30,7 @@ type SPProxyClnt struct {
 }
 
 func NewSPProxyClnt(pe *proc.ProcEnv, npc *dialproxyclnt.DialProxyClnt) (*SPProxyClnt, error) {
-	conn, err := net.Dial("unix", sp.SIGMASOCKET)
+	ch, err := rpcchannel.NewUnixConnChannel(sp.SIGMASOCKET)
 	if err != nil {
 		return nil, err
 	}
@@ -40,11 +40,9 @@ func NewSPProxyClnt(pe *proc.ProcEnv, npc *dialproxyclnt.DialProxyClnt) (*SPProx
 		dmx:          nil,
 		rpcc:         nil,
 		seqcntr:      new(sessp.Tseqcntr),
-		conn:         conn,
+		conn:         ch.Conn(),
 		disconnected: false,
 	}
-
-	ch := rpcchannel.NewRPCChannel(conn)
 	rpcc, err := rpcclnt.NewRPCClnt("spproxy", rpcclntopts.WithRPCChannel(ch))
 	if err != nil {
 		return nil, err

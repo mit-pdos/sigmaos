@@ -13,6 +13,7 @@
 // Some common debug selectors
 const std::string TEST = "TEST";
 const std::string ALWAYS = "ALWAYS";
+const std::string FATAL = "FATAL";
 const std::string SPAWN_LAT = "SPAWN_LAT";
 
 namespace sigmaos {
@@ -26,7 +27,7 @@ const std::string ERR = "_ERR";
 class sigmadebug_sink : public spdlog::sinks::base_sink<std::mutex> {
   public:
   sigmadebug_sink(std::string selector) : _enabled(false), _stdout_sink(std::make_shared<spdlog::sinks::stdout_sink_mt>()) {
-    if (selector == ALWAYS) {
+    if (selector == ALWAYS || selector == FATAL) {
       _enabled = true;
     }
     std::string sigmadebug(std::getenv("SIGMADEBUG"));
@@ -69,6 +70,7 @@ class _log {
   ~_log();
   private:
   static bool _l_always;
+  static bool _l_fatal;
   static bool _l_test;
   static bool _l_spawn_lat;
 };
@@ -85,4 +87,16 @@ void log(std::string selector, spdlog::format_string_t<Args...> fmt, Args &&...a
     logger = spdlog::get(selector);
   }
   logger->info(fmt, std::forward<Args>(args)...);
+}
+
+// Write a log line given a selector
+template <typename... Args>
+void fatal(spdlog::format_string_t<Args...> fmt, Args &&...args) {
+  auto logger = spdlog::get(FATAL);
+  if (logger == nullptr) {
+    sigmaos::util::log::init_logger(FATAL);
+    logger = spdlog::get(FATAL);
+  }
+  logger->info(fmt, std::forward<Args>(args)...);
+  throw std::runtime_error("FATAL CPP");
 }

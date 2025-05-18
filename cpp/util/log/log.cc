@@ -6,6 +6,7 @@ namespace sigmaos {
 namespace util::log {
 
 bool _log::_l_always = init_logger(ALWAYS);
+bool _log::_l_fatal = init_logger(FATAL);
 bool _log::_l_test = init_logger(TEST);
 bool _log::_l_spawn_lat = init_logger(SPAWN_LAT);
 

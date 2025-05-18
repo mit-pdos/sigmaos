@@ -53,7 +53,10 @@ class Srv {
   }
   ~Srv() {}
 
-  void RegisterRPCEndpoint(std::shared_ptr<RPCEndpoint> rpce);
+  // Expose an RPC handler via this RPC server
+  void ExposeRPCHandler(std::shared_ptr<RPCEndpoint> rpce);
+  // Register this server's SigmaEP in the realm namespace at path pn
+  std::expected<int, sigmaos::serr::Error> RegisterEP(std::string pn);
   std::shared_ptr<TendpointProto> GetEndpoint();
   std::expected<int, sigmaos::serr::Error> Close() {
     _done = true;

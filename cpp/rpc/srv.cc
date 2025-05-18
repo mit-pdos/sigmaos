@@ -81,13 +81,25 @@ std::shared_ptr<TendpointProto> Srv::GetEndpoint() {
   return ep;
 }
 
-void Srv::RegisterRPCEndpoint(std::shared_ptr<RPCEndpoint> rpce) {
+void Srv::ExposeRPCHandler(std::shared_ptr<RPCEndpoint> rpce) {
   if (_rpc_endpoints.contains(rpce->GetMethod())) {
     throw std::runtime_error(std::format("Double-register method {}", rpce->GetMethod()));
   }
   _rpc_endpoints[rpce->GetMethod()] = rpce;
 }
 
+std::expected<int, sigmaos::serr::Error> Srv::RegisterEP(std::string pn) {
+  {
+    auto ep = GetEndpoint();
+    auto res = _sp_clnt->RegisterEP("name/echo-srv-cpp", ep);
+    if (!res.has_value()) {
+      log(RPCSRV_ERR, "Error RegisterEP: {}", res.error());
+      return std::unexpected(res.error());
+    }
+    log(RPCSRV, "Registered sigmaEP {} in realm at pn {}", ep->ShortDebugString(), pn);
+  }
+  return 0;
+}
 
 [[noreturn]] void Srv::Run() {
   // Mark server as started

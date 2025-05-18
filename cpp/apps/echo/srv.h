@@ -24,6 +24,8 @@ namespace apps::echo {
 const std::string ECHOSRV = "ECHOSRV";
 const std::string ECHOSRV_ERR = "ECHOSRV" + sigmaos::util::log::ERR;
 
+const std::string ECHOSRV_REALM_PN = "name/echo-srv-cpp";
+
 class Srv {
   public:
   Srv(std::shared_ptr<sigmaos::proxy::sigmap::Clnt> sp_clnt) : _sp_clnt(sp_clnt) {
@@ -31,16 +33,15 @@ class Srv {
     _srv = std::make_shared<sigmaos::rpc::srv::Srv>(sp_clnt);
     log(ECHOSRV, "Started RPC srv");
     auto echo_ep = std::make_shared<sigmaos::rpc::srv::RPCEndpoint>("EchoSrv.Echo", std::make_shared<EchoReq>(), std::make_shared<EchoRep>(), std::bind(&Srv::Echo, this, std::placeholders::_1, std::placeholders::_2));
-    _srv->RegisterRPCEndpoint(echo_ep);
-    log(ECHOSRV, "Registered echo ep");
+    _srv->ExposeRPCHandler(echo_ep);
+    log(ECHOSRV, "Exposed echo RPC handler");
     {
-      auto ep = _srv->GetEndpoint();
-      auto res = sp_clnt->RegisterEP("name/echo-srv-cpp", ep);
+      auto res = _srv->RegisterEP(ECHOSRV_REALM_PN);
       if (!res.has_value()) {
         log(ECHOSRV_ERR, "Error RegisterEP: {}", res.error());
         throw std::runtime_error(std::format("Error RegisterEP: {}", res.error().String()));
       }
-      log(ECHOSRV, "Registered sigmaEP in realm namespace");
+      log(ECHOSRV, "Registered sigmaEP");
     }
   }
   ~Srv() {}

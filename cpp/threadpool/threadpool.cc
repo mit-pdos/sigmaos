@@ -7,13 +7,16 @@ bool Threadpool::_l = sigmaos::util::log::init_logger(THREADPOOL);
 bool Threadpool::_l_e = sigmaos::util::log::init_logger(THREADPOOL_ERR);
 
 void Threadpool::Run(std::function<void(void)> f) {
-  std::lock_guard<std::mutex> guard(_mu);
-  // If there are no idle threads, create a new thread.
-  if (_n_idle == 0) {
-    add_thread();
+  {
+    std::lock_guard<std::mutex> guard(_mu);
+    // If there are no idle threads, create a new thread.
+    if (_n_idle == 0) {
+      add_thread();
+    }
+    // Add to the work queue
+    _work_q.push(f);
   }
-  // Add to the work queue
-  _work_q.push(f);
+  _cond.notify_one();
 }
 
 // Thread main loop

@@ -76,11 +76,9 @@ class Srv {
   static bool _l;
   static bool _l_e;
   
-  // TODO: move request handler typedef to its own header
   std::expected<std::shared_ptr<sigmaos::io::transport::Call>, sigmaos::serr::Error> serve_request(std::shared_ptr<sigmaos::io::transport::Call> req);
   std::expected<std::shared_ptr<sigmaos::io::transport::Call>, sigmaos::serr::Error> unwrap_and_run_rpc(std::shared_ptr<sigmaos::io::transport::Call> req);
 };
-
 
 };
 };

@@ -7,6 +7,7 @@ add_library(io_net STATIC
 
 target_link_libraries(io_net PUBLIC
   serr
+  threadpool
   util_log
   io_transport_internal
   io_conn_tcp

@@ -23,10 +23,8 @@ void Srv::handle_connections() {
     }
     auto conn = res.value();
     log(NETSRV, "Accepted connection");
-    // TODO: do this in another thread
-    handle_connection(conn);
-    // TODO: use thread pool
-//    std::thread(&Srv::handle_connection, this, conn);
+    // Handle the connection via the thread pool
+    _thread_pool.Run(std::bind(&Srv::handle_connection, this, conn));
   }
 }
 

@@ -10,6 +10,7 @@
 #include <io/conn/tcp/tcp.h>
 #include <io/demux/srv.h>
 #include <serr/serr.h>
+#include <threadpool/threadpool.h>
 
 namespace sigmaos {
 namespace io::net {
@@ -19,7 +20,7 @@ const std::string NETSRV_ERR = NETSRV + sigmaos::util::log::ERR;
 
 class Srv {
   public:
-  Srv(sigmaos::io::demux::RequestHandler serve_request) : _done(false), _serve_request(serve_request), _sessions() {
+  Srv(sigmaos::io::demux::RequestHandler serve_request) : _done(false), _serve_request(serve_request), _sessions(), _thread_pool() {
     log(NETSRV, "Starting net server");
     _lis = std::make_shared<sigmaos::io::conn::tcpconn::Listener>();
     log(NETSRV, "TCP server started");
@@ -37,6 +38,7 @@ class Srv {
   bool _done;
   sigmaos::io::demux::RequestHandler _serve_request;
   std::vector<std::shared_ptr<sigmaos::io::demux::Srv>> _sessions;
+  sigmaos::threadpool::Threadpool _thread_pool;
   std::shared_ptr<sigmaos::io::conn::tcpconn::Listener> _lis;
   std::thread connection_handler;
   // Used for logger initialization

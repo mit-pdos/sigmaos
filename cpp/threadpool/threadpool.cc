@@ -36,7 +36,7 @@ void Threadpool::work() {
       // waiter
       wakeup_next_waiter = _work_q.size() > 0;
     }
-    // Wake up the next waiter (there is work left in the queue)
+    // Wake up the next waiter if there is work left in the queue
     if (wakeup_next_waiter) {
       _cond.notify_one();
     }

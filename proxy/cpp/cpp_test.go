@@ -154,22 +154,30 @@ func TestEchoServerProc(t *testing.T) {
 		return
 	}
 
+	db.DPrintf(db.TEST, "Created echosrv RPC clnt")
+
 	arg := &echoproto.EchoReq{
 		Text: "Hello there!",
 		Num1: 1,
 		Num2: 2,
 	}
 	var res echoproto.EchoRep
+	db.DPrintf(db.TEST, "Send good EchoSrv.Echo RPC")
 	err = rpcc.RPC("EchoSrv.Echo", arg, &res)
+	db.DPrintf(db.TEST, "Recv good EchoSrv.Echo RPC reply")
 	assert.Nil(mrts.GetRealm(test.REALM1).Ts.T, err, "Error echo RPC: %v", err)
 	assert.Equal(mrts.T, arg.Text, res.Text, "Didn't echo correctly")
 	assert.Equal(mrts.T, arg.Num1+arg.Num2, res.Res, "Didn't add correctly: %v + %v != %v", arg.Num1, arg.Num2, res.Res)
+	db.DPrintf(db.TEST, "Send bad EchoSrv.Echo RPC")
 	err = rpcc.RPC("EchoSrv.Echo234", arg, &res)
+	db.DPrintf(db.TEST, "Recv bad EchoSrv.Echo RPC reply")
 	assert.NotNil(mrts.GetRealm(test.REALM1).Ts.T, err, "Unexpectedly succeeded unknown RPC: %v", err)
 
+	db.DPrintf(db.TEST, "Evict echosrv")
 	err = mrts.GetRealm(test.REALM1).Evict(p.GetPid())
 	assert.Nil(mrts.GetRealm(test.REALM1).Ts.T, err, "Evict")
 
+	db.DPrintf(db.TEST, "WaitExit echosrv")
 	status, err := mrts.GetRealm(test.REALM1).WaitExit(p.GetPid())
 	db.DPrintf(db.TEST, "CPP proc exited, status: %v", status)
 	assert.Nil(mrts.GetRealm(test.REALM1).Ts.T, err, "WaitExit error")

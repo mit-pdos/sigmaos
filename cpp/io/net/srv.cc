@@ -8,7 +8,6 @@ bool Srv::_l_e = sigmaos::util::log::init_logger(NETSRV_ERR);
 
 void Srv::handle_connection(std::shared_ptr<sigmaos::io::conn::Conn> conn) {
   log(NETSRV, "Handling connection!");
-  // TODO: Make transport
   auto trans = std::make_shared<sigmaos::io::transport::Transport>(conn);
   log(NETSRV, "Made transport");
   _demux_srvs.push_back(std::make_shared<sigmaos::io::demux::Srv>(trans, _serve_request, _demux_init_nthread));

@@ -7,17 +7,12 @@ import (
 	"testing"
 	"time"
 
-	"net"
-	rpcclnt "sigmaos/rpc/clnt"
-	rpcchannel "sigmaos/rpc/clnt/channel/connchannel"
-	rpcncclnt "sigmaos/rpc/clnt/netconn"
-	rpcclntopts "sigmaos/rpc/clnt/opts"
-
 	"github.com/stretchr/testify/assert"
 
 	db "sigmaos/debug"
 	echoproto "sigmaos/example/example_echo_server/proto"
 	"sigmaos/proc"
+	rpcncclnt "sigmaos/rpc/clnt/netconn"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )

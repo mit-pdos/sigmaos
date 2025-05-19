@@ -91,7 +91,7 @@ void log(std::string selector, spdlog::format_string_t<Args...> fmt, Args &&...a
 
 // Write a log line given a selector
 template <typename... Args>
-void fatal(spdlog::format_string_t<Args...> fmt, Args &&...args) {
+[[noreturn]] void fatal(spdlog::format_string_t<Args...> fmt, Args &&...args) {
   auto logger = spdlog::get(FATAL);
   if (logger == nullptr) {
     sigmaos::util::log::init_logger(FATAL);

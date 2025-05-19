@@ -5,8 +5,8 @@ import (
 	"net"
 
 	db "sigmaos/debug"
-	"sigmaos/proxy/sigmap/transport"
 	"sigmaos/rpc"
+	"sigmaos/rpc/transport"
 	sessp "sigmaos/session/proto"
 	"sigmaos/util/io/demux"
 )

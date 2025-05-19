@@ -52,6 +52,7 @@ void Threadpool::work() {
 
 // Add a new thread to the thread pool. Caller holds lock.
 void Threadpool::add_thread() {
+  log(THREADPOOL, "{} add_thread", _name);
   // Add a new thread to the pool
   _threads.push_back(std::thread(std::bind(&Threadpool::work, this)));
   // Increment the number of idle threads

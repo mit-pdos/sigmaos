@@ -23,6 +23,7 @@ add_subdirectory(proxy)
 add_subdirectory(sigmap)
 add_subdirectory(rpc)
 add_subdirectory(apps)
+add_subdirectory(threadpool)
 
 # Procs
 add_subdirectory(user)

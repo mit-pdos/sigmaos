@@ -12,6 +12,7 @@ target_link_libraries(io_demux PUBLIC
   util_log
   io_demux_internal
   io_transport
+  threadpool
 )
 
 target_include_directories(io_demux PUBLIC ${CMAKE_SOURCE_DIR})

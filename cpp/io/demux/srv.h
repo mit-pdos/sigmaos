@@ -7,6 +7,7 @@
 #include <io/transport/transport.h>
 #include <io/transport/call.h>
 #include <io/demux/internal/callmap.h>
+#include <threadpool/threadpool.h>
 
 namespace sigmaos {
 namespace io::demux {
@@ -18,7 +19,7 @@ typedef std::function<std::expected<std::shared_ptr<sigmaos::io::transport::Call
 
 class Srv {
   public:
-  Srv(std::shared_ptr<sigmaos::io::transport::Transport> trans, RequestHandler serve_request) : _mu(), _closed(false), _trans(trans), _serve_request(serve_request), _callmap(), _reader_thread(std::thread(&Srv::read_requests, this)) {
+  Srv(std::shared_ptr<sigmaos::io::transport::Transport> trans, RequestHandler serve_request) : _mu(), _closed(false), _trans(trans), _serve_request(serve_request), _callmap(), _reader_thread(std::thread(&Srv::read_requests, this)), _thread_pool() {
     log(DEMUXSRV, "New demuxsrv");
   }
 
@@ -33,6 +34,7 @@ class Srv {
   std::shared_ptr<sigmaos::io::transport::Transport> _trans;
   RequestHandler _serve_request;
   sigmaos::io::demux::internal::CallMap _callmap;
+  sigmaos::threadpool::Threadpool _thread_pool;
   std::thread _reader_thread;
   // Used for logger initialization
   static bool _l;

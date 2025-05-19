@@ -23,7 +23,12 @@ const std::string THREADPOOL_ERR = THREADPOOL + sigmaos::util::log::ERR;
 
 class Threadpool {
   public:
-  Threadpool() : _mu(), _cond(), _n_idle(0), _threads(), _work_q() {}
+  Threadpool() : Threadpool(0) {}
+  Threadpool(int n_initial_threads) : _mu(), _cond(), _n_idle(0), _threads(), _work_q() {
+    for (int i = 0; i < n_initial_threads; i++) {
+      add_thread();
+    }
+  }
   ~Threadpool() {}
 
   // Run a function in the threadpool

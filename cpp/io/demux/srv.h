@@ -19,7 +19,9 @@ typedef std::function<std::expected<std::shared_ptr<sigmaos::io::transport::Call
 
 class Srv {
   public:
-  Srv(std::shared_ptr<sigmaos::io::transport::Transport> trans, RequestHandler serve_request) : _mu(), _closed(false), _trans(trans), _serve_request(serve_request), _callmap(), _reader_thread(std::thread(&Srv::read_requests, this)), _thread_pool() {
+  Srv(std::shared_ptr<sigmaos::io::transport::Transport> trans, RequestHandler serve_request) : Srv(trans, serve_request, 0) {}
+
+  Srv(std::shared_ptr<sigmaos::io::transport::Transport> trans, RequestHandler serve_request, int init_nthread) : _mu(), _closed(false), _trans(trans), _serve_request(serve_request), _callmap(), _reader_thread(std::thread(&Srv::read_requests, this)), _thread_pool(init_nthread) {
     log(DEMUXSRV, "New demuxsrv");
   }
 

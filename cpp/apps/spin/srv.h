@@ -25,12 +25,13 @@ const std::string SPINSRV = "SPINSRV";
 const std::string SPINSRV_ERR = "SPINSRV" + sigmaos::util::log::ERR;
 
 const std::string SPINSRV_REALM_PN = "name/spin-srv-cpp";
+const int INIT_NTHREAD = 100;
 
 class Srv {
   public:
   Srv(std::shared_ptr<sigmaos::proxy::sigmap::Clnt> sp_clnt) : _sp_clnt(sp_clnt) {
     log(SPINSRV, "Starting RPC srv");
-    _srv = std::make_shared<sigmaos::rpc::srv::Srv>(sp_clnt);
+    _srv = std::make_shared<sigmaos::rpc::srv::Srv>(sp_clnt, INIT_NTHREAD);
     log(SPINSRV, "Started RPC srv");
     auto spin_ep = std::make_shared<sigmaos::rpc::srv::RPCEndpoint>("SpinSrv.Spin", std::make_shared<SpinReq>(), std::make_shared<SpinRep>(), std::bind(&Srv::Spin, this, std::placeholders::_1, std::placeholders::_2));
     _srv->ExposeRPCHandler(spin_ep);

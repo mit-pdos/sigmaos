@@ -45,9 +45,10 @@ class RPCEndpoint {
 
 class Srv {
   public:
-  Srv(std::shared_ptr<sigmaos::proxy::sigmap::Clnt> sp_clnt) : _done(false), _sp_clnt(sp_clnt), _sessions(), _rpc_endpoints() {
+  Srv(std::shared_ptr<sigmaos::proxy::sigmap::Clnt> sp_clnt) : Srv(sp_clnt, 0) {}
+  Srv(std::shared_ptr<sigmaos::proxy::sigmap::Clnt> sp_clnt, int demux_init_nthread) : _done(false), _sp_clnt(sp_clnt), _rpc_endpoints() {
     log(RPCSRV, "Starting net server");
-    _netsrv = std::make_shared<sigmaos::io::net::Srv>(std::bind(&Srv::serve_request, this, std::placeholders::_1));
+    _netsrv = std::make_shared<sigmaos::io::net::Srv>(std::bind(&Srv::serve_request, this, std::placeholders::_1), demux_init_nthread);
     int port = _netsrv->GetPort();
     log(RPCSRV, "Net server started with port {}", port);
   }
@@ -70,7 +71,6 @@ class Srv {
   bool _done;
   std::shared_ptr<sigmaos::proxy::sigmap::Clnt> _sp_clnt;
   std::shared_ptr<sigmaos::io::net::Srv> _netsrv;
-  std::vector<std::shared_ptr<sigmaos::io::demux::Srv>> _sessions;
   std::map<std::string, std::shared_ptr<RPCEndpoint>> _rpc_endpoints;
   // Used for logger initialization
   static bool _l;

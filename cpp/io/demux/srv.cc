@@ -25,8 +25,6 @@ void Srv::read_requests() {
     req->SwapIOVecs();
     log(DEMUXSRV, "demuxsrv done reading call {}, handle request", req->GetSeqno());
     _thread_pool.Run(std::bind(&Srv::handle_request, this, res.value()));
-//    // TODO: use thread pool
-//    threads.push_back(std::thread(&Srv::handle_request, this, res.value()));
   }
 }
 

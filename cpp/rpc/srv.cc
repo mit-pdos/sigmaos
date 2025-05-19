@@ -91,7 +91,7 @@ void Srv::ExposeRPCHandler(std::shared_ptr<RPCEndpoint> rpce) {
 std::expected<int, sigmaos::serr::Error> Srv::RegisterEP(std::string pn) {
   {
     auto ep = GetEndpoint();
-    auto res = _sp_clnt->RegisterEP("name/echo-srv-cpp", ep);
+    auto res = _sp_clnt->RegisterEP(pn, ep);
     if (!res.has_value()) {
       log(RPCSRV_ERR, "Error RegisterEP: {}", res.error());
       return std::unexpected(res.error());

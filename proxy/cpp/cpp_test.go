@@ -9,6 +9,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	spinproto "sigmaos/apps/spin/proto"
 	db "sigmaos/debug"
 	echoproto "sigmaos/example/example_echo_server/proto"
 	"sigmaos/proc"
@@ -161,15 +162,15 @@ func TestEchoServerProc(t *testing.T) {
 		Num1: 1,
 		Num2: 2,
 	}
-	var res echoproto.EchoRep
+	var rep echoproto.EchoRep
 	db.DPrintf(db.TEST, "Send good EchoSrv.Echo RPC")
-	err = rpcc.RPC("EchoSrv.Echo", arg, &res)
+	err = rpcc.RPC("EchoSrv.Echo", arg, &rep)
 	db.DPrintf(db.TEST, "Recv good EchoSrv.Echo RPC reply")
 	assert.Nil(mrts.GetRealm(test.REALM1).Ts.T, err, "Error echo RPC: %v", err)
-	assert.Equal(mrts.T, arg.Text, res.Text, "Didn't echo correctly")
-	assert.Equal(mrts.T, arg.Num1+arg.Num2, res.Res, "Didn't add correctly: %v + %v != %v", arg.Num1, arg.Num2, res.Res)
+	assert.Equal(mrts.T, arg.Text, rep.Text, "Didn't echo correctly")
+	assert.Equal(mrts.T, arg.Num1+arg.Num2, rep.Res, "Didn't add correctly: %v + %v != %v", arg.Num1, arg.Num2, rep.Res)
 	db.DPrintf(db.TEST, "Send bad EchoSrv.Echo RPC")
-	err = rpcc.RPC("EchoSrv.Echo234", arg, &res)
+	err = rpcc.RPC("EchoSrv.Echo234", arg, &rep)
 	db.DPrintf(db.TEST, "Recv bad EchoSrv.Echo RPC reply")
 	assert.NotNil(mrts.GetRealm(test.REALM1).Ts.T, err, "Unexpectedly succeeded unknown RPC: %v", err)
 
@@ -178,6 +179,63 @@ func TestEchoServerProc(t *testing.T) {
 	assert.Nil(mrts.GetRealm(test.REALM1).Ts.T, err, "Evict")
 
 	db.DPrintf(db.TEST, "WaitExit echosrv")
+	status, err := mrts.GetRealm(test.REALM1).WaitExit(p.GetPid())
+	db.DPrintf(db.TEST, "CPP proc exited, status: %v", status)
+	assert.Nil(mrts.GetRealm(test.REALM1).Ts.T, err, "WaitExit error")
+	assert.True(mrts.GetRealm(test.REALM1).Ts.T, status != nil && status.IsStatusEvicted(), "Exit status wrong: %v", status)
+	db.DPrintf(db.TEST, "Proc done")
+}
+
+func TestSpinServerProc(t *testing.T) {
+	const (
+		SERVER_PROC_MCPU proc.Tmcpu = 1000
+		SRV_PN           string     = "name/spin-srv-cpp"
+	)
+
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	defer mrts.Shutdown()
+
+	p := proc.NewProc("spin-srv-cpp", nil)
+	p.SetMcpu(SERVER_PROC_MCPU)
+	db.DPrintf(db.TEST, "Spawn server proc %v", p)
+	start := time.Now()
+	err := mrts.GetRealm(test.REALM1).Spawn(p)
+	assert.Nil(mrts.GetRealm(test.REALM1).Ts.T, err, "Spawn")
+	err = mrts.GetRealm(test.REALM1).WaitStart(p.GetPid())
+	assert.Nil(mrts.GetRealm(test.REALM1).Ts.T, err, "Start")
+	db.DPrintf(db.TEST, "CPP server proc started (lat=%v)", time.Since(start))
+
+	// Verify the endpoint has been correctly posted
+	ep, err := mrts.GetRealm(test.REALM1).ReadEndpoint(SRV_PN)
+	if !assert.Nil(mrts.GetRealm(test.REALM1).Ts.T, err, "ReadEndpoint: %v", err) {
+		return
+	}
+	db.DPrintf(db.TEST, "CPP spin srv EP: %v", ep)
+
+	rpcc, err := rpcncclnt.NewTCPRPCClnt("spinsrv", ep)
+	if !assert.Nil(mrts.GetRealm(test.REALM1).Ts.T, err, "new rpc clnt: %v", err) {
+		return
+	}
+
+	db.DPrintf(db.TEST, "Created spinsrv RPC clnt")
+
+	arg := &spinproto.SpinReq{
+		N: 100000,
+	}
+	var rep spinproto.SpinRep
+	db.DPrintf(db.TEST, "Send good SpinSrv.Spin RPC")
+	err = rpcc.RPC("SpinSrv.Spin", arg, &rep)
+	db.DPrintf(db.TEST, "Recv good SpinSrv.Spin RPC reply: %v", rep.N)
+	assert.Nil(mrts.GetRealm(test.REALM1).Ts.T, err, "Error spin RPC: %v", err)
+
+	db.DPrintf(db.TEST, "Evict spinsrv")
+	err = mrts.GetRealm(test.REALM1).Evict(p.GetPid())
+	assert.Nil(mrts.GetRealm(test.REALM1).Ts.T, err, "Evict")
+
+	db.DPrintf(db.TEST, "WaitExit spinsrv")
 	status, err := mrts.GetRealm(test.REALM1).WaitExit(p.GetPid())
 	db.DPrintf(db.TEST, "CPP proc exited, status: %v", status)
 	assert.Nil(mrts.GetRealm(test.REALM1).Ts.T, err, "WaitExit error")

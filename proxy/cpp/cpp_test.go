@@ -10,6 +10,7 @@ import (
 	"net"
 	rpcclnt "sigmaos/rpc/clnt"
 	rpcchannel "sigmaos/rpc/clnt/channel/connchannel"
+	rpcncclnt "sigmaos/rpc/clnt/netconn"
 	rpcclntopts "sigmaos/rpc/clnt/opts"
 
 	"github.com/stretchr/testify/assert"
@@ -153,24 +154,23 @@ func TestEchoServerProc(t *testing.T) {
 	assert.Nil(mrts.GetRealm(test.REALM1).Ts.T, err, "ReadEndpoint: %v", err)
 	db.DPrintf(db.TEST, "CPP Echo srv EP: %v", ep)
 
-	ch, err := rpcchannel.NewTCPConnChannel(ep)
-	if assert.Nil(mrts.GetRealm(test.REALM1).Ts.T, err, "Dial: %v", err) {
-		rpcc, err := rpcclnt.NewRPCClnt("echosrv", rpcclntopts.WithRPCChannel(ch))
-		if assert.Nil(mrts.GetRealm(test.REALM1).Ts.T, err, "New RPCClnt") {
-			arg := &echoproto.EchoReq{
-				Text: "Hello there!",
-				Num1: 1,
-				Num2: 2,
-			}
-			var res echoproto.EchoRep
-			err = rpcc.RPC("EchoSrv.Echo", arg, &res)
-			assert.Nil(mrts.GetRealm(test.REALM1).Ts.T, err, "Error echo RPC: %v", err)
-			assert.Equal(mrts.T, arg.Text, res.Text, "Didn't echo correctly")
-			assert.Equal(mrts.T, arg.Num1+arg.Num2, res.Res, "Didn't add correctly: %v + %v != %v", arg.Num1, arg.Num2, res.Res)
-			err = rpcc.RPC("EchoSrv.Echo234", arg, &res)
-			assert.NotNil(mrts.GetRealm(test.REALM1).Ts.T, err, "Unexpectedly succeeded unknown RPC: %v", err)
-		}
+	rpcc, err := rpcncclnt.NewTCPRPCClnt("echosrv", ep)
+	if !assert.Nil(mrts.GetRealm(test.REALM1).Ts.T, err, "new rpc clnt: %v", err) {
+		return
 	}
+
+	arg := &echoproto.EchoReq{
+		Text: "Hello there!",
+		Num1: 1,
+		Num2: 2,
+	}
+	var res echoproto.EchoRep
+	err = rpcc.RPC("EchoSrv.Echo", arg, &res)
+	assert.Nil(mrts.GetRealm(test.REALM1).Ts.T, err, "Error echo RPC: %v", err)
+	assert.Equal(mrts.T, arg.Text, res.Text, "Didn't echo correctly")
+	assert.Equal(mrts.T, arg.Num1+arg.Num2, res.Res, "Didn't add correctly: %v + %v != %v", arg.Num1, arg.Num2, res.Res)
+	err = rpcc.RPC("EchoSrv.Echo234", arg, &res)
+	assert.NotNil(mrts.GetRealm(test.REALM1).Ts.T, err, "Unexpectedly succeeded unknown RPC: %v", err)
 
 	err = mrts.GetRealm(test.REALM1).Evict(p.GetPid())
 	assert.Nil(mrts.GetRealm(test.REALM1).Ts.T, err, "Evict")

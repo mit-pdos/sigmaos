@@ -126,3 +126,7 @@ func (rpcc *RPCClnt) StatsClnt() map[string]*rpc.MethodStatSnapshot {
 func (rpcc *RPCClnt) StatsSrv() (*rpc.RPCStatsSnapshot, error) {
 	return rpcc.ch.StatsSrv()
 }
+
+func (rpcc *RPCClnt) Channel() channel.RPCChannel {
+	return rpcc.ch
+}

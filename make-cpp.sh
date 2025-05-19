@@ -52,6 +52,7 @@ for PP in rpc ; do
 done
 
 protoc -I=. --cpp_out="./cpp/apps/echo/proto" --proto_path example/example_echo_server/proto example_echo_server.proto
+protoc -I=. --cpp_out="./cpp/apps/spin/proto" --proto_path apps/spin/proto spin.proto
 
 cd cpp
 

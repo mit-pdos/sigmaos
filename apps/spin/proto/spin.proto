@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+option go_package = "sigmaos/apps/spin/proto";
+
+service SpinService {
+  rpc Spin(SpinReq) returns (SpinRep);
+}
+
+message SpinReq {
+  int64 n = 1;
+}
+
+message SpinRep {
+  int64 n = 1;
+}

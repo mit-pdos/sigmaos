@@ -234,7 +234,7 @@ func (fse *FsEtcd) Rename(dei *DirEntInfo, from, to string, new path.Tpathname, 
 	if err != nil {
 		return nops, err
 	}
-	db.DPrintf(db.FSETCD, "Rename in %v from %v to %v (%f)", dir, from, to, f)
+	db.DPrintf(db.FSETCD, "Rename in %v from %v to %v (%v)", dir, from, to, f)
 	difrom, ok := dir.Ents.Lookup(from)
 	if !ok {
 		return nops, serr.NewErr(serr.TErrNotfound, from)

@@ -17,5 +17,11 @@ std::shared_ptr<ProcEnv> GetProcEnv() {
   return _env;
 }
 
+google::protobuf::Timestamp GetExecTime() {
+  google::protobuf::Timestamp exec_time;
+  google::protobuf::util::TimeUtil::FromString(std::getenv("SIGMA_EXEC_TIME"), &exec_time);
+  return exec_time;
+}
+
 };
 };

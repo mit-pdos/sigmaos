@@ -28,7 +28,7 @@ func TestOldLeaderOK(t *testing.T) {
 		return
 	}
 
-	l := leaderclnt.OldleaderTest(ts, sp.NAMED+DIR, "", sp.ROOTREALM)
+	l := leaderclnt.OldleaderTest(ts, sp.NAMED+DIR, nil, sp.ROOTREALM)
 
 	l.ReleaseLeadership()
 
@@ -53,14 +53,13 @@ func TestOldLeaderCrash(t *testing.T) {
 		return
 	}
 
-	// Start a new named
 	nd2 := ndclnt.NewNamedProc(test.REALM1, ts.ProcEnv().UseDialProxy, false)
 	db.DPrintf(db.TEST, "Starting a new named: %v", nd2.GetPid())
 	if err := ndclnt.StartNamed(ts.SigmaClnt, nd2); !assert.Nil(ts.T, err, "Err startNamed 2: %v", err) {
 		return
 	}
 
-	l := leaderclnt.OldleaderTest(ts, sp.NAMED+DIR, crashpn, test.REALM1)
+	l := leaderclnt.OldleaderTest(ts, sp.NAMED+DIR, &e, test.REALM1)
 
 	l.ReleaseLeadership()
 
@@ -80,7 +79,7 @@ func TestMemfs(t *testing.T) {
 		return
 	}
 
-	l := leaderclnt.OldleaderTest(ts, dir+DIR, "", sp.ROOTREALM)
+	l := leaderclnt.OldleaderTest(ts, dir+DIR, nil, sp.ROOTREALM)
 
 	sts, err := l.GetFences(fencedir)
 	assert.Nil(ts.T, err, "GetFences")

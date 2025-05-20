@@ -23,7 +23,7 @@ const (
 	leadername = "name/leader"
 )
 
-func OldleaderTest(ts *test.Tstate, pn string, crashpn string, realm sp.Trealm) *LeaderClnt {
+func OldleaderTest(ts *test.Tstate, pn string, e *crash.Tevent, realm sp.Trealm) *LeaderClnt {
 	pe := proc.NewDifferentRealmProcEnv(ts.ProcEnv(), realm)
 	fsl, err := sigmaclnt.NewFsLib(pe, ts.GetDialProxyClnt())
 	assert.Nil(ts.T, err, "NewFsLib")
@@ -123,12 +123,12 @@ func OldleaderTest(ts *test.Tstate, pn string, crashpn string, realm sp.Trealm) 
 	_, err = fsl.PutFile(pn+"/ggg", 0777, sp.OWRITE, []byte(strconv.Itoa(0)))
 	assert.Nil(ts.T, err, "PutFile")
 
-	if crashpn != "" {
+	if e != nil {
 		db.DPrintf(db.TEST, "Crash named...")
-		err := crash.SignalFailer(fsl, crashpn)
+		err := crash.SignalFailer(fsl, e.Path)
 		assert.Nil(ts.T, err, "Err failer: %v", err)
-		// wait a bit to make sure the old named is gone
-		time.Sleep(500 * time.Millisecond)
+		// give old named time to fail
+		time.Sleep(time.Duration(e.MaxInterval) * time.Millisecond)
 	}
 
 	// let old leader run

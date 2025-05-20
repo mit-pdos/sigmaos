@@ -18,5 +18,5 @@ void LogSpawnLatency(sigmaos::sigmap::types::Tpid pid, google::protobuf::Timesta
   if (op_start.seconds() != epoch.seconds() || op_start.nanos() != epoch.nanos()) {
     op_lat = (double) (t.seconds() - op_start.seconds()) + ((double) t.nanos() - op_start.nanos()) / (1E9);
   }
-  log(SPAWN_LAT, "[{}] {} op:{} sinceSpawn:{}", pid, msg, st_lat, "xxx");
+  log(SPAWN_LAT, "[{}] {} op:{} sinceSpawn:{}", pid, msg, op_lat, st_lat);
 }

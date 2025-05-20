@@ -85,6 +85,10 @@ func TestRemoveBasic(t *testing.T) {
 	assert.Equal(t, nil, err)
 	db.DPrintf(db.TEST, "PutFile done")
 
+	dg, err := ts.GetFile(fn)
+	assert.Nil(t, err)
+	assert.Equal(t, d, dg)
+
 	db.DPrintf(db.TEST, "RemoveFile")
 	err = ts.Remove(fn)
 	assert.Equal(t, nil, err)
@@ -138,9 +142,20 @@ func TestCreateTwice(t *testing.T) {
 	d := []byte("hello")
 	_, err := ts.PutFile(fn, 0777, sp.OWRITE, d)
 	assert.Nil(t, err)
-	_, err = ts.PutFile(fn, 0777, sp.OWRITE|sp.OEXCL, d)
+	d1 := []byte("hello again")
+	_, err = ts.PutFile(fn, 0777, sp.OWRITE|sp.OEXCL, d1)
 	assert.NotNil(t, err)
 	assert.True(t, serr.IsErrCode(err, serr.TErrExists))
+
+	dg, err := ts.GetFile(fn)
+	assert.Nil(t, err)
+	assert.Equal(t, d, dg)
+
+	_, err = ts.PutFile(fn, 0777, sp.OWRITE, d1)
+	assert.Nil(t, err)
+	dg, err = ts.GetFile(fn)
+	assert.Nil(t, err)
+	assert.Equal(t, d1, dg)
 
 	err = ts.Remove(fn)
 	assert.Nil(t, err, "Remove: %v", err)

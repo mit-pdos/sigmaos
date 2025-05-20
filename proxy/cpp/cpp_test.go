@@ -242,3 +242,49 @@ func TestSpinServerProc(t *testing.T) {
 	assert.True(mrts.GetRealm(test.REALM1).Ts.T, status != nil && status.IsStatusEvicted(), "Exit status wrong: %v", status)
 	db.DPrintf(db.TEST, "Proc done")
 }
+
+func TestSpinServerSpawnLatency(t *testing.T) {
+	const (
+		N_PROC = 15
+		N_NODE = 8
+	)
+
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	defer mrts.Shutdown()
+
+	if err := mrts.GetRealm(test.REALM1).BootNode(N_NODE); !assert.Nil(t, err, "Err boot: %v", err) {
+		return
+	}
+
+	p := proc.NewProc("spin-srv-cpp", nil)
+	p.SetMcpu(2000)
+	start := time.Now()
+	err := mrts.GetRealm(test.REALM1).Spawn(p)
+	assert.Nil(mrts.GetRealm(test.REALM1).Ts.T, err, "Spawn")
+	err = mrts.GetRealm(test.REALM1).WaitStart(p.GetPid())
+	assert.Nil(mrts.GetRealm(test.REALM1).Ts.T, err, "Start")
+	db.DPrintf(db.TEST, "CPP server proc started (lat=%v)", time.Since(start))
+
+	db.DPrintf(db.TEST, "Running procs")
+	c := make(chan bool)
+	for i := 0; i < N_PROC; i++ {
+		go func(c chan bool) {
+			p := proc.NewProc("spin-srv-cpp", nil)
+			p.SetMcpu(2000)
+			start := time.Now()
+			err := mrts.GetRealm(test.REALM1).Spawn(p)
+			assert.Nil(mrts.GetRealm(test.REALM1).Ts.T, err, "Spawn")
+			err = mrts.GetRealm(test.REALM1).WaitStart(p.GetPid())
+			assert.Nil(mrts.GetRealm(test.REALM1).Ts.T, err, "Start")
+			db.DPrintf(db.TEST, "Spin server proc started (lat=%v)", time.Since(start))
+			c <- true
+		}(c)
+	}
+	for i := 0; i < N_PROC; i++ {
+		<-c
+	}
+	db.DPrintf(db.TEST, "Procs done")
+}

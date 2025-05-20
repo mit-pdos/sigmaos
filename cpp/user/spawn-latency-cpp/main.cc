@@ -1,5 +1,7 @@
 #include <iostream>
 
+#include <google/protobuf/util/time_util.h>
+
 #include <util/log/log.h>
 #include <proxy/sigmap/sigmap.h>
 #include <serr/serr.h>
@@ -8,9 +10,12 @@
 const std::string CPP_USER_PROC = "CPP_USER_PROC";
 
 int main(int argc, char *argv[]) {
+  auto t = google::protobuf::util::TimeUtil::GetCurrentTime();
   sigmaos::util::log::init_logger(CPP_USER_PROC);
   log(CPP_USER_PROC, "Running");
   auto sp_clnt = std::make_shared<sigmaos::proxy::sigmap::Clnt>();
+  auto spawn_time = sp_clnt->ProcEnv()->GetSpawnTime();
+  log(SPAWN_LAT, "Time since spawn until main: {}s", t.seconds() - spawn_time.seconds() + (t.nanos() - spawn_time.nanos()) / (1E9));
 
   {
     auto res = sp_clnt->Started();

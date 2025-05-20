@@ -271,12 +271,14 @@ func (nps *DialProxySrvStubs) Close(c fs.CtxI, req netproto.CloseReq, res *netpr
 // TODO: check if calling proc cannot invalidate `realm`'s endpoint
 func (nps *DialProxySrvStubs) InvalidateNamedEndpointCacheEntry(c fs.CtxI, req netproto.InvalidateNamedEndpointReq, res *netproto.InvalidateNamedEndpointRep) error {
 	db.DPrintf(db.DIALPROXYSRV, "InvalidateNamedEndpointCacheEntry %v", req)
+	db.DPrintf(db.NAMED_LDR, "InvalidateNamedEndpointCacheEntry %v", req)
 	res.Blob = &rpcproto.Blob{
 		Iov: [][]byte{nil},
 	}
 	realm := sp.Trealm(req.RealmStr)
 	if err := nps.sc.InvalidateNamedEndpointCacheEntryRealm(realm); err != nil {
 		db.DPrintf(db.DIALPROXYSRV_ERR, "InvalidateNamedEndpointCacheEntry [%v] err %v %T", realm, err, err)
+		db.DPrintf(db.NAMED_LDR, "InvalidateNamedEndpointCacheEntry [%v] err %v %T", realm, err, err)
 		if sr, ok := serr.IsErr(err); ok {
 			res.Err = sp.NewRerrorSerr(sr)
 		} else {
@@ -291,12 +293,14 @@ func (nps *DialProxySrvStubs) InvalidateNamedEndpointCacheEntry(c fs.CtxI, req n
 // TODO: check if calling proc cannot look up `realm`'s endpoint
 func (nps *DialProxySrvStubs) GetNamedEndpoint(c fs.CtxI, req netproto.NamedEndpointReq, res *netproto.NamedEndpointRep) error {
 	db.DPrintf(db.DIALPROXYSRV, "GetNamedEndpoint %v", req)
+	db.DPrintf(db.NAMED_LDR, "GetNamedEndpoint %v", req)
 	res.Blob = &rpcproto.Blob{
 		Iov: [][]byte{nil},
 	}
 	realm := sp.Trealm(req.RealmStr)
 	if ep, err := nps.sc.GetNamedEndpointRealm(realm); err != nil {
 		db.DPrintf(db.DIALPROXYSRV_ERR, "GetNamedEndpointRealm [%v] err %v %T", realm, err, err)
+		db.DPrintf(db.NAMED_LDR, "GetNamedEndpointRealm [%v] err %v %T", realm, err, err)
 		if sr, ok := serr.IsErr(err); ok {
 			res.Err = sp.NewRerrorSerr(sr)
 		} else {

@@ -16,7 +16,7 @@ int main(int argc, char *argv[]) {
   log(CPP_USER_PROC, "Running");
   auto sp_clnt = std::make_shared<sigmaos::proxy::sigmap::Clnt>();
   auto spawn_time = sp_clnt->ProcEnv()->GetSpawnTime();
-  LogSpawnLatency(sp_clnt->ProcEnv()->GetPID(), spawn_time, google::protobuf::util::TimeUtil::GetEpoch(), "Time since spawn until main");
+  LogSpawnLatency(sp_clnt->ProcEnv()->GetPID(), spawn_time, google::protobuf::util::TimeUtil::GetEpoch(), "E2e spawn time since spawn until main");
   {
     auto res = sp_clnt->Started();
     if (!res.has_value()) {

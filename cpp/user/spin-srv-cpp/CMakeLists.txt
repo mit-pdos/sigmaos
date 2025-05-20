@@ -9,6 +9,7 @@ target_link_libraries(spin-srv-cpp PRIVATE
   io_conn_tcp
   io_conn_unix
   util_log
+  util_perf
   sigmap_proxy
   spin_proto
   app_spin

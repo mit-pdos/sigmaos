@@ -245,9 +245,10 @@ func TestSpinServerProc(t *testing.T) {
 
 func TestSpinServerSpawnLatency(t *testing.T) {
 	const (
-		N_PROC     = 15
-		N_NODE     = 8
-		N_PARALLEL = 1
+		N_PROC        = 15
+		N_NODE        = 8
+		N_PARALLEL    = 1
+		MCPU_PER_PROC = 2000
 	)
 
 	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
@@ -261,7 +262,7 @@ func TestSpinServerSpawnLatency(t *testing.T) {
 	}
 
 	p := proc.NewProc("spin-srv-cpp", nil)
-	p.SetMcpu(2000)
+	p.SetMcpu(MCPU_PER_PROC)
 	start := time.Now()
 	err := mrts.GetRealm(test.REALM1).Spawn(p)
 	assert.Nil(mrts.GetRealm(test.REALM1).Ts.T, err, "Spawn")
@@ -279,7 +280,7 @@ func TestSpinServerSpawnLatency(t *testing.T) {
 		go func(c chan bool, parallelCh chan bool) {
 			<-parallelCh
 			p := proc.NewProc("spin-srv-cpp", nil)
-			p.SetMcpu(2000)
+			p.SetMcpu(MCPU_PER_PROC)
 			start := time.Now()
 			err := mrts.GetRealm(test.REALM1).Spawn(p)
 			assert.Nil(mrts.GetRealm(test.REALM1).Ts.T, err, "Spawn")

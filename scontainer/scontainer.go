@@ -10,8 +10,6 @@ import (
 	"syscall"
 	"time"
 
-	"google.golang.org/protobuf/types/known/timestamppb"
-
 	db "sigmaos/debug"
 	"sigmaos/proc"
 	"sigmaos/sched/msched/proc/srv/binsrv"
@@ -47,7 +45,11 @@ func StartSigmaContainer(uproc *proc.Proc, dialproxy bool) (*uprocCmd, error) {
 	}
 	uproc.AppendEnv("PATH", "/bin:/bin2:/usr/bin:/home/sigmaos/bin/kernel")
 	uproc.AppendEnv("SIGMA_EXEC_TIME", strconv.FormatInt(time.Now().UnixMicro(), 10))
-	uproc.AppendEnv("SIGMA_EXEC_TIME_PB", timestamppb.New(time.Now()).String())
+	b, err := time.Now().MarshalText()
+	if err != nil {
+		db.DFatalf("Error marshal timestamp pb: %v", err)
+	}
+	uproc.AppendEnv("SIGMA_EXEC_TIME_PB", string(b))
 	uproc.AppendEnv("SIGMA_SPAWN_TIME", strconv.FormatInt(uproc.GetSpawnTime().UnixMicro(), 10))
 	uproc.AppendEnv(proc.SIGMAPERF, uproc.GetProcEnv().GetPerf())
 	// uproc.AppendEnv("RUST_BACKTRACE", "1")

@@ -171,7 +171,7 @@ func TestKillNamedClient(t *testing.T) {
 				db.DPrintf(db.TEST, "done")
 				done = true
 			default:
-				time.Sleep(1 * time.Second)
+				time.Sleep(100 * time.Millisecond)
 				db.DPrintf(db.TEST, "Create")
 				fn := filepath.Join(sp.NAMED, "fff")
 				_, err = sc.PutFile(fn, 0777, sp.OREAD, nil)
@@ -186,6 +186,7 @@ func TestKillNamedClient(t *testing.T) {
 		ch <- true
 	}(ch)
 
+	// Let go routine do a few iterations
 	time.Sleep(3 * time.Second)
 
 	// Start a new named

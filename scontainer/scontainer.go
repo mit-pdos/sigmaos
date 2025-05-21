@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
@@ -38,8 +39,14 @@ func StartSigmaContainer(uproc *proc.Proc, dialproxy bool) (*uprocCmd, error) {
 	pn := binsrv.BinPath(uproc.GetVersionedProgram())
 	// Optionally strace the proc
 	if straceProcs[uproc.GetProgram()] {
-		// "--signal=!SIGSEGV",
-		cmd = exec.Command("strace", append([]string{"-D", "-f", "uproc-trampoline", uproc.GetPid().String(), pn, strconv.FormatBool(dialproxy)}, uproc.Args...)...)
+		args := []string{"--absolute-timestamps", "--absolute-timestamps=precision:us", "-D", "-f", "uproc-trampoline", uproc.GetPid().String(), pn, strconv.FormatBool(dialproxy)}
+		if strings.Contains(uproc.GetProgram(), "cpp") {
+			// Don't catch SIGSEGV for C++ programs, as this can lead to an infinite
+			// strace output loop.
+			args = append([]string{"--signal=!SIGSEGV"}, args...)
+		}
+		args = append(args, uproc.Args...)
+		cmd = exec.Command("strace", args...)
 	} else {
 		cmd = exec.Command("uproc-trampoline", append([]string{uproc.GetPid().String(), pn, strconv.FormatBool(dialproxy)}, uproc.Args...)...)
 	}

@@ -38,7 +38,7 @@ func (fsl *FsLib) WriteEndpointFile(pn sp.Tsigmapath, ep *sp.Tendpoint) error {
 	if err != nil {
 		return err
 	}
-	if err := fsl.PutFileAtomic(pn, 0777|sp.DMSYMLINK, b); err != nil {
+	if _, err := fsl.PutFile(pn, 0777|sp.DMSYMLINK, sp.OWRITE, b); err != nil {
 		db.DPrintf(db.ALWAYS, "WriteEndpointFile %v err %v\n", pn, err)
 		return err
 	}

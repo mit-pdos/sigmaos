@@ -106,10 +106,12 @@ std::expected<int, sigmaos::serr::Error> Srv::RegisterEP(std::string pn) {
 [[noreturn]] void Srv::Run() {
   // Mark server as started
   {
+    auto start = google::protobuf::util::TimeUtil::GetCurrentTime();
     auto res = _sp_clnt->Started();
     if (!res.has_value()) {
       log(RPCSRV, "Error Started: {}", res.error());
     }
+    LogSpawnLatency(_sp_clnt->ProcEnv()->GetPID(), _sp_clnt->ProcEnv()->GetSpawnTime(), start, "spproxyclnt.Started");
   }
   log(RPCSRV, "Started");
   // Start a new thread to wait for the eviction signal

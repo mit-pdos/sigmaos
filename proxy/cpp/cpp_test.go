@@ -245,8 +245,9 @@ func TestSpinServerProc(t *testing.T) {
 
 func TestSpinServerSpawnLatency(t *testing.T) {
 	const (
-		N_PROC = 15
-		N_NODE = 8
+		N_PROC     = 15
+		N_NODE     = 8
+		N_PARALLEL = 1
 	)
 
 	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
@@ -269,9 +270,14 @@ func TestSpinServerSpawnLatency(t *testing.T) {
 	db.DPrintf(db.TEST, "CPP server proc started (lat=%v)", time.Since(start))
 
 	db.DPrintf(db.TEST, "Running procs")
+	parallelCh := make(chan bool, N_PARALLEL)
+	for i := 0; i < N_PARALLEL; i++ {
+		parallelCh <- true
+	}
 	c := make(chan bool)
 	for i := 0; i < N_PROC; i++ {
-		go func(c chan bool) {
+		go func(c chan bool, parallelCh chan bool) {
+			<-parallelCh
 			p := proc.NewProc("spin-srv-cpp", nil)
 			p.SetMcpu(2000)
 			start := time.Now()
@@ -280,8 +286,9 @@ func TestSpinServerSpawnLatency(t *testing.T) {
 			err = mrts.GetRealm(test.REALM1).WaitStart(p.GetPid())
 			assert.Nil(mrts.GetRealm(test.REALM1).Ts.T, err, "Start")
 			db.DPrintf(db.TEST, "Spin server proc started (lat=%v)", time.Since(start))
+			parallelCh <- true
 			c <- true
-		}(c)
+		}(c, parallelCh)
 	}
 	for i := 0; i < N_PROC; i++ {
 		<-c

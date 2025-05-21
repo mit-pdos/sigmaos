@@ -7,6 +7,7 @@ add_library(sigmap_proxy STATIC sigmap.cc)
 target_link_libraries(sigmap_proxy PUBLIC
   serr
   util_log
+  util_perf
   rpc 
   proc
   proc_proto

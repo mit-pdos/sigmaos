@@ -89,6 +89,7 @@ void Srv::ExposeRPCHandler(std::shared_ptr<RPCEndpoint> rpce) {
 }
 
 std::expected<int, sigmaos::serr::Error> Srv::RegisterEP(std::string pn) {
+  auto start = google::protobuf::util::TimeUtil::GetCurrentTime();
   {
     auto ep = GetEndpoint();
     auto res = _sp_clnt->RegisterEP(pn, ep);
@@ -98,6 +99,7 @@ std::expected<int, sigmaos::serr::Error> Srv::RegisterEP(std::string pn) {
     }
     log(RPCSRV, "Registered sigmaEP {} in realm at pn {}", ep->ShortDebugString(), pn);
   }
+  LogSpawnLatency(_sp_clnt->ProcEnv()->GetPID(), _sp_clnt->ProcEnv()->GetSpawnTime(), start, "RegisterEP");
   return 0;
 }
 

@@ -11,6 +11,7 @@ add_library(rpc STATIC
 target_link_libraries(rpc PUBLIC
   serr
   util_log
+  util_perf
   io_demux
   io_iovec
 )

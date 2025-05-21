@@ -5,7 +5,10 @@
 #include <expected>
 #include <format>
 
+#include <google/protobuf/util/time_util.h>
+
 #include <util/log/log.h>
+#include <util/perf/perf.h>
 #include <io/net/srv.h>
 #include <io/conn/conn.h>
 #include <io/transport/transport.h>
@@ -48,7 +51,9 @@ class Srv {
   Srv(std::shared_ptr<sigmaos::proxy::sigmap::Clnt> sp_clnt) : Srv(sp_clnt, 0) {}
   Srv(std::shared_ptr<sigmaos::proxy::sigmap::Clnt> sp_clnt, int demux_init_nthread) : _done(false), _sp_clnt(sp_clnt), _rpc_endpoints() {
     log(RPCSRV, "Starting net server");
+    auto start = google::protobuf::util::TimeUtil::GetCurrentTime();
     _netsrv = std::make_shared<sigmaos::io::net::Srv>(std::bind(&Srv::serve_request, this, std::placeholders::_1), demux_init_nthread);
+    LogSpawnLatency(_sp_clnt->ProcEnv()->GetPID(), _sp_clnt->ProcEnv()->GetSpawnTime(), start, "Make NetSrv");
     int port = _netsrv->GetPort();
     log(RPCSRV, "Net server started with port {}", port);
   }

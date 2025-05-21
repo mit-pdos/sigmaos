@@ -8,7 +8,10 @@
 #include <memory>
 #include <expected>
 
+#include <google/protobuf/util/time_util.h>
+
 #include <util/log/log.h>
+#include <util/perf/perf.h>
 #include <io/conn/conn.h>
 #include <io/conn/unix/unix.h>
 #include <io/transport/transport.h>
@@ -33,13 +36,23 @@ class Clnt {
   Clnt() : _disconnected(false) {
     _env = sigmaos::proc::GetProcEnv();
     log(SPPROXYCLNT, "New clnt {}", _env->String());
+    auto start = google::protobuf::util::TimeUtil::GetCurrentTime();
     _conn = std::make_shared<sigmaos::io::conn::unixconn::ClntConn>(SPPROXY_SOCKET_PN);
+    LogSpawnLatency(_env->GetPID(), _env->GetSpawnTime(), start, "Connect ClntConn");
+    start = google::protobuf::util::TimeUtil::GetCurrentTime();
     _trans = std::make_shared<sigmaos::io::transport::Transport>(_conn);
+    LogSpawnLatency(_env->GetPID(), _env->GetSpawnTime(), start, "Create transport");
+    start = google::protobuf::util::TimeUtil::GetCurrentTime();
     _demux = std::make_shared<sigmaos::io::demux::Clnt>(_trans);
+    LogSpawnLatency(_env->GetPID(), _env->GetSpawnTime(), start, "Create demuxclnt");
+    start = google::protobuf::util::TimeUtil::GetCurrentTime();
     _rpcc = std::make_shared<sigmaos::rpc::Clnt>(_demux);
+    LogSpawnLatency(_env->GetPID(), _env->GetSpawnTime(), start, "Create rpcclnt");
+    start = google::protobuf::util::TimeUtil::GetCurrentTime();
     log(SPPROXYCLNT, "Initializing proxy conn");
     // Initialize the sigmaproxyd connection
     init_conn();
+    LogSpawnLatency(_env->GetPID(), _env->GetSpawnTime(), start, "Init spproxy conn");
   }
 
   ~Clnt() { Close(); }

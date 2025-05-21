@@ -63,7 +63,5 @@ func StopNamed(sc *sigmaclnt.SigmaClnt, nd *proc.Proc) error {
 	if !status.IsStatusEvicted() {
 		return fmt.Errorf("Wrong exit status %v", status)
 	}
-	// Make sure the named EP has been removed
-	sc.Remove(filepath.Join(sp.REALMS, test.REALM1.String()))
 	return err
 }

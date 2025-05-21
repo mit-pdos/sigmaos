@@ -191,7 +191,7 @@ echo "$LOGIN soft nofile 100000" | sudo tee -a /etc/security/limits.conf
 
 # Load apparmor profile
 cd sigmaos
-sudo apparmor_parser -r scontainer/sigmaos-uproc
+sudo ./load-apparmor.sh
 
 echo -n > ~/.hushlogin
 ENDSSH

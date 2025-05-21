@@ -157,18 +157,9 @@ func Run(args []string) error {
 			db.DFatalf("SetNamed: %v", err)
 		}
 	} else {
-		pn = path.MarkResolve(filepath.Join(sp.REALMS, nd.realm.String()))
-		db.DPrintf(db.ALWAYS, "NewEndpointSymlink %v %v lid %v", nd.realm, pn, nd.sess.Lease())
-		// Set lease shorter than fsetcd.LeaseTTL so that when new
-		// leading named is elected the old named's endpoint file has
-		// been deleted.
-		li, err := sc.LeaseClnt.AskLease(pn, fsetcd.LeaseTTL-1)
-		if err != nil {
-			db.DFatalf("Error AskLease %v: %v", pn, err)
-		}
-		li.KeepExtending()
-
-		if err := nd.MkLeasedEndpoint(pn, ep, li.Lease()); err != nil {
+		pn = filepath.Join(sp.REALMS, nd.realm.String())
+		db.DPrintf(db.ALWAYS, "NewEndpointSymlink %v %v ep %v", nd.realm, pn, ep)
+		if err := nd.WriteEndpointFile(pn, ep); err != nil {
 			db.DPrintf(db.ERROR, "MkEndpointFile %v at %v err %v", nd.realm, pn, err)
 			db.DFatalf("MkEndpointFile %v at %v err %v", nd.realm, pn, err)
 			return err

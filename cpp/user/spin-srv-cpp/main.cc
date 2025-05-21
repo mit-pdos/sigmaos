@@ -16,7 +16,6 @@ int main(int argc, char *argv[]) {
   auto pe = sigmaos::proc::GetProcEnv();
   LogSpawnLatency(pe->GetPID(), pe->GetSpawnTime(), google::protobuf::util::TimeUtil::GetEpoch(), "E2e spawn time since spawn until main");
   LogSpawnLatency(pe->GetPID(), google::protobuf::util::TimeUtil::GetEpoch(), sigmaos::proc::GetExecTime(), "proc.exec_proc");
-  auto t = google::protobuf::util::TimeUtil::GetCurrentTime();
   sigmaos::util::log::init_logger(sigmaos::apps::spin::SPINSRV);
   log(sigmaos::apps::spin::SPINSRV, "main");
   auto sp_clnt = std::make_shared<sigmaos::proxy::sigmap::Clnt>();

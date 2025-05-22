@@ -37,7 +37,7 @@ class Srv {
     _srv->ExposeRPCHandler(spin_ep);
     log(SPINSRV, "Exposed spin RPC handler");
     {
-      auto res = _srv->RegisterEP(SPINSRV_REALM_PN);
+      auto res = _srv->RegisterEP(SPINSRV_REALM_PN + _sp_clnt->ProcEnv()->GetPID());
       if (!res.has_value()) {
         log(SPINSRV_ERR, "Error RegisterEP: {}", res.error());
         fatal("Error RegisterEP: {}", res.error().String());

@@ -159,6 +159,7 @@ if [[ $COMPILE == "--compile" ]]; then
       util/coordination/semaphore \
       sched/msched/proc/chunk/srv \
       ft/leaderclnt/electclnt \
+      sigmaclnt/fslib/dirwatcher \
       sigmaclnt/fslib/dircache \
       sigmasrv/memfssrv/memfs \
       namesrv \
@@ -254,6 +255,7 @@ if [[ $BASIC == "--basic" ]]; then
       dialproxy \
       sigmaclnt/fslib \
       ft/leaderclnt/electclnt \
+      sigmaclnt/fslib/dirwatcher \
       sigmaclnt/fslib/dircache; \
       do
         if ! [ -z "$SKIPTO" ]; then

@@ -33,16 +33,22 @@ std::expected<int, sigmaos::serr::Error> Clnt::RPC(std::string method, google::p
   auto wrapped_rep = res.value();
   // If there was an error in the RPC stack, bail out
   if (wrapped_rep.err().errcode() != sigmaos::serr::TErrNoError) {
+    log(RPCCLNT_ERR, "error in RPC stack");
+    log(RPCCLNT_ERR, "error in RPC stack error:{}", wrapped_rep.err().ShortDebugString());
     return std::unexpected(sigmaos::serr::Error(sigmaos::serr::TErrUnreachable, std::format("rpc error: {}", wrapped_rep.err().ShortDebugString())));
   }
+  log(RPCCLNT, "Deserialize reply data");
   // Deserialize the reply
   auto rep_data_buf = out_iov->GetBuffer(0);
   rep.ParseFromString(*rep_data_buf->Get());
+  log(RPCCLNT, "Remove reply data buffer");
   // Remove the first element in iov, which contains the serialized reply
   // message
   out_iov->RemoveBuffer(0);
+  log(RPCCLNT, "Set blob IOV");
   // Set the reply's blob's IOV to point to the returned data, if applicable.
   set_blob_iov(out_iov, rep);
+  log(RPCCLNT, "Done set blob IOV");
   return 0;
 }
 
@@ -65,14 +71,18 @@ std::expected<Rep, sigmaos::serr::Error> Clnt::wrap_and_run_rpc(std::string meth
   auto wrapped_call = std::make_shared<io::transport::Call>(seqno, wrapped_in_iov, out_iov);
   auto res = _demux->SendReceive(wrapped_call);
   if (!res.has_value()) {
+    log(RPCCLNT_ERR, "Error sendreceive: {}", res.error().String());
     return std::unexpected(res.error());
   }
+  log(RPCCLNT, "Deserialize wrapper for reply seqno: {}", seqno);
   Rep rep;
   // Deserialize the wrapper
   auto wrapper_rep_buf = out_iov->GetBuffer(0);
   rep.ParseFromString(*wrapper_rep_buf->Get());
+  log(RPCCLNT, "Remove wrapper buffer for reply seqno: {}", seqno);
   // Remove the wrapper from the out IOVec
   out_iov->RemoveBuffer(0);
+  log(RPCCLNT, "Done remove wrapper buffer for reply seqno: {}", seqno);
 	// TODO: Record stats
 //	rpcc.si.Stat(method, time.Since(start).Microseconds())
   return rep;

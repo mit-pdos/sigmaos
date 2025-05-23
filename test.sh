@@ -171,6 +171,7 @@ if [[ $COMPILE == "--compile" ]]; then
       boot/clnt \
       ft/leaderclnt \
       ft/leadertest \
+      ft/task \
       apps/kv/kvgrp \
       apps/cache/cachegrp/clnt \
       apps/www \
@@ -309,6 +310,7 @@ if [[ $BASIC == "--basic" ]]; then
       sigmaclnt/procclnt \
       ft/leaderclnt \
       ft/leadertest \
+      ft/task \
       apps/kv/kvgrp \
       apps/cache/cachegrp/clnt; \
       do

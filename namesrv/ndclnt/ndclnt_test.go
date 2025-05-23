@@ -137,9 +137,45 @@ func TestKillNamedAlone(t *testing.T) {
 	}
 }
 
-func TestKillNamedClient(t *testing.T) {
-	const T = 1000
+func namedClient(t *testing.T, sc *sigmaclnt.SigmaClnt, ch chan bool) {
 	const MAXRETRY = 30
+	done := false
+	for !done {
+		select {
+		case <-ch:
+			db.DPrintf(db.TEST, "done")
+			done = true
+		default:
+			time.Sleep(10 * time.Millisecond)
+			fn := filepath.Join(sp.NAMED, "fff")
+			_, err := sc.PutFile(fn, 0777, sp.OWRITE|sp.OEXCL, nil)
+			if err == nil {
+				for i := 0; i < MAXRETRY; i++ {
+					sts, err := sc.GetDir(sp.NAMED)
+					if err == nil {
+						assert.True(t, sp.Present(sts, []string{fn}))
+						break
+					}
+					assert.NotEqual(t, MAXRETRY, i)
+				}
+				for i := 0; i < MAXRETRY; i++ {
+					if err := sc.Remove(fn); err == nil {
+						break
+					}
+					assert.NotEqual(t, MAXRETRY, i)
+				}
+			}
+		}
+	}
+	ch <- true
+}
+
+func TestKillNamedClient(t *testing.T) {
+	const (
+		T = 1000
+		N = 5
+	)
+
 	crashpn := sp.NAMED + "crashnd.sem"
 
 	e := crash.NewEventPath(crash.NAMED_CRASH, T, float64(1.0), crashpn)
@@ -163,65 +199,38 @@ func TestKillNamedClient(t *testing.T) {
 		return
 	}
 
-	ch := make(chan bool)
-	go func(ch chan bool) {
-		done := false
-		for !done {
-			select {
-			case <-ch:
-				db.DPrintf(db.TEST, "done")
-				done = true
-			default:
-				time.Sleep(10 * time.Millisecond)
-				fn := filepath.Join(sp.NAMED, "fff")
-				_, err = sc.PutFile(fn, 0777, sp.OWRITE|sp.OEXCL, nil)
-				if err == nil {
-					for i := 0; i < MAXRETRY; i++ {
-						sts, err := sc.GetDir(sp.NAMED)
-						if err == nil {
-							assert.True(t, sp.Present(sts, []string{fn}))
-							break
-						}
-						assert.NotEqual(t, MAXRETRY, i)
-					}
-					for i := 0; i < MAXRETRY; i++ {
-						if err := sc.Remove(fn); err == nil {
-							break
-						}
-						assert.NotEqual(t, MAXRETRY, i)
-					}
-				}
+	for i := 0; i < N; i++ {
+		ch := make(chan bool)
+		go namedClient(t, sc, ch)
+
+		// Let namedClient do a few iterations
+		time.Sleep(3 * time.Second)
+
+		// Start a new named
+		nd2 := ndclnt.NewNamedProc(test.REALM1, ts.ProcEnv().UseDialProxy, true)
+		db.DPrintf(db.TEST, "Starting a new named: %v", nd2.GetPid())
+		if err := ndclnt.StartNamed(ts.SigmaClnt, nd2); !assert.Nil(ts.T, err, "Err startNamed 2: %v", err) {
+			return
+		}
+		// Tell named to old crash
+		db.DPrintf(db.TEST, "Crashing named")
+		err = crash.SignalFailer(sc.FsLib, crashpn)
+		assert.Nil(t, err, "Err crash: %v", err)
+
+		// Allow the crashing named time to crash
+		time.Sleep(T * time.Millisecond)
+
+		db.DPrintf(db.TEST, "named should be dead & buried")
+
+		ch <- true
+		<-ch
+
+		if i == N-1 {
+			db.DPrintf(db.TEST, "client finished")
+			if err := ndclnt.StopNamed(ts.SigmaClnt, nd2); !assert.Nil(ts.T, err, "Err stop named: %v", err) {
+				return
 			}
 		}
-		ch <- true
-	}(ch)
-
-	// Let go routine do a few iterations
-	time.Sleep(3 * time.Second)
-
-	// Start a new named
-	nd2 := ndclnt.NewNamedProc(test.REALM1, ts.ProcEnv().UseDialProxy, false)
-	db.DPrintf(db.TEST, "Starting a new named: %v", nd2.GetPid())
-	if err := ndclnt.StartNamed(ts.SigmaClnt, nd2); !assert.Nil(ts.T, err, "Err startNamed 2: %v", err) {
-		return
-	}
-	// Tell named to old crash
-	db.DPrintf(db.TEST, "Crashing named")
-	err = crash.SignalFailer(sc.FsLib, crashpn)
-	assert.Nil(t, err, "Err crash: %v", err)
-
-	// Allow the crashing named time to crash
-	time.Sleep(T * time.Millisecond)
-
-	db.DPrintf(db.TEST, "named should be dead & buried")
-
-	ch <- true
-	<-ch
-
-	db.DPrintf(db.TEST, "client finished")
-
-	if err := ndclnt.StopNamed(ts.SigmaClnt, nd2); !assert.Nil(ts.T, err, "Err stop named: %v", err) {
-		return
 	}
 }
 

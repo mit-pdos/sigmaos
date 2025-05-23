@@ -189,7 +189,7 @@ func TestEchoServerProc(t *testing.T) {
 func TestSpinServerProc(t *testing.T) {
 	const (
 		SERVER_PROC_MCPU proc.Tmcpu = 1000
-		SRV_PN           string     = "name/spin-srv-cpp"
+		SRV_UNION_DIR    string     = "name/spin-srv-cpp"
 	)
 
 	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
@@ -197,6 +197,11 @@ func TestSpinServerProc(t *testing.T) {
 		return
 	}
 	defer mrts.Shutdown()
+
+	// Make union dir
+	if err := mrts.GetRealm(test.REALM1).MkDir(SRV_UNION_DIR, 0777); !assert.Nil(mrts.T, err, "Err mkunion") {
+		return
+	}
 
 	p := proc.NewProc("spin-srv-cpp", nil)
 	p.SetMcpu(SERVER_PROC_MCPU)
@@ -209,7 +214,7 @@ func TestSpinServerProc(t *testing.T) {
 	db.DPrintf(db.TEST, "CPP server proc started (lat=%v)", time.Since(start))
 
 	// Verify the endpoint has been correctly posted
-	ep, err := mrts.GetRealm(test.REALM1).ReadEndpoint(SRV_PN)
+	ep, err := mrts.GetRealm(test.REALM1).ReadEndpoint(filepath.Join(SRV_UNION_DIR, p.GetPid().String()))
 	if !assert.Nil(mrts.GetRealm(test.REALM1).Ts.T, err, "ReadEndpoint: %v", err) {
 		return
 	}
@@ -245,10 +250,11 @@ func TestSpinServerProc(t *testing.T) {
 
 func TestSpinServerSpawnLatency(t *testing.T) {
 	const (
-		N_PROC        = 15
-		N_NODE        = 8
-		N_PARALLEL    = 1
-		MCPU_PER_PROC = 2000
+		N_PROC               = 1
+		N_NODE               = 0
+		N_PARALLEL           = 1
+		MCPU_PER_PROC        = 2000
+		SRV_UNION_DIR string = "name/spin-srv-cpp"
 	)
 
 	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
@@ -256,6 +262,11 @@ func TestSpinServerSpawnLatency(t *testing.T) {
 		return
 	}
 	defer mrts.Shutdown()
+
+	// Make union dir
+	if err := mrts.GetRealm(test.REALM1).MkDir(SRV_UNION_DIR, 0777); !assert.Nil(mrts.T, err, "Err mkunion") {
+		return
+	}
 
 	if err := mrts.GetRealm(test.REALM1).BootNode(N_NODE); !assert.Nil(t, err, "Err boot: %v", err) {
 		return

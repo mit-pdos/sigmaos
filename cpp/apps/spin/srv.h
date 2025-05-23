@@ -4,6 +4,7 @@
 #include <vector>
 #include <expected>
 #include <format>
+#include <filesystem>
 
 #include <util/log/log.h>
 #include <io/net/srv.h>
@@ -24,7 +25,7 @@ namespace apps::spin {
 const std::string SPINSRV = "SPINSRV";
 const std::string SPINSRV_ERR = "SPINSRV" + sigmaos::util::log::ERR;
 
-const std::string SPINSRV_REALM_PN = "name/spin-srv-cpp";
+const std::filesystem::path SPINSRV_UNION_DIR_PN = "name/spin-srv-cpp";
 const int INIT_NTHREAD = 100;
 
 class Srv {
@@ -37,7 +38,8 @@ class Srv {
     _srv->ExposeRPCHandler(spin_ep);
     log(SPINSRV, "Exposed spin RPC handler");
     {
-      auto res = _srv->RegisterEP(SPINSRV_REALM_PN + _sp_clnt->ProcEnv()->GetPID());
+      auto pn = SPINSRV_UNION_DIR_PN / std::filesystem::path(_sp_clnt->ProcEnv()->GetPID());
+      auto res = _srv->RegisterEP(pn);
       if (!res.has_value()) {
         log(SPINSRV_ERR, "Error RegisterEP: {}", res.error());
         fatal("Error RegisterEP: {}", res.error().String());

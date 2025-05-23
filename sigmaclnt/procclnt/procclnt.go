@@ -151,7 +151,7 @@ func (clnt *ProcClnt) forceRunViaMSched(kernelID string, p *proc.Proc) error {
 	err := clnt.mschedclnt.ForceRun(kernelID, false, p)
 	if err != nil {
 		db.DPrintf(db.PROCCLNT_ERR, "forceRunViaMSched: getMSchedClnt %v err %v\n", kernelID, err)
-		if serr.IsErrCode(err, serr.TErrUnreachable) {
+		if serr.IsErrorUnreachable(err) {
 			db.DPrintf(db.PROCCLNT_ERR, "Unregister %v", kernelID)
 			clnt.mschedclnt.UnregisterSrv(kernelID)
 		}
@@ -211,7 +211,7 @@ func (clnt *ProcClnt) spawnRetry(kernelId string, p *proc.Proc) (*proc.ProcSeqno
 		// server becoming unreachable.
 		if err != nil {
 			// If unreachable, retry.
-			if serr.IsErrCode(err, serr.TErrUnreachable) {
+			if serr.IsErrorUnreachable(err) {
 				db.DPrintf(db.PROCCLNT_ERR, "Err spawnRetry unreachable %v", err)
 				continue
 			}

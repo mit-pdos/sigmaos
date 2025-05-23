@@ -109,13 +109,13 @@ func writer(t *testing.T, ch chan struct{}, ch2 chan struct{}, pe *proc.ProcEnv,
 		case <-ch:
 			stop = true
 		default:
-			if err := fsl.Remove(fn); serr.IsErrCode(err, serr.TErrUnreachable) {
+			if err := fsl.Remove(fn); serr.IsErrorUnreachable(err) {
 				ncrash += 1
 				break
 			}
 			w, err := fsl.CreateBufWriter(fn, 0777)
 			if err != nil {
-				assert.True(t, serr.IsErrCode(err, serr.TErrUnreachable), "Err code %v", err)
+				assert.True(t, serr.IsErrorUnreachable(err), "Err code %v", err)
 				ncrash += 1
 				break
 			}
@@ -126,7 +126,7 @@ func writer(t *testing.T, ch chan struct{}, ch2 chan struct{}, pe *proc.ProcEnv,
 				break
 			}
 			if err := w.Close(); err != nil {
-				assert.True(t, serr.IsErrCode(err, serr.TErrUnreachable))
+				assert.True(t, serr.IsErrorUnreachable(err))
 				ncrash += 1
 				break
 			}

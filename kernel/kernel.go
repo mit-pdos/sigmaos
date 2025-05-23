@@ -163,7 +163,7 @@ func (k *Kernel) shutdown() {
 		for _, pid := range cpids {
 			for i := 0; i < MAX_EVICT_RETRIES; i++ {
 				err := k.svcs.svcMap[pid].Evict()
-				if err == nil || !serr.IsErrCode(err, serr.TErrUnreachable) {
+				if err == nil || !serr.IsErrorUnreachable(err) {
 					db.DPrintf(db.KERNEL, "Evicted proc %v %T err %v", pid, k.svcs.svcMap[pid], err)
 					k.svcs.svcMap[pid].Wait()
 					break

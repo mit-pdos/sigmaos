@@ -219,7 +219,7 @@ func (ft *FtTasks) renameTodoToWip(files []string) ([]string, error) {
 	for _, file := range files {
 		if err := ft.Rename(filepath.Join(ft.todo, file), filepath.Join(ft.wip, file)); err == nil {
 			newents = append(newents, file)
-		} else if serr.IsErrCode(err, serr.TErrUnreachable) { // partitioned?
+		} else if serr.IsErrorUnreachable(err) { // partitioned?
 			r = err
 			break
 		}

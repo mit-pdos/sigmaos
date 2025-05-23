@@ -52,6 +52,7 @@ const (
 	TErrExists
 	TErrClosed // for closed sessions and pipes.
 	TErrBadFcall
+	TErrIO
 
 	//
 	// sigma OS errors
@@ -146,6 +147,8 @@ func (err Terror) String() string {
 		return "closed"
 	case TErrBadFcall:
 		return "bad fcall"
+	case TErrIO:
+		return "IO error"
 
 	// sigma OS errors
 	case TErrRetry:
@@ -220,6 +223,11 @@ func (err *Err) IsMaybeSpecialElem() bool {
 // SigmaOS couldn't reach a server
 func (err *Err) IsErrUnreachable() bool {
 	return err.Code() == TErrUnreachable
+}
+
+// SigmaOS experience an error during I/O (e.g., wait for a response)
+func (err *Err) IsErrIO() bool {
+	return err.Code() == TErrIO
 }
 
 // A file is unavailable: either a server on the file's path is

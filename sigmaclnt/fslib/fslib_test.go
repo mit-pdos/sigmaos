@@ -1449,7 +1449,7 @@ func TestFslibClose(t *testing.T) {
 
 	_, err = fsl.Stat(dot)
 	assert.NotNil(t, err)
-	assert.True(t, serr.IsErrCode(err, serr.TErrUnreachable))
+	assert.True(t, serr.IsErrorUnreachable(err))
 
 	ts.Shutdown()
 }
@@ -1616,13 +1616,13 @@ func TestDisconnect(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 
 	_, err = ts.Write(fd, d)
-	assert.True(t, serr.IsErrCode(err, serr.TErrUnreachable))
+	assert.True(t, serr.IsErrorUnreachable(err))
 
 	err = ts.CloseFd(fd)
-	assert.True(t, serr.IsErrCode(err, serr.TErrUnreachable))
+	assert.True(t, serr.IsErrorUnreachable(err))
 
 	fd, err = ts.Open(fn, sp.OREAD)
-	assert.True(t, serr.IsErrCode(err, serr.TErrUnreachable), "Err not unreachable: %v", err)
+	assert.True(t, serr.IsErrorUnreachable(err))
 
 	ts.Shutdown()
 }

@@ -233,6 +233,7 @@ func (pathc *PathClnt) Stat(pn sp.Tsigmapath, principal *sp.Tprincipal) (*sp.Tst
 // TestMaintainReplicationLevelCrashProcd test the fail-over case.)
 func (pathc *PathClnt) open(path path.Tpathname, principal *sp.Tprincipal, resolve bool, w sos.Watch) (sp.Tfid, *serr.Err) {
 	for i := 0; i < sp.Conf.Path.MAX_RESOLVE_RETRY; i++ {
+		//db.DPrintf(db.TEST, "try %d %v %t", i, path, resolve)
 		if err, cont := pathc.mntclnt.ResolveRoot(path); err != nil {
 			db.DPrintf(db.PATHCLNT_ERR, "open: resolveRoot %v err %v cont %t", path, err, cont)
 			if cont && err.IsErrUnreachable() {

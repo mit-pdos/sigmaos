@@ -146,6 +146,7 @@ func TestDisconnectSessSrv(t *testing.T) {
 	time.Sleep(1 * time.Second)
 	r := <-ch
 	assert.NotNil(t, r)
+	//assert.Equal(t, serr.TErrIO, r.Code())
 	ts.srv.CloseListener()
 }
 
@@ -167,13 +168,13 @@ func testManyClients(t *testing.T, crash int) {
 				default:
 					req := sp.NewTattach(sp.Tfid(j), sp.NoFid, ts.PE.GetSecrets(), sp.TclntId(i), path.Tpathname{})
 					_, err := ts.clnt.RPC(ts.srv.GetEndpoint(), req, nil, nil)
-					if err != nil && crash > 0 && serr.IsErrCode(err, serr.TErrUnreachable) {
+					if err != nil && crash > 0 && err.IsErrUnreachable() {
 						// wait for stop signal
 						<-stop
 						ch <- true
 						done = true
 					} else {
-						assert.True(t, err == nil)
+						assert.Nil(t, err)
 					}
 				}
 			}

@@ -70,7 +70,7 @@ func (besc *BESchedClnt) Enqueue(p *proc.Proc) (string, *proc.ProcSeqno, error) 
 	s = time.Now()
 	if err := rpcc.RPC("BESched.Enqueue", req, res); err != nil {
 		db.DPrintf(db.ALWAYS, "BESched.Enqueue err %v", err)
-		if serr.IsErrCode(err, serr.TErrUnreachable) {
+		if serr.IsErrorUnreachable(err) {
 			db.DPrintf(db.ALWAYS, "Invalidate entry %v", besID)
 			besc.rpcdc.InvalidateEntry(besID)
 		}
@@ -112,7 +112,7 @@ func (besc *BESchedClnt) GetProc(callerKernelID string, freeMem proc.Tmem, bias 
 		res := &proto.GetProcRep{}
 		if err := rpcc.RPC("BESched.GetProc", req, res); err != nil {
 			db.DPrintf(db.ALWAYS, "BESched.GetProc %v err %v", callerKernelID, err)
-			if serr.IsErrCode(err, serr.TErrUnreachable) {
+			if serr.IsErrorUnreachable(err) {
 				db.DPrintf(db.ALWAYS, "Invalidate entry %v", besID)
 				besc.rpcdc.InvalidateEntry(besID)
 				continue

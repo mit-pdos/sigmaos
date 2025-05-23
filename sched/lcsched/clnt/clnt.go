@@ -52,7 +52,7 @@ func (lcs *LCSchedClnt) Enqueue(p *proc.Proc) (string, error) {
 	start = time.Now()
 	if err := rpcc.RPC("LCSched.Enqueue", req, res); err != nil {
 		db.DPrintf(db.ALWAYS, "LCSched.Enqueue err %v", err)
-		if serr.IsErrorUnreachable(err) {
+		if serr.IsErrorSession(err) {
 			db.DPrintf(db.ALWAYS, "Invalidate entry %v", pqID)
 			lcs.rpcdc.InvalidateEntry(pqID)
 		}

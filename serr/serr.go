@@ -230,6 +230,10 @@ func (err *Err) IsErrIO() bool {
 	return err.Code() == TErrIO
 }
 
+func (err *Err) IsErrSession() bool {
+	return err.IsErrUnreachable() || err.IsErrIO()
+}
+
 // A file is unavailable: either a server on the file's path is
 // unreachable or the file is not found
 func (err *Err) IsErrUnavailable() bool {
@@ -302,6 +306,22 @@ func IsErrorUnreachable(error error) bool {
 	var err *Err
 	if errors.As(error, &err) {
 		return err.IsErrUnreachable()
+	}
+	return false
+}
+
+func IsErrorIO(error error) bool {
+	var err *Err
+	if errors.As(error, &err) {
+		return err.IsErrIO()
+	}
+	return false
+}
+
+func IsErrorSession(error error) bool {
+	var err *Err
+	if errors.As(error, &err) {
+		return err.IsErrSession()
 	}
 	return false
 }

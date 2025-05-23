@@ -50,7 +50,7 @@ func NewProcdMgr(fsl *fslib.FsLib, kernelId string) *ProcdMgr {
 		for {
 			err := dirwatcher.WaitCreate(pdm.fsl, filepath.Join(sp.BOOT, pdm.kernelId))
 			// Retry if unreachable
-			if serr.IsErrorUnreachable(err) || serr.IsErrCode(err, serr.TErrClosed) {
+			if serr.IsErrorSession(err) || serr.IsErrCode(err, serr.TErrClosed) {
 				db.DPrintf(db.PROCDMGR, "Boot dir unreachable")
 				continue
 			}

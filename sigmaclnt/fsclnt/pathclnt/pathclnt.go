@@ -236,7 +236,7 @@ func (pathc *PathClnt) open(path path.Tpathname, principal *sp.Tprincipal, resol
 		//db.DPrintf(db.TEST, "try %d %v %t", i, path, resolve)
 		if err, cont := pathc.mntclnt.ResolveRoot(path); err != nil {
 			db.DPrintf(db.PATHCLNT_ERR, "open: resolveRoot %v err %v cont %t", path, err, cont)
-			if cont && err.IsErrUnreachable() {
+			if cont && err.IsErrSession() {
 				time.Sleep(sp.Conf.Path.RESOLVE_TIMEOUT)
 				continue
 			}

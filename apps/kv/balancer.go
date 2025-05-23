@@ -253,7 +253,7 @@ func (bl *Balancer) monitorMyself() {
 	for true {
 		time.Sleep(time.Duration(500) * time.Millisecond)
 		_, err := readConfig(bl.FsLib, KVConfig(bl.job))
-		if serr.IsErrorUnreachable(err) {
+		if serr.IsErrorSession(err) {
 			crash.Crash()
 		}
 	}
@@ -262,7 +262,7 @@ func (bl *Balancer) monitorMyself() {
 // Post config atomically
 func (bl *Balancer) PostConfig() {
 	if err := bl.PutFileJsonAtomic(KVConfig(bl.job), 0777, *bl.conf); err != nil {
-		if serr.IsErrorUnreachable(err) {
+		if serr.IsErrorSession(err) {
 			crash.Crash()
 		}
 		db.DFatalf("NewFile %v err %v", KVConfig(bl.job), err)
@@ -337,7 +337,7 @@ func (bl *Balancer) runProcRetry(args []string, retryf func(error, *proc.Status)
 		}
 		if err != nil && (strings.HasPrefix(err.Error(), "Spawn error") ||
 			strings.HasPrefix(err.Error(), "Missing return status") ||
-			serr.IsErrorUnreachable(err)) {
+			serr.IsErrorSession(err)) {
 			db.DFatalf("CRASH: runProc %v err %v", pid, err)
 		}
 		if retryf(err, status) {

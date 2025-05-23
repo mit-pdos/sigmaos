@@ -32,14 +32,10 @@ func StartNamed(sc *sigmaclnt.SigmaClnt, nd *proc.Proc) error {
 	if err := sc.Spawn(nd); err != nil {
 		return err
 	}
-	db.DPrintf(db.TEST, "New named spawned: %v", nd.GetPid())
-
 	// Wait for the proc to start
 	if err := sc.WaitStart(nd.GetPid()); err != nil {
 		return err
 	}
-	db.DPrintf(db.TEST, "New named started")
-
 	// Wait for the named to start up
 	pn := path.MarkResolve(filepath.Join(sp.REALMS, test.REALM1.String()))
 	_, err := sc.GetFileWatch(pn)

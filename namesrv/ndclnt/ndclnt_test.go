@@ -14,6 +14,7 @@ import (
 	"sigmaos/namesrv/ndclnt"
 	"sigmaos/path"
 	"sigmaos/proc"
+	"sigmaos/serr"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
@@ -98,19 +99,14 @@ func TestKillNamedAlone(t *testing.T) {
 	time.Sleep(CRASH_SEM_DELAY)
 
 	// Tell named to crash
-	db.DPrintf(db.TEST, "Crashing named")
 	err = crash.SignalFailer(sc.FsLib, crashpn)
 	assert.Nil(t, err, "Err crash: %v", err)
 
 	// Allow the crashing named time to crash
 	time.Sleep(T * time.Millisecond)
 
-	db.DPrintf(db.TEST, "named should be dead & buried")
-
 	_, err = sc.GetDir(path.MarkResolve(sp.NAMED))
 	assert.NotNil(t, err)
-
-	db.DPrintf(db.TEST, "named unreachable, as expected")
 
 	// Start a new named
 	nd2 := ndclnt.NewNamedProc(test.REALM1, ts.ProcEnv().UseDialProxy, false)
@@ -144,7 +140,6 @@ func namedClient(t *testing.T, sc *sigmaclnt.SigmaClnt, ch chan bool) {
 	for !done {
 		select {
 		case <-ch:
-			db.DPrintf(db.TEST, "done")
 			done = true
 		default:
 			time.Sleep(10 * time.Millisecond)
@@ -179,7 +174,7 @@ func namedClient(t *testing.T, sc *sigmaclnt.SigmaClnt, ch chan bool) {
 
 func TestKillNamedClient(t *testing.T) {
 	const (
-		T = 1000
+		T = 200
 		N = 5
 	)
 
@@ -220,14 +215,11 @@ func TestKillNamedClient(t *testing.T) {
 			return
 		}
 		// Tell named to old crash
-		db.DPrintf(db.TEST, "Crashing named")
 		err = crash.SignalFailer(sc.FsLib, crashpn)
 		assert.Nil(t, err, "Err crash: %v", err)
 
 		// Allow the crashing named time to crash
 		time.Sleep(T * time.Millisecond)
-
-		db.DPrintf(db.TEST, "named should be dead & buried")
 
 		ch <- true
 		<-ch
@@ -277,6 +269,7 @@ func TestAtMostOnce(t *testing.T) {
 	fn := filepath.Join(sp.NAMED, CRASHFILE)
 	_, err = sc.SetFile(fn, d, sp.OAPPEND, sp.NoOffset)
 	assert.NotNil(t, err)
+	assert.True(t, serr.IsErrorIO(err))
 
 	d1, err := sc.GetFile(fn)
 	assert.Nil(t, err)
@@ -304,7 +297,6 @@ func reboot(t *testing.T, dn string, f func(*test.Tstate, *sigmaclnt.SigmaClnt, 
 	if !assert.Nil(ts.T, err, "Err new sigmaclnt realm: %v", err) {
 		return
 	}
-	db.DPrintf(db.TEST, "Made new realm sigmaclnt")
 
 	fn := filepath.Join(dn, "leasedf")
 

@@ -125,7 +125,7 @@ func (dr *DirWatcher) isWatchClosed(err error) bool {
 		return false
 	}
 
-	return dr.closed.Load() || serr.IsErrCode(err, serr.TErrClosed) || serr.IsErrorUnreachable(err) || serr.IsErrCode(err, serr.TErrUnknownfid) || err == io.ErrUnexpectedEOF
+	return dr.closed.Load() || serr.IsErrCode(err, serr.TErrClosed) || serr.IsErrorSession(err) || serr.IsErrCode(err, serr.TErrUnknownfid) || err == io.ErrUnexpectedEOF
 }
 
 func (dr *DirWatcher) readUpdates() (*protsrv_proto.WatchEventList, error) {

@@ -302,7 +302,7 @@ func TestNetFail(t *testing.T) {
 			call := d.(*call)
 			assert.True(t, len(call.buf) == REPBUFSZ)
 		} else {
-			db.DPrintf(db.ALWAYS, "SendReceive err %v", err)
+			db.DPrintf(db.CRASH, "SendReceive err %v", err)
 			var err error
 			dmx.Close()
 			dmx, err = ts.connect()

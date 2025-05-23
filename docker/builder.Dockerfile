@@ -1,9 +1,22 @@
 # syntax=docker/dockerfile:1-experimental
 
-FROM archlinux
+FROM ubuntu:24.04 AS base
 
-#RUN pacman --noconfirm -Syu
-RUN pacman --noconfirm -Sy git libseccomp wget gcc pkg-config parallel time protobuf
+RUN apt update && \
+  apt install -y \
+  git \
+  wget \
+  gcc \
+  pkg-config \
+  parallel \
+  time \
+  cmake \
+  libprotobuf-dev \
+  libseccomp-dev \
+  libspdlog-dev \
+  libabsl-dev \
+  libprotoc-dev \
+  protobuf-compiler
 
 # Download an initial version of Go
 RUN wget "https://go.dev/dl/go1.22.2.linux-amd64.tar.gz" && \

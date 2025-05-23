@@ -16,6 +16,8 @@ void Clnt::init_conn() {
   req.set_allocated_procenvproto(_env->GetProto());
   // Execute the RPC
   auto res = _rpcc->RPC("SPProxySrvAPI.Init", req, rep);
+  // Make sure to release the proc env proto pointer so it isn't destroyed
+  auto _ = req.release_procenvproto();
   if (!res.has_value()) {
     log(SPPROXYCLNT_ERR, "Err RPC: {}", res.error());
     fatal("Err rpc: {}", res.error().String());
@@ -24,8 +26,6 @@ void Clnt::init_conn() {
     fatal("init rpc error: {}", rep.err().ShortDebugString());
   }
   log(SPPROXYCLNT, "Init RPC successful");
-  // Make sure to release the proc env proto pointer so it isn't destroyed
-  auto _ = req.release_procenvproto();
 }
 
 std::expected<int, sigmaos::serr::Error> Clnt::Test() {
@@ -180,14 +180,6 @@ std::expected<std::shared_ptr<std::string>, sigmaos::serr::Error> Clnt::GetFile(
   iov->AddAllocated(s.get());
   rep.set_allocated_blob(&blob);
   auto res = _rpcc->RPC("SPProxySrvAPI.GetFile", req, rep);
-  if (!res.has_value()) {
-    log(SPPROXYCLNT_ERR, "Err RPC: {}", res.error());
-    return std::unexpected(res.error());
-  }
-  if (rep.err().errcode() != sigmaos::serr::Terror::TErrNoError) {
-    return std::unexpected(sigmaos::serr::Error((sigmaos::serr::Terror) rep.err().errcode(), rep.err().obj()));
-  }
-  log(SPPROXYCLNT, "GetFile done: {}", pn);
   // Remove the data buffer from the protobuf's IOV in order to regain
   // ownership of its underlying memory.
   {
@@ -196,6 +188,14 @@ std::expected<std::shared_ptr<std::string>, sigmaos::serr::Error> Clnt::GetFile(
   {
     auto _ = rep.release_blob();
   }
+  if (!res.has_value()) {
+    log(SPPROXYCLNT_ERR, "Err RPC: {}", res.error());
+    return std::unexpected(res.error());
+  }
+  if (rep.err().errcode() != sigmaos::serr::Terror::TErrNoError) {
+    return std::unexpected(sigmaos::serr::Error((sigmaos::serr::Terror) rep.err().errcode(), rep.err().obj()));
+  }
+  log(SPPROXYCLNT, "GetFile done: {}", pn);
   return s;
 }
 
@@ -213,14 +213,6 @@ std::expected<uint32_t, sigmaos::serr::Error> Clnt::PutFile(std::string pn, sigm
   req.set_offset(offset);
   req.set_leaseid(leaseID);
   auto res = _rpcc->RPC("SPProxySrvAPI.PutFile", req, rep);
-  if (!res.has_value()) {
-    log(SPPROXYCLNT_ERR, "Err RPC: {}", res.error());
-    return std::unexpected(res.error());
-  }
-  if (rep.err().errcode() != sigmaos::serr::Terror::TErrNoError) {
-    return std::unexpected(sigmaos::serr::Error((sigmaos::serr::Terror) rep.err().errcode(), rep.err().obj()));
-  }
-  log(SPPROXYCLNT, "PutFile done: {} {} {} {} {} {}", pn, perm, mode, data->size(), offset, leaseID);
   // Remove the data buffer from the protobuf's IOV in order to regain
   // ownership of its underlying memory.
   {
@@ -229,6 +221,14 @@ std::expected<uint32_t, sigmaos::serr::Error> Clnt::PutFile(std::string pn, sigm
   {
     auto _ = req.release_blob();
   }
+  if (!res.has_value()) {
+    log(SPPROXYCLNT_ERR, "Err RPC: {}", res.error());
+    return std::unexpected(res.error());
+  }
+  if (rep.err().errcode() != sigmaos::serr::Terror::TErrNoError) {
+    return std::unexpected(sigmaos::serr::Error((sigmaos::serr::Terror) rep.err().errcode(), rep.err().obj()));
+  }
+  log(SPPROXYCLNT, "PutFile done: {} {} {} {} {} {}", pn, perm, mode, data->size(), offset, leaseID);
   return rep.size();
 }
 
@@ -244,14 +244,6 @@ std::expected<uint32_t, sigmaos::serr::Error> Clnt::Read(int fd, std::string *b)
   iov->AddAllocated(b);
   rep.set_allocated_blob(&blob);
   auto res = _rpcc->RPC("SPProxySrvAPI.Read", req, rep);
-  if (!res.has_value()) {
-    log(SPPROXYCLNT_ERR, "Err RPC: {}", res.error());
-    return std::unexpected(res.error());
-  }
-  if (rep.err().errcode() != sigmaos::serr::Terror::TErrNoError) {
-    return std::unexpected(sigmaos::serr::Error((sigmaos::serr::Terror) rep.err().errcode(), rep.err().obj()));
-  }
-  log(SPPROXYCLNT, "Read done: {} {}", fd, b->size());
   // Remove the data buffer from the protobuf's IOV in order to regain
   // ownership of its underlying memory.
   {
@@ -260,6 +252,14 @@ std::expected<uint32_t, sigmaos::serr::Error> Clnt::Read(int fd, std::string *b)
   {
     auto _ = rep.release_blob();
   }
+  if (!res.has_value()) {
+    log(SPPROXYCLNT_ERR, "Err RPC: {}", res.error());
+    return std::unexpected(res.error());
+  }
+  if (rep.err().errcode() != sigmaos::serr::Terror::TErrNoError) {
+    return std::unexpected(sigmaos::serr::Error((sigmaos::serr::Terror) rep.err().errcode(), rep.err().obj()));
+  }
+  log(SPPROXYCLNT, "Read done: {} {}", fd, b->size());
   return b->size();
 }
 
@@ -275,14 +275,6 @@ std::expected<uint32_t, sigmaos::serr::Error> Clnt::Pread(int fd, std::string *b
   iov->AddAllocated(b);
   rep.set_allocated_blob(&blob);
   auto res = _rpcc->RPC("SPProxySrvAPI.Pread", req, rep);
-  if (!res.has_value()) {
-    log(SPPROXYCLNT_ERR, "Err RPC: {}", res.error());
-    return std::unexpected(res.error());
-  }
-  if (rep.err().errcode() != sigmaos::serr::Terror::TErrNoError) {
-    return std::unexpected(sigmaos::serr::Error((sigmaos::serr::Terror) rep.err().errcode(), rep.err().obj()));
-  }
-  log(SPPROXYCLNT, "Pread done: {} {} {}", fd, b->size(), offset);
   // Remove the data buffer from the protobuf's IOV in order to regain
   // ownership of its underlying memory.
   {
@@ -291,6 +283,14 @@ std::expected<uint32_t, sigmaos::serr::Error> Clnt::Pread(int fd, std::string *b
   {
     auto _ = rep.release_blob();
   }
+  if (!res.has_value()) {
+    log(SPPROXYCLNT_ERR, "Err RPC: {}", res.error());
+    return std::unexpected(res.error());
+  }
+  if (rep.err().errcode() != sigmaos::serr::Terror::TErrNoError) {
+    return std::unexpected(sigmaos::serr::Error((sigmaos::serr::Terror) rep.err().errcode(), rep.err().obj()));
+  }
+  log(SPPROXYCLNT, "Pread done: {} {} {}", fd, b->size(), offset);
   return b->size();
 }
 
@@ -304,14 +304,6 @@ std::expected<uint32_t, sigmaos::serr::Error> Clnt::Write(int fd, std::string *b
   req.set_fd(fd);
   req.set_allocated_blob(&blob);
   auto res = _rpcc->RPC("SPProxySrvAPI.Write", req, rep);
-  if (!res.has_value()) {
-    log(SPPROXYCLNT_ERR, "Err RPC: {}", res.error());
-    return std::unexpected(res.error());
-  }
-  if (rep.err().errcode() != sigmaos::serr::Terror::TErrNoError) {
-    return std::unexpected(sigmaos::serr::Error((sigmaos::serr::Terror) rep.err().errcode(), rep.err().obj()));
-  }
-  log(SPPROXYCLNT, "Write done: {} {}", fd, b->size());
   // Remove the data buffer from the protobuf's IOV in order to regain
   // ownership of its underlying memory.
   {
@@ -320,6 +312,14 @@ std::expected<uint32_t, sigmaos::serr::Error> Clnt::Write(int fd, std::string *b
   {
     auto _ = req.release_blob();
   }
+  if (!res.has_value()) {
+    log(SPPROXYCLNT_ERR, "Err RPC: {}", res.error());
+    return std::unexpected(res.error());
+  }
+  if (rep.err().errcode() != sigmaos::serr::Terror::TErrNoError) {
+    return std::unexpected(sigmaos::serr::Error((sigmaos::serr::Terror) rep.err().errcode(), rep.err().obj()));
+  }
+  log(SPPROXYCLNT, "Write done: {} {}", fd, b->size());
   return rep.size();
 }
 
@@ -442,6 +442,7 @@ std::expected<int, sigmaos::serr::Error> Clnt::MountTree(std::shared_ptr<Tendpoi
   req.set_tree(tree);
   req.set_mountname(mount);
   auto res = _rpcc->RPC("SPProxySrvAPI.MountTree", req, rep);
+  auto _ = req.release_endpoint();
   if (!res.has_value()) {
     log(SPPROXYCLNT_ERR, "Err RPC: {}", res.error());
     return std::unexpected(res.error());
@@ -449,7 +450,6 @@ std::expected<int, sigmaos::serr::Error> Clnt::MountTree(std::shared_ptr<Tendpoi
   if (rep.err().errcode() != sigmaos::serr::Terror::TErrNoError) {
     return std::unexpected(sigmaos::serr::Error((sigmaos::serr::Terror) rep.err().errcode(), rep.err().obj()));
   }
-  auto _ = req.release_endpoint();
   log(SPPROXYCLNT, "MountTree done: {} {} {}", ep->ShortDebugString(), tree, mount);
   return 0;
 }
@@ -460,6 +460,7 @@ std::expected<bool, sigmaos::serr::Error> Clnt::IsLocalMount(std::shared_ptr<Ten
   SigmaMountRep rep;
   req.set_allocated_endpoint(ep.get());
   auto res = _rpcc->RPC("SPProxySrvAPI.IsLocalMount", req, rep);
+  auto _ = req.release_endpoint();
   if (!res.has_value()) {
     log(SPPROXYCLNT_ERR, "Err RPC: {}", res.error());
     return std::unexpected(res.error());
@@ -467,7 +468,6 @@ std::expected<bool, sigmaos::serr::Error> Clnt::IsLocalMount(std::shared_ptr<Ten
   if (rep.err().errcode() != sigmaos::serr::Terror::TErrNoError) {
     return std::unexpected(sigmaos::serr::Error((sigmaos::serr::Terror) rep.err().errcode(), rep.err().obj()));
   }
-  auto _ = req.release_endpoint();
   log(SPPROXYCLNT, "IsLocalMount done: {}", ep->ShortDebugString());
   return rep.local();
 }
@@ -625,6 +625,7 @@ std::expected<int, sigmaos::serr::Error> Clnt::RegisterEP(std::string pn, std::s
   req.set_path(pn);
   req.set_allocated_endpoint(ep.get());
   auto res = _rpcc->RPC("SPProxySrvAPI.RegisterEP", req, rep);
+  auto _ = req.release_endpoint();
   if (!res.has_value()) {
     log(SPPROXYCLNT_ERR, "Err RPC: {}", res.error());
     return std::unexpected(res.error());
@@ -632,7 +633,6 @@ std::expected<int, sigmaos::serr::Error> Clnt::RegisterEP(std::string pn, std::s
   if (rep.err().errcode() != sigmaos::serr::Terror::TErrNoError) {
     return std::unexpected(sigmaos::serr::Error((sigmaos::serr::Terror) rep.err().errcode(), rep.err().obj()));
   }
-  auto _ = req.release_endpoint();
   log(SPPROXYCLNT, "RegisterEP done: {} -> {}", pn, ep->ShortDebugString());
   return 0;
 }

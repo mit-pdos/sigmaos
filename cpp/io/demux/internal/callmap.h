@@ -7,6 +7,7 @@
 #include <iostream>
 #include <memory>
 #include <expected>
+#include <optional>
 #include <map>
 #include <future>
 #include <mutex>

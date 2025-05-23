@@ -1,14 +1,22 @@
 # syntax=docker/dockerfile:1-experimental
 
-FROM archlinux
+FROM ubuntu:24.04
 
-RUN pacman-key --init && \
-  pacman-key --refresh-keys && \
-  pacman-key -u && \
-  pacman-key --populate && \
-  pacman --noconfirm -Sy archlinux-keyring
-
-RUN pacman --noconfirm -Sy git libseccomp wget gcc pkg-config parallel time make cmake spdlog protobuf=30.2
+RUN apt update && \
+  apt install -y \
+  git \
+  wget \
+  gcc \
+  pkg-config \
+  parallel \
+  time \
+  cmake \
+  libprotobuf-dev \
+  libseccomp-dev \
+  libspdlog-dev \
+  libabsl-dev \
+  libprotoc-dev \
+  protobuf-compiler
 
 WORKDIR /home/sigmaos
 

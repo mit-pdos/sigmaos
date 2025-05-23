@@ -21,7 +21,7 @@ google::protobuf::Timestamp GetExecTime();
 class ProcEnv {
   public:
   ProcEnv(std::string pe_str) {
-    auto res = google::protobuf::json::JsonStringToMessage(pe_str, &_proto);
+    auto res = google::protobuf::util::JsonStringToMessage(pe_str, &_proto);
     if (!res.ok()) {
       fatal("Error parse proc env str: {}", pe_str);
     }

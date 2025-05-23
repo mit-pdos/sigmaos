@@ -1,18 +1,17 @@
 # syntax=docker/dockerfile:1-experimental
 
-FROM archlinux AS base
+FROM ubuntu:24.04 AS base
 
-RUN pacman-key --init
-RUN pacman-key --refresh-keys
-RUN pacman-key -u
-RUN pacman-key --populate
-RUN pacman-key --init && \
-  pacman-key --refresh-keys && \
-  pacman-key -u && \
-  pacman-key --populate && \
-  pacman --noconfirm -Sy archlinux-keyring
-
-RUN pacman --noconfirm -Sy libseccomp strace fuse gcc-libs spdlog protobuf=30.2
+RUN apt update && \
+  apt install -y \
+  libseccomp-dev \
+  strace \
+  fuse \
+  libspdlog-dev \
+  libprotobuf-dev \
+  valgrind \
+  libc6-dbg \
+  libabsl-dev
 
 WORKDIR /home/sigmaos
 RUN mkdir bin && \
@@ -45,7 +44,7 @@ ENV mongoip x.x.x.x
 ENV buildtag "local-build"
 ENV dialproxy "false"
 # Install docker-cli
-RUN pacman --noconfirm -Sy docker
+RUN apt install -y docker.io
 ENV reserveMcpu "0"
 ENV netmode "host"
 ENV sigmauser "NOT_SET"

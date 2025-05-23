@@ -80,6 +80,7 @@ PROTOBUF_CONSTEXPR ProcEnvProto::ProcEnvProto(
   , /*decltype(_impl_.realmswitchstr_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}
   , /*decltype(_impl_.version_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}
   , /*decltype(_impl_.fail_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}
+  , /*decltype(_impl_.valgrind_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}
   , /*decltype(_impl_.principal_)*/nullptr
   , /*decltype(_impl_.spawntimepb_)*/nullptr
   , /*decltype(_impl_.mschedendpointproto_)*/nullptr
@@ -196,6 +197,7 @@ const uint32_t TableStruct_proc_2fproc_2eproto::offsets[] PROTOBUF_SECTION_VARIA
   PROTOBUF_FIELD_OFFSET(::ProcEnvProto, _impl_.realmswitchstr_),
   PROTOBUF_FIELD_OFFSET(::ProcEnvProto, _impl_.version_),
   PROTOBUF_FIELD_OFFSET(::ProcEnvProto, _impl_.fail_),
+  PROTOBUF_FIELD_OFFSET(::ProcEnvProto, _impl_.valgrind_),
   PROTOBUF_FIELD_OFFSET(::ProcProto_EnvEntry_DoNotUse, _has_bits_),
   PROTOBUF_FIELD_OFFSET(::ProcProto_EnvEntry_DoNotUse, _internal_metadata_),
   ~0u,  // no _extensions_
@@ -224,8 +226,8 @@ static const ::_pbi::MigrationSchema schemas[] PROTOBUF_SECTION_VARIABLE(protode
   { 10, 18, -1, sizeof(::ProcEnvProto_EtcdEndpointsEntry_DoNotUse)},
   { 20, 28, -1, sizeof(::ProcEnvProto_SecretsMapEntry_DoNotUse)},
   { 30, -1, -1, sizeof(::ProcEnvProto)},
-  { 64, 72, -1, sizeof(::ProcProto_EnvEntry_DoNotUse)},
-  { 74, -1, -1, sizeof(::ProcProto)},
+  { 65, 73, -1, sizeof(::ProcProto_EnvEntry_DoNotUse)},
+  { 75, -1, -1, sizeof(::ProcProto)},
 };
 
 static const ::_pb::Message* const file_default_instances[] = {
@@ -241,7 +243,7 @@ const char descriptor_table_protodef_proc_2fproc_2eproto[] PROTOBUF_SECTION_VARI
   "\n\017proc/proc.proto\032\037google/protobuf/times"
   "tamp.proto\032\023sigmap/sigmap.proto\"L\n\tProcS"
   "eqno\022\r\n\005epoch\030\001 \001(\004\022\r\n\005seqno\030\002 \001(\004\022\017\n\007pr"
-  "ocqID\030\003 \001(\t\022\020\n\010mSchedID\030\004 \001(\t\"\316\006\n\014ProcEn"
+  "ocqID\030\003 \001(\t\022\020\n\010mSchedID\030\004 \001(\t\"\340\006\n\014ProcEn"
   "vProto\022\016\n\006pidStr\030\001 \001(\t\022\017\n\007program\030\002 \001(\t\022"
   "\020\n\010realmStr\030\003 \001(\t\022\036\n\tprincipal\030\004 \001(\0132\013.T"
   "principal\022\017\n\007procDir\030\005 \001(\t\022\021\n\tparentDir\030"
@@ -259,16 +261,16 @@ const char descriptor_table_protodef_proc_2fproc_2eproto[] PROTOBUF_SECTION_VARI
   "\0221\n\nsecretsMap\030\027 \003(\0132\035.ProcEnvProto.Secr"
   "etsMapEntry\022\021\n\tsigmaPath\030\030 \003(\t\022\017\n\007kernel"
   "s\030\031 \003(\t\022\026\n\016realmSwitchStr\030\032 \001(\t\022\017\n\007versi"
-  "on\030\033 \001(\t\022\014\n\004fail\030\034 \001(\t\032E\n\022EtcdEndpointsE"
-  "ntry\022\013\n\003key\030\001 \001(\t\022\036\n\005value\030\002 \001(\0132\017.Tendp"
-  "ointProto:\0028\001\032\?\n\017SecretsMapEntry\022\013\n\003key\030"
-  "\001 \001(\t\022\033\n\005value\030\002 \001(\0132\014.SecretProto:\0028\001\"\276"
-  "\001\n\tProcProto\022#\n\014procEnvProto\030\001 \001(\0132\r.Pro"
-  "cEnvProto\022\014\n\004args\030\002 \003(\t\022 \n\003env\030\003 \003(\0132\023.P"
-  "rocProto.EnvEntry\022\017\n\007typeInt\030\004 \001(\r\022\017\n\007mc"
-  "puInt\030\005 \001(\r\022\016\n\006memInt\030\006 \001(\r\032*\n\010EnvEntry\022"
-  "\013\n\003key\030\001 \001(\t\022\r\n\005value\030\002 \001(\t:\0028\001B\016Z\014sigma"
-  "os/procb\006proto3"
+  "on\030\033 \001(\t\022\014\n\004fail\030\034 \001(\t\022\020\n\010valgrind\030\035 \001(\t"
+  "\032E\n\022EtcdEndpointsEntry\022\013\n\003key\030\001 \001(\t\022\036\n\005v"
+  "alue\030\002 \001(\0132\017.TendpointProto:\0028\001\032\?\n\017Secre"
+  "tsMapEntry\022\013\n\003key\030\001 \001(\t\022\033\n\005value\030\002 \001(\0132\014"
+  ".SecretProto:\0028\001\"\276\001\n\tProcProto\022#\n\014procEn"
+  "vProto\030\001 \001(\0132\r.ProcEnvProto\022\014\n\004args\030\002 \003("
+  "\t\022 \n\003env\030\003 \003(\0132\023.ProcProto.EnvEntry\022\017\n\007t"
+  "ypeInt\030\004 \001(\r\022\017\n\007mcpuInt\030\005 \001(\r\022\016\n\006memInt\030"
+  "\006 \001(\r\032*\n\010EnvEntry\022\013\n\003key\030\001 \001(\t\022\r\n\005value\030"
+  "\002 \001(\t:\0028\001B\016Z\014sigmaos/procb\006proto3"
   ;
 static const ::_pbi::DescriptorTable* const descriptor_table_proc_2fproc_2eproto_deps[2] = {
   &::descriptor_table_google_2fprotobuf_2ftimestamp_2eproto,
@@ -276,7 +278,7 @@ static const ::_pbi::DescriptorTable* const descriptor_table_proc_2fproc_2eproto
 };
 static ::_pbi::once_flag descriptor_table_proc_2fproc_2eproto_once;
 const ::_pbi::DescriptorTable descriptor_table_proc_2fproc_2eproto = {
-    false, false, 1215, descriptor_table_protodef_proc_2fproc_2eproto,
+    false, false, 1233, descriptor_table_protodef_proc_2fproc_2eproto,
     "proc/proc.proto",
     &descriptor_table_proc_2fproc_2eproto_once, descriptor_table_proc_2fproc_2eproto_deps, 2, 6,
     schemas, file_default_instances, TableStruct_proc_2fproc_2eproto::offsets,
@@ -720,6 +722,7 @@ ProcEnvProto::ProcEnvProto(const ProcEnvProto& from)
     , decltype(_impl_.realmswitchstr_){}
     , decltype(_impl_.version_){}
     , decltype(_impl_.fail_){}
+    , decltype(_impl_.valgrind_){}
     , decltype(_impl_.principal_){nullptr}
     , decltype(_impl_.spawntimepb_){nullptr}
     , decltype(_impl_.mschedendpointproto_){nullptr}
@@ -861,6 +864,14 @@ ProcEnvProto::ProcEnvProto(const ProcEnvProto& from)
     _this->_impl_.fail_.Set(from._internal_fail(), 
       _this->GetArenaForAllocation());
   }
+  _impl_.valgrind_.InitDefault();
+  #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+    _impl_.valgrind_.Set("", GetArenaForAllocation());
+  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  if (!from._internal_valgrind().empty()) {
+    _this->_impl_.valgrind_.Set(from._internal_valgrind(), 
+      _this->GetArenaForAllocation());
+  }
   if (from._internal_has_principal()) {
     _this->_impl_.principal_ = new ::Tprincipal(*from._impl_.principal_);
   }
@@ -904,6 +915,7 @@ inline void ProcEnvProto::SharedCtor(
     , decltype(_impl_.realmswitchstr_){}
     , decltype(_impl_.version_){}
     , decltype(_impl_.fail_){}
+    , decltype(_impl_.valgrind_){}
     , decltype(_impl_.principal_){nullptr}
     , decltype(_impl_.spawntimepb_){nullptr}
     , decltype(_impl_.mschedendpointproto_){nullptr}
@@ -978,6 +990,10 @@ inline void ProcEnvProto::SharedCtor(
   #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
     _impl_.fail_.Set("", GetArenaForAllocation());
   #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  _impl_.valgrind_.InitDefault();
+  #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+    _impl_.valgrind_.Set("", GetArenaForAllocation());
+  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
 }
 
 ProcEnvProto::~ProcEnvProto() {
@@ -1014,6 +1030,7 @@ inline void ProcEnvProto::SharedDtor() {
   _impl_.realmswitchstr_.Destroy();
   _impl_.version_.Destroy();
   _impl_.fail_.Destroy();
+  _impl_.valgrind_.Destroy();
   if (this != internal_default_instance()) delete _impl_.principal_;
   if (this != internal_default_instance()) delete _impl_.spawntimepb_;
   if (this != internal_default_instance()) delete _impl_.mschedendpointproto_;
@@ -1055,6 +1072,7 @@ void ProcEnvProto::Clear() {
   _impl_.realmswitchstr_.ClearToEmpty();
   _impl_.version_.ClearToEmpty();
   _impl_.fail_.ClearToEmpty();
+  _impl_.valgrind_.ClearToEmpty();
   if (GetArenaForAllocation() == nullptr && _impl_.principal_ != nullptr) {
     delete _impl_.principal_;
   }
@@ -1360,6 +1378,16 @@ const char* ProcEnvProto::_InternalParse(const char* ptr, ::_pbi::ParseContext* 
           ptr = ::_pbi::InlineGreedyStringParser(str, ptr, ctx);
           CHK_(ptr);
           CHK_(::_pbi::VerifyUTF8(str, "ProcEnvProto.fail"));
+        } else
+          goto handle_unusual;
+        continue;
+      // string valgrind = 29;
+      case 29:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 234)) {
+          auto str = _internal_mutable_valgrind();
+          ptr = ::_pbi::InlineGreedyStringParser(str, ptr, ctx);
+          CHK_(ptr);
+          CHK_(::_pbi::VerifyUTF8(str, "ProcEnvProto.valgrind"));
         } else
           goto handle_unusual;
         continue;
@@ -1676,6 +1704,16 @@ uint8_t* ProcEnvProto::_InternalSerialize(
         28, this->_internal_fail(), target);
   }
 
+  // string valgrind = 29;
+  if (!this->_internal_valgrind().empty()) {
+    ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::VerifyUtf8String(
+      this->_internal_valgrind().data(), static_cast<int>(this->_internal_valgrind().length()),
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::SERIALIZE,
+      "ProcEnvProto.valgrind");
+    target = stream->WriteStringMaybeAliased(
+        29, this->_internal_valgrind(), target);
+  }
+
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
     target = ::_pbi::WireFormat::InternalSerializeUnknownFieldsToArray(
         _internal_metadata_.unknown_fields<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(::PROTOBUF_NAMESPACE_ID::UnknownFieldSet::default_instance), target, stream);
@@ -1838,6 +1876,13 @@ size_t ProcEnvProto::ByteSizeLong() const {
         this->_internal_fail());
   }
 
+  // string valgrind = 29;
+  if (!this->_internal_valgrind().empty()) {
+    total_size += 2 +
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
+        this->_internal_valgrind());
+  }
+
   // .Tprincipal principal = 4;
   if (this->_internal_has_principal()) {
     total_size += 1 +
@@ -1958,6 +2003,9 @@ void ProcEnvProto::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::P
   if (!from._internal_fail().empty()) {
     _this->_internal_set_fail(from._internal_fail());
   }
+  if (!from._internal_valgrind().empty()) {
+    _this->_internal_set_valgrind(from._internal_valgrind());
+  }
   if (from._internal_has_principal()) {
     _this->_internal_mutable_principal()->::Tprincipal::MergeFrom(
         from._internal_principal());
@@ -2072,6 +2120,10 @@ void ProcEnvProto::InternalSwap(ProcEnvProto* other) {
   ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr::InternalSwap(
       &_impl_.fail_, lhs_arena,
       &other->_impl_.fail_, rhs_arena
+  );
+  ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr::InternalSwap(
+      &_impl_.valgrind_, lhs_arena,
+      &other->_impl_.valgrind_, rhs_arena
   );
   ::PROTOBUF_NAMESPACE_ID::internal::memswap<
       PROTOBUF_FIELD_OFFSET(ProcEnvProto, _impl_.usedialproxy_)

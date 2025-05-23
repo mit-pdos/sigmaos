@@ -16,6 +16,8 @@ import (
 	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/docker/go-connections/nat"
 
+	units "github.com/docker/go-units"
+
 	"sigmaos/dcontainer/cgroup"
 	db "sigmaos/debug"
 	"sigmaos/proc"
@@ -106,6 +108,17 @@ func StartDockerContainer(p *proc.Proc, kernelId, user, netmode string) (*DConta
 		)
 	}
 
+	ulimits := []*units.Ulimit{}
+	if p.GetProcEnv().GetValgrind() != "" {
+		// If running with valgrind, we have to set a limit on the number of open
+		// FDs (or else valgrind won't run).
+		ulimits = append(ulimits, &units.Ulimit{
+			"nofile",
+			1000000,
+			1000000,
+		})
+	}
+
 	resp, err := cli.ContainerCreate(ctx,
 		&container.Config{
 			Image:        image,
@@ -120,6 +133,9 @@ func StartDockerContainer(p *proc.Proc, kernelId, user, netmode string) (*DConta
 			Privileged:   true,
 			PortBindings: pmap,
 			OomScoreAdj:  score,
+			Resources: container.Resources{
+				Ulimits: ulimits,
+			},
 		}, &network.NetworkingConfig{
 			EndpointsConfig: endpoints,
 		}, nil, kernelId+"-procd-"+p.GetPid().String())

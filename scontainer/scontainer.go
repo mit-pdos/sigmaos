@@ -35,6 +35,7 @@ func StartSigmaContainer(uproc *proc.Proc, dialproxy bool) (*uprocCmd, error) {
 	db.DPrintf(db.CONTAINER, "RunUProc dialproxy %v %v env %v\n", dialproxy, uproc, os.Environ())
 	var cmd *exec.Cmd
 	straceProcs := proc.GetLabels(uproc.GetProcEnv().GetStrace())
+	valgrindProcs := proc.GetLabels(uproc.GetProcEnv().GetValgrind())
 
 	pn := binsrv.BinPath(uproc.GetVersionedProgram())
 	// Optionally strace the proc
@@ -47,6 +48,8 @@ func StartSigmaContainer(uproc *proc.Proc, dialproxy bool) (*uprocCmd, error) {
 		}
 		args = append(args, uproc.Args...)
 		cmd = exec.Command("strace", args...)
+	} else if valgrindProcs[uproc.GetProgram()] {
+		cmd = exec.Command("valgrind", append([]string{"--trace-children=yes", "uproc-trampoline", uproc.GetPid().String(), pn, strconv.FormatBool(dialproxy)}, uproc.Args...)...)
 	} else {
 		cmd = exec.Command("uproc-trampoline", append([]string{uproc.GetPid().String(), pn, strconv.FormatBool(dialproxy)}, uproc.Args...)...)
 	}

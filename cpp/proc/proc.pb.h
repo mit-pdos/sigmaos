@@ -465,6 +465,7 @@ class ProcEnvProto final :
     kRealmSwitchStrFieldNumber = 26,
     kVersionFieldNumber = 27,
     kFailFieldNumber = 28,
+    kValgrindFieldNumber = 29,
     kPrincipalFieldNumber = 4,
     kSpawnTimePBFieldNumber = 17,
     kMSchedEndpointProtoFieldNumber = 19,
@@ -780,6 +781,20 @@ class ProcEnvProto final :
   std::string* _internal_mutable_fail();
   public:
 
+  // string valgrind = 29;
+  void clear_valgrind();
+  const std::string& valgrind() const;
+  template <typename ArgT0 = const std::string&, typename... ArgT>
+  void set_valgrind(ArgT0&& arg0, ArgT... args);
+  std::string* mutable_valgrind();
+  PROTOBUF_NODISCARD std::string* release_valgrind();
+  void set_allocated_valgrind(std::string* valgrind);
+  private:
+  const std::string& _internal_valgrind() const;
+  inline PROTOBUF_ALWAYS_INLINE void _internal_set_valgrind(const std::string& value);
+  std::string* _internal_mutable_valgrind();
+  public:
+
   // .Tprincipal principal = 4;
   bool has_principal() const;
   private:
@@ -924,6 +939,7 @@ class ProcEnvProto final :
     ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr realmswitchstr_;
     ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr version_;
     ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr fail_;
+    ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr valgrind_;
     ::Tprincipal* principal_;
     ::PROTOBUF_NAMESPACE_ID::Timestamp* spawntimepb_;
     ::TendpointProto* mschedendpointproto_;
@@ -2786,6 +2802,56 @@ inline void ProcEnvProto::set_allocated_fail(std::string* fail) {
   }
 #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
   // @@protoc_insertion_point(field_set_allocated:ProcEnvProto.fail)
+}
+
+// string valgrind = 29;
+inline void ProcEnvProto::clear_valgrind() {
+  _impl_.valgrind_.ClearToEmpty();
+}
+inline const std::string& ProcEnvProto::valgrind() const {
+  // @@protoc_insertion_point(field_get:ProcEnvProto.valgrind)
+  return _internal_valgrind();
+}
+template <typename ArgT0, typename... ArgT>
+inline PROTOBUF_ALWAYS_INLINE
+void ProcEnvProto::set_valgrind(ArgT0&& arg0, ArgT... args) {
+ 
+ _impl_.valgrind_.Set(static_cast<ArgT0 &&>(arg0), args..., GetArenaForAllocation());
+  // @@protoc_insertion_point(field_set:ProcEnvProto.valgrind)
+}
+inline std::string* ProcEnvProto::mutable_valgrind() {
+  std::string* _s = _internal_mutable_valgrind();
+  // @@protoc_insertion_point(field_mutable:ProcEnvProto.valgrind)
+  return _s;
+}
+inline const std::string& ProcEnvProto::_internal_valgrind() const {
+  return _impl_.valgrind_.Get();
+}
+inline void ProcEnvProto::_internal_set_valgrind(const std::string& value) {
+  
+  _impl_.valgrind_.Set(value, GetArenaForAllocation());
+}
+inline std::string* ProcEnvProto::_internal_mutable_valgrind() {
+  
+  return _impl_.valgrind_.Mutable(GetArenaForAllocation());
+}
+inline std::string* ProcEnvProto::release_valgrind() {
+  // @@protoc_insertion_point(field_release:ProcEnvProto.valgrind)
+  return _impl_.valgrind_.Release();
+}
+inline void ProcEnvProto::set_allocated_valgrind(std::string* valgrind) {
+  if (valgrind != nullptr) {
+    
+  } else {
+    
+  }
+  _impl_.valgrind_.SetAllocated(valgrind, GetArenaForAllocation());
+#ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  if (_impl_.valgrind_.IsDefault()) {
+    _impl_.valgrind_.Set("", GetArenaForAllocation());
+  }
+#endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  // @@protoc_insertion_point(field_set_allocated:ProcEnvProto.valgrind)
 }
 
 // -------------------------------------------------------------------

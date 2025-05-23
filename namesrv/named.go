@@ -179,6 +179,8 @@ func Run(args []string) error {
 		db.DFatalf("warmCache err %v", err)
 	}
 
+	crash.SetCrashFile(nd.FsLib, crash.NAMED_CRASHFILE)
+
 	crash.Failer(nd.FsLib, crash.NAMED_CRASH, func(e crash.Tevent) {
 		crash.Crash()
 	})

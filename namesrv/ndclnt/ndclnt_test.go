@@ -23,6 +23,7 @@ import (
 const (
 	MCPU            proc.Tmcpu = 1000
 	CRASH_SEM_DELAY            = 100 * time.Millisecond
+	CRASHFILE                  = "###crashfile##!"
 )
 
 func TestCompile(t *testing.T) {
@@ -247,7 +248,11 @@ func TestAtMostOnce(t *testing.T) {
 	}
 	defer ts.Shutdown()
 
-	nd1 := ndclnt.NewNamedProc(test.REALM1, ts.ProcEnv().UseDialProxy, false)
+	e := crash.NewEventPath(crash.NAMED_CRASHFILE, 0, 0.0, CRASHFILE)
+	err := crash.SetSigmaFail(crash.NewTeventMapOne(e))
+	assert.Nil(t, err)
+
+	nd1 := ndclnt.NewNamedProc(test.REALM1, ts.ProcEnv().UseDialProxy, true)
 	if err := ndclnt.StartNamed(ts.SigmaClnt, nd1); !assert.Nil(ts.T, err, "Err startNamed: %v", err) {
 		return
 	}
@@ -258,16 +263,10 @@ func TestAtMostOnce(t *testing.T) {
 		return
 	}
 
-	// Start two hot-standby named
+	// Start a hot-standby named
 	nd2 := ndclnt.NewNamedProc(test.REALM1, ts.ProcEnv().UseDialProxy, false)
 	db.DPrintf(db.TEST, "Starting a new named: %v", nd2.GetPid())
 	if err := ndclnt.StartNamed(ts.SigmaClnt, nd2); !assert.Nil(ts.T, err, "Err startNamed 2: %v", err) {
-		return
-	}
-
-	nd3 := ndclnt.NewNamedProc(test.REALM1, ts.ProcEnv().UseDialProxy, false)
-	db.DPrintf(db.TEST, "Starting a new named: %v", nd3.GetPid())
-	if err := ndclnt.StartNamed(ts.SigmaClnt, nd3); !assert.Nil(ts.T, err, "Err startNamed 2: %v", err) {
 		return
 	}
 
@@ -275,7 +274,7 @@ func TestAtMostOnce(t *testing.T) {
 	assert.Nil(t, err)
 
 	d := []byte("hello")
-	fn := filepath.Join(sp.NAMED, crash.CRASHFILE)
+	fn := filepath.Join(sp.NAMED, CRASHFILE)
 	_, err = sc.SetFile(fn, d, sp.OAPPEND, sp.NoOffset)
 	assert.NotNil(t, err)
 
@@ -283,7 +282,7 @@ func TestAtMostOnce(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, d, d1, d1)
 
-	if err := ndclnt.StopNamed(ts.SigmaClnt, nd3); !assert.Nil(ts.T, err, "Err stop named: %v", err) {
+	if err := ndclnt.StopNamed(ts.SigmaClnt, nd2); !assert.Nil(ts.T, err, "Err stop named: %v", err) {
 		return
 	}
 }

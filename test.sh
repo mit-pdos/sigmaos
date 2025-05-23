@@ -328,6 +328,7 @@ if [[ $BASIC == "--basic" ]]; then
 fi
 
 
+if [[ $APPS == "--proxynp" ]]; then
     #
     # test ninep proxy with just named and full kernel
     #
@@ -344,6 +345,7 @@ fi
         fi
         run_test $T "./test-in-docker.sh --pkg $T --args \"$VERB --timeout 20m $SPPROXYD $DIALPROXY $REUSEKERNEL\""
     done
+fi
 
     # run_test "sigmapsrv/ux" "./test-in-docker.sh --pkg sigmasrv/memfssrv/sigmapsrv --run ReadPerf --args \"$VERB --path name/ux/~any/ $SPPROXYD $DIALPROXY $REUSEKERNEL\""
     # run_test "sigmapsrv/s3" "./test-in-docker.sh --pkg sigmasrv/memfssrv/sigmapsrv --run ReadPerf --args \"$VERB --path name/s3/~any/9ps3/ $SPPROXYD $DIALPROXY $REUSEKERNEL\""

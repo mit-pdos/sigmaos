@@ -147,8 +147,9 @@ func namedClient(t *testing.T, sc *sigmaclnt.SigmaClnt, ch chan bool) {
 			done = true
 		default:
 			time.Sleep(10 * time.Millisecond)
+			d := []byte("hello")
 			fn := filepath.Join(sp.NAMED, "fff")
-			_, err := sc.PutFile(fn, 0777, sp.OWRITE|sp.OEXCL, nil)
+			_, err := sc.PutFile(fn, 0777, sp.OWRITE|sp.OEXCL, d)
 			if err == nil {
 				for i := 0; i < MAXRETRY; i++ {
 					sts, err := sc.GetDir(sp.NAMED)
@@ -158,6 +159,11 @@ func namedClient(t *testing.T, sc *sigmaclnt.SigmaClnt, ch chan bool) {
 					}
 					assert.NotEqual(t, MAXRETRY, i)
 				}
+
+				dg, err := sc.GetFile(fn)
+				assert.Nil(t, err)
+				assert.Equal(t, d, dg)
+
 				for i := 0; i < MAXRETRY; i++ {
 					if err := sc.Remove(fn); err == nil {
 						break
@@ -231,6 +237,54 @@ func TestKillNamedClient(t *testing.T) {
 				return
 			}
 		}
+	}
+}
+
+func TestAtMostOnce(t *testing.T) {
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	defer ts.Shutdown()
+
+	nd1 := ndclnt.NewNamedProc(test.REALM1, ts.ProcEnv().UseDialProxy, false)
+	if err := ndclnt.StartNamed(ts.SigmaClnt, nd1); !assert.Nil(ts.T, err, "Err startNamed: %v", err) {
+		return
+	}
+
+	pe := proc.NewDifferentRealmProcEnv(ts.ProcEnv(), test.REALM1)
+	sc, err := sigmaclnt.NewSigmaClnt(pe)
+	if !assert.Nil(ts.T, err, "Err new sigmaclnt realm: %v", err) {
+		return
+	}
+
+	// Start two hot-standby named
+	nd2 := ndclnt.NewNamedProc(test.REALM1, ts.ProcEnv().UseDialProxy, false)
+	db.DPrintf(db.TEST, "Starting a new named: %v", nd2.GetPid())
+	if err := ndclnt.StartNamed(ts.SigmaClnt, nd2); !assert.Nil(ts.T, err, "Err startNamed 2: %v", err) {
+		return
+	}
+
+	nd3 := ndclnt.NewNamedProc(test.REALM1, ts.ProcEnv().UseDialProxy, false)
+	db.DPrintf(db.TEST, "Starting a new named: %v", nd3.GetPid())
+	if err := ndclnt.StartNamed(ts.SigmaClnt, nd3); !assert.Nil(ts.T, err, "Err startNamed 2: %v", err) {
+		return
+	}
+
+	_, err = sc.GetDir(sp.NAMED)
+	assert.Nil(t, err)
+
+	d := []byte("hello")
+	fn := filepath.Join(sp.NAMED, crash.CRASHFILE)
+	_, err = sc.SetFile(fn, d, sp.OAPPEND, sp.NoOffset)
+	assert.NotNil(t, err)
+
+	d1, err := sc.GetFile(fn)
+	assert.Nil(t, err)
+	assert.Equal(t, d, d1, d1)
+
+	if err := ndclnt.StopNamed(ts.SigmaClnt, nd3); !assert.Nil(ts.T, err, "Err stop named: %v", err) {
+		return
 	}
 }
 

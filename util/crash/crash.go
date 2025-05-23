@@ -19,6 +19,8 @@ import (
 const (
 	ONE   = 1000
 	FIFTY = 500
+
+	CRASHFILE = "###crashf!!"
 )
 
 var labels *TeventMap
@@ -187,6 +189,12 @@ func Crash() {
 func CrashMsg(msg string) {
 	db.DPrintf(db.CRASH, "CrashMsg %v", msg)
 	os.Exit(proc.CRASH)
+}
+
+func CrashFile(name string) {
+	if name == CRASHFILE {
+		Crash()
+	}
 }
 
 func PartitionNamed(fsl *fslib.FsLib) {

@@ -139,6 +139,7 @@ func TestKillNamedAlone(t *testing.T) {
 
 func TestKillNamedClient(t *testing.T) {
 	const T = 1000
+	const MAXRETRY = 30
 	crashpn := sp.NAMED + "crashnd.sem"
 
 	e := crash.NewEventPath(crash.NAMED_CRASH, T, float64(1.0), crashpn)
@@ -171,16 +172,25 @@ func TestKillNamedClient(t *testing.T) {
 				db.DPrintf(db.TEST, "done")
 				done = true
 			default:
-				time.Sleep(100 * time.Millisecond)
-				db.DPrintf(db.TEST, "Create")
+				time.Sleep(10 * time.Millisecond)
 				fn := filepath.Join(sp.NAMED, "fff")
-				_, err = sc.PutFile(fn, 0777, sp.OREAD, nil)
-				assert.Nil(t, err)
-				sts, err := sc.GetDir(sp.NAMED)
-				assert.Nil(t, err)
-				assert.True(t, sp.Present(sts, []string{fn}))
-				err = sc.Remove(fn)
-				assert.Equal(t, nil, err)
+				_, err = sc.PutFile(fn, 0777, sp.OWRITE|sp.OEXCL, nil)
+				if err == nil {
+					for i := 0; i < MAXRETRY; i++ {
+						sts, err := sc.GetDir(sp.NAMED)
+						if err == nil {
+							assert.True(t, sp.Present(sts, []string{fn}))
+							break
+						}
+						assert.NotEqual(t, MAXRETRY, i)
+					}
+					for i := 0; i < MAXRETRY; i++ {
+						if err := sc.Remove(fn); err == nil {
+							break
+						}
+						assert.NotEqual(t, MAXRETRY, i)
+					}
+				}
 			}
 		}
 		ch <- true

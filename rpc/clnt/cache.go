@@ -75,7 +75,7 @@ func (cc *ClntCache) RPCRetry(pn string, method string, arg proto.Message, res p
 		rpcc, err := cc.Lookup(pn)
 		if err != nil {
 			var sr *serr.Err
-			if errors.As(err, &sr) && serr.Retry(sr) {
+			if errors.As(err, &sr) && serr.IsRetryOK(sr) {
 				db.DPrintf(db.RPCCLNT, "RPC retry lookup failure pn %v", pn)
 				continue
 			}
@@ -84,7 +84,7 @@ func (cc *ClntCache) RPCRetry(pn string, method string, arg proto.Message, res p
 		}
 		if err := rpcc.RPC(method, arg, res); err != nil {
 			var sr *serr.Err
-			if errors.As(err, &sr) && serr.Retry(sr) {
+			if errors.As(err, &sr) && serr.IsRetryOK(sr) {
 				time.Sleep(sp.Conf.Path.RESOLVE_TIMEOUT)
 				cc.stats.Nretry += 1
 				db.DPrintf(db.RPCCLNT, "RPC: retry %v %v err %v", pn, method, sr)

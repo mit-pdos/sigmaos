@@ -94,7 +94,7 @@ func Obj2File(o FsObj, fname string) (File, *serr.Err) {
 	return nil, nil
 }
 
-func MarshalDir[Dir *sp.Tstat | *np.Stat9P](cnt sp.Tsize, dir []Dir) ([]byte, int, *serr.Err) {
+func MarshalDir[Dir *sp.Tstat | *np.Stat9P](cnt sp.Tsize, dir []Dir) ([]byte, int, error) {
 	var buf []byte
 
 	if len(dir) == 0 {
@@ -103,7 +103,7 @@ func MarshalDir[Dir *sp.Tstat | *np.Stat9P](cnt sp.Tsize, dir []Dir) ([]byte, in
 	n := 0
 	for _, st := range dir {
 		var b []byte
-		var e *serr.Err
+		var e error
 		switch any(st).(type) {
 		case *np.Stat9P:
 			b, e = npcodec.MarshalDirEnt(any(st).(*np.Stat9P), uint64(cnt))

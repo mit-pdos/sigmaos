@@ -1,12 +1,10 @@
 package npcodec
 
 import (
-	"errors"
 	"io"
 
 	db "sigmaos/debug"
 	np "sigmaos/ninep"
-	"sigmaos/serr"
 )
 
 func MarshalSizeDir(dir []*np.Stat9P) np.Tlength {
@@ -17,14 +15,14 @@ func MarshalSizeDir(dir []*np.Stat9P) np.Tlength {
 	return np.Tlength(sz)
 }
 
-func MarshalDirEnt(st *np.Stat9P, cnt uint64) ([]byte, *serr.Err) {
+func MarshalDirEnt(st *np.Stat9P, cnt uint64) ([]byte, error) {
 	sz := sizeNp(*st)
 	if cnt < sz {
 		return nil, nil
 	}
 	b, e := marshal(*st)
 	if e != nil {
-		return nil, serr.NewErrError(e)
+		return nil, e
 	}
 	if sz != uint64(len(b)) {
 		db.DFatalf("MarshalDirEnt %v %v\n", sz, len(b))
@@ -32,14 +30,10 @@ func MarshalDirEnt(st *np.Stat9P, cnt uint64) ([]byte, *serr.Err) {
 	return b, nil
 }
 
-func UnmarshalDirEnt(rdr io.Reader) (*np.Stat9P, *serr.Err) {
+func UnmarshalDirEnt(rdr io.Reader) (*np.Stat9P, error) {
 	st := np.Stat9P{}
-	if error := unmarshalReader(rdr, &st); error != nil {
-		var nperr *serr.Err
-		if errors.As(error, &nperr) {
-			return nil, nperr
-		}
-		return nil, serr.NewErrError(error)
+	if err := unmarshalReader(rdr, &st); err != nil {
+		return nil, err
 	}
 	return &st, nil
 }

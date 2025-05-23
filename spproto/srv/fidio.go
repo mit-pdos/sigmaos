@@ -43,9 +43,9 @@ func readDir(f *fid.Fid, o fs.FsObj, off sp.Toffset, count sp.Tsize) ([]byte, *s
 	if err != nil {
 		return nil, err
 	}
-	b, n, err := fs.MarshalDir(count, dirents)
+	b, n, e := fs.MarshalDir(count, dirents)
 	if err != nil {
-		return nil, err
+		return nil, serr.NewErrError(e)
 	}
 	f.IncCursor(n)
 	return b, nil

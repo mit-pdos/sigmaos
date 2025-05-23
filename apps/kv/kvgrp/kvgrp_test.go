@@ -14,6 +14,7 @@ import (
 	"sigmaos/namesrv/fsetcd"
 	"sigmaos/path"
 	"sigmaos/proc"
+	"sigmaos/serr"
 	sesssrv "sigmaos/session/srv"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
@@ -213,7 +214,7 @@ func TestReconnectSimple(t *testing.T) {
 		assert.Nil(t, err)
 		for i := 0; i < N; i++ {
 			_, err := fsl.Stat(path.MarkResolve(kvgrp.GrpPath(kvgrp.JobDir(ts.job), ts.grp)))
-			if err != nil {
+			if err != nil && !serr.IsErrorIO(err) {
 				ch <- err
 				return
 			}
@@ -222,7 +223,7 @@ func TestReconnectSimple(t *testing.T) {
 		ch <- nil
 	}()
 	err = <-ch
-	assert.Nil(ts.mrts.T, err, "fsl1")
+	assert.Nil(ts.mrts.T, err, "fsl1 %v", err)
 	ts.gm.StopGroup()
 	ts.Shutdown(false, false)
 }

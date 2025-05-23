@@ -275,6 +275,7 @@ func (p *Proc) setBaseEnv() {
 	// Pass through debug/performance vars.
 	p.AppendEnv(SIGMAPERF, GetSigmaPerf())
 	p.AppendEnv(SIGMADEBUG, GetSigmaDebug())
+	p.AppendEnv(SIGMADEBUGPROCS, GetSigmaDebugProcs())
 	p.AppendEnv(SIGMAFAIL, GetSigmaFail())
 	p.AppendEnv(SIGMADEBUGPID, p.GetPid().String())
 	if p.IsPrivileged() {

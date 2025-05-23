@@ -211,6 +211,7 @@ CID=$(docker run -dit \
              -e SIGMAPERF=${SIGMAPERF} \
              -e SIGMAFAIL=${SIGMAFAIL} \
              -e SIGMADEBUG=${SIGMADEBUG} \
+             -e SIGMADEBUGPROCS=${SIGMADEBUGPROCS} \
              -e reserveMcpu=${RMCPU} \
              -e netmode=${NET} \
              -e sigmauser=${SIGMAUSER} \

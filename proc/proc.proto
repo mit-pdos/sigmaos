@@ -40,6 +40,7 @@ message ProcEnvProto {
   string realmSwitchStr = 26;
   string version = 27;
   string fail = 28;
+  string debugProcs = 29;
 }
 
 message ProcProto {

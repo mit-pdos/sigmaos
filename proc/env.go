@@ -17,14 +17,15 @@ import (
 
 // Environment variables for procs (SHOULD NOT BE ADDED TO)
 const (
-	SIGMASTRACE    = "SIGMASTRACE"
-	SIGMADEBUGPID  = "SIGMADEBUGPID"
-	SIGMAPERF      = "SIGMAPERF"
-	SIGMADEBUG     = "SIGMADEBUG"
-	SIGMACONFIG    = "SIGMACONFIG"
-	SIGMAPRINCIPAL = "SIGMAPRINCIPAL"
-	SIGMAFAIL      = "SIGMAFAIL"
-	SIGMAGEN       = "SIGMAGEN"
+	SIGMASTRACE     = "SIGMASTRACE"
+	SIGMADEBUGPID   = "SIGMADEBUGPID"
+	SIGMAPERF       = "SIGMAPERF"
+	SIGMADEBUG      = "SIGMADEBUG"
+	SIGMADEBUGPROCS = "SIGMADEBUGPROCS"
+	SIGMACONFIG     = "SIGMACONFIG"
+	SIGMAPRINCIPAL  = "SIGMAPRINCIPAL"
+	SIGMAFAIL       = "SIGMAFAIL"
+	SIGMAGEN        = "SIGMAGEN"
 )
 
 type ProcEnv struct {
@@ -54,6 +55,10 @@ func GetSigmaPerf() string {
 
 func GetSigmaDebug() string {
 	return os.Getenv(SIGMADEBUG)
+}
+
+func GetSigmaDebugProcs() string {
+	return os.Getenv(SIGMADEBUGPROCS)
 }
 
 func GetSigmaFail() string {
@@ -109,6 +114,7 @@ func NewProcEnv(program string, pid sp.Tpid, realm sp.Trealm, principal *sp.Tpri
 			Perf:                os.Getenv(SIGMAPERF),
 			Strace:              os.Getenv(SIGMASTRACE),
 			Debug:               os.Getenv(SIGMADEBUG),
+			DebugProcs:          os.Getenv(SIGMADEBUGPROCS),
 			ProcdPIDStr:         sp.NOT_SET,
 			Fail:                os.Getenv(SIGMAFAIL),
 			Privileged:          priv,

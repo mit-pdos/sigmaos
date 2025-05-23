@@ -141,6 +141,7 @@ ETCD_IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{
 # Run the test
 docker exec \
   --env SIGMADEBUG="$SIGMADEBUG" \
+  --env SIGMADEBUGPROCS="$SIGMADEBUGPROCS" \
   -it $testercid \
   go test -v sigmaos/$SPKG --run $TNAME \
   --user $SIGMAUSER \

@@ -13,7 +13,7 @@ std::expected<int, sigmaos::serr::Error> Transport::WriteCall(std::shared_ptr<Ca
   if (!res.has_value()) {
     return res;
   }
-  log(TRANSPORT, "WriteCall seqno {}", call->GetSeqno());
+  log(TRANSPORT, "WriteCall seqno {}", (int) call->GetSeqno());
   res = sigmaos::io::frame::WriteSeqno(_conn, call->GetSeqno());
   if (!res.has_value()) {
     return res;

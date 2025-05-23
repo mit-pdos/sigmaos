@@ -3,7 +3,6 @@
 #include <sys/un.h>
 #include <unistd.h>
 
-#include <iostream>
 #include <memory>
 #include <expected>
 

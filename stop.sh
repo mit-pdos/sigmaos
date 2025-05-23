@@ -75,8 +75,8 @@ if [[ "$ALL" == "true" ]]; then
   sudo rm -f /tmp/spproxyd/spproxyd-dialproxy.sock
 fi
 
-if docker ps -a | grep -qE "$USER_IMAGE_NAME|$KERNEL_IMAGE_NAME|$DB_IMAGE_NAME|$MONGO_IMAGE_NAME"; then
-  for container in $(docker ps -a | grep -E "$USER_IMAGE_NAME|$KERNEL_IMAGE_NAME|$DB_IMAGE_NAME|$MONGO_IMAGE_NAME" | cut -d ' ' -f1) ; do
+if docker ps -a | grep -qE "$USER_IMAGE_NAME|$KERNEL_IMAGE_NAME|$DB_IMAGE_NAME|$MONGO_IMAGE_NAME|procd|spproxyd-sigma|sigma-"; then
+  for container in $(docker ps -a | grep -E "$USER_IMAGE_NAME|$KERNEL_IMAGE_NAME|$DB_IMAGE_NAME|$MONGO_IMAGE_NAME|procd|spproxyd-sigma|sigma-" | cut -d ' ' -f1) ; do
     # Optionally skip DB shutdown
     if [ "$SKIPDB" == "true" ]; then
       cname=$(docker ps -a | grep $container | cut -d ' ' -f4)

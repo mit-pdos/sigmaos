@@ -429,8 +429,6 @@ func (cksrv *ChunkSrv) GetFileStat(ctx fs.CtxI, req proto.GetFileStatReq, res *p
 		return nil
 	}
 
-	defer be.signalStatWaiters()
-
 	// for lookup and fetches from origin
 	var ep *sp.Tendpoint
 	epp := req.GetNamedEndpointProto()
@@ -445,10 +443,10 @@ func (cksrv *ChunkSrv) GetFileStat(ctx fs.CtxI, req proto.GetFileStatReq, res *p
 	}()
 
 	st, srv, err := cksrv.getFileStat(r, req.GetProg(), sp.Tpid(req.Pid), req.GetSigmaPath(), req.GetS3Secret(), ep)
+	be.signalStatWaiters(st)
 	if err != nil {
 		return err
 	}
-	be.st = st
 	res.Stat = st.StatProto()
 	res.Path = srv
 	return nil

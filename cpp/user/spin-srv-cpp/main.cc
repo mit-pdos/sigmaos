@@ -14,6 +14,7 @@
 
 int main(int argc, char *argv[]) {
   auto pe = sigmaos::proc::GetProcEnv();
+  log(ALWAYS, "Spawn time: {}, Current time: {}", pe->GetSpawnTime().ShortDebugString(), google::protobuf::util::TimeUtil::GetCurrentTime().ShortDebugString());
   LogSpawnLatency(pe->GetPID(), pe->GetSpawnTime(), google::protobuf::util::TimeUtil::GetEpoch(), "E2e spawn time since spawn until main");
   LogSpawnLatency(pe->GetPID(), google::protobuf::util::TimeUtil::GetEpoch(), sigmaos::proc::GetExecTime(), "proc.exec_proc");
   sigmaos::util::log::init_logger(sigmaos::apps::spin::SPINSRV);

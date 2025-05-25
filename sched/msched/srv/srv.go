@@ -344,15 +344,16 @@ func (msched *MSched) shouldGetBEProc() (proc.Tmem, bool) {
 	return mem, mem > 0 && cpu < (sp.Conf.MSched.TARGET_CPU_UTIL*int64(linuxsched.GetNCores()))
 }
 
-func (msched *MSched) register() {
+func (msched *MSched) register(ep *sp.Tendpoint) {
 	rpcc, err := sprpcclnt.NewRPCClnt(msched.sc.FsLib, filepath.Join(sp.LCSCHED, sp.ANY))
 	if err != nil {
 		db.DFatalf("Error lsched rpccc: %v", err)
 	}
 	req := &lcschedproto.RegisterMSchedReq{
-		KernelID: msched.kernelID,
-		McpuInt:  uint32(msched.mcpufree),
-		MemInt:   uint32(msched.memfree),
+		KernelID:      msched.kernelID,
+		McpuInt:       uint32(msched.mcpufree),
+		MemInt:        uint32(msched.memfree),
+		EndpointProto: ep.GetProto(),
 	}
 	res := &lcschedproto.RegisterMSchedRep{}
 	if err := rpcc.RPC("LCSched.RegisterMSched", req, res); err != nil {
@@ -396,7 +397,7 @@ func RunMSched(kernelID string, reserveMcpu uint) error {
 	go msched.getQueuedProcs()
 	go msched.stats()
 	go msched.monitorCPU()
-	msched.register()
+	msched.register(ssrv.GetEndpoint())
 	ssrv.RunServer()
 	return nil
 }

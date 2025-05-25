@@ -1,11 +1,13 @@
 syntax = "proto3";
 
 option go_package = "sigmaos/sched/lcsched/proto";
+import "sigmap/sigmap.proto";
 
 message RegisterMSchedReq {
   string kernelID = 1;
   uint32 mcpuInt = 2;
   uint32 memInt = 3;
+  TendpointProto endpointProto = 4;
 }
 
 message RegisterMSchedRep {

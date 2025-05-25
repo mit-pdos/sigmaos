@@ -9,6 +9,7 @@ import (
 	"sigmaos/api/fs"
 	db "sigmaos/debug"
 	"sigmaos/proc"
+	"sigmaos/rpc"
 	beschedproto "sigmaos/sched/besched/proto"
 	"sigmaos/sched/lcsched/proto"
 	mschedclnt "sigmaos/sched/msched/clnt"
@@ -76,6 +77,16 @@ func (lcs *LCSched) RegisterMSched(ctx fs.CtxI, req proto.RegisterMSchedReq, res
 	}
 	lcs.mscheds[req.KernelID] = newResources(req.McpuInt, req.MemInt)
 	lcs.cond.Broadcast()
+	// Immediately mount the msched RPC file
+	ep := sp.NewEndpointFromProto(req.EndpointProto)
+	pn := filepath.Join(sp.MSCHED, req.KernelID, rpc.RPC)
+	db.DPrintf(db.LCSCHED, "Mount[%v] %v as %v", ep, rpc.RPC, pn)
+	err := lcs.sc.FsLib.MountTree(ep, rpc.RPC, pn)
+	if err != nil {
+		db.DPrintf(db.ERROR, "Err MountTree: ep %v err %v", ep, err)
+		return err
+	}
+
 	// Monitor the msched
 	go lcs.monitorMSched(req.KernelID)
 	return nil

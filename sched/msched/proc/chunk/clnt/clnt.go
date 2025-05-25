@@ -28,6 +28,7 @@ func NewChunkClnt(fsl *fslib.FsLib, eager bool) *ChunkClnt {
 		ch:                ch,
 	}
 	if eager {
+		ckclnt.ShardedSvcRPCClnt.Init()
 		go ckclnt.readCh()
 	}
 	return ckclnt

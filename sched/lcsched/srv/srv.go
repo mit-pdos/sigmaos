@@ -86,6 +86,10 @@ func (lcs *LCSched) RegisterMSched(ctx fs.CtxI, req proto.RegisterMSchedReq, res
 		db.DPrintf(db.ERROR, "Err MountTree: ep %v err %v", ep, err)
 		return err
 	}
+	if _, err := lcs.mschedclnt.GetRPCClnt(req.KernelID); err != nil {
+		db.DPrintf(db.ERROR, "Err Get RPCclnt kid %v err %v", req.KernelID, err)
+		return err
+	}
 
 	// Monitor the msched
 	go lcs.monitorMSched(req.KernelID)

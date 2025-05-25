@@ -68,7 +68,7 @@ func (mc *MSchedClnt) Nprocs(procdir string) (int, error) {
 }
 
 func (mc *MSchedClnt) WarmProcd(kernelID string, pid sp.Tpid, realm sp.Trealm, prog string, path []string, ptype proc.Ttype) error {
-	rpcc, err := mc.getRPCClnt(kernelID)
+	rpcc, err := mc.GetRPCClnt(kernelID)
 	if err != nil {
 		return err
 	}
@@ -95,7 +95,7 @@ func (mc *MSchedClnt) WarmProcd(kernelID string, pid sp.Tpid, realm sp.Trealm, p
 // memory).
 func (mc *MSchedClnt) ForceRun(kernelID string, memAccountedFor bool, p *proc.Proc) error {
 	start := time.Now()
-	rpcc, err := mc.getRPCClnt(kernelID)
+	rpcc, err := mc.GetRPCClnt(kernelID)
 	if err != nil {
 		return err
 	}
@@ -113,7 +113,7 @@ func (mc *MSchedClnt) ForceRun(kernelID string, memAccountedFor bool, p *proc.Pr
 
 func (mc *MSchedClnt) Wait(method Tmethod, mschedID string, seqno *proc.ProcSeqno, pid sp.Tpid) (*proc.Status, error) {
 	// RPC a msched to wait.
-	rpcc, err := mc.getRPCClnt(mschedID)
+	rpcc, err := mc.GetRPCClnt(mschedID)
 	if err != nil {
 		return nil, err
 	}
@@ -131,7 +131,7 @@ func (mc *MSchedClnt) Wait(method Tmethod, mschedID string, seqno *proc.ProcSeqn
 func (mc *MSchedClnt) Notify(method Tmethod, kernelID string, pid sp.Tpid, status *proc.Status) error {
 	start := time.Now()
 	// Get the RPC client for the local msched
-	rpcc, err := mc.getRPCClnt(kernelID)
+	rpcc, err := mc.GetRPCClnt(kernelID)
 	if err != nil {
 		return err
 	}
@@ -174,7 +174,7 @@ func (mc *MSchedClnt) GetRunningProcs(nsample int) (map[sp.Trealm][]*proc.Proc, 
 		sampled[kernelID] = true
 		req := &proto.GetRunningProcsReq{}
 		res := &proto.GetRunningProcsRep{}
-		rpcc, err := mc.getRPCClnt(kernelID)
+		rpcc, err := mc.GetRPCClnt(kernelID)
 		if err != nil {
 			db.DPrintf(db.ERROR, "Can't get clnt: %v", err)
 			return nil, err
@@ -205,7 +205,7 @@ func (mc *MSchedClnt) MSchedStats() (int, []map[string]*proto.RealmStats, error)
 	for _, sd := range sds {
 		req := &proto.GetMSchedStatsReq{}
 		res := &proto.GetMSchedStatsRep{}
-		rpcc, err := mc.getRPCClnt(sd)
+		rpcc, err := mc.GetRPCClnt(sd)
 		if err != nil {
 			return 0, nil, err
 		}
@@ -255,7 +255,7 @@ func (mc *MSchedClnt) GetCPUUtil(realm sp.Trealm) (float64, error) {
 		// Get the CPU shares on this msched.
 		req := &proto.GetCPUUtilReq{RealmStr: realm.String()}
 		res := &proto.GetCPUUtilRep{}
-		sclnt, err := mc.getRPCClnt(sd)
+		sclnt, err := mc.GetRPCClnt(sd)
 		if err != nil {
 			db.DPrintf(db.MSCHEDCLNT_ERR, "Error GetCPUUtil GetMSchedClnt: %v", err)
 			return 0, err
@@ -290,7 +290,7 @@ func (mc *MSchedClnt) getRPCClntMyMSched() (*rpcclnt.RPCClnt, error) {
 	return mc.rpcc, nil
 }
 
-func (mc *MSchedClnt) getRPCClnt(kernelID string) (*rpcclnt.RPCClnt, error) {
+func (mc *MSchedClnt) GetRPCClnt(kernelID string) (*rpcclnt.RPCClnt, error) {
 	if kernelID == mc.kernelID {
 		return mc.getRPCClntMyMSched()
 	}

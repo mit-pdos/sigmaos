@@ -47,9 +47,9 @@ type KvClerk struct {
 }
 
 type TclerkRes struct {
-	Nkeys  int64 `json:"Nkeys"`
-	Nretry int64 `json:"Nretry"`
-	Ms     int64 `json:"Ms"`
+	Nkeys  int64  `json:"Nkeys"`
+	Nretry uint64 `json:"Nretry"`
+	Ms     int64  `json:"Ms"`
 }
 
 func (cr *TclerkRes) Add(cr0 TclerkRes) {

@@ -4,6 +4,7 @@ package clnt
 import (
 	"errors"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"google.golang.org/protobuf/proto"
@@ -23,7 +24,7 @@ type ClntCache struct {
 }
 
 type Tstats struct {
-	Nretry int64
+	Nretry atomic.Uint64
 }
 
 func NewRPCClntCache(opts ...*rpcclntopts.RPCClntOption) *ClntCache {
@@ -86,7 +87,7 @@ func (cc *ClntCache) RPCRetry(pn string, method string, arg proto.Message, res p
 			var sr *serr.Err
 			if errors.As(err, &sr) && serr.IsRetryOK(sr) {
 				time.Sleep(sp.Conf.Path.RESOLVE_TIMEOUT)
-				cc.stats.Nretry += 1
+				cc.stats.Nretry.Add(1)
 				db.DPrintf(db.RPCCLNT, "RPC: retry %v %v err %v", pn, method, sr)
 				cc.Delete(pn)
 				continue

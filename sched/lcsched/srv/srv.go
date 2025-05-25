@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"sync"
+	"time"
 
 	"sigmaos/api/fs"
 	db "sigmaos/debug"
@@ -45,14 +46,21 @@ func NewLCSched(sc *sigmaclnt.SigmaClnt) *LCSched {
 }
 
 func (lcs *LCSched) Enqueue(ctx fs.CtxI, req beschedproto.EnqueueReq, res *beschedproto.EnqueueRep) error {
+	start := time.Now()
 	p := proc.NewProcFromProto(req.ProcProto)
 	if p.GetRealm() != ctx.Principal().GetRealm() {
 		return fmt.Errorf("Proc realm %v doesn't match principal realm %v", p.GetRealm(), ctx.Principal().GetRealm())
 	}
+	perf.LogSpawnLatency("LCSched.Enqueue recvd proc", p.GetPid(), p.GetSpawnTime(), perf.TIME_NOT_SET)
+	defer func(start time.Time) {
+		perf.LogSpawnLatency("LCSched.Eneuque E2e", p.GetPid(), p.GetSpawnTime(), start)
+	}(start)
 	db.DPrintf(db.LCSCHED, "[%v] Enqueued %v", p.GetRealm(), p)
 
 	ch := make(chan string)
+	start = time.Now()
 	lcs.addProc(p, ch)
+	perf.LogSpawnLatency("LCSched.addProc", p.GetPid(), p.GetSpawnTime(), start)
 	res.MSchedID = <-ch
 	return nil
 }
@@ -98,11 +106,12 @@ func (lcs *LCSched) schedule() {
 		for realm, q := range lcs.qs {
 			db.DPrintf(db.LCSCHED, "Try to schedule realm %v", realm)
 			for kid, r := range lcs.mscheds {
-				p, ch, _, ok := q.Dequeue(func(p *proc.Proc) bool {
+				p, ch, enqueueT, ok := q.Dequeue(func(p *proc.Proc) bool {
 					return isEligible(p, r.mcpu, r.mem)
 				})
 				if ok {
 					db.DPrintf(db.LCSCHED, "Successfully schedule realm %v", realm)
+					perf.LogSpawnLatency("LCSched.Dequeue found eligible msched", p.GetPid(), p.GetSpawnTime(), enqueueT)
 					// Alloc resources for the proc
 					r.alloc(p)
 					go lcs.runProc(kid, p, ch, r)
@@ -132,12 +141,14 @@ func (lcs *LCSched) runProc(kernelID string, p *proc.Proc, ch chan string, r *Re
 	}
 	lcs.realmbins.SetBinKernelID(p.GetRealm(), p.GetProgram(), kernelID)
 	db.DPrintf(db.LCSCHED, "runProc kernelID %v p %v", kernelID, p)
+	start := time.Now()
 	if err := lcs.mschedclnt.ForceRun(kernelID, false, p); err != nil {
 		db.DPrintf(db.ALWAYS, "MSched.Run %v err %v", kernelID, err)
 		// Re-enqueue the proc
 		lcs.addProc(p, ch)
 		return
 	}
+	perf.LogSpawnLatency("LCSched.runProc ForceRun", p.GetPid(), p.GetSpawnTime(), start)
 	// Notify the spawner that a msched has been chosen.
 	ch <- kernelID
 	// Wait for the proc to exit.

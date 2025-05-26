@@ -300,6 +300,7 @@ func (cksrv *ChunkSrv) fetch(realm sp.Trealm, prog string, pid sp.Tpid, s3secret
 		}
 	}
 
+	// Try to fetch from the cache
 	ok, sz, srvpath, blob, err := cksrv.fetchCache(be, realm, pid, s3secret, ckid, size, data)
 	if ok || err != nil {
 		return sz, srvpath, blob, err
@@ -313,6 +314,13 @@ func (cksrv *ChunkSrv) fetch(realm sp.Trealm, prog string, pid sp.Tpid, s3secret
 	// one outstanding fetch per chunk
 	be.waitFetch(ckid)
 	defer be.signalFetchWaiters(ckid)
+
+	// Try to fetch from the cache once more, in case we had to wait on an
+	// outstanding fetch which has now completed
+	ok, sz, srvpath, blob, err := cksrv.fetchCache(be, realm, pid, s3secret, ckid, size, data)
+	if ok || err != nil {
+		return sz, srvpath, blob, err
+	}
 
 	sz, srvpath, err = cksrv.fetchChunk(be, realm, pid, s3secret, ckid, size, paths, ep)
 	if err != nil {
@@ -377,7 +385,7 @@ func (cksrv *ChunkSrv) getFileStat(r sp.Trealm, prog string, pid sp.Tpid, paths 
 		s := filepath.Base(paths[0])
 		srv := paths[0]
 		st, _, err := cksrv.ckclnt.GetFileStat(s, prog, pid, r, s3secret, []string{}, nil)
-		db.DPrintf(db.CHUNKSRV, "%v: GetFileStat: chunkd %v pid %v st %v err %v", cksrv.kernelId, paths[0], pid, st, err)
+		db.DPrintf(db.CHUNKSRV, "%v: GetFileStat: done get from peer chunkd %v pid %v st %v err %v", cksrv.kernelId, paths[0], pid, st, err)
 		if err == nil {
 			return st, srv, nil
 		}

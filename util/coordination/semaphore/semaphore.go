@@ -50,7 +50,7 @@ func (sem *Semaphore) Down() error {
 			db.DPrintf(db.SEMCLNT_ERR, "down notfound %v ok err %v\n", sem.path, err)
 			return nil
 		}
-		if serr.IsErrCode(err, serr.TErrUnreachable) || serr.IsErrCode(err, serr.TErrClosed) {
+		if serr.IsErrorSession(err) || serr.IsErrCode(err, serr.TErrClosed) {
 			db.DPrintf(db.SEMCLNT, "down unreachable %v ok err %v\n", sem.path, err)
 			time.Sleep(sp.Conf.Path.RESOLVE_TIMEOUT)
 			continue

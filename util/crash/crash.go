@@ -22,6 +22,7 @@ const (
 )
 
 var labels *TeventMap
+var crashfile string
 
 type Tevent struct {
 	Label string `json:"label"` // see selector.go
@@ -189,6 +190,12 @@ func CrashMsg(msg string) {
 	os.Exit(proc.CRASH)
 }
 
+func CrashFile(name string) {
+	if crashfile != "" && name == crashfile {
+		Crash()
+	}
+}
+
 func PartitionNamed(fsl *fslib.FsLib) {
 	db.DPrintf(db.CRASH, "PartitionNamed from %v", sp.NAMED)
 	if err := fsl.Disconnect(sp.NAMED); err != nil {
@@ -210,6 +217,13 @@ func PartitionPath(fsl *fslib.FsLib, pn string) {
 	}
 	if err := fsl.Disconnect(pn); err != nil {
 		db.DPrintf(db.CRASH, "PartitionPath: %v Disconnect %v err %v", os.Args, pn, err)
+	}
+}
+
+func SetCrashFile(fsl *fslib.FsLib, label Tselector) {
+	initLabels()
+	if e, ok := labels.Evs[label]; ok {
+		crashfile = e.Path
 	}
 }
 

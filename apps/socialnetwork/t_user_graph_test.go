@@ -26,7 +26,9 @@ func TestUser(t *testing.T) {
 	}
 	defer mrts.Shutdown()
 	tssn, err := newTstateSN(mrts, []sn.Srv{sn.Srv{"socialnetwork-user", nil, 1000}}, NCACHESRV)
-	defer assert.Nil(t, tssn.Shutdown())
+	defer func() {
+		assert.Nil(t, tssn.Shutdown())
+	}()
 	if err != nil {
 		return
 	}
@@ -107,7 +109,9 @@ func TestGraph(t *testing.T) {
 	tssn, err := newTstateSN(mrts, []sn.Srv{
 		sn.Srv{"socialnetwork-user", nil, 1000},
 		sn.Srv{"socialnetwork-graph", nil, 1000}}, NCACHESRV)
-	defer assert.Nil(t, tssn.Shutdown())
+	defer func() {
+		assert.Nil(t, tssn.Shutdown())
+	}()
 	if err != nil {
 		return
 	}
@@ -194,7 +198,9 @@ func TestUserAndGraph(t *testing.T) {
 	tssn, err := newTstateSN(mrts, []sn.Srv{
 		sn.Srv{"socialnetwork-user", nil, 1000},
 		sn.Srv{"socialnetwork-graph", nil, 1000}}, NCACHESRV)
-	defer assert.Nil(t, tssn.Shutdown())
+	defer func() {
+		assert.Nil(t, tssn.Shutdown())
+	}()
 	if err != nil {
 		return
 	}
@@ -279,7 +285,9 @@ func testRPCTime(t *testing.T, mcpu proc.Tmcpu) {
 	defer mrts.Shutdown()
 
 	tssn, err := newTstateSN(mrts, []sn.Srv{sn.Srv{"socialnetwork-user", nil, mcpu}}, 1)
-	defer assert.Nil(t, tssn.Shutdown())
+	defer func() {
+		assert.Nil(t, tssn.Shutdown())
+	}()
 	if err != nil {
 		return
 	}

@@ -2,6 +2,7 @@ package fsux
 
 import (
 	"fmt"
+	"path/filepath"
 	"strconv"
 	"sync"
 	"testing"
@@ -11,6 +12,7 @@ import (
 
 	db "sigmaos/debug"
 	dialproxyclnt "sigmaos/dialproxy/clnt"
+	"sigmaos/path"
 	"sigmaos/proc"
 	"sigmaos/serr"
 	"sigmaos/sigmaclnt"
@@ -19,11 +21,16 @@ import (
 	"sigmaos/util/crash"
 )
 
+var fn string
+
 const (
-	fn      = sp.UX + "/" + sp.ANY + "/"
 	FILESZ  = 50 * sp.MBYTE
 	WRITESZ = 4096
 )
+
+func init() {
+	fn = path.MarkResolve(filepath.Join(sp.UX, sp.ANY))
+}
 
 func TestCompile(t *testing.T) {
 }
@@ -94,7 +101,7 @@ func TestDir(t *testing.T) {
 func writer(t *testing.T, ch chan struct{}, ch2 chan struct{}, pe *proc.ProcEnv, idx int) {
 	fsl, err := sigmaclnt.NewFsLib(pe, dialproxyclnt.NewDialProxyClnt(pe))
 	assert.Nil(t, err)
-	fn := sp.UX + sp.ANY + "/file-" + string(pe.GetPrincipal().GetID()) + "-" + strconv.Itoa(idx)
+	fn := filepath.Join(sp.UX, sp.ANY, "file-"+string(pe.GetPrincipal().GetID())+"-"+strconv.Itoa(idx))
 	stop := false
 	ncrash := 0
 	for !stop {
@@ -102,13 +109,13 @@ func writer(t *testing.T, ch chan struct{}, ch2 chan struct{}, pe *proc.ProcEnv,
 		case <-ch:
 			stop = true
 		default:
-			if err := fsl.Remove(fn); serr.IsErrCode(err, serr.TErrUnreachable) {
+			if err := fsl.Remove(fn); serr.IsErrorSession(err) {
 				ncrash += 1
 				break
 			}
 			w, err := fsl.CreateBufWriter(fn, 0777)
 			if err != nil {
-				assert.True(t, serr.IsErrCode(err, serr.TErrUnreachable), "Err code %v", err)
+				assert.True(t, serr.IsErrorSession(err), "Err code %v", err)
 				ncrash += 1
 				break
 			}
@@ -119,7 +126,7 @@ func writer(t *testing.T, ch chan struct{}, ch2 chan struct{}, pe *proc.ProcEnv,
 				break
 			}
 			if err := w.Close(); err != nil {
-				assert.True(t, serr.IsErrCode(err, serr.TErrUnreachable))
+				assert.True(t, serr.IsErrorSession(err))
 				ncrash += 1
 				break
 			}

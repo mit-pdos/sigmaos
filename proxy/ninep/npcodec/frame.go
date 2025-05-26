@@ -53,7 +53,7 @@ func unmarshalFrame(f sessp.Tframe) (*sessp.FcallMsg, *serr.Err) {
 	return fc, nil
 }
 
-func (t *Transport) ReadCall() (demux.CallI, *serr.Err) {
+func (t *Transport) ReadCall() (demux.CallI, error) {
 	f, err := frame.ReadFrame(t.rdr)
 	if err != nil {
 		db.DPrintf(db.NPCODEC, "ReadFrame err %v\n", err)
@@ -62,7 +62,7 @@ func (t *Transport) ReadCall() (demux.CallI, *serr.Err) {
 	return unmarshalFrame(f)
 }
 
-func (t *Transport) WriteCall(c demux.CallI) *serr.Err {
+func (t *Transport) WriteCall(c demux.CallI) error {
 	fcm := c.(*sessp.FcallMsg)
 	b, err := marshalFrame(fcm)
 	if err != nil {

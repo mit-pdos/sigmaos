@@ -9,6 +9,7 @@ import (
 	bootclnt "sigmaos/boot/clnt"
 	db "sigmaos/debug"
 	kernelclnt "sigmaos/kernel/clnt"
+	"sigmaos/path"
 	"sigmaos/proc"
 	realmpkg "sigmaos/realm"
 	"sigmaos/sigmaclnt"
@@ -84,6 +85,7 @@ func (rts *RealmTstate) remove(removeNamedState bool) error {
 func (rts *RealmTstate) BootNode(n int) error {
 	return rts.bootNode(n, false)
 }
+
 func (rts *RealmTstate) bootNode(n int, waitForNamed bool) error {
 	kids, err := rts.Ts.bootNode(n, bootclnt.BOOT_NODE)
 	if err != nil {
@@ -92,9 +94,12 @@ func (rts *RealmTstate) bootNode(n int, waitForNamed bool) error {
 	db.DPrintf(db.TEST, "Booted additional kernels: %v", kids)
 	if waitForNamed {
 		db.DPrintf(db.TEST, "Wait for realm %v named to come up", rts.realm)
-		// wait until the realm's named has registered its endpoint and is ready to
-		// serve
-		if _, err := rts.Ts.GetFileWatch(filepath.Join(sp.REALMS, rts.realm.String())); err != nil {
+		// wait until the realm's named has registered its endpoint
+		// and is ready to serve. Indicate that the link with named
+		// must be resolved, in case the endpoint for the old named is
+		// cached; a failed connection will invalidate the endpoint.
+		fn := path.MarkResolve(filepath.Join(sp.REALMS, rts.realm.String()))
+		if _, err := rts.Ts.GetFileWatch(fn); err != nil {
 			db.DPrintf(db.ERROR, "Error GetFileWatch waiting for named: %v", err)
 			return err
 		}

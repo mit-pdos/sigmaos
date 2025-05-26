@@ -8,6 +8,7 @@ import (
 
 	db "sigmaos/debug"
 	kernelclnt "sigmaos/kernel/clnt"
+	"sigmaos/path"
 	"sigmaos/proc"
 	sprpcclnt "sigmaos/rpc/clnt/sigmap"
 	"sigmaos/serr"
@@ -49,7 +50,7 @@ func NewProcdMgr(fsl *fslib.FsLib, kernelId string) *ProcdMgr {
 		for {
 			err := dirwatcher.WaitCreate(pdm.fsl, filepath.Join(sp.BOOT, pdm.kernelId))
 			// Retry if unreachable
-			if serr.IsErrCode(err, serr.TErrUnreachable) || serr.IsErrCode(err, serr.TErrClosed) {
+			if serr.IsErrorSession(err) || serr.IsErrCode(err, serr.TErrClosed) {
 				db.DPrintf(db.PROCDMGR, "Boot dir unreachable")
 				continue
 			}
@@ -58,7 +59,7 @@ func NewProcdMgr(fsl *fslib.FsLib, kernelId string) *ProcdMgr {
 			}
 			break
 		}
-		kclnt, err := kernelclnt.NewKernelClnt(pdm.fsl, filepath.Join(sp.BOOT, pdm.kernelId)+"/")
+		kclnt, err := kernelclnt.NewKernelClnt(pdm.fsl, path.MarkResolve(filepath.Join(sp.BOOT, pdm.kernelId)))
 		if err != nil {
 			db.DFatalf("Err ProcdMgr Can't make kernelclnt: %v", err)
 		}

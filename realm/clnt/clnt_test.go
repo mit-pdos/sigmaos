@@ -15,6 +15,7 @@ import (
 	cachegrpmgr "sigmaos/apps/cache/cachegrp/mgr"
 	proto "sigmaos/apps/cache/proto"
 	db "sigmaos/debug"
+	"sigmaos/path"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
@@ -428,14 +429,14 @@ func TestKernelIsolationBasic(t *testing.T) {
 	rootNamedEP, err := mrts.GetRoot().GetNamedEndpoint()
 	assert.Nil(t, err, "Err %v", err)
 	db.DPrintf(db.TEST, "rootNamed EP: %v", rootNamedEP)
-	pn := filepath.Join(sp.NAME, sp.BESCHEDREL) + "/"
+	pn := path.MarkResolve(filepath.Join(sp.NAME, sp.BESCHEDREL))
 	db.DPrintf(db.TEST, "Try to get dir %v", pn)
 	// Ensure that tenant realms can perform GetDir on union directories which
 	// live in the root named (and are mounted into the tenant's named)
 	sts, err := mrts.GetRealm(test.REALM1).GetDir(pn)
 	assert.Nil(t, err, "Unable to GetDir root-mounted union dir %v: %v", pn, err)
 	assert.True(t, len(sts) == 1, "Wrong list of mscheds: %v", sp.Names(sts))
-	sts1, err := mrts.GetRealm(test.REALM1).GetDir(filepath.Join(pn, sts[0].Name) + "/")
+	sts1, err := mrts.GetRealm(test.REALM1).GetDir(path.MarkResolve(filepath.Join(pn, sts[0].Name)))
 	assert.Nil(t, err, "Unable to GetDir root-mounted union dir %v: %v", pn, err)
 	assert.True(t, len(sts1) == 2, "Wrong procq contents: %v", sp.Names(sts1))
 	db.DPrintf(db.TEST, "Got contents of %v%v: %v", pn, sts[0].Name, sp.Names(sts1))
@@ -550,9 +551,8 @@ func TestMultiRealmIsolationEndpoint(t *testing.T) {
 	pn := filepath.Join(sp.NAMED, "srv")
 	err = mrts.GetRealm(test.REALM2).MkEndpointFile(pn, ep)
 	assert.Nil(t, err)
-	pn = pn + "/"
 
-	status := spawndirreader(mrts.GetRealm(test.REALM2), pn)
+	status := spawndirreader(mrts.GetRealm(test.REALM2), path.MarkResolve(pn))
 	assert.True(t, status.IsStatusErr(), "Status is: %v", status)
 	db.DPrintf(db.TEST, "status %v %v\n", status.Msg(), status.Data())
 
@@ -592,13 +592,13 @@ func TestMultiRealmIsolationNamed(t *testing.T) {
 	err = mrts.GetRealm(test.REALM2).MkEndpointFile(pn, ep1)
 	assert.Nil(t, err)
 
-	pn = filepath.Join(sp.NAMED, "named1"+"/")
+	pn = path.MarkResolve(filepath.Join(sp.NAMED, "named1"))
 	status := spawndirreader(mrts.GetRealm(test.REALM1), pn)
 	assert.True(t, status.IsStatusOK(), "%v: Status is: %v", pn, status)
 	db.DPrintf(db.TEST, "status %v %v\n", status.Msg(), status.Data())
 
 	for _, f := range []string{"rootnamed", "named1"} {
-		pn := filepath.Join(sp.NAMED, f) + "/"
+		pn := path.MarkResolve(filepath.Join(sp.NAMED, f))
 		status := spawndirreader(mrts.GetRealm(test.REALM2), pn)
 		assert.True(t, status.IsStatusErr(), "%v: Status is: %v", pn, status)
 		db.DPrintf(db.TEST, "status %v %v\n", status.Msg(), status.Data())

@@ -18,6 +18,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	db "sigmaos/debug"
+	"sigmaos/path"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )
@@ -38,7 +39,7 @@ func TestOne(t *testing.T) {
 
 	db.DPrintf(db.TEST, "TestOne %v %v\n", sp.S3, sp.Names(dirents))
 
-	d := sp.S3 + sp.ANY + "/"
+	d := path.MarkResolve(filepath.Join(sp.S3, sp.ANY))
 	dirents, err = ts.GetDir(d)
 	assert.Nil(t, err, "GetDir")
 
@@ -109,7 +110,7 @@ func TestSymlinkDir(t *testing.T) {
 	_, err := ts.GetFile(dn)
 	assert.Nil(t, err, "GetFile")
 
-	dirents, err := ts.GetDir(dn + "/" + "9ps3")
+	dirents, err := ts.GetDir(filepath.Join(dn, "9ps3"))
 	assert.Nil(t, err, "GetDir")
 
 	assert.True(t, sp.Present(dirents, ROOT))
@@ -140,9 +141,9 @@ func TestReadSplit(t *testing.T) {
 const NOBJ = 100
 
 func put(clnt *s3.Client, i int, wg *sync.WaitGroup) {
-	prefix := "s3test/" + strconv.Itoa(i) + "/"
+	prefix := "s3test/" + strconv.Itoa(i)
 	for j := 0; j < NOBJ; j++ {
-		key := prefix + strconv.Itoa(j)
+		key := filepath.Join(prefix, strconv.Itoa(j))
 		input := &s3.PutObjectInput{
 			Bucket: aws.String("9ps3"),
 			Key:    &key,

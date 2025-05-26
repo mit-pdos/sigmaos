@@ -106,7 +106,7 @@ func (dc *DirCache[E]) readDirAndWatch() *dirwatcher.DirWatcher {
 		var err error
 		initEnts, dw, err = dirwatcher.NewDirWatcherWithRead(dc.FsLib, dc.Path)
 		if err != nil {
-			if serr.IsErrorUnreachable(err) {
+			if serr.IsErrorSession(err) {
 				continue
 			} else {
 				dc.err = err

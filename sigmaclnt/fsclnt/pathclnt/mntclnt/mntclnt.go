@@ -101,7 +101,7 @@ func (mc *MntClnt) ResolveRoot(pn path.Tpathname) (*serr.Err, bool) {
 func (mc *MntClnt) PathLastMount(pn sp.Tsigmapath, principal *sp.Tprincipal) (path.Tpathname, path.Tpathname, error) {
 	// Automount the longest prefix of pn; if pn exist, then the
 	// server holding the directory/file correspending to pn.
-	if _, err := mc.pathc.Stat(pn+"/", principal); err != nil {
+	if _, err := mc.pathc.Stat(path.MarkResolve(pn), principal); err != nil {
 		db.DPrintf(db.MOUNT_ERR, "%v: Stat %v err %v\n", mc.cid, pn, err)
 	}
 	return mc.LastMount(pn, principal)

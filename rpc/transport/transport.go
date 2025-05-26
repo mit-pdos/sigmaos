@@ -49,7 +49,7 @@ func (t *Transport) Close() error {
 
 }
 
-func (t *Transport) WriteCall(c demux.CallI) *serr.Err {
+func (t *Transport) WriteCall(c demux.CallI) error {
 	fc := c.(*Call)
 	// db.DPrintf(db.TEST, "writecall %v\n", c)
 	if err := frame.WriteSeqno(fc.Seqno, t.wrt); err != nil {
@@ -64,7 +64,7 @@ func (t *Transport) WriteCall(c demux.CallI) *serr.Err {
 	return nil
 }
 
-func (t *Transport) ReadCall() (demux.CallI, *serr.Err) {
+func (t *Transport) ReadCall() (demux.CallI, error) {
 	seqno, err := frame.ReadSeqno(t.rdr)
 	if err != nil {
 		return nil, err

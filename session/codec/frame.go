@@ -37,19 +37,19 @@ func (t *Transport) Close() error {
 	return t.conn.Close()
 }
 
-func (t *Transport) ReadCall() (demux.CallI, *serr.Err) {
+func (t *Transport) ReadCall() (demux.CallI, error) {
 	f, err := frame.ReadFrame(t.rdr)
 	if err != nil {
 		return nil, err
 	}
 	fm := sessp.NewFcallMsgNull()
-	if error := proto.Unmarshal(f, fm.Fc); error != nil {
-		db.DFatalf("Decoding fcall err %v", error)
+	if err := proto.Unmarshal(f, fm.Fc); err != nil {
+		db.DFatalf("Decoding fcall err %v", err)
 	}
 	b := make(sessp.Tframe, fm.Fc.Len)
-	n, error := io.ReadFull(t.rdr, b)
+	n, err := io.ReadFull(t.rdr, b)
 	if n != len(b) {
-		return nil, serr.NewErr(serr.TErrUnreachable, error)
+		return nil, err
 	}
 
 	// Get any IoVecs which were supplied as destinations for the output of the
@@ -89,7 +89,7 @@ func (t *Transport) ReadCall() (demux.CallI, *serr.Err) {
 	return pmm, nil
 }
 
-func (t *Transport) WriteCall(c demux.CallI) *serr.Err {
+func (t *Transport) WriteCall(c demux.CallI) error {
 	fcm := c.(*sessp.PartMarshaledMsg)
 	fcm.Fcm.Fc.Len = uint32(len(fcm.MarshaledFcm))
 	fcm.Fcm.Fc.Nvec = uint32(len(fcm.Fcm.Iov))

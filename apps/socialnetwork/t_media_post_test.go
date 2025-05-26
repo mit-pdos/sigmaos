@@ -51,7 +51,9 @@ func TestMedia(t *testing.T) {
 	defer mrts.Shutdown()
 
 	tssn, err := newTstateSN(mrts, []sn.Srv{sn.Srv{"socialnetwork-media", nil, 1000}}, NCACHESRV)
-	defer assert.Nil(t, tssn.Shutdown())
+	defer func() {
+		assert.Nil(t, tssn.Shutdown())
+	}()
 	if err != nil {
 		return
 	}
@@ -102,7 +104,9 @@ func TestPost(t *testing.T) {
 	defer mrts.Shutdown()
 
 	tssn, err := newTstateSN(mrts, []sn.Srv{sn.Srv{"socialnetwork-post", nil, 1000}}, NCACHESRV)
-	defer assert.Nil(t, tssn.Shutdown())
+	defer func() {
+		assert.Nil(t, tssn.Shutdown())
+	}()
 	if err != nil {
 		return
 	}

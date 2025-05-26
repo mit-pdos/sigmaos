@@ -10,6 +10,7 @@ import (
 	"time"
 
 	db "sigmaos/debug"
+	"sigmaos/path"
 	"sigmaos/proc"
 	"sigmaos/proc/kproc"
 	beschedclnt "sigmaos/sched/besched/clnt"
@@ -150,7 +151,7 @@ func (clnt *ProcClnt) forceRunViaMSched(kernelID string, p *proc.Proc) error {
 	err := clnt.mschedclnt.ForceRun(kernelID, false, p)
 	if err != nil {
 		db.DPrintf(db.PROCCLNT_ERR, "forceRunViaMSched: getMSchedClnt %v err %v\n", kernelID, err)
-		if serr.IsErrCode(err, serr.TErrUnreachable) {
+		if serr.IsErrorSession(err) {
 			db.DPrintf(db.PROCCLNT_ERR, "Unregister %v", kernelID)
 			clnt.mschedclnt.UnregisterSrv(kernelID)
 		}
@@ -210,7 +211,7 @@ func (clnt *ProcClnt) spawnRetry(kernelId string, p *proc.Proc) (*proc.ProcSeqno
 		// server becoming unreachable.
 		if err != nil {
 			// If unreachable, retry.
-			if serr.IsErrCode(err, serr.TErrUnreachable) {
+			if serr.IsErrorSession(err) {
 				db.DPrintf(db.PROCCLNT_ERR, "Err spawnRetry unreachable %v", err)
 				continue
 			}
@@ -328,7 +329,7 @@ func (clnt *ProcClnt) exited(procdir, parentdir, kernelID string, pid sp.Tpid, s
 		db.DPrintf(db.PROCCLNT_ERR, "Error notify exited: %v", err)
 	}
 	// clean myself up
-	r := removeProc(clnt.FsLib, procdir+"/", clnt.procDirCreated)
+	r := removeProc(clnt.FsLib, path.MarkResolve(procdir), clnt.procDirCreated)
 	if r != nil {
 		return fmt.Errorf("Exited error [%v] %v", procdir, r)
 	}

@@ -140,9 +140,9 @@ func (dir *DirImpl) Stat(ctx fs.CtxI) (*sp.Tstat, *serr.Err) {
 	if err != nil {
 		return nil, err
 	}
-	l, err := spcodec.MarshalSizeDir(sts)
-	if err != nil {
-		return nil, err
+	l, e := spcodec.MarshalSizeDir(sts)
+	if e != nil {
+		return nil, serr.NewErrError(e)
 	}
 	st.SetLength(l)
 	return st, nil

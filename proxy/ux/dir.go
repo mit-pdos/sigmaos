@@ -3,6 +3,7 @@ package fsux
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"syscall"
 
 	"sigmaos/api/fs"
@@ -175,8 +176,8 @@ func (d *Dir) LookupPath(ctx fs.CtxI, path path.Tpathname) ([]fs.FsObj, fs.FsObj
 }
 
 func (d *Dir) Renameat(ctx fs.CtxI, from string, dd fs.Dir, to string, f sp.Tfence) *serr.Err {
-	oldPath := d.PathName() + "/" + from
-	newPath := dd.(*Dir).PathName() + "/" + to
+	oldPath := filepath.Join(d.PathName(), from)
+	newPath := filepath.Join(dd.(*Dir).PathName(), to)
 	db.DPrintf(db.UX, "%v: Renameat d:%v from:%v to:%v\n", ctx, d, from, to)
 	err := os.Rename(oldPath, newPath)
 	if err != nil {
@@ -206,8 +207,8 @@ func (d *Dir) Remove(ctx fs.CtxI, name string, f sp.Tfence, del fs.Tdel) *serr.E
 }
 
 func (d *Dir) Rename(ctx fs.CtxI, from, to string, f sp.Tfence) *serr.Err {
-	oldPath := d.PathName() + "/" + from
-	newPath := d.PathName() + "/" + to
+	oldPath := filepath.Join(d.PathName(), from)
+	newPath := filepath.Join(d.PathName(), to)
 	db.DPrintf(db.UX, "%v: Rename d:%v from:%v to:%v\n", ctx, d, from, to)
 	error := os.Rename(oldPath, newPath)
 	if error != nil {

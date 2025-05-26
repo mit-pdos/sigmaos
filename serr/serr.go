@@ -52,23 +52,24 @@ const (
 	TErrExists       = 30
 	TErrClosed       = 31 // for closed sessions and pipes.
 	TErrBadFcall     = 32
+	TErrIO           = 33
 	//
 	// sigma OS errors
 	//
 
-	TErrRetry = 33 // tell client to retry
+	TErrRetry = 34 // tell client to retry
 
 	//
 	// To propagate non-sigma errors.
 	// Must be *last* for String2Err()
 	//
-	TErrError = 34
+	TErrError = 35
 )
 
 // Several calls optimistically connect to a recently-mounted server
 // without doing a pathname walk; this may fail, and the call should
-// walk. retry() says when to retry.
-func Retry(err *Err) bool {
+// walk. IsRetryOK() says when to retry.
+func IsRetryOK(err *Err) bool {
 	if err == nil {
 		return false
 	}
@@ -145,6 +146,8 @@ func (err Terror) String() string {
 		return "closed"
 	case TErrBadFcall:
 		return "bad fcall"
+	case TErrIO:
+		return "IO error"
 
 	// sigma OS errors
 	case TErrRetry:
@@ -222,6 +225,15 @@ func (err *Err) IsErrUnreachable() bool {
 	return err.Code() == TErrUnreachable
 }
 
+// SigmaOS experience an error during I/O (e.g., wait for a response)
+func (err *Err) IsErrIO() bool {
+	return err.Code() == TErrIO
+}
+
+func (err *Err) IsErrSession() bool {
+	return err.IsErrUnreachable() || err.IsErrIO()
+}
+
 // A file is unavailable: either a server on the file's path is
 // unreachable or the file is not found
 func (err *Err) IsErrUnavailable() bool {
@@ -294,6 +306,22 @@ func IsErrorUnreachable(error error) bool {
 	var err *Err
 	if errors.As(error, &err) {
 		return err.IsErrUnreachable()
+	}
+	return false
+}
+
+func IsErrorIO(error error) bool {
+	var err *Err
+	if errors.As(error, &err) {
+		return err.IsErrIO()
+	}
+	return false
+}
+
+func IsErrorSession(error error) bool {
+	var err *Err
+	if errors.As(error, &err) {
+		return err.IsErrSession()
 	}
 	return false
 }

@@ -147,8 +147,6 @@ func Run(args []string) error {
 
 	nd.SigmaSrv.Mount(sp.PSTATSD, nd.pstats)
 
-	db.DPrintf(db.NAMED_LDR, "newSrv %v ep %v", nd.realm, ep)
-
 	pn := sp.NAMED
 	if nd.realm == sp.ROOTREALM {
 		// Allow connections from all realms, so that realms can mount the kernel
@@ -160,22 +158,16 @@ func Run(args []string) error {
 		}
 	} else {
 		pn = filepath.Join(sp.REALMS, nd.realm.String())
-		db.DPrintf(db.ALWAYS, "NewEndpointSymlink %v %v lid %v", nd.realm, pn, nd.sess.Lease())
-		li, err := sc.LeaseClnt.AskLease(pn, fsetcd.LeaseTTL)
-		if err != nil {
-			db.DFatalf("Error AskLease %v: %v", pn, err)
-		}
-		li.KeepExtending()
-
-		if err := nd.MkLeasedEndpoint(pn, ep, li.Lease()); err != nil {
+		db.DPrintf(db.ALWAYS, "NewEndpointSymlink %v %v ep %v", nd.realm, pn, ep)
+		if err := nd.WriteEndpointFile(pn, ep); err != nil {
 			db.DPrintf(db.ERROR, "MkEndpointFile %v at %v err %v", nd.realm, pn, err)
 			db.DFatalf("MkEndpointFile %v at %v err %v", nd.realm, pn, err)
 			return err
 		}
-		db.DPrintf(db.NAMED, "[%v] named endpoint %v", nd.realm, ep)
+		db.DPrintf(db.NAMED_LDR, "[%v] named endpoint %v", nd.realm, ep)
 	}
 
-	nd.getRoot(pn + "/")
+	nd.getRoot(path.MarkResolve(pn))
 
 	if err := nd.CreateLeaderFile(filepath.Join(sp.NAME, nd.elect.Key()), nil, sp.TleaseId(nd.sess.Lease()), nd.elect.Fence()); err != nil {
 		db.DPrintf(db.NAMED, "CreateElectionInfo %v err %v", nd.elect.Key(), err)
@@ -186,6 +178,8 @@ func Run(args []string) error {
 	if err := nd.warmCache(); err != nil {
 		db.DFatalf("warmCache err %v", err)
 	}
+
+	crash.SetCrashFile(nd.FsLib, crash.NAMED_CRASHFILE)
 
 	crash.Failer(nd.FsLib, crash.NAMED_CRASH, func(e crash.Tevent) {
 		crash.Crash()
@@ -301,6 +295,7 @@ func (nd *Named) waitExit(ch chan struct{}) {
 
 func (nd *Named) watchLeased() {
 	for pn := range nd.ephch {
+		db.DPrintf(db.NAMED_LDR, "Expired pn %v", pn)
 		nd.SigmaSrv.Notify(pn)
 	}
 }

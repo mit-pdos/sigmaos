@@ -48,18 +48,19 @@ enum Terror : int {
 	TErrExists = 30,
 	TErrClosed = 31, // for closed sessions and pipes.
 	TErrBadFcall = 32,
+	TErrIO = 33,
 
 	//
 	// sigma OS errors
 	//
 
-	TErrRetry = 33, // tell client to retry
+	TErrRetry = 34, // tell client to retry
 
 	//
 	// To propagate non-sigma errors.
 	// Must be *last* for String2Err()
 	//
-	TErrError = 34,
+	TErrError = 35,
 };
 
 std::string TerrorToString(Terror e);

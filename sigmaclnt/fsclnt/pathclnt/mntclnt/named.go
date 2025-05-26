@@ -101,6 +101,11 @@ func (mc *MntClnt) getNamedEndpointDirect(realm sp.Trealm) (*sp.Tendpoint, *serr
 }
 
 func (mc *MntClnt) invalidateNamedMountCacheEntry(realm sp.Trealm) error {
+	db.DPrintf(db.NAMED_LDR, "invalidateNamedMountCacheEntry %v", realm)
+	if realm != sp.ROOTREALM {
+		pn := filepath.Join(sp.ROOT, sp.REALMSREL, realm.String())
+		mc.mnt.umount(path.Split(pn), true)
+	}
 	mc.ndMntCache.Invalidate(realm)
 	if mc.pe.UseDialProxy {
 		return mc.npc.InvalidateNamedEndpointCacheEntry(realm)

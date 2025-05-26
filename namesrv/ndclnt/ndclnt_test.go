@@ -1,4 +1,4 @@
-package namesrv_test
+package ndclnt_test
 
 import (
 	"path/filepath"
@@ -11,7 +11,10 @@ import (
 	dialproxyclnt "sigmaos/dialproxy/clnt"
 	"sigmaos/namesrv"
 	"sigmaos/namesrv/fsetcd"
+	"sigmaos/namesrv/ndclnt"
+	"sigmaos/path"
 	"sigmaos/proc"
+	"sigmaos/serr"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
@@ -19,9 +22,9 @@ import (
 )
 
 const (
-	MCPU            proc.Tmcpu    = 1000
-	DELAY           time.Duration = 2 * fsetcd.LeaseTTL * time.Second
-	CRASH_SEM_DELAY               = 5 * time.Second
+	MCPU            proc.Tmcpu = 1000
+	CRASH_SEM_DELAY            = 100 * time.Millisecond
+	CRASHFILE                  = "###crashfile##!"
 )
 
 func TestCompile(t *testing.T) {
@@ -33,7 +36,7 @@ func TestBootNamed(t *testing.T) {
 		return
 	}
 
-	sts, err := ts.GetDir(sp.NAMED + "/")
+	sts, err := ts.GetDir(sp.NAMED)
 	assert.Nil(t, err)
 	db.DPrintf(db.TEST, "named %v", sp.Names(sts))
 
@@ -54,60 +57,11 @@ func TestPstats(t *testing.T) {
 	ts.Shutdown()
 }
 
-func newNamedProc(mcpu proc.Tmcpu, realm sp.Trealm, dialproxy bool, canFail bool) *proc.Proc {
-	p := proc.NewProc(sp.NAMEDREL, []string{realm.String()})
-	p.SetMcpu(mcpu)
-	p.SetRealmSwitch(realm)
-	p.GetProcEnv().UseDialProxy = dialproxy
-	if !canFail {
-		p.AppendEnv("SIGMAFAIL", "")
-	} else {
-		p.AppendEnv(proc.SIGMAFAIL, proc.GetSigmaFail())
-	}
-	return p
-}
-
-func startNamed(ts *test.Tstate, nd *proc.Proc) error {
-	// Spawn the named proc
-	if err := ts.Spawn(nd); !assert.Nil(ts.T, err, "Err spawn named: %v", err) {
-		return err
-	}
-	db.DPrintf(db.TEST, "New named spawned: %v", nd.GetPid())
-
-	// Wait for the proc to start
-	if err := ts.WaitStart(nd.GetPid()); !assert.Nil(ts.T, err, "Err WaitStart named: %v", err) {
-		return err
-	}
-	db.DPrintf(db.TEST, "New named started")
-
-	// Wait for the named to start up
-	_, err := ts.GetFileWatch(filepath.Join(sp.REALMS, test.REALM1.String()))
-	// wait until the named has registered its endpoint and is ready to serve
-	if !assert.Nil(ts.T, err, "Err GetFileWatch: %v", err) {
-		return err
-	}
-	db.DPrintf(db.TEST, "New named ready to serve")
-	return nil
-}
-
-func stopNamed(ts *test.Tstate, nd *proc.Proc) error {
-	// Evict the new named
-	err := ts.Evict(nd.GetPid())
-	assert.Nil(ts.T, err, "Err evict named: %v", err)
-	status, err := ts.WaitExit(nd.GetPid())
-	if assert.Nil(ts.T, err, "Err WaitExit named: %v", err) {
-		assert.True(ts.T, status.IsStatusEvicted(), "Wrong exit status: %v", status)
-	}
-	// Make sure the named EP has been removed
-	ts.Remove(filepath.Join(sp.REALMS, test.REALM1.String()))
-	return err
-}
-
-func TestKillNamed(t *testing.T) {
+func TestKillNamedAlone(t *testing.T) {
 	const T = 1000
-	fn := sp.NAMED + "crashnd.sem"
+	crashpn := sp.NAMED + "crashnd.sem"
 
-	e := crash.NewEventPath(crash.NAMED_CRASH, T, float64(1.0), fn)
+	e := crash.NewEventPath(crash.NAMED_CRASH, T, float64(1.0), crashpn)
 	err := crash.SetSigmaFail(crash.NewTeventMapOne(e))
 	assert.Nil(t, err)
 
@@ -117,8 +71,8 @@ func TestKillNamed(t *testing.T) {
 	}
 	defer ts.Shutdown()
 
-	nd1 := newNamedProc(MCPU, test.REALM1, ts.ProcEnv().UseDialProxy, true)
-	if err := startNamed(ts, nd1); !assert.Nil(ts.T, err, "Err startNamed: %v", err) {
+	nd1 := ndclnt.NewNamedProc(test.REALM1, ts.ProcEnv().UseDialProxy, true)
+	if err := ndclnt.StartNamed(ts.SigmaClnt, nd1); !assert.Nil(ts.T, err, "Err startNamed: %v", err) {
 		return
 	}
 
@@ -127,48 +81,201 @@ func TestKillNamed(t *testing.T) {
 	if !assert.Nil(ts.T, err, "Err new sigmaclnt realm: %v", err) {
 		return
 	}
-	db.DPrintf(db.TEST, "Made new realm sigmaclnt")
 
-	sts, err := sc.GetDir(sp.NAMED + "/")
+	fn := filepath.Join(sp.NAMED, "fff")
+	_, err = sc.PutFile(fn, 0777, sp.OREAD, nil)
 	assert.Nil(t, err)
-	db.DPrintf(db.TEST, "New realm sigmaclnt contents: %v", sp.Names(sts))
 
-	db.DPrintf(db.TEST, "named %v", sp.Names(sts))
-
-	sts, err = ts.GetDir(sp.NAMED + "/")
+	sts, err := sc.GetDir(sp.NAMED)
 	assert.Nil(t, err)
-	db.DPrintf(db.TEST, "New realm sigmaclnt contents: %v", sp.Names(sts))
+	assert.True(t, sp.Present(sts, []string{"fff"}))
 
-	db.DPrintf(db.TEST, "named root %v", sp.Names(sts))
+	sts, err = ts.GetDir(sp.NAMED)
+	assert.Nil(t, err)
+	// db.DPrintf(db.TEST, "Root realm sigmaclnt contents: %v", sp.Names(sts))
+	assert.True(t, sp.Present(sts, []string{"chunkd"}))
 
-	// Wait for a bit for the crash semaphore to be crated
+	// Wait for a bit for the crash semaphore to be created
 	time.Sleep(CRASH_SEM_DELAY)
 
-	// Crash named
-	db.DPrintf(db.TEST, "Crashing named %v", sp.Names(sts))
-	err = crash.SignalFailer(sc.FsLib, fn)
+	// Tell named to crash
+	err = crash.SignalFailer(sc.FsLib, crashpn)
 	assert.Nil(t, err, "Err crash: %v", err)
-	time.Sleep(DELAY)
 
-	db.DPrintf(db.TEST, "named should be dead & buried")
+	// Allow the crashing named time to crash
+	time.Sleep(T * time.Millisecond)
 
-	_, err = sc.GetDir(sp.NAMED)
+	_, err = sc.GetDir(path.MarkResolve(sp.NAMED))
 	assert.NotNil(t, err)
 
-	db.DPrintf(db.TEST, "named unreachable, as expected")
-
 	// Start a new named
-	nd2 := newNamedProc(MCPU, test.REALM1, ts.ProcEnv().UseDialProxy, false)
+	nd2 := ndclnt.NewNamedProc(test.REALM1, ts.ProcEnv().UseDialProxy, false)
 	db.DPrintf(db.TEST, "Starting a new named: %v", nd2.GetPid())
-	if err := startNamed(ts, nd2); !assert.Nil(ts.T, err, "Err startNamed 2: %v", err) {
+	if err := ndclnt.StartNamed(ts.SigmaClnt, nd2); !assert.Nil(ts.T, err, "Err startNamed 2: %v", err) {
 		return
 	}
 
-	sts, err = sc.GetDir(sp.NAMED + "/")
-	assert.Nil(t, err, "Get named dir post-crash")
-	db.DPrintf(db.TEST, "named %v", sp.Names(sts))
+	fn1 := filepath.Join(sp.NAMED, "ggg")
+	_, err = sc.PutFile(fn1, 0777, sp.OREAD, nil)
+	assert.Nil(t, err)
 
-	if err := stopNamed(ts, nd2); !assert.Nil(ts.T, err, "Err stop named: %v", err) {
+	sts, err = sc.GetDir(path.MarkResolve(sp.NAMED))
+	assert.Nil(t, err, "Get named dir post-crash")
+	assert.True(t, sp.Present(sts, []string{"fff"}))
+	assert.True(t, sp.Present(sts, []string{"ggg"}))
+
+	err = sc.Remove(fn)
+	assert.Equal(t, nil, err)
+	err = sc.Remove(fn1)
+	assert.Equal(t, nil, err)
+
+	if err := ndclnt.StopNamed(ts.SigmaClnt, nd2); !assert.Nil(ts.T, err, "Err stop named: %v", err) {
+		return
+	}
+}
+
+func namedClient(t *testing.T, sc *sigmaclnt.SigmaClnt, ch chan bool) {
+	const MAXRETRY = 30
+	done := false
+	for !done {
+		select {
+		case <-ch:
+			done = true
+		default:
+			time.Sleep(10 * time.Millisecond)
+			d := []byte("hello")
+			fn := filepath.Join(sp.NAMED, "fff")
+			_, err := sc.PutFile(fn, 0777, sp.OWRITE|sp.OEXCL, d)
+			if err == nil {
+				for i := 0; i < MAXRETRY; i++ {
+					sts, err := sc.GetDir(sp.NAMED)
+					if err == nil {
+						assert.True(t, sp.Present(sts, []string{fn}))
+						break
+					}
+					assert.NotEqual(t, MAXRETRY, i)
+				}
+
+				dg, err := sc.GetFile(fn)
+				assert.Nil(t, err)
+				assert.Equal(t, d, dg)
+
+				for i := 0; i < MAXRETRY; i++ {
+					if err := sc.Remove(fn); err == nil {
+						break
+					}
+					assert.NotEqual(t, MAXRETRY, i)
+				}
+			}
+		}
+	}
+	ch <- true
+}
+
+func TestKillNamedClient(t *testing.T) {
+	const (
+		T = 200
+		N = 5
+	)
+
+	crashpn := sp.NAMED + "crashnd.sem"
+
+	e := crash.NewEventPath(crash.NAMED_CRASH, T, float64(1.0), crashpn)
+	err := crash.SetSigmaFail(crash.NewTeventMapOne(e))
+	assert.Nil(t, err)
+
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	defer ts.Shutdown()
+
+	nd1 := ndclnt.NewNamedProc(test.REALM1, ts.ProcEnv().UseDialProxy, true)
+	if err := ndclnt.StartNamed(ts.SigmaClnt, nd1); !assert.Nil(ts.T, err, "Err startNamed: %v", err) {
+		return
+	}
+
+	pe := proc.NewDifferentRealmProcEnv(ts.ProcEnv(), test.REALM1)
+	sc, err := sigmaclnt.NewSigmaClnt(pe)
+	if !assert.Nil(ts.T, err, "Err new sigmaclnt realm: %v", err) {
+		return
+	}
+
+	for i := 0; i < N; i++ {
+		ch := make(chan bool)
+		go namedClient(t, sc, ch)
+
+		// Let namedClient do a few iterations
+		time.Sleep(3 * time.Second)
+
+		// Start a new named
+		nd2 := ndclnt.NewNamedProc(test.REALM1, ts.ProcEnv().UseDialProxy, true)
+		db.DPrintf(db.TEST, "Starting a new named: %v", nd2.GetPid())
+		if err := ndclnt.StartNamed(ts.SigmaClnt, nd2); !assert.Nil(ts.T, err, "Err startNamed 2: %v", err) {
+			return
+		}
+		// Tell named to old crash
+		err = crash.SignalFailer(sc.FsLib, crashpn)
+		assert.Nil(t, err, "Err crash: %v", err)
+
+		// Allow the crashing named time to crash
+		time.Sleep(T * time.Millisecond)
+
+		ch <- true
+		<-ch
+
+		if i == N-1 {
+			db.DPrintf(db.TEST, "client finished")
+			if err := ndclnt.StopNamed(ts.SigmaClnt, nd2); !assert.Nil(ts.T, err, "Err stop named: %v", err) {
+				return
+			}
+		}
+	}
+}
+
+func TestAtMostOnce(t *testing.T) {
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	defer ts.Shutdown()
+
+	e := crash.NewEventPath(crash.NAMED_CRASHFILE, 0, 0.0, CRASHFILE)
+	err := crash.SetSigmaFail(crash.NewTeventMapOne(e))
+	assert.Nil(t, err)
+
+	nd1 := ndclnt.NewNamedProc(test.REALM1, ts.ProcEnv().UseDialProxy, true)
+	if err := ndclnt.StartNamed(ts.SigmaClnt, nd1); !assert.Nil(ts.T, err, "Err startNamed: %v", err) {
+		return
+	}
+
+	pe := proc.NewDifferentRealmProcEnv(ts.ProcEnv(), test.REALM1)
+	sc, err := sigmaclnt.NewSigmaClnt(pe)
+	if !assert.Nil(ts.T, err, "Err new sigmaclnt realm: %v", err) {
+		return
+	}
+
+	// Start a hot-standby named
+	nd2 := ndclnt.NewNamedProc(test.REALM1, ts.ProcEnv().UseDialProxy, false)
+	db.DPrintf(db.TEST, "Starting a new named: %v", nd2.GetPid())
+	if err := ndclnt.StartNamed(ts.SigmaClnt, nd2); !assert.Nil(ts.T, err, "Err startNamed 2: %v", err) {
+		return
+	}
+
+	_, err = sc.GetDir(sp.NAMED)
+	assert.Nil(t, err)
+
+	d := []byte("hello")
+	fn := filepath.Join(sp.NAMED, CRASHFILE)
+	_, err = sc.SetFile(fn, d, sp.OAPPEND, sp.NoOffset)
+	assert.NotNil(t, err)
+	assert.True(t, serr.IsErrorIO(err))
+
+	d1, err := sc.GetFile(fn)
+	assert.Nil(t, err)
+	assert.Equal(t, d, d1, d1)
+
+	if err := ndclnt.StopNamed(ts.SigmaClnt, nd2); !assert.Nil(ts.T, err, "Err stop named: %v", err) {
 		return
 	}
 }
@@ -180,8 +287,8 @@ func reboot(t *testing.T, dn string, f func(*test.Tstate, *sigmaclnt.SigmaClnt, 
 		return
 	}
 
-	nd1 := newNamedProc(MCPU, test.REALM1, ts.ProcEnv().UseDialProxy, true)
-	if err := startNamed(ts, nd1); !assert.Nil(ts.T, err, "Err startNamed: %v", err) {
+	nd1 := ndclnt.NewNamedProc(test.REALM1, ts.ProcEnv().UseDialProxy, true)
+	if err := ndclnt.StartNamed(ts.SigmaClnt, nd1); !assert.Nil(ts.T, err, "Err startNamed: %v", err) {
 		return
 	}
 
@@ -190,7 +297,6 @@ func reboot(t *testing.T, dn string, f func(*test.Tstate, *sigmaclnt.SigmaClnt, 
 	if !assert.Nil(ts.T, err, "Err new sigmaclnt realm: %v", err) {
 		return
 	}
-	db.DPrintf(db.TEST, "Made new realm sigmaclnt")
 
 	fn := filepath.Join(dn, "leasedf")
 
@@ -207,7 +313,7 @@ func reboot(t *testing.T, dn string, f func(*test.Tstate, *sigmaclnt.SigmaClnt, 
 
 	assert.Equal(ts.T, 1, len(sts))
 
-	stopNamed(ts, nd1)
+	ndclnt.StopNamed(ts.SigmaClnt, nd1)
 	ts.Shutdown()
 
 	if !quick {
@@ -221,8 +327,8 @@ func reboot(t *testing.T, dn string, f func(*test.Tstate, *sigmaclnt.SigmaClnt, 
 	}
 	defer ts.Shutdown()
 
-	nd2 := newNamedProc(MCPU, test.REALM1, ts.ProcEnv().UseDialProxy, true)
-	if err := startNamed(ts, nd2); !assert.Nil(ts.T, err, "Err startNamed: %v", err) {
+	nd2 := ndclnt.NewNamedProc(test.REALM1, ts.ProcEnv().UseDialProxy, true)
+	if err := ndclnt.StartNamed(ts.SigmaClnt, nd2); !assert.Nil(ts.T, err, "Err startNamed: %v", err) {
 		return
 	}
 
@@ -253,7 +359,7 @@ func reboot(t *testing.T, dn string, f func(*test.Tstate, *sigmaclnt.SigmaClnt, 
 
 	ts.Remove(fn)
 
-	stopNamed(ts, nd2)
+	ndclnt.StopNamed(ts.SigmaClnt, nd2)
 }
 
 // In these tests named will receive notification from etcd that
@@ -264,8 +370,8 @@ func TestLeaseQuickReboot(t *testing.T) {
 		return
 	}
 
-	nd1 := newNamedProc(MCPU, test.REALM1, ts.ProcEnv().UseDialProxy, true)
-	if err := startNamed(ts, nd1); !assert.Nil(ts.T, err, "Err startNamed: %v", err) {
+	nd1 := ndclnt.NewNamedProc(test.REALM1, ts.ProcEnv().UseDialProxy, true)
+	if err := ndclnt.StartNamed(ts.SigmaClnt, nd1); !assert.Nil(ts.T, err, "Err startNamed: %v", err) {
 		return
 	}
 
@@ -284,7 +390,7 @@ func TestLeaseQuickReboot(t *testing.T) {
 	sts, err := sc.GetDir(dn)
 	assert.Nil(t, err, "Err GetDir: %v", err)
 	assert.Equal(t, 0, len(sts))
-	err = stopNamed(ts, nd1)
+	err = ndclnt.StopNamed(ts.SigmaClnt, nd1)
 	// Shut down regardless of whether or not stopping named was successful
 	ts.Shutdown()
 	if !assert.Nil(ts.T, err, "Err stop named: %v", err) {
@@ -336,8 +442,8 @@ func TestLeaseDelayReboot(t *testing.T) {
 		return
 	}
 
-	nd1 := newNamedProc(MCPU, test.REALM1, ts.ProcEnv().UseDialProxy, true)
-	if err := startNamed(ts, nd1); !assert.Nil(ts.T, err, "Err startNamed: %v", err) {
+	nd1 := ndclnt.NewNamedProc(test.REALM1, ts.ProcEnv().UseDialProxy, true)
+	if err := ndclnt.StartNamed(ts.SigmaClnt, nd1); !assert.Nil(ts.T, err, "Err startNamed: %v", err) {
 		return
 	}
 
@@ -356,7 +462,7 @@ func TestLeaseDelayReboot(t *testing.T) {
 	sts, err := sc.GetDir(dn)
 	assert.Nil(t, err, "Err GetDir: %v", err)
 	assert.Equal(t, 0, len(sts))
-	err = stopNamed(ts, nd1)
+	err = ndclnt.StopNamed(ts.SigmaClnt, nd1)
 	// Shut down regardless of whether or not stopping named was successful
 	ts.Shutdown()
 	if !assert.Nil(ts.T, err, "Err stop named: %v", err) {
@@ -408,8 +514,8 @@ func TestLeaseGetDirReboot(t *testing.T) {
 		return
 	}
 
-	nd1 := newNamedProc(MCPU, test.REALM1, ts.ProcEnv().UseDialProxy, true)
-	if err := startNamed(ts, nd1); !assert.Nil(ts.T, err, "Err startNamed: %v", err) {
+	nd1 := ndclnt.NewNamedProc(test.REALM1, ts.ProcEnv().UseDialProxy, true)
+	if err := ndclnt.StartNamed(ts.SigmaClnt, nd1); !assert.Nil(ts.T, err, "Err startNamed: %v", err) {
 		return
 	}
 
@@ -428,7 +534,7 @@ func TestLeaseGetDirReboot(t *testing.T) {
 	sts, err := sc.GetDir(dn)
 	assert.Nil(t, err, "Err GetDir: %v", err)
 	assert.Equal(t, 0, len(sts))
-	err = stopNamed(ts, nd1)
+	err = ndclnt.StopNamed(ts.SigmaClnt, nd1)
 	// Shut down regardless of whether or not stopping named was successful
 	ts.Shutdown()
 	if !assert.Nil(ts.T, err, "Err stop named: %v", err) {
@@ -447,7 +553,8 @@ func TestLeaseGetDirReboot(t *testing.T) {
 }
 
 // Test if read fails after a named lost leadership
-func TestPartitionNamed(t *testing.T) {
+// XXX commented out until etcd fix
+func xTestPartitionNamed(t *testing.T) {
 	e := crash.NewEventStartDelay(crash.NAMED_PARTITION, 2000, 1000, 7000, float64(1.0))
 	err := crash.SetSigmaFail(crash.NewTeventMapOne(e))
 	assert.Nil(t, err)

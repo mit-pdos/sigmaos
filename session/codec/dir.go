@@ -8,24 +8,24 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	// db "sigmaos/debug"
-	"sigmaos/util/io/frame"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
+	"sigmaos/util/io/frame"
 )
 
-func MarshalSizeDir(dir []*sp.Tstat) (sp.Tlength, *serr.Err) {
+func MarshalSizeDir(dir []*sp.Tstat) (sp.Tlength, error) {
 	sz := uint64(0)
 	for _, st := range dir {
 		b, err := proto.Marshal(st)
 		if err != nil {
-			return 0, serr.NewErrError(err)
+			return 0, err
 		}
 		sz += uint64(len(b))
 	}
 	return sp.Tlength(sz), nil
 }
 
-func MarshalDirEnt(st *sp.Tstat, cnt uint64) ([]byte, *serr.Err) {
+func MarshalDirEnt(st *sp.Tstat, cnt uint64) ([]byte, error) {
 	var buf bytes.Buffer
 	b, err := proto.Marshal(st)
 	if err != nil {
@@ -41,7 +41,7 @@ func MarshalDirEnt(st *sp.Tstat, cnt uint64) ([]byte, *serr.Err) {
 	return buf.Bytes(), nil
 }
 
-func UnmarshalDirEnt(rdr io.Reader) (*sp.Tstat, *serr.Err) {
+func UnmarshalDirEnt(rdr io.Reader) (*sp.Tstat, error) {
 	st := sp.NewStatNull()
 	b, err := frame.ReadFrame(rdr)
 	if err != nil {

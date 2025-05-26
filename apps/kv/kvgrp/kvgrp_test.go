@@ -12,6 +12,7 @@ import (
 	dialproxyclnt "sigmaos/dialproxy/clnt"
 	"sigmaos/ft/procgroupmgr"
 	"sigmaos/namesrv/fsetcd"
+	"sigmaos/path"
 	"sigmaos/proc"
 	sesssrv "sigmaos/session/srv"
 	"sigmaos/sigmaclnt"
@@ -80,7 +81,7 @@ func TestStartStopRepl0(t *testing.T) {
 
 	ts := newTstate(mrts, kv.KVD_NO_REPL, false)
 
-	sts, _, err := ts.mrts.GetRealm(test.REALM1).ReadDir(kvgrp.GrpPath(kvgrp.JobDir(ts.job), ts.grp) + "/")
+	sts, _, err := ts.mrts.GetRealm(test.REALM1).ReadDir(path.MarkResolve(kvgrp.GrpPath(kvgrp.JobDir(ts.job), ts.grp)))
 	db.DPrintf(db.TEST, "Stat: %v %v\n", sp.Names(sts), err)
 	assert.Nil(t, err, "stat")
 
@@ -211,7 +212,7 @@ func TestReconnectSimple(t *testing.T) {
 		fsl, err := sigmaclnt.NewFsLib(pe, dialproxyclnt.NewDialProxyClnt(pe))
 		assert.Nil(t, err)
 		for i := 0; i < N; i++ {
-			_, err := fsl.Stat(kvgrp.GrpPath(kvgrp.JobDir(ts.job), ts.grp) + "/")
+			_, err := fsl.Stat(path.MarkResolve(kvgrp.GrpPath(kvgrp.JobDir(ts.job), ts.grp)))
 			if err != nil {
 				ch <- err
 				return
@@ -231,7 +232,7 @@ func (ts *Tstate) stat(t *testing.T, i int, ch chan error) {
 	fsl, err := sigmaclnt.NewFsLib(pe, dialproxyclnt.NewDialProxyClnt(pe))
 	assert.Nil(t, err)
 	for true {
-		_, err := fsl.Stat(kvgrp.GrpPath(kvgrp.JobDir(ts.job), ts.grp) + "/")
+		_, err := fsl.Stat(path.MarkResolve(kvgrp.GrpPath(kvgrp.JobDir(ts.job), ts.grp)))
 		if err != nil {
 			db.DPrintf(db.TEST, "Stat %d err %v", i, err)
 			ch <- err

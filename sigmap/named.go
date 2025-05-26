@@ -10,7 +10,7 @@ const (
 	LOCAL = "~local"
 )
 
-// if name ends in "/", it is a directory with mount files for that service
+// if name ends in "/", it is a directory with link files for that service
 const (
 	KNAMED      = "knamed"
 	NAME        = "name"

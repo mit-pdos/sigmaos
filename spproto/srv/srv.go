@@ -18,6 +18,7 @@ import (
 	"sigmaos/spproto/srv/lockmap"
 	"sigmaos/spproto/srv/namei"
 	"sigmaos/spproto/srv/watch"
+	"sigmaos/util/crash"
 )
 
 type GetRootCtxF func(*sp.Tprincipal, map[string]*sp.SecretProto, string, sessp.Tsession, sp.TclntId) (fs.Dir, fs.CtxI)
@@ -662,5 +663,8 @@ func (ps *ProtSrv) PutFile(args *sp.Tputfile, data []byte, rets *sp.Rwrite) *sp.
 		return sp.NewRerrorSerr(err)
 	}
 	rets.Count = uint32(n)
+
+	crash.CrashFile(name)
+
 	return nil
 }

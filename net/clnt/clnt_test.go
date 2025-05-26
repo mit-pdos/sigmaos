@@ -141,36 +141,40 @@ func newTransport(conn net.Conn, iovm *demux.IoVecMap) demux.TransportI {
 	}
 }
 
-func (t *transport) ReadCall() (demux.CallI, *serr.Err) {
+func (t *transport) ReadCall() (demux.CallI, error) {
 	var l uint32
 
 	if err := binary.Read(t.rdr, binary.LittleEndian, &l); err != nil {
-		return nil, serr.NewErr(serr.TErrUnreachable, err)
+		return nil, err
 	}
 	l = l - 4
 	if l < 0 {
-		return nil, serr.NewErr(serr.TErrUnreachable, "readMsg too short")
+		return nil, io.ErrShortBuffer
 	}
 	frame := make(sessp.Tframe, l)
 	n, e := io.ReadFull(t.rdr, frame)
 	if n != len(frame) {
-		return nil, serr.NewErr(serr.TErrUnreachable, e)
+		return nil, e
 	}
 	return &call{buf: frame}, nil
 }
 
-func (t *transport) WriteCall(c demux.CallI) *serr.Err {
+func (t *transport) WriteCall(c demux.CallI) error {
 	call := c.(*call)
 
 	l := uint32(len(call.buf) + 4) // +4 because that is how 9P wants it
 	if err := binary.Write(t.wrt, binary.LittleEndian, l); err != nil {
-		return serr.NewErr(serr.TErrUnreachable, err.Error())
+		return err
 	}
-	if n, err := t.wrt.Write(call.buf); err != nil || n != len(call.buf) {
-		return serr.NewErr(serr.TErrUnreachable, err.Error())
+	n, err := t.wrt.Write(call.buf)
+	if err != nil {
+		return err
+	}
+	if n != len(call.buf) {
+		return io.ErrShortWrite
 	}
 	if err := t.wrt.Flush(); err != nil {
-		return serr.NewErr(serr.TErrUnreachable, err.Error())
+		return err
 	}
 	return nil
 }
@@ -298,7 +302,7 @@ func TestNetFail(t *testing.T) {
 			call := d.(*call)
 			assert.True(t, len(call.buf) == REPBUFSZ)
 		} else {
-			db.DPrintf(db.ALWAYS, "SendReceive err %v", err)
+			db.DPrintf(db.CRASH, "SendReceive err %v", err)
 			var err error
 			dmx.Close()
 			dmx, err = ts.connect()

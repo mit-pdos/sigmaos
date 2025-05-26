@@ -9,6 +9,7 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	db "sigmaos/debug"
+	"sigmaos/path"
 	"sigmaos/serr"
 	"sigmaos/sigmaclnt/fslib"
 	sp "sigmaos/sigmap"
@@ -124,7 +125,7 @@ func (dr *DirWatcher) isWatchClosed(err error) bool {
 		return false
 	}
 
-	return dr.closed.Load() || serr.IsErrCode(err, serr.TErrClosed) || serr.IsErrCode(err, serr.TErrUnreachable) || serr.IsErrCode(err, serr.TErrUnknownfid) || err == io.ErrUnexpectedEOF
+	return dr.closed.Load() || serr.IsErrCode(err, serr.TErrClosed) || serr.IsErrorSession(err) || serr.IsErrCode(err, serr.TErrUnknownfid) || err == io.ErrUnexpectedEOF
 }
 
 func (dr *DirWatcher) readUpdates() (*protsrv_proto.WatchEventList, error) {
@@ -185,7 +186,7 @@ func WaitNEntries(fsl *fslib.FsLib, pn sp.Tsigmapath, n int) error {
 }
 
 func WaitCreate(fsl *fslib.FsLib, pn sp.Tsigmapath) error {
-	dir := filepath.Dir(pn) + "/"
+	dir := path.MarkResolve(filepath.Dir(pn))
 	f := filepath.Base(pn)
 
 	return waitCond(fsl, dir, func(ents map[sp.Tsigmapath]bool) bool {
@@ -194,7 +195,7 @@ func WaitCreate(fsl *fslib.FsLib, pn sp.Tsigmapath) error {
 }
 
 func WaitRemove(fsl *fslib.FsLib, pn sp.Tsigmapath) error {
-	dir := filepath.Dir(pn) + "/"
+	dir := path.MarkResolve(filepath.Dir(pn))
 	f := filepath.Base(pn)
 
 	return waitCond(fsl, dir, func(ents map[sp.Tsigmapath]bool) bool {

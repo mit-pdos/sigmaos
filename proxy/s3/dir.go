@@ -245,9 +245,9 @@ func (d *Dir) statDir(ctx fs.CtxI) *serr.Err {
 		}
 		d.sts = append(d.sts, st)
 	}
-	sz, err := spcodec.MarshalSizeDir(d.sts)
-	if err != nil {
-		return err
+	sz, e := spcodec.MarshalSizeDir(d.sts)
+	if e != nil {
+		return serr.NewErrError(e)
 	}
 	d.sz = sz
 	return nil

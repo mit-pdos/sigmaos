@@ -82,8 +82,8 @@ func (c *SessClnt) RPC(req sessp.Tmsg, iniov sessp.IoVec, outiov sessp.IoVec) (*
 	}
 
 	if err != nil {
-		if err.IsErrUnreachable() {
-			db.DPrintf(db.CRASH, "Reset sess %v's dmx %p", c.sid, dmx)
+		if err.IsErrSession() {
+			db.DPrintf(db.CRASH, "Reset sess %v's dmx %p err %v", c.sid, dmx, err)
 			c.resetdmx(dmx)
 		}
 		return nil, err

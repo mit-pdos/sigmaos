@@ -4,6 +4,7 @@ import (
 	"gopkg.in/mgo.v2/bson"
 
 	dbg "sigmaos/debug"
+	"sigmaos/path"
 	proto "sigmaos/proxy/mongo/proto"
 	rpcclnt "sigmaos/rpc/clnt"
 	sprpcclnt "sigmaos/rpc/clnt/sigmap"
@@ -26,7 +27,7 @@ func NewMongoClntWithName(fsl *fslib.FsLib, pn string) (*MongoClnt, error) {
 }
 
 func NewMongoClnt(fsl *fslib.FsLib) (*MongoClnt, error) {
-	return NewMongoClntWithName(fsl, sp.MONGO+sp.ANY+"/")
+	return NewMongoClntWithName(fsl, path.MarkResolve(sp.MONGO+sp.ANY))
 }
 
 func (mongoc *MongoClnt) GetMongoURL() (string, error) {

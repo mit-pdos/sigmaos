@@ -122,7 +122,7 @@ func (ts *Tstate) restartTstate() error {
 
 func (ts *Tstate) cleanup() {
 	ts.mrts.GetRealm(test.REALM1).RmDir(sp.IMG)
-	imgresize.Cleanup(ts.mrts.GetRealm(test.REALM1).FsLib, filepath.Join(sp.S3, sp.LOCAL, "9ps3/img-save"))
+	imgresize.Cleanup(ts.mrts.GetRealm(test.REALM1).FsLib, filepath.Join(sp.S3, sp.ANY, "9ps3/img-save"))
 }
 
 func (ts *Tstate) shutdown() {
@@ -247,7 +247,7 @@ func TestImgdManyOK(t *testing.T) {
 	err = ts.mrts.GetRealm(test.REALM1).BootNode(1)
 	assert.Nil(t, err, "BootProcd 2")
 
-	sts, err1 := ts.mrts.GetRealm(test.REALM1).GetDir(filepath.Join(sp.S3, sp.LOCAL, "9ps3/img-save"))
+	sts, err1 := ts.mrts.GetRealm(test.REALM1).GetDir(filepath.Join(sp.S3, sp.ANY, "9ps3/img-save"))
 	assert.Nil(t, err)
 
 	paths := make([]string, 0, len(sts))
@@ -255,7 +255,6 @@ func TestImgdManyOK(t *testing.T) {
 		fn := filepath.Join(sp.S3, sp.LOCAL, "9ps3/img-save/", st.Name)
 		paths = append(paths, fn)
 	}
-
 	ts.imgdJob(paths, nil)
 	ts.shutdown()
 }

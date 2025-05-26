@@ -42,7 +42,7 @@ func (clnt *ProcClnt) RunProc(uproc *proc.Proc) (uprocErr error, childErr error)
 		ProcProto: uproc.GetProto(),
 	}
 	res := &proto.RunRep{}
-	if err := clnt.RPC("ProcRPCSrv.Run", req, res); serr.IsErrCode(err, serr.TErrUnreachable) {
+	if err := clnt.RPC("ProcRPCSrv.Run", req, res); serr.IsErrorSession(err) {
 		return err, nil
 	} else {
 		db.DPrintf(db.PROCDMGR_ERR, "Err child %v", err)
@@ -60,7 +60,7 @@ func (clnt *ProcClnt) WarmProcd(pid sp.Tpid, realm sp.Trealm, prog string, s3sec
 		NamedEndpointProto: namedEP.GetProto(),
 	}
 	res := &proto.RunRep{}
-	if err := clnt.RPC("ProcRPCSrv.WarmProcd", req, res); serr.IsErrCode(err, serr.TErrUnreachable) {
+	if err := clnt.RPC("ProcRPCSrv.WarmProcd", req, res); serr.IsErrorSession(err) {
 		return err, nil
 	} else {
 		return nil, err

@@ -13,8 +13,8 @@ type CallI interface {
 }
 
 type TransportI interface {
-	ReadCall() (CallI, *serr.Err)
-	WriteCall(CallI) *serr.Err
+	ReadCall() (CallI, error)
+	WriteCall(CallI) error
 	Close() error
 }
 
@@ -49,10 +49,11 @@ func (dmx *DemuxSrv) reader() {
 			break
 		}
 		go func(c CallI) {
-			rep, err := dmx.srv.ServeRequest(c)
-			if err != nil {
+			rep, sr := dmx.srv.ServeRequest(c)
+			if sr != nil {
 				return
 			}
+			var err error
 			dmx.mu.Lock()
 			if !dmx.closed {
 				err = dmx.trans.WriteCall(rep)

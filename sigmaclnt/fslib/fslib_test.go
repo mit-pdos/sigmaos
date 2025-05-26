@@ -85,6 +85,10 @@ func TestRemoveBasic(t *testing.T) {
 	assert.Equal(t, nil, err)
 	db.DPrintf(db.TEST, "PutFile done")
 
+	dg, err := ts.GetFile(fn)
+	assert.Nil(t, err)
+	assert.Equal(t, d, dg)
+
 	db.DPrintf(db.TEST, "RemoveFile")
 	err = ts.Remove(fn)
 	assert.Equal(t, nil, err)
@@ -138,9 +142,20 @@ func TestCreateTwice(t *testing.T) {
 	d := []byte("hello")
 	_, err := ts.PutFile(fn, 0777, sp.OWRITE, d)
 	assert.Nil(t, err)
-	_, err = ts.PutFile(fn, 0777, sp.OWRITE|sp.OEXCL, d)
+	d1 := []byte("hello again")
+	_, err = ts.PutFile(fn, 0777, sp.OWRITE|sp.OEXCL, d1)
 	assert.NotNil(t, err)
 	assert.True(t, serr.IsErrCode(err, serr.TErrExists))
+
+	dg, err := ts.GetFile(fn)
+	assert.Nil(t, err)
+	assert.Equal(t, d, dg)
+
+	_, err = ts.PutFile(fn, 0777, sp.OWRITE, d1)
+	assert.Nil(t, err)
+	dg, err = ts.GetFile(fn)
+	assert.Nil(t, err)
+	assert.Equal(t, d1, dg)
 
 	err = ts.Remove(fn)
 	assert.Nil(t, err, "Remove: %v", err)
@@ -262,7 +277,7 @@ func TestRemoveSymlink(t *testing.T) {
 	err = ts.MkEndpointFile(fn, ep)
 	assert.Nil(t, err, "MkEndpointFile: %v", err)
 
-	sts, err := ts.GetDir(fn + "/")
+	sts, err := ts.GetDir(path.MarkResolve(fn))
 	assert.Nil(t, err, "GetDir: %v", err)
 	assert.True(t, sp.Present(sts, namesrv.InitRootDir))
 
@@ -291,7 +306,7 @@ func TestRmDirWithSymlink(t *testing.T) {
 	err = ts.MkEndpointFile(fn, ep)
 	assert.Nil(t, err, "MkEndpointFile: %v", err)
 
-	sts, err := ts.GetDir(fn + "/")
+	sts, err := ts.GetDir(path.MarkResolve(fn))
 	assert.Nil(t, err, "GetDir: %v", err)
 	assert.True(t, sp.Present(sts, namesrv.InitRootDir))
 
@@ -317,7 +332,7 @@ func TestReadSymlink(t *testing.T) {
 	err = ts.MkEndpointFile(fn, ep)
 	assert.Nil(t, err, "MkEndpointFile: %v", err)
 
-	_, err = ts.GetDir(fn + "/")
+	_, err = ts.GetDir(path.MarkResolve(fn))
 	assert.Nil(t, err, "GetDir: %v", err)
 
 	ep1, err := ts.ReadEndpoint(fn)
@@ -1095,7 +1110,7 @@ func TestSymlinkPath(t *testing.T) {
 	err = ts.Symlink([]byte(pathname), fn, 0777)
 	assert.Nil(ts.T, err, "Symlink")
 
-	sts, err := ts.GetDir(fn + "/")
+	sts, err := ts.GetDir(path.MarkResolve(fn))
 	assert.Equal(t, nil, err)
 	assert.True(t, sp.Present(sts, path.Tpathname{DIR1}), DIR1)
 
@@ -1130,7 +1145,7 @@ func TestEndpointSimple(t *testing.T) {
 	pn := filepath.Join(dn, "namedself")
 	err = ts.MkEndpointFile(pn, newEndpoint(t, ts, pathname))
 	assert.Nil(ts.T, err, "MkEndpointFile")
-	sts, err := ts.GetDir(pn + "/")
+	sts, err := ts.GetDir(path.MarkResolve(pn))
 	assert.Equal(t, nil, err)
 	assert.True(t, sp.Present(sts, path.Tpathname{DIR1}), DIR1)
 
@@ -1157,15 +1172,15 @@ func TestUnionDir(t *testing.T) {
 	err = ts.MkEndpointFile(filepath.Join(pathname, DIR1, "namedself1"), newep)
 	assert.Nil(ts.T, err, "EndpointService")
 
-	sts, err := ts.GetDir(filepath.Join(pathname, DIR1, sp.ANY) + "/")
+	sts, err := ts.GetDir(path.MarkResolve(filepath.Join(pathname, DIR1, sp.ANY)))
 	assert.Equal(t, nil, err)
 	assert.True(t, sp.Present(sts, path.Tpathname{DIR1}), DIR1)
 
-	sts, err = ts.GetDir(filepath.Join(pathname, DIR1, sp.ANY, DIR1) + "/")
+	sts, err = ts.GetDir(filepath.Join(pathname, DIR1, sp.ANY, DIR1))
 	assert.Equal(t, nil, err)
 	assert.True(t, sp.Present(sts, path.Tpathname{"namedself0", "namedself1"}), DIR1)
 
-	sts, err = ts.GetDir(filepath.Join(pathname, DIR1, sp.ANY) + "/")
+	sts, err = ts.GetDir(path.MarkResolve(filepath.Join(pathname, DIR1, sp.ANY)))
 	assert.Equal(t, nil, err)
 	assert.True(t, sp.Present(sts, path.Tpathname{DIR1}), DIR1)
 
@@ -1199,7 +1214,7 @@ func TestUnionRoot(t *testing.T) {
 	if pathname != sp.NAMED && pathname != "name/memfs/"+sp.LOCAL+"/" {
 		pn = filepath.Join(pathname, sp.ANY)
 	}
-	sts, err := ts.GetDir(pn + "/")
+	sts, err := ts.GetDir(path.MarkResolve(pn))
 	assert.Equal(t, nil, err)
 	assert.True(t, sp.Present(sts, path.Tpathname{"namedself0", "namedself1"}), "dir: %v", sp.Names(sts))
 
@@ -1233,11 +1248,11 @@ func TestUnionSymlinkRead(t *testing.T) {
 	if pathname != sp.NAMED && pathname != "name/memfs/"+sp.LOCAL+"/" {
 		basepn = filepath.Join(pathname, sp.ANY)
 	}
-	sts, err := ts.GetDir(filepath.Join(basepn, DIR1, "namedself1") + "/")
+	sts, err := ts.GetDir(path.MarkResolve(filepath.Join(basepn, DIR1, "namedself1")))
 	assert.Equal(t, nil, err)
 	assert.True(t, sp.Present(sts, path.Tpathname{DIR1, "namedself0"}), "root wrong")
 
-	sts, err = ts.GetDir(filepath.Join(basepn, DIR1, "namedself1", DIR1) + "/")
+	sts, err = ts.GetDir(filepath.Join(basepn, DIR1, "namedself1", DIR1))
 	assert.Equal(t, nil, err)
 	assert.True(t, sp.Present(sts, path.Tpathname{"namedself1"}), "d wrong")
 
@@ -1273,7 +1288,7 @@ func TestUnionSymlinkPut(t *testing.T) {
 	_, err = ts.PutFile(fn1, 0777, sp.OWRITE, b)
 	assert.Equal(t, nil, err)
 
-	sts, err := ts.GetDir(filepath.Join(basepn, "namedself0") + "/")
+	sts, err := ts.GetDir(path.MarkResolve(filepath.Join(basepn, "namedself0")))
 	assert.Equal(t, nil, err)
 	assert.True(t, sp.Present(sts, path.Tpathname{FILE, FILE1}), "root wrong")
 
@@ -1368,7 +1383,7 @@ func TestEndpointUnion(t *testing.T) {
 		eppn = filepath.Join(eppn, sp.ANY)
 	}
 
-	sts, err := ts.GetDir(filepath.Join(pathname, eppn) + "/")
+	sts, err := ts.GetDir(path.MarkResolve(filepath.Join(pathname, eppn)))
 	assert.Equal(t, nil, err)
 	assert.True(t, sp.Present(sts, path.Tpathname{DIR1}), DIR1)
 
@@ -1434,7 +1449,7 @@ func TestFslibClose(t *testing.T) {
 
 	_, err = fsl.Stat(dot)
 	assert.NotNil(t, err)
-	assert.True(t, serr.IsErrCode(err, serr.TErrUnreachable))
+	assert.True(t, serr.IsErrorUnreachable(err))
 
 	ts.Shutdown()
 }
@@ -1601,13 +1616,13 @@ func TestDisconnect(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 
 	_, err = ts.Write(fd, d)
-	assert.True(t, serr.IsErrCode(err, serr.TErrUnreachable))
+	assert.True(t, serr.IsErrorUnreachable(err))
 
 	err = ts.CloseFd(fd)
-	assert.True(t, serr.IsErrCode(err, serr.TErrUnreachable))
+	assert.True(t, serr.IsErrorUnreachable(err))
 
 	fd, err = ts.Open(fn, sp.OREAD)
-	assert.True(t, serr.IsErrCode(err, serr.TErrUnreachable), "Err not unreachable: %v", err)
+	assert.True(t, serr.IsErrorUnreachable(err))
 
 	ts.Shutdown()
 }

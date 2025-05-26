@@ -270,10 +270,12 @@ func (cksrv *ChunkSrv) fetchChunk(fetchCnt uint64, be *bin, r sp.Trealm, pid sp.
 		}
 	}
 	pn := pathBinCache(r, be.prog)
+	start := time.Now()
 	if err := writeChunk(pn, ck, b[0:sz]); err != nil {
 		db.DPrintf(db.CHUNKSRV, "%v: fetchChunk(%v) err: Writechunk %q ckid %d err %v", cksrv.kernelId, fetchCnt, pn, ck, err)
 		return 0, "", err
 	}
+	perf.LogSpawnLatency("%v: ChunkSrv.fetchChunk.writeChunk(%v) chunk for peer done ck %d", pid, perf.TIME_NOT_SET, start, cksrv.kernelId, fetchCnt, ck)
 	db.DPrintf(db.CHUNKSRV, "%v: fetchChunk(%v) done: writeChunk %v pid %v ckid %d sz %d", cksrv.kernelId, fetchCnt, pn, pid, ck, sz)
 	return sz, srvpath, nil
 }

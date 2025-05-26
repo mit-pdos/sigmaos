@@ -281,7 +281,7 @@ func (cksrv *ChunkSrv) fetchChunk(fetchCnt uint64, be *bin, r sp.Trealm, pid sp.
 func (cksrv *ChunkSrv) fetch(realm sp.Trealm, prog string, pid sp.Tpid, s3secret *sp.SecretProto, ck int, size sp.Tsize, paths []string, data bool, ep *sp.Tendpoint) (sp.Tsize, string, *rpcproto.Blob, error) {
 	// Increment the fetch counter
 	fetchCnt := cksrv.fetchCnt.Add(1)
-	db.DPrintf(db.CHUNKSRV, "%v: Fetch(%v): pid %v %v data %v", cksrv.kernelId, fetchCnt, pid, prog, data)
+	db.DPrintf(db.CHUNKSRV, "%v: Fetch(%v): pid %v prog %v ck %v data %v", cksrv.kernelId, fetchCnt, pid, prog, ck, data)
 	s := time.Now()
 	defer func() {
 		perf.LogSpawnLatency("%v: ChunkSrv.Fetch(%v) chunk for peer done ck %d", pid, perf.TIME_NOT_SET, s, cksrv.kernelId, fetchCnt, ck)
@@ -311,7 +311,7 @@ func (cksrv *ChunkSrv) fetch(realm sp.Trealm, prog string, pid sp.Tpid, s3secret
 	}
 
 	if len(paths) == 0 {
-		db.DPrintf(db.CHUNKSRV, "%v: Fetch(%v): pid %v %v ok %t err %v", cksrv.kernelId, fetchCnt, pid, prog, ok, err)
+		db.DPrintf(db.CHUNKSRV, "%v: Fetch(%v): pid %v prog %v ck %v ok %t err %v", cksrv.kernelId, fetchCnt, pid, prog, ck, ok, err)
 		return 0, "", nil, serr.NewErr(serr.TErrNotfound, prog)
 	}
 
@@ -328,7 +328,7 @@ func (cksrv *ChunkSrv) fetch(realm sp.Trealm, prog string, pid sp.Tpid, s3secret
 
 	sz, srvpath, err = cksrv.fetchChunk(fetchCnt, be, realm, pid, s3secret, ckid, size, paths, ep)
 	if err != nil {
-		db.DPrintf(db.CHUNKSRV, "%v: Fetch(%v): pid %v %v ok %t err 2 %v", cksrv.kernelId, fetchCnt, pid, prog, ok, err)
+		db.DPrintf(db.CHUNKSRV, "%v: Fetch(%v): pid %v prog %v ck %v ok %t err 2 %v", cksrv.kernelId, fetchCnt, pid, prog, ck, ok, err)
 		return 0, "", nil, err
 	}
 	return sz, srvpath, nil, nil

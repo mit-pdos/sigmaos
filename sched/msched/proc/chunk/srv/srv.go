@@ -336,7 +336,7 @@ func (cksrv *ChunkSrv) fetch(realm sp.Trealm, prog string, pid sp.Tpid, s3secret
 		db.DPrintf(db.CHUNKSRV, "%v: Fetch(%v): pid %v prog %v ck %v ok %t err 2 %v", cksrv.kernelId, fetchCnt, pid, prog, ck, ok, err)
 		return 0, "", nil, err
 	}
-	perf.LogSpawnLatency("%v: ChunkSrv.Fetch.fetchChunk(%v) ck %d", pid, perf.TIME_NOT_SET, s, cksrv.kernelId, fetchCnt, ck)
+	perf.LogSpawnLatency("%v: ChunkSrv.Fetch.fetchChunk(%v) from peer ck %d", pid, perf.TIME_NOT_SET, s, cksrv.kernelId, fetchCnt, ck)
 	return sz, srvpath, nil, nil
 }
 

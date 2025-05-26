@@ -251,8 +251,10 @@ func (cksrv *ChunkSrv) fetchChunk(fetchCnt uint64, be *bin, r sp.Trealm, pid sp.
 		srvpath = paths[0]
 		srv := filepath.Base(srvpath)
 		db.DPrintf(db.CHUNKSRV, "%v: fetchChunk(%v): pid %v prog %v ckid %d %v", cksrv.kernelId, fetchCnt, pid, be.prog, ck, []string{srvpath})
+		start := time.Now()
 		sz, _, err = cksrv.ckclnt.FetchChunk(srv, be.prog, pid, r, s3secret, ck, size, []string{}, b)
 		db.DPrintf(db.CHUNKSRV, "%v: fetchChunk(%v) done: pid %v prog %v ckid %d %v err %v", cksrv.kernelId, fetchCnt, pid, be.prog, ck, []string{srvpath}, err)
+		perf.LogSpawnLatency("%v: ChunkSrv.fetchChunk.FetchChunk(%v) RPC to peer ck %d", pid, perf.TIME_NOT_SET, start, cksrv.kernelId, fetchCnt, ck)
 		if err == nil {
 			ok = true
 			break
@@ -265,7 +267,9 @@ func (cksrv *ChunkSrv) fetchChunk(fetchCnt uint64, be *bin, r sp.Trealm, pid sp.
 			db.DPrintf(db.CHUNKSRV, "%v: fetchChunk(%v) err: pid %v %v err %v", cksrv.kernelId, fetchCnt, pid, be.prog, err)
 			return 0, "", serr.NewErr(serr.TErrNotfound, be.prog)
 		}
+		start := time.Now()
 		sz, srvpath, err = cksrv.fetchOrigin(fetchCnt, r, be.prog, pid, s3secret, ck, paths, b, ep)
+		perf.LogSpawnLatency("%v: ChunkSrv.fetchChunk.fetchOrigin(%v) ck %d", pid, perf.TIME_NOT_SET, start, cksrv.kernelId, fetchCnt, ck)
 		if err != nil {
 			db.DPrintf(db.CHUNKSRV, "%v: fetchChunk(%v) err: pid %v origin %v err %v", cksrv.kernelId, fetchCnt, pid, paths, err)
 			return 0, "", err

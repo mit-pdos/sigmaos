@@ -179,7 +179,7 @@ func (cksrv *ChunkSrv) fetchCache(fetchCnt uint64, be *bin, r sp.Trealm, pid sp.
 	pn := pathBinCache(r, be.prog)
 	if sz, ok := IsPresent(pn, ck, size); ok {
 		b := make([]byte, sz)
-		db.DPrintf(db.CHUNKSRV, "%v: FetchCache(%v) %q pid %v ckid %d hit %d", cksrv.kernelId, fetchCnt, pn, pid, ck, sz)
+		db.DPrintf(db.CHUNKSRV, "%v: FetchCache(%v) %q pid %v ckid %d hit %d data %v", cksrv.kernelId, fetchCnt, pn, pid, ck, sz, data)
 		start := time.Now()
 		if err := ReadChunk(pn, ck, b); err != nil {
 			return false, 0, "", nil, err

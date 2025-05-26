@@ -94,8 +94,9 @@ func (ssrv *SessSrv) NewConn(p *sp.Tprincipal, conn net.Conn) *demux.DemuxSrv {
 	}
 	db.DPrintf(db.SESSSRV, "NewConn %v %v", p, conn)
 	iovm := demux.NewIoVecMap()
-	nc.dmx = demux.NewDemuxSrv(nc, spcodec.NewTransport(conn, iovm))
-	return nc.dmx
+	dmx := demux.NewDemuxSrv(nc, spcodec.NewTransport(conn, iovm))
+	nc.setDmx(dmx)
+	return dmx
 }
 
 // Serve server-generated fcalls.

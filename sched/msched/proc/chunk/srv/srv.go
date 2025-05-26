@@ -317,7 +317,7 @@ func (cksrv *ChunkSrv) fetch(realm sp.Trealm, prog string, pid sp.Tpid, s3secret
 
 	// Try to fetch from the cache once more, in case we had to wait on an
 	// outstanding fetch which has now completed
-	ok, sz, srvpath, blob, err := cksrv.fetchCache(be, realm, pid, s3secret, ckid, size, data)
+	ok, sz, srvpath, blob, err = cksrv.fetchCache(be, realm, pid, s3secret, ckid, size, data)
 	if ok || err != nil {
 		return sz, srvpath, blob, err
 	}

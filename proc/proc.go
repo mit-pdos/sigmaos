@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"runtime/debug"
 	"strings"
+	"sync"
 	"time"
 
 	"google.golang.org/protobuf/proto"
@@ -49,6 +50,7 @@ func ParseTtype(tstr string) Ttype {
 }
 
 type Proc struct {
+	sync.Mutex
 	*ProcProto
 }
 
@@ -101,10 +103,12 @@ func NewProcPid(pid sp.Tpid, program string, args []string) *Proc {
 }
 
 func NewProcFromProto(p *ProcProto) *Proc {
-	return &Proc{p}
+	return &Proc{ProcProto: p}
 }
 
 func (p *Proc) GetProto() *ProcProto {
+	p.Lock()
+	defer p.Unlock()
 	return p.ProcProto
 }
 
@@ -148,6 +152,9 @@ func (p *Proc) GetPrincipal() *sp.Tprincipal {
 }
 
 func (p *Proc) SetKernelID(kernelID string, setProcDir bool) {
+	p.Lock()
+	defer p.Unlock()
+
 	p.ProcEnvProto.KernelID = kernelID
 	if setProcDir {
 		p.setProcDir(kernelID)
@@ -186,6 +193,9 @@ func (p *Proc) PrependSigmaPath(pn string) {
 // Finalize env details which can only be set once a physical machine and
 // procd container have been chosen.
 func (p *Proc) FinalizeEnv(innerIP sp.Tip, outerIP sp.Tip, procdPid sp.Tpid) {
+	p.Lock()
+	defer p.Unlock()
+
 	p.ProcEnvProto.InnerContainerIPStr = innerIP.String()
 	p.ProcEnvProto.OuterContainerIPStr = outerIP.String()
 	p.ProcEnvProto.SetProcdPID(procdPid)
@@ -370,6 +380,8 @@ func (p *Proc) GetHow() Thow {
 }
 
 func (p *Proc) SetMSchedEndpoint(ep *sp.Tendpoint) {
+	p.Lock()
+	defer p.Unlock()
 	p.ProcEnvProto.MSchedEndpointProto = ep.GetProto()
 }
 

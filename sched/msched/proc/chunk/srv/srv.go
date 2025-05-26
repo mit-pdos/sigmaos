@@ -280,7 +280,7 @@ func (cksrv *ChunkSrv) fetch(realm sp.Trealm, prog string, pid sp.Tpid, s3secret
 	db.DPrintf(db.CHUNKSRV, "%v: Fetch: pid %v %v", cksrv.kernelId, pid, prog)
 	s := time.Now()
 	defer func() {
-		perf.LogSpawnLatency("ChunkSrv.Fetch chunk %d", pid, perf.TIME_NOT_SET, s, ck)
+		perf.LogSpawnLatency("ChunkSrv.Fetch chunk for peer done ck %d", pid, perf.TIME_NOT_SET, s, ck)
 	}()
 
 	ckid := int(ck)

@@ -77,7 +77,7 @@ func (k *Kernel) bootSubsystemPIDWithMcpu(pid sp.Tpid, program string, args, env
 }
 
 func (k *Kernel) bootSubsystem(program string, args, env []string, realm sp.Trealm, how proc.Thow, mcpu proc.Tmcpu) (Subsystem, error) {
-	pid := sp.GenPid(program)
+	pid := sp.GenPidKernelProc(program, k.k.Param.KernelID)
 	return k.bootSubsystemPIDWithMcpu(pid, program, args, env, realm, how, mcpu)
 }
 

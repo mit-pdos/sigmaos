@@ -181,7 +181,7 @@ func (k *Kernel) bootMSched(env []string) (Subsystem, error) {
 }
 
 func (k *Kernel) bootSPProxyd() (Subsystem, error) {
-	pid := sp.GenPid("spproxy")
+	pid := sp.GenPidKernelProc("spproxy", k.k.Param.KernelID)
 	p := proc.NewPrivProcPid(pid, "spproxy", nil, true)
 	p.GetProcEnv().SetSecrets(k.ProcEnv().GetSecrets())
 	p.SetHow(proc.HLINUX)

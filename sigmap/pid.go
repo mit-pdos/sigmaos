@@ -8,6 +8,10 @@ func GenPid(program string) Tpid {
 	return Tpid(program + "-" + rand.Name())
 }
 
+func GenPidKernelProc(program string, kid string) Tpid {
+	return Tpid(program + "-" + kid + "-" + rand.Name())
+}
+
 func (pid Tpid) String() string {
 	return string(pid)
 }

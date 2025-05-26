@@ -423,9 +423,9 @@ func (cksrv *ChunkSrv) getFileStat(r sp.Trealm, prog string, pid sp.Tpid, paths 
 func (cksrv *ChunkSrv) GetFileStat(ctx fs.CtxI, req proto.GetFileStatReq, res *proto.GetFileStatRep) error {
 	db.DPrintf(db.CHUNKSRV, "%v: GetFileStat: %v", cksrv.kernelId, req)
 	s := time.Now()
-	defer func() {
+	defer func(s time.Time) {
 		perf.LogSpawnLatency("ChunkSrv.GetFileStat %s", sp.Tpid(req.GetPid()), perf.TIME_NOT_SET, s, cksrv.kernelId)
-	}()
+	}(s)
 
 	r := sp.Trealm(req.GetRealmStr())
 	be, err := cksrv.getBin(r, req.GetProg())

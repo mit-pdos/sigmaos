@@ -290,6 +290,11 @@ func (ps *ProcSrv) assignToRealm(realm sp.Trealm, upid sp.Tpid, prog string, pat
 		perf.LogSpawnLatency("ProcSrv.assignToRealm", upid, perf.TIME_NOT_SET, start)
 	}(start)
 
+	if err := mountRealmBinDir(realm); err != nil {
+		db.DFatalf("Error mount realm bin dir: %v", err)
+	}
+	perf.LogSpawnLatency("ProcSrv.mountRealmBinDir", upid, perf.TIME_NOT_SET, start)
+
 	// Prefetch file stats
 	go func() {
 		s := time.Now()
@@ -300,11 +305,6 @@ func (ps *ProcSrv) assignToRealm(realm sp.Trealm, upid sp.Tpid, prog string, pat
 	}()
 	start = time.Now()
 	db.DPrintf(db.PROCD, "Assign Procd to realm %v", realm)
-
-	if err := mountRealmBinDir(realm); err != nil {
-		db.DFatalf("Error mount realm bin dir: %v", err)
-	}
-	perf.LogSpawnLatency("ProcSrv.mountRealmBinDir", upid, perf.TIME_NOT_SET, start)
 
 	db.DPrintf(db.PROCD, "Assign Procd to realm %v done", realm)
 	// Note that the uprocsrv has been assigned.

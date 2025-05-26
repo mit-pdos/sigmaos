@@ -272,7 +272,7 @@ func (cksrv *ChunkSrv) fetchChunk(be *bin, r sp.Trealm, pid sp.Tpid, s3secret *s
 		db.DPrintf(db.CHUNKSRV, "fetchChunk err: Writechunk %q ckid %d err %v", pn, ck, err)
 		return 0, "", err
 	}
-	db.DPrintf(db.CHUNKSRV, "%v: fetchChunk err: writeChunk %v pid %v ckid %d sz %d", cksrv.kernelId, pn, pid, ck, sz)
+	db.DPrintf(db.CHUNKSRV, "%v: fetchChunk done: writeChunk %v pid %v ckid %d sz %d", cksrv.kernelId, pn, pid, ck, sz)
 	return sz, srvpath, nil
 }
 

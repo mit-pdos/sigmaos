@@ -180,12 +180,12 @@ func (cksrv *ChunkSrv) fetchCache(fetchCnt uint64, be *bin, r sp.Trealm, pid sp.
 	if sz, ok := IsPresent(pn, ck, size); ok {
 		b := make([]byte, sz)
 		db.DPrintf(db.CHUNKSRV, "%v: FetchCache(%v) %q pid %v ckid %d hit %d data %v", cksrv.kernelId, fetchCnt, pn, pid, ck, sz, data)
-		start := time.Now()
-		if err := ReadChunk(pn, ck, b); err != nil {
-			return false, 0, "", nil, err
-		}
-		perf.LogSpawnLatency("%v: ChunkSrv.fetchCache.readChunk(%v) ck %d", pid, perf.TIME_NOT_SET, start, cksrv.kernelId, fetchCnt, ck)
 		if data {
+			start := time.Now()
+			if err := ReadChunk(pn, ck, b); err != nil {
+				return false, 0, "", nil, err
+			}
+			perf.LogSpawnLatency("%v: ChunkSrv.fetchCache.readChunk(%v) ck %d", pid, perf.TIME_NOT_SET, start, cksrv.kernelId, fetchCnt, ck)
 			return true, sp.Tsize(sz), cksrv.path, &rpcproto.Blob{Iov: [][]byte{b}}, nil
 		}
 		return true, sp.Tsize(sz), cksrv.path, nil, nil

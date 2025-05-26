@@ -180,9 +180,11 @@ func (cksrv *ChunkSrv) fetchCache(fetchCnt uint64, be *bin, r sp.Trealm, pid sp.
 	if sz, ok := IsPresent(pn, ck, size); ok {
 		b := make([]byte, sz)
 		db.DPrintf(db.CHUNKSRV, "%v: FetchCache(%v) %q pid %v ckid %d hit %d", cksrv.kernelId, fetchCnt, pn, pid, ck, sz)
+		start := time.Now()
 		if err := ReadChunk(pn, ck, b); err != nil {
 			return false, 0, "", nil, err
 		}
+		perf.LogSpawnLatency("%v: ChunkSrv.fetchCache.readChunk(%v) ck %d", pid, perf.TIME_NOT_SET, start, cksrv.kernelId, fetchCnt, ck)
 		if data {
 			return true, sp.Tsize(sz), cksrv.path, &rpcproto.Blob{Iov: [][]byte{b}}, nil
 		}
@@ -275,7 +277,7 @@ func (cksrv *ChunkSrv) fetchChunk(fetchCnt uint64, be *bin, r sp.Trealm, pid sp.
 		db.DPrintf(db.CHUNKSRV, "%v: fetchChunk(%v) err: Writechunk %q ckid %d err %v", cksrv.kernelId, fetchCnt, pn, ck, err)
 		return 0, "", err
 	}
-	perf.LogSpawnLatency("%v: ChunkSrv.fetchChunk.writeChunk(%v) chunk for peer done ck %d", pid, perf.TIME_NOT_SET, start, cksrv.kernelId, fetchCnt, ck)
+	perf.LogSpawnLatency("%v: ChunkSrv.fetchChunk.writeChunk(%v) ck %d", pid, perf.TIME_NOT_SET, start, cksrv.kernelId, fetchCnt, ck)
 	db.DPrintf(db.CHUNKSRV, "%v: fetchChunk(%v) done: writeChunk %v pid %v ckid %d sz %d", cksrv.kernelId, fetchCnt, pn, pid, ck, sz)
 	return sz, srvpath, nil
 }

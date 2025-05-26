@@ -287,9 +287,9 @@ func (cksrv *ChunkSrv) fetch(realm sp.Trealm, prog string, pid sp.Tpid, s3secret
 	fetchCnt := cksrv.fetchCnt.Add(1)
 	db.DPrintf(db.CHUNKSRV, "%v: Fetch(%v): pid %v prog %v ck %v data %v", cksrv.kernelId, fetchCnt, pid, prog, ck, data)
 	s := time.Now()
-	defer func() {
+	defer func(s time.Time) {
 		perf.LogSpawnLatency("%v: ChunkSrv.Fetch(%v) chunk for peer done ck %d", pid, perf.TIME_NOT_SET, s, cksrv.kernelId, fetchCnt, ck)
-	}()
+	}(s)
 
 	ckid := int(ck)
 	be, err := cksrv.getBin(realm, prog)
@@ -330,11 +330,13 @@ func (cksrv *ChunkSrv) fetch(realm sp.Trealm, prog string, pid sp.Tpid, s3secret
 		return sz, srvpath, blob, err
 	}
 
+	s = time.Now()
 	sz, srvpath, err = cksrv.fetchChunk(fetchCnt, be, realm, pid, s3secret, ckid, size, paths, ep)
 	if err != nil {
 		db.DPrintf(db.CHUNKSRV, "%v: Fetch(%v): pid %v prog %v ck %v ok %t err 2 %v", cksrv.kernelId, fetchCnt, pid, prog, ck, ok, err)
 		return 0, "", nil, err
 	}
+	perf.LogSpawnLatency("%v: ChunkSrv.Fetch.fetchChunk(%v) ck %d", pid, perf.TIME_NOT_SET, s, cksrv.kernelId, fetchCnt, ck)
 	return sz, srvpath, nil, nil
 }
 

@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"sigmaos/api/fs"
@@ -109,6 +110,7 @@ type ChunkSrv struct {
 	path     string
 	ckclnt   *chunkclnt.ChunkClnt
 	realms   *realms
+	fetchCnt atomic.Uint64
 }
 
 func newChunkSrv(kernelId string, sc *sigmaclnt.SigmaClnt) *ChunkSrv {
@@ -173,11 +175,11 @@ func (cksrv *ChunkSrv) getBin(realm sp.Trealm, prog string) (*bin, error) {
 // Handle a FetchChunkReq
 //
 
-func (cksrv *ChunkSrv) fetchCache(be *bin, r sp.Trealm, pid sp.Tpid, s3secret *sp.SecretProto, ck int, size sp.Tsize, data bool) (bool, sp.Tsize, string, *rpcproto.Blob, error) {
+func (cksrv *ChunkSrv) fetchCache(fetchCnt uint64, be *bin, r sp.Trealm, pid sp.Tpid, s3secret *sp.SecretProto, ck int, size sp.Tsize, data bool) (bool, sp.Tsize, string, *rpcproto.Blob, error) {
 	pn := pathBinCache(r, be.prog)
 	if sz, ok := IsPresent(pn, ck, size); ok {
 		b := make([]byte, sz)
-		db.DPrintf(db.CHUNKSRV, "%v: FetchCache %q pid %v ckid %d hit %d", cksrv.kernelId, pn, pid, ck, sz)
+		db.DPrintf(db.CHUNKSRV, "%v: FetchCache(%v) %q pid %v ckid %d hit %d", cksrv.kernelId, fetchCnt, pn, pid, ck, sz)
 		if err := ReadChunk(pn, ck, b); err != nil {
 			return false, 0, "", nil, err
 		}
@@ -186,12 +188,12 @@ func (cksrv *ChunkSrv) fetchCache(be *bin, r sp.Trealm, pid sp.Tpid, s3secret *s
 		}
 		return true, sp.Tsize(sz), cksrv.path, nil, nil
 	}
-	db.DPrintf(db.CHUNKSRV, "%v: FetchCache: %q pid %v ckid %d not present\n", cksrv.kernelId, pn, pid, ck)
+	db.DPrintf(db.CHUNKSRV, "%v: FetchCache(%v): %q pid %v ckid %d not present", cksrv.kernelId, fetchCnt, pn, pid, ck)
 	return false, 0, "", nil, nil
 }
 
-func (cksrv *ChunkSrv) fetchOrigin(r sp.Trealm, prog string, pid sp.Tpid, s3secret *sp.SecretProto, ck int, paths []string, b []byte, ep *sp.Tendpoint) (sp.Tsize, string, error) {
-	db.DPrintf(db.CHUNKSRV, "%v: fetchOrigin: pid %v %v ckid %d %v", cksrv.kernelId, pid, prog, ck, paths)
+func (cksrv *ChunkSrv) fetchOrigin(fetchCnt uint64, r sp.Trealm, prog string, pid sp.Tpid, s3secret *sp.SecretProto, ck int, paths []string, b []byte, ep *sp.Tendpoint) (sp.Tsize, string, error) {
+	db.DPrintf(db.CHUNKSRV, "%v: fetchOrigin(%v): pid %v %v ckid %d %v", cksrv.kernelId, fetchCnt, pid, prog, ck, paths)
 	be, err := cksrv.getBin(r, prog)
 	if err != nil {
 		return 0, "", err
@@ -213,11 +215,11 @@ func (cksrv *ChunkSrv) fetchOrigin(r sp.Trealm, prog string, pid sp.Tpid, s3secr
 		be.path = path0
 		fd = fd0
 		path = path0
-		perf.LogSpawnLatency("ChunkSrv.fetchOrigin.open", pid, perf.TIME_NOT_SET, s)
+		perf.LogSpawnLatency("%v: ChunkSrv.fetchOrigin.open(%v)", pid, perf.TIME_NOT_SET, s, cksrv.kernelId, fetchCnt)
 	}
 	sz, err := sc.Pread(fd, b, sp.Toffset(chunk.ChunkOff(ck)))
 	if err != nil {
-		db.DPrintf(db.CHUNKSRV, "%v: fetchOrigin: pid %v read %q ckid %d err %v", cksrv.kernelId, pid, prog, ck, err)
+		db.DPrintf(db.CHUNKSRV, "%v: fetchOrigin(%v): pid %v read %q ckid %d err %v", cksrv.kernelId, fetchCnt, pid, prog, ck, err)
 		be.failFd()
 		sc.CloseFd(fd)
 		return 0, "", err
@@ -225,7 +227,7 @@ func (cksrv *ChunkSrv) fetchOrigin(r sp.Trealm, prog string, pid sp.Tpid, s3secr
 	return sz, path, nil
 }
 
-func (cksrv *ChunkSrv) fetchChunk(be *bin, r sp.Trealm, pid sp.Tpid, s3secret *sp.SecretProto, ck int, size sp.Tsize, paths []string, ep *sp.Tendpoint) (sp.Tsize, string, error) {
+func (cksrv *ChunkSrv) fetchChunk(fetchCnt uint64, be *bin, r sp.Trealm, pid sp.Tpid, s3secret *sp.SecretProto, ck int, size sp.Tsize, paths []string, ep *sp.Tendpoint) (sp.Tsize, string, error) {
 	sz := sp.Tsize(0)
 	b := make([]byte, int(sp.Conf.Chunk.CHUNK_SZ))
 	var err error
@@ -237,7 +239,7 @@ func (cksrv *ChunkSrv) fetchChunk(be *bin, r sp.Trealm, pid sp.Tpid, s3secret *s
 	}
 
 	if len(paths) == 0 {
-		db.DPrintf(db.CHUNKSRV, "%v: fetchChunk: r %v p %v pid %v err %v", cksrv.kernelId, r, be.prog, pid, err)
+		db.DPrintf(db.CHUNKSRV, "%v: fetchChunk(%v): r %v p %v pid %v err %v", cksrv.kernelId, fetchCnt, r, be.prog, pid, err)
 		return 0, "", serr.NewErr(serr.TErrNotfound, be.prog)
 	}
 
@@ -246,9 +248,9 @@ func (cksrv *ChunkSrv) fetchChunk(be *bin, r sp.Trealm, pid sp.Tpid, s3secret *s
 	for chunk.IsChunkSrvPath(paths[0]) {
 		srvpath = paths[0]
 		srv := filepath.Base(srvpath)
-		db.DPrintf(db.CHUNKSRV, "%v: fetchChunk: pid %v prog %v ckid %d %v", cksrv.kernelId, pid, be.prog, ck, []string{srvpath})
+		db.DPrintf(db.CHUNKSRV, "%v: fetchChunk(%v): pid %v prog %v ckid %d %v", cksrv.kernelId, fetchCnt, pid, be.prog, ck, []string{srvpath})
 		sz, _, err = cksrv.ckclnt.FetchChunk(srv, be.prog, pid, r, s3secret, ck, size, []string{}, b)
-		db.DPrintf(db.CHUNKSRV, "%v: fetchChunk done: pid %v prog %v ckid %d %v err %v", cksrv.kernelId, pid, be.prog, ck, []string{srvpath}, err)
+		db.DPrintf(db.CHUNKSRV, "%v: fetchChunk(%v) done: pid %v prog %v ckid %d %v err %v", cksrv.kernelId, fetchCnt, pid, be.prog, ck, []string{srvpath}, err)
 		if err == nil {
 			ok = true
 			break
@@ -258,29 +260,31 @@ func (cksrv *ChunkSrv) fetchChunk(be *bin, r sp.Trealm, pid sp.Tpid, s3secret *s
 
 	if !ok {
 		if len(paths) == 0 {
-			db.DPrintf(db.CHUNKSRV, "%v: fetchChunk err: pid %v %v err %v", cksrv.kernelId, pid, be.prog, err)
+			db.DPrintf(db.CHUNKSRV, "%v: fetchChunk(%v) err: pid %v %v err %v", cksrv.kernelId, fetchCnt, pid, be.prog, err)
 			return 0, "", serr.NewErr(serr.TErrNotfound, be.prog)
 		}
-		sz, srvpath, err = cksrv.fetchOrigin(r, be.prog, pid, s3secret, ck, paths, b, ep)
+		sz, srvpath, err = cksrv.fetchOrigin(fetchCnt, r, be.prog, pid, s3secret, ck, paths, b, ep)
 		if err != nil {
-			db.DPrintf(db.CHUNKSRV, "%v: fetchChunk err: pid %v origin %v err %v", cksrv.kernelId, pid, paths, err)
+			db.DPrintf(db.CHUNKSRV, "%v: fetchChunk(%v) err: pid %v origin %v err %v", cksrv.kernelId, fetchCnt, pid, paths, err)
 			return 0, "", err
 		}
 	}
 	pn := pathBinCache(r, be.prog)
 	if err := writeChunk(pn, ck, b[0:sz]); err != nil {
-		db.DPrintf(db.CHUNKSRV, "fetchChunk err: Writechunk %q ckid %d err %v", pn, ck, err)
+		db.DPrintf(db.CHUNKSRV, "%v: fetchChunk(%v) err: Writechunk %q ckid %d err %v", cksrv.kernelId, fetchCnt, pn, ck, err)
 		return 0, "", err
 	}
-	db.DPrintf(db.CHUNKSRV, "%v: fetchChunk done: writeChunk %v pid %v ckid %d sz %d", cksrv.kernelId, pn, pid, ck, sz)
+	db.DPrintf(db.CHUNKSRV, "%v: fetchChunk(%v) done: writeChunk %v pid %v ckid %d sz %d", cksrv.kernelId, fetchCnt, pn, pid, ck, sz)
 	return sz, srvpath, nil
 }
 
 func (cksrv *ChunkSrv) fetch(realm sp.Trealm, prog string, pid sp.Tpid, s3secret *sp.SecretProto, ck int, size sp.Tsize, paths []string, data bool, ep *sp.Tendpoint) (sp.Tsize, string, *rpcproto.Blob, error) {
-	db.DPrintf(db.CHUNKSRV, "%v: Fetch: pid %v %v", cksrv.kernelId, pid, prog)
+	// Increment the fetch counter
+	fetchCnt := cksrv.fetchCnt.Add(1)
+	db.DPrintf(db.CHUNKSRV, "%v: Fetch(%v): pid %v %v data %v", cksrv.kernelId, fetchCnt, pid, prog, data)
 	s := time.Now()
 	defer func() {
-		perf.LogSpawnLatency("ChunkSrv.Fetch chunk for peer done ck %d", pid, perf.TIME_NOT_SET, s, ck)
+		perf.LogSpawnLatency("%v: ChunkSrv.Fetch(%v) chunk for peer done ck %d", pid, perf.TIME_NOT_SET, s, cksrv.kernelId, fetchCnt, ck)
 	}()
 
 	ckid := int(ck)
@@ -290,7 +294,7 @@ func (cksrv *ChunkSrv) fetch(realm sp.Trealm, prog string, pid sp.Tpid, s3secret
 	}
 
 	if st, ok := be.isStatCached(); ok {
-		db.DPrintf(db.CHUNKSRV, "%v: Fetch: pid %v hit stat %v %d", cksrv.kernelId, pid, prog, st.Length)
+		db.DPrintf(db.CHUNKSRV, "%v: Fetch(%v): pid %v hit stat %v %d", cksrv.kernelId, fetchCnt, pid, prog, st.Length)
 		if uint64(sp.Tsize(chunk.ChunkOff(ckid))+size) > st.Length {
 			size = sp.Tsize(st.Length)
 		}
@@ -301,13 +305,13 @@ func (cksrv *ChunkSrv) fetch(realm sp.Trealm, prog string, pid sp.Tpid, s3secret
 	}
 
 	// Try to fetch from the cache
-	ok, sz, srvpath, blob, err := cksrv.fetchCache(be, realm, pid, s3secret, ckid, size, data)
+	ok, sz, srvpath, blob, err := cksrv.fetchCache(fetchCnt, be, realm, pid, s3secret, ckid, size, data)
 	if ok || err != nil {
 		return sz, srvpath, blob, err
 	}
 
 	if len(paths) == 0 {
-		db.DPrintf(db.CHUNKSRV, "%v: Fetch: pid %v %v ok %t err %v", cksrv.kernelId, pid, prog, ok, err)
+		db.DPrintf(db.CHUNKSRV, "%v: Fetch(%v): pid %v %v ok %t err %v", cksrv.kernelId, fetchCnt, pid, prog, ok, err)
 		return 0, "", nil, serr.NewErr(serr.TErrNotfound, prog)
 	}
 
@@ -317,14 +321,14 @@ func (cksrv *ChunkSrv) fetch(realm sp.Trealm, prog string, pid sp.Tpid, s3secret
 
 	// Try to fetch from the cache once more, in case we had to wait on an
 	// outstanding fetch which has now completed
-	ok, sz, srvpath, blob, err = cksrv.fetchCache(be, realm, pid, s3secret, ckid, size, data)
+	ok, sz, srvpath, blob, err = cksrv.fetchCache(fetchCnt, be, realm, pid, s3secret, ckid, size, data)
 	if ok || err != nil {
 		return sz, srvpath, blob, err
 	}
 
-	sz, srvpath, err = cksrv.fetchChunk(be, realm, pid, s3secret, ckid, size, paths, ep)
+	sz, srvpath, err = cksrv.fetchChunk(fetchCnt, be, realm, pid, s3secret, ckid, size, paths, ep)
 	if err != nil {
-		db.DPrintf(db.CHUNKSRV, "%v: Fetch: pid %v %v ok %t err 2 %v", cksrv.kernelId, pid, prog, ok, err)
+		db.DPrintf(db.CHUNKSRV, "%v: Fetch(%v): pid %v %v ok %t err 2 %v", cksrv.kernelId, fetchCnt, pid, prog, ok, err)
 		return 0, "", nil, err
 	}
 	return sz, srvpath, nil, nil

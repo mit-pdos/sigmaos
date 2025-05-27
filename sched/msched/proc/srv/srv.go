@@ -72,21 +72,22 @@ func (pe *procEntry) procWait() {
 
 // Procsrv holds the state for serving procs.
 type ProcSrv struct {
-	mu             sync.RWMutex
-	ch             chan struct{}
-	pe             *proc.ProcEnv
-	ssrv           *sigmasrv.SigmaSrv
-	kc             *kernelclnt.KernelClnt
-	sc             *sigmaclnt.SigmaClnt
-	spc            *spproxysrv.SPProxySrvCmd
-	binsrv         *exec.Cmd
-	kernelId       string
-	realm          sp.Trealm
-	dialproxy      bool
-	spproxydPID    sp.Tpid
-	schedPolicySet bool
-	procs          *syncmap.SyncMap[int, *procEntry]
-	ckclnt         *chunkclnt.ChunkClnt
+	mu              sync.RWMutex
+	ch              chan struct{}
+	pe              *proc.ProcEnv
+	ssrv            *sigmasrv.SigmaSrv
+	kc              *kernelclnt.KernelClnt
+	sc              *sigmaclnt.SigmaClnt
+	spc             *spproxysrv.SPProxySrvCmd
+	binsrv          *exec.Cmd
+	kernelId        string
+	realm           sp.Trealm
+	prefetchedStats map[string]bool
+	dialproxy       bool
+	spproxydPID     sp.Tpid
+	schedPolicySet  bool
+	procs           *syncmap.SyncMap[int, *procEntry]
+	ckclnt          *chunkclnt.ChunkClnt
 }
 
 type ProcRPCSrv struct {
@@ -96,13 +97,14 @@ type ProcRPCSrv struct {
 func RunProcSrv(kernelId string, dialproxy bool, spproxydPID sp.Tpid) error {
 	pe := proc.GetProcEnv()
 	ps := &ProcSrv{
-		kernelId:    kernelId,
-		dialproxy:   dialproxy,
-		ch:          make(chan struct{}),
-		pe:          pe,
-		spproxydPID: spproxydPID,
-		realm:       sp.NO_REALM,
-		procs:       syncmap.NewSyncMap[int, *procEntry](),
+		kernelId:        kernelId,
+		dialproxy:       dialproxy,
+		ch:              make(chan struct{}),
+		pe:              pe,
+		spproxydPID:     spproxydPID,
+		realm:           sp.NO_REALM,
+		prefetchedStats: make(map[string]bool),
+		procs:           syncmap.NewSyncMap[int, *procEntry](),
 	}
 
 	// Set inner container IP as soon as uprocsrv starts up
@@ -290,15 +292,6 @@ func (ps *ProcSrv) assignToRealm(realm sp.Trealm, upid sp.Tpid, prog string, pat
 		perf.LogSpawnLatency("ProcSrv.assignToRealm", upid, perf.TIME_NOT_SET, start)
 	}(start)
 
-	// Prefetch file stats
-	go func() {
-		s := time.Now()
-		if _, _, err := ps.ckclnt.GetFileStat(ps.kernelId, prog, upid, realm, s3secret, path, ep); err != nil {
-			db.DPrintf(db.PROCD, "GetFileStat %v %v err %v", ps.kernelId, realm, err)
-		}
-		perf.LogSpawnLatency("ProcSrv.prefetch", upid, perf.TIME_NOT_SET, s)
-	}()
-	start = time.Now()
 	db.DPrintf(db.PROCD, "Assign Procd to realm %v", realm)
 
 	if err := mountRealmBinDir(realm); err != nil {
@@ -321,6 +314,35 @@ func (ps *ProcRPCSrv) Run(ctx fs.CtxI, req proto.RunReq, res *proto.RunRep) erro
 	return ps.ps.Run(ctx, req, res)
 }
 
+func (ps *ProcSrv) prefetchProcFileStat(realm sp.Trealm, upid sp.Tpid, prog string, path []string, s3secret *sp.SecretProto, ep *sp.TendpointProto) {
+	ps.mu.RLock()
+	defer ps.mu.RUnlock()
+
+	// If already prefetched, bail out
+	if ps.prefetchedStats[prog] {
+		return
+	}
+
+	// Promote lock
+	ps.mu.RUnlock()
+	ps.mu.Lock()
+	// If prefetched during the lock promotion process, bail out
+	if ps.prefetchedStats[prog] {
+		ps.mu.Unlock()
+		ps.mu.RLock()
+		return
+	}
+	ps.prefetchedStats[prog] = true
+	s := time.Now()
+	if _, _, err := ps.ckclnt.GetFileStat(ps.kernelId, prog, upid, realm, s3secret, path, ep); err != nil {
+		db.DPrintf(db.PROCD, "GetFileStat %v %v err %v", ps.kernelId, realm, err)
+	}
+	perf.LogSpawnLatency("ProcSrv.prefetch", upid, perf.TIME_NOT_SET, s)
+	// Demote to reader lock
+	ps.mu.Unlock()
+	ps.mu.RLock()
+}
+
 // Run a proc inside of an sigma container
 func (ps *ProcSrv) Run(ctx fs.CtxI, req proto.RunReq, res *proto.RunRep) error {
 	uproc := proc.NewProcFromProto(req.ProcProto)
@@ -334,20 +356,12 @@ func (ps *ProcSrv) Run(ctx fs.CtxI, req proto.RunReq, res *proto.RunRep) error {
 		// works
 		return fmt.Errorf("Dummy")
 	}
-
+	// Prefetch file stats
+	go ps.prefetchProcFileStat(uproc.GetRealm(), uproc.GetPid(), uproc.GetVersionedProgram(), uproc.GetSigmaPath(), uproc.GetSecrets()["s3"], uproc.GetNamedEndpoint())
 	// Assign this uprocsrv to the realm, if not already assigned.
 	if err := ps.assignToRealm(uproc.GetRealm(), uproc.GetPid(), uproc.GetVersionedProgram(), uproc.GetSigmaPath(), uproc.GetSecrets()["s3"], uproc.GetNamedEndpoint()); err != nil {
 		db.DFatalf("Err assign to realm: %v", err)
 	}
-	// Prefetch file stats
-	go func() {
-		s := time.Now()
-		if _, _, err := ps.ckclnt.GetFileStat(ps.kernelId, uproc.GetVersionedProgram(), uproc.GetPid(), uproc.GetRealm(), uproc.GetSecrets()["s3"], uproc.GetSigmaPath(), uproc.GetNamedEndpoint()); err != nil {
-			db.DPrintf(db.PROCD, "GetFileStat %v %v err %v", ps.kernelId, uproc.GetRealm(), err)
-		}
-		perf.LogSpawnLatency("ProcSrv.prefetch2", uproc.GetPid(), perf.TIME_NOT_SET, s)
-	}()
-
 	// Set this uprocsrv's Linux scheduling policy
 	if err := ps.setSchedPolicy(uproc.GetPid(), uproc.GetType()); err != nil {
 		db.DFatalf("Err set sched policy: %v", err)

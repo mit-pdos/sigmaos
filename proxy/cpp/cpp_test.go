@@ -332,6 +332,7 @@ func TestSpinServerExec(t *testing.T) {
 	if !assert.Nil(t, err, "Err homedir: %v", err) {
 		return
 	}
+	p.FinalizeEnv("xxx", "yyy", "zzz")
 	cmd := exec.Command(filepath.Join(homedir, "sigmaos/bin/user", p.GetVersionedProgram()))
 	cmd.Env = append(cmd.Env, p.GetEnv()...)
 	cmd.Stdout = os.Stdout

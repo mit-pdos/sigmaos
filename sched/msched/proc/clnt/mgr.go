@@ -95,7 +95,7 @@ func (pdm *ProcdMgr) GetCPUShares() map[sp.Trealm]Tshare {
 	for r, pdcm := range pdm.upcs {
 		smap[r] = 0
 		for _, rpcc := range pdcm {
-			smap[r] += rpcc.share
+			smap[r] += rpcc.GetCPUShare()
 		}
 	}
 	return smap
@@ -142,7 +142,7 @@ func (pdm *ProcdMgr) startProcd() (sp.Tpid, *ProcClnt) {
 	if err != nil {
 		db.DPrintf(db.ERROR, "Error Make RPCClnt Procd: %v", err)
 	}
-	c := NewProcClnt(pid, rc)
+	c := NewProcClnt(pid, rc, pdm.kclnt)
 	return pid, c
 }
 
@@ -185,6 +185,7 @@ func (pdm *ProcdMgr) delProcClnt(realm sp.Trealm, ptype proc.Ttype) error {
 			}
 		}
 	}
+	rpcc.Stop()
 	return nil
 }
 

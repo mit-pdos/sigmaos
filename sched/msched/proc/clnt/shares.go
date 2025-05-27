@@ -37,11 +37,13 @@ func (pdm *ProcdMgr) startBalanceShares(p *proc.Proc) error {
 	switch p.GetType() {
 	case proc.T_LC:
 		rpcc := pdm.upcs[p.GetRealm()][p.GetType()]
+
+		share := rpcc.GetCPUShare()
 		// Reset rpcc share amount to 0, since it was set to min before.
-		if rpcc.share == MIN_SHARE {
-			rpcc.share = 0
+		if share == MIN_SHARE {
+			share = 0
 		}
-		if err := pdm.setShare(rpcc, rpcc.share+mcpuToShare(p.GetMcpu())); err != nil {
+		if err := pdm.setShare(rpcc, share+mcpuToShare(p.GetMcpu())); err != nil {
 			return err
 		}
 	case proc.T_BE:
@@ -67,7 +69,7 @@ func (pdm *ProcdMgr) exitBalanceShares(p *proc.Proc) error {
 	switch p.GetType() {
 	case proc.T_LC:
 		rpcc := pdm.upcs[p.GetRealm()][p.GetType()]
-		if err := pdm.setShare(rpcc, rpcc.share-mcpuToShare(p.GetMcpu())); err != nil {
+		if err := pdm.setShare(rpcc, rpcc.GetCPUShare()-mcpuToShare(p.GetMcpu())); err != nil {
 			return err
 		}
 	case proc.T_BE:
@@ -84,7 +86,7 @@ func (pdm *ProcdMgr) balanceBEShares() error {
 	for _, rpcc := range pdm.beProcds {
 		// If the number of BE Procds has not changed, no rebalancing needs to
 		// happen.
-		if rpcc.share == cpuShare {
+		if rpcc.GetCPUShare() == cpuShare {
 			continue
 		}
 		if err := pdm.setShare(rpcc, cpuShare); err != nil {
@@ -107,19 +109,15 @@ func (pdm *ProcdMgr) setShare(rpcc *ProcClnt, share Tshare) error {
 		share = MIN_SHARE
 	}
 	// If the share isn't changing, return.
-	if rpcc.share == share {
+	if rpcc.GetCPUShare() == share {
 		db.DPrintf(db.PROCDMGR, "Skip setting CPU share for %v: no change", rpcc, share)
 		return nil
 	}
-	rpcc.share = share
-	if rpcc.share > 10000 {
-		db.DFatalf("Share outside of cgroupsv2 range [1,10000]: %v\n%v", rpcc.share, string(debug.Stack()))
+	if share > 10000 {
+		db.DFatalf("Share outside of cgroupsv2 range [1,10000]: %v\n%v", share, string(debug.Stack()))
 	}
-	go func() {
-		if err := pdm.kclnt.SetCPUShares(rpcc.pid, int64(share)); err != nil {
-			db.DPrintf(db.PROCDMGR, "Error SetCPUShares[%v] %v", rpcc.pid, err)
-		}
-	}()
+	// Set CPU shares asynchronously
+	rpcc.SetCPUShare(share)
 	db.DPrintf(db.PROCDMGR, "Set CPU share %v to %v", rpcc, share)
 	return nil
 }

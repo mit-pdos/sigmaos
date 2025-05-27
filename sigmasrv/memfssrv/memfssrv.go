@@ -91,13 +91,13 @@ func (mfs *MemFs) rootFid(pn string) (sp.Tfid, path.Tpathname, *serr.Err) {
 }
 
 // Returns FsObj for pn and the path from the root to FsObj
-func (mfs *MemFs) lookupWalk(pn string) (fs.Dir, fs.FsObj, string, *serr.Err) {
+func (mfs *MemFs) lookupWalk(pn string, ltype lockmap.Tlock) (fs.Dir, fs.FsObj, string, *serr.Err) {
 	fid, path, err := mfs.rootFid(pn)
 	if err != nil {
 		return nil, nil, "", err
 	}
 	db.DPrintf(db.MEMFSSRV, "lookupWalk %q %v path %v\n", pn, fid, path)
-	_, parent, name, lo, err := mfs.ps.LookupWalkParent(fid, path, false, lockmap.RLOCK)
+	_, parent, name, lo, err := mfs.ps.LookupWalkParent(fid, path, false, ltype)
 	if err != nil {
 		db.DPrintf(db.MEMFSSRV, "LookupWalk %v err %v\n", path.Dir(), err)
 		return nil, nil, "", err
@@ -113,7 +113,7 @@ func (mfs *MemFs) MkNod(pn string, i fs.FsObj) *serr.Err {
 }
 
 func (mfs *MemFs) CreateNod(pn string, p sp.Tperm, m sp.Tmode, lid sp.TleaseId, o fs.FsObj) (fs.FsObj, *serr.Err) {
-	_, lo, name, err := mfs.lookupWalk(filepath.Dir(pn))
+	_, lo, name, err := mfs.lookupWalk(filepath.Dir(pn), lockmap.WLOCK)
 	db.DPrintf(db.MEMFSSRV, "Create %q perm %v dir %v base %q o %v\n", pn, p, lo, name, o)
 	_, nf, err := mfs.ps.CreateObjFm(mfs.ctx, lo, filepath.Base(pn), p, m, lid, sp.NoFence(), o)
 	if err != nil {
@@ -128,7 +128,7 @@ func (mfs *MemFs) Create(pn string, p sp.Tperm, m sp.Tmode, lid sp.TleaseId) (fs
 }
 
 func (mfs *MemFs) Remove(pn string) *serr.Err {
-	parent, lo, name, err := mfs.lookupWalk(pn)
+	parent, lo, name, err := mfs.lookupWalk(pn, lockmap.WLOCK)
 	if err != nil {
 		return err
 	}
@@ -142,7 +142,7 @@ func (mfs *MemFs) RemoveLease(p sp.Tpath, obj fs.FsObj, name string, dir fs.Dir)
 }
 
 func (mfs *MemFs) Open(pn string, m sp.Tmode) (fs.FsObj, *serr.Err) {
-	_, lo, _, err := mfs.lookupWalk(pn)
+	_, lo, _, err := mfs.lookupWalk(pn, lockmap.RLOCK)
 	if err != nil {
 		return nil, err
 	}
@@ -155,7 +155,7 @@ func (mfs *MemFs) Open(pn string, m sp.Tmode) (fs.FsObj, *serr.Err) {
 // of the change.
 func (mfs *MemFs) Notify(pn path.Tpathname) error {
 	db.DPrintf(db.WATCH, "MemFs.Notify pn %v\n", pn)
-	parent, lo, name, err := mfs.lookupWalk(pn.String())
+	parent, lo, name, err := mfs.lookupWalk(pn.String(), lockmap.WLOCK)
 	if err != nil {
 		return err
 	}

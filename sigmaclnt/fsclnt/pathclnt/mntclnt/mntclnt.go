@@ -68,7 +68,7 @@ func (mc *MntClnt) ResolveMnt(p path.Tpathname, resolve bool) (sp.Tfid, path.Tpa
 		// MountTree() is trying (or will try) to mount pnt and may
 		// succeed or fail; retry resolveMnt.  The retry won't happen
 		// often since MountTree() will lock pnt while mounting.
-		db.DPrintf(db.TEST, "%v: resolveMnt try again path %v resolve %t", mc.cid, path, resolve)
+		db.DPrintf(db.TEST, "%v: ResolveMnt try again path %v resolve %t", mc.cid, path, resolve)
 	}
 }
 
@@ -202,7 +202,7 @@ func (mc *MntClnt) Disconnect(pn sp.Tsigmapath) error {
 		if ok {
 			return mc.disconnectMnt(pnt)
 		} else {
-			return serr.NewErr(serr.TErrUnreachable, pnt.path)
+			return serr.NewErr(serr.TErrUnreachable, pn)
 		}
 	}
 	return nil

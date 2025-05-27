@@ -392,7 +392,7 @@ func mountRealmBinDir(realm sp.Trealm) error {
 	dir := chunksrv.MkPathBinRealm(realm)
 	mnt := chunksrv.PathBinProc()
 
-	db.DPrintf(db.PROCD, "mountRealmBinDir: %q %q\n", dir, mnt)
+	db.DPrintf(db.PROCD, "mountRealmBinDir: %q %q", dir, mnt)
 
 	if err := syscall.Mount(dir, mnt, "none", syscall.MS_BIND|syscall.MS_RDONLY, ""); err != nil {
 		db.DPrintf(db.ALWAYS, "failed to mount realm's bin dir %q to %q err %v", dir, mnt, err)
@@ -416,7 +416,6 @@ func (ps *ProcSrv) Fetch(pid, cid int, prog string, sz sp.Tsize) (sp.Tsize, erro
 
 	start := time.Now()
 	sz, path, err := ps.ckclnt.Fetch(ps.kernelId, prog, pe.proc.GetPid(), ps.realm, s3secret, cid, sz, pe.proc.GetSigmaPath(), pe.proc.GetNamedEndpoint())
-
 	perf.LogSpawnLatency("ProcSrv.Fetch done ck %d sz %d path %s", pe.proc.GetPid(), pe.proc.GetSpawnTime(), start, cid, sz, path)
 	return sz, err
 }

@@ -277,7 +277,7 @@ func (cksrv *ChunkSrv) fetchChunk(fetchCnt uint64, be *bin, r sp.Trealm, pid sp.
 	}
 	pn := pathBinCache(r, be.prog)
 	start := time.Now()
-	if err := writeChunk(pn, ck, b[0:sz]); err != nil {
+	if err := writeChunk(fetchCnt, pid, cksrv.kernelId, pn, ck, b[0:sz]); err != nil {
 		db.DPrintf(db.CHUNKSRV, "%v: fetchChunk(%v) err: Writechunk %q ckid %d err %v", cksrv.kernelId, fetchCnt, pn, ck, err)
 		return 0, "", err
 	}
@@ -568,13 +568,21 @@ func IsPresent(pn string, ck int, totsz sp.Tsize) (int64, bool) {
 	return sz, ok
 }
 
-func writeChunk(pn string, ckid int, b []byte) error {
+func writeChunk(fetchCnt uint64, pid sp.Tpid, kernelID string, pn string, ckid int, b []byte) error {
+	start := time.Now()
 	ufd, err := os.OpenFile(pn, os.O_RDWR|os.O_CREATE, 0777)
 	if err != nil {
 		return err
 	}
-	defer ufd.Close()
+	perf.LogSpawnLatency("%v: writeChunk.OpenFile(%v) ck %d", pid, perf.TIME_NOT_SET, start, kernelID, fetchCnt, ckid)
+	defer func() {
+		start := time.Now()
+		ufd.Close()
+		perf.LogSpawnLatency("%v: writeChunk.Close(%v) ck %d", pid, perf.TIME_NOT_SET, start, kernelID, fetchCnt, ckid)
+	}()
+	start = time.Now()
 	nn, err := ufd.WriteAt(b, chunk.ChunkOff(ckid))
+	perf.LogSpawnLatency("%v: writeChunk.WriteAt(%v) ck %d", pid, perf.TIME_NOT_SET, start, kernelID, fetchCnt, ckid)
 	if nn != len(b) {
 		return err
 	}

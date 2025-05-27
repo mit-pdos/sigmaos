@@ -3,6 +3,7 @@ package mntclnt
 import (
 	"fmt"
 	"sync"
+	"sync/atomic"
 
 	db "sigmaos/debug"
 	"sigmaos/path"
@@ -14,7 +15,7 @@ type Point struct {
 	sync.Mutex
 	path   path.Tpathname
 	fid    sp.Tfid
-	closed bool
+	closed atomic.Bool
 }
 
 func newPoint(path path.Tpathname, fid sp.Tfid) *Point {
@@ -25,8 +26,13 @@ func (p *Point) String() string {
 	return fmt.Sprintf("{%v, %v}", p.path, p.fid)
 }
 
+// caller holds lock
 func (p *Point) isAttached() bool {
 	return p.fid != sp.NoFid
+}
+
+func (p *Point) isClosed() bool {
+	return p.closed.Load()
 }
 
 func (p *Point) getFid() (sp.Tfid, bool) {
@@ -39,11 +45,8 @@ func (p *Point) getFid() (sp.Tfid, bool) {
 // For testing, mark mount point as closed so that client cannot
 // communicate and remount server.
 func (p *Point) disconnect() {
-	p.Lock()
-	defer p.Unlock()
-
 	db.DPrintf(db.CRASH, "disconnect %v", p)
-	p.closed = true
+	p.closed.Store(true)
 }
 
 type MntTable struct {
@@ -70,7 +73,7 @@ func (mnt *MntTable) lookupAlloc(path path.Tpathname, fid sp.Tfid) (*Point, *ser
 	point := newPoint(path, fid)
 	for i, p := range mnt.mounts {
 		if path.Equal(p.path) {
-			if p.closed {
+			if p.isClosed() {
 				db.DPrintf(db.CRASH, "lookupAlloc %v mount closed %v", path, p.path)
 				return nil, serr.NewErr(serr.TErrUnreachable, fmt.Sprintf("%v (closed mount)", p.path))
 			}
@@ -108,7 +111,7 @@ func (mnt *MntTable) resolveMnt(path path.Tpathname, allowResolve bool) (*Point,
 	for _, p := range mnt.mounts {
 		ok, left := match(p.path, path)
 		if ok {
-			if p.closed {
+			if p.isClosed() {
 				db.DPrintf(db.CRASH, "resolveMnt %v mount closed %v", path, p.path)
 				return nil, path, serr.NewErr(serr.TErrUnreachable, fmt.Sprintf("%v (closed mount)", path))
 			}
@@ -130,7 +133,7 @@ func (mnt *MntTable) umount(path path.Tpathname, exact bool) (*Point, *serr.Err)
 	for i, p := range mnt.mounts {
 		ok, left := match(p.path, path)
 		if ok {
-			if p.closed {
+			if p.isClosed() {
 				db.DPrintf(db.CRASH, "umount %v mount closed ", p.path)
 				return nil, serr.NewErr(serr.TErrUnreachable, fmt.Sprintf("%v (closed mount)", p.path))
 			}
@@ -146,7 +149,7 @@ func (mnt *MntTable) umount(path path.Tpathname, exact bool) (*Point, *serr.Err)
 			}
 		}
 	}
-	// db.DPrintf(db.ALWAYS, "umount: %v %v\n", path, mnt.mounts)
+	db.DPrintf(db.ALWAYS, "umount: %v %v\n", path, mnt.mounts)
 	return nil, serr.NewErr(serr.TErrUnreachable, fmt.Sprintf("%v (no mount)", path))
 }
 

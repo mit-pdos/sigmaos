@@ -58,12 +58,24 @@ struct ProcEnvProto_SecretsMapEntry_DoNotUseDefaultTypeInternal {
   };
 };
 PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 ProcEnvProto_SecretsMapEntry_DoNotUseDefaultTypeInternal _ProcEnvProto_SecretsMapEntry_DoNotUse_default_instance_;
+PROTOBUF_CONSTEXPR ProcEnvProto_CachedEndpointsEntry_DoNotUse::ProcEnvProto_CachedEndpointsEntry_DoNotUse(
+    ::_pbi::ConstantInitialized) {}
+struct ProcEnvProto_CachedEndpointsEntry_DoNotUseDefaultTypeInternal {
+  PROTOBUF_CONSTEXPR ProcEnvProto_CachedEndpointsEntry_DoNotUseDefaultTypeInternal()
+      : _instance(::_pbi::ConstantInitialized{}) {}
+  ~ProcEnvProto_CachedEndpointsEntry_DoNotUseDefaultTypeInternal() {}
+  union {
+    ProcEnvProto_CachedEndpointsEntry_DoNotUse _instance;
+  };
+};
+PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 ProcEnvProto_CachedEndpointsEntry_DoNotUseDefaultTypeInternal _ProcEnvProto_CachedEndpointsEntry_DoNotUse_default_instance_;
 PROTOBUF_CONSTEXPR ProcEnvProto::ProcEnvProto(
     ::_pbi::ConstantInitialized): _impl_{
     /*decltype(_impl_.etcdendpoints_)*/{::_pbi::ConstantInitialized()}
   , /*decltype(_impl_.secretsmap_)*/{::_pbi::ConstantInitialized()}
   , /*decltype(_impl_.sigmapath_)*/{}
   , /*decltype(_impl_.kernels_)*/{}
+  , /*decltype(_impl_.cachedendpoints_)*/{::_pbi::ConstantInitialized()}
   , /*decltype(_impl_.pidstr_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}
   , /*decltype(_impl_.program_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}
   , /*decltype(_impl_.realmstr_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}
@@ -83,8 +95,6 @@ PROTOBUF_CONSTEXPR ProcEnvProto::ProcEnvProto(
   , /*decltype(_impl_.valgrind_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}
   , /*decltype(_impl_.principal_)*/nullptr
   , /*decltype(_impl_.spawntimepb_)*/nullptr
-  , /*decltype(_impl_.mschedendpointproto_)*/nullptr
-  , /*decltype(_impl_.namedendpointproto_)*/nullptr
   , /*decltype(_impl_.howint_)*/0
   , /*decltype(_impl_.privileged_)*/false
   , /*decltype(_impl_.usespproxy_)*/false
@@ -128,7 +138,7 @@ struct ProcProtoDefaultTypeInternal {
   };
 };
 PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 ProcProtoDefaultTypeInternal _ProcProto_default_instance_;
-static ::_pb::Metadata file_level_metadata_proc_2fproc_2eproto[6];
+static ::_pb::Metadata file_level_metadata_proc_2fproc_2eproto[7];
 static constexpr ::_pb::EnumDescriptor const** file_level_enum_descriptors_proc_2fproc_2eproto = nullptr;
 static constexpr ::_pb::ServiceDescriptor const** file_level_service_descriptors_proc_2fproc_2eproto = nullptr;
 
@@ -163,6 +173,16 @@ const uint32_t TableStruct_proc_2fproc_2eproto::offsets[] PROTOBUF_SECTION_VARIA
   PROTOBUF_FIELD_OFFSET(::ProcEnvProto_SecretsMapEntry_DoNotUse, value_),
   0,
   1,
+  PROTOBUF_FIELD_OFFSET(::ProcEnvProto_CachedEndpointsEntry_DoNotUse, _has_bits_),
+  PROTOBUF_FIELD_OFFSET(::ProcEnvProto_CachedEndpointsEntry_DoNotUse, _internal_metadata_),
+  ~0u,  // no _extensions_
+  ~0u,  // no _oneof_case_
+  ~0u,  // no _weak_field_map_
+  ~0u,  // no _inlined_string_donated_
+  PROTOBUF_FIELD_OFFSET(::ProcEnvProto_CachedEndpointsEntry_DoNotUse, key_),
+  PROTOBUF_FIELD_OFFSET(::ProcEnvProto_CachedEndpointsEntry_DoNotUse, value_),
+  0,
+  1,
   ~0u,  // no _has_bits_
   PROTOBUF_FIELD_OFFSET(::ProcEnvProto, _internal_metadata_),
   ~0u,  // no _extensions_
@@ -187,8 +207,6 @@ const uint32_t TableStruct_proc_2fproc_2eproto::offsets[] PROTOBUF_SECTION_VARIA
   PROTOBUF_FIELD_OFFSET(::ProcEnvProto, _impl_.howint_),
   PROTOBUF_FIELD_OFFSET(::ProcEnvProto, _impl_.spawntimepb_),
   PROTOBUF_FIELD_OFFSET(::ProcEnvProto, _impl_.strace_),
-  PROTOBUF_FIELD_OFFSET(::ProcEnvProto, _impl_.mschedendpointproto_),
-  PROTOBUF_FIELD_OFFSET(::ProcEnvProto, _impl_.namedendpointproto_),
   PROTOBUF_FIELD_OFFSET(::ProcEnvProto, _impl_.usespproxy_),
   PROTOBUF_FIELD_OFFSET(::ProcEnvProto, _impl_.usedialproxy_),
   PROTOBUF_FIELD_OFFSET(::ProcEnvProto, _impl_.secretsmap_),
@@ -197,6 +215,7 @@ const uint32_t TableStruct_proc_2fproc_2eproto::offsets[] PROTOBUF_SECTION_VARIA
   PROTOBUF_FIELD_OFFSET(::ProcEnvProto, _impl_.realmswitchstr_),
   PROTOBUF_FIELD_OFFSET(::ProcEnvProto, _impl_.version_),
   PROTOBUF_FIELD_OFFSET(::ProcEnvProto, _impl_.fail_),
+  PROTOBUF_FIELD_OFFSET(::ProcEnvProto, _impl_.cachedendpoints_),
   PROTOBUF_FIELD_OFFSET(::ProcEnvProto, _impl_.valgrind_),
   PROTOBUF_FIELD_OFFSET(::ProcProto_EnvEntry_DoNotUse, _has_bits_),
   PROTOBUF_FIELD_OFFSET(::ProcProto_EnvEntry_DoNotUse, _internal_metadata_),
@@ -225,15 +244,17 @@ static const ::_pbi::MigrationSchema schemas[] PROTOBUF_SECTION_VARIABLE(protode
   { 0, -1, -1, sizeof(::ProcSeqno)},
   { 10, 18, -1, sizeof(::ProcEnvProto_EtcdEndpointsEntry_DoNotUse)},
   { 20, 28, -1, sizeof(::ProcEnvProto_SecretsMapEntry_DoNotUse)},
-  { 30, -1, -1, sizeof(::ProcEnvProto)},
-  { 65, 73, -1, sizeof(::ProcProto_EnvEntry_DoNotUse)},
-  { 75, -1, -1, sizeof(::ProcProto)},
+  { 30, 38, -1, sizeof(::ProcEnvProto_CachedEndpointsEntry_DoNotUse)},
+  { 40, -1, -1, sizeof(::ProcEnvProto)},
+  { 74, 82, -1, sizeof(::ProcProto_EnvEntry_DoNotUse)},
+  { 84, -1, -1, sizeof(::ProcProto)},
 };
 
 static const ::_pb::Message* const file_default_instances[] = {
   &::_ProcSeqno_default_instance_._instance,
   &::_ProcEnvProto_EtcdEndpointsEntry_DoNotUse_default_instance_._instance,
   &::_ProcEnvProto_SecretsMapEntry_DoNotUse_default_instance_._instance,
+  &::_ProcEnvProto_CachedEndpointsEntry_DoNotUse_default_instance_._instance,
   &::_ProcEnvProto_default_instance_._instance,
   &::_ProcProto_EnvEntry_DoNotUse_default_instance_._instance,
   &::_ProcProto_default_instance_._instance,
@@ -243,7 +264,7 @@ const char descriptor_table_protodef_proc_2fproc_2eproto[] PROTOBUF_SECTION_VARI
   "\n\017proc/proc.proto\032\037google/protobuf/times"
   "tamp.proto\032\023sigmap/sigmap.proto\"L\n\tProcS"
   "eqno\022\r\n\005epoch\030\001 \001(\004\022\r\n\005seqno\030\002 \001(\004\022\017\n\007pr"
-  "ocqID\030\003 \001(\t\022\020\n\010mSchedID\030\004 \001(\t\"\340\006\n\014ProcEn"
+  "ocqID\030\003 \001(\t\022\020\n\010mSchedID\030\004 \001(\t\"\213\007\n\014ProcEn"
   "vProto\022\016\n\006pidStr\030\001 \001(\t\022\017\n\007program\030\002 \001(\t\022"
   "\020\n\010realmStr\030\003 \001(\t\022\036\n\tprincipal\030\004 \001(\0132\013.T"
   "principal\022\017\n\007procDir\030\005 \001(\t\022\021\n\tparentDir\030"
@@ -254,23 +275,24 @@ const char descriptor_table_protodef_proc_2fproc_2eproto[] PROTOBUF_SECTION_VARI
   "perf\030\014 \001(\t\022\r\n\005debug\030\r \001(\t\022\023\n\013procdPIDStr"
   "\030\016 \001(\t\022\022\n\nprivileged\030\017 \001(\010\022\016\n\006howInt\030\020 \001"
   "(\005\022/\n\013spawnTimePB\030\021 \001(\0132\032.google.protobu"
-  "f.Timestamp\022\016\n\006strace\030\022 \001(\t\022,\n\023mSchedEnd"
-  "pointProto\030\023 \001(\0132\017.TendpointProto\022+\n\022nam"
-  "edEndpointProto\030\024 \001(\0132\017.TendpointProto\022\022"
-  "\n\nuseSPProxy\030\025 \001(\010\022\024\n\014useDialProxy\030\026 \001(\010"
-  "\0221\n\nsecretsMap\030\027 \003(\0132\035.ProcEnvProto.Secr"
-  "etsMapEntry\022\021\n\tsigmaPath\030\030 \003(\t\022\017\n\007kernel"
-  "s\030\031 \003(\t\022\026\n\016realmSwitchStr\030\032 \001(\t\022\017\n\007versi"
-  "on\030\033 \001(\t\022\014\n\004fail\030\034 \001(\t\022\020\n\010valgrind\030\035 \001(\t"
-  "\032E\n\022EtcdEndpointsEntry\022\013\n\003key\030\001 \001(\t\022\036\n\005v"
-  "alue\030\002 \001(\0132\017.TendpointProto:\0028\001\032\?\n\017Secre"
-  "tsMapEntry\022\013\n\003key\030\001 \001(\t\022\033\n\005value\030\002 \001(\0132\014"
-  ".SecretProto:\0028\001\"\276\001\n\tProcProto\022#\n\014procEn"
-  "vProto\030\001 \001(\0132\r.ProcEnvProto\022\014\n\004args\030\002 \003("
-  "\t\022 \n\003env\030\003 \003(\0132\023.ProcProto.EnvEntry\022\017\n\007t"
-  "ypeInt\030\004 \001(\r\022\017\n\007mcpuInt\030\005 \001(\r\022\016\n\006memInt\030"
-  "\006 \001(\r\032*\n\010EnvEntry\022\013\n\003key\030\001 \001(\t\022\r\n\005value\030"
-  "\002 \001(\t:\0028\001B\016Z\014sigmaos/procb\006proto3"
+  "f.Timestamp\022\016\n\006strace\030\022 \001(\t\022\022\n\nuseSPProx"
+  "y\030\023 \001(\010\022\024\n\014useDialProxy\030\024 \001(\010\0221\n\nsecrets"
+  "Map\030\025 \003(\0132\035.ProcEnvProto.SecretsMapEntry"
+  "\022\021\n\tsigmaPath\030\026 \003(\t\022\017\n\007kernels\030\027 \003(\t\022\026\n\016"
+  "realmSwitchStr\030\030 \001(\t\022\017\n\007version\030\031 \001(\t\022\014\n"
+  "\004fail\030\032 \001(\t\022;\n\017cachedEndpoints\030\033 \003(\0132\".P"
+  "rocEnvProto.CachedEndpointsEntry\022\020\n\010valg"
+  "rind\030\034 \001(\t\032E\n\022EtcdEndpointsEntry\022\013\n\003key\030"
+  "\001 \001(\t\022\036\n\005value\030\002 \001(\0132\017.TendpointProto:\0028"
+  "\001\032\?\n\017SecretsMapEntry\022\013\n\003key\030\001 \001(\t\022\033\n\005val"
+  "ue\030\002 \001(\0132\014.SecretProto:\0028\001\032G\n\024CachedEndp"
+  "ointsEntry\022\013\n\003key\030\001 \001(\t\022\036\n\005value\030\002 \001(\0132\017"
+  ".TendpointProto:\0028\001\"\276\001\n\tProcProto\022#\n\014pro"
+  "cEnvProto\030\001 \001(\0132\r.ProcEnvProto\022\014\n\004args\030\002"
+  " \003(\t\022 \n\003env\030\003 \003(\0132\023.ProcProto.EnvEntry\022\017"
+  "\n\007typeInt\030\004 \001(\r\022\017\n\007mcpuInt\030\005 \001(\r\022\016\n\006memI"
+  "nt\030\006 \001(\r\032*\n\010EnvEntry\022\013\n\003key\030\001 \001(\t\022\r\n\005val"
+  "ue\030\002 \001(\t:\0028\001B\016Z\014sigmaos/procb\006proto3"
   ;
 static const ::_pbi::DescriptorTable* const descriptor_table_proc_2fproc_2eproto_deps[2] = {
   &::descriptor_table_google_2fprotobuf_2ftimestamp_2eproto,
@@ -278,9 +300,9 @@ static const ::_pbi::DescriptorTable* const descriptor_table_proc_2fproc_2eproto
 };
 static ::_pbi::once_flag descriptor_table_proc_2fproc_2eproto_once;
 const ::_pbi::DescriptorTable descriptor_table_proc_2fproc_2eproto = {
-    false, false, 1233, descriptor_table_protodef_proc_2fproc_2eproto,
+    false, false, 1276, descriptor_table_protodef_proc_2fproc_2eproto,
     "proc/proc.proto",
-    &descriptor_table_proc_2fproc_2eproto_once, descriptor_table_proc_2fproc_2eproto_deps, 2, 6,
+    &descriptor_table_proc_2fproc_2eproto_once, descriptor_table_proc_2fproc_2eproto_deps, 2, 7,
     schemas, file_default_instances, TableStruct_proc_2fproc_2eproto::offsets,
     file_level_metadata_proc_2fproc_2eproto, file_level_enum_descriptors_proc_2fproc_2eproto,
     file_level_service_descriptors_proc_2fproc_2eproto,
@@ -635,12 +657,24 @@ void ProcEnvProto_SecretsMapEntry_DoNotUse::MergeFrom(const ProcEnvProto_Secrets
 
 // ===================================================================
 
+ProcEnvProto_CachedEndpointsEntry_DoNotUse::ProcEnvProto_CachedEndpointsEntry_DoNotUse() {}
+ProcEnvProto_CachedEndpointsEntry_DoNotUse::ProcEnvProto_CachedEndpointsEntry_DoNotUse(::PROTOBUF_NAMESPACE_ID::Arena* arena)
+    : SuperType(arena) {}
+void ProcEnvProto_CachedEndpointsEntry_DoNotUse::MergeFrom(const ProcEnvProto_CachedEndpointsEntry_DoNotUse& other) {
+  MergeFromInternal(other);
+}
+::PROTOBUF_NAMESPACE_ID::Metadata ProcEnvProto_CachedEndpointsEntry_DoNotUse::GetMetadata() const {
+  return ::_pbi::AssignDescriptors(
+      &descriptor_table_proc_2fproc_2eproto_getter, &descriptor_table_proc_2fproc_2eproto_once,
+      file_level_metadata_proc_2fproc_2eproto[3]);
+}
+
+// ===================================================================
+
 class ProcEnvProto::_Internal {
  public:
   static const ::Tprincipal& principal(const ProcEnvProto* msg);
   static const ::PROTOBUF_NAMESPACE_ID::Timestamp& spawntimepb(const ProcEnvProto* msg);
-  static const ::TendpointProto& mschedendpointproto(const ProcEnvProto* msg);
-  static const ::TendpointProto& namedendpointproto(const ProcEnvProto* msg);
 };
 
 const ::Tprincipal&
@@ -650,14 +684,6 @@ ProcEnvProto::_Internal::principal(const ProcEnvProto* msg) {
 const ::PROTOBUF_NAMESPACE_ID::Timestamp&
 ProcEnvProto::_Internal::spawntimepb(const ProcEnvProto* msg) {
   return *msg->_impl_.spawntimepb_;
-}
-const ::TendpointProto&
-ProcEnvProto::_Internal::mschedendpointproto(const ProcEnvProto* msg) {
-  return *msg->_impl_.mschedendpointproto_;
-}
-const ::TendpointProto&
-ProcEnvProto::_Internal::namedendpointproto(const ProcEnvProto* msg) {
-  return *msg->_impl_.namedendpointproto_;
 }
 void ProcEnvProto::clear_principal() {
   if (GetArenaForAllocation() == nullptr && _impl_.principal_ != nullptr) {
@@ -674,20 +700,11 @@ void ProcEnvProto::clear_spawntimepb() {
   }
   _impl_.spawntimepb_ = nullptr;
 }
-void ProcEnvProto::clear_mschedendpointproto() {
-  if (GetArenaForAllocation() == nullptr && _impl_.mschedendpointproto_ != nullptr) {
-    delete _impl_.mschedendpointproto_;
-  }
-  _impl_.mschedendpointproto_ = nullptr;
-}
-void ProcEnvProto::clear_namedendpointproto() {
-  if (GetArenaForAllocation() == nullptr && _impl_.namedendpointproto_ != nullptr) {
-    delete _impl_.namedendpointproto_;
-  }
-  _impl_.namedendpointproto_ = nullptr;
-}
 void ProcEnvProto::clear_secretsmap() {
   _impl_.secretsmap_.Clear();
+}
+void ProcEnvProto::clear_cachedendpoints() {
+  _impl_.cachedendpoints_.Clear();
 }
 ProcEnvProto::ProcEnvProto(::PROTOBUF_NAMESPACE_ID::Arena* arena,
                          bool is_message_owned)
@@ -706,6 +723,7 @@ ProcEnvProto::ProcEnvProto(const ProcEnvProto& from)
     , /*decltype(_impl_.secretsmap_)*/{}
     , decltype(_impl_.sigmapath_){from._impl_.sigmapath_}
     , decltype(_impl_.kernels_){from._impl_.kernels_}
+    , /*decltype(_impl_.cachedendpoints_)*/{}
     , decltype(_impl_.pidstr_){}
     , decltype(_impl_.program_){}
     , decltype(_impl_.realmstr_){}
@@ -725,8 +743,6 @@ ProcEnvProto::ProcEnvProto(const ProcEnvProto& from)
     , decltype(_impl_.valgrind_){}
     , decltype(_impl_.principal_){nullptr}
     , decltype(_impl_.spawntimepb_){nullptr}
-    , decltype(_impl_.mschedendpointproto_){nullptr}
-    , decltype(_impl_.namedendpointproto_){nullptr}
     , decltype(_impl_.howint_){}
     , decltype(_impl_.privileged_){}
     , decltype(_impl_.usespproxy_){}
@@ -736,6 +752,7 @@ ProcEnvProto::ProcEnvProto(const ProcEnvProto& from)
   _internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
   _this->_impl_.etcdendpoints_.MergeFrom(from._impl_.etcdendpoints_);
   _this->_impl_.secretsmap_.MergeFrom(from._impl_.secretsmap_);
+  _this->_impl_.cachedendpoints_.MergeFrom(from._impl_.cachedendpoints_);
   _impl_.pidstr_.InitDefault();
   #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
     _impl_.pidstr_.Set("", GetArenaForAllocation());
@@ -878,12 +895,6 @@ ProcEnvProto::ProcEnvProto(const ProcEnvProto& from)
   if (from._internal_has_spawntimepb()) {
     _this->_impl_.spawntimepb_ = new ::PROTOBUF_NAMESPACE_ID::Timestamp(*from._impl_.spawntimepb_);
   }
-  if (from._internal_has_mschedendpointproto()) {
-    _this->_impl_.mschedendpointproto_ = new ::TendpointProto(*from._impl_.mschedendpointproto_);
-  }
-  if (from._internal_has_namedendpointproto()) {
-    _this->_impl_.namedendpointproto_ = new ::TendpointProto(*from._impl_.namedendpointproto_);
-  }
   ::memcpy(&_impl_.howint_, &from._impl_.howint_,
     static_cast<size_t>(reinterpret_cast<char*>(&_impl_.usedialproxy_) -
     reinterpret_cast<char*>(&_impl_.howint_)) + sizeof(_impl_.usedialproxy_));
@@ -899,6 +910,7 @@ inline void ProcEnvProto::SharedCtor(
     , /*decltype(_impl_.secretsmap_)*/{::_pbi::ArenaInitialized(), arena}
     , decltype(_impl_.sigmapath_){arena}
     , decltype(_impl_.kernels_){arena}
+    , /*decltype(_impl_.cachedendpoints_)*/{::_pbi::ArenaInitialized(), arena}
     , decltype(_impl_.pidstr_){}
     , decltype(_impl_.program_){}
     , decltype(_impl_.realmstr_){}
@@ -918,8 +930,6 @@ inline void ProcEnvProto::SharedCtor(
     , decltype(_impl_.valgrind_){}
     , decltype(_impl_.principal_){nullptr}
     , decltype(_impl_.spawntimepb_){nullptr}
-    , decltype(_impl_.mschedendpointproto_){nullptr}
-    , decltype(_impl_.namedendpointproto_){nullptr}
     , decltype(_impl_.howint_){0}
     , decltype(_impl_.privileged_){false}
     , decltype(_impl_.usespproxy_){false}
@@ -1014,6 +1024,8 @@ inline void ProcEnvProto::SharedDtor() {
   _impl_.secretsmap_.~MapField();
   _impl_.sigmapath_.~RepeatedPtrField();
   _impl_.kernels_.~RepeatedPtrField();
+  _impl_.cachedendpoints_.Destruct();
+  _impl_.cachedendpoints_.~MapField();
   _impl_.pidstr_.Destroy();
   _impl_.program_.Destroy();
   _impl_.realmstr_.Destroy();
@@ -1033,14 +1045,13 @@ inline void ProcEnvProto::SharedDtor() {
   _impl_.valgrind_.Destroy();
   if (this != internal_default_instance()) delete _impl_.principal_;
   if (this != internal_default_instance()) delete _impl_.spawntimepb_;
-  if (this != internal_default_instance()) delete _impl_.mschedendpointproto_;
-  if (this != internal_default_instance()) delete _impl_.namedendpointproto_;
 }
 
 void ProcEnvProto::ArenaDtor(void* object) {
   ProcEnvProto* _this = reinterpret_cast< ProcEnvProto* >(object);
   _this->_impl_.etcdendpoints_.Destruct();
   _this->_impl_.secretsmap_.Destruct();
+  _this->_impl_.cachedendpoints_.Destruct();
 }
 void ProcEnvProto::SetCachedSize(int size) const {
   _impl_._cached_size_.Set(size);
@@ -1056,6 +1067,7 @@ void ProcEnvProto::Clear() {
   _impl_.secretsmap_.Clear();
   _impl_.sigmapath_.Clear();
   _impl_.kernels_.Clear();
+  _impl_.cachedendpoints_.Clear();
   _impl_.pidstr_.ClearToEmpty();
   _impl_.program_.ClearToEmpty();
   _impl_.realmstr_.ClearToEmpty();
@@ -1081,14 +1093,6 @@ void ProcEnvProto::Clear() {
     delete _impl_.spawntimepb_;
   }
   _impl_.spawntimepb_ = nullptr;
-  if (GetArenaForAllocation() == nullptr && _impl_.mschedendpointproto_ != nullptr) {
-    delete _impl_.mschedendpointproto_;
-  }
-  _impl_.mschedendpointproto_ = nullptr;
-  if (GetArenaForAllocation() == nullptr && _impl_.namedendpointproto_ != nullptr) {
-    delete _impl_.namedendpointproto_;
-  }
-  _impl_.namedendpointproto_ = nullptr;
   ::memset(&_impl_.howint_, 0, static_cast<size_t>(
       reinterpret_cast<char*>(&_impl_.usedialproxy_) -
       reinterpret_cast<char*>(&_impl_.howint_)) + sizeof(_impl_.usedialproxy_));
@@ -1276,54 +1280,38 @@ const char* ProcEnvProto::_InternalParse(const char* ptr, ::_pbi::ParseContext* 
         } else
           goto handle_unusual;
         continue;
-      // .TendpointProto mSchedEndpointProto = 19;
+      // bool useSPProxy = 19;
       case 19:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 154)) {
-          ptr = ctx->ParseMessage(_internal_mutable_mschedendpointproto(), ptr);
-          CHK_(ptr);
-        } else
-          goto handle_unusual;
-        continue;
-      // .TendpointProto namedEndpointProto = 20;
-      case 20:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 162)) {
-          ptr = ctx->ParseMessage(_internal_mutable_namedendpointproto(), ptr);
-          CHK_(ptr);
-        } else
-          goto handle_unusual;
-        continue;
-      // bool useSPProxy = 21;
-      case 21:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 168)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 152)) {
           _impl_.usespproxy_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
           CHK_(ptr);
         } else
           goto handle_unusual;
         continue;
-      // bool useDialProxy = 22;
-      case 22:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 176)) {
+      // bool useDialProxy = 20;
+      case 20:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 160)) {
           _impl_.usedialproxy_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
           CHK_(ptr);
         } else
           goto handle_unusual;
         continue;
-      // map<string, .SecretProto> secretsMap = 23;
-      case 23:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 186)) {
+      // map<string, .SecretProto> secretsMap = 21;
+      case 21:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 170)) {
           ptr -= 2;
           do {
             ptr += 2;
             ptr = ctx->ParseMessage(&_impl_.secretsmap_, ptr);
             CHK_(ptr);
             if (!ctx->DataAvailable(ptr)) break;
-          } while (::PROTOBUF_NAMESPACE_ID::internal::ExpectTag<186>(ptr));
+          } while (::PROTOBUF_NAMESPACE_ID::internal::ExpectTag<170>(ptr));
         } else
           goto handle_unusual;
         continue;
-      // repeated string sigmaPath = 24;
-      case 24:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 194)) {
+      // repeated string sigmaPath = 22;
+      case 22:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 178)) {
           ptr -= 2;
           do {
             ptr += 2;
@@ -1332,13 +1320,13 @@ const char* ProcEnvProto::_InternalParse(const char* ptr, ::_pbi::ParseContext* 
             CHK_(ptr);
             CHK_(::_pbi::VerifyUTF8(str, "ProcEnvProto.sigmaPath"));
             if (!ctx->DataAvailable(ptr)) break;
-          } while (::PROTOBUF_NAMESPACE_ID::internal::ExpectTag<194>(ptr));
+          } while (::PROTOBUF_NAMESPACE_ID::internal::ExpectTag<178>(ptr));
         } else
           goto handle_unusual;
         continue;
-      // repeated string kernels = 25;
-      case 25:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 202)) {
+      // repeated string kernels = 23;
+      case 23:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 186)) {
           ptr -= 2;
           do {
             ptr += 2;
@@ -1347,13 +1335,13 @@ const char* ProcEnvProto::_InternalParse(const char* ptr, ::_pbi::ParseContext* 
             CHK_(ptr);
             CHK_(::_pbi::VerifyUTF8(str, "ProcEnvProto.kernels"));
             if (!ctx->DataAvailable(ptr)) break;
-          } while (::PROTOBUF_NAMESPACE_ID::internal::ExpectTag<202>(ptr));
+          } while (::PROTOBUF_NAMESPACE_ID::internal::ExpectTag<186>(ptr));
         } else
           goto handle_unusual;
         continue;
-      // string realmSwitchStr = 26;
-      case 26:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 210)) {
+      // string realmSwitchStr = 24;
+      case 24:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 194)) {
           auto str = _internal_mutable_realmswitchstr();
           ptr = ::_pbi::InlineGreedyStringParser(str, ptr, ctx);
           CHK_(ptr);
@@ -1361,9 +1349,9 @@ const char* ProcEnvProto::_InternalParse(const char* ptr, ::_pbi::ParseContext* 
         } else
           goto handle_unusual;
         continue;
-      // string version = 27;
-      case 27:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 218)) {
+      // string version = 25;
+      case 25:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 202)) {
           auto str = _internal_mutable_version();
           ptr = ::_pbi::InlineGreedyStringParser(str, ptr, ctx);
           CHK_(ptr);
@@ -1371,9 +1359,9 @@ const char* ProcEnvProto::_InternalParse(const char* ptr, ::_pbi::ParseContext* 
         } else
           goto handle_unusual;
         continue;
-      // string fail = 28;
-      case 28:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 226)) {
+      // string fail = 26;
+      case 26:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 210)) {
           auto str = _internal_mutable_fail();
           ptr = ::_pbi::InlineGreedyStringParser(str, ptr, ctx);
           CHK_(ptr);
@@ -1381,9 +1369,22 @@ const char* ProcEnvProto::_InternalParse(const char* ptr, ::_pbi::ParseContext* 
         } else
           goto handle_unusual;
         continue;
-      // string valgrind = 29;
-      case 29:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 234)) {
+      // map<string, .TendpointProto> cachedEndpoints = 27;
+      case 27:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 218)) {
+          ptr -= 2;
+          do {
+            ptr += 2;
+            ptr = ctx->ParseMessage(&_impl_.cachedendpoints_, ptr);
+            CHK_(ptr);
+            if (!ctx->DataAvailable(ptr)) break;
+          } while (::PROTOBUF_NAMESPACE_ID::internal::ExpectTag<218>(ptr));
+        } else
+          goto handle_unusual;
+        continue;
+      // string valgrind = 28;
+      case 28:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 226)) {
           auto str = _internal_mutable_valgrind();
           ptr = ::_pbi::InlineGreedyStringParser(str, ptr, ctx);
           CHK_(ptr);
@@ -1602,33 +1603,19 @@ uint8_t* ProcEnvProto::_InternalSerialize(
         18, this->_internal_strace(), target);
   }
 
-  // .TendpointProto mSchedEndpointProto = 19;
-  if (this->_internal_has_mschedendpointproto()) {
-    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::
-      InternalWriteMessage(19, _Internal::mschedendpointproto(this),
-        _Internal::mschedendpointproto(this).GetCachedSize(), target, stream);
-  }
-
-  // .TendpointProto namedEndpointProto = 20;
-  if (this->_internal_has_namedendpointproto()) {
-    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::
-      InternalWriteMessage(20, _Internal::namedendpointproto(this),
-        _Internal::namedendpointproto(this).GetCachedSize(), target, stream);
-  }
-
-  // bool useSPProxy = 21;
+  // bool useSPProxy = 19;
   if (this->_internal_usespproxy() != 0) {
     target = stream->EnsureSpace(target);
-    target = ::_pbi::WireFormatLite::WriteBoolToArray(21, this->_internal_usespproxy(), target);
+    target = ::_pbi::WireFormatLite::WriteBoolToArray(19, this->_internal_usespproxy(), target);
   }
 
-  // bool useDialProxy = 22;
+  // bool useDialProxy = 20;
   if (this->_internal_usedialproxy() != 0) {
     target = stream->EnsureSpace(target);
-    target = ::_pbi::WireFormatLite::WriteBoolToArray(22, this->_internal_usedialproxy(), target);
+    target = ::_pbi::WireFormatLite::WriteBoolToArray(20, this->_internal_usedialproxy(), target);
   }
 
-  // map<string, .SecretProto> secretsMap = 23;
+  // map<string, .SecretProto> secretsMap = 21;
   if (!this->_internal_secretsmap().empty()) {
     using MapType = ::_pb::Map<std::string, ::SecretProto>;
     using WireHelper = ProcEnvProto_SecretsMapEntry_DoNotUse::Funcs;
@@ -1643,75 +1630,101 @@ uint8_t* ProcEnvProto::_InternalSerialize(
 
     if (stream->IsSerializationDeterministic() && map_field.size() > 1) {
       for (const auto& entry : ::_pbi::MapSorterPtr<MapType>(map_field)) {
-        target = WireHelper::InternalSerialize(23, entry.first, entry.second, target, stream);
+        target = WireHelper::InternalSerialize(21, entry.first, entry.second, target, stream);
         check_utf8(entry);
       }
     } else {
       for (const auto& entry : map_field) {
-        target = WireHelper::InternalSerialize(23, entry.first, entry.second, target, stream);
+        target = WireHelper::InternalSerialize(21, entry.first, entry.second, target, stream);
         check_utf8(entry);
       }
     }
   }
 
-  // repeated string sigmaPath = 24;
+  // repeated string sigmaPath = 22;
   for (int i = 0, n = this->_internal_sigmapath_size(); i < n; i++) {
     const auto& s = this->_internal_sigmapath(i);
     ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::VerifyUtf8String(
       s.data(), static_cast<int>(s.length()),
       ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::SERIALIZE,
       "ProcEnvProto.sigmaPath");
-    target = stream->WriteString(24, s, target);
+    target = stream->WriteString(22, s, target);
   }
 
-  // repeated string kernels = 25;
+  // repeated string kernels = 23;
   for (int i = 0, n = this->_internal_kernels_size(); i < n; i++) {
     const auto& s = this->_internal_kernels(i);
     ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::VerifyUtf8String(
       s.data(), static_cast<int>(s.length()),
       ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::SERIALIZE,
       "ProcEnvProto.kernels");
-    target = stream->WriteString(25, s, target);
+    target = stream->WriteString(23, s, target);
   }
 
-  // string realmSwitchStr = 26;
+  // string realmSwitchStr = 24;
   if (!this->_internal_realmswitchstr().empty()) {
     ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::VerifyUtf8String(
       this->_internal_realmswitchstr().data(), static_cast<int>(this->_internal_realmswitchstr().length()),
       ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::SERIALIZE,
       "ProcEnvProto.realmSwitchStr");
     target = stream->WriteStringMaybeAliased(
-        26, this->_internal_realmswitchstr(), target);
+        24, this->_internal_realmswitchstr(), target);
   }
 
-  // string version = 27;
+  // string version = 25;
   if (!this->_internal_version().empty()) {
     ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::VerifyUtf8String(
       this->_internal_version().data(), static_cast<int>(this->_internal_version().length()),
       ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::SERIALIZE,
       "ProcEnvProto.version");
     target = stream->WriteStringMaybeAliased(
-        27, this->_internal_version(), target);
+        25, this->_internal_version(), target);
   }
 
-  // string fail = 28;
+  // string fail = 26;
   if (!this->_internal_fail().empty()) {
     ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::VerifyUtf8String(
       this->_internal_fail().data(), static_cast<int>(this->_internal_fail().length()),
       ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::SERIALIZE,
       "ProcEnvProto.fail");
     target = stream->WriteStringMaybeAliased(
-        28, this->_internal_fail(), target);
+        26, this->_internal_fail(), target);
   }
 
-  // string valgrind = 29;
+  // map<string, .TendpointProto> cachedEndpoints = 27;
+  if (!this->_internal_cachedendpoints().empty()) {
+    using MapType = ::_pb::Map<std::string, ::TendpointProto>;
+    using WireHelper = ProcEnvProto_CachedEndpointsEntry_DoNotUse::Funcs;
+    const auto& map_field = this->_internal_cachedendpoints();
+    auto check_utf8 = [](const MapType::value_type& entry) {
+      (void)entry;
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::VerifyUtf8String(
+        entry.first.data(), static_cast<int>(entry.first.length()),
+        ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::SERIALIZE,
+        "ProcEnvProto.CachedEndpointsEntry.key");
+    };
+
+    if (stream->IsSerializationDeterministic() && map_field.size() > 1) {
+      for (const auto& entry : ::_pbi::MapSorterPtr<MapType>(map_field)) {
+        target = WireHelper::InternalSerialize(27, entry.first, entry.second, target, stream);
+        check_utf8(entry);
+      }
+    } else {
+      for (const auto& entry : map_field) {
+        target = WireHelper::InternalSerialize(27, entry.first, entry.second, target, stream);
+        check_utf8(entry);
+      }
+    }
+  }
+
+  // string valgrind = 28;
   if (!this->_internal_valgrind().empty()) {
     ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::VerifyUtf8String(
       this->_internal_valgrind().data(), static_cast<int>(this->_internal_valgrind().length()),
       ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::SERIALIZE,
       "ProcEnvProto.valgrind");
     target = stream->WriteStringMaybeAliased(
-        29, this->_internal_valgrind(), target);
+        28, this->_internal_valgrind(), target);
   }
 
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
@@ -1739,7 +1752,7 @@ size_t ProcEnvProto::ByteSizeLong() const {
     total_size += ProcEnvProto_EtcdEndpointsEntry_DoNotUse::Funcs::ByteSizeLong(it->first, it->second);
   }
 
-  // map<string, .SecretProto> secretsMap = 23;
+  // map<string, .SecretProto> secretsMap = 21;
   total_size += 2 *
       ::PROTOBUF_NAMESPACE_ID::internal::FromIntSize(this->_internal_secretsmap_size());
   for (::PROTOBUF_NAMESPACE_ID::Map< std::string, ::SecretProto >::const_iterator
@@ -1748,7 +1761,7 @@ size_t ProcEnvProto::ByteSizeLong() const {
     total_size += ProcEnvProto_SecretsMapEntry_DoNotUse::Funcs::ByteSizeLong(it->first, it->second);
   }
 
-  // repeated string sigmaPath = 24;
+  // repeated string sigmaPath = 22;
   total_size += 2 *
       ::PROTOBUF_NAMESPACE_ID::internal::FromIntSize(_impl_.sigmapath_.size());
   for (int i = 0, n = _impl_.sigmapath_.size(); i < n; i++) {
@@ -1756,12 +1769,21 @@ size_t ProcEnvProto::ByteSizeLong() const {
       _impl_.sigmapath_.Get(i));
   }
 
-  // repeated string kernels = 25;
+  // repeated string kernels = 23;
   total_size += 2 *
       ::PROTOBUF_NAMESPACE_ID::internal::FromIntSize(_impl_.kernels_.size());
   for (int i = 0, n = _impl_.kernels_.size(); i < n; i++) {
     total_size += ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
       _impl_.kernels_.Get(i));
+  }
+
+  // map<string, .TendpointProto> cachedEndpoints = 27;
+  total_size += 2 *
+      ::PROTOBUF_NAMESPACE_ID::internal::FromIntSize(this->_internal_cachedendpoints_size());
+  for (::PROTOBUF_NAMESPACE_ID::Map< std::string, ::TendpointProto >::const_iterator
+      it = this->_internal_cachedendpoints().begin();
+      it != this->_internal_cachedendpoints().end(); ++it) {
+    total_size += ProcEnvProto_CachedEndpointsEntry_DoNotUse::Funcs::ByteSizeLong(it->first, it->second);
   }
 
   // string pidStr = 1;
@@ -1855,28 +1877,28 @@ size_t ProcEnvProto::ByteSizeLong() const {
         this->_internal_strace());
   }
 
-  // string realmSwitchStr = 26;
+  // string realmSwitchStr = 24;
   if (!this->_internal_realmswitchstr().empty()) {
     total_size += 2 +
       ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
         this->_internal_realmswitchstr());
   }
 
-  // string version = 27;
+  // string version = 25;
   if (!this->_internal_version().empty()) {
     total_size += 2 +
       ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
         this->_internal_version());
   }
 
-  // string fail = 28;
+  // string fail = 26;
   if (!this->_internal_fail().empty()) {
     total_size += 2 +
       ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
         this->_internal_fail());
   }
 
-  // string valgrind = 29;
+  // string valgrind = 28;
   if (!this->_internal_valgrind().empty()) {
     total_size += 2 +
       ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
@@ -1897,20 +1919,6 @@ size_t ProcEnvProto::ByteSizeLong() const {
         *_impl_.spawntimepb_);
   }
 
-  // .TendpointProto mSchedEndpointProto = 19;
-  if (this->_internal_has_mschedendpointproto()) {
-    total_size += 2 +
-      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::MessageSize(
-        *_impl_.mschedendpointproto_);
-  }
-
-  // .TendpointProto namedEndpointProto = 20;
-  if (this->_internal_has_namedendpointproto()) {
-    total_size += 2 +
-      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::MessageSize(
-        *_impl_.namedendpointproto_);
-  }
-
   // int32 howInt = 16;
   if (this->_internal_howint() != 0) {
     total_size += 2 +
@@ -1923,12 +1931,12 @@ size_t ProcEnvProto::ByteSizeLong() const {
     total_size += 1 + 1;
   }
 
-  // bool useSPProxy = 21;
+  // bool useSPProxy = 19;
   if (this->_internal_usespproxy() != 0) {
     total_size += 2 + 1;
   }
 
-  // bool useDialProxy = 22;
+  // bool useDialProxy = 20;
   if (this->_internal_usedialproxy() != 0) {
     total_size += 2 + 1;
   }
@@ -1955,6 +1963,7 @@ void ProcEnvProto::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::P
   _this->_impl_.secretsmap_.MergeFrom(from._impl_.secretsmap_);
   _this->_impl_.sigmapath_.MergeFrom(from._impl_.sigmapath_);
   _this->_impl_.kernels_.MergeFrom(from._impl_.kernels_);
+  _this->_impl_.cachedendpoints_.MergeFrom(from._impl_.cachedendpoints_);
   if (!from._internal_pidstr().empty()) {
     _this->_internal_set_pidstr(from._internal_pidstr());
   }
@@ -2014,14 +2023,6 @@ void ProcEnvProto::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::P
     _this->_internal_mutable_spawntimepb()->::PROTOBUF_NAMESPACE_ID::Timestamp::MergeFrom(
         from._internal_spawntimepb());
   }
-  if (from._internal_has_mschedendpointproto()) {
-    _this->_internal_mutable_mschedendpointproto()->::TendpointProto::MergeFrom(
-        from._internal_mschedendpointproto());
-  }
-  if (from._internal_has_namedendpointproto()) {
-    _this->_internal_mutable_namedendpointproto()->::TendpointProto::MergeFrom(
-        from._internal_namedendpointproto());
-  }
   if (from._internal_howint() != 0) {
     _this->_internal_set_howint(from._internal_howint());
   }
@@ -2057,6 +2058,7 @@ void ProcEnvProto::InternalSwap(ProcEnvProto* other) {
   _impl_.secretsmap_.InternalSwap(&other->_impl_.secretsmap_);
   _impl_.sigmapath_.InternalSwap(&other->_impl_.sigmapath_);
   _impl_.kernels_.InternalSwap(&other->_impl_.kernels_);
+  _impl_.cachedendpoints_.InternalSwap(&other->_impl_.cachedendpoints_);
   ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr::InternalSwap(
       &_impl_.pidstr_, lhs_arena,
       &other->_impl_.pidstr_, rhs_arena
@@ -2136,7 +2138,7 @@ void ProcEnvProto::InternalSwap(ProcEnvProto* other) {
 ::PROTOBUF_NAMESPACE_ID::Metadata ProcEnvProto::GetMetadata() const {
   return ::_pbi::AssignDescriptors(
       &descriptor_table_proc_2fproc_2eproto_getter, &descriptor_table_proc_2fproc_2eproto_once,
-      file_level_metadata_proc_2fproc_2eproto[3]);
+      file_level_metadata_proc_2fproc_2eproto[4]);
 }
 
 // ===================================================================
@@ -2150,7 +2152,7 @@ void ProcProto_EnvEntry_DoNotUse::MergeFrom(const ProcProto_EnvEntry_DoNotUse& o
 ::PROTOBUF_NAMESPACE_ID::Metadata ProcProto_EnvEntry_DoNotUse::GetMetadata() const {
   return ::_pbi::AssignDescriptors(
       &descriptor_table_proc_2fproc_2eproto_getter, &descriptor_table_proc_2fproc_2eproto_once,
-      file_level_metadata_proc_2fproc_2eproto[4]);
+      file_level_metadata_proc_2fproc_2eproto[5]);
 }
 
 // ===================================================================
@@ -2533,7 +2535,7 @@ void ProcProto::InternalSwap(ProcProto* other) {
 ::PROTOBUF_NAMESPACE_ID::Metadata ProcProto::GetMetadata() const {
   return ::_pbi::AssignDescriptors(
       &descriptor_table_proc_2fproc_2eproto_getter, &descriptor_table_proc_2fproc_2eproto_once,
-      file_level_metadata_proc_2fproc_2eproto[5]);
+      file_level_metadata_proc_2fproc_2eproto[6]);
 }
 
 // @@protoc_insertion_point(namespace_scope)
@@ -2549,6 +2551,10 @@ Arena::CreateMaybeMessage< ::ProcEnvProto_EtcdEndpointsEntry_DoNotUse >(Arena* a
 template<> PROTOBUF_NOINLINE ::ProcEnvProto_SecretsMapEntry_DoNotUse*
 Arena::CreateMaybeMessage< ::ProcEnvProto_SecretsMapEntry_DoNotUse >(Arena* arena) {
   return Arena::CreateMessageInternal< ::ProcEnvProto_SecretsMapEntry_DoNotUse >(arena);
+}
+template<> PROTOBUF_NOINLINE ::ProcEnvProto_CachedEndpointsEntry_DoNotUse*
+Arena::CreateMaybeMessage< ::ProcEnvProto_CachedEndpointsEntry_DoNotUse >(Arena* arena) {
+  return Arena::CreateMessageInternal< ::ProcEnvProto_CachedEndpointsEntry_DoNotUse >(arena);
 }
 template<> PROTOBUF_NOINLINE ::ProcEnvProto*
 Arena::CreateMaybeMessage< ::ProcEnvProto >(Arena* arena) {

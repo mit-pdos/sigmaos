@@ -229,6 +229,25 @@ func (pe *ProcEnvProto) SetInnerContainerIP(ip sp.Tip) {
 	pe.InnerContainerIPStr = ip.String()
 }
 
+func (pe *ProcEnvProto) GetCachedEndpoint(pn string) (*sp.Tendpoint, bool) {
+	epProto, ok := pe.CachedEndpoints[pn]
+	if !ok {
+		return nil, false
+	}
+	return sp.NewEndpointFromProto(epProto), true
+}
+
+func (pe *ProcEnvProto) SetCachedEndpoint(pn string, ep *sp.Tendpoint) {
+	if pe.CachedEndpoints == nil {
+		pe.CachedEndpoints = make(map[string]*sp.TendpointProto)
+	}
+	pe.CachedEndpoints[pn] = ep.GetProto()
+}
+
+func (pe *ProcEnvProto) ClearCachedEndpoint(pn string) {
+	delete(pe.CachedEndpoints, pn)
+}
+
 func (pe *ProcEnvProto) SetSigmaPath(buildTag string) {
 	if buildTag == sp.LOCAL_BUILD {
 		pe.SigmaPath = append(pe.SigmaPath, filepath.Join(sp.UX, sp.LOCAL, "bin/user/common"))
@@ -298,7 +317,7 @@ func (pe *ProcEnvProto) SetRealmSwitch(realm sp.Trealm) {
 }
 
 func (pe *ProcEnvProto) ClearNamedEndpoint() {
-	pe.NamedEndpointProto = nil
+	pe.ClearCachedEndpoint(sp.NAMEDREL)
 }
 
 func (pe *ProcEnvProto) SetVersion(v string) {
@@ -322,23 +341,19 @@ func (pe *ProcEnvProto) GetSpawnTime() time.Time {
 }
 
 func (pe *ProcEnv) GetMSchedEndpoint() (*sp.Tendpoint, bool) {
-	mp := pe.ProcEnvProto.GetMSchedEndpointProto()
-	if mp == nil {
+	ep, ok := pe.GetCachedEndpoint(sp.MSCHEDREL)
+	if !ok {
 		return &sp.Tendpoint{}, false
 	}
-	return sp.NewEndpointFromProto(mp), true
+	return ep, true
 }
 
-func (pe *ProcEnv) GetNamedEndpoint() (*sp.Tendpoint, bool) {
-	mp := pe.ProcEnvProto.GetNamedEndpointProto()
-	if mp == nil {
+func (pe *ProcEnvProto) GetNamedEndpoint() (*sp.Tendpoint, bool) {
+	ep, ok := pe.GetCachedEndpoint(sp.NAMEDREL)
+	if !ok {
 		return &sp.Tendpoint{}, false
 	}
-	return sp.NewEndpointFromProto(mp), true
-}
-
-func (pe *ProcEnv) SetNamedEndpoint(ep *sp.Tendpoint) {
-	pe.ProcEnvProto.NamedEndpointProto = ep.TendpointProto
+	return ep, true
 }
 
 func (pe *ProcEnv) Marshal() string {
@@ -359,6 +374,7 @@ func Unmarshal(pestr string) *ProcEnv {
 }
 
 func (pe *ProcEnv) String() string {
+	namedEP, _ := pe.GetCachedEndpoint(sp.NAMEDREL)
 	return fmt.Sprintf("&{ "+
 		"Program:%v "+
 		"Version:%v "+
@@ -383,6 +399,7 @@ func (pe *ProcEnv) String() string {
 		"SigmaPath:%v "+
 		"RealmSwitch:%v "+
 		"Fail:%v "+
+		"CachedEPs:%v "+
 		"}",
 		pe.Program,
 		pe.Version,
@@ -399,7 +416,7 @@ func (pe *ProcEnv) String() string {
 		pe.GetEtcdEndpoints(),
 		pe.InnerContainerIPStr,
 		pe.OuterContainerIPStr,
-		pe.NamedEndpointProto,
+		namedEP,
 		pe.BuildTag,
 		pe.Privileged,
 		pe.UseSPProxy,
@@ -407,5 +424,6 @@ func (pe *ProcEnv) String() string {
 		pe.SigmaPath,
 		pe.RealmSwitchStr,
 		pe.Fail,
+		pe.CachedEndpoints,
 	)
 }

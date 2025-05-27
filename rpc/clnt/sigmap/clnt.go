@@ -2,12 +2,12 @@
 package sigmap
 
 import (
-	"sigmaos/sigmaclnt/fslib"
 	"sigmaos/rpc/clnt"
 	"sigmaos/rpc/clnt/channel"
 	"sigmaos/rpc/clnt/channel/spchannel"
 	"sigmaos/rpc/clnt/opts"
 	rpcclntopts "sigmaos/rpc/clnt/opts"
+	"sigmaos/sigmaclnt/fslib"
 )
 
 func WithSPChannel(fsl *fslib.FsLib) *rpcclntopts.RPCClntOption {

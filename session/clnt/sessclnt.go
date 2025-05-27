@@ -69,6 +69,7 @@ func (c *SessClnt) RPC(req sessp.Tmsg, iniov sessp.IoVec, outiov sessp.IoVec) (*
 	s := time.Now()
 	fc := sessp.NewFcallMsg(req, iniov, c.sid, c.seqcntr)
 	pmfc := spcodec.NewPartMarshaledMsg(fc)
+	marshalLat := time.Since(s)
 	dmx, err := c.getdmx()
 	if err != nil {
 		return nil, err
@@ -93,7 +94,7 @@ func (c *SessClnt) RPC(req sessp.Tmsg, iniov sessp.IoVec, outiov sessp.IoVec) (*
 	if err := spcodec.UnmarshalMsg(r); err != nil {
 		return nil, err
 	}
-	db.DPrintf(db.NET_LAT, "RPC req %v fm %v lat %v\n", fc, r.Fcm, time.Since(s))
+	db.DPrintf(db.NET_LAT, "RPC req %v fm %v marshalLat %v lat %v", fc, r.Fcm, marshalLat, time.Since(s))
 	return r.Fcm, nil
 }
 

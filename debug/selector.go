@@ -30,6 +30,7 @@ const (
 	REALM_GROW_LAT           = "REALM_GROW_LAT"
 	CACHE_LAT                = "CACHE_LAT"
 	WALK_LAT                 = "WALK_LAT"
+	CLUNK_LAT                = "CLUNK_LAT"
 	FSETCD_LAT               = "FSETCD_LAT"
 	ATTACH_LAT               = "ATTACH_LAT"
 	RPC_LAT                  = "RPC_LAT"
@@ -59,6 +60,14 @@ const (
 	CACHESRV      Tselector = "CACHESRV"
 	CACHECLERK              = "CACHECLERK"
 	CACHEDSVCCLNT           = "CACHEDSVCCLNT"
+)
+
+// EPCache
+const (
+	EPCACHE         Tselector = "EPCACHE"
+	EPCACHE_ERR               = EPCACHE + ERR
+	EPCACHECLNT               = "EPCACHECLNT"
+	EPCACHECLNT_ERR           = EPCACHECLNT + ERR
 )
 
 // Hotel
@@ -259,11 +268,12 @@ const (
 
 // RPC Client Libraries
 const (
-	DEMUXCLNT     Tselector = "DEMUXCLNT"
-	DEMUXCLNT_ERR           = "DEMUXCLNT" + ERR
-	SESSDEVCLNT             = "SESSDEVCLNT"
-	RPCCLNT                 = "RPCCLNT"
-	RPCCHAN                 = "RPCCHAN"
+	DEMUXCLNT       Tselector = "DEMUXCLNT"
+	DEMUXCLNT_ERR             = "DEMUXCLNT" + ERR
+	SESSDEVCLNT               = "SESSDEVCLNT"
+	SESSDEVCLNT_ERR           = "SESSDEVCLNT" + ERR
+	RPCCLNT                   = "RPCCLNT"
+	RPCCHAN                   = "RPCCHAN"
 )
 
 // External service libraries

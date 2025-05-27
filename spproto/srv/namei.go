@@ -1,6 +1,8 @@
 package srv
 
 import (
+	"time"
+
 	"sigmaos/api/fs"
 	db "sigmaos/debug"
 	"sigmaos/path"
@@ -32,9 +34,13 @@ func (ps *ProtSrv) lookupObj(ctx fs.CtxI, f *fid.Fid, target path.Tpathname, lty
 	if !o.Perm().IsDir() {
 		return nil, o, lk, "", serr.NewErr(serr.TErrNotDir, f.Name())
 	}
+	s := time.Now()
 	os, lo, lk, _, err := namei.Walk(ps.plt, ctx, o, lk, target, nil, ltype)
 	if err == nil {
 		name = target[len(os)-1]
+	}
+	if db.WillBePrinted(db.WALK_LAT) {
+		db.DPrintf(db.WALK_LAT, "ProtSrv lookupObj namei.Walk %v %v lat %v", f.Ctx().ClntId(), target, time.Since(s))
 	}
 	return os, lo, lk, name, err
 }

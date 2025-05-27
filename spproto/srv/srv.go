@@ -189,7 +189,10 @@ func (ps *ProtSrv) Walk(args *sp.Twalk, rets *sp.Rwalk) *sp.Rerror {
 	s := time.Now()
 	os, lo, lk, name, err := ps.lookupObj(f.Ctx(), f, args.Wnames, lockmap.RLOCK)
 
-	db.DPrintf(db.WALK_LAT, "ProtSrv.Walk %v %v lat %v", f.Ctx().ClntId(), args.Wnames, time.Since(s))
+	db.DPrintf(db.WALK_LAT, "ProtSrv.Walk lookupObj %v %v lat %v", f.Ctx().ClntId(), args.Wnames, time.Since(s))
+	defer func(s time.Time) {
+		db.DPrintf(db.WALK_LAT, "ProtSrv.Walk E2E %v %v lat %v", f.Ctx().ClntId(), args.Wnames, time.Since(s))
+	}(s)
 	defer ps.plt.Release(f.Ctx(), lk, lockmap.RLOCK)
 
 	if err != nil && !err.IsMaybeSpecialElem() {
@@ -211,12 +214,20 @@ func (ps *ProtSrv) Walk(args *sp.Twalk, rets *sp.Rwalk) *sp.Rerror {
 }
 
 func (ps *ProtSrv) clunk(fid sp.Tfid) *sp.Rerror {
+	s := time.Now()
 	f, err := ps.fm.LookupDel(fid)
 	if err != nil {
 		return sp.NewRerrorSerr(err)
 	}
+	db.DPrintf(db.CLUNK_LAT, "ProtSrv.Clunk lookupDel %v %v lat %v", f.Ctx().ClntId(), fid, time.Since(s))
+
+	defer func(s time.Time) {
+		db.DPrintf(db.CLUNK_LAT, "ProtSrv.Clunk E2E %v %v lat %v", f.Ctx().ClntId(), fid, time.Since(s))
+	}(s)
+
 	db.DPrintf(db.PROTSRV, "%v: Clunk %v f %v", f.Ctx().ClntId(), fid, f)
 	if f.IsOpen() { // has the fid been opened?
+		s = time.Now()
 		if _, err := ps.vt.Delete(f.Obj().Path()); err != nil {
 			db.DFatalf("%v: clunk %v vt del failed %v err %v\n", f.Ctx().ClntId(), fid, f.Obj(), err)
 		}

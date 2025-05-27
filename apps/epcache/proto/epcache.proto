@@ -1,0 +1,38 @@
+syntax = "proto3";
+
+import "sigmap/sigmap.proto";
+
+option go_package = "sigmaos/apps/epcache/proto";
+
+message Instance {
+  string iD = 1;
+  TendpointProto endpointProto = 2;
+}
+
+message RegisterEndpointReq {
+  string serviceName = 1;
+  Instance instance = 2;
+}
+
+message RegisterEndpointRep {
+  bool oK = 1;
+}
+
+message DeregisterEndpointReq {
+  string serviceName = 1;
+  string instanceID = 2;
+}
+
+message DeregisterEndpointRep {
+  bool oK = 1;
+}
+
+message GetEndpointsReq {
+  string serviceName = 1;
+  uint64 version = 2;
+}
+
+message GetEndpointsRep {
+  repeated Instance instances = 1;
+  uint64 version = 2;
+}

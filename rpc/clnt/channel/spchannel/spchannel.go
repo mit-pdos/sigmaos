@@ -6,11 +6,11 @@ import (
 	"time"
 
 	db "sigmaos/debug"
-	"sigmaos/sigmaclnt/fslib"
 	"sigmaos/rpc"
 	"sigmaos/rpc/clnt/channel"
 	rpcdevclnt "sigmaos/rpc/dev/clnt"
 	sessp "sigmaos/session/proto"
+	"sigmaos/sigmaclnt/fslib"
 	sp "sigmaos/sigmap"
 )
 
@@ -29,19 +29,24 @@ func NewSPChannelEndpoint(fsl *fslib.FsLib, pn string, ep *sp.Tendpoint) (channe
 
 func NewSPChannel(fsl *fslib.FsLib, pn string) (channel.RPCChannel, error) {
 	s := time.Now()
-	defer func() {
-		db.DPrintf(db.ATTACH_LAT, "NewSigmaRPCClnt %q lat %v", pn, time.Since(s))
-	}()
+	defer func(s time.Time) {
+		db.DPrintf(db.ATTACH_LAT, "NewSigmaPRPCChannel E2e %q lat %v", pn, time.Since(s))
+	}(s)
 
 	pn0 := filepath.Join(pn, rpc.RPC)
+	s = time.Now()
 	sdc, err := rpcdevclnt.NewSessDevClnt(fsl, pn0)
 	if err != nil {
 		return nil, err
 	}
+	db.DPrintf(db.ATTACH_LAT, "NewSigmaPRPCChannel NewSessDevClnt %q lat %v", pn, time.Since(s))
+	db.DPrintf(db.RPCCLNT, "Open %v", sdc.DataPn())
+	s = time.Now()
 	fd, err := fsl.Open(sdc.DataPn(), sp.ORDWR)
 	if err != nil {
 		return nil, err
 	}
+	db.DPrintf(db.ATTACH_LAT, "NewSigmaPRPCChannel Open %q lat %v", pn, time.Since(s))
 	return &SPChannel{
 		fsl: fsl,
 		fd:  fd,

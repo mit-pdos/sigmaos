@@ -52,6 +52,9 @@ extern const ::PROTOBUF_NAMESPACE_ID::internal::DescriptorTable descriptor_table
 class ProcEnvProto;
 struct ProcEnvProtoDefaultTypeInternal;
 extern ProcEnvProtoDefaultTypeInternal _ProcEnvProto_default_instance_;
+class ProcEnvProto_CachedEndpointsEntry_DoNotUse;
+struct ProcEnvProto_CachedEndpointsEntry_DoNotUseDefaultTypeInternal;
+extern ProcEnvProto_CachedEndpointsEntry_DoNotUseDefaultTypeInternal _ProcEnvProto_CachedEndpointsEntry_DoNotUse_default_instance_;
 class ProcEnvProto_EtcdEndpointsEntry_DoNotUse;
 struct ProcEnvProto_EtcdEndpointsEntry_DoNotUseDefaultTypeInternal;
 extern ProcEnvProto_EtcdEndpointsEntry_DoNotUseDefaultTypeInternal _ProcEnvProto_EtcdEndpointsEntry_DoNotUse_default_instance_;
@@ -69,6 +72,7 @@ struct ProcSeqnoDefaultTypeInternal;
 extern ProcSeqnoDefaultTypeInternal _ProcSeqno_default_instance_;
 PROTOBUF_NAMESPACE_OPEN
 template<> ::ProcEnvProto* Arena::CreateMaybeMessage<::ProcEnvProto>(Arena*);
+template<> ::ProcEnvProto_CachedEndpointsEntry_DoNotUse* Arena::CreateMaybeMessage<::ProcEnvProto_CachedEndpointsEntry_DoNotUse>(Arena*);
 template<> ::ProcEnvProto_EtcdEndpointsEntry_DoNotUse* Arena::CreateMaybeMessage<::ProcEnvProto_EtcdEndpointsEntry_DoNotUse>(Arena*);
 template<> ::ProcEnvProto_SecretsMapEntry_DoNotUse* Arena::CreateMaybeMessage<::ProcEnvProto_SecretsMapEntry_DoNotUse>(Arena*);
 template<> ::ProcProto* Arena::CreateMaybeMessage<::ProcProto>(Arena*);
@@ -321,6 +325,32 @@ public:
 
 // -------------------------------------------------------------------
 
+class ProcEnvProto_CachedEndpointsEntry_DoNotUse : public ::PROTOBUF_NAMESPACE_ID::internal::MapEntry<ProcEnvProto_CachedEndpointsEntry_DoNotUse, 
+    std::string, ::TendpointProto,
+    ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::TYPE_STRING,
+    ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::TYPE_MESSAGE> {
+public:
+  typedef ::PROTOBUF_NAMESPACE_ID::internal::MapEntry<ProcEnvProto_CachedEndpointsEntry_DoNotUse, 
+    std::string, ::TendpointProto,
+    ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::TYPE_STRING,
+    ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::TYPE_MESSAGE> SuperType;
+  ProcEnvProto_CachedEndpointsEntry_DoNotUse();
+  explicit PROTOBUF_CONSTEXPR ProcEnvProto_CachedEndpointsEntry_DoNotUse(
+      ::PROTOBUF_NAMESPACE_ID::internal::ConstantInitialized);
+  explicit ProcEnvProto_CachedEndpointsEntry_DoNotUse(::PROTOBUF_NAMESPACE_ID::Arena* arena);
+  void MergeFrom(const ProcEnvProto_CachedEndpointsEntry_DoNotUse& other);
+  static const ProcEnvProto_CachedEndpointsEntry_DoNotUse* internal_default_instance() { return reinterpret_cast<const ProcEnvProto_CachedEndpointsEntry_DoNotUse*>(&_ProcEnvProto_CachedEndpointsEntry_DoNotUse_default_instance_); }
+  static bool ValidateKey(std::string* s) {
+    return ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::VerifyUtf8String(s->data(), static_cast<int>(s->size()), ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::PARSE, "ProcEnvProto.CachedEndpointsEntry.key");
+ }
+  static bool ValidateValue(void*) { return true; }
+  using ::PROTOBUF_NAMESPACE_ID::Message::MergeFrom;
+  ::PROTOBUF_NAMESPACE_ID::Metadata GetMetadata() const final;
+  friend struct ::TableStruct_proc_2fproc_2eproto;
+};
+
+// -------------------------------------------------------------------
+
 class ProcEnvProto final :
     public ::PROTOBUF_NAMESPACE_ID::Message /* @@protoc_insertion_point(class_definition:ProcEnvProto) */ {
  public:
@@ -369,7 +399,7 @@ class ProcEnvProto final :
                &_ProcEnvProto_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    3;
+    4;
 
   friend void swap(ProcEnvProto& a, ProcEnvProto& b) {
     a.Swap(&b);
@@ -446,9 +476,10 @@ class ProcEnvProto final :
 
   enum : int {
     kEtcdEndpointsFieldNumber = 7,
-    kSecretsMapFieldNumber = 23,
-    kSigmaPathFieldNumber = 24,
-    kKernelsFieldNumber = 25,
+    kSecretsMapFieldNumber = 21,
+    kSigmaPathFieldNumber = 22,
+    kKernelsFieldNumber = 23,
+    kCachedEndpointsFieldNumber = 27,
     kPidStrFieldNumber = 1,
     kProgramFieldNumber = 2,
     kRealmStrFieldNumber = 3,
@@ -462,18 +493,16 @@ class ProcEnvProto final :
     kDebugFieldNumber = 13,
     kProcdPIDStrFieldNumber = 14,
     kStraceFieldNumber = 18,
-    kRealmSwitchStrFieldNumber = 26,
-    kVersionFieldNumber = 27,
-    kFailFieldNumber = 28,
-    kValgrindFieldNumber = 29,
+    kRealmSwitchStrFieldNumber = 24,
+    kVersionFieldNumber = 25,
+    kFailFieldNumber = 26,
+    kValgrindFieldNumber = 28,
     kPrincipalFieldNumber = 4,
     kSpawnTimePBFieldNumber = 17,
-    kMSchedEndpointProtoFieldNumber = 19,
-    kNamedEndpointProtoFieldNumber = 20,
     kHowIntFieldNumber = 16,
     kPrivilegedFieldNumber = 15,
-    kUseSPProxyFieldNumber = 21,
-    kUseDialProxyFieldNumber = 22,
+    kUseSPProxyFieldNumber = 19,
+    kUseDialProxyFieldNumber = 20,
   };
   // map<string, .TendpointProto> etcdEndpoints = 7;
   int etcdendpoints_size() const;
@@ -492,7 +521,7 @@ class ProcEnvProto final :
   ::PROTOBUF_NAMESPACE_ID::Map< std::string, ::TendpointProto >*
       mutable_etcdendpoints();
 
-  // map<string, .SecretProto> secretsMap = 23;
+  // map<string, .SecretProto> secretsMap = 21;
   int secretsmap_size() const;
   private:
   int _internal_secretsmap_size() const;
@@ -509,7 +538,7 @@ class ProcEnvProto final :
   ::PROTOBUF_NAMESPACE_ID::Map< std::string, ::SecretProto >*
       mutable_secretsmap();
 
-  // repeated string sigmaPath = 24;
+  // repeated string sigmaPath = 22;
   int sigmapath_size() const;
   private:
   int _internal_sigmapath_size() const;
@@ -533,7 +562,7 @@ class ProcEnvProto final :
   std::string* _internal_add_sigmapath();
   public:
 
-  // repeated string kernels = 25;
+  // repeated string kernels = 23;
   int kernels_size() const;
   private:
   int _internal_kernels_size() const;
@@ -556,6 +585,23 @@ class ProcEnvProto final :
   const std::string& _internal_kernels(int index) const;
   std::string* _internal_add_kernels();
   public:
+
+  // map<string, .TendpointProto> cachedEndpoints = 27;
+  int cachedendpoints_size() const;
+  private:
+  int _internal_cachedendpoints_size() const;
+  public:
+  void clear_cachedendpoints();
+  private:
+  const ::PROTOBUF_NAMESPACE_ID::Map< std::string, ::TendpointProto >&
+      _internal_cachedendpoints() const;
+  ::PROTOBUF_NAMESPACE_ID::Map< std::string, ::TendpointProto >*
+      _internal_mutable_cachedendpoints();
+  public:
+  const ::PROTOBUF_NAMESPACE_ID::Map< std::string, ::TendpointProto >&
+      cachedendpoints() const;
+  ::PROTOBUF_NAMESPACE_ID::Map< std::string, ::TendpointProto >*
+      mutable_cachedendpoints();
 
   // string pidStr = 1;
   void clear_pidstr();
@@ -739,7 +785,7 @@ class ProcEnvProto final :
   std::string* _internal_mutable_strace();
   public:
 
-  // string realmSwitchStr = 26;
+  // string realmSwitchStr = 24;
   void clear_realmswitchstr();
   const std::string& realmswitchstr() const;
   template <typename ArgT0 = const std::string&, typename... ArgT>
@@ -753,7 +799,7 @@ class ProcEnvProto final :
   std::string* _internal_mutable_realmswitchstr();
   public:
 
-  // string version = 27;
+  // string version = 25;
   void clear_version();
   const std::string& version() const;
   template <typename ArgT0 = const std::string&, typename... ArgT>
@@ -767,7 +813,7 @@ class ProcEnvProto final :
   std::string* _internal_mutable_version();
   public:
 
-  // string fail = 28;
+  // string fail = 26;
   void clear_fail();
   const std::string& fail() const;
   template <typename ArgT0 = const std::string&, typename... ArgT>
@@ -781,7 +827,7 @@ class ProcEnvProto final :
   std::string* _internal_mutable_fail();
   public:
 
-  // string valgrind = 29;
+  // string valgrind = 28;
   void clear_valgrind();
   const std::string& valgrind() const;
   template <typename ArgT0 = const std::string&, typename... ArgT>
@@ -831,42 +877,6 @@ class ProcEnvProto final :
       ::PROTOBUF_NAMESPACE_ID::Timestamp* spawntimepb);
   ::PROTOBUF_NAMESPACE_ID::Timestamp* unsafe_arena_release_spawntimepb();
 
-  // .TendpointProto mSchedEndpointProto = 19;
-  bool has_mschedendpointproto() const;
-  private:
-  bool _internal_has_mschedendpointproto() const;
-  public:
-  void clear_mschedendpointproto();
-  const ::TendpointProto& mschedendpointproto() const;
-  PROTOBUF_NODISCARD ::TendpointProto* release_mschedendpointproto();
-  ::TendpointProto* mutable_mschedendpointproto();
-  void set_allocated_mschedendpointproto(::TendpointProto* mschedendpointproto);
-  private:
-  const ::TendpointProto& _internal_mschedendpointproto() const;
-  ::TendpointProto* _internal_mutable_mschedendpointproto();
-  public:
-  void unsafe_arena_set_allocated_mschedendpointproto(
-      ::TendpointProto* mschedendpointproto);
-  ::TendpointProto* unsafe_arena_release_mschedendpointproto();
-
-  // .TendpointProto namedEndpointProto = 20;
-  bool has_namedendpointproto() const;
-  private:
-  bool _internal_has_namedendpointproto() const;
-  public:
-  void clear_namedendpointproto();
-  const ::TendpointProto& namedendpointproto() const;
-  PROTOBUF_NODISCARD ::TendpointProto* release_namedendpointproto();
-  ::TendpointProto* mutable_namedendpointproto();
-  void set_allocated_namedendpointproto(::TendpointProto* namedendpointproto);
-  private:
-  const ::TendpointProto& _internal_namedendpointproto() const;
-  ::TendpointProto* _internal_mutable_namedendpointproto();
-  public:
-  void unsafe_arena_set_allocated_namedendpointproto(
-      ::TendpointProto* namedendpointproto);
-  ::TendpointProto* unsafe_arena_release_namedendpointproto();
-
   // int32 howInt = 16;
   void clear_howint();
   int32_t howint() const;
@@ -885,7 +895,7 @@ class ProcEnvProto final :
   void _internal_set_privileged(bool value);
   public:
 
-  // bool useSPProxy = 21;
+  // bool useSPProxy = 19;
   void clear_usespproxy();
   bool usespproxy() const;
   void set_usespproxy(bool value);
@@ -894,7 +904,7 @@ class ProcEnvProto final :
   void _internal_set_usespproxy(bool value);
   public:
 
-  // bool useDialProxy = 22;
+  // bool useDialProxy = 20;
   void clear_usedialproxy();
   bool usedialproxy() const;
   void set_usedialproxy(bool value);
@@ -923,6 +933,11 @@ class ProcEnvProto final :
         ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::TYPE_MESSAGE> secretsmap_;
     ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField<std::string> sigmapath_;
     ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField<std::string> kernels_;
+    ::PROTOBUF_NAMESPACE_ID::internal::MapField<
+        ProcEnvProto_CachedEndpointsEntry_DoNotUse,
+        std::string, ::TendpointProto,
+        ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::TYPE_STRING,
+        ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::TYPE_MESSAGE> cachedendpoints_;
     ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr pidstr_;
     ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr program_;
     ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr realmstr_;
@@ -942,8 +957,6 @@ class ProcEnvProto final :
     ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr valgrind_;
     ::Tprincipal* principal_;
     ::PROTOBUF_NAMESPACE_ID::Timestamp* spawntimepb_;
-    ::TendpointProto* mschedendpointproto_;
-    ::TendpointProto* namedendpointproto_;
     int32_t howint_;
     bool privileged_;
     bool usespproxy_;
@@ -1031,7 +1044,7 @@ class ProcProto final :
                &_ProcProto_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    5;
+    6;
 
   friend void swap(ProcProto& a, ProcProto& b) {
     a.Swap(&b);
@@ -1373,6 +1386,8 @@ inline void ProcSeqno::set_allocated_mschedid(std::string* mschedid) {
 #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
   // @@protoc_insertion_point(field_set_allocated:ProcSeqno.mSchedID)
 }
+
+// -------------------------------------------------------------------
 
 // -------------------------------------------------------------------
 
@@ -2268,177 +2283,7 @@ inline void ProcEnvProto::set_allocated_strace(std::string* strace) {
   // @@protoc_insertion_point(field_set_allocated:ProcEnvProto.strace)
 }
 
-// .TendpointProto mSchedEndpointProto = 19;
-inline bool ProcEnvProto::_internal_has_mschedendpointproto() const {
-  return this != internal_default_instance() && _impl_.mschedendpointproto_ != nullptr;
-}
-inline bool ProcEnvProto::has_mschedendpointproto() const {
-  return _internal_has_mschedendpointproto();
-}
-inline const ::TendpointProto& ProcEnvProto::_internal_mschedendpointproto() const {
-  const ::TendpointProto* p = _impl_.mschedendpointproto_;
-  return p != nullptr ? *p : reinterpret_cast<const ::TendpointProto&>(
-      ::_TendpointProto_default_instance_);
-}
-inline const ::TendpointProto& ProcEnvProto::mschedendpointproto() const {
-  // @@protoc_insertion_point(field_get:ProcEnvProto.mSchedEndpointProto)
-  return _internal_mschedendpointproto();
-}
-inline void ProcEnvProto::unsafe_arena_set_allocated_mschedendpointproto(
-    ::TendpointProto* mschedendpointproto) {
-  if (GetArenaForAllocation() == nullptr) {
-    delete reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(_impl_.mschedendpointproto_);
-  }
-  _impl_.mschedendpointproto_ = mschedendpointproto;
-  if (mschedendpointproto) {
-    
-  } else {
-    
-  }
-  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:ProcEnvProto.mSchedEndpointProto)
-}
-inline ::TendpointProto* ProcEnvProto::release_mschedendpointproto() {
-  
-  ::TendpointProto* temp = _impl_.mschedendpointproto_;
-  _impl_.mschedendpointproto_ = nullptr;
-#ifdef PROTOBUF_FORCE_COPY_IN_RELEASE
-  auto* old =  reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(temp);
-  temp = ::PROTOBUF_NAMESPACE_ID::internal::DuplicateIfNonNull(temp);
-  if (GetArenaForAllocation() == nullptr) { delete old; }
-#else  // PROTOBUF_FORCE_COPY_IN_RELEASE
-  if (GetArenaForAllocation() != nullptr) {
-    temp = ::PROTOBUF_NAMESPACE_ID::internal::DuplicateIfNonNull(temp);
-  }
-#endif  // !PROTOBUF_FORCE_COPY_IN_RELEASE
-  return temp;
-}
-inline ::TendpointProto* ProcEnvProto::unsafe_arena_release_mschedendpointproto() {
-  // @@protoc_insertion_point(field_release:ProcEnvProto.mSchedEndpointProto)
-  
-  ::TendpointProto* temp = _impl_.mschedendpointproto_;
-  _impl_.mschedendpointproto_ = nullptr;
-  return temp;
-}
-inline ::TendpointProto* ProcEnvProto::_internal_mutable_mschedendpointproto() {
-  
-  if (_impl_.mschedendpointproto_ == nullptr) {
-    auto* p = CreateMaybeMessage<::TendpointProto>(GetArenaForAllocation());
-    _impl_.mschedendpointproto_ = p;
-  }
-  return _impl_.mschedendpointproto_;
-}
-inline ::TendpointProto* ProcEnvProto::mutable_mschedendpointproto() {
-  ::TendpointProto* _msg = _internal_mutable_mschedendpointproto();
-  // @@protoc_insertion_point(field_mutable:ProcEnvProto.mSchedEndpointProto)
-  return _msg;
-}
-inline void ProcEnvProto::set_allocated_mschedendpointproto(::TendpointProto* mschedendpointproto) {
-  ::PROTOBUF_NAMESPACE_ID::Arena* message_arena = GetArenaForAllocation();
-  if (message_arena == nullptr) {
-    delete reinterpret_cast< ::PROTOBUF_NAMESPACE_ID::MessageLite*>(_impl_.mschedendpointproto_);
-  }
-  if (mschedendpointproto) {
-    ::PROTOBUF_NAMESPACE_ID::Arena* submessage_arena =
-        ::PROTOBUF_NAMESPACE_ID::Arena::InternalGetOwningArena(
-                reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(mschedendpointproto));
-    if (message_arena != submessage_arena) {
-      mschedendpointproto = ::PROTOBUF_NAMESPACE_ID::internal::GetOwnedMessage(
-          message_arena, mschedendpointproto, submessage_arena);
-    }
-    
-  } else {
-    
-  }
-  _impl_.mschedendpointproto_ = mschedendpointproto;
-  // @@protoc_insertion_point(field_set_allocated:ProcEnvProto.mSchedEndpointProto)
-}
-
-// .TendpointProto namedEndpointProto = 20;
-inline bool ProcEnvProto::_internal_has_namedendpointproto() const {
-  return this != internal_default_instance() && _impl_.namedendpointproto_ != nullptr;
-}
-inline bool ProcEnvProto::has_namedendpointproto() const {
-  return _internal_has_namedendpointproto();
-}
-inline const ::TendpointProto& ProcEnvProto::_internal_namedendpointproto() const {
-  const ::TendpointProto* p = _impl_.namedendpointproto_;
-  return p != nullptr ? *p : reinterpret_cast<const ::TendpointProto&>(
-      ::_TendpointProto_default_instance_);
-}
-inline const ::TendpointProto& ProcEnvProto::namedendpointproto() const {
-  // @@protoc_insertion_point(field_get:ProcEnvProto.namedEndpointProto)
-  return _internal_namedendpointproto();
-}
-inline void ProcEnvProto::unsafe_arena_set_allocated_namedendpointproto(
-    ::TendpointProto* namedendpointproto) {
-  if (GetArenaForAllocation() == nullptr) {
-    delete reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(_impl_.namedendpointproto_);
-  }
-  _impl_.namedendpointproto_ = namedendpointproto;
-  if (namedendpointproto) {
-    
-  } else {
-    
-  }
-  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:ProcEnvProto.namedEndpointProto)
-}
-inline ::TendpointProto* ProcEnvProto::release_namedendpointproto() {
-  
-  ::TendpointProto* temp = _impl_.namedendpointproto_;
-  _impl_.namedendpointproto_ = nullptr;
-#ifdef PROTOBUF_FORCE_COPY_IN_RELEASE
-  auto* old =  reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(temp);
-  temp = ::PROTOBUF_NAMESPACE_ID::internal::DuplicateIfNonNull(temp);
-  if (GetArenaForAllocation() == nullptr) { delete old; }
-#else  // PROTOBUF_FORCE_COPY_IN_RELEASE
-  if (GetArenaForAllocation() != nullptr) {
-    temp = ::PROTOBUF_NAMESPACE_ID::internal::DuplicateIfNonNull(temp);
-  }
-#endif  // !PROTOBUF_FORCE_COPY_IN_RELEASE
-  return temp;
-}
-inline ::TendpointProto* ProcEnvProto::unsafe_arena_release_namedendpointproto() {
-  // @@protoc_insertion_point(field_release:ProcEnvProto.namedEndpointProto)
-  
-  ::TendpointProto* temp = _impl_.namedendpointproto_;
-  _impl_.namedendpointproto_ = nullptr;
-  return temp;
-}
-inline ::TendpointProto* ProcEnvProto::_internal_mutable_namedendpointproto() {
-  
-  if (_impl_.namedendpointproto_ == nullptr) {
-    auto* p = CreateMaybeMessage<::TendpointProto>(GetArenaForAllocation());
-    _impl_.namedendpointproto_ = p;
-  }
-  return _impl_.namedendpointproto_;
-}
-inline ::TendpointProto* ProcEnvProto::mutable_namedendpointproto() {
-  ::TendpointProto* _msg = _internal_mutable_namedendpointproto();
-  // @@protoc_insertion_point(field_mutable:ProcEnvProto.namedEndpointProto)
-  return _msg;
-}
-inline void ProcEnvProto::set_allocated_namedendpointproto(::TendpointProto* namedendpointproto) {
-  ::PROTOBUF_NAMESPACE_ID::Arena* message_arena = GetArenaForAllocation();
-  if (message_arena == nullptr) {
-    delete reinterpret_cast< ::PROTOBUF_NAMESPACE_ID::MessageLite*>(_impl_.namedendpointproto_);
-  }
-  if (namedendpointproto) {
-    ::PROTOBUF_NAMESPACE_ID::Arena* submessage_arena =
-        ::PROTOBUF_NAMESPACE_ID::Arena::InternalGetOwningArena(
-                reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(namedendpointproto));
-    if (message_arena != submessage_arena) {
-      namedendpointproto = ::PROTOBUF_NAMESPACE_ID::internal::GetOwnedMessage(
-          message_arena, namedendpointproto, submessage_arena);
-    }
-    
-  } else {
-    
-  }
-  _impl_.namedendpointproto_ = namedendpointproto;
-  // @@protoc_insertion_point(field_set_allocated:ProcEnvProto.namedEndpointProto)
-}
-
-// bool useSPProxy = 21;
+// bool useSPProxy = 19;
 inline void ProcEnvProto::clear_usespproxy() {
   _impl_.usespproxy_ = false;
 }
@@ -2458,7 +2303,7 @@ inline void ProcEnvProto::set_usespproxy(bool value) {
   // @@protoc_insertion_point(field_set:ProcEnvProto.useSPProxy)
 }
 
-// bool useDialProxy = 22;
+// bool useDialProxy = 20;
 inline void ProcEnvProto::clear_usedialproxy() {
   _impl_.usedialproxy_ = false;
 }
@@ -2478,7 +2323,7 @@ inline void ProcEnvProto::set_usedialproxy(bool value) {
   // @@protoc_insertion_point(field_set:ProcEnvProto.useDialProxy)
 }
 
-// map<string, .SecretProto> secretsMap = 23;
+// map<string, .SecretProto> secretsMap = 21;
 inline int ProcEnvProto::_internal_secretsmap_size() const {
   return _impl_.secretsmap_.size();
 }
@@ -2504,7 +2349,7 @@ ProcEnvProto::mutable_secretsmap() {
   return _internal_mutable_secretsmap();
 }
 
-// repeated string sigmaPath = 24;
+// repeated string sigmaPath = 22;
 inline int ProcEnvProto::_internal_sigmapath_size() const {
   return _impl_.sigmapath_.size();
 }
@@ -2579,7 +2424,7 @@ ProcEnvProto::mutable_sigmapath() {
   return &_impl_.sigmapath_;
 }
 
-// repeated string kernels = 25;
+// repeated string kernels = 23;
 inline int ProcEnvProto::_internal_kernels_size() const {
   return _impl_.kernels_.size();
 }
@@ -2654,7 +2499,7 @@ ProcEnvProto::mutable_kernels() {
   return &_impl_.kernels_;
 }
 
-// string realmSwitchStr = 26;
+// string realmSwitchStr = 24;
 inline void ProcEnvProto::clear_realmswitchstr() {
   _impl_.realmswitchstr_.ClearToEmpty();
 }
@@ -2704,7 +2549,7 @@ inline void ProcEnvProto::set_allocated_realmswitchstr(std::string* realmswitchs
   // @@protoc_insertion_point(field_set_allocated:ProcEnvProto.realmSwitchStr)
 }
 
-// string version = 27;
+// string version = 25;
 inline void ProcEnvProto::clear_version() {
   _impl_.version_.ClearToEmpty();
 }
@@ -2754,7 +2599,7 @@ inline void ProcEnvProto::set_allocated_version(std::string* version) {
   // @@protoc_insertion_point(field_set_allocated:ProcEnvProto.version)
 }
 
-// string fail = 28;
+// string fail = 26;
 inline void ProcEnvProto::clear_fail() {
   _impl_.fail_.ClearToEmpty();
 }
@@ -2804,7 +2649,33 @@ inline void ProcEnvProto::set_allocated_fail(std::string* fail) {
   // @@protoc_insertion_point(field_set_allocated:ProcEnvProto.fail)
 }
 
-// string valgrind = 29;
+// map<string, .TendpointProto> cachedEndpoints = 27;
+inline int ProcEnvProto::_internal_cachedendpoints_size() const {
+  return _impl_.cachedendpoints_.size();
+}
+inline int ProcEnvProto::cachedendpoints_size() const {
+  return _internal_cachedendpoints_size();
+}
+inline const ::PROTOBUF_NAMESPACE_ID::Map< std::string, ::TendpointProto >&
+ProcEnvProto::_internal_cachedendpoints() const {
+  return _impl_.cachedendpoints_.GetMap();
+}
+inline const ::PROTOBUF_NAMESPACE_ID::Map< std::string, ::TendpointProto >&
+ProcEnvProto::cachedendpoints() const {
+  // @@protoc_insertion_point(field_map:ProcEnvProto.cachedEndpoints)
+  return _internal_cachedendpoints();
+}
+inline ::PROTOBUF_NAMESPACE_ID::Map< std::string, ::TendpointProto >*
+ProcEnvProto::_internal_mutable_cachedendpoints() {
+  return _impl_.cachedendpoints_.MutableMap();
+}
+inline ::PROTOBUF_NAMESPACE_ID::Map< std::string, ::TendpointProto >*
+ProcEnvProto::mutable_cachedendpoints() {
+  // @@protoc_insertion_point(field_mutable_map:ProcEnvProto.cachedEndpoints)
+  return _internal_mutable_cachedendpoints();
+}
+
+// string valgrind = 28;
 inline void ProcEnvProto::clear_valgrind() {
   _impl_.valgrind_.ClearToEmpty();
 }
@@ -3117,6 +2988,8 @@ inline void ProcProto::set_memint(uint32_t value) {
 #ifdef __GNUC__
   #pragma GCC diagnostic pop
 #endif  // __GNUC__
+// -------------------------------------------------------------------
+
 // -------------------------------------------------------------------
 
 // -------------------------------------------------------------------

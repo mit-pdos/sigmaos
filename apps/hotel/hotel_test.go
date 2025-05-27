@@ -5,19 +5,24 @@ import (
 	"fmt"
 	"math/rand"
 	"net"
+	"path/filepath"
 	"strconv"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 
+	"sigmaos/apps/epcache"
+	epcachesrv "sigmaos/apps/epcache/srv"
 	"sigmaos/apps/hotel"
 	"sigmaos/apps/hotel/proto"
+	"sigmaos/benchmarks"
 	"sigmaos/benchmarks/loadgen"
 	db "sigmaos/debug"
 	"sigmaos/path"
 	"sigmaos/proc"
 	dbclnt "sigmaos/proxy/db/clnt"
+	"sigmaos/rpc"
 	sprpcclnt "sigmaos/rpc/clnt/sigmap"
 	shardedsvcrpcclnt "sigmaos/rpc/shardedsvc/clnt"
 	sp "sigmaos/sigmap"
@@ -32,6 +37,7 @@ var MAX_RPS int
 var DURATION time.Duration
 var cache string
 var TEST_AUTH bool
+var prewarm bool
 
 const (
 	NCACHESRV             = 6
@@ -44,6 +50,7 @@ func init() {
 	flag.StringVar(&K8S_ADDR, "k8saddr", "", "Addr of k8s frontend.")
 	flag.IntVar(&MAX_RPS, "maxrps", 1000, "Max number of requests/sec.")
 	flag.BoolVar(&TEST_AUTH, "auth", false, "Testing k8s auth")
+	flag.BoolVar(&prewarm, "prewarm", false, "Prewarm bins (only implemented for some tests)")
 	flag.DurationVar(&DURATION, "duration", 10*time.Second, "Duration of load generation benchmarks.")
 	flag.StringVar(&cache, "cache", "cached", "Cache service")
 }
@@ -60,7 +67,8 @@ func newTstate(mrts *test.MultiRealmTstate, srvs []*hotel.Srv, nserver int, geoN
 	ts.job = rd.String(8)
 	ts.mrts = mrts
 	n := 0
-	for i := 1; int(linuxsched.GetNCores())*i < len(srvs)*2+nserver*2; i++ {
+	// Avg of 2 cores per service, + epcache core
+	for i := 1; int(linuxsched.GetNCores())*i < len(srvs)*2+nserver*2+int(epcachesrv.SRV_MCPU/1000); i++ {
 		n += 1
 	}
 	err = ts.mrts.GetRealm(test.REALM1).BootNode(n)
@@ -443,8 +451,9 @@ func runGeo(t *testing.T, wc *hotel.WebClnt, r *rand.Rand) {
 
 func TestBenchSpawnGeo(t *testing.T) {
 	const (
-		N_GEO  = 15
-		N_NODE = 8
+		N_GEO      = 15
+		N_NODE     = 8
+		N_PARALLEL = 2
 	)
 	// Bail out early if machine has too many cores (which messes with the cgroups setting)
 	if !assert.False(t, linuxsched.GetNCores() > 10, "SpawnBurst test will fail because machine has >10 cores, which causes cgroups settings to fail") {
@@ -462,15 +471,30 @@ func TestBenchSpawnGeo(t *testing.T) {
 		return
 	}
 
-	rpcdc := shardedsvcrpcclnt.NewShardedSvcRPCClnt(mrts.GetRealm(test.REALM1).FsLib, hotel.HOTELGEODIR, db.TEST, db.TEST)
-	geoID, err := rpcdc.WaitTimedRandomEntry()
-	if !assert.Nil(t, err, "Err get geo server ID: %v", err) {
+	if prewarm {
+		benchmarks.WarmupRealm(mrts.GetRealm(test.REALM1), []string{"hotel-geod"})
+	}
+
+	eps, _, err := ts.hotel.EPCacheJob.Clnt.GetEndpoints(hotel.HOTELGEODIR, epcache.NO_VERSION)
+	if !assert.Nil(t, err, "Err getEndpoints: %v", err) {
 		return
 	}
-	rpcc, err := rpcdc.GetClnt(geoID)
+
+	if !assert.Equal(t, len(eps), 1, "Wrong num eps: %v", len(eps)) {
+		return
+	}
+
+	pn := "name/geosrv"
+	db.DPrintf(db.ALWAYS, "Mount start")
+	if err := mrts.GetRealm(test.REALM1).FsLib.MountTree(sp.NewEndpointFromProto(eps[0].EndpointProto), rpc.RPC, filepath.Join(pn, rpc.RPC)); !assert.Nil(t, err, "Err mount geo srv: %v", err) {
+		return
+	}
+
+	rpcc, err := sprpcclnt.NewRPCClnt(mrts.GetRealm(test.REALM1).FsLib, pn)
 	if !assert.Nil(t, err, "Err get geo clnt: %v", err) {
 		return
 	}
+
 	arg := proto.GeoReq{
 		Lat: 37.7749,
 		Lon: -122.4194,
@@ -481,13 +505,20 @@ func TestBenchSpawnGeo(t *testing.T) {
 	db.DPrintf(db.TEST, "res %v\n", res.HotelIds)
 	assert.Equal(t, 9, len(res.HotelIds))
 	db.DPrintf(db.TEST, "Spawning %v additional geos", N_GEO)
+	// Control amount of parallelism
+	p := make(chan bool, N_PARALLEL)
+	for i := 0; i < N_PARALLEL; i++ {
+		p <- true
+	}
 	c := make(chan bool)
 	for i := 0; i < N_GEO; i++ {
-		go func(c chan bool) {
+		go func(c chan bool, p chan bool) {
+			<-p
 			err := ts.hotel.AddGeoSrv()
 			assert.Nil(mrts.T, err, "Err add geo srv: %v")
+			p <- true
 			c <- true
-		}(c)
+		}(c, p)
 	}
 	for i := 0; i < N_GEO; i++ {
 		<-c

@@ -334,10 +334,20 @@ func (ps *ProcSrv) Run(ctx fs.CtxI, req proto.RunReq, res *proto.RunRep) error {
 		// works
 		return fmt.Errorf("Dummy")
 	}
+
 	// Assign this uprocsrv to the realm, if not already assigned.
 	if err := ps.assignToRealm(uproc.GetRealm(), uproc.GetPid(), uproc.GetVersionedProgram(), uproc.GetSigmaPath(), uproc.GetSecrets()["s3"], uproc.GetNamedEndpoint()); err != nil {
 		db.DFatalf("Err assign to realm: %v", err)
 	}
+	// Prefetch file stats
+	go func() {
+		s := time.Now()
+		if _, _, err := ps.ckclnt.GetFileStat(ps.kernelId, uproc.GetVersionedProgram(), uproc.GetPid(), uproc.GetRealm(), uproc.GetSecrets()["s3"], uproc.GetSigmaPath(), uproc.GetNamedEndpoint()); err != nil {
+			db.DPrintf(db.PROCD, "GetFileStat %v %v err %v", ps.kernelId, uproc.GetRealm(), err)
+		}
+		perf.LogSpawnLatency("ProcSrv.prefetch2", uproc.GetPid(), perf.TIME_NOT_SET, s)
+	}()
+
 	// Set this uprocsrv's Linux scheduling policy
 	if err := ps.setSchedPolicy(uproc.GetPid(), uproc.GetType()); err != nil {
 		db.DFatalf("Err set sched policy: %v", err)

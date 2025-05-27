@@ -49,7 +49,7 @@ const (
 	// The kernel's scheduler starts a uprocsrv container per realm
 	// and proc type and mounts "/tmp/sigmaos-bin/<kernelid>" at
 	// ROOTBINCONTAINER for uprocsrv.
-	ROOTBINCONTAINER = sp.SIGMAHOME + "all-realm-bin"
+	ROOTBINCONTAINER = sp.SIGMAHOME + "/all-realm-bin"
 
 	// The directory ROOTBINCONTAINER/<realm> is mounted here by
 	// uprocsrv:

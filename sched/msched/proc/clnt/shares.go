@@ -115,10 +115,11 @@ func (pdm *ProcdMgr) setShare(rpcc *ProcClnt, share Tshare) error {
 	if rpcc.share > 10000 {
 		db.DFatalf("Share outside of cgroupsv2 range [1,10000]: %v\n%v", rpcc.share, string(debug.Stack()))
 	}
-	if err := pdm.kclnt.SetCPUShares(rpcc.pid, int64(share)); err != nil {
-		db.DPrintf(db.PROCDMGR, "Error SetCPUShares[%v] %v", rpcc.pid, err)
-		return err
-	}
+	go func() {
+		if err := pdm.kclnt.SetCPUShares(rpcc.pid, int64(share)); err != nil {
+			db.DPrintf(db.PROCDMGR, "Error SetCPUShares[%v] %v", rpcc.pid, err)
+		}
+	}()
 	db.DPrintf(db.PROCDMGR, "Set CPU share %v to %v", rpcc, share)
 	return nil
 }

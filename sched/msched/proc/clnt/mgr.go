@@ -185,7 +185,9 @@ func (pdm *ProcdMgr) delProcClnt(realm sp.Trealm, ptype proc.Ttype) error {
 			}
 		}
 	}
-	rpcc.Stop()
+	if rpcc != nil {
+		rpcc.Stop()
+	}
 	return nil
 }
 

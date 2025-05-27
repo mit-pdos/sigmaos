@@ -234,7 +234,6 @@ func (c *Coord) waitForTask(ft *fttask.FtTasks, start time.Time, ch chan Tresult
 		r.MsOuter = ms
 		ch <- Tresult{t, true, ms, status.Msg(), r}
 	} else { // task failed; make it runnable again
-		c.stat.Nfail += 1
 		db.DPrintf(db.MR, "Task failed %v status %v", t, status)
 		if status != nil && status.Msg() == RESTART {
 			// reducer indicates to run some mappers again
@@ -408,6 +407,8 @@ func (c *Coord) Round(ttype string) {
 				mapsDone = true
 				db.DPrintf(db.ALWAYS, "Mapping took %vs\n", time.Since(start).Seconds())
 			}
+		} else {
+			c.stat.Nfail += 1
 		}
 	}
 }

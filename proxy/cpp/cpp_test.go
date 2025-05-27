@@ -2,6 +2,8 @@ package cpp_test
 
 import (
 	"flag"
+	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -306,4 +308,36 @@ func TestSpinServerSpawnLatency(t *testing.T) {
 		<-c
 	}
 	db.DPrintf(db.TEST, "Procs done")
+}
+
+func TestSpinServerExec(t *testing.T) {
+	//	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
+	//	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+	//		return
+	//	}
+	//	defer mrts.Shutdown()
+	//
+	//	// Make union dir
+	//	if err := mrts.GetRealm(test.REALM1).MkDir(SRV_UNION_DIR, 0777); !assert.Nil(mrts.T, err, "Err mkunion") {
+	//		return
+	//	}
+	//
+	//	if err := mrts.GetRealm(test.REALM1).BootNode(N_NODE); !assert.Nil(t, err, "Err boot: %v", err) {
+	//		return
+	//	}
+
+	p := proc.NewProc("spin-srv-cpp", nil)
+	p.SetSpawnTime(time.Now())
+	homedir, err := os.UserHomeDir()
+	if !assert.Nil(t, err, "Err homedir: %v", err) {
+		return
+	}
+	cmd := exec.Command(filepath.Join(homedir, "sigmaos/bin/user", p.GetVersionedProgram()))
+	cmd.Env = append(cmd.Env, p.GetEnv()...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	if err := cmd.Start(); !assert.Nil(t, err, "Err command start: %v", err) {
+		return
+	}
+	cmd.Wait()
 }

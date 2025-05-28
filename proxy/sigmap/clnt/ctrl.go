@@ -38,11 +38,28 @@ func (scc *CtrlClnt) StatsSrv() (*rpc.RPCStatsSnapshot, error) {
 
 // Tell spproxyd to prepare for an incoming proc
 func (scc *CtrlClnt) InformIncomingProc(p *proc.Proc) error {
-	req := spproto.SigmaIncomingProcReq{
-		ProcProto: p.GetProto(),
+	req := spproto.SigmaInformProcReq{
+		ProcEnvProto: p.GetProcEnv().GetProto(),
 	}
 	rep := spproto.SigmaErrRep{}
 	err := scc.rpcc.RPC("CtrlAPI.InformIncomingProc", &req, &rep)
+	db.DPrintf(db.SPPROXYCLNT, "Inform incoming proc %v", p)
+	if err != nil {
+		return err
+	}
+	if rep.Err.TErrCode() != serr.TErrNoError {
+		return sp.NewErr(rep.Err)
+	}
+	return nil
+}
+
+// Tell spproxyd a proc is done
+func (scc *CtrlClnt) InformProcDone(p *proc.Proc) error {
+	req := spproto.SigmaInformProcReq{
+		ProcEnvProto: p.GetProcEnv().GetProto(),
+	}
+	rep := spproto.SigmaErrRep{}
+	err := scc.rpcc.RPC("CtrlAPI.InformProcDone", &req, &rep)
 	db.DPrintf(db.SPPROXYCLNT, "Inform incoming proc %v", p)
 	if err != nil {
 		return err

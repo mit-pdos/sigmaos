@@ -42,9 +42,16 @@ func newCtrlConn(conn net.Conn, spps *SPProxySrv) *CtrlConn {
 	return cc
 }
 
-func (capi *CtrlAPI) InformIncomingProc(ctx fs.CtxI, req scproto.SigmaIncomingProcReq, rep *scproto.SigmaErrRep) error {
-	capi.cc.spps.IncomingProc(req.ProcProto)
+func (capi *CtrlAPI) InformIncomingProc(ctx fs.CtxI, req scproto.SigmaInformProcReq, rep *scproto.SigmaErrRep) error {
+	capi.cc.spps.IncomingProc(req.ProcEnvProto)
 	rep.Err = sp.NewRerror()
+	return nil
+}
+
+func (capi *CtrlAPI) InformProcDone(ctx fs.CtxI, req scproto.SigmaInformProcReq, rep *scproto.SigmaErrRep) error {
+	db.DFatalf("Unimplemented")
+	//	capi.cc.spps.IncomingProc(req.ProcEnvProto)
+	//	rep.Err = sp.NewRerror()
 	return nil
 }
 

@@ -169,11 +169,10 @@ func (spps *SPProxySrv) getOrCreateSigmaClnt(pep *proc.ProcEnvProto, get bool) (
 	return scr.sc, scr.err
 }
 
-func (spps *SPProxySrv) IncomingProc(pp *proc.ProcProto) {
-	p := proc.NewProcFromProto(pp)
-	db.DPrintf(db.SPPROXYSRV, "Informed of incoming proc %v", p)
+func (spps *SPProxySrv) IncomingProc(pep *proc.ProcEnvProto) {
+	db.DPrintf(db.SPPROXYSRV, "Informed of incoming proc %v", pep.GetPID())
 	// Start creating a new sigmaclnt for the proc
-	spps.getOrCreateSigmaClnt(p.GetProcEnv().GetProto(), false)
+	spps.getOrCreateSigmaClnt(pep, false)
 }
 
 // The spproxyd process enters here

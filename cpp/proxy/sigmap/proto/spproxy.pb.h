@@ -72,9 +72,9 @@ extern SigmaFdRepDefaultTypeInternal _SigmaFdRep_default_instance_;
 class SigmaFenceReq;
 struct SigmaFenceReqDefaultTypeInternal;
 extern SigmaFenceReqDefaultTypeInternal _SigmaFenceReq_default_instance_;
-class SigmaIncomingProcReq;
-struct SigmaIncomingProcReqDefaultTypeInternal;
-extern SigmaIncomingProcReqDefaultTypeInternal _SigmaIncomingProcReq_default_instance_;
+class SigmaInformProcReq;
+struct SigmaInformProcReqDefaultTypeInternal;
+extern SigmaInformProcReqDefaultTypeInternal _SigmaInformProcReq_default_instance_;
 class SigmaInitReq;
 struct SigmaInitReqDefaultTypeInternal;
 extern SigmaInitReqDefaultTypeInternal _SigmaInitReq_default_instance_;
@@ -135,7 +135,7 @@ template<> ::SigmaErrRep* Arena::CreateMaybeMessage<::SigmaErrRep>(Arena*);
 template<> ::SigmaExitedReq* Arena::CreateMaybeMessage<::SigmaExitedReq>(Arena*);
 template<> ::SigmaFdRep* Arena::CreateMaybeMessage<::SigmaFdRep>(Arena*);
 template<> ::SigmaFenceReq* Arena::CreateMaybeMessage<::SigmaFenceReq>(Arena*);
-template<> ::SigmaIncomingProcReq* Arena::CreateMaybeMessage<::SigmaIncomingProcReq>(Arena*);
+template<> ::SigmaInformProcReq* Arena::CreateMaybeMessage<::SigmaInformProcReq>(Arena*);
 template<> ::SigmaInitReq* Arena::CreateMaybeMessage<::SigmaInitReq>(Arena*);
 template<> ::SigmaLastMountRep* Arena::CreateMaybeMessage<::SigmaLastMountRep>(Arena*);
 template<> ::SigmaMountRep* Arena::CreateMaybeMessage<::SigmaMountRep>(Arena*);
@@ -157,24 +157,24 @@ PROTOBUF_NAMESPACE_CLOSE
 
 // ===================================================================
 
-class SigmaIncomingProcReq final :
-    public ::PROTOBUF_NAMESPACE_ID::Message /* @@protoc_insertion_point(class_definition:SigmaIncomingProcReq) */ {
+class SigmaInformProcReq final :
+    public ::PROTOBUF_NAMESPACE_ID::Message /* @@protoc_insertion_point(class_definition:SigmaInformProcReq) */ {
  public:
-  inline SigmaIncomingProcReq() : SigmaIncomingProcReq(nullptr) {}
-  ~SigmaIncomingProcReq() override;
-  explicit PROTOBUF_CONSTEXPR SigmaIncomingProcReq(::PROTOBUF_NAMESPACE_ID::internal::ConstantInitialized);
+  inline SigmaInformProcReq() : SigmaInformProcReq(nullptr) {}
+  ~SigmaInformProcReq() override;
+  explicit PROTOBUF_CONSTEXPR SigmaInformProcReq(::PROTOBUF_NAMESPACE_ID::internal::ConstantInitialized);
 
-  SigmaIncomingProcReq(const SigmaIncomingProcReq& from);
-  SigmaIncomingProcReq(SigmaIncomingProcReq&& from) noexcept
-    : SigmaIncomingProcReq() {
+  SigmaInformProcReq(const SigmaInformProcReq& from);
+  SigmaInformProcReq(SigmaInformProcReq&& from) noexcept
+    : SigmaInformProcReq() {
     *this = ::std::move(from);
   }
 
-  inline SigmaIncomingProcReq& operator=(const SigmaIncomingProcReq& from) {
+  inline SigmaInformProcReq& operator=(const SigmaInformProcReq& from) {
     CopyFrom(from);
     return *this;
   }
-  inline SigmaIncomingProcReq& operator=(SigmaIncomingProcReq&& from) noexcept {
+  inline SigmaInformProcReq& operator=(SigmaInformProcReq&& from) noexcept {
     if (this == &from) return *this;
     if (GetOwningArena() == from.GetOwningArena()
   #ifdef PROTOBUF_FORCE_COPY_IN_MOVE
@@ -197,20 +197,20 @@ class SigmaIncomingProcReq final :
   static const ::PROTOBUF_NAMESPACE_ID::Reflection* GetReflection() {
     return default_instance().GetMetadata().reflection;
   }
-  static const SigmaIncomingProcReq& default_instance() {
+  static const SigmaInformProcReq& default_instance() {
     return *internal_default_instance();
   }
-  static inline const SigmaIncomingProcReq* internal_default_instance() {
-    return reinterpret_cast<const SigmaIncomingProcReq*>(
-               &_SigmaIncomingProcReq_default_instance_);
+  static inline const SigmaInformProcReq* internal_default_instance() {
+    return reinterpret_cast<const SigmaInformProcReq*>(
+               &_SigmaInformProcReq_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
     0;
 
-  friend void swap(SigmaIncomingProcReq& a, SigmaIncomingProcReq& b) {
+  friend void swap(SigmaInformProcReq& a, SigmaInformProcReq& b) {
     a.Swap(&b);
   }
-  inline void Swap(SigmaIncomingProcReq* other) {
+  inline void Swap(SigmaInformProcReq* other) {
     if (other == this) return;
   #ifdef PROTOBUF_FORCE_COPY_IN_SWAP
     if (GetOwningArena() != nullptr &&
@@ -223,7 +223,7 @@ class SigmaIncomingProcReq final :
       ::PROTOBUF_NAMESPACE_ID::internal::GenericSwap(this, other);
     }
   }
-  void UnsafeArenaSwap(SigmaIncomingProcReq* other) {
+  void UnsafeArenaSwap(SigmaInformProcReq* other) {
     if (other == this) return;
     GOOGLE_DCHECK(GetOwningArena() == other->GetOwningArena());
     InternalSwap(other);
@@ -231,14 +231,14 @@ class SigmaIncomingProcReq final :
 
   // implements Message ----------------------------------------------
 
-  SigmaIncomingProcReq* New(::PROTOBUF_NAMESPACE_ID::Arena* arena = nullptr) const final {
-    return CreateMaybeMessage<SigmaIncomingProcReq>(arena);
+  SigmaInformProcReq* New(::PROTOBUF_NAMESPACE_ID::Arena* arena = nullptr) const final {
+    return CreateMaybeMessage<SigmaInformProcReq>(arena);
   }
   using ::PROTOBUF_NAMESPACE_ID::Message::CopyFrom;
-  void CopyFrom(const SigmaIncomingProcReq& from);
+  void CopyFrom(const SigmaInformProcReq& from);
   using ::PROTOBUF_NAMESPACE_ID::Message::MergeFrom;
-  void MergeFrom( const SigmaIncomingProcReq& from) {
-    SigmaIncomingProcReq::MergeImpl(*this, from);
+  void MergeFrom( const SigmaInformProcReq& from) {
+    SigmaInformProcReq::MergeImpl(*this, from);
   }
   private:
   static void MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PROTOBUF_NAMESPACE_ID::Message& from_msg);
@@ -256,15 +256,15 @@ class SigmaIncomingProcReq final :
   void SharedCtor(::PROTOBUF_NAMESPACE_ID::Arena* arena, bool is_message_owned);
   void SharedDtor();
   void SetCachedSize(int size) const final;
-  void InternalSwap(SigmaIncomingProcReq* other);
+  void InternalSwap(SigmaInformProcReq* other);
 
   private:
   friend class ::PROTOBUF_NAMESPACE_ID::internal::AnyMetadata;
   static ::PROTOBUF_NAMESPACE_ID::StringPiece FullMessageName() {
-    return "SigmaIncomingProcReq";
+    return "SigmaInformProcReq";
   }
   protected:
-  explicit SigmaIncomingProcReq(::PROTOBUF_NAMESPACE_ID::Arena* arena,
+  explicit SigmaInformProcReq(::PROTOBUF_NAMESPACE_ID::Arena* arena,
                        bool is_message_owned = false);
   public:
 
@@ -278,27 +278,27 @@ class SigmaIncomingProcReq final :
   // accessors -------------------------------------------------------
 
   enum : int {
-    kProcProtoFieldNumber = 1,
+    kProcEnvProtoFieldNumber = 1,
   };
-  // .ProcProto procProto = 1;
-  bool has_procproto() const;
+  // .ProcEnvProto procEnvProto = 1;
+  bool has_procenvproto() const;
   private:
-  bool _internal_has_procproto() const;
+  bool _internal_has_procenvproto() const;
   public:
-  void clear_procproto();
-  const ::ProcProto& procproto() const;
-  PROTOBUF_NODISCARD ::ProcProto* release_procproto();
-  ::ProcProto* mutable_procproto();
-  void set_allocated_procproto(::ProcProto* procproto);
+  void clear_procenvproto();
+  const ::ProcEnvProto& procenvproto() const;
+  PROTOBUF_NODISCARD ::ProcEnvProto* release_procenvproto();
+  ::ProcEnvProto* mutable_procenvproto();
+  void set_allocated_procenvproto(::ProcEnvProto* procenvproto);
   private:
-  const ::ProcProto& _internal_procproto() const;
-  ::ProcProto* _internal_mutable_procproto();
+  const ::ProcEnvProto& _internal_procenvproto() const;
+  ::ProcEnvProto* _internal_mutable_procenvproto();
   public:
-  void unsafe_arena_set_allocated_procproto(
-      ::ProcProto* procproto);
-  ::ProcProto* unsafe_arena_release_procproto();
+  void unsafe_arena_set_allocated_procenvproto(
+      ::ProcEnvProto* procenvproto);
+  ::ProcEnvProto* unsafe_arena_release_procenvproto();
 
-  // @@protoc_insertion_point(class_scope:SigmaIncomingProcReq)
+  // @@protoc_insertion_point(class_scope:SigmaInformProcReq)
  private:
   class _Internal;
 
@@ -306,7 +306,7 @@ class SigmaIncomingProcReq final :
   typedef void InternalArenaConstructable_;
   typedef void DestructorSkippable_;
   struct Impl_ {
-    ::ProcProto* procproto_;
+    ::ProcEnvProto* procenvproto_;
     mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   };
   union { Impl_ _impl_; };
@@ -4648,41 +4648,41 @@ class SigmaExitedReq final :
   #pragma GCC diagnostic push
   #pragma GCC diagnostic ignored "-Wstrict-aliasing"
 #endif  // __GNUC__
-// SigmaIncomingProcReq
+// SigmaInformProcReq
 
-// .ProcProto procProto = 1;
-inline bool SigmaIncomingProcReq::_internal_has_procproto() const {
-  return this != internal_default_instance() && _impl_.procproto_ != nullptr;
+// .ProcEnvProto procEnvProto = 1;
+inline bool SigmaInformProcReq::_internal_has_procenvproto() const {
+  return this != internal_default_instance() && _impl_.procenvproto_ != nullptr;
 }
-inline bool SigmaIncomingProcReq::has_procproto() const {
-  return _internal_has_procproto();
+inline bool SigmaInformProcReq::has_procenvproto() const {
+  return _internal_has_procenvproto();
 }
-inline const ::ProcProto& SigmaIncomingProcReq::_internal_procproto() const {
-  const ::ProcProto* p = _impl_.procproto_;
-  return p != nullptr ? *p : reinterpret_cast<const ::ProcProto&>(
-      ::_ProcProto_default_instance_);
+inline const ::ProcEnvProto& SigmaInformProcReq::_internal_procenvproto() const {
+  const ::ProcEnvProto* p = _impl_.procenvproto_;
+  return p != nullptr ? *p : reinterpret_cast<const ::ProcEnvProto&>(
+      ::_ProcEnvProto_default_instance_);
 }
-inline const ::ProcProto& SigmaIncomingProcReq::procproto() const {
-  // @@protoc_insertion_point(field_get:SigmaIncomingProcReq.procProto)
-  return _internal_procproto();
+inline const ::ProcEnvProto& SigmaInformProcReq::procenvproto() const {
+  // @@protoc_insertion_point(field_get:SigmaInformProcReq.procEnvProto)
+  return _internal_procenvproto();
 }
-inline void SigmaIncomingProcReq::unsafe_arena_set_allocated_procproto(
-    ::ProcProto* procproto) {
+inline void SigmaInformProcReq::unsafe_arena_set_allocated_procenvproto(
+    ::ProcEnvProto* procenvproto) {
   if (GetArenaForAllocation() == nullptr) {
-    delete reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(_impl_.procproto_);
+    delete reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(_impl_.procenvproto_);
   }
-  _impl_.procproto_ = procproto;
-  if (procproto) {
+  _impl_.procenvproto_ = procenvproto;
+  if (procenvproto) {
     
   } else {
     
   }
-  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:SigmaIncomingProcReq.procProto)
+  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:SigmaInformProcReq.procEnvProto)
 }
-inline ::ProcProto* SigmaIncomingProcReq::release_procproto() {
+inline ::ProcEnvProto* SigmaInformProcReq::release_procenvproto() {
   
-  ::ProcProto* temp = _impl_.procproto_;
-  _impl_.procproto_ = nullptr;
+  ::ProcEnvProto* temp = _impl_.procenvproto_;
+  _impl_.procenvproto_ = nullptr;
 #ifdef PROTOBUF_FORCE_COPY_IN_RELEASE
   auto* old =  reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(temp);
   temp = ::PROTOBUF_NAMESPACE_ID::internal::DuplicateIfNonNull(temp);
@@ -4694,45 +4694,45 @@ inline ::ProcProto* SigmaIncomingProcReq::release_procproto() {
 #endif  // !PROTOBUF_FORCE_COPY_IN_RELEASE
   return temp;
 }
-inline ::ProcProto* SigmaIncomingProcReq::unsafe_arena_release_procproto() {
-  // @@protoc_insertion_point(field_release:SigmaIncomingProcReq.procProto)
+inline ::ProcEnvProto* SigmaInformProcReq::unsafe_arena_release_procenvproto() {
+  // @@protoc_insertion_point(field_release:SigmaInformProcReq.procEnvProto)
   
-  ::ProcProto* temp = _impl_.procproto_;
-  _impl_.procproto_ = nullptr;
+  ::ProcEnvProto* temp = _impl_.procenvproto_;
+  _impl_.procenvproto_ = nullptr;
   return temp;
 }
-inline ::ProcProto* SigmaIncomingProcReq::_internal_mutable_procproto() {
+inline ::ProcEnvProto* SigmaInformProcReq::_internal_mutable_procenvproto() {
   
-  if (_impl_.procproto_ == nullptr) {
-    auto* p = CreateMaybeMessage<::ProcProto>(GetArenaForAllocation());
-    _impl_.procproto_ = p;
+  if (_impl_.procenvproto_ == nullptr) {
+    auto* p = CreateMaybeMessage<::ProcEnvProto>(GetArenaForAllocation());
+    _impl_.procenvproto_ = p;
   }
-  return _impl_.procproto_;
+  return _impl_.procenvproto_;
 }
-inline ::ProcProto* SigmaIncomingProcReq::mutable_procproto() {
-  ::ProcProto* _msg = _internal_mutable_procproto();
-  // @@protoc_insertion_point(field_mutable:SigmaIncomingProcReq.procProto)
+inline ::ProcEnvProto* SigmaInformProcReq::mutable_procenvproto() {
+  ::ProcEnvProto* _msg = _internal_mutable_procenvproto();
+  // @@protoc_insertion_point(field_mutable:SigmaInformProcReq.procEnvProto)
   return _msg;
 }
-inline void SigmaIncomingProcReq::set_allocated_procproto(::ProcProto* procproto) {
+inline void SigmaInformProcReq::set_allocated_procenvproto(::ProcEnvProto* procenvproto) {
   ::PROTOBUF_NAMESPACE_ID::Arena* message_arena = GetArenaForAllocation();
   if (message_arena == nullptr) {
-    delete reinterpret_cast< ::PROTOBUF_NAMESPACE_ID::MessageLite*>(_impl_.procproto_);
+    delete reinterpret_cast< ::PROTOBUF_NAMESPACE_ID::MessageLite*>(_impl_.procenvproto_);
   }
-  if (procproto) {
+  if (procenvproto) {
     ::PROTOBUF_NAMESPACE_ID::Arena* submessage_arena =
         ::PROTOBUF_NAMESPACE_ID::Arena::InternalGetOwningArena(
-                reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(procproto));
+                reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(procenvproto));
     if (message_arena != submessage_arena) {
-      procproto = ::PROTOBUF_NAMESPACE_ID::internal::GetOwnedMessage(
-          message_arena, procproto, submessage_arena);
+      procenvproto = ::PROTOBUF_NAMESPACE_ID::internal::GetOwnedMessage(
+          message_arena, procenvproto, submessage_arena);
     }
     
   } else {
     
   }
-  _impl_.procproto_ = procproto;
-  // @@protoc_insertion_point(field_set_allocated:SigmaIncomingProcReq.procProto)
+  _impl_.procenvproto_ = procenvproto;
+  // @@protoc_insertion_point(field_set_allocated:SigmaInformProcReq.procEnvProto)
 }
 
 // -------------------------------------------------------------------

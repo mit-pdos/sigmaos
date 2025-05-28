@@ -21,7 +21,7 @@ void LogSpawnLatency(sigmaos::sigmap::types::Tpid pid, google::protobuf::Timesta
   if (op_start.seconds() != epoch.seconds() || op_start.nanos() != epoch.nanos()) {
     op_lat_ms = current_unix_time_us / 1000.0 - ((double) op_start.seconds() * 1000 + (double) op_start.nanos() / (1E6));
   }
-  log(SPAWN_LAT, "[{}] {} op:{}ms sinceSpawn:{}ms", pid, msg, op_lat_ms, st_lat_ms);
+  log(SPAWN_LAT, "[{}] {} op:{:.3f}ms sinceSpawn:{:.3f}ms", pid, msg, op_lat_ms, st_lat_ms);
 }
 
 google::protobuf::Timestamp GetCurrentTime() {

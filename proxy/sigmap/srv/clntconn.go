@@ -141,7 +141,7 @@ func (scs *SPProxySrvAPI) Init(ctx fs.CtxI, req scproto.SigmaInitReq, rep *scpro
 	perf.LogSpawnLatency("SPProxySrv.Init NewSigmaClnt", pe.GetPID(), pe.GetSpawnTime(), start)
 	// Asynchronously start procclnt initialization
 	scs.sc = sc
-	scs.initProcClnt(false)
+	go scs.initProcClnt(false)
 	db.DPrintf(db.SPPROXYSRV, "%v: Init %v err %v", scs.sc.ClntId(), pe, err)
 	rep.Err = scs.setErr(nil)
 	return nil

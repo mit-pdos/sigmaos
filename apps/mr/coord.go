@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
+	"reflect"
 	"strconv"
 	"sync/atomic"
 	"time"
@@ -61,21 +62,47 @@ type Coord struct {
 	intOutdir       string
 	done            int32
 	memPerTask      proc.Tmem
-	stat            Stat
+	stat            AStat
 }
 
 type Stat struct {
-	Ntask          int
-	Nmap           int
-	Nreduce        int
-	Nfail          int
-	Nrestart       int
-	NrecoverMap    int
-	NrecoverReduce int
+	Ntask          uint64
+	Nmap           uint64
+	Nreduce        uint64
+	Nfail          uint64
+	Nrestart       uint64
+	NrecoverMap    uint64
+	NrecoverReduce uint64
 }
 
 func (s *Stat) String() string {
 	return fmt.Sprintf("{nT %d nM %d nR %d nfail %d nrestart %d nrecoverM %d nrecoverR %d}", s.Ntask, s.Nmap, s.Nreduce, s.Nfail, s.Nrestart, s.NrecoverMap, s.NrecoverReduce)
+}
+
+type AStat struct {
+	Ntask          atomic.Uint64
+	Nmap           atomic.Uint64
+	Nreduce        atomic.Uint64
+	Nfail          atomic.Uint64
+	Nrestart       atomic.Uint64
+	NrecoverMap    atomic.Uint64
+	NrecoverReduce atomic.Uint64
+}
+
+func (s *AStat) String() string {
+	return fmt.Sprintf("{nT %d nM %d nR %d nfail %d nrestart %d nrecoverM %d nrecoverR %d}", s.Ntask, s.Nmap, s.Nreduce, s.Nfail, s.Nrestart, s.NrecoverMap, s.NrecoverReduce)
+}
+
+func (s *AStat) Snapshot() Stat {
+	st := &Stat{}
+	v := reflect.ValueOf(s).Elem()
+	v1 := reflect.ValueOf(st).Elem()
+	for i := 0; i < v.NumField(); i++ {
+		f := v.Field(i).Addr().Interface().(*atomic.Uint64)
+		f1 := v1.Field(i).Addr().Interface().(*uint64)
+		*f1 = f.Load()
+	}
+	return *st
 }
 
 type NewProc func(string) (*proc.Proc, error)
@@ -172,7 +199,7 @@ func (c *Coord) mapperProc(task string) (*proc.Proc, error) {
 		return nil, err
 	}
 	db.DPrintf(db.ALWAYS, "bin %v", string(bin))
-	c.stat.Nmap += 1
+	c.stat.Nmap.Add(1)
 	proc := c.newTask(mapperbin, []string{c.jobRoot, c.job, strconv.Itoa(c.nreducetask), string(bin), c.intOutdir, c.linesz, c.wordsz}, c.memPerTask)
 	return proc, nil
 }
@@ -193,7 +220,7 @@ func (c *Coord) reducerProc(tn string) (*proc.Proc, error) {
 	}
 	outlink := ReduceOut(c.jobRoot, c.job) + t.Task
 	outTarget := ReduceOutTarget(c.outdir, c.job) + t.Task
-	c.stat.Nreduce += 1
+	c.stat.Nreduce.Add(1)
 	return c.newTask(c.reducerbin, []string{string(b), outlink, outTarget, strconv.Itoa(c.nmaptask)}, c.memPerTask), nil
 }
 
@@ -323,7 +350,7 @@ func (c *Coord) doRestart() bool {
 	if n+m > 0 {
 		db.DPrintf(db.ALWAYS, "doRestart(): restart %d tasks\n", n+m)
 	}
-	c.stat.Nrestart += n + m
+	c.stat.Nrestart.Add(uint64(n + m))
 	return n+m > 0
 }
 
@@ -408,7 +435,7 @@ func (c *Coord) Round(ttype string) {
 				db.DPrintf(db.ALWAYS, "Mapping took %vs\n", time.Since(start).Seconds())
 			}
 		} else {
-			c.stat.Nfail += 1
+			c.stat.Nfail.Add(1)
 		}
 	}
 }
@@ -444,7 +471,7 @@ func (c *Coord) Work() {
 	if n, err := c.mft.RecoverTasks(); err != nil {
 		db.DFatalf("RecoverTasks mapper err %v", err)
 	} else {
-		c.stat.NrecoverMap = n
+		c.stat.NrecoverMap.Store(uint64(n))
 		db.DPrintf(db.MR, "Recover %d map tasks took %v", n, time.Since(start))
 	}
 
@@ -452,11 +479,11 @@ func (c *Coord) Work() {
 	if n, err := c.rft.RecoverTasks(); err != nil {
 		db.DFatalf("RecoverTasks reducer err %v", err)
 	} else {
-		c.stat.NrecoverReduce = n
+		c.stat.NrecoverReduce.Store(uint64(n))
 		db.DPrintf(db.MR, "Recover %d reduce tasks took %v", n, time.Since(start))
 	}
 
-	c.stat.Ntask = c.mft.GetStats().Ntask + c.rft.GetStats().Ntask
+	c.stat.Ntask.Store(uint64(c.mft.GetStats().Ntask + c.rft.GetStats().Ntask))
 
 	start = time.Now()
 	c.doRestart()
@@ -506,5 +533,5 @@ func (c *Coord) Work() {
 	db.DPrintf(db.ALWAYS, "E2e bench took %v", time.Since(jobStart))
 	JobDone(c.FsLib, c.jobRoot, c.job)
 
-	c.ClntExit(proc.NewStatusInfo(proc.StatusOK, "OK", c.stat))
+	c.ClntExit(proc.NewStatusInfo(proc.StatusOK, "OK", c.stat.Snapshot()))
 }

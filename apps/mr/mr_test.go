@@ -423,11 +423,11 @@ func (ts *Tstate) crashServers(srv string, l crash.Tselector, em *crash.TeventMa
 	}
 }
 
-func (ts *Tstate) collectStats(stati []*procgroupmgr.ProcStatus) (int, mr.Stat) {
+func (ts *Tstate) collectStats(stati []*procgroupmgr.ProcStatus) (uint64, mr.Stat) {
 	mrst := mr.Stat{}
-	nstart := 0
+	nstart := uint64(0)
 	for _, st := range stati {
-		nstart += st.Nstart
+		nstart += uint64(st.Nstart)
 		db.DPrintf(db.TEST, "grpmgr stat: ncoord %d %v", st.Nstart, st)
 		if st.IsStatusOK() {
 			// if st.Status != nil && st.IsStatusOK() {
@@ -445,7 +445,7 @@ func (ts *Tstate) collectStats(stati []*procgroupmgr.ProcStatus) (int, mr.Stat) 
 	return nstart, mrst
 }
 
-func runN(t *testing.T, em *crash.TeventMap, srvs map[string]crash.Tselector, maliciousMapper int, monitor bool) (int, int, *mr.Stat) {
+func runN(t *testing.T, em *crash.TeventMap, srvs map[string]crash.Tselector, maliciousMapper int, monitor bool) (uint64, uint64, *mr.Stat) {
 	var s3secrets *sp.SecretProto
 	var err1 error
 	// If running with malicious mappers, try to get restricted AWS secrets
@@ -550,7 +550,7 @@ func runN(t *testing.T, em *crash.TeventMap, srvs map[string]crash.Tselector, ma
 	err = mr.CleanupMROutputs(ts.mrts.GetRealm(test.REALM1).FsLib, mr.JobOut(job.Output, ts.job), mr.MapIntermediateDir(ts.job, job.Intermediate), true)
 	assert.Nil(ts.mrts.T, err, "Cleanup MR Outputs: %v", err)
 	db.DPrintf(db.TEST, "Done cleanup MR outputs")
-	return nmap + ts.nreducetask, nstart, &mrst
+	return uint64(nmap + ts.nreducetask), nstart, &mrst
 }
 
 // if f returns true, repeat test
@@ -568,7 +568,7 @@ func repeatTest(t *testing.T, f func() bool) {
 func TestMRJob(t *testing.T) {
 	n, _, st := runN(t, nil, nil, 0, true)
 	assert.Equal(t, n, st.Ntask)
-	assert.Equal(t, 0, st.Nfail)
+	assert.Equal(t, uint64(0), st.Nfail)
 }
 
 func TestMaliciousMapper(t *testing.T) {

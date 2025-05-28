@@ -36,7 +36,7 @@ for PP in \
   spproto/srv; \
   do
     for P in $PP/proto/*.proto ; do
-      echo "protoc (golang)  $P"
+      echo "protoc (golang) $P"
       protoc -I=. --go_out=../ $P
     done
 done

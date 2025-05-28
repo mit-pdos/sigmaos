@@ -30,12 +30,11 @@ const (
 // SPProxySrv maintains the state of the spproxysrv. All
 // SigmaSrvClnt's share one fid table
 type SPProxySrv struct {
-	mu               sync.Mutex
-	pe               *proc.ProcEnv
-	nps              *dialproxysrv.DialProxySrv
-	fidc             *fidclnt.FidClnt
-	clnts            map[sp.Tpid]chan *sigmaclnt.SigmaClnt
-	clntCreationErrs map[sp.Tpid]error
+	mu    sync.Mutex
+	pe    *proc.ProcEnv
+	nps   *dialproxysrv.DialProxySrv
+	fidc  *fidclnt.FidClnt
+	clnts map[sp.Tpid]chan *sigmaClntCreationResult
 }
 
 func newSPProxySrv() (*SPProxySrv, error) {
@@ -46,14 +45,18 @@ func newSPProxySrv() (*SPProxySrv, error) {
 		return nil, err
 	}
 	spps := &SPProxySrv{
-		pe:               pe,
-		nps:              nps,
-		fidc:             fidclnt.NewFidClnt(pe, dialproxyclnt.NewDialProxyClnt(pe)),
-		clnts:            make(map[sp.Tpid]chan *sigmaclnt.SigmaClnt),
-		clntCreationErrs: make(map[sp.Tpid]error),
+		pe:    pe,
+		nps:   nps,
+		fidc:  fidclnt.NewFidClnt(pe, dialproxyclnt.NewDialProxyClnt(pe)),
+		clnts: make(map[sp.Tpid]chan *sigmaClntCreationResult),
 	}
 	db.DPrintf(db.SPPROXYSRV, "newSPProxySrv ProcEnv:%v", pe)
 	return spps, nil
+}
+
+type sigmaClntCreationResult struct {
+	sc  *sigmaclnt.SigmaClnt
+	err error
 }
 
 func (spps *SPProxySrv) runServer() error {
@@ -116,20 +119,19 @@ func (spps *SPProxySrv) runServer() error {
 }
 
 // Create a sigmaclnt on behalf of a proc
-func (spp *SPProxySrv) createSigmaClnt(pe *proc.ProcEnv, ch chan *sigmaclnt.SigmaClnt) {
+func (spp *SPProxySrv) createSigmaClnt(pe *proc.ProcEnv, ch chan *sigmaClntCreationResult) {
 	db.DPrintf(db.SPPROXYSRV, "createSigmaClnt for %v", pe.GetPID())
 	start := time.Now()
 	sc, err := sigmaclnt.NewSigmaClntFsLibFidClnt(pe, spp.fidc)
 	if err != nil {
 		db.DPrintf(db.SPPROXYSRV_ERR, "Error NewSigmaClnt proc %v", pe.GetPID())
 	}
-	spp.mu.Lock()
-	// Inform any waiters of the error code of the clnt creation
-	spp.clntCreationErrs[pe.GetPID()] = err
-	spp.mu.Unlock()
 	perf.LogSpawnLatency("SPProxySrv.createSigmaClnt", pe.GetPID(), pe.GetSpawnTime(), start)
-	// Inform any waiters that the sigmaclnt has been created
-	ch <- sc
+	// Inform any waiters of the result of sigmaclnt creation
+	ch <- &sigmaClntCreationResult{
+		sc:  sc,
+		err: err,
+	}
 }
 
 // Allocate a sigmaclnt for a proxied proc, if one doesn't exist already.
@@ -139,12 +141,12 @@ func (spps *SPProxySrv) getOrCreateSigmaClnt(pep *proc.ProcEnvProto, get bool) (
 	pe.UseSPProxy = false
 	pe.UseDialProxy = false
 
-	var ch chan *sigmaclnt.SigmaClnt
+	var ch chan *sigmaClntCreationResult
 	var ok bool
 
 	spps.mu.Lock()
 	if ch, ok = spps.clnts[pe.GetPID()]; !ok {
-		ch = make(chan *sigmaclnt.SigmaClnt, 1)
+		ch = make(chan *sigmaClntCreationResult, 1)
 		spps.clnts[pe.GetPID()] = ch
 	}
 	spps.mu.Unlock()
@@ -153,11 +155,8 @@ func (spps *SPProxySrv) getOrCreateSigmaClnt(pep *proc.ProcEnvProto, get bool) (
 	if !get {
 		return nil, nil
 	}
-	sc := <-ch
-	spps.mu.Lock()
-	err := spps.clntCreationErrs[pe.GetPID()]
-	spps.mu.Unlock()
-	return sc, err
+	scr := <-ch
+	return scr.sc, scr.err
 }
 
 func (spps *SPProxySrv) IncomingProc(pp *proc.ProcProto) {

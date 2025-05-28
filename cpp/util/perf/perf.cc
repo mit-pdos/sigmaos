@@ -23,3 +23,11 @@ void LogSpawnLatency(sigmaos::sigmap::types::Tpid pid, google::protobuf::Timesta
   }
   log(SPAWN_LAT, "[{}] {} op:{}ms sinceSpawn:{}ms", pid, msg, op_lat, st_lat);
 }
+
+google::protobuf::Timestamp GetCurrentTime() {
+  auto current_unix_time = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count();
+  google::protobuf::Timestamp ts;
+  ts.set_seconds(current_unix_time / 1000);
+  ts.set_nanos((current_unix_time % 1000) * 1000000);
+  return ts;
+}

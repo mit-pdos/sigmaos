@@ -7,6 +7,7 @@
 #include <filesystem>
 
 #include <util/log/log.h>
+#include <util/perf/perf.h>
 #include <io/net/srv.h>
 #include <io/conn/conn.h>
 #include <io/transport/transport.h>
@@ -32,18 +33,22 @@ class Srv {
   public:
   Srv(std::shared_ptr<sigmaos::proxy::sigmap::Clnt> sp_clnt) : _sp_clnt(sp_clnt) {
     log(SPINSRV, "Starting RPC srv");
+    auto start = GetCurrentTime();
     _srv = std::make_shared<sigmaos::rpc::srv::Srv>(sp_clnt, INIT_NTHREAD);
+    LogSpawnLatency(_sp_clnt->ProcEnv()->GetPID(), _sp_clnt->ProcEnv()->GetSpawnTime(), start, "Make RPCSrv");
     log(SPINSRV, "Started RPC srv");
     auto spin_ep = std::make_shared<sigmaos::rpc::srv::RPCEndpoint>("SpinSrv.Spin", std::make_shared<SpinReq>(), std::make_shared<SpinRep>(), std::bind(&Srv::Spin, this, std::placeholders::_1, std::placeholders::_2));
     _srv->ExposeRPCHandler(spin_ep);
     log(SPINSRV, "Exposed spin RPC handler");
     {
       auto pn = SPINSRV_UNION_DIR_PN / std::filesystem::path(_sp_clnt->ProcEnv()->GetPID());
+      auto start = GetCurrentTime();
       auto res = _srv->RegisterEP(pn);
       if (!res.has_value()) {
         log(SPINSRV_ERR, "Error RegisterEP: {}", res.error());
         fatal("Error RegisterEP: {}", res.error().String());
       }
+      LogSpawnLatency(_sp_clnt->ProcEnv()->GetPID(), _sp_clnt->ProcEnv()->GetSpawnTime(), start, "RegisterEP");
       log(SPINSRV, "Registered sigmaEP");
     }
   }

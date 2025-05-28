@@ -69,9 +69,11 @@ pgrep -x spproxyd > /dev/null && sudo killall -9 spproxyd
 pgrep -x start-kernel.sh > /dev/null && killall -9 start-kernel.sh
 
 sudo rm -f $TMP_BASE/spproxyd/spproxyd.sock
+sudo rm -f $TMP_BASE/spproxyd/spproxyd-ctrl.sock
 sudo rm -f $TMP_BASE/spproxyd/spproxyd-dialproxy.sock
 if [[ "$ALL" == "true" ]]; then
   sudo rm -f /tmp/spproxyd/spproxyd.sock
+  sudo rm -f /tmp/spproxyd/spproxyd-ctrl.sock
   sudo rm -f /tmp/spproxyd/spproxyd-dialproxy.sock
 fi
 

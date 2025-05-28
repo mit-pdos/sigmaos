@@ -72,6 +72,9 @@ extern SigmaFdRepDefaultTypeInternal _SigmaFdRep_default_instance_;
 class SigmaFenceReq;
 struct SigmaFenceReqDefaultTypeInternal;
 extern SigmaFenceReqDefaultTypeInternal _SigmaFenceReq_default_instance_;
+class SigmaIncomingProcReq;
+struct SigmaIncomingProcReqDefaultTypeInternal;
+extern SigmaIncomingProcReqDefaultTypeInternal _SigmaIncomingProcReq_default_instance_;
 class SigmaInitReq;
 struct SigmaInitReqDefaultTypeInternal;
 extern SigmaInitReqDefaultTypeInternal _SigmaInitReq_default_instance_;
@@ -132,6 +135,7 @@ template<> ::SigmaErrRep* Arena::CreateMaybeMessage<::SigmaErrRep>(Arena*);
 template<> ::SigmaExitedReq* Arena::CreateMaybeMessage<::SigmaExitedReq>(Arena*);
 template<> ::SigmaFdRep* Arena::CreateMaybeMessage<::SigmaFdRep>(Arena*);
 template<> ::SigmaFenceReq* Arena::CreateMaybeMessage<::SigmaFenceReq>(Arena*);
+template<> ::SigmaIncomingProcReq* Arena::CreateMaybeMessage<::SigmaIncomingProcReq>(Arena*);
 template<> ::SigmaInitReq* Arena::CreateMaybeMessage<::SigmaInitReq>(Arena*);
 template<> ::SigmaLastMountRep* Arena::CreateMaybeMessage<::SigmaLastMountRep>(Arena*);
 template<> ::SigmaMountRep* Arena::CreateMaybeMessage<::SigmaMountRep>(Arena*);
@@ -152,6 +156,163 @@ template<> ::SigmaWriteReq* Arena::CreateMaybeMessage<::SigmaWriteReq>(Arena*);
 PROTOBUF_NAMESPACE_CLOSE
 
 // ===================================================================
+
+class SigmaIncomingProcReq final :
+    public ::PROTOBUF_NAMESPACE_ID::Message /* @@protoc_insertion_point(class_definition:SigmaIncomingProcReq) */ {
+ public:
+  inline SigmaIncomingProcReq() : SigmaIncomingProcReq(nullptr) {}
+  ~SigmaIncomingProcReq() override;
+  explicit PROTOBUF_CONSTEXPR SigmaIncomingProcReq(::PROTOBUF_NAMESPACE_ID::internal::ConstantInitialized);
+
+  SigmaIncomingProcReq(const SigmaIncomingProcReq& from);
+  SigmaIncomingProcReq(SigmaIncomingProcReq&& from) noexcept
+    : SigmaIncomingProcReq() {
+    *this = ::std::move(from);
+  }
+
+  inline SigmaIncomingProcReq& operator=(const SigmaIncomingProcReq& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  inline SigmaIncomingProcReq& operator=(SigmaIncomingProcReq&& from) noexcept {
+    if (this == &from) return *this;
+    if (GetOwningArena() == from.GetOwningArena()
+  #ifdef PROTOBUF_FORCE_COPY_IN_MOVE
+        && GetOwningArena() != nullptr
+  #endif  // !PROTOBUF_FORCE_COPY_IN_MOVE
+    ) {
+      InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+
+  static const ::PROTOBUF_NAMESPACE_ID::Descriptor* descriptor() {
+    return GetDescriptor();
+  }
+  static const ::PROTOBUF_NAMESPACE_ID::Descriptor* GetDescriptor() {
+    return default_instance().GetMetadata().descriptor;
+  }
+  static const ::PROTOBUF_NAMESPACE_ID::Reflection* GetReflection() {
+    return default_instance().GetMetadata().reflection;
+  }
+  static const SigmaIncomingProcReq& default_instance() {
+    return *internal_default_instance();
+  }
+  static inline const SigmaIncomingProcReq* internal_default_instance() {
+    return reinterpret_cast<const SigmaIncomingProcReq*>(
+               &_SigmaIncomingProcReq_default_instance_);
+  }
+  static constexpr int kIndexInFileMessages =
+    0;
+
+  friend void swap(SigmaIncomingProcReq& a, SigmaIncomingProcReq& b) {
+    a.Swap(&b);
+  }
+  inline void Swap(SigmaIncomingProcReq* other) {
+    if (other == this) return;
+  #ifdef PROTOBUF_FORCE_COPY_IN_SWAP
+    if (GetOwningArena() != nullptr &&
+        GetOwningArena() == other->GetOwningArena()) {
+   #else  // PROTOBUF_FORCE_COPY_IN_SWAP
+    if (GetOwningArena() == other->GetOwningArena()) {
+  #endif  // !PROTOBUF_FORCE_COPY_IN_SWAP
+      InternalSwap(other);
+    } else {
+      ::PROTOBUF_NAMESPACE_ID::internal::GenericSwap(this, other);
+    }
+  }
+  void UnsafeArenaSwap(SigmaIncomingProcReq* other) {
+    if (other == this) return;
+    GOOGLE_DCHECK(GetOwningArena() == other->GetOwningArena());
+    InternalSwap(other);
+  }
+
+  // implements Message ----------------------------------------------
+
+  SigmaIncomingProcReq* New(::PROTOBUF_NAMESPACE_ID::Arena* arena = nullptr) const final {
+    return CreateMaybeMessage<SigmaIncomingProcReq>(arena);
+  }
+  using ::PROTOBUF_NAMESPACE_ID::Message::CopyFrom;
+  void CopyFrom(const SigmaIncomingProcReq& from);
+  using ::PROTOBUF_NAMESPACE_ID::Message::MergeFrom;
+  void MergeFrom( const SigmaIncomingProcReq& from) {
+    SigmaIncomingProcReq::MergeImpl(*this, from);
+  }
+  private:
+  static void MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PROTOBUF_NAMESPACE_ID::Message& from_msg);
+  public:
+  PROTOBUF_ATTRIBUTE_REINITIALIZES void Clear() final;
+  bool IsInitialized() const final;
+
+  size_t ByteSizeLong() const final;
+  const char* _InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::internal::ParseContext* ctx) final;
+  uint8_t* _InternalSerialize(
+      uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const final;
+  int GetCachedSize() const final { return _impl_._cached_size_.Get(); }
+
+  private:
+  void SharedCtor(::PROTOBUF_NAMESPACE_ID::Arena* arena, bool is_message_owned);
+  void SharedDtor();
+  void SetCachedSize(int size) const final;
+  void InternalSwap(SigmaIncomingProcReq* other);
+
+  private:
+  friend class ::PROTOBUF_NAMESPACE_ID::internal::AnyMetadata;
+  static ::PROTOBUF_NAMESPACE_ID::StringPiece FullMessageName() {
+    return "SigmaIncomingProcReq";
+  }
+  protected:
+  explicit SigmaIncomingProcReq(::PROTOBUF_NAMESPACE_ID::Arena* arena,
+                       bool is_message_owned = false);
+  public:
+
+  static const ClassData _class_data_;
+  const ::PROTOBUF_NAMESPACE_ID::Message::ClassData*GetClassData() const final;
+
+  ::PROTOBUF_NAMESPACE_ID::Metadata GetMetadata() const final;
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  enum : int {
+    kProcProtoFieldNumber = 1,
+  };
+  // .ProcProto procProto = 1;
+  bool has_procproto() const;
+  private:
+  bool _internal_has_procproto() const;
+  public:
+  void clear_procproto();
+  const ::ProcProto& procproto() const;
+  PROTOBUF_NODISCARD ::ProcProto* release_procproto();
+  ::ProcProto* mutable_procproto();
+  void set_allocated_procproto(::ProcProto* procproto);
+  private:
+  const ::ProcProto& _internal_procproto() const;
+  ::ProcProto* _internal_mutable_procproto();
+  public:
+  void unsafe_arena_set_allocated_procproto(
+      ::ProcProto* procproto);
+  ::ProcProto* unsafe_arena_release_procproto();
+
+  // @@protoc_insertion_point(class_scope:SigmaIncomingProcReq)
+ private:
+  class _Internal;
+
+  template <typename T> friend class ::PROTOBUF_NAMESPACE_ID::Arena::InternalHelper;
+  typedef void InternalArenaConstructable_;
+  typedef void DestructorSkippable_;
+  struct Impl_ {
+    ::ProcProto* procproto_;
+    mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
+  };
+  union { Impl_ _impl_; };
+  friend struct ::TableStruct_proxy_2fsigmap_2fproto_2fspproxy_2eproto;
+};
+// -------------------------------------------------------------------
 
 class SigmaInitReq final :
     public ::PROTOBUF_NAMESPACE_ID::Message /* @@protoc_insertion_point(class_definition:SigmaInitReq) */ {
@@ -201,7 +362,7 @@ class SigmaInitReq final :
                &_SigmaInitReq_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    0;
+    1;
 
   friend void swap(SigmaInitReq& a, SigmaInitReq& b) {
     a.Swap(&b);
@@ -357,7 +518,7 @@ class SigmaNullReq final :
                &_SigmaNullReq_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    1;
+    2;
 
   friend void swap(SigmaNullReq& a, SigmaNullReq& b) {
     a.Swap(&b);
@@ -476,7 +637,7 @@ class SigmaRealmReq final :
                &_SigmaRealmReq_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    2;
+    3;
 
   friend void swap(SigmaRealmReq& a, SigmaRealmReq& b) {
     a.Swap(&b);
@@ -629,7 +790,7 @@ class SigmaCloseReq final :
                &_SigmaCloseReq_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    3;
+    4;
 
   friend void swap(SigmaCloseReq& a, SigmaCloseReq& b) {
     a.Swap(&b);
@@ -777,7 +938,7 @@ class SigmaErrRep final :
                &_SigmaErrRep_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    4;
+    5;
 
   friend void swap(SigmaErrRep& a, SigmaErrRep& b) {
     a.Swap(&b);
@@ -934,7 +1095,7 @@ class SigmaPathReq final :
                &_SigmaPathReq_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    5;
+    6;
 
   friend void swap(SigmaPathReq& a, SigmaPathReq& b) {
     a.Swap(&b);
@@ -1087,7 +1248,7 @@ class SigmaStatRep final :
                &_SigmaStatRep_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    6;
+    7;
 
   friend void swap(SigmaStatRep& a, SigmaStatRep& b) {
     a.Swap(&b);
@@ -1264,7 +1425,7 @@ class SigmaCreateReq final :
                &_SigmaCreateReq_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    7;
+    8;
 
   friend void swap(SigmaCreateReq& a, SigmaCreateReq& b) {
     a.Swap(&b);
@@ -1481,7 +1642,7 @@ class SigmaFdRep final :
                &_SigmaFdRep_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    8;
+    9;
 
   friend void swap(SigmaFdRep& a, SigmaFdRep& b) {
     a.Swap(&b);
@@ -1649,7 +1810,7 @@ class SigmaRenameReq final :
                &_SigmaRenameReq_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    9;
+    10;
 
   friend void swap(SigmaRenameReq& a, SigmaRenameReq& b) {
     a.Swap(&b);
@@ -1818,7 +1979,7 @@ class SigmaDataRep final :
                &_SigmaDataRep_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    10;
+    11;
 
   friend void swap(SigmaDataRep& a, SigmaDataRep& b) {
     a.Swap(&b);
@@ -1995,7 +2156,7 @@ class SigmaPutFileReq final :
                &_SigmaPutFileReq_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    11;
+    12;
 
   friend void swap(SigmaPutFileReq& a, SigmaPutFileReq& b) {
     a.Swap(&b);
@@ -2212,7 +2373,7 @@ class SigmaSizeRep final :
                &_SigmaSizeRep_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    12;
+    13;
 
   friend void swap(SigmaSizeRep& a, SigmaSizeRep& b) {
     a.Swap(&b);
@@ -2380,7 +2541,7 @@ class SigmaReadReq final :
                &_SigmaReadReq_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    13;
+    14;
 
   friend void swap(SigmaReadReq& a, SigmaReadReq& b) {
     a.Swap(&b);
@@ -2550,7 +2711,7 @@ class SigmaWriteReq final :
                &_SigmaWriteReq_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    14;
+    15;
 
   friend void swap(SigmaWriteReq& a, SigmaWriteReq& b) {
     a.Swap(&b);
@@ -2749,7 +2910,7 @@ class SigmaSeekReq final :
                &_SigmaSeekReq_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    15;
+    16;
 
   friend void swap(SigmaSeekReq& a, SigmaSeekReq& b) {
     a.Swap(&b);
@@ -2908,7 +3069,7 @@ class SigmaClntIdRep final :
                &_SigmaClntIdRep_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    16;
+    17;
 
   friend void swap(SigmaClntIdRep& a, SigmaClntIdRep& b) {
     a.Swap(&b);
@@ -3076,7 +3237,7 @@ class SigmaFenceReq final :
                &_SigmaFenceReq_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    17;
+    18;
 
   friend void swap(SigmaFenceReq& a, SigmaFenceReq& b) {
     a.Swap(&b);
@@ -3249,7 +3410,7 @@ class SigmaMountTreeReq final :
                &_SigmaMountTreeReq_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    18;
+    19;
 
   friend void swap(SigmaMountTreeReq& a, SigmaMountTreeReq& b) {
     a.Swap(&b);
@@ -3438,7 +3599,7 @@ class SigmaLastMountRep final :
                &_SigmaLastMountRep_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    19;
+    20;
 
   friend void swap(SigmaLastMountRep& a, SigmaLastMountRep& b) {
     a.Swap(&b);
@@ -3647,7 +3808,7 @@ class SigmaMountReq final :
                &_SigmaMountReq_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    20;
+    21;
 
   friend void swap(SigmaMountReq& a, SigmaMountReq& b) {
     a.Swap(&b);
@@ -3820,7 +3981,7 @@ class SigmaMountRep final :
                &_SigmaMountRep_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    21;
+    22;
 
   friend void swap(SigmaMountRep& a, SigmaMountRep& b) {
     a.Swap(&b);
@@ -4008,7 +4169,7 @@ class SigmaMountsRep final :
                &_SigmaMountsRep_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    22;
+    23;
 
   friend void swap(SigmaMountsRep& a, SigmaMountsRep& b) {
     a.Swap(&b);
@@ -4191,7 +4352,7 @@ class SigmaRegisterEPReq final :
                &_SigmaRegisterEPReq_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    23;
+    24;
 
   friend void swap(SigmaRegisterEPReq& a, SigmaRegisterEPReq& b) {
     a.Swap(&b);
@@ -4364,7 +4525,7 @@ class SigmaExitedReq final :
                &_SigmaExitedReq_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    24;
+    25;
 
   friend void swap(SigmaExitedReq& a, SigmaExitedReq& b) {
     a.Swap(&b);
@@ -4487,6 +4648,95 @@ class SigmaExitedReq final :
   #pragma GCC diagnostic push
   #pragma GCC diagnostic ignored "-Wstrict-aliasing"
 #endif  // __GNUC__
+// SigmaIncomingProcReq
+
+// .ProcProto procProto = 1;
+inline bool SigmaIncomingProcReq::_internal_has_procproto() const {
+  return this != internal_default_instance() && _impl_.procproto_ != nullptr;
+}
+inline bool SigmaIncomingProcReq::has_procproto() const {
+  return _internal_has_procproto();
+}
+inline const ::ProcProto& SigmaIncomingProcReq::_internal_procproto() const {
+  const ::ProcProto* p = _impl_.procproto_;
+  return p != nullptr ? *p : reinterpret_cast<const ::ProcProto&>(
+      ::_ProcProto_default_instance_);
+}
+inline const ::ProcProto& SigmaIncomingProcReq::procproto() const {
+  // @@protoc_insertion_point(field_get:SigmaIncomingProcReq.procProto)
+  return _internal_procproto();
+}
+inline void SigmaIncomingProcReq::unsafe_arena_set_allocated_procproto(
+    ::ProcProto* procproto) {
+  if (GetArenaForAllocation() == nullptr) {
+    delete reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(_impl_.procproto_);
+  }
+  _impl_.procproto_ = procproto;
+  if (procproto) {
+    
+  } else {
+    
+  }
+  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:SigmaIncomingProcReq.procProto)
+}
+inline ::ProcProto* SigmaIncomingProcReq::release_procproto() {
+  
+  ::ProcProto* temp = _impl_.procproto_;
+  _impl_.procproto_ = nullptr;
+#ifdef PROTOBUF_FORCE_COPY_IN_RELEASE
+  auto* old =  reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(temp);
+  temp = ::PROTOBUF_NAMESPACE_ID::internal::DuplicateIfNonNull(temp);
+  if (GetArenaForAllocation() == nullptr) { delete old; }
+#else  // PROTOBUF_FORCE_COPY_IN_RELEASE
+  if (GetArenaForAllocation() != nullptr) {
+    temp = ::PROTOBUF_NAMESPACE_ID::internal::DuplicateIfNonNull(temp);
+  }
+#endif  // !PROTOBUF_FORCE_COPY_IN_RELEASE
+  return temp;
+}
+inline ::ProcProto* SigmaIncomingProcReq::unsafe_arena_release_procproto() {
+  // @@protoc_insertion_point(field_release:SigmaIncomingProcReq.procProto)
+  
+  ::ProcProto* temp = _impl_.procproto_;
+  _impl_.procproto_ = nullptr;
+  return temp;
+}
+inline ::ProcProto* SigmaIncomingProcReq::_internal_mutable_procproto() {
+  
+  if (_impl_.procproto_ == nullptr) {
+    auto* p = CreateMaybeMessage<::ProcProto>(GetArenaForAllocation());
+    _impl_.procproto_ = p;
+  }
+  return _impl_.procproto_;
+}
+inline ::ProcProto* SigmaIncomingProcReq::mutable_procproto() {
+  ::ProcProto* _msg = _internal_mutable_procproto();
+  // @@protoc_insertion_point(field_mutable:SigmaIncomingProcReq.procProto)
+  return _msg;
+}
+inline void SigmaIncomingProcReq::set_allocated_procproto(::ProcProto* procproto) {
+  ::PROTOBUF_NAMESPACE_ID::Arena* message_arena = GetArenaForAllocation();
+  if (message_arena == nullptr) {
+    delete reinterpret_cast< ::PROTOBUF_NAMESPACE_ID::MessageLite*>(_impl_.procproto_);
+  }
+  if (procproto) {
+    ::PROTOBUF_NAMESPACE_ID::Arena* submessage_arena =
+        ::PROTOBUF_NAMESPACE_ID::Arena::InternalGetOwningArena(
+                reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(procproto));
+    if (message_arena != submessage_arena) {
+      procproto = ::PROTOBUF_NAMESPACE_ID::internal::GetOwnedMessage(
+          message_arena, procproto, submessage_arena);
+    }
+    
+  } else {
+    
+  }
+  _impl_.procproto_ = procproto;
+  // @@protoc_insertion_point(field_set_allocated:SigmaIncomingProcReq.procProto)
+}
+
+// -------------------------------------------------------------------
+
 // SigmaInitReq
 
 // .ProcEnvProto procEnvProto = 1;
@@ -7618,6 +7868,8 @@ inline void SigmaExitedReq::set_allocated_msg(std::string* msg) {
 #ifdef __GNUC__
   #pragma GCC diagnostic pop
 #endif  // __GNUC__
+// -------------------------------------------------------------------
+
 // -------------------------------------------------------------------
 
 // -------------------------------------------------------------------

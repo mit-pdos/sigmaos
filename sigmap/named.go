@@ -106,6 +106,7 @@ var RootNamedMountedDirs map[string]bool = map[string]bool{
 const (
 	SIGMAHOME              = "/home/sigmaos"
 	SIGMASOCKET            = "/tmp/spproxyd/spproxyd.sock"
+	SIGMASOCKET_CTRL       = "/tmp/spproxyd/spproxyd-ctrl.sock"
 	SIGMA_DIALPROXY_SOCKET = "/tmp/spproxyd/spproxyd-dialproxy.sock"
 )
 

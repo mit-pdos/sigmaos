@@ -393,6 +393,11 @@ func (ps *ProcSrv) Run(ctx fs.CtxI, req proto.RunReq, res *proto.RunRep) error {
 	}
 	scontainer.CleanupUProc(uproc.GetPid())
 	ps.procs.Delete(pid)
+	if uproc.GetProcEnv().UseSPProxy {
+		if err := ps.spc.InformProcDone(uproc); err != nil {
+			db.DFatalf("Err inform spproxyclnt proc done: %v", err)
+		}
+	}
 	// ps.sc.CloseFd(pe.fd)
 	return err
 }

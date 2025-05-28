@@ -60,7 +60,7 @@ func (scc *CtrlClnt) InformProcDone(p *proc.Proc) error {
 	}
 	rep := spproto.SigmaErrRep{}
 	err := scc.rpcc.RPC("CtrlAPI.InformProcDone", &req, &rep)
-	db.DPrintf(db.SPPROXYCLNT, "Inform incoming proc %v", p)
+	db.DPrintf(db.SPPROXYCLNT, "Inform proc done %v", p)
 	if err != nil {
 		return err
 	}

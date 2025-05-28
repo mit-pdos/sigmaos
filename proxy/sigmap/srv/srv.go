@@ -175,6 +175,15 @@ func (spps *SPProxySrv) IncomingProc(pep *proc.ProcEnvProto) {
 	spps.getOrCreateSigmaClnt(pep, false)
 }
 
+func (spps *SPProxySrv) ProcDone(pep *proc.ProcEnvProto) {
+	db.DPrintf(db.SPPROXYSRV, "Informed proc done", pep.GetPID())
+	spps.mu.Lock()
+	defer spps.mu.Unlock()
+
+	// Clean up sigmaclnt structures
+	delete(spps.clnts, pep.GetPID())
+}
+
 // The spproxyd process enters here
 func RunSPProxySrv() error {
 	spps, err := newSPProxySrv()
@@ -207,6 +216,10 @@ type SPProxySrvCmd struct {
 // to create a sigmaclnt for it.
 func (sppsc *SPProxySrvCmd) InformIncomingProc(p *proc.Proc) error {
 	return sppsc.cc.InformIncomingProc(p)
+}
+
+func (sppsc *SPProxySrvCmd) InformProcDone(p *proc.Proc) error {
+	return sppsc.cc.InformProcDone(p)
 }
 
 func (sppsc *SPProxySrvCmd) GetProc() *proc.Proc {

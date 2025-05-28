@@ -49,9 +49,8 @@ func (capi *CtrlAPI) InformIncomingProc(ctx fs.CtxI, req scproto.SigmaInformProc
 }
 
 func (capi *CtrlAPI) InformProcDone(ctx fs.CtxI, req scproto.SigmaInformProcReq, rep *scproto.SigmaErrRep) error {
-	db.DFatalf("Unimplemented")
-	//	capi.cc.spps.IncomingProc(req.ProcEnvProto)
-	//	rep.Err = sp.NewRerror()
+	capi.cc.spps.ProcDone(req.ProcEnvProto)
+	rep.Err = sp.NewRerror()
 	return nil
 }
 

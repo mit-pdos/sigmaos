@@ -117,7 +117,7 @@ func (spps *SPProxySrv) runServer() error {
 
 // Create a sigmaclnt on behalf of a proc
 func (spp *SPProxySrv) createSigmaClnt(pe *proc.ProcEnv, ch chan *sigmaclnt.SigmaClnt) {
-	db.DPrintf(db.SPPROXYSRV, "createSigmaCLnt for %v", pe.GetPID())
+	db.DPrintf(db.SPPROXYSRV, "createSigmaClnt for %v", pe.GetPID())
 	start := time.Now()
 	sc, err := sigmaclnt.NewSigmaClntFsLibFidClnt(pe, spp.fidc)
 	if err != nil {

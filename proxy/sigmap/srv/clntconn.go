@@ -427,15 +427,19 @@ func (scs *SPProxySrvAPI) initProcClnt(wait bool) error {
 
 func (scs *SPProxySrvAPI) Started(ctx fs.CtxI, req scproto.SigmaNullReq, rep *scproto.SigmaErrRep) error {
 	db.DPrintf(db.SPPROXYSRV, "%v: Started", scs.sc.ClntId())
+	start := time.Now()
 	err := scs.initProcClnt(true)
 	if err != nil {
 		rep.Err = scs.setErr(err)
 		return nil
 	}
+	perf.LogSpawnLatency("SPProxySrv.Started initProcClnt", scs.sc.ProcEnv().GetPID(), scs.sc.ProcEnv().GetSpawnTime(), start)
+	start = time.Now()
 	err = scs.sc.Started()
 	if err != nil {
 		db.DPrintf(db.SPPROXYSRV_ERR, "%v: Started err: %v", scs.sc.ClntId(), err)
 	}
+	perf.LogSpawnLatency("SPProxySrv.Started.Started", scs.sc.ProcEnv().GetPID(), scs.sc.ProcEnv().GetSpawnTime(), start)
 	rep.Err = scs.setErr(err)
 	db.DPrintf(db.SPPROXYSRV, "%v: Started done %v %v", scs.sc.ClntId(), req, rep)
 	return nil

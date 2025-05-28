@@ -89,7 +89,7 @@ void Srv::ExposeRPCHandler(std::shared_ptr<RPCEndpoint> rpce) {
 }
 
 std::expected<int, sigmaos::serr::Error> Srv::RegisterEP(std::string pn) {
-  auto start = google::protobuf::util::TimeUtil::GetCurrentTime();
+  auto start = GetCurrentTime();
   {
     auto ep = GetEndpoint();
     auto res = _sp_clnt->RegisterEP(pn, ep);
@@ -106,7 +106,7 @@ std::expected<int, sigmaos::serr::Error> Srv::RegisterEP(std::string pn) {
 [[noreturn]] void Srv::Run() {
   // Mark server as started
   {
-    auto start = google::protobuf::util::TimeUtil::GetCurrentTime();
+    auto start = GetCurrentTime();
     auto res = _sp_clnt->Started();
     if (!res.has_value()) {
       log(RPCSRV, "Error Started: {}", res.error());

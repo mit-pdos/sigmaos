@@ -145,8 +145,6 @@ func (sca *SPProxySrvAPI) Init(ctx fs.CtxI, req scproto.SigmaInitReq, rep *scpro
 	}
 	perf.LogSpawnLatency("SPProxySrv.Init wait getOrCreateSigmaClnt", pe.GetPID(), pe.GetSpawnTime(), start)
 	sca.sc = sc
-	// Asynchronously start procclnt initialization
-	go sca.initProcClnt(false)
 	db.DPrintf(db.SPPROXYSRV, "%v: Init done %v", sca.sc.ClntId(), pe)
 	rep.Err = sca.setErr(nil)
 	return nil
@@ -398,49 +396,10 @@ func (sca *SPProxySrvAPI) RegisterEP(ctx fs.CtxI, req scproto.SigmaRegisterEPReq
 }
 
 // ========== Procclnt API ==========
-func (sca *SPProxySrvAPI) initProcClnt(wait bool) error {
-	sca.mu.Lock()
-	defer sca.mu.Unlock()
-
-	var err error
-	// If this is the first thread trying to use the procclnt, initialize it
-	if !sca.procClntInitStarted {
-		sca.procClntInitStarted = true
-		go func() {
-			sca.procClntInitErr = sca.sc.NewProcClnt()
-			if sca.procClntInitErr != nil {
-				db.DPrintf(db.SPPROXYSRV_ERR, "%v: Failed to create procclnt: %v", sca.sc.ClntId(), err)
-			}
-
-			sca.mu.Lock()
-			defer sca.mu.Unlock()
-
-			// Mark that the proc clnt init is done
-			sca.procClntInitDone = true
-			// Wake up waiters
-			sca.cond.Broadcast()
-		}()
-	} else {
-		// Optionally wait for initialization to finish
-		for wait && !sca.procClntInitDone {
-			sca.cond.Wait()
-		}
-	}
-	// Return result of procclnt initialization
-	return sca.procClntInitErr
-}
-
 func (sca *SPProxySrvAPI) Started(ctx fs.CtxI, req scproto.SigmaNullReq, rep *scproto.SigmaErrRep) error {
 	db.DPrintf(db.SPPROXYSRV, "%v: Started", sca.sc.ClntId())
 	start := time.Now()
-	err := sca.initProcClnt(true)
-	if err != nil {
-		rep.Err = sca.setErr(err)
-		return nil
-	}
-	perf.LogSpawnLatency("SPProxySrv.Started initProcClnt", sca.sc.ProcEnv().GetPID(), sca.sc.ProcEnv().GetSpawnTime(), start)
-	start = time.Now()
-	err = sca.sc.Started()
+	err := sca.sc.Started()
 	if err != nil {
 		db.DPrintf(db.SPPROXYSRV_ERR, "%v: Started err: %v", sca.sc.ClntId(), err)
 	}
@@ -453,11 +412,6 @@ func (sca *SPProxySrvAPI) Started(ctx fs.CtxI, req scproto.SigmaNullReq, rep *sc
 func (sca *SPProxySrvAPI) Exited(ctx fs.CtxI, req scproto.SigmaExitedReq, rep *scproto.SigmaErrRep) error {
 	status := proc.Tstatus(req.Status)
 	db.DPrintf(db.SPPROXYSRV, "%v: Exited status %v  msg %v", sca.sc.ClntId(), status, req.Msg)
-	err := sca.initProcClnt(true)
-	rep.Err = sca.setErr(err)
-	if err != nil {
-		return nil
-	}
 	sca.sc.Exited(proc.NewStatusInfo(proc.Tstatus(req.Status), req.Msg, nil))
 	db.DPrintf(db.SPPROXYSRV, "%v: Exited done %v %v", sca.sc.ClntId(), req, rep)
 	return nil
@@ -465,11 +419,6 @@ func (sca *SPProxySrvAPI) Exited(ctx fs.CtxI, req scproto.SigmaExitedReq, rep *s
 
 func (sca *SPProxySrvAPI) WaitEvict(ctx fs.CtxI, req scproto.SigmaNullReq, rep *scproto.SigmaErrRep) error {
 	db.DPrintf(db.SPPROXYSRV, "%v: WaitEvict %v", sca.sc.ClntId())
-	err := sca.initProcClnt(true)
-	rep.Err = sca.setErr(err)
-	if err != nil {
-		return nil
-	}
 	sca.sc.WaitEvict(sca.sc.ProcEnv().GetPID())
 	db.DPrintf(db.SPPROXYSRV, "%v: WaitEvict done %v %v", sca.sc.ClntId(), req, rep)
 	return nil

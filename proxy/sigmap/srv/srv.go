@@ -158,10 +158,10 @@ func (spps *SPProxySrv) getOrCreateSigmaClnt(pep *proc.ProcEnvProto, get bool) (
 		db.DPrintf(db.SPPROXYSRV, "Need to create SigmaClnt for proc %v", pe.GetPID())
 		ch = make(chan *sigmaClntCreationResult, 1)
 		spps.clnts[pe.GetPID()] = ch
+		go spps.createSigmaClnt(pe, true, ch)
 	}
 	spps.mu.Unlock()
 	// If the clnt didn't exist already, start creating it
-	go spps.createSigmaClnt(pe, true, ch)
 	if !get {
 		return nil, nil
 	}

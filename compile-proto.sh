@@ -5,7 +5,7 @@
 echo "=== Compile golang proto ===" 
 
 for P in sigmap proc ; do
-  echo "protoc $P golang"
+  echo "protoc (golang) $P"
   protoc -I=. --go_out=../ $P/$P.proto
 done
 
@@ -36,7 +36,7 @@ for PP in \
   spproto/srv; \
   do
     for P in $PP/proto/*.proto ; do
-      echo "protoc $P golang"
+      echo "protoc (golang)  $P"
       protoc -I=. --go_out=../ $P
     done
 done

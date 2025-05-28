@@ -33,6 +33,7 @@ func runSpawnLatency(ts *test.RealmTstate, kernels []string, evict bool, ncore p
 	}
 	p := proc.NewProc("spawn-latency-cpp", args)
 	p.SetMcpu(ncore)
+	p.GetProcEnv().UseSPProxy = true
 	start1 := time.Now()
 	err := ts.Spawn(p)
 	assert.Nil(ts.Ts.T, err, "Spawn")
@@ -138,6 +139,7 @@ func TestEchoServerProc(t *testing.T) {
 	defer mrts.Shutdown()
 
 	p := proc.NewProc("echo-srv-cpp", nil)
+	p.GetProcEnv().UseSPProxy = true
 	p.SetMcpu(SERVER_PROC_MCPU)
 	db.DPrintf(db.TEST, "Spawn server proc %v", p)
 	start := time.Now()
@@ -206,6 +208,7 @@ func TestSpinServerProc(t *testing.T) {
 	}
 
 	p := proc.NewProc("spin-srv-cpp", nil)
+	p.GetProcEnv().UseSPProxy = true
 	p.SetMcpu(SERVER_PROC_MCPU)
 	db.DPrintf(db.TEST, "Spawn server proc %v", p)
 	start := time.Now()
@@ -275,6 +278,7 @@ func TestSpinServerSpawnLatency(t *testing.T) {
 	}
 
 	p := proc.NewProc("spin-srv-cpp", nil)
+	p.GetProcEnv().UseSPProxy = true
 	p.SetMcpu(MCPU_PER_PROC)
 	start := time.Now()
 	err := mrts.GetRealm(test.REALM1).Spawn(p)
@@ -293,6 +297,7 @@ func TestSpinServerSpawnLatency(t *testing.T) {
 		go func(c chan bool, parallelCh chan bool) {
 			<-parallelCh
 			p := proc.NewProc("spin-srv-cpp", nil)
+			p.GetProcEnv().UseSPProxy = true
 			p.SetMcpu(MCPU_PER_PROC)
 			start := time.Now()
 			err := mrts.GetRealm(test.REALM1).Spawn(p)
@@ -316,6 +321,7 @@ func TestSpinServerExec(t *testing.T) {
 	)
 	for i := 0; i < N_TRIALS; i++ {
 		p := proc.NewProc("spin-srv-cpp", nil)
+		p.GetProcEnv().UseSPProxy = true
 		p.SetSpawnTime(time.Now())
 		homedir, err := os.UserHomeDir()
 		if !assert.Nil(t, err, "Err homedir: %v", err) {

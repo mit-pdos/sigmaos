@@ -133,7 +133,7 @@ func (p *Proc) InheritParentProcEnv(parentPE *ProcEnv) {
 	p.ProcEnvProto.Debug = parentPE.Debug
 	p.ProcEnvProto.BuildTag = parentPE.BuildTag
 	p.ProcEnvProto.Version = parentPE.Version
-	p.ProcEnvProto.UseSPProxy = parentPE.UseSPProxy
+	p.ProcEnvProto.UseSPProxy = p.ProcEnvProto.UseSPProxy || parentPE.UseSPProxy
 	// Don't override intentionally set net proxy settings
 	p.ProcEnvProto.UseDialProxy = parentPE.UseDialProxy || p.ProcEnvProto.UseDialProxy
 	p.ProcEnvProto.SigmaPath = append(p.ProcEnvProto.SigmaPath, parentPE.SigmaPath...)

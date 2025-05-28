@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"sync"
+	"time"
 
 	"sigmaos/api/fs"
 	sos "sigmaos/api/sigmaos"
@@ -21,6 +22,7 @@ import (
 	"sigmaos/sigmaclnt/fidclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/util/io/demux"
+	"sigmaos/util/perf"
 )
 
 // One SigmaClntConn per client connection
@@ -80,11 +82,14 @@ func (scc *SigmaClntConn) close() error {
 // SPProxySrvAPI exports the RPC methods that the server proxies.  The
 // RPC methods correspond to the functions in the sigmaos interface.
 type SPProxySrvAPI struct {
-	mu          sync.Mutex
-	closed      bool
-	hasProcClnt bool
-	fidc        *fidclnt.FidClnt
-	sc          *sigmaclnt.SigmaClnt
+	mu                  sync.Mutex
+	cond                *sync.Cond
+	closed              bool
+	procClntInitStarted bool
+	procClntInitDone    bool
+	procClntInitErr     error
+	fidc                *fidclnt.FidClnt
+	sc                  *sigmaclnt.SigmaClnt
 }
 
 func (scc *SPProxySrvAPI) testAndSetClosed() bool {
@@ -97,6 +102,7 @@ func (scc *SPProxySrvAPI) testAndSetClosed() bool {
 
 func NewSPProxySrvAPI(pe *proc.ProcEnv, fidc *fidclnt.FidClnt) (*SPProxySrvAPI, error) {
 	scsa := &SPProxySrvAPI{sc: nil, fidc: fidc}
+	scsa.cond = sync.NewCond(&scsa.mu)
 	return scsa, nil
 }
 
@@ -126,11 +132,15 @@ func (scs *SPProxySrvAPI) Init(ctx fs.CtxI, req scproto.SigmaInitReq, rep *scpro
 	pe.UseSPProxy = false
 	pe.UseDialProxy = false
 	db.DPrintf(db.SPPROXYSRV, "Init pe %v", pe)
+	start := time.Now()
 	sc, err := sigmaclnt.NewSigmaClntFsLibFidClnt(pe, scs.fidc)
 	if err != nil {
 		rep.Err = scs.setErr(fmt.Errorf("Error init SPProxySrvAPI: %v pe %v", err, pe))
 		return err
 	}
+	perf.LogSpawnLatency("SPProxySrv.Init NewSigmaClnt", pe.GetPID(), pe.GetSpawnTime(), start)
+	// Asynchronously start procclnt initialization
+	scs.initProcClnt(false)
 	scs.sc = sc
 	db.DPrintf(db.SPPROXYSRV, "%v: Init %v err %v", scs.sc.ClntId(), pe, err)
 	rep.Err = scs.setErr(nil)
@@ -383,26 +393,41 @@ func (scs *SPProxySrvAPI) RegisterEP(ctx fs.CtxI, req scproto.SigmaRegisterEPReq
 }
 
 // ========== Procclnt API ==========
-func (scs *SPProxySrvAPI) initProcClnt() error {
+func (scs *SPProxySrvAPI) initProcClnt(wait bool) error {
 	scs.mu.Lock()
 	defer scs.mu.Unlock()
 
 	var err error
-	// Make a procclnt if we haven't already
-	if !scs.hasProcClnt {
-		scs.hasProcClnt = true
-		err = scs.sc.NewProcClnt()
+	// If this is the first thread trying to use the procclnt, initialize it
+	if !scs.procClntInitStarted {
+		scs.procClntInitStarted = true
+		go func() {
+			scs.procClntInitErr = scs.sc.NewProcClnt()
+			if scs.procClntInitErr != nil {
+				db.DPrintf(db.SPPROXYSRV_ERR, "%v: Failed to create procclnt: %v", scs.sc.ClntId(), err)
+			}
+
+			scs.mu.Lock()
+			defer scs.mu.Unlock()
+
+			// Mark that the proc clnt init is done
+			scs.procClntInitDone = true
+			// Wake up waiters
+			scs.cond.Broadcast()
+		}()
+	} else {
+		// Optionally wait for initialization to finish
+		for wait && !scs.procClntInitDone {
+			scs.cond.Wait()
+		}
 	}
-	// If unsuccessful, bail out
-	if err != nil {
-		db.DPrintf(db.SPPROXYSRV_ERR, "%v: Failed to create procclnt: %v", scs.sc.ClntId(), err)
-	}
-	return err
+	// Return result of procclnt initialization
+	return scs.procClntInitErr
 }
 
 func (scs *SPProxySrvAPI) Started(ctx fs.CtxI, req scproto.SigmaNullReq, rep *scproto.SigmaErrRep) error {
 	db.DPrintf(db.SPPROXYSRV, "%v: Started", scs.sc.ClntId())
-	err := scs.initProcClnt()
+	err := scs.initProcClnt(true)
 	if err != nil {
 		rep.Err = scs.setErr(err)
 		return nil
@@ -419,7 +444,7 @@ func (scs *SPProxySrvAPI) Started(ctx fs.CtxI, req scproto.SigmaNullReq, rep *sc
 func (scs *SPProxySrvAPI) Exited(ctx fs.CtxI, req scproto.SigmaExitedReq, rep *scproto.SigmaErrRep) error {
 	status := proc.Tstatus(req.Status)
 	db.DPrintf(db.SPPROXYSRV, "%v: Exited status %v  msg %v", scs.sc.ClntId(), status, req.Msg)
-	err := scs.initProcClnt()
+	err := scs.initProcClnt(true)
 	rep.Err = scs.setErr(err)
 	if err != nil {
 		return nil
@@ -431,7 +456,7 @@ func (scs *SPProxySrvAPI) Exited(ctx fs.CtxI, req scproto.SigmaExitedReq, rep *s
 
 func (scs *SPProxySrvAPI) WaitEvict(ctx fs.CtxI, req scproto.SigmaNullReq, rep *scproto.SigmaErrRep) error {
 	db.DPrintf(db.SPPROXYSRV, "%v: WaitEvict %v", scs.sc.ClntId())
-	err := scs.initProcClnt()
+	err := scs.initProcClnt(true)
 	rep.Err = scs.setErr(err)
 	if err != nil {
 		return nil

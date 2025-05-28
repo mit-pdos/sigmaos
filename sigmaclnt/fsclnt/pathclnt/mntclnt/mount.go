@@ -125,7 +125,8 @@ func (mnt *MntTable) resolveMnt(path path.Tpathname, allowResolve bool) (*Point,
 }
 
 // Umount matches mnt point that is the longest prefix of path, if exact is
-// false, or matches path exact, if exact if true.
+// false, or matches path exact, if exact if true.  Note: MountTree() may
+// call umount() while holding pnt.Lock()
 func (mnt *MntTable) umount(path path.Tpathname, exact bool) (*Point, *serr.Err) {
 	mnt.Lock()
 	defer mnt.Unlock()
@@ -139,12 +140,12 @@ func (mnt *MntTable) umount(path path.Tpathname, exact bool) (*Point, *serr.Err)
 			}
 			if len(left) == 0 {
 				mnt.mounts = append(mnt.mounts[:i], mnt.mounts[i+1:]...)
-				db.DPrintf(db.MOUNT, "umount exact %v %v\n", path, p)
+				db.DPrintf(db.MOUNT, "umount exact %v", path)
 				return p, nil
 			}
 			if !exact {
 				mnt.mounts = append(mnt.mounts[:i], mnt.mounts[i+1:]...)
-				db.DPrintf(db.MOUNT, "umount prefetch %v left %v %v\n", path, left, p.fid)
+				db.DPrintf(db.MOUNT, "umount prefetch %v left %v", path, left)
 				return p, nil
 			}
 		}

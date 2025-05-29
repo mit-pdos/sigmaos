@@ -5,12 +5,15 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 
+	"sigmaos/apps/epcache"
+	epcachesrv "sigmaos/apps/epcache/srv"
 	spinproto "sigmaos/apps/spin/proto"
 	db "sigmaos/debug"
 	echoproto "sigmaos/example/example_echo_server/proto"
@@ -260,6 +263,7 @@ func TestSpinServerSpawnLatency(t *testing.T) {
 		N_PARALLEL           = 1
 		MCPU_PER_PROC        = 2000
 		SRV_UNION_DIR string = "name/spin-srv-cpp"
+		USE_EPCACHE   bool   = true
 	)
 
 	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
@@ -277,11 +281,36 @@ func TestSpinServerSpawnLatency(t *testing.T) {
 		return
 	}
 
-	p := proc.NewProc("spin-srv-cpp", nil)
+	var epcsrvEP *sp.Tendpoint
+	var j *epcachesrv.EPCacheJob
+	var err error
+	// Start the epcache server
+	if USE_EPCACHE {
+		j, err = epcachesrv.NewEPCacheJob(mrts.GetRealm(test.REALM1).SigmaClnt)
+		if !assert.Nil(mrts.T, err, "Err EPCacheJob: %v", err) {
+			return
+		}
+		// Read the endpoint of the endpoint cache server
+		epcsrvEPB, err := mrts.GetRealm(test.REALM1).GetFile(epcache.EPCACHE)
+		if !assert.Nil(mrts.T, err, "Err GetFile EPCacheSrv EP: %v", err) {
+			return
+		}
+		epcsrvEP, err = sp.NewEndpointFromBytes(epcsrvEPB)
+		if !assert.Nil(mrts.T, err, "Err GetFile unmarshal EPCacheSrv EP: %v", err) {
+			return
+		}
+		_ = j
+		// TODO: use j
+	}
+
+	p := proc.NewProc("spin-srv-cpp", []string{strconv.FormatBool(USE_EPCACHE)})
 	p.GetProcEnv().UseSPProxy = true
 	p.SetMcpu(MCPU_PER_PROC)
+	if USE_EPCACHE {
+		p.SetCachedEndpoint(epcache.EPCACHE, epcsrvEP)
+	}
 	start := time.Now()
-	err := mrts.GetRealm(test.REALM1).Spawn(p)
+	err = mrts.GetRealm(test.REALM1).Spawn(p)
 	assert.Nil(mrts.GetRealm(test.REALM1).Ts.T, err, "Spawn")
 	err = mrts.GetRealm(test.REALM1).WaitStart(p.GetPid())
 	assert.Nil(mrts.GetRealm(test.REALM1).Ts.T, err, "Start")
@@ -296,9 +325,12 @@ func TestSpinServerSpawnLatency(t *testing.T) {
 	for i := 0; i < N_PROC; i++ {
 		go func(c chan bool, parallelCh chan bool) {
 			<-parallelCh
-			p := proc.NewProc("spin-srv-cpp", nil)
+			p := proc.NewProc("spin-srv-cpp", []string{strconv.FormatBool(USE_EPCACHE)})
 			p.GetProcEnv().UseSPProxy = true
 			p.SetMcpu(MCPU_PER_PROC)
+			if USE_EPCACHE {
+				p.SetCachedEndpoint(epcache.EPCACHE, epcsrvEP)
+			}
 			start := time.Now()
 			err := mrts.GetRealm(test.REALM1).Spawn(p)
 			assert.Nil(mrts.GetRealm(test.REALM1).Ts.T, err, "Spawn")

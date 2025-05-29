@@ -21,9 +21,11 @@ int main(int argc, char *argv[]) {
   auto sp_clnt = std::make_shared<sigmaos::proxy::sigmap::Clnt>();
   LogSpawnLatency(pe->GetPID(), pe->GetSpawnTime(), start, "Create spproxyclnt");
 
+  bool use_epcache = (argc > 1) && (argv[1] == "true");
+
   // Create the echo server
   start = GetCurrentTime();
-  auto srv = std::make_shared<sigmaos::apps::spin::Srv>(sp_clnt);
+  auto srv = std::make_shared<sigmaos::apps::spin::Srv>(sp_clnt, use_epcache);
   LogSpawnLatency(pe->GetPID(), pe->GetSpawnTime(), start, "Make SpinSrv");
   // Run the server
   srv->Run();

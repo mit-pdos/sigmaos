@@ -9,6 +9,7 @@ import (
 
 	"sigmaos/api/fs"
 	sos "sigmaos/api/sigmaos"
+	epcacheclnt "sigmaos/apps/epcache/clnt"
 	"sigmaos/ctx"
 	db "sigmaos/debug"
 	"sigmaos/proc"
@@ -92,6 +93,7 @@ type SPProxySrvAPI struct {
 	procClntInitErr     error
 	fidc                *fidclnt.FidClnt
 	sc                  *sigmaclnt.SigmaClnt
+	epcc                *epcacheclnt.EndpointCacheClnt
 	spps                *SPProxySrv
 }
 
@@ -138,13 +140,14 @@ func (sca *SPProxySrvAPI) Init(ctx fs.CtxI, req scproto.SigmaInitReq, rep *scpro
 	pe := proc.NewProcEnvFromProto(req.ProcEnvProto)
 	db.DPrintf(db.SPPROXYSRV, "Init pe %v", pe)
 	start := time.Now()
-	sc, err := sca.spps.getOrCreateSigmaClnt(req.ProcEnvProto, true)
+	sc, epcc, err := sca.spps.getOrCreateSigmaClnt(req.ProcEnvProto, true)
 	if err != nil {
 		rep.Err = sca.setErr(fmt.Errorf("Error init SPProxySrvAPI: %v pe %v", err, pe))
 		return err
 	}
 	perf.LogSpawnLatency("SPProxySrv.Init wait getOrCreateSigmaClnt", pe.GetPID(), pe.GetSpawnTime(), start)
 	sca.sc = sc
+	sca.epcc = epcc
 	db.DPrintf(db.SPPROXYSRV, "%v: Init done %v", sca.sc.ClntId(), pe)
 	rep.Err = sca.setErr(nil)
 	return nil
@@ -385,13 +388,20 @@ func (sca *SPProxySrvAPI) Close(ctx fs.CtxI, req scproto.SigmaNullReq, rep *scpr
 // ========== EP Manipulation =========
 func (sca *SPProxySrvAPI) RegisterEP(ctx fs.CtxI, req scproto.SigmaRegisterEPReq, rep *scproto.SigmaErrRep) error {
 	ep := sp.NewEndpointFromProto(req.Endpoint)
-	db.DPrintf(db.SPPROXYSRV, "%v: RegisterEP %v -> %v", sca.sc.ClntId(), req.Path, ep)
-	err := sca.sc.MkEndpointFile(req.Path, ep)
-	if err != nil {
-		db.DPrintf(db.SPPROXYSRV_ERR, "%v: RegisterEP err: %v", sca.sc.ClntId(), err)
+	useEPCC := sca.epcc == nil
+	db.DPrintf(db.SPPROXYSRV, "%v: RegisterEP (useEPCC:%v) %v -> %v", sca.sc.ClntId(), useEPCC, req.Path, ep)
+	var err error
+	if !useEPCC {
+		if err = sca.sc.MkEndpointFile(req.Path, ep); err != nil {
+			db.DPrintf(db.SPPROXYSRV_ERR, "%v: RegisterEP MkEndpointFile err: %v", sca.sc.ClntId(), err)
+		}
+	} else {
+		if err = sca.epcc.RegisterEndpoint(req.Path, sca.sc.ProcEnv().GetPID().String(), ep); err != nil {
+			db.DPrintf(db.SPPROXYSRV_ERR, "%v: RegisterEP EPCC err: %v", sca.sc.ClntId(), err)
+		}
 	}
 	rep.Err = sca.setErr(err)
-	db.DPrintf(db.SPPROXYSRV, "%v: RegisterEP done %v %v", sca.sc.ClntId(), req, rep)
+	db.DPrintf(db.SPPROXYSRV, "%v: RegisterEP (useEPCC:%v) done %v %v", sca.sc.ClntId(), useEPCC, req, rep)
 	return nil
 }
 

@@ -12,6 +12,8 @@ import (
 	"syscall"
 	"time"
 
+	"sigmaos/apps/epcache"
+	epcacheclnt "sigmaos/apps/epcache/clnt"
 	db "sigmaos/debug"
 	dialproxyclnt "sigmaos/dialproxy/clnt"
 	dialproxysrv "sigmaos/dialproxy/srv"
@@ -56,8 +58,9 @@ func newSPProxySrv() (*SPProxySrv, error) {
 }
 
 type sigmaClntCreationResult struct {
-	sc  *sigmaclnt.SigmaClnt
-	err error
+	sc   *sigmaclnt.SigmaClnt
+	epcc *epcacheclnt.EndpointCacheClnt
+	err  error
 }
 
 func (spps *SPProxySrv) runServer() error {
@@ -128,31 +131,47 @@ func (spp *SPProxySrv) createSigmaClnt(pe *proc.ProcEnv, withProcClnt bool, ch c
 	if err != nil {
 		db.DPrintf(db.SPPROXYSRV_ERR, "Error NewSigmaClnt proc %v", pe.GetPID())
 	}
+	var epcc *epcacheclnt.EndpointCacheClnt
 	// Initialize a procclnt too
-	if err == nil && withProcClnt {
-		start := time.Now()
-		err = sc.NewProcClnt()
-		perf.LogSpawnLatency("SPProxySrv.createSigmaClnt initProcClnt", pe.GetPID(), pe.GetSpawnTime(), start)
-		if err != nil {
-			db.DPrintf(db.SPPROXYSRV_ERR, "%v: Failed to create procclnt: %v", pe.GetPID(), err)
-		} else {
-			err = sc.ProcAPI.(*procclnt.ProcClnt).InitMSchedClnt()
-			perf.LogSpawnLatency("SPProxySrv.createSigmaClnt initMSchedClnt", pe.GetPID(), pe.GetSpawnTime(), start)
+	if err == nil {
+		if withProcClnt {
+			start := time.Now()
+			err = sc.NewProcClnt()
+			perf.LogSpawnLatency("SPProxySrv.createSigmaClnt initProcClnt", pe.GetPID(), pe.GetSpawnTime(), start)
 			if err != nil {
-				db.DPrintf(db.SPPROXYSRV_ERR, "%v: Failed to initialize msched clnt: %v", pe.GetPID(), err)
+				db.DPrintf(db.SPPROXYSRV_ERR, "%v: Failed to create procclnt: %v", pe.GetPID(), err)
+			} else {
+				// Initialize the procclnt's connection to msched, which will be needed to
+				// call, e.g., Started
+				err = sc.ProcAPI.(*procclnt.ProcClnt).InitMSchedClnt()
+				perf.LogSpawnLatency("SPProxySrv.createSigmaClnt initMSchedClnt", pe.GetPID(), pe.GetSpawnTime(), start)
+				if err != nil {
+					db.DPrintf(db.SPPROXYSRV_ERR, "%v: Failed to initialize msched clnt: %v", pe.GetPID(), err)
+				}
+			}
+		}
+		// If running with EPCache, pre-mount the epcache srv
+		if epcsrvEP, ok := pe.GetCachedEndpoint(epcache.EPCACHE); ok {
+			if err := epcacheclnt.MountEPCacheSrv(sc.FsLib, epcsrvEP); err != nil {
+				db.DPrintf(db.SPPROXYSRV_ERR, "%v: failed to mount EPCacheSrv EP: %v", pe.GetPID(), err)
+			}
+			epcc, err = epcacheclnt.NewEndpointCacheClnt(sc.FsLib)
+			if err != nil {
+				db.DPrintf(db.SPPROXYSRV_ERR, "%v: Err NewEPCacheClnt: %v", pe.GetPID(), err)
 			}
 		}
 	}
 	// Inform any waiters of the result of sigmaclnt creation
 	ch <- &sigmaClntCreationResult{
-		sc:  sc,
-		err: err,
+		sc:   sc,
+		epcc: epcc,
+		err:  err,
 	}
 }
 
 // Allocate a sigmaclnt for a proxied proc, if one doesn't exist already.
 // Optionally, return the sigmaclnt (consuming it)
-func (spps *SPProxySrv) getOrCreateSigmaClnt(pep *proc.ProcEnvProto, get bool) (*sigmaclnt.SigmaClnt, error) {
+func (spps *SPProxySrv) getOrCreateSigmaClnt(pep *proc.ProcEnvProto, get bool) (*sigmaclnt.SigmaClnt, *epcacheclnt.EndpointCacheClnt, error) {
 	pe := proc.NewProcEnvFromProto(pep)
 	pe.UseSPProxy = false
 	pe.UseDialProxy = false
@@ -170,10 +189,10 @@ func (spps *SPProxySrv) getOrCreateSigmaClnt(pep *proc.ProcEnvProto, get bool) (
 	spps.mu.Unlock()
 	// If the clnt didn't exist already, start creating it
 	if !get {
-		return nil, nil
+		return nil, nil, nil
 	}
 	scr := <-ch
-	return scr.sc, scr.err
+	return scr.sc, scr.epcc, scr.err
 }
 
 func (spps *SPProxySrv) IncomingProc(pep *proc.ProcEnvProto) {

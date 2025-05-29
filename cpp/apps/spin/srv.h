@@ -31,8 +31,8 @@ const int INIT_NTHREAD = 100;
 
 class Srv {
   public:
-  Srv(std::shared_ptr<sigmaos::proxy::sigmap::Clnt> sp_clnt) : _sp_clnt(sp_clnt) {
-    log(SPINSRV, "Starting RPC srv");
+  Srv(std::shared_ptr<sigmaos::proxy::sigmap::Clnt> sp_clnt, bool use_epcache) : _sp_clnt(sp_clnt), _use_epcache(use_epcache) {
+    log(SPINSRV, "Starting RPC srv epcache {}", _use_epcache);
     auto start = GetCurrentTime();
     _srv = std::make_shared<sigmaos::rpc::srv::Srv>(sp_clnt, INIT_NTHREAD);
     LogSpawnLatency(_sp_clnt->ProcEnv()->GetPID(), _sp_clnt->ProcEnv()->GetSpawnTime(), start, "Make RPCSrv");
@@ -48,7 +48,7 @@ class Srv {
         log(SPINSRV_ERR, "Error RegisterEP: {}", res.error());
         fatal("Error RegisterEP: {}", res.error().String());
       }
-      LogSpawnLatency(_sp_clnt->ProcEnv()->GetPID(), _sp_clnt->ProcEnv()->GetSpawnTime(), start, "RegisterEP");
+      LogSpawnLatency(_sp_clnt->ProcEnv()->GetPID(), _sp_clnt->ProcEnv()->GetSpawnTime(), start, std::format("RegisterEP epcache {}", _use_epcache));
       log(SPINSRV, "Registered sigmaEP");
     }
   }
@@ -59,6 +59,7 @@ class Srv {
   private:
   std::shared_ptr<sigmaos::proxy::sigmap::Clnt> _sp_clnt;
   std::shared_ptr<sigmaos::rpc::srv::Srv> _srv;
+  bool _use_epcache;
   // Used for logger initialization
   static bool _l;
   static bool _l_e;

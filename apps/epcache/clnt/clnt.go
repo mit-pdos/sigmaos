@@ -2,10 +2,12 @@ package clnt
 
 import (
 	"fmt"
+	"path/filepath"
 
 	"sigmaos/apps/epcache"
 	"sigmaos/apps/epcache/proto"
 	db "sigmaos/debug"
+	"sigmaos/rpc"
 	rpcclnt "sigmaos/rpc/clnt"
 	sprpcclnt "sigmaos/rpc/clnt/sigmap"
 	"sigmaos/sigmaclnt/fslib"
@@ -26,6 +28,14 @@ func NewEndpointCacheClnt(fsl *fslib.FsLib) (*EndpointCacheClnt, error) {
 		fsl:  fsl,
 		rpcc: rpcc,
 	}, nil
+}
+
+func MountEPCacheSrv(fsl *fslib.FsLib, epcsrvEP *sp.Tendpoint) error {
+	pn := filepath.Join(epcache.EPCACHE, rpc.RPC)
+	if err := fsl.MountTree(epcsrvEP, rpc.RPC, pn); err != nil {
+		return err
+	}
+	return nil
 }
 
 // Register a service's endpoint

@@ -3,7 +3,6 @@ package hotel
 import (
 	"encoding/json"
 	"log"
-	"path/filepath"
 	"strconv"
 	"sync"
 	"time"
@@ -15,11 +14,10 @@ import (
 
 	"sigmaos/api/fs"
 	"sigmaos/apps/epcache"
-	epclnt "sigmaos/apps/epcache/clnt"
+	epcacheclnt "sigmaos/apps/epcache/clnt"
 	"sigmaos/apps/hotel/proto"
 	db "sigmaos/debug"
 	"sigmaos/proc"
-	"sigmaos/rpc"
 	"sigmaos/sigmasrv"
 	"sigmaos/util/perf"
 	"sigmaos/util/tracing"
@@ -113,15 +111,14 @@ func RunGeoSrv(job string, nidxStr string, maxSearchRadiusStr string, maxSearchR
 
 	start = time.Now()
 	if epcsrvEP, ok := pe.GetCachedEndpoint(epcache.EPCACHE); ok {
-		pn := filepath.Join(epcache.EPCACHE, rpc.RPC)
-		if err := ssrv.MemFs.SigmaClnt().FsLib.MountTree(epcsrvEP, rpc.RPC, pn); err != nil {
+		if err := epcacheclnt.MountEPCacheSrv(ssrv.MemFs.SigmaClnt().FsLib, epcsrvEP); err != nil {
 			db.DFatalf("Err mount epcache srv: %v", err)
 		}
 	}
 	perf.LogSpawnLatency("Geo.MountEPCacheSrv", pe.GetPID(), pe.GetSpawnTime(), start)
 
 	start = time.Now()
-	epcc, err := epclnt.NewEndpointCacheClnt(ssrv.MemFs.SigmaClnt().FsLib)
+	epcc, err := epcacheclnt.NewEndpointCacheClnt(ssrv.MemFs.SigmaClnt().FsLib)
 	if err != nil {
 		db.DFatalf("Err EPCC: %v", err)
 	}

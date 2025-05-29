@@ -53,6 +53,12 @@ func newProcClnt(fsl *fslib.FsLib, pid sp.Tpid, procDirCreated bool, kernelID st
 	return clnt
 }
 
+// Eagerly initialize the msched clnt
+func (clnt *ProcClnt) InitMSchedClnt() error {
+	_, err := clnt.mschedclnt.GetRPCClnt(clnt.ProcEnv().GetKernelID())
+	return err
+}
+
 // ========== SPAWN ==========
 
 // Create the named state the proc (and its parent) expects.

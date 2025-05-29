@@ -19,6 +19,7 @@ import (
 	"sigmaos/proxy/sigmap/clnt"
 	"sigmaos/sigmaclnt"
 	"sigmaos/sigmaclnt/fidclnt"
+	"sigmaos/sigmaclnt/procclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/util/perf"
 )
@@ -123,18 +124,24 @@ func (spp *SPProxySrv) createSigmaClnt(pe *proc.ProcEnv, withProcClnt bool, ch c
 	db.DPrintf(db.SPPROXYSRV, "createSigmaClnt for %v", pe.GetPID())
 	start := time.Now()
 	sc, err := sigmaclnt.NewSigmaClntFsLibFidClnt(pe, spp.fidc)
+	perf.LogSpawnLatency("SPProxySrv.createSigmaClnt initFsLib", pe.GetPID(), pe.GetSpawnTime(), start)
 	if err != nil {
 		db.DPrintf(db.SPPROXYSRV_ERR, "Error NewSigmaClnt proc %v", pe.GetPID())
 	}
-	perf.LogSpawnLatency("SPProxySrv.createSigmaClnt initFsLib", pe.GetPID(), pe.GetSpawnTime(), start)
 	// Initialize a procclnt too
 	if err == nil && withProcClnt {
 		start := time.Now()
 		err = sc.NewProcClnt()
+		perf.LogSpawnLatency("SPProxySrv.createSigmaClnt initProcClnt", pe.GetPID(), pe.GetSpawnTime(), start)
 		if err != nil {
 			db.DPrintf(db.SPPROXYSRV_ERR, "%v: Failed to create procclnt: %v", pe.GetPID(), err)
+		} else {
+			err = sc.ProcAPI.(*procclnt.ProcClnt).InitMSchedClnt()
+			perf.LogSpawnLatency("SPProxySrv.createSigmaClnt initMSchedClnt", pe.GetPID(), pe.GetSpawnTime(), start)
+			if err != nil {
+				db.DPrintf(db.SPPROXYSRV_ERR, "%v: Failed to initialize msched clnt: %v", pe.GetPID(), err)
+			}
 		}
-		perf.LogSpawnLatency("SPProxySrv.createSigmaClnt initProcClnt", pe.GetPID(), pe.GetSpawnTime(), start)
 	}
 	// Inform any waiters of the result of sigmaclnt creation
 	ch <- &sigmaClntCreationResult{

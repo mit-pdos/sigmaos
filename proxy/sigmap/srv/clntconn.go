@@ -388,7 +388,7 @@ func (sca *SPProxySrvAPI) Close(ctx fs.CtxI, req scproto.SigmaNullReq, rep *scpr
 // ========== EP Manipulation =========
 func (sca *SPProxySrvAPI) RegisterEP(ctx fs.CtxI, req scproto.SigmaRegisterEPReq, rep *scproto.SigmaErrRep) error {
 	ep := sp.NewEndpointFromProto(req.Endpoint)
-	useEPCC := sca.epcc == nil
+	useEPCC := sca.epcc != nil
 	db.DPrintf(db.SPPROXYSRV, "%v: RegisterEP (useEPCC:%v) %v -> %v", sca.sc.ClntId(), useEPCC, req.Path, ep)
 	var err error
 	if !useEPCC {

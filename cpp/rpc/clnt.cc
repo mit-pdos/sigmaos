@@ -69,7 +69,7 @@ std::expected<Rep, sigmaos::serr::Error> Clnt::wrap_and_run_rpc(std::string meth
 
   // Create the call object to be sent, and perform the RPC.
   auto wrapped_call = std::make_shared<io::transport::Call>(seqno, wrapped_in_iov, out_iov);
-  auto res = _demux->SendReceive(wrapped_call);
+  auto res = _chan->SendReceive(wrapped_call);
   if (!res.has_value()) {
     log(RPCCLNT_ERR, "Error sendreceive: {}", res.error().String());
     return std::unexpected(res.error());

@@ -14,6 +14,7 @@
 #include <io/transport/transport.h>
 #include <io/transport/call.h>
 #include <io/demux/internal/callmap.h>
+#include <rpc/channel.h>
 
 namespace sigmaos {
 namespace io::demux {
@@ -21,7 +22,7 @@ namespace io::demux {
 const std::string DEMUXCLNT = "DEMUXCLNT";
 const std::string DEMUXCLNT_ERR = DEMUXCLNT + sigmaos::util::log::ERR;
 
-class Clnt {
+class Clnt : public sigmaos::rpc::Channel {
   public:
   Clnt(std::shared_ptr<sigmaos::io::transport::Transport> trans) : _mu(), _trans(trans), _callmap(), _reader_thread(std::thread(&Clnt::read_responses, this)) {
     log(DEMUXCLNT, "New demux clnt");

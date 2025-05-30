@@ -19,18 +19,19 @@ const std::string RPCCLNT_ERR = "RPCCLNT" + sigmaos::util::log::ERR;
 
 class Clnt {
   public:
-  Clnt(std::shared_ptr<sigmaos::io::demux::Clnt> demux) : _seqno(1), _demux(demux) {}
+  Clnt(std::shared_ptr<Channel> chan) : _seqno(1), _chan(chan) {}
+//  Clnt(std::shared_ptr<sigmaos::io::demux::Clnt> demux) : Clnt(dynamic_pointer_cast<Channel>(demux)) {}
   ~Clnt() { Close(); }
 
   std::expected<int, sigmaos::serr::Error> RPC(std::string method, google::protobuf::Message &req, google::protobuf::Message &res);
   void Close() { 
     log(RPCCLNT, "Close");
-    _demux->Close(); 
+    _chan->Close(); 
     log(RPCCLNT, "Done close");
   }
   private:
   std::atomic<uint64_t> _seqno;
-  std::shared_ptr<sigmaos::io::demux::Clnt> _demux;
+  std::shared_ptr<Channel> _chan;
   // Used for logger initialization
   static bool _l;
   static bool _l_e;

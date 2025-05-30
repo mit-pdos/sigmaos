@@ -21,7 +21,7 @@ int main(int argc, char *argv[]) {
   auto sp_clnt = std::make_shared<sigmaos::proxy::sigmap::Clnt>();
   LogSpawnLatency(pe->GetPID(), pe->GetSpawnTime(), start, "Create spproxyclnt");
 
-  bool use_epcache = (argc > 1) && (argv[1] == "true");
+  bool use_epcache = (argc > 1) && (std::string(argv[1]) == "true");
 
   // Create the echo server
   start = GetCurrentTime();

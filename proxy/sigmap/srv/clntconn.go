@@ -199,6 +199,7 @@ func (sca *SPProxySrvAPI) Remove(ctx fs.CtxI, req scproto.SigmaPathReq, rep *scp
 }
 
 func (sca *SPProxySrvAPI) GetFile(ctx fs.CtxI, req scproto.SigmaPathReq, rep *scproto.SigmaDataRep) error {
+	db.DPrintf(db.SPPROXYSRV, "%v: GetFile %v", sca.sc.ClntId(), req)
 	d, err := sca.sc.GetFile(req.Path)
 	rep.Blob = &rpcproto.Blob{Iov: [][]byte{d}}
 	rep.Err = sca.setErr(err)

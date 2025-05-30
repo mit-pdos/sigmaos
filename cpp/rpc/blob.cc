@@ -21,6 +21,11 @@ std::pair<Blob *, bool> extract_blob(google::protobuf::Message &msg) {
       bmsg = r->MutableMessage(&msg, fd);
       blob = dynamic_cast<Blob *>(bmsg);
       has_blob = true;
+      {
+        // Release the blob message from the protobuf, so that the protobuf's
+        // blob field is unset.
+        auto _ = r->ReleaseMessage(&msg, fd);
+      }
       break;
     }
   }

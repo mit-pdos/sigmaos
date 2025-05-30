@@ -180,14 +180,6 @@ std::expected<std::shared_ptr<std::string>, sigmaos::serr::Error> Clnt::GetFile(
   iov->AddAllocated(s.get());
   rep.set_allocated_blob(&blob);
   auto res = _rpcc->RPC("SPProxySrvAPI.GetFile", req, rep);
-  // Remove the data buffer from the protobuf's IOV in order to regain
-  // ownership of its underlying memory.
-  {
-    auto _ = iov->ReleaseLast();
-  }
-  {
-    auto _ = rep.release_blob();
-  }
   if (!res.has_value()) {
     log(SPPROXYCLNT_ERR, "Err RPC: {}", res.error());
     return std::unexpected(res.error());
@@ -213,14 +205,6 @@ std::expected<uint32_t, sigmaos::serr::Error> Clnt::PutFile(std::string pn, sigm
   req.set_offset(offset);
   req.set_leaseid(leaseID);
   auto res = _rpcc->RPC("SPProxySrvAPI.PutFile", req, rep);
-  // Remove the data buffer from the protobuf's IOV in order to regain
-  // ownership of its underlying memory.
-  {
-    auto _ = iov->ReleaseLast();
-  }
-  {
-    auto _ = req.release_blob();
-  }
   if (!res.has_value()) {
     log(SPPROXYCLNT_ERR, "Err RPC: {}", res.error());
     return std::unexpected(res.error());
@@ -244,14 +228,6 @@ std::expected<uint32_t, sigmaos::serr::Error> Clnt::Read(int fd, std::string *b)
   iov->AddAllocated(b);
   rep.set_allocated_blob(&blob);
   auto res = _rpcc->RPC("SPProxySrvAPI.Read", req, rep);
-  // Remove the data buffer from the protobuf's IOV in order to regain
-  // ownership of its underlying memory.
-  {
-    auto _ = iov->ReleaseLast();
-  }
-  {
-    auto _ = rep.release_blob();
-  }
   if (!res.has_value()) {
     log(SPPROXYCLNT_ERR, "Err RPC: {}", res.error());
     return std::unexpected(res.error());
@@ -275,14 +251,6 @@ std::expected<uint32_t, sigmaos::serr::Error> Clnt::Pread(int fd, std::string *b
   iov->AddAllocated(b);
   rep.set_allocated_blob(&blob);
   auto res = _rpcc->RPC("SPProxySrvAPI.Pread", req, rep);
-  // Remove the data buffer from the protobuf's IOV in order to regain
-  // ownership of its underlying memory.
-  {
-    auto _ = iov->ReleaseLast();
-  }
-  {
-    auto _ = rep.release_blob();
-  }
   if (!res.has_value()) {
     log(SPPROXYCLNT_ERR, "Err RPC: {}", res.error());
     return std::unexpected(res.error());
@@ -304,14 +272,6 @@ std::expected<uint32_t, sigmaos::serr::Error> Clnt::Write(int fd, std::string *b
   req.set_fd(fd);
   req.set_allocated_blob(&blob);
   auto res = _rpcc->RPC("SPProxySrvAPI.Write", req, rep);
-  // Remove the data buffer from the protobuf's IOV in order to regain
-  // ownership of its underlying memory.
-  {
-    auto _ = iov->ReleaseLast();
-  }
-  {
-    auto _ = req.release_blob();
-  }
   if (!res.has_value()) {
     log(SPPROXYCLNT_ERR, "Err RPC: {}", res.error());
     return std::unexpected(res.error());

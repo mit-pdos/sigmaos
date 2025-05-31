@@ -56,7 +56,7 @@ std::expected<int, sigmaos::serr::Error> Clnt::RegisterEndpoint(std::string svc_
   return 0;
 }
 std::expected<int, sigmaos::serr::Error> Clnt::DeregisterEndpoint(std::string svc_name, std::string instance_id) {
-	log(EPCACHECLNT, "DeregisterEndpoint: {} -> {}", svc_name, instance_id)
+	log(EPCACHECLNT, "DeregisterEndpoint: {} -> {}", svc_name, instance_id);
 	DeregisterEndpointRep rep;
 	DeregisterEndpointReq req;
   req.set_servicename(svc_name);

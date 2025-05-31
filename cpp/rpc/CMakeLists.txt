@@ -1,6 +1,7 @@
 message(STATUS "Building rpc library")
 
 add_subdirectory(proto)
+add_subdirectory(spchannel)
 
 add_library(rpc STATIC
   blob.cc

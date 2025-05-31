@@ -360,7 +360,7 @@ std::expected<int, sigmaos::serr::Error> Clnt::FenceDir(std::string pn/*, f sp.T
 //func (scc *SPProxyClnt) WriteFence(fd int, d []byte, f sp.Tfence) (sp.Tsize, error) {
 
 std::expected<int, sigmaos::serr::Error> Clnt::WriteRead(int fd, std::shared_ptr<sigmaos::io::iovec::IOVec> in_iov, std::shared_ptr<sigmaos::io::iovec::IOVec> out_iov) {
-  log(SPPROXYCLNT, "WriteRead: {}", fd);
+  log(SPPROXYCLNT, "WriteRead: {} in_iov({}) out_iov({})", fd, in_iov->Size(), out_iov->Size());
   Blob in_blob;
   auto req_iov = in_blob.mutable_iov();
   // Iterate input IOVec and add each vector to the request blob's IOV
@@ -372,6 +372,7 @@ std::expected<int, sigmaos::serr::Error> Clnt::WriteRead(int fd, std::shared_ptr
   // Set input blob
   req.set_fd(fd);
   req.set_allocated_blob(&in_blob);
+  req.set_noutvec(out_iov->Size());
   Blob out_blob;
   auto rep_iov = out_blob.mutable_iov();
   // Iterate output IOVec and add each vector to the reply blob's IOV

@@ -62,7 +62,7 @@ std::expected<int, sigmaos::serr::Error> Clnt::DeregisterEndpoint(std::string sv
   req.set_servicename(svc_name);
   req.set_instanceid(instance_id);
   {
-	  auto res = _rpcc.RPC("EPCacheSrv.DeregisterEndpoint", req, &res);
+	  auto res = _rpcc->RPC("EPCacheSrv.DeregisterEndpoint", req, &res);
     if (!res.has_value()) {
       log(EPCACHECLNT_ERR, "Error DergisterEndpoint: {}", res.error().String());
       return std::unexpected(res.error());
@@ -72,7 +72,7 @@ std::expected<int, sigmaos::serr::Error> Clnt::DeregisterEndpoint(std::string sv
     log(EPCACHECLNT_ERR, "DeregisterEndpoint failed");
     return std::unexpected(sigmaos::serr::Error(sigmaos::serr::TErrError, "Deregistration failed"));
 	}
-	log(EPCACHECLNT, "DeregisterEndpoint ok: {} -> {}", svc_name, instance_id)
+	log(EPCACHECLNT, "DeregisterEndpoint ok: {} -> {}", svc_name, instance_id);
   return 0;
 }
 

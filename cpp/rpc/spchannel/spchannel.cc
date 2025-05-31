@@ -11,15 +11,6 @@ std::expected<int, sigmaos::serr::Error> Channel::Init() {
   // TODO: use consts
   std::string clone_pn = _srv_pn + "/rpc/clone";
   {
-    std::string msg = std::format("Hello world! I'm a CPP proc!");
-    log(TEST, "PutFile message \"{}\" length {}", msg, msg.size());
-    auto res = _sp_clnt->PutFile("name/hello-cpp-1", 0777, 0, &msg, 0, 0);
-    if (!res.has_value()) {
-      log(ALWAYS, "Err RPC: {}", res.error());
-      return std::unexpected(res.error());
-    }
-  }
-  {
     auto res = _sp_clnt->GetFile(clone_pn);
     if (!res.has_value()) {
       log(SPCHAN_ERR, "Error GetFile clone file({}): {}", clone_pn, res.error().String());

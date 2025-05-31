@@ -56,7 +56,24 @@ std::expected<int, sigmaos::serr::Error> Clnt::RegisterEndpoint(std::string svc_
   return 0;
 }
 std::expected<int, sigmaos::serr::Error> Clnt::DeregisterEndpoint(std::string svc_name, std::string instance_id) {
-  fatal("unimplemented");
+	log(EPCACHECLNT, "DeregisterEndpoint: {} -> {}", svc_name, instance_id)
+	DeregisterEndpointRep rep;
+	DeregisterEndpointReq req;
+  req.set_servicename(svc_name);
+  req.set_instanceid(instance_id);
+  {
+	  auto res = _rpcc.RPC("EPCacheSrv.DeregisterEndpoint", req, &res);
+    if (!res.has_value()) {
+      log(EPCACHECLNT_ERR, "Error DergisterEndpoint: {}", res.error().String());
+      return std::unexpected(res.error());
+    }
+  }
+	if (!rep.ok()) {
+    log(EPCACHECLNT_ERR, "DeregisterEndpoint failed");
+    return std::unexpected(sigmaos::serr::Error(sigmaos::serr::TErrError, "Deregistration failed"));
+	}
+	log(EPCACHECLNT, "DeregisterEndpoint ok: {} -> {}", svc_name, instance_id)
+  return 0;
 }
 
 //std::expected<std::pair<std::vector<std::shared_ptr<Instance>>, Tversion>, sigmaos::serr::Error> DeregisterEndpoint(std::string svc_name, std::string instance_id);

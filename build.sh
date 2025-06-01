@@ -10,6 +10,7 @@ TAG=""
 TARGET="local"
 VERSION="1.0"
 USERBIN="all"
+NORACE="--norace"
 while [[ "$#" -gt 0 ]]; do
   case "$1" in
   --parallel)
@@ -33,6 +34,11 @@ while [[ "$#" -gt 0 ]]; do
   --version)
     shift
     VERSION="$1"
+    shift
+    ;;
+  --race)
+    shift
+    NORACE=""
     shift
     ;;
   --userbin)
@@ -160,7 +166,8 @@ if [ -z "$rsbuildercid" ]; then
   echo "========== Done starting Rust builder ========== "
 fi
 
-BUILD_ARGS="--norace \
+BUILD_ARGS="\
+  $NORACE \
   --gopath /go-custom/bin/go \
   --target $TARGET \
   $PARALLEL"

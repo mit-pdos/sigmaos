@@ -155,7 +155,7 @@ func (pss *ProtSrvState) RemoveObj(ctx fs.CtxI, dir fs.Dir, o fs.FsObj, name str
 		if ok := pss.lm.Delete(o.Path()); !ok {
 			// leasesrv may already have removed path from leased
 			// map and called RemoveObj to delete it.
-			db.DPrintf(db.PROTSRV, "Delete %v doesn't exist in et\n", o.Path())
+			db.DPrintf(db.PROTSRV, "Delete %v doesn't exist in lm", o.Path())
 		}
 	}
 	return nil

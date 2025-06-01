@@ -76,7 +76,28 @@ std::expected<int, sigmaos::serr::Error> Clnt::DeregisterEndpoint(std::string sv
   return 0;
 }
 
-//  std::expected<std::pair<std::vector<std::shared_ptr<Instance>>, Tversion>, sigmaos::serr::Error> DeregisterEndpoint(std::string svc_name, std::string instance_id);
+std::expected<std::pair<std::vector<std::shared_ptr<Instance>>, Tversion>, sigmaos::serr::Error> Clnt::GetEndpoints(std::string svc_name, Tversion v1) {
+	log(EPCACHECLNT, "GetEndpoints: {} v{}", svc_name, v1);
+  std::vector<std::shared_ptr<Instance>> instances;
+  Tversion v2;
+  GetEndpointsRep rep;
+	GetEndpointsReq req;
+  req.set_servicename(svc_name);
+  req.set_version((uint64_t) v1);
+  {
+	  auto res = _rpcc->RPC("EPCacheSrv.GetEndpoints", req, rep);
+    if (!res.has_value()) {
+      log(EPCACHECLNT_ERR, "Error GetEndpoints: {}", res.error().String());
+      return std::unexpected(res.error());
+    }
+    v2 = (Tversion) rep.version();
+    for (auto i : rep.instances()) {
+      instances.push_back(std::make_shared<Instance>(i));
+    }
+  }
+	log(EPCACHECLNT, "GetEndpoints ok: {} v{} -> {} n_instances:{}", svc_name, (uint64_t) v1, (uint64_t) v2, instances.size());
+	return std::make_pair(instances, v2);
+}
 
 };
 };

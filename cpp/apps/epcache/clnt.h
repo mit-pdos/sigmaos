@@ -13,6 +13,7 @@
 #include <rpc/clnt.h>
 #include <proxy/sigmap/sigmap.h>
 
+#include <apps/epcache/epcache.h>
 #include <apps/epcache/proto/epcache.pb.h>
 
 namespace sigmaos {
@@ -33,7 +34,7 @@ class Clnt {
   // Register an endpoint
   std::expected<int, sigmaos::serr::Error> RegisterEndpoint(std::string svc_name, std::string instance_id, std::shared_ptr<TendpointProto> ep);
   std::expected<int, sigmaos::serr::Error> DeregisterEndpoint(std::string svc_name, std::string instance_id);
-//  std::expected<std::pair<std::vector<std::shared_ptr<Instance>>, Tversion>, sigmaos::serr::Error> DeregisterEndpoint(std::string svc_name, std::string instance_id);
+  std::expected<std::pair<std::vector<std::shared_ptr<Instance>>, Tversion>, sigmaos::serr::Error> GetEndpoints(std::string svc_name, Tversion v1);
   private:
   std::shared_ptr<sigmaos::proxy::sigmap::Clnt> _sp_clnt;
   std::shared_ptr<sigmaos::rpc::Clnt> _rpcc;

@@ -8,7 +8,9 @@
 #include <proc/proc.h>
 #include <util/perf/perf.h>
 #include <rpc/srv.h>
+#include <rpc/spchannel/spchannel.h>
 #include <sigmap/const.h>
+#include <apps/epcache/clnt.h>
 
 #include <apps/spin/srv.h>
 
@@ -22,6 +24,8 @@ int main(int argc, char *argv[]) {
   LogSpawnLatency(pe->GetPID(), pe->GetSpawnTime(), start, "Create spproxyclnt");
 
   bool use_epcache = (argc > 1) && (std::string(argv[1]) == "true");
+
+  log(sigmaos::apps::spin::SPINSRV, "argc {} argv[1] {}", argc, argv[1]);
 
   // Create the echo server
   start = GetCurrentTime();

@@ -24,7 +24,7 @@ const std::string EPCACHE_PN = "name/epcache";
 const std::string EPCACHECLNT = "EPCACHECLNT";
 const std::string EPCACHECLNT_ERR = EPCACHECLNT + sigmaos::util::log::ERR;
 
-// A channel/connection over which to make RPCs
+// An RPC client for the EPCache service
 class Clnt {
   public:
   Clnt(std::shared_ptr<sigmaos::proxy::sigmap::Clnt> sp_clnt) : _sp_clnt(sp_clnt) {}
@@ -33,7 +33,9 @@ class Clnt {
   std::expected<int, sigmaos::serr::Error> Init();
   // Register an endpoint
   std::expected<int, sigmaos::serr::Error> RegisterEndpoint(std::string svc_name, std::string instance_id, std::shared_ptr<TendpointProto> ep);
+  // Deregister an endpoint
   std::expected<int, sigmaos::serr::Error> DeregisterEndpoint(std::string svc_name, std::string instance_id);
+  // Get a list of endpoints corresponding to a service
   std::expected<std::pair<std::vector<std::shared_ptr<Instance>>, Tversion>, sigmaos::serr::Error> GetEndpoints(std::string svc_name, Tversion v1);
   private:
   std::shared_ptr<sigmaos::proxy::sigmap::Clnt> _sp_clnt;

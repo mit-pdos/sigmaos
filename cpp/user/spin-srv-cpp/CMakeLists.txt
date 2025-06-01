@@ -14,4 +14,7 @@ target_link_libraries(spin-srv-cpp PRIVATE
   spin_proto
   app_spin
   rpc
+  rpc_spchannel
+  app_epcache
+  app_cache
 )

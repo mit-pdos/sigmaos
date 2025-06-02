@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+option go_package = "sigmaos/apps/cossim/proto";
+
+service CosSimService {
+  rpc CosSim(CosSimReq) returns (CosSimRep);
+}
+
+message CosSimReq {
+  bytes inputVec = 1; // TODO: blob
+  int64 n = 2;
+}
+
+message CosSimRep {
+  uint64 iD = 1;
+}

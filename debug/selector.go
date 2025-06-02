@@ -62,6 +62,14 @@ const (
 	CACHEDSVCCLNT           = "CACHEDSVCCLNT"
 )
 
+// CosSim
+const (
+	COSSIMSRV      Tselector = "COSSIMSRV"
+	COSSIMSRV_ERR            = COSSIMSRV + ERR
+	COSSIMCLNT               = "COSSIMCLNT"
+	COSSIMCLNT_ERR           = COSSIMCLNT + ERR
+)
+
 // EPCache
 const (
 	EPCACHE         Tselector = "EPCACHE"

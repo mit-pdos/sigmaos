@@ -1,4 +1,4 @@
-message(STATUS "Building spawn-latency-cpp proc")
+message(STATUS "Building spin-srv-cpp proc")
 
 add_executable(spin-srv-cpp
   main.cc

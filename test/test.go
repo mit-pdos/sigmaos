@@ -307,9 +307,9 @@ func (ts *Tstate) Shutdown() error {
 		db.DPrintf(db.ALWAYS, "Skipping shutdown")
 		db.DPrintf(db.TEST, "Skipping shutdown")
 	} else {
-		db.DPrintf(db.SYSTEM, "Shutdown")
+		db.DPrintf(db.KERNEL, "Shutdown")
 		if ts.memfs != nil {
-			db.DPrintf(db.SYSTEM, "Shutdown memfs")
+			db.DPrintf(db.KERNEL, "Shutdown memfs")
 			err := ts.Evict(ts.memfs.GetPid())
 			assert.Nil(ts.T, err, "evict")
 			_, err = ts.WaitExit(ts.memfs.GetPid())

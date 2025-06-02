@@ -130,11 +130,6 @@ const (
 	WATCH_PERF = "WATCH_PERF"
 )
 
-// System
-const (
-	SYSTEM Tselector = "SYSTEM"
-)
-
 // Kernel
 const (
 	KERNEL         Tselector = "KERNEL"

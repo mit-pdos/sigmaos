@@ -10,7 +10,6 @@
 #include <rpc/srv.h>
 #include <rpc/spchannel/spchannel.h>
 #include <sigmap/const.h>
-#include <apps/epcache/clnt.h>
 
 #include <apps/spin/srv.h>
 

@@ -27,8 +27,8 @@ const std::string TCPCONN_ERR = TCPCONN + sigmaos::util::log::ERR;
 class Conn : public sigmaos::io::conn::Conn {
   public:
   // Create a tcp connection
-  Conn() : sigmaos::io::conn::Conn(), _addr({0}) {}
-  Conn(int sockfd, struct sockaddr_in addr) : sigmaos::io::conn::Conn(sockfd), _addr(addr) {}
+  Conn(std::string id) : sigmaos::io::conn::Conn(id), _addr({0}) {}
+  Conn(std::string id, int sockfd, struct sockaddr_in addr) : sigmaos::io::conn::Conn(id, sockfd), _addr(addr) {}
   ~Conn() {}
 
   protected:
@@ -49,7 +49,7 @@ class Conn : public sigmaos::io::conn::Conn {
 
 class ClntConn : public Conn {
   public:
-  ClntConn(std::string srv_addr, int port) {
+  ClntConn(std::string id, std::string srv_addr, int port) : Conn(id) {
     int sockfd;
     sockaddr_in addr;
     log(TCPCONN, "New tcp client connection {}:{}", srv_addr, port);
@@ -75,7 +75,7 @@ class ClntConn : public Conn {
 
 class Listener {
   public:
-  Listener() {
+  Listener(std::string id) : _id(id) {
     log(TCPCONN, "New TCP listener");
     _sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (_sockfd == -1) {
@@ -104,6 +104,7 @@ class Listener {
   int GetPort() { return htons(_addr.sin_port); }
 
   private:
+  std::string _id;
   int _sockfd;
   struct sockaddr_in _addr;
 };

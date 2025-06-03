@@ -10,9 +10,12 @@ namespace io::conn {
 
 class Conn {
 public:
-  Conn() : _sockfd(-1) {}
-  Conn(int sockfd) : _sockfd(sockfd) {}
+  Conn(std::string id) : Conn(id, -1) {}
+  Conn(std::string id, int sockfd) : _id(id), _sockfd(sockfd) {}
   ~Conn() {}
+
+  // Get conn ID
+  std::string GetID() { return _id; }
 
   // Read/Write a buffer
   std::expected<int, sigmaos::serr::Error> Read(std::string *b);
@@ -32,6 +35,7 @@ protected:
   std::expected<int, sigmaos::serr::Error> write_bytes(const char *b, size_t size);
 
 private:
+  std::string _id;
   int _sockfd;
   // Used for logger initialization
   static bool _l;

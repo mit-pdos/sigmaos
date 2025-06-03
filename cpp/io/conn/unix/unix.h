@@ -5,6 +5,7 @@
 #include <unistd.h>
 
 #include <iostream>
+#include <format>
 #include <memory>
 #include <vector>
 #include <expected>
@@ -22,7 +23,7 @@ const std::string UNIXCONN_ERR = UNIXCONN + sigmaos::util::log::ERR;
 class Conn : public sigmaos::io::conn::Conn {
   public:
   // Create a unix socket connection
-  Conn() : sigmaos::io::conn::Conn(), _addr({0}) {}
+  Conn(std::string id) : sigmaos::io::conn::Conn(id), _addr({0}) {}
   ~Conn() {}
 
   protected:
@@ -40,7 +41,7 @@ class Conn : public sigmaos::io::conn::Conn {
 
 class ClntConn : public Conn {
   public:
-  ClntConn(std::string pn) {
+  ClntConn(std::string pn) : Conn(std::format("unixconn:{}", pn)) {
     int sockfd;
     sockaddr_un addr;
     log(UNIXCONN, "New unix client connection {}", pn);

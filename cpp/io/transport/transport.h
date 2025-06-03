@@ -21,7 +21,7 @@ const std::string TRANSPORT_ERR = "TRANSPORT" + sigmaos::util::log::ERR;
 class Transport {
   public:
   Transport(std::shared_ptr<sigmaos::io::conn::Conn> conn) : _conn(conn), _calls() {
-    log(TRANSPORT, "New transport");
+    log(TRANSPORT, "New transport connID: {}", conn->GetID());
   }
 
   ~Transport() { _conn->Close(); }

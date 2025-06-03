@@ -20,10 +20,10 @@ const std::string NETSRV_ERR = NETSRV + sigmaos::util::log::ERR;
 
 class Srv {
   public:
-  Srv(sigmaos::io::demux::RequestHandler serve_request) : Srv(serve_request, 0) {}
-  Srv(sigmaos::io::demux::RequestHandler serve_request, int demux_init_nthread) : _done(false), _serve_request(serve_request), _demux_srvs(), _thread_pool("netsrv"), _demux_init_nthread(demux_init_nthread) {
+  Srv(std::string id, sigmaos::io::demux::RequestHandler serve_request) : Srv(id, serve_request, 0) {}
+  Srv(std::string id, sigmaos::io::demux::RequestHandler serve_request, int demux_init_nthread) : _id(id), _done(false), _serve_request(serve_request), _demux_srvs(), _thread_pool("netsrv"), _demux_init_nthread(demux_init_nthread) {
     log(NETSRV, "Starting net server");
-    _lis = std::make_shared<sigmaos::io::conn::tcpconn::Listener>();
+    _lis = std::make_shared<sigmaos::io::conn::tcpconn::Listener>(_id);
     log(NETSRV, "TCP server started");
     connection_handler = std::thread(&Srv::handle_connections, this);
   }
@@ -36,6 +36,7 @@ class Srv {
     return _lis->Close();
   }
   private:
+  std::string _id;
   bool _done;
   sigmaos::io::demux::RequestHandler _serve_request;
   std::vector<std::shared_ptr<sigmaos::io::demux::Srv>> _demux_srvs;

@@ -14,7 +14,7 @@ std::expected<std::shared_ptr<Conn>, sigmaos::serr::Error> Listener::Accept() {
     log(TCPCONN_ERR, "Error accept socket fd {}", _sockfd);
     return std::unexpected(sigmaos::serr::Error(sigmaos::serr::TErrError, std::format("accept socket fd {}", _sockfd)));
   }
-  return std::make_shared<Conn>(connfd, clnt_addr);
+  return std::make_shared<Conn>(_id, connfd, clnt_addr);
 }
 
 std::expected<int, sigmaos::serr::Error> Listener::Close() {

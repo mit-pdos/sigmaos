@@ -529,7 +529,6 @@ func (ps *ProtSrv) GetFile(args *sp.Tgetfile, rets *sp.Rread) ([]byte, *sp.Rerro
 	if args.Tcount() > sp.MAXGETSET {
 		return nil, sp.NewRerrorSerr(serr.NewErr(serr.TErrInval, "too large"))
 	}
-	db.DPrintf(db.PROTSRV, "%v: GetFile start args {%v}", ps.sid, args)
 	f, pn, lo, i, err := ps.lookupWalkOpen(args.Tfid(), args.Wnames, args.Resolve, args.Tmode(), lockmap.RLOCK)
 	if err != nil {
 		return nil, sp.NewRerrorSerr(err)
@@ -540,7 +539,6 @@ func (ps *ProtSrv) GetFile(args *sp.Tgetfile, rets *sp.Rread) ([]byte, *sp.Rerro
 	if err != nil {
 		return nil, sp.NewRerrorSerr(err)
 	}
-	db.DPrintf(db.PROTSRV, "%v: GetFile3 start args {%v}", ps.sid, args)
 	if err := lo.Close(f.Ctx(), args.Tmode()); err != nil {
 		return nil, sp.NewRerrorSerr(err)
 	}

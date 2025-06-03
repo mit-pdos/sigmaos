@@ -272,26 +272,15 @@ func TestMR(t *testing.T) {
 		memReq          proc.Tmem
 	}
 	// Variable MR benchmark configuration parameters
-	var (
+var (
 		mrApps []*MRExperimentConfig = []*MRExperimentConfig{
-			// {"ryan-mr-wiki20G-grep-ux-512.yml", 10, 4, 7000},
-			// {"ryan-mr-wiki20G-grep-ux-256.yml", 10, 4, 7000},
-			// {"ryan-mr-wiki20G-grep-ux-128.yml", 10, 4, 7000},
-			// {"ryan-mr-wiki20G-grep-ux-64.yml", 10, 4, 7000},
-			// {"ryan-mr-wiki20G-grep-ux-32.yml", 10, 4, 7000},
-
-			{"ryan-mr-wiki20G-wc-ux-512.yml", 10, 4, 7000},
-			// {"ryan-mr-wiki20G-wc-ux-512-45.yml", 10, 4, 7000},
-			// {"ryan-mr-wiki20G-wc-ux-256-45.yml", 10, 4, 7000},
-			// {"ryan-mr-wiki20G-wc-ux-128.yml", 10, 4, 7000},
-			// {"ryan-mr-wiki20G-wc-ux-128-45.yml", 10, 4, 7000},
-			// // {"ryan-mr-wiki20G-wc-ux-64-45.yml", 10, 4, 7000},
-			// {"ryan-mr-wiki20G-wc-ux-32.yml", 10, 4, 7000},
-			// {"ryan-mr-wiki20G-wc-ux-32-45.yml", 10, 4, 7000},
-		}
-
-		prewarmRealms []bool = []bool{true}
+			{"mr-grep-wiki2G-bench-s3.yml", 10, 4, 7000},
+			{"mr-grep-wiki2G-granular-bench-s3.yml", 54, 4, 7000},
+			{"mr-wc-wiki2G-bench.yml", 10, 4, 7000},
+			{"mr-wc-wiki2G-bench-s3.yml", 10, 4, 7000},
+		}		
 		perfs []bool = []bool{false}
+		prewarmRealms []bool = []bool{true}
 		//		prewarmRealms []bool   = []bool{true, false}
 	)
 	// Constant MR benchmark configuration parameters

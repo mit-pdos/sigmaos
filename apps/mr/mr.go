@@ -71,17 +71,6 @@ func NewBins(fsl *fslib.FsLib, dir string, maxbinsz, splitsz sp.Tlength) ([]Bin,
 		return nil, err
 	}
 
-	currMaxBinSz := maxbinsz
-	genNewBinSz := func() {
-		// double := rand.Int64(10) == 0
-		// if double {
-		// 	currMaxBinSz = maxbinsz * 10
-		// } else {
-		// 	currMaxBinSz = maxbinsz
-		// }
-	}
-	genNewBinSz()
-	for x := 0; x < 150; x++ {
 	for _, st := range sts {
 		for i := uint64(0); ; {
 			n := uint64(splitsz)
@@ -99,18 +88,16 @@ func NewBins(fsl *fslib.FsLib, dir string, maxbinsz, splitsz sp.Tlength) ([]Bin,
 			bin = append(bin, split)
 			binsz += n
 
-			if binsz+uint64(splitsz) > uint64(currMaxBinSz) { // bin full?
+			if binsz+uint64(splitsz) > uint64(maxbinsz) { // bin full?
 				bins = append(bins, bin)
 				bin = Bin{}
 				binsz = uint64(0)
-				genNewBinSz()
 			}
 			if n < uint64(splitsz) { // next file
 				break
 			}
 			i += n
 		}
-	}
 	}
 	if binsz > 0 {
 		bins = append(bins, bin)

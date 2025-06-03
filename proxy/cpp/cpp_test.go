@@ -12,6 +12,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	cossimclnt "sigmaos/apps/cossim/clnt"
 	"sigmaos/apps/epcache"
 	epcachesrv "sigmaos/apps/epcache/srv"
 	spinproto "sigmaos/apps/spin/proto"
@@ -282,11 +283,10 @@ func TestSpinServerSpawnLatency(t *testing.T) {
 	}
 
 	var epcsrvEP *sp.Tendpoint
-	var j *epcachesrv.EPCacheJob
 	var err error
 	// Start the epcache server
 	if USE_EPCACHE {
-		j, err = epcachesrv.NewEPCacheJob(mrts.GetRealm(test.REALM1).SigmaClnt)
+		_, err = epcachesrv.NewEPCacheJob(mrts.GetRealm(test.REALM1).SigmaClnt)
 		if !assert.Nil(mrts.T, err, "Err EPCacheJob: %v", err) {
 			return
 		}
@@ -299,8 +299,6 @@ func TestSpinServerSpawnLatency(t *testing.T) {
 		if !assert.Nil(mrts.T, err, "Err GetFile unmarshal EPCacheSrv EP: %v", err) {
 			return
 		}
-		_ = j
-		// TODO: use j
 	}
 
 	p := proc.NewProc("spin-srv-cpp", []string{strconv.FormatBool(USE_EPCACHE)})
@@ -369,4 +367,98 @@ func TestSpinServerExec(t *testing.T) {
 		}
 		cmd.Wait()
 	}
+}
+
+func TestCosSimSpawnLatency(t *testing.T) {
+	const (
+		N_PROC               = 1
+		N_NODE               = 0
+		N_PARALLEL           = 1
+		MCPU_PER_PROC        = 2000
+		SRV_UNION_DIR string = "name/cossim"
+		// App parameters
+		N_VEC   = 100
+		VEC_DIM = 100
+	)
+
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	defer mrts.Shutdown()
+
+	// Make union dir
+	if err := mrts.GetRealm(test.REALM1).MkDir(SRV_UNION_DIR, 0777); !assert.Nil(mrts.T, err, "Err mkunion") {
+		return
+	}
+
+	if err := mrts.GetRealm(test.REALM1).BootNode(N_NODE); !assert.Nil(t, err, "Err boot: %v", err) {
+		return
+	}
+
+	// Start the epcache server
+	epcJob, err := epcachesrv.NewEPCacheJob(mrts.GetRealm(test.REALM1).SigmaClnt)
+	if !assert.Nil(mrts.T, err, "Err EPCacheJob: %v", err) {
+		return
+	}
+	// Read the endpoint of the endpoint cache server
+	epcsrvEPB, err := mrts.GetRealm(test.REALM1).GetFile(epcache.EPCACHE)
+	if !assert.Nil(mrts.T, err, "Err GetFile EPCacheSrv EP: %v", err) {
+		return
+	}
+	epcsrvEP, err := sp.NewEndpointFromBytes(epcsrvEPB)
+	if !assert.Nil(mrts.T, err, "Err GetFile unmarshal EPCacheSrv EP: %v", err) {
+		return
+	}
+	// Construct input vec
+	v := make([]float64, VEC_DIM)
+	for i := range v {
+		v[i] = float64(i)
+	}
+	p := proc.NewProc("cossim-srv-cpp", []string{strconv.Itoa(N_VEC), strconv.Itoa(VEC_DIM)})
+	p.GetProcEnv().UseSPProxy = true
+	p.SetMcpu(MCPU_PER_PROC)
+	p.SetCachedEndpoint(epcache.EPCACHE, epcsrvEP)
+	start := time.Now()
+	err = mrts.GetRealm(test.REALM1).Spawn(p)
+	assert.Nil(mrts.GetRealm(test.REALM1).Ts.T, err, "Spawn")
+	err = mrts.GetRealm(test.REALM1).WaitStart(p.GetPid())
+	assert.Nil(mrts.GetRealm(test.REALM1).Ts.T, err, "Start")
+	db.DPrintf(db.TEST, "CPP server proc started (lat=%v)", time.Since(start))
+	csclnt, err := cossimclnt.NewCosSimClnt(mrts.GetRealm(test.REALM1).FsLib, epcJob.Clnt, p.GetPid().String())
+	if !assert.Nil(t, err, "Err new CosSimClnt: %v", err) {
+		return
+	}
+	id, val, err := csclnt.CosSim(v, 1)
+	if !assert.Nil(t, err, "Err CosSim: %v", err) {
+		return
+	}
+	db.DPrintf(db.TEST, "CosSim result: %v %v", id, val)
+	db.DPrintf(db.TEST, "Running procs")
+	parallelCh := make(chan bool, N_PARALLEL)
+	for i := 0; i < N_PARALLEL; i++ {
+		parallelCh <- true
+	}
+	c := make(chan bool)
+	for i := 0; i < N_PROC; i++ {
+		go func(c chan bool, parallelCh chan bool) {
+			<-parallelCh
+			p := proc.NewProc("cossim-srv-cpp", []string{strconv.Itoa(N_VEC), strconv.Itoa(VEC_DIM)})
+			p.GetProcEnv().UseSPProxy = true
+			p.SetMcpu(MCPU_PER_PROC)
+			p.SetCachedEndpoint(epcache.EPCACHE, epcsrvEP)
+			start := time.Now()
+			err := mrts.GetRealm(test.REALM1).Spawn(p)
+			assert.Nil(mrts.GetRealm(test.REALM1).Ts.T, err, "Spawn")
+			err = mrts.GetRealm(test.REALM1).WaitStart(p.GetPid())
+			assert.Nil(mrts.GetRealm(test.REALM1).Ts.T, err, "Start")
+			db.DPrintf(db.TEST, "Spin server proc started (lat=%v)", time.Since(start))
+			parallelCh <- true
+			c <- true
+		}(c, parallelCh)
+	}
+	for i := 0; i < N_PROC; i++ {
+		<-c
+	}
+	db.DPrintf(db.TEST, "Procs done")
 }

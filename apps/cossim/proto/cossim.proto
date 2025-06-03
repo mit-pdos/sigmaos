@@ -7,10 +7,11 @@ service CosSimService {
 }
 
 message CosSimReq {
-  bytes inputVec = 1; // TODO: blob
+  repeated double inputVec = 1; // TODO: blob
   int64 n = 2;
 }
 
 message CosSimRep {
-  uint64 iD = 1;
+  uint64 iD = 1; // Closest vector ID
+  double val = 2; // Value of maximum cosine similarity
 }

@@ -33,6 +33,7 @@ for PP in \
   proxy/mongo \
   example/example_echo_server \
   apps/spin \
+  apps/cossim \
   spproto/srv; \
   do
     for P in $PP/proto/*.proto ; do

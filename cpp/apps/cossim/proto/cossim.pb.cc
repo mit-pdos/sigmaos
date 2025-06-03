@@ -22,7 +22,7 @@ namespace _pbi = _pb::internal;
 
 PROTOBUF_CONSTEXPR CosSimReq::CosSimReq(
     ::_pbi::ConstantInitialized): _impl_{
-    /*decltype(_impl_.inputvec_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}
+    /*decltype(_impl_.inputvec_)*/{}
   , /*decltype(_impl_.n_)*/int64_t{0}
   , /*decltype(_impl_._cached_size_)*/{}} {}
 struct CosSimReqDefaultTypeInternal {
@@ -37,6 +37,7 @@ PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORIT
 PROTOBUF_CONSTEXPR CosSimRep::CosSimRep(
     ::_pbi::ConstantInitialized): _impl_{
     /*decltype(_impl_.id_)*/uint64_t{0u}
+  , /*decltype(_impl_.val_)*/0
   , /*decltype(_impl_._cached_size_)*/{}} {}
 struct CosSimRepDefaultTypeInternal {
   PROTOBUF_CONSTEXPR CosSimRepDefaultTypeInternal()
@@ -67,6 +68,7 @@ const uint32_t TableStruct_cossim_2eproto::offsets[] PROTOBUF_SECTION_VARIABLE(p
   ~0u,  // no _weak_field_map_
   ~0u,  // no _inlined_string_donated_
   PROTOBUF_FIELD_OFFSET(::CosSimRep, _impl_.id_),
+  PROTOBUF_FIELD_OFFSET(::CosSimRep, _impl_.val_),
 };
 static const ::_pbi::MigrationSchema schemas[] PROTOBUF_SECTION_VARIABLE(protodesc_cold) = {
   { 0, -1, -1, sizeof(::CosSimReq)},
@@ -80,14 +82,14 @@ static const ::_pb::Message* const file_default_instances[] = {
 
 const char descriptor_table_protodef_cossim_2eproto[] PROTOBUF_SECTION_VARIABLE(protodesc_cold) =
   "\n\014cossim.proto\"(\n\tCosSimReq\022\020\n\010inputVec\030"
-  "\001 \001(\014\022\t\n\001n\030\002 \001(\003\"\027\n\tCosSimRep\022\n\n\002iD\030\001 \001("
-  "\00421\n\rCosSimService\022 \n\006CosSim\022\n.CosSimReq"
-  "\032\n.CosSimRepB\033Z\031sigmaos/apps/cossim/prot"
-  "ob\006proto3"
+  "\001 \003(\001\022\t\n\001n\030\002 \001(\003\"$\n\tCosSimRep\022\n\n\002iD\030\001 \001("
+  "\004\022\013\n\003val\030\002 \001(\00121\n\rCosSimService\022 \n\006CosSi"
+  "m\022\n.CosSimReq\032\n.CosSimRepB\033Z\031sigmaos/app"
+  "s/cossim/protob\006proto3"
   ;
 static ::_pbi::once_flag descriptor_table_cossim_2eproto_once;
 const ::_pbi::DescriptorTable descriptor_table_cossim_2eproto = {
-    false, false, 169, descriptor_table_protodef_cossim_2eproto,
+    false, false, 182, descriptor_table_protodef_cossim_2eproto,
     "cossim.proto",
     &descriptor_table_cossim_2eproto_once, nullptr, 0, 2,
     schemas, file_default_instances, TableStruct_cossim_2eproto::offsets,
@@ -117,19 +119,11 @@ CosSimReq::CosSimReq(const CosSimReq& from)
   : ::PROTOBUF_NAMESPACE_ID::Message() {
   CosSimReq* const _this = this; (void)_this;
   new (&_impl_) Impl_{
-      decltype(_impl_.inputvec_){}
+      decltype(_impl_.inputvec_){from._impl_.inputvec_}
     , decltype(_impl_.n_){}
     , /*decltype(_impl_._cached_size_)*/{}};
 
   _internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
-  _impl_.inputvec_.InitDefault();
-  #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
-    _impl_.inputvec_.Set("", GetArenaForAllocation());
-  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
-  if (!from._internal_inputvec().empty()) {
-    _this->_impl_.inputvec_.Set(from._internal_inputvec(), 
-      _this->GetArenaForAllocation());
-  }
   _this->_impl_.n_ = from._impl_.n_;
   // @@protoc_insertion_point(copy_constructor:CosSimReq)
 }
@@ -139,14 +133,10 @@ inline void CosSimReq::SharedCtor(
   (void)arena;
   (void)is_message_owned;
   new (&_impl_) Impl_{
-      decltype(_impl_.inputvec_){}
+      decltype(_impl_.inputvec_){arena}
     , decltype(_impl_.n_){int64_t{0}}
     , /*decltype(_impl_._cached_size_)*/{}
   };
-  _impl_.inputvec_.InitDefault();
-  #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
-    _impl_.inputvec_.Set("", GetArenaForAllocation());
-  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
 }
 
 CosSimReq::~CosSimReq() {
@@ -160,7 +150,7 @@ CosSimReq::~CosSimReq() {
 
 inline void CosSimReq::SharedDtor() {
   GOOGLE_DCHECK(GetArenaForAllocation() == nullptr);
-  _impl_.inputvec_.Destroy();
+  _impl_.inputvec_.~RepeatedField();
 }
 
 void CosSimReq::SetCachedSize(int size) const {
@@ -173,7 +163,7 @@ void CosSimReq::Clear() {
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
-  _impl_.inputvec_.ClearToEmpty();
+  _impl_.inputvec_.Clear();
   _impl_.n_ = int64_t{0};
   _internal_metadata_.Clear<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>();
 }
@@ -184,12 +174,14 @@ const char* CosSimReq::_InternalParse(const char* ptr, ::_pbi::ParseContext* ctx
     uint32_t tag;
     ptr = ::_pbi::ReadTag(ptr, &tag);
     switch (tag >> 3) {
-      // bytes inputVec = 1;
+      // repeated double inputVec = 1;
       case 1:
         if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 10)) {
-          auto str = _internal_mutable_inputvec();
-          ptr = ::_pbi::InlineGreedyStringParser(str, ptr, ctx);
+          ptr = ::PROTOBUF_NAMESPACE_ID::internal::PackedDoubleParser(_internal_mutable_inputvec(), ptr, ctx);
           CHK_(ptr);
+        } else if (static_cast<uint8_t>(tag) == 9) {
+          _internal_add_inputvec(::PROTOBUF_NAMESPACE_ID::internal::UnalignedLoad<double>(ptr));
+          ptr += sizeof(double);
         } else
           goto handle_unusual;
         continue;
@@ -230,10 +222,9 @@ uint8_t* CosSimReq::_InternalSerialize(
   uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
-  // bytes inputVec = 1;
-  if (!this->_internal_inputvec().empty()) {
-    target = stream->WriteBytesMaybeAliased(
-        1, this->_internal_inputvec(), target);
+  // repeated double inputVec = 1;
+  if (this->_internal_inputvec_size() > 0) {
+    target = stream->WriteFixedPacked(1, _internal_inputvec(), target);
   }
 
   // int64 n = 2;
@@ -258,11 +249,15 @@ size_t CosSimReq::ByteSizeLong() const {
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
-  // bytes inputVec = 1;
-  if (!this->_internal_inputvec().empty()) {
-    total_size += 1 +
-      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::BytesSize(
-        this->_internal_inputvec());
+  // repeated double inputVec = 1;
+  {
+    unsigned int count = static_cast<unsigned int>(this->_internal_inputvec_size());
+    size_t data_size = 8UL * count;
+    if (data_size > 0) {
+      total_size += 1 +
+        ::_pbi::WireFormatLite::Int32Size(static_cast<int32_t>(data_size));
+    }
+    total_size += data_size;
   }
 
   // int64 n = 2;
@@ -288,9 +283,7 @@ void CosSimReq::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PROT
   uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
-  if (!from._internal_inputvec().empty()) {
-    _this->_internal_set_inputvec(from._internal_inputvec());
-  }
+  _this->_impl_.inputvec_.MergeFrom(from._impl_.inputvec_);
   if (from._internal_n() != 0) {
     _this->_internal_set_n(from._internal_n());
   }
@@ -310,13 +303,8 @@ bool CosSimReq::IsInitialized() const {
 
 void CosSimReq::InternalSwap(CosSimReq* other) {
   using std::swap;
-  auto* lhs_arena = GetArenaForAllocation();
-  auto* rhs_arena = other->GetArenaForAllocation();
   _internal_metadata_.InternalSwap(&other->_internal_metadata_);
-  ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr::InternalSwap(
-      &_impl_.inputvec_, lhs_arena,
-      &other->_impl_.inputvec_, rhs_arena
-  );
+  _impl_.inputvec_.InternalSwap(&other->_impl_.inputvec_);
   swap(_impl_.n_, other->_impl_.n_);
 }
 
@@ -343,10 +331,13 @@ CosSimRep::CosSimRep(const CosSimRep& from)
   CosSimRep* const _this = this; (void)_this;
   new (&_impl_) Impl_{
       decltype(_impl_.id_){}
+    , decltype(_impl_.val_){}
     , /*decltype(_impl_._cached_size_)*/{}};
 
   _internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
-  _this->_impl_.id_ = from._impl_.id_;
+  ::memcpy(&_impl_.id_, &from._impl_.id_,
+    static_cast<size_t>(reinterpret_cast<char*>(&_impl_.val_) -
+    reinterpret_cast<char*>(&_impl_.id_)) + sizeof(_impl_.val_));
   // @@protoc_insertion_point(copy_constructor:CosSimRep)
 }
 
@@ -356,6 +347,7 @@ inline void CosSimRep::SharedCtor(
   (void)is_message_owned;
   new (&_impl_) Impl_{
       decltype(_impl_.id_){uint64_t{0u}}
+    , decltype(_impl_.val_){0}
     , /*decltype(_impl_._cached_size_)*/{}
   };
 }
@@ -383,7 +375,9 @@ void CosSimRep::Clear() {
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
-  _impl_.id_ = uint64_t{0u};
+  ::memset(&_impl_.id_, 0, static_cast<size_t>(
+      reinterpret_cast<char*>(&_impl_.val_) -
+      reinterpret_cast<char*>(&_impl_.id_)) + sizeof(_impl_.val_));
   _internal_metadata_.Clear<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>();
 }
 
@@ -398,6 +392,14 @@ const char* CosSimRep::_InternalParse(const char* ptr, ::_pbi::ParseContext* ctx
         if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 8)) {
           _impl_.id_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
           CHK_(ptr);
+        } else
+          goto handle_unusual;
+        continue;
+      // double val = 2;
+      case 2:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 17)) {
+          _impl_.val_ = ::PROTOBUF_NAMESPACE_ID::internal::UnalignedLoad<double>(ptr);
+          ptr += sizeof(double);
         } else
           goto handle_unusual;
         continue;
@@ -436,6 +438,16 @@ uint8_t* CosSimRep::_InternalSerialize(
     target = ::_pbi::WireFormatLite::WriteUInt64ToArray(1, this->_internal_id(), target);
   }
 
+  // double val = 2;
+  static_assert(sizeof(uint64_t) == sizeof(double), "Code assumes uint64_t and double are the same size.");
+  double tmp_val = this->_internal_val();
+  uint64_t raw_val;
+  memcpy(&raw_val, &tmp_val, sizeof(tmp_val));
+  if (raw_val != 0) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteDoubleToArray(2, this->_internal_val(), target);
+  }
+
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
     target = ::_pbi::WireFormat::InternalSerializeUnknownFieldsToArray(
         _internal_metadata_.unknown_fields<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(::PROTOBUF_NAMESPACE_ID::UnknownFieldSet::default_instance), target, stream);
@@ -455,6 +467,15 @@ size_t CosSimRep::ByteSizeLong() const {
   // uint64 iD = 1;
   if (this->_internal_id() != 0) {
     total_size += ::_pbi::WireFormatLite::UInt64SizePlusOne(this->_internal_id());
+  }
+
+  // double val = 2;
+  static_assert(sizeof(uint64_t) == sizeof(double), "Code assumes uint64_t and double are the same size.");
+  double tmp_val = this->_internal_val();
+  uint64_t raw_val;
+  memcpy(&raw_val, &tmp_val, sizeof(tmp_val));
+  if (raw_val != 0) {
+    total_size += 1 + 8;
   }
 
   return MaybeComputeUnknownFieldsSize(total_size, &_impl_._cached_size_);
@@ -478,6 +499,13 @@ void CosSimRep::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PROT
   if (from._internal_id() != 0) {
     _this->_internal_set_id(from._internal_id());
   }
+  static_assert(sizeof(uint64_t) == sizeof(double), "Code assumes uint64_t and double are the same size.");
+  double tmp_val = from._internal_val();
+  uint64_t raw_val;
+  memcpy(&raw_val, &tmp_val, sizeof(tmp_val));
+  if (raw_val != 0) {
+    _this->_internal_set_val(from._internal_val());
+  }
   _this->_internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
 }
 
@@ -495,7 +523,12 @@ bool CosSimRep::IsInitialized() const {
 void CosSimRep::InternalSwap(CosSimRep* other) {
   using std::swap;
   _internal_metadata_.InternalSwap(&other->_internal_metadata_);
-  swap(_impl_.id_, other->_impl_.id_);
+  ::PROTOBUF_NAMESPACE_ID::internal::memswap<
+      PROTOBUF_FIELD_OFFSET(CosSimRep, _impl_.val_)
+      + sizeof(CosSimRep::_impl_.val_)
+      - PROTOBUF_FIELD_OFFSET(CosSimRep, _impl_.id_)>(
+          reinterpret_cast<char*>(&_impl_.id_),
+          reinterpret_cast<char*>(&other->_impl_.id_));
 }
 
 ::PROTOBUF_NAMESPACE_ID::Metadata CosSimRep::GetMetadata() const {

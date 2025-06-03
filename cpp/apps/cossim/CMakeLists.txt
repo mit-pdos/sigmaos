@@ -11,6 +11,7 @@ target_link_libraries(app_cossim PUBLIC
   util_log
   io_demux
   io_iovec
+  cossim_proto
 )
 
 target_include_directories(app_cossim PUBLIC ${CMAKE_SOURCE_DIR})

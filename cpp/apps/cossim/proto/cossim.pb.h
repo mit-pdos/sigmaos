@@ -181,19 +181,27 @@ class CosSimReq final :
     kInputVecFieldNumber = 1,
     kNFieldNumber = 2,
   };
-  // bytes inputVec = 1;
-  void clear_inputvec();
-  const std::string& inputvec() const;
-  template <typename ArgT0 = const std::string&, typename... ArgT>
-  void set_inputvec(ArgT0&& arg0, ArgT... args);
-  std::string* mutable_inputvec();
-  PROTOBUF_NODISCARD std::string* release_inputvec();
-  void set_allocated_inputvec(std::string* inputvec);
+  // repeated double inputVec = 1;
+  int inputvec_size() const;
   private:
-  const std::string& _internal_inputvec() const;
-  inline PROTOBUF_ALWAYS_INLINE void _internal_set_inputvec(const std::string& value);
-  std::string* _internal_mutable_inputvec();
+  int _internal_inputvec_size() const;
   public:
+  void clear_inputvec();
+  private:
+  double _internal_inputvec(int index) const;
+  const ::PROTOBUF_NAMESPACE_ID::RepeatedField< double >&
+      _internal_inputvec() const;
+  void _internal_add_inputvec(double value);
+  ::PROTOBUF_NAMESPACE_ID::RepeatedField< double >*
+      _internal_mutable_inputvec();
+  public:
+  double inputvec(int index) const;
+  void set_inputvec(int index, double value);
+  void add_inputvec(double value);
+  const ::PROTOBUF_NAMESPACE_ID::RepeatedField< double >&
+      inputvec() const;
+  ::PROTOBUF_NAMESPACE_ID::RepeatedField< double >*
+      mutable_inputvec();
 
   // int64 n = 2;
   void clear_n();
@@ -212,7 +220,7 @@ class CosSimReq final :
   typedef void InternalArenaConstructable_;
   typedef void DestructorSkippable_;
   struct Impl_ {
-    ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr inputvec_;
+    ::PROTOBUF_NAMESPACE_ID::RepeatedField< double > inputvec_;
     int64_t n_;
     mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   };
@@ -343,6 +351,7 @@ class CosSimRep final :
 
   enum : int {
     kIDFieldNumber = 1,
+    kValFieldNumber = 2,
   };
   // uint64 iD = 1;
   void clear_id();
@@ -351,6 +360,15 @@ class CosSimRep final :
   private:
   uint64_t _internal_id() const;
   void _internal_set_id(uint64_t value);
+  public:
+
+  // double val = 2;
+  void clear_val();
+  double val() const;
+  void set_val(double value);
+  private:
+  double _internal_val() const;
+  void _internal_set_val(double value);
   public:
 
   // @@protoc_insertion_point(class_scope:CosSimRep)
@@ -362,6 +380,7 @@ class CosSimRep final :
   typedef void DestructorSkippable_;
   struct Impl_ {
     uint64_t id_;
+    double val_;
     mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   };
   union { Impl_ _impl_; };
@@ -378,54 +397,51 @@ class CosSimRep final :
 #endif  // __GNUC__
 // CosSimReq
 
-// bytes inputVec = 1;
+// repeated double inputVec = 1;
+inline int CosSimReq::_internal_inputvec_size() const {
+  return _impl_.inputvec_.size();
+}
+inline int CosSimReq::inputvec_size() const {
+  return _internal_inputvec_size();
+}
 inline void CosSimReq::clear_inputvec() {
-  _impl_.inputvec_.ClearToEmpty();
+  _impl_.inputvec_.Clear();
 }
-inline const std::string& CosSimReq::inputvec() const {
+inline double CosSimReq::_internal_inputvec(int index) const {
+  return _impl_.inputvec_.Get(index);
+}
+inline double CosSimReq::inputvec(int index) const {
   // @@protoc_insertion_point(field_get:CosSimReq.inputVec)
-  return _internal_inputvec();
+  return _internal_inputvec(index);
 }
-template <typename ArgT0, typename... ArgT>
-inline PROTOBUF_ALWAYS_INLINE
-void CosSimReq::set_inputvec(ArgT0&& arg0, ArgT... args) {
- 
- _impl_.inputvec_.SetBytes(static_cast<ArgT0 &&>(arg0), args..., GetArenaForAllocation());
+inline void CosSimReq::set_inputvec(int index, double value) {
+  _impl_.inputvec_.Set(index, value);
   // @@protoc_insertion_point(field_set:CosSimReq.inputVec)
 }
-inline std::string* CosSimReq::mutable_inputvec() {
-  std::string* _s = _internal_mutable_inputvec();
-  // @@protoc_insertion_point(field_mutable:CosSimReq.inputVec)
-  return _s;
+inline void CosSimReq::_internal_add_inputvec(double value) {
+  _impl_.inputvec_.Add(value);
 }
-inline const std::string& CosSimReq::_internal_inputvec() const {
-  return _impl_.inputvec_.Get();
+inline void CosSimReq::add_inputvec(double value) {
+  _internal_add_inputvec(value);
+  // @@protoc_insertion_point(field_add:CosSimReq.inputVec)
 }
-inline void CosSimReq::_internal_set_inputvec(const std::string& value) {
-  
-  _impl_.inputvec_.Set(value, GetArenaForAllocation());
+inline const ::PROTOBUF_NAMESPACE_ID::RepeatedField< double >&
+CosSimReq::_internal_inputvec() const {
+  return _impl_.inputvec_;
 }
-inline std::string* CosSimReq::_internal_mutable_inputvec() {
-  
-  return _impl_.inputvec_.Mutable(GetArenaForAllocation());
+inline const ::PROTOBUF_NAMESPACE_ID::RepeatedField< double >&
+CosSimReq::inputvec() const {
+  // @@protoc_insertion_point(field_list:CosSimReq.inputVec)
+  return _internal_inputvec();
 }
-inline std::string* CosSimReq::release_inputvec() {
-  // @@protoc_insertion_point(field_release:CosSimReq.inputVec)
-  return _impl_.inputvec_.Release();
+inline ::PROTOBUF_NAMESPACE_ID::RepeatedField< double >*
+CosSimReq::_internal_mutable_inputvec() {
+  return &_impl_.inputvec_;
 }
-inline void CosSimReq::set_allocated_inputvec(std::string* inputvec) {
-  if (inputvec != nullptr) {
-    
-  } else {
-    
-  }
-  _impl_.inputvec_.SetAllocated(inputvec, GetArenaForAllocation());
-#ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
-  if (_impl_.inputvec_.IsDefault()) {
-    _impl_.inputvec_.Set("", GetArenaForAllocation());
-  }
-#endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
-  // @@protoc_insertion_point(field_set_allocated:CosSimReq.inputVec)
+inline ::PROTOBUF_NAMESPACE_ID::RepeatedField< double >*
+CosSimReq::mutable_inputvec() {
+  // @@protoc_insertion_point(field_mutable_list:CosSimReq.inputVec)
+  return _internal_mutable_inputvec();
 }
 
 // int64 n = 2;
@@ -470,6 +486,26 @@ inline void CosSimRep::_internal_set_id(uint64_t value) {
 inline void CosSimRep::set_id(uint64_t value) {
   _internal_set_id(value);
   // @@protoc_insertion_point(field_set:CosSimRep.iD)
+}
+
+// double val = 2;
+inline void CosSimRep::clear_val() {
+  _impl_.val_ = 0;
+}
+inline double CosSimRep::_internal_val() const {
+  return _impl_.val_;
+}
+inline double CosSimRep::val() const {
+  // @@protoc_insertion_point(field_get:CosSimRep.val)
+  return _internal_val();
+}
+inline void CosSimRep::_internal_set_val(double value) {
+  
+  _impl_.val_ = value;
+}
+inline void CosSimRep::set_val(double value) {
+  _internal_set_val(value);
+  // @@protoc_insertion_point(field_set:CosSimRep.val)
 }
 
 #ifdef __GNUC__

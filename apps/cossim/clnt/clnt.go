@@ -2,14 +2,15 @@ package clnt
 
 import (
 	"fmt"
-	"path/filepath"
 
 	"sigmaos/apps/cossim"
 	"sigmaos/apps/cossim/proto"
+	"sigmaos/apps/epcache"
+	epcacheclnt "sigmaos/apps/epcache/clnt"
 	db "sigmaos/debug"
-	"sigmaos/rpc"
 	rpcclnt "sigmaos/rpc/clnt"
-	sprpcclnt "sigmaos/rpc/clnt/sigmap"
+	"sigmaos/rpc/clnt/channel/spchannel"
+	rpco "sigmaos/rpc/clnt/opts"
 	"sigmaos/sigmaclnt/fslib"
 	sp "sigmaos/sigmap"
 )
@@ -17,32 +18,54 @@ import (
 type CosSimClnt struct {
 	fsl  *fslib.FsLib
 	rpcc *rpcclnt.RPCClnt
+	epcc *epcacheclnt.EndpointCacheClnt
 }
 
-func NewCosSimClnt(fsl *fslib.FsLib) (*CosSimClnt, error) {
-	rpcc, err := sprpcclnt.NewRPCClnt(fsl, cossim.COSSIM)
+func NewCosSimClnt(fsl *fslib.FsLib, epcc *epcacheclnt.EndpointCacheClnt, srvID string) (*CosSimClnt, error) {
+	instances, _, err := epcc.GetEndpoints(cossim.COSSIM, epcache.NO_VERSION)
+	if err != nil {
+		db.DPrintf(db.COSSIMCLNT_ERR, "Err GetEndpoints: %v", err)
+		return nil, err
+	}
+	var ep *sp.Tendpoint
+	for _, i := range instances {
+		if i.ID == srvID {
+			ep = sp.NewEndpointFromProto(i.EndpointProto)
+		}
+	}
+	if ep == nil {
+		db.DPrintf(db.COSSIMCLNT_ERR, "Err no EP for srv %v", srvID)
+		return nil, fmt.Errorf("No EP for srv %v", srvID)
+	}
+	ch, err := spchannel.NewSPChannelEndpoint(fsl, cossim.COSSIM, ep)
+	if err != nil {
+		db.DPrintf(db.COSSIMCLNT_ERR, "Err SPChannelEndpoint: %v", err)
+		return nil, err
+	}
+	rpcc, err := rpcclnt.NewRPCClnt(cossim.COSSIM, rpco.WithRPCChannel(ch))
 	if err != nil {
 		return nil, err
 	}
 	return &CosSimClnt{
 		fsl:  fsl,
 		rpcc: rpcc,
+		epcc: epcc,
 	}, nil
 }
 
 // Register a service's endpoint
-func (clnt *CosSimClnt) CosSim(b []byte, n int64) (uint64, error) {
-	db.DPrintf(db.COSSIMCLNT, "CosSim: %v", len(b))
+func (clnt *CosSimClnt) CosSim(v []float64, n int64) (uint64, float64, error) {
+	db.DPrintf(db.COSSIMCLNT, "CosSim: %v", len(v))
 	var res proto.CosSimRep
 	req := &proto.CosSimReq{
-		InputVec: b,
+		InputVec: v,
 		N:        n,
 	}
 	err := clnt.rpcc.RPC("CosSimSrv.CosSim", req, &res)
 	if err != nil {
 		db.DPrintf(db.COSSIMCLNT_ERR, "Err Register: %v", err)
-		return 0, err
+		return 0, 0.0, err
 	}
-	db.DPrintf(db.COSSIMCLNT, "CosSim ok: %v -> %v", len(b), res.ID)
-	return res.ID, nil
+	db.DPrintf(db.COSSIMCLNT, "CosSim ok: %v -> id:%v val:%v", len(v), res.ID, res.Val)
+	return res.ID, res.Val, nil
 }

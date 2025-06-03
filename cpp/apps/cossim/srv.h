@@ -5,6 +5,8 @@
 #include <expected>
 #include <format>
 #include <filesystem>
+#include <limits>
+#include <cmath>
 
 #include <util/log/log.h>
 #include <util/perf/perf.h>
@@ -26,12 +28,12 @@ namespace apps::cossim {
 const std::string COSSIMSRV = "COSSIMSRV";
 const std::string COSSIMSRV_ERR = "COSSIMSRV" + sigmaos::util::log::ERR;
 
-const std::filesystem::path COSSIMSRV_UNION_DIR_PN = "name/cossim";
+const std::filesystem::path COSSIM_SVC_NAME = "name/cossim";
 const int INIT_NTHREAD = 100;
 
 class Srv {
   public:
-  Srv(std::shared_ptr<sigmaos::proxy::sigmap::Clnt> sp_clnt) : _sp_clnt(sp_clnt){
+  Srv(std::shared_ptr<sigmaos::proxy::sigmap::Clnt> sp_clnt, int nvec, int vec_dim) : _nvec(nvec), _vec_dim(vec_dim), _vec_db(), _sp_clnt(sp_clnt) {
     log(COSSIMSRV, "Starting RPC srv");
     auto start = GetCurrentTime();
     _srv = std::make_shared<sigmaos::rpc::srv::Srv>(sp_clnt, INIT_NTHREAD);
@@ -41,7 +43,13 @@ class Srv {
     _srv->ExposeRPCHandler(cossim_ep);
     log(COSSIMSRV, "Exposed cossim RPC handler");
     {
-      auto pn = COSSIMSRV_UNION_DIR_PN / std::filesystem::path(_sp_clnt->ProcEnv()->GetPID());
+      auto res = Init();
+      if (!res.has_value()) {
+        fatal("Error Init: {}", res.error().String());
+      }
+    }
+    {
+      auto pn = COSSIM_SVC_NAME;
       auto start = GetCurrentTime();
       auto res = _srv->RegisterEP(pn);
       if (!res.has_value()) {
@@ -53,10 +61,13 @@ class Srv {
     }
   }
   ~Srv() {}
-
+  std::expected<int, sigmaos::serr::Error> Init();
   [[noreturn]] void Run();
 
   private:
+  int _nvec;
+  int _vec_dim;
+  std::map<uint64_t, std::vector<double>> _vec_db;
   std::shared_ptr<sigmaos::proxy::sigmap::Clnt> _sp_clnt;
   std::shared_ptr<sigmaos::rpc::srv::Srv> _srv;
   // Used for logger initialization

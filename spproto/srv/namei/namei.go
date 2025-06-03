@@ -16,7 +16,6 @@ func Walk(plt *lockmap.PathLockTable, ctx fs.CtxI, o fs.FsObj, dlk *lockmap.Path
 	nos, e, rest, err := d.LookupPath(ctx, target)
 	if err != nil { // an error or perhaps a ~
 		db.DPrintf(db.NAMEI, "%v: dir %v: file not found %v", ctx.Principal(), d, target[0])
-		// releaseLk(plt, ctx, plk, ltype)
 		return os, d, dlk, target, err
 	}
 	os = append(os, nos...)
@@ -32,7 +31,6 @@ func Walk(plt *lockmap.PathLockTable, ctx fs.CtxI, o fs.FsObj, dlk *lockmap.Path
 		}
 		return os, e, flk, nil, nil
 	}
-	// releaseLk(plt, ctx, plk, ltype)
 	switch e := e.(type) {
 	case fs.Dir:
 		db.DPrintf(db.NAMEI, "%v: namei e %v os(%d) %v target '%v'", ctx.Principal(), e, len(os), os, target[1:])

@@ -9,8 +9,7 @@ import (
 	epcacheclnt "sigmaos/apps/epcache/clnt"
 	db "sigmaos/debug"
 	rpcclnt "sigmaos/rpc/clnt"
-	"sigmaos/rpc/clnt/channel/spchannel"
-	rpco "sigmaos/rpc/clnt/opts"
+	rpcncclnt "sigmaos/rpc/clnt/netconn"
 	"sigmaos/sigmaclnt/fslib"
 	sp "sigmaos/sigmap"
 )
@@ -37,13 +36,9 @@ func NewCosSimClnt(fsl *fslib.FsLib, epcc *epcacheclnt.EndpointCacheClnt, srvID 
 		db.DPrintf(db.COSSIMCLNT_ERR, "Err no EP for srv %v", srvID)
 		return nil, fmt.Errorf("No EP for srv %v", srvID)
 	}
-	ch, err := spchannel.NewSPChannelEndpoint(fsl, cossim.COSSIM, ep)
+	rpcc, err := rpcncclnt.NewTCPRPCClnt("echosrv", ep)
 	if err != nil {
-		db.DPrintf(db.COSSIMCLNT_ERR, "Err SPChannelEndpoint: %v", err)
-		return nil, err
-	}
-	rpcc, err := rpcclnt.NewRPCClnt(cossim.COSSIM, rpco.WithRPCChannel(ch))
-	if err != nil {
+		db.DPrintf(db.COSSIMCLNT_ERR, "Err NewRPCClnt: %v", err)
 		return nil, err
 	}
 	return &CosSimClnt{

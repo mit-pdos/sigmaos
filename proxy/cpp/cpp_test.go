@@ -369,7 +369,7 @@ func TestSpinServerExec(t *testing.T) {
 	}
 }
 
-func TestCosSimSpawnLatency(t *testing.T) {
+func TestCosSimInitLatency(t *testing.T) {
 	const (
 		N_PROC               = 1
 		N_NODE               = 0

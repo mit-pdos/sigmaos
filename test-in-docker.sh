@@ -1,7 +1,7 @@
 #!/bin/bash
 
 usage() {
-  echo "Usage: $0 --pkg PKG [--run TEST] [--args ARGS] [--no-start] [--rebuildtester]" 1>&2
+  echo "Usage: $0 --race --pkg PKG [--run TEST] [--args ARGS] [--no-start] [--rebuildtester]" 1>&2
 }
 
 TNAME="Test"
@@ -9,6 +9,7 @@ SPKG=""
 ARGS=""
 START="--start"
 REBUILD_TESTER="false"
+RACE=""
 while [[ "$#" -gt 0 ]]; do
   case "$1" in
   --run)
@@ -24,6 +25,10 @@ while [[ "$#" -gt 0 ]]; do
       shift
       SPKG="$1" 
       shift
+      ;;
+  --race)
+      shift
+      RACE="--race" 
       ;;
   --args)
       shift
@@ -143,7 +148,7 @@ docker exec \
   --env SIGMADEBUG="$SIGMADEBUG" \
   --env SIGMADEBUGPROCS="$SIGMADEBUGPROCS" \
   -it $testercid \
-  go test -v sigmaos/$SPKG --run $TNAME \
+  go test -v $RACE sigmaos/$SPKG --run $TNAME \
   --user $SIGMAUSER \
   --homedir $HOME \
   --projectroot $ROOT \

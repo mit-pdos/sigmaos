@@ -209,7 +209,6 @@ func (sca *SPProxySrvAPI) GetFile(ctx fs.CtxI, req scproto.SigmaPathReq, rep *sc
 
 func (sca *SPProxySrvAPI) PutFile(ctx fs.CtxI, req scproto.SigmaPutFileReq, rep *scproto.SigmaSizeRep) error {
 	db.DPrintf(db.SPPROXYSRV, "%v: PutFile req %v %v", sca.sc.ClntId(), req.Path, len(req.Blob.Iov))
-	db.DPrintf(db.ALWAYS, "%v: PutFile fapi %p", sca.sc.ClntId(), sca.sc.FileAPI)
 	sz, err := sca.sc.FileAPI.PutFile(req.Path, sp.Tperm(req.Perm), sp.Tmode(req.Mode), req.Blob.Iov[0], sp.Toffset(req.Offset), sp.TleaseId(req.LeaseId))
 	rep.Size = uint64(sz)
 	rep.Err = sca.setErr(err)

@@ -6,6 +6,10 @@ service CosSimService {
   rpc CosSim(CosSimReq) returns (CosSimRep);
 }
 
+message Vector {
+  repeated double vals = 1; // TODO: blob
+}
+
 message CosSimReq {
   repeated double inputVec = 1; // TODO: blob
   int64 n = 2;

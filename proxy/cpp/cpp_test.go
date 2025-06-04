@@ -12,7 +12,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	cossimclnt "sigmaos/apps/cossim/clnt"
+	"sigmaos/apps/cossim"
+	cossimsrv "sigmaos/apps/cossim/srv"
 	"sigmaos/apps/epcache"
 	epcachesrv "sigmaos/apps/epcache/srv"
 	spinproto "sigmaos/apps/spin/proto"
@@ -286,17 +287,13 @@ func TestSpinServerSpawnLatency(t *testing.T) {
 	var err error
 	// Start the epcache server
 	if USE_EPCACHE {
-		_, err = epcachesrv.NewEPCacheJob(mrts.GetRealm(test.REALM1).SigmaClnt)
+		var j *epcachesrv.EPCacheJob
+		j, err = epcachesrv.NewEPCacheJob(mrts.GetRealm(test.REALM1).SigmaClnt)
 		if !assert.Nil(mrts.T, err, "Err EPCacheJob: %v", err) {
 			return
 		}
-		// Read the endpoint of the endpoint cache server
-		epcsrvEPB, err := mrts.GetRealm(test.REALM1).GetFile(epcache.EPCACHE)
-		if !assert.Nil(mrts.T, err, "Err GetFile EPCacheSrv EP: %v", err) {
-			return
-		}
-		epcsrvEP, err = sp.NewEndpointFromBytes(epcsrvEPB)
-		if !assert.Nil(mrts.T, err, "Err GetFile unmarshal EPCacheSrv EP: %v", err) {
+		epcsrvEP, err = j.GetSrvEP()
+		if !assert.Nil(mrts.T, err, "Err Get EPCacheSrv EP: %v", err) {
 			return
 		}
 	}
@@ -371,14 +368,18 @@ func TestSpinServerExec(t *testing.T) {
 
 func TestCosSimInitLatency(t *testing.T) {
 	const (
-		N_PROC               = 1
-		N_NODE               = 0
-		N_PARALLEL           = 1
-		MCPU_PER_PROC        = 2000
-		SRV_UNION_DIR string = "name/cossim"
+		N_PROC       = 1
+		N_NODE       = 0
+		N_PARALLEL   = 1
+		MCPU_PER_SRV = 2000
 		// App parameters
 		N_VEC   = 100
 		VEC_DIM = 100
+		// Cache parameters
+		N_CACHE    = 1
+		CACHE_MCPU = 1000
+		CACHE_GC   = true
+		JOB_NAME   = "cossim-job"
 	)
 
 	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
@@ -387,53 +388,33 @@ func TestCosSimInitLatency(t *testing.T) {
 	}
 	defer mrts.Shutdown()
 
-	// Make union dir
-	if err := mrts.GetRealm(test.REALM1).MkDir(SRV_UNION_DIR, 0777); !assert.Nil(mrts.T, err, "Err mkunion") {
-		return
-	}
-
 	if err := mrts.GetRealm(test.REALM1).BootNode(N_NODE); !assert.Nil(t, err, "Err boot: %v", err) {
 		return
 	}
 
-	// Start the epcache server
-	epcJob, err := epcachesrv.NewEPCacheJob(mrts.GetRealm(test.REALM1).SigmaClnt)
-	if !assert.Nil(mrts.T, err, "Err EPCacheJob: %v", err) {
+	// Start a cossim job
+	j, err := cossimsrv.NewCosSimJob(mrts.GetRealm(test.REALM1).SigmaClnt, JOB_NAME, N_VEC, VEC_DIM, MCPU_PER_SRV, N_CACHE, CACHE_MCPU, CACHE_GC)
+	if !assert.Nil(mrts.T, err, "Err NewCosSimJob: %v", err) {
 		return
 	}
-	// Read the endpoint of the endpoint cache server
-	epcsrvEPB, err := mrts.GetRealm(test.REALM1).GetFile(epcache.EPCACHE)
-	if !assert.Nil(mrts.T, err, "Err GetFile EPCacheSrv EP: %v", err) {
-		return
-	}
-	epcsrvEP, err := sp.NewEndpointFromBytes(epcsrvEPB)
-	if !assert.Nil(mrts.T, err, "Err GetFile unmarshal EPCacheSrv EP: %v", err) {
-		return
-	}
+	defer j.Stop()
+
 	// Construct input vec
-	v := make([]float64, VEC_DIM)
-	for i := range v {
-		v[i] = float64(i)
-	}
-	p := proc.NewProc("cossim-srv-cpp", []string{strconv.Itoa(N_VEC), strconv.Itoa(VEC_DIM)})
-	p.GetProcEnv().UseSPProxy = true
-	p.SetMcpu(MCPU_PER_PROC)
-	p.SetCachedEndpoint(epcache.EPCACHE, epcsrvEP)
-	start := time.Now()
-	err = mrts.GetRealm(test.REALM1).Spawn(p)
-	assert.Nil(mrts.GetRealm(test.REALM1).Ts.T, err, "Spawn")
-	err = mrts.GetRealm(test.REALM1).WaitStart(p.GetPid())
-	assert.Nil(mrts.GetRealm(test.REALM1).Ts.T, err, "Start")
-	db.DPrintf(db.TEST, "CPP server proc started (lat=%v)", time.Since(start))
-	csclnt, err := cossimclnt.NewCosSimClnt(mrts.GetRealm(test.REALM1).FsLib, epcJob.Clnt, p.GetPid().String())
-	if !assert.Nil(t, err, "Err new CosSimClnt: %v", err) {
+	v := cossim.VectorToSlice(cossim.NewVectors(1, VEC_DIM)[0])
+	_, csclnt, startLat, err := j.AddSrv()
+	if !assert.Nil(mrts.T, err, "Err AddSrv: %v", err) {
 		return
 	}
+	db.DPrintf(db.TEST, "CosSim server proc started (lat=%v)", startLat)
+	start := time.Now()
 	id, val, err := csclnt.CosSim(v, 1)
 	if !assert.Nil(t, err, "Err CosSim: %v", err) {
 		return
 	}
 	db.DPrintf(db.TEST, "CosSim result: %v %v", id, val)
+	db.DPrintf(db.TEST, "CosSim proc handled first request (lat=%v)", time.Since(start))
+	return
+
 	db.DPrintf(db.TEST, "Running procs")
 	parallelCh := make(chan bool, N_PARALLEL)
 	for i := 0; i < N_PARALLEL; i++ {
@@ -443,16 +424,16 @@ func TestCosSimInitLatency(t *testing.T) {
 	for i := 0; i < N_PROC; i++ {
 		go func(c chan bool, parallelCh chan bool) {
 			<-parallelCh
-			p := proc.NewProc("cossim-srv-cpp", []string{strconv.Itoa(N_VEC), strconv.Itoa(VEC_DIM)})
-			p.GetProcEnv().UseSPProxy = true
-			p.SetMcpu(MCPU_PER_PROC)
-			p.SetCachedEndpoint(epcache.EPCACHE, epcsrvEP)
 			start := time.Now()
-			err := mrts.GetRealm(test.REALM1).Spawn(p)
-			assert.Nil(mrts.GetRealm(test.REALM1).Ts.T, err, "Spawn")
-			err = mrts.GetRealm(test.REALM1).WaitStart(p.GetPid())
-			assert.Nil(mrts.GetRealm(test.REALM1).Ts.T, err, "Start")
-			db.DPrintf(db.TEST, "Spin server proc started (lat=%v)", time.Since(start))
+			_, csclnt, startLat, err := j.AddSrv()
+			if !assert.Nil(mrts.T, err, "Err AddSrv: %v", err) {
+				return
+			}
+			db.DPrintf(db.TEST, "CosSim server proc started (lat=%v)", startLat)
+			id, val, err := csclnt.CosSim(v, 1)
+			assert.Nil(t, err, "Err CosSim: %v", err)
+			db.DPrintf(db.TEST, "CosSim result: %v %v", id, val)
+			db.DPrintf(db.TEST, "CosSim proc handled first request (lat=%v)", time.Since(start))
 			parallelCh <- true
 			c <- true
 		}(c, parallelCh)

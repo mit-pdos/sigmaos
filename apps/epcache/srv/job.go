@@ -3,10 +3,12 @@ package srv
 import (
 	"fmt"
 
+	"sigmaos/apps/epcache"
 	epclnt "sigmaos/apps/epcache/clnt"
 	db "sigmaos/debug"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
+	sp "sigmaos/sigmap"
 )
 
 const (
@@ -40,6 +42,19 @@ func NewEPCacheJob(sc *sigmaclnt.SigmaClnt) (*EPCacheJob, error) {
 	}
 	j.Clnt = clnt
 	return j, nil
+}
+
+func (j *EPCacheJob) GetSrvEP() (*sp.Tendpoint, error) {
+	// Read the endpoint of the endpoint cache server
+	epcsrvEPB, err := j.sc.GetFile(epcache.EPCACHE)
+	if err != nil {
+		return nil, err
+	}
+	epcsrvEP, err := sp.NewEndpointFromBytes(epcsrvEPB)
+	if err != nil {
+		return nil, err
+	}
+	return epcsrvEP, nil
 }
 
 func (j *EPCacheJob) Stop() error {

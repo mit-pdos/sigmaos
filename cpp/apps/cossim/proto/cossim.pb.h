@@ -50,12 +50,177 @@ extern CosSimRepDefaultTypeInternal _CosSimRep_default_instance_;
 class CosSimReq;
 struct CosSimReqDefaultTypeInternal;
 extern CosSimReqDefaultTypeInternal _CosSimReq_default_instance_;
+class Vector;
+struct VectorDefaultTypeInternal;
+extern VectorDefaultTypeInternal _Vector_default_instance_;
 PROTOBUF_NAMESPACE_OPEN
 template<> ::CosSimRep* Arena::CreateMaybeMessage<::CosSimRep>(Arena*);
 template<> ::CosSimReq* Arena::CreateMaybeMessage<::CosSimReq>(Arena*);
+template<> ::Vector* Arena::CreateMaybeMessage<::Vector>(Arena*);
 PROTOBUF_NAMESPACE_CLOSE
 
 // ===================================================================
+
+class Vector final :
+    public ::PROTOBUF_NAMESPACE_ID::Message /* @@protoc_insertion_point(class_definition:Vector) */ {
+ public:
+  inline Vector() : Vector(nullptr) {}
+  ~Vector() override;
+  explicit PROTOBUF_CONSTEXPR Vector(::PROTOBUF_NAMESPACE_ID::internal::ConstantInitialized);
+
+  Vector(const Vector& from);
+  Vector(Vector&& from) noexcept
+    : Vector() {
+    *this = ::std::move(from);
+  }
+
+  inline Vector& operator=(const Vector& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  inline Vector& operator=(Vector&& from) noexcept {
+    if (this == &from) return *this;
+    if (GetOwningArena() == from.GetOwningArena()
+  #ifdef PROTOBUF_FORCE_COPY_IN_MOVE
+        && GetOwningArena() != nullptr
+  #endif  // !PROTOBUF_FORCE_COPY_IN_MOVE
+    ) {
+      InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+
+  static const ::PROTOBUF_NAMESPACE_ID::Descriptor* descriptor() {
+    return GetDescriptor();
+  }
+  static const ::PROTOBUF_NAMESPACE_ID::Descriptor* GetDescriptor() {
+    return default_instance().GetMetadata().descriptor;
+  }
+  static const ::PROTOBUF_NAMESPACE_ID::Reflection* GetReflection() {
+    return default_instance().GetMetadata().reflection;
+  }
+  static const Vector& default_instance() {
+    return *internal_default_instance();
+  }
+  static inline const Vector* internal_default_instance() {
+    return reinterpret_cast<const Vector*>(
+               &_Vector_default_instance_);
+  }
+  static constexpr int kIndexInFileMessages =
+    0;
+
+  friend void swap(Vector& a, Vector& b) {
+    a.Swap(&b);
+  }
+  inline void Swap(Vector* other) {
+    if (other == this) return;
+  #ifdef PROTOBUF_FORCE_COPY_IN_SWAP
+    if (GetOwningArena() != nullptr &&
+        GetOwningArena() == other->GetOwningArena()) {
+   #else  // PROTOBUF_FORCE_COPY_IN_SWAP
+    if (GetOwningArena() == other->GetOwningArena()) {
+  #endif  // !PROTOBUF_FORCE_COPY_IN_SWAP
+      InternalSwap(other);
+    } else {
+      ::PROTOBUF_NAMESPACE_ID::internal::GenericSwap(this, other);
+    }
+  }
+  void UnsafeArenaSwap(Vector* other) {
+    if (other == this) return;
+    GOOGLE_DCHECK(GetOwningArena() == other->GetOwningArena());
+    InternalSwap(other);
+  }
+
+  // implements Message ----------------------------------------------
+
+  Vector* New(::PROTOBUF_NAMESPACE_ID::Arena* arena = nullptr) const final {
+    return CreateMaybeMessage<Vector>(arena);
+  }
+  using ::PROTOBUF_NAMESPACE_ID::Message::CopyFrom;
+  void CopyFrom(const Vector& from);
+  using ::PROTOBUF_NAMESPACE_ID::Message::MergeFrom;
+  void MergeFrom( const Vector& from) {
+    Vector::MergeImpl(*this, from);
+  }
+  private:
+  static void MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PROTOBUF_NAMESPACE_ID::Message& from_msg);
+  public:
+  PROTOBUF_ATTRIBUTE_REINITIALIZES void Clear() final;
+  bool IsInitialized() const final;
+
+  size_t ByteSizeLong() const final;
+  const char* _InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::internal::ParseContext* ctx) final;
+  uint8_t* _InternalSerialize(
+      uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const final;
+  int GetCachedSize() const final { return _impl_._cached_size_.Get(); }
+
+  private:
+  void SharedCtor(::PROTOBUF_NAMESPACE_ID::Arena* arena, bool is_message_owned);
+  void SharedDtor();
+  void SetCachedSize(int size) const final;
+  void InternalSwap(Vector* other);
+
+  private:
+  friend class ::PROTOBUF_NAMESPACE_ID::internal::AnyMetadata;
+  static ::PROTOBUF_NAMESPACE_ID::StringPiece FullMessageName() {
+    return "Vector";
+  }
+  protected:
+  explicit Vector(::PROTOBUF_NAMESPACE_ID::Arena* arena,
+                       bool is_message_owned = false);
+  public:
+
+  static const ClassData _class_data_;
+  const ::PROTOBUF_NAMESPACE_ID::Message::ClassData*GetClassData() const final;
+
+  ::PROTOBUF_NAMESPACE_ID::Metadata GetMetadata() const final;
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  enum : int {
+    kValsFieldNumber = 1,
+  };
+  // repeated double vals = 1;
+  int vals_size() const;
+  private:
+  int _internal_vals_size() const;
+  public:
+  void clear_vals();
+  private:
+  double _internal_vals(int index) const;
+  const ::PROTOBUF_NAMESPACE_ID::RepeatedField< double >&
+      _internal_vals() const;
+  void _internal_add_vals(double value);
+  ::PROTOBUF_NAMESPACE_ID::RepeatedField< double >*
+      _internal_mutable_vals();
+  public:
+  double vals(int index) const;
+  void set_vals(int index, double value);
+  void add_vals(double value);
+  const ::PROTOBUF_NAMESPACE_ID::RepeatedField< double >&
+      vals() const;
+  ::PROTOBUF_NAMESPACE_ID::RepeatedField< double >*
+      mutable_vals();
+
+  // @@protoc_insertion_point(class_scope:Vector)
+ private:
+  class _Internal;
+
+  template <typename T> friend class ::PROTOBUF_NAMESPACE_ID::Arena::InternalHelper;
+  typedef void InternalArenaConstructable_;
+  typedef void DestructorSkippable_;
+  struct Impl_ {
+    ::PROTOBUF_NAMESPACE_ID::RepeatedField< double > vals_;
+    mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
+  };
+  union { Impl_ _impl_; };
+  friend struct ::TableStruct_cossim_2eproto;
+};
+// -------------------------------------------------------------------
 
 class CosSimReq final :
     public ::PROTOBUF_NAMESPACE_ID::Message /* @@protoc_insertion_point(class_definition:CosSimReq) */ {
@@ -105,7 +270,7 @@ class CosSimReq final :
                &_CosSimReq_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    0;
+    1;
 
   friend void swap(CosSimReq& a, CosSimReq& b) {
     a.Swap(&b);
@@ -277,7 +442,7 @@ class CosSimRep final :
                &_CosSimRep_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    1;
+    2;
 
   friend void swap(CosSimRep& a, CosSimRep& b) {
     a.Swap(&b);
@@ -395,6 +560,57 @@ class CosSimRep final :
   #pragma GCC diagnostic push
   #pragma GCC diagnostic ignored "-Wstrict-aliasing"
 #endif  // __GNUC__
+// Vector
+
+// repeated double vals = 1;
+inline int Vector::_internal_vals_size() const {
+  return _impl_.vals_.size();
+}
+inline int Vector::vals_size() const {
+  return _internal_vals_size();
+}
+inline void Vector::clear_vals() {
+  _impl_.vals_.Clear();
+}
+inline double Vector::_internal_vals(int index) const {
+  return _impl_.vals_.Get(index);
+}
+inline double Vector::vals(int index) const {
+  // @@protoc_insertion_point(field_get:Vector.vals)
+  return _internal_vals(index);
+}
+inline void Vector::set_vals(int index, double value) {
+  _impl_.vals_.Set(index, value);
+  // @@protoc_insertion_point(field_set:Vector.vals)
+}
+inline void Vector::_internal_add_vals(double value) {
+  _impl_.vals_.Add(value);
+}
+inline void Vector::add_vals(double value) {
+  _internal_add_vals(value);
+  // @@protoc_insertion_point(field_add:Vector.vals)
+}
+inline const ::PROTOBUF_NAMESPACE_ID::RepeatedField< double >&
+Vector::_internal_vals() const {
+  return _impl_.vals_;
+}
+inline const ::PROTOBUF_NAMESPACE_ID::RepeatedField< double >&
+Vector::vals() const {
+  // @@protoc_insertion_point(field_list:Vector.vals)
+  return _internal_vals();
+}
+inline ::PROTOBUF_NAMESPACE_ID::RepeatedField< double >*
+Vector::_internal_mutable_vals() {
+  return &_impl_.vals_;
+}
+inline ::PROTOBUF_NAMESPACE_ID::RepeatedField< double >*
+Vector::mutable_vals() {
+  // @@protoc_insertion_point(field_mutable_list:Vector.vals)
+  return _internal_mutable_vals();
+}
+
+// -------------------------------------------------------------------
+
 // CosSimReq
 
 // repeated double inputVec = 1;
@@ -511,6 +727,8 @@ inline void CosSimRep::set_val(double value) {
 #ifdef __GNUC__
   #pragma GCC diagnostic pop
 #endif  // __GNUC__
+// -------------------------------------------------------------------
+
 // -------------------------------------------------------------------
 
 

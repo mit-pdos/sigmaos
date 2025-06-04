@@ -32,7 +32,6 @@ int main(int argc, char *argv[]) {
   std::string str_vec_dim = argv[1];
   int vec_dim = std::stoi(str_vec_dim);
 
-
   // Create the echo server
   start = GetCurrentTime();
   auto srv = std::make_shared<sigmaos::apps::cossim::Srv>(sp_clnt, nvec, vec_dim);

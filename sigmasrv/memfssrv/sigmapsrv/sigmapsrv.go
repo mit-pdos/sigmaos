@@ -37,7 +37,7 @@ type SigmaPSrv struct {
 	pe          *proc.ProcEnv
 	srvep       *sp.Tendpoint
 	dirunder    fs.Dir
-	dirover     *overlay.DirOverlay
+	dirover     *overlaydir.DirOverlay
 	fencefs     fs.Dir
 	stats       *stats.StatInode
 	attachAuthF spprotosrv.AttachAuthF
@@ -47,7 +47,7 @@ func NewSigmaPSrv(pe *proc.ProcEnv, npc *dialproxyclnt.DialProxyClnt, root fs.Di
 	psrv := &SigmaPSrv{
 		pe:          pe,
 		dirunder:    root,
-		dirover:     overlay.MkDirOverlay(root),
+		dirover:     overlaydir.MkDirOverlay(root),
 		fencefs:     fencefs,
 		attachAuthF: aaf,
 	}

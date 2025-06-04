@@ -16,4 +16,5 @@ target_link_libraries(cossim-srv-cpp PRIVATE
   rpc
   rpc_spchannel
   app_cossim
+  app_cache
 )

@@ -20,6 +20,7 @@
 #include <sigmap/const.h>
 #include <rpc/srv.h>
 #include <proxy/sigmap/sigmap.h>
+#include <apps/cache/clnt.h>
 #include <apps/cossim/proto/cossim.pb.h>
 
 namespace sigmaos {
@@ -33,7 +34,7 @@ const int INIT_NTHREAD = 100;
 
 class Srv {
   public:
-  Srv(std::shared_ptr<sigmaos::proxy::sigmap::Clnt> sp_clnt, int nvec, int vec_dim) : _nvec(nvec), _vec_dim(vec_dim), _vec_db(), _sp_clnt(sp_clnt) {
+  Srv(std::shared_ptr<sigmaos::proxy::sigmap::Clnt> sp_clnt, int nvec, int vec_dim, std::string cache_clnt_pn) : _nvec(nvec), _vec_dim(vec_dim), _vec_db(), _sp_clnt(sp_clnt), _cache_clnt(std::make_shared<sigmaos::apps::cache::Clnt>(sp_clnt, cache_clnt_pn)) {
     log(COSSIMSRV, "Starting RPC srv");
     auto start = GetCurrentTime();
     _srv = std::make_shared<sigmaos::rpc::srv::Srv>(sp_clnt, INIT_NTHREAD);
@@ -42,12 +43,22 @@ class Srv {
     auto cossim_ep = std::make_shared<sigmaos::rpc::srv::RPCEndpoint>("CosSimSrv.CosSim", std::make_shared<CosSimReq>(), std::make_shared<CosSimRep>(), std::bind(&Srv::CosSim, this, std::placeholders::_1, std::placeholders::_2));
     _srv->ExposeRPCHandler(cossim_ep);
     log(COSSIMSRV, "Exposed cossim RPC handler");
+    log(COSSIMSRV, "Init cache clnt");
+    {
+      auto res = _cache_clnt->Init();
+      if (!res.has_value()) {
+        fatal("Error Init cacheclnt: {}", res.error().String());
+      }
+    }
+    log(COSSIMSRV, "Done init cache clnt");
+    log(COSSIMSRV, "Init srv");
     {
       auto res = Init();
       if (!res.has_value()) {
         fatal("Error Init: {}", res.error().String());
       }
     }
+    log(COSSIMSRV, "Done init srv");
     {
       auto pn = COSSIM_SVC_NAME;
       auto start = GetCurrentTime();
@@ -69,6 +80,7 @@ class Srv {
   int _vec_dim;
   std::map<uint64_t, std::vector<double>> _vec_db;
   std::shared_ptr<sigmaos::proxy::sigmap::Clnt> _sp_clnt;
+  std::shared_ptr<sigmaos::apps::cache::Clnt> _cache_clnt;
   std::shared_ptr<sigmaos::rpc::srv::Srv> _srv;
   // Used for logger initialization
   static bool _l;

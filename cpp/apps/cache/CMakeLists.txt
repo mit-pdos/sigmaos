@@ -2,7 +2,10 @@ message(STATUS "Building cache library")
 
 add_subdirectory(proto)
 
-add_library(app_cache STATIC clnt.cc)
+add_library(app_cache STATIC
+  clnt.cc
+  cache.cc
+)
 
 target_link_libraries(app_cache PUBLIC
   serr
@@ -21,6 +24,7 @@ target_link_libraries(app_cache PUBLIC
   rpc_spchannel
   epcache_proto
   util_tracing_proto
+  cache_proto
 )
 
 target_include_directories(app_cache PUBLIC ${CMAKE_SOURCE_DIR})

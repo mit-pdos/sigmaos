@@ -53,6 +53,7 @@ type CosSimJob struct {
 	epcsrvEP   *sp.Tendpoint
 	cacheClnt  *cachegrpclnt.CachedSvcClnt
 	cacheMgr   *cachegrpmgr.CacheMgr
+	cachePN    string
 	nvec       int
 	vecDim     int
 	vecs       []*proto.Vector
@@ -91,6 +92,7 @@ func NewCosSimJob(sc *sigmaclnt.SigmaClnt, job string, nvec int, vecDim int, srv
 		EPCacheJob: epcj,
 		epcsrvEP:   epcsrvEP,
 		cacheClnt:  cc,
+		cachePN:    cc.Server(0),
 		cacheMgr:   cm,
 		nvec:       nvec,
 		vecDim:     vecDim,
@@ -103,7 +105,7 @@ func NewCosSimJob(sc *sigmaclnt.SigmaClnt, job string, nvec int, vecDim int, srv
 
 // Add a new cossim server
 func (j *CosSimJob) AddSrv() (*proc.Proc, *clnt.CosSimClnt, time.Duration, error) {
-	p := proc.NewProc("cossim-srv-cpp", []string{strconv.Itoa(j.nvec), strconv.Itoa(j.vecDim)})
+	p := proc.NewProc("cossim-srv-cpp", []string{j.cachePN, strconv.Itoa(j.nvec), strconv.Itoa(j.vecDim)})
 	p.GetProcEnv().UseSPProxy = true
 	p.SetMcpu(j.srvMcpu)
 	p.SetCachedEndpoint(epcache.EPCACHE, j.epcsrvEP)

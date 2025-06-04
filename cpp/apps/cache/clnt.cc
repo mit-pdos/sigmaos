@@ -11,7 +11,7 @@ std::expected<int, sigmaos::serr::Error> Clnt::Init() {
   {
     // Create a sigmap RPC channel to the server via the sigmaproxy
     log(CACHECLNT, "Create channel");
-    auto chan = std::make_shared<sigmaos::rpc::spchannel::Channel>(CACHE_PN, _sp_clnt);
+    auto chan = std::make_shared<sigmaos::rpc::spchannel::Channel>(_srv_pn, _sp_clnt);
     // Initialize the channel
     auto res = chan->Init();
     if (!res.has_value()) {
@@ -32,12 +32,10 @@ std::expected<int, sigmaos::serr::Error> Clnt::Get(std::string key, std::string 
   CacheReq req;
   req.set_key(key);
   req.set_shard(key2shard(key));
-  req.set_allocated_value(val);
 	{
     auto res = _rpcc->RPC("CacheSrv.Get", req, rep);
-    {
-      auto _ = req.release_value();
-    }
+
+    *val = rep.value();
     if (!res.has_value()) {
       log(CACHECLNT_ERR, "Error Get: {}", res.error().String());
       return std::unexpected(res.error());

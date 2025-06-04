@@ -20,15 +20,13 @@
 namespace sigmaos {
 namespace apps::cache {
 
-const std::string CACHE_PN = "name/cache";
-
 const std::string CACHECLNT = "CACHECLNT";
 const std::string CACHECLNT_ERR = CACHECLNT + sigmaos::util::log::ERR;
 
 // A channel/connection over which to make RPCs
 class Clnt {
   public:
-  Clnt(std::string srv, std::shared_ptr<sigmaos::proxy::sigmap::Clnt> sp_clnt) : _srv(srv), _sp_clnt(sp_clnt) {}
+  Clnt(std::shared_ptr<sigmaos::proxy::sigmap::Clnt> sp_clnt, std::string srv_pn) : _srv_pn(srv_pn), _sp_clnt(sp_clnt) {}
   ~Clnt() {}
   // Initialize the channel
   std::expected<int, sigmaos::serr::Error> Init();
@@ -36,7 +34,7 @@ class Clnt {
   std::expected<int, sigmaos::serr::Error> Put(std::string key, std::string *val);
   std::expected<int, sigmaos::serr::Error> Delete(std::string key);
   private:
-  std::string _srv;
+  std::string _srv_pn;
   std::shared_ptr<sigmaos::proxy::sigmap::Clnt> _sp_clnt;
   std::shared_ptr<sigmaos::rpc::Clnt> _rpcc;
   // Used for logger initialization

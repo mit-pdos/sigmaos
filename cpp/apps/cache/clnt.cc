@@ -28,13 +28,17 @@ std::expected<int, sigmaos::serr::Error> Clnt::Init() {
 
 std::expected<int, sigmaos::serr::Error> Clnt::Get(std::string key, std::string *val) {
 	log(CACHECLNT, "Get: {}", key);
+  TfenceProto fence;
 	CacheRep rep;
   CacheReq req;
+  req.set_allocated_fence(&fence);
   req.set_key(key);
   req.set_shard(key2shard(key));
 	{
     auto res = _rpcc->RPC("CacheSrv.Get", req, rep);
-
+    {
+      auto _ = req.release_fence();
+    }
     *val = rep.value();
     if (!res.has_value()) {
       log(CACHECLNT_ERR, "Error Get: {}", res.error().String());
@@ -47,8 +51,10 @@ std::expected<int, sigmaos::serr::Error> Clnt::Get(std::string key, std::string 
 
 std::expected<int, sigmaos::serr::Error> Clnt::Put(std::string key, std::string *val) {
 	log(CACHECLNT, "Put: {} -> {}b", key, val->size());
+  TfenceProto fence;
 	CacheRep rep;
 	CacheReq req;
+  req.set_allocated_fence(&fence);
   req.set_key(key);
   req.set_shard(key2shard(key));
   req.set_allocated_value(val);
@@ -56,6 +62,9 @@ std::expected<int, sigmaos::serr::Error> Clnt::Put(std::string key, std::string 
     auto res = _rpcc->RPC("CacheSrv.Put", req, rep);
     {
       auto _ = req.release_value();
+    }
+    {
+      auto _ = req.release_fence();
     }
     if (!res.has_value()) {
       log(CACHECLNT_ERR, "Error Put: {}", res.error().String());
@@ -68,14 +77,19 @@ std::expected<int, sigmaos::serr::Error> Clnt::Put(std::string key, std::string 
 
 std::expected<int, sigmaos::serr::Error> Clnt::Delete(std::string key) {
 	log(CACHECLNT, "Delete: {}", key);
+  TfenceProto fence;
 	CacheRep rep;
 	CacheReq req;
+  req.set_allocated_fence(&fence);
   req.set_key(key);
   req.set_shard(key2shard(key));
 	{
     auto res = _rpcc->RPC("CacheSrv.Delete", req, rep);
     {
       auto _ = req.release_value();
+    }
+    {
+      auto _ = req.release_fence();
     }
     if (!res.has_value()) {
       log(CACHECLNT_ERR, "Error Delete: {}", res.error().String());

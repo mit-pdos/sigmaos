@@ -150,11 +150,12 @@ func (rm *RealmSrv) Make(ctx fs.CtxI, req proto.MakeReq, res *proto.MakeRep) err
 
 	// wait until the realm's named has registered its endpoint and is ready to
 	// serve
-	if _, err := rm.sc.GetFileWatch(path.MarkResolve(filepath.Join(sp.REALMS, req.Realm))); err != nil {
-		db.DPrintf(db.ERROR, "Error GetFileWatch named root: %v", err)
+	pn := path.MarkResolve(filepath.Join(sp.REALMS, req.Realm))
+	if _, err := rm.sc.GetFileWatch(pn); err != nil {
+		db.DPrintf(db.ERROR, "Error GetFileWatch named root %v: %v", pn, err)
 		return err
 	}
-
+	db.DPrintf(db.TEST, "RealmSrv.Make named ready to serve for %v %v", rid, pn)
 	db.DPrintf(db.REALMD, "RealmSrv.Make named ready to serve for %v", rid)
 	pe := proc.NewDifferentRealmProcEnv(rm.sc.ProcEnv(), rid)
 	sc, err := sigmaclnt.NewSigmaClntFsLib(pe, dialproxyclnt.NewDialProxyClnt(pe))

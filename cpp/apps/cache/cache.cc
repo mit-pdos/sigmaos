@@ -11,7 +11,7 @@ uint32_t key2shard(std::string key) {
     s ^= (uint32_t) key[i];
     s *= prime32;
   }
-  return s;
+  return s % NSHARD;
 }
 
 };

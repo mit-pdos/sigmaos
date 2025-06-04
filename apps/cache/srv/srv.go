@@ -318,6 +318,7 @@ func (cs *CacheSrv) Get(ctx fs.CtxI, req cacheproto.CacheReq, rep *cacheproto.Ca
 
 	s, err := cs.lookupShard(req.Tshard())
 	if err != nil {
+		db.DPrintf(db.CACHESRV, "lookupShard error %v", err)
 		return err
 	}
 	v, ok := s.get(req.Key)

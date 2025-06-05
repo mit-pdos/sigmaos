@@ -14,6 +14,7 @@ import (
 
 type Inode struct {
 	mu    sync.Mutex
+	dev   sp.Tdev
 	inum  sp.Tpath
 	perm  sp.Tperm
 	lid   sp.TleaseId
@@ -21,12 +22,29 @@ type Inode struct {
 	owner *sp.Tprincipal
 }
 
-var NextInum atomic.Uint64
+type InodeAlloc struct {
+	dev      sp.Tdev
+	nextInum atomic.Uint64
+}
 
-func NewInode(ctx fs.CtxI, p sp.Tperm, lid sp.TleaseId) *Inode {
+func NewInodeAlloc(dev sp.Tdev) *InodeAlloc {
+	ia := &InodeAlloc{dev: dev}
+	return ia
+}
+
+func (ia *InodeAlloc) AllocInum() sp.Tpath {
+	return sp.Tpath(ia.nextInum.Add(1))
+}
+
+func (ia *InodeAlloc) Dev() sp.Tdev {
+	return ia.dev
+}
+
+func (ia *InodeAlloc) NewInode(ctx fs.CtxI, p sp.Tperm, lid sp.TleaseId) *Inode {
 	i := &Inode{
-		inum:  sp.Tpath(NextInum.Add(1)),
+		inum:  ia.AllocInum(),
 		perm:  p,
+		dev:   ia.Dev(),
 		mtime: time.Now().Unix(),
 		lid:   lid,
 	}
@@ -57,6 +75,12 @@ func (inode *Inode) Path() sp.Tpath {
 	inode.mu.Lock()
 	defer inode.mu.Unlock()
 	return inode.inum
+}
+
+func (inode *Inode) Dev() sp.Tdev {
+	inode.mu.Lock()
+	defer inode.mu.Unlock()
+	return inode.dev
 }
 
 func (inode *Inode) Perm() sp.Tperm {

@@ -25,6 +25,7 @@ import (
 	"sigmaos/sigmaclnt"
 	"sigmaos/sigmaclnt/procclnt"
 	sp "sigmaos/sigmap"
+	"sigmaos/sigmasrv/memfssrv/memfs/inode"
 	"sigmaos/sigmasrv/memfssrv/sigmapsrv/overlaydir"
 	"sigmaos/sigmasrv/stats"
 	spprotosrv "sigmaos/spproto/srv"
@@ -51,7 +52,7 @@ func NewSigmaPSrv(pe *proc.ProcEnv, npc *dialproxyclnt.DialProxyClnt, root fs.Di
 		fencefs:     fencefs,
 		attachAuthF: aaf,
 	}
-	psrv.stats = stats.NewStatsDev()
+	psrv.stats = stats.NewStatsDev(inode.NewInodeAlloc(sp.DEV_STATFS))
 	psrv.ProtSrvState = spprotosrv.NewProtSrvState(psrv.stats)
 	psrv.VersionTable().Insert(psrv.dirover.Path())
 	psrv.dirover.Mount(sp.STATSD, psrv.stats)

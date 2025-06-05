@@ -145,6 +145,7 @@ func Run(args []string) error {
 		db.DFatalf("Error newSrv %v", err)
 	}
 
+	nd.pstats = fsetcd.NewPstatsDev(nd.SigmaSrv.MemFs.InodeAlloc())
 	nd.SigmaSrv.Mount(sp.PSTATSD, nd.pstats)
 
 	pn := sp.NAMED

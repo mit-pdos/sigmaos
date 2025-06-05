@@ -7,6 +7,7 @@ import (
 
 	db "sigmaos/debug"
 	dialproxyclnt "sigmaos/dialproxy/clnt"
+	"sigmaos/namesrv/fsetcd"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
@@ -63,6 +64,7 @@ func RunKNamed(args []string) error {
 
 	db.DPrintf(db.NAMED, "newSrv %v ep %v", nd.realm, ep)
 
+	nd.pstats = fsetcd.NewPstatsDev(nd.SigmaSrv.MemFs.InodeAlloc())
 	nd.SigmaSrv.Mount(sp.PSTATSD, nd.pstats)
 
 	if err := nd.fs.SetRootNamed(ep); err != nil {

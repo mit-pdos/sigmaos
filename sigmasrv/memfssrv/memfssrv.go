@@ -31,6 +31,7 @@ type MemFs struct {
 	roots *roots
 	sc    *sigmaclnt.SigmaClnt
 	pn    string
+	ia    *inode.InodeAlloc
 }
 
 type roots struct {
@@ -53,7 +54,7 @@ func (rts *roots) lookupAlloc(pn string) (sp.Tfid, bool) {
 	return fid, ok
 }
 
-func NewMemFsSrv(pn string, srv *sigmapsrv.SigmaPSrv, sc *sigmaclnt.SigmaClnt, fencefs fs.Dir) *MemFs {
+func NewMemFsSrv(pn string, srv *sigmapsrv.SigmaPSrv, sc *sigmaclnt.SigmaClnt, fencefs fs.Dir, ia *inode.InodeAlloc) *MemFs {
 	mfs := &MemFs{
 		SigmaPSrv: srv,
 		ctx:       ctx.NewCtx(sc.ProcEnv().GetPrincipal(), nil, 0, sp.NoClntId, nil, fencefs),
@@ -61,6 +62,7 @@ func NewMemFsSrv(pn string, srv *sigmapsrv.SigmaPSrv, sc *sigmaclnt.SigmaClnt, f
 		pn:        pn,
 		ps:        spprotosrv.NewProtSrv(sc.ProcEnv(), srv.ProtSrvState, nil, 0, srv.GetRootCtx, spprotosrv.AttachAllowAllToAll),
 		roots:     newRoots(),
+		ia:        ia,
 	}
 	return mfs
 }
@@ -69,9 +71,13 @@ func (mfs *MemFs) SigmaClnt() *sigmaclnt.SigmaClnt {
 	return mfs.sc
 }
 
+func (mfs *MemFs) InodeAlloc() *inode.InodeAlloc {
+	return mfs.ia
+}
+
 // Note: NewDev() sets parent
 func (mfs *MemFs) NewDevInode() *inode.Inode {
-	return inode.NewInode(mfs.ctx, sp.DMDEVICE, sp.NoLeaseId)
+	return mfs.ia.NewInode(mfs.ctx, sp.DMDEVICE, sp.NoLeaseId)
 }
 
 // Returns fid for root and remaining path from root

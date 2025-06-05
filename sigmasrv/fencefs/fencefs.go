@@ -39,11 +39,19 @@ func (f *Fence) Read(ctx fs.CtxI, off sp.Toffset, sz sp.Tsize, fence sp.Tfence) 
 	return nil, serr.NewErr(serr.TErrNotSupported, "Read")
 }
 
-func newInode(ctx fs.CtxI, p sp.Tperm, lid sp.TleaseId, mode sp.Tmode, new fs.MkDirF) (fs.FsObj, *serr.Err) {
+type FenceInode struct {
+	ia *inode.InodeAlloc
+}
+
+func NewFenceInode() *FenceInode {
+	return &FenceInode{inode.NewInodeAlloc(sp.DEV_FENCEFS)}
+}
+
+func (fi *FenceInode) NewFsObj(ctx fs.CtxI, p sp.Tperm, lid sp.TleaseId, mode sp.Tmode, nd fs.MkDirF) (fs.FsObj, *serr.Err) {
 	db.DPrintf(db.FENCEFS, "newInode %v", p)
-	i := inode.NewInode(ctx, p, lid)
+	i := fi.ia.NewInode(ctx, p, lid)
 	if p.IsDir() {
-		return dir.MkDir(i, newInode), nil
+		return dir.MkDir(i, fi), nil
 	} else if p.IsFile() {
 		return newFence(i), nil
 	} else {
@@ -52,8 +60,7 @@ func newInode(ctx fs.CtxI, p sp.Tperm, lid sp.TleaseId, mode sp.Tmode, new fs.Mk
 }
 
 func NewRoot(ctx fs.CtxI, parent fs.Dir) fs.Dir {
-	dir := dir.NewRootDir(ctx, newInode)
-	return dir
+	return dir.NewRootDir(ctx, NewFenceInode())
 }
 
 // XXX check that clnt is allowed to update fence, perhaps using ctx

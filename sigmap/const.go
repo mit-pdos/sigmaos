@@ -151,3 +151,11 @@ func NoPrincipal() *Tprincipal {
 		RealmStr: NO_REALM.String(),
 	}
 }
+
+// File system devices
+const (
+	DEV_MEMFS Tdev = iota + 1
+	DEV_RPCFS
+	DEV_STATFS
+	DEV_FENCEFS
+)

@@ -12,6 +12,7 @@ import (
 	"sigmaos/sigmasrv/memfssrv/memfs"
 	"sigmaos/sigmasrv/memfssrv/memfs/dir"
 	"sigmaos/sigmasrv/memfssrv/memfs/fenceddir"
+	"sigmaos/sigmasrv/memfssrv/memfs/inode"
 	"sigmaos/sigmasrv/memfssrv/sigmapsrv"
 	spprotosrv "sigmaos/spproto/srv"
 	"sigmaos/util/perf"
@@ -48,11 +49,12 @@ func NewMemFsPortClnt(pn string, addr *sp.Taddr, sc *sigmaclnt.SigmaClnt, aaf sp
 
 func NewMemFsPortClntFenceAuth(pn string, addr *sp.Taddr, sc *sigmaclnt.SigmaClnt, fencefs fs.Dir, aaf spprotosrv.AttachAuthF) (*MemFs, error) {
 	ctx := ctx.NewCtx(sp.NoPrincipal(), nil, 0, sp.NoClntId, nil, fencefs)
-	root := fenceddir.NewFencedRoot(dir.NewRootDir(ctx, memfs.NewInode))
-	return NewMemFsRootPortClntFenceAuth(root, pn, addr, sc, fencefs, aaf)
+	ni := memfs.NewNewInode(sp.DEV_MEMFS)
+	root := fenceddir.NewFencedRoot(dir.NewRootDir(ctx, ni))
+	return NewMemFsRootPortClntFenceAuth(root, pn, addr, sc, fencefs, aaf, ni.InodeAlloc())
 }
 
-func NewMemFsRootPortClntFenceAuth(root fs.Dir, srvpath string, addr *sp.Taddr, sc *sigmaclnt.SigmaClnt, fencefs fs.Dir, aaf spprotosrv.AttachAuthF) (*MemFs, error) {
+func NewMemFsRootPortClntFenceAuth(root fs.Dir, srvpath string, addr *sp.Taddr, sc *sigmaclnt.SigmaClnt, fencefs fs.Dir, aaf spprotosrv.AttachAuthF, ia *inode.InodeAlloc) (*MemFs, error) {
 	start := time.Now()
 	srv, mpn, err := sigmapsrv.NewSigmaPSrvPost(root, srvpath, addr, sc, fencefs, aaf)
 	if err != nil {
@@ -63,7 +65,7 @@ func NewMemFsRootPortClntFenceAuth(root fs.Dir, srvpath string, addr *sp.Taddr, 
 	defer func() {
 		perf.LogSpawnLatency("NewMemFsAddr.NewMemFsSrv", sc.ProcEnv().GetPID(), sc.ProcEnv().GetSpawnTime(), start)
 	}()
-	mfs := NewMemFsSrv(mpn, srv, sc, nil)
+	mfs := NewMemFsSrv(mpn, srv, sc, nil, ia)
 	return mfs, nil
 }
 

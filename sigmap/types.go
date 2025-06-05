@@ -2,6 +2,7 @@ package sigmap
 
 type Tfid uint32
 type Tpath uint64
+type Tdev uint32
 type Tiounit uint32
 type Tperm uint32
 type Toffset uint64

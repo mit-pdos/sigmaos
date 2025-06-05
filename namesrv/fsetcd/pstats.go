@@ -43,9 +43,9 @@ type PstatInode struct {
 	pstats *pstats
 }
 
-func NewPstatsDev() *PstatInode {
+func NewPstatsDev(ia *inode.InodeAlloc) *PstatInode {
 	sti := &PstatInode{
-		Inode:  inode.NewInode(nil, sp.DMDEVICE, sp.NoLeaseId),
+		Inode:  ia.NewInode(nil, sp.DMDEVICE, sp.NoLeaseId),
 		pstats: newPstats(),
 	}
 	return sti

@@ -152,9 +152,9 @@ type StatInode struct {
 	pathCnts bool
 }
 
-func NewStatsDev() *StatInode {
+func NewStatsDev(ia *inode.InodeAlloc) *StatInode {
 	sti := &StatInode{
-		Inode:    inode.NewInode(nil, sp.DMDEVICE, sp.NoLeaseId),
+		Inode:    ia.NewInode(nil, sp.DMDEVICE, sp.NoLeaseId),
 		st:       NewStats(),
 		pathCnts: false,
 	}

@@ -106,7 +106,7 @@ func RunBalancer(job, kvdmcpu string, auto string, repl string) {
 	}
 	ctx := ctx.NewCtx(sp.NewPrincipal(sp.TprincipalID(KVBALANCER), bl.SigmaClnt.ProcEnv().GetRealm()), nil, 0, sp.NoClntId, nil, nil)
 	root, _, _ := ssrv.Root(path.Tpathname{})
-	err1 := dir.MkNod(ctx, fenceddir.GetDir(root), "ctl", newCtl(ctx, bl))
+	err1 := dir.MkNod(ctx, fenceddir.GetDir(root), "ctl", newCtl(ctx, bl, ssrv.MemFs.InodeAlloc()))
 	if err1 != nil {
 		db.DFatalf("MkNod clone failed %v", err1)
 	}
@@ -200,8 +200,8 @@ type Ctl struct {
 	bl *Balancer
 }
 
-func newCtl(ctx fs.CtxI, bl *Balancer) fs.FsObj {
-	i := inode.NewInode(ctx, sp.DMDEVICE, sp.NoLeaseId)
+func newCtl(ctx fs.CtxI, bl *Balancer, ia *inode.InodeAlloc) fs.FsObj {
+	i := ia.NewInode(ctx, sp.DMDEVICE, sp.NoLeaseId)
 	return &Ctl{i, bl}
 }
 

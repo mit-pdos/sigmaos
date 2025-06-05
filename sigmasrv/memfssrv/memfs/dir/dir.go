@@ -16,22 +16,22 @@ import (
 
 type DirImpl struct {
 	fs.Inode
-	no    fs.NewFsObjF
+	ni    fs.NewInode
 	mu    sync.Mutex
 	dents *sortedmapv1.SortedMap[string, fs.FsObj]
 }
 
-func MkDir(i fs.Inode, no fs.NewFsObjF) *DirImpl {
+func MkDir(i fs.Inode, ni fs.NewInode) *DirImpl {
 	d := &DirImpl{}
 	d.Inode = i
-	d.no = no
+	d.ni = ni
 	d.dents = sortedmapv1.NewSortedMap[string, fs.FsObj]()
 	d.dents.Insert(".", d)
 	return d
 }
 
-func MkDirF(i fs.Inode, no fs.NewFsObjF) fs.FsObj {
-	d := MkDir(i, no)
+func MkDirF(i fs.Inode, ni fs.NewInode) fs.FsObj {
+	d := MkDir(i, ni)
 	return d
 }
 
@@ -80,8 +80,8 @@ func (dir *DirImpl) DumpTree() (string, error) {
 	return s, nil
 }
 
-func NewRootDir(ctx fs.CtxI, no fs.NewFsObjF) fs.Dir {
-	i, _ := no(ctx, sp.DMDIR, sp.NoLeaseId, 0, MkDirF)
+func NewRootDir(ctx fs.CtxI, ni fs.NewInode) fs.Dir {
+	i, _ := ni.NewFsObj(ctx, sp.DMDIR, sp.NoLeaseId, 0, MkDirF)
 	return i.(fs.Dir)
 }
 
@@ -220,7 +220,7 @@ func (dir *DirImpl) Create(ctx fs.CtxI, name string, perm sp.Tperm, m sp.Tmode, 
 	}
 	newo := dev
 	if dev == nil {
-		no, err := dir.no(ctx, perm, lid, m, MkDirF)
+		no, err := dir.ni.NewFsObj(ctx, perm, lid, m, MkDirF)
 		if err != nil {
 			return nil, err
 		}

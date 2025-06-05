@@ -23,6 +23,7 @@ import (
 	"sigmaos/sigmasrv/memfssrv"
 	"sigmaos/sigmasrv/memfssrv/memfs"
 	"sigmaos/sigmasrv/memfssrv/memfs/dir"
+	"sigmaos/sigmasrv/memfssrv/memfs/inode"
 	spprotosrv "sigmaos/spproto/srv"
 	"sigmaos/util/perf"
 )
@@ -150,7 +151,8 @@ func NewSigmaSrvRootClnt(root fs.Dir, addr *sp.Taddr, path string, sc *sigmaclnt
 }
 
 func NewSigmaSrvRootClntAuthFn(root fs.Dir, addr *sp.Taddr, path string, sc *sigmaclnt.SigmaClnt, aaf spprotosrv.AttachAuthF) (*SigmaSrv, error) {
-	mfs, err := memfssrv.NewMemFsRootPortClntFenceAuth(root, path, addr, sc, nil, aaf)
+	ia := inode.NewInodeAlloc(sp.DEV_MEMFS)
+	mfs, err := memfssrv.NewMemFsRootPortClntFenceAuth(root, path, addr, sc, nil, aaf, ia)
 	if err != nil {
 		return nil, err
 	}
@@ -169,7 +171,7 @@ func NewSigmaSrvRoot(root fs.Dir, path string, addr *sp.Taddr, pe *proc.ProcEnv)
 // function is useful for sigmasrv whose root is for a non-memfs file
 // system (e.g., knamed/named, which uses fsetcd).
 func (ssrv *SigmaSrv) MountRPCSrv(svci any) error {
-	d := dir.NewRootDir(ctx.NewCtxNull(), memfs.NewInode)
+	d := dir.NewRootDir(ctx.NewCtxNull(), memfs.NewNewInode(sp.DEV_RPCFS))
 	ssrv.MemFs.SigmaPSrv.Mount(rpc.RPC, d.(*dir.DirImpl))
 	if err := ssrv.newRPCDev(rpc.RPC, svci); err != nil {
 		return err

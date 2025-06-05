@@ -33,13 +33,11 @@ func (dir *DirOverlay) String() string {
 }
 
 func (dir *DirOverlay) Path() sp.Tpath {
-	// return dir.i.Path()
 	return dir.underlay.Path()
 }
 
 func (dir *DirOverlay) Dev() sp.Tdev {
-	// return dir.underlay.Dev()
-	return 0
+	return dir.underlay.Dev()
 }
 
 func (dir *DirOverlay) Perm() sp.Tperm {
@@ -82,7 +80,7 @@ func (dir *DirOverlay) Mount(name string, i fs.FsObj) {
 	db.DPrintf(db.OVERLAYDIR, "Mount i %v as %v\n", i, name)
 
 	if dir.Path() == i.Path() {
-		db.DFatalf("Mount: path dir p %v (dev %d) i %v (p %v, dev %d) are equal", dir.Path(), 0, name, i.Path(), 0)
+		db.DFatalf("Mount: path dir p %v (dev %d) i %v (p %v, dev %d) are equal", dir.Path(), dir.Dev(), name, i.Path(), i.Dev())
 	}
 	dir.entries[name] = i
 }

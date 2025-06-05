@@ -88,6 +88,10 @@ func (o *Obj) Path() sp.Tpath {
 	return o.path
 }
 
+func (o *Obj) Dev() sp.Tdev {
+	return sp.DEV_UXFS
+}
+
 func (o *Obj) PathName() string {
 	p := o.pathName.String()
 	if len(o.pathName) == 0 {

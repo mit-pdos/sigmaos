@@ -109,6 +109,10 @@ func (o *Obj) Path() sp.Tpath {
 	return newTpath(p.AppendPath(o.key))
 }
 
+func (o *Obj) Dev() sp.Tdev {
+	return sp.DEV_S3FS
+}
+
 func (o *Obj) Perm() sp.Tperm {
 	return o.perm
 }

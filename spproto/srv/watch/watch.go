@@ -5,7 +5,6 @@ import (
 	"encoding/binary"
 	"sigmaos/api/fs"
 	db "sigmaos/debug"
-	"sigmaos/ninep"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 	"sigmaos/spproto/srv/fid"
@@ -22,7 +21,7 @@ func NewFidWatch(fm *fid.FidMap, ctx fs.CtxI, fid sp.Tfid, watch *Watch) *fid.Fi
 }
 
 type PerFidState struct {
-	fid          *fid.Fid  // the fid for watcher
+	fid          *fid.Fid // the fid for watcher
 	dir          sp.Tpath // directory being watched
 	events       []*protsrv_proto.WatchEvent
 	remainingMsg []byte
@@ -131,8 +130,12 @@ func (wo *Watch) Path() sp.Tpath {
 	return sp.NoPath
 }
 
+func (wo *Watch) Dev() sp.Tdev {
+	return sp.DEV_WATCHFS
+}
+
 func (wo *Watch) Perm() sp.Tperm {
-	return ninep.DMREAD
+	return sp.DMREAD
 }
 
 func (wo *Watch) Unlink() {

@@ -30,7 +30,7 @@ type FsObj interface {
 	Open(CtxI, sp.Tmode) (FsObj, *serr.Err)
 	Close(CtxI, sp.Tmode) *serr.Err // for pipes
 	Path() sp.Tpath
-	//Dev() sp.Tdev
+	Dev() sp.Tdev
 	Perm() sp.Tperm
 	Unlink()
 	String() string
@@ -65,7 +65,7 @@ type Dir interface {
 
 type Inode interface {
 	Path() sp.Tpath
-	//Dev() sp.Tdev
+	Dev() sp.Tdev
 	Perm() sp.Tperm
 	IsLeased() bool
 	SetMtime(int64)

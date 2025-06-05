@@ -34,11 +34,15 @@ func newObjDi(fs *fsetcd.FsEtcd, pn path.Tpathname, di fsetcd.DirEntInfo) *Obj {
 }
 
 func (o *Obj) String() string {
-	return fmt.Sprintf("{pn %q di %v}", o.pn, o.di)
+	return fmt.Sprintf("{pn %q di %v (%d)}", o.pn, o.di, o.Dev())
 }
 
 func (o *Obj) Path() sp.Tpath {
 	return o.di.Path
+}
+
+func (o *Obj) Dev() sp.Tdev {
+	return sp.DEV_ETCDFS
 }
 
 func (o *Obj) Perm() sp.Tperm {

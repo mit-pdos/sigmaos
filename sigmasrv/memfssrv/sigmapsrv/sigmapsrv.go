@@ -54,7 +54,7 @@ func NewSigmaPSrv(pe *proc.ProcEnv, npc *dialproxyclnt.DialProxyClnt, root fs.Di
 	}
 	psrv.stats = stats.NewStatsDev(inode.NewInodeAlloc(sp.DEV_STATFS))
 	psrv.ProtSrvState = spprotosrv.NewProtSrvState(psrv.stats)
-	psrv.VersionTable().Insert(psrv.dirover.Path())
+	psrv.VersionTable().Insert(fs.Uid(psrv.dirover))
 	psrv.dirover.Mount(sp.STATSD, psrv.stats)
 	psrv.SessSrv = sesssrv.NewSessSrv(pe, npc, addr, psrv.stats, psrv)
 	return psrv

@@ -46,6 +46,10 @@ func (f *Fid) Path() sp.Tpath {
 	return f.obj.Path()
 }
 
+func (f *Fid) Uid() sp.Tuid {
+	return fs.Uid(f.obj)
+}
+
 func (f *Fid) Ctx() fs.CtxI {
 	return f.ctx
 }

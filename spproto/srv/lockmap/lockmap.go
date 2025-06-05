@@ -39,26 +39,26 @@ func (t Tlock) String() string {
 
 type PathLock struct {
 	sync.RWMutex
-	path sp.Tpath
+	uid sp.Tuid
 }
 
-func (pl *PathLock) Path() sp.Tpath {
-	return pl.path
+func (pl *PathLock) Uid() sp.Tuid {
+	return pl.uid
 }
 
-func newLock(p sp.Tpath) PathLock {
-	return PathLock{path: p}
+func newLock(uid sp.Tuid) PathLock {
+	return PathLock{uid: uid}
 }
 
 type PathLockTable struct {
 	//	deadlock.Mutex
 	sync.Mutex
-	*refmap.RefTable[sp.Tpath, PathLock]
+	*refmap.RefTable[sp.Tuid, PathLock]
 }
 
 func NewPathLockTable() *PathLockTable {
 	plt := &PathLockTable{}
-	plt.RefTable = refmap.NewRefTable[sp.Tpath, PathLock](N, db.LOCKMAP)
+	plt.RefTable = refmap.NewRefTable[sp.Tuid, PathLock](N, db.LOCKMAP)
 	return plt
 }
 
@@ -69,38 +69,38 @@ func (plt *PathLockTable) Len() (int, int) {
 }
 
 // Caller must hold plt lock
-func (plt *PathLockTable) allocLockL(p sp.Tpath) *PathLock {
-	lk, _ := plt.Insert(p, newLock(p))
+func (plt *PathLockTable) allocLockL(uid sp.Tuid) *PathLock {
+	lk, _ := plt.Insert(uid, newLock(uid))
 	return lk
 }
 
-func (plt *PathLockTable) allocLock(p sp.Tpath) *PathLock {
+func (plt *PathLockTable) allocLock(uid sp.Tuid) *PathLock {
 	plt.Lock()
 	defer plt.Unlock()
-	return plt.allocLockL(p)
+	return plt.allocLockL(uid)
 }
 
-func (plt *PathLockTable) Acquire(ctx fs.CtxI, path sp.Tpath, ltype Tlock) *PathLock {
-	lk := plt.allocLock(path)
+func (plt *PathLockTable) Acquire(ctx fs.CtxI, uid sp.Tuid, ltype Tlock) *PathLock {
+	lk := plt.allocLock(uid)
 	if ltype == WLOCK {
 		lk.Lock()
 	} else {
 		lk.RLock()
 	}
-	db.DPrintf(db.LOCKMAP, "%v: Lock %v", ctx.Principal(), lk.path)
+	db.DPrintf(db.LOCKMAP, "%v: Lock %v", ctx.Principal(), lk.uid)
 	return lk
 }
 
 func (plt *PathLockTable) release(lk *PathLock) (bool, error) {
 	plt.Lock()
 	defer plt.Unlock()
-	return plt.Delete(lk.path)
+	return plt.Delete(lk.uid)
 }
 
 // Release lock for path. Caller should have watch locked through
 // Acquire().
 func (plt *PathLockTable) Release(ctx fs.CtxI, lk *PathLock, ltype Tlock) {
-	db.DPrintf(db.LOCKMAP, "%v: Release %v", ctx.Principal(), lk.path)
+	db.DPrintf(db.LOCKMAP, "%v: Release %v", ctx.Principal(), lk.uid)
 	if ltype == WLOCK {
 		lk.Unlock()
 	} else {
@@ -110,10 +110,10 @@ func (plt *PathLockTable) Release(ctx fs.CtxI, lk *PathLock, ltype Tlock) {
 }
 
 // Caller must have dlk locked
-func (plt *PathLockTable) HandOverLock(ctx fs.CtxI, dlk *PathLock, path sp.Tpath, ltype Tlock) *PathLock {
-	flk := plt.allocLock(path)
+func (plt *PathLockTable) HandOverLock(ctx fs.CtxI, dlk *PathLock, uid sp.Tuid, ltype Tlock) *PathLock {
+	flk := plt.allocLock(uid)
 
-	db.DPrintf(db.LOCKMAP, "%v: HandoverLock %v %v", ctx.Principal(), dlk.path, path)
+	db.DPrintf(db.LOCKMAP, "%v: HandoverLock %v %v", ctx.Principal(), dlk.uid, uid)
 
 	if ltype == WLOCK {
 		flk.Lock()

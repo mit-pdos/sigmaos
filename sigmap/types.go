@@ -1,5 +1,9 @@
 package sigmap
 
+import (
+	"fmt"
+)
+
 type Tfid uint32
 type Tpath uint64
 type Tdev uint32
@@ -31,3 +35,12 @@ type TTendpoint uint32
 
 // XXX make its own type?
 type Tsigmapath = string
+
+type Tuid struct {
+	Dev  Tdev
+	Path Tpath
+}
+
+func (uid Tuid) String() string {
+	return fmt.Sprintf("(%v,%d)", uid.Path, uid.Dev)
+}

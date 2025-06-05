@@ -77,6 +77,10 @@ type Inode interface {
 	String() string
 }
 
+func Uid(o FsObj) sp.Tuid {
+	return sp.Tuid{Dev: o.Dev(), Path: o.Path()}
+}
+
 type MkDirF func(Inode, NewInode) FsObj
 
 type NewInode interface {

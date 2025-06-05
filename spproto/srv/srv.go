@@ -77,7 +77,7 @@ func (ps *ProtSrv) Version(args *sp.Tversion, rets *sp.Rversion) *sp.Rerror {
 }
 
 func (ps *ProtSrv) NewRootFid(id sp.Tfid, ctx fs.CtxI, root fs.FsObj, name string) {
-	qid := ps.newQid(root.Perm(), root.Path())
+	qid := ps.newQid(root.Perm(), fs.Uid(root))
 	f := ps.fm.NewFid(name, root, root.(fs.Dir), ctx, 0, qid)
 	if err := ps.fm.Insert(id, f); err != nil {
 		db.DFatalf("NewRootFid err %v\n", err)
@@ -97,7 +97,7 @@ func (ps *ProtSrv) Attach(args *sp.Tattach, rets *sp.Rattach) (sp.TclntId, *sp.R
 	root, ctx := ps.getRootCtx(ps.p, args.GetSecrets(), args.Aname, ps.sid, args.TclntId())
 	db.DPrintf(db.PROTSRV, "Attach p %v fid %v afid %v aname %v cid %v sid %v secrets %v", ctx.Principal(), args.Tfid(), args.Tafid(), args.Aname, args.TclntId(), ps.sid, args.Secrets)
 	tree := root.(fs.FsObj)
-	qid := ps.newQid(tree.Perm(), tree.Path())
+	qid := ps.newQid(tree.Perm(), fs.Uid(tree))
 	// If client and server do not belong to the same realm, check that the
 	// client is authorized to attach
 	if ctx.Principal().GetRealm() != ps.srvPE.GetRealm() {
@@ -108,7 +108,7 @@ func (ps *ProtSrv) Attach(args *sp.Tattach, rets *sp.Rattach) (sp.TclntId, *sp.R
 	}
 	parent := root
 	if args.Aname != "" {
-		dlk := ps.plt.Acquire(ctx, tree.Path(), lockmap.RLOCK)
+		dlk := ps.plt.Acquire(ctx, fs.Uid(tree), lockmap.RLOCK)
 		os, lo, lk, rest, err := namei.Walk(ps.plt, ctx, root, dlk, p, nil, lockmap.RLOCK)
 		defer ps.plt.Release(ctx, lk, lockmap.RLOCK)
 		if len(rest) > 0 || err != nil {
@@ -116,7 +116,7 @@ func (ps *ProtSrv) Attach(args *sp.Tattach, rets *sp.Rattach) (sp.TclntId, *sp.R
 		}
 		tree = lo
 		parent = getParent(root, os)
-		qid = ps.newQid(lo.Perm(), lo.Path())
+		qid = ps.newQid(lo.Perm(), fs.Uid(lo))
 	}
 	fid := ps.fm.NewFid(p.Base(), tree, parent, ctx, 0, qid)
 	if err := ps.fm.Insert(args.Tfid(), fid); err != nil {
@@ -143,7 +143,7 @@ func (ps *ProtSrv) Detach(args *sp.Tdetach, rets *sp.Rdetach) *sp.Rerror {
 func (ps *ProtSrv) newQidProtos(os []fs.FsObj) []*sp.TqidProto {
 	var qids []*sp.TqidProto
 	for _, o := range os {
-		qid := ps.newQid(o.Perm(), o.Path())
+		qid := ps.newQid(o.Perm(), fs.Uid(o))
 		qids = append(qids, qid.Proto())
 	}
 	return qids
@@ -198,7 +198,7 @@ func (ps *ProtSrv) Walk(args *sp.Twalk, rets *sp.Rwalk) *sp.Rerror {
 
 	// let the client decide what to do with rest (when there is a rest)
 	rets.Qids = ps.newQidProtos(os)
-	qid := ps.newQid(lo.Perm(), lo.Path())
+	qid := ps.newQid(lo.Perm(), fs.Uid(lo))
 	parent := getParent(f.Obj().(fs.Dir), os)
 
 	db.DPrintf(db.PROTSRV, "%v: Walk NewFid fid %v lo %v qid %v os %v", f.Ctx().ClntId(), args.NewFid, lo, qid, os)
@@ -217,7 +217,7 @@ func (ps *ProtSrv) clunk(fid sp.Tfid) *sp.Rerror {
 	}
 	db.DPrintf(db.PROTSRV, "%v: Clunk %v f %v", f.Ctx().ClntId(), fid, f)
 	if f.IsOpen() { // has the fid been opened?
-		if _, err := ps.vt.Delete(f.Obj().Path()); err != nil {
+		if _, err := ps.vt.Delete(fs.Uid(f.Obj())); err != nil {
 			db.DFatalf("%v: clunk %v vt del failed %v err %v\n", f.Ctx().ClntId(), fid, f.Obj(), err)
 		}
 		f.Obj().Close(f.Ctx(), f.Mode())
@@ -256,7 +256,7 @@ func (ps *ProtSrv) Open(args *sp.Topen, rets *sp.Ropen) *sp.Rerror {
 		f.SetObj(no)
 	}
 
-	ps.vt.Insert(qid.Tpath())
+	ps.vt.Insert(fs.Uid(no))
 
 	rets.Qid = qid.Proto()
 	return nil
@@ -271,7 +271,7 @@ func (ps *ProtSrv) Watch(args *sp.Twatch, rets *sp.Rwatch) *sp.Rerror {
 	if err != nil {
 		return sp.NewRerrorSerr(err)
 	}
-	p := dirf.Path()
+	p := dirf.Uid()
 
 	db.DPrintf(db.PROTSRV, "%v: Watch %v %q v %v %v", dirf.Ctx().ClntId(), p, dirf.Name(), dirf.Qid(), args)
 
@@ -329,7 +329,7 @@ func (ps *ProtSrv) ReadF(args *sp.TreadF, rets *sp.Rread) ([]byte, *sp.Rerror) {
 	db.DPrintf(db.PROTSRV, "%v: ReadF f %v path %v args {%v}\n", f.Ctx().ClntId(), f, f.Path(), args)
 
 	if !watch.IsWatch(f.Obj()) {
-		flk := ps.plt.Acquire(f.Ctx(), f.Path(), lockmap.RLOCK)
+		flk := ps.plt.Acquire(f.Ctx(), f.Uid(), lockmap.RLOCK)
 		defer ps.plt.Release(f.Ctx(), flk, lockmap.RLOCK)
 	} else {
 		db.DPrintf(db.PROTSRV, "%v: Watched ReadF (skip locking) f %v path %v args {%v}\n", f.Ctx().ClntId(), f, f.Path(), args)
@@ -597,7 +597,7 @@ func (ps *ProtSrv) PutFile(args *sp.Tputfile, data []byte, rets *sp.Rwrite) *sp.
 		if !lo.Perm().IsDir() {
 			return sp.NewRerrorSerr(serr.NewErr(serr.TErrNotDir, dname))
 		}
-		dlk = ps.plt.Acquire(f.Ctx(), lo.Path(), lockmap.WLOCK)
+		dlk = ps.plt.Acquire(f.Ctx(), fs.Uid(lo), lockmap.WLOCK)
 		defer ps.plt.Release(f.Ctx(), dlk, lockmap.WLOCK)
 
 		db.DPrintf(db.PROTSRV, "%v: PutFile try to create %q %v", f.Ctx().ClntId(), name, lo)
@@ -620,13 +620,13 @@ func (ps *ProtSrv) PutFile(args *sp.Tputfile, data []byte, rets *sp.Rwrite) *sp.
 				return sp.NewRerrorSerr(err)
 			}
 			// flk also ensures that two writes execute atomically
-			flk = ps.plt.Acquire(f.Ctx(), lo.Path(), lockmap.WLOCK)
+			flk = ps.plt.Acquire(f.Ctx(), fs.Uid(lo), lockmap.WLOCK)
 		}
 	} else {
 		db.DPrintf(db.PROTSRV, "%v: PutFile open %v (%v)", f.Ctx().ClntId(), name, dname)
-		dlk = ps.plt.Acquire(f.Ctx(), dir.Path(), lockmap.WLOCK)
+		dlk = ps.plt.Acquire(f.Ctx(), fs.Uid(dir), lockmap.WLOCK)
 		defer ps.plt.Release(f.Ctx(), dlk, lockmap.WLOCK)
-		flk = ps.plt.Acquire(f.Ctx(), lo.Path(), lockmap.WLOCK)
+		flk = ps.plt.Acquire(f.Ctx(), fs.Uid(lo), lockmap.WLOCK)
 		no, err := lo.Open(f.Ctx(), args.Tmode())
 		if err != nil {
 			return sp.NewRerrorSerr(err)
@@ -638,7 +638,7 @@ func (ps *ProtSrv) PutFile(args *sp.Tputfile, data []byte, rets *sp.Rwrite) *sp.
 	defer ps.plt.Release(f.Ctx(), flk, lockmap.WLOCK)
 
 	// make an fid for the file (in case we created it)
-	qid := ps.newQid(lo.Perm(), lo.Path())
+	qid := ps.newQid(lo.Perm(), fs.Uid(lo))
 	f = ps.newFid(ps.fm, f.Ctx(), dir, name, lo, args.TleaseId(), qid)
 	i, err := fs.Obj2File(lo, name)
 	if err != nil {

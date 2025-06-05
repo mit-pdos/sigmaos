@@ -79,8 +79,8 @@ func (dir *DirOverlay) Mount(name string, i fs.FsObj) {
 
 	db.DPrintf(db.OVERLAYDIR, "Mount i %v as %v\n", i, name)
 
-	if dir.Path() == i.Path() {
-		db.DFatalf("Mount: path dir p %v (dev %d) i %v (p %v, dev %d) are equal", dir.Path(), dir.Dev(), name, i.Path(), i.Dev())
+	if fs.Uid(dir) == fs.Uid(i) {
+		db.DFatalf("Mount: dir uid = i %v (uid %v) are equal", name, fs.Uid(i))
 	}
 	dir.entries[name] = i
 }

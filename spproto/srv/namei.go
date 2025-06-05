@@ -25,7 +25,7 @@ func (ps *ProtSrv) lookupObj(ctx fs.CtxI, f *fid.Fid, target path.Tpathname, lty
 	db.DPrintf(db.NAMEI, "%v: lookupObj %v target '%v'", ctx.Principal(), f, target)
 	o := f.Obj()
 	name := f.Name()
-	lk := ps.plt.Acquire(ctx, f.Path(), ltype)
+	lk := ps.plt.Acquire(ctx, f.Uid(), ltype)
 	if len(target) == 0 {
 		return nil, o, lk, name, nil
 	}

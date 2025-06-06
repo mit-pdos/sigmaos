@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"sync"
 	"time"
 
 	db "sigmaos/debug"
@@ -22,7 +23,7 @@ const (
 )
 
 var labels *TeventMap
-var crashfile string
+var crashfile Tcrashfile
 
 type Tevent struct {
 	Label string `json:"label"` // see selector.go
@@ -62,6 +63,11 @@ func NewEventStartDelay(l string, s, mi, d int64, p float64) Tevent {
 
 func (e *Tevent) String() string {
 	return fmt.Sprintf("{l %v s %v mi %v p %v d %v}", e.Label, e.Start, e.MaxInterval, e.Prob, e.Delay)
+}
+
+type Tcrashfile struct {
+	sync.Mutex
+	name string
 }
 
 type Teventf func(e Tevent)
@@ -191,7 +197,10 @@ func CrashMsg(msg string) {
 }
 
 func CrashFile(name string) {
-	if crashfile != "" && name == crashfile {
+	crashfile.Lock()
+	crash := crashfile.name != "" && name == crashfile.name
+	crashfile.Unlock()
+	if crash {
 		Crash()
 	}
 }
@@ -223,7 +232,9 @@ func PartitionPath(fsl *fslib.FsLib, pn string) {
 func SetCrashFile(fsl *fslib.FsLib, label Tselector) {
 	initLabels()
 	if e, ok := labels.Evs[label]; ok {
-		crashfile = e.Path
+		crashfile.Lock()
+		crashfile.name = e.Path
+		crashfile.Unlock()
 	}
 }
 

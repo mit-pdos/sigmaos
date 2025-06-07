@@ -38,7 +38,6 @@ std::expected<int, sigmaos::serr::Error> Srv::CosSim(std::shared_ptr<google::pro
 }
 
 std::expected<int, sigmaos::serr::Error> Srv::Init() {
-  // TODO: init vector db from memcachedb
   for (int i = 0; i < _nvec; i++) {
     std::string b(10000, '\0');
     // Get the serialized vector from cached

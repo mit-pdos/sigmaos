@@ -45,18 +45,22 @@ class Srv {
     log(COSSIMSRV, "Exposed cossim RPC handler");
     log(COSSIMSRV, "Init cache clnt");
     {
+      auto start = GetCurrentTime();
       auto res = _cache_clnt->Init();
       if (!res.has_value()) {
         fatal("Error Init cacheclnt: {}", res.error().String());
       }
+      LogSpawnLatency(_sp_clnt->ProcEnv()->GetPID(), _sp_clnt->ProcEnv()->GetSpawnTime(), start, "Init cacheclnt");
     }
     log(COSSIMSRV, "Done init cache clnt");
     log(COSSIMSRV, "Init srv");
     {
+      auto start = GetCurrentTime();
       auto res = Init();
       if (!res.has_value()) {
         fatal("Error Init: {}", res.error().String());
       }
+      LogSpawnLatency(_sp_clnt->ProcEnv()->GetPID(), _sp_clnt->ProcEnv()->GetSpawnTime(), start, "Init soft state");
     }
     log(COSSIMSRV, "Done init srv");
     {

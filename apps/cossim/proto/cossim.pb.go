@@ -67,19 +67,75 @@ func (x *Vector) GetVals() []float64 {
 	return nil
 }
 
+// Range of vectors for which to compute cosine similarit
+type VecRange struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	StartID uint64 `protobuf:"varint,1,opt,name=startID,proto3" json:"startID,omitempty"`
+	EndID   uint64 `protobuf:"varint,2,opt,name=endID,proto3" json:"endID,omitempty"`
+}
+
+func (x *VecRange) Reset() {
+	*x = VecRange{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_apps_cossim_proto_cossim_proto_msgTypes[1]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *VecRange) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*VecRange) ProtoMessage() {}
+
+func (x *VecRange) ProtoReflect() protoreflect.Message {
+	mi := &file_apps_cossim_proto_cossim_proto_msgTypes[1]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use VecRange.ProtoReflect.Descriptor instead.
+func (*VecRange) Descriptor() ([]byte, []int) {
+	return file_apps_cossim_proto_cossim_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *VecRange) GetStartID() uint64 {
+	if x != nil {
+		return x.StartID
+	}
+	return 0
+}
+
+func (x *VecRange) GetEndID() uint64 {
+	if x != nil {
+		return x.EndID
+	}
+	return 0
+}
+
 type CosSimReq struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	InputVec []float64 `protobuf:"fixed64,1,rep,packed,name=inputVec,proto3" json:"inputVec,omitempty"` // TODO: blob
-	N        int64     `protobuf:"varint,2,opt,name=n,proto3" json:"n,omitempty"`
+	InputVec  *Vector     `protobuf:"bytes,1,opt,name=inputVec,proto3" json:"inputVec,omitempty"`   // TODO: blob
+	VecRanges []*VecRange `protobuf:"bytes,2,rep,name=vecRanges,proto3" json:"vecRanges,omitempty"` // Ranges of vectors for which to compute cosine simmilarity
 }
 
 func (x *CosSimReq) Reset() {
 	*x = CosSimReq{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_apps_cossim_proto_cossim_proto_msgTypes[1]
+		mi := &file_apps_cossim_proto_cossim_proto_msgTypes[2]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -92,7 +148,7 @@ func (x *CosSimReq) String() string {
 func (*CosSimReq) ProtoMessage() {}
 
 func (x *CosSimReq) ProtoReflect() protoreflect.Message {
-	mi := &file_apps_cossim_proto_cossim_proto_msgTypes[1]
+	mi := &file_apps_cossim_proto_cossim_proto_msgTypes[2]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -105,21 +161,21 @@ func (x *CosSimReq) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CosSimReq.ProtoReflect.Descriptor instead.
 func (*CosSimReq) Descriptor() ([]byte, []int) {
-	return file_apps_cossim_proto_cossim_proto_rawDescGZIP(), []int{1}
+	return file_apps_cossim_proto_cossim_proto_rawDescGZIP(), []int{2}
 }
 
-func (x *CosSimReq) GetInputVec() []float64 {
+func (x *CosSimReq) GetInputVec() *Vector {
 	if x != nil {
 		return x.InputVec
 	}
 	return nil
 }
 
-func (x *CosSimReq) GetN() int64 {
+func (x *CosSimReq) GetVecRanges() []*VecRange {
 	if x != nil {
-		return x.N
+		return x.VecRanges
 	}
-	return 0
+	return nil
 }
 
 type CosSimRep struct {
@@ -134,7 +190,7 @@ type CosSimRep struct {
 func (x *CosSimRep) Reset() {
 	*x = CosSimRep{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_apps_cossim_proto_cossim_proto_msgTypes[2]
+		mi := &file_apps_cossim_proto_cossim_proto_msgTypes[3]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -147,7 +203,7 @@ func (x *CosSimRep) String() string {
 func (*CosSimRep) ProtoMessage() {}
 
 func (x *CosSimRep) ProtoReflect() protoreflect.Message {
-	mi := &file_apps_cossim_proto_cossim_proto_msgTypes[2]
+	mi := &file_apps_cossim_proto_cossim_proto_msgTypes[3]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -160,7 +216,7 @@ func (x *CosSimRep) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CosSimRep.ProtoReflect.Descriptor instead.
 func (*CosSimRep) Descriptor() ([]byte, []int) {
-	return file_apps_cossim_proto_cossim_proto_rawDescGZIP(), []int{2}
+	return file_apps_cossim_proto_cossim_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *CosSimRep) GetID() uint64 {
@@ -183,11 +239,17 @@ var file_apps_cossim_proto_cossim_proto_rawDesc = []byte{
 	0x0a, 0x1e, 0x61, 0x70, 0x70, 0x73, 0x2f, 0x63, 0x6f, 0x73, 0x73, 0x69, 0x6d, 0x2f, 0x70, 0x72,
 	0x6f, 0x74, 0x6f, 0x2f, 0x63, 0x6f, 0x73, 0x73, 0x69, 0x6d, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f,
 	0x22, 0x1c, 0x0a, 0x06, 0x56, 0x65, 0x63, 0x74, 0x6f, 0x72, 0x12, 0x12, 0x0a, 0x04, 0x76, 0x61,
-	0x6c, 0x73, 0x18, 0x01, 0x20, 0x03, 0x28, 0x01, 0x52, 0x04, 0x76, 0x61, 0x6c, 0x73, 0x22, 0x35,
-	0x0a, 0x09, 0x43, 0x6f, 0x73, 0x53, 0x69, 0x6d, 0x52, 0x65, 0x71, 0x12, 0x1a, 0x0a, 0x08, 0x69,
-	0x6e, 0x70, 0x75, 0x74, 0x56, 0x65, 0x63, 0x18, 0x01, 0x20, 0x03, 0x28, 0x01, 0x52, 0x08, 0x69,
-	0x6e, 0x70, 0x75, 0x74, 0x56, 0x65, 0x63, 0x12, 0x0c, 0x0a, 0x01, 0x6e, 0x18, 0x02, 0x20, 0x01,
-	0x28, 0x03, 0x52, 0x01, 0x6e, 0x22, 0x2d, 0x0a, 0x09, 0x43, 0x6f, 0x73, 0x53, 0x69, 0x6d, 0x52,
+	0x6c, 0x73, 0x18, 0x01, 0x20, 0x03, 0x28, 0x01, 0x52, 0x04, 0x76, 0x61, 0x6c, 0x73, 0x22, 0x3a,
+	0x0a, 0x08, 0x56, 0x65, 0x63, 0x52, 0x61, 0x6e, 0x67, 0x65, 0x12, 0x18, 0x0a, 0x07, 0x73, 0x74,
+	0x61, 0x72, 0x74, 0x49, 0x44, 0x18, 0x01, 0x20, 0x01, 0x28, 0x04, 0x52, 0x07, 0x73, 0x74, 0x61,
+	0x72, 0x74, 0x49, 0x44, 0x12, 0x14, 0x0a, 0x05, 0x65, 0x6e, 0x64, 0x49, 0x44, 0x18, 0x02, 0x20,
+	0x01, 0x28, 0x04, 0x52, 0x05, 0x65, 0x6e, 0x64, 0x49, 0x44, 0x22, 0x59, 0x0a, 0x09, 0x43, 0x6f,
+	0x73, 0x53, 0x69, 0x6d, 0x52, 0x65, 0x71, 0x12, 0x23, 0x0a, 0x08, 0x69, 0x6e, 0x70, 0x75, 0x74,
+	0x56, 0x65, 0x63, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x07, 0x2e, 0x56, 0x65, 0x63, 0x74,
+	0x6f, 0x72, 0x52, 0x08, 0x69, 0x6e, 0x70, 0x75, 0x74, 0x56, 0x65, 0x63, 0x12, 0x27, 0x0a, 0x09,
+	0x76, 0x65, 0x63, 0x52, 0x61, 0x6e, 0x67, 0x65, 0x73, 0x18, 0x02, 0x20, 0x03, 0x28, 0x0b, 0x32,
+	0x09, 0x2e, 0x56, 0x65, 0x63, 0x52, 0x61, 0x6e, 0x67, 0x65, 0x52, 0x09, 0x76, 0x65, 0x63, 0x52,
+	0x61, 0x6e, 0x67, 0x65, 0x73, 0x22, 0x2d, 0x0a, 0x09, 0x43, 0x6f, 0x73, 0x53, 0x69, 0x6d, 0x52,
 	0x65, 0x70, 0x12, 0x0e, 0x0a, 0x02, 0x69, 0x44, 0x18, 0x01, 0x20, 0x01, 0x28, 0x04, 0x52, 0x02,
 	0x69, 0x44, 0x12, 0x10, 0x0a, 0x03, 0x76, 0x61, 0x6c, 0x18, 0x02, 0x20, 0x01, 0x28, 0x01, 0x52,
 	0x03, 0x76, 0x61, 0x6c, 0x32, 0x31, 0x0a, 0x0d, 0x43, 0x6f, 0x73, 0x53, 0x69, 0x6d, 0x53, 0x65,
@@ -210,20 +272,23 @@ func file_apps_cossim_proto_cossim_proto_rawDescGZIP() []byte {
 	return file_apps_cossim_proto_cossim_proto_rawDescData
 }
 
-var file_apps_cossim_proto_cossim_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
+var file_apps_cossim_proto_cossim_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
 var file_apps_cossim_proto_cossim_proto_goTypes = []interface{}{
 	(*Vector)(nil),    // 0: Vector
-	(*CosSimReq)(nil), // 1: CosSimReq
-	(*CosSimRep)(nil), // 2: CosSimRep
+	(*VecRange)(nil),  // 1: VecRange
+	(*CosSimReq)(nil), // 2: CosSimReq
+	(*CosSimRep)(nil), // 3: CosSimRep
 }
 var file_apps_cossim_proto_cossim_proto_depIdxs = []int32{
-	1, // 0: CosSimService.CosSim:input_type -> CosSimReq
-	2, // 1: CosSimService.CosSim:output_type -> CosSimRep
-	1, // [1:2] is the sub-list for method output_type
-	0, // [0:1] is the sub-list for method input_type
-	0, // [0:0] is the sub-list for extension type_name
-	0, // [0:0] is the sub-list for extension extendee
-	0, // [0:0] is the sub-list for field type_name
+	0, // 0: CosSimReq.inputVec:type_name -> Vector
+	1, // 1: CosSimReq.vecRanges:type_name -> VecRange
+	2, // 2: CosSimService.CosSim:input_type -> CosSimReq
+	3, // 3: CosSimService.CosSim:output_type -> CosSimRep
+	3, // [3:4] is the sub-list for method output_type
+	2, // [2:3] is the sub-list for method input_type
+	2, // [2:2] is the sub-list for extension type_name
+	2, // [2:2] is the sub-list for extension extendee
+	0, // [0:2] is the sub-list for field type_name
 }
 
 func init() { file_apps_cossim_proto_cossim_proto_init() }
@@ -245,7 +310,7 @@ func file_apps_cossim_proto_cossim_proto_init() {
 			}
 		}
 		file_apps_cossim_proto_cossim_proto_msgTypes[1].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*CosSimReq); i {
+			switch v := v.(*VecRange); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -257,6 +322,18 @@ func file_apps_cossim_proto_cossim_proto_init() {
 			}
 		}
 		file_apps_cossim_proto_cossim_proto_msgTypes[2].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*CosSimReq); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_apps_cossim_proto_cossim_proto_msgTypes[3].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*CosSimRep); i {
 			case 0:
 				return &v.state
@@ -275,7 +352,7 @@ func file_apps_cossim_proto_cossim_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_apps_cossim_proto_cossim_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   3,
+			NumMessages:   4,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

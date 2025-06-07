@@ -49,18 +49,20 @@ func NewCosSimClnt(fsl *fslib.FsLib, epcc *epcacheclnt.EndpointCacheClnt, srvID 
 }
 
 // Register a service's endpoint
-func (clnt *CosSimClnt) CosSim(v []float64, n int64) (uint64, float64, error) {
-	db.DPrintf(db.COSSIMCLNT, "CosSim: %v", len(v))
+func (clnt *CosSimClnt) CosSim(v []float64, ranges []*proto.VecRange) (uint64, float64, error) {
+	db.DPrintf(db.COSSIMCLNT, "CosSim: %v ranges:%v", len(v), ranges)
 	var res proto.CosSimRep
 	req := &proto.CosSimReq{
-		InputVec: v,
-		N:        n,
+		InputVec: &proto.Vector{
+			Vals: v,
+		},
+		VecRanges: ranges,
 	}
 	err := clnt.rpcc.RPC("CosSimSrv.CosSim", req, &res)
 	if err != nil {
 		db.DPrintf(db.COSSIMCLNT_ERR, "Err Register: %v", err)
 		return 0, 0.0, err
 	}
-	db.DPrintf(db.COSSIMCLNT, "CosSim ok: %v -> id:%v val:%v", len(v), res.ID, res.Val)
+	db.DPrintf(db.COSSIMCLNT, "CosSim ok: %v %v -> id:%v val:%v", len(v), ranges, res.ID, res.Val)
 	return res.ID, res.Val, nil
 }

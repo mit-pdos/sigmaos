@@ -10,9 +10,15 @@ message Vector {
   repeated double vals = 1; // TODO: blob
 }
 
+// Range of vectors for which to compute cosine similarit
+message VecRange {
+  uint64 startID = 1;
+  uint64 endID = 2;
+}
+
 message CosSimReq {
-  repeated double inputVec = 1; // TODO: blob
-  int64 n = 2;
+  Vector inputVec = 1; // TODO: blob
+  repeated VecRange vecRanges = 2; // Ranges of vectors for which to compute cosine simmilarity
 }
 
 message CosSimRep {

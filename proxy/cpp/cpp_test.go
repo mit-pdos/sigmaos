@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"sigmaos/apps/cossim"
+	cossimproto "sigmaos/apps/cossim/proto"
 	cossimsrv "sigmaos/apps/cossim/srv"
 	"sigmaos/apps/epcache"
 	epcachesrv "sigmaos/apps/epcache/srv"
@@ -405,9 +406,14 @@ func TestCosSimInitLatency(t *testing.T) {
 	if !assert.Nil(mrts.T, err, "Err AddSrv: %v", err) {
 		return
 	}
+	ranges := []*cossimproto.VecRange{&cossimproto.VecRange{
+		StartID: 0,
+		EndID:   N_VEC - 1,
+	},
+	}
 	db.DPrintf(db.TEST, "CosSim server proc started (lat=%v)", startLat)
 	start := time.Now()
-	id, val, err := csclnt.CosSim(v, 1)
+	id, val, err := csclnt.CosSim(v, ranges)
 	if !assert.Nil(t, err, "Err CosSim: %v", err) {
 		return
 	}
@@ -430,7 +436,7 @@ func TestCosSimInitLatency(t *testing.T) {
 				return
 			}
 			db.DPrintf(db.TEST, "CosSim server proc started (lat=%v)", startLat)
-			id, val, err := csclnt.CosSim(v, 1)
+			id, val, err := csclnt.CosSim(v, ranges)
 			assert.Nil(t, err, "Err CosSim: %v", err)
 			db.DPrintf(db.TEST, "CosSim result: %v %v", id, val)
 			db.DPrintf(db.TEST, "CosSim proc handled first request (lat=%v)", time.Since(start))

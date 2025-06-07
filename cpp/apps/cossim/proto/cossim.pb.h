@@ -50,12 +50,16 @@ extern CosSimRepDefaultTypeInternal _CosSimRep_default_instance_;
 class CosSimReq;
 struct CosSimReqDefaultTypeInternal;
 extern CosSimReqDefaultTypeInternal _CosSimReq_default_instance_;
+class VecRange;
+struct VecRangeDefaultTypeInternal;
+extern VecRangeDefaultTypeInternal _VecRange_default_instance_;
 class Vector;
 struct VectorDefaultTypeInternal;
 extern VectorDefaultTypeInternal _Vector_default_instance_;
 PROTOBUF_NAMESPACE_OPEN
 template<> ::CosSimRep* Arena::CreateMaybeMessage<::CosSimRep>(Arena*);
 template<> ::CosSimReq* Arena::CreateMaybeMessage<::CosSimReq>(Arena*);
+template<> ::VecRange* Arena::CreateMaybeMessage<::VecRange>(Arena*);
 template<> ::Vector* Arena::CreateMaybeMessage<::Vector>(Arena*);
 PROTOBUF_NAMESPACE_CLOSE
 
@@ -222,6 +226,165 @@ class Vector final :
 };
 // -------------------------------------------------------------------
 
+class VecRange final :
+    public ::PROTOBUF_NAMESPACE_ID::Message /* @@protoc_insertion_point(class_definition:VecRange) */ {
+ public:
+  inline VecRange() : VecRange(nullptr) {}
+  ~VecRange() override;
+  explicit PROTOBUF_CONSTEXPR VecRange(::PROTOBUF_NAMESPACE_ID::internal::ConstantInitialized);
+
+  VecRange(const VecRange& from);
+  VecRange(VecRange&& from) noexcept
+    : VecRange() {
+    *this = ::std::move(from);
+  }
+
+  inline VecRange& operator=(const VecRange& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  inline VecRange& operator=(VecRange&& from) noexcept {
+    if (this == &from) return *this;
+    if (GetOwningArena() == from.GetOwningArena()
+  #ifdef PROTOBUF_FORCE_COPY_IN_MOVE
+        && GetOwningArena() != nullptr
+  #endif  // !PROTOBUF_FORCE_COPY_IN_MOVE
+    ) {
+      InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+
+  static const ::PROTOBUF_NAMESPACE_ID::Descriptor* descriptor() {
+    return GetDescriptor();
+  }
+  static const ::PROTOBUF_NAMESPACE_ID::Descriptor* GetDescriptor() {
+    return default_instance().GetMetadata().descriptor;
+  }
+  static const ::PROTOBUF_NAMESPACE_ID::Reflection* GetReflection() {
+    return default_instance().GetMetadata().reflection;
+  }
+  static const VecRange& default_instance() {
+    return *internal_default_instance();
+  }
+  static inline const VecRange* internal_default_instance() {
+    return reinterpret_cast<const VecRange*>(
+               &_VecRange_default_instance_);
+  }
+  static constexpr int kIndexInFileMessages =
+    1;
+
+  friend void swap(VecRange& a, VecRange& b) {
+    a.Swap(&b);
+  }
+  inline void Swap(VecRange* other) {
+    if (other == this) return;
+  #ifdef PROTOBUF_FORCE_COPY_IN_SWAP
+    if (GetOwningArena() != nullptr &&
+        GetOwningArena() == other->GetOwningArena()) {
+   #else  // PROTOBUF_FORCE_COPY_IN_SWAP
+    if (GetOwningArena() == other->GetOwningArena()) {
+  #endif  // !PROTOBUF_FORCE_COPY_IN_SWAP
+      InternalSwap(other);
+    } else {
+      ::PROTOBUF_NAMESPACE_ID::internal::GenericSwap(this, other);
+    }
+  }
+  void UnsafeArenaSwap(VecRange* other) {
+    if (other == this) return;
+    GOOGLE_DCHECK(GetOwningArena() == other->GetOwningArena());
+    InternalSwap(other);
+  }
+
+  // implements Message ----------------------------------------------
+
+  VecRange* New(::PROTOBUF_NAMESPACE_ID::Arena* arena = nullptr) const final {
+    return CreateMaybeMessage<VecRange>(arena);
+  }
+  using ::PROTOBUF_NAMESPACE_ID::Message::CopyFrom;
+  void CopyFrom(const VecRange& from);
+  using ::PROTOBUF_NAMESPACE_ID::Message::MergeFrom;
+  void MergeFrom( const VecRange& from) {
+    VecRange::MergeImpl(*this, from);
+  }
+  private:
+  static void MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PROTOBUF_NAMESPACE_ID::Message& from_msg);
+  public:
+  PROTOBUF_ATTRIBUTE_REINITIALIZES void Clear() final;
+  bool IsInitialized() const final;
+
+  size_t ByteSizeLong() const final;
+  const char* _InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::internal::ParseContext* ctx) final;
+  uint8_t* _InternalSerialize(
+      uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const final;
+  int GetCachedSize() const final { return _impl_._cached_size_.Get(); }
+
+  private:
+  void SharedCtor(::PROTOBUF_NAMESPACE_ID::Arena* arena, bool is_message_owned);
+  void SharedDtor();
+  void SetCachedSize(int size) const final;
+  void InternalSwap(VecRange* other);
+
+  private:
+  friend class ::PROTOBUF_NAMESPACE_ID::internal::AnyMetadata;
+  static ::PROTOBUF_NAMESPACE_ID::StringPiece FullMessageName() {
+    return "VecRange";
+  }
+  protected:
+  explicit VecRange(::PROTOBUF_NAMESPACE_ID::Arena* arena,
+                       bool is_message_owned = false);
+  public:
+
+  static const ClassData _class_data_;
+  const ::PROTOBUF_NAMESPACE_ID::Message::ClassData*GetClassData() const final;
+
+  ::PROTOBUF_NAMESPACE_ID::Metadata GetMetadata() const final;
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  enum : int {
+    kStartIDFieldNumber = 1,
+    kEndIDFieldNumber = 2,
+  };
+  // uint64 startID = 1;
+  void clear_startid();
+  uint64_t startid() const;
+  void set_startid(uint64_t value);
+  private:
+  uint64_t _internal_startid() const;
+  void _internal_set_startid(uint64_t value);
+  public:
+
+  // uint64 endID = 2;
+  void clear_endid();
+  uint64_t endid() const;
+  void set_endid(uint64_t value);
+  private:
+  uint64_t _internal_endid() const;
+  void _internal_set_endid(uint64_t value);
+  public:
+
+  // @@protoc_insertion_point(class_scope:VecRange)
+ private:
+  class _Internal;
+
+  template <typename T> friend class ::PROTOBUF_NAMESPACE_ID::Arena::InternalHelper;
+  typedef void InternalArenaConstructable_;
+  typedef void DestructorSkippable_;
+  struct Impl_ {
+    uint64_t startid_;
+    uint64_t endid_;
+    mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
+  };
+  union { Impl_ _impl_; };
+  friend struct ::TableStruct_cossim_2eproto;
+};
+// -------------------------------------------------------------------
+
 class CosSimReq final :
     public ::PROTOBUF_NAMESPACE_ID::Message /* @@protoc_insertion_point(class_definition:CosSimReq) */ {
  public:
@@ -270,7 +433,7 @@ class CosSimReq final :
                &_CosSimReq_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    1;
+    2;
 
   friend void swap(CosSimReq& a, CosSimReq& b) {
     a.Swap(&b);
@@ -343,39 +506,44 @@ class CosSimReq final :
   // accessors -------------------------------------------------------
 
   enum : int {
+    kVecRangesFieldNumber = 2,
     kInputVecFieldNumber = 1,
-    kNFieldNumber = 2,
   };
-  // repeated double inputVec = 1;
-  int inputvec_size() const;
+  // repeated .VecRange vecRanges = 2;
+  int vecranges_size() const;
   private:
-  int _internal_inputvec_size() const;
+  int _internal_vecranges_size() const;
+  public:
+  void clear_vecranges();
+  ::VecRange* mutable_vecranges(int index);
+  ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::VecRange >*
+      mutable_vecranges();
+  private:
+  const ::VecRange& _internal_vecranges(int index) const;
+  ::VecRange* _internal_add_vecranges();
+  public:
+  const ::VecRange& vecranges(int index) const;
+  ::VecRange* add_vecranges();
+  const ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::VecRange >&
+      vecranges() const;
+
+  // .Vector inputVec = 1;
+  bool has_inputvec() const;
+  private:
+  bool _internal_has_inputvec() const;
   public:
   void clear_inputvec();
+  const ::Vector& inputvec() const;
+  PROTOBUF_NODISCARD ::Vector* release_inputvec();
+  ::Vector* mutable_inputvec();
+  void set_allocated_inputvec(::Vector* inputvec);
   private:
-  double _internal_inputvec(int index) const;
-  const ::PROTOBUF_NAMESPACE_ID::RepeatedField< double >&
-      _internal_inputvec() const;
-  void _internal_add_inputvec(double value);
-  ::PROTOBUF_NAMESPACE_ID::RepeatedField< double >*
-      _internal_mutable_inputvec();
+  const ::Vector& _internal_inputvec() const;
+  ::Vector* _internal_mutable_inputvec();
   public:
-  double inputvec(int index) const;
-  void set_inputvec(int index, double value);
-  void add_inputvec(double value);
-  const ::PROTOBUF_NAMESPACE_ID::RepeatedField< double >&
-      inputvec() const;
-  ::PROTOBUF_NAMESPACE_ID::RepeatedField< double >*
-      mutable_inputvec();
-
-  // int64 n = 2;
-  void clear_n();
-  int64_t n() const;
-  void set_n(int64_t value);
-  private:
-  int64_t _internal_n() const;
-  void _internal_set_n(int64_t value);
-  public:
+  void unsafe_arena_set_allocated_inputvec(
+      ::Vector* inputvec);
+  ::Vector* unsafe_arena_release_inputvec();
 
   // @@protoc_insertion_point(class_scope:CosSimReq)
  private:
@@ -385,8 +553,8 @@ class CosSimReq final :
   typedef void InternalArenaConstructable_;
   typedef void DestructorSkippable_;
   struct Impl_ {
-    ::PROTOBUF_NAMESPACE_ID::RepeatedField< double > inputvec_;
-    int64_t n_;
+    ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::VecRange > vecranges_;
+    ::Vector* inputvec_;
     mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   };
   union { Impl_ _impl_; };
@@ -442,7 +610,7 @@ class CosSimRep final :
                &_CosSimRep_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    2;
+    3;
 
   friend void swap(CosSimRep& a, CosSimRep& b) {
     a.Swap(&b);
@@ -611,73 +779,180 @@ Vector::mutable_vals() {
 
 // -------------------------------------------------------------------
 
+// VecRange
+
+// uint64 startID = 1;
+inline void VecRange::clear_startid() {
+  _impl_.startid_ = uint64_t{0u};
+}
+inline uint64_t VecRange::_internal_startid() const {
+  return _impl_.startid_;
+}
+inline uint64_t VecRange::startid() const {
+  // @@protoc_insertion_point(field_get:VecRange.startID)
+  return _internal_startid();
+}
+inline void VecRange::_internal_set_startid(uint64_t value) {
+  
+  _impl_.startid_ = value;
+}
+inline void VecRange::set_startid(uint64_t value) {
+  _internal_set_startid(value);
+  // @@protoc_insertion_point(field_set:VecRange.startID)
+}
+
+// uint64 endID = 2;
+inline void VecRange::clear_endid() {
+  _impl_.endid_ = uint64_t{0u};
+}
+inline uint64_t VecRange::_internal_endid() const {
+  return _impl_.endid_;
+}
+inline uint64_t VecRange::endid() const {
+  // @@protoc_insertion_point(field_get:VecRange.endID)
+  return _internal_endid();
+}
+inline void VecRange::_internal_set_endid(uint64_t value) {
+  
+  _impl_.endid_ = value;
+}
+inline void VecRange::set_endid(uint64_t value) {
+  _internal_set_endid(value);
+  // @@protoc_insertion_point(field_set:VecRange.endID)
+}
+
+// -------------------------------------------------------------------
+
 // CosSimReq
 
-// repeated double inputVec = 1;
-inline int CosSimReq::_internal_inputvec_size() const {
-  return _impl_.inputvec_.size();
+// .Vector inputVec = 1;
+inline bool CosSimReq::_internal_has_inputvec() const {
+  return this != internal_default_instance() && _impl_.inputvec_ != nullptr;
 }
-inline int CosSimReq::inputvec_size() const {
-  return _internal_inputvec_size();
+inline bool CosSimReq::has_inputvec() const {
+  return _internal_has_inputvec();
 }
 inline void CosSimReq::clear_inputvec() {
-  _impl_.inputvec_.Clear();
+  if (GetArenaForAllocation() == nullptr && _impl_.inputvec_ != nullptr) {
+    delete _impl_.inputvec_;
+  }
+  _impl_.inputvec_ = nullptr;
 }
-inline double CosSimReq::_internal_inputvec(int index) const {
-  return _impl_.inputvec_.Get(index);
+inline const ::Vector& CosSimReq::_internal_inputvec() const {
+  const ::Vector* p = _impl_.inputvec_;
+  return p != nullptr ? *p : reinterpret_cast<const ::Vector&>(
+      ::_Vector_default_instance_);
 }
-inline double CosSimReq::inputvec(int index) const {
+inline const ::Vector& CosSimReq::inputvec() const {
   // @@protoc_insertion_point(field_get:CosSimReq.inputVec)
-  return _internal_inputvec(index);
-}
-inline void CosSimReq::set_inputvec(int index, double value) {
-  _impl_.inputvec_.Set(index, value);
-  // @@protoc_insertion_point(field_set:CosSimReq.inputVec)
-}
-inline void CosSimReq::_internal_add_inputvec(double value) {
-  _impl_.inputvec_.Add(value);
-}
-inline void CosSimReq::add_inputvec(double value) {
-  _internal_add_inputvec(value);
-  // @@protoc_insertion_point(field_add:CosSimReq.inputVec)
-}
-inline const ::PROTOBUF_NAMESPACE_ID::RepeatedField< double >&
-CosSimReq::_internal_inputvec() const {
-  return _impl_.inputvec_;
-}
-inline const ::PROTOBUF_NAMESPACE_ID::RepeatedField< double >&
-CosSimReq::inputvec() const {
-  // @@protoc_insertion_point(field_list:CosSimReq.inputVec)
   return _internal_inputvec();
 }
-inline ::PROTOBUF_NAMESPACE_ID::RepeatedField< double >*
-CosSimReq::_internal_mutable_inputvec() {
-  return &_impl_.inputvec_;
+inline void CosSimReq::unsafe_arena_set_allocated_inputvec(
+    ::Vector* inputvec) {
+  if (GetArenaForAllocation() == nullptr) {
+    delete reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(_impl_.inputvec_);
+  }
+  _impl_.inputvec_ = inputvec;
+  if (inputvec) {
+    
+  } else {
+    
+  }
+  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:CosSimReq.inputVec)
 }
-inline ::PROTOBUF_NAMESPACE_ID::RepeatedField< double >*
-CosSimReq::mutable_inputvec() {
-  // @@protoc_insertion_point(field_mutable_list:CosSimReq.inputVec)
-  return _internal_mutable_inputvec();
+inline ::Vector* CosSimReq::release_inputvec() {
+  
+  ::Vector* temp = _impl_.inputvec_;
+  _impl_.inputvec_ = nullptr;
+#ifdef PROTOBUF_FORCE_COPY_IN_RELEASE
+  auto* old =  reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(temp);
+  temp = ::PROTOBUF_NAMESPACE_ID::internal::DuplicateIfNonNull(temp);
+  if (GetArenaForAllocation() == nullptr) { delete old; }
+#else  // PROTOBUF_FORCE_COPY_IN_RELEASE
+  if (GetArenaForAllocation() != nullptr) {
+    temp = ::PROTOBUF_NAMESPACE_ID::internal::DuplicateIfNonNull(temp);
+  }
+#endif  // !PROTOBUF_FORCE_COPY_IN_RELEASE
+  return temp;
+}
+inline ::Vector* CosSimReq::unsafe_arena_release_inputvec() {
+  // @@protoc_insertion_point(field_release:CosSimReq.inputVec)
+  
+  ::Vector* temp = _impl_.inputvec_;
+  _impl_.inputvec_ = nullptr;
+  return temp;
+}
+inline ::Vector* CosSimReq::_internal_mutable_inputvec() {
+  
+  if (_impl_.inputvec_ == nullptr) {
+    auto* p = CreateMaybeMessage<::Vector>(GetArenaForAllocation());
+    _impl_.inputvec_ = p;
+  }
+  return _impl_.inputvec_;
+}
+inline ::Vector* CosSimReq::mutable_inputvec() {
+  ::Vector* _msg = _internal_mutable_inputvec();
+  // @@protoc_insertion_point(field_mutable:CosSimReq.inputVec)
+  return _msg;
+}
+inline void CosSimReq::set_allocated_inputvec(::Vector* inputvec) {
+  ::PROTOBUF_NAMESPACE_ID::Arena* message_arena = GetArenaForAllocation();
+  if (message_arena == nullptr) {
+    delete _impl_.inputvec_;
+  }
+  if (inputvec) {
+    ::PROTOBUF_NAMESPACE_ID::Arena* submessage_arena =
+        ::PROTOBUF_NAMESPACE_ID::Arena::InternalGetOwningArena(inputvec);
+    if (message_arena != submessage_arena) {
+      inputvec = ::PROTOBUF_NAMESPACE_ID::internal::GetOwnedMessage(
+          message_arena, inputvec, submessage_arena);
+    }
+    
+  } else {
+    
+  }
+  _impl_.inputvec_ = inputvec;
+  // @@protoc_insertion_point(field_set_allocated:CosSimReq.inputVec)
 }
 
-// int64 n = 2;
-inline void CosSimReq::clear_n() {
-  _impl_.n_ = int64_t{0};
+// repeated .VecRange vecRanges = 2;
+inline int CosSimReq::_internal_vecranges_size() const {
+  return _impl_.vecranges_.size();
 }
-inline int64_t CosSimReq::_internal_n() const {
-  return _impl_.n_;
+inline int CosSimReq::vecranges_size() const {
+  return _internal_vecranges_size();
 }
-inline int64_t CosSimReq::n() const {
-  // @@protoc_insertion_point(field_get:CosSimReq.n)
-  return _internal_n();
+inline void CosSimReq::clear_vecranges() {
+  _impl_.vecranges_.Clear();
 }
-inline void CosSimReq::_internal_set_n(int64_t value) {
-  
-  _impl_.n_ = value;
+inline ::VecRange* CosSimReq::mutable_vecranges(int index) {
+  // @@protoc_insertion_point(field_mutable:CosSimReq.vecRanges)
+  return _impl_.vecranges_.Mutable(index);
 }
-inline void CosSimReq::set_n(int64_t value) {
-  _internal_set_n(value);
-  // @@protoc_insertion_point(field_set:CosSimReq.n)
+inline ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::VecRange >*
+CosSimReq::mutable_vecranges() {
+  // @@protoc_insertion_point(field_mutable_list:CosSimReq.vecRanges)
+  return &_impl_.vecranges_;
+}
+inline const ::VecRange& CosSimReq::_internal_vecranges(int index) const {
+  return _impl_.vecranges_.Get(index);
+}
+inline const ::VecRange& CosSimReq::vecranges(int index) const {
+  // @@protoc_insertion_point(field_get:CosSimReq.vecRanges)
+  return _internal_vecranges(index);
+}
+inline ::VecRange* CosSimReq::_internal_add_vecranges() {
+  return _impl_.vecranges_.Add();
+}
+inline ::VecRange* CosSimReq::add_vecranges() {
+  ::VecRange* _add = _internal_add_vecranges();
+  // @@protoc_insertion_point(field_add:CosSimReq.vecRanges)
+  return _add;
+}
+inline const ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::VecRange >&
+CosSimReq::vecranges() const {
+  // @@protoc_insertion_point(field_list:CosSimReq.vecRanges)
+  return _impl_.vecranges_;
 }
 
 // -------------------------------------------------------------------
@@ -727,6 +1002,8 @@ inline void CosSimRep::set_val(double value) {
 #ifdef __GNUC__
   #pragma GCC diagnostic pop
 #endif  // __GNUC__
+// -------------------------------------------------------------------
+
 // -------------------------------------------------------------------
 
 // -------------------------------------------------------------------

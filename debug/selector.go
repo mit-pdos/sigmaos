@@ -24,16 +24,17 @@ const (
 
 // Latency break-down.
 const (
-	SPAWN_LAT      Tselector = "SPAWN_LAT"
-	NET_LAT                  = "NET_LAT"
-	DIALPROXY_LAT            = "DIALPROXY_LAT"
-	REALM_GROW_LAT           = "REALM_GROW_LAT"
-	CACHE_LAT                = "CACHE_LAT"
-	WALK_LAT                 = "WALK_LAT"
-	CLUNK_LAT                = "CLUNK_LAT"
-	FSETCD_LAT               = "FSETCD_LAT"
-	ATTACH_LAT               = "ATTACH_LAT"
-	RPC_LAT                  = "RPC_LAT"
+	SPAWN_LAT         Tselector = "SPAWN_LAT"
+	SPAWN_LAT_VERBOSE           = "SPAWN_LAT_VERBOSE"
+	NET_LAT                     = "NET_LAT"
+	DIALPROXY_LAT               = "DIALPROXY_LAT"
+	REALM_GROW_LAT              = "REALM_GROW_LAT"
+	CACHE_LAT                   = "CACHE_LAT"
+	WALK_LAT                    = "WALK_LAT"
+	CLUNK_LAT                   = "CLUNK_LAT"
+	FSETCD_LAT                  = "FSETCD_LAT"
+	ATTACH_LAT                  = "ATTACH_LAT"
+	RPC_LAT                     = "RPC_LAT"
 )
 
 // Tests

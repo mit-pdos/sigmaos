@@ -86,12 +86,12 @@ func (dl *downloader) read(off int64, nbyte int) (int, error) {
 			}
 			d := time.Since(s)
 			dl.tot += d
-			perf.LogSpawnLatency("BinSrv.downloader.read.fetchChunk %d sz %v", dl.p.GetPid(), dl.p.GetSpawnTime(), s, c, sz)
+			perf.LogSpawnLatencyVerbose("BinSrv.downloader.read.fetchChunk %d sz %v", dl.p.GetPid(), dl.p.GetSpawnTime(), s, c, sz)
 		}
 		n += sz
 		db.DPrintf(db.BINSRV, "read %q ck %d sz %d", pn, c, sz)
 	}
-	perf.LogSpawnLatency("BinSrv.downloader.read nbyte %v", dl.p.GetPid(), dl.p.GetSpawnTime(), start, nbyte)
+	perf.LogSpawnLatencyVerbose("BinSrv.downloader.read nbyte %v", dl.p.GetPid(), dl.p.GetSpawnTime(), start, nbyte)
 	db.DPrintf(db.BINSRV, "read done %d %d: chunks [%d,%d)", off, nbyte, i, j)
 	return min(n-o, nbyte), nil
 }

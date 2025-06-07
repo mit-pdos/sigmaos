@@ -61,7 +61,7 @@ func (f *binfsFile) Read(ctx context.Context, buf []byte, off int64) (res fuse.R
 	}
 	f.open()
 	db.DPrintf(db.BINSRV, "ReadResult %q o %d sz %d", f.pn, off, sz)
-	perf.LogSpawnLatency("BinFs.FUSE.Read sz %d", f.dl.p.GetPid(), f.dl.p.GetSpawnTime(), start, sz)
+	perf.LogSpawnLatencyVerbose("BinFs.FUSE.Read sz %d", f.dl.p.GetPid(), f.dl.p.GetSpawnTime(), start, sz)
 	r := fuse.ReadResultFd(uintptr(f.fd), off, int(sz))
 	return r, fs.OK
 }

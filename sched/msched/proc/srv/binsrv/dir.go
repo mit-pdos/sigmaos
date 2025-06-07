@@ -48,7 +48,7 @@ func (n *binFsNode) Lookup(ctx context.Context, name string, out *fuse.EntryOut)
 	if err != nil {
 		return nil, fs.ToErrno(os.ErrNotExist)
 	}
-	perf.LogSpawnLatency("BinSrv.binFsNode.Lookup", p.GetPid(), p.GetSpawnTime(), start)
+	perf.LogSpawnLatencyVerbose("BinSrv.binFsNode.Lookup", p.GetPid(), p.GetSpawnTime(), start)
 	ust := syscall.Stat_t{}
 	toUstat(sst, &ust)
 	out.Attr.FromStat(&ust)
@@ -73,7 +73,7 @@ func (n *binFsNode) Open(ctx context.Context, flags uint32) (fh fs.FileHandle, f
 	start := time.Now()
 	pr := n.RootData.bincache.pds.LookupProc(int(c.Pid))
 	dl := n.RootData.bincache.getDownload(p, n.sz, pr, c.Pid)
-	perf.LogSpawnLatency("BinSrv.binFsNode.getDownload", dl.p.GetPid(), dl.p.GetSpawnTime(), start)
+	perf.LogSpawnLatencyVerbose("BinSrv.binFsNode.getDownload", dl.p.GetPid(), dl.p.GetSpawnTime(), start)
 	lf := newBinFsFile(p, dl)
 	return lf, fuse.FOPEN_KEEP_CACHE, 0
 }

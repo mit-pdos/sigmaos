@@ -42,19 +42,31 @@ std::expected<int, sigmaos::serr::Error> Srv::CosSim(std::shared_ptr<google::pro
 
 std::expected<int, sigmaos::serr::Error> Srv::Init() {
   for (int i = 0; i < _nvec; i++) {
-    std::string b(10000, '\0');
-    // Get the serialized vector from cached
-    {
-      auto res = _cache_clnt->Get(std::to_string(i), &b);
-      if (!res.has_value()) {
-        return res;
-      }
+    auto res = fetch_vector(i);
+    if (!res.has_value()) {
+      return res;
     }
-    // Parse the vector
-    Vector v;
-    v.ParseFromString(b);
-    _vec_db[i] = std::vector<double>(v.vals().begin(), v.vals().end());
   }
+  return 0;
+}
+
+std::expected<int, sigmaos::serr::Error> Srv::fetch_vector(uint64_t id) {
+  // If map already contains key, bail out early
+  if (_vec_db.contains(id)) {
+    return 0;
+  }
+  std::string b;
+  // Get the serialized vector from cached
+  {
+    auto res = _cache_clnt->Get(std::to_string(id), &b);
+    if (!res.has_value()) {
+      return res;
+    }
+  }
+  // Parse the vector
+  Vector v;
+  v.ParseFromString(b);
+  _vec_db[id] = std::vector<double>(v.vals().begin(), v.vals().end());
   return 0;
 }
 

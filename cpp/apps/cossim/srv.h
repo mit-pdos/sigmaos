@@ -92,6 +92,7 @@ class Srv {
   
   // CosSim RPC handler
   std::expected<int, sigmaos::serr::Error> CosSim(std::shared_ptr<google::protobuf::Message> preq, std::shared_ptr<google::protobuf::Message> prep);
+  std::expected<int, sigmaos::serr::Error> fetch_vector(uint64_t id);
 };
 
 

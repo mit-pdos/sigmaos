@@ -38,8 +38,7 @@ class Srv {
     log(COSSIMSRV, "Starting RPC srv");
     auto start = GetCurrentTime();
     _srv = std::make_shared<sigmaos::rpc::srv::Srv>(sp_clnt, INIT_NTHREAD);
-    LogSpawnLatency(_sp_clnt->ProcEnv()->GetPID(), _sp_clnt->ProcEnv()->GetSpawnTime(), start, "Make RPCSrv");
-    log(COSSIMSRV, "Started RPC srv");
+    LogSpawnLatency(_sp_clnt->ProcEnv()->GetPID(), _sp_clnt->ProcEnv()->GetSpawnTime(), start, "Make RPCSrv"); log(COSSIMSRV, "Started RPC srv");
     auto cossim_ep = std::make_shared<sigmaos::rpc::srv::RPCEndpoint>("CosSimSrv.CosSim", std::make_shared<CosSimReq>(), std::make_shared<CosSimRep>(), std::bind(&Srv::CosSim, this, std::placeholders::_1, std::placeholders::_2));
     _srv->ExposeRPCHandler(cossim_ep);
     log(COSSIMSRV, "Exposed cossim RPC handler");
@@ -56,12 +55,10 @@ class Srv {
     if (eager_init) {
       log(COSSIMSRV, "Init vector DB");
       {
-        auto start = GetCurrentTime();
         auto res = Init();
         if (!res.has_value()) {
           fatal("Error Init: {}", res.error().String());
         }
-        LogSpawnLatency(_sp_clnt->ProcEnv()->GetPID(), _sp_clnt->ProcEnv()->GetSpawnTime(), start, "Init soft state");
       }
       log(COSSIMSRV, "Done init vector DB");
     }

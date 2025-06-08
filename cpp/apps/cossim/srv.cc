@@ -48,12 +48,14 @@ std::expected<int, sigmaos::serr::Error> Srv::CosSim(std::shared_ptr<google::pro
 }
 
 std::expected<int, sigmaos::serr::Error> Srv::Init() {
+  auto start = GetCurrentTime();
   for (int i = 0; i < _nvec; i++) {
     auto res = fetch_vector(i);
     if (!res.has_value()) {
       return res;
     }
   }
+  LogSpawnLatency(_sp_clnt->ProcEnv()->GetPID(), _sp_clnt->ProcEnv()->GetSpawnTime(), start, "Init soft state vector DB");
   return 0;
 }
 
@@ -64,6 +66,7 @@ std::expected<int, sigmaos::serr::Error> Srv::fetch_vector(uint64_t id) {
   if (_vec_db.contains(id)) {
     return 0;
   }
+  auto start = GetCurrentTime();
   std::string b;
   // Get the serialized vector from cached
   {
@@ -76,6 +79,7 @@ std::expected<int, sigmaos::serr::Error> Srv::fetch_vector(uint64_t id) {
   Vector v;
   v.ParseFromString(b);
   _vec_db[id] = std::vector<double>(v.vals().begin(), v.vals().end());
+  LogSpawnLatency(_sp_clnt->ProcEnv()->GetPID(), _sp_clnt->ProcEnv()->GetSpawnTime(), start, "Fetch vector");
   return 0;
 }
 

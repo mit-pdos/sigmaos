@@ -34,7 +34,7 @@ const int INIT_NTHREAD = 100;
 
 class Srv {
   public:
-  Srv(std::shared_ptr<sigmaos::proxy::sigmap::Clnt> sp_clnt, int nvec, int vec_dim, std::string cache_clnt_pn) : _nvec(nvec), _vec_dim(vec_dim), _vec_db(), _sp_clnt(sp_clnt), _cache_clnt(std::make_shared<sigmaos::apps::cache::Clnt>(sp_clnt, cache_clnt_pn)) {
+  Srv(std::shared_ptr<sigmaos::proxy::sigmap::Clnt> sp_clnt, int nvec, int vec_dim, std::string cache_clnt_pn, bool eager_init) : _mu(), _nvec(nvec), _vec_dim(vec_dim), _vec_db(), _sp_clnt(sp_clnt), _cache_clnt(std::make_shared<sigmaos::apps::cache::Clnt>(sp_clnt, cache_clnt_pn)) {
     log(COSSIMSRV, "Starting RPC srv");
     auto start = GetCurrentTime();
     _srv = std::make_shared<sigmaos::rpc::srv::Srv>(sp_clnt, INIT_NTHREAD);
@@ -53,16 +53,18 @@ class Srv {
       LogSpawnLatency(_sp_clnt->ProcEnv()->GetPID(), _sp_clnt->ProcEnv()->GetSpawnTime(), start, "Init cacheclnt");
     }
     log(COSSIMSRV, "Done init cache clnt");
-    log(COSSIMSRV, "Init srv");
-    {
-      auto start = GetCurrentTime();
-      auto res = Init();
-      if (!res.has_value()) {
-        fatal("Error Init: {}", res.error().String());
+    if (eager_init) {
+      log(COSSIMSRV, "Init vector DB");
+      {
+        auto start = GetCurrentTime();
+        auto res = Init();
+        if (!res.has_value()) {
+          fatal("Error Init: {}", res.error().String());
+        }
+        LogSpawnLatency(_sp_clnt->ProcEnv()->GetPID(), _sp_clnt->ProcEnv()->GetSpawnTime(), start, "Init soft state");
       }
-      LogSpawnLatency(_sp_clnt->ProcEnv()->GetPID(), _sp_clnt->ProcEnv()->GetSpawnTime(), start, "Init soft state");
+      log(COSSIMSRV, "Done init vector DB");
     }
-    log(COSSIMSRV, "Done init srv");
     {
       auto pn = COSSIM_SVC_NAME;
       auto start = GetCurrentTime();
@@ -80,6 +82,7 @@ class Srv {
   [[noreturn]] void Run();
 
   private:
+  std::mutex _mu;
   int _nvec;
   int _vec_dim;
   std::map<uint64_t, std::vector<double>> _vec_db;

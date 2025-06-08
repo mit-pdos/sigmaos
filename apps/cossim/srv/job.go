@@ -56,13 +56,14 @@ type CosSimJob struct {
 	cachePN    string
 	nvec       int
 	vecDim     int
+	eagerInit  bool
 	vecs       []*proto.Vector
 	srvMcpu    proc.Tmcpu
 	srvs       []*proc.Proc
 	clnts      []*clnt.CosSimClnt
 }
 
-func NewCosSimJob(sc *sigmaclnt.SigmaClnt, job string, nvec int, vecDim int, srvMcpu proc.Tmcpu, ncache int, cacheMcpu proc.Tmcpu, cacheGC bool) (*CosSimJob, error) {
+func NewCosSimJob(sc *sigmaclnt.SigmaClnt, job string, nvec int, vecDim int, eagerInit bool, srvMcpu proc.Tmcpu, ncache int, cacheMcpu proc.Tmcpu, cacheGC bool) (*CosSimJob, error) {
 	// Init fs
 	if err := initFS(sc, job); err != nil {
 		return nil, err
@@ -105,7 +106,7 @@ func NewCosSimJob(sc *sigmaclnt.SigmaClnt, job string, nvec int, vecDim int, srv
 
 // Add a new cossim server
 func (j *CosSimJob) AddSrv() (*proc.Proc, *clnt.CosSimClnt, time.Duration, error) {
-	p := proc.NewProc("cossim-srv-cpp", []string{j.cachePN, strconv.Itoa(j.nvec), strconv.Itoa(j.vecDim)})
+	p := proc.NewProc("cossim-srv-cpp", []string{j.cachePN, strconv.Itoa(j.nvec), strconv.Itoa(j.vecDim), strconv.FormatBool(j.eagerInit)})
 	p.GetProcEnv().UseSPProxy = true
 	p.SetMcpu(j.srvMcpu)
 	p.SetCachedEndpoint(epcache.EPCACHE, j.epcsrvEP)

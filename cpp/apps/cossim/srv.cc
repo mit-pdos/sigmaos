@@ -16,6 +16,13 @@ std::expected<int, sigmaos::serr::Error> Srv::CosSim(std::shared_ptr<google::pro
   uint64_t max_id = 0;
   for (auto const &vr : v_ranges) {
     for (int id = vr.startid(); id <= vr.endid(); id++) {
+      {
+        // Fetch the vector if it has not been fetched already
+        auto res = fetch_vector(id);
+        if (!res.has_value()) {
+          return res;
+        }
+      }
       auto vec = _vec_db.at(id);
       // Compute cosine similarity
       double input_l2 = 0.0;
@@ -51,6 +58,8 @@ std::expected<int, sigmaos::serr::Error> Srv::Init() {
 }
 
 std::expected<int, sigmaos::serr::Error> Srv::fetch_vector(uint64_t id) {
+  // Lock to make sure fetching is atomic
+  std::lock_guard<std::mutex> guard(_mu);
   // If map already contains key, bail out early
   if (_vec_db.contains(id)) {
     return 0;

@@ -35,7 +35,7 @@ const int INIT_NTHREAD = 100;
 class Srv {
   public:
   Srv(std::shared_ptr<sigmaos::proxy::sigmap::Clnt> sp_clnt, int nvec, int vec_dim, std::string cache_clnt_pn, bool eager_init) : _mu(), _nvec(nvec), _vec_dim(vec_dim), _vec_db(), _sp_clnt(sp_clnt), _cache_clnt(std::make_shared<sigmaos::apps::cache::Clnt>(sp_clnt, cache_clnt_pn)) {
-    log(COSSIMSRV, "Starting RPC srv");
+    log(COSSIMSRV, "Starting RPC srv nvec:{} vec_dim:{} eager:{}", nvec, vec_dim, eager_init);
     auto start = GetCurrentTime();
     _srv = std::make_shared<sigmaos::rpc::srv::Srv>(sp_clnt, INIT_NTHREAD);
     LogSpawnLatency(_sp_clnt->ProcEnv()->GetPID(), _sp_clnt->ProcEnv()->GetSpawnTime(), start, "Make RPCSrv"); log(COSSIMSRV, "Started RPC srv");

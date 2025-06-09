@@ -57,7 +57,7 @@ func TestPstats(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestKillNamedAlone(t *testing.T) {
+func TestCrashNamedAlone(t *testing.T) {
 	const T = 1000
 	crashpn := sp.NAMED + "crashnd.sem"
 
@@ -172,7 +172,7 @@ func namedClient(t *testing.T, sc *sigmaclnt.SigmaClnt, ch chan bool) {
 	ch <- true
 }
 
-func TestKillNamedClient(t *testing.T) {
+func TestCrashNamedClient(t *testing.T) {
 	const (
 		T = 200
 		N = 5

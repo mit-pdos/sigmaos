@@ -15,9 +15,19 @@ import (
 )
 
 type CosSimClnt struct {
-	fsl  *fslib.FsLib
 	rpcc *rpcclnt.RPCClnt
-	epcc *epcacheclnt.EndpointCacheClnt
+}
+
+func NewCosSimClntFromEP(ep *sp.Tendpoint) (*CosSimClnt, error) {
+	rpcc, err := rpcncclnt.NewTCPRPCClnt("echosrv", ep)
+	if err != nil {
+		db.DPrintf(db.COSSIMCLNT_ERR, "Err NewRPCClnt: %v", err)
+		return nil, err
+	}
+	return &CosSimClnt{
+		rpcc: rpcc,
+	}, nil
+
 }
 
 func NewCosSimClnt(fsl *fslib.FsLib, epcc *epcacheclnt.EndpointCacheClnt, srvID string) (*CosSimClnt, error) {
@@ -36,16 +46,7 @@ func NewCosSimClnt(fsl *fslib.FsLib, epcc *epcacheclnt.EndpointCacheClnt, srvID 
 		db.DPrintf(db.COSSIMCLNT_ERR, "Err no EP for srv %v", srvID)
 		return nil, fmt.Errorf("No EP for srv %v", srvID)
 	}
-	rpcc, err := rpcncclnt.NewTCPRPCClnt("echosrv", ep)
-	if err != nil {
-		db.DPrintf(db.COSSIMCLNT_ERR, "Err NewRPCClnt: %v", err)
-		return nil, err
-	}
-	return &CosSimClnt{
-		fsl:  fsl,
-		rpcc: rpcc,
-		epcc: epcc,
-	}, nil
+	return NewCosSimClntFromEP(ep)
 }
 
 // Register a service's endpoint

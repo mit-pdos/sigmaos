@@ -60,7 +60,7 @@ type CosSimJob struct {
 	vecs       []*proto.Vector
 	srvMcpu    proc.Tmcpu
 	srvs       []*proc.Proc
-	clnts      []*clnt.CosSimClnt
+	cscs       *clnt.CosSimShardClnt
 }
 
 func NewCosSimJob(sc *sigmaclnt.SigmaClnt, job string, nvec int, vecDim int, eagerInit bool, srvMcpu proc.Tmcpu, ncache int, cacheMcpu proc.Tmcpu, cacheGC bool) (*CosSimJob, error) {
@@ -87,6 +87,10 @@ func NewCosSimJob(sc *sigmaclnt.SigmaClnt, job string, nvec int, vecDim int, eag
 	if err := writeVectorsToCache(cc, vecs); err != nil {
 		return nil, err
 	}
+	cscs, err := clnt.NewCosSimShardClnt(sc.FsLib, epcj.Clnt)
+	if err != nil {
+		return nil, err
+	}
 	return &CosSimJob{
 		job:        job,
 		SigmaClnt:  sc,
@@ -101,7 +105,7 @@ func NewCosSimJob(sc *sigmaclnt.SigmaClnt, job string, nvec int, vecDim int, eag
 		eagerInit:  eagerInit,
 		srvMcpu:    srvMcpu,
 		srvs:       []*proc.Proc{},
-		clnts:      []*clnt.CosSimClnt{},
+		cscs:       cscs,
 	}, nil
 }
 
@@ -119,7 +123,7 @@ func (j *CosSimJob) AddSrv() (*proc.Proc, *clnt.CosSimClnt, time.Duration, error
 		return nil, nil, 0, err
 	}
 	startLatency := time.Since(start)
-	csclnt, err := clnt.NewCosSimClnt(j.FsLib, j.EPCacheJob.Clnt, p.GetPid().String())
+	csclnt, err := j.cscs.GetClnt(p.GetPid().String())
 	if err != nil {
 		return nil, nil, 0, err
 	}
@@ -128,11 +132,11 @@ func (j *CosSimJob) AddSrv() (*proc.Proc, *clnt.CosSimClnt, time.Duration, error
 	defer j.mu.Unlock()
 
 	j.srvs = append(j.srvs, p)
-	j.clnts = append(j.clnts, csclnt)
 	return p, csclnt, startLatency, nil
 }
 
 func (j *CosSimJob) Stop() error {
+	j.cscs.Stop()
 	for _, p := range j.srvs {
 		db.DPrintf(db.TEST, "Evict cossim %v", p.GetPid())
 		if err := j.Evict(p.GetPid()); err != nil {

@@ -1,9 +1,11 @@
 package clnt
 
 import (
+	"fmt"
 	"sync"
 
 	"sigmaos/apps/cossim"
+	"sigmaos/apps/cossim/proto"
 	"sigmaos/apps/epcache"
 	epcacheclnt "sigmaos/apps/epcache/clnt"
 	epcacheproto "sigmaos/apps/epcache/proto"
@@ -12,21 +14,51 @@ import (
 	sp "sigmaos/sigmap"
 )
 
+type clnt struct {
+	srvID           string
+	outstandingReqs uint64
+	c               *CosSimClnt
+}
+
+func newClnt(srvID string, c *CosSimClnt) *clnt {
+	return &clnt{
+		srvID:           srvID,
+		outstandingReqs: 0,
+		c:               c,
+	}
+}
+
+func (c *clnt) Get() *CosSimClnt {
+	c.outstandingReqs++
+	return c.c
+}
+
+func (c *clnt) Put() {
+	c.outstandingReqs--
+}
+
+func (c *clnt) GetNOutstanding() uint64 {
+	return c.outstandingReqs
+}
+
+func (c *clnt) GetSrvID() string {
+	return c.srvID
+}
+
 type CosSimShardClnt struct {
 	mu         sync.Mutex
 	fsl        *fslib.FsLib
-	clnts      map[string]*CosSimClnt
+	clnts      map[string]*clnt
 	clntsSlice []*CosSimClnt
 	epcc       *epcacheclnt.EndpointCacheClnt
 	lastEPV    epcache.Tversion
 	done       bool
 }
 
-// TODO: Add option to lazily init?
 func NewCosSimShardClnt(fsl *fslib.FsLib, epcc *epcacheclnt.EndpointCacheClnt) (*CosSimShardClnt, error) {
 	cssc := &CosSimShardClnt{
 		fsl:     fsl,
-		clnts:   make(map[string]*CosSimClnt),
+		clnts:   make(map[string]*clnt),
 		epcc:    epcc,
 		lastEPV: epcache.NO_VERSION,
 		done:    false,
@@ -35,20 +67,59 @@ func NewCosSimShardClnt(fsl *fslib.FsLib, epcc *epcacheclnt.EndpointCacheClnt) (
 	return cssc, nil
 }
 
+func (cssc *CosSimShardClnt) CosSimLeastLoaded(v []float64, ranges []*proto.VecRange) (uint64, float64, error) {
+	srvID, clnt, err := cssc.GetLeastLoadedClnt()
+	if err != nil {
+		db.DPrintf(db.COSSIMCLNT_ERR, "Err GetLeastLoadedClnt: %v", err)
+		return 0, 0.0, err
+	}
+	defer cssc.PutClnt(srvID)
+	return clnt.CosSim(v, ranges)
+}
+
+func (cssc *CosSimShardClnt) GetLeastLoadedClnt() (string, *CosSimClnt, error) {
+	cssc.mu.Lock()
+	defer cssc.mu.Unlock()
+
+	if len(cssc.clnts) == 0 {
+		return sp.NOT_SET, nil, fmt.Errorf("No clients to speak of")
+	}
+
+	var minClnt *clnt
+	for _, clnt := range cssc.clnts {
+		if minClnt == nil || clnt.GetNOutstanding() < minClnt.GetNOutstanding() {
+			minClnt = clnt
+		}
+	}
+	return minClnt.GetSrvID(), minClnt.Get(), nil
+}
+
 func (cssc *CosSimShardClnt) GetClnt(srvID string) (*CosSimClnt, error) {
 	cssc.mu.Lock()
 	defer cssc.mu.Unlock()
 
 	clnt, ok := cssc.clnts[srvID]
 	if ok {
-		return clnt, nil
+		return clnt.Get(), nil
 	}
-	clnt, err := NewCosSimClnt(cssc.fsl, cssc.epcc, srvID)
+	c, err := NewCosSimClnt(cssc.fsl, cssc.epcc, srvID)
 	if err != nil {
 		return nil, err
 	}
-	cssc.clnts[srvID] = clnt
-	return clnt, nil
+	cssc.clnts[srvID] = newClnt(srvID, c)
+	return clnt.Get(), nil
+}
+
+func (cssc *CosSimShardClnt) PutClnt(srvID string) {
+	cssc.mu.Lock()
+	defer cssc.mu.Unlock()
+
+	clnt, ok := cssc.clnts[srvID]
+	if !ok {
+		db.DPrintf(db.ERROR, "Err put clnt unknown clnt: %v", srvID)
+		return
+	}
+	clnt.Put()
 }
 
 func (cssc *CosSimShardClnt) monitorShards() {
@@ -80,7 +151,7 @@ func (cssc *CosSimShardClnt) addClnts(instances []*epcacheproto.Instance) {
 		if err != nil {
 			db.DPrintf(db.COSSIMCLNT_ERR, "Err new cossim clnt: %v", err)
 		}
-		cssc.clnts[i.ID] = clnt
+		cssc.clnts[i.ID] = newClnt(i.ID, clnt)
 		cssc.clntsSlice = append(cssc.clntsSlice, clnt)
 	}
 }

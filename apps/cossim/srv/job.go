@@ -109,30 +109,30 @@ func NewCosSimJob(sc *sigmaclnt.SigmaClnt, job string, nvec int, vecDim int, eag
 	}, nil
 }
 
+func (j *CosSimJob) GetClnt(srvID string) (*clnt.CosSimClnt, error) {
+	return j.cscs.GetClnt(srvID)
+}
+
 // Add a new cossim server
-func (j *CosSimJob) AddSrv() (*proc.Proc, *clnt.CosSimClnt, time.Duration, error) {
+func (j *CosSimJob) AddSrv() (*proc.Proc, time.Duration, error) {
 	p := proc.NewProc("cossim-srv-cpp", []string{j.cachePN, strconv.Itoa(j.nvec), strconv.Itoa(j.vecDim), strconv.FormatBool(j.eagerInit)})
 	p.GetProcEnv().UseSPProxy = true
 	p.SetMcpu(j.srvMcpu)
 	p.SetCachedEndpoint(epcache.EPCACHE, j.epcsrvEP)
 	start := time.Now()
 	if err := j.Spawn(p); err != nil {
-		return nil, nil, 0, err
+		return nil, 0, err
 	}
 	if err := j.WaitStart(p.GetPid()); err != nil {
-		return nil, nil, 0, err
+		return nil, 0, err
 	}
 	startLatency := time.Since(start)
-	csclnt, err := j.cscs.GetClnt(p.GetPid().String())
-	if err != nil {
-		return nil, nil, 0, err
-	}
 
 	j.mu.Lock()
 	defer j.mu.Unlock()
 
 	j.srvs = append(j.srvs, p)
-	return p, csclnt, startLatency, nil
+	return p, startLatency, nil
 }
 
 func (j *CosSimJob) Stop() error {

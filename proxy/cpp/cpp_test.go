@@ -403,7 +403,7 @@ func TestCosSimInitLatency(t *testing.T) {
 
 	// Construct input vec
 	v := cossim.VectorToSlice(cossim.NewVectors(1, VEC_DIM)[0])
-	_, csclnt, startLat, err := j.AddSrv()
+	p, startLat, err := j.AddSrv()
 	if !assert.Nil(mrts.T, err, "Err AddSrv: %v", err) {
 		return
 	}
@@ -414,6 +414,10 @@ func TestCosSimInitLatency(t *testing.T) {
 	}
 	db.DPrintf(db.TEST, "CosSim server proc started (lat=%v)", startLat)
 	start := time.Now()
+	csclnt, err := j.GetClnt(p.GetPid().String())
+	if !assert.Nil(t, err, "Err GetClnt: %v", err) {
+		return
+	}
 	id, val, err := csclnt.CosSim(v, ranges)
 	if !assert.Nil(t, err, "Err CosSim: %v", err) {
 		return
@@ -431,8 +435,12 @@ func TestCosSimInitLatency(t *testing.T) {
 		go func(c chan bool, parallelCh chan bool) {
 			<-parallelCh
 			start := time.Now()
-			_, csclnt, startLat, err := j.AddSrv()
+			_, startLat, err := j.AddSrv()
 			if !assert.Nil(mrts.T, err, "Err AddSrv: %v", err) {
+				return
+			}
+			csclnt, err := j.GetClnt(p.GetPid().String())
+			if !assert.Nil(t, err, "Err GetClnt: %v", err) {
 				return
 			}
 			db.DPrintf(db.TEST, "CosSim server proc started (lat=%v)", startLat)

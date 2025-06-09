@@ -95,7 +95,8 @@ const (
 
 // FSETCD consts
 const (
-	EtcdSessionTTL = 5
+	EtcdSessionTTL     = 5
+	EtcdSessionExpired = EtcdSessionTTL + 1
 )
 
 // Realm consts

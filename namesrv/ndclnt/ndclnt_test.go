@@ -594,7 +594,7 @@ func xTestPartitionNamed(t *testing.T) {
 	time.Sleep(time.Duration(e.Start+e.MaxInterval+e.Delay) * time.Millisecond)
 
 	// wait until session times out
-	time.Sleep(sp.EtcdSessionTTL * time.Second)
+	time.Sleep(sp.EtcdSessionExpired * time.Second)
 
 	pe.ClearNamedEndpoint()
 	npc = dialproxyclnt.NewDialProxyClnt(pe)

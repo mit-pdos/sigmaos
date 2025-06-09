@@ -133,7 +133,7 @@ func (rts *RealmTstate) CrashServer(e0, e1 crash.Tevent, srv string) {
 	case sp.MSCHEDREL, sp.PROCDREL, sp.UXREL:
 		if srv == sp.MSCHEDREL || srv == sp.PROCDREL {
 			db.DPrintf(db.TEST, "Waiting for named's lease to (potentially) expire")
-			time.Sleep(2 * sp.EtcdSessionTTL * time.Second)
+			time.Sleep(sp.EtcdSessionExpired * time.Second)
 			db.DPrintf(db.TEST, "Done waiting for named's lease to (potentially) expire")
 		}
 		// a crashed msched and procd causes several kernel services

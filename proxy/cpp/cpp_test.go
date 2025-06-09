@@ -420,7 +420,6 @@ func TestCosSimInitLatency(t *testing.T) {
 	}
 	db.DPrintf(db.TEST, "CosSim result: %v %v", id, val)
 	db.DPrintf(db.TEST, "CosSim proc handled first request (lat=%v)", time.Since(start))
-	return
 
 	db.DPrintf(db.TEST, "Running procs")
 	parallelCh := make(chan bool, N_PARALLEL)

@@ -204,6 +204,7 @@ func newSysClnt(t *testing.T, ntype bootclnt.Tboot) (*Tstate, error) {
 			db.DPrintf(db.ALWAYS, "Error start kernel: %v", err)
 			return nil, err
 		}
+		db.DPrintf(db.TEST, "Started kernel %v", kernelid)
 	}
 	var dpp *DialProxyProvider
 	if !noBootDialProxy && (useSPProxy || useDialProxy) {

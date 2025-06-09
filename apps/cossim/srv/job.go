@@ -98,6 +98,7 @@ func NewCosSimJob(sc *sigmaclnt.SigmaClnt, job string, nvec int, vecDim int, eag
 		nvec:       nvec,
 		vecDim:     vecDim,
 		vecs:       vecs,
+		eagerInit:  eagerInit,
 		srvMcpu:    srvMcpu,
 		srvs:       []*proc.Proc{},
 		clnts:      []*clnt.CosSimClnt{},

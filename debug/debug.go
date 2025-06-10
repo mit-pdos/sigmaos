@@ -35,6 +35,10 @@ func init() {
 	} else {
 		for p, _ := range procstr {
 			doLog = isLoggingProc(proc.GetSigmaDebugPid(), p)
+			if doLog {
+				log.Printf("Logging %v", proc.GetSigmaDebugPid())
+				break
+			}
 		}
 	}
 	DPrintf(SPAWN_LAT, "[%v] debug init pkg: %v", proc.GetSigmaDebugPid(), time.Since(s))
@@ -68,7 +72,7 @@ func DFatalf(format string, v ...interface{}) {
 	pc, _, _, ok := runtime.Caller(1)
 	fnDetails := runtime.FuncForPC(pc)
 	fnName := strings.TrimPrefix(fnDetails.Name(), "sigmaos/")
-	// debug.PrintStack()
+	debug.PrintStack()
 	if ok && fnDetails != nil {
 		log.Fatalf("FATAL %v %v Err: %v", proc.GetSigmaDebugPid(), fnName, fmt.Sprintf(format, v...))
 	} else {

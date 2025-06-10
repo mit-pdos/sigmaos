@@ -135,7 +135,7 @@ func (dr *DirWatcher) readUpdates() (*protsrv_proto.WatchEventList, error) {
 	err := binary.Read(dr.reader, binary.LittleEndian, &length)
 	if dr.isWatchClosed(err) {
 		db.DPrintf(db.WATCH, "DirWatcher ReadUpdates: watch stream for %s closed %v", dr.pn, err)
-		return eventList, serr.NewErr(serr.TErrClosed, "")
+		return eventList, serr.NewErr(serr.TErrClosed, dr.pn)
 	}
 	if err != nil {
 		db.DFatalf("failed to read length %v", err)
@@ -144,7 +144,7 @@ func (dr *DirWatcher) readUpdates() (*protsrv_proto.WatchEventList, error) {
 	numRead, err := io.ReadFull(dr.reader, data)
 	if dr.isWatchClosed(err) {
 		db.DPrintf(db.WATCH, "DirWatcher ReadUpdates: watch stream for %s closed %v", dr.pn, err)
-		return eventList, serr.NewErr(serr.TErrClosed, "")
+		return eventList, serr.NewErr(serr.TErrClosed, dr.pn)
 	}
 	if err != nil {
 		db.DFatalf("watch stream produced err %v", err)
@@ -156,9 +156,10 @@ func (dr *DirWatcher) readUpdates() (*protsrv_proto.WatchEventList, error) {
 
 	err = proto.Unmarshal(data, eventList)
 	if err != nil {
-		db.DFatalf("DirWatcher: failed to unmarshal data %v", err)
+		db.DPrintf(db.ERROR, "DirWatcher %v failed to unmarshal data err %v", dr.pn, err)
+		return eventList, serr.NewErr(serr.TErrClosed, dr.pn)
 	}
-	db.DPrintf(db.WATCH, "DirWatcher ReadUpdates: received %d bytes with %d events", numRead, len(eventList.Events))
+	db.DPrintf(db.WATCH, "DirWatcher %v ReadUpdates: received %d bytes with %d events", dr.pn, numRead, len(eventList.Events))
 
 	return eventList, nil
 }

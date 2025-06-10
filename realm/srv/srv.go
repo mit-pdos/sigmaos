@@ -14,7 +14,6 @@ import (
 	dialproxyclnt "sigmaos/dialproxy/clnt"
 	"sigmaos/ft/procgroupmgr"
 	kernelclnt "sigmaos/kernel/clnt"
-	"sigmaos/path"
 	"sigmaos/proc"
 	realmpkg "sigmaos/realm"
 	"sigmaos/realm/proto"
@@ -96,10 +95,6 @@ func RunRealmSrv(dialproxy bool) error {
 	if err != nil {
 		return err
 	}
-	//	_, serr := ssrv.MemFs.Create(sp.REALMSREL, 0777|sp.DMDIR, sp.OREAD, sp.NoLeaseId)
-	//	if serr != nil {
-	//		return serr
-	//	}
 	db.DPrintf(db.REALMD, "newsrv ok")
 	rs.sc = sigmaclnt.NewSigmaClntKernel(ssrv.MemFs.SigmaClnt())
 	rs.mkc = kernelclnt.NewMultiKernelClnt(ssrv.MemFs.SigmaClnt().FsLib, db.REALMD, db.REALMD_ERR)
@@ -143,17 +138,30 @@ func (rm *RealmSrv) Make(ctx fs.CtxI, req proto.MakeReq, res *proto.MakeRep) err
 	r := newRealm()
 	r.namedcfg = procgroupmgr.NewProcGroupConfigRealmSwitch(1, sp.NAMEDREL, nil, NAMED_MCPU, req.Realm, rid, rm.dialproxy)
 
+	// Remove the named ep file for the new realm, in case the realm
+	// name is re-used and Remove() of the realm failed to clean it
+	// up. Once it is removed, we can watch for it to detect if the
+	// named of the new incarnation of the realm exists.(The EP file
+	// isn't leased and thus not automatically deleted.)
+	pn := filepath.Join(sp.REALMS, req.Realm)
+	err := rm.sc.Remove(pn)
+	db.DPrintf(db.REALMD, "RealmSrv.Make %v rm named ep err %v", req.Realm, err)
+
 	db.DPrintf(db.REALMD, "RealmSrv.Make %v spawn named %v", req.Realm, r.namedcfg)
 	r.namedgrp = r.namedcfg.StartGrpMgr(rm.sc.SigmaClnt())
 	db.DPrintf(db.REALMD, "RealmSrv.Make %v named started", req.Realm)
-	//time.Sleep(10 * time.Second)
 
 	// wait until the realm's named has registered its endpoint and is ready to
 	// serve
-	pn := path.MarkResolve(filepath.Join(sp.REALMS, req.Realm))
-	if _, err := rm.sc.GetFileWatch(pn); err != nil {
+	if b, err := rm.sc.GetFileWatch(pn); err != nil {
 		db.DPrintf(db.ERROR, "Error GetFileWatch named root %v: %v", pn, err)
 		return err
+	} else {
+		ep, err := sp.NewEndpointFromBytes(b)
+		if err != nil {
+			return err
+		}
+		db.DPrintf(db.REALMD, "named ep %v", ep)
 	}
 	db.DPrintf(db.TEST, "RealmSrv.Make named ready to serve for %v %v", rid, pn)
 	db.DPrintf(db.REALMD, "RealmSrv.Make named ready to serve for %v", rid)
@@ -271,6 +279,12 @@ func (rm *RealmSrv) Remove(ctx fs.CtxI, req proto.RemoveReq, res *proto.RemoveRe
 		db.DPrintf(db.ERROR, "Error stop realm named group: %v", err)
 		return err
 	}
+
+	pn := filepath.Join(sp.REALMS, req.Realm)
+	if err := rm.sc.Remove(pn); err != nil {
+		db.DPrintf(db.ERROR, "Remove %v err %v", pn, err)
+	}
+
 	delete(rm.realms, rid)
 	return nil
 }

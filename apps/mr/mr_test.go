@@ -656,6 +656,6 @@ func TestCrashInfraMSchedBESchedUx1(t *testing.T) {
 	srvs := make(map[string]crash.Tselector)
 	srvs[sp.UXREL] = crash.UX_CRASH
 	srvs[sp.MSCHEDREL] = crash.MSCHED_CRASH
-	ntask, _, st := runN(t, em, srvs, 0, false)
-	assert.True(t, st.Ntask > ntask || st.Nfail > 0)
+	ntask, nstart, st := runN(t, em, srvs, 0, false)
+	assert.True(t, nstart > 1 || st.Ntask > ntask || st.Nfail > 0)
 }

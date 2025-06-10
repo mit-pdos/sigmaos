@@ -554,9 +554,9 @@ func runN(t *testing.T, em *crash.TeventMap, srvs map[string]crash.Tselector, ma
 }
 
 // if f returns true, repeat test
-func repeatTest(t *testing.T, f func() bool) {
+func repeatTest(t *testing.T, f func() bool, n int) {
 	ok := false
-	for i := 0; i < 10; i++ {
+	for i := 0; i < n; i++ {
 		if !f() {
 			ok = true
 			break
@@ -584,14 +584,14 @@ func TestCrashReducerOnlyCrash(t *testing.T) {
 	repeatTest(t, func() bool {
 		_, _, st := runN(t, reduceEv.Filter(crash.MRREDUCE_CRASH), nil, 0, false)
 		return st.Nfail == 0
-	})
+	}, 10)
 }
 
 func TestCrashReducerOnlyPartition(t *testing.T) {
 	repeatTest(t, func() bool {
 		_, _, st := runN(t, reduceEv.Filter(crash.MRREDUCE_PARTITION), nil, 0, false)
 		return st.Nfail == 0
-	})
+	}, 10)
 }
 
 func TestCrashReducerOnlyBoth(t *testing.T) {
@@ -619,9 +619,9 @@ func TestCrashInfraUx1(t *testing.T) {
 	srvs := make(map[string]crash.Tselector)
 	srvs[sp.UXREL] = crash.UX_CRASH
 	repeatTest(t, func() bool {
-		ntask, _, st := runN(t, crash.NewTeventMapOne(e0), srvs, 0, false)
-		return st.Ntask <= ntask && st.Nfail <= 0
-	})
+		ntask, nstart, st := runN(t, crash.NewTeventMapOne(e0), srvs, 0, false)
+		return nstart == 1 && st.Ntask <= ntask && st.Nfail <= 0
+	}, 5)
 }
 
 func TestCrashInfraBESched1(t *testing.T) {

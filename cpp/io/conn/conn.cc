@@ -18,7 +18,7 @@ std::expected<int, sigmaos::serr::Error> Conn::Write(const std::string *b) {
 
 std::expected<uint64_t, sigmaos::serr::Error> Conn::ReadUint64() {
   size_t size = sizeof(uint64_t);
-  char b[size];
+  char b[size] = {0};
   auto res = read_bytes(b, size);
   if (!res.has_value()) {
     return res;
@@ -28,7 +28,7 @@ std::expected<uint64_t, sigmaos::serr::Error> Conn::ReadUint64() {
 
 std::expected<int, sigmaos::serr::Error> Conn::WriteUint64(uint64_t i) {
   size_t size = sizeof(uint64_t);
-  char b[size];
+  char b[size] = {0};
   sigmaos::util::codec::uint64_to_bytes(b, i);
   auto res = write_bytes(b, size);
   if (!res.has_value()) {
@@ -39,7 +39,7 @@ std::expected<int, sigmaos::serr::Error> Conn::WriteUint64(uint64_t i) {
 
 std::expected<uint32_t, sigmaos::serr::Error> Conn::ReadUint32() {
   size_t size = sizeof(uint32_t);
-  char b[size];
+  char b[size] = {0};
   auto res = read_bytes(b, size);
   if (!res.has_value()) {
     return res;
@@ -49,7 +49,7 @@ std::expected<uint32_t, sigmaos::serr::Error> Conn::ReadUint32() {
 
 std::expected<int, sigmaos::serr::Error> Conn::WriteUint32(uint32_t i) {
   size_t size = sizeof(uint32_t);
-  char b[size];
+  char b[size] = {0};
   sigmaos::util::codec::uint32_to_bytes(b, i);
   auto res = write_bytes(b, size);
   if (!res.has_value()) {

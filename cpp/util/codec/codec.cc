@@ -16,9 +16,14 @@ void uint32_to_bytes(char *b, uint32_t i) {
 }
 
 uint64_t bytes_to_uint64(char *b) {
-  return uint64_t(b[0]) | uint64_t(b[1]) << 8 | uint64_t(b[2]) << 16 |
-    uint64_t(b[3]) << 24 | uint64_t(b[4]) << 32 | uint64_t(b[5]) << 40 |
-    uint64_t(b[6]) << 48 | uint64_t(b[7]) << 56;
+  return (((uint64_t) b[0]) & 0xFF) | 
+         (((uint64_t) b[1]) & 0xFF) << 8 |
+         (((uint64_t) b[2]) & 0xFF) << 16 |
+         (((uint64_t) b[3]) & 0xFF) << 24 |
+         (((uint64_t) b[4]) & 0xFF) << 32 |
+         (((uint64_t) b[5]) & 0xFF) << 40 | 
+         (((uint64_t) b[6]) & 0xFF) << 48 | 
+         (((uint64_t) b[7]) & 0xFF) << 56;
 }
 
 void uint64_to_bytes(char *b, uint64_t i) {

@@ -11,7 +11,7 @@ std::expected<int, sigmaos::serr::Error> Srv::CosSim(std::shared_ptr<google::pro
   auto rep = dynamic_pointer_cast<CosSimRep>(prep);
   auto input = req->inputvec().vals();
   auto const &v_ranges = req->vecranges();
-  log(COSSIMSRV, "CosSim invec={}", input.size());
+  log(COSSIMSRV, "CosSim req invec={}", input.size());
   double max = 0.0;
   uint64_t max_id = 0;
   for (auto const &vr : v_ranges) {
@@ -43,7 +43,7 @@ std::expected<int, sigmaos::serr::Error> Srv::CosSim(std::shared_ptr<google::pro
   }
   rep->set_id(max_id);
   rep->set_val(max);
-  log(COSSIMSRV, "CosSim invec={} max_id={} max={}", input.size(), max_id, max);
+  log(COSSIMSRV, "CosSim rep invec={} max_id={} max={}", input.size(), max_id, max);
   return 0;
 }
 

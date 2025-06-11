@@ -1886,7 +1886,9 @@ func TestCosSim(t *testing.T) {
 		defer p.Done()
 		monitorCPUUtil(ts1, p)
 	}
+	db.DPrintf(db.TEST, "Run cossim")
 	runOps(ts1, ji, runCosSim, rs)
+	db.DPrintf(db.TEST, "Done run cossim")
 	//	printResultSummary(rs)
 	if sigmaos {
 		mrts.Shutdown()

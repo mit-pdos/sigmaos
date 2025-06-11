@@ -94,6 +94,7 @@ func NewCosSimJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, durs string,
 				return ji
 			}
 		}
+		time.Sleep(2 * time.Second)
 	}
 
 	// Make a load generators.

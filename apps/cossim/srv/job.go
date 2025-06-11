@@ -138,6 +138,9 @@ func (j *CosSimJob) AddSrv() (*proc.Proc, time.Duration, error) {
 	defer j.mu.Unlock()
 
 	j.srvs = append(j.srvs, p)
+	if len(j.srvs) == 1 {
+		time.Sleep(time.Second)
+	}
 	return p, startLatency, nil
 }
 

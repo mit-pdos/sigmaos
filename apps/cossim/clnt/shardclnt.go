@@ -3,6 +3,7 @@ package clnt
 import (
 	"fmt"
 	"sync"
+	"time"
 
 	"sigmaos/apps/cossim"
 	"sigmaos/apps/cossim/proto"
@@ -73,6 +74,7 @@ func (cssc *CosSimShardClnt) CosSimLeastLoaded(v []float64, ranges []*proto.VecR
 		db.DPrintf(db.COSSIMCLNT_ERR, "Err GetLeastLoadedClnt: %v", err)
 		return 0, 0.0, err
 	}
+	db.DPrintf(db.COSSIMCLNT, "Least loaded server: %v", srvID)
 	defer cssc.PutClnt(srvID)
 	return clnt.CosSim(v, ranges)
 }
@@ -128,6 +130,7 @@ func (cssc *CosSimShardClnt) monitorShards() {
 		instances, v, err := cssc.epcc.GetEndpoints(cossim.COSSIM, cssc.lastEPV)
 		if err != nil {
 			db.DPrintf(db.COSSIMCLNT_ERR, "Err GetEndpoints: %v", err)
+			time.Sleep(1 * time.Second)
 			continue
 		}
 		// Update set of available clients

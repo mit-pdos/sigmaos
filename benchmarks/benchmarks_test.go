@@ -1873,12 +1873,8 @@ func TestCosSim(t *testing.T) {
 		p := newRealmPerf(ts1)
 		defer p.Done()
 		monitorCPUUtil(ts1, p)
-	} else {
-		p := newRealmPerf(ts1)
-		defer p.Done()
-		monitorK8sCPUUtil(ts1, p, "hotel", "")
 	}
-	runOps(ts1, ji, runHotel, rs)
+	runOps(ts1, ji, runCosSim, rs)
 	//	printResultSummary(rs)
 	if sigmaos {
 		mrts.Shutdown()

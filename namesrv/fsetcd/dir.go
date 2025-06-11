@@ -3,6 +3,7 @@ package fsetcd
 import (
 	"fmt"
 	"log"
+	"sync"
 	"time"
 
 	"sigmaos/api/fs"
@@ -26,6 +27,7 @@ const (
 )
 
 type DirEntInfo struct {
+	sync.Mutex
 	Nf      *EtcdFile
 	Path    sp.Tpath
 	Perm    sp.Tperm
@@ -52,11 +54,31 @@ func NewDirEntInfoDir(p sp.Tpath) *DirEntInfo {
 }
 
 func (di *DirEntInfo) String() string {
+	di.Lock()
+	defer di.Unlock()
 	if di.Nf != nil {
 		return fmt.Sprintf("&{p %v perm %v cid %v lid %v len %d}", di.Path, di.Perm, di.ClntId, di.LeaseId, len(di.Nf.Data))
 	} else {
 		return fmt.Sprintf("&{p %v perm %v cid %v lid %v}", di.Path, di.Perm, di.ClntId, di.LeaseId)
 	}
+}
+
+func (di *DirEntInfo) IsNfLoaded() bool {
+	di.Lock()
+	defer di.Unlock()
+	return di.Nf != nil
+}
+
+func (di *DirEntInfo) SetNf(nf *EtcdFile) {
+	di.Lock()
+	defer di.Unlock()
+	di.Nf = nf
+}
+
+func (di *DirEntInfo) GetNf() *EtcdFile {
+	di.Lock()
+	defer di.Unlock()
+	return di.Nf
 }
 
 type DirInfo struct {

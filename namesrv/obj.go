@@ -81,7 +81,7 @@ func (o *Obj) NewStat() (*sp.Tstat, *serr.Err) {
 	st.SetQid(&qid)
 	st.SetMode(o.di.Perm)
 	di := &o.di
-	st.SetLengthInt(len(o.di.GetNf().Data))
+	st.SetLengthInt(len(di.GetNf().Data))
 	return st, nil
 }
 

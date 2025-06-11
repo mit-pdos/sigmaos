@@ -60,7 +60,7 @@ type CosSimJob struct {
 	vecs       []*proto.Vector
 	srvMcpu    proc.Tmcpu
 	srvs       []*proc.Proc
-	cscs       *clnt.CosSimShardClnt
+	Clnt       *clnt.CosSimShardClnt
 }
 
 func NewCosSimJob(sc *sigmaclnt.SigmaClnt, job string, nvec int, vecDim int, eagerInit bool, srvMcpu proc.Tmcpu, ncache int, cacheMcpu proc.Tmcpu, cacheGC bool) (*CosSimJob, error) {
@@ -111,12 +111,12 @@ func NewCosSimJob(sc *sigmaclnt.SigmaClnt, job string, nvec int, vecDim int, eag
 		eagerInit:  eagerInit,
 		srvMcpu:    srvMcpu,
 		srvs:       []*proc.Proc{},
-		cscs:       cscs,
+		Clnt:       cscs,
 	}, nil
 }
 
 func (j *CosSimJob) GetClnt(srvID string) (*clnt.CosSimClnt, error) {
-	return j.cscs.GetClnt(srvID)
+	return j.Clnt.GetClnt(srvID)
 }
 
 // Add a new cossim server
@@ -142,7 +142,7 @@ func (j *CosSimJob) AddSrv() (*proc.Proc, time.Duration, error) {
 }
 
 func (j *CosSimJob) Stop() error {
-	j.cscs.Stop()
+	j.Clnt.Stop()
 	for _, p := range j.srvs {
 		db.DPrintf(db.TEST, "Evict cossim %v", p.GetPid())
 		if err := j.Evict(p.GetPid()); err != nil {

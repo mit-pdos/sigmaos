@@ -88,6 +88,12 @@ func NewCosSimJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, durs string,
 		// Only start one cache if autoscaling.
 		ji.j, err = cossimsrv.NewCosSimJob(ts.SigmaClnt, ji.job, ji.cosSimNVec, ji.cosSimVecDim, ji.eagerInit, ji.mcpuPerSrv, ji.ncache, cacheMcpu, cacheGC)
 		assert.Nil(ts.Ts.T, err, "Error NewCosSimJob: %v", err)
+		for i := 0; i < ji.nCosSim; i++ {
+			_, _, err := ji.j.AddSrv()
+			if !assert.Nil(ts.Ts.T, err, "Err AddSrv: %v", err) {
+				return ji
+			}
+		}
 	}
 
 	// Make a load generators.

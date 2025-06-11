@@ -10,6 +10,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"sigmaos/apps/cossim"
+	cossimproto "sigmaos/apps/cossim/proto"
 	cossimsrv "sigmaos/apps/cossim/srv"
 	"sigmaos/apps/hotel"
 	"sigmaos/benchmarks"
@@ -190,7 +192,7 @@ func init() {
 	flag.StringVar(&HOTEL_DURS, "hotel_dur", "10s", "Hotel benchmark load generation duration (comma-separated for multiple phases).")
 	flag.StringVar(&HOTEL_MAX_RPS, "hotel_max_rps", "1000", "Max requests/second for hotel bench (comma-separated for multiple phases).")
 	flag.StringVar(&COSSIM_DURS, "cossim_dur", "10s", "Cossim benchmark load generation duration (comma-separated for multiple phases).")
-	flag.StringVar(&COSSIM_MAX_RPS, "cossim_max_rps", "1000", "Max requests/second for cossim bench (comma-separated for multiple phases).")
+	flag.StringVar(&COSSIM_MAX_RPS, "cossim_max_rps", "1", "Max requests/second for cossim bench (comma-separated for multiple phases).")
 	flag.BoolVar(&MANUALLY_SCALE_COSSIM, "manually_scale_cossim", false, "Manually scale geos")
 	flag.DurationVar(&SCALE_COSSIM_DELAY, "scale_cossim_delay", 0*time.Second, "Delay to wait before scaling up number of geos.")
 	flag.IntVar(&N_COSSIM_TO_ADD, "n_cossim_to_add", 0, "Number of geo to add.")
@@ -1838,7 +1840,6 @@ func TestK8sSocialNetworkImgResize(t *testing.T) {
 func TestCosSim(t *testing.T) {
 	const (
 		sigmaos = true
-		N_NODE  = 4
 	)
 
 	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{REALM1})
@@ -1847,19 +1848,24 @@ func TestCosSim(t *testing.T) {
 	}
 	defer mrts.Shutdown()
 
-	if err := mrts.GetRealm(REALM1).BootNode(N_NODE); !assert.Nil(t, err, "Err boot: %v", err) {
-		return
-	}
-
 	ts1 := mrts.GetRealm(REALM1)
 
 	p := newRealmPerf(mrts.GetRealm(REALM1))
 	defer p.Done()
 
+	// Construct input vec
+	v := cossim.VectorToSlice(cossim.NewVectors(1, COSSIM_VEC_DIM)[0])
+	ranges := []*cossimproto.VecRange{
+		&cossimproto.VecRange{
+			StartID: 0,
+			EndID:   uint64(COSSIM_NVEC - 1),
+		},
+	}
+
 	rs := benchmarks.NewResults(1, benchmarks.E2E)
 	jobs, ji := newCosSimJobs(ts1, p, sigmaos, COSSIM_DURS, COSSIM_MAX_RPS, COSSIM_NCACHE, COSSIM_CACHE_GC, proc.Tmcpu(COSSIM_CACHE_MCPU), MANUALLY_SCALE_CACHES, SCALE_CACHE_DELAY, N_CACHES_TO_ADD, NCOSSIM, proc.Tmcpu(COSSIM_SRV_MCPU), MANUALLY_SCALE_COSSIM, SCALE_COSSIM_DELAY, N_COSSIM_TO_ADD, COSSIM_NVEC, COSSIM_VEC_DIM, COSSIM_EAGER_INIT, func(j *cossimsrv.CosSimJob, r *rand.Rand) {
-		db.DPrintf(db.TEST, "xxx")
-		// TODO: cossim req
+		_, _, err := j.Clnt.CosSimLeastLoaded(v, ranges)
+		assert.Nil(t, err, "CosSim req: %v", err)
 	})
 	go func() {
 		for _, j := range jobs {

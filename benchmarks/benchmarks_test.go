@@ -167,6 +167,7 @@ func init() {
 	flag.IntVar(&N_HOTEL, "nhotel", 80, "Number of hotels in the dataset.")
 	flag.BoolVar(&HOTEL_CACHE_AUTOSCALE, "hotel_cache_autoscale", false, "Autoscale hotel cache")
 	flag.IntVar(&NCOSSIM, "ncossim", 1, "Cossim ngeo")
+	flag.IntVar(&COSSIM_NCACHE, "cossim_ncache", 1, "Cossim ncache")
 	flag.IntVar(&COSSIM_CACHE_MCPU, "cossim_cache_mcpu", 2000, "Cossim cache mcpu")
 	flag.IntVar(&COSSIM_SRV_MCPU, "cossim_srv_mcpu", 2000, "Cossim server mcpu")
 	flag.IntVar(&COSSIM_NVEC, "cossim_nvec", 100, "Number of vectors in the cossim DB")
@@ -1837,6 +1838,7 @@ func TestK8sSocialNetworkImgResize(t *testing.T) {
 func TestCosSim(t *testing.T) {
 	const (
 		sigmaos = true
+		N_NODE  = 4
 	)
 
 	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{REALM1})
@@ -1844,6 +1846,10 @@ func TestCosSim(t *testing.T) {
 		return
 	}
 	defer mrts.Shutdown()
+
+	if err := mrts.GetRealm(REALM1).BootNode(N_NODE); !assert.Nil(t, err, "Err boot: %v", err) {
+		return
+	}
 
 	ts1 := mrts.GetRealm(REALM1)
 

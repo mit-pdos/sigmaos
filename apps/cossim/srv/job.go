@@ -66,29 +66,35 @@ type CosSimJob struct {
 func NewCosSimJob(sc *sigmaclnt.SigmaClnt, job string, nvec int, vecDim int, eagerInit bool, srvMcpu proc.Tmcpu, ncache int, cacheMcpu proc.Tmcpu, cacheGC bool) (*CosSimJob, error) {
 	// Init fs
 	if err := initFS(sc, job); err != nil {
+		db.DPrintf(db.COSSIMSRV_ERR, "Err initfs: %v", err)
 		return nil, err
 	}
 	// Create epcache job
 	epcj, err := epsrv.NewEPCacheJob(sc)
 	if err != nil {
+		db.DPrintf(db.COSSIMSRV_ERR, "Err epcache: %v", err)
 		return nil, err
 	}
 	epcsrvEP, err := epcj.GetSrvEP()
 	if err != nil {
+		db.DPrintf(db.COSSIMSRV_ERR, "Err getSrvEP: %v", err)
 		return nil, err
 	}
 	// Start the cachegrp job
 	cm, err := cachegrpmgr.NewCacheMgr(sc, job, ncache, cacheMcpu, cacheGC)
 	if err != nil {
+		db.DPrintf(db.COSSIMSRV_ERR, "Err newCacheMgr: %v", err)
 		return nil, err
 	}
 	cc := cachegrpclnt.NewCachedSvcClnt(sc.FsLib, job)
 	vecs := cossim.NewVectors(nvec, vecDim)
 	if err := writeVectorsToCache(cc, vecs); err != nil {
+		db.DPrintf(db.COSSIMSRV_ERR, "Err writeVectors: %v", err)
 		return nil, err
 	}
 	cscs, err := clnt.NewCosSimShardClnt(sc.FsLib, epcj.Clnt)
 	if err != nil {
+		db.DPrintf(db.COSSIMSRV_ERR, "Err newCosSimShardClnt: %v", err)
 		return nil, err
 	}
 	return &CosSimJob{

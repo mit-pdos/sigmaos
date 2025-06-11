@@ -10,6 +10,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	cossimsrv "sigmaos/apps/cossim/srv"
 	"sigmaos/apps/hotel"
 	"sigmaos/benchmarks"
 	db "sigmaos/debug"
@@ -77,8 +78,19 @@ var N_GEO_TO_ADD int
 var SCALE_GEO_DELAY time.Duration
 var SCALE_CACHE_DELAY time.Duration
 var N_CACHES_TO_ADD int
+var COSSIM_NCACHE int
+var COSSIM_CACHE_MCPU int
+var COSSIM_SRV_MCPU int
+var NCOSSIM int
+var COSSIM_NVEC int
+var COSSIM_VEC_DIM int
+var COSSIM_EAGER_INIT bool
+var MANUALLY_SCALE_COSSIM bool
+var N_COSSIM_TO_ADD int
+var SCALE_COSSIM_DELAY time.Duration
 var CACHE_TYPE string
 var CACHE_GC bool
+var COSSIM_CACHE_GC bool
 var BLOCK_MEM string
 var N_REALM int
 var ASYNCRW bool
@@ -89,6 +101,8 @@ var DURATION time.Duration
 var MAX_RPS int
 var HOTEL_DURS string
 var HOTEL_MAX_RPS string
+var COSSIM_DURS string
+var COSSIM_MAX_RPS string
 var SOCIAL_NETWORK_DURS string
 var SOCIAL_NETWORK_MAX_RPS string
 var SOCIAL_NETWORK_READ_ONLY bool
@@ -152,6 +166,12 @@ func init() {
 	flag.IntVar(&HOTEL_IMG_SZ_MB, "hotel_img_sz_mb", 0, "Hotel image data size in megabytes.")
 	flag.IntVar(&N_HOTEL, "nhotel", 80, "Number of hotels in the dataset.")
 	flag.BoolVar(&HOTEL_CACHE_AUTOSCALE, "hotel_cache_autoscale", false, "Autoscale hotel cache")
+	flag.IntVar(&NCOSSIM, "ncossim", 1, "Cossim ngeo")
+	flag.IntVar(&COSSIM_CACHE_MCPU, "cossim_cache_mcpu", 2000, "Cossim cache mcpu")
+	flag.IntVar(&COSSIM_SRV_MCPU, "cossim_srv_mcpu", 2000, "Cossim server mcpu")
+	flag.IntVar(&COSSIM_NVEC, "cossim_nvec", 100, "Number of vectors in the cossim DB")
+	flag.IntVar(&COSSIM_VEC_DIM, "cossim_vec_dim", 100, "Dimension of each vector in the cossim DB")
+	flag.BoolVar(&COSSIM_EAGER_INIT, "cossim_eager_init", false, "Initialize cossim server eagerly")
 	flag.BoolVar(&MANUALLY_SCALE_GEO, "manually_scale_geo", false, "Manually scale geos")
 	flag.DurationVar(&SCALE_GEO_DELAY, "scale_geo_delay", 0*time.Second, "Delay to wait before scaling up number of geos.")
 	flag.IntVar(&N_GEO_TO_ADD, "n_geo_to_add", 0, "Number of geo to add.")
@@ -160,6 +180,7 @@ func init() {
 	flag.IntVar(&N_CACHES_TO_ADD, "n_caches_to_add", 0, "Number of caches to add.")
 	flag.StringVar(&CACHE_TYPE, "cache_type", "cached", "Hotel cache type (kvd or cached).")
 	flag.BoolVar(&CACHE_GC, "cache_gc", false, "Turn hotel cache GC on (true) or off (false).")
+	flag.BoolVar(&COSSIM_CACHE_GC, "cossim_cache_gc", true, "Turn hotel cache GC on (true) or off (false).")
 	flag.StringVar(&BLOCK_MEM, "block_mem", "0MB", "Amount of physical memory to block on every machine.")
 	flag.StringVar(&MEMCACHED_ADDRS, "memcached", "", "memcached server addresses (comma-separated).")
 	flag.StringVar(&HTTP_URL, "http_url", "http://x.x.x.x", "HTTP url.")
@@ -167,6 +188,11 @@ func init() {
 	flag.IntVar(&MAX_RPS, "max_rps", 1000, "Max requests per second.")
 	flag.StringVar(&HOTEL_DURS, "hotel_dur", "10s", "Hotel benchmark load generation duration (comma-separated for multiple phases).")
 	flag.StringVar(&HOTEL_MAX_RPS, "hotel_max_rps", "1000", "Max requests/second for hotel bench (comma-separated for multiple phases).")
+	flag.StringVar(&COSSIM_DURS, "cossim_dur", "10s", "Cossim benchmark load generation duration (comma-separated for multiple phases).")
+	flag.StringVar(&COSSIM_MAX_RPS, "cossim_max_rps", "1000", "Max requests/second for cossim bench (comma-separated for multiple phases).")
+	flag.BoolVar(&MANUALLY_SCALE_COSSIM, "manually_scale_cossim", false, "Manually scale geos")
+	flag.DurationVar(&SCALE_COSSIM_DELAY, "scale_cossim_delay", 0*time.Second, "Delay to wait before scaling up number of geos.")
+	flag.IntVar(&N_COSSIM_TO_ADD, "n_cossim_to_add", 0, "Number of geo to add.")
 	flag.StringVar(&SOCIAL_NETWORK_DURS, "sn_dur", "10s", "Social network benchmark load generation duration (comma-separated for multiple phases).")
 	flag.StringVar(&SOCIAL_NETWORK_MAX_RPS, "sn_max_rps", "1000", "Max requests/second for social network bench (comma-separated for multiple phases).")
 	flag.BoolVar(&SOCIAL_NETWORK_READ_ONLY, "sn_read_only", false, "send read only cases in social network bench")
@@ -1806,4 +1832,55 @@ func TestK8sSocialNetworkImgResize(t *testing.T) {
 	evictProcs(mrts.GetRealm(sp.ROOTREALM), ps)
 	time.Sleep(10 * time.Second)
 	evictMemBlockers(mrts.GetRoot(), blockers)
+}
+
+func TestCosSim(t *testing.T) {
+	const (
+		sigmaos = true
+	)
+
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{REALM1})
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	defer mrts.Shutdown()
+
+	ts1 := mrts.GetRealm(REALM1)
+
+	p := newRealmPerf(mrts.GetRealm(REALM1))
+	defer p.Done()
+
+	rs := benchmarks.NewResults(1, benchmarks.E2E)
+	jobs, ji := newCosSimJobs(ts1, p, sigmaos, COSSIM_DURS, COSSIM_MAX_RPS, COSSIM_NCACHE, COSSIM_CACHE_GC, proc.Tmcpu(COSSIM_CACHE_MCPU), MANUALLY_SCALE_CACHES, SCALE_CACHE_DELAY, N_CACHES_TO_ADD, NCOSSIM, proc.Tmcpu(COSSIM_SRV_MCPU), MANUALLY_SCALE_COSSIM, SCALE_COSSIM_DELAY, N_COSSIM_TO_ADD, COSSIM_NVEC, COSSIM_VEC_DIM, COSSIM_EAGER_INIT, func(j *cossimsrv.CosSimJob, r *rand.Rand) {
+		db.DPrintf(db.TEST, "xxx")
+		// TODO: cossim req
+	})
+	go func() {
+		for _, j := range jobs {
+			// Wait until ready
+			<-j.ready
+			if N_CLNT > 1 {
+				// Wait for clients to start up on other machines.
+				db.DPrintf(db.ALWAYS, "Leader waiting for clnts")
+				waitForClnts(mrts.GetRoot(), N_CLNT)
+				db.DPrintf(db.ALWAYS, "Leader done waiting for clnts")
+			}
+			// Ack to allow the job to proceed.
+			j.ready <- true
+		}
+	}()
+	if sigmaos {
+		p := newRealmPerf(ts1)
+		defer p.Done()
+		monitorCPUUtil(ts1, p)
+	} else {
+		p := newRealmPerf(ts1)
+		defer p.Done()
+		monitorK8sCPUUtil(ts1, p, "hotel", "")
+	}
+	runOps(ts1, ji, runHotel, rs)
+	//	printResultSummary(rs)
+	if sigmaos {
+		mrts.Shutdown()
+	}
 }

@@ -368,6 +368,20 @@ func newSocialNetworkJobs(
 	return ws, is
 }
 
+// ========== CosSim Helpers ==========
+func newCosSimJobs(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, dur string, maxrps string, ncache int, cacheGC bool, cacheMcpu proc.Tmcpu, manuallyScaleCaches bool, scaleCacheDelay time.Duration, nCachesToAdd int, nCosSim int, cosSimMcpu proc.Tmcpu, manuallyScaleCosSim bool, scaleCosSimDelay time.Duration, nCosSimToAdd int, cosSimNVec int, cosSimVecDim int, eagerInit bool, fn cosSimFn) ([]*CosSimJobInstance, []interface{}) {
+	// n is ntrials, which is always 1.
+	n := 1
+	ws := make([]*CosSimJobInstance, 0, n)
+	is := make([]interface{}, 0, n)
+	for i := 0; i < n; i++ {
+		i := NewCosSimJob(ts, p, sigmaos, dur, maxrps, fn, false, ncache, cacheGC, cacheMcpu, manuallyScaleCaches, scaleCacheDelay, nCachesToAdd, nCosSim, cosSimNVec, cosSimVecDim, eagerInit, cosSimMcpu, manuallyScaleCosSim, scaleCosSimDelay, nCosSimToAdd)
+		ws = append(ws, i)
+		is = append(is, i)
+	}
+	return ws, is
+}
+
 // ========== Client Helpers ==========
 
 var clidir string = filepath.Join("name/", "clnts")

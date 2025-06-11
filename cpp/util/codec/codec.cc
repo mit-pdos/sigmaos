@@ -4,8 +4,10 @@ namespace sigmaos {
 namespace util::codec {
 
 uint32_t bytes_to_uint32(char *b) {
-  return uint32_t(b[0]) | uint32_t(b[1]) << 8 | uint32_t(b[2]) << 16 | 
-    uint32_t(b[3]) << 24;
+  return (((uint32_t) b[0]) & 0xFF) |
+         (((uint32_t) b[1]) & 0xFF) << 8 |
+         (((uint32_t) b[2]) & 0xFF) << 16 |
+         (((uint32_t) b[3]) & 0xFF) << 24;
 }
 
 void uint32_to_bytes(char *b, uint32_t i) {

@@ -65,7 +65,7 @@ func (dir *DirOverlay) NewStat() (*sp.Tstat, *serr.Err) {
 }
 
 func (dir *DirOverlay) Stat(ctx fs.CtxI) (*sp.Tstat, *serr.Err) {
-	st, err := dir.underlay.NewStat()
+	st, err := dir.underlay.Stat(ctx)
 	if err != nil {
 		return nil, err
 	}

@@ -37,8 +37,8 @@ func (dmx *DemuxClnt) reply(tag sessp.Ttag, rep CallI, err *serr.Err) {
 	if ch, ok := dmx.callmap.remove(tag); ok {
 		ch <- reply{rep, err}
 	} else {
-		db.DPrintf(db.ERROR, "reply %v no matching req %v", rep, tag)
-		db.DFatalf("reply %v no matching req %v", rep, tag)
+		db.DPrintf(db.ERROR, "reply %v no matching req %v (0x%x)", rep, tag, tag)
+		db.DFatalf("reply %v no matching req %v (0x%x)", rep, tag, tag)
 	}
 }
 

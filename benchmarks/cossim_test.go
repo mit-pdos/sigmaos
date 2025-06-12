@@ -85,14 +85,18 @@ func NewCosSimJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, durs string,
 	var err error
 
 	if !ji.justCli {
+		db.DPrintf(db.TEST, "Create new CosSim job")
 		// Only start one cache if autoscaling.
 		ji.j, err = cossimsrv.NewCosSimJob(ts.SigmaClnt, ji.job, ji.cosSimNVec, ji.cosSimVecDim, ji.eagerInit, ji.mcpuPerSrv, ji.ncache, cacheMcpu, cacheGC)
 		assert.Nil(ts.Ts.T, err, "Error NewCosSimJob: %v", err)
+		db.DPrintf(db.TEST, "New CosSim job created")
 		for i := 0; i < ji.nCosSim; i++ {
+			db.DPrintf(db.TEST, "Add initial cossim server %v", i)
 			_, _, err := ji.j.AddSrv()
 			if !assert.Nil(ts.Ts.T, err, "Err AddSrv: %v", err) {
 				return ji
 			}
+			db.DPrintf(db.TEST, "Cossim server ready %v", i)
 		}
 		time.Sleep(2 * time.Second)
 	}

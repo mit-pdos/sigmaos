@@ -64,11 +64,11 @@ func (svc *svc) get(v1 epcache.Tversion) []*proto.Instance {
 	db.DPrintf(db.EPCACHE, "Get svc %v current:%v requested:%v", svc.name, svc.v, v1)
 	if v1 != epcache.NO_VERSION {
 		// If this is a versioned get, wait until v > v1
-		for svc.v < v1 {
+		for svc.v <= v1 {
 			svc.cond.Wait()
 		}
 	}
-	db.DPrintf(db.EPCACHE, "Get svc %v %v >= %v result: %v", svc.name, svc.v, v1, svc.instances)
+	db.DPrintf(db.EPCACHE, "Get svc %v %v > %v result: %v", svc.name, svc.v, v1, svc.instances)
 	is := make([]*proto.Instance, 0, len(svc.instances))
 	for _, i := range svc.instances {
 		is = append(is, i)

@@ -792,3 +792,76 @@ func TestLCBEHotelImgResizeRPCMultiplexing(t *testing.T) {
 	getFollowerCmd := GetHotelClientCmdConstructor("Search", false, len(driverVMs), rps, dur, numCaches, cacheType, scaleCache, sleep, manuallyScaleCaches, scaleCacheDelay, numCachesToAdd, numGeo, numGeoIdx, geoSearchRadius, geoNResults, manuallyScaleGeo, scaleGeoDelay, numGeoToAdd)
 	ts.RunParallelClientBenchmark(benchName, driverVMs, getLeaderCmd, getFollowerCmd, nil, nil, clientDelay, numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost)
 }
+
+// Test CosSim Geo's application tail latency.
+func TestScaleCosSim(t *testing.T) {
+	var (
+		benchNameBase string = "cos_sim_tail_latency"
+		driverVMs     []int  = []int{9}
+	)
+	// Cluster configuration parameters
+	const (
+		numNodes          int  = 9
+		numCoresPerNode   uint = 4
+		numFullNodes      int  = numNodes
+		numProcqOnlyNodes int  = 0
+		turboBoost        bool = false
+	)
+	// CosSim benchmark configuration parameters
+	var (
+		rps                   []int           = []int{250, 500, 750}
+		dur                   []time.Duration = []time.Duration{10 * time.Second, 10 * time.Second, 10 * time.Second}
+		numCosSimBase         int             = 1
+		numCaches             int             = 3
+		scaleCache            bool            = false
+		clientDelay           time.Duration   = 0 * time.Second
+		sleep                 time.Duration   = 0 * time.Second
+		nvec                  int             = 100
+		vecDim                int             = 100
+		eagerInit             bool            = false
+		manuallyScaleCosSim   []bool          = []bool{false} //[]bool{true, false}
+		scaleCosSimDelayBase  time.Duration   = 20 * time.Second
+		scaleCosSimExtraDelay []time.Duration = []time.Duration{0}
+		nAdditionalCosSim     []int           = []int{2, 0}
+	)
+	ts, err := NewTstate(t)
+	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {
+		return
+	}
+	for _, scale := range manuallyScaleCosSim {
+		for _, numCosSimToAdd := range nAdditionalCosSim {
+			for _, extraDelay := range scaleCosSimExtraDelay {
+				// Don't add artificial delays for k8s
+				if ts.BCfg.K8s {
+					extraDelay = 0
+				}
+				db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
+				benchName := benchNameBase
+				numCosSim := numCosSimBase
+				scaleCosSimDelay := scaleCosSimDelayBase
+				if eagerInit {
+					benchName += "_eager"
+				}
+				if scale {
+					if numCosSimToAdd == 0 {
+						continue
+					}
+					benchName += "_scale_cossim_add_" + strconv.Itoa(numCosSimToAdd)
+					if extraDelay > 0 && numCosSimToAdd > 0 {
+						scaleCosSimDelay += extraDelay
+						benchName += "_extra_scaling_delay_" + extraDelay.String()
+					}
+				} else {
+					numCosSim += numCosSimToAdd
+					benchName += "_no_scale_cossim_nsrv_" + strconv.Itoa(numCosSim)
+				}
+				getLeaderCmd := GetCosSimClientCmdConstructor("CosSim", true, len(driverVMs), rps, dur, numCaches, scaleCache, sleep, false, 0, 0, numCosSim, nvec, vecDim, eagerInit, scale, scaleCosSimDelay, numCosSimToAdd)
+				getFollowerCmd := GetCosSimClientCmdConstructor("CosSim", false, len(driverVMs), rps, dur, numCaches, scaleCache, sleep, false, 0, 0, numCosSim, nvec, vecDim, eagerInit, scale, scaleCosSimDelay, numCosSimToAdd)
+				ran := ts.RunParallelClientBenchmark(benchName, driverVMs, getLeaderCmd, getFollowerCmd, startK8sHotelApp, stopK8sHotelApp, clientDelay, numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost)
+				if oneByOne && ran {
+					return
+				}
+			}
+		}
+	}
+}

@@ -567,3 +567,104 @@ func GetLCBEHotelImgResizeRPCMultiplexingCmdConstructor(numClients int, rps []in
 		)
 	}
 }
+
+// Construct command string to run cosine similarity benchmark's load-generating client
+//
+// - numClients specifies the total number of client machines which will make
+// requests to the cossim application
+//
+// - rps specifies the number of requests-per-second this client should execute
+// in each phase of the benchmark.
+//
+// - dur specifies the duration for which each rps period should last.
+//
+// - If scaleCache is true, the cache autoscales.
+//
+// - clientDelay specifies the delay for which the client should wait before
+// starting to send requests.
+func GetCosSimClientCmdConstructor(cossimReqName string, leader bool, numClients int, rps []int, dur []time.Duration, numCaches int, scaleCache bool, clientDelay time.Duration, manuallyScaleCaches bool, scaleCacheDelay time.Duration, numCachesToAdd int, numCosSim int, nvec int, vecDim int, cossimEagerInit, manuallyScaleCosSim bool, scaleCosSimDelay time.Duration, numCosSimToAdd int) GetBenchCmdFn {
+	return func(bcfg *BenchConfig, ccfg *ClusterConfig) string {
+		const (
+			debugSelectors string = "\"TEST;THROUGHPUT;CPU_UTIL;SPAWN_LAT\""
+			perfSelectors  string = "\"COSSIM_TPT;TEST_TPT;BENCH_TPT;\""
+		)
+		testName := ""
+		if leader {
+			testName = fmt.Sprintf("CosSim")
+		} else {
+			testName = fmt.Sprintf("CosSimJustCli")
+		}
+		autoscaleCache := ""
+		if scaleCache {
+			autoscaleCache = "--cossim_cache_autoscale"
+		}
+		dialproxy := ""
+		if bcfg.NoNetproxy {
+			dialproxy = "--nodialproxy"
+		}
+		overlays := ""
+		if bcfg.Overlays {
+			overlays = "--overlays"
+		}
+		scalecache := ""
+		if manuallyScaleCaches {
+			scalecache = "--manually_scale_caches"
+		}
+		scaleCosSim := ""
+		if manuallyScaleCosSim {
+			scaleCosSim = "--manually_scale_cossim"
+		}
+		cossimEagerInitStr := ""
+		if cossimEagerInit {
+			cossimEagerInitStr = "--cossim_eager_init"
+		}
+		return fmt.Sprintf("export SIGMADEBUG=%s; export SIGMAPERF=%s; go clean -testcache; "+
+			"ulimit -n 100000; "+
+			"./set-cores.sh --set 1 --start 2 --end 39 > /dev/null 2>&1 ; "+
+			"go test -v sigmaos/benchmarks -timeout 0 --no-shutdown %s %s --etcdIP %s --tag %s "+
+			"--run %s "+
+			"--nclnt %s "+
+			"--cossim_ncache %s "+
+			"--cossim_cache_mcpu 2000 "+
+			"%s "+ // scaleCache
+			"--cossim_dur %s "+
+			"--cossim_max_rps %s "+
+			"--sleep %s "+
+			"%s "+ // manually_scale_caches
+			"--scale_cache_delay %s "+
+			"--n_caches_to_add %s "+
+			"--ncossim %s "+
+			"--cossim_nvec %s "+
+			"--cossim_vec_dim %s "+
+			"%s "+ //cossim_eager_init
+			"%s "+ // manually_scale_cossim
+			"--scale_cossim_delay %s "+
+			"--n_cossim_to_add %s "+
+			"--prewarm_realm "+
+			"> /tmp/bench.out 2>&1 ;",
+			debugSelectors,
+			perfSelectors,
+			dialproxy,
+			overlays,
+			ccfg.LeaderNodeIP,
+			bcfg.Tag,
+			testName,
+			strconv.Itoa(numClients),
+			strconv.Itoa(numCaches),
+			autoscaleCache,
+			dursToString(dur),
+			rpsToString(rps),
+			clientDelay.String(),
+			scalecache,
+			scaleCacheDelay.String(),
+			strconv.Itoa(numCachesToAdd),
+			strconv.Itoa(numCosSim),
+			strconv.Itoa(nvec),
+			strconv.Itoa(vecDim),
+			cossimEagerInitStr,
+			scaleCosSim,
+			scaleCosSimDelay.String(),
+			strconv.Itoa(numCosSimToAdd),
+		)
+	}
+}

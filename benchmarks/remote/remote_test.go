@@ -801,7 +801,7 @@ func TestScaleCosSim(t *testing.T) {
 	)
 	// Cluster configuration parameters
 	const (
-		numNodes          int  = 9
+		numNodes          int  = 4
 		numCoresPerNode   uint = 4
 		numFullNodes      int  = numNodes
 		numProcqOnlyNodes int  = 0
@@ -809,10 +809,12 @@ func TestScaleCosSim(t *testing.T) {
 	)
 	// CosSim benchmark configuration parameters
 	var (
-		rps                   []int           = []int{250, 500, 750}
-		dur                   []time.Duration = []time.Duration{10 * time.Second, 10 * time.Second, 10 * time.Second}
+		//		rps                   []int           = []int{250, 500, 750, 1000, 1250}
+		//		dur                   []time.Duration = []time.Duration{10 * time.Second, 10 * time.Second, 10 * time.Second, 10 * time.Second, 10 * time.Second}
+		rps                   []int           = []int{10000, 12000}
+		dur                   []time.Duration = []time.Duration{10 * time.Second, 10 * time.Second}
 		numCosSimBase         int             = 1
-		numCaches             int             = 3
+		numCaches             int             = 1
 		scaleCache            bool            = false
 		clientDelay           time.Duration   = 0 * time.Second
 		sleep                 time.Duration   = 0 * time.Second
@@ -822,7 +824,7 @@ func TestScaleCosSim(t *testing.T) {
 		manuallyScaleCosSim   []bool          = []bool{false} //[]bool{true, false}
 		scaleCosSimDelayBase  time.Duration   = 20 * time.Second
 		scaleCosSimExtraDelay []time.Duration = []time.Duration{0}
-		nAdditionalCosSim     []int           = []int{2, 0}
+		nAdditionalCosSim     []int           = []int{0} //2, 0}
 	)
 	ts, err := NewTstate(t)
 	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {

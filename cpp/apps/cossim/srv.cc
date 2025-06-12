@@ -7,6 +7,7 @@ bool Srv::_l = sigmaos::util::log::init_logger(COSSIMSRV);
 bool Srv::_l_e = sigmaos::util::log::init_logger(COSSIMSRV_ERR);
 
 std::expected<int, sigmaos::serr::Error> Srv::CosSim(std::shared_ptr<google::protobuf::Message> preq, std::shared_ptr<google::protobuf::Message> prep) {
+  auto start = GetCurrentTime();
   auto req = dynamic_pointer_cast<CosSimReq>(preq);
   auto rep = dynamic_pointer_cast<CosSimRep>(prep);
   auto input = req->inputvec().vals();
@@ -20,6 +21,7 @@ std::expected<int, sigmaos::serr::Error> Srv::CosSim(std::shared_ptr<google::pro
         // Fetch the vector if it has not been fetched already
         auto res = fetch_vector(id);
         if (!res.has_value()) {
+          log(COSSIMSRV_ERR, "Can't fetch vector {}", id);
           return res;
         }
       }
@@ -43,7 +45,7 @@ std::expected<int, sigmaos::serr::Error> Srv::CosSim(std::shared_ptr<google::pro
   }
   rep->set_id(max_id);
   rep->set_val(max);
-  log(COSSIMSRV, "CosSim rep invec={} max_id={} max={}", input.size(), max_id, max);
+  log(COSSIMSRV, "CosSim rep invec={} max_id={} max={} latency={}", input.size(), max_id, max, LatencyMS(start));
   return 0;
 }
 

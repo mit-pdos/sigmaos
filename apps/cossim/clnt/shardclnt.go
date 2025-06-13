@@ -69,12 +69,13 @@ func NewCosSimShardClnt(fsl *fslib.FsLib, epcc *epcacheclnt.EndpointCacheClnt) (
 }
 
 func (cssc *CosSimShardClnt) CosSimLeastLoaded(v []float64, ranges []*proto.VecRange) (uint64, float64, error) {
+	start := time.Now()
 	srvID, clnt, err := cssc.GetLeastLoadedClnt()
 	if err != nil {
 		db.DPrintf(db.COSSIMCLNT_ERR, "Err GetLeastLoadedClnt: %v", err)
 		return 0, 0.0, err
 	}
-	db.DPrintf(db.COSSIMCLNT, "Least loaded server: %v", srvID)
+	db.DPrintf(db.COSSIMCLNT, "Least loaded server: %v lat:%v", srvID, time.Since(start))
 	defer cssc.PutClnt(srvID)
 	return clnt.CosSim(v, ranges)
 }

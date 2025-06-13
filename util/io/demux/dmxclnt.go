@@ -5,7 +5,6 @@ package demux
 
 import (
 	"sync"
-	"time"
 
 	db "sigmaos/debug"
 	"sigmaos/serr"

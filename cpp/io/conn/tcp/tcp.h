@@ -1,6 +1,7 @@
 #pragma once
 
 #include <sys/socket.h>
+#include <netinet/tcp.h>
 #include <sys/un.h>
 #include <unistd.h>
 #include <netinet/in.h>
@@ -65,6 +66,12 @@ class ClntConn : public Conn {
       close(sockfd);
       log(TCPCONN_ERR, "Failed to connect client TCP socket", srv_addr, port);
       fatal("Failed to connect client TCP socket");
+    }
+    int flag = 1;
+    if (setsockopt(sockfd, IPPROTO_TCP, TCP_NODELAY, (char *) &flag, sizeof(int))) {
+      close(sockfd);
+      log(TCPCONN_ERR, "Failed to set TCP socket options", srv_addr, port);
+      fatal("Failed to set TCP socket options");
     }
     init(sockfd, addr);
   }

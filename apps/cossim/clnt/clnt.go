@@ -2,6 +2,7 @@ package clnt
 
 import (
 	"fmt"
+	"sync/atomic"
 	"time"
 
 	"sigmaos/apps/cossim"
@@ -16,7 +17,8 @@ import (
 )
 
 type CosSimClnt struct {
-	rpcc *rpcclnt.RPCClnt
+	rpcc    *rpcclnt.RPCClnt
+	reqCntr atomic.Uint64
 }
 
 func NewCosSimClntFromEP(ep *sp.Tendpoint) (*CosSimClnt, error) {
@@ -52,6 +54,7 @@ func NewCosSimClnt(fsl *fslib.FsLib, epcc *epcacheclnt.EndpointCacheClnt, srvID 
 
 // Register a service's endpoint
 func (clnt *CosSimClnt) CosSim(v []float64, ranges []*proto.VecRange) (uint64, float64, error) {
+	reqID := clnt.reqCntr.Add(1)
 	db.DPrintf(db.COSSIMCLNT, "CosSim: %v ranges:%v", len(v), ranges)
 	start := time.Now()
 	var res proto.CosSimRep
@@ -60,10 +63,11 @@ func (clnt *CosSimClnt) CosSim(v []float64, ranges []*proto.VecRange) (uint64, f
 			Vals: v,
 		},
 		VecRanges: ranges,
+		ID:        reqID,
 	}
 	err := clnt.rpcc.RPC("CosSimSrv.CosSim", req, &res)
 	if err != nil {
-		db.DPrintf(db.COSSIMCLNT_ERR, "Err Register: %v", err)
+		db.DPrintf(db.COSSIMCLNT_ERR, "Err CosSim: %v", err)
 		return 0, 0.0, err
 	}
 	db.DPrintf(db.COSSIMCLNT, "CosSim ok: %v %v -> id:%v val:%v lat:%v", len(v), ranges, res.ID, res.Val, time.Since(start))

@@ -19,6 +19,7 @@ message VecRange {
 message CosSimReq {
   Vector inputVec = 1; // TODO: blob
   repeated VecRange vecRanges = 2; // Ranges of vectors for which to compute cosine simmilarity
+  uint64 iD = 3; // Request ID
 }
 
 message CosSimRep {

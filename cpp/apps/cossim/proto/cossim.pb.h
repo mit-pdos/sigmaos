@@ -508,6 +508,7 @@ class CosSimReq final :
   enum : int {
     kVecRangesFieldNumber = 2,
     kInputVecFieldNumber = 1,
+    kIDFieldNumber = 3,
   };
   // repeated .VecRange vecRanges = 2;
   int vecranges_size() const;
@@ -545,6 +546,15 @@ class CosSimReq final :
       ::Vector* inputvec);
   ::Vector* unsafe_arena_release_inputvec();
 
+  // uint64 iD = 3;
+  void clear_id();
+  uint64_t id() const;
+  void set_id(uint64_t value);
+  private:
+  uint64_t _internal_id() const;
+  void _internal_set_id(uint64_t value);
+  public:
+
   // @@protoc_insertion_point(class_scope:CosSimReq)
  private:
   class _Internal;
@@ -555,6 +565,7 @@ class CosSimReq final :
   struct Impl_ {
     ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::VecRange > vecranges_;
     ::Vector* inputvec_;
+    uint64_t id_;
     mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   };
   union { Impl_ _impl_; };
@@ -953,6 +964,26 @@ inline const ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::VecRange >&
 CosSimReq::vecranges() const {
   // @@protoc_insertion_point(field_list:CosSimReq.vecRanges)
   return _impl_.vecranges_;
+}
+
+// uint64 iD = 3;
+inline void CosSimReq::clear_id() {
+  _impl_.id_ = uint64_t{0u};
+}
+inline uint64_t CosSimReq::_internal_id() const {
+  return _impl_.id_;
+}
+inline uint64_t CosSimReq::id() const {
+  // @@protoc_insertion_point(field_get:CosSimReq.iD)
+  return _internal_id();
+}
+inline void CosSimReq::_internal_set_id(uint64_t value) {
+  
+  _impl_.id_ = value;
+}
+inline void CosSimReq::set_id(uint64_t value) {
+  _internal_set_id(value);
+  // @@protoc_insertion_point(field_set:CosSimReq.iD)
 }
 
 // -------------------------------------------------------------------

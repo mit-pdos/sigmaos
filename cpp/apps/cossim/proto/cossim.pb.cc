@@ -51,6 +51,7 @@ PROTOBUF_CONSTEXPR CosSimReq::CosSimReq(
     ::_pbi::ConstantInitialized): _impl_{
     /*decltype(_impl_.vecranges_)*/{}
   , /*decltype(_impl_.inputvec_)*/nullptr
+  , /*decltype(_impl_.id_)*/uint64_t{0u}
   , /*decltype(_impl_._cached_size_)*/{}} {}
 struct CosSimReqDefaultTypeInternal {
   PROTOBUF_CONSTEXPR CosSimReqDefaultTypeInternal()
@@ -103,6 +104,7 @@ const uint32_t TableStruct_cossim_2eproto::offsets[] PROTOBUF_SECTION_VARIABLE(p
   ~0u,  // no _inlined_string_donated_
   PROTOBUF_FIELD_OFFSET(::CosSimReq, _impl_.inputvec_),
   PROTOBUF_FIELD_OFFSET(::CosSimReq, _impl_.vecranges_),
+  PROTOBUF_FIELD_OFFSET(::CosSimReq, _impl_.id_),
   ~0u,  // no _has_bits_
   PROTOBUF_FIELD_OFFSET(::CosSimRep, _internal_metadata_),
   ~0u,  // no _extensions_
@@ -116,7 +118,7 @@ static const ::_pbi::MigrationSchema schemas[] PROTOBUF_SECTION_VARIABLE(protode
   { 0, -1, -1, sizeof(::Vector)},
   { 7, -1, -1, sizeof(::VecRange)},
   { 15, -1, -1, sizeof(::CosSimReq)},
-  { 23, -1, -1, sizeof(::CosSimRep)},
+  { 24, -1, -1, sizeof(::CosSimRep)},
 };
 
 static const ::_pb::Message* const file_default_instances[] = {
@@ -129,15 +131,16 @@ static const ::_pb::Message* const file_default_instances[] = {
 const char descriptor_table_protodef_cossim_2eproto[] PROTOBUF_SECTION_VARIABLE(protodesc_cold) =
   "\n\014cossim.proto\"\026\n\006Vector\022\014\n\004vals\030\001 \003(\001\"*"
   "\n\010VecRange\022\017\n\007startID\030\001 \001(\004\022\r\n\005endID\030\002 \001"
-  "(\004\"D\n\tCosSimReq\022\031\n\010inputVec\030\001 \001(\0132\007.Vect"
-  "or\022\034\n\tvecRanges\030\002 \003(\0132\t.VecRange\"$\n\tCosS"
-  "imRep\022\n\n\002iD\030\001 \001(\004\022\013\n\003val\030\002 \001(\00121\n\rCosSim"
-  "Service\022 \n\006CosSim\022\n.CosSimReq\032\n.CosSimRe"
-  "pB\033Z\031sigmaos/apps/cossim/protob\006proto3"
+  "(\004\"P\n\tCosSimReq\022\031\n\010inputVec\030\001 \001(\0132\007.Vect"
+  "or\022\034\n\tvecRanges\030\002 \003(\0132\t.VecRange\022\n\n\002iD\030\003"
+  " \001(\004\"$\n\tCosSimRep\022\n\n\002iD\030\001 \001(\004\022\013\n\003val\030\002 \001"
+  "(\00121\n\rCosSimService\022 \n\006CosSim\022\n.CosSimRe"
+  "q\032\n.CosSimRepB\033Z\031sigmaos/apps/cossim/pro"
+  "tob\006proto3"
   ;
 static ::_pbi::once_flag descriptor_table_cossim_2eproto_once;
 const ::_pbi::DescriptorTable descriptor_table_cossim_2eproto = {
-    false, false, 278, descriptor_table_protodef_cossim_2eproto,
+    false, false, 290, descriptor_table_protodef_cossim_2eproto,
     "cossim.proto",
     &descriptor_table_cossim_2eproto_once, nullptr, 0, 4,
     schemas, file_default_instances, TableStruct_cossim_2eproto::offsets,
@@ -569,12 +572,14 @@ CosSimReq::CosSimReq(const CosSimReq& from)
   new (&_impl_) Impl_{
       decltype(_impl_.vecranges_){from._impl_.vecranges_}
     , decltype(_impl_.inputvec_){nullptr}
+    , decltype(_impl_.id_){}
     , /*decltype(_impl_._cached_size_)*/{}};
 
   _internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
   if (from._internal_has_inputvec()) {
     _this->_impl_.inputvec_ = new ::Vector(*from._impl_.inputvec_);
   }
+  _this->_impl_.id_ = from._impl_.id_;
   // @@protoc_insertion_point(copy_constructor:CosSimReq)
 }
 
@@ -585,6 +590,7 @@ inline void CosSimReq::SharedCtor(
   new (&_impl_) Impl_{
       decltype(_impl_.vecranges_){arena}
     , decltype(_impl_.inputvec_){nullptr}
+    , decltype(_impl_.id_){uint64_t{0u}}
     , /*decltype(_impl_._cached_size_)*/{}
   };
 }
@@ -619,6 +625,7 @@ void CosSimReq::Clear() {
     delete _impl_.inputvec_;
   }
   _impl_.inputvec_ = nullptr;
+  _impl_.id_ = uint64_t{0u};
   _internal_metadata_.Clear<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>();
 }
 
@@ -646,6 +653,14 @@ const char* CosSimReq::_InternalParse(const char* ptr, ::_pbi::ParseContext* ctx
             CHK_(ptr);
             if (!ctx->DataAvailable(ptr)) break;
           } while (::PROTOBUF_NAMESPACE_ID::internal::ExpectTag<18>(ptr));
+        } else
+          goto handle_unusual;
+        continue;
+      // uint64 iD = 3;
+      case 3:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 24)) {
+          _impl_.id_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
+          CHK_(ptr);
         } else
           goto handle_unusual;
         continue;
@@ -693,6 +708,12 @@ uint8_t* CosSimReq::_InternalSerialize(
         InternalWriteMessage(2, repfield, repfield.GetCachedSize(), target, stream);
   }
 
+  // uint64 iD = 3;
+  if (this->_internal_id() != 0) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteUInt64ToArray(3, this->_internal_id(), target);
+  }
+
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
     target = ::_pbi::WireFormat::InternalSerializeUnknownFieldsToArray(
         _internal_metadata_.unknown_fields<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(::PROTOBUF_NAMESPACE_ID::UnknownFieldSet::default_instance), target, stream);
@@ -723,6 +744,11 @@ size_t CosSimReq::ByteSizeLong() const {
         *_impl_.inputvec_);
   }
 
+  // uint64 iD = 3;
+  if (this->_internal_id() != 0) {
+    total_size += ::_pbi::WireFormatLite::UInt64SizePlusOne(this->_internal_id());
+  }
+
   return MaybeComputeUnknownFieldsSize(total_size, &_impl_._cached_size_);
 }
 
@@ -746,6 +772,9 @@ void CosSimReq::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PROT
     _this->_internal_mutable_inputvec()->::Vector::MergeFrom(
         from._internal_inputvec());
   }
+  if (from._internal_id() != 0) {
+    _this->_internal_set_id(from._internal_id());
+  }
   _this->_internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
 }
 
@@ -764,7 +793,12 @@ void CosSimReq::InternalSwap(CosSimReq* other) {
   using std::swap;
   _internal_metadata_.InternalSwap(&other->_internal_metadata_);
   _impl_.vecranges_.InternalSwap(&other->_impl_.vecranges_);
-  swap(_impl_.inputvec_, other->_impl_.inputvec_);
+  ::PROTOBUF_NAMESPACE_ID::internal::memswap<
+      PROTOBUF_FIELD_OFFSET(CosSimReq, _impl_.id_)
+      + sizeof(CosSimReq::_impl_.id_)
+      - PROTOBUF_FIELD_OFFSET(CosSimReq, _impl_.inputvec_)>(
+          reinterpret_cast<char*>(&_impl_.inputvec_),
+          reinterpret_cast<char*>(&other->_impl_.inputvec_));
 }
 
 ::PROTOBUF_NAMESPACE_ID::Metadata CosSimReq::GetMetadata() const {

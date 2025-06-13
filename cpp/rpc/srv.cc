@@ -57,11 +57,13 @@ std::expected<std::shared_ptr<sigmaos::io::transport::Call>, sigmaos::serr::Erro
   // Set the request's blob's IOV to point to the input data, if applicable.
   set_blob_iov(in_iov, *req_proto);
   auto rep_proto = rpce->GetOutput();
+  auto start = GetCurrentTime();
   auto res = rpce->GetFunction()(req_proto, rep_proto);
   if (!res.has_value()) {
     log(RPCSRV_ERR, "rpc::Srv unwrap_and_run_req Run function: {}", res.error());
     return std::unexpected(res.error());
   }
+  log(RPCSRV, "External RPC stub {} latency={:0.3f}ms", wrapper_req.method(), LatencyMS(start));
   auto out_iov = req->GetOutIOVec();
   // Extract any input IOVecs from the reply RPC
   extract_blob_iov(*rep_proto, out_iov);

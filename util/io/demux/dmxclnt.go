@@ -83,9 +83,6 @@ func (dmx *DemuxClnt) SendReceive(req CallI, outiov sessp.IoVec) (CallI, *serr.E
 	// thread doesn't block indefinitely trying to deliver the "TErrIO"
 	// reply.
 	rep := <-ch
-	if time.Since(start) > 40*time.Millisecond {
-		db.DPrintf(db.ALWAYS, "Long RPC: %v", time.Since(start))
-	}
 	return rep.rep, rep.err
 }
 

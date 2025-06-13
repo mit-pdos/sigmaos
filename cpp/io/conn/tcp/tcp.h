@@ -36,6 +36,12 @@ class Conn : public sigmaos::io::conn::Conn {
   void init(int sockfd, sockaddr_in addr) {
     _addr = addr;
     sigmaos::io::conn::Conn::init(sockfd);
+    int flag = 1;
+    if (setsockopt(sockfd, IPPROTO_TCP, TCP_NODELAY, (char *) &flag, sizeof(int))) {
+      close(sockfd);
+      log(TCPCONN_ERR, "Failed to set TCP socket options");
+      fatal("Failed to set TCP socket options");
+    }
   }
 
   private:
@@ -66,12 +72,6 @@ class ClntConn : public Conn {
       close(sockfd);
       log(TCPCONN_ERR, "Failed to connect client TCP socket", srv_addr, port);
       fatal("Failed to connect client TCP socket");
-    }
-    int flag = 1;
-    if (setsockopt(sockfd, IPPROTO_TCP, TCP_NODELAY, (char *) &flag, sizeof(int))) {
-      close(sockfd);
-      log(TCPCONN_ERR, "Failed to set TCP socket options", srv_addr, port);
-      fatal("Failed to set TCP socket options");
     }
     init(sockfd, addr);
   }

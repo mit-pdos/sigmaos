@@ -25,6 +25,8 @@ const int SOCK_BACKLOG = 5;
 const std::string TCPCONN = "TCPCONN";
 const std::string TCPCONN_ERR = TCPCONN + sigmaos::util::log::ERR;
 
+void set_tcp_nodelay(int sockfd);
+
 class Conn : public sigmaos::io::conn::Conn {
   public:
   // Create a tcp connection
@@ -36,12 +38,7 @@ class Conn : public sigmaos::io::conn::Conn {
   void init(int sockfd, sockaddr_in addr) {
     _addr = addr;
     sigmaos::io::conn::Conn::init(sockfd);
-    int flag = 1;
-    if (setsockopt(sockfd, IPPROTO_TCP, TCP_NODELAY, (char *) &flag, sizeof(int))) {
-      close(sockfd);
-      log(TCPCONN_ERR, "Failed to set TCP socket options");
-      fatal("Failed to set TCP socket options");
-    }
+    set_tcp_nodelay(sockfd);
   }
 
   private:

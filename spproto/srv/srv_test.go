@@ -21,6 +21,7 @@ import (
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv/memfssrv/memfs"
 	"sigmaos/sigmasrv/memfssrv/memfs/dir"
+	"sigmaos/sigmasrv/memfssrv/memfs/inode"
 	"sigmaos/sigmasrv/stats"
 	"sigmaos/spproto/srv"
 	"sigmaos/test"
@@ -46,7 +47,7 @@ type tstate struct {
 }
 
 func setupNamed(pe *proc.ProcEnv) fs.Dir {
-	stats := fsetcd.NewPstatsDev()
+	stats := fsetcd.NewPstatsDev(inode.NewInodeAlloc(sp.DEV_STATFS))
 	npc := dialproxyclnt.NewDialProxyClnt(pe)
 	fs, err := fsetcd.NewFsEtcd(npc.Dial, pe.GetEtcdEndpoints(), sp.ROOTREALM, stats)
 	if err != nil {
@@ -71,13 +72,13 @@ func newTstate(t *testing.T) *tstate {
 	var root fs.Dir
 	switch srvname {
 	case sp.MEMFSREL:
-		root = dir.NewRootDir(ctx, memfs.NewInode)
+		root = dir.NewRootDir(ctx, memfs.NewNewInode(sp.DEV_MEMFS))
 	case sp.NAMEDREL:
 		root = setupNamed(pe)
 	default:
 		db.DFatalf("newTstate: Unknown srv %v", srvname)
 	}
-	stats := stats.NewStatsDev()
+	stats := stats.NewStatsDev(inode.NewInodeAlloc(sp.DEV_STATFS))
 	pps := srv.NewProtSrvState(stats)
 	grf := func(*sp.Tprincipal, map[string]*sp.SecretProto, string, sessp.Tsession, sp.TclntId) (fs.Dir, fs.CtxI) {
 		return root, ctx
@@ -181,7 +182,7 @@ func TestWalkClunk(t *testing.T) {
 			ts.clunk(fid)
 		}
 		t := time.Since(s)
-		db.DPrintf(db.TEST, "%d walk+clunk %v us/op %f", n, t, float64(t.Microseconds())/float64(n))
+		db.DPrintf(db.TEST, "%v: %d walk+clunk %v us/op %f", srvname, n, t, float64(t.Microseconds())/float64(n))
 		db.DPrintf(db.TEST, "len freelist %v", ts.srv.Stats())
 	}
 }
@@ -200,7 +201,7 @@ func TestWalkPathClunk(t *testing.T) {
 			ts.clunk(fid)
 		}
 		t := time.Since(s)
-		db.DPrintf(db.TEST, "%d walk+clunk %v us/op %f", n, t, float64(t.Microseconds())/float64(n))
+		db.DPrintf(db.TEST, "%v: %d walk+clunk %v us/op %f", srvname, n, t, float64(t.Microseconds())/float64(n))
 		db.DPrintf(db.TEST, "len freelist %v", ts.srv.Stats())
 	}
 }

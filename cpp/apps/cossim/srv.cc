@@ -45,7 +45,7 @@ std::expected<int, sigmaos::serr::Error> Srv::CosSim(std::shared_ptr<google::pro
   }
   rep->set_id(max_id);
   rep->set_val(max);
-  log(COSSIMSRV, "CosSim rep invec={} max_id={} max={} latency={}", input.size(), max_id, max, LatencyMS(start));
+  log(COSSIMSRV, "CosSim rep invec={} max_id={} max={} latency={:0.3f}ms", input.size(), max_id, max, LatencyMS(start));
   return 0;
 }
 

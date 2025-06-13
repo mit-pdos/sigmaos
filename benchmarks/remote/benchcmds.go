@@ -585,7 +585,7 @@ func GetLCBEHotelImgResizeRPCMultiplexingCmdConstructor(numClients int, rps []in
 func GetCosSimClientCmdConstructor(cossimReqName string, leader bool, numClients int, rps []int, dur []time.Duration, numCaches int, scaleCache bool, clientDelay time.Duration, manuallyScaleCaches bool, scaleCacheDelay time.Duration, numCachesToAdd int, numCosSim int, nvec int, vecDim int, cossimEagerInit, manuallyScaleCosSim bool, scaleCosSimDelay time.Duration, numCosSimToAdd int) GetBenchCmdFn {
 	return func(bcfg *BenchConfig, ccfg *ClusterConfig) string {
 		const (
-			debugSelectors string = "\"TEST;THROUGHPUT;CPU_UTIL;SPAWN_LAT\""
+			debugSelectors string = "\"TEST;THROUGHPUT;CPU_UTIL;SPAWN_LAT;\""
 			perfSelectors  string = "\"COSSIM_TPT;TEST_TPT;BENCH_TPT;\""
 		)
 		testName := ""

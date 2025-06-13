@@ -809,18 +809,16 @@ func TestScaleCosSim(t *testing.T) {
 	)
 	// CosSim benchmark configuration parameters
 	var (
-		//		rps                   []int           = []int{250, 500, 750, 1000, 1250}
-		//		dur                   []time.Duration = []time.Duration{10 * time.Second, 10 * time.Second, 10 * time.Second, 10 * time.Second, 10 * time.Second}
-		rps                   []int           = []int{10000, 12000}
-		dur                   []time.Duration = []time.Duration{10 * time.Second, 10 * time.Second}
+		rps                   []int           = []int{500, 550, 600, 650, 700, 750}
+		dur                   []time.Duration = []time.Duration{10 * time.Second, 10 * time.Second, 10 * time.Second, 10 * time.Second, 10 * time.Second, 10 * time.Second}
 		numCosSimBase         int             = 1
 		numCaches             int             = 1
 		scaleCache            bool            = false
 		clientDelay           time.Duration   = 0 * time.Second
 		sleep                 time.Duration   = 0 * time.Second
-		nvec                  int             = 100
+		nvec                  int             = 5000
 		vecDim                int             = 100
-		eagerInit             bool            = false
+		eagerInit             bool            = true
 		manuallyScaleCosSim   []bool          = []bool{false} //[]bool{true, false}
 		scaleCosSimDelayBase  time.Duration   = 20 * time.Second
 		scaleCosSimExtraDelay []time.Duration = []time.Duration{0}

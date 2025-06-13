@@ -5,6 +5,7 @@ package demux
 
 import (
 	"sync"
+	"time"
 
 	db "sigmaos/debug"
 	"sigmaos/serr"
@@ -62,6 +63,7 @@ func (dmx *DemuxClnt) reader() {
 }
 
 func (dmx *DemuxClnt) SendReceive(req CallI, outiov sessp.IoVec) (CallI, *serr.Err) {
+	start := time.Now()
 	ch := make(chan reply)
 	if err := dmx.callmap.put(req.Tag(), ch); err != nil {
 		db.DPrintf(db.DEMUXCLNT_ERR, "SendReceive: enqueue req %v err %v", req, err)
@@ -81,6 +83,9 @@ func (dmx *DemuxClnt) SendReceive(req CallI, outiov sessp.IoVec) (CallI, *serr.E
 	// thread doesn't block indefinitely trying to deliver the "TErrIO"
 	// reply.
 	rep := <-ch
+	if time.Since(start) > 40*time.Millisecond {
+		db.DPrintf(db.ALWAYS, "Long RPC: %v", time.Since(start))
+	}
 	return rep.rep, rep.err
 }
 

@@ -128,8 +128,10 @@ func (ji *CosSimJobInstance) StartCosSimJob() {
 		go func() {
 			time.Sleep(ji.scaleCosSimDelay)
 			for i := 0; i < ji.nCosSimToAdd; i++ {
+				db.DPrintf(db.TEST, "Scale up cossim srvs to: %v", i+ji.nCosSim)
 				_, _, err := ji.j.AddSrv()
 				assert.Nil(ji.Ts.T, err, "Add CosSim srv: %v", err)
+				db.DPrintf(db.TEST, "Done scale up cossim srvs to: %v", i+ji.nCosSim)
 			}
 		}()
 	}

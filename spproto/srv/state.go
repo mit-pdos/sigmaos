@@ -12,7 +12,6 @@ import (
 	"sigmaos/spproto/srv/lockmap"
 	"sigmaos/spproto/srv/version"
 	"sigmaos/spproto/srv/watch"
-	"sigmaos/util/freelist"
 )
 
 const N = 10000
@@ -24,7 +23,6 @@ type ProtSrvState struct {
 	stats *stats.StatInode
 	lm    *leasedmap.LeasedMap
 	cct   *clntcond.ClntCondTable
-	fidfl *freelist.FreeList[fid.Fid]
 }
 
 func NewProtSrvState(stats *stats.StatInode) *ProtSrvState {
@@ -36,7 +34,6 @@ func NewProtSrvState(stats *stats.StatInode) *ProtSrvState {
 		cct:   cct,
 		wt:    watch.NewWatchTable(),
 		vt:    version.NewVersionTable(),
-		fidfl: freelist.NewFreeList[fid.Fid](N), // one free list shared by all sessions
 	}
 	return pss
 }

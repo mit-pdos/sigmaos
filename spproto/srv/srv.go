@@ -38,7 +38,7 @@ type ProtSrv struct {
 func NewProtSrv(srvPE *proc.ProcEnv, pss *ProtSrvState, p *sp.Tprincipal, sid sessp.Tsession, grf GetRootCtxF, aaf AttachAuthF) *ProtSrv {
 	ps := &ProtSrv{
 		ProtSrvState: pss,
-		fm:           fid.NewFidMap(pss.fidfl),
+		fm:           fid.NewFidMap(),
 		p:            p,
 		srvPE:        srvPE,
 		sid:          sid,
@@ -55,7 +55,6 @@ func NewProtServer(srvPE *proc.ProcEnv, pss *ProtSrvState, p *sp.Tprincipal, sid
 
 type ProtSrvStats struct {
 	nfid         int
-	nfidFree     int
 	nlock        int
 	nlockFree    int
 	nversion     int
@@ -64,7 +63,7 @@ type ProtSrvStats struct {
 
 func (ps *ProtSrv) Stats() *ProtSrvStats {
 	pss := &ProtSrvStats{}
-	pss.nfid, pss.nfidFree = ps.fm.Len()
+	pss.nfid = ps.fm.Len()
 	pss.nlock, pss.nlockFree = ps.ProtSrvState.plt.Len()
 	pss.nversion, pss.nversionFree = ps.ProtSrvState.vt.Len()
 	return pss
@@ -230,9 +229,6 @@ func (ps *ProtSrv) clunk(fid sp.Tfid) *sp.Rerror {
 		defer ps.plt.Release(f.Ctx(), pl, lockmap.WLOCK)
 		ps.wt.CloseWatcher(watch, f)
 	}
-
-	ps.fm.Free(f)
-
 	return nil
 }
 
@@ -315,7 +311,7 @@ func (ps *ProtSrv) Create(args *sp.Tcreate, rets *sp.Rcreate) *sp.Rerror {
 	if err := ps.fm.Update(args.Tfid(), nf); err != nil {
 		return sp.NewRerrorSerr(err)
 	}
-	ps.fm.Free(f)
+	//ps.fm.Free(f)
 	rets.Qid = qid.Proto()
 	return nil
 }
@@ -326,13 +322,13 @@ func (ps *ProtSrv) ReadF(args *sp.TreadF, rets *sp.Rread) ([]byte, *sp.Rerror) {
 		return nil, sp.NewRerrorSerr(err)
 	}
 
-	db.DPrintf(db.PROTSRV, "%v: ReadF f %v path %v args {%v}\n", f.Ctx().ClntId(), f, f.Path(), args)
-
-	if !watch.IsWatch(f.Obj()) {
+	db.DPrintf(db.PROTSRV, "%v: ReadF f %v path %v args {%v}", f.Ctx().ClntId(), f, f.Path(), args)
+	w := watch.IsWatch(f.Obj())
+	if !w {
 		flk := ps.plt.Acquire(f.Ctx(), f.Uid(), lockmap.RLOCK)
 		defer ps.plt.Release(f.Ctx(), flk, lockmap.RLOCK)
 	} else {
-		db.DPrintf(db.PROTSRV, "%v: Watched ReadF (skip locking) f %v path %v args {%v}\n", f.Ctx().ClntId(), f, f.Path(), args)
+		db.DPrintf(db.PROTSRV, "%v: Watched ReadF (skip locking) f %v path %v args {%v}", f.Ctx().ClntId(), f, f.Path(), args)
 	}
 
 	data, err := FidRead(args.Tfid(), f, args.Toffset(), args.Tcount(), args.Tfence())

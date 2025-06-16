@@ -63,6 +63,7 @@ class Srv {
   void ExposeRPCHandler(std::shared_ptr<RPCEndpoint> rpce);
   // Register this server's SigmaEP in the realm namespace at path pn
   std::expected<int, sigmaos::serr::Error> RegisterEP(std::string pn);
+  void RegisterPerfTracker(std::shared_ptr<sigmaos::util::perf::Perf> p) { _perf = p; };
   std::shared_ptr<TendpointProto> GetEndpoint();
   std::expected<int, sigmaos::serr::Error> Close() {
     _done = true;
@@ -77,6 +78,7 @@ class Srv {
   std::shared_ptr<sigmaos::proxy::sigmap::Clnt> _sp_clnt;
   std::shared_ptr<sigmaos::io::net::Srv> _netsrv;
   std::map<std::string, std::shared_ptr<RPCEndpoint>> _rpc_endpoints;
+  std::shared_ptr<sigmaos::util::perf::Perf> _perf;
   // Used for logger initialization
   static bool _l;
   static bool _l_e;

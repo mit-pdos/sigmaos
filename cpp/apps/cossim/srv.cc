@@ -7,6 +7,8 @@ bool Srv::_l = sigmaos::util::log::init_logger(COSSIMSRV);
 bool Srv::_l_e = sigmaos::util::log::init_logger(COSSIMSRV_ERR);
 
 std::expected<int, sigmaos::serr::Error> Srv::CosSim(std::shared_ptr<google::protobuf::Message> preq, std::shared_ptr<google::protobuf::Message> prep) {
+  // Register that a request was received
+  _perf->TptTick(1.0);
   auto start = GetCurrentTime();
   auto req = dynamic_pointer_cast<CosSimReq>(preq);
   auto rep = dynamic_pointer_cast<CosSimRep>(prep);

@@ -129,6 +129,9 @@ std::expected<int, sigmaos::serr::Error> Srv::RegisterEP(std::string pn) {
       log(RPCSRV_ERR, "Error exited: {}", res.error());
     }
   }
+  if (_perf) {
+    _perf->Done();
+  }
   log(RPCSRV, "Exited");
   // exit
   std::exit(0);

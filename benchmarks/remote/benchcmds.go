@@ -586,7 +586,7 @@ func GetCosSimClientCmdConstructor(cossimReqName string, leader bool, numClients
 	return func(bcfg *BenchConfig, ccfg *ClusterConfig) string {
 		const (
 			debugSelectors string = "\"TEST;THROUGHPUT;CPU_UTIL;SPAWN_LAT;\""
-			perfSelectors  string = "\"COSSIM_TPT;TEST_TPT;BENCH_TPT;\""
+			perfSelectors  string = "\"COSSIMSRV_TPT;TEST_TPT;BENCH_TPT;\""
 		)
 		testName := ""
 		if leader {
@@ -626,6 +626,7 @@ func GetCosSimClientCmdConstructor(cossimReqName string, leader bool, numClients
 			"--nclnt %s "+
 			"--cossim_ncache %s "+
 			"--cossim_cache_mcpu 2000 "+
+			"--cossim_srv_mcpu 3000 "+
 			"%s "+ // scaleCache
 			"--cossim_dur %s "+
 			"--cossim_max_rps %s "+

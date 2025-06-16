@@ -809,8 +809,10 @@ func TestScaleCosSim(t *testing.T) {
 	)
 	// CosSim benchmark configuration parameters
 	var (
-		rps                   []int           = []int{500, 550, 600, 650, 700, 750}
-		dur                   []time.Duration = []time.Duration{10 * time.Second, 10 * time.Second, 10 * time.Second, 10 * time.Second, 10 * time.Second, 10 * time.Second}
+		//		rps                   []int           = []int{300, 600, 600}
+		//		dur                   []time.Duration = []time.Duration{5 * time.Second, 30 * time.Second, 30 * time.Second}
+		rps                   []int           = []int{600, 650, 1000} //1300}
+		dur                   []time.Duration = []time.Duration{5 * time.Second, 30 * time.Second, 30 * time.Second}
 		numCosSimBase         int             = 1
 		numCaches             int             = 1
 		scaleCache            bool            = false
@@ -819,10 +821,10 @@ func TestScaleCosSim(t *testing.T) {
 		nvec                  int             = 5000
 		vecDim                int             = 100
 		eagerInit             bool            = true
-		manuallyScaleCosSim   []bool          = []bool{false} //[]bool{true, false}
-		scaleCosSimDelayBase  time.Duration   = 20 * time.Second
+		manuallyScaleCosSim   []bool          = []bool{true, false} //[]bool{true, false}
+		scaleCosSimDelayBase  time.Duration   = 35 * time.Second
 		scaleCosSimExtraDelay []time.Duration = []time.Duration{0}
-		nAdditionalCosSim     []int           = []int{0} //2, 0}
+		nAdditionalCosSim     []int           = []int{0, 1}
 	)
 	ts, err := NewTstate(t)
 	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {

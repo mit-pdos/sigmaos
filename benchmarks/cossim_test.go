@@ -47,6 +47,7 @@ type CosSimJobInstance struct {
 
 func NewCosSimJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, durs string, maxrpss string, fn cosSimFn, justCli bool, ncache int, cacheGC bool, cacheMcpu proc.Tmcpu, manuallyScaleCaches bool, scaleCacheDelay time.Duration, nCachesToAdd int, nCosSim int, cosSimNVec int, cosSimVecDim int, eagerInit bool, mcpuPerSrv proc.Tmcpu, manuallyScaleCosSim bool, scaleCosSimDelay time.Duration, nCosSimToAdd int) *CosSimJobInstance {
 	ji := &CosSimJobInstance{}
+	ji.sigmaos = true
 	ji.job = "cossim-job"
 	ji.ready = make(chan bool)
 	ji.fn = fn

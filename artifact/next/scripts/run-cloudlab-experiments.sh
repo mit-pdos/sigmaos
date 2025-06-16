@@ -56,7 +56,6 @@ AWS_VPC_LARGE=vpc-0affa7f07bd923811
 
 mkdir -p $LOG_DIR
 
-# Figure 8
 if [ $EXP == "all" ] || [ $EXP == "cossim" ]; then
   if [ $RERUN == "true" ]; then
     echo "Clearing any cached CosSim data..."

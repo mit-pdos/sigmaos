@@ -4,8 +4,6 @@
 
 #include <google/protobuf/util/time_util.h>
 
-#include <util/log/log.h>
-
 google::protobuf::Timestamp epoch = google::protobuf::util::TimeUtil::GetEpoch();
 
 void LogSpawnLatency(sigmaos::sigmap::types::Tpid pid, google::protobuf::Timestamp spawn_time, google::protobuf::Timestamp op_start, std::string msg) {

@@ -22,7 +22,7 @@ namespace sigmaos {
 namespace util::perf {
 
 // Selector constants
-const std::string _TPT = "TPT";
+const std::string TPT = "_TPT";
 
 // Performance constants
 const int SAMPLE_HZ = 50;
@@ -34,7 +34,7 @@ const std::string PERF_OUTPUT_BASE_PATH = "/tmp/sigmaos-perf/";
 class Perf {
   public:
   Perf(std::shared_ptr<sigmaos::proc::ProcEnv> pe, std::string selector) : _selector(selector), _pe(pe), _tpt(false), _tpts(), _times() {
-    if (sigmaos::util::common::ContainsLabel(_pe->GetPerf(), _selector + _TPT)) {
+    if (sigmaos::util::common::ContainsLabel(_pe->GetPerf(), _selector + TPT)) {
       setup_tpt(SAMPLE_HZ);
     }
   }

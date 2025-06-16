@@ -10,6 +10,8 @@
 #include <spdlog/spdlog.h>
 #include <spdlog/common.h>
 
+#include <util/common/util.h>
+
 // Some common debug selectors
 const std::string TEST = "TEST";
 const std::string ALWAYS = "ALWAYS";
@@ -32,23 +34,7 @@ class sigmadebug_sink : public spdlog::sinks::base_sink<std::mutex> {
     }
     std::string sigmadebug(std::getenv("SIGMADEBUG"));
     std::string pid(std::getenv("SIGMADEBUGPID"));
-    _stdout_sink->set_pattern(std::format("%H:%M:%S.%f {} {} %v", pid, selector));
-    int nextpos = sigmadebug.find(selector);
-    while (nextpos != std::string::npos) {
-      // Save current pos
-      int pos = nextpos;
-      // Advance nextpos
-      nextpos = sigmadebug.find(selector, pos + 1);
-      // Check that the selector is delimited on either side. If not, continue
-      if (!(pos == 0 || sigmadebug[pos - 1] == ';')) {
-        continue;
-      }
-      if (!(pos + selector.length() == sigmadebug.length() || sigmadebug[pos + selector.length()] == ';')) {
-        continue;
-      }
-      _enabled = true;
-      break;
-    }
+    _enabled |= sigmaos::util::common::ContainsLabel(sigmadebug, pid);
   }
   void sink_it_(const spdlog::details::log_msg& msg) override {
     if (_enabled) {

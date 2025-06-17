@@ -5,6 +5,8 @@
 #include <format>
 #include <string>
 
+#include <iostream>
+
 #include <spdlog/sinks/base_sink.h>
 #include <spdlog/sinks/stdout_sinks.h>
 #include <spdlog/spdlog.h>
@@ -29,10 +31,13 @@ const std::string ERR = "_ERR";
 class sigmadebug_sink : public spdlog::sinks::base_sink<std::mutex> {
   public:
   sigmadebug_sink(std::string selector) : _enabled(false), _stdout_sink(std::make_shared<spdlog::sinks::stdout_sink_mt>()) {
+    std::string sigmadebug(std::getenv("SIGMADEBUG"));
+    std::string pid(std::getenv("SIGMADEBUGPID"));
+    _stdout_sink->set_pattern(std::format("%H:%M:%S.%f {} {} %v", pid, selector));
     if (selector == ALWAYS || selector == FATAL) {
       _enabled = true;
     } else {
-      _enabled = sigmaos::util::common::ContainsLabel(std::getenv("SIGMADEBUG"), std::getenv("SIGMADEBUGPID"));
+      _enabled = sigmaos::util::common::ContainsLabel(sigmadebug, selector);
     }
   }
   void sink_it_(const spdlog::details::log_msg& msg) override {

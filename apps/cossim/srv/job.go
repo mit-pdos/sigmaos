@@ -55,11 +55,13 @@ func writeVectorsToCache(cc *cachegrpclnt.CachedSvcClnt, vecs []*cossimproto.Vec
 	shard := &cacheproto.ShardReq{
 		Vals: m,
 	}
+	db.DPrintf(db.ALWAYS, "Put all vecs")
 	// Also store all values in a single key
 	if err := cc.Put("all-vecs", shard); err != nil {
 		db.DPrintf(db.ERROR, "Error write all vecs")
 		return err
 	}
+	db.DPrintf(db.ALWAYS, "Done Put all vecs")
 	return nil
 }
 

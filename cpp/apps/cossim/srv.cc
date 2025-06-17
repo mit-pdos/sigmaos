@@ -79,11 +79,14 @@ std::expected<int, sigmaos::serr::Error> Srv::fetch_vector(uint64_t id) {
       return res;
     }
   }
+  LogSpawnLatency(_sp_clnt->ProcEnv()->GetPID(), _sp_clnt->ProcEnv()->GetSpawnTime(), start, "Get vector");
   // Parse the vector
+  auto start_parse_and_alloc = GetCurrentTime();
   Vector v;
   v.ParseFromString(b);
   _vec_db[id] = std::vector<double>(v.vals().begin(), v.vals().end());
-  LogSpawnLatency(_sp_clnt->ProcEnv()->GetPID(), _sp_clnt->ProcEnv()->GetSpawnTime(), start, "Fetch vector");
+  LogSpawnLatency(_sp_clnt->ProcEnv()->GetPID(), _sp_clnt->ProcEnv()->GetSpawnTime(), start_parse_and_alloc, "Parse & alloc vector");
+  LogSpawnLatency(_sp_clnt->ProcEnv()->GetPID(), _sp_clnt->ProcEnv()->GetSpawnTime(), start, "Fetch vector e2e");
   return 0;
 }
 

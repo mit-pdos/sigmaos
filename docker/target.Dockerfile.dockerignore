@@ -7,5 +7,8 @@ Dockerfile.*
 !make.sh
 !create-net.sh
 rs/*/target/
-cpp/build
+cpp
 */*_test.go
+bin/kernel/junction
+bin/kernel/junction_run
+bin/kernel/iokenreld

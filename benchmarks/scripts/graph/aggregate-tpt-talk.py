@@ -293,7 +293,6 @@ def graph_data(input_load_label, input_dir_sigmaos, input_dir_k8s, title, out, h
   if len(hotel_lats) > 0:
     x1, y1 = buckets_to_lists(hotel_tail_lat_buckets)
     ymax = max(ymax, max(y1))
-    print(len(tptax))
     p_tail_lat = add_data_to_graph(tptax[tptax_idx + 1], x1, y1, str(int(percentile)) + "% tail latency (ms)", "red", "-", "")
     plots.append(p_tail_lat)
     x2, y2 = buckets_to_lists(hotel_avg_lat_buckets)

@@ -251,8 +251,9 @@ func (sca *SPProxySrvAPI) Seek(ctx fs.CtxI, req scproto.SigmaSeekReq, rep *scpro
 
 func (sca *SPProxySrvAPI) WriteRead(ctx fs.CtxI, req scproto.SigmaWriteReq, rep *scproto.SigmaDataRep) error {
 	bl := make(sessp.IoVec, req.NOutVec)
+	start := time.Now()
 	err := sca.sc.WriteRead(int(req.Fd), req.Blob.GetIoVec(), bl)
-	db.DPrintf(db.SPPROXYSRV, "%v: WriteRead %v %v %v %v", sca.sc.ClntId(), req.Fd, len(req.Blob.Iov), len(bl), err)
+	db.DPrintf(db.SPPROXYSRV, "%v: WriteRead (lat=%v) fd:%v nInIOV:%v nOutIOV:%v err:%v", sca.sc.ClntId(), time.Since(start), req.Fd, len(req.Blob.Iov), len(bl), err)
 	rep.Blob = rpcproto.NewBlob(bl)
 	rep.Err = sca.setErr(err)
 	return nil

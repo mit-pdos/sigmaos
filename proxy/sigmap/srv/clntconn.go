@@ -268,10 +268,11 @@ func (sca *SPProxySrvAPI) CreateLeased(ctx fs.CtxI, req scproto.SigmaCreateReq, 
 }
 
 func (sca *SPProxySrvAPI) ClntId(ctx fs.CtxI, req scproto.SigmaNullReq, rep *scproto.SigmaClntIdRep) error {
+	start := time.Now()
 	id := sca.sc.ClntId()
 	rep.ClntId = uint64(id)
 	rep.Err = sca.setErr(nil)
-	db.DPrintf(db.SPPROXYSRV, "%v: ClntId %v %v", sca.sc.ClntId(), req, rep)
+	db.DPrintf(db.SPPROXYSRV, "%v: ClntId (lat=%v) %v %v", sca.sc.ClntId(), time.Since(start), req, rep)
 	return nil
 }
 

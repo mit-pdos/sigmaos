@@ -6,11 +6,14 @@ import (
 	"sync"
 	"time"
 
+	"google.golang.org/protobuf/proto"
+
 	cachegrpclnt "sigmaos/apps/cache/cachegrp/clnt"
 	cachegrpmgr "sigmaos/apps/cache/cachegrp/mgr"
+	cacheproto "sigmaos/apps/cache/proto"
 	"sigmaos/apps/cossim"
 	"sigmaos/apps/cossim/clnt"
-	"sigmaos/apps/cossim/proto"
+	cossimproto "sigmaos/apps/cossim/proto"
 	"sigmaos/apps/epcache"
 	epsrv "sigmaos/apps/epcache/srv"
 	db "sigmaos/debug"
@@ -36,11 +39,26 @@ func initFS(sc *sigmaclnt.SigmaClnt, jobname string) error {
 }
 
 // Write vector DB to cache srv
-func writeVectorsToCache(cc *cachegrpclnt.CachedSvcClnt, vecs []*proto.Vector) error {
+func writeVectorsToCache(cc *cachegrpclnt.CachedSvcClnt, vecs []*cossimproto.Vector) error {
+	m := make(map[string][]byte)
 	for id, v := range vecs {
 		if err := cc.Put(strconv.Itoa(id), v); err != nil {
 			return err
 		}
+		b, err := proto.Marshal(v)
+		if err != nil {
+			db.DPrintf(db.ERROR, "Error marshal vec when writing to cache")
+			return err
+		}
+		m[strconv.Itoa(id)] = b
+	}
+	shard := &cacheproto.ShardReq{
+		Vals: m,
+	}
+	// Also store all values in a single key
+	if err := cc.Put("all-vecs", shard); err != nil {
+		db.DPrintf(db.ERROR, "Error write all vecs")
+		return err
 	}
 	return nil
 }
@@ -57,7 +75,7 @@ type CosSimJob struct {
 	nvec       int
 	vecDim     int
 	eagerInit  bool
-	vecs       []*proto.Vector
+	vecs       []*cossimproto.Vector
 	srvMcpu    proc.Tmcpu
 	srvs       []*proc.Proc
 	Clnt       *clnt.CosSimShardClnt

@@ -27,7 +27,8 @@ func NewNamedProc(realm sp.Trealm, dialproxy bool, canFail bool) *proc.Proc {
 	return p
 }
 
-func StartNamed(sc *sigmaclnt.SigmaClnt, nd *proc.Proc, pn string) error {
+func ClearAndStartNamed(sc *sigmaclnt.SigmaClnt, nd *proc.Proc, pn string) error {
+	RemoveNamedEP(sc.FsLib, pn)
 	if err := sc.Spawn(nd); err != nil {
 		return err
 	}
@@ -38,6 +39,17 @@ func StartNamed(sc *sigmaclnt.SigmaClnt, nd *proc.Proc, pn string) error {
 		return err
 	}
 	db.DPrintf(db.TEST, "New named ready to serve")
+	return nil
+}
+
+func StartNamed(sc *sigmaclnt.SigmaClnt, nd *proc.Proc, pn string) error {
+	if err := sc.Spawn(nd); err != nil {
+		return err
+	}
+	if err := sc.WaitStart(nd.GetPid()); err != nil {
+		return err
+	}
+	db.DPrintf(db.TEST, "New named spawned")
 	return nil
 }
 

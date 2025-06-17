@@ -73,7 +73,7 @@ func TestCrashNamedAlone(t *testing.T) {
 
 	nd1 := ndclnt.NewNamedProc(test.REALM1, ts.ProcEnv().UseDialProxy, true)
 	pn := filepath.Join(sp.REALMS, test.REALM1.String())
-	if err := ndclnt.StartNamed(ts.SigmaClnt, nd1, pn); !assert.Nil(ts.T, err, "Err startNamed: %v", err) {
+	if err := ndclnt.ClearAndStartNamed(ts.SigmaClnt, nd1, pn); !assert.Nil(ts.T, err, "Err startNamed: %v", err) {
 		return
 	}
 
@@ -112,7 +112,7 @@ func TestCrashNamedAlone(t *testing.T) {
 	// Start a new named
 	nd2 := ndclnt.NewNamedProc(test.REALM1, ts.ProcEnv().UseDialProxy, false)
 	db.DPrintf(db.TEST, "Starting a new named: %v", nd2.GetPid())
-	if err := ndclnt.StartNamed(ts.SigmaClnt, nd2, pn); !assert.Nil(ts.T, err, "Err startNamed 2: %v", err) {
+	if err := ndclnt.ClearAndStartNamed(ts.SigmaClnt, nd2, pn); !assert.Nil(ts.T, err, "Err startNamed 2: %v", err) {
 		return
 	}
 
@@ -193,7 +193,7 @@ func TestCrashNamedClient(t *testing.T) {
 
 	nd1 := ndclnt.NewNamedProc(test.REALM1, ts.ProcEnv().UseDialProxy, true)
 	pn := filepath.Join(sp.REALMS, test.REALM1.String())
-	if err := ndclnt.StartNamed(ts.SigmaClnt, nd1, pn); !assert.Nil(ts.T, err, "Err startNamed: %v", err) {
+	if err := ndclnt.ClearAndStartNamed(ts.SigmaClnt, nd1, pn); !assert.Nil(ts.T, err, "Err startNamed: %v", err) {
 		return
 	}
 
@@ -249,7 +249,7 @@ func TestAtMostOnce(t *testing.T) {
 
 	nd1 := ndclnt.NewNamedProc(test.REALM1, ts.ProcEnv().UseDialProxy, true)
 	pn := filepath.Join(sp.REALMS, test.REALM1.String())
-	if err := ndclnt.StartNamed(ts.SigmaClnt, nd1, pn); !assert.Nil(ts.T, err, "Err startNamed: %v", err) {
+	if err := ndclnt.ClearAndStartNamed(ts.SigmaClnt, nd1, pn); !assert.Nil(ts.T, err, "Err startNamed: %v", err) {
 		return
 	}
 
@@ -293,7 +293,7 @@ func reboot(t *testing.T, dn string, f func(*test.Tstate, *sigmaclnt.SigmaClnt, 
 
 	nd1 := ndclnt.NewNamedProc(test.REALM1, ts.ProcEnv().UseDialProxy, true)
 	pn := filepath.Join(sp.REALMS, test.REALM1.String())
-	if err := ndclnt.StartNamed(ts.SigmaClnt, nd1, pn); !assert.Nil(ts.T, err, "Err startNamed: %v", err) {
+	if err := ndclnt.ClearAndStartNamed(ts.SigmaClnt, nd1, pn); !assert.Nil(ts.T, err, "Err startNamed: %v", err) {
 		return
 	}
 
@@ -333,7 +333,7 @@ func reboot(t *testing.T, dn string, f func(*test.Tstate, *sigmaclnt.SigmaClnt, 
 	defer ts.Shutdown()
 
 	nd2 := ndclnt.NewNamedProc(test.REALM1, ts.ProcEnv().UseDialProxy, true)
-	if err := ndclnt.StartNamed(ts.SigmaClnt, nd2, pn); !assert.Nil(ts.T, err, "Err startNamed: %v", err) {
+	if err := ndclnt.ClearAndStartNamed(ts.SigmaClnt, nd2, pn); !assert.Nil(ts.T, err, "Err startNamed: %v", err) {
 		return
 	}
 
@@ -377,7 +377,7 @@ func TestLeaseQuickReboot(t *testing.T) {
 
 	nd1 := ndclnt.NewNamedProc(test.REALM1, ts.ProcEnv().UseDialProxy, true)
 	pn := filepath.Join(sp.REALMS, test.REALM1.String())
-	if err := ndclnt.StartNamed(ts.SigmaClnt, nd1, pn); !assert.Nil(ts.T, err, "Err startNamed: %v", err) {
+	if err := ndclnt.ClearAndStartNamed(ts.SigmaClnt, nd1, pn); !assert.Nil(ts.T, err, "Err startNamed: %v", err) {
 		return
 	}
 
@@ -450,7 +450,7 @@ func TestLeaseDelayReboot(t *testing.T) {
 
 	nd1 := ndclnt.NewNamedProc(test.REALM1, ts.ProcEnv().UseDialProxy, true)
 	pn := filepath.Join(sp.REALMS, test.REALM1.String())
-	if err := ndclnt.StartNamed(ts.SigmaClnt, nd1, pn); !assert.Nil(ts.T, err, "Err startNamed: %v", err) {
+	if err := ndclnt.ClearAndStartNamed(ts.SigmaClnt, nd1, pn); !assert.Nil(ts.T, err, "Err startNamed: %v", err) {
 		return
 	}
 

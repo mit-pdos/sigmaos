@@ -205,7 +205,7 @@ func (pathc *PathClnt) Stat(pn sp.Tsigmapath, principal *sp.Tprincipal) (*sp.Tst
 	}
 	target, rest, err := pathc.mntclnt.Resolve(splitPN, principal, true)
 	if err != nil {
-		db.DPrintf(db.ALWAYS, "%v: Stat resolve %v err %v\n", pathc.cid, splitPN, err)
+		db.DPrintf(db.PATHCLNT_ERR, "%v: Stat resolve %v err %v\n", pathc.cid, splitPN, err)
 	}
 	db.DPrintf(db.PATHCLNT, "%v: Stat resolve %v target %v rest %v\n", pathc.cid, splitPN, target, rest)
 	if len(rest) == 0 && !path.EndSlash(pn) {

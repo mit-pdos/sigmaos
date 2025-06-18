@@ -72,21 +72,56 @@ std::expected<int, sigmaos::serr::Error> Conn::Close() {
 }
 
 std::expected<int, sigmaos::serr::Error> Conn::read_bytes(char *b, size_t size) {
-  int n = read(_sockfd, b, size);
-  if (n != size) {
-    log(CONN_ERR, "Err read_bytes fd {}", _sockfd);
-    return std::unexpected(sigmaos::serr::Error(sigmaos::serr::Terror::TErrUnreachable, std::format("read wrong num bytes: {} != {}", n, size)));
+  int total = 0;
+  while (total != size) {
+    int n = read(_sockfd, b, size);
+    // EOF
+    if (n == 0) {
+      break;
+    }
+    // Error
+    if (n == -1) {
+      log(CONN_ERR, "Err read_bytes fd {}", _sockfd);
+      return std::unexpected(sigmaos::serr::Error(sigmaos::serr::Terror::TErrUnreachable, "read error"));
+    }
+    // Success
+    // Move the pointer into the buffer forward
+    b += n;
+    // Increment the total number of bytes read
+    total += n;
   }
-  return n;
+  if (total != size) {
+    log(CONN_ERR, "Err read_bytes fd {} n({:d}) != size({:d})", _sockfd, (int) total, (int) size);
+    return std::unexpected(sigmaos::serr::Error(sigmaos::serr::Terror::TErrUnreachable, std::format("read wrong num bytes: {} != {}", (int) total, (int) size)));
+  }
+  return total;
 }
 
+// TODO: multi-step writes
 std::expected<int, sigmaos::serr::Error> Conn::write_bytes(const char *b, size_t size) {
-  int n = write(_sockfd, b, size);
-  if (n != size) {
-    log(CONN_ERR, "Err write_bytes fd {}", _sockfd);
-    return std::unexpected(sigmaos::serr::Error(sigmaos::serr::Terror::TErrUnreachable, std::format("wrote wrong num bytes: {} != {}", n, size)));
+  int total = 0;
+  while (total != size) {
+    int n = write(_sockfd, b, size);
+    // EOF
+    if (n == 0) {
+      break;
+    }
+    // Error
+    if (n == -1) {
+      log(CONN_ERR, "Err write_bytes fd {}", _sockfd);
+      return std::unexpected(sigmaos::serr::Error(sigmaos::serr::Terror::TErrUnreachable, "write error"));
+    }
+    // Success
+    // Move the pointer into the buffer forward
+    b += n;
+    // Increment the total number of bytes read
+    total += n;
   }
-  return n;
+  if (total != size) {
+    log(CONN_ERR, "Err write_bytes fd {}", _sockfd);
+    return std::unexpected(sigmaos::serr::Error(sigmaos::serr::Terror::TErrUnreachable, std::format("wrote wrong num bytes: {} != {}", (int) total, (int) size)));
+  }
+  return total;
 }
 
 };

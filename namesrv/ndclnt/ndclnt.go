@@ -4,15 +4,53 @@ import (
 	"fmt"
 
 	db "sigmaos/debug"
-	"sigmaos/ft/procgroupmgr"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
-	"sigmaos/sigmaclnt/fslib"
 	sp "sigmaos/sigmap"
-	//"sigmaos/test"
 )
 
 const MCPU proc.Tmcpu = 1000
+
+type NdClnt struct {
+	sc *sigmaclnt.SigmaClnt
+	pn string
+}
+
+func NewNdClnt(sc *sigmaclnt.SigmaClnt, pn string) *NdClnt {
+	return &NdClnt{
+		sc: sc,
+		pn: pn,
+	}
+}
+
+func (ndc *NdClnt) Name() string {
+	return ndc.pn
+}
+
+// Remove the named ep file for the new realm, in case the realm name
+// is re-used and it hasn't been clean removed yet (e.g., by
+// realmd). Once it is removed, we can watch for it to detect if the
+// named of the new incarnation of the realm exists. (The EP file
+// isn't leased and thus not automatically deleted.)
+func (ndc *NdClnt) RemoveNamedEP() error {
+	err := ndc.sc.Remove(ndc.pn)
+	return err
+}
+
+// Wait until the realm's named has registered its endpoint and is
+// ready to serve
+func (ndc *NdClnt) WaitNamed() error {
+	if b, err := ndc.sc.GetFileWatch(ndc.pn); err != nil {
+		return err
+	} else {
+		ep, err := sp.NewEndpointFromBytes(b)
+		if err != nil {
+			db.DPrintf(db.NAMED_LDR, "named ep %v err %v", string(b), err)
+		}
+		db.DPrintf(db.NAMED_LDR, "named ep %v", ep)
+	}
+	return nil
+}
 
 func NewNamedProc(realm sp.Trealm, dialproxy bool, canFail bool) *proc.Proc {
 	p := proc.NewProc(sp.NAMEDREL, []string{realm.String()})
@@ -27,73 +65,43 @@ func NewNamedProc(realm sp.Trealm, dialproxy bool, canFail bool) *proc.Proc {
 	return p
 }
 
-func ClearAndStartNamed(sc *sigmaclnt.SigmaClnt, nd *proc.Proc, pn string) error {
-	RemoveNamedEP(sc.FsLib, pn)
-	if err := sc.Spawn(nd); err != nil {
+func (ndc *NdClnt) ClearAndStartNamed(nd *proc.Proc) error {
+	ndc.RemoveNamedEP()
+	if err := ndc.sc.Spawn(nd); err != nil {
 		return err
 	}
-	if err := sc.WaitStart(nd.GetPid()); err != nil {
+	if err := ndc.sc.WaitStart(nd.GetPid()); err != nil {
 		return err
 	}
-	if err := WaitNamed(sc.FsLib, pn); err != nil {
+	if err := ndc.WaitNamed(); err != nil {
 		return err
 	}
 	db.DPrintf(db.TEST, "New named ready to serve")
 	return nil
 }
 
-func StartNamed(sc *sigmaclnt.SigmaClnt, nd *proc.Proc, pn string) error {
-	if err := sc.Spawn(nd); err != nil {
+func (ndc *NdClnt) StartNamed(nd *proc.Proc) error {
+	if err := ndc.sc.Spawn(nd); err != nil {
 		return err
 	}
-	if err := sc.WaitStart(nd.GetPid()); err != nil {
+	if err := ndc.sc.WaitStart(nd.GetPid()); err != nil {
 		return err
 	}
 	db.DPrintf(db.TEST, "New named spawned")
 	return nil
 }
 
-func StartNamedGrp(sc *sigmaclnt.SigmaClnt, cfg *procgroupmgr.ProcGroupMgrConfig) *procgroupmgr.ProcGroupMgr {
-	db.DPrintf(db.NAMED_LDR, "StartNamedGrp %v spawn named", cfg)
-	return cfg.StartGrpMgr(sc)
-}
-
-// wait until the realm's named has registered its endpoint and is ready to
-// serve
-func WaitNamed(fsl *fslib.FsLib, pn string) error {
-	if b, err := fsl.GetFileWatch(pn); err != nil {
-		return err
-	} else {
-		ep, err := sp.NewEndpointFromBytes(b)
-		if err != nil {
-			db.DPrintf(db.NAMED_LDR, "named ep %v err %v", string(b), err)
-		}
-		db.DPrintf(db.NAMED_LDR, "named ep %v", ep)
-	}
-	return nil
-}
-
-func StopNamed(sc *sigmaclnt.SigmaClnt, nd *proc.Proc) error {
-	// Evict the new named
-	if err := sc.Evict(nd.GetPid()); err != nil {
+func (ndc *NdClnt) StopNamed(nd *proc.Proc) error {
+	// Evict the named
+	if err := ndc.sc.Evict(nd.GetPid()); err != nil {
 		return err
 	}
-	status, err := sc.WaitExit(nd.GetPid())
+	status, err := ndc.sc.WaitExit(nd.GetPid())
 	if err != nil {
 		return err
 	}
 	if !status.IsStatusEvicted() {
 		return fmt.Errorf("Wrong exit status %v", status)
 	}
-	return err
-}
-
-// Remove the named ep file for the new realm, in case the realm name
-// is re-used and it hasn't been clean removed yet (e.g., by
-// realmd). Once it is removed, we can watch for it to detect if the
-// named of the new incarnation of the realm exists. (The EP file
-// isn't leased and thus not automatically deleted.)
-func RemoveNamedEP(fsl *fslib.FsLib, pn string) error {
-	err := fsl.Remove(pn)
 	return err
 }

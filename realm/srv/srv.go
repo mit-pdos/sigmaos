@@ -40,8 +40,7 @@ type Subsystem struct {
 
 type Realm struct {
 	sync.Mutex
-	namedcfg                 *procgroupmgr.ProcGroupMgrConfig
-	namedgrp                 *procgroupmgr.ProcGroupMgr
+	ndg                      *ndclnt.NdMgr
 	perRealmKernelSubsystems []*Subsystem
 	sc                       *sigmaclnt.SigmaClnt
 }
@@ -138,18 +137,17 @@ func (rm *RealmSrv) Make(ctx fs.CtxI, req proto.MakeReq, res *proto.MakeRep) err
 	}
 	r := newRealm()
 
-	// Remove realm's named EP, so that realm can watch for it to
-	// detect if the named of the new incarnation of the realm
-	// exists.
 	pn := filepath.Join(sp.REALMS, req.Realm)
-	err := ndclnt.RemoveNamedEP(rm.sc.FsLib, pn)
-	db.DPrintf(db.REALMD, "RealmSrv.Make %v rm named ep err %v", pn, err)
+	r.ndg = ndclnt.NewNdGrpMgr(rm.sc.SigmaClnt(), pn, procgroupmgr.NewProcGroupConfigRealmSwitch(1, sp.NAMEDREL, nil, NAMED_MCPU, req.Realm, rid, rm.dialproxy), true)
 
-	r.namedcfg = procgroupmgr.NewProcGroupConfigRealmSwitch(1, sp.NAMEDREL, nil, NAMED_MCPU, req.Realm, rid, rm.dialproxy)
-	r.namedgrp = ndclnt.StartNamedGrp(rm.sc.SigmaClnt(), r.namedcfg)
+	if err := r.ndg.StartNamedGrp(); err != nil {
+		db.DPrintf(db.ERROR, "Error StartNamedGrp %v", err)
+		return err
+	}
+
 	db.DPrintf(db.REALMD, "RealmSrv.Make %v named started", req.Realm)
 
-	if err := ndclnt.WaitNamed(rm.sc.FsLib, pn); err != nil {
+	if err := r.ndg.WaitNamed(); err != nil {
 		db.DPrintf(db.ERROR, "Error GetFileWatch named root %v: %v", pn, err)
 		return err
 	}
@@ -265,14 +263,12 @@ func (rm *RealmSrv) Remove(ctx fs.CtxI, req proto.RemoveReq, res *proto.RemoveRe
 
 	// XXX remove root dir
 
-	if _, err := r.namedgrp.StopGroup(); err != nil {
+	if err := r.ndg.StopNamedGrp(); err != nil {
 		db.DPrintf(db.ERROR, "Error stop realm named group: %v", err)
 		return err
 	}
-
-	pn := filepath.Join(sp.REALMS, req.Realm)
-	if err := rm.sc.SigmaClnt().Remove(pn); err != nil {
-		db.DPrintf(db.ERROR, "Remove %v err %v", pn, err)
+	if err := r.ndg.RemoveNamedEP(); err != nil {
+		db.DPrintf(db.ERROR, "RemoveNamedEP %v err %v", r.ndg.Name(), err)
 	}
 
 	delete(rm.realms, rid)

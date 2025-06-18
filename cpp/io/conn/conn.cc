@@ -97,7 +97,6 @@ std::expected<int, sigmaos::serr::Error> Conn::read_bytes(char *b, size_t size) 
   return total;
 }
 
-// TODO: multi-step writes
 std::expected<int, sigmaos::serr::Error> Conn::write_bytes(const char *b, size_t size) {
   int total = 0;
   while (total != size) {

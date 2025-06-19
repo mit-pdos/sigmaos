@@ -107,6 +107,7 @@ func (spps *SPProxySrv) runServer() error {
 		}
 		db.DPrintf(db.SPPROXYSRV, "exiting")
 		os.Remove(sp.SIGMASOCKET)
+		os.Remove(sp.SIGMASOCKET_CTRL)
 		spps.fidc.Close()
 		spps.nps.Shutdown()
 		os.Exit(0)

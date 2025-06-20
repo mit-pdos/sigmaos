@@ -174,17 +174,18 @@ func (pathc *PathClnt) renameat(old, new sp.Tsigmapath, principal *sp.Tprincipal
 
 func (pathc *PathClnt) Remove(pn sp.Tsigmapath, principal *sp.Tprincipal, f *sp.Tfence) error {
 	db.DPrintf(db.PATHCLNT, "%v: Remove %v\n", pathc.cid, pn)
-
 	splitPN, err := serr.PathSplitErr(pn)
 	if err != nil {
 		return err
 	}
+	open := false
 	fid, rest, err := pathc.mntclnt.Resolve(splitPN, principal, path.EndSlash(pn))
-	if err != nil {
-		return err
+	if err == nil {
+		err = pathc.FidClnt.RemoveFile(fid, rest, path.EndSlash(pn), f)
+	} else {
+		open = true
 	}
-	err = pathc.FidClnt.RemoveFile(fid, rest, path.EndSlash(pn), f)
-	if serr.IsRetryOK(err) {
+	if open || serr.IsRetryOK(err) {
 		fid, err = pathc.open(splitPN, principal, path.EndSlash(pn), nil)
 		if err != nil {
 			return err
@@ -298,12 +299,15 @@ func (pathc *PathClnt) GetFile(pn sp.Tsigmapath, principal *sp.Tprincipal, mode 
 	if err != nil {
 		return nil, err
 	}
+	open := false
+	var data []byte
 	fid, rest, err := pathc.mntclnt.Resolve(p, principal, path.EndSlash(pn))
-	if err != nil {
-		return nil, err
+	if err == nil {
+		data, err = pathc.FidClnt.GetFile(fid, rest, mode, off, cnt, path.EndSlash(pn), f)
+	} else {
+		open = true
 	}
-	data, err := pathc.FidClnt.GetFile(fid, rest, mode, off, cnt, path.EndSlash(pn), f)
-	if serr.IsRetryOK(err) {
+	if open || serr.IsRetryOK(err) {
 		fid, err = pathc.open(p, principal, path.EndSlash(pn), nil)
 		if err != nil {
 			return nil, err
@@ -329,13 +333,15 @@ func (pathc *PathClnt) PutFile(pn sp.Tsigmapath, principal *sp.Tprincipal, mode 
 	if err != nil {
 		return 0, err
 	}
+	open := false
+	cnt := sp.Tsize(0)
 	fid, rest, err := pathc.mntclnt.Resolve(p, principal, path.EndSlash(pn))
-	if err != nil {
-		db.DPrintf(db.PATHCLNT_ERR, "%v: Error PutFile resolve %v %v %v: %v", pathc.cid, pn, mode, lid, err)
-		return 0, err
+	if err == nil {
+		cnt, err = pathc.FidClnt.PutFile(fid, rest, mode, perm, off, data, path.EndSlash(pn), lid, f)
+	} else {
+		open = true
 	}
-	cnt, err := pathc.FidClnt.PutFile(fid, rest, mode, perm, off, data, path.EndSlash(pn), lid, f)
-	if serr.IsRetryOK(err) {
+	if open || serr.IsRetryOK(err) {
 		dir := p.Dir()
 		base := path.Tpathname{p.Base()}
 		resolve := true

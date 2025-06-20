@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 
 	db "sigmaos/debug"
+	dialproxyclnt "sigmaos/dialproxy/clnt"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
@@ -13,15 +14,26 @@ import (
 const MCPU proc.Tmcpu = 1000
 
 type NdClnt struct {
-	scRoot *sigmaclnt.SigmaClnt
-	pn     string
+	scRoot  *sigmaclnt.SigmaClnt
+	scRealm *sigmaclnt.SigmaClnt
+	pn      string
 }
 
-func NewNdClnt(sc *sigmaclnt.SigmaClnt, realm sp.Trealm) *NdClnt {
-	return &NdClnt{
-		scRoot: sc,
-		pn:     filepath.Join(sp.REALMS, realm.String()),
+func NewNdClnt(scRoot *sigmaclnt.SigmaClnt, realm sp.Trealm) (*NdClnt, error) {
+	pe := proc.NewDifferentRealmProcEnv(scRoot.ProcEnv(), realm)
+	sc, err := sigmaclnt.NewSigmaClntFsLib(pe, dialproxyclnt.NewDialProxyClnt(pe))
+	if err != nil {
+		return nil, err
 	}
+	return &NdClnt{
+		scRoot:  scRoot,
+		scRealm: sc,
+		pn:      filepath.Join(sp.REALMS, realm.String()),
+	}, nil
+}
+
+func (ndc *NdClnt) SigmaClntRealm() *sigmaclnt.SigmaClnt {
+	return ndc.scRealm
 }
 
 func (ndc *NdClnt) PathName() string {

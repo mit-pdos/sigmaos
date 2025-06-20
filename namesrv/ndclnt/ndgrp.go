@@ -13,8 +13,11 @@ type NdMgr struct {
 	grp *procgroupmgr.ProcGroupMgr
 }
 
-func NewNdGrpMgr(sc *sigmaclnt.SigmaClnt, realm sp.Trealm, cfg *procgroupmgr.ProcGroupMgrConfig, clear bool) *NdMgr {
-	ndc := NewNdClnt(sc, realm)
+func NewNdGrpMgr(sc *sigmaclnt.SigmaClnt, realm sp.Trealm, cfg *procgroupmgr.ProcGroupMgrConfig, clear bool) (*NdMgr, error) {
+	ndc, err := NewNdClnt(sc, realm)
+	if err != nil {
+		return nil, err
+	}
 	if clear {
 		err := ndc.RemoveNamedEP()
 		db.DPrintf(db.NAMED_LDR, "RealmSrv.Make %v rm named ep err %v", ndc.pn, err)
@@ -22,7 +25,7 @@ func NewNdGrpMgr(sc *sigmaclnt.SigmaClnt, realm sp.Trealm, cfg *procgroupmgr.Pro
 	return &NdMgr{
 		NdClnt: ndc,
 		cfg:    cfg,
-	}
+	}, nil
 }
 
 func (ndg *NdMgr) Grp() *procgroupmgr.ProcGroupMgr {

@@ -2,7 +2,6 @@ package ndclnt_test
 
 import (
 	"path/filepath"
-	"reflect"
 	"testing"
 	"time"
 
@@ -61,7 +60,10 @@ func TestPstats(t *testing.T) {
 
 func makeNamed1(ts *test.Tstate) (*ndclnt.NdClnt, *proc.Proc, error) {
 	nd := ndclnt.NewNamedProc(test.REALM1, ts.ProcEnv().UseDialProxy, true)
-	ndc := ndclnt.NewNdClnt(ts.SigmaClnt, test.REALM1)
+	ndc, err := ndclnt.NewNdClnt(ts.SigmaClnt, test.REALM1)
+	if err != nil {
+		return nil, nil, err
+	}
 	return ndc, nd, ndc.ClearAndStartNamed(nd)
 }
 
@@ -94,12 +96,7 @@ func TestCrashNamedAlone(t *testing.T) {
 		return
 	}
 
-	pe := proc.NewDifferentRealmProcEnv(ts.ProcEnv(), test.REALM1)
-	sc, err := sigmaclnt.NewSigmaClnt(pe)
-	if !assert.Nil(ts.T, err, "Err new sigmaclnt realm: %v", err) {
-		return
-	}
-
+	sc := ndc.SigmaClntRealm()
 	fn := filepath.Join(sp.NAMED, "fff")
 	_, err = sc.PutFile(fn, 0777, sp.OREAD, nil)
 	assert.Nil(t, err)
@@ -172,11 +169,13 @@ func namedClient(t *testing.T, sc *sigmaclnt.SigmaClnt, ch chan bool) {
 					}
 					assert.NotEqual(t, MAXRETRY, i)
 				}
-
-				dg, err := sc.GetFile(fn)
-				assert.Nil(t, err)
-				assert.True(t, reflect.DeepEqual(d, dg) || dg == nil)
-
+				for i := 0; i < MAXRETRY; i++ {
+					dg, err := sc.GetFile(fn)
+					if err == nil {
+						assert.Equal(t, d, dg)
+						break
+					}
+				}
 				for i := 0; i < MAXRETRY; i++ {
 					if err := sc.Remove(fn); err == nil {
 						break
@@ -232,25 +231,23 @@ func TestCrashNamedClient(t *testing.T) {
 	if !assert.Nil(ts.T, err, "makeNamed err %v", err) {
 		return
 	}
-
-	pe := proc.NewDifferentRealmProcEnv(ts.ProcEnv(), test.REALM1)
-	sc, err := sigmaclnt.NewSigmaClnt(pe)
-	if !assert.Nil(ts.T, err, "Err new sigmaclnt realm: %v", err) {
-		return
-	}
+	sc := ndc.SigmaClntRealm()
 
 	for i := 0; i < N; i++ {
 		ch := make(chan bool)
 		go namedClient(t, sc, ch)
 
 		// Let namedClient do a few iterations
-		time.Sleep(3 * time.Second)
+		time.Sleep(1 * time.Second)
 
 		// Start a new named
 		nd2, err := makeNamed2(ts, ndc, false, true)
 		if !assert.Nil(ts.T, err, "Err startNamed 2: %v", err) {
 			return
 		}
+
+		// Wait for a bit for semaphores to be created
+		time.Sleep(CRASH_SEM_DELAY)
 
 		// Tell named to old crash
 		err = crash.SignalFailer(sc.FsLib, crashpn)
@@ -296,13 +293,7 @@ func testReconnectClient(t *testing.T, f func(t *testing.T, sc *sigmaclnt.SigmaC
 		return
 	}
 
-	pe := proc.NewDifferentRealmProcEnv(ts.ProcEnv(), test.REALM1)
-	sc, err := sigmaclnt.NewSigmaClnt(pe)
-	if !assert.Nil(ts.T, err, "Err new sigmaclnt realm: %v", err) {
-		return
-	}
-
-	f(t, sc)
+	f(t, ndc.SigmaClntRealm())
 
 	err = ndc.StopNamed(nd1)
 	assert.Nil(t, err)
@@ -346,11 +337,7 @@ func TestAtMostOnce(t *testing.T) {
 		return
 	}
 
-	pe := proc.NewDifferentRealmProcEnv(ts.ProcEnv(), test.REALM1)
-	sc, err := sigmaclnt.NewSigmaClnt(pe)
-	if !assert.Nil(ts.T, err, "Err new sigmaclnt realm: %v", err) {
-		return
-	}
+	sc := ndc.SigmaClntRealm()
 
 	// Start a hot-standby named
 	nd2, err := makeNamed2(ts, ndc, false, false)
@@ -391,16 +378,12 @@ func TestCrashSemaphore(t *testing.T) {
 	}
 	defer ts.Shutdown()
 
-	if _, _, err := makeNamed1(ts); !assert.Nil(ts.T, err, "makeNamed err %v", err) {
+	ndc, _, err := makeNamed1(ts)
+	if !assert.Nil(ts.T, err, "makeNamed err %v", err) {
 		return
 	}
 
-	pe := proc.NewDifferentRealmProcEnv(ts.ProcEnv(), test.REALM1)
-	sc, err := sigmaclnt.NewSigmaClnt(pe)
-	if !assert.Nil(ts.T, err, "Err new sigmaclnt realm: %v", err) {
-		return
-	}
-
+	sc := ndc.SigmaClntRealm()
 	sem := semaphore.NewSemaphore(sc.FsLib, pn)
 	err = sem.Init(0)
 	assert.Nil(t, err)
@@ -442,11 +425,7 @@ func reboot(t *testing.T, dn string, f func(*test.Tstate, *sigmaclnt.SigmaClnt, 
 		return
 	}
 
-	pe := proc.NewDifferentRealmProcEnv(ts.ProcEnv(), test.REALM1)
-	sc, err := sigmaclnt.NewSigmaClnt(pe)
-	if !assert.Nil(ts.T, err, "Err new sigmaclnt realm: %v", err) {
-		return
-	}
+	sc := ndc.SigmaClntRealm()
 
 	fn := filepath.Join(dn, "leasedf")
 
@@ -524,14 +503,7 @@ func TestLeaseQuickReboot(t *testing.T) {
 	if !assert.Nil(ts.T, err, "makeNamed err %v", err) {
 		return
 	}
-
-	pe := proc.NewDifferentRealmProcEnv(ts.ProcEnv(), test.REALM1)
-	sc, err := sigmaclnt.NewSigmaClnt(pe)
-	if !assert.Nil(ts.T, err, "Err new sigmaclnt realm: %v", err) {
-		return
-	}
-	db.DPrintf(db.TEST, "Made new realm sigmaclnt")
-
+	sc := ndc.SigmaClntRealm()
 	dn := filepath.Join(sp.NAMED, "dir")
 	sc.RmDir(dn)
 	err = sc.MkDir(dn, 0777)
@@ -596,14 +568,7 @@ func TestLeaseDelayReboot(t *testing.T) {
 	if !assert.Nil(ts.T, err, "makeNamed err %v", err) {
 		return
 	}
-
-	pe := proc.NewDifferentRealmProcEnv(ts.ProcEnv(), test.REALM1)
-	sc, err := sigmaclnt.NewSigmaClnt(pe)
-	if !assert.Nil(ts.T, err, "Err new sigmaclnt realm: %v", err) {
-		return
-	}
-	db.DPrintf(db.TEST, "Made new realm sigmaclnt")
-
+	sc := ndc.SigmaClntRealm()
 	dn := filepath.Join(sp.NAMED, "ddd")
 	sc.RmDir(dn)
 	err = sc.MkDir(dn, 0777)
@@ -669,13 +634,7 @@ func TestLeaseGetDirReboot(t *testing.T) {
 		return
 	}
 
-	pe := proc.NewDifferentRealmProcEnv(ts.ProcEnv(), test.REALM1)
-	sc, err := sigmaclnt.NewSigmaClnt(pe)
-	if !assert.Nil(ts.T, err, "Err new sigmaclnt realm: %v", err) {
-		return
-	}
-	db.DPrintf(db.TEST, "Made new realm sigmaclnt")
-
+	sc := ndc.SigmaClntRealm()
 	dn := filepath.Join(sp.NAMED, "thedir")
 	sc.RmDir(dn)
 	err = sc.MkDir(dn, 0777)

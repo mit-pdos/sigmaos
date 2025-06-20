@@ -173,14 +173,12 @@ if [[ $COMPILE == "--compile" ]]; then
       ft/leaderclnt \
       ft/leadertest \
       ft/task \
-      apps/kv/kvgrp \
       apps/cache/cachegrp/clnt \
       apps/www \
       sigmasrv/memfssrv/sigmapsrv \
       realm/clnt \
       apps/mr \
       apps/imgresize \
-      apps/kv \
       apps/hotel \
       apps/socialnetwork \
       benchmarks \
@@ -313,7 +311,6 @@ if [[ $BASIC == "--basic" ]]; then
       ft/leaderclnt \
       ft/leadertest \
       ft/task \
-      apps/kv/kvgrp \
       apps/cache/cachegrp/clnt; \
       do
         if ! [ -z "$SKIPTO" ]; then
@@ -359,8 +356,8 @@ fi
 
 if [[ $APPS == "--apps" ]]; then
     if [[ $FAST == "--fast" ]]; then
-        PKGS="apps/mr apps/imgresize apps/kv apps/hotel apps/socialnetwork"
-        TNAMES=("MRJob" "ImgdOne" "KVOKN" "TestBenchDeathStarSingle" "TestCompose")
+        PKGS="apps/mr apps/imgresize apps/hotel apps/socialnetwork"
+        TNAMES=("MRJob" "ImgdOne" "TestBenchDeathStarSingle" "TestCompose")
         NEED_DB=("false" "false" "false" "true" "true")
         i=0
         for T in $PKGS; do
@@ -399,20 +396,6 @@ if [[ $APPS == "--apps" ]]; then
             fi
             ./start-db.sh
             run_test $T "./test-in-docker.sh --pkg $T --args \"$VERB --timeout 20m $SPPROXYD $DIALPROXY $REUSEKERNEL\""
-        done
-        # On machines with many cores, kv tests may take a long time.
-        for T in apps/kv; do
-            if ! [ -z "$SKIPTO" ]; then
-              if [[ "$SKIPTO" == "$T" ]]; then
-                # Stop skipping
-                SKIPTO=""
-              else
-                # Skip
-                continue
-              fi
-            fi
-            ./start-db.sh
-            run_test $T "./test-in-docker.sh --pkg $T --args \"$VERB --timeout 50m $SPPROXYD $DIALPROXY $REUSEKERNEL\""
         done
     fi
 fi

@@ -29,8 +29,10 @@ func TestCompile(t *testing.T) {
 
 func makeNdMgr(ts *test.Tstate) (*ndclnt.NdMgr, error) {
 	cfg := procgroupmgr.NewProcGroupConfigRealmSwitch(1, sp.NAMEDREL, nil, 0, test.REALM1.String(), test.REALM1, true)
-	pn := filepath.Join(sp.REALMS, test.REALM1.String())
-	ndg := ndclnt.NewNdGrpMgr(ts.SigmaClnt, pn, cfg, true)
+	ndg, err := ndclnt.NewNdGrpMgr(ts.SigmaClnt, test.REALM1, cfg, true)
+	if err != nil {
+		return nil, err
+	}
 	if err := ndg.StartNamedGrp(); err != nil {
 		return nil, err
 	}
@@ -141,8 +143,8 @@ func TestRecover(t *testing.T) {
 	assert.Nil(t, err, "Recover")
 	assert.Equal(t, 1, len(gms))
 
-	pn := filepath.Join(sp.REALMS, test.REALM1.String())
-	ndc := ndclnt.NewNdClnt(ts.SigmaClnt, pn)
+	ndc, err := ndclnt.NewNdClnt(ts.SigmaClnt, test.REALM1)
+	assert.Nil(t, err)
 
 	err = ndc.WaitNamed()
 	assert.Nil(t, err)

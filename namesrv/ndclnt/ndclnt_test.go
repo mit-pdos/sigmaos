@@ -189,6 +189,27 @@ func namedClient(t *testing.T, sc *sigmaclnt.SigmaClnt, ch chan bool) {
 	ch <- true
 }
 
+func namedClientBlocking(t *testing.T, sc *sigmaclnt.SigmaClnt, ch chan bool) {
+	pn := filepath.Join(sp.NAMED, "crash.sem")
+	done := false
+	for !done {
+		select {
+		case <-ch:
+			done = true
+		default:
+			time.Sleep(10 * time.Millisecond)
+			sem := semaphore.NewSemaphore(sc.FsLib, pn)
+			if err := sem.Init(0); err != nil {
+				db.DPrintf(db.TEST, "init err %v", err)
+			}
+			if err := sem.Down(); err != nil {
+				db.DPrintf(db.TEST, "down err %v", err)
+			}
+		}
+	}
+	ch <- true
+}
+
 func TestCrashNamedClient(t *testing.T) {
 	const (
 		T = 200
@@ -250,7 +271,7 @@ func TestCrashNamedClient(t *testing.T) {
 	}
 }
 
-func TestReconnectClient(t *testing.T) {
+func testReconnectClient(t *testing.T, f func(t *testing.T, sc *sigmaclnt.SigmaClnt)) {
 	const (
 		T       = 200
 		N       = 5
@@ -281,17 +302,32 @@ func TestReconnectClient(t *testing.T) {
 		return
 	}
 
-	ch := make(chan bool)
-	go namedClient(t, sc, ch)
-
-	// Let namedClient experience network failures
-	time.Sleep(10 * time.Second)
-
-	ch <- true
-	<-ch
+	f(t, sc)
 
 	err = ndc.StopNamed(nd1)
 	assert.Nil(t, err)
+}
+
+func TestReconnectClientNonBlocking(t *testing.T) {
+	testReconnectClient(t, func(t *testing.T, sc *sigmaclnt.SigmaClnt) {
+		ch := make(chan bool)
+		go namedClient(t, sc, ch)
+		// Let namedClient experience network failures
+		time.Sleep(10 * time.Second)
+		ch <- true
+		<-ch
+	})
+}
+
+func TestReconnectClientBlocking(t *testing.T) {
+	testReconnectClient(t, func(t *testing.T, sc *sigmaclnt.SigmaClnt) {
+		ch := make(chan bool)
+		go namedClientBlocking(t, sc, ch)
+		// Let namedClient experience network failures
+		time.Sleep(10 * time.Second)
+		ch <- true
+		<-ch
+	})
 }
 
 func TestAtMostOnce(t *testing.T) {

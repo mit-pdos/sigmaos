@@ -18,6 +18,7 @@ import (
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
+	"sigmaos/util/coordination/semaphore"
 	"sigmaos/util/crash"
 )
 
@@ -293,6 +294,60 @@ func TestAtMostOnce(t *testing.T) {
 	if err := ndc.StopNamed(nd2); !assert.Nil(ts.T, err, "Err stop named: %v", err) {
 		return
 	}
+}
+
+func TestCrashSemaphore(t *testing.T) {
+	const T = 200
+	crashpn := sp.NAMED + "crashnd.sem"
+	pn := filepath.Join(sp.NAMED, "crash.sem")
+
+	e := crash.NewEventPath(crash.NAMED_CRASH, T, float64(1.0), crashpn)
+	err := crash.SetSigmaFail(crash.NewTeventMapOne(e))
+	assert.Nil(t, err)
+
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	defer ts.Shutdown()
+
+	if _, _, err := makeNamed1(ts); !assert.Nil(ts.T, err, "makeNamed err %v", err) {
+		return
+	}
+
+	pe := proc.NewDifferentRealmProcEnv(ts.ProcEnv(), test.REALM1)
+	sc, err := sigmaclnt.NewSigmaClnt(pe)
+	if !assert.Nil(ts.T, err, "Err new sigmaclnt realm: %v", err) {
+		return
+	}
+
+	sem := semaphore.NewSemaphore(sc.FsLib, pn)
+	err = sem.Init(0)
+	assert.Nil(t, err)
+
+	sts, err := sc.GetDir(path.MarkResolve(sp.NAMED))
+	assert.Nil(t, err)
+
+	db.DPrintf(db.TEST, "named %v", sp.Names(sts))
+
+	ch := make(chan error)
+	go func() {
+		pe := proc.NewDifferentRealmProcEnv(ts.ProcEnv(), test.REALM1)
+		sc, err := sigmaclnt.NewSigmaClnt(pe)
+		sem := semaphore.NewSemaphore(sc.FsLib, pn)
+		err = sem.Down()
+		ch <- err
+	}()
+
+	// Wait for a bit for semaphores to be created
+	time.Sleep(CRASH_SEM_DELAY)
+
+	// Tell named storing sem to crash
+	err = crash.SignalFailer(sc.FsLib, crashpn)
+	assert.Nil(t, err, "Err crash: %v", err)
+
+	err = <-ch
+	assert.NotNil(ts.T, err, "down")
 }
 
 // Create a leased file and then reboot

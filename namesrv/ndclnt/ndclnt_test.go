@@ -250,6 +250,47 @@ func TestCrashNamedClient(t *testing.T) {
 	}
 }
 
+func TestReconnectClient(t *testing.T) {
+	const (
+		T       = 200
+		N       = 5
+		NETFAIL = 200
+	)
+
+	e := crash.NewEvent(crash.NAMED_NETFAIL, NETFAIL, 0.33)
+	err := crash.SetSigmaFail(crash.NewTeventMapOne(e))
+	assert.Nil(t, err)
+
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	defer ts.Shutdown()
+
+	ndc, nd1, err := makeNamed1(ts)
+	if !assert.Nil(ts.T, err, "makeNamed err %v", err) {
+		return
+	}
+
+	pe := proc.NewDifferentRealmProcEnv(ts.ProcEnv(), test.REALM1)
+	sc, err := sigmaclnt.NewSigmaClnt(pe)
+	if !assert.Nil(ts.T, err, "Err new sigmaclnt realm: %v", err) {
+		return
+	}
+
+	ch := make(chan bool)
+	go namedClient(t, sc, ch)
+
+	// Let namedClient experience network failures
+	time.Sleep(10 * time.Second)
+
+	ch <- true
+	<-ch
+
+	err = ndc.StopNamed(nd1)
+	assert.Nil(t, err)
+}
+
 func TestAtMostOnce(t *testing.T) {
 	ts, err1 := test.NewTstateAll(t)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {

@@ -180,6 +180,10 @@ func Run(args []string) error {
 		crash.Crash()
 	})
 
+	crash.Failer(nd.FsLib, crash.NAMED_NETFAIL, func(e crash.Tevent) {
+		nd.SigmaSrv.PartitionClient(false)
+	})
+
 	crash.Failer(nd.FsLib, crash.NAMED_PARTITION, func(e crash.Tevent) {
 		if nd.delay == 0 {
 			nd.delay = e.Delay

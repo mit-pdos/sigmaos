@@ -24,6 +24,14 @@ func NewNdGrpMgr(sc *sigmaclnt.SigmaClnt, pn string, cfg *procgroupmgr.ProcGroup
 	}
 }
 
+func (ndg *NdMgr) Grp() *procgroupmgr.ProcGroupMgr {
+	return ndg.grp
+}
+
+func (ndg *NdMgr) Cfg() *procgroupmgr.ProcGroupMgrConfig {
+	return ndg.cfg
+}
+
 func (ndg *NdMgr) StartNamedGrp() error {
 	db.DPrintf(db.NAMED_LDR, "StartNamedGrp %v spawn named", ndg.cfg)
 	ndg.grp = ndg.cfg.StartGrpMgr(ndg.sc)

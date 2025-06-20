@@ -169,6 +169,7 @@ if [[ $COMPILE == "--compile" ]]; then
       proxy/ux \
       proxy/s3 \
       boot/clnt \
+      ft/procgroupmgr \
       ft/leaderclnt \
       ft/leadertest \
       ft/task \
@@ -283,6 +284,7 @@ if [[ $BASIC == "--basic" ]]; then
 
     for T in \
       namesrv/ndclnt \
+      ft/procgroupmgr \
       util/coordination/semaphore \
       sched/msched/proc/chunk/srv \
       proxy/ux \

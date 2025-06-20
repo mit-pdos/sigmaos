@@ -184,6 +184,10 @@ func Run(args []string) error {
 		nd.SigmaSrv.PartitionClient(false)
 	})
 
+	crash.Failer(nd.FsLib, crash.NAMED_NETDISCONNECT, func(e crash.Tevent) {
+		nd.SigmaSrv.PartitionClient(true)
+	})
+
 	crash.Failer(nd.FsLib, crash.NAMED_PARTITION, func(e crash.Tevent) {
 		if nd.delay == 0 {
 			nd.delay = e.Delay

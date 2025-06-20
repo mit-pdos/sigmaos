@@ -258,7 +258,10 @@ func TestReconnectClient(t *testing.T) {
 	)
 
 	e := crash.NewEvent(crash.NAMED_NETFAIL, NETFAIL, 0.33)
-	err := crash.SetSigmaFail(crash.NewTeventMapOne(e))
+	em := crash.NewTeventMapOne(e)
+	e1 := crash.NewEvent(crash.NAMED_NETDISCONNECT, NETFAIL, 0.33)
+	em.Insert(e1)
+	err := crash.SetSigmaFail(em)
 	assert.Nil(t, err)
 
 	ts, err1 := test.NewTstateAll(t)

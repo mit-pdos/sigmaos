@@ -49,7 +49,7 @@ func (mc *MntClnt) String() string {
 
 func (mc *MntClnt) Resolve(p path.Tpathname, principal *sp.Tprincipal, resolve bool) (sp.Tfid, path.Tpathname, *serr.Err) {
 	if err, ok := mc.resolveRoot(p); err != nil {
-		db.DPrintf(db.ALWAYS, "%v: resolveRoot %v err %v b %v\n", mc.cid, p, err, ok)
+		db.DPrintf(db.ALWAYS, "%v: resolveRoot %v err %v ok %v", mc.cid, p, err, ok)
 	}
 	return mc.ResolveMnt(p, resolve)
 }
@@ -91,7 +91,7 @@ func (mc *MntClnt) ResolveRoot(pn path.Tpathname) (*serr.Err, bool) {
 	err, ok := mc.resolveRoot(pn)
 	db.DPrintf(db.WALK_LAT, "ResolveRoot %v %v lat %v\n", mc.cid, pn, time.Since(s))
 	if err != nil {
-		db.DPrintf(db.MOUNT_ERR, "ResolveRoot unreachable %v err %v\n", pn, err)
+		db.DPrintf(db.MOUNT_ERR, "ResolveRoot unreachable %v ok %t err %v\n", pn, ok, err)
 	}
 	return err, ok
 }

@@ -4,6 +4,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/ft/procgroupmgr"
 	"sigmaos/sigmaclnt"
+	sp "sigmaos/sigmap"
 )
 
 type NdMgr struct {
@@ -12,8 +13,8 @@ type NdMgr struct {
 	grp *procgroupmgr.ProcGroupMgr
 }
 
-func NewNdGrpMgr(sc *sigmaclnt.SigmaClnt, pn string, cfg *procgroupmgr.ProcGroupMgrConfig, clear bool) *NdMgr {
-	ndc := NewNdClnt(sc, pn)
+func NewNdGrpMgr(sc *sigmaclnt.SigmaClnt, realm sp.Trealm, cfg *procgroupmgr.ProcGroupMgrConfig, clear bool) *NdMgr {
+	ndc := NewNdClnt(sc, realm)
 	if clear {
 		err := ndc.RemoveNamedEP()
 		db.DPrintf(db.NAMED_LDR, "RealmSrv.Make %v rm named ep err %v", ndc.pn, err)
@@ -34,7 +35,7 @@ func (ndg *NdMgr) Cfg() *procgroupmgr.ProcGroupMgrConfig {
 
 func (ndg *NdMgr) StartNamedGrp() error {
 	db.DPrintf(db.NAMED_LDR, "StartNamedGrp %v spawn named", ndg.cfg)
-	ndg.grp = ndg.cfg.StartGrpMgr(ndg.sc)
+	ndg.grp = ndg.cfg.StartGrpMgr(ndg.scRoot)
 	return nil
 }
 

@@ -2,6 +2,7 @@ package ndclnt
 
 import (
 	"fmt"
+	"path/filepath"
 
 	db "sigmaos/debug"
 	"sigmaos/proc"
@@ -12,18 +13,18 @@ import (
 const MCPU proc.Tmcpu = 1000
 
 type NdClnt struct {
-	sc *sigmaclnt.SigmaClnt
-	pn string
+	scRoot *sigmaclnt.SigmaClnt
+	pn     string
 }
 
-func NewNdClnt(sc *sigmaclnt.SigmaClnt, pn string) *NdClnt {
+func NewNdClnt(sc *sigmaclnt.SigmaClnt, realm sp.Trealm) *NdClnt {
 	return &NdClnt{
-		sc: sc,
-		pn: pn,
+		scRoot: sc,
+		pn:     filepath.Join(sp.REALMS, realm.String()),
 	}
 }
 
-func (ndc *NdClnt) Name() string {
+func (ndc *NdClnt) PathName() string {
 	return ndc.pn
 }
 
@@ -33,14 +34,14 @@ func (ndc *NdClnt) Name() string {
 // named of the new incarnation of the realm exists. (The EP file
 // isn't leased and thus not automatically deleted.)
 func (ndc *NdClnt) RemoveNamedEP() error {
-	err := ndc.sc.Remove(ndc.pn)
+	err := ndc.scRoot.Remove(ndc.pn)
 	return err
 }
 
 // Wait until the realm's named has registered its endpoint and is
 // ready to serve
 func (ndc *NdClnt) WaitNamed() error {
-	if b, err := ndc.sc.GetFileWatch(ndc.pn); err != nil {
+	if b, err := ndc.scRoot.GetFileWatch(ndc.pn); err != nil {
 		return err
 	} else {
 		ep, err := sp.NewEndpointFromBytes(b)
@@ -67,10 +68,10 @@ func NewNamedProc(realm sp.Trealm, dialproxy bool, canFail bool) *proc.Proc {
 
 func (ndc *NdClnt) ClearAndStartNamed(nd *proc.Proc) error {
 	ndc.RemoveNamedEP()
-	if err := ndc.sc.Spawn(nd); err != nil {
+	if err := ndc.scRoot.Spawn(nd); err != nil {
 		return err
 	}
-	if err := ndc.sc.WaitStart(nd.GetPid()); err != nil {
+	if err := ndc.scRoot.WaitStart(nd.GetPid()); err != nil {
 		return err
 	}
 	if err := ndc.WaitNamed(); err != nil {
@@ -81,10 +82,10 @@ func (ndc *NdClnt) ClearAndStartNamed(nd *proc.Proc) error {
 }
 
 func (ndc *NdClnt) StartNamed(nd *proc.Proc) error {
-	if err := ndc.sc.Spawn(nd); err != nil {
+	if err := ndc.scRoot.Spawn(nd); err != nil {
 		return err
 	}
-	if err := ndc.sc.WaitStart(nd.GetPid()); err != nil {
+	if err := ndc.scRoot.WaitStart(nd.GetPid()); err != nil {
 		return err
 	}
 	db.DPrintf(db.TEST, "New named spawned")
@@ -93,10 +94,10 @@ func (ndc *NdClnt) StartNamed(nd *proc.Proc) error {
 
 func (ndc *NdClnt) StopNamed(nd *proc.Proc) error {
 	// Evict the named
-	if err := ndc.sc.Evict(nd.GetPid()); err != nil {
+	if err := ndc.scRoot.Evict(nd.GetPid()); err != nil {
 		return err
 	}
-	status, err := ndc.sc.WaitExit(nd.GetPid())
+	status, err := ndc.scRoot.WaitExit(nd.GetPid())
 	if err != nil {
 		return err
 	}

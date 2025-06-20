@@ -137,8 +137,7 @@ func (rm *RealmSrv) Make(ctx fs.CtxI, req proto.MakeReq, res *proto.MakeRep) err
 	}
 	r := newRealm()
 
-	pn := filepath.Join(sp.REALMS, req.Realm)
-	r.ndg = ndclnt.NewNdGrpMgr(rm.sc.SigmaClnt(), pn, procgroupmgr.NewProcGroupConfigRealmSwitch(1, sp.NAMEDREL, nil, NAMED_MCPU, req.Realm, rid, rm.dialproxy), true)
+	r.ndg = ndclnt.NewNdGrpMgr(rm.sc.SigmaClnt(), sp.Trealm(req.Realm), procgroupmgr.NewProcGroupConfigRealmSwitch(1, sp.NAMEDREL, nil, NAMED_MCPU, req.Realm, rid, rm.dialproxy), true)
 
 	if err := r.ndg.StartNamedGrp(); err != nil {
 		db.DPrintf(db.ERROR, "Error StartNamedGrp %v", err)
@@ -148,7 +147,7 @@ func (rm *RealmSrv) Make(ctx fs.CtxI, req proto.MakeReq, res *proto.MakeRep) err
 	db.DPrintf(db.REALMD, "RealmSrv.Make %v named started", req.Realm)
 
 	if err := r.ndg.WaitNamed(); err != nil {
-		db.DPrintf(db.ERROR, "Error GetFileWatch named root %v: %v", pn, err)
+		db.DPrintf(db.ERROR, "Error GetFileWatch named root %v: %v", r.ndg.PathName(), err)
 		return err
 	}
 
@@ -268,7 +267,7 @@ func (rm *RealmSrv) Remove(ctx fs.CtxI, req proto.RemoveReq, res *proto.RemoveRe
 		return err
 	}
 	if err := r.ndg.RemoveNamedEP(); err != nil {
-		db.DPrintf(db.ERROR, "RemoveNamedEP %v err %v", r.ndg.Name(), err)
+		db.DPrintf(db.ERROR, "RemoveNamedEP %v err %v", r.ndg.PathName(), err)
 	}
 
 	delete(rm.realms, rid)

@@ -61,8 +61,7 @@ func TestPstats(t *testing.T) {
 
 func makeNamed1(ts *test.Tstate) (*ndclnt.NdClnt, *proc.Proc, error) {
 	nd := ndclnt.NewNamedProc(test.REALM1, ts.ProcEnv().UseDialProxy, true)
-	pn := filepath.Join(sp.REALMS, test.REALM1.String())
-	ndc := ndclnt.NewNdClnt(ts.SigmaClnt, pn)
+	ndc := ndclnt.NewNdClnt(ts.SigmaClnt, test.REALM1)
 	return ndc, nd, ndc.ClearAndStartNamed(nd)
 }
 

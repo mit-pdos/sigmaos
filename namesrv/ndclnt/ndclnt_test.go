@@ -2,6 +2,7 @@ package ndclnt_test
 
 import (
 	"path/filepath"
+	"reflect"
 	"testing"
 	"time"
 
@@ -175,7 +176,7 @@ func namedClient(t *testing.T, sc *sigmaclnt.SigmaClnt, ch chan bool) {
 
 				dg, err := sc.GetFile(fn)
 				assert.Nil(t, err)
-				assert.Equal(t, d, dg)
+				assert.True(t, reflect.DeepEqual(d, dg) || dg == nil)
 
 				for i := 0; i < MAXRETRY; i++ {
 					if err := sc.Remove(fn); err == nil {

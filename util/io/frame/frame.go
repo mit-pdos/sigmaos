@@ -99,7 +99,7 @@ func WriteFrames(wr io.Writer, iov sessp.IoVec) error {
 			return err
 		}
 		if db.WillBePrinted(db.PROXY_RPC_LAT) && len(f) > 2*sp.MBYTE {
-			db.DPrintf(db.PROXY_RPC_LAT, "Done write %vB lat=%v tpt=%v", len(f), time.Since(start), (float64(len(f))/time.Since(start).Seconds())/float64(sp.MBYTE))
+			db.DPrintf(db.PROXY_RPC_LAT, "Done write %vB lat=%v tpt=%0.3fMB/s", len(f), time.Since(start), (float64(len(f))/time.Since(start).Seconds())/float64(sp.MBYTE))
 		}
 	}
 	return nil

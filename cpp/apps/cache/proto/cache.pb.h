@@ -36,6 +36,7 @@
 #include <google/protobuf/unknown_field_set.h>
 #include "util/tracing/proto/tracing.pb.h"
 #include "sigmap/sigmap.pb.h"
+#include "rpc/proto/rpc.pb.h"
 // @@protoc_insertion_point(includes)
 #include <google/protobuf/port_def.inc>
 #define PROTOBUF_INTERNAL_EXPORT_cache_2eproto
@@ -50,9 +51,18 @@ struct TableStruct_cache_2eproto {
   static const uint32_t offsets[];
 };
 extern const ::PROTOBUF_NAMESPACE_ID::internal::DescriptorTable descriptor_table_cache_2eproto;
+class CacheGetDescriptor;
+struct CacheGetDescriptorDefaultTypeInternal;
+extern CacheGetDescriptorDefaultTypeInternal _CacheGetDescriptor_default_instance_;
 class CacheInt;
 struct CacheIntDefaultTypeInternal;
 extern CacheIntDefaultTypeInternal _CacheInt_default_instance_;
+class CacheMultiGetRep;
+struct CacheMultiGetRepDefaultTypeInternal;
+extern CacheMultiGetRepDefaultTypeInternal _CacheMultiGetRep_default_instance_;
+class CacheMultiGetReq;
+struct CacheMultiGetReqDefaultTypeInternal;
+extern CacheMultiGetReqDefaultTypeInternal _CacheMultiGetReq_default_instance_;
 class CacheOK;
 struct CacheOKDefaultTypeInternal;
 extern CacheOKDefaultTypeInternal _CacheOK_default_instance_;
@@ -78,7 +88,10 @@ class ShardReq_ValsEntry_DoNotUse;
 struct ShardReq_ValsEntry_DoNotUseDefaultTypeInternal;
 extern ShardReq_ValsEntry_DoNotUseDefaultTypeInternal _ShardReq_ValsEntry_DoNotUse_default_instance_;
 PROTOBUF_NAMESPACE_OPEN
+template<> ::CacheGetDescriptor* Arena::CreateMaybeMessage<::CacheGetDescriptor>(Arena*);
 template<> ::CacheInt* Arena::CreateMaybeMessage<::CacheInt>(Arena*);
+template<> ::CacheMultiGetRep* Arena::CreateMaybeMessage<::CacheMultiGetRep>(Arena*);
+template<> ::CacheMultiGetReq* Arena::CreateMaybeMessage<::CacheMultiGetReq>(Arena*);
 template<> ::CacheOK* Arena::CreateMaybeMessage<::CacheOK>(Arena*);
 template<> ::CacheRep* Arena::CreateMaybeMessage<::CacheRep>(Arena*);
 template<> ::CacheReq* Arena::CreateMaybeMessage<::CacheReq>(Arena*);
@@ -322,6 +335,524 @@ class CacheReq final :
 };
 // -------------------------------------------------------------------
 
+class CacheGetDescriptor final :
+    public ::PROTOBUF_NAMESPACE_ID::Message /* @@protoc_insertion_point(class_definition:CacheGetDescriptor) */ {
+ public:
+  inline CacheGetDescriptor() : CacheGetDescriptor(nullptr) {}
+  ~CacheGetDescriptor() override;
+  explicit PROTOBUF_CONSTEXPR CacheGetDescriptor(::PROTOBUF_NAMESPACE_ID::internal::ConstantInitialized);
+
+  CacheGetDescriptor(const CacheGetDescriptor& from);
+  CacheGetDescriptor(CacheGetDescriptor&& from) noexcept
+    : CacheGetDescriptor() {
+    *this = ::std::move(from);
+  }
+
+  inline CacheGetDescriptor& operator=(const CacheGetDescriptor& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  inline CacheGetDescriptor& operator=(CacheGetDescriptor&& from) noexcept {
+    if (this == &from) return *this;
+    if (GetOwningArena() == from.GetOwningArena()
+  #ifdef PROTOBUF_FORCE_COPY_IN_MOVE
+        && GetOwningArena() != nullptr
+  #endif  // !PROTOBUF_FORCE_COPY_IN_MOVE
+    ) {
+      InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+
+  static const ::PROTOBUF_NAMESPACE_ID::Descriptor* descriptor() {
+    return GetDescriptor();
+  }
+  static const ::PROTOBUF_NAMESPACE_ID::Descriptor* GetDescriptor() {
+    return default_instance().GetMetadata().descriptor;
+  }
+  static const ::PROTOBUF_NAMESPACE_ID::Reflection* GetReflection() {
+    return default_instance().GetMetadata().reflection;
+  }
+  static const CacheGetDescriptor& default_instance() {
+    return *internal_default_instance();
+  }
+  static inline const CacheGetDescriptor* internal_default_instance() {
+    return reinterpret_cast<const CacheGetDescriptor*>(
+               &_CacheGetDescriptor_default_instance_);
+  }
+  static constexpr int kIndexInFileMessages =
+    1;
+
+  friend void swap(CacheGetDescriptor& a, CacheGetDescriptor& b) {
+    a.Swap(&b);
+  }
+  inline void Swap(CacheGetDescriptor* other) {
+    if (other == this) return;
+  #ifdef PROTOBUF_FORCE_COPY_IN_SWAP
+    if (GetOwningArena() != nullptr &&
+        GetOwningArena() == other->GetOwningArena()) {
+   #else  // PROTOBUF_FORCE_COPY_IN_SWAP
+    if (GetOwningArena() == other->GetOwningArena()) {
+  #endif  // !PROTOBUF_FORCE_COPY_IN_SWAP
+      InternalSwap(other);
+    } else {
+      ::PROTOBUF_NAMESPACE_ID::internal::GenericSwap(this, other);
+    }
+  }
+  void UnsafeArenaSwap(CacheGetDescriptor* other) {
+    if (other == this) return;
+    GOOGLE_DCHECK(GetOwningArena() == other->GetOwningArena());
+    InternalSwap(other);
+  }
+
+  // implements Message ----------------------------------------------
+
+  CacheGetDescriptor* New(::PROTOBUF_NAMESPACE_ID::Arena* arena = nullptr) const final {
+    return CreateMaybeMessage<CacheGetDescriptor>(arena);
+  }
+  using ::PROTOBUF_NAMESPACE_ID::Message::CopyFrom;
+  void CopyFrom(const CacheGetDescriptor& from);
+  using ::PROTOBUF_NAMESPACE_ID::Message::MergeFrom;
+  void MergeFrom( const CacheGetDescriptor& from) {
+    CacheGetDescriptor::MergeImpl(*this, from);
+  }
+  private:
+  static void MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PROTOBUF_NAMESPACE_ID::Message& from_msg);
+  public:
+  PROTOBUF_ATTRIBUTE_REINITIALIZES void Clear() final;
+  bool IsInitialized() const final;
+
+  size_t ByteSizeLong() const final;
+  const char* _InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::internal::ParseContext* ctx) final;
+  uint8_t* _InternalSerialize(
+      uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const final;
+  int GetCachedSize() const final { return _impl_._cached_size_.Get(); }
+
+  private:
+  void SharedCtor(::PROTOBUF_NAMESPACE_ID::Arena* arena, bool is_message_owned);
+  void SharedDtor();
+  void SetCachedSize(int size) const final;
+  void InternalSwap(CacheGetDescriptor* other);
+
+  private:
+  friend class ::PROTOBUF_NAMESPACE_ID::internal::AnyMetadata;
+  static ::PROTOBUF_NAMESPACE_ID::StringPiece FullMessageName() {
+    return "CacheGetDescriptor";
+  }
+  protected:
+  explicit CacheGetDescriptor(::PROTOBUF_NAMESPACE_ID::Arena* arena,
+                       bool is_message_owned = false);
+  public:
+
+  static const ClassData _class_data_;
+  const ::PROTOBUF_NAMESPACE_ID::Message::ClassData*GetClassData() const final;
+
+  ::PROTOBUF_NAMESPACE_ID::Metadata GetMetadata() const final;
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  enum : int {
+    kKeyFieldNumber = 1,
+    kShardFieldNumber = 2,
+  };
+  // string key = 1;
+  void clear_key();
+  const std::string& key() const;
+  template <typename ArgT0 = const std::string&, typename... ArgT>
+  void set_key(ArgT0&& arg0, ArgT... args);
+  std::string* mutable_key();
+  PROTOBUF_NODISCARD std::string* release_key();
+  void set_allocated_key(std::string* key);
+  private:
+  const std::string& _internal_key() const;
+  inline PROTOBUF_ALWAYS_INLINE void _internal_set_key(const std::string& value);
+  std::string* _internal_mutable_key();
+  public:
+
+  // uint32 shard = 2;
+  void clear_shard();
+  uint32_t shard() const;
+  void set_shard(uint32_t value);
+  private:
+  uint32_t _internal_shard() const;
+  void _internal_set_shard(uint32_t value);
+  public:
+
+  // @@protoc_insertion_point(class_scope:CacheGetDescriptor)
+ private:
+  class _Internal;
+
+  template <typename T> friend class ::PROTOBUF_NAMESPACE_ID::Arena::InternalHelper;
+  typedef void InternalArenaConstructable_;
+  typedef void DestructorSkippable_;
+  struct Impl_ {
+    ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr key_;
+    uint32_t shard_;
+    mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
+  };
+  union { Impl_ _impl_; };
+  friend struct ::TableStruct_cache_2eproto;
+};
+// -------------------------------------------------------------------
+
+class CacheMultiGetReq final :
+    public ::PROTOBUF_NAMESPACE_ID::Message /* @@protoc_insertion_point(class_definition:CacheMultiGetReq) */ {
+ public:
+  inline CacheMultiGetReq() : CacheMultiGetReq(nullptr) {}
+  ~CacheMultiGetReq() override;
+  explicit PROTOBUF_CONSTEXPR CacheMultiGetReq(::PROTOBUF_NAMESPACE_ID::internal::ConstantInitialized);
+
+  CacheMultiGetReq(const CacheMultiGetReq& from);
+  CacheMultiGetReq(CacheMultiGetReq&& from) noexcept
+    : CacheMultiGetReq() {
+    *this = ::std::move(from);
+  }
+
+  inline CacheMultiGetReq& operator=(const CacheMultiGetReq& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  inline CacheMultiGetReq& operator=(CacheMultiGetReq&& from) noexcept {
+    if (this == &from) return *this;
+    if (GetOwningArena() == from.GetOwningArena()
+  #ifdef PROTOBUF_FORCE_COPY_IN_MOVE
+        && GetOwningArena() != nullptr
+  #endif  // !PROTOBUF_FORCE_COPY_IN_MOVE
+    ) {
+      InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+
+  static const ::PROTOBUF_NAMESPACE_ID::Descriptor* descriptor() {
+    return GetDescriptor();
+  }
+  static const ::PROTOBUF_NAMESPACE_ID::Descriptor* GetDescriptor() {
+    return default_instance().GetMetadata().descriptor;
+  }
+  static const ::PROTOBUF_NAMESPACE_ID::Reflection* GetReflection() {
+    return default_instance().GetMetadata().reflection;
+  }
+  static const CacheMultiGetReq& default_instance() {
+    return *internal_default_instance();
+  }
+  static inline const CacheMultiGetReq* internal_default_instance() {
+    return reinterpret_cast<const CacheMultiGetReq*>(
+               &_CacheMultiGetReq_default_instance_);
+  }
+  static constexpr int kIndexInFileMessages =
+    2;
+
+  friend void swap(CacheMultiGetReq& a, CacheMultiGetReq& b) {
+    a.Swap(&b);
+  }
+  inline void Swap(CacheMultiGetReq* other) {
+    if (other == this) return;
+  #ifdef PROTOBUF_FORCE_COPY_IN_SWAP
+    if (GetOwningArena() != nullptr &&
+        GetOwningArena() == other->GetOwningArena()) {
+   #else  // PROTOBUF_FORCE_COPY_IN_SWAP
+    if (GetOwningArena() == other->GetOwningArena()) {
+  #endif  // !PROTOBUF_FORCE_COPY_IN_SWAP
+      InternalSwap(other);
+    } else {
+      ::PROTOBUF_NAMESPACE_ID::internal::GenericSwap(this, other);
+    }
+  }
+  void UnsafeArenaSwap(CacheMultiGetReq* other) {
+    if (other == this) return;
+    GOOGLE_DCHECK(GetOwningArena() == other->GetOwningArena());
+    InternalSwap(other);
+  }
+
+  // implements Message ----------------------------------------------
+
+  CacheMultiGetReq* New(::PROTOBUF_NAMESPACE_ID::Arena* arena = nullptr) const final {
+    return CreateMaybeMessage<CacheMultiGetReq>(arena);
+  }
+  using ::PROTOBUF_NAMESPACE_ID::Message::CopyFrom;
+  void CopyFrom(const CacheMultiGetReq& from);
+  using ::PROTOBUF_NAMESPACE_ID::Message::MergeFrom;
+  void MergeFrom( const CacheMultiGetReq& from) {
+    CacheMultiGetReq::MergeImpl(*this, from);
+  }
+  private:
+  static void MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PROTOBUF_NAMESPACE_ID::Message& from_msg);
+  public:
+  PROTOBUF_ATTRIBUTE_REINITIALIZES void Clear() final;
+  bool IsInitialized() const final;
+
+  size_t ByteSizeLong() const final;
+  const char* _InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::internal::ParseContext* ctx) final;
+  uint8_t* _InternalSerialize(
+      uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const final;
+  int GetCachedSize() const final { return _impl_._cached_size_.Get(); }
+
+  private:
+  void SharedCtor(::PROTOBUF_NAMESPACE_ID::Arena* arena, bool is_message_owned);
+  void SharedDtor();
+  void SetCachedSize(int size) const final;
+  void InternalSwap(CacheMultiGetReq* other);
+
+  private:
+  friend class ::PROTOBUF_NAMESPACE_ID::internal::AnyMetadata;
+  static ::PROTOBUF_NAMESPACE_ID::StringPiece FullMessageName() {
+    return "CacheMultiGetReq";
+  }
+  protected:
+  explicit CacheMultiGetReq(::PROTOBUF_NAMESPACE_ID::Arena* arena,
+                       bool is_message_owned = false);
+  public:
+
+  static const ClassData _class_data_;
+  const ::PROTOBUF_NAMESPACE_ID::Message::ClassData*GetClassData() const final;
+
+  ::PROTOBUF_NAMESPACE_ID::Metadata GetMetadata() const final;
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  enum : int {
+    kGetsFieldNumber = 1,
+    kSpanContextConfigFieldNumber = 2,
+    kFenceFieldNumber = 3,
+  };
+  // repeated .CacheGetDescriptor gets = 1;
+  int gets_size() const;
+  private:
+  int _internal_gets_size() const;
+  public:
+  void clear_gets();
+  ::CacheGetDescriptor* mutable_gets(int index);
+  ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::CacheGetDescriptor >*
+      mutable_gets();
+  private:
+  const ::CacheGetDescriptor& _internal_gets(int index) const;
+  ::CacheGetDescriptor* _internal_add_gets();
+  public:
+  const ::CacheGetDescriptor& gets(int index) const;
+  ::CacheGetDescriptor* add_gets();
+  const ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::CacheGetDescriptor >&
+      gets() const;
+
+  // .SpanContextConfig spanContextConfig = 2;
+  bool has_spancontextconfig() const;
+  private:
+  bool _internal_has_spancontextconfig() const;
+  public:
+  void clear_spancontextconfig();
+  const ::SpanContextConfig& spancontextconfig() const;
+  PROTOBUF_NODISCARD ::SpanContextConfig* release_spancontextconfig();
+  ::SpanContextConfig* mutable_spancontextconfig();
+  void set_allocated_spancontextconfig(::SpanContextConfig* spancontextconfig);
+  private:
+  const ::SpanContextConfig& _internal_spancontextconfig() const;
+  ::SpanContextConfig* _internal_mutable_spancontextconfig();
+  public:
+  void unsafe_arena_set_allocated_spancontextconfig(
+      ::SpanContextConfig* spancontextconfig);
+  ::SpanContextConfig* unsafe_arena_release_spancontextconfig();
+
+  // .TfenceProto fence = 3;
+  bool has_fence() const;
+  private:
+  bool _internal_has_fence() const;
+  public:
+  void clear_fence();
+  const ::TfenceProto& fence() const;
+  PROTOBUF_NODISCARD ::TfenceProto* release_fence();
+  ::TfenceProto* mutable_fence();
+  void set_allocated_fence(::TfenceProto* fence);
+  private:
+  const ::TfenceProto& _internal_fence() const;
+  ::TfenceProto* _internal_mutable_fence();
+  public:
+  void unsafe_arena_set_allocated_fence(
+      ::TfenceProto* fence);
+  ::TfenceProto* unsafe_arena_release_fence();
+
+  // @@protoc_insertion_point(class_scope:CacheMultiGetReq)
+ private:
+  class _Internal;
+
+  template <typename T> friend class ::PROTOBUF_NAMESPACE_ID::Arena::InternalHelper;
+  typedef void InternalArenaConstructable_;
+  typedef void DestructorSkippable_;
+  struct Impl_ {
+    ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::CacheGetDescriptor > gets_;
+    ::SpanContextConfig* spancontextconfig_;
+    ::TfenceProto* fence_;
+    mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
+  };
+  union { Impl_ _impl_; };
+  friend struct ::TableStruct_cache_2eproto;
+};
+// -------------------------------------------------------------------
+
+class CacheMultiGetRep final :
+    public ::PROTOBUF_NAMESPACE_ID::Message /* @@protoc_insertion_point(class_definition:CacheMultiGetRep) */ {
+ public:
+  inline CacheMultiGetRep() : CacheMultiGetRep(nullptr) {}
+  ~CacheMultiGetRep() override;
+  explicit PROTOBUF_CONSTEXPR CacheMultiGetRep(::PROTOBUF_NAMESPACE_ID::internal::ConstantInitialized);
+
+  CacheMultiGetRep(const CacheMultiGetRep& from);
+  CacheMultiGetRep(CacheMultiGetRep&& from) noexcept
+    : CacheMultiGetRep() {
+    *this = ::std::move(from);
+  }
+
+  inline CacheMultiGetRep& operator=(const CacheMultiGetRep& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  inline CacheMultiGetRep& operator=(CacheMultiGetRep&& from) noexcept {
+    if (this == &from) return *this;
+    if (GetOwningArena() == from.GetOwningArena()
+  #ifdef PROTOBUF_FORCE_COPY_IN_MOVE
+        && GetOwningArena() != nullptr
+  #endif  // !PROTOBUF_FORCE_COPY_IN_MOVE
+    ) {
+      InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+
+  static const ::PROTOBUF_NAMESPACE_ID::Descriptor* descriptor() {
+    return GetDescriptor();
+  }
+  static const ::PROTOBUF_NAMESPACE_ID::Descriptor* GetDescriptor() {
+    return default_instance().GetMetadata().descriptor;
+  }
+  static const ::PROTOBUF_NAMESPACE_ID::Reflection* GetReflection() {
+    return default_instance().GetMetadata().reflection;
+  }
+  static const CacheMultiGetRep& default_instance() {
+    return *internal_default_instance();
+  }
+  static inline const CacheMultiGetRep* internal_default_instance() {
+    return reinterpret_cast<const CacheMultiGetRep*>(
+               &_CacheMultiGetRep_default_instance_);
+  }
+  static constexpr int kIndexInFileMessages =
+    3;
+
+  friend void swap(CacheMultiGetRep& a, CacheMultiGetRep& b) {
+    a.Swap(&b);
+  }
+  inline void Swap(CacheMultiGetRep* other) {
+    if (other == this) return;
+  #ifdef PROTOBUF_FORCE_COPY_IN_SWAP
+    if (GetOwningArena() != nullptr &&
+        GetOwningArena() == other->GetOwningArena()) {
+   #else  // PROTOBUF_FORCE_COPY_IN_SWAP
+    if (GetOwningArena() == other->GetOwningArena()) {
+  #endif  // !PROTOBUF_FORCE_COPY_IN_SWAP
+      InternalSwap(other);
+    } else {
+      ::PROTOBUF_NAMESPACE_ID::internal::GenericSwap(this, other);
+    }
+  }
+  void UnsafeArenaSwap(CacheMultiGetRep* other) {
+    if (other == this) return;
+    GOOGLE_DCHECK(GetOwningArena() == other->GetOwningArena());
+    InternalSwap(other);
+  }
+
+  // implements Message ----------------------------------------------
+
+  CacheMultiGetRep* New(::PROTOBUF_NAMESPACE_ID::Arena* arena = nullptr) const final {
+    return CreateMaybeMessage<CacheMultiGetRep>(arena);
+  }
+  using ::PROTOBUF_NAMESPACE_ID::Message::CopyFrom;
+  void CopyFrom(const CacheMultiGetRep& from);
+  using ::PROTOBUF_NAMESPACE_ID::Message::MergeFrom;
+  void MergeFrom( const CacheMultiGetRep& from) {
+    CacheMultiGetRep::MergeImpl(*this, from);
+  }
+  private:
+  static void MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PROTOBUF_NAMESPACE_ID::Message& from_msg);
+  public:
+  PROTOBUF_ATTRIBUTE_REINITIALIZES void Clear() final;
+  bool IsInitialized() const final;
+
+  size_t ByteSizeLong() const final;
+  const char* _InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::internal::ParseContext* ctx) final;
+  uint8_t* _InternalSerialize(
+      uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const final;
+  int GetCachedSize() const final { return _impl_._cached_size_.Get(); }
+
+  private:
+  void SharedCtor(::PROTOBUF_NAMESPACE_ID::Arena* arena, bool is_message_owned);
+  void SharedDtor();
+  void SetCachedSize(int size) const final;
+  void InternalSwap(CacheMultiGetRep* other);
+
+  private:
+  friend class ::PROTOBUF_NAMESPACE_ID::internal::AnyMetadata;
+  static ::PROTOBUF_NAMESPACE_ID::StringPiece FullMessageName() {
+    return "CacheMultiGetRep";
+  }
+  protected:
+  explicit CacheMultiGetRep(::PROTOBUF_NAMESPACE_ID::Arena* arena,
+                       bool is_message_owned = false);
+  public:
+
+  static const ClassData _class_data_;
+  const ::PROTOBUF_NAMESPACE_ID::Message::ClassData*GetClassData() const final;
+
+  ::PROTOBUF_NAMESPACE_ID::Metadata GetMetadata() const final;
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  enum : int {
+    kBlobFieldNumber = 1,
+  };
+  // .Blob blob = 1;
+  bool has_blob() const;
+  private:
+  bool _internal_has_blob() const;
+  public:
+  void clear_blob();
+  const ::Blob& blob() const;
+  PROTOBUF_NODISCARD ::Blob* release_blob();
+  ::Blob* mutable_blob();
+  void set_allocated_blob(::Blob* blob);
+  private:
+  const ::Blob& _internal_blob() const;
+  ::Blob* _internal_mutable_blob();
+  public:
+  void unsafe_arena_set_allocated_blob(
+      ::Blob* blob);
+  ::Blob* unsafe_arena_release_blob();
+
+  // @@protoc_insertion_point(class_scope:CacheMultiGetRep)
+ private:
+  class _Internal;
+
+  template <typename T> friend class ::PROTOBUF_NAMESPACE_ID::Arena::InternalHelper;
+  typedef void InternalArenaConstructable_;
+  typedef void DestructorSkippable_;
+  struct Impl_ {
+    ::Blob* blob_;
+    mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
+  };
+  union { Impl_ _impl_; };
+  friend struct ::TableStruct_cache_2eproto;
+};
+// -------------------------------------------------------------------
+
 class ShardReq_ValsEntry_DoNotUse : public ::PROTOBUF_NAMESPACE_ID::internal::MapEntry<ShardReq_ValsEntry_DoNotUse, 
     std::string, std::string,
     ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::TYPE_STRING,
@@ -396,7 +927,7 @@ class ShardReq final :
                &_ShardReq_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    2;
+    5;
 
   friend void swap(ShardReq& a, ShardReq& b) {
     a.Swap(&b);
@@ -589,7 +1120,7 @@ class CacheOK final :
                &_CacheOK_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    3;
+    6;
 
   friend void swap(CacheOK& a, CacheOK& b) {
     a.Swap(&b);
@@ -708,7 +1239,7 @@ class CacheRep final :
                &_CacheRep_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    4;
+    7;
 
   friend void swap(CacheRep& a, CacheRep& b) {
     a.Swap(&b);
@@ -887,7 +1418,7 @@ class ShardData final :
                &_ShardData_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    6;
+    9;
 
   friend void swap(ShardData& a, ShardData& b) {
     a.Swap(&b);
@@ -1050,7 +1581,7 @@ class CacheString final :
                &_CacheString_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    7;
+    10;
 
   friend void swap(CacheString& a, CacheString& b) {
     a.Swap(&b);
@@ -1203,7 +1734,7 @@ class CacheInt final :
                &_CacheInt_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    8;
+    11;
 
   friend void swap(CacheInt& a, CacheInt& b) {
     a.Swap(&b);
@@ -1624,6 +2155,383 @@ inline void CacheReq::set_allocated_fence(::TfenceProto* fence) {
 
 // -------------------------------------------------------------------
 
+// CacheGetDescriptor
+
+// string key = 1;
+inline void CacheGetDescriptor::clear_key() {
+  _impl_.key_.ClearToEmpty();
+}
+inline const std::string& CacheGetDescriptor::key() const {
+  // @@protoc_insertion_point(field_get:CacheGetDescriptor.key)
+  return _internal_key();
+}
+template <typename ArgT0, typename... ArgT>
+inline PROTOBUF_ALWAYS_INLINE
+void CacheGetDescriptor::set_key(ArgT0&& arg0, ArgT... args) {
+ 
+ _impl_.key_.Set(static_cast<ArgT0 &&>(arg0), args..., GetArenaForAllocation());
+  // @@protoc_insertion_point(field_set:CacheGetDescriptor.key)
+}
+inline std::string* CacheGetDescriptor::mutable_key() {
+  std::string* _s = _internal_mutable_key();
+  // @@protoc_insertion_point(field_mutable:CacheGetDescriptor.key)
+  return _s;
+}
+inline const std::string& CacheGetDescriptor::_internal_key() const {
+  return _impl_.key_.Get();
+}
+inline void CacheGetDescriptor::_internal_set_key(const std::string& value) {
+  
+  _impl_.key_.Set(value, GetArenaForAllocation());
+}
+inline std::string* CacheGetDescriptor::_internal_mutable_key() {
+  
+  return _impl_.key_.Mutable(GetArenaForAllocation());
+}
+inline std::string* CacheGetDescriptor::release_key() {
+  // @@protoc_insertion_point(field_release:CacheGetDescriptor.key)
+  return _impl_.key_.Release();
+}
+inline void CacheGetDescriptor::set_allocated_key(std::string* key) {
+  if (key != nullptr) {
+    
+  } else {
+    
+  }
+  _impl_.key_.SetAllocated(key, GetArenaForAllocation());
+#ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  if (_impl_.key_.IsDefault()) {
+    _impl_.key_.Set("", GetArenaForAllocation());
+  }
+#endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  // @@protoc_insertion_point(field_set_allocated:CacheGetDescriptor.key)
+}
+
+// uint32 shard = 2;
+inline void CacheGetDescriptor::clear_shard() {
+  _impl_.shard_ = 0u;
+}
+inline uint32_t CacheGetDescriptor::_internal_shard() const {
+  return _impl_.shard_;
+}
+inline uint32_t CacheGetDescriptor::shard() const {
+  // @@protoc_insertion_point(field_get:CacheGetDescriptor.shard)
+  return _internal_shard();
+}
+inline void CacheGetDescriptor::_internal_set_shard(uint32_t value) {
+  
+  _impl_.shard_ = value;
+}
+inline void CacheGetDescriptor::set_shard(uint32_t value) {
+  _internal_set_shard(value);
+  // @@protoc_insertion_point(field_set:CacheGetDescriptor.shard)
+}
+
+// -------------------------------------------------------------------
+
+// CacheMultiGetReq
+
+// repeated .CacheGetDescriptor gets = 1;
+inline int CacheMultiGetReq::_internal_gets_size() const {
+  return _impl_.gets_.size();
+}
+inline int CacheMultiGetReq::gets_size() const {
+  return _internal_gets_size();
+}
+inline void CacheMultiGetReq::clear_gets() {
+  _impl_.gets_.Clear();
+}
+inline ::CacheGetDescriptor* CacheMultiGetReq::mutable_gets(int index) {
+  // @@protoc_insertion_point(field_mutable:CacheMultiGetReq.gets)
+  return _impl_.gets_.Mutable(index);
+}
+inline ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::CacheGetDescriptor >*
+CacheMultiGetReq::mutable_gets() {
+  // @@protoc_insertion_point(field_mutable_list:CacheMultiGetReq.gets)
+  return &_impl_.gets_;
+}
+inline const ::CacheGetDescriptor& CacheMultiGetReq::_internal_gets(int index) const {
+  return _impl_.gets_.Get(index);
+}
+inline const ::CacheGetDescriptor& CacheMultiGetReq::gets(int index) const {
+  // @@protoc_insertion_point(field_get:CacheMultiGetReq.gets)
+  return _internal_gets(index);
+}
+inline ::CacheGetDescriptor* CacheMultiGetReq::_internal_add_gets() {
+  return _impl_.gets_.Add();
+}
+inline ::CacheGetDescriptor* CacheMultiGetReq::add_gets() {
+  ::CacheGetDescriptor* _add = _internal_add_gets();
+  // @@protoc_insertion_point(field_add:CacheMultiGetReq.gets)
+  return _add;
+}
+inline const ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::CacheGetDescriptor >&
+CacheMultiGetReq::gets() const {
+  // @@protoc_insertion_point(field_list:CacheMultiGetReq.gets)
+  return _impl_.gets_;
+}
+
+// .SpanContextConfig spanContextConfig = 2;
+inline bool CacheMultiGetReq::_internal_has_spancontextconfig() const {
+  return this != internal_default_instance() && _impl_.spancontextconfig_ != nullptr;
+}
+inline bool CacheMultiGetReq::has_spancontextconfig() const {
+  return _internal_has_spancontextconfig();
+}
+inline const ::SpanContextConfig& CacheMultiGetReq::_internal_spancontextconfig() const {
+  const ::SpanContextConfig* p = _impl_.spancontextconfig_;
+  return p != nullptr ? *p : reinterpret_cast<const ::SpanContextConfig&>(
+      ::_SpanContextConfig_default_instance_);
+}
+inline const ::SpanContextConfig& CacheMultiGetReq::spancontextconfig() const {
+  // @@protoc_insertion_point(field_get:CacheMultiGetReq.spanContextConfig)
+  return _internal_spancontextconfig();
+}
+inline void CacheMultiGetReq::unsafe_arena_set_allocated_spancontextconfig(
+    ::SpanContextConfig* spancontextconfig) {
+  if (GetArenaForAllocation() == nullptr) {
+    delete reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(_impl_.spancontextconfig_);
+  }
+  _impl_.spancontextconfig_ = spancontextconfig;
+  if (spancontextconfig) {
+    
+  } else {
+    
+  }
+  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:CacheMultiGetReq.spanContextConfig)
+}
+inline ::SpanContextConfig* CacheMultiGetReq::release_spancontextconfig() {
+  
+  ::SpanContextConfig* temp = _impl_.spancontextconfig_;
+  _impl_.spancontextconfig_ = nullptr;
+#ifdef PROTOBUF_FORCE_COPY_IN_RELEASE
+  auto* old =  reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(temp);
+  temp = ::PROTOBUF_NAMESPACE_ID::internal::DuplicateIfNonNull(temp);
+  if (GetArenaForAllocation() == nullptr) { delete old; }
+#else  // PROTOBUF_FORCE_COPY_IN_RELEASE
+  if (GetArenaForAllocation() != nullptr) {
+    temp = ::PROTOBUF_NAMESPACE_ID::internal::DuplicateIfNonNull(temp);
+  }
+#endif  // !PROTOBUF_FORCE_COPY_IN_RELEASE
+  return temp;
+}
+inline ::SpanContextConfig* CacheMultiGetReq::unsafe_arena_release_spancontextconfig() {
+  // @@protoc_insertion_point(field_release:CacheMultiGetReq.spanContextConfig)
+  
+  ::SpanContextConfig* temp = _impl_.spancontextconfig_;
+  _impl_.spancontextconfig_ = nullptr;
+  return temp;
+}
+inline ::SpanContextConfig* CacheMultiGetReq::_internal_mutable_spancontextconfig() {
+  
+  if (_impl_.spancontextconfig_ == nullptr) {
+    auto* p = CreateMaybeMessage<::SpanContextConfig>(GetArenaForAllocation());
+    _impl_.spancontextconfig_ = p;
+  }
+  return _impl_.spancontextconfig_;
+}
+inline ::SpanContextConfig* CacheMultiGetReq::mutable_spancontextconfig() {
+  ::SpanContextConfig* _msg = _internal_mutable_spancontextconfig();
+  // @@protoc_insertion_point(field_mutable:CacheMultiGetReq.spanContextConfig)
+  return _msg;
+}
+inline void CacheMultiGetReq::set_allocated_spancontextconfig(::SpanContextConfig* spancontextconfig) {
+  ::PROTOBUF_NAMESPACE_ID::Arena* message_arena = GetArenaForAllocation();
+  if (message_arena == nullptr) {
+    delete reinterpret_cast< ::PROTOBUF_NAMESPACE_ID::MessageLite*>(_impl_.spancontextconfig_);
+  }
+  if (spancontextconfig) {
+    ::PROTOBUF_NAMESPACE_ID::Arena* submessage_arena =
+        ::PROTOBUF_NAMESPACE_ID::Arena::InternalGetOwningArena(
+                reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(spancontextconfig));
+    if (message_arena != submessage_arena) {
+      spancontextconfig = ::PROTOBUF_NAMESPACE_ID::internal::GetOwnedMessage(
+          message_arena, spancontextconfig, submessage_arena);
+    }
+    
+  } else {
+    
+  }
+  _impl_.spancontextconfig_ = spancontextconfig;
+  // @@protoc_insertion_point(field_set_allocated:CacheMultiGetReq.spanContextConfig)
+}
+
+// .TfenceProto fence = 3;
+inline bool CacheMultiGetReq::_internal_has_fence() const {
+  return this != internal_default_instance() && _impl_.fence_ != nullptr;
+}
+inline bool CacheMultiGetReq::has_fence() const {
+  return _internal_has_fence();
+}
+inline const ::TfenceProto& CacheMultiGetReq::_internal_fence() const {
+  const ::TfenceProto* p = _impl_.fence_;
+  return p != nullptr ? *p : reinterpret_cast<const ::TfenceProto&>(
+      ::_TfenceProto_default_instance_);
+}
+inline const ::TfenceProto& CacheMultiGetReq::fence() const {
+  // @@protoc_insertion_point(field_get:CacheMultiGetReq.fence)
+  return _internal_fence();
+}
+inline void CacheMultiGetReq::unsafe_arena_set_allocated_fence(
+    ::TfenceProto* fence) {
+  if (GetArenaForAllocation() == nullptr) {
+    delete reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(_impl_.fence_);
+  }
+  _impl_.fence_ = fence;
+  if (fence) {
+    
+  } else {
+    
+  }
+  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:CacheMultiGetReq.fence)
+}
+inline ::TfenceProto* CacheMultiGetReq::release_fence() {
+  
+  ::TfenceProto* temp = _impl_.fence_;
+  _impl_.fence_ = nullptr;
+#ifdef PROTOBUF_FORCE_COPY_IN_RELEASE
+  auto* old =  reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(temp);
+  temp = ::PROTOBUF_NAMESPACE_ID::internal::DuplicateIfNonNull(temp);
+  if (GetArenaForAllocation() == nullptr) { delete old; }
+#else  // PROTOBUF_FORCE_COPY_IN_RELEASE
+  if (GetArenaForAllocation() != nullptr) {
+    temp = ::PROTOBUF_NAMESPACE_ID::internal::DuplicateIfNonNull(temp);
+  }
+#endif  // !PROTOBUF_FORCE_COPY_IN_RELEASE
+  return temp;
+}
+inline ::TfenceProto* CacheMultiGetReq::unsafe_arena_release_fence() {
+  // @@protoc_insertion_point(field_release:CacheMultiGetReq.fence)
+  
+  ::TfenceProto* temp = _impl_.fence_;
+  _impl_.fence_ = nullptr;
+  return temp;
+}
+inline ::TfenceProto* CacheMultiGetReq::_internal_mutable_fence() {
+  
+  if (_impl_.fence_ == nullptr) {
+    auto* p = CreateMaybeMessage<::TfenceProto>(GetArenaForAllocation());
+    _impl_.fence_ = p;
+  }
+  return _impl_.fence_;
+}
+inline ::TfenceProto* CacheMultiGetReq::mutable_fence() {
+  ::TfenceProto* _msg = _internal_mutable_fence();
+  // @@protoc_insertion_point(field_mutable:CacheMultiGetReq.fence)
+  return _msg;
+}
+inline void CacheMultiGetReq::set_allocated_fence(::TfenceProto* fence) {
+  ::PROTOBUF_NAMESPACE_ID::Arena* message_arena = GetArenaForAllocation();
+  if (message_arena == nullptr) {
+    delete reinterpret_cast< ::PROTOBUF_NAMESPACE_ID::MessageLite*>(_impl_.fence_);
+  }
+  if (fence) {
+    ::PROTOBUF_NAMESPACE_ID::Arena* submessage_arena =
+        ::PROTOBUF_NAMESPACE_ID::Arena::InternalGetOwningArena(
+                reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(fence));
+    if (message_arena != submessage_arena) {
+      fence = ::PROTOBUF_NAMESPACE_ID::internal::GetOwnedMessage(
+          message_arena, fence, submessage_arena);
+    }
+    
+  } else {
+    
+  }
+  _impl_.fence_ = fence;
+  // @@protoc_insertion_point(field_set_allocated:CacheMultiGetReq.fence)
+}
+
+// -------------------------------------------------------------------
+
+// CacheMultiGetRep
+
+// .Blob blob = 1;
+inline bool CacheMultiGetRep::_internal_has_blob() const {
+  return this != internal_default_instance() && _impl_.blob_ != nullptr;
+}
+inline bool CacheMultiGetRep::has_blob() const {
+  return _internal_has_blob();
+}
+inline const ::Blob& CacheMultiGetRep::_internal_blob() const {
+  const ::Blob* p = _impl_.blob_;
+  return p != nullptr ? *p : reinterpret_cast<const ::Blob&>(
+      ::_Blob_default_instance_);
+}
+inline const ::Blob& CacheMultiGetRep::blob() const {
+  // @@protoc_insertion_point(field_get:CacheMultiGetRep.blob)
+  return _internal_blob();
+}
+inline void CacheMultiGetRep::unsafe_arena_set_allocated_blob(
+    ::Blob* blob) {
+  if (GetArenaForAllocation() == nullptr) {
+    delete reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(_impl_.blob_);
+  }
+  _impl_.blob_ = blob;
+  if (blob) {
+    
+  } else {
+    
+  }
+  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:CacheMultiGetRep.blob)
+}
+inline ::Blob* CacheMultiGetRep::release_blob() {
+  
+  ::Blob* temp = _impl_.blob_;
+  _impl_.blob_ = nullptr;
+#ifdef PROTOBUF_FORCE_COPY_IN_RELEASE
+  auto* old =  reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(temp);
+  temp = ::PROTOBUF_NAMESPACE_ID::internal::DuplicateIfNonNull(temp);
+  if (GetArenaForAllocation() == nullptr) { delete old; }
+#else  // PROTOBUF_FORCE_COPY_IN_RELEASE
+  if (GetArenaForAllocation() != nullptr) {
+    temp = ::PROTOBUF_NAMESPACE_ID::internal::DuplicateIfNonNull(temp);
+  }
+#endif  // !PROTOBUF_FORCE_COPY_IN_RELEASE
+  return temp;
+}
+inline ::Blob* CacheMultiGetRep::unsafe_arena_release_blob() {
+  // @@protoc_insertion_point(field_release:CacheMultiGetRep.blob)
+  
+  ::Blob* temp = _impl_.blob_;
+  _impl_.blob_ = nullptr;
+  return temp;
+}
+inline ::Blob* CacheMultiGetRep::_internal_mutable_blob() {
+  
+  if (_impl_.blob_ == nullptr) {
+    auto* p = CreateMaybeMessage<::Blob>(GetArenaForAllocation());
+    _impl_.blob_ = p;
+  }
+  return _impl_.blob_;
+}
+inline ::Blob* CacheMultiGetRep::mutable_blob() {
+  ::Blob* _msg = _internal_mutable_blob();
+  // @@protoc_insertion_point(field_mutable:CacheMultiGetRep.blob)
+  return _msg;
+}
+inline void CacheMultiGetRep::set_allocated_blob(::Blob* blob) {
+  ::PROTOBUF_NAMESPACE_ID::Arena* message_arena = GetArenaForAllocation();
+  if (message_arena == nullptr) {
+    delete reinterpret_cast< ::PROTOBUF_NAMESPACE_ID::MessageLite*>(_impl_.blob_);
+  }
+  if (blob) {
+    ::PROTOBUF_NAMESPACE_ID::Arena* submessage_arena =
+        ::PROTOBUF_NAMESPACE_ID::Arena::InternalGetOwningArena(
+                reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(blob));
+    if (message_arena != submessage_arena) {
+      blob = ::PROTOBUF_NAMESPACE_ID::internal::GetOwnedMessage(
+          message_arena, blob, submessage_arena);
+    }
+    
+  } else {
+    
+  }
+  _impl_.blob_ = blob;
+  // @@protoc_insertion_point(field_set_allocated:CacheMultiGetRep.blob)
+}
+
+// -------------------------------------------------------------------
+
 // -------------------------------------------------------------------
 
 // ShardReq
@@ -1936,6 +2844,12 @@ inline void CacheInt::set_val(int64_t value) {
 #ifdef __GNUC__
   #pragma GCC diagnostic pop
 #endif  // __GNUC__
+// -------------------------------------------------------------------
+
+// -------------------------------------------------------------------
+
+// -------------------------------------------------------------------
+
 // -------------------------------------------------------------------
 
 // -------------------------------------------------------------------

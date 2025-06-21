@@ -39,13 +39,45 @@ std::expected<int, sigmaos::serr::Error> Clnt::Get(std::string key, std::string 
     {
       auto _ = req.release_fence();
     }
+    auto start = GetCurrentTime();
     *val = rep.value();
+    log(PROXY_RPC_LAT, "Set val to reply value lat:{}ms", LatencyMS(start));
     if (!res.has_value()) {
       log(CACHECLNT_ERR, "Error Get: {}", res.error().String());
       return std::unexpected(res.error());
     }
   }
 	log(CACHECLNT, "Get ok: {} -> {}b", key, val->size());
+  return 0;
+}
+
+std::expected<int, sigmaos::serr::Error> Clnt::MultiGet(std::vector<std::string> keys, std::vector<std::string *> vals) {
+	log(CACHECLNT, "MultiGet nkey {}", keys.size());
+  TfenceProto fence;
+	CacheMultiGetRep rep;
+  CacheMultiGetReq req;
+  req.set_allocated_fence(&fence);
+  Blob blob;
+  auto iov = blob.mutable_iov();
+  auto gets = req.mutable_gets();
+  for (int i = 0; i < keys.size(); i++) {
+    auto get = gets->Add();
+    get->set_key(keys.at(i));
+    get->set_shard(key2shard(keys.at(i)));
+    iov->AddAllocated(vals.at(i));
+  }
+  rep.set_allocated_blob(&blob);
+	{
+    auto res = _rpcc->RPC("CacheSrv.MultiGet", req, rep);
+    {
+      auto _ = req.release_fence();
+    }
+    if (!res.has_value()) {
+      log(CACHECLNT_ERR, "Error Get: {}", res.error().String());
+      return std::unexpected(res.error());
+    }
+  }
+	log(CACHECLNT, "Get ok");
   return 0;
 }
 

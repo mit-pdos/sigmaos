@@ -2,6 +2,8 @@
 
 #include <rpc/blob.h>
 
+#include <util/perf/perf.h>
+
 namespace sigmaos {
 namespace rpc {
 
@@ -40,7 +42,9 @@ std::expected<int, sigmaos::serr::Error> Clnt::RPC(std::string method, google::p
   log(RPCCLNT, "Deserialize reply data");
   // Deserialize the reply
   auto rep_data_buf = out_iov->GetBuffer(0);
+  auto start = GetCurrentTime();
   rep.ParseFromString(*rep_data_buf->Get());
+  log(PROXY_RPC_LAT, "RPCClnt Parse reply lat:{}ms", LatencyMS(start));
   log(RPCCLNT, "Remove reply data buffer");
   // Remove the first element in iov, which contains the serialized reply
   // message
@@ -69,17 +73,21 @@ std::expected<Rep, sigmaos::serr::Error> Clnt::wrap_and_run_rpc(std::string meth
 
   // Create the call object to be sent, and perform the RPC.
   auto wrapped_call = std::make_shared<io::transport::Call>(seqno, wrapped_in_iov, out_iov);
+  auto start = GetCurrentTime();
   auto res = _chan->SendReceive(wrapped_call);
   if (!res.has_value()) {
     log(RPCCLNT_ERR, "Error sendreceive: {}", res.error().String());
     return std::unexpected(res.error());
   }
+  log(PROXY_RPC_LAT, "RPCClnt SendReceive");
   log(RPCCLNT, "Deserialize wrapper for reply seqno: {}", seqno);
   Rep rep;
   // Deserialize the wrapper
   auto wrapper_rep_buf = out_iov->GetBuffer(0);
+  start = GetCurrentTime();
   rep.ParseFromString(*wrapper_rep_buf->Get());
   log(RPCCLNT, "Remove wrapper buffer for reply seqno: {}", seqno);
+  log(PROXY_RPC_LAT, "RPCClnt Parse wrapper");
   // Remove the wrapper from the out IOVec
   out_iov->RemoveBuffer(0);
   log(RPCCLNT, "Done remove wrapper buffer for reply seqno: {}", seqno);

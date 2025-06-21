@@ -2,6 +2,8 @@
 
 #include <util/codec/codec.h>
 
+#include <util/perf/perf.h>
+
 namespace sigmaos {
 namespace io::conn {
 
@@ -72,8 +74,13 @@ std::expected<int, sigmaos::serr::Error> Conn::Close() {
 }
 
 std::expected<int, sigmaos::serr::Error> Conn::read_bytes(char *b, size_t size) {
+  auto start = GetCurrentTime();
+  bool looped = false;
   int total = 0;
   while (total != size) {
+    if (total != 0 && !looped) {
+      looped = true;
+    }
     int n = read(_sockfd, b, size);
     // EOF
     if (n == 0) {
@@ -93,6 +100,9 @@ std::expected<int, sigmaos::serr::Error> Conn::read_bytes(char *b, size_t size) 
   if (total != size) {
     log(CONN_ERR, "Err read_bytes fd {} n({:d}) != size({:d})", _sockfd, (int) total, (int) size);
     return std::unexpected(sigmaos::serr::Error(sigmaos::serr::Terror::TErrUnreachable, std::format("read wrong num bytes: {} != {}", (int) total, (int) size)));
+  }
+  if (looped) {
+    log(PROXY_RPC_LAT, "read_bytes looped lat:{}ms", LatencyMS(start));
   }
   return total;
 }

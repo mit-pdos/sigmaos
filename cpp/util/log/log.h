@@ -19,6 +19,7 @@ const std::string TEST = "TEST";
 const std::string ALWAYS = "ALWAYS";
 const std::string FATAL = "FATAL";
 const std::string SPAWN_LAT = "SPAWN_LAT";
+const std::string PROXY_RPC_LAT = "PROXY_RPC_LAT";
 
 namespace sigmaos {
 namespace util::log {

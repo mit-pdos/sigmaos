@@ -2,6 +2,7 @@ syntax = "proto3";
 
 import "util/tracing/proto/tracing.proto";
 import "sigmap/sigmap.proto";
+import "rpc/proto/rpc.proto";
 
 option go_package = "sigmaos/apps/cache/proto";
 
@@ -12,6 +13,21 @@ message CacheReq {
   uint32 mode = 4;
   SpanContextConfig spanContextConfig = 5;
   TfenceProto fence = 6;
+}
+
+message CacheGetDescriptor {
+  string key = 1;
+  uint32 shard = 2;
+}
+
+message CacheMultiGetReq {
+  repeated CacheGetDescriptor gets = 1; // (key, shard) pairs of get requests
+  SpanContextConfig spanContextConfig = 2;
+  TfenceProto fence = 3;
+}
+
+message CacheMultiGetRep {
+  Blob blob = 1;
 }
 
 message ShardReq {

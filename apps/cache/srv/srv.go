@@ -12,6 +12,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/proc"
 	rpcdevsrv "sigmaos/rpc/dev/srv"
+	rpcproto "sigmaos/rpc/proto"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
@@ -335,6 +336,38 @@ func (cs *CacheSrv) Get(ctx fs.CtxI, req cacheproto.CacheReq, rep *cacheproto.Ca
 		db.DPrintf(db.CACHE_LAT, "Long e2e get: %v", time.Since(e2e))
 	}
 	return serr.NewErr(serr.TErrNotfound, fmt.Sprintf("key %s", req.Key))
+}
+
+func (cs *CacheSrv) MultiGet(ctx fs.CtxI, req cacheproto.CacheMultiGetReq, rep *cacheproto.CacheMultiGetRep) error {
+	if req.Fence.HasFence() {
+		// TODO: implement fenced multi-get
+		db.DFatalf("Fenced multi-get unimplemented")
+		// return cs.MultiGetFence(ctx, req, rep)
+	}
+
+	db.DPrintf(db.CACHESRV, "MultiGet %v", req)
+
+	cs.mu.Lock()
+	defer cs.mu.Unlock()
+
+	rep.Blob = &rpcproto.Blob{}
+
+	for _, getReq := range req.Gets {
+		s, err := cs.lookupShard(getReq.Tshard())
+		if err != nil {
+			db.DPrintf(db.CACHESRV, "lookupShard error %v", err)
+			return err
+		}
+		v, ok := s.get(getReq.Key)
+		if ok {
+			// Append value to blob & continue processing gets
+			rep.Blob.Iov = append(rep.Blob.Iov, v)
+			continue
+		}
+		// Key not found, so bail out & fail all gets
+		return serr.NewErr(serr.TErrNotfound, fmt.Sprintf("key %s", getReq.Key))
+	}
+	return nil
 }
 
 func (cs *CacheSrv) Delete(ctx fs.CtxI, req cacheproto.CacheReq, rep *cacheproto.CacheRep) error {

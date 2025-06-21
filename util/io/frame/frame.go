@@ -4,8 +4,11 @@ import (
 	"encoding/binary"
 	"io"
 
+	"time"
+
 	db "sigmaos/debug"
 	sessp "sigmaos/session/proto"
+	sp "sigmaos/sigmap"
 )
 
 // Read a frame into an existing buffer
@@ -91,8 +94,12 @@ func WriteFrames(wr io.Writer, iov sessp.IoVec) error {
 		return err
 	}
 	for _, f := range iov {
+		start := time.Now()
 		if err := WriteFrame(wr, f); err != nil {
 			return err
+		}
+		if db.WillBePrinted(db.PROXY_RPC_LAT) && len(f) > 2*sp.MBYTE {
+			db.DPrintf(db.PROXY_RPC_LAT, "Done write %vB lat=%v tpt=%v", len(f), time.Since(start), (float64(len(f))/time.Since(start).Seconds())/float64(sp.MBYTE))
 		}
 	}
 	return nil

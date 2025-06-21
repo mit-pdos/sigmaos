@@ -88,6 +88,9 @@ func (rpcs *RPCSrv) ServeRPC(ctx fs.CtxI, m string, iov sessp.IoVec) (sessp.IoVe
 		return nil, serr.NewErrError(r)
 	}
 	iovrep = append(sessp.IoVec{b}, iovrep...)
+	if db.WillBePrinted(db.PROXY_RPC_LAT) && m == "SPProxySrvAPI.WriteRead" {
+		db.DPrintf(db.PROXY_RPC_LAT, "reply to writeread")
+	}
 	return iovrep, nil
 }
 

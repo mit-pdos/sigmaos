@@ -35,6 +35,7 @@ const (
 	FSETCD_LAT                  = "FSETCD_LAT"
 	ATTACH_LAT                  = "ATTACH_LAT"
 	RPC_LAT                     = "RPC_LAT"
+	PROXY_RPC_LAT               = "PROXY_RPC_LAT"
 )
 
 // Tests

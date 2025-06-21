@@ -374,9 +374,9 @@ func TestCosSimInitLatency(t *testing.T) {
 		N_PARALLEL   = 1
 		MCPU_PER_SRV = 2000
 		// App parameters
-		N_VEC      = 100
+		N_VEC      = 1000
 		VEC_DIM    = 100
-		EAGER_INIT = false
+		EAGER_INIT = true
 		// Cache parameters
 		N_CACHE    = 1
 		CACHE_MCPU = 1000

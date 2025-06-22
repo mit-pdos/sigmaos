@@ -4,6 +4,7 @@ add_subdirectory(proto)
 
 add_library(app_cossim STATIC
   srv.cc
+  vec.cc
 )
 
 target_link_libraries(app_cossim PUBLIC

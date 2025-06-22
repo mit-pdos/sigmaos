@@ -12,6 +12,7 @@ std::expected<int, sigmaos::serr::Error> Srv::CosSim(std::shared_ptr<google::pro
   auto start = GetCurrentTime();
   auto req = dynamic_pointer_cast<CosSimReq>(preq);
   auto rep = dynamic_pointer_cast<CosSimRep>(prep);
+  auto input_vec = std::make_shared<sigmaos::apps::cossim::Vector>(req->mutable_inputvec(), _vec_dim);
   auto input = req->inputvec().vals();
   auto const &v_ranges = req->vecranges();
   log(COSSIMSRV, "CosSim req({}) invec={}", req->id(), input.size());
@@ -28,16 +29,7 @@ std::expected<int, sigmaos::serr::Error> Srv::CosSim(std::shared_ptr<google::pro
         }
       }
       auto vec = _vec_db.at(id);
-      // Compute cosine similarity
-      double input_l2 = 0.0;
-      double vec_l2 = 0.0;
-      double cos_sim = 0.0;
-      for (int i = 0; i < input.size(); i++) {
-        cos_sim += input[i] * vec[i];
-        input_l2 += input[i] * input[i];
-        vec_l2 += vec[i] * vec[i];
-      }
-      cos_sim /= (std::sqrt(input_l2) * std::sqrt(vec_l2));
+      double cos_sim = input_vec->CosineSimilarity(vec);
       // Compare to max cosine similarity found so far
       if (cos_sim > max) {
         max_id = id;
@@ -52,14 +44,45 @@ std::expected<int, sigmaos::serr::Error> Srv::CosSim(std::shared_ptr<google::pro
 }
 
 std::expected<int, sigmaos::serr::Error> Srv::Init() {
+  int nbyte = 0;
   auto start = GetCurrentTime();
-  for (int i = 0; i < _nvec; i++) {
-    auto res = fetch_vector(i);
-    if (!res.has_value()) {
-      return res;
+  if (false) {
+    for (int i = 0; i < _nvec; i++) {
+      auto res = fetch_vector(i);
+      if (!res.has_value()) {
+        return res;
+      }
+      nbyte += res.value();
     }
+  } else {
+    std::vector<std::string> key_vec;
+    std::vector<std::shared_ptr<std::string>> bufs;
+    auto start = GetCurrentTime();
+    log(COSSIMSRV, "Going to get shard");
+    for (int i = 0; i < _nvec; i++) {
+      key_vec.push_back(std::to_string(i));
+      bufs.push_back(std::make_shared<std::string>());
+    }
+    // Get the serialized vector from cached
+    {
+      auto res = _cache_clnt->MultiGet(key_vec, bufs);
+      if (!res.has_value()) {
+        log(SPAWN_LAT, "Error get all-vecs {}", res.error().String());
+        return res;
+      }
+    }
+    log(COSSIMSRV, "Got shard");
+    LogSpawnLatency(_sp_clnt->ProcEnv()->GetPID(), _sp_clnt->ProcEnv()->GetSpawnTime(), start, "GetShard RPC");
+    start = GetCurrentTime();
+    for (int id = 0; id < _nvec; id++) {
+      log(COSSIMSRV, "parse vec {}", id);
+      _vec_db[id] = std::make_shared<sigmaos::apps::cossim::Vector>(bufs.at(id), bufs.at(id)->data(), _vec_dim);
+      log(COSSIMSRV, "done parse vec {}", id);
+    }
+    log(COSSIMSRV, "done parsing all vecs");
+    LogSpawnLatency(_sp_clnt->ProcEnv()->GetPID(), _sp_clnt->ProcEnv()->GetSpawnTime(), start, "Parse vecs & construct DB");
   }
-  LogSpawnLatency(_sp_clnt->ProcEnv()->GetPID(), _sp_clnt->ProcEnv()->GetSpawnTime(), start, "Init soft state vector DB");
+  LogSpawnLatency(_sp_clnt->ProcEnv()->GetPID(), _sp_clnt->ProcEnv()->GetSpawnTime(), start, std::format("Init soft state vector DB: {}B", (int) nbyte));
   return 0;
 }
 
@@ -71,10 +94,10 @@ std::expected<int, sigmaos::serr::Error> Srv::fetch_vector(uint64_t id) {
     return 0;
   }
   auto start = GetCurrentTime();
-  std::string b;
+  auto b = std::make_shared<std::string>();
   // Get the serialized vector from cached
   {
-    auto res = _cache_clnt->Get(std::to_string(id), &b);
+    auto res = _cache_clnt->Get(std::to_string(id), b);
     if (!res.has_value()) {
       return res;
     }
@@ -82,12 +105,10 @@ std::expected<int, sigmaos::serr::Error> Srv::fetch_vector(uint64_t id) {
   LogSpawnLatency(_sp_clnt->ProcEnv()->GetPID(), _sp_clnt->ProcEnv()->GetSpawnTime(), start, "Get vector");
   // Parse the vector
   auto start_parse_and_alloc = GetCurrentTime();
-  Vector v;
-  v.ParseFromString(b);
-  _vec_db[id] = std::vector<double>(v.vals().begin(), v.vals().end());
+  _vec_db[id] = std::make_shared<sigmaos::apps::cossim::Vector>(b, b->data(), _vec_dim);
   LogSpawnLatency(_sp_clnt->ProcEnv()->GetPID(), _sp_clnt->ProcEnv()->GetSpawnTime(), start_parse_and_alloc, "Parse & alloc vector");
   LogSpawnLatency(_sp_clnt->ProcEnv()->GetPID(), _sp_clnt->ProcEnv()->GetSpawnTime(), start, "Fetch vector e2e");
-  return 0;
+  return b->size();
 }
 
 [[noreturn]] void Srv::Run() {

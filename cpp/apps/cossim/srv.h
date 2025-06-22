@@ -22,6 +22,7 @@
 #include <proxy/sigmap/sigmap.h>
 #include <apps/cache/clnt.h>
 #include <apps/cossim/proto/cossim.pb.h>
+#include <apps/cossim/vec.h>
 
 namespace sigmaos {
 namespace apps::cossim {
@@ -88,7 +89,7 @@ class Srv {
   std::mutex _mu;
   int _nvec;
   int _vec_dim;
-  std::map<uint64_t, std::vector<double>> _vec_db;
+  std::map<uint64_t, std::shared_ptr<sigmaos::apps::cossim::Vector>> _vec_db;
   std::shared_ptr<sigmaos::proxy::sigmap::Clnt> _sp_clnt;
   std::shared_ptr<sigmaos::util::perf::Perf> _perf;
   std::shared_ptr<sigmaos::apps::cache::Clnt> _cache_clnt;

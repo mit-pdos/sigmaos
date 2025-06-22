@@ -26,7 +26,7 @@ std::expected<int, sigmaos::serr::Error> Clnt::Init() {
   return 0;
 }
 
-std::expected<int, sigmaos::serr::Error> Clnt::Get(std::string key, std::string *val) {
+std::expected<int, sigmaos::serr::Error> Clnt::Get(std::string key, std::shared_ptr<std::string> val) {
 	log(CACHECLNT, "Get: {}", key);
   TfenceProto fence;
 	CacheRep rep;
@@ -51,7 +51,7 @@ std::expected<int, sigmaos::serr::Error> Clnt::Get(std::string key, std::string 
   return 0;
 }
 
-std::expected<int, sigmaos::serr::Error> Clnt::MultiGet(std::vector<std::string> keys, std::vector<std::string *> vals) {
+std::expected<int, sigmaos::serr::Error> Clnt::MultiGet(std::vector<std::string> keys, std::vector<std::shared_ptr<std::string>> vals) {
 	log(CACHECLNT, "MultiGet nkey {}", keys.size());
   TfenceProto fence;
 	CacheMultiGetRep rep;
@@ -64,7 +64,7 @@ std::expected<int, sigmaos::serr::Error> Clnt::MultiGet(std::vector<std::string>
     auto get = gets->Add();
     get->set_key(keys.at(i));
     get->set_shard(key2shard(keys.at(i)));
-    iov->AddAllocated(vals.at(i));
+    iov->AddAllocated(vals.at(i).get());
   }
   rep.set_allocated_blob(&blob);
 	{
@@ -81,7 +81,7 @@ std::expected<int, sigmaos::serr::Error> Clnt::MultiGet(std::vector<std::string>
   return 0;
 }
 
-std::expected<int, sigmaos::serr::Error> Clnt::Put(std::string key, std::string *val) {
+std::expected<int, sigmaos::serr::Error> Clnt::Put(std::string key, std::shared_ptr<std::string> val) {
 	log(CACHECLNT, "Put: {} -> {}b", key, val->size());
   TfenceProto fence;
 	CacheRep rep;
@@ -89,7 +89,7 @@ std::expected<int, sigmaos::serr::Error> Clnt::Put(std::string key, std::string 
   req.set_allocated_fence(&fence);
   req.set_key(key);
   req.set_shard(key2shard(key));
-  req.set_allocated_value(val);
+  req.set_allocated_value(val.get());
 	{
     auto res = _rpcc->RPC("CacheSrv.Put", req, rep);
     {

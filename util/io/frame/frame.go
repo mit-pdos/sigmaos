@@ -93,14 +93,20 @@ func WriteFrames(wr io.Writer, iov sessp.IoVec) error {
 	if err := WriteNumOfFrames(wr, uint32(len(iov))); err != nil {
 		return err
 	}
+	start := time.Now()
+	nbyte := 0
 	for _, f := range iov {
 		start := time.Now()
 		if err := WriteFrame(wr, f); err != nil {
 			return err
 		}
+		nbyte += len(f)
 		if db.WillBePrinted(db.PROXY_RPC_LAT) && len(f) > 2*sp.MBYTE {
 			db.DPrintf(db.PROXY_RPC_LAT, "Done write %vB lat=%v tpt=%0.3fMB/s", len(f), time.Since(start), (float64(len(f))/time.Since(start).Seconds())/float64(sp.MBYTE))
 		}
+	}
+	if db.WillBePrinted(db.PROXY_RPC_LAT) && nbyte > 2*sp.MBYTE {
+		db.DPrintf(db.PROXY_RPC_LAT, "Done write %vB lat=%v tpt=%0.3fMB/s", nbyte, time.Since(start), (float64(nbyte)/time.Since(start).Seconds())/float64(sp.MBYTE))
 	}
 	return nil
 }

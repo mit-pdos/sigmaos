@@ -1,12 +1,12 @@
 package cossim
 
 import (
+	"bytes"
+	"encoding/binary"
 	"path/filepath"
 	"strconv"
 	"sync"
 	"time"
-
-	"google.golang.org/protobuf/proto"
 
 	cachegrpclnt "sigmaos/apps/cache/cachegrp/clnt"
 	cachegrpmgr "sigmaos/apps/cache/cachegrp/mgr"
@@ -38,16 +38,28 @@ func initFS(sc *sigmaclnt.SigmaClnt, jobname string) error {
 	return nil
 }
 
+func marshalVec(v *cossimproto.Vector) ([]byte, error) {
+	b := make([]byte, 8*len(v.Vals))
+	buf := bytes.NewBuffer(b)
+	for _, val := range v.Vals {
+		// Write the value to the buffer in LittleEndian mode
+		if err := binary.Write(buf, binary.LittleEndian, val); err != nil {
+			db.DPrintf(db.ERROR, "binary.Write value %v: err %v", val, err)
+			return nil, err
+		}
+	}
+	return buf.Bytes(), nil
+}
+
 // Write vector DB to cache srv
 func writeVectorsToCache(cc *cachegrpclnt.CachedSvcClnt, vecs []*cossimproto.Vector) error {
 	m := make(map[string][]byte)
 	for id, v := range vecs {
-		if err := cc.Put(strconv.Itoa(id), v); err != nil {
+		b, err := marshalVec(v)
+		if err != nil {
 			return err
 		}
-		b, err := proto.Marshal(v)
-		if err != nil {
-			db.DPrintf(db.ERROR, "Error marshal vec when writing to cache")
+		if err := cc.PutBytes(strconv.Itoa(id), b); err != nil {
 			return err
 		}
 		m[strconv.Itoa(id)] = b

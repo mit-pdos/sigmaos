@@ -125,8 +125,9 @@ std::expected<int, sigmaos::serr::Error> Conn::write_bytes(const char *b, size_t
     // Success
     // Move the pointer into the buffer forward
     b += n;
-    // Increment the total number of bytes read
+    // Increment the total number of byteswrite 
     total += n;
+    // Decrement the number of bytes left to write
     left -= n;
   }
   if (total != size) {

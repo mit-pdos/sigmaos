@@ -75,6 +75,10 @@ func (csc *CachedSvcClnt) Put(key string, val proto.Message) error {
 	return csc.PutTraced(nil, key, val)
 }
 
+func (csc *CachedSvcClnt) PutBytes(key string, b []byte) error {
+	return csc.PutBytesTraced(nil, key, b)
+}
+
 func (csc *CachedSvcClnt) Get(key string, val proto.Message) error {
 	return csc.GetTraced(nil, key, val)
 }
@@ -90,6 +94,15 @@ func (csc *CachedSvcClnt) GetTraced(sctx *tproto.SpanContextConfig, key string, 
 	}
 	srv := csc.Server(key2server(key, n))
 	return csc.cc.GetTracedFenced(sctx, srv, key, val, sp.NullFence())
+}
+
+func (csc *CachedSvcClnt) PutBytesTraced(sctx *tproto.SpanContextConfig, key string, b []byte) error {
+	n, err := csc.dd.WaitEntriesN(1, true)
+	if err != nil {
+		return err
+	}
+	srv := csc.Server(key2server(key, n))
+	return csc.cc.PutBytesTracedFenced(sctx, srv, key, b, sp.NullFence())
 }
 
 func (csc *CachedSvcClnt) PutTraced(sctx *tproto.SpanContextConfig, key string, val proto.Message) error {

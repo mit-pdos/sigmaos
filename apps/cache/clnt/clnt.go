@@ -52,11 +52,7 @@ func (cc *CacheClnt) key2shard(key string) uint32 {
 	return shard
 }
 
-func (cc *CacheClnt) NewPut(sctx *tproto.SpanContextConfig, key string, val proto.Message, f *sp.Tfence) (*cacheproto.CacheReq, error) {
-	b, err := proto.Marshal(val)
-	if err != nil {
-		return nil, err
-	}
+func (cc *CacheClnt) NewPutBytes(sctx *tproto.SpanContextConfig, key string, b []byte, f *sp.Tfence) (*cacheproto.CacheReq, error) {
 	return &cacheproto.CacheReq{
 		SpanContextConfig: sctx,
 		Fence:             f.FenceProto(),
@@ -66,8 +62,28 @@ func (cc *CacheClnt) NewPut(sctx *tproto.SpanContextConfig, key string, val prot
 	}, nil
 }
 
+func (cc *CacheClnt) NewPut(sctx *tproto.SpanContextConfig, key string, val proto.Message, f *sp.Tfence) (*cacheproto.CacheReq, error) {
+	b, err := proto.Marshal(val)
+	if err != nil {
+		return nil, err
+	}
+	return cc.NewPutBytes(sctx, key, b, f)
+}
+
 func (cc *CacheClnt) PutTracedFenced(sctx *tproto.SpanContextConfig, srv, key string, val proto.Message, f *sp.Tfence) error {
 	req, err := cc.NewPut(sctx, key, val, f)
+	if err != nil {
+		return err
+	}
+	var res cacheproto.CacheRep
+	if err := cc.RPC(srv, "CacheSrv.Put", req, &res); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (cc *CacheClnt) PutBytesTracedFenced(sctx *tproto.SpanContextConfig, srv, key string, b []byte, f *sp.Tfence) error {
+	req, err := cc.NewPutBytes(sctx, key, b, f)
 	if err != nil {
 		return err
 	}

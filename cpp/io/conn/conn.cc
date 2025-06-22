@@ -77,11 +77,11 @@ std::expected<int, sigmaos::serr::Error> Conn::read_bytes(char *b, size_t size) 
   auto start = GetCurrentTime();
   bool looped = false;
   int total = 0;
-  while (total != size) {
+  for (size_t left = size; left > 0; ) {
     if (total != 0 && !looped) {
       looped = true;
     }
-    int n = read(_sockfd, b, size);
+    int n = read(_sockfd, b, left);
     // EOF
     if (n == 0) {
       break;
@@ -96,6 +96,8 @@ std::expected<int, sigmaos::serr::Error> Conn::read_bytes(char *b, size_t size) 
     b += n;
     // Increment the total number of bytes read
     total += n;
+    // Decrement the number of bytes left to read
+    left -= n;
   }
   if (total != size) {
     log(CONN_ERR, "Err read_bytes fd {} n({:d}) != size({:d})", _sockfd, (int) total, (int) size);
@@ -109,7 +111,7 @@ std::expected<int, sigmaos::serr::Error> Conn::read_bytes(char *b, size_t size) 
 
 std::expected<int, sigmaos::serr::Error> Conn::write_bytes(const char *b, size_t size) {
   int total = 0;
-  while (total != size) {
+  for (size_t left = size; left > 0; ) {
     int n = write(_sockfd, b, size);
     // EOF
     if (n == 0) {
@@ -125,6 +127,7 @@ std::expected<int, sigmaos::serr::Error> Conn::write_bytes(const char *b, size_t
     b += n;
     // Increment the total number of bytes read
     total += n;
+    left -= n;
   }
   if (total != size) {
     log(CONN_ERR, "Err write_bytes fd {}", _sockfd);

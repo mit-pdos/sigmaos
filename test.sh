@@ -358,7 +358,7 @@ if [[ $APPS == "--apps" ]]; then
     if [[ $FAST == "--fast" ]]; then
         PKGS="apps/mr apps/imgresize apps/hotel apps/socialnetwork"
         TNAMES=("MRJob" "ImgdOne" "TestBenchDeathStarSingle" "TestCompose")
-        NEED_DB=("false" "false" "false" "true" "true")
+        NEED_DB=("false" "false" "true" "true")
         i=0
         for T in $PKGS; do
           if ! [ -z "$SKIPTO" ]; then
@@ -376,6 +376,9 @@ if [[ $APPS == "--apps" ]]; then
           fi
           run_test $T "./test-in-docker.sh --pkg $T --run '${TNAMES[$i]}' --args \"$VERB $SPPROXYD $DIALPROXY\""
           i=$(($i+1))
+          if [[ "${NEED_DB[$i]}" == "true" ]]; then
+              ./stop.sh
+          fi
         done
     else
         for T in \
@@ -396,6 +399,7 @@ if [[ $APPS == "--apps" ]]; then
             fi
             ./start-db.sh
             run_test $T "./test-in-docker.sh --pkg $T --args \"$VERB --timeout 20m $SPPROXYD $DIALPROXY $REUSEKERNEL\""
+            ./stop.sh
         done
     fi
 fi

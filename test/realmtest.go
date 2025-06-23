@@ -86,8 +86,10 @@ func (rts *RealmTstate) BootNode(n int) error {
 	return rts.bootNode(n, false)
 }
 
+// We may need to wait for the realm's new named to come up during
+// booting the node so that the realm's UX and S3 can register
+// themselves.
 func (rts *RealmTstate) bootNode(n int, waitForNamed bool) error {
-
 	kids, err := rts.Ts.bootNode(n, bootclnt.BOOT_NODE)
 	if err != nil {
 		return err
@@ -95,16 +97,27 @@ func (rts *RealmTstate) bootNode(n int, waitForNamed bool) error {
 	db.DPrintf(db.TEST, "Booted additional kernels: %v", kids)
 	if waitForNamed {
 		db.DPrintf(db.TEST, "Wait for realm %v named to come up", rts.realm)
-		// wait until the realm's named has registered its endpoint
-		// and is ready to serve. Indicate that the link with named
-		// must be resolved, in case the endpoint for the old named is
-		// cached; a failed connection will invalidate the endpoint.
+		// Indicate that the link with named must be resolved, in case
+		// the endpoint for the old named is cached; a failed
+		// connection will invalidate the endpoint.
 		fn := path.MarkResolve(filepath.Join(sp.REALMS, rts.realm.String()))
-		if _, err := rts.Ts.GetFileWatch(fn); err != nil {
-			db.DPrintf(db.ERROR, "Error GetFileWatch waiting for named: %v", err)
-			return err
+
+		// Loop until new named is up.  Don't use GetFileWatch because
+		// it may return the old named's EP, since it persists until
+		// the new one overrides it.
+		for i := 0; true; i++ {
+			if sts, err := rts.Ts.GetDir(fn); err != nil {
+				db.DPrintf(db.TEST, "Named down %v err %v", rts.realm, err)
+				if i >= sp.Conf.Path.MAX_RESOLVE_RETRY {
+					return err
+				}
+				time.Sleep(sp.Conf.Path.RESOLVE_TIMEOUT)
+			} else {
+				db.DPrintf(db.TEST, "Done wait for realm named %v", sp.Names(sts))
+				break
+			}
 		}
-		db.DPrintf(db.TEST, "Done wait for realm %v named to come up", rts.realm)
+
 	}
 	for _, kid := range kids {
 		for _, ss := range []string{sp.UXREL, sp.S3REL} {
@@ -138,10 +151,10 @@ func (rts *RealmTstate) CrashServer(e0, e1 crash.Tevent, srv string) {
 			db.DPrintf(db.TEST, "Done waiting for named's lease to (potentially) expire")
 		}
 		// a crashed msched and procd causes several kernel services
-		// to exit, so start a new node.
-		// Since this realm's named may go down along with the original node,
-		// we may need to wait for the new named to come up during the boot
-		// process.
+		// to exit, so start a new node. if the crashed msched started
+		// named, the named will crash too, but realmd will start a
+		// new one (for which we may have to wait until it has
+		// started).
 		err = rts.bootNode(1, true)
 	default:
 		err = rts.Ts.BootEnv(srv, []string{"SIGMAFAIL=" + s})

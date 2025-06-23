@@ -31,7 +31,7 @@ class Clnt {
   // Initialize the channel
   std::expected<int, sigmaos::serr::Error> Init();
   std::expected<int, sigmaos::serr::Error> Get(std::string key, std::shared_ptr<std::string> val);
-  std::expected<int, sigmaos::serr::Error> MultiGet(std::vector<std::string> keys, std::vector<std::shared_ptr<std::string>> vals);
+  std::expected<std::pair<std::vector<uint64_t>, std::shared_ptr<std::string>>, sigmaos::serr::Error> MultiGet(std::vector<std::string> keys);
   std::expected<int, sigmaos::serr::Error> Put(std::string key, std::shared_ptr<std::string> val);
   std::expected<int, sigmaos::serr::Error> Delete(std::string key);
   private:

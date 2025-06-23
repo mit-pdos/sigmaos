@@ -56,28 +56,33 @@ std::expected<int, sigmaos::serr::Error> Srv::Init() {
     }
   } else {
     std::vector<std::string> key_vec;
-    std::vector<std::shared_ptr<std::string>> bufs;
+    std::shared_ptr<std::string> buf;
+    std::vector<uint64_t> lengths;
     auto start = GetCurrentTime();
     log(COSSIMSRV, "Going to get shard");
     for (int i = 0; i < _nvec; i++) {
       key_vec.push_back(std::to_string(i));
-      bufs.push_back(std::make_shared<std::string>());
     }
     // Get the serialized vector from cached
     {
-      auto res = _cache_clnt->MultiGet(key_vec, bufs);
+      auto res = _cache_clnt->MultiGet(key_vec);
       if (!res.has_value()) {
         log(SPAWN_LAT, "Error get all-vecs {}", res.error().String());
-        return res;
+        return std::unexpected(res.error());
       }
+      auto res_pair = res.value();
+      lengths = res_pair.first;
+      buf = res_pair.second; 
     }
     log(COSSIMSRV, "Got shard");
     LogSpawnLatency(_sp_clnt->ProcEnv()->GetPID(), _sp_clnt->ProcEnv()->GetSpawnTime(), start, "GetShard RPC");
     start = GetCurrentTime();
+    uint64_t off = 0;
     for (int id = 0; id < _nvec; id++) {
       log(COSSIMSRV, "parse vec {}", id);
-      _vec_db[id] = std::make_shared<sigmaos::apps::cossim::Vector>(bufs.at(id), bufs.at(id)->data(), _vec_dim);
+      _vec_db[id] = std::make_shared<sigmaos::apps::cossim::Vector>(buf, buf->data() + off, _vec_dim);
       log(COSSIMSRV, "done parse vec {}", id);
+      off += lengths[id];
     }
     log(COSSIMSRV, "done parsing all vecs");
     LogSpawnLatency(_sp_clnt->ProcEnv()->GetPID(), _sp_clnt->ProcEnv()->GetSpawnTime(), start, "Parse vecs & construct DB");

@@ -817,9 +817,32 @@ class CacheMultiGetRep final :
   // accessors -------------------------------------------------------
 
   enum : int {
-    kBlobFieldNumber = 1,
+    kLengthsFieldNumber = 1,
+    kBlobFieldNumber = 2,
   };
-  // .Blob blob = 1;
+  // repeated uint64 lengths = 1;
+  int lengths_size() const;
+  private:
+  int _internal_lengths_size() const;
+  public:
+  void clear_lengths();
+  private:
+  uint64_t _internal_lengths(int index) const;
+  const ::PROTOBUF_NAMESPACE_ID::RepeatedField< uint64_t >&
+      _internal_lengths() const;
+  void _internal_add_lengths(uint64_t value);
+  ::PROTOBUF_NAMESPACE_ID::RepeatedField< uint64_t >*
+      _internal_mutable_lengths();
+  public:
+  uint64_t lengths(int index) const;
+  void set_lengths(int index, uint64_t value);
+  void add_lengths(uint64_t value);
+  const ::PROTOBUF_NAMESPACE_ID::RepeatedField< uint64_t >&
+      lengths() const;
+  ::PROTOBUF_NAMESPACE_ID::RepeatedField< uint64_t >*
+      mutable_lengths();
+
+  // .Blob blob = 2;
   bool has_blob() const;
   private:
   bool _internal_has_blob() const;
@@ -845,6 +868,8 @@ class CacheMultiGetRep final :
   typedef void InternalArenaConstructable_;
   typedef void DestructorSkippable_;
   struct Impl_ {
+    ::PROTOBUF_NAMESPACE_ID::RepeatedField< uint64_t > lengths_;
+    mutable std::atomic<int> _lengths_cached_byte_size_;
     ::Blob* blob_;
     mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   };
@@ -2445,7 +2470,54 @@ inline void CacheMultiGetReq::set_allocated_fence(::TfenceProto* fence) {
 
 // CacheMultiGetRep
 
-// .Blob blob = 1;
+// repeated uint64 lengths = 1;
+inline int CacheMultiGetRep::_internal_lengths_size() const {
+  return _impl_.lengths_.size();
+}
+inline int CacheMultiGetRep::lengths_size() const {
+  return _internal_lengths_size();
+}
+inline void CacheMultiGetRep::clear_lengths() {
+  _impl_.lengths_.Clear();
+}
+inline uint64_t CacheMultiGetRep::_internal_lengths(int index) const {
+  return _impl_.lengths_.Get(index);
+}
+inline uint64_t CacheMultiGetRep::lengths(int index) const {
+  // @@protoc_insertion_point(field_get:CacheMultiGetRep.lengths)
+  return _internal_lengths(index);
+}
+inline void CacheMultiGetRep::set_lengths(int index, uint64_t value) {
+  _impl_.lengths_.Set(index, value);
+  // @@protoc_insertion_point(field_set:CacheMultiGetRep.lengths)
+}
+inline void CacheMultiGetRep::_internal_add_lengths(uint64_t value) {
+  _impl_.lengths_.Add(value);
+}
+inline void CacheMultiGetRep::add_lengths(uint64_t value) {
+  _internal_add_lengths(value);
+  // @@protoc_insertion_point(field_add:CacheMultiGetRep.lengths)
+}
+inline const ::PROTOBUF_NAMESPACE_ID::RepeatedField< uint64_t >&
+CacheMultiGetRep::_internal_lengths() const {
+  return _impl_.lengths_;
+}
+inline const ::PROTOBUF_NAMESPACE_ID::RepeatedField< uint64_t >&
+CacheMultiGetRep::lengths() const {
+  // @@protoc_insertion_point(field_list:CacheMultiGetRep.lengths)
+  return _internal_lengths();
+}
+inline ::PROTOBUF_NAMESPACE_ID::RepeatedField< uint64_t >*
+CacheMultiGetRep::_internal_mutable_lengths() {
+  return &_impl_.lengths_;
+}
+inline ::PROTOBUF_NAMESPACE_ID::RepeatedField< uint64_t >*
+CacheMultiGetRep::mutable_lengths() {
+  // @@protoc_insertion_point(field_mutable_list:CacheMultiGetRep.lengths)
+  return _internal_mutable_lengths();
+}
+
+// .Blob blob = 2;
 inline bool CacheMultiGetRep::_internal_has_blob() const {
   return this != internal_default_instance() && _impl_.blob_ != nullptr;
 }

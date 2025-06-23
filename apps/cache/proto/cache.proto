@@ -27,7 +27,8 @@ message CacheMultiGetReq {
 }
 
 message CacheMultiGetRep {
-  Blob blob = 1;
+  repeated uint64 lengths = 1;
+  Blob blob = 2;
 }
 
 message ShardReq {

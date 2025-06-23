@@ -51,7 +51,7 @@ std::expected<int, sigmaos::serr::Error> Clnt::Get(std::string key, std::shared_
   return 0;
 }
 
-std::expected<int, sigmaos::serr::Error> Clnt::MultiGet(std::vector<std::string> keys, std::vector<std::shared_ptr<std::string>> vals) {
+std::expected<std::pair<std::vector<uint64_t>, std::shared_ptr<std::string>>, sigmaos::serr::Error> Clnt::MultiGet(std::vector<std::string> keys) {
 	log(CACHECLNT, "MultiGet nkey {}", keys.size());
   TfenceProto fence;
 	CacheMultiGetRep rep;
@@ -59,12 +59,14 @@ std::expected<int, sigmaos::serr::Error> Clnt::MultiGet(std::vector<std::string>
   req.set_allocated_fence(&fence);
   Blob blob;
   auto iov = blob.mutable_iov();
+  // Add a buffer to hold the output
+  auto buf = std::make_shared<std::string>();
+  iov->AddAllocated(buf.get());
   auto gets = req.mutable_gets();
   for (int i = 0; i < keys.size(); i++) {
     auto get = gets->Add();
     get->set_key(keys.at(i));
     get->set_shard(key2shard(keys.at(i)));
-    iov->AddAllocated(vals.at(i).get());
   }
   rep.set_allocated_blob(&blob);
 	{
@@ -77,8 +79,12 @@ std::expected<int, sigmaos::serr::Error> Clnt::MultiGet(std::vector<std::string>
       return std::unexpected(res.error());
     }
   }
+  std::vector<uint64_t> lengths(rep.lengths().size(), 0);
+  for (int i = 0; i < lengths.size(); i++) {
+    lengths[i] = rep.lengths().at(i);
+  }
 	log(CACHECLNT, "Get ok");
-  return 0;
+  return std::make_pair(lengths, buf);
 }
 
 std::expected<int, sigmaos::serr::Error> Clnt::Put(std::string key, std::shared_ptr<std::string> val) {

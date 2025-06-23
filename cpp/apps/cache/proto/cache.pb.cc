@@ -69,7 +69,9 @@ struct CacheMultiGetReqDefaultTypeInternal {
 PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 CacheMultiGetReqDefaultTypeInternal _CacheMultiGetReq_default_instance_;
 PROTOBUF_CONSTEXPR CacheMultiGetRep::CacheMultiGetRep(
     ::_pbi::ConstantInitialized): _impl_{
-    /*decltype(_impl_.blob_)*/nullptr
+    /*decltype(_impl_.lengths_)*/{}
+  , /*decltype(_impl_._lengths_cached_byte_size_)*/{0}
+  , /*decltype(_impl_.blob_)*/nullptr
   , /*decltype(_impl_._cached_size_)*/{}} {}
 struct CacheMultiGetRepDefaultTypeInternal {
   PROTOBUF_CONSTEXPR CacheMultiGetRepDefaultTypeInternal()
@@ -220,6 +222,7 @@ const uint32_t TableStruct_cache_2eproto::offsets[] PROTOBUF_SECTION_VARIABLE(pr
   ~0u,  // no _oneof_case_
   ~0u,  // no _weak_field_map_
   ~0u,  // no _inlined_string_donated_
+  PROTOBUF_FIELD_OFFSET(::CacheMultiGetRep, _impl_.lengths_),
   PROTOBUF_FIELD_OFFSET(::CacheMultiGetRep, _impl_.blob_),
   PROTOBUF_FIELD_OFFSET(::ShardReq_ValsEntry_DoNotUse, _has_bits_),
   PROTOBUF_FIELD_OFFSET(::ShardReq_ValsEntry_DoNotUse, _internal_metadata_),
@@ -290,14 +293,14 @@ static const ::_pbi::MigrationSchema schemas[] PROTOBUF_SECTION_VARIABLE(protode
   { 12, -1, -1, sizeof(::CacheGetDescriptor)},
   { 20, -1, -1, sizeof(::CacheMultiGetReq)},
   { 29, -1, -1, sizeof(::CacheMultiGetRep)},
-  { 36, 44, -1, sizeof(::ShardReq_ValsEntry_DoNotUse)},
-  { 46, -1, -1, sizeof(::ShardReq)},
-  { 55, -1, -1, sizeof(::CacheOK)},
-  { 61, -1, -1, sizeof(::CacheRep)},
-  { 68, 76, -1, sizeof(::ShardData_ValsEntry_DoNotUse)},
-  { 78, -1, -1, sizeof(::ShardData)},
-  { 85, -1, -1, sizeof(::CacheString)},
-  { 92, -1, -1, sizeof(::CacheInt)},
+  { 37, 45, -1, sizeof(::ShardReq_ValsEntry_DoNotUse)},
+  { 47, -1, -1, sizeof(::ShardReq)},
+  { 56, -1, -1, sizeof(::CacheOK)},
+  { 62, -1, -1, sizeof(::CacheRep)},
+  { 69, 77, -1, sizeof(::ShardData_ValsEntry_DoNotUse)},
+  { 79, -1, -1, sizeof(::ShardData)},
+  { 86, -1, -1, sizeof(::CacheString)},
+  { 93, -1, -1, sizeof(::CacheInt)},
 };
 
 static const ::_pb::Message* const file_default_instances[] = {
@@ -326,17 +329,17 @@ const char descriptor_table_protodef_cache_2eproto[] PROTOBUF_SECTION_VARIABLE(p
   "\002 \001(\r\"\201\001\n\020CacheMultiGetReq\022!\n\004gets\030\001 \003(\013"
   "2\023.CacheGetDescriptor\022-\n\021spanContextConf"
   "ig\030\002 \001(\0132\022.SpanContextConfig\022\033\n\005fence\030\003 "
-  "\001(\0132\014.TfenceProto\"\'\n\020CacheMultiGetRep\022\023\n"
-  "\004blob\030\001 \001(\0132\005.Blob\"\206\001\n\010ShardReq\022\r\n\005shard"
-  "\030\001 \001(\r\022\033\n\005fence\030\002 \001(\0132\014.TfenceProto\022!\n\004v"
-  "als\030\003 \003(\0132\023.ShardReq.ValsEntry\032+\n\tValsEn"
-  "try\022\013\n\003key\030\001 \001(\t\022\r\n\005value\030\002 \001(\014:\0028\001\"\t\n\007C"
-  "acheOK\"\031\n\010CacheRep\022\r\n\005value\030\001 \001(\014\"\\\n\tSha"
-  "rdData\022\"\n\004vals\030\001 \003(\0132\024.ShardData.ValsEnt"
-  "ry\032+\n\tValsEntry\022\013\n\003key\030\001 \001(\t\022\r\n\005value\030\002 "
-  "\001(\014:\0028\001\"\032\n\013CacheString\022\013\n\003val\030\001 \001(\t\"\027\n\010C"
-  "acheInt\022\013\n\003val\030\001 \001(\003B\032Z\030sigmaos/apps/cac"
-  "he/protob\006proto3"
+  "\001(\0132\014.TfenceProto\"8\n\020CacheMultiGetRep\022\017\n"
+  "\007lengths\030\001 \003(\004\022\023\n\004blob\030\002 \001(\0132\005.Blob\"\206\001\n\010"
+  "ShardReq\022\r\n\005shard\030\001 \001(\r\022\033\n\005fence\030\002 \001(\0132\014"
+  ".TfenceProto\022!\n\004vals\030\003 \003(\0132\023.ShardReq.Va"
+  "lsEntry\032+\n\tValsEntry\022\013\n\003key\030\001 \001(\t\022\r\n\005val"
+  "ue\030\002 \001(\014:\0028\001\"\t\n\007CacheOK\"\031\n\010CacheRep\022\r\n\005v"
+  "alue\030\001 \001(\014\"\\\n\tShardData\022\"\n\004vals\030\001 \003(\0132\024."
+  "ShardData.ValsEntry\032+\n\tValsEntry\022\013\n\003key\030"
+  "\001 \001(\t\022\r\n\005value\030\002 \001(\014:\0028\001\"\032\n\013CacheString\022"
+  "\013\n\003val\030\001 \001(\t\"\027\n\010CacheInt\022\013\n\003val\030\001 \001(\003B\032Z"
+  "\030sigmaos/apps/cache/protob\006proto3"
   ;
 static const ::_pbi::DescriptorTable* const descriptor_table_cache_2eproto_deps[3] = {
   &::descriptor_table_rpc_2fproto_2frpc_2eproto,
@@ -345,7 +348,7 @@ static const ::_pbi::DescriptorTable* const descriptor_table_cache_2eproto_deps[
 };
 static ::_pbi::once_flag descriptor_table_cache_2eproto_once;
 const ::_pbi::DescriptorTable descriptor_table_cache_2eproto = {
-    false, false, 816, descriptor_table_protodef_cache_2eproto,
+    false, false, 833, descriptor_table_protodef_cache_2eproto,
     "cache.proto",
     &descriptor_table_cache_2eproto_once, descriptor_table_cache_2eproto_deps, 3, 12,
     schemas, file_default_instances, TableStruct_cache_2eproto::offsets,
@@ -1303,7 +1306,9 @@ CacheMultiGetRep::CacheMultiGetRep(const CacheMultiGetRep& from)
   : ::PROTOBUF_NAMESPACE_ID::Message() {
   CacheMultiGetRep* const _this = this; (void)_this;
   new (&_impl_) Impl_{
-      decltype(_impl_.blob_){nullptr}
+      decltype(_impl_.lengths_){from._impl_.lengths_}
+    , /*decltype(_impl_._lengths_cached_byte_size_)*/{0}
+    , decltype(_impl_.blob_){nullptr}
     , /*decltype(_impl_._cached_size_)*/{}};
 
   _internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
@@ -1318,7 +1323,9 @@ inline void CacheMultiGetRep::SharedCtor(
   (void)arena;
   (void)is_message_owned;
   new (&_impl_) Impl_{
-      decltype(_impl_.blob_){nullptr}
+      decltype(_impl_.lengths_){arena}
+    , /*decltype(_impl_._lengths_cached_byte_size_)*/{0}
+    , decltype(_impl_.blob_){nullptr}
     , /*decltype(_impl_._cached_size_)*/{}
   };
 }
@@ -1334,6 +1341,7 @@ CacheMultiGetRep::~CacheMultiGetRep() {
 
 inline void CacheMultiGetRep::SharedDtor() {
   GOOGLE_DCHECK(GetArenaForAllocation() == nullptr);
+  _impl_.lengths_.~RepeatedField();
   if (this != internal_default_instance()) delete _impl_.blob_;
 }
 
@@ -1347,6 +1355,7 @@ void CacheMultiGetRep::Clear() {
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
+  _impl_.lengths_.Clear();
   if (GetArenaForAllocation() == nullptr && _impl_.blob_ != nullptr) {
     delete _impl_.blob_;
   }
@@ -1360,9 +1369,20 @@ const char* CacheMultiGetRep::_InternalParse(const char* ptr, ::_pbi::ParseConte
     uint32_t tag;
     ptr = ::_pbi::ReadTag(ptr, &tag);
     switch (tag >> 3) {
-      // .Blob blob = 1;
+      // repeated uint64 lengths = 1;
       case 1:
         if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 10)) {
+          ptr = ::PROTOBUF_NAMESPACE_ID::internal::PackedUInt64Parser(_internal_mutable_lengths(), ptr, ctx);
+          CHK_(ptr);
+        } else if (static_cast<uint8_t>(tag) == 8) {
+          _internal_add_lengths(::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr));
+          CHK_(ptr);
+        } else
+          goto handle_unusual;
+        continue;
+      // .Blob blob = 2;
+      case 2:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 18)) {
           ptr = ctx->ParseMessage(_internal_mutable_blob(), ptr);
           CHK_(ptr);
         } else
@@ -1397,10 +1417,19 @@ uint8_t* CacheMultiGetRep::_InternalSerialize(
   uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
-  // .Blob blob = 1;
+  // repeated uint64 lengths = 1;
+  {
+    int byte_size = _impl_._lengths_cached_byte_size_.load(std::memory_order_relaxed);
+    if (byte_size > 0) {
+      target = stream->WriteUInt64Packed(
+          1, _internal_lengths(), byte_size, target);
+    }
+  }
+
+  // .Blob blob = 2;
   if (this->_internal_has_blob()) {
     target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::
-      InternalWriteMessage(1, _Internal::blob(this),
+      InternalWriteMessage(2, _Internal::blob(this),
         _Internal::blob(this).GetCachedSize(), target, stream);
   }
 
@@ -1420,7 +1449,21 @@ size_t CacheMultiGetRep::ByteSizeLong() const {
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
-  // .Blob blob = 1;
+  // repeated uint64 lengths = 1;
+  {
+    size_t data_size = ::_pbi::WireFormatLite::
+      UInt64Size(this->_impl_.lengths_);
+    if (data_size > 0) {
+      total_size += 1 +
+        ::_pbi::WireFormatLite::Int32Size(static_cast<int32_t>(data_size));
+    }
+    int cached_size = ::_pbi::ToCachedSize(data_size);
+    _impl_._lengths_cached_byte_size_.store(cached_size,
+                                    std::memory_order_relaxed);
+    total_size += data_size;
+  }
+
+  // .Blob blob = 2;
   if (this->_internal_has_blob()) {
     total_size += 1 +
       ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::MessageSize(
@@ -1445,6 +1488,7 @@ void CacheMultiGetRep::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const
   uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
+  _this->_impl_.lengths_.MergeFrom(from._impl_.lengths_);
   if (from._internal_has_blob()) {
     _this->_internal_mutable_blob()->::Blob::MergeFrom(
         from._internal_blob());
@@ -1466,6 +1510,7 @@ bool CacheMultiGetRep::IsInitialized() const {
 void CacheMultiGetRep::InternalSwap(CacheMultiGetRep* other) {
   using std::swap;
   _internal_metadata_.InternalSwap(&other->_internal_metadata_);
+  _impl_.lengths_.InternalSwap(&other->_impl_.lengths_);
   swap(_impl_.blob_, other->_impl_.blob_);
 }
 

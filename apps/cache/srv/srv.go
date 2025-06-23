@@ -352,6 +352,8 @@ func (cs *CacheSrv) MultiGet(ctx fs.CtxI, req cacheproto.CacheMultiGetReq, rep *
 
 	rep.Blob = &rpcproto.Blob{}
 
+	bufs := make([][]byte, 0, len(req.Gets))
+	totalLength := 0
 	for _, getReq := range req.Gets {
 		s, err := cs.lookupShard(getReq.Tshard())
 		if err != nil {
@@ -361,12 +363,24 @@ func (cs *CacheSrv) MultiGet(ctx fs.CtxI, req cacheproto.CacheMultiGetReq, rep *
 		v, ok := s.get(getReq.Key)
 		if ok {
 			// Append value to blob & continue processing gets
-			rep.Blob.Iov = append(rep.Blob.Iov, v)
+			bufs = append(bufs, v)
+			rep.Lengths = append(rep.Lengths, uint64(len(v)))
+			totalLength += len(v)
 			continue
 		}
 		// Key not found, so bail out & fail all gets
 		return serr.NewErr(serr.TErrNotfound, fmt.Sprintf("key %s", getReq.Key))
 	}
+	// Concatenate buffers to speed up blob write
+	b := make([]byte, totalLength)
+	idx := 0
+	for _, buf := range bufs {
+		n := copy(b[idx:idx+len(buf)], buf)
+		if n != len(buf) {
+			db.DFatalf("Didn't copy whole buf: %v != %v", n, len(buf))
+		}
+	}
+	rep.Blob.Iov = append(rep.Blob.Iov, b)
 	return nil
 }
 

@@ -624,6 +624,9 @@ func TestCrashRealmNamed(t *testing.T) {
 	_, err = sc.PutFile(fn, 0777, sp.OREAD, nil)
 	assert.Nil(t, err)
 
+	ep0, err := sc.GetNamedEndpoint()
+	assert.Nil(t, err)
+
 	err = crash.SignalFailer(sc.FsLib, crashpn)
 	assert.Nil(t, err, "Err crash: %v", err)
 
@@ -631,6 +634,14 @@ func TestCrashRealmNamed(t *testing.T) {
 
 	_, err = sc.GetFile(fn)
 	assert.Nil(t, err)
+
+	ep1, err := sc.GetNamedEndpoint()
+	assert.Nil(t, err)
+
+	_, p0 := ep0.TargetIPPort(0)
+	_, p1 := ep1.TargetIPPort(0)
+
+	assert.NotEqual(t, p0, p1)
 
 	defer mrts.Shutdown()
 }

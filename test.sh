@@ -281,16 +281,16 @@ if [[ $BASIC == "--basic" ]]; then
     #
 
     for T in \
-      namesrv/ndclnt \
-      ft/leaderclnt \
-      ft/leadertest \
       util/coordination/semaphore \
-      ft/procgroupmgr \
-      ft/task \
       sched/msched/proc/chunk/srv \
       proxy/ux \
       boot/clnt \
       proxy/s3 \
+      ft/leaderclnt \
+      ft/leadertest \
+      namesrv/ndclnt \
+      ft/procgroupmgr \
+      ft/task \
       realm/clnt; \
       do
         if ! [ -z "$SKIPTO" ]; then

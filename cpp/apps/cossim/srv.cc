@@ -83,6 +83,7 @@ std::expected<int, sigmaos::serr::Error> Srv::Init() {
       _vec_db[id] = std::make_shared<sigmaos::apps::cossim::Vector>(buf, buf->data() + off, _vec_dim);
       log(COSSIMSRV, "done parse vec {}", id);
       off += lengths[id];
+      nbyte += lengths[id];
     }
     log(COSSIMSRV, "done parsing all vecs");
     LogSpawnLatency(_sp_clnt->ProcEnv()->GetPID(), _sp_clnt->ProcEnv()->GetSpawnTime(), start, "Parse vecs & construct DB");

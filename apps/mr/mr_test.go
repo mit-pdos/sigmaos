@@ -608,8 +608,15 @@ func TestCrashTaskAndCoord(t *testing.T) {
 	em := crash.NewTeventMap()
 	em.Merge(mapEv)
 	em.Merge(reduceEv)
-	em.Merge(coordEv)
-	ntask, nr, st := runN(t, em, nil, 0, false)
+
+	// Crash coord less frequently so that the test doesn't take ~1000s
+	e0 := crash.NewEventStart(crash.MRCOORD_CRASH, 750, CRASHCOORD, 0.05)
+	coordEv1 := crash.NewTeventMapOne(e0)
+	e1 := crash.NewEventStart(crash.MRCOORD_PARTITION, 750, CRASHCOORD, 0.05)
+	coordEv1.Insert(e1)
+	em.Merge(coordEv1)
+
+	ntask, nr, st := runN(t, em, nil, 0, true)
 	assert.True(t, nr > mr.NCOORD)
 	assert.True(t, st.Ntask > ntask)
 }

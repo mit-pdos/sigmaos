@@ -6,9 +6,17 @@ namespace apps::cache {
 bool Clnt::_l = sigmaos::util::log::init_logger(CACHECLNT);
 bool Clnt::_l_e = sigmaos::util::log::init_logger(CACHECLNT_ERR);
 
-// Initialize the channel & connect to the server
-std::expected<int, sigmaos::serr::Error> Clnt::Init() {
+
+std::expected<std::shared_ptr<sigmaos::rpc::Clnt>, sigmaos::serr::Error> Clnt::get_clnt(int srv_id) {
+  // Ensure we don't create duplicate clients
+  std::lock_guard<std::mutex> guard(_mu);
+  // If client already exists, return it
+  if (_clnts.contains(srv_id)) {
+    log(CACHECLNT, "Successfully got client srv_id:{}", srv_id);
+    return _clnts[srv_id];
+  }
   {
+    // TODO: set path dynamically based on server ID
     // Create a sigmap RPC channel to the server via the sigmaproxy
     log(CACHECLNT, "Create channel");
     auto chan = std::make_shared<sigmaos::rpc::spchannel::Channel>(_srv_pn, _sp_clnt);
@@ -20,14 +28,24 @@ std::expected<int, sigmaos::serr::Error> Clnt::Init() {
     }
     log(CACHECLNT, "Create RPC client");
     // Create an RPC client from the channel
-    _rpcc = std::make_shared<sigmaos::rpc::Clnt>(chan);
+    _clnts[srv_id] = std::make_shared<sigmaos::rpc::Clnt>(chan);
   }
-  log(CACHECLNT, "Init successful!");
-  return 0;
+  log(CACHECLNT, "Successfully created client srv_id:{}", srv_id);
+  return _clnts[srv_id];
 }
 
 std::expected<int, sigmaos::serr::Error> Clnt::Get(std::string key, std::shared_ptr<std::string> val) {
 	log(CACHECLNT, "Get: {}", key);
+  std::shared_ptr<sigmaos::rpc::Clnt> rpcc;
+  {
+    // TODO: pass in srv_id
+    auto res = get_clnt(0);
+    if (!res.has_value()) {
+      log(CACHECLNT_ERR, "Error get_clnt: {}", res.error().String());
+      return std::unexpected(res.error());
+    }
+    rpcc = res.value();
+  }
   TfenceProto fence;
 	CacheRep rep;
   CacheReq req;
@@ -35,7 +53,7 @@ std::expected<int, sigmaos::serr::Error> Clnt::Get(std::string key, std::shared_
   req.set_key(key);
   req.set_shard(key2shard(key));
 	{
-    auto res = _rpcc->RPC("CacheSrv.Get", req, rep);
+    auto res = rpcc->RPC("CacheSrv.Get", req, rep);
     {
       auto _ = req.release_fence();
     }
@@ -53,6 +71,16 @@ std::expected<int, sigmaos::serr::Error> Clnt::Get(std::string key, std::shared_
 
 std::expected<std::pair<std::vector<uint64_t>, std::shared_ptr<std::string>>, sigmaos::serr::Error> Clnt::MultiGet(std::vector<std::string> keys) {
 	log(CACHECLNT, "MultiGet nkey {}", keys.size());
+  std::shared_ptr<sigmaos::rpc::Clnt> rpcc;
+  {
+    // TODO: pass in srv_id
+    auto res = get_clnt(0);
+    if (!res.has_value()) {
+      log(CACHECLNT_ERR, "Error get_clnt: {}", res.error().String());
+      return std::unexpected(res.error());
+    }
+    rpcc = res.value();
+  }
   TfenceProto fence;
 	CacheMultiGetRep rep;
   CacheMultiGetReq req;
@@ -70,7 +98,7 @@ std::expected<std::pair<std::vector<uint64_t>, std::shared_ptr<std::string>>, si
   }
   rep.set_allocated_blob(&blob);
 	{
-    auto res = _rpcc->RPC("CacheSrv.MultiGet", req, rep);
+    auto res = rpcc->RPC("CacheSrv.MultiGet", req, rep);
     {
       auto _ = req.release_fence();
     }
@@ -89,6 +117,16 @@ std::expected<std::pair<std::vector<uint64_t>, std::shared_ptr<std::string>>, si
 
 std::expected<int, sigmaos::serr::Error> Clnt::Put(std::string key, std::shared_ptr<std::string> val) {
 	log(CACHECLNT, "Put: {} -> {}b", key, val->size());
+  std::shared_ptr<sigmaos::rpc::Clnt> rpcc;
+  {
+    // TODO: pass in srv_id
+    auto res = get_clnt(0);
+    if (!res.has_value()) {
+      log(CACHECLNT_ERR, "Error get_clnt: {}", res.error().String());
+      return std::unexpected(res.error());
+    }
+    rpcc = res.value();
+  }
   TfenceProto fence;
 	CacheRep rep;
 	CacheReq req;
@@ -97,7 +135,7 @@ std::expected<int, sigmaos::serr::Error> Clnt::Put(std::string key, std::shared_
   req.set_shard(key2shard(key));
   req.set_allocated_value(val.get());
 	{
-    auto res = _rpcc->RPC("CacheSrv.Put", req, rep);
+    auto res = rpcc->RPC("CacheSrv.Put", req, rep);
     {
       auto _ = req.release_value();
     }
@@ -115,6 +153,16 @@ std::expected<int, sigmaos::serr::Error> Clnt::Put(std::string key, std::shared_
 
 std::expected<int, sigmaos::serr::Error> Clnt::Delete(std::string key) {
 	log(CACHECLNT, "Delete: {}", key);
+  std::shared_ptr<sigmaos::rpc::Clnt> rpcc;
+  {
+    // TODO: pass in srv_id
+    auto res = get_clnt(0);
+    if (!res.has_value()) {
+      log(CACHECLNT_ERR, "Error get_clnt: {}", res.error().String());
+      return std::unexpected(res.error());
+    }
+    rpcc = res.value();
+  }
   TfenceProto fence;
 	CacheRep rep;
 	CacheReq req;
@@ -122,7 +170,7 @@ std::expected<int, sigmaos::serr::Error> Clnt::Delete(std::string key) {
   req.set_key(key);
   req.set_shard(key2shard(key));
 	{
-    auto res = _rpcc->RPC("CacheSrv.Delete", req, rep);
+    auto res = rpcc->RPC("CacheSrv.Delete", req, rep);
     {
       auto _ = req.release_value();
     }

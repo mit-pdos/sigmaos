@@ -47,16 +47,6 @@ class Srv {
     auto cossim_ep = std::make_shared<sigmaos::rpc::srv::RPCEndpoint>("CosSimSrv.CosSim", std::make_shared<CosSimReq>(), std::make_shared<CosSimRep>(), std::bind(&Srv::CosSim, this, std::placeholders::_1, std::placeholders::_2));
     _srv->ExposeRPCHandler(cossim_ep);
     log(COSSIMSRV, "Exposed cossim RPC handler");
-    log(COSSIMSRV, "Init cache clnt");
-    {
-      auto start = GetCurrentTime();
-      auto res = _cache_clnt->Init();
-      if (!res.has_value()) {
-        fatal("Error Init cacheclnt: {}", res.error().String());
-      }
-      LogSpawnLatency(_sp_clnt->ProcEnv()->GetPID(), _sp_clnt->ProcEnv()->GetSpawnTime(), start, "Init cacheclnt");
-    }
-    log(COSSIMSRV, "Done init cache clnt");
     if (eager_init) {
       log(COSSIMSRV, "Init vector DB");
       {

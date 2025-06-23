@@ -106,7 +106,7 @@ func WriteFrames(wr io.Writer, iov sessp.IoVec) error {
 		}
 	}
 	if db.WillBePrinted(db.PROXY_RPC_LAT) && nbyte > 2*sp.MBYTE {
-		db.DPrintf(db.PROXY_RPC_LAT, "Done write %vB lat=%v tpt=%0.3fMB/s", nbyte, time.Since(start), (float64(nbyte)/time.Since(start).Seconds())/float64(sp.MBYTE))
+		db.DPrintf(db.PROXY_RPC_LAT, "Done write all iov %vB lat=%v tpt=%0.3fMB/s", nbyte, time.Since(start), (float64(nbyte)/time.Since(start).Seconds())/float64(sp.MBYTE))
 	}
 	return nil
 }

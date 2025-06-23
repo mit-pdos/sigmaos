@@ -71,6 +71,35 @@ func (csc *CachedSvcClnt) StatsSrvs() ([]*rpc.RPCStatsSnapshot, error) {
 	return stats, nil
 }
 
+func (csc *CachedSvcClnt) GetEndpoint(i int) (*sp.Tendpoint, error) {
+	// Read the endpoint of the endpoint cache server
+	srvEPB, err := csc.fsl.GetFile(csc.Server(i))
+	if err != nil {
+		return nil, err
+	}
+	srvEP, err := sp.NewEndpointFromBytes(srvEPB)
+	if err != nil {
+		return nil, err
+	}
+	return srvEP, nil
+}
+
+func (csc *CachedSvcClnt) GetEndpoints() (map[string]*sp.Tendpoint, error) {
+	n, err := csc.dd.WaitEntriesN(1, true)
+	if err != nil {
+		return nil, err
+	}
+	eps := make(map[string]*sp.Tendpoint)
+	for i := 0; i < n; i++ {
+		ep, err := csc.GetEndpoint(i)
+		if err != nil {
+			return nil, err
+		}
+		eps[csc.Server(i)] = ep
+	}
+	return eps, nil
+}
+
 func (csc *CachedSvcClnt) Put(key string, val proto.Message) error {
 	return csc.PutTraced(nil, key, val)
 }

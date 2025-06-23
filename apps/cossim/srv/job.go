@@ -86,6 +86,7 @@ type CosSimJob struct {
 	cacheClnt  *cachegrpclnt.CachedSvcClnt
 	cacheMgr   *cachegrpmgr.CacheMgr
 	cachePN    string
+	cacheEPs   map[string]*sp.Tendpoint
 	nvec       int
 	vecDim     int
 	eagerInit  bool
@@ -124,6 +125,11 @@ func NewCosSimJob(sc *sigmaclnt.SigmaClnt, job string, nvec int, vecDim int, eag
 		db.DPrintf(db.COSSIMSRV_ERR, "Err writeVectors: %v", err)
 		return nil, err
 	}
+	cacheEPs, err := cc.GetEndpoints()
+	if err != nil {
+		db.DPrintf(db.COSSIMSRV_ERR, "Err get cache EPs: %v", err)
+		return nil, err
+	}
 	cscs, err := clnt.NewCosSimShardClnt(sc.FsLib, epcj.Clnt)
 	if err != nil {
 		db.DPrintf(db.COSSIMSRV_ERR, "Err newCosSimShardClnt: %v", err)
@@ -136,6 +142,7 @@ func NewCosSimJob(sc *sigmaclnt.SigmaClnt, job string, nvec int, vecDim int, eag
 		epcsrvEP:   epcsrvEP,
 		cacheClnt:  cc,
 		cachePN:    cc.Server(0),
+		cacheEPs:   cacheEPs,
 		cacheMgr:   cm,
 		nvec:       nvec,
 		vecDim:     vecDim,
@@ -157,6 +164,9 @@ func (j *CosSimJob) AddSrv() (*proc.Proc, time.Duration, error) {
 	p.GetProcEnv().UseSPProxy = true
 	p.SetMcpu(j.srvMcpu)
 	p.SetCachedEndpoint(epcache.EPCACHE, j.epcsrvEP)
+	for pn, ep := range j.cacheEPs {
+		p.SetCachedEndpoint(pn, ep)
+	}
 	start := time.Now()
 	if err := j.Spawn(p); err != nil {
 		return nil, 0, err

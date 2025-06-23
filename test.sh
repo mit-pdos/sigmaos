@@ -282,8 +282,11 @@ if [[ $BASIC == "--basic" ]]; then
 
     for T in \
       namesrv/ndclnt \
-      ft/procgroupmgr \
+      ft/leaderclnt \
+      ft/leadertest \
       util/coordination/semaphore \
+      ft/procgroupmgr \
+      ft/task \
       sched/msched/proc/chunk/srv \
       proxy/ux \
       boot/clnt \
@@ -308,9 +311,6 @@ if [[ $BASIC == "--basic" ]]; then
 
     for T in \
       sigmaclnt/procclnt \
-      ft/leaderclnt \
-      ft/leadertest \
-      ft/task \
       apps/cache/cachegrp/clnt; \
       do
         if ! [ -z "$SKIPTO" ]; then

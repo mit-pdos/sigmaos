@@ -385,8 +385,7 @@ if [[ $APPS == "--apps" ]]; then
           apps/imgresize \
           apps/mr \
           apps/hotel \
-          apps/socialnetwork \
-          apps/www; \
+          apps/socialnetwork; \
           do
             if ! [ -z "$SKIPTO" ]; then
               if [[ "$SKIPTO" == "$T" ]]; then

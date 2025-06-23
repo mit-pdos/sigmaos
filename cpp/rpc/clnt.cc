@@ -44,7 +44,7 @@ std::expected<int, sigmaos::serr::Error> Clnt::RPC(std::string method, google::p
   auto rep_data_buf = out_iov->GetBuffer(0);
   auto start = GetCurrentTime();
   rep.ParseFromString(*rep_data_buf->Get());
-  log(PROXY_RPC_LAT, "RPCClnt Parse reply lat:{}ms", LatencyMS(start));
+  log(PROXY_RPC_LAT, "RPCClnt Parse reply lat:{}ms", (int) LatencyMS(start));
   log(RPCCLNT, "Remove reply data buffer");
   // Remove the first element in iov, which contains the serialized reply
   // message

@@ -629,9 +629,8 @@ func TestCrashRealmNamed(t *testing.T) {
 
 	time.Sleep(2 * T * time.Millisecond)
 
-	sts, err := sc.GetDir(sp.NAMED)
+	_, err = sc.GetFile(fn)
 	assert.Nil(t, err)
-	assert.True(t, sp.Present(sts, []string{"fff"}))
 
 	defer mrts.Shutdown()
 }

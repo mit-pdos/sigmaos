@@ -87,6 +87,7 @@ func (rts *RealmTstate) BootNode(n int) error {
 }
 
 func (rts *RealmTstate) bootNode(n int, waitForNamed bool) error {
+
 	kids, err := rts.Ts.bootNode(n, bootclnt.BOOT_NODE)
 	if err != nil {
 		return err

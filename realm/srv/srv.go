@@ -135,7 +135,8 @@ func (rm *RealmSrv) Make(ctx fs.CtxI, req proto.MakeReq, res *proto.MakeRep) err
 	}
 	r := newRealm()
 
-	ndg, err := ndclnt.NewNdGrpMgr(rm.sc.SigmaClnt(), sp.Trealm(req.Realm), procgroupmgr.NewProcGroupConfigRealmSwitch(1, sp.NAMEDREL, nil, NAMED_MCPU, req.Realm, rid, rm.dialproxy), true)
+	nd := procgroupmgr.NewProcGroupConfigRealmSwitch(1, sp.NAMEDREL, nil, NAMED_MCPU, req.Realm, rid, rm.dialproxy)
+	ndg, err := ndclnt.NewNdGrpMgr(rm.sc.SigmaClnt(), sp.Trealm(req.Realm), nd, true)
 	if err != nil {
 		db.DPrintf(db.ERROR, "Error NewNdGrpMgr %v", err)
 		return err

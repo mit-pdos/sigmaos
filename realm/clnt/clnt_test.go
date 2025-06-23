@@ -19,6 +19,7 @@ import (
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
+	"sigmaos/util/crash"
 	"sigmaos/util/linux/mem"
 	rd "sigmaos/util/rand"
 )
@@ -605,6 +606,34 @@ func TestMultiRealmIsolationNamed(t *testing.T) {
 		sts, err := mrts.GetRealm(test.REALM2).GetDir(pn)
 		assert.NotNil(t, err, "GetDir %v %v\n", pn, sp.Names(sts))
 	}
+}
+
+func TestCrashRealmNamed(t *testing.T) {
+	const T = 1000
+	crashpn := sp.NAMED + "crashnd.sem"
+
+	e := crash.NewEventPath(crash.NAMED_CRASH, T, float64(1.0), crashpn)
+	err := crash.SetSigmaFail(crash.NewTeventMapOne(e))
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+
+	sc := mrts.GetRealm(test.REALM1).SigmaClnt
+	fn := filepath.Join(sp.NAMED, "fff")
+	_, err = sc.PutFile(fn, 0777, sp.OREAD, nil)
+	assert.Nil(t, err)
+
+	err = crash.SignalFailer(sc.FsLib, crashpn)
+	assert.Nil(t, err, "Err crash: %v", err)
+
+	time.Sleep(2 * T * time.Millisecond)
+
+	sts, err := sc.GetDir(sp.NAMED)
+	assert.Nil(t, err)
+	assert.True(t, sp.Present(sts, []string{"fff"}))
+
+	defer mrts.Shutdown()
 }
 
 // These often don't pass due to a scheduling bug in Linux.

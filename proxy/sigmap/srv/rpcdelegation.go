@@ -25,30 +25,33 @@ type RPCReplies struct {
 	cond    *sync.Cond
 	done    []bool
 	results []sessp.IoVec
+	errors  []error
 }
 
 func NewRPCReplies(rpcs []*proc.InitializationRPC) *RPCReplies {
 	reps := &RPCReplies{
 		done:    make([]bool, len(rpcs)),
 		results: make([]sessp.IoVec, len(rpcs)),
+		errors:  make([]error, len(rpcs)),
 	}
 	reps.cond = sync.NewCond(&reps.mu)
 	return reps
 }
 
 // Insert the reply for a delegated RPC. Unblocks any waiters on the reply
-func (reps *RPCReplies) InsertReply(idx uint64, iov sessp.IoVec) {
+func (reps *RPCReplies) InsertReply(idx uint64, iov sessp.IoVec, err error) {
 	reps.mu.Lock()
 	defer reps.mu.Unlock()
 
 	i := int(idx)
 	reps.done[i] = true
 	reps.results[i] = iov
+	reps.errors[i] = err
 	reps.cond.Broadcast()
 }
 
 // Retrieve the reply for a delegated RPC. Blocks until the reply materializes
-func (reps *RPCReplies) GetReply(idx uint64) sessp.IoVec {
+func (reps *RPCReplies) GetReply(idx uint64) (sessp.IoVec, error) {
 	reps.mu.Lock()
 	defer reps.mu.Unlock()
 
@@ -56,7 +59,7 @@ func (reps *RPCReplies) GetReply(idx uint64) sessp.IoVec {
 		reps.cond.Wait()
 	}
 	i := int(idx)
-	return reps.results[i]
+	return reps.results[i], reps.errors[i]
 }
 
 func (tab *DelegatedRPCReplyTable) getReplies(pid sp.Tpid) *RPCReplies {
@@ -71,13 +74,13 @@ func (tab *DelegatedRPCReplyTable) getReplies(pid sp.Tpid) *RPCReplies {
 	return reps
 }
 
-func (tab *DelegatedRPCReplyTable) InsertReply(pid sp.Tpid, rpcIdx uint64, iov sessp.IoVec) {
+func (tab *DelegatedRPCReplyTable) InsertReply(pid sp.Tpid, rpcIdx uint64, iov sessp.IoVec, err error) {
 	db.DPrintf(db.SPPROXYSRV, "[%v] DelegatedRPC.InsertReply(%v)", pid, rpcIdx)
 	reps := tab.getReplies(pid)
-	reps.InsertReply(rpcIdx, iov)
+	reps.InsertReply(rpcIdx, iov, err)
 }
 
-func (tab *DelegatedRPCReplyTable) GetReply(pid sp.Tpid, rpcIdx uint64) sessp.IoVec {
+func (tab *DelegatedRPCReplyTable) GetReply(pid sp.Tpid, rpcIdx uint64) (sessp.IoVec, error) {
 	db.DPrintf(db.SPPROXYSRV, "[%v] DelegatedRPC.GetReply(%v)", pid, rpcIdx)
 	defer db.DPrintf(db.SPPROXYSRV, "[%v] DelegatedRPC.GetReply(%v) done", pid, rpcIdx)
 

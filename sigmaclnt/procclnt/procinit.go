@@ -30,7 +30,7 @@ func NewProcClnt(fsl *fslib.FsLib) (*ProcClnt, error) {
 			start := time.Now()
 			err := fsl.MountTree(ep, rpc.RPC, pn)
 			if err != nil {
-				db.DPrintf(db.ERROR, "Err MountTree: ep %v err %v", ep, err)
+				db.DPrintf(db.ERROR, "Err MountTree: ep %v pn %v err %v", ep, pn, err)
 				mschedC <- err
 				return
 			}

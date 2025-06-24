@@ -45,7 +45,7 @@ func NewCacheClnt(fsl *fslib.FsLib, job string, nshard int) *CacheClnt {
 	return cc
 }
 
-func (cc *CacheClnt) key2shard(key string) uint32 {
+func (cc *CacheClnt) Key2shard(key string) uint32 {
 	h := fnv.New32a()
 	h.Write([]byte(key))
 	shard := h.Sum32() % uint32(cc.nshard)
@@ -57,7 +57,7 @@ func (cc *CacheClnt) NewPutBytes(sctx *tproto.SpanContextConfig, key string, b [
 		SpanContextConfig: sctx,
 		Fence:             f.FenceProto(),
 		Key:               key,
-		Shard:             cc.key2shard(key),
+		Shard:             cc.Key2shard(key),
 		Value:             b,
 	}, nil
 }
@@ -119,7 +119,7 @@ func (cc *CacheClnt) NewAppend(key string, val proto.Message, f *sp.Tfence) (*ca
 	wr.Flush()
 	return &cacheproto.CacheReq{
 		Key:   key,
-		Shard: cc.key2shard(key),
+		Shard: cc.Key2shard(key),
 		Mode:  uint32(sp.OAPPEND),
 		Value: buf.Bytes(),
 		Fence: f.FenceProto(),
@@ -142,7 +142,7 @@ func (cc *CacheClnt) NewGet(sctx *tproto.SpanContextConfig, key string, f *sp.Tf
 	return &cacheproto.CacheReq{
 		SpanContextConfig: sctx,
 		Key:               key,
-		Shard:             cc.key2shard(key),
+		Shard:             cc.Key2shard(key),
 		Fence:             f.FenceProto(),
 	}
 }
@@ -209,7 +209,7 @@ func (cc *CacheClnt) DeleteTracedFenced(sctx *tproto.SpanContextConfig, srv, key
 		SpanContextConfig: sctx,
 		Fence:             f.FenceProto(),
 		Key:               key,
-		Shard:             cc.key2shard(key),
+		Shard:             cc.Key2shard(key),
 	}
 	var res cacheproto.CacheRep
 	if err := cc.RPC(srv, "CacheSrv.Delete", req, &res); err != nil {

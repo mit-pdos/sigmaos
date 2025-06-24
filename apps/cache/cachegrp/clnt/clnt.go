@@ -13,6 +13,7 @@ import (
 	"sigmaos/apps/cache"
 	"sigmaos/apps/cache/cachegrp"
 	cacheclnt "sigmaos/apps/cache/clnt"
+	cacheproto "sigmaos/apps/cache/proto"
 	db "sigmaos/debug"
 	"sigmaos/rpc"
 	"sigmaos/sigmaclnt/fslib"
@@ -98,6 +99,19 @@ func (csc *CachedSvcClnt) GetEndpoints() (map[string]*sp.Tendpoint, error) {
 		eps[csc.Server(i)] = ep
 	}
 	return eps, nil
+}
+
+func (csc *CachedSvcClnt) NewMultiGetReq(keys []string) *cacheproto.CacheMultiGetReq {
+	req := &cacheproto.CacheMultiGetReq{
+		Fence: sp.NullFence().FenceProto(),
+	}
+	for _, key := range keys {
+		req.Gets = append(req.Gets, &cacheproto.CacheGetDescriptor{
+			Key:   key,
+			Shard: csc.cc.Key2shard(key),
+		})
+	}
+	return req
 }
 
 func (csc *CachedSvcClnt) Put(key string, val proto.Message) error {

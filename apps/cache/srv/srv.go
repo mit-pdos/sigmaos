@@ -381,6 +381,7 @@ func (cs *CacheSrv) MultiGet(ctx fs.CtxI, req cacheproto.CacheMultiGetReq, rep *
 		}
 		idx += len(buf)
 	}
+	db.DPrintf(db.CACHESRV, "MultiGet reply total serialized length: %v", len(b))
 	rep.Blob.Iov = append(rep.Blob.Iov, b)
 	return nil
 }

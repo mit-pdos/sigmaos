@@ -42,8 +42,9 @@ func initFS(sc *sigmaclnt.SigmaClnt, jobname string) error {
 }
 
 func marshalVec(v *cossimproto.Vector) ([]byte, error) {
-	b := make([]byte, 8*len(v.Vals))
+	b := make([]byte, 0)
 	buf := bytes.NewBuffer(b)
+	buf.Grow(8 * len(v.Vals))
 	for _, val := range v.Vals {
 		// Write the value to the buffer in LittleEndian mode
 		if err := binary.Write(buf, binary.LittleEndian, val); err != nil {

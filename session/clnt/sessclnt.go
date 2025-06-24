@@ -93,7 +93,7 @@ func (c *SessClnt) RPC(req sessp.Tmsg, iniov sessp.IoVec, outiov sessp.IoVec) (*
 	if err := spcodec.UnmarshalMsg(r); err != nil {
 		return nil, err
 	}
-	db.DPrintf(db.NET_LAT, "RPC req %v fm %v lat %v\n", fc, r.Fcm, time.Since(s))
+	db.DPrintf(db.NET_LAT, "RPC req %v fm %v lat %v", fc, r.Fcm, time.Since(s))
 	return r.Fcm, nil
 }
 
@@ -115,10 +115,10 @@ func (c *SessClnt) getdmx() (*demux.DemuxClnt, *serr.Err) {
 	}
 
 	if c.dmx == nil {
-		db.DPrintf(db.SESSCLNT, "%v Connect to %v %v\n", c.sid, c.ep, c.closed)
+		db.DPrintf(db.SESSCLNT, "%v Connect to %v %v", c.sid, c.ep, c.closed)
 		conn, err := netclnt.NewNetClnt(c.pe, c.npc, c.ep)
 		if err != nil {
-			db.DPrintf(db.SESSCLNT, "%v Error %v unable to reconnect to %v\n", c.sid, err, c.ep)
+			db.DPrintf(db.SESSCLNT, "%v Error %v unable to connect to %v", c.sid, err, c.ep)
 			return nil, err
 		}
 		db.DPrintf(db.SESSCLNT, "%v connection to %v", c.sid, c.ep)
@@ -141,7 +141,7 @@ func (c *SessClnt) ownClosed() bool {
 
 // Close the session permanently
 func (c *SessClnt) Close() error {
-	db.DPrintf(db.SESSCLNT, "%v Close session to %v %v\n", c.sid, c.ep, c.closed)
+	db.DPrintf(db.SESSCLNT, "%v Close session to %v %v", c.sid, c.ep, c.closed)
 	if !c.ownClosed() {
 		return nil
 	}

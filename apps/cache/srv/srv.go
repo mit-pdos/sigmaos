@@ -379,6 +379,7 @@ func (cs *CacheSrv) MultiGet(ctx fs.CtxI, req cacheproto.CacheMultiGetReq, rep *
 		if n != len(buf) {
 			db.DFatalf("Didn't copy whole buf: %v != %v", n, len(buf))
 		}
+		idx += len(buf)
 	}
 	rep.Blob.Iov = append(rep.Blob.Iov, b)
 	return nil

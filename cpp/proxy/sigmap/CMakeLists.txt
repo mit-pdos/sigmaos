@@ -4,7 +4,6 @@ add_subdirectory(proto)
 
 add_library(sigmap_proxy STATIC
   sigmap.cc
-  delegated_rpc.cc
 )
 
 target_link_libraries(sigmap_proxy PUBLIC

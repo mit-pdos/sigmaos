@@ -28,7 +28,7 @@ std::expected<std::shared_ptr<sigmaos::rpc::Clnt>, sigmaos::serr::Error> Clnt::g
     }
     log(CACHECLNT, "Create RPC client");
     // Create an RPC client from the channel
-    _clnts[srv_id] = std::make_shared<sigmaos::rpc::Clnt>(chan);
+    _clnts[srv_id] = std::make_shared<sigmaos::rpc::Clnt>(chan, _sp_clnt->GetSPProxyChannel());
   }
   log(CACHECLNT, "Successfully created client srv_id:{}", srv_id);
   return _clnts[srv_id];

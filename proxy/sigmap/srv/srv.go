@@ -160,9 +160,9 @@ func (spp *SPProxySrv) runDelegatedInitializationRPCs(pe *proc.ProcEnv, sc *sigm
 		outiov := initRPC.GetOutputIOV()
 		err := rpcchan.SendReceive(initRPC.GetInputIOV(), outiov)
 		if err != nil {
-			db.DPrintf(db.SPPROXYSRV_ERR, "Err create unmounted RPC channel to run delegated RPCs (%v): %v", pn, err)
+			db.DPrintf(db.SPPROXYSRV_ERR, "Err execute delegated RPC (%v): %v", pn, err)
 			// TODO: remove fatal
-			db.DFatalf("Err create unmounted RPC channel to run delegated RPCs (%v): %v", pn, err)
+			db.DFatalf("Err execute delegated RPC (%v): %v", pn, err)
 		}
 		db.DPrintf(db.SPPROXYSRV, "[%v] Done running delegated init RPC(%v)", pe.GetPID(), initRPCIdx)
 		spp.repTab.InsertReply(pe.GetPID(), uint64(initRPCIdx), outiov, err)

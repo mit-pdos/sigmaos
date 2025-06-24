@@ -10,7 +10,21 @@ namespace rpc {
 bool Clnt::_l = sigmaos::util::log::init_logger(RPCCLNT);
 bool Clnt::_l_e = sigmaos::util::log::init_logger(RPCCLNT_ERR);
 
+// Retrieve the result of a delegated RPC
+std::expected<int, sigmaos::serr::Error> Clnt::DelegatedRPC(uint64_t rpc_idx, google::protobuf::Message &rep) {
+  // Create the delegate request
+  SigmaDelegatedRPCReq req;
+  req.set_rpcidx(rpc_idx);
+  return rpc(true, "", req, rep);
+}
+
+// Perform an RPC
 std::expected<int, sigmaos::serr::Error> Clnt::RPC(std::string method, google::protobuf::Message &req, google::protobuf::Message &rep) {
+  return rpc(false, method, req, rep);
+}
+
+
+std::expected<int, sigmaos::serr::Error> Clnt::rpc(bool delegate, std::string method, google::protobuf::Message &req, google::protobuf::Message &rep) {
   // Create an IOV for RPC inputs
   auto in_iov = std::make_shared<sigmaos::io::iovec::IOVec>();
   auto req_data = std::make_shared<std::string>();
@@ -26,38 +40,17 @@ std::expected<int, sigmaos::serr::Error> Clnt::RPC(std::string method, google::p
   // Extract any output IOVecs from the response RPC
   extract_blob_iov(rep, out_iov);
   log(RPCCLNT, "out_iov len {}", out_iov->Size());
+  uint64_t seqno = _seqno++;
   // Wrap the RPC and execute it
-  auto res = wrap_and_run_rpc(method, in_iov, out_iov);
+  auto res = wrap_and_run_rpc(delegate, seqno, method, in_iov, out_iov);
   if (!res.has_value()) {
     return std::unexpected(res.error());
   }
-  // Get the response
-  auto wrapped_rep = res.value();
-  // If there was an error in the RPC stack, bail out
-  if (wrapped_rep.err().errcode() != sigmaos::serr::TErrNoError) {
-    log(RPCCLNT_ERR, "error in RPC stack");
-    log(RPCCLNT_ERR, "error in RPC stack error:{}", wrapped_rep.err().ShortDebugString());
-    return std::unexpected(sigmaos::serr::Error(sigmaos::serr::TErrUnreachable, std::format("rpc error: {}", wrapped_rep.err().ShortDebugString())));
-  }
-  log(RPCCLNT, "Deserialize reply data");
-  // Deserialize the reply
-  auto rep_data_buf = out_iov->GetBuffer(0);
-  auto start = GetCurrentTime();
-  rep.ParseFromString(*rep_data_buf->Get());
-  log(PROXY_RPC_LAT, "RPCClnt Parse reply lat:{}ms", (int) LatencyMS(start));
-  log(RPCCLNT, "Remove reply data buffer");
-  // Remove the first element in iov, which contains the serialized reply
-  // message
-  out_iov->RemoveBuffer(0);
-  log(RPCCLNT, "Set blob IOV");
-  // Set the reply's blob's IOV to point to the returned data, if applicable.
-  set_blob_iov(out_iov, rep);
-  log(RPCCLNT, "Done set blob IOV");
-  return 0;
+  // Process the wrapped response
+  return process_wrapped_reply(seqno, out_iov, rep);
 }
 
-std::expected<Rep, sigmaos::serr::Error> Clnt::wrap_and_run_rpc(std::string method, const std::shared_ptr<sigmaos::io::iovec::IOVec> in_iov, std::shared_ptr<sigmaos::io::iovec::IOVec> out_iov) {
-  uint64_t seqno = _seqno++;
+std::expected<int, sigmaos::serr::Error> Clnt::wrap_and_run_rpc(bool delegate, uint64_t seqno, std::string method, const std::shared_ptr<sigmaos::io::iovec::IOVec> in_iov, std::shared_ptr<sigmaos::io::iovec::IOVec> out_iov) {
   auto wrapped_in_iov = std::make_shared<sigmaos::io::iovec::IOVec>();
   Req req;
   auto wrapper_req_data = std::make_shared<std::string>();
@@ -74,26 +67,59 @@ std::expected<Rep, sigmaos::serr::Error> Clnt::wrap_and_run_rpc(std::string meth
   // Create the call object to be sent, and perform the RPC.
   auto wrapped_call = std::make_shared<io::transport::Call>(seqno, wrapped_in_iov, out_iov);
   auto start = GetCurrentTime();
-  auto res = _chan->SendReceive(wrapped_call);
+  std::expected<std::shared_ptr<sigmaos::io::transport::Call>, sigmaos::serr::Error> res;
+  if (delegate) {
+    // Sanity check
+    if (!_delegate_chan) {
+      fatal("Try to run a delegated RPC with a null delegate channel");
+    }
+    res = _delegate_chan->SendReceive(wrapped_call);
+  } else {
+    res = _chan->SendReceive(wrapped_call);
+  }
   if (!res.has_value()) {
     log(RPCCLNT_ERR, "Error sendreceive: {}", res.error().String());
     return std::unexpected(res.error());
   }
   log(PROXY_RPC_LAT, "RPCClnt SendReceive");
+  return 0;
+}
+
+std::expected<int, sigmaos::serr::Error> Clnt::process_wrapped_reply(uint64_t seqno, std::shared_ptr<sigmaos::io::iovec::IOVec> out_iov, google::protobuf::Message &rep) {
   log(RPCCLNT, "Deserialize wrapper for reply seqno: {}", seqno);
-  Rep rep;
+  Rep wrapped_rep;
   // Deserialize the wrapper
   auto wrapper_rep_buf = out_iov->GetBuffer(0);
-  start = GetCurrentTime();
-  rep.ParseFromString(*wrapper_rep_buf->Get());
+  auto start = GetCurrentTime();
+  wrapped_rep.ParseFromString(*wrapper_rep_buf->Get());
   log(RPCCLNT, "Remove wrapper buffer for reply seqno: {}", seqno);
   log(PROXY_RPC_LAT, "RPCClnt Parse wrapper");
   // Remove the wrapper from the out IOVec
   out_iov->RemoveBuffer(0);
   log(RPCCLNT, "Done remove wrapper buffer for reply seqno: {}", seqno);
 	// TODO: Record stats
-//	rpcc.si.Stat(method, time.Since(start).Microseconds())
-  return rep;
+  //	rpcc.si.Stat(method, time.Since(start).Microseconds())
+  // If there was an error in the RPC stack, bail out
+  if (wrapped_rep.err().errcode() != sigmaos::serr::TErrNoError) {
+    log(RPCCLNT_ERR, "error in RPC stack");
+    log(RPCCLNT_ERR, "error in RPC stack error:{}", wrapped_rep.err().ShortDebugString());
+    return std::unexpected(sigmaos::serr::Error(sigmaos::serr::TErrUnreachable, std::format("rpc error: {}", wrapped_rep.err().ShortDebugString())));
+  }
+  log(RPCCLNT, "Deserialize reply data");
+  // Deserialize the reply
+  auto rep_data_buf = out_iov->GetBuffer(0);
+  start = GetCurrentTime();
+  rep.ParseFromString(*rep_data_buf->Get());
+  log(PROXY_RPC_LAT, "RPCClnt Parse reply lat:{}ms", (int) LatencyMS(start));
+  log(RPCCLNT, "Remove reply data buffer");
+  // Remove the first element in iov, which contains the serialized reply
+  // message
+  out_iov->RemoveBuffer(0);
+  log(RPCCLNT, "Set blob IOV");
+  // Set the reply's blob's IOV to point to the returned data, if applicable.
+  set_blob_iov(out_iov, rep);
+  log(RPCCLNT, "Done set blob IOV");
+  return 0;
 }
   
 };

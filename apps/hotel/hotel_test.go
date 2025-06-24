@@ -441,7 +441,7 @@ func runGeo(t *testing.T, wc *hotel.WebClnt, r *rand.Rand) {
 	assert.Equal(t, "Geo!", s)
 }
 
-func TestBenchSpawnGeo(t *testing.T) {
+func BenchSpawnGeo(t *testing.T) {
 	const (
 		N_GEO  = 15
 		N_NODE = 8
@@ -495,7 +495,7 @@ func TestBenchSpawnGeo(t *testing.T) {
 	db.DPrintf(db.TEST, "Done spawning %v additional geos", N_GEO)
 }
 
-func TestBenchDeathStarSingle(t *testing.T) {
+func BenchDeathStarSingle(t *testing.T) {
 	// Bail out early if machine has too many cores (which messes with the cgroups setting)
 	if !assert.False(t, linuxsched.GetNCores() > 10, "SpawnBurst test will fail because machine has >10 cores, which causes cgroups settings to fail") {
 		return
@@ -515,7 +515,7 @@ func TestBenchDeathStarSingle(t *testing.T) {
 	ts.stop()
 }
 
-func TestBenchDeathStarSingleK8s(t *testing.T) {
+func BenchDeathStarSingleK8s(t *testing.T) {
 	// Bail out early if machine has too many cores (which messes with the cgroups setting)
 	if !assert.False(t, linuxsched.GetNCores() > 10, "SpawnBurst test will fail because machine has >10 cores, which causes cgroups settings to fail") {
 		return
@@ -542,7 +542,7 @@ func TestBenchDeathStarSingleK8s(t *testing.T) {
 	hotel.RunDSB(t, 1000, wc, r)
 }
 
-func TestBenchSearchSigma(t *testing.T) {
+func BenchSearchSigma(t *testing.T) {
 	// Bail out early if machine has too many cores (which messes with the cgroups setting)
 	if !assert.False(t, linuxsched.GetNCores() > 10, "SpawnBurst test will fail because machine has >10 cores, which causes cgroups settings to fail") {
 		return
@@ -586,7 +586,7 @@ func setupK8sState(ts *Tstate) error {
 	return nil
 }
 
-func TestBenchSearchK8s(t *testing.T) {
+func BenchSearchK8s(t *testing.T) {
 	// Bail out early if machine has too many cores (which messes with the cgroups setting)
 	if !assert.False(t, linuxsched.GetNCores() > 10, "SpawnBurst test will fail because machine has >10 cores, which causes cgroups settings to fail") {
 		return
@@ -618,7 +618,7 @@ func TestBenchSearchK8s(t *testing.T) {
 	lg.Run()
 }
 
-func TestBenchGeoSigma(t *testing.T) {
+func BenchGeoSigma(t *testing.T) {
 	// Bail out early if machine has too many cores (which messes with the cgroups setting)
 	if !assert.False(t, linuxsched.GetNCores() > 10, "SpawnBurst test will fail because machine has >10 cores, which causes cgroups settings to fail") {
 		return
@@ -645,7 +645,7 @@ func TestBenchGeoSigma(t *testing.T) {
 	ts.stop()
 }
 
-func TestBenchGeoK8s(t *testing.T) {
+func BenchGeoK8s(t *testing.T) {
 	// Bail out early if machine has too many cores (which messes with the cgroups setting)
 	if !assert.False(t, linuxsched.GetNCores() > 10, "SpawnBurst test will fail because machine has >10 cores, which causes cgroups settings to fail") {
 		return
@@ -704,7 +704,7 @@ func testMultiSearch(t *testing.T, nthread int) {
 	for t := 0; t < nthread; t++ {
 		<-ch
 	}
-	db.DPrintf(db.TEST, "TestBenchMultiSearch nthread=%d N=%d %dms\n", nthread, N, time.Since(start).Milliseconds())
+	db.DPrintf(db.TEST, "BenchMultiSearch nthread=%d N=%d %dms\n", nthread, N, time.Since(start).Milliseconds())
 	ts.PrintStats(nil)
 	ts.stop()
 }

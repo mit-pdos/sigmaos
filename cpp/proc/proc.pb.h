@@ -49,6 +49,9 @@ struct TableStruct_proc_2fproc_2eproto {
   static const uint32_t offsets[];
 };
 extern const ::PROTOBUF_NAMESPACE_ID::internal::DescriptorTable descriptor_table_proc_2fproc_2eproto;
+class InitializationRPC;
+struct InitializationRPCDefaultTypeInternal;
+extern InitializationRPCDefaultTypeInternal _InitializationRPC_default_instance_;
 class ProcEnvProto;
 struct ProcEnvProtoDefaultTypeInternal;
 extern ProcEnvProtoDefaultTypeInternal _ProcEnvProto_default_instance_;
@@ -71,6 +74,7 @@ class ProcSeqno;
 struct ProcSeqnoDefaultTypeInternal;
 extern ProcSeqnoDefaultTypeInternal _ProcSeqno_default_instance_;
 PROTOBUF_NAMESPACE_OPEN
+template<> ::InitializationRPC* Arena::CreateMaybeMessage<::InitializationRPC>(Arena*);
 template<> ::ProcEnvProto* Arena::CreateMaybeMessage<::ProcEnvProto>(Arena*);
 template<> ::ProcEnvProto_CachedEndpointsEntry_DoNotUse* Arena::CreateMaybeMessage<::ProcEnvProto_CachedEndpointsEntry_DoNotUse>(Arena*);
 template<> ::ProcEnvProto_EtcdEndpointsEntry_DoNotUse* Arena::CreateMaybeMessage<::ProcEnvProto_EtcdEndpointsEntry_DoNotUse>(Arena*);
@@ -81,6 +85,196 @@ template<> ::ProcSeqno* Arena::CreateMaybeMessage<::ProcSeqno>(Arena*);
 PROTOBUF_NAMESPACE_CLOSE
 
 // ===================================================================
+
+class InitializationRPC final :
+    public ::PROTOBUF_NAMESPACE_ID::Message /* @@protoc_insertion_point(class_definition:InitializationRPC) */ {
+ public:
+  inline InitializationRPC() : InitializationRPC(nullptr) {}
+  ~InitializationRPC() override;
+  explicit PROTOBUF_CONSTEXPR InitializationRPC(::PROTOBUF_NAMESPACE_ID::internal::ConstantInitialized);
+
+  InitializationRPC(const InitializationRPC& from);
+  InitializationRPC(InitializationRPC&& from) noexcept
+    : InitializationRPC() {
+    *this = ::std::move(from);
+  }
+
+  inline InitializationRPC& operator=(const InitializationRPC& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  inline InitializationRPC& operator=(InitializationRPC&& from) noexcept {
+    if (this == &from) return *this;
+    if (GetOwningArena() == from.GetOwningArena()
+  #ifdef PROTOBUF_FORCE_COPY_IN_MOVE
+        && GetOwningArena() != nullptr
+  #endif  // !PROTOBUF_FORCE_COPY_IN_MOVE
+    ) {
+      InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+
+  static const ::PROTOBUF_NAMESPACE_ID::Descriptor* descriptor() {
+    return GetDescriptor();
+  }
+  static const ::PROTOBUF_NAMESPACE_ID::Descriptor* GetDescriptor() {
+    return default_instance().GetMetadata().descriptor;
+  }
+  static const ::PROTOBUF_NAMESPACE_ID::Reflection* GetReflection() {
+    return default_instance().GetMetadata().reflection;
+  }
+  static const InitializationRPC& default_instance() {
+    return *internal_default_instance();
+  }
+  static inline const InitializationRPC* internal_default_instance() {
+    return reinterpret_cast<const InitializationRPC*>(
+               &_InitializationRPC_default_instance_);
+  }
+  static constexpr int kIndexInFileMessages =
+    0;
+
+  friend void swap(InitializationRPC& a, InitializationRPC& b) {
+    a.Swap(&b);
+  }
+  inline void Swap(InitializationRPC* other) {
+    if (other == this) return;
+  #ifdef PROTOBUF_FORCE_COPY_IN_SWAP
+    if (GetOwningArena() != nullptr &&
+        GetOwningArena() == other->GetOwningArena()) {
+   #else  // PROTOBUF_FORCE_COPY_IN_SWAP
+    if (GetOwningArena() == other->GetOwningArena()) {
+  #endif  // !PROTOBUF_FORCE_COPY_IN_SWAP
+      InternalSwap(other);
+    } else {
+      ::PROTOBUF_NAMESPACE_ID::internal::GenericSwap(this, other);
+    }
+  }
+  void UnsafeArenaSwap(InitializationRPC* other) {
+    if (other == this) return;
+    GOOGLE_DCHECK(GetOwningArena() == other->GetOwningArena());
+    InternalSwap(other);
+  }
+
+  // implements Message ----------------------------------------------
+
+  InitializationRPC* New(::PROTOBUF_NAMESPACE_ID::Arena* arena = nullptr) const final {
+    return CreateMaybeMessage<InitializationRPC>(arena);
+  }
+  using ::PROTOBUF_NAMESPACE_ID::Message::CopyFrom;
+  void CopyFrom(const InitializationRPC& from);
+  using ::PROTOBUF_NAMESPACE_ID::Message::MergeFrom;
+  void MergeFrom( const InitializationRPC& from) {
+    InitializationRPC::MergeImpl(*this, from);
+  }
+  private:
+  static void MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PROTOBUF_NAMESPACE_ID::Message& from_msg);
+  public:
+  PROTOBUF_ATTRIBUTE_REINITIALIZES void Clear() final;
+  bool IsInitialized() const final;
+
+  size_t ByteSizeLong() const final;
+  const char* _InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::internal::ParseContext* ctx) final;
+  uint8_t* _InternalSerialize(
+      uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const final;
+  int GetCachedSize() const final { return _impl_._cached_size_.Get(); }
+
+  private:
+  void SharedCtor(::PROTOBUF_NAMESPACE_ID::Arena* arena, bool is_message_owned);
+  void SharedDtor();
+  void SetCachedSize(int size) const final;
+  void InternalSwap(InitializationRPC* other);
+
+  private:
+  friend class ::PROTOBUF_NAMESPACE_ID::internal::AnyMetadata;
+  static ::PROTOBUF_NAMESPACE_ID::StringPiece FullMessageName() {
+    return "InitializationRPC";
+  }
+  protected:
+  explicit InitializationRPC(::PROTOBUF_NAMESPACE_ID::Arena* arena,
+                       bool is_message_owned = false);
+  public:
+
+  static const ClassData _class_data_;
+  const ::PROTOBUF_NAMESPACE_ID::Message::ClassData*GetClassData() const final;
+
+  ::PROTOBUF_NAMESPACE_ID::Metadata GetMetadata() const final;
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  enum : int {
+    kMarshaledRPCIOVFieldNumber = 2,
+    kTargetPathnameFieldNumber = 1,
+    kNOutIOVFieldNumber = 3,
+  };
+  // repeated bytes marshaledRPCIOV = 2;
+  int marshaledrpciov_size() const;
+  private:
+  int _internal_marshaledrpciov_size() const;
+  public:
+  void clear_marshaledrpciov();
+  const std::string& marshaledrpciov(int index) const;
+  std::string* mutable_marshaledrpciov(int index);
+  void set_marshaledrpciov(int index, const std::string& value);
+  void set_marshaledrpciov(int index, std::string&& value);
+  void set_marshaledrpciov(int index, const char* value);
+  void set_marshaledrpciov(int index, const void* value, size_t size);
+  std::string* add_marshaledrpciov();
+  void add_marshaledrpciov(const std::string& value);
+  void add_marshaledrpciov(std::string&& value);
+  void add_marshaledrpciov(const char* value);
+  void add_marshaledrpciov(const void* value, size_t size);
+  const ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField<std::string>& marshaledrpciov() const;
+  ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField<std::string>* mutable_marshaledrpciov();
+  private:
+  const std::string& _internal_marshaledrpciov(int index) const;
+  std::string* _internal_add_marshaledrpciov();
+  public:
+
+  // string targetPathname = 1;
+  void clear_targetpathname();
+  const std::string& targetpathname() const;
+  template <typename ArgT0 = const std::string&, typename... ArgT>
+  void set_targetpathname(ArgT0&& arg0, ArgT... args);
+  std::string* mutable_targetpathname();
+  PROTOBUF_NODISCARD std::string* release_targetpathname();
+  void set_allocated_targetpathname(std::string* targetpathname);
+  private:
+  const std::string& _internal_targetpathname() const;
+  inline PROTOBUF_ALWAYS_INLINE void _internal_set_targetpathname(const std::string& value);
+  std::string* _internal_mutable_targetpathname();
+  public:
+
+  // uint64 nOutIOV = 3;
+  void clear_noutiov();
+  uint64_t noutiov() const;
+  void set_noutiov(uint64_t value);
+  private:
+  uint64_t _internal_noutiov() const;
+  void _internal_set_noutiov(uint64_t value);
+  public:
+
+  // @@protoc_insertion_point(class_scope:InitializationRPC)
+ private:
+  class _Internal;
+
+  template <typename T> friend class ::PROTOBUF_NAMESPACE_ID::Arena::InternalHelper;
+  typedef void InternalArenaConstructable_;
+  typedef void DestructorSkippable_;
+  struct Impl_ {
+    ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField<std::string> marshaledrpciov_;
+    ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr targetpathname_;
+    uint64_t noutiov_;
+    mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
+  };
+  union { Impl_ _impl_; };
+  friend struct ::TableStruct_proc_2fproc_2eproto;
+};
+// -------------------------------------------------------------------
 
 class ProcSeqno final :
     public ::PROTOBUF_NAMESPACE_ID::Message /* @@protoc_insertion_point(class_definition:ProcSeqno) */ {
@@ -130,7 +324,7 @@ class ProcSeqno final :
                &_ProcSeqno_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    0;
+    1;
 
   friend void swap(ProcSeqno& a, ProcSeqno& b) {
     a.Swap(&b);
@@ -399,7 +593,7 @@ class ProcEnvProto final :
                &_ProcEnvProto_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    4;
+    5;
 
   friend void swap(ProcEnvProto& a, ProcEnvProto& b) {
     a.Swap(&b);
@@ -480,6 +674,7 @@ class ProcEnvProto final :
     kSigmaPathFieldNumber = 22,
     kKernelsFieldNumber = 23,
     kCachedEndpointsFieldNumber = 27,
+    kInitRPCsFieldNumber = 29,
     kPidStrFieldNumber = 1,
     kProgramFieldNumber = 2,
     kRealmStrFieldNumber = 3,
@@ -503,6 +698,7 @@ class ProcEnvProto final :
     kPrivilegedFieldNumber = 15,
     kUseSPProxyFieldNumber = 19,
     kUseDialProxyFieldNumber = 20,
+    kDelegateInitFlagFieldNumber = 30,
   };
   // map<string, .TendpointProto> etcdEndpoints = 7;
   int etcdendpoints_size() const;
@@ -602,6 +798,24 @@ class ProcEnvProto final :
       cachedendpoints() const;
   ::PROTOBUF_NAMESPACE_ID::Map< std::string, ::TendpointProto >*
       mutable_cachedendpoints();
+
+  // repeated .InitializationRPC initRPCs = 29;
+  int initrpcs_size() const;
+  private:
+  int _internal_initrpcs_size() const;
+  public:
+  void clear_initrpcs();
+  ::InitializationRPC* mutable_initrpcs(int index);
+  ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::InitializationRPC >*
+      mutable_initrpcs();
+  private:
+  const ::InitializationRPC& _internal_initrpcs(int index) const;
+  ::InitializationRPC* _internal_add_initrpcs();
+  public:
+  const ::InitializationRPC& initrpcs(int index) const;
+  ::InitializationRPC* add_initrpcs();
+  const ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::InitializationRPC >&
+      initrpcs() const;
 
   // string pidStr = 1;
   void clear_pidstr();
@@ -913,6 +1127,15 @@ class ProcEnvProto final :
   void _internal_set_usedialproxy(bool value);
   public:
 
+  // bool delegateInitFlag = 30;
+  void clear_delegateinitflag();
+  bool delegateinitflag() const;
+  void set_delegateinitflag(bool value);
+  private:
+  bool _internal_delegateinitflag() const;
+  void _internal_set_delegateinitflag(bool value);
+  public:
+
   // @@protoc_insertion_point(class_scope:ProcEnvProto)
  private:
   class _Internal;
@@ -938,6 +1161,7 @@ class ProcEnvProto final :
         std::string, ::TendpointProto,
         ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::TYPE_STRING,
         ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::TYPE_MESSAGE> cachedendpoints_;
+    ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::InitializationRPC > initrpcs_;
     ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr pidstr_;
     ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr program_;
     ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr realmstr_;
@@ -961,6 +1185,7 @@ class ProcEnvProto final :
     bool privileged_;
     bool usespproxy_;
     bool usedialproxy_;
+    bool delegateinitflag_;
     mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   };
   union { Impl_ _impl_; };
@@ -1044,7 +1269,7 @@ class ProcProto final :
                &_ProcProto_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    6;
+    7;
 
   friend void swap(ProcProto& a, ProcProto& b) {
     a.Swap(&b);
@@ -1245,6 +1470,155 @@ class ProcProto final :
   #pragma GCC diagnostic push
   #pragma GCC diagnostic ignored "-Wstrict-aliasing"
 #endif  // __GNUC__
+// InitializationRPC
+
+// string targetPathname = 1;
+inline void InitializationRPC::clear_targetpathname() {
+  _impl_.targetpathname_.ClearToEmpty();
+}
+inline const std::string& InitializationRPC::targetpathname() const {
+  // @@protoc_insertion_point(field_get:InitializationRPC.targetPathname)
+  return _internal_targetpathname();
+}
+template <typename ArgT0, typename... ArgT>
+inline PROTOBUF_ALWAYS_INLINE
+void InitializationRPC::set_targetpathname(ArgT0&& arg0, ArgT... args) {
+ 
+ _impl_.targetpathname_.Set(static_cast<ArgT0 &&>(arg0), args..., GetArenaForAllocation());
+  // @@protoc_insertion_point(field_set:InitializationRPC.targetPathname)
+}
+inline std::string* InitializationRPC::mutable_targetpathname() {
+  std::string* _s = _internal_mutable_targetpathname();
+  // @@protoc_insertion_point(field_mutable:InitializationRPC.targetPathname)
+  return _s;
+}
+inline const std::string& InitializationRPC::_internal_targetpathname() const {
+  return _impl_.targetpathname_.Get();
+}
+inline void InitializationRPC::_internal_set_targetpathname(const std::string& value) {
+  
+  _impl_.targetpathname_.Set(value, GetArenaForAllocation());
+}
+inline std::string* InitializationRPC::_internal_mutable_targetpathname() {
+  
+  return _impl_.targetpathname_.Mutable(GetArenaForAllocation());
+}
+inline std::string* InitializationRPC::release_targetpathname() {
+  // @@protoc_insertion_point(field_release:InitializationRPC.targetPathname)
+  return _impl_.targetpathname_.Release();
+}
+inline void InitializationRPC::set_allocated_targetpathname(std::string* targetpathname) {
+  if (targetpathname != nullptr) {
+    
+  } else {
+    
+  }
+  _impl_.targetpathname_.SetAllocated(targetpathname, GetArenaForAllocation());
+#ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  if (_impl_.targetpathname_.IsDefault()) {
+    _impl_.targetpathname_.Set("", GetArenaForAllocation());
+  }
+#endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  // @@protoc_insertion_point(field_set_allocated:InitializationRPC.targetPathname)
+}
+
+// repeated bytes marshaledRPCIOV = 2;
+inline int InitializationRPC::_internal_marshaledrpciov_size() const {
+  return _impl_.marshaledrpciov_.size();
+}
+inline int InitializationRPC::marshaledrpciov_size() const {
+  return _internal_marshaledrpciov_size();
+}
+inline void InitializationRPC::clear_marshaledrpciov() {
+  _impl_.marshaledrpciov_.Clear();
+}
+inline std::string* InitializationRPC::add_marshaledrpciov() {
+  std::string* _s = _internal_add_marshaledrpciov();
+  // @@protoc_insertion_point(field_add_mutable:InitializationRPC.marshaledRPCIOV)
+  return _s;
+}
+inline const std::string& InitializationRPC::_internal_marshaledrpciov(int index) const {
+  return _impl_.marshaledrpciov_.Get(index);
+}
+inline const std::string& InitializationRPC::marshaledrpciov(int index) const {
+  // @@protoc_insertion_point(field_get:InitializationRPC.marshaledRPCIOV)
+  return _internal_marshaledrpciov(index);
+}
+inline std::string* InitializationRPC::mutable_marshaledrpciov(int index) {
+  // @@protoc_insertion_point(field_mutable:InitializationRPC.marshaledRPCIOV)
+  return _impl_.marshaledrpciov_.Mutable(index);
+}
+inline void InitializationRPC::set_marshaledrpciov(int index, const std::string& value) {
+  _impl_.marshaledrpciov_.Mutable(index)->assign(value);
+  // @@protoc_insertion_point(field_set:InitializationRPC.marshaledRPCIOV)
+}
+inline void InitializationRPC::set_marshaledrpciov(int index, std::string&& value) {
+  _impl_.marshaledrpciov_.Mutable(index)->assign(std::move(value));
+  // @@protoc_insertion_point(field_set:InitializationRPC.marshaledRPCIOV)
+}
+inline void InitializationRPC::set_marshaledrpciov(int index, const char* value) {
+  GOOGLE_DCHECK(value != nullptr);
+  _impl_.marshaledrpciov_.Mutable(index)->assign(value);
+  // @@protoc_insertion_point(field_set_char:InitializationRPC.marshaledRPCIOV)
+}
+inline void InitializationRPC::set_marshaledrpciov(int index, const void* value, size_t size) {
+  _impl_.marshaledrpciov_.Mutable(index)->assign(
+    reinterpret_cast<const char*>(value), size);
+  // @@protoc_insertion_point(field_set_pointer:InitializationRPC.marshaledRPCIOV)
+}
+inline std::string* InitializationRPC::_internal_add_marshaledrpciov() {
+  return _impl_.marshaledrpciov_.Add();
+}
+inline void InitializationRPC::add_marshaledrpciov(const std::string& value) {
+  _impl_.marshaledrpciov_.Add()->assign(value);
+  // @@protoc_insertion_point(field_add:InitializationRPC.marshaledRPCIOV)
+}
+inline void InitializationRPC::add_marshaledrpciov(std::string&& value) {
+  _impl_.marshaledrpciov_.Add(std::move(value));
+  // @@protoc_insertion_point(field_add:InitializationRPC.marshaledRPCIOV)
+}
+inline void InitializationRPC::add_marshaledrpciov(const char* value) {
+  GOOGLE_DCHECK(value != nullptr);
+  _impl_.marshaledrpciov_.Add()->assign(value);
+  // @@protoc_insertion_point(field_add_char:InitializationRPC.marshaledRPCIOV)
+}
+inline void InitializationRPC::add_marshaledrpciov(const void* value, size_t size) {
+  _impl_.marshaledrpciov_.Add()->assign(reinterpret_cast<const char*>(value), size);
+  // @@protoc_insertion_point(field_add_pointer:InitializationRPC.marshaledRPCIOV)
+}
+inline const ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField<std::string>&
+InitializationRPC::marshaledrpciov() const {
+  // @@protoc_insertion_point(field_list:InitializationRPC.marshaledRPCIOV)
+  return _impl_.marshaledrpciov_;
+}
+inline ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField<std::string>*
+InitializationRPC::mutable_marshaledrpciov() {
+  // @@protoc_insertion_point(field_mutable_list:InitializationRPC.marshaledRPCIOV)
+  return &_impl_.marshaledrpciov_;
+}
+
+// uint64 nOutIOV = 3;
+inline void InitializationRPC::clear_noutiov() {
+  _impl_.noutiov_ = uint64_t{0u};
+}
+inline uint64_t InitializationRPC::_internal_noutiov() const {
+  return _impl_.noutiov_;
+}
+inline uint64_t InitializationRPC::noutiov() const {
+  // @@protoc_insertion_point(field_get:InitializationRPC.nOutIOV)
+  return _internal_noutiov();
+}
+inline void InitializationRPC::_internal_set_noutiov(uint64_t value) {
+  
+  _impl_.noutiov_ = value;
+}
+inline void InitializationRPC::set_noutiov(uint64_t value) {
+  _internal_set_noutiov(value);
+  // @@protoc_insertion_point(field_set:InitializationRPC.nOutIOV)
+}
+
+// -------------------------------------------------------------------
+
 // ProcSeqno
 
 // uint64 epoch = 1;
@@ -2725,6 +3099,66 @@ inline void ProcEnvProto::set_allocated_valgrind(std::string* valgrind) {
   // @@protoc_insertion_point(field_set_allocated:ProcEnvProto.valgrind)
 }
 
+// repeated .InitializationRPC initRPCs = 29;
+inline int ProcEnvProto::_internal_initrpcs_size() const {
+  return _impl_.initrpcs_.size();
+}
+inline int ProcEnvProto::initrpcs_size() const {
+  return _internal_initrpcs_size();
+}
+inline void ProcEnvProto::clear_initrpcs() {
+  _impl_.initrpcs_.Clear();
+}
+inline ::InitializationRPC* ProcEnvProto::mutable_initrpcs(int index) {
+  // @@protoc_insertion_point(field_mutable:ProcEnvProto.initRPCs)
+  return _impl_.initrpcs_.Mutable(index);
+}
+inline ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::InitializationRPC >*
+ProcEnvProto::mutable_initrpcs() {
+  // @@protoc_insertion_point(field_mutable_list:ProcEnvProto.initRPCs)
+  return &_impl_.initrpcs_;
+}
+inline const ::InitializationRPC& ProcEnvProto::_internal_initrpcs(int index) const {
+  return _impl_.initrpcs_.Get(index);
+}
+inline const ::InitializationRPC& ProcEnvProto::initrpcs(int index) const {
+  // @@protoc_insertion_point(field_get:ProcEnvProto.initRPCs)
+  return _internal_initrpcs(index);
+}
+inline ::InitializationRPC* ProcEnvProto::_internal_add_initrpcs() {
+  return _impl_.initrpcs_.Add();
+}
+inline ::InitializationRPC* ProcEnvProto::add_initrpcs() {
+  ::InitializationRPC* _add = _internal_add_initrpcs();
+  // @@protoc_insertion_point(field_add:ProcEnvProto.initRPCs)
+  return _add;
+}
+inline const ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::InitializationRPC >&
+ProcEnvProto::initrpcs() const {
+  // @@protoc_insertion_point(field_list:ProcEnvProto.initRPCs)
+  return _impl_.initrpcs_;
+}
+
+// bool delegateInitFlag = 30;
+inline void ProcEnvProto::clear_delegateinitflag() {
+  _impl_.delegateinitflag_ = false;
+}
+inline bool ProcEnvProto::_internal_delegateinitflag() const {
+  return _impl_.delegateinitflag_;
+}
+inline bool ProcEnvProto::delegateinitflag() const {
+  // @@protoc_insertion_point(field_get:ProcEnvProto.delegateInitFlag)
+  return _internal_delegateinitflag();
+}
+inline void ProcEnvProto::_internal_set_delegateinitflag(bool value) {
+  
+  _impl_.delegateinitflag_ = value;
+}
+inline void ProcEnvProto::set_delegateinitflag(bool value) {
+  _internal_set_delegateinitflag(value);
+  // @@protoc_insertion_point(field_set:ProcEnvProto.delegateInitFlag)
+}
+
 // -------------------------------------------------------------------
 
 // -------------------------------------------------------------------
@@ -2988,6 +3422,8 @@ inline void ProcProto::set_memint(uint32_t value) {
 #ifdef __GNUC__
   #pragma GCC diagnostic pop
 #endif  // __GNUC__
+// -------------------------------------------------------------------
+
 // -------------------------------------------------------------------
 
 // -------------------------------------------------------------------

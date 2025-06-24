@@ -12,6 +12,7 @@ import (
 
 	"google.golang.org/protobuf/types/known/timestamppb"
 
+	sessp "sigmaos/session/proto"
 	sp "sigmaos/sigmap"
 )
 
@@ -248,6 +249,22 @@ func (pe *ProcEnvProto) ClearCachedEndpoint(pn string) {
 	delete(pe.CachedEndpoints, pn)
 }
 
+func (pe *ProcEnvProto) AddInitializationRPC(pn string, iov sessp.IoVec, nOutIOV uint64) {
+	pe.InitRPCs = append(pe.InitRPCs, newInitializationRPC(pn, iov, nOutIOV))
+}
+
+func (pe *ProcEnvProto) GetInitializationRPCs() []*InitializationRPC {
+	return pe.InitRPCs
+}
+
+func (pe *ProcEnvProto) SetDelegateInit(delegate bool) {
+	pe.DelegateInitFlag = delegate
+}
+
+func (pe *ProcEnvProto) GetDelegateInit() bool {
+	return pe.DelegateInitFlag
+}
+
 func (pe *ProcEnvProto) SetSigmaPath(buildTag string) {
 	if buildTag == sp.LOCAL_BUILD {
 		pe.SigmaPath = append(pe.SigmaPath, filepath.Join(sp.UX, sp.LOCAL, "bin/user/common"))
@@ -400,6 +417,7 @@ func (pe *ProcEnv) String() string {
 		"RealmSwitch:%v "+
 		"Fail:%v "+
 		"CachedEPs:%v "+
+		"DelegateInit:%v "+
 		"}",
 		pe.Program,
 		pe.Version,
@@ -425,5 +443,6 @@ func (pe *ProcEnv) String() string {
 		pe.RealmSwitchStr,
 		pe.Fail,
 		pe.CachedEndpoints,
+		pe.GetDelegateInit(),
 	)
 }

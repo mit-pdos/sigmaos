@@ -8,6 +8,8 @@ import (
 	"sync"
 	"time"
 
+	"google.golang.org/protobuf/proto"
+
 	cachegrpclnt "sigmaos/apps/cache/cachegrp/clnt"
 	cachegrpmgr "sigmaos/apps/cache/cachegrp/mgr"
 	cacheproto "sigmaos/apps/cache/proto"
@@ -18,6 +20,7 @@ import (
 	epsrv "sigmaos/apps/epcache/srv"
 	db "sigmaos/debug"
 	"sigmaos/proc"
+	rpcproto "sigmaos/rpc/proto"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 )
@@ -52,17 +55,20 @@ func marshalVec(v *cossimproto.Vector) ([]byte, error) {
 }
 
 // Write vector DB to cache srv
-func writeVectorsToCache(cc *cachegrpclnt.CachedSvcClnt, vecs []*cossimproto.Vector) error {
+func writeVectorsToCache(cc *cachegrpclnt.CachedSvcClnt, vecs []*cossimproto.Vector) ([]string, error) {
+	vecKeys := make([]string, len(vecs))
 	m := make(map[string][]byte)
-	for id, v := range vecs {
+	for i, v := range vecs {
+		id := strconv.Itoa(i)
+		vecKeys[i] = id
 		b, err := marshalVec(v)
 		if err != nil {
-			return err
+			return nil, err
 		}
-		if err := cc.PutBytes(strconv.Itoa(id), b); err != nil {
-			return err
+		if err := cc.PutBytes(id, b); err != nil {
+			return nil, err
 		}
-		m[strconv.Itoa(id)] = b
+		m[id] = b
 	}
 	shard := &cacheproto.ShardReq{
 		Vals: m,
@@ -71,10 +77,10 @@ func writeVectorsToCache(cc *cachegrpclnt.CachedSvcClnt, vecs []*cossimproto.Vec
 	// Also store all values in a single key
 	if err := cc.Put("all-vecs", shard); err != nil {
 		db.DPrintf(db.ERROR, "Error write all vecs")
-		return err
+		return nil, err
 	}
 	db.DPrintf(db.TEST, "Done Put all vecs")
-	return nil
+	return vecKeys, nil
 }
 
 type CosSimJob struct {
@@ -91,6 +97,7 @@ type CosSimJob struct {
 	vecDim     int
 	eagerInit  bool
 	vecs       []*cossimproto.Vector
+	vecKeys    []string
 	srvMcpu    proc.Tmcpu
 	srvs       []*proc.Proc
 	Clnt       *clnt.CosSimShardClnt
@@ -121,7 +128,8 @@ func NewCosSimJob(sc *sigmaclnt.SigmaClnt, job string, nvec int, vecDim int, eag
 	}
 	cc := cachegrpclnt.NewCachedSvcClnt(sc.FsLib, job)
 	vecs := cossim.NewVectors(nvec, vecDim)
-	if err := writeVectorsToCache(cc, vecs); err != nil {
+	vecKeys, err := writeVectorsToCache(cc, vecs)
+	if err != nil {
 		db.DPrintf(db.COSSIMSRV_ERR, "Err writeVectors: %v", err)
 		return nil, err
 	}
@@ -147,6 +155,7 @@ func NewCosSimJob(sc *sigmaclnt.SigmaClnt, job string, nvec int, vecDim int, eag
 		nvec:       nvec,
 		vecDim:     vecDim,
 		vecs:       vecs,
+		vecKeys:    vecKeys,
 		eagerInit:  eagerInit,
 		srvMcpu:    srvMcpu,
 		srvs:       []*proc.Proc{},
@@ -167,6 +176,25 @@ func (j *CosSimJob) AddSrv() (*proc.Proc, time.Duration, error) {
 	for pn, ep := range j.cacheEPs {
 		p.SetCachedEndpoint(pn, ep)
 	}
+	// TODO: put in convenience function
+	rpcWrapperReq := &rpcproto.Req{
+		Method: "CacheSrv.MultiGet",
+	}
+	wrapperBytes, err := proto.Marshal(rpcWrapperReq)
+	if err != nil {
+		db.DPrintf(db.ALWAYS, "Error marshal wrapper bytes: %v", err)
+		return nil, 0, err
+	}
+	multiGetReq := j.cacheClnt.NewMultiGetReq(j.vecKeys)
+	db.DPrintf(db.COSSIMSRV, "MultiGetReq for new cachesrv: %v -> %v", j.cachePN, multiGetReq)
+	reqBytes, err := proto.Marshal(multiGetReq)
+	if err != nil {
+		db.DPrintf(db.ALWAYS, "Error marshal multiGetReq: %v", err)
+		return nil, 0, err
+	}
+	p.AddInitializationRPC(j.cachePN, [][]byte{wrapperBytes, reqBytes}, 3)
+	// Ask for spproxy to run delegated initialization RPCs on behalf of the proc
+	p.SetDelegateInit(true)
 	start := time.Now()
 	if err := j.Spawn(p); err != nil {
 		return nil, 0, err

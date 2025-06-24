@@ -19,6 +19,8 @@ import (
 	dialproxysrv "sigmaos/dialproxy/srv"
 	"sigmaos/proc"
 	"sigmaos/proxy/sigmap/clnt"
+	rpcchan "sigmaos/rpc/clnt/channel"
+	sprpcchan "sigmaos/rpc/clnt/channel/spchannel"
 	"sigmaos/sigmaclnt"
 	"sigmaos/sigmaclnt/fidclnt"
 	"sigmaos/sigmaclnt/procclnt"
@@ -123,6 +125,51 @@ func (spps *SPProxySrv) runServer() error {
 	}
 }
 
+// Run delegated initialization RPCs
+func (spp *SPProxySrv) runDelegatedInitializationRPCs(pe *proc.ProcEnv, sc *sigmaclnt.SigmaClnt) {
+	// If the proc didn't ask for delegated initialization, bail out
+	if !pe.GetDelegateInit() {
+		return
+	}
+	db.DPrintf(db.SPPROXYSRV, "[%v] Run delegated init RPCs", pe.GetPID())
+	for initRPCIdx, initRPC := range pe.GetInitRPCs() {
+		// TODO: cache channels for later use
+		pn := initRPC.GetTargetPathname()
+		db.DPrintf(db.SPPROXYSRV, "[%v] Create clnt for delegated RPC(%v): %v", pe.GetPID(), initRPCIdx, pn)
+		var rpcchan rpcchan.RPCChannel
+		if ep, ok := pe.GetCachedEndpoint(pn); ok {
+			var err error
+			rpcchan, err = sprpcchan.NewSPChannelEndpoint(sc.FsLib, pn, ep)
+			if err != nil {
+				db.DPrintf(db.SPPROXYSRV_ERR, "Err create mounted RPC channel to run delegated RPCs (%v -> %v): %v", pn, ep, err)
+				// TODO: remove fatal
+				db.DFatalf("Err create mounted RPC channel to run delegated RPCs (%v -> %v): %v", pn, ep, err)
+			}
+		} else {
+			var err error
+			rpcchan, err = sprpcchan.NewSPChannel(sc.FsLib, pn)
+			if err != nil {
+				db.DPrintf(db.SPPROXYSRV_ERR, "Err create unmounted RPC channel to run delegated RPCs (%v): %v", pn, err)
+				// TODO: remove fatal
+				db.DFatalf("Err create unmounted RPC channel to run delegated RPCs (%v): %v", pn, err)
+			}
+		}
+		db.DPrintf(db.SPPROXYSRV, "[%v] Run delegated init RPC(%v)", pe.GetPID(), initRPCIdx)
+		outiov := initRPC.GetOutputIOV()
+		if err := rpcchan.SendReceive(initRPC.GetInputIOV(), outiov); err != nil {
+			db.DPrintf(db.SPPROXYSRV_ERR, "Err create unmounted RPC channel to run delegated RPCs (%v): %v", pn, err)
+			// TODO: remove fatal
+			db.DFatalf("Err create unmounted RPC channel to run delegated RPCs (%v): %v", pn, err)
+		}
+		db.DPrintf(db.SPPROXYSRV, "[%v] Done running delegated init RPC(%v)", pe.GetPID(), initRPCIdx)
+		// TODO: remove
+		for _, v := range outiov {
+			db.DPrintf(db.SPPROXYSRV, "got resulting iov len %v", len(v))
+		}
+		// TODO: store resulting state as a promise
+	}
+}
+
 // Create a sigmaclnt on behalf of a proc
 func (spp *SPProxySrv) createSigmaClnt(pe *proc.ProcEnv, withProcClnt bool, ch chan *sigmaClntCreationResult) {
 	db.DPrintf(db.SPPROXYSRV, "createSigmaClnt for %v", pe.GetPID())
@@ -132,6 +179,8 @@ func (spp *SPProxySrv) createSigmaClnt(pe *proc.ProcEnv, withProcClnt bool, ch c
 	if err != nil {
 		db.DPrintf(db.SPPROXYSRV_ERR, "Error NewSigmaClnt proc %v", pe.GetPID())
 	}
+	// We only need an fslib to run delegated RPCs
+	go spp.runDelegatedInitializationRPCs(pe, sc)
 	var epcc *epcacheclnt.EndpointCacheClnt
 	// Initialize a procclnt too
 	if err == nil {
@@ -185,10 +234,10 @@ func (spps *SPProxySrv) getOrCreateSigmaClnt(pep *proc.ProcEnvProto, get bool) (
 		db.DPrintf(db.SPPROXYSRV, "Need to create SigmaClnt for proc %v", pe.GetPID())
 		ch = make(chan *sigmaClntCreationResult, 1)
 		spps.clnts[pe.GetPID()] = ch
+		// If the clnt didn't exist already, start creating it
 		go spps.createSigmaClnt(pe, true, ch)
 	}
 	spps.mu.Unlock()
-	// If the clnt didn't exist already, start creating it
 	if !get {
 		return nil, nil, nil
 	}

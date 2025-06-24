@@ -64,6 +64,7 @@ class Clnt {
 
   std::expected<int, sigmaos::serr::Error> Test();
   std::shared_ptr<sigmaos::proc::ProcEnv> ProcEnv() { return _env; }
+  std::shared_ptr<sigmaos::rpc::Channel> GetSPProxyChannel() { return _demux; }
 
   // Stubs
 
@@ -116,7 +117,8 @@ class Clnt {
 
   private:
   std::shared_ptr<sigmaos::io::conn::Conn> _conn;
-  std::shared_ptr<sigmaos::io::transport::Transport> _trans; std::shared_ptr<sigmaos::io::demux::Clnt> _demux;
+  std::shared_ptr<sigmaos::io::transport::Transport> _trans;
+  std::shared_ptr<sigmaos::io::demux::Clnt> _demux;
   std::shared_ptr<sigmaos::rpc::Clnt> _rpcc;
   std::shared_ptr<sigmaos::proc::ProcEnv> _env;
   bool _disconnected;

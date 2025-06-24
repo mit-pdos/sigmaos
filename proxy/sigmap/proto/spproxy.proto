@@ -141,3 +141,12 @@ message SigmaExitedReq {
         uint32 status = 1;
         string msg = 2;
 }
+
+message SigmaDelegatedRPCReq {
+        uint64 rPCIdx = 1;
+}
+
+message SigmaDelegatedRPCRep {
+        Blob blob = 1;
+        Rerror err = 2;
+}

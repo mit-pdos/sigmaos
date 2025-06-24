@@ -35,11 +35,12 @@ const (
 // SPProxySrv maintains the state of the spproxysrv. All
 // SigmaSrvClnt's share one fid table
 type SPProxySrv struct {
-	mu    sync.Mutex
-	pe    *proc.ProcEnv
-	nps   *dialproxysrv.DialProxySrv
-	fidc  *fidclnt.FidClnt
-	clnts map[sp.Tpid]chan *sigmaClntCreationResult
+	mu     sync.Mutex
+	pe     *proc.ProcEnv
+	nps    *dialproxysrv.DialProxySrv
+	fidc   *fidclnt.FidClnt
+	clnts  map[sp.Tpid]chan *sigmaClntCreationResult
+	repTab *DelegatedRPCReplyTable
 }
 
 func newSPProxySrv() (*SPProxySrv, error) {
@@ -50,10 +51,11 @@ func newSPProxySrv() (*SPProxySrv, error) {
 		return nil, err
 	}
 	spps := &SPProxySrv{
-		pe:    pe,
-		nps:   nps,
-		fidc:  fidclnt.NewFidClnt(pe, dialproxyclnt.NewDialProxyClnt(pe)),
-		clnts: make(map[sp.Tpid]chan *sigmaClntCreationResult),
+		pe:     pe,
+		nps:    nps,
+		fidc:   fidclnt.NewFidClnt(pe, dialproxyclnt.NewDialProxyClnt(pe)),
+		clnts:  make(map[sp.Tpid]chan *sigmaClntCreationResult),
+		repTab: NewDelegatedRPCReplyTable(),
 	}
 	db.DPrintf(db.SPPROXYSRV, "newSPProxySrv ProcEnv:%v", pe)
 	return spps, nil
@@ -162,11 +164,7 @@ func (spp *SPProxySrv) runDelegatedInitializationRPCs(pe *proc.ProcEnv, sc *sigm
 			db.DFatalf("Err create unmounted RPC channel to run delegated RPCs (%v): %v", pn, err)
 		}
 		db.DPrintf(db.SPPROXYSRV, "[%v] Done running delegated init RPC(%v)", pe.GetPID(), initRPCIdx)
-		// TODO: remove
-		for _, v := range outiov {
-			db.DPrintf(db.SPPROXYSRV, "got resulting iov len %v", len(v))
-		}
-		// TODO: store resulting state as a promise
+		spp.repTab.InsertReply(pe.GetPID(), uint64(initRPCIdx), outiov)
 	}
 }
 
@@ -179,6 +177,8 @@ func (spp *SPProxySrv) createSigmaClnt(pe *proc.ProcEnv, withProcClnt bool, ch c
 	if err != nil {
 		db.DPrintf(db.SPPROXYSRV_ERR, "Error NewSigmaClnt proc %v", pe.GetPID())
 	}
+	// Set up delegated RPC reply table for the proc
+	spp.repTab.NewProc(pe)
 	// We only need an fslib to run delegated RPCs
 	go spp.runDelegatedInitializationRPCs(pe, sc)
 	var epcc *epcacheclnt.EndpointCacheClnt
@@ -258,6 +258,7 @@ func (spps *SPProxySrv) ProcDone(pep *proc.ProcEnvProto) {
 
 	// Clean up sigmaclnt structures
 	delete(spps.clnts, pep.GetPID())
+	spps.repTab.DelProc(pep.GetPID())
 }
 
 // The spproxyd process enters here

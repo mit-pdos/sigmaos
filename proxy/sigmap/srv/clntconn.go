@@ -436,3 +436,16 @@ func (sca *SPProxySrvAPI) WaitEvict(ctx fs.CtxI, req scproto.SigmaNullReq, rep *
 	db.DPrintf(db.SPPROXYSRV, "%v: WaitEvict done %v %v", sca.sc.ClntId(), req, rep)
 	return nil
 }
+
+// ========== Delegated RPCs ==========
+func (sca *SPProxySrvAPI) GetDelegatedRPCReply(ctx fs.CtxI, req scproto.SigmaDelegatedRPCReq, rep *scproto.SigmaDelegatedRPCRep) error {
+	db.DPrintf(db.SPPROXYSRV, "%v: GetDelegatedRPCReply %v", sca.sc.ClntId(), req)
+	iov := sca.spps.repTab.GetReply(sca.sc.ProcEnv().GetPID(), req.RPCIdx)
+	rep.Blob = &rpcproto.Blob{
+		Iov: [][]byte(iov),
+	}
+	rep.Err = sca.setErr(nil)
+	//	rep.Err = sca.setErr(err)
+	db.DPrintf(db.SPPROXYSRV, "%v: GetDelegatedRPCReply done %v %v", sca.sc.ClntId(), req, rep)
+	return nil
+}

@@ -29,7 +29,6 @@ func NewNetClnt(pe *proc.ProcEnv, npc *dialproxyclnt.DialProxyClnt, ep *sp.Tendp
 		ep:  ep,
 	}
 	conn, err := nc.connect(ep)
-	db.DPrintf(db.NETCLNT_ERR, "NewNetClnt connect %v err %v\n", ep, err)
 	return conn, err
 }
 
@@ -40,13 +39,13 @@ func (nc *NetClnt) connect(ep *sp.Tendpoint) (net.Conn, *serr.Err) {
 			ep.Addr = append(ep.Addr[1:], ep.Addr[0])
 		}
 		c, err := nc.npc.Dial(ep)
-		db.DPrintf(db.NETCLNT, "Dial %v addr.Addr %v\n", addr.IPPort(), err)
 		if err != nil {
+			db.DPrintf(db.NETCLNT_ERR, "Dial %v err %v", addr.IPPort(), err)
 			continue
 		}
-		db.DPrintf(db.NETCLNT, "NetClnt connected %v -> %v\n", c.LocalAddr(), addr)
+		db.DPrintf(db.NETCLNT, "NetClnt connected %v -> %v", c.LocalAddr(), addr)
 		return c, nil
 	}
-	db.DPrintf(db.NETCLNT_ERR, "NetClnt unable to connect to any of %v\n", ep)
+	db.DPrintf(db.NETCLNT_ERR, "NetClnt unable to connect to any of %v", ep)
 	return nil, serr.NewErr(serr.TErrUnreachable, "no connection")
 }

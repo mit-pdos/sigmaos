@@ -111,7 +111,7 @@ std::expected<std::pair<std::vector<uint64_t>, std::shared_ptr<std::string>>, si
   for (int i = 0; i < lengths.size(); i++) {
     lengths[i] = rep.lengths().at(i);
   }
-	log(CACHECLNT, "Get ok");
+	log(CACHECLNT, "MultiGet ok");
   return std::make_pair(lengths, buf);
 }
 
@@ -184,6 +184,41 @@ std::expected<int, sigmaos::serr::Error> Clnt::Delete(std::string key) {
   }
 	log(CACHECLNT, "Delete ok: {}", key);
   return 0;
+}
+
+std::expected<std::pair<std::vector<uint64_t>, std::shared_ptr<std::string>>, sigmaos::serr::Error> Clnt::DelegatedMultiGet(uint64_t rpc_idx) {
+	log(CACHECLNT, "Delegated MultiGet rpc_idx {}", (int) rpc_idx);
+  std::shared_ptr<sigmaos::rpc::Clnt> rpcc;
+  {
+    // TODO: pass in srv_id
+    auto res = get_clnt(0);
+    if (!res.has_value()) {
+      log(CACHECLNT_ERR, "Error get_clnt: {}", res.error().String());
+      return std::unexpected(res.error());
+    }
+    rpcc = res.value();
+  }
+  TfenceProto fence;
+	CacheMultiGetRep rep;
+  Blob blob;
+  auto iov = blob.mutable_iov();
+  // Add a buffer to hold the output
+  auto buf = std::make_shared<std::string>();
+  iov->AddAllocated(buf.get());
+  rep.set_allocated_blob(&blob);
+	{
+    auto res = rpcc->DelegatedRPC(rpc_idx, rep);
+    if (!res.has_value()) {
+      log(CACHECLNT_ERR, "Error Get: {}", res.error().String());
+      return std::unexpected(res.error());
+    }
+  }
+  std::vector<uint64_t> lengths(rep.lengths().size(), 0);
+  for (int i = 0; i < lengths.size(); i++) {
+    lengths[i] = rep.lengths().at(i);
+  }
+	log(CACHECLNT, "DelegatedMultiGet ok");
+  return std::make_pair(lengths, buf);
 }
 
 };

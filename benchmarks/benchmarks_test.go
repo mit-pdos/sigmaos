@@ -80,6 +80,7 @@ var N_GEO_TO_ADD int
 var SCALE_GEO_DELAY time.Duration
 var SCALE_CACHE_DELAY time.Duration
 var N_CACHES_TO_ADD int
+var COSSIM_DELEGATE_INIT bool
 var COSSIM_NCACHE int
 var COSSIM_CACHE_MCPU int
 var COSSIM_SRV_MCPU int
@@ -168,13 +169,14 @@ func init() {
 	flag.IntVar(&HOTEL_IMG_SZ_MB, "hotel_img_sz_mb", 0, "Hotel image data size in megabytes.")
 	flag.IntVar(&N_HOTEL, "nhotel", 80, "Number of hotels in the dataset.")
 	flag.BoolVar(&HOTEL_CACHE_AUTOSCALE, "hotel_cache_autoscale", false, "Autoscale hotel cache")
-	flag.IntVar(&NCOSSIM, "ncossim", 1, "Cossim ngeo")
+	flag.IntVar(&NCOSSIM, "ncossim", 1, "Cossim nsrv")
 	flag.IntVar(&COSSIM_NCACHE, "cossim_ncache", 1, "Cossim ncache")
 	flag.IntVar(&COSSIM_CACHE_MCPU, "cossim_cache_mcpu", 2000, "Cossim cache mcpu")
 	flag.IntVar(&COSSIM_SRV_MCPU, "cossim_srv_mcpu", 2000, "Cossim server mcpu")
 	flag.IntVar(&COSSIM_NVEC, "cossim_nvec", 100, "Number of vectors in the cossim DB")
 	flag.IntVar(&COSSIM_VEC_DIM, "cossim_vec_dim", 100, "Dimension of each vector in the cossim DB")
 	flag.BoolVar(&COSSIM_EAGER_INIT, "cossim_eager_init", false, "Initialize cossim server eagerly")
+	flag.BoolVar(&COSSIM_DELEGATE_INIT, "cossim_delegated_init", false, "Cossim")
 	flag.BoolVar(&MANUALLY_SCALE_GEO, "manually_scale_geo", false, "Manually scale geos")
 	flag.DurationVar(&SCALE_GEO_DELAY, "scale_geo_delay", 0*time.Second, "Delay to wait before scaling up number of geos.")
 	flag.IntVar(&N_GEO_TO_ADD, "n_geo_to_add", 0, "Number of geo to add.")
@@ -1863,7 +1865,7 @@ func TestCosSim(t *testing.T) {
 	}
 
 	rs := benchmarks.NewResults(1, benchmarks.E2E)
-	jobs, ji := newCosSimJobs(ts1, p, sigmaos, COSSIM_DURS, COSSIM_MAX_RPS, COSSIM_NCACHE, COSSIM_CACHE_GC, proc.Tmcpu(COSSIM_CACHE_MCPU), MANUALLY_SCALE_CACHES, SCALE_CACHE_DELAY, N_CACHES_TO_ADD, NCOSSIM, proc.Tmcpu(COSSIM_SRV_MCPU), MANUALLY_SCALE_COSSIM, SCALE_COSSIM_DELAY, N_COSSIM_TO_ADD, COSSIM_NVEC, COSSIM_VEC_DIM, COSSIM_EAGER_INIT, func(j *cossimsrv.CosSimJob, r *rand.Rand) {
+	jobs, ji := newCosSimJobs(ts1, p, sigmaos, COSSIM_DURS, COSSIM_MAX_RPS, COSSIM_NCACHE, COSSIM_CACHE_GC, proc.Tmcpu(COSSIM_CACHE_MCPU), MANUALLY_SCALE_CACHES, SCALE_CACHE_DELAY, N_CACHES_TO_ADD, NCOSSIM, proc.Tmcpu(COSSIM_SRV_MCPU), MANUALLY_SCALE_COSSIM, SCALE_COSSIM_DELAY, N_COSSIM_TO_ADD, COSSIM_NVEC, COSSIM_VEC_DIM, COSSIM_EAGER_INIT, COSSIM_DELEGATE_INIT, func(j *cossimsrv.CosSimJob, r *rand.Rand) {
 		_, _, err := j.Clnt.CosSimLeastLoaded(v, ranges)
 		assert.Nil(t, err, "CosSim req: %v", err)
 	})

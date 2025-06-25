@@ -88,23 +88,24 @@ type CosSimJob struct {
 	mu  sync.Mutex
 	job string
 	*sigmaclnt.SigmaClnt
-	EPCacheJob *epsrv.EPCacheJob
-	epcsrvEP   *sp.Tendpoint
-	cacheClnt  *cachegrpclnt.CachedSvcClnt
-	cacheMgr   *cachegrpmgr.CacheMgr
-	cachePN    string
-	cacheEPs   map[string]*sp.Tendpoint
-	nvec       int
-	vecDim     int
-	eagerInit  bool
-	vecs       []*cossimproto.Vector
-	vecKeys    []string
-	srvMcpu    proc.Tmcpu
-	srvs       []*proc.Proc
-	Clnt       *clnt.CosSimShardClnt
+	EPCacheJob       *epsrv.EPCacheJob
+	epcsrvEP         *sp.Tendpoint
+	cacheClnt        *cachegrpclnt.CachedSvcClnt
+	cacheMgr         *cachegrpmgr.CacheMgr
+	cachePN          string
+	cacheEPs         map[string]*sp.Tendpoint
+	nvec             int
+	vecDim           int
+	eagerInit        bool
+	vecs             []*cossimproto.Vector
+	vecKeys          []string
+	srvMcpu          proc.Tmcpu
+	srvs             []*proc.Proc
+	Clnt             *clnt.CosSimShardClnt
+	delegateInitRPCs bool
 }
 
-func NewCosSimJob(sc *sigmaclnt.SigmaClnt, job string, nvec int, vecDim int, eagerInit bool, srvMcpu proc.Tmcpu, ncache int, cacheMcpu proc.Tmcpu, cacheGC bool) (*CosSimJob, error) {
+func NewCosSimJob(sc *sigmaclnt.SigmaClnt, job string, nvec int, vecDim int, eagerInit bool, srvMcpu proc.Tmcpu, ncache int, cacheMcpu proc.Tmcpu, cacheGC bool, delegateInitRPCs bool) (*CosSimJob, error) {
 	// Init fs
 	if err := initFS(sc, job); err != nil {
 		db.DPrintf(db.COSSIMSRV_ERR, "Err initfs: %v", err)
@@ -145,22 +146,23 @@ func NewCosSimJob(sc *sigmaclnt.SigmaClnt, job string, nvec int, vecDim int, eag
 		return nil, err
 	}
 	return &CosSimJob{
-		job:        job,
-		SigmaClnt:  sc,
-		EPCacheJob: epcj,
-		epcsrvEP:   epcsrvEP,
-		cacheClnt:  cc,
-		cachePN:    cc.Server(0),
-		cacheEPs:   cacheEPs,
-		cacheMgr:   cm,
-		nvec:       nvec,
-		vecDim:     vecDim,
-		vecs:       vecs,
-		vecKeys:    vecKeys,
-		eagerInit:  eagerInit,
-		srvMcpu:    srvMcpu,
-		srvs:       []*proc.Proc{},
-		Clnt:       cscs,
+		job:              job,
+		SigmaClnt:        sc,
+		EPCacheJob:       epcj,
+		epcsrvEP:         epcsrvEP,
+		cacheClnt:        cc,
+		cachePN:          cc.Server(0),
+		cacheEPs:         cacheEPs,
+		cacheMgr:         cm,
+		nvec:             nvec,
+		vecDim:           vecDim,
+		vecs:             vecs,
+		vecKeys:          vecKeys,
+		eagerInit:        eagerInit,
+		srvMcpu:          srvMcpu,
+		srvs:             []*proc.Proc{},
+		Clnt:             cscs,
+		delegateInitRPCs: delegateInitRPCs,
 	}, nil
 }
 
@@ -195,7 +197,7 @@ func (j *CosSimJob) AddSrv() (*proc.Proc, time.Duration, error) {
 	}
 	p.AddInitializationRPC(j.cachePN, [][]byte{wrapperBytes, reqBytes}, 3)
 	// Ask for spproxy to run delegated initialization RPCs on behalf of the proc
-	p.SetDelegateInit(true)
+	p.SetDelegateInit(j.delegateInitRPCs)
 	start := time.Now()
 	if err := j.Spawn(p); err != nil {
 		return nil, 0, err

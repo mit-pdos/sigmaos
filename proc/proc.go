@@ -387,13 +387,24 @@ func (p *Proc) GetNamedEndpoint() *sp.TendpointProto {
 	ep, _ := p.ProcEnvProto.GetNamedEndpoint()
 	return ep.GetProto()
 }
+func (pe *ProcEnvProto) AddInitializationRPC(pn string, iov sessp.IoVec, nOutIOV uint64) {
+
+}
+
+func (p *Proc) GetInitializationRPCs() []*InitializationRPC {
+	return p.InitRPCs
+}
 
 func (p *Proc) AddInitializationRPC(pn string, iov sessp.IoVec, nOutIOV uint64) {
-	p.ProcEnvProto.AddInitializationRPC(pn, iov, nOutIOV)
+	p.InitRPCs = append(p.InitRPCs, newInitializationRPC(pn, iov, nOutIOV))
 }
 
 func (p *Proc) SetDelegateInit(delegate bool) {
 	p.ProcEnvProto.SetDelegateInit(delegate)
+}
+
+func (p *Proc) GetDelegateInit() bool {
+	return p.ProcEnvProto.GetDelegateInit()
 }
 
 // Return Env map as a []string

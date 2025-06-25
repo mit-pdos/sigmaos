@@ -140,7 +140,7 @@ func (sca *SPProxySrvAPI) Init(ctx fs.CtxI, req scproto.SigmaInitReq, rep *scpro
 	pe := proc.NewProcEnvFromProto(req.ProcEnvProto)
 	db.DPrintf(db.SPPROXYSRV, "Init pe %v", pe)
 	start := time.Now()
-	sc, epcc, err := sca.spps.getOrCreateSigmaClnt(req.ProcEnvProto, true)
+	sc, epcc, err := sca.spps.getOrCreateSigmaClnt(pe, nil, true)
 	if err != nil {
 		rep.Err = sca.setErr(fmt.Errorf("Error init SPProxySrvAPI: %v pe %v", err, pe))
 		return err

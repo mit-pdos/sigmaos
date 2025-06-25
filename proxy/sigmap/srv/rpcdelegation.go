@@ -116,17 +116,17 @@ func (tab *DelegatedRPCReplyTable) PutRPCChannel(pid sp.Tpid, pn string, ch rpcc
 	reps.PutRPCChannel(pn, ch)
 }
 
-func (tab *DelegatedRPCReplyTable) NewProc(pe *proc.ProcEnv) {
-	db.DPrintf(db.SPPROXYSRV, "[%v] DelegatedRPC.NewProc", pe.GetPID())
+func (tab *DelegatedRPCReplyTable) NewProc(p *proc.Proc) {
+	db.DPrintf(db.SPPROXYSRV, "[%v] DelegatedRPC.NewProc", p.GetPid())
 
 	tab.mu.Lock()
 	defer tab.mu.Unlock()
 
 	// Sanity check
-	if _, ok := tab.reps[pe.GetPID()]; ok {
-		db.DFatalf("NewProc twice: %v", pe.GetPID())
+	if _, ok := tab.reps[p.GetPid()]; ok {
+		db.DFatalf("NewProc twice: %v", p.GetPid())
 	}
-	tab.reps[pe.GetPID()] = NewRPCReplies(pe.GetInitRPCs())
+	tab.reps[p.GetPid()] = NewRPCReplies(p.GetInitRPCs())
 }
 
 func (tab *DelegatedRPCReplyTable) DelProc(pid sp.Tpid) {

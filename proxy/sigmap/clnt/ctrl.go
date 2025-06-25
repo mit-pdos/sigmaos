@@ -39,7 +39,7 @@ func (scc *CtrlClnt) StatsSrv() (*rpc.RPCStatsSnapshot, error) {
 // Tell spproxyd to prepare for an incoming proc
 func (scc *CtrlClnt) InformIncomingProc(p *proc.Proc) error {
 	req := spproto.SigmaInformProcReq{
-		ProcEnvProto: p.GetProcEnv().GetProto(),
+		ProcProto: p.GetProto(),
 	}
 	rep := spproto.SigmaErrRep{}
 	err := scc.rpcc.RPC("CtrlAPI.InformIncomingProc", &req, &rep)
@@ -56,7 +56,7 @@ func (scc *CtrlClnt) InformIncomingProc(p *proc.Proc) error {
 // Tell spproxyd a proc is done
 func (scc *CtrlClnt) InformProcDone(p *proc.Proc) error {
 	req := spproto.SigmaInformProcReq{
-		ProcEnvProto: p.GetProcEnv().GetProto(),
+		ProcProto: p.GetProto(),
 	}
 	rep := spproto.SigmaErrRep{}
 	err := scc.rpcc.RPC("CtrlAPI.InformProcDone", &req, &rep)

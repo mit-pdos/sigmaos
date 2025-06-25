@@ -12,7 +12,6 @@ import (
 
 	"google.golang.org/protobuf/types/known/timestamppb"
 
-	sessp "sigmaos/session/proto"
 	sp "sigmaos/sigmap"
 )
 
@@ -247,14 +246,6 @@ func (pe *ProcEnvProto) SetCachedEndpoint(pn string, ep *sp.Tendpoint) {
 
 func (pe *ProcEnvProto) ClearCachedEndpoint(pn string) {
 	delete(pe.CachedEndpoints, pn)
-}
-
-func (pe *ProcEnvProto) AddInitializationRPC(pn string, iov sessp.IoVec, nOutIOV uint64) {
-	pe.InitRPCs = append(pe.InitRPCs, newInitializationRPC(pn, iov, nOutIOV))
-}
-
-func (pe *ProcEnvProto) GetInitializationRPCs() []*InitializationRPC {
-	return pe.InitRPCs
 }
 
 func (pe *ProcEnvProto) SetDelegateInit(delegate bool) {

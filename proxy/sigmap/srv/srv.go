@@ -127,20 +127,20 @@ func (spps *SPProxySrv) runServer() error {
 }
 
 // Run delegated initialization RPCs
-func (spp *SPProxySrv) runDelegatedInitializationRPCs(pe *proc.ProcEnv, sc *sigmaclnt.SigmaClnt) {
+func (spp *SPProxySrv) runDelegatedInitializationRPCs(p *proc.Proc, sc *sigmaclnt.SigmaClnt) {
 	// If the proc didn't ask for delegated initialization, bail out
-	if !pe.GetDelegateInit() {
+	if !p.GetDelegateInit() {
 		return
 	}
-	db.DPrintf(db.SPPROXYSRV, "[%v] Run delegated init RPCs", pe.GetPID())
-	for initRPCIdx, initRPC := range pe.GetInitRPCs() {
+	db.DPrintf(db.SPPROXYSRV, "[%v] Run delegated init RPCs", p.GetPid())
+	for initRPCIdx, initRPC := range p.GetInitRPCs() {
 		pn := initRPC.GetTargetPathname()
-		db.DPrintf(db.SPPROXYSRV, "[%v] Create clnt for delegated RPC(%v): %v", pe.GetPID(), initRPCIdx, pn)
-		rpcchan, ok := spp.repTab.GetRPCChannel(pe.GetPID(), pn)
+		db.DPrintf(db.SPPROXYSRV, "[%v] Create clnt for delegated RPC(%v): %v", p.GetPid(), initRPCIdx, pn)
+		rpcchan, ok := spp.repTab.GetRPCChannel(p.GetPid(), pn)
 		// If we don't have a cached channel for this RPC target, create a new channel for it (and cache it)
 		if !ok {
 			db.DPrintf(db.SPPROXYSRV, "[%v] delegated RPC(%v) create new channel for: %v", initRPCIdx, pn)
-			if ep, ok := pe.GetCachedEndpoint(pn); ok {
+			if ep, ok := p.GetProcEnv().GetCachedEndpoint(pn); ok {
 				var err error
 				rpcchan, err = sprpcchan.NewSPChannelEndpoint(sc.FsLib, pn, ep)
 				if err != nil {
@@ -160,11 +160,11 @@ func (spp *SPProxySrv) runDelegatedInitializationRPCs(pe *proc.ProcEnv, sc *sigm
 				}
 			}
 			// Cache the channel for later reuse
-			spp.repTab.PutRPCChannel(pe.GetPID(), pn, rpcchan)
+			spp.repTab.PutRPCChannel(p.GetPid(), pn, rpcchan)
 		} else {
 			db.DPrintf(db.SPPROXYSRV, "[%v] delegated RPC(%v) reuse cached channel for: %v", initRPCIdx, pn)
 		}
-		db.DPrintf(db.SPPROXYSRV, "[%v] Run delegated init RPC(%v)", pe.GetPID(), initRPCIdx)
+		db.DPrintf(db.SPPROXYSRV, "[%v] Run delegated init RPC(%v)", p.GetPid(), initRPCIdx)
 		outiov := initRPC.GetOutputIOV()
 		err := rpcchan.SendReceive(initRPC.GetInputIOV(), outiov)
 		if err != nil {
@@ -172,13 +172,13 @@ func (spp *SPProxySrv) runDelegatedInitializationRPCs(pe *proc.ProcEnv, sc *sigm
 			// TODO: remove fatal
 			db.DFatalf("Err execute delegated RPC (%v): %v", pn, err)
 		}
-		db.DPrintf(db.SPPROXYSRV, "[%v] Done running delegated init RPC(%v)", pe.GetPID(), initRPCIdx)
-		spp.repTab.InsertReply(pe.GetPID(), uint64(initRPCIdx), outiov, err)
+		db.DPrintf(db.SPPROXYSRV, "[%v] Done running delegated init RPC(%v)", p.GetPid(), initRPCIdx)
+		spp.repTab.InsertReply(p.GetPid(), uint64(initRPCIdx), outiov, err)
 	}
 }
 
 // Create a sigmaclnt on behalf of a proc
-func (spp *SPProxySrv) createSigmaClnt(pe *proc.ProcEnv, withProcClnt bool, ch chan *sigmaClntCreationResult) {
+func (spp *SPProxySrv) createSigmaClnt(pe *proc.ProcEnv, p *proc.Proc, withProcClnt bool, ch chan *sigmaClntCreationResult) {
 	db.DPrintf(db.SPPROXYSRV, "createSigmaClnt for %v", pe.GetPID())
 	start := time.Now()
 	sc, err := sigmaclnt.NewSigmaClntFsLibFidClnt(pe, spp.fidc)
@@ -187,9 +187,11 @@ func (spp *SPProxySrv) createSigmaClnt(pe *proc.ProcEnv, withProcClnt bool, ch c
 		db.DPrintf(db.SPPROXYSRV_ERR, "Error NewSigmaClnt proc %v", pe.GetPID())
 	}
 	// Set up delegated RPC reply table for the proc
-	spp.repTab.NewProc(pe)
+	spp.repTab.NewProc(p)
 	// We only need an fslib to run delegated RPCs
-	go spp.runDelegatedInitializationRPCs(pe, sc)
+	if p != nil {
+		go spp.runDelegatedInitializationRPCs(p, sc)
+	}
 	var epcc *epcacheclnt.EndpointCacheClnt
 	// Initialize a procclnt too
 	if err == nil {
@@ -230,8 +232,7 @@ func (spp *SPProxySrv) createSigmaClnt(pe *proc.ProcEnv, withProcClnt bool, ch c
 
 // Allocate a sigmaclnt for a proxied proc, if one doesn't exist already.
 // Optionally, return the sigmaclnt (consuming it)
-func (spps *SPProxySrv) getOrCreateSigmaClnt(pep *proc.ProcEnvProto, get bool) (*sigmaclnt.SigmaClnt, *epcacheclnt.EndpointCacheClnt, error) {
-	pe := proc.NewProcEnvFromProto(pep)
+func (spps *SPProxySrv) getOrCreateSigmaClnt(pe *proc.ProcEnv, p *proc.Proc, get bool) (*sigmaclnt.SigmaClnt, *epcacheclnt.EndpointCacheClnt, error) {
 	pe.UseSPProxy = false
 	pe.UseDialProxy = false
 
@@ -244,7 +245,7 @@ func (spps *SPProxySrv) getOrCreateSigmaClnt(pep *proc.ProcEnvProto, get bool) (
 		ch = make(chan *sigmaClntCreationResult, 1)
 		spps.clnts[pe.GetPID()] = ch
 		// If the clnt didn't exist already, start creating it
-		go spps.createSigmaClnt(pe, true, ch)
+		go spps.createSigmaClnt(pe, p, true, ch)
 	}
 	spps.mu.Unlock()
 	if !get {
@@ -254,20 +255,20 @@ func (spps *SPProxySrv) getOrCreateSigmaClnt(pep *proc.ProcEnvProto, get bool) (
 	return scr.sc, scr.epcc, scr.err
 }
 
-func (spps *SPProxySrv) IncomingProc(pep *proc.ProcEnvProto) {
-	db.DPrintf(db.SPPROXYSRV, "Informed of incoming proc %v", pep.GetPID())
+func (spps *SPProxySrv) IncomingProc(p *proc.Proc) {
+	db.DPrintf(db.SPPROXYSRV, "Informed of incoming proc %v", p.GetPid())
 	// Start creating a new sigmaclnt for the proc
-	spps.getOrCreateSigmaClnt(pep, false)
+	spps.getOrCreateSigmaClnt(p.GetProcEnv(), p, false)
 }
 
-func (spps *SPProxySrv) ProcDone(pep *proc.ProcEnvProto) {
-	db.DPrintf(db.SPPROXYSRV, "Informed proc done", pep.GetPID())
+func (spps *SPProxySrv) ProcDone(p *proc.Proc) {
+	db.DPrintf(db.SPPROXYSRV, "Informed proc done", p.GetPid())
 	spps.mu.Lock()
 	defer spps.mu.Unlock()
 
 	// Clean up sigmaclnt structures
-	delete(spps.clnts, pep.GetPID())
-	spps.repTab.DelProc(pep.GetPID())
+	delete(spps.clnts, p.GetPid())
+	spps.repTab.DelProc(p.GetPid())
 }
 
 // The spproxyd process enters here

@@ -46,7 +46,6 @@ message ProcEnvProto {
   string fail = 26;
   map<string, TendpointProto> cachedEndpoints = 27;
   string valgrind = 28;
-  repeated InitializationRPC initRPCs = 29;
   bool delegateInitFlag = 30;
 }
 
@@ -54,6 +53,7 @@ message ProcProto {
   ProcEnvProto procEnvProto = 1;
   repeated string args = 2;
   map<string, string> env = 3;
+  repeated InitializationRPC initRPCs = 29;
   uint32 typeInt = 4;
   uint32 mcpuInt = 5;
   uint32 memInt = 6;

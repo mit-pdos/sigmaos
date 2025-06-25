@@ -6,6 +6,7 @@ import (
 	"sigmaos/api/fs"
 	"sigmaos/ctx"
 	db "sigmaos/debug"
+	"sigmaos/proc"
 	scproto "sigmaos/proxy/sigmap/proto"
 	rpcsrv "sigmaos/rpc/srv"
 	"sigmaos/rpc/transport"
@@ -43,13 +44,15 @@ func newCtrlConn(conn net.Conn, spps *SPProxySrv) *CtrlConn {
 }
 
 func (capi *CtrlAPI) InformIncomingProc(ctx fs.CtxI, req scproto.SigmaInformProcReq, rep *scproto.SigmaErrRep) error {
-	capi.cc.spps.IncomingProc(req.ProcEnvProto)
+	p := proc.NewProcFromProto(req.ProcProto)
+	capi.cc.spps.IncomingProc(p)
 	rep.Err = sp.NewRerror()
 	return nil
 }
 
 func (capi *CtrlAPI) InformProcDone(ctx fs.CtxI, req scproto.SigmaInformProcReq, rep *scproto.SigmaErrRep) error {
-	capi.cc.spps.ProcDone(req.ProcEnvProto)
+	p := proc.NewProcFromProto(req.ProcProto)
+	capi.cc.spps.ProcDone(p)
 	rep.Err = sp.NewRerror()
 	return nil
 }

@@ -12,10 +12,11 @@ bool Clnt::_l_e = sigmaos::util::log::init_logger(RPCCLNT_ERR);
 
 // Retrieve the result of a delegated RPC
 std::expected<int, sigmaos::serr::Error> Clnt::DelegatedRPC(uint64_t rpc_idx, google::protobuf::Message &rep) {
+  log(RPCCLNT, "DelegatedRPC {}", (int) rpc_idx);
   // Create the delegate request
   SigmaDelegatedRPCReq req;
   req.set_rpcidx(rpc_idx);
-  return rpc(true, "", req, rep);
+  return rpc(true, "SPProxySrvAPI.GetDelegatedRPCReply", req, rep);
 }
 
 // Perform an RPC

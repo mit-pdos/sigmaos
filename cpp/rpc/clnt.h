@@ -24,6 +24,7 @@ class Clnt {
   Clnt(std::shared_ptr<Channel> chan, std::shared_ptr<Channel> delegate_chan) : _seqno(1), _chan(chan), _delegate_chan(delegate_chan) {}
   ~Clnt() { Close(); }
 
+  std::shared_ptr<Channel> GetChannel() { return _chan; }
   std::expected<int, sigmaos::serr::Error> RPC(std::string method, google::protobuf::Message &req, google::protobuf::Message &rep);
   std::expected<int, sigmaos::serr::Error> DelegatedRPC(uint64_t rpc_idx, google::protobuf::Message &delegated_rep);
   void Close() { 

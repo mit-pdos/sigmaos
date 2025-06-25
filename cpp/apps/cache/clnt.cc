@@ -13,19 +13,23 @@ std::expected<std::shared_ptr<sigmaos::rpc::Clnt>, sigmaos::serr::Error> Clnt::g
   // If client already exists, return it
   if (_clnts.contains(srv_id)) {
     log(CACHECLNT, "Successfully got client srv_id:{}", srv_id);
-    return _clnts[srv_id];
+    auto clnt = _clnts[srv_id];
+    if (!clnt->GetChannel()->IsInitialized()) {
+      // Initialize the channel
+      auto res = clnt->GetChannel()->Init();
+      if (!res.has_value()) {
+        log(CACHECLNT_ERR, "Error initialize channel: {}", res.error().String());
+        return std::unexpected(res.error());
+      }
+      log(CACHECLNT, "Initialized RPC channel for pre-existing client srv_id:{}", srv_id);
+    }
+    return clnt;
   }
   {
     // TODO: set path dynamically based on server ID
     // Create a sigmap RPC channel to the server via the sigmaproxy
-    log(CACHECLNT, "Create channel");
+    log(CACHECLNT, "Create channel (with lazy initialization)");
     auto chan = std::make_shared<sigmaos::rpc::spchannel::Channel>(_srv_pn, _sp_clnt);
-    // Initialize the channel
-    auto res = chan->Init();
-    if (!res.has_value()) {
-      log(CACHECLNT_ERR, "Error create channel: {}", res.error().String());
-      return std::unexpected(res.error());
-    }
     log(CACHECLNT, "Create RPC client");
     // Create an RPC client from the channel
     _clnts[srv_id] = std::make_shared<sigmaos::rpc::Clnt>(chan, _sp_clnt->GetSPProxyChannel());

@@ -18,7 +18,9 @@ namespace rpc {
 class Channel {
   public:
   virtual std::expected<std::shared_ptr<sigmaos::io::transport::Call>, sigmaos::serr::Error> SendReceive(std::shared_ptr<sigmaos::io::transport::Call> call) = 0;
+  virtual std::expected<int, sigmaos::serr::Error> Init() = 0;
   virtual std::expected<int, sigmaos::serr::Error> Close() = 0;
+  virtual bool IsInitialized() = 0;
   virtual bool IsClosed() = 0;
 };
 

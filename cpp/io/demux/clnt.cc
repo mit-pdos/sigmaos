@@ -60,6 +60,7 @@ std::expected<int, sigmaos::serr::Error> Clnt::Close() {
   return 0;
 }
 
+
 bool Clnt::IsClosed() {
   return _callmap.IsClosed();
 }

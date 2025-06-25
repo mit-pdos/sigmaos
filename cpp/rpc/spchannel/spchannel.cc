@@ -8,6 +8,10 @@ bool Channel::_l_e = sigmaos::util::log::init_logger(SPCHAN_ERR);
 
 // Initialize the channel & connect to the server
 std::expected<int, sigmaos::serr::Error> Channel::Init() {
+  // Sanity check
+  if (_initialized) {
+    fatal("Double-init channel to {}", _srv_pn);
+  }
   // TODO: use consts
   std::string clone_pn = _srv_pn + "/rpc/clone";
   {
@@ -28,11 +32,16 @@ std::expected<int, sigmaos::serr::Error> Channel::Init() {
     }
     _fd = res.value();
   }
+  _initialized = true;
   log(SPCHAN, "Successfully initialized sigmap-based RPC channel to {}", _srv_pn);
   return 0;
 }
 
 std::expected<std::shared_ptr<sigmaos::io::transport::Call>, sigmaos::serr::Error> Channel::SendReceive(std::shared_ptr<sigmaos::io::transport::Call> call) {
+  // Sanity check
+  if (!_initialized) {
+    fatal("Use uninitialized channel");
+  }
   {
     auto res = _sp_clnt->WriteRead(_fd, call->GetInIOVec(), call->GetOutIOVec());
     if (!res.has_value()) {
@@ -45,11 +54,19 @@ std::expected<std::shared_ptr<sigmaos::io::transport::Call>, sigmaos::serr::Erro
 
 std::expected<int, sigmaos::serr::Error> Channel::Close() {
   _closed = true;
+  // Sanity check
+  if (!_initialized) {
+    return 0;
+  }
   return _sp_clnt->CloseFD(_fd);
 }
 
 bool Channel::IsClosed() {
   return _closed;
+}
+
+bool Channel::IsInitialized() {
+  return _initialized;
 }
 
 };

@@ -33,6 +33,8 @@ class Clnt : public sigmaos::rpc::Channel {
   std::expected<std::shared_ptr<sigmaos::io::transport::Call>, sigmaos::serr::Error> SendReceive(std::shared_ptr<sigmaos::io::transport::Call> call);
   std::expected<int, sigmaos::serr::Error> Close();
   bool IsClosed();
+  bool IsInitialized() { return true; }
+  std::expected<int, sigmaos::serr::Error> Init() { return 0; }
 
   private:
   std::mutex _mu;

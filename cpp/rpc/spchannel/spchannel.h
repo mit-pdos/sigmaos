@@ -23,14 +23,16 @@ const std::string SPCHAN_ERR = SPCHAN + sigmaos::util::log::ERR;
 class Channel : public sigmaos::rpc::Channel {
   public:
 // TODO: constructor from endpoint
-  Channel(std::string srv_pn, std::shared_ptr<sigmaos::proxy::sigmap::Clnt> sp_clnt) : _srv_pn(srv_pn), _sp_clnt(sp_clnt), _closed(false) {}
+  Channel(std::string srv_pn, std::shared_ptr<sigmaos::proxy::sigmap::Clnt> sp_clnt) : _initialized(false), _srv_pn(srv_pn), _sp_clnt(sp_clnt), _closed(false) {}
   ~Channel() {}
   // Initialize the channel
   std::expected<int, sigmaos::serr::Error> Init();
   std::expected<std::shared_ptr<sigmaos::io::transport::Call>, sigmaos::serr::Error> SendReceive(std::shared_ptr<sigmaos::io::transport::Call> call);
   std::expected<int, sigmaos::serr::Error> Close();
   bool IsClosed();
+  bool IsInitialized();
   private:
+  bool _initialized;
   std::string _srv_pn;
   std::string _sid;
   int _fd;

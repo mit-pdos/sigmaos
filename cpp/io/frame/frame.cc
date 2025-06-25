@@ -56,7 +56,7 @@ std::expected<uint64_t, sigmaos::serr::Error> ReadSeqno(std::shared_ptr<sigmaos:
     return res;
   }
   uint64_t seqno = res.value();
-  log(FRAME, "ReadSeqno nbyte {}", seqno);
+  log(FRAME, "ReadSeqno {}", seqno);
   return seqno;
 }
 
@@ -66,7 +66,7 @@ std::expected<uint32_t, sigmaos::serr::Error> ReadNumFrames(std::shared_ptr<sigm
     return res;
   }
   uint32_t nframes = res.value();
-  log(FRAME, "ReadNumFrames nbyte {}", nframes);
+  log(FRAME, "ReadNumFrames {}", nframes);
   return nframes;
 }
 

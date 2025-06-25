@@ -582,10 +582,11 @@ func GetLCBEHotelImgResizeRPCMultiplexingCmdConstructor(numClients int, rps []in
 //
 // - clientDelay specifies the delay for which the client should wait before
 // starting to send requests.
-func GetCosSimClientCmdConstructor(cossimReqName string, leader bool, numClients int, rps []int, dur []time.Duration, numCaches int, scaleCache bool, clientDelay time.Duration, manuallyScaleCaches bool, scaleCacheDelay time.Duration, numCachesToAdd int, numCosSim int, nvec int, vecDim int, cossimEagerInit, manuallyScaleCosSim bool, scaleCosSimDelay time.Duration, numCosSimToAdd int) GetBenchCmdFn {
+func GetCosSimClientCmdConstructor(cossimReqName string, leader bool, numClients int, rps []int, dur []time.Duration, numCaches int, scaleCache bool, clientDelay time.Duration, manuallyScaleCaches bool, scaleCacheDelay time.Duration, numCachesToAdd int, numCosSim int, nvec int, vecDim int, cossimEagerInit, delegateInit, manuallyScaleCosSim bool, scaleCosSimDelay time.Duration, numCosSimToAdd int) GetBenchCmdFn {
 	return func(bcfg *BenchConfig, ccfg *ClusterConfig) string {
 		const (
-			debugSelectors string = "\"TEST;THROUGHPUT;CPU_UTIL;SPAWN_LAT;\""
+			//			debugSelectors string = "\"TEST;THROUGHPUT;CPU_UTIL;SPAWN_LAT;\""
+			debugSelectors string = "\"TEST;THROUGHPUT;CPU_UTIL;SPAWN_LAT;PROXY_LAT;\""
 			perfSelectors  string = "\"COSSIMSRV_TPT;TEST_TPT;BENCH_TPT;\""
 		)
 		testName := ""
@@ -614,6 +615,10 @@ func GetCosSimClientCmdConstructor(cossimReqName string, leader bool, numClients
 		if manuallyScaleCosSim {
 			scaleCosSim = "--manually_scale_cossim"
 		}
+		cossimDelegateInitStr := ""
+		if delegateInit {
+			cossimDelegateInitStr = "--cossim_delegated_init"
+		}
 		cossimEagerInitStr := ""
 		if cossimEagerInit {
 			cossimEagerInitStr = "--cossim_eager_init"
@@ -638,6 +643,7 @@ func GetCosSimClientCmdConstructor(cossimReqName string, leader bool, numClients
 			"--cossim_nvec %s "+
 			"--cossim_vec_dim %s "+
 			"%s "+ //cossim_eager_init
+			"%s "+ //cossim_delegated_init
 			"%s "+ // manually_scale_cossim
 			"--scale_cossim_delay %s "+
 			"--n_cossim_to_add %s "+
@@ -663,6 +669,7 @@ func GetCosSimClientCmdConstructor(cossimReqName string, leader bool, numClients
 			strconv.Itoa(nvec),
 			strconv.Itoa(vecDim),
 			cossimEagerInitStr,
+			cossimDelegateInitStr,
 			scaleCosSim,
 			scaleCosSimDelay.String(),
 			strconv.Itoa(numCosSimToAdd),

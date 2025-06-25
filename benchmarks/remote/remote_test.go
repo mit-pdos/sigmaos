@@ -811,7 +811,9 @@ func TestScaleCosSim(t *testing.T) {
 	var (
 		//		rps                   []int           = []int{300, 600, 600}
 		//		dur                   []time.Duration = []time.Duration{5 * time.Second, 30 * time.Second, 30 * time.Second}
-		rps                   []int           = []int{600, 650, 1000} //1300}
+		//		rps                   []int           = []int{600, 650, 1000} // works without additional debug statements
+		//		rps                   []int           = []int{550, 550, 1000} // works with additional debug statements
+		rps                   []int           = []int{450, 450, 1000} //1300}
 		dur                   []time.Duration = []time.Duration{5 * time.Second, 30 * time.Second, 30 * time.Second}
 		numCosSimBase         int             = 1
 		numCaches             int             = 1
@@ -821,6 +823,7 @@ func TestScaleCosSim(t *testing.T) {
 		nvec                  int             = 5000
 		vecDim                int             = 100
 		eagerInit             []bool          = []bool{true, false}
+		delegateInit          []bool          = []bool{true, false}
 		manuallyScaleCosSim   []bool          = []bool{true, false}
 		scaleCosSimDelayBase  time.Duration   = 35 * time.Second
 		scaleCosSimExtraDelay []time.Duration = []time.Duration{0}
@@ -830,39 +833,44 @@ func TestScaleCosSim(t *testing.T) {
 	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {
 		return
 	}
-	for _, eager := range eagerInit {
-		for _, scale := range manuallyScaleCosSim {
-			for _, numCosSimToAdd := range nAdditionalCosSim {
-				for _, extraDelay := range scaleCosSimExtraDelay {
-					// Don't add artificial delays for k8s
-					if ts.BCfg.K8s {
-						extraDelay = 0
-					}
-					db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
-					benchName := benchNameBase
-					numCosSim := numCosSimBase
-					scaleCosSimDelay := scaleCosSimDelayBase
-					if eager {
-						benchName += "_eager"
-					}
-					if scale {
-						if numCosSimToAdd == 0 {
-							continue
+	for _, delegate := range delegateInit {
+		for _, eager := range eagerInit {
+			for _, scale := range manuallyScaleCosSim {
+				for _, numCosSimToAdd := range nAdditionalCosSim {
+					for _, extraDelay := range scaleCosSimExtraDelay {
+						// Don't add artificial delays for k8s
+						if ts.BCfg.K8s {
+							extraDelay = 0
 						}
-						benchName += "_scale_cossim_add_" + strconv.Itoa(numCosSimToAdd)
-						if extraDelay > 0 && numCosSimToAdd > 0 {
-							scaleCosSimDelay += extraDelay
-							benchName += "_extra_scaling_delay_" + extraDelay.String()
+						db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
+						benchName := benchNameBase
+						numCosSim := numCosSimBase
+						scaleCosSimDelay := scaleCosSimDelayBase
+						if eager {
+							benchName += "_eager"
 						}
-					} else {
-						numCosSim += numCosSimToAdd
-						benchName += "_no_scale_cossim_nsrv_" + strconv.Itoa(numCosSim)
-					}
-					getLeaderCmd := GetCosSimClientCmdConstructor("CosSim", true, len(driverVMs), rps, dur, numCaches, scaleCache, sleep, false, 0, 0, numCosSim, nvec, vecDim, eager, scale, scaleCosSimDelay, numCosSimToAdd)
-					getFollowerCmd := GetCosSimClientCmdConstructor("CosSim", false, len(driverVMs), rps, dur, numCaches, scaleCache, sleep, false, 0, 0, numCosSim, nvec, vecDim, eager, scale, scaleCosSimDelay, numCosSimToAdd)
-					ran := ts.RunParallelClientBenchmark(benchName, driverVMs, getLeaderCmd, getFollowerCmd, startK8sHotelApp, stopK8sHotelApp, clientDelay, numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost)
-					if oneByOne && ran {
-						return
+						if delegate {
+							benchName += "_delegate"
+						}
+						if scale {
+							if numCosSimToAdd == 0 {
+								continue
+							}
+							benchName += "_scale_cossim_add_" + strconv.Itoa(numCosSimToAdd)
+							if extraDelay > 0 && numCosSimToAdd > 0 {
+								scaleCosSimDelay += extraDelay
+								benchName += "_extra_scaling_delay_" + extraDelay.String()
+							}
+						} else {
+							numCosSim += numCosSimToAdd
+							benchName += "_no_scale_cossim_nsrv_" + strconv.Itoa(numCosSim)
+						}
+						getLeaderCmd := GetCosSimClientCmdConstructor("CosSim", true, len(driverVMs), rps, dur, numCaches, scaleCache, sleep, false, 0, 0, numCosSim, nvec, vecDim, eager, delegate, scale, scaleCosSimDelay, numCosSimToAdd)
+						getFollowerCmd := GetCosSimClientCmdConstructor("CosSim", false, len(driverVMs), rps, dur, numCaches, scaleCache, sleep, false, 0, 0, numCosSim, nvec, vecDim, eager, delegate, scale, scaleCosSimDelay, numCosSimToAdd)
+						ran := ts.RunParallelClientBenchmark(benchName, driverVMs, getLeaderCmd, getFollowerCmd, startK8sHotelApp, stopK8sHotelApp, clientDelay, numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost)
+						if oneByOne && ran {
+							return
+						}
 					}
 				}
 			}

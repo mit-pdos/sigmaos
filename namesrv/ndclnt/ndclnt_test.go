@@ -77,7 +77,9 @@ func makeNamed2(ts *test.Tstate, ndc *ndclnt.NdClnt, wait, canFail bool) (*proc.
 	}
 }
 
-func TestManyNamedClient(t *testing.T) {
+// Test many clients mounting two servers concurrently, mimicing
+// [procclnt/initproc].
+func TestManyClients(t *testing.T) {
 	const (
 		N = 400
 	)
@@ -93,13 +95,40 @@ func TestManyNamedClient(t *testing.T) {
 		return
 	}
 	c := make(chan bool)
+	sts, err := ts.GetDir(sp.MSCHED)
+	assert.Nil(t, err)
+	kernelId := sts[0].Name
+	pn := filepath.Join(sp.MSCHED, kernelId)
+	rpcep, err := ts.ReadEndpoint(pn)
 	for i := 0; i < N; i++ {
 		go func() {
 			pe := proc.NewDifferentRealmProcEnv(ts.ProcEnv(), test.REALM1)
 			sc, err := sigmaclnt.NewSigmaClnt(pe)
-			sts, err := sc.GetDir(path.MarkResolve(sp.NAMED))
+			mschedC := make(chan error)
+			namedC := make(chan error)
+			go func() {
+				sts, err := sc.GetDir(path.MarkResolve(sp.NAMED))
+				if err != nil {
+					namedC <- err
+					return
+				}
+				assert.True(t, sp.Present(sts, []string{"rpc"}))
+				namedC <- nil
+			}()
+			go func() {
+				err := sc.MountTree(rpcep, "", pn)
+				if err != nil {
+					mschedC <- err
+					return
+				}
+				sts, err := sc.GetDir(path.MarkResolve(pn))
+				assert.True(t, len(sts) > 0)
+				mschedC <- err
+			}()
+			err = <-namedC
 			assert.Nil(t, err)
-			assert.True(t, sp.Present(sts, []string{"rpc"}))
+			err = <-mschedC
+			assert.Nil(t, err)
 			sc.Close()
 			c <- true
 		}()

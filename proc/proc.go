@@ -234,7 +234,6 @@ func (p *Proc) String() string {
 		"InnerIP:%v "+
 		"OuterIP:%v "+
 		"Args:%v "+
-		"Env:%v "+
 		"Type:%v "+
 		"Mcpu:%v "+
 		"Mem:%v "+
@@ -254,7 +253,6 @@ func (p *Proc) String() string {
 		p.ProcEnvProto.GetInnerContainerIP(),
 		p.ProcEnvProto.GetOuterContainerIP(),
 		p.Args,
-		p.Env,
 		p.GetType(),
 		p.GetMcpu(),
 		p.GetMem(),

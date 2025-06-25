@@ -445,6 +445,6 @@ func (sca *SPProxySrvAPI) GetDelegatedRPCReply(ctx fs.CtxI, req scproto.SigmaDel
 		Iov: [][]byte(iov),
 	}
 	rep.Err = sca.setErr(err)
-	db.DPrintf(db.SPPROXYSRV, "%v: GetDelegatedRPCReply done %v %v", sca.sc.ClntId(), req, rep)
+	db.DPrintf(db.SPPROXYSRV, "%v: GetDelegatedRPCReply done %v", sca.sc.ClntId(), req)
 	return nil
 }

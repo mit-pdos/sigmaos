@@ -11,12 +11,33 @@ bool Clnt::_l = sigmaos::util::log::init_logger(RPCCLNT);
 bool Clnt::_l_e = sigmaos::util::log::init_logger(RPCCLNT_ERR);
 
 // Retrieve the result of a delegated RPC
-std::expected<int, sigmaos::serr::Error> Clnt::DelegatedRPC(uint64_t rpc_idx, google::protobuf::Message &rep) {
+std::expected<int, sigmaos::serr::Error> Clnt::DelegatedRPC(uint64_t rpc_idx, google::protobuf::Message &delegated_rep) {
   log(RPCCLNT, "DelegatedRPC {}", (int) rpc_idx);
+  auto out_iov = std::make_shared<sigmaos::io::iovec::IOVec>();
+  // Prepend an empty slot to the out iovec for the marshaled delegated reply
+  out_iov->AddBuffers(2);
+  // Extract any output IOVecs from the delegated reply RPC
+  extract_blob_iov(delegated_rep, out_iov);
   // Create the delegate request
   SigmaDelegatedRPCReq req;
   req.set_rpcidx(rpc_idx);
-  return rpc(true, "SPProxySrvAPI.GetDelegatedRPCReply", req, rep);
+  SigmaDelegatedRPCRep rep;
+  Blob blob;
+  auto iov = blob.mutable_iov();
+  // Add the delegated reply's blob output buffers to the RPC's blob
+  for (int i = 0; i < out_iov->Size(); i++) {
+    iov->AddAllocated(out_iov->GetBuffer(i)->Get());
+  }
+  rep.set_allocated_blob(&blob);
+  {
+    // Run the delegated RPC
+    auto res = rpc(true, "SPProxySrvAPI.GetDelegatedRPCReply", req, rep);
+    if (!res.has_value()) {
+      return res;
+    }
+  }
+  // Process the delegated, wrapped RPC reply
+  return process_wrapped_reply(rpc_idx, out_iov, delegated_rep);
 }
 
 // Perform an RPC

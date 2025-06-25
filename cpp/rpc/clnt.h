@@ -25,7 +25,7 @@ class Clnt {
   ~Clnt() { Close(); }
 
   std::expected<int, sigmaos::serr::Error> RPC(std::string method, google::protobuf::Message &req, google::protobuf::Message &rep);
-  std::expected<int, sigmaos::serr::Error> DelegatedRPC(uint64_t rpc_idx, google::protobuf::Message &rep);
+  std::expected<int, sigmaos::serr::Error> DelegatedRPC(uint64_t rpc_idx, google::protobuf::Message &delegated_rep);
   void Close() { 
     log(RPCCLNT, "Close");
     _chan->Close(); 

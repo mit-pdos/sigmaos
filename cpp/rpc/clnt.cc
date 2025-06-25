@@ -37,7 +37,9 @@ std::expected<int, sigmaos::serr::Error> Clnt::DelegatedRPC(uint64_t rpc_idx, go
     }
   }
   // Process the delegated, wrapped RPC reply
-  return process_wrapped_reply(rpc_idx, out_iov, delegated_rep);
+  auto res = process_wrapped_reply(rpc_idx, out_iov, delegated_rep);
+  log(RPCCLNT, "DelegatedRPC done {}", (int) rpc_idx);
+  return res;
 }
 
 // Perform an RPC

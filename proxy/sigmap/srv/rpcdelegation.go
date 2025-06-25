@@ -32,9 +32,10 @@ type RPCReplies struct {
 
 func NewRPCReplies(rpcs []*proc.InitializationRPC) *RPCReplies {
 	reps := &RPCReplies{
-		done:    make([]bool, len(rpcs)),
-		results: make([]sessp.IoVec, len(rpcs)),
-		errors:  make([]error, len(rpcs)),
+		channels: make(map[string]rpcchan.RPCChannel),
+		done:     make([]bool, len(rpcs)),
+		results:  make([]sessp.IoVec, len(rpcs)),
+		errors:   make([]error, len(rpcs)),
 	}
 	reps.cond = sync.NewCond(&reps.mu)
 	return reps

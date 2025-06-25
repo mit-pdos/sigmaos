@@ -5,6 +5,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/proc"
+	rpcchan "sigmaos/rpc/clnt/channel"
 	sessp "sigmaos/session/proto"
 	sp "sigmaos/sigmap"
 )
@@ -21,11 +22,12 @@ func NewDelegatedRPCReplyTable() *DelegatedRPCReplyTable {
 }
 
 type RPCReplies struct {
-	mu      sync.Mutex
-	cond    *sync.Cond
-	done    []bool
-	results []sessp.IoVec
-	errors  []error
+	mu       sync.Mutex
+	channels map[string]rpcchan.RPCChannel
+	cond     *sync.Cond
+	done     []bool
+	results  []sessp.IoVec
+	errors   []error
 }
 
 func NewRPCReplies(rpcs []*proc.InitializationRPC) *RPCReplies {
@@ -36,6 +38,21 @@ func NewRPCReplies(rpcs []*proc.InitializationRPC) *RPCReplies {
 	}
 	reps.cond = sync.NewCond(&reps.mu)
 	return reps
+}
+
+func (reps *RPCReplies) GetRPCChannel(pn string) (rpcchan.RPCChannel, bool) {
+	reps.mu.Lock()
+	defer reps.mu.Unlock()
+
+	ch, ok := reps.channels[pn]
+	return ch, ok
+}
+
+func (reps *RPCReplies) PutRPCChannel(pn string, ch rpcchan.RPCChannel) {
+	reps.mu.Lock()
+	defer reps.mu.Unlock()
+
+	reps.channels[pn] = ch
 }
 
 // Insert the reply for a delegated RPC. Unblocks any waiters on the reply
@@ -86,6 +103,16 @@ func (tab *DelegatedRPCReplyTable) GetReply(pid sp.Tpid, rpcIdx uint64) (sessp.I
 
 	reps := tab.getReplies(pid)
 	return reps.GetReply(rpcIdx)
+}
+
+func (tab *DelegatedRPCReplyTable) GetRPCChannel(pid sp.Tpid, pn string) (rpcchan.RPCChannel, bool) {
+	reps := tab.getReplies(pid)
+	return reps.GetRPCChannel(pn)
+}
+
+func (tab *DelegatedRPCReplyTable) PutRPCChannel(pid sp.Tpid, pn string, ch rpcchan.RPCChannel) {
+	reps := tab.getReplies(pid)
+	reps.PutRPCChannel(pn, ch)
 }
 
 func (tab *DelegatedRPCReplyTable) NewProc(pe *proc.ProcEnv) {

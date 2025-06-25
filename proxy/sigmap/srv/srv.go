@@ -19,7 +19,6 @@ import (
 	dialproxysrv "sigmaos/dialproxy/srv"
 	"sigmaos/proc"
 	"sigmaos/proxy/sigmap/clnt"
-	rpcchan "sigmaos/rpc/clnt/channel"
 	sprpcchan "sigmaos/rpc/clnt/channel/spchannel"
 	"sigmaos/sigmaclnt"
 	"sigmaos/sigmaclnt/fidclnt"
@@ -135,26 +134,35 @@ func (spp *SPProxySrv) runDelegatedInitializationRPCs(pe *proc.ProcEnv, sc *sigm
 	}
 	db.DPrintf(db.SPPROXYSRV, "[%v] Run delegated init RPCs", pe.GetPID())
 	for initRPCIdx, initRPC := range pe.GetInitRPCs() {
-		// TODO: cache channels for later use
 		pn := initRPC.GetTargetPathname()
 		db.DPrintf(db.SPPROXYSRV, "[%v] Create clnt for delegated RPC(%v): %v", pe.GetPID(), initRPCIdx, pn)
-		var rpcchan rpcchan.RPCChannel
-		if ep, ok := pe.GetCachedEndpoint(pn); ok {
-			var err error
-			rpcchan, err = sprpcchan.NewSPChannelEndpoint(sc.FsLib, pn, ep)
-			if err != nil {
-				db.DPrintf(db.SPPROXYSRV_ERR, "Err create mounted RPC channel to run delegated RPCs (%v -> %v): %v", pn, ep, err)
-				// TODO: remove fatal
-				db.DFatalf("Err create mounted RPC channel to run delegated RPCs (%v -> %v): %v", pn, ep, err)
+		rpcchan, ok := spp.repTab.GetRPCChannel(pe.GetPID(), pn)
+		// If we don't have a cached channel for this RPC target, create a new channel for it (and cache it)
+		if !ok {
+			db.DPrintf(db.SPPROXYSRV, "[%v] delegated RPC(%v) create new channel for: %v", initRPCIdx, pn)
+			if ep, ok := pe.GetCachedEndpoint(pn); ok {
+				var err error
+				rpcchan, err = sprpcchan.NewSPChannelEndpoint(sc.FsLib, pn, ep)
+				if err != nil {
+					db.DPrintf(db.SPPROXYSRV_ERR, "Err create mounted RPC channel to run delegated RPCs (%v -> %v): %v", pn, ep, err)
+					// TODO: remove fatal
+					db.DFatalf("Err create mounted RPC channel to run delegated RPCs (%v -> %v): %v", pn, ep, err)
+					continue
+				}
+			} else {
+				var err error
+				rpcchan, err = sprpcchan.NewSPChannel(sc.FsLib, pn)
+				if err != nil {
+					db.DPrintf(db.SPPROXYSRV_ERR, "Err create unmounted RPC channel to run delegated RPCs (%v): %v", pn, err)
+					// TODO: remove fatal
+					db.DFatalf("Err create unmounted RPC channel to run delegated RPCs (%v): %v", pn, err)
+					continue
+				}
 			}
+			// Cache the channel for later reuse
+			spp.repTab.PutRPCChannel(pe.GetPID(), pn, rpcchan)
 		} else {
-			var err error
-			rpcchan, err = sprpcchan.NewSPChannel(sc.FsLib, pn)
-			if err != nil {
-				db.DPrintf(db.SPPROXYSRV_ERR, "Err create unmounted RPC channel to run delegated RPCs (%v): %v", pn, err)
-				// TODO: remove fatal
-				db.DFatalf("Err create unmounted RPC channel to run delegated RPCs (%v): %v", pn, err)
-			}
+			db.DPrintf(db.SPPROXYSRV, "[%v] delegated RPC(%v) reuse cached channel for: %v", initRPCIdx, pn)
 		}
 		db.DPrintf(db.SPPROXYSRV, "[%v] Run delegated init RPC(%v)", pe.GetPID(), initRPCIdx)
 		outiov := initRPC.GetOutputIOV()

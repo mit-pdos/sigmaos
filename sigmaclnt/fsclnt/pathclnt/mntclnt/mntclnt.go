@@ -132,7 +132,7 @@ func (mc *MntClnt) MountTree(secrets map[string]*sp.SecretProto, ep *sp.Tendpoin
 	s := time.Now()
 	fid, err := mc.fidc.Attach(secrets, mc.cid, ep, pn, tree)
 	if err != nil {
-		db.DPrintf(db.MOUNT_ERR, "%v: MountTree Attach [%v]/%v err %v", mc.cid, ep, tree, err)
+		db.DPrintf(db.MOUNT_ERR, "%v: MountTree Attach [%v]/%v n %v err %v", mc.cid, ep, tree, mntname, err)
 		mc.mnt.umount(pn, true)
 	}
 	db.DPrintf(db.MOUNT, "%v: MountTree pn %q err %v Attach lat %v\n", mc.cid, mntname, err, time.Since(s))

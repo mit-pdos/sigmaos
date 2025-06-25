@@ -45,17 +45,21 @@ func NewProcClnt(fsl *fslib.FsLib) (*ProcClnt, error) {
 			err := fsl.MountTree(ep, "", sp.NAMED)
 			if err != nil {
 				db.DPrintf(db.ERROR, "Err MountTree: ep %v err %v", ep, err)
-				//			return nil, err
+				namedC <- err
+				return
 			} else {
 				perf.LogSpawnLatency("Mount named", fsl.ProcEnv().GetPID(), fsl.ProcEnv().GetSpawnTime(), start)
 			}
 		}
 		namedC <- nil
 	}()
-	<-namedC
-	err := <-mschedC
+	err := <-namedC
+	err0 := <-mschedC
 	if err != nil {
 		return nil, err
+	}
+	if err0 != nil {
+		return nil, err0
 	}
 	return newProcClnt(fsl, fsl.ProcEnv().GetPID(), fsl.ProcEnv().GetPrivileged(), fsl.ProcEnv().GetKernelID()), nil
 }

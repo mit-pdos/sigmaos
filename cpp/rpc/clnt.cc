@@ -14,7 +14,8 @@ bool Clnt::_l_e = sigmaos::util::log::init_logger(RPCCLNT_ERR);
 std::expected<int, sigmaos::serr::Error> Clnt::DelegatedRPC(uint64_t rpc_idx, google::protobuf::Message &delegated_rep) {
   log(RPCCLNT, "DelegatedRPC {}", (int) rpc_idx);
   auto out_iov = std::make_shared<sigmaos::io::iovec::IOVec>();
-  // Prepend an empty slot to the out iovec for the marshaled delegated reply
+  // Prepend empty slots to the out iovec for the marshaled delegated reply and
+  // its RPC wrapper
   out_iov->AddBuffers(2);
   // Extract any output IOVecs from the delegated reply RPC
   extract_blob_iov(delegated_rep, out_iov);
@@ -46,7 +47,6 @@ std::expected<int, sigmaos::serr::Error> Clnt::DelegatedRPC(uint64_t rpc_idx, go
 std::expected<int, sigmaos::serr::Error> Clnt::RPC(std::string method, google::protobuf::Message &req, google::protobuf::Message &rep) {
   return rpc(false, method, req, rep);
 }
-
 
 std::expected<int, sigmaos::serr::Error> Clnt::rpc(bool delegate, std::string method, google::protobuf::Message &req, google::protobuf::Message &rep) {
   // Create an IOV for RPC inputs

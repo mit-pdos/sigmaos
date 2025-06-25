@@ -65,7 +65,7 @@ std::expected<int, sigmaos::serr::Error> Srv::Init() {
     }
     // Get the serialized vector from cached
     {
-      auto res = _cache_clnt->MultiGet(key_vec);
+      auto res = _cache_clnt->DelegatedMultiGet(0);
       if (!res.has_value()) {
         log(SPAWN_LAT, "Error get all-vecs {}", res.error().String());
         return std::unexpected(res.error());

@@ -77,6 +77,38 @@ func makeNamed2(ts *test.Tstate, ndc *ndclnt.NdClnt, wait, canFail bool) (*proc.
 	}
 }
 
+func TestManyNamedClient(t *testing.T) {
+	const (
+		N = 400
+	)
+
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	defer ts.Shutdown()
+
+	_, _, err := makeNamed1(ts)
+	if !assert.Nil(ts.T, err, "makeNamed err %v", err) {
+		return
+	}
+	c := make(chan bool)
+	for i := 0; i < N; i++ {
+		go func() {
+			pe := proc.NewDifferentRealmProcEnv(ts.ProcEnv(), test.REALM1)
+			sc, err := sigmaclnt.NewSigmaClnt(pe)
+			sts, err := sc.GetDir(path.MarkResolve(sp.NAMED))
+			assert.Nil(t, err)
+			assert.True(t, sp.Present(sts, []string{"rpc"}))
+			sc.Close()
+			c <- true
+		}()
+	}
+	for i := 0; i < N; i++ {
+		<-c
+	}
+}
+
 func TestCrashNamedAlone(t *testing.T) {
 	const T = 1000
 	crashpn := sp.NAMED + "crashnd.sem"

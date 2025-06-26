@@ -48,16 +48,14 @@ func TestOldLeaderCrash(t *testing.T) {
 		return
 	}
 
-	ndc, err := ndclnt.NewNdClnt(ts.SigmaClnt, test.REALM1)
-	assert.Nil(t, err)
 	nd1 := ndclnt.NewNamedProc(test.REALM1, ts.ProcEnv().UseDialProxy, true)
-	if err := ndc.StartNamed(nd1); !assert.Nil(ts.T, err, "Err startNamed: %v", err) {
+	if err := ndclnt.StartNamed(ts.SigmaClnt, nd1); !assert.Nil(ts.T, err, "Err startNamed: %v", err) {
 		return
 	}
 
 	nd2 := ndclnt.NewNamedProc(test.REALM1, ts.ProcEnv().UseDialProxy, false)
 	db.DPrintf(db.TEST, "Starting a new named: %v", nd2.GetPid())
-	if err := ndc.StartNamed(nd2); !assert.Nil(ts.T, err, "Err startNamed 2: %v", err) {
+	if err := ndclnt.StartNamed(ts.SigmaClnt, nd2); !assert.Nil(ts.T, err, "Err startNamed 2: %v", err) {
 		return
 	}
 
@@ -65,7 +63,7 @@ func TestOldLeaderCrash(t *testing.T) {
 
 	l.ReleaseLeadership()
 
-	if err := ndc.StopNamed(nd2); !assert.Nil(ts.T, err, "Err stop named: %v", err) {
+	if err := ndclnt.StopNamed(ts.SigmaClnt, nd2); !assert.Nil(ts.T, err, "Err stop named: %v", err) {
 		return
 	}
 

@@ -53,15 +53,28 @@ func NewRPCClnt(pn string, opts ...*rpcclntopts.RPCClntOption) (*RPCClnt, error)
 	}, nil
 }
 
-func (rpcc *RPCClnt) rpc(method string, iniov sessp.IoVec, outiov sessp.IoVec) (*rpcproto.Rep, error) {
+func WrapRPCRequest(method string, arg proto.Message) (sessp.IoVec, error) {
 	req := rpcproto.Req{Method: method}
-	b, err := proto.Marshal(&req)
+	wrapperBytes, err := proto.Marshal(&req)
 	if err != nil {
 		return nil, serr.NewErrError(err)
 	}
+	var iniov sessp.IoVec
+	inblob := rpc.GetBlob(arg)
+	if inblob != nil {
+		iniov = inblob.GetIoVec()
+		inblob.SetIoVec(nil)
+	}
+	argBytes, err := proto.Marshal(arg)
+	if err != nil {
+		return nil, err
+	}
+	return append(sessp.IoVec{wrapperBytes, argBytes}, iniov...), nil
+}
 
+func (rpcc *RPCClnt) rpc(method string, iniov sessp.IoVec, outiov sessp.IoVec) (*rpcproto.Rep, error) {
 	start := time.Now()
-	err = rpcc.ch.SendReceive(append(sessp.IoVec{b}, iniov...), outiov)
+	err := rpcc.ch.SendReceive(iniov, outiov)
 	if err != nil {
 		return nil, err
 	}
@@ -79,13 +92,7 @@ func (rpcc *RPCClnt) rpc(method string, iniov sessp.IoVec, outiov sessp.IoVec) (
 // the blob from the message and pass it down in an IoVec to avoid
 // marshaling overhead of large blobs.
 func (rpcc *RPCClnt) RPC(method string, arg proto.Message, res proto.Message) error {
-	inblob := rpc.GetBlob(arg)
-	var iniov sessp.IoVec
-	if inblob != nil {
-		iniov = inblob.GetIoVec()
-		inblob.SetIoVec(nil)
-	}
-	a, err := proto.Marshal(arg)
+	iniov, err := WrapRPCRequest(method, arg)
 	if err != nil {
 		return err
 	}
@@ -99,7 +106,7 @@ func (rpcc *RPCClnt) RPC(method string, arg proto.Message, res proto.Message) er
 		outiov = append(outiov, outblob.GetIoVec()...)
 	}
 	// Add an IoVec spot for the RPC wrappers
-	rep, err := rpcc.rpc(method, append(sessp.IoVec{a}, iniov...), outiov)
+	rep, err := rpcc.rpc(method, iniov, outiov)
 	if err != nil {
 		return err
 	}

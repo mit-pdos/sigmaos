@@ -46,14 +46,6 @@ const (
 	PERF               = "PERF"
 )
 
-// WWW
-const (
-	WWW      Tselector = "WWW"
-	WWW_ERR            = WWW + ERR
-	WWW_CLNT           = WWW + "_CLNT"
-	MATMUL             = "MATMUL"
-)
-
 // Cache
 const (
 	CACHESRV      Tselector = "CACHESRV"
@@ -81,6 +73,7 @@ const (
 	SPINNER                  = "SPINNER"
 	FSREADER                 = "FSREADER"
 	SLEEPER_TIMING           = "SLEEPER_TIMING"
+	MATMUL                   = "MATMUL"
 )
 
 // Img

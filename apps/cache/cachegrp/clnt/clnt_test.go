@@ -17,11 +17,13 @@ import (
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 	"sigmaos/util/coordination/semaphore"
+	linuxsched "sigmaos/util/linux/sched"
 	rd "sigmaos/util/rand"
 )
 
 const (
-	CACHE_MCPU = 2000
+	NCPU       = 2
+	CACHE_MCPU = NCPU * 1000
 )
 
 type Tstate struct {
@@ -122,6 +124,11 @@ func testCacheSharded(t *testing.T, nsrv int) {
 	const (
 		N = 10
 	)
+	nc := linuxsched.GetNCores()
+	if nc < uint(NCPU*nsrv) {
+		db.DPrintf(db.TEST, "testCacheSharded: too many servers")
+		return
+	}
 	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return

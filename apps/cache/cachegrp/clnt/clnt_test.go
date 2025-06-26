@@ -253,22 +253,26 @@ func TestElasticCache(t *testing.T) {
 	ts := newTstate(mrts, NSRV)
 
 	for i := 0; i < N; i++ {
-		ts.StartClerk(DUR, NKEYS, i*NKEYS, 2*1000)
+		// set mcpu to 0 for tests, but for real benchmarks CACHE_MCPU
+		ts.StartClerk(DUR, NKEYS, i*NKEYS, 0)
 	}
 
 	ts.sem.Up()
 
 	cc := cachegrpclnt.NewCachedSvcClnt(ts.mrts.GetRealm(test.REALM1).FsLib, ts.job)
 
+	nc := linuxsched.GetNCores()
+	nsrv := NSRV
 	for i := 0; i < 5; i++ {
 		time.Sleep(5 * time.Second)
 		sts, err := cc.StatsSrvs()
 		assert.Nil(t, err)
 		qlen := sts[0].StatsSnapshot.AvgQlen
 		db.DPrintf(db.ALWAYS, "Qlen %v %v\n", qlen, sts)
-		if qlen > 1.1 && i < 1 {
+		if qlen > 1.1 && i < 1 && nc < uint(NCPU*nsrv) {
 			db.DPrintf(db.TEST, "Add server")
 			ts.cm.AddServer()
+			nsrv++
 		}
 	}
 

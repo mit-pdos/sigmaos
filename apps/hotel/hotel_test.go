@@ -54,18 +54,25 @@ type Tstate struct {
 	hotel *hotel.HotelJob
 }
 
-func newTstate(mrts *test.MultiRealmTstate, srvs []*hotel.Srv, nserver int, geoNIndex, geoSearchRadius, geoNResults int) *Tstate {
+func newTstate(mrts *test.MultiRealmTstate, srvs []*hotel.Srv, ncache int, geoNIndex, geoSearchRadius, geoNResults int) *Tstate {
+	const CACHE_MCPU = proc.Tmcpu(2000)
 	var err error
 	ts := &Tstate{}
 	ts.job = rd.String(8)
 	ts.mrts = mrts
-	n := 0
-	for i := 1; int(linuxsched.GetNCores())*i < len(srvs)*2+nserver*2; i++ {
-		n += 1
+	ncore := 0
+	for _, s := range srvs {
+		ncore += int(s.Mcpu) / 1000
 	}
+	ncore += ncache * (int(CACHE_MCPU) / 1000)
+	n := 1
+	if int(linuxsched.GetNCores()) < ncore {
+		n += (ncore / int(linuxsched.GetNCores())) + 1
+	}
+	db.DPrintf(db.TEST, "linux %d ncore %d n %d", linuxsched.GetNCores(), ncore, n)
 	err = ts.mrts.GetRealm(test.REALM1).BootNode(n)
 	assert.Nil(ts.mrts.T, err)
-	ts.hotel, err = hotel.NewHotelJob(ts.mrts.GetRealm(test.REALM1).SigmaClnt, ts.job, srvs, 80, cache, proc.Tmcpu(2000), nserver, true, 0, 1, geoNIndex, geoSearchRadius, geoNResults)
+	ts.hotel, err = hotel.NewHotelJob(ts.mrts.GetRealm(test.REALM1).SigmaClnt, ts.job, srvs, 80, cache, CACHE_MCPU, ncache, true, 0, 1, geoNIndex, geoSearchRadius, geoNResults)
 	assert.Nil(ts.mrts.T, err)
 	return ts
 }

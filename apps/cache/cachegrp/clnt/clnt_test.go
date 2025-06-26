@@ -202,7 +202,8 @@ func TestCacheConcur(t *testing.T) {
 		go func() {
 			defer wg.Done()
 			res := &proto.CacheString{}
-			err = cc.Get("x", res)
+			err := cc.Get("x", res)
+			assert.Nil(t, err)
 			s := res.Val
 			assert.Equal(t, v, s)
 			db.DPrintf(db.TEST, "Done get")

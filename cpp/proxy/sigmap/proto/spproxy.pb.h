@@ -286,25 +286,25 @@ class SigmaInformProcReq final :
   // accessors -------------------------------------------------------
 
   enum : int {
-    kProcEnvProtoFieldNumber = 1,
+    kProcProtoFieldNumber = 1,
   };
-  // .ProcEnvProto procEnvProto = 1;
-  bool has_procenvproto() const;
+  // .ProcProto procProto = 1;
+  bool has_procproto() const;
   private:
-  bool _internal_has_procenvproto() const;
+  bool _internal_has_procproto() const;
   public:
-  void clear_procenvproto();
-  const ::ProcEnvProto& procenvproto() const;
-  PROTOBUF_NODISCARD ::ProcEnvProto* release_procenvproto();
-  ::ProcEnvProto* mutable_procenvproto();
-  void set_allocated_procenvproto(::ProcEnvProto* procenvproto);
+  void clear_procproto();
+  const ::ProcProto& procproto() const;
+  PROTOBUF_NODISCARD ::ProcProto* release_procproto();
+  ::ProcProto* mutable_procproto();
+  void set_allocated_procproto(::ProcProto* procproto);
   private:
-  const ::ProcEnvProto& _internal_procenvproto() const;
-  ::ProcEnvProto* _internal_mutable_procenvproto();
+  const ::ProcProto& _internal_procproto() const;
+  ::ProcProto* _internal_mutable_procproto();
   public:
-  void unsafe_arena_set_allocated_procenvproto(
-      ::ProcEnvProto* procenvproto);
-  ::ProcEnvProto* unsafe_arena_release_procenvproto();
+  void unsafe_arena_set_allocated_procproto(
+      ::ProcProto* procproto);
+  ::ProcProto* unsafe_arena_release_procproto();
 
   // @@protoc_insertion_point(class_scope:SigmaInformProcReq)
  private:
@@ -314,7 +314,7 @@ class SigmaInformProcReq final :
   typedef void InternalArenaConstructable_;
   typedef void DestructorSkippable_;
   struct Impl_ {
-    ::ProcEnvProto* procenvproto_;
+    ::ProcProto* procproto_;
     mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   };
   union { Impl_ _impl_; };
@@ -4983,39 +4983,39 @@ class SigmaDelegatedRPCRep final :
 #endif  // __GNUC__
 // SigmaInformProcReq
 
-// .ProcEnvProto procEnvProto = 1;
-inline bool SigmaInformProcReq::_internal_has_procenvproto() const {
-  return this != internal_default_instance() && _impl_.procenvproto_ != nullptr;
+// .ProcProto procProto = 1;
+inline bool SigmaInformProcReq::_internal_has_procproto() const {
+  return this != internal_default_instance() && _impl_.procproto_ != nullptr;
 }
-inline bool SigmaInformProcReq::has_procenvproto() const {
-  return _internal_has_procenvproto();
+inline bool SigmaInformProcReq::has_procproto() const {
+  return _internal_has_procproto();
 }
-inline const ::ProcEnvProto& SigmaInformProcReq::_internal_procenvproto() const {
-  const ::ProcEnvProto* p = _impl_.procenvproto_;
-  return p != nullptr ? *p : reinterpret_cast<const ::ProcEnvProto&>(
-      ::_ProcEnvProto_default_instance_);
+inline const ::ProcProto& SigmaInformProcReq::_internal_procproto() const {
+  const ::ProcProto* p = _impl_.procproto_;
+  return p != nullptr ? *p : reinterpret_cast<const ::ProcProto&>(
+      ::_ProcProto_default_instance_);
 }
-inline const ::ProcEnvProto& SigmaInformProcReq::procenvproto() const {
-  // @@protoc_insertion_point(field_get:SigmaInformProcReq.procEnvProto)
-  return _internal_procenvproto();
+inline const ::ProcProto& SigmaInformProcReq::procproto() const {
+  // @@protoc_insertion_point(field_get:SigmaInformProcReq.procProto)
+  return _internal_procproto();
 }
-inline void SigmaInformProcReq::unsafe_arena_set_allocated_procenvproto(
-    ::ProcEnvProto* procenvproto) {
+inline void SigmaInformProcReq::unsafe_arena_set_allocated_procproto(
+    ::ProcProto* procproto) {
   if (GetArenaForAllocation() == nullptr) {
-    delete reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(_impl_.procenvproto_);
+    delete reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(_impl_.procproto_);
   }
-  _impl_.procenvproto_ = procenvproto;
-  if (procenvproto) {
+  _impl_.procproto_ = procproto;
+  if (procproto) {
     
   } else {
     
   }
-  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:SigmaInformProcReq.procEnvProto)
+  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:SigmaInformProcReq.procProto)
 }
-inline ::ProcEnvProto* SigmaInformProcReq::release_procenvproto() {
+inline ::ProcProto* SigmaInformProcReq::release_procproto() {
   
-  ::ProcEnvProto* temp = _impl_.procenvproto_;
-  _impl_.procenvproto_ = nullptr;
+  ::ProcProto* temp = _impl_.procproto_;
+  _impl_.procproto_ = nullptr;
 #ifdef PROTOBUF_FORCE_COPY_IN_RELEASE
   auto* old =  reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(temp);
   temp = ::PROTOBUF_NAMESPACE_ID::internal::DuplicateIfNonNull(temp);
@@ -5027,45 +5027,45 @@ inline ::ProcEnvProto* SigmaInformProcReq::release_procenvproto() {
 #endif  // !PROTOBUF_FORCE_COPY_IN_RELEASE
   return temp;
 }
-inline ::ProcEnvProto* SigmaInformProcReq::unsafe_arena_release_procenvproto() {
-  // @@protoc_insertion_point(field_release:SigmaInformProcReq.procEnvProto)
+inline ::ProcProto* SigmaInformProcReq::unsafe_arena_release_procproto() {
+  // @@protoc_insertion_point(field_release:SigmaInformProcReq.procProto)
   
-  ::ProcEnvProto* temp = _impl_.procenvproto_;
-  _impl_.procenvproto_ = nullptr;
+  ::ProcProto* temp = _impl_.procproto_;
+  _impl_.procproto_ = nullptr;
   return temp;
 }
-inline ::ProcEnvProto* SigmaInformProcReq::_internal_mutable_procenvproto() {
+inline ::ProcProto* SigmaInformProcReq::_internal_mutable_procproto() {
   
-  if (_impl_.procenvproto_ == nullptr) {
-    auto* p = CreateMaybeMessage<::ProcEnvProto>(GetArenaForAllocation());
-    _impl_.procenvproto_ = p;
+  if (_impl_.procproto_ == nullptr) {
+    auto* p = CreateMaybeMessage<::ProcProto>(GetArenaForAllocation());
+    _impl_.procproto_ = p;
   }
-  return _impl_.procenvproto_;
+  return _impl_.procproto_;
 }
-inline ::ProcEnvProto* SigmaInformProcReq::mutable_procenvproto() {
-  ::ProcEnvProto* _msg = _internal_mutable_procenvproto();
-  // @@protoc_insertion_point(field_mutable:SigmaInformProcReq.procEnvProto)
+inline ::ProcProto* SigmaInformProcReq::mutable_procproto() {
+  ::ProcProto* _msg = _internal_mutable_procproto();
+  // @@protoc_insertion_point(field_mutable:SigmaInformProcReq.procProto)
   return _msg;
 }
-inline void SigmaInformProcReq::set_allocated_procenvproto(::ProcEnvProto* procenvproto) {
+inline void SigmaInformProcReq::set_allocated_procproto(::ProcProto* procproto) {
   ::PROTOBUF_NAMESPACE_ID::Arena* message_arena = GetArenaForAllocation();
   if (message_arena == nullptr) {
-    delete reinterpret_cast< ::PROTOBUF_NAMESPACE_ID::MessageLite*>(_impl_.procenvproto_);
+    delete reinterpret_cast< ::PROTOBUF_NAMESPACE_ID::MessageLite*>(_impl_.procproto_);
   }
-  if (procenvproto) {
+  if (procproto) {
     ::PROTOBUF_NAMESPACE_ID::Arena* submessage_arena =
         ::PROTOBUF_NAMESPACE_ID::Arena::InternalGetOwningArena(
-                reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(procenvproto));
+                reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(procproto));
     if (message_arena != submessage_arena) {
-      procenvproto = ::PROTOBUF_NAMESPACE_ID::internal::GetOwnedMessage(
-          message_arena, procenvproto, submessage_arena);
+      procproto = ::PROTOBUF_NAMESPACE_ID::internal::GetOwnedMessage(
+          message_arena, procproto, submessage_arena);
     }
     
   } else {
     
   }
-  _impl_.procenvproto_ = procenvproto;
-  // @@protoc_insertion_point(field_set_allocated:SigmaInformProcReq.procEnvProto)
+  _impl_.procproto_ = procproto;
+  // @@protoc_insertion_point(field_set_allocated:SigmaInformProcReq.procProto)
 }
 
 // -------------------------------------------------------------------

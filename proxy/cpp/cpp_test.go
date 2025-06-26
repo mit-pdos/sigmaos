@@ -395,7 +395,7 @@ func TestCosSimInitLatency(t *testing.T) {
 	}
 
 	// Start a cossim job
-	j, err := cossimsrv.NewCosSimJob(mrts.GetRealm(test.REALM1).SigmaClnt, JOB_NAME, N_VEC, VEC_DIM, EAGER_INIT, MCPU_PER_SRV, N_CACHE, CACHE_MCPU, CACHE_GC)
+	j, err := cossimsrv.NewCosSimJob(mrts.GetRealm(test.REALM1).SigmaClnt, JOB_NAME, N_VEC, VEC_DIM, EAGER_INIT, MCPU_PER_SRV, N_CACHE, CACHE_MCPU, CACHE_GC, true)
 	if !assert.Nil(mrts.T, err, "Err NewCosSimJob: %v", err) {
 		return
 	}

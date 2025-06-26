@@ -91,7 +91,6 @@ PROTOBUF_CONSTEXPR ProcEnvProto::ProcEnvProto(
   , /*decltype(_impl_.sigmapath_)*/{}
   , /*decltype(_impl_.kernels_)*/{}
   , /*decltype(_impl_.cachedendpoints_)*/{::_pbi::ConstantInitialized()}
-  , /*decltype(_impl_.initrpcs_)*/{}
   , /*decltype(_impl_.pidstr_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}
   , /*decltype(_impl_.program_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}
   , /*decltype(_impl_.realmstr_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}
@@ -141,6 +140,7 @@ PROTOBUF_CONSTEXPR ProcProto::ProcProto(
     ::_pbi::ConstantInitialized): _impl_{
     /*decltype(_impl_.args_)*/{}
   , /*decltype(_impl_.env_)*/{::_pbi::ConstantInitialized()}
+  , /*decltype(_impl_.initrpcs_)*/{}
   , /*decltype(_impl_.procenvproto_)*/nullptr
   , /*decltype(_impl_.typeint_)*/0u
   , /*decltype(_impl_.mcpuint_)*/0u
@@ -243,7 +243,6 @@ const uint32_t TableStruct_proc_2fproc_2eproto::offsets[] PROTOBUF_SECTION_VARIA
   PROTOBUF_FIELD_OFFSET(::ProcEnvProto, _impl_.fail_),
   PROTOBUF_FIELD_OFFSET(::ProcEnvProto, _impl_.cachedendpoints_),
   PROTOBUF_FIELD_OFFSET(::ProcEnvProto, _impl_.valgrind_),
-  PROTOBUF_FIELD_OFFSET(::ProcEnvProto, _impl_.initrpcs_),
   PROTOBUF_FIELD_OFFSET(::ProcEnvProto, _impl_.delegateinitflag_),
   PROTOBUF_FIELD_OFFSET(::ProcProto_EnvEntry_DoNotUse, _has_bits_),
   PROTOBUF_FIELD_OFFSET(::ProcProto_EnvEntry_DoNotUse, _internal_metadata_),
@@ -264,6 +263,7 @@ const uint32_t TableStruct_proc_2fproc_2eproto::offsets[] PROTOBUF_SECTION_VARIA
   PROTOBUF_FIELD_OFFSET(::ProcProto, _impl_.procenvproto_),
   PROTOBUF_FIELD_OFFSET(::ProcProto, _impl_.args_),
   PROTOBUF_FIELD_OFFSET(::ProcProto, _impl_.env_),
+  PROTOBUF_FIELD_OFFSET(::ProcProto, _impl_.initrpcs_),
   PROTOBUF_FIELD_OFFSET(::ProcProto, _impl_.typeint_),
   PROTOBUF_FIELD_OFFSET(::ProcProto, _impl_.mcpuint_),
   PROTOBUF_FIELD_OFFSET(::ProcProto, _impl_.memint_),
@@ -275,8 +275,8 @@ static const ::_pbi::MigrationSchema schemas[] PROTOBUF_SECTION_VARIABLE(protode
   { 29, 37, -1, sizeof(::ProcEnvProto_SecretsMapEntry_DoNotUse)},
   { 39, 47, -1, sizeof(::ProcEnvProto_CachedEndpointsEntry_DoNotUse)},
   { 49, -1, -1, sizeof(::ProcEnvProto)},
-  { 85, 93, -1, sizeof(::ProcProto_EnvEntry_DoNotUse)},
-  { 95, -1, -1, sizeof(::ProcProto)},
+  { 84, 92, -1, sizeof(::ProcProto_EnvEntry_DoNotUse)},
+  { 94, -1, -1, sizeof(::ProcProto)},
 };
 
 static const ::_pb::Message* const file_default_instances[] = {
@@ -296,7 +296,7 @@ const char descriptor_table_protodef_proc_2fproc_2eproto[] PROTOBUF_SECTION_VARI
   "alizationRPC\022\026\n\016targetPathname\030\001 \001(\t\022\027\n\017"
   "marshaledRPCIOV\030\002 \003(\014\022\017\n\007nOutIOV\030\003 \001(\004\"L"
   "\n\tProcSeqno\022\r\n\005epoch\030\001 \001(\004\022\r\n\005seqno\030\002 \001("
-  "\004\022\017\n\007procqID\030\003 \001(\t\022\020\n\010mSchedID\030\004 \001(\t\"\313\007\n"
+  "\004\022\017\n\007procqID\030\003 \001(\t\022\020\n\010mSchedID\030\004 \001(\t\"\245\007\n"
   "\014ProcEnvProto\022\016\n\006pidStr\030\001 \001(\t\022\017\n\007program"
   "\030\002 \001(\t\022\020\n\010realmStr\030\003 \001(\t\022\036\n\tprincipal\030\004 "
   "\001(\0132\013.Tprincipal\022\017\n\007procDir\030\005 \001(\t\022\021\n\tpar"
@@ -314,16 +314,16 @@ const char descriptor_table_protodef_proc_2fproc_2eproto[] PROTOBUF_SECTION_VARI
   "\003(\t\022\026\n\016realmSwitchStr\030\030 \001(\t\022\017\n\007version\030\031"
   " \001(\t\022\014\n\004fail\030\032 \001(\t\022;\n\017cachedEndpoints\030\033 "
   "\003(\0132\".ProcEnvProto.CachedEndpointsEntry\022"
-  "\020\n\010valgrind\030\034 \001(\t\022$\n\010initRPCs\030\035 \003(\0132\022.In"
-  "itializationRPC\022\030\n\020delegateInitFlag\030\036 \001("
-  "\010\032E\n\022EtcdEndpointsEntry\022\013\n\003key\030\001 \001(\t\022\036\n\005"
-  "value\030\002 \001(\0132\017.TendpointProto:\0028\001\032\?\n\017Secr"
-  "etsMapEntry\022\013\n\003key\030\001 \001(\t\022\033\n\005value\030\002 \001(\0132"
-  "\014.SecretProto:\0028\001\032G\n\024CachedEndpointsEntr"
-  "y\022\013\n\003key\030\001 \001(\t\022\036\n\005value\030\002 \001(\0132\017.Tendpoin"
-  "tProto:\0028\001\"\276\001\n\tProcProto\022#\n\014procEnvProto"
-  "\030\001 \001(\0132\r.ProcEnvProto\022\014\n\004args\030\002 \003(\t\022 \n\003e"
-  "nv\030\003 \003(\0132\023.ProcProto.EnvEntry\022\017\n\007typeInt"
+  "\020\n\010valgrind\030\034 \001(\t\022\030\n\020delegateInitFlag\030\036 "
+  "\001(\010\032E\n\022EtcdEndpointsEntry\022\013\n\003key\030\001 \001(\t\022\036"
+  "\n\005value\030\002 \001(\0132\017.TendpointProto:\0028\001\032\?\n\017Se"
+  "cretsMapEntry\022\013\n\003key\030\001 \001(\t\022\033\n\005value\030\002 \001("
+  "\0132\014.SecretProto:\0028\001\032G\n\024CachedEndpointsEn"
+  "try\022\013\n\003key\030\001 \001(\t\022\036\n\005value\030\002 \001(\0132\017.Tendpo"
+  "intProto:\0028\001\"\344\001\n\tProcProto\022#\n\014procEnvPro"
+  "to\030\001 \001(\0132\r.ProcEnvProto\022\014\n\004args\030\002 \003(\t\022 \n"
+  "\003env\030\003 \003(\0132\023.ProcProto.EnvEntry\022$\n\010initR"
+  "PCs\030\035 \003(\0132\022.InitializationRPC\022\017\n\007typeInt"
   "\030\004 \001(\r\022\017\n\007mcpuInt\030\005 \001(\r\022\016\n\006memInt\030\006 \001(\r\032"
   "*\n\010EnvEntry\022\013\n\003key\030\001 \001(\t\022\r\n\005value\030\002 \001(\t:"
   "\0028\001B\016Z\014sigmaos/procb\006proto3"
@@ -1022,7 +1022,6 @@ ProcEnvProto::ProcEnvProto(const ProcEnvProto& from)
     , decltype(_impl_.sigmapath_){from._impl_.sigmapath_}
     , decltype(_impl_.kernels_){from._impl_.kernels_}
     , /*decltype(_impl_.cachedendpoints_)*/{}
-    , decltype(_impl_.initrpcs_){from._impl_.initrpcs_}
     , decltype(_impl_.pidstr_){}
     , decltype(_impl_.program_){}
     , decltype(_impl_.realmstr_){}
@@ -1211,7 +1210,6 @@ inline void ProcEnvProto::SharedCtor(
     , decltype(_impl_.sigmapath_){arena}
     , decltype(_impl_.kernels_){arena}
     , /*decltype(_impl_.cachedendpoints_)*/{::_pbi::ArenaInitialized(), arena}
-    , decltype(_impl_.initrpcs_){arena}
     , decltype(_impl_.pidstr_){}
     , decltype(_impl_.program_){}
     , decltype(_impl_.realmstr_){}
@@ -1328,7 +1326,6 @@ inline void ProcEnvProto::SharedDtor() {
   _impl_.kernels_.~RepeatedPtrField();
   _impl_.cachedendpoints_.Destruct();
   _impl_.cachedendpoints_.~MapField();
-  _impl_.initrpcs_.~RepeatedPtrField();
   _impl_.pidstr_.Destroy();
   _impl_.program_.Destroy();
   _impl_.realmstr_.Destroy();
@@ -1371,7 +1368,6 @@ void ProcEnvProto::Clear() {
   _impl_.sigmapath_.Clear();
   _impl_.kernels_.Clear();
   _impl_.cachedendpoints_.Clear();
-  _impl_.initrpcs_.Clear();
   _impl_.pidstr_.ClearToEmpty();
   _impl_.program_.ClearToEmpty();
   _impl_.realmstr_.ClearToEmpty();
@@ -1693,19 +1689,6 @@ const char* ProcEnvProto::_InternalParse(const char* ptr, ::_pbi::ParseContext* 
           ptr = ::_pbi::InlineGreedyStringParser(str, ptr, ctx);
           CHK_(ptr);
           CHK_(::_pbi::VerifyUTF8(str, "ProcEnvProto.valgrind"));
-        } else
-          goto handle_unusual;
-        continue;
-      // repeated .InitializationRPC initRPCs = 29;
-      case 29:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 234)) {
-          ptr -= 2;
-          do {
-            ptr += 2;
-            ptr = ctx->ParseMessage(_internal_add_initrpcs(), ptr);
-            CHK_(ptr);
-            if (!ctx->DataAvailable(ptr)) break;
-          } while (::PROTOBUF_NAMESPACE_ID::internal::ExpectTag<234>(ptr));
         } else
           goto handle_unusual;
         continue;
@@ -2052,14 +2035,6 @@ uint8_t* ProcEnvProto::_InternalSerialize(
         28, this->_internal_valgrind(), target);
   }
 
-  // repeated .InitializationRPC initRPCs = 29;
-  for (unsigned i = 0,
-      n = static_cast<unsigned>(this->_internal_initrpcs_size()); i < n; i++) {
-    const auto& repfield = this->_internal_initrpcs(i);
-    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::
-        InternalWriteMessage(29, repfield, repfield.GetCachedSize(), target, stream);
-  }
-
   // bool delegateInitFlag = 30;
   if (this->_internal_delegateinitflag() != 0) {
     target = stream->EnsureSpace(target);
@@ -2123,13 +2098,6 @@ size_t ProcEnvProto::ByteSizeLong() const {
       it = this->_internal_cachedendpoints().begin();
       it != this->_internal_cachedendpoints().end(); ++it) {
     total_size += ProcEnvProto_CachedEndpointsEntry_DoNotUse::Funcs::ByteSizeLong(it->first, it->second);
-  }
-
-  // repeated .InitializationRPC initRPCs = 29;
-  total_size += 2UL * this->_internal_initrpcs_size();
-  for (const auto& msg : this->_impl_.initrpcs_) {
-    total_size +=
-      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::MessageSize(msg);
   }
 
   // string pidStr = 1;
@@ -2315,7 +2283,6 @@ void ProcEnvProto::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::P
   _this->_impl_.sigmapath_.MergeFrom(from._impl_.sigmapath_);
   _this->_impl_.kernels_.MergeFrom(from._impl_.kernels_);
   _this->_impl_.cachedendpoints_.MergeFrom(from._impl_.cachedendpoints_);
-  _this->_impl_.initrpcs_.MergeFrom(from._impl_.initrpcs_);
   if (!from._internal_pidstr().empty()) {
     _this->_internal_set_pidstr(from._internal_pidstr());
   }
@@ -2414,7 +2381,6 @@ void ProcEnvProto::InternalSwap(ProcEnvProto* other) {
   _impl_.sigmapath_.InternalSwap(&other->_impl_.sigmapath_);
   _impl_.kernels_.InternalSwap(&other->_impl_.kernels_);
   _impl_.cachedendpoints_.InternalSwap(&other->_impl_.cachedendpoints_);
-  _impl_.initrpcs_.InternalSwap(&other->_impl_.initrpcs_);
   ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr::InternalSwap(
       &_impl_.pidstr_, lhs_arena,
       &other->_impl_.pidstr_, rhs_arena
@@ -2537,6 +2503,7 @@ ProcProto::ProcProto(const ProcProto& from)
   new (&_impl_) Impl_{
       decltype(_impl_.args_){from._impl_.args_}
     , /*decltype(_impl_.env_)*/{}
+    , decltype(_impl_.initrpcs_){from._impl_.initrpcs_}
     , decltype(_impl_.procenvproto_){nullptr}
     , decltype(_impl_.typeint_){}
     , decltype(_impl_.mcpuint_){}
@@ -2561,6 +2528,7 @@ inline void ProcProto::SharedCtor(
   new (&_impl_) Impl_{
       decltype(_impl_.args_){arena}
     , /*decltype(_impl_.env_)*/{::_pbi::ArenaInitialized(), arena}
+    , decltype(_impl_.initrpcs_){arena}
     , decltype(_impl_.procenvproto_){nullptr}
     , decltype(_impl_.typeint_){0u}
     , decltype(_impl_.mcpuint_){0u}
@@ -2584,6 +2552,7 @@ inline void ProcProto::SharedDtor() {
   _impl_.args_.~RepeatedPtrField();
   _impl_.env_.Destruct();
   _impl_.env_.~MapField();
+  _impl_.initrpcs_.~RepeatedPtrField();
   if (this != internal_default_instance()) delete _impl_.procenvproto_;
 }
 
@@ -2603,6 +2572,7 @@ void ProcProto::Clear() {
 
   _impl_.args_.Clear();
   _impl_.env_.Clear();
+  _impl_.initrpcs_.Clear();
   if (GetArenaForAllocation() == nullptr && _impl_.procenvproto_ != nullptr) {
     delete _impl_.procenvproto_;
   }
@@ -2676,6 +2646,19 @@ const char* ProcProto::_InternalParse(const char* ptr, ::_pbi::ParseContext* ctx
         if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 48)) {
           _impl_.memint_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint32(&ptr);
           CHK_(ptr);
+        } else
+          goto handle_unusual;
+        continue;
+      // repeated .InitializationRPC initRPCs = 29;
+      case 29:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 234)) {
+          ptr -= 2;
+          do {
+            ptr += 2;
+            ptr = ctx->ParseMessage(_internal_add_initrpcs(), ptr);
+            CHK_(ptr);
+            if (!ctx->DataAvailable(ptr)) break;
+          } while (::PROTOBUF_NAMESPACE_ID::internal::ExpectTag<234>(ptr));
         } else
           goto handle_unusual;
         continue;
@@ -2773,6 +2756,14 @@ uint8_t* ProcProto::_InternalSerialize(
     target = ::_pbi::WireFormatLite::WriteUInt32ToArray(6, this->_internal_memint(), target);
   }
 
+  // repeated .InitializationRPC initRPCs = 29;
+  for (unsigned i = 0,
+      n = static_cast<unsigned>(this->_internal_initrpcs_size()); i < n; i++) {
+    const auto& repfield = this->_internal_initrpcs(i);
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::
+        InternalWriteMessage(29, repfield, repfield.GetCachedSize(), target, stream);
+  }
+
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
     target = ::_pbi::WireFormat::InternalSerializeUnknownFieldsToArray(
         _internal_metadata_.unknown_fields<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(::PROTOBUF_NAMESPACE_ID::UnknownFieldSet::default_instance), target, stream);
@@ -2804,6 +2795,13 @@ size_t ProcProto::ByteSizeLong() const {
       it = this->_internal_env().begin();
       it != this->_internal_env().end(); ++it) {
     total_size += ProcProto_EnvEntry_DoNotUse::Funcs::ByteSizeLong(it->first, it->second);
+  }
+
+  // repeated .InitializationRPC initRPCs = 29;
+  total_size += 2UL * this->_internal_initrpcs_size();
+  for (const auto& msg : this->_impl_.initrpcs_) {
+    total_size +=
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::MessageSize(msg);
   }
 
   // .ProcEnvProto procEnvProto = 1;
@@ -2848,6 +2846,7 @@ void ProcProto::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PROT
 
   _this->_impl_.args_.MergeFrom(from._impl_.args_);
   _this->_impl_.env_.MergeFrom(from._impl_.env_);
+  _this->_impl_.initrpcs_.MergeFrom(from._impl_.initrpcs_);
   if (from._internal_has_procenvproto()) {
     _this->_internal_mutable_procenvproto()->::ProcEnvProto::MergeFrom(
         from._internal_procenvproto());
@@ -2880,6 +2879,7 @@ void ProcProto::InternalSwap(ProcProto* other) {
   _internal_metadata_.InternalSwap(&other->_internal_metadata_);
   _impl_.args_.InternalSwap(&other->_impl_.args_);
   _impl_.env_.InternalSwap(&other->_impl_.env_);
+  _impl_.initrpcs_.InternalSwap(&other->_impl_.initrpcs_);
   ::PROTOBUF_NAMESPACE_ID::internal::memswap<
       PROTOBUF_FIELD_OFFSET(ProcProto, _impl_.memint_)
       + sizeof(ProcProto::_impl_.memint_)

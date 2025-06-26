@@ -674,7 +674,6 @@ class ProcEnvProto final :
     kSigmaPathFieldNumber = 22,
     kKernelsFieldNumber = 23,
     kCachedEndpointsFieldNumber = 27,
-    kInitRPCsFieldNumber = 29,
     kPidStrFieldNumber = 1,
     kProgramFieldNumber = 2,
     kRealmStrFieldNumber = 3,
@@ -798,24 +797,6 @@ class ProcEnvProto final :
       cachedendpoints() const;
   ::PROTOBUF_NAMESPACE_ID::Map< std::string, ::TendpointProto >*
       mutable_cachedendpoints();
-
-  // repeated .InitializationRPC initRPCs = 29;
-  int initrpcs_size() const;
-  private:
-  int _internal_initrpcs_size() const;
-  public:
-  void clear_initrpcs();
-  ::InitializationRPC* mutable_initrpcs(int index);
-  ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::InitializationRPC >*
-      mutable_initrpcs();
-  private:
-  const ::InitializationRPC& _internal_initrpcs(int index) const;
-  ::InitializationRPC* _internal_add_initrpcs();
-  public:
-  const ::InitializationRPC& initrpcs(int index) const;
-  ::InitializationRPC* add_initrpcs();
-  const ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::InitializationRPC >&
-      initrpcs() const;
 
   // string pidStr = 1;
   void clear_pidstr();
@@ -1161,7 +1142,6 @@ class ProcEnvProto final :
         std::string, ::TendpointProto,
         ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::TYPE_STRING,
         ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::TYPE_MESSAGE> cachedendpoints_;
-    ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::InitializationRPC > initrpcs_;
     ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr pidstr_;
     ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr program_;
     ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr realmstr_;
@@ -1347,6 +1327,7 @@ class ProcProto final :
   enum : int {
     kArgsFieldNumber = 2,
     kEnvFieldNumber = 3,
+    kInitRPCsFieldNumber = 29,
     kProcEnvProtoFieldNumber = 1,
     kTypeIntFieldNumber = 4,
     kMcpuIntFieldNumber = 5,
@@ -1392,6 +1373,24 @@ class ProcProto final :
       env() const;
   ::PROTOBUF_NAMESPACE_ID::Map< std::string, std::string >*
       mutable_env();
+
+  // repeated .InitializationRPC initRPCs = 29;
+  int initrpcs_size() const;
+  private:
+  int _internal_initrpcs_size() const;
+  public:
+  void clear_initrpcs();
+  ::InitializationRPC* mutable_initrpcs(int index);
+  ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::InitializationRPC >*
+      mutable_initrpcs();
+  private:
+  const ::InitializationRPC& _internal_initrpcs(int index) const;
+  ::InitializationRPC* _internal_add_initrpcs();
+  public:
+  const ::InitializationRPC& initrpcs(int index) const;
+  ::InitializationRPC* add_initrpcs();
+  const ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::InitializationRPC >&
+      initrpcs() const;
 
   // .ProcEnvProto procEnvProto = 1;
   bool has_procenvproto() const;
@@ -1452,6 +1451,7 @@ class ProcProto final :
         std::string, std::string,
         ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::TYPE_STRING,
         ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::TYPE_STRING> env_;
+    ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::InitializationRPC > initrpcs_;
     ::ProcEnvProto* procenvproto_;
     uint32_t typeint_;
     uint32_t mcpuint_;
@@ -3099,46 +3099,6 @@ inline void ProcEnvProto::set_allocated_valgrind(std::string* valgrind) {
   // @@protoc_insertion_point(field_set_allocated:ProcEnvProto.valgrind)
 }
 
-// repeated .InitializationRPC initRPCs = 29;
-inline int ProcEnvProto::_internal_initrpcs_size() const {
-  return _impl_.initrpcs_.size();
-}
-inline int ProcEnvProto::initrpcs_size() const {
-  return _internal_initrpcs_size();
-}
-inline void ProcEnvProto::clear_initrpcs() {
-  _impl_.initrpcs_.Clear();
-}
-inline ::InitializationRPC* ProcEnvProto::mutable_initrpcs(int index) {
-  // @@protoc_insertion_point(field_mutable:ProcEnvProto.initRPCs)
-  return _impl_.initrpcs_.Mutable(index);
-}
-inline ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::InitializationRPC >*
-ProcEnvProto::mutable_initrpcs() {
-  // @@protoc_insertion_point(field_mutable_list:ProcEnvProto.initRPCs)
-  return &_impl_.initrpcs_;
-}
-inline const ::InitializationRPC& ProcEnvProto::_internal_initrpcs(int index) const {
-  return _impl_.initrpcs_.Get(index);
-}
-inline const ::InitializationRPC& ProcEnvProto::initrpcs(int index) const {
-  // @@protoc_insertion_point(field_get:ProcEnvProto.initRPCs)
-  return _internal_initrpcs(index);
-}
-inline ::InitializationRPC* ProcEnvProto::_internal_add_initrpcs() {
-  return _impl_.initrpcs_.Add();
-}
-inline ::InitializationRPC* ProcEnvProto::add_initrpcs() {
-  ::InitializationRPC* _add = _internal_add_initrpcs();
-  // @@protoc_insertion_point(field_add:ProcEnvProto.initRPCs)
-  return _add;
-}
-inline const ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::InitializationRPC >&
-ProcEnvProto::initrpcs() const {
-  // @@protoc_insertion_point(field_list:ProcEnvProto.initRPCs)
-  return _impl_.initrpcs_;
-}
-
 // bool delegateInitFlag = 30;
 inline void ProcEnvProto::clear_delegateinitflag() {
   _impl_.delegateinitflag_ = false;
@@ -3357,6 +3317,46 @@ inline ::PROTOBUF_NAMESPACE_ID::Map< std::string, std::string >*
 ProcProto::mutable_env() {
   // @@protoc_insertion_point(field_mutable_map:ProcProto.env)
   return _internal_mutable_env();
+}
+
+// repeated .InitializationRPC initRPCs = 29;
+inline int ProcProto::_internal_initrpcs_size() const {
+  return _impl_.initrpcs_.size();
+}
+inline int ProcProto::initrpcs_size() const {
+  return _internal_initrpcs_size();
+}
+inline void ProcProto::clear_initrpcs() {
+  _impl_.initrpcs_.Clear();
+}
+inline ::InitializationRPC* ProcProto::mutable_initrpcs(int index) {
+  // @@protoc_insertion_point(field_mutable:ProcProto.initRPCs)
+  return _impl_.initrpcs_.Mutable(index);
+}
+inline ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::InitializationRPC >*
+ProcProto::mutable_initrpcs() {
+  // @@protoc_insertion_point(field_mutable_list:ProcProto.initRPCs)
+  return &_impl_.initrpcs_;
+}
+inline const ::InitializationRPC& ProcProto::_internal_initrpcs(int index) const {
+  return _impl_.initrpcs_.Get(index);
+}
+inline const ::InitializationRPC& ProcProto::initrpcs(int index) const {
+  // @@protoc_insertion_point(field_get:ProcProto.initRPCs)
+  return _internal_initrpcs(index);
+}
+inline ::InitializationRPC* ProcProto::_internal_add_initrpcs() {
+  return _impl_.initrpcs_.Add();
+}
+inline ::InitializationRPC* ProcProto::add_initrpcs() {
+  ::InitializationRPC* _add = _internal_add_initrpcs();
+  // @@protoc_insertion_point(field_add:ProcProto.initRPCs)
+  return _add;
+}
+inline const ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::InitializationRPC >&
+ProcProto::initrpcs() const {
+  // @@protoc_insertion_point(field_list:ProcProto.initRPCs)
+  return _impl_.initrpcs_;
 }
 
 // uint32 typeInt = 4;

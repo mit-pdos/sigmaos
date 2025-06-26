@@ -22,7 +22,7 @@ namespace _pbi = _pb::internal;
 
 PROTOBUF_CONSTEXPR SigmaInformProcReq::SigmaInformProcReq(
     ::_pbi::ConstantInitialized): _impl_{
-    /*decltype(_impl_.procenvproto_)*/nullptr
+    /*decltype(_impl_.procproto_)*/nullptr
   , /*decltype(_impl_._cached_size_)*/{}} {}
 struct SigmaInformProcReqDefaultTypeInternal {
   PROTOBUF_CONSTEXPR SigmaInformProcReqDefaultTypeInternal()
@@ -427,7 +427,7 @@ const uint32_t TableStruct_proxy_2fsigmap_2fproto_2fspproxy_2eproto::offsets[] P
   ~0u,  // no _oneof_case_
   ~0u,  // no _weak_field_map_
   ~0u,  // no _inlined_string_donated_
-  PROTOBUF_FIELD_OFFSET(::SigmaInformProcReq, _impl_.procenvproto_),
+  PROTOBUF_FIELD_OFFSET(::SigmaInformProcReq, _impl_.procproto_),
   ~0u,  // no _has_bits_
   PROTOBUF_FIELD_OFFSET(::SigmaInitReq, _internal_metadata_),
   ~0u,  // no _extensions_
@@ -716,50 +716,49 @@ static const ::_pb::Message* const file_default_instances[] = {
 const char descriptor_table_protodef_proxy_2fsigmap_2fproto_2fspproxy_2eproto[] PROTOBUF_SECTION_VARIABLE(protodesc_cold) =
   "\n proxy/sigmap/proto/spproxy.proto\032\023sigm"
   "ap/sigmap.proto\032\017proc/proc.proto\032\023rpc/pr"
-  "oto/rpc.proto\"9\n\022SigmaInformProcReq\022#\n\014p"
-  "rocEnvProto\030\001 \001(\0132\r.ProcEnvProto\"3\n\014Sigm"
-  "aInitReq\022#\n\014procEnvProto\030\001 \001(\0132\r.ProcEnv"
-  "Proto\"\016\n\014SigmaNullReq\"!\n\rSigmaRealmReq\022\020"
-  "\n\010realmStr\030\001 \001(\t\"\033\n\rSigmaCloseReq\022\n\n\002fd\030"
-  "\001 \001(\r\"#\n\013SigmaErrRep\022\024\n\003err\030\001 \001(\0132\007.Rerr"
-  "or\"\034\n\014SigmaPathReq\022\014\n\004path\030\001 \001(\t\"\?\n\014Sigm"
-  "aStatRep\022\031\n\004stat\030\001 \001(\0132\013.TstatProto\022\024\n\003e"
-  "rr\030\002 \001(\0132\007.Rerror\"v\n\016SigmaCreateReq\022\014\n\004p"
-  "ath\030\001 \001(\t\022\014\n\004perm\030\002 \001(\r\022\014\n\004mode\030\003 \001(\r\022\017\n"
-  "\007leaseId\030\004 \001(\004\022\033\n\005fence\030\005 \001(\0132\014.TfencePr"
-  "oto\022\014\n\004wait\030\006 \001(\010\".\n\nSigmaFdRep\022\n\n\002fd\030\001 "
-  "\001(\r\022\024\n\003err\030\002 \001(\0132\007.Rerror\"*\n\016SigmaRename"
-  "Req\022\013\n\003src\030\001 \001(\t\022\013\n\003dst\030\002 \001(\t\"9\n\014SigmaDa"
-  "taRep\022\023\n\004blob\030\001 \001(\0132\005.Blob\022\024\n\003err\030\002 \001(\0132"
-  "\007.Rerror\"q\n\017SigmaPutFileReq\022\014\n\004path\030\001 \001("
-  "\t\022\014\n\004perm\030\002 \001(\r\022\014\n\004mode\030\003 \001(\r\022\016\n\006offset\030"
-  "\004 \001(\004\022\017\n\007leaseId\030\005 \001(\004\022\023\n\004blob\030\006 \001(\0132\005.B"
-  "lob\"2\n\014SigmaSizeRep\022\014\n\004size\030\001 \001(\004\022\024\n\003err"
-  "\030\002 \001(\0132\007.Rerror\"5\n\014SigmaReadReq\022\n\n\002fd\030\001 "
-  "\001(\r\022\014\n\004size\030\002 \001(\004\022\013\n\003off\030\003 \001(\004\"^\n\rSigmaW"
-  "riteReq\022\n\n\002fd\030\001 \001(\r\022\033\n\005fence\030\002 \001(\0132\014.Tfe"
-  "nceProto\022\023\n\004blob\030\003 \001(\0132\005.Blob\022\017\n\007nOutVec"
-  "\030\004 \001(\r\"*\n\014SigmaSeekReq\022\n\n\002fd\030\001 \001(\r\022\016\n\006of"
-  "fset\030\002 \001(\004\"6\n\016SigmaClntIdRep\022\016\n\006clntId\030\001"
-  " \001(\004\022\024\n\003err\030\002 \001(\0132\007.Rerror\":\n\rSigmaFence"
-  "Req\022\014\n\004Path\030\001 \001(\t\022\033\n\005Fence\030\002 \001(\0132\014.Tfenc"
-  "eProto\"W\n\021SigmaMountTreeReq\022!\n\010Endpoint\030"
-  "\001 \001(\0132\017.TendpointProto\022\014\n\004tree\030\002 \001(\t\022\021\n\t"
-  "mountName\030\003 \001(\t\"G\n\021SigmaLastMountRep\022\r\n\005"
-  "path1\030\001 \003(\t\022\r\n\005path2\030\002 \003(\t\022\024\n\003err\030\003 \001(\0132"
-  "\007.Rerror\"@\n\rSigmaMountReq\022!\n\010endpoint\030\001 "
-  "\001(\0132\017.TendpointProto\022\014\n\004port\030\002 \001(\t\"W\n\rSi"
-  "gmaMountRep\022!\n\010endpoint\030\001 \001(\0132\017.Tendpoin"
-  "tProto\022\r\n\005local\030\002 \001(\010\022\024\n\003err\030\003 \001(\0132\007.Rer"
-  "ror\"9\n\016SigmaMountsRep\022\021\n\tendpoints\030\001 \003(\t"
-  "\022\024\n\003err\030\002 \001(\0132\007.Rerror\"E\n\022SigmaRegisterE"
-  "PReq\022\014\n\004path\030\001 \001(\t\022!\n\010endpoint\030\002 \001(\0132\017.T"
-  "endpointProto\"-\n\016SigmaExitedReq\022\016\n\006statu"
-  "s\030\001 \001(\r\022\013\n\003msg\030\002 \001(\t\"&\n\024SigmaDelegatedRP"
-  "CReq\022\016\n\006rPCIdx\030\001 \001(\004\"A\n\024SigmaDelegatedRP"
-  "CRep\022\023\n\004blob\030\001 \001(\0132\005.Blob\022\024\n\003err\030\002 \001(\0132\007"
-  ".RerrorB\034Z\032sigmaos/proxy/sigmap/protob\006p"
-  "roto3"
+  "oto/rpc.proto\"3\n\022SigmaInformProcReq\022\035\n\tp"
+  "rocProto\030\001 \001(\0132\n.ProcProto\"3\n\014SigmaInitR"
+  "eq\022#\n\014procEnvProto\030\001 \001(\0132\r.ProcEnvProto\""
+  "\016\n\014SigmaNullReq\"!\n\rSigmaRealmReq\022\020\n\010real"
+  "mStr\030\001 \001(\t\"\033\n\rSigmaCloseReq\022\n\n\002fd\030\001 \001(\r\""
+  "#\n\013SigmaErrRep\022\024\n\003err\030\001 \001(\0132\007.Rerror\"\034\n\014"
+  "SigmaPathReq\022\014\n\004path\030\001 \001(\t\"\?\n\014SigmaStatR"
+  "ep\022\031\n\004stat\030\001 \001(\0132\013.TstatProto\022\024\n\003err\030\002 \001"
+  "(\0132\007.Rerror\"v\n\016SigmaCreateReq\022\014\n\004path\030\001 "
+  "\001(\t\022\014\n\004perm\030\002 \001(\r\022\014\n\004mode\030\003 \001(\r\022\017\n\007lease"
+  "Id\030\004 \001(\004\022\033\n\005fence\030\005 \001(\0132\014.TfenceProto\022\014\n"
+  "\004wait\030\006 \001(\010\".\n\nSigmaFdRep\022\n\n\002fd\030\001 \001(\r\022\024\n"
+  "\003err\030\002 \001(\0132\007.Rerror\"*\n\016SigmaRenameReq\022\013\n"
+  "\003src\030\001 \001(\t\022\013\n\003dst\030\002 \001(\t\"9\n\014SigmaDataRep\022"
+  "\023\n\004blob\030\001 \001(\0132\005.Blob\022\024\n\003err\030\002 \001(\0132\007.Rerr"
+  "or\"q\n\017SigmaPutFileReq\022\014\n\004path\030\001 \001(\t\022\014\n\004p"
+  "erm\030\002 \001(\r\022\014\n\004mode\030\003 \001(\r\022\016\n\006offset\030\004 \001(\004\022"
+  "\017\n\007leaseId\030\005 \001(\004\022\023\n\004blob\030\006 \001(\0132\005.Blob\"2\n"
+  "\014SigmaSizeRep\022\014\n\004size\030\001 \001(\004\022\024\n\003err\030\002 \001(\013"
+  "2\007.Rerror\"5\n\014SigmaReadReq\022\n\n\002fd\030\001 \001(\r\022\014\n"
+  "\004size\030\002 \001(\004\022\013\n\003off\030\003 \001(\004\"^\n\rSigmaWriteRe"
+  "q\022\n\n\002fd\030\001 \001(\r\022\033\n\005fence\030\002 \001(\0132\014.TfencePro"
+  "to\022\023\n\004blob\030\003 \001(\0132\005.Blob\022\017\n\007nOutVec\030\004 \001(\r"
+  "\"*\n\014SigmaSeekReq\022\n\n\002fd\030\001 \001(\r\022\016\n\006offset\030\002"
+  " \001(\004\"6\n\016SigmaClntIdRep\022\016\n\006clntId\030\001 \001(\004\022\024"
+  "\n\003err\030\002 \001(\0132\007.Rerror\":\n\rSigmaFenceReq\022\014\n"
+  "\004Path\030\001 \001(\t\022\033\n\005Fence\030\002 \001(\0132\014.TfenceProto"
+  "\"W\n\021SigmaMountTreeReq\022!\n\010Endpoint\030\001 \001(\0132"
+  "\017.TendpointProto\022\014\n\004tree\030\002 \001(\t\022\021\n\tmountN"
+  "ame\030\003 \001(\t\"G\n\021SigmaLastMountRep\022\r\n\005path1\030"
+  "\001 \003(\t\022\r\n\005path2\030\002 \003(\t\022\024\n\003err\030\003 \001(\0132\007.Rerr"
+  "or\"@\n\rSigmaMountReq\022!\n\010endpoint\030\001 \001(\0132\017."
+  "TendpointProto\022\014\n\004port\030\002 \001(\t\"W\n\rSigmaMou"
+  "ntRep\022!\n\010endpoint\030\001 \001(\0132\017.TendpointProto"
+  "\022\r\n\005local\030\002 \001(\010\022\024\n\003err\030\003 \001(\0132\007.Rerror\"9\n"
+  "\016SigmaMountsRep\022\021\n\tendpoints\030\001 \003(\t\022\024\n\003er"
+  "r\030\002 \001(\0132\007.Rerror\"E\n\022SigmaRegisterEPReq\022\014"
+  "\n\004path\030\001 \001(\t\022!\n\010endpoint\030\002 \001(\0132\017.Tendpoi"
+  "ntProto\"-\n\016SigmaExitedReq\022\016\n\006status\030\001 \001("
+  "\r\022\013\n\003msg\030\002 \001(\t\"&\n\024SigmaDelegatedRPCReq\022\016"
+  "\n\006rPCIdx\030\001 \001(\004\"A\n\024SigmaDelegatedRPCRep\022\023"
+  "\n\004blob\030\001 \001(\0132\005.Blob\022\024\n\003err\030\002 \001(\0132\007.Rerro"
+  "rB\034Z\032sigmaos/proxy/sigmap/protob\006proto3"
   ;
 static const ::_pbi::DescriptorTable* const descriptor_table_proxy_2fsigmap_2fproto_2fspproxy_2eproto_deps[3] = {
   &::descriptor_table_proc_2fproc_2eproto,
@@ -768,7 +767,7 @@ static const ::_pbi::DescriptorTable* const descriptor_table_proxy_2fsigmap_2fpr
 };
 static ::_pbi::once_flag descriptor_table_proxy_2fsigmap_2fproto_2fspproxy_2eproto_once;
 const ::_pbi::DescriptorTable descriptor_table_proxy_2fsigmap_2fproto_2fspproxy_2eproto = {
-    false, false, 1805, descriptor_table_protodef_proxy_2fsigmap_2fproto_2fspproxy_2eproto,
+    false, false, 1799, descriptor_table_protodef_proxy_2fsigmap_2fproto_2fspproxy_2eproto,
     "proxy/sigmap/proto/spproxy.proto",
     &descriptor_table_proxy_2fsigmap_2fproto_2fspproxy_2eproto_once, descriptor_table_proxy_2fsigmap_2fproto_2fspproxy_2eproto_deps, 3, 28,
     schemas, file_default_instances, TableStruct_proxy_2fsigmap_2fproto_2fspproxy_2eproto::offsets,
@@ -786,18 +785,18 @@ PROTOBUF_ATTRIBUTE_INIT_PRIORITY2 static ::_pbi::AddDescriptorsRunner dynamic_in
 
 class SigmaInformProcReq::_Internal {
  public:
-  static const ::ProcEnvProto& procenvproto(const SigmaInformProcReq* msg);
+  static const ::ProcProto& procproto(const SigmaInformProcReq* msg);
 };
 
-const ::ProcEnvProto&
-SigmaInformProcReq::_Internal::procenvproto(const SigmaInformProcReq* msg) {
-  return *msg->_impl_.procenvproto_;
+const ::ProcProto&
+SigmaInformProcReq::_Internal::procproto(const SigmaInformProcReq* msg) {
+  return *msg->_impl_.procproto_;
 }
-void SigmaInformProcReq::clear_procenvproto() {
-  if (GetArenaForAllocation() == nullptr && _impl_.procenvproto_ != nullptr) {
-    delete _impl_.procenvproto_;
+void SigmaInformProcReq::clear_procproto() {
+  if (GetArenaForAllocation() == nullptr && _impl_.procproto_ != nullptr) {
+    delete _impl_.procproto_;
   }
-  _impl_.procenvproto_ = nullptr;
+  _impl_.procproto_ = nullptr;
 }
 SigmaInformProcReq::SigmaInformProcReq(::PROTOBUF_NAMESPACE_ID::Arena* arena,
                          bool is_message_owned)
@@ -809,12 +808,12 @@ SigmaInformProcReq::SigmaInformProcReq(const SigmaInformProcReq& from)
   : ::PROTOBUF_NAMESPACE_ID::Message() {
   SigmaInformProcReq* const _this = this; (void)_this;
   new (&_impl_) Impl_{
-      decltype(_impl_.procenvproto_){nullptr}
+      decltype(_impl_.procproto_){nullptr}
     , /*decltype(_impl_._cached_size_)*/{}};
 
   _internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
-  if (from._internal_has_procenvproto()) {
-    _this->_impl_.procenvproto_ = new ::ProcEnvProto(*from._impl_.procenvproto_);
+  if (from._internal_has_procproto()) {
+    _this->_impl_.procproto_ = new ::ProcProto(*from._impl_.procproto_);
   }
   // @@protoc_insertion_point(copy_constructor:SigmaInformProcReq)
 }
@@ -824,7 +823,7 @@ inline void SigmaInformProcReq::SharedCtor(
   (void)arena;
   (void)is_message_owned;
   new (&_impl_) Impl_{
-      decltype(_impl_.procenvproto_){nullptr}
+      decltype(_impl_.procproto_){nullptr}
     , /*decltype(_impl_._cached_size_)*/{}
   };
 }
@@ -840,7 +839,7 @@ SigmaInformProcReq::~SigmaInformProcReq() {
 
 inline void SigmaInformProcReq::SharedDtor() {
   GOOGLE_DCHECK(GetArenaForAllocation() == nullptr);
-  if (this != internal_default_instance()) delete _impl_.procenvproto_;
+  if (this != internal_default_instance()) delete _impl_.procproto_;
 }
 
 void SigmaInformProcReq::SetCachedSize(int size) const {
@@ -853,10 +852,10 @@ void SigmaInformProcReq::Clear() {
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
-  if (GetArenaForAllocation() == nullptr && _impl_.procenvproto_ != nullptr) {
-    delete _impl_.procenvproto_;
+  if (GetArenaForAllocation() == nullptr && _impl_.procproto_ != nullptr) {
+    delete _impl_.procproto_;
   }
-  _impl_.procenvproto_ = nullptr;
+  _impl_.procproto_ = nullptr;
   _internal_metadata_.Clear<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>();
 }
 
@@ -866,10 +865,10 @@ const char* SigmaInformProcReq::_InternalParse(const char* ptr, ::_pbi::ParseCon
     uint32_t tag;
     ptr = ::_pbi::ReadTag(ptr, &tag);
     switch (tag >> 3) {
-      // .ProcEnvProto procEnvProto = 1;
+      // .ProcProto procProto = 1;
       case 1:
         if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 10)) {
-          ptr = ctx->ParseMessage(_internal_mutable_procenvproto(), ptr);
+          ptr = ctx->ParseMessage(_internal_mutable_procproto(), ptr);
           CHK_(ptr);
         } else
           goto handle_unusual;
@@ -903,11 +902,11 @@ uint8_t* SigmaInformProcReq::_InternalSerialize(
   uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
-  // .ProcEnvProto procEnvProto = 1;
-  if (this->_internal_has_procenvproto()) {
+  // .ProcProto procProto = 1;
+  if (this->_internal_has_procproto()) {
     target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::
-      InternalWriteMessage(1, _Internal::procenvproto(this),
-        _Internal::procenvproto(this).GetCachedSize(), target, stream);
+      InternalWriteMessage(1, _Internal::procproto(this),
+        _Internal::procproto(this).GetCachedSize(), target, stream);
   }
 
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
@@ -926,11 +925,11 @@ size_t SigmaInformProcReq::ByteSizeLong() const {
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
-  // .ProcEnvProto procEnvProto = 1;
-  if (this->_internal_has_procenvproto()) {
+  // .ProcProto procProto = 1;
+  if (this->_internal_has_procproto()) {
     total_size += 1 +
       ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::MessageSize(
-        *_impl_.procenvproto_);
+        *_impl_.procproto_);
   }
 
   return MaybeComputeUnknownFieldsSize(total_size, &_impl_._cached_size_);
@@ -951,9 +950,9 @@ void SigmaInformProcReq::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, con
   uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
-  if (from._internal_has_procenvproto()) {
-    _this->_internal_mutable_procenvproto()->::ProcEnvProto::MergeFrom(
-        from._internal_procenvproto());
+  if (from._internal_has_procproto()) {
+    _this->_internal_mutable_procproto()->::ProcProto::MergeFrom(
+        from._internal_procproto());
   }
   _this->_internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
 }
@@ -972,7 +971,7 @@ bool SigmaInformProcReq::IsInitialized() const {
 void SigmaInformProcReq::InternalSwap(SigmaInformProcReq* other) {
   using std::swap;
   _internal_metadata_.InternalSwap(&other->_internal_metadata_);
-  swap(_impl_.procenvproto_, other->_impl_.procenvproto_);
+  swap(_impl_.procproto_, other->_impl_.procproto_);
 }
 
 ::PROTOBUF_NAMESPACE_ID::Metadata SigmaInformProcReq::GetMetadata() const {

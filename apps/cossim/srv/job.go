@@ -8,8 +8,6 @@ import (
 	"sync"
 	"time"
 
-	"google.golang.org/protobuf/proto"
-
 	cachegrpclnt "sigmaos/apps/cache/cachegrp/clnt"
 	cachegrpmgr "sigmaos/apps/cache/cachegrp/mgr"
 	cacheproto "sigmaos/apps/cache/proto"
@@ -20,7 +18,7 @@ import (
 	epsrv "sigmaos/apps/epcache/srv"
 	db "sigmaos/debug"
 	"sigmaos/proc"
-	rpcproto "sigmaos/rpc/proto"
+	rpcclnt "sigmaos/rpc/clnt"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 )
@@ -179,23 +177,14 @@ func (j *CosSimJob) AddSrv() (*proc.Proc, time.Duration, error) {
 	for pn, ep := range j.cacheEPs {
 		p.SetCachedEndpoint(pn, ep)
 	}
-	// TODO: put in convenience function
-	rpcWrapperReq := &rpcproto.Req{
-		Method: "CacheSrv.MultiGet",
-	}
-	wrapperBytes, err := proto.Marshal(rpcWrapperReq)
-	if err != nil {
-		db.DPrintf(db.ALWAYS, "Error marshal wrapper bytes: %v", err)
-		return nil, 0, err
-	}
 	multiGetReq := j.cacheClnt.NewMultiGetReq(j.vecKeys)
 	db.DPrintf(db.COSSIMSRV, "MultiGetReq for new cachesrv: %v -> %v", j.cachePN, multiGetReq)
-	reqBytes, err := proto.Marshal(multiGetReq)
+	iniov, err := rpcclnt.WrapRPCRequest("CacheSrv.MultiGet", multiGetReq)
 	if err != nil {
-		db.DPrintf(db.ALWAYS, "Error marshal multiGetReq: %v", err)
+		db.DPrintf(db.ALWAYS, "Error wrap & marshal multiGetReq: %v", err)
 		return nil, 0, err
 	}
-	p.AddInitializationRPC(j.cachePN, [][]byte{wrapperBytes, reqBytes}, 3)
+	p.AddInitializationRPC(j.cachePN, iniov, 3)
 	// Ask for spproxy to run delegated initialization RPCs on behalf of the proc
 	p.SetDelegateInit(j.delegateInitRPCs)
 	start := time.Now()

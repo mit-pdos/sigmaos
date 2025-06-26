@@ -88,19 +88,6 @@ const (
 	MR_TPT           = "MR_TPT"
 )
 
-// KV
-const (
-	KVBAL       Tselector = "KVBAL"
-	KVBAL_ERR             = KVBAL + ERR
-	KVCLERK               = "KVCLERK"
-	KVCLERK_ERR           = KVCLERK + ERR
-	KVMON                 = "KVMON"
-	KVMV                  = "KVMV"
-	KVMV_ERR              = KVMV + ERR
-	KVGRP                 = "KVGRP"
-	KVGRP_ERR             = KVGRP + ERR
-)
-
 // Socialnet
 const (
 	SOCIAL_NETWORK          Tselector = "SOCIAL_NETWORK"

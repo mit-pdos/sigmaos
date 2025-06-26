@@ -171,11 +171,6 @@ func (m *member) spawnL() error {
 	p.AppendEnv(proc.SIGMAFAIL, proc.GetSigmaFail())
 	p.AppendEnv(proc.SIGMAGEN, strconv.Itoa(m.gen))
 	p.AppendEnv("SIGMAREPL", newREPL(m.id, m.NReplicas))
-	// If we are specifically setting kvd's mcpu=1, then set GOMAXPROCS to 1
-	// (for use when comparing to redis).
-	if m.Mcpu == 1000 && strings.Contains(m.Program, "kvd") {
-		p.AppendEnv("GOMAXPROCS", strconv.Itoa(1))
-	}
 	db.DPrintf(db.GROUPMGR, "Spawn p %v", p)
 	if err := m.Spawn(p); err != nil {
 		db.DPrintf(db.GROUPMGR, "Error Spawn pid %v err %v", p.GetPid(), err)

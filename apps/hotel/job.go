@@ -7,7 +7,6 @@ import (
 
 	cachegrpclnt "sigmaos/apps/cache/cachegrp/clnt"
 	cachegrpmgr "sigmaos/apps/cache/cachegrp/mgr"
-	"sigmaos/apps/kv"
 	db "sigmaos/debug"
 	dialproxyclnt "sigmaos/dialproxy/clnt"
 	"sigmaos/proc"
@@ -146,7 +145,6 @@ type HotelJob struct {
 	CacheAutoscaler *cachegrpclnt.Autoscaler
 	pids            []sp.Tpid
 	cache           string
-	kvf             *kv.KVFleet
 	job             string
 }
 
@@ -160,7 +158,6 @@ func NewHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []*Srv, nhotel int, c
 	var cm *cachegrpmgr.CacheMgr
 	var ca *cachegrpclnt.Autoscaler
 	var err error
-	var kvf *kv.KVFleet
 
 	// Init fs.
 	if err := InitHotelFs(sc.FsLib, job); err != nil {
@@ -179,16 +176,6 @@ func NewHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []*Srv, nhotel int, c
 			}
 			cc = cachegrpclnt.NewCachedSvcClnt(sc.FsLib, job)
 			ca = cachegrpclnt.NewAutoscaler(cm, cc)
-		case "kvd":
-			db.DPrintf(db.ALWAYS, "Hotel running with kvd")
-			kvf, err = kv.NewKvdFleet(sc, job, ncache, 0, cacheMcpu, "manual")
-			if err != nil {
-				return nil, err
-			}
-			err = kvf.Start()
-			if err != nil {
-				return nil, err
-			}
 		// XXX Remove
 		case "memcached":
 			db.DPrintf(db.ALWAYS, "Hotel running with memcached")
@@ -217,7 +204,7 @@ func NewHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []*Srv, nhotel int, c
 		db.DPrintf(db.TEST, "Hotel started %v", srv.Name)
 	}
 
-	hj := &HotelJob{sc, cc, cm, ca, pids, cache, kvf, job}
+	hj := &HotelJob{sc, cc, cm, ca, pids, cache, job}
 
 	if ngeo > 1 {
 		for i := 0; i < ngeo-1; i++ {
@@ -264,9 +251,6 @@ func (hj *HotelJob) Stop() error {
 	}
 	if hj.cacheMgr != nil {
 		hj.cacheMgr.Stop()
-	}
-	if hj.kvf != nil {
-		hj.kvf.Stop()
 	}
 	return nil
 }

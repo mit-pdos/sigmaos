@@ -23,7 +23,7 @@ func (pathc *PathClnt) walkSymlink1(fid sp.Tfid, resolved, left path.Tpathname) 
 
 		error := pathc.mntclnt.MountTree(pathc.pe.GetSecrets(), ep, ep.Root, resolved.String())
 		if error != nil {
-			db.DPrintf(db.WALK, "automount %v %v err %v\n", resolved, ep, error)
+			db.DPrintf(db.WALK_ERR, "automount %v %v err %v\n", resolved, ep, error)
 			return left, error.(*serr.Err)
 		}
 		p = append(resolved, left...)

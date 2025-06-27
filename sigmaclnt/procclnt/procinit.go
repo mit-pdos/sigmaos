@@ -53,8 +53,11 @@ func NewProcClnt(fsl *fslib.FsLib) (*ProcClnt, error) {
 		}
 		namedC <- nil
 	}()
-	// Ignore MountTree errors for named; later usages of "named/" will umount the
-	// cached ep entry and retry and may find a new named.
+	// Ignore MountTree errors for named; later usages of "named/"
+	// will umount the cached ep entry and retry and may find a new
+	// named.  Not ignoring the error causes mr's TestCrashMsched1 to
+	// fail.
+	//
 	<-namedC
 	// If MountTree fails for msched, bail out since this proc must
 	// notify its msched, and thus might as well exit now.

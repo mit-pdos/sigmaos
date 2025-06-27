@@ -100,14 +100,14 @@ func (rts *RealmTstate) bootNode(n int, waitForNamed bool) error {
 		// Indicate that the link with named must be resolved, in case
 		// the endpoint for the old named is cached; a failed
 		// connection will invalidate the endpoint.
-		fn := path.MarkResolve(filepath.Join(sp.REALMS, rts.realm.String()))
+		pn := path.MarkResolve(filepath.Join(sp.REALMS, rts.realm.String()))
 
 		// Loop until new named is up.  Don't use GetFileWatch because
 		// it may return the old named's EP, since it persists until
 		// the new one overrides it.
 		for i := 0; true; i++ {
-			if sts, err := rts.Ts.GetDir(fn); err != nil {
-				db.DPrintf(db.TEST, "Named down %v err %v", rts.realm, err)
+			if sts, err := rts.Ts.GetDir(pn); err != nil {
+				db.DPrintf(db.TEST, "Named down %v pn %v err %v", rts.realm, pn, err)
 				if i >= sp.Conf.Path.MAX_RESOLVE_RETRY {
 					return err
 				}
@@ -146,15 +146,16 @@ func (rts *RealmTstate) CrashServer(e0, e1 crash.Tevent, srv string) {
 	switch srv {
 	case sp.MSCHEDREL, sp.PROCDREL, sp.UXREL:
 		if srv == sp.MSCHEDREL || srv == sp.PROCDREL {
+			// Wait for old named potentially to exit and its lease to expire
 			db.DPrintf(db.TEST, "Waiting for named's lease to (potentially) expire")
-			time.Sleep(sp.EtcdSessionExpired * time.Second)
+			time.Sleep(2*sp.Conf.Session.TIMEOUT + sp.EtcdSessionExpired*time.Second)
 			db.DPrintf(db.TEST, "Done waiting for named's lease to (potentially) expire")
 		}
 		// a crashed msched and procd causes several kernel services
 		// to exit, so start a new node. if the crashed msched started
-		// named, the named will crash too, but realmd will start a
-		// new one (for which we may have to wait until it has
-		// started).
+		// named, the named will crash too (because its waitExit() to
+		// msched will timeout). but realmd will start a new one (for
+		// which we may have to wait until it has started).
 		err = rts.bootNode(1, true)
 	default:
 		err = rts.Ts.BootEnv(srv, []string{"SIGMAFAIL=" + s})

@@ -153,19 +153,18 @@ func Run(args []string) error {
 		// Allow connections from all realms, so that realms can mount the kernel
 		// service union directories
 		nd.GetDialProxyClnt().AllowConnectionsFromAllRealms()
-		db.DPrintf(db.ALWAYS, "SetRootNamed %v ep %v", nd.realm, ep)
+		db.DPrintf(db.NAMED_LDR, "SetRootNamed %v ep %v", nd.realm, ep)
 		if err := nd.fs.SetRootNamed(ep); err != nil {
 			db.DFatalf("SetNamed: %v", err)
 		}
 	} else {
 		pn = filepath.Join(sp.REALMS, nd.realm.String())
-		db.DPrintf(db.ALWAYS, "NewEndpointSymlink %v %v ep %v", nd.realm, pn, ep)
 		if err := nd.WriteEndpointFile(pn, ep); err != nil {
-			db.DPrintf(db.ERROR, "MkEndpointFile %v at %v err %v", nd.realm, pn, err)
+			db.DPrintf(db.NAMED_LDR, "MkEndpointFile %v at %v err %v", nd.realm, pn, err)
 			db.DFatalf("MkEndpointFile %v at %v err %v", nd.realm, pn, err)
 			return err
 		}
-		db.DPrintf(db.NAMED_LDR, "[%v] named endpoint %v", nd.realm, ep)
+		db.DPrintf(db.NAMED_LDR, "[%v] named %v endpoint %v", nd.realm, pn, ep)
 	}
 
 	nd.getRoot(path.MarkResolve(pn))

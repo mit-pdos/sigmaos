@@ -67,7 +67,7 @@ func newTstate(mrts *test.MultiRealmTstate, srvs []*hotel.Srv, ncache int, geoNI
 	ncore += ncache * (int(CACHE_MCPU) / 1000)
 	n := 1
 	if int(linuxsched.GetNCores()) < ncore {
-		n += (ncore / int(linuxsched.GetNCores())) + 1
+		n += (ncore / int(linuxsched.GetNCores())) + 2
 	}
 	db.DPrintf(db.TEST, "linux %d ncore %d n %d", linuxsched.GetNCores(), ncore, n)
 	err = ts.mrts.GetRealm(test.REALM1).BootNode(n)

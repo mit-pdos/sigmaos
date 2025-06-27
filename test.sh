@@ -354,7 +354,7 @@ fi
 if [[ $APPS == "--apps" ]]; then
     if [[ $FAST == "--fast" ]]; then
         PKGS="apps/mr apps/imgresize apps/hotel apps/socialnetwork"
-        TNAMES=("MRJob" "ImgdOne" "TestBenchDeathStarSingle" "TestCompose")
+        TNAMES=("MRJob" "ImgdOne" "TestWww" "TestCompose")
         NEED_DB=("false" "false" "true" "true")
         i=0
         for T in $PKGS; do

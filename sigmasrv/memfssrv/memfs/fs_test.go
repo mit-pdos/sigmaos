@@ -24,7 +24,7 @@ func newTest(t *testing.T) *TestState {
 	ts := &TestState{}
 	ts.t = t
 	ts.ctx = ctx.NewCtxNull()
-	ts.rooti = dir.NewRootDir(ts.ctx, memfs.NewNewInode(sp.DEV_MEMFS))
+	ts.rooti = dir.NewRootDir(ts.ctx, NewNewInode(sp.DEV_MEMFS))
 	return ts
 }
 

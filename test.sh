@@ -158,11 +158,9 @@ if [[ $COMPILE == "--compile" ]]; then
       sigmaclnt/fslib \
       util/coordination/semaphore \
       sched/msched/proc/chunk/srv \
-      ft/leaderclnt/electclnt \
       sigmaclnt/fslib/dirwatcher \
       sigmaclnt/fslib/dircache \
       sigmasrv/memfssrv/memfs \
-      namesrv \
       namesrv/fsetcd \
       namesrv/ndclnt \
       sigmaclnt/procclnt \

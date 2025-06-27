@@ -122,7 +122,7 @@ func Run(args []string) error {
 		db.DFatalf("Error Started: %v", err)
 	}
 
-	ch := make(chan struct{})
+	ch := make(chan error)
 	go nd.waitExit(ch)
 
 	db.DPrintf(db.NAMED_LDR, "started %v %v", pe.GetPID(), nd.realm)
@@ -194,9 +194,9 @@ func Run(args []string) error {
 		}
 	})
 
-	<-ch
+	err = <-ch
 
-	db.DPrintf(db.ALWAYS, "named done %v %v", nd.realm, ep)
+	db.DPrintf(db.NAMED_LDR, "named done %v %v err %v", nd.realm, ep, err)
 
 	if err := nd.resign(); err != nil {
 		db.DPrintf(db.NAMED_LDR, "resign %v err %v", pe.GetPID(), err)
@@ -275,24 +275,23 @@ func (nd *Named) getRoot(pn string) error {
 	return nil
 }
 
-func (nd *Named) waitExit(ch chan struct{}) {
-	var i int = 0
-	for ; ; i++ {
+func (nd *Named) waitExit(ch chan error) {
+	var r error
+	// retry := sp.Conf.Path.MAX_RESOLVE_RETRY
+	retry := 1
+	for i := 0; ; i++ {
 		err := nd.WaitEvict(nd.ProcEnv().GetPID())
 		if err == nil {
-			db.DPrintf(db.ALWAYS, "candidate %v %v evicted", nd.realm, nd.ProcEnv().GetPID().String())
-			ch <- struct{}{}
 			break
 		}
-		if i > sp.Conf.Path.MAX_RESOLVE_RETRY {
-			db.DPrintf(db.ALWAYS, "candidate %v %v err evict giving up!", nd.realm, nd.ProcEnv().GetPID().String())
-			ch <- struct{}{}
+		r = err
+		if i >= retry {
 			break
 		}
-		db.DPrintf(db.NAMED, "Error WaitEvict: %v", err)
+		db.DPrintf(db.NAMED_LDR, "Error WaitEvict: err %v; retry", err)
 		time.Sleep(sp.Conf.Path.RESOLVE_TIMEOUT)
-		continue
 	}
+	ch <- r
 }
 
 func (nd *Named) watchLeased() {

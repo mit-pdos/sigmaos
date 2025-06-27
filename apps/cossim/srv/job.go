@@ -90,8 +90,9 @@ type CosSimJob struct {
 	epcsrvEP         *sp.Tendpoint
 	cacheClnt        *cachegrpclnt.CachedSvcClnt
 	cacheMgr         *cachegrpmgr.CacheMgr
-	cachePN          string
+	cachePNBase      string
 	cacheEPs         map[string]*sp.Tendpoint
+	ncache           int
 	nvec             int
 	vecDim           int
 	eagerInit        bool
@@ -149,9 +150,10 @@ func NewCosSimJob(sc *sigmaclnt.SigmaClnt, job string, nvec int, vecDim int, eag
 		EPCacheJob:       epcj,
 		epcsrvEP:         epcsrvEP,
 		cacheClnt:        cc,
-		cachePN:          cc.Server(0),
+		cachePNBase:      filepath.Dir(cc.Server(0)),
 		cacheEPs:         cacheEPs,
 		cacheMgr:         cm,
+		ncache:           ncache,
 		nvec:             nvec,
 		vecDim:           vecDim,
 		vecs:             vecs,
@@ -170,7 +172,7 @@ func (j *CosSimJob) GetClnt(srvID string) (*clnt.CosSimClnt, error) {
 
 // Add a new cossim server
 func (j *CosSimJob) AddSrv() (*proc.Proc, time.Duration, error) {
-	p := proc.NewProc("cossim-srv-cpp", []string{j.cachePN, strconv.Itoa(j.nvec), strconv.Itoa(j.vecDim), strconv.FormatBool(j.eagerInit)})
+	p := proc.NewProc("cossim-srv-cpp", []string{j.cachePNBase, strconv.Itoa(j.ncache), strconv.Itoa(j.nvec), strconv.Itoa(j.vecDim), strconv.FormatBool(j.eagerInit)})
 	p.GetProcEnv().UseSPProxy = true
 	p.SetMcpu(j.srvMcpu)
 	p.SetCachedEndpoint(epcache.EPCACHE, j.epcsrvEP)
@@ -178,13 +180,19 @@ func (j *CosSimJob) AddSrv() (*proc.Proc, time.Duration, error) {
 		p.SetCachedEndpoint(pn, ep)
 	}
 	multiGetReq := j.cacheClnt.NewMultiGetReq(j.vecKeys)
-	db.DPrintf(db.COSSIMSRV, "MultiGetReq for new cachesrv: %v -> %v", j.cachePN, multiGetReq)
+	cachesrvPN := filepath.Join(j.cachePNBase, "/0")
+	db.DPrintf(db.COSSIMSRV, "MultiGetReq for new cachesrv: %v -> %v", cachesrvPN, multiGetReq)
 	iniov, err := rpcclnt.WrapRPCRequest("CacheSrv.MultiGet", multiGetReq)
 	if err != nil {
 		db.DPrintf(db.ALWAYS, "Error wrap & marshal multiGetReq: %v", err)
 		return nil, 0, err
 	}
-	p.AddInitializationRPC(j.cachePN, iniov, 3)
+	p.AddInitializationRPC(cachesrvPN, iniov, 3)
+	totalInIOVLen := 0
+	for _, b := range iniov {
+		totalInIOVLen += len(b)
+	}
+	db.DPrintf(db.ALWAYS, "Total delegated RPC len: %v", totalInIOVLen)
 	// Ask for spproxy to run delegated initialization RPCs on behalf of the proc
 	p.SetDelegateInit(j.delegateInitRPCs)
 	start := time.Now()

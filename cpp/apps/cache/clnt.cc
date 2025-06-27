@@ -29,7 +29,8 @@ std::expected<std::shared_ptr<sigmaos::rpc::Clnt>, sigmaos::serr::Error> Clnt::g
     // TODO: set path dynamically based on server ID
     // Create a sigmap RPC channel to the server via the sigmaproxy
     log(CACHECLNT, "Create channel (with lazy initialization)");
-    auto chan = std::make_shared<sigmaos::rpc::spchannel::Channel>(_srv_pn, _sp_clnt);
+    std::string srv_pn = _svc_pn_base + "/" + std::to_string(srv_id);
+    auto chan = std::make_shared<sigmaos::rpc::spchannel::Channel>(srv_pn, _sp_clnt);
     log(CACHECLNT, "Create RPC client");
     // Create an RPC client from the channel
     _clnts[srv_id] = std::make_shared<sigmaos::rpc::Clnt>(chan, _sp_clnt->GetSPProxyChannel());
@@ -43,7 +44,7 @@ std::expected<int, sigmaos::serr::Error> Clnt::Get(std::string key, std::shared_
   std::shared_ptr<sigmaos::rpc::Clnt> rpcc;
   {
     // TODO: pass in srv_id
-    auto res = get_clnt(0);
+    auto res = get_clnt(key2server(key, _nsrv));
     if (!res.has_value()) {
       log(CACHECLNT_ERR, "Error get_clnt: {}", res.error().String());
       return std::unexpected(res.error());

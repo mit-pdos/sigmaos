@@ -22,24 +22,27 @@ int main(int argc, char *argv[]) {
   auto sp_clnt = std::make_shared<sigmaos::proxy::sigmap::Clnt>();
   LogSpawnLatency(pe->GetPID(), pe->GetSpawnTime(), start, "Create spproxyclnt");
 
-  if (argc < 5) {
-    fatal("Usage: {} CACHE_PN N_VEC VEC_LEN EAGER_INIT", argv[0]);
+  if (argc < 6) {
+    fatal("Usage: {} CACHE_PN N_CACHE N_VEC VEC_LEN EAGER_INIT", argv[0]);
   }
 
   std::string cache_pn = argv[1];
 
-  std::string str_nvec = argv[2];
+  std::string str_ncache = argv[2];
+  int ncache = std::stoi(str_ncache);
+
+  std::string str_nvec = argv[3];
   int nvec = std::stoi(str_nvec);
 
-  std::string str_vec_dim = argv[3];
+  std::string str_vec_dim = argv[4];
   int vec_dim = std::stoi(str_vec_dim);
 
-  std::string str_eager_init = argv[4];
+  std::string str_eager_init = argv[5];
   bool eager_init = str_eager_init == "true";
 
   // Create the echo server
   start = GetCurrentTime();
-  auto srv = std::make_shared<sigmaos::apps::cossim::Srv>(sp_clnt, nvec, vec_dim, cache_pn, eager_init);
+  auto srv = std::make_shared<sigmaos::apps::cossim::Srv>(sp_clnt, nvec, vec_dim, cache_pn, ncache, eager_init);
   LogSpawnLatency(pe->GetPID(), pe->GetSpawnTime(), start, "Make CosSim");
   // Run the server
   srv->Run();

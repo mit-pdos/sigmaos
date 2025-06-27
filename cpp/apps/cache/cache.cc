@@ -14,5 +14,10 @@ uint32_t key2shard(std::string key) {
   return s % NSHARD;
 }
 
+uint32_t key2server(std::string key, uint32_t nserver) {
+  uint32_t shard = key2shard(key);
+  return shard % nserver;
+}
+
 };
 };

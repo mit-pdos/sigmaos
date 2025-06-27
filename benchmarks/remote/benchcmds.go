@@ -245,7 +245,7 @@ func GetCorralCmdConstructor() GetBenchCmdFn {
 // - dur specifies the duration for which each rps period should last.
 //
 // - cacheType specifies the type of cache service that hotel should use (e.g.,
-// cached vs kvd vs memcached).
+// cached vs memcached).
 //
 // - If scaleCache is true, the cache autoscales.
 //
@@ -435,7 +435,7 @@ func GetSocialnetClientCmdConstructor(leader bool, numClients int, rps []int, du
 // - dur specifies the duration for which each rps period should last.
 //
 // - cacheType specifies the type of cache service that hotel should use (e.g.,
-// cached vs kvd vs memcached).
+// cached vs memcached).
 //
 // - If scaleCache is true, the cache autoscales.
 //
@@ -507,7 +507,7 @@ func GetLCBEHotelImgResizeMultiplexingCmdConstructor(numClients int, rps []int, 
 // - dur specifies the duration for which each rps period should last.
 //
 // - cacheType specifies the type of cache service that hotel should use (e.g.,
-// cached vs kvd vs memcached).
+// cached vs memcached).
 //
 // - If scaleCache is true, the cache autoscales.
 //

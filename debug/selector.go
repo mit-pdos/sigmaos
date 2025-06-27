@@ -46,14 +46,6 @@ const (
 	PERF               = "PERF"
 )
 
-// WWW
-const (
-	WWW      Tselector = "WWW"
-	WWW_ERR            = WWW + ERR
-	WWW_CLNT           = WWW + "_CLNT"
-	MATMUL             = "MATMUL"
-)
-
 // Cache
 const (
 	CACHESRV      Tselector = "CACHESRV"
@@ -81,6 +73,7 @@ const (
 	SPINNER                  = "SPINNER"
 	FSREADER                 = "FSREADER"
 	SLEEPER_TIMING           = "SLEEPER_TIMING"
+	MATMUL                   = "MATMUL"
 )
 
 // Img
@@ -93,19 +86,6 @@ const (
 const (
 	MR     Tselector = "MR"
 	MR_TPT           = "MR_TPT"
-)
-
-// KV
-const (
-	KVBAL       Tselector = "KVBAL"
-	KVBAL_ERR             = KVBAL + ERR
-	KVCLERK               = "KVCLERK"
-	KVCLERK_ERR           = KVCLERK + ERR
-	KVMON                 = "KVMON"
-	KVMV                  = "KVMV"
-	KVMV_ERR              = KVMV + ERR
-	KVGRP                 = "KVGRP"
-	KVGRP_ERR             = KVGRP + ERR
 )
 
 // Socialnet

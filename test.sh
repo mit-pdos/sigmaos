@@ -174,7 +174,6 @@ if [[ $COMPILE == "--compile" ]]; then
       ft/leadertest \
       ft/task \
       apps/cache/cachegrp/clnt \
-      apps/www \
       sigmasrv/memfssrv/sigmapsrv \
       realm/clnt \
       apps/mr \
@@ -398,7 +397,10 @@ if [[ $APPS == "--apps" ]]; then
             fi
             ./start-db.sh
             run_test $T "./test-in-docker.sh --pkg $T --args \"$VERB --timeout 20m $SPPROXYD $DIALPROXY $REUSEKERNEL\""
+<<<<<<< HEAD
             ./stop.sh
+=======
+>>>>>>> test-in-docker
         done
     fi
 fi

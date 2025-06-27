@@ -158,7 +158,7 @@ func init() {
 	flag.BoolVar(&MANUALLY_SCALE_CACHES, "manually_scale_caches", false, "Manually scale caches")
 	flag.DurationVar(&SCALE_CACHE_DELAY, "scale_cache_delay", 0*time.Second, "Delay to wait before scaling up number of caches.")
 	flag.IntVar(&N_CACHES_TO_ADD, "n_caches_to_add", 0, "Number of caches to add.")
-	flag.StringVar(&CACHE_TYPE, "cache_type", "cached", "Hotel cache type (kvd or cached).")
+	flag.StringVar(&CACHE_TYPE, "cache_type", "cached", "Hotel cache type (cached).")
 	flag.BoolVar(&CACHE_GC, "cache_gc", false, "Turn hotel cache GC on (true) or off (false).")
 	flag.StringVar(&BLOCK_MEM, "block_mem", "0MB", "Amount of physical memory to block on every machine.")
 	flag.StringVar(&MEMCACHED_ADDRS, "memcached", "", "memcached server addresses (comma-separated).")
@@ -501,41 +501,6 @@ func TestAppMR(t *testing.T) {
 	monitorCPUUtil(mrts.GetRealm(REALM1), p)
 	runOps(mrts.GetRealm(REALM1), apps, runMR, rs)
 	printResultSummary(rs)
-}
-
-func runKVTest(t *testing.T, nReplicas int) {
-	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{REALM1})
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
-	defer mrts.Shutdown()
-
-	rs := benchmarks.NewResults(1, benchmarks.E2E)
-	p := newRealmPerf(mrts.GetRealm(REALM1))
-	defer p.Done()
-	nclerks := []int{N_CLERK}
-	db.DPrintf(db.ALWAYS, "Running with %v clerks", N_CLERK)
-	jobs, ji := newNKVJobs(mrts.GetRealm(REALM1), 1, N_KVD, nReplicas, nclerks, nil, CLERK_DURATION, proc.Tmcpu(KVD_MCPU), proc.Tmcpu(CLERK_MCPU), KV_AUTO, REDIS_ADDR)
-	go func() {
-		for _, j := range jobs {
-			// Wait until ready
-			<-j.ready
-			// Ack to allow the job to proceed.
-			j.ready <- true
-		}
-	}()
-	monitorCPUUtil(mrts.GetRealm(REALM1), p)
-	db.DPrintf(db.TEST, "runOps")
-	runOps(mrts.GetRealm(REALM1), ji, runKV, rs)
-	printResultSummary(rs)
-}
-
-func TestAppKVUnrepl(t *testing.T) {
-	runKVTest(t, 0)
-}
-
-func TestAppKVRepl(t *testing.T) {
-	runKVTest(t, 3)
 }
 
 func TestAppCached(t *testing.T) {
@@ -1024,97 +989,6 @@ func TestRealmBalanceImgResizeImgResize(t *testing.T) {
 		db.DPrintf(db.TEST, "Done ImgResize job %v", i+1)
 	}
 	printResultSummary(rses[0])
-}
-
-// Old realm balance benchmark involving KV & MR.
-// Start a realm with a long-running BE mr job. Then, start a realm with a kv
-// job. In phases, ramp the kv job's CPU utilization up and down, and watch the
-// realm-level software balance resource requests across realms.
-func TestKVMRRRB(t *testing.T) {
-	done := make(chan bool)
-	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{REALM1, REALM2})
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
-	defer mrts.Shutdown()
-	// Structures for mr
-	rs1 := benchmarks.NewResults(1, benchmarks.E2E)
-	p1 := newRealmPerf(mrts.GetRealm(REALM1))
-	defer p1.Done()
-	// Structure for kv
-	rs2 := benchmarks.NewResults(1, benchmarks.E2E)
-	p2 := newRealmPerf(mrts.GetRealm(REALM2))
-	defer p2.Done()
-	// Prep MR job
-	mrjobs, mrapps := newNMRJobs(mrts.GetRealm(REALM1), p1, 1, MR_APP, chooseMRJobRoot(mrts.GetRealm(REALM1)), proc.Tmem(MR_MEM_REQ))
-	// Prep KV job
-	nclerks := []int{N_CLERK}
-	kvjobs, ji := newNKVJobs(mrts.GetRealm(REALM2), 1, N_KVD, 0, nclerks, nil, CLERK_DURATION, proc.Tmcpu(KVD_MCPU), proc.Tmcpu(CLERK_MCPU), KV_AUTO, REDIS_ADDR)
-	monitorCPUUtil(mrts.GetRealm(REALM1), p1)
-	monitorCPUUtil(mrts.GetRealm(REALM2), p2)
-	// Run KV job
-	go func() {
-		runOps(mrts.GetRealm(REALM2), ji, runKV, rs2)
-		done <- true
-	}()
-	// Wait for KV jobs to set up.
-	<-kvjobs[0].ready
-	// Run MR job
-	go func() {
-		runOps(mrts.GetRealm(REALM1), mrapps, runMR, rs1)
-		done <- true
-	}()
-	// Wait for MR jobs to set up.
-	<-mrjobs[0].ready
-	// Kick off MR jobs.
-	mrjobs[0].ready <- true
-	// Sleep for a bit
-	time.Sleep(70 * time.Second)
-	// Kick off KV jobs
-	kvjobs[0].ready <- true
-	// Wait for both jobs to finish.
-	<-done
-	<-done
-	printResultSummary(rs1)
-	printResultSummary(rs2)
-}
-
-func testWww(t *testing.T, sigmaos bool) {
-	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{REALM1})
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
-	defer func() {
-		if sigmaos {
-			mrts.Shutdown()
-		}
-	}()
-	rs := benchmarks.NewResults(1, benchmarks.E2E)
-	db.DPrintf(db.ALWAYS, "Running with %d clients", N_CLNT)
-	jobs, ji := newWwwJobs(mrts.GetRealm(REALM1), sigmaos, 1, proc.Tmcpu(WWWD_MCPU), WWWD_REQ_TYPE, N_TRIALS, N_CLNT, N_CLNT_REQ, WWWD_REQ_DELAY)
-	go func() {
-		for _, j := range jobs {
-			// Wait until ready
-			<-j.ready
-			// Ack to allow the job to proceed.
-			j.ready <- true
-		}
-	}()
-	if sigmaos {
-		p := newRealmPerf(mrts.GetRealm(REALM1))
-		defer p.Done()
-		monitorCPUUtil(mrts.GetRealm(REALM1), p)
-	}
-	runOps(mrts.GetRealm(REALM1), ji, runWww, rs)
-	printResultSummary(rs)
-}
-
-func TestWwwSigmaos(t *testing.T) {
-	testWww(t, true)
-}
-
-func TestWwwK8s(t *testing.T) {
-	testWww(t, false)
 }
 
 func testHotel(rootts *test.Tstate, ts1 *test.RealmTstate, p *perf.Perf, sigmaos bool, fn hotelFn) {

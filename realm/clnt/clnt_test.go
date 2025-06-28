@@ -17,12 +17,12 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/path"
 	"sigmaos/proc"
-	"sigmaos/sigmaclnt/fslib"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 	"sigmaos/util/crash"
 	"sigmaos/util/linux/mem"
 	rd "sigmaos/util/rand"
+	"sigmaos/util/retry"
 )
 
 const (
@@ -634,7 +634,7 @@ func TestCrashRealmNamed(t *testing.T) {
 	// allow named to crash
 	time.Sleep(T * time.Millisecond)
 
-	err = fslib.RetryAtLeastOnce(func() error {
+	err = retry.RetryAtLeastOnce(func() error {
 		_, err = sc.GetFile(fn)
 		db.DPrintf(db.TEST, "Named down pn %v err %v", fn, err)
 		return err

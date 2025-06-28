@@ -1,4 +1,4 @@
-package fslib
+package retry
 
 import (
 	"fmt"

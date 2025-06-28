@@ -22,10 +22,10 @@ import (
 	mschedclnt "sigmaos/sched/msched/clnt"
 	"sigmaos/serr"
 	"sigmaos/sigmaclnt"
-	"sigmaos/sigmaclnt/fslib"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
 	spprotosrv "sigmaos/spproto/srv"
+	"sigmaos/util/retry"
 )
 
 const (
@@ -232,7 +232,7 @@ func (rm *RealmSrv) Remove(ctx fs.CtxI, req proto.RemoveReq, res *proto.RemoveRe
 		// happens is in realm clean up in TestCrashRealmNamed,
 		// because it will remove the crashnd.sem file, which causes
 		// named to crash in that.
-		if err := fslib.RetryAtLeastOnce(func() error {
+		if err := retry.RetryAtLeastOnce(func() error {
 			err := sc.RmDirEntries(sp.NAMED)
 			if err != nil {
 				db.DPrintf(db.REALMD_ERR, "Remove NAMED err %v", err)

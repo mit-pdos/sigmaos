@@ -13,9 +13,9 @@ import (
 	"sigmaos/proc"
 	realmpkg "sigmaos/realm"
 	"sigmaos/sigmaclnt"
-	"sigmaos/sigmaclnt/fslib"
 	sp "sigmaos/sigmap"
 	"sigmaos/util/crash"
+	"sigmaos/util/retry"
 )
 
 // Tstate relative to a realm.
@@ -107,7 +107,7 @@ func (rts *RealmTstate) bootNode(n int, waitForNamed bool) error {
 		// it may return the old named's EP, since it persists until
 		// the new one overrides it.
 		var sts []*sp.Tstat
-		err := fslib.RetryAtMostOnce(func() error {
+		err := retry.RetryAtMostOnce(func() error {
 			db.DPrintf(db.TEST, "Named down %v pn %v err %v", rts.realm, pn, err)
 			sts, err = rts.Ts.GetDir(pn)
 			return err

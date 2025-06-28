@@ -24,10 +24,10 @@ import (
 	proto "sigmaos/sched/msched/proc/chunk/proto"
 	"sigmaos/serr"
 	"sigmaos/sigmaclnt"
-	"sigmaos/sigmaclnt/fslib"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
 	"sigmaos/util/perf"
+	"sigmaos/util/retry"
 )
 
 const (
@@ -457,7 +457,7 @@ func (cksrv *ChunkSrv) lookup(sc *sigmaclnt.SigmaClnt, pid sp.Tpid, prog string,
 
 	var st *sp.Tstat
 	path := ""
-	err := fslib.RetryPaths(paths, func(i int, pn string) error {
+	err := retry.RetryPaths(paths, func(i int, pn string) error {
 		db.DPrintf(db.CHUNKSRV, "Stat '%v/%v'", pn, prog)
 		s := time.Now()
 		sst, err := sc.Stat(pn + "/" + prog)
@@ -477,7 +477,7 @@ func (cksrv *ChunkSrv) lookup(sc *sigmaclnt.SigmaClnt, pid sp.Tpid, prog string,
 func open(sc *sigmaclnt.SigmaClnt, prog string, paths []string) (int, string, error) {
 	sfd := -1
 	path := ""
-	if err := fslib.RetryPaths(paths, func(i int, pn string) error {
+	if err := retry.RetryPaths(paths, func(i int, pn string) error {
 		db.DPrintf(db.CHUNKSRV, "sOpen %q/%v", pn, prog)
 		fd, err := sc.Open(pn+"/"+prog, sp.OREAD)
 		if err == nil {

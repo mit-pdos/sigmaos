@@ -53,12 +53,12 @@ func NewEventPath(l string, mi int64, p float64, pn string) Tevent {
 	return Tevent{Label: l, MaxInterval: mi, Prob: p, Path: pn}
 }
 
-func NewEventStart(l string, s, mi int64, p float64) Tevent {
-	return Tevent{Label: l, Start: s, MaxInterval: mi, Prob: p}
+func NewEventPathDelay(l string, mi, d int64, p float64, pn string) Tevent {
+	return Tevent{Label: l, MaxInterval: mi, Delay: d, Prob: p, Path: pn}
 }
 
-func NewEventStartDelay(l string, s, mi, d int64, p float64) Tevent {
-	return Tevent{Label: l, Start: s, MaxInterval: mi, Delay: d, Prob: p}
+func NewEventStart(l string, s, mi int64, p float64) Tevent {
+	return Tevent{Label: l, Start: s, MaxInterval: mi, Prob: p}
 }
 
 func (e *Tevent) String() string {

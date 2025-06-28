@@ -57,7 +57,7 @@ func RunKNamed(args []string) error {
 	}
 	defer nd.fs.Close()
 
-	ep, err := nd.newSrv()
+	ep, err := nd.newSrv(nil)
 	if err != nil {
 		db.DFatalf("Error newSrv %v\n", err)
 	}

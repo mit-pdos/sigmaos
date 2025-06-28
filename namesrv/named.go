@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	db "sigmaos/debug"
@@ -15,6 +16,7 @@ import (
 	"sigmaos/path"
 	"sigmaos/proc"
 	"sigmaos/rpc"
+	sesssrv "sigmaos/session/srv"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
@@ -26,15 +28,16 @@ import (
 type Named struct {
 	*sigmaclnt.SigmaClnt
 	*sigmasrv.SigmaSrv
-	mu     sync.Mutex
-	fs     *fsetcd.FsEtcd
-	elect  *leaderetcd.Election
-	job    string
-	realm  sp.Trealm
-	delay  int64
-	sess   *fsetcd.Session
-	pstats *fsetcd.PstatInode
-	ephch  chan path.Tpathname
+	mu      sync.Mutex
+	fs      *fsetcd.FsEtcd
+	elect   *leaderetcd.Election
+	job     string
+	realm   sp.Trealm
+	delay   int64
+	sess    *fsetcd.Session
+	pstats  *fsetcd.PstatInode
+	ephch   chan path.Tpathname
+	expired atomic.Bool
 }
 
 func newNamed(realm sp.Trealm) *Named {
@@ -137,10 +140,11 @@ func Run(args []string) error {
 		<-nd.sess.Done()
 		db.DPrintf(db.NAMED_LDR, "session expired delay %v", nd.delay)
 		time.Sleep(time.Duration(nd.delay) * time.Millisecond)
+		nd.expired.Store(true)
 		nd.resign()
 	}()
 
-	ep, err := nd.newSrv()
+	ep, err := nd.newSrv(nd)
 	if err != nil {
 		db.DFatalf("Error newSrv %v", err)
 	}
@@ -188,10 +192,9 @@ func Run(args []string) error {
 	})
 
 	crash.Failer(nd.FsLib, crash.NAMED_PARTITION, func(e crash.Tevent) {
-		if nd.delay == 0 {
-			nd.delay = e.Delay
-			nd.sess.Orphan()
-		}
+		db.DPrintf(db.NAMED_LDR, "partition; delay %v", e.Delay)
+		nd.delay = e.Delay
+		nd.sess.Orphan()
 	})
 
 	err = <-ch
@@ -207,7 +210,21 @@ func Run(args []string) error {
 	return nil
 }
 
-func (nd *Named) newSrv() (*sp.Tendpoint, error) {
+// Note: maybe this should be called from named's dir.go and file.go
+// instead of sesssrv.
+func (nd *Named) Expired() bool {
+	// XXX: TODO This isn't quite right because there is a window
+	// between lease expiring and named being notified; we want the
+	// different interface in
+	// https://github.com/etcd-io/etcd/pull/19092/.
+	b := nd.expired.Load()
+	if b {
+		db.DPrintf(db.NAMED, "Reject request; lease expired")
+	}
+	return b
+}
+
+func (nd *Named) newSrv(exp sesssrv.ExpireI) (*sp.Tendpoint, error) {
 	ip := sp.NO_IP
 	root := RootDir(nd.fs, nd.realm)
 	var addr *sp.Taddr
@@ -226,7 +243,7 @@ func (nd *Named) newSrv() (*sp.Tendpoint, error) {
 		addr = sp.NewTaddr(ip, sp.NO_PORT)
 		aaf = spprotosrv.AttachAllowAllToAll
 	}
-	ssrv, err := sigmasrv.NewSigmaSrvRootClntAuthFn(root, addr, "", nd.SigmaClnt, aaf)
+	ssrv, err := sigmasrv.NewSigmaSrvRootClntAuthFnExp(root, addr, "", nd.SigmaClnt, aaf, exp)
 	if err != nil {
 		return nil, fmt.Errorf("NewSigmaSrvRootClnt err: %v", err)
 	}

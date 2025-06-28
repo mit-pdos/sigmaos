@@ -638,10 +638,7 @@ func TestCrashRealmNamed(t *testing.T) {
 	ep1, err := sc.GetNamedEndpoint()
 	assert.Nil(t, err)
 
-	_, p0 := ep0.TargetIPPort(0)
-	_, p1 := ep1.TargetIPPort(0)
-
-	assert.NotEqual(t, p0, p1)
+	assert.False(t, ep0.Equal(ep1))
 
 	defer mrts.Shutdown()
 }

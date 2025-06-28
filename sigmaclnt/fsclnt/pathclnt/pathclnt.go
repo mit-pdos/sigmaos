@@ -246,13 +246,13 @@ func (pathc *PathClnt) open(path path.Tpathname, principal *sp.Tprincipal, resol
 		start := time.Now()
 		fid, path1, left, err := pathc.walkPath(path, resolve, w)
 		db.DPrintf(db.WALK_LAT, "open %v %v -> (%v, %v  %v, %v) lat: %v", pathc.cid, path, fid, path1, left, err, time.Since(start))
-		if serr.IsRetryOK(err) {
+		if serr.IsErrOpenRetryOK(err) {
 			done := len(path1) - len(left)
-			db.DPrintf(db.PATHCLNT_ERR, "Walk retry p %v %v l %v d %v err %v by umount %v", path, path1, left, done, err, path1[0:done])
+			db.DPrintf(db.PATHCLNT_ERR, "walkPath retry pn '%v' pn1 '%v' left '%v' d %v err %v by umount %v", path, path1, left, done, err, path1[0:done])
 			if e := pathc.mntclnt.UmountPrefix(path1[0:done]); e != nil {
 				return sp.NoFid, e
 			}
-			db.DPrintf(db.PATHCLNT_ERR, "open: retry p %v r %v", path, resolve)
+			db.DPrintf(db.PATHCLNT_ERR, "open: retry pn '%v' r %v", path, resolve)
 			// try again
 			time.Sleep(sp.Conf.Path.RESOLVE_TIMEOUT)
 			continue

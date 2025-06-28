@@ -77,6 +77,14 @@ func IsRetryOK(err *Err) bool {
 	return err.IsErrUnreachable() || err.IsErrUnknownfid() || err.IsMaybeSpecialElem()
 }
 
+// Retry Open() also on IsErrIO
+func IsErrOpenRetryOK(err *Err) bool {
+	if err == nil {
+		return false
+	}
+	return err.IsErrUnreachable() || err.IsErrUnknownfid() || err.IsMaybeSpecialElem() || err.IsErrIO()
+}
+
 func (err Terror) String() string {
 	switch err {
 	case TErrNoError:
@@ -326,6 +334,22 @@ func IsErrorIO(error error) bool {
 	var err *Err
 	if errors.As(error, &err) {
 		return err.IsErrIO()
+	}
+	return false
+}
+
+func IsErrorRetryOK(error error) bool {
+	var err *Err
+	if errors.As(error, &err) {
+		return IsRetryOK(err)
+	}
+	return false
+}
+
+func IsErrorOpenRetryOK(error error) bool {
+	var err *Err
+	if errors.As(error, &err) {
+		return IsErrOpenRetryOK(err)
 	}
 	return false
 }

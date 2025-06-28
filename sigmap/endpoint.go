@@ -81,3 +81,17 @@ func (t TTendpoint) String() string {
 		return "UNKOWN"
 	}
 }
+
+func (ep *Tendpoint) Equal(ep1 *Tendpoint) bool {
+	for i, _ := range ep.Addr {
+		if i >= len(ep1.Addr) {
+			return false
+		}
+		ip, p := ep.TargetIPPort(i)
+		ip1, p1 := ep1.TargetIPPort(i)
+		if ip != ip1 || p != p1 {
+			return false
+		}
+	}
+	return true
+}

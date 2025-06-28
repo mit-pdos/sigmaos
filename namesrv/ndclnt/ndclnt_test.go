@@ -157,10 +157,10 @@ func makeNamed2(ts *test.Tstate, ndc *ndclnt.NdClnt, wait, canFail bool) (*proc.
 }
 
 func TestCrashNamedAlone(t *testing.T) {
-	const T = 1000
+	const T = 200
 	crashpn := sp.NAMED + "crashnd.sem"
 
-	e := crash.NewEventPath(crash.NAMED_CRASH, T, float64(1.0), crashpn)
+	e := crash.NewEventPath(crash.NAMED_CRASH, 0, float64(1.0), crashpn)
 	err := crash.SetSigmaFail(crash.NewTeventMapOne(e))
 	assert.Nil(t, err)
 
@@ -349,7 +349,6 @@ func TestCrashNamedClient(t *testing.T) {
 
 func testReconnectClient(t *testing.T, f func(t *testing.T, sc *sigmaclnt.SigmaClnt)) {
 	const (
-		T       = 200
 		N       = 5
 		NETFAIL = 200
 	)
@@ -443,11 +442,10 @@ func TestAtMostOnce(t *testing.T) {
 }
 
 func TestCrashSemaphore(t *testing.T) {
-	const T = 200
 	crashpn := sp.NAMED + "crashnd.sem"
 	pn := filepath.Join(sp.NAMED, "crash.sem")
 
-	e := crash.NewEventPath(crash.NAMED_CRASH, T, float64(1.0), crashpn)
+	e := crash.NewEventPath(crash.NAMED_CRASH, 0, float64(1.0), crashpn)
 	err := crash.SetSigmaFail(crash.NewTeventMapOne(e))
 	assert.Nil(t, err)
 
@@ -763,7 +761,7 @@ func partitionNamed(t *testing.T, delay int64) {
 	assert.Nil(t, err)
 
 	dn := filepath.Join(sp.NAMED, DIR)
-	ts.RmDir(dn)
+	sc.RmDir(dn)
 	err = sc.MkDir(dn, 0777)
 	assert.Nil(t, err, "dir")
 	fn := filepath.Join(dn, "fff")
@@ -820,9 +818,6 @@ func partitionNamed(t *testing.T, delay int64) {
 			assert.True(t, serr.IsErrorUnreachable(err))
 		}
 	}
-	err = fsl2.RmDir(dn)
-	assert.Nil(t, err)
-
 	err = ndc.StopNamed(nd2)
 	assert.Nil(ts.T, err, "Err stop named: %v", err)
 

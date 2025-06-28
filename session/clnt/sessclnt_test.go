@@ -456,7 +456,7 @@ func newTstateSp(t *testing.T) *TstateSp {
 	ts := &TstateSp{}
 	ts.TstateMin = test.NewTstateMin(t)
 	root := dir.NewRootDir(ctx.NewCtxNull(), memfs.NewNewInode(sp.DEV_MEMFS))
-	ts.srv = sigmapsrv.NewSigmaPSrv(ts.PE, dialproxyclnt.NewDialProxyClnt(ts.PE), root, ts.Addr, nil, spprotosrv.AttachAllowAllToAll)
+	ts.srv = sigmapsrv.NewSigmaPSrv(ts.PE, dialproxyclnt.NewDialProxyClnt(ts.PE), root, ts.Addr, nil, spprotosrv.AttachAllowAllToAll, nil)
 	ts.clnt = sessclnt.NewMgr(ts.PE, dialproxyclnt.NewDialProxyClnt(ts.PE))
 	return ts
 }

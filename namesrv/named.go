@@ -137,10 +137,19 @@ func Run(args []string) error {
 	defer nd.fs.Close()
 
 	go func() {
+		// We want to call nd.sess.Expired() but it doesn't exist; see Expire()
 		<-nd.sess.Done()
 		db.DPrintf(db.NAMED_LDR, "session expired delay %v", nd.delay)
-		time.Sleep(time.Duration(nd.delay) * time.Millisecond)
-		nd.expired.Store(true)
+		if nd.delay < 0 {
+			// mark lease has expired but keep running for a while to
+			// test if request are rejected in TestPartitionNamedExpire
+			nd.expired.Store(true)
+			time.Sleep(time.Duration(-nd.delay) * time.Millisecond)
+		} else if nd.delay >= 0 {
+			// if ndelay > 0, mimic bad case (see Expire())
+			time.Sleep(time.Duration(nd.delay) * time.Millisecond)
+			nd.expired.Store(true)
+		}
 		nd.resign()
 	}()
 

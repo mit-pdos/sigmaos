@@ -740,16 +740,11 @@ func TestLeaseGetDirReboot(t *testing.T) {
 	}, true)
 }
 
-// Test if read fails after a named lost leadership
-func TestPartitionNamed(t *testing.T) {
-	// To make test fail, set delay to DELAY_BAD. This mimics the
-	// possible, incorrect scenario in Expired() (without having to
-	// modify etcd).
-	const DELAY_BAD = (sp.EtcdSessionExpired + 1) * 1000
-	const DELAY = 0
+func partitionNamed(t *testing.T, delay int64) {
+	const DIR = "ddd"
 	crashpn := sp.NAMED + "crashnd.sem"
 
-	e := crash.NewEventPathDelay(crash.NAMED_PARTITION, 0, DELAY, float64(1.0), crashpn)
+	e := crash.NewEventPathDelay(crash.NAMED_PARTITION, 0, delay, float64(1.0), crashpn)
 	err := crash.SetSigmaFail(crash.NewTeventMapOne(e))
 	assert.Nil(t, err)
 
@@ -767,7 +762,7 @@ func TestPartitionNamed(t *testing.T) {
 	ep1, err := sc.GetNamedEndpoint()
 	assert.Nil(t, err)
 
-	dn := filepath.Join(sp.NAMED, "ddd")
+	dn := filepath.Join(sp.NAMED, DIR)
 	ts.RmDir(dn)
 	err = sc.MkDir(dn, 0777)
 	assert.Nil(t, err, "dir")
@@ -812,12 +807,43 @@ func TestPartitionNamed(t *testing.T) {
 	// read from old server
 	b = make([]byte, 1)
 	n, err := rdr.Read(b)
-	assert.NotNil(t, err)
-	assert.NotEqual(t, 1, n)
-	db.DPrintf(db.TEST, "read err %v", err)
+	if delay > 0 {
+		// This shouldn't happen but could with current etcd interface.
+		assert.Nil(t, err)
+		assert.Equal(t, 1, n)
+	} else {
+		assert.NotNil(t, err)
+		assert.NotEqual(t, 1, n)
+		if delay < 0 {
+			assert.True(t, serr.IsErrorClosed(err))
+		} else {
+			assert.True(t, serr.IsErrorUnreachable(err))
+		}
+	}
+	err = fsl2.RmDir(dn)
+	assert.Nil(t, err)
 
 	err = ndc.StopNamed(nd2)
 	assert.Nil(ts.T, err, "Err stop named: %v", err)
 
 	ts.Shutdown()
+}
+
+// Test if read fails after a named resigns leadership
+func TestPartitionNamedResignOK(t *testing.T) {
+	partitionNamed(t, 0)
+}
+
+// Test if read fails after a named session expires but before
+// resigning.
+func TestPartitionNamedExpire(t *testing.T) {
+	const DELAY_BAD = (sp.EtcdSessionExpired + 1) * 1000
+	partitionNamed(t, -DELAY_BAD)
+}
+
+// To mimic possible, incorrect scenario in Expired() (without having
+// to modify etcd).
+func TestPartitionNamedResignBad(t *testing.T) {
+	const DELAY_BAD = (sp.EtcdSessionExpired + 1) * 1000
+	partitionNamed(t, DELAY_BAD)
 }

@@ -248,6 +248,10 @@ func (err *Err) IsErrStale() bool {
 	return err.Code() == TErrStale
 }
 
+func (err *Err) IsErrClosed() bool {
+	return err.Code() == TErrClosed
+}
+
 func (err *Err) IsErrSessClosed() bool {
 	return err.Code() == TErrClosed && strings.Contains(err.Error(), "sess")
 }
@@ -306,6 +310,14 @@ func IsErrorUnreachable(error error) bool {
 	var err *Err
 	if errors.As(error, &err) {
 		return err.IsErrUnreachable()
+	}
+	return false
+}
+
+func IsErrorClosed(error error) bool {
+	var err *Err
+	if errors.As(error, &err) {
+		return err.IsErrClosed()
 	}
 	return false
 }

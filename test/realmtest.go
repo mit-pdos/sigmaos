@@ -13,6 +13,7 @@ import (
 	"sigmaos/proc"
 	realmpkg "sigmaos/realm"
 	"sigmaos/sigmaclnt"
+	"sigmaos/sigmaclnt/fslib"
 	sp "sigmaos/sigmap"
 	"sigmaos/util/crash"
 )
@@ -105,19 +106,16 @@ func (rts *RealmTstate) bootNode(n int, waitForNamed bool) error {
 		// Loop until new named is up.  Don't use GetFileWatch because
 		// it may return the old named's EP, since it persists until
 		// the new one overrides it.
-		for i := 0; true; i++ {
-			if sts, err := rts.Ts.GetDir(pn); err != nil {
-				db.DPrintf(db.TEST, "Named down %v pn %v err %v", rts.realm, pn, err)
-				if i >= sp.Conf.Path.MAX_RESOLVE_RETRY {
-					return err
-				}
-				time.Sleep(sp.Conf.Path.RESOLVE_TIMEOUT)
-			} else {
-				db.DPrintf(db.TEST, "Done wait for realm named %v", sp.Names(sts))
-				break
-			}
+		var sts []*sp.Tstat
+		err := fslib.RetryAtMostOnce(func() error {
+			db.DPrintf(db.TEST, "Named down %v pn %v err %v", rts.realm, pn, err)
+			sts, err = rts.Ts.GetDir(pn)
+			return err
+		})
+		if err != nil {
+			return err
 		}
-
+		db.DPrintf(db.TEST, "Done wait for realm named %v", sp.Names(sts))
 	}
 	for _, kid := range kids {
 		for _, ss := range []string{sp.UXREL, sp.S3REL} {

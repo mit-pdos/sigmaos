@@ -17,6 +17,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/path"
 	"sigmaos/proc"
+	"sigmaos/sigmaclnt/fslib"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 	"sigmaos/util/crash"
@@ -609,10 +610,10 @@ func TestMultiRealmIsolationNamed(t *testing.T) {
 }
 
 func TestCrashRealmNamed(t *testing.T) {
-	const T = 1000
+	const T = 200
 	crashpn := sp.NAMED + "crashnd.sem"
 
-	e := crash.NewEventPath(crash.NAMED_CRASH, T, float64(1.0), crashpn)
+	e := crash.NewEventPath(crash.NAMED_CRASH, 0, float64(1.0), crashpn)
 	err := crash.SetSigmaFail(crash.NewTeventMapOne(e))
 	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
@@ -630,14 +631,20 @@ func TestCrashRealmNamed(t *testing.T) {
 	err = crash.SignalFailer(sc.FsLib, crashpn)
 	assert.Nil(t, err, "Err crash: %v", err)
 
-	time.Sleep(2 * T * time.Millisecond)
+	// allow named to crash
+	time.Sleep(T * time.Millisecond)
 
-	_, err = sc.GetFile(fn)
+	err = fslib.RetryAtLeastOnce(func() error {
+		_, err = sc.GetFile(fn)
+		db.DPrintf(db.TEST, "Named down pn %v err %v", fn, err)
+		return err
+	})
 	assert.Nil(t, err)
 
 	ep1, err := sc.GetNamedEndpoint()
 	assert.Nil(t, err)
 
+	db.DPrintf(db.TEST, "ep0 %v ep1 %v", ep0, ep1)
 	assert.False(t, ep0.Equal(ep1))
 
 	defer mrts.Shutdown()

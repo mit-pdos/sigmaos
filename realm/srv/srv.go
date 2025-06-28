@@ -22,6 +22,7 @@ import (
 	mschedclnt "sigmaos/sched/msched/clnt"
 	"sigmaos/serr"
 	"sigmaos/sigmaclnt"
+	"sigmaos/sigmaclnt/fslib"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
 	spprotosrv "sigmaos/spproto/srv"
@@ -226,8 +227,18 @@ func (rm *RealmSrv) Remove(ctx fs.CtxI, req proto.RemoveReq, res *proto.RemoveRe
 
 	sc := r.ndg.SigmaClntRealm()
 	if req.RemoveNamedState {
-		// If removing named state, remove the realm's name/*
-		if err := sc.RmDirEntries(sp.NAMED); err != nil {
+		// If removing named state, remove the realm's name/*. Retry
+		// if realm's named crash while removing.  Once case this
+		// happens is in realm clean up in TestCrashRealmNamed,
+		// because it will remove the crashnd.sem file, which causes
+		// named to crash in that.
+		if err := fslib.RetryAtLeastOnce(func() error {
+			err := sc.RmDirEntries(sp.NAMED)
+			if err != nil {
+				db.DPrintf(db.REALMD_ERR, "Remove NAMED err %v", err)
+			}
+			return err
+		}); err != nil {
 			db.DPrintf(db.ERROR, "Error remove NAMED: %v", err)
 			return err
 		}

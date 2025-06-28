@@ -301,6 +301,7 @@ func (nd *Named) getRoot(pn string) error {
 	return nil
 }
 
+// XXX maybe not even retry once
 func (nd *Named) waitExit(ch chan error) {
 	var r error
 	// retry := sp.Conf.Path.MAX_RESOLVE_RETRY

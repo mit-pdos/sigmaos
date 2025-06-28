@@ -59,20 +59,59 @@ std::expected<int, sigmaos::serr::Error> Srv::Init() {
     std::vector<uint64_t> lengths;
     auto start = GetCurrentTime();
     log(COSSIMSRV, "Going to get shard");
+    // If retrieving delegated initialization RPCs
     if (_sp_clnt->ProcEnv()->GetDelegateInit()) {
+      // Retrieve the RPC result for each cache server
       for (int i = 0; i < _ncache; i++) {
         // Get the serialized vector from cached
         {
           auto res = _cache_clnt->DelegatedMultiGet(i);
           if (!res.has_value()) {
-            log(SPAWN_LAT, "Error get all-vecs {}", res.error().String());
+            log(COSSIMSRV_ERR, "Error DelegatedMultiVec {}", res.error().String());
             return std::unexpected(res.error());
           }
           auto res_pair = res.value();
           lengths = res_pair.first;
           buf = res_pair.second; 
         }
-        log(COSSIMSRV, "Got shard delegated RPC #{}", i);
+        log(COSSIMSRV, "Got shards delegated RPC #{}", i);
+        LogSpawnLatency(_sp_clnt->ProcEnv()->GetPID(), _sp_clnt->ProcEnv()->GetSpawnTime(), start, "GetShard RPC");
+        start = GetCurrentTime();
+        uint64_t off = 0;
+        for (int id = 0; id < _nvec; id++) {
+          log(COSSIMSRV, "parse vec {}", id);
+          _vec_db[id] = std::make_shared<sigmaos::apps::cossim::Vector>(buf, buf->data() + off, _vec_dim);
+          log(COSSIMSRV, "done parse vec {}", id);
+          off += lengths[id];
+          nbyte += lengths[id];
+        }
+        log(COSSIMSRV, "Done parsing shard delegated RPC #{}", i);
+      }
+      log(COSSIMSRV, "Parsed all vec shards from delegated RPCs & constructed DB");
+      LogSpawnLatency(_sp_clnt->ProcEnv()->GetPID(), _sp_clnt->ProcEnv()->GetSpawnTime(), start, "Parse vecs & construct DB");
+    } else {
+      std::map<uint32_t, std::vector<std::string>> key_vecs;
+      for (uint32_t i = 0; i < _nvec; i++) {
+        std::string i_str = std::to_string(i);
+        uint32_t server_id = sigmaos::apps::cache::key2server(i_str, _ncache);
+        if (!key_vecs.contains(i)) {
+          key_vecs[i] = std::vector<std::string>();
+        }
+        key_vecs[i].push_back(i_str);
+      }
+      for (int i = 0; i < _ncache; i++) {
+        // Get the serialized vector from cached
+        {
+          auto res = _cache_clnt->MultiGet(key_vecs[i]);
+          if (!res.has_value()) {
+            log(COSSIMSRV_ERR, "Error MultiGet {}", res.error().String());
+            return std::unexpected(res.error());
+          }
+          auto res_pair = res.value();
+          lengths = res_pair.first;
+          buf = res_pair.second; 
+        }
+        log(COSSIMSRV, "Got shards direct RPC");
         LogSpawnLatency(_sp_clnt->ProcEnv()->GetPID(), _sp_clnt->ProcEnv()->GetSpawnTime(), start, "GetShard RPC");
         start = GetCurrentTime();
         uint64_t off = 0;
@@ -84,36 +123,7 @@ std::expected<int, sigmaos::serr::Error> Srv::Init() {
           nbyte += lengths[id];
         }
       }
-      log(COSSIMSRV, "done parsing vecs");
-      LogSpawnLatency(_sp_clnt->ProcEnv()->GetPID(), _sp_clnt->ProcEnv()->GetSpawnTime(), start, "Parse vecs & construct DB");
-    } else {
-      std::vector<std::string> key_vec;
-      for (int i = 0; i < _nvec; i++) {
-        key_vec.push_back(std::to_string(i));
-      }
-      // Get the serialized vector from cached
-      {
-        auto res = _cache_clnt->MultiGet(key_vec);
-        if (!res.has_value()) {
-          log(SPAWN_LAT, "Error get all-vecs {}", res.error().String());
-          return std::unexpected(res.error());
-        }
-        auto res_pair = res.value();
-        lengths = res_pair.first;
-        buf = res_pair.second; 
-      }
-      log(COSSIMSRV, "Got shard");
-      LogSpawnLatency(_sp_clnt->ProcEnv()->GetPID(), _sp_clnt->ProcEnv()->GetSpawnTime(), start, "GetShard RPC");
-      start = GetCurrentTime();
-      uint64_t off = 0;
-      for (int id = 0; id < _nvec; id++) {
-        log(COSSIMSRV, "parse vec {}", id);
-        _vec_db[id] = std::make_shared<sigmaos::apps::cossim::Vector>(buf, buf->data() + off, _vec_dim);
-        log(COSSIMSRV, "done parse vec {}", id);
-        off += lengths[id];
-        nbyte += lengths[id];
-      }
-      log(COSSIMSRV, "done parsing vecs");
+      log(COSSIMSRV, "Parsed all vec shards from direct RPCs & constructed DB");
       LogSpawnLatency(_sp_clnt->ProcEnv()->GetPID(), _sp_clnt->ProcEnv()->GetSpawnTime(), start, "Parse vecs & construct DB");
     }
   }

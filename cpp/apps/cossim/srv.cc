@@ -55,38 +55,67 @@ std::expected<int, sigmaos::serr::Error> Srv::Init() {
       nbyte += res.value();
     }
   } else {
-    std::vector<std::string> key_vec;
     std::shared_ptr<std::string> buf;
     std::vector<uint64_t> lengths;
     auto start = GetCurrentTime();
     log(COSSIMSRV, "Going to get shard");
-    for (int i = 0; i < _nvec; i++) {
-      key_vec.push_back(std::to_string(i));
-    }
-    // Get the serialized vector from cached
-    {
-      auto res = _cache_clnt->DelegatedMultiGet(0);
-      if (!res.has_value()) {
-        log(SPAWN_LAT, "Error get all-vecs {}", res.error().String());
-        return std::unexpected(res.error());
+    if (_sp_clnt->ProcEnv()->GetDelegateInit()) {
+      for (int i = 0; i < _ncache; i++) {
+        // Get the serialized vector from cached
+        {
+          auto res = _cache_clnt->DelegatedMultiGet(i);
+          if (!res.has_value()) {
+            log(SPAWN_LAT, "Error get all-vecs {}", res.error().String());
+            return std::unexpected(res.error());
+          }
+          auto res_pair = res.value();
+          lengths = res_pair.first;
+          buf = res_pair.second; 
+        }
+        log(COSSIMSRV, "Got shard delegated RPC #{}", i);
+        LogSpawnLatency(_sp_clnt->ProcEnv()->GetPID(), _sp_clnt->ProcEnv()->GetSpawnTime(), start, "GetShard RPC");
+        start = GetCurrentTime();
+        uint64_t off = 0;
+        for (int id = 0; id < _nvec; id++) {
+          log(COSSIMSRV, "parse vec {}", id);
+          _vec_db[id] = std::make_shared<sigmaos::apps::cossim::Vector>(buf, buf->data() + off, _vec_dim);
+          log(COSSIMSRV, "done parse vec {}", id);
+          off += lengths[id];
+          nbyte += lengths[id];
+        }
       }
-      auto res_pair = res.value();
-      lengths = res_pair.first;
-      buf = res_pair.second; 
+      log(COSSIMSRV, "done parsing vecs");
+      LogSpawnLatency(_sp_clnt->ProcEnv()->GetPID(), _sp_clnt->ProcEnv()->GetSpawnTime(), start, "Parse vecs & construct DB");
+    } else {
+      std::vector<std::string> key_vec;
+      for (int i = 0; i < _nvec; i++) {
+        key_vec.push_back(std::to_string(i));
+      }
+      // Get the serialized vector from cached
+      {
+        auto res = _cache_clnt->MultiGet(key_vec);
+        if (!res.has_value()) {
+          log(SPAWN_LAT, "Error get all-vecs {}", res.error().String());
+          return std::unexpected(res.error());
+        }
+        auto res_pair = res.value();
+        lengths = res_pair.first;
+        buf = res_pair.second; 
+      }
+      log(COSSIMSRV, "Got shard");
+      LogSpawnLatency(_sp_clnt->ProcEnv()->GetPID(), _sp_clnt->ProcEnv()->GetSpawnTime(), start, "GetShard RPC");
+      start = GetCurrentTime();
+      uint64_t off = 0;
+      for (int id = 0; id < _nvec; id++) {
+        log(COSSIMSRV, "parse vec {}", id);
+        _vec_db[id] = std::make_shared<sigmaos::apps::cossim::Vector>(buf, buf->data() + off, _vec_dim);
+        log(COSSIMSRV, "done parse vec {}", id);
+        off += lengths[id];
+        nbyte += lengths[id];
+      }
+      log(COSSIMSRV, "done parsing vecs");
+      LogSpawnLatency(_sp_clnt->ProcEnv()->GetPID(), _sp_clnt->ProcEnv()->GetSpawnTime(), start, "Parse vecs & construct DB");
     }
-    log(COSSIMSRV, "Got shard");
-    LogSpawnLatency(_sp_clnt->ProcEnv()->GetPID(), _sp_clnt->ProcEnv()->GetSpawnTime(), start, "GetShard RPC");
-    start = GetCurrentTime();
-    uint64_t off = 0;
-    for (int id = 0; id < _nvec; id++) {
-      log(COSSIMSRV, "parse vec {}", id);
-      _vec_db[id] = std::make_shared<sigmaos::apps::cossim::Vector>(buf, buf->data() + off, _vec_dim);
-      log(COSSIMSRV, "done parse vec {}", id);
-      off += lengths[id];
-      nbyte += lengths[id];
-    }
-    log(COSSIMSRV, "done parsing all vecs");
-    LogSpawnLatency(_sp_clnt->ProcEnv()->GetPID(), _sp_clnt->ProcEnv()->GetSpawnTime(), start, "Parse vecs & construct DB");
   }
   LogSpawnLatency(_sp_clnt->ProcEnv()->GetPID(), _sp_clnt->ProcEnv()->GetSpawnTime(), start, std::format("Init soft state vector DB: {}B", (int) nbyte));
   return 0;

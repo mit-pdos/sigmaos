@@ -179,20 +179,24 @@ func (j *CosSimJob) AddSrv() (*proc.Proc, time.Duration, error) {
 	for pn, ep := range j.cacheEPs {
 		p.SetCachedEndpoint(pn, ep)
 	}
-	multiGetReq := j.cacheClnt.NewMultiGetReq(j.vecKeys)
-	cachesrvPN := filepath.Join(j.cachePNBase, "/0")
-	db.DPrintf(db.COSSIMSRV, "MultiGetReq for new cachesrv: %v -> %v", cachesrvPN, multiGetReq)
-	iniov, err := rpcclnt.WrapRPCRequest("CacheSrv.MultiGet", multiGetReq)
-	if err != nil {
-		db.DPrintf(db.ALWAYS, "Error wrap & marshal multiGetReq: %v", err)
-		return nil, 0, err
+	cacheGetReqs := j.cacheClnt.NewMultiGetReqs(j.vecKeys, j.ncache)
+	nreqs := 0
+	for server, getReq := range cacheGetReqs {
+		cachesrvPN := j.cacheClnt.Server(server)
+		db.DPrintf(db.COSSIMSRV, "MultiGetReq for new cachesrv: %v -> %v", cachesrvPN, getReq)
+		iniov, err := rpcclnt.WrapRPCRequest("CacheSrv.MultiGet", getReq)
+		if err != nil {
+			db.DPrintf(db.ALWAYS, "Error wrap & marshal getReq: %v", err)
+			return nil, 0, err
+		}
+		p.AddInitializationRPC(cachesrvPN, iniov, 3)
+		totalInIOVLen := 0
+		for _, b := range iniov {
+			totalInIOVLen += len(b)
+		}
+		db.DPrintf(db.TEST, "Delegated RPC(%v) total len: %v", nreqs, totalInIOVLen)
+		nreqs++
 	}
-	p.AddInitializationRPC(cachesrvPN, iniov, 3)
-	totalInIOVLen := 0
-	for _, b := range iniov {
-		totalInIOVLen += len(b)
-	}
-	db.DPrintf(db.ALWAYS, "Total delegated RPC len: %v", totalInIOVLen)
 	// Ask for spproxy to run delegated initialization RPCs on behalf of the proc
 	p.SetDelegateInit(j.delegateInitRPCs)
 	start := time.Now()

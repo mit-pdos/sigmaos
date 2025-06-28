@@ -36,6 +36,7 @@ class ProcEnv {
   sigmaos::sigmap::types::Tip GetOuterContainerIP() { return _proto.outercontaineripstr(); }
   google::protobuf::Timestamp GetSpawnTime() { return _proto.spawntimepb(); }
   std::string GetPerf() { return _proto.perf(); }
+  bool GetDelegateInit() { return _proto.delegateinitflag(); }
 
   private:
   ProcEnvProto _proto;

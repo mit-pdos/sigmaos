@@ -37,7 +37,7 @@ class Srv {
   public:
   Srv(std::shared_ptr<sigmaos::proxy::sigmap::Clnt> sp_clnt,
   int nvec, int vec_dim, std::string cache_clnt_pn, int ncache, bool eager_init) : _mu(),
-    _nvec(nvec), _vec_dim(vec_dim), _vec_db(), _sp_clnt(sp_clnt),
+    _nvec(nvec), _vec_dim(vec_dim), _vec_db(), _sp_clnt(sp_clnt), _ncache(ncache),
     _perf(std::make_shared<sigmaos::util::perf::Perf>(sp_clnt->ProcEnv(), COSSIMSRV)),
     _cache_clnt(std::make_shared<sigmaos::apps::cache::Clnt>(sp_clnt, cache_clnt_pn, (uint32_t) ncache)) {
     log(COSSIMSRV, "Starting RPC srv nvec:{} vec_dim:{} eager:{}", nvec, vec_dim, eager_init);
@@ -77,6 +77,7 @@ class Srv {
 
   private:
   std::mutex _mu;
+  int _ncache;
   int _nvec;
   int _vec_dim;
   std::map<uint64_t, std::shared_ptr<sigmaos::apps::cossim::Vector>> _vec_db;

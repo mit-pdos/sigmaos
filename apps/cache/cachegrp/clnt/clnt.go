@@ -101,17 +101,23 @@ func (csc *CachedSvcClnt) GetEndpoints() (map[string]*sp.Tendpoint, error) {
 	return eps, nil
 }
 
-func (csc *CachedSvcClnt) NewMultiGetReq(keys []string) *cacheproto.CacheMultiGetReq {
-	req := &cacheproto.CacheMultiGetReq{
-		Fence: sp.NullFence().FenceProto(),
-	}
+func (csc *CachedSvcClnt) NewMultiGetReqs(keys []string, nserver int) map[int]*cacheproto.CacheMultiGetReq {
+	reqs := make(map[int]*cacheproto.CacheMultiGetReq)
 	for _, key := range keys {
+		server := key2server(key, nserver)
+		req, ok := reqs[server]
+		if !ok {
+			req = &cacheproto.CacheMultiGetReq{
+				Fence: sp.NullFence().FenceProto(),
+			}
+			reqs[server] = req
+		}
 		req.Gets = append(req.Gets, &cacheproto.CacheGetDescriptor{
 			Key:   key,
 			Shard: csc.cc.Key2shard(key),
 		})
 	}
-	return req
+	return reqs
 }
 
 func (csc *CachedSvcClnt) Put(key string, val proto.Message) error {

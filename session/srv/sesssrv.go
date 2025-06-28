@@ -23,6 +23,10 @@ type NewSessionI interface {
 	NewSession(*sp.Tprincipal, sessp.Tsession) sps.ProtSrv
 }
 
+type ExpireI interface {
+	Expired() bool
+}
+
 //
 // SessSrv has a table with all sess conds in use so that it can
 // unblock threads that are waiting in a sess cond when a session
@@ -36,17 +40,19 @@ type SessSrv struct {
 	srv   *netsrv.NetServer
 	stats *stats.StatInode
 	qlen  stats.Tcounter
+	exp   ExpireI
 }
 
-func NewSessSrv(pe *proc.ProcEnv, npc *dialproxyclnt.DialProxyClnt, addr *sp.Taddr, stats *stats.StatInode, newSess NewSessionI) *SessSrv {
+func NewSessSrv(pe *proc.ProcEnv, npc *dialproxyclnt.DialProxyClnt, addr *sp.Taddr, stats *stats.StatInode, newSess NewSessionI, exp ExpireI) *SessSrv {
 	ssrv := &SessSrv{
 		pe:    pe,
 		stats: stats,
 		st:    newSessionTable(newSess),
+		exp:   exp,
 	}
 	ssrv.srv = netsrv.NewNetServer(pe, npc, addr, ssrv)
 	ssrv.sm = newSessionMgr(ssrv.st, ssrv.srvFcall)
-	db.DPrintf(db.SESSSRV, "Listen on address: %v", ssrv.srv.GetEndpoint())
+	db.DPrintf(db.SESSSRV, "Listen on address: %v exp %v", ssrv.srv.GetEndpoint(), exp)
 	return ssrv
 }
 
@@ -111,6 +117,13 @@ func (ssrv *SessSrv) serve(sess *Session, fc *sessp.FcallMsg) *sessp.FcallMsg {
 	qlen := ssrv.QueueLen()
 	ssrv.stats.Stats().Inc(fc.Msg.Type(), qlen)
 
+	if ssrv.exp != nil {
+		if ssrv.exp.Expired() {
+			db.DPrintf(db.SESSSRV, "srv expired")
+			err := serr.NewErr(serr.TErrClosed, "srv expired")
+			return sessp.NewFcallMsgReply(fc, sp.NewRerrorSerr(err))
+		}
+	}
 	db.DPrintf(db.SESSSRV, "Dispatch request %v", fc)
 	msg, iov, rerror, op, clntid := sess.Dispatch(fc.Msg, fc.Iov)
 	db.DPrintf(db.SESSSRV, "Done dispatch request %v", fc)

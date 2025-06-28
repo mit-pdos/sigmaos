@@ -44,7 +44,7 @@ type SigmaPSrv struct {
 	attachAuthF spprotosrv.AttachAuthF
 }
 
-func NewSigmaPSrv(pe *proc.ProcEnv, npc *dialproxyclnt.DialProxyClnt, root fs.Dir, addr *sp.Taddr, fencefs fs.Dir, aaf spprotosrv.AttachAuthF) *SigmaPSrv {
+func NewSigmaPSrv(pe *proc.ProcEnv, npc *dialproxyclnt.DialProxyClnt, root fs.Dir, addr *sp.Taddr, fencefs fs.Dir, aaf spprotosrv.AttachAuthF, exp sesssrv.ExpireI) *SigmaPSrv {
 	psrv := &SigmaPSrv{
 		pe:          pe,
 		dirunder:    root,
@@ -56,13 +56,13 @@ func NewSigmaPSrv(pe *proc.ProcEnv, npc *dialproxyclnt.DialProxyClnt, root fs.Di
 	psrv.ProtSrvState = spprotosrv.NewProtSrvState(psrv.stats)
 	psrv.VersionTable().Insert(fs.Uid(psrv.dirover))
 	psrv.dirover.Mount(sp.STATSD, psrv.stats)
-	psrv.SessSrv = sesssrv.NewSessSrv(pe, npc, addr, psrv.stats, psrv)
+	psrv.SessSrv = sesssrv.NewSessSrv(pe, npc, addr, psrv.stats, psrv, exp)
 	return psrv
 }
 
-func NewSigmaPSrvPost(root fs.Dir, pn string, addr *sp.Taddr, sc *sigmaclnt.SigmaClnt, fencefs fs.Dir, aaf spprotosrv.AttachAuthF) (*SigmaPSrv, string, error) {
+func NewSigmaPSrvPost(root fs.Dir, pn string, addr *sp.Taddr, sc *sigmaclnt.SigmaClnt, fencefs fs.Dir, aaf spprotosrv.AttachAuthF, exp sesssrv.ExpireI) (*SigmaPSrv, string, error) {
 	start := time.Now()
-	psrv := NewSigmaPSrv(sc.ProcEnv(), sc.GetDialProxyClnt(), root, addr, fencefs, aaf)
+	psrv := NewSigmaPSrv(sc.ProcEnv(), sc.GetDialProxyClnt(), root, addr, fencefs, aaf, exp)
 	perf.LogSpawnLatency("NewSigmaPSrv", sc.ProcEnv().GetPID(), sc.ProcEnv().GetSpawnTime(), start)
 	start = time.Now()
 	defer func() {

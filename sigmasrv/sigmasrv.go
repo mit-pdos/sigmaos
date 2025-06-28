@@ -16,6 +16,7 @@ import (
 	"sigmaos/rpc"
 	rpcdevsrv "sigmaos/rpc/dev/srv"
 	rpcsrv "sigmaos/rpc/srv"
+	sesssrv "sigmaos/session/srv"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv/cpumon"
@@ -152,7 +153,15 @@ func NewSigmaSrvRootClnt(root fs.Dir, addr *sp.Taddr, path string, sc *sigmaclnt
 
 func NewSigmaSrvRootClntAuthFn(root fs.Dir, addr *sp.Taddr, path string, sc *sigmaclnt.SigmaClnt, aaf spprotosrv.AttachAuthF) (*SigmaSrv, error) {
 	ia := inode.NewInodeAlloc(sp.DEV_MEMFS)
-	mfs, err := memfssrv.NewMemFsRootPortClntFenceAuth(root, path, addr, sc, nil, aaf, ia)
+	mfs, err := memfssrv.NewMemFsRootPortClntFenceAuthExp(root, path, addr, sc, nil, aaf, ia, nil)
+	if err != nil {
+		return nil, err
+	}
+	return newSigmaSrv(mfs), nil
+}
+func NewSigmaSrvRootClntAuthFnExp(root fs.Dir, addr *sp.Taddr, path string, sc *sigmaclnt.SigmaClnt, aaf spprotosrv.AttachAuthF, exp sesssrv.ExpireI) (*SigmaSrv, error) {
+	ia := inode.NewInodeAlloc(sp.DEV_MEMFS)
+	mfs, err := memfssrv.NewMemFsRootPortClntFenceAuthExp(root, path, addr, sc, nil, aaf, ia, exp)
 	if err != nil {
 		return nil, err
 	}

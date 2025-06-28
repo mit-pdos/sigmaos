@@ -7,6 +7,7 @@ import (
 	"sigmaos/ctx"
 	db "sigmaos/debug"
 	"sigmaos/proc"
+	sessrv "sigmaos/session/srv"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv/memfssrv/memfs"
@@ -51,12 +52,12 @@ func NewMemFsPortClntFenceAuth(pn string, addr *sp.Taddr, sc *sigmaclnt.SigmaCln
 	ctx := ctx.NewCtx(sp.NoPrincipal(), nil, 0, sp.NoClntId, nil, fencefs)
 	ni := memfs.NewNewInode(sp.DEV_MEMFS)
 	root := fenceddir.NewFencedRoot(dir.NewRootDir(ctx, ni))
-	return NewMemFsRootPortClntFenceAuth(root, pn, addr, sc, fencefs, aaf, ni.InodeAlloc())
+	return NewMemFsRootPortClntFenceAuthExp(root, pn, addr, sc, fencefs, aaf, ni.InodeAlloc(), nil)
 }
 
-func NewMemFsRootPortClntFenceAuth(root fs.Dir, srvpath string, addr *sp.Taddr, sc *sigmaclnt.SigmaClnt, fencefs fs.Dir, aaf spprotosrv.AttachAuthF, ia *inode.InodeAlloc) (*MemFs, error) {
+func NewMemFsRootPortClntFenceAuthExp(root fs.Dir, srvpath string, addr *sp.Taddr, sc *sigmaclnt.SigmaClnt, fencefs fs.Dir, aaf spprotosrv.AttachAuthF, ia *inode.InodeAlloc, exp sessrv.ExpireI) (*MemFs, error) {
 	start := time.Now()
-	srv, mpn, err := sigmapsrv.NewSigmaPSrvPost(root, srvpath, addr, sc, fencefs, aaf)
+	srv, mpn, err := sigmapsrv.NewSigmaPSrvPost(root, srvpath, addr, sc, fencefs, aaf, exp)
 	if err != nil {
 		return nil, err
 	}

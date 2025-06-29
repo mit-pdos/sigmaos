@@ -69,8 +69,8 @@ const (
 
 // Several calls optimistically connect to a recently-mounted server
 // without doing a pathname walk; this may fail, and the call should
-// walk. IsRetryOK() says when to retry.
-func IsRetryOK(err *Err) bool {
+// walk. IsWalkOK() says when to walk.
+func IsErrWalkOK(err *Err) bool {
 	if err == nil {
 		return false
 	}
@@ -78,11 +78,11 @@ func IsRetryOK(err *Err) bool {
 }
 
 // Retry Open() also on IsErrIO
-func IsErrOpenRetryOK(err *Err) bool {
+func IsErrRetryOpenOK(err *Err) bool {
 	if err == nil {
 		return false
 	}
-	return err.IsErrUnreachable() || err.IsErrUnknownfid() || err.IsMaybeSpecialElem() || err.IsErrIO()
+	return IsErrWalkOK(err) || err.IsErrIO()
 }
 
 func (err Terror) String() string {
@@ -338,18 +338,18 @@ func IsErrorIO(error error) bool {
 	return false
 }
 
-func IsErrorRetryOK(error error) bool {
+func IsErrorWalkOK(error error) bool {
 	var err *Err
 	if errors.As(error, &err) {
-		return IsRetryOK(err)
+		return IsErrWalkOK(err)
 	}
 	return false
 }
 
-func IsErrorOpenRetryOK(error error) bool {
+func IsErrorRetryOpenOK(error error) bool {
 	var err *Err
 	if errors.As(error, &err) {
-		return IsErrOpenRetryOK(err)
+		return IsErrRetryOpenOK(err)
 	}
 	return false
 }

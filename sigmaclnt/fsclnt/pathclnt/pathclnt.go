@@ -185,7 +185,7 @@ func (pathc *PathClnt) Remove(pn sp.Tsigmapath, principal *sp.Tprincipal, f *sp.
 	} else {
 		open = true
 	}
-	if open || serr.IsRetryOK(err) {
+	if open || serr.IsErrorWalkOK(err) {
 		fid, err = pathc.open(splitPN, principal, path.EndSlash(pn), nil)
 		if err != nil {
 			return err
@@ -246,7 +246,7 @@ func (pathc *PathClnt) open(path path.Tpathname, principal *sp.Tprincipal, resol
 		start := time.Now()
 		fid, path1, left, err := pathc.walkPath(path, resolve, w)
 		db.DPrintf(db.WALK_LAT, "open %v %v -> (%v, %v  %v, %v) lat: %v", pathc.cid, path, fid, path1, left, err, time.Since(start))
-		if serr.IsErrOpenRetryOK(err) {
+		if serr.IsErrorRetryOpenOK(err) {
 			done := len(path1) - len(left)
 			db.DPrintf(db.PATHCLNT_ERR, "walkPath retry pn '%v' pn1 '%v' left '%v' d %v err %v by umount %v", path, path1, left, done, err, path1[0:done])
 			if e := pathc.mntclnt.UmountPrefix(path1[0:done]); e != nil {
@@ -307,7 +307,7 @@ func (pathc *PathClnt) GetFile(pn sp.Tsigmapath, principal *sp.Tprincipal, mode 
 	} else {
 		open = true
 	}
-	if open || serr.IsRetryOK(err) {
+	if open || serr.IsErrorWalkOK(err) {
 		fid, err = pathc.open(p, principal, path.EndSlash(pn), nil)
 		if err != nil {
 			return nil, err
@@ -341,7 +341,7 @@ func (pathc *PathClnt) PutFile(pn sp.Tsigmapath, principal *sp.Tprincipal, mode 
 	} else {
 		open = true
 	}
-	if open || serr.IsRetryOK(err) {
+	if open || serr.IsErrorWalkOK(err) {
 		dir := p.Dir()
 		base := path.Tpathname{p.Base()}
 		resolve := true

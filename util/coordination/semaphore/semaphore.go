@@ -4,7 +4,6 @@ package semaphore
 
 import (
 	"fmt"
-	"time"
 
 	db "sigmaos/debug"
 	"sigmaos/serr"

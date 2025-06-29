@@ -2,10 +2,8 @@
 package clnt
 
 import (
-	"errors"
 	"sync"
 	"sync/atomic"
-	"time"
 
 	"google.golang.org/protobuf/proto"
 
@@ -13,7 +11,7 @@ import (
 	"sigmaos/rpc"
 	rpcclntopts "sigmaos/rpc/clnt/opts"
 	"sigmaos/serr"
-	sp "sigmaos/sigmap"
+	"sigmaos/util/retry"
 )
 
 type ClntCache struct {
@@ -72,32 +70,29 @@ func (cc *ClntCache) Delete(pn string) {
 }
 
 func (cc *ClntCache) RPCRetry(pn string, method string, arg proto.Message, res proto.Message) error {
-	for i := 0; i < sp.Conf.Path.MAX_RESOLVE_RETRY; i++ {
+	err := retry.RetryAtMostOnce(func() error {
 		rpcc, err := cc.Lookup(pn)
 		if err != nil {
-			var sr *serr.Err
-			if errors.As(err, &sr) && serr.IsRetryOK(sr) {
+			if serr.IsErrorRetryOK(err) {
 				db.DPrintf(db.RPCCLNT, "RPC retry lookup failure pn %v", pn)
-				continue
+			} else {
+				db.DPrintf(db.RPCCLNT, "RPC lookup failure: give up pn %v", pn)
 			}
-			db.DPrintf(db.RPCCLNT, "RPC lookup failure: give up pn %v", pn)
 			return err
 		}
-		if err := rpcc.RPC(method, arg, res); err != nil {
-			var sr *serr.Err
-			if errors.As(err, &sr) && serr.IsRetryOK(sr) {
-				time.Sleep(sp.Conf.Path.RESOLVE_TIMEOUT)
+		err = rpcc.RPC(method, arg, res)
+		if err != nil {
+			if serr.IsErrorRetryOK(err) {
 				cc.stats.Nretry.Add(1)
-				db.DPrintf(db.RPCCLNT, "RPC: retry %v %v err %v", pn, method, sr)
+				db.DPrintf(db.RPCCLNT, "RPC: retry %v %v err %v", pn, method, err)
 				cc.Delete(pn)
-				continue
+			} else {
+				db.DPrintf(db.RPCCLNT, "RPCRetry no retry %v err: %v sr: %v", pn, err, err)
 			}
-			db.DPrintf(db.RPCCLNT, "RPCRetry no retry %v err: %v sr: %v", pn, err, sr)
-			return err
 		}
-		return nil
-	}
-	return serr.NewErr(serr.TErrUnreachable, pn)
+		return err
+	})
+	return err
 }
 
 func (cc *ClntCache) RPC(pn string, method string, arg proto.Message, res proto.Message) error {

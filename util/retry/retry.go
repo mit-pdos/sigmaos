@@ -39,7 +39,8 @@ func RetryPaths(paths []sp.Tsigmapath, f func(i int, pn sp.Tsigmapath) error) er
 	return r
 }
 
-// Repeat f a number of times if okf says ok.
+// Repeat f a number of times if okf says ok. Between each iteration
+// sleep for duration d.
 func Repeat(f func() error, okf func(error) bool, d time.Duration) error {
 	for i := 0; true; i++ {
 		if err := f(); err == nil {
@@ -52,6 +53,10 @@ func Repeat(f func() error, okf func(error) bool, d time.Duration) error {
 		time.Sleep(d)
 	}
 	return nil
+}
+
+func RepeatDefDur(f func() error, okf func(error) bool) error {
+	return Repeat(f, okf, sp.Conf.Path.RESOLVE_TIMEOUT)
 }
 
 // RetryAtMostOnce is intended for functions f that want to retry in case named

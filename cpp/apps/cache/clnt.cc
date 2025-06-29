@@ -43,7 +43,6 @@ std::expected<int, sigmaos::serr::Error> Clnt::Get(std::string key, std::shared_
 	log(CACHECLNT, "Get: {}", key);
   std::shared_ptr<sigmaos::rpc::Clnt> rpcc;
   {
-    // TODO: pass in srv_id
     auto res = get_clnt(key2server(key, _nsrv));
     if (!res.has_value()) {
       log(CACHECLNT_ERR, "Error get_clnt: {}", res.error().String());
@@ -123,8 +122,7 @@ std::expected<int, sigmaos::serr::Error> Clnt::Put(std::string key, std::shared_
 	log(CACHECLNT, "Put: {} -> {}b", key, val->size());
   std::shared_ptr<sigmaos::rpc::Clnt> rpcc;
   {
-    // TODO: pass in srv_id
-    auto res = get_clnt(0);
+    auto res = get_clnt(key2server(key, _nsrv));
     if (!res.has_value()) {
       log(CACHECLNT_ERR, "Error get_clnt: {}", res.error().String());
       return std::unexpected(res.error());
@@ -159,8 +157,7 @@ std::expected<int, sigmaos::serr::Error> Clnt::Delete(std::string key) {
 	log(CACHECLNT, "Delete: {}", key);
   std::shared_ptr<sigmaos::rpc::Clnt> rpcc;
   {
-    // TODO: pass in srv_id
-    auto res = get_clnt(0);
+    auto res = get_clnt(key2server(key, _nsrv));
     if (!res.has_value()) {
       log(CACHECLNT_ERR, "Error get_clnt: {}", res.error().String());
       return std::unexpected(res.error());

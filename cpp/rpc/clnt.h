@@ -33,6 +33,7 @@ class Clnt {
     log(RPCCLNT, "Done close");
   }
   private:
+  std::mutex _mu;
   std::atomic<uint64_t> _seqno;
   std::shared_ptr<Channel> _chan;
   std::shared_ptr<Channel> _delegate_chan;
@@ -40,6 +41,7 @@ class Clnt {
   static bool _l;
   static bool _l_e;
 
+  std::expected<int, sigmaos::serr::Error> check_channel_init();
   std::expected<int, sigmaos::serr::Error> rpc(bool delegate, std::string method, google::protobuf::Message &req, google::protobuf::Message &rep);
   std::expected<int, sigmaos::serr::Error> wrap_and_run_rpc(bool delegate, uint64_t seqno, std::string method, const std::shared_ptr<sigmaos::io::iovec::IOVec> in_iov, std::shared_ptr<sigmaos::io::iovec::IOVec> out_iov);
   std::expected<int, sigmaos::serr::Error> process_wrapped_reply(uint64_t seqno, std::shared_ptr<sigmaos::io::iovec::IOVec> out_iov, google::protobuf::Message &rep);

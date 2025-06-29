@@ -45,7 +45,34 @@ std::expected<int, sigmaos::serr::Error> Clnt::DelegatedRPC(uint64_t rpc_idx, go
 
 // Perform an RPC
 std::expected<int, sigmaos::serr::Error> Clnt::RPC(std::string method, google::protobuf::Message &req, google::protobuf::Message &rep) {
+  {
+    auto res = check_channel_init();
+    if (!res.has_value()) {
+      return res;
+    }
+  }
   return rpc(false, method, req, rep);
+}
+
+std::expected<int, sigmaos::serr::Error> Clnt::check_channel_init() {
+  // Fast-path: check if channel is initialized
+  if (_chan->IsInitialized()) {
+    return 0;
+  }
+
+  std::lock_guard<std::mutex> guard(_mu);
+  // Fast-path: check again, now holding the lock
+  if (_chan->IsInitialized()) {
+    return 0;
+  }
+  // Initialize the channel
+  auto res = _chan->Init();
+  if (!res.has_value()) {
+    log(RPCCLNT_ERR, "Error initialize channel: {}", res.error().String());
+//    return std::unexpected(res.error());
+    return res;
+  }
+  return 0;
 }
 
 std::expected<int, sigmaos::serr::Error> Clnt::rpc(bool delegate, std::string method, google::protobuf::Message &req, google::protobuf::Message &rep) {

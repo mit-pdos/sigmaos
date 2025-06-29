@@ -60,12 +60,12 @@ std::expected<int, sigmaos::serr::Error> Srv::Init() {
     for (uint32_t i = 0; i < _nvec; i++) {
       std::string i_str = std::to_string(i);
       uint32_t server_id = sigmaos::apps::cache::key2server(i_str, _ncache);
-      if (!key_vecs.contains(i)) {
-        key_vecs[i] = std::vector<std::string>();
-        key_vecs_int[i] = std::vector<int>();
+      if (!key_vecs.contains(server_id)) {
+        key_vecs[server_id] = std::vector<std::string>();
+        key_vecs_int[server_id] = std::vector<int>();
       }
-      key_vecs[i].push_back(i_str);
-      key_vecs_int[i].push_back(i);
+      key_vecs[server_id].push_back(i_str);
+      key_vecs_int[server_id].push_back(i);
     }
     std::shared_ptr<std::string> buf;
     std::vector<uint64_t> lengths;
@@ -95,8 +95,8 @@ std::expected<int, sigmaos::serr::Error> Srv::Init() {
           log(COSSIMSRV, "parse vec {}", id);
           _vec_db[id] = std::make_shared<sigmaos::apps::cossim::Vector>(buf, buf->data() + off, _vec_dim);
           log(COSSIMSRV, "done parse vec {}", id);
-          off += lengths[id];
-          nbyte += lengths[id];
+          off += lengths[j];
+          nbyte += lengths[j];
         }
         log(COSSIMSRV, "Done parsing shard delegated RPC #{}", i);
       }
@@ -124,8 +124,8 @@ std::expected<int, sigmaos::serr::Error> Srv::Init() {
           log(COSSIMSRV, "parse vec {}", id);
           _vec_db[id] = std::make_shared<sigmaos::apps::cossim::Vector>(buf, buf->data() + off, _vec_dim);
           log(COSSIMSRV, "done parse vec {}", id);
-          off += lengths[id];
-          nbyte += lengths[id];
+          off += lengths[j];
+          nbyte += lengths[j];
         }
       }
       log(COSSIMSRV, "Parsed all vec shards from direct RPCs & constructed DB");

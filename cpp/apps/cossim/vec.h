@@ -28,7 +28,7 @@ namespace apps::cossim {
 
 class Vector {
   public:
-  Vector(::Vector *proto_vec, int dim) : _proto_vec(proto_vec), _underlying_buf(nullptr), _dim(dim) {}
+  Vector(::Vector *proto_vec, int dim) : _proto_vec(proto_vec), _underlying_buf(nullptr), _vals(nullptr), _dim(dim) {}
   Vector(std::shared_ptr<std::string> underlying_buf, char *vals, int dim) : _proto_vec(nullptr), _underlying_buf(underlying_buf), _vals((double *) vals), _dim(dim) {}
   ~Vector() {}
 

@@ -378,7 +378,7 @@ func TestCosSimInitLatency(t *testing.T) {
 		VEC_DIM    = 100
 		EAGER_INIT = true
 		// Cache parameters
-		N_CACHE    = 1
+		N_CACHE    = 2
 		CACHE_MCPU = 1000
 		CACHE_GC   = true
 		JOB_NAME   = "cossim-job"

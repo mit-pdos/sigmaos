@@ -74,12 +74,11 @@ std::expected<int, sigmaos::serr::Error> Clnt::Get(std::string key, std::shared_
   return 0;
 }
 
-std::expected<std::pair<std::vector<uint64_t>, std::shared_ptr<std::string>>, sigmaos::serr::Error> Clnt::MultiGet(std::vector<std::string> keys) {
+std::expected<std::pair<std::vector<uint64_t>, std::shared_ptr<std::string>>, sigmaos::serr::Error> Clnt::MultiGet(uint32_t srv_id, std::vector<std::string> keys) {
 	log(CACHECLNT, "MultiGet nkey {}", keys.size());
   std::shared_ptr<sigmaos::rpc::Clnt> rpcc;
   {
-    // TODO: pass in srv_id
-    auto res = get_clnt(0);
+    auto res = get_clnt(srv_id);
     if (!res.has_value()) {
       log(CACHECLNT_ERR, "Error get_clnt: {}", res.error().String());
       return std::unexpected(res.error());

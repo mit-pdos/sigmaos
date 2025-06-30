@@ -1,7 +1,6 @@
 package test
 
 import (
-	"path/filepath"
 	"time"
 
 	"github.com/stretchr/testify/assert"
@@ -101,7 +100,7 @@ func (rts *RealmTstate) bootNode(n int, waitForNamed bool) error {
 		// Indicate that the link with named must be resolved, in case
 		// the endpoint for the old named is cached; a failed
 		// connection will invalidate the endpoint.
-		pn := path.MarkResolve(filepath.Join(sp.REALMS, rts.realm.String()))
+		pn := path.MarkResolve(sp.NamedRootPathname(rts.realm))
 
 		// Loop until new named is up.  Don't use GetFileWatch because
 		// it may return the old named's EP, since it persists until

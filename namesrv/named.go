@@ -171,7 +171,7 @@ func Run(args []string) error {
 			db.DFatalf("SetNamed: %v", err)
 		}
 	} else {
-		pn = filepath.Join(sp.REALMS, nd.realm.String())
+		pn = sp.NamedRootPathname(nd.realm)
 		if err := nd.WriteEndpointFile(pn, ep); err != nil {
 			db.DPrintf(db.NAMED_LDR, "MkEndpointFile %v at %v err %v", nd.realm, pn, err)
 			db.DFatalf("MkEndpointFile %v at %v err %v", nd.realm, pn, err)

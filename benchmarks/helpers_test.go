@@ -353,7 +353,7 @@ func waitForRealmCreation(rootts *test.Tstate, realm sp.Trealm) error {
 		sp.UXREL,
 	}
 	for _, d := range dirs {
-		if err := dirwatcher.WaitCreate(rootts.FsLib, filepath.Join(sp.REALMS, realm.String(), d)); err != nil {
+		if err := dirwatcher.WaitCreate(rootts.FsLib, filepath.Join(sp.NamedRootPathname(realm), d)); err != nil {
 			return err
 		}
 	}

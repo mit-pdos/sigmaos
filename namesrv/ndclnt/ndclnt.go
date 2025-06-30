@@ -2,7 +2,6 @@ package ndclnt
 
 import (
 	"fmt"
-	"path/filepath"
 
 	db "sigmaos/debug"
 	dialproxyclnt "sigmaos/dialproxy/clnt"
@@ -28,7 +27,7 @@ func NewNdClnt(scRoot *sigmaclnt.SigmaClnt, realm sp.Trealm) (*NdClnt, error) {
 	return &NdClnt{
 		scRoot:  scRoot,
 		scRealm: sc,
-		pn:      filepath.Join(sp.REALMS, realm.String()),
+		pn:      sp.NamedRootPathname(realm),
 	}, nil
 }
 

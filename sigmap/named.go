@@ -126,3 +126,7 @@ func BESchedKernel(kid string) string {
 func ProxyPathname(srv, kid string) string {
 	return filepath.Join(srv, kid)
 }
+
+func NamedRootPathname(realm Trealm) string {
+	return filepath.Join(REALMS, realm.String())
+}

@@ -678,7 +678,7 @@ func TestDirConcur(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestWaitCreate(t *testing.T) {
+func TestWaitCreateBasic(t *testing.T) {
 	ts, err1 := test.NewTstatePath(t, pathname)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return

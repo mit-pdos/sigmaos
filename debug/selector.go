@@ -291,8 +291,7 @@ const (
 
 // Server-side Infrastructure
 const (
-	REPLSRV       Tselector = "REPLSRV"
-	NETSRV                  = "NETSRV"
+	NETSRV        Tselector = "NETSRV"
 	DEMUXSRV                = "DEMUXSRV"
 	DEMUXSRV_ERR            = "DEMUXSRV" + ERR
 	REPLRAFT                = "REPLRAFT"

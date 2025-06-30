@@ -132,49 +132,55 @@ func (spp *SPProxySrv) runDelegatedInitializationRPCs(p *proc.Proc, sc *sigmacln
 	if !p.GetDelegateInit() {
 		return
 	}
+	var wg sync.WaitGroup
 	db.DPrintf(db.SPPROXYSRV, "[%v] Run delegated init RPCs", p.GetPid())
 	for initRPCIdx, initRPC := range p.GetInitRPCs() {
-		pn := initRPC.GetTargetPathname()
-		db.DPrintf(db.SPPROXYSRV, "[%v] Create clnt for delegated RPC(%v): %v", p.GetPid(), initRPCIdx, pn)
-		rpcchan, ok := spp.repTab.GetRPCChannel(p.GetPid(), pn)
-		// If we don't have a cached channel for this RPC target, create a new channel for it (and cache it)
-		if !ok {
-			db.DPrintf(db.SPPROXYSRV, "[%v] delegated RPC(%v) create new channel for: %v", initRPCIdx, pn)
-			if ep, ok := p.GetProcEnv().GetCachedEndpoint(pn); ok {
-				var err error
-				rpcchan, err = sprpcchan.NewSPChannelEndpoint(sc.FsLib, pn, ep)
-				if err != nil {
-					db.DPrintf(db.SPPROXYSRV_ERR, "Err create mounted RPC channel to run delegated RPCs (%v -> %v): %v", pn, ep, err)
-					// TODO: remove fatal
-					db.DFatalf("Err create mounted RPC channel to run delegated RPCs (%v -> %v): %v", pn, ep, err)
-					continue
+		wg.Add(1)
+		go func(initRPCIdx int, initRPC *proc.InitializationRPC) {
+			defer wg.Done()
+			pn := initRPC.GetTargetPathname()
+			db.DPrintf(db.SPPROXYSRV, "[%v] Create clnt for delegated RPC(%v): %v", p.GetPid(), initRPCIdx, pn)
+			rpcchan, ok := spp.repTab.GetRPCChannel(p.GetPid(), pn)
+			// If we don't have a cached channel for this RPC target, create a new channel for it (and cache it)
+			if !ok {
+				db.DPrintf(db.SPPROXYSRV, "[%v] delegated RPC(%v) create new channel for: %v", initRPCIdx, pn)
+				if ep, ok := p.GetProcEnv().GetCachedEndpoint(pn); ok {
+					var err error
+					rpcchan, err = sprpcchan.NewSPChannelEndpoint(sc.FsLib, pn, ep)
+					if err != nil {
+						db.DPrintf(db.SPPROXYSRV_ERR, "Err create mounted RPC channel to run delegated RPCs (%v -> %v): %v", pn, ep, err)
+						// TODO: remove fatal
+						db.DFatalf("Err create mounted RPC channel to run delegated RPCs (%v -> %v): %v", pn, ep, err)
+						return
+					}
+				} else {
+					var err error
+					rpcchan, err = sprpcchan.NewSPChannel(sc.FsLib, pn)
+					if err != nil {
+						db.DPrintf(db.SPPROXYSRV_ERR, "Err create unmounted RPC channel to run delegated RPCs (%v): %v", pn, err)
+						// TODO: remove fatal
+						db.DFatalf("Err create unmounted RPC channel to run delegated RPCs (%v): %v", pn, err)
+						return
+					}
 				}
+				// Cache the channel for later reuse
+				spp.repTab.PutRPCChannel(p.GetPid(), pn, rpcchan)
 			} else {
-				var err error
-				rpcchan, err = sprpcchan.NewSPChannel(sc.FsLib, pn)
-				if err != nil {
-					db.DPrintf(db.SPPROXYSRV_ERR, "Err create unmounted RPC channel to run delegated RPCs (%v): %v", pn, err)
-					// TODO: remove fatal
-					db.DFatalf("Err create unmounted RPC channel to run delegated RPCs (%v): %v", pn, err)
-					continue
-				}
+				db.DPrintf(db.SPPROXYSRV, "[%v] delegated RPC(%v) reuse cached channel for: %v", initRPCIdx, pn)
 			}
-			// Cache the channel for later reuse
-			spp.repTab.PutRPCChannel(p.GetPid(), pn, rpcchan)
-		} else {
-			db.DPrintf(db.SPPROXYSRV, "[%v] delegated RPC(%v) reuse cached channel for: %v", initRPCIdx, pn)
-		}
-		db.DPrintf(db.SPPROXYSRV, "[%v] Run delegated init RPC(%v)", p.GetPid(), initRPCIdx)
-		outiov := initRPC.GetOutputIOV()
-		err := rpcchan.SendReceive(initRPC.GetInputIOV(), outiov)
-		if err != nil {
-			db.DPrintf(db.SPPROXYSRV_ERR, "Err execute delegated RPC (%v): %v", pn, err)
-			// TODO: remove fatal
-			db.DFatalf("Err execute delegated RPC (%v): %v", pn, err)
-		}
-		db.DPrintf(db.SPPROXYSRV, "[%v] Done running delegated init RPC(%v)", p.GetPid(), initRPCIdx)
-		spp.repTab.InsertReply(p.GetPid(), uint64(initRPCIdx), outiov, err)
+			db.DPrintf(db.SPPROXYSRV, "[%v] Run delegated init RPC(%v)", p.GetPid(), initRPCIdx)
+			outiov := initRPC.GetOutputIOV()
+			err := rpcchan.SendReceive(initRPC.GetInputIOV(), outiov)
+			if err != nil {
+				db.DPrintf(db.SPPROXYSRV_ERR, "Err execute delegated RPC (%v): %v", pn, err)
+				// TODO: remove fatal
+				db.DFatalf("Err execute delegated RPC (%v): %v", pn, err)
+			}
+			db.DPrintf(db.SPPROXYSRV, "[%v] Done running delegated init RPC(%v)", p.GetPid(), initRPCIdx)
+			spp.repTab.InsertReply(p.GetPid(), uint64(initRPCIdx), outiov, err)
+		}(initRPCIdx, initRPC)
 	}
+	wg.Wait()
 }
 
 // Create a sigmaclnt on behalf of a proc

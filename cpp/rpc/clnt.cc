@@ -61,7 +61,7 @@ std::expected<int, sigmaos::serr::Error> Clnt::check_channel_init() {
   }
 
   std::lock_guard<std::mutex> guard(_mu);
-  // Fast-path: check again, now holding the lock
+  // Slow-path: check again, now holding the lock
   if (_chan->IsInitialized()) {
     return 0;
   }
@@ -69,7 +69,6 @@ std::expected<int, sigmaos::serr::Error> Clnt::check_channel_init() {
   auto res = _chan->Init();
   if (!res.has_value()) {
     log(RPCCLNT_ERR, "Error initialize channel: {}", res.error().String());
-//    return std::unexpected(res.error());
     return res;
   }
   return 0;

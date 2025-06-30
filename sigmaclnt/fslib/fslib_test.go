@@ -1622,7 +1622,7 @@ func TestDisconnect(t *testing.T) {
 	assert.True(t, serr.IsErrorUnreachable(err))
 
 	fd, err = ts.Open(fn, sp.OREAD)
-	assert.True(t, serr.IsErrorUnreachable(err))
+	assert.True(t, serr.IsErrorUnreachable(err), err)
 
 	ts.Shutdown()
 }

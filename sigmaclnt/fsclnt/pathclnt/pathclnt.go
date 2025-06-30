@@ -22,6 +22,7 @@ import (
 	"sigmaos/sigmaclnt/fsclnt/pathclnt/mntclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/util/rand"
+	"sigmaos/util/retry"
 )
 
 type PathClnt struct {
@@ -230,39 +231,38 @@ func (pathc *PathClnt) Stat(pn sp.Tsigmapath, principal *sp.Tprincipal) (*sp.Tst
 // open walks path and, on success, returns the fd walked to; it is
 // the caller's responsibility to clunk the fd.  If a server is
 // unreachable, it umounts the path it walked to, and starts over
-// again, perhaps switching to another replica.  (Note:
-// TestMaintainReplicationLevelCrashProcd test the fail-over case.)
+// again, perhaps switching to another replica or recovered server.
 func (pathc *PathClnt) open(path path.Tpathname, principal *sp.Tprincipal, resolve bool, w sos.Watch) (sp.Tfid, *serr.Err) {
-	for i := 0; i < sp.Conf.Path.MAX_RESOLVE_RETRY; i++ {
-		//db.DPrintf(db.TEST, "try %d %v %t", i, path, resolve)
+	fid := sp.NoFid
+	err, ok := retry.RetryDefDurCont(func() (error, bool) {
 		if err, cont := pathc.mntclnt.ResolveRoot(path); err != nil {
 			db.DPrintf(db.PATHCLNT_ERR, "open: resolveRoot %v err %v cont %t", path, err, cont)
-			if cont && err.IsErrSession() {
-				time.Sleep(sp.Conf.Path.RESOLVE_TIMEOUT)
-				continue
-			}
-			return sp.NoFid, err
+			return err, cont
 		}
 		start := time.Now()
-		fid, path1, left, err := pathc.walkPath(path, resolve, w)
+		fid0, path1, left, err := pathc.walkPath(path, resolve, w)
 		db.DPrintf(db.WALK_LAT, "open %v %v -> (%v, %v  %v, %v) lat: %v", pathc.cid, path, fid, path1, left, err, time.Since(start))
 		if serr.IsErrorRetryOpenOK(err) {
 			done := len(path1) - len(left)
 			db.DPrintf(db.PATHCLNT_ERR, "walkPath retry pn '%v' pn1 '%v' left '%v' d %v err %v by umount %v", path, path1, left, done, err, path1[0:done])
 			if e := pathc.mntclnt.UmountPrefix(path1[0:done]); e != nil {
-				return sp.NoFid, e
+				return e, true
 			}
 			db.DPrintf(db.PATHCLNT_ERR, "open: retry pn '%v' r %v", path, resolve)
-			// try again
-			time.Sleep(sp.Conf.Path.RESOLVE_TIMEOUT)
-			continue
 		}
 		if err != nil {
-			return sp.NoFid, err
+			return err, true
 		}
-		return fid, nil
+		fid = fid0
+		return nil, true
+	}, serr.IsErrorRetryOpenOK)
+	if !ok {
+		return sp.NoFid, serr.NewErr(serr.TErrUnreachable, path)
 	}
-	return sp.NoFid, serr.NewErr(serr.TErrUnreachable, path)
+	if err != nil {
+		return sp.NoFid, err.(*serr.Err)
+	}
+	return fid, nil
 }
 
 func (pathc *PathClnt) Open(pn sp.Tsigmapath, principal *sp.Tprincipal, mode sp.Tmode, w sos.Watch) (sp.Tfid, error) {

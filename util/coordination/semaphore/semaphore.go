@@ -41,7 +41,7 @@ func (sem *Semaphore) InitLease(perm sp.Tperm, lid sp.TleaseId) error {
 
 // Down semaphore. If not upped yet (i.e., if file exists), block
 func (sem *Semaphore) Down() error {
-	err := retry.RepeatDefDur(func() error {
+	err, ok := retry.RetryDefDur(func() error {
 		db.DPrintf(db.SEMCLNT, "Down %v\n", sem.path)
 		err := dirwatcher.WaitRemove(sem.FsLib, sem.path)
 		// If err is because file has been removed, then no error: the
@@ -58,9 +58,12 @@ func (sem *Semaphore) Down() error {
 			return err
 		}
 	}, serr.IsErrorSession)
-	if err != nil {
+	if !ok {
 		db.DPrintf(db.SEMCLNT_ERR, "Down failed after retries")
 		return serr.NewErr(serr.TErrUnreachable, sem.path)
+	}
+	if err != nil {
+		return err
 	}
 	return nil
 }

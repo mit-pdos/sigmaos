@@ -107,7 +107,7 @@ func (rts *RealmTstate) bootNode(n int, waitForNamed bool) error {
 		// it may return the old named's EP, since it persists until
 		// the new one overrides it.
 		var sts []*sp.Tstat
-		err := retry.RetryAtMostOnce(func() error {
+		err, _ := retry.RetryAtMostOnce(func() error {
 			db.DPrintf(db.TEST, "Named down %v pn %v err %v", rts.realm, pn, err)
 			sts, err = rts.Ts.GetDir(pn)
 			return err

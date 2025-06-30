@@ -634,7 +634,7 @@ func TestCrashRealmNamed(t *testing.T) {
 	// allow named to crash
 	time.Sleep(T * time.Millisecond)
 
-	err = retry.RetryAtLeastOnce(func() error {
+	err, _ = retry.RetryAtLeastOnce(func() error {
 		_, err = sc.GetFile(fn)
 		db.DPrintf(db.TEST, "Named down pn %v err %v", fn, err)
 		return err

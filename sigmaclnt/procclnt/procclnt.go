@@ -180,7 +180,7 @@ func (clnt *ProcClnt) enqueueViaLCSched(p *proc.Proc) (string, error) {
 func (clnt *ProcClnt) spawnRetry(kernelId string, p *proc.Proc) (*proc.ProcSeqno, error) {
 	start := time.Now()
 	var pseqno *proc.ProcSeqno
-	err := retry.Repeat(func() error {
+	err, ok := retry.Retry(func() error {
 		var err error
 		if p.IsPrivileged() {
 			// Privileged procs are force-run on the msched specified by kernelID in
@@ -223,9 +223,12 @@ func (clnt *ProcClnt) spawnRetry(kernelId string, p *proc.Proc) (*proc.ProcSeqno
 		perf.LogSpawnLatency("spawnRetry", p.GetPid(), p.GetSpawnTime(), start)
 		return nil
 	}, serr.IsErrorSession, 0)
-	if err != nil {
+	if !ok {
 		db.DPrintf(db.PROCCLNT_ERR, "spawnRetry failed at kernelId %v err %v proc %v", kernelId, p, err)
 		return nil, serr.NewErr(serr.TErrUnreachable, kernelId)
+	}
+	if err != nil {
+		return nil, err
 	}
 	return pseqno, err
 }

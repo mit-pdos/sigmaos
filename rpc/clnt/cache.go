@@ -70,7 +70,7 @@ func (cc *ClntCache) Delete(pn string) {
 }
 
 func (cc *ClntCache) RPCRetry(pn string, method string, arg proto.Message, res proto.Message) error {
-	err := retry.RetryAtMostOnce(func() error {
+	err, ok := retry.RetryAtMostOnce(func() error {
 		rpcc, err := cc.Lookup(pn)
 		if err != nil {
 			if serr.IsErrorWalkOK(err) {
@@ -92,6 +92,9 @@ func (cc *ClntCache) RPCRetry(pn string, method string, arg proto.Message, res p
 		}
 		return err
 	})
+	if !ok {
+		return serr.NewErr(serr.TErrUnreachable, pn)
+	}
 	return err
 }
 

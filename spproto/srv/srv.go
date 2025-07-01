@@ -114,7 +114,7 @@ func (ps *ProtSrv) Attach(args *sp.Tattach, rets *sp.Rattach) (sp.TclntId, *sp.R
 			return sp.NoClntId, sp.NewRerrorSerr(err)
 		}
 		tree = lo
-		parent = getParent(root, os)
+		parent = getParentDir(root, os)
 		qid = ps.newQid(lo.Perm(), fs.Uid(lo))
 	}
 	fid := ps.fm.NewFid(p.Base(), tree, parent, ctx, 0, qid)
@@ -166,7 +166,7 @@ func (ps *ProtSrv) lookupObjLastParent(ctx fs.CtxI, f *fid.Fid, names path.Tpath
 	if err != nil {
 		return nil, nil, err
 	}
-	parent := getParent(f.Obj().(fs.Dir), os)
+	parent := getParentFid(f, os)
 	if lo.Perm().IsSymlink() && resolve {
 		return nil, nil, serr.NewErr(serr.TErrNotDir, names[len(names)-1])
 	}
@@ -198,9 +198,10 @@ func (ps *ProtSrv) Walk(args *sp.Twalk, rets *sp.Rwalk) *sp.Rerror {
 	// let the client decide what to do with rest (when there is a rest)
 	rets.Qids = ps.newQidProtos(os)
 	qid := ps.newQid(lo.Perm(), fs.Uid(lo))
-	parent := getParent(f.Obj().(fs.Dir), os)
 
 	db.DPrintf(db.PROTSRV, "%v: Walk NewFid fid %v lo %v qid %v os %v", f.Ctx().ClntId(), args.NewFid, lo, qid, os)
+
+	parent := getParentFid(f, os)
 
 	fid := ps.fm.NewFid(name, lo, parent, f.Ctx(), 0, qid)
 	if err := ps.fm.Insert(args.Tnewfid(), fid); err != nil {

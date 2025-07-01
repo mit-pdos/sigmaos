@@ -10,7 +10,18 @@ import (
 	"sigmaos/spproto/srv/namei"
 )
 
-func getParent(start fs.Dir, os []fs.FsObj) fs.Dir {
+func getParentFid(start *fid.Fid, os []fs.FsObj) fs.Dir {
+	if len(os) == 0 {
+		return start.Parent()
+	} else if len(os) == 1 {
+		return start.Obj().(fs.Dir)
+	} else {
+		d := os[len(os)-2]
+		return d.(fs.Dir)
+	}
+}
+
+func getParentDir(start fs.Dir, os []fs.FsObj) fs.Dir {
 	if len(os) <= 1 {
 		return start
 	} else {

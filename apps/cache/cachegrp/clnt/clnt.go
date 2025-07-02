@@ -22,7 +22,7 @@ import (
 	tproto "sigmaos/util/tracing/proto"
 )
 
-func key2server(key string, nserver int) int {
+func Key2server(key string, nserver int) int {
 	h := fnv.New32a()
 	h.Write([]byte(key))
 	server := int(h.Sum32()) % nserver
@@ -104,7 +104,7 @@ func (csc *CachedSvcClnt) GetEndpoints() (map[string]*sp.Tendpoint, error) {
 func (csc *CachedSvcClnt) NewMultiGetReqs(keys []string, nserver int) map[int]*cacheproto.CacheMultiGetReq {
 	reqs := make(map[int]*cacheproto.CacheMultiGetReq)
 	for _, key := range keys {
-		server := key2server(key, nserver)
+		server := Key2server(key, nserver)
 		req, ok := reqs[server]
 		if !ok {
 			req = &cacheproto.CacheMultiGetReq{
@@ -118,6 +118,10 @@ func (csc *CachedSvcClnt) NewMultiGetReqs(keys []string, nserver int) map[int]*c
 		})
 	}
 	return reqs
+}
+
+func (csc *CachedSvcClnt) Key2shard(key string) uint32 {
+	return csc.cc.Key2shard(key)
 }
 
 func (csc *CachedSvcClnt) Put(key string, val proto.Message) error {
@@ -141,7 +145,7 @@ func (csc *CachedSvcClnt) GetTraced(sctx *tproto.SpanContextConfig, key string, 
 	if err != nil {
 		return err
 	}
-	srv := csc.Server(key2server(key, n))
+	srv := csc.Server(Key2server(key, n))
 	return csc.cc.GetTracedFenced(sctx, srv, key, val, sp.NullFence())
 }
 
@@ -150,7 +154,7 @@ func (csc *CachedSvcClnt) PutBytesTraced(sctx *tproto.SpanContextConfig, key str
 	if err != nil {
 		return err
 	}
-	srv := csc.Server(key2server(key, n))
+	srv := csc.Server(Key2server(key, n))
 	return csc.cc.PutBytesTracedFenced(sctx, srv, key, b, sp.NullFence())
 }
 
@@ -159,7 +163,7 @@ func (csc *CachedSvcClnt) PutTraced(sctx *tproto.SpanContextConfig, key string, 
 	if err != nil {
 		return err
 	}
-	srv := csc.Server(key2server(key, n))
+	srv := csc.Server(Key2server(key, n))
 	return csc.cc.PutTracedFenced(sctx, srv, key, val, sp.NullFence())
 }
 
@@ -168,7 +172,7 @@ func (csc *CachedSvcClnt) DeleteTraced(sctx *tproto.SpanContextConfig, key strin
 	if err != nil {
 		return err
 	}
-	srv := csc.Server(key2server(key, n))
+	srv := csc.Server(Key2server(key, n))
 	return csc.cc.DeleteTracedFenced(sctx, srv, key, sp.NullFence())
 }
 

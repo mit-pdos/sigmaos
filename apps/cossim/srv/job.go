@@ -183,7 +183,7 @@ func (j *CosSimJob) AddSrv() (*proc.Proc, time.Duration, error) {
 	nreqs := 0
 	for server, getReq := range cacheGetReqs {
 		cachesrvPN := j.cacheClnt.Server(server)
-		db.DPrintf(db.COSSIMSRV, "MultiGetReq for new cachesrv: %v -> %v", cachesrvPN, getReq)
+		db.DPrintf(db.COSSIMSRV, "MultiGetReq for new cachesrv: %v -> %v", cachesrvPN, len(getReq.Gets))
 		iniov, err := rpcclnt.WrapRPCRequest("CacheSrv.MultiGet", getReq)
 		if err != nil {
 			db.DPrintf(db.ALWAYS, "Error wrap & marshal getReq: %v", err)

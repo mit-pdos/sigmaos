@@ -64,7 +64,7 @@ func run(cmd string) ([]byte, error) {
 	return out, err
 }
 
-func TestProxy(t *testing.T) {
+func TestProxyBasic(t *testing.T) {
 	t1, err1 := test.NewTstatePath(t, sp.NAMED)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
@@ -75,18 +75,26 @@ func TestProxy(t *testing.T) {
 		return
 	}
 
-	out, err := run("ls -a /mnt/9p/ | grep '.statsd'")
+	out, err := run("ls -ld /mnt/9p/")
+	assert.Nil(t, err)
+	db.DPrintf(db.TEST, "out %v", string(out))
+
+	out, err = run("ls -a /mnt/9p/ | grep '.statsd'")
 	if !assert.Nil(t, err, "Err run ls: %v", err) {
 		return
 	}
 	assert.Equal(t, ".pstatsd\n.statsd\n", string(out))
 
-	out, err = run("cat /mnt/9p/.statsd")
-	assert.Nil(t, err)
-	assert.True(t, strings.Contains(string(out), "Nwalk"))
-
 	out, err = run("echo hello > /mnt/9p/xxx")
 	assert.Nil(t, err)
+
+	out, err = run("cat /mnt/9p/xxx ")
+	assert.Nil(t, err)
+	assert.True(t, strings.Contains(string(out), "hello"))
+
+	out, err = run("ls -l /mnt/9p/xxx")
+	assert.Nil(t, err)
+	db.DPrintf(db.TEST, "out %v", string(out))
 
 	out, err = run("mv /mnt/9p/xxx /mnt/9p/yyy")
 	assert.Nil(t, err)
@@ -96,6 +104,11 @@ func TestProxy(t *testing.T) {
 
 	out, err = run("mkdir /mnt/9p/ddd")
 	assert.Nil(t, err)
+
+	out, err = run("ls -ld /mnt/9p/ddd")
+	assert.Nil(t, err)
+	db.DPrintf(db.TEST, "out %v", string(out))
+	// assert.Equal(t, "xxx\n", string(out))
 
 	out, err = run("echo hello > /mnt/9p/ddd/xxx")
 	assert.Nil(t, err)
@@ -107,7 +120,16 @@ func TestProxy(t *testing.T) {
 	out, err = run("rm /mnt/9p/ddd/xxx")
 	assert.Nil(t, err)
 
-	out, err = run("cp ../tutorial/01_local_dev.md /mnt/9p/ddd/yyy")
+	out, err = run("cat /mnt/9p/ddd/xxx ")
+	assert.NotNil(t, err)
+
+	out, err = run("rm /mnt/9p/ddd/xxx")
+	assert.NotNil(t, err)
+
+	out, err = run("ls /mnt/9p/xxx")
+	assert.NotNil(t, err)
+
+	out, err = run("cp ../../tutorial/01_local_dev.md /mnt/9p/ddd/yyy")
 	assert.Nil(t, err)
 
 	out, err = run("rm /mnt/9p/ddd/yyy")
@@ -115,9 +137,6 @@ func TestProxy(t *testing.T) {
 
 	out, err = run("rmdir /mnt/9p/ddd")
 	assert.Nil(t, err)
-
-	out, err = run("ls /mnt/9p/xxx")
-	assert.NotNil(t, err)
 }
 
 func TestStats(t *testing.T) {

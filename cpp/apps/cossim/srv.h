@@ -6,6 +6,7 @@
 #include <format>
 #include <filesystem>
 #include <limits>
+#include <future>
 #include <cmath>
 
 #include <util/log/log.h>
@@ -92,7 +93,7 @@ class Srv {
   // CosSim RPC handler
   std::expected<int, sigmaos::serr::Error> CosSim(std::shared_ptr<google::protobuf::Message> preq, std::shared_ptr<google::protobuf::Message> prep);
   std::expected<int, sigmaos::serr::Error> fetch_vector(uint64_t id);
-  std::expected<int, sigmaos::serr::Error> fetch_init_vectors_from_cache(int srv_id, std::vector<std::string> &key_vec, std::vector<int> &key_vec_int);
+  void fetch_init_vectors_from_cache(std::promise<std::expected<int, sigmaos::serr::Error>> &result, int srv_id, std::vector<std::string> &key_vec, std::vector<int> &key_vec_int);
 };
 
 

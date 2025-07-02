@@ -43,7 +43,7 @@ std::expected<int, sigmaos::serr::Error> Srv::CosSim(std::shared_ptr<google::pro
   return 0;
 }
 
-std::expected<int, sigmaos::serr::Error> Srv::fetch_init_vectors_from_cache(int srv_id, std::vector<std::string> &key_vec, std::vector<int> &key_vec_int) {
+void Srv::fetch_init_vectors_from_cache(std::promise<std::expected<int, sigmaos::serr::Error>> &result, int srv_id, std::vector<std::string> &key_vec, std::vector<int> &key_vec_int) {
   int nbyte = 0;
   auto start = GetCurrentTime();
   std::shared_ptr<std::string> buf;
@@ -55,7 +55,8 @@ std::expected<int, sigmaos::serr::Error> Srv::fetch_init_vectors_from_cache(int 
       auto res = _cache_clnt->DelegatedMultiGet(srv_id);
       if (!res.has_value()) {
         log(COSSIMSRV_ERR, "Error DelegatedMultiVec {}", res.error().String());
-        return std::unexpected(res.error());
+        result.set_value(std::unexpected(res.error()));
+        return;
       }
       auto res_pair = res.value();
       lengths = res_pair.first;
@@ -63,6 +64,8 @@ std::expected<int, sigmaos::serr::Error> Srv::fetch_init_vectors_from_cache(int 
     }
     log(COSSIMSRV, "Got shards delegated RPC #{}", srv_id);
     LogSpawnLatency(_sp_clnt->ProcEnv()->GetPID(), _sp_clnt->ProcEnv()->GetSpawnTime(), start, "GetShard RPC");
+    // Take the lock while modifying the _vec_db map
+    std::lock_guard<std::mutex> guard(_mu);
     start = GetCurrentTime();
     uint64_t off = 0;
     for (int j = 0; j < key_vec_int.size(); j++) {
@@ -82,7 +85,8 @@ std::expected<int, sigmaos::serr::Error> Srv::fetch_init_vectors_from_cache(int 
       auto res = _cache_clnt->MultiGet(srv_id, key_vec);
       if (!res.has_value()) {
         log(COSSIMSRV_ERR, "Error MultiGet {}", res.error().String());
-        return std::unexpected(res.error());
+        result.set_value(std::unexpected(res.error()));
+        return;
       }
       auto res_pair = res.value();
       lengths = res_pair.first;
@@ -90,6 +94,8 @@ std::expected<int, sigmaos::serr::Error> Srv::fetch_init_vectors_from_cache(int 
     }
     log(COSSIMSRV, "Got shards direct RPC");
     LogSpawnLatency(_sp_clnt->ProcEnv()->GetPID(), _sp_clnt->ProcEnv()->GetSpawnTime(), start, "GetShard RPC");
+    // Take the lock while modifying the _vec_db map
+    std::lock_guard<std::mutex> guard(_mu);
     start = GetCurrentTime();
     uint64_t off = 0;
     for (int j = 0; j < key_vec_int.size(); j++) {
@@ -102,7 +108,7 @@ std::expected<int, sigmaos::serr::Error> Srv::fetch_init_vectors_from_cache(int 
     }
     LogSpawnLatency(_sp_clnt->ProcEnv()->GetPID(), _sp_clnt->ProcEnv()->GetSpawnTime(), start, "Parse vecs & construct DB");
   }
-  return nbyte;
+  result.set_value(nbyte);
 }
 
 std::expected<int, sigmaos::serr::Error> Srv::Init() {
@@ -120,13 +126,23 @@ std::expected<int, sigmaos::serr::Error> Srv::Init() {
   }
   int nbyte = 0;
   auto start = GetCurrentTime();
+  std::vector<std::thread> fetch_threads;
+  std::vector<std::promise<std::expected<int, sigmaos::serr::Error>>> fetch_promises;
+  std::vector<std::future<std::expected<int, sigmaos::serr::Error>>> fetch_results;
+  // Start fetches in multiple threads
   for (int srv_id = 0; srv_id < _ncache; srv_id++) {
-    auto res = fetch_init_vectors_from_cache(srv_id, key_vecs.at(srv_id), key_vecs_int.at(srv_id));
+    fetch_promises.push_back(std::promise<std::expected<int, sigmaos::serr::Error>>());
+    fetch_results.push_back(fetch_promises.at(srv_id).get_future());
+    fetch_threads.push_back(std::thread(&Srv::fetch_init_vectors_from_cache, this, std::ref(fetch_promises.at(srv_id)), srv_id, std::ref(key_vecs.at(srv_id)), std::ref(key_vecs_int.at(srv_id))));
+  }
+  for (int i = 0; i < fetch_threads.size(); i++) {
+    fetch_threads.at(i).join();
+    auto res = fetch_results.at(i).get();
     if (!res.has_value()) {
-      log(COSSIMSRV_ERR, "Error DelegatedMultiVec {}", res.error().String());
+      log(COSSIMSRV_ERR, "Error fetch_init_vectors_from_cache {}", res.error().String());
       return std::unexpected(res.error());
     }
-    nbyte = res.value();
+    nbyte += res.value();
   }
   LogSpawnLatency(_sp_clnt->ProcEnv()->GetPID(), _sp_clnt->ProcEnv()->GetSpawnTime(), start, std::format("Initialize soft state vector DB: {}B", (int) nbyte));
   return 0;

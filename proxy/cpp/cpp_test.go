@@ -378,10 +378,11 @@ func TestCosSimInitLatency(t *testing.T) {
 		VEC_DIM    = 100
 		EAGER_INIT = true
 		// Cache parameters
-		N_CACHE    = 2
-		CACHE_MCPU = 1000
-		CACHE_GC   = true
-		JOB_NAME   = "cossim-job"
+		N_CACHE      = 2
+		CACHE_MCPU   = 1000
+		CACHE_GC     = true
+		DELEGATE_RPC = true
+		JOB_NAME     = "cossim-job"
 	)
 
 	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
@@ -395,7 +396,7 @@ func TestCosSimInitLatency(t *testing.T) {
 	}
 
 	// Start a cossim job
-	j, err := cossimsrv.NewCosSimJob(mrts.GetRealm(test.REALM1).SigmaClnt, JOB_NAME, N_VEC, VEC_DIM, EAGER_INIT, MCPU_PER_SRV, N_CACHE, CACHE_MCPU, CACHE_GC, true)
+	j, err := cossimsrv.NewCosSimJob(mrts.GetRealm(test.REALM1).SigmaClnt, JOB_NAME, N_VEC, VEC_DIM, EAGER_INIT, MCPU_PER_SRV, N_CACHE, CACHE_MCPU, CACHE_GC, DELEGATE_RPC)
 	if !assert.Nil(mrts.T, err, "Err NewCosSimJob: %v", err) {
 		return
 	}

@@ -368,6 +368,7 @@ func (cs *CacheSrv) MultiGet(ctx fs.CtxI, req cacheproto.CacheMultiGetReq, rep *
 			totalLength += len(v)
 			continue
 		}
+		db.DPrintf(db.CACHESRV_ERR, "Key not found %v shard %v", getReq.Key, getReq.Tshard())
 		// Key not found, so bail out & fail all gets
 		return serr.NewErr(serr.TErrNotfound, fmt.Sprintf("key %s", getReq.Key))
 	}

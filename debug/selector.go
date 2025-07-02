@@ -60,6 +60,7 @@ const (
 // Cache
 const (
 	CACHESRV      Tselector = "CACHESRV"
+	CACHESRV_ERR            = CACHESRV + ERR
 	CACHECLERK              = "CACHECLERK"
 	CACHEDSVCCLNT           = "CACHEDSVCCLNT"
 )

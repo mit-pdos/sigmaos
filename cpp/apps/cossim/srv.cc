@@ -43,7 +43,7 @@ std::expected<int, sigmaos::serr::Error> Srv::CosSim(std::shared_ptr<google::pro
   return 0;
 }
 
-void Srv::fetch_init_vectors_from_cache(std::promise<std::expected<int, sigmaos::serr::Error>> &result, int srv_id, std::vector<std::string> &key_vec, std::vector<int> &key_vec_int) {
+void Srv::fetch_init_vectors_from_cache(std::shared_ptr<std::promise<std::expected<int, sigmaos::serr::Error>>> result, int srv_id, std::vector<std::string> &key_vec, std::vector<int> &key_vec_int) {
   int nbyte = 0;
   auto start = GetCurrentTime();
   std::shared_ptr<std::string> buf;
@@ -55,7 +55,7 @@ void Srv::fetch_init_vectors_from_cache(std::promise<std::expected<int, sigmaos:
       auto res = _cache_clnt->DelegatedMultiGet(srv_id);
       if (!res.has_value()) {
         log(COSSIMSRV_ERR, "Error DelegatedMultiVec {}", res.error().String());
-        result.set_value(std::unexpected(res.error()));
+        result->set_value(std::unexpected(res.error()));
         return;
       }
       auto res_pair = res.value();
@@ -85,7 +85,7 @@ void Srv::fetch_init_vectors_from_cache(std::promise<std::expected<int, sigmaos:
       auto res = _cache_clnt->MultiGet(srv_id, key_vec);
       if (!res.has_value()) {
         log(COSSIMSRV_ERR, "Error MultiGet {}", res.error().String());
-        result.set_value(std::unexpected(res.error()));
+        result->set_value(std::unexpected(res.error()));
         return;
       }
       auto res_pair = res.value();
@@ -108,7 +108,7 @@ void Srv::fetch_init_vectors_from_cache(std::promise<std::expected<int, sigmaos:
     }
     LogSpawnLatency(_sp_clnt->ProcEnv()->GetPID(), _sp_clnt->ProcEnv()->GetSpawnTime(), start, "Parse vecs & construct DB");
   }
-  result.set_value(nbyte);
+  result->set_value(nbyte);
 }
 
 std::expected<int, sigmaos::serr::Error> Srv::Init() {
@@ -127,12 +127,12 @@ std::expected<int, sigmaos::serr::Error> Srv::Init() {
   int nbyte = 0;
   auto start = GetCurrentTime();
   std::vector<std::thread> fetch_threads;
-  std::vector<std::promise<std::expected<int, sigmaos::serr::Error>>> fetch_promises;
+  std::vector<std::shared_ptr<std::promise<std::expected<int, sigmaos::serr::Error>>>> fetch_promises;
   std::vector<std::future<std::expected<int, sigmaos::serr::Error>>> fetch_results;
   // Start fetches in multiple threads
   for (int srv_id = 0; srv_id < _ncache; srv_id++) {
-    fetch_promises.push_back(std::promise<std::expected<int, sigmaos::serr::Error>>());
-    fetch_results.push_back(fetch_promises.at(srv_id).get_future());
+    fetch_promises.push_back(std::make_shared<std::promise<std::expected<int, sigmaos::serr::Error>>>());
+    fetch_results.push_back(fetch_promises.at(srv_id)->get_future());
     fetch_threads.push_back(std::thread(&Srv::fetch_init_vectors_from_cache, this, std::ref(fetch_promises.at(srv_id)), srv_id, std::ref(key_vecs.at(srv_id)), std::ref(key_vecs_int.at(srv_id))));
   }
   for (int i = 0; i < fetch_threads.size(); i++) {

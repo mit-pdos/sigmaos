@@ -138,7 +138,8 @@ func (npc *NpSess) Walk(args *sp.Twalk, rets *sp.Rwalk) *sp.Rerror {
 	if !ok {
 		return sp.NewRerrorCode(serr.TErrNotfound)
 	}
-	fid1, err := npc.pc.Walk(fid, append([]string{"name"}, args.Wnames...), sp.NewPrincipal(
+
+	fid1, err := npc.pc.Walk(fid, args.Wnames, sp.NewPrincipal(
 		sp.TprincipalID("proxy"),
 		sp.ROOTREALM,
 	))

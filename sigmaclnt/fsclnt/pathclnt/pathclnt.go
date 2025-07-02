@@ -376,8 +376,14 @@ func (pathc *PathClnt) Walk(fid sp.Tfid, path path.Tpathname, principal *sp.Tpri
 	// p := ch.Path().AppendPath(path)
 	// return pathc.walk(p, principal, true, nil)
 
-	db.DPrintf(db.PATHCLNT, "Walk %v %v (ch %v)", fid, path, ch)
-	return pathc.open(path, principal, true, nil)
+	db.DPrintf(db.NPPROXY, "Walk %v %v (ch %v)", fid, path, ch)
+	fid1, left, err := pathc.FidClnt.Walk(fid, path)
+
+	qid := pathc.FidClnt.Lookup(fid1).Lastqid()
+	s := qid.Ttype()&sp.QTSYMLINK == sp.QTSYMLINK
+
+	db.DPrintf(db.NPPROXY, "qid %v s %t left l %v", qid, s, left)
+	return fid1, err
 }
 
 func (pathc *PathClnt) Disconnected() bool {

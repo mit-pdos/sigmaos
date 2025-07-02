@@ -34,7 +34,7 @@ func newObjDi(fs *fsetcd.FsEtcd, pn path.Tpathname, di fsetcd.DirEntInfo) *Obj {
 }
 
 func (o *Obj) String() string {
-	return fmt.Sprintf("{pn %q di %v (%d)}", o.pn, &o.di, o.Dev())
+	return fmt.Sprintf("{pn %q di %v (dev %d)}", o.pn, &o.di, o.Dev())
 }
 
 func (o *Obj) Path() sp.Tpath {

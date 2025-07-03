@@ -193,11 +193,10 @@ func TestBoot(t *testing.T) {
 	e := strings.Fields(string(out))
 
 	dn := filepath.Join(boot, e[1])
-	db.DPrintf(db.TEST, "boot srv dn: %v\n", dn)
+	// db.DPrintf(db.TEST, "boot srv dn: %v\n", dn)
 	out, err = run("ls " + dn)
 	assert.Nil(t, err)
-
-	db.DPrintf(db.TEST, "boot: %v\n", string(out))
+	assert.True(t, strings.Contains(string(out), "rpc"))
 }
 
 func TestSelf(t *testing.T) {
@@ -226,7 +225,7 @@ func TestSelf(t *testing.T) {
 	out, err := run("ls -l /mnt/9p/namedself/d")
 	assert.Nil(t, err)
 
-	db.DPrintf(db.TEST, "Out: %v\n", string(out))
+	// db.DPrintf(db.TEST, "Out: %v\n", string(out))
 	assert.True(t, strings.Contains(string(out), "myfile"))
 
 	ts.Remove("name/namedself")

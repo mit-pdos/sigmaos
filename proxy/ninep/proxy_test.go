@@ -152,7 +152,6 @@ func TestStats(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		out, err := run("cat /mnt/9p/.statsd")
 		assert.Nil(t, err)
-		db.DPrintf(db.TEST, "out: %s", string(out))
 		assert.True(t, strings.Contains(string(out), "Nwalk"))
 	}
 }

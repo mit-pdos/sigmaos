@@ -59,7 +59,7 @@ func run(cmd string) ([]byte, error) {
 	db.DPrintf(db.TEST, "cmd %v", cmd)
 	out, err := exec.Command("bash", "-c", cmd).CombinedOutput()
 	if err != nil {
-		db.DPrintf(db.ALWAYS, "stderr: %v", string(out))
+		db.DPrintf(db.ERROR, "stderr: %v", string(out))
 	}
 	return out, err
 }
@@ -107,8 +107,7 @@ func TestProxyBasic(t *testing.T) {
 
 	out, err = run("ls -ld /mnt/9p/ddd")
 	assert.Nil(t, err)
-	db.DPrintf(db.TEST, "out %v", string(out))
-	// assert.Equal(t, "xxx\n", string(out))
+	assert.True(t, strings.Contains(string(out), "mnt/9p/ddd"))
 
 	out, err = run("echo hello > /mnt/9p/ddd/xxx")
 	assert.Nil(t, err)
@@ -171,15 +170,9 @@ func TestUx(t *testing.T) {
 	ux := "/mnt/9p/ux"
 	out, err := run("ls " + ux)
 	assert.Nil(t, err)
-
-	db.DPrintf(db.TEST, "Ux: %v\n", string(out))
-
 	dn := filepath.Join(ux, string(out))
 	out, err = run("ls " + dn)
 	assert.Nil(t, err)
-
-	db.DPrintf(db.TEST, "Ux: %v\n", string(out))
-
 	assert.True(t, strings.Contains(string(out), "bin"))
 }
 

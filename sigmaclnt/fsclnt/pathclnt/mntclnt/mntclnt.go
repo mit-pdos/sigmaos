@@ -107,15 +107,15 @@ func (mc *MntClnt) PathLastMount(pn sp.Tsigmapath, principal *sp.Tprincipal) (pa
 	return mc.LastMount(pn, principal)
 }
 
-func (mc *MntClnt) MountTree(secrets map[string]*sp.SecretProto, ep *sp.Tendpoint, tree, mntname sp.Tsigmapath) error {
+func (mc *MntClnt) MountTreeFid(secrets map[string]*sp.SecretProto, ep *sp.Tendpoint, tree, mntname sp.Tsigmapath) (sp.Tfid, error) {
 	pn, err := serr.PathSplitErr(mntname)
 	if err != nil {
-		return err
+		return sp.NoFid, err
 	}
 	db.DPrintf(db.MOUNT, "%v: MountTree [%v]:%q mnt %v", mc.cid, ep, tree, mntname)
 	pnt, err := mc.mnt.lookupAlloc(pn, sp.NoFid)
 	if err != nil {
-		return err
+		return sp.NoFid, err
 	}
 
 	pnt.Lock()
@@ -124,7 +124,7 @@ func (mc *MntClnt) MountTree(secrets map[string]*sp.SecretProto, ep *sp.Tendpoin
 	db.DPrintf(db.MOUNT, "%v: isAttached? [%v] %t err %v", mc.cid, ep, pnt.isAttached(), err)
 
 	if pnt.isAttached() {
-		return nil
+		return pnt.fid, nil
 	}
 
 	db.DPrintf(db.MOUNT, "MountTree [%v]:%q attach %v", ep, tree, mntname)
@@ -138,10 +138,15 @@ func (mc *MntClnt) MountTree(secrets map[string]*sp.SecretProto, ep *sp.Tendpoin
 	db.DPrintf(db.MOUNT, "%v: MountTree pn %q err %v Attach lat %v\n", mc.cid, mntname, err, time.Since(s))
 
 	if err != nil {
-		return err
+		return sp.NoFid, err
 	}
 	pnt.fid = fid
-	return nil
+	return fid, nil
+}
+
+func (mc *MntClnt) MountTree(secrets map[string]*sp.SecretProto, ep *sp.Tendpoint, tree, mntname sp.Tsigmapath) error {
+	_, err := mc.MountTreeFid(secrets, ep, tree, mntname)
+	return err
 }
 
 // Detach from server

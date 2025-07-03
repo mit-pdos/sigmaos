@@ -365,25 +365,23 @@ func (pathc *PathClnt) PutFile(pn sp.Tsigmapath, principal *sp.Tprincipal, mode 
 	return cnt, nil
 }
 
-// For npproxy
-func (pathc *PathClnt) Walk(fid sp.Tfid, path path.Tpathname, principal *sp.Tprincipal) (sp.Tfid, *serr.Err) {
-	ch := pathc.FidClnt.Lookup(fid)
-	if ch == nil {
-		return sp.NoFid, serr.NewErr(serr.TErrNotfound, fid)
-	}
-
+// For ninep proxy
+func (pathc *PathClnt) Walk(fid1 sp.Tfid, path path.Tpathname, principal *sp.Tprincipal) (sp.Tfid, *serr.Err) {
 	// XXX fix
 	// p := ch.Path().AppendPath(path)
 	// return pathc.walk(p, principal, true, nil)
 
-	db.DPrintf(db.NPPROXY, "Walk %v %v (ch %v)", fid, path, ch)
-	fid1, left, err := pathc.FidClnt.Walk(fid, path)
+	// Obtain a private copy of fid that this thread walks, which
+	// walkPathFid closes.
+	fid, err := pathc.FidClnt.Clone(fid1)
+	if err != nil {
+		return sp.NoFid, err
+	}
+	fid, left, retry, err := pathc.walkPathFid1(fid, path, path, true, nil)
 
-	qid := pathc.FidClnt.Lookup(fid1).Lastqid()
-	s := qid.Ttype()&sp.QTSYMLINK == sp.QTSYMLINK
+	db.DPrintf(db.NPPROXY, "Walk: walkPathFid %v path '%v'  fid %v left '%v' r %t err %v", fid1, path, fid, left, retry, err)
 
-	db.DPrintf(db.NPPROXY, "qid %v s %t left l %v", qid, s, left)
-	return fid1, err
+	return fid, err
 }
 
 func (pathc *PathClnt) Disconnected() bool {

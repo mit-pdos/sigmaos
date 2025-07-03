@@ -124,7 +124,7 @@ func (npc *NpSess) Attach(args *sp.Tattach, rets *sp.Rattach) (sp.TclntId, *sp.R
 	}
 	rets.Qid = npc.qm.Insert(fid, []sp.Tqid{*npc.fidc.Qid(fid)})[0]
 	npc.fm.mapTo(args.Tfid(), fid)
-	db.DPrintf(db.NPPROXY, "Attach args %v rets %v fid %v", args, rets, fid)
+	db.DPrintf(db.NPPROXY, "Attach args %v rets %v linux %v mapTo %v", args, rets, args.Tfid(), fid)
 	return args.TclntId(), nil
 }
 
@@ -154,7 +154,7 @@ func (npc *NpSess) Walk(args *sp.Twalk, rets *sp.Rwalk) *sp.Rerror {
 
 	rets.Qids = npc.qm.Insert(fid1, qids)
 	npc.fm.mapTo(args.Tnewfid(), fid1)
-	db.DPrintf(db.NPPROXY, "Walk ret %v fid %v mapTo %v", rets, fid1, args.Tnewfid())
+	db.DPrintf(db.NPPROXY, "Walk ret %v linux %v mapTo %v", rets, args.Tnewfid(), fid1)
 	return nil
 }
 
@@ -240,7 +240,7 @@ func (npc *NpSess) Stat(args *sp.Trstat, rets *sp.Rrstat) *sp.Rerror {
 	if !ok {
 		return sp.NewRerrorCode(serr.TErrNotfound)
 	}
-	db.DPrintf(db.NPPROXY, "Stat: req %v mapTo %v", args.Tfid(), fid)
+	db.DPrintf(db.NPPROXY, "Stat: req linux %v mapTo %v", args.Tfid(), fid)
 	st, err := npc.fidc.Stat(fid)
 	if err != nil {
 		db.DPrintf(db.NPPROXY, "Stats: args %v err %v", args, err)

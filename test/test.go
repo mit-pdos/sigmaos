@@ -52,6 +52,9 @@ func init() {
 	flag.StringVar(&projectRoot, "projectroot", "", "Path to project root")
 	flag.StringVar(&homeDir, "homedir", "", "Home directory, which contains the User's .aws directory")
 	flag.StringVar(&netname, "netname", "host", "Overlay network in which to run tests (or host if running in host mode)")
+	if !Start {
+		db.DPrintf(db.ALWAYS, "Running without starting kernel")
+	}
 }
 
 var savedTstate *Tstate

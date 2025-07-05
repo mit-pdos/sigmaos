@@ -14,24 +14,23 @@ import (
 // it returns NoFid and the rest of path that it wasn't able to walk.
 // walkPath first walks the mount table, finding the server with the
 // longest-match, and then uses walkPathFid() to walk at that server.
-// If retry, walkPathFid() returned a new path to be walked (e.g.,
-// when walkPathFid traversed a symbolic link or endpoint that also
-// may have updated the mount table).
+// If retry, walkPathFid() returned a new path to be walked (when
+// walkPathFid traversed a symbolic link).
 //
-// Each of the walk*() returns an fid, which on error is the
-// same as the argument; and the caller is responsible for clunking
+// Each of the walk*() returns an fid, which on error is the same as
+// the argument; and the caller is responsible for clunking
 func (pathc *PathClnt) walkPath(path path.Tpathname, resolve bool, w sos.Watch) (sp.Tfid, path.Tpathname, path.Tpathname, *serr.Err) {
 	for i := 0; i < sp.Conf.Path.MAX_SYMLINK; i++ {
 		db.DPrintf(db.WALK, "walkPath: '%v' resolve %v", path, resolve)
 		fid, left, err := pathc.walkMount(path, resolve)
 		if err != nil {
-			db.DPrintf(db.WALK, "walkPath: left '%v' resolve %v err %v", left, resolve, err)
+			db.DPrintf(db.WALK, "walkPath: walkMount left '%v' resolve %v err %v", left, resolve, err)
 			if len(left) != 0 || resolve {
 				return sp.NoFid, path, left, err
 			}
 		}
 		retry := false
-		fid, left, retry, err = pathc.walkPathFid(fid, path, left, resolve, w)
+		fid, left, retry, err = pathc.walkPathFid1(fid, path, left, resolve, w)
 		if err != nil {
 			db.DPrintf(db.WALK_ERR, "walkPath: walkPathFid %v path '%v' left '%v' retry %t err %v(%T)", fid, path, left, retry, err, err)
 			return sp.NoFid, path, left, err
@@ -98,15 +97,13 @@ func (pathc *PathClnt) walkPathFid(fid1 sp.Tfid, path, left path.Tpathname, reso
 	return sp.NoFid, left, false, serr.NewErr(serr.TErrNotfound, left)
 }
 
-// TODO: finish refactoring.  Deal with ProxyBasic failing
-
-// Walk left as much as possible at the server at fid1. walkElement
+// Walk `left` as much as possible at the server at fid1. walkElement
 // may fail to walk, finish walking, return a symbolic link to walk,
 // or return a fid for a new server to continue at.
-func (pathc *PathClnt) walkPathFid1(fid1 sp.Tfid, path, left path.Tpathname, resolve bool, w sos.Watch) (sp.Tfid, path.Tpathname, bool, *serr.Err) {
+func (pathc *PathClnt) walkPathFid1(fid1 sp.Tfid, path, left1 path.Tpathname, resolve bool, w sos.Watch) (sp.Tfid, path.Tpathname, bool, *serr.Err) {
 	for true {
-		fid, left, retry, err := pathc.walkElement(fid1, path, left, resolve, w)
-		db.DPrintf(db.WALK, "walkPathFid: walkElement %v %v '%v' %v", fid, left, retry, err)
+		fid, left, retry, err := pathc.walkElement(fid1, path, left1, resolve, w)
+		db.DPrintf(db.WALK, "walkPathFid: walkElement %v %v left '%v' %v", fid, left, retry, err)
 		if err != nil {
 			return sp.NoFid, left, false, err
 		}
@@ -114,21 +111,24 @@ func (pathc *PathClnt) walkPathFid1(fid1 sp.Tfid, path, left path.Tpathname, res
 			return sp.NoFid, left, true, nil
 		}
 		if len(left) == 0 {
-			// Note: fid can be the one returned by walkMount
+			// Note: fid can be fid1
 			return fid, nil, false, nil
 		}
 		// continue at the server identified at fid
+		fid1 = fid
+		left1 = left
 	}
-	return sp.NoFid, left, false, serr.NewErr(serr.TErrNotfound, left)
+	// doesn't reach here
+	return sp.NoFid, left1, false, serr.NewErr(serr.TErrNotfound, left1)
 }
 
 // Walk as much of left as possible at the server identified by
 // fid1. walkOne may fail, or end at symbolic file (containing
 // symbolic link or an endpoint) or a special path element.  The
-// latter two cases are handled by walkSymlink and walkSpecialElement,
+// latter two cases are handled by walkSymfile and walkSpecialElement,
 // respectively.
 func (pathc *PathClnt) walkElement(fid1 sp.Tfid, path, left path.Tpathname, resolve bool, w sos.Watch) (sp.Tfid, path.Tpathname, bool, *serr.Err) {
-	db.DPrintf(db.WALK, "walkElement: walkOne %v left '%v'", fid1, path)
+	db.DPrintf(db.WALK, "walkElement: walkOne %v left '%v'", fid1, left)
 	fid, left, err := pathc.walkOne(fid1, left, w)
 	if err != nil {
 		pathc.FidClnt.Clunk(fid)
@@ -140,7 +140,7 @@ func (pathc *PathClnt) walkElement(fid1 sp.Tfid, path, left path.Tpathname, reso
 		pathc.FidClnt.Clunk(fid)
 		return sp.NoFid, left, false, err
 	}
-	db.DPrintf(db.WALK, "walkElement %v fid2 %v left '%v' retry %v err %v", fid, fid2, left, retry, err)
+	db.DPrintf(db.WALK, "walkElement: walkSymfile %v fid2 %v left '%v' retry %v err %v", fid, fid2, left, retry, err)
 	// a true symlink?
 	if retry {
 		pathc.FidClnt.Clunk(fid)
@@ -278,7 +278,7 @@ func (pathc *PathClnt) walkSymfile(fid sp.Tfid, path, left path.Tpathname, resol
 		done := len(path) - len(left)
 		resolved := path[0:done]
 		fid1, pn, err := pathc.walkReadSymfile(fid, resolved)
-		db.DPrintf(db.WALK, "walkReadSymfile %v fid1 %v pn '%v' resolved %v left '%v'", fid, fid1, pn, resolved, left)
+		db.DPrintf(db.WALK, "walkSymfile: walkReadSymfile %v fid1 %v pn '%v' resolved %v left '%v'", fid, fid1, pn, resolved, left)
 		if err != nil {
 			return false, sp.NoFid, left, err
 		}

@@ -8,6 +8,7 @@ import (
 	"sigmaos/namesrv/leaderetcd"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
+	"sigmaos/sigmasrv/memfssrv/memfs/inode"
 )
 
 // named uses fsetcd's election package to elect a named.  named also supports
@@ -32,6 +33,8 @@ func Elect(fs *fsetcd.FsEtcd, pe *proc.ProcEnv, realm sp.Trealm) (*fsetcd.Sessio
 }
 
 func (nd *Named) startLeader() error {
+	ia := inode.NewInodeAlloc(sp.DEV_PSTATFS)
+	nd.pstats = fsetcd.NewPstatsDev(ia)
 	fs, err := fsetcd.NewFsEtcd(nd.GetDialProxyClnt().Dial, nd.ProcEnv().GetEtcdEndpoints(), nd.realm, nd.pstats)
 	if err != nil {
 		return err

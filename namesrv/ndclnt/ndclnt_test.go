@@ -51,8 +51,10 @@ func TestPstats(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
+
 	st, err := ts.ReadPstats()
 	assert.Nil(t, err)
+	assert.True(t, len(st.Counters) > 0)
 	db.DPrintf(db.TEST, "pstats %v", st)
 
 	ts.Shutdown()

@@ -268,7 +268,7 @@ func TestElasticCache(t *testing.T) {
 		time.Sleep(5 * time.Second)
 		sts, err := cc.StatsSrvs()
 		assert.Nil(t, err)
-		qlen := sts[0].StatsSnapshot.AvgQlen
+		qlen := sts[0].SrvStatsSnapshot.AvgQlen
 		db.DPrintf(db.ALWAYS, "Qlen %v %v\n", qlen, sts)
 		if qlen > 1.1 && i < 1 && nc < uint(NCPU*nsrv) {
 			db.DPrintf(db.TEST, "Add server")

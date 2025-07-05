@@ -9,24 +9,24 @@ import (
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv/memfssrv/memfs/inode"
-	"sigmaos/sigmasrv/stats"
+	"sigmaos/util/spstats"
 	"sigmaos/util/syncmap"
 )
 
 type pstats struct {
-	paths *syncmap.SyncMap[string, *stats.Tcounter]
+	paths *syncmap.SyncMap[string, *spstats.Tcounter]
 }
 
 func newPstats() *pstats {
-	return &pstats{paths: syncmap.NewSyncMap[string, *stats.Tcounter]()}
+	return &pstats{paths: syncmap.NewSyncMap[string, *spstats.Tcounter]()}
 }
 
-func (ps *pstats) Update(pn path.Tpathname, c stats.Tcounter) {
-	c0, _ := ps.paths.AllocNew(pn.String(), func(string) *stats.Tcounter {
-		n := stats.NewCounter(0)
+func (ps *pstats) Update(pn path.Tpathname, c spstats.Tcounter) {
+	c0, _ := ps.paths.AllocNew(pn.String(), func(string) *spstats.Tcounter {
+		n := spstats.NewCounter(0)
 		return &n
 	})
-	stats.Add(c0, c)
+	spstats.Add(c0, c)
 }
 
 // For reading and marshaling
@@ -53,7 +53,7 @@ func NewPstatsDev(ia *inode.InodeAlloc) *PstatInode {
 
 func (sti *PstatInode) stats() []byte {
 	ss := NewPstatsSnapshot()
-	sti.pstats.paths.Iter(func(k string, c *stats.Tcounter) bool {
+	sti.pstats.paths.Iter(func(k string, c *spstats.Tcounter) bool {
 		ss.Counters[k] = c.Load()
 		return true
 	})

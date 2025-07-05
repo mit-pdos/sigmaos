@@ -1,4 +1,4 @@
-package stats
+package spstats
 
 import (
 	"sync/atomic"

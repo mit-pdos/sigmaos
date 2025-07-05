@@ -4,13 +4,13 @@ import (
 	"encoding/json"
 	"path/filepath"
 
-	db "sigmaos/debug"
 	"sigmaos/api/fs"
-	"sigmaos/sigmasrv/memfssrv/memfs/inode"
-	"sigmaos/sigmasrv/memfssrv"
+	db "sigmaos/debug"
 	"sigmaos/rpc"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
+	"sigmaos/sigmasrv/memfssrv"
+	"sigmaos/sigmasrv/memfssrv/memfs/inode"
 )
 
 type statsDev struct {
@@ -32,7 +32,7 @@ func newStatsDev(mfs *memfssrv.MemFs, pn string) (*rpc.StatInfo, *serr.Err) {
 func (std *statsDev) marshal() ([]byte, *serr.Err) {
 	db.DPrintf(db.SIGMASRV, "Marshal stats: %v\n", std.si)
 	st := &rpc.RPCStatsSnapshot{}
-	st.StatsSnapshot = std.mfs.Stats().StatsSnapshot()
+	st.SrvStatsSnapshot = std.mfs.Stats().StatsSnapshot()
 	st.RpcStat = std.si.Stats()
 	b, err := json.Marshal(st)
 	if err != nil {

@@ -323,6 +323,10 @@ func (fsc *FsClient) Close() error {
 	return fsc.pc.Close()
 }
 
+//func (fsc *FsClient) Stats() error {
+//	return fsc.pc.Stats()
+//}
+
 func (fsc *FsClient) mntLookup(pn sp.Tsigmapath) (sos.PathClntAPI, error) {
 	p := path.Split(pn)
 	if len(p) == 0 {

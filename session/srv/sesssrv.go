@@ -17,6 +17,7 @@ import (
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv/stats"
 	"sigmaos/util/io/demux"
+	"sigmaos/util/spstats"
 )
 
 type NewSessionI interface {
@@ -39,7 +40,7 @@ type SessSrv struct {
 	sm    *sessionMgr
 	srv   *netsrv.NetServer
 	stats *stats.StatInode
-	qlen  stats.Tcounter
+	qlen  spstats.Tcounter
 	exp   ExpireI
 }
 
@@ -111,8 +112,8 @@ func (ssrv *SessSrv) srvFcall(sess *Session, fc *sessp.FcallMsg) *sessp.FcallMsg
 }
 
 func (ssrv *SessSrv) serve(sess *Session, fc *sessp.FcallMsg) *sessp.FcallMsg {
-	stats.Inc(&ssrv.qlen, 1)
-	defer stats.Dec(&ssrv.qlen)
+	spstats.Inc(&ssrv.qlen, 1)
+	defer spstats.Dec(&ssrv.qlen)
 
 	qlen := ssrv.QueueLen()
 	ssrv.stats.Stats().Inc(fc.Msg.Type(), qlen)

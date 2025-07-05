@@ -3,11 +3,8 @@ package stats
 import (
 	"encoding/json"
 	"fmt"
-	"reflect"
 	"sort"
-	"strings"
 	"sync"
-	"sync/atomic"
 
 	"sigmaos/api/fs"
 	db "sigmaos/debug"
@@ -17,6 +14,7 @@ import (
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv/memfssrv/memfs/inode"
 	"sigmaos/util/perf"
+	"sigmaos/util/spstats"
 )
 
 type StatsCommon struct {
@@ -36,59 +34,9 @@ func (st *StatsCommon) String() string {
 }
 
 type Stats struct {
-	Ntotal      Tcounter
-	Nversion    Tcounter
-	Nauth       Tcounter
-	Nattach     Tcounter
-	Ndetach     Tcounter
-	Nflush      Tcounter
-	Nwalk       Tcounter
-	Nclunk      Tcounter
-	Nopen       Tcounter
-	Nwatch      Tcounter
-	Ncreate     Tcounter
-	Nread       Tcounter
-	Nwrite      Tcounter
-	Nremove     Tcounter
-	Nremovefile Tcounter
-	Nstat       Tcounter
-	Nwstat      Tcounter
-	Nrenameat   Tcounter
-	Nget        Tcounter
-	Nput        Tcounter
-	Nrpc        Tcounter
-
-	Qlen Tcounter
-
+	SpSt spstats.SpStats
+	Qlen spstats.Tcounter
 	StatsCommon
-}
-
-// For reading and marshaling
-type StatsSnapshot struct {
-	Counters map[string]int64
-	StatsCommon
-}
-
-func newStatsSnapshot() *StatsSnapshot {
-	st := &StatsSnapshot{}
-	st.Counters = make(map[string]int64)
-	return st
-}
-
-func (st *StatsSnapshot) String() string {
-	ks := make([]string, 0, len(st.Counters))
-	for k := range st.Counters {
-		ks = append(ks, k)
-	}
-	sort.Strings(ks)
-	s := "["
-	for _, k := range ks {
-		s += fmt.Sprintf("{%s: %d}", k, st.Counters[k])
-	}
-	s += "] "
-	c := &st.StatsCommon
-	s += c.String()
-	return s
 }
 
 func NewStats() *Stats {
@@ -97,52 +45,9 @@ func NewStats() *Stats {
 }
 
 func (si *Stats) Inc(fct sessp.Tfcall, ql int64) {
-	switch fct {
-	case sessp.TTversion:
-		Inc(&si.Nversion, 1)
-	case sessp.TTauth:
-		Inc(&si.Nauth, 1)
-	case sessp.TTattach:
-		Inc(&si.Nattach, 1)
-	case sessp.TTdetach:
-		Inc(&si.Ndetach, 1)
-	case sessp.TTflush:
-		Inc(&si.Nflush, 1)
-	case sessp.TTwalk:
-		Inc(&si.Nwalk, 1)
-	case sessp.TTopen:
-		Inc(&si.Nopen, 1)
-	case sessp.TTcreate:
-		Inc(&si.Ncreate, 1)
-	case sessp.TTread, sessp.TTreadF:
-		Inc(&si.Nread, 1)
-	case sessp.TTwrite, sessp.TTwriteF:
-		Inc(&si.Nwrite, 1)
-	case sessp.TTclunk:
-		Inc(&si.Nclunk, 1)
-	case sessp.TTremove:
-		Inc(&si.Nremove, 1)
-	case sessp.TTremovefile:
-		Inc(&si.Nremovefile, 1)
-	case sessp.TTstat:
-		Inc(&si.Nstat, 1)
-	case sessp.TTwstat:
-		Inc(&si.Nwstat, 1)
-	case sessp.TTwatch:
-		Inc(&si.Nwatch, 1)
-	case sessp.TTrenameat:
-		Inc(&si.Nrenameat, 1)
-	case sessp.TTgetfile:
-		Inc(&si.Nget, 1)
-	case sessp.TTputfile:
-		Inc(&si.Nput, 1)
-	case sessp.TTwriteread:
-		Inc(&si.Nrpc, 1)
-	default:
-		db.DPrintf(db.ALWAYS, "StatInfo: missing counter for %v\n", fct)
-	}
-	Inc(&si.Ntotal, 1)
-	Inc(&si.Qlen, ql)
+	st := &si.SpSt
+	st.Inc(fct, ql)
+	spstats.Inc(&si.Qlen, ql)
 }
 
 type StatInode struct {
@@ -257,27 +162,27 @@ func (st *Stats) SortPath() []pair {
 	return s
 }
 
-// Make a StatsSnapshot from st while concurrent Inc()s may happen
-func (st *Stats) statsSnapshot() *StatsSnapshot {
-	stro := newStatsSnapshot()
-
-	v := reflect.ValueOf(st).Elem()
-	for i := 0; i < v.NumField(); i++ {
-		t := v.Field(i).Type().String()
-		n := v.Type().Field(i).Name
-		if strings.HasSuffix(t, "atomic.Int64") {
-			p := v.Field(i).Addr().Interface().(*atomic.Int64)
-			stro.Counters[n] = p.Load()
-		}
-	}
-	return stro
+type SrvStatsSnapshot struct {
+	spstats.SpStatsSnapshot
+	StatsCommon
 }
 
-func (sti *StatInode) StatsSnapshot() *StatsSnapshot {
-	stro := sti.st.statsSnapshot()
+func (sst *SrvStatsSnapshot) String() string {
+	sp := &sst.SpStatsSnapshot
+	s := sp.String()
+	c := &sst.StatsCommon
+	s += c.String()
+	return s
+}
+
+func (sti *StatInode) StatsSnapshot() *SrvStatsSnapshot {
+	sp := &sti.st.SpSt
+	spro := sp.StatsSnapshot()
 	sti.mu.Lock()
 	defer sti.mu.Unlock()
-	stro.AvgQlen = float64(sti.st.Qlen.Load()) / float64(sti.st.Ntotal.Load())
+	stro := &SrvStatsSnapshot{}
+	stro.SpStatsSnapshot = *spro
+	stro.StatsCommon.AvgQlen = float64(sti.st.Qlen.Load()) / float64(sti.st.SpSt.Ntotal.Load())
 	stro.Paths = sti.st.Paths
 	stro.Util = sti.st.Util
 	stro.Load = sti.st.Load

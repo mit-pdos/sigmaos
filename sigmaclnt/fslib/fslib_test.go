@@ -1323,7 +1323,7 @@ func TestSetFileSymlink(t *testing.T) {
 	err = ts.MkEndpointFile(filepath.Join(pathname, "namedself0"), newEndpoint(t, ts, pathname))
 	assert.Nil(ts.T, err, "MkEndpointFile")
 
-	st, err := ts.ReadStats(pathname)
+	st, err := ts.ReadSrvStats(pathname)
 	assert.Nil(t, err, "statsd")
 	nwalk := st.Counters["Nwalk"]
 
@@ -1334,7 +1334,7 @@ func TestSetFileSymlink(t *testing.T) {
 	assert.Nil(ts.T, err, "SetFile: %v", err)
 	assert.Equal(ts.T, sp.Tsize(len(d)), n, "SetFile")
 
-	st, err = ts.ReadStats(pathname)
+	st, err = ts.ReadSrvStats(pathname)
 	assert.Nil(t, err, "statsd")
 
 	db.DPrintf(db.TEST, "st %v\n", st)
@@ -1346,7 +1346,7 @@ func TestSetFileSymlink(t *testing.T) {
 	assert.Nil(ts.T, err, "GetFile")
 	assert.Equal(ts.T, d, b, "GetFile")
 
-	st, err = ts.ReadStats(pathname)
+	st, err = ts.ReadSrvStats(pathname)
 	assert.Nil(t, err, "statsd")
 
 	assert.Equal(ts.T, nwalk, st.Counters["Nwalk"], "getfile")

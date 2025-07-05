@@ -13,8 +13,8 @@ import (
 	"sigmaos/path"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
-	"sigmaos/sigmasrv/stats"
 	"sigmaos/util/sortedmapv1"
+	"sigmaos/util/spstats"
 )
 
 type Tstat int
@@ -55,8 +55,8 @@ func (fs *FsEtcd) leasedkey(dei *DirEntInfo) string {
 	return LEASEPREFIX + string(fs.realm) + ":" + strconv.FormatUint(uint64(dei.Path), 16)
 }
 
-func (fs *FsEtcd) LeasedPaths(realm sp.Trealm) ([]LeasedKey, stats.Tcounter, error) {
-	c := stats.NewCounter(1)
+func (fs *FsEtcd) LeasedPaths(realm sp.Trealm) ([]LeasedKey, spstats.Tcounter, error) {
+	c := spstats.NewCounter(1)
 	resp, err := fs.Clnt().Get(context.TODO(), prefixLease(fs.realm), clientv3.WithPrefix())
 	db.DPrintf(db.FSETCD, "LeasedPaths %v err %v\n", resp, err)
 	if err != nil {
@@ -74,8 +74,8 @@ func (fs *FsEtcd) LeasedPaths(realm sp.Trealm) ([]LeasedKey, stats.Tcounter, err
 	return ekeys, c, nil
 }
 
-func (fs *FsEtcd) getLeasedPathName(key string) (path.Tpathname, stats.Tcounter, error) {
-	c := stats.NewCounter(1)
+func (fs *FsEtcd) getLeasedPathName(key string) (path.Tpathname, spstats.Tcounter, error) {
+	c := spstats.NewCounter(1)
 	resp, err := fs.Clnt().Get(context.TODO(), key)
 	db.DPrintf(db.FSETCD, "getLeasedPathName %v err %v\n", resp, err)
 	if err != nil {
@@ -88,8 +88,8 @@ func (fs *FsEtcd) getLeasedPathName(key string) (path.Tpathname, stats.Tcounter,
 	return path.Split(string(resp.Kvs[0].Value)), c, nil
 }
 
-func (fs *FsEtcd) getFile(key string) (*EtcdFile, sp.TQversion, stats.Tcounter, *serr.Err) {
-	c := stats.NewCounter(1)
+func (fs *FsEtcd) getFile(key string) (*EtcdFile, sp.TQversion, spstats.Tcounter, *serr.Err) {
+	c := spstats.NewCounter(1)
 	db.DPrintf(db.FSETCD, "getFile %v\n", key)
 	resp, err := fs.Clnt().Get(context.TODO(), key)
 	db.DPrintf(db.FSETCD, "getFile %v %v err %v\n", key, resp, err)
@@ -108,12 +108,12 @@ func (fs *FsEtcd) getFile(key string) (*EtcdFile, sp.TQversion, stats.Tcounter, 
 	return nf, sp.TQversion(resp.Kvs[0].Version), c, nil
 }
 
-func (fs *FsEtcd) GetFile(dei *DirEntInfo) (*EtcdFile, sp.TQversion, stats.Tcounter, *serr.Err) {
+func (fs *FsEtcd) GetFile(dei *DirEntInfo) (*EtcdFile, sp.TQversion, spstats.Tcounter, *serr.Err) {
 	return fs.getFile(fs.path2key(fs.realm, dei))
 }
 
-func (fs *FsEtcd) PutFile(dei *DirEntInfo, nf *EtcdFile, f sp.Tfence) (stats.Tcounter, *serr.Err) {
-	c := stats.NewCounter(1)
+func (fs *FsEtcd) PutFile(dei *DirEntInfo, nf *EtcdFile, f sp.Tfence) (spstats.Tcounter, *serr.Err) {
+	c := spstats.NewCounter(1)
 	opts := dei.LeaseOpts()
 	fenced := f.PathName != ""
 	if b, err := proto.Marshal(nf.EtcdFileProto); err != nil {
@@ -152,10 +152,10 @@ func (fs *FsEtcd) PutFile(dei *DirEntInfo, nf *EtcdFile, f sp.Tfence) (stats.Tco
 	}
 }
 
-func (fs *FsEtcd) readDir(dei *DirEntInfo, stat Tstat) (*DirInfo, sp.TQversion, stats.Tcounter, *serr.Err) {
+func (fs *FsEtcd) readDir(dei *DirEntInfo, stat Tstat) (*DirInfo, sp.TQversion, spstats.Tcounter, *serr.Err) {
 	if de, ok := fs.dc.lookup(dei.Path); ok && (stat == TSTAT_NONE || de.stat == TSTAT_STAT) {
 		db.DPrintf(db.FSETCD, "fsetcd.readDir path %v %v", dei.Path, de.dir)
-		return de.dir, de.v, stats.NewCounter(0), nil
+		return de.dir, de.v, spstats.NewCounter(0), nil
 	}
 	s := time.Now()
 	dir, v, stat, nops, err := fs.readDirEtcd(dei, stat)
@@ -168,9 +168,9 @@ func (fs *FsEtcd) readDir(dei *DirEntInfo, stat Tstat) (*DirInfo, sp.TQversion, 
 }
 
 // If stat is TSTAT_STAT, stat every entry in the directory.
-func (fs *FsEtcd) readDirEtcd(dei *DirEntInfo, stat Tstat) (*DirInfo, sp.TQversion, Tstat, stats.Tcounter, *serr.Err) {
+func (fs *FsEtcd) readDirEtcd(dei *DirEntInfo, stat Tstat) (*DirInfo, sp.TQversion, Tstat, spstats.Tcounter, *serr.Err) {
 	db.DPrintf(db.FSETCD, "readDirEtcd %v %v\n", dei.Path, stat)
-	nops := stats.NewCounter(1)
+	nops := spstats.NewCounter(1)
 	nf, v, nops, err := fs.GetFile(dei)
 	if err != nil {
 		return nil, 0, stat, nops, err
@@ -194,7 +194,7 @@ func (fs *FsEtcd) readDirEtcd(dei *DirEntInfo, stat Tstat) (*DirInfo, sp.TQversi
 				// named didn't cache the directory, check if its
 				// leased key still exists.
 				_, nops1, err := fs.getLeasedPathName(fs.leasedkey(di))
-				stats.Add(&nops, nops1)
+				spstats.Add(&nops, nops1)
 				if err != nil {
 					db.DPrintf(db.FSETCD, "readDir: expired %q %v err %v\n", e.Name, e.Tperm(), err)
 					update = true
@@ -205,7 +205,7 @@ func (fs *FsEtcd) readDirEtcd(dei *DirEntInfo, stat Tstat) (*DirInfo, sp.TQversi
 			if stat == TSTAT_STAT {
 				s := time.Now()
 				nf, _, nops1, err := fs.GetFile(di)
-				stats.Add(&nops, nops1)
+				spstats.Add(&nops, nops1)
 				db.DPrintf(db.FSETCD_LAT, "%v: check stat %v %v", dei.Path, e.Tpath(), time.Since(s))
 				if err != nil {
 					db.DPrintf(db.ERROR, "readDir: stat entry %v %v err %v\n", e.Name, e.Tperm(), err)
@@ -228,7 +228,7 @@ func (fs *FsEtcd) readDirEtcd(dei *DirEntInfo, stat Tstat) (*DirInfo, sp.TQversi
 	}
 	if update {
 		nops1, err := fs.updateDir(dei, di, v)
-		stats.Add(&nops, nops1)
+		spstats.Add(&nops, nops1)
 		if err != nil {
 			if err.IsErrVersion() {
 				// retry?
@@ -241,10 +241,10 @@ func (fs *FsEtcd) readDirEtcd(dei *DirEntInfo, stat Tstat) (*DirInfo, sp.TQversi
 	return di, v, stat, nops, nil
 }
 
-func (fs *FsEtcd) updateDir(dei *DirEntInfo, dir *DirInfo, v sp.TQversion) (stats.Tcounter, *serr.Err) {
+func (fs *FsEtcd) updateDir(dei *DirEntInfo, dir *DirInfo, v sp.TQversion) (spstats.Tcounter, *serr.Err) {
 	d1, r := marshalDirInfo(dir)
 	if r != nil {
-		return stats.NewCounter(0), r
+		return spstats.NewCounter(0), r
 	}
 	// Update directory if directory hasn't changed.
 	cmp := []clientv3.Cmp{
@@ -255,7 +255,7 @@ func (fs *FsEtcd) updateDir(dei *DirEntInfo, dir *DirInfo, v sp.TQversion) (stat
 	ops1 := []clientv3.Op{
 		clientv3.OpGet(fs.fencekey),
 		clientv3.OpGet(fs.path2key(fs.realm, dei))}
-	c := stats.NewCounter(1)
+	c := spstats.NewCounter(1)
 	resp, err := fs.Clnt().Txn(context.TODO()).If(cmp...).Then(ops...).Else(ops1...).Commit()
 	db.DPrintf(db.FSETCD, "updateDir %v %v %v %v err %v\n", dei.Path, dir, v, resp, err)
 	if err != nil {
@@ -272,8 +272,8 @@ func (fs *FsEtcd) updateDir(dei *DirEntInfo, dir *DirInfo, v sp.TQversion) (stat
 	return c, nil
 }
 
-func (fs *FsEtcd) create(dei *DirEntInfo, dir *DirInfo, v sp.TQversion, new *DirEntInfo, npn path.Tpathname, f sp.Tfence) (stats.Tcounter, *serr.Err) {
-	c := stats.NewCounter(0)
+func (fs *FsEtcd) create(dei *DirEntInfo, dir *DirInfo, v sp.TQversion, new *DirEntInfo, npn path.Tpathname, f sp.Tfence) (spstats.Tcounter, *serr.Err) {
+	c := spstats.NewCounter(0)
 	opts := new.LeaseOpts()
 	b, err := proto.Marshal(new.Nf.EtcdFileProto)
 	if err != nil {
@@ -307,7 +307,7 @@ func (fs *FsEtcd) create(dei *DirEntInfo, dir *DirInfo, v sp.TQversion, new *Dir
 		ops = append(ops, clientv3.OpPut(fs.leasedkey(new), npn.String(), opts...))
 
 	}
-	stats.Inc(&c, 1)
+	spstats.Inc(&c, 1)
 	start := time.Now()
 	resp, err := fs.Clnt().Txn(context.TODO()).If(cmp...).Then(ops...).Else(ops1...).Commit()
 	db.DPrintf(db.FSETCD, "Create new %v dei %v v %v %v err %v lat %v", new, dei, v, resp, err, time.Since(start))
@@ -333,8 +333,8 @@ func (fs *FsEtcd) create(dei *DirEntInfo, dir *DirInfo, v sp.TQversion, new *Dir
 	return c, nil
 }
 
-func (fs *FsEtcd) remove(dei *DirEntInfo, dir *DirInfo, v sp.TQversion, del *DirEntInfo, f sp.Tfence) (stats.Tcounter, *serr.Err) {
-	c := stats.NewCounter(0)
+func (fs *FsEtcd) remove(dei *DirEntInfo, dir *DirInfo, v sp.TQversion, del *DirEntInfo, f sp.Tfence) (spstats.Tcounter, *serr.Err) {
+	c := spstats.NewCounter(0)
 	d1, r := marshalDirInfo(dir)
 	if r != nil {
 		return c, r
@@ -358,7 +358,7 @@ func (fs *FsEtcd) remove(dei *DirEntInfo, dir *DirInfo, v sp.TQversion, del *Dir
 	if del.LeaseId.IsLeased() {
 		ops = append(ops, clientv3.OpDelete(fs.leasedkey(del)))
 	}
-	stats.Inc(&c, 1)
+	spstats.Inc(&c, 1)
 	resp, err := fs.Clnt().Txn(context.TODO()).
 		If(cmp...).Then(ops...).Else(ops1...).Commit()
 	db.DPrintf(db.FSETCD, "Remove dei %v %v %v %v err %v\n", dei, dir, del, resp, err)
@@ -385,8 +385,8 @@ func (fs *FsEtcd) remove(dei *DirEntInfo, dir *DirInfo, v sp.TQversion, del *Dir
 }
 
 // XXX retry
-func (fs *FsEtcd) rename(dei *DirEntInfo, dir *DirInfo, v sp.TQversion, del, from *DirEntInfo, npn path.Tpathname, f sp.Tfence) (stats.Tcounter, *serr.Err) {
-	c := stats.NewCounter(0)
+func (fs *FsEtcd) rename(dei *DirEntInfo, dir *DirInfo, v sp.TQversion, del, from *DirEntInfo, npn path.Tpathname, f sp.Tfence) (spstats.Tcounter, *serr.Err) {
+	c := spstats.NewCounter(0)
 	opts := from.LeaseOpts()
 	d1, r := marshalDirInfo(dir)
 	if r != nil {
@@ -423,7 +423,7 @@ func (fs *FsEtcd) rename(dei *DirEntInfo, dir *DirInfo, v sp.TQversion, del, fro
 	if from.LeaseId.IsLeased() {
 		ops = append(ops, clientv3.OpPut(fs.leasedkey(from), npn.String(), opts...))
 	}
-	stats.Inc(&c, 1)
+	spstats.Inc(&c, 1)
 	resp, err := fs.Clnt().Txn(context.TODO()).If(cmp...).Then(ops...).Else(ops1...).Commit()
 	db.DPrintf(db.FSETCD, "Rename dei %v dir %v from %v %v err %v\n", dei, dir, from, resp, err)
 	if err != nil {
@@ -453,8 +453,8 @@ func (fs *FsEtcd) rename(dei *DirEntInfo, dir *DirInfo, v sp.TQversion, del, fro
 }
 
 // XXX retry
-func (fs *FsEtcd) renameAt(deif *DirEntInfo, dirf *DirInfo, vf sp.TQversion, deit *DirEntInfo, dirt *DirInfo, vt sp.TQversion, del, from *DirEntInfo, npn path.Tpathname) (stats.Tcounter, *serr.Err) {
-	c := stats.NewCounter(0)
+func (fs *FsEtcd) renameAt(deif *DirEntInfo, dirf *DirInfo, vf sp.TQversion, deit *DirEntInfo, dirt *DirInfo, vt sp.TQversion, del, from *DirEntInfo, npn path.Tpathname) (spstats.Tcounter, *serr.Err) {
+	c := spstats.NewCounter(0)
 	opts := from.LeaseOpts()
 	bf, r := marshalDirInfo(dirf)
 	if r != nil {
@@ -501,7 +501,7 @@ func (fs *FsEtcd) renameAt(deif *DirEntInfo, dirf *DirInfo, vf sp.TQversion, dei
 		ops = append(ops, clientv3.OpPut(fs.leasedkey(from), npn.String(), opts...))
 	}
 
-	stats.Inc(&c, 1)
+	spstats.Inc(&c, 1)
 	resp, err := fs.Clnt().Txn(context.TODO()).If(cmp...).Then(ops...).Else(ops1...).Commit()
 	db.DPrintf(db.FSETCD, "RenameAt %v %v err %v\n", del, resp, err)
 	if err != nil {

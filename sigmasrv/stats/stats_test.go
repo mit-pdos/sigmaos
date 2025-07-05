@@ -20,17 +20,17 @@ func TestStatsd(t *testing.T) {
 		return
 	}
 
-	st, err := ts.ReadStats("name/")
+	st, err := ts.ReadSrvStats("name/")
 	assert.Nil(t, err, "statsd")
 	db.DPrintf(db.TEST, "st %v\n", st)
 	nget := st.Counters["Nget"]
 
 	for i := 0; i < N; i++ {
-		_, err := ts.ReadStats("name/")
+		_, err := ts.ReadSrvStats("name/")
 		assert.Nil(t, err, "statsd")
 	}
 
-	st, err = ts.ReadStats("name/")
+	st, err = ts.ReadSrvStats("name/")
 	assert.Nil(t, err, "statsd")
 
 	assert.Equal(t, nget+N+1, st.Counters["Nget"], "statsd")

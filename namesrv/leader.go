@@ -10,7 +10,8 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-// XXX maybe in fsetd
+// named uses fsetcd's election package to elect a named.  named also supports
+// clients asking for leases on file stored in named; see [leasesrv.go].
 func Elect(fs *fsetcd.FsEtcd, pe *proc.ProcEnv, realm sp.Trealm) (*fsetcd.Session, *leaderetcd.Election, error) {
 	fn := fmt.Sprintf("named-election-%s", realm)
 	sess, err := fs.NewSession()

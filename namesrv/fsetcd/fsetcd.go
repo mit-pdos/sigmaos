@@ -17,7 +17,7 @@ import (
 	"sigmaos/path"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
-	"sigmaos/sigmasrv/stats"
+	"sigmaos/util/spstats"
 )
 
 const (
@@ -136,7 +136,7 @@ func (fs *FsEtcd) Fence(key string, rev int64) {
 func (fs *FsEtcd) Detach(cid sp.TclntId) {
 }
 
-func (fs *FsEtcd) PstatUpdate(pn path.Tpathname, c stats.Tcounter) {
+func (fs *FsEtcd) PstatUpdate(pn path.Tpathname, c spstats.Tcounter) {
 	if fs.pstats == nil {
 		return
 	}

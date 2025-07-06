@@ -26,7 +26,6 @@ std::expected<std::shared_ptr<sigmaos::rpc::Clnt>, sigmaos::serr::Error> Clnt::g
     return clnt;
   }
   {
-    // TODO: set path dynamically based on server ID
     // Create a sigmap RPC channel to the server via the sigmaproxy
     log(CACHECLNT, "Create channel (with lazy initialization)");
     std::string srv_pn = _svc_pn_base + "/" + std::to_string(srv_id);

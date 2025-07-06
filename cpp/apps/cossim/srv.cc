@@ -43,7 +43,8 @@ std::expected<int, sigmaos::serr::Error> Srv::CosSim(std::shared_ptr<google::pro
   return 0;
 }
 
-void Srv::fetch_init_vectors_from_cache(std::shared_ptr<std::promise<std::expected<int, sigmaos::serr::Error>>> result, int srv_id, std::vector<std::string> &key_vec, std::vector<int> &key_vec_int) {
+  void fetch_init_vectors_from_cache();
+void Srv::fetch_init_vectors_from_cache(std::shared_ptr<std::promise<std::expected<int, sigmaos::serr::Error>>> result, int srv_id, std::shared_ptr<std::vector<std::string>> key_vec, std::shared_ptr<std::vector<int>> key_vec_int) {
   int nbyte = 0;
   auto start = GetCurrentTime();
   std::shared_ptr<std::string> buf;
@@ -68,12 +69,12 @@ void Srv::fetch_init_vectors_from_cache(std::shared_ptr<std::promise<std::expect
     std::lock_guard<std::mutex> guard(_mu);
     start = GetCurrentTime();
     uint64_t off = 0;
-    for (int j = 0; j < key_vec_int.size(); j++) {
-      int id = key_vec_int.at(j);
+    for (int j = 0; j < key_vec_int->size(); j++) {
+      int id = key_vec_int->at(j);
       log(COSSIMSRV, "parse vec {}", id);
       _vec_db[id] = std::make_shared<sigmaos::apps::cossim::Vector>(buf, buf->data() + off, _vec_dim);
       log(COSSIMSRV, "done parse vec {}", id);
-      log(COSSIMSRV, "done parse vec {} lengths sz1 {} sz2 {}", id, lengths.size(), key_vec_int.size());
+      log(COSSIMSRV, "done parse vec {} lengths sz1 {} sz2 {}", id, lengths.size(), key_vec_int->size());
       off += lengths.at(j);
       nbyte += lengths.at(j);
     }
@@ -82,7 +83,7 @@ void Srv::fetch_init_vectors_from_cache(std::shared_ptr<std::promise<std::expect
   } else {
     // Get the serialized vector from cached
     {
-      auto res = _cache_clnt->MultiGet(srv_id, key_vec);
+      auto res = _cache_clnt->MultiGet(srv_id, *key_vec);
       if (!res.has_value()) {
         log(COSSIMSRV_ERR, "Error MultiGet {}", res.error().String());
         result->set_value(std::unexpected(res.error()));
@@ -98,8 +99,8 @@ void Srv::fetch_init_vectors_from_cache(std::shared_ptr<std::promise<std::expect
     std::lock_guard<std::mutex> guard(_mu);
     start = GetCurrentTime();
     uint64_t off = 0;
-    for (int j = 0; j < key_vec_int.size(); j++) {
-      int id = key_vec_int.at(j);
+    for (int j = 0; j < key_vec_int->size(); j++) {
+      int id = key_vec_int->at(j);
       log(COSSIMSRV, "parse vec {}", id);
       _vec_db[id] = std::make_shared<sigmaos::apps::cossim::Vector>(buf, buf->data() + off, _vec_dim);
       log(COSSIMSRV, "done parse vec {}", id);
@@ -112,17 +113,17 @@ void Srv::fetch_init_vectors_from_cache(std::shared_ptr<std::promise<std::expect
 }
 
 std::expected<int, sigmaos::serr::Error> Srv::Init() {
-  std::map<uint32_t, std::vector<std::string>> key_vecs;
-  std::map<uint32_t, std::vector<int>> key_vecs_int;
+  std::map<uint32_t, std::shared_ptr<std::vector<std::string>>> key_vecs;
+  std::map<uint32_t, std::shared_ptr<std::vector<int>>> key_vecs_int;
   for (uint32_t i = 0; i < _nvec; i++) {
     std::string i_str = std::to_string(i);
     uint32_t server_id = sigmaos::apps::cache::key2server(i_str, _ncache);
     if (!key_vecs.contains(server_id)) {
-      key_vecs[server_id] = std::vector<std::string>();
-      key_vecs_int[server_id] = std::vector<int>();
+      key_vecs[server_id] = std::make_shared<std::vector<std::string>>();
+      key_vecs_int[server_id] = std::make_shared<std::vector<int>>();
     }
-    key_vecs[server_id].push_back(i_str);
-    key_vecs_int[server_id].push_back(i);
+    key_vecs[server_id]->push_back(i_str);
+    key_vecs_int[server_id]->push_back(i);
   }
   int nbyte = 0;
   auto start = GetCurrentTime();
@@ -133,7 +134,7 @@ std::expected<int, sigmaos::serr::Error> Srv::Init() {
   for (int srv_id = 0; srv_id < _ncache; srv_id++) {
     fetch_promises.push_back(std::make_shared<std::promise<std::expected<int, sigmaos::serr::Error>>>());
     fetch_results.push_back(fetch_promises.at(srv_id)->get_future());
-    fetch_threads.push_back(std::thread(&Srv::fetch_init_vectors_from_cache, this, std::ref(fetch_promises.at(srv_id)), srv_id, std::ref(key_vecs.at(srv_id)), std::ref(key_vecs_int.at(srv_id))));
+    fetch_threads.push_back(std::thread(&Srv::fetch_init_vectors_from_cache, this, fetch_promises.at(srv_id), srv_id, key_vecs.at(srv_id), key_vecs_int.at(srv_id)));
   }
   for (int i = 0; i < fetch_threads.size(); i++) {
     fetch_threads.at(i).join();

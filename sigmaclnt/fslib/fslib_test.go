@@ -79,13 +79,13 @@ func TestStats(t *testing.T) {
 	}
 	defer ts.Shutdown()
 
-	spst, err := ts.Stats()
+	st, err := ts.Stats()
 	assert.Nil(t, err)
-	spstro := spst.StatsSnapshot()
+	spstro := st.SpStats.StatsSnapshot()
 	db.DPrintf(db.TEST, "Stats %v", spstro)
 	_, err = ts.GetDir(pathname)
 	assert.Nil(t, err)
-	spstro1 := spst.StatsSnapshot()
+	spstro1 := st.SpStats.StatsSnapshot()
 	db.DPrintf(db.TEST, "Stats %v", spstro1)
 	assert.True(t, spstro1.Counters["Nopen"] == spstro.Counters["Nopen"]+1)
 	assert.True(t, spstro1.Counters["Nwalk"] == spstro.Counters["Nwalk"]+2)

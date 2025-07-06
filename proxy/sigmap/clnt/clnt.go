@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net"
 
+	sos "sigmaos/api/sigmaos"
 	db "sigmaos/debug"
 	dialproxyclnt "sigmaos/dialproxy/clnt"
 	"sigmaos/proc"
@@ -19,7 +20,6 @@ import (
 	sessp "sigmaos/session/proto"
 	sp "sigmaos/sigmap"
 	"sigmaos/util/io/demux"
-	"sigmaos/util/spstats"
 )
 
 type SPProxyClnt struct {
@@ -77,7 +77,7 @@ func (scc *SPProxyClnt) SendReceive(iniov sessp.IoVec, outiov sessp.IoVec) error
 	}
 }
 
-func (scc *SPProxyClnt) Stats() (*spstats.SpStats, error) {
+func (scc *SPProxyClnt) Stats() (*sos.ClntStats, error) {
 	return nil, serr.NewErr(serr.TErrNotSupported, "Stats")
 }
 

@@ -15,7 +15,7 @@ import (
 	"sigmaos/sigmaclnt/fidclnt"
 	"sigmaos/sigmaclnt/fsclnt/pathclnt"
 	sp "sigmaos/sigmap"
-	"sigmaos/util/spstats"
+	//	"sigmaos/util/spstats"
 	"sigmaos/util/syncmap"
 )
 
@@ -324,8 +324,9 @@ func (fsc *FsClient) Close() error {
 	return fsc.pc.Close()
 }
 
-func (fsc *FsClient) Stats() (*spstats.SpStats, error) {
-	return fsc.pc.Stats()
+func (fsc *FsClient) Stats() (*sos.ClntStats, error) {
+	st := &sos.ClntStats{SpStats: fsc.pc.FidClnt.Stats()}
+	return st, nil
 }
 
 func (fsc *FsClient) mntLookup(pn sp.Tsigmapath) (sos.PathClntAPI, error) {

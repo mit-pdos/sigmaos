@@ -73,7 +73,7 @@ type FileAPI interface {
 	Detach(path sp.Tsigmapath) error
 	Disconnect(path sp.Tsigmapath) error
 	Disconnected() bool
-	Stats() (*spstats.SpStats, error)
+	Stats() (*ClntStats, error)
 }
 
 type PathClntAPI interface {
@@ -83,4 +83,8 @@ type PathClntAPI interface {
 	PreadRdr(fid sp.Tfid, off sp.Toffset, len sp.Tsize) (io.ReadCloser, error)
 	WriteF(fid sp.Tfid, off sp.Toffset, data []byte, f *sp.Tfence) (sp.Tsize, error)
 	Clunk(fid sp.Tfid) error
+}
+
+type ClntStats struct {
+	*spstats.SpStats
 }

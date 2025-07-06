@@ -23,7 +23,7 @@ import (
 	sp "sigmaos/sigmap"
 	"sigmaos/util/rand"
 	"sigmaos/util/retry"
-	"sigmaos/util/spstats"
+	//"sigmaos/util/spstats"
 )
 
 type PathClnt struct {
@@ -62,9 +62,9 @@ func (pathc *PathClnt) Close() error {
 	return err
 }
 
-func (pathc *PathClnt) Stats() (*spstats.SpStats, error) {
-	return pathc.FidClnt.Stats()
-}
+//func (pathc *PathClnt) Stats() (*spstats.SpStats, error) {
+//	return pathc.FidClnt.Stats()
+//}
 
 func (pathc *PathClnt) ClntId() sp.TclntId {
 	return pathc.cid

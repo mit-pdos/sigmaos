@@ -81,15 +81,15 @@ func TestStats(t *testing.T) {
 
 	st, err := ts.Stats()
 	assert.Nil(t, err)
-	spstro := st.SpStats.StatsSnapshot()
-	db.DPrintf(db.TEST, "Stats %v", spstro)
+	db.DPrintf(db.TEST, "Stats %v", st.SpStatsSnapshot)
 	_, err = ts.GetDir(pathname)
 	assert.Nil(t, err)
-	spstro1 := st.SpStats.StatsSnapshot()
-	db.DPrintf(db.TEST, "Stats %v", spstro1)
-	assert.True(t, spstro1.Counters["Nopen"] == spstro.Counters["Nopen"]+1)
-	assert.True(t, spstro1.Counters["Nwalk"] == spstro.Counters["Nwalk"]+2)
-	assert.True(t, spstro1.Counters["Nclunk"] == spstro.Counters["Nclunk"]+2)
+	st1, err := ts.Stats()
+	assert.Nil(t, err)
+	db.DPrintf(db.TEST, "Stats %v", st1.SpStatsSnapshot)
+	assert.True(t, st1.SpStatsSnapshot.Counters["Nopen"] == st.SpStatsSnapshot.Counters["Nopen"]+1)
+	assert.True(t, st1.SpStatsSnapshot.Counters["Nwalk"] == st.SpStatsSnapshot.Counters["Nwalk"]+2)
+	assert.True(t, st1.SpStatsSnapshot.Counters["Nclunk"] == st.SpStatsSnapshot.Counters["Nclunk"]+2)
 }
 
 func TestRemoveBasic(t *testing.T) {

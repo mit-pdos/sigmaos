@@ -50,8 +50,8 @@ func (fidc *FidClnt) String() string {
 	return str
 }
 
-func (fidc *FidClnt) Stats() *spstats.SpStats {
-	return fidc.spst
+func (fidc *FidClnt) Stats() *spstats.SpStatsSnapshot {
+	return fidc.spst.StatsSnapshot()
 }
 
 func (fidc *FidClnt) GetDialProxyClnt() *dialproxyclnt.DialProxyClnt {

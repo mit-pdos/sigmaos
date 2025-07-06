@@ -86,5 +86,5 @@ type PathClntAPI interface {
 }
 
 type ClntStats struct {
-	*spstats.SpStats
+	spstats.SpStatsSnapshot
 }

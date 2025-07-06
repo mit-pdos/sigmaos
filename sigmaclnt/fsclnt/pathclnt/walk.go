@@ -281,6 +281,7 @@ func (pathc *PathClnt) walkSymfile(fid sp.Tfid, path, left path.Tpathname, resol
 		resolved := path[0:done]
 		fid1, pn, err := pathc.walkReadSymfile(fid, resolved)
 		db.DPrintf(db.WALK, "walkSymfile: walkReadSymfile %v fid1 %v pn '%v' resolved %v left '%v'", fid, fid1, pn, resolved, left)
+		pathc.FidClnt.Clunk(fid)
 		if err != nil {
 			return false, sp.NoFid, left, err
 		}

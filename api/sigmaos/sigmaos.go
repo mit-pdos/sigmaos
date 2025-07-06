@@ -86,21 +86,22 @@ type PathClntAPI interface {
 	Clunk(fid sp.Tfid) error
 }
 
-type PathClntStats struct {
-	Nfid uint64
+type PathClntStatsSnapshot struct {
+	Nfid int64
+	Nsym int64
 }
 
-func (pcst *PathClntStats) String() string {
-	return fmt.Sprintf("[{Nfid %d}]", pcst.Nfid)
+func (pcst *PathClntStatsSnapshot) String() string {
+	return fmt.Sprintf("[{Nfid %d} {Nsym %d}]", pcst.Nfid, pcst.Nsym)
 }
 
 type ClntStats struct {
-	PathClntStats
+	PathClntStatsSnapshot
 	spstats.SpStatsSnapshot
 }
 
 func (cst *ClntStats) String() string {
-	pc := &cst.PathClntStats
+	pc := &cst.PathClntStatsSnapshot
 	sp := &cst.SpStatsSnapshot
 	return fmt.Sprintf("\nClntStats:\n  Pclnt: %v\n  SpStats: %v", pc.String(), sp.String())
 }

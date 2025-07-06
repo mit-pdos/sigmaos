@@ -87,7 +87,7 @@ func TestStats(t *testing.T) {
 	st1, err := ts.Stats()
 	assert.Nil(t, err)
 	db.DPrintf(db.TEST, "Stats %v", st1)
-	assert.True(t, st1.PathClntStats.Nfid == st1.PathClntStats.Nfid)
+	assert.True(t, st1.PathClntStatsSnapshot.Nfid == st.PathClntStatsSnapshot.Nfid)
 	assert.True(t, st1.SpStatsSnapshot.Counters["Nopen"] == st.SpStatsSnapshot.Counters["Nopen"]+1)
 	assert.True(t, st1.SpStatsSnapshot.Counters["Nwalk"] == st.SpStatsSnapshot.Counters["Nwalk"]+2)
 	assert.True(t, st1.SpStatsSnapshot.Counters["Nclunk"] == st.SpStatsSnapshot.Counters["Nclunk"]+2)
@@ -337,7 +337,7 @@ func TestRmDirWithSymlink(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestReadSymlink(t *testing.T) {
+func TestReadEndPoint(t *testing.T) {
 	ts, err1 := test.NewTstatePath(t, pathname)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
@@ -1131,9 +1131,20 @@ func TestSymlinkPath(t *testing.T) {
 	err = ts.Symlink([]byte(pathname), fn, 0777)
 	assert.Nil(ts.T, err, "Symlink")
 
+	st, err := ts.Stats()
+	assert.Nil(t, err)
+	db.DPrintf(db.TEST, "Stats %v", st)
+
 	sts, err := ts.GetDir(path.MarkResolve(fn))
 	assert.Equal(t, nil, err)
 	assert.True(t, sp.Present(sts, path.Tpathname{DIR1}), DIR1)
+
+	st1, err := ts.Stats()
+	assert.Nil(t, err)
+	db.DPrintf(db.TEST, "Stats %v", st1)
+
+	assert.True(t, st1.PathClntStatsSnapshot.Nsym == st.PathClntStatsSnapshot.Nsym+1)
+	assert.True(t, st1.PathClntStatsSnapshot.Nfid == st.PathClntStatsSnapshot.Nfid)
 
 	err = ts.RmDir(dn)
 	assert.Nil(t, err, "RmDir: %v", err)

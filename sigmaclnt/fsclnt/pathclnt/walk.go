@@ -8,6 +8,7 @@ import (
 	"sigmaos/path"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
+	"sigmaos/util/spstats"
 )
 
 // Walk path. If success, returns the fid for the path.  If failure,
@@ -38,6 +39,7 @@ func (pathc *PathClnt) walkPath(path path.Tpathname, resolve bool, w sos.Watch) 
 		if retry {
 			db.DPrintf(db.WALK, "walkPath: retry %v path '%v' left '%v'", fid, path, left)
 			path = left
+			spstats.Inc(&pathc.pcstats.Nsym, 1)
 			continue
 		}
 		db.DPrintf(db.WALK, "walkPath: done %v path '%v' left '%v'", fid, path, left)

@@ -23,7 +23,7 @@ import (
 	sp "sigmaos/sigmap"
 	"sigmaos/util/rand"
 	"sigmaos/util/retry"
-	//"sigmaos/util/spstats"
+	"sigmaos/util/spstats"
 )
 
 type PathClnt struct {
@@ -32,6 +32,11 @@ type PathClnt struct {
 	pe           *proc.ProcEnv
 	cid          sp.TclntId
 	disconnected bool // Used by test harness
+	pcstats      *PathClntStats
+}
+
+type PathClntStats struct {
+	Nsym spstats.Tcounter
 }
 
 func NewPathClnt(pe *proc.ProcEnv, fidc *fidclnt.FidClnt) *PathClnt {
@@ -39,15 +44,17 @@ func NewPathClnt(pe *proc.ProcEnv, fidc *fidclnt.FidClnt) *PathClnt {
 		pe:      pe,
 		FidClnt: fidc,
 		cid:     sp.TclntId(rand.Uint64()),
+		pcstats: &PathClntStats{},
 	}
 	pathc.mntclnt = mntclnt.NewMntClnt(pathc, fidc, pathc.cid, pe, fidc.GetDialProxyClnt())
 	db.DPrintf(db.TEST, "New cid %v %v\n", pathc.cid, pe.GetRealm())
 	return pathc
 }
 
-func (pathc *PathClnt) Stats() sos.PathClntStats {
-	st := sos.PathClntStats{}
-	st.Nfid = uint64(pathc.FidClnt.Len())
+func (pathc *PathClnt) Stats() sos.PathClntStatsSnapshot {
+	st := sos.PathClntStatsSnapshot{}
+	st.Nsym = pathc.pcstats.Nsym.Load()
+	st.Nfid = int64(pathc.FidClnt.Len())
 	return st
 }
 

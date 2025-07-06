@@ -81,12 +81,10 @@ func TestStats(t *testing.T) {
 
 	st, err := ts.Stats()
 	assert.Nil(t, err)
-	db.DPrintf(db.TEST, "Stats %v", st)
 	_, err = ts.GetDir(pathname)
 	assert.Nil(t, err)
 	st1, err := ts.Stats()
 	assert.Nil(t, err)
-	db.DPrintf(db.TEST, "Stats %v", st1)
 	assert.True(t, st1.PathClntStatsSnapshot.Nfid == st.PathClntStatsSnapshot.Nfid)
 	assert.True(t, st1.SpStatsSnapshot.Counters["Nopen"] == st.SpStatsSnapshot.Counters["Nopen"]+1)
 	assert.True(t, st1.SpStatsSnapshot.Counters["Nwalk"] == st.SpStatsSnapshot.Counters["Nwalk"]+2)
@@ -1133,7 +1131,6 @@ func TestSymlinkPath(t *testing.T) {
 
 	st, err := ts.Stats()
 	assert.Nil(t, err)
-	db.DPrintf(db.TEST, "Stats %v", st)
 
 	sts, err := ts.GetDir(path.MarkResolve(fn))
 	assert.Equal(t, nil, err)
@@ -1141,7 +1138,6 @@ func TestSymlinkPath(t *testing.T) {
 
 	st1, err := ts.Stats()
 	assert.Nil(t, err)
-	db.DPrintf(db.TEST, "Stats %v", st1)
 
 	assert.True(t, st1.PathClntStatsSnapshot.Nsym == st.PathClntStatsSnapshot.Nsym+1)
 	assert.True(t, st1.PathClntStatsSnapshot.Nfid == st.PathClntStatsSnapshot.Nfid)
@@ -1164,7 +1160,7 @@ func newEndpoint(t *testing.T, ts *test.Tstate, path string) *sp.Tendpoint {
 	return ep
 }
 
-func TestEndpointSimple(t *testing.T) {
+func TestEndpointLink(t *testing.T) {
 	ts, err1 := test.NewTstatePath(t, pathname)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
@@ -1177,9 +1173,19 @@ func TestEndpointSimple(t *testing.T) {
 	pn := filepath.Join(dn, "namedself")
 	err = ts.MkEndpointFile(pn, newEndpoint(t, ts, pathname))
 	assert.Nil(ts.T, err, "MkEndpointFile")
+
+	st, err := ts.Stats()
+	assert.Nil(t, err)
+
 	sts, err := ts.GetDir(path.MarkResolve(pn))
 	assert.Equal(t, nil, err)
 	assert.True(t, sp.Present(sts, path.Tpathname{DIR1}), DIR1)
+
+	st1, err := ts.Stats()
+	assert.Nil(t, err)
+
+	assert.True(t, st1.PathClntStatsSnapshot.Nsym == st.PathClntStatsSnapshot.Nsym)
+	assert.True(t, st1.PathClntStatsSnapshot.Nfid == st.PathClntStatsSnapshot.Nfid+1)
 
 	err = ts.RmDir(dn)
 	assert.Nil(t, err, "RmDir: %v", err)
@@ -1204,17 +1210,34 @@ func TestUnionDir(t *testing.T) {
 	err = ts.MkEndpointFile(filepath.Join(pathname, DIR1, "namedself1"), newep)
 	assert.Nil(ts.T, err, "EndpointService")
 
+	st, err := ts.Stats()
+	assert.Nil(t, err)
+
 	sts, err := ts.GetDir(path.MarkResolve(filepath.Join(pathname, DIR1, sp.ANY)))
 	assert.Equal(t, nil, err)
 	assert.True(t, sp.Present(sts, path.Tpathname{DIR1}), DIR1)
+
+	st0, err := ts.Stats()
+	assert.Nil(t, err)
 
 	sts, err = ts.GetDir(filepath.Join(pathname, DIR1, sp.ANY, DIR1))
 	assert.Equal(t, nil, err)
 	assert.True(t, sp.Present(sts, path.Tpathname{"namedself0", "namedself1"}), DIR1)
 
+	st1, err := ts.Stats()
+	assert.Nil(t, err)
+
 	sts, err = ts.GetDir(path.MarkResolve(filepath.Join(pathname, DIR1, sp.ANY)))
 	assert.Equal(t, nil, err)
 	assert.True(t, sp.Present(sts, path.Tpathname{DIR1}), DIR1)
+
+	st2, err := ts.Stats()
+	assert.Nil(t, err)
+
+	assert.True(t, st.PathClntStatsSnapshot.Nsym == st2.PathClntStatsSnapshot.Nsym)
+	assert.True(t, st0.PathClntStatsSnapshot.Nfid == st.PathClntStatsSnapshot.Nfid+1)
+	assert.True(t, st0.PathClntStatsSnapshot.Nfid == st1.PathClntStatsSnapshot.Nfid)
+	assert.True(t, st0.PathClntStatsSnapshot.Nfid == st2.PathClntStatsSnapshot.Nfid)
 
 	pn, err := ts.ResolveMounts(filepath.Join(pathname, DIR1, sp.ANY))
 	assert.Equal(t, nil, err)
@@ -1410,6 +1433,9 @@ func TestEndpointUnion(t *testing.T) {
 	err = ts.MkEndpointFile(pn, newEndpoint(t, ts, dn))
 	assert.Nil(ts.T, err, "MkEndpointFile")
 
+	st, err := ts.Stats()
+	assert.Nil(t, err)
+
 	eppn := "mount/"
 	if pathname != sp.NAMED && pathname != "name/memfs/"+sp.LOCAL+"/" {
 		eppn = filepath.Join(eppn, sp.ANY)
@@ -1418,6 +1444,12 @@ func TestEndpointUnion(t *testing.T) {
 	sts, err := ts.GetDir(path.MarkResolve(filepath.Join(pathname, eppn)))
 	assert.Equal(t, nil, err)
 	assert.True(t, sp.Present(sts, path.Tpathname{DIR1}), DIR1)
+
+	st1, err := ts.Stats()
+	assert.Nil(t, err)
+
+	assert.True(t, st1.PathClntStatsSnapshot.Nsym == st.PathClntStatsSnapshot.Nsym)
+	assert.True(t, st1.PathClntStatsSnapshot.Nfid == st.PathClntStatsSnapshot.Nfid+1)
 
 	err = ts.Remove(pn)
 	assert.Nil(t, err, "Remove %v", err)

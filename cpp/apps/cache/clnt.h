@@ -29,7 +29,7 @@ class Clnt {
   Clnt(std::shared_ptr<sigmaos::proxy::sigmap::Clnt> sp_clnt, std::string _svc_pn_base, uint32_t nsrv) : _mu(), _svc_pn_base(_svc_pn_base), _nsrv(nsrv), _sp_clnt(sp_clnt), _clnts() {}
   ~Clnt() {}
   std::expected<int, sigmaos::serr::Error> Get(std::string key, std::shared_ptr<std::string> val);
-  std::expected<std::pair<std::vector<uint64_t>, std::shared_ptr<std::string>>, sigmaos::serr::Error> MultiGet(uint32_t srv_id, std::vector<std::string> keys);
+  std::expected<std::pair<std::vector<uint64_t>, std::shared_ptr<std::string>>, sigmaos::serr::Error> MultiGet(uint32_t srv_id, std::vector<std::string> &keys);
   std::expected<std::pair<std::vector<uint64_t>, std::shared_ptr<std::string>>, sigmaos::serr::Error> DelegatedMultiGet(uint64_t rpc_idx);
   std::expected<int, sigmaos::serr::Error> Put(std::string key, std::shared_ptr<std::string> val);
   std::expected<int, sigmaos::serr::Error> Delete(std::string key);

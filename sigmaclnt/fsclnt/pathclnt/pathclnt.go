@@ -45,6 +45,12 @@ func NewPathClnt(pe *proc.ProcEnv, fidc *fidclnt.FidClnt) *PathClnt {
 	return pathc
 }
 
+func (pathc *PathClnt) Stats() sos.PathClntStats {
+	st := sos.PathClntStats{}
+	st.Nfid = uint64(pathc.FidClnt.Len())
+	return st
+}
+
 func (pathc *PathClnt) String() string {
 	return fmt.Sprintf("{Pathclnt: cid %v mount table %v fidclnt %v}", pathc.cid, pathc.mntclnt, pathc.FidClnt)
 }

@@ -325,7 +325,10 @@ func (fsc *FsClient) Close() error {
 }
 
 func (fsc *FsClient) Stats() (*sos.ClntStats, error) {
-	st := &sos.ClntStats{SpStatsSnapshot: *fsc.pc.FidClnt.Stats()}
+	st := &sos.ClntStats{
+		PathClntStats:   fsc.pc.Stats(),
+		SpStatsSnapshot: *fsc.pc.FidClnt.Stats(),
+	}
 	return st, nil
 }
 

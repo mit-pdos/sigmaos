@@ -2,6 +2,7 @@
 package sigmaos
 
 import (
+	"fmt"
 	"io"
 
 	"sigmaos/path"
@@ -85,6 +86,21 @@ type PathClntAPI interface {
 	Clunk(fid sp.Tfid) error
 }
 
+type PathClntStats struct {
+	Nfid uint64
+}
+
+func (pcst *PathClntStats) String() string {
+	return fmt.Sprintf("[{Nfid %d}]", pcst.Nfid)
+}
+
 type ClntStats struct {
+	PathClntStats
 	spstats.SpStatsSnapshot
+}
+
+func (cst *ClntStats) String() string {
+	pc := &cst.PathClntStats
+	sp := &cst.SpStatsSnapshot
+	return fmt.Sprintf("\nClntStats:\n  Pclnt: %v\n  SpStats: %v", pc.String(), sp.String())
 }

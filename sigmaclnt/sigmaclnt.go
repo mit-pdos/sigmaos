@@ -18,6 +18,7 @@ import (
 	"sigmaos/sigmaclnt/fslib"
 	"sigmaos/sigmaclnt/procclnt"
 	"sigmaos/util/perf"
+	"sigmaos/util/spstats"
 )
 
 func init() {
@@ -62,7 +63,7 @@ func newFsLibFidClnt(pe *proc.ProcEnv, fidc *fidclnt.FidClnt) (*fslib.FsLib, err
 }
 
 func NewFsLib(pe *proc.ProcEnv, npc *dialproxyclnt.DialProxyClnt) (*fslib.FsLib, error) {
-	return newFsLibFidClnt(pe, fidclnt.NewFidClnt(pe, npc))
+	return newFsLibFidClnt(pe, fidclnt.NewFidClnt(pe, npc, &spstats.SpStats{}))
 }
 
 // Convert to SigmaClntKernel from SigmaClnt
@@ -105,7 +106,7 @@ func NewSigmaClntFsLibFidClnt(pe *proc.ProcEnv, fidc *fidclnt.FidClnt) (*SigmaCl
 }
 
 func NewSigmaClntFsLib(pe *proc.ProcEnv, npc *dialproxyclnt.DialProxyClnt) (*SigmaClnt, error) {
-	return NewSigmaClntFsLibFidClnt(pe, fidclnt.NewFidClnt(pe, npc))
+	return NewSigmaClntFsLibFidClnt(pe, fidclnt.NewFidClnt(pe, npc, &spstats.SpStats{}))
 }
 
 func NewSigmaClnt(pe *proc.ProcEnv) (*SigmaClnt, error) {

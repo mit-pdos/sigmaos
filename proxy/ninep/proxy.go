@@ -22,6 +22,7 @@ import (
 	sp "sigmaos/sigmap"
 	"sigmaos/util/io/demux"
 	"sigmaos/util/rand"
+	"sigmaos/util/spstats"
 )
 
 type proxyConn struct {
@@ -87,7 +88,7 @@ type NpSess struct {
 func newNpSess(pe *proc.ProcEnv, npcs *dialproxyclnt.DialProxyClnt, lip string) *NpSess {
 	npc := &NpSess{}
 	npc.pe = pe
-	npc.fidc = fidclnt.NewFidClnt(pe, npcs)
+	npc.fidc = fidclnt.NewFidClnt(pe, npcs, &spstats.SpStats{})
 	npc.principal = pe.GetPrincipal()
 	npc.pc = pathclnt.NewPathClnt(pe, npc.fidc)
 	npc.fm = newFidMap()

@@ -15,9 +15,11 @@ import (
 	"sigmaos/rpc"
 	rpcclnt "sigmaos/rpc/clnt"
 	rpcclntopts "sigmaos/rpc/clnt/opts"
+	"sigmaos/serr"
 	sessp "sigmaos/session/proto"
 	sp "sigmaos/sigmap"
 	"sigmaos/util/io/demux"
+	"sigmaos/util/spstats"
 )
 
 type SPProxyClnt struct {
@@ -73,6 +75,10 @@ func (scc *SPProxyClnt) SendReceive(iniov sessp.IoVec, outiov sessp.IoVec) error
 		}
 		return nil
 	}
+}
+
+func (scc *SPProxyClnt) Stats() (*spstats.SpStats, error) {
+	return nil, serr.NewErr(serr.TErrNotSupported, "Stats")
 }
 
 func (scc *SPProxyClnt) StatsSrv() (*rpc.RPCStatsSnapshot, error) {

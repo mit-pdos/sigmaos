@@ -17,6 +17,7 @@ import (
 	"sigmaos/sigmaclnt/fidclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/util/perf"
+	"sigmaos/util/spstats"
 )
 
 const (
@@ -41,7 +42,7 @@ func newSPProxySrv() (*SPProxySrv, error) {
 	scs := &SPProxySrv{
 		pe:   pe,
 		nps:  nps,
-		fidc: fidclnt.NewFidClnt(pe, dialproxyclnt.NewDialProxyClnt(pe)),
+		fidc: fidclnt.NewFidClnt(pe, dialproxyclnt.NewDialProxyClnt(pe), &spstats.SpStats{}),
 	}
 	db.DPrintf(db.SPPROXYSRV, "newSPProxySrv ProcEnv:%v", pe)
 	return scs, nil

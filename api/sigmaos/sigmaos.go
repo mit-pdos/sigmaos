@@ -7,6 +7,7 @@ import (
 	"sigmaos/path"
 	sessp "sigmaos/session/proto"
 	sp "sigmaos/sigmap"
+	"sigmaos/util/spstats"
 )
 
 type Twait bool
@@ -72,6 +73,7 @@ type FileAPI interface {
 	Detach(path sp.Tsigmapath) error
 	Disconnect(path sp.Tsigmapath) error
 	Disconnected() bool
+	Stats() (*spstats.SpStats, error)
 }
 
 type PathClntAPI interface {

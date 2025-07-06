@@ -189,7 +189,7 @@ func TestBoot(t *testing.T) {
 	out, err := run("ls " + boot)
 	assert.Nil(t, err)
 
-	db.DPrintf(db.TEST, "boot srv: %v\n", string(out))
+	// db.DPrintf(db.TEST, "boot srv: %v\n", string(out))
 	e := strings.Fields(string(out))
 
 	dn := filepath.Join(boot, e[1])

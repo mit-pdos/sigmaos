@@ -72,6 +72,26 @@ func TestEmptyPath(t *testing.T) {
 	ts.Shutdown()
 }
 
+func TestStats(t *testing.T) {
+	ts, err1 := test.NewTstatePath(t, pathname)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	defer ts.Shutdown()
+
+	spst, err := ts.Stats()
+	assert.Nil(t, err)
+	spstro := spst.StatsSnapshot()
+	db.DPrintf(db.TEST, "Stats %v", spstro)
+	_, err = ts.GetDir(pathname)
+	assert.Nil(t, err)
+	spstro1 := spst.StatsSnapshot()
+	db.DPrintf(db.TEST, "Stats %v", spstro1)
+	assert.True(t, spstro1.Counters["Nopen"] == spstro.Counters["Nopen"]+1)
+	assert.True(t, spstro1.Counters["Nwalk"] == spstro.Counters["Nwalk"]+2)
+	assert.True(t, spstro1.Counters["Nclunk"] == spstro.Counters["Nclunk"]+2)
+}
+
 func TestRemoveBasic(t *testing.T) {
 	ts, err1 := test.NewTstatePath(t, pathname)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {

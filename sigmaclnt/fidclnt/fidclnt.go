@@ -23,6 +23,7 @@ import (
 	sessp "sigmaos/session/proto"
 	sp "sigmaos/sigmap"
 	spprotoclnt "sigmaos/spproto/clnt"
+	"sigmaos/util/spstats"
 )
 
 type FidClnt struct {
@@ -31,20 +32,26 @@ type FidClnt struct {
 	refcnt int
 	sm     *sessclnt.Mgr
 	npc    *dialproxyclnt.DialProxyClnt
+	spst   *spstats.SpStats
 }
 
-func NewFidClnt(pe *proc.ProcEnv, npc *dialproxyclnt.DialProxyClnt) *FidClnt {
+func NewFidClnt(pe *proc.ProcEnv, npc *dialproxyclnt.DialProxyClnt, spst *spstats.SpStats) *FidClnt {
 	return &FidClnt{
 		fids:   newFidMap(),
 		refcnt: 1,
 		sm:     sessclnt.NewMgr(pe, npc),
 		npc:    npc,
+		spst:   spst,
 	}
 }
 
 func (fidc *FidClnt) String() string {
 	str := fmt.Sprintf("{fids %v}", fidc.fids)
 	return str
+}
+
+func (fidc *FidClnt) Stats() (*spstats.SpStats, error) {
+	return fidc.spst, nil
 }
 
 func (fidc *FidClnt) GetDialProxyClnt() *dialproxyclnt.DialProxyClnt {
@@ -136,7 +143,7 @@ func (fidc *FidClnt) Clunk(fid sp.Tfid) error {
 func (fidc *FidClnt) Attach(secrets map[string]*sp.SecretProto, cid sp.TclntId, ep *sp.Tendpoint, pn path.Tpathname, tree string) (sp.Tfid, *serr.Err) {
 	s := time.Now()
 	fid := fidc.allocFid()
-	pc := spprotoclnt.NewSPProtoClnt(ep, fidc.sm)
+	pc := spprotoclnt.NewSPProtoClnt(ep, fidc.sm, fidc.spst)
 	reply, err := pc.Attach(secrets, cid, fid, path.Split(tree))
 	if err != nil {
 		db.DPrintf(db.FIDCLNT_ERR, "Error attach %v: %v", ep, err)

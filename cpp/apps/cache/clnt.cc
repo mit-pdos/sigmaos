@@ -7,14 +7,14 @@ bool Clnt::_l = sigmaos::util::log::init_logger(CACHECLNT);
 bool Clnt::_l_e = sigmaos::util::log::init_logger(CACHECLNT_ERR);
 
 
-std::expected<std::shared_ptr<sigmaos::rpc::Clnt>, sigmaos::serr::Error> Clnt::get_clnt(int srv_id) {
+std::expected<std::shared_ptr<sigmaos::rpc::Clnt>, sigmaos::serr::Error> Clnt::get_clnt(int srv_id, bool initialize) {
   // Ensure we don't create duplicate clients
   std::lock_guard<std::mutex> guard(_mu);
   // If client already exists, return it
   if (_clnts.contains(srv_id)) {
     log(CACHECLNT, "Successfully got client srv_id:{}", srv_id);
     auto clnt = _clnts[srv_id];
-    if (!clnt->GetChannel()->IsInitialized()) {
+    if (initialize && !clnt->GetChannel()->IsInitialized()) {
       // Initialize the channel
       auto res = clnt->GetChannel()->Init();
       if (!res.has_value()) {
@@ -42,7 +42,7 @@ std::expected<int, sigmaos::serr::Error> Clnt::Get(std::string key, std::shared_
 	log(CACHECLNT, "Get: {}", key);
   std::shared_ptr<sigmaos::rpc::Clnt> rpcc;
   {
-    auto res = get_clnt(key2server(key, _nsrv));
+    auto res = get_clnt(key2server(key, _nsrv), true);
     if (!res.has_value()) {
       log(CACHECLNT_ERR, "Error get_clnt: {}", res.error().String());
       return std::unexpected(res.error());
@@ -76,7 +76,7 @@ std::expected<std::pair<std::vector<uint64_t>, std::shared_ptr<std::string>>, si
 	log(CACHECLNT, "MultiGet nkey {}", keys.size());
   std::shared_ptr<sigmaos::rpc::Clnt> rpcc;
   {
-    auto res = get_clnt(srv_id);
+    auto res = get_clnt(srv_id, true);
     if (!res.has_value()) {
       log(CACHECLNT_ERR, "Error get_clnt: {}", res.error().String());
       return std::unexpected(res.error());
@@ -121,7 +121,7 @@ std::expected<int, sigmaos::serr::Error> Clnt::Put(std::string key, std::shared_
 	log(CACHECLNT, "Put: {} -> {}b", key, val->size());
   std::shared_ptr<sigmaos::rpc::Clnt> rpcc;
   {
-    auto res = get_clnt(key2server(key, _nsrv));
+    auto res = get_clnt(key2server(key, _nsrv), true);
     if (!res.has_value()) {
       log(CACHECLNT_ERR, "Error get_clnt: {}", res.error().String());
       return std::unexpected(res.error());
@@ -156,7 +156,7 @@ std::expected<int, sigmaos::serr::Error> Clnt::Delete(std::string key) {
 	log(CACHECLNT, "Delete: {}", key);
   std::shared_ptr<sigmaos::rpc::Clnt> rpcc;
   {
-    auto res = get_clnt(key2server(key, _nsrv));
+    auto res = get_clnt(key2server(key, _nsrv), true);
     if (!res.has_value()) {
       log(CACHECLNT_ERR, "Error get_clnt: {}", res.error().String());
       return std::unexpected(res.error());
@@ -190,8 +190,7 @@ std::expected<std::pair<std::vector<uint64_t>, std::shared_ptr<std::string>>, si
 	log(CACHECLNT, "Delegated MultiGet rpc_idx {}", (int) rpc_idx);
   std::shared_ptr<sigmaos::rpc::Clnt> rpcc;
   {
-    // TODO: pass in srv_id
-    auto res = get_clnt(0);
+    auto res = get_clnt(0, false);
     if (!res.has_value()) {
       log(CACHECLNT_ERR, "Error get_clnt: {}", res.error().String());
       return std::unexpected(res.error());

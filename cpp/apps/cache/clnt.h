@@ -43,7 +43,7 @@ class Clnt {
   static bool _l;
   static bool _l_e;
 
-  std::expected<std::shared_ptr<sigmaos::rpc::Clnt>, sigmaos::serr::Error> get_clnt(int srv_id);
+  std::expected<std::shared_ptr<sigmaos::rpc::Clnt>, sigmaos::serr::Error> get_clnt(int srv_id, bool initialize);
 };
 
 };

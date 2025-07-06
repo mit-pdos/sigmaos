@@ -55,17 +55,17 @@ func (pathc *PathClnt) walkReadSymfile(fid sp.Tfid, resolved path.Tpathname) (sp
 	s := time.Now()
 	target, sr := pathc.FidClnt.GetFile(fid, path.Tpathname{}, sp.OREAD, 0, sp.MAXGETSET, false, sp.NullFence())
 	if sr != nil {
-		db.DPrintf(db.WALK, "walkReadSymfile: GetFile %v err %v\n", fid, sr)
+		db.DPrintf(db.WALK, "walkReadSymfile: GetFile %v err %v", fid, sr)
 		return sp.NoFid, nil, sr
 	}
 	ep, err := sp.NewEndpointFromBytes(target)
 	if err == nil { // an endpoint file
 		fid, err := pathc.walkEndpoint(ep, resolved)
-		db.DPrintf(db.WALK_LAT, "walkReadSymfile: %v %v %v ep %v lat %v\n", pathc.cid, fid, resolved, ep, time.Since(s))
+		db.DPrintf(db.WALK_LAT, "walkReadSymfile: ep %v %v %v ep %v lat %v", pathc.cid, fid, resolved, ep, time.Since(s))
 		return fid, nil, err
 	} else { // a true symlink
-		db.DPrintf(db.WALK, "walkReadSymfile: %v NewMount err %v\n", fid, err)
 		pn := path.Split(string(target))
+		db.DPrintf(db.WALK, "walkReadSymfile: sym target '%v'", pn)
 		return sp.NoFid, pn, nil
 	}
 }

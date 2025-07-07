@@ -797,11 +797,11 @@ func TestLCBEHotelImgResizeRPCMultiplexing(t *testing.T) {
 func TestScaleCosSim(t *testing.T) {
 	var (
 		benchNameBase string = "cos_sim_tail_latency"
-		driverVMs     []int  = []int{5}
+		driverVMs     []int  = []int{9}
 	)
 	// Cluster configuration parameters
 	const (
-		numNodes          int  = 4
+		numNodes          int  = 8
 		numCoresPerNode   uint = 4
 		numFullNodes      int  = numNodes
 		numProcqOnlyNodes int  = 0
@@ -864,6 +864,10 @@ func TestScaleCosSim(t *testing.T) {
 								}
 							} else {
 								if numCosSimToAdd == 0 {
+									continue
+								}
+								// RPC delegation not interesting without scaling happening
+								if delegate {
 									continue
 								}
 								numCosSim += numCosSimToAdd

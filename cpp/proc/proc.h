@@ -1,6 +1,7 @@
 #pragma once
 
 #include <expected>
+#include <utility>
 
 #include <google/protobuf/message.h>
 #include <google/protobuf/util/json_util.h>
@@ -37,6 +38,7 @@ class ProcEnv {
   google::protobuf::Timestamp GetSpawnTime() { return _proto.spawntimepb(); }
   std::string GetPerf() { return _proto.perf(); }
   bool GetDelegateInit() { return _proto.delegateinitflag(); }
+  std::pair<std::shared_ptr<TendpointProto>, bool> GetCachedEndpoint(std::string &pn);
 
   private:
   ProcEnvProto _proto;

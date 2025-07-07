@@ -23,5 +23,14 @@ google::protobuf::Timestamp GetExecTime() {
   return exec_time;
 }
 
+
+std::pair<std::shared_ptr<TendpointProto>, bool> ProcEnv::GetCachedEndpoint(std::string &pn) {
+  if (!_proto.cachedendpoints().contains(pn)) {
+    return std::make_pair(nullptr, false);
+  }
+  auto ep = _proto.cachedendpoints().at(pn);
+  return std::make_pair(std::make_shared<TendpointProto>(ep), true);
+}
+
 };
 };

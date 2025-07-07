@@ -11,6 +11,7 @@
 #include <io/iovec/iovec.h>
 #include <rpc/proto/rpc.pb.h>
 #include <rpc/channel.h>
+#include <rpc/rpc.h>
 #include <proxy/sigmap/sigmap.h>
 
 namespace sigmaos {

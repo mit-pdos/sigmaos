@@ -12,8 +12,7 @@ std::expected<int, sigmaos::serr::Error> Channel::Init() {
   if (_initialized) {
     fatal("Double-init channel to {}", _srv_pn);
   }
-  // TODO: use consts
-  std::string clone_pn = _srv_pn + "/rpc/clone";
+  std::string clone_pn = _srv_pn + "/" + sigmaos::rpc::CLONE;
   {
     auto res = _sp_clnt->GetFile(clone_pn);
     if (!res.has_value()) {
@@ -23,8 +22,7 @@ std::expected<int, sigmaos::serr::Error> Channel::Init() {
     _sid = *res.value();
   }
   {
-    // TODO: use consts
-    std::string sess_dev_pn = _srv_pn + "/rpc/" + _sid + "/data";
+    std::string sess_dev_pn = _srv_pn + "/" + sigmaos::rpc::RPC + "/" + _sid + "/data";
     auto res = _sp_clnt->Open(sess_dev_pn, sigmaos::sigmap::constants::ORDWR, false);
     if (!res.has_value()) {
       log(SPCHAN_ERR, "Error Open data file({}): {}", sess_dev_pn, res.error().String());

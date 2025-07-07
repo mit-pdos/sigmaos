@@ -11,6 +11,7 @@
 #include <io/iovec/iovec.h>
 #include <rpc/spchannel/spchannel.h>
 #include <rpc/clnt.h>
+#include <rpc/rpc.h>
 #include <proxy/sigmap/sigmap.h>
 
 #include <util/tracing/proto/tracing.pb.h>

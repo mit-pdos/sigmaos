@@ -27,13 +27,30 @@ std::expected<std::shared_ptr<sigmaos::rpc::Clnt>, sigmaos::serr::Error> Clnt::g
   }
   auto clnt = _clnts.at(srv_id);
   if (initialize && !clnt->GetChannel()->IsInitialized()) {
+    std::string srv_pn = _svc_pn_base + "/" + std::to_string(srv_id);
+    auto cache_pair = _sp_clnt->ProcEnv()->GetCachedEndpoint(srv_pn);
+    auto ep = cache_pair.first;
+    bool ok = cache_pair.second;
+    if (ok) {
+      // Mount the cache server
+      log(CACHECLNT, "Mount cached EP for cache server {}: {}", srv_id, ep->ShortDebugString());
+      //
+      {
+        auto res = _sp_clnt->MountTree(ep, sigmaos::rpc::RPC, srv_pn + "/" + sigmaos::rpc::RPC);
+        if (!res.has_value()) {
+          log(CACHECLNT_ERR, "Error MountTree srv_id {}: {}", srv_id, res.error().String());
+          return std::unexpected(res.error());
+        }
+        log(CACHECLNT, "Mounted RPC channel for srv_id:{}", srv_id);
+      }
+    }
     // Initialize the channel
     auto res = clnt->GetChannel()->Init();
     if (!res.has_value()) {
       log(CACHECLNT_ERR, "Error initialize channel: {}", res.error().String());
       return std::unexpected(res.error());
     }
-    log(CACHECLNT, "Initialized RPC channel for pre-existing client srv_id:{}", srv_id);
+    log(CACHECLNT, "Initialized RPC channel for client  ofsrv_id:{}", srv_id);
   }
   return clnt;
 }

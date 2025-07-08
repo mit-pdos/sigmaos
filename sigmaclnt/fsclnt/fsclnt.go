@@ -15,7 +15,6 @@ import (
 	"sigmaos/sigmaclnt/fidclnt"
 	"sigmaos/sigmaclnt/fsclnt/pathclnt"
 	sp "sigmaos/sigmap"
-	//"sigmaos/util/spstats"
 	"sigmaos/util/syncmap"
 )
 

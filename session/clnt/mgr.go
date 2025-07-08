@@ -56,7 +56,7 @@ func (sc *Mgr) allocSessClnt(ep *sp.Tendpoint) (*SessClnt, *serr.Err) {
 		return sess, nil
 	}
 	spstats.Inc(&sc.pcst.Nsession, 1)
-	sess, err := newSessClnt(sc.pe, sc.npc, ep)
+	sess, err := newSessClnt(sc.pe, sc.npc, ep, sc.pcst)
 	if err != nil {
 		return nil, err
 	}

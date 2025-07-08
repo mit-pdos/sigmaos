@@ -116,14 +116,16 @@ func (mc *MntClnt) invalidateNamedMountCacheEntry(realm sp.Trealm) error {
 
 func (mc *MntClnt) mountNamed(realm sp.Trealm, mntName, tree sp.Tsigmapath) *serr.Err {
 	db.DPrintf(db.MOUNT, "mountNamed [%v] at %v tree \"%v\"", realm, mntName, tree)
-	spstats.Inc(&mc.pcstats.NmntNamed, 1)
 	s := time.Now()
 	ep, err := mc.getNamedEndpointRealm(realm)
 	if err != nil {
+		spstats.Inc(&mc.pcstats.NgetNamedErr, 1)
 		db.DPrintf(db.MOUNT_ERR, "mountNamed [%v]: getNamedMount err %v", realm, err)
 		return err
 	}
+	spstats.Inc(&mc.pcstats.NgetNamedOK, 1)
 	if err := mc.MountTree(mc.pe.GetSecrets(), ep, tree, mntName); err != nil {
+		spstats.Inc(&mc.pcstats.NmntNamedErr, 1)
 		db.DPrintf(db.MOUNT_ERR, "mountNamed: MountTree err %v", err)
 		// If mounting failed, the named is unreachable. Invalidate the cache entry
 		// for this realm.
@@ -132,6 +134,7 @@ func (mc *MntClnt) mountNamed(realm sp.Trealm, mntName, tree sp.Tsigmapath) *ser
 		}
 		return serr.NewErr(serr.TErrUnreachable, fmt.Sprintf("%v realm failure", realm))
 	}
+	spstats.Inc(&mc.pcstats.NmntNamedOK, 1)
 	db.DPrintf(db.MOUNT, "mountNamed [%v]: MountTree ep %v/%v at %v", realm, ep, tree, mntName)
 	db.DPrintf(db.WALK_LAT, "mountNamed [%v]: %v MountTree ep %v/%v at %v lat %v", mc.cid, realm, ep, tree, mntName, time.Since(s))
 	return nil

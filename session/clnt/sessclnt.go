@@ -21,6 +21,7 @@ import (
 	sp "sigmaos/sigmap"
 	"sigmaos/util/io/demux"
 	"sigmaos/util/rand"
+	"sigmaos/util/spstats"
 )
 
 type SessClnt struct {
@@ -32,14 +33,16 @@ type SessClnt struct {
 	npc     *dialproxyclnt.DialProxyClnt
 	pe      *proc.ProcEnv
 	dmx     *demux.DemuxClnt
+	pcst    *spstats.PathClntStats
 }
 
-func newSessClnt(pe *proc.ProcEnv, npc *dialproxyclnt.DialProxyClnt, ep *sp.Tendpoint) (*SessClnt, *serr.Err) {
+func newSessClnt(pe *proc.ProcEnv, npc *dialproxyclnt.DialProxyClnt, ep *sp.Tendpoint, pcst *spstats.PathClntStats) (*SessClnt, *serr.Err) {
 	c := &SessClnt{
 		sid:     sessp.Tsession(rand.Uint64()),
 		npc:     npc,
 		pe:      pe,
 		ep:      ep,
+		pcst:    pcst,
 		seqcntr: new(sessp.Tseqcntr),
 	}
 	db.DPrintf(db.SESSCLNT, "Make session %v to srvs %v", c.sid, ep)
@@ -119,8 +122,10 @@ func (c *SessClnt) getdmx() (*demux.DemuxClnt, *serr.Err) {
 		conn, err := netclnt.NewNetClnt(c.pe, c.npc, c.ep)
 		if err != nil {
 			db.DPrintf(db.SESSCLNT, "%v Error %v unable to connect to %v", c.sid, err, c.ep)
+			spstats.Inc(&c.pcst.NnetclntErr, 1)
 			return nil, err
 		}
+		spstats.Inc(&c.pcst.NnetclntOK, 1)
 		db.DPrintf(db.SESSCLNT, "%v connection to %v", c.sid, c.ep)
 		iovm := demux.NewIoVecMap()
 		c.dmx = demux.NewDemuxClnt(spcodec.NewTransport(conn, iovm), iovm)

@@ -27,6 +27,7 @@ import (
 	"sigmaos/test"
 	"sigmaos/util/io/demux"
 	"sigmaos/util/rand"
+	"sigmaos/util/spstats"
 )
 
 const (
@@ -95,7 +96,7 @@ type TstateSrv struct {
 
 func newTstateClntAddr(t *testing.T, addr *sp.Taddr, crash int) *TstateSrv {
 	ts := &TstateSrv{TstateMin: test.NewTstateMinAddr(t, addr), crash: crash}
-	ts.clnt = sessclnt.NewMgr(ts.PE, dialproxyclnt.NewDialProxyClnt(ts.PE))
+	ts.clnt = sessclnt.NewMgr(ts.PE, dialproxyclnt.NewDialProxyClnt(ts.PE), &spstats.PathClntStats{})
 	return ts
 }
 
@@ -457,7 +458,7 @@ func newTstateSp(t *testing.T) *TstateSp {
 	ts.TstateMin = test.NewTstateMin(t)
 	root := dir.NewRootDir(ctx.NewCtxNull(), memfs.NewNewInode(sp.DEV_MEMFS))
 	ts.srv = sigmapsrv.NewSigmaPSrv(ts.PE, dialproxyclnt.NewDialProxyClnt(ts.PE), root, ts.Addr, nil, spprotosrv.AttachAllowAllToAll, nil)
-	ts.clnt = sessclnt.NewMgr(ts.PE, dialproxyclnt.NewDialProxyClnt(ts.PE))
+	ts.clnt = sessclnt.NewMgr(ts.PE, dialproxyclnt.NewDialProxyClnt(ts.PE), &spstats.PathClntStats{})
 	return ts
 }
 

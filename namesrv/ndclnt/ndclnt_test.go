@@ -20,6 +20,7 @@ import (
 	"sigmaos/test"
 	"sigmaos/util/coordination/semaphore"
 	"sigmaos/util/crash"
+	"sigmaos/util/retry"
 )
 
 const (
@@ -428,15 +429,29 @@ func TestAtMostOnce(t *testing.T) {
 	_, err = sc.GetDir(sp.NAMED)
 	assert.Nil(t, err)
 
+	st, err := sc.Stats()
+	assert.Nil(t, err)
+
 	d := []byte("hello")
 	fn := filepath.Join(sp.NAMED, CRASHFILE)
 	_, err = sc.SetFile(fn, d, sp.OAPPEND, sp.NoOffset)
 	assert.NotNil(t, err)
 	assert.True(t, serr.IsErrorIO(err))
 
-	d1, err := sc.GetFile(fn)
+	var d1 []byte
+	err, ok := retry.RetryAtLeastOnce(func() error {
+		d1, err = sc.GetFile(fn)
+		return err
+	})
 	assert.Nil(t, err)
+	assert.True(t, ok)
 	assert.Equal(t, d, d1, d1)
+
+	st1, err := sc.Stats()
+	assert.Nil(t, err)
+
+	assert.True(t, st1.PathClntStatsSnapshot.Counters["NgetNamedOK"] > st.PathClntStatsSnapshot.Counters["NgetNamed"])
+	assert.True(t, st1.PathClntStatsSnapshot.Counters["Nsession"] > st.PathClntStatsSnapshot.Counters["Nsession"])
 
 	if err := ndc.StopNamed(nd2); !assert.Nil(ts.T, err, "Err stop named: %v", err) {
 		return

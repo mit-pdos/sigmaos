@@ -243,27 +243,29 @@ func namedClient(t *testing.T, sc *sigmaclnt.SigmaClnt, ch chan bool) {
 			fn := filepath.Join(sp.NAMED, "fff")
 			_, err := sc.PutFile(fn, 0777, sp.OWRITE|sp.OEXCL, d)
 			if err == nil {
-				for i := 0; i < MAXRETRY; i++ {
+				err, ok := retry.RetryAtLeastOnce(func() error {
 					sts, err := sc.GetDir(sp.NAMED)
 					if err == nil {
 						assert.True(t, sp.Present(sts, []string{fn}))
-						break
 					}
-					assert.NotEqual(t, MAXRETRY, i)
-				}
-				for i := 0; i < MAXRETRY; i++ {
+					return err
+				})
+				assert.Nil(t, err)
+				assert.True(t, ok)
+				err, ok = retry.RetryAtLeastOnce(func() error {
 					dg, err := sc.GetFile(fn)
 					if err == nil {
 						assert.Equal(t, d, dg)
-						break
 					}
-				}
-				for i := 0; i < MAXRETRY; i++ {
-					if err := sc.Remove(fn); err == nil {
-						break
-					}
-					assert.NotEqual(t, MAXRETRY, i)
-				}
+					return err
+				})
+				assert.Nil(t, err)
+				assert.True(t, ok)
+				_, ok = retry.RetryAtLeastOnce(func() error {
+					err := sc.Remove(fn)
+					return err
+				})
+				assert.True(t, ok)
 			}
 		}
 	}

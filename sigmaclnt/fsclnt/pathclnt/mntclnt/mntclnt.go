@@ -16,6 +16,7 @@ import (
 type MntClntAPI interface {
 	GetFile(pn sp.Tsigmapath, principal *sp.Tprincipal, mode sp.Tmode, off sp.Toffset, cnt sp.Tsize, f *sp.Tfence) ([]byte, error)
 	Stat(pn sp.Tsigmapath, principal *sp.Tprincipal) (*sp.Tstat, error)
+	IncNamed()
 }
 
 type MntClnt struct {

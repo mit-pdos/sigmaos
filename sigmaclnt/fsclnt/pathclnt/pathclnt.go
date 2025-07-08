@@ -45,6 +45,7 @@ type PathClntStats struct {
 	NwalkEP    spstats.Tcounter
 	NwalkSym   spstats.Tcounter
 	NwalkUnion spstats.Tcounter
+	NmntNamed  spstats.Tcounter
 }
 
 func NewPathClnt(pe *proc.ProcEnv, fidc *fidclnt.FidClnt) *PathClnt {
@@ -64,6 +65,10 @@ func (pathc *PathClnt) Stats() sos.PathClntStatsSnapshot {
 	spstats.FillCounters(pathc.pcstats, st.Counters)
 	st.Counters["Nfid"] = int64(pathc.FidClnt.Len())
 	return st
+}
+
+func (pathc *PathClnt) IncNamed() {
+	spstats.Inc(&pathc.pcstats.NmntNamed, 1)
 }
 
 func (pathc *PathClnt) String() string {

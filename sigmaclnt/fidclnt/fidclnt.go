@@ -33,15 +33,18 @@ type FidClnt struct {
 	sm     *sessclnt.Mgr
 	npc    *dialproxyclnt.DialProxyClnt
 	spst   *spstats.SpStats
+	pcst   *spstats.PathClntStats
 }
 
-func NewFidClnt(pe *proc.ProcEnv, npc *dialproxyclnt.DialProxyClnt, spst *spstats.SpStats) *FidClnt {
+func NewFidClnt(pe *proc.ProcEnv, npc *dialproxyclnt.DialProxyClnt) *FidClnt {
+	pcst := &spstats.PathClntStats{}
 	return &FidClnt{
 		fids:   newFidMap(),
 		refcnt: 1,
-		sm:     sessclnt.NewMgr(pe, npc),
+		sm:     sessclnt.NewMgr(pe, npc, pcst),
 		npc:    npc,
-		spst:   spst,
+		spst:   &spstats.SpStats{},
+		pcst:   pcst,
 	}
 }
 
@@ -50,8 +53,12 @@ func (fidc *FidClnt) String() string {
 	return str
 }
 
-func (fidc *FidClnt) Stats() *spstats.SpStatsSnapshot {
-	return fidc.spst.StatsSnapshot()
+func (fidc *FidClnt) PathClntStats() *spstats.PathClntStats {
+	return fidc.pcst
+}
+
+func (fidc *FidClnt) SpStats() *spstats.SpStats {
+	return fidc.spst
 }
 
 func (fidc *FidClnt) GetDialProxyClnt() *dialproxyclnt.DialProxyClnt {

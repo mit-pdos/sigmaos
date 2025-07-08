@@ -86,16 +86,8 @@ type PathClntAPI interface {
 	Clunk(fid sp.Tfid) error
 }
 
-type PathClntStatsSnapshot struct {
-	Counters map[string]int64
-}
-
-func (pcst *PathClntStatsSnapshot) String() string {
-	return spstats.StringCounters(pcst.Counters)
-}
-
 type ClntStats struct {
-	PathClntStatsSnapshot
+	spstats.PathClntStatsSnapshot
 	spstats.SpStatsSnapshot
 }
 

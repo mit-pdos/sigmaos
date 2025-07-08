@@ -10,6 +10,7 @@ import (
 	"sigmaos/path"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
+	"sigmaos/util/spstats"
 )
 
 func (mc *MntClnt) GetNamedEndpointRealm(realm sp.Trealm) (*sp.Tendpoint, error) {
@@ -115,7 +116,7 @@ func (mc *MntClnt) invalidateNamedMountCacheEntry(realm sp.Trealm) error {
 
 func (mc *MntClnt) mountNamed(realm sp.Trealm, mntName, tree sp.Tsigmapath) *serr.Err {
 	db.DPrintf(db.MOUNT, "mountNamed [%v] at %v tree \"%v\"", realm, mntName, tree)
-	mc.pathc.IncNamed()
+	spstats.Inc(&mc.pcstats.NmntNamed, 1)
 	s := time.Now()
 	ep, err := mc.getNamedEndpointRealm(realm)
 	if err != nil {

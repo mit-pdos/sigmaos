@@ -32,43 +32,20 @@ type PathClnt struct {
 	pe           *proc.ProcEnv
 	cid          sp.TclntId
 	disconnected bool // Used by test harness
-	pcstats      *PathClntStats
-}
-
-type PathClntStats struct {
-	Nsym       spstats.Tcounter
-	Nopen      spstats.Tcounter
-	NwalkPath  spstats.Tcounter
-	NwalkElem  spstats.Tcounter
-	NwalkOne   spstats.Tcounter
-	NreadSym   spstats.Tcounter
-	NwalkEP    spstats.Tcounter
-	NwalkSym   spstats.Tcounter
-	NwalkUnion spstats.Tcounter
-	NmntNamed  spstats.Tcounter
+	pcstats      *spstats.PathClntStats
 }
 
 func NewPathClnt(pe *proc.ProcEnv, fidc *fidclnt.FidClnt) *PathClnt {
+	pcst := fidc.PathClntStats()
 	pathc := &PathClnt{
 		pe:      pe,
 		FidClnt: fidc,
 		cid:     sp.TclntId(rand.Uint64()),
-		pcstats: &PathClntStats{},
+		pcstats: pcst,
 	}
-	pathc.mntclnt = mntclnt.NewMntClnt(pathc, fidc, pathc.cid, pe, fidc.GetDialProxyClnt())
+	pathc.mntclnt = mntclnt.NewMntClnt(pathc, fidc, pathc.cid, pe, pcst, fidc.GetDialProxyClnt())
 	db.DPrintf(db.TEST, "New cid %v %v\n", pathc.cid, pe.GetRealm())
 	return pathc
-}
-
-func (pathc *PathClnt) Stats() sos.PathClntStatsSnapshot {
-	st := sos.PathClntStatsSnapshot{Counters: make(map[string]int64)}
-	spstats.FillCounters(pathc.pcstats, st.Counters)
-	st.Counters["Nfid"] = int64(pathc.FidClnt.Len())
-	return st
-}
-
-func (pathc *PathClnt) IncNamed() {
-	spstats.Inc(&pathc.pcstats.NmntNamed, 1)
 }
 
 func (pathc *PathClnt) String() string {

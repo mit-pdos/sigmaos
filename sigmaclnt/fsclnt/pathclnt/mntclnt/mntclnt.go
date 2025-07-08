@@ -11,12 +11,12 @@ import (
 	"sigmaos/serr"
 	"sigmaos/sigmaclnt/fidclnt"
 	sp "sigmaos/sigmap"
+	"sigmaos/util/spstats"
 )
 
 type MntClntAPI interface {
 	GetFile(pn sp.Tsigmapath, principal *sp.Tprincipal, mode sp.Tmode, off sp.Toffset, cnt sp.Tsize, f *sp.Tfence) ([]byte, error)
 	Stat(pn sp.Tsigmapath, principal *sp.Tprincipal) (*sp.Tstat, error)
-	IncNamed()
 }
 
 type MntClnt struct {
@@ -28,9 +28,10 @@ type MntClnt struct {
 	cid        sp.TclntId
 	fidc       *fidclnt.FidClnt
 	pathc      MntClntAPI
+	pcstats    *spstats.PathClntStats
 }
 
-func NewMntClnt(pathc MntClntAPI, fidc *fidclnt.FidClnt, cid sp.TclntId, pe *proc.ProcEnv, npc *dialproxyclnt.DialProxyClnt) *MntClnt {
+func NewMntClnt(pathc MntClntAPI, fidc *fidclnt.FidClnt, cid sp.TclntId, pe *proc.ProcEnv, pcstats *spstats.PathClntStats, npc *dialproxyclnt.DialProxyClnt) *MntClnt {
 	mc := &MntClnt{
 		cid:        cid,
 		mnt:        newMntTable(),
@@ -40,6 +41,7 @@ func NewMntClnt(pathc MntClntAPI, fidc *fidclnt.FidClnt, cid sp.TclntId, pe *pro
 		npc:        npc,
 		fidc:       fidc,
 		pathc:      pathc,
+		pcstats:    pcstats,
 	}
 	return mc
 }

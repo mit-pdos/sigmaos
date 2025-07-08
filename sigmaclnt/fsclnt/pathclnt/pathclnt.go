@@ -36,7 +36,15 @@ type PathClnt struct {
 }
 
 type PathClntStats struct {
-	Nsym spstats.Tcounter
+	Nsym       spstats.Tcounter
+	Nopen      spstats.Tcounter
+	NwalkPath  spstats.Tcounter
+	NwalkElem  spstats.Tcounter
+	NwalkOne   spstats.Tcounter
+	NreadSym   spstats.Tcounter
+	NwalkEP    spstats.Tcounter
+	NwalkSym   spstats.Tcounter
+	NwalkUnion spstats.Tcounter
 }
 
 func NewPathClnt(pe *proc.ProcEnv, fidc *fidclnt.FidClnt) *PathClnt {
@@ -52,9 +60,9 @@ func NewPathClnt(pe *proc.ProcEnv, fidc *fidclnt.FidClnt) *PathClnt {
 }
 
 func (pathc *PathClnt) Stats() sos.PathClntStatsSnapshot {
-	st := sos.PathClntStatsSnapshot{}
-	st.Nsym = pathc.pcstats.Nsym.Load()
-	st.Nfid = int64(pathc.FidClnt.Len())
+	st := sos.PathClntStatsSnapshot{Counters: make(map[string]int64)}
+	spstats.FillCounters(pathc.pcstats, st.Counters)
+	st.Counters["Nfid"] = int64(pathc.FidClnt.Len())
 	return st
 }
 
@@ -74,10 +82,6 @@ func (pathc *PathClnt) Close() error {
 	}
 	return err
 }
-
-//func (pathc *PathClnt) Stats() (*spstats.SpStats, error) {
-//	return pathc.FidClnt.Stats()
-//}
 
 func (pathc *PathClnt) ClntId() sp.TclntId {
 	return pathc.cid
@@ -253,6 +257,7 @@ func (pathc *PathClnt) Stat(pn sp.Tsigmapath, principal *sp.Tprincipal) (*sp.Tst
 func (pathc *PathClnt) open(path path.Tpathname, principal *sp.Tprincipal, resolve bool, w sos.Watch) (sp.Tfid, *serr.Err) {
 	fid := sp.NoFid
 	err, ok := retry.RetryDefDurCont(func() (error, bool) {
+		spstats.Inc(&pathc.pcstats.Nopen, 1)
 		if err, cont := pathc.mntclnt.ResolveRoot(path); err != nil {
 			db.DPrintf(db.PATHCLNT_ERR, "open: resolveRoot %v err %v cont %t", path, err, cont)
 			return err, cont

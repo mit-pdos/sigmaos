@@ -7,6 +7,7 @@ import (
 	"sigmaos/path"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
+	"sigmaos/util/spstats"
 )
 
 func (pathc *PathClnt) walkReadSymlink(fid sp.Tfid, resolved, left path.Tpathname) (path.Tpathname, *serr.Err) {
@@ -53,6 +54,7 @@ func (pathc *PathClnt) walkEndpoint(ep *sp.Tendpoint, resolved path.Tpathname) (
 
 func (pathc *PathClnt) walkReadSymfile(fid sp.Tfid, resolved path.Tpathname) (sp.Tfid, path.Tpathname, *serr.Err) {
 	s := time.Now()
+	spstats.Inc(&pathc.pcstats.NreadSym, 1)
 	target, sr := pathc.FidClnt.GetFile(fid, path.Tpathname{}, sp.OREAD, 0, sp.MAXGETSET, false, sp.NullFence())
 	if sr != nil {
 		db.DPrintf(db.WALK, "walkReadSymfile: GetFile %v err %v", fid, sr)
@@ -60,10 +62,12 @@ func (pathc *PathClnt) walkReadSymfile(fid sp.Tfid, resolved path.Tpathname) (sp
 	}
 	ep, err := sp.NewEndpointFromBytes(target)
 	if err == nil { // an endpoint file
+		spstats.Inc(&pathc.pcstats.NwalkEP, 1)
 		fid, err := pathc.walkEndpoint(ep, resolved)
 		db.DPrintf(db.WALK_LAT, "walkReadSymfile: ep %v %v %v ep %v lat %v", pathc.cid, fid, resolved, ep, time.Since(s))
 		return fid, nil, err
 	} else { // a true symlink
+		spstats.Inc(&pathc.pcstats.NwalkSym, 1)
 		pn := path.Split(string(target))
 		db.DPrintf(db.WALK, "walkReadSymfile: sym target '%v'", pn)
 		return sp.NoFid, pn, nil

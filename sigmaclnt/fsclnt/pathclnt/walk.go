@@ -23,6 +23,7 @@ import (
 func (pathc *PathClnt) walkPath(path path.Tpathname, resolve bool, w sos.Watch) (sp.Tfid, path.Tpathname, path.Tpathname, *serr.Err) {
 	for i := 0; i < sp.Conf.Path.MAX_SYMLINK; i++ {
 		db.DPrintf(db.WALK, "walkPath: '%v' resolve %v", path, resolve)
+		spstats.Inc(&pathc.pcstats.NwalkPath, 1)
 		fid, left, err := pathc.walkMount(path, resolve)
 		if err != nil {
 			db.DPrintf(db.WALK, "walkPath: walkMount left '%v' resolve %v err %v", left, resolve, err)
@@ -104,6 +105,7 @@ func (pathc *PathClnt) walkPathFid(fid1 sp.Tfid, path, left path.Tpathname, reso
 // or return a fid for a new server to continue at.
 func (pathc *PathClnt) walkPathFid1(fid1 sp.Tfid, path, left1 path.Tpathname, resolve bool, w sos.Watch) (sp.Tfid, path.Tpathname, bool, *serr.Err) {
 	for true {
+		spstats.Inc(&pathc.pcstats.NwalkElem, 1)
 		fid, left, retry, err := pathc.walkElement(fid1, path, left1, resolve, w)
 		db.DPrintf(db.WALK, "walkPathFid: walkElement %v %v left '%v' %v", fid, left, retry, err)
 		if err != nil {
@@ -185,6 +187,7 @@ func (pathc *PathClnt) walkMount(path path.Tpathname, resolve bool) (sp.Tfid, pa
 // file is created.
 func (pathc *PathClnt) walkOne(fid sp.Tfid, path path.Tpathname, w sos.Watch) (sp.Tfid, path.Tpathname, *serr.Err) {
 	db.DPrintf(db.WALK, "walkOne %v left '%v'", fid, path)
+	spstats.Inc(&pathc.pcstats.NwalkOne, 1)
 	s := time.Now()
 	fid1, left, err := pathc.FidClnt.Walk(fid, path)
 	if err != nil { // fid1 == fid
@@ -222,6 +225,7 @@ func (pathc *PathClnt) walkOne(fid sp.Tfid, path path.Tpathname, w sos.Watch) (s
 // and return fid for result.
 func (pathc *PathClnt) walkUnion(fid sp.Tfid, p path.Tpathname) (sp.Tfid, path.Tpathname, *serr.Err) {
 	if len(p) > 0 && path.IsUnionElem(p[0]) {
+		spstats.Inc(&pathc.pcstats.NwalkUnion, 1)
 		if p[0] == sp.LOCAL && pathc.pe.GetKernelID() != sp.NOT_SET {
 			start := time.Now()
 			fid1, err := pathc.unionScan(fid, pathc.pe.GetKernelID(), sp.LOCAL)

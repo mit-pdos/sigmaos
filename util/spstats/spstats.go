@@ -1,12 +1,6 @@
 package spstats
 
 import (
-	"fmt"
-	"reflect"
-	"sort"
-	"strings"
-	"sync/atomic"
-
 	db "sigmaos/debug"
 	sessp "sigmaos/session/proto"
 )
@@ -88,38 +82,13 @@ type SpStatsSnapshot struct {
 	Counters map[string]int64
 }
 
-// Make a StatsSnapshot from st while concurrent Inc()s may happen
+// Make a SpStatsSnapshot from st while concurrent Inc()s may happen
 func (st *SpStats) StatsSnapshot() *SpStatsSnapshot {
-	stro := newStatsSnapshot()
-
-	v := reflect.ValueOf(st).Elem()
-	for i := 0; i < v.NumField(); i++ {
-		t := v.Field(i).Type().String()
-		n := v.Type().Field(i).Name
-		if strings.HasSuffix(t, "atomic.Int64") {
-			p := v.Field(i).Addr().Interface().(*atomic.Int64)
-			stro.Counters[n] = p.Load()
-		}
-	}
+	stro := &SpStatsSnapshot{Counters: make(map[string]int64)}
+	FillCounters(st, stro.Counters)
 	return stro
 }
 
-func newStatsSnapshot() *SpStatsSnapshot {
-	st := &SpStatsSnapshot{}
-	st.Counters = make(map[string]int64)
-	return st
-}
-
 func (st *SpStatsSnapshot) String() string {
-	ks := make([]string, 0, len(st.Counters))
-	for k := range st.Counters {
-		ks = append(ks, k)
-	}
-	sort.Strings(ks)
-	s := "["
-	for _, k := range ks {
-		s += fmt.Sprintf("{%s: %d}", k, st.Counters[k])
-	}
-	s += "] "
-	return s
+	return StringCounters(st.Counters)
 }

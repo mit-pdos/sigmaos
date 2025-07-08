@@ -87,12 +87,11 @@ type PathClntAPI interface {
 }
 
 type PathClntStatsSnapshot struct {
-	Nfid int64
-	Nsym int64
+	Counters map[string]int64
 }
 
 func (pcst *PathClntStatsSnapshot) String() string {
-	return fmt.Sprintf("[{Nfid %d} {Nsym %d}]", pcst.Nfid, pcst.Nsym)
+	return spstats.StringCounters(pcst.Counters)
 }
 
 type ClntStats struct {

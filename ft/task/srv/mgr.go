@@ -10,21 +10,20 @@ import (
 	"sigmaos/serr"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
-	"sigmaos/util/crash"
 	"time"
 )
 
 type FtTaskSrvMgr struct {
-	sc *sigmaclnt.SigmaClnt
+	sc      *sigmaclnt.SigmaClnt
 	stopped bool
-	Id fttask.FtTaskSrvId
-	clnt fttask_clnt.FtTaskClnt[any, any]
-	p *procgroupmgr.ProcGroupMgr
+	Id      fttask.FtTaskSrvId
+	clnt    fttask_clnt.FtTaskClnt[any, any]
+	p       *procgroupmgr.ProcGroupMgr
 }
 
 // when testing partitions, we don't want to evict unresponsive instances
 // to test if new instances can coexist with old ones
-func NewFtTaskSrvMgr(sc *sigmaclnt.SigmaClnt, id string, em *crash.TeventMap, evictUnresponsive bool) (*FtTaskSrvMgr, error) {
+func NewFtTaskSrvMgr(sc *sigmaclnt.SigmaClnt, id string, evictUnresponsive bool) (*FtTaskSrvMgr, error) {
 	err := sc.MkDir(sp.FTTASK, 0777)
 	if err != nil && !serr.IsErrorExists(err) {
 		return nil, err
@@ -32,11 +31,6 @@ func NewFtTaskSrvMgr(sc *sigmaclnt.SigmaClnt, id string, em *crash.TeventMap, ev
 
 	err = sc.MkDir(filepath.Join(sp.FTTASK, id), 0777)
 	if err != nil && !serr.IsErrorExists(err) {
-		return nil, err
-	}
-
-	err = crash.SetSigmaFail(em)
-	if err != nil {
 		return nil, err
 	}
 

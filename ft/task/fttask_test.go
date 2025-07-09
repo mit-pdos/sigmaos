@@ -62,7 +62,7 @@ func TestServerPerf(t *testing.T) {
 
 	nTasks := 1000
 
-	mgr, err := fttasksrv.NewFtTaskSrvMgr(ts.SigmaClnt, "test", nil, true)
+	mgr, err := fttasksrv.NewFtTaskSrvMgr(ts.SigmaClnt, "test", true)
 	assert.Nil(t, err)
 
 	clnt := fttask_clnt.NewFtTaskClnt[mr.Bin, string](ts.FsLib, mgr.Id)
@@ -130,7 +130,7 @@ func TestServerBatchedPerf(t *testing.T) {
 
 	nTasks := 1000
 
-	mgr, err := fttasksrv.NewFtTaskSrvMgr(ts.SigmaClnt, "test", nil, true)
+	mgr, err := fttasksrv.NewFtTaskSrvMgr(ts.SigmaClnt, "test", true)
 	assert.Nil(t, err)
 
 	clnt := fttask_clnt.NewFtTaskClnt[mr.Bin, string](ts.FsLib, mgr.Id)
@@ -205,7 +205,7 @@ func TestServerMoveTasksByStatus(t *testing.T) {
 	}
 
 	db.DPrintf(db.TEST, "Making fttasks server")
-	mgr, err := fttasksrv.NewFtTaskSrvMgr(ts.SigmaClnt, "test", nil, true)
+	mgr, err := fttasksrv.NewFtTaskSrvMgr(ts.SigmaClnt, "test", true)
 	assert.Nil(t, err)
 
 	clnt := fttask_clnt.NewFtTaskClnt[struct{}, struct{}](ts.FsLib, mgr.Id)
@@ -283,7 +283,7 @@ func TestServerMoveTasksById(t *testing.T) {
 	}
 
 	db.DPrintf(db.TEST, "Making fttasks server")
-	mgr, err := fttasksrv.NewFtTaskSrvMgr(ts.SigmaClnt, "test", nil, true)
+	mgr, err := fttasksrv.NewFtTaskSrvMgr(ts.SigmaClnt, "test", true)
 	assert.Nil(t, err)
 
 	clnt := fttask_clnt.NewFtTaskClnt[struct{}, struct{}](ts.FsLib, mgr.Id)
@@ -350,7 +350,7 @@ func TestServerWait(t *testing.T) {
 
 	ntasks := 5
 
-	mgr, err := fttasksrv.NewFtTaskSrvMgr(ts.SigmaClnt, "test", nil, true)
+	mgr, err := fttasksrv.NewFtTaskSrvMgr(ts.SigmaClnt, "test", true)
 	assert.Nil(t, err)
 
 	clnt := fttask_clnt.NewFtTaskClnt[mr.Bin, string](ts.FsLib, mgr.Id)
@@ -391,7 +391,7 @@ func TestServerErrors(t *testing.T) {
 
 	ntasks := 5
 
-	mgr, err := fttasksrv.NewFtTaskSrvMgr(ts.SigmaClnt, "test", nil, true)
+	mgr, err := fttasksrv.NewFtTaskSrvMgr(ts.SigmaClnt, "test", true)
 	assert.Nil(t, err)
 
 	clnt := fttask_clnt.NewFtTaskClnt[interface{}, interface{}](ts.FsLib, mgr.Id)
@@ -435,7 +435,7 @@ func TestServerStop(t *testing.T) {
 		return
 	}
 
-	mgr, err := fttasksrv.NewFtTaskSrvMgr(ts.SigmaClnt, "test", nil, true)
+	mgr, err := fttasksrv.NewFtTaskSrvMgr(ts.SigmaClnt, "test", true)
 	assert.Nil(t, err)
 
 	clnt := fttask_clnt.NewFtTaskClnt[interface{}, interface{}](ts.FsLib, mgr.Id)
@@ -484,7 +484,7 @@ func TestServerFence(t *testing.T) {
 		return
 	}
 
-	mgr, err := fttasksrv.NewFtTaskSrvMgr(ts.SigmaClnt, "test", nil, true)
+	mgr, err := fttasksrv.NewFtTaskSrvMgr(ts.SigmaClnt, "test", true)
 	assert.Nil(t, err)
 
 	clnt := fttask_clnt.NewFtTaskClnt[interface{}, interface{}](ts.FsLib, mgr.Id)
@@ -521,7 +521,12 @@ func runTestServerData(t *testing.T, em *crash.TeventMap) []*procgroupmgr.ProcSt
 
 	ntasks := 5
 
-	mgr, err := fttasksrv.NewFtTaskSrvMgr(ts.SigmaClnt, "test", em, true)
+	err = crash.SetSigmaFail(em)
+	if err != nil {
+		return nil, err
+	}
+
+	mgr, err := fttasksrv.NewFtTaskSrvMgr(ts.SigmaClnt, "test", true)
 	assert.Nil(t, err)
 
 	clnt := fttask_clnt.NewFtTaskClnt[mr.Bin, string](ts.FsLib, mgr.Id)
@@ -624,7 +629,7 @@ func TestServerPartition(t *testing.T) {
 	ts, err := test.NewTstateAll(t)
 	assert.Nil(t, err, "Error New Tstate: %v", err)
 
-	mgr, err := fttasksrv.NewFtTaskSrvMgr(ts.SigmaClnt, "test", nil, false)
+	mgr, err := fttasksrv.NewFtTaskSrvMgr(ts.SigmaClnt, "test", false)
 	assert.Nil(t, err)
 
 	clnt := fttask_clnt.NewFtTaskClnt[mr.Bin, string](ts.FsLib, mgr.Id)

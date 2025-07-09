@@ -252,7 +252,7 @@ func PrepareJob(fsl *fslib.FsLib, ts *Tasks, jobRoot, jobName string, j *Job) (i
 
 	splitsz := sp.Tlength(SPLITSZ)
 
-	bins, err := NewBins(fsl, job.Input, sp.Tlength(job.Binsz), splitsz)
+	bins, err := NewBins(fsl, job.Input, true, sp.Tlength(job.Binsz), splitsz)
 	if err != nil || len(bins) == 0 {
 		return len(bins), err
 	}

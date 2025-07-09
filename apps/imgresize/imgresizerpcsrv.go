@@ -10,7 +10,9 @@ import (
 	"sigmaos/api/fs"
 	"sigmaos/apps/imgresize/proto"
 	db "sigmaos/debug"
-	fttaskmgr "sigmaos/ft/task/mgr"
+	"sigmaos/ft/task"
+	fttask_clnt "sigmaos/ft/task/clnt"
+	fttask_coord "sigmaos/ft/task/coord"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
@@ -18,13 +20,13 @@ import (
 )
 
 type ImgSrvRPC struct {
-	job        string
+	ftclnt     fttask_clnt.FtTaskClnt[Ttask, any]
 	nrounds    int
 	workerMcpu proc.Tmcpu
 	workerMem  proc.Tmem
 	ssrv       *sigmasrv.SigmaSrv
 	ndone      atomic.Int64
-	mkProc     fttaskmgr.TmkProc
+	mkProc     fttask_coord.TmkProc[Ttask]
 	sc         *sigmaclnt.SigmaClnt
 }
 
@@ -33,16 +35,18 @@ func NewImgSrvRPC(args []string) (*ImgSrvRPC, error) {
 		return nil, fmt.Errorf("NewImgSrv: wrong number of arguments: %v", args)
 	}
 	imgd := &ImgSrvRPC{}
-	imgd.job = args[0]
 
-	ssrv, err := sigmasrv.NewSigmaSrv(filepath.Join(sp.IMG, imgd.job), imgd, proc.GetProcEnv())
+	serverId := args[0]
+	ssrv, err := sigmasrv.NewSigmaSrv(filepath.Join(sp.IMG, serverId), imgd, proc.GetProcEnv())
 	if err != nil {
 		db.DFatalf("NewSigmaSrv: %v", err)
 		return nil, err
 	}
 	imgd.sc = ssrv.SigmaClnt()
 	imgd.ssrv = ssrv
-	db.DPrintf(db.IMGD, "Made fslib job %v", imgd.job)
+
+	imgd.ftclnt = fttask_clnt.NewFtTaskClnt[Ttask, any](imgd.sc.FsLib, task.FtTaskSrvId(serverId))
+	db.DPrintf(db.IMGD, "Made imgd connected to %v", serverId)
 	mcpu, err := strconv.Atoi(args[1])
 	if err != nil {
 		return nil, fmt.Errorf("NewImgSrv: Error parse MCPU %v", err)
@@ -57,7 +61,7 @@ func NewImgSrvRPC(args []string) (*ImgSrvRPC, error) {
 	if err != nil {
 		db.DFatalf("Error parse nrounds: %v", err)
 	}
-	imgd.mkProc = getMkProcFn(imgd.job, imgd.nrounds, imgd.workerMcpu, imgd.workerMem)
+	imgd.mkProc = getMkProcFn(imgd.ftclnt.ServerId(), imgd.nrounds, imgd.workerMcpu, imgd.workerMem)
 	return imgd, nil
 }
 
@@ -71,7 +75,10 @@ func (imgd *ImgSrvRPC) Resize(ctx fs.CtxI, req proto.ImgResizeReq, rep *proto.Im
 	defer db.DPrintf(db.IMGD, "Resize %v done", req)
 
 	t := NewTask(req.InputPath)
-	p := imgd.mkProc(req.TaskName, t)
+	p := imgd.mkProc(fttask_clnt.Task[Ttask]{
+		Id: fttask_clnt.TaskId(0),
+		Data: *t,
+	})
 
 	db.DPrintf(db.IMGD, "prep to spawn task %v %v", p.GetPid(), p.Args)
 	start := time.Now()
@@ -98,7 +105,7 @@ func (imgd *ImgSrvRPC) Resize(ctx fs.CtxI, req proto.ImgResizeReq, rep *proto.Im
 }
 
 func (imgd *ImgSrvRPC) Work() {
-	db.DPrintf(db.IMGD, "Run imgd RPC server job %v", imgd.job)
+	db.DPrintf(db.IMGD, "Run imgd RPC server server %v", imgd.ftclnt.ServerId())
 	if err := imgd.ssrv.RunServer(); err != nil {
 		db.DFatalf("RunServer: %v", err)
 	}

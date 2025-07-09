@@ -4,9 +4,9 @@ package electclnt
 
 import (
 	db "sigmaos/debug"
-	"sigmaos/sigmaclnt/fslib"
 	"sigmaos/namesrv/fsetcd"
 	"sigmaos/namesrv/leaderetcd"
+	"sigmaos/sigmaclnt/fslib"
 	sp "sigmaos/sigmap"
 )
 
@@ -51,6 +51,11 @@ func (ec *ElectClnt) AcquireLeadership(b []byte) error {
 func (ec *ElectClnt) ReleaseLeadership() error {
 	ec.Remove(ec.elect.Key())
 	return ec.elect.Resign()
+}
+
+// for testing
+func (ec *ElectClnt) CloseSession() error {
+	return ec.sess.Close()
 }
 
 func (ec *ElectClnt) Fence() sp.Tfence {

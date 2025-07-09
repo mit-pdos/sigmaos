@@ -187,3 +187,16 @@ func (mnt *MntTable) mountedPoints() []*Point {
 	}
 	return pnts
 }
+
+func (mnt *MntTable) delete(pnt *Point) error {
+	mnt.Lock()
+	defer mnt.Unlock()
+
+	for i, p := range mnt.mounts {
+		if p == pnt {
+			mnt.mounts = append(mnt.mounts[:i], mnt.mounts[i+1:]...)
+			return nil
+		}
+	}
+	return serr.NewErr(serr.TErrUnreachable, fmt.Sprintf("%v (no mount)", pnt))
+}

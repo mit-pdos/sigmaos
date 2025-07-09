@@ -160,7 +160,7 @@ func (s3c *S3PathClnt) S3Stat(bucket, key string) (sp.Tlength, error) {
 		db.DPrintf(db.S3, "readHead: %v err %v\n", key, err)
 		return 0, serr.NewErrError(err)
 	}
-	db.DPrintf(db.S3, "readHead: %v %v %v\n", key, result.ContentLength, err)
+	db.DPrintf(db.S3, "readHead: %v %v %v\n", key, *result.ContentLength, err)
 	return sp.Tlength(*result.ContentLength), nil
 }
 

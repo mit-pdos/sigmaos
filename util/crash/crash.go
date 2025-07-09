@@ -35,7 +35,7 @@ type Tevent struct {
 	MaxInterval int64 `json:"maxinterval"`
 
 	// probability of generating event in this interval
-	Prob float64 `json:"prob:`
+	Prob float64 `json:"prob`
 
 	// delay in ms (interpretable by event creator)
 	Delay int64 `json:"delay"`

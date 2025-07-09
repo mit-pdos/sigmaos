@@ -235,7 +235,7 @@ func (ssrv *SigmaSrv) SrvExit(status *proc.Status) error {
 	db.DPrintf(db.SIGMASRV, "cpumon done %v", ssrv.MemFs.SigmaClnt().ProcEnv().Program)
 	ssrv.MemFs.StopServing()
 	db.DPrintf(db.ALWAYS, "StopServing %v", ssrv.MemFs.SigmaClnt().ProcEnv().Program)
-	return ssrv.MemFs.MemFsExit(proc.NewStatus(proc.StatusEvicted))
+	return ssrv.MemFs.MemFsExit(status)
 }
 
 func (ssrv *SigmaSrv) Serve() {
@@ -246,4 +246,9 @@ func (ssrv *SigmaSrv) Serve() {
 	if err := ssrv.MemFs.SigmaClnt().WaitEvict(ssrv.SigmaClnt().ProcEnv().GetPID()); err != nil {
 		db.DPrintf(db.ALWAYS, "Error WaitEvict: %v", err)
 	}
+}
+
+// for testing network partitions; causes all RPCs to return unavailable
+func (ssrv *SigmaSrv) Partition() {
+	ssrv.rpcs.Partition()
 }

@@ -213,7 +213,6 @@ func (mc *MntClnt) Disconnect(pn sp.Tsigmapath) error {
 			return serr.NewErr(serr.TErrUnreachable, pn)
 		}
 	}
-	return nil
 }
 
 func (mc *MntClnt) disconnectMnt(pnt *Point) error {

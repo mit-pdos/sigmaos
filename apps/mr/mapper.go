@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"path/filepath"
+
 	// "runtime/debug"
 	"strconv"
 	"strings"
@@ -39,7 +39,6 @@ type Mapper struct {
 	linesz      int
 	input       string
 	intOutput   string
-	bin         string
 	wrts        []*fslib.FileWriter
 	pwrts       []*perf.PerfWriter
 	rand        string
@@ -50,7 +49,7 @@ type Mapper struct {
 	ch          chan error
 }
 
-func NewMapper(sc *sigmaclnt.SigmaClnt, mapf mr.MapT, combinef mr.ReduceT, jobRoot, job string, p *perf.Perf, nr, lsz, wsz int, input, intOutput string) (*Mapper, error) {
+func NewMapper(sc *sigmaclnt.SigmaClnt, mapf mr.MapT, combinef mr.ReduceT, jobRoot, job string, p *perf.Perf, nr, lsz, wsz int, input string, intOutput string) (*Mapper, error) {
 	m := &Mapper{
 		SigmaClnt:   sc,
 		mapf:        mapf,
@@ -62,7 +61,6 @@ func NewMapper(sc *sigmaclnt.SigmaClnt, mapf mr.MapT, combinef mr.ReduceT, jobRo
 		rand:        rand.Name(),
 		input:       input,
 		intOutput:   intOutput,
-		bin:         filepath.Base(input),
 		wrts:        make([]*fslib.FileWriter, nr),
 		pwrts:       make([]*perf.PerfWriter, nr),
 		perf:        p,
@@ -281,7 +279,7 @@ func (m *Mapper) DoMap() (sp.Tlength, sp.Tlength, Bin, error) {
 	getInputStart := time.Now()
 	var bin Bin
 	if err := json.Unmarshal([]byte(m.input), &bin); err != nil {
-		db.DPrintf(db.MR, "Mapper %s: unmarshal err %v\n", m.bin, err)
+		db.DPrintf(db.MR, "Mapper: unmarshal err %v\n", err)
 		return 0, 0, nil, err
 	}
 	perf.LogSpawnLatency("Mapper.getInput", m.ProcEnv().GetPID(), m.ProcEnv().GetSpawnTime(), getInputStart)

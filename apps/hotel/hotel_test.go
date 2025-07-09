@@ -223,7 +223,7 @@ func TestUserSingle(t *testing.T) {
 		Name:     "Cornell_0",
 		Password: hotel.NewPassword("0"),
 	}
-	var res proto.UserRep
+	var res proto.HotelUserRep
 	err = rpcc.RPC("Users.CheckUser", arg, &res)
 	assert.Nil(t, err)
 	db.DPrintf(db.TEST, "res %v\n", res)

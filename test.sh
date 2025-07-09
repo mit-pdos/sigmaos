@@ -210,7 +210,7 @@ if [[ $BASIC == "--basic" ]]; then
       util/linux/sched \
       util/perf \
       sigmap \
-      sortedmap; \
+      util/sortedmapv1; \
       do
         if ! [ -z "$SKIPTO" ]; then
           if [[ "$SKIPTO" == "$T" ]]; then

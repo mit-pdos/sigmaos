@@ -10,34 +10,6 @@ import (
 	"sigmaos/util/spstats"
 )
 
-func (pathc *PathClnt) walkReadSymlink(fid sp.Tfid, resolved, left path.Tpathname) (path.Tpathname, *serr.Err) {
-	s := time.Now()
-	target, err := pathc.FidClnt.GetFile(fid, path.Tpathname{}, sp.OREAD, 0, sp.MAXGETSET, false, sp.NullFence())
-	if err != nil {
-		db.DPrintf(db.WALK, "walkReadSymlink %v err %v\n", fid, err)
-		return left, err
-
-	}
-	var p path.Tpathname
-	ep, error := sp.NewEndpointFromBytes(target)
-	if error == nil {
-
-		db.DPrintf(db.WALK_LAT, "walkReadSymlink %v %v %v ep %v lat %v\n", pathc.cid, fid, resolved, ep, time.Since(s))
-
-		error := pathc.mntclnt.MountTree(pathc.pe.GetSecrets(), ep, ep.Root, resolved.String())
-		if error != nil {
-			db.DPrintf(db.WALK_ERR, "automount %v %v err %v\n", resolved, ep, error)
-			return left, error.(*serr.Err)
-
-		}
-		p = append(resolved, left...)
-	} else {
-		db.DPrintf(db.WALK, "walkReadSymlink %v NewMount err %v\n", fid, err)
-		p = append(path.Split(string(target)), left...)
-	}
-	return p, nil
-}
-
 func (pathc *PathClnt) walkEndpoint(ep *sp.Tendpoint, resolved path.Tpathname) (sp.Tfid, *serr.Err) {
 	fid, err := pathc.mntclnt.MountTreeFid(pathc.pe.GetSecrets(), ep, ep.Root, resolved.String())
 	if err != nil {

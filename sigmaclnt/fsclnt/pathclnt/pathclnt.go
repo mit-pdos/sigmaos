@@ -372,17 +372,13 @@ func (pathc *PathClnt) PutFile(pn sp.Tsigmapath, principal *sp.Tprincipal, mode 
 
 // For ninep proxy
 func (pathc *PathClnt) Walk(fid1 sp.Tfid, path path.Tpathname, principal *sp.Tprincipal) (sp.Tfid, *serr.Err) {
-	// XXX fix
-	// p := ch.Path().AppendPath(path)
-	// return pathc.walk(p, principal, true, nil)
-
 	// Obtain a private copy of fid that this thread walks, which
 	// walkPathFid closes.
 	fid, err := pathc.FidClnt.Clone(fid1)
 	if err != nil {
 		return sp.NoFid, err
 	}
-	fid, left, retry, err := pathc.walkPathFid1(fid, path, path, true, nil)
+	fid, left, retry, err := pathc.walkPathFid(fid, path, path, true, nil)
 
 	db.DPrintf(db.NPPROXY, "Walk: walkPathFid %v path '%v'  fid %v left '%v' r %t err %v", fid1, path, fid, left, retry, err)
 

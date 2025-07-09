@@ -32,7 +32,7 @@ func (pathc *PathClnt) walkPath(path path.Tpathname, resolve bool, w sos.Watch) 
 			}
 		}
 		retry := false
-		fid, left, retry, err = pathc.walkPathFid1(fid, path, left, resolve, w)
+		fid, left, retry, err = pathc.walkPathFid(fid, path, left, resolve, w)
 		if err != nil {
 			db.DPrintf(db.WALK_ERR, "walkPath: walkPathFid %v path '%v' left '%v' retry %t err %v(%T)", fid, path, left, retry, err, err)
 			return sp.NoFid, path, left, err
@@ -49,61 +49,10 @@ func (pathc *PathClnt) walkPath(path path.Tpathname, resolve bool, w sos.Watch) 
 	return sp.NoFid, path, path, serr.NewErr(serr.TErrUnreachable, "too many symlink cycles")
 }
 
-// Walk path at server identified by and starting from fid. walkOne
-// may fail to walk, finish walking, or return the path element that
-// is a union or symlink. In the latter case, walkPathFid() uses
-// walkUnion() and walkSymlink to resolve that element. walkUnion()
-// typically ends in a symlink.  walkSymlink will automount a new
-// server and update the mount table and/or return a new path to walk
-// (if retry). Each of the walk*() returns an fid, which on error is
-// the same as the argument; and the caller is responsible for
-// clunking it.
-func (pathc *PathClnt) walkPathFid(fid1 sp.Tfid, path, left path.Tpathname, resolve bool, w sos.Watch) (sp.Tfid, path.Tpathname, bool, *serr.Err) {
-	db.DPrintf(db.WALK, "walkPathFid: walkOne %v left '%v'", fid1, path)
-	fid, left, err := pathc.walkOne(fid1, left, w)
-	if err != nil {
-		pathc.FidClnt.Clunk(fid)
-		return sp.NoFid, left, false, err
-	}
-	retry, left, err := pathc.walkSymlink(fid, path, left, resolve)
-	if err != nil {
-		pathc.FidClnt.Clunk(fid)
-		return sp.NoFid, left, false, err
-	}
-	db.DPrintf(db.WALK, "walkPathFid %v left '%v' retry %v err %v", fid, left, retry, err)
-	if retry {
-		// On success walkSymlink returns new path to walk
-		pathc.FidClnt.Clunk(fid)
-		return sp.NoFid, left, true, nil
-
-	}
-	fid, left, err = pathc.walkUnion(fid, left)
-	if err != nil {
-		pathc.FidClnt.Clunk(fid)
-		return sp.NoFid, left, false, err
-	}
-	retry, left, err = pathc.walkSymlink(fid, path, left, resolve)
-	if err != nil {
-		pathc.FidClnt.Clunk(fid)
-		return sp.NoFid, left, false, err
-	}
-	db.DPrintf(db.WALK, "walkPathFid %v left '%v' retry %v err %v", fid, left, retry, err)
-	if retry {
-		// On success walkSymlink returns new path to walk
-		pathc.FidClnt.Clunk(fid)
-		return sp.NoFid, left, true, nil
-	}
-	if len(left) == 0 {
-		// Note: fid can be the one returned by walkMount
-		return fid, nil, false, nil
-	}
-	return sp.NoFid, left, false, serr.NewErr(serr.TErrNotfound, left)
-}
-
 // Walk `left` as much as possible at the server at fid1. walkElement
 // may fail to walk, finish walking, return a symbolic link to walk,
 // or return a fid for a new server to continue at.
-func (pathc *PathClnt) walkPathFid1(fid1 sp.Tfid, path, left1 path.Tpathname, resolve bool, w sos.Watch) (sp.Tfid, path.Tpathname, bool, *serr.Err) {
+func (pathc *PathClnt) walkPathFid(fid1 sp.Tfid, path, left1 path.Tpathname, resolve bool, w sos.Watch) (sp.Tfid, path.Tpathname, bool, *serr.Err) {
 	for true {
 		spstats.Inc(&pathc.pcstats.NwalkElem, 1)
 		fid, left, retry, err := pathc.walkElement(fid1, path, left1, resolve, w)
@@ -248,28 +197,6 @@ func (pathc *PathClnt) walkUnion(fid sp.Tfid, p path.Tpathname) (sp.Tfid, path.T
 		return fid1, p[1:], nil
 	}
 	return fid, p, nil
-}
-
-// Is fid a symlink?  If so, walk it (incl. automounting) and return
-// whether caller should retry.
-func (pathc *PathClnt) walkSymlink(fid sp.Tfid, path, left path.Tpathname, resolve bool) (bool, path.Tpathname, *serr.Err) {
-	db.DPrintf(db.WALK, "walkSymlink %v path %v left %v resolve %v", fid, path, left, resolve)
-	qid := pathc.FidClnt.Lookup(fid).Lastqid()
-
-	// if len(left) == 0 and !resolve, don't resolve
-	// symlinks, so that the client can remove a symlink
-	if qid.Ttype()&sp.QTSYMLINK == sp.QTSYMLINK && (len(left) > 0 || (len(left) == 0 && resolve)) {
-		done := len(path) - len(left)
-		resolved := path[0:done]
-		db.DPrintf(db.WALK, "walkSymlink %v resolved %v left %v", fid, resolved, left)
-		left, err := pathc.walkReadSymlink(fid, resolved, left)
-		if err != nil {
-			return false, left, err
-		}
-		// start over again
-		return true, left, nil
-	}
-	return false, left, nil
 }
 
 // Is fid a symlink?  If so, walk it (incl. automounting) and return

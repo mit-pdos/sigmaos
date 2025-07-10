@@ -11,7 +11,6 @@ import (
 	"sigmaos/rpc"
 	rpcclntopts "sigmaos/rpc/clnt/opts"
 	"sigmaos/serr"
-	"sigmaos/util/retry"
 )
 
 type ClntCache struct {
@@ -69,31 +68,27 @@ func (cc *ClntCache) Delete(pn string) {
 	delete(cc.rpccs, pn)
 }
 
+// Retry lookup if rpcc.RPC cannot reach server.
 func (cc *ClntCache) RPCRetry(pn string, method string, arg proto.Message, res proto.Message) error {
-	err, ok := retry.RetryAtMostOnce(func() error {
-		rpcc, err := cc.Lookup(pn)
+	var err error
+	var rpcc *RPCClnt
+	for i := 0; i < 2; i++ {
+		rpcc, err = cc.Lookup(pn)
 		if err != nil {
-			if serr.IsErrorWalkOK(err) {
-				db.DPrintf(db.RPCCLNT, "RPC retry lookup failure pn %v", pn)
-			} else {
-				db.DPrintf(db.RPCCLNT, "RPC lookup failure: give up pn %v", pn)
-			}
+			db.DPrintf(db.RPCCLNT, "RPCRetry lookup pn %v %v err %v", pn, method, err)
 			return err
 		}
 		err = rpcc.RPC(method, arg, res)
-		if err != nil {
-			if serr.IsErrorWalkOK(err) {
-				cc.stats.Nretry.Add(1)
-				db.DPrintf(db.RPCCLNT, "RPC: retry %v %v err %v", pn, method, err)
-				cc.Delete(pn)
-			} else {
-				db.DPrintf(db.RPCCLNT, "RPCRetry no retry %v err: %v sr: %v", pn, err, err)
-			}
+		if err == nil {
+			return nil
 		}
-		return err
-	})
-	if !ok {
-		return serr.NewErr(serr.TErrUnreachable, pn)
+		if !serr.IsErrorWalkOK(err) {
+			db.DPrintf(db.RPCCLNT, "RPCRetry RPC %v %v err %v", pn, method, err)
+			return err
+		}
+		db.DPrintf(db.RPCCLNT, "RPCRetry retry %v %v err %v", pn, method, err)
+		cc.Delete(pn)
+		cc.stats.Nretry.Add(1)
 	}
 	return err
 }

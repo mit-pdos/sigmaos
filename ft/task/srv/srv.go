@@ -93,7 +93,6 @@ func RunTaskSrv(args []string) error {
 		done:           make(map[int32]bool),
 		errored:        make(map[int32]bool),
 		rootId:         fttask.FtTaskSrvId(fttaskId),
-		lastPingTime:   time.Now(),
 		lastPingTimeMu: sync.Mutex{},
 	}
 
@@ -154,6 +153,8 @@ func RunTaskSrv(args []string) error {
 		return err
 	}
 
+	s.lastPingTime = time.Now()
+
 	s.mu.Unlock()
 
 	go func() {
@@ -171,7 +172,7 @@ func RunTaskSrv(args []string) error {
 	}()
 
 	crash.Failer(s.fsl, crash.FTTASKS_CRASH, func(e crash.Tevent) {
-		crash.CrashMsg("crash")
+		crash.Crash()
 	})
 
 	return ssrv.RunServer()
@@ -185,7 +186,6 @@ func (s *TaskSrv) acquireLeadership(ssrv *sigmasrv.SigmaSrv) error {
 	s.electclnt = electclnt
 
 	db.DPrintf(db.FTTASKS, "Acquiring leadership...")
-	// time.Sleep(2 * sp.EtcdSessionTTL * time.Second)
 	if err := electclnt.AcquireLeadership([]byte("")); err != nil {
 		return err
 	}

@@ -522,9 +522,7 @@ func runTestServerData(t *testing.T, em *crash.TeventMap) []*procgroupmgr.ProcSt
 	ntasks := 5
 
 	err = crash.SetSigmaFail(em)
-	if err != nil {
-		return nil, err
-	}
+	assert.Nil(t, err)
 
 	mgr, err := fttasksrv.NewFtTaskSrvMgr(ts.SigmaClnt, "test", true)
 	assert.Nil(t, err)
@@ -611,11 +609,10 @@ func TestServerData(t *testing.T) {
 
 func TestServerCrash(t *testing.T) {
 	succ := false
+	e0 := crash.NewEventStart(crash.FTTASKS_CRASH, 50, 250, 0.33)
 	for i := 0; i < 10; i++ {
-		e0 := crash.NewEventStart(crash.FTTASKS_CRASH, 50, 250, 0.33)
 		stats := runTestServerData(t, crash.NewTeventMapOne(e0))
 		db.DPrintf(db.ALWAYS, "restarted %d times", stats[0].Nstart)
-
 		if stats[0].Nstart > 1 {
 			succ = true
 			break

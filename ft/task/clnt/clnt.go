@@ -13,9 +13,9 @@ type TaskStatus = proto.TaskStatus
 type TaskId = int32
 
 const (
-	TODO = proto.TaskStatus_TODO
-	WIP = proto.TaskStatus_WIP
-	DONE = proto.TaskStatus_DONE
+	TODO  = proto.TaskStatus_TODO
+	WIP   = proto.TaskStatus_WIP
+	DONE  = proto.TaskStatus_DONE
 	ERROR = proto.TaskStatus_ERROR
 )
 
@@ -43,8 +43,7 @@ type FtTaskClnt[Data any, Output any] interface {
 	ClearEtcd() error
 	AsRawClnt() FtTaskClnt[[]byte, []byte]
 	ServerId() task.FtTaskSrvId
-	Ping() error
 	CurrInstance() string
-	
-	rpc(method string, arg protobuf.Message, res protobuf.Message, isPing bool) error
+
+	rpc(method string, arg protobuf.Message, res protobuf.Message) error
 }

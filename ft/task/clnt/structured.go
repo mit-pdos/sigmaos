@@ -13,11 +13,11 @@ type ftTaskClnt[Data any, Output any] struct {
 	*RawFtTaskClnt
 }
 
-func Encode[T any] (data T) ([]byte, error) {
+func Encode[T any](data T) ([]byte, error) {
 	return json.Marshal(data)
 }
 
-func Decode[T any] (encoded []byte) (T, error) {
+func Decode[T any](encoded []byte) (T, error) {
 	var data T
 	err := json.Unmarshal(encoded, &data)
 	return data, err
@@ -49,7 +49,7 @@ func (tc *ftTaskClnt[Data, Output]) SubmitTasks(tasks []*Task[Data]) ([]TaskId, 
 	arg := proto.SubmitTasksReq{Tasks: protoTasks, Fence: tc.fenceProto()}
 	res := proto.SubmitTasksRep{}
 
-	err := tc.rpc("TaskSrv.SubmitTasks", &arg, &res, false)
+	err := tc.rpc("TaskSrv.SubmitTasks", &arg, &res)
 	return res.Existing, err
 }
 
@@ -71,7 +71,7 @@ func (tc *ftTaskClnt[Data, Output]) EditTasks(tasks []*Task[Data]) ([]TaskId, er
 	arg := proto.EditTasksReq{Tasks: protoTasks, Fence: tc.fenceProto()}
 	res := proto.EditTasksRep{}
 
-	err := tc.rpc("TaskSrv.EditTasks", &arg, &res, false)
+	err := tc.rpc("TaskSrv.EditTasks", &arg, &res)
 	return res.Unknown, err
 }
 
@@ -79,7 +79,7 @@ func (tc *ftTaskClnt[Data, Output]) ReadTasks(ids []TaskId) ([]Task[Data], error
 	arg := proto.ReadTasksReq{Ids: ids, Fence: tc.fenceProto()}
 	res := proto.ReadTasksRep{}
 
-	err := tc.rpc("TaskSrv.ReadTasks", &arg, &res, false)
+	err := tc.rpc("TaskSrv.ReadTasks", &arg, &res)
 	if err != nil {
 		return nil, err
 	}
@@ -103,7 +103,7 @@ func (tc *ftTaskClnt[Data, Output]) GetTaskOutputs(ids []TaskId) ([]Output, erro
 	arg := proto.GetTaskOutputsReq{Ids: ids, Fence: tc.fenceProto()}
 	res := proto.GetTaskOutputsRep{}
 
-	err := tc.rpc("TaskSrv.GetTaskOutputs", &arg, &res, false)
+	err := tc.rpc("TaskSrv.GetTaskOutputs", &arg, &res)
 	if err != nil {
 		return nil, err
 	}
@@ -133,7 +133,7 @@ func (tc *ftTaskClnt[Data, Output]) AddTaskOutputs(ids []TaskId, outputs []Outpu
 	arg := proto.AddTaskOutputsReq{Ids: ids, Outputs: encoded, MarkDone: markDone, Fence: tc.fenceProto()}
 	res := proto.AddTaskOutputsRep{}
 
-	err = tc.rpc("TaskSrv.AddTaskOutputs", &arg, &res, false)
+	err = tc.rpc("TaskSrv.AddTaskOutputs", &arg, &res)
 	return err
 }
 

@@ -558,15 +558,15 @@ func runN(t *testing.T, em *crash.TeventMap, srvs map[string]crash.Tselector, ma
 }
 
 // if f returns true, repeat test
-func repeatTest(t *testing.T, f func() bool, n int) {
-	ok := false
-	for i := 0; i < n; i++ {
+func repeatTest(t *testing.T, f func() bool, n int) int {
+	i := 0
+	for ; i < n; i++ {
 		if !f() {
-			ok = true
 			break
 		}
 	}
-	assert.True(t, ok, "Test never caused a failure")
+	assert.True(t, i < n, "Test never caused a failure")
+	return i
 }
 
 func TestMRJob(t *testing.T) {
@@ -592,10 +592,11 @@ func TestCrashReducerOnlyCrash(t *testing.T) {
 }
 
 func TestCrashReducerOnlyPartition(t *testing.T) {
-	repeatTest(t, func() bool {
-		_, _, st := runN(t, reduceEv.Filter(crash.MRREDUCE_PARTITION), nil, 0, false)
+	i := repeatTest(t, func() bool {
+		_, _, st := runN(t, reduceEv.Filter(crash.MRREDUCE_PARTITION), nil, 0, true)
 		return st.Nfail == 0
 	}, 10)
+	db.DPrintf(db.TEST, "iter %d", i)
 }
 
 func TestCrashReducerOnlyBoth(t *testing.T) {

@@ -593,7 +593,7 @@ func TestCrashReducerOnlyCrash(t *testing.T) {
 }
 
 func TestCrashReducerOnlyPartition(t *testing.T) {
-	i := repeatTest(t, func() bool {
+	repeatTest(t, func() bool {
 		_, _, st := runN(t, reduceEv.Filter(crash.MRREDUCE_PARTITION), nil, 0, true)
 		return st.Nfail == 0
 	}, 10)

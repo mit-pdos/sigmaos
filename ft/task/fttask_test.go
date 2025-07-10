@@ -20,6 +20,7 @@ import (
 	"sigmaos/sigmap"
 	"sigmaos/test"
 	"sigmaos/util/crash"
+	"sigmaos/util/retry"
 )
 
 const (
@@ -592,9 +593,17 @@ func runTestServerData(t *testing.T, em *crash.TeventMap) []*procgroupmgr.ProcSt
 		time.Sleep(30 * time.Millisecond)
 	}
 
-	readOutputs, err := clnt.GetTaskOutputs(ids)
+	var readOutputs []string
+	err, ok := retry.RetryAtLeastOnce(func() error {
+		readOutputs, err = clnt.GetTaskOutputs(ids)
+		if err == nil {
+			assert.Equal(t, ntasks, len(outputs))
+		}
+		return err
+	})
 	assert.Nil(t, err)
-	assert.Equal(t, ntasks, len(outputs))
+	assert.True(t, ok)
+
 	for i := 0; i < ntasks; i++ {
 		assert.Equal(t, outputs[i], readOutputs[i])
 	}

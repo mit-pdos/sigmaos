@@ -156,15 +156,14 @@ func Rand50() bool {
 	return rand.Int64(ONE) < FIFTY
 }
 
-func RandSleep(c int64) uint64 {
+func RandSleep(c int64) (uint64, uint64) {
 	ms := uint64(0)
 	if c > 0 {
 		ms = rand.Int64(c)
 	}
 	r := rand.Int64(ONE)
-	// db.DPrintf(db.CRASH, "RandSleep %dms r %d\n", ms, r)
 	time.Sleep(time.Duration(ms) * time.Millisecond)
-	return r
+	return r, ms
 }
 
 func SetSigmaFail(em *TeventMap) error {
@@ -251,9 +250,9 @@ func failLabel(fsl *fslib.FsLib, label Tselector, e Tevent, f Teventf) {
 		if e.MaxInterval < 0 {
 			t = -t
 		}
-		r := RandSleep(t)
+		r, ms := RandSleep(t)
 		if r < uint64(e.Prob*ONE) {
-			db.DPrintf(db.CRASH, "Raise event %v r %d %v", label, r, e)
+			db.DPrintf(db.CRASH, "Raise event %v r %d ms %d %v", label, r, ms, e)
 			f(e)
 		}
 		if e.MaxInterval <= 0 {

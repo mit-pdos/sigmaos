@@ -46,9 +46,6 @@ type TaskSrv struct {
 	etcdClient *clientv3.Client
 	electclnt  *electclnt.ElectClnt
 	fsl        *fslib.FsLib
-
-	lastPingTime   time.Time
-	lastPingTimeMu sync.Mutex
 }
 
 const (
@@ -83,17 +80,16 @@ func RunTaskSrv(args []string) error {
 	pe := proc.GetProcEnv()
 	mu := &sync.Mutex{}
 	s := &TaskSrv{
-		mu:             mu,
-		data:           make(map[int32][]byte),
-		output:         make(map[int32][]byte),
-		status:         make(map[int32]proto.TaskStatus),
-		todo:           make(map[int32]bool),
-		todoCond:       sync.NewCond(mu),
-		wip:            make(map[int32]bool),
-		done:           make(map[int32]bool),
-		errored:        make(map[int32]bool),
-		rootId:         fttask.FtTaskSrvId(fttaskId),
-		lastPingTimeMu: sync.Mutex{},
+		mu:       mu,
+		data:     make(map[int32][]byte),
+		output:   make(map[int32][]byte),
+		status:   make(map[int32]proto.TaskStatus),
+		todo:     make(map[int32]bool),
+		todoCond: sync.NewCond(mu),
+		wip:      make(map[int32]bool),
+		done:     make(map[int32]bool),
+		errored:  make(map[int32]bool),
+		rootId:   fttask.FtTaskSrvId(fttaskId),
 	}
 
 	// prevent the server from serving any requests until everything has been initialized
@@ -153,23 +149,7 @@ func RunTaskSrv(args []string) error {
 		return err
 	}
 
-	s.lastPingTime = time.Now()
-
 	s.mu.Unlock()
-
-	go func() {
-		for {
-			s.lastPingTimeMu.Lock()
-			// if we haven't heard a ping in a while, exit and release leadership
-			if time.Since(s.lastPingTime) >= fttask.SRV_MAX_MISSING_PINGS*fttask.MGR_PING_TIMEOUT {
-				db.DPrintf(db.FTTASKS, "Ping timeout, exiting...")
-				s.electclnt.ReleaseLeadership()
-				ssrv.SrvExit(proc.NewStatusErr("ping timeout", ""))
-			}
-			s.lastPingTimeMu.Unlock()
-			time.Sleep(fttask.MGR_PING_TIMEOUT)
-		}
-	}()
 
 	crash.Failer(s.fsl, crash.FTTASKS_CRASH, func(e crash.Tevent) {
 		crash.Crash()
@@ -720,15 +700,6 @@ func (s *TaskSrv) AcquireTasks(ctx fs.CtxI, req proto.AcquireTasksReq, rep *prot
 	rep.Ids = ids
 
 	db.DPrintf(db.FTTASKS, "AcquireTasks: n: %d stopped: %t", len(rep.Ids), rep.Stopped)
-
-	return nil
-}
-
-func (s *TaskSrv) Ping(ctx fs.CtxI, req proto.PingReq, rep *proto.PingRep) error {
-	// use a separate lock in case we under a lot of load and the default mutex is highly contested
-	s.lastPingTimeMu.Lock()
-	s.lastPingTime = time.Now()
-	s.lastPingTimeMu.Unlock()
 
 	return nil
 }

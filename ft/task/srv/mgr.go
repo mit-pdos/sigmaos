@@ -1,4 +1,5 @@
 // Handles the creation and auto-restart of a fault tolerant task server
+// using [ft/procgroupmgr].
 package srv
 
 import (
@@ -10,7 +11,6 @@ import (
 	"sigmaos/serr"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
-	"time"
 )
 
 type FtTaskSrvMgr struct {
@@ -45,50 +45,7 @@ func NewFtTaskSrvMgr(sc *sigmaclnt.SigmaClnt, id string, evictUnresponsive bool)
 
 	ft := &FtTaskSrvMgr{sc, false, fttask.FtTaskSrvId(id), clnt, p}
 
-	go ft.monitor(evictUnresponsive)
-
 	return ft, nil
-}
-
-func (ft *FtTaskSrvMgr) monitor(evictUnresponsive bool) {
-	nfail := 0
-	for !ft.stopped {
-		err := ft.clnt.Ping()
-		if serr.IsErrorUnavailable(err) {
-			if ft.stopped {
-				return
-			}
-			nfail += 1
-
-			if nfail >= fttask.MGR_NUM_FAILS_UNTIL_RESTART {
-				db.DPrintf(db.FTTASKS, "Failed to ping server %d times, restarting group", fttask.MGR_NUM_FAILS_UNTIL_RESTART)
-				err = ft.p.RestartGroup(evictUnresponsive)
-				if err != nil {
-					db.DPrintf(db.FTTASKS, "Failed to restart group: %v", err)
-				}
-				time.Sleep(fttask.MGR_RESTART_TIMEOUT)
-				nfail = 0
-			}
-		} else {
-			nfail = 0
-		}
-
-		time.Sleep(fttask.MGR_PING_TIMEOUT)
-	}
-}
-
-// for testing a permanent network partition between client
-// and currently running instance
-// mgr will eventually notice the partition and restart the group
-func (ft *FtTaskSrvMgr) Partition() error {
-	ft.p.Lock()
-	defer ft.p.Unlock()
-
-	currInstance := ft.clnt.CurrInstance()
-	db.DPrintf(db.FTTASKS, "Partitioning instance %v", currInstance)
-
-	// prevent client from connecting to the partitioned instance
-	return ft.sc.Disconnect(filepath.Join(ft.Id.ServerPath(), currInstance))
 }
 
 func (ft *FtTaskSrvMgr) Stop(clearStore bool) ([]*procgroupmgr.ProcStatus, error) {

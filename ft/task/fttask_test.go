@@ -2,6 +2,7 @@ package task_test
 
 import (
 	"fmt"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -9,10 +10,13 @@ import (
 
 	"sigmaos/apps/mr"
 	db "sigmaos/debug"
+	dialproxyclnt "sigmaos/dialproxy/clnt"
 	"sigmaos/ft/procgroupmgr"
 	fttask_clnt "sigmaos/ft/task/clnt"
 	"sigmaos/ft/task/proto"
 	fttasksrv "sigmaos/ft/task/srv"
+	"sigmaos/proc"
+	"sigmaos/sigmaclnt"
 	"sigmaos/sigmap"
 	"sigmaos/test"
 	"sigmaos/util/crash"
@@ -618,7 +622,6 @@ func TestServerCrash(t *testing.T) {
 			break
 		}
 	}
-
 	assert.True(t, succ)
 }
 
@@ -629,22 +632,31 @@ func TestServerPartition(t *testing.T) {
 	mgr, err := fttasksrv.NewFtTaskSrvMgr(ts.SigmaClnt, "test", false)
 	assert.Nil(t, err)
 
-	clnt := fttask_clnt.NewFtTaskClnt[mr.Bin, string](ts.FsLib, mgr.Id)
-
-	_, err = clnt.GetNTasks(fttask_clnt.DONE)
+	pe := proc.NewAddedProcEnv(ts.ProcEnv())
+	fsl, err := sigmaclnt.NewFsLib(pe, dialproxyclnt.NewDialProxyClnt(pe))
 	assert.Nil(t, err)
 
-	err = mgr.Partition()
+	clnt := fttask_clnt.NewFtTaskClnt[mr.Bin, string](fsl, mgr.Id)
+
+	n, err := clnt.GetNTasks(fttask_clnt.TODO)
 	assert.Nil(t, err)
 
+	crash.PartitionPath(fsl, filepath.Join(clnt.ServerId().ServerPath(), clnt.CurrInstance()))
 	_, _, err = clnt.AcquireTasks(false)
+	assert.NotNil(t, err)
+
+	clnt = fttask_clnt.NewFtTaskClnt[mr.Bin, string](ts.FsLib, mgr.Id)
+
+	ids, _, err := clnt.AcquireTasks(false)
 	assert.Nil(t, err)
+
+	assert.Equal(t, int(n), len(ids))
 
 	stats, err := mgr.Stop(true)
 	assert.Nil(t, err)
 
+	assert.Equal(t, 1, stats[0].Nstart)
+
 	err = ts.Shutdown()
 	assert.Nil(t, err)
-
-	assert.Greater(t, stats[0].Nstart, 1)
 }

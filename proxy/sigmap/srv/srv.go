@@ -143,7 +143,7 @@ func (spp *SPProxySrv) runDelegatedInitializationRPCs(p *proc.Proc, sc *sigmacln
 			rpcchan, ok := spp.repTab.GetRPCChannel(p.GetPid(), pn)
 			// If we don't have a cached channel for this RPC target, create a new channel for it (and cache it)
 			if !ok {
-				db.DPrintf(db.SPPROXYSRV, "[%v] delegated RPC(%v) create new channel for: %v", initRPCIdx, pn)
+				db.DPrintf(db.SPPROXYSRV, "[%v] delegated RPC(%v) create new channel for: %v", p.GetPid(), initRPCIdx, pn)
 				if ep, ok := p.GetProcEnv().GetCachedEndpoint(pn); ok {
 					var err error
 					rpcchan, err = sprpcchan.NewSPChannelEndpoint(sc.FsLib, pn, ep)

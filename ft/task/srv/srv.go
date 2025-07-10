@@ -119,9 +119,6 @@ func RunTaskSrv(args []string) error {
 	db.DPrintf(db.FTTASKS, "Created fttask srv with id %s, args %v", srvId, args)
 
 	s.fsl = ssrv.SigmaClnt().FsLib
-	crash.Failer(s.fsl, crash.FTTASKS_CRASH, func(e crash.Tevent) {
-		crash.CrashMsg("crash")
-	})
 
 	etcdMnts := pe.GetEtcdEndpoints()
 	dial := ssrv.SigmaClnt().GetDialProxyClnt().Dial
@@ -172,6 +169,10 @@ func RunTaskSrv(args []string) error {
 			time.Sleep(fttask.MGR_PING_TIMEOUT)
 		}
 	}()
+
+	crash.Failer(s.fsl, crash.FTTASKS_CRASH, func(e crash.Tevent) {
+		crash.CrashMsg("crash")
+	})
 
 	return ssrv.RunServer()
 }

@@ -13,6 +13,8 @@ import (
 	"sigmaos/benchmarks/loadgen"
 	db "sigmaos/debug"
 	"sigmaos/proc"
+	mschedclnt "sigmaos/sched/msched/clnt"
+	sp "sigmaos/sigmap"
 	"sigmaos/test"
 	"sigmaos/util/perf"
 )
@@ -43,6 +45,9 @@ type CosSimJobInstance struct {
 	j                   *cossimsrv.CosSimJob
 	lgs                 []*loadgen.LoadGenerator
 	p                   *perf.Perf
+	msc                 *mschedclnt.MSchedClnt
+	cossimKIDs          map[string]bool
+	cacheKIDs           map[string]bool
 	*test.RealmTstate
 }
 
@@ -68,6 +73,8 @@ func NewCosSimJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, durs string,
 	ji.eagerInit = eagerInit
 	ji.delegateInit = delegateInit
 	ji.mcpuPerSrv = mcpuPerSrv
+	ji.cossimKIDs = make(map[string]bool)
+	ji.cacheKIDs = make(map[string]bool)
 
 	durslice := strings.Split(durs, ",")
 	maxrpsslice := strings.Split(maxrpss, ",")
@@ -102,6 +109,29 @@ func NewCosSimJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, durs string,
 			db.DPrintf(db.TEST, "Cossim server ready %v", i)
 		}
 		time.Sleep(2 * time.Second)
+		ji.msc = mschedclnt.NewMSchedClnt(ts.SigmaClnt.FsLib, sp.NOT_SET)
+		// Find machines were caches are running, and machines where the CosSim
+		// server is running
+		nMSched, err := ji.msc.NMSched()
+		if !assert.Nil(ts.Ts.T, err, "Err GetNMSched: %v", err) {
+			return ji
+		}
+		runningProcs, err := ji.msc.GetRunningProcs(nMSched)
+		if !assert.Nil(ts.Ts.T, err, "Err GetRunningProcs: %v", err) {
+			return ji
+		}
+		for _, p := range runningProcs[ts.GetRealm()] {
+			// Record where relevant programs are running
+			switch p.GetProgram() {
+			case "cossim-srv-cpp":
+				ji.cossimKIDs[p.GetKernelID()] = true
+				db.DPrintf(db.TEST, "cossim-srv-cpp running on kernel %v", p.GetKernelID())
+			case "cached":
+				ji.cacheKIDs[p.GetKernelID()] = true
+				db.DPrintf(db.TEST, "cached running on kernel %v", p.GetKernelID())
+			default:
+			}
+		}
 	}
 
 	// Make a load generators.

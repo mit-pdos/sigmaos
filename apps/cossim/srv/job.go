@@ -170,9 +170,20 @@ func (j *CosSimJob) GetClnt(srvID string) (*clnt.CosSimClnt, error) {
 	return j.Clnt.GetClnt(srvID)
 }
 
+func (j *CosSimJob) AddSrvWithSigmaPath(pn string) (*proc.Proc, time.Duration, error) {
+	return j.addSrv(pn)
+}
+
 // Add a new cossim server
 func (j *CosSimJob) AddSrv() (*proc.Proc, time.Duration, error) {
+	return j.addSrv(sp.NOT_SET)
+}
+
+func (j *CosSimJob) addSrv(sigmaPath string) (*proc.Proc, time.Duration, error) {
 	p := proc.NewProc("cossim-srv-cpp", []string{j.cachePNBase, strconv.Itoa(j.ncache), strconv.Itoa(j.nvec), strconv.Itoa(j.vecDim), strconv.FormatBool(j.eagerInit)})
+	if sigmaPath != sp.NOT_SET {
+		p.PrependSigmaPath(sigmaPath)
+	}
 	p.GetProcEnv().UseSPProxy = true
 	p.SetMcpu(j.srvMcpu)
 	p.SetCachedEndpoint(epcache.EPCACHE, j.epcsrvEP)

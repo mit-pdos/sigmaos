@@ -238,32 +238,34 @@ func SetCrashFile(fsl *fslib.FsLib, label Tselector) {
 	}
 }
 
+func failLabel(fsl *fslib.FsLib, label Tselector, e Tevent, f Teventf) {
+	if e.Path != "" {
+		sem := semaphore.NewSemaphore(fsl, e.Path)
+		sem.Init(0)
+		sem.Down()
+		db.DPrintf(db.CRASH, "Downed %v", e.Path)
+	}
+	time.Sleep(time.Duration(e.Start) * time.Millisecond)
+	for true {
+		t := e.MaxInterval
+		if e.MaxInterval < 0 {
+			t = -t
+		}
+		r := RandSleep(t)
+		if r < uint64(e.Prob*ONE) {
+			db.DPrintf(db.CRASH, "Raise event %v r %d %v", label, r, e)
+			f(e)
+		}
+		if e.MaxInterval <= 0 {
+			break
+		}
+	}
+}
+
 func Failer(fsl *fslib.FsLib, label Tselector, f Teventf) {
 	initLabels()
 	if e, ok := labels.Evs[label]; ok {
-		go func(label Tselector, e Tevent) {
-			if e.Path != "" {
-				sem := semaphore.NewSemaphore(fsl, e.Path)
-				sem.Init(0)
-				sem.Down()
-				db.DPrintf(db.CRASH, "Downed %v", e.Path)
-			}
-			time.Sleep(time.Duration(e.Start) * time.Millisecond)
-			for true {
-				t := e.MaxInterval
-				if e.MaxInterval < 0 {
-					t = -t
-				}
-				r := RandSleep(t)
-				if r < uint64(e.Prob*ONE) {
-					db.DPrintf(db.CRASH, "Raise event %v r %d %v", label, r, e)
-					f(e)
-				}
-				if e.MaxInterval <= 0 {
-					break
-				}
-			}
-		}(label, e)
+		go failLabel(fsl, label, e, f)
 	}
 }
 

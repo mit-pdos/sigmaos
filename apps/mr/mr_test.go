@@ -565,6 +565,7 @@ func repeatTest(t *testing.T, f func() bool, n int) int {
 			break
 		}
 	}
+	db.DPrintf(db.TEST, "iter %d", i)
 	assert.True(t, i < n, "Test never caused a failure")
 	return i
 }
@@ -596,7 +597,6 @@ func TestCrashReducerOnlyPartition(t *testing.T) {
 		_, _, st := runN(t, reduceEv.Filter(crash.MRREDUCE_PARTITION), nil, 0, true)
 		return st.Nfail == 0
 	}, 10)
-	db.DPrintf(db.TEST, "iter %d", i)
 }
 
 func TestCrashReducerOnlyBoth(t *testing.T) {

@@ -91,7 +91,7 @@ func newTstate(mrts *test.MultiRealmTstate) (*Tstate, error) {
 	ts.cleanup()
 
 	var err error
-	ts.ftsrv, err = fttask_srv.NewFtTaskSrvMgr(ts.mrts.GetRealm(test.REALM1).SigmaClnt, fmt.Sprintf("imgresize-%s", ts.job), nil, true)
+	ts.ftsrv, err = fttask_srv.NewFtTaskSrvMgr(ts.mrts.GetRealm(test.REALM1).SigmaClnt, fmt.Sprintf("imgresize-%s", ts.job), true)
 	if !assert.Nil(ts.mrts.T, err) {
 		return nil, err
 	}
@@ -114,7 +114,7 @@ func (ts *Tstate) restartTstate() error {
 
 	db.DPrintf(db.TEST, "%v named contents post-shutdown: %v", test.REALM1, sp.Names(sts))
 
-	ts.ftsrv, err = fttask_srv.NewFtTaskSrvMgr(ts.mrts.GetRealm(test.REALM1).SigmaClnt, fmt.Sprintf("imgresize-%s", ts.job), nil, true)
+	ts.ftsrv, err = fttask_srv.NewFtTaskSrvMgr(ts.mrts.GetRealm(test.REALM1).SigmaClnt, fmt.Sprintf("imgresize-%s", ts.job), true)
 	assert.Nil(ts.mrts.T, err)
 	ts.ftclnt = fttask_clnt.NewFtTaskClnt[imgresize.Ttask, any](ts.mrts.GetRealm(test.REALM1).SigmaClnt.FsLib, ts.ftsrv.Id)
 	return nil

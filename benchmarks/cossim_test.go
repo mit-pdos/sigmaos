@@ -14,6 +14,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/proc"
 	mschedclnt "sigmaos/sched/msched/clnt"
+	"sigmaos/sched/msched/proc/chunk"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 	"sigmaos/util/perf"
@@ -48,6 +49,7 @@ type CosSimJobInstance struct {
 	msc                 *mschedclnt.MSchedClnt
 	cossimKIDs          map[string]bool
 	cacheKIDs           map[string]bool
+	warmCossimSrvKID    string
 	*test.RealmTstate
 }
 
@@ -120,19 +122,36 @@ func NewCosSimJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, durs string,
 		if !assert.Nil(ts.Ts.T, err, "Err GetRunningProcs: %v", err) {
 			return ji
 		}
-		db.DPrintf(db.TEST, "runningProcs: %v", runningProcs)
+		foundCossim := false
 		for _, p := range runningProcs[ts.GetRealm()] {
 			// Record where relevant programs are running
 			switch p.GetProgram() {
 			case "cossim-srv-cpp":
 				ji.cossimKIDs[p.GetKernelID()] = true
 				db.DPrintf(db.TEST, "cossim-srv-cpp[%v] running on kernel %v", p.GetPid(), p.GetKernelID())
+				foundCossim = true
 			case "cached":
 				ji.cacheKIDs[p.GetKernelID()] = true
+				ji.warmCossimSrvKID = p.GetKernelID()
 				db.DPrintf(db.TEST, "cached[%v] running on kernel %v", p.GetPid(), p.GetKernelID())
 			default:
 			}
 		}
+		if !assert.True(ts.Ts.T, foundCossim, "Err didn't find cossim srv kernel ID: %v", runningProcs) {
+			return ji
+		}
+		// Warm up an msched currently running a cached shard with the cossim srv
+		// bin. No cossim server will be able to actually run on this machine (the
+		// CPU reservation conflicts with that of the cached server), so we can be
+		// sure that future servers which try to download the cossim srver binary
+		// from this msched won't have to contend with the CPU utilization of an
+		// existing cossim server under load.
+		db.DPrintf(db.TEST, "Target kernel to run prewarm with CossimSrv bin: %v", ji.warmCossimSrvKID)
+		err = ji.msc.WarmProcd(ji.warmCossimSrvKID, ts.Ts.ProcEnv().GetPID(), ts.GetRealm(), "cossim-srv-cpp-v"+sp.Version, ts.Ts.ProcEnv().GetSigmaPath(), proc.T_LC)
+		if !assert.Nil(ts.Ts.T, err, "Err warming third msched with cossim bin") {
+			return ji
+		}
+		db.DPrintf(db.TEST, "Warmed kid %v with CossimSrv bin", ji.warmCossimSrvKID)
 	}
 
 	// Make a load generators.
@@ -163,7 +182,7 @@ func (ji *CosSimJobInstance) StartCosSimJob() {
 			time.Sleep(ji.scaleCosSimDelay)
 			for i := 0; i < ji.nCosSimToAdd; i++ {
 				db.DPrintf(db.TEST, "Scale up cossim srvs to: %v", (i+1)+ji.nCosSim)
-				_, _, err := ji.j.AddSrv()
+				_, _, err := ji.j.AddSrvWithSigmaPath(chunk.ChunkdPath(ji.warmCossimSrvKID))
 				assert.Nil(ji.Ts.T, err, "Add CosSim srv: %v", err)
 				db.DPrintf(db.TEST, "Done scale up cossim srvs to: %v", (i+1)+ji.nCosSim)
 			}

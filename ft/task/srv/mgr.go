@@ -3,15 +3,20 @@
 package srv
 
 import (
+	// "fmt"
+
 	"path/filepath"
 	db "sigmaos/debug"
 	"sigmaos/ft/procgroupmgr"
 	fttask "sigmaos/ft/task"
 	fttask_clnt "sigmaos/ft/task/clnt"
+	"sigmaos/proc"
 	"sigmaos/serr"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 )
+
+const FTTASK_SRV_MCPU proc.Tmcpu = 1000
 
 type FtTaskSrvMgr struct {
 	sc      *sigmaclnt.SigmaClnt
@@ -23,7 +28,7 @@ type FtTaskSrvMgr struct {
 
 // when testing partitions, we don't want to evict unresponsive instances
 // to test if new instances can coexist with old ones
-func NewFtTaskSrvMgr(sc *sigmaclnt.SigmaClnt, id string, evictUnresponsive bool) (*FtTaskSrvMgr, error) {
+func NewFtTaskSrvMgr(sc *sigmaclnt.SigmaClnt, id string, persist bool) (*FtTaskSrvMgr, error) {
 	err := sc.MkDir(sp.FTTASK, 0777)
 	if err != nil && !serr.IsErrorExists(err) {
 		return nil, err
@@ -34,7 +39,12 @@ func NewFtTaskSrvMgr(sc *sigmaclnt.SigmaClnt, id string, evictUnresponsive bool)
 		return nil, err
 	}
 
-	config := procgroupmgr.NewProcGroupConfig(1, "fttask-srv", []string{}, 1000, id)
+	job := id
+	config := procgroupmgr.NewProcGroupConfig(1, "fttask-srv", []string{}, FTTASK_SRV_MCPU, job)
+	if persist {
+		config.Persist(sc.FsLib)
+	}
+
 	p := config.StartGrpMgr(sc)
 	err = p.WaitStart()
 	if err != nil {
@@ -60,7 +70,7 @@ func (ft *FtTaskSrvMgr) Stop(clearStore bool) ([]*procgroupmgr.ProcStatus, error
 			return nil, err
 		}
 	}
-	db.DPrintf(db.FTTASKS, "Stopping group")
+	db.DPrintf(db.FTTASKS, "Stopping group %v", ft.Id)
 	stats, err := ft.p.StopGroup()
 	return stats, err
 }

@@ -67,7 +67,7 @@ func TestServerPerf(t *testing.T) {
 
 	nTasks := 1000
 
-	mgr, err := fttasksrv.NewFtTaskSrvMgr(ts.SigmaClnt, "test", true)
+	mgr, err := fttasksrv.NewFtTaskSrvMgr(ts.SigmaClnt, "test", false)
 	assert.Nil(t, err)
 
 	clnt := fttask_clnt.NewFtTaskClnt[mr.Bin, string](ts.FsLib, mgr.Id)
@@ -135,7 +135,7 @@ func TestServerBatchedPerf(t *testing.T) {
 
 	nTasks := 1000
 
-	mgr, err := fttasksrv.NewFtTaskSrvMgr(ts.SigmaClnt, "test", true)
+	mgr, err := fttasksrv.NewFtTaskSrvMgr(ts.SigmaClnt, "test", false)
 	assert.Nil(t, err)
 
 	clnt := fttask_clnt.NewFtTaskClnt[mr.Bin, string](ts.FsLib, mgr.Id)
@@ -210,7 +210,7 @@ func TestServerMoveTasksByStatus(t *testing.T) {
 	}
 
 	db.DPrintf(db.TEST, "Making fttasks server")
-	mgr, err := fttasksrv.NewFtTaskSrvMgr(ts.SigmaClnt, "test", true)
+	mgr, err := fttasksrv.NewFtTaskSrvMgr(ts.SigmaClnt, "test", false)
 	assert.Nil(t, err)
 
 	clnt := fttask_clnt.NewFtTaskClnt[struct{}, struct{}](ts.FsLib, mgr.Id)
@@ -288,7 +288,7 @@ func TestServerMoveTasksById(t *testing.T) {
 	}
 
 	db.DPrintf(db.TEST, "Making fttasks server")
-	mgr, err := fttasksrv.NewFtTaskSrvMgr(ts.SigmaClnt, "test", true)
+	mgr, err := fttasksrv.NewFtTaskSrvMgr(ts.SigmaClnt, "test", false)
 	assert.Nil(t, err)
 
 	clnt := fttask_clnt.NewFtTaskClnt[struct{}, struct{}](ts.FsLib, mgr.Id)
@@ -355,7 +355,7 @@ func TestServerWait(t *testing.T) {
 
 	ntasks := 5
 
-	mgr, err := fttasksrv.NewFtTaskSrvMgr(ts.SigmaClnt, "test", true)
+	mgr, err := fttasksrv.NewFtTaskSrvMgr(ts.SigmaClnt, "test", false)
 	assert.Nil(t, err)
 
 	clnt := fttask_clnt.NewFtTaskClnt[mr.Bin, string](ts.FsLib, mgr.Id)
@@ -396,7 +396,7 @@ func TestServerErrors(t *testing.T) {
 
 	ntasks := 5
 
-	mgr, err := fttasksrv.NewFtTaskSrvMgr(ts.SigmaClnt, "test", true)
+	mgr, err := fttasksrv.NewFtTaskSrvMgr(ts.SigmaClnt, "test", false)
 	assert.Nil(t, err)
 
 	clnt := fttask_clnt.NewFtTaskClnt[interface{}, interface{}](ts.FsLib, mgr.Id)
@@ -440,7 +440,7 @@ func TestServerStop(t *testing.T) {
 		return
 	}
 
-	mgr, err := fttasksrv.NewFtTaskSrvMgr(ts.SigmaClnt, "test", true)
+	mgr, err := fttasksrv.NewFtTaskSrvMgr(ts.SigmaClnt, "test", false)
 	assert.Nil(t, err)
 
 	clnt := fttask_clnt.NewFtTaskClnt[interface{}, interface{}](ts.FsLib, mgr.Id)
@@ -489,7 +489,7 @@ func TestServerFence(t *testing.T) {
 		return
 	}
 
-	mgr, err := fttasksrv.NewFtTaskSrvMgr(ts.SigmaClnt, "test", true)
+	mgr, err := fttasksrv.NewFtTaskSrvMgr(ts.SigmaClnt, "test", false)
 	assert.Nil(t, err)
 
 	clnt := fttask_clnt.NewFtTaskClnt[interface{}, interface{}](ts.FsLib, mgr.Id)
@@ -529,7 +529,7 @@ func runTestServerData(t *testing.T, em *crash.TeventMap) []*procgroupmgr.ProcSt
 	err = crash.SetSigmaFail(em)
 	assert.Nil(t, err)
 
-	mgr, err := fttasksrv.NewFtTaskSrvMgr(ts.SigmaClnt, "test", true)
+	mgr, err := fttasksrv.NewFtTaskSrvMgr(ts.SigmaClnt, "test", false)
 	assert.Nil(t, err)
 
 	clnt := fttask_clnt.NewFtTaskClnt[mr.Bin, string](ts.FsLib, mgr.Id)
@@ -616,25 +616,7 @@ func runTestServerData(t *testing.T, em *crash.TeventMap) []*procgroupmgr.ProcSt
 	return stats
 }
 
-func TestServerData(t *testing.T) {
-	runTestServerData(t, nil)
-}
-
-func TestServerCrash(t *testing.T) {
-	succ := false
-	e0 := crash.NewEventStart(crash.FTTASKS_CRASH, 50, 250, 0.33)
-	for i := 0; i < 10; i++ {
-		stats := runTestServerData(t, crash.NewTeventMapOne(e0))
-		db.DPrintf(db.ALWAYS, "restarted %d times", stats[0].Nstart)
-		if stats[0].Nstart > 1 {
-			succ = true
-			break
-		}
-	}
-	assert.True(t, succ)
-}
-
-func TestServerPartition(t *testing.T) {
+func TestClntPartition(t *testing.T) {
 	ts, err := test.NewTstateAll(t)
 	assert.Nil(t, err, "Error New Tstate: %v", err)
 
@@ -668,4 +650,25 @@ func TestServerPartition(t *testing.T) {
 
 	err = ts.Shutdown()
 	assert.Nil(t, err)
+}
+
+func TestServerData(t *testing.T) {
+	runTestServerData(t, nil)
+}
+
+func TestServerCrash(t *testing.T) {
+	succ := false
+	e0 := crash.NewEventStart(crash.FTTASKS_CRASH, 50, 250, 0.33)
+	for i := 0; i < 10; i++ {
+		stats := runTestServerData(t, crash.NewTeventMapOne(e0))
+		db.DPrintf(db.ALWAYS, "restarted %d times", stats[0].Nstart)
+		if stats[0].Nstart > 1 {
+			succ = true
+			break
+		}
+	}
+	assert.True(t, succ)
+}
+
+func TestServerPartition(t *testing.T) {
 }

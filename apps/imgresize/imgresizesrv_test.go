@@ -16,7 +16,6 @@ import (
 	"sigmaos/ft/procgroupmgr"
 	fttask_clnt "sigmaos/ft/task/clnt"
 	fttask_srv "sigmaos/ft/task/srv"
-	"sigmaos/namesrv/fsetcd"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
@@ -91,7 +90,7 @@ func newTstate(mrts *test.MultiRealmTstate) (*Tstate, error) {
 	ts.cleanup()
 
 	var err error
-	ts.ftsrv, err = fttask_srv.NewFtTaskSrvMgr(ts.mrts.GetRealm(test.REALM1).SigmaClnt, fmt.Sprintf("imgresize-%s", ts.job), true)
+	ts.ftsrv, err = fttask_srv.NewFtTaskSrvMgr(ts.mrts.GetRealm(test.REALM1).SigmaClnt, fmt.Sprintf("imgresize-%s", ts.job), false)
 	if !assert.Nil(ts.mrts.T, err) {
 		return nil, err
 	}
@@ -114,9 +113,12 @@ func (ts *Tstate) restartTstate() error {
 
 	db.DPrintf(db.TEST, "%v named contents post-shutdown: %v", test.REALM1, sp.Names(sts))
 
-	ts.ftsrv, err = fttask_srv.NewFtTaskSrvMgr(ts.mrts.GetRealm(test.REALM1).SigmaClnt, fmt.Sprintf("imgresize-%s", ts.job), true)
-	assert.Nil(ts.mrts.T, err)
+	ts.ftsrv, err = fttask_srv.NewFtTaskSrvMgr(ts.mrts.GetRealm(test.REALM1).SigmaClnt, fmt.Sprintf("imgresize-%s", ts.job), false)
+	if !assert.Nil(ts.mrts.T, err) {
+		return err
+	}
 	ts.ftclnt = fttask_clnt.NewFtTaskClnt[imgresize.Ttask, any](ts.mrts.GetRealm(test.REALM1).SigmaClnt.FsLib, ts.ftsrv.Id)
+
 	return nil
 }
 
@@ -293,11 +295,13 @@ func TestImgdRestart(t *testing.T) {
 
 	time.Sleep(2 * time.Second)
 
+	// Stop procgroup mgrs
+	ts.ftsrv.Stop(false)
 	imgd.StopGroup()
 
 	ts.mrts.ShutdownForReboot()
 
-	time.Sleep(2 * fsetcd.LeaseTTL * time.Second)
+	time.Sleep(sp.EtcdSessionExpired * time.Second)
 
 	db.DPrintf(db.TEST, "Restart")
 

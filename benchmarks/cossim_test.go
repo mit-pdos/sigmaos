@@ -123,18 +123,23 @@ func NewCosSimJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, durs string,
 			return ji
 		}
 		foundCossim := false
-		for _, p := range runningProcs[ts.GetRealm()] {
-			// Record where relevant programs are running
-			switch p.GetProgram() {
-			case "cossim-srv-cpp":
-				ji.cossimKIDs[p.GetKernelID()] = true
-				db.DPrintf(db.TEST, "cossim-srv-cpp[%v] running on kernel %v", p.GetPid(), p.GetKernelID())
-				foundCossim = true
-			case "cached":
-				ji.cacheKIDs[p.GetKernelID()] = true
-				ji.warmCossimSrvKID = p.GetKernelID()
-				db.DPrintf(db.TEST, "cached[%v] running on kernel %v", p.GetPid(), p.GetKernelID())
-			default:
+		for i := 0; i < 5; i++ {
+			for _, p := range runningProcs[ts.GetRealm()] {
+				// Record where relevant programs are running
+				switch p.GetProgram() {
+				case "cossim-srv-cpp":
+					ji.cossimKIDs[p.GetKernelID()] = true
+					db.DPrintf(db.TEST, "cossim-srv-cpp[%v] running on kernel %v", p.GetPid(), p.GetKernelID())
+					foundCossim = true
+				case "cached":
+					ji.cacheKIDs[p.GetKernelID()] = true
+					ji.warmCossimSrvKID = p.GetKernelID()
+					db.DPrintf(db.TEST, "cached[%v] running on kernel %v", p.GetPid(), p.GetKernelID())
+				default:
+				}
+			}
+			if !foundCossim {
+				time.Sleep(5 * time.Second)
 			}
 		}
 		if !assert.True(ts.Ts.T, foundCossim, "Err didn't find cossim srv kernel ID: %v", runningProcs) {

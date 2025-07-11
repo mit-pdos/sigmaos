@@ -126,10 +126,10 @@ func NewCosSimJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, durs string,
 			switch p.GetProgram() {
 			case "cossim-srv-cpp":
 				ji.cossimKIDs[p.GetKernelID()] = true
-				db.DPrintf(db.TEST, "cossim-srv-cpp[%v] running on kernel %v", p.GetPID(), p.GetKernelID())
+				db.DPrintf(db.TEST, "cossim-srv-cpp[%v] running on kernel %v", p.GetPid(), p.GetKernelID())
 			case "cached":
 				ji.cacheKIDs[p.GetKernelID()] = true
-				db.DPrintf(db.TEST, "cached[%v] running on kernel %v", p.GetPID(), p.GetKernelID())
+				db.DPrintf(db.TEST, "cached[%v] running on kernel %v", p.GetPid(), p.GetKernelID())
 			default:
 			}
 		}

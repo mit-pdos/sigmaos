@@ -67,7 +67,9 @@ func (tc *RawFtTaskClnt) rpc(method string, arg protobuf.Message, res protobuf.M
 		serverPath := filepath.Join(tc.serverId.ServerPath(), currInstance)
 		err := tc.rpcclntc.RPC(serverPath, method, arg, res)
 
-		db.DPrintf(db.TEST, "rpc %v err %v", serverPath, err)
+		if err != nil {
+			db.DPrintf(db.FTTASKS, "rpc %v err %v", serverPath, err)
+		}
 		// IsErrorSession?
 
 		// if this is an error unrelated to finding the server, return it

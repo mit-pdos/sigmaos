@@ -153,7 +153,7 @@ func NewCosSimJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, durs string,
 		// existing cossim server under load.
 		db.DPrintf(db.TEST, "Target kernel to run prewarm with CossimSrv bin: %v", ji.warmCossimSrvKID)
 		err = ji.msc.WarmProcd(ji.warmCossimSrvKID, ts.Ts.ProcEnv().GetPID(), ts.GetRealm(), "cossim-srv-cpp-v"+sp.Version, ts.Ts.ProcEnv().GetSigmaPath(), proc.T_LC)
-		if !assert.Nil(ts.Ts.T, err, "Err warming third msched with cossim bin") {
+		if !assert.Nil(ts.Ts.T, err, "Err warming third msched with cossim bin: %v", err) {
 			return ji
 		}
 		db.DPrintf(db.TEST, "Warmed kid %v with CossimSrv bin", ji.warmCossimSrvKID)

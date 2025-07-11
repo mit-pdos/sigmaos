@@ -173,6 +173,7 @@ func TestImgdFatalError(t *testing.T) {
 	for _, s := range gs {
 		assert.True(ts.mrts.T, s.IsStatusFatal(), s)
 	}
+	ts.ftsrv.Stop(true)
 }
 
 func (ts *Tstate) imgdJob(paths []string, em *crash.TeventMap) {

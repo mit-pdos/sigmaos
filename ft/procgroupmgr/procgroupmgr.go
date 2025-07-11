@@ -81,6 +81,7 @@ func NewProcGroupConfigRealmSwitch(n int, bin string, args []string, mcpu proc.T
 }
 
 func (cfg *ProcGroupMgrConfig) Persist(fsl *fslib.FsLib) error {
+	db.DPrintf(db.GROUPMGR, "Persist job cfg %v", cfg.Job)
 	fsl.MkDir(GRPMGRDIR, 0777)
 	pn := filepath.Join(GRPMGRDIR, cfg.Job)
 	if err := fsl.PutFileJsonAtomic(pn, 0777, cfg); err != nil {
@@ -97,7 +98,7 @@ func Recover(sc *sigmaclnt.SigmaClnt) ([]*ProcGroupMgr, error) {
 		if err := sc.GetFileJson(pn, cfg); err != nil {
 			return true, err
 		}
-		db.DPrintf(db.ALWAYS, "cfg %v\n", cfg)
+		db.DPrintf(db.ALWAYS, "Recover cfg %v", cfg)
 		pgms = append(pgms, cfg.StartGrpMgr(sc))
 		return false, nil
 
@@ -322,7 +323,7 @@ func (pgm *ProcGroupMgr) evictGroupMembers() error {
 // leader, while the primary keeps running, because it is later in the
 // list.
 func (pgm *ProcGroupMgr) StopGroup() ([]*ProcStatus, error) {
-	db.DPrintf(db.GROUPMGR, "ProcGroupMgr Stop")
+	db.DPrintf(db.GROUPMGR, "ProcGroupMgr Stop %v", pgm)
 	err := pgm.evictGroupMembers()
 
 	db.DPrintf(db.GROUPMGR, "wait for members")

@@ -114,16 +114,20 @@ func NewCosSimJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, durs string,
 		ji.msc = mschedclnt.NewMSchedClnt(ts.SigmaClnt.FsLib, sp.NOT_SET)
 		// Find machines were caches are running, and machines where the CosSim
 		// server is running
+		_, err := ji.msc.GetMScheds()
+		if !assert.Nil(ts.Ts.T, err, "Err GetMScheds: %v", err) {
+			return ji
+		}
 		nMSched, err := ji.msc.NMSched()
 		if !assert.Nil(ts.Ts.T, err, "Err GetNMSched: %v", err) {
 			return ji
 		}
-		runningProcs, err := ji.msc.GetRunningProcs(nMSched)
-		if !assert.Nil(ts.Ts.T, err, "Err GetRunningProcs: %v", err) {
-			return ji
-		}
 		foundCossim := false
 		for i := 0; i < 5; i++ {
+			runningProcs, err := ji.msc.GetRunningProcs(nMSched)
+			if !assert.Nil(ts.Ts.T, err, "Err GetRunningProcs: %v", err) {
+				return ji
+			}
 			for _, p := range runningProcs[ts.GetRealm()] {
 				// Record where relevant programs are running
 				switch p.GetProgram() {
@@ -140,9 +144,14 @@ func NewCosSimJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, durs string,
 			}
 			if !foundCossim {
 				time.Sleep(5 * time.Second)
+				for _, rp := range runningProcs {
+					for _, p := range rp {
+						db.DPrintf(db.ALWAYS, "Running proc %v on %v", p.GetPid(), p.GetKernelID())
+					}
+				}
 			}
 		}
-		if !assert.True(ts.Ts.T, foundCossim, "Err didn't find cossim srv kernel ID: %v", runningProcs) {
+		if !assert.True(ts.Ts.T, foundCossim, "Err didn't find cossim srv kernel ID") {
 			return ji
 		}
 		// Warm up an msched currently running a cached shard with the cossim srv

@@ -170,6 +170,7 @@ func (spp *SPProxySrv) runDelegatedInitializationRPCs(p *proc.Proc, sc *sigmacln
 			}
 			db.DPrintf(db.SPPROXYSRV, "[%v] Run delegated init RPC(%v)", p.GetPid(), initRPCIdx)
 			outiov := initRPC.GetOutputIOV()
+			start := time.Now()
 			err := rpcchan.SendReceive(initRPC.GetInputIOV(), outiov)
 			if err != nil {
 				db.DPrintf(db.SPPROXYSRV_ERR, "Err execute delegated RPC (%v): %v", pn, err)
@@ -177,7 +178,7 @@ func (spp *SPProxySrv) runDelegatedInitializationRPCs(p *proc.Proc, sc *sigmacln
 				db.DFatalf("Err execute delegated RPC (%v): %v", pn, err)
 			}
 			db.DPrintf(db.SPPROXYSRV, "[%v] Done running delegated init RPC(%v)", p.GetPid(), initRPCIdx)
-			spp.repTab.InsertReply(p.GetPid(), uint64(initRPCIdx), outiov, err)
+			spp.repTab.InsertReply(p.GetPid(), uint64(initRPCIdx), outiov, err, start)
 		}(initRPCIdx, initRPC)
 	}
 	wg.Wait()

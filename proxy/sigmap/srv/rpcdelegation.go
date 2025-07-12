@@ -2,6 +2,7 @@ package srv
 
 import (
 	"sync"
+	"time"
 
 	db "sigmaos/debug"
 	"sigmaos/proc"
@@ -92,8 +93,8 @@ func (tab *DelegatedRPCReplyTable) getReplies(pid sp.Tpid) *RPCReplies {
 	return reps
 }
 
-func (tab *DelegatedRPCReplyTable) InsertReply(pid sp.Tpid, rpcIdx uint64, iov sessp.IoVec, err error) {
-	db.DPrintf(db.SPPROXYSRV, "[%v] DelegatedRPC.InsertReply(%v)", pid, rpcIdx)
+func (tab *DelegatedRPCReplyTable) InsertReply(pid sp.Tpid, rpcIdx uint64, iov sessp.IoVec, err error, start time.Time) {
+	db.DPrintf(db.SPPROXYSRV, "[%v] DelegatedRPC.InsertReply(%v) lat=%v", pid, rpcIdx, time.Since(start))
 	reps := tab.getReplies(pid)
 	reps.InsertReply(rpcIdx, iov, err)
 }

@@ -64,6 +64,10 @@ void Srv::fetch_init_vectors_from_cache(std::shared_ptr<std::promise<std::expect
     }
     log(COSSIMSRV, "Got shards delegated RPC #{}", srv_id);
     LogSpawnLatency(_sp_clnt->ProcEnv()->GetPID(), _sp_clnt->ProcEnv()->GetSpawnTime(), start, "GetShard RPC");
+    // Sanity check
+    if (key_vec_int->size() != lengths.size()) {
+      fatal("Key vec and returned lengths ({}) don't match in size: {} != {}", srv_id, (int) key_vec_int->size(), (int) lengths.size());
+    }
     // Take the lock while modifying the _vec_db map
     std::lock_guard<std::mutex> guard(_mu);
     start = GetCurrentTime();

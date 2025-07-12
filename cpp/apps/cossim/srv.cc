@@ -43,7 +43,6 @@ std::expected<int, sigmaos::serr::Error> Srv::CosSim(std::shared_ptr<google::pro
   return 0;
 }
 
-  void fetch_init_vectors_from_cache();
 void Srv::fetch_init_vectors_from_cache(std::shared_ptr<std::promise<std::expected<int, sigmaos::serr::Error>>> result, int srv_id, std::shared_ptr<std::vector<std::string>> key_vec, std::shared_ptr<std::vector<int>> key_vec_int) {
   int nbyte = 0;
   auto start = GetCurrentTime();

@@ -101,9 +101,7 @@ void Srv::fetch_init_vectors_from_cache(std::shared_ptr<std::promise<std::expect
     uint64_t off = 0;
     for (int j = 0; j < key_vec_int->size(); j++) {
       int id = key_vec_int->at(j);
-      log(COSSIMSRV, "parse vec {}", id);
       _vec_db[id] = std::make_shared<sigmaos::apps::cossim::Vector>(buf, buf->data() + off, _vec_dim);
-      log(COSSIMSRV, "done parse vec {}", id);
       off += lengths.at(j);
       nbyte += lengths.at(j);
     }

@@ -123,6 +123,7 @@ func NewCosSimJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, durs string,
 			return ji
 		}
 		foundCossim := false
+		foundCached := false
 		for i := 0; i < 5; i++ {
 			runningProcs, err := ji.msc.GetRunningProcs(nMSched)
 			if !assert.Nil(ts.Ts.T, err, "Err GetRunningProcs: %v", err) {
@@ -139,19 +140,18 @@ func NewCosSimJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, durs string,
 					ji.cacheKIDs[p.GetKernelID()] = true
 					ji.warmCossimSrvKID = p.GetKernelID()
 					db.DPrintf(db.TEST, "cached[%v] running on kernel %v", p.GetPid(), p.GetKernelID())
+					foundCached = true
 				default:
 				}
 			}
-			if !foundCossim {
+			if !foundCossim || !foundCached {
 				time.Sleep(5 * time.Second)
-				for _, rp := range runningProcs {
-					for _, p := range rp {
-						db.DPrintf(db.ALWAYS, "Running proc %v on %v", p.GetPid(), p.GetKernelID())
-					}
-				}
 			}
 		}
-		if !assert.True(ts.Ts.T, foundCossim, "Err didn't find cossim srv kernel ID") {
+		if !assert.True(ts.Ts.T, foundCossim, "Err didn't find cossim srv") {
+			return ji
+		}
+		if !assert.True(ts.Ts.T, foundCached, "Err didn't find cached srv") {
 			return ji
 		}
 		// Warm up an msched currently running a cached shard with the cossim srv

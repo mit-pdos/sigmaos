@@ -86,6 +86,7 @@ var COSSIM_CACHE_MCPU int
 var COSSIM_SRV_MCPU int
 var NCOSSIM int
 var COSSIM_NVEC int
+var COSSIM_NVEC_TO_QUERY int
 var COSSIM_VEC_DIM int
 var COSSIM_EAGER_INIT bool
 var MANUALLY_SCALE_COSSIM bool
@@ -174,6 +175,7 @@ func init() {
 	flag.IntVar(&COSSIM_CACHE_MCPU, "cossim_cache_mcpu", 2000, "Cossim cache mcpu")
 	flag.IntVar(&COSSIM_SRV_MCPU, "cossim_srv_mcpu", 2000, "Cossim server mcpu")
 	flag.IntVar(&COSSIM_NVEC, "cossim_nvec", 100, "Number of vectors in the cossim DB")
+	flag.IntVar(&COSSIM_NVEC_TO_QUERY, "cossim_nvec_to_query", 100, "Number of vectors to query in the cossim DB")
 	flag.IntVar(&COSSIM_VEC_DIM, "cossim_vec_dim", 100, "Dimension of each vector in the cossim DB")
 	flag.BoolVar(&COSSIM_EAGER_INIT, "cossim_eager_init", false, "Initialize cossim server eagerly")
 	flag.BoolVar(&COSSIM_DELEGATE_INIT, "cossim_delegated_init", false, "Cossim")
@@ -1860,7 +1862,7 @@ func TestCosSim(t *testing.T) {
 	ranges := []*cossimproto.VecRange{
 		&cossimproto.VecRange{
 			StartID: 0,
-			EndID:   uint64(COSSIM_NVEC - 1),
+			EndID:   uint64(COSSIM_NVEC_TO_QUERY - 1),
 		},
 	}
 

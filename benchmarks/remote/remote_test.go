@@ -822,7 +822,8 @@ func TestScaleCosSim(t *testing.T) {
 		scaleCache            bool            = false
 		clientDelay           time.Duration   = 0 * time.Second
 		sleep                 time.Duration   = 0 * time.Second
-		nvec                  int             = 5000
+		nvec                  int             = 10000
+		nvecToQuery           int             = 5000
 		vecDim                int             = 100
 		eagerInit             []bool          = []bool{true} //, false}
 		delegateInit          []bool          = []bool{true, false}
@@ -875,8 +876,8 @@ func TestScaleCosSim(t *testing.T) {
 								numCosSim += numCosSimToAdd
 								benchName += "_no_scale_cossim_nsrv_" + strconv.Itoa(numCosSim)
 							}
-							getLeaderCmd := GetCosSimClientCmdConstructor("CosSim", true, len(driverVMs), rps, dur, numCaches, scaleCache, sleep, false, 0, 0, numCosSim, nvec, vecDim, eager, delegate, scale, scaleCosSimDelay, numCosSimToAdd)
-							getFollowerCmd := GetCosSimClientCmdConstructor("CosSim", false, len(driverVMs), rps, dur, numCaches, scaleCache, sleep, false, 0, 0, numCosSim, nvec, vecDim, eager, delegate, scale, scaleCosSimDelay, numCosSimToAdd)
+							getLeaderCmd := GetCosSimClientCmdConstructor("CosSim", true, len(driverVMs), rps, dur, numCaches, scaleCache, sleep, false, 0, 0, numCosSim, nvec, nvecToQuery, vecDim, eager, delegate, scale, scaleCosSimDelay, numCosSimToAdd)
+							getFollowerCmd := GetCosSimClientCmdConstructor("CosSim", false, len(driverVMs), rps, dur, numCaches, scaleCache, sleep, false, 0, 0, numCosSim, nvec, nvecToQuery, vecDim, eager, delegate, scale, scaleCosSimDelay, numCosSimToAdd)
 							ran := ts.RunParallelClientBenchmark(benchName, driverVMs, getLeaderCmd, getFollowerCmd, startK8sHotelApp, stopK8sHotelApp, clientDelay, numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost)
 							if oneByOne && ran {
 								return

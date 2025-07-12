@@ -582,7 +582,7 @@ func GetLCBEHotelImgResizeRPCMultiplexingCmdConstructor(numClients int, rps []in
 //
 // - clientDelay specifies the delay for which the client should wait before
 // starting to send requests.
-func GetCosSimClientCmdConstructor(cossimReqName string, leader bool, numClients int, rps []int, dur []time.Duration, numCaches int, scaleCache bool, clientDelay time.Duration, manuallyScaleCaches bool, scaleCacheDelay time.Duration, numCachesToAdd int, numCosSim int, nvec int, vecDim int, cossimEagerInit, delegateInit, manuallyScaleCosSim bool, scaleCosSimDelay time.Duration, numCosSimToAdd int) GetBenchCmdFn {
+func GetCosSimClientCmdConstructor(cossimReqName string, leader bool, numClients int, rps []int, dur []time.Duration, numCaches int, scaleCache bool, clientDelay time.Duration, manuallyScaleCaches bool, scaleCacheDelay time.Duration, numCachesToAdd int, numCosSim int, nvec int, nvecToQuery int, vecDim int, cossimEagerInit, delegateInit, manuallyScaleCosSim bool, scaleCosSimDelay time.Duration, numCosSimToAdd int) GetBenchCmdFn {
 	return func(bcfg *BenchConfig, ccfg *ClusterConfig) string {
 		const (
 			//			debugSelectors string = "\"TEST;THROUGHPUT;CPU_UTIL;SPAWN_LAT;\""
@@ -643,6 +643,7 @@ func GetCosSimClientCmdConstructor(cossimReqName string, leader bool, numClients
 			"--n_caches_to_add %s "+
 			"--ncossim %s "+
 			"--cossim_nvec %s "+
+			"--cossim_nvec_to_query %s "+
 			"--cossim_vec_dim %s "+
 			"%s "+ //cossim_eager_init
 			"%s "+ //cossim_delegated_init
@@ -670,6 +671,7 @@ func GetCosSimClientCmdConstructor(cossimReqName string, leader bool, numClients
 			strconv.Itoa(numCachesToAdd),
 			strconv.Itoa(numCosSim),
 			strconv.Itoa(nvec),
+			strconv.Itoa(nvecToQuery),
 			strconv.Itoa(vecDim),
 			cossimEagerInitStr,
 			cossimDelegateInitStr,

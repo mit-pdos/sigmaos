@@ -178,7 +178,7 @@ func (spp *SPProxySrv) runDelegatedInitializationRPCs(p *proc.Proc, sc *sigmacln
 				db.DFatalf("Err execute delegated RPC (%v): %v", pn, err)
 			}
 			db.DPrintf(db.SPPROXYSRV, "[%v] Done running delegated init RPC(%v)", p.GetPid(), initRPCIdx)
-			spp.repTab.InsertReply(p.GetPid(), uint64(initRPCIdx), outiov, err, start)
+			spp.repTab.InsertReply(p, uint64(initRPCIdx), outiov, err, start)
 		}(initRPCIdx, initRPC)
 	}
 	wg.Wait()

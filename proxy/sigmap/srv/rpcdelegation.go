@@ -9,6 +9,7 @@ import (
 	rpcchan "sigmaos/rpc/clnt/channel"
 	sessp "sigmaos/session/proto"
 	sp "sigmaos/sigmap"
+	"sigmaos/util/perf"
 )
 
 type DelegatedRPCReplyTable struct {
@@ -93,9 +94,10 @@ func (tab *DelegatedRPCReplyTable) getReplies(pid sp.Tpid) *RPCReplies {
 	return reps
 }
 
-func (tab *DelegatedRPCReplyTable) InsertReply(pid sp.Tpid, rpcIdx uint64, iov sessp.IoVec, err error, start time.Time) {
-	db.DPrintf(db.SPPROXYSRV, "[%v] DelegatedRPC.InsertReply(%v) lat=%v", pid, rpcIdx, time.Since(start))
-	reps := tab.getReplies(pid)
+func (tab *DelegatedRPCReplyTable) InsertReply(p *proc.Proc, rpcIdx uint64, iov sessp.IoVec, err error, start time.Time) {
+	db.DPrintf(db.SPPROXYSRV, "[%v] DelegatedRPC.InsertReply(%v) lat=%v", p.GetPid(), rpcIdx, time.Since(start))
+	perf.LogSpawnLatency("DelegatedRPC(%v)", p.GetPid(), p.GetSpawnTime(), start, rpcIdx)
+	reps := tab.getReplies(p.GetPid())
 	reps.InsertReply(rpcIdx, iov, err)
 }
 

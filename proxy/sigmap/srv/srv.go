@@ -269,7 +269,7 @@ func (spps *SPProxySrv) IncomingProc(p *proc.Proc) {
 }
 
 func (spps *SPProxySrv) ProcDone(p *proc.Proc) {
-	db.DPrintf(db.SPPROXYSRV, "Informed proc done", p.GetPid())
+	db.DPrintf(db.SPPROXYSRV, "Informed proc done %v", p.GetPid())
 	spps.mu.Lock()
 	defer spps.mu.Unlock()
 

@@ -587,7 +587,9 @@ func GetCosSimClientCmdConstructor(cossimReqName string, leader bool, numClients
 		const (
 			//			debugSelectors string = "\"TEST;THROUGHPUT;CPU_UTIL;SPAWN_LAT;\""
 			debugSelectors string = "\"TEST;THROUGHPUT;CPU_UTIL;SPAWN_LAT;PROXY_LAT;\""
-			perfSelectors  string = "\"COSSIMSRV_TPT;TEST_TPT;BENCH_TPT;\""
+			//			valgrindSelectors     string = "\"cossim-srv-cpp;\""
+			valgrindSelectors string = ""
+			perfSelectors     string = "\"COSSIMSRV_TPT;TEST_TPT;BENCH_TPT;\""
 		)
 		testName := ""
 		if leader {
@@ -623,7 +625,7 @@ func GetCosSimClientCmdConstructor(cossimReqName string, leader bool, numClients
 		if cossimEagerInit {
 			cossimEagerInitStr = "--cossim_eager_init"
 		}
-		return fmt.Sprintf("export SIGMADEBUG=%s; export SIGMAPERF=%s; go clean -testcache; "+
+		return fmt.Sprintf("export SIGMADEBUG=%s; export SIGMAVALGRIND=%s; export SIGMAPERF=%s; go clean -testcache; "+
 			"ulimit -n 100000; "+
 			"./set-cores.sh --set 1 --start 2 --end 39 > /dev/null 2>&1 ; "+
 			"go test -v sigmaos/benchmarks -timeout 0 --no-shutdown %s %s --etcdIP %s --tag %s "+
@@ -631,7 +633,7 @@ func GetCosSimClientCmdConstructor(cossimReqName string, leader bool, numClients
 			"--nclnt %s "+
 			"--cossim_ncache %s "+
 			"--cossim_cache_mcpu 2000 "+
-			"--cossim_srv_mcpu 3000 "+
+			"--cossim_srv_mcpu 4000 "+
 			"%s "+ // scaleCache
 			"--cossim_dur %s "+
 			"--cossim_max_rps %s "+
@@ -650,6 +652,7 @@ func GetCosSimClientCmdConstructor(cossimReqName string, leader bool, numClients
 			"--prewarm_realm "+
 			"> /tmp/bench.out 2>&1 ;",
 			debugSelectors,
+			valgrindSelectors,
 			perfSelectors,
 			dialproxy,
 			overlays,

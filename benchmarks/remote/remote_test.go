@@ -813,10 +813,12 @@ func TestScaleCosSim(t *testing.T) {
 		//		dur                   []time.Duration = []time.Duration{5 * time.Second, 30 * time.Second, 30 * time.Second}
 		//		rps                   []int           = []int{600, 650, 1000} // works without additional debug statements
 		//		rps                   []int           = []int{550, 550, 1000} // works with additional debug statements
-		rps                   []int           = []int{450, 450, 1000} //1300}
+		//		rps                   []int           = []int{500, 550, 575, 600, 625, 650, 1000}
+		//		dur                   []time.Duration = []time.Duration{5 * time.Second, 5 * time.Second, 5 * time.Second, 5 * time.Second, 5 * time.Second, 5 * time.Second, 30 * time.Second}
+		rps                   []int           = []int{300, 500, 1000}
 		dur                   []time.Duration = []time.Duration{5 * time.Second, 30 * time.Second, 30 * time.Second}
 		numCosSimBase         int             = 1
-		nCache                []int           = []int{1, 2}
+		nCache                []int           = []int{1, 2, 4}
 		scaleCache            bool            = false
 		clientDelay           time.Duration   = 0 * time.Second
 		sleep                 time.Duration   = 0 * time.Second

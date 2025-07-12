@@ -71,15 +71,12 @@ void Srv::fetch_init_vectors_from_cache(std::shared_ptr<std::promise<std::expect
     uint64_t off = 0;
     for (int j = 0; j < key_vec_int->size(); j++) {
       int id = key_vec_int->at(j);
-      log(COSSIMSRV, "parse vec {}", id);
       _vec_db[id] = std::make_shared<sigmaos::apps::cossim::Vector>(buf, buf->data() + off, _vec_dim);
-      log(COSSIMSRV, "done parse vec {}", id);
-      log(COSSIMSRV, "done parse vec {} lengths sz1 {} sz2 {}", id, lengths.size(), key_vec_int->size());
       off += lengths.at(j);
       nbyte += lengths.at(j);
     }
     log(COSSIMSRV, "Done parsing shard delegated RPC #{}", srv_id);
-    LogSpawnLatency(_sp_clnt->ProcEnv()->GetPID(), _sp_clnt->ProcEnv()->GetSpawnTime(), start, "Parse vecs & construct DB");
+    LogSpawnLatency(_sp_clnt->ProcEnv()->GetPID(), _sp_clnt->ProcEnv()->GetSpawnTime(), start, "Parse vecs & construct DB delegated");
   } else {
     // Get the serialized vector from cached
     {

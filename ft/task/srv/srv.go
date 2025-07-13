@@ -37,11 +37,11 @@ type TaskSrv struct {
 	done    map[int32]bool
 	errored map[int32]bool
 
-	mu       *sync.Mutex
-	todoCond *sync.Cond
-	stopped  bool
-	fence    *sp.Tfence
-	rootId   fttask.FtTaskSrvId
+	mu                       *sync.Mutex
+	todoCond                 *sync.Cond
+	hasLastTaskBeenSubmitted bool
+	fence                    *sp.Tfence
+	rootId                   fttask.FtTaskSrvId
 
 	etcdClient *clientv3.Client
 	electclnt  *electclnt.ElectClnt
@@ -49,12 +49,12 @@ type TaskSrv struct {
 }
 
 const (
-	ETCD_STATUS     = "status"
-	ETCD_DATA       = "data"
-	ETCD_OUTPUT     = "output"
-	ETCD_SRV_FENCE  = "srv_fence"  // ensures only the most recently elected fttask srv can write to etcd
-	ETCD_CLNT_FENCE = "clnt_fence" // ensures only the most recently elected client can write to server
-	ETCD_STOPPED    = "stopped"
+	ETCD_STATUS                   = "status"
+	ETCD_DATA                     = "data"
+	ETCD_OUTPUT                   = "output"
+	ETCD_SRV_FENCE                = "srv_fence"  // ensures only the most recently elected fttask srv can write to etcd
+	ETCD_CLNT_FENCE               = "clnt_fence" // ensures only the most recently elected client can write to server
+	ETCD_LASTTASKHASBEENSUBMITTED = "submittedLastTask"
 )
 
 const (
@@ -261,8 +261,8 @@ func (s *TaskSrv) readEtcd() error {
 			}
 
 			s.fence = &sp.Tfence{Epoch: sp.Tepoch(epoch)}
-		} else if key == s.root()+ETCD_STOPPED {
-			s.stopped = true
+		} else if key == s.root()+ETCD_LASTTASKHASBEENSUBMITTED {
+			s.hasLastTaskBeenSubmitted = true
 		} else {
 			db.DPrintf(db.ERROR, "Unknown key type %v", key)
 			return serr.NewErr(serr.TErrInval, key)
@@ -677,7 +677,7 @@ func (s *TaskSrv) AcquireTasks(ctx fs.CtxI, req proto.AcquireTasksReq, rep *prot
 
 	fence := s.fence
 	ids := s.get(proto.TaskStatus_TODO)
-	for req.Wait && len(ids) == 0 && !s.stopped && fence == s.fence {
+	for req.Wait && len(ids) == 0 && !s.hasLastTaskBeenSubmitted && fence == s.fence {
 		db.DPrintf(db.FTTASKS, "AcquireTasks: waiting for tasks...")
 		s.todoCond.Wait()
 		ids = s.get(proto.TaskStatus_TODO)
@@ -696,7 +696,7 @@ func (s *TaskSrv) AcquireTasks(ctx fs.CtxI, req proto.AcquireTasksReq, rep *prot
 		return err
 	}
 
-	rep.Stopped = s.stopped // XXX && wip is empty
+	rep.Stopped = s.hasLastTaskBeenSubmitted // XXX && wip is empty
 	rep.Ids = ids
 
 	db.DPrintf(db.FTTASKS, "AcquireTasks: n: %d stopped: %t", len(rep.Ids), rep.Stopped)
@@ -733,7 +733,7 @@ func (s *TaskSrv) SubmittedLastTask(ctx fs.CtxI, req proto.SubmittedLastTaskReq,
 	resp, err := s.etcdClient.Txn(context.TODO()).If(
 		clientv3.Compare(clientv3.Value(s.root()+ETCD_SRV_FENCE), "=", strconv.FormatUint(uint64(s.electclnt.Fence().Epoch), 10)),
 	).Then(
-		clientv3.OpPut(s.root()+ETCD_STOPPED, "1"),
+		clientv3.OpPut(s.root()+ETCD_LASTTASKHASBEENSUBMITTED, "1"),
 	).Commit()
 
 	if err != nil {
@@ -746,7 +746,7 @@ func (s *TaskSrv) SubmittedLastTask(ctx fs.CtxI, req proto.SubmittedLastTaskReq,
 		return serr.NewErr(serr.TErrError, "etcd txn failed")
 	}
 
-	s.stopped = true
+	s.hasLastTaskBeenSubmitted = true
 	s.todoCond.Broadcast()
 
 	return nil

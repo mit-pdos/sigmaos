@@ -386,11 +386,9 @@ func (s *TaskSrv) applyChanges(added map[int32]bool, status map[int32]proto.Task
 	}
 
 	// update local cache
-	addedTodo := false
 	for id := range added {
 		s.status[id] = proto.TaskStatus_TODO
 		(*s.getMap(proto.TaskStatus_TODO))[id] = true
-		addedTodo = true
 	}
 
 	for id, newStatus := range status {
@@ -400,10 +398,6 @@ func (s *TaskSrv) applyChanges(added map[int32]bool, status map[int32]proto.Task
 			s.status[id] = to
 			delete(*s.getMap(from), id)
 			(*s.getMap(to))[id] = true
-
-			if to == proto.TaskStatus_TODO {
-				addedTodo = true
-			}
 		}
 	}
 
@@ -415,9 +409,7 @@ func (s *TaskSrv) applyChanges(added map[int32]bool, status map[int32]proto.Task
 		s.output[id] = output
 	}
 
-	if addedTodo {
-		s.todoCond.Broadcast()
-	}
+	s.todoCond.Broadcast()
 
 	db.DPrintf(db.FTTASKS, "WriteChanges: wrote changes to local cache")
 
@@ -667,6 +659,12 @@ func (s *TaskSrv) AddTaskOutputs(ctx fs.CtxI, req proto.AddTaskOutputsReq, rep *
 	return nil
 }
 
+// caller should hold lock
+func (s *TaskSrv) allTasksDone() bool {
+	//return s.hasLastTaskBeenSubmitted
+	return len(s.wip) == 0 && len(s.todo) == 0 && s.hasLastTaskBeenSubmitted
+}
+
 func (s *TaskSrv) AcquireTasks(ctx fs.CtxI, req proto.AcquireTasksReq, rep *proto.AcquireTasksRep) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -677,7 +675,7 @@ func (s *TaskSrv) AcquireTasks(ctx fs.CtxI, req proto.AcquireTasksReq, rep *prot
 
 	fence := s.fence
 	ids := s.get(proto.TaskStatus_TODO)
-	for req.Wait && len(ids) == 0 && !s.hasLastTaskBeenSubmitted && fence == s.fence {
+	for req.Wait && len(ids) == 0 && !s.allTasksDone() && fence == s.fence {
 		db.DPrintf(db.FTTASKS, "AcquireTasks: waiting for tasks...")
 		s.todoCond.Wait()
 		ids = s.get(proto.TaskStatus_TODO)
@@ -696,7 +694,7 @@ func (s *TaskSrv) AcquireTasks(ctx fs.CtxI, req proto.AcquireTasksReq, rep *prot
 		return err
 	}
 
-	rep.Stopped = s.hasLastTaskBeenSubmitted // XXX && wip is empty
+	rep.Stopped = s.allTasksDone()
 	rep.Ids = ids
 
 	db.DPrintf(db.FTTASKS, "AcquireTasks: n: %d stopped: %t", len(rep.Ids), rep.Stopped)

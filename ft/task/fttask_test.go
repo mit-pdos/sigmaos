@@ -509,12 +509,12 @@ func TestServerStop(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestAcquireStop(t *testing.T) {
-	n := 0
+func TestAcquireStopped(t *testing.T) {
 	ts, err := newTstate(t)
 	if !assert.Nil(t, err, "Error New Tstate: %v", err) {
 		return
 	}
+	chTasks := make(chan fttask_clnt.TaskId)
 	go func() {
 		stopped := false
 		for !stopped {
@@ -525,9 +525,10 @@ func TestAcquireStop(t *testing.T) {
 			db.DPrintf(db.TEST, "AcquireTasks %v stop %t err %v", tasks, stop, err)
 			stopped = stop
 			if len(tasks) > 0 {
-				n += 1
+				chTasks <- tasks[0]
 			}
 		}
+		close(chTasks)
 	}()
 
 	_, err = ts.clnt.SubmitTasks([]*fttask_clnt.Task[interface{}]{
@@ -541,10 +542,18 @@ func TestAcquireStop(t *testing.T) {
 	err = ts.clnt.SubmittedLastTask()
 	assert.Nil(ts.T, err)
 
-	time.Sleep(100 * time.Millisecond)
-
-	err = ts.clnt.MoveTasks([]fttask_clnt.TaskId{0}, fttask_clnt.TODO)
-	assert.Nil(t, err)
+	n := 0
+	for range chTasks {
+		if n == 0 {
+			// but move wip task to do do (simulating a tailed task)
+			err = ts.clnt.MoveTasks([]fttask_clnt.TaskId{0}, fttask_clnt.TODO)
+			assert.Nil(t, err)
+		} else {
+			err = ts.clnt.MoveTasks([]fttask_clnt.TaskId{0}, fttask_clnt.DONE)
+			assert.Nil(t, err)
+		}
+		n += 1
+	}
 
 	assert.Equal(t, 2, n)
 

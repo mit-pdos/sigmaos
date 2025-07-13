@@ -25,6 +25,13 @@ message SubmitTasksRep {
   repeated int32 existing = 1;
 }
 
+message SubmittedLastTaskReq {
+  TfenceProto fence = 2;
+}
+
+message SubmittedLastTaskRep {
+}
+
 message EditTasksReq {
   repeated Task tasks = 1;
   TfenceProto fence = 2;
@@ -115,14 +122,6 @@ message GetTaskStatsReq {
 
 message GetTaskStatsRep {
   TaskStats stats = 1;
-}
-
-message SubmitStopReq {
-  TfenceProto fence = 2;
-}
-
-message SubmitStopRep {
-
 }
 
 message FenceReq {

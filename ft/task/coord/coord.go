@@ -41,7 +41,7 @@ func (ftm *FtTaskCoord[Data, Output]) ExecuteTasks(mkProc TmkProc[Data]) *proc.S
 
 	go ftm.getTasks(chTask, chStop)
 
-	// keep doing work until startTasks us to stop (e.g., clients
+	// keep doing work until chStop tell us to stop (e.g., clients
 	// stops ftm) or unrecoverable error.
 	stopped := false
 	receivedStop := false
@@ -50,7 +50,7 @@ func (ftm *FtTaskCoord[Data, Output]) ExecuteTasks(mkProc TmkProc[Data]) *proc.S
 		case res := <-chRes:
 			ftm.nTasksRunning.Add(-1)
 			if ftm.nTasksRunning.Load() == 0 {
-				n, err := ftm.GetNTasks(ftclnt.TODO)
+				n, err := ftm.GetNTasks(ftclnt.TODO) // XXX and WIP
 				if err != nil {
 					db.DFatalf("GetNTasks err %v", err)
 				}
@@ -89,7 +89,7 @@ func (ftm *FtTaskCoord[Data, Output]) getTasks(chTask chan<- []ftclnt.TaskId, ch
 		if err != nil {
 			db.DFatalf("AcquireTasks err %v", err)
 		}
-
+		db.DPrintf(db.FTTASKMGR, "getTasks: AcquireTasks %v %t err %v", tasks, stopped, err)
 		if len(tasks) != 0 {
 			chTask <- tasks
 		}

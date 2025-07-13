@@ -244,11 +244,11 @@ func (tc *RawFtTaskClnt) GetNTasks(status TaskStatus) (int32, error) {
 	}
 }
 
-func (tc *RawFtTaskClnt) SubmitStop() error {
-	arg := proto.SubmitStopReq{Fence: tc.fenceProto()}
-	res := proto.SubmitStopRep{}
+func (tc *RawFtTaskClnt) SubmittedLastTask() error {
+	arg := proto.SubmittedLastTaskReq{Fence: tc.fenceProto()}
+	res := proto.SubmittedLastTaskRep{}
 
-	err := tc.rpc("TaskSrv.SubmitStop", &arg, &res)
+	err := tc.rpc("TaskSrv.SubmittedLastTask", &arg, &res)
 	return err
 }
 

@@ -696,7 +696,7 @@ func (s *TaskSrv) AcquireTasks(ctx fs.CtxI, req proto.AcquireTasksReq, rep *prot
 		return err
 	}
 
-	rep.Stopped = s.stopped
+	rep.Stopped = s.stopped // XXX && wip is empty
 	rep.Ids = ids
 
 	db.DPrintf(db.FTTASKS, "AcquireTasks: n: %d stopped: %t", len(rep.Ids), rep.Stopped)
@@ -720,7 +720,7 @@ func (s *TaskSrv) GetTaskStats(ctx fs.CtxI, req proto.GetTaskStatsReq, rep *prot
 	return nil
 }
 
-func (s *TaskSrv) SubmitStop(ctx fs.CtxI, req proto.SubmitStopReq, rep *proto.SubmitStopRep) error {
+func (s *TaskSrv) SubmittedLastTask(ctx fs.CtxI, req proto.SubmittedLastTaskReq, rep *proto.SubmittedLastTaskRep) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 

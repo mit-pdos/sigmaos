@@ -20,7 +20,7 @@ for i in $(seq 1 $N);
 do
     echo "=== run $i"
     ./stop.sh && ./test-in-docker.sh  --pkg $PKG $TEST 2>&1 | tee test.out
-    grep FAIL test.out
+    grep "^FAIL" test.out
     if [ $? -eq 0 ]; then
 	echo "TEST FAILED"
 	exit 1

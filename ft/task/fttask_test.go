@@ -447,7 +447,7 @@ func TestServerStop(t *testing.T) {
 	ts.shutdown()
 }
 
-func TestAcquireStopped(t *testing.T) {
+func TestGetTasksClose(t *testing.T) {
 	ts, err := newTstate[interface{}, interface{}](t)
 	if !assert.Nil(t, err, "Error New Tstate: %v", err) {
 		return
@@ -470,7 +470,8 @@ func TestAcquireStopped(t *testing.T) {
 	n := 0
 	for range chTasks {
 		if n == 0 {
-			// but move wip task to do do (simulating a tailed task)
+			// but move wip task to do do (simulating a failed task), which
+			// will show up chTasks again
 			err = ts.clnt.MoveTasks([]fttask_clnt.TaskId{0}, fttask_clnt.TODO)
 			assert.Nil(t, err)
 		} else {
@@ -481,6 +482,46 @@ func TestAcquireStopped(t *testing.T) {
 	}
 
 	assert.Equal(t, 2, n)
+
+	ts.shutdown()
+}
+
+func TestErrorTasks(t *testing.T) {
+	ts, err := newTstate[interface{}, string](t)
+	if !assert.Nil(t, err, "Error New Tstate: %v", err) {
+		return
+	}
+
+	chTasks := make(chan []fttask_clnt.TaskId)
+	go fttask_clnt.GetTasks[interface{}, string](ts.clnt, chTasks)
+
+	_, err = ts.clnt.SubmitTasks([]*fttask_clnt.Task[interface{}]{
+		{
+			Id:   int32(0),
+			Data: struct{}{},
+		},
+	})
+	assert.Nil(t, err)
+
+	err = ts.clnt.SubmittedLastTask()
+	assert.Nil(ts.T, err)
+
+	for range chTasks {
+		err = ts.clnt.MoveTasks([]fttask_clnt.TaskId{0}, fttask_clnt.ERROR)
+		assert.Nil(t, err)
+		o := []string{"error"}
+		err = ts.clnt.AddTaskOutputs([]fttask_clnt.TaskId{0}, o, false)
+		assert.Nil(t, err)
+	}
+
+	ids, err := ts.clnt.GetTasksByStatus(fttask_clnt.ERROR)
+	assert.Nil(t, err)
+	assert.Equal(t, 1, len(ids))
+
+	outs, err := ts.clnt.GetTaskOutputs(ids)
+	for _, o := range outs {
+		assert.Equal(t, "error", o)
+	}
 
 	ts.shutdown()
 }

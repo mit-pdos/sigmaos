@@ -661,7 +661,6 @@ func (s *TaskSrv) AddTaskOutputs(ctx fs.CtxI, req proto.AddTaskOutputsReq, rep *
 
 // caller should hold lock
 func (s *TaskSrv) allTasksDone() bool {
-	//return s.hasLastTaskBeenSubmitted
 	return len(s.wip) == 0 && len(s.todo) == 0 && s.hasLastTaskBeenSubmitted
 }
 

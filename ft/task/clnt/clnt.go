@@ -2,6 +2,7 @@
 package clnt
 
 import (
+	db "sigmaos/debug"
 	"sigmaos/ft/task"
 	"sigmaos/ft/task/proto"
 	sp "sigmaos/sigmap"
@@ -46,4 +47,23 @@ type FtTaskClnt[Data any, Output any] interface {
 	CurrInstance() string
 
 	rpc(method string, arg protobuf.Message, res protobuf.Message) error
+}
+
+func GetTasks[Data any, Output any](tc FtTaskClnt[Data, Output], chTask chan TaskId) {
+	for {
+		tasks, stopped, err := tc.AcquireTasks(true)
+		if err != nil {
+			db.DFatalf("AcquireTasks err %v", err)
+		}
+		db.DPrintf(db.FTTASKS, "GetTasks: AcquireTasks %v %t err %v", tasks, stopped, err)
+		for _, t := range tasks {
+			if len(tasks) != 0 {
+				chTask <- t
+			}
+		}
+		if stopped {
+			close(chTask)
+			break
+		}
+	}
 }

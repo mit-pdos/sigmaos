@@ -452,22 +452,9 @@ func TestAcquireStopped(t *testing.T) {
 	if !assert.Nil(t, err, "Error New Tstate: %v", err) {
 		return
 	}
-	chTasks := make(chan fttask_clnt.TaskId)
-	go func() {
-		stopped := false
-		for !stopped {
-			tasks, stop, err := ts.clnt.AcquireTasks(true)
-			if err != nil {
-				db.DFatalf("AcquireTasks err %v", err)
-			}
-			db.DPrintf(db.TEST, "AcquireTasks %v stop %t err %v", tasks, stop, err)
-			stopped = stop
-			if len(tasks) > 0 {
-				chTasks <- tasks[0]
-			}
-		}
-		close(chTasks)
-	}()
+
+	chTasks := make(chan []fttask_clnt.TaskId)
+	go fttask_clnt.GetTasks[interface{}, interface{}](ts.clnt, chTasks)
 
 	_, err = ts.clnt.SubmitTasks([]*fttask_clnt.Task[interface{}]{
 		{

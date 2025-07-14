@@ -375,6 +375,7 @@ func TestServerWait(t *testing.T) {
 	ts.shutdown()
 }
 
+// Check that server returns an error for a few incorrect calls
 func TestServerErrors(t *testing.T) {
 	ts, err := newTstate[interface{}, interface{}](t)
 	if !assert.Nil(t, err, "Error New Tstate: %v", err) {

@@ -168,7 +168,7 @@ func TestImgdFatalError(t *testing.T) {
 	assert.Nil(ts.mrts.T, err)
 	assert.Empty(ts.mrts.T, existing)
 
-	err = ts.ftclnt.SubmitStop()
+	err = ts.ftclnt.SubmittedLastTask()
 	assert.Nil(ts.mrts.T, err)
 
 	gs := imgd.WaitGroup()
@@ -189,7 +189,7 @@ func (ts *Tstate) imgdJob(paths []string, em *crash.TeventMap) {
 	assert.Nil(ts.mrts.T, err)
 	assert.Empty(ts.mrts.T, existing)
 
-	err = ts.ftclnt.SubmitStop()
+	err = ts.ftclnt.SubmittedLastTask()
 	assert.Nil(ts.mrts.T, err)
 
 	go ts.progress()
@@ -283,7 +283,7 @@ func TestImgdRestart(t *testing.T) {
 	assert.Nil(ts.mrts.T, err)
 	assert.Empty(ts.mrts.T, existing)
 
-	err = ts.ftclnt.SubmitStop()
+	err = ts.ftclnt.SubmittedLastTask()
 	assert.Nil(t, err)
 
 	imgd := imgresize.StartImgd(ts.mrts.GetRealm(test.REALM1).SigmaClnt, ts.ftclnt.ServerId(), IMG_RESIZE_MCPU, IMG_RESIZE_MEM, true, 1, 0, nil)

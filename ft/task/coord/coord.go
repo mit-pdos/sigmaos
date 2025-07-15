@@ -1,25 +1,25 @@
 package fttaskmgr
 
 import (
+	"time"
+
 	procapi "sigmaos/api/proc"
 	db "sigmaos/debug"
 	ftclnt "sigmaos/ft/task/clnt"
 	"sigmaos/proc"
-	"sync/atomic"
-	"time"
+	"sigmaos/util/spstats"
 )
+
+type AStat struct {
+	Nok    spstats.Tcounter
+	Nerror spstats.Tcounter
+	Nfail  spstats.Tcounter
+}
 
 type FtTaskCoord[Data any, Output any] struct {
 	ftclnt.FtTaskClnt[Data, Output]
 	procapi.ProcAPI
-	nTasksRunning atomic.Int32
-}
-
-type Tresult struct {
-	id     ftclnt.TaskId
-	ok     bool
-	ms     int64
-	status *proc.Status
+	AStat
 }
 
 type Tnew[Data any] func() Data
@@ -29,79 +29,30 @@ func NewFtTaskCoord[Data any, Output any](pclnt procapi.ProcAPI, ft ftclnt.FtTas
 	if _, err := ft.MoveTasksByStatus(ftclnt.WIP, ftclnt.TODO); err != nil {
 		return nil, err
 	}
-
-	return &FtTaskCoord[Data, Output]{ProcAPI: pclnt, FtTaskClnt: ft}, nil
+	return &FtTaskCoord[Data, Output]{
+		ProcAPI:    pclnt,
+		FtTaskClnt: ft,
+	}, nil
 }
 
-func (ftm *FtTaskCoord[Data, Output]) ExecuteTasks(mkProc TmkProc[Data]) *proc.Status {
-	var r *Tresult
-	chRes := make(chan Tresult)
+func (ftm *FtTaskCoord[Data, Output]) ExecuteTasks(mkProc TmkProc[Data]) *spstats.TcounterSnapshot {
 	chTask := make(chan []ftclnt.TaskId)
-	chStop := make(chan bool)
 
-	go ftm.getTasks(chTask, chStop)
+	go ftclnt.GetTasks(ftm, chTask)
 
-	// keep doing work until chStop tell us to stop (e.g., clients
-	// stops ftm) or unrecoverable error.
-	stopped := false
-	receivedStop := false
-	for !stopped {
-		select {
-		case res := <-chRes:
-			ftm.nTasksRunning.Add(-1)
-			if ftm.nTasksRunning.Load() == 0 {
-				n, err := ftm.GetNTasks(ftclnt.TODO) // XXX and WIP
-				if err != nil {
-					db.DFatalf("GetNTasks err %v", err)
-				}
-				db.DPrintf(db.FTTASKMGR, "receivedStop %t ntask=0 n %d", receivedStop, n)
-				if n == 0 && receivedStop {
-					stopped = true
-				}
-			}
-			if res.ok {
-				db.DPrintf(db.FTTASKMGR, "%v ok %v ms %d msg %v", res.id, res.ok, res.ms, res.status)
-			} else if res.status != nil {
-				db.DPrintf(db.ALWAYS, "task %v has unrecoverable err %v\n", res.id, res.status)
-				r = &res
-				break
-			}
-		case tasks := <-chTask:
-			err := ftm.startTasks(tasks, chRes, mkProc)
-			if err != nil {
-				db.DFatalf("StartTasks %v err %v", tasks, err)
-			}
-		case s := <-chStop:
-			receivedStop = s
-		}
-	}
-
-	db.DPrintf(db.FTTASKMGR, "ExecuteTasks: done")
-	if r != nil {
-		return r.status
-	}
-	return nil
-}
-
-func (ftm *FtTaskCoord[Data, Output]) getTasks(chTask chan<- []ftclnt.TaskId, chStop chan<- bool) {
-	for {
-		tasks, stopped, err := ftm.AcquireTasks(true)
+	for tasks := range chTask {
+		err := ftm.startTasks(tasks, mkProc)
 		if err != nil {
-			db.DFatalf("AcquireTasks err %v", err)
-		}
-		db.DPrintf(db.FTTASKMGR, "getTasks: AcquireTasks %v %t err %v", tasks, stopped, err)
-		if len(tasks) != 0 {
-			chTask <- tasks
-		}
-
-		if stopped {
-			chStop <- true
-			break
+			db.DFatalf("StartTasks %v err %v", tasks, err)
 		}
 	}
+	db.DPrintf(db.FTTASKMGR, "ExecuteTasks: done %v", ftm.AStat)
+	stro := spstats.NewTcounterSnapshot()
+	stro.FillCounters(&ftm.AStat)
+	return stro
 }
 
-func (ftm *FtTaskCoord[Data, Output]) startTasks(tasks []ftclnt.TaskId, ch chan Tresult, mkProc TmkProc[Data]) error {
+func (ftm *FtTaskCoord[Data, Output]) startTasks(tasks []ftclnt.TaskId, mkProc TmkProc[Data]) error {
 	ntask := 0
 	tasksData, err := ftm.ReadTasks(tasks)
 	if err != nil {
@@ -110,52 +61,54 @@ func (ftm *FtTaskCoord[Data, Output]) startTasks(tasks []ftclnt.TaskId, ch chan 
 	}
 
 	for _, task := range tasksData {
-		ftm.nTasksRunning.Add(1)
 		ntask += 1
 		p := mkProc(task)
-		go ftm.runTask(p, task.Id, ch)
+		go ftm.runTask(p, task.Id)
 	}
 
-	db.DPrintf(db.FTTASKMGR, "Started %v tasks ntask in progress %v", ntask, ftm.nTasksRunning.Load())
+	db.DPrintf(db.FTTASKMGR, "Started %v tasks", ntask)
 	return nil
 }
 
-func (ftm *FtTaskCoord[Data, Output]) runTask(p *proc.Proc, t ftclnt.TaskId, ch chan<- Tresult) {
+func (ftm *FtTaskCoord[Data, Output]) runTask(p *proc.Proc, t ftclnt.TaskId) {
 	db.DPrintf(db.FTTASKMGR, "prep to spawn task %v %v", p.GetPid(), p.Args)
 	start := time.Now()
 	err := ftm.Spawn(p)
 	if err != nil {
 		db.DPrintf(db.ALWAYS, "Couldn't spawn a task %v, err: %v", t, err)
-		ch <- Tresult{t, false, 0, nil}
+		if err := ftm.MoveTasks([]ftclnt.TaskId{t}, ftclnt.TODO); err != nil {
+			db.DFatalf("MoveTasks %v TODO err %v", t, err)
+		}
 	} else {
 		db.DPrintf(db.FTTASKMGR, "spawned task %v %v", p.GetPid(), p.Args)
-		res := ftm.waitForTask(start, p, t)
-		ch <- res
+		ftm.waitForTask(start, p, t)
 	}
 }
 
-func (ftm *FtTaskCoord[Data, Output]) waitForTask(start time.Time, p *proc.Proc, id ftclnt.TaskId) Tresult {
+func (ftm *FtTaskCoord[Data, Output]) waitForTask(start time.Time, p *proc.Proc, id ftclnt.TaskId) {
 	ftm.WaitStart(p.GetPid())
 	db.DPrintf(db.ALWAYS, "Start Latency %v", time.Since(start))
 	status, err := ftm.WaitExit(p.GetPid())
-	ms := time.Since(start).Milliseconds()
 	if err == nil && status.IsStatusOK() {
 		if err := ftm.MoveTasks([]ftclnt.TaskId{id}, ftclnt.DONE); err != nil {
-			db.DFatalf("MarkDone %v done err %v", id, err)
+			db.DFatalf("MoveTasks %v done err %v", id, err)
 		}
-		return Tresult{id, true, ms, status}
+		spstats.Inc(&ftm.AStat.Nok, 1)
 	} else if err == nil && status.IsStatusErr() && !status.IsCrashed() {
 		db.DPrintf(db.ALWAYS, "task %v errored status %v msg %v", id, status, status.Msg())
+		spstats.Inc(&ftm.AStat.Nerror, 1)
 		// mark task as done, but return error
-		if err := ftm.MoveTasks([]ftclnt.TaskId{id}, ftclnt.DONE); err != nil {
-			db.DFatalf("MarkDone %v done err %v", id, err)
+		if err := ftm.MoveTasks([]ftclnt.TaskId{id}, ftclnt.ERROR); err != nil {
+			db.DFatalf("MoveTasks %v error err %v", id, err)
 		}
-		return Tresult{id, false, ms, status}
+		//if err := ftm.AddTaskOutputs([]ftclnt.TaskId{id}, status, false); err != nil {
+		//	db.DFatalf("AddTaskOutputs %v error err %v", id, err)
+		//}
 	} else { // an error, task crashed, or was evicted; make it runnable again
 		db.DPrintf(db.FTTASKMGR, "task %v failed %v err %v msg %q", id, status, err, status.Msg())
+		spstats.Inc(&ftm.AStat.Nfail, 1)
 		if err := ftm.MoveTasks([]ftclnt.TaskId{id}, ftclnt.TODO); err != nil {
-			db.DFatalf("MarkRunnable %v err %v", id, err)
+			db.DFatalf("MoveTasks %v todo err %v", id, err)
 		}
-		return Tresult{id, false, ms, nil}
 	}
 }

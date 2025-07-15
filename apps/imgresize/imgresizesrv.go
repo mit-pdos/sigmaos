@@ -102,12 +102,12 @@ func (imgd *ImgSrv) Work() {
 	if err != nil {
 		db.DFatalf("NewTaskMgr err %v", err)
 	}
-	status := ftc.ExecuteTasks(getMkProcFn(imgd.ftclnt.ServerId(), imgd.nrounds, imgd.workerMcpu, imgd.workerMem))
-	db.DPrintf(db.ALWAYS, "imgresized exit")
+	st := ftc.ExecuteTasks(getMkProcFn(imgd.ftclnt.ServerId(), imgd.nrounds, imgd.workerMcpu, imgd.workerMem))
+	//ids, err := ftc.GetTasksByStatus(fttask_clnt.ERROR)
+	//if err != nil {
+	//db.DFatalf("GetTasksByStatus err %v", err)
+	//}
+	imgd.ClntExit(proc.NewStatusInfo(proc.StatusOK, "OK", st))
+	db.DPrintf(db.ALWAYS, "imgresized exit %v", st)
 	imgd.exited = true
-	if status == nil {
-		imgd.ClntExitOK()
-	} else {
-		imgd.ClntExit(proc.NewStatusInfo(proc.StatusFatal, "task error", status))
-	}
 }

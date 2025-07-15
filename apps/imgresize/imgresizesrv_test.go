@@ -21,6 +21,7 @@ import (
 	"sigmaos/test"
 	"sigmaos/util/crash"
 	rd "sigmaos/util/rand"
+	"sigmaos/util/spstats"
 )
 
 const (
@@ -171,10 +172,15 @@ func TestImgdFatalError(t *testing.T) {
 	err = ts.ftclnt.SubmittedLastTask()
 	assert.Nil(ts.mrts.T, err)
 
-	gs := imgd.WaitGroup()
-	for _, s := range gs {
-		assert.True(ts.mrts.T, s.IsStatusFatal(), s)
-	}
+	stati := imgd.WaitGroup()
+	assert.True(t, len(stati) > 0)
+	assert.True(t, stati[0].IsStatusOK())
+
+	stro, err := spstats.UnmarshalTcounterSnapshot(stati[0].Data())
+	assert.Nil(ts.mrts.T, err)
+
+	assert.True(t, stro.Counters["Nerror"] > 0)
+
 	ts.ftsrv.Stop(true)
 }
 

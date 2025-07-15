@@ -87,12 +87,14 @@ type PathClntAPI interface {
 }
 
 type ClntStats struct {
-	spstats.PathClntStatsSnapshot
-	spstats.SpStatsSnapshot
+	Path *spstats.TcounterSnapshot
+	Sp   *spstats.TcounterSnapshot
+}
+
+func NewClntStats() *ClntStats {
+	return &ClntStats{spstats.NewTcounterSnapshot(), spstats.NewTcounterSnapshot()}
 }
 
 func (cst *ClntStats) String() string {
-	pc := &cst.PathClntStatsSnapshot
-	sp := &cst.SpStatsSnapshot
-	return fmt.Sprintf("\nClntStats:\n  Pclnt: %v\n  SpStats: %v", pc.String(), sp.String())
+	return fmt.Sprintf("\nClntStats:\n  Pclnt: %v\n  SpStats: %v", cst.Path.String(), cst.Sp.String())
 }

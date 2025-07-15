@@ -452,8 +452,8 @@ func TestAtMostOnce(t *testing.T) {
 	st1, err := sc.Stats()
 	assert.Nil(t, err)
 
-	assert.True(t, st1.PathClntStatsSnapshot.Counters["NgetNamedOK"] > st.PathClntStatsSnapshot.Counters["NgetNamed"])
-	assert.True(t, st1.PathClntStatsSnapshot.Counters["Nsession"] > st.PathClntStatsSnapshot.Counters["Nsession"])
+	assert.True(t, st1.Path.Counters["NgetNamedOK"] > st.Path.Counters["NgetNamed"])
+	assert.True(t, st1.Path.Counters["Nsession"] > st.Path.Counters["Nsession"])
 
 	if err := ndc.StopNamed(nd2); !assert.Nil(ts.T, err, "Err stop named: %v", err) {
 		return

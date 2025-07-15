@@ -327,8 +327,8 @@ func (fsc *FsClient) Stats() (*sos.ClntStats, error) {
 	spst := fsc.pc.FidClnt.PathClntStats().StatsSnapshot()
 	spst.Counters["Nfid"] = int64(fsc.pc.FidClnt.Len())
 	st := &sos.ClntStats{
-		PathClntStatsSnapshot: *spst,
-		SpStatsSnapshot:       *fsc.pc.FidClnt.SpStats().StatsSnapshot(),
+		Path: spst,
+		Sp:   fsc.pc.FidClnt.SpStats().StatsSnapshot(),
 	}
 	return st, nil
 }

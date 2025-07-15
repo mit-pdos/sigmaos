@@ -77,18 +77,9 @@ func (st *SpStats) Inc(fct sessp.Tfcall, ql int64) {
 	Inc(&st.Ntotal, 1)
 }
 
-// For reading and marshaling
-type SpStatsSnapshot struct {
-	Counters map[string]int64
-}
-
-// Make a SpStatsSnapshot from st while concurrent Inc()s may happen
-func (st *SpStats) StatsSnapshot() *SpStatsSnapshot {
-	stro := &SpStatsSnapshot{Counters: make(map[string]int64)}
-	FillCounters(st, stro.Counters)
+// Make a snapshot from st while concurrent Inc()s may happen
+func (st *SpStats) StatsSnapshot() *TcounterSnapshot {
+	stro := NewTcounterSnapshot()
+	stro.FillCounters(st)
 	return stro
-}
-
-func (st *SpStatsSnapshot) String() string {
-	return StringCounters(st.Counters)
 }

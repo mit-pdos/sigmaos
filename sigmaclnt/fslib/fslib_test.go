@@ -86,10 +86,10 @@ func TestStats(t *testing.T) {
 	st1, err := ts.Stats()
 	assert.Nil(t, err)
 
-	assert.True(t, st1.PathClntStatsSnapshot.Counters["Nfid"] == st.PathClntStatsSnapshot.Counters["Nfid"])
-	assert.True(t, st1.SpStatsSnapshot.Counters["Nopen"] == st.SpStatsSnapshot.Counters["Nopen"]+1)
-	assert.True(t, st1.SpStatsSnapshot.Counters["Nwalk"] == st.SpStatsSnapshot.Counters["Nwalk"]+2)
-	assert.True(t, st1.SpStatsSnapshot.Counters["Nclunk"] == st.SpStatsSnapshot.Counters["Nclunk"]+2)
+	assert.True(t, st1.Path.Counters["Nfid"] == st.Path.Counters["Nfid"])
+	assert.True(t, st1.Sp.Counters["Nopen"] == st.Sp.Counters["Nopen"]+1)
+	assert.True(t, st1.Sp.Counters["Nwalk"] == st.Sp.Counters["Nwalk"]+2)
+	assert.True(t, st1.Sp.Counters["Nclunk"] == st.Sp.Counters["Nclunk"]+2)
 }
 
 func TestRemoveBasic(t *testing.T) {
@@ -1140,8 +1140,8 @@ func TestSymlinkPath(t *testing.T) {
 	st1, err := ts.Stats()
 	assert.Nil(t, err)
 
-	assert.True(t, st1.PathClntStatsSnapshot.Counters["Nsym"] == st.PathClntStatsSnapshot.Counters["Nsym"]+1)
-	assert.True(t, st1.PathClntStatsSnapshot.Counters["Nfid"] == st.PathClntStatsSnapshot.Counters["Nfid"])
+	assert.True(t, st1.Path.Counters["Nsym"] == st.Path.Counters["Nsym"]+1)
+	assert.True(t, st1.Path.Counters["Nfid"] == st.Path.Counters["Nfid"])
 
 	err = ts.RmDir(dn)
 	assert.Nil(t, err, "RmDir: %v", err)
@@ -1185,8 +1185,8 @@ func TestEndpointLink(t *testing.T) {
 	st1, err := ts.Stats()
 	assert.Nil(t, err)
 
-	assert.True(t, st1.PathClntStatsSnapshot.Counters["Nsym"] == st.PathClntStatsSnapshot.Counters["Nsym"])
-	assert.True(t, st1.PathClntStatsSnapshot.Counters["Nfid"] == st.PathClntStatsSnapshot.Counters["Nfid"]+1)
+	assert.True(t, st1.Path.Counters["Nsym"] == st.Path.Counters["Nsym"])
+	assert.True(t, st1.Path.Counters["Nfid"] == st.Path.Counters["Nfid"]+1)
 
 	err = ts.RmDir(dn)
 	assert.Nil(t, err, "RmDir: %v", err)
@@ -1235,10 +1235,10 @@ func TestUnionDir(t *testing.T) {
 	st2, err := ts.Stats()
 	assert.Nil(t, err)
 
-	assert.True(t, st.PathClntStatsSnapshot.Counters["Nsym"] == st2.PathClntStatsSnapshot.Counters["Nsym"])
-	assert.True(t, st0.PathClntStatsSnapshot.Counters["Nfid"] == st.PathClntStatsSnapshot.Counters["Nfid"]+1)
-	assert.True(t, st0.PathClntStatsSnapshot.Counters["Nfid"] == st1.PathClntStatsSnapshot.Counters["Nfid"])
-	assert.True(t, st0.PathClntStatsSnapshot.Counters["Nfid"] == st2.PathClntStatsSnapshot.Counters["Nfid"])
+	assert.True(t, st.Path.Counters["Nsym"] == st2.Path.Counters["Nsym"])
+	assert.True(t, st0.Path.Counters["Nfid"] == st.Path.Counters["Nfid"]+1)
+	assert.True(t, st0.Path.Counters["Nfid"] == st1.Path.Counters["Nfid"])
+	assert.True(t, st0.Path.Counters["Nfid"] == st2.Path.Counters["Nfid"])
 
 	pn, err := ts.ResolveMounts(filepath.Join(pathname, DIR1, sp.ANY))
 	assert.Equal(t, nil, err)
@@ -1449,8 +1449,8 @@ func TestEndpointUnion(t *testing.T) {
 	st1, err := ts.Stats()
 	assert.Nil(t, err)
 
-	assert.True(t, st1.PathClntStatsSnapshot.Counters["Nsym"] == st.PathClntStatsSnapshot.Counters["Nsym"])
-	assert.True(t, st1.PathClntStatsSnapshot.Counters["Nfid"] == st.PathClntStatsSnapshot.Counters["Nfid"]+1)
+	assert.True(t, st1.Path.Counters["Nsym"] == st.Path.Counters["Nsym"])
+	assert.True(t, st1.Path.Counters["Nfid"] == st.Path.Counters["Nfid"]+1)
 
 	err = ts.Remove(pn)
 	assert.Nil(t, err, "Remove %v", err)

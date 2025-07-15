@@ -163,13 +163,16 @@ func (st *Stats) SortPath() []pair {
 }
 
 type SrvStatsSnapshot struct {
-	spstats.SpStatsSnapshot
+	*spstats.TcounterSnapshot
 	StatsCommon
 }
 
+func NewSrvStatsSnapshot() *SrvStatsSnapshot {
+	return &SrvStatsSnapshot{TcounterSnapshot: spstats.NewTcounterSnapshot()}
+}
+
 func (sst *SrvStatsSnapshot) String() string {
-	sp := &sst.SpStatsSnapshot
-	s := sp.String()
+	s := sst.TcounterSnapshot.String()
 	c := &sst.StatsCommon
 	s += c.String()
 	return s
@@ -180,8 +183,8 @@ func (sti *StatInode) StatsSnapshot() *SrvStatsSnapshot {
 	spro := sp.StatsSnapshot()
 	sti.mu.Lock()
 	defer sti.mu.Unlock()
-	stro := &SrvStatsSnapshot{}
-	stro.SpStatsSnapshot = *spro
+	stro := NewSrvStatsSnapshot()
+	stro.TcounterSnapshot = spro
 	stro.StatsCommon.AvgQlen = float64(sti.st.Qlen.Load()) / float64(sti.st.SpSt.Ntotal.Load())
 	stro.Paths = sti.st.Paths
 	stro.Util = sti.st.Util

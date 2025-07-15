@@ -7,6 +7,8 @@ import (
 	"strings"
 	"sync/atomic"
 
+	"github.com/mitchellh/mapstructure"
+
 	sp "sigmaos/sigmap"
 )
 
@@ -52,28 +54,42 @@ func Max(max *Tcounter, v int64) {
 	}
 }
 
-func FillCounters(st any, counters map[string]int64) {
+type TcounterSnapshot struct {
+	Counters map[string]int64
+}
+
+func NewTcounterSnapshot() *TcounterSnapshot {
+	return &TcounterSnapshot{Counters: make(map[string]int64)}
+}
+
+func (cnts *TcounterSnapshot) FillCounters(st any) {
 	v := reflect.ValueOf(st).Elem()
 	for i := 0; i < v.NumField(); i++ {
 		t := v.Field(i).Type().String()
 		n := v.Type().Field(i).Name
 		if strings.HasSuffix(t, "atomic.Int64") {
 			p := v.Field(i).Addr().Interface().(*atomic.Int64)
-			counters[n] = p.Load()
+			cnts.Counters[n] = p.Load()
 		}
 	}
 }
 
-func StringCounters(counters map[string]int64) string {
-	ks := make([]string, 0, len(counters))
-	for k := range counters {
+func (cnts *TcounterSnapshot) String() string {
+	ks := make([]string, 0, len(cnts.Counters))
+	for k := range cnts.Counters {
 		ks = append(ks, k)
 	}
 	sort.Strings(ks)
 	s := "["
 	for _, k := range ks {
-		s += fmt.Sprintf("{%s: %d}", k, counters[k])
+		s += fmt.Sprintf("{%s: %d}", k, cnts.Counters[k])
 	}
 	s += "] "
 	return s
+}
+
+func UnmarshalTcounterSnapshot(d any) (*TcounterSnapshot, error) {
+	st := NewTcounterSnapshot()
+	err := mapstructure.Decode(d, &st)
+	return st, err
 }

@@ -160,18 +160,7 @@ func (rpcc *RPCClnt) DelegatedRPC(rpcIdx uint64, res proto.Message) error {
 	if rep.Err.ErrCode != 0 {
 		return sp.NewErr(rep.Err)
 	}
-	// TODO: process the wrapped reply
-	if err := proto.Unmarshal(outiov[1], res); err != nil {
-		return err
-	}
-	if outblob != nil {
-		// Need to get the blob again, because its value will be reset during
-		// unmarshaling
-		outblob = rpc.GetBlob(res)
-		// Set the IoVec to handle replies with blobs
-		outblob.SetIoVec(outiov[2:])
-	}
-	return nil
+	return processWrappedRPCRep(outiov, res, outblob)
 }
 
 func (rpcc *RPCClnt) StatsClnt() map[string]*rpc.MethodStatSnapshot {

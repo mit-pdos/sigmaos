@@ -16,7 +16,6 @@ import (
 	"time"
 
 	"github.com/dustin/go-humanize"
-	"github.com/mitchellh/mapstructure"
 	"github.com/stretchr/testify/assert"
 
 	"sigmaos/apps/mr"
@@ -34,6 +33,7 @@ import (
 	"sigmaos/util/crash"
 	"sigmaos/util/perf"
 	rd "sigmaos/util/rand"
+	"sigmaos/util/spstats"
 
 	// "sigmaos/sigmasrv/stats"
 	"sigmaos/apps/mr/grep"
@@ -427,29 +427,28 @@ func (ts *Tstate) crashServers(srv string, l crash.Tselector, em *crash.TeventMa
 	}
 }
 
-func (ts *Tstate) collectStats(stati []*procgroupmgr.ProcStatus) (uint64, mr.Stat) {
-	mrst := mr.Stat{}
+func (ts *Tstate) collectStats(stati []*procgroupmgr.ProcStatus) (uint64, *spstats.TcounterSnapshot) {
+	mrst := spstats.NewTcounterSnapshot()
 	nstart := uint64(0)
 	for _, st := range stati {
 		nstart += uint64(st.Nstart)
 		db.DPrintf(db.TEST, "grpmgr stat: ncoord %d %v", st.Nstart, st)
 		if st.IsStatusOK() {
-			// if st.Status != nil && st.IsStatusOK() {
-			t := mr.Stat{}
-			err := mapstructure.Decode(st.Data(), &t)
+			stro, err := spstats.UnmarshalTcounterSnapshot(st.Data())
 			assert.Nil(ts.mrts.T, err)
-			if t.Nmap > 0 || t.Nreduce > 0 {
-				mrst = t
+			db.DPrintf(db.TEST, "stats %v", stro)
+			if stro.Counters["Nmap"] > 0 || stro.Counters["Nreduce"] > 0 {
+				mrst = stro
 			}
-			if t.Ntask > mrst.Ntask {
-				mrst.Ntask = t.Ntask
+			if stro.Counters["Ntask"] > mrst.Counters["Ntask"] {
+				mrst.Counters["Ntask"] = stro.Counters["Ntask"]
 			}
 		}
 	}
 	return nstart, mrst
 }
 
-func runN(t *testing.T, em *crash.TeventMap, srvs map[string]crash.Tselector, maliciousMapper int, monitor bool) (uint64, uint64, *mr.Stat) {
+func runN(t *testing.T, em *crash.TeventMap, srvs map[string]crash.Tselector, maliciousMapper int, monitor bool) (int64, uint64, *spstats.TcounterSnapshot) {
 	var s3secrets *sp.SecretProto
 	var err1 error
 	// If running with malicious mappers, try to get restricted AWS secrets
@@ -554,7 +553,7 @@ func runN(t *testing.T, em *crash.TeventMap, srvs map[string]crash.Tselector, ma
 	err = mr.CleanupMROutputs(ts.mrts.GetRealm(test.REALM1).FsLib, mr.JobOut(job.Output, ts.job), mr.MapIntermediateDir(ts.job, job.Intermediate), true)
 	assert.Nil(ts.mrts.T, err, "Cleanup MR Outputs: %v", err)
 	db.DPrintf(db.TEST, "Done cleanup MR outputs")
-	return uint64(nmap + ts.nreducetask), nstart, &mrst
+	return int64(nmap + ts.nreducetask), nstart, mrst
 }
 
 // if f returns true, repeat test
@@ -572,8 +571,8 @@ func repeatTest(t *testing.T, f func() bool, n int) int {
 
 func TestMRJob(t *testing.T) {
 	n, _, st := runN(t, nil, nil, 0, true)
-	assert.Equal(t, n, st.Ntask)
-	assert.Equal(t, uint64(0), st.Nfail)
+	assert.Equal(t, n, st.Counters["Ntask"])
+	assert.Equal(t, int64(0), st.Counters["Nfail"])
 }
 
 func TestMaliciousMapper(t *testing.T) {
@@ -582,26 +581,26 @@ func TestMaliciousMapper(t *testing.T) {
 
 func TestCrashMapperOnly(t *testing.T) {
 	_, _, st := runN(t, mapEv, nil, 0, false)
-	assert.True(t, st.Nfail > 0)
+	assert.True(t, st.Counters["Nfail"] > 0)
 }
 
 func TestCrashReducerOnlyCrash(t *testing.T) {
 	repeatTest(t, func() bool {
 		_, _, st := runN(t, reduceEv.Filter(crash.MRREDUCE_CRASH), nil, 0, false)
-		return st.Nfail == 0
+		return st.Counters["Nfail"] == 0
 	}, 10)
 }
 
 func TestCrashReducerOnlyPartition(t *testing.T) {
 	repeatTest(t, func() bool {
 		_, _, st := runN(t, reduceEv.Filter(crash.MRREDUCE_PARTITION), nil, 0, true)
-		return st.Nfail == 0
+		return st.Counters["Nfail"] == 0
 	}, 10)
 }
 
 func TestCrashReducerOnlyBoth(t *testing.T) {
 	_, _, st := runN(t, reduceEv, nil, 0, false)
-	assert.True(t, st.Nfail > 0)
+	assert.True(t, st.Counters["Nfail"] > 0)
 }
 
 func TestCrashCoordOnly(t *testing.T) {
@@ -623,7 +622,7 @@ func TestCrashTaskAndCoord(t *testing.T) {
 
 	ntask, nr, st := runN(t, em, nil, 0, true)
 	assert.True(t, nr > mr.NCOORD)
-	assert.True(t, st.Ntask > ntask)
+	assert.True(t, st.Counters["Ntask"] > ntask)
 }
 
 func TestCrashInfraUx1(t *testing.T) {
@@ -632,7 +631,7 @@ func TestCrashInfraUx1(t *testing.T) {
 	srvs[sp.UXREL] = crash.UX_CRASH
 	repeatTest(t, func() bool {
 		ntask, nstart, st := runN(t, crash.NewTeventMapOne(e0), srvs, 0, false)
-		return nstart == 1 && st.Ntask <= ntask && st.Nfail <= 0
+		return nstart == 1 && st.Counters["Ntask"] <= ntask && st.Counters["Nfail"] <= 0
 	}, 5)
 }
 
@@ -641,7 +640,7 @@ func TestCrashInfraBESched1(t *testing.T) {
 	srvs := make(map[string]crash.Tselector)
 	srvs[sp.BESCHEDREL] = crash.BESCHED_CRASH
 	ntask, _, st := runN(t, crash.NewTeventMapOne(e0), srvs, 0, false)
-	assert.True(t, st.Ntask >= ntask || st.Nfail >= 0)
+	assert.True(t, st.Counters["Ntask"] >= ntask || st.Counters["Nfail"] >= 0)
 }
 
 func TestCrashInfraMSched1(t *testing.T) {
@@ -649,7 +648,7 @@ func TestCrashInfraMSched1(t *testing.T) {
 	srvs := make(map[string]crash.Tselector)
 	srvs[sp.MSCHEDREL] = crash.MSCHED_CRASH
 	ntask, ncoord, st := runN(t, crash.NewTeventMapOne(e0), srvs, 0, false)
-	assert.True(t, st.Ntask > ntask || st.Nfail > 0 || ncoord > 1)
+	assert.True(t, st.Counters["Ntask"] > ntask || st.Counters["Nfail"] > 0 || ncoord > 1)
 }
 
 func TestCrashInfraProcd1(t *testing.T) {
@@ -657,7 +656,7 @@ func TestCrashInfraProcd1(t *testing.T) {
 	srvs := make(map[string]crash.Tselector)
 	srvs[sp.PROCDREL] = crash.PROCD_CRASH
 	ntask, _, st := runN(t, crash.NewTeventMapOne(e0), srvs, 0, false)
-	assert.True(t, st.Ntask > ntask || st.Nfail > 0)
+	assert.True(t, st.Counters["Ntask"] > ntask || st.Counters["Nfail"] > 0)
 }
 
 func TestCrashInfraMSchedBESchedUx1(t *testing.T) {
@@ -669,5 +668,5 @@ func TestCrashInfraMSchedBESchedUx1(t *testing.T) {
 	srvs[sp.UXREL] = crash.UX_CRASH
 	srvs[sp.MSCHEDREL] = crash.MSCHED_CRASH
 	ntask, nstart, st := runN(t, em, srvs, 0, false)
-	assert.True(t, nstart > 1 || st.Ntask > ntask || st.Nfail > 0)
+	assert.True(t, nstart > 1 || st.Counters["Ntask"] > ntask || st.Counters["Nfail"] > 0)
 }

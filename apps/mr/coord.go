@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"reflect"
 	"sort"
 	"strconv"
 	"sync/atomic"
@@ -21,6 +20,7 @@ import (
 	"sigmaos/util/crash"
 	"sigmaos/util/perf"
 	"sigmaos/util/rand"
+	"sigmaos/util/spstats"
 )
 
 const (
@@ -74,44 +74,18 @@ type Coord struct {
 	perf            *perf.Perf
 }
 
-type Stat struct {
-	Ntask          uint64
-	Nmap           uint64
-	Nreduce        uint64
-	Nfail          uint64
-	Nrestart       uint64
-	NrecoverMap    uint64
-	NrecoverReduce uint64
-}
-
-func (s *Stat) String() string {
-	return fmt.Sprintf("{nT %d nM %d nR %d nfail %d nrestart %d nrecoverM %d nrecoverR %d}", s.Ntask, s.Nmap, s.Nreduce, s.Nfail, s.Nrestart, s.NrecoverMap, s.NrecoverReduce)
-}
-
 type AStat struct {
-	Ntask          atomic.Uint64
-	Nmap           atomic.Uint64
-	Nreduce        atomic.Uint64
-	Nfail          atomic.Uint64
-	Nrestart       atomic.Uint64
-	NrecoverMap    atomic.Uint64
-	NrecoverReduce atomic.Uint64
+	Ntask          spstats.Tcounter
+	Nmap           spstats.Tcounter
+	Nreduce        spstats.Tcounter
+	Nfail          spstats.Tcounter
+	Nrestart       spstats.Tcounter
+	NrecoverMap    spstats.Tcounter
+	NrecoverReduce spstats.Tcounter
 }
 
 func (s *AStat) String() string {
 	return fmt.Sprintf("{nT %d nM %d nR %d nfail %d nrestart %d nrecoverM %d nrecoverR %d}", s.Ntask, s.Nmap, s.Nreduce, s.Nfail, s.Nrestart, s.NrecoverMap, s.NrecoverReduce)
-}
-
-func (s *AStat) Snapshot() Stat {
-	st := &Stat{}
-	v := reflect.ValueOf(s).Elem()
-	v1 := reflect.ValueOf(st).Elem()
-	for i := 0; i < v.NumField(); i++ {
-		f := v.Field(i).Addr().Interface().(*atomic.Uint64)
-		f1 := v1.Field(i).Addr().Interface().(*uint64)
-		*f1 = f.Load()
-	}
-	return *st
 }
 
 type NewProc func(fttask_clnt.Task[[]byte]) (*proc.Proc, error)
@@ -378,7 +352,7 @@ func (c *Coord) doRestart() bool {
 	if n+m > 0 {
 		db.DPrintf(db.ALWAYS, "doRestart(): restart %d tasks\n", n+m)
 	}
-	c.stat.Nrestart.Add(uint64(n + m))
+	spstats.Inc(&c.stat.Nrestart, int64(n+m))
 	return n+m > 0
 }
 
@@ -551,7 +525,7 @@ func (c *Coord) Work() {
 	if n, err := c.mftclnt.MoveTasksByStatus(fttask_clnt.WIP, fttask_clnt.TODO); err != nil {
 		db.DFatalf("RecoverTasks mapper err %v", err)
 	} else {
-		c.stat.NrecoverMap.Store(uint64(n))
+		spstats.Store(&c.stat.NrecoverMap, int64(n))
 		db.DPrintf(db.MR, "Recover %d map tasks took %v", n, time.Since(start))
 	}
 
@@ -559,7 +533,7 @@ func (c *Coord) Work() {
 	if n, err := c.rftclnt.MoveTasksByStatus(fttask_clnt.WIP, fttask_clnt.TODO); err != nil {
 		db.DFatalf("RecoverTasks reducer err %v", err)
 	} else {
-		c.stat.NrecoverReduce.Store(uint64(n))
+		c.stat.NrecoverReduce.Store(int64(n))
 		db.DPrintf(db.MR, "Recover %d reduce tasks took %v", n, time.Since(start))
 	}
 
@@ -571,7 +545,7 @@ func (c *Coord) Work() {
 	if err != nil {
 		db.DFatalf("Stats err %v\n", err)
 	}
-	c.stat.Ntask.Store(uint64(mftStats.NumDone + rftStats.NumDone + mftStats.NumError + rftStats.NumError + mftStats.NumTodo + rftStats.NumTodo + mftStats.NumError + rftStats.NumError))
+	spstats.Store(&c.stat.Ntask, int64(mftStats.NumDone+rftStats.NumDone+mftStats.NumError+rftStats.NumError+mftStats.NumTodo+rftStats.NumTodo+mftStats.NumError+rftStats.NumError))
 
 	start = time.Now()
 	c.doRestart()
@@ -622,6 +596,8 @@ func (c *Coord) Work() {
 	db.DPrintf(db.ALWAYS, "E2e bench took %v", time.Since(jobStart))
 	JobDone(c.FsLib, c.jobRoot, c.job)
 
-	c.ClntExit(proc.NewStatusInfo(proc.StatusOK, "OK", c.stat.Snapshot()))
+	stro := spstats.NewTcounterSnapshot()
+	stro.FillCounters(&c.stat)
+	c.ClntExit(proc.NewStatusInfo(proc.StatusOK, "OK", stro))
 	defer c.perf.Done()
 }

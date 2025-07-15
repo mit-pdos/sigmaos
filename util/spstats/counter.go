@@ -26,6 +26,12 @@ func Inc(c *Tcounter, v int64) {
 	}
 }
 
+func Store(c *Tcounter, v int64) {
+	if sp.Conf.Util.STATS {
+		c.Store(v)
+	}
+}
+
 func Add(c *Tcounter, v Tcounter) {
 	if sp.Conf.Util.STATS {
 		c.Add(v.Load())

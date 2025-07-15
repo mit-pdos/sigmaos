@@ -62,6 +62,17 @@ func NewTcounterSnapshot() *TcounterSnapshot {
 	return &TcounterSnapshot{Counters: make(map[string]int64)}
 }
 
+func (cnts *TcounterSnapshot) MergeCounters(st *TcounterSnapshot) {
+	for k, v := range st.Counters {
+		_, ok := cnts.Counters[k]
+		if ok {
+			cnts.Counters[k] += v
+		} else {
+			cnts.Counters[k] = v
+		}
+	}
+}
+
 func (cnts *TcounterSnapshot) FillCounters(st any) {
 	v := reflect.ValueOf(st).Elem()
 	for i := 0; i < v.NumField(); i++ {

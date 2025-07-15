@@ -184,7 +184,7 @@ func TestImgdFatalError(t *testing.T) {
 	ts.ftsrv.Stop(true)
 }
 
-func (ts *Tstate) imgdJob(paths []string, em *crash.TeventMap) {
+func (ts *Tstate) imgdJob(paths []string, em *crash.TeventMap) *spstats.TcounterSnapshot {
 	imgd := imgresize.StartImgd(ts.mrts.GetRealm(test.REALM1).SigmaClnt, ts.ftclnt.ServerId(), IMG_RESIZE_MCPU, IMG_RESIZE_MEM, false, 1, 0, em)
 
 	tasks := make([]*fttask_clnt.Task[imgresize.Ttask], len(paths))
@@ -201,9 +201,14 @@ func (ts *Tstate) imgdJob(paths []string, em *crash.TeventMap) {
 	go ts.progress()
 
 	gs := imgd.WaitGroup()
+	st := spstats.NewTcounterSnapshot()
 	for _, s := range gs {
 		assert.True(ts.mrts.T, s.IsStatusOK(), s)
+		stro, err := spstats.UnmarshalTcounterSnapshot(s.Data())
+		st.MergeCounters(stro)
+		assert.Nil(ts.mrts.T, err)
 	}
+	return st
 }
 
 func TestImgdOneOK(t *testing.T) {
@@ -238,7 +243,9 @@ func TestImgdOneCrash(t *testing.T) {
 	}
 
 	fn := filepath.Join(sp.S3, sp.LOCAL, "9ps3/img-save/8.jpg")
-	ts.imgdJob([]string{fn}, crash.NewTeventMapOne(e0))
+	stro := ts.imgdJob([]string{fn}, crash.NewTeventMapOne(e0))
+	assert.True(t, stro.Counters["Nfail"] > 0)
+
 	ts.shutdown()
 }
 

@@ -336,7 +336,7 @@ func (sca *SPProxySrvAPI) InvalidateNamedEndpointCacheEntryRealm(ctx fs.CtxI, re
 	return nil
 }
 
-func (sca *SPProxySrvAPI) GetNamedEndpoint(ctx fs.CtxI, req scproto.SigmaRealmReq, rep *scproto.SigmaMountRep) error {
+func (sca *SPProxySrvAPI) GetNamedEndpointRealm(ctx fs.CtxI, req scproto.SigmaRealmReq, rep *scproto.SigmaMountRep) error {
 	ep, err := sca.sc.GetNamedEndpointRealm(sp.Trealm(req.RealmStr))
 	if err != nil {
 		db.DPrintf(db.ERROR, "Err GetNamedEndpoint: %v", err)

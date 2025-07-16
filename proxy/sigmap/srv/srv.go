@@ -184,8 +184,8 @@ func (spps *SPProxySrv) getSigmaClnt(pe *proc.ProcEnv, p *proc.Proc) (*sigmaclnt
 	pe.UseDialProxy = false
 
 	// Initiate sigmaclnt creation
-	spps.scm.AllocProcState(pe, p)
-	return spps.scm.getSigmaClnt(pe.GetPID())
+	ps := spps.scm.AllocProcState(pe, p)
+	return ps.GetSigmaClnt()
 }
 
 func (spps *SPProxySrv) IncomingProc(p *proc.Proc) {

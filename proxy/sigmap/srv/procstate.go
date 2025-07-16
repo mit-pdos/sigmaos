@@ -7,8 +7,10 @@ import (
 	"sigmaos/apps/epcache"
 	epcacheclnt "sigmaos/apps/epcache/clnt"
 	db "sigmaos/debug"
+	dialproxyclnt "sigmaos/dialproxy/clnt"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
+	"sigmaos/sigmaclnt/fidclnt"
 	"sigmaos/sigmaclnt/procclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/util/perf"
@@ -38,10 +40,18 @@ func (scm *SigmaClntMgr) AllocProcState(pe *proc.ProcEnv, p *proc.Proc) *procSta
 		return ps
 	}
 
-	db.DPrintf(db.SPPROXYSRV, "AllocProcState newState %v", pe.GetPID())
 	// Otherwise, start to create the proc's state
-	scm.ps[pe.GetPID()] = newProcState(scm.spps, pe, p)
-	return scm.ps[pe.GetPID()]
+	ps := newProcState(scm.spps, pe, p)
+
+	// Test program may create many sigmaclnts with the same PID, so don't cache
+	// them to avoid errors
+	cacheState := pe.GetProgram() != "test"
+
+	db.DPrintf(db.SPPROXYSRV, "AllocProcState newState %v", pe.GetPID())
+	if cacheState {
+		scm.ps[pe.GetPID()] = ps
+	}
+	return ps
 }
 
 func (scm *SigmaClntMgr) DelProcState(p *proc.Proc) {
@@ -49,12 +59,12 @@ func (scm *SigmaClntMgr) DelProcState(p *proc.Proc) {
 }
 
 // Expects ps to be allocated already
-func (scm *SigmaClntMgr) getSigmaClnt(pid sp.Tpid) (*sigmaclnt.SigmaClnt, *epcacheclnt.EndpointCacheClnt, error) {
+func (scm *SigmaClntMgr) GetSigmaClnt(pid sp.Tpid) (*sigmaclnt.SigmaClnt, *epcacheclnt.EndpointCacheClnt, error) {
 	scm.mu.Lock()
 	ps := scm.ps[pid]
 	scm.mu.Unlock()
 
-	return ps.getSigmaClnt()
+	return ps.GetSigmaClnt()
 }
 
 type procState struct {
@@ -79,7 +89,7 @@ func newProcState(spps *SPProxySrv, pe *proc.ProcEnv, p *proc.Proc) *procState {
 	return ps
 }
 
-func (ps *procState) getSigmaClnt() (*sigmaclnt.SigmaClnt, *epcacheclnt.EndpointCacheClnt, error) {
+func (ps *procState) GetSigmaClnt() (*sigmaclnt.SigmaClnt, *epcacheclnt.EndpointCacheClnt, error) {
 	ps.mu.Lock()
 	defer ps.mu.Unlock()
 
@@ -105,7 +115,7 @@ func (ps *procState) setSigmaClnt(sc *sigmaclnt.SigmaClnt, epcc *epcacheclnt.End
 func (ps *procState) createSigmaClnt(spps *SPProxySrv) {
 	db.DPrintf(db.SPPROXYSRV, "createSigmaClnt for %v withProcClnt %v", ps.pe.GetPID(), ps.pe.UseSPProxyProcClnt)
 	start := time.Now()
-	sc, err := sigmaclnt.NewSigmaClntFsLibFidClnt(ps.pe, spps.fidc)
+	sc, err := sigmaclnt.NewSigmaClntFsLibFidClnt(ps.pe, fidclnt.NewFidClnt(ps.pe, dialproxyclnt.NewDialProxyClnt(ps.pe)))
 	perf.LogSpawnLatency("SPProxySrv.createSigmaClnt initFsLib", ps.pe.GetPID(), ps.pe.GetSpawnTime(), start)
 	if err != nil {
 		db.DPrintf(db.SPPROXYSRV_ERR, "Error NewSigmaClnt proc %v", ps.pe.GetPID())

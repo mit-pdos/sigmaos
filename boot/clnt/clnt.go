@@ -105,7 +105,7 @@ func NewKernelClntStart(etcdIP sp.Tip, pe *proc.ProcEnv, ntype Tboot, dialproxy 
 }
 
 func NewKernelClnt(kernelId string, etcdIP sp.Tip, pe *proc.ProcEnv) (*Kernel, error) {
-	db.DPrintf(db.KERNEL, "NewKernelClnt %s\n", kernelId)
+	db.DPrintf(db.KERNEL, "NewKernelClnt %v", kernelId)
 	sc, err := sigmaclnt.NewSigmaClntRootInit(pe)
 	if err != nil {
 		db.DPrintf(db.ALWAYS, "NewKernelClnt sigmaclnt err %v", err)

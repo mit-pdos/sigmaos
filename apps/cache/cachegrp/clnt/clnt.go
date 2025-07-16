@@ -120,6 +120,16 @@ func (csc *CachedSvcClnt) NewMultiGetReqs(keys []string, nserver int) map[int]*c
 	return reqs
 }
 
+// XXX Fences?
+// Do we need a non-null fence?
+func (cs *CachedSvcClnt) NewDumpReq(shard cache.Tshard) *cacheproto.ShardReq {
+	req := &cacheproto.ShardReq{
+		Shard: uint32(shard),
+		Fence: sp.NullFence().FenceProto(),
+	}
+	return req
+}
+
 func (csc *CachedSvcClnt) Key2shard(key string) uint32 {
 	return csc.cc.Key2shard(key)
 }

@@ -47,6 +47,7 @@ message ProcEnvProto {
   map<string, TendpointProto> cachedEndpoints = 27;
   string valgrind = 28;
   bool delegateInitFlag = 30;
+  bool useSPProxyProcClnt = 31;
 }
 
 message ProcProto {

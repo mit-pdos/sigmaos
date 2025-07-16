@@ -10,6 +10,7 @@ import (
 	spproto "sigmaos/proxy/sigmap/proto"
 	"sigmaos/rpc"
 	rpcclnt "sigmaos/rpc/clnt"
+	"sigmaos/rpc/clnt/channel"
 	rpcchan "sigmaos/rpc/clnt/channel/rpcchannel"
 	rpcnc "sigmaos/rpc/clnt/netconn"
 	sessp "sigmaos/session/proto"
@@ -40,12 +41,16 @@ func NewSPProxyClnt(pe *proc.ProcEnv, npc *dialproxyclnt.DialProxyClnt) (*SPProx
 		disconnected: false,
 	}
 	// Initialize the server-side component of sigmaclnt by sending the proc env
-	db.DPrintf(db.SPPROXYCLNT, "Init sigmaclntclnt for %v", pe.GetPID())
+	db.DPrintf(db.SPPROXYCLNT, "Init sigmaproxyclnt for %v", pe.GetPID())
 	if err := scc.Init(); err != nil {
 		db.DPrintf(db.ERROR, "Error init sigmaclnt: %v", err)
 		return nil, err
 	}
 	return scc, nil
+}
+
+func (scc *SPProxyClnt) GetRPCChannel() channel.RPCChannel {
+	return scc.rpcc.Channel()
 }
 
 func (scc *SPProxyClnt) StatsSrv() (*rpc.RPCStatsSnapshot, error) {

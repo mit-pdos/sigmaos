@@ -8,7 +8,8 @@ import (
 )
 
 type RPCClntOptions struct {
-	NewRPCChannel channel.NewRPCChannelFn
+	NewRPCChannel          channel.NewRPCChannelFn
+	NewDelegatedRPCChannel channel.NewRPCChannelFn
 }
 
 func NewEmptyRPCClntOptions() *RPCClntOptions {
@@ -17,11 +18,23 @@ func NewEmptyRPCClntOptions() *RPCClntOptions {
 			db.DPrintf(db.ERROR, "RPC Channel constructor not set")
 			return nil, fmt.Errorf("RPC Channel constructor not set")
 		},
+		NewDelegatedRPCChannel: func(string) (channel.RPCChannel, error) {
+			db.DPrintf(db.RPCCHAN, "No delegated RPC channel supplied")
+			return nil, nil
+		},
 	}
 }
 
 type RPCClntOption struct {
 	Apply func(opts *RPCClntOptions)
+}
+
+func WithDelegatedRPCChannelConstructor(fn channel.NewRPCChannelFn) *RPCClntOption {
+	return &RPCClntOption{
+		Apply: func(opts *RPCClntOptions) {
+			opts.NewDelegatedRPCChannel = fn
+		},
+	}
 }
 
 func WithRPCChannelConstructor(fn channel.NewRPCChannelFn) *RPCClntOption {
@@ -34,6 +47,12 @@ func WithRPCChannelConstructor(fn channel.NewRPCChannelFn) *RPCClntOption {
 
 func WithRPCChannel(ch channel.RPCChannel) *RPCClntOption {
 	return WithRPCChannelConstructor(func(pn string) (channel.RPCChannel, error) {
+		return ch, nil
+	})
+}
+
+func WithDelegatedRPCChannel(ch channel.RPCChannel) *RPCClntOption {
+	return WithDelegatedRPCChannelConstructor(func(pn string) (channel.RPCChannel, error) {
 		return ch, nil
 	})
 }

@@ -28,8 +28,9 @@ type RPCcall struct {
 }
 
 type RPCClnt struct {
-	si *rpc.StatInfo
-	ch channel.RPCChannel
+	si             *rpc.StatInfo
+	ch             channel.RPCChannel
+	delegatedRPCCh channel.RPCChannel
 }
 
 // XXX TODO Shouldn't take pn here
@@ -48,9 +49,14 @@ func NewRPCClnt(pn string, opts ...*rpcclntopts.RPCClntOption) (*RPCClnt, error)
 	if err != nil {
 		return nil, err
 	}
+	delCh, err := rpcOpts.NewDelegatedRPCChannel(sp.NOT_SET)
+	if err != nil {
+		return nil, err
+	}
 	return &RPCClnt{
-		si: rpc.NewStatInfo(),
-		ch: ch,
+		si:             rpc.NewStatInfo(),
+		ch:             ch,
+		delegatedRPCCh: delCh,
 	}, nil
 }
 
@@ -73,7 +79,7 @@ func WrapRPCRequest(method string, arg proto.Message) (sessp.IoVec, error) {
 	return append(sessp.IoVec{wrapperBytes, argBytes}, iniov...), nil
 }
 
-func (rpcc *RPCClnt) wrappedRPC(method string, iniov sessp.IoVec, outiov sessp.IoVec) error {
+func (rpcc *RPCClnt) runWrappedRPC(method string, iniov sessp.IoVec, outiov sessp.IoVec) error {
 	start := time.Now()
 	err := rpcc.ch.SendReceive(iniov, outiov)
 	if err != nil {
@@ -126,7 +132,7 @@ func (rpcc *RPCClnt) rpc(delegate bool, method string, arg proto.Message, res pr
 		// into buffers in its IoVec
 		outiov = append(outiov, outblob.GetIoVec()...)
 	}
-	if err := rpcc.wrappedRPC(method, iniov, outiov); err != nil {
+	if err := rpcc.runWrappedRPC(method, iniov, outiov); err != nil {
 		return err
 	}
 	if err := processWrappedRPCRep(outiov, res, outblob); err != nil {

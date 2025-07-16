@@ -5,26 +5,28 @@ import (
 	"fmt"
 	"net"
 	"path/filepath"
+	"strconv"
+	"strings"
+	"sync"
+	"sync/atomic"
+	"time"
+
+	clientv3 "go.etcd.io/etcd/client/v3"
+	"google.golang.org/grpc"
+
 	"sigmaos/api/fs"
+	db "sigmaos/debug"
 	"sigmaos/ft/leaderclnt/electclnt"
 	fttask "sigmaos/ft/task"
 	"sigmaos/ft/task/proto"
 	"sigmaos/proc"
 	"sigmaos/serr"
+	sesssrv "sigmaos/session/srv"
 	"sigmaos/sigmaclnt/fslib"
+	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
 	"sigmaos/util/crash"
 	"sigmaos/util/rand"
-	"strconv"
-	"strings"
-	"sync"
-	"time"
-
-	db "sigmaos/debug"
-	sp "sigmaos/sigmap"
-
-	clientv3 "go.etcd.io/etcd/client/v3"
-	"google.golang.org/grpc"
 )
 
 type TaskSrv struct {
@@ -46,6 +48,8 @@ type TaskSrv struct {
 	etcdClient *clientv3.Client
 	electclnt  *electclnt.ElectClnt
 	fsl        *fslib.FsLib
+
+	expired atomic.Bool
 }
 
 const (
@@ -101,7 +105,7 @@ func RunTaskSrv(args []string) error {
 	for {
 		var err error
 		srvId = rand.String(4)
-		ssrv, err = sigmasrv.NewSigmaSrv(filepath.Join(fttask.FtTaskSrvId(fttaskId).ServerPath(), srvId), s, pe)
+		ssrv, err = sigmasrv.NewSigmaSrv(filepath.Join(fttask.FtTaskSrvId(fttaskId).ServerPath(), srvId), s, pe, sesssrv.WithExp(s))
 		if serr.IsErrorExists(err) {
 			continue
 		} else if err != nil {
@@ -144,6 +148,12 @@ func RunTaskSrv(args []string) error {
 	if err := s.acquireLeadership(ssrv); err != nil {
 		return err
 	}
+
+	go func() {
+		<-s.electclnt.Done()
+		db.DPrintf(db.FTTASKS, "Session expired")
+		s.expired.Store(true)
+	}()
 
 	if err := s.readEtcd(); err != nil {
 		return err
@@ -197,6 +207,14 @@ func (s *TaskSrv) acquireLeadership(ssrv *sigmasrv.SigmaSrv) error {
 	}
 
 	return nil
+}
+
+func (s *TaskSrv) Expired() bool {
+	b := s.expired.Load()
+	if b {
+		db.DPrintf(db.FTTASKS, "Reject request; lease expired")
+	}
+	return b
 }
 
 func (s *TaskSrv) parseStatus(val string) (proto.TaskStatus, error) {

@@ -79,9 +79,19 @@ func WrapRPCRequest(method string, arg proto.Message) (sessp.IoVec, error) {
 	return append(sessp.IoVec{wrapperBytes, argBytes}, iniov...), nil
 }
 
-func (rpcc *RPCClnt) runWrappedRPC(method string, iniov sessp.IoVec, outiov sessp.IoVec) error {
+func (rpcc *RPCClnt) runWrappedRPC(delegate bool, method string, iniov sessp.IoVec, outiov sessp.IoVec) error {
+	var err error
 	start := time.Now()
-	err := rpcc.ch.SendReceive(iniov, outiov)
+	if delegate {
+		// Sanity check
+		if rpcc.delegatedRPCCh == nil {
+			db.DFatalf("Try to run delegated RPC with unset delegated RPC channel")
+		}
+		err = rpcc.delegatedRPCCh.SendReceive(iniov, outiov)
+	} else {
+		// TODO: lazily init ch
+		err = rpcc.ch.SendReceive(iniov, outiov)
+	}
 	if err != nil {
 		return err
 	}
@@ -132,7 +142,7 @@ func (rpcc *RPCClnt) rpc(delegate bool, method string, arg proto.Message, res pr
 		// into buffers in its IoVec
 		outiov = append(outiov, outblob.GetIoVec()...)
 	}
-	if err := rpcc.runWrappedRPC(method, iniov, outiov); err != nil {
+	if err := rpcc.runWrappedRPC(delegate, method, iniov, outiov); err != nil {
 		return err
 	}
 	if err := processWrappedRPCRep(outiov, res, outblob); err != nil {
@@ -141,9 +151,10 @@ func (rpcc *RPCClnt) rpc(delegate bool, method string, arg proto.Message, res pr
 	return nil
 }
 
-// DelegatedRPC handles a delegated RPC, retreiving a res that contains a Blob
-// specially: it removes the blob from the message and pass it down in an IoVec
-// to avoid marshaling overhead of large blobs.
+// DelegatedRPC handles a delegated RPC (requesting the response from
+// SPProxySrv via the delegated RPC channel), retreiving a res that contains a
+// Blob specially: it removes the blob from the message and pass it down in an
+// IoVec to avoid marshaling overhead of large blobs.
 func (rpcc *RPCClnt) DelegatedRPC(rpcIdx uint64, res proto.Message) error {
 	// Prepend 2 empty slots to the out iovec: one for the rpcproto.Rep
 	// wrapper, and one for the marshaled res proto.Message

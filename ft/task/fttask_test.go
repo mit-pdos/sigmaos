@@ -343,6 +343,7 @@ func TestServerMoveTasksById(t *testing.T) {
 	ts.shutdown()
 }
 
+// Test that blocking AcquireTasks blocks
 func TestServerWait(t *testing.T) {
 	ts, err := newTstate[mr.Bin, string](t)
 	if !assert.Nil(t, err, "Error New Tstate: %v", err) {
@@ -413,6 +414,8 @@ func TestServerErrors(t *testing.T) {
 	ts.shutdown()
 }
 
+// Test if server stops after saying that it won't submit any more
+// tasks
 func TestServerStop(t *testing.T) {
 	ts, err := newTstate[interface{}, interface{}](t)
 	if !assert.Nil(t, err, "Error New Tstate: %v", err) {
@@ -447,7 +450,10 @@ func TestServerStop(t *testing.T) {
 	ts.shutdown()
 }
 
-func TestGetTasksClose(t *testing.T) {
+// Test if the GetTasks goroutine stops after client told server it
+// won't submit more tasks, but not before all tasks are completed,
+// including failed ones that must run again.
+func TestGetTasksStop(t *testing.T) {
 	ts, err := newTstate[interface{}, interface{}](t)
 	if !assert.Nil(t, err, "Error New Tstate: %v", err) {
 		return
@@ -486,6 +492,8 @@ func TestGetTasksClose(t *testing.T) {
 	ts.shutdown()
 }
 
+// Test if tasks with a permanent error are put
+// in the error bin.
 func TestErrorTasks(t *testing.T) {
 	ts, err := newTstate[interface{}, string](t)
 	if !assert.Nil(t, err, "Error New Tstate: %v", err) {
@@ -526,6 +534,8 @@ func TestErrorTasks(t *testing.T) {
 	ts.shutdown()
 }
 
+// Test if server rejects requests from a client (e.g., imgresized)
+// with a stale fence
 func TestServerFence(t *testing.T) {
 	ts, err := newTstate[interface{}, interface{}](t)
 	if !assert.Nil(t, err, "Error New Tstate: %v", err) {
@@ -642,6 +652,8 @@ func runTestServerData(t *testing.T, em *crash.TeventMap) []*procgroupmgr.ProcSt
 	return ts.shutdown()
 }
 
+// Test that a client that partition cannot execute ops at the server
+// but a new client can.
 func TestClntPartition(t *testing.T) {
 	ts, err := newTstate[mr.Bin, string](t)
 	if !assert.Nil(t, err, "Error New Tstate: %v", err) {
@@ -671,6 +683,8 @@ func TestServerData(t *testing.T) {
 	runTestServerData(t, nil)
 }
 
+// Test that after a fttask srv crashes another takes over and a
+// concurrent make progress despite a server crash.
 func TestServerCrash(t *testing.T) {
 	succ := false
 	e0 := crash.NewEventStart(crash.FTTASKS_CRASH, 50, 250, 0.33)

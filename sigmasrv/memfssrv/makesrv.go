@@ -57,7 +57,8 @@ func NewMemFsPortClntFenceAuth(pn string, addr *sp.Taddr, sc *sigmaclnt.SigmaCln
 
 func NewMemFsRootPortClntFenceAuthExp(root fs.Dir, srvpath string, addr *sp.Taddr, sc *sigmaclnt.SigmaClnt, fencefs fs.Dir, aaf spprotosrv.AttachAuthF, ia *inode.InodeAlloc, exp sessrv.ExpireI) (*MemFs, error) {
 	start := time.Now()
-	srv, mpn, err := sigmapsrv.NewSigmaPSrvPost(root, srvpath, addr, sc, fencefs, aaf, exp)
+	srv := sigmapsrv.NewSigmaPSrv(sc.ProcEnv(), sc.GetDialProxyClnt(), root, addr, fencefs, aaf, exp)
+	mpn, err := srv.PostMount(sc, srvpath)
 	if err != nil {
 		return nil, err
 	}

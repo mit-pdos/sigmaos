@@ -40,7 +40,7 @@ func NewCacheClnt(fsl *fslib.FsLib, job string, nshard int) *CacheClnt {
 	cc := &CacheClnt{
 		fsl:       fsl,
 		nshard:    nshard,
-		ClntCache: rpcclnt.NewRPCClntCache(sprpcclnt.WithSPChannel(fsl)),
+		ClntCache: rpcclnt.NewRPCClntCache(sprpcclnt.WithSPChannel(fsl), sprpcclnt.WithDelegatedSPProxyChannel(fsl)),
 	}
 	return cc
 }

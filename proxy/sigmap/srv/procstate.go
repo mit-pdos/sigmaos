@@ -1,6 +1,7 @@
 package srv
 
 import (
+	"fmt"
 	"sync"
 	"time"
 
@@ -9,6 +10,8 @@ import (
 	db "sigmaos/debug"
 	dialproxyclnt "sigmaos/dialproxy/clnt"
 	"sigmaos/proc"
+	rpcchan "sigmaos/rpc/clnt/channel"
+	sessp "sigmaos/session/proto"
 	"sigmaos/sigmaclnt"
 	"sigmaos/sigmaclnt/fidclnt"
 	"sigmaos/sigmaclnt/procclnt"
@@ -17,31 +20,31 @@ import (
 )
 
 // Manages sigmaclnts on behalf of procs
-type SigmaClntMgr struct {
+type ProcStateMgr struct {
 	mu   sync.Mutex
 	spps *SPProxySrv
 	ps   map[sp.Tpid]*procState // TODO: use syncmap?
 }
 
-func NewSigmaClntMgr(spps *SPProxySrv) *SigmaClntMgr {
-	return &SigmaClntMgr{
+func NewProcStateMgr(spps *SPProxySrv) *ProcStateMgr {
+	return &ProcStateMgr{
 		ps:   make(map[sp.Tpid]*procState),
 		spps: spps,
 	}
 }
 
-func (scm *SigmaClntMgr) AllocProcState(pe *proc.ProcEnv, p *proc.Proc) *procState {
-	scm.mu.Lock()
-	defer scm.mu.Unlock()
+func (psm *ProcStateMgr) AllocProcState(pe *proc.ProcEnv, p *proc.Proc) *procState {
+	psm.mu.Lock()
+	defer psm.mu.Unlock()
 
 	// If already exists or already being created, bail out
-	if ps, ok := scm.ps[pe.GetPID()]; ok {
+	if ps, ok := psm.ps[pe.GetPID()]; ok {
 		db.DPrintf(db.SPPROXYSRV, "AllocProcState already exists %v", pe.GetPID())
 		return ps
 	}
 
 	// Otherwise, start to create the proc's state
-	ps := newProcState(scm.spps, pe, p)
+	ps := newProcState(psm.spps, pe, p)
 
 	// Test program may create many sigmaclnts with the same PID, so don't cache
 	// them to avoid errors
@@ -49,40 +52,96 @@ func (scm *SigmaClntMgr) AllocProcState(pe *proc.ProcEnv, p *proc.Proc) *procSta
 
 	db.DPrintf(db.SPPROXYSRV, "AllocProcState newState %v", pe.GetPID())
 	if cacheState {
-		scm.ps[pe.GetPID()] = ps
+		psm.ps[pe.GetPID()] = ps
 	}
 	return ps
 }
 
-func (scm *SigmaClntMgr) DelProcState(p *proc.Proc) {
-	delete(scm.ps, p.GetPid())
+func (psm *ProcStateMgr) DelProcState(p *proc.Proc) {
+	psm.mu.Lock()
+	defer psm.mu.Unlock()
+
+	delete(psm.ps, p.GetPid())
+}
+
+func (psm *ProcStateMgr) getProcState(pid sp.Tpid) (*procState, bool) {
+	psm.mu.Lock()
+	defer psm.mu.Unlock()
+
+	ps, ok := psm.ps[pid]
+	return ps, ok
 }
 
 // Expects ps to be allocated already
-func (scm *SigmaClntMgr) GetSigmaClnt(pid sp.Tpid) (*sigmaclnt.SigmaClnt, *epcacheclnt.EndpointCacheClnt, error) {
-	scm.mu.Lock()
-	ps := scm.ps[pid]
-	scm.mu.Unlock()
-
+func (psm *ProcStateMgr) GetSigmaClnt(pid sp.Tpid) (*sigmaclnt.SigmaClnt, *epcacheclnt.EndpointCacheClnt, error) {
+	ps, ok := psm.getProcState(pid)
+	if !ok {
+		db.DPrintf(db.SPPROXYSRV_ERR, "Try to get sigmaclnt for unknown proc: %v", pid)
+		return nil, nil, fmt.Errorf("Try to get sigmaclnt for unknown proc: %v", pid)
+	}
 	return ps.GetSigmaClnt()
 }
 
+func (psm *ProcStateMgr) InsertReply(p *proc.Proc, rpcIdx uint64, iov sessp.IoVec, err error, start time.Time) {
+	db.DPrintf(db.SPPROXYSRV, "[%v] DelegatedRPC.InsertReply(%v) lat=%v", p.GetPid(), rpcIdx, time.Since(start))
+	perf.LogSpawnLatency("DelegatedRPC(%v)", p.GetPid(), p.GetSpawnTime(), start, rpcIdx)
+	ps, ok := psm.getProcState(p.GetPid())
+	if !ok {
+		db.DPrintf(db.SPPROXYSRV_ERR, "Try to insert delegated RPC reply for unknown proc: %v", p.GetPid())
+	}
+	ps.rpcReps.InsertReply(rpcIdx, iov, err)
+}
+
+func (psm *ProcStateMgr) GetReply(pid sp.Tpid, rpcIdx uint64) (sessp.IoVec, error) {
+	db.DPrintf(db.SPPROXYSRV, "[%v] DelegatedRPC.GetReply(%v)", pid, rpcIdx)
+	defer db.DPrintf(db.SPPROXYSRV, "[%v] DelegatedRPC.GetReply(%v) done", pid, rpcIdx)
+
+	ps, ok := psm.getProcState(pid)
+	if !ok {
+		db.DPrintf(db.SPPROXYSRV_ERR, "Try to get delegated RPC reply for unknown proc: %v", pid)
+		return nil, fmt.Errorf("Try to get delegated RPC reply for unknown proc: %v", pid)
+	}
+	return ps.rpcReps.GetReply(rpcIdx)
+}
+
+func (psm *ProcStateMgr) GetRPCChannel(pid sp.Tpid, pn string) (rpcchan.RPCChannel, bool) {
+	ps, ok := psm.getProcState(pid)
+	if !ok {
+		db.DFatalf("Try to get delegated RPC reply for unknown proc: %v", pid)
+	}
+	return ps.rpcReps.GetRPCChannel(pn)
+}
+
+func (psm *ProcStateMgr) PutRPCChannel(pid sp.Tpid, pn string, ch rpcchan.RPCChannel) {
+	ps, ok := psm.getProcState(pid)
+	if !ok {
+		db.DFatalf("Try to RPC channel for unknown proc: %v", pid)
+	}
+	ps.rpcReps.PutRPCChannel(pn, ch)
+}
+
 type procState struct {
-	mu   sync.Mutex
-	cond *sync.Cond
-	done bool // done creating the proc state?
-	pe   *proc.ProcEnv
-	p    *proc.Proc
-	sc   *sigmaclnt.SigmaClnt
-	epcc *epcacheclnt.EndpointCacheClnt
-	err  error // Creation result
+	mu      sync.Mutex
+	cond    *sync.Cond
+	done    bool // done creating the proc state?
+	pe      *proc.ProcEnv
+	p       *proc.Proc
+	rpcReps *RPCState
+	sc      *sigmaclnt.SigmaClnt
+	epcc    *epcacheclnt.EndpointCacheClnt
+	err     error // Creation result
 }
 
 func newProcState(spps *SPProxySrv, pe *proc.ProcEnv, p *proc.Proc) *procState {
+	var initRPCs []*proc.InitializationRPC
+	if p != nil {
+		initRPCs = p.GetInitializationRPCs()
+	}
 	ps := &procState{
-		pe:   pe,
-		p:    p,
-		done: false,
+		pe:      pe,
+		p:       p,
+		rpcReps: NewRPCState(initRPCs),
+		done:    false,
 	}
 	ps.cond = sync.NewCond(&ps.mu)
 	go ps.createSigmaClnt(spps)
@@ -122,8 +181,6 @@ func (ps *procState) createSigmaClnt(spps *SPProxySrv) {
 	}
 	// We only need an fslib to run delegated RPCs
 	if ps.p != nil {
-		// Set up delegated RPC reply table for the proc
-		spps.repTab.NewProc(ps.p)
 		go spps.runDelegatedInitializationRPCs(ps.p, sc)
 	}
 	var epcc *epcacheclnt.EndpointCacheClnt

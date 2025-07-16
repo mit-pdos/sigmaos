@@ -442,7 +442,7 @@ func (sca *SPProxySrvAPI) WaitEvict(ctx fs.CtxI, req scproto.SigmaNullReq, rep *
 // ========== Delegated RPCs ==========
 func (sca *SPProxySrvAPI) GetDelegatedRPCReply(ctx fs.CtxI, req scproto.SigmaDelegatedRPCReq, rep *scproto.SigmaDelegatedRPCRep) error {
 	db.DPrintf(db.SPPROXYSRV, "%v: GetDelegatedRPCReply %v", sca.sc.ClntId(), req)
-	iov, err := sca.spps.repTab.GetReply(sca.sc.ProcEnv().GetPID(), req.RPCIdx)
+	iov, err := sca.spps.psm.GetReply(sca.sc.ProcEnv().GetPID(), req.RPCIdx)
 	rep.Blob = &rpcproto.Blob{
 		Iov: [][]byte(iov),
 	}

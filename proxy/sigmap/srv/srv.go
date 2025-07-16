@@ -32,12 +32,11 @@ const (
 // SPProxySrv maintains the state of the spproxysrv. All
 // SigmaSrvClnt's share one fid table
 type SPProxySrv struct {
-	mu     sync.Mutex
-	pe     *proc.ProcEnv
-	nps    *dialproxysrv.DialProxySrv
-	fidc   *fidclnt.FidClnt
-	scm    *SigmaClntMgr
-	repTab *DelegatedRPCReplyTable
+	mu   sync.Mutex
+	pe   *proc.ProcEnv
+	nps  *dialproxysrv.DialProxySrv
+	fidc *fidclnt.FidClnt
+	psm  *ProcStateMgr
 }
 
 func newSPProxySrv() (*SPProxySrv, error) {
@@ -48,12 +47,11 @@ func newSPProxySrv() (*SPProxySrv, error) {
 		return nil, err
 	}
 	spps := &SPProxySrv{
-		pe:     pe,
-		nps:    nps,
-		fidc:   fidclnt.NewFidClnt(pe, dialproxyclnt.NewDialProxyClnt(pe)),
-		repTab: NewDelegatedRPCReplyTable(),
+		pe:   pe,
+		nps:  nps,
+		fidc: fidclnt.NewFidClnt(pe, dialproxyclnt.NewDialProxyClnt(pe)),
 	}
-	spps.scm = NewSigmaClntMgr(spps)
+	spps.psm = NewProcStateMgr(spps)
 	db.DPrintf(db.SPPROXYSRV, "newSPProxySrv ProcEnv:%v", pe)
 	return spps, nil
 }
@@ -132,7 +130,7 @@ func (spp *SPProxySrv) runDelegatedInitializationRPCs(p *proc.Proc, sc *sigmacln
 			defer wg.Done()
 			pn := initRPC.GetTargetPathname()
 			db.DPrintf(db.SPPROXYSRV, "[%v] Create clnt for delegated RPC(%v): %v", p.GetPid(), initRPCIdx, pn)
-			rpcchan, ok := spp.repTab.GetRPCChannel(p.GetPid(), pn)
+			rpcchan, ok := spp.psm.GetRPCChannel(p.GetPid(), pn)
 			// If we don't have a cached channel for this RPC target, create a new channel for it (and cache it)
 			if !ok {
 				db.DPrintf(db.SPPROXYSRV, "[%v] delegated RPC(%v) create new channel for: %v", p.GetPid(), initRPCIdx, pn)
@@ -156,7 +154,7 @@ func (spp *SPProxySrv) runDelegatedInitializationRPCs(p *proc.Proc, sc *sigmacln
 					}
 				}
 				// Cache the channel for later reuse
-				spp.repTab.PutRPCChannel(p.GetPid(), pn, rpcchan)
+				spp.psm.PutRPCChannel(p.GetPid(), pn, rpcchan)
 			} else {
 				db.DPrintf(db.SPPROXYSRV, "[%v] delegated RPC(%v) reuse cached channel for: %v", initRPCIdx, pn)
 			}
@@ -170,7 +168,7 @@ func (spp *SPProxySrv) runDelegatedInitializationRPCs(p *proc.Proc, sc *sigmacln
 				db.DFatalf("Err execute delegated RPC (%v): %v", pn, err)
 			}
 			db.DPrintf(db.SPPROXYSRV, "[%v] Done running delegated init RPC(%v)", p.GetPid(), initRPCIdx)
-			spp.repTab.InsertReply(p, uint64(initRPCIdx), outiov, err, start)
+			spp.psm.InsertReply(p, uint64(initRPCIdx), outiov, err, start)
 		}(initRPCIdx, initRPC)
 	}
 	wg.Wait()
@@ -184,7 +182,7 @@ func (spps *SPProxySrv) getSigmaClnt(pe *proc.ProcEnv, p *proc.Proc) (*sigmaclnt
 	pe.UseDialProxy = false
 
 	// Initiate sigmaclnt creation
-	ps := spps.scm.AllocProcState(pe, p)
+	ps := spps.psm.AllocProcState(pe, p)
 	return ps.GetSigmaClnt()
 }
 
@@ -192,7 +190,7 @@ func (spps *SPProxySrv) IncomingProc(p *proc.Proc) {
 	db.DPrintf(db.SPPROXYSRV, "Informed of incoming proc %v", p.GetPid())
 	p.GetProcEnv().UseSPProxy = false
 	p.GetProcEnv().UseDialProxy = false
-	spps.scm.AllocProcState(p.GetProcEnv(), p)
+	spps.psm.AllocProcState(p.GetProcEnv(), p)
 }
 
 func (spps *SPProxySrv) ProcDone(p *proc.Proc) {
@@ -200,8 +198,7 @@ func (spps *SPProxySrv) ProcDone(p *proc.Proc) {
 	spps.mu.Lock()
 	defer spps.mu.Unlock()
 
-	spps.scm.DelProcState(p)
-	spps.repTab.DelProc(p.GetPid())
+	spps.psm.DelProcState(p)
 }
 
 // The spproxyd process enters here

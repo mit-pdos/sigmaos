@@ -185,6 +185,7 @@ func (j *CosSimJob) addSrv(sigmaPath string) (*proc.Proc, time.Duration, error) 
 		p.PrependSigmaPath(sigmaPath)
 	}
 	p.GetProcEnv().UseSPProxy = true
+	p.GetProcEnv().UseSPProxyProcClnt = true
 	p.SetMcpu(j.srvMcpu)
 	p.SetCachedEndpoint(epcache.EPCACHE, j.epcsrvEP)
 	for pn, ep := range j.cacheEPs {

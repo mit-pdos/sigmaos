@@ -68,11 +68,10 @@ func (srv *SigmaPSrv) applyOpts(opts []SigmaPSrvOpt) {
 	}
 }
 
-func NewSigmaPSrv(pe *proc.ProcEnv, npc *dialproxyclnt.DialProxyClnt, root fs.Dir, addr *sp.Taddr, fencefs fs.Dir, aaf spprotosrv.AttachAuthF, exp sesssrv.ExpireI) *SigmaPSrv {
+func NewSigmaPSrv(pe *proc.ProcEnv, npc *dialproxyclnt.DialProxyClnt, root fs.Dir, addr *sp.Taddr, fencefs fs.Dir, aaf spprotosrv.AttachAuthF, opts []sesssrv.SessSrvOpt) *SigmaPSrv {
 	start := time.Now()
 	psrv := NewSigmaPSrvOpts(pe, root, fencefs, aaf)
 
-	opts := sesssrv.WithExp(exp)
 	psrv.SessSrv = sesssrv.NewSessSrvOpts(pe, npc, addr, psrv.stats, psrv, opts)
 	perf.LogSpawnLatency("NewSigmaPsrv", pe.GetPID(), pe.GetSpawnTime(), start)
 	return psrv

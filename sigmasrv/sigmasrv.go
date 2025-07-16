@@ -37,12 +37,12 @@ type SigmaSrv struct {
 }
 
 // Make a sigmasrv with an memfs, and publish server at fn.
-func NewSigmaSrv(fn string, svci any, pe *proc.ProcEnv) (*SigmaSrv, error) {
+func NewSigmaSrv(fn string, svci any, pe *proc.ProcEnv, opts ...sesssrv.SessSrvOpt) (*SigmaSrv, error) {
 	db.DPrintf(db.SIGMASRV, "NewSigmaSrv %T", svci)
 	defer db.DPrintf(db.SIGMASRV, "NewSigmaSrv done %T", svci)
 
 	start := time.Now()
-	mfs, error := memfssrv.NewMemFs(fn, pe, spprotosrv.AttachAllowAllToAll)
+	mfs, error := memfssrv.NewMemFs(fn, pe, spprotosrv.AttachAllowAllToAll, opts...)
 	if error != nil {
 		db.DPrintf(db.ERROR, "NewSigmaSrv %v err %v", fn, error)
 		return nil, error
@@ -148,20 +148,12 @@ func newSigmaSrvRPC(mfs *memfssrv.MemFs, svci any) (*SigmaSrv, error) {
 }
 
 func NewSigmaSrvRootClnt(root fs.Dir, addr *sp.Taddr, path string, sc *sigmaclnt.SigmaClnt) (*SigmaSrv, error) {
-	return NewSigmaSrvRootClntAuthFn(root, addr, path, sc, spprotosrv.AttachAllowAllToAll)
+	return NewSigmaSrvRootClntAuthOpt(root, addr, path, sc, spprotosrv.AttachAllowAllToAll)
 }
 
-func NewSigmaSrvRootClntAuthFn(root fs.Dir, addr *sp.Taddr, path string, sc *sigmaclnt.SigmaClnt, aaf spprotosrv.AttachAuthF) (*SigmaSrv, error) {
+func NewSigmaSrvRootClntAuthOpt(root fs.Dir, addr *sp.Taddr, path string, sc *sigmaclnt.SigmaClnt, aaf spprotosrv.AttachAuthF, opts ...sesssrv.SessSrvOpt) (*SigmaSrv, error) {
 	ia := inode.NewInodeAlloc(sp.DEV_MEMFS)
-	mfs, err := memfssrv.NewMemFsRootPortClntFenceAuthExp(root, path, addr, sc, nil, aaf, ia, nil)
-	if err != nil {
-		return nil, err
-	}
-	return newSigmaSrv(mfs), nil
-}
-func NewSigmaSrvRootClntAuthFnExp(root fs.Dir, addr *sp.Taddr, path string, sc *sigmaclnt.SigmaClnt, aaf spprotosrv.AttachAuthF, exp sesssrv.ExpireI) (*SigmaSrv, error) {
-	ia := inode.NewInodeAlloc(sp.DEV_MEMFS)
-	mfs, err := memfssrv.NewMemFsRootPortClntFenceAuthExp(root, path, addr, sc, nil, aaf, ia, exp)
+	mfs, err := memfssrv.NewMemFsRootPortClntFenceAuthOpt(root, path, addr, sc, nil, aaf, ia, opts...)
 	if err != nil {
 		return nil, err
 	}

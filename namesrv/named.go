@@ -252,7 +252,7 @@ func (nd *Named) newSrv(exp sesssrv.ExpireI) (*sp.Tendpoint, error) {
 		addr = sp.NewTaddr(ip, sp.NO_PORT)
 		aaf = spprotosrv.AttachAllowAllToAll
 	}
-	ssrv, err := sigmasrv.NewSigmaSrvRootClntAuthFnExp(root, addr, "", nd.SigmaClnt, aaf, exp)
+	ssrv, err := sigmasrv.NewSigmaSrvRootClntAuthOpt(root, addr, "", nd.SigmaClnt, aaf, sesssrv.WithExp(nd))
 	if err != nil {
 		return nil, fmt.Errorf("NewSigmaSrvRootClnt err: %v", err)
 	}

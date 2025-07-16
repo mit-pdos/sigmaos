@@ -50,7 +50,7 @@ func WithExp(exp ExpireI) SessSrvOpt {
 	return func(srv *SessSrv) { srv.exp = exp }
 }
 
-func NewSessSrvOpts(pe *proc.ProcEnv, npc *dialproxyclnt.DialProxyClnt, addr *sp.Taddr, stats *stats.StatInode, newSess NewSessionI, opts ...SessSrvOpt) *SessSrv {
+func NewSessSrvOpts(pe *proc.ProcEnv, npc *dialproxyclnt.DialProxyClnt, addr *sp.Taddr, stats *stats.StatInode, newSess NewSessionI, opts []SessSrvOpt) *SessSrv {
 	ssrv := &SessSrv{
 		pe:    pe,
 		stats: stats,
@@ -67,19 +67,6 @@ func (srv *SessSrv) applyOpts(opts []SessSrvOpt) {
 	for _, opt := range opts {
 		opt(srv)
 	}
-}
-
-func NewSessSrv(pe *proc.ProcEnv, npc *dialproxyclnt.DialProxyClnt, addr *sp.Taddr, stats *stats.StatInode, newSess NewSessionI, exp ExpireI) *SessSrv {
-	ssrv := &SessSrv{
-		pe:    pe,
-		stats: stats,
-		st:    newSessionTable(newSess),
-		exp:   exp,
-	}
-	ssrv.srv = netsrv.NewNetServer(pe, npc, addr, ssrv)
-	ssrv.sm = newSessionMgr(ssrv.st, ssrv.srvFcall)
-	db.DPrintf(db.SESSSRV, "Listen on address: %v exp %v", ssrv.srv.GetEndpoint(), exp)
-	return ssrv
 }
 
 func (ssrv *SessSrv) ProcEnv() *proc.ProcEnv {

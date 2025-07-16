@@ -53,6 +53,11 @@ func (ec *ElectClnt) ReleaseLeadership() error {
 	return ec.elect.Resign()
 }
 
+// We want to call ec.sess.Expired() but it doesn't exist; see [namesrv/named.go]
+func (ec *ElectClnt) Done() <-chan struct{} {
+	return ec.sess.Done()
+}
+
 // for testing
 func (ec *ElectClnt) CloseSession() error {
 	return ec.sess.Close()

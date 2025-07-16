@@ -698,6 +698,7 @@ class ProcEnvProto final :
     kUseSPProxyFieldNumber = 19,
     kUseDialProxyFieldNumber = 20,
     kDelegateInitFlagFieldNumber = 30,
+    kUseSPProxyProcClntFieldNumber = 31,
   };
   // map<string, .TendpointProto> etcdEndpoints = 7;
   int etcdendpoints_size() const;
@@ -1117,6 +1118,15 @@ class ProcEnvProto final :
   void _internal_set_delegateinitflag(bool value);
   public:
 
+  // bool useSPProxyProcClnt = 31;
+  void clear_usespproxyprocclnt();
+  bool usespproxyprocclnt() const;
+  void set_usespproxyprocclnt(bool value);
+  private:
+  bool _internal_usespproxyprocclnt() const;
+  void _internal_set_usespproxyprocclnt(bool value);
+  public:
+
   // @@protoc_insertion_point(class_scope:ProcEnvProto)
  private:
   class _Internal;
@@ -1166,6 +1176,7 @@ class ProcEnvProto final :
     bool usespproxy_;
     bool usedialproxy_;
     bool delegateinitflag_;
+    bool usespproxyprocclnt_;
     mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   };
   union { Impl_ _impl_; };
@@ -3117,6 +3128,26 @@ inline void ProcEnvProto::_internal_set_delegateinitflag(bool value) {
 inline void ProcEnvProto::set_delegateinitflag(bool value) {
   _internal_set_delegateinitflag(value);
   // @@protoc_insertion_point(field_set:ProcEnvProto.delegateInitFlag)
+}
+
+// bool useSPProxyProcClnt = 31;
+inline void ProcEnvProto::clear_usespproxyprocclnt() {
+  _impl_.usespproxyprocclnt_ = false;
+}
+inline bool ProcEnvProto::_internal_usespproxyprocclnt() const {
+  return _impl_.usespproxyprocclnt_;
+}
+inline bool ProcEnvProto::usespproxyprocclnt() const {
+  // @@protoc_insertion_point(field_get:ProcEnvProto.useSPProxyProcClnt)
+  return _internal_usespproxyprocclnt();
+}
+inline void ProcEnvProto::_internal_set_usespproxyprocclnt(bool value) {
+  
+  _impl_.usespproxyprocclnt_ = value;
+}
+inline void ProcEnvProto::set_usespproxyprocclnt(bool value) {
+  _internal_set_usespproxyprocclnt(value);
+  // @@protoc_insertion_point(field_set:ProcEnvProto.useSPProxyProcClnt)
 }
 
 // -------------------------------------------------------------------

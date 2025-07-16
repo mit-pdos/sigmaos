@@ -115,6 +115,7 @@ PROTOBUF_CONSTEXPR ProcEnvProto::ProcEnvProto(
   , /*decltype(_impl_.usespproxy_)*/false
   , /*decltype(_impl_.usedialproxy_)*/false
   , /*decltype(_impl_.delegateinitflag_)*/false
+  , /*decltype(_impl_.usespproxyprocclnt_)*/false
   , /*decltype(_impl_._cached_size_)*/{}} {}
 struct ProcEnvProtoDefaultTypeInternal {
   PROTOBUF_CONSTEXPR ProcEnvProtoDefaultTypeInternal()
@@ -244,6 +245,7 @@ const uint32_t TableStruct_proc_2fproc_2eproto::offsets[] PROTOBUF_SECTION_VARIA
   PROTOBUF_FIELD_OFFSET(::ProcEnvProto, _impl_.cachedendpoints_),
   PROTOBUF_FIELD_OFFSET(::ProcEnvProto, _impl_.valgrind_),
   PROTOBUF_FIELD_OFFSET(::ProcEnvProto, _impl_.delegateinitflag_),
+  PROTOBUF_FIELD_OFFSET(::ProcEnvProto, _impl_.usespproxyprocclnt_),
   PROTOBUF_FIELD_OFFSET(::ProcProto_EnvEntry_DoNotUse, _has_bits_),
   PROTOBUF_FIELD_OFFSET(::ProcProto_EnvEntry_DoNotUse, _internal_metadata_),
   ~0u,  // no _extensions_
@@ -275,8 +277,8 @@ static const ::_pbi::MigrationSchema schemas[] PROTOBUF_SECTION_VARIABLE(protode
   { 29, 37, -1, sizeof(::ProcEnvProto_SecretsMapEntry_DoNotUse)},
   { 39, 47, -1, sizeof(::ProcEnvProto_CachedEndpointsEntry_DoNotUse)},
   { 49, -1, -1, sizeof(::ProcEnvProto)},
-  { 84, 92, -1, sizeof(::ProcProto_EnvEntry_DoNotUse)},
-  { 94, -1, -1, sizeof(::ProcProto)},
+  { 85, 93, -1, sizeof(::ProcProto_EnvEntry_DoNotUse)},
+  { 95, -1, -1, sizeof(::ProcProto)},
 };
 
 static const ::_pb::Message* const file_default_instances[] = {
@@ -296,7 +298,7 @@ const char descriptor_table_protodef_proc_2fproc_2eproto[] PROTOBUF_SECTION_VARI
   "alizationRPC\022\026\n\016targetPathname\030\001 \001(\t\022\027\n\017"
   "marshaledRPCIOV\030\002 \003(\014\022\017\n\007nOutIOV\030\003 \001(\004\"L"
   "\n\tProcSeqno\022\r\n\005epoch\030\001 \001(\004\022\r\n\005seqno\030\002 \001("
-  "\004\022\017\n\007procqID\030\003 \001(\t\022\020\n\010mSchedID\030\004 \001(\t\"\245\007\n"
+  "\004\022\017\n\007procqID\030\003 \001(\t\022\020\n\010mSchedID\030\004 \001(\t\"\301\007\n"
   "\014ProcEnvProto\022\016\n\006pidStr\030\001 \001(\t\022\017\n\007program"
   "\030\002 \001(\t\022\020\n\010realmStr\030\003 \001(\t\022\036\n\tprincipal\030\004 "
   "\001(\0132\013.Tprincipal\022\017\n\007procDir\030\005 \001(\t\022\021\n\tpar"
@@ -315,18 +317,19 @@ const char descriptor_table_protodef_proc_2fproc_2eproto[] PROTOBUF_SECTION_VARI
   " \001(\t\022\014\n\004fail\030\032 \001(\t\022;\n\017cachedEndpoints\030\033 "
   "\003(\0132\".ProcEnvProto.CachedEndpointsEntry\022"
   "\020\n\010valgrind\030\034 \001(\t\022\030\n\020delegateInitFlag\030\036 "
-  "\001(\010\032E\n\022EtcdEndpointsEntry\022\013\n\003key\030\001 \001(\t\022\036"
-  "\n\005value\030\002 \001(\0132\017.TendpointProto:\0028\001\032\?\n\017Se"
-  "cretsMapEntry\022\013\n\003key\030\001 \001(\t\022\033\n\005value\030\002 \001("
-  "\0132\014.SecretProto:\0028\001\032G\n\024CachedEndpointsEn"
-  "try\022\013\n\003key\030\001 \001(\t\022\036\n\005value\030\002 \001(\0132\017.Tendpo"
-  "intProto:\0028\001\"\344\001\n\tProcProto\022#\n\014procEnvPro"
-  "to\030\001 \001(\0132\r.ProcEnvProto\022\014\n\004args\030\002 \003(\t\022 \n"
-  "\003env\030\003 \003(\0132\023.ProcProto.EnvEntry\022$\n\010initR"
-  "PCs\030\035 \003(\0132\022.InitializationRPC\022\017\n\007typeInt"
-  "\030\004 \001(\r\022\017\n\007mcpuInt\030\005 \001(\r\022\016\n\006memInt\030\006 \001(\r\032"
-  "*\n\010EnvEntry\022\013\n\003key\030\001 \001(\t\022\r\n\005value\030\002 \001(\t:"
-  "\0028\001B\016Z\014sigmaos/procb\006proto3"
+  "\001(\010\022\032\n\022useSPProxyProcClnt\030\037 \001(\010\032E\n\022EtcdE"
+  "ndpointsEntry\022\013\n\003key\030\001 \001(\t\022\036\n\005value\030\002 \001("
+  "\0132\017.TendpointProto:\0028\001\032\?\n\017SecretsMapEntr"
+  "y\022\013\n\003key\030\001 \001(\t\022\033\n\005value\030\002 \001(\0132\014.SecretPr"
+  "oto:\0028\001\032G\n\024CachedEndpointsEntry\022\013\n\003key\030\001"
+  " \001(\t\022\036\n\005value\030\002 \001(\0132\017.TendpointProto:\0028\001"
+  "\"\344\001\n\tProcProto\022#\n\014procEnvProto\030\001 \001(\0132\r.P"
+  "rocEnvProto\022\014\n\004args\030\002 \003(\t\022 \n\003env\030\003 \003(\0132\023"
+  ".ProcProto.EnvEntry\022$\n\010initRPCs\030\035 \003(\0132\022."
+  "InitializationRPC\022\017\n\007typeInt\030\004 \001(\r\022\017\n\007mc"
+  "puInt\030\005 \001(\r\022\016\n\006memInt\030\006 \001(\r\032*\n\010EnvEntry\022"
+  "\013\n\003key\030\001 \001(\t\022\r\n\005value\030\002 \001(\t:\0028\001B\016Z\014sigma"
+  "os/procb\006proto3"
   ;
 static const ::_pbi::DescriptorTable* const descriptor_table_proc_2fproc_2eproto_deps[2] = {
   &::descriptor_table_google_2fprotobuf_2ftimestamp_2eproto,
@@ -334,7 +337,7 @@ static const ::_pbi::DescriptorTable* const descriptor_table_proc_2fproc_2eproto
 };
 static ::_pbi::once_flag descriptor_table_proc_2fproc_2eproto_once;
 const ::_pbi::DescriptorTable descriptor_table_proc_2fproc_2eproto = {
-    false, false, 1427, descriptor_table_protodef_proc_2fproc_2eproto,
+    false, false, 1455, descriptor_table_protodef_proc_2fproc_2eproto,
     "proc/proc.proto",
     &descriptor_table_proc_2fproc_2eproto_once, descriptor_table_proc_2fproc_2eproto_deps, 2, 8,
     schemas, file_default_instances, TableStruct_proc_2fproc_2eproto::offsets,
@@ -1046,6 +1049,7 @@ ProcEnvProto::ProcEnvProto(const ProcEnvProto& from)
     , decltype(_impl_.usespproxy_){}
     , decltype(_impl_.usedialproxy_){}
     , decltype(_impl_.delegateinitflag_){}
+    , decltype(_impl_.usespproxyprocclnt_){}
     , /*decltype(_impl_._cached_size_)*/{}};
 
   _internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
@@ -1195,8 +1199,8 @@ ProcEnvProto::ProcEnvProto(const ProcEnvProto& from)
     _this->_impl_.spawntimepb_ = new ::PROTOBUF_NAMESPACE_ID::Timestamp(*from._impl_.spawntimepb_);
   }
   ::memcpy(&_impl_.howint_, &from._impl_.howint_,
-    static_cast<size_t>(reinterpret_cast<char*>(&_impl_.delegateinitflag_) -
-    reinterpret_cast<char*>(&_impl_.howint_)) + sizeof(_impl_.delegateinitflag_));
+    static_cast<size_t>(reinterpret_cast<char*>(&_impl_.usespproxyprocclnt_) -
+    reinterpret_cast<char*>(&_impl_.howint_)) + sizeof(_impl_.usespproxyprocclnt_));
   // @@protoc_insertion_point(copy_constructor:ProcEnvProto)
 }
 
@@ -1234,6 +1238,7 @@ inline void ProcEnvProto::SharedCtor(
     , decltype(_impl_.usespproxy_){false}
     , decltype(_impl_.usedialproxy_){false}
     , decltype(_impl_.delegateinitflag_){false}
+    , decltype(_impl_.usespproxyprocclnt_){false}
     , /*decltype(_impl_._cached_size_)*/{}
   };
   _impl_.pidstr_.InitDefault();
@@ -1394,8 +1399,8 @@ void ProcEnvProto::Clear() {
   }
   _impl_.spawntimepb_ = nullptr;
   ::memset(&_impl_.howint_, 0, static_cast<size_t>(
-      reinterpret_cast<char*>(&_impl_.delegateinitflag_) -
-      reinterpret_cast<char*>(&_impl_.howint_)) + sizeof(_impl_.delegateinitflag_));
+      reinterpret_cast<char*>(&_impl_.usespproxyprocclnt_) -
+      reinterpret_cast<char*>(&_impl_.howint_)) + sizeof(_impl_.usespproxyprocclnt_));
   _internal_metadata_.Clear<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>();
 }
 
@@ -1696,6 +1701,14 @@ const char* ProcEnvProto::_InternalParse(const char* ptr, ::_pbi::ParseContext* 
       case 30:
         if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 240)) {
           _impl_.delegateinitflag_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
+          CHK_(ptr);
+        } else
+          goto handle_unusual;
+        continue;
+      // bool useSPProxyProcClnt = 31;
+      case 31:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 248)) {
+          _impl_.usespproxyprocclnt_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
           CHK_(ptr);
         } else
           goto handle_unusual;
@@ -2041,6 +2054,12 @@ uint8_t* ProcEnvProto::_InternalSerialize(
     target = ::_pbi::WireFormatLite::WriteBoolToArray(30, this->_internal_delegateinitflag(), target);
   }
 
+  // bool useSPProxyProcClnt = 31;
+  if (this->_internal_usespproxyprocclnt() != 0) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteBoolToArray(31, this->_internal_usespproxyprocclnt(), target);
+  }
+
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
     target = ::_pbi::WireFormat::InternalSerializeUnknownFieldsToArray(
         _internal_metadata_.unknown_fields<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(::PROTOBUF_NAMESPACE_ID::UnknownFieldSet::default_instance), target, stream);
@@ -2260,6 +2279,11 @@ size_t ProcEnvProto::ByteSizeLong() const {
     total_size += 2 + 1;
   }
 
+  // bool useSPProxyProcClnt = 31;
+  if (this->_internal_usespproxyprocclnt() != 0) {
+    total_size += 2 + 1;
+  }
+
   return MaybeComputeUnknownFieldsSize(total_size, &_impl_._cached_size_);
 }
 
@@ -2357,6 +2381,9 @@ void ProcEnvProto::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::P
   if (from._internal_delegateinitflag() != 0) {
     _this->_internal_set_delegateinitflag(from._internal_delegateinitflag());
   }
+  if (from._internal_usespproxyprocclnt() != 0) {
+    _this->_internal_set_usespproxyprocclnt(from._internal_usespproxyprocclnt());
+  }
   _this->_internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
 }
 
@@ -2450,8 +2477,8 @@ void ProcEnvProto::InternalSwap(ProcEnvProto* other) {
       &other->_impl_.valgrind_, rhs_arena
   );
   ::PROTOBUF_NAMESPACE_ID::internal::memswap<
-      PROTOBUF_FIELD_OFFSET(ProcEnvProto, _impl_.delegateinitflag_)
-      + sizeof(ProcEnvProto::_impl_.delegateinitflag_)
+      PROTOBUF_FIELD_OFFSET(ProcEnvProto, _impl_.usespproxyprocclnt_)
+      + sizeof(ProcEnvProto::_impl_.usespproxyprocclnt_)
       - PROTOBUF_FIELD_OFFSET(ProcEnvProto, _impl_.principal_)>(
           reinterpret_cast<char*>(&_impl_.principal_),
           reinterpret_cast<char*>(&other->_impl_.principal_));

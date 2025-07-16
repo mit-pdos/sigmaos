@@ -825,7 +825,7 @@ func partitionNamed(t *testing.T, delay int64) {
 	b = make([]byte, 1)
 	n, err := rdr.Read(b)
 	if delay > 0 {
-		// This shouldn't happen but could with current etcd interface.
+		// This shouldn't happen but can with current etcd interface.
 		assert.Nil(t, err)
 		assert.Equal(t, 1, n)
 	} else {

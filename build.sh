@@ -1,7 +1,7 @@
 #!/bin/bash
 
 usage() {
-  echo "Usage: $0 [--push TAG] [--target TARGET] [--version VERSION] [--userbin USERBIN] [--parallel] [--rebuildbuilder]" 1>&2
+  echo "Usage: $0 [--push TAG] [--target TARGET] [--version VERSION] [--userbin USERBIN] [--no_cpp] [--parallel] [--rebuildbuilder]" 1>&2
 }
 
 PARALLEL=""
@@ -10,6 +10,7 @@ TAG=""
 TARGET="local"
 VERSION="1.0"
 USERBIN="all"
+NO_CPP="false"
 while [[ "$#" -gt 0 ]]; do
   case "$1" in
   --parallel)
@@ -19,6 +20,10 @@ while [[ "$#" -gt 0 ]]; do
   --rebuildbuilder)
     shift
     REBUILD_BUILDER="true"
+    ;;
+  --no_cpp)
+    shift
+    NO_CPP="true"
     ;;
   --push)
     shift
@@ -246,21 +251,23 @@ docker exec -it $rsbuildercid \
   fi
 echo "========== Done building Rust bins =========="
 
-echo "========== Building CPP bins =========="
-BUILD_OUT_FILE=$BUILD_LOG/make-user-cpp.out
-docker exec -it $cppbuildercid \
-  /usr/bin/time -f "Build time: %e sec" \
-  ./make-cpp.sh $CPP_BUILD_ARGS --version $VERSION \
-  2>&1 | tee $BUILD_OUT_FILE && \
-  if [ ${PIPESTATUS[0]} -ne 0 ]; then
-    printf "\n!!!!!!!!!! BUILD ERROR !!!!!!!!!!\nLogs in: $BUILD_OUT_FILE\n" \
-      | tee -a $BUILD_OUT_FILE;
-  fi;
-  if [ $(grep -q "BUILD ERROR" $BUILD_OUT_FILE; echo $?) -eq 0 ]; then
-    echo "!!!!!!!!!! ABORTING BUILD !!!!!!!!!!"
-    exit 1
-  fi
-echo "========== Done building CPP bins =========="
+if [ "${NO_CPP}" != "true" ]; then
+  echo "========== Building CPP bins =========="
+  BUILD_OUT_FILE=$BUILD_LOG/make-user-cpp.out
+  docker exec -it $cppbuildercid \
+    /usr/bin/time -f "Build time: %e sec" \
+    ./make-cpp.sh $CPP_BUILD_ARGS --version $VERSION \
+    2>&1 | tee $BUILD_OUT_FILE && \
+    if [ ${PIPESTATUS[0]} -ne 0 ]; then
+      printf "\n!!!!!!!!!! BUILD ERROR !!!!!!!!!!\nLogs in: $BUILD_OUT_FILE\n" \
+        | tee -a $BUILD_OUT_FILE;
+    fi;
+    if [ $(grep -q "BUILD ERROR" $BUILD_OUT_FILE; echo $?) -eq 0 ]; then
+      echo "!!!!!!!!!! ABORTING BUILD !!!!!!!!!!"
+      exit 1
+    fi
+  echo "========== Done building CPP bins =========="
+fi
 
 echo "========== Copying kernel bins for procd =========="
 if [ "${TARGET}" == "local" ]; then

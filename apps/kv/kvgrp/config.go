@@ -175,7 +175,8 @@ func (g *Group) startServer(cfg *GroupConfig, raftCfg *raft.RaftConfig) (*GroupC
 	var cs any
 	var err error
 
-	cs = cachesrv.NewCacheSrv(g.ProcEnv(), "")
+	// XXX
+	cs, _ = cachesrv.NewCacheSrv(g.ProcEnv(), "", "", 0)
 	if raftCfg != nil {
 		cs, err = replsrv.NewReplSrv(raftCfg, cs)
 		if err != nil {

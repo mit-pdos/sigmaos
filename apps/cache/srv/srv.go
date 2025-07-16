@@ -40,6 +40,7 @@ type CacheSrv struct {
 	shrd      string
 	tracer    *tracing.Tracer
 	lastFence *sp.Tfence
+	ssrv      *sigmasrv.SigmaSrv
 	perf      *perf.Perf
 }
 
@@ -50,31 +51,17 @@ func RunCacheSrv(args []string, nshard int) error {
 	}
 
 	pe := proc.GetProcEnv()
-	s := NewCacheSrv(pe, pn)
-
-	for i := 0; i < nshard; i++ {
-		if err := s.createShard(cache.Tshard(i), sp.NoFence(), make(cache.Tcache)); err != nil {
-			db.DFatalf("CreateShard %v\n", err)
-		}
-	}
-
-	db.DPrintf(db.CACHESRV, "Run %v\n", s.shrd)
-	ssrv, err := sigmasrv.NewSigmaSrv(args[1]+s.shrd, s, pe)
+	s, err := NewCacheSrv(pe, args[1], pn, nshard)
 	if err != nil {
 		return err
 	}
-	if _, err := ssrv.Create(cache.DUMP, sp.DMDIR|0777, sp.ORDWR, sp.NoLeaseId); err != nil {
-		return err
-	}
-	if err := rpcdevsrv.NewSessDev(ssrv.MemFs, cache.DUMP, s.newSession, nil); err != nil {
-		return err
-	}
-	ssrv.RunServer()
+
+	s.ssrv.RunServer()
 	s.exitCacheSrv()
 	return nil
 }
 
-func NewCacheSrv(pe *proc.ProcEnv, pn string) *CacheSrv {
+func NewCacheSrv(pe *proc.ProcEnv, dirname string, pn string, nshard int) (*CacheSrv, error) {
 	cs := &CacheSrv{shards: make(map[cache.Tshard]*shardInfo), lastFence: sp.NullFence()}
 	// Turn off tracing for now
 	//	cs.tracer = tracing.Init("cache", proc.GetSigmaJaegerIP())
@@ -84,7 +71,25 @@ func NewCacheSrv(pe *proc.ProcEnv, pn string) *CacheSrv {
 	}
 	cs.perf = p
 	cs.shrd = pn
-	return cs
+	for i := 0; i < nshard; i++ {
+		if err := cs.createShard(cache.Tshard(i), sp.NoFence(), make(cache.Tcache)); err != nil {
+			db.DFatalf("CreateShard %v\n", err)
+		}
+	}
+
+	db.DPrintf(db.CACHESRV, "Run %v %v", dirname, cs.shrd)
+	ssrv, err := sigmasrv.NewSigmaSrv(dirname+cs.shrd, cs, pe)
+	if err != nil {
+		return nil, err
+	}
+	if _, err := ssrv.Create(cache.DUMP, sp.DMDIR|0777, sp.ORDWR, sp.NoLeaseId); err != nil {
+		return nil, err
+	}
+	if err := rpcdevsrv.NewSessDev(ssrv.MemFs, cache.DUMP, cs.newSession, nil); err != nil {
+		return nil, err
+	}
+	cs.ssrv = ssrv
+	return cs, nil
 }
 
 func (cs *CacheSrv) exitCacheSrv() {

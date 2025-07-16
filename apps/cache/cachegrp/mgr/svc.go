@@ -28,7 +28,24 @@ type CachedSvc struct {
 func (cs *CachedSvc) addServer(i int) error {
 	// SpawnBurst to spread servers across procds.
 	p := proc.NewProc(cs.bin, []string{cs.pn, cachegrp.SRVDIR + strconv.Itoa(int(i))})
-	//	p.AppendEnv("GODEBUG", "gctrace=1")
+	if !cs.gc {
+		p.AppendEnv("GOGC", "off")
+	}
+	p.SetMcpu(cs.mcpu)
+	err := cs.Spawn(p)
+	if err != nil {
+		return err
+	}
+	if err := cs.WaitStart(p.GetPid()); err != nil {
+		return err
+	}
+	cs.servers = append(cs.servers, p.GetPid())
+	return nil
+}
+
+func (cs *CachedSvc) addBackupServer(i int) error {
+	// SpawnBurst to spread servers across procds.
+	p := proc.NewProc(cs.bin+"-backup", []string{cs.pn, cachegrp.BACKUP + strconv.Itoa(int(i))})
 	if !cs.gc {
 		p.AppendEnv("GOGC", "off")
 	}
@@ -48,6 +65,11 @@ func (cs *CachedSvc) addServer(i int) error {
 func NewCachedSvc(sc *sigmaclnt.SigmaClnt, nsrv int, mcpu proc.Tmcpu, job, bin, pn string, gc bool) (*CachedSvc, error) {
 	sc.MkDir(pn, 0777)
 	if err := sc.MkDir(pn+cachegrp.SRVDIR, 0777); err != nil {
+		if !serr.IsErrCode(err, serr.TErrExists) {
+			return nil, err
+		}
+	}
+	if err := sc.MkDir(pn+cachegrp.BACKUP, 0777); err != nil {
 		if !serr.IsErrCode(err, serr.TErrExists) {
 			return nil, err
 		}
@@ -77,6 +99,13 @@ func (cs *CachedSvc) AddServer() error {
 	return cs.addServer(n)
 }
 
+func (cs *CachedSvc) AddBackupServer(i int) error {
+	cs.Lock()
+	defer cs.Unlock()
+
+	return cs.addBackupServer(i)
+}
+
 func (cs *CachedSvc) Nserver() int {
 	return len(cs.servers)
 }
@@ -87,6 +116,10 @@ func (cs *CachedSvc) SvcDir() string {
 
 func (cs *CachedSvc) Server(n string) string {
 	return cs.pn + cachegrp.Server(n)
+}
+
+func (cs *CachedSvc) BackupServer(n string) string {
+	return cs.pn + cachegrp.BackupServer(n)
 }
 
 func (cs *CachedSvc) Stop() error {

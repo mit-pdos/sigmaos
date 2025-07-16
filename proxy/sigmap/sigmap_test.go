@@ -1,6 +1,7 @@
 package sigmap_test
 
 import (
+	"strconv"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -15,12 +16,27 @@ import (
 func TestCompile(t *testing.T) {
 }
 
+// Write vector DB to cache srv
+func writeKVsToCache(cc *cachegrpclnt.CachedSvcClnt, nkv int) ([]string, error) {
+	keys := make([]string, nkv)
+	for i := range keys {
+		key := "key-" + strconv.Itoa(i)
+		keys[i] = key
+		if err := cc.PutBytes(key, []byte("val"+strconv.Itoa(i))); err != nil {
+			return nil, err
+		}
+	}
+	db.DPrintf(db.TEST, "Done write KVs to cache")
+	return keys, nil
+}
+
 func TestCachedDelegatedReshard(t *testing.T) {
 	const (
 		JOB_NAME  = "scalecache-job"
 		ncache    = 1
 		cacheMcpu = 4000
 		cacheGC   = true
+		N_KV      = 5000
 	)
 
 	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
@@ -36,6 +52,15 @@ func TestCachedDelegatedReshard(t *testing.T) {
 		return
 	}
 	cc := cachegrpclnt.NewCachedSvcClnt(mrts.GetRealm(test.REALM1).FsLib, JOB_NAME)
-	_ = cm
-	_ = cc
+
+	keys, err := writeKVsToCache(cc, N_KV)
+	if !assert.Nil(t, err, "Err write KVs to cache: %v", err) {
+		return
+	}
+
+	srvID := 0
+	if err := cm.AddBackupServer(srvID); !assert.Nil(t, err, "Err add backup server(%v): %v", srvID, err) {
+		return
+	}
+	_ = keys
 }

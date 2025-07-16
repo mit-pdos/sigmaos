@@ -52,10 +52,10 @@ func NewMemFsPortClntFenceAuth(pn string, addr *sp.Taddr, sc *sigmaclnt.SigmaCln
 	ctx := ctx.NewCtx(sp.NoPrincipal(), nil, 0, sp.NoClntId, nil, fencefs)
 	ni := memfs.NewNewInode(sp.DEV_MEMFS)
 	root := fenceddir.NewFencedRoot(dir.NewRootDir(ctx, ni))
-	return NewMemFsRootPortClntFenceAuthOpt(root, pn, addr, sc, fencefs, aaf, ni.InodeAlloc(), opts...)
+	return NewMemFsRootPortClntFenceAuth(root, pn, addr, sc, fencefs, aaf, ni.InodeAlloc(), opts)
 }
 
-func NewMemFsRootPortClntFenceAuthOpt(root fs.Dir, srvpath string, addr *sp.Taddr, sc *sigmaclnt.SigmaClnt, fencefs fs.Dir, aaf spprotosrv.AttachAuthF, ia *inode.InodeAlloc, opts ...sesssrv.SessSrvOpt) (*MemFs, error) {
+func NewMemFsRootPortClntFenceAuth(root fs.Dir, srvpath string, addr *sp.Taddr, sc *sigmaclnt.SigmaClnt, fencefs fs.Dir, aaf spprotosrv.AttachAuthF, ia *inode.InodeAlloc, opts []sesssrv.SessSrvOpt) (*MemFs, error) {
 	start := time.Now()
 
 	srv := sigmapsrv.NewSigmaPSrv(sc.ProcEnv(), sc.GetDialProxyClnt(), root, addr, fencefs, aaf, opts)

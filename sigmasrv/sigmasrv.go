@@ -153,7 +153,7 @@ func NewSigmaSrvRootClnt(root fs.Dir, addr *sp.Taddr, path string, sc *sigmaclnt
 
 func NewSigmaSrvRootClntAuthOpt(root fs.Dir, addr *sp.Taddr, path string, sc *sigmaclnt.SigmaClnt, aaf spprotosrv.AttachAuthF, opts ...sesssrv.SessSrvOpt) (*SigmaSrv, error) {
 	ia := inode.NewInodeAlloc(sp.DEV_MEMFS)
-	mfs, err := memfssrv.NewMemFsRootPortClntFenceAuthOpt(root, path, addr, sc, nil, aaf, ia, opts...)
+	mfs, err := memfssrv.NewMemFsRootPortClntFenceAuth(root, path, addr, sc, nil, aaf, ia, opts)
 	if err != nil {
 		return nil, err
 	}

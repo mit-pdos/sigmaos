@@ -70,7 +70,6 @@ func (tc *RawFtTaskClnt) rpc(method string, arg protobuf.Message, res protobuf.M
 		if err != nil {
 			db.DPrintf(db.FTTASKS, "rpc %v err %v", serverPath, err)
 		}
-		// IsErrorSession?
 
 		// if this is an error unrelated to finding the server, return it
 		if !(serr.IsErrorUnavailable(err) && (err.(*serr.Err).Obj == serverPath || err.(*serr.Err).Obj == currInstance)) {

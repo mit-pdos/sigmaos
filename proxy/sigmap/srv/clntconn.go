@@ -447,6 +447,13 @@ func (sca *SPProxySrvAPI) GetDelegatedRPCReply(ctx fs.CtxI, req scproto.SigmaDel
 		Iov: [][]byte(iov),
 	}
 	rep.Err = sca.setErr(err)
-	db.DPrintf(db.SPPROXYSRV, "%v: GetDelegatedRPCReply done %v", sca.sc.ClntId(), req)
+	lens := make([]int, len(iov)+1)
+	if db.WillBePrinted(db.SPPROXYSRV) {
+		lens[0] = len(iov)
+		for i := range iov {
+			lens[i+1] = len(iov[i])
+		}
+	}
+	db.DPrintf(db.SPPROXYSRV, "%v: GetDelegatedRPCReply done %v lens %v", sca.sc.ClntId(), req, lens)
 	return nil
 }

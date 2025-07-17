@@ -37,6 +37,8 @@ func TestCachedDelegatedReshard(t *testing.T) {
 		cacheMcpu = 4000
 		cacheGC   = true
 		N_KV      = 5000
+		//		DELEGATED_INIT = false
+		DELEGATED_INIT = true
 	)
 
 	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
@@ -59,8 +61,9 @@ func TestCachedDelegatedReshard(t *testing.T) {
 	}
 
 	srvID := 0
-	if err := cm.AddBackupServer(srvID); !assert.Nil(t, err, "Err add backup server(%v): %v", srvID, err) {
+	if err := cm.AddBackupServer(srvID, DELEGATED_INIT); !assert.Nil(t, err, "Err add backup server(%v): %v", srvID, err) {
 		return
 	}
+
 	_ = keys
 }

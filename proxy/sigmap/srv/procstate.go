@@ -88,6 +88,7 @@ func (psm *ProcStateMgr) InsertReply(p *proc.Proc, rpcIdx uint64, iov sessp.IoVe
 	ps, ok := psm.getProcState(p.GetPid())
 	if !ok {
 		db.DPrintf(db.SPPROXYSRV_ERR, "Try to insert delegated RPC reply for unknown proc: %v", p.GetPid())
+		return
 	}
 	ps.rpcReps.InsertReply(rpcIdx, iov, err)
 }
@@ -107,7 +108,8 @@ func (psm *ProcStateMgr) GetReply(pid sp.Tpid, rpcIdx uint64) (sessp.IoVec, erro
 func (psm *ProcStateMgr) GetRPCChannel(pid sp.Tpid, pn string) (rpcchan.RPCChannel, bool) {
 	ps, ok := psm.getProcState(pid)
 	if !ok {
-		db.DFatalf("Try to get delegated RPC reply for unknown proc: %v", pid)
+		db.DPrintf(db.SPPROXYSRV_ERR, "Try to get delegated RPC reply for unknown proc: %v", pid)
+		return nil, false
 	}
 	return ps.rpcReps.GetRPCChannel(pn)
 }
@@ -115,7 +117,8 @@ func (psm *ProcStateMgr) GetRPCChannel(pid sp.Tpid, pn string) (rpcchan.RPCChann
 func (psm *ProcStateMgr) PutRPCChannel(pid sp.Tpid, pn string, ch rpcchan.RPCChannel) {
 	ps, ok := psm.getProcState(pid)
 	if !ok {
-		db.DFatalf("Try to RPC channel for unknown proc: %v", pid)
+		db.DPrintf(db.SPPROXYSRV_ERR, "Try to RPC channel for unknown proc: %v", pid)
+		return
 	}
 	ps.rpcReps.PutRPCChannel(pn, ch)
 }

@@ -165,7 +165,9 @@ func (rpcc *RPCClnt) DelegatedRPC(rpcIdx uint64, res proto.Message) error {
 		// into buffers in its IoVec
 		outiov = append(outiov, outblob.GetIoVec()...)
 	}
-	req := &spproxyproto.SigmaDelegatedRPCReq{}
+	req := &spproxyproto.SigmaDelegatedRPCReq{
+		RPCIdx: rpcIdx,
+	}
 	rep := &spproxyproto.SigmaDelegatedRPCRep{
 		Blob: &rpcproto.Blob{
 			Iov: outiov,

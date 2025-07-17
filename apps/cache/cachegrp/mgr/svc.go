@@ -20,13 +20,14 @@ import (
 type CachedSvc struct {
 	sync.Mutex
 	*sigmaclnt.SigmaClnt
-	bin     string
-	servers []sp.Tpid
-	nserver int
-	mcpu    proc.Tmcpu
-	pn      string
-	job     string
-	gc      bool
+	bin           string
+	servers       []sp.Tpid
+	backupServers []sp.Tpid
+	nserver       int
+	mcpu          proc.Tmcpu
+	pn            string
+	job           string
+	gc            bool
 }
 
 func (cs *CachedSvc) addServer(i int) error {
@@ -86,7 +87,7 @@ func (cs *CachedSvc) addBackupServer(srvID int, delegatedInit bool) error {
 	if err := cs.WaitStart(p.GetPid()); err != nil {
 		return err
 	}
-	cs.servers = append(cs.servers, p.GetPid())
+	cs.backupServers = append(cs.backupServers, p.GetPid())
 	return nil
 }
 
@@ -104,14 +105,15 @@ func NewCachedSvc(sc *sigmaclnt.SigmaClnt, nsrv int, mcpu proc.Tmcpu, job, bin, 
 		}
 	}
 	cs := &CachedSvc{
-		SigmaClnt: sc,
-		bin:       bin,
-		servers:   make([]sp.Tpid, 0),
-		nserver:   nsrv,
-		mcpu:      mcpu,
-		pn:        pn,
-		gc:        gc,
-		job:       job,
+		SigmaClnt:     sc,
+		bin:           bin,
+		servers:       make([]sp.Tpid, 0),
+		backupServers: make([]sp.Tpid, 0),
+		nserver:       nsrv,
+		mcpu:          mcpu,
+		pn:            pn,
+		gc:            gc,
+		job:           job,
 	}
 	for i := 0; i < cs.nserver; i++ {
 		if err := cs.addServer(i); err != nil {
@@ -158,6 +160,14 @@ func (cs *CachedSvc) Stop() error {
 			return err
 		}
 		if _, err := cs.WaitExit(pid); err != nil {
+			return err
+		}
+	}
+	for _, pid := range cs.backupServers {
+		if err := cs.Evict(pid); err != nil {
+			return err
+		}
+		if status, err := cs.WaitExit(pid); err != nil || !status.IsStatusOK() {
 			return err
 		}
 	}

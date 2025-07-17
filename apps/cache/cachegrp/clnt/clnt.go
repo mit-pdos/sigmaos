@@ -56,6 +56,10 @@ func (csc *CachedSvcClnt) Server(i int) string {
 	return csc.pn + cachegrp.Server(strconv.Itoa(i))
 }
 
+func (csc *CachedSvcClnt) BackupServer(i int) string {
+	return csc.pn + cachegrp.BackupServer(strconv.Itoa(i))
+}
+
 func (csc *CachedSvcClnt) StatsSrvs() ([]*rpc.RPCStatsSnapshot, error) {
 	n, err := csc.dd.WaitEntriesN(1, true)
 	if err != nil {
@@ -143,7 +147,11 @@ func (csc *CachedSvcClnt) PutBytes(key string, b []byte) error {
 }
 
 func (csc *CachedSvcClnt) Get(key string, val proto.Message) error {
-	return csc.GetTraced(nil, key, val)
+	return csc.getTraced(nil, key, val, false)
+}
+
+func (csc *CachedSvcClnt) BackupGet(key string, val proto.Message) error {
+	return csc.getTraced(nil, key, val, true)
 }
 
 func (csc *CachedSvcClnt) Delete(key string) error {
@@ -151,11 +159,20 @@ func (csc *CachedSvcClnt) Delete(key string) error {
 }
 
 func (csc *CachedSvcClnt) GetTraced(sctx *tproto.SpanContextConfig, key string, val proto.Message) error {
+	return csc.getTraced(sctx, key, val, false)
+}
+
+func (csc *CachedSvcClnt) getTraced(sctx *tproto.SpanContextConfig, key string, val proto.Message, backup bool) error {
 	n, err := csc.dd.WaitEntriesN(1, true)
 	if err != nil {
 		return err
 	}
-	srv := csc.Server(Key2server(key, n))
+	var srv string
+	if backup {
+		srv = csc.BackupServer(Key2server(key, n))
+	} else {
+		srv = csc.Server(Key2server(key, n))
+	}
 	return csc.cc.GetTracedFenced(sctx, srv, key, val, sp.NullFence())
 }
 

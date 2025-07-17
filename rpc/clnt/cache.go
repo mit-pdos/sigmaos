@@ -52,11 +52,15 @@ func (cc *ClntCache) Lookup(pn string) (*RPCClnt, error) {
 	}
 	cc.Unlock()
 	ch, err := cc.rpcOpts.NewRPCChannel(pn)
+	delCh, err1 := cc.rpcOpts.NewDelegatedRPCChannel(pn)
 	cc.Lock()
 	if err != nil {
 		return nil, err
 	}
-	rpcc, err = NewRPCClnt(pn, rpcclntopts.WithRPCChannel(ch))
+	if err1 != nil {
+		return nil, err
+	}
+	rpcc, err = NewRPCClnt(pn, rpcclntopts.WithRPCChannel(ch), rpcclntopts.WithDelegatedRPCChannel(delCh))
 	if err != nil {
 		return nil, err
 	}
@@ -97,6 +101,14 @@ func (cc *ClntCache) RPCRetry(pn string, method string, arg proto.Message, res p
 		return nil
 	}
 	return serr.NewErr(serr.TErrUnreachable, pn)
+}
+
+func (cc *ClntCache) DelegatedRPC(pn string, rpcIdx uint64, res proto.Message) error {
+	rpcc, err := cc.Lookup(pn)
+	if err != nil {
+		return err
+	}
+	return rpcc.DelegatedRPC(rpcIdx, res)
 }
 
 func (cc *ClntCache) RPC(pn string, method string, arg proto.Message, res proto.Message) error {

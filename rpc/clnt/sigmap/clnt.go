@@ -9,12 +9,15 @@ import (
 	"sigmaos/rpc/clnt/opts"
 	rpcclntopts "sigmaos/rpc/clnt/opts"
 	"sigmaos/sigmaclnt/fslib"
+
+	db "sigmaos/debug"
 )
 
 func WithDelegatedSPProxyChannel(fsl *fslib.FsLib) *rpcclntopts.RPCClntOption {
 	return &opts.RPCClntOption{
 		Apply: func(opts *rpcclntopts.RPCClntOptions) {
 			opts.NewDelegatedRPCChannel = func(pn string) (channel.RPCChannel, error) {
+				db.DPrintf(db.RPCCHAN, "Use delegated chan? %v", fsl.ProcEnv().UseSPProxy)
 				if fsl.ProcEnv().UseSPProxy {
 					// Extract SPProxy channel & return it
 					return fsl.FileAPI.(*spproxyclnt.SPProxyClnt).GetRPCChannel(), nil

@@ -354,6 +354,7 @@ func (cs *CacheSrv) Get(ctx fs.CtxI, req cacheproto.CacheReq, rep *cacheproto.Ca
 	if time.Since(e2e) > 1*time.Millisecond {
 		db.DPrintf(db.CACHE_LAT, "Long e2e get: %v", time.Since(e2e))
 	}
+	db.DPrintf(db.CACHESRV, "Get %v key not found", req)
 	return serr.NewErr(serr.TErrNotfound, fmt.Sprintf("key %s", req.Key))
 }
 

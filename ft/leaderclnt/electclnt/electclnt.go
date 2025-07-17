@@ -59,8 +59,8 @@ func (ec *ElectClnt) Done() <-chan struct{} {
 }
 
 // for testing
-func (ec *ElectClnt) CloseSession() error {
-	return ec.sess.Close()
+func (ec *ElectClnt) Orphan() {
+	ec.sess.Orphan()
 }
 
 func (ec *ElectClnt) Fence() sp.Tfence {

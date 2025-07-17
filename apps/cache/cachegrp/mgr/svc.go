@@ -6,9 +6,12 @@ import (
 	"strconv"
 	"sync"
 
-	// db "sigmaos/debug"
+	"sigmaos/apps/cache"
 	"sigmaos/apps/cache/cachegrp"
+	cacheproto "sigmaos/apps/cache/proto"
+	db "sigmaos/debug"
 	"sigmaos/proc"
+	rpcclnt "sigmaos/rpc/clnt"
 	"sigmaos/serr"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
@@ -22,6 +25,7 @@ type CachedSvc struct {
 	nserver int
 	mcpu    proc.Tmcpu
 	pn      string
+	job     string
 	gc      bool
 }
 
@@ -43,13 +47,38 @@ func (cs *CachedSvc) addServer(i int) error {
 	return nil
 }
 
-func (cs *CachedSvc) addBackupServer(i int) error {
+func (cs *CachedSvc) addBackupServer(srvID int, delegatedInit bool) error {
 	// SpawnBurst to spread servers across procds.
-	p := proc.NewProc(cs.bin+"-backup", []string{cs.pn, cachegrp.BACKUP + strconv.Itoa(int(i))})
+	p := proc.NewProc(cs.bin+"-backup", []string{cs.pn, cs.job, cachegrp.BACKUP + strconv.Itoa(int(srvID))})
 	if !cs.gc {
 		p.AppendEnv("GOGC", "off")
 	}
 	p.SetMcpu(cs.mcpu)
+	// Have backup server use spproxy
+	p.GetProcEnv().UseSPProxy = true
+	p.GetProcEnv().UseSPProxyProcClnt = true
+
+	totalInIOVLen := 0
+	dumps := make([]*cacheproto.ShardReq, cache.NSHARD)
+	for i := range dumps {
+		dumps[i] = &cacheproto.ShardReq{
+			Shard: uint32(i),
+			Fence: sp.NullFence().FenceProto(),
+		}
+		cachesrvPN := cs.Server(strconv.Itoa(srvID))
+		iniov, err := rpcclnt.WrapRPCRequest("CacheSrv.DumpShard", dumps[i])
+		if err != nil {
+			db.DPrintf(db.ALWAYS, "Error wrap & marshal dumpReq: %v", err)
+			return err
+		}
+		p.AddInitializationRPC(cachesrvPN, iniov, 2)
+		for _, b := range iniov {
+			totalInIOVLen += len(b)
+		}
+	}
+	db.DPrintf(db.TEST, "Delegated RPC(%v) total len: %v", len(dumps), totalInIOVLen)
+	// Ask for spproxy to run delegated initialization RPCs on behalf of the proc
+	p.SetDelegateInit(delegatedInit)
 	err := cs.Spawn(p)
 	if err != nil {
 		return err
@@ -82,6 +111,7 @@ func NewCachedSvc(sc *sigmaclnt.SigmaClnt, nsrv int, mcpu proc.Tmcpu, job, bin, 
 		mcpu:      mcpu,
 		pn:        pn,
 		gc:        gc,
+		job:       job,
 	}
 	for i := 0; i < cs.nserver; i++ {
 		if err := cs.addServer(i); err != nil {
@@ -99,11 +129,11 @@ func (cs *CachedSvc) AddServer() error {
 	return cs.addServer(n)
 }
 
-func (cs *CachedSvc) AddBackupServer(i int) error {
+func (cs *CachedSvc) AddBackupServer(i int, delegatedInit bool) error {
 	cs.Lock()
 	defer cs.Unlock()
 
-	return cs.addBackupServer(i)
+	return cs.addBackupServer(i, delegatedInit)
 }
 
 func (cs *CachedSvc) Nserver() int {

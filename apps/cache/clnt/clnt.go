@@ -263,6 +263,14 @@ func (c *CacheClnt) FreezeShard(srv string, shard cache.Tshard, f *sp.Tfence) er
 	return nil
 }
 
+func (c *CacheClnt) DelegatedDumpShard(srv string, rpcIdx int) (cache.Tcache, error) {
+	var res cacheproto.ShardData
+	if err := c.DelegatedRPC(srv, uint64(rpcIdx), &res); err != nil {
+		return nil, err
+	}
+	return res.Vals, nil
+}
+
 func (c *CacheClnt) DumpShard(srv string, shard cache.Tshard, f *sp.Tfence) (cache.Tcache, error) {
 	req := &cacheproto.ShardReq{
 		Shard: uint32(shard),

@@ -155,6 +155,17 @@ func (cs *CacheSrv) lookupShardFence(s cache.Tshard, f sp.Tfence) (*shardInfo, e
 	return sh, nil
 }
 
+func (cs *CacheSrv) loadShard(s cache.Tshard, vals cache.Tcache) error {
+	cs.mu.Lock()
+	defer cs.mu.Unlock()
+
+	if _, ok := cs.shards[s]; !ok {
+		return serr.NewErr(serr.TErrNotfound, s)
+	}
+	cs.shards[s].s.fill(vals)
+	return nil
+}
+
 func (cs *CacheSrv) createShard(s cache.Tshard, f sp.Tfence, vals cache.Tcache) error {
 	cs.mu.Lock()
 	defer cs.mu.Unlock()
@@ -218,13 +229,16 @@ func (cs *CacheSrv) DumpShard(ctx fs.CtxI, req cacheproto.ShardReq, rep *cachepr
 	db.DPrintf(db.CACHESRV, "DumpShard %v\n", req)
 
 	if cmp := cs.cmpFence(req.Fence.Tfence()); cmp == sp.FENCE_GT {
+		db.DPrintf(db.CACHESRV_ERR, "DumpShard(%v) err stale fence", req.Tshard())
 		return serr.NewErr(serr.TErrStale, fmt.Sprintf("shard %v", req.Tshard()))
 	}
 	if si, ok := cs.shards[req.Tshard()]; !ok {
+		db.DPrintf(db.CACHESRV_ERR, "DumpShard(%v) err not found", req.Tshard())
 		return serr.NewErr(serr.TErrNotfound, req.Tshard())
 	} else {
 		rep.Vals = si.s.dump()
 	}
+	db.DPrintf(db.CACHESRV, "DumpShard(%v) done", req.Tshard())
 	return nil
 }
 

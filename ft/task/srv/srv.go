@@ -153,6 +153,8 @@ func RunTaskSrv(args []string) error {
 		<-s.electclnt.Done()
 		db.DPrintf(db.FTTASKS, "Session expired")
 		s.expired.Store(true)
+		s.electclnt.ReleaseLeadership()
+		crash.Crash()
 	}()
 
 	if err := s.readEtcd(); err != nil {
@@ -163,6 +165,11 @@ func RunTaskSrv(args []string) error {
 
 	crash.Failer(s.fsl, crash.FTTASKS_CRASH, func(e crash.Tevent) {
 		crash.Crash()
+	})
+
+	crash.Failer(s.fsl, crash.FTTASKS_PARTITION, func(e crash.Tevent) {
+		db.DPrintf(db.FTTASKS, "partition; delay %v", e.Delay)
+		s.electclnt.Orphan()
 	})
 
 	return ssrv.RunServer()

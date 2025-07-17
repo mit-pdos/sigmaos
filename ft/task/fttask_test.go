@@ -18,6 +18,7 @@ import (
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
 	"sigmaos/sigmap"
+	sp "sigmaos/sigmap"
 	"sigmaos/test"
 	"sigmaos/util/crash"
 	"sigmaos/util/retry"
@@ -700,4 +701,32 @@ func TestServerCrash(t *testing.T) {
 }
 
 func TestServerPartition(t *testing.T) {
+	const DELAY = 0
+	crashpn := sp.NAMED + "crashtasksrv.sem"
+
+	e := crash.NewEventPathDelay(crash.FTTASKS_PARTITION, 0, DELAY, float64(1.0), crashpn)
+	err := crash.SetSigmaFail(crash.NewTeventMapOne(e))
+	assert.Nil(t, err)
+
+	ts, err := newTstate[mr.Bin, string](t)
+	if !assert.Nil(t, err, "Error New Tstate: %v", err) {
+		return
+	}
+
+	n, err := ts.clnt.GetNTasks(fttask_clnt.TODO)
+	assert.Nil(t, err)
+
+	err = crash.SignalFailer(ts.FsLib, crashpn)
+	assert.Nil(t, err, "Err crash: %v", err)
+
+	time.Sleep(sp.EtcdSessionExpired * time.Second)
+
+	ids, _, err := ts.clnt.AcquireTasks(false)
+	assert.Nil(t, err)
+
+	assert.Equal(t, int(n), len(ids))
+
+	stats := ts.shutdown()
+
+	assert.Greater(t, stats[0].Nstart, 1)
 }

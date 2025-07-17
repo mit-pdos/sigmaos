@@ -17,6 +17,7 @@ import (
 	"sigmaos/sigmaclnt/fsclnt"
 	"sigmaos/sigmaclnt/fslib"
 	"sigmaos/sigmaclnt/procclnt"
+	sp "sigmaos/sigmap"
 	"sigmaos/util/perf"
 	//"sigmaos/util/spstats"
 )
@@ -168,4 +169,24 @@ func (sc *SigmaClnt) ClntExitOK() {
 
 func (sc *SigmaClnt) StopWatchingSrvs() {
 	sc.ProcAPI.(*procclnt.ProcClnt).StopWatchingSrvs()
+}
+
+// XXX maybe not even retry once
+func (sc *SigmaClnt) WaitExitChan(ch chan error) {
+	var r error
+	// retry := sp.Conf.Path.MAX_RESOLVE_RETRY
+	retry := 1
+	for i := 0; ; i++ {
+		err := sc.WaitEvict(sc.ProcEnv().GetPID())
+		if err == nil {
+			break
+		}
+		r = err
+		if i >= retry {
+			break
+		}
+		db.DPrintf(db.ERROR, "Error WaitEvict: err %v; retry", err)
+		time.Sleep(sp.Conf.Path.RESOLVE_TIMEOUT)
+	}
+	ch <- r
 }

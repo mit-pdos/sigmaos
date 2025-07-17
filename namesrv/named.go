@@ -126,7 +126,7 @@ func Run(args []string) error {
 	}
 
 	ch := make(chan error)
-	go nd.waitExit(ch)
+	go nd.WaitExitChan(ch)
 
 	db.DPrintf(db.NAMED_LDR, "started %v %v", pe.GetPID(), nd.realm)
 
@@ -299,26 +299,6 @@ func (nd *Named) getRoot(pn string) error {
 	}
 	db.DPrintf(db.NAMED, "getdir %v sts %v", pn, sp.Names(sts))
 	return nil
-}
-
-// XXX maybe not even retry once
-func (nd *Named) waitExit(ch chan error) {
-	var r error
-	// retry := sp.Conf.Path.MAX_RESOLVE_RETRY
-	retry := 1
-	for i := 0; ; i++ {
-		err := nd.WaitEvict(nd.ProcEnv().GetPID())
-		if err == nil {
-			break
-		}
-		r = err
-		if i >= retry {
-			break
-		}
-		db.DPrintf(db.NAMED_LDR, "Error WaitEvict: err %v; retry", err)
-		time.Sleep(sp.Conf.Path.RESOLVE_TIMEOUT)
-	}
-	ch <- r
 }
 
 func (nd *Named) watchLeased() {

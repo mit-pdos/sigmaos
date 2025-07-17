@@ -177,7 +177,7 @@ func (rpcc *RPCClnt) DelegatedRPC(rpcIdx uint64, res proto.Message) error {
 	if rep.Err.ErrCode != 0 {
 		return sp.NewErr(rep.Err)
 	}
-	return processWrappedRPCRep(outiov, res, outblob)
+	return processWrappedRPCRep(rep.Blob.Iov, res, outblob)
 }
 
 func (rpcc *RPCClnt) StatsClnt() map[string]*rpc.MethodStatSnapshot {

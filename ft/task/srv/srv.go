@@ -154,6 +154,7 @@ func RunTaskSrv(args []string) error {
 		db.DPrintf(db.FTTASKS, "Session expired")
 		s.expired.Store(true)
 		s.electclnt.ReleaseLeadership()
+		ssrv.StopServing()
 		crash.Crash()
 	}()
 

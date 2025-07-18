@@ -688,7 +688,7 @@ func TestServerData(t *testing.T) {
 // concurrent make progress despite a server crash.
 func TestServerCrash(t *testing.T) {
 	succ := false
-	e0 := crash.NewEventStart(crash.FTTASKS_CRASH, 50, 250, 0.33)
+	e0 := crash.NewEventStart(crash.FTTASKSRV_CRASH, 50, 250, 0.33)
 	for i := 0; i < 10; i++ {
 		stats := runTestServerData(t, crash.NewTeventMapOne(e0))
 		db.DPrintf(db.ALWAYS, "restarted %d times", stats[0].Nstart)
@@ -704,7 +704,7 @@ func TestServerPartition(t *testing.T) {
 	const DELAY = 0
 	crashpn := sp.NAMED + "crashtasksrv.sem"
 
-	e := crash.NewEventPathDelay(crash.FTTASKS_PARTITION, 0, DELAY, float64(1.0), crashpn)
+	e := crash.NewEventPathDelay(crash.FTTASKSRV_PARTITION, 0, DELAY, float64(1.0), crashpn)
 	err := crash.SetSigmaFail(crash.NewTeventMapOne(e))
 	assert.Nil(t, err)
 

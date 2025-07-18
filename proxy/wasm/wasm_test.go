@@ -1,6 +1,7 @@
 package cpp_test
 
 import (
+	"flag"
 	"os"
 	"testing"
 	"time"
@@ -22,11 +23,17 @@ import (
 	//	"sigmaos/test"
 )
 
+var wasmScript string
+
+func init() {
+	flag.StringVar(&wasmScript, "wasm_script", "/home/arielck/sigmaos/rs/wasm/hello-wasm/target/wasm32-unknown-unknown/release/hello_wasm.wasm", "path to WASM script")
+}
+
 func TestCompile(t *testing.T) {
 }
 
 func TestHelloWorld(t *testing.T) {
-	wasmScript, err := os.ReadFile("/home/arielck/sigmaos/wasm/helloworld.wasm")
+	wasmScript, err := os.ReadFile(wasmScript)
 	if !assert.Nil(t, err, "Err read wasm script: %v", err) {
 		return
 	}
@@ -48,15 +55,15 @@ func TestHelloWorld(t *testing.T) {
 		return
 	}
 
-	// Gets the `sum` exported function from the WebAssembly instance.
-	sum, err := instance.Exports.GetFunction("sum")
+	// Gets the `add` exported function from the WebAssembly instance.
+	add, err := instance.Exports.GetFunction("add")
 	if !assert.Nil(t, err, "Err get wasm function: %v", err) {
 		return
 	}
 
 	// Calls that exported function with Go standard values. The WebAssembly
 	// types are inferred and values are casted automatically.
-	result, err := sum(5, 37)
+	result, err := add(5, 37)
 	if !assert.Nil(t, err, "Err call wasm function: %v", err) {
 		return
 	}
@@ -68,7 +75,7 @@ func TestLatency(t *testing.T) {
 	const (
 		NTRIAL = 10
 	)
-	wasmScript, err := os.ReadFile("/home/arielck/sigmaos/wasm/helloworld.wasm")
+	wasmScript, err := os.ReadFile(wasmScript)
 	if !assert.Nil(t, err, "Err read wasm script: %v", err) {
 		return
 	}
@@ -106,14 +113,14 @@ func TestLatency(t *testing.T) {
 	}
 	db.DPrintf(db.TEST, "Wasm module instantiation (%vB) latency:\n\tAvg: %v\n\tEach:%v", len(wasmScript), time.Since(start)/NTRIAL, durs)
 
-	var sum wasmer.NativeFunction
+	var add wasmer.NativeFunction
 
 	durs = make([]time.Duration, 0, NTRIAL)
 	start = time.Now()
 	for i := 0; i < NTRIAL; i++ {
 		start := time.Now()
-		// Gets the `sum` exported function from the WebAssembly instance.
-		sum, err = instance.Exports.GetFunction("sum")
+		// Gets the `add` exported function from the WebAssembly instance.
+		add, err = instance.Exports.GetFunction("add")
 		if !assert.Nil(t, err, "Err get wasm function: %v", err) {
 			return
 		}
@@ -123,7 +130,7 @@ func TestLatency(t *testing.T) {
 
 	// Calls that exported function with Go standard values. The WebAssembly
 	// types are inferred and values are casted automatically.
-	result, err := sum(5, 37)
+	result, err := add(5, 37)
 	if !assert.Nil(t, err, "Err call wasm function: %v", err) {
 		return
 	}

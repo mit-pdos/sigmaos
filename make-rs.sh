@@ -60,8 +60,12 @@ build="parallel -j$njobs $CARGO \"build --manifest-path=rs/{}/Cargo.toml --relea
 echo $build
 eval $build
 
-#cp 
-
 # Copy rust bins
 cp rs/uproc-trampoline/target/release/uproc-trampoline bin/kernel
 cp rs/spawn-latency/target/release/spawn-latency bin/user/spawn-latency-v$VERSION
+
+# Build wasm scripts
+TARGETS=$(ls rs/wasm)
+build="parallel -j$njobs $CARGO \"build --manifest-path=rs/wasm/{}/Cargo.toml --target=wasm32-unknown-unknown --release\" ::: $TARGETS"
+echo $build
+eval $build

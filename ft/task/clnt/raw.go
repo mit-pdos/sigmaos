@@ -51,7 +51,7 @@ func (tc *RawFtTaskClnt) rpc(method string, arg protobuf.Message, res protobuf.M
 	err, ok := retry.RetryDefDur(func() error {
 		err := tc.rpcclntc.RPC(pn, method, arg, res)
 		if err != nil {
-			db.DPrintf(db.FTTASKS, "rpc %v err %v", pn, err)
+			db.DPrintf(db.FTTASKCLNT, "rpc %v err %v", pn, err)
 		}
 		return err
 	}, func(err error) bool {
@@ -143,11 +143,16 @@ func (tc *RawFtTaskClnt) GetTaskOutputs(ids []TaskId) ([][]byte, error) {
 	arg := proto.GetTaskOutputsReq{Ids: ids, Fence: tc.fenceProto()}
 	res := proto.GetTaskOutputsRep{}
 
-	err := tc.rpc("TaskSrv.GetTaskOutputs", &arg, &res)
+	err, _ := retry.RetryAtLeastOnce(func() error {
+		err := tc.rpc("TaskSrv.GetTaskOutputs", &arg, &res)
+		if err != nil {
+			db.DPrintf(db.FTTASKCLNT, "GetTaskOutputs: retry %v", err)
+		}
+		return err
+	})
 	if err != nil {
 		return nil, err
 	}
-
 	return res.Outputs, nil
 }
 

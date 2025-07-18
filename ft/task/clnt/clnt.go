@@ -55,7 +55,7 @@ func GetTasks[Data any, Output any](tc FtTaskClnt[Data, Output], chTask chan []T
 		if err != nil {
 			db.DFatalf("AcquireTasks err %v", err)
 		}
-		db.DPrintf(db.FTTASKS, "GetTasks: AcquireTasks %v %t err %v", tasks, stopped, err)
+		db.DPrintf(db.FTTASKMGR, "GetTasks: AcquireTasks %v %t err %v", tasks, stopped, err)
 		if len(tasks) != 0 {
 			chTask <- tasks
 		}

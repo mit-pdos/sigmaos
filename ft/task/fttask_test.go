@@ -21,7 +21,6 @@ import (
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 	"sigmaos/util/crash"
-	"sigmaos/util/retry"
 )
 
 const (
@@ -590,18 +589,10 @@ func runTestServerData(t *testing.T, em *crash.TeventMap) []*procgroupmgr.ProcSt
 	assert.Nil(t, err)
 	assert.Equal(t, 0, len(existing))
 
-	if em != nil {
-		time.Sleep(30 * time.Millisecond)
-	}
-
 	ids, stopped, err := ts.clnt.AcquireTasks(false)
 	assert.Nil(t, err)
 	assert.False(t, stopped)
 	assert.Equal(t, ntasks, len(ids))
-
-	if em != nil {
-		time.Sleep(30 * time.Millisecond)
-	}
 
 	read, err := ts.clnt.ReadTasks(ids)
 	assert.Nil(t, err)
@@ -612,10 +603,6 @@ func runTestServerData(t *testing.T, em *crash.TeventMap) []*procgroupmgr.ProcSt
 		assert.Equal(t, fmt.Sprintf("hello_%d", id), file)
 	}
 
-	if em != nil {
-		time.Sleep(30 * time.Millisecond)
-	}
-
 	outputs := make([]string, len(ids))
 	for i := 0; i < ntasks; i++ {
 		outputs[i] = fmt.Sprintf("output_%d", i)
@@ -623,28 +610,13 @@ func runTestServerData(t *testing.T, em *crash.TeventMap) []*procgroupmgr.ProcSt
 	err = ts.clnt.AddTaskOutputs(ids, outputs, false)
 	assert.Nil(t, err)
 
-	if em != nil {
-		time.Sleep(30 * time.Millisecond)
-	}
-
 	n, err := ts.clnt.MoveTasksByStatus(proto.TaskStatus_WIP, proto.TaskStatus_DONE)
 	assert.Equal(t, ntasks, int(n))
 	assert.Nil(t, err)
 
-	if em != nil {
-		time.Sleep(30 * time.Millisecond)
-	}
-
-	var readOutputs []string
-	err, ok := retry.RetryAtLeastOnce(func() error {
-		readOutputs, err = ts.clnt.GetTaskOutputs(ids)
-		if err == nil {
-			assert.Equal(t, ntasks, len(outputs))
-		}
-		return err
-	})
+	readOutputs, err := ts.clnt.GetTaskOutputs(ids)
 	assert.Nil(t, err)
-	assert.True(t, ok)
+	assert.Equal(t, ntasks, len(outputs))
 
 	for i := 0; i < ntasks; i++ {
 		assert.Equal(t, outputs[i], readOutputs[i])

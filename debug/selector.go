@@ -229,7 +229,8 @@ const (
 	ELECTCLNT               = "ELECTCLNT"
 	EPOCHCLNT               = "EPOCHCLNT"
 	EPOCHCLNT_ERR           = EPOCHCLNT + ERR
-	FTTASKS                 = "FTTASKS"
+	FTTASKSRV               = "FTTASKSRV"
+	FTTASKCLNT              = "FTTASKCLNT"
 	FTTASKMGR               = "FTTASKMGR"
 )
 

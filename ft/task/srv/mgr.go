@@ -52,7 +52,7 @@ func NewFtTaskSrvMgr(sc *sigmaclnt.SigmaClnt, id string, persist bool) (*FtTaskS
 func (ft *FtTaskSrvMgr) Stop(clearStore bool) ([]*procgroupmgr.ProcStatus, error) {
 	ft.stopped = true
 	if clearStore {
-		db.DPrintf(db.FTTASKS, "Sending request to clear backing store")
+		db.DPrintf(db.FTTASKMGR, "Sending request to clear backing store")
 		// lock to ensure group members don't change while we clear the db
 		ft.p.Lock()
 		err := ft.clnt.ClearEtcd()
@@ -61,7 +61,7 @@ func (ft *FtTaskSrvMgr) Stop(clearStore bool) ([]*procgroupmgr.ProcStatus, error
 			return nil, err
 		}
 	}
-	db.DPrintf(db.FTTASKS, "Stopping group %v", ft.Id)
+	db.DPrintf(db.FTTASKMGR, "Stopping group %v", ft.Id)
 	stats, err := ft.p.StopGroup()
 	return stats, err
 }

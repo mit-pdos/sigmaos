@@ -137,3 +137,68 @@ func TestLatency(t *testing.T) {
 
 	assert.Equal(t, result.(int32), int32(42))
 }
+
+var logged bool
+
+func log(v int32) {
+	logged = true
+	db.DPrintf(db.TEST, "Logged from wasm: %v", v)
+}
+
+func TestHostFunction(t *testing.T) {
+	wasmScript, err := os.ReadFile(wasmScript)
+	if !assert.Nil(t, err, "Err read wasm script: %v", err) {
+		return
+	}
+	engine := wasmer.NewEngine()
+	store := wasmer.NewStore(engine)
+
+	logHostFn := wasmer.NewFunction(
+		store,
+		wasmer.NewFunctionType(wasmer.NewValueTypes(wasmer.I32), wasmer.NewValueTypes()),
+		func(args []wasmer.Value) ([]wasmer.Value, error) {
+			log(args[0].I32())
+			return []wasmer.Value{}, nil
+		},
+	)
+
+	start := time.Now()
+	// Compiles the module
+	module, err := wasmer.NewModule(store, wasmScript)
+	if !assert.Nil(t, err, "Err compile wasm module: %v", err) {
+		return
+	}
+	db.DPrintf(db.TEST, "Wasm module compilation (%vB) latency: %v", len(wasmScript), time.Since(start))
+
+	// Instantiates the module
+	importObject := wasmer.NewImportObject()
+	importObject.Register(
+		"sigmaos_host",
+		map[string]wasmer.IntoExtern{
+			"log": logHostFn,
+		},
+	)
+	instance, err := wasmer.NewInstance(module, importObject)
+	if !assert.Nil(t, err, "Err instantiate wasm module: %v", err) {
+		return
+	}
+
+	// Gets the `add` exported function from the WebAssembly instance.
+	add_and_log, err := instance.Exports.GetFunction("add_and_log")
+	if !assert.Nil(t, err, "Err get wasm function: %v", err) {
+		return
+	}
+
+	// Calls that exported function with Go standard values. The WebAssembly
+	// types are inferred and values are casted automatically.
+	result, err := add_and_log(5, 37)
+	if !assert.Nil(t, err, "Err call wasm function: %v", err) {
+		return
+	}
+
+	if !assert.True(t, logged, "log host function never called") {
+		return
+	}
+
+	db.DPrintf(db.TEST, "Result: %v", result) // 42!
+}

@@ -102,7 +102,16 @@ func (tc *RawFtTaskClnt) GetTasksByStatus(taskStatus TaskStatus) ([]TaskId, erro
 	arg := proto.GetTasksByStatusReq{Status: taskStatus, Fence: tc.fenceProto()}
 	res := proto.GetTasksByStatusRep{}
 
-	err := tc.rpc("TaskSrv.GetTasksByStatus", &arg, &res)
+	err, _ := retry.RetryAtLeastOnce(func() error {
+		err := tc.rpc("TaskSrv.GetTasksByStatus", &arg, &res)
+		if err != nil {
+			db.DPrintf(db.FTTASKCLNT, "GetTasksByStatus: rpc err %v", err)
+		}
+		return err
+	})
+	if err != nil {
+		return nil, err
+	}
 	return res.Ids, err
 }
 
@@ -110,7 +119,13 @@ func (tc *RawFtTaskClnt) ReadTasks(ids []TaskId) ([]Task[[]byte], error) {
 	arg := proto.ReadTasksReq{Ids: ids, Fence: tc.fenceProto()}
 	res := proto.ReadTasksRep{}
 
-	err := tc.rpc("TaskSrv.ReadTasks", &arg, &res)
+	err, _ := retry.RetryAtLeastOnce(func() error {
+		err := tc.rpc("TaskSrv.ReadTasks", &arg, &res)
+		if err != nil {
+			db.DPrintf(db.FTTASKCLNT, "ReadTasks: rpc err %v", err)
+		}
+		return err
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -146,7 +161,7 @@ func (tc *RawFtTaskClnt) GetTaskOutputs(ids []TaskId) ([][]byte, error) {
 	err, _ := retry.RetryAtLeastOnce(func() error {
 		err := tc.rpc("TaskSrv.GetTaskOutputs", &arg, &res)
 		if err != nil {
-			db.DPrintf(db.FTTASKCLNT, "GetTaskOutputs: retry %v", err)
+			db.DPrintf(db.FTTASKCLNT, "GetTaskOutputs: rpc err %v", err)
 		}
 		return err
 	})
@@ -176,7 +191,17 @@ func (tc *RawFtTaskClnt) Stats() (*proto.TaskStats, error) {
 	arg := proto.GetTaskStatsReq{}
 	res := proto.GetTaskStatsRep{}
 
-	err := tc.rpc("TaskSrv.GetTaskStats", &arg, &res)
+	err, _ := retry.RetryAtLeastOnce(func() error {
+		err := tc.rpc("TaskSrv.GetTaskStats", &arg, &res)
+		if err != nil {
+			db.DPrintf(db.FTTASKCLNT, "Stats: rpc err %v", err)
+			return err
+		}
+		return err
+	})
+	if err != nil {
+		return nil, err
+	}
 	return res.Stats, err
 }
 
@@ -204,7 +229,13 @@ func (tc *RawFtTaskClnt) SubmittedLastTask() error {
 	arg := proto.SubmittedLastTaskReq{Fence: tc.fenceProto()}
 	res := proto.SubmittedLastTaskRep{}
 
-	err := tc.rpc("TaskSrv.SubmittedLastTask", &arg, &res)
+	err, _ := retry.RetryAtLeastOnce(func() error {
+		err := tc.rpc("TaskSrv.SubmittedLastTask", &arg, &res)
+		if err != nil {
+			db.DPrintf(db.FTTASKCLNT, "SubmittedLastTask: rpc err %v", err)
+		}
+		return err
+	})
 	return err
 }
 
@@ -230,7 +261,13 @@ func (tc *RawFtTaskClnt) ClearEtcd() error {
 	arg := proto.ClearEtcdReq{}
 	res := proto.ClearEtcdRep{}
 
-	err := tc.rpc("TaskSrv.ClearEtcd", &arg, &res)
+	err, _ := retry.RetryAtLeastOnce(func() error {
+		err := tc.rpc("TaskSrv.ClearEtcd", &arg, &res)
+		if err != nil {
+			db.DPrintf(db.FTTASKCLNT, "ClearEtcd: rpc err %v", err)
+		}
+		return err
+	})
 	return err
 }
 

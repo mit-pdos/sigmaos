@@ -3,9 +3,6 @@
 package srv
 
 import (
-	// "fmt"
-
-	"path/filepath"
 	db "sigmaos/debug"
 	"sigmaos/ft/procgroupmgr"
 	fttask "sigmaos/ft/task"
@@ -34,13 +31,7 @@ func NewFtTaskSrvMgr(sc *sigmaclnt.SigmaClnt, id string, persist bool) (*FtTaskS
 		return nil, err
 	}
 
-	err = sc.MkDir(filepath.Join(sp.FTTASK, id), 0777)
-	if err != nil && !serr.IsErrorExists(err) {
-		return nil, err
-	}
-
-	job := id
-	config := procgroupmgr.NewProcGroupConfig(1, "fttask-srv", []string{}, FTTASK_SRV_MCPU, job)
+	config := procgroupmgr.NewProcGroupConfig(1, "fttask-srv", []string{}, FTTASK_SRV_MCPU, id)
 	if persist {
 		config.Persist(sc.FsLib)
 	}

@@ -2,8 +2,10 @@
 package clnt
 
 import (
-	"fmt"
-	"path/filepath"
+	"sync"
+
+	protobuf "google.golang.org/protobuf/proto"
+
 	db "sigmaos/debug"
 	fttask "sigmaos/ft/task"
 	"sigmaos/ft/task/proto"
@@ -12,10 +14,7 @@ import (
 	"sigmaos/serr"
 	"sigmaos/sigmaclnt/fslib"
 	sp "sigmaos/sigmap"
-	"sync"
-	"time"
-
-	protobuf "google.golang.org/protobuf/proto"
+	"sigmaos/util/retry"
 )
 
 type RawFtTaskClnt struct {
@@ -47,69 +46,22 @@ func (tc *RawFtTaskClnt) fenceProto() *sp.TfenceProto {
 	return tc.fence.FenceProto()
 }
 
-func (tc *RawFtTaskClnt) getAvailableInstances() ([]string, error) {
-	instances, _, err := tc.fsl.ReadDir(tc.serverId.ServerPath())
-	instanceIds := make([]string, 0)
-	for _, instance := range instances {
-		instanceIds = append(instanceIds, instance.Name)
-	}
-
-	return instanceIds, err
-}
-
 func (tc *RawFtTaskClnt) rpc(method string, arg protobuf.Message, res protobuf.Message) error {
-	// lock to protect tc.currInstance
-	tc.mu.Lock()
-	currInstance := tc.currInstance
-	tc.mu.Unlock()
-
-	if currInstance != "" {
-		serverPath := filepath.Join(tc.serverId.ServerPath(), currInstance)
-		err := tc.rpcclntc.RPC(serverPath, method, arg, res)
-
+	pn := tc.serverId.ServerPath()
+	err, ok := retry.RetryDefDur(func() error {
+		err := tc.rpcclntc.RPC(pn, method, arg, res)
 		if err != nil {
-			db.DPrintf(db.FTTASKS, "rpc %v err %v", serverPath, err)
+			db.DPrintf(db.FTTASKS, "rpc %v err %v", pn, err)
 		}
-
-		// if this is an error unrelated to finding the server, return it
-		if !(serr.IsErrorUnavailable(err) && (err.(*serr.Err).Obj == serverPath || err.(*serr.Err).Obj == currInstance)) {
-			return err
-		}
-
-		db.DPrintf(db.FTTASKS, "rpc to last known instance %s failed: %v", tc.currInstance, err)
+		return err
+	}, func(err error) bool {
+		// if not found, try again, because a new fttask srv may start and take over
+		return serr.IsErrorNotfound(err) && err.(*serr.Err).Obj == tc.serverId.String()
+	})
+	if !ok {
+		return serr.NewErr(serr.TErrUnreachable, pn)
 	}
-
-	numRetries := fttask.CLNT_NUM_RETRIES
-
-	var instances []string
-	for i := 0; i < numRetries; i++ {
-		var err error
-
-		instances, err = tc.getAvailableInstances()
-		if err != nil {
-			return err
-		}
-
-		for _, instance := range instances {
-			if instance == currInstance {
-				continue
-			}
-
-			err := tc.rpcclntc.RPC(filepath.Join(tc.serverId.ServerPath(), instance), method, arg, res)
-			if err == nil {
-				tc.mu.Lock()
-				tc.currInstance = instance
-				tc.mu.Unlock()
-				return nil
-			}
-			db.DPrintf(db.FTTASKS, "rpc %s to %s failed: %v", method, instance, err)
-		}
-
-		db.DPrintf(db.FTTASKS, "rpc %s to all instances %v failed", method, instances)
-		time.Sleep(fttask.CLNT_RETRY_TIMEOUT)
-	}
-	db.DPrintf(db.FTTASKS, "rpc %s to all instances %v failed %d times", method, instances, numRetries)
-	return serr.NewErr(serr.TErrUnreachable, fmt.Sprintf("no instances available, %v all failed", instances))
+	return err
 }
 
 func (tc *RawFtTaskClnt) SubmitTasks(tasks []*Task[[]byte]) ([]TaskId, error) {

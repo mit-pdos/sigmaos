@@ -224,17 +224,17 @@ func (err *Err) IsErrSession() bool {
 	return err.IsErrUnreachable() || err.IsErrIO() || err.IsErrClosed()
 }
 
-// A file is unavailable: either a server on the file's path is
-// unreachable or the file is not found
-func (err *Err) IsErrUnavailable() bool {
-	return err.IsErrUnreachable() || err.IsErrNotfound()
-}
-
 // Several calls optimistically connect to a recently-mounted server
 // without doing a pathname walk; this may fail, and the call should
 // walk. IsWalkOK() says when to walk.
 func (err *Err) IsErrWalkOK() bool {
 	return err.IsErrUnreachable() || err.IsErrUnknownfid() || err.IsMaybeSpecialElem()
+}
+
+// A file is unavailable: either a server on the file's path is
+// unreachable or the file is not found
+func (err *Err) IsErrUnavailable() bool {
+	return err.IsErrWalkOK() || err.IsErrNotfound()
 }
 
 // Retry Open() also on IsErrIO

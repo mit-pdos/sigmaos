@@ -72,12 +72,12 @@ func NewSigmaSrvAddr(fn string, addr *sp.Taddr, pe *proc.ProcEnv, svci any) (*Si
 	return NewSigmaSrvAddrClnt(fn, addr, sc, svci)
 }
 
-func NewSigmaSrvClnt(fn string, sc *sigmaclnt.SigmaClnt, svci any) (*SigmaSrv, error) {
-	return NewSigmaSrvClntAuthFn(fn, sc, svci, spprotosrv.AttachAllowAllToAll)
+func NewSigmaSrvClnt(fn string, sc *sigmaclnt.SigmaClnt, svci any, opts ...sesssrv.SessSrvOpt) (*SigmaSrv, error) {
+	return NewSigmaSrvClntAuthFn(fn, sc, svci, spprotosrv.AttachAllowAllToAll, opts...)
 }
 
-func NewSigmaSrvClntAuthFn(fn string, sc *sigmaclnt.SigmaClnt, svci any, aaf spprotosrv.AttachAuthF) (*SigmaSrv, error) {
-	mfs, error := memfssrv.NewMemFsPortClnt(fn, sp.NewTaddrAnyPort(), sc, aaf)
+func NewSigmaSrvClntAuthFn(fn string, sc *sigmaclnt.SigmaClnt, svci any, aaf spprotosrv.AttachAuthF, opts ...sesssrv.SessSrvOpt) (*SigmaSrv, error) {
+	mfs, error := memfssrv.NewMemFsPortClnt(fn, sp.NewTaddrAnyPort(), sc, aaf, opts...)
 	if error != nil {
 		db.DPrintf(db.ERROR, "NewSigmaSrvClnt %v err %v", fn, error)
 		return nil, error

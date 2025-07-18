@@ -22,11 +22,10 @@ import (
 	"sigmaos/proc"
 	"sigmaos/serr"
 	sesssrv "sigmaos/session/srv"
-	"sigmaos/sigmaclnt/fslib"
+	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
 	"sigmaos/util/crash"
-	"sigmaos/util/rand"
 )
 
 type TaskSrv struct {
@@ -47,7 +46,7 @@ type TaskSrv struct {
 
 	etcdClient *clientv3.Client
 	electclnt  *electclnt.ElectClnt
-	fsl        *fslib.FsLib
+	sc         *sigmaclnt.SigmaClnt
 
 	expired atomic.Bool
 }
@@ -96,31 +95,22 @@ func RunTaskSrv(args []string) error {
 		rootId:   fttask.FtTaskSrvId(fttaskId),
 	}
 
-	// prevent the server from serving any requests until everything has been initialized
-	s.mu.Lock()
-
-	var ssrv *sigmasrv.SigmaSrv
-	var srvId string
-
-	for {
-		var err error
-		srvId = rand.String(4)
-		ssrv, err = sigmasrv.NewSigmaSrv(filepath.Join(fttask.FtTaskSrvId(fttaskId).ServerPath(), srvId), s, pe, sesssrv.WithExp(s))
-		if serr.IsErrorExists(err) {
-			continue
-		} else if err != nil {
-			return err
-		} else {
-			break
-		}
+	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
+	if err != nil {
+		return err
 	}
+	s.sc = sc
 
-	db.DPrintf(db.FTTASKS, "Created fttask srv with id %s, args %v", srvId, args)
+	db.DPrintf(db.FTTASKS, "Start: %v %v", args, sc)
 
-	s.fsl = ssrv.SigmaClnt().FsLib
+	if err := s.sc.Started(); err != nil {
+		return err
+	}
+	ch := make(chan error)
+	go s.sc.WaitExitChan(ch)
 
 	etcdMnts := pe.GetEtcdEndpoints()
-	dial := ssrv.SigmaClnt().GetDialProxyClnt().Dial
+	dial := s.sc.GetDialProxyClnt().Dial
 
 	endpoints := []string{}
 	for addr := range etcdMnts {
@@ -145,7 +135,7 @@ func RunTaskSrv(args []string) error {
 	}
 	s.etcdClient = etcdClient
 
-	if err := s.acquireLeadership(ssrv); err != nil {
+	if err := s.acquireLeadership(); err != nil {
 		return err
 	}
 
@@ -154,7 +144,6 @@ func RunTaskSrv(args []string) error {
 		db.DPrintf(db.FTTASKS, "Session expired")
 		s.expired.Store(true)
 		s.electclnt.ReleaseLeadership()
-		ssrv.StopServing()
 		crash.Crash()
 	}()
 
@@ -162,22 +151,37 @@ func RunTaskSrv(args []string) error {
 		return err
 	}
 
-	s.mu.Unlock()
+	ssrv, err := sigmasrv.NewSigmaSrvClnt(fttask.FtTaskSrvId(fttaskId).ServerPath(), s.sc, s, sesssrv.WithExp(s))
+	if err != nil {
+		return err
+	}
 
-	crash.Failer(s.fsl, crash.FTTASKS_CRASH, func(e crash.Tevent) {
+	db.DPrintf(db.FTTASKS, "Created fttask srv %s", fttaskId)
+
+	crash.Failer(s.sc.FsLib, crash.FTTASKS_CRASH, func(e crash.Tevent) {
 		crash.Crash()
 	})
 
-	crash.Failer(s.fsl, crash.FTTASKS_PARTITION, func(e crash.Tevent) {
+	crash.Failer(s.sc.FsLib, crash.FTTASKS_PARTITION, func(e crash.Tevent) {
 		db.DPrintf(db.FTTASKS, "partition; delay %v", e.Delay)
 		s.electclnt.Orphan()
 	})
 
-	return ssrv.RunServer()
+	err = <-ch
+
+	db.DPrintf(db.FTTASKS, "task srv done %v err %v", fttaskId, err)
+
+	if err := s.electclnt.ReleaseLeadership(); err != nil {
+		return err
+	}
+
+	ssrv.SrvExit(proc.NewStatus(proc.StatusEvicted))
+
+	return nil
 }
 
-func (s *TaskSrv) acquireLeadership(ssrv *sigmasrv.SigmaSrv) error {
-	electclnt, err := electclnt.NewElectClnt(ssrv.SigmaClnt().FsLib, filepath.Join(sp.NAMED, "fttask", s.rootId.String()+"-leader"), sp.Tperm(0777))
+func (s *TaskSrv) acquireLeadership() error {
+	electclnt, err := electclnt.NewElectClnt(s.sc.FsLib, filepath.Join(sp.NAMED, "fttask", s.rootId.String()+"-leader"), sp.Tperm(0777))
 	if err != nil {
 		return err
 	}

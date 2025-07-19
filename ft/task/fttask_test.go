@@ -3,6 +3,7 @@ package task_test
 import (
 	"fmt"
 	"path/filepath"
+	"strconv"
 	"testing"
 	"time"
 
@@ -563,16 +564,43 @@ func TestServerFence(t *testing.T) {
 	ts.shutdown()
 }
 
+func TestAtMostOnceSubmit(t *testing.T) {
+	e := crash.NewEventPath(crash.FTTASKSRV_SUBMITCRASH, 0, 0.0, strconv.Itoa(fttask_srv.CRASHID))
+	err := crash.SetSigmaFail(crash.NewTeventMapOne(e))
+	assert.Nil(t, err)
+
+	ts, err := newTstate[struct{}, struct{}](t)
+	if !assert.Nil(t, err, "Error New Tstate: %v", err) {
+		return
+	}
+
+	tasks := make([]*fttask_clnt.Task[struct{}], 0)
+	for i := 0; i < 1; i++ {
+		tasks = append(tasks, &fttask_clnt.Task[struct{}]{
+			Id:   fttask_srv.CRASHID,
+			Data: struct{}{},
+		})
+	}
+
+	existing, err := ts.clnt.SubmitTasks(tasks)
+	assert.Nil(t, err)
+	assert.Equal(t, 0, len(existing))
+
+	ts.shutdown()
+}
+
+func TestAtMostOnceAcquire(t *testing.T) {
+}
+
 func runTestServerData(t *testing.T, em *crash.TeventMap) []*procgroupmgr.ProcStatus {
+	err := crash.SetSigmaFail(em)
+	assert.Nil(t, err)
+
 	ts, err := newTstate[mr.Bin, string](t)
 	if !assert.Nil(t, err, "Error New Tstate: %v", err) {
 		return nil
 	}
-
 	ntasks := 5
-
-	err = crash.SetSigmaFail(em)
-	assert.Nil(t, err)
 
 	tasks := make([]*fttask_clnt.Task[mr.Bin], 0)
 	for i := 0; i < ntasks; i++ {

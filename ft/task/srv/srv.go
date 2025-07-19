@@ -28,6 +28,8 @@ import (
 	"sigmaos/util/crash"
 )
 
+const CRASHID = -1
+
 type TaskSrv struct {
 	data   map[int32][]byte
 	output map[int32][]byte
@@ -157,6 +159,8 @@ func RunTaskSrv(args []string) error {
 	}
 
 	db.DPrintf(db.FTTASKSRV, "Created fttask srv %s", fttaskId)
+
+	crash.SetCrashFile(s.sc.FsLib, crash.FTTASKSRV_SUBMITCRASH)
 
 	crash.Failer(s.sc.FsLib, crash.FTTASKSRV_CRASH, func(e crash.Tevent) {
 		crash.Crash()
@@ -502,6 +506,10 @@ func (s *TaskSrv) SubmitTasks(ctx fs.CtxI, req proto.SubmitTasksReq, rep *proto.
 	}
 
 	rep.Existing = existing
+
+	if len(req.Tasks) > 0 {
+		crash.CrashFile(strconv.Itoa(int(req.Tasks[0].Id)))
+	}
 
 	db.DPrintf(db.FTTASKSRV, "SubmitTasks: total: %d, exist: %d", len(req.Tasks), len(existing))
 

@@ -734,6 +734,10 @@ func (s *TaskSrv) AcquireTasks(ctx fs.CtxI, req proto.AcquireTasksReq, rep *prot
 	rep.Stopped = s.allTasksDone()
 	rep.Ids = ids
 
+	if len(ids) > 0 {
+		crash.CrashFile(strconv.Itoa(int(ids[0])))
+	}
+
 	db.DPrintf(db.FTTASKSRV, "AcquireTasks: n: %d stopped: %t", len(rep.Ids), rep.Stopped)
 
 	return nil

@@ -81,6 +81,7 @@ func (tc *RawFtTaskClnt) SubmitTasks(tasks []*Task[[]byte]) ([]TaskId, error) {
 	return res.Existing, err
 }
 
+// EditTasks assumes only one client invokes it for a specific id
 func (tc *RawFtTaskClnt) EditTasks(tasks []*Task[[]byte]) ([]TaskId, error) {
 	var protoTasks []*proto.Task
 
@@ -94,7 +95,13 @@ func (tc *RawFtTaskClnt) EditTasks(tasks []*Task[[]byte]) ([]TaskId, error) {
 	arg := proto.EditTasksReq{Tasks: protoTasks, Fence: tc.fenceProto()}
 	res := proto.EditTasksRep{}
 
-	err := tc.rpc("TaskSrv.EditTasks", &arg, &res)
+	err, _ := retry.RetryAtLeastOnce(func() error {
+		err := tc.rpc("TaskSrv.EditTasks", &arg, &res)
+		if err != nil {
+			db.DPrintf(db.FTTASKCLNT, "EditTasks: rpc err %v", err)
+		}
+		return err
+	})
 	return res.Unknown, err
 }
 
@@ -138,19 +145,33 @@ func (tc *RawFtTaskClnt) ReadTasks(ids []TaskId) ([]Task[[]byte], error) {
 	return tasks, nil
 }
 
+// MoveTasks assumes only one client invokes it for a specific id
 func (tc *RawFtTaskClnt) MoveTasks(ids []TaskId, to TaskStatus) error {
 	arg := proto.MoveTasksReq{Ids: ids, To: to, Fence: tc.fenceProto()}
 	res := proto.MoveTasksRep{}
 
-	err := tc.rpc("TaskSrv.MoveTasks", &arg, &res)
+	err, _ := retry.RetryAtLeastOnce(func() error {
+		err := tc.rpc("TaskSrv.MoveTasks", &arg, &res)
+		if err != nil {
+			db.DPrintf(db.FTTASKCLNT, "MoveTasks: rpc err %v", err)
+		}
+		return err
+	})
 	return err
 }
 
+// MoveTasksByStatus assumes only one client invokes it
 func (tc *RawFtTaskClnt) MoveTasksByStatus(from, to TaskStatus) (int32, error) {
 	arg := proto.MoveTasksByStatusReq{From: from, To: to, Fence: tc.fenceProto()}
 	res := proto.MoveTasksByStatusRep{}
 
-	err := tc.rpc("TaskSrv.MoveTasksByStatus", &arg, &res)
+	err, _ := retry.RetryAtLeastOnce(func() error {
+		err := tc.rpc("TaskSrv.MoveTasksByStatus", &arg, &res)
+		if err != nil {
+			db.DPrintf(db.FTTASKCLNT, "MoveTasksByStatus: rpc err %v", err)
+		}
+		return err
+	})
 	return res.NumMoved, err
 }
 
@@ -171,11 +192,18 @@ func (tc *RawFtTaskClnt) GetTaskOutputs(ids []TaskId) ([][]byte, error) {
 	return res.Outputs, nil
 }
 
+// AddTaskOutput assumes only one client invokes it for a specific id
 func (tc *RawFtTaskClnt) AddTaskOutputs(ids []TaskId, outputs [][]byte, markDone bool) error {
 	arg := proto.AddTaskOutputsReq{Ids: ids, Outputs: outputs, MarkDone: markDone, Fence: tc.fenceProto()}
 	res := proto.AddTaskOutputsRep{}
 
-	err := tc.rpc("TaskSrv.AddTaskOutputs", &arg, &res)
+	err, _ := retry.RetryAtLeastOnce(func() error {
+		err := tc.rpc("TaskSrv.AddTaskOutputs", &arg, &res)
+		if err != nil {
+			db.DPrintf(db.FTTASKCLNT, "AddTasksOutputs: rpc err %v", err)
+		}
+		return err
+	})
 	return err
 }
 
@@ -257,6 +285,7 @@ func (tc *RawFtTaskClnt) Fence(fence *sp.Tfence) error {
 	return err
 }
 
+// ClearEtcd assumes only one client executes it
 func (tc *RawFtTaskClnt) ClearEtcd() error {
 	arg := proto.ClearEtcdReq{}
 	res := proto.ClearEtcdRep{}

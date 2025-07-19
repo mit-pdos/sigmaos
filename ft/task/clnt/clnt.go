@@ -1,4 +1,5 @@
-// Defines client interface for interacting with fault tolerant task server
+// Defines client interface for interacting with fault tolerant task
+// server. Clients shouldn't reuse TaskId's.
 package clnt
 
 import (

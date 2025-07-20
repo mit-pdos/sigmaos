@@ -224,12 +224,11 @@ func (pgm *ProcGroupMgr) stopMember(pr *procret) bool {
 }
 
 func (pgm *ProcGroupMgr) handleProcRet(pr *procret, gstatus *[]*ProcStatus, n *int) {
-	db.DPrintf(db.GROUPMGR, "handleProcRet: %v", pr)
 	// Take the lock to protect pgm.running
 	pgm.mu.Lock()
 	defer pgm.mu.Unlock()
 
-	db.DPrintf(db.GROUPMGR, "handleProcRet1: %v", pr)
+	db.DPrintf(db.GROUPMGR, "handleProcRet: %v", pr)
 
 	if pr.gen != pgm.members[pr.member].gen {
 		db.DPrintf(db.GROUPMGR, "%v: old gen %d ret, latest %d\n", pgm.members[pr.member].Program, pr.gen, pgm.members[pr.member].gen)

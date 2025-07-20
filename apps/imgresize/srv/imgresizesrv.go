@@ -86,8 +86,8 @@ func (imgd *ImgSrv) Work() {
 	}
 
 	// Try to become the leading coordinator.
-	if err := imgd.leaderclnt.LeadAndFence(nil, []string{filepath.Join(sp.IMG, string(imgd.ftclnt.ServiceId()))}); err != nil {
-		sts, _, err2 := imgd.sc.ReadDir(filepath.Join(sp.IMG, string(imgd.ftclnt.ServiceId())))
+	if err := imgd.leaderclnt.LeadAndFence(nil, []string{filepath.Join(sp.IMG, imgd.imgSvcId)}); err != nil {
+		sts, _, err2 := imgd.sc.ReadDir(filepath.Join(sp.IMG, imgd.imgSvcId))
 		db.DFatalf("LeadAndFence err %v sts %v err2 %v", err, sp.Names(sts), err2)
 	}
 
@@ -97,7 +97,7 @@ func (imgd *ImgSrv) Work() {
 		db.DFatalf("FtTaskClnt.Fence err %v", err)
 	}
 
-	db.DPrintf(db.ALWAYS, "leader %s sigmafail %q", imgd.ftclnt.ServiceId(), proc.GetSigmaFail())
+	db.DPrintf(db.ALWAYS, "leader %s sigmafail %q", imgd.imgSvcId, proc.GetSigmaFail())
 
 	rpcs := NewRPCSrv(imgd)
 	ssrv, err := sigmasrv.NewSigmaSrvClnt(filepath.Join(sp.IMG, imgd.imgSvcId),

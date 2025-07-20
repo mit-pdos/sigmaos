@@ -30,18 +30,7 @@ const (
 	IMG_RESIZE_MEM  proc.Tmem  = 0
 
 	CRASHIMG = 1000
-
-	TASKSVC = "imgresize-tasksvc"
-	IMGSVC  = "imgresize"
 )
-
-func imgId(job string) string {
-	return fmt.Sprintf("%s-%s", IMGSVC, job)
-}
-
-func taskId(job string) string {
-	return fmt.Sprintf("%s-%s", TASKSVC, job)
-}
 
 func TestCompile(t *testing.T) {
 }
@@ -103,7 +92,7 @@ func newTstate(mrts *test.MultiRealmTstate) (*Tstate, error) {
 	ts.cleanup()
 
 	var err error
-	ts.ftsrv, err = fttask_srv.NewFtTaskSrvMgr(ts.mrts.GetRealm(test.REALM1).SigmaClnt, taskId(ts.job), false)
+	ts.ftsrv, err = fttask_srv.NewFtTaskSrvMgr(ts.mrts.GetRealm(test.REALM1).SigmaClnt, imgresize.TaskSvcId(ts.job), false)
 	if !assert.Nil(ts.mrts.T, err) {
 		return nil, err
 	}
@@ -126,7 +115,7 @@ func (ts *Tstate) restartTstate() error {
 
 	db.DPrintf(db.TEST, "%v named contents post-shutdown: %v", test.REALM1, sp.Names(sts))
 
-	ts.ftsrv, err = fttask_srv.NewFtTaskSrvMgr(ts.mrts.GetRealm(test.REALM1).SigmaClnt, taskId(ts.job), false)
+	ts.ftsrv, err = fttask_srv.NewFtTaskSrvMgr(ts.mrts.GetRealm(test.REALM1).SigmaClnt, imgresize.TaskSvcId(ts.job), false)
 	if !assert.Nil(ts.mrts.T, err) {
 		return err
 	}
@@ -161,7 +150,7 @@ func (ts *Tstate) progress() {
 }
 
 func (ts *Tstate) imgdJob(paths []string, em *crash.TeventMap) *spstats.TcounterSnapshot {
-	imgd := imgresize.StartImgd(ts.mrts.GetRealm(test.REALM1).SigmaClnt, imgId(ts.job), ts.ftclnt.ServiceId().String(), IMG_RESIZE_MCPU, IMG_RESIZE_MEM, false, 1, 0, em)
+	imgd := imgresize.StartImgd(ts.mrts.GetRealm(test.REALM1).SigmaClnt, imgresize.ImgSvcId(ts.job), ts.ftclnt.ServiceId().String(), IMG_RESIZE_MCPU, IMG_RESIZE_MEM, false, 1, 0, em)
 
 	tasks := make([]*fttask_clnt.Task[imgresize.Ttask], len(paths))
 	for i, pn := range paths {
@@ -224,11 +213,11 @@ func TestImgdRPC(t *testing.T) {
 	err = ts.mrts.GetRealm(test.REALM1).BootNode(1)
 	assert.Nil(t, err, "BootProcd 2")
 
-	imgd := imgresize.StartImgd(ts.mrts.GetRealm(test.REALM1).SigmaClnt, imgId(ts.job), ts.ftclnt.ServiceId().String(), IMG_RESIZE_MCPU, IMG_RESIZE_MEM, false, 1, 0, nil)
+	imgd := imgresize.StartImgd(ts.mrts.GetRealm(test.REALM1).SigmaClnt, imgresize.ImgSvcId(ts.job), ts.ftclnt.ServiceId().String(), IMG_RESIZE_MCPU, IMG_RESIZE_MEM, false, 1, 0, nil)
 
 	time.Sleep(1 * time.Second)
 
-	rpcc, err := imgd_clnt.NewImgResizeRPCClnt(ts.mrts.GetRealm(test.REALM1).SigmaClnt.FsLib, imgId(ts.job))
+	rpcc, err := imgd_clnt.NewImgResizeRPCClnt(ts.mrts.GetRealm(test.REALM1).SigmaClnt.FsLib, imgresize.ImgSvcId(ts.job))
 	if !assert.Nil(ts.mrts.T, err) {
 		return
 	}
@@ -342,7 +331,7 @@ func TestImgdRestart(t *testing.T) {
 	err = ts.ftclnt.SubmittedLastTask()
 	assert.Nil(t, err)
 
-	imgd := imgresize.StartImgd(ts.mrts.GetRealm(test.REALM1).SigmaClnt, fmt.Sprintf("%s-%s", IMGSVC, ts.job), ts.ftclnt.ServiceId().String(), IMG_RESIZE_MCPU, IMG_RESIZE_MEM, true, 1, 0, nil)
+	imgd := imgresize.StartImgd(ts.mrts.GetRealm(test.REALM1).SigmaClnt, imgresize.ImgSvcId(ts.job), ts.ftclnt.ServiceId().String(), IMG_RESIZE_MCPU, IMG_RESIZE_MEM, true, 1, 0, nil)
 
 	db.DPrintf(db.TEST, "Get named contents pre-shutdown")
 	sts, err := ts.mrts.GetRealm(test.REALM1).GetDir(sp.NAMED)

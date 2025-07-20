@@ -1,6 +1,7 @@
 package imgresize
 
 import (
+	"fmt"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -17,6 +18,19 @@ import (
 	"sigmaos/util/crash"
 	rd "sigmaos/util/rand"
 )
+
+const (
+	TASKSVC = "imgresize-tasksvc"
+	IMGSVC  = "imgresize"
+)
+
+func ImgSvcId(job string) string {
+	return fmt.Sprintf("%s-%s", IMGSVC, job)
+}
+
+func TaskSvcId(job string) string {
+	return fmt.Sprintf("%s-%s", TASKSVC, job)
+}
 
 type Ttask struct {
 	FileName string `json:"File"`

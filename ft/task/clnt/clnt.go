@@ -44,8 +44,7 @@ type FtTaskClnt[Data any, Output any] interface {
 	Fence(fence *sp.Tfence) error
 	ClearEtcd() error
 	AsRawClnt() FtTaskClnt[[]byte, []byte]
-	ServerId() task.FtTaskSrvId
-	CurrInstance() string
+	ServiceId() task.FtTaskSvcId
 
 	rpc(method string, arg protobuf.Message, res protobuf.Message) error
 }

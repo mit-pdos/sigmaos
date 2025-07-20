@@ -26,8 +26,8 @@ type MRJobInstance struct {
 	memreq  proc.Tmem
 	job     *mr.Job
 	cm      *procgroupmgr.ProcGroupMgr
-	mftid   fttask.FtTaskSrvId
-	rftid   fttask.FtTaskSrvId
+	mftid   fttask.FtTaskSvcId
+	rftid   fttask.FtTaskSvcId
 }
 
 func NewMRJobInstance(ts *test.RealmTstate, p *perf.Perf, app, jobRoot, jobname string, memreq proc.Tmem) *MRJobInstance {

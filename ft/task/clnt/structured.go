@@ -23,7 +23,7 @@ func Decode[T any](encoded []byte) (T, error) {
 	return data, err
 }
 
-func NewFtTaskClnt[Data any, Output any](fsl *fslib.FsLib, serverId task.FtTaskSrvId) FtTaskClnt[Data, Output] {
+func NewFtTaskClnt[Data any, Output any](fsl *fslib.FsLib, serverId task.FtTaskSvcId) FtTaskClnt[Data, Output] {
 	raw := newRawFtTaskClnt(fsl, serverId)
 	tc := &ftTaskClnt[Data, Output]{
 		raw,

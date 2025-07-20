@@ -52,8 +52,8 @@ type TreduceTask struct {
 
 type Coord struct {
 	*sigmaclnt.SigmaClnt
-	mftid           task.FtTaskSrvId
-	rftid           task.FtTaskSrvId
+	mftid           task.FtTaskSvcId
+	rftid           task.FtTaskSvcId
 	mftclnt         fttask_clnt.FtTaskClnt[Bin, Bin]
 	rftclnt         fttask_clnt.FtTaskClnt[TreduceTask, Bin]
 	jobRoot         string
@@ -153,8 +153,8 @@ func NewCoord(args []string) (*Coord, error) {
 		return nil, fmt.Errorf("NewCoord: NewLeaderclnt err %v", err)
 	}
 
-	c.mftid = task.FtTaskSrvId(args[10])
-	c.rftid = task.FtTaskSrvId(args[11])
+	c.mftid = task.FtTaskSvcId(args[10])
+	c.rftid = task.FtTaskSvcId(args[11])
 
 	return c, nil
 }
@@ -203,7 +203,7 @@ func (c *Coord) reducerProc(t fttask_clnt.Task[[]byte]) (*proc.Proc, error) {
 	outlink := ReduceOut(c.jobRoot, c.job) + data.Task
 	outTarget := ReduceOutTarget(c.outdir, c.job) + data.Task
 	c.stat.Nreduce.Add(1)
-	return c.newTask(c.reducerbin, []string{strconv.Itoa(int(t.Id)), string(c.rftclnt.ServerId()), outlink, outTarget, strconv.Itoa(c.nmaptask)}, c.memPerTask), nil
+	return c.newTask(c.reducerbin, []string{strconv.Itoa(int(t.Id)), string(c.rftclnt.ServiceId()), outlink, outTarget, strconv.Itoa(c.nmaptask)}, c.memPerTask), nil
 }
 
 type Tresult struct {

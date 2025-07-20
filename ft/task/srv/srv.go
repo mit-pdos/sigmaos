@@ -44,7 +44,7 @@ type TaskSrv struct {
 	todoCond                 *sync.Cond
 	hasLastTaskBeenSubmitted bool
 	fence                    *sp.Tfence
-	rootId                   fttask.FtTaskSrvId
+	rootId                   fttask.FtTaskSvcId
 
 	etcdClient *clientv3.Client
 	electclnt  *electclnt.ElectClnt
@@ -58,7 +58,7 @@ const (
 	ETCD_DATA                     = "data"
 	ETCD_OUTPUT                   = "output"
 	ETCD_SRV_FENCE                = "srv_fence"  // ensures only the most recently elected fttask srv can write to etcd
-	ETCD_CLNT_FENCE               = "clnt_fence" // ensures only the most recently elected client can write to server
+	ETCD_CLNT_FENCE               = "clnt_fence" // ensures only the most recently elected client can write to fttask srv
 	ETCD_LASTTASKHASBEENSUBMITTED = "submittedLastTask"
 )
 
@@ -94,7 +94,7 @@ func RunTaskSrv(args []string) error {
 		wip:      make(map[int32]bool),
 		done:     make(map[int32]bool),
 		errored:  make(map[int32]bool),
-		rootId:   fttask.FtTaskSrvId(fttaskId),
+		rootId:   fttask.FtTaskSvcId(fttaskId),
 	}
 
 	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
@@ -153,7 +153,7 @@ func RunTaskSrv(args []string) error {
 		return err
 	}
 
-	ssrv, err := sigmasrv.NewSigmaSrvClnt(fttask.FtTaskSrvId(fttaskId).ServerPath(), s.sc, s, sesssrv.WithExp(s))
+	ssrv, err := sigmasrv.NewSigmaSrvClnt(fttask.FtTaskSvcId(fttaskId).ServicePath(), s.sc, s, sesssrv.WithExp(s))
 	if err != nil {
 		return err
 	}

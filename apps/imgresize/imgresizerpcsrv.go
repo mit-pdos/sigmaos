@@ -45,7 +45,7 @@ func NewImgSrvRPC(args []string) (*ImgSrvRPC, error) {
 	imgd.sc = ssrv.SigmaClnt()
 	imgd.ssrv = ssrv
 
-	imgd.ftclnt = fttask_clnt.NewFtTaskClnt[Ttask, any](imgd.sc.FsLib, task.FtTaskSrvId(serverId))
+	imgd.ftclnt = fttask_clnt.NewFtTaskClnt[Ttask, any](imgd.sc.FsLib, task.FtTaskSvcId(serverId))
 	db.DPrintf(db.IMGD, "Made imgd connected to %v", serverId)
 	mcpu, err := strconv.Atoi(args[1])
 	if err != nil {
@@ -61,7 +61,7 @@ func NewImgSrvRPC(args []string) (*ImgSrvRPC, error) {
 	if err != nil {
 		db.DFatalf("Error parse nrounds: %v", err)
 	}
-	imgd.mkProc = getMkProcFn(imgd.ftclnt.ServerId(), imgd.nrounds, imgd.workerMcpu, imgd.workerMem)
+	imgd.mkProc = getMkProcFn(imgd.ftclnt.ServiceId(), imgd.nrounds, imgd.workerMcpu, imgd.workerMem)
 	return imgd, nil
 }
 
@@ -76,7 +76,7 @@ func (imgd *ImgSrvRPC) Resize(ctx fs.CtxI, req proto.ImgResizeReq, rep *proto.Im
 
 	t := NewTask(req.InputPath)
 	p := imgd.mkProc(fttask_clnt.Task[Ttask]{
-		Id: fttask_clnt.TaskId(0),
+		Id:   fttask_clnt.TaskId(0),
 		Data: *t,
 	})
 
@@ -105,7 +105,7 @@ func (imgd *ImgSrvRPC) Resize(ctx fs.CtxI, req proto.ImgResizeReq, rep *proto.Im
 }
 
 func (imgd *ImgSrvRPC) Work() {
-	db.DPrintf(db.IMGD, "Run imgd RPC server server %v", imgd.ftclnt.ServerId())
+	db.DPrintf(db.IMGD, "Run imgd RPC server server %v", imgd.ftclnt.ServiceId())
 	if err := imgd.ssrv.RunServer(); err != nil {
 		db.DFatalf("RunServer: %v", err)
 	}

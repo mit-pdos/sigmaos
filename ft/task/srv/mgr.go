@@ -18,7 +18,7 @@ const FTTASK_SRV_MCPU proc.Tmcpu = 1000
 type FtTaskSrvMgr struct {
 	sc      *sigmaclnt.SigmaClnt
 	stopped bool
-	Id      fttask.FtTaskSrvId
+	Id      fttask.FtTaskSvcId
 	clnt    fttask_clnt.FtTaskClnt[any, any]
 	pgm     *procgroupmgr.ProcGroupMgr
 }
@@ -36,9 +36,9 @@ func NewFtTaskSrvMgr(sc *sigmaclnt.SigmaClnt, id string, persist bool) (*FtTaskS
 
 	pgm := config.StartGrpMgr(sc)
 
-	clnt := fttask_clnt.NewFtTaskClnt[any, any](sc.FsLib, fttask.FtTaskSrvId(id))
+	clnt := fttask_clnt.NewFtTaskClnt[any, any](sc.FsLib, fttask.FtTaskSvcId(id))
 
-	ft := &FtTaskSrvMgr{sc, false, fttask.FtTaskSrvId(id), clnt, pgm}
+	ft := &FtTaskSrvMgr{sc, false, fttask.FtTaskSvcId(id), clnt, pgm}
 
 	return ft, nil
 }

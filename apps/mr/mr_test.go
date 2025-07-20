@@ -321,7 +321,7 @@ func TestMapperReducer(t *testing.T) {
 		outlink := mr.ReduceOut(ts.jobRoot, ts.job) + rt.Data.Task
 		outTarget := mr.ReduceOutTarget(job.Output, ts.job) + rt.Data.Task
 
-		r, err := mr.NewReducer(sc, reducer, []string{strconv.Itoa(int(rt.Id)), string(ts.tasks.Rftclnt.ServerId()), outlink, outTarget, strconv.Itoa(nmap), "true"}, p)
+		r, err := mr.NewReducer(sc, reducer, []string{strconv.Itoa(int(rt.Id)), string(ts.tasks.Rftclnt.ServiceId()), outlink, outTarget, strconv.Itoa(nmap), "true"}, p)
 		assert.Nil(t, err)
 		status := r.DoReduce()
 		assert.True(t, status.IsStatusOK(), "status %v", status)

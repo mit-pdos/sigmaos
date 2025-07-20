@@ -148,44 +148,8 @@ func (ts *Tstate) progress() {
 	}
 }
 
-func TestImgdFatalError(t *testing.T) {
-	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
-	defer mrts.Shutdown()
-
-	ts, err1 := newTstate(mrts)
-	if !assert.Nil(t, err1, "Error New Tstate2: %v", err1) {
-		return
-	}
-
-	imgd := imgresize.StartImgd(ts.mrts.GetRealm(test.REALM1).SigmaClnt, ts.ftclnt.ServerId(), IMG_RESIZE_MCPU, IMG_RESIZE_MEM, false, 1, 0, nil)
-
-	// a non-existing file
-	fn := filepath.Join(sp.S3, sp.LOCAL, "9ps3/img-save/", "yyy.jpg")
-
-	existing, err := ts.ftclnt.SubmitTasks([]*fttask_clnt.Task[imgresize.Ttask]{{Id: 0, Data: *imgresize.NewTask(fn)}})
-	assert.Nil(ts.mrts.T, err)
-	assert.Empty(ts.mrts.T, existing)
-
-	err = ts.ftclnt.SubmittedLastTask()
-	assert.Nil(ts.mrts.T, err)
-
-	stati := imgd.WaitGroup()
-	assert.True(t, len(stati) > 0)
-	assert.True(t, stati[0].IsStatusOK())
-
-	stro, err := spstats.UnmarshalTcounterSnapshot(stati[0].Data())
-	assert.Nil(ts.mrts.T, err)
-
-	assert.True(t, stro.Counters["Nerror"] > 0)
-
-	ts.ftsrv.Stop(true)
-}
-
 func (ts *Tstate) imgdJob(paths []string, em *crash.TeventMap) *spstats.TcounterSnapshot {
-	imgd := imgresize.StartImgd(ts.mrts.GetRealm(test.REALM1).SigmaClnt, ts.ftclnt.ServerId(), IMG_RESIZE_MCPU, IMG_RESIZE_MEM, false, 1, 0, em)
+	imgd := imgresize.StartImgd(ts.mrts.GetRealm(test.REALM1).SigmaClnt, ts.ftclnt.ServiceId(), IMG_RESIZE_MCPU, IMG_RESIZE_MEM, false, 1, 0, em)
 
 	tasks := make([]*fttask_clnt.Task[imgresize.Ttask], len(paths))
 	for i, pn := range paths {
@@ -194,6 +158,8 @@ func (ts *Tstate) imgdJob(paths []string, em *crash.TeventMap) *spstats.Tcounter
 	existing, err := ts.ftclnt.SubmitTasks(tasks)
 	assert.Nil(ts.mrts.T, err)
 	assert.Empty(ts.mrts.T, existing)
+
+	db.DPrintf(db.TEST, "Submitted")
 
 	err = ts.ftclnt.SubmittedLastTask()
 	assert.Nil(ts.mrts.T, err)
@@ -225,6 +191,26 @@ func TestImgdOneOK(t *testing.T) {
 
 	fn := filepath.Join(sp.S3, sp.LOCAL, "9ps3/img-save/8.jpg")
 	ts.imgdJob([]string{fn}, nil)
+	ts.shutdown()
+}
+
+func TestImgdFatalError(t *testing.T) {
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	defer mrts.Shutdown()
+
+	ts, err1 := newTstate(mrts)
+	if !assert.Nil(t, err1, "Error New Tstate2: %v", err1) {
+		return
+	}
+
+	// a non-existing file
+	fn := filepath.Join(sp.S3, sp.LOCAL, "9ps3/img-save/", "yyy.jpg")
+	stro := ts.imgdJob([]string{fn}, nil)
+
+	assert.True(t, stro.Counters["Nerror"] > 0)
 	ts.shutdown()
 }
 
@@ -299,7 +285,7 @@ func TestImgdRestart(t *testing.T) {
 	err = ts.ftclnt.SubmittedLastTask()
 	assert.Nil(t, err)
 
-	imgd := imgresize.StartImgd(ts.mrts.GetRealm(test.REALM1).SigmaClnt, ts.ftclnt.ServerId(), IMG_RESIZE_MCPU, IMG_RESIZE_MEM, true, 1, 0, nil)
+	imgd := imgresize.StartImgd(ts.mrts.GetRealm(test.REALM1).SigmaClnt, ts.ftclnt.ServiceId(), IMG_RESIZE_MCPU, IMG_RESIZE_MEM, true, 1, 0, nil)
 
 	db.DPrintf(db.TEST, "Get named contents pre-shutdown")
 	sts, err := ts.mrts.GetRealm(test.REALM1).GetDir(sp.NAMED)

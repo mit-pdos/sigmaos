@@ -694,7 +694,7 @@ func TestClntPartition(t *testing.T) {
 	n, err := clnt.GetNTasks(fttask_clnt.TODO)
 	assert.Nil(t, err)
 
-	crash.PartitionPath(fsl, filepath.Join(ts.clnt.ServerId().ServerPath(), clnt.CurrInstance()))
+	crash.PartitionPath(fsl, filepath.Join(ts.clnt.ServiceId().ServicePath()))
 	_, _, err = clnt.AcquireTasks(false)
 	assert.NotNil(t, err)
 

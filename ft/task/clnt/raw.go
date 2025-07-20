@@ -18,22 +18,20 @@ import (
 )
 
 type RawFtTaskClnt struct {
-	rpcclntc     *rpcclnt.ClntCache
-	fsl          *fslib.FsLib
-	serverId     fttask.FtTaskSrvId
-	currInstance string
-	fence        *sp.Tfence
-	mu           sync.Mutex
+	rpcclntc  *rpcclnt.ClntCache
+	fsl       *fslib.FsLib
+	serviceId fttask.FtTaskSvcId
+	fence     *sp.Tfence
+	mu        sync.Mutex
 }
 
-func newRawFtTaskClnt(fsl *fslib.FsLib, serverId fttask.FtTaskSrvId) *RawFtTaskClnt {
+func newRawFtTaskClnt(fsl *fslib.FsLib, serviceId fttask.FtTaskSvcId) *RawFtTaskClnt {
 	tc := &RawFtTaskClnt{
-		fsl:          fsl,
-		rpcclntc:     rpcclnt.NewRPCClntCache(sprpcclnt.WithSPChannel(fsl)),
-		serverId:     serverId,
-		currInstance: "",
-		fence:        nil,
-		mu:           sync.Mutex{},
+		fsl:       fsl,
+		rpcclntc:  rpcclnt.NewRPCClntCache(sprpcclnt.WithSPChannel(fsl)),
+		serviceId: serviceId,
+		fence:     nil,
+		mu:        sync.Mutex{},
 	}
 	return tc
 }
@@ -47,7 +45,7 @@ func (tc *RawFtTaskClnt) fenceProto() *sp.TfenceProto {
 }
 
 func (tc *RawFtTaskClnt) rpc(method string, arg protobuf.Message, res protobuf.Message) error {
-	pn := tc.serverId.ServerPath()
+	pn := tc.serviceId.ServicePath()
 	err, ok := retry.RetryDefDur(func() error {
 		err := tc.rpcclntc.RPC(pn, method, arg, res)
 		if err != nil {
@@ -56,7 +54,7 @@ func (tc *RawFtTaskClnt) rpc(method string, arg protobuf.Message, res protobuf.M
 		return err
 	}, func(err error) bool {
 		// if not found, try again, because a new fttask srv may start and take over
-		return serr.IsErrorNotfound(err) && err.(*serr.Err).Obj == tc.serverId.String()
+		return serr.IsErrorNotfound(err) && err.(*serr.Err).Obj == tc.serviceId.String()
 	})
 	if !ok {
 		return serr.NewErr(serr.TErrUnreachable, pn)
@@ -300,16 +298,10 @@ func (tc *RawFtTaskClnt) ClearEtcd() error {
 	return err
 }
 
-func (tc *RawFtTaskClnt) CurrInstance() string {
-	tc.mu.Lock()
-	defer tc.mu.Unlock()
-	return tc.currInstance
-}
-
 func (tc *RawFtTaskClnt) AsRawClnt() FtTaskClnt[[]byte, []byte] {
 	return tc
 }
 
-func (tc *RawFtTaskClnt) ServerId() fttask.FtTaskSrvId {
-	return tc.serverId
+func (tc *RawFtTaskClnt) ServiceId() fttask.FtTaskSvcId {
+	return tc.serviceId
 }

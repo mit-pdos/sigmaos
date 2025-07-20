@@ -58,7 +58,7 @@ func NewReducer(sc *sigmaclnt.SigmaClnt, reducef mr.ReduceT, args []string, p *p
 	if err != nil {
 		return nil, fmt.Errorf("Reducer: id %v isn't int %v", args[0], err)
 	}
-	srvId := fttask.FtTaskSrvId(args[1])
+	srvId := fttask.FtTaskSvcId(args[1])
 
 	ftclnt := fttask_clnt.NewFtTaskClnt[TreduceTask, Bin](sc.FsLib, srvId)
 

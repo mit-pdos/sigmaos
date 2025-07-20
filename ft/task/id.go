@@ -5,12 +5,12 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-type FtTaskSrvId string
+type FtTaskSvcId string
 
-func (id FtTaskSrvId) ServerPath() string {
+func (id FtTaskSvcId) ServicePath() string {
 	return filepath.Join(sp.NAMED, "fttask", string(id))
 }
 
-func (id FtTaskSrvId) String() string {
+func (id FtTaskSvcId) String() string {
 	return string(id)
 }

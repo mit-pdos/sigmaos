@@ -24,7 +24,9 @@ RUN echo 'source $HOME/.cargo/env' >> $HOME/.bashrc
 RUN source $HOME/.bashrc
 ENV PATH="/root/.cargo/bin:${PATH}"
 RUN rustup update
-RUN cargo install wasm-pack
+RUN cargo install \
+  wasm-pack \
+  protobuf-codegen
 
 # Copy rust trampoline
 COPY rs rs 

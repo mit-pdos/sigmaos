@@ -139,9 +139,11 @@ func TestLatency(t *testing.T) {
 }
 
 var logged bool
+var loggedVal int32
 
 func log(v int32) {
 	logged = true
+	loggedVal = v
 	db.DPrintf(db.TEST, "Logged from wasm: %v", v)
 }
 
@@ -175,7 +177,7 @@ func TestHostFunction(t *testing.T) {
 	importObject.Register(
 		"sigmaos_host",
 		map[string]wasmer.IntoExtern{
-			"log": logHostFn,
+			"log_int": logHostFn,
 		},
 	)
 	instance, err := wasmer.NewInstance(module, importObject)
@@ -197,6 +199,93 @@ func TestHostFunction(t *testing.T) {
 	}
 
 	if !assert.True(t, logged, "log host function never called") {
+		return
+	}
+
+	db.DPrintf(db.TEST, "Result: %v", result) // 42!
+}
+
+func TestMemory(t *testing.T) {
+
+	const (
+		ALLOC_SZ = 1024
+	)
+	wasmScript, err := os.ReadFile(wasmScript)
+	if !assert.Nil(t, err, "Err read wasm script: %v", err) {
+		return
+	}
+	engine := wasmer.NewEngine()
+	store := wasmer.NewStore(engine)
+
+	logHostFn := wasmer.NewFunction(
+		store,
+		wasmer.NewFunctionType(wasmer.NewValueTypes(wasmer.I32), wasmer.NewValueTypes()),
+		func(args []wasmer.Value) ([]wasmer.Value, error) {
+			log(args[0].I32())
+			return []wasmer.Value{}, nil
+		},
+	)
+
+	start := time.Now()
+	// Compiles the module
+	module, err := wasmer.NewModule(store, wasmScript)
+	if !assert.Nil(t, err, "Err compile wasm module: %v", err) {
+		return
+	}
+	db.DPrintf(db.TEST, "Wasm module compilation (%vB) latency: %v", len(wasmScript), time.Since(start))
+
+	// Instantiates the module
+	importObject := wasmer.NewImportObject()
+	importObject.Register(
+		"sigmaos_host",
+		map[string]wasmer.IntoExtern{
+			"log_int": logHostFn,
+		},
+	)
+	instance, err := wasmer.NewInstance(module, importObject)
+	if !assert.Nil(t, err, "Err instantiate wasm module: %v", err) {
+		return
+	}
+
+	allocFn, err := instance.Exports.GetFunction("allocate")
+	if !assert.Nil(t, err, "Err get allocate wasm function: %v", err) {
+		return
+	}
+	allocateResult, err := allocFn(ALLOC_SZ)
+	if !assert.Nil(t, err, "Err allocate wasm mem: %v", err) {
+		return
+	}
+	inputPointer := allocateResult.(int32)
+	db.DPrintf(db.TEST, "Alloc result: %v", allocateResult)
+	mem, err := instance.Exports.GetMemory("memory")
+	if !assert.Nil(t, err, "Err get wasm mem: %v", err) {
+		return
+	}
+	buf := mem.Data()[inputPointer : inputPointer+ALLOC_SZ]
+	buf[0] = 'A'
+
+	// Gets the `add` exported function from the WebAssembly instance.
+	add_and_log_with_mem, err := instance.Exports.GetFunction("add_and_log_with_mem")
+	if !assert.Nil(t, err, "Err get wasm function: %v", err) {
+		return
+	}
+
+	// Calls that exported function with Go standard values. The WebAssembly
+	// types are inferred and values are casted automatically.
+	result, err := add_and_log_with_mem(5, 37, allocateResult, ALLOC_SZ)
+	if !assert.Nil(t, err, "Err call wasm function: %v", err) {
+		return
+	}
+
+	if !assert.True(t, logged, "log host function never called") {
+		return
+	}
+
+	if !assert.Equal(t, int32(buf[0]), loggedVal, "WASM buffer read didn't work") {
+		return
+	}
+
+	if !assert.Equal(t, buf[1], buf[0]+1, "WASM buffer write didn't work") {
 		return
 	}
 

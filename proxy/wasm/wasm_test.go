@@ -24,9 +24,11 @@ import (
 )
 
 var wasmScript string
+var cossimBootScript string
 
 func init() {
 	flag.StringVar(&wasmScript, "wasm_script", "/home/arielck/sigmaos/rs/wasm/hello-wasm/target/wasm32-unknown-unknown/release/hello_wasm.wasm", "path to WASM script")
+	flag.StringVar(&cossimBootScript, "cossim_boot_script", "/home/arielck/sigmaos/rs/wasm/cossim-boot/target/wasm32-unknown-unknown/release/cossim_boot.wasm", "path to WASM script")
 }
 
 func TestCompile(t *testing.T) {
@@ -206,7 +208,6 @@ func TestHostFunction(t *testing.T) {
 }
 
 func TestMemory(t *testing.T) {
-
 	const (
 		ALLOC_SZ = 1024
 	)
@@ -286,6 +287,84 @@ func TestMemory(t *testing.T) {
 	}
 
 	if !assert.Equal(t, buf[1], buf[0]+1, "WASM buffer write didn't work") {
+		return
+	}
+
+	db.DPrintf(db.TEST, "Result: %v", result) // 42!
+}
+
+func TestCosSimBoot(t *testing.T) {
+	const (
+		BUF_SZ = 655360
+	)
+	bootScript, err := os.ReadFile(cossimBootScript)
+	if !assert.Nil(t, err, "Err read wasm script: %v", err) {
+		return
+	}
+	engine := wasmer.NewEngine()
+	store := wasmer.NewStore(engine)
+
+	logHostFn := wasmer.NewFunction(
+		store,
+		wasmer.NewFunctionType(wasmer.NewValueTypes(wasmer.I32), wasmer.NewValueTypes()),
+		func(args []wasmer.Value) ([]wasmer.Value, error) {
+			log(args[0].I32())
+			return []wasmer.Value{}, nil
+		},
+	)
+
+	start := time.Now()
+	// Compiles the module
+	module, err := wasmer.NewModule(store, bootScript)
+	if !assert.Nil(t, err, "Err compile wasm module: %v", err) {
+		return
+	}
+	db.DPrintf(db.TEST, "Wasm module compilation (%vB) latency: %v", len(bootScript), time.Since(start))
+
+	// Instantiates the module
+	importObject := wasmer.NewImportObject()
+	importObject.Register(
+		"sigmaos_host",
+		map[string]wasmer.IntoExtern{
+			"log_int": logHostFn,
+		},
+	)
+	instance, err := wasmer.NewInstance(module, importObject)
+	if !assert.Nil(t, err, "Err instantiate wasm module: %v", err) {
+		return
+	}
+
+	allocFn, err := instance.Exports.GetFunction("allocate")
+	if !assert.Nil(t, err, "Err get allocate wasm function: %v", err) {
+		return
+	}
+	allocateResult, err := allocFn(BUF_SZ)
+	if !assert.Nil(t, err, "Err allocate wasm mem: %v", err) {
+		return
+	}
+	inputPointer := allocateResult.(int32)
+	db.DPrintf(db.TEST, "Alloc result: %v", allocateResult)
+	mem, err := instance.Exports.GetMemory("memory")
+	if !assert.Nil(t, err, "Err get wasm mem: %v", err) {
+		return
+	}
+	_ = inputPointer
+	_ = mem
+
+	// Gets the `boot` exported function from the WebAssembly instance.
+	boot, err := instance.Exports.GetFunction("boot")
+	if !assert.Nil(t, err, "Err get wasm function: %v", err) {
+		return
+	}
+
+	// Calls that exported function with Go standard values. The WebAssembly
+	// types are inferred and values are casted automatically.
+	result, err := boot(5, 37, allocateResult, BUF_SZ)
+	if !assert.Nil(t, err, "Err call wasm function: %v", err) {
+		return
+	}
+
+	if !assert.True(t, logged, "log host function never called") {
 		return
 	}
 

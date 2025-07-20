@@ -2,6 +2,11 @@ use std::mem;
 use std::os::raw::c_char;
 use std::slice;
 
+mod cache;
+mod rpc;
+mod sigmap;
+mod tracing;
+
 mod sigmaos {
     mod sigmaos_host {
         #[link(wasm_import_module = "sigmaos_host")]
@@ -28,6 +33,7 @@ pub fn allocate(size: usize) -> *mut c_char {
 pub fn boot(left: usize, right: usize, b: *mut c_char, len: usize) -> usize {
     let buf_slice: &mut [i8] = unsafe { slice::from_raw_parts_mut(b, len) };
     let n: i32 = buf_slice[0].into();
+    let multi_get = cache::CacheMultiGetReq::new();
     buf_slice[1] = (n + 1) as i8;
     sigmaos::log_int(n);
     left + right

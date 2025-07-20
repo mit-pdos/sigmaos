@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"sigmaos/apps/imgresize"
+	imgd_clnt "sigmaos/apps/imgresize/clnt"
 	db "sigmaos/debug"
 	"sigmaos/ft/procgroupmgr"
 	fttask_clnt "sigmaos/ft/task/clnt"
@@ -73,6 +74,75 @@ func TestResizeProc(t *testing.T) {
 	status, err := mrts.GetRealm(test.REALM1).WaitExit(p.GetPid())
 	assert.Nil(t, err, "WaitExit error %v", err)
 	assert.True(t, status.IsStatusOK(), "WaitExit status error: %v", status)
+}
+
+type TstateRPC struct {
+	job     string
+	mrts    *test.MultiRealmTstate
+	srvProc *proc.Proc
+	rpcc    *imgd_clnt.ImgResizeRPCClnt
+}
+
+func newTstateRPC(mrts *test.MultiRealmTstate) (*TstateRPC, error) {
+	ts := &TstateRPC{}
+	ts.mrts = mrts
+	ts.job = rd.String(4)
+	ts.cleanup()
+
+	err := ts.mrts.GetRealm(test.REALM1).MkDir(sp.IMG, 0777)
+	if !assert.Nil(ts.mrts.T, err) {
+		return nil, err
+	}
+	p, err := imgresize.StartImgRPCd(ts.mrts.GetRealm(test.REALM1).SigmaClnt, ts.job, IMG_RESIZE_MCPU, IMG_RESIZE_MEM, 1, 0)
+	if !assert.Nil(ts.mrts.T, err) {
+		return nil, err
+	}
+	db.DPrintf(db.TEST, "Started imgd RPC server")
+	ts.srvProc = p
+	rpcc, err := imgd_clnt.NewImgResizeRPCClnt(ts.mrts.GetRealm(test.REALM1).SigmaClnt.FsLib, ts.job)
+	if !assert.Nil(ts.mrts.T, err) {
+		return nil, err
+	}
+	ts.rpcc = rpcc
+	return ts, nil
+}
+
+func (ts *TstateRPC) cleanup() {
+	ts.mrts.GetRealm(test.REALM1).RmDir(sp.IMG)
+	imgresize.Cleanup(ts.mrts.GetRealm(test.REALM1).FsLib, filepath.Join(sp.S3, sp.LOCAL, "9ps3/img-save"))
+}
+
+func (ts *TstateRPC) shutdown() {
+	err := ts.mrts.GetRealm(test.REALM1).Evict(ts.srvProc.GetPid())
+	assert.Nil(ts.mrts.T, err)
+	status, err := ts.mrts.GetRealm(test.REALM1).WaitExit(ts.srvProc.GetPid())
+	if assert.Nil(ts.mrts.T, err) {
+		assert.True(ts.mrts.T, status.IsStatusEvicted(), "Wrong status: %v", status)
+	}
+}
+
+func TestImgdRPC(t *testing.T) {
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	defer mrts.Shutdown()
+
+	ts, err1 := newTstateRPC(mrts)
+	if !assert.Nil(t, err1, "Error New Tstate2: %v", err1) {
+		return
+	}
+
+	err := ts.mrts.GetRealm(test.REALM1).BootNode(1)
+	assert.Nil(t, err, "BootProcd 1")
+
+	err = ts.mrts.GetRealm(test.REALM1).BootNode(1)
+	assert.Nil(t, err, "BootProcd 2")
+
+	in := filepath.Join(sp.S3, sp.LOCAL, "9ps3/img-save/6.jpg")
+	err = ts.rpcc.Resize("resize-rpc-test", in)
+	assert.Nil(ts.mrts.T, err)
+	ts.shutdown()
 }
 
 type Tstate struct {

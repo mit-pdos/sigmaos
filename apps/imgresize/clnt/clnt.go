@@ -1,4 +1,4 @@
-package imgresize
+package clnt
 
 import (
 	"fmt"

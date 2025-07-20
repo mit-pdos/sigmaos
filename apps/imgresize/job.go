@@ -74,7 +74,7 @@ func IsThumbNail(fn string) bool {
 	return strings.Contains(fn, "-thumb")
 }
 
-func getMkProcFn(serverId task.FtTaskSvcId, nrounds int, workerMcpu proc.Tmcpu, workerMem proc.Tmem) fttask_coord.TmkProc[Ttask] {
+func GetMkProcFn(serverId task.FtTaskSvcId, nrounds int, workerMcpu proc.Tmcpu, workerMem proc.Tmem) fttask_coord.TmkProc[Ttask] {
 	return func(task fttask_clnt.Task[Ttask]) *proc.Proc {
 		db.DPrintf(db.IMGD, "mkProc %v", task)
 		fn := task.Data.FileName

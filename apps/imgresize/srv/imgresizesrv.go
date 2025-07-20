@@ -28,12 +28,13 @@ type ImgSrv struct {
 	workerMcpu proc.Tmcpu
 	workerMem  proc.Tmem
 	leaderclnt *leaderclnt.LeaderClnt
-	serviceId  string
+	imgSvcId   string
+	taskSvcId  string
 	ch         chan error
 }
 
 func NewImgSrv(args []string) (*ImgSrv, error) {
-	if len(args) != 4 {
+	if len(args) != 5 {
 		return nil, fmt.Errorf("NewImgSrv: wrong number of arguments: %v", args)
 	}
 	imgd := &ImgSrv{}
@@ -43,10 +44,11 @@ func NewImgSrv(args []string) (*ImgSrv, error) {
 	}
 	imgd.sc = sc
 
-	imgd.serviceId = args[0]
-	db.DPrintf(db.IMGD, "Made imgd connected to %v", imgd.serviceId)
+	imgd.imgSvcId = args[0]
+	imgd.taskSvcId = args[4]
+	db.DPrintf(db.IMGD, "Made imgd %v connected to task %v", imgd.imgSvcId, imgd.taskSvcId)
 
-	imgd.ftclnt = fttask_clnt.NewFtTaskClnt[imgresize.Ttask, any](sc.FsLib, task.FtTaskSvcId(imgd.serviceId))
+	imgd.ftclnt = fttask_clnt.NewFtTaskClnt[imgresize.Ttask, any](sc.FsLib, task.FtTaskSvcId(imgd.taskSvcId))
 	mcpu, err := strconv.Atoi(args[1])
 	if err != nil {
 		return nil, fmt.Errorf("NewImgSrv: Error parse MCPU %v", err)
@@ -98,7 +100,7 @@ func (imgd *ImgSrv) Work() {
 	db.DPrintf(db.ALWAYS, "leader %s sigmafail %q", imgd.ftclnt.ServiceId(), proc.GetSigmaFail())
 
 	rpcs := NewRPCSrv(imgd)
-	ssrv, err := sigmasrv.NewSigmaSrvClnt(filepath.Join(sp.IMG, imgd.serviceId),
+	ssrv, err := sigmasrv.NewSigmaSrvClnt(filepath.Join(sp.IMG, imgd.imgSvcId),
 		imgd.sc, rpcs) // sesssrv.WithExp(imgd))
 	if err != nil {
 		db.DFatalf("NewSigmaSrvClnt: err %v", err)
@@ -110,7 +112,7 @@ func (imgd *ImgSrv) Work() {
 		os.Exit(0)
 	}()
 
-	db.DPrintf(db.FTTASKSRV, "Created imgd srv %s", imgd.serviceId)
+	db.DPrintf(db.FTTASKSRV, "Created imgd srv %s", imgd.imgSvcId)
 
 	ftc, err := fttask_coord.NewFtTaskCoord(imgd.sc.ProcAPI, imgd.ftclnt)
 	if err != nil {

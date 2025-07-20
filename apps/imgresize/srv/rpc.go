@@ -12,19 +12,19 @@ import (
 	fttask_coord "sigmaos/ft/task/coord"
 )
 
-type RPCsrv struct {
+type ImgSrvRPC struct {
 	imgd   *ImgSrv
 	mkProc fttask_coord.TmkProc[imgresize.Ttask]
 	ndone  atomic.Int64
 }
 
-func NewRPCSrv(imgd *ImgSrv) *RPCsrv {
-	rpcs := &RPCsrv{imgd: imgd}
+func NewRPCSrv(imgd *ImgSrv) *ImgSrvRPC {
+	rpcs := &ImgSrvRPC{imgd: imgd}
 	rpcs.mkProc = imgresize.GetMkProcFn(imgd.ftclnt.ServiceId(), imgd.nrounds, imgd.workerMcpu, imgd.workerMem)
 	return rpcs
 }
 
-func (rpcs *RPCsrv) Resize(ctx fs.CtxI, req proto.ImgResizeReq, rep *proto.ImgResizeRep) error {
+func (rpcs *ImgSrvRPC) Resize(ctx fs.CtxI, req proto.ImgResizeReq, rep *proto.ImgResizeRep) error {
 	db.DPrintf(db.IMGD, "Resize %v", req)
 	defer db.DPrintf(db.IMGD, "Resize %v done", req)
 

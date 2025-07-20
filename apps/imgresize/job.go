@@ -26,27 +26,13 @@ func NewTask(fn string) *Ttask {
 	return &Ttask{fn}
 }
 
-func StartImgd(sc *sigmaclnt.SigmaClnt, srvId task.FtTaskSvcId, workerMcpu proc.Tmcpu, workerMem proc.Tmem, persist bool, nrounds int, imgdMcpu proc.Tmcpu, em *crash.TeventMap) *procgroupmgr.ProcGroupMgr {
+func StartImgd(sc *sigmaclnt.SigmaClnt, svcId, svcTaskId string, workerMcpu proc.Tmcpu, workerMem proc.Tmem, persist bool, nrounds int, imgdMcpu proc.Tmcpu, em *crash.TeventMap) *procgroupmgr.ProcGroupMgr {
 	crash.SetSigmaFail(em)
-	cfg := procgroupmgr.NewProcGroupConfig(1, "imgresized", []string{strconv.Itoa(int(workerMcpu)), strconv.Itoa(int(workerMem)), strconv.Itoa(nrounds)}, imgdMcpu, string(srvId))
+	cfg := procgroupmgr.NewProcGroupConfig(1, "imgresized", []string{strconv.Itoa(int(workerMcpu)), strconv.Itoa(int(workerMem)), strconv.Itoa(nrounds), svcTaskId}, imgdMcpu, svcId)
 	if persist {
 		cfg.Persist(sc.FsLib)
 	}
 	return cfg.StartGrpMgr(sc)
-}
-
-func StartImgRPCd(sc *sigmaclnt.SigmaClnt, job string, workerMcpu proc.Tmcpu, workerMem proc.Tmem, nrounds int, imgdMcpu proc.Tmcpu) (*proc.Proc, error) {
-	p := proc.NewProc("imgresizerpcd", []string{job, strconv.Itoa(int(workerMcpu)), strconv.Itoa(int(workerMem)), strconv.Itoa(nrounds)})
-	p.SetMcpu(imgdMcpu)
-	if err := sc.Spawn(p); err != nil {
-		db.DPrintf(db.TEST, "Error Spawn %v", p)
-		return p, err
-	}
-	if err := sc.WaitStart(p.GetPid()); err != nil {
-		db.DPrintf(db.TEST, "Error WaitStart %v", p)
-		return p, err
-	}
-	return p, nil
 }
 
 // remove old thumbnails

@@ -30,7 +30,18 @@ const (
 	IMG_RESIZE_MEM  proc.Tmem  = 0
 
 	CRASHIMG = 1000
+
+	TASKSVC = "imgresize-tasksvc"
+	IMGSVC  = "imgresize"
 )
+
+func imgId(job string) string {
+	return fmt.Sprintf("%s-%s", IMGSVC, job)
+}
+
+func taskId(job string) string {
+	return fmt.Sprintf("%s-%s", TASKSVC, job)
+}
 
 func TestCompile(t *testing.T) {
 }
@@ -76,75 +87,6 @@ func TestResizeProc(t *testing.T) {
 	assert.True(t, status.IsStatusOK(), "WaitExit status error: %v", status)
 }
 
-type TstateRPC struct {
-	job     string
-	mrts    *test.MultiRealmTstate
-	srvProc *proc.Proc
-	rpcc    *imgd_clnt.ImgResizeRPCClnt
-}
-
-func newTstateRPC(mrts *test.MultiRealmTstate) (*TstateRPC, error) {
-	ts := &TstateRPC{}
-	ts.mrts = mrts
-	ts.job = rd.String(4)
-	ts.cleanup()
-
-	err := ts.mrts.GetRealm(test.REALM1).MkDir(sp.IMG, 0777)
-	if !assert.Nil(ts.mrts.T, err) {
-		return nil, err
-	}
-	p, err := imgresize.StartImgRPCd(ts.mrts.GetRealm(test.REALM1).SigmaClnt, ts.job, IMG_RESIZE_MCPU, IMG_RESIZE_MEM, 1, 0)
-	if !assert.Nil(ts.mrts.T, err) {
-		return nil, err
-	}
-	db.DPrintf(db.TEST, "Started imgd RPC server")
-	ts.srvProc = p
-	rpcc, err := imgd_clnt.NewImgResizeRPCClnt(ts.mrts.GetRealm(test.REALM1).SigmaClnt.FsLib, ts.job)
-	if !assert.Nil(ts.mrts.T, err) {
-		return nil, err
-	}
-	ts.rpcc = rpcc
-	return ts, nil
-}
-
-func (ts *TstateRPC) cleanup() {
-	ts.mrts.GetRealm(test.REALM1).RmDir(sp.IMG)
-	imgresize.Cleanup(ts.mrts.GetRealm(test.REALM1).FsLib, filepath.Join(sp.S3, sp.LOCAL, "9ps3/img-save"))
-}
-
-func (ts *TstateRPC) shutdown() {
-	err := ts.mrts.GetRealm(test.REALM1).Evict(ts.srvProc.GetPid())
-	assert.Nil(ts.mrts.T, err)
-	status, err := ts.mrts.GetRealm(test.REALM1).WaitExit(ts.srvProc.GetPid())
-	if assert.Nil(ts.mrts.T, err) {
-		assert.True(ts.mrts.T, status.IsStatusEvicted(), "Wrong status: %v", status)
-	}
-}
-
-func TestImgdRPC(t *testing.T) {
-	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
-	defer mrts.Shutdown()
-
-	ts, err1 := newTstateRPC(mrts)
-	if !assert.Nil(t, err1, "Error New Tstate2: %v", err1) {
-		return
-	}
-
-	err := ts.mrts.GetRealm(test.REALM1).BootNode(1)
-	assert.Nil(t, err, "BootProcd 1")
-
-	err = ts.mrts.GetRealm(test.REALM1).BootNode(1)
-	assert.Nil(t, err, "BootProcd 2")
-
-	in := filepath.Join(sp.S3, sp.LOCAL, "9ps3/img-save/6.jpg")
-	err = ts.rpcc.Resize("resize-rpc-test", in)
-	assert.Nil(ts.mrts.T, err)
-	ts.shutdown()
-}
-
 type Tstate struct {
 	job    string
 	mrts   *test.MultiRealmTstate
@@ -161,7 +103,7 @@ func newTstate(mrts *test.MultiRealmTstate) (*Tstate, error) {
 	ts.cleanup()
 
 	var err error
-	ts.ftsrv, err = fttask_srv.NewFtTaskSrvMgr(ts.mrts.GetRealm(test.REALM1).SigmaClnt, fmt.Sprintf("imgresize-%s", ts.job), false)
+	ts.ftsrv, err = fttask_srv.NewFtTaskSrvMgr(ts.mrts.GetRealm(test.REALM1).SigmaClnt, taskId(ts.job), false)
 	if !assert.Nil(ts.mrts.T, err) {
 		return nil, err
 	}
@@ -184,7 +126,7 @@ func (ts *Tstate) restartTstate() error {
 
 	db.DPrintf(db.TEST, "%v named contents post-shutdown: %v", test.REALM1, sp.Names(sts))
 
-	ts.ftsrv, err = fttask_srv.NewFtTaskSrvMgr(ts.mrts.GetRealm(test.REALM1).SigmaClnt, fmt.Sprintf("imgresize-%s", ts.job), false)
+	ts.ftsrv, err = fttask_srv.NewFtTaskSrvMgr(ts.mrts.GetRealm(test.REALM1).SigmaClnt, taskId(ts.job), false)
 	if !assert.Nil(ts.mrts.T, err) {
 		return err
 	}
@@ -219,7 +161,7 @@ func (ts *Tstate) progress() {
 }
 
 func (ts *Tstate) imgdJob(paths []string, em *crash.TeventMap) *spstats.TcounterSnapshot {
-	imgd := imgresize.StartImgd(ts.mrts.GetRealm(test.REALM1).SigmaClnt, ts.ftclnt.ServiceId(), IMG_RESIZE_MCPU, IMG_RESIZE_MEM, false, 1, 0, em)
+	imgd := imgresize.StartImgd(ts.mrts.GetRealm(test.REALM1).SigmaClnt, imgId(ts.job), ts.ftclnt.ServiceId().String(), IMG_RESIZE_MCPU, IMG_RESIZE_MEM, false, 1, 0, em)
 
 	tasks := make([]*fttask_clnt.Task[imgresize.Ttask], len(paths))
 	for i, pn := range paths {
@@ -261,6 +203,51 @@ func TestImgdOneOK(t *testing.T) {
 
 	fn := filepath.Join(sp.S3, sp.LOCAL, "9ps3/img-save/8.jpg")
 	ts.imgdJob([]string{fn}, nil)
+	ts.shutdown()
+}
+
+func TestImgdRPC(t *testing.T) {
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	defer mrts.Shutdown()
+
+	ts, err1 := newTstate(mrts)
+	if !assert.Nil(t, err1, "Error New Tstate2: %v", err1) {
+		return
+	}
+
+	err := ts.mrts.GetRealm(test.REALM1).BootNode(1)
+	assert.Nil(t, err, "BootProcd 1")
+
+	err = ts.mrts.GetRealm(test.REALM1).BootNode(1)
+	assert.Nil(t, err, "BootProcd 2")
+
+	imgd := imgresize.StartImgd(ts.mrts.GetRealm(test.REALM1).SigmaClnt, imgId(ts.job), ts.ftclnt.ServiceId().String(), IMG_RESIZE_MCPU, IMG_RESIZE_MEM, false, 1, 0, nil)
+
+	time.Sleep(1 * time.Second)
+
+	rpcc, err := imgd_clnt.NewImgResizeRPCClnt(ts.mrts.GetRealm(test.REALM1).SigmaClnt.FsLib, imgId(ts.job))
+	if !assert.Nil(ts.mrts.T, err) {
+		return
+	}
+
+	go ts.progress()
+
+	in := filepath.Join(sp.S3, sp.LOCAL, "9ps3/img-save/6.jpg")
+	err = rpcc.Resize("resize-rpc-test", in)
+	assert.Nil(ts.mrts.T, err)
+
+	//err := ts.ftclnt.SubmittedLastTask()
+	//assert.Nil(ts.mrts.T, err)
+
+	sts, err := imgd.StopGroup()
+	assert.Nil(ts.mrts.T, err)
+	for _, st := range sts {
+		db.DPrintf(db.TEST, "st %v", st)
+	}
+
 	ts.shutdown()
 }
 
@@ -355,7 +342,7 @@ func TestImgdRestart(t *testing.T) {
 	err = ts.ftclnt.SubmittedLastTask()
 	assert.Nil(t, err)
 
-	imgd := imgresize.StartImgd(ts.mrts.GetRealm(test.REALM1).SigmaClnt, ts.ftclnt.ServiceId(), IMG_RESIZE_MCPU, IMG_RESIZE_MEM, true, 1, 0, nil)
+	imgd := imgresize.StartImgd(ts.mrts.GetRealm(test.REALM1).SigmaClnt, fmt.Sprintf("%s-%s", IMGSVC, ts.job), ts.ftclnt.ServiceId().String(), IMG_RESIZE_MCPU, IMG_RESIZE_MEM, true, 1, 0, nil)
 
 	db.DPrintf(db.TEST, "Get named contents pre-shutdown")
 	sts, err := ts.mrts.GetRealm(test.REALM1).GetDir(sp.NAMED)

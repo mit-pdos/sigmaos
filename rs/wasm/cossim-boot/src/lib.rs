@@ -12,12 +12,12 @@ mod sigmaos {
     mod sigmaos_host {
         #[link(wasm_import_module = "sigmaos_host")]
         extern "C" {
-            pub fn rpc(i: u64);
+            pub fn rpc(idx: u64, len: u64);
         }
     }
-    pub fn rpc(i: u64) {
+    pub fn rpc(idx: u64, len: u64) {
         unsafe {
-            sigmaos_host::rpc(i);
+            sigmaos_host::rpc(idx, len);
         }
     }
 }
@@ -30,8 +30,8 @@ pub fn allocate(size: usize) -> *mut c_char {
     pointer as *mut c_char
 }
 
-#[export_name = "dummy_test_boot"]
-pub fn dummy_test_boot(key: u64, shard: u32, b: *mut c_char, buf_sz: usize) {
+#[export_name = "boot"]
+pub fn boot(key: u64, shard: u32, b: *mut c_char, buf_sz: usize) {
     let buf: &mut [u8] = unsafe { slice::from_raw_parts_mut(b as *mut u8, buf_sz) };
     let n: i32 = buf[0].into();
     let mut multi_get = cache::CacheMultiGetReq::new();
@@ -48,5 +48,5 @@ pub fn dummy_test_boot(key: u64, shard: u32, b: *mut c_char, buf_sz: usize) {
         buf[idx] = *b;
         idx += 1;
     }
-    sigmaos::rpc(v.len() as u64);
+    sigmaos::rpc(0, v.len() as u64);
 }

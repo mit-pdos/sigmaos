@@ -306,12 +306,13 @@ func TestCosSimBoot(t *testing.T) {
 	cacheMultiGet := &cacheproto.CacheMultiGetReq{}
 	rpcFn := wasmer.NewFunction(
 		store,
-		wasmer.NewFunctionType(wasmer.NewValueTypes(wasmer.I64), wasmer.NewValueTypes()),
+		wasmer.NewFunctionType(wasmer.NewValueTypes(wasmer.I64, wasmer.I64), wasmer.NewValueTypes()),
 		func(args []wasmer.Value) ([]wasmer.Value, error) {
 			rpcIdx := args[0].I64()
 			l := args[1].I64()
 			err := proto.Unmarshal(buf[:l], cacheMultiGet)
 			assert.Nil(t, err, "Err unmarshal MultiGet: %v", err)
+			db.DPrintf(db.TEST, "WASM requests RPC(%v): %v", rpcIdx, cacheMultiGet)
 			return []wasmer.Value{}, nil
 		},
 	)
@@ -373,5 +374,4 @@ func TestCosSimBoot(t *testing.T) {
 	if !assert.Equal(t, strconv.Itoa(KEY), cacheMultiGet.Gets[0].Key, "Key not serialized correctly") {
 		return
 	}
-	db.DPrintf(db.TEST, "Unmarshaled proto: %v", cacheMultiGet)
 }

@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"sigmaos/apps/cache"
 	cachegrpclnt "sigmaos/apps/cache/cachegrp/clnt"
 	cachegrpmgr "sigmaos/apps/cache/cachegrp/mgr"
 	cacheproto "sigmaos/apps/cache/proto"
@@ -191,7 +192,7 @@ func (j *CosSimJob) addSrv(sigmaPath string) (*proc.Proc, time.Duration, error) 
 	for pn, ep := range j.cacheEPs {
 		p.SetCachedEndpoint(pn, ep)
 	}
-	cacheGetReqs := j.cacheClnt.NewMultiGetReqs(j.vecKeys, j.ncache)
+	cacheGetReqs := cachegrpclnt.NewMultiGetReqs(j.vecKeys, j.ncache, cache.NSHARD)
 	nreqs := 0
 	for i := 0; i < len(cacheGetReqs); i++ {
 		server := i

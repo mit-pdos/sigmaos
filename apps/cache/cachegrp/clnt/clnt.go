@@ -105,7 +105,7 @@ func (csc *CachedSvcClnt) GetEndpoints() (map[string]*sp.Tendpoint, error) {
 	return eps, nil
 }
 
-func (csc *CachedSvcClnt) NewMultiGetReqs(keys []string, nserver int) map[int]*cacheproto.CacheMultiGetReq {
+func NewMultiGetReqs(keys []string, nserver int, nshard uint32) map[int]*cacheproto.CacheMultiGetReq {
 	reqs := make(map[int]*cacheproto.CacheMultiGetReq)
 	for _, key := range keys {
 		server := Key2server(key, nserver)
@@ -118,7 +118,7 @@ func (csc *CachedSvcClnt) NewMultiGetReqs(keys []string, nserver int) map[int]*c
 		}
 		req.Gets = append(req.Gets, &cacheproto.CacheGetDescriptor{
 			Key:   key,
-			Shard: csc.cc.Key2shard(key),
+			Shard: cacheclnt.Key2shard(key, nshard),
 		})
 	}
 	return reqs

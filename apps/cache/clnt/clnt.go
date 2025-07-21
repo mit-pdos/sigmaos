@@ -45,6 +45,13 @@ func NewCacheClnt(fsl *fslib.FsLib, job string, nshard int) *CacheClnt {
 	return cc
 }
 
+func Key2shard(key string, nshard uint32) uint32 {
+	h := fnv.New32a()
+	h.Write([]byte(key))
+	shard := h.Sum32() % nshard
+	return shard
+}
+
 func (cc *CacheClnt) Key2shard(key string) uint32 {
 	h := fnv.New32a()
 	h.Write([]byte(key))

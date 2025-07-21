@@ -1,0 +1,40 @@
+package imgresize
+
+import (
+	imgd_clnt "sigmaos/apps/imgresize/clnt"
+	"sigmaos/ft/task"
+	fttask_clnt "sigmaos/ft/task/clnt"
+	"sigmaos/sigmaclnt"
+)
+
+type ImgdClnt[Data any] struct {
+	rpcc   *imgd_clnt.ImgResizeRPCClnt
+	ftclnt fttask_clnt.FtTaskClnt[Data, any]
+}
+
+func NewImgdClnt[Data any](sc *sigmaclnt.SigmaClnt, job string, id task.FtTaskSvcId) (*ImgdClnt[Data], error) {
+	rpcc, err := imgd_clnt.NewImgResizeRPCClnt(sc.FsLib, ImgSvcId(job))
+	if err != nil {
+		return nil, err
+	}
+	return &ImgdClnt[Data]{
+		rpcc:   rpcc,
+		ftclnt: fttask_clnt.NewFtTaskClnt[Data, any](sc.FsLib, id),
+	}, nil
+}
+
+func (clnt *ImgdClnt[Data]) SubmitTasks(tasks []*fttask_clnt.Task[Data]) ([]fttask_clnt.TaskId, error) {
+	return clnt.ftclnt.SubmitTasks(tasks)
+}
+
+func (clnt *ImgdClnt[Data]) SubmittedLastTask() error {
+	return clnt.ftclnt.SubmittedLastTask()
+}
+
+func (clnt *ImgdClnt[Data]) GetNTasks(status fttask_clnt.TaskStatus) (int32, error) {
+	return clnt.ftclnt.GetNTasks(status)
+}
+
+func (clnt *ImgdClnt[Data]) Resize(tname, ipath string) error {
+	return clnt.rpcc.Resize(tname, ipath)
+}

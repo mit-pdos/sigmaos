@@ -12,7 +12,6 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"sigmaos/apps/imgresize"
-	imgd_clnt "sigmaos/apps/imgresize/clnt"
 	db "sigmaos/debug"
 	fttask_clnt "sigmaos/ft/task/clnt"
 	"sigmaos/proc"
@@ -78,7 +77,8 @@ type Tstate struct {
 	job  string
 	mrts *test.MultiRealmTstate
 	ch   chan bool
-	imgd *imgresize.ImgdMgr
+	imgd *imgresize.ImgdMgr[imgresize.Ttask]
+	clnt *imgresize.ImgdClnt[imgresize.Ttask]
 }
 
 func newTstate(mrts *test.MultiRealmTstate, em *crash.TeventMap) (*Tstate, error) {
@@ -88,11 +88,19 @@ func newTstate(mrts *test.MultiRealmTstate, em *crash.TeventMap) (*Tstate, error
 	ts.ch = make(chan bool)
 	ts.cleanup()
 
-	imgd, err := imgresize.NewImgdMgr(ts.mrts.GetRealm(test.REALM1).SigmaClnt, ts.job, IMG_RESIZE_MCPU, IMG_RESIZE_MEM, false, 1, 0, em)
+	imgd, err := imgresize.NewImgdMgr[imgresize.Ttask](ts.mrts.GetRealm(test.REALM1).SigmaClnt, ts.job, IMG_RESIZE_MCPU, IMG_RESIZE_MEM, false, 1, 0, em)
 	if err != nil {
 		return nil, err
 	}
 	ts.imgd = imgd
+
+	time.Sleep(1 * time.Second)
+
+	clnt, err := imgd.NewImgdClnt(ts.mrts.GetRealm(test.REALM1).SigmaClnt)
+	if err != nil {
+		return nil, err
+	}
+	ts.clnt = clnt
 	return ts, nil
 }
 
@@ -110,10 +118,18 @@ func (ts *Tstate) restartTstate() error {
 		return err
 	}
 
+	sc := ts.mrts.GetRealm(test.REALM1).SigmaClnt
+
 	db.DPrintf(db.TEST, "%v named contents post-shutdown: %v", test.REALM1, sp.Names(sts))
-	if err := ts.imgd.Restart(ts.mrts.GetRealm(test.REALM1).SigmaClnt); err != nil {
+	if err := ts.imgd.Restart(sc); err != nil {
 		return err
 	}
+
+	clnt, err := ts.imgd.NewImgdClnt(sc)
+	if err != nil {
+		return err
+	}
+	ts.clnt = clnt
 
 	return nil
 }
@@ -123,7 +139,7 @@ func (ts *Tstate) cleanup() {
 	imgresize.Cleanup(ts.mrts.GetRealm(test.REALM1).FsLib, filepath.Join(sp.S3, sp.ANY, "9ps3/img-save"))
 }
 
-func (ts *Tstate) shutdown() {
+func (ts *Tstate) stopProgress() {
 	ts.ch <- true
 }
 
@@ -133,7 +149,7 @@ func (ts *Tstate) progress() {
 		case <-ts.ch:
 			return
 		case <-time.After(1 * time.Second):
-			if n, err := ts.imgd.Ftclnt.GetNTasks(fttask_clnt.DONE); err != nil {
+			if n, err := ts.clnt.GetNTasks(fttask_clnt.DONE); err != nil {
 				assert.Nil(ts.mrts.T, err)
 			} else {
 				fmt.Printf("%d..", n)
@@ -147,13 +163,13 @@ func (ts *Tstate) doJob(paths []string) *spstats.TcounterSnapshot {
 	for i, pn := range paths {
 		tasks[i] = &fttask_clnt.Task[imgresize.Ttask]{Id: fttask_clnt.TaskId(i), Data: *imgresize.NewTask(pn)}
 	}
-	existing, err := ts.imgd.Ftclnt.SubmitTasks(tasks)
+	existing, err := ts.clnt.SubmitTasks(tasks)
 	assert.Nil(ts.mrts.T, err)
 	assert.Empty(ts.mrts.T, existing)
 
 	db.DPrintf(db.TEST, "Submitted")
 
-	err = ts.imgd.Ftclnt.SubmittedLastTask()
+	err = ts.clnt.SubmittedLastTask()
 	assert.Nil(ts.mrts.T, err)
 
 	go ts.progress()
@@ -166,6 +182,8 @@ func (ts *Tstate) doJob(paths []string) *spstats.TcounterSnapshot {
 		st.MergeCounters(stro)
 		assert.Nil(ts.mrts.T, err)
 	}
+
+	ts.stopProgress()
 	return st
 }
 
@@ -183,7 +201,6 @@ func TestImgdOneOK(t *testing.T) {
 
 	fn := filepath.Join(sp.S3, sp.LOCAL, "9ps3/img-save/8.jpg")
 	ts.doJob([]string{fn})
-	ts.shutdown()
 }
 
 func TestImgdRPC(t *testing.T) {
@@ -206,15 +223,10 @@ func TestImgdRPC(t *testing.T) {
 
 	time.Sleep(1 * time.Second)
 
-	rpcc, err := imgd_clnt.NewImgResizeRPCClnt(ts.mrts.GetRealm(test.REALM1).SigmaClnt.FsLib, imgresize.ImgSvcId(ts.job))
-	if !assert.Nil(ts.mrts.T, err) {
-		return
-	}
-
 	go ts.progress()
 
 	in := filepath.Join(sp.S3, sp.LOCAL, "9ps3/img-save/6.jpg")
-	err = rpcc.Resize("resize-rpc-test", in)
+	err = ts.clnt.Resize("resize-rpc-test", in)
 	assert.Nil(ts.mrts.T, err)
 
 	//err := ts.ftclnt.SubmittedLastTask()
@@ -226,7 +238,7 @@ func TestImgdRPC(t *testing.T) {
 		db.DPrintf(db.TEST, "st %v", st)
 	}
 
-	ts.shutdown()
+	ts.stopProgress()
 }
 
 func TestImgdFatalError(t *testing.T) {
@@ -246,7 +258,6 @@ func TestImgdFatalError(t *testing.T) {
 	stro := ts.doJob([]string{fn})
 
 	assert.True(t, stro.Counters["Nerror"] > 0)
-	ts.shutdown()
 }
 
 func TestImgdOneCrash(t *testing.T) {
@@ -266,8 +277,6 @@ func TestImgdOneCrash(t *testing.T) {
 	fn := filepath.Join(sp.S3, sp.LOCAL, "9ps3/img-save/8.jpg")
 	stro := ts.doJob([]string{fn})
 	assert.True(t, stro.Counters["Nfail"] > 0)
-
-	ts.shutdown()
 }
 
 func TestImgdManyOK(t *testing.T) {
@@ -297,7 +306,6 @@ func TestImgdManyOK(t *testing.T) {
 		paths = append(paths, fn)
 	}
 	ts.doJob(paths)
-	ts.shutdown()
 }
 
 func TestImgdRestart(t *testing.T) {
@@ -313,11 +321,11 @@ func TestImgdRestart(t *testing.T) {
 
 	fn := filepath.Join(sp.S3, sp.LOCAL, "9ps3/img-save/1.jpg")
 
-	existing, err := ts.imgd.Ftclnt.SubmitTasks([]*fttask_clnt.Task[imgresize.Ttask]{{Id: 0, Data: *imgresize.NewTask(fn)}})
+	existing, err := ts.clnt.SubmitTasks([]*fttask_clnt.Task[imgresize.Ttask]{{Id: 0, Data: *imgresize.NewTask(fn)}})
 	assert.Nil(ts.mrts.T, err)
 	assert.Empty(ts.mrts.T, existing)
 
-	err = ts.imgd.Ftclnt.SubmittedLastTask()
+	err = ts.clnt.SubmittedLastTask()
 	assert.Nil(t, err)
 
 	db.DPrintf(db.TEST, "Get named contents pre-shutdown")
@@ -345,5 +353,5 @@ func TestImgdRestart(t *testing.T) {
 
 	ts.imgd.WaitImgd()
 
-	ts.shutdown()
+	ts.stopProgress()
 }

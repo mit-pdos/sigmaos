@@ -29,7 +29,7 @@ func ImgSvcId(job string) string {
 	return fmt.Sprintf("%s-%s", IMGSVC, job)
 }
 
-func ImgTaskSvcId(job string) string {
+func TaskSvcId(job string) string {
 	return fmt.Sprintf("%s-%s", TASKSVC, job)
 }
 
@@ -41,26 +41,24 @@ func NewTask(fn string) *Ttask {
 	return &Ttask{fn}
 }
 
-type ImgdMgr struct {
-	imgTaskSvcId string
-	pgm          *procgroupmgr.ProcGroupMgr
-	ftsrv        *fttask_srv.FtTaskSrvMgr
-	Ftclnt       fttask_clnt.FtTaskClnt[Ttask, any]
+type ImgdMgr[Data any] struct {
+	job   string
+	pgm   *procgroupmgr.ProcGroupMgr
+	ftsrv *fttask_srv.FtTaskSrvMgr
 }
 
-func NewImgdMgr(sc *sigmaclnt.SigmaClnt, job string, workerMcpu proc.Tmcpu, workerMem proc.Tmem, persist bool, nrounds int, imgdMcpu proc.Tmcpu, em *crash.TeventMap) (*ImgdMgr, error) {
+func NewImgdMgr[Data any](sc *sigmaclnt.SigmaClnt, job string, workerMcpu proc.Tmcpu, workerMem proc.Tmem, persist bool, nrounds int, imgdMcpu proc.Tmcpu, em *crash.TeventMap) (*ImgdMgr[Data], error) {
 	crash.SetSigmaFail(em)
-	imgd := &ImgdMgr{}
+	imgd := &ImgdMgr[Data]{}
 
-	imgd.imgTaskSvcId = ImgTaskSvcId(job)
+	imgd.job = job
 	var err error
-	imgd.ftsrv, err = fttask_srv.NewFtTaskSrvMgr(sc, imgd.imgTaskSvcId, false)
+	imgd.ftsrv, err = fttask_srv.NewFtTaskSrvMgr(sc, TaskSvcId(job), false)
 	if err != nil {
 		return nil, err
 	}
-	imgd.Ftclnt = fttask_clnt.NewFtTaskClnt[Ttask, any](sc.FsLib, imgd.ftsrv.Id)
 
-	cfg := procgroupmgr.NewProcGroupConfig(1, "imgresized", []string{strconv.Itoa(int(workerMcpu)), strconv.Itoa(int(workerMem)), strconv.Itoa(nrounds), imgd.imgTaskSvcId}, imgdMcpu, ImgSvcId(job))
+	cfg := procgroupmgr.NewProcGroupConfig(1, "imgresized", []string{strconv.Itoa(int(workerMcpu)), strconv.Itoa(int(workerMem)), strconv.Itoa(nrounds), TaskSvcId(imgd.job)}, imgdMcpu, ImgSvcId(job))
 
 	if persist {
 		cfg.Persist(sc.FsLib)
@@ -69,13 +67,16 @@ func NewImgdMgr(sc *sigmaclnt.SigmaClnt, job string, workerMcpu proc.Tmcpu, work
 	return imgd, nil
 }
 
-func (imgd *ImgdMgr) Restart(sc *sigmaclnt.SigmaClnt) error {
+func (imgd *ImgdMgr[Data]) NewImgdClnt(sc *sigmaclnt.SigmaClnt) (*ImgdClnt[Data], error) {
+	return NewImgdClnt[Data](sc, imgd.job, imgd.ftsrv.Id)
+}
+
+func (imgd *ImgdMgr[Data]) Restart(sc *sigmaclnt.SigmaClnt) error {
 	var err error
-	imgd.ftsrv, err = fttask_srv.NewFtTaskSrvMgr(sc, imgd.imgTaskSvcId, false)
+	imgd.ftsrv, err = fttask_srv.NewFtTaskSrvMgr(sc, TaskSvcId(imgd.job), false)
 	if err != nil {
 		return err
 	}
-	imgd.Ftclnt = fttask_clnt.NewFtTaskClnt[Ttask, any](sc.FsLib, imgd.ftsrv.Id)
 	pgms, err := procgroupmgr.Recover(sc)
 	if err != nil {
 		return err
@@ -87,13 +88,13 @@ func (imgd *ImgdMgr) Restart(sc *sigmaclnt.SigmaClnt) error {
 	return nil
 }
 
-func (imgd *ImgdMgr) WaitImgd() []*procgroupmgr.ProcStatus {
+func (imgd *ImgdMgr[Data]) WaitImgd() []*procgroupmgr.ProcStatus {
 	sts := imgd.pgm.WaitGroup()
 	imgd.ftsrv.Stop(true)
 	return sts
 }
 
-func (imgd *ImgdMgr) StopImgd(clearStore bool) ([]*procgroupmgr.ProcStatus, error) {
+func (imgd *ImgdMgr[Data]) StopImgd(clearStore bool) ([]*procgroupmgr.ProcStatus, error) {
 	sts, err := imgd.pgm.StopGroup()
 	imgd.ftsrv.Stop(clearStore)
 	return sts, err

@@ -38,7 +38,7 @@ func (clnt *ImgResizeRPCClnt) Resize(tname, ipath string) error {
 		return err
 	}
 	if !res.OK {
-		return fmt.Errorf("Err res not OK")
+		return fmt.Errorf("Resize error")
 	}
 	return nil
 }

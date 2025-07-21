@@ -3,24 +3,16 @@ package cpp_test
 import (
 	"flag"
 	"os"
+	"strconv"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 	wasmer "github.com/wasmerio/wasmer-go/wasmer"
+	"google.golang.org/protobuf/proto"
 
+	cacheproto "sigmaos/apps/cache/proto"
 	db "sigmaos/debug"
-	//	"sigmaos/apps/cossim"
-	//	cossimproto "sigmaos/apps/cossim/proto"
-	//	cossimsrv "sigmaos/apps/cossim/srv"
-	//	"sigmaos/apps/epcache"
-	//	epcachesrv "sigmaos/apps/epcache/srv"
-	//	spinproto "sigmaos/apps/spin/proto"
-	//	echoproto "sigmaos/example/example_echo_server/proto"
-	//	"sigmaos/proc"
-	//	rpcncclnt "sigmaos/rpc/clnt/netconn"
-	//	sp "sigmaos/sigmap"
-	//	"sigmaos/test"
 )
 
 var wasmScript string
@@ -296,7 +288,13 @@ func TestMemory(t *testing.T) {
 func TestCosSimBoot(t *testing.T) {
 	const (
 		BUF_SZ = 655360
+		KEY    = 42
+		SHARD  = 100
 	)
+	warmupScript, err := os.ReadFile(wasmScript)
+	if !assert.Nil(t, err, "Err read wasm script: %v", err) {
+		return
+	}
 	bootScript, err := os.ReadFile(cossimBootScript)
 	if !assert.Nil(t, err, "Err read wasm script: %v", err) {
 		return
@@ -304,14 +302,23 @@ func TestCosSimBoot(t *testing.T) {
 	engine := wasmer.NewEngine()
 	store := wasmer.NewStore(engine)
 
-	logHostFn := wasmer.NewFunction(
+	var buf []byte
+	cacheMultiGet := &cacheproto.CacheMultiGetReq{}
+	rpcFn := wasmer.NewFunction(
 		store,
-		wasmer.NewFunctionType(wasmer.NewValueTypes(wasmer.I32), wasmer.NewValueTypes()),
+		wasmer.NewFunctionType(wasmer.NewValueTypes(wasmer.I64), wasmer.NewValueTypes()),
 		func(args []wasmer.Value) ([]wasmer.Value, error) {
-			log(args[0].I32())
+			l := args[0].I64()
+			err := proto.Unmarshal(buf[:l], cacheMultiGet)
+			assert.Nil(t, err, "Err unmarshal MultiGet: %v", err)
 			return []wasmer.Value{}, nil
 		},
 	)
+
+	// Warm up wasmer
+	if _, err := wasmer.NewModule(store, warmupScript); !assert.Nil(t, err, "Err compile wasm module: %v", err) {
+		return
+	}
 
 	start := time.Now()
 	// Compiles the module
@@ -326,7 +333,7 @@ func TestCosSimBoot(t *testing.T) {
 	importObject.Register(
 		"sigmaos_host",
 		map[string]wasmer.IntoExtern{
-			"log_int": logHostFn,
+			"rpc": rpcFn,
 		},
 	)
 	instance, err := wasmer.NewInstance(module, importObject)
@@ -338,35 +345,32 @@ func TestCosSimBoot(t *testing.T) {
 	if !assert.Nil(t, err, "Err get allocate wasm function: %v", err) {
 		return
 	}
-	allocateResult, err := allocFn(BUF_SZ)
+	wasmBufPtr, err := allocFn(BUF_SZ)
 	if !assert.Nil(t, err, "Err allocate wasm mem: %v", err) {
 		return
 	}
-	inputPointer := allocateResult.(int32)
-	db.DPrintf(db.TEST, "Alloc result: %v", allocateResult)
+	db.DPrintf(db.TEST, "WASM-allocated buffer address: %v", wasmBufPtr)
 	mem, err := instance.Exports.GetMemory("memory")
 	if !assert.Nil(t, err, "Err get wasm mem: %v", err) {
 		return
 	}
-	_ = inputPointer
-	_ = mem
-
+	buf = mem.Data()[wasmBufPtr.(int32) : wasmBufPtr.(int32)+BUF_SZ]
 	// Gets the `boot` exported function from the WebAssembly instance.
-	boot, err := instance.Exports.GetFunction("boot")
+	boot, err := instance.Exports.GetFunction("dummy_test_boot")
 	if !assert.Nil(t, err, "Err get wasm function: %v", err) {
 		return
 	}
-
 	// Calls that exported function with Go standard values. The WebAssembly
 	// types are inferred and values are casted automatically.
-	result, err := boot(5, 37, allocateResult, BUF_SZ)
-	if !assert.Nil(t, err, "Err call wasm function: %v", err) {
+	if _, err := boot(KEY, SHARD, wasmBufPtr, BUF_SZ); !assert.Nil(t, err, "Err call wasm function: %v", err) {
 		return
 	}
-
-	if !assert.True(t, logged, "log host function never called") {
+	// Check that the key and shard were set correctly
+	if !assert.Equal(t, uint64(SHARD), uint64(cacheMultiGet.Gets[0].Shard), "Shard not serialized correctly") {
 		return
 	}
-
-	db.DPrintf(db.TEST, "Result: %v", result) // 42!
+	if !assert.Equal(t, strconv.Itoa(KEY), cacheMultiGet.Gets[0].Key, "Key not serialized correctly") {
+		return
+	}
+	db.DPrintf(db.TEST, "Unmarshaled proto: %v", cacheMultiGet)
 }

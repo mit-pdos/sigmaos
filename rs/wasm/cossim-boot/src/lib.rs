@@ -1,4 +1,4 @@
-use protobuf::Message;
+use protobuf::{Message, MessageField};
 use std::mem;
 use std::os::raw::c_char;
 use std::slice;
@@ -35,9 +35,11 @@ pub fn dummy_test_boot(key: u64, shard: u32, b: *mut c_char, buf_sz: usize) {
     let buf: &mut [u8] = unsafe { slice::from_raw_parts_mut(b as *mut u8, buf_sz) };
     let n: i32 = buf[0].into();
     let mut multi_get = cache::CacheMultiGetReq::new();
+    let fence = sigmap::TfenceProto::new();
     let mut get_descriptor = cache::CacheGetDescriptor::new();
     get_descriptor.key = key.to_string();
     get_descriptor.shard = shard;
+    multi_get.fence = MessageField::some(fence);
     multi_get.gets.push(get_descriptor);
     multi_get.write_to_vec(&mut buf.to_vec()).unwrap();
     let v = multi_get.write_to_bytes().unwrap();

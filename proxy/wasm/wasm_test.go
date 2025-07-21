@@ -1,6 +1,8 @@
 package cpp_test
 
 import (
+	"bytes"
+	"encoding/binary"
 	"flag"
 	"os"
 	"strconv"
@@ -11,6 +13,8 @@ import (
 	wasmer "github.com/wasmerio/wasmer-go/wasmer"
 	"google.golang.org/protobuf/proto"
 
+	"sigmaos/apps/cache"
+	cachegrpclnt "sigmaos/apps/cache/cachegrp/clnt"
 	cacheproto "sigmaos/apps/cache/proto"
 	db "sigmaos/debug"
 )
@@ -287,9 +291,9 @@ func TestMemory(t *testing.T) {
 
 func TestCosSimBoot(t *testing.T) {
 	const (
-		BUF_SZ = 655360
-		KEY    = 42
-		SHARD  = 100
+		BUF_SZ        = 655360
+		N_SRV  uint32 = 2
+		N_KEYS uint64 = 120
 	)
 	warmupScript, err := os.ReadFile(wasmScript)
 	if !assert.Nil(t, err, "Err read wasm script: %v", err) {
@@ -302,17 +306,39 @@ func TestCosSimBoot(t *testing.T) {
 	engine := wasmer.NewEngine()
 	store := wasmer.NewStore(engine)
 
+	vecKeys := make([]string, N_KEYS)
+	for i := range vecKeys {
+		vecKeys[i] = strconv.Itoa(i)
+	}
+	cacheMultiGetReqs := cachegrpclnt.NewMultiGetReqs(vecKeys, int(N_SRV), cache.NSHARD)
 	var buf []byte
-	cacheMultiGet := &cacheproto.CacheMultiGetReq{}
-	rpcFn := wasmer.NewFunction(
+	sendRPCFn := wasmer.NewFunction(
 		store,
 		wasmer.NewFunctionType(wasmer.NewValueTypes(wasmer.I64, wasmer.I64), wasmer.NewValueTypes()),
 		func(args []wasmer.Value) ([]wasmer.Value, error) {
 			rpcIdx := args[0].I64()
 			l := args[1].I64()
-			err := proto.Unmarshal(buf[:l], cacheMultiGet)
-			assert.Nil(t, err, "Err unmarshal MultiGet: %v", err)
-			db.DPrintf(db.TEST, "WASM requests RPC(%v): %v", rpcIdx, cacheMultiGet)
+			cacheMultiGet := &cacheproto.CacheMultiGetReq{}
+			if err := proto.Unmarshal(buf[:l], cacheMultiGet); !assert.Nil(t, err, "Err unmarshal MultiGet: %v", err) {
+				return []wasmer.Value{}, nil
+			}
+			// Get the "ground truth" request
+			groundTruthReq := cacheMultiGetReqs[int(rpcIdx)]
+			// Check that the number of gets matches
+			if !assert.Equal(t, len(groundTruthReq.Gets), len(cacheMultiGet.Gets), "Mismatched number of get requests for rpcIdx: %v", rpcIdx) {
+				return []wasmer.Value{}, nil
+			}
+			for i := range groundTruthReq.Gets {
+				// Check that the key matches
+				if !assert.Equal(t, groundTruthReq.Gets[i].Key, cacheMultiGet.Gets[i].Key, "Mismatched key for rpcIdx: %v getIdx: %v", rpcIdx, i) {
+					return []wasmer.Value{}, nil
+				}
+				// Check that the shard matches
+				// Check that the key matches
+				if !assert.Equal(t, groundTruthReq.Gets[i].Shard, cacheMultiGet.Gets[i].Shard, "Mismatched shard for rpcIdx: %v getIdx: %v", rpcIdx, i) {
+					return []wasmer.Value{}, nil
+				}
+			}
 			return []wasmer.Value{}, nil
 		},
 	)
@@ -335,7 +361,7 @@ func TestCosSimBoot(t *testing.T) {
 	importObject.Register(
 		"sigmaos_host",
 		map[string]wasmer.IntoExtern{
-			"rpc": rpcFn,
+			"send_rpc": sendRPCFn,
 		},
 	)
 	instance, err := wasmer.NewInstance(module, importObject)
@@ -362,16 +388,18 @@ func TestCosSimBoot(t *testing.T) {
 	if !assert.Nil(t, err, "Err get wasm function: %v", err) {
 		return
 	}
+	// Write the input arguments to the boot script
+	inputBuf := bytes.NewBuffer(make([]byte, 0, 4))
+	if err := binary.Write(inputBuf, binary.LittleEndian, N_SRV); !assert.Nil(t, err, "Err write input to boot script: %v", err) {
+		return
+	}
+	if err := binary.Write(inputBuf, binary.LittleEndian, N_KEYS); !assert.Nil(t, err, "Err write input to boot script: %v", err) {
+		return
+	}
+	copy(buf, inputBuf.Bytes())
 	// Calls that exported function with Go standard values. The WebAssembly
 	// types are inferred and values are casted automatically.
-	if _, err := boot(KEY, SHARD, wasmBufPtr, BUF_SZ); !assert.Nil(t, err, "Err call wasm function: %v", err) {
-		return
-	}
-	// Check that the key and shard were set correctly
-	if !assert.Equal(t, uint64(SHARD), uint64(cacheMultiGet.Gets[0].Shard), "Shard not serialized correctly") {
-		return
-	}
-	if !assert.Equal(t, strconv.Itoa(KEY), cacheMultiGet.Gets[0].Key, "Key not serialized correctly") {
+	if _, err := boot(wasmBufPtr, BUF_SZ); !assert.Nil(t, err, "Err call wasm function: %v", err) {
 		return
 	}
 }

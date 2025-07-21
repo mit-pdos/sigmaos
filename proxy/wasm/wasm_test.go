@@ -308,7 +308,8 @@ func TestCosSimBoot(t *testing.T) {
 		store,
 		wasmer.NewFunctionType(wasmer.NewValueTypes(wasmer.I64), wasmer.NewValueTypes()),
 		func(args []wasmer.Value) ([]wasmer.Value, error) {
-			l := args[0].I64()
+			rpcIdx := args[0].I64()
+			l := args[1].I64()
 			err := proto.Unmarshal(buf[:l], cacheMultiGet)
 			assert.Nil(t, err, "Err unmarshal MultiGet: %v", err)
 			return []wasmer.Value{}, nil
@@ -356,7 +357,7 @@ func TestCosSimBoot(t *testing.T) {
 	}
 	buf = mem.Data()[wasmBufPtr.(int32) : wasmBufPtr.(int32)+BUF_SZ]
 	// Gets the `boot` exported function from the WebAssembly instance.
-	boot, err := instance.Exports.GetFunction("dummy_test_boot")
+	boot, err := instance.Exports.GetFunction("boot")
 	if !assert.Nil(t, err, "Err get wasm function: %v", err) {
 		return
 	}

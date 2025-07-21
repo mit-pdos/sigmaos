@@ -12,6 +12,7 @@ VERSION="1.0"
 USERBIN="all"
 NO_CPP="false"
 NO_GO="false"
+NO_DOCKER="false"
 while [[ "$#" -gt 0 ]]; do
   case "$1" in
   --parallel)
@@ -21,6 +22,10 @@ while [[ "$#" -gt 0 ]]; do
   --rebuildbuilder)
     shift
     REBUILD_BUILDER="true"
+    ;;
+  --no_docker)
+    shift
+    NO_DOCKER="true"
     ;;
   --no_go)
     shift
@@ -276,14 +281,16 @@ if [ "${NO_CPP}" != "true" ]; then
   echo "========== Done building CPP bins =========="
 fi
 
-echo "========== Copying kernel bins for procd =========="
-if [ "${TARGET}" == "local" ]; then
-  sudo cp $ROOT/create-net.sh $KERNELBIN/
-  cp $KERNELBIN/procd $PROCD_BIN/
-  cp $KERNELBIN/spproxyd $PROCD_BIN/
-  cp $KERNELBIN/uproc-trampoline $PROCD_BIN/
+if [ "${NO_DOCKER}" != "true" ]; then
+  echo "========== Copying kernel bins for procd =========="
+  if [ "${TARGET}" == "local" ]; then
+    sudo cp $ROOT/create-net.sh $KERNELBIN/
+    cp $KERNELBIN/procd $PROCD_BIN/
+    cp $KERNELBIN/spproxyd $PROCD_BIN/
+    cp $KERNELBIN/uproc-trampoline $PROCD_BIN/
+  fi
+  echo "========== Done copying kernel bins for uproc =========="
 fi
-echo "========== Done copying kernel bins for uproc =========="
 
 # Now, prepare to build final containers which will actually run.
 targets="sigmauser-remote sigmaos-remote"
@@ -299,10 +306,12 @@ fi
 
 build_targets="parallel -j$njobs \"DOCKER_BUILDKIT=1 docker build --progress=plain -f docker/target.Dockerfile --target {} -t {}$BUILD_TARGET_SUFFIX . 2>&1 | tee $BUILD_LOG/{}.out\" ::: $targets"
 
-printf "\nBuilding Docker image targets\n$build_targets\n\n"
-echo "========== Start Docker targets build =========="
-eval $build_targets
-echo "========== Done building Docker targets =========="
+if [ "${NO_DOCKER}" != "true" ]; then
+  printf "\nBuilding Docker image targets\n$build_targets\n\n"
+  echo "========== Start Docker targets build =========="
+  eval $build_targets
+  echo "========== Done building Docker targets =========="
+fi
 
 if [ "${TARGET}" == "local" ]; then
   # If developing locally, rename the sigmaos image which includes binaries to
@@ -318,10 +327,12 @@ else
   echo "========== Done pushing user bins to S3 =========="
 fi
 
-# Build npproxy for host
-echo "========== Building proxy =========="
-/usr/bin/time -f "Build time: %e sec" ./make.sh --norace $PARALLEL npproxy 
-echo "========== Done building proxy =========="
+if [ "${NO_GO}" != "true" ]; then
+  # Build npproxy for host
+  echo "========== Building proxy =========="
+  /usr/bin/time -f "Build time: %e sec" ./make.sh --norace $PARALLEL npproxy 
+  echo "========== Done building proxy =========="
+fi
 
 if ! [ -z "$TAG" ]; then
   echo "========== Pushing container images to DockerHub =========="

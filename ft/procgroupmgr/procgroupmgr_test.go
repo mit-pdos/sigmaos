@@ -139,9 +139,11 @@ func TestRecover(t *testing.T) {
 
 	time.Sleep(sp.EtcdSessionExpired * time.Second)
 
-	gms, err := procgroupmgr.Recover(ts.SigmaClnt)
+	cfgs, err := procgroupmgr.Recover(ts.SigmaClnt)
 	assert.Nil(t, err, "Recover")
-	assert.Equal(t, 1, len(gms))
+	assert.Equal(t, 1, len(cfgs))
+
+	pgm := cfgs[0].StartGrpMgr(ts.SigmaClnt)
 
 	ndc, err := ndclnt.NewNdClnt(ts.SigmaClnt, test.REALM1)
 	assert.Nil(t, err)
@@ -153,5 +155,5 @@ func TestRecover(t *testing.T) {
 	assert.Nil(t, err, "Get named dir post-recover")
 	assert.True(t, sp.Present(sts, []string{"fff"}))
 
-	gms[0].StopGroup()
+	pgm.StopGroup()
 }

@@ -90,8 +90,8 @@ func (cfg *ProcGroupMgrConfig) Persist(fsl *fslib.FsLib) error {
 	return nil
 }
 
-func Recover(sc *sigmaclnt.SigmaClnt) ([]*ProcGroupMgr, error) {
-	pgms := make([]*ProcGroupMgr, 0)
+func Recover(sc *sigmaclnt.SigmaClnt) ([]*ProcGroupMgrConfig, error) {
+	cfgs := make([]*ProcGroupMgrConfig, 0)
 	sc.ProcessDir(GRPMGRDIR, func(st *sp.Tstat) (bool, error) {
 		pn := filepath.Join(GRPMGRDIR, st.Name)
 		cfg := &ProcGroupMgrConfig{}
@@ -99,11 +99,11 @@ func Recover(sc *sigmaclnt.SigmaClnt) ([]*ProcGroupMgr, error) {
 			return true, err
 		}
 		db.DPrintf(db.ALWAYS, "Recover cfg %v", cfg)
-		pgms = append(pgms, cfg.StartGrpMgr(sc))
+		cfgs = append(cfgs, cfg)
 		return false, nil
 
 	})
-	return pgms, nil
+	return cfgs, nil
 }
 
 func (cfg *ProcGroupMgrConfig) StartGrpMgr(sc *sigmaclnt.SigmaClnt) *ProcGroupMgr {

@@ -8,3 +8,9 @@ protobuf = "3.7.2"
 
 [lib]
 crate-type = ["cdylib"]
+
+[profile.release]
+lto = true
+opt-level = "s"
+panic = "abort"
+strip = "symbols"

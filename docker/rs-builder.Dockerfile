@@ -10,6 +10,7 @@ RUN apk add --no-cache libseccomp \
   gcc \
   libc-dev \
   parallel \
+  binaryen \
   libseccomp-static
 
 RUN echo 'will cite' | parallel --citation || true

@@ -89,14 +89,15 @@ func (imgd *ImgdMgr[Data]) Restart(sc *sigmaclnt.SigmaClnt) error {
 	if err != nil {
 		return err
 	}
-	pgms, err := procgroupmgr.Recover(sc)
+
+	cfgs, err := procgroupmgr.Recover(sc)
 	if err != nil {
 		return err
 	}
-	if len(pgms) < 1 {
-		fmt.Errorf("Too few procgroup mgrs")
+	if len(cfgs) < 1 {
+		return fmt.Errorf("Too few procgroup cfgs")
 	}
-	imgd.pgm = pgms[0]
+	imgd.pgm = cfgs[0].StartGrpMgr(sc)
 	return nil
 }
 

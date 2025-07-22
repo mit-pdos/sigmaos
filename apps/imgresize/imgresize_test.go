@@ -60,8 +60,8 @@ func TestResizeProc(t *testing.T) {
 	}
 	defer mrts.Shutdown()
 
-	in := filepath.Join(sp.S3, sp.LOCAL, "9ps3/img-save/6.jpg")
-	out := filepath.Join(sp.S3, sp.LOCAL, "9ps3/img/6-thumb-xxx.jpg")
+	in := filepath.Join(sp.S3, sp.LOCAL, "9ps3/img-save/8.jpg")
+	out := filepath.Join(sp.S3, sp.LOCAL, "9ps3/img/8-thumb-xxx.jpg")
 	mrts.GetRealm(test.REALM1).Remove(out)
 	p := proc.NewProc("imgresize", []string{in, out, "1"})
 	err := mrts.GetRealm(test.REALM1).Spawn(p)
@@ -81,14 +81,14 @@ type Tstate struct {
 	clnt *imgresize.ImgdClnt[imgresize.Ttask]
 }
 
-func newTstate(mrts *test.MultiRealmTstate, em *crash.TeventMap) (*Tstate, error) {
+func newTstate(mrts *test.MultiRealmTstate, persist bool, em *crash.TeventMap) (*Tstate, error) {
 	ts := &Tstate{}
 	ts.mrts = mrts
 	ts.job = rd.String(4)
 	ts.ch = make(chan bool)
 	ts.cleanup()
 
-	imgd, err := imgresize.NewImgdMgr[imgresize.Ttask](ts.mrts.GetRealm(test.REALM1).SigmaClnt, ts.job, IMG_RESIZE_MCPU, IMG_RESIZE_MEM, false, 1, 0, em)
+	imgd, err := imgresize.NewImgdMgr[imgresize.Ttask](ts.mrts.GetRealm(test.REALM1).SigmaClnt, ts.job, IMG_RESIZE_MCPU, IMG_RESIZE_MEM, persist, 1, 0, em)
 	if err != nil {
 		return nil, err
 	}
@@ -117,9 +117,9 @@ func (ts *Tstate) restartTstate() error {
 		return err
 	}
 
+	db.DPrintf(db.TEST, "%v named contents post-shutdown: %v", test.REALM1, sp.Names(sts))
 	sc := ts.mrts.GetRealm(test.REALM1).SigmaClnt
 
-	db.DPrintf(db.TEST, "%v named contents post-shutdown: %v", test.REALM1, sp.Names(sts))
 	if err := ts.imgd.Restart(sc); err != nil {
 		return err
 	}
@@ -164,7 +164,7 @@ func TestImgdResizeRPC(t *testing.T) {
 	}
 	defer mrts.Shutdown()
 
-	ts, err1 := newTstate(mrts, nil)
+	ts, err1 := newTstate(mrts, false, nil)
 	if !assert.Nil(t, err1, "Error New Tstate2: %v", err1) {
 		return
 	}
@@ -177,7 +177,7 @@ func TestImgdResizeRPC(t *testing.T) {
 
 	go ts.progress()
 
-	in := filepath.Join(sp.S3, sp.LOCAL, "9ps3/img-save/6.jpg")
+	in := filepath.Join(sp.S3, sp.LOCAL, "9ps3/img-save/8.jpg")
 	err = ts.clnt.Resize("resize-rpc-test", in)
 	assert.Nil(ts.mrts.T, err)
 
@@ -230,7 +230,7 @@ func TestImgdOneOK(t *testing.T) {
 	}
 	defer mrts.Shutdown()
 
-	ts, err1 := newTstate(mrts, nil)
+	ts, err1 := newTstate(mrts, false, nil)
 	if !assert.Nil(t, err1, "Error New Tstate2: %v", err1) {
 		return
 	}
@@ -246,7 +246,7 @@ func TestImgdFatalError(t *testing.T) {
 	}
 	defer mrts.Shutdown()
 
-	ts, err1 := newTstate(mrts, nil)
+	ts, err1 := newTstate(mrts, false, nil)
 	if !assert.Nil(t, err1, "Error New Tstate2: %v", err1) {
 		return
 	}
@@ -258,25 +258,6 @@ func TestImgdFatalError(t *testing.T) {
 	assert.True(t, stro.Counters["Nerror"] > 0)
 }
 
-func TestImgdOneCrash(t *testing.T) {
-	e0 := crash.NewEventStart(crash.IMGRESIZE_CRASH, 100, CRASHIMG, 0.3)
-
-	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
-	defer mrts.Shutdown()
-
-	ts, err1 := newTstate(mrts, crash.NewTeventMapOne(e0))
-	if !assert.Nil(t, err1, "Error New Tstate2: %v", err1) {
-		return
-	}
-
-	fn := filepath.Join(sp.S3, sp.LOCAL, "9ps3/img-save/8.jpg")
-	stro := ts.doJob([]string{fn})
-	assert.True(t, stro.Counters["Nfail"] > 0)
-}
-
 func TestImgdManyOK(t *testing.T) {
 	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
@@ -284,7 +265,7 @@ func TestImgdManyOK(t *testing.T) {
 	}
 	defer mrts.Shutdown()
 
-	ts, err1 := newTstate(mrts, nil)
+	ts, err1 := newTstate(mrts, false, nil)
 	if !assert.Nil(t, err1, "Error New Tstate2: %v", err1) {
 		return
 	}
@@ -306,18 +287,37 @@ func TestImgdManyOK(t *testing.T) {
 	ts.doJob(paths)
 }
 
+func TestImgdProcCrash(t *testing.T) {
+	e0 := crash.NewEventStart(crash.IMGRESIZE_CRASH, 100, CRASHIMG, 0.3)
+
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	defer mrts.Shutdown()
+
+	ts, err1 := newTstate(mrts, false, crash.NewTeventMapOne(e0))
+	if !assert.Nil(t, err1, "Error New Tstate2: %v", err1) {
+		return
+	}
+
+	fn := filepath.Join(sp.S3, sp.LOCAL, "9ps3/img-save/8.jpg")
+	stro := ts.doJob([]string{fn})
+	assert.True(t, stro.Counters["Nfail"] > 0)
+}
+
 func TestImgdRestart(t *testing.T) {
 	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
 
-	ts, err1 := newTstate(mrts, nil)
+	ts, err1 := newTstate(mrts, true, nil)
 	if !assert.Nil(t, err1, "Error New Tstate2: %v", err1) {
 		return
 	}
 
-	fn := filepath.Join(sp.S3, sp.LOCAL, "9ps3/img-save/1.jpg")
+	fn := filepath.Join(sp.S3, sp.LOCAL, "9ps3/img-save/8.jpg")
 
 	existing, err := ts.clnt.SubmitTasks([]*fttask_clnt.Task[imgresize.Ttask]{{Id: 0, Data: *imgresize.NewTask(fn)}})
 	assert.Nil(ts.mrts.T, err)

@@ -2,9 +2,11 @@ package imgresize
 
 import (
 	imgd_clnt "sigmaos/apps/imgresize/clnt"
+	db "sigmaos/debug"
 	"sigmaos/ft/task"
 	fttask_clnt "sigmaos/ft/task/clnt"
 	"sigmaos/sigmaclnt"
+	//sp "sigmaos/sigmap"
 )
 
 // A client for imgresized service, providing both an RPC interface
@@ -45,4 +47,14 @@ func (clnt *ImgdClnt[Data]) Resize(tname, ipath string) error {
 
 func (clnt *ImgdClnt[Data]) Status() (int64, error) {
 	return clnt.rpcc.Status()
+}
+
+func (clnt *ImgdClnt[Data]) SetImgdFence() error {
+	f, err := clnt.rpcc.ImgdFence()
+	if err != nil {
+		return nil
+	}
+	db.DPrintf(db.TEST, "fence %v", f)
+	clnt.ftclnt.SetFence(&f)
+	return nil
 }

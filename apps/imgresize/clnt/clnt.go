@@ -52,3 +52,13 @@ func (clnt *ImgResizeRPCClnt) Status() (int64, error) {
 	}
 	return res.NDone, nil
 }
+
+func (clnt *ImgResizeRPCClnt) ImgdFence() (sp.Tfence, error) {
+	arg := proto.ImgFenceReq{}
+	res := proto.ImgFenceRep{}
+	err := clnt.rpcclntc.RPCRetryNotFound(clnt.pn, clnt.job, "ImgSrvRPC.ImgdFence", &arg, &res)
+	if err != nil {
+		return sp.NoFence(), err
+	}
+	return res.ImgdFence.Tfence(), nil
+}

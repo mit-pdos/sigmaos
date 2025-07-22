@@ -62,3 +62,9 @@ func (imgd *ImgSrvRPC) Status(ctx fs.CtxI, req proto.StatusReq, rep *proto.Statu
 	rep.NDone = imgd.ndone.Load()
 	return nil
 }
+
+func (imgd *ImgSrvRPC) ImgdFence(ctx fs.CtxI, req proto.ImgFenceReq, rep *proto.ImgFenceRep) error {
+	f := imgd.imgd.leaderclnt.Fence()
+	rep.ImgdFence = f.FenceProto()
+	return nil
+}

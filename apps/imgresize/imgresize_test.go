@@ -93,11 +93,13 @@ func newTstate(mrts *test.MultiRealmTstate, em *crash.TeventMap) (*Tstate, error
 		return nil, err
 	}
 	ts.imgd = imgd
+
 	clnt, err := imgd.NewImgdClnt(ts.mrts.GetRealm(test.REALM1).SigmaClnt)
 	if err != nil {
 		return nil, err
 	}
 	ts.clnt = clnt
+
 	return ts, nil
 }
 
@@ -155,6 +157,43 @@ func (ts *Tstate) progress() {
 	}
 }
 
+func TestImgdResizeRPC(t *testing.T) {
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	defer mrts.Shutdown()
+
+	ts, err1 := newTstate(mrts, nil)
+	if !assert.Nil(t, err1, "Error New Tstate2: %v", err1) {
+		return
+	}
+
+	err := ts.mrts.GetRealm(test.REALM1).BootNode(1)
+	assert.Nil(t, err, "BootProcd 1")
+
+	err = ts.mrts.GetRealm(test.REALM1).BootNode(1)
+	assert.Nil(t, err, "BootProcd 2")
+
+	go ts.progress()
+
+	in := filepath.Join(sp.S3, sp.LOCAL, "9ps3/img-save/6.jpg")
+	err = ts.clnt.Resize("resize-rpc-test", in)
+	assert.Nil(ts.mrts.T, err)
+
+	n, err := ts.clnt.Status()
+	assert.Nil(ts.mrts.T, err)
+	assert.Equal(ts.mrts.T, int64(1), n)
+
+	sts, err := ts.imgd.StopImgd(true)
+	assert.Nil(ts.mrts.T, err)
+	for _, st := range sts {
+		assert.True(ts.mrts.T, st.IsStatusEvicted())
+	}
+
+	ts.stopProgress()
+}
+
 func (ts *Tstate) doJob(paths []string) *spstats.TcounterSnapshot {
 	tasks := make([]*fttask_clnt.Task[imgresize.Ttask], len(paths))
 	for i, pn := range paths {
@@ -198,45 +237,6 @@ func TestImgdOneOK(t *testing.T) {
 
 	fn := filepath.Join(sp.S3, sp.LOCAL, "9ps3/img-save/8.jpg")
 	ts.doJob([]string{fn})
-}
-
-func TestImgdRPC(t *testing.T) {
-	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
-	defer mrts.Shutdown()
-
-	ts, err1 := newTstate(mrts, nil)
-	if !assert.Nil(t, err1, "Error New Tstate2: %v", err1) {
-		return
-	}
-
-	err := ts.mrts.GetRealm(test.REALM1).BootNode(1)
-	assert.Nil(t, err, "BootProcd 1")
-
-	err = ts.mrts.GetRealm(test.REALM1).BootNode(1)
-	assert.Nil(t, err, "BootProcd 2")
-
-	time.Sleep(1 * time.Second)
-
-	go ts.progress()
-
-	in := filepath.Join(sp.S3, sp.LOCAL, "9ps3/img-save/6.jpg")
-	err = ts.clnt.Resize("resize-rpc-test", in)
-	assert.Nil(ts.mrts.T, err)
-
-	n, err := ts.clnt.Status()
-	assert.Nil(ts.mrts.T, err)
-	assert.Equal(ts.mrts.T, int64(1), n)
-
-	sts, err := ts.imgd.StopImgd(true)
-	assert.Nil(ts.mrts.T, err)
-	for _, st := range sts {
-		db.DPrintf(db.TEST, "st %v", st)
-	}
-
-	ts.stopProgress()
 }
 
 func TestImgdFatalError(t *testing.T) {

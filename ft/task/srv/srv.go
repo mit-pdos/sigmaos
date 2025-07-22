@@ -185,7 +185,7 @@ func RunTaskSrv(args []string) error {
 }
 
 func (s *TaskSrv) acquireLeadership() error {
-	electclnt, err := electclnt.NewElectClnt(s.sc.FsLib, filepath.Join(sp.NAMED, "fttask", s.rootId.String()+"-leader"), sp.Tperm(0777))
+	electclnt, err := electclnt.NewElectClnt(s.sc.FsLib, filepath.Join(sp.FTTASK, s.rootId.String()+"-leader"), sp.Tperm(0777))
 	if err != nil {
 		return err
 	}

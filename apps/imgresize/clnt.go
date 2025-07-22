@@ -1,7 +1,7 @@
 package imgresize
 
 import (
-	imgd_clnt "sigmaos/apps/imgresize/clnt"
+	rpcclnt "sigmaos/apps/imgresize/rpcclnt"
 	db "sigmaos/debug"
 	"sigmaos/ft/task"
 	fttask_clnt "sigmaos/ft/task/clnt"
@@ -14,12 +14,12 @@ import (
 // calls don't persist their work.
 
 type ImgdClnt[Data any] struct {
-	rpcc   *imgd_clnt.ImgResizeRPCClnt
+	rpcc   *rpcclnt.ImgResizeRPCClnt
 	ftclnt fttask_clnt.FtTaskClnt[Data, any]
 }
 
 func NewImgdClnt[Data any](sc *sigmaclnt.SigmaClnt, job string, id task.FtTaskSvcId) (*ImgdClnt[Data], error) {
-	rpcc, err := imgd_clnt.NewImgResizeRPCClnt(sc.FsLib, ImgSvcId(job))
+	rpcc, err := rpcclnt.NewImgResizeRPCClnt(sc.FsLib, ImgSvcId(job))
 	if err != nil {
 		return nil, err
 	}

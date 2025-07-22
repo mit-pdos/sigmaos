@@ -1,4 +1,4 @@
-// The clnt package provides a client for an imgresized server
+// The clnt package provides the RPC calls to imgresized
 package clnt
 
 import (

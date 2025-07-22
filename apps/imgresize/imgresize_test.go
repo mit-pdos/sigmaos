@@ -93,9 +93,6 @@ func newTstate(mrts *test.MultiRealmTstate, em *crash.TeventMap) (*Tstate, error
 		return nil, err
 	}
 	ts.imgd = imgd
-
-	time.Sleep(1 * time.Second)
-
 	clnt, err := imgd.NewImgdClnt(ts.mrts.GetRealm(test.REALM1).SigmaClnt)
 	if err != nil {
 		return nil, err

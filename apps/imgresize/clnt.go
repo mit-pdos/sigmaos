@@ -7,6 +7,9 @@ import (
 	"sigmaos/sigmaclnt"
 )
 
+// A client for imgresized service, providing both an RPC interface
+// for the service and the fttask clnt interface.
+
 type ImgdClnt[Data any] struct {
 	rpcc   *imgd_clnt.ImgResizeRPCClnt
 	ftclnt fttask_clnt.FtTaskClnt[Data, any]

@@ -46,20 +46,7 @@ func (tc *RawFtTaskClnt) fenceProto() *sp.TfenceProto {
 
 func (tc *RawFtTaskClnt) rpc(method string, arg protobuf.Message, res protobuf.Message) error {
 	pn := tc.serviceId.ServicePath()
-	err, ok := retry.RetryDefDur(func() error {
-		err := tc.rpcclntc.RPC(pn, method, arg, res)
-		if err != nil {
-			db.DPrintf(db.FTTASKCLNT, "rpc %v err %v", pn, err)
-		}
-		return err
-	}, func(err error) bool {
-		// if not found, try again, because a new fttask srv may start and take over
-		return serr.IsErrorNotfound(err) && err.(*serr.Err).Obj == tc.serviceId.String()
-	})
-	if !ok {
-		return serr.NewErr(serr.TErrUnreachable, pn)
-	}
-	return err
+	return tc.rpcclntc.RPCRetryNotFound(pn, tc.serviceId.String(), method, arg, res)
 }
 
 func (tc *RawFtTaskClnt) SubmitTasks(tasks []*Task[[]byte]) ([]TaskId, error) {

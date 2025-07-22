@@ -5,12 +5,13 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"google.golang.org/protobuf/proto"
+	protobuf "google.golang.org/protobuf/proto"
 
 	db "sigmaos/debug"
 	"sigmaos/rpc"
 	rpcclntopts "sigmaos/rpc/clnt/opts"
 	"sigmaos/serr"
+	"sigmaos/util/retry"
 )
 
 type ClntCache struct {
@@ -69,7 +70,7 @@ func (cc *ClntCache) Delete(pn string) {
 }
 
 // Retry lookup if rpcc.RPC cannot reach server.
-func (cc *ClntCache) RPCRetry(pn string, method string, arg proto.Message, res proto.Message) error {
+func (cc *ClntCache) RPCRetry(pn string, method string, arg protobuf.Message, res protobuf.Message) error {
 	var err error
 	var rpcc *RPCClnt
 	for i := 0; i < 2; i++ {
@@ -93,8 +94,26 @@ func (cc *ClntCache) RPCRetry(pn string, method string, arg proto.Message, res p
 	return err
 }
 
-func (cc *ClntCache) RPC(pn string, method string, arg proto.Message, res proto.Message) error {
+func (cc *ClntCache) RPC(pn string, method string, arg protobuf.Message, res protobuf.Message) error {
 	return cc.RPCRetry(pn, method, arg, res)
+}
+
+func (cc *ClntCache) RPCRetryNotFound(pn, notfound, method string, arg protobuf.Message, res protobuf.Message) error {
+	err, ok := retry.RetryDefDur(func() error {
+		err := cc.RPC(pn, method, arg, res)
+		if err != nil {
+			db.DPrintf(db.RPCCLNT, "RPCRetryNotFound: rpc %v (%v) err %v", pn, notfound, err)
+		}
+		return err
+	}, func(err error) bool {
+		// if not found, try again, because srv may not have started yet,
+		// or a new srv may start and take over,
+		return serr.IsErrorNotfound(err) && err.(*serr.Err).Obj == notfound
+	})
+	if !ok {
+		return serr.NewErr(serr.TErrUnreachable, pn)
+	}
+	return err
 }
 
 func (cc *ClntCache) StatsSrv(pn string) (*rpc.RPCStatsSnapshot, error) {

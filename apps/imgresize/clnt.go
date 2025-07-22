@@ -8,7 +8,8 @@ import (
 )
 
 // A client for imgresized service, providing both an RPC interface
-// for the service and the fttask clnt interface.
+// for the service and the fttask clnt interface.  The RPC interface
+// calls don't persist their work.
 
 type ImgdClnt[Data any] struct {
 	rpcc   *imgd_clnt.ImgResizeRPCClnt
@@ -40,4 +41,8 @@ func (clnt *ImgdClnt[Data]) GetNTasks(status fttask_clnt.TaskStatus) (int32, err
 
 func (clnt *ImgdClnt[Data]) Resize(tname, ipath string) error {
 	return clnt.rpcc.Resize(tname, ipath)
+}
+
+func (clnt *ImgdClnt[Data]) Status() (int64, error) {
+	return clnt.rpcc.Status()
 }

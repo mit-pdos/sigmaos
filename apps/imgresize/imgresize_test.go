@@ -226,8 +226,9 @@ func TestImgdRPC(t *testing.T) {
 	err = ts.clnt.Resize("resize-rpc-test", in)
 	assert.Nil(ts.mrts.T, err)
 
-	//err := ts.ftclnt.SubmittedLastTask()
-	//assert.Nil(ts.mrts.T, err)
+	n, err := ts.clnt.Status()
+	assert.Nil(ts.mrts.T, err)
+	assert.Equal(ts.mrts.T, int64(1), n)
 
 	sts, err := ts.imgd.StopImgd(true)
 	assert.Nil(ts.mrts.T, err)

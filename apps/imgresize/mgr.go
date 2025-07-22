@@ -13,6 +13,7 @@ import (
 	fttask_coord "sigmaos/ft/task/coord"
 	fttask_srv "sigmaos/ft/task/srv"
 	"sigmaos/proc"
+	"sigmaos/serr"
 	"sigmaos/sigmaclnt"
 	"sigmaos/sigmaclnt/fslib"
 	sp "sigmaos/sigmap"
@@ -58,6 +59,10 @@ func NewImgdMgr[Data any](sc *sigmaclnt.SigmaClnt, job string, workerMcpu proc.T
 		return nil, err
 	}
 
+	if err := sc.MkDir(sp.IMG, 0777); err != nil && !serr.IsErrorExists(err) {
+		return nil, err
+	}
+
 	cfg := procgroupmgr.NewProcGroupConfig(1, "imgresized", []string{strconv.Itoa(int(workerMcpu)), strconv.Itoa(int(workerMem)), strconv.Itoa(nrounds), TaskSvcId(imgd.job)}, imgdMcpu, ImgSvcId(job))
 
 	if persist {
@@ -72,8 +77,7 @@ func (imgd *ImgdMgr[Data]) NewImgdClnt(sc *sigmaclnt.SigmaClnt) (*ImgdClnt[Data]
 	if err != nil {
 		return nil, err
 	}
-	err = clnt.SetImgdFence()
-	if err != nil {
+	if err := clnt.SetImgdFence(); err != nil {
 		return nil, err
 	}
 	return clnt, nil

@@ -51,10 +51,10 @@ func (clnt *ImgdClnt[Data]) Status() (int64, error) {
 
 func (clnt *ImgdClnt[Data]) SetImgdFence() error {
 	f, err := clnt.rpcc.ImgdFence()
+	db.DPrintf(db.TEST, "fence %v err %v", f, err)
 	if err != nil {
 		return nil
 	}
-	db.DPrintf(db.TEST, "fence %v", f)
 	clnt.ftclnt.SetFence(&f)
 	return nil
 }

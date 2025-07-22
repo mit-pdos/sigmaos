@@ -81,10 +81,6 @@ func NewImgSrv(args []string) (*ImgSrv, error) {
 func (imgd *ImgSrv) Work() {
 	db.DPrintf(db.IMGD, "Try acquire leadership coord %v server %v", imgd.sc.ProcEnv().GetPID(), imgd.ftclnt.ServiceId())
 
-	if err := imgd.sc.MkDirPath(sp.NAMED, filepath.Join(sp.IMGREL, string(imgd.ftclnt.ServiceId())), 0777); err != nil && !serr.IsErrorExists(err) {
-		db.DFatalf("MkDirPath err %v", err)
-	}
-
 	// Try to become the leading coordinator.
 	if err := imgd.leaderclnt.LeadAndFence(nil, []string{filepath.Join(sp.IMG, imgd.imgSvcId)}); err != nil {
 		sts, _, err2 := imgd.sc.ReadDir(filepath.Join(sp.IMG, imgd.imgSvcId))

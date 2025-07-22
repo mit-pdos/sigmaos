@@ -1,7 +1,7 @@
 #!/bin/bash
 
 usage() {
-  echo "Usage: $0 [--push TAG] [--target TARGET] [--version VERSION] [--userbin USERBIN] [--no_cpp] [--parallel] [--rebuildbuilder]" 1>&2
+  echo "Usage: $0 [--push TAG] [--target TARGET] [--version VERSION] [--userbin USERBIN] [--no_go] [--no_rs] [--no_docker] [--no_cpp] [--parallel] [--rebuildbuilder]" 1>&2
 }
 
 PARALLEL=""
@@ -11,6 +11,7 @@ TARGET="local"
 VERSION="1.0"
 USERBIN="all"
 NO_CPP="false"
+NO_RS="false"
 NO_GO="false"
 NO_DOCKER="false"
 while [[ "$#" -gt 0 ]]; do
@@ -30,6 +31,10 @@ while [[ "$#" -gt 0 ]]; do
   --no_go)
     shift
     NO_GO="true"
+    ;;
+  --no_rs)
+    shift
+    NO_RS="true"
     ;;
   --no_cpp)
     shift
@@ -247,21 +252,23 @@ fi
 RS_BUILD_ARGS="--rustpath \$HOME/.cargo/bin/cargo \
   $PARALLEL"
 
-echo "========== Building Rust bins =========="
-BUILD_OUT_FILE=$BUILD_LOG/make-user-rs.out
-docker exec -it $rsbuildercid \
-  /usr/bin/time -f "Build time: %e sec" \
-  ./make-rs.sh $RS_BUILD_ARGS --version $VERSION \
-  2>&1 | tee $BUILD_OUT_FILE && \
-  if [ ${PIPESTATUS[0]} -ne 0 ]; then
-    printf "\n!!!!!!!!!! BUILD ERROR !!!!!!!!!!\nLogs in: $BUILD_OUT_FILE\n" \
-      | tee -a $BUILD_OUT_FILE;
-  fi;
-  if [ $(grep -q "BUILD ERROR" $BUILD_OUT_FILE; echo $?) -eq 0 ]; then
-    echo "!!!!!!!!!! ABORTING BUILD !!!!!!!!!!"
-    exit 1
-  fi
-echo "========== Done building Rust bins =========="
+if [ "${NO_RS}" != "true" ]; then
+  echo "========== Building Rust bins =========="
+  BUILD_OUT_FILE=$BUILD_LOG/make-user-rs.out
+  docker exec -it $rsbuildercid \
+    /usr/bin/time -f "Build time: %e sec" \
+    ./make-rs.sh $RS_BUILD_ARGS --version $VERSION \
+    2>&1 | tee $BUILD_OUT_FILE && \
+    if [ ${PIPESTATUS[0]} -ne 0 ]; then
+      printf "\n!!!!!!!!!! BUILD ERROR !!!!!!!!!!\nLogs in: $BUILD_OUT_FILE\n" \
+        | tee -a $BUILD_OUT_FILE;
+    fi;
+    if [ $(grep -q "BUILD ERROR" $BUILD_OUT_FILE; echo $?) -eq 0 ]; then
+      echo "!!!!!!!!!! ABORTING BUILD !!!!!!!!!!"
+      exit 1
+    fi
+  echo "========== Done building Rust bins =========="
+fi
 
 if [ "${NO_CPP}" != "true" ]; then
   echo "========== Building CPP bins =========="

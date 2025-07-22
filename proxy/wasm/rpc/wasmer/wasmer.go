@@ -1,9 +1,6 @@
 package wasmer
 
 import (
-	//"bytes"
-	//"encoding/binary"
-	//"strconv"
 	"time"
 
 	wasmer "github.com/wasmerio/wasmer-go/wasmer"

@@ -361,6 +361,8 @@ const (
 	REFMAP_SUFFIX           = "_REFMAP"
 	VERSION                 = "VERSION"
 	CLNTCOND                = "CLNTCOND"
+	WASMRT                  = "WASMRT"
+	WASMRT_ERR              = WASMRT + ERR
 )
 
 // 9P

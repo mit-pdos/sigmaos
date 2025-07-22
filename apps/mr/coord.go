@@ -510,9 +510,11 @@ func (c *Coord) Work() {
 
 	db.DPrintf(db.ALWAYS, "leader %s nmap %v nreduce %v\n", c.job, c.nmaptask, c.nreducetask)
 
+	f := c.leaderclnt.Fence()
+
 	var err error
-	c.mftclnt = fttask_clnt.NewFtTaskClnt[Bin, Bin](c.FsLib, c.mftid)
-	c.rftclnt = fttask_clnt.NewFtTaskClnt[TreduceTask, Bin](c.FsLib, c.rftid)
+	c.mftclnt = fttask_clnt.NewFtTaskClnt[Bin, Bin](c.FsLib, c.mftid, &f)
+	c.rftclnt = fttask_clnt.NewFtTaskClnt[TreduceTask, Bin](c.FsLib, c.rftid, &f)
 
 	crash.Failer(c.FsLib, crash.MRCOORD_CRASH, func(e crash.Tevent) {
 		crash.CrashMsg(c.stat.String())

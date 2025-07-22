@@ -57,3 +57,8 @@ func (rpcs *ImgSrvRPC) Resize(ctx fs.CtxI, req proto.ImgResizeReq, rep *proto.Im
 	rep.OK = true
 	return nil
 }
+
+func (imgd *ImgSrvRPC) Status(ctx fs.CtxI, req proto.StatusReq, rep *proto.StatusRep) error {
+	rep.NDone = imgd.ndone.Load()
+	return nil
+}

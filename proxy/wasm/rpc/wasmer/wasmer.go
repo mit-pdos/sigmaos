@@ -62,6 +62,7 @@ func (wrt *WasmerRuntime) RunModule(pid sp.Tpid, compiledModule []byte, inputByt
 	}
 	db.DPrintf(db.WASMRT, "Deserialized compiled WASM module")
 	var buf []byte
+	// Register SigmaOS host API calls
 	importObject := wasmer.NewImportObject()
 	importObject.Register(
 		"sigmaos_host",
@@ -71,6 +72,7 @@ func (wrt *WasmerRuntime) RunModule(pid sp.Tpid, compiledModule []byte, inputByt
 		},
 	)
 	start := time.Now()
+	// Instantiate the module
 	instance, err := wasmer.NewInstance(module, importObject)
 	if err != nil {
 		db.DPrintf(db.ERROR, "Err instantiate WASM module: %v", err)
@@ -78,6 +80,8 @@ func (wrt *WasmerRuntime) RunModule(pid sp.Tpid, compiledModule []byte, inputByt
 		return err
 	}
 	perf.LogSpawnLatency("WASM module instantiation", pid, perf.TIME_NOT_SET, start)
+	// Get a function pointer to the module's allocate function, which the
+	// runtime uses to allocate a shared buffer in the WASM module's memory
 	allocFn, err := instance.Exports.GetFunction("allocate")
 	if err != nil {
 		db.DPrintf(db.ERROR, "Err get WASM module allocate fn: %v", err)
@@ -97,9 +101,11 @@ func (wrt *WasmerRuntime) RunModule(pid sp.Tpid, compiledModule []byte, inputByt
 		db.DPrintf(db.WASMRT_ERR, "Err get WASM instance memory: %v", err)
 		return err
 	}
+	// Create a Go buffer from the allocated WASM shared buffer
 	buf = mem.Data()[wasmBufPtr.(int32) : wasmBufPtr.(int32)+SHARED_BUF_SZ]
 	// Copy the input bytes to the buffer
 	copy(buf, inputBytes)
+	// Get a function pointer to the "boot" function exposed by the module
 	boot, err := instance.Exports.GetFunction("boot")
 	if err != nil {
 		db.DPrintf(db.ERROR, "Err get WASM boot function: %v", err)
@@ -107,8 +113,8 @@ func (wrt *WasmerRuntime) RunModule(pid sp.Tpid, compiledModule []byte, inputByt
 		return err
 	}
 	start = time.Now()
-	// Calls that exported function with Go standard values. The WebAssembly
-	// types are inferred and values are casted automatically.
+	// Call the boot function and inform it of the size & address of the shared
+	// buffer.
 	if _, err := boot(wasmBufPtr, SHARED_BUF_SZ); err != nil {
 		db.DPrintf(db.ERROR, "Err get WASM instance memory: %v", err)
 		db.DPrintf(db.WASMRT_ERR, "Err get WASM instance memory: %v", err)

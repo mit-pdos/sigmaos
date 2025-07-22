@@ -127,10 +127,13 @@ func (wrt *WasmerRuntime) newSendRPCFn(store *wasmer.Store, buf *[]byte) *wasmer
 		store,
 		wasmer.NewFunctionType(wasmer.NewValueTypes(wasmer.I64, wasmer.I64, wasmer.I64), wasmer.NewValueTypes()),
 		func(args []wasmer.Value) ([]wasmer.Value, error) {
+			// Get the RPC index ID
 			rpcIdx := uint64(args[0].I64())
 			pn_len := args[1].I64()
 			rpc_len := args[2].I64()
+			// Get the RPC destination pathname from the shared buffer
 			pn := string((*buf)[:pn_len])
+			// Get the marshaled RPC from the shared buffer
 			rpcBytes := (*buf)[pn_len : pn_len+rpc_len]
 			db.DPrintf(db.WASMRT, "SendRPC(%v) pn:%v nbyte:%v", rpcIdx, pn, len(rpcBytes))
 			err := wrt.rpcAPI.Send(rpcIdx, pn, rpcBytes)
@@ -144,15 +147,24 @@ func (wrt *WasmerRuntime) newSendRPCFn(store *wasmer.Store, buf *[]byte) *wasmer
 	)
 }
 
-func (wrt *WasmerRuntime) newRecvRPCFn(store *wasmer.Store, b *[]byte) *wasmer.Function {
+func (wrt *WasmerRuntime) newRecvRPCFn(store *wasmer.Store, buf *[]byte) *wasmer.Function {
 	return wasmer.NewFunction(
 		store,
 		wasmer.NewFunctionType(wasmer.NewValueTypes(wasmer.I64), wasmer.NewValueTypes(wasmer.I64)),
 		func(args []wasmer.Value) ([]wasmer.Value, error) {
+			// Get the RPC index ID
 			rpcIdx := uint64(args[0].I64())
 			db.DPrintf(db.WASMRT, "RecvRPC(%v)", rpcIdx)
-			replyLen := 0
-			db.DFatalf("Unimplemented")
+			// Receive the RPC reply
+			replyBytes, err := wrt.rpcAPI.Recv(rpcIdx)
+			if err != nil {
+				db.DPrintf(db.WASMRT_ERR, "Err RecvRPC(%v): %v", rpcIdx, err)
+				return []wasmer.Value{}, err
+			}
+			// Copy the reply to the shared buffer
+			copy(*buf, replyBytes)
+			// Report the RPC reply's length back to the WASM module
+			replyLen := len(replyBytes)
 			db.DPrintf(db.WASMRT, "RecvRPC(%v) reply len: %v", rpcIdx, replyLen)
 			return []wasmer.Value{wasmer.NewI64(replyLen)}, nil
 		},

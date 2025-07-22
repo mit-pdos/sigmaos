@@ -13,9 +13,9 @@ import (
 	fttask_clnt "sigmaos/ft/task/clnt"
 	fttask_coord "sigmaos/ft/task/coord"
 	"sigmaos/proc"
+	"sigmaos/serr"
 	// sesssrv "sigmaos/session/srv"
 	"sigmaos/apps/imgresize"
-	"sigmaos/serr"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
@@ -29,7 +29,7 @@ type ImgSrv struct {
 	workerMem  proc.Tmem
 	leaderclnt *leaderclnt.LeaderClnt
 	imgSvcId   string
-	taskSvcId  string
+	taskSvcId  task.FtTaskSvcId
 	ch         chan error
 }
 
@@ -45,10 +45,9 @@ func NewImgSrv(args []string) (*ImgSrv, error) {
 	imgd.sc = sc
 
 	imgd.imgSvcId = args[0]
-	imgd.taskSvcId = args[4]
+	imgd.taskSvcId = task.FtTaskSvcId(args[4])
 	db.DPrintf(db.IMGD, "Made imgd %v connected to task %v", imgd.imgSvcId, imgd.taskSvcId)
 
-	imgd.ftclnt = fttask_clnt.NewFtTaskClnt[imgresize.Ttask, any](sc.FsLib, task.FtTaskSvcId(imgd.taskSvcId))
 	mcpu, err := strconv.Atoi(args[1])
 	if err != nil {
 		return nil, fmt.Errorf("NewImgSrv: Error parse MCPU %v", err)
@@ -66,7 +65,7 @@ func NewImgSrv(args []string) (*ImgSrv, error) {
 
 	imgd.sc.Started()
 
-	folder := filepath.Join(sp.IMG, string(imgd.ftclnt.ServiceId()))
+	folder := filepath.Join(sp.IMG, imgd.taskSvcId.String())
 	imgd.leaderclnt, err = leaderclnt.NewLeaderClnt(imgd.sc.FsLib, filepath.Join(folder, "imgd-leader"), 0777)
 	if err != nil {
 		return nil, fmt.Errorf("NewLeaderclnt err %v", err)
@@ -79,9 +78,9 @@ func NewImgSrv(args []string) (*ImgSrv, error) {
 }
 
 func (imgd *ImgSrv) Work() {
-	db.DPrintf(db.IMGD, "Try acquire leadership coord %v server %v", imgd.sc.ProcEnv().GetPID(), imgd.ftclnt.ServiceId())
+	db.DPrintf(db.IMGD, "Try acquire leadership coord %v server %v", imgd.sc.ProcEnv().GetPID(), imgd.taskSvcId)
 
-	if err := imgd.sc.MkDirPath(sp.NAMED, filepath.Join(sp.IMGREL, string(imgd.ftclnt.ServiceId())), 0777); err != nil && !serr.IsErrorExists(err) {
+	if err := imgd.sc.MkDirPath(sp.NAMED, filepath.Join(sp.IMGREL, imgd.taskSvcId.String()), 0777); err != nil && !serr.IsErrorExists(err) {
 		db.DFatalf("MkDirPath err %v", err)
 	}
 
@@ -90,14 +89,16 @@ func (imgd *ImgSrv) Work() {
 		sts, _, err2 := imgd.sc.ReadDir(filepath.Join(sp.IMG, imgd.imgSvcId))
 		db.DFatalf("LeadAndFence err %v sts %v err2 %v", err, sp.Names(sts), err2)
 	}
-
 	fence := imgd.leaderclnt.Fence()
+
+	imgd.ftclnt = fttask_clnt.NewFtTaskClnt[imgresize.Ttask, any](imgd.sc.FsLib, imgd.taskSvcId, &fence)
+
 	err := imgd.ftclnt.Fence(&fence)
 	if err != nil {
 		db.DFatalf("FtTaskClnt.Fence err %v", err)
 	}
 
-	db.DPrintf(db.ALWAYS, "leader %s sigmafail %q", imgd.imgSvcId, proc.GetSigmaFail())
+	db.DPrintf(db.ALWAYS, "leader %s sigmafail %q fence %v", imgd.imgSvcId, proc.GetSigmaFail(), &fence)
 
 	rpcs := NewRPCSrv(imgd)
 	ssrv, err := sigmasrv.NewSigmaSrvClnt(filepath.Join(sp.IMG, imgd.imgSvcId),
@@ -112,7 +113,7 @@ func (imgd *ImgSrv) Work() {
 		os.Exit(0)
 	}()
 
-	db.DPrintf(db.FTTASKSRV, "Created imgd srv %s", imgd.imgSvcId)
+	db.DPrintf(db.FTTASKSRV, "Created imgd srv %s %v", imgd.imgSvcId, fence)
 
 	ftc, err := fttask_coord.NewFtTaskCoord(imgd.sc.ProcAPI, imgd.ftclnt)
 	if err != nil {

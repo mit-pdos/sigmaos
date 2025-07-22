@@ -73,7 +73,7 @@ func NewImgdMgr[Data any](sc *sigmaclnt.SigmaClnt, job string, workerMcpu proc.T
 }
 
 func (imgd *ImgdMgr[Data]) NewImgdClnt(sc *sigmaclnt.SigmaClnt) (*ImgdClnt[Data], error) {
-	clnt, err := NewImgdClnt[Data](sc, imgd.job, imgd.ftsrv.Id)
+	clnt, err := NewImgdClnt[Data](sc, imgd.job, imgd.ftsrv.Id, sp.NullFence())
 	if err != nil {
 		return nil, err
 	}

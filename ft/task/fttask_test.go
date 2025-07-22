@@ -78,7 +78,7 @@ func newTstate[Data any, Output any](t *testing.T) (*Tstate[Data, Output], error
 		return nil, err
 	}
 	ts.mgr = mgr
-	ts.clnt = fttask_clnt.NewFtTaskClnt[Data, Output](ts.FsLib, mgr.Id)
+	ts.clnt = fttask_clnt.NewFtTaskClnt[Data, Output](ts.FsLib, mgr.Id, sp.NullFence())
 	return ts, nil
 }
 
@@ -689,7 +689,7 @@ func TestClntPartition(t *testing.T) {
 	pe := proc.NewAddedProcEnv(ts.ProcEnv())
 	fsl, err := sigmaclnt.NewFsLib(pe, dialproxyclnt.NewDialProxyClnt(pe))
 	assert.Nil(t, err)
-	clnt := fttask_clnt.NewFtTaskClnt[mr.Bin, string](fsl, ts.mgr.Id)
+	clnt := fttask_clnt.NewFtTaskClnt[mr.Bin, string](fsl, ts.mgr.Id, sp.NullFence())
 
 	n, err := clnt.GetNTasks(fttask_clnt.TODO)
 	assert.Nil(t, err)

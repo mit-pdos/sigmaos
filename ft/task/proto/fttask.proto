@@ -82,6 +82,7 @@ message MoveTasksByStatusRep {
 message AcquireTasksReq {
   bool wait = 1;
   TfenceProto fence = 2;
+  TfenceProto acquireId = 3;
 }
 
 message AcquireTasksRep {

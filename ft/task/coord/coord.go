@@ -90,10 +90,10 @@ func (ftm *FtTaskCoord[Data, Output]) waitForTask(start time.Time, p *proc.Proc,
 	db.DPrintf(db.ALWAYS, "Start Latency %v", time.Since(start))
 	status, err := ftm.WaitExit(p.GetPid())
 	if err == nil && status.IsStatusOK() {
+		spstats.Inc(&ftm.AStat.Nok, 1)
 		if err := ftm.MoveTasks([]ftclnt.TaskId{id}, ftclnt.DONE); err != nil {
 			db.DFatalf("MoveTasks %v done err %v", id, err)
 		}
-		spstats.Inc(&ftm.AStat.Nok, 1)
 	} else if err == nil && status.IsStatusErr() && !status.IsCrashed() {
 		db.DPrintf(db.ALWAYS, "task %v errored status %v msg %v", id, status, status.Msg())
 		spstats.Inc(&ftm.AStat.Nerror, 1)

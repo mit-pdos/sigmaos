@@ -36,7 +36,7 @@ func NewFtTaskSrvMgr(sc *sigmaclnt.SigmaClnt, id string, persist bool) (*FtTaskS
 
 	pgm := config.StartGrpMgr(sc)
 
-	clnt := fttask_clnt.NewFtTaskClnt[any, any](sc.FsLib, fttask.FtTaskSvcId(id))
+	clnt := fttask_clnt.NewFtTaskClnt[any, any](sc.FsLib, fttask.FtTaskSvcId(id), sp.NullFence())
 
 	ft := &FtTaskSrvMgr{sc, false, fttask.FtTaskSvcId(id), clnt, pgm}
 

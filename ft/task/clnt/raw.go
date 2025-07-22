@@ -3,6 +3,7 @@ package clnt
 
 import (
 	"sync"
+	"sync/atomic"
 
 	protobuf "google.golang.org/protobuf/proto"
 
@@ -18,20 +19,23 @@ import (
 )
 
 type RawFtTaskClnt struct {
-	rpcclntc  *rpcclnt.ClntCache
-	fsl       *fslib.FsLib
-	serviceId fttask.FtTaskSvcId
-	fence     *sp.Tfence
-	mu        sync.Mutex
+	rpcclntc   *rpcclnt.ClntCache
+	fsl        *fslib.FsLib
+	serviceId  fttask.FtTaskSvcId
+	fence      *sp.Tfence
+	mu         sync.Mutex
+	acquireId  *AcquireId
+	acquireCnt atomic.Int64
 }
 
-func newRawFtTaskClnt(fsl *fslib.FsLib, serviceId fttask.FtTaskSvcId) *RawFtTaskClnt {
+func newRawFtTaskClnt(fsl *fslib.FsLib, serviceId fttask.FtTaskSvcId, a *AcquireId) *RawFtTaskClnt {
 	tc := &RawFtTaskClnt{
 		fsl:       fsl,
 		rpcclntc:  rpcclnt.NewRPCClntCache(sprpcclnt.WithSPChannel(fsl)),
 		serviceId: serviceId,
 		fence:     nil,
 		mu:        sync.Mutex{},
+		acquireId: a,
 	}
 	return tc
 }
@@ -193,7 +197,19 @@ func (tc *RawFtTaskClnt) AddTaskOutputs(ids []TaskId, outputs [][]byte, markDone
 }
 
 func (tc *RawFtTaskClnt) AcquireTasks(wait bool) ([]TaskId, bool, error) {
-	arg := proto.AcquireTasksReq{Wait: wait, Fence: tc.fenceProto()}
+	f := sp.NoFence()
+	if tc.acquireId != nil {
+		cnt := tc.acquireCnt.Add(1)
+		f = *tc.acquireId
+		f.Seqno = sp.Tseqno(cnt)
+		db.DPrintf(db.FTTASKCLNT, "f %v %v", f, cnt)
+	}
+
+	arg := proto.AcquireTasksReq{
+		Wait:      wait,
+		Fence:     tc.fenceProto(),
+		AcquireId: f.FenceProto(),
+	}
 	res := proto.AcquireTasksRep{}
 
 	err := tc.rpc("TaskSrv.AcquireTasks", &arg, &res)
@@ -266,7 +282,13 @@ func (tc *RawFtTaskClnt) Fence(fence *sp.Tfence) error {
 	arg := proto.FenceReq{Fence: tc.fenceProto()}
 	res := proto.FenceRep{}
 
-	err := tc.rpc("TaskSrv.Fence", &arg, &res)
+	err, _ := retry.RetryAtLeastOnce(func() error {
+		err := tc.rpc("TaskSrv.Fence", &arg, &res)
+		if err != nil {
+			db.DPrintf(db.FTTASKCLNT, "Fence: rpc err %v", err)
+		}
+		return err
+	})
 	return err
 }
 

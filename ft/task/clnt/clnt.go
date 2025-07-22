@@ -21,6 +21,8 @@ const (
 	ERROR = proto.TaskStatus_ERROR
 )
 
+type AcquireId = sp.Tfence
+
 type Task[Data any] struct {
 	Id   TaskId
 	Data Data

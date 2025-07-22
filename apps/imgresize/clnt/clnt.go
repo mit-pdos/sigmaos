@@ -1,3 +1,4 @@
+// The clnt package provides a client for an imgresized server
 package clnt
 
 import (
@@ -5,7 +6,7 @@ import (
 	"path/filepath"
 
 	"sigmaos/apps/imgresize/proto"
-	db "sigmaos/debug"
+	// db "sigmaos/debug"
 	rpcclnt "sigmaos/rpc/clnt"
 	sprpcclnt "sigmaos/rpc/clnt/sigmap"
 	"sigmaos/sigmaclnt/fslib"
@@ -13,17 +14,14 @@ import (
 )
 
 type ImgResizeRPCClnt struct {
-	rpcc *rpcclnt.RPCClnt
+	pn       string
+	rpcclntc *rpcclnt.ClntCache
 }
 
 func NewImgResizeRPCClnt(fsl *fslib.FsLib, job string) (*ImgResizeRPCClnt, error) {
-	rpcc, err := sprpcclnt.NewRPCClnt(fsl, filepath.Join(sp.IMG, job))
-	if err != nil {
-		db.DPrintf(db.ERROR, "NewSigmaRPCClnt: %v", err)
-		return nil, err
-	}
 	return &ImgResizeRPCClnt{
-		rpcc: rpcc,
+		pn:       filepath.Join(sp.IMG, job),
+		rpcclntc: rpcclnt.NewRPCClntCache(sprpcclnt.WithSPChannel(fsl)),
 	}, nil
 }
 
@@ -33,7 +31,7 @@ func (clnt *ImgResizeRPCClnt) Resize(tname, ipath string) error {
 		InputPath: ipath,
 	}
 	res := proto.ImgResizeRep{}
-	err := clnt.rpcc.RPC("ImgSrvRPC.Resize", &arg, &res)
+	err := clnt.rpcclntc.RPC(clnt.pn, "ImgSrvRPC.Resize", &arg, &res)
 	if err != nil {
 		return err
 	}
@@ -46,7 +44,7 @@ func (clnt *ImgResizeRPCClnt) Resize(tname, ipath string) error {
 func (clnt *ImgResizeRPCClnt) Status() (int64, error) {
 	arg := proto.StatusReq{}
 	res := proto.StatusRep{}
-	err := clnt.rpcc.RPC("ImgSrvRPC.Status", &arg, &res)
+	err := clnt.rpcclntc.RPC(clnt.pn, "ImgSrvRPC.Status", &arg, &res)
 	if err != nil {
 		return 0, err
 	}

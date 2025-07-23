@@ -24,7 +24,7 @@ var cossimBootScript string
 
 func init() {
 	flag.StringVar(&wasmScript, "wasm_script", "/home/arielck/sigmaos/rs/wasm/hello-wasm/target/wasm32-unknown-unknown/release/hello_wasm.wasm", "path to WASM script")
-	flag.StringVar(&cossimBootScript, "cossim_boot_script", "/home/arielck/sigmaos/rs/wasm/cossim-boot/target/wasm32-unknown-unknown/release/cossim_boot.wasm", "path to WASM script")
+	flag.StringVar(&cossimBootScript, "cossim_boot_script", "/home/arielck/sigmaos/rs/wasm/cossim_boot/target/wasm32-unknown-unknown/release/cossim_boot.wasm", "path to WASM script")
 }
 
 func TestCompile(t *testing.T) {

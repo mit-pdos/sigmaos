@@ -12,7 +12,6 @@ import (
 
 	"google.golang.org/protobuf/proto"
 
-	sessp "sigmaos/session/proto"
 	sp "sigmaos/sigmap"
 )
 
@@ -387,24 +386,26 @@ func (p *Proc) GetNamedEndpoint() *sp.TendpointProto {
 	ep, _ := p.ProcEnvProto.GetNamedEndpoint()
 	return ep.GetProto()
 }
-func (pe *ProcEnvProto) AddInitializationRPC(pn string, iov sessp.IoVec, nOutIOV uint64) {
 
+func (p *Proc) GetBootScript() []byte {
+	return p.BootScript
 }
 
-func (p *Proc) GetInitializationRPCs() []*InitializationRPC {
-	return p.InitRPCs
+func (p *Proc) GetBootScriptInput() []byte {
+	return p.BootScriptInput
 }
 
-func (p *Proc) AddInitializationRPC(pn string, iov sessp.IoVec, nOutIOV uint64) {
-	p.InitRPCs = append(p.InitRPCs, newInitializationRPC(pn, iov, nOutIOV))
+func (p *Proc) SetBootScript(b []byte, input []byte) {
+	p.BootScript = b
+	p.BootScriptInput = input
 }
 
-func (p *Proc) SetDelegateInit(delegate bool) {
-	p.ProcEnvProto.SetDelegateInit(delegate)
+func (p *Proc) SetRunBootScript(run bool) {
+	p.ProcEnvProto.SetRunBootScript(run)
 }
 
-func (p *Proc) GetDelegateInit() bool {
-	return p.ProcEnvProto.GetDelegateInit()
+func (p *Proc) GetRunBootScript() bool {
+	return p.ProcEnvProto.GetRunBootScript()
 }
 
 // Return Env map as a []string

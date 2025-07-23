@@ -37,7 +37,7 @@ class ProcEnv {
   sigmaos::sigmap::types::Tip GetOuterContainerIP() { return _proto.outercontaineripstr(); }
   google::protobuf::Timestamp GetSpawnTime() { return _proto.spawntimepb(); }
   std::string GetPerf() { return _proto.perf(); }
-  bool GetDelegateInit() { return _proto.delegateinitflag(); }
+  bool GetRunBootScript() { return _proto.runbootscriptflag(); }
   std::pair<std::shared_ptr<TendpointProto>, bool> GetCachedEndpoint(std::string &pn);
 
   private:

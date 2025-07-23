@@ -8,7 +8,6 @@ import (
 	"sync"
 	"time"
 
-	"sigmaos/apps/cache"
 	cachegrpclnt "sigmaos/apps/cache/cachegrp/clnt"
 	cachegrpmgr "sigmaos/apps/cache/cachegrp/mgr"
 	cacheproto "sigmaos/apps/cache/proto"
@@ -19,7 +18,7 @@ import (
 	epsrv "sigmaos/apps/epcache/srv"
 	db "sigmaos/debug"
 	"sigmaos/proc"
-	rpcclnt "sigmaos/rpc/clnt"
+	"sigmaos/proxy/wasm/rpc/wasmer"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 )
@@ -103,6 +102,8 @@ type CosSimJob struct {
 	srvs             []*proc.Proc
 	Clnt             *clnt.CosSimShardClnt
 	delegateInitRPCs bool
+	bootScript       []byte
+	bootScriptInput  []byte
 }
 
 func NewCosSimJob(sc *sigmaclnt.SigmaClnt, job string, nvec int, vecDim int, eagerInit bool, srvMcpu proc.Tmcpu, ncache int, cacheMcpu proc.Tmcpu, cacheGC bool, delegateInitRPCs bool) (*CosSimJob, error) {
@@ -145,6 +146,19 @@ func NewCosSimJob(sc *sigmaclnt.SigmaClnt, job string, nvec int, vecDim int, eag
 		db.DPrintf(db.COSSIMSRV_ERR, "Err newCosSimShardClnt: %v", err)
 		return nil, err
 	}
+	bootScript, err := wasmer.ReadBootScript("cossim_boot")
+	if err != nil {
+		db.DPrintf(db.ERROR, "Err read WASM boot script: %v", err)
+	}
+	// Write the input arguments to the boot script
+	inputBuf := bytes.NewBuffer(make([]byte, 0, 12))
+	if err := binary.Write(inputBuf, binary.LittleEndian, uint32(ncache)); err != nil {
+		return nil, err
+	}
+	if err := binary.Write(inputBuf, binary.LittleEndian, uint64(nvec)); err != nil {
+		return nil, err
+	}
+	bootScriptInput := inputBuf.Bytes()
 	return &CosSimJob{
 		job:              job,
 		SigmaClnt:        sc,
@@ -164,6 +178,8 @@ func NewCosSimJob(sc *sigmaclnt.SigmaClnt, job string, nvec int, vecDim int, eag
 		srvs:             []*proc.Proc{},
 		Clnt:             cscs,
 		delegateInitRPCs: delegateInitRPCs,
+		bootScript:       bootScript,
+		bootScriptInput:  bootScriptInput,
 	}, nil
 }
 
@@ -192,28 +208,8 @@ func (j *CosSimJob) addSrv(sigmaPath string) (*proc.Proc, time.Duration, error) 
 	for pn, ep := range j.cacheEPs {
 		p.SetCachedEndpoint(pn, ep)
 	}
-	cacheGetReqs := cachegrpclnt.NewMultiGetReqs(j.vecKeys, j.ncache, cache.NSHARD)
-	nreqs := 0
-	for i := 0; i < len(cacheGetReqs); i++ {
-		server := i
-		getReq := cacheGetReqs[server]
-		cachesrvPN := j.cacheClnt.Server(server)
-		db.DPrintf(db.TEST, "MultiGetReq for new cachesrv: %v -> %v", cachesrvPN, len(getReq.Gets))
-		iniov, err := rpcclnt.WrapRPCRequest("CacheSrv.MultiGet", getReq)
-		if err != nil {
-			db.DPrintf(db.ALWAYS, "Error wrap & marshal getReq: %v", err)
-			return nil, 0, err
-		}
-		p.AddInitializationRPC(cachesrvPN, iniov, 3)
-		totalInIOVLen := 0
-		for _, b := range iniov {
-			totalInIOVLen += len(b)
-		}
-		db.DPrintf(db.TEST, "Delegated RPC(%v) total len: %v", nreqs, totalInIOVLen)
-		nreqs++
-	}
-	// Ask for spproxy to run delegated initialization RPCs on behalf of the proc
-	p.SetDelegateInit(j.delegateInitRPCs)
+	p.SetBootScript(j.bootScript, j.bootScriptInput)
+	p.SetRunBootScript(j.delegateInitRPCs)
 	start := time.Now()
 	if err := j.Spawn(p); err != nil {
 		return nil, 0, err

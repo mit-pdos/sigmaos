@@ -4,12 +4,6 @@ option go_package = "sigmaos/proc";
 import "google/protobuf/timestamp.proto";
 import "sigmap/sigmap.proto";
 
-message InitializationRPC {
-  string targetPathname = 1;
-  repeated bytes marshaledRPCIOV = 2;
-  uint64 nOutIOV = 3;
-}
-
 message ProcSeqno {
   uint64 epoch = 1;
   uint64 seqno = 2;
@@ -46,16 +40,17 @@ message ProcEnvProto {
   string fail = 26;
   map<string, TendpointProto> cachedEndpoints = 27;
   string valgrind = 28;
-  bool delegateInitFlag = 30;
-  bool useSPProxyProcClnt = 31;
+  bool runBootScriptFlag = 29;
+  bool useSPProxyProcClnt = 30;
 }
 
 message ProcProto {
   ProcEnvProto procEnvProto = 1;
   repeated string args = 2;
   map<string, string> env = 3;
-  repeated InitializationRPC initRPCs = 29;
-  uint32 typeInt = 4;
-  uint32 mcpuInt = 5;
-  uint32 memInt = 6;
+  bytes bootScript = 4;
+  bytes bootScriptInput = 5;
+  uint32 typeInt = 6;
+  uint32 mcpuInt = 7;
+  uint32 memInt = 8;
 }

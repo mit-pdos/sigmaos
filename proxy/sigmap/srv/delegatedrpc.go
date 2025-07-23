@@ -1,7 +1,6 @@
 package srv
 
 import (
-	"sync"
 	"time"
 
 	db "sigmaos/debug"
@@ -52,19 +51,4 @@ func (spp *SPProxySrv) runDelegatedRPC(sc *sigmaclnt.SigmaClnt, p *proc.Proc, rp
 	}
 	db.DPrintf(db.SPPROXYSRV, "[%v] Done running delegated init RPC(%v)", p.GetPid(), rpcIdx)
 	spp.psm.InsertReply(p, uint64(rpcIdx), outiov, err, start)
-}
-
-// Run a proc's boot script
-func (spp *SPProxySrv) runBootScript(p *proc.Proc, sc *sigmaclnt.SigmaClnt) {
-	var wg sync.WaitGroup
-	db.DPrintf(db.SPPROXYSRV, "[%v] Run delegated init RPCs", p.GetPid())
-	for initRPCIdx, initRPC := range p.GetInitRPCs() {
-		wg.Add(1)
-		go func(initRPCIdx int, initRPC *proc.InitializationRPC) {
-			defer wg.Done()
-			db.DPrintf(db.ALWAYS, "initRPC IOV len: %v", len(initRPC.GetInputIOV()))
-			spp.runDelegatedRPC(sc, p, uint64(initRPCIdx), initRPC.GetTargetPathname(), initRPC.GetInputIOV(), initRPC.GetNOutIOV())
-		}(initRPCIdx, initRPC)
-	}
-	wg.Wait()
 }

@@ -248,12 +248,12 @@ func (pe *ProcEnvProto) ClearCachedEndpoint(pn string) {
 	delete(pe.CachedEndpoints, pn)
 }
 
-func (pe *ProcEnvProto) SetDelegateInit(delegate bool) {
-	pe.DelegateInitFlag = delegate
+func (pe *ProcEnvProto) SetRunBootScript(run bool) {
+	pe.RunBootScriptFlag = run
 }
 
-func (pe *ProcEnvProto) GetDelegateInit() bool {
-	return pe.DelegateInitFlag
+func (pe *ProcEnvProto) GetRunBootScript() bool {
+	return pe.RunBootScriptFlag
 }
 
 func (pe *ProcEnvProto) SetSigmaPath(buildTag string) {
@@ -408,7 +408,7 @@ func (pe *ProcEnv) String() string {
 		"RealmSwitch:%v "+
 		"Fail:%v "+
 		"CachedEPs:%v "+
-		"DelegateInit:%v "+
+		"RunBootScript:%v "+
 		"}",
 		pe.Program,
 		pe.Version,
@@ -434,6 +434,6 @@ func (pe *ProcEnv) String() string {
 		pe.RealmSwitchStr,
 		pe.Fail,
 		pe.CachedEndpoints,
-		pe.GetDelegateInit(),
+		pe.GetRunBootScript(),
 	)
 }

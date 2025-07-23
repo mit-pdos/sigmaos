@@ -49,7 +49,7 @@ void Srv::fetch_init_vectors_from_cache(std::shared_ptr<std::promise<std::expect
   std::shared_ptr<std::string> buf;
   std::vector<uint64_t> lengths;
   // If retrieving delegated initialization RPCs
-  if (_sp_clnt->ProcEnv()->GetDelegateInit()) {
+  if (_sp_clnt->ProcEnv()->GetRunBootScript()) {
     // Get the serialized vector from cached
     {
       auto res = _cache_clnt->DelegatedMultiGet(srv_id);

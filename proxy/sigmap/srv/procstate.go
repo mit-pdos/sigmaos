@@ -180,13 +180,12 @@ func (ps *procState) createSigmaClnt(spps *SPProxySrv) {
 	if err != nil {
 		db.DPrintf(db.SPPROXYSRV_ERR, "Error NewSigmaClnt proc %v", ps.pe.GetPID())
 	}
-	if ps.p != nil && ps.p.GetDelegateInit() {
-		rpcAPI := NewWASMRPCProxy(spps, sc, ps.p)
-		ps.wrt = wasmrt.NewWasmerRuntime(rpcAPI)
+	if ps.p != nil && ps.p.GetRunBootScript() {
 		// If the proc specified a boot script, create a WASM runtime and run the
 		// script
-		// TODO: replace by procState.runBootScript
-		go spps.runBootScript(ps.p, sc)
+		rpcAPI := NewWASMRPCProxy(spps, sc, ps.p)
+		ps.wrt = wasmrt.NewWasmerRuntime(rpcAPI)
+		go ps.wrt.RunModule(ps.p.GetPid(), ps.p.GetBootScript(), ps.p.GetBootScriptInput())
 	}
 	var epcc *epcacheclnt.EndpointCacheClnt
 	// Initialize a procclnt too

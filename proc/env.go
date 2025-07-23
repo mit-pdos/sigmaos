@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime/debug"
+	"strconv"
 	"strings"
 	"time"
 
@@ -69,8 +70,13 @@ func SetSigmaFail(s string) {
 	os.Setenv(SIGMAFAIL, s)
 }
 
-func GetSigmaGen() string {
-	return os.Getenv(SIGMAGEN)
+func GetSigmaGen() int {
+	s := os.Getenv(SIGMAGEN)
+	n, err := strconv.Atoi(s)
+	if err != nil {
+		return -1
+	}
+	return n
 }
 
 func SetSigmaGen(s string) {

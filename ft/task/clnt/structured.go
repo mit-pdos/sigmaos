@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"sigmaos/ft/task"
-	"sigmaos/ft/task/proto"
 	"sigmaos/sigmaclnt/fslib"
 )
 
@@ -47,87 +46,62 @@ func (tc *ftTaskClnt[Data, Output]) SubmitTasks(tasks []*Task[Data]) ([]TaskId, 
 }
 
 func (tc *ftTaskClnt[Data, Output]) EditTasks(tasks []*Task[Data]) ([]TaskId, error) {
-	var protoTasks []*proto.Task
-
+	var raw_tasks []*Task[[]byte]
 	for _, task := range tasks {
 		encoded, err := Encode(task.Data)
 		if err != nil {
 			return nil, err
 		}
-
-		protoTasks = append(protoTasks, &proto.Task{
+		raw_tasks = append(raw_tasks, &Task[[]byte]{
 			Id:   task.Id,
 			Data: encoded,
 		})
 	}
-
-	arg := proto.EditTasksReq{Tasks: protoTasks, Fence: tc.fenceProto()}
-	res := proto.EditTasksRep{}
-
-	err := tc.rpc("TaskSrv.EditTasks", &arg, &res)
-	return res.Unknown, err
+	return tc.RawFtTaskClnt.EditTasks(raw_tasks)
 }
 
 func (tc *ftTaskClnt[Data, Output]) ReadTasks(ids []TaskId) ([]Task[Data], error) {
-	arg := proto.ReadTasksReq{Ids: ids, Fence: tc.fenceProto()}
-	res := proto.ReadTasksRep{}
-
-	err := tc.rpc("TaskSrv.ReadTasks", &arg, &res)
+	raw_tasks, err := tc.RawFtTaskClnt.ReadTasks(ids)
 	if err != nil {
 		return nil, err
 	}
-
 	var tasks []Task[Data]
-
-	for _, protoTask := range res.Tasks {
+	for _, raw_task := range raw_tasks {
 		var data Data
-		err := json.NewDecoder(bytes.NewReader(protoTask.Data)).Decode(&data)
+		err := json.NewDecoder(bytes.NewReader(raw_task.Data)).Decode(&data)
 		if err != nil {
 			return nil, err
 		}
-
-		tasks = append(tasks, Task[Data]{Id: protoTask.Id, Data: data})
+		tasks = append(tasks, Task[Data]{Id: raw_task.Id, Data: data})
 	}
-
 	return tasks, nil
 }
 
 func (tc *ftTaskClnt[Data, Output]) GetTaskOutputs(ids []TaskId) ([]Output, error) {
-	arg := proto.GetTaskOutputsReq{Ids: ids, Fence: tc.fenceProto()}
-	res := proto.GetTaskOutputsRep{}
-
-	err := tc.rpc("TaskSrv.GetTaskOutputs", &arg, &res)
+	raw_out, err := tc.RawFtTaskClnt.GetTaskOutputs(ids)
 	if err != nil {
 		return nil, err
 	}
-
 	outputs := make([]Output, len(ids))
-	for ix, output := range res.Outputs {
-		outputs[ix], err = Decode[Output](output)
-
+	for ix, out := range raw_out {
+		outputs[ix], err = Decode[Output](out)
 		if err != nil {
 			return nil, err
 		}
 	}
-
 	return outputs, nil
 }
 
 func (tc *ftTaskClnt[Data, Output]) AddTaskOutputs(ids []TaskId, outputs []Output, markDone bool) error {
-	encoded := make([][]byte, len(outputs))
+	raw_out := make([][]byte, len(outputs))
 	var err error
 	for ix, output := range outputs {
-		encoded[ix], err = Encode(output)
+		raw_out[ix], err = Encode(output)
 		if err != nil {
 			return err
 		}
 	}
-
-	arg := proto.AddTaskOutputsReq{Ids: ids, Outputs: encoded, MarkDone: markDone, Fence: tc.fenceProto()}
-	res := proto.AddTaskOutputsRep{}
-
-	err = tc.rpc("TaskSrv.AddTaskOutputs", &arg, &res)
-	return err
+	return tc.RawFtTaskClnt.AddTaskOutputs(ids, raw_out, markDone)
 }
 
 func (tc *ftTaskClnt[Data, Output]) AsRawClnt() FtTaskClnt[[]byte, []byte] {

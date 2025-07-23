@@ -24,7 +24,10 @@ RUN mkdir bin && \
     mkdir bin/kernel && \
     mkdir bin/linux
 
-RUN curl https://get.wasmer.io -sSfL | WASMER_DIR=/lib sh
+# Install wasmer in /usr/local
+RUN curl https://get.wasmer.io -sSfL | WASMER_DIR=/usr/local sh
+# Copy wasmer libs to /lib
+RUN cp /usr/local/lib/* /lib
 
 # ========== local user image ==========
 FROM base AS sigmauser-local

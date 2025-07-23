@@ -1,8 +1,9 @@
-// package procgroupmgr keeps n instances of the same proc running. If one
-// instance (a member) of the group of n crashes, the manager starts
-// another one.  Some programs use the n instances to form a Raft
-// group (e.g., kvgrp); others use it in a hot-standby configuration
-// (e.g., a realm's named, mr coordinator, kv balancer, imageresized).
+// package procgroupmgr keeps n instances of the same proc running. If
+// one instance (a member) of the group of n crashes, the manager
+// starts another one.  Some programs use the n instances to form a
+// Raft group (e.g., kvgrp); others use it in a hot-standby
+// configuration (e.g., a realm's named, mr coordinator, kv balancer,
+// imageresized).
 //
 // There are two ways of stopping the group manager: the caller calls
 // StopGroup() or the caller calls WaitGroup() (which returns when all

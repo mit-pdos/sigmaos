@@ -128,18 +128,25 @@ func (wrt *WasmerRuntime) RunModule(pid sp.Tpid, compiledModule []byte, inputByt
 func (wrt *WasmerRuntime) newSendRPCFn(store *wasmer.Store, buf *[]byte) *wasmer.Function {
 	return wasmer.NewFunction(
 		store,
-		wasmer.NewFunctionType(wasmer.NewValueTypes(wasmer.I64, wasmer.I64, wasmer.I64), wasmer.NewValueTypes()),
+		wasmer.NewFunctionType(wasmer.NewValueTypes(wasmer.I64, wasmer.I64, wasmer.I64, wasmer.I64, wasmer.I64), wasmer.NewValueTypes()),
 		func(args []wasmer.Value) ([]wasmer.Value, error) {
 			// Get the RPC index ID
 			rpcIdx := uint64(args[0].I64())
-			pn_len := args[1].I64()
-			rpc_len := args[2].I64()
+			pnLen := args[1].I64()
+			methodLen := args[2].I64()
+			rpcLen := args[3].I64()
+			nOutIOV := uint64(args[4].I64())
+			idx := int64(0)
 			// Get the RPC destination pathname from the shared buffer
-			pn := string((*buf)[:pn_len])
+			pn := string((*buf)[idx : idx+pnLen])
+			idx += pnLen
+			// Get the method name from the shared buffer
+			method := string((*buf)[idx : idx+methodLen])
+			idx += methodLen
 			// Get the marshaled RPC from the shared buffer
-			rpcBytes := (*buf)[pn_len : pn_len+rpc_len]
+			rpcBytes := (*buf)[idx : idx+rpcLen]
 			db.DPrintf(db.WASMRT, "SendRPC(%v) pn:%v nbyte:%v", rpcIdx, pn, len(rpcBytes))
-			err := wrt.rpcAPI.Send(rpcIdx, pn, rpcBytes)
+			err := wrt.rpcAPI.Send(rpcIdx, pn, method, rpcBytes, nOutIOV)
 			if err != nil {
 				db.DPrintf(db.WASMRT_ERR, "Err SendRPC(%v): %v", rpcIdx, err)
 				return []wasmer.Value{}, err

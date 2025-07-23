@@ -14,13 +14,19 @@ mod sigmaos {
     mod sigmaos_host {
         #[link(wasm_import_module = "sigmaos_host")]
         extern "C" {
-            pub fn send_rpc(rpc_idx: u64, pn_len: u64, rpc_len: u64);
+            pub fn send_rpc(
+                rpc_idx: u64,
+                pn_len: u64,
+                method_len: u64,
+                rpc_len: u64,
+                n_outiov: u64,
+            );
             pub fn recv_rpc(rpc_idx: u64) -> u64;
         }
     }
-    pub fn send_rpc(rpc_idx: u64, pn_len: u64, rpc_len: u64) {
+    pub fn send_rpc(rpc_idx: u64, pn_len: u64, method_len: u64, rpc_len: u64, n_outiov: u64) {
         unsafe {
-            sigmaos_host::send_rpc(rpc_idx, pn_len, rpc_len);
+            sigmaos_host::send_rpc(rpc_idx, pn_len, method_len, rpc_len, n_outiov);
         }
     }
     pub fn recv_rpc(rpc_idx: u64) -> u64 {
@@ -92,16 +98,24 @@ pub fn boot(b: *mut c_char, buf_sz: usize) {
         let v = multi_get_rpcs[rpc_idx].write_to_bytes().unwrap();
         let pn_base = "name/cache/servers/".to_owned();
         let mut idx = 0;
+        let mut pn_len = 0;
         for c in pn_base.bytes() {
             buf[idx] = c;
             idx += 1;
+            pn_len += 1;
         }
         let srv_id = rpc_idx.to_string();
         for c in srv_id.bytes() {
             buf[idx] = c;
             idx += 1;
+            pn_len += 1;
         }
-        let pn_len = idx;
+        let mut method_len = 0;
+        for c in "CacheSrv.MultiGet".bytes() {
+            buf[idx] = c;
+            idx += 1;
+            method_len += 1;
+        }
         for b in &v {
             buf[idx] = *b;
             idx += 1;
@@ -109,6 +123,12 @@ pub fn boot(b: *mut c_char, buf_sz: usize) {
         // Record the serialized protobuf size, so we can zero the buffer again
         // before writing the next protobuf
         write_sz = pn_len as usize + v.len() as usize;
-        sigmaos::send_rpc(rpc_idx.try_into().unwrap(), pn_len as u64, v.len() as u64);
+        sigmaos::send_rpc(
+            rpc_idx.try_into().unwrap(),
+            pn_len as u64,
+            method_len as u64,
+            v.len() as u64,
+            1,
+        );
     }
 }

@@ -2,6 +2,7 @@ package wasm_test
 
 import (
 	"fmt"
+	"strconv"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -23,8 +24,17 @@ func NewTestRPCAPI(t *testing.T, cacheMultiGetReqs map[int]*cacheproto.CacheMult
 	}
 }
 
-func (ts *TestRPCAPI) Send(rpcIdx uint64, pn string, b []byte) error {
-	db.DPrintf(db.TEST, "Send pn:%v", pn)
+func (ts *TestRPCAPI) Send(rpcIdx uint64, pn string, method string, b []byte, nOutIOV uint64) error {
+	db.DPrintf(db.TEST, "Send pn:%v method:%v nOutIOV:%v", pn, method, nOutIOV)
+	if !assert.Equal(ts.T, "CacheSrv.MultiGet", method, "wrong method name: %v", method) {
+		return fmt.Errorf("Wrong method name: %v", method)
+	}
+	if !assert.Equal(ts.T, uint64(1), nOutIOV, "wrong num outIOV: %v", method) {
+		return fmt.Errorf("Wrong num outIOV: %v", nOutIOV)
+	}
+	if !assert.Equal(ts.T, "name/cache/servers/"+strconv.Itoa(int(rpcIdx)), pn, "wrong pathname: %v", pn) {
+		return fmt.Errorf("Wrong num outIOV: %v", nOutIOV)
+	}
 	cacheMultiGet := &cacheproto.CacheMultiGetReq{}
 	if err := proto.Unmarshal(b, cacheMultiGet); !assert.Nil(ts.T, err, "Err unmarshal MultiGet: %v", err) {
 		return err

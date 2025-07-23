@@ -180,9 +180,13 @@ func (ps *procState) createSigmaClnt(spps *SPProxySrv) {
 	if err != nil {
 		db.DPrintf(db.SPPROXYSRV_ERR, "Error NewSigmaClnt proc %v", ps.pe.GetPID())
 	}
-	// We only need an fslib to run delegated RPCs
-	if ps.p != nil {
-		go spps.runDelegatedInitializationRPCs(ps.p, sc)
+	if ps.p != nil && ps.p.GetDelegateInit() {
+		rpcAPI := NewWASMRPCProxy(spps, sc, ps.p)
+		ps.wrt = wasmrt.NewWasmerRuntime(rpcAPI)
+		// If the proc specified a boot script, create a WASM runtime and run the
+		// script
+		// TODO: replace by procState.runBootScript
+		go spps.runBootScript(ps.p, sc)
 	}
 	var epcc *epcacheclnt.EndpointCacheClnt
 	// Initialize a procclnt too

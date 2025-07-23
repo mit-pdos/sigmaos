@@ -54,12 +54,8 @@ func (spp *SPProxySrv) runDelegatedRPC(sc *sigmaclnt.SigmaClnt, p *proc.Proc, rp
 	spp.psm.InsertReply(p, uint64(rpcIdx), outiov, err, start)
 }
 
-// Run delegated initialization RPCs
-func (spp *SPProxySrv) runDelegatedInitializationRPCs(p *proc.Proc, sc *sigmaclnt.SigmaClnt) {
-	// If the proc didn't ask for delegated initialization, bail out
-	if !p.GetDelegateInit() {
-		return
-	}
+// Run a proc's boot script
+func (spp *SPProxySrv) runBootScript(p *proc.Proc, sc *sigmaclnt.SigmaClnt) {
 	var wg sync.WaitGroup
 	db.DPrintf(db.SPPROXYSRV, "[%v] Run delegated init RPCs", p.GetPid())
 	for initRPCIdx, initRPC := range p.GetInitRPCs() {

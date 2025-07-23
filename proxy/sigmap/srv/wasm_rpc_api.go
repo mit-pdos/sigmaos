@@ -7,13 +7,13 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/proc"
+	wasmrpc "sigmaos/proxy/wasm/rpc"
 	rpcclnt "sigmaos/rpc/clnt"
 	rpcproto "sigmaos/rpc/proto"
 	"sigmaos/serr"
 	sessp "sigmaos/session/proto"
 	sigmaclnt "sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
-	// wasmrt "sigmaos/proxy/wasm/rpc/wasmer"
 )
 
 type WASMRPCProxy struct {
@@ -22,7 +22,7 @@ type WASMRPCProxy struct {
 	p   *proc.Proc
 }
 
-func NewWASMRPCProxy(spp *SPProxySrv, sc *sigmaclnt.SigmaClnt, p *proc.Proc) *WASMRPCProxy {
+func NewWASMRPCProxy(spp *SPProxySrv, sc *sigmaclnt.SigmaClnt, p *proc.Proc) wasmrpc.RPCAPI {
 	return &WASMRPCProxy{
 		spp: spp,
 		sc:  sc,

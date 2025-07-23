@@ -128,7 +128,7 @@ pub fn boot(b: *mut c_char, buf_sz: usize) {
             pn_len as u64,
             method_len as u64,
             v.len() as u64,
-            1,
+            2,
         );
     }
 }

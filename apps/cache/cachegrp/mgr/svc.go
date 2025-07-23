@@ -6,12 +6,8 @@ import (
 	"strconv"
 	"sync"
 
-	"sigmaos/apps/cache"
 	"sigmaos/apps/cache/cachegrp"
-	cacheproto "sigmaos/apps/cache/proto"
-	db "sigmaos/debug"
 	"sigmaos/proc"
-	rpcclnt "sigmaos/rpc/clnt"
 	"sigmaos/serr"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
@@ -59,27 +55,27 @@ func (cs *CachedSvc) addBackupServer(srvID int, delegatedInit bool) error {
 	p.GetProcEnv().UseSPProxy = true
 	p.GetProcEnv().UseSPProxyProcClnt = true
 
-	totalInIOVLen := 0
-	dumps := make([]*cacheproto.ShardReq, cache.NSHARD)
-	for i := range dumps {
-		dumps[i] = &cacheproto.ShardReq{
-			Shard: uint32(i),
-			Fence: sp.NullFence().FenceProto(),
-		}
-		cachesrvPN := cs.Server(strconv.Itoa(srvID))
-		iniov, err := rpcclnt.WrapRPCRequest("CacheSrv.DumpShard", dumps[i])
-		if err != nil {
-			db.DPrintf(db.ALWAYS, "Error wrap & marshal dumpReq: %v", err)
-			return err
-		}
-		p.AddInitializationRPC(cachesrvPN, iniov, 2)
-		for _, b := range iniov {
-			totalInIOVLen += len(b)
-		}
-	}
-	db.DPrintf(db.TEST, "Delegated RPC(%v) total len: %v", len(dumps), totalInIOVLen)
-	// Ask for spproxy to run delegated initialization RPCs on behalf of the proc
-	p.SetDelegateInit(delegatedInit)
+	//	totalInIOVLen := 0
+	//	dumps := make([]*cacheproto.ShardReq, cache.NSHARD)
+	//	for i := range dumps {
+	//		dumps[i] = &cacheproto.ShardReq{
+	//			Shard: uint32(i),
+	//			Fence: sp.NullFence().FenceProto(),
+	//		}
+	//		cachesrvPN := cs.Server(strconv.Itoa(srvID))
+	//		iniov, err := rpcclnt.WrapRPCRequest("CacheSrv.DumpShard", dumps[i])
+	//		if err != nil {
+	//			db.DPrintf(db.ALWAYS, "Error wrap & marshal dumpReq: %v", err)
+	//			return err
+	//		}
+	//		p.AddInitializationRPC(cachesrvPN, iniov, 2)
+	//		for _, b := range iniov {
+	//			totalInIOVLen += len(b)
+	//		}
+	//	}
+	//	db.DPrintf(db.TEST, "Delegated RPC(%v) total len: %v", len(dumps), totalInIOVLen)
+	//	// Ask for spproxy to run delegated initialization RPCs on behalf of the proc
+	//	p.SetDelegateInit(delegatedInit)
 	err := cs.Spawn(p)
 	if err != nil {
 		return err

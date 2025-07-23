@@ -2,6 +2,7 @@ package srv
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net"
 	"path/filepath"
@@ -13,6 +14,7 @@ import (
 
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"google.golang.org/grpc"
+	gproto "google.golang.org/protobuf/proto"
 
 	"sigmaos/api/fs"
 	db "sigmaos/debug"
@@ -31,9 +33,10 @@ import (
 const CRASHID = -1
 
 type TaskSrv struct {
-	data   map[int32][]byte
-	output map[int32][]byte
-	status map[int32]proto.TaskStatus
+	data     map[int32][]byte
+	output   map[int32][]byte
+	status   map[int32]proto.TaskStatus
+	acquirer map[int32]*sp.Tfence
 
 	todo    map[int32]bool
 	wip     map[int32]bool
@@ -56,6 +59,7 @@ type TaskSrv struct {
 const (
 	ETCD_STATUS                   = "status"
 	ETCD_DATA                     = "data"
+	ETCD_ACQUIRER                 = "acquirer"
 	ETCD_OUTPUT                   = "output"
 	ETCD_SRV_FENCE                = "srv_fence"  // ensures only the most recently elected fttask srv can write to etcd
 	ETCD_CLNT_FENCE               = "clnt_fence" // ensures only the most recently elected client can write to fttask srv
@@ -90,6 +94,7 @@ func RunTaskSrv(args []string) error {
 		output:   make(map[int32][]byte),
 		status:   make(map[int32]proto.TaskStatus),
 		todo:     make(map[int32]bool),
+		acquirer: make(map[int32]*sp.Tfence),
 		todoCond: sync.NewCond(mu),
 		wip:      make(map[int32]bool),
 		done:     make(map[int32]bool),
@@ -272,6 +277,18 @@ func (s *TaskSrv) readEtcd() error {
 
 			s.status[int32(id)] = status
 			(*s.getMap(status))[int32(id)] = true
+		} else if strings.HasPrefix(key, s.keyPrefix(ETCD_ACQUIRER)) {
+			id, err := strconv.ParseInt(strings.TrimPrefix(key, s.keyPrefix(ETCD_ACQUIRER)), 10, 32)
+			if err != nil {
+				return err
+			}
+
+			a := &sp.TfenceProto{}
+			if err := gproto.Unmarshal([]byte(val), a); err != nil {
+				return err
+			}
+			f := a.Tfence()
+			s.acquirer[int32(id)] = &f
 		} else if strings.HasPrefix(key, s.keyPrefix(ETCD_DATA)) {
 			id, err := strconv.ParseInt(strings.TrimPrefix(key, s.keyPrefix(ETCD_DATA)), 10, 32)
 			if err != nil {
@@ -324,9 +341,14 @@ func (s *TaskSrv) getMap(status proto.TaskStatus) *map[int32]bool {
 }
 
 // must hold lock
-func (s *TaskSrv) applyChanges(added map[int32]bool, status map[int32]proto.TaskStatus, data map[int32][]byte, outputs map[int32][]byte) error {
+func (s *TaskSrv) applyChanges(added map[int32]bool, status map[int32]proto.TaskStatus, data map[int32][]byte, outputs map[int32][]byte, acquirer *sp.Tfence) error {
 	if len(added)+len(status)+len(data)+len(outputs) == 0 {
 		return nil
+	}
+
+	ab, err := gproto.Marshal(acquirer.FenceProto())
+	if err != nil {
+		return serr.NewErr(serr.TErrInval, err)
 	}
 
 	// validate changes
@@ -398,6 +420,11 @@ func (s *TaskSrv) applyChanges(added map[int32]bool, status map[int32]proto.Task
 		if err := addOp(clientv3.OpPut(s.key(id, ETCD_STATUS), newStatus.String())); err != nil {
 			return err
 		}
+		if newStatus == proto.TaskStatus_WIP {
+			if err := addOp(clientv3.OpPut(s.key(id, ETCD_ACQUIRER), string(ab))); err != nil {
+				return err
+			}
+		}
 	}
 
 	for id, d := range data {
@@ -432,6 +459,9 @@ func (s *TaskSrv) applyChanges(added map[int32]bool, status map[int32]proto.Task
 			s.status[id] = to
 			delete(*s.getMap(from), id)
 			(*s.getMap(to))[id] = true
+		}
+		if to == proto.TaskStatus_WIP {
+			s.acquirer[id] = acquirer
 		}
 	}
 
@@ -487,28 +517,29 @@ func (s *TaskSrv) SubmitTasks(ctx fs.CtxI, req proto.SubmitTasksReq, rep *proto.
 		return err
 	}
 
+	added := make(map[int32]bool)
+	data := make(map[int32][]byte)
 	existing := make([]int32, 0)
 	for _, task := range req.Tasks {
 		if _, ok := s.data[task.Id]; ok {
 			existing = append(existing, task.Id)
+		} else {
+			added[task.Id] = true
+			data[task.Id] = task.Data
 		}
 	}
 
-	added := make(map[int32]bool)
-	data := make(map[int32][]byte)
-	for _, task := range req.Tasks {
-		added[task.Id] = true
-		data[task.Id] = task.Data
-	}
-
-	if err := s.applyChanges(added, nil, data, nil); err != nil {
+	if err := s.applyChanges(added, nil, data, nil, sp.NullFence()); err != nil {
 		return err
 	}
 
 	rep.Existing = existing
 
-	if len(req.Tasks) > 0 {
-		crash.CrashFile(strconv.Itoa(int(req.Tasks[0].Id)))
+	if len(req.Tasks) > 0 && proc.GetSigmaGen() <= 1 {
+		var s string
+		if err := json.Unmarshal(req.Tasks[0].Data, &s); err == nil && s == "submit" {
+			crash.CrashFile(strconv.Itoa(int(req.Tasks[0].Id)))
+		}
 	}
 
 	db.DPrintf(db.FTTASKSRV, "SubmitTasks: total: %d, exist: %d", len(req.Tasks), len(existing))
@@ -538,7 +569,7 @@ func (s *TaskSrv) EditTasks(ctx fs.CtxI, req proto.EditTasksReq, rep *proto.Edit
 		}
 	}
 
-	if err := s.applyChanges(nil, nil, data, nil); err != nil {
+	if err := s.applyChanges(nil, nil, data, nil, sp.NullFence()); err != nil {
 		return err
 	}
 
@@ -605,7 +636,7 @@ func (s *TaskSrv) MoveTasks(ctx fs.CtxI, req proto.MoveTasksReq, rep *proto.Move
 		status[id] = req.To
 	}
 
-	if err := s.applyChanges(nil, status, nil, nil); err != nil {
+	if err := s.applyChanges(nil, status, nil, nil, sp.NullFence()); err != nil {
 		return err
 	}
 
@@ -638,7 +669,7 @@ func (s *TaskSrv) MoveTasksByStatus(ctx fs.CtxI, req proto.MoveTasksByStatusReq,
 
 	n := len(*from)
 
-	if err := s.applyChanges(nil, status, nil, nil); err != nil {
+	if err := s.applyChanges(nil, status, nil, nil, sp.NullFence()); err != nil {
 		return err
 	}
 
@@ -690,7 +721,7 @@ func (s *TaskSrv) AddTaskOutputs(ctx fs.CtxI, req proto.AddTaskOutputsReq, rep *
 		}
 	}
 
-	if err := s.applyChanges(nil, status, nil, outputs); err != nil {
+	if err := s.applyChanges(nil, status, nil, outputs, sp.NullFence()); err != nil {
 		return err
 	}
 
@@ -706,7 +737,8 @@ func (s *TaskSrv) AcquireTasks(ctx fs.CtxI, req proto.AcquireTasksReq, rep *prot
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	db.DPrintf(db.TEST, "acquireid: %v", req.AcquireId)
+	aid := req.AcquireId.Tfence()
+	db.DPrintf(db.TEST, "acquireid: %v", &aid)
 
 	if err := s.checkFence(req.Fence); err != nil {
 		return err
@@ -729,15 +761,18 @@ func (s *TaskSrv) AcquireTasks(ctx fs.CtxI, req proto.AcquireTasksReq, rep *prot
 		status[id] = proto.TaskStatus_WIP
 	}
 
-	if err := s.applyChanges(nil, status, nil, nil); err != nil {
+	if err := s.applyChanges(nil, status, nil, nil, &aid); err != nil {
 		return err
 	}
 
 	rep.Stopped = s.allTasksDone()
 	rep.Ids = ids
 
-	if len(ids) > 0 {
-		crash.CrashFile(strconv.Itoa(int(ids[0])))
+	if len(ids) > 0 && proc.GetSigmaGen() <= 1 {
+		var s0 string
+		if err := json.Unmarshal(s.data[ids[0]], &s0); err == nil && s0 == "acquire" {
+			crash.CrashFile(strconv.Itoa(int(ids[0])))
+		}
 	}
 
 	db.DPrintf(db.FTTASKSRV, "AcquireTasks: n: %d stopped: %t", len(rep.Ids), rep.Stopped)

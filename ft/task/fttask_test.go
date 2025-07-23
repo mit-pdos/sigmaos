@@ -77,8 +77,9 @@ func newTstate[Data any, Output any](t *testing.T) (*Tstate[Data, Output], error
 	if err != nil {
 		return nil, err
 	}
+	f := sp.NewFence("test-acquirer", 1)
 	ts.mgr = mgr
-	ts.clnt = fttask_clnt.NewFtTaskClnt[Data, Output](ts.FsLib, mgr.Id, sp.NullFence())
+	ts.clnt = fttask_clnt.NewFtTaskClnt[Data, Output](ts.FsLib, mgr.Id, &f)
 	return ts, nil
 }
 
@@ -564,46 +565,46 @@ func TestServerFence(t *testing.T) {
 	ts.shutdown()
 }
 
-func TestAtMostOnceSubmit(t *testing.T) {
+func TestExactlyOnceSubmit(t *testing.T) {
 	e := crash.NewEventPath(crash.FTTASKSRV_SUBMITCRASH, 0, 0.0, strconv.Itoa(fttask_srv.CRASHID))
 	err := crash.SetSigmaFail(crash.NewTeventMapOne(e))
 	assert.Nil(t, err)
 
-	ts, err := newTstate[struct{}, struct{}](t)
+	ts, err := newTstate[string, struct{}](t)
 	if !assert.Nil(t, err, "Error New Tstate: %v", err) {
 		return
 	}
 
-	tasks := make([]*fttask_clnt.Task[struct{}], 0)
+	tasks := make([]*fttask_clnt.Task[string], 0)
 	for i := 0; i < 1; i++ {
-		tasks = append(tasks, &fttask_clnt.Task[struct{}]{
+		tasks = append(tasks, &fttask_clnt.Task[string]{
 			Id:   fttask_srv.CRASHID,
-			Data: struct{}{},
+			Data: "submit",
 		})
 	}
 
 	existing, err := ts.clnt.SubmitTasks(tasks)
 	assert.Nil(t, err)
-	assert.Equal(t, 0, len(existing))
+	assert.Equal(t, 1, len(existing))
 
 	ts.shutdown()
 }
 
-func TestAtMostOnceAcquire(t *testing.T) {
+func TestExactlyOnceAcquire(t *testing.T) {
 	e := crash.NewEventPath(crash.FTTASKSRV_SUBMITCRASH, 0, 0.0, strconv.Itoa(fttask_srv.CRASHID))
 	err := crash.SetSigmaFail(crash.NewTeventMapOne(e))
 	assert.Nil(t, err)
 
-	ts, err := newTstate[struct{}, struct{}](t)
+	ts, err := newTstate[string, struct{}](t)
 	if !assert.Nil(t, err, "Error New Tstate: %v", err) {
 		return
 	}
 
-	tasks := make([]*fttask_clnt.Task[struct{}], 0)
+	tasks := make([]*fttask_clnt.Task[string], 0)
 	for i := 0; i < 1; i++ {
-		tasks = append(tasks, &fttask_clnt.Task[struct{}]{
+		tasks = append(tasks, &fttask_clnt.Task[string]{
 			Id:   fttask_srv.CRASHID,
-			Data: struct{}{},
+			Data: "acquire",
 		})
 	}
 
@@ -689,6 +690,7 @@ func TestClntPartition(t *testing.T) {
 	pe := proc.NewAddedProcEnv(ts.ProcEnv())
 	fsl, err := sigmaclnt.NewFsLib(pe, dialproxyclnt.NewDialProxyClnt(pe))
 	assert.Nil(t, err)
+
 	clnt := fttask_clnt.NewFtTaskClnt[mr.Bin, string](fsl, ts.mgr.Id, sp.NullFence())
 
 	n, err := clnt.GetNTasks(fttask_clnt.TODO)

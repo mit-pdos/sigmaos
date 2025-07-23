@@ -44,6 +44,7 @@ message EditTasksRep {
 message GetTasksByStatusReq {
   TaskStatus status = 1;
   TfenceProto fence = 2;
+  TfenceProto acquireId = 3;
 }
 
 message GetTasksByStatusRep {

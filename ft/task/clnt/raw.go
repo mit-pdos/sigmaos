@@ -66,7 +66,14 @@ func (tc *RawFtTaskClnt) SubmitTasks(tasks []*Task[[]byte]) ([]TaskId, error) {
 	arg := proto.SubmitTasksReq{Tasks: protoTasks, Fence: tc.fenceProto()}
 	res := proto.SubmitTasksRep{}
 
-	err := tc.rpc("TaskSrv.SubmitTasks", &arg, &res)
+	err, _ := retry.RetryAtLeastOnce(func() error {
+		err := tc.rpc("TaskSrv.SubmitTasks", &arg, &res)
+		if err != nil {
+			db.DPrintf(db.FTTASKCLNT, "SubmitTasks: rpc err %v", err)
+		}
+		return err
+	})
+
 	return res.Existing, err
 }
 
@@ -95,7 +102,15 @@ func (tc *RawFtTaskClnt) EditTasks(tasks []*Task[[]byte]) ([]TaskId, error) {
 }
 
 func (tc *RawFtTaskClnt) GetTasksByStatus(taskStatus TaskStatus) ([]TaskId, error) {
-	arg := proto.GetTasksByStatusReq{Status: taskStatus, Fence: tc.fenceProto()}
+	return tc.getTasksByStatusAcquirer(taskStatus, sp.NullFence())
+}
+
+func (tc *RawFtTaskClnt) getTasksByStatusAcquirer(taskStatus TaskStatus, aid *sp.Tfence) ([]TaskId, error) {
+	arg := proto.GetTasksByStatusReq{
+		Status:    taskStatus,
+		Fence:     tc.fenceProto(),
+		AcquireId: aid.FenceProto(),
+	}
 	res := proto.GetTasksByStatusRep{}
 
 	err, _ := retry.RetryAtLeastOnce(func() error {
@@ -212,7 +227,23 @@ func (tc *RawFtTaskClnt) AcquireTasks(wait bool) ([]TaskId, bool, error) {
 	}
 	res := proto.AcquireTasksRep{}
 
-	err := tc.rpc("TaskSrv.AcquireTasks", &arg, &res)
+	err, ok := retry.RetryAtMostOnce(func() error {
+		err := tc.rpc("TaskSrv.AcquireTasks", &arg, &res)
+		if err != nil {
+			db.DPrintf(db.FTTASKCLNT, "AcquireTasks: rpc err %v", err)
+		}
+		return err
+	})
+	if !ok {
+		return nil, false, serr.NewErr(serr.TErrUnreachable, tc.serviceId.ServicePath())
+	}
+	if serr.IsErrorIO(err) {
+		tasks, err := tc.getTasksByStatusAcquirer(WIP, &f)
+		if err != nil {
+			return nil, false, err
+		}
+		return tasks, false, err // XXX stopped?
+	}
 	return res.Ids, res.Stopped, err
 }
 
@@ -224,7 +255,6 @@ func (tc *RawFtTaskClnt) Stats() (*proto.TaskStats, error) {
 		err := tc.rpc("TaskSrv.GetTaskStats", &arg, &res)
 		if err != nil {
 			db.DPrintf(db.FTTASKCLNT, "Stats: rpc err %v", err)
-			return err
 		}
 		return err
 	})

@@ -3,7 +3,6 @@ package srv
 import (
 	"sync"
 
-	"sigmaos/proc"
 	rpcchan "sigmaos/rpc/clnt/channel"
 	sessp "sigmaos/session/proto"
 )
@@ -12,17 +11,17 @@ type RPCState struct {
 	mu       sync.Mutex
 	channels map[string]rpcchan.RPCChannel
 	cond     *sync.Cond
-	done     []bool
-	results  []sessp.IoVec
-	errors   []error
+	done     map[uint64]bool
+	results  map[uint64]sessp.IoVec
+	errors   map[uint64]error
 }
 
-func NewRPCState(rpcs []*proc.InitializationRPC) *RPCState {
+func NewRPCState() *RPCState {
 	rpcst := &RPCState{
 		channels: make(map[string]rpcchan.RPCChannel),
-		done:     make([]bool, len(rpcs)),
-		results:  make([]sessp.IoVec, len(rpcs)),
-		errors:   make([]error, len(rpcs)),
+		done:     make(map[uint64]bool),
+		results:  make(map[uint64]sessp.IoVec),
+		errors:   make(map[uint64]error),
 	}
 	rpcst.cond = sync.NewCond(&rpcst.mu)
 	return rpcst
@@ -48,10 +47,9 @@ func (rpcs *RPCState) InsertReply(idx uint64, iov sessp.IoVec, err error) {
 	rpcs.mu.Lock()
 	defer rpcs.mu.Unlock()
 
-	i := int(idx)
-	rpcs.done[i] = true
-	rpcs.results[i] = iov
-	rpcs.errors[i] = err
+	rpcs.done[idx] = true
+	rpcs.results[idx] = iov
+	rpcs.errors[idx] = err
 	rpcs.cond.Broadcast()
 }
 
@@ -63,6 +61,5 @@ func (rpcs *RPCState) GetReply(idx uint64) (sessp.IoVec, error) {
 	for !rpcs.done[idx] {
 		rpcs.cond.Wait()
 	}
-	i := int(idx)
-	return rpcs.results[i], rpcs.errors[i]
+	return rpcs.results[idx], rpcs.errors[idx]
 }

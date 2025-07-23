@@ -10,6 +10,7 @@ import (
 	db "sigmaos/debug"
 	dialproxyclnt "sigmaos/dialproxy/clnt"
 	"sigmaos/proc"
+	wasmrt "sigmaos/proxy/wasm/rpc/wasmer"
 	rpcchan "sigmaos/rpc/clnt/channel"
 	sessp "sigmaos/session/proto"
 	"sigmaos/sigmaclnt"
@@ -130,20 +131,17 @@ type procState struct {
 	pe      *proc.ProcEnv
 	p       *proc.Proc
 	rpcReps *RPCState
+	wrt     *wasmrt.WasmerRuntime
 	sc      *sigmaclnt.SigmaClnt
 	epcc    *epcacheclnt.EndpointCacheClnt
 	err     error // Creation result
 }
 
 func newProcState(spps *SPProxySrv, pe *proc.ProcEnv, p *proc.Proc) *procState {
-	var initRPCs []*proc.InitializationRPC
-	if p != nil {
-		initRPCs = p.GetInitializationRPCs()
-	}
 	ps := &procState{
 		pe:      pe,
 		p:       p,
-		rpcReps: NewRPCState(initRPCs),
+		rpcReps: NewRPCState(),
 		done:    false,
 	}
 	ps.cond = sync.NewCond(&ps.mu)

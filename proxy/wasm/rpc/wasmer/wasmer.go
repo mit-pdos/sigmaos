@@ -56,8 +56,8 @@ func (wrt *WasmerRuntime) RunModule(pid sp.Tpid, compiledModule []byte, inputByt
 	store := wasmer.NewStore(engine)
 	module, err := wasmer.DeserializeModule(store, compiledModule)
 	if err != nil {
-		db.DPrintf(db.ERROR, "Err in compiled WASM module deserialization: %v", err)
-		db.DPrintf(db.WASMRT_ERR, "Err in compiled WASM module deserialization: %v", err)
+		db.DPrintf(db.ERROR, "[%v] Err in compiled WASM module deserialization: %v", pid, err)
+		db.DPrintf(db.WASMRT_ERR, "[%v] Err in compiled WASM module deserialization: %v", pid, err)
 		return err
 	}
 	db.DPrintf(db.WASMRT, "Deserialized compiled WASM module")
@@ -75,8 +75,8 @@ func (wrt *WasmerRuntime) RunModule(pid sp.Tpid, compiledModule []byte, inputByt
 	// Instantiate the module
 	instance, err := wasmer.NewInstance(module, importObject)
 	if err != nil {
-		db.DPrintf(db.ERROR, "Err instantiate WASM module: %v", err)
-		db.DPrintf(db.WASMRT_ERR, "Err instantiate WASM module: %v", err)
+		db.DPrintf(db.ERROR, "[%v] Err instantiate WASM module: %v", pid, err)
+		db.DPrintf(db.WASMRT_ERR, "[%v] Err instantiate WASM module: %v", pid, err)
 		return err
 	}
 	perf.LogSpawnLatency("WASM module instantiation", pid, perf.TIME_NOT_SET, start)
@@ -84,21 +84,21 @@ func (wrt *WasmerRuntime) RunModule(pid sp.Tpid, compiledModule []byte, inputByt
 	// runtime uses to allocate a shared buffer in the WASM module's memory
 	allocFn, err := instance.Exports.GetFunction("allocate")
 	if err != nil {
-		db.DPrintf(db.ERROR, "Err get WASM module allocate fn: %v", err)
-		db.DPrintf(db.WASMRT_ERR, "Err get WASM module allocate fn: %v", err)
+		db.DPrintf(db.ERROR, "[%v] Err get WASM module allocate fn: %v", pid, err)
+		db.DPrintf(db.WASMRT_ERR, "[%v] Err get WASM module allocate fn: %v", pid, err)
 		return err
 	}
 	wasmBufPtr, err := allocFn(SHARED_BUF_SZ)
 	if err != nil {
-		db.DPrintf(db.ERROR, "Err allocate shared buffer with WASM module: %v", err)
-		db.DPrintf(db.WASMRT_ERR, "Err allocate shared buffer with WASM module: %v", err)
+		db.DPrintf(db.ERROR, "[%v] Err allocate shared buffer with WASM module: %v", pid, err)
+		db.DPrintf(db.WASMRT_ERR, "[%v] Err allocate shared buffer with WASM module: %v", pid, err)
 		return err
 	}
-	db.DPrintf(db.TEST, "WASM-allocated buffer address: %v", wasmBufPtr)
+	db.DPrintf(db.WASMRT, "[%v] WASM-allocated buffer address: %v", pid, wasmBufPtr)
 	mem, err := instance.Exports.GetMemory("memory")
 	if err != nil {
-		db.DPrintf(db.ERROR, "Err get WASM instance memory: %v", err)
-		db.DPrintf(db.WASMRT_ERR, "Err get WASM instance memory: %v", err)
+		db.DPrintf(db.ERROR, "[%v] Err get WASM instance memory: %v", pid, err)
+		db.DPrintf(db.WASMRT_ERR, "[%v] Err get WASM instance memory: %v", pid, err)
 		return err
 	}
 	// Create a Go buffer from the allocated WASM shared buffer
@@ -108,20 +108,20 @@ func (wrt *WasmerRuntime) RunModule(pid sp.Tpid, compiledModule []byte, inputByt
 	// Get a function pointer to the "boot" function exposed by the module
 	boot, err := instance.Exports.GetFunction("boot")
 	if err != nil {
-		db.DPrintf(db.ERROR, "Err get WASM boot function: %v", err)
-		db.DPrintf(db.WASMRT_ERR, "Err get WASM boot function: %v", err)
+		db.DPrintf(db.ERROR, "[%v] Err get WASM boot function: %v", pid, err)
+		db.DPrintf(db.WASMRT_ERR, "[%v] Err get WASM boot function: %v", pid, err)
 		return err
 	}
 	start = time.Now()
 	// Call the boot function and inform it of the size & address of the shared
 	// buffer.
 	if _, err := boot(wasmBufPtr, SHARED_BUF_SZ); err != nil {
-		db.DPrintf(db.ERROR, "Err get WASM instance memory: %v", err)
-		db.DPrintf(db.WASMRT_ERR, "Err get WASM instance memory: %v", err)
+		db.DPrintf(db.ERROR, "[%v] Err get WASM instance memory: %v", pid, err)
+		db.DPrintf(db.WASMRT_ERR, "[%v] Err get WASM instance memory: %v", pid, err)
 		return err
 	}
 	perf.LogSpawnLatency("WASM module ran", pid, perf.TIME_NOT_SET, start)
-	db.DPrintf(db.WASMRT, "Successfully ran WASM module")
+	db.DPrintf(db.WASMRT, "[%v] Successfully ran WASM boot script", pid)
 	return nil
 }
 

@@ -11,7 +11,8 @@ RUN apt update && \
   libprotobuf-dev \
   valgrind \
   libc6-dbg \
-  libabsl-dev
+  libabsl-dev \
+  wasmer
 
 WORKDIR /home/sigmaos
 RUN mkdir bin && \

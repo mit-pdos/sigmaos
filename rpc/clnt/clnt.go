@@ -61,11 +61,6 @@ func NewRPCClnt(pn string, opts ...*rpcclntopts.RPCClntOption) (*RPCClnt, error)
 }
 
 func WrapRPCRequest(method string, arg proto.Message) (sessp.IoVec, error) {
-	req := rpcproto.Req{Method: method}
-	wrapperBytes, err := proto.Marshal(&req)
-	if err != nil {
-		return nil, serr.NewErrError(err)
-	}
 	var iniov sessp.IoVec
 	inblob := rpc.GetBlob(arg)
 	if inblob != nil {
@@ -76,7 +71,16 @@ func WrapRPCRequest(method string, arg proto.Message) (sessp.IoVec, error) {
 	if err != nil {
 		return nil, err
 	}
-	return append(sessp.IoVec{wrapperBytes, argBytes}, iniov...), nil
+	return WrapMarshaledRPCRequest(method, append(sessp.IoVec{argBytes}, iniov...))
+}
+
+func WrapMarshaledRPCRequest(method string, iniov sessp.IoVec) (sessp.IoVec, error) {
+	req := rpcproto.Req{Method: method}
+	wrapperBytes, err := proto.Marshal(&req)
+	if err != nil {
+		return nil, serr.NewErrError(err)
+	}
+	return append(sessp.IoVec{wrapperBytes}, iniov...), nil
 }
 
 func (rpcc *RPCClnt) runWrappedRPC(delegate bool, method string, iniov sessp.IoVec, outiov sessp.IoVec) error {

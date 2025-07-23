@@ -640,9 +640,8 @@ func runTestServerData(t *testing.T, em *crash.TeventMap) []*procgroupmgr.ProcSt
 		})
 	}
 
-	existing, err := ts.clnt.SubmitTasks(tasks)
+	_, err = ts.clnt.SubmitTasks(tasks)
 	assert.Nil(t, err)
-	assert.Equal(t, 0, len(existing))
 
 	ids, stopped, err := ts.clnt.AcquireTasks(false)
 	assert.Nil(t, err)

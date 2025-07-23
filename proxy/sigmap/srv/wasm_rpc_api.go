@@ -24,7 +24,6 @@ func NewWASMRPCProxy(spp *SPProxySrv, sc *sigmaclnt.SigmaClnt, p *proc.Proc) *WA
 }
 
 func (wp *WASMRPCProxy) Send(rpcIdx uint64, pn string, method string, b []byte, nOutIOV uint64) error {
-	db.DFatalf("Unimplemented")
 	// Wrap the marshaled RPC byte slice in an RPC wrapper
 	iniov, err := rpcclnt.WrapMarshaledRPCRequest("CacheSrv.MultiGet", sessp.IoVec{b})
 	if err != nil {

@@ -12,10 +12,14 @@ RUN apt update && \
   valgrind \
   libc6-dbg \
   libabsl-dev \
-  curl
+  curl \
+  golang
 
-# Install wasmer
-RUN curl https://get.wasmer.io -sSfL | sh
+# Install wasmer go pkg
+RUN mkdir t && \
+  cd t && \
+  go mod init tmod && \
+  go get github.com/wasmerio/wasmer-go/wasmer@latest
 
 WORKDIR /home/sigmaos
 RUN mkdir bin && \
@@ -23,11 +27,6 @@ RUN mkdir bin && \
     mkdir bin/user && \
     mkdir bin/kernel && \
     mkdir bin/linux
-
-# Install wasmer in /usr/local
-RUN curl https://get.wasmer.io -sSfL | WASMER_DIR=/usr/local sh
-# Copy wasmer libs to /lib
-RUN cp /usr/local/lib/* /lib
 
 # ========== local user image ==========
 FROM base AS sigmauser-local

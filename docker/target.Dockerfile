@@ -12,7 +12,10 @@ RUN apt update && \
   valgrind \
   libc6-dbg \
   libabsl-dev \
-  wasmer
+  curl
+
+# Install wasmer
+RUN curl https://get.wasmer.io -sSfL | sh
 
 WORKDIR /home/sigmaos
 RUN mkdir bin && \
@@ -20,6 +23,8 @@ RUN mkdir bin && \
     mkdir bin/user && \
     mkdir bin/kernel && \
     mkdir bin/linux
+
+RUN curl https://get.wasmer.io -sSfL | WASMER_DIR=/lib sh
 
 # ========== local user image ==========
 FROM base AS sigmauser-local

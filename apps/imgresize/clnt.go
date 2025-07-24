@@ -29,7 +29,7 @@ func NewImgdClnt[Data any](sc *sigmaclnt.SigmaClnt, job string, id task.FtTaskSv
 	}, nil
 }
 
-func (clnt *ImgdClnt[Data]) SubmitTasks(tasks []*fttask_clnt.Task[Data]) ([]fttask_clnt.TaskId, error) {
+func (clnt *ImgdClnt[Data]) SubmitTasks(tasks []*fttask_clnt.Task[Data]) error {
 	return clnt.ftclnt.SubmitTasks(tasks)
 }
 

@@ -110,9 +110,8 @@ func TestServerPerf(t *testing.T) {
 				},
 			},
 		}
-		existing, err := ts.clnt.SubmitTasks(tasks)
+		err := ts.clnt.SubmitTasks(tasks)
 		assert.Nil(t, err)
-		assert.Empty(t, existing)
 	}
 	db.DPrintf(db.ALWAYS, "Submitting tasks took %v (%v per task)", time.Since(start), time.Since(start)/time.Duration(nTasks))
 
@@ -170,9 +169,8 @@ func TestServerBatchedPerf(t *testing.T) {
 	}
 
 	start := time.Now()
-	existing, err := ts.clnt.SubmitTasks(tasks)
+	err = ts.clnt.SubmitTasks(tasks)
 	assert.Nil(t, err)
-	assert.Empty(t, existing)
 	db.DPrintf(db.ALWAYS, "Submitting tasks took %v (%v per task)", time.Since(start), time.Since(start)/time.Duration(nTasks))
 
 	start = time.Now()
@@ -232,9 +230,8 @@ func TestServerMoveTasksByStatus(t *testing.T) {
 	}
 
 	db.DPrintf(db.TEST, "Submitting tasks %v", tasks)
-	existing, err := ts.clnt.SubmitTasks(tasks)
+	err = ts.clnt.SubmitTasks(tasks)
 	assert.Nil(t, err)
-	assert.Equal(t, 0, len(existing))
 	testServerContents(t, ts.clnt,
 		ids,
 		[]int32{},
@@ -302,9 +299,8 @@ func TestServerMoveTasksById(t *testing.T) {
 	}
 
 	db.DPrintf(db.TEST, "Submitting tasks %v", tasks)
-	existing, err := ts.clnt.SubmitTasks(tasks)
+	err = ts.clnt.SubmitTasks(tasks)
 	assert.Nil(t, err)
-	assert.Equal(t, 0, len(existing))
 	testServerContents(t, ts.clnt,
 		[]int32{0, 1, 2, 3, 4},
 		[]int32{},
@@ -365,9 +361,8 @@ func TestServerWait(t *testing.T) {
 
 	go func() {
 		time.Sleep(100 * time.Millisecond)
-		existing, err := ts.clnt.SubmitTasks(tasks)
+		err := ts.clnt.SubmitTasks(tasks)
 		assert.Nil(t, err)
-		assert.Equal(t, 0, len(existing))
 	}()
 
 	ids, stopped, err := ts.clnt.AcquireTasks(true)
@@ -393,13 +388,11 @@ func TestServerErrors(t *testing.T) {
 		})
 	}
 
-	existing, err := ts.clnt.SubmitTasks(tasks)
+	err = ts.clnt.SubmitTasks(tasks)
 	assert.Nil(t, err)
-	assert.Equal(t, 0, len(existing))
 
-	existing, err = ts.clnt.SubmitTasks(tasks[:1])
+	err = ts.clnt.SubmitTasks(tasks[:1])
 	assert.Nil(t, err)
-	assert.Equal(t, []int32{0}, existing)
 
 	err = ts.clnt.MoveTasks([]int32{5}, proto.TaskStatus_DONE)
 	assert.NotNil(t, err)
@@ -424,14 +417,13 @@ func TestServerStop(t *testing.T) {
 		return
 	}
 
-	existing, err := ts.clnt.SubmitTasks([]*fttask_clnt.Task[interface{}]{
+	err = ts.clnt.SubmitTasks([]*fttask_clnt.Task[interface{}]{
 		{
 			Id:   int32(0),
 			Data: struct{}{},
 		},
 	})
 	assert.Nil(t, err)
-	assert.Equal(t, 0, len(existing))
 
 	_, stopped, err := ts.clnt.AcquireTasks(true)
 	assert.Nil(t, err)
@@ -447,7 +439,6 @@ func TestServerStop(t *testing.T) {
 	_, stopped, err = ts.clnt.AcquireTasks(true)
 	assert.Nil(t, err)
 	assert.True(t, stopped)
-	assert.Equal(t, 0, len(existing))
 
 	ts.shutdown()
 }
@@ -464,7 +455,7 @@ func TestGetTasksStop(t *testing.T) {
 	chTasks := make(chan []fttask_clnt.TaskId)
 	go fttask_clnt.GetTasks[interface{}, interface{}](ts.clnt, chTasks)
 
-	_, err = ts.clnt.SubmitTasks([]*fttask_clnt.Task[interface{}]{
+	err = ts.clnt.SubmitTasks([]*fttask_clnt.Task[interface{}]{
 		{
 			Id:   int32(0),
 			Data: struct{}{},
@@ -505,7 +496,7 @@ func TestErrorTasks(t *testing.T) {
 	chTasks := make(chan []fttask_clnt.TaskId)
 	go fttask_clnt.GetTasks[interface{}, string](ts.clnt, chTasks)
 
-	_, err = ts.clnt.SubmitTasks([]*fttask_clnt.Task[interface{}]{
+	err = ts.clnt.SubmitTasks([]*fttask_clnt.Task[interface{}]{
 		{
 			Id:   int32(0),
 			Data: struct{}{},
@@ -583,9 +574,8 @@ func TestExactlyOnceSubmit(t *testing.T) {
 		})
 	}
 
-	existing, err := ts.clnt.SubmitTasks(tasks)
+	err = ts.clnt.SubmitTasks(tasks)
 	assert.Nil(t, err)
-	assert.Equal(t, 1, len(existing))
 
 	ts.shutdown()
 }
@@ -608,9 +598,8 @@ func TestExactlyOnceAcquire(t *testing.T) {
 		})
 	}
 
-	existing, err := ts.clnt.SubmitTasks(tasks)
+	err = ts.clnt.SubmitTasks(tasks)
 	assert.Nil(t, err)
-	assert.Equal(t, 0, len(existing))
 
 	ids, _, err := ts.clnt.AcquireTasks(false)
 	assert.Nil(t, err)
@@ -640,7 +629,7 @@ func runTestServerData(t *testing.T, em *crash.TeventMap) []*procgroupmgr.ProcSt
 		})
 	}
 
-	_, err = ts.clnt.SubmitTasks(tasks)
+	err = ts.clnt.SubmitTasks(tasks)
 	assert.Nil(t, err)
 
 	ids, stopped, err := ts.clnt.AcquireTasks(false)

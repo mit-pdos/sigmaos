@@ -181,7 +181,7 @@ func InitCoordFS(sc *sigmaclnt.SigmaClnt, jobRoot, jobname string, nreducetask i
 		t := TreduceTask{strconv.Itoa(r), nil}
 		rTasks[r] = &fttask_clnt.Task[TreduceTask]{Id: fttask_clnt.TaskId(r), Data: t}
 	}
-	_, err = rftclnt.SubmitTasks(rTasks)
+	err = rftclnt.SubmitTasks(rTasks)
 	return &Tasks{mftsrv, mftclnt, rftsrv, rftclnt}, err
 }
 
@@ -261,7 +261,7 @@ func PrepareJob(fsl *fslib.FsLib, ts *Tasks, jobRoot, jobName string, j *Job) (i
 	for i, b := range bins {
 		mtasks[i] = &fttask_clnt.Task[Bin]{Id: fttask_clnt.TaskId(i), Data: b}
 	}
-	_, err = ts.Mftclnt.SubmitTasks(mtasks)
+	err = ts.Mftclnt.SubmitTasks(mtasks)
 	return len(bins), err
 }
 

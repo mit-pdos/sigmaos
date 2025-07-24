@@ -199,9 +199,8 @@ func (ts *Tstate) doJob(paths []string) *spstats.TcounterSnapshot {
 	for i, pn := range paths {
 		tasks[i] = &fttask_clnt.Task[imgresize.Ttask]{Id: fttask_clnt.TaskId(i), Data: *imgresize.NewTask(pn)}
 	}
-	existing, err := ts.clnt.SubmitTasks(tasks)
+	err := ts.clnt.SubmitTasks(tasks)
 	assert.Nil(ts.mrts.T, err)
-	assert.Empty(ts.mrts.T, existing)
 
 	db.DPrintf(db.TEST, "Submitted")
 
@@ -319,9 +318,8 @@ func TestImgdRestart(t *testing.T) {
 
 	fn := filepath.Join(sp.S3, sp.LOCAL, "9ps3/img-save/8.jpg")
 
-	existing, err := ts.clnt.SubmitTasks([]*fttask_clnt.Task[imgresize.Ttask]{{Id: 0, Data: *imgresize.NewTask(fn)}})
+	err := ts.clnt.SubmitTasks([]*fttask_clnt.Task[imgresize.Ttask]{{Id: 0, Data: *imgresize.NewTask(fn)}})
 	assert.Nil(ts.mrts.T, err)
-	assert.Empty(ts.mrts.T, existing)
 
 	err = ts.clnt.SubmittedLastTask()
 	assert.Nil(t, err)

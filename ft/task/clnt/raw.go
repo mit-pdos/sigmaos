@@ -53,7 +53,7 @@ func (tc *RawFtTaskClnt) rpc(method string, arg protobuf.Message, res protobuf.M
 	return tc.rpcclntc.RPCRetryNotFound(pn, tc.serviceId.String(), method, arg, res)
 }
 
-func (tc *RawFtTaskClnt) SubmitTasks(tasks []*Task[[]byte]) ([]TaskId, error) {
+func (tc *RawFtTaskClnt) SubmitTasks(tasks []*Task[[]byte]) error {
 	var protoTasks []*proto.Task
 
 	for _, task := range tasks {
@@ -74,7 +74,7 @@ func (tc *RawFtTaskClnt) SubmitTasks(tasks []*Task[[]byte]) ([]TaskId, error) {
 		return err
 	})
 
-	return res.Existing, err
+	return err
 }
 
 // EditTasks assumes only one client invokes it for a specific id

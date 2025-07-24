@@ -30,12 +30,12 @@ func NewFtTaskClnt[Data any, Output any](fsl *fslib.FsLib, serverId task.FtTaskS
 	return tc
 }
 
-func (tc *ftTaskClnt[Data, Output]) SubmitTasks(tasks []*Task[Data]) ([]TaskId, error) {
+func (tc *ftTaskClnt[Data, Output]) SubmitTasks(tasks []*Task[Data]) error {
 	var raw_tasks []*Task[[]byte]
 	for _, task := range tasks {
 		encoded, err := Encode(task.Data)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		raw_tasks = append(raw_tasks, &Task[[]byte]{
 			Id:   task.Id,

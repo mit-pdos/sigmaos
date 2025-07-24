@@ -3,7 +3,7 @@
 version = 4
 
 [[package]]
-name = "cossim_boot"
+name = "cached_backup_boot"
 version = "0.1.0"
 dependencies = [
  "protobuf",

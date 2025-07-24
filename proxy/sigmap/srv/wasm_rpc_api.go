@@ -36,7 +36,7 @@ func (wp *WASMRPCProxy) Send(rpcIdx uint64, pn string, method string, b []byte, 
 	reqBytes := make([]byte, len(b))
 	copy(reqBytes, b)
 	// Wrap the marshaled RPC byte slice in an RPC wrapper
-	iniov, err := rpcclnt.WrapMarshaledRPCRequest("CacheSrv.MultiGet", sessp.IoVec{reqBytes})
+	iniov, err := rpcclnt.WrapMarshaledRPCRequest(method, sessp.IoVec{reqBytes})
 	if err != nil {
 		db.DPrintf(db.SPPROXYSRV_ERR, "[%v] Error wrap & marshal WASM-proxied RPC request: %v", wp.p.GetPid(), err)
 		return err

@@ -13,7 +13,7 @@ const NSHARD: u32 = 1009;
 mod sigmaos {
     mod sigmaos_host {
         #[link(wasm_import_module = "sigmaos_host")]
-        extern "C" {
+        unsafe extern "C" {
             pub fn send_rpc(
                 rpc_idx: u64,
                 pn_len: u64,
@@ -34,7 +34,7 @@ mod sigmaos {
     }
 }
 
-#[export_name = "allocate"]
+#[unsafe(export_name = "allocate")]
 pub fn allocate(size: usize) -> *mut c_char {
     let mut buffer = Vec::with_capacity(size);
     let pointer = buffer.as_mut_ptr();
@@ -42,76 +42,39 @@ pub fn allocate(size: usize) -> *mut c_char {
     pointer as *mut c_char
 }
 
-fn key2shard(key: &String) -> u32 {
-    // fnv32a hash inspired by https://cs.opensource.google/go/go/+/refs/tags/go1.24.3:src/hash/fnv/fnv.go;l=51
-    let mut s: u32 = 2166136261;
-    let prime32: u32 = 16777619;
-    for c in key.bytes() {
-        s ^= c as u32;
-        s *= prime32;
-    }
-    return s % NSHARD;
-}
-
 fn zero_buf(buf: &mut [u8], nbyte: usize) {
     buf[0..nbyte].fill(0);
 }
 
-fn key2server(key: &String, nserver: u32) -> u32 {
-    // fnv32a hash inspired by https://cs.opensource.google/go/go/+/refs/tags/go1.24.3:src/hash/fnv/fnv.go;l=51
-    let mut s: u32 = 2166136261;
-    let prime32: u32 = 16777619;
-    for c in key.bytes() {
-        s ^= c as u32;
-        s *= prime32;
-    }
-    return s % nserver;
-}
-
-#[export_name = "boot"]
+#[unsafe(export_name = "boot")]
 pub fn boot(b: *mut c_char, buf_sz: usize) {
     // Convert the shared buffer to a slice
     let buf: &mut [u8] = unsafe { slice::from_raw_parts_mut(b as *mut u8, buf_sz) };
-    // Get the input arguments to the boot script
-    let n_srv = u32::from_le_bytes(buf[0..4].try_into().unwrap());
-    let n_keys = u64::from_le_bytes(buf[4..12].try_into().unwrap());
-    // Now zero the slice
-    // Create a multi_get request for each server
-    let mut multi_get_rpcs: Vec<cache::CacheMultiGetReq> = Vec::new();
-    for srv_id in 0..n_srv {
-        multi_get_rpcs.push(cache::CacheMultiGetReq::new());
-        multi_get_rpcs[srv_id as usize].fence = MessageField::some(sigmap::TfenceProto::new());
-    }
-    for key in 0..n_keys {
-        let mut get_descriptor = cache::CacheGetDescriptor::new();
-        get_descriptor.key = key.to_string();
-        get_descriptor.shard = key2shard(&get_descriptor.key);
-        let srv_id = key2server(&get_descriptor.key, n_srv);
-        multi_get_rpcs[srv_id as usize].gets.push(get_descriptor);
+    let primary_srv_id = u32::from_le_bytes(buf[0..4].try_into().unwrap());
+    // Create a shard request for each shard
+    let mut shard_req_rpcs: Vec<cache::ShardReq> = Vec::new();
+    for srv_id in 0..NSHARD {
+        let mut shard_req = cache::ShardReq::new();
+        shard_req.shard = srv_id as u32;
+        shard_req.fence = MessageField::some(sigmap::TfenceProto::new());
+        shard_req_rpcs.push(shard_req);
     }
     // Initial buffer contents are the 4-byte n_srv and the 8-byte n_keys
-    let mut write_sz: usize = 12;
-    for rpc_idx in 0..multi_get_rpcs.len() {
+    let mut write_sz: usize = 0;
+    let pn = "name/cache/servers/".to_owned() + &primary_srv_id.to_string();
+    for rpc_idx in 0..shard_req_rpcs.len() {
         // First, fill any portion of the buffer previously written to with
         // zeros
         zero_buf(buf, write_sz);
-        let v = multi_get_rpcs[rpc_idx].write_to_bytes().unwrap();
-        let pn_base = "name/cache/servers/".to_owned();
+        let v = shard_req_rpcs[rpc_idx].write_to_bytes().unwrap();
         let mut idx = 0;
-        let mut pn_len = 0;
-        for c in pn_base.bytes() {
+        let pn_len = pn.len();
+        for c in pn.bytes() {
             buf[idx] = c;
             idx += 1;
-            pn_len += 1;
-        }
-        let srv_id = rpc_idx.to_string();
-        for c in srv_id.bytes() {
-            buf[idx] = c;
-            idx += 1;
-            pn_len += 1;
         }
         let mut method_len = 0;
-        for c in "CacheSrv.MultiGet".bytes() {
+        for c in "CacheSrv.DumpShard".bytes() {
             buf[idx] = c;
             idx += 1;
             method_len += 1;
@@ -128,7 +91,7 @@ pub fn boot(b: *mut c_char, buf_sz: usize) {
             pn_len as u64,
             method_len as u64,
             v.len() as u64,
-            2,
+            1,
         );
     }
 }

@@ -3,11 +3,15 @@
 package mgr
 
 import (
+	"bytes"
+	"encoding/binary"
 	"strconv"
 	"sync"
 
 	"sigmaos/apps/cache/cachegrp"
+	db "sigmaos/debug"
 	"sigmaos/proc"
+	"sigmaos/proxy/wasm/rpc/wasmer"
 	"sigmaos/serr"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
@@ -19,6 +23,7 @@ type CachedSvc struct {
 	bin           string
 	servers       []sp.Tpid
 	backupServers []sp.Tpid
+	bootScript    []byte
 	nserver       int
 	mcpu          proc.Tmcpu
 	pn            string
@@ -54,28 +59,14 @@ func (cs *CachedSvc) addBackupServer(srvID int, delegatedInit bool) error {
 	// Have backup server use spproxy
 	p.GetProcEnv().UseSPProxy = true
 	p.GetProcEnv().UseSPProxyProcClnt = true
-
-	//	totalInIOVLen := 0
-	//	dumps := make([]*cacheproto.ShardReq, cache.NSHARD)
-	//	for i := range dumps {
-	//		dumps[i] = &cacheproto.ShardReq{
-	//			Shard: uint32(i),
-	//			Fence: sp.NullFence().FenceProto(),
-	//		}
-	//		cachesrvPN := cs.Server(strconv.Itoa(srvID))
-	//		iniov, err := rpcclnt.WrapRPCRequest("CacheSrv.DumpShard", dumps[i])
-	//		if err != nil {
-	//			db.DPrintf(db.ALWAYS, "Error wrap & marshal dumpReq: %v", err)
-	//			return err
-	//		}
-	//		p.AddInitializationRPC(cachesrvPN, iniov, 2)
-	//		for _, b := range iniov {
-	//			totalInIOVLen += len(b)
-	//		}
-	//	}
-	//	db.DPrintf(db.TEST, "Delegated RPC(%v) total len: %v", len(dumps), totalInIOVLen)
-	//	// Ask for spproxy to run delegated initialization RPCs on behalf of the proc
-	//	p.SetDelegateInit(delegatedInit)
+	// Write the input arguments to the boot script
+	inputBuf := bytes.NewBuffer(make([]byte, 0, 4))
+	if err := binary.Write(inputBuf, binary.LittleEndian, uint32(srvID)); err != nil {
+		return err
+	}
+	bootScriptInput := inputBuf.Bytes()
+	p.SetBootScript(cs.bootScript, bootScriptInput)
+	p.SetRunBootScript(delegatedInit)
 	err := cs.Spawn(p)
 	if err != nil {
 		return err
@@ -100,6 +91,11 @@ func NewCachedSvc(sc *sigmaclnt.SigmaClnt, nsrv int, mcpu proc.Tmcpu, job, bin, 
 			return nil, err
 		}
 	}
+	bootScript, err := wasmer.ReadBootScript("cached_backup_boot")
+	if err != nil {
+		db.DPrintf(db.ERROR, "Err read WASM boot script: %v", err)
+		return nil, err
+	}
 	cs := &CachedSvc{
 		SigmaClnt:     sc,
 		bin:           bin,
@@ -110,6 +106,7 @@ func NewCachedSvc(sc *sigmaclnt.SigmaClnt, nsrv int, mcpu proc.Tmcpu, job, bin, 
 		pn:            pn,
 		gc:            gc,
 		job:           job,
+		bootScript:    bootScript,
 	}
 	for i := 0; i < cs.nserver; i++ {
 		if err := cs.addServer(i); err != nil {

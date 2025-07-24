@@ -62,18 +62,20 @@ func (wrt *WasmerRuntime) RunModule(pid sp.Tpid, compiledModule []byte, inputByt
 	}
 	db.DPrintf(db.WASMRT, "Deserialized compiled WASM module")
 	var buf []byte
+	var instance *wasmer.Instance
+	var wasmBufPtr int32
 	// Register SigmaOS host API calls
 	importObject := wasmer.NewImportObject()
 	importObject.Register(
 		"sigmaos_host",
 		map[string]wasmer.IntoExtern{
-			"send_rpc": wrt.newSendRPCFn(store, &buf),
-			"recv_rpc": wrt.newRecvRPCFn(store, &buf),
+			"send_rpc": wrt.newSendRPCFn(store, &instance, &wasmBufPtr, pid),
+			"recv_rpc": wrt.newRecvRPCFn(store, &instance, &wasmBufPtr, pid),
 		},
 	)
 	start := time.Now()
 	// Instantiate the module
-	instance, err := wasmer.NewInstance(module, importObject)
+	instance, err = wasmer.NewInstance(module, importObject)
 	if err != nil {
 		db.DPrintf(db.ERROR, "[%v] Err instantiate WASM module: %v", pid, err)
 		db.DPrintf(db.WASMRT_ERR, "[%v] Err instantiate WASM module: %v", pid, err)
@@ -88,12 +90,13 @@ func (wrt *WasmerRuntime) RunModule(pid sp.Tpid, compiledModule []byte, inputByt
 		db.DPrintf(db.WASMRT_ERR, "[%v] Err get WASM module allocate fn: %v", pid, err)
 		return err
 	}
-	wasmBufPtr, err := allocFn(SHARED_BUF_SZ)
+	memPtr, err := allocFn(SHARED_BUF_SZ)
 	if err != nil {
 		db.DPrintf(db.ERROR, "[%v] Err allocate shared buffer with WASM module: %v", pid, err)
 		db.DPrintf(db.WASMRT_ERR, "[%v] Err allocate shared buffer with WASM module: %v", pid, err)
 		return err
 	}
+	wasmBufPtr = memPtr.(int32)
 	db.DPrintf(db.WASMRT, "[%v] WASM-allocated buffer address: %v", pid, wasmBufPtr)
 	mem, err := instance.Exports.GetMemory("memory")
 	if err != nil {
@@ -102,7 +105,7 @@ func (wrt *WasmerRuntime) RunModule(pid sp.Tpid, compiledModule []byte, inputByt
 		return err
 	}
 	// Create a Go buffer from the allocated WASM shared buffer
-	buf = mem.Data()[wasmBufPtr.(int32) : wasmBufPtr.(int32)+SHARED_BUF_SZ]
+	buf = mem.Data()[wasmBufPtr : wasmBufPtr+SHARED_BUF_SZ]
 	// Copy the input bytes to the buffer
 	copy(buf, inputBytes)
 	// Get a function pointer to the "boot" function exposed by the module
@@ -125,7 +128,7 @@ func (wrt *WasmerRuntime) RunModule(pid sp.Tpid, compiledModule []byte, inputByt
 	return nil
 }
 
-func (wrt *WasmerRuntime) newSendRPCFn(store *wasmer.Store, buf *[]byte) *wasmer.Function {
+func (wrt *WasmerRuntime) newSendRPCFn(store *wasmer.Store, instance **wasmer.Instance, wasmBufPtr *int32, pid sp.Tpid) *wasmer.Function {
 	return wasmer.NewFunction(
 		store,
 		wasmer.NewFunctionType(wasmer.NewValueTypes(wasmer.I64, wasmer.I64, wasmer.I64, wasmer.I64, wasmer.I64), wasmer.NewValueTypes()),
@@ -137,16 +140,26 @@ func (wrt *WasmerRuntime) newSendRPCFn(store *wasmer.Store, buf *[]byte) *wasmer
 			rpcLen := args[3].I64()
 			nOutIOV := uint64(args[4].I64())
 			idx := int64(0)
+			mem, err := (*instance).Exports.GetMemory("memory")
+			if err != nil {
+				db.DPrintf(db.ERROR, "[%v] Err get WASM instance memory: %v", pid, err)
+				db.DPrintf(db.WASMRT_ERR, "[%v] Err get WASM instance memory: %v", pid, err)
+				return []wasmer.Value{}, err
+			}
+			// Create a Go buffer from the allocated WASM shared buffer
+			buf := (*mem).Data()[*wasmBufPtr : *wasmBufPtr+SHARED_BUF_SZ]
+			db.DPrintf(db.ALWAYS, "pnLen:%v methodLen:%v rpcLen:%v buf:%p bufStart:%p", pnLen, methodLen, rpcLen, buf, &buf[0])
 			// Get the RPC destination pathname from the shared buffer
-			pn := string((*buf)[idx : idx+pnLen])
+			pn := string(buf[idx : idx+pnLen])
 			idx += pnLen
 			// Get the method name from the shared buffer
-			method := string((*buf)[idx : idx+methodLen])
+			method := string(buf[idx : idx+methodLen])
 			idx += methodLen
 			// Get the marshaled RPC from the shared buffer
-			rpcBytes := (*buf)[idx : idx+rpcLen]
-			db.DPrintf(db.WASMRT, "SendRPC(%v) pn:%v nbyte:%v", rpcIdx, pn, len(rpcBytes))
-			err := wrt.rpcAPI.Send(rpcIdx, pn, method, rpcBytes, nOutIOV)
+			rpcBytes := make([]byte, rpcLen)
+			copy(rpcBytes, buf[idx:idx+rpcLen])
+			db.DPrintf(db.WASMRT, "SendRPC(%v) pn:%v method:%v nbyte:%v", rpcIdx, pn, method, len(rpcBytes))
+			err = wrt.rpcAPI.Send(rpcIdx, pn, method, rpcBytes, nOutIOV)
 			if err != nil {
 				db.DPrintf(db.WASMRT_ERR, "Err SendRPC(%v): %v", rpcIdx, err)
 				return []wasmer.Value{}, err
@@ -157,7 +170,7 @@ func (wrt *WasmerRuntime) newSendRPCFn(store *wasmer.Store, buf *[]byte) *wasmer
 	)
 }
 
-func (wrt *WasmerRuntime) newRecvRPCFn(store *wasmer.Store, buf *[]byte) *wasmer.Function {
+func (wrt *WasmerRuntime) newRecvRPCFn(store *wasmer.Store, instance **wasmer.Instance, wasmBufPtr *int32, pid sp.Tpid) *wasmer.Function {
 	return wasmer.NewFunction(
 		store,
 		wasmer.NewFunctionType(wasmer.NewValueTypes(wasmer.I64), wasmer.NewValueTypes(wasmer.I64)),
@@ -171,8 +184,16 @@ func (wrt *WasmerRuntime) newRecvRPCFn(store *wasmer.Store, buf *[]byte) *wasmer
 				db.DPrintf(db.WASMRT_ERR, "Err RecvRPC(%v): %v", rpcIdx, err)
 				return []wasmer.Value{}, err
 			}
+			mem, err := (*instance).Exports.GetMemory("memory")
+			if err != nil {
+				db.DPrintf(db.ERROR, "[%v] Err get WASM instance memory: %v", pid, err)
+				db.DPrintf(db.WASMRT_ERR, "[%v] Err get WASM instance memory: %v", pid, err)
+				return []wasmer.Value{}, err
+			}
+			// Create a Go buffer from the allocated WASM shared buffer
+			buf := (*mem).Data()[*wasmBufPtr : *wasmBufPtr+SHARED_BUF_SZ]
 			// Copy the reply to the shared buffer
-			copy(*buf, replyBytes)
+			copy(buf, replyBytes)
 			// Report the RPC reply's length back to the WASM module
 			replyLen := len(replyBytes)
 			db.DPrintf(db.WASMRT, "RecvRPC(%v) reply len: %v", rpcIdx, replyLen)

@@ -149,6 +149,7 @@ func NewCosSimJob(sc *sigmaclnt.SigmaClnt, job string, nvec int, vecDim int, eag
 	bootScript, err := wasmer.ReadBootScript("cossim_boot")
 	if err != nil {
 		db.DPrintf(db.ERROR, "Err read WASM boot script: %v", err)
+		return nil, err
 	}
 	// Write the input arguments to the boot script
 	inputBuf := bytes.NewBuffer(make([]byte, 0, 12))

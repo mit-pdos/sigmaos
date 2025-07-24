@@ -1,12 +1,11 @@
+use proto::cache;
+use proto::rpc;
+use proto::sigmap;
+use proto::tracing;
 use protobuf::{Message, MessageField};
 use std::mem;
 use std::os::raw::c_char;
 use std::slice;
-
-mod cache;
-mod rpc;
-mod sigmap;
-mod tracing;
 
 const NSHARD: u32 = 1009;
 

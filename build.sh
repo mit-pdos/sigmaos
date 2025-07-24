@@ -120,8 +120,10 @@ KERNELBIN=${BIN}/kernel
 USRBIN=${BIN}/user
 mkdir -p $KERNELBIN
 mkdir -p $USRBIN
-# Clear the procd bin directory
-rm -rf $PROCD_BIN
+if [ "${NO_GO}" != "true" ]; then
+  # Clear the procd bin directory if rebuilding Go procs
+  rm -rf $PROCD_BIN
+fi
 mkdir -p $PROCD_BIN
 
 # build and start db container

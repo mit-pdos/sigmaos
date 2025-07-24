@@ -6,6 +6,7 @@ edition = "2024"
 [dependencies]
 protobuf = "3.7.2"
 proto = { path = "../../proto" }
+sigmaos = { path = "../../sigmaos" }
 
 [lib]
 crate-type = ["cdylib"]

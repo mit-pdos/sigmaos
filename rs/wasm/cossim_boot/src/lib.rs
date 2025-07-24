@@ -1,37 +1,12 @@
 use proto::cache;
-use proto::rpc;
 use proto::sigmap;
-use proto::tracing;
 use protobuf::{Message, MessageField};
+use sigmaos;
 use std::mem;
 use std::os::raw::c_char;
 use std::slice;
 
 const NSHARD: u32 = 1009;
-
-mod sigmaos {
-    mod sigmaos_host {
-        #[link(wasm_import_module = "sigmaos_host")]
-        extern "C" {
-            pub fn send_rpc(
-                rpc_idx: u64,
-                pn_len: u64,
-                method_len: u64,
-                rpc_len: u64,
-                n_outiov: u64,
-            );
-            pub fn recv_rpc(rpc_idx: u64) -> u64;
-        }
-    }
-    pub fn send_rpc(rpc_idx: u64, pn_len: u64, method_len: u64, rpc_len: u64, n_outiov: u64) {
-        unsafe {
-            sigmaos_host::send_rpc(rpc_idx, pn_len, method_len, rpc_len, n_outiov);
-        }
-    }
-    pub fn recv_rpc(rpc_idx: u64) -> u64 {
-        return unsafe { sigmaos_host::recv_rpc(rpc_idx) };
-    }
-}
 
 #[export_name = "allocate"]
 pub fn allocate(size: usize) -> *mut c_char {

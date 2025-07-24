@@ -497,6 +497,7 @@ class ProcEnvProto final :
     kVersionFieldNumber = 25,
     kFailFieldNumber = 26,
     kValgrindFieldNumber = 28,
+    kDebugProcsFieldNumber = 31,
     kPrincipalFieldNumber = 4,
     kSpawnTimePBFieldNumber = 17,
     kHowIntFieldNumber = 16,
@@ -843,6 +844,20 @@ class ProcEnvProto final :
   std::string* _internal_mutable_valgrind();
   public:
 
+  // string debugProcs = 31;
+  void clear_debugprocs();
+  const std::string& debugprocs() const;
+  template <typename ArgT0 = const std::string&, typename... ArgT>
+  void set_debugprocs(ArgT0&& arg0, ArgT... args);
+  std::string* mutable_debugprocs();
+  PROTOBUF_NODISCARD std::string* release_debugprocs();
+  void set_allocated_debugprocs(std::string* debugprocs);
+  private:
+  const std::string& _internal_debugprocs() const;
+  inline PROTOBUF_ALWAYS_INLINE void _internal_set_debugprocs(const std::string& value);
+  std::string* _internal_mutable_debugprocs();
+  public:
+
   // .Tprincipal principal = 4;
   bool has_principal() const;
   private:
@@ -975,6 +990,7 @@ class ProcEnvProto final :
     ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr version_;
     ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr fail_;
     ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr valgrind_;
+    ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr debugprocs_;
     ::Tprincipal* principal_;
     ::PROTOBUF_NAMESPACE_ID::Timestamp* spawntimepb_;
     int32_t howint_;
@@ -2817,6 +2833,56 @@ inline void ProcEnvProto::_internal_set_usespproxyprocclnt(bool value) {
 inline void ProcEnvProto::set_usespproxyprocclnt(bool value) {
   _internal_set_usespproxyprocclnt(value);
   // @@protoc_insertion_point(field_set:ProcEnvProto.useSPProxyProcClnt)
+}
+
+// string debugProcs = 31;
+inline void ProcEnvProto::clear_debugprocs() {
+  _impl_.debugprocs_.ClearToEmpty();
+}
+inline const std::string& ProcEnvProto::debugprocs() const {
+  // @@protoc_insertion_point(field_get:ProcEnvProto.debugProcs)
+  return _internal_debugprocs();
+}
+template <typename ArgT0, typename... ArgT>
+inline PROTOBUF_ALWAYS_INLINE
+void ProcEnvProto::set_debugprocs(ArgT0&& arg0, ArgT... args) {
+ 
+ _impl_.debugprocs_.Set(static_cast<ArgT0 &&>(arg0), args..., GetArenaForAllocation());
+  // @@protoc_insertion_point(field_set:ProcEnvProto.debugProcs)
+}
+inline std::string* ProcEnvProto::mutable_debugprocs() {
+  std::string* _s = _internal_mutable_debugprocs();
+  // @@protoc_insertion_point(field_mutable:ProcEnvProto.debugProcs)
+  return _s;
+}
+inline const std::string& ProcEnvProto::_internal_debugprocs() const {
+  return _impl_.debugprocs_.Get();
+}
+inline void ProcEnvProto::_internal_set_debugprocs(const std::string& value) {
+  
+  _impl_.debugprocs_.Set(value, GetArenaForAllocation());
+}
+inline std::string* ProcEnvProto::_internal_mutable_debugprocs() {
+  
+  return _impl_.debugprocs_.Mutable(GetArenaForAllocation());
+}
+inline std::string* ProcEnvProto::release_debugprocs() {
+  // @@protoc_insertion_point(field_release:ProcEnvProto.debugProcs)
+  return _impl_.debugprocs_.Release();
+}
+inline void ProcEnvProto::set_allocated_debugprocs(std::string* debugprocs) {
+  if (debugprocs != nullptr) {
+    
+  } else {
+    
+  }
+  _impl_.debugprocs_.SetAllocated(debugprocs, GetArenaForAllocation());
+#ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  if (_impl_.debugprocs_.IsDefault()) {
+    _impl_.debugprocs_.Set("", GetArenaForAllocation());
+  }
+#endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  // @@protoc_insertion_point(field_set_allocated:ProcEnvProto.debugProcs)
 }
 
 // -------------------------------------------------------------------

@@ -11,7 +11,7 @@ import (
 )
 
 func (spp *SPProxySrv) runDelegatedRPC(sc *sigmaclnt.SigmaClnt, p *proc.Proc, rpcIdx uint64, pn string, iniov sessp.IoVec, outIOVSize uint64) {
-	db.DPrintf(db.SPPROXYSRV, "[%v] Create clnt for delegated RPC(%v): %v", p.GetPid(), rpcIdx, pn)
+	db.DPrintf(db.SPPROXYSRV, "[%v] Get RPCChannel for delegated RPC(%v): %v", p.GetPid(), rpcIdx, pn)
 	rpcchan, ok := spp.psm.GetRPCChannel(p.GetPid(), pn)
 	// If we don't have a cached channel for this RPC target, create a new channel for it (and cache it)
 	if !ok {

@@ -588,8 +588,21 @@ func (s *TaskSrv) GetTasksByStatus(ctx fs.CtxI, req proto.GetTasksByStatusReq, r
 		return err
 	}
 
-	rep.Ids = s.get(req.Status)
+	ids := s.get(req.Status)
 
+	aid := req.AcquireId.Tfence()
+	if aid.HasFence() {
+		ids0 := make([]int32, 0)
+		for _, id := range ids {
+			aid1 := s.acquirer[id]
+			if aid1.PathName == aid.PathName {
+				ids0 = append(ids0, id)
+			}
+		}
+		ids = ids0
+	}
+
+	rep.Ids = ids
 	if rep.Ids == nil {
 		return serr.NewErr(serr.TErrInval, req.Status)
 	}

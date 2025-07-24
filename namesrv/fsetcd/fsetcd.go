@@ -17,7 +17,7 @@ import (
 	"sigmaos/path"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
-	"sigmaos/sigmasrv/stats"
+	"sigmaos/util/spstats"
 )
 
 const (
@@ -136,7 +136,7 @@ func (fs *FsEtcd) Fence(key string, rev int64) {
 func (fs *FsEtcd) Detach(cid sp.TclntId) {
 }
 
-func (fs *FsEtcd) PstatUpdate(pn path.Tpathname, c stats.Tcounter) {
+func (fs *FsEtcd) PstatUpdate(pn path.Tpathname, c spstats.Tcounter) {
 	if fs.pstats == nil {
 		return
 	}
@@ -184,7 +184,7 @@ func GetRootNamed(dial dialproxy.DialFn, etcdMnts map[string]*sp.TendpointProto,
 		return &sp.Tendpoint{}, sr
 	}
 	ep, err := sp.NewEndpointFromBytes(nf.Data)
-	if sr != nil {
+	if err != nil {
 		db.DPrintf(db.FSETCD, "NewEndpoint %v err %v\n", BOOT, err)
 		return &sp.Tendpoint{}, serr.NewErrError(err)
 	}

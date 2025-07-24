@@ -25,6 +25,7 @@ import (
 	"sigmaos/sigmaclnt"
 	"sigmaos/sigmaclnt/procclnt"
 	sp "sigmaos/sigmap"
+	"sigmaos/sigmasrv/memfssrv/memfs/inode"
 	"sigmaos/sigmasrv/memfssrv/sigmapsrv/overlaydir"
 	"sigmaos/sigmasrv/stats"
 	spprotosrv "sigmaos/spproto/srv"
@@ -37,45 +38,60 @@ type SigmaPSrv struct {
 	pe          *proc.ProcEnv
 	srvep       *sp.Tendpoint
 	dirunder    fs.Dir
-	dirover     *overlay.DirOverlay
+	dirover     *overlaydir.DirOverlay
 	fencefs     fs.Dir
 	stats       *stats.StatInode
 	attachAuthF spprotosrv.AttachAuthF
 }
 
-func NewSigmaPSrv(pe *proc.ProcEnv, npc *dialproxyclnt.DialProxyClnt, root fs.Dir, addr *sp.Taddr, fencefs fs.Dir, aaf spprotosrv.AttachAuthF) *SigmaPSrv {
+type SigmaPSrvOpt func(*SigmaPSrv)
+
+func NewSigmaPSrvOpts(pe *proc.ProcEnv, root fs.Dir, fencefs fs.Dir, aaf spprotosrv.AttachAuthF, opts ...SigmaPSrvOpt) *SigmaPSrv {
 	psrv := &SigmaPSrv{
 		pe:          pe,
 		dirunder:    root,
-		dirover:     overlay.MkDirOverlay(root),
+		dirover:     overlaydir.MkDirOverlay(root),
 		fencefs:     fencefs,
 		attachAuthF: aaf,
 	}
-	psrv.stats = stats.NewStatsDev()
+	psrv.applyOpts(opts)
+	psrv.stats = stats.NewStatsDev(inode.NewInodeAlloc(sp.DEV_STATFS))
 	psrv.ProtSrvState = spprotosrv.NewProtSrvState(psrv.stats)
-	psrv.VersionTable().Insert(psrv.dirover.Path())
+	psrv.VersionTable().Insert(fs.Uid(psrv.dirover))
 	psrv.dirover.Mount(sp.STATSD, psrv.stats)
-	psrv.SessSrv = sesssrv.NewSessSrv(pe, npc, addr, psrv.stats, psrv)
-	psrv.srvep = psrv.GetEndpoint()
 	return psrv
 }
 
-func NewSigmaPSrvPost(root fs.Dir, pn string, addr *sp.Taddr, sc *sigmaclnt.SigmaClnt, fencefs fs.Dir, aaf spprotosrv.AttachAuthF) (*SigmaPSrv, string, error) {
+func (srv *SigmaPSrv) applyOpts(opts []SigmaPSrvOpt) {
+	for _, opt := range opts {
+		opt(srv)
+	}
+}
+
+func NewSigmaPSrv(pe *proc.ProcEnv, npc *dialproxyclnt.DialProxyClnt, root fs.Dir, addr *sp.Taddr, fencefs fs.Dir, aaf spprotosrv.AttachAuthF, opts []sesssrv.SessSrvOpt) *SigmaPSrv {
 	start := time.Now()
-	psrv := NewSigmaPSrv(sc.ProcEnv(), sc.GetDialProxyClnt(), root, addr, fencefs, aaf)
-	perf.LogSpawnLatency("NewSigmaPSrv", sc.ProcEnv().GetPID(), sc.ProcEnv().GetSpawnTime(), start)
-	start = time.Now()
+	psrv := NewSigmaPSrvOpts(pe, root, fencefs, aaf)
+
+	psrv.SessSrv = sesssrv.NewSessSrvOpts(pe, npc, addr, psrv.stats, psrv, opts)
+	psrv.srvep = psrv.GetEndpoint()
+	perf.LogSpawnLatency("NewSigmaPsrv", pe.GetPID(), pe.GetSpawnTime(), start)
+	return psrv
+}
+
+func (psrv *SigmaPSrv) PostMount(sc *sigmaclnt.SigmaClnt, pn string) (string, error) {
+	start := time.Now()
 	defer func() {
-		perf.LogSpawnLatency("NewSigmaPSrvPost", sc.ProcEnv().GetPID(), sc.ProcEnv().GetSpawnTime(), start)
+		perf.LogSpawnLatency("PostMount", sc.ProcEnv().GetPID(), sc.ProcEnv().GetSpawnTime(), start)
 	}()
+	ep := psrv.GetEndpoint()
 	if len(pn) > 0 {
-		if mpn, err := psrv.postMount(sc, pn); err != nil {
-			return nil, "", err
+		if mpn, err := psrv.postMount(sc, pn, ep); err != nil {
+			return "", err
 		} else {
 			pn = mpn
 		}
 	}
-	return psrv, pn, nil
+	return pn, nil
 }
 
 func (psrv *SigmaPSrv) NewSession(p *sp.Tprincipal, sessid sessp.Tsession) sps.ProtSrv {
@@ -105,9 +121,8 @@ func (psrv *SigmaPSrv) GetSigmaPSrvEndpoint() *sp.Tendpoint {
 	return psrv.srvep
 }
 
-func (psrv *SigmaPSrv) postMount(sc *sigmaclnt.SigmaClnt, pn string) (string, error) {
+func (psrv *SigmaPSrv) postMount(sc *sigmaclnt.SigmaClnt, pn string, ep *sp.Tendpoint) (string, error) {
 	start := time.Now()
-	ep := psrv.GetEndpoint()
 	psrv.srvep = ep
 	db.DPrintf(db.BOOT, "Advertise %s at %v\n", pn, ep)
 	if path.EndSlash(pn) {

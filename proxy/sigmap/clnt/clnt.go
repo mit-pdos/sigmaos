@@ -4,6 +4,7 @@
 package clnt
 
 import (
+	sos "sigmaos/api/sigmaos"
 	db "sigmaos/debug"
 	dialproxyclnt "sigmaos/dialproxy/clnt"
 	"sigmaos/proc"
@@ -13,6 +14,7 @@ import (
 	"sigmaos/rpc/clnt/channel"
 	rpcchan "sigmaos/rpc/clnt/channel/rpcchannel"
 	rpcnc "sigmaos/rpc/clnt/netconn"
+	"sigmaos/serr"
 	sessp "sigmaos/session/proto"
 	sp "sigmaos/sigmap"
 	"sigmaos/util/io/demux"
@@ -51,6 +53,10 @@ func NewSPProxyClnt(pe *proc.ProcEnv, npc *dialproxyclnt.DialProxyClnt) (*SPProx
 
 func (scc *SPProxyClnt) GetRPCChannel() channel.RPCChannel {
 	return scc.rpcc.Channel()
+}
+
+func (scc *SPProxyClnt) Stats() (*sos.ClntStats, error) {
+	return nil, serr.NewErr(serr.TErrNotSupported, "Stats")
 }
 
 func (scc *SPProxyClnt) StatsSrv() (*rpc.RPCStatsSnapshot, error) {

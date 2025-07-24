@@ -24,6 +24,7 @@ import (
 	"sigmaos/util/coordination/semaphore"
 	"sigmaos/util/crash"
 	"sigmaos/util/perf"
+	"sigmaos/util/retry"
 )
 
 type ProcClnt struct {
@@ -185,7 +186,7 @@ func (clnt *ProcClnt) enqueueViaLCSched(p *proc.Proc) (string, error) {
 func (clnt *ProcClnt) spawnRetry(kernelId string, p *proc.Proc) (*proc.ProcSeqno, error) {
 	start := time.Now()
 	var pseqno *proc.ProcSeqno
-	for i := 0; i < sp.Conf.Path.MAX_RESOLVE_RETRY; i++ {
+	err, ok := retry.Retry(func() error {
 		var err error
 		if p.IsPrivileged() {
 			// Privileged procs are force-run on the msched specified by kernelID in
@@ -213,22 +214,29 @@ func (clnt *ProcClnt) spawnRetry(kernelId string, p *proc.Proc) (*proc.ProcSeqno
 				pseqno = proc.NewProcSeqno(sp.NOT_SET, spawnedMSchedID, 0, 0)
 			}
 		}
+
 		// If spawn attempt resulted in an error, check if it was due to the
 		// server becoming unreachable.
 		if err != nil {
 			// If unreachable, retry.
 			if serr.IsErrorSession(err) {
 				db.DPrintf(db.PROCCLNT_ERR, "Err spawnRetry unreachable %v", err)
-				continue
+			} else {
+				db.DPrintf(db.PROCCLNT_ERR, "spawnRetry failed err %v proc %v", err, p)
 			}
-			db.DPrintf(db.PROCCLNT_ERR, "spawnRetry failed err %v proc %v", err, p)
-			return nil, err
+			return err
 		}
 		perf.LogSpawnLatency("spawnRetry", p.GetPid(), p.GetSpawnTime(), start)
-		return pseqno, nil
+		return nil
+	}, serr.IsErrorSession, 0)
+	if !ok {
+		db.DPrintf(db.PROCCLNT_ERR, "spawnRetry failed at kernelId %v err %v proc %v", kernelId, p, err)
+		return nil, serr.NewErr(serr.TErrUnreachable, kernelId)
 	}
-	db.DPrintf(db.PROCCLNT_ERR, "spawnRetry failed, too many retries (%v): %v", sp.Conf.Path.MAX_RESOLVE_RETRY, p)
-	return nil, serr.NewErr(serr.TErrUnreachable, kernelId)
+	if err != nil {
+		return nil, err
+	}
+	return pseqno, err
 }
 
 // ========== WAIT ==========

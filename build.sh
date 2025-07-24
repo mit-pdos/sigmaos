@@ -14,6 +14,7 @@ NO_CPP="false"
 NO_RS="false"
 NO_GO="false"
 NO_DOCKER="false"
+NORACE="--norace"
 while [[ "$#" -gt 0 ]]; do
   case "$1" in
   --parallel)
@@ -53,6 +54,11 @@ while [[ "$#" -gt 0 ]]; do
   --version)
     shift
     VERSION="$1"
+    shift
+    ;;
+  --race)
+    shift
+    NORACE=""
     shift
     ;;
   --userbin)
@@ -208,7 +214,8 @@ if [ -z "$cppbuildercid" ]; then
   echo "========== Done starting CPP builder ========== "
 fi
 
-BUILD_ARGS="--norace \
+BUILD_ARGS="\
+  $NORACE \
   --gopath /go-custom/bin/go \
   --target $TARGET \
   $PARALLEL"

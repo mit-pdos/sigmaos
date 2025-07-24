@@ -16,7 +16,6 @@ func Walk(plt *lockmap.PathLockTable, ctx fs.CtxI, o fs.FsObj, dlk *lockmap.Path
 	nos, e, rest, err := d.LookupPath(ctx, target)
 	if err != nil { // an error or perhaps a ~
 		db.DPrintf(db.NAMEI, "%v: dir %v: file not found %v", ctx.Principal(), d, target[0])
-		// releaseLk(plt, ctx, plk, ltype)
 		return os, d, dlk, target, err
 	}
 	os = append(os, nos...)
@@ -27,16 +26,15 @@ func Walk(plt *lockmap.PathLockTable, ctx fs.CtxI, o fs.FsObj, dlk *lockmap.Path
 		if target.Base() == "." {
 			flk = dlk
 		} else {
-			flk = plt.Acquire(ctx, lo.Path(), ltype)
+			flk = plt.Acquire(ctx, fs.Uid(lo), ltype)
 			plt.Release(ctx, dlk, ltype)
 		}
 		return os, e, flk, nil, nil
 	}
-	// releaseLk(plt, ctx, plk, ltype)
 	switch e := e.(type) {
 	case fs.Dir:
 		db.DPrintf(db.NAMEI, "%v: namei e %v os(%d) %v target '%v'", ctx.Principal(), e, len(os), os, target[1:])
-		dlk = plt.HandOverLock(ctx, dlk, lo.Path(), ltype)
+		dlk = plt.HandOverLock(ctx, dlk, fs.Uid(lo), ltype)
 		return Walk(plt, ctx, e, dlk, target[1:], os, ltype)
 	default: // an error or perhaps a symlink
 		db.DPrintf(db.NAMEI, "%v: error not dir namei %T %v %v %v %v", ctx.Principal(), e, target, d, os, target[1:])

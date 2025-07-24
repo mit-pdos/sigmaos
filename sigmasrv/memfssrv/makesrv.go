@@ -7,28 +7,30 @@ import (
 	"sigmaos/ctx"
 	db "sigmaos/debug"
 	"sigmaos/proc"
+	sesssrv "sigmaos/session/srv"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv/memfssrv/memfs"
 	"sigmaos/sigmasrv/memfssrv/memfs/dir"
 	"sigmaos/sigmasrv/memfssrv/memfs/fenceddir"
+	"sigmaos/sigmasrv/memfssrv/memfs/inode"
 	"sigmaos/sigmasrv/memfssrv/sigmapsrv"
 	spprotosrv "sigmaos/spproto/srv"
 	"sigmaos/util/perf"
 )
 
 // Make an MemFs and advertise it at pn
-func NewMemFs(pn string, pe *proc.ProcEnv, aaf spprotosrv.AttachAuthF) (*MemFs, error) {
-	return NewMemFsAddr(pn, sp.NewTaddr(sp.NO_IP, sp.NO_PORT), pe, aaf)
+func NewMemFs(pn string, pe *proc.ProcEnv, aaf spprotosrv.AttachAuthF, opts ...sesssrv.SessSrvOpt) (*MemFs, error) {
+	return NewMemFsAddr(pn, sp.NewTaddr(sp.NO_IP, sp.NO_PORT), pe, aaf, opts...)
 }
 
-func NewMemFsAddrClnt(pn string, addr *sp.Taddr, sc *sigmaclnt.SigmaClnt, aaf spprotosrv.AttachAuthF) (*MemFs, error) {
-	fs, err := NewMemFsPortClnt(pn, addr, sc, aaf)
+func NewMemFsAddrClnt(pn string, addr *sp.Taddr, sc *sigmaclnt.SigmaClnt, aaf spprotosrv.AttachAuthF, opts ...sesssrv.SessSrvOpt) (*MemFs, error) {
+	fs, err := NewMemFsPortClnt(pn, addr, sc, aaf, opts...)
 	return fs, err
 }
 
 // Make an MemFs for a specific port and advertise it at pn
-func NewMemFsAddr(pn string, addr *sp.Taddr, pe *proc.ProcEnv, aaf spprotosrv.AttachAuthF) (*MemFs, error) {
+func NewMemFsAddr(pn string, addr *sp.Taddr, pe *proc.ProcEnv, aaf spprotosrv.AttachAuthF, opts ...sesssrv.SessSrvOpt) (*MemFs, error) {
 	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
 	if err != nil {
 		return nil, err
@@ -37,24 +39,27 @@ func NewMemFsAddr(pn string, addr *sp.Taddr, pe *proc.ProcEnv, aaf spprotosrv.At
 	defer func() {
 		perf.LogSpawnLatency("NewMemFsAddr.NewMemFsAddrClnt", pe.GetPID(), pe.GetSpawnTime(), start)
 	}()
-	return NewMemFsAddrClnt(pn, addr, sc, aaf)
+	return NewMemFsAddrClnt(pn, addr, sc, aaf, opts...)
 }
 
 // Make an MemFs for a specific port and client, and advertise it at
 // pn
-func NewMemFsPortClnt(pn string, addr *sp.Taddr, sc *sigmaclnt.SigmaClnt, aaf spprotosrv.AttachAuthF) (*MemFs, error) {
-	return NewMemFsPortClntFenceAuth(pn, addr, sc, nil, aaf)
+func NewMemFsPortClnt(pn string, addr *sp.Taddr, sc *sigmaclnt.SigmaClnt, aaf spprotosrv.AttachAuthF, opts ...sesssrv.SessSrvOpt) (*MemFs, error) {
+	return NewMemFsPortClntFenceAuth(pn, addr, sc, nil, aaf, opts...)
 }
 
-func NewMemFsPortClntFenceAuth(pn string, addr *sp.Taddr, sc *sigmaclnt.SigmaClnt, fencefs fs.Dir, aaf spprotosrv.AttachAuthF) (*MemFs, error) {
+func NewMemFsPortClntFenceAuth(pn string, addr *sp.Taddr, sc *sigmaclnt.SigmaClnt, fencefs fs.Dir, aaf spprotosrv.AttachAuthF, opts ...sesssrv.SessSrvOpt) (*MemFs, error) {
 	ctx := ctx.NewCtx(sp.NoPrincipal(), nil, 0, sp.NoClntId, nil, fencefs)
-	root := fenceddir.NewFencedRoot(dir.NewRootDir(ctx, memfs.NewInode))
-	return NewMemFsRootPortClntFenceAuth(root, pn, addr, sc, fencefs, aaf)
+	ni := memfs.NewNewInode(sp.DEV_MEMFS)
+	root := fenceddir.NewFencedRoot(dir.NewRootDir(ctx, ni))
+	return NewMemFsRootPortClntFenceAuth(root, pn, addr, sc, fencefs, aaf, ni.InodeAlloc(), opts)
 }
 
-func NewMemFsRootPortClntFenceAuth(root fs.Dir, srvpath string, addr *sp.Taddr, sc *sigmaclnt.SigmaClnt, fencefs fs.Dir, aaf spprotosrv.AttachAuthF) (*MemFs, error) {
+func NewMemFsRootPortClntFenceAuth(root fs.Dir, srvpath string, addr *sp.Taddr, sc *sigmaclnt.SigmaClnt, fencefs fs.Dir, aaf spprotosrv.AttachAuthF, ia *inode.InodeAlloc, opts []sesssrv.SessSrvOpt) (*MemFs, error) {
 	start := time.Now()
-	srv, mpn, err := sigmapsrv.NewSigmaPSrvPost(root, srvpath, addr, sc, fencefs, aaf)
+
+	srv := sigmapsrv.NewSigmaPSrv(sc.ProcEnv(), sc.GetDialProxyClnt(), root, addr, fencefs, aaf, opts)
+	mpn, err := srv.PostMount(sc, srvpath)
 	if err != nil {
 		return nil, err
 	}
@@ -63,7 +68,7 @@ func NewMemFsRootPortClntFenceAuth(root fs.Dir, srvpath string, addr *sp.Taddr, 
 	defer func() {
 		perf.LogSpawnLatency("NewMemFsAddr.NewMemFsSrv", sc.ProcEnv().GetPID(), sc.ProcEnv().GetSpawnTime(), start)
 	}()
-	mfs := NewMemFsSrv(mpn, srv, sc, nil)
+	mfs := NewMemFsSrv(mpn, srv, sc, nil, ia)
 	return mfs, nil
 }
 

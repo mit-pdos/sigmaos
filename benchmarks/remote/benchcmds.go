@@ -24,7 +24,7 @@ func GetInitFSCmd(bcfg *BenchConfig, ccfg *ClusterConfig) string {
 		overlays = "--overlays"
 	}
 	return fmt.Sprintf("export SIGMADEBUG=%s; go clean -testcache; "+
-		"go test -v sigmaos/fslib -timeout 0 --no-shutdown %s %s --etcdIP %s --tag %s "+
+		"go test -v sigmaos/sigmaclnt/fslib -timeout 0 --no-shutdown %s %s --etcdIP %s --tag %s "+
 		"--run InitFs "+
 		"> /tmp/bench.out 2>&1",
 		debugSelectors,
@@ -67,7 +67,7 @@ func GetStartCmdConstructor(rps int, dur time.Duration, dummyProc, lcProc, prewa
 		return fmt.Sprintf("export SIGMADEBUG=%s; go clean -testcache; "+
 			"./set-cores.sh --set 1 --start 2 --end 39 > /dev/null 2>&1 ; "+
 			"go test -v sigmaos/benchmarks -timeout 0 --no-shutdown %s %s --etcdIP %s --tag %s "+
-			"--run TestMicroScheddSpawn "+
+			"--run TestMicroMSchedSpawn "+
 			"%s "+ // proc
 			"--nclnt 50 "+
 			"%s "+ // skipStats
@@ -174,16 +174,19 @@ func GetBEImgResizeRPCMultiplexingCmd(bcfg *BenchConfig, ccfg *ClusterConfig) st
 // instantaneous throughput. This is an optional parameter because it adds
 // non-insignificant overhead to the MR computation, which unfairly penalizes
 // the SigmaOS implementation when comparing to Corral.
-func GetMRCmdConstructor(mrApp string, memReq proc.Tmem, prewarmRealm, measureTpt bool) GetBenchCmdFn {
+func GetMRCmdConstructor(mrApp string, memReq proc.Tmem, prewarmRealm, measureTpt bool, perf bool) GetBenchCmdFn {
 	return func(bcfg *BenchConfig, ccfg *ClusterConfig) string {
 		const (
-			debugSelectors        string = "\"TEST;BENCH;MR;\""
+			debugSelectors        string = "\"TEST;BENCH;MR_COORD\""
 			optionalPerfSelectors string = "\"TEST_TPT;BENCH_TPT;\""
 		)
 		// If measuring throughput, set the perf selectors
 		perfSelectors := "\"\""
 		if measureTpt {
 			perfSelectors = optionalPerfSelectors
+		}
+		if perf {
+			perfSelectors = "\"MRREDUCER_PPROF;MRCOORD_PPROF;MRREDUCER_PPROF_MEM\""
 		}
 		prewarm := ""
 		if prewarmRealm {
@@ -245,7 +248,7 @@ func GetCorralCmdConstructor() GetBenchCmdFn {
 // - dur specifies the duration for which each rps period should last.
 //
 // - cacheType specifies the type of cache service that hotel should use (e.g.,
-// cached vs kvd vs memcached).
+// cached vs memcached).
 //
 // - If scaleCache is true, the cache autoscales.
 //
@@ -435,7 +438,7 @@ func GetSocialnetClientCmdConstructor(leader bool, numClients int, rps []int, du
 // - dur specifies the duration for which each rps period should last.
 //
 // - cacheType specifies the type of cache service that hotel should use (e.g.,
-// cached vs kvd vs memcached).
+// cached vs memcached).
 //
 // - If scaleCache is true, the cache autoscales.
 //
@@ -507,7 +510,7 @@ func GetLCBEHotelImgResizeMultiplexingCmdConstructor(numClients int, rps []int, 
 // - dur specifies the duration for which each rps period should last.
 //
 // - cacheType specifies the type of cache service that hotel should use (e.g.,
-// cached vs kvd vs memcached).
+// cached vs memcached).
 //
 // - If scaleCache is true, the cache autoscales.
 //

@@ -1,7 +1,6 @@
 package mr
 
 import (
-	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -16,6 +15,8 @@ import (
 	"sigmaos/apps/mr/kvmap"
 	"sigmaos/apps/mr/mr"
 	db "sigmaos/debug"
+	fttask "sigmaos/ft/task"
+	fttask_clnt "sigmaos/ft/task/clnt"
 	"sigmaos/proc"
 	"sigmaos/serr"
 	"sigmaos/sigmaclnt"
@@ -47,23 +48,37 @@ type Reducer struct {
 
 func NewReducer(sc *sigmaclnt.SigmaClnt, reducef mr.ReduceT, args []string, p *perf.Perf) (*Reducer, error) {
 	r := &Reducer{
-		outlink:      args[1],
-		outputTarget: args[2],
+		outlink:      args[2],
+		outputTarget: args[3],
 		reducef:      reducef,
 		SigmaClnt:    sc,
 		perf:         p,
 	}
-	if err := json.Unmarshal([]byte(args[0]), &r.input); err != nil {
-		db.DPrintf(db.MR, "NewReducer %s: unmarshal err %v\n", args[0], err)
-		return nil, err
+	id, err := strconv.Atoi(args[0])
+	if err != nil {
+		return nil, fmt.Errorf("Reducer: id %v isn't int %v", args[0], err)
 	}
+	srvId := fttask.FtTaskSvcId(args[1])
+
+	ftclnt := fttask_clnt.NewFtTaskClnt[TreduceTask, Bin](sc.FsLib, srvId, sp.NullFence())
+
+	start := time.Now()
+	data, err := ftclnt.ReadTasks([]fttask_clnt.TaskId{fttask_clnt.TaskId(id)})
+	if err != nil {
+		return nil, fmt.Errorf("Reducer: ReadTasks %v err %v", id, err)
+	}
+	if len(data) != 1 {
+		return nil, fmt.Errorf("Reducer: ReadTasks %v len %d != 1", id, len(data))
+	}
+	db.DPrintf(db.MR_COORD, "Reducer: ReadTasks %v %v in %v", id, len(data), time.Since(start))
+	r.input = data[0].Data.Input
 	r.tmp = r.outputTarget + rand.Name()
 
 	db.DPrintf(db.MR, "Reducer outputting to %v", r.tmp)
 
-	m, err := strconv.Atoi(args[3])
+	m, err := strconv.Atoi(args[4])
 	if err != nil {
-		return nil, fmt.Errorf("Reducer: nmaptask %v isn't int", args[2])
+		return nil, fmt.Errorf("Reducer: nmaptask %v isn't int", args[4])
 	}
 	r.nmaptask = m
 
@@ -81,13 +96,6 @@ func NewReducer(sc *sigmaclnt.SigmaClnt, reducef mr.ReduceT, args []string, p *p
 	return r, nil
 }
 
-type result struct {
-	kvs  []*mr.KeyValue
-	name string
-	ok   bool
-	n    sp.Tlength
-}
-
 func ReadKVs(rdr io.Reader, kvm *kvmap.KVMap, reducef mr.ReduceT) error {
 	kvd := newKVDecoder(rdr, DEFAULT_KEY_BUF_SZ, DEFAULT_VAL_BUF_SZ)
 	for {
@@ -95,9 +103,8 @@ func ReadKVs(rdr io.Reader, kvm *kvmap.KVMap, reducef mr.ReduceT) error {
 			if err == io.EOF {
 				break
 			}
-			if err != nil {
+			if serr.IsErrorSession(err) {
 				return err
-				break
 			}
 		} else {
 			if err := kvm.Combine(k, v, reducef); err != nil {
@@ -224,7 +231,7 @@ func (r *Reducer) emit(key []byte, value string) error {
 }
 
 func (r *Reducer) DoReduce() *proc.Status {
-	db.DPrintf(db.ALWAYS, "DoReduce in %v out %v nmap %v\n", r.input, r.outlink, r.nmaptask)
+	db.DPrintf(db.ALWAYS, "DoReduce in %v out %v nmap %v\n", len(r.input), r.outlink, r.nmaptask)
 	rtot := readResult{
 		kvm:        kvmap.NewKVMap(chunkreader.MINCAP, chunkreader.MAXCAP),
 		mapsFailed: []string{},
@@ -238,7 +245,7 @@ func (r *Reducer) DoReduce() *proc.Status {
 	}
 
 	ms := rtot.d.Milliseconds()
-	db.DPrintf(db.MR, "DoReduce: Readfiles %s: in %s %vms (%s)\n", r.input, humanize.Bytes(uint64(rtot.n)), ms, test.TputStr(rtot.n, ms))
+	db.DPrintf(db.MR, "DoReduce: Readfiles %v: in %s %vms (%s)\n", len(r.input), humanize.Bytes(uint64(rtot.n)), ms, test.TputStr(rtot.n, ms))
 
 	start := time.Now()
 

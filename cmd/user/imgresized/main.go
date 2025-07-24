@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"os"
 
-	"sigmaos/apps/imgresize"
+	imgsrv "sigmaos/apps/imgresize/srv"
 )
 
 func main() {
-	w, err := imgresize.NewImgSrv(os.Args[1:])
+	w, err := imgsrv.NewImgSrv(os.Args[1:])
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v: error %v", os.Args[0], err)
 		os.Exit(1)

@@ -31,6 +31,7 @@ type MemFs struct {
 	roots *roots
 	sc    *sigmaclnt.SigmaClnt
 	pn    string
+	ia    *inode.InodeAlloc
 }
 
 type roots struct {
@@ -53,7 +54,7 @@ func (rts *roots) lookupAlloc(pn string) (sp.Tfid, bool) {
 	return fid, ok
 }
 
-func NewMemFsSrv(pn string, srv *sigmapsrv.SigmaPSrv, sc *sigmaclnt.SigmaClnt, fencefs fs.Dir) *MemFs {
+func NewMemFsSrv(pn string, srv *sigmapsrv.SigmaPSrv, sc *sigmaclnt.SigmaClnt, fencefs fs.Dir, ia *inode.InodeAlloc) *MemFs {
 	mfs := &MemFs{
 		SigmaPSrv: srv,
 		ctx:       ctx.NewCtx(sc.ProcEnv().GetPrincipal(), nil, 0, sp.NoClntId, nil, fencefs),
@@ -61,6 +62,7 @@ func NewMemFsSrv(pn string, srv *sigmapsrv.SigmaPSrv, sc *sigmaclnt.SigmaClnt, f
 		pn:        pn,
 		ps:        spprotosrv.NewProtSrv(sc.ProcEnv(), srv.ProtSrvState, nil, 0, srv.GetRootCtx, spprotosrv.AttachAllowAllToAll),
 		roots:     newRoots(),
+		ia:        ia,
 	}
 	return mfs
 }
@@ -69,9 +71,13 @@ func (mfs *MemFs) SigmaClnt() *sigmaclnt.SigmaClnt {
 	return mfs.sc
 }
 
+func (mfs *MemFs) InodeAlloc() *inode.InodeAlloc {
+	return mfs.ia
+}
+
 // Note: NewDev() sets parent
 func (mfs *MemFs) NewDevInode() *inode.Inode {
-	return inode.NewInode(mfs.ctx, sp.DMDEVICE, sp.NoLeaseId)
+	return mfs.ia.NewInode(mfs.ctx, sp.DMDEVICE, sp.NoLeaseId)
 }
 
 // Returns fid for root and remaining path from root
@@ -91,13 +97,13 @@ func (mfs *MemFs) rootFid(pn string) (sp.Tfid, path.Tpathname, *serr.Err) {
 }
 
 // Returns FsObj for pn and the path from the root to FsObj
-func (mfs *MemFs) lookupWalk(pn string) (fs.Dir, fs.FsObj, string, *serr.Err) {
+func (mfs *MemFs) lookupWalk(pn string, ltype lockmap.Tlock) (fs.Dir, fs.FsObj, string, *serr.Err) {
 	fid, path, err := mfs.rootFid(pn)
 	if err != nil {
 		return nil, nil, "", err
 	}
 	db.DPrintf(db.MEMFSSRV, "lookupWalk %q %v path %v\n", pn, fid, path)
-	_, parent, name, lo, err := mfs.ps.LookupWalkParent(fid, path, false, lockmap.RLOCK)
+	_, parent, name, lo, err := mfs.ps.LookupWalkParent(fid, path, false, ltype)
 	if err != nil {
 		db.DPrintf(db.MEMFSSRV, "LookupWalk %v err %v\n", path.Dir(), err)
 		return nil, nil, "", err
@@ -113,7 +119,7 @@ func (mfs *MemFs) MkNod(pn string, i fs.FsObj) *serr.Err {
 }
 
 func (mfs *MemFs) CreateNod(pn string, p sp.Tperm, m sp.Tmode, lid sp.TleaseId, o fs.FsObj) (fs.FsObj, *serr.Err) {
-	_, lo, name, err := mfs.lookupWalk(filepath.Dir(pn))
+	_, lo, name, err := mfs.lookupWalk(filepath.Dir(pn), lockmap.WLOCK)
 	db.DPrintf(db.MEMFSSRV, "Create %q perm %v dir %v base %q o %v\n", pn, p, lo, name, o)
 	_, nf, err := mfs.ps.CreateObjFm(mfs.ctx, lo, filepath.Base(pn), p, m, lid, sp.NoFence(), o)
 	if err != nil {
@@ -128,7 +134,7 @@ func (mfs *MemFs) Create(pn string, p sp.Tperm, m sp.Tmode, lid sp.TleaseId) (fs
 }
 
 func (mfs *MemFs) Remove(pn string) *serr.Err {
-	parent, lo, name, err := mfs.lookupWalk(pn)
+	parent, lo, name, err := mfs.lookupWalk(pn, lockmap.WLOCK)
 	if err != nil {
 		return err
 	}
@@ -142,7 +148,7 @@ func (mfs *MemFs) RemoveLease(p sp.Tpath, obj fs.FsObj, name string, dir fs.Dir)
 }
 
 func (mfs *MemFs) Open(pn string, m sp.Tmode) (fs.FsObj, *serr.Err) {
-	_, lo, _, err := mfs.lookupWalk(pn)
+	_, lo, _, err := mfs.lookupWalk(pn, lockmap.RLOCK)
 	if err != nil {
 		return nil, err
 	}
@@ -155,11 +161,14 @@ func (mfs *MemFs) Open(pn string, m sp.Tmode) (fs.FsObj, *serr.Err) {
 // of the change.
 func (mfs *MemFs) Notify(pn path.Tpathname) error {
 	db.DPrintf(db.WATCH, "MemFs.Notify pn %v\n", pn)
-	parent, lo, name, err := mfs.lookupWalk(pn.String())
+	parent, lo, name, err := mfs.lookupWalk(pn.String(), lockmap.WLOCK)
 	if err != nil {
+		db.DPrintf(db.WATCH, "MemFs.Notify lookupWalk %v err %v\n", pn, err)
 		return err
 	}
-	return mfs.RemoveObj(mfs.ctx, parent, lo, name, sp.NoFence(), fs.DEL_EPHEMERAL)
+	err = mfs.RemoveObj(mfs.ctx, parent, lo, name, sp.NoFence(), fs.DEL_EPHEMERAL)
+	db.DPrintf(db.WATCH, "MemFs.Notify RemoveObj %v err %v\n", pn, err)
+	return err
 }
 
 func (mfs *MemFs) Dump() error {

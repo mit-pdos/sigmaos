@@ -16,6 +16,7 @@ import (
 	"sigmaos/rpc"
 	rpcdevsrv "sigmaos/rpc/dev/srv"
 	rpcsrv "sigmaos/rpc/srv"
+	sesssrv "sigmaos/session/srv"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv/cpumon"
@@ -23,6 +24,7 @@ import (
 	"sigmaos/sigmasrv/memfssrv"
 	"sigmaos/sigmasrv/memfssrv/memfs"
 	"sigmaos/sigmasrv/memfssrv/memfs/dir"
+	"sigmaos/sigmasrv/memfssrv/memfs/inode"
 	spprotosrv "sigmaos/spproto/srv"
 	"sigmaos/util/perf"
 )
@@ -35,12 +37,12 @@ type SigmaSrv struct {
 }
 
 // Make a sigmasrv with an memfs, and publish server at fn.
-func NewSigmaSrv(fn string, svci any, pe *proc.ProcEnv) (*SigmaSrv, error) {
+func NewSigmaSrv(fn string, svci any, pe *proc.ProcEnv, opts ...sesssrv.SessSrvOpt) (*SigmaSrv, error) {
 	db.DPrintf(db.SIGMASRV, "NewSigmaSrv %T", svci)
 	defer db.DPrintf(db.SIGMASRV, "NewSigmaSrv done %T", svci)
 
 	start := time.Now()
-	mfs, error := memfssrv.NewMemFs(fn, pe, spprotosrv.AttachAllowAllToAll)
+	mfs, error := memfssrv.NewMemFs(fn, pe, spprotosrv.AttachAllowAllToAll, opts...)
 	if error != nil {
 		db.DPrintf(db.ERROR, "NewSigmaSrv %v err %v", fn, error)
 		return nil, error
@@ -70,12 +72,12 @@ func NewSigmaSrvAddr(fn string, addr *sp.Taddr, pe *proc.ProcEnv, svci any) (*Si
 	return NewSigmaSrvAddrClnt(fn, addr, sc, svci)
 }
 
-func NewSigmaSrvClnt(fn string, sc *sigmaclnt.SigmaClnt, svci any) (*SigmaSrv, error) {
-	return NewSigmaSrvClntAuthFn(fn, sc, svci, spprotosrv.AttachAllowAllToAll)
+func NewSigmaSrvClnt(fn string, sc *sigmaclnt.SigmaClnt, svci any, opts ...sesssrv.SessSrvOpt) (*SigmaSrv, error) {
+	return NewSigmaSrvClntAuthFn(fn, sc, svci, spprotosrv.AttachAllowAllToAll, opts...)
 }
 
-func NewSigmaSrvClntAuthFn(fn string, sc *sigmaclnt.SigmaClnt, svci any, aaf spprotosrv.AttachAuthF) (*SigmaSrv, error) {
-	mfs, error := memfssrv.NewMemFsPortClnt(fn, sp.NewTaddrAnyPort(), sc, aaf)
+func NewSigmaSrvClntAuthFn(fn string, sc *sigmaclnt.SigmaClnt, svci any, aaf spprotosrv.AttachAuthF, opts ...sesssrv.SessSrvOpt) (*SigmaSrv, error) {
+	mfs, error := memfssrv.NewMemFsPortClnt(fn, sp.NewTaddrAnyPort(), sc, aaf, opts...)
 	if error != nil {
 		db.DPrintf(db.ERROR, "NewSigmaSrvClnt %v err %v", fn, error)
 		return nil, error
@@ -146,11 +148,12 @@ func newSigmaSrvRPC(mfs *memfssrv.MemFs, svci any) (*SigmaSrv, error) {
 }
 
 func NewSigmaSrvRootClnt(root fs.Dir, addr *sp.Taddr, path string, sc *sigmaclnt.SigmaClnt) (*SigmaSrv, error) {
-	return NewSigmaSrvRootClntAuthFn(root, addr, path, sc, spprotosrv.AttachAllowAllToAll)
+	return NewSigmaSrvRootClntAuthOpt(root, addr, path, sc, spprotosrv.AttachAllowAllToAll)
 }
 
-func NewSigmaSrvRootClntAuthFn(root fs.Dir, addr *sp.Taddr, path string, sc *sigmaclnt.SigmaClnt, aaf spprotosrv.AttachAuthF) (*SigmaSrv, error) {
-	mfs, err := memfssrv.NewMemFsRootPortClntFenceAuth(root, path, addr, sc, nil, aaf)
+func NewSigmaSrvRootClntAuthOpt(root fs.Dir, addr *sp.Taddr, path string, sc *sigmaclnt.SigmaClnt, aaf spprotosrv.AttachAuthF, opts ...sesssrv.SessSrvOpt) (*SigmaSrv, error) {
+	ia := inode.NewInodeAlloc(sp.DEV_MEMFS)
+	mfs, err := memfssrv.NewMemFsRootPortClntFenceAuth(root, path, addr, sc, nil, aaf, ia, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -169,7 +172,7 @@ func NewSigmaSrvRoot(root fs.Dir, path string, addr *sp.Taddr, pe *proc.ProcEnv)
 // function is useful for sigmasrv whose root is for a non-memfs file
 // system (e.g., knamed/named, which uses fsetcd).
 func (ssrv *SigmaSrv) MountRPCSrv(svci any) error {
-	d := dir.NewRootDir(ctx.NewCtxNull(), memfs.NewInode)
+	d := dir.NewRootDir(ctx.NewCtxNull(), memfs.NewNewInode(sp.DEV_RPCFS))
 	ssrv.MemFs.SigmaPSrv.Mount(rpc.RPC, d.(*dir.DirImpl))
 	if err := ssrv.newRPCDev(rpc.RPC, svci); err != nil {
 		return err
@@ -224,7 +227,7 @@ func (ssrv *SigmaSrv) SrvExit(status *proc.Status) error {
 	db.DPrintf(db.SIGMASRV, "cpumon done %v", ssrv.MemFs.SigmaClnt().ProcEnv().Program)
 	ssrv.MemFs.StopServing()
 	db.DPrintf(db.ALWAYS, "StopServing %v", ssrv.MemFs.SigmaClnt().ProcEnv().Program)
-	return ssrv.MemFs.MemFsExit(proc.NewStatus(proc.StatusEvicted))
+	return ssrv.MemFs.MemFsExit(status)
 }
 
 func (ssrv *SigmaSrv) Serve() {
@@ -235,4 +238,9 @@ func (ssrv *SigmaSrv) Serve() {
 	if err := ssrv.MemFs.SigmaClnt().WaitEvict(ssrv.SigmaClnt().ProcEnv().GetPID()); err != nil {
 		db.DPrintf(db.ALWAYS, "Error WaitEvict: %v", err)
 	}
+}
+
+// for testing network partitions; causes all RPCs to return unavailable
+func (ssrv *SigmaSrv) Partition() {
+	ssrv.rpcs.Partition()
 }

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"sync"
 	"time"
 
 	db "sigmaos/debug"
@@ -22,7 +23,7 @@ const (
 )
 
 var labels *TeventMap
-var crashfile string
+var crashfile Tcrashfile
 
 type Tevent struct {
 	Label string `json:"label"` // see selector.go
@@ -34,7 +35,7 @@ type Tevent struct {
 	MaxInterval int64 `json:"maxinterval"`
 
 	// probability of generating event in this interval
-	Prob float64 `json:"prob:`
+	Prob float64 `json:"prob`
 
 	// delay in ms (interpretable by event creator)
 	Delay int64 `json:"delay"`
@@ -52,16 +53,21 @@ func NewEventPath(l string, mi int64, p float64, pn string) Tevent {
 	return Tevent{Label: l, MaxInterval: mi, Prob: p, Path: pn}
 }
 
+func NewEventPathDelay(l string, mi, d int64, p float64, pn string) Tevent {
+	return Tevent{Label: l, MaxInterval: mi, Delay: d, Prob: p, Path: pn}
+}
+
 func NewEventStart(l string, s, mi int64, p float64) Tevent {
 	return Tevent{Label: l, Start: s, MaxInterval: mi, Prob: p}
 }
 
-func NewEventStartDelay(l string, s, mi, d int64, p float64) Tevent {
-	return Tevent{Label: l, Start: s, MaxInterval: mi, Delay: d, Prob: p}
-}
-
 func (e *Tevent) String() string {
 	return fmt.Sprintf("{l %v s %v mi %v p %v d %v}", e.Label, e.Start, e.MaxInterval, e.Prob, e.Delay)
+}
+
+type Tcrashfile struct {
+	sync.Mutex
+	name string
 }
 
 type Teventf func(e Tevent)
@@ -150,15 +156,14 @@ func Rand50() bool {
 	return rand.Int64(ONE) < FIFTY
 }
 
-func RandSleep(c int64) uint64 {
+func RandSleep(c int64) (uint64, uint64) {
 	ms := uint64(0)
 	if c > 0 {
 		ms = rand.Int64(c)
 	}
 	r := rand.Int64(ONE)
-	// db.DPrintf(db.CRASH, "RandSleep %dms r %d\n", ms, r)
 	time.Sleep(time.Duration(ms) * time.Millisecond)
-	return r
+	return r, ms
 }
 
 func SetSigmaFail(em *TeventMap) error {
@@ -191,7 +196,10 @@ func CrashMsg(msg string) {
 }
 
 func CrashFile(name string) {
-	if crashfile != "" && name == crashfile {
+	crashfile.Lock()
+	crash := crashfile.name != "" && name == crashfile.name
+	crashfile.Unlock()
+	if crash {
 		Crash()
 	}
 }
@@ -223,36 +231,40 @@ func PartitionPath(fsl *fslib.FsLib, pn string) {
 func SetCrashFile(fsl *fslib.FsLib, label Tselector) {
 	initLabels()
 	if e, ok := labels.Evs[label]; ok {
-		crashfile = e.Path
+		crashfile.Lock()
+		crashfile.name = e.Path
+		crashfile.Unlock()
+	}
+}
+
+func failLabel(fsl *fslib.FsLib, label Tselector, e Tevent, f Teventf) {
+	if e.Path != "" {
+		sem := semaphore.NewSemaphore(fsl, e.Path)
+		sem.Init(0)
+		sem.Down()
+		db.DPrintf(db.CRASH, "Downed %v", e.Path)
+	}
+	time.Sleep(time.Duration(e.Start) * time.Millisecond)
+	for true {
+		t := e.MaxInterval
+		if e.MaxInterval < 0 {
+			t = -t
+		}
+		r, ms := RandSleep(t)
+		if r < uint64(e.Prob*ONE) {
+			db.DPrintf(db.CRASH, "Raise event %v r %d ms %d %v", label, r, ms, e)
+			f(e)
+		}
+		if e.MaxInterval <= 0 {
+			break
+		}
 	}
 }
 
 func Failer(fsl *fslib.FsLib, label Tselector, f Teventf) {
 	initLabels()
 	if e, ok := labels.Evs[label]; ok {
-		go func(label Tselector, e Tevent) {
-			if e.Path != "" {
-				sem := semaphore.NewSemaphore(fsl, e.Path)
-				sem.Init(0)
-				sem.Down()
-				db.DPrintf(db.CRASH, "Downed %v", e.Path)
-			}
-			time.Sleep(time.Duration(e.Start) * time.Millisecond)
-			for true {
-				t := e.MaxInterval
-				if e.MaxInterval < 0 {
-					t = -t
-				}
-				r := RandSleep(t)
-				if r < uint64(e.Prob*ONE) {
-					db.DPrintf(db.CRASH, "Raise event %v r %d %v", label, r, e)
-					f(e)
-				}
-				if e.MaxInterval <= 0 {
-					break
-				}
-			}
-		}(label, e)
+		go failLabel(fsl, label, e, f)
 	}
 }
 

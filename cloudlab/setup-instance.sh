@@ -12,7 +12,7 @@ source $DIR/env.sh
 SSHCMD=$LOGIN@$1
 
 # Set up a few directories, and prepare to scp the aws secrets.
-ssh -i $DIR/keys/cloudlab-sigmaos $SSHCMD <<ENDSSH
+ssh -o StrictHostKeyChecking=accept-new -i $DIR/keys/cloudlab-sigmaos $SSHCMD <<ENDSSH
 sudo mkdir -p /mnt/9p
 mkdir ~/.aws
 mkdir ~/.docker
@@ -34,6 +34,11 @@ do
     yes | gpg --output $F --decrypt ${F}.gpg || exit 1
   fi
 done
+
+# remove any old secrets on the server
+ssh -i $DIR/keys/cloudlab-sigmaos $SSHCMD <<ENDSSH
+rm -f ~/.aws/credentials ~/.aws/config ~/.docker/config.json
+ENDSSH
 
 # scp the aws and docker secrets to the server and remove them locally.
 scp -i $DIR/keys/cloudlab-sigmaos ../aws/.aws/config $SSHCMD:~/.aws/
@@ -109,7 +114,10 @@ if [ -d "sigmaos" ]
 then
   ssh-agent bash -c 'ssh-add ~/.ssh/aws-sigmaos; (cd sigmaos; git pull;)'
 else
-  ssh-agent bash -c 'ssh-add ~/.ssh/aws-sigmaos; git clone git@g.csail.mit.edu:sigmaos; (cd sigmaos; go mod download;)'
+  git clone https://github.com/mit-pdos/sigmaos.git
+  cd sigmaos
+  go mod download
+  cd ..
   # Indicate that sigma has not been build yet on this instance
   touch ~/.nobuild
 fi
@@ -169,6 +177,10 @@ then
   # For hadoop
 #  yes | sudo apt install openjdk-8-jdk \
 #  openjdk-8-jre-headless
+
+  curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+  unzip awscliv2.zip
+  sudo ./aws/install
 
   wget 'https://golang.org/dl/go1.22.1.linux-amd64.tar.gz'
   sudo rm -rf /usr/local/go && sudo tar -C /usr/local -xzf go1.22.1.linux-amd64.tar.gz

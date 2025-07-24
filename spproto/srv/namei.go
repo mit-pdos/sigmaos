@@ -12,7 +12,18 @@ import (
 	"sigmaos/spproto/srv/namei"
 )
 
-func getParent(start fs.Dir, os []fs.FsObj) fs.Dir {
+func getParentFid(start *fid.Fid, os []fs.FsObj) fs.Dir {
+	if len(os) == 0 {
+		return start.Parent()
+	} else if len(os) == 1 {
+		return start.Obj().(fs.Dir)
+	} else {
+		d := os[len(os)-2]
+		return d.(fs.Dir)
+	}
+}
+
+func getParentDir(start fs.Dir, os []fs.FsObj) fs.Dir {
 	if len(os) <= 1 {
 		return start
 	} else {
@@ -27,7 +38,7 @@ func (ps *ProtSrv) lookupObj(ctx fs.CtxI, f *fid.Fid, target path.Tpathname, lty
 	db.DPrintf(db.NAMEI, "%v: lookupObj %v target '%v'", ctx.Principal(), f, target)
 	o := f.Obj()
 	name := f.Name()
-	lk := ps.plt.Acquire(ctx, f.Path(), ltype)
+	lk := ps.plt.Acquire(ctx, f.Uid(), ltype)
 	if len(target) == 0 {
 		return nil, o, lk, name, nil
 	}

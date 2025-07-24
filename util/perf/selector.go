@@ -45,6 +45,7 @@ const (
 const (
 	MRMAPPER  Tselector = "MRMAPPER"
 	MRREDUCER           = "MRREDUCER"
+	MRCOORD             = "MRCOORD"
 	SEQGREP             = "SEQGREP"
 	SEQWC               = "SEQWC"
 )

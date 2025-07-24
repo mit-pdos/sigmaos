@@ -30,7 +30,7 @@ func NewProcClnt(fsl *fslib.FsLib) (*ProcClnt, error) {
 			start := time.Now()
 			err := fsl.MountTree(ep, rpc.RPC, pn)
 			if err != nil {
-				db.DPrintf(db.ERROR, "Err MountTree: ep %v err %v", ep, err)
+				db.DPrintf(db.ERROR, "Err MountTree: ep %v pn %v err %v", ep, pn, err)
 				mschedC <- err
 				return
 			}
@@ -44,15 +44,23 @@ func NewProcClnt(fsl *fslib.FsLib) (*ProcClnt, error) {
 			start := time.Now()
 			err := fsl.MountTree(ep, "", sp.NAMED)
 			if err != nil {
-				db.DPrintf(db.ERROR, "Err MountTree: ep %v err %v", ep, err)
-				//			return nil, err
+				db.DPrintf(db.ERROR, "Err MountTree: named ep %v err %v", ep, err)
+				namedC <- err
+				return
 			} else {
 				perf.LogSpawnLatency("Mount named", fsl.ProcEnv().GetPID(), fsl.ProcEnv().GetSpawnTime(), start)
 			}
 		}
 		namedC <- nil
 	}()
+	// Ignore MountTree errors for named; later usages of "named/"
+	// will umount the cached ep entry and retry and may find a new
+	// named.  Not ignoring the error causes mr's TestCrashMsched1 to
+	// fail.
+	//
 	<-namedC
+	// If MountTree fails for msched, bail out since this proc must
+	// notify its msched, and thus might as well exit now.
 	err := <-mschedC
 	if err != nil {
 		return nil, err

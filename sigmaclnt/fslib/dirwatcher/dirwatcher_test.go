@@ -22,6 +22,9 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestCompile(t *testing.T) {
+}
+
 func testSumProgram(t *testing.T, nworkers int, nfiles int) {
 	ts, err := test.NewTstateAll(t)
 
@@ -38,7 +41,7 @@ func testSumProgram(t *testing.T, nworkers int, nfiles int) {
 	assert.Nil(t, err)
 	status, err := ts.WaitExit(p.GetPid())
 	assert.Nil(t, err)
-	if (!status.IsStatusOK()) {
+	if !status.IsStatusOK() {
 		assert.Fail(t, "coord did not return OK, err: %v", err)
 	}
 
@@ -47,10 +50,10 @@ func testSumProgram(t *testing.T, nworkers int, nfiles int) {
 
 type Stats struct {
 	Average float64
-	Max int64
-	Min int64
-	Stddev float64
-	Median int64
+	Max     int64
+	Min     int64
+	Stddev  float64
+	Median  int64
 }
 
 func flatten(data [][][]time.Duration) []time.Duration {
@@ -76,21 +79,21 @@ func computeStats(data []time.Duration) Stats {
 
 	stddev := float64(0)
 	for _, d := range data {
-		stddev += math.Pow(float64(d.Nanoseconds()) - average, 2)
+		stddev += math.Pow(float64(d.Nanoseconds())-average, 2)
 	}
 	stddev /= float64(len(data))
 	stddev = math.Sqrt(stddev)
 
-	sort.Slice(data, func (i, j int) bool {
+	sort.Slice(data, func(i, j int) bool {
 		return data[i] < data[j]
 	})
-	median := data[len(data) / 2].Nanoseconds()
+	median := data[len(data)/2].Nanoseconds()
 
 	return Stats{average, maxT, minT, stddev, median}
 }
 
 func (s Stats) String() string {
-	return fmt.Sprintf("Avg: %f us\nMax: %f us\nMin: %f us\nStddev: %f us\nMedian: %f us\n", s.Average / 1000.0, float64(s.Max) / 1000.0, float64(s.Min) / 1000.0, s.Stddev / 1000.0, float64(s.Median) / 1000.0)
+	return fmt.Sprintf("Avg: %f us\nMax: %f us\nMin: %f us\nStddev: %f us\nMedian: %f us\n", s.Average/1000.0, float64(s.Max)/1000.0, float64(s.Min)/1000.0, s.Stddev/1000.0, float64(s.Median)/1000.0)
 }
 
 func dataString(data []time.Duration) string {
@@ -122,7 +125,7 @@ func testPerf(t *testing.T, nWorkers int, nStartingFiles int, nTrials int, nFile
 	assert.Nil(t, err)
 	status, err := ts.WaitExit(p.GetPid())
 	assert.Nil(t, err)
-	if (!status.IsStatusOK()) {
+	if !status.IsStatusOK() {
 		assert.Fail(t, "coord did not return OK, err: %v", err)
 	}
 
@@ -325,7 +328,7 @@ func TestDirWatcherNEntries(t *testing.T) {
 			assert.Nil(t, err)
 		}
 
-		<- done
+		<-done
 	}, 10)
 }
 

@@ -19,8 +19,10 @@ import (
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
+	"sigmaos/util/crash"
 	"sigmaos/util/linux/mem"
 	rd "sigmaos/util/rand"
+	"sigmaos/util/retry"
 )
 
 const (
@@ -605,6 +607,47 @@ func TestMultiRealmIsolationNamed(t *testing.T) {
 		sts, err := mrts.GetRealm(test.REALM2).GetDir(pn)
 		assert.NotNil(t, err, "GetDir %v %v\n", pn, sp.Names(sts))
 	}
+}
+
+func TestCrashRealmNamed(t *testing.T) {
+	const T = 200
+	crashpn := sp.NAMED + "crashnd.sem"
+
+	e := crash.NewEventPath(crash.NAMED_CRASH, 0, float64(1.0), crashpn)
+	err := crash.SetSigmaFail(crash.NewTeventMapOne(e))
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+
+	sc := mrts.GetRealm(test.REALM1).SigmaClnt
+	fn := filepath.Join(sp.NAMED, "fff")
+	_, err = sc.PutFile(fn, 0777, sp.OREAD, nil)
+	assert.Nil(t, err)
+
+	ep0, err := sc.GetNamedEndpoint()
+	assert.Nil(t, err)
+
+	err = crash.SignalFailer(sc.FsLib, crashpn)
+	assert.Nil(t, err, "Err crash: %v", err)
+
+	// allow named to crash
+	time.Sleep(T * time.Millisecond)
+
+	err, _ = retry.RetryAtLeastOnce(func() error {
+		_, err = sc.GetFile(fn)
+		db.DPrintf(db.TEST, "Named down pn %v err %v", fn, err)
+		return err
+	})
+	assert.Nil(t, err)
+
+	ep1, err := sc.GetNamedEndpoint()
+	assert.Nil(t, err)
+
+	db.DPrintf(db.TEST, "ep0 %v ep1 %v", ep0, ep1)
+	assert.False(t, ep0.Equal(ep1))
+
+	defer mrts.Shutdown()
 }
 
 // These often don't pass due to a scheduling bug in Linux.

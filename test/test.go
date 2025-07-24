@@ -52,6 +52,9 @@ func init() {
 	flag.StringVar(&projectRoot, "projectroot", "", "Path to project root")
 	flag.StringVar(&homeDir, "homedir", "", "Home directory, which contains the User's .aws directory")
 	flag.StringVar(&netname, "netname", "host", "Overlay network in which to run tests (or host if running in host mode)")
+	if !Start {
+		db.DPrintf(db.ALWAYS, "Running without starting kernel")
+	}
 }
 
 var savedTstate *Tstate
@@ -204,6 +207,7 @@ func newSysClnt(t *testing.T, ntype bootclnt.Tboot) (*Tstate, error) {
 			db.DPrintf(db.ALWAYS, "Error start kernel: %v", err)
 			return nil, err
 		}
+		db.DPrintf(db.TEST, "Started kernel %v", kernelid)
 	}
 	var dpp *DialProxyProvider
 	if !noBootDialProxy && (useSPProxy || useDialProxy) {
@@ -307,9 +311,9 @@ func (ts *Tstate) Shutdown() error {
 		db.DPrintf(db.ALWAYS, "Skipping shutdown")
 		db.DPrintf(db.TEST, "Skipping shutdown")
 	} else {
-		db.DPrintf(db.SYSTEM, "Shutdown")
+		db.DPrintf(db.KERNEL, "Shutdown")
 		if ts.memfs != nil {
-			db.DPrintf(db.SYSTEM, "Shutdown memfs")
+			db.DPrintf(db.KERNEL, "Shutdown memfs")
 			err := ts.Evict(ts.memfs.GetPid())
 			assert.Nil(ts.T, err, "evict")
 			_, err = ts.WaitExit(ts.memfs.GetPid())

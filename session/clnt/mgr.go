@@ -11,6 +11,7 @@ import (
 	"sigmaos/serr"
 	sessp "sigmaos/session/proto"
 	sp "sigmaos/sigmap"
+	"sigmaos/util/spstats"
 )
 
 type Mgr struct {
@@ -19,14 +20,16 @@ type Mgr struct {
 	sessions map[string]*SessClnt
 	pe       *proc.ProcEnv
 	npc      *dialproxyclnt.DialProxyClnt
+	pcst     *spstats.PathClntStats
 }
 
-func NewMgr(pe *proc.ProcEnv, npc *dialproxyclnt.DialProxyClnt) *Mgr {
+func NewMgr(pe *proc.ProcEnv, npc *dialproxyclnt.DialProxyClnt, pcst *spstats.PathClntStats) *Mgr {
 	sc := &Mgr{
 		sessions: make(map[string]*SessClnt),
 		sessKeys: make(map[*sp.Tendpoint]string),
 		pe:       pe,
 		npc:      npc,
+		pcst:     pcst,
 	}
 	db.DPrintf(db.SESSCLNT, "Session Mgr for session")
 	return sc
@@ -52,7 +55,8 @@ func (sc *Mgr) allocSessClnt(ep *sp.Tendpoint) (*SessClnt, *serr.Err) {
 	if sess, ok := sc.sessions[key]; ok {
 		return sess, nil
 	}
-	sess, err := newSessClnt(sc.pe, sc.npc, ep)
+	spstats.Inc(&sc.pcst.Nsession, 1)
+	sess, err := newSessClnt(sc.pe, sc.npc, ep, sc.pcst)
 	if err != nil {
 		return nil, err
 	}
@@ -82,7 +86,7 @@ func (sc *Mgr) RPC(ep *sp.Tendpoint, req sessp.Tmsg, iniov sessp.IoVec, outiov s
 	start := time.Now()
 	rep, err := sess.RPC(req, iniov, outiov)
 	if db.WillBePrinted(db.RPC_LAT) {
-		db.DPrintf(db.RPC_LAT, "RPC time %v [%v] started (%v) alloc %v rpc %v tot %v", req.Type(), req, start, allocLat, time.Since(start), time.Since(s))
+		db.DPrintf(db.RPC_LAT, "RPC time %v [%v] err %v started (%v) alloc %v rpc %v tot %v", req.Type(), req, err, start, allocLat, time.Since(start), time.Since(s))
 	}
 
 	return rep, err

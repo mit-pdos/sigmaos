@@ -42,6 +42,7 @@ message ProcEnvProto {
   string valgrind = 28;
   bool runBootScriptFlag = 29;
   bool useSPProxyProcClnt = 30;
+  string debugProcs = 31;
 }
 
 message ProcProto {

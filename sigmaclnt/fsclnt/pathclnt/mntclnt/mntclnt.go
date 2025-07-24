@@ -11,6 +11,7 @@ import (
 	"sigmaos/serr"
 	"sigmaos/sigmaclnt/fidclnt"
 	sp "sigmaos/sigmap"
+	"sigmaos/util/spstats"
 )
 
 type MntClntAPI interface {
@@ -27,9 +28,10 @@ type MntClnt struct {
 	cid        sp.TclntId
 	fidc       *fidclnt.FidClnt
 	pathc      MntClntAPI
+	pcstats    *spstats.PathClntStats
 }
 
-func NewMntClnt(pathc MntClntAPI, fidc *fidclnt.FidClnt, cid sp.TclntId, pe *proc.ProcEnv, npc *dialproxyclnt.DialProxyClnt) *MntClnt {
+func NewMntClnt(pathc MntClntAPI, fidc *fidclnt.FidClnt, cid sp.TclntId, pe *proc.ProcEnv, pcstats *spstats.PathClntStats, npc *dialproxyclnt.DialProxyClnt) *MntClnt {
 	mc := &MntClnt{
 		cid:        cid,
 		mnt:        newMntTable(),
@@ -39,6 +41,7 @@ func NewMntClnt(pathc MntClntAPI, fidc *fidclnt.FidClnt, cid sp.TclntId, pe *pro
 		npc:        npc,
 		fidc:       fidc,
 		pathc:      pathc,
+		pcstats:    pcstats,
 	}
 	return mc
 }
@@ -49,7 +52,7 @@ func (mc *MntClnt) String() string {
 
 func (mc *MntClnt) Resolve(p path.Tpathname, principal *sp.Tprincipal, resolve bool) (sp.Tfid, path.Tpathname, *serr.Err) {
 	if err, ok := mc.resolveRoot(p); err != nil {
-		db.DPrintf(db.ALWAYS, "%v: resolveRoot %v err %v b %v\n", mc.cid, p, err, ok)
+		db.DPrintf(db.ALWAYS, "%v: resolveRoot %v err %v ok %v", mc.cid, p, err, ok)
 	}
 	db.DPrintf(db.MOUNT, "%v: Resolve success resolveRoot %v", mc.cid, p)
 	return mc.ResolveMnt(p, resolve)
@@ -71,7 +74,7 @@ func (mc *MntClnt) ResolveMnt(p path.Tpathname, resolve bool) (sp.Tfid, path.Tpa
 		// MountTree() is trying (or will try) to mount pnt and may
 		// succeed or fail; retry resolveMnt.  The retry won't happen
 		// often since MountTree() will lock pnt while mounting.
-		db.DPrintf(db.TEST, "%v: resolveMnt try again path %v resolve %t", mc.cid, path, resolve)
+		db.DPrintf(db.TEST, "%v: ResolveMnt try again path %v resolve %t", mc.cid, path, resolve)
 	}
 }
 
@@ -94,7 +97,7 @@ func (mc *MntClnt) ResolveRoot(pn path.Tpathname) (*serr.Err, bool) {
 	err, ok := mc.resolveRoot(pn)
 	db.DPrintf(db.WALK_LAT, "ResolveRoot %v %v lat %v\n", mc.cid, pn, time.Since(s))
 	if err != nil {
-		db.DPrintf(db.MOUNT_ERR, "ResolveRoot unreachable %v err %v\n", pn, err)
+		db.DPrintf(db.MOUNT_ERR, "ResolveRoot unreachable %v ok %t err %v\n", pn, ok, err)
 	}
 	return err, ok
 }
@@ -110,15 +113,15 @@ func (mc *MntClnt) PathLastMount(pn sp.Tsigmapath, principal *sp.Tprincipal) (pa
 	return mc.LastMount(pn, principal)
 }
 
-func (mc *MntClnt) MountTree(secrets map[string]*sp.SecretProto, ep *sp.Tendpoint, tree, mntname sp.Tsigmapath) error {
+func (mc *MntClnt) MountTreeFid(secrets map[string]*sp.SecretProto, ep *sp.Tendpoint, tree, mntname sp.Tsigmapath) (sp.Tfid, error) {
 	pn, err := serr.PathSplitErr(mntname)
 	if err != nil {
-		return err
+		return sp.NoFid, err
 	}
 	db.DPrintf(db.MOUNT, "%v: MountTree [%v]:%q mnt %v", mc.cid, ep, tree, mntname)
 	pnt, err := mc.mnt.lookupAlloc(pn, sp.NoFid)
 	if err != nil {
-		return err
+		return sp.NoFid, err
 	}
 
 	pnt.Lock()
@@ -127,7 +130,7 @@ func (mc *MntClnt) MountTree(secrets map[string]*sp.SecretProto, ep *sp.Tendpoin
 	db.DPrintf(db.MOUNT, "%v: isAttached? [%v] %t err %v", mc.cid, ep, pnt.isAttached(), err)
 
 	if pnt.isAttached() {
-		return nil
+		return pnt.fid, nil
 	}
 
 	db.DPrintf(db.MOUNT, "MountTree [%v]:%q attach %v", ep, tree, mntname)
@@ -135,16 +138,21 @@ func (mc *MntClnt) MountTree(secrets map[string]*sp.SecretProto, ep *sp.Tendpoin
 	s := time.Now()
 	fid, err := mc.fidc.Attach(secrets, mc.cid, ep, pn, tree)
 	if err != nil {
-		db.DPrintf(db.MOUNT_ERR, "%v: MountTree Attach [%v]/%v err %v", mc.cid, ep, tree, err)
+		db.DPrintf(db.MOUNT_ERR, "%v: MountTree Attach [%v]/%v n %v err %v", mc.cid, ep, tree, mntname, err)
 		mc.mnt.umount(pn, true)
 	}
 	db.DPrintf(db.MOUNT, "%v: MountTree pn %q err %v Attach lat %v\n", mc.cid, mntname, err, time.Since(s))
 
 	if err != nil {
-		return err
+		return sp.NoFid, err
 	}
 	pnt.fid = fid
-	return nil
+	return fid, nil
+}
+
+func (mc *MntClnt) MountTree(secrets map[string]*sp.SecretProto, ep *sp.Tendpoint, tree, mntname sp.Tsigmapath) error {
+	_, err := mc.MountTreeFid(secrets, ep, tree, mntname)
+	return err
 }
 
 // Detach from server
@@ -205,10 +213,9 @@ func (mc *MntClnt) Disconnect(pn sp.Tsigmapath) error {
 		if ok {
 			return mc.disconnectMnt(pnt)
 		} else {
-			return serr.NewErr(serr.TErrUnreachable, pnt.path)
+			return serr.NewErr(serr.TErrUnreachable, pn)
 		}
 	}
-	return nil
 }
 
 func (mc *MntClnt) disconnectMnt(pnt *Point) error {

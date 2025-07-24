@@ -25,10 +25,10 @@ import (
 	proto "sigmaos/sched/msched/proc/chunk/proto"
 	"sigmaos/serr"
 	"sigmaos/sigmaclnt"
-	"sigmaos/sigmaclnt/fslib"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
 	"sigmaos/util/perf"
+	"sigmaos/util/retry"
 )
 
 const (
@@ -451,8 +451,6 @@ func (cksrv *ChunkSrv) GetFileStat(ctx fs.CtxI, req proto.GetFileStatReq, res *p
 		return nil
 	}
 
-	defer be.signalStatWaiters()
-
 	// for lookup and fetches from origin
 	var ep *sp.Tendpoint
 	epp := req.GetNamedEndpointProto()
@@ -467,10 +465,10 @@ func (cksrv *ChunkSrv) GetFileStat(ctx fs.CtxI, req proto.GetFileStatReq, res *p
 	}()
 
 	st, srv, err := cksrv.getFileStat(r, req.GetProg(), sp.Tpid(req.Pid), req.GetSigmaPath(), req.GetS3Secret(), ep)
+	be.signalStatWaiters(st)
 	if err != nil {
 		return err
 	}
-	be.st = st
 	res.Stat = st.StatProto()
 	res.Path = srv
 	return nil
@@ -481,7 +479,7 @@ func (cksrv *ChunkSrv) lookup(sc *sigmaclnt.SigmaClnt, pid sp.Tpid, prog string,
 
 	var st *sp.Tstat
 	path := ""
-	err := fslib.RetryPaths(paths, func(i int, pn string) error {
+	err := retry.RetryPaths(paths, func(i int, pn string) error {
 		db.DPrintf(db.CHUNKSRV, "Stat '%v/%v'", pn, prog)
 		s := time.Now()
 		sst, err := sc.Stat(pn + "/" + prog)
@@ -501,7 +499,7 @@ func (cksrv *ChunkSrv) lookup(sc *sigmaclnt.SigmaClnt, pid sp.Tpid, prog string,
 func open(sc *sigmaclnt.SigmaClnt, prog string, paths []string) (int, string, error) {
 	sfd := -1
 	path := ""
-	if err := fslib.RetryPaths(paths, func(i int, pn string) error {
+	if err := retry.RetryPaths(paths, func(i int, pn string) error {
 		db.DPrintf(db.CHUNKSRV, "sOpen %q/%v", pn, prog)
 		fd, err := sc.Open(pn+"/"+prog, sp.OREAD)
 		if err == nil {

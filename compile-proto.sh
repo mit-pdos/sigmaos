@@ -23,8 +23,6 @@ for PP in \
   util/k8s util/tracing \
   apps/epcache \
   apps/cache \
-  apps/kv/repl \
-  apps/kv \
   apps/hotel \
   apps/socialnetwork \
   proxy/sigmap \
@@ -34,7 +32,8 @@ for PP in \
   example/example_echo_server \
   apps/spin \
   apps/cossim \
-  spproto/srv; \
+  spproto/srv \
+  ft/task; \
   do
     for P in $PP/proto/*.proto ; do
       echo "protoc (golang) $P"

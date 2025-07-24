@@ -35,9 +35,8 @@ func (fm *FidMap) allocFid() sp.Tfid {
 	fm.Lock()
 	defer fm.Unlock()
 
-	fid := fm.next
 	fm.next += 1
-	return fid
+	return fm.next
 }
 
 func (fm *FidMap) len() int {

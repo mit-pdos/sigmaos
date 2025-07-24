@@ -239,21 +239,6 @@ func parseDurations(ts *test.RealmTstate, ss []string) []time.Duration {
 	return ds
 }
 
-func newNKVJobs(ts *test.RealmTstate, n, nkvd, kvdrepl int, nclerks []int, phases []time.Duration, ckdur string, kvdmcpu, ckmcpu proc.Tmcpu, auto string, redisaddr string) ([]*KVJobInstance, []interface{}) {
-	// If we're running with unbounded clerks...
-	if len(phases) > 0 {
-		assert.Equal(ts.Ts.T, len(nclerks), len(phases), "Phase and clerk lengths don't match: %v != %v", len(phases), len(nclerks))
-	}
-	js := make([]*KVJobInstance, 0, n)
-	is := make([]interface{}, 0, n)
-	for i := 0; i < n; i++ {
-		ji := NewKVJobInstance(ts, nkvd, kvdrepl, nclerks, phases, ckdur, kvdmcpu, ckmcpu, auto, redisaddr)
-		js = append(js, ji)
-		is = append(is, ji)
-	}
-	return js, is
-}
-
 // ========== Cached Helpers ==========
 func newNCachedJobs(ts *test.RealmTstate, n, nkeys, ncache, nclerks int, durstr string, ckmcpu, cachemcpu proc.Tmcpu) ([]*CachedJobInstance, []interface{}) {
 	js := make([]*CachedJobInstance, 0, n)
@@ -276,19 +261,6 @@ func newMSchedJobs(ts *test.RealmTstate, nclnt int, dur string, maxrps string, p
 	is := make([]interface{}, 0, n)
 	for i := 0; i < n; i++ {
 		i := NewMSchedJob(ts, nclnt, dur, maxrps, progname, sfn, kernels, withKernelPref, skipstats)
-		ws = append(ws, i)
-		is = append(is, i)
-	}
-	return ws, is
-}
-
-// ========== Www Helpers ========
-
-func newWwwJobs(ts *test.RealmTstate, sigmaos bool, n int, wwwmcpu proc.Tmcpu, reqtype string, ntrials, nclnt, nreq int, delay time.Duration) ([]*WwwJobInstance, []interface{}) {
-	ws := make([]*WwwJobInstance, 0, n)
-	is := make([]interface{}, 0, n)
-	for i := 0; i < n; i++ {
-		i := NewWwwJob(ts, sigmaos, wwwmcpu, reqtype, ntrials, nclnt, nreq, delay)
 		ws = append(ws, i)
 		is = append(is, i)
 	}
@@ -395,7 +367,7 @@ func waitForRealmCreation(rootts *test.Tstate, realm sp.Trealm) error {
 		sp.UXREL,
 	}
 	for _, d := range dirs {
-		if err := dirwatcher.WaitCreate(rootts.FsLib, filepath.Join(sp.REALMS, realm.String(), d)); err != nil {
+		if err := dirwatcher.WaitCreate(rootts.FsLib, filepath.Join(sp.NamedRootPathname(realm), d)); err != nil {
 			return err
 		}
 	}

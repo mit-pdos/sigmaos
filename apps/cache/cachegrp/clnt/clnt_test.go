@@ -17,11 +17,13 @@ import (
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 	"sigmaos/util/coordination/semaphore"
+	linuxsched "sigmaos/util/linux/sched"
 	rd "sigmaos/util/rand"
 )
 
 const (
-	CACHE_MCPU = 2000
+	NCPU       = 2
+	CACHE_MCPU = NCPU * 1000
 )
 
 type Tstate struct {
@@ -122,6 +124,11 @@ func testCacheSharded(t *testing.T, nsrv int) {
 	const (
 		N = 10
 	)
+	nc := linuxsched.GetNCores()
+	if nc < uint(NCPU*nsrv) {
+		db.DPrintf(db.TEST, "testCacheSharded: too many servers")
+		return
+	}
 	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
@@ -195,7 +202,8 @@ func TestCacheConcur(t *testing.T) {
 		go func() {
 			defer wg.Done()
 			res := &proto.CacheString{}
-			err = cc.Get("x", res)
+			err := cc.Get("x", res)
+			assert.Nil(t, err)
 			s := res.Val
 			assert.Equal(t, v, s)
 			db.DPrintf(db.TEST, "Done get")
@@ -246,22 +254,26 @@ func TestElasticCache(t *testing.T) {
 	ts := newTstate(mrts, NSRV)
 
 	for i := 0; i < N; i++ {
-		ts.StartClerk(DUR, NKEYS, i*NKEYS, 2*1000)
+		// set mcpu to 0 for tests, but for real benchmarks CACHE_MCPU
+		ts.StartClerk(DUR, NKEYS, i*NKEYS, 0)
 	}
 
 	ts.sem.Up()
 
 	cc := cachegrpclnt.NewCachedSvcClnt(ts.mrts.GetRealm(test.REALM1).FsLib, ts.job)
 
+	nc := linuxsched.GetNCores()
+	nsrv := NSRV
 	for i := 0; i < 5; i++ {
 		time.Sleep(5 * time.Second)
 		sts, err := cc.StatsSrvs()
 		assert.Nil(t, err)
-		qlen := sts[0].StatsSnapshot.AvgQlen
+		qlen := sts[0].SrvStatsSnapshot.AvgQlen
 		db.DPrintf(db.ALWAYS, "Qlen %v %v\n", qlen, sts)
-		if qlen > 1.1 && i < 1 {
+		if qlen > 1.1 && i < 1 && nc < uint(NCPU*nsrv) {
 			db.DPrintf(db.TEST, "Add server")
 			ts.cm.AddServer()
+			nsrv++
 		}
 	}
 

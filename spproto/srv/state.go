@@ -12,7 +12,6 @@ import (
 	"sigmaos/spproto/srv/lockmap"
 	"sigmaos/spproto/srv/version"
 	"sigmaos/spproto/srv/watch"
-	"sigmaos/util/freelist"
 )
 
 const N = 10000
@@ -24,7 +23,6 @@ type ProtSrvState struct {
 	stats *stats.StatInode
 	lm    *leasedmap.LeasedMap
 	cct   *clntcond.ClntCondTable
-	fidfl *freelist.FreeList[fid.Fid]
 }
 
 func NewProtSrvState(stats *stats.StatInode) *ProtSrvState {
@@ -36,7 +34,6 @@ func NewProtSrvState(stats *stats.StatInode) *ProtSrvState {
 		cct:   cct,
 		wt:    watch.NewWatchTable(),
 		vt:    version.NewVersionTable(),
-		fidfl: freelist.NewFreeList[fid.Fid](N), // one free list shared by all sessions
 	}
 	return pss
 }
@@ -61,8 +58,8 @@ func (pss *ProtSrvState) Stats() *stats.StatInode {
 	return pss.stats
 }
 
-func (pss *ProtSrvState) newQid(perm sp.Tperm, path sp.Tpath) sp.Tqid {
-	return sp.NewQidPerm(perm, pss.vt.GetVersion(path), path)
+func (pss *ProtSrvState) newQid(perm sp.Tperm, uid sp.Tuid) sp.Tqid {
+	return sp.NewQidPerm(perm, pss.vt.GetVersion(uid), uid.Path)
 }
 
 func (pss *ProtSrvState) newFid(fm *fid.FidMap, ctx fs.CtxI, dir fs.Dir, name string, o fs.FsObj, lid sp.TleaseId, qid sp.Tqid) *fid.Fid {
@@ -81,9 +78,9 @@ func (pss *ProtSrvState) createObj(ctx fs.CtxI, d fs.Dir, dlk *lockmap.PathLock,
 	// pss.stats.IncPathString(fn.Dir().String())
 	o1, err := d.Create(ctx, name, perm, mode, lid, f, dev)
 	if err == nil {
-		pss.vt.IncVersion(d.Path())
-		pss.wt.AddCreateEvent(dlk.Path(), name)
-		flk := pss.plt.Acquire(ctx, o1.Path(), lockmap.WLOCK)
+		pss.vt.IncVersion(fs.Uid(d))
+		pss.wt.AddCreateEvent(dlk.Uid(), name)
+		flk := pss.plt.Acquire(ctx, fs.Uid(o1), lockmap.WLOCK)
 		return o1, flk, nil
 	} else {
 		return nil, nil, err
@@ -96,7 +93,7 @@ func (pss *ProtSrvState) CreateObj(fm *fid.FidMap, ctx fs.CtxI, o fs.FsObj, name
 		return sp.Tqid{}, nil, serr.NewErr(serr.TErrNotDir, name)
 	}
 	d := o.(fs.Dir)
-	dlk := pss.plt.Acquire(ctx, d.Path(), lockmap.WLOCK)
+	dlk := pss.plt.Acquire(ctx, fs.Uid(d), lockmap.WLOCK)
 	defer pss.plt.Release(ctx, dlk, lockmap.WLOCK)
 
 	o1, flk, err := pss.createObj(ctx, d, dlk, name, perm, m, lid, fence, dev)
@@ -108,10 +105,10 @@ func (pss *ProtSrvState) CreateObj(fm *fid.FidMap, ctx fs.CtxI, o fs.FsObj, name
 	}
 	defer pss.plt.Release(ctx, flk, lockmap.WLOCK)
 
-	qid := pss.newQid(o1.Perm(), o1.Path())
+	qid := pss.newQid(o1.Perm(), fs.Uid(o1))
 	nf := pss.newFid(fm, ctx, d, name, o1, lid, qid)
 	nf.SetMode(m)
-	pss.vt.Insert(qid.Tpath())
+	pss.vt.Insert(fs.Uid(o1))
 	return qid, nf, nil
 }
 
@@ -122,9 +119,9 @@ func (pss *ProtSrvState) OpenObj(ctx fs.CtxI, o fs.FsObj, m sp.Tmode) (fs.FsObj,
 		return nil, sp.Tqid{}, r
 	}
 	if no != nil {
-		return no, pss.newQid(no.Perm(), no.Path()), nil
+		return no, pss.newQid(no.Perm(), fs.Uid(no)), nil
 	} else {
-		return o, pss.newQid(o.Perm(), o.Path()), nil
+		return o, pss.newQid(o.Perm(), fs.Uid(o)), nil
 	}
 }
 
@@ -134,7 +131,7 @@ func (pss *ProtSrvState) RemoveObj(ctx fs.CtxI, dir fs.Dir, o fs.FsObj, name str
 	}
 
 	// lock dir to make WatchV and Remove interact correctly
-	dlk := pss.plt.Acquire(ctx, dir.Path(), lockmap.WLOCK)
+	dlk := pss.plt.Acquire(ctx, fs.Uid(dir), lockmap.WLOCK)
 	defer pss.plt.Release(ctx, dlk, lockmap.WLOCK)
 
 	// pss.stats.IncPathString(flk.Path())
@@ -148,14 +145,14 @@ func (pss *ProtSrvState) RemoveObj(ctx fs.CtxI, dir fs.Dir, o fs.FsObj, name str
 		return err
 	}
 
-	pss.vt.IncVersion(dir.Path())
-	pss.wt.AddRemoveEvent(dlk.Path(), name)
+	pss.vt.IncVersion(fs.Uid(dir))
+	pss.wt.AddRemoveEvent(dlk.Uid(), name)
 
 	if leased && pss.lm != nil {
 		if ok := pss.lm.Delete(o.Path()); !ok {
 			// leasesrv may already have removed path from leased
 			// map and called RemoveObj to delete it.
-			db.DPrintf(db.PROTSRV, "Delete %v doesn't exist in et\n", o.Path())
+			db.DPrintf(db.PROTSRV, "Delete %v doesn't exist in lm", o.Path())
 		}
 	}
 	return nil
@@ -163,7 +160,7 @@ func (pss *ProtSrvState) RemoveObj(ctx fs.CtxI, dir fs.Dir, o fs.FsObj, name str
 
 // Rename this fid.  Other fids for the same underlying fs obj are unchanged.
 func (pss *ProtSrvState) RenameObj(f *fid.Fid, name string, fence sp.Tfence) *serr.Err {
-	dlk := pss.plt.Acquire(f.Ctx(), f.Path(), lockmap.WLOCK)
+	dlk := pss.plt.Acquire(f.Ctx(), f.Uid(), lockmap.WLOCK)
 	defer pss.plt.Release(f.Ctx(), dlk, lockmap.WLOCK)
 
 	// pss.stats.IncPathString(po.Pathname().String())
@@ -173,10 +170,10 @@ func (pss *ProtSrvState) RenameObj(f *fid.Fid, name string, fence sp.Tfence) *se
 		return err
 	}
 
-	pss.vt.IncVersion(f.Parent().Path())
+	pss.vt.IncVersion(fs.Uid(f.Parent()))
 
-	pss.wt.AddRemoveEvent(dlk.Path(), f.Name())
-	pss.wt.AddCreateEvent(dlk.Path(), name)
+	pss.wt.AddRemoveEvent(dlk.Uid(), f.Name())
+	pss.wt.AddCreateEvent(dlk.Uid(), name)
 
 	if f.Obj().IsLeased() && pss.lm != nil {
 		pss.lm.Rename(f.Path(), name)
@@ -200,11 +197,11 @@ func lockOrder(d1 fs.FsObj, d2 fs.FsObj) bool {
 func (pss *ProtSrvState) RenameAtObj(old, new *fid.Fid, dold, dnew fs.Dir, oldname, newname string, o fs.FsObj, f sp.Tfence) *serr.Err {
 	var d1lk, d2lk *lockmap.PathLock
 	if srcfirst := lockOrder(dold, dnew); srcfirst {
-		d1lk = pss.plt.Acquire(old.Ctx(), dold.Path(), lockmap.WLOCK)
-		d2lk = pss.plt.Acquire(new.Ctx(), dnew.Path(), lockmap.WLOCK)
+		d1lk = pss.plt.Acquire(old.Ctx(), fs.Uid(dold), lockmap.WLOCK)
+		d2lk = pss.plt.Acquire(new.Ctx(), fs.Uid(dnew), lockmap.WLOCK)
 	} else {
-		d2lk = pss.plt.Acquire(new.Ctx(), dnew.Path(), lockmap.WLOCK)
-		d1lk = pss.plt.Acquire(old.Ctx(), dold.Path(), lockmap.WLOCK)
+		d2lk = pss.plt.Acquire(new.Ctx(), fs.Uid(dnew), lockmap.WLOCK)
+		d1lk = pss.plt.Acquire(old.Ctx(), fs.Uid(dold), lockmap.WLOCK)
 	}
 	defer pss.plt.Release(old.Ctx(), d1lk, lockmap.WLOCK)
 	defer pss.plt.Release(new.Ctx(), d2lk, lockmap.WLOCK)
@@ -218,10 +215,10 @@ func (pss *ProtSrvState) RenameAtObj(old, new *fid.Fid, dold, dnew fs.Dir, oldna
 		pss.lm.Rename(o.Path(), newname)
 	}
 
-	pss.vt.IncVersion(new.Obj().Path())
-	pss.vt.IncVersion(old.Obj().Path())
+	pss.vt.IncVersion(fs.Uid(new.Obj()))
+	pss.vt.IncVersion(fs.Uid(old.Obj()))
 
-	pss.wt.AddRemoveEvent(d1lk.Path(), oldname)
-	pss.wt.AddCreateEvent(d2lk.Path(), newname)
+	pss.wt.AddRemoveEvent(d1lk.Uid(), oldname)
+	pss.wt.AddCreateEvent(d2lk.Uid(), newname)
 	return nil
 }

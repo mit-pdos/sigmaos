@@ -11,10 +11,9 @@ import (
 
 	"sigmaos/api/fs"
 	db "sigmaos/debug"
-	dialproxyclnt "sigmaos/dialproxy/clnt"
 	"sigmaos/ft/procgroupmgr"
 	kernelclnt "sigmaos/kernel/clnt"
-	"sigmaos/path"
+	"sigmaos/namesrv/ndclnt"
 	"sigmaos/proc"
 	realmpkg "sigmaos/realm"
 	"sigmaos/realm/proto"
@@ -26,6 +25,7 @@ import (
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
 	spprotosrv "sigmaos/spproto/srv"
+	"sigmaos/util/retry"
 )
 
 const (
@@ -40,10 +40,8 @@ type Subsystem struct {
 
 type Realm struct {
 	sync.Mutex
-	namedcfg                 *procgroupmgr.ProcGroupMgrConfig
-	namedgrp                 *procgroupmgr.ProcGroupMgr
+	ndg                      *ndclnt.NdMgr
 	perRealmKernelSubsystems []*Subsystem
-	sc                       *sigmaclnt.SigmaClnt
 }
 
 func newRealm() *Realm {
@@ -96,10 +94,6 @@ func RunRealmSrv(dialproxy bool) error {
 	if err != nil {
 		return err
 	}
-	//	_, serr := ssrv.MemFs.Create(sp.REALMSREL, 0777|sp.DMDIR, sp.OREAD, sp.NoLeaseId)
-	//	if serr != nil {
-	//		return serr
-	//	}
 	db.DPrintf(db.REALMD, "newsrv ok")
 	rs.sc = sigmaclnt.NewSigmaClntKernel(ssrv.MemFs.SigmaClnt())
 	rs.mkc = kernelclnt.NewMultiKernelClnt(ssrv.MemFs.SigmaClnt().FsLib, db.REALMD, db.REALMD_ERR)
@@ -141,27 +135,29 @@ func (rm *RealmSrv) Make(ctx fs.CtxI, req proto.MakeReq, res *proto.MakeRep) err
 		return err
 	}
 	r := newRealm()
-	r.namedcfg = procgroupmgr.NewProcGroupConfigRealmSwitch(1, sp.NAMEDREL, nil, NAMED_MCPU, req.Realm, rid, rm.dialproxy)
 
-	db.DPrintf(db.REALMD, "RealmSrv.Make %v spawn named %v", req.Realm, r.namedcfg)
-	r.namedgrp = r.namedcfg.StartGrpMgr(rm.sc.SigmaClnt())
+	nd := procgroupmgr.NewProcGroupConfigRealmSwitch(1, sp.NAMEDREL, nil, NAMED_MCPU, req.Realm, rid, rm.dialproxy)
+	ndg, err := ndclnt.NewNdGrpMgr(rm.sc.SigmaClnt(), sp.Trealm(req.Realm), nd, true)
+	if err != nil {
+		db.DPrintf(db.ERROR, "Error NewNdGrpMgr %v", err)
+		return err
+	}
+	r.ndg = ndg
+
+	if err := r.ndg.StartNamedGrp(); err != nil {
+		db.DPrintf(db.ERROR, "Error StartNamedGrp %v", err)
+		return err
+	}
+
 	db.DPrintf(db.REALMD, "RealmSrv.Make %v named started", req.Realm)
 
-	// wait until the realm's named has registered its endpoint and is ready to
-	// serve
-	if _, err := rm.sc.GetFileWatch(path.MarkResolve(filepath.Join(sp.REALMS, req.Realm))); err != nil {
-		db.DPrintf(db.ERROR, "Error GetFileWatch named root: %v", err)
+	if err := r.ndg.WaitNamed(); err != nil {
+		db.DPrintf(db.ERROR, "Error GetFileWatch named root %v: %v", r.ndg.PathName(), err)
 		return err
 	}
 
 	db.DPrintf(db.REALMD, "RealmSrv.Make named ready to serve for %v", rid)
-	pe := proc.NewDifferentRealmProcEnv(rm.sc.ProcEnv(), rid)
-	sc, err := sigmaclnt.NewSigmaClntFsLib(pe, dialproxyclnt.NewDialProxyClnt(pe))
-	if err != nil {
-		db.DPrintf(db.REALMD_ERR, "Error NewSigmaClntRealm: %v", err)
-		return err
-	}
-	r.sc = sc
+	sc := r.ndg.SigmaClntRealm()
 	// Make some rootrealm services available in new realm
 	rootNamedEP, err := rm.sc.GetNamedEndpoint()
 	if err != nil {
@@ -229,9 +225,20 @@ func (rm *RealmSrv) Remove(ctx fs.CtxI, req proto.RemoveReq, res *proto.RemoveRe
 		return serr.NewErr(serr.TErrNotfound, rid)
 	}
 
+	sc := r.ndg.SigmaClntRealm()
 	if req.RemoveNamedState {
-		// If removing named state, remove the realm's name/*
-		if err := r.sc.RmDirEntries(sp.NAMED); err != nil {
+		// If removing named state, remove the realm's name/*. Retry
+		// if realm's named crash while removing.  Once case this
+		// happens is in realm clean up in TestCrashRealmNamed,
+		// because it will remove the crashnd.sem file, which causes
+		// named to crash in that.
+		if err, _ := retry.RetryAtLeastOnce(func() error {
+			err := sc.RmDirEntries(sp.NAMED)
+			if err != nil {
+				db.DPrintf(db.REALMD_ERR, "Remove NAMED err %v", err)
+			}
+			return err
+		}); err != nil {
 			db.DPrintf(db.ERROR, "Error remove NAMED: %v", err)
 			return err
 		}
@@ -241,14 +248,14 @@ func (rm *RealmSrv) Remove(ctx fs.CtxI, req proto.RemoveReq, res *proto.RemoveRe
 		dirsToRemove := []string{sp.KPIDSREL, sp.S3REL, sp.UXREL}
 		for _, d := range dirsToRemove {
 			pn := filepath.Join(sp.NAMED, d)
-			if err := r.sc.RmDir(pn); err != nil {
+			if err := sc.RmDir(pn); err != nil {
 				db.DPrintf(db.ERROR, "Error remove %v: %v", d, err)
 				return err
 			}
 		}
 		for s, _ := range sp.RootNamedMountedDirs {
 			pn := filepath.Join(sp.NAMED, s)
-			if err := r.sc.Remove(pn); err != nil {
+			if err := sc.Remove(pn); err != nil {
 				db.DPrintf(db.ERROR, "Error remove root EP mount %v err %v", pn, err)
 				return err
 			}
@@ -265,10 +272,14 @@ func (rm *RealmSrv) Remove(ctx fs.CtxI, req proto.RemoveReq, res *proto.RemoveRe
 
 	// XXX remove root dir
 
-	if _, err := r.namedgrp.StopGroup(); err != nil {
+	if err := r.ndg.StopNamedGrp(); err != nil {
 		db.DPrintf(db.ERROR, "Error stop realm named group: %v", err)
 		return err
 	}
+	if err := r.ndg.RemoveNamedEP(); err != nil {
+		db.DPrintf(db.ERROR, "RemoveNamedEP %v err %v", r.ndg.PathName(), err)
+	}
+
 	delete(rm.realms, rid)
 	return nil
 }

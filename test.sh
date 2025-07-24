@@ -158,11 +158,9 @@ if [[ $COMPILE == "--compile" ]]; then
       sigmaclnt/fslib \
       util/coordination/semaphore \
       sched/msched/proc/chunk/srv \
-      ft/leaderclnt/electclnt \
       sigmaclnt/fslib/dirwatcher \
       sigmaclnt/fslib/dircache \
       sigmasrv/memfssrv/memfs \
-      namesrv \
       namesrv/fsetcd \
       namesrv/ndclnt \
       sigmaclnt/procclnt \
@@ -170,17 +168,15 @@ if [[ $COMPILE == "--compile" ]]; then
       proxy/s3 \
       proxy/cpp \
       boot/clnt \
+      ft/procgroupmgr \
       ft/leaderclnt \
       ft/leadertest \
       ft/task \
-      apps/kv/kvgrp \
       apps/cache/cachegrp/clnt \
-      apps/www \
       sigmasrv/memfssrv/sigmapsrv \
       realm/clnt \
       apps/mr \
       apps/imgresize \
-      apps/kv \
       apps/hotel \
       apps/socialnetwork \
       benchmarks \
@@ -215,7 +211,7 @@ if [[ $BASIC == "--basic" ]]; then
       util/linux/sched \
       util/perf \
       sigmap \
-      sortedmap; \
+      # util/sortedmapv1; \
       do
         if ! [ -z "$SKIPTO" ]; then
           if [[ "$SKIPTO" == "$T" ]]; then
@@ -283,13 +279,17 @@ if [[ $BASIC == "--basic" ]]; then
     #
 
     for T in \
-      namesrv/ndclnt \
       util/coordination/semaphore \
       sched/msched/proc/chunk/srv \
       proxy/ux \
       boot/clnt \
       proxy/s3 \
       proxy/cpp \
+      ft/leaderclnt \
+      ft/leadertest \
+      namesrv/ndclnt \
+      ft/procgroupmgr \
+      ft/task \
       realm/clnt; \
       do
         if ! [ -z "$SKIPTO" ]; then
@@ -310,10 +310,6 @@ if [[ $BASIC == "--basic" ]]; then
 
     for T in \
       sigmaclnt/procclnt \
-      ft/leaderclnt \
-      ft/leadertest \
-      ft/task \
-      apps/kv/kvgrp \
       apps/cache/cachegrp/clnt; \
       do
         if ! [ -z "$SKIPTO" ]; then
@@ -359,9 +355,9 @@ fi
 
 if [[ $APPS == "--apps" ]]; then
     if [[ $FAST == "--fast" ]]; then
-        PKGS="apps/mr apps/imgresize apps/kv apps/hotel apps/socialnetwork"
-        TNAMES=("MRJob" "ImgdOne" "KVOKN" "TestBenchDeathStarSingle" "TestCompose")
-        NEED_DB=("false" "false" "false" "true" "true")
+        PKGS="apps/mr apps/imgresize apps/hotel apps/socialnetwork"
+        TNAMES=("MRJob" "ImgdOne" "TestWww" "TestCompose")
+        NEED_DB=("false" "false" "true" "true")
         i=0
         for T in $PKGS; do
           if ! [ -z "$SKIPTO" ]; then
@@ -379,14 +375,16 @@ if [[ $APPS == "--apps" ]]; then
           fi
           run_test $T "./test-in-docker.sh --pkg $T --run '${TNAMES[$i]}' --args \"$VERB $SPPROXYD $DIALPROXY\""
           i=$(($i+1))
+          if [[ "${NEED_DB[$i]}" == "true" ]]; then
+              ./stop.sh
+          fi
         done
     else
         for T in \
           apps/imgresize \
           apps/mr \
           apps/hotel \
-          apps/socialnetwork \
-          apps/www; \
+          apps/socialnetwork; \
           do
             if ! [ -z "$SKIPTO" ]; then
               if [[ "$SKIPTO" == "$T" ]]; then
@@ -399,20 +397,7 @@ if [[ $APPS == "--apps" ]]; then
             fi
             ./start-db.sh
             run_test $T "./test-in-docker.sh --pkg $T --args \"$VERB --timeout 20m $SPPROXYD $DIALPROXY $REUSEKERNEL\""
-        done
-        # On machines with many cores, kv tests may take a long time.
-        for T in apps/kv; do
-            if ! [ -z "$SKIPTO" ]; then
-              if [[ "$SKIPTO" == "$T" ]]; then
-                # Stop skipping
-                SKIPTO=""
-              else
-                # Skip
-                continue
-              fi
-            fi
-            ./start-db.sh
-            run_test $T "./test-in-docker.sh --pkg $T --args \"$VERB --timeout 50m $SPPROXYD $DIALPROXY $REUSEKERNEL\""
+            ./stop.sh
         done
     fi
 fi

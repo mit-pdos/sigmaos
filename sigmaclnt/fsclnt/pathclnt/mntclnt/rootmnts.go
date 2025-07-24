@@ -92,7 +92,9 @@ func (rootmt *RootMountTable) isRootMount(mntName sp.Tsigmapath) bool {
 	return false
 }
 
-// Resolve pn that names a server's root (e.g., name/ux, name)
+// Resolve pn that names a server's root (e.g., name/ux, name), and it
+// may mount the root.  If so, tell caller that it should walk
+// pathname again.
 func (mc *MntClnt) resolveRoot(pn path.Tpathname) (*serr.Err, bool) {
 	db.DPrintf(db.MOUNT, "resolveRoot %v", pn)
 	if len(pn) == 0 {

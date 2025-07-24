@@ -2,17 +2,67 @@ package ndclnt
 
 import (
 	"fmt"
-	"path/filepath"
 
 	db "sigmaos/debug"
-	"sigmaos/path"
+	dialproxyclnt "sigmaos/dialproxy/clnt"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
-	"sigmaos/test"
 )
 
 const MCPU proc.Tmcpu = 1000
+
+type NdClnt struct {
+	scRoot  *sigmaclnt.SigmaClnt
+	scRealm *sigmaclnt.SigmaClnt
+	pn      string
+}
+
+func NewNdClnt(scRoot *sigmaclnt.SigmaClnt, realm sp.Trealm) (*NdClnt, error) {
+	pe := proc.NewDifferentRealmProcEnv(scRoot.ProcEnv(), realm)
+	sc, err := sigmaclnt.NewSigmaClntFsLib(pe, dialproxyclnt.NewDialProxyClnt(pe))
+	if err != nil {
+		return nil, err
+	}
+	return &NdClnt{
+		scRoot:  scRoot,
+		scRealm: sc,
+		pn:      sp.NamedRootPathname(realm),
+	}, nil
+}
+
+func (ndc *NdClnt) SigmaClntRealm() *sigmaclnt.SigmaClnt {
+	return ndc.scRealm
+}
+
+func (ndc *NdClnt) PathName() string {
+	return ndc.pn
+}
+
+// Remove the named ep file for the new realm, in case the realm name
+// is re-used and it hasn't been clean removed yet (e.g., by
+// realmd). Once it is removed, we can watch for it to detect if the
+// named of the new incarnation of the realm exists. (The EP file
+// isn't leased and thus not automatically deleted.)
+func (ndc *NdClnt) RemoveNamedEP() error {
+	err := ndc.scRoot.Remove(ndc.pn)
+	return err
+}
+
+// Wait until the realm's named has registered its endpoint and is
+// ready to serve
+func (ndc *NdClnt) WaitNamed() error {
+	if b, err := ndc.scRoot.GetFileWatch(ndc.pn); err != nil {
+		return err
+	} else {
+		ep, err := sp.NewEndpointFromBytes(b)
+		if err != nil {
+			db.DPrintf(db.NAMED_LDR, "named ep %v err %v", string(b), err)
+		}
+		db.DPrintf(db.NAMED_LDR, "named ep %v", ep)
+	}
+	return nil
+}
 
 func NewNamedProc(realm sp.Trealm, dialproxy bool, canFail bool) *proc.Proc {
 	p := proc.NewProc(sp.NAMEDREL, []string{realm.String()})
@@ -27,32 +77,38 @@ func NewNamedProc(realm sp.Trealm, dialproxy bool, canFail bool) *proc.Proc {
 	return p
 }
 
-func StartNamed(sc *sigmaclnt.SigmaClnt, nd *proc.Proc) error {
-	// Spawn the named proc
-	if err := sc.Spawn(nd); err != nil {
+func (ndc *NdClnt) ClearAndStartNamed(nd *proc.Proc) error {
+	ndc.RemoveNamedEP()
+	if err := ndc.scRoot.Spawn(nd); err != nil {
 		return err
 	}
-	// Wait for the proc to start
-	if err := sc.WaitStart(nd.GetPid()); err != nil {
+	if err := ndc.scRoot.WaitStart(nd.GetPid()); err != nil {
 		return err
 	}
-	// Wait for the named to start up
-	pn := path.MarkResolve(filepath.Join(sp.REALMS, test.REALM1.String()))
-	_, err := sc.GetFileWatch(pn)
-	// wait until the named has registered its endpoint and is ready to serve
-	if err != nil {
+	if err := ndc.WaitNamed(); err != nil {
 		return err
 	}
 	db.DPrintf(db.TEST, "New named ready to serve")
 	return nil
 }
 
-func StopNamed(sc *sigmaclnt.SigmaClnt, nd *proc.Proc) error {
-	// Evict the new named
-	if err := sc.Evict(nd.GetPid()); err != nil {
+func (ndc *NdClnt) StartNamed(nd *proc.Proc) error {
+	if err := ndc.scRoot.Spawn(nd); err != nil {
 		return err
 	}
-	status, err := sc.WaitExit(nd.GetPid())
+	if err := ndc.scRoot.WaitStart(nd.GetPid()); err != nil {
+		return err
+	}
+	db.DPrintf(db.TEST, "New named spawned")
+	return nil
+}
+
+func (ndc *NdClnt) StopNamed(nd *proc.Proc) error {
+	// Evict the named
+	if err := ndc.scRoot.Evict(nd.GetPid()); err != nil {
+		return err
+	}
+	status, err := ndc.scRoot.WaitExit(nd.GetPid())
 	if err != nil {
 		return err
 	}

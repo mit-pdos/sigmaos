@@ -54,7 +54,7 @@ func (mgr *ProcMgr) RunProc(p *proc.Proc) {
 	p.SetKernelID(mgr.kernelId, true)
 	// Set the msched mount for the proc, so it can mount this msched in one RPC
 	// (without walking down to it).
-	p.SetMSchedEndpoint(mgr.ssrv.GetSigmaPSrvEndpoint())
+	p.SetMSchedEndpoint(mgr.ssrv.GetEndpoint())
 	mgr.setupProcState(p)
 	err := mgr.runProc(p)
 	if err != nil {

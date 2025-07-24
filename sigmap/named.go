@@ -50,6 +50,9 @@ const (
 	IMGREL = "img"
 	IMG    = NAMED + IMGREL + "/"
 
+	FTTASKREL = "fttask"
+	FTTASK = NAMED + FTTASKREL + "/"
+
 	MEMBLOCK = "name/memblock"
 
 	K8S_SCRAPER = NAMED + "k8sscraper/"
@@ -126,4 +129,8 @@ func BESchedKernel(kid string) string {
 
 func ProxyPathname(srv, kid string) string {
 	return filepath.Join(srv, kid)
+}
+
+func NamedRootPathname(realm Trealm) string {
+	return filepath.Join(REALMS, realm.String())
 }

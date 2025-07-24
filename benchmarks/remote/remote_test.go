@@ -53,7 +53,7 @@ func TestInitFS(t *testing.T) {
 	// Cluster configuration parameters
 	const (
 		driverVM          int  = 0
-		numNodes          int  = 4
+		numNodes          int  = 10
 		numCoresPerNode   uint = 4
 		numFullNodes      int  = numNodes
 		numProcqOnlyNodes int  = 0
@@ -111,9 +111,9 @@ func TestSingleMachineMaxTpt(t *testing.T) {
 	)
 	// Cluster configuration parameters
 	const (
-		driverVM          int  = 3
-		numNodes          int  = 2
-		numProcqOnlyNodes int  = 1
+		driverVM          int  = 0
+		numNodes          int  = 1
+		numProcqOnlyNodes int  = 0
 		numFullNodes      int  = numNodes - numProcqOnlyNodes
 		turboBoost        bool = true
 	)
@@ -130,8 +130,8 @@ func TestSingleMachineMaxTpt(t *testing.T) {
 		lcProc        bool          = false
 		prewarmRealm  bool          = true
 		skipStats     bool          = true
-		rps           []int         = []int{1600, 1200, 800, 400}
-		nCoresPerNode []uint        = []uint{40, 32, 16, 8, 4, 2}
+		rps           []int         = []int{400}
+		nCoresPerNode []uint        = []uint{2}
 		dur           time.Duration = 5 * time.Second
 	)
 	db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
@@ -262,7 +262,7 @@ func TestMR(t *testing.T) {
 	// Cluster configuration parameters
 	const (
 		driverVM          int  = 0
-		numProcqOnlyNodes int  = 2
+		numProcqOnlyNodes int  = 1
 		turboBoost        bool = true
 	)
 	type MRExperimentConfig struct {
@@ -272,13 +272,14 @@ func TestMR(t *testing.T) {
 		memReq          proc.Tmem
 	}
 	// Variable MR benchmark configuration parameters
-	var (
+var (
 		mrApps []*MRExperimentConfig = []*MRExperimentConfig{
-			&MRExperimentConfig{"mr-grep-wiki2G-bench-s3.yml", 10, 4, 7000},
-			&MRExperimentConfig{"mr-grep-wiki2G-granular-bench-s3.yml", 54, 4, 7000},
-			&MRExperimentConfig{"mr-wc-wiki2G-bench.yml", 10, 4, 7000},
-			&MRExperimentConfig{"mr-wc-wiki2G-bench-s3.yml", 10, 4, 7000},
-		}
+			{"mr-grep-wiki2G-bench-s3.yml", 10, 4, 7000},
+			{"mr-grep-wiki2G-granular-bench-s3.yml", 54, 4, 7000},
+			{"mr-wc-wiki2G-bench.yml", 10, 4, 7000},
+			{"mr-wc-wiki2G-bench-s3.yml", 10, 4, 7000},
+		}		
+		perfs []bool = []bool{false}
 		prewarmRealms []bool = []bool{true}
 		//		prewarmRealms []bool   = []bool{true, false}
 	)
@@ -294,16 +295,21 @@ func TestMR(t *testing.T) {
 		return
 	}
 	db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
-	for _, mrEP := range mrApps {
-		for _, prewarmRealm := range prewarmRealms {
-			benchName := filepath.Join(benchNameBase, mrEP.benchName)
-			if prewarmRealm {
-				benchName += "-warm"
-			} else {
-				benchName += "-cold"
+	for _, perf := range perfs {
+		for _, mrEP := range mrApps {
+			for _, prewarmRealm := range prewarmRealms {
+				benchName := filepath.Join(benchNameBase, mrEP.benchName)
+				if prewarmRealm {
+					benchName += "-warm"
+				} else {
+					benchName += "-cold"
+				}
+				if perf {
+					benchName += "-perf"
+				}
+				numFullNodes := mrEP.numNodes - numProcqOnlyNodes
+				ts.RunStandardBenchmark(benchName, driverVM, GetMRCmdConstructor(mrEP.benchName, mrEP.memReq, prewarmRealm, measureTpt, perf), mrEP.numNodes, mrEP.numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost)
 			}
-			numFullNodes := mrEP.numNodes - numProcqOnlyNodes
-			ts.RunStandardBenchmark(benchName, driverVM, GetMRCmdConstructor(mrEP.benchName, mrEP.memReq, prewarmRealm, measureTpt), mrEP.numNodes, mrEP.numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost)
 		}
 	}
 }

@@ -124,7 +124,7 @@ func (npc *NpSess) Attach(args *sp.Tattach, rets *sp.Rattach) (sp.TclntId, *sp.R
 	}
 	rets.Qid = npc.qm.Insert(fid, []sp.Tqid{*npc.fidc.Qid(fid)})[0]
 	npc.fm.mapTo(args.Tfid(), fid)
-	db.DPrintf(db.NPPROXY, "Attach args %v rets %v fid %v", args, rets, fid)
+	db.DPrintf(db.NPPROXY, "Attach args %v rets %v linux %v mapTo %v", args, rets, args.Tfid(), fid)
 	return args.TclntId(), nil
 }
 
@@ -138,7 +138,8 @@ func (npc *NpSess) Walk(args *sp.Twalk, rets *sp.Rwalk) *sp.Rerror {
 	if !ok {
 		return sp.NewRerrorCode(serr.TErrNotfound)
 	}
-	fid1, err := npc.pc.Walk(fid, append([]string{"name"}, args.Wnames...), sp.NewPrincipal(
+
+	fid1, err := npc.pc.Walk(fid, args.Wnames, sp.NewPrincipal(
 		sp.TprincipalID("proxy"),
 		sp.ROOTREALM,
 	))
@@ -153,7 +154,7 @@ func (npc *NpSess) Walk(args *sp.Twalk, rets *sp.Rwalk) *sp.Rerror {
 
 	rets.Qids = npc.qm.Insert(fid1, qids)
 	npc.fm.mapTo(args.Tnewfid(), fid1)
-	db.DPrintf(db.NPPROXY, "Walk ret %v fid %v mapTo %v", rets, fid1, args.Tnewfid())
+	db.DPrintf(db.NPPROXY, "Walk ret %v linux %v mapTo %v", rets, args.Tnewfid(), fid1)
 	return nil
 }
 
@@ -181,7 +182,7 @@ func (npc *NpSess) Create(args *sp.Tcreate, rets *sp.Rcreate) *sp.Rerror {
 	if !ok {
 		return sp.NewRerrorCode(serr.TErrNotfound)
 	}
-	fid1, err := npc.fidc.Create(fid, args.Name, args.Tperm(), args.Tmode(), sp.NoLeaseId, sp.NullFence())
+	fid1, err := npc.fidc.Create(fid, args.Name, args.Tperm()|0777, args.Tmode(), sp.NoLeaseId, sp.NullFence())
 	if err != nil {
 		db.DPrintf(db.NPPROXY, "Create args %v err: %v", args, err)
 		return sp.NewRerrorSerr(err)
@@ -239,7 +240,7 @@ func (npc *NpSess) Stat(args *sp.Trstat, rets *sp.Rrstat) *sp.Rerror {
 	if !ok {
 		return sp.NewRerrorCode(serr.TErrNotfound)
 	}
-	db.DPrintf(db.NPPROXY, "Stat: req %v mapTo %v", args.Tfid(), fid)
+	db.DPrintf(db.NPPROXY, "Stat: req linux %v mapTo %v", args.Tfid(), fid)
 	st, err := npc.fidc.Stat(fid)
 	if err != nil {
 		db.DPrintf(db.NPPROXY, "Stats: args %v err %v", args, err)
@@ -284,7 +285,7 @@ func (npc *NpSess) ReadF(args *sp.TreadF, rets *sp.Rread) ([]byte, *sp.Rerror) {
 		return nil, sp.NewRerrorErr(err)
 	}
 	b = b[:cnt]
-	db.DPrintf(db.NPPROXY, "ReadUV: args %v rets %v %d", args, rets, cnt)
+	db.DPrintf(db.NPPROXY, "ReadF: args %v rets %v %d", args, rets, cnt)
 	qid := npc.pc.Qid(fid)
 	if sp.Qtype(qid.Type)&sp.QTDIR == sp.QTDIR {
 		d1, err1 := Sp2NpDir(b, args.Tcount())

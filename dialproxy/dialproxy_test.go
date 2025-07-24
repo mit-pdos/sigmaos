@@ -67,6 +67,53 @@ func TestDial(t *testing.T) {
 	ts.Shutdown()
 }
 
+func TestManyDial(t *testing.T) {
+	const (
+		NCLNT = 400
+	)
+	ts, err1 := test.NewTstate(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	addr := sp.NewTaddr(IP, PORT)
+	c := make(chan bool)
+	l, err := net.Listen("tcp", addr.IPPort())
+	assert.Nil(t, err, "Err Listen: %v", err)
+	go func(l net.Listener) {
+		for true {
+			conn, err := l.Accept()
+			if err != nil {
+				break
+			}
+			go func(conn net.Conn) {
+				b := make([]byte, len(TEST_MSG))
+				n, err := conn.Read(b)
+				assert.Nil(t, err, "Err read: %v", err)
+				assert.Equal(t, len(b), n, "Err read nbyte: %v != %v", len(b), n)
+				c <- true
+			}(conn)
+		}
+	}(l)
+	for i := 0; i < NCLNT; i++ {
+		go func(i int) {
+			npc := ts.GetDialProxyClnt()
+			ep := sp.NewEndpoint(sp.EXTERNAL_EP, sp.Taddrs{addr})
+			conn, err := npc.Dial(ep)
+			assert.Nil(t, err, "Err Dial: %v", err)
+			n, err := conn.Write([]byte(TEST_MSG))
+			if assert.Nil(t, err, "Err Write: %v", err) {
+				assert.Equal(t, len(TEST_MSG), n, "Err Write nbyte: %v != %v", len(TEST_MSG), n)
+			}
+			conn.Close()
+		}(i)
+	}
+	for i := 0; i < NCLNT; i++ {
+		<-c
+	}
+	l.Close()
+	ts.Shutdown()
+}
+
 // Make sure failed dialing returns an error (connection refused)
 func TestFailedDial(t *testing.T) {
 	ts, err1 := test.NewTstate(t)

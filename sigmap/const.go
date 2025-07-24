@@ -95,7 +95,8 @@ const (
 
 // FSETCD consts
 const (
-	EtcdSessionTTL = 5
+	EtcdSessionTTL     = 5
+	EtcdSessionExpired = EtcdSessionTTL + 1
 )
 
 // Realm consts
@@ -150,3 +151,16 @@ func NoPrincipal() *Tprincipal {
 		RealmStr: NO_REALM.String(),
 	}
 }
+
+// File system devices
+const (
+	DEV_MEMFS Tdev = iota + 1
+	DEV_RPCFS
+	DEV_STATFS
+	DEV_PSTATFS
+	DEV_FENCEFS
+	DEV_S3FS
+	DEV_UXFS
+	DEV_ETCDFS
+	DEV_WATCHFS
+)

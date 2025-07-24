@@ -59,7 +59,11 @@ func (t *Transport) ReadCall() (demux.CallI, error) {
 		db.DPrintf(db.NPCODEC, "ReadFrame err %v\n", err)
 		return nil, err
 	}
-	return unmarshalFrame(f)
+	c, sr := unmarshalFrame(f)
+	if err != nil {
+		return nil, sr
+	}
+	return c, nil
 }
 
 func (t *Transport) WriteCall(c demux.CallI) error {

@@ -44,7 +44,7 @@ func (dmx *DemuxSrv) reader() {
 		}
 		c, err := dmx.trans.ReadCall()
 		if err != nil {
-			db.DPrintf(db.DEMUXSRV_ERR, "reader: %p ReadCall err %v\n", dmx, err)
+			db.DPrintf(db.DEMUXSRV_ERR, "reader: %p ReadCall err %v", dmx, err)
 			dmx.srv.ReportError(err)
 			break
 		}
@@ -60,7 +60,7 @@ func (dmx *DemuxSrv) reader() {
 			}
 			dmx.mu.Unlock()
 			if err != nil {
-				db.DPrintf(db.DEMUXSRV_ERR, "reader: %p WriteCall reply %v error %v\n", dmx, rep, err)
+				db.DPrintf(db.DEMUXSRV_ERR, "reader: %p WriteCall reply %v error %v", dmx, rep, err)
 			}
 		}(c)
 	}

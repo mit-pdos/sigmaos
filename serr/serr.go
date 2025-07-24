@@ -66,16 +66,6 @@ const (
 	TErrError = 35
 )
 
-// Several calls optimistically connect to a recently-mounted server
-// without doing a pathname walk; this may fail, and the call should
-// walk. IsRetryOK() says when to retry.
-func IsRetryOK(err *Err) bool {
-	if err == nil {
-		return false
-	}
-	return err.IsErrUnreachable() || err.IsErrUnknownfid() || err.IsMaybeSpecialElem()
-}
-
 func (err Terror) String() string {
 	switch err {
 	case TErrNoError:
@@ -231,13 +221,25 @@ func (err *Err) IsErrIO() bool {
 }
 
 func (err *Err) IsErrSession() bool {
-	return err.IsErrUnreachable() || err.IsErrIO()
+	return err.IsErrUnreachable() || err.IsErrIO() || err.IsErrClosed()
+}
+
+// Several calls optimistically connect to a recently-mounted server
+// without doing a pathname walk; this may fail, and the call should
+// walk. IsWalkOK() says when to walk.
+func (err *Err) IsErrWalkOK() bool {
+	return err.IsErrUnreachable() || err.IsErrUnknownfid() || err.IsMaybeSpecialElem()
 }
 
 // A file is unavailable: either a server on the file's path is
 // unreachable or the file is not found
 func (err *Err) IsErrUnavailable() bool {
-	return err.IsErrUnreachable() || err.IsErrNotfound()
+	return err.IsErrWalkOK() || err.IsErrNotfound()
+}
+
+// Retry Open() also on IsErrIO
+func (err *Err) IsErrRetryOpenOK() bool {
+	return err.IsErrWalkOK() || err.IsErrIO()
 }
 
 func (err *Err) IsErrVersion() bool {
@@ -246,6 +248,10 @@ func (err *Err) IsErrVersion() bool {
 
 func (err *Err) IsErrStale() bool {
 	return err.Code() == TErrStale
+}
+
+func (err *Err) IsErrClosed() bool {
+	return err.Code() == TErrClosed
 }
 
 func (err *Err) IsErrSessClosed() bool {
@@ -272,7 +278,7 @@ func (err *Err) ErrPath() string {
 
 func IsErr(error error) (*Err, bool) {
 	var err *Err
-	if errors.As(error, &err) {
+	if errors.As(error, &err) && err != nil {
 		return err, true
 	}
 	return nil, false
@@ -280,7 +286,7 @@ func IsErr(error error) (*Err, bool) {
 
 func IsErrorNotfound(error error) bool {
 	var err *Err
-	if errors.As(error, &err) {
+	if errors.As(error, &err) && err != nil {
 		return err.IsErrNotfound()
 	}
 	return false
@@ -288,7 +294,7 @@ func IsErrorNotfound(error error) bool {
 
 func IsErrorExists(error error) bool {
 	var err *Err
-	if errors.As(error, &err) {
+	if errors.As(error, &err) && err != nil {
 		return err.IsErrExists()
 	}
 	return false
@@ -296,7 +302,7 @@ func IsErrorExists(error error) bool {
 
 func IsErrorUnavailable(error error) bool {
 	var err *Err
-	if errors.As(error, &err) {
+	if errors.As(error, &err) && err != nil {
 		return err.IsErrUnavailable()
 	}
 	return false
@@ -304,23 +310,47 @@ func IsErrorUnavailable(error error) bool {
 
 func IsErrorUnreachable(error error) bool {
 	var err *Err
-	if errors.As(error, &err) {
+	if errors.As(error, &err) && err != nil {
 		return err.IsErrUnreachable()
+	}
+	return false
+}
+
+func IsErrorClosed(error error) bool {
+	var err *Err
+	if errors.As(error, &err) && err != nil {
+		return err.IsErrClosed()
 	}
 	return false
 }
 
 func IsErrorIO(error error) bool {
 	var err *Err
-	if errors.As(error, &err) {
+	if errors.As(error, &err) && err != nil {
 		return err.IsErrIO()
+	}
+	return false
+}
+
+func IsErrorWalkOK(error error) bool {
+	var err *Err
+	if errors.As(error, &err) && err != nil {
+		return err.IsErrWalkOK()
+	}
+	return false
+}
+
+func IsErrorRetryOpenOK(error error) bool {
+	var err *Err
+	if errors.As(error, &err) && err != nil {
+		return err.IsErrRetryOpenOK()
 	}
 	return false
 }
 
 func IsErrorSession(error error) bool {
 	var err *Err
-	if errors.As(error, &err) {
+	if errors.As(error, &err) && err != nil {
 		return err.IsErrSession()
 	}
 	return false
@@ -328,7 +358,7 @@ func IsErrorSession(error error) bool {
 
 func IsErrCode(error error, code Terror) bool {
 	var err *Err
-	if errors.As(error, &err) {
+	if errors.As(error, &err) && err != nil {
 		return err.Code() == code
 	}
 	return false

@@ -72,6 +72,26 @@ func TestEmptyPath(t *testing.T) {
 	ts.Shutdown()
 }
 
+func TestStats(t *testing.T) {
+	ts, err1 := test.NewTstatePath(t, pathname)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	defer ts.Shutdown()
+
+	st, err := ts.Stats()
+	assert.Nil(t, err)
+	_, err = ts.GetDir(pathname)
+	assert.Nil(t, err)
+	st1, err := ts.Stats()
+	assert.Nil(t, err)
+
+	assert.True(t, st1.Path.Counters["Nfid"] == st.Path.Counters["Nfid"])
+	assert.True(t, st1.Sp.Counters["Nopen"] == st.Sp.Counters["Nopen"]+1)
+	assert.True(t, st1.Sp.Counters["Nwalk"] == st.Sp.Counters["Nwalk"]+2)
+	assert.True(t, st1.Sp.Counters["Nclunk"] == st.Sp.Counters["Nclunk"]+2)
+}
+
 func TestRemoveBasic(t *testing.T) {
 	ts, err1 := test.NewTstatePath(t, pathname)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
@@ -316,7 +336,7 @@ func TestRmDirWithSymlink(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestReadSymlink(t *testing.T) {
+func TestReadEndPoint(t *testing.T) {
 	ts, err1 := test.NewTstatePath(t, pathname)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
@@ -678,7 +698,7 @@ func TestDirConcur(t *testing.T) {
 	ts.Shutdown()
 }
 
-func TestWaitCreate(t *testing.T) {
+func TestWaitCreateBasic(t *testing.T) {
 	ts, err1 := test.NewTstatePath(t, pathname)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
@@ -1110,9 +1130,18 @@ func TestSymlinkPath(t *testing.T) {
 	err = ts.Symlink([]byte(pathname), fn, 0777)
 	assert.Nil(ts.T, err, "Symlink")
 
+	st, err := ts.Stats()
+	assert.Nil(t, err)
+
 	sts, err := ts.GetDir(path.MarkResolve(fn))
 	assert.Equal(t, nil, err)
 	assert.True(t, sp.Present(sts, path.Tpathname{DIR1}), DIR1)
+
+	st1, err := ts.Stats()
+	assert.Nil(t, err)
+
+	assert.True(t, st1.Path.Counters["Nsym"] == st.Path.Counters["Nsym"]+1)
+	assert.True(t, st1.Path.Counters["Nfid"] == st.Path.Counters["Nfid"])
 
 	err = ts.RmDir(dn)
 	assert.Nil(t, err, "RmDir: %v", err)
@@ -1132,7 +1161,7 @@ func newEndpoint(t *testing.T, ts *test.Tstate, path string) *sp.Tendpoint {
 	return ep
 }
 
-func TestEndpointSimple(t *testing.T) {
+func TestEndpointLink(t *testing.T) {
 	ts, err1 := test.NewTstatePath(t, pathname)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
@@ -1145,9 +1174,19 @@ func TestEndpointSimple(t *testing.T) {
 	pn := filepath.Join(dn, "namedself")
 	err = ts.MkEndpointFile(pn, newEndpoint(t, ts, pathname))
 	assert.Nil(ts.T, err, "MkEndpointFile")
+
+	st, err := ts.Stats()
+	assert.Nil(t, err)
+
 	sts, err := ts.GetDir(path.MarkResolve(pn))
 	assert.Equal(t, nil, err)
 	assert.True(t, sp.Present(sts, path.Tpathname{DIR1}), DIR1)
+
+	st1, err := ts.Stats()
+	assert.Nil(t, err)
+
+	assert.True(t, st1.Path.Counters["Nsym"] == st.Path.Counters["Nsym"])
+	assert.True(t, st1.Path.Counters["Nfid"] == st.Path.Counters["Nfid"]+1)
 
 	err = ts.RmDir(dn)
 	assert.Nil(t, err, "RmDir: %v", err)
@@ -1172,17 +1211,34 @@ func TestUnionDir(t *testing.T) {
 	err = ts.MkEndpointFile(filepath.Join(pathname, DIR1, "namedself1"), newep)
 	assert.Nil(ts.T, err, "EndpointService")
 
+	st, err := ts.Stats()
+	assert.Nil(t, err)
+
 	sts, err := ts.GetDir(path.MarkResolve(filepath.Join(pathname, DIR1, sp.ANY)))
 	assert.Equal(t, nil, err)
 	assert.True(t, sp.Present(sts, path.Tpathname{DIR1}), DIR1)
+
+	st0, err := ts.Stats()
+	assert.Nil(t, err)
 
 	sts, err = ts.GetDir(filepath.Join(pathname, DIR1, sp.ANY, DIR1))
 	assert.Equal(t, nil, err)
 	assert.True(t, sp.Present(sts, path.Tpathname{"namedself0", "namedself1"}), DIR1)
 
+	st1, err := ts.Stats()
+	assert.Nil(t, err)
+
 	sts, err = ts.GetDir(path.MarkResolve(filepath.Join(pathname, DIR1, sp.ANY)))
 	assert.Equal(t, nil, err)
 	assert.True(t, sp.Present(sts, path.Tpathname{DIR1}), DIR1)
+
+	st2, err := ts.Stats()
+	assert.Nil(t, err)
+
+	assert.True(t, st.Path.Counters["Nsym"] == st2.Path.Counters["Nsym"])
+	assert.True(t, st0.Path.Counters["Nfid"] == st.Path.Counters["Nfid"]+1)
+	assert.True(t, st0.Path.Counters["Nfid"] == st1.Path.Counters["Nfid"])
+	assert.True(t, st0.Path.Counters["Nfid"] == st2.Path.Counters["Nfid"])
 
 	pn, err := ts.ResolveMounts(filepath.Join(pathname, DIR1, sp.ANY))
 	assert.Equal(t, nil, err)
@@ -1323,7 +1379,7 @@ func TestSetFileSymlink(t *testing.T) {
 	err = ts.MkEndpointFile(filepath.Join(pathname, "namedself0"), newEndpoint(t, ts, pathname))
 	assert.Nil(ts.T, err, "MkEndpointFile")
 
-	st, err := ts.ReadStats(pathname)
+	st, err := ts.ReadSrvStats(pathname)
 	assert.Nil(t, err, "statsd")
 	nwalk := st.Counters["Nwalk"]
 
@@ -1334,7 +1390,7 @@ func TestSetFileSymlink(t *testing.T) {
 	assert.Nil(ts.T, err, "SetFile: %v", err)
 	assert.Equal(ts.T, sp.Tsize(len(d)), n, "SetFile")
 
-	st, err = ts.ReadStats(pathname)
+	st, err = ts.ReadSrvStats(pathname)
 	assert.Nil(t, err, "statsd")
 
 	db.DPrintf(db.TEST, "st %v\n", st)
@@ -1346,7 +1402,7 @@ func TestSetFileSymlink(t *testing.T) {
 	assert.Nil(ts.T, err, "GetFile")
 	assert.Equal(ts.T, d, b, "GetFile")
 
-	st, err = ts.ReadStats(pathname)
+	st, err = ts.ReadSrvStats(pathname)
 	assert.Nil(t, err, "statsd")
 
 	assert.Equal(ts.T, nwalk, st.Counters["Nwalk"], "getfile")
@@ -1378,6 +1434,9 @@ func TestEndpointUnion(t *testing.T) {
 	err = ts.MkEndpointFile(pn, newEndpoint(t, ts, dn))
 	assert.Nil(ts.T, err, "MkEndpointFile")
 
+	st, err := ts.Stats()
+	assert.Nil(t, err)
+
 	eppn := "mount/"
 	if pathname != sp.NAMED && pathname != "name/memfs/"+sp.LOCAL+"/" {
 		eppn = filepath.Join(eppn, sp.ANY)
@@ -1386,6 +1445,12 @@ func TestEndpointUnion(t *testing.T) {
 	sts, err := ts.GetDir(path.MarkResolve(filepath.Join(pathname, eppn)))
 	assert.Equal(t, nil, err)
 	assert.True(t, sp.Present(sts, path.Tpathname{DIR1}), DIR1)
+
+	st1, err := ts.Stats()
+	assert.Nil(t, err)
+
+	assert.True(t, st1.Path.Counters["Nsym"] == st.Path.Counters["Nsym"])
+	assert.True(t, st1.Path.Counters["Nfid"] == st.Path.Counters["Nfid"]+1)
 
 	err = ts.Remove(pn)
 	assert.Nil(t, err, "Remove %v", err)
@@ -1622,7 +1687,7 @@ func TestDisconnect(t *testing.T) {
 	assert.True(t, serr.IsErrorUnreachable(err))
 
 	fd, err = ts.Open(fn, sp.OREAD)
-	assert.True(t, serr.IsErrorUnreachable(err))
+	assert.True(t, serr.IsErrorUnreachable(err), err)
 
 	ts.Shutdown()
 }

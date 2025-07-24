@@ -21,6 +21,7 @@ import (
 	sp "sigmaos/sigmap"
 	"sigmaos/util/io/demux"
 	"sigmaos/util/rand"
+	"sigmaos/util/spstats"
 )
 
 type SessClnt struct {
@@ -32,14 +33,16 @@ type SessClnt struct {
 	npc     *dialproxyclnt.DialProxyClnt
 	pe      *proc.ProcEnv
 	dmx     *demux.DemuxClnt
+	pcst    *spstats.PathClntStats
 }
 
-func newSessClnt(pe *proc.ProcEnv, npc *dialproxyclnt.DialProxyClnt, ep *sp.Tendpoint) (*SessClnt, *serr.Err) {
+func newSessClnt(pe *proc.ProcEnv, npc *dialproxyclnt.DialProxyClnt, ep *sp.Tendpoint, pcst *spstats.PathClntStats) (*SessClnt, *serr.Err) {
 	c := &SessClnt{
 		sid:     sessp.Tsession(rand.Uint64()),
 		npc:     npc,
 		pe:      pe,
 		ep:      ep,
+		pcst:    pcst,
 		seqcntr: new(sessp.Tseqcntr),
 	}
 	db.DPrintf(db.SESSCLNT, "Make session %v to srvs %v", c.sid, ep)
@@ -84,7 +87,7 @@ func (c *SessClnt) RPC(req sessp.Tmsg, iniov sessp.IoVec, outiov sessp.IoVec) (*
 
 	if err != nil {
 		if err.IsErrSession() {
-			db.DPrintf(db.CRASH, "Reset sess %v's dmx %p err %v", c.sid, dmx, err)
+			db.DPrintf(db.SESSCLNT_ERR, "Reset sess %v's dmx %p err %v", c.sid, dmx, err)
 			c.resetdmx(dmx)
 		}
 		return nil, err
@@ -116,12 +119,14 @@ func (c *SessClnt) getdmx() (*demux.DemuxClnt, *serr.Err) {
 	}
 
 	if c.dmx == nil {
-		db.DPrintf(db.SESSCLNT, "%v Connect to %v %v\n", c.sid, c.ep, c.closed)
+		db.DPrintf(db.SESSCLNT, "%v Connect to %v %v", c.sid, c.ep, c.closed)
 		conn, err := netclnt.NewNetClnt(c.pe, c.npc, c.ep)
 		if err != nil {
-			db.DPrintf(db.SESSCLNT, "%v Error %v unable to reconnect to %v\n", c.sid, err, c.ep)
+			db.DPrintf(db.SESSCLNT, "%v Error %v unable to connect to %v", c.sid, err, c.ep)
+			spstats.Inc(&c.pcst.NnetclntErr, 1)
 			return nil, err
 		}
+		spstats.Inc(&c.pcst.NnetclntOK, 1)
 		db.DPrintf(db.SESSCLNT, "%v connection to %v", c.sid, c.ep)
 		iovm := demux.NewIoVecMap()
 		c.dmx = demux.NewDemuxClnt(spcodec.NewTransport(conn, iovm), iovm)
@@ -142,7 +147,7 @@ func (c *SessClnt) ownClosed() bool {
 
 // Close the session permanently
 func (c *SessClnt) Close() error {
-	db.DPrintf(db.SESSCLNT, "%v Close session to %v %v\n", c.sid, c.ep, c.closed)
+	db.DPrintf(db.SESSCLNT, "%v Close session to %v %v", c.sid, c.ep, c.closed)
 	if !c.ownClosed() {
 		return nil
 	}

@@ -13,9 +13,6 @@ import (
 	"sigmaos/sigmasrv/clntcond"
 )
 
-type NewFsObjF func(CtxI, sp.Tperm, sp.TleaseId, sp.Tmode, MkDirF) (FsObj, *serr.Err)
-type MkDirF func(Inode, NewFsObjF) FsObj
-
 // Each request takes a Ctx with context for the request
 type CtxI interface {
 	Principal() *sp.Tprincipal
@@ -33,6 +30,7 @@ type FsObj interface {
 	Open(CtxI, sp.Tmode) (FsObj, *serr.Err)
 	Close(CtxI, sp.Tmode) *serr.Err // for pipes
 	Path() sp.Tpath
+	Dev() sp.Tdev
 	Perm() sp.Tperm
 	Unlink()
 	String() string
@@ -67,6 +65,7 @@ type Dir interface {
 
 type Inode interface {
 	Path() sp.Tpath
+	Dev() sp.Tdev
 	Perm() sp.Tperm
 	IsLeased() bool
 	SetMtime(int64)
@@ -76,6 +75,16 @@ type Inode interface {
 	Open(CtxI, sp.Tmode) (FsObj, *serr.Err)
 	Close(CtxI, sp.Tmode) *serr.Err // for pipes
 	String() string
+}
+
+func Uid(o FsObj) sp.Tuid {
+	return sp.Tuid{Dev: o.Dev(), Path: o.Path()}
+}
+
+type MkDirF func(Inode, NewInode) FsObj
+
+type NewInode interface {
+	NewFsObj(CtxI, sp.Tperm, sp.TleaseId, sp.Tmode, MkDirF) (FsObj, *serr.Err)
 }
 
 type RPC interface {

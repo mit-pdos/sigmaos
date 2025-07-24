@@ -5,12 +5,13 @@ import (
 	"sync"
 
 	"sigmaos/sigmasrv/stats"
+	"sigmaos/util/spstats"
 )
 
 type MethodStat struct {
-	N   stats.Tcounter // number of invocations of method
-	Tot stats.Tcounter // tot us for this method
-	Max stats.Tcounter
+	N   spstats.Tcounter // number of invocations of method
+	Tot spstats.Tcounter // tot us for this method
+	Max spstats.Tcounter
 	Avg float64
 }
 
@@ -31,12 +32,12 @@ type RPCStats struct {
 }
 
 type RPCStatsSnapshot struct {
-	*stats.StatsSnapshot
+	*stats.SrvStatsSnapshot
 	RpcStat map[string]*MethodStatSnapshot
 }
 
 func (st *RPCStatsSnapshot) String() string {
-	s := "Sigma stats:\n" + st.StatsSnapshot.String() + "\n"
+	s := "Sigma stats:\n" + st.SrvStatsSnapshot.String() + "\n"
 	s += "RPC stats:\n methods:\n"
 	for m, st := range st.RpcStat {
 		s += fmt.Sprintf("  %s: %s\n", m, st.String())
@@ -93,7 +94,7 @@ func (sts *StatInfo) Stat(m string, t int64) {
 		stif, _ = sts.st.MStats.LoadOrStore(m, st)
 	}
 	st = stif.(*MethodStat)
-	stats.Inc(&st.N, 1)
-	stats.Inc(&st.Tot, t)
-	stats.Max(&st.Max, t)
+	spstats.Inc(&st.N, 1)
+	spstats.Inc(&st.Tot, t)
+	spstats.Max(&st.Max, t)
 }

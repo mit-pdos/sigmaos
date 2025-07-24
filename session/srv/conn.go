@@ -41,13 +41,25 @@ func (nc *netConn) setSess(sess *Session) {
 	nc.sess = sess
 }
 
+func (nc *netConn) setDmx(dmx *demux.DemuxSrv) {
+	nc.Lock()
+	defer nc.Unlock()
+	nc.dmx = dmx
+}
+
+func (nc *netConn) getDmx() *demux.DemuxSrv {
+	nc.Lock()
+	defer nc.Unlock()
+	return nc.dmx
+}
+
 func (nc *netConn) Close() error {
-	return nc.dmx.Close()
+	return nc.getDmx().Close()
 }
 
 func (nc *netConn) IsClosed() bool {
 	db.DPrintf(db.SESSSRV, "IsClosed %v\n", nc.sessid)
-	return nc.dmx.IsClosed()
+	return nc.getDmx().IsClosed()
 }
 
 func (nc *netConn) ReportError(err error) {

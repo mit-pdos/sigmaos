@@ -272,7 +272,7 @@ func (ts *TstateNet) failer(ch chan struct{}) {
 		case <-ch:
 			return
 		default:
-			r := crash.RandSleep(NETFAIL)
+			r, _ := crash.RandSleep(NETFAIL)
 			if r < uint64(0.33*crash.ONE) {
 				if dmx := ts.getSrvDmx(); dmx != nil {
 					dmx.Close()

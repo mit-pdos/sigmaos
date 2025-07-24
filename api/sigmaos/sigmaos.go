@@ -2,11 +2,13 @@
 package sigmaos
 
 import (
+	"fmt"
 	"io"
 
 	"sigmaos/path"
 	sessp "sigmaos/session/proto"
 	sp "sigmaos/sigmap"
+	"sigmaos/util/spstats"
 )
 
 type Twait bool
@@ -72,6 +74,7 @@ type FileAPI interface {
 	Detach(path sp.Tsigmapath) error
 	Disconnect(path sp.Tsigmapath) error
 	Disconnected() bool
+	Stats() (*ClntStats, error)
 }
 
 type PathClntAPI interface {
@@ -81,4 +84,17 @@ type PathClntAPI interface {
 	PreadRdr(fid sp.Tfid, off sp.Toffset, len sp.Tsize) (io.ReadCloser, error)
 	WriteF(fid sp.Tfid, off sp.Toffset, data []byte, f *sp.Tfence) (sp.Tsize, error)
 	Clunk(fid sp.Tfid) error
+}
+
+type ClntStats struct {
+	Path *spstats.TcounterSnapshot
+	Sp   *spstats.TcounterSnapshot
+}
+
+func NewClntStats() *ClntStats {
+	return &ClntStats{spstats.NewTcounterSnapshot(), spstats.NewTcounterSnapshot()}
+}
+
+func (cst *ClntStats) String() string {
+	return fmt.Sprintf("\nClntStats:\n  Pclnt: %v\n  SpStats: %v", cst.Path.String(), cst.Sp.String())
 }

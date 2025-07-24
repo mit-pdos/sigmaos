@@ -3,7 +3,6 @@ package mr
 import (
 	"fmt"
 	"hash/fnv"
-	"path/filepath"
 	"strings"
 
 	"github.com/dustin/go-humanize"
@@ -76,15 +75,24 @@ func NewBins(fsl *fslib.FsLib, inputDir string, swapLocalForAny bool, maxbinsz, 
 	if err != nil {
 		return nil, err
 	}
+
 	for _, st := range sts {
 		for i := uint64(0); ; {
 			n := uint64(splitsz)
 			if i+n > st.LengthUint64() {
 				n = st.LengthUint64() - i
 			}
-			split := mr.Split{filepath.Join(inputDir, st.Name), sp.Toffset(i), sp.Tlength(n)}
+			if n == 0 {
+				break
+			}
+			split := mr.Split{
+				File:   dir + "/" + st.Name,
+				Offset: sp.Toffset(i),
+				Length: sp.Tlength(n),
+			}
 			bin = append(bin, split)
 			binsz += n
+
 			if binsz+uint64(splitsz) > uint64(maxbinsz) { // bin full?
 				bins = append(bins, bin)
 				bin = Bin{}

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	db "sigmaos/debug"
@@ -15,6 +16,7 @@ import (
 	"sigmaos/path"
 	"sigmaos/proc"
 	"sigmaos/rpc"
+	sesssrv "sigmaos/session/srv"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
@@ -26,15 +28,16 @@ import (
 type Named struct {
 	*sigmaclnt.SigmaClnt
 	*sigmasrv.SigmaSrv
-	mu     sync.Mutex
-	fs     *fsetcd.FsEtcd
-	elect  *leaderetcd.Election
-	job    string
-	realm  sp.Trealm
-	delay  int64
-	sess   *fsetcd.Session
-	pstats *fsetcd.PstatInode
-	ephch  chan path.Tpathname
+	mu      sync.Mutex
+	fs      *fsetcd.FsEtcd
+	elect   *leaderetcd.Election
+	job     string
+	realm   sp.Trealm
+	delay   int64
+	sess    *fsetcd.Session
+	pstats  *fsetcd.PstatInode
+	ephch   chan path.Tpathname
+	expired atomic.Bool
 }
 
 func newNamed(realm sp.Trealm) *Named {
@@ -122,8 +125,8 @@ func Run(args []string) error {
 		db.DFatalf("Error Started: %v", err)
 	}
 
-	ch := make(chan struct{})
-	go nd.waitExit(ch)
+	ch := make(chan error)
+	go nd.WaitExitChan(ch)
 
 	db.DPrintf(db.NAMED_LDR, "started %v %v", pe.GetPID(), nd.realm)
 
@@ -134,17 +137,28 @@ func Run(args []string) error {
 	defer nd.fs.Close()
 
 	go func() {
+		// We want to call nd.sess.Expired() but it doesn't exist; see Expire()
 		<-nd.sess.Done()
 		db.DPrintf(db.NAMED_LDR, "session expired delay %v", nd.delay)
-		time.Sleep(time.Duration(nd.delay) * time.Millisecond)
+		if nd.delay < 0 {
+			// mark lease has expired but keep running for a while to
+			// test if request are rejected in TestPartitionNamedExpire
+			nd.expired.Store(true)
+			time.Sleep(time.Duration(-nd.delay) * time.Millisecond)
+		} else if nd.delay >= 0 {
+			// if ndelay > 0, mimic bad case (see Expire())
+			time.Sleep(time.Duration(nd.delay) * time.Millisecond)
+			nd.expired.Store(true)
+		}
 		nd.resign()
 	}()
 
-	ep, err := nd.newSrv()
+	ep, err := nd.newSrv(nd)
 	if err != nil {
 		db.DFatalf("Error newSrv %v", err)
 	}
 
+	nd.pstats = fsetcd.NewPstatsDev(nd.SigmaSrv.MemFs.InodeAlloc())
 	nd.SigmaSrv.Mount(sp.PSTATSD, nd.pstats)
 
 	pn := sp.NAMED
@@ -152,28 +166,21 @@ func Run(args []string) error {
 		// Allow connections from all realms, so that realms can mount the kernel
 		// service union directories
 		nd.GetDialProxyClnt().AllowConnectionsFromAllRealms()
-		db.DPrintf(db.ALWAYS, "SetRootNamed %v ep %v", nd.realm, ep)
+		db.DPrintf(db.NAMED_LDR, "SetRootNamed %v ep %v", nd.realm, ep)
 		if err := nd.fs.SetRootNamed(ep); err != nil {
 			db.DFatalf("SetNamed: %v", err)
 		}
 	} else {
-		pn = filepath.Join(sp.REALMS, nd.realm.String())
-		db.DPrintf(db.ALWAYS, "NewEndpointSymlink %v %v ep %v", nd.realm, pn, ep)
+		pn = sp.NamedRootPathname(nd.realm)
 		if err := nd.WriteEndpointFile(pn, ep); err != nil {
-			db.DPrintf(db.ERROR, "MkEndpointFile %v at %v err %v", nd.realm, pn, err)
+			db.DPrintf(db.NAMED_LDR, "MkEndpointFile %v at %v err %v", nd.realm, pn, err)
 			db.DFatalf("MkEndpointFile %v at %v err %v", nd.realm, pn, err)
 			return err
 		}
-		db.DPrintf(db.NAMED_LDR, "[%v] named endpoint %v", nd.realm, ep)
+		db.DPrintf(db.NAMED_LDR, "[%v] named %v endpoint %v", nd.realm, pn, ep)
 	}
 
 	nd.getRoot(path.MarkResolve(pn))
-
-	if err := nd.CreateLeaderFile(filepath.Join(sp.NAME, nd.elect.Key()), nil, sp.TleaseId(nd.sess.Lease()), nd.elect.Fence()); err != nil {
-		db.DPrintf(db.NAMED, "CreateElectionInfo %v err %v", nd.elect.Key(), err)
-	}
-
-	db.DPrintf(db.NAMED_LDR, "Created Leader file %v ", nd.elect.Key())
 
 	if err := nd.warmCache(); err != nil {
 		db.DFatalf("warmCache err %v", err)
@@ -185,16 +192,23 @@ func Run(args []string) error {
 		crash.Crash()
 	})
 
-	crash.Failer(nd.FsLib, crash.NAMED_PARTITION, func(e crash.Tevent) {
-		if nd.delay == 0 {
-			nd.delay = e.Delay
-			nd.sess.Orphan()
-		}
+	crash.Failer(nd.FsLib, crash.NAMED_NETFAIL, func(e crash.Tevent) {
+		nd.SigmaSrv.PartitionClient(false)
 	})
 
-	<-ch
+	crash.Failer(nd.FsLib, crash.NAMED_NETDISCONNECT, func(e crash.Tevent) {
+		nd.SigmaSrv.PartitionClient(true)
+	})
 
-	db.DPrintf(db.ALWAYS, "named done %v %v", nd.realm, ep)
+	crash.Failer(nd.FsLib, crash.NAMED_PARTITION, func(e crash.Tevent) {
+		db.DPrintf(db.NAMED_LDR, "partition; delay %v", e.Delay)
+		nd.delay = e.Delay
+		nd.sess.Orphan()
+	})
+
+	err = <-ch
+
+	db.DPrintf(db.NAMED_LDR, "named done %v %v err %v", nd.realm, ep, err)
 
 	if err := nd.resign(); err != nil {
 		db.DPrintf(db.NAMED_LDR, "resign %v err %v", pe.GetPID(), err)
@@ -205,7 +219,21 @@ func Run(args []string) error {
 	return nil
 }
 
-func (nd *Named) newSrv() (*sp.Tendpoint, error) {
+// Note: maybe this should be called from named's dir.go and file.go
+// instead of sesssrv.
+func (nd *Named) Expired() bool {
+	// XXX: TODO This isn't quite right because there is a window
+	// between lease expiring and named being notified; we want the
+	// different interface in
+	// https://github.com/etcd-io/etcd/pull/19092/.
+	b := nd.expired.Load()
+	if b {
+		db.DPrintf(db.NAMED, "Reject request; lease expired")
+	}
+	return b
+}
+
+func (nd *Named) newSrv(exp sesssrv.ExpireI) (*sp.Tendpoint, error) {
 	ip := sp.NO_IP
 	root := RootDir(nd.fs, nd.realm)
 	var addr *sp.Taddr
@@ -224,7 +252,7 @@ func (nd *Named) newSrv() (*sp.Tendpoint, error) {
 		addr = sp.NewTaddr(ip, sp.NO_PORT)
 		aaf = spprotosrv.AttachAllowAllToAll
 	}
-	ssrv, err := sigmasrv.NewSigmaSrvRootClntAuthFn(root, addr, "", nd.SigmaClnt, aaf)
+	ssrv, err := sigmasrv.NewSigmaSrvRootClntAuthOpt(root, addr, "", nd.SigmaClnt, aaf, sesssrv.WithExp(nd))
 	if err != nil {
 		return nil, fmt.Errorf("NewSigmaSrvRootClnt err: %v", err)
 	}
@@ -271,26 +299,6 @@ func (nd *Named) getRoot(pn string) error {
 	}
 	db.DPrintf(db.NAMED, "getdir %v sts %v", pn, sp.Names(sts))
 	return nil
-}
-
-func (nd *Named) waitExit(ch chan struct{}) {
-	var i int = 0
-	for ; ; i++ {
-		err := nd.WaitEvict(nd.ProcEnv().GetPID())
-		if err == nil {
-			db.DPrintf(db.ALWAYS, "candidate %v %v evicted", nd.realm, nd.ProcEnv().GetPID().String())
-			ch <- struct{}{}
-			break
-		}
-		if i > sp.Conf.Path.MAX_RESOLVE_RETRY {
-			db.DPrintf(db.ALWAYS, "candidate %v %v err evict giving up!", nd.realm, nd.ProcEnv().GetPID().String())
-			ch <- struct{}{}
-			break
-		}
-		db.DPrintf(db.NAMED, "Error WaitEvict: %v", err)
-		time.Sleep(sp.Conf.Path.RESOLVE_TIMEOUT)
-		continue
-	}
 }
 
 func (nd *Named) watchLeased() {

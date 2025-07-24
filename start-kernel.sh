@@ -5,7 +5,7 @@
 #
 
 usage() {
-    echo "Usage: $0 [--pull TAG] [--boot all|all_no_besched|node|node_no_besched|minnode|besched_node|named|realm_no_besched|spproxyd] [--named ADDRs] [--dbip DBIP] [--mongoip MONGOIP] [--usedialproxy] [--reserveMcpu rmcpu] [--homedir HOMEDIR] [--projectroot PROJECT_ROOT] [--sigmauser SIGMAUSER] kernelid"  1>&2
+    echo "Usage: $0 [--pull TAG] [--boot all|all_no_besched|node|node_no_besched|minnode|besched_node|named|realm_no_besched|spproxyd] [--named ADDRs] [--dbip DBIP] [--mongoip MONGOIP] [--usedialproxy] [--reserveMcpu rmcpu] [--homedir HOMEDIR] [--projectroot PROJECT_ROOT] [--sigmauser SIGMAUSER] [--net NETNAME] kernelid"  1>&2
 }
 
 UPDATE=""
@@ -21,6 +21,7 @@ RMCPU="0"
 HOMEDIR=$HOME
 PROJECT_ROOT=$(realpath $(dirname $0))
 SIGMAUSER="NOT_SET"
+
 while [[ "$#" -gt 1 ]]; do
   case "$1" in
   --boot)
@@ -176,7 +177,9 @@ if [ "$MONGOIP" == "x.x.x.x" ] && docker ps | grep -q $MONGO_IMAGE_NAME; then
   MONGOIP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $MONGO_IMAGE_NAME):27017
 fi
 
-# If running in local configuration, mount bin directory.
+# Mounting docker.sock is bad idea in general because it requires to
+# give rw permission on host to privileged daemon.  But maybe ok in
+# our case where kernel is trusted.
 MOUNTS="--mount type=bind,src=/var/run/docker.sock,dst=/var/run/docker.sock \
   --mount type=bind,src=/sys/fs/cgroup,dst=/cgroup \
   --mount type=bind,src=$KERNEL_DIR,dst=/tmp/sigmaos \
@@ -185,6 +188,7 @@ MOUNTS="--mount type=bind,src=/var/run/docker.sock,dst=/var/run/docker.sock \
   --mount type=bind,src=$HOST_BIN_CACHE/${KERNELID},dst=/home/sigmaos/bin/user/realms \
   --mount type=bind,src=$PERF_DIR,dst=/tmp/sigmaos-perf \
   --mount type=bind,src=$HOMEDIR/.aws,dst=/home/sigmaos/.aws"
+# If running in local configuration, mount bin directory.
 if [ "$TAG" == "local-build" ]; then
   MOUNTS="$MOUNTS\
     --mount type=bind,src=$PROJECT_ROOT/bin/user,dst=/home/sigmaos/bin/user/common \
@@ -192,9 +196,6 @@ if [ "$TAG" == "local-build" ]; then
     --mount type=bind,src=$PROJECT_ROOT/bin/linux,dst=/home/sigmaos/bin/linux"
 fi
 
-# Mounting docker.sock is bad idea in general because it requires to
-# give rw permission on host to privileged daemon.  But maybe ok in
-# our case where kernel is trusted.
 CID=$(docker run -dit \
              $MOUNTS \
              --pid host \
@@ -212,6 +213,7 @@ CID=$(docker run -dit \
              -e SIGMAFAIL=${SIGMAFAIL} \
              -e SIGMADEBUG=${SIGMADEBUG} \
              -e SIGMAVALGRIND=${SIGMAVALGRIND} \
+             -e SIGMADEBUGPROCS=${SIGMADEBUGPROCS} \
              -e reserveMcpu=${RMCPU} \
              -e netmode=${NET} \
              -e sigmauser=${SIGMAUSER} \

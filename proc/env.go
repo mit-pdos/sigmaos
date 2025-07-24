@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime/debug"
+	"strconv"
 	"strings"
 	"time"
 
@@ -17,15 +18,16 @@ import (
 
 // Environment variables for procs (SHOULD NOT BE ADDED TO)
 const (
-	SIGMASTRACE    = "SIGMASTRACE"
-	SIGMAVALGRIND  = "SIGMAVALGRIND"
-	SIGMADEBUGPID  = "SIGMADEBUGPID"
-	SIGMAPERF      = "SIGMAPERF"
-	SIGMADEBUG     = "SIGMADEBUG"
-	SIGMACONFIG    = "SIGMACONFIG"
-	SIGMAPRINCIPAL = "SIGMAPRINCIPAL"
-	SIGMAFAIL      = "SIGMAFAIL"
-	SIGMAGEN       = "SIGMAGEN"
+	SIGMASTRACE     = "SIGMASTRACE"
+	SIGMAVALGRIND   = "SIGMAVALGRIND"
+	SIGMADEBUGPID   = "SIGMADEBUGPID"
+	SIGMAPERF       = "SIGMAPERF"
+	SIGMADEBUG      = "SIGMADEBUG"
+	SIGMACONFIG     = "SIGMACONFIG"
+	SIGMAPRINCIPAL  = "SIGMAPRINCIPAL"
+	SIGMAFAIL       = "SIGMAFAIL"
+	SIGMAGEN        = "SIGMAGEN"
+	SIGMADEBUGPROCS = "SIGMADEBUGPROCS"
 )
 
 type ProcEnv struct {
@@ -57,6 +59,10 @@ func GetSigmaDebug() string {
 	return os.Getenv(SIGMADEBUG)
 }
 
+func GetSigmaDebugProcs() string {
+	return os.Getenv(SIGMADEBUGPROCS)
+}
+
 func GetSigmaFail() string {
 	return os.Getenv(SIGMAFAIL)
 }
@@ -65,8 +71,13 @@ func SetSigmaFail(s string) {
 	os.Setenv(SIGMAFAIL, s)
 }
 
-func GetSigmaGen() string {
-	return os.Getenv(SIGMAGEN)
+func GetSigmaGen() int {
+	s := os.Getenv(SIGMAGEN)
+	n, err := strconv.Atoi(s)
+	if err != nil {
+		return -1
+	}
+	return n
 }
 
 func SetSigmaGen(s string) {
@@ -111,6 +122,7 @@ func NewProcEnv(program string, pid sp.Tpid, realm sp.Trealm, principal *sp.Tpri
 			Strace:              os.Getenv(SIGMASTRACE),
 			Valgrind:            os.Getenv(SIGMAVALGRIND),
 			Debug:               os.Getenv(SIGMADEBUG),
+			DebugProcs:          os.Getenv(SIGMADEBUGPROCS),
 			ProcdPIDStr:         sp.NOT_SET,
 			Fail:                os.Getenv(SIGMAFAIL),
 			Privileged:          priv,

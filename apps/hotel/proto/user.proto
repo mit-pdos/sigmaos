@@ -5,8 +5,8 @@ import "util/tracing/proto/tracing.proto";
 option go_package = "sigmaos/apps/hotel/proto";
 
 service User {
-  rpc MakeReservation(UserReq) returns (UserRep);
-  rpc CheckAvailability(UserReq) returns (UserRep);
+  rpc MakeReservation(UserReq) returns (HotelUserRep);
+  rpc CheckAvailability(UserReq) returns (HotelUserRep);
 }
 
 message UserReq {
@@ -15,6 +15,6 @@ message UserReq {
   SpanContextConfig spanContextConfig = 3;
 }
 
-message UserRep {
+message HotelUserRep {
   string oK = 1;
 }

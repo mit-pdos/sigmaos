@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 protobuf = "3.7.2"
+proto = { path = "../../proto" }
 
 [lib]
 crate-type = ["cdylib"]

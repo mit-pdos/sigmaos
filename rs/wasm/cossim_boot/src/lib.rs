@@ -2,19 +2,10 @@ use proto::cache;
 use proto::sigmap;
 use protobuf::{Message, MessageField};
 use sigmaos;
-use std::mem;
 use std::os::raw::c_char;
 use std::slice;
 
 const NSHARD: u32 = 1009;
-
-#[export_name = "allocate"]
-pub fn allocate(size: usize) -> *mut c_char {
-    let mut buffer = Vec::with_capacity(size);
-    let pointer = buffer.as_mut_ptr();
-    mem::forget(buffer);
-    pointer as *mut c_char
-}
 
 fn key2shard(key: &String) -> u32 {
     // fnv32a hash inspired by https://cs.opensource.google/go/go/+/refs/tags/go1.24.3:src/hash/fnv/fnv.go;l=51

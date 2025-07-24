@@ -2,19 +2,10 @@ use proto::cache;
 use proto::sigmap;
 use protobuf::{Message, MessageField};
 use sigmaos;
-use std::mem;
 use std::os::raw::c_char;
 use std::slice;
 
 const NSHARD: u32 = 1009;
-
-#[unsafe(export_name = "allocate")]
-pub fn allocate(size: usize) -> *mut c_char {
-    let mut buffer = Vec::with_capacity(size);
-    let pointer = buffer.as_mut_ptr();
-    mem::forget(buffer);
-    pointer as *mut c_char
-}
 
 fn zero_buf(buf: &mut [u8], nbyte: usize) {
     buf[0..nbyte].fill(0);

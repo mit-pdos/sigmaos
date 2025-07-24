@@ -1,3 +1,6 @@
+use std::mem;
+use std::os::raw::c_char;
+
 mod sigmaos_host {
     #[link(wasm_import_module = "sigmaos_host")]
     unsafe extern "C" {
@@ -16,10 +19,10 @@ pub fn recv_rpc(rpc_idx: u64) -> u64 {
     return unsafe { sigmaos_host::recv_rpc(rpc_idx) };
 }
 
-//#[unsafe(export_name = "allocate")]
-//pub fn allocate(size: usize) -> *mut c_char {
-//    let mut buffer = Vec::with_capacity(size);
-//    let pointer = buffer.as_mut_ptr();
-//    mem::forget(buffer);
-//    pointer as *mut c_char
-//}
+#[unsafe(export_name = "allocate")]
+pub fn allocate(size: usize) -> *mut c_char {
+    let mut buffer = Vec::with_capacity(size);
+    let pointer = buffer.as_mut_ptr();
+    mem::forget(buffer);
+    pointer as *mut c_char
+}

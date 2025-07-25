@@ -49,12 +49,14 @@ func (cs *CachedSvc) addServer(i int) error {
 	return nil
 }
 
-func (cs *CachedSvc) addBackupServer(srvID int, delegatedInit bool) error {
+func (cs *CachedSvc) addBackupServer(srvID int, ep *sp.Tendpoint, delegatedInit bool) error {
 	// SpawnBurst to spread servers across procds.
 	p := proc.NewProc(cs.bin+"-backup", []string{cs.pn, cs.job, cachegrp.BACKUP + strconv.Itoa(int(srvID))})
 	if !cs.gc {
 		p.AppendEnv("GOGC", "off")
 	}
+	// Cache the primary server's endpoint in the backup proc struct
+	p.SetCachedEndpoint(cs.Server(strconv.Itoa(srvID)), ep)
 	p.SetMcpu(cs.mcpu)
 	// Have backup server use spproxy
 	p.GetProcEnv().UseSPProxy = true
@@ -124,11 +126,11 @@ func (cs *CachedSvc) AddServer() error {
 	return cs.addServer(n)
 }
 
-func (cs *CachedSvc) AddBackupServer(i int, delegatedInit bool) error {
+func (cs *CachedSvc) AddBackupServer(i int, ep *sp.Tendpoint, delegatedInit bool) error {
 	cs.Lock()
 	defer cs.Unlock()
 
-	return cs.addBackupServer(i, delegatedInit)
+	return cs.addBackupServer(i, ep, delegatedInit)
 }
 
 func (cs *CachedSvc) Nserver() int {

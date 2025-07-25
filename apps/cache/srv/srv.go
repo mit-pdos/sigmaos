@@ -76,7 +76,6 @@ func NewCacheSrv(pe *proc.ProcEnv, dirname string, pn string, nshard int) (*Cach
 			db.DFatalf("CreateShard %v\n", err)
 		}
 	}
-
 	db.DPrintf(db.CACHESRV, "Run %v %v", dirname, cs.shrd)
 	ssrv, err := sigmasrv.NewSigmaSrv(dirname+cs.shrd, cs, pe)
 	if err != nil {

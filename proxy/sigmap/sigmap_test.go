@@ -60,7 +60,11 @@ func TestCachedDelegatedReshard(t *testing.T) {
 		return
 	}
 	srvID := 0
-	if err := cm.AddBackupServer(srvID, DELEGATED_INIT); !assert.Nil(t, err, "Err add backup server(%v): %v", srvID, err) {
+	ep, err := cc.GetEndpoint(srvID)
+	if !assert.Nil(t, err, "Err get primary endpoint: %v", err) {
+		return
+	}
+	if err := cm.AddBackupServer(srvID, ep, DELEGATED_INIT); !assert.Nil(t, err, "Err add backup server(%v): %v", srvID, err) {
 		return
 	}
 	for i, key := range keys {

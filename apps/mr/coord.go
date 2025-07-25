@@ -7,13 +7,12 @@ import (
 	"fmt"
 	"sort"
 	"strconv"
-	"sync/atomic"
 	"time"
 
 	db "sigmaos/debug"
 	"sigmaos/ft/leaderclnt"
 	"sigmaos/ft/task"
-	fttask_clnt "sigmaos/ft/task/clnt"
+	ftclnt "sigmaos/ft/task/clnt"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
@@ -54,8 +53,8 @@ type Coord struct {
 	*sigmaclnt.SigmaClnt
 	mftid           task.FtTaskSvcId
 	rftid           task.FtTaskSvcId
-	mftclnt         fttask_clnt.FtTaskClnt[Bin, Bin]
-	rftclnt         fttask_clnt.FtTaskClnt[TreduceTask, Bin]
+	mftclnt         ftclnt.FtTaskClnt[Bin, Bin]
+	rftclnt         ftclnt.FtTaskClnt[TreduceTask, Bin]
 	jobRoot         string
 	job             string
 	nmaptask        int
@@ -68,7 +67,6 @@ type Coord struct {
 	leaderclnt      *leaderclnt.LeaderClnt
 	outdir          string
 	intOutdir       string
-	done            int32
 	memPerTask      proc.Tmem
 	stat            AStat
 	perf            *perf.Perf
@@ -88,7 +86,7 @@ func (s *AStat) String() string {
 	return fmt.Sprintf("{nT %d nM %d nR %d nfail %d nrestart %d nrecoverM %d nrecoverR %d}", s.Ntask, s.Nmap, s.Nreduce, s.Nfail, s.Nrestart, s.NrecoverMap, s.NrecoverReduce)
 }
 
-type NewProc func(fttask_clnt.Task[[]byte]) (*proc.Proc, error)
+type NewProc func(ftclnt.Task[[]byte]) (*proc.Proc, error)
 
 func NewCoord(args []string) (*Coord, error) {
 	if len(args) != 12 {
@@ -169,8 +167,8 @@ func (c *Coord) newTask(bin string, args []string, mb proc.Tmem) *proc.Proc {
 	return p
 }
 
-func (c *Coord) mapperProc(t fttask_clnt.Task[[]byte]) (*proc.Proc, error) {
-	bin, err := fttask_clnt.Decode[Bin](t.Data)
+func (c *Coord) mapperProc(t ftclnt.Task[[]byte]) (*proc.Proc, error) {
+	bin, err := ftclnt.Decode[Bin](t.Data)
 	if err != nil {
 		db.DFatalf("mapperProc: failed to convert data to bin %v %v", t.Data, err)
 	}
@@ -195,8 +193,8 @@ func (c *Coord) mapperProc(t fttask_clnt.Task[[]byte]) (*proc.Proc, error) {
 	return proc, nil
 }
 
-func (c *Coord) reducerProc(t fttask_clnt.Task[[]byte]) (*proc.Proc, error) {
-	data, err := fttask_clnt.Decode[TreduceTask](t.Data)
+func (c *Coord) reducerProc(t ftclnt.Task[[]byte]) (*proc.Proc, error) {
+	data, err := ftclnt.Decode[TreduceTask](t.Data)
 	if err != nil {
 		db.DFatalf("reducerProc: failed to convert data to task %v %v", t.Data, err)
 	}
@@ -207,14 +205,14 @@ func (c *Coord) reducerProc(t fttask_clnt.Task[[]byte]) (*proc.Proc, error) {
 }
 
 type Tresult struct {
-	t   fttask_clnt.TaskId
+	t   ftclnt.TaskId
 	ok  bool
 	ms  int64
 	msg string
 	res *Result
 }
 
-func (c *Coord) waitForTask(ftclnt fttask_clnt.FtTaskClnt[[]byte, []byte], start time.Time, ch chan Tresult, p *proc.Proc, t fttask_clnt.TaskId) {
+func (c *Coord) waitForTask(ch chan<- Tresult, ft ftclnt.FtTaskClnt[[]byte, []byte], start time.Time, p *proc.Proc, t ftclnt.TaskId) {
 	// Wait for the task to exit.
 	status, err := c.WaitExit(p.GetPid())
 	// Record end time.
@@ -236,11 +234,11 @@ func (c *Coord) waitForTask(ftclnt fttask_clnt.FtTaskClnt[[]byte, []byte], start
 		}
 		// mark task as done
 		start := time.Now()
-		encoded, err := fttask_clnt.Encode(r.OutBin)
+		encoded, err := ftclnt.Encode(r.OutBin)
 		if err != nil {
 			db.DFatalf("Encode %v err %v", r.OutBin, err)
 		}
-		if err := ftclnt.AddTaskOutputs([]fttask_clnt.TaskId{t}, [][]byte{encoded}, true); err != nil {
+		if err := ft.AddTaskOutputs([]ftclnt.TaskId{t}, [][]byte{encoded}, true); err != nil {
 			db.DFatalf("MarkDone %v done err %v", t, err)
 		}
 		db.DPrintf(db.MR_COORD, "MarkDone latency: lat %v inner %v task %s", time.Since(start), r.MsInner, r.Task)
@@ -253,7 +251,7 @@ func (c *Coord) waitForTask(ftclnt fttask_clnt.FtTaskClnt[[]byte, []byte], start
 			s := newStringSlice(status.Data().([]interface{}))
 			c.restart(s, t)
 		} else { // if failure but not restart, rerun task immediately again
-			if err := ftclnt.MoveTasks([]fttask_clnt.TaskId{t}, fttask_clnt.TODO); err != nil {
+			if err := ft.MoveTasks([]ftclnt.TaskId{t}, ftclnt.TODO); err != nil {
 				db.DFatalf("MarkRunnable %v err %v", t, err)
 			}
 		}
@@ -261,10 +259,10 @@ func (c *Coord) waitForTask(ftclnt fttask_clnt.FtTaskClnt[[]byte, []byte], start
 	}
 }
 
-func (c *Coord) runTasks(ftclnt fttask_clnt.FtTaskClnt[[]byte, []byte], ch chan Tresult, ids []fttask_clnt.TaskId, f NewProc) {
+func (c *Coord) runTasks(ch chan<- Tresult, ft ftclnt.FtTaskClnt[[]byte, []byte], ids []ftclnt.TaskId, f NewProc) error {
 	db.DPrintf(db.MR_COORD, "runTasks %v", len(ids))
 	start := time.Now()
-	tasks, err := ftclnt.ReadTasks(ids)
+	tasks, err := ft.ReadTasks(ids)
 	if err != nil {
 		db.DFatalf("ReadTasks %v err %v", ids, err)
 	}
@@ -290,8 +288,9 @@ func (c *Coord) runTasks(ftclnt fttask_clnt.FtTaskClnt[[]byte, []byte], ch chan 
 		if err != nil {
 			db.DFatalf("Err spawn task: %v", err)
 		}
-		go c.waitForTask(ftclnt, start, ch, proc, t.Id)
+		go c.waitForTask(ch, ft, start, proc, t.Id)
 	}
+	return nil
 }
 
 func newStringSlice(data []interface{}) []string {
@@ -302,23 +301,12 @@ func newStringSlice(data []interface{}) []string {
 	return s
 }
 
-func (c *Coord) startTasks(ft fttask_clnt.FtTaskClnt[[]byte, []byte], ch chan Tresult, f NewProc) int {
-	start := time.Now()
-	tns, _, err := ft.AcquireTasks(false)
-	if err != nil {
-		db.DFatalf("startTasks err %v\n", err)
-	}
-	db.DPrintf(db.MR_COORD, "startTasks %v time: %v", len(tns), time.Since(start))
-	c.runTasks(ft, ch, tns, f)
-	return len(tns)
-}
-
 // A reducer failed because it couldn't read its input file; we must
 // restart mapper.  We let all mappers and reducers finish, before
-// starting a new round for the mappers and reducers that must be
-// restarted, which avoids restarting a mapper several times (because
-// several reducers may ask the mapper to be restarted).
-func (c *Coord) restart(files []string, task fttask_clnt.TaskId) {
+// restarting any mappers and reducers, which avoids restarting a
+// mapper several times (because several reducers may ask the mapper
+// to be restarted).
+func (c *Coord) restart(files []string, task ftclnt.TaskId) {
 	db.DPrintf(db.ALWAYS, "restart: files %v for %v\n", files, task)
 	for _, f := range files {
 		if err := c.Remove(f); err != nil {
@@ -326,26 +314,26 @@ func (c *Coord) restart(files []string, task fttask_clnt.TaskId) {
 		}
 	}
 	// Record that we have to rerun reducer task
-	if err := c.rftclnt.MoveTasks([]fttask_clnt.TaskId{task}, fttask_clnt.ERROR); err != nil {
+	if err := c.rftclnt.MoveTasks([]ftclnt.TaskId{task}, ftclnt.ERROR); err != nil {
 		db.DPrintf(db.ALWAYS, "restart reducer %v err %v\n", task, err)
 	}
 }
 
 // Mark all error-ed tasks as runnable
 func (c *Coord) doRestart() bool {
-	m, err := c.rftclnt.MoveTasksByStatus(fttask_clnt.ERROR, fttask_clnt.TODO)
+	m, err := c.rftclnt.MoveTasksByStatus(ftclnt.ERROR, ftclnt.TODO)
 	if err != nil {
 		db.DFatalf("Restart reducers err %v\n", err)
 	}
 	if m > 0 {
 		// if a reducer couldn't read its input files, mark all
 		// mappers as failed so that they will be restarted.
-		_, err := c.mftclnt.MoveTasksByStatus(fttask_clnt.DONE, fttask_clnt.ERROR)
+		_, err := c.mftclnt.MoveTasksByStatus(ftclnt.DONE, ftclnt.ERROR)
 		if err != nil {
 			db.DFatalf("MarkDoneError err %v\n", err)
 		}
 	}
-	n, err := c.mftclnt.MoveTasksByStatus(fttask_clnt.ERROR, fttask_clnt.TODO)
+	n, err := c.mftclnt.MoveTasksByStatus(ftclnt.ERROR, ftclnt.TODO)
 	if err != nil {
 		db.DFatalf("Restart mappers err %v\n", err)
 	}
@@ -356,29 +344,46 @@ func (c *Coord) doRestart() bool {
 	return n+m > 0
 }
 
+// Assume no reducers are in ERROR (i.e., errored reducers have
+// already been moved to TODO when running makeReduceBins)
 func (c *Coord) makeReduceBins() error {
-	mns, err := c.mftclnt.GetTasksByStatus(fttask_clnt.DONE)
+	mns, err := c.mftclnt.GetTasksByStatus(ftclnt.DONE)
 	if err != nil {
 		return err
 	}
-	rnsTodo, err := c.rftclnt.GetTasksByStatus(fttask_clnt.TODO)
-	if err != nil {
-		return err
-	}
-
-	rnsDone, err := c.rftclnt.GetTasksByStatus(fttask_clnt.DONE)
+	rnsTodo, err := c.rftclnt.GetTasksByStatus(ftclnt.TODO)
 	if err != nil {
 		return err
 	}
 
-	// get all reducers (including those that succeeded in previous rounds) in sorted order to ensure
-	// any restarted reducers are given the exact same files as before
+	rnsDone, err := c.rftclnt.GetTasksByStatus(ftclnt.DONE)
+	if err != nil {
+		return err
+	}
+
+	// we submitted any reduce tasks yet
+	if len(rnsDone)+len(rnsDone) == 0 {
+		db.DPrintf(db.MR_COORD, "Submit %d reduce tasks", c.nreducetask)
+		rTasks := make([]*ftclnt.Task[TreduceTask], c.nreducetask)
+		for r := 0; r < c.nreducetask; r++ {
+			t := TreduceTask{strconv.Itoa(r), nil}
+			rTasks[r] = &ftclnt.Task[TreduceTask]{Id: ftclnt.TaskId(r), Data: t}
+			rnsTodo = append(rnsTodo, rTasks[r].Id)
+		}
+		if err := c.rftclnt.SubmitTasks(rTasks); err != nil {
+			return err
+		}
+	}
+
+	// get all reducers (including those that succeeded in previous
+	// rounds) in sorted order to ensure any restarted reducers are
+	// given the exact same files as before
 	rns := append(rnsDone, rnsTodo...)
 	sort.Slice(rns, func(i, j int) bool {
 		return rns[i] < rns[j]
 	})
 
-	reduceBinIn := make(map[fttask_clnt.TaskId]Bin, c.nreducetask)
+	reduceBinIn := make(map[ftclnt.TaskId]Bin, c.nreducetask)
 
 	for _, n := range rns {
 		reduceBinIn[n] = make(Bin, c.nmaptask)
@@ -414,15 +419,16 @@ func (c *Coord) makeReduceBins() error {
 		}
 	}
 
-	// if we have a lot of mappers, this can be a lot of data, whihc exceeds the 2MB limit per gRPC
-	// message and/or the 1MB limit for etcd, so we break it up into batches and use 900 KB messages
-	// to be safe
+	// if we have a lot of mappers, this can be a lot of data, which
+	// exceeds the 2MB limit per gRPC message and/or the 1MB limit for
+	// etcd, so we break it up into batches and use 900 KB messages to
+	// be safe
 	const (
 		maxBatchSize = 900 * 1024 // 900 KB
 		taskOverhead = 64         // Proto overhead estimate
 	)
 
-	batched := make([]*fttask_clnt.Task[TreduceTask], 0, len(rtaskData))
+	batched := make([]*ftclnt.Task[TreduceTask], 0, len(rtaskData))
 	currentBatchSize := 0
 
 	start = time.Now()
@@ -459,47 +465,6 @@ func (c *Coord) makeReduceBins() error {
 	return nil
 }
 
-// XXX do something for stragglers?
-func (c *Coord) Round(ttype string) {
-	mapsDone := false
-	start := time.Now()
-	ch := make(chan Tresult)
-	for m := 0; ; m-- {
-		if ttype == "map" {
-			m += c.startTasks(c.mftclnt.AsRawClnt(), ch, c.mapperProc)
-		} else if ttype == "reduce" {
-			m += c.startTasks(c.rftclnt.AsRawClnt(), ch, c.reducerProc)
-		} else if ttype == "all" {
-			m += c.startTasks(c.mftclnt.AsRawClnt(), ch, c.mapperProc)
-			db.DPrintf(db.MR_COORD, "startTasks mappers %v", m)
-			m += c.startTasks(c.rftclnt.AsRawClnt(), ch, c.reducerProc)
-			db.DPrintf(db.MR_COORD, "startTasks add reducers %v", m)
-		} else {
-			db.DFatalf("Unknown ttype: %v", ttype)
-		}
-		if m <= 0 {
-			break
-		}
-		res := <-ch
-		db.DPrintf(db.MR_COORD, "Round: task done %v ok %v msg %v", res.t, res.ok, res.msg)
-		if res.res != nil {
-			db.DPrintf(db.MR_COORD, "Round: task %v res: msInner %d msOuter %d res %v\n", res.t, res.res.MsInner, res.res.MsOuter, res.res)
-		}
-		if res.ok {
-			if err := c.AppendFileJson(MRstats(c.jobRoot, c.job), res.res); err != nil {
-				db.DFatalf("Appendfile %v err %v\n", MRstats(c.jobRoot, c.job), err)
-			}
-			db.DPrintf(db.ALWAYS, "tasks left %d/%d\n", m-1, c.nmaptask+c.nreducetask)
-			if !mapsDone && m < c.nmaptask {
-				mapsDone = true
-				db.DPrintf(db.ALWAYS, "Mapping took %vs\n", time.Since(start).Seconds())
-			}
-		} else {
-			c.stat.Nfail.Add(1)
-		}
-	}
-}
-
 func (c *Coord) Work() {
 	db.DPrintf(db.MR_COORD, "Try acquire leadership coord %v job %v", c.ProcEnv().GetPID(), c.job)
 
@@ -513,8 +478,8 @@ func (c *Coord) Work() {
 	f := c.leaderclnt.Fence()
 
 	var err error
-	c.mftclnt = fttask_clnt.NewFtTaskClnt[Bin, Bin](c.FsLib, c.mftid, &f)
-	c.rftclnt = fttask_clnt.NewFtTaskClnt[TreduceTask, Bin](c.FsLib, c.rftid, &f)
+	c.mftclnt = ftclnt.NewFtTaskClnt[Bin, Bin](c.FsLib, c.mftid, &f)
+	c.rftclnt = ftclnt.NewFtTaskClnt[TreduceTask, Bin](c.FsLib, c.rftid, &f)
 
 	crash.Failer(c.FsLib, crash.MRCOORD_CRASH, func(e crash.Tevent) {
 		crash.CrashMsg(c.stat.String())
@@ -524,7 +489,7 @@ func (c *Coord) Work() {
 	})
 
 	start := time.Now()
-	if n, err := c.mftclnt.MoveTasksByStatus(fttask_clnt.WIP, fttask_clnt.TODO); err != nil {
+	if n, err := c.mftclnt.MoveTasksByStatus(ftclnt.WIP, ftclnt.TODO); err != nil {
 		db.DFatalf("RecoverTasks mapper err %v", err)
 	} else {
 		spstats.Store(&c.stat.NrecoverMap, int64(n))
@@ -532,58 +497,30 @@ func (c *Coord) Work() {
 	}
 
 	start = time.Now()
-	if n, err := c.rftclnt.MoveTasksByStatus(fttask_clnt.WIP, fttask_clnt.TODO); err != nil {
+	if n, err := c.rftclnt.MoveTasksByStatus(ftclnt.WIP, ftclnt.TODO); err != nil {
 		db.DFatalf("RecoverTasks reducer err %v", err)
 	} else {
 		c.stat.NrecoverReduce.Store(int64(n))
 		db.DPrintf(db.MR, "Recover %d reduce tasks took %v", n, time.Since(start))
 	}
 
-	mftStats, err := c.mftclnt.Stats()
-	if err != nil {
-		db.DFatalf("Stats err %v\n", err)
-	}
-	rftStats, err := c.rftclnt.Stats()
-	if err != nil {
-		db.DFatalf("Stats err %v\n", err)
-	}
-	spstats.Store(&c.stat.Ntask, int64(mftStats.NumDone+rftStats.NumDone+mftStats.NumError+rftStats.NumError+mftStats.NumTodo+rftStats.NumTodo+mftStats.NumError+rftStats.NumError))
-
 	start = time.Now()
 	c.doRestart()
 	db.DPrintf(db.MR_COORD, "doRestart took %v", time.Since(start))
 	jobStart := time.Now()
 
-	for {
-		//		c.Round("all")
-		start := time.Now()
-		c.Round("map")
-		m, err := c.mftclnt.GetNTasks(fttask_clnt.DONE)
-		db.DPrintf(db.ALWAYS, "run round %d", m)
-		if err != nil {
-			db.DFatalf("NtaskDone err %v\n", err)
-		}
-		if int(m) == c.nmaptask {
-			ms := time.Since(start).Milliseconds()
-			db.DPrintf(db.ALWAYS, "map phase took %vms\n", ms)
+	ch := make(chan Tresult)
+	go c.mgr(ch, c.mftclnt.AsRawClnt(), c.mapperProc)
+	go c.mgr(ch, c.rftclnt.AsRawClnt(), c.reducerProc)
 
-			err := c.makeReduceBins()
-			if err != nil {
-				db.DFatalf("ReduceBins err %v", err)
-			}
-			c.Round("reduce")
-		}
-		if !c.doRestart() {
-			break
-		}
-	}
+	c.processResult(ch)
 
 	// double check we are done
-	n, err := c.mftclnt.GetNTasks(fttask_clnt.DONE)
+	n, err := c.mftclnt.GetNTasks(ftclnt.DONE)
 	if err != nil {
 		db.DFatalf("NtaskDone mappers err %v\n", err)
 	}
-	m, err := c.rftclnt.GetNTasks(fttask_clnt.DONE)
+	m, err := c.rftclnt.GetNTasks(ftclnt.DONE)
 	if err != nil {
 		db.DFatalf("NtaskDone reducers err %v\n", err)
 	}
@@ -593,8 +530,6 @@ func (c *Coord) Work() {
 
 	db.DPrintf(db.ALWAYS, "job done stat %v", &c.stat)
 
-	atomic.StoreInt32(&c.done, 1)
-
 	db.DPrintf(db.ALWAYS, "E2e bench took %v", time.Since(jobStart))
 	JobDone(c.FsLib, c.jobRoot, c.job)
 
@@ -602,4 +537,61 @@ func (c *Coord) Work() {
 	stro.FillCounters(&c.stat)
 	c.ClntExit(proc.NewStatusInfo(proc.StatusOK, "OK", stro))
 	defer c.perf.Done()
+}
+
+func (c *Coord) mgr(ch chan<- Tresult, ft ftclnt.FtTaskClnt[[]byte, []byte], f NewProc) {
+	chTask := make(chan []ftclnt.TaskId)
+
+	go ftclnt.GetTasks(ft, chTask)
+
+	for tasks := range chTask {
+		err := c.runTasks(ch, ft, tasks, f)
+		if err != nil {
+			db.DFatalf("runTasks %v err %v", tasks, err)
+		}
+	}
+	stats, err := ft.Stats()
+	if err != nil {
+		db.DFatalf("mgr: Stats err %v", err)
+	}
+	db.DPrintf(db.MR_COORD, "ExecuteTasks %v: done %v", ft, stats)
+	n := stats.NumDone + stats.NumError + stats.NumTodo + stats.NumWip
+	spstats.Inc(&c.stat.Ntask, int64(n))
+}
+
+func (c *Coord) processResult(ch <-chan Tresult) {
+	nM := 0
+	nR := 0
+	for res := range ch {
+		db.DPrintf(db.MR_COORD, "Work: task done %v ok %v msg %v", res.t, res.ok, res.msg)
+		if res.res != nil {
+			db.DPrintf(db.MR_COORD, "Work: task %v (%t) res: msInner %d msOuter %d res %v\n", res.t, res.res.IsM, res.res.MsInner, res.res.MsOuter, res.res)
+		}
+		if res.ok {
+			if err := c.AppendFileJson(MRstats(c.jobRoot, c.job), res.res); err != nil {
+				db.DFatalf("Appendfile %v err %v\n", MRstats(c.jobRoot, c.job), err)
+			}
+			if res.res.IsM {
+				nM += 1
+				if nM >= c.nmaptask {
+					if err := c.makeReduceBins(); err != nil {
+						db.DFatalf("ReduceBins err %v", err)
+					}
+				}
+			} else {
+				nR += 1
+				if nR >= c.nreducetask {
+					db.DPrintf(db.MR_COORD, "Work: SubmittedLastTask")
+					c.mftclnt.SubmittedLastTask()
+					c.rftclnt.SubmittedLastTask()
+					return
+				}
+			}
+			// but wait until all reducers returned
+			// a reducer who returned but couldn't read its inputs
+			db.DPrintf(db.ALWAYS, "tasks done %d/%d\n", nM+nR, c.nmaptask+c.nreducetask)
+		} else {
+			c.stat.Nfail.Add(1)
+		}
+	}
 }

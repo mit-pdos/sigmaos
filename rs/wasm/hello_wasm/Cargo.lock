@@ -3,5 +3,5 @@
 version = 4
 
 [[package]]
-name = "hello-wasm"
+name = "hello_wasm"
 version = "0.1.0"

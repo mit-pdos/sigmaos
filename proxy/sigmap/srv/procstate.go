@@ -106,22 +106,13 @@ func (psm *ProcStateMgr) GetReply(pid sp.Tpid, rpcIdx uint64) (sessp.IoVec, erro
 	return ps.rpcReps.GetReply(rpcIdx)
 }
 
-func (psm *ProcStateMgr) GetRPCChannel(pid sp.Tpid, pn string) (rpcchan.RPCChannel, bool) {
+func (psm *ProcStateMgr) GetRPCChannel(sc *sigmaclnt.SigmaClnt, pid sp.Tpid, rpcIdx uint64, pn string) (rpcchan.RPCChannel, error) {
 	ps, ok := psm.getProcState(pid)
 	if !ok {
 		db.DPrintf(db.SPPROXYSRV_ERR, "Try to get delegated RPC reply for unknown proc: %v", pid)
-		return nil, false
+		return nil, fmt.Errorf("Can't find proc stae: %v", pid)
 	}
-	return ps.rpcReps.GetRPCChannel(pn)
-}
-
-func (psm *ProcStateMgr) PutRPCChannel(pid sp.Tpid, pn string, ch rpcchan.RPCChannel) {
-	ps, ok := psm.getProcState(pid)
-	if !ok {
-		db.DPrintf(db.SPPROXYSRV_ERR, "Try to RPC channel for unknown proc: %v", pid)
-		return
-	}
-	ps.rpcReps.PutRPCChannel(pn, ch)
+	return ps.rpcReps.GetRPCChannel(sc, rpcIdx, pn)
 }
 
 type procState struct {

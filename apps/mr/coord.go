@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"sort"
 	"strconv"
+	"sync"
 	"time"
 
 	db "sigmaos/debug"
@@ -510,10 +511,20 @@ func (c *Coord) Work() {
 	jobStart := time.Now()
 
 	ch := make(chan Tresult)
-	go c.mgr(ch, c.mftclnt.AsRawClnt(), c.mapperProc)
-	go c.mgr(ch, c.rftclnt.AsRawClnt(), c.reducerProc)
+	wg := &sync.WaitGroup{}
+	wg.Add(2)
+	go func() {
+		defer wg.Done()
+		c.mgr(ch, c.mftclnt.AsRawClnt(), c.mapperProc)
+	}()
+	go func() {
+		defer wg.Done()
+		c.mgr(ch, c.rftclnt.AsRawClnt(), c.reducerProc)
+	}()
 
 	c.processResult(ch)
+
+	wg.Wait()
 
 	// double check we are done
 	n, err := c.mftclnt.GetNTasks(ftclnt.DONE)

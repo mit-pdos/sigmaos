@@ -751,7 +751,7 @@ func (s *TaskSrv) AcquireTasks(ctx fs.CtxI, req proto.AcquireTasksReq, rep *prot
 	defer s.mu.Unlock()
 
 	aid := req.AcquireId.Tfence()
-	db.DPrintf(db.TEST, "acquireid: %v", &aid)
+	db.DPrintf(db.FTTASKSRV, "acquireid: %v", &aid)
 
 	if err := s.checkFence(req.Fence); err != nil {
 		return err

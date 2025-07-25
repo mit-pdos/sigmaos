@@ -83,7 +83,7 @@ type AStat struct {
 }
 
 func (s *AStat) String() string {
-	return fmt.Sprintf("{nT %d nM %d nR %d nfail %d nrestart %d nrecoverM %d nrecoverR %d}", s.Ntask, s.Nmap, s.Nreduce, s.Nfail, s.Nrestart, s.NrecoverMap, s.NrecoverReduce)
+	return fmt.Sprintf("{nT %d nM %d nR %d nfail %d nrestart %d nrecoverM %d nrecoverR %d}", s.Ntask.Load(), s.Nmap.Load(), s.Nreduce.Load(), s.Nfail.Load(), s.Nrestart.Load(), s.NrecoverMap.Load(), s.NrecoverReduce.Load())
 }
 
 type NewProc func(ftclnt.Task[[]byte]) (*proc.Proc, error)
@@ -554,7 +554,7 @@ func (c *Coord) mgr(ch chan<- Tresult, ft ftclnt.FtTaskClnt[[]byte, []byte], f N
 	if err != nil {
 		db.DFatalf("mgr: Stats err %v", err)
 	}
-	db.DPrintf(db.MR_COORD, "ExecuteTasks %v: done %v", ft, stats)
+	db.DPrintf(db.MR_COORD, "mgr %v: done %v", ft.ServiceId(), stats)
 	n := stats.NumDone + stats.NumError + stats.NumTodo + stats.NumWip
 	spstats.Inc(&c.stat.Ntask, int64(n))
 }

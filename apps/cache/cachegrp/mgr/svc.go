@@ -91,7 +91,7 @@ func NewCachedSvc(sc *sigmaclnt.SigmaClnt, nsrv int, mcpu proc.Tmcpu, job, bin, 
 			return nil, err
 		}
 	}
-	bootScript, err := wasmer.ReadBootScript("cached_backup_boot")
+	bootScript, err := wasmer.ReadBootScript(sc, "cached_backup_boot")
 	if err != nil {
 		db.DPrintf(db.ERROR, "Err read WASM boot script: %v", err)
 		return nil, err

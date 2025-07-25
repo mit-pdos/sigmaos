@@ -41,3 +41,6 @@ DIR=$(dirname $0)
 
 # Copy versioned user procs to s3.
 aws s3 cp --recursive bin/user s3://$TAG/bin $PROFILE
+
+# Copy WASM scripts to S3
+aws s3 cp --recursive bin/wasm s3://$TAG/wasm $PROFILE

@@ -146,7 +146,7 @@ func NewCosSimJob(sc *sigmaclnt.SigmaClnt, job string, nvec int, vecDim int, eag
 		db.DPrintf(db.COSSIMSRV_ERR, "Err newCosSimShardClnt: %v", err)
 		return nil, err
 	}
-	bootScript, err := wasmer.ReadBootScript("cossim_boot")
+	bootScript, err := wasmer.ReadBootScript(sc, "cossim_boot")
 	if err != nil {
 		db.DPrintf(db.ERROR, "Err read WASM boot script: %v", err)
 		return nil, err

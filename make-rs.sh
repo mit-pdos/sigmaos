@@ -45,9 +45,11 @@ fi
 
 ROOT=$(pwd)
 OUTPATH=bin
+WASMDIR=$OUTPATH/wasm
 
 mkdir -p $OUTPATH/kernel
 mkdir -p $OUTPATH/user
+mkdir -p $WASMDIR
 
 LDF="-X sigmaos/sigmap.Target=$TARGET -s -w"
 
@@ -69,3 +71,8 @@ TARGETS=$(ls rs/wasm)
 build="parallel -j$njobs $CARGO \"build --manifest-path=rs/wasm/{}/Cargo.toml --target=wasm32-unknown-unknown --release\" ::: $TARGETS"
 echo $build
 eval $build
+
+echo "Copy WASM scripts to bin dir"
+for t in $TARGETS; do
+  cp rs/wasm/$t/target/wasm32-unknown-unknown/release/$t.wasm $WASMDIR/
+done

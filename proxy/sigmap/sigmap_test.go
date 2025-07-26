@@ -34,14 +34,14 @@ func writeKVsToCache(cc *cachegrpclnt.CachedSvcClnt, nkv int) ([]string, error) 
 
 func TestCachedDelegatedReshard(t *testing.T) {
 	const (
-		JOB_NAME   = "scalecache-job"
-		ncache     = 1
-		cacheMcpu  = 3000
-		cacheGC    = true
-		useEPCache = true
-		N_KV       = 5000
-		//		DELEGATED_INIT = false
+		JOB_NAME       = "scalecache-job"
+		ncache         = 1
+		cacheMcpu      = 3000
+		cacheGC        = true
+		useEPCache     = true
+		N_KV           = 5000
 		DELEGATED_INIT = true
+		//		DELEGATED_INIT = false
 	)
 
 	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})

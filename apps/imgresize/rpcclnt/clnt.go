@@ -7,7 +7,7 @@ import (
 
 	"sigmaos/apps/imgresize/proto"
 	// db "sigmaos/debug"
-	rpcclnt "sigmaos/rpc/clnt"
+	rpcclntcache "sigmaos/rpc/clnt/cache"
 	sprpcclnt "sigmaos/rpc/clnt/sigmap"
 	"sigmaos/sigmaclnt/fslib"
 	sp "sigmaos/sigmap"
@@ -16,14 +16,14 @@ import (
 type ImgResizeRPCClnt struct {
 	job      string
 	pn       string
-	rpcclntc *rpcclnt.ClntCache
+	rpcclntc *rpcclntcache.ClntCache
 }
 
 func NewImgResizeRPCClnt(fsl *fslib.FsLib, job string) (*ImgResizeRPCClnt, error) {
 	return &ImgResizeRPCClnt{
 		job:      job,
 		pn:       filepath.Join(sp.IMG, job),
-		rpcclntc: rpcclnt.NewRPCClntCache(sprpcclnt.WithSPChannel(fsl)),
+		rpcclntc: rpcclntcache.NewRPCClntCache(sprpcclnt.WithSPChannel(fsl)),
 	}, nil
 }
 

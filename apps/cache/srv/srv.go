@@ -9,6 +9,8 @@ import (
 
 	"sigmaos/api/fs"
 	"sigmaos/apps/cache"
+	"sigmaos/apps/epcache"
+	epcacheclnt "sigmaos/apps/epcache/clnt"
 	db "sigmaos/debug"
 	"sigmaos/proc"
 	rpcdevsrv "sigmaos/rpc/dev/srv"
@@ -44,14 +46,14 @@ type CacheSrv struct {
 	perf      *perf.Perf
 }
 
-func RunCacheSrv(args []string, nshard int) error {
+func RunCacheSrv(args []string, nshard int, useEPCache bool) error {
 	pn := ""
 	if len(args) > 2 {
 		pn = args[2]
 	}
 
 	pe := proc.GetProcEnv()
-	s, err := NewCacheSrv(pe, args[1], pn, nshard)
+	s, err := NewCacheSrv(pe, args[1], pn, nshard, useEPCache)
 	if err != nil {
 		return err
 	}
@@ -61,10 +63,8 @@ func RunCacheSrv(args []string, nshard int) error {
 	return nil
 }
 
-func NewCacheSrv(pe *proc.ProcEnv, dirname string, pn string, nshard int) (*CacheSrv, error) {
+func NewCacheSrv(pe *proc.ProcEnv, dirname string, pn string, nshard int, useEPCache bool) (*CacheSrv, error) {
 	cs := &CacheSrv{shards: make(map[cache.Tshard]*shardInfo), lastFence: sp.NullFence()}
-	// Turn off tracing for now
-	//	cs.tracer = tracing.Init("cache", proc.GetSigmaJaegerIP())
 	p, err := perf.NewPerf(pe, perf.CACHESRV)
 	if err != nil {
 		db.DFatalf("NewPerf err %v\n", err)
@@ -77,7 +77,34 @@ func NewCacheSrv(pe *proc.ProcEnv, dirname string, pn string, nshard int) (*Cach
 		}
 	}
 	db.DPrintf(db.CACHESRV, "Run %v %v", dirname, cs.shrd)
-	ssrv, err := sigmasrv.NewSigmaSrv(dirname+cs.shrd, cs, pe)
+	var ssrv *sigmasrv.SigmaSrv
+	svcInstanceName := dirname + cs.shrd
+	// If not using EPCache, post EP in the realm namespace
+	if !useEPCache {
+		ssrv, err = sigmasrv.NewSigmaSrv(svcInstanceName, cs, pe)
+	} else {
+		// Otherwise, don't post EP (and instead post EP in the EP cache service)
+		ssrv, err = sigmasrv.NewSigmaSrv("", cs, pe)
+		start := time.Now()
+		if epcsrvEP, ok := pe.GetCachedEndpoint(epcache.EPCACHE); ok {
+			if err := epcacheclnt.MountEPCacheSrv(ssrv.MemFs.SigmaClnt().FsLib, epcsrvEP); err != nil {
+				db.DFatalf("Err mount epcache srv: %v", err)
+			}
+		}
+		perf.LogSpawnLatency("cachesrv.MountEPCacheSrv", pe.GetPID(), pe.GetSpawnTime(), start)
+		start = time.Now()
+		epcc, err := epcacheclnt.NewEndpointCacheClnt(ssrv.MemFs.SigmaClnt().FsLib)
+		if err != nil {
+			db.DFatalf("Err EPCC: %v", err)
+		}
+		perf.LogSpawnLatency("cachesrv.NewEPCacheClnt", pe.GetPID(), pe.GetSpawnTime(), start)
+		start = time.Now()
+		ep := ssrv.MemFs.GetSigmaPSrvEndpoint()
+		if err := epcc.RegisterEndpoint(svcInstanceName, pe.GetPID().String(), ep); err != nil {
+			db.DFatalf("Err RegisterEP: %v", err)
+		}
+		perf.LogSpawnLatency("EPCacheSrv.RegisterEP", pe.GetPID(), pe.GetSpawnTime(), start)
+	}
 	if err != nil {
 		return nil, err
 	}

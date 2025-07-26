@@ -6,7 +6,7 @@ package clnt
 import (
 	db "sigmaos/debug"
 	leaseproto "sigmaos/ft/lease/proto"
-	rpcclnt "sigmaos/rpc/clnt"
+	rpcclntcache "sigmaos/rpc/clnt/cache"
 	sprpcclnt "sigmaos/rpc/clnt/sigmap"
 	"sigmaos/sigmaclnt/fslib"
 	sp "sigmaos/sigmap"
@@ -16,7 +16,7 @@ import (
 type LeaseClnt struct {
 	*fslib.FsLib
 	lm            *syncmap.SyncMap[string, *Lease]
-	cc            *rpcclnt.ClntCache
+	cc            *rpcclntcache.ClntCache
 	askedForLease bool // Used by test harness
 }
 
@@ -24,7 +24,7 @@ func NewLeaseClnt(fsl *fslib.FsLib) (*LeaseClnt, error) {
 	return &LeaseClnt{
 		FsLib: fsl,
 		lm:    syncmap.NewSyncMap[string, *Lease](),
-		cc:    rpcclnt.NewRPCClntCache(sprpcclnt.WithSPChannel(fsl)),
+		cc:    rpcclntcache.NewRPCClntCache(sprpcclnt.WithSPChannel(fsl)),
 	}, nil
 }
 

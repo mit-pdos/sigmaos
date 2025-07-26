@@ -14,6 +14,7 @@ import (
 	"sigmaos/apps/cache/cachegrp"
 	cacheclnt "sigmaos/apps/cache/clnt"
 	cacheproto "sigmaos/apps/cache/proto"
+	epcacheclnt "sigmaos/apps/epcache/clnt"
 	db "sigmaos/debug"
 	"sigmaos/rpc"
 	"sigmaos/sigmaclnt/fslib"
@@ -31,17 +32,25 @@ func Key2server(key string, nserver int) int {
 
 type CachedSvcClnt struct {
 	sync.Mutex
-	fsl *fslib.FsLib
-	cc  *cacheclnt.CacheClnt
-	pn  string
-	dd  *dircache.DirCache[struct{}]
+	fsl            *fslib.FsLib
+	epcc           *epcacheclnt.EndpointCacheClnt
+	useEPCacheClnt bool
+	cc             *cacheclnt.CacheClnt
+	pn             string
+	dd             *dircache.DirCache[struct{}]
 }
 
 func NewCachedSvcClnt(fsl *fslib.FsLib, job string) *CachedSvcClnt {
+	return NewCachedSvcClntEPCache(fsl, nil, job)
+}
+
+func NewCachedSvcClntEPCache(fsl *fslib.FsLib, epcc *epcacheclnt.EndpointCacheClnt, job string) *CachedSvcClnt {
 	csc := &CachedSvcClnt{
-		fsl: fsl,
-		pn:  cache.CACHE,
-		cc:  cacheclnt.NewCacheClnt(fsl, job, cache.NSHARD),
+		fsl:            fsl,
+		epcc:           epcc,
+		useEPCacheClnt: epcc != nil,
+		pn:             cache.CACHE,
+		cc:             cacheclnt.NewCacheClnt(fsl, job, cache.NSHARD),
 	}
 	dir := csc.pn + cachegrp.SRVDIR
 	csc.dd = dircache.NewDirCache[struct{}](fsl, dir, csc.newEntry, nil, db.CACHEDSVCCLNT, db.CACHEDSVCCLNT)

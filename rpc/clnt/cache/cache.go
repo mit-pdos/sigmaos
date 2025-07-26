@@ -9,6 +9,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/rpc"
+	rpcclnt "sigmaos/rpc/clnt"
 	rpcclntopts "sigmaos/rpc/clnt/opts"
 	"sigmaos/serr"
 	"sigmaos/util/retry"
@@ -16,7 +17,7 @@ import (
 
 type ClntCache struct {
 	sync.Mutex
-	rpccs   map[string]*RPCClnt
+	rpccs   map[string]*rpcclnt.RPCClnt
 	rpcOpts *rpcclntopts.RPCClntOptions
 	stats   Tstats
 }
@@ -31,7 +32,7 @@ func NewRPCClntCache(opts ...*rpcclntopts.RPCClntOption) *ClntCache {
 		opt.Apply(rpcOpts)
 	}
 	return &ClntCache{
-		rpccs:   make(map[string]*RPCClnt),
+		rpccs:   make(map[string]*rpcclnt.RPCClnt),
 		rpcOpts: rpcOpts,
 	}
 }
@@ -42,7 +43,7 @@ func (cc *ClntCache) Stats() Tstats {
 
 // Note: several threads may call Lookup for same pn, overwriting the
 // rpcc of the last thread that called Lookup.
-func (cc *ClntCache) Lookup(pn string) (*RPCClnt, error) {
+func (cc *ClntCache) Lookup(pn string) (*rpcclnt.RPCClnt, error) {
 	cc.Lock()
 	defer cc.Unlock()
 	rpcc, ok := cc.rpccs[pn]
@@ -59,7 +60,7 @@ func (cc *ClntCache) Lookup(pn string) (*RPCClnt, error) {
 	if err1 != nil {
 		return nil, err
 	}
-	rpcc, err = NewRPCClnt(pn, rpcclntopts.WithRPCChannel(ch), rpcclntopts.WithDelegatedRPCChannel(delCh))
+	rpcc, err = rpcclnt.NewRPCClnt(pn, rpcclntopts.WithRPCChannel(ch), rpcclntopts.WithDelegatedRPCChannel(delCh))
 	if err != nil {
 		return nil, err
 	}
@@ -76,7 +77,7 @@ func (cc *ClntCache) Delete(pn string) {
 // Retry lookup if rpcc.RPC cannot reach server.
 func (cc *ClntCache) RPCRetry(pn string, method string, arg protobuf.Message, res protobuf.Message) error {
 	var err error
-	var rpcc *RPCClnt
+	var rpcc *rpcclnt.RPCClnt
 	for i := 0; i < 2; i++ {
 		rpcc, err = cc.Lookup(pn)
 		if err != nil {

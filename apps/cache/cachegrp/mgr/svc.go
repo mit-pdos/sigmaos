@@ -5,13 +5,17 @@ package mgr
 import (
 	"bytes"
 	"encoding/binary"
+	"path/filepath"
 	"strconv"
 	"sync"
 
 	"sigmaos/apps/cache/cachegrp"
+	"sigmaos/apps/epcache"
+	epsrv "sigmaos/apps/epcache/srv"
 	db "sigmaos/debug"
 	"sigmaos/proc"
 	"sigmaos/proxy/wasm/rpc/wasmer"
+	"sigmaos/rpc"
 	"sigmaos/serr"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
@@ -20,6 +24,9 @@ import (
 type CachedSvc struct {
 	sync.Mutex
 	*sigmaclnt.SigmaClnt
+	EPCacheJob    *epsrv.EPCacheJob
+	epcsrvEP      *sp.Tendpoint
+	useEPCache    bool
 	bin           string
 	servers       []sp.Tpid
 	backupServers []sp.Tpid
@@ -31,9 +38,10 @@ type CachedSvc struct {
 	gc            bool
 }
 
+// Currently, only backup servers advertise themselves via the EP cache
 func (cs *CachedSvc) addServer(i int) error {
 	// SpawnBurst to spread servers across procds.
-	p := proc.NewProc(cs.bin, []string{cs.pn, cachegrp.SRVDIR + strconv.Itoa(int(i))})
+	p := proc.NewProc(cs.bin, []string{cs.pn, cachegrp.SRVDIR + strconv.Itoa(int(i)), strconv.FormatBool(false)})
 	if !cs.gc {
 		p.AppendEnv("GOGC", "off")
 	}
@@ -51,9 +59,13 @@ func (cs *CachedSvc) addServer(i int) error {
 
 func (cs *CachedSvc) addBackupServer(srvID int, ep *sp.Tendpoint, delegatedInit bool) error {
 	// SpawnBurst to spread servers across procds.
-	p := proc.NewProc(cs.bin+"-backup", []string{cs.pn, cs.job, cachegrp.BACKUP + strconv.Itoa(int(srvID))})
+	p := proc.NewProc(cs.bin+"-backup", []string{cs.pn, cs.job, cachegrp.BACKUP + strconv.Itoa(int(srvID)), strconv.FormatBool(cs.useEPCache)})
 	if !cs.gc {
 		p.AppendEnv("GOGC", "off")
+	}
+	if cs.useEPCache {
+		// Cache the primary server's endpoint in the backup proc struct
+		p.SetCachedEndpoint(epcache.EPCACHE, cs.epcsrvEP)
 	}
 	// Cache the primary server's endpoint in the backup proc struct
 	p.SetCachedEndpoint(cs.Server(strconv.Itoa(srvID)), ep)
@@ -76,12 +88,29 @@ func (cs *CachedSvc) addBackupServer(srvID int, ep *sp.Tendpoint, delegatedInit 
 	if err := cs.WaitStart(p.GetPid()); err != nil {
 		return err
 	}
+	if cs.useEPCache {
+		backupPN := cs.BackupServer(strconv.Itoa(srvID))
+		// Get EP from epcachesrv
+		instances, _, err := cs.EPCacheJob.Clnt.GetEndpoints(backupPN, epcache.NO_VERSION)
+		if err != nil {
+			return err
+		}
+		// Manually mount cached-backup so it will resolve later
+		ep := sp.NewEndpointFromProto(instances[0].EndpointProto)
+		if err := cs.MountTree(ep, rpc.RPC, filepath.Join(backupPN, rpc.RPC)); err != nil {
+			return err
+		}
+	}
 	cs.backupServers = append(cs.backupServers, p.GetPid())
 	return nil
 }
 
 // XXX use job
 func NewCachedSvc(sc *sigmaclnt.SigmaClnt, nsrv int, mcpu proc.Tmcpu, job, bin, pn string, gc bool) (*CachedSvc, error) {
+	return NewCachedSvcEPCache(sc, nil, nsrv, mcpu, job, bin, pn, gc)
+}
+
+func NewCachedSvcEPCache(sc *sigmaclnt.SigmaClnt, epCacheJob *epsrv.EPCacheJob, nsrv int, mcpu proc.Tmcpu, job, bin, pn string, gc bool) (*CachedSvc, error) {
 	sc.MkDir(pn, 0777)
 	if err := sc.MkDir(pn+cachegrp.SRVDIR, 0777); err != nil {
 		if !serr.IsErrCode(err, serr.TErrExists) {
@@ -98,8 +127,20 @@ func NewCachedSvc(sc *sigmaclnt.SigmaClnt, nsrv int, mcpu proc.Tmcpu, job, bin, 
 		db.DPrintf(db.ERROR, "Err read WASM boot script: %v", err)
 		return nil, err
 	}
+	var epcsrvEP *sp.Tendpoint
+	if epCacheJob != nil {
+		// Cache the EPCache's endpoint in the proc stroct
+		epcsrvEP, err = epCacheJob.GetSrvEP()
+		if err != nil {
+			db.DPrintf(db.ERROR, "Err getSrvEP ep cache srv: %v", err)
+			return nil, err
+		}
+	}
 	cs := &CachedSvc{
 		SigmaClnt:     sc,
+		EPCacheJob:    epCacheJob,
+		epcsrvEP:      epcsrvEP,
+		useEPCache:    epCacheJob != nil,
 		bin:           bin,
 		servers:       make([]sp.Tpid, 0),
 		backupServers: make([]sp.Tpid, 0),

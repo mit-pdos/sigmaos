@@ -18,7 +18,7 @@ import (
 	cacheproto "sigmaos/apps/cache/proto"
 	db "sigmaos/debug"
 	"sigmaos/rpc"
-	rpcclnt "sigmaos/rpc/clnt"
+	rpcclntcache "sigmaos/rpc/clnt/cache"
 	sprpcclnt "sigmaos/rpc/clnt/sigmap"
 	rpcdev "sigmaos/rpc/dev"
 	"sigmaos/sigmaclnt/fslib"
@@ -31,18 +31,17 @@ func NewKey(k uint64) string {
 }
 
 type CacheClnt struct {
-	*rpcclnt.ClntCache
+	*rpcclntcache.ClntCache
 	fsl    *fslib.FsLib
 	nshard int
 }
 
 func NewCacheClnt(fsl *fslib.FsLib, job string, nshard int) *CacheClnt {
-	cc := &CacheClnt{
+	return &CacheClnt{
 		fsl:       fsl,
 		nshard:    nshard,
-		ClntCache: rpcclnt.NewRPCClntCache(sprpcclnt.WithSPChannel(fsl), sprpcclnt.WithDelegatedSPProxyChannel(fsl)),
+		ClntCache: rpcclntcache.NewRPCClntCache(sprpcclnt.WithSPChannel(fsl), sprpcclnt.WithDelegatedSPProxyChannel(fsl)),
 	}
-	return cc
 }
 
 func Key2shard(key string, nshard uint32) uint32 {

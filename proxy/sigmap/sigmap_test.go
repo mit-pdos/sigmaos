@@ -9,6 +9,7 @@ import (
 	cachegrpclnt "sigmaos/apps/cache/cachegrp/clnt"
 	cachegrpmgr "sigmaos/apps/cache/cachegrp/mgr"
 	cacheproto "sigmaos/apps/cache/proto"
+	epsrv "sigmaos/apps/epcache/srv"
 	db "sigmaos/debug"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
@@ -33,11 +34,12 @@ func writeKVsToCache(cc *cachegrpclnt.CachedSvcClnt, nkv int) ([]string, error) 
 
 func TestCachedDelegatedReshard(t *testing.T) {
 	const (
-		JOB_NAME  = "scalecache-job"
-		ncache    = 1
-		cacheMcpu = 4000
-		cacheGC   = true
-		N_KV      = 5000
+		JOB_NAME   = "scalecache-job"
+		ncache     = 1
+		cacheMcpu  = 3000
+		cacheGC    = true
+		useEPCache = true
+		N_KV       = 5000
 		//		DELEGATED_INIT = false
 		DELEGATED_INIT = true
 	)
@@ -48,8 +50,17 @@ func TestCachedDelegatedReshard(t *testing.T) {
 	}
 	defer mrts.Shutdown()
 
+	var epcj *epsrv.EPCacheJob
+	var err error
+	if useEPCache {
+		epcj, err = epsrv.NewEPCacheJob(mrts.GetRealm(test.REALM1).SigmaClnt)
+		if !assert.Nil(t, err, "Err new epCacheJob: %v", err) {
+			return
+		}
+	}
+
 	// Start the cachegrp job
-	cm, err := cachegrpmgr.NewCacheMgr(mrts.GetRealm(test.REALM1).SigmaClnt, JOB_NAME, ncache, cacheMcpu, cacheGC)
+	cm, err := cachegrpmgr.NewCacheMgrEPCache(mrts.GetRealm(test.REALM1).SigmaClnt, epcj, JOB_NAME, ncache, cacheMcpu, cacheGC)
 	if !assert.Nil(t, err, "Err new cachemgr: %v", err) {
 		db.DPrintf(db.COSSIMSRV_ERR, "Err newCacheMgr: %v", err)
 		return

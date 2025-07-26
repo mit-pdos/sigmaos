@@ -10,9 +10,9 @@ import (
 	"sigmaos/proc"
 )
 
-func RunCacheSrvBackup(cachedir, jobname, shardpn string, nshard int) error {
+func RunCacheSrvBackup(cachedir, jobname, shardpn string, nshard int, useEPCache bool) error {
 	pe := proc.GetProcEnv()
-	s, err := NewCacheSrv(pe, cachedir, shardpn, nshard)
+	s, err := NewCacheSrv(pe, cachedir, shardpn, nshard, useEPCache)
 	if err != nil {
 		return err
 	}

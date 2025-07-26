@@ -10,7 +10,7 @@ import (
 	db "sigmaos/debug"
 	fttask "sigmaos/ft/task"
 	"sigmaos/ft/task/proto"
-	rpcclnt "sigmaos/rpc/clnt"
+	rpcclntcache "sigmaos/rpc/clnt/cache"
 	sprpcclnt "sigmaos/rpc/clnt/sigmap"
 	"sigmaos/serr"
 	"sigmaos/sigmaclnt/fslib"
@@ -19,7 +19,7 @@ import (
 )
 
 type RawFtTaskClnt struct {
-	rpcclntc   *rpcclnt.ClntCache
+	rpcclntc   *rpcclntcache.ClntCache
 	fsl        *fslib.FsLib
 	serviceId  fttask.FtTaskSvcId
 	fence      *sp.Tfence
@@ -31,7 +31,7 @@ type RawFtTaskClnt struct {
 func newRawFtTaskClnt(fsl *fslib.FsLib, serviceId fttask.FtTaskSvcId, a *AcquireId) *RawFtTaskClnt {
 	tc := &RawFtTaskClnt{
 		fsl:       fsl,
-		rpcclntc:  rpcclnt.NewRPCClntCache(sprpcclnt.WithSPChannel(fsl)),
+		rpcclntc:  rpcclntcache.NewRPCClntCache(sprpcclnt.WithSPChannel(fsl)),
 		serviceId: serviceId,
 		fence:     nil,
 		mu:        sync.Mutex{},

@@ -63,6 +63,23 @@ func RunCacheSrv(args []string, nshard int, useEPCache bool) error {
 	return nil
 }
 
+func (cs *CacheSrv) resetShardHitCnts() {
+	for {
+		time.Sleep(5 * time.Second)
+		// Copy the list of shards
+		cs.mu.Lock()
+		shards := make([]*shard, 0, len(cs.shards))
+		for _, si := range cs.shards {
+			shards = append(shards, si.s)
+		}
+		cs.mu.Unlock()
+		// Reset the hit count on each shard
+		for _, s := range shards {
+			s.resetHitCnt()
+		}
+	}
+}
+
 func NewCacheSrv(pe *proc.ProcEnv, dirname string, pn string, nshard int, useEPCache bool) (*CacheSrv, error) {
 	cs := &CacheSrv{shards: make(map[cache.Tshard]*shardInfo), lastFence: sp.NullFence()}
 	p, err := perf.NewPerf(pe, perf.CACHESRV)
@@ -115,6 +132,7 @@ func NewCacheSrv(pe *proc.ProcEnv, dirname string, pn string, nshard int, useEPC
 		return nil, err
 	}
 	cs.ssrv = ssrv
+	go cs.resetShardHitCnts()
 	return cs, nil
 }
 
@@ -457,4 +475,5 @@ func (cs *CacheSrv) Delete(ctx fs.CtxI, req cacheproto.CacheReq, rep *cacheproto
 		return nil
 	}
 	return serr.NewErr(serr.TErrNotfound, fmt.Sprintf("key %s", req.Key))
+
 }

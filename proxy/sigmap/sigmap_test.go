@@ -3,6 +3,7 @@ package sigmap_test
 import (
 	"strconv"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 
@@ -92,6 +93,8 @@ func TestCachedDelegatedReshard(t *testing.T) {
 			break
 		}
 	}
+	db.DPrintf(db.TEST, "Sleep a bit so caches can print stats")
+	time.Sleep(5 * time.Second)
 	if err := cm.Stop(); !assert.Nil(t, err, "Err stop cachemgr: %v", err) {
 		return
 	}

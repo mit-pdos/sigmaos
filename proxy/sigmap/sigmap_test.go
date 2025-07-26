@@ -1,15 +1,19 @@
 package sigmap_test
 
 import (
+	"math"
+	"math/rand"
 	"strconv"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 
+	"sigmaos/apps/cache"
 	cachegrpclnt "sigmaos/apps/cache/cachegrp/clnt"
 	cachegrpmgr "sigmaos/apps/cache/cachegrp/mgr"
 	cacheproto "sigmaos/apps/cache/proto"
+	cachesrv "sigmaos/apps/cache/srv"
 	epsrv "sigmaos/apps/epcache/srv"
 	db "sigmaos/debug"
 	sp "sigmaos/sigmap"
@@ -35,13 +39,14 @@ func writeKVsToCache(cc *cachegrpclnt.CachedSvcClnt, nkv int) ([]string, error) 
 
 func TestCachedDelegatedReshard(t *testing.T) {
 	const (
-		JOB_NAME       = "scalecache-job"
-		ncache         = 1
-		cacheMcpu      = 3000
-		cacheGC        = true
-		useEPCache     = true
-		N_KV           = 5000
-		DELEGATED_INIT = true
+		JOB_NAME          = "scalecache-job"
+		ncache            = 1
+		cacheMcpu         = 3000
+		cacheGC           = true
+		useEPCache        = true
+		N_KV              = 5000
+		N_HOTSHARD_TRIALS = 5
+		DELEGATED_INIT    = true
 		//		DELEGATED_INIT = false
 	)
 
@@ -79,12 +84,62 @@ func TestCachedDelegatedReshard(t *testing.T) {
 	if err := cm.AddBackupServer(srvID, ep, DELEGATED_INIT); !assert.Nil(t, err, "Err add backup server(%v): %v", srvID, err) {
 		return
 	}
+	var foundEnoughMatches bool
+	// May need to retry, as shard hit counts reset periodically
+	for i := 0; i < N_HOTSHARD_TRIALS; i++ {
+		shardHits := make(map[uint32]uint64)
+		for i, key := range keys {
+			if _, ok := shardHits[cc.Key2shard(key)]; !ok {
+				shardHits[cc.Key2shard(key)] = 0
+			}
+			shardHits[cc.Key2shard(key)]++
+			val := &cacheproto.CacheString{}
+			// Try getting from the original server
+			if err := cc.Get(key, val); !assert.Nil(t, err, "Err get cachemgr: %v", err) {
+				break
+			}
+			if !assert.Equal(t, val.Val, "val-"+strconv.Itoa(i), "Err vals don't match") {
+				break
+			}
+		}
+		hotShards, hitCnts, err := cc.GetHotShards(0, cache.NSHARD)
+		if !assert.Nil(t, err, "Err GetHotShards: %v", err) {
+			return
+		}
+		nMatches := 0
+		for i := range hotShards {
+			// If reported hit count matches expected hit count, increment number of
+			// matches
+			if hitCnts[i] == shardHits[uint32(hotShards[i])] {
+				nMatches++
+			}
+		}
+		// If ~50% of the shard hit counts match, declare success
+		if nMatches >= int(math.Round(float64(cache.NSHARD)*0.5)) {
+			db.DPrintf(db.TEST, "Found sufficient shard hit matches (%v)", nMatches)
+			foundEnoughMatches = true
+			break
+		} else {
+			randSleep := cachesrv.SHARD_STAT_SCAN_INTERVAL / time.Duration(rand.Intn(10))
+			db.DPrintf(db.TEST, "Insufficient shard hit matches (%v)... sleep %v", nMatches, randSleep)
+			time.Sleep(randSleep)
+		}
+	}
+	if !assert.True(t, foundEnoughMatches, "Didn't find enough shard hit count matches") {
+		return
+	}
+	// Wait a bit for shard counts to reset
+	time.Sleep(2 * cachesrv.SHARD_STAT_SCAN_INTERVAL)
+	// Check shard counts reset
+	hotShards, _, err := cc.GetHotShards(0, cache.NSHARD)
+	if !assert.Nil(t, err, "Err GetHotShards: %v", err) {
+		return
+	}
+	if !assert.Equal(t, len(hotShards), 0, "HotShard counts didn't reset") {
+		return
+	}
 	for i, key := range keys {
 		val := &cacheproto.CacheString{}
-		// Try getting from the original server
-		if err := cc.Get(key, val); !assert.Nil(t, err, "Err get cachemgr: %v", err) {
-			break
-		}
 		// Try getting from the backup server
 		if err := cc.BackupGet(key, val); !assert.Nil(t, err, "Err backup get cachemgr: %v", err) {
 			break

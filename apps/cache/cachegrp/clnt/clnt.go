@@ -167,6 +167,10 @@ func (csc *CachedSvcClnt) Delete(key string) error {
 	return csc.DeleteTraced(nil, key)
 }
 
+func (csc *CachedSvcClnt) GetHotShards(srv int, topN uint32) ([]cache.Tshard, []uint64, error) {
+	return csc.cc.GetHotShards(csc.Server(srv), topN)
+}
+
 func (csc *CachedSvcClnt) GetTraced(sctx *tproto.SpanContextConfig, key string, val proto.Message) error {
 	return csc.getTraced(sctx, key, val, false)
 }

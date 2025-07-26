@@ -75,6 +75,12 @@ extern CacheReqDefaultTypeInternal _CacheReq_default_instance_;
 class CacheString;
 struct CacheStringDefaultTypeInternal;
 extern CacheStringDefaultTypeInternal _CacheString_default_instance_;
+class HotShardsRep;
+struct HotShardsRepDefaultTypeInternal;
+extern HotShardsRepDefaultTypeInternal _HotShardsRep_default_instance_;
+class HotShardsReq;
+struct HotShardsReqDefaultTypeInternal;
+extern HotShardsReqDefaultTypeInternal _HotShardsReq_default_instance_;
 class ShardData;
 struct ShardDataDefaultTypeInternal;
 extern ShardDataDefaultTypeInternal _ShardData_default_instance_;
@@ -96,6 +102,8 @@ template<> ::CacheOK* Arena::CreateMaybeMessage<::CacheOK>(Arena*);
 template<> ::CacheRep* Arena::CreateMaybeMessage<::CacheRep>(Arena*);
 template<> ::CacheReq* Arena::CreateMaybeMessage<::CacheReq>(Arena*);
 template<> ::CacheString* Arena::CreateMaybeMessage<::CacheString>(Arena*);
+template<> ::HotShardsRep* Arena::CreateMaybeMessage<::HotShardsRep>(Arena*);
+template<> ::HotShardsReq* Arena::CreateMaybeMessage<::HotShardsReq>(Arena*);
 template<> ::ShardData* Arena::CreateMaybeMessage<::ShardData>(Arena*);
 template<> ::ShardData_ValsEntry_DoNotUse* Arena::CreateMaybeMessage<::ShardData_ValsEntry_DoNotUse>(Arena*);
 template<> ::ShardReq* Arena::CreateMaybeMessage<::ShardReq>(Arena*);
@@ -103,6 +111,316 @@ template<> ::ShardReq_ValsEntry_DoNotUse* Arena::CreateMaybeMessage<::ShardReq_V
 PROTOBUF_NAMESPACE_CLOSE
 
 // ===================================================================
+
+class HotShardsReq final :
+    public ::PROTOBUF_NAMESPACE_ID::Message /* @@protoc_insertion_point(class_definition:HotShardsReq) */ {
+ public:
+  inline HotShardsReq() : HotShardsReq(nullptr) {}
+  ~HotShardsReq() override;
+  explicit PROTOBUF_CONSTEXPR HotShardsReq(::PROTOBUF_NAMESPACE_ID::internal::ConstantInitialized);
+
+  HotShardsReq(const HotShardsReq& from);
+  HotShardsReq(HotShardsReq&& from) noexcept
+    : HotShardsReq() {
+    *this = ::std::move(from);
+  }
+
+  inline HotShardsReq& operator=(const HotShardsReq& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  inline HotShardsReq& operator=(HotShardsReq&& from) noexcept {
+    if (this == &from) return *this;
+    if (GetOwningArena() == from.GetOwningArena()
+  #ifdef PROTOBUF_FORCE_COPY_IN_MOVE
+        && GetOwningArena() != nullptr
+  #endif  // !PROTOBUF_FORCE_COPY_IN_MOVE
+    ) {
+      InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+
+  static const ::PROTOBUF_NAMESPACE_ID::Descriptor* descriptor() {
+    return GetDescriptor();
+  }
+  static const ::PROTOBUF_NAMESPACE_ID::Descriptor* GetDescriptor() {
+    return default_instance().GetMetadata().descriptor;
+  }
+  static const ::PROTOBUF_NAMESPACE_ID::Reflection* GetReflection() {
+    return default_instance().GetMetadata().reflection;
+  }
+  static const HotShardsReq& default_instance() {
+    return *internal_default_instance();
+  }
+  static inline const HotShardsReq* internal_default_instance() {
+    return reinterpret_cast<const HotShardsReq*>(
+               &_HotShardsReq_default_instance_);
+  }
+  static constexpr int kIndexInFileMessages =
+    0;
+
+  friend void swap(HotShardsReq& a, HotShardsReq& b) {
+    a.Swap(&b);
+  }
+  inline void Swap(HotShardsReq* other) {
+    if (other == this) return;
+  #ifdef PROTOBUF_FORCE_COPY_IN_SWAP
+    if (GetOwningArena() != nullptr &&
+        GetOwningArena() == other->GetOwningArena()) {
+   #else  // PROTOBUF_FORCE_COPY_IN_SWAP
+    if (GetOwningArena() == other->GetOwningArena()) {
+  #endif  // !PROTOBUF_FORCE_COPY_IN_SWAP
+      InternalSwap(other);
+    } else {
+      ::PROTOBUF_NAMESPACE_ID::internal::GenericSwap(this, other);
+    }
+  }
+  void UnsafeArenaSwap(HotShardsReq* other) {
+    if (other == this) return;
+    GOOGLE_DCHECK(GetOwningArena() == other->GetOwningArena());
+    InternalSwap(other);
+  }
+
+  // implements Message ----------------------------------------------
+
+  HotShardsReq* New(::PROTOBUF_NAMESPACE_ID::Arena* arena = nullptr) const final {
+    return CreateMaybeMessage<HotShardsReq>(arena);
+  }
+  using ::PROTOBUF_NAMESPACE_ID::Message::CopyFrom;
+  void CopyFrom(const HotShardsReq& from);
+  using ::PROTOBUF_NAMESPACE_ID::Message::MergeFrom;
+  void MergeFrom( const HotShardsReq& from) {
+    HotShardsReq::MergeImpl(*this, from);
+  }
+  private:
+  static void MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PROTOBUF_NAMESPACE_ID::Message& from_msg);
+  public:
+  PROTOBUF_ATTRIBUTE_REINITIALIZES void Clear() final;
+  bool IsInitialized() const final;
+
+  size_t ByteSizeLong() const final;
+  const char* _InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::internal::ParseContext* ctx) final;
+  uint8_t* _InternalSerialize(
+      uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const final;
+  int GetCachedSize() const final { return _impl_._cached_size_.Get(); }
+
+  private:
+  void SharedCtor(::PROTOBUF_NAMESPACE_ID::Arena* arena, bool is_message_owned);
+  void SharedDtor();
+  void SetCachedSize(int size) const final;
+  void InternalSwap(HotShardsReq* other);
+
+  private:
+  friend class ::PROTOBUF_NAMESPACE_ID::internal::AnyMetadata;
+  static ::PROTOBUF_NAMESPACE_ID::StringPiece FullMessageName() {
+    return "HotShardsReq";
+  }
+  protected:
+  explicit HotShardsReq(::PROTOBUF_NAMESPACE_ID::Arena* arena,
+                       bool is_message_owned = false);
+  public:
+
+  static const ClassData _class_data_;
+  const ::PROTOBUF_NAMESPACE_ID::Message::ClassData*GetClassData() const final;
+
+  ::PROTOBUF_NAMESPACE_ID::Metadata GetMetadata() const final;
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  enum : int {
+    kTopNFieldNumber = 1,
+  };
+  // uint32 topN = 1;
+  void clear_topn();
+  uint32_t topn() const;
+  void set_topn(uint32_t value);
+  private:
+  uint32_t _internal_topn() const;
+  void _internal_set_topn(uint32_t value);
+  public:
+
+  // @@protoc_insertion_point(class_scope:HotShardsReq)
+ private:
+  class _Internal;
+
+  template <typename T> friend class ::PROTOBUF_NAMESPACE_ID::Arena::InternalHelper;
+  typedef void InternalArenaConstructable_;
+  typedef void DestructorSkippable_;
+  struct Impl_ {
+    uint32_t topn_;
+    mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
+  };
+  union { Impl_ _impl_; };
+  friend struct ::TableStruct_cache_2eproto;
+};
+// -------------------------------------------------------------------
+
+class HotShardsRep final :
+    public ::PROTOBUF_NAMESPACE_ID::Message /* @@protoc_insertion_point(class_definition:HotShardsRep) */ {
+ public:
+  inline HotShardsRep() : HotShardsRep(nullptr) {}
+  ~HotShardsRep() override;
+  explicit PROTOBUF_CONSTEXPR HotShardsRep(::PROTOBUF_NAMESPACE_ID::internal::ConstantInitialized);
+
+  HotShardsRep(const HotShardsRep& from);
+  HotShardsRep(HotShardsRep&& from) noexcept
+    : HotShardsRep() {
+    *this = ::std::move(from);
+  }
+
+  inline HotShardsRep& operator=(const HotShardsRep& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  inline HotShardsRep& operator=(HotShardsRep&& from) noexcept {
+    if (this == &from) return *this;
+    if (GetOwningArena() == from.GetOwningArena()
+  #ifdef PROTOBUF_FORCE_COPY_IN_MOVE
+        && GetOwningArena() != nullptr
+  #endif  // !PROTOBUF_FORCE_COPY_IN_MOVE
+    ) {
+      InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+
+  static const ::PROTOBUF_NAMESPACE_ID::Descriptor* descriptor() {
+    return GetDescriptor();
+  }
+  static const ::PROTOBUF_NAMESPACE_ID::Descriptor* GetDescriptor() {
+    return default_instance().GetMetadata().descriptor;
+  }
+  static const ::PROTOBUF_NAMESPACE_ID::Reflection* GetReflection() {
+    return default_instance().GetMetadata().reflection;
+  }
+  static const HotShardsRep& default_instance() {
+    return *internal_default_instance();
+  }
+  static inline const HotShardsRep* internal_default_instance() {
+    return reinterpret_cast<const HotShardsRep*>(
+               &_HotShardsRep_default_instance_);
+  }
+  static constexpr int kIndexInFileMessages =
+    1;
+
+  friend void swap(HotShardsRep& a, HotShardsRep& b) {
+    a.Swap(&b);
+  }
+  inline void Swap(HotShardsRep* other) {
+    if (other == this) return;
+  #ifdef PROTOBUF_FORCE_COPY_IN_SWAP
+    if (GetOwningArena() != nullptr &&
+        GetOwningArena() == other->GetOwningArena()) {
+   #else  // PROTOBUF_FORCE_COPY_IN_SWAP
+    if (GetOwningArena() == other->GetOwningArena()) {
+  #endif  // !PROTOBUF_FORCE_COPY_IN_SWAP
+      InternalSwap(other);
+    } else {
+      ::PROTOBUF_NAMESPACE_ID::internal::GenericSwap(this, other);
+    }
+  }
+  void UnsafeArenaSwap(HotShardsRep* other) {
+    if (other == this) return;
+    GOOGLE_DCHECK(GetOwningArena() == other->GetOwningArena());
+    InternalSwap(other);
+  }
+
+  // implements Message ----------------------------------------------
+
+  HotShardsRep* New(::PROTOBUF_NAMESPACE_ID::Arena* arena = nullptr) const final {
+    return CreateMaybeMessage<HotShardsRep>(arena);
+  }
+  using ::PROTOBUF_NAMESPACE_ID::Message::CopyFrom;
+  void CopyFrom(const HotShardsRep& from);
+  using ::PROTOBUF_NAMESPACE_ID::Message::MergeFrom;
+  void MergeFrom( const HotShardsRep& from) {
+    HotShardsRep::MergeImpl(*this, from);
+  }
+  private:
+  static void MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PROTOBUF_NAMESPACE_ID::Message& from_msg);
+  public:
+  PROTOBUF_ATTRIBUTE_REINITIALIZES void Clear() final;
+  bool IsInitialized() const final;
+
+  size_t ByteSizeLong() const final;
+  const char* _InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::internal::ParseContext* ctx) final;
+  uint8_t* _InternalSerialize(
+      uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const final;
+  int GetCachedSize() const final { return _impl_._cached_size_.Get(); }
+
+  private:
+  void SharedCtor(::PROTOBUF_NAMESPACE_ID::Arena* arena, bool is_message_owned);
+  void SharedDtor();
+  void SetCachedSize(int size) const final;
+  void InternalSwap(HotShardsRep* other);
+
+  private:
+  friend class ::PROTOBUF_NAMESPACE_ID::internal::AnyMetadata;
+  static ::PROTOBUF_NAMESPACE_ID::StringPiece FullMessageName() {
+    return "HotShardsRep";
+  }
+  protected:
+  explicit HotShardsRep(::PROTOBUF_NAMESPACE_ID::Arena* arena,
+                       bool is_message_owned = false);
+  public:
+
+  static const ClassData _class_data_;
+  const ::PROTOBUF_NAMESPACE_ID::Message::ClassData*GetClassData() const final;
+
+  ::PROTOBUF_NAMESPACE_ID::Metadata GetMetadata() const final;
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  enum : int {
+    kShardsFieldNumber = 1,
+  };
+  // repeated uint32 shards = 1;
+  int shards_size() const;
+  private:
+  int _internal_shards_size() const;
+  public:
+  void clear_shards();
+  private:
+  uint32_t _internal_shards(int index) const;
+  const ::PROTOBUF_NAMESPACE_ID::RepeatedField< uint32_t >&
+      _internal_shards() const;
+  void _internal_add_shards(uint32_t value);
+  ::PROTOBUF_NAMESPACE_ID::RepeatedField< uint32_t >*
+      _internal_mutable_shards();
+  public:
+  uint32_t shards(int index) const;
+  void set_shards(int index, uint32_t value);
+  void add_shards(uint32_t value);
+  const ::PROTOBUF_NAMESPACE_ID::RepeatedField< uint32_t >&
+      shards() const;
+  ::PROTOBUF_NAMESPACE_ID::RepeatedField< uint32_t >*
+      mutable_shards();
+
+  // @@protoc_insertion_point(class_scope:HotShardsRep)
+ private:
+  class _Internal;
+
+  template <typename T> friend class ::PROTOBUF_NAMESPACE_ID::Arena::InternalHelper;
+  typedef void InternalArenaConstructable_;
+  typedef void DestructorSkippable_;
+  struct Impl_ {
+    ::PROTOBUF_NAMESPACE_ID::RepeatedField< uint32_t > shards_;
+    mutable std::atomic<int> _shards_cached_byte_size_;
+    mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
+  };
+  union { Impl_ _impl_; };
+  friend struct ::TableStruct_cache_2eproto;
+};
+// -------------------------------------------------------------------
 
 class CacheReq final :
     public ::PROTOBUF_NAMESPACE_ID::Message /* @@protoc_insertion_point(class_definition:CacheReq) */ {
@@ -152,7 +470,7 @@ class CacheReq final :
                &_CacheReq_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    0;
+    2;
 
   friend void swap(CacheReq& a, CacheReq& b) {
     a.Swap(&b);
@@ -383,7 +701,7 @@ class CacheGetDescriptor final :
                &_CacheGetDescriptor_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    1;
+    3;
 
   friend void swap(CacheGetDescriptor& a, CacheGetDescriptor& b) {
     a.Swap(&b);
@@ -547,7 +865,7 @@ class CacheMultiGetReq final :
                &_CacheMultiGetReq_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    2;
+    4;
 
   friend void swap(CacheMultiGetReq& a, CacheMultiGetReq& b) {
     a.Swap(&b);
@@ -744,7 +1062,7 @@ class CacheMultiGetRep final :
                &_CacheMultiGetRep_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    3;
+    5;
 
   friend void swap(CacheMultiGetRep& a, CacheMultiGetRep& b) {
     a.Swap(&b);
@@ -952,7 +1270,7 @@ class ShardReq final :
                &_ShardReq_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    5;
+    7;
 
   friend void swap(ShardReq& a, ShardReq& b) {
     a.Swap(&b);
@@ -1145,7 +1463,7 @@ class CacheOK final :
                &_CacheOK_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    6;
+    8;
 
   friend void swap(CacheOK& a, CacheOK& b) {
     a.Swap(&b);
@@ -1264,7 +1582,7 @@ class CacheRep final :
                &_CacheRep_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    7;
+    9;
 
   friend void swap(CacheRep& a, CacheRep& b) {
     a.Swap(&b);
@@ -1443,7 +1761,7 @@ class ShardData final :
                &_ShardData_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    9;
+    11;
 
   friend void swap(ShardData& a, ShardData& b) {
     a.Swap(&b);
@@ -1606,7 +1924,7 @@ class CacheString final :
                &_CacheString_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    10;
+    12;
 
   friend void swap(CacheString& a, CacheString& b) {
     a.Swap(&b);
@@ -1759,7 +2077,7 @@ class CacheInt final :
                &_CacheInt_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    11;
+    13;
 
   friend void swap(CacheInt& a, CacheInt& b) {
     a.Swap(&b);
@@ -1866,6 +2184,81 @@ class CacheInt final :
   #pragma GCC diagnostic push
   #pragma GCC diagnostic ignored "-Wstrict-aliasing"
 #endif  // __GNUC__
+// HotShardsReq
+
+// uint32 topN = 1;
+inline void HotShardsReq::clear_topn() {
+  _impl_.topn_ = 0u;
+}
+inline uint32_t HotShardsReq::_internal_topn() const {
+  return _impl_.topn_;
+}
+inline uint32_t HotShardsReq::topn() const {
+  // @@protoc_insertion_point(field_get:HotShardsReq.topN)
+  return _internal_topn();
+}
+inline void HotShardsReq::_internal_set_topn(uint32_t value) {
+  
+  _impl_.topn_ = value;
+}
+inline void HotShardsReq::set_topn(uint32_t value) {
+  _internal_set_topn(value);
+  // @@protoc_insertion_point(field_set:HotShardsReq.topN)
+}
+
+// -------------------------------------------------------------------
+
+// HotShardsRep
+
+// repeated uint32 shards = 1;
+inline int HotShardsRep::_internal_shards_size() const {
+  return _impl_.shards_.size();
+}
+inline int HotShardsRep::shards_size() const {
+  return _internal_shards_size();
+}
+inline void HotShardsRep::clear_shards() {
+  _impl_.shards_.Clear();
+}
+inline uint32_t HotShardsRep::_internal_shards(int index) const {
+  return _impl_.shards_.Get(index);
+}
+inline uint32_t HotShardsRep::shards(int index) const {
+  // @@protoc_insertion_point(field_get:HotShardsRep.shards)
+  return _internal_shards(index);
+}
+inline void HotShardsRep::set_shards(int index, uint32_t value) {
+  _impl_.shards_.Set(index, value);
+  // @@protoc_insertion_point(field_set:HotShardsRep.shards)
+}
+inline void HotShardsRep::_internal_add_shards(uint32_t value) {
+  _impl_.shards_.Add(value);
+}
+inline void HotShardsRep::add_shards(uint32_t value) {
+  _internal_add_shards(value);
+  // @@protoc_insertion_point(field_add:HotShardsRep.shards)
+}
+inline const ::PROTOBUF_NAMESPACE_ID::RepeatedField< uint32_t >&
+HotShardsRep::_internal_shards() const {
+  return _impl_.shards_;
+}
+inline const ::PROTOBUF_NAMESPACE_ID::RepeatedField< uint32_t >&
+HotShardsRep::shards() const {
+  // @@protoc_insertion_point(field_list:HotShardsRep.shards)
+  return _internal_shards();
+}
+inline ::PROTOBUF_NAMESPACE_ID::RepeatedField< uint32_t >*
+HotShardsRep::_internal_mutable_shards() {
+  return &_impl_.shards_;
+}
+inline ::PROTOBUF_NAMESPACE_ID::RepeatedField< uint32_t >*
+HotShardsRep::mutable_shards() {
+  // @@protoc_insertion_point(field_mutable_list:HotShardsRep.shards)
+  return _internal_mutable_shards();
+}
+
+// -------------------------------------------------------------------
+
 // CacheReq
 
 // string key = 1;
@@ -2916,6 +3309,10 @@ inline void CacheInt::set_val(int64_t value) {
 #ifdef __GNUC__
   #pragma GCC diagnostic pop
 #endif  // __GNUC__
+// -------------------------------------------------------------------
+
+// -------------------------------------------------------------------
+
 // -------------------------------------------------------------------
 
 // -------------------------------------------------------------------

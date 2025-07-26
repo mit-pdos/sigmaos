@@ -153,6 +153,21 @@ func (cc *CacheClnt) NewGet(sctx *tproto.SpanContextConfig, key string, f *sp.Tf
 	}
 }
 
+func (cc *CacheClnt) GetHotShards(srv string, topN uint32) ([]cache.Tshard, []uint64, error) {
+	req := &cacheproto.HotShardsReq{
+		TopN: topN,
+	}
+	var res cacheproto.HotShardsRep
+	if err := cc.RPC(srv, "CacheSrv.GetHotShards", req, &res); err != nil {
+		return nil, nil, err
+	}
+	shardIDs := make([]cache.Tshard, 0, len(res.ShardIDs))
+	for _, sid := range res.ShardIDs {
+		shardIDs = append(shardIDs, cache.Tshard(sid))
+	}
+	return shardIDs, res.HitCnts, nil
+}
+
 func (cc *CacheClnt) GetTracedFenced(sctx *tproto.SpanContextConfig, srv, key string, val proto.Message, f *sp.Tfence) error {
 	req := cc.NewGet(sctx, key, f)
 	s := time.Now()

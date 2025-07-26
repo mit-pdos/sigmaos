@@ -378,6 +378,30 @@ func (cs *CacheSrv) Put(ctx fs.CtxI, req cacheproto.CacheReq, rep *cacheproto.Ca
 	return err
 }
 
+// Return the IDs of the topN hottest shards
+func (cs *CacheSrv) GetHotShards(ctx fs.CtxI, req cacheproto.HotShardsReq, rep *cacheproto.HotShardsRep) error {
+	rep.ShardIDs = make([]uint32, 0, req.TopN)
+	rep.HitCnts = make([]uint64, 0, req.TopN)
+	defer func() {
+		db.DPrintf(db.CACHESRV, "HotShards: %v", rep.ShardIDs)
+	}()
+
+	cs.mu.Lock()
+	defer cs.mu.Unlock()
+
+	hottestIdx := len(cs.shardStats) - 1
+	// If the hottest shard has no hits, then no shards are hot. Return an empty
+	// slice
+	if cs.shardStats[hottestIdx].hitCnt == 0 {
+		return nil
+	}
+	for i := 0; i < int(req.TopN) && i < hottestIdx; i++ {
+		rep.ShardIDs = append(rep.ShardIDs, uint32(cs.shardStats[hottestIdx-i].shardID))
+		rep.HitCnts = append(rep.HitCnts, cs.shardStats[hottestIdx-i].hitCnt)
+	}
+	return nil
+}
+
 func (cs *CacheSrv) Get(ctx fs.CtxI, req cacheproto.CacheReq, rep *cacheproto.CacheRep) error {
 	if req.Fence.HasFence() {
 		return cs.GetFence(ctx, req, rep)

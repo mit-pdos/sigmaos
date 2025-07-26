@@ -6,6 +6,15 @@ import "rpc/proto/rpc.proto";
 
 option go_package = "sigmaos/apps/cache/proto";
 
+message HotShardsReq {
+  uint32 topN = 1;
+}
+
+message HotShardsRep {
+  repeated uint32 shardIDs = 1;
+  repeated uint64 hitCnts = 2;
+}
+
 message CacheReq {
   string key = 1;
   bytes value = 2;

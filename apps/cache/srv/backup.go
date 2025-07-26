@@ -8,6 +8,8 @@ import (
 	cacheclnt "sigmaos/apps/cache/clnt"
 	db "sigmaos/debug"
 	"sigmaos/proc"
+	"sigmaos/rpc"
+	sp "sigmaos/sigmap"
 )
 
 func RunCacheSrvBackup(cachedir, jobname, shardpn string, nshard int, useEPCache bool) error {
@@ -21,15 +23,36 @@ func RunCacheSrvBackup(cachedir, jobname, shardpn string, nshard int, useEPCache
 	peerpn := cachedir + cachegrp.Server(peer)
 	db.DPrintf(db.CACHESRV, "Peer name: %v", peer)
 	cc := cacheclnt.NewCacheClnt(s.ssrv.SigmaClnt().FsLib, jobname, nshard)
-	// Dump peer shards
-	for i := 0; i < nshard; i++ {
-		shard := cache.Tshard(i)
-		vals, err := cc.DelegatedDumpShard(peerpn, i)
-		if err != nil {
-			db.DFatalf("Err DumpShard(%v) from server %v: %v", i, peer, err)
+	// If not doing delegated initialization, fetch directly from peer
+	if !pe.GetRunBootScript() {
+		ep, _ := pe.GetCachedEndpoint(peerpn)
+		// First, mount the peer
+		if err := s.ssrv.SigmaClnt().MountTree(ep, rpc.RPC, filepath.Join(peerpn, rpc.RPC)); err != nil {
+			db.DFatalf("Err mount peer: %v", err)
+			return err
 		}
-		if err := s.loadShard(shard, vals); err != nil {
-			db.DFatalf("Err LoadShard(%v) from server %v: %v", i, peer, err)
+		// Dump peer shards via direct RPC
+		for i := 0; i < nshard; i++ {
+			shard := cache.Tshard(i)
+			vals, err := cc.DumpShard(peer, shard, sp.NullFence())
+			if err != nil {
+				db.DFatalf("Err DumpShard(%v) from server %v: %v", i, peer, err)
+			}
+			if err := s.loadShard(shard, vals); err != nil {
+				db.DFatalf("Err LoadShard(%v) from server %v: %v", i, peer, err)
+			}
+		}
+	} else {
+		// Dump peer shards via delegated RPC
+		for i := 0; i < nshard; i++ {
+			shard := cache.Tshard(i)
+			vals, err := cc.DelegatedDumpShard(peerpn, i)
+			if err != nil {
+				db.DFatalf("Err DumpShard(%v) from server %v: %v", i, peer, err)
+			}
+			if err := s.loadShard(shard, vals); err != nil {
+				db.DFatalf("Err LoadShard(%v) from server %v: %v", i, peer, err)
+			}
 		}
 	}
 	db.DPrintf(db.CACHESRV, "Loaded cache state from peer %v", peerpn)

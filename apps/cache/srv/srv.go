@@ -28,7 +28,7 @@ type Tstatus string
 const (
 	READY                    Tstatus = "Ready"
 	FROZEN                   Tstatus = "Frozen"
-	SHARD_STAT_SCAN_INTERVAL         = 1 * time.Second
+	SHARD_STAT_SCAN_INTERVAL         = 2 * time.Second
 )
 
 type shardInfo struct {
@@ -392,7 +392,7 @@ func (cs *CacheSrv) GetHotShards(ctx fs.CtxI, req cacheproto.HotShardsReq, rep *
 	hottestIdx := len(cs.shardStats) - 1
 	// If the hottest shard has no hits, then no shards are hot. Return an empty
 	// slice
-	if cs.shardStats[hottestIdx].hitCnt == 0 {
+	if len(cs.shardStats) == 0 || cs.shardStats[hottestIdx].hitCnt == 0 {
 		return nil
 	}
 	for i := 0; i < int(req.TopN) && i < hottestIdx; i++ {

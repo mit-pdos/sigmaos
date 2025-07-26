@@ -90,10 +90,11 @@ func (s *shard) getHitCnt() uint64 {
 	return s.oldHitCnt
 }
 
-func (s *shard) resetHitCnt() {
+func (s *shard) resetHitCnt() uint64 {
 	s.Lock()
 	defer s.Unlock()
 
 	s.oldHitCnt = s.hitCnt
 	s.hitCnt = 0
+	return s.oldHitCnt
 }

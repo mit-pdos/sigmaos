@@ -2,6 +2,7 @@ package srv
 
 import (
 	"fmt"
+	"sort"
 	"sync"
 	"time"
 
@@ -25,8 +26,9 @@ import (
 type Tstatus string
 
 const (
-	READY  Tstatus = "Ready"
-	FROZEN Tstatus = "Frozen"
+	READY                    Tstatus = "Ready"
+	FROZEN                   Tstatus = "Frozen"
+	SHARD_STAT_SCAN_INTERVAL         = 5 * time.Second
 )
 
 type shardInfo struct {
@@ -37,13 +39,14 @@ type shardInfo struct {
 type shardMap map[cache.Tshard]*shardInfo
 
 type CacheSrv struct {
-	mu        sync.Mutex
-	shards    shardMap
-	shrd      string
-	tracer    *tracing.Tracer
-	lastFence *sp.Tfence
-	ssrv      *sigmasrv.SigmaSrv
-	perf      *perf.Perf
+	mu         sync.Mutex
+	shards     shardMap
+	shrd       string
+	tracer     *tracing.Tracer
+	lastFence  *sp.Tfence
+	ssrv       *sigmasrv.SigmaSrv
+	perf       *perf.Perf
+	shardStats []*shardStats
 }
 
 func RunCacheSrv(args []string, nshard int, useEPCache bool) error {
@@ -63,20 +66,28 @@ func RunCacheSrv(args []string, nshard int, useEPCache bool) error {
 	return nil
 }
 
-func (cs *CacheSrv) resetShardHitCnts() {
+func (cs *CacheSrv) manageShardHitCnts() {
 	for {
-		time.Sleep(5 * time.Second)
+		time.Sleep(SHARD_STAT_SCAN_INTERVAL)
 		// Copy the list of shards
 		cs.mu.Lock()
-		shards := make([]*shard, 0, len(cs.shards))
-		for _, si := range cs.shards {
-			shards = append(shards, si.s)
+		// If the number of shards has changed, re-create the shardStats slice.
+		// Otherwise, reuse it to avoid allocating while holding the lock.
+		if len(cs.shardStats) != len(cs.shards) {
+			cs.shardStats = make([]*shardStats, len(cs.shards))
+		}
+		idx := 0
+		for sid, si := range cs.shards {
+			cs.shardStats[idx].shardID = sid
+			// Reset the hit count on each shard, and note the old hit count
+			cs.shardStats[idx].hitCnt = si.s.resetHitCnt()
+			idx++
 		}
 		cs.mu.Unlock()
-		// Reset the hit count on each shard
-		for _, s := range shards {
-			s.resetHitCnt()
-		}
+		// Sort the shards by hit count
+		sort.Slice(cs.shardStats, func(i, j int) bool {
+			return cs.shardStats[i].hitCnt < cs.shardStats[j].hitCnt
+		})
 	}
 }
 
@@ -132,7 +143,7 @@ func NewCacheSrv(pe *proc.ProcEnv, dirname string, pn string, nshard int, useEPC
 		return nil, err
 	}
 	cs.ssrv = ssrv
-	go cs.resetShardHitCnts()
+	go cs.manageShardHitCnts()
 	return cs, nil
 }
 

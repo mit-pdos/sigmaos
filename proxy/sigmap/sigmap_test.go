@@ -120,7 +120,7 @@ func TestCachedDelegatedReshard(t *testing.T) {
 			foundEnoughMatches = true
 			break
 		} else {
-			randSleep := cachesrv.SHARD_STAT_SCAN_INTERVAL / time.Duration(rand.Intn(10))
+			randSleep := cachesrv.SHARD_STAT_SCAN_INTERVAL / time.Duration(rand.Intn(10)+1)
 			db.DPrintf(db.TEST, "Insufficient shard hit matches (%v)... sleep %v", nMatches, randSleep)
 			time.Sleep(randSleep)
 		}

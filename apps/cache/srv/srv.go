@@ -28,7 +28,7 @@ type Tstatus string
 const (
 	READY                    Tstatus = "Ready"
 	FROZEN                   Tstatus = "Frozen"
-	SHARD_STAT_SCAN_INTERVAL         = 5 * time.Second
+	SHARD_STAT_SCAN_INTERVAL         = 1 * time.Second
 )
 
 type shardInfo struct {
@@ -46,7 +46,7 @@ type CacheSrv struct {
 	lastFence  *sp.Tfence
 	ssrv       *sigmasrv.SigmaSrv
 	perf       *perf.Perf
-	shardStats []*shardStats
+	shardStats []shardStats
 }
 
 func RunCacheSrv(args []string, nshard int, useEPCache bool) error {
@@ -74,7 +74,7 @@ func (cs *CacheSrv) manageShardHitCnts() {
 		// If the number of shards has changed, re-create the shardStats slice.
 		// Otherwise, reuse it to avoid allocating while holding the lock.
 		if len(cs.shardStats) != len(cs.shards) {
-			cs.shardStats = make([]*shardStats, len(cs.shards))
+			cs.shardStats = make([]shardStats, len(cs.shards))
 		}
 		idx := 0
 		for sid, si := range cs.shards {
@@ -88,6 +88,7 @@ func (cs *CacheSrv) manageShardHitCnts() {
 		sort.Slice(cs.shardStats, func(i, j int) bool {
 			return cs.shardStats[i].hitCnt < cs.shardStats[j].hitCnt
 		})
+		db.DPrintf(db.CACHESRV, "Shard stats: %v", cs.shardStats)
 	}
 }
 

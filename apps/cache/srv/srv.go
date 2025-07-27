@@ -389,13 +389,12 @@ func (cs *CacheSrv) GetHotShards(ctx fs.CtxI, req cacheproto.HotShardsReq, rep *
 	cs.mu.Lock()
 	defer cs.mu.Unlock()
 
-	hottestIdx := len(cs.shardStats) - 1
-	// If the hottest shard has no hits, then no shards are hot. Return an empty
-	// slice
-	if len(cs.shardStats) == 0 || cs.shardStats[hottestIdx].hitCnt == 0 {
+	// If we don't have any shard stats yet, bail out
+	if len(cs.shardStats) == 0 {
 		return nil
 	}
-	for i := 0; i < int(req.TopN) && i < hottestIdx; i++ {
+	hottestIdx := len(cs.shardStats) - 1
+	for i := 0; i < int(req.TopN) && i <= hottestIdx; i++ {
 		rep.ShardIDs = append(rep.ShardIDs, uint32(cs.shardStats[hottestIdx-i].shardID))
 		rep.HitCnts = append(rep.HitCnts, cs.shardStats[hottestIdx-i].hitCnt)
 	}

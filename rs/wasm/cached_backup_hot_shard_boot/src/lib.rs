@@ -36,7 +36,7 @@ pub fn boot(b: *mut c_char, buf_sz: usize) {
     // Initial buffer contents are the 4-byte n_srv and the 8-byte n_keys
     for i in 0..shard_req_rpcs.len() {
         let rpc_idx = i + 1;
-        let rpc_bytes = shard_req_rpcs[rpc_idx].write_to_bytes().unwrap();
+        let rpc_bytes = shard_req_rpcs[i].write_to_bytes().unwrap();
         sigmaos::send_rpc(
             buf,
             rpc_idx.try_into().unwrap(),

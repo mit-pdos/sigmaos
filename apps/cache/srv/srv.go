@@ -380,6 +380,7 @@ func (cs *CacheSrv) Put(ctx fs.CtxI, req cacheproto.CacheReq, rep *cacheproto.Ca
 
 // Return the IDs of the topN hottest shards
 func (cs *CacheSrv) GetHotShards(ctx fs.CtxI, req cacheproto.HotShardsReq, rep *cacheproto.HotShardsRep) error {
+	db.DPrintf(db.CACHESRV, "GetHotShards: %v", req)
 	rep.ShardIDs = make([]uint32, 0, req.TopN)
 	rep.HitCnts = make([]uint64, 0, req.TopN)
 	defer func() {

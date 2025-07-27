@@ -5,10 +5,6 @@ use sigmaos;
 use std::os::raw::c_char;
 use std::slice;
 
-//fn zero_buf(buf: &mut [u8], nbyte: usize) {
-//    buf[0..nbyte].fill(0);
-//}
-
 #[unsafe(export_name = "boot")]
 pub fn boot(b: *mut c_char, buf_sz: usize) {
     // Convert the shared buffer to a slice

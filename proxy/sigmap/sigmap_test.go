@@ -131,12 +131,17 @@ func TestCachedDelegatedReshard(t *testing.T) {
 	// Wait a bit for shard counts to reset
 	time.Sleep(2 * cachesrv.SHARD_STAT_SCAN_INTERVAL)
 	// Check shard counts reset
-	hotShards, _, err := cc.GetHotShards(0, cache.NSHARD)
+	_, shardCnts, err := cc.GetHotShards(0, cache.NSHARD)
+	if !assert.Equal(t, int(cache.NSHARD), len(shardCnts), "HotShard counts didn't reset") {
+		return
+	}
 	if !assert.Nil(t, err, "Err GetHotShards: %v", err) {
 		return
 	}
-	if !assert.Equal(t, len(hotShards), 0, "HotShard counts didn't reset") {
-		return
+	for _, cnt := range shardCnts {
+		if !assert.Equal(t, cnt, int64(0), "HotShard counts didn't reset") {
+			return
+		}
 	}
 	for i, key := range keys {
 		val := &cacheproto.CacheString{}

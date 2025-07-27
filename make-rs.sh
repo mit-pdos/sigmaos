@@ -62,6 +62,12 @@ build="parallel -j$njobs $CARGO \"build --manifest-path=rs/{}/Cargo.toml --relea
 echo $build
 eval $build
 
+# Bail out early on build error
+export EXIT_STATUS=$?
+if [ $EXIT_STATUS  -ne 0 ]; then
+  exit $EXIT_STATUS
+fi
+
 # Copy rust bins
 cp rs/uproc-trampoline/target/release/uproc-trampoline bin/kernel
 cp rs/spawn-latency/target/release/spawn-latency bin/user/spawn-latency-v$VERSION
@@ -71,6 +77,12 @@ TARGETS=$(ls rs/wasm)
 build="parallel -j$njobs $CARGO \"build --manifest-path=rs/wasm/{}/Cargo.toml --target=wasm32-unknown-unknown --release\" ::: $TARGETS"
 echo $build
 eval $build
+
+# Bail out early on build error
+export EXIT_STATUS=$?
+if [ $EXIT_STATUS  -ne 0 ]; then
+  exit $EXIT_STATUS
+fi
 
 echo "Copy WASM scripts to bin dir"
 for t in $TARGETS; do

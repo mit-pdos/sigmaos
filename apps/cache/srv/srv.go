@@ -381,8 +381,12 @@ func (cs *CacheSrv) Put(ctx fs.CtxI, req cacheproto.CacheReq, rep *cacheproto.Ca
 // Return the IDs of the topN hottest shards
 func (cs *CacheSrv) GetHotShards(ctx fs.CtxI, req cacheproto.HotShardsReq, rep *cacheproto.HotShardsRep) error {
 	db.DPrintf(db.CACHESRV, "GetHotShards: %v", req)
-	rep.ShardIDs = make([]uint32, 0, req.TopN)
-	rep.HitCnts = make([]uint64, 0, req.TopN)
+	nShards := int(req.TopN)
+	if nShards == GET_ALL_SHARDS {
+		nShards = cache.NSHARD
+	}
+	rep.ShardIDs = make([]uint32, 0, nShards)
+	rep.HitCnts = make([]uint64, 0, nShards)
 	defer func() {
 		db.DPrintf(db.CACHESRV, "HotShards: %v", rep.ShardIDs)
 	}()
@@ -395,7 +399,7 @@ func (cs *CacheSrv) GetHotShards(ctx fs.CtxI, req cacheproto.HotShardsReq, rep *
 		return nil
 	}
 	hottestIdx := len(cs.shardStats) - 1
-	for i := 0; i < int(req.TopN) && i <= hottestIdx; i++ {
+	for i := 0; i < nShards && i <= hottestIdx; i++ {
 		rep.ShardIDs = append(rep.ShardIDs, uint32(cs.shardStats[hottestIdx-i].shardID))
 		rep.HitCnts = append(rep.HitCnts, cs.shardStats[hottestIdx-i].hitCnt)
 	}

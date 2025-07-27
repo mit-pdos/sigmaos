@@ -148,7 +148,7 @@ func (wrt *WasmerRuntime) newSendRPCFn(store *wasmer.Store, instance **wasmer.In
 			}
 			// Create a Go buffer from the allocated WASM shared buffer
 			buf := (*mem).Data()[*wasmBufPtr : *wasmBufPtr+SHARED_BUF_SZ]
-			db.DPrintf(db.ALWAYS, "pnLen:%v methodLen:%v rpcLen:%v buf:%p bufStart:%p", pnLen, methodLen, rpcLen, buf, &buf[0])
+			db.DPrintf(db.WASMRT, "pnLen:%v methodLen:%v rpcLen:%v buf:%p bufStart:%p", pnLen, methodLen, rpcLen, buf, &buf[0])
 			// Get the RPC destination pathname from the shared buffer
 			pn := string(buf[idx : idx+pnLen])
 			idx += pnLen

@@ -48,6 +48,7 @@ func TestCachedDelegatedReshard(t *testing.T) {
 		N_HOTSHARD_TRIALS = 5
 		DELEGATED_INIT    = true
 		//		DELEGATED_INIT = false
+		TOP_N = cachesrv.GET_ALL_SHARDS
 	)
 
 	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
@@ -81,7 +82,7 @@ func TestCachedDelegatedReshard(t *testing.T) {
 	if !assert.Nil(t, err, "Err get primary endpoint: %v", err) {
 		return
 	}
-	if err := cm.AddBackupServer(srvID, ep, DELEGATED_INIT); !assert.Nil(t, err, "Err add backup server(%v): %v", srvID, err) {
+	if err := cm.AddBackupServer(srvID, ep, DELEGATED_INIT, TOP_N); !assert.Nil(t, err, "Err add backup server(%v): %v", srvID, err) {
 		return
 	}
 	var foundEnoughMatches bool

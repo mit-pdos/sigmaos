@@ -12,7 +12,11 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-func RunCacheSrvBackup(cachedir, jobname, shardpn string, nshard int, useEPCache bool) error {
+const (
+	GET_ALL_SHARDS = 0
+)
+
+func RunCacheSrvBackup(cachedir, jobname, shardpn string, nshard int, useEPCache bool, topN int) error {
 	pe := proc.GetProcEnv()
 	s, err := NewCacheSrv(pe, cachedir, shardpn, nshard, useEPCache)
 	if err != nil {
@@ -23,6 +27,12 @@ func RunCacheSrvBackup(cachedir, jobname, shardpn string, nshard int, useEPCache
 	peerpn := cachedir + cachegrp.Server(peer)
 	db.DPrintf(db.CACHESRV, "Peer name: %v", peer)
 	cc := cacheclnt.NewCacheClnt(s.ssrv.SigmaClnt().FsLib, jobname, nshard)
+	if topN != GET_ALL_SHARDS {
+		db.DFatalf("unimplemented")
+		// TODO:
+		// 1. get hot shard list
+		// 2. get hot shards
+	}
 	// If not doing delegated initialization, fetch directly from peer
 	if !pe.GetRunBootScript() {
 		ep, _ := pe.GetCachedEndpoint(peerpn)

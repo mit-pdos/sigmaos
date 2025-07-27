@@ -139,7 +139,7 @@ func TestCachedDelegatedReshard(t *testing.T) {
 		return
 	}
 	for _, cnt := range shardCnts {
-		if !assert.Equal(t, cnt, 0, "HotShard counts didn't reset") {
+		if !assert.Equal(t, cnt, uint64(0), "HotShard counts didn't reset") {
 			return
 		}
 	}

@@ -9,7 +9,31 @@ mod sigmaos_host {
     }
 }
 
-pub fn send_rpc(rpc_idx: u64, pn_len: u64, method_len: u64, rpc_len: u64, n_outiov: u64) {
+pub fn send_rpc(
+    buf: &mut [u8],
+    rpc_idx: u64,
+    pn: &str,
+    method: &str,
+    rpc_bytes: &[u8],
+    n_outiov: u64,
+) {
+    let mut idx = 0;
+    let pn_len = pn.len() as u64;
+    for c in pn.bytes() {
+        buf[idx] = c;
+        idx += 1;
+    }
+    let mut method_len: u64 = 0;
+    for c in method.bytes() {
+        buf[idx] = c;
+        idx += 1;
+        method_len += 1;
+    }
+    let rpc_len = rpc_bytes.len() as u64;
+    for b in rpc_bytes {
+        buf[idx] = *b;
+        idx += 1;
+    }
     unsafe {
         sigmaos_host::send_rpc(rpc_idx, pn_len, method_len, rpc_len, n_outiov);
     }

@@ -5,11 +5,9 @@ use sigmaos;
 use std::os::raw::c_char;
 use std::slice;
 
-const NSHARD: u32 = 1009;
-
-fn zero_buf(buf: &mut [u8], nbyte: usize) {
-    buf[0..nbyte].fill(0);
-}
+//fn zero_buf(buf: &mut [u8], nbyte: usize) {
+//    buf[0..nbyte].fill(0);
+//}
 
 #[unsafe(export_name = "boot")]
 pub fn boot(b: *mut c_char, buf_sz: usize) {
@@ -20,29 +18,8 @@ pub fn boot(b: *mut c_char, buf_sz: usize) {
     let pn = "name/cache/servers/".to_owned() + &primary_srv_id.to_string();
     let mut hot_shards_req = cache::HotShardsReq::new();
     hot_shards_req.topN = top_n;
-    let v = hot_shards_req.write_to_bytes().unwrap();
-    // Make the GetHotShards RPC
-    let mut idx = 0;
-    let pn_len = pn.len();
-    for c in pn.bytes() {
-        buf[idx] = c;
-        idx += 1;
-    }
-    let mut method_len = 0;
-    for c in "CacheSrv.GetHotShards".bytes() {
-        buf[idx] = c;
-        idx += 1;
-        method_len += 1;
-    }
-    for b in &v {
-        buf[idx] = *b;
-        idx += 1;
-    }
-    let mut write_sz: usize = 0;
-    // Record the serialized protobuf size, so we can zero the buffer again
-    // before writing the next protobuf
-    write_sz = pn_len as usize + method_len as usize + v.len() as usize;
-    sigmaos::send_rpc(0, pn_len as u64, method_len as u64, v.len() as u64, 1);
+    let rpc_bytes = hot_shards_req.write_to_bytes().unwrap();
+    sigmaos::send_rpc(buf, 0, &pn, "CacheSrv.GetHotShards", &rpc_bytes, 1);
     // Await the reply
     let rep_nbyte = sigmaos::recv_rpc(0) as usize;
     // Resize the buffer
@@ -58,34 +35,13 @@ pub fn boot(b: *mut c_char, buf_sz: usize) {
     }
     // Initial buffer contents are the 4-byte n_srv and the 8-byte n_keys
     for rpc_idx in 0..shard_req_rpcs.len() {
-        // First, fill any portion of the buffer previously written to with
-        // zeros
-        zero_buf(buf, write_sz);
-        let v = shard_req_rpcs[rpc_idx].write_to_bytes().unwrap();
-        let mut idx = 0;
-        let pn_len = pn.len();
-        for c in pn.bytes() {
-            buf[idx] = c;
-            idx += 1;
-        }
-        let mut method_len = 0;
-        for c in "CacheSrv.DumpShard".bytes() {
-            buf[idx] = c;
-            idx += 1;
-            method_len += 1;
-        }
-        for b in &v {
-            buf[idx] = *b;
-            idx += 1;
-        }
-        // Record the serialized protobuf size, so we can zero the buffer again
-        // before writing the next protobuf
-        write_sz = pn_len as usize + method_len as usize + v.len() as usize;
+        let rpc_bytes = shard_req_rpcs[rpc_idx].write_to_bytes().unwrap();
         sigmaos::send_rpc(
+            buf,
             rpc_idx.try_into().unwrap(),
-            pn_len as u64,
-            method_len as u64,
-            v.len() as u64,
+            &pn,
+            "CacheSrv.DumpShard",
+            &rpc_bytes,
             1,
         );
     }

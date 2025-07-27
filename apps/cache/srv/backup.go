@@ -45,7 +45,7 @@ func RunCacheSrvBackup(cachedir, jobname, shardpn string, nshard int, useEPCache
 		if err != nil {
 			db.DFatalf("Err GetHotShards: %v", err)
 		}
-		db.DPrintf(db.CACHESRV, "top %v Hot shards: %v", topN, hotShards)
+		db.DPrintf(db.CACHESRV, "top %v hot shards: %v", topN, hotShards)
 		// Dump peer shards via direct RPC
 		for _, shard := range hotShards {
 			vals, err := cc.DumpShard(peerpn, shard, sp.NullFence())
@@ -61,7 +61,7 @@ func RunCacheSrvBackup(cachedir, jobname, shardpn string, nshard int, useEPCache
 		if err != nil {
 			db.DFatalf("Err DelegatedGetHotShards: %v", err)
 		}
-		db.DPrintf(db.CACHESRV, "top %v Hot shards: %v", topN, hotShards)
+		db.DPrintf(db.CACHESRV, "top %v delegated hot shards(%v): %v", topN, len(hotShards), hotShards)
 		// Dump peer shards via delegated RPC
 		for i, shard := range hotShards {
 			// First RPC is the GetHotShards RPC

@@ -380,7 +380,7 @@ func (cs *CacheSrv) Put(ctx fs.CtxI, req cacheproto.CacheReq, rep *cacheproto.Ca
 
 // Return the IDs of the topN hottest shards
 func (cs *CacheSrv) GetHotShards(ctx fs.CtxI, req cacheproto.HotShardsReq, rep *cacheproto.HotShardsRep) error {
-	db.DPrintf(db.CACHESRV, "GetHotShards: %v", req)
+	db.DPrintf(db.CACHESRV, "%v: GetHotShards: %v", ctx.Principal(), req)
 	nShards := int(req.TopN)
 	if nShards == GET_ALL_SHARDS {
 		nShards = cache.NSHARD
@@ -388,7 +388,7 @@ func (cs *CacheSrv) GetHotShards(ctx fs.CtxI, req cacheproto.HotShardsReq, rep *
 	rep.ShardIDs = make([]uint32, 0, nShards)
 	rep.HitCnts = make([]uint64, 0, nShards)
 	defer func() {
-		db.DPrintf(db.CACHESRV, "HotShards: %v", rep.ShardIDs)
+		db.DPrintf(db.CACHESRV, "HotShards(%v): %v", len(rep.ShardIDs), rep.ShardIDs)
 	}()
 
 	cs.mu.Lock()

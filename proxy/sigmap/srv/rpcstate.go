@@ -104,6 +104,10 @@ func (rpcs *RPCState) InsertReply(idx uint64, iov sessp.IoVec, err error) {
 	rpcs.mu.Lock()
 	defer rpcs.mu.Unlock()
 
+	if rpcs.done[idx] {
+		db.DFatalf("Err double-insert RPC(%v) reply", idx)
+	}
+
 	rpcs.done[idx] = true
 	rpcs.results[idx] = iov
 	rpcs.errors[idx] = err

@@ -78,6 +78,9 @@ func (cs *CachedSvc) addBackupServer(srvID int, ep *sp.Tendpoint, delegatedInit 
 	if err := binary.Write(inputBuf, binary.LittleEndian, uint32(srvID)); err != nil {
 		return err
 	}
+	if err := binary.Write(inputBuf, binary.LittleEndian, uint32(topN)); err != nil {
+		return err
+	}
 	bootScriptInput := inputBuf.Bytes()
 	p.SetBootScript(cs.bootScript, bootScriptInput)
 	p.SetRunBootScript(delegatedInit)

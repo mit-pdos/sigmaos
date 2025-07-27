@@ -3,7 +3,6 @@ package srv
 import (
 	"path/filepath"
 
-	"sigmaos/apps/cache"
 	"sigmaos/apps/cache/cachegrp"
 	cacheclnt "sigmaos/apps/cache/clnt"
 	db "sigmaos/debug"
@@ -33,35 +32,44 @@ func RunCacheSrvBackup(cachedir, jobname, shardpn string, nshard int, useEPCache
 		// 1. get hot shard list
 		// 2. get hot shards
 	}
+	// TODO: don't do this with delegation, once we get lazy RPC channel creation working
+	ep, _ := pe.GetCachedEndpoint(peerpn)
+	// First, mount the peer
+	if err := s.ssrv.SigmaClnt().MountTree(ep, rpc.RPC, filepath.Join(peerpn, rpc.RPC)); err != nil {
+		db.DFatalf("Err mount peer: %v", err)
+		return err
+	}
 	// If not doing delegated initialization, fetch directly from peer
 	if !pe.GetRunBootScript() {
-		ep, _ := pe.GetCachedEndpoint(peerpn)
-		// First, mount the peer
-		if err := s.ssrv.SigmaClnt().MountTree(ep, rpc.RPC, filepath.Join(peerpn, rpc.RPC)); err != nil {
-			db.DFatalf("Err mount peer: %v", err)
-			return err
+		hotShards, _, err := cc.GetHotShards(peerpn, uint32(topN))
+		if err != nil {
+			db.DFatalf("Err GetHotShards: %v", err)
 		}
 		// Dump peer shards via direct RPC
-		for i := 0; i < nshard; i++ {
-			shard := cache.Tshard(i)
+		for _, shard := range hotShards {
 			vals, err := cc.DumpShard(peerpn, shard, sp.NullFence())
 			if err != nil {
-				db.DFatalf("Err DumpShard(%v) from server %v: %v", i, peer, err)
+				db.DFatalf("Err DumpShard(%v) from server %v: %v", shard, peer, err)
 			}
 			if err := s.loadShard(shard, vals); err != nil {
-				db.DFatalf("Err LoadShard(%v) from server %v: %v", i, peer, err)
+				db.DFatalf("Err LoadShard(%v) from server %v: %v", shard, peer, err)
 			}
 		}
 	} else {
+		hotShards, _, err := cc.DelegatedGetHotShards(peerpn, 0)
+		if err != nil {
+			db.DFatalf("Err DelegatedGetHotShards: %v", err)
+		}
 		// Dump peer shards via delegated RPC
-		for i := 0; i < nshard; i++ {
-			shard := cache.Tshard(i)
-			vals, err := cc.DelegatedDumpShard(peerpn, i)
+		for i, shard := range hotShards {
+			// First RPC is the GetHotShards RPC
+			rpcIdx := i + 1
+			vals, err := cc.DelegatedDumpShard(peerpn, rpcIdx)
 			if err != nil {
-				db.DFatalf("Err DumpShard(%v) from server %v: %v", i, peer, err)
+				db.DFatalf("Err DumpShard(%v) from server %v: %v", rpcIdx, peer, err)
 			}
 			if err := s.loadShard(shard, vals); err != nil {
-				db.DFatalf("Err LoadShard(%v) from server %v: %v", i, peer, err)
+				db.DFatalf("Err LoadShard(%v) from server %v: %v", rpcIdx, peer, err)
 			}
 		}
 	}

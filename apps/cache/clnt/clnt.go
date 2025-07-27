@@ -153,6 +153,18 @@ func (cc *CacheClnt) NewGet(sctx *tproto.SpanContextConfig, key string, f *sp.Tf
 	}
 }
 
+func (c *CacheClnt) DelegatedGetHotShards(srv string, rpcIdx uint64) ([]cache.Tshard, []uint64, error) {
+	var res cacheproto.HotShardsRep
+	if err := c.DelegatedRPC(srv, uint64(rpcIdx), &res); err != nil {
+		return nil, nil, err
+	}
+	shardIDs := make([]cache.Tshard, 0, len(res.ShardIDs))
+	for _, sid := range res.ShardIDs {
+		shardIDs = append(shardIDs, cache.Tshard(sid))
+	}
+	return shardIDs, res.HitCnts, nil
+}
+
 func (cc *CacheClnt) GetHotShards(srv string, topN uint32) ([]cache.Tshard, []uint64, error) {
 	req := &cacheproto.HotShardsReq{
 		TopN: topN,

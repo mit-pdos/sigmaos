@@ -12,6 +12,7 @@ import (
 	"sigmaos/apps/cache"
 	cachegrpclnt "sigmaos/apps/cache/cachegrp/clnt"
 	cachegrpmgr "sigmaos/apps/cache/cachegrp/mgr"
+	cacheclnt "sigmaos/apps/cache/clnt"
 	cacheproto "sigmaos/apps/cache/proto"
 	cachesrv "sigmaos/apps/cache/srv"
 	epsrv "sigmaos/apps/epcache/srv"
@@ -47,8 +48,7 @@ func TestCachedDelegatedReshard(t *testing.T) {
 		N_KV              = 5000
 		N_HOTSHARD_TRIALS = 5
 		DELEGATED_INIT    = true
-		//		DELEGATED_INIT = false
-		TOP_N = cachesrv.GET_ALL_SHARDS
+		TOP_N             = cachesrv.GET_ALL_SHARDS
 	)
 
 	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
@@ -82,6 +82,8 @@ func TestCachedDelegatedReshard(t *testing.T) {
 	if !assert.Nil(t, err, "Err get primary endpoint: %v", err) {
 		return
 	}
+	// Sleep for a bit, for the list of hot shards to populate
+	time.Sleep(2 * cachesrv.SHARD_STAT_SCAN_INTERVAL)
 	if err := cm.AddBackupServer(srvID, ep, DELEGATED_INIT, TOP_N); !assert.Nil(t, err, "Err add backup server(%v): %v", srvID, err) {
 		return
 	}
@@ -147,7 +149,7 @@ func TestCachedDelegatedReshard(t *testing.T) {
 	for i, key := range keys {
 		val := &cacheproto.CacheString{}
 		// Try getting from the backup server
-		if err := cc.BackupGet(key, val); !assert.Nil(t, err, "Err backup get cachemgr: %v", err) {
+		if err := cc.BackupGet(key, val); !assert.Nil(t, err, "Err backup get cachemgr: %v expected to be in shard: %v", err, cacheclnt.Key2shard(key, cache.NSHARD)) {
 			break
 		}
 		if !assert.Equal(t, val.Val, "val-"+strconv.Itoa(i), "Err vals don't match") {

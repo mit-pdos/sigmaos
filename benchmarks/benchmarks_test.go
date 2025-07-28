@@ -195,7 +195,7 @@ func init() {
 	flag.BoolVar(&BACKUP_CACHED_USE_EPCACHE, "backup_cached_use_epcache", false, "Backup cached use epcache")
 	flag.BoolVar(&BACKUP_CACHED_DELEGATE_INIT, "backup_cached_delegated_init", false, "Backup cached delegate init")
 	flag.StringVar(&BACKUP_CACHED_DURS, "backup_cached_dur", "10s", "Backup cached benchmark load generation duration (comma-separated for multiple phases).")
-	flag.StringVar(&BACKUP_CACHED_MAX_RPC, "backup_cached_max_rps", "100", "Backup cached benchmark load generation duration (comma-separated for multiple phases).")
+	flag.StringVar(&BACKUP_CACHED_MAX_RPS, "backup_cached_max_rps", "100", "Backup cached benchmark load generation duration (comma-separated for multiple phases).")
 	flag.BoolVar(&MANUALLY_SCALE_GEO, "manually_scale_geo", false, "Manually scale geos")
 	flag.DurationVar(&SCALE_GEO_DELAY, "scale_geo_delay", 0*time.Second, "Delay to wait before scaling up number of geos.")
 	flag.IntVar(&N_GEO_TO_ADD, "n_geo_to_add", 0, "Number of geo to add.")

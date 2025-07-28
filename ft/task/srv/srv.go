@@ -501,7 +501,11 @@ func (s *TaskSrv) checkFence(fence *sp.TfenceProto) error {
 		return nil
 	}
 
-	if fence == nil || s.fence.Epoch > fence.Tfence().Epoch {
+	if fence == nil {
+		return nil
+	}
+
+	if s.fence.Epoch > fence.Tfence().Epoch {
 		db.DPrintf(db.FTTASKSRV, "checkFence: failed curr: %v req: %v", s.fence, fence)
 		return serr.NewErr(serr.TErrInval, fmt.Sprintf("fence %v is not after %v", fence, s.fence))
 	}
@@ -688,7 +692,7 @@ func (s *TaskSrv) MoveTasksByStatus(ctx fs.CtxI, req proto.MoveTasksByStatusReq,
 
 	rep.NumMoved = int32(n)
 
-	db.DPrintf(db.FTTASKSRV, "MoveTasksByStatus: n: %d, from: %v, to: %v", n, req.From, req.To)
+	db.DPrintf(db.FTTASKSRV, "MoveTasksByStatus: %v n: %d, from: %v, to: %v", s.fence, n, req.From, req.To)
 
 	return nil
 }
@@ -757,15 +761,15 @@ func (s *TaskSrv) AcquireTasks(ctx fs.CtxI, req proto.AcquireTasksReq, rep *prot
 		return err
 	}
 
-	fence := s.fence
+	fence := req.Fence.Tfence()
 	ids := s.get(proto.TaskStatus_TODO)
-	for req.Wait && len(ids) == 0 && !s.allTasksDone() && fence == s.fence {
+	for req.Wait && len(ids) == 0 && !s.allTasksDone() && s.fence.Eq(&fence) {
 		db.DPrintf(db.FTTASKSRV, "AcquireTasks: waiting for tasks...")
 		s.todoCond.Wait()
 		ids = s.get(proto.TaskStatus_TODO)
 	}
 
-	if fence != s.fence {
+	if s.fence != nil && !s.fence.Eq(&fence) {
 		return serr.NewErr(serr.TErrInval, fmt.Sprintf("fence changed from %v to %v", fence, s.fence))
 	}
 
@@ -788,7 +792,7 @@ func (s *TaskSrv) AcquireTasks(ctx fs.CtxI, req proto.AcquireTasksReq, rep *prot
 		}
 	}
 
-	db.DPrintf(db.FTTASKSRV, "AcquireTasks: n: %d stopped: %t", len(rep.Ids), rep.Stopped)
+	db.DPrintf(db.FTTASKSRV, "AcquireTasks: %v n: %d stopped: %t", fence, len(rep.Ids), rep.Stopped)
 
 	return nil
 }
@@ -846,6 +850,7 @@ func (s *TaskSrv) Fence(ctx fs.CtxI, req proto.FenceReq, rep *proto.FenceRep) er
 	defer s.mu.Unlock()
 
 	fence := req.Fence.Tfence()
+	db.DPrintf(db.FTTASKSRV, "Set fence %v", fence)
 	if s.fence != nil && s.fence.Epoch >= fence.Epoch {
 		return serr.NewErr(serr.TErrInval, fmt.Sprintf("fence already set with epoch %v, attempted to set with %v", fence.Epoch, s.fence.Epoch))
 	}

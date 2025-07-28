@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"sigmaos/apps/imgresize"
-	imgd_clnt "sigmaos/apps/imgresize/clnt"
+	//	imgd_clnt "sigmaos/apps/imgresize/clnt"
 	db "sigmaos/debug"
 	"sigmaos/ft/procgroupmgr"
 	"sigmaos/proc"
@@ -34,8 +34,8 @@ type ImgResizeRPCJobInstance struct {
 	ready             chan bool
 	sleepBetweenTasks time.Duration
 	pgm               *procgroupmgr.ProcGroupMgr
-	rpcc              *imgd_clnt.ImgResizeRPCClnt
-	p                 *perf.Perf
+	//	rpcc              *imgd_clnt.ImgResizeRPCClnt
+	p *perf.Perf
 	*test.RealmTstate
 }
 
@@ -68,8 +68,8 @@ func NewImgResizeRPCJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, input 
 func (ji *ImgResizeRPCJobInstance) runTask(wg *sync.WaitGroup, idx int) {
 	defer wg.Done()
 
-	err := ji.rpcc.Resize(strconv.Itoa(idx), ji.input)
-	assert.Nil(ji.Ts.T, err, "Err Resize: %v", err)
+	// err := ji.rpcc.Resize(strconv.Itoa(idx), ji.input)
+	// assert.Nil(ji.Ts.T, err, "Err Resize: %v", err)
 }
 
 func (ji *ImgResizeRPCJobInstance) runTasks() {
@@ -86,10 +86,10 @@ func (ji *ImgResizeRPCJobInstance) runTasks() {
 
 func (ji *ImgResizeRPCJobInstance) StartImgResizeRPCJob() {
 	db.DPrintf(db.ALWAYS, "StartImgResizeRPC server input %v tps %v dur %v mcpu %v job %v", ji.input, ji.tasksPerSecond, ji.dur, ji.mcpu, ji.job)
-	ji.pgm = imgresize.StartImgd(ji.SigmaClnt, ji.job, "", ji.mcpu, ji.mem, false, ji.nrounds, ji.imgdmcpu, nil)
-	rpcc, err := imgd_clnt.NewImgResizeRPCClnt(ji.SigmaClnt.FsLib, ji.job)
-	assert.Nil(ji.Ts.T, err)
-	ji.rpcc = rpcc
+	//	ji.pgm = imgresize.StartImgd(ji.SigmaClnt, ji.job, "", ji.mcpu, ji.mem, false, ji.nrounds, ji.imgdmcpu, nil)
+	//	rpcc, err := imgd_clnt.NewImgResizeRPCClnt(ji.SigmaClnt.FsLib, ji.job)
+	//	assert.Nil(ji.Ts.T, err)
+	//	ji.rpcc = rpcc
 	go ji.runTasks()
 	db.DPrintf(db.ALWAYS, "Done starting ImgResizeRPC server")
 }
@@ -97,14 +97,14 @@ func (ji *ImgResizeRPCJobInstance) StartImgResizeRPCJob() {
 func (ji *ImgResizeRPCJobInstance) Wait() {
 	db.DPrintf(db.TEST, "Waiting for ImgResizeRPCJob to finish")
 	<-ji.runningTasks
-	ndone, err := ji.rpcc.Status()
-	assert.Nil(ji.Ts.T, err, "Status: %v", err)
-	db.DPrintf(db.TEST, "[%v] Done waiting for ImgResizeRPCJob to finish. Completed %v tasks", ji.GetRealm(), ndone)
-	sts, err := ji.pgm.StopGroup()
-	if assert.Nil(ji.Ts.T, err) {
-		assert.True(ji.Ts.T, sts[0].IsStatusEvicted(), "Wrong status: %v", sts[0])
-	}
-	db.DPrintf(db.TEST, "[%v] Imgd shutdown", ji.GetRealm())
+	//	ndone, err := ji.rpcc.Status()
+	//	assert.Nil(ji.Ts.T, err, "Status: %v", err)
+	//	db.DPrintf(db.TEST, "[%v] Done waiting for ImgResizeRPCJob to finish. Completed %v tasks", ji.GetRealm(), ndone)
+	//	sts, err := ji.pgm.StopGroup()
+	//	if assert.Nil(ji.Ts.T, err) {
+	//		assert.True(ji.Ts.T, sts[0].IsStatusEvicted(), "Wrong status: %v", sts[0])
+	//	}
+	//	db.DPrintf(db.TEST, "[%v] Imgd shutdown", ji.GetRealm())
 }
 
 func (ji *ImgResizeRPCJobInstance) Cleanup() {

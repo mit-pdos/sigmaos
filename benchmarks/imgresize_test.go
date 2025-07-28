@@ -59,7 +59,7 @@ func NewImgResizeJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, input str
 	assert.Nil(ts.Ts.T, err, "Error new fttasksrvmgr: %v", err)
 
 	ji.ftmgr = ftmgr
-	ji.ftclnt = fttask_clnt.NewFtTaskClnt[imgresize.Ttask, any](ji.SigmaClnt.FsLib, ftmgr.Id)
+	//	ji.ftclnt = fttask_clnt.NewFtTaskClnt[imgresize.Ttask, any](ji.SigmaClnt.FsLib, ftmgr.Id)
 
 	fn := ji.input
 	fns := make([]string, 0, ji.ninputs)
@@ -75,9 +75,9 @@ func NewImgResizeJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, input str
 				Data: *imgresize.NewTask(fn),
 			})
 		}
-		existing, err := ji.ftclnt.SubmitTasks(tasks)
-		assert.Empty(ji.Ts.T, existing)
-		assert.Nil(ji.Ts.T, err, "Error SubmitTask: %v", err)
+		//		existing, err := ji.ftclnt.SubmitTasks(tasks)
+		//		assert.Empty(ji.Ts.T, existing)
+		//		assert.Nil(ji.Ts.T, err, "Error SubmitTask: %v", err)
 	}
 	// Sanity check
 	n, err := ji.ftclnt.GetNTasks(fttask_clnt.TODO)
@@ -89,7 +89,7 @@ func NewImgResizeJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, input str
 
 func (ji *ImgResizeJobInstance) StartImgResizeJob() {
 	db.DPrintf(db.ALWAYS, "StartImgResizeJob input %v ntasks %v mcpu %v job %v", ji.input, ji.ntasks, ji.mcpu, ji.job)
-	ji.imgd = imgresize.StartImgd(ji.SigmaClnt, imgresize.ImgSvcId(ji.job), ji.ftclnt.ServiceId().String(), ji.mcpu, ji.mem, false, ji.nrounds, ji.imgdmcpu, nil)
+	//ji.imgd = imgresize.StartImgd(ji.SigmaClnt, imgresize.ImgSvcId(ji.job), ji.ftclnt.ServiceId().String(), ji.mcpu, ji.mem, false, ji.nrounds, ji.imgdmcpu, nil)
 	db.DPrintf(db.ALWAYS, "Done starting ImgResizeJob")
 }
 

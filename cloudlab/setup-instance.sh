@@ -103,6 +103,9 @@ EOF
 
 sudo mkdir -p /mnt/9p
 
+sudo apt update
+sudo apt install -y golang-go
+
 if [ -d "DeathStarBench" ] 
 then
   (cd DeathStarBench; git pull;)
@@ -182,8 +185,8 @@ then
   unzip awscliv2.zip
   sudo ./aws/install
 
-  wget 'https://golang.org/dl/go1.22.1.linux-amd64.tar.gz'
-  sudo rm -rf /usr/local/go && sudo tar -C /usr/local -xzf go1.22.1.linux-amd64.tar.gz
+  wget 'https://go.dev/dl/go1.24.5.linux-amd64.tar.gz'
+  sudo rm -rf /usr/local/go && sudo tar -C /usr/local -xzf go1.24.5.linux-amd64.tar.gz
   export PATH=/bin:/sbin:/usr/sbin:\$PATH:/usr/local/go/bin
   echo "PATH=\$PATH:/usr/local/go/bin" >> ~/.profile
   go version
@@ -209,5 +212,4 @@ echo -n > ~/.hushlogin
 ENDSSH
 
 echo "== TO LOGIN TO VM INSTANCE USE: =="
-echo "ssh $SSHCMD"
-echo "============================="
+echo "ssh $SSHCMD" echo "============================="

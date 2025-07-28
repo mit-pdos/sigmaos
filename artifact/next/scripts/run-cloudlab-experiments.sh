@@ -72,7 +72,7 @@ if [ $EXP == "all" ] || [ $EXP == "cossim" ]; then
 #    echo "Clearing any cached CosSim data..."
 #    rm -rf benchmarks/results/$VERSION/cos_sim_tail_latency_*
 #  fi
-  echo "Generating CosSim data..."
+  echo "Generating CachedBackup data..."
   go clean -testcache; go test -v -timeout 0 sigmaos/benchmarks/remote --run TestScaleCachedBackup --parallelize --platform cloudlab --vpc none --tag $TAG --no-shutdown --version $VERSION --branch cpp 2>&1 | tee $LOG_DIR/cache-backup.out
-  echo "Done generating CosSim data..."
+  echo "Done generating CachedBackup data..."
 fi

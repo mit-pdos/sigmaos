@@ -82,6 +82,10 @@ func NewReducer(sc *sigmaclnt.SigmaClnt, reducef mr.ReduceT, args []string, p *p
 	}
 	r.nmaptask = m
 
+	if len(r.input) < 1 {
+		return nil, fmt.Errorf("Reducer: input missing %v", r)
+	}
+
 	if sp.IsS3Path(r.input[0].File) {
 		r.MountS3PathClnt()
 	}
@@ -289,12 +293,12 @@ func RunReducer(reducef mr.ReduceT, args []string) {
 	if err != nil {
 		db.DFatalf("NewSigmaClnt err %v\n", err)
 	}
-	r, err := NewReducer(sc, reducef, args, p)
-	if err != nil {
+	if err := sc.Started(); err != nil {
 		db.DFatalf("%v: error %v", os.Args[0], err)
 	}
-	if err := r.Started(); err != nil {
-		db.DFatalf("%v: error %v", os.Args[0], err)
+	r, err := NewReducer(sc, reducef, args, p)
+	if err != nil {
+		r.ClntExit(proc.NewStatusErr("NewReducer err", err))
 	}
 	crash.Failer(sc.FsLib, crash.MRREDUCE_CRASH, func(e crash.Tevent) {
 		crash.Crash()

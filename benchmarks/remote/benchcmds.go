@@ -684,3 +684,65 @@ func GetCosSimClientCmdConstructor(cossimReqName string, leader bool, numClients
 		)
 	}
 }
+
+func GetCachedBackupClientCmdConstructor(leader bool, numClients int, rps []int, dur []time.Duration, clientDelay time.Duration, numCachedBackup int, nkeys int, topN int, delegateInit, useEPCache bool) GetBenchCmdFn {
+	return func(bcfg *BenchConfig, ccfg *ClusterConfig) string {
+		const (
+			debugSelectors    string = "\"TEST;THROUGHPUT;CPU_UTIL;SPAWN_LAT;PROXY_LAT;\""
+			valgrindSelectors string = ""
+			perfSelectors     string = "\"CACHED_TPT;TEST_TPT;BENCH_TPT;\""
+		)
+		testName := ""
+		if leader {
+			testName = fmt.Sprintf("CachedBackup")
+		} else {
+			testName = fmt.Sprintf("CachedBackupJustCli")
+		}
+		dialproxy := ""
+		if bcfg.NoNetproxy {
+			dialproxy = "--nodialproxy"
+		}
+		cachedBackupUseEPCacheStr := ""
+		if useEPCache {
+			cachedBackupUseEPCacheStr = "--backup_cached_use_epcache"
+		}
+		delegateInitStr := ""
+		if delegateInit {
+			delegateInitStr = "--backup_cached_delegated_init"
+		}
+		return fmt.Sprintf("export SIGMADEBUG=%s; export SIGMAVALGRIND=%s; export SIGMAPERF=%s; go clean -testcache; "+
+			"ulimit -n 100000; "+
+			"./set-cores.sh --set 1 --start 2 --end 39 > /dev/null 2>&1 ; "+
+			"go test -v sigmaos/benchmarks -timeout 0 --no-shutdown %s --etcdIP %s --tag %s "+
+			"--run %s "+
+			"--nclnt %s "+
+			"--backup_cached_ncache %s "+
+			"--backup_cached_mcpu 3000 "+
+			"--backup_cached_dur %s "+
+			"--backup_cached_max_rps %s "+
+			"--sleep %s "+
+			"--backup_cached_nkeys %s "+
+			"--backup_cached_top_n %s "+
+			"%s "+ // backup_cached_delegated_init
+			"%s "+ // cached_backup_use_epcache
+			"--prewarm_realm "+
+			"> /tmp/bench.out 2>&1 ;",
+			debugSelectors,
+			valgrindSelectors,
+			perfSelectors,
+			dialproxy,
+			ccfg.LeaderNodeIP,
+			bcfg.Tag,
+			testName,
+			strconv.Itoa(numClients),
+			strconv.Itoa(numCachedBackup),
+			dursToString(dur),
+			rpsToString(rps),
+			clientDelay.String(),
+			strconv.Itoa(nkeys),
+			strconv.Itoa(topN),
+			delegateInitStr,
+			cachedBackupUseEPCacheStr,
+		)
+	}
+}

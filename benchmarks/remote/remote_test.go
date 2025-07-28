@@ -272,14 +272,14 @@ func TestMR(t *testing.T) {
 		memReq          proc.Tmem
 	}
 	// Variable MR benchmark configuration parameters
-var (
+	var (
 		mrApps []*MRExperimentConfig = []*MRExperimentConfig{
 			{"mr-grep-wiki2G-bench-s3.yml", 10, 4, 7000},
 			{"mr-grep-wiki2G-granular-bench-s3.yml", 54, 4, 7000},
 			{"mr-wc-wiki2G-bench.yml", 10, 4, 7000},
 			{"mr-wc-wiki2G-bench-s3.yml", 10, 4, 7000},
-		}		
-		perfs []bool = []bool{false}
+		}
+		perfs         []bool = []bool{false}
 		prewarmRealms []bool = []bool{true}
 		//		prewarmRealms []bool   = []bool{true, false}
 	)
@@ -799,7 +799,7 @@ func TestLCBEHotelImgResizeRPCMultiplexing(t *testing.T) {
 	ts.RunParallelClientBenchmark(benchName, driverVMs, getLeaderCmd, getFollowerCmd, nil, nil, clientDelay, numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost)
 }
 
-// Test CosSim Geo's application tail latency.
+// Test CosSim's application tail latency.
 func TestScaleCosSim(t *testing.T) {
 	var (
 		benchNameBase string = "cos_sim_tail_latency"
@@ -892,6 +892,51 @@ func TestScaleCosSim(t *testing.T) {
 					}
 				}
 			}
+		}
+	}
+}
+
+// Test Cached backup's application tail latency.
+func TestScaleCachedBackup(t *testing.T) {
+	var (
+		benchNameBase string = "cached_backup_tail_latency"
+		driverVMs     []int  = []int{5}
+	)
+	// Cluster configuration parameters
+	const (
+		numNodes          int  = 4
+		numCoresPerNode   uint = 4
+		numFullNodes      int  = numNodes
+		numProcqOnlyNodes int  = 0
+		turboBoost        bool = false
+	)
+	// Cached benchmark configuration parameters
+	var (
+		rps             []int           = []int{300, 500, 1000}
+		dur             []time.Duration = []time.Duration{5 * time.Second, 30 * time.Second, 30 * time.Second}
+		numCachedBackup int             = 1
+		clientDelay     time.Duration   = 0 * time.Second
+		sleep           time.Duration   = 0 * time.Second
+		delegateInit    []bool          = []bool{true, false}
+		useEPCache      bool            = true
+		nkeys           int             = 5000
+		topN            int             = 0
+	)
+	ts, err := NewTstate(t)
+	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {
+		return
+	}
+	for _, delegate := range delegateInit {
+		db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
+		benchName := benchNameBase
+		if delegate {
+			benchName += "_delegate"
+		}
+		getLeaderCmd := GetCachedBackupClientCmdConstructor(true, len(driverVMs), rps, dur, sleep, numCachedBackup, nkeys, topN, delegate, useEPCache)
+		getFollowerCmd := GetCachedBackupClientCmdConstructor(false, len(driverVMs), rps, dur, sleep, numCachedBackup, nkeys, topN, delegate, useEPCache)
+		ran := ts.RunParallelClientBenchmark(benchName, driverVMs, getLeaderCmd, getFollowerCmd, startK8sHotelApp, stopK8sHotelApp, clientDelay, numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost)
+		if oneByOne && ran {
+			return
 		}
 	}
 }

@@ -26,12 +26,6 @@ func RunCacheSrvBackup(cachedir, jobname, shardpn string, nshard int, useEPCache
 	peerpn := cachedir + cachegrp.Server(peer)
 	db.DPrintf(db.CACHESRV, "Peer name: %v", peer)
 	cc := cacheclnt.NewCacheClnt(s.ssrv.SigmaClnt().FsLib, jobname, nshard)
-	if topN != GET_ALL_SHARDS {
-		db.DFatalf("unimplemented")
-		// TODO:
-		// 1. get hot shard list
-		// 2. get hot shards
-	}
 	// TODO: don't do this with delegation, once we get lazy RPC channel creation working
 	ep, _ := pe.GetCachedEndpoint(peerpn)
 	// First, mount the peer

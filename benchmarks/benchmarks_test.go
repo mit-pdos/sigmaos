@@ -10,7 +10,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"sigmaos/apps/cache"
+	cachesrv "sigmaos/apps/cache/srv"
 	"sigmaos/apps/cossim"
 	cossimproto "sigmaos/apps/cossim/proto"
 	cossimsrv "sigmaos/apps/cossim/srv"
@@ -96,6 +96,8 @@ var BACKUP_CACHED_USE_EPCACHE bool
 var BACKUP_CACHED_DELEGATE_INIT bool
 var BACKUP_CACHED_NKEYS int
 var BACKUP_CACHED_TOP_N_SHARDS int
+var BACKUP_CACHED_DURS string
+var BACKUP_CACHED_MAX_RPS string
 var MANUALLY_SCALE_COSSIM bool
 var N_COSSIM_TO_ADD int
 var SCALE_COSSIM_DELAY time.Duration
@@ -189,9 +191,11 @@ func init() {
 	flag.IntVar(&BACKUP_CACHED_NCACHE, "backup_cached_ncache", 1, "Backup ncache")
 	flag.IntVar(&BACKUP_CACHED_CACHE_MCPU, "backup_cached_mcpu", 1000, "Backup cached mcpu")
 	flag.IntVar(&BACKUP_CACHED_NKEYS, "backup_cached_nkeys", 5000, "Backup cached nkeys")
-	flag.IntVar(&BACKUP_CACHED_TOP_N_SHARDS, "backup_cached_top_n", cache.NSHARD, "Backup cached top n shards")
+	flag.IntVar(&BACKUP_CACHED_TOP_N_SHARDS, "backup_cached_top_n", cachesrv.GET_ALL_SHARDS, "Backup cached top n shards")
 	flag.BoolVar(&BACKUP_CACHED_USE_EPCACHE, "backup_cached_use_epcache", false, "Backup cached use epcache")
-	flag.BoolVar(&BACKUP_CACHED_DELEGATE_INIT, "backup_cached_delegate_init", false, "Backup cached delegate init")
+	flag.BoolVar(&BACKUP_CACHED_DELEGATE_INIT, "backup_cached_delegated_init", false, "Backup cached delegate init")
+	flag.StringVar(&BACKUP_CACHED_DURS, "backup_cached_dur", "10s", "Backup cached benchmark load generation duration (comma-separated for multiple phases).")
+	flag.StringVar(&BACKUP_CACHED_MAX_RPC, "backup_cached_max_rps", "100", "Backup cached benchmark load generation duration (comma-separated for multiple phases).")
 	flag.BoolVar(&MANUALLY_SCALE_GEO, "manually_scale_geo", false, "Manually scale geos")
 	flag.DurationVar(&SCALE_GEO_DELAY, "scale_geo_delay", 0*time.Second, "Delay to wait before scaling up number of geos.")
 	flag.IntVar(&N_GEO_TO_ADD, "n_geo_to_add", 0, "Number of geo to add.")

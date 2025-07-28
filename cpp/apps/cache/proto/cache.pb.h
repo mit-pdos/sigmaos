@@ -381,29 +381,52 @@ class HotShardsRep final :
   // accessors -------------------------------------------------------
 
   enum : int {
-    kShardsFieldNumber = 1,
+    kShardIDsFieldNumber = 1,
+    kHitCntsFieldNumber = 2,
   };
-  // repeated uint32 shards = 1;
-  int shards_size() const;
+  // repeated uint32 shardIDs = 1;
+  int shardids_size() const;
   private:
-  int _internal_shards_size() const;
+  int _internal_shardids_size() const;
   public:
-  void clear_shards();
+  void clear_shardids();
   private:
-  uint32_t _internal_shards(int index) const;
+  uint32_t _internal_shardids(int index) const;
   const ::PROTOBUF_NAMESPACE_ID::RepeatedField< uint32_t >&
-      _internal_shards() const;
-  void _internal_add_shards(uint32_t value);
+      _internal_shardids() const;
+  void _internal_add_shardids(uint32_t value);
   ::PROTOBUF_NAMESPACE_ID::RepeatedField< uint32_t >*
-      _internal_mutable_shards();
+      _internal_mutable_shardids();
   public:
-  uint32_t shards(int index) const;
-  void set_shards(int index, uint32_t value);
-  void add_shards(uint32_t value);
+  uint32_t shardids(int index) const;
+  void set_shardids(int index, uint32_t value);
+  void add_shardids(uint32_t value);
   const ::PROTOBUF_NAMESPACE_ID::RepeatedField< uint32_t >&
-      shards() const;
+      shardids() const;
   ::PROTOBUF_NAMESPACE_ID::RepeatedField< uint32_t >*
-      mutable_shards();
+      mutable_shardids();
+
+  // repeated uint64 hitCnts = 2;
+  int hitcnts_size() const;
+  private:
+  int _internal_hitcnts_size() const;
+  public:
+  void clear_hitcnts();
+  private:
+  uint64_t _internal_hitcnts(int index) const;
+  const ::PROTOBUF_NAMESPACE_ID::RepeatedField< uint64_t >&
+      _internal_hitcnts() const;
+  void _internal_add_hitcnts(uint64_t value);
+  ::PROTOBUF_NAMESPACE_ID::RepeatedField< uint64_t >*
+      _internal_mutable_hitcnts();
+  public:
+  uint64_t hitcnts(int index) const;
+  void set_hitcnts(int index, uint64_t value);
+  void add_hitcnts(uint64_t value);
+  const ::PROTOBUF_NAMESPACE_ID::RepeatedField< uint64_t >&
+      hitcnts() const;
+  ::PROTOBUF_NAMESPACE_ID::RepeatedField< uint64_t >*
+      mutable_hitcnts();
 
   // @@protoc_insertion_point(class_scope:HotShardsRep)
  private:
@@ -413,8 +436,10 @@ class HotShardsRep final :
   typedef void InternalArenaConstructable_;
   typedef void DestructorSkippable_;
   struct Impl_ {
-    ::PROTOBUF_NAMESPACE_ID::RepeatedField< uint32_t > shards_;
-    mutable std::atomic<int> _shards_cached_byte_size_;
+    ::PROTOBUF_NAMESPACE_ID::RepeatedField< uint32_t > shardids_;
+    mutable std::atomic<int> _shardids_cached_byte_size_;
+    ::PROTOBUF_NAMESPACE_ID::RepeatedField< uint64_t > hitcnts_;
+    mutable std::atomic<int> _hitcnts_cached_byte_size_;
     mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   };
   union { Impl_ _impl_; };
@@ -2210,51 +2235,98 @@ inline void HotShardsReq::set_topn(uint32_t value) {
 
 // HotShardsRep
 
-// repeated uint32 shards = 1;
-inline int HotShardsRep::_internal_shards_size() const {
-  return _impl_.shards_.size();
+// repeated uint32 shardIDs = 1;
+inline int HotShardsRep::_internal_shardids_size() const {
+  return _impl_.shardids_.size();
 }
-inline int HotShardsRep::shards_size() const {
-  return _internal_shards_size();
+inline int HotShardsRep::shardids_size() const {
+  return _internal_shardids_size();
 }
-inline void HotShardsRep::clear_shards() {
-  _impl_.shards_.Clear();
+inline void HotShardsRep::clear_shardids() {
+  _impl_.shardids_.Clear();
 }
-inline uint32_t HotShardsRep::_internal_shards(int index) const {
-  return _impl_.shards_.Get(index);
+inline uint32_t HotShardsRep::_internal_shardids(int index) const {
+  return _impl_.shardids_.Get(index);
 }
-inline uint32_t HotShardsRep::shards(int index) const {
-  // @@protoc_insertion_point(field_get:HotShardsRep.shards)
-  return _internal_shards(index);
+inline uint32_t HotShardsRep::shardids(int index) const {
+  // @@protoc_insertion_point(field_get:HotShardsRep.shardIDs)
+  return _internal_shardids(index);
 }
-inline void HotShardsRep::set_shards(int index, uint32_t value) {
-  _impl_.shards_.Set(index, value);
-  // @@protoc_insertion_point(field_set:HotShardsRep.shards)
+inline void HotShardsRep::set_shardids(int index, uint32_t value) {
+  _impl_.shardids_.Set(index, value);
+  // @@protoc_insertion_point(field_set:HotShardsRep.shardIDs)
 }
-inline void HotShardsRep::_internal_add_shards(uint32_t value) {
-  _impl_.shards_.Add(value);
+inline void HotShardsRep::_internal_add_shardids(uint32_t value) {
+  _impl_.shardids_.Add(value);
 }
-inline void HotShardsRep::add_shards(uint32_t value) {
-  _internal_add_shards(value);
-  // @@protoc_insertion_point(field_add:HotShardsRep.shards)
-}
-inline const ::PROTOBUF_NAMESPACE_ID::RepeatedField< uint32_t >&
-HotShardsRep::_internal_shards() const {
-  return _impl_.shards_;
+inline void HotShardsRep::add_shardids(uint32_t value) {
+  _internal_add_shardids(value);
+  // @@protoc_insertion_point(field_add:HotShardsRep.shardIDs)
 }
 inline const ::PROTOBUF_NAMESPACE_ID::RepeatedField< uint32_t >&
-HotShardsRep::shards() const {
-  // @@protoc_insertion_point(field_list:HotShardsRep.shards)
-  return _internal_shards();
+HotShardsRep::_internal_shardids() const {
+  return _impl_.shardids_;
+}
+inline const ::PROTOBUF_NAMESPACE_ID::RepeatedField< uint32_t >&
+HotShardsRep::shardids() const {
+  // @@protoc_insertion_point(field_list:HotShardsRep.shardIDs)
+  return _internal_shardids();
 }
 inline ::PROTOBUF_NAMESPACE_ID::RepeatedField< uint32_t >*
-HotShardsRep::_internal_mutable_shards() {
-  return &_impl_.shards_;
+HotShardsRep::_internal_mutable_shardids() {
+  return &_impl_.shardids_;
 }
 inline ::PROTOBUF_NAMESPACE_ID::RepeatedField< uint32_t >*
-HotShardsRep::mutable_shards() {
-  // @@protoc_insertion_point(field_mutable_list:HotShardsRep.shards)
-  return _internal_mutable_shards();
+HotShardsRep::mutable_shardids() {
+  // @@protoc_insertion_point(field_mutable_list:HotShardsRep.shardIDs)
+  return _internal_mutable_shardids();
+}
+
+// repeated uint64 hitCnts = 2;
+inline int HotShardsRep::_internal_hitcnts_size() const {
+  return _impl_.hitcnts_.size();
+}
+inline int HotShardsRep::hitcnts_size() const {
+  return _internal_hitcnts_size();
+}
+inline void HotShardsRep::clear_hitcnts() {
+  _impl_.hitcnts_.Clear();
+}
+inline uint64_t HotShardsRep::_internal_hitcnts(int index) const {
+  return _impl_.hitcnts_.Get(index);
+}
+inline uint64_t HotShardsRep::hitcnts(int index) const {
+  // @@protoc_insertion_point(field_get:HotShardsRep.hitCnts)
+  return _internal_hitcnts(index);
+}
+inline void HotShardsRep::set_hitcnts(int index, uint64_t value) {
+  _impl_.hitcnts_.Set(index, value);
+  // @@protoc_insertion_point(field_set:HotShardsRep.hitCnts)
+}
+inline void HotShardsRep::_internal_add_hitcnts(uint64_t value) {
+  _impl_.hitcnts_.Add(value);
+}
+inline void HotShardsRep::add_hitcnts(uint64_t value) {
+  _internal_add_hitcnts(value);
+  // @@protoc_insertion_point(field_add:HotShardsRep.hitCnts)
+}
+inline const ::PROTOBUF_NAMESPACE_ID::RepeatedField< uint64_t >&
+HotShardsRep::_internal_hitcnts() const {
+  return _impl_.hitcnts_;
+}
+inline const ::PROTOBUF_NAMESPACE_ID::RepeatedField< uint64_t >&
+HotShardsRep::hitcnts() const {
+  // @@protoc_insertion_point(field_list:HotShardsRep.hitCnts)
+  return _internal_hitcnts();
+}
+inline ::PROTOBUF_NAMESPACE_ID::RepeatedField< uint64_t >*
+HotShardsRep::_internal_mutable_hitcnts() {
+  return &_impl_.hitcnts_;
+}
+inline ::PROTOBUF_NAMESPACE_ID::RepeatedField< uint64_t >*
+HotShardsRep::mutable_hitcnts() {
+  // @@protoc_insertion_point(field_mutable_list:HotShardsRep.hitCnts)
+  return _internal_mutable_hitcnts();
 }
 
 // -------------------------------------------------------------------

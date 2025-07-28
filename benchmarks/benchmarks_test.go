@@ -10,6 +10,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"sigmaos/apps/cache"
 	"sigmaos/apps/cossim"
 	cossimproto "sigmaos/apps/cossim/proto"
 	cossimsrv "sigmaos/apps/cossim/srv"
@@ -89,6 +90,12 @@ var COSSIM_NVEC int
 var COSSIM_NVEC_TO_QUERY int
 var COSSIM_VEC_DIM int
 var COSSIM_EAGER_INIT bool
+var BACKUP_CACHED_NCACHE int
+var BACKUP_CACHED_CACHE_MCPU int
+var BACKUP_CACHED_USE_EPCACHE bool
+var BACKUP_CACHED_DELEGATE_INIT bool
+var BACKUP_CACHED_NKEYS int
+var BACKUP_CACHED_TOP_N_SHARDS int
 var MANUALLY_SCALE_COSSIM bool
 var N_COSSIM_TO_ADD int
 var SCALE_COSSIM_DELAY time.Duration
@@ -179,6 +186,12 @@ func init() {
 	flag.IntVar(&COSSIM_VEC_DIM, "cossim_vec_dim", 100, "Dimension of each vector in the cossim DB")
 	flag.BoolVar(&COSSIM_EAGER_INIT, "cossim_eager_init", false, "Initialize cossim server eagerly")
 	flag.BoolVar(&COSSIM_DELEGATE_INIT, "cossim_delegated_init", false, "Cossim")
+	flag.IntVar(&BACKUP_CACHED_NCACHE, "backup_cached_ncache", 1, "Backup ncache")
+	flag.IntVar(&BACKUP_CACHED_CACHE_MCPU, "backup_cached_mcpu", 1000, "Backup cached mcpu")
+	flag.IntVar(&BACKUP_CACHED_NKEYS, "backup_cached_nkeys", 5000, "Backup cached nkeys")
+	flag.IntVar(&BACKUP_CACHED_TOP_N_SHARDS, "backup_cached_top_n", cache.NSHARD, "Backup cached top n shards")
+	flag.BoolVar(&BACKUP_CACHED_USE_EPCACHE, "backup_cached_use_epcache", false, "Backup cached use epcache")
+	flag.BoolVar(&BACKUP_CACHED_DELEGATE_INIT, "backup_cached_delegate_init", false, "Backup cached delegate init")
 	flag.BoolVar(&MANUALLY_SCALE_GEO, "manually_scale_geo", false, "Manually scale geos")
 	flag.DurationVar(&SCALE_GEO_DELAY, "scale_geo_delay", 0*time.Second, "Delay to wait before scaling up number of geos.")
 	flag.IntVar(&N_GEO_TO_ADD, "n_geo_to_add", 0, "Number of geo to add.")
@@ -1767,6 +1780,53 @@ func TestCosSim(t *testing.T) {
 	db.DPrintf(db.TEST, "Run cossim")
 	runOps(ts1, ji, runCosSim, rs)
 	db.DPrintf(db.TEST, "Done run cossim")
+	//	printResultSummary(rs)
+	if sigmaos {
+		mrts.Shutdown()
+	}
+}
+
+func TestCachedBackup(t *testing.T) {
+	const (
+		sigmaos = true
+		jobName = "cached-job"
+	)
+
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{REALM1})
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	defer mrts.Shutdown()
+
+	ts1 := mrts.GetRealm(REALM1)
+
+	p := newRealmPerf(mrts.GetRealm(REALM1))
+	defer p.Done()
+
+	rs := benchmarks.NewResults(1, benchmarks.E2E)
+	jobs, ji := newCachedBackupJobs(mrts.GetRealm(REALM1), jobName, BACKUP_CACHED_NCACHE, proc.Tmcpu(BACKUP_CACHED_CACHE_MCPU), true, BACKUP_CACHED_USE_EPCACHE, BACKUP_CACHED_NKEYS, BACKUP_CACHED_DELEGATE_INIT, BACKUP_CACHED_TOP_N_SHARDS)
+	go func() {
+		for _, j := range jobs {
+			// Wait until ready
+			<-j.ready
+			if N_CLNT > 1 {
+				// Wait for clients to start up on other machines.
+				db.DPrintf(db.ALWAYS, "Leader waiting for clnts")
+				waitForClnts(mrts.GetRoot(), N_CLNT)
+				db.DPrintf(db.ALWAYS, "Leader done waiting for clnts")
+			}
+			// Ack to allow the job to proceed.
+			j.ready <- true
+		}
+	}()
+	if sigmaos {
+		p := newRealmPerf(ts1)
+		defer p.Done()
+		monitorCPUUtil(ts1, p)
+	}
+	db.DPrintf(db.TEST, "Run cached backup job")
+	runOps(ts1, ji, runCachedBackup, rs)
+	db.DPrintf(db.TEST, "Done run cached backup job")
 	//	printResultSummary(rs)
 	if sigmaos {
 		mrts.Shutdown()

@@ -69,7 +69,6 @@ func TestCachedDelegatedReshard(t *testing.T) {
 	// Start the cachegrp job
 	cm, err := cachegrpmgr.NewCacheMgrEPCache(mrts.GetRealm(test.REALM1).SigmaClnt, epcj, JOB_NAME, ncache, cacheMcpu, cacheGC)
 	if !assert.Nil(t, err, "Err new cachemgr: %v", err) {
-		db.DPrintf(db.COSSIMSRV_ERR, "Err newCacheMgr: %v", err)
 		return
 	}
 	cc := cachegrpclnt.NewCachedSvcClnt(mrts.GetRealm(test.REALM1).FsLib, JOB_NAME)

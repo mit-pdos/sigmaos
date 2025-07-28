@@ -2,7 +2,6 @@ package benchmarks_test
 
 import (
 	"path/filepath"
-	"strconv"
 	"sync"
 	"time"
 

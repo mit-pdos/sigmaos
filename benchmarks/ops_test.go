@@ -218,6 +218,22 @@ func runCosSim(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
 	return time.Since(start), 1.0
 }
 
+func runCachedBackup(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
+	ji := i.(*CachedBackupJobInstance)
+	ji.ready <- true
+	<-ji.ready
+	// Start a procd clnt, and monitor procds
+	if ji.sigmaos {
+		rpcc := mschedclnt.NewMSchedClnt(ts.SigmaClnt.FsLib, sp.NOT_SET)
+		rpcc.MonitorMSchedStats(ts.GetRealm(), SCHEDD_STAT_MONITOR_PERIOD)
+		defer rpcc.Done()
+	}
+	start := time.Now()
+	ji.StartCachedBackupJob()
+	ji.Wait()
+	return time.Since(start), 1.0
+}
+
 func runImgResize(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
 	ji := i.(*ImgResizeJobInstance)
 	ji.ready <- true

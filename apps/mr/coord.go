@@ -209,6 +209,7 @@ type Tresult struct {
 	ok  bool
 	ms  int64
 	msg string
+	pid sp.Tpid
 	res *Result
 }
 
@@ -243,19 +244,19 @@ func (c *Coord) waitForTask(ch chan<- Tresult, ft ftclnt.FtTaskClnt[[]byte, []by
 		}
 		db.DPrintf(db.MR_COORD, "MarkDone latency: lat %v inner %v task %s", time.Since(start), r.MsInner, r.Task)
 		r.MsOuter = ms
-		ch <- Tresult{t, true, ms, status.Msg(), r}
+		ch <- Tresult{t, true, ms, status.Msg(), p.GetPid(), r}
 	} else { // task failed; make it runnable again
 		db.DPrintf(db.MR, "Task failed %v status %v", t, status)
 		if status != nil && status.Msg() == RESTART {
 			// reducer indicates to run some mappers again
 			s := newStringSlice(status.Data().([]interface{}))
 			c.restart(s, t)
-			ch <- Tresult{t, false, ms, RESTART, nil}
+			ch <- Tresult{t, false, ms, RESTART, p.GetPid(), nil}
 		} else { // if failure but not restart, rerun task immediately again
 			if err := ft.MoveTasks([]ftclnt.TaskId{t}, ftclnt.TODO); err != nil {
 				db.DFatalf("MarkRunnable %v err %v", t, err)
 			}
-			ch <- Tresult{t, false, ms, "", nil}
+			ch <- Tresult{t, false, ms, "", p.GetPid(), nil}
 		}
 	}
 }
@@ -283,7 +284,7 @@ func (c *Coord) runTasks(ch chan<- Tresult, ft ftclnt.FtTaskClnt[[]byte, []byte]
 
 	for i, t := range tasks {
 		proc := procs[i]
-		db.DPrintf(db.MR_COORD, "prep to spawn proc %v", proc.GetPid())
+		db.DPrintf(db.MR_COORD, "prep to spawn proc %v for task %v", proc.GetPid(), t.Id)
 		start := time.Now()
 		err = c.Spawn(proc)
 		if err != nil {
@@ -497,6 +498,13 @@ func (c *Coord) Work() {
 	c.mftclnt = ftclnt.NewFtTaskClnt[Bin, Bin](c.FsLib, c.mftid, &f)
 	c.rftclnt = ftclnt.NewFtTaskClnt[TreduceTask, Bin](c.FsLib, c.rftid, &f)
 
+	if err := c.mftclnt.Fence(&f); err != nil {
+		db.DFatalf("Fence mapper err %v", err)
+	}
+	if err := c.rftclnt.Fence(&f); err != nil {
+		db.DFatalf("Fence reducer err %v", err)
+	}
+
 	crash.Failer(c.FsLib, crash.MRCOORD_CRASH, func(e crash.Tevent) {
 		crash.CrashMsg(c.stat.String())
 	})
@@ -509,7 +517,7 @@ func (c *Coord) Work() {
 		db.DFatalf("RecoverTasks mapper err %v", err)
 	} else {
 		spstats.Store(&c.stat.NrecoverMap, int64(n))
-		db.DPrintf(db.MR, "Recover %d map tasks took %v", n, time.Since(start))
+		db.DPrintf(db.MR_COORD, "Recover %d WIP map tasks took %v", n, time.Since(start))
 	}
 
 	start = time.Now()
@@ -517,40 +525,65 @@ func (c *Coord) Work() {
 		db.DFatalf("RecoverTasks reducer err %v", err)
 	} else {
 		c.stat.NrecoverReduce.Store(int64(n))
-		db.DPrintf(db.MR, "Recover %d reduce tasks took %v", n, time.Since(start))
+		db.DPrintf(db.MR_COORD, "Recover %d WIP reduce tasks took %v", n, time.Since(start))
 	}
 
 	c.doRestart()
 
-	start = time.Now()
-
-	ch := make(chan Tresult)
-	wg := &sync.WaitGroup{}
-	wg.Add(2)
-	go func() {
-		defer wg.Done()
-		c.mgr(ch, c.mftclnt.AsRawClnt(), c.mapperProc)
-	}()
-	go func() {
-		defer wg.Done()
-		c.mgr(ch, c.rftclnt.AsRawClnt(), c.reducerProc)
-	}()
-
-	c.processResult(ch)
-
-	wg.Wait()
-
-	// double check we are done
-	n, err := c.mftclnt.GetNTasks(ftclnt.DONE)
+	m, err := c.mftclnt.GetNTasks(ftclnt.DONE)
 	if err != nil {
 		db.DFatalf("NtaskDone mappers err %v\n", err)
 	}
-	m, err := c.rftclnt.GetNTasks(ftclnt.DONE)
+	r, err := c.rftclnt.GetNTasks(ftclnt.DONE)
 	if err != nil {
 		db.DFatalf("NtaskDone reducers err %v\n", err)
 	}
-	if int(n+m) < c.nmaptask+c.nreducetask {
-		db.DFatalf("job isn't done %v+%v != %v+%v", n, m, c.nmaptask, c.nreducetask)
+
+	ids, err := c.mftclnt.GetTasksByStatus(ftclnt.TODO)
+	if err != nil {
+		db.DFatalf(" reducers err %v\n", err)
+	}
+	db.DPrintf(db.MR_COORD, "Recover WIP map tasks %v", ids)
+
+	ids, err = c.rftclnt.GetTasksByStatus(ftclnt.TODO)
+	if err != nil {
+		db.DFatalf(" reducers err %v\n", err)
+	}
+
+	db.DPrintf(db.MR_COORD, "Recover WIP reduce tasks %v", ids)
+
+	if int(m+r) < c.nmaptask+c.nreducetask {
+		start = time.Now()
+
+		ch := make(chan Tresult)
+		wg := &sync.WaitGroup{}
+		wg.Add(2)
+		go func() {
+			defer wg.Done()
+			c.mgr(ch, c.mftclnt.AsRawClnt(), c.mapperProc)
+		}()
+		go func() {
+			defer wg.Done()
+			c.mgr(ch, c.rftclnt.AsRawClnt(), c.reducerProc)
+		}()
+
+		c.processResult(ch, m, r)
+
+		wg.Wait()
+
+		// double check we are done
+		m, err = c.mftclnt.GetNTasks(ftclnt.DONE)
+		if err != nil {
+			db.DFatalf("NtaskDone mappers err %v\n", err)
+		}
+		r, err = c.rftclnt.GetNTasks(ftclnt.DONE)
+		if err != nil {
+			db.DFatalf("NtaskDone reducers err %v\n", err)
+		}
+	}
+
+	if int(m+r) < c.nmaptask+c.nreducetask {
+		db.DFatalf("job isn't done %v+%v != %v+%v", m, r, c.nmaptask, c.nreducetask)
 	}
 
 	db.DPrintf(db.ALWAYS, "job done stat %v", &c.stat)
@@ -570,6 +603,7 @@ func (c *Coord) mgr(ch chan<- Tresult, ft ftclnt.FtTaskClnt[[]byte, []byte], f N
 	go ftclnt.GetTasks(ft, chTask)
 
 	for tasks := range chTask {
+		db.DPrintf(db.MR_COORD, "tasks %v", tasks)
 		err := c.runTasks(ch, ft, tasks, f)
 		if err != nil {
 			db.DFatalf("runTasks %v err %v", tasks, err)
@@ -584,21 +618,27 @@ func (c *Coord) mgr(ch chan<- Tresult, ft ftclnt.FtTaskClnt[[]byte, []byte], f N
 	spstats.Inc(&c.stat.Ntask, int64(n))
 }
 
-func (c *Coord) processResult(ch <-chan Tresult) {
-	nM := 0
-	nR := 0
+func (c *Coord) processResult(ch <-chan Tresult, m, r int32) {
+	db.DPrintf(db.MR_COORD, "processResults %d %d", m, r)
+	nM := int(m)
+	nR := int(r)
 	nRestart := 0
+	ts := make(map[ftclnt.TaskId]bool)
 	for res := range ch {
 		if res.res != nil {
 			db.DPrintf(db.MR_COORD, "processResult: task %v (%t) res: msInner %d msOuter %d res %v", res.t, res.res.IsM, res.res.MsInner, res.res.MsOuter, res.res)
 		} else {
-			db.DPrintf(db.MR_COORD, "processResult: task wo res %v ok %v msg %v", res.t, res.ok, res.msg)
+			db.DPrintf(db.MR_COORD, "processResult: task wo res %v ok %v msg %v pid %v", res.t, res.ok, res.msg, res.pid)
 		}
 		if res.ok {
 			if err := c.AppendFileJson(MRstats(c.jobRoot, c.job), res.res); err != nil {
 				db.DFatalf("Appendfile %v err %v\n", MRstats(c.jobRoot, c.job), err)
 			}
 			if res.res.IsM {
+				if _, ok := ts[res.t]; ok {
+					db.DFatalf("task id already finished %v", res.t)
+				}
+				ts[res.t] = true
 				nM += 1
 				if nM >= c.nmaptask { // kick off reducers?
 					if err := c.makeReduceBins(); err != nil {
@@ -624,6 +664,7 @@ func (c *Coord) processResult(ch <-chan Tresult) {
 		if nR+nRestart >= c.nreducetask { // Run mappers again for some errored reducers?
 			nM = 0
 			nRestart = 0
+			ts = make(map[ftclnt.TaskId]bool)
 			c.doRestart()
 		}
 	}

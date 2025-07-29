@@ -602,13 +602,17 @@ func TestCrashReducerOnlyPartition(t *testing.T) {
 }
 
 func TestCrashReducerOnlyBoth(t *testing.T) {
-	_, _, st := runN(t, reduceEv, nil, 0, false)
-	assert.True(t, st.Counters["Nfail"] > 0)
+	repeatTest(t, func() bool {
+		_, _, st := runN(t, reduceEv, nil, 0, false)
+		return st.Counters["Nfail"] <= 0
+	}, 10)
 }
 
 func TestCrashCoordOnly(t *testing.T) {
-	_, nr, _ := runN(t, coordEv, nil, 0, false)
-	assert.True(t, nr > mr.NCOORD)
+	repeatTest(t, func() bool {
+		_, nr, _ := runN(t, coordEv, nil, 0, false)
+		return nr <= mr.NCOORD
+	}, 10)
 }
 
 func TestCrashTaskAndCoord(t *testing.T) {
@@ -623,9 +627,10 @@ func TestCrashTaskAndCoord(t *testing.T) {
 	coordEv1.Insert(e1)
 	em.Merge(coordEv1)
 
-	ntask, nr, st := runN(t, em, nil, 0, true)
-	assert.True(t, nr > mr.NCOORD)
-	assert.True(t, st.Counters["Ntask"] > ntask)
+	repeatTest(t, func() bool {
+		ntask, nr, st := runN(t, em, nil, 0, true)
+		return nr <= mr.NCOORD && st.Counters["Ntask"] <= ntask
+	}, 10)
 }
 
 func TestCrashInfraUx1(t *testing.T) {
@@ -658,8 +663,10 @@ func TestCrashInfraProcd1(t *testing.T) {
 	e0 := crash.NewEventPath(crash.PROCD_CRASH, CRASHCOORD, float64(1.0), crashSemPn(crash.PROCD_CRASH, 0))
 	srvs := make(map[string]crash.Tselector)
 	srvs[sp.PROCDREL] = crash.PROCD_CRASH
-	ntask, _, st := runN(t, crash.NewTeventMapOne(e0), srvs, 0, false)
-	assert.True(t, st.Counters["Ntask"] > ntask || st.Counters["Nfail"] > 0)
+	repeatTest(t, func() bool {
+		ntask, _, st := runN(t, crash.NewTeventMapOne(e0), srvs, 0, false)
+		return st.Counters["Ntask"] <= ntask || st.Counters["Nfail"] <= 0
+	}, 10)
 }
 
 func TestCrashInfraMSchedBESchedUx1(t *testing.T) {

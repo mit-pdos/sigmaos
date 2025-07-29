@@ -139,6 +139,15 @@ type Tasks struct {
 	Rftclnt fttask_clnt.FtTaskClnt[TreduceTask, any]
 }
 
+func (ts *Tasks) SubmitReducers(nreducetask int) error {
+	rTasks := make([]*fttask_clnt.Task[TreduceTask], nreducetask)
+	for r := 0; r < nreducetask; r++ {
+		t := TreduceTask{strconv.Itoa(r), nil}
+		rTasks[r] = &fttask_clnt.Task[TreduceTask]{Id: fttask_clnt.TaskId(r), Data: t}
+	}
+	return ts.Rftclnt.SubmitTasks(rTasks)
+}
+
 func InitCoordFS(sc *sigmaclnt.SigmaClnt, jobRoot, jobname string, nreducetask int) (*Tasks, error) {
 	sc.FsLib.MkDir(MRDIRTOP, 0777)
 	sc.FsLib.MkDir(MRDIRELECT, 0777)
@@ -249,7 +258,6 @@ func PrepareJob(fsl *fslib.FsLib, ts *Tasks, jobRoot, jobName string, j *Job) (i
 	if err != nil || len(bins) == 0 {
 		return len(bins), err
 	}
-
 	mtasks := make([]*fttask_clnt.Task[Bin], len(bins))
 	for i, b := range bins {
 		mtasks[i] = &fttask_clnt.Task[Bin]{Id: fttask_clnt.TaskId(i), Data: b}

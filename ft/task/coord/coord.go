@@ -101,6 +101,7 @@ func (ftm *FtTaskCoord[Data, Output]) waitForTask(start time.Time, p *proc.Proc,
 		if err := ftm.MoveTasks([]ftclnt.TaskId{id}, ftclnt.ERROR); err != nil {
 			db.DFatalf("MoveTasks %v error err %v", id, err)
 		}
+		// XXX write status to output
 		//if err := ftm.AddTaskOutputs([]ftclnt.TaskId{id}, status, false); err != nil {
 		//	db.DFatalf("AddTaskOutputs %v error err %v", id, err)
 		//}

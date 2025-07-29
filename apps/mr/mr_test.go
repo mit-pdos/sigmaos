@@ -298,6 +298,9 @@ func TestMapperReducer(t *testing.T) {
 	}
 	db.DPrintf(db.ALWAYS, "map %s total: in %s out %s tot %s %vms (%s)\n", job.Input, humanize.Bytes(uint64(nin)), humanize.Bytes(uint64(nout)), humanize.Bytes(uint64(nin+nout)), time.Since(start).Milliseconds(), test.TputStr(nin+nout, time.Since(start).Milliseconds()))
 
+	err = ts.tasks.SubmitReducers(job.Nreduce)
+	assert.Nil(t, err)
+
 	tns, _, err = ts.tasks.Rftclnt.AcquireTasks(false)
 	assert.Nil(t, err)
 

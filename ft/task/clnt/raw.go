@@ -33,7 +33,7 @@ func newRawFtTaskClnt(fsl *fslib.FsLib, serviceId fttask.FtTaskSvcId, a *Acquire
 		fsl:       fsl,
 		rpcclntc:  rpcclnt.NewRPCClntCache(sprpcclnt.WithSPChannel(fsl)),
 		serviceId: serviceId,
-		fence:     nil,
+		fence:     sp.NullFence(),
 		mu:        sync.Mutex{},
 		acquireId: a,
 	}

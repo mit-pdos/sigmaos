@@ -13,6 +13,8 @@ import (
 	"sigmaos/ft/leaderclnt"
 	"sigmaos/ft/task"
 	ftclnt "sigmaos/ft/task/clnt"
+	"sigmaos/ft/task/procmgr"
+	ftmgr "sigmaos/ft/task/procmgr"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
@@ -55,6 +57,8 @@ type Coord struct {
 	rftid           task.FtTaskSvcId
 	mftclnt         ftclnt.FtTaskClnt[Bin, Bin]
 	rftclnt         ftclnt.FtTaskClnt[TreduceTask, Bin]
+	mcoord          *fttaskmgr.FtTaskCoord[[]byte, []byte]
+	rcoord          *fttaskmgr.FtTaskCoord[[]byte, []byte]
 	jobRoot         string
 	job             string
 	nmaptask        int
@@ -495,8 +499,12 @@ func (c *Coord) Work() {
 	f := c.leaderclnt.Fence()
 
 	var err error
+
+	ch := make(chan ftmgr.Tresult)
 	c.mftclnt = ftclnt.NewFtTaskClnt[Bin, Bin](c.FsLib, c.mftid, &f)
+	c.mcoord, err = fttaskmgr.NewFtTaskCoord[[]byte, []byte](c.SigmaClnt, c.mftclnt.AsRawClnt(), ch)
 	c.rftclnt = ftclnt.NewFtTaskClnt[TreduceTask, Bin](c.FsLib, c.rftid, &f)
+	c.rcoord, err = fttaskmgr.NewFtTaskCoord[[]byte, []byte](c.SigmaClnt, c.rftclnt.AsRawClnt(), ch)
 
 	if err := c.mftclnt.Fence(&f); err != nil {
 		db.DFatalf("Fence mapper err %v", err)
@@ -555,19 +563,18 @@ func (c *Coord) Work() {
 	if int(m+r) < c.nmaptask+c.nreducetask {
 		start = time.Now()
 
-		ch := make(chan Tresult)
 		wg := &sync.WaitGroup{}
 		wg.Add(2)
 		go func() {
 			defer wg.Done()
-			c.mgr(ch, c.mftclnt.AsRawClnt(), c.mapperProc)
+			c.mcoord.ExecuteTasks(c.mapperProc)
 		}()
 		go func() {
 			defer wg.Done()
-			c.mgr(ch, c.rftclnt.AsRawClnt(), c.reducerProc)
+			c.rcoord.ExecuteTasks(c.reducerProc)
 		}()
 
-		c.processResult(ch, m, r)
+		c.processResult(nil, m, r) // XXX fix
 
 		wg.Wait()
 

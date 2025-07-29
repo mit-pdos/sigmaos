@@ -10,7 +10,7 @@ import (
 	"sigmaos/ft/procgroupmgr"
 	"sigmaos/ft/task"
 	fttask_clnt "sigmaos/ft/task/clnt"
-	fttask_coord "sigmaos/ft/task/coord"
+	fttask_mgr "sigmaos/ft/task/procmgr"
 	fttask_srv "sigmaos/ft/task/srv"
 	"sigmaos/proc"
 	"sigmaos/serr"
@@ -138,13 +138,13 @@ func IsThumbNail(fn string) bool {
 	return strings.Contains(fn, "-thumb")
 }
 
-func GetMkProcFn(serverId task.FtTaskSvcId, nrounds int, workerMcpu proc.Tmcpu, workerMem proc.Tmem) fttask_coord.TmkProc[Ttask] {
-	return func(task fttask_clnt.Task[Ttask]) *proc.Proc {
+func GetMkProcFn(serverId task.FtTaskSvcId, nrounds int, workerMcpu proc.Tmcpu, workerMem proc.Tmem) fttask_mgr.TnewProc[Ttask] {
+	return func(task fttask_clnt.Task[Ttask]) (*proc.Proc, error) {
 		db.DPrintf(db.IMGD, "mkProc %v", task)
 		fn := task.Data.FileName
 		p := proc.NewProcPid(sp.GenPid(string(serverId)), "imgresize", []string{fn, ThumbName(fn), strconv.Itoa(nrounds)})
 		p.SetMcpu(workerMcpu)
 		p.SetMem(workerMem)
-		return p
+		return p, nil
 	}
 }

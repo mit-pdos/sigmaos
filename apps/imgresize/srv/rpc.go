@@ -9,12 +9,12 @@ import (
 	"sigmaos/apps/imgresize/proto"
 	db "sigmaos/debug"
 	fttask_clnt "sigmaos/ft/task/clnt"
-	fttask_coord "sigmaos/ft/task/coord"
+	fttask_mgr "sigmaos/ft/task/procmgr"
 )
 
 type ImgSrvRPC struct {
 	imgd   *ImgSrv
-	mkProc fttask_coord.TmkProc[imgresize.Ttask]
+	mkProc fttask_mgr.TnewProc[imgresize.Ttask]
 	ndone  atomic.Int64
 }
 
@@ -29,16 +29,18 @@ func (rpcs *ImgSrvRPC) Resize(ctx fs.CtxI, req proto.ImgResizeReq, rep *proto.Im
 	defer db.DPrintf(db.IMGD, "Resize %v done", req)
 
 	t := imgresize.NewTask(req.InputPath)
-	p := rpcs.mkProc(fttask_clnt.Task[imgresize.Ttask]{
+	p, err := rpcs.mkProc(fttask_clnt.Task[imgresize.Ttask]{
 		Id:   fttask_clnt.TaskId(0),
 		Data: *t,
 	})
+	if err != nil {
+		db.DFatalf("Resize:mkProc err %", err)
+	}
 
 	db.DPrintf(db.IMGD, "prep to spawn task %v %v", p.GetPid(), p.Args)
 	start := time.Now()
 	// Spawn proc.
-	err := rpcs.imgd.sc.Spawn(p)
-	if err != nil {
+	if err := rpcs.imgd.sc.Spawn(p); err != nil {
 		db.DPrintf(db.IMGD_ERR, "Error spawn task: %v", err)
 		db.DFatalf("Error spawn task: %v", err)
 		rep.OK = false

@@ -712,7 +712,7 @@ func GetCachedBackupClientCmdConstructor(leader bool, numClients int, rps []int,
 		}
 		prewarmStr := ""
 		if prewarm {
-			prewarmStr := "--prewarm_realm"
+			prewarmStr = "--prewarm_realm"
 		}
 		return fmt.Sprintf("export SIGMADEBUG=%s; export SIGMAVALGRIND=%s; export SIGMAPERF=%s; go clean -testcache; "+
 			"ulimit -n 100000; "+

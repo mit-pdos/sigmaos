@@ -934,6 +934,9 @@ func TestScaleCachedBackup(t *testing.T) {
 			if delegate {
 				benchName += "_delegate"
 			}
+			if prewarm {
+				benchName += "_prewarm"
+			}
 			getLeaderCmd := GetCachedBackupClientCmdConstructor(true, len(driverVMs), rps, dur, sleep, numCachedBackup, nkeys, topN, delegate, useEPCache, prewarm)
 			getFollowerCmd := GetCachedBackupClientCmdConstructor(false, len(driverVMs), rps, dur, sleep, numCachedBackup, nkeys, topN, delegate, useEPCache, prewarm)
 			ran := ts.RunParallelClientBenchmark(benchName, driverVMs, getLeaderCmd, getFollowerCmd, startK8sHotelApp, stopK8sHotelApp, clientDelay, numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost)

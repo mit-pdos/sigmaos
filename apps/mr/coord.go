@@ -208,97 +208,6 @@ func (c *Coord) reducerProc(t ftclnt.Task[[]byte]) (*proc.Proc, error) {
 	return c.newTask(c.reducerbin, []string{strconv.Itoa(int(t.Id)), string(c.rftclnt.ServiceId()), outlink, outTarget, strconv.Itoa(c.nmaptask)}, c.memPerTask), nil
 }
 
-type Tresult struct {
-	t   ftclnt.TaskId
-	ok  bool
-	ms  int64
-	msg string
-	pid sp.Tpid
-	res *Result
-}
-
-func (c *Coord) waitForTask(ch chan<- Tresult, ft ftclnt.FtTaskClnt[[]byte, []byte], start time.Time, p *proc.Proc, t ftclnt.TaskId) {
-	// Wait for the task to exit.
-	status, err := c.WaitExit(p.GetPid())
-	// Record end time.
-	ms := time.Since(start).Milliseconds()
-	if err == nil && status.IsStatusOK() {
-		if c.maliciousMapper > 0 && p.GetProgram() == MALICIOUS_MAPPER_BIN {
-			// If running with malicious mapper, then exit status should not be OK.
-			// The task should be restarted automatically by the MR FT
-			// infrastructure.  If the exit status *was* OK, then the output files
-			// won't match, because the malicious mapper doesn't actually do the map
-			// (it just touches some buckets it shouldn't have access to). Because of
-			// this, letting the coordinator proceed by marking the task as done
-			// should cause the test to fail.
-			db.DPrintf(db.ERROR, "!!! WARNING: MALICIOUS MAPPER SUCCEEDED !!!")
-		}
-		r, err := NewResult(status.Data())
-		if err != nil {
-			db.DFatalf("NewResult %v err %v", status.Data(), err)
-		}
-		// mark task as done
-		start := time.Now()
-		encoded, err := ftclnt.Encode(r.OutBin)
-		if err != nil {
-			db.DFatalf("Encode %v err %v", r.OutBin, err)
-		}
-		if err := ft.AddTaskOutputs([]ftclnt.TaskId{t}, [][]byte{encoded}, true); err != nil {
-			db.DFatalf("MarkDone %v done err %v", t, err)
-		}
-		db.DPrintf(db.MR_COORD, "MarkDone latency: lat %v inner %v task %s", time.Since(start), r.MsInner, r.Task)
-		r.MsOuter = ms
-		ch <- Tresult{t, true, ms, status.Msg(), p.GetPid(), r}
-	} else { // task failed; make it runnable again
-		db.DPrintf(db.MR, "Task failed %v status %v", t, status)
-		if status != nil && status.Msg() == RESTART {
-			// reducer indicates to run some mappers again
-			s := newStringSlice(status.Data().([]interface{}))
-			c.restart(s, t)
-			ch <- Tresult{t, false, ms, RESTART, p.GetPid(), nil}
-		} else { // if failure but not restart, rerun task immediately again
-			if err := ft.MoveTasks([]ftclnt.TaskId{t}, ftclnt.TODO); err != nil {
-				db.DFatalf("MarkRunnable %v err %v", t, err)
-			}
-			ch <- Tresult{t, false, ms, "", p.GetPid(), nil}
-		}
-	}
-}
-
-func (c *Coord) runTasks(ch chan<- Tresult, ft ftclnt.FtTaskClnt[[]byte, []byte], ids []ftclnt.TaskId, f NewProc) error {
-	db.DPrintf(db.MR_COORD, "runTasks %v", len(ids))
-	start := time.Now()
-	tasks, err := ft.ReadTasks(ids)
-	if err != nil {
-		db.DFatalf("ReadTasks %v err %v", ids, err)
-	}
-	db.DPrintf(db.MR_COORD, "runTasks: read tasks %v time: %v", len(tasks), time.Since(start))
-
-	// create all proc objects first so we can spawn them all in
-	// quick succession to try to balance load across machines
-	procs := make([]*proc.Proc, len(tasks))
-	for i, t := range tasks {
-		proc, err := f(t)
-		if err != nil {
-			db.DFatalf("Err spawn task: %v", err)
-		}
-
-		procs[i] = proc
-	}
-
-	for i, t := range tasks {
-		proc := procs[i]
-		db.DPrintf(db.MR_COORD, "prep to spawn proc %v for task %v", proc.GetPid(), t.Id)
-		start := time.Now()
-		err = c.Spawn(proc)
-		if err != nil {
-			db.DFatalf("Err spawn task: %v", err)
-		}
-		go c.waitForTask(ch, ft, start, proc, t.Id)
-	}
-	return nil
-}
-
 func newStringSlice(data []interface{}) []string {
 	s := make([]string, 0, len(data))
 	for _, o := range data {
@@ -567,16 +476,27 @@ func (c *Coord) Work() {
 		wg.Add(2)
 		go func() {
 			defer wg.Done()
-			c.mcoord.ExecuteTasks(c.mapperProc)
+			st, err := c.mcoord.ExecuteTasks(c.mapperProc)
+			if err != nil {
+				db.DFatalf("ExecuteTasks: mcoord err %v", err)
+			}
+			n := st.NumDone + st.NumError + st.NumTodo + st.NumWip
+			spstats.Inc(&c.stat.Ntask, int64(n))
 		}()
 		go func() {
 			defer wg.Done()
-			c.rcoord.ExecuteTasks(c.reducerProc)
+			st, err := c.rcoord.ExecuteTasks(c.reducerProc)
+			if err != nil {
+				db.DFatalf("ExecuteTasks: rcoord err %v", err)
+			}
+			n := st.NumDone + st.NumError + st.NumTodo + st.NumWip
+			spstats.Inc(&c.stat.Ntask, int64(n))
 		}()
 
-		c.processResult(ch, m, r)
+		go c.processResult(ch, m, r)
 
 		wg.Wait()
+		close(ch)
 
 		// double check we are done
 		m, err = c.mftclnt.GetNTasks(ftclnt.DONE)
@@ -602,27 +522,6 @@ func (c *Coord) Work() {
 	stro.FillCounters(&c.stat)
 	c.ClntExit(proc.NewStatusInfo(proc.StatusOK, "OK", stro))
 	defer c.perf.Done()
-}
-
-func (c *Coord) mgr(ch chan<- Tresult, ft ftclnt.FtTaskClnt[[]byte, []byte], f NewProc) {
-	chTask := make(chan []ftclnt.TaskId)
-
-	go ftclnt.GetTasks(ft, chTask)
-
-	for tasks := range chTask {
-		db.DPrintf(db.MR_COORD, "tasks %v", tasks)
-		err := c.runTasks(ch, ft, tasks, f)
-		if err != nil {
-			db.DFatalf("runTasks %v err %v", tasks, err)
-		}
-	}
-	stats, err := ft.Stats()
-	if err != nil {
-		db.DFatalf("mgr: Stats err %v", err)
-	}
-	db.DPrintf(db.MR_COORD, "mgr %v: done %v", ft.ServiceId(), stats)
-	n := stats.NumDone + stats.NumError + stats.NumTodo + stats.NumWip
-	spstats.Inc(&c.stat.Ntask, int64(n))
 }
 
 func (c *Coord) processResult(ch <-chan ftmgr.Tresult[[]byte, []byte], m, r int32) {
@@ -680,7 +579,6 @@ func (c *Coord) processResult(ch <-chan ftmgr.Tresult[[]byte, []byte], m, r int3
 					db.DPrintf(db.MR_COORD, "processResult: SubmittedLastTask")
 					c.mftclnt.SubmittedLastTask()
 					c.rftclnt.SubmittedLastTask()
-					return
 				}
 			}
 			db.DPrintf(db.ALWAYS, "tasks done %d/%d\n", nM+nR, c.nmaptask+c.nreducetask)

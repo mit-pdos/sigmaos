@@ -8,6 +8,7 @@ import (
 	procapi "sigmaos/api/proc"
 	db "sigmaos/debug"
 	fttask_clnt "sigmaos/ft/task/clnt"
+	"sigmaos/ft/task/proto"
 	"sigmaos/proc"
 )
 
@@ -36,18 +37,24 @@ func NewFtTaskCoord[Data any, Output any](pclnt procapi.ProcAPI, ft fttask_clnt.
 	}, nil
 }
 
-func (ftm *FtTaskCoord[Data, Output]) ExecuteTasks(mkProc TnewProc[Data]) {
+func (ftm *FtTaskCoord[Data, Output]) ExecuteTasks(mkProc TnewProc[Data]) (*proto.TaskStats, error) {
 	chTask := make(chan []fttask_clnt.TaskId)
 
 	go fttask_clnt.GetTasks(ftm.ftclnt, chTask)
 
 	for tasks := range chTask {
-		err := ftm.startTasks(tasks, mkProc)
-		if err != nil {
-			db.DFatalf("StartTasks %v err %v", tasks, err)
+		if err := ftm.startTasks(tasks, mkProc); err != nil {
+			db.DPrintf(db.FTTASKMGR, "ExecuteTasks: startTasks err %v", err)
+			return nil, err
 		}
 	}
-	db.DPrintf(db.FTTASKMGR, "ExecuteTasks: done")
+	stats, err := ftm.ftclnt.Stats()
+	if err != nil {
+		db.DPrintf(db.FTTASKMGR, "ExecuteTasks: Stats err %v", err)
+		return nil, err
+	}
+	db.DPrintf(db.FTTASKMGR, "ExecuteTasks: done %v", stats)
+	return stats, nil
 }
 
 func (ftm *FtTaskCoord[Data, Output]) startTasks(ids []fttask_clnt.TaskId, newProc TnewProc[Data]) error {

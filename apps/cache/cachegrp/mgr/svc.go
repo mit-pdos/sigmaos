@@ -84,9 +84,11 @@ func (cs *CachedSvc) addBackupServerWithSigmaPath(sigmaPath string, srvID int, e
 	if err := binary.Write(inputBuf, binary.LittleEndian, uint32(topN)); err != nil {
 		return err
 	}
-	bootScriptInput := inputBuf.Bytes()
-	p.SetBootScript(cs.bootScript, bootScriptInput)
-	p.SetRunBootScript(delegatedInit)
+	if delegatedInit {
+		bootScriptInput := inputBuf.Bytes()
+		p.SetBootScript(cs.bootScript, bootScriptInput)
+		p.SetRunBootScript(delegatedInit)
+	}
 	err := cs.Spawn(p)
 	if err != nil {
 		return err

@@ -918,25 +918,28 @@ func TestScaleCachedBackup(t *testing.T) {
 		clientDelay     time.Duration   = 0 * time.Second
 		sleep           time.Duration   = 0 * time.Second
 		delegateInit    []bool          = []bool{true, false}
+		prewarmRealm    []bool          = []bool{true, false}
 		useEPCache      bool            = true
 		nkeys           int             = 5000
-		topN            int             = 0
+		topN            int             = 100
 	)
 	ts, err := NewTstate(t)
 	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {
 		return
 	}
-	for _, delegate := range delegateInit {
-		db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
-		benchName := benchNameBase
-		if delegate {
-			benchName += "_delegate"
-		}
-		getLeaderCmd := GetCachedBackupClientCmdConstructor(true, len(driverVMs), rps, dur, sleep, numCachedBackup, nkeys, topN, delegate, useEPCache)
-		getFollowerCmd := GetCachedBackupClientCmdConstructor(false, len(driverVMs), rps, dur, sleep, numCachedBackup, nkeys, topN, delegate, useEPCache)
-		ran := ts.RunParallelClientBenchmark(benchName, driverVMs, getLeaderCmd, getFollowerCmd, startK8sHotelApp, stopK8sHotelApp, clientDelay, numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost)
-		if oneByOne && ran {
-			return
+	for _, prewarm := range prewarmRealm {
+		for _, delegate := range delegateInit {
+			db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
+			benchName := benchNameBase
+			if delegate {
+				benchName += "_delegate"
+			}
+			getLeaderCmd := GetCachedBackupClientCmdConstructor(true, len(driverVMs), rps, dur, sleep, numCachedBackup, nkeys, topN, delegate, useEPCache, prewarm)
+			getFollowerCmd := GetCachedBackupClientCmdConstructor(false, len(driverVMs), rps, dur, sleep, numCachedBackup, nkeys, topN, delegate, useEPCache, prewarm)
+			ran := ts.RunParallelClientBenchmark(benchName, driverVMs, getLeaderCmd, getFollowerCmd, startK8sHotelApp, stopK8sHotelApp, clientDelay, numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost)
+			if oneByOne && ran {
+				return
+			}
 		}
 	}
 }

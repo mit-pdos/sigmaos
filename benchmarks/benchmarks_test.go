@@ -1802,6 +1802,10 @@ func TestCachedBackup(t *testing.T) {
 	}
 	defer mrts.Shutdown()
 
+	if PREWARM_REALM {
+		benchmarks.WarmupRealm(mrts.GetRealm(REALM1), []string{"cached-backup"})
+	}
+
 	ts1 := mrts.GetRealm(REALM1)
 
 	p := newRealmPerf(mrts.GetRealm(REALM1))

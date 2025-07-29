@@ -685,7 +685,7 @@ func GetCosSimClientCmdConstructor(cossimReqName string, leader bool, numClients
 	}
 }
 
-func GetCachedBackupClientCmdConstructor(leader bool, numClients int, rps []int, dur []time.Duration, clientDelay time.Duration, numCachedBackup int, nkeys int, topN int, delegateInit, useEPCache bool) GetBenchCmdFn {
+func GetCachedBackupClientCmdConstructor(leader bool, numClients int, rps []int, dur []time.Duration, clientDelay time.Duration, numCachedBackup int, nkeys int, topN int, delegateInit, useEPCache, prewarm bool) GetBenchCmdFn {
 	return func(bcfg *BenchConfig, ccfg *ClusterConfig) string {
 		const (
 			debugSelectors    string = "\"TEST;THROUGHPUT;CPU_UTIL;SPAWN_LAT;PROXY_LAT;\""
@@ -710,6 +710,10 @@ func GetCachedBackupClientCmdConstructor(leader bool, numClients int, rps []int,
 		if delegateInit {
 			delegateInitStr = "--backup_cached_delegated_init"
 		}
+		prewarmStr := ""
+		if prewarm {
+			prewarmStr := "--prewarm_realm"
+		}
 		return fmt.Sprintf("export SIGMADEBUG=%s; export SIGMAVALGRIND=%s; export SIGMAPERF=%s; go clean -testcache; "+
 			"ulimit -n 100000; "+
 			"./set-cores.sh --set 1 --start 2 --end 39 > /dev/null 2>&1 ; "+
@@ -725,7 +729,7 @@ func GetCachedBackupClientCmdConstructor(leader bool, numClients int, rps []int,
 			"--backup_cached_top_n %s "+
 			"%s "+ // backup_cached_delegated_init
 			"%s "+ // cached_backup_use_epcache
-			"--prewarm_realm "+
+			"%s "+ // prewarm
 			"> /tmp/bench.out 2>&1 ;",
 			debugSelectors,
 			valgrindSelectors,
@@ -743,6 +747,7 @@ func GetCachedBackupClientCmdConstructor(leader bool, numClients int, rps []int,
 			strconv.Itoa(topN),
 			delegateInitStr,
 			cachedBackupUseEPCacheStr,
+			prewarmStr,
 		)
 	}
 }

@@ -154,7 +154,7 @@ func (imgd *ImgSrv) processResults(ch <-chan fttask_mgr.Tresult[imgresize.Ttask,
 		} else if res.Err == nil && res.Status.IsStatusErr() && !res.Status.IsCrashed() {
 			db.DPrintf(db.ALWAYS, "task %v errored status %v msg %v", res.Id, res.Status, res.Status.Msg())
 			spstats.Inc(&imgd.AStat.Nerror, 1)
-			// mark task as done, but return error
+			// mark task as errored out
 			if err := imgd.ftclnt.MoveTasks([]fttask_clnt.TaskId{res.Id}, fttask_clnt.ERROR); err != nil {
 				db.DFatalf("MoveTasks %v error err %v", res.Id, err)
 			}
@@ -162,7 +162,7 @@ func (imgd *ImgSrv) processResults(ch <-chan fttask_mgr.Tresult[imgresize.Ttask,
 			//if err := ftm.AddTaskOutputs([]ftclnt.TaskId{id}, status, false); err != nil {
 			//	db.DFatalf("AddTaskOutputs %v error err %v", id, err)
 			//}
-		} else { // an error, task crashed, or was evicted; make it runnable again
+		} else { // an error: task crashed, or was evicted; make it runnable again
 			db.DPrintf(db.FTTASKMGR, "task %v failed %v err %v msg %q", res.Id, res.Status, res.Err, res.Status.Msg())
 			spstats.Inc(&imgd.AStat.Nfail, 1)
 			if err := imgd.ftclnt.MoveTasks([]fttask_clnt.TaskId{res.Id}, fttask_clnt.TODO); err != nil {

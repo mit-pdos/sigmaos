@@ -19,7 +19,7 @@ func PrintMRStats(fsl *fslib.FsLib, jobRoot, job string) error {
 		return err
 	}
 	dec := json.NewDecoder(rdr)
-	fmt.Println("=== STATS:")
+	fmt.Println("==== STATS:")
 	totIn := sp.Tlength(0)
 	totOut := sp.Tlength(0)
 	totWTmp := sp.Tlength(0)
@@ -45,7 +45,7 @@ func PrintMRStats(fsl *fslib.FsLib, jobRoot, job string) error {
 	for _, r := range results {
 		fmt.Printf("[%s, kid:%v]:\n\tin %v out %v tot %v inner %vms outer %vms (%s)\n", r.Task, r.KernelID, humanize.Bytes(uint64(r.In)), humanize.Bytes(uint64(r.Out)), test.Mbyte(r.In+r.Out), r.MsInner, r.MsOuter, test.TputStr(r.In+r.Out, r.MsInner))
 	}
-	fmt.Printf("=== totIn %s (%d) totOut %s tmpOut %s tmpIn %s\n",
+	fmt.Printf("==== totIn %s (%d) totOut %s tmpOut %s tmpIn %s\n",
 		humanize.Bytes(uint64(totIn)), totIn,
 		humanize.Bytes(uint64(totOut)),
 		humanize.Bytes(uint64(totWTmp)),

@@ -1,5 +1,6 @@
 // The ftttaskmgr package executes tasks as procs and returns the
-// results to client through a Tresult channel.
+// results of each proc to the client of fttaskmgr through a Tresult
+// channel.
 package fttaskmgr
 
 import (

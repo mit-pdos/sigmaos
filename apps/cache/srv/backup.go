@@ -19,18 +19,22 @@ const (
 
 func RunCacheSrvBackup(cachedir, jobname, shardpn string, nshard int, useEPCache bool, topN int) error {
 	pe := proc.GetProcEnv()
+	start := time.Now()
 	s, err := NewCacheSrv(pe, cachedir, shardpn, nshard, useEPCache)
 	if err != nil {
 		return err
 	}
+	perf.LogSpawnLatency("Backup.NewCacheSrv", pe.GetPID(), pe.GetSpawnTime(), start)
 	// Get peer name
 	peer := filepath.Base(shardpn)
 	peerpn := cachedir + cachegrp.Server(peer)
 	db.DPrintf(db.CACHESRV, "Peer name: %v", peer)
+	start = time.Now()
 	cc := cacheclnt.NewCacheClnt(s.ssrv.SigmaClnt().FsLib, jobname, nshard)
+	perf.LogSpawnLatency("Backup.NewCacheClnt", pe.GetPID(), pe.GetSpawnTime(), start)
 	// TODO: don't do this with delegation, once we get lazy RPC channel creation working
 	ep, _ := pe.GetCachedEndpoint(peerpn)
-	start := time.Now()
+	start = time.Now()
 	// First, mount the peer
 	if err := s.ssrv.SigmaClnt().MountTree(ep, rpc.RPC, filepath.Join(peerpn, rpc.RPC)); err != nil {
 		db.DFatalf("Err mount peer: %v", err)

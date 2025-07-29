@@ -9,7 +9,7 @@ import (
 	"sigmaos/apps/imgresize/proto"
 	db "sigmaos/debug"
 	fttask_clnt "sigmaos/ft/task/clnt"
-	fttask_mgr "sigmaos/ft/task/procmgr"
+	fttask_mgr "sigmaos/ft/task/fttaskmgr"
 )
 
 type ImgSrvRPC struct {

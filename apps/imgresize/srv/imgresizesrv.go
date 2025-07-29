@@ -11,7 +11,7 @@ import (
 	"sigmaos/ft/leaderclnt"
 	"sigmaos/ft/task"
 	fttask_clnt "sigmaos/ft/task/clnt"
-	fttask_mgr "sigmaos/ft/task/procmgr"
+	fttask_mgr "sigmaos/ft/task/fttaskmgr"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"

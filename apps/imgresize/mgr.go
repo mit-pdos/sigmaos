@@ -10,7 +10,7 @@ import (
 	"sigmaos/ft/procgroupmgr"
 	"sigmaos/ft/task"
 	fttask_clnt "sigmaos/ft/task/clnt"
-	fttask_mgr "sigmaos/ft/task/procmgr"
+	fttask_mgr "sigmaos/ft/task/fttaskmgr"
 	fttask_srv "sigmaos/ft/task/srv"
 	"sigmaos/proc"
 	"sigmaos/serr"

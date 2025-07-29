@@ -7,39 +7,39 @@ import (
 
 	procapi "sigmaos/api/proc"
 	db "sigmaos/debug"
-	ftclnt "sigmaos/ft/task/clnt"
+	fttask_clnt "sigmaos/ft/task/clnt"
 	"sigmaos/proc"
-	sp "sigmaos/sigmap"
 )
 
-type Tresult struct {
+type Tresult[Data any, Output any] struct {
 	Ms     time.Duration
 	Err    error
 	Status *proc.Status
-	Pid    sp.Tpid
-	Id     ftclnt.TaskId
+	Proc   *proc.Proc
+	Id     fttask_clnt.TaskId
+	Ftclnt fttask_clnt.FtTaskClnt[Data, Output]
 }
 
 type FtTaskCoord[Data any, Output any] struct {
-	ftclnt.FtTaskClnt[Data, Output]
-	procapi.ProcAPI
-	chResult chan<- Tresult
+	ftclnt   fttask_clnt.FtTaskClnt[Data, Output]
+	pclnt    procapi.ProcAPI
+	chResult chan<- Tresult[Data, Output]
 }
 
-type TnewProc[Data any] func(ftclnt.Task[Data]) (*proc.Proc, error)
+type TnewProc[Data any] func(fttask_clnt.Task[Data]) (*proc.Proc, error)
 
-func NewFtTaskCoord[Data any, Output any](pclnt procapi.ProcAPI, ft ftclnt.FtTaskClnt[Data, Output], ch chan<- Tresult) (*FtTaskCoord[Data, Output], error) {
+func NewFtTaskCoord[Data any, Output any](pclnt procapi.ProcAPI, ft fttask_clnt.FtTaskClnt[Data, Output], ch chan<- Tresult[Data, Output]) (*FtTaskCoord[Data, Output], error) {
 	return &FtTaskCoord[Data, Output]{
-		ProcAPI:    pclnt,
-		FtTaskClnt: ft,
-		chResult:   ch,
+		pclnt:    pclnt,
+		ftclnt:   ft,
+		chResult: ch,
 	}, nil
 }
 
 func (ftm *FtTaskCoord[Data, Output]) ExecuteTasks(mkProc TnewProc[Data]) {
-	chTask := make(chan []ftclnt.TaskId)
+	chTask := make(chan []fttask_clnt.TaskId)
 
-	go ftclnt.GetTasks(ftm, chTask)
+	go fttask_clnt.GetTasks(ftm.ftclnt, chTask)
 
 	for tasks := range chTask {
 		err := ftm.startTasks(tasks, mkProc)
@@ -50,10 +50,10 @@ func (ftm *FtTaskCoord[Data, Output]) ExecuteTasks(mkProc TnewProc[Data]) {
 	db.DPrintf(db.FTTASKMGR, "ExecuteTasks: done")
 }
 
-func (ftm *FtTaskCoord[Data, Output]) startTasks(ids []ftclnt.TaskId, newProc TnewProc[Data]) error {
+func (ftm *FtTaskCoord[Data, Output]) startTasks(ids []fttask_clnt.TaskId, newProc TnewProc[Data]) error {
 	db.DPrintf(db.FTTASKMGR, "runTasks %v", len(ids))
 	start := time.Now()
-	tasks, err := ftm.ReadTasks(ids)
+	tasks, err := ftm.ftclnt.ReadTasks(ids)
 	if err != nil {
 		db.DPrintf(db.FTTASKMGR, "ReadTasks %v err %v", tasks, err)
 		return err
@@ -79,13 +79,13 @@ func (ftm *FtTaskCoord[Data, Output]) startTasks(ids []ftclnt.TaskId, newProc Tn
 	return nil
 }
 
-func (ftm *FtTaskCoord[Data, Output]) runTask(p *proc.Proc, t ftclnt.TaskId) {
+func (ftm *FtTaskCoord[Data, Output]) runTask(p *proc.Proc, t fttask_clnt.TaskId) {
 	db.DPrintf(db.FTTASKMGR, "prep to spawn task %v %v", p.GetPid(), p.Args)
 	start := time.Now()
-	err := ftm.Spawn(p)
+	err := ftm.pclnt.Spawn(p)
 	if err != nil {
 		db.DPrintf(db.ALWAYS, "Couldn't spawn a task %v, err: %v", t, err)
-		if err := ftm.MoveTasks([]ftclnt.TaskId{t}, ftclnt.TODO); err != nil {
+		if err := ftm.ftclnt.MoveTasks([]fttask_clnt.TaskId{t}, fttask_clnt.TODO); err != nil {
 			db.DFatalf("MoveTasks %v TODO err %v", t, err)
 		}
 	} else {
@@ -94,16 +94,17 @@ func (ftm *FtTaskCoord[Data, Output]) runTask(p *proc.Proc, t ftclnt.TaskId) {
 	}
 }
 
-func (ftm *FtTaskCoord[Data, Output]) waitForTask(start time.Time, p *proc.Proc, id ftclnt.TaskId) {
-	ftm.WaitStart(p.GetPid())
+func (ftm *FtTaskCoord[Data, Output]) waitForTask(start time.Time, p *proc.Proc, id fttask_clnt.TaskId) {
+	ftm.pclnt.WaitStart(p.GetPid())
 	db.DPrintf(db.FTTASKMGR, "Start Latency %v", time.Since(start))
-	status, err := ftm.WaitExit(p.GetPid())
+	status, err := ftm.pclnt.WaitExit(p.GetPid())
 	ms := time.Since(start)
-	ftm.chResult <- Tresult{
+	ftm.chResult <- Tresult[Data, Output]{
 		Ms:     ms,
 		Err:    err,
 		Status: status,
-		Pid:    p.GetPid(),
+		Proc:   p,
 		Id:     id,
+		Ftclnt: ftm.ftclnt,
 	}
 }

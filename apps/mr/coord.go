@@ -500,7 +500,7 @@ func (c *Coord) Work() {
 
 	var err error
 
-	ch := make(chan ftmgr.Tresult)
+	ch := make(chan ftmgr.Tresult[[]byte, []byte])
 	c.mftclnt = ftclnt.NewFtTaskClnt[Bin, Bin](c.FsLib, c.mftid, &f)
 	c.mcoord, err = fttaskmgr.NewFtTaskCoord[[]byte, []byte](c.SigmaClnt, c.mftclnt.AsRawClnt(), ch)
 	c.rftclnt = ftclnt.NewFtTaskClnt[TreduceTask, Bin](c.FsLib, c.rftid, &f)
@@ -574,7 +574,7 @@ func (c *Coord) Work() {
 			c.rcoord.ExecuteTasks(c.reducerProc)
 		}()
 
-		c.processResult(nil, m, r) // XXX fix
+		c.processResult(ch, m, r)
 
 		wg.Wait()
 
@@ -625,27 +625,49 @@ func (c *Coord) mgr(ch chan<- Tresult, ft ftclnt.FtTaskClnt[[]byte, []byte], f N
 	spstats.Inc(&c.stat.Ntask, int64(n))
 }
 
-func (c *Coord) processResult(ch <-chan Tresult, m, r int32) {
+func (c *Coord) processResult(ch <-chan ftmgr.Tresult[[]byte, []byte], m, r int32) {
 	db.DPrintf(db.MR_COORD, "processResults %d %d", m, r)
 	nM := int(m)
 	nR := int(r)
 	nRestart := 0
 	ts := make(map[ftclnt.TaskId]bool)
 	for res := range ch {
-		if res.res != nil {
-			db.DPrintf(db.MR_COORD, "processResult: task %v (%t) res: msInner %d msOuter %d res %v", res.t, res.res.IsM, res.res.MsInner, res.res.MsOuter, res.res)
-		} else {
-			db.DPrintf(db.MR_COORD, "processResult: task wo res %v ok %v msg %v pid %v", res.t, res.ok, res.msg, res.pid)
-		}
-		if res.ok {
-			if err := c.AppendFileJson(MRstats(c.jobRoot, c.job), res.res); err != nil {
-				db.DFatalf("Appendfile %v err %v\n", MRstats(c.jobRoot, c.job), err)
+		db.DPrintf(db.MR_COORD, "processResult: res %v", res)
+		if res.Err == nil && res.Status.IsStatusOK() {
+			if c.maliciousMapper > 0 && res.Proc.GetProgram() == MALICIOUS_MAPPER_BIN {
+				// If running with malicious mapper, then exit status should not be OK.
+				// The task should be restarted automatically by the MR FT
+				// infrastructure.  If the exit status *was* OK, then the output files
+				// won't match, because the malicious mapper doesn't actually do the map
+				// (it just touches some buckets it shouldn't have access to). Because of
+				// this, letting the coordinator proceed by marking the task as done
+				// should cause the test to fail.
+				db.DPrintf(db.ERROR, "!!! WARNING: MALICIOUS MAPPER SUCCEEDED !!!")
 			}
-			if res.res.IsM {
-				if _, ok := ts[res.t]; ok {
-					db.DFatalf("task id already finished %v", res.t)
+			r, err := NewResult(res.Status.Data())
+			if err != nil {
+				db.DFatalf("NewResult %v err %v", res.Status.Data(), err)
+			}
+			r.MsOuter = res.Ms.Milliseconds()
+			db.DPrintf(db.MR_COORD, "Task results %v", r)
+			// mark task as done
+			start := time.Now()
+			encoded, err := ftclnt.Encode(r.OutBin)
+			if err != nil {
+				db.DFatalf("Encode %v err %v", r.OutBin, err)
+			}
+			if err := res.Ftclnt.AddTaskOutputs([]ftclnt.TaskId{res.Id}, [][]byte{encoded}, true); err != nil {
+				db.DFatalf("MarkDone %v done err %v", res.Id, err)
+			}
+			db.DPrintf(db.MR_COORD, "MarkDone latency: lat %v", time.Since(start))
+			if err := c.AppendFileJson(MRstats(c.jobRoot, c.job), r); err != nil {
+				db.DFatalf("Appendfile %v err %v", MRstats(c.jobRoot, c.job), err)
+			}
+			if r.IsM {
+				if _, ok := ts[res.Id]; ok {
+					db.DFatalf("task id already finished %v", res.Id)
 				}
-				ts[res.t] = true
+				ts[res.Id] = true
 				nM += 1
 				if nM >= c.nmaptask { // kick off reducers?
 					if err := c.makeReduceBins(); err != nil {
@@ -663,8 +685,16 @@ func (c *Coord) processResult(ch <-chan Tresult, m, r int32) {
 			}
 			db.DPrintf(db.ALWAYS, "tasks done %d/%d\n", nM+nR, c.nmaptask+c.nreducetask)
 		} else {
-			if res.msg == RESTART {
+			db.DPrintf(db.MR, "Task failed %v status %v", res.Id, res.Status)
+			if res.Status != nil && res.Status.Msg() == RESTART {
+				// reducer indicates to run some mappers again
+				s := newStringSlice(res.Status.Data().([]interface{}))
+				c.restart(s, res.Id)
 				nRestart += 1
+			} else { // if failure but not restart, rerun task immediately again
+				if err := res.Ftclnt.MoveTasks([]ftclnt.TaskId{res.Id}, ftclnt.TODO); err != nil {
+					db.DFatalf("MarkRunnable %v err %v", res.Id, err)
+				}
 			}
 			c.stat.Nfail.Add(1)
 		}

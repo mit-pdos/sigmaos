@@ -120,7 +120,7 @@ func (imgd *ImgSrv) Work() {
 		db.DFatalf("MoveTasksByStatus err %v", err)
 	}
 
-	ch := make(chan fttask_mgr.Tresult)
+	ch := make(chan fttask_mgr.Tresult[imgresize.Ttask, any])
 	ftc, err := fttask_mgr.NewFtTaskCoord(imgd.sc.ProcAPI, imgd.ftclnt, ch)
 	if err != nil {
 		db.DFatalf("NewFtTaskCoord err %v", err)
@@ -144,7 +144,7 @@ func (imgd *ImgSrv) Work() {
 	ssrv.SrvExit(proc.NewStatusInfo(proc.StatusOK, "OK", st))
 }
 
-func (imgd *ImgSrv) processResults(ch <-chan fttask_mgr.Tresult) {
+func (imgd *ImgSrv) processResults(ch <-chan fttask_mgr.Tresult[imgresize.Ttask, any]) {
 	for res := range ch {
 		if res.Err == nil && res.Status.IsStatusOK() {
 			spstats.Inc(&imgd.AStat.Nok, 1)

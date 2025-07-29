@@ -2,6 +2,7 @@ package benchmarks_test
 
 import (
 	"strconv"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 
@@ -11,25 +12,29 @@ import (
 	epsrv "sigmaos/apps/epcache/srv"
 	db "sigmaos/debug"
 	"sigmaos/proc"
+	mschedclnt "sigmaos/sched/msched/clnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )
 
 type CachedBackupJobInstance struct {
-	jobName       string
-	sigmaos       bool
-	ncache        int
-	cacheMCPU     proc.Tmcpu
-	cacheGC       bool
-	useEPCache    bool
-	nKV           int
-	delegatedInit bool
-	topN          int
-	ready         chan bool
-	epcj          *epsrv.EPCacheJob
-	cm            *cachegrpmgr.CacheMgr
-	cc            *cachegrpclnt.CachedSvcClnt
-	primaryEPs    []*sp.Tendpoint
+	jobName          string
+	sigmaos          bool
+	ncache           int
+	cacheMCPU        proc.Tmcpu
+	cacheGC          bool
+	useEPCache       bool
+	nKV              int
+	delegatedInit    bool
+	topN             int
+	ready            chan bool
+	warmCachedSrvKID string
+	cacheKIDs        map[string]bool
+	epcj             *epsrv.EPCacheJob
+	msc              *mschedclnt.MSchedClnt
+	cm               *cachegrpmgr.CacheMgr
+	cc               *cachegrpclnt.CachedSvcClnt
+	primaryEPs       []*sp.Tendpoint
 	*test.RealmTstate
 }
 
@@ -42,6 +47,8 @@ func NewCachedBackupJob(ts *test.RealmTstate, jobName string, ncache int, cacheM
 		cacheMCPU:     cacheMCPU,
 		cacheGC:       cacheGC,
 		useEPCache:    useEPCache,
+		cacheKIDs:     make(map[string]bool),
+		msc:           mschedclnt.NewMSchedClnt(ts.SigmaClnt.FsLib, sp.NOT_SET),
 		nKV:           nKV,
 		delegatedInit: delegatedInit,
 		topN:          topN,
@@ -73,6 +80,49 @@ func NewCachedBackupJob(ts *test.RealmTstate, jobName string, ncache int, cacheM
 		}
 		ji.primaryEPs[i] = ep
 	}
+	// Find machines were cached is running
+	if _, err := ji.msc.GetMScheds(); !assert.Nil(ts.Ts.T, err, "Err GetMScheds: %v", err) {
+		return ji
+	}
+	nMSched, err := ji.msc.NMSched()
+	if !assert.Nil(ts.Ts.T, err, "Err GetNMSched: %v", err) {
+		return ji
+	}
+	foundCached := false
+	for i := 0; i < 5; i++ {
+		runningProcs, err := ji.msc.GetRunningProcs(nMSched)
+		if !assert.Nil(ts.Ts.T, err, "Err GetRunningProcs: %v", err) {
+			return ji
+		}
+		for _, p := range runningProcs[ts.GetRealm()] {
+			// Record where relevant programs are running
+			switch p.GetProgram() {
+			case "cached":
+				ji.cacheKIDs[p.GetKernelID()] = true
+				ji.warmCachedSrvKID = p.GetKernelID()
+				db.DPrintf(db.TEST, "cached[%v] running on kernel %v", p.GetPid(), p.GetKernelID())
+				foundCached = true
+			default:
+			}
+		}
+		if !foundCached {
+			time.Sleep(5 * time.Second)
+		}
+	}
+	if !assert.True(ts.Ts.T, foundCached, "Err didn't find cached srv") {
+		return ji
+	}
+	// Warm up an msched currently running a cached shard with the cached-backup
+	// bin. No cached-backup server will be able to run on this machine (the
+	// CPU reservation conflicts with that of the cached server), so we can be
+	// sure that future servers will try to download the cached-backup binary
+	// from this msched.
+	db.DPrintf(db.TEST, "Target kernel to run prewarm with CachedBackup bin: %v", ji.warmCachedSrvKID)
+	err = ji.msc.WarmProcd(ji.warmCachedSrvKID, ts.Ts.ProcEnv().GetPID(), ts.GetRealm(), "cached-backup-v"+sp.Version, ts.Ts.ProcEnv().GetSigmaPath(), proc.T_LC)
+	if !assert.Nil(ts.Ts.T, err, "Err warming with cached-backup bin: %v", err) {
+		return ji
+	}
+	db.DPrintf(db.TEST, "Warmed kid %v with CachedBackup bin", ji.warmCachedSrvKID)
 	return ji
 }
 

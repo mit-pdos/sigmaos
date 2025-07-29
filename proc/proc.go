@@ -13,6 +13,7 @@ import (
 
 	"google.golang.org/protobuf/proto"
 
+	rpcproto "sigmaos/rpc/proto"
 	sp "sigmaos/sigmap"
 )
 
@@ -402,7 +403,7 @@ func (p *Proc) GetNamedEndpoint() *sp.TendpointProto {
 }
 
 func (p *Proc) GetBootScript() []byte {
-	return p.BootScript
+	return p.Blob.Iov[0]
 }
 
 func (p *Proc) GetBootScriptInput() []byte {
@@ -410,7 +411,9 @@ func (p *Proc) GetBootScriptInput() []byte {
 }
 
 func (p *Proc) SetBootScript(b []byte, input []byte) {
-	p.BootScript = b
+	p.Blob = &rpcproto.Blob{
+		Iov: [][]byte{b},
+	}
 	p.BootScriptInput = input
 }
 

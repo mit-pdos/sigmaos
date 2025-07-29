@@ -80,6 +80,9 @@ func RunCacheSrvBackup(cachedir, jobname, shardpn string, nshard int, useEPCache
 		}
 	}
 	perf.LogSpawnLatency("Backup.LoadCacheState", pe.GetPID(), pe.GetSpawnTime(), start)
+	if !db.WillBePrinted(db.SPAWN_LAT) {
+		db.DPrintf(db.ALWAYS, "LoadCacheState & ready to run e2e %v op %v", time.Since(pe.GetSpawnTime()), start)
+	}
 	db.DPrintf(db.CACHESRV, "Loaded cache state from peer %v", peerpn)
 	// Run server
 	s.ssrv.RunServer()

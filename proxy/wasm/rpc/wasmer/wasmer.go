@@ -51,7 +51,7 @@ func (wrt *WasmerRuntime) PrecompileModule(wasmBytes []byte) ([]byte, error) {
 	return compiledModule, nil
 }
 
-func (wrt *WasmerRuntime) RunModule(pid sp.Tpid, compiledModule []byte, inputBytes []byte) error {
+func (wrt *WasmerRuntime) RunModule(pid sp.Tpid, spawnTime time.Time, compiledModule []byte, inputBytes []byte) error {
 	engine := wasmer.NewEngine()
 	store := wasmer.NewStore(engine)
 	module, err := wasmer.DeserializeModule(store, compiledModule)
@@ -123,7 +123,7 @@ func (wrt *WasmerRuntime) RunModule(pid sp.Tpid, compiledModule []byte, inputByt
 		db.DPrintf(db.WASMRT_ERR, "[%v] Err get WASM instance memory: %v", pid, err)
 		return err
 	}
-	perf.LogSpawnLatency("WASM module ran", pid, perf.TIME_NOT_SET, start)
+	perf.LogSpawnLatency("WASM module ran", pid, spawnTime, start)
 	db.DPrintf(db.WASMRT, "[%v] Successfully ran WASM boot script", pid)
 	return nil
 }

@@ -176,7 +176,7 @@ func (ps *procState) createSigmaClnt(spps *SPProxySrv) {
 		// script
 		rpcAPI := NewWASMRPCProxy(spps, sc, ps.p)
 		ps.wrt = wasmrt.NewWasmerRuntime(rpcAPI)
-		go ps.wrt.RunModule(ps.p.GetPid(), ps.p.GetBootScript(), ps.p.GetBootScriptInput())
+		go ps.wrt.RunModule(ps.p.GetPid(), ps.p.GetSpawnTime(), ps.p.GetBootScript(), ps.p.GetBootScriptInput())
 	}
 	var epcc *epcacheclnt.EndpointCacheClnt
 	// Initialize a procclnt too

@@ -13,6 +13,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/proc"
 	mschedclnt "sigmaos/sched/msched/clnt"
+	"sigmaos/sched/msched/proc/chunk"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )
@@ -131,7 +132,7 @@ func (ji *CachedBackupJobInstance) StartCachedBackupJob() {
 	// TODO: loadgen
 	// TODO: more than one primary server
 	srvID := 0
-	if err := ji.cm.AddBackupServer(srvID, ji.primaryEPs[srvID], ji.delegatedInit, ji.topN); !assert.Nil(ji.Ts.T, err, "Err add backup server(%v): %v", srvID, err) {
+	if err := ji.cm.AddBackupServerWithSigmaPath(chunk.ChunkdPath(ji.warmCachedSrvKID), srvID, ji.primaryEPs[srvID], ji.delegatedInit, ji.topN); !assert.Nil(ji.Ts.T, err, "Err add backup server(%v): %v", srvID, err) {
 		return
 	}
 	db.DPrintf(db.TEST, "Done add backup server")

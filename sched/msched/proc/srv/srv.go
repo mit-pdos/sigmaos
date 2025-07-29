@@ -361,11 +361,13 @@ func (ps *ProcSrv) Run(ctx fs.CtxI, req proto.RunReq, res *proto.RunRep) error {
 	// If this proc uses SPProxy, inform spproxy that there is a proc incoming so
 	// that it can pre-create the proc's sigmaclnt
 	if uproc.GetProcEnv().UseSPProxy {
-		start := time.Now()
-		if err := ps.spc.InformIncomingProc(uproc); err != nil {
-			db.DFatalf("Err inform spproxyclnt incoming proc: %v", err)
-		}
-		perf.LogSpawnLatency("ProcSrv.Run spproxy.InformIncomingProc", uproc.GetPid(), uproc.GetSpawnTime(), start)
+		go func() {
+			start := time.Now()
+			if err := ps.spc.InformIncomingProc(uproc); err != nil {
+				db.DFatalf("Err inform spproxyclnt incoming proc: %v", err)
+			}
+			perf.LogSpawnLatency("ProcSrv.Run spproxy.InformIncomingProc", uproc.GetPid(), uproc.GetSpawnTime(), start)
+		}()
 	}
 	// Assign this uprocsrv to the realm, if not already assigned.
 	if err := ps.assignToRealm(uproc.GetRealm(), uproc.GetPid(), uproc.GetVersionedProgram(), uproc.GetSigmaPath(), uproc.GetSecrets()["s3"], uproc.GetNamedEndpoint()); err != nil {

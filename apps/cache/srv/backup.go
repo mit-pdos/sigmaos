@@ -2,6 +2,7 @@ package srv
 
 import (
 	"path/filepath"
+	"time"
 
 	"sigmaos/apps/cache/cachegrp"
 	cacheclnt "sigmaos/apps/cache/clnt"
@@ -9,6 +10,7 @@ import (
 	"sigmaos/proc"
 	"sigmaos/rpc"
 	sp "sigmaos/sigmap"
+	"sigmaos/util/perf"
 )
 
 const (
@@ -28,11 +30,14 @@ func RunCacheSrvBackup(cachedir, jobname, shardpn string, nshard int, useEPCache
 	cc := cacheclnt.NewCacheClnt(s.ssrv.SigmaClnt().FsLib, jobname, nshard)
 	// TODO: don't do this with delegation, once we get lazy RPC channel creation working
 	ep, _ := pe.GetCachedEndpoint(peerpn)
+	start := time.Now()
 	// First, mount the peer
 	if err := s.ssrv.SigmaClnt().MountTree(ep, rpc.RPC, filepath.Join(peerpn, rpc.RPC)); err != nil {
 		db.DFatalf("Err mount peer: %v", err)
 		return err
 	}
+	perf.LogSpawnLatency("Backup.MountPrimary", pe.GetPID(), pe.GetSpawnTime(), start)
+	start = time.Now()
 	// If not doing delegated initialization, fetch directly from peer
 	if !pe.GetRunBootScript() {
 		hotShards, _, err := cc.GetHotShards(peerpn, uint32(topN))
@@ -70,6 +75,7 @@ func RunCacheSrvBackup(cachedir, jobname, shardpn string, nshard int, useEPCache
 			}
 		}
 	}
+	perf.LogSpawnLatency("Backup.LoadCacheState", pe.GetPID(), pe.GetSpawnTime(), start)
 	db.DPrintf(db.CACHESRV, "Loaded cache state from peer %v", peerpn)
 	// Run server
 	s.ssrv.RunServer()

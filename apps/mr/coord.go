@@ -407,13 +407,8 @@ func (c *Coord) Work() {
 
 	f := c.leaderclnt.Fence()
 
-	var err error
-
-	ch := make(chan ftmgr.Tresult[[]byte, []byte])
 	c.mftclnt = ftclnt.NewFtTaskClnt[Bin, Bin](c.FsLib, c.mftid, &f)
-	c.mcoord, err = fttaskmgr.NewFtTaskCoord[[]byte, []byte](c.SigmaClnt, c.mftclnt.AsRawClnt(), ch)
 	c.rftclnt = ftclnt.NewFtTaskClnt[TreduceTask, Bin](c.FsLib, c.rftid, &f)
-	c.rcoord, err = fttaskmgr.NewFtTaskCoord[[]byte, []byte](c.SigmaClnt, c.rftclnt.AsRawClnt(), ch)
 
 	if err := c.mftclnt.Fence(&f); err != nil {
 		db.DFatalf("Fence mapper err %v", err)
@@ -421,6 +416,11 @@ func (c *Coord) Work() {
 	if err := c.rftclnt.Fence(&f); err != nil {
 		db.DFatalf("Fence reducer err %v", err)
 	}
+
+	var err error
+	ch := make(chan ftmgr.Tresult[[]byte, []byte])
+	c.mcoord, err = fttaskmgr.NewFtTaskCoord[[]byte, []byte](c.SigmaClnt, c.mftclnt.AsRawClnt(), ch)
+	c.rcoord, err = fttaskmgr.NewFtTaskCoord[[]byte, []byte](c.SigmaClnt, c.rftclnt.AsRawClnt(), ch)
 
 	crash.Failer(c.FsLib, crash.MRCOORD_CRASH, func(e crash.Tevent) {
 		crash.CrashMsg(c.stat.String())
@@ -456,21 +456,8 @@ func (c *Coord) Work() {
 		db.DFatalf("NtaskDone reducers err %v\n", err)
 	}
 
-	ids, err := c.mftclnt.GetTasksByStatus(ftclnt.TODO)
-	if err != nil {
-		db.DFatalf(" reducers err %v\n", err)
-	}
-	db.DPrintf(db.MR_COORD, "Recover WIP map tasks %v", ids)
-
-	ids, err = c.rftclnt.GetTasksByStatus(ftclnt.TODO)
-	if err != nil {
-		db.DFatalf(" reducers err %v\n", err)
-	}
-
-	db.DPrintf(db.MR_COORD, "Recover WIP reduce tasks %v", ids)
-
+	start = time.Now()
 	if int(m+r) < c.nmaptask+c.nreducetask {
-		start = time.Now()
 
 		wg := &sync.WaitGroup{}
 		wg.Add(2)
@@ -529,6 +516,14 @@ func (c *Coord) processResult(ch <-chan ftmgr.Tresult[[]byte, []byte], m, r int3
 	nM := int(m)
 	nR := int(r)
 	nRestart := 0
+
+	// we may recovery with all mappers done and we should kick off
+	// the reducers
+	if nM >= c.nmaptask {
+		if err := c.makeReduceBins(); err != nil {
+			db.DFatalf("ReduceBins err %v", err)
+		}
+	}
 	ts := make(map[ftclnt.TaskId]bool)
 	for res := range ch {
 		db.DPrintf(db.MR_COORD, "processResult: res %v", res)

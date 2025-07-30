@@ -254,7 +254,7 @@ func (cksrv *ChunkSrv) fetchChunk(fetchCnt uint64, be *bin, r sp.Trealm, pid sp.
 		start := time.Now()
 		sz, _, err = cksrv.ckclnt.FetchChunk(srv, be.prog, pid, r, s3secret, ck, size, []string{}, b)
 		db.DPrintf(db.CHUNKSRV, "%v: fetchChunk(%v) done: pid %v prog %v ckid %d %v err %v", cksrv.kernelId, fetchCnt, pid, be.prog, ck, []string{srvpath}, err)
-		perf.LogSpawnLatency("%v: ChunkSrv.fetchChunk.FetchChunk(%v) RPC to peer ck %d", pid, perf.TIME_NOT_SET, start, cksrv.kernelId, fetchCnt, ck)
+		perf.LogSpawnLatency("%v: ChunkSrv.fetchChunk.FetchChunk(%v) RPC to peer ck %d tpt:%0.3fMB/s", pid, perf.TIME_NOT_SET, start, cksrv.kernelId, fetchCnt, ck, float64(sz)/time.Since(start).Seconds()/float64(sp.MBYTE))
 		if err == nil {
 			ok = true
 			break
@@ -340,7 +340,7 @@ func (cksrv *ChunkSrv) fetch(realm sp.Trealm, prog string, pid sp.Tpid, s3secret
 		db.DPrintf(db.CHUNKSRV, "%v: Fetch(%v): pid %v prog %v ck %v ok %t err 2 %v", cksrv.kernelId, fetchCnt, pid, prog, ck, ok, err)
 		return 0, "", nil, err
 	}
-	perf.LogSpawnLatency("%v: ChunkSrv.Fetch.fetchChunk(%v) from peer ck %d tpt:%0.3fMB/s", pid, perf.TIME_NOT_SET, s, cksrv.kernelId, fetchCnt, ck, float64(sz)/time.Since(s).Seconds()/float64(sp.MBYTE))
+	perf.LogSpawnLatency("%v: ChunkSrv.Fetch.fetchChunk(%v) from peer ck %d", pid, perf.TIME_NOT_SET, s, cksrv.kernelId, fetchCnt, ck)
 	return sz, srvpath, nil, nil
 }
 

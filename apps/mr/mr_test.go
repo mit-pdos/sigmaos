@@ -71,18 +71,14 @@ func init() {
 	flag.IntVar(&nmap, "nmap", 1, "number of mapper threads")
 	flag.DurationVar(&timeout, "mr-timeout", 0, "timeout")
 
-	e0 := crash.NewEventStart(crash.MRMAP_CRASH, 100, CRASHMAP, 0.33)
-	e1 := crash.NewEventStart(crash.MRMAP_PARTITION, 100, CRASHMAP, 0.33)
+	e0 := crash.NewEvent(crash.MRMAP_CRASH, CRASHMAP, 0.33, crash.WithStart(100))
+	e1 := crash.NewEvent(crash.MRMAP_PARTITION, CRASHMAP, 0.33, crash.WithStart(100))
 	mapEv = crash.NewTeventMapOne(e0)
 	mapEv.Insert(e1)
-	e0 = crash.NewEventStart(crash.MRREDUCE_CRASH, 0, CRASHREDUCE, 0.33)
-	e1 = crash.NewEventStart(crash.MRREDUCE_PARTITION, 0, CRASHREDUCE, 0.33)
+	e0 = crash.NewEvent(crash.MRREDUCE_CRASH, CRASHREDUCE, 0.33)
+	e1 = crash.NewEvent(crash.MRREDUCE_PARTITION, CRASHREDUCE, 0.33)
 	reduceEv = crash.NewTeventMapOne(e0)
 	reduceEv.Insert(e1)
-	// e0 = crash.NewEventStart(crash.MRCOORD_CRASH, 100, CRASHCOORD, 0.33)
-	e1 = crash.NewEventStart(crash.MRCOORD_PARTITION, 100, CRASHCOORD, 0.33)
-	coordEv = crash.NewTeventMapOne(e0)
-	coordEv.Insert(e1)
 }
 
 func TestCompile(t *testing.T) {
@@ -416,13 +412,14 @@ func crashSemPn(l crash.Tselector, i int) string {
 	return fn
 }
 
-func (ts *Tstate) crashServers(srv string, l crash.Tselector, em *crash.TeventMap, n int) {
+func (ts *Tstate) crashServers(srv string, l crash.Tselector, em *crash.TeventMap) {
 	e0, ok := em.Lookup(l)
 	assert.True(ts.mrts.T, ok)
-	db.DPrintf(db.TEST, "crashServers srv %v event %v", srv, e0)
-	for i := 0; i < n; i++ {
-		time.Sleep(CRASHSRV * time.Millisecond)
-		e1 := crash.NewEventPath(string(l), 0, float64(1.0), crashSemPn(l, i+1))
+	d := time.Duration(e0.Delay) * time.Millisecond
+	db.DPrintf(db.TEST, "crashServers srv %v event %v d %v", srv, e0, d)
+	for i := 0; i < e0.N; i++ {
+		time.Sleep(d)
+		e1 := crash.NewEvent(string(l), e0.MaxInterval, e0.Prob, crash.WithPath(crashSemPn(l, i+1)))
 		ts.crashmu.Lock()
 		ts.mrts.GetRealm(test.REALM1).CrashServer(e0, e1, srv)
 		ts.crashmu.Unlock()
@@ -525,7 +522,7 @@ func runN(t *testing.T, em *crash.TeventMap, srvs map[string]crash.Tselector, ma
 	for k, v := range srvs {
 		wg.Add(1)
 		go func(k string, v crash.Tselector) {
-			ts.crashServers(k, v, em, 1)
+			ts.crashServers(k, v, em)
 			wg.Done()
 		}(k, v)
 	}
@@ -609,6 +606,19 @@ func TestCrashReducerOnlyBoth(t *testing.T) {
 }
 
 func TestCrashCoordOnly(t *testing.T) {
+	e0 := crash.NewEvent(crash.MRCOORD_CRASH, CRASHCOORD, 0.33, crash.WithStart(100))
+	e1 := crash.NewEvent(crash.MRCOORD_PARTITION, CRASHCOORD, 0.33, crash.WithStart(100))
+	coordEv = crash.NewTeventMapOne(e0)
+	coordEv.Insert(e1)
+	repeatTest(t, func() bool {
+		_, nr, _ := runN(t, coordEv, nil, 0, false)
+		return nr <= mr.NCOORD
+	}, 10)
+}
+
+func TestCrashPartitionCoordOnly(t *testing.T) {
+	e0 := crash.NewEvent(crash.MRCOORD_PARTITION, CRASHCOORD, 0.33, crash.WithStart(100))
+	coordEv = crash.NewTeventMapOne(e0)
 	repeatTest(t, func() bool {
 		_, nr, _ := runN(t, coordEv, nil, 0, false)
 		return nr <= mr.NCOORD
@@ -621,9 +631,9 @@ func TestCrashTaskAndCoord(t *testing.T) {
 	em.Merge(reduceEv)
 
 	// Crash coord less frequently so that the test doesn't take ~1000s
-	e0 := crash.NewEventStart(crash.MRCOORD_CRASH, 750, CRASHCOORD, 0.05)
+	e0 := crash.NewEvent(crash.MRCOORD_CRASH, CRASHCOORD, 0.05, crash.WithStart(750))
 	coordEv1 := crash.NewTeventMapOne(e0)
-	e1 := crash.NewEventStart(crash.MRCOORD_PARTITION, 750, CRASHCOORD, 0.05)
+	e1 := crash.NewEvent(crash.MRCOORD_PARTITION, CRASHCOORD, 0.05, crash.WithStart(750))
 	coordEv1.Insert(e1)
 	em.Merge(coordEv1)
 
@@ -634,7 +644,8 @@ func TestCrashTaskAndCoord(t *testing.T) {
 }
 
 func TestCrashInfraUx1(t *testing.T) {
-	e0 := crash.NewEventPath(crash.UX_CRASH, 0, float64(1.0), crashSemPn(crash.UX_CRASH, 0))
+	const CRASHDELAY = 200
+	e0 := crash.NewEvent(crash.UX_CRASH, 200, float64(0.3), crash.WithN(10), crash.WithPath(crashSemPn(crash.UX_CRASH, 0)), crash.WithDelay(CRASHDELAY))
 	srvs := make(map[string]crash.Tselector)
 	srvs[sp.UXREL] = crash.UX_CRASH
 	repeatTest(t, func() bool {
@@ -644,7 +655,7 @@ func TestCrashInfraUx1(t *testing.T) {
 }
 
 func TestCrashInfraBESched1(t *testing.T) {
-	e0 := crash.NewEventPath(crash.BESCHED_CRASH, CRASHSRV, float64(1.0), crashSemPn(crash.BESCHED_CRASH, 0))
+	e0 := crash.NewEvent(crash.BESCHED_CRASH, CRASHSRV, float64(1.0), crash.WithPath(crashSemPn(crash.BESCHED_CRASH, 0)), crash.WithDelay(CRASHSRV))
 	srvs := make(map[string]crash.Tselector)
 	srvs[sp.BESCHEDREL] = crash.BESCHED_CRASH
 	ntask, _, st := runN(t, crash.NewTeventMapOne(e0), srvs, 0, false)
@@ -652,7 +663,7 @@ func TestCrashInfraBESched1(t *testing.T) {
 }
 
 func TestCrashInfraMSched1(t *testing.T) {
-	e0 := crash.NewEventPath(crash.MSCHED_CRASH, CRASHCOORD, float64(1.0), crashSemPn(crash.MSCHED_CRASH, 0))
+	e0 := crash.NewEvent(crash.MSCHED_CRASH, CRASHCOORD, float64(1.0), crash.WithPath(crashSemPn(crash.MSCHED_CRASH, 0)), crash.WithDelay(CRASHSRV))
 	srvs := make(map[string]crash.Tselector)
 	srvs[sp.MSCHEDREL] = crash.MSCHED_CRASH
 	ntask, ncoord, st := runN(t, crash.NewTeventMapOne(e0), srvs, 0, false)
@@ -660,7 +671,7 @@ func TestCrashInfraMSched1(t *testing.T) {
 }
 
 func TestCrashInfraProcd1(t *testing.T) {
-	e0 := crash.NewEventPath(crash.PROCD_CRASH, CRASHCOORD, float64(1.0), crashSemPn(crash.PROCD_CRASH, 0))
+	e0 := crash.NewEvent(crash.PROCD_CRASH, CRASHCOORD, float64(1.0), crash.WithPath(crashSemPn(crash.PROCD_CRASH, 0)), crash.WithDelay(CRASHSRV))
 	srvs := make(map[string]crash.Tselector)
 	srvs[sp.PROCDREL] = crash.PROCD_CRASH
 	repeatTest(t, func() bool {
@@ -670,9 +681,9 @@ func TestCrashInfraProcd1(t *testing.T) {
 }
 
 func TestCrashInfraMSchedBESchedUx1(t *testing.T) {
-	e := crash.NewEventPath(crash.UX_CRASH, 0, float64(1.0), crashSemPn(crash.UX_CRASH, 0))
+	e := crash.NewEvent(crash.UX_CRASH, 0, float64(1.0), crash.WithPath(crashSemPn(crash.UX_CRASH, 0)), crash.WithDelay(CRASHSRV))
 	em := crash.NewTeventMapOne(e)
-	e = crash.NewEventPath(crash.MSCHED_CRASH, CRASHCOORD, float64(1.0), crashSemPn(crash.MSCHED_CRASH, 0))
+	e = crash.NewEvent(crash.MSCHED_CRASH, CRASHCOORD, float64(1.0), crash.WithPath(crashSemPn(crash.MSCHED_CRASH, 0)))
 	em.Insert(e)
 	srvs := make(map[string]crash.Tselector)
 	srvs[sp.UXREL] = crash.UX_CRASH

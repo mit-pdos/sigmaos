@@ -28,25 +28,54 @@ var crashfile Tcrashfile
 type Tevent struct {
 	Label string `json:"label"` // see selector.go
 
-	// wait for start ms to start generating events
-	Start int64 `json:"start"`
-
 	// max length of event interval in ms (if <= 0, only once)
 	MaxInterval int64 `json:"maxinterval"`
 
 	// probability of generating event in this interval
 	Prob float64 `json:"prob`
 
-	// delay in ms (interpretable by event creator)
-	Delay int64 `json:"delay"`
+	// wait for start ms to start generating events
+	Start int64 `json:"start"`
 
 	// pathname for, for example, a semaphore to delay event
 	// generation until semaphore has been upped.
 	Path string
+
+	// delay in ms (for event creator)
+	Delay int64 `json:"delay"`
+
+	// number of times to raise the event (for event creator)
+	N int
 }
 
-func NewEvent(l string, mi int64, p float64) Tevent {
-	return Tevent{Label: l, MaxInterval: mi, Prob: p}
+type EventOpt func(*Tevent)
+
+func WithStart(n int64) EventOpt {
+	return func(e *Tevent) { e.Start = n }
+}
+
+func WithN(n int) EventOpt {
+	return func(e *Tevent) { e.N = n }
+}
+
+func WithPath(p string) EventOpt {
+	return func(e *Tevent) { e.Path = p }
+}
+
+func WithDelay(d int64) EventOpt {
+	return func(e *Tevent) { e.Delay = d }
+}
+
+func NewEvent(l string, mi int64, p float64, opts ...EventOpt) Tevent {
+	e := Tevent{Label: l, MaxInterval: mi, Prob: p}
+	e.applyOpts(opts)
+	return e
+}
+
+func (e *Tevent) applyOpts(opts []EventOpt) {
+	for _, opt := range opts {
+		opt(e)
+	}
 }
 
 func NewEventPath(l string, mi int64, p float64, pn string) Tevent {

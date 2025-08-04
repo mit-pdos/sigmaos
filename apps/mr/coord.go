@@ -507,6 +507,7 @@ func (c *Coord) Work() {
 
 	stro := spstats.NewTcounterSnapshot()
 	stro.FillCounters(&c.stat)
+	stro.MergeCounters(c.ProcAPI.Stats())
 	c.ClntExit(proc.NewStatusInfo(proc.StatusOK, "OK", stro))
 	defer c.perf.Done()
 }

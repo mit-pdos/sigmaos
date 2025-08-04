@@ -263,6 +263,17 @@ func (pgm *ProcGroupMgr) manager(n int) {
 	pgm.ch <- gstatus
 }
 
+func (pgm *ProcGroupMgr) Nstart() []int {
+	pgm.mu.Lock()
+	defer pgm.mu.Unlock()
+
+	ns := make([]int, len(pgm.members))
+	for i, m := range pgm.members {
+		ns[i] = m.gen
+	}
+	return ns
+}
+
 func (pgm *ProcGroupMgr) Crash() error {
 	db.DPrintf(db.GROUPMGR, "ProcGroupMgr Crash")
 	pgm.mu.Lock()

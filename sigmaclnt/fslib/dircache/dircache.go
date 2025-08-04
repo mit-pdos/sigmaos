@@ -96,9 +96,9 @@ func (dc *DirCache[E]) Init() {
 	}
 }
 
-func (dc *DirCache[E]) Stats() *spstats.TcounterSnapshot {
+func (dc *DirCache[E]) Stats(prefix string) *spstats.TcounterSnapshot {
 	stro := spstats.NewTcounterSnapshot()
-	stro.FillCounters(&dc.stat)
+	stro.FillCountersPrefix(&dc.stat, prefix)
 	return stro
 }
 

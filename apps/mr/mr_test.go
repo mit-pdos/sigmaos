@@ -658,8 +658,8 @@ func TestCrashInfraBESched(t *testing.T) {
 	srvs[sp.BESCHEDREL] = crash.BESCHED_CRASH
 	repeatTest(t, func() bool {
 		_, _, st := runN(t, crash.NewTeventMapOne(e0), srvs, 0, false)
-		return st.Counters["Ninvalidate"] <= 0
-	}, 1)
+		return st.Counters["BEsched_Ninvalidate"] <= 0
+	}, 5)
 }
 
 func TestCrashInfraMSched(t *testing.T) {

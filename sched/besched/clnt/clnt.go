@@ -40,7 +40,7 @@ func NewBESchedClntMSched(fsl *fslib.FsLib, nextEpoch shardedsvcrpcclnt.AllocFn,
 }
 
 func (besc *BESchedClnt) Stats() *spstats.TcounterSnapshot {
-	return besc.rpcdc.Stats()
+	return besc.rpcdc.Stats("BEsched_")
 }
 
 func (besc *BESchedClnt) chooseBESched(p *proc.Proc) (string, error) {

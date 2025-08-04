@@ -52,9 +52,8 @@ const (
 	CRASHREDUCE = 150
 	CRASHMAP    = 400
 	CRASHCOORD  = 700
-	// CRASHSRV    = 1000
-	CRASHSRV = 500
-	MEM_REQ  = 1000
+	CRASHSRV    = 200
+	MEM_REQ     = 1000
 )
 
 var app string // yaml app file
@@ -643,9 +642,9 @@ func TestCrashTaskAndCoord(t *testing.T) {
 	}, 10)
 }
 
-func TestCrashInfraUx1(t *testing.T) {
+func TestCrashInfraUx(t *testing.T) {
 	const CRASHDELAY = 200
-	e0 := crash.NewEvent(crash.UX_CRASH, 200, float64(0.3), crash.WithN(10), crash.WithPath(crashSemPn(crash.UX_CRASH, 0)), crash.WithDelay(CRASHDELAY))
+	e0 := crash.NewEvent(crash.UX_CRASH, CRASHSRV, float64(0.3), crash.WithN(5), crash.WithPath(crashSemPn(crash.UX_CRASH, 0)), crash.WithDelay(CRASHDELAY))
 	srvs := make(map[string]crash.Tselector)
 	srvs[sp.UXREL] = crash.UX_CRASH
 	repeatTest(t, func() bool {
@@ -654,36 +653,41 @@ func TestCrashInfraUx1(t *testing.T) {
 	}, 5)
 }
 
-func TestCrashInfraBESched1(t *testing.T) {
-	e0 := crash.NewEvent(crash.BESCHED_CRASH, CRASHSRV, float64(1.0), crash.WithPath(crashSemPn(crash.BESCHED_CRASH, 0)), crash.WithDelay(CRASHSRV))
+func TestCrashInfraBESched(t *testing.T) {
+	const T = 500
+	e0 := crash.NewEvent(crash.BESCHED_CRASH, CRASHSRV, float64(1.0), crash.WithN(5), crash.WithPath(crashSemPn(crash.BESCHED_CRASH, 0)), crash.WithDelay(T))
 	srvs := make(map[string]crash.Tselector)
 	srvs[sp.BESCHEDREL] = crash.BESCHED_CRASH
-	ntask, _, st := runN(t, crash.NewTeventMapOne(e0), srvs, 0, false)
-	assert.True(t, st.Counters["Ntask"] >= ntask || st.Counters["Nfail"] >= 0)
+	repeatTest(t, func() bool {
+		_, _, st := runN(t, crash.NewTeventMapOne(e0), srvs, 0, false)
+		return st.Counters["Ninvalidate"] <= 0
+	}, 1)
 }
 
-func TestCrashInfraMSched1(t *testing.T) {
-	e0 := crash.NewEvent(crash.MSCHED_CRASH, CRASHCOORD, float64(1.0), crash.WithPath(crashSemPn(crash.MSCHED_CRASH, 0)), crash.WithDelay(CRASHSRV))
+func TestCrashInfraMSched(t *testing.T) {
+	e0 := crash.NewEvent(crash.MSCHED_CRASH, CRASHSRV, float64(1.0), crash.WithN(5), crash.WithPath(crashSemPn(crash.MSCHED_CRASH, 0)), crash.WithDelay(CRASHSRV))
 	srvs := make(map[string]crash.Tselector)
 	srvs[sp.MSCHEDREL] = crash.MSCHED_CRASH
-	ntask, ncoord, st := runN(t, crash.NewTeventMapOne(e0), srvs, 0, false)
-	assert.True(t, st.Counters["Ntask"] > ntask || st.Counters["Nfail"] > 0 || ncoord > 1)
+	repeatTest(t, func() bool {
+		ntask, ncoord, st := runN(t, crash.NewTeventMapOne(e0), srvs, 0, false)
+		return st.Counters["Ntask"] <= ntask && st.Counters["Nfail"] <= 0 && ncoord <= 1
+	}, 1)
 }
 
-func TestCrashInfraProcd1(t *testing.T) {
-	e0 := crash.NewEvent(crash.PROCD_CRASH, CRASHCOORD, float64(1.0), crash.WithPath(crashSemPn(crash.PROCD_CRASH, 0)), crash.WithDelay(CRASHSRV))
+func TestCrashInfraProcd(t *testing.T) {
+	e0 := crash.NewEvent(crash.PROCD_CRASH, CRASHSRV, float64(1.0), crash.WithN(5), crash.WithPath(crashSemPn(crash.PROCD_CRASH, 0)), crash.WithDelay(CRASHSRV))
 	srvs := make(map[string]crash.Tselector)
 	srvs[sp.PROCDREL] = crash.PROCD_CRASH
 	repeatTest(t, func() bool {
 		ntask, _, st := runN(t, crash.NewTeventMapOne(e0), srvs, 0, false)
-		return st.Counters["Ntask"] <= ntask || st.Counters["Nfail"] <= 0
-	}, 10)
+		return st.Counters["Ntask"] <= ntask && st.Counters["Nfail"] <= 0
+	}, 5)
 }
 
-func TestCrashInfraMSchedBESchedUx1(t *testing.T) {
-	e := crash.NewEvent(crash.UX_CRASH, 0, float64(1.0), crash.WithPath(crashSemPn(crash.UX_CRASH, 0)), crash.WithDelay(CRASHSRV))
+func TestCrashInfraMSchedSchedUx(t *testing.T) {
+	e := crash.NewEvent(crash.UX_CRASH, CRASHSRV, float64(1.0), crash.WithN(5), crash.WithPath(crashSemPn(crash.UX_CRASH, 0)), crash.WithDelay(CRASHSRV))
 	em := crash.NewTeventMapOne(e)
-	e = crash.NewEvent(crash.MSCHED_CRASH, CRASHCOORD, float64(1.0), crash.WithPath(crashSemPn(crash.MSCHED_CRASH, 0)))
+	e = crash.NewEvent(crash.MSCHED_CRASH, CRASHCOORD, float64(1.0), crash.WithN(5), crash.WithPath(crashSemPn(crash.MSCHED_CRASH, 0)))
 	em.Insert(e)
 	srvs := make(map[string]crash.Tselector)
 	srvs[sp.UXREL] = crash.UX_CRASH

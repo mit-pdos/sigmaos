@@ -643,8 +643,7 @@ func TestCrashTaskAndCoord(t *testing.T) {
 }
 
 func TestCrashInfraUx(t *testing.T) {
-	const CRASHDELAY = 200
-	e0 := crash.NewEvent(crash.UX_CRASH, CRASHSRV, float64(0.3), crash.WithN(5), crash.WithPath(crashSemPn(crash.UX_CRASH, 0)), crash.WithDelay(CRASHDELAY))
+	e0 := crash.NewEvent(crash.UX_CRASH, CRASHSRV, float64(0.3), crash.WithN(5), crash.WithPath(crashSemPn(crash.UX_CRASH, 0)), crash.WithDelay(CRASHSRV))
 	srvs := make(map[string]crash.Tselector)
 	srvs[sp.UXREL] = crash.UX_CRASH
 	repeatTest(t, func() bool {
@@ -654,8 +653,7 @@ func TestCrashInfraUx(t *testing.T) {
 }
 
 func TestCrashInfraBESched(t *testing.T) {
-	const T = 500
-	e0 := crash.NewEvent(crash.BESCHED_CRASH, CRASHSRV, float64(1.0), crash.WithN(5), crash.WithPath(crashSemPn(crash.BESCHED_CRASH, 0)), crash.WithDelay(T))
+	e0 := crash.NewEvent(crash.BESCHED_CRASH, CRASHSRV, float64(1.0), crash.WithN(5), crash.WithPath(crashSemPn(crash.BESCHED_CRASH, 0)), crash.WithDelay(CRASHSRV))
 	srvs := make(map[string]crash.Tselector)
 	srvs[sp.BESCHEDREL] = crash.BESCHED_CRASH
 	repeatTest(t, func() bool {

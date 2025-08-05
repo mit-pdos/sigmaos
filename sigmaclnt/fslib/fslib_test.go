@@ -79,11 +79,11 @@ func TestStats(t *testing.T) {
 	}
 	defer ts.Shutdown()
 
-	st, err := ts.Stats()
+	st, err := ts.FsLib.Stats()
 	assert.Nil(t, err)
 	_, err = ts.GetDir(pathname)
 	assert.Nil(t, err)
-	st1, err := ts.Stats()
+	st1, err := ts.FsLib.Stats()
 	assert.Nil(t, err)
 
 	assert.True(t, st1.Path.Counters["Nfid"] == st.Path.Counters["Nfid"])
@@ -1130,14 +1130,14 @@ func TestSymlinkPath(t *testing.T) {
 	err = ts.Symlink([]byte(pathname), fn, 0777)
 	assert.Nil(ts.T, err, "Symlink")
 
-	st, err := ts.Stats()
+	st, err := ts.FsLib.Stats()
 	assert.Nil(t, err)
 
 	sts, err := ts.GetDir(path.MarkResolve(fn))
 	assert.Equal(t, nil, err)
 	assert.True(t, sp.Present(sts, path.Tpathname{DIR1}), DIR1)
 
-	st1, err := ts.Stats()
+	st1, err := ts.FsLib.Stats()
 	assert.Nil(t, err)
 
 	assert.True(t, st1.Path.Counters["Nsym"] == st.Path.Counters["Nsym"]+1)
@@ -1175,14 +1175,14 @@ func TestEndpointLink(t *testing.T) {
 	err = ts.MkEndpointFile(pn, newEndpoint(t, ts, pathname))
 	assert.Nil(ts.T, err, "MkEndpointFile")
 
-	st, err := ts.Stats()
+	st, err := ts.FsLib.Stats()
 	assert.Nil(t, err)
 
 	sts, err := ts.GetDir(path.MarkResolve(pn))
 	assert.Equal(t, nil, err)
 	assert.True(t, sp.Present(sts, path.Tpathname{DIR1}), DIR1)
 
-	st1, err := ts.Stats()
+	st1, err := ts.FsLib.Stats()
 	assert.Nil(t, err)
 
 	assert.True(t, st1.Path.Counters["Nsym"] == st.Path.Counters["Nsym"])
@@ -1211,28 +1211,28 @@ func TestUnionDir(t *testing.T) {
 	err = ts.MkEndpointFile(filepath.Join(pathname, DIR1, "namedself1"), newep)
 	assert.Nil(ts.T, err, "EndpointService")
 
-	st, err := ts.Stats()
+	st, err := ts.FsLib.Stats()
 	assert.Nil(t, err)
 
 	sts, err := ts.GetDir(path.MarkResolve(filepath.Join(pathname, DIR1, sp.ANY)))
 	assert.Equal(t, nil, err)
 	assert.True(t, sp.Present(sts, path.Tpathname{DIR1}), DIR1)
 
-	st0, err := ts.Stats()
+	st0, err := ts.FsLib.Stats()
 	assert.Nil(t, err)
 
 	sts, err = ts.GetDir(filepath.Join(pathname, DIR1, sp.ANY, DIR1))
 	assert.Equal(t, nil, err)
 	assert.True(t, sp.Present(sts, path.Tpathname{"namedself0", "namedself1"}), DIR1)
 
-	st1, err := ts.Stats()
+	st1, err := ts.FsLib.Stats()
 	assert.Nil(t, err)
 
 	sts, err = ts.GetDir(path.MarkResolve(filepath.Join(pathname, DIR1, sp.ANY)))
 	assert.Equal(t, nil, err)
 	assert.True(t, sp.Present(sts, path.Tpathname{DIR1}), DIR1)
 
-	st2, err := ts.Stats()
+	st2, err := ts.FsLib.Stats()
 	assert.Nil(t, err)
 
 	assert.True(t, st.Path.Counters["Nsym"] == st2.Path.Counters["Nsym"])
@@ -1434,7 +1434,7 @@ func TestEndpointUnion(t *testing.T) {
 	err = ts.MkEndpointFile(pn, newEndpoint(t, ts, dn))
 	assert.Nil(ts.T, err, "MkEndpointFile")
 
-	st, err := ts.Stats()
+	st, err := ts.FsLib.Stats()
 	assert.Nil(t, err)
 
 	eppn := "mount/"
@@ -1446,7 +1446,7 @@ func TestEndpointUnion(t *testing.T) {
 	assert.Equal(t, nil, err)
 	assert.True(t, sp.Present(sts, path.Tpathname{DIR1}), DIR1)
 
-	st1, err := ts.Stats()
+	st1, err := ts.FsLib.Stats()
 	assert.Nil(t, err)
 
 	assert.True(t, st1.Path.Counters["Nsym"] == st.Path.Counters["Nsym"])

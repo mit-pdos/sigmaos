@@ -41,6 +41,7 @@ const (
 )
 
 // Parameters
+var EXAMPLE_FLAG string
 var N_TRIALS int
 var N_THREADS int
 var PREWARM_REALM bool
@@ -143,6 +144,7 @@ var S3_RES_DIR string
 // Read & set the proc version.
 func init() {
 	db.DPrintf(db.ALWAYS, "Benchmark Args: %v", os.Args)
+	flag.StringVar(&EXAMPLE_FLAG, "example_flag", sp.NOT_SET, "example flag")
 	flag.IntVar(&N_REALM, "nrealm", 2, "Number of realms (relevant to BE balance benchmarks).")
 	flag.IntVar(&N_TRIALS, "ntrials", 1, "Number of trials.")
 	flag.IntVar(&N_THREADS, "nthreads", 1, "Number of threads.")
@@ -249,6 +251,62 @@ const (
 )
 
 func TestCompile(t *testing.T) {
+}
+
+func TestExample(t *testing.T) {
+	// Create a test state, and create two realms in the SigmaOS cluster
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{REALM1, REALM2})
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	// Shut down the SigmaOS cluster after the benchmark completes
+	defer mrts.Shutdown()
+
+	// Optionally "prewarm" the SigmaOS cluster for REALM1. This starts a
+	// `procsrv` for the realm on each machine in the cluster, and pre-downloads
+	// the specified binaries onto the procsrv.
+	if PREWARM_REALM {
+		benchmarks.WarmupRealm(mrts.GetRealm(REALM1), []string{"spinner", "sleeper"})
+	}
+
+	// Get a test state specific to REALM1.
+	ts1 := mrts.GetRealm(REALM1)
+
+	// Create a perf object for REALM1, which can be used to collect utilization
+	// and performance information for the cluster from REALM1's perspective.
+	p := newRealmPerf(mrts.GetRealm(REALM1))
+	defer p.Done()
+
+	// Create a "results" object to store E2E benchmark performance info
+	rs := benchmarks.NewResults(1, benchmarks.E2E)
+	// Create a new job object, which sets up and tears down the benchmark state,
+	// as well as outputting/storing results
+	// TODO: example job
+	jobs, ji := newExampleJobs(mrts.GetRealm(REALM1), EXAMPLE_FLAG)
+	// Tell the job we are ready to start in a separate thread
+	go func() {
+		for _, j := range jobs {
+			// Wait until ready
+			<-j.ready
+			if N_CLNT > 1 {
+				// Wait for clients to start up on other machines.
+				db.DPrintf(db.ALWAYS, "Leader waiting for clnts")
+				waitForClnts(mrts.GetRoot(), N_CLNT)
+				db.DPrintf(db.ALWAYS, "Leader done waiting for clnts")
+			}
+			// Ack to allow the job to proceed.
+			j.ready <- true
+		}
+	}()
+	// Monitor CPU utilization.
+	p2 := newRealmPerf(ts1)
+	defer p2.Done()
+	monitorCPUUtil(ts1, p2)
+	// Run the benchmark
+	db.DPrintf(db.TEST, "Run example job")
+	// TODO: run example job
+	runOps(ts1, ji, runExample, rs)
+	db.DPrintf(db.TEST, "Done run example job")
 }
 
 // Test how long it takes to init a semaphore.

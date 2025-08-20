@@ -51,6 +51,20 @@ func warmupRealmBench(ts *test.RealmTstate, i interface{}) (time.Duration, float
 	return time.Since(start), float64(nDL)
 }
 
+func runExample(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
+	ji := i.(*ExampleJobInstance)
+	ji.ready <- true
+	<-ji.ready
+	// Start a procd clnt, and monitor procds
+	rpcc := mschedclnt.NewMSchedClnt(ts.SigmaClnt.FsLib, sp.NOT_SET)
+	rpcc.MonitorMSchedStats(ts.GetRealm(), SCHEDD_STAT_MONITOR_PERIOD)
+	defer rpcc.Done()
+	start := time.Now()
+	ji.StartExampleJob()
+	ji.Wait()
+	return time.Since(start), 1.0
+}
+
 // TODO for matmul, possibly only benchmark internal time
 func runProc(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
 	start := time.Now()

@@ -28,6 +28,21 @@ import (
 // A set of helper functions that we use across our benchmarks.
 //
 
+// ========== Example Helpers ==========
+
+func newExampleJobs(ts *test.RealmTstate, exampleFlag string) ([]*ExampleJobInstance, []interface{}) {
+	// n is ntrials, which is always 1.
+	n := 1
+	ws := make([]*ExampleJobInstance, 0, n)
+	is := make([]interface{}, 0, n)
+	for i := 0; i < n; i++ {
+		i := NewExampleJob(ts, exampleFlag)
+		ws = append(ws, i)
+		is = append(is, i)
+	}
+	return ws, is
+}
+
 // ========== Proc Helpers ==========
 
 func newNProcs(n int, prog string, args []string, env map[string]string, mcpu proc.Tmcpu) ([]*proc.Proc, []interface{}) {

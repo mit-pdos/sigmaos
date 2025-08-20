@@ -42,6 +42,7 @@ add benchmarks which leverage the existing benchmarking infrastructure.
 
 The entry point into the remote benchmark orchestration package is
 `benchmarks/remote/remote_test.go`. Examples of how it is invoked can be found
+in the SOSP24 artifact
 [here](../artifact/sosp24/scripts/run-cloudlab-experiments.sh).
 
 Each benchmark has its own test stub (see `TestExample` for a simplified
@@ -57,7 +58,11 @@ the cluster, its composition (e.g., number of `besched`-only nodes,
 enabling/disabling the cluster CPU's TurboBoost), and the client machine on
 which you wish to run the master benchmark runner script.
 
-***TODO: write about output***
+Benchmark output will be collected and stored in `benchmarks/results/VERSION`.
+This includes output from the benchmark master runner script, all logs from the
+SigmaOS cluster, and any perf files created when running the benchmark. This
+output can then be used by graphing scripts. For examples, see the SOSP24
+artifact [here](../artifact/sosp24/scripts/generate-cloudlab-graphs.sh).
 
 ### `benchmarks/remote/benchcmds.go`: Benchmark command constructors
 

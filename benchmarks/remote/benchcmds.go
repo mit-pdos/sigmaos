@@ -40,7 +40,7 @@ func GetExampleCmdConstructor(prewarm bool, exampleFlag string) GetBenchCmdFn {
 		const (
 			debugSelectors    string = "\"TEST;THROUGHPUT;CPU_UTIL;SPAWN_LAT;PROXY_LAT;\""
 			valgrindSelectors string = ""
-			perfSelectors     string = "\"CACHED_TPT;TEST_TPT;BENCH_TPT;\""
+			perfSelectors     string = "\"TEST_TPT;BENCH_TPT;\""
 		)
 		dialproxy := ""
 		if bcfg.NoNetproxy {

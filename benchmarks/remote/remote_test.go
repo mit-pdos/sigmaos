@@ -70,6 +70,34 @@ func TestInitFS(t *testing.T) {
 	ts.RunStandardBenchmark(benchName, driverVM, GetInitFSCmd, numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost)
 }
 
+// Example remote benchmark runner stub
+func TestExample(t *testing.T) {
+	var (
+		benchName    string = "example"
+		exampleFlag  string = "example-bench-flag-val"
+		prewarmRealm bool   = false
+	)
+	// Cluster configuration parameters
+	const (
+		driverVM          int  = 0
+		numNodes          int  = 10
+		numCoresPerNode   uint = 4
+		numFullNodes      int  = numNodes
+		numProcqOnlyNodes int  = 0
+		turboBoost        bool = false
+	)
+	ts, err := NewTstate(t)
+	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {
+		return
+	}
+	if !assert.False(ts.t, ts.BCfg.K8s, "K8s version of benchmark does not exist") {
+		return
+	}
+	db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
+	getExampleCmd := GetExampleCmdConstructor(prewarmRealm, exampleFlag)
+	ts.RunStandardBenchmark(benchName, driverVM, getExampleCmd, numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost)
+}
+
 // Test SigmaOS cold-start.
 func TestColdStart(t *testing.T) {
 	var (

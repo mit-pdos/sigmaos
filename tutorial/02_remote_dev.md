@@ -53,15 +53,14 @@ should be the same as the name of the S3 bucket which the SigmaOS development
 team created for you during [onboarding](./onboarding.md).
 
 The remainder of this tutorial will refer to your tag as `TAG`. When running
-the scripts, make sure to replace `TAG` with your own tag name.  However, the
-`--target` argument will be `aws` regardless of deployment platform (CloudLab
-or EC2).
+the scripts, make sure to replace `TAG` with your own tag name.  The `--target`
+argument will be `remote` regardless of deployment platform (CloudLab or EC2).
 
 Build the SigmaOS images for remote deployment and push user `proc` binaries to
 S3 with:
 
 ```
-$ ./build.sh --parallel --target aws --push TAG
+$ ./build.sh --parallel --target remote --push TAG
 ```
 
 ## Installing, updating, and deploying SigmaOS on a remote cluster
@@ -88,6 +87,70 @@ XXX TODO.
 
 #### CloudLab.
 
+The SigmaOS CloudLab experiments are all run on c220g5 machines running Ubuntu
+24.04, and thus some scripts (such as the package install scripts and disk
+partition setup) may not run correctly without modification on other CloudLab
+instance types. Proceed with caution if using another instance type.
+
+First, set the `LOGIN` variable in `cloudlab/env.sh` to your cloudlab username,
+USERNAME.
+
+Then, go to the CloudLab experiment manifest page, and copy the XML-formatted
+description of your cloudlab cluster into a local file (e.g.,
+`/tmp/cloudlab-servers.txt`). Then, from the `sigmaos/cloudlab` directory, run
+the manifest ingestion script to store a description of the clusters in a
+format usable by other SigmaOS CloudLab scripts (supplying your CloudLab
+username in place of `USERNAME`):
+
+```
+$ ./import-server-manifest.sh --manifest /tmp/servers.txt --username USERNAME 
+```
+
+Next, make sure that you can decrypt the DockerHub/AWS credentials checked into
+the repo by running the following line from the root of the SigmaOS repo, e.g.:
+
+```
+$ gpg --output /tmp/xxxxx --decrypt aws/.aws/credentials.gpg; rm /tmp/xxxxx
+```
+
+Then, you can set up the CloudLab cluster by running one script. From the root
+of the SigmaOS repo, run:
+
+```
+$ cd cloudlab
+$ ./setup-cluster.sh
+```
+
+This should install SigmaOS and all of its dependencies, and configure the OS
+kernel on each machine to prepare the machines for benchmarking.Internally, the
+`setup-cluster.sh` script runs two scripts for each machine: one script which
+installs SigmaOS and its dependencies, and another that configures the OS
+kernel. The `setup-cluster.sh` script will pipe output from each script into
+its own file, for each machine in the cluster. Output from
+the scripts is stored in `/tmp/sigmaos-cloudlab-node-logs`. This output can be
+helpful in the event that one of the scripts doesn't run to completion
+correctly. Feel free to skip the description of the CloudLab setup scripts
+below (unless one of them produced an error).
+
+If the install scripts ran successfully, you should see all machines in your
+cluster running, and each should have the SigmaOS repo in `$HOME`. To verify
+your installation, build the SigmaOS binaries for remote development, and then
+run the following scripts and ensure that they terminatea successfully:
+
+```
+$ ./stop-sigmaos.sh --vpc $VPC --parallel
+$ ./start-sigmaos.sh --vpc $VPC --pull TAG --branch BRANCH
+```
+
+These scripts should take no more than a couple of minutes to run. If they
+hang, please reach out for help :) .
+
+For the remainder of this tutorial,
+replace USER and HOSTNAME with your username and the DNS name of the machine
+you wish to run the script on.
+
+##### configure-kernel.sh
+
 CloudLab sets up its machines with a very small root partition (usually 15G)
 and a large, unmounted partition. This causes problems for both SigmaOS and
 Kubernetes, since Docker and Kubernetes store container logs, images, and other
@@ -100,53 +163,6 @@ The `./configure-kernel.sh` script takes care of configuring the kernel,
 formatting, and mounting a large data volume for SigmaOS, Kubernetes, and
 Docker to use. Make sure that each machine successfully restarts after running
 the kernel configuration script on it.
-
-For the remainder of this section,
-replace USER and HOSTNAME with your username and the DNS name of the machine
-you wish to run the script on.
-
-You may update the content of `servers.txt` to match your cluster on cloudlab. 
-
-First, find the name of the large, unused partition on the cloudlab machines
-you are using by logging into one of them and running:
-
-```
-$ lsblk
-```
-
-For example, on `c220g5` machines, this is `/dev/sda4`.
-
-Once you have this information, use it to fill in the `cloudlab/env.sh`
-environment file with your username and the path to the large, unmounted block
-device.
-
-Then, run the `cloudlab/configure-kernel.sh` with each machine name as follows:
-
-```
-$ cd cloudlab
-$ ./configure-kernel.sh HOSTNAME
-```
-
-If you are setting up a multi-machine clutser, it may be convenient to run this
-script in parallel in a bash for loop, like so:
-
-```
-$ cd cloudlab
-$ for h in $(cat servers.txt | cut -d " " -f 2); do
-	echo "=========== Upgrading linux for $h";
-	./configure-kernel.sh $h >& /tmp/$h.out;
-done
-```
-
-Then, install the SigmaOS software, credentials, and its dependencies by
-running:
-
-```
-$ cd cloudlab
-$ ./setup-instance.sh USER HOSTNAME >& /tmp/setup_$h.out
-```
-
-On the target machine, there should be a sigmaos repo, plus docker runnables. 
 
 ### Updating SigmaOS
 

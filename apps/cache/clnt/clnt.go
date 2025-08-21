@@ -36,11 +36,11 @@ type CacheClnt struct {
 	nshard int
 }
 
-func NewCacheClnt(fsl *fslib.FsLib, job string, nshard int) *CacheClnt {
+func NewCacheClnt(fsl *fslib.FsLib, job string, nshard int, lazyInit bool) *CacheClnt {
 	return &CacheClnt{
 		fsl:       fsl,
 		nshard:    nshard,
-		ClntCache: rpcclntcache.NewRPCClntCache(sprpcclnt.WithSPChannel(fsl), sprpcclnt.WithDelegatedSPProxyChannel(fsl)),
+		ClntCache: rpcclntcache.NewRPCClntCache(sprpcclnt.WithSPChannel(fsl, lazyInit), sprpcclnt.WithDelegatedSPProxyChannel(fsl)),
 	}
 }
 

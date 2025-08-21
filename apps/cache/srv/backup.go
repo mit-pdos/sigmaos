@@ -30,17 +30,20 @@ func RunCacheSrvBackup(cachedir, jobname, shardpn string, nshard int, useEPCache
 	peerpn := cachedir + cachegrp.Server(peer)
 	db.DPrintf(db.CACHESRV, "Peer name: %v", peer)
 	start = time.Now()
-	cc := cacheclnt.NewCacheClnt(s.ssrv.SigmaClnt().FsLib, jobname, nshard)
+	cc := cacheclnt.NewCacheClnt(s.ssrv.SigmaClnt().FsLib, jobname, nshard, true)
 	perf.LogSpawnLatency("Backup.NewCacheClnt", pe.GetPID(), pe.GetSpawnTime(), start)
-	// TODO: don't do this with delegation, once we get lazy RPC channel creation working
-	ep, _ := pe.GetCachedEndpoint(peerpn)
-	start = time.Now()
-	// First, mount the peer
-	if err := s.ssrv.SigmaClnt().MountTree(ep, rpc.RPC, filepath.Join(peerpn, rpc.RPC)); err != nil {
-		db.DFatalf("Err mount peer: %v", err)
-		return err
+	// We only need to mount the primary if we are not running the boot script
+	// (otherwise the RPC client can be lazily initialized)
+	if !pe.GetRunBootScript() {
+		start = time.Now()
+		ep, _ := pe.GetCachedEndpoint(peerpn)
+		// First, mount the peer
+		if err := s.ssrv.SigmaClnt().MountTree(ep, rpc.RPC, filepath.Join(peerpn, rpc.RPC)); err != nil {
+			db.DFatalf("Err mount peer: %v", err)
+			return err
+		}
+		perf.LogSpawnLatency("Backup.MountPrimary", pe.GetPID(), pe.GetSpawnTime(), start)
 	}
-	perf.LogSpawnLatency("Backup.MountPrimary", pe.GetPID(), pe.GetSpawnTime(), start)
 	start = time.Now()
 	// If not doing delegated initialization, fetch directly from peer
 	if !pe.GetRunBootScript() {

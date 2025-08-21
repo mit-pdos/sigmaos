@@ -50,7 +50,7 @@ func NewCachedSvcClntEPCache(fsl *fslib.FsLib, epcc *epcacheclnt.EndpointCacheCl
 		epcc:           epcc,
 		useEPCacheClnt: epcc != nil,
 		pn:             cache.CACHE,
-		cc:             cacheclnt.NewCacheClnt(fsl, job, cache.NSHARD),
+		cc:             cacheclnt.NewCacheClnt(fsl, job, cache.NSHARD, false),
 	}
 	dir := csc.pn + cachegrp.SRVDIR
 	csc.dd = dircache.NewDirCache[struct{}](fsl, dir, csc.newEntry, nil, db.CACHEDSVCCLNT, db.CACHEDSVCCLNT)

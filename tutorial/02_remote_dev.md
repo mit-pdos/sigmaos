@@ -5,6 +5,10 @@ benchmarking, and deploy SigmaOS on a remote set of machines. By the end of
 this tutorial, you should be able to start a SigmaOS cluster on a remote set of
 machines, and run benchmarks on the cluster.
 
+Note: you should run these scripts on your local development machine (they will
+automatically connect to your remote cluster and run the required commands on
+your behalf).
+
 ## Platforms
 
 Currently, we deploy SigmaOS in two remote settings:

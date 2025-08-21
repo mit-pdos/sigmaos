@@ -178,10 +178,6 @@ then
 #  yes | sudo apt install openjdk-8-jdk \
 #  openjdk-8-jre-headless
 
-  curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
-  unzip awscliv2.zip
-  sudo ./aws/install
-
   wget 'https://go.dev/dl/go1.24.5.linux-amd64.tar.gz'
   sudo rm -rf /usr/local/go && sudo tar -C /usr/local -xzf go1.24.5.linux-amd64.tar.gz
   export PATH=/bin:/sbin:/usr/sbin:\$PATH:/usr/local/go/bin

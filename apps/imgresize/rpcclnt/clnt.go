@@ -23,7 +23,7 @@ func NewImgResizeRPCClnt(fsl *fslib.FsLib, job string) (*ImgResizeRPCClnt, error
 	return &ImgResizeRPCClnt{
 		job:      job,
 		pn:       filepath.Join(sp.IMG, job),
-		rpcclntc: rpcclntcache.NewRPCClntCache(sprpcclnt.WithSPChannel(fsl)),
+		rpcclntc: rpcclntcache.NewRPCClntCache(sprpcclnt.WithSPChannel(fsl, false)),
 	}, nil
 }
 

@@ -4,10 +4,12 @@
 package srv
 
 import (
+	"bufio"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -16,6 +18,7 @@ import (
 	"golang.org/x/sys/unix"
 
 	criu "github.com/checkpoint-restore/go-criu/v7"
+	"github.com/checkpoint-restore/go-criu/v7/rpc"
 
 	chunkclnt "sigmaos/chunk/clnt"
 	chunksrv "sigmaos/chunk/srv"
@@ -36,6 +39,8 @@ import (
 	spproxysrv "sigmaos/spproxy/srv"
 	"sigmaos/util/perf"
 	"sigmaos/util/syncmap"
+
+	protoBufproto "google.golang.org/protobuf/proto"
 )
 
 // Lookup may try to read proc in a proc's procEntry before procsrv
@@ -101,6 +106,54 @@ type ProcRPCSrv struct {
 	ps *ProcSrv
 }
 
+func (ps *ProcSrv) cacheCriuKdat() error {
+	cmd := exec.Command("/bin/sleep", "300")
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
+	if err := cmd.Start(); err != nil {
+		db.DPrintf(db.ERROR, "failed to start dummy process for criu: %v", err)
+	}
+	pid := cmd.Process.Pid
+
+	// 2) Set up image/work directories and open as FDs (what CRIU RPC expects)
+	imgDir := "/tmp/dummycriu"
+	if err := os.MkdirAll(imgDir, 0755); err != nil {
+		db.DPrintf(db.ERROR, "mkdir %s: %v", imgDir, err)
+	}
+	f, err := os.Open(imgDir)
+	defer f.Close()
+	if err != nil {
+		return err
+	}
+	verbose := db.IsLabelSet(db.CRIU)
+	opts := &rpc.CriuOpts{
+		Pid:         protoBufproto.Int32(int32(pid)),
+		ImagesDirFd: protoBufproto.Int32(int32(f.Fd())),
+		// Root:         proto.String(root),
+		TcpClose:     protoBufproto.Bool(true), // XXX does it matter on dump?
+		Unprivileged: protoBufproto.Bool(false),
+		ExtUnixSk:    protoBufproto.Bool(true),
+	}
+	if verbose {
+		opts.LogLevel = protoBufproto.Int32(4)
+		opts.LogFile = protoBufproto.String("dump.log")
+	}
+	err = ps.criuclnt.Dump(opts, criu.NoNotify{})
+	if err != nil {
+		return err
+	}
+	db.DPrintf(db.CKPT, "CheckpointProc: dump err %v", err)
+	if verbose {
+		pn := imgDir + "/dump.log"
+		b, err := os.ReadFile(pn)
+		if err != nil {
+			db.DPrintf(db.CKPT, "ReadFile %q err %v", pn, err)
+			return err
+		}
+		db.DPrintf(db.CKPT, "dumpLog %q: %s", pn, string(b))
+
+	}
+	return nil
+}
 func RunProcSrv(kernelId string, dialproxy bool, spproxydPID sp.Tpid) error {
 	pe := proc.GetProcEnv()
 	ps := &ProcSrv{
@@ -184,10 +237,15 @@ func RunProcSrv(kernelId string, dialproxy bool, spproxydPID sp.Tpid) error {
 	ps.lpc = lpc
 
 	// XXX move somewhere else?
+	ps.criuclnt.SetCriuPath("/criu/criu/criu")
 	if v, err := ps.criuclnt.GetCriuVersion(); err != nil {
 		db.DFatalf("GetCriuVersion err %v\n", err)
 	} else {
 		db.DPrintf(db.PROCD, "GetCriuVersion %v", v)
+	}
+	err = ps.cacheCriuKdat()
+	if err != nil {
+		db.DFatalf("cache criu kdat err %v\n", err)
 	}
 
 	if err = ssrv.RunServer(); err != nil {
@@ -341,6 +399,30 @@ func (ps *ProcRPCSrv) Checkpoint(ctx fs.CtxI, req proto.CheckpointProcRequest, r
 func (ps *ProcRPCSrv) Run(ctx fs.CtxI, req proto.RunRequest, res *proto.RunResult) error {
 	return ps.ps.Run(ctx, req, res)
 }
+func ReadProcStatus(pid int) (map[string]string, error) {
+	path := filepath.Join("/proc", fmt.Sprint(pid), "status")
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err // e.g., process may have exited (ENOENT) or permission denied (EACCES)
+	}
+	defer f.Close()
+
+	status := make(map[string]string)
+	sc := bufio.NewScanner(f)
+	for sc.Scan() {
+		line := sc.Text()
+		// Format: "Key:\tValue ..."
+		if i := strings.IndexByte(line, ':'); i >= 0 {
+			key := line[:i]
+			val := strings.TrimSpace(line[i+1:])
+			status[key] = val
+		}
+	}
+	if err := sc.Err(); err != nil {
+		return nil, err
+	}
+	return status, nil
+}
 
 // Run a proc inside of an inner container
 func (ps *ProcSrv) Run(ctx fs.CtxI, req proto.RunRequest, res *proto.RunResult) error {
@@ -368,9 +450,18 @@ func (ps *ProcSrv) Run(ctx fs.CtxI, req proto.RunRequest, res *proto.RunResult) 
 	uproc.FinalizeEnv(ps.pe.GetInnerContainerIP(), ps.pe.GetOuterContainerIP(), ps.pe.GetPID())
 	db.DPrintf(db.SPAWN_LAT, "[%v] Proc Run: spawn time since spawn %v", uproc.GetPid(), time.Since(uproc.GetSpawnTime()))
 	if uproc.GetCheckpointLocation() != "" {
+
+		// db.DPrintf(db.PROCD, "Pid %v -> %d", uproc.GetPid(), pid)
+		// pe, alloc := ps.procs.Alloc(pid, newProcEntry(uproc))
+		// if !alloc { // it was already inserted
+		// 	pe.insertSignal(uproc)
+		// }
+
+		db.DPrintf(db.CKPT, "restoring proc")
 		if err := ps.restoreProc(uproc); err != nil {
 			return err
 		}
+
 		return nil
 	} else {
 		cmd, err := scontainer.StartSigmaContainer(uproc, ps.dialproxy)
@@ -401,6 +492,7 @@ func (ps *ProcSrv) Run(ctx fs.CtxI, req proto.RunRequest, res *proto.RunResult) 
 		}
 
 		scontainer.CleanupUProc(uproc.GetPid())
+		db.DPrintf(db.PROCD, "Removing Pid %v -> %d", uproc.GetPid(), pid)
 		ps.procs.Delete(pid)
 		// ps.sc.CloseFd(pe.fd)
 
@@ -447,7 +539,11 @@ func mountRealmBinDir(realm sp.Trealm) error {
 
 func (ps *ProcSrv) Fetch(pid, cid int, prog string, sz sp.Tsize) (sp.Tsize, error) {
 	pe, ok := ps.procs.Lookup(pid)
+	db.DPrintf(db.PROCD, "Fetch: procs.Lookup %v %v\n", pid, prog)
+
 	if !ok || pe.proc == nil {
+		db.DPrintf(db.ERROR, "Fetch: procs.Lookup %v %v\n", pid, prog)
+
 		db.DFatalf("Fetch: procs.Lookup %v %v\n", pid, prog)
 	}
 
@@ -484,6 +580,7 @@ func (ps *ProcSrv) lookupProc(proc *proc.Proc, prog string) (*sp.Stat, error) {
 }
 
 func (ps *ProcSrv) Lookup(pid int, prog string) (*sp.Stat, error) {
+	db.DPrintf(db.PROCD, "Lookup pid %v\n", pid)
 	pe, alloc := ps.procs.Alloc(pid, newProcEntry(nil))
 	if alloc {
 		db.DPrintf(db.PROCD, "Lookup wait for pid %v proc %v\n", pid, pe)

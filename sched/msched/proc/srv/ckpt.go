@@ -3,9 +3,11 @@ package srv
 import (
 	//"archive/zip"
 	//"compress/flate"
+	"bufio"
 	"encoding/binary"
 	"fmt"
 	"io"
+	"math/rand"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -23,6 +25,7 @@ import (
 	"github.com/klauspost/compress/flate"
 	"github.com/klauspost/compress/zip"
 	"github.com/pierrec/lz4/v4"
+	"golang.org/x/sys/unix"
 )
 
 const (
@@ -80,6 +83,15 @@ func (ps *ProcSrv) Checkpoint(ctx fs.CtxI, req proto.CheckpointProcRequest, res 
 		pe.mu.Unlock()
 		db.DPrintf(db.PROCD, "writeCheckpoint lazy %v err %v\n", spid, err)
 		return err
+	}
+	path := "/run"
+
+	entries, _ := os.ReadDir(path)
+
+	db.DPrintf(db.CKPT, "all entries in /run")
+	for _, entry := range entries {
+		db.DPrintf(db.CKPT, "entry %s", entry)
+
 	}
 	pe.mu.Lock()
 	pe.checkpointStatus = 0
@@ -385,13 +397,52 @@ func (ps *ProcSrv) writeCheckpoint2(chkptLocalDir string, chkptSimgaDir string, 
 	db.DPrintf(db.PROCD, "writeCheckpoint: copied %d files %s", len(files), filepath.Join(pn, "dump.zip"))
 	return nil
 }
+func (ps *ProcSrv) getRestoredPid(proc *proc.Proc, fifoDir string) error {
+	fifo := filepath.Join(fifoDir, "pid.fifo")
 
+	// Clean up any stale FIFO from prior runs (ignore errors).
+	_ = os.Remove(fifo)
+
+	// Create the FIFO: mode 0666 so other processes/users can write.
+	if err := unix.Mkfifo(fifo, 0666); err != nil {
+		db.DPrintf(db.ERROR, "mkfifo: %v", err)
+	}
+	db.DPrintf(db.CKPT, "pid pipe created at %v", fifo)
+
+	// Open read-only; this blocks until someone opens for write.
+	f, err := os.OpenFile(fifo, os.O_RDONLY, 0)
+	if err != nil {
+		db.DPrintf(db.ERROR, "open read: %v", err)
+	}
+	defer f.Close()
+
+	// Read text lines until writer closes (EOF.
+	sc := bufio.NewScanner(f)
+	if sc.Scan() {
+		db.DPrintf(db.CKPT, "received restore proc pid: %v", sc.Text())
+		pid, err := strconv.Atoi(sc.Text())
+		if err != nil {
+			db.DPrintf(db.ERROR, "pid pipe format error: %v", err)
+
+		}
+		pe, alloc := ps.procs.Alloc(pid, newProcEntry(proc))
+		if !alloc { // it was already inserted
+			pe.insertSignal(proc)
+		}
+
+	} else {
+		db.DPrintf(db.ERROR, "read error: %v", err)
+	}
+	return nil
+}
 func (ps *ProcSrv) restoreProc(proc *proc.Proc) error {
 	dst := RESTOREDIR + proc.GetPid().String()
 	ckptSigmaDir := proc.GetCheckpointLocation()
 	//assumePID is 1
 	//if err := ps.readCheckpointAndRegisterLz4(ckptSigmaDir, dst, CKPTLAZY, 1); err != nil {
-	if err := ps.readCheckpointAndRegister(ckptSigmaDir, dst, CKPTLAZY, 1); err != nil {
+
+	lazypagesid := rand.Intn(100000) // pick a large enough range to avoid collisions
+	if err := ps.readCheckpointAndRegister(ckptSigmaDir, dst, CKPTLAZY, 1, lazypagesid); err != nil {
 		db.DPrintf(db.CKPT, "LZ4 WRONG")
 		return nil
 	}
@@ -411,8 +462,10 @@ func (ps *ProcSrv) restoreProc(proc *proc.Proc) error {
 	//	}
 	//	db.DPrintf(db.CKPT, "restoreProc: Registered %d %v", pid, pages)
 	//	}()
+	go ps.getRestoredPid(proc, ps.lpc.WorkDir())
+
 	// XXX delete dst dir when done
-	if err := scontainer.RestoreProc(ps.criuclnt, proc, filepath.Join(dst, CKPTLAZY), ps.lpc.WorkDir()); err != nil {
+	if err := scontainer.RestoreProc(ps.criuclnt, proc, filepath.Join(dst, CKPTLAZY), ps.lpc.WorkDir(), lazypagesid); err != nil {
 		return err
 	}
 	return nil
@@ -535,7 +588,7 @@ func (ps *ProcSrv) readCheckpoint2(ckptSigmaDir, localDir, ckpt string) error {
 	return nil
 }
 
-func (ps *ProcSrv) readCheckpointAndRegister(ckptSigmaDir, localDir, ckpt string, pid int) error {
+func (ps *ProcSrv) readCheckpointAndRegister(ckptSigmaDir, localDir, ckpt string, pid int, lazypagesid int) error {
 	db.DPrintf(db.CKPT, "readCheckpoint %v %v %v", ckptSigmaDir, localDir, ckpt)
 
 	os.Mkdir(localDir, 0755)
@@ -593,6 +646,7 @@ func (ps *ProcSrv) readCheckpointAndRegister(ckptSigmaDir, localDir, ckpt string
 		db.DPrintf(db.CKPT, "SEE %s\n", entry)
 		if strings.HasPrefix(entry, "preloads") {
 			firstInstance = false
+
 		}
 		if strings.HasPrefix(entry, "pagemap") || strings.HasPrefix(entry, "mm-") || strings.HasPrefix(entry, "preloads") {
 			db.DPrintf(db.PROCD, "DownloadFile %s\n", entry)
@@ -607,9 +661,10 @@ func (ps *ProcSrv) readCheckpointAndRegister(ckptSigmaDir, localDir, ckpt string
 	}
 	go func() {
 		pages := filepath.Join(ckptSigmaDir, CKPTFULL, "pages-"+strconv.Itoa(pid)+".img")
-		db.DPrintf(db.CKPT, "restoreProc: Register %d %v", pid, pages)
-		if err := ps.lpc.Register(pid, pn, pages, filepath.Join(ckptSigmaDir, ckpt), firstInstance); err != nil {
-			db.DPrintf(db.CKPT, "restoreProc: Register %d %v err %v", pid, pages, err)
+
+		db.DPrintf(db.CKPT, "restoreProc: Register %d %v", lazypagesid, pages)
+		if err := ps.lpc.Register(lazypagesid, pn, pages, filepath.Join(ckptSigmaDir, ckpt), firstInstance); err != nil {
+			db.DPrintf(db.CKPT, "restoreProc: Register %d %v err %v", lazypagesid, pages, err)
 			return
 		}
 		db.DPrintf(db.CKPT, "restoreProc: Registered %d %v", pid, pages)

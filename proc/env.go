@@ -7,12 +7,11 @@ import (
 	"os"
 	"path/filepath"
 	"runtime/debug"
+	sp "sigmaos/sigmap"
 	"strings"
 	"time"
 
 	"google.golang.org/protobuf/types/known/timestamppb"
-
-	sp "sigmaos/sigmap"
 )
 
 // Environment variables for procs (SHOULD NOT BE ADDED TO)

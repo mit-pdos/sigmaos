@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 
@@ -136,12 +137,12 @@ func TestSpawnCkptProc(t *testing.T) {
 
 	db.DPrintf(db.TEST, "Spawn from checkpoint %v", pid)
 
-	restProc := proc.NewProcFromCheckpoint(pid, PROGRAM+"-copy", pn)
-
+	restProc := proc.NewProcFromCheckpoint(pid, PROGRAM, pn)
+	restProc.Args = []string{"5", "1000", "name/ux/~any/ckpt-proc-7f03b979fbb54ec6/"}
 	err = ts.Spawn(restProc)
 	assert.Nil(t, err)
 
-	db.DPrintf(db.TEST, "Wait until start %v", pid)
+	db.DPrintf(db.TEST, "Wait until start %v %v", pid, restProc)
 
 	err = ts.WaitStart(restProc.GetPid())
 	assert.Nil(t, err)
@@ -164,34 +165,14 @@ func TestSpawnCkptProc(t *testing.T) {
 
 	// 	}
 	// }
-	linuxpid, err := listAllProcesses()
+	// linuxpid, err := listAllProcesses()
 	assert.Nil(t, err)
-	db.DPrintf(db.TEST, "pid: %s", linuxpid)
-	//file, err := os.Create("/home/freddietang/sigmaos/strace_output.txt")
-	//	assert.Nil(t, err)
-	//	defer file.Close()
-	//cmd := exec.Command("sudo", "strace", "-tt", "-f", "-p", linuxpid)
 
-	//Redirect the output to standard output
-	//cmd.Stdout = file
-	//cmd.Stderr = file
-	// Start the strace process
-	//cmd.Run()
-	// straces, err := trace("lazypages")
-	// defer func() {
-	// 	for _, proc := range straces {
-	// 		if proc.Process != nil {
-	// 			db.DPrintf(db.TEST, "Stopping process: %s\n", proc.Path)
-	// 			proc.Process.Kill() // Kill process
-	// 		}
-	// 	}
-	// }()
-	//assert.Nil(t, err)
 	s, err := ts.WaitExit(restProc.GetPid())
 	assert.Nil(t, err, "Err waitexit %v status: %v", err, s)
 	db.DPrintf(db.TEST, "Started %v", restProc.GetPid())
-	//time.Sleep(2000 * time.Millisecond)
-	//ts.Shutdown()
+	time.Sleep(2000 * time.Millisecond)
+	ts.Shutdown()
 }
 
 func TestSpawnCkptGeo(t *testing.T) {
@@ -226,7 +207,7 @@ func TestSpawnCkptGeo(t *testing.T) {
 
 	pid = sp.GenPid(GEO + "-copy")
 
-	//db.DPrintf(db.TEST, "Spawn from checkpoint %v", pid)
+	db.DPrintf(db.TEST, "Spawn from checkpoint %v", pid)
 
 	restProc := proc.NewProcFromCheckpoint(pid, GEO+"-copy", pn)
 	err = ts.Spawn(restProc)
@@ -236,8 +217,9 @@ func TestSpawnCkptGeo(t *testing.T) {
 
 	err = ts.WaitStart(restProc.GetPid())
 	assert.Nil(t, err)
-	//	db.DPrintf(db.TEST, "Started %v", pid)
-	//time.Sleep(2000 * time.Millisecond)
+	db.DPrintf(db.TEST, "Started %v", pid)
+
+	time.Sleep(1000 * time.Millisecond)
 	status, err = ts.WaitExit(restProc.GetPid())
 	db.DPrintf(db.TEST, "exited %v", status)
 	db.DPrintf(db.TEST, "Spawn from checkpoint")
@@ -250,7 +232,7 @@ func TestSpawnCkptGeo(t *testing.T) {
 
 	err = ts.WaitStart(restProc2.GetPid())
 	db.DPrintf(db.TEST, "Started %v", pid)
-	//time.Sleep(200000 * time.Millisecond)
+	time.Sleep(2000 * time.Millisecond)
 	assert.Nil(t, err)
 	ts.Shutdown()
 }

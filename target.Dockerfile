@@ -1,7 +1,18 @@
 # syntax=docker/dockerfile:1-experimental
-
-FROM alpine AS base
-
+#change to ubuntu
+# Stage 1: the existing CRIU image
+FROM criu-x86_64 as base
+# Stage 2: your custom Ubuntu image
+#FROM ubuntu:22.04 AS base
+#RUN apt-get update \
+# && apt-get install -y criu \
+# && rm -rf /var/lib/apt/lists/*
+# Install any packages you want
+RUN apt-get update && \
+    apt-get install -y libseccomp-dev strace fuse iptables && \
+    rm -rf /var/lib/apt/lists/*
+# Copy the CRIU binary from the builder image
+# FROM ubuntu AS base
 # Install some apt packages for debugging.
 #RUN \
 #  apt-get update && \
@@ -13,8 +24,8 @@ FROM alpine AS base
 #  apt autoremove && \
 #  rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-RUN apk add --no-cache libseccomp gcompat musl-dev strace fuse iptables
-RUN apk add criu-dev --repository=https://dl-cdn.alpinelinux.org/alpine/edge/testing
+# RUN apt-get install libseccomp gcompat musl-dev strace fuse iptables
+#RUN apk add criu-dev --repository=https://dl-cdn.alpinelinux.org/alpine/edge/testing
 #RUN apk add py3-criu --repository=https://dl-cdn.alpinelinux.org/alpine/edge/testing
 
 WORKDIR /home/sigmaos
@@ -50,7 +61,11 @@ ENV mongoip x.x.x.x
 ENV buildtag "local-build"
 ENV dialproxy "false"
 # Install docker-cli
-RUN apk add --update docker openrc
+RUN apt-get update && \
+    apt-get install -y docker.io && \
+    rm -rf /var/lib/apt/lists/*
+# RUN apt-get install --update docker openrc
+
 ENV reserveMcpu "0"
 
 # Make a directory for binaries shared between realms.

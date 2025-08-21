@@ -191,44 +191,114 @@ func reverse[T any](s []T) {
 	}
 }
 func (lpc *lazyPagesConn) preFetch(saved_addresses [][]uint64) {
+	//saved_addresses = make([][]uint64, 0)
 	lpc.mu.Lock()
-	mp := make(map[int]int)
+	mp := make([][]Req, len(lpc.iovs.iovs))
+	for i, _ := range lpc.iovs.iovs {
+		mp[i] = make([]Req, 0)
+	}
 	for _, pair := range saved_addresses {
 		addr := pair[0]
 		nopages := int(pair[1])
 		iovno := lpc.iovs.findBinSearch(addr)
 
 		if iovno != -1 {
-
+			WTHRESH := 5
 			iov := lpc.iovs.iovs[iovno]
 			pi := lpc.pmi.findBinSearch(addr)
 			index := int(addr-iov.start) / (iov.pagesz)
 			iovlen := int(iov.end-iov.start) / iov.pagesz
 			nopages := min(iovlen-index, nopages)
-			if i, ok := mp[iovno]; ok {
-				db.DPrintf(db.LAZYPAGESSRV_FAULT, "extended : %v -> %v+%v", lpc.queue[i].index, index, nopages)
-				if lpc.queue[i].index > index {
-					lpc.queue[i].addr = uint64(pi * iov.pagesz)
-					lpc.queue[i].nopages += lpc.queue[i].index - index
-					lpc.queue[i].realaddr = addr
-					lpc.queue[i].index = index
-				} else if lpc.queue[i].index < index {
-					if lpc.queue[i].index+lpc.queue[i].nopages < index+nopages {
-						lpc.queue[i].nopages = index + nopages - lpc.queue[i].index
+			indlow := -1
+			indhigh := -1
+			for i := range mp[iovno] {
+
+				if mp[iovno][i].index <= index {
+					if indlow == -1 || mp[iovno][indlow].index < mp[iovno][i].index {
+
+						indlow = i
+
 					}
-
+				} else if mp[iovno][i].index > index {
+					if indhigh == -1 || mp[iovno][indhigh].index > mp[iovno][i].index {
+						indhigh = i
+					}
 				}
-				continue
 			}
-			mp[iovno] = len(lpc.queue)
+			if indlow == -1 || mp[iovno][indlow].index+mp[iovno][indlow].nopages < index-WTHRESH {
+				if indhigh == -1 || mp[iovno][indhigh].index > index+nopages+WTHRESH {
+					//		db.DPrintf(db.LAZYPAGESSRV_FAULT, "new : %v+%v", index, nopages)
+					mp[iovno] = append(mp[iovno],
+						Req{iov: iovno, nopages: nopages, index: index, addr: uint64(pi * iov.pagesz), realaddr: addr})
+				} else {
+					//		db.DPrintf(db.LAZYPAGESSRV_FAULT, "extend : %v -> %v+%v", mp[iovno][indhigh].index, index, mp[iovno][indhigh].nopages)
 
-			//begin := max(0, index-PREFETCH/4)
+					mp[iovno][indhigh].addr = uint64(pi * iov.pagesz)
+					mp[iovno][indhigh].nopages += mp[iovno][indhigh].index - index
+					mp[iovno][indhigh].realaddr = addr
+					mp[iovno][indhigh].index = index
+				}
+			} else {
+				if mp[iovno][indlow].index+mp[iovno][indlow].nopages >= index+nopages {
+					continue
+				}
+				if indhigh == -1 || mp[iovno][indhigh].index > index+nopages+WTHRESH {
+					mp[iovno][indlow].nopages = index + nopages - mp[iovno][indlow].index
+					//		db.DPrintf(db.LAZYPAGESSRV_FAULT, "extend : %v -> %v+%v", mp[iovno][indlow].index, index, nopages)
 
-			//lpc.queue = append(lpc.queue, Req{iov: iovno, nopages: min(iovlen-begin, PREFETCH/4), index: begin, addr: uint64((pi - (index - begin)) * iov.pagesz), realaddr: addr - uint64(pi*(index-begin))})
+				} else {
+					mp[iovno][indlow].nopages = mp[iovno][indhigh].index + mp[iovno][indhigh].nopages - mp[iovno][indlow].index
+					//		db.DPrintf(db.LAZYPAGESSRV_FAULT, "replace : %v -> %v+%v", mp[iovno][indhigh].index, mp[iovno][indlow].index, mp[iovno][indlow].nopages)
 
-			lpc.queue = append(lpc.queue, Req{iov: iovno, nopages: nopages, index: index, addr: uint64(pi * iov.pagesz), realaddr: addr})
+					mp[iovno] = append(mp[iovno][:indhigh], mp[iovno][indhigh+1:]...)
+				}
+				//
+
+			}
+
 		}
 	}
+	for iovno := range mp {
+		lpc.queue = append(lpc.queue, mp[iovno]...)
+
+	}
+	// mp := make(map[int]int)
+	// for _, pair := range saved_addresses {
+	// 	addr := pair[0]
+	// 	nopages := int(pair[1])
+	// 	iovno := lpc.iovs.findBinSearch(addr)
+
+	// 	if iovno != -1 {
+
+	// 		iov := lpc.iovs.iovs[iovno]
+	// 		pi := lpc.pmi.findBinSearch(addr)
+	// 		index := int(addr-iov.start) / (iov.pagesz)
+	// 		iovlen := int(iov.end-iov.start) / iov.pagesz
+	// 		nopages := min(iovlen-index, nopages)
+	// 		if i, ok := mp[iovno]; ok {
+	// 			db.DPrintf(db.LAZYPAGESSRV_FAULT, "extended : %v -> %v+%v", lpc.queue[i].index, index, nopages)
+	// 			if lpc.queue[i].index > index {
+	// 				lpc.queue[i].addr = uint64(pi * iov.pagesz)
+	// 				lpc.queue[i].nopages += lpc.queue[i].index - index
+	// 				lpc.queue[i].realaddr = addr
+	// 				lpc.queue[i].index = index
+	// 			} else if lpc.queue[i].index < index {
+	// 				if lpc.queue[i].index+lpc.queue[i].nopages < index+nopages {
+	// 					lpc.queue[i].nopages = index + nopages - lpc.queue[i].index
+	// 				}
+
+	// 			}
+	// 			continue
+	// 		}
+	// 		mp[iovno] = len(lpc.queue)
+
+	// 		//begin := max(0, index-PREFETCH/4)
+
+	// 		//lpc.queue = append(lpc.queue, Req{iov: iovno, nopages: min(iovlen-begin, PREFETCH/4), index: begin, addr: uint64((pi - (index - begin)) * iov.pagesz), realaddr: addr - uint64(pi*(index-begin))})
+
+	// 		lpc.queue = append(lpc.queue, Req{iov: iovno, nopages: nopages, index: index, addr: uint64(pi * iov.pagesz), realaddr: addr})
+	// 	}
+	// }
 	db.DPrintf(db.LAZYPAGESSRV_FAULT, "QUEUE length %v saved len:%v", len(lpc.queue), len(saved_addresses))
 	lpc.mu.Unlock()
 	for {
@@ -281,7 +351,7 @@ func (lpc *lazyPagesConn) preFetch(saved_addresses [][]uint64) {
 		if err := lpc.rp(int64(request.addr), buf); err != nil {
 			db.DFatalf("no page content for %x err: %v", request.addr, err)
 		}
-		db.DPrintf(db.LAZYPAGESSRV_FAULT, "fetched addr %x hits %v", request.realaddr, lpc.hits)
+		//db.DPrintf(db.LAZYPAGESSRV_FAULT, "fetched addr %x hits %v", request.realaddr, lpc.hits)
 		lpc.mu.Lock()
 		curriovno = request.iov
 		iovlen = int(iov.end-iov.start) / iov.pagesz

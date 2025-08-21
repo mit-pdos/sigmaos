@@ -3,12 +3,13 @@
 num_runs=$1
 # Initialize an associative array to store cumulative timestamp values (in ms)
 declare -A total_times
-
+./stop.sh > /dev/null 2>&1
 # Function to convert timestamp to milliseconds
 timestamp_to_ms() {
     # Use `date` to convert H:M:S(.ms) to epoch time with milliseconds
     date -u -d "1970-01-01T$1" +%s%3N
 }
+> restore_time.txt
 # Initialize the array with zeros
 for ((i = 0; i < ${#patterns[@]}; i++)); do
     total_times[$i]=0
@@ -27,7 +28,7 @@ for ((run = 1; run <= num_runs; run++)); do
         "Spawn from checkpoint"
         "restoreProc: Register "
         "restoreProc: Registered"
-        "readCheckpoint"
+        "CKPT readCheckpoint"
         "Done readCheckpoint"
         "Invoke restore"
         "restoreProc: Restore err"
@@ -113,14 +114,39 @@ for ((run = 1; run <= num_runs; run++)); do
     #     ./stop.sh > /dev/null 2>&1
     #     exit 1
     # fi
+    
     for ((i = 0; i < ${#patterns[@]}; i++)); do
             if [[ -n "${times[$i]}" ]]; then
+            
                 echo "$i ${patterns[$i]} ${times[$i]}"
                 ms=$(timestamp_to_ms "${times[$i]}")
                 
                 total_times[$i]=$((total_times[$i] + ms))
             fi
         done
+    # if (( $(echo "$(timestamp_to_ms "${times[2]}")> $(timestamp_to_ms "${times[5]}")" | bc -l) )); then
+    #             echo "FOUND!"
+    #             break
+    #         fi
+    diff=$(echo "$(timestamp_to_ms "${times[6]}") - $(timestamp_to_ms "${times[5]}")" | bc -l)
+    echo "$diff" >> restore_time.txt
+    if (( $(echo "$diff > 80" | bc -l) )); then
+        echo "FOUND! $diff"
+        for ((i = 0; i < ${#patterns[@]}; i++)); do
+            #avg_ms=$((total_times[$i] / num_runs))
+            total_times[$i]=$(timestamp_to_ms "${times[$i]}")
+            
+        done
+
+        echo "Timestamps"
+        for ((i = 1; i < ${#patterns[@]}; i++)); do
+            t1=${total_times[0]}
+            t2=${total_times[$i]}
+            diff=$((t2 - t1))
+            echo "${patterns[$i]} offset: ${diff} ms"
+        done
+        break  # only valid inside a loop
+    fi
     ./stop.sh > /dev/null 2>&1
 done
 average=$(echo "scale=2; $total_faults / $num_runs" | bc)

@@ -121,7 +121,7 @@ func (lps *lazyPagesSrv) handleConn(conn net.Conn) {
 		db.DFatalf("Read pid err %v", err)
 	}
 
-	// db.DPrintf(db.LAZYPAGESSRV, "pid %d\n", pid)
+	db.DPrintf(db.LAZYPAGESSRV, "pid %d\n", pid)
 	flags, err := unix.FcntlInt(uintptr(connFd), unix.F_GETFL, 0)
 	newFlags := flags &^ unix.O_NONBLOCK
 	_, err = unix.FcntlInt(uintptr(connFd), unix.F_SETFL, newFlags)
@@ -217,14 +217,14 @@ func (lps *lazyPagesSrv) register(pid int, imgdir, pages string, ckptDir string,
 	// 	db.DPrintf(db.PROCD, "DownloadFile pages err %v\n", err)
 	// 	return err
 	// }
-	fullpages := filepath.Join(lazypages.WorkDir(proc.GetProcEnv().GetPID()), "fullpages-"+strconv.Itoa(pid)+".img")
+	fullpages := filepath.Join(lazypages.WorkDir(proc.GetProcEnv().GetPID()), "fullpages-"+strconv.Itoa(1)+".img")
 	histFD := -1
 	var err error
 	preloads := make([][]uint64, 0)
 	if firstInstance {
 
 		//XXXXXXXXX fix name to identify process since pid is 1
-		histFn := filepath.Join(ckptDir, "preloads-"+strconv.Itoa(pid)+".txt")
+		histFn := filepath.Join(ckptDir, "preloads-"+strconv.Itoa(1)+".txt")
 		_, err = lps.Create(histFn, 0777, 0)
 		if err != nil {
 			return err
@@ -234,9 +234,9 @@ func (lps *lazyPagesSrv) register(pid int, imgdir, pages string, ckptDir string,
 			return err
 		}
 	} else {
-		preloads = lps.readPreloads(filepath.Join(imgdir, "preloads-"+strconv.Itoa(pid)+".txt"))
+		preloads = lps.readPreloads(filepath.Join(imgdir, "preloads-"+strconv.Itoa(1)+".txt"))
 	}
-	lpc, err := lps.newLazyPagesConn(pid, imgdir, pages, fullpages, histFD)
+	lpc, err := lps.newLazyPagesConn(1, imgdir, pages, fullpages, histFD)
 	if err != nil {
 		return err
 	}

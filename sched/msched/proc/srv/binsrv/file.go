@@ -3,6 +3,7 @@ package binsrv
 import (
 	"context"
 	"fmt"
+	db "sigmaos/debug"
 	"sync"
 	"syscall"
 	"time"
@@ -11,7 +12,6 @@ import (
 
 	"github.com/hanwen/go-fuse/v2/fs"
 	"github.com/hanwen/go-fuse/v2/fuse"
-	db "sigmaos/debug"
 )
 
 type binfsFile struct {

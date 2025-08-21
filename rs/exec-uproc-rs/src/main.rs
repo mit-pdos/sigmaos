@@ -79,6 +79,7 @@ fn main() {
     log::info!("SPAWN_LAT SIGMA_DIALPROXY_FD: {}",dialproxy_conn_fd.to_string());
     print_elapsed_time("trampoline.connect_dialproxy", now, false);
     now = SystemTime::now();
+    println!("dialproxy {}", dialproxy);
     seccomp_proc(dialproxy).expect("seccomp failed");
     print_elapsed_time("trampoline.seccomp_proc", now, false);
     now = SystemTime::now();
@@ -254,11 +255,12 @@ fn seccomp_proc(dialproxy: String) -> Result<(), Box<dyn std::error::Error>> {
     // XXX Should really be 64 syscalls. We can remove ioctl, poll, and lstat,
     // but the mini rust proc for our spawn latency microbenchmarks requires
     // it.
-    const ALLOWED_SYSCALLS: [ScmpSyscall; 69] = [
+    const ALLOWED_SYSCALLS: [ScmpSyscall; 72] = [
         ScmpSyscall::new("ioctl"), // XXX Only needed for rust proc spawn microbenchmark
         ScmpSyscall::new("poll"),  // XXX Only needed for rust proc spawn microbenchmark
         ScmpSyscall::new("lstat"), // XXX Only needed for rust proc spawn microbenchmark
         ScmpSyscall::new("clock_gettime"), // XXX Only needed to run on gVisor
+        ScmpSyscall::new("clone3"),
         ScmpSyscall::new("membarrier"), // XXX Only needed to run on gVisor
         ScmpSyscall::new("accept4"),
         ScmpSyscall::new("access"),
@@ -285,6 +287,7 @@ fn seccomp_proc(dialproxy: String) -> Result<(), Box<dyn std::error::Error>> {
         ScmpSyscall::new("getsockname"),
         ScmpSyscall::new("getsockopt"),
         ScmpSyscall::new("gettid"),
+        ScmpSyscall::new("getuid"),
         ScmpSyscall::new("lseek"),
         ScmpSyscall::new("madvise"),
         ScmpSyscall::new("mkdirat"),
@@ -304,6 +307,7 @@ fn seccomp_proc(dialproxy: String) -> Result<(), Box<dyn std::error::Error>> {
         ScmpSyscall::new("recvfrom"),
         ScmpSyscall::new("recvmsg"),
         ScmpSyscall::new("restart_syscall"),
+        ScmpSyscall::new("rseq"),
         ScmpSyscall::new("rt_sigaction"),
         ScmpSyscall::new("rt_sigprocmask"),
         ScmpSyscall::new("rt_sigreturn"),

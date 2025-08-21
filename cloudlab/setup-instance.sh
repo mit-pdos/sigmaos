@@ -2,7 +2,7 @@
 
 if [ "$#" -ne 1 ]
 then
-  echo "Usage: ./install-sw.sh address"
+  echo "Usage: ./setup-instance.sh address"
   exit 1
 fi
 

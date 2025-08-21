@@ -99,6 +99,9 @@ instance types. Proceed with caution if using another instance type.
 First, set the `LOGIN` variable in `cloudlab/env.sh` to your cloudlab username,
 USERNAME.
 
+Next, put the SSH keys associated with your CloudLab account in
+`cloudlab/keys/cloudlab-sigmaos` and `cloudlab/keys/cloudlab-sigmaos.pub`
+
 Then, go to the CloudLab experiment manifest page, and copy the XML-formatted
 description of your cloudlab cluster into a local file (e.g.,
 `/tmp/cloudlab-servers.txt`). Then, from the `sigmaos/cloudlab` directory, run

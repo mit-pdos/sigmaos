@@ -28,16 +28,20 @@ func WithDelegatedSPProxyChannel(fsl *fslib.FsLib) *rpcclntopts.RPCClntOption {
 	}
 }
 
-func WithSPChannel(fsl *fslib.FsLib) *rpcclntopts.RPCClntOption {
+func WithSPChannel(fsl *fslib.FsLib, lazyInit bool) *rpcclntopts.RPCClntOption {
 	return &opts.RPCClntOption{
 		Apply: func(opts *rpcclntopts.RPCClntOptions) {
 			opts.NewRPCChannel = func(pn string) (channel.RPCChannel, error) {
-				return spchannel.NewSPChannel(fsl, pn)
+				return spchannel.NewSPChannel(fsl, pn, lazyInit)
 			}
 		},
 	}
 }
 
 func NewRPCClnt(fsl *fslib.FsLib, pn string) (*clnt.RPCClnt, error) {
-	return clnt.NewRPCClnt(pn, WithSPChannel(fsl))
+	return NewRPCClntLazyInit(fsl, pn, false)
+}
+
+func NewRPCClntLazyInit(fsl *fslib.FsLib, pn string, lazyInit bool) (*clnt.RPCClnt, error) {
+	return clnt.NewRPCClnt(pn, WithSPChannel(fsl, lazyInit))
 }

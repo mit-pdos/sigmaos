@@ -31,7 +31,7 @@ type RawFtTaskClnt struct {
 func newRawFtTaskClnt(fsl *fslib.FsLib, serviceId fttask.FtTaskSvcId, a *AcquireId) *RawFtTaskClnt {
 	tc := &RawFtTaskClnt{
 		fsl:       fsl,
-		rpcclntc:  rpcclntcache.NewRPCClntCache(sprpcclnt.WithSPChannel(fsl)),
+		rpcclntc:  rpcclntcache.NewRPCClntCache(sprpcclnt.WithSPChannel(fsl, false)),
 		serviceId: serviceId,
 		fence:     nil,
 		mu:        sync.Mutex{},

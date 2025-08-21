@@ -64,13 +64,13 @@ func (rpcs *RPCState) GetRPCChannel(sc *sigmaclnt.SigmaClnt, rpcIdx uint64, pn s
 			// If the proc env has an endpoint cached, use it to make the channel
 			if ep, ok := sc.ProcEnv().GetCachedEndpoint(pn); ok {
 				db.DPrintf(db.SPPROXYSRV, "[%v] delRPC(%v) create channel EP cached pn:%v", sc.ProcEnv().GetPID(), rpcIdx, pn)
-				ch, err = sprpcchan.NewSPChannelEndpoint(sc.FsLib, pn, ep)
+				ch, err = sprpcchan.NewSPChannelEndpoint(sc.FsLib, pn, ep, false)
 				if err != nil {
 					db.DPrintf(db.SPPROXYSRV_ERR, "Err create mounted RPC channel to run delRPCs (%v -> %v): %v", pn, ep, err)
 				}
 			} else {
 				db.DPrintf(db.SPPROXYSRV, "[%v] delRPC(%v) create channel no EP pn:%v", sc.ProcEnv().GetPID(), rpcIdx, pn)
-				ch, err = sprpcchan.NewSPChannel(sc.FsLib, pn)
+				ch, err = sprpcchan.NewSPChannel(sc.FsLib, pn, false)
 				if err != nil {
 					db.DPrintf(db.SPPROXYSRV_ERR, "Err create unmounted RPC channel to run delRPCs (%v): %v", pn, err)
 				}

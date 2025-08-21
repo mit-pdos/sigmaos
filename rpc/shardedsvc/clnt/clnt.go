@@ -4,10 +4,10 @@ import (
 	"path/filepath"
 
 	db "sigmaos/debug"
-	"sigmaos/sigmaclnt/fslib/dircache"
-	"sigmaos/sigmaclnt/fslib"
 	rpcclnt "sigmaos/rpc/clnt"
 	sprpcclnt "sigmaos/rpc/clnt/sigmap"
+	"sigmaos/sigmaclnt/fslib"
+	"sigmaos/sigmaclnt/fslib/dircache"
 )
 
 type AllocFn func(string)

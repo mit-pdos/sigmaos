@@ -9,6 +9,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"sigmaos/apps/cache"
 	cachegrpclnt "sigmaos/apps/cache/cachegrp/clnt"
 	cachegrpmgr "sigmaos/apps/cache/cachegrp/mgr"
 	cacheproto "sigmaos/apps/cache/proto"
@@ -41,7 +42,9 @@ type CachedBackupJobInstance struct {
 	cc               *cachegrpclnt.CachedSvcClnt
 	primaryEPs       []*sp.Tendpoint
 	lgs              []*loadgen.LoadGenerator
+	putLGs           []*loadgen.LoadGenerator
 	keys             []string
+	vals             []*cacheproto.CacheString
 	dur              []time.Duration
 	maxrps           []int
 	putDur           []time.Duration
@@ -110,7 +113,7 @@ func NewCachedBackupJob(ts *test.RealmTstate, jobName string, durs string, maxrp
 		return ji
 	}
 	ji.cc = cachegrpclnt.NewCachedSvcClnt(ts.FsLib, ji.jobName)
-	ji.keys, err = ji.writeKVsToCache()
+	ji.keys, ji.vals, err = ji.writeKVsToCache()
 	if !assert.Nil(ji.Ts.T, err, "Err write KVs to cache: %v", err) {
 		return ji
 	}
@@ -173,18 +176,34 @@ func NewCachedBackupJob(ts *test.RealmTstate, jobName string, durs string, maxrp
 			if isMiss {
 				// Simulate fetching the data from elsewhere
 				time.Sleep(1 * time.Second)
-				db.DPrintf(db.TEST, "Cache miss!")
+				db.DPrintf(db.TEST, "Sim cache miss!")
 			}
 			idx := r.Int() % len(ji.keys)
 			// Select a key to request
 			key := ji.keys[idx]
 			v := &cacheproto.CacheString{}
-			if err := ji.cc.Get(key, v); !assert.Nil(ji.Ts.T, err, "Err cc get: %v", err) {
+			err := ji.cc.Get(key, v)
+			if err != nil && !cache.IsMiss(err) {
+				db.DPrintf(db.TEST, "True cache miss!")
+			} else if !assert.Nil(ji.Ts.T, err, "Err cc get: %v", err) {
 				return 0, false
 			}
-			assert.Equal(ji.Ts.T, v.Val, "val-"+strconv.Itoa(idx), "Unexpected val for key %v: %v", key, v.Val)
+			assert.Equal(ji.Ts.T, v.Val, ji.vals[idx].Val, "Unexpected val for key %v: %v", key, v.Val)
 			// TODO: on miss, try from DB
 			// TODO: on MOVE, wait & then retry
+			return 0, false
+		}))
+	}
+	ji.putLGs = make([]*loadgen.LoadGenerator, 0, len(ji.putDur))
+	for i := range ji.putDur {
+		ji.putLGs = append(ji.putLGs, loadgen.NewLoadGenerator(ji.putDur[i], ji.putMaxrps[i], func(r *rand.Rand) (time.Duration, bool) {
+			idx := r.Int() % len(ji.keys)
+			// Select a key to request
+			key := ji.keys[idx]
+			val := ji.vals[idx]
+			if err := ji.cc.Put(key, val); !assert.Nil(ji.Ts.T, err, "Err cc put: %v", err) {
+				return 0, false
+			}
 			return 0, false
 		}))
 	}
@@ -203,12 +222,29 @@ func (ji *CachedBackupJobInstance) StartCachedBackupJob() {
 		}(lg, &wg)
 	}
 	wg.Wait()
+	for _, putLG := range ji.putLGs {
+		wg.Add(1)
+		go func(putLG *loadgen.LoadGenerator, wg *sync.WaitGroup) {
+			defer wg.Done()
+			putLG.Calibrate()
+		}(putLG, &wg)
+	}
+	wg.Wait()
 	// Start a goroutine to asynchronously scale cached
 	go ji.scaleCached()
+	wg.Add(1)
+	// Start a goroutine to asynchronously run puts
+	go func() {
+		for i, putLG := range ji.putLGs {
+			db.DPrintf(db.TEST, "Run put load generator rps %v dur %v", ji.maxrps[i], ji.dur[i])
+			putLG.Run()
+		}
+	}()
 	for i, lg := range ji.lgs {
-		db.DPrintf(db.TEST, "Run load generator rps %v dur %v", ji.maxrps[i], ji.dur[i])
+		db.DPrintf(db.TEST, "Run get load generator rps %v dur %v", ji.maxrps[i], ji.dur[i])
 		lg.Run()
 	}
+	wg.Wait()
 }
 
 func (ji *CachedBackupJobInstance) Wait() {
@@ -234,15 +270,18 @@ func (ji *CachedBackupJobInstance) scaleCached() {
 }
 
 // Write vector DB to cache srv
-func (ji *CachedBackupJobInstance) writeKVsToCache() ([]string, error) {
+func (ji *CachedBackupJobInstance) writeKVsToCache() ([]string, []*cacheproto.CacheString, error) {
 	keys := make([]string, ji.nKV)
+	vals := make([]*cacheproto.CacheString, ji.nKV)
 	for i := range keys {
 		key := "key-" + strconv.Itoa(i)
+		val := &cacheproto.CacheString{Val: "val-" + strconv.Itoa(i)}
 		keys[i] = key
-		if err := ji.cc.Put(key, &cacheproto.CacheString{Val: "val-" + strconv.Itoa(i)}); err != nil {
-			return nil, err
+		vals[i] = val
+		if err := ji.cc.Put(key, val); err != nil {
+			return nil, nil, err
 		}
 	}
 	db.DPrintf(db.TEST, "Done write KVs to cache")
-	return keys, nil
+	return keys, vals, nil
 }

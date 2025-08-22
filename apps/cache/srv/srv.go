@@ -93,7 +93,10 @@ func (cs *CacheSrv) manageShardHitCnts() {
 }
 
 func NewCacheSrv(pe *proc.ProcEnv, dirname string, pn string, nshard int, useEPCache bool) (*CacheSrv, error) {
-	cs := &CacheSrv{shards: make(map[cache.Tshard]*shardInfo), lastFence: sp.NullFence()}
+	cs := &CacheSrv{
+		shards:    make(map[cache.Tshard]*shardInfo),
+		lastFence: sp.NullFence(),
+	}
 	p, err := perf.NewPerf(pe, perf.CACHESRV)
 	if err != nil {
 		db.DFatalf("NewPerf err %v\n", err)

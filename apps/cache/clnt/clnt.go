@@ -304,10 +304,11 @@ func (c *CacheClnt) DelegatedDumpShard(srv string, rpcIdx int) (cache.Tcache, er
 	return res.Vals, nil
 }
 
-func (c *CacheClnt) DumpShard(srv string, shard cache.Tshard, f *sp.Tfence) (cache.Tcache, error) {
+func (c *CacheClnt) DumpShard(srv string, shard cache.Tshard, f *sp.Tfence, empty bool) (cache.Tcache, error) {
 	req := &cacheproto.ShardReq{
 		Shard: uint32(shard),
 		Fence: f.FenceProto(),
+		Empty: empty,
 	}
 	var res cacheproto.ShardData
 	if err := c.RPC(srv, "CacheSrv.DumpShard", req, &res); err != nil {

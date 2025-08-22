@@ -54,7 +54,7 @@ func RunCacheSrvBackup(cachedir, jobname, shardpn string, nshard int, useEPCache
 		db.DPrintf(db.CACHESRV, "top %v hot shards: %v", topN, hotShards)
 		// Dump peer shards via direct RPC
 		for _, shard := range hotShards {
-			vals, err := cc.DumpShard(peerpn, shard, sp.NullFence())
+			vals, err := cc.DumpShard(peerpn, shard, sp.NullFence(), false)
 			if err != nil {
 				db.DFatalf("Err DumpShard(%v) from server %v: %v", shard, peer, err)
 			}

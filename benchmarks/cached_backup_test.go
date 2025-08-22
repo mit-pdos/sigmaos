@@ -159,7 +159,7 @@ func NewCachedBackupJob(ts *test.RealmTstate, jobName string, durs string, maxrp
 			if err := ji.cc.Get(key, v); !assert.Nil(ji.Ts.T, err, "Err cc get: %v", err) {
 				return 0, false
 			}
-			assert.Equal(ji.Ts.T, v.Val, "val-"+strconv.Itoa(i), "Unexpected val for key %v: %v", key, v.Val)
+			assert.Equal(ji.Ts.T, v.Val, "val-"+strconv.Itoa(idx), "Unexpected val for key %v: %v", key, v.Val)
 			// TODO: on miss, try from DB
 			// TODO: on MOVE, wait & then retry
 			return 0, false

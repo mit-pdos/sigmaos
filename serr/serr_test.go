@@ -34,7 +34,7 @@ func TestErr(t *testing.T) {
 }
 
 func TestError(t *testing.T) {
-	for c := serr.TErrBadattach; c <= serr.TErrError; c++ {
+	for c := serr.Terror(serr.TErrBadattach); c <= serr.TErrError; c = serr.Terror(c + 1) {
 		log.Printf("%d %v\n", c, c)
 		assert.True(t, c.String() != "unknown error", c)
 	}

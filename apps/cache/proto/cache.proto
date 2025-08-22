@@ -44,6 +44,7 @@ message ShardReq {
   uint32 shard = 1;
   TfenceProto fence = 2;
   map<string, bytes> vals = 3;
+  bool empty = 4; // Empty the shard, deleting all of its keys and values
 }
 
 message CacheOK {}

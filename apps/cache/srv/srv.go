@@ -292,7 +292,7 @@ func (cs *CacheSrv) DumpShard(ctx fs.CtxI, req cacheproto.ShardReq, rep *cachepr
 		db.DPrintf(db.CACHESRV_ERR, "DumpShard(%v) err not found", req.Tshard())
 		return serr.NewErr(serr.TErrNotfound, req.Tshard())
 	} else {
-		rep.Vals = si.s.dump()
+		rep.Vals = si.s.dump(req.Empty)
 	}
 	db.DPrintf(db.CACHESRV, "DumpShard(%v) done", req.Tshard())
 	return nil

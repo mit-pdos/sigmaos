@@ -72,13 +72,17 @@ func (s *shard) fill(vals cache.Tcache) bool {
 	return true
 }
 
-func (s *shard) dump() cache.Tcache {
+// If empty is true, clear the shard data
+func (s *shard) dump(empty bool) cache.Tcache {
 	s.Lock()
 	defer s.Unlock()
 
 	m := make(cache.Tcache)
 	for k, v := range s.cache {
 		m[k] = v
+	}
+	if empty {
+		s.cache = make(cache.Tcache)
 	}
 	return m
 }

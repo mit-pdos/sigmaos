@@ -13,7 +13,6 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"sigmaos/apps/epcache"
-	epcachesrv "sigmaos/apps/epcache/srv"
 	"sigmaos/apps/hotel"
 	"sigmaos/apps/hotel/proto"
 	"sigmaos/benchmarks"

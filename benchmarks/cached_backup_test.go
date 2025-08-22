@@ -148,11 +148,16 @@ func NewCachedBackupJob(ts *test.RealmTstate, jobName string, durs string, maxrp
 	ji.lgs = make([]*loadgen.LoadGenerator, 0, len(ji.dur))
 	for i := range ji.dur {
 		ji.lgs = append(ji.lgs, loadgen.NewLoadGenerator(ji.dur[i], ji.maxrps[i], func(r *rand.Rand) (time.Duration, bool) {
-			// TODO: Get requests
+			idx := r.Int() % len(ji.keys)
+			// Select a key to request
+			key := ji.keys[idx]
+			v := &cacheproto.CacheString{}
+			if err := ji.cc.Get(key, v); !assert.Nil(ji.Ts.T, err, "Err cc get: %v", err) {
+				return 0, false
+			}
+			assert.Equal(ji.Ts.T, v.Val, "val-"+strconv.Itoa(i), "Unexpected val for key %v: %v", key, v.Val)
 			// TODO: on miss, try from DB
 			// TODO: on MOVE, wait & then retry
-			//			// Run a single request.
-			//			ji.fn(ji.wc, r)
 			return 0, false
 		}))
 	}

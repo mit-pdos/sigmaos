@@ -168,6 +168,12 @@ func NewCachedBackupJob(ts *test.RealmTstate, jobName string, durs string, maxrp
 	ji.lgs = make([]*loadgen.LoadGenerator, 0, len(ji.dur))
 	for i := range ji.dur {
 		ji.lgs = append(ji.lgs, loadgen.NewLoadGenerator(ji.dur[i], ji.maxrps[i], func(r *rand.Rand) (time.Duration, bool) {
+			// 10% chance of miss
+			isMiss := (r.Int() % 100) > 90
+			if isMiss {
+				// Simulate fetching the data from elsewhere
+				time.Sleep(1 * time.Second)
+			}
 			idx := r.Int() % len(ji.keys)
 			// Select a key to request
 			key := ji.keys[idx]

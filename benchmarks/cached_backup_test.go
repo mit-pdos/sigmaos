@@ -44,12 +44,14 @@ type CachedBackupJobInstance struct {
 	keys             []string
 	dur              []time.Duration
 	maxrps           []int
+	putDur           []time.Duration
+	putMaxrps        []int
 	scale            bool
 	scaleDelay       time.Duration
 	*test.RealmTstate
 }
 
-func NewCachedBackupJob(ts *test.RealmTstate, jobName string, durs string, maxrpss string, ncache int, cacheMCPU proc.Tmcpu, cacheGC bool, useEPCache bool, nKV int, delegatedInit bool, topN int, scale bool, scaleDelay time.Duration) *CachedBackupJobInstance {
+func NewCachedBackupJob(ts *test.RealmTstate, jobName string, durs string, maxrpss string, putDurs string, putMaxrpss string, ncache int, cacheMCPU proc.Tmcpu, cacheGC bool, useEPCache bool, nKV int, delegatedInit bool, topN int, scale bool, scaleDelay time.Duration) *CachedBackupJobInstance {
 	ji := &CachedBackupJobInstance{
 		RealmTstate:   ts,
 		sigmaos:       true,
@@ -80,6 +82,20 @@ func NewCachedBackupJob(ts *test.RealmTstate, jobName string, durs string, maxrp
 		assert.Nil(ts.Ts.T, err, "Bad duration %v", err)
 		ji.dur = append(ji.dur, d)
 		ji.maxrps = append(ji.maxrps, n)
+	}
+
+	putDurslice := strings.Split(putDurs, ",")
+	putMaxrpsslice := strings.Split(putMaxrpss, ",")
+	assert.Equal(ts.Ts.T, len(putDurslice), len(putMaxrpsslice), "Non-matching lengths: putDurs(%v) != putMaxrpss(%v)", len(putDurslice), len(putMaxrpsslice))
+	ji.putDur = make([]time.Duration, 0, len(putDurslice))
+	ji.putMaxrps = make([]int, 0, len(putDurslice))
+	for i := range putDurslice {
+		d, err := time.ParseDuration(putDurslice[i])
+		assert.Nil(ts.Ts.T, err, "Bad putDuration %v", err)
+		n, err := strconv.Atoi(putMaxrpsslice[i])
+		assert.Nil(ts.Ts.T, err, "Bad putDuration %v", err)
+		ji.putDur = append(ji.putDur, d)
+		ji.putMaxrps = append(ji.putMaxrps, n)
 	}
 
 	var err error
@@ -169,7 +185,7 @@ func NewCachedBackupJob(ts *test.RealmTstate, jobName string, durs string, maxrp
 }
 
 func (ji *CachedBackupJobInstance) StartCachedBackupJob() {
-	db.DPrintf(db.TEST, "Start cached backup job dur %v maxrps %v", ji.dur, ji.maxrps)
+	db.DPrintf(db.TEST, "Start cached backup job get dur %v get maxrps %v put dur %v put maxrps %v", ji.dur, ji.maxrps, ji.putDur, ji.putMaxrps)
 	// Warm up load generators
 	var wg sync.WaitGroup
 	for _, lg := range ji.lgs {
@@ -189,6 +205,9 @@ func (ji *CachedBackupJobInstance) StartCachedBackupJob() {
 }
 
 func (ji *CachedBackupJobInstance) Wait() {
+	for _, lg := range ji.lgs {
+		lg.Stats()
+	}
 	ji.cm.Stop()
 }
 

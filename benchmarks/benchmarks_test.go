@@ -99,6 +99,8 @@ var BACKUP_CACHED_NKEYS int
 var BACKUP_CACHED_TOP_N_SHARDS int
 var BACKUP_CACHED_DURS string
 var BACKUP_CACHED_MAX_RPS string
+var BACKUP_CACHED_PUT_DURS string
+var BACKUP_CACHED_PUT_MAX_RPS string
 var SCALE_BACKUP_CACHED_DELAY time.Duration
 var MANUALLY_SCALE_BACKUP_CACHED bool
 var MANUALLY_SCALE_COSSIM bool
@@ -200,6 +202,8 @@ func init() {
 	flag.BoolVar(&BACKUP_CACHED_DELEGATE_INIT, "backup_cached_delegated_init", false, "Backup cached delegate init")
 	flag.StringVar(&BACKUP_CACHED_DURS, "backup_cached_dur", "10s", "Backup cached benchmark load generation duration (comma-separated for multiple phases).")
 	flag.StringVar(&BACKUP_CACHED_MAX_RPS, "backup_cached_max_rps", "100", "Backup cached benchmark load generation duration (comma-separated for multiple phases).")
+	flag.StringVar(&BACKUP_CACHED_PUT_DURS, "backup_cached_put_dur", "10s", "Backup cached benchmark load generation duration (comma-separated for multiple phases).")
+	flag.StringVar(&BACKUP_CACHED_PUT_MAX_RPS, "backup_cached_put_max_rps", "100", "Backup cached benchmark load generation duration (comma-separated for multiple phases).")
 	flag.BoolVar(&MANUALLY_SCALE_BACKUP_CACHED, "manually_scale_backup_cached", false, "Manually scale backup cached")
 	flag.DurationVar(&SCALE_BACKUP_CACHED_DELAY, "scale_backup_cached_delay", 0*time.Second, "Delay to wait before scaling number of backup cacheds.")
 	flag.BoolVar(&MANUALLY_SCALE_GEO, "manually_scale_geo", false, "Manually scale geos")
@@ -1874,7 +1878,7 @@ func TestCachedBackup(t *testing.T) {
 	defer p.Done()
 
 	rs := benchmarks.NewResults(1, benchmarks.E2E)
-	jobs, ji := newCachedBackupJobs(mrts.GetRealm(REALM1), jobName, BACKUP_CACHED_DURS, BACKUP_CACHED_MAX_RPS, BACKUP_CACHED_NCACHE, proc.Tmcpu(BACKUP_CACHED_CACHE_MCPU), true, BACKUP_CACHED_USE_EPCACHE, BACKUP_CACHED_NKEYS, BACKUP_CACHED_DELEGATE_INIT, BACKUP_CACHED_TOP_N_SHARDS, MANUALLY_SCALE_BACKUP_CACHED, SCALE_BACKUP_CACHED_DELAY)
+	jobs, ji := newCachedBackupJobs(mrts.GetRealm(REALM1), jobName, BACKUP_CACHED_DURS, BACKUP_CACHED_MAX_RPS, BACKUP_CACHED_PUT_DURS, BACKUP_CACHED_PUT_MAX_RPS, BACKUP_CACHED_NCACHE, proc.Tmcpu(BACKUP_CACHED_CACHE_MCPU), true, BACKUP_CACHED_USE_EPCACHE, BACKUP_CACHED_NKEYS, BACKUP_CACHED_DELEGATE_INIT, BACKUP_CACHED_TOP_N_SHARDS, MANUALLY_SCALE_BACKUP_CACHED, SCALE_BACKUP_CACHED_DELAY)
 	go func() {
 		for _, j := range jobs {
 			// Wait until ready

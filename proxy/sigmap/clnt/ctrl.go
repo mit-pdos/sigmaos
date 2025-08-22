@@ -38,8 +38,13 @@ func (scc *CtrlClnt) StatsSrv() (*rpc.RPCStatsSnapshot, error) {
 
 // Tell spproxyd to prepare for an incoming proc
 func (scc *CtrlClnt) InformIncomingProc(p *proc.Proc) error {
+	// Create a copy of the proc proto
+	pp := *p.GetProto()
+	// Clear the env, which is unneeded by spproxyd and may be modified in
+	// another thread
+	pp.Env = nil
 	req := spproto.SigmaInformProcReq{
-		ProcProto: p.GetProto(),
+		ProcProto: &pp,
 	}
 	rep := spproto.SigmaErrRep{}
 	err := scc.rpcc.RPC("CtrlAPI.InformIncomingProc", &req, &rep)

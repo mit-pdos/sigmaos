@@ -267,13 +267,13 @@ func newNCachedJobs(ts *test.RealmTstate, n, nkeys, ncache, nclerks int, durstr 
 	return js, is
 }
 
-func newCachedBackupJobs(ts *test.RealmTstate, jobName string, ncache int, cacheMCPU proc.Tmcpu, cacheGC bool, useEPCache bool, nKV int, delegatedInit bool, topN int) ([]*CachedBackupJobInstance, []interface{}) {
+func newCachedBackupJobs(ts *test.RealmTstate, jobName string, durs string, maxrpss string, ncache int, cacheMCPU proc.Tmcpu, cacheGC bool, useEPCache bool, nKV int, delegatedInit bool, topN int) ([]*CachedBackupJobInstance, []interface{}) {
 	// n is ntrials, which is always 1.
 	n := 1
 	ws := make([]*CachedBackupJobInstance, 0, n)
 	is := make([]interface{}, 0, n)
 	for i := 0; i < n; i++ {
-		i := NewCachedBackupJob(ts, jobName, ncache, cacheMCPU, cacheGC, useEPCache, nKV, delegatedInit, topN)
+		i := NewCachedBackupJob(ts, jobName, durs, maxrpss, ncache, cacheMCPU, cacheGC, useEPCache, nKV, delegatedInit, topN)
 		ws = append(ws, i)
 		is = append(is, i)
 	}

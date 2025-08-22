@@ -1,7 +1,10 @@
 package benchmarks_test
 
 import (
+	"math/rand"
 	"strconv"
+	"strings"
+	"sync"
 	"time"
 
 	"github.com/stretchr/testify/assert"
@@ -10,6 +13,7 @@ import (
 	cachegrpmgr "sigmaos/apps/cache/cachegrp/mgr"
 	cacheproto "sigmaos/apps/cache/proto"
 	epsrv "sigmaos/apps/epcache/srv"
+	"sigmaos/benchmarks/loadgen"
 	db "sigmaos/debug"
 	"sigmaos/proc"
 	mschedclnt "sigmaos/sched/msched/clnt"
@@ -36,10 +40,14 @@ type CachedBackupJobInstance struct {
 	cm               *cachegrpmgr.CacheMgr
 	cc               *cachegrpclnt.CachedSvcClnt
 	primaryEPs       []*sp.Tendpoint
+	lgs              []*loadgen.LoadGenerator
+	keys             []string
+	dur              []time.Duration
+	maxrps           []int
 	*test.RealmTstate
 }
 
-func NewCachedBackupJob(ts *test.RealmTstate, jobName string, ncache int, cacheMCPU proc.Tmcpu, cacheGC bool, useEPCache bool, nKV int, delegatedInit bool, topN int) *CachedBackupJobInstance {
+func NewCachedBackupJob(ts *test.RealmTstate, jobName string, durs string, maxrpss string, ncache int, cacheMCPU proc.Tmcpu, cacheGC bool, useEPCache bool, nKV int, delegatedInit bool, topN int) *CachedBackupJobInstance {
 	ji := &CachedBackupJobInstance{
 		RealmTstate:   ts,
 		sigmaos:       true,
@@ -55,6 +63,21 @@ func NewCachedBackupJob(ts *test.RealmTstate, jobName string, ncache int, cacheM
 		topN:          topN,
 		ready:         make(chan bool),
 	}
+
+	durslice := strings.Split(durs, ",")
+	maxrpsslice := strings.Split(maxrpss, ",")
+	assert.Equal(ts.Ts.T, len(durslice), len(maxrpsslice), "Non-matching lengths: durs(%v) != maxrpss(%v)", len(durslice), len(maxrpsslice))
+	ji.dur = make([]time.Duration, 0, len(durslice))
+	ji.maxrps = make([]int, 0, len(durslice))
+	for i := range durslice {
+		d, err := time.ParseDuration(durslice[i])
+		assert.Nil(ts.Ts.T, err, "Bad duration %v", err)
+		n, err := strconv.Atoi(maxrpsslice[i])
+		assert.Nil(ts.Ts.T, err, "Bad duration %v", err)
+		ji.dur = append(ji.dur, d)
+		ji.maxrps = append(ji.maxrps, n)
+	}
+
 	var err error
 	if ji.useEPCache {
 		ji.epcj, err = epsrv.NewEPCacheJob(ts.SigmaClnt)
@@ -67,12 +90,10 @@ func NewCachedBackupJob(ts *test.RealmTstate, jobName string, ncache int, cacheM
 		return ji
 	}
 	ji.cc = cachegrpclnt.NewCachedSvcClnt(ts.FsLib, ji.jobName)
-	keys, err := ji.writeKVsToCache()
+	ji.keys, err = ji.writeKVsToCache()
 	if !assert.Nil(ji.Ts.T, err, "Err write KVs to cache: %v", err) {
 		return ji
 	}
-	_ = keys
-	// TODO: use keys to generate load
 	ji.primaryEPs = make([]*sp.Tendpoint, ji.ncache)
 	for i := 0; i < ji.ncache; i++ {
 		ep, err := ji.cc.GetEndpoint(i)
@@ -124,13 +145,38 @@ func NewCachedBackupJob(ts *test.RealmTstate, jobName string, ncache int, cacheM
 		return ji
 	}
 	db.DPrintf(db.TEST, "Warmed kid %v with CachedBackup bin", ji.warmCachedSrvKID)
+	ji.lgs = make([]*loadgen.LoadGenerator, 0, len(ji.dur))
+	for i := range ji.dur {
+		ji.lgs = append(ji.lgs, loadgen.NewLoadGenerator(ji.dur[i], ji.maxrps[i], func(r *rand.Rand) (time.Duration, bool) {
+			// TODO: Get requests
+			// TODO: on miss, try from DB
+			// TODO: on MOVE, wait & then retry
+			//			// Run a single request.
+			//			ji.fn(ji.wc, r)
+			return 0, false
+		}))
+	}
 	return ji
 }
 
 func (ji *CachedBackupJobInstance) StartCachedBackupJob() {
+	db.DPrintf(db.TEST, "Start cached backup job dur %v maxrps %v", ji.dur, ji.maxrps)
+	// Warm up load generators
+	var wg sync.WaitGroup
+	for _, lg := range ji.lgs {
+		wg.Add(1)
+		go func(lg *loadgen.LoadGenerator, wg *sync.WaitGroup) {
+			defer wg.Done()
+			lg.Calibrate()
+		}(lg, &wg)
+	}
+	wg.Wait()
+	for i, lg := range ji.lgs {
+		db.DPrintf(db.TEST, "Run load generator rps %v dur %v", ji.maxrps[i], ji.dur[i])
+		lg.Run()
+	}
+	// TODO: Start backup in a separate thread
 	db.DPrintf(db.TEST, "Add backup server")
-	// TODO: loadgen
-	// TODO: more than one primary server
 	srvID := 0
 	if err := ji.cm.AddBackupServerWithSigmaPath(chunk.ChunkdPath(ji.warmCachedSrvKID), srvID, ji.primaryEPs[srvID], ji.delegatedInit, ji.topN); !assert.Nil(ji.Ts.T, err, "Err add backup server(%v): %v", srvID, err) {
 		return

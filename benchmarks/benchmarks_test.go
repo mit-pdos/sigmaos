@@ -1870,7 +1870,7 @@ func TestCachedBackup(t *testing.T) {
 	defer p.Done()
 
 	rs := benchmarks.NewResults(1, benchmarks.E2E)
-	jobs, ji := newCachedBackupJobs(mrts.GetRealm(REALM1), jobName, BACKUP_CACHED_NCACHE, proc.Tmcpu(BACKUP_CACHED_CACHE_MCPU), true, BACKUP_CACHED_USE_EPCACHE, BACKUP_CACHED_NKEYS, BACKUP_CACHED_DELEGATE_INIT, BACKUP_CACHED_TOP_N_SHARDS)
+	jobs, ji := newCachedBackupJobs(mrts.GetRealm(REALM1), jobName, BACKUP_CACHED_DURS, BACKUP_CACHED_MAX_RPS, BACKUP_CACHED_NCACHE, proc.Tmcpu(BACKUP_CACHED_CACHE_MCPU), true, BACKUP_CACHED_USE_EPCACHE, BACKUP_CACHED_NKEYS, BACKUP_CACHED_DELEGATE_INIT, BACKUP_CACHED_TOP_N_SHARDS)
 	go func() {
 		for _, j := range jobs {
 			// Wait until ready

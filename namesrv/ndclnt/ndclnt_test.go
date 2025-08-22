@@ -811,7 +811,7 @@ func partitionNamed(t *testing.T, delay int64) {
 	assert.False(t, ep1.Equal(ep2))
 
 	pe := proc.NewAddedProcEnv(ts.ProcEnv())
-	pe.SetNamedEndpoint(ep2)
+	pe.SetCachedEndpoint(sp.NAMEDREL, ep2)
 	fsl2, err := sigmaclnt.NewFsLib(pe, ts.GetDialProxyClnt())
 
 	_, err = fsl2.PutFile(filepath.Join(dn, "ggg"), 0777, sp.OWRITE, []byte("bye"))

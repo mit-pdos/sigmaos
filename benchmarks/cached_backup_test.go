@@ -44,10 +44,12 @@ type CachedBackupJobInstance struct {
 	keys             []string
 	dur              []time.Duration
 	maxrps           []int
+	scale            bool
+	scaleDelay       time.Duration
 	*test.RealmTstate
 }
 
-func NewCachedBackupJob(ts *test.RealmTstate, jobName string, durs string, maxrpss string, ncache int, cacheMCPU proc.Tmcpu, cacheGC bool, useEPCache bool, nKV int, delegatedInit bool, topN int) *CachedBackupJobInstance {
+func NewCachedBackupJob(ts *test.RealmTstate, jobName string, durs string, maxrpss string, ncache int, cacheMCPU proc.Tmcpu, cacheGC bool, useEPCache bool, nKV int, delegatedInit bool, topN int, scale bool, scaleDelay time.Duration) *CachedBackupJobInstance {
 	ji := &CachedBackupJobInstance{
 		RealmTstate:   ts,
 		sigmaos:       true,
@@ -61,6 +63,8 @@ func NewCachedBackupJob(ts *test.RealmTstate, jobName string, durs string, maxrp
 		nKV:           nKV,
 		delegatedInit: delegatedInit,
 		topN:          topN,
+		scale:         scale,
+		scaleDelay:    scaleDelay,
 		ready:         make(chan bool),
 	}
 
@@ -176,21 +180,31 @@ func (ji *CachedBackupJobInstance) StartCachedBackupJob() {
 		}(lg, &wg)
 	}
 	wg.Wait()
+	// Start a goroutine to asynchronously scale cached
+	go ji.scaleCached()
 	for i, lg := range ji.lgs {
 		db.DPrintf(db.TEST, "Run load generator rps %v dur %v", ji.maxrps[i], ji.dur[i])
 		lg.Run()
 	}
-	// TODO: Start backup in a separate thread
+}
+
+func (ji *CachedBackupJobInstance) Wait() {
+	ji.cm.Stop()
+}
+
+func (ji *CachedBackupJobInstance) scaleCached() {
+	// If not scaling, bail out early
+	if !ji.scale {
+		return
+	}
+	time.Sleep(ji.scaleDelay)
+	// TODO: More scaling
 	db.DPrintf(db.TEST, "Add backup server")
 	srvID := 0
 	if err := ji.cm.AddBackupServerWithSigmaPath(chunk.ChunkdPath(ji.warmCachedSrvKID), srvID, ji.primaryEPs[srvID], ji.delegatedInit, ji.topN); !assert.Nil(ji.Ts.T, err, "Err add backup server(%v): %v", srvID, err) {
 		return
 	}
 	db.DPrintf(db.TEST, "Done add backup server")
-}
-
-func (ji *CachedBackupJobInstance) Wait() {
-	ji.cm.Stop()
 }
 
 // Write vector DB to cache srv

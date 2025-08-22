@@ -120,6 +120,12 @@ the repo by running the following line from the root of the SigmaOS repo, e.g.:
 $ gpg --output /tmp/xxxxx --decrypt aws/.aws/credentials.gpg; rm /tmp/xxxxx
 ```
 
+If your PGP key is password-protected, you may need to repeat this step before
+running any scripts which internally try to use your PGP key (e.g., the
+cluster/instance setup scripts), since `gpg` will try to prompt you for the
+password again after a short timeout, and if the command is being run from a
+script this will lead to an error.
+
 Then, you can set up the CloudLab cluster by running one script. From the root
 of the SigmaOS repo, run:
 

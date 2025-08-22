@@ -220,8 +220,6 @@ func TestSpawnCkptGeo(t *testing.T) {
 	db.DPrintf(db.TEST, "Started %v", pid)
 
 	time.Sleep(1000 * time.Millisecond)
-	status, err = ts.WaitExit(restProc.GetPid())
-	db.DPrintf(db.TEST, "exited %v", status)
 	db.DPrintf(db.TEST, "Spawn from checkpoint")
 	pid = sp.GenPid(GEO + "-copy2")
 	restProc2 := proc.NewProcFromCheckpoint(pid, GEO+"-copy2", pn)
@@ -230,6 +228,9 @@ func TestSpawnCkptGeo(t *testing.T) {
 
 	db.DPrintf(db.TEST, "Wait until start again %v", pid)
 
+	status, err = ts.WaitExit(restProc.GetPid())
+	assert.Nil(t, err)
+	db.DPrintf(db.TEST, "exited %v", status)
 	err = ts.WaitStart(restProc2.GetPid())
 	db.DPrintf(db.TEST, "Started %v", pid)
 	time.Sleep(2000 * time.Millisecond)

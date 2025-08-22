@@ -377,10 +377,10 @@ func restoreProc(criuclnt *criu.Criu, proc *proc.Proc, imgDir, workDir, jailPath
 
 	entries, _ := os.ReadDir(path)
 
-	db.DPrintf(db.CKPT, "old entries in proc fd: %v", workDir)
+	// db.DPrintf(db.CKPT, "old entries in proc fd: %v", workDir)
 	for _, entry := range entries {
 		if entry.IsDir() {
-			db.DPrintf(db.CKPT, "entry %s", entry)
+			// db.DPrintf(db.CKPT, "entry %s", entry)
 			dirs[entry.Name()] = true
 		}
 	}

@@ -12,6 +12,7 @@ perf/perf.test
 benchmarks/results/
 *.err
 *.pdf
+cloudlab/
 scratch.sh
 run-until-fail.sh
 # Artifact evaluation credential files

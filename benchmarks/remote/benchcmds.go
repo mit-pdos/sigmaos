@@ -10,7 +10,34 @@ import (
 )
 
 // Constructors for commands used to start benchmarks
+func GetCkptGeoCmd(bcfg *BenchConfig, ccfg *ClusterConfig) string {
+	const (
+		debugSelectors string = "\"BENCH;TEST;CKPT\""
+	)
 
+	return fmt.Sprintf("export SIGMADEBUG=%s; go clean -testcache; "+
+		"go test -v sigmaos/ckpt -timeout 0 --no-shutdown --etcdIP %s --tag %s "+
+		"--run CkptGeo"+
+		"> /tmp/bench.out 2>&1",
+		debugSelectors,
+		ccfg.LeaderNodeIP,
+		bcfg.Tag,
+	)
+}
+func GetTestCmd(bcfg *BenchConfig, ccfg *ClusterConfig) string {
+	const (
+		debugSelectors string = "\"BENCH;TEST;CKPT\""
+	)
+
+	return fmt.Sprintf("export SIGMADEBUG=%s; go clean -testcache; "+
+		"go test -v sigmaos/benchmarks -timeout 0 --no-shutdown --etcdIP %s --tag %s "+
+		"--run TestMicroSpawnWaitStartRealm -ntrials=2"+
+		"> /tmp/bench.out 2>&1",
+		debugSelectors,
+		ccfg.LeaderNodeIP,
+		bcfg.Tag,
+	)
+}
 func GetInitFSCmd(bcfg *BenchConfig, ccfg *ClusterConfig) string {
 	const (
 		debugSelectors string = "\"BENCH;TEST;\""
@@ -25,7 +52,7 @@ func GetInitFSCmd(bcfg *BenchConfig, ccfg *ClusterConfig) string {
 	}
 	return fmt.Sprintf("export SIGMADEBUG=%s; go clean -testcache; "+
 		"go test -v sigmaos/fslib -timeout 0 --no-shutdown %s %s --etcdIP %s --tag %s "+
-		"--run InitFs "+
+		"--run InitFS"+
 		"> /tmp/bench.out 2>&1",
 		debugSelectors,
 		dialproxy,
@@ -34,7 +61,42 @@ func GetInitFSCmd(bcfg *BenchConfig, ccfg *ClusterConfig) string {
 		bcfg.Tag,
 	)
 }
-
+func GetExampleCmdConstructor(prewarm bool, exampleFlag string) GetBenchCmdFn {
+	return func(bcfg *BenchConfig, ccfg *ClusterConfig) string {
+		const (
+			debugSelectors    string = "\"TEST;THROUGHPUT;CPU_UTIL;SPAWN_LAT;PROXY_LAT;\""
+			valgrindSelectors string = ""
+			perfSelectors     string = "\"TEST_TPT;BENCH_TPT;\""
+		)
+		dialproxy := ""
+		if bcfg.NoNetproxy {
+			dialproxy = "--nodialproxy"
+		}
+		prewarmStr := ""
+		if prewarm {
+			prewarmStr = "--prewarm_realm"
+		}
+		testName := "TestExample"
+		return fmt.Sprintf("export SIGMADEBUG=%s; export SIGMAVALGRIND=%s; export SIGMAPERF=%s; go clean -testcache; "+
+			"ulimit -n 100000; "+
+			"./set-cores.sh --set 1 --start 2 --end 39 > /dev/null 2>&1 ; "+
+			"go test -v sigmaos/benchmarks -timeout 0 --no-shutdown %s --etcdIP %s --tag %s "+
+			"--run %s "+
+			"--example_flag %s "+
+			"%s "+ // prewarm
+			"> /tmp/bench.out 2>&1 ;",
+			debugSelectors,
+			valgrindSelectors,
+			perfSelectors,
+			dialproxy,
+			ccfg.LeaderNodeIP,
+			bcfg.Tag,
+			testName,
+			exampleFlag,
+			prewarmStr,
+		)
+	}
+}
 func GetStartCmdConstructor(rps int, dur time.Duration, dummyProc, lcProc, prewarmRealm, skipStats bool) GetBenchCmdFn {
 	return func(bcfg *BenchConfig, ccfg *ClusterConfig) string {
 		const (

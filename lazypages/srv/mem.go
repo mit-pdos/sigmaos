@@ -499,14 +499,13 @@ func (mm *Tmm) collectIovs(pmi *TpagemapImg) (*Iovs, int, int) {
 	npages := uint32(0)
 	maxIovLen := start
 	nvma := 0
-	db.DPrintf(db.ALWAYS, "FIRST entry: %v", pmi.PagemapEntries[0].Message.(*pagemap.PagemapEntry), end)
+	db.DPrintf(db.CRIU, "FIRST entry: %v", pmi.PagemapEntries[0].Message.(*pagemap.PagemapEntry), end)
 	for _, pme := range pmi.PagemapEntries[0:] {
 		pm := pme.Message.(*pagemap.PagemapEntry)
 
 		start = pm.GetVaddr()
 		end = start + uint64(pm.GetNrPages()*uint32(mm.pagesz))
 		npages += pm.GetNrPages()
-		db.DPrintf(db.ALWAYS, "pme start %x end %x", start, end)
 		for ; nvma < len(mm.Vmas); nvma++ {
 			vma := mm.Vmas[nvma]
 			// if start >= vma.GetStart() {
@@ -565,7 +564,6 @@ func (mm *Tmm) collectIovsbad(pmi *TpagemapImg) (*Iovs, int, int) {
 		}
 		end = pm.GetVaddr() + uint64(pm.GetNrPages()*uint32(mm.pagesz))
 		npages += pm.GetNrPages()
-		db.DPrintf(db.ALWAYS, "pme start %x end %x", start, end)
 		for ; nvma < len(mm.Vmas); nvma++ {
 			vma := mm.Vmas[nvma]
 			// if start >= vma.GetStart() {

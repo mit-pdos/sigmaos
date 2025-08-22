@@ -153,7 +153,6 @@ then
   libssl-dev \
   git-lfs \
   libseccomp-dev \
-  awscli \
   htop \
   jq \
   docker.io \

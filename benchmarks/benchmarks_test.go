@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	rd "sigmaos/util/rand"
 
 	"github.com/stretchr/testify/assert"
 
@@ -265,6 +266,82 @@ func TestMicroDownSemaphore(t *testing.T) {
 	printResultSummary(rs)
 	rmOutDir(ts1)
 	rootts.Shutdown()
+}
+
+const (
+	NPAGES = "1000"
+	GEO    = "hotel-geod"
+	RUN    = 5
+)
+
+// Geo constants
+const (
+	DEF_GEO_N_IDX         = 1000
+	DEF_GEO_SEARCH_RADIUS = 10
+	DEF_GEO_N_RESULTS     = 5
+)
+
+func TestCRIUGeo(t *testing.T) {
+	ts, err := test.NewTstateAll(t)
+	assert.Nil(t, err)
+
+	pid := sp.GenPid(GEO)
+	pn := sp.UX + "~any/" + pid.String() + "/"
+
+	job := rd.String(8)
+	err = hotel.InitHotelFs(ts.FsLib, job)
+	//ts.MkDir(filepath.Join("name/hotel/geo", job), 0777)
+
+	assert.Nil(t, err)
+
+	//db.DPrintf(db.TEST, "Spawn proc %v %v", job, pn)
+
+	//ckptProc := proc.NewProcPid(pid, GEO, []string{job, pn, "1000", "10", "20"})
+	ckptProc := proc.NewProcPid(pid, GEO, []string{job, pn, "1000", "10", "20"})
+	db.DPrintf(db.TEST, "Spawn proc %v %v", job, pn)
+	err = ts.Spawn(ckptProc)
+	assert.Nil(t, err)
+	err = ts.WaitStart(ckptProc.GetPid())
+	assert.Nil(t, err)
+
+	db.DPrintf(db.TEST, "Wait until proc %v has checkpointed itself", ckptProc.GetPid())
+
+	status, err := ts.WaitExit(ckptProc.GetPid())
+	assert.Nil(t, err)
+	assert.True(t, status.IsStatusErr())
+	//time.Sleep(100 * time.Millisecond)
+
+	pid = sp.GenPid(GEO + "-copy")
+
+	db.DPrintf(db.TEST, "Spawn from checkpoint %v", pid)
+
+	restProc := proc.NewProcFromCheckpoint(pid, GEO+"-copy", pn)
+	err = ts.Spawn(restProc)
+	assert.Nil(t, err)
+
+	//db.DPrintf(db.TEST, "Wait until start %v", pid)
+
+	err = ts.WaitStart(restProc.GetPid())
+	assert.Nil(t, err)
+	db.DPrintf(db.TEST, "Started %v", pid)
+
+	time.Sleep(1000 * time.Millisecond)
+	db.DPrintf(db.TEST, "Spawn from checkpoint")
+	pid = sp.GenPid(GEO + "-copy2")
+	restProc2 := proc.NewProcFromCheckpoint(pid, GEO+"-copy2", pn)
+	err = ts.Spawn(restProc2)
+	assert.Nil(t, err)
+
+	db.DPrintf(db.TEST, "Wait until start again %v", pid)
+
+	status, err = ts.WaitExit(restProc.GetPid())
+	assert.Nil(t, err)
+	db.DPrintf(db.TEST, "exited %v", status)
+	err = ts.WaitStart(restProc2.GetPid())
+	db.DPrintf(db.TEST, "Started %v", pid)
+	time.Sleep(2000 * time.Millisecond)
+	assert.Nil(t, err)
+	ts.Shutdown()
 }
 
 // Test how long it takes to cold Spawn and run the first instruction of

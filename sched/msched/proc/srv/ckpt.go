@@ -84,15 +84,7 @@ func (ps *ProcSrv) Checkpoint(ctx fs.CtxI, req proto.CheckpointProcRequest, res 
 		db.DPrintf(db.PROCD, "writeCheckpoint lazy %v err %v\n", spid, err)
 		return err
 	}
-	path := "/run"
 
-	entries, _ := os.ReadDir(path)
-
-	db.DPrintf(db.CKPT, "all entries in /run")
-	for _, entry := range entries {
-		db.DPrintf(db.CKPT, "entry %s", entry)
-
-	}
 	pe.mu.Lock()
 	pe.checkpointStatus = 0
 	pe.mu.Unlock()
@@ -643,17 +635,17 @@ func (ps *ProcSrv) readCheckpointAndRegister(ckptSigmaDir, localDir, ckpt string
 	files := sp.Names(sts)
 	firstInstance := true
 	for _, entry := range files {
-		db.DPrintf(db.CKPT, "SEE %s\n", entry)
+		// db.DPrintf(db.CKPT, "SEE %s\n", entry)
 		if strings.HasPrefix(entry, "preloads") {
 			firstInstance = false
 
 		}
 		if strings.HasPrefix(entry, "pagemap") || strings.HasPrefix(entry, "mm-") || strings.HasPrefix(entry, "preloads") {
-			db.DPrintf(db.PROCD, "DownloadFile %s\n", entry)
+			// db.DPrintf(db.PROCD, "DownloadFile %s\n", entry)
 			fn := filepath.Join(ckptSigmaDir, ckpt, entry)
 			dstfn := filepath.Join(pn, entry)
 			if err := ps.ssrv.MemFs.SigmaClnt().DownloadFile(fn, dstfn); err != nil {
-				db.DPrintf(db.PROCD, "DownloadFile %v err %v\n", fn, err)
+				// db.DPrintf(db.PROCD, "DownloadFile %v err %v\n", fn, err)
 				return err
 			}
 		}

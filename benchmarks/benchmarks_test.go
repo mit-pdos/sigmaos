@@ -284,12 +284,14 @@ const (
 )
 
 func TestCRIUGeo(t *testing.T) {
-	rootts, err := test.NewTstateWithRealms(t)
-	if !assert.Nil(t, err, "Error New Tstate: %v", err) {
-		return
-	}
+	// rootts, err := test.NewTstateWithRealms(t)
+	// if !assert.Nil(t, err, "Error New Tstate: %v", err) {
+	// 	return
+	// }
 
-	ts, err := test.NewRealmTstate(rootts, REALM1)
+	// ts, err := test.NewRealmTstate(rootts, REALM1)
+
+	ts, err := test.NewTstateAll(t)
 	assert.Nil(t, err)
 
 	pid := sp.GenPid(GEO)
@@ -347,11 +349,15 @@ func TestCRIUGeo(t *testing.T) {
 		assert.Nil(t, err)
 		ps = append(ps, restProcCopy)
 	}
-	db.DPrintf(db.TEST, "Wait until start again %v", pid)
-	waitStartProcs(ts, ps)
+	db.DPrintf(db.TEST, "Wait until start again")
+	for _, p := range ps {
+		err := ts.WaitStart(p.GetPid())
+		assert.Nil(t, err, "WaitStart: %v", err)
+	}
 	db.DPrintf(db.TEST, "Started %v", pid)
 	assert.Nil(t, err)
-	rootts.Shutdown()
+	ts.Shutdown()
+
 }
 
 // Test how long it takes to cold Spawn and run the first instruction of

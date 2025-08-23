@@ -220,7 +220,13 @@ func restoreMounts(sigmaPid sp.Tpid) error {
 	if err := mkMount("/tmp/sigmaos-perf", jailPath+"tmp/sigmaos-perf", "none", syscall.MS_BIND); err != nil {
 		return err
 	}
-	syscall.Unmount(jailPath+"/tmp/sigmaos-perf", 0)
+	f, err := os.OpenFile("/tmp/sigmaos-perf/log-proc.txt", os.O_CREATE|os.O_RDWR, 0644)
+	db.DPrintf(db.CKPT, "made file log-proc")
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	// syscall.Unmount(jailPath+"/tmp/sigmaos-perf", 0)
 	// if err := mkMount(dst, jailPath+"tmp/sigmaos-perf", "none", syscall.MS_BIND); err != nil {
 	// 	return err
 	// }

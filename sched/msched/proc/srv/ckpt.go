@@ -634,7 +634,6 @@ func (ps *ProcSrv) readCheckpointAndRegister(ckptSigmaDir, localDir, ckpt string
 	sts, err := ps.ssrv.MemFs.SigmaClnt().GetDir(filepath.Join(ckptSigmaDir, ckpt))
 	files := sp.Names(sts)
 	firstInstance := true
-	firstInstance := true
 	for _, entry := range files {
 		// db.DPrintf(db.CKPT, "SEE %s\n", entry)
 		if strings.HasPrefix(entry, "preloads") {

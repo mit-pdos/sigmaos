@@ -113,12 +113,14 @@ var K8S_ADDR string
 var K8S_LEADER_NODE_IP string
 var K8S_JOB_NAME string
 var S3_RES_DIR string
+var CKPT bool
 
 // Read & set the proc version.
 func init() {
 	db.DPrintf(db.ALWAYS, "Benchmark Args: %v", os.Args)
 	flag.IntVar(&N_REALM, "nrealm", 2, "Number of realms (relevant to BE balance benchmarks).")
 	flag.IntVar(&N_TRIALS, "ntrials", 1, "Number of trials.")
+	flag.BoolVar(&CKPT, "ckpt", true, "If we should use checkpoint")
 	flag.IntVar(&N_THREADS, "nthreads", 1, "Number of threads.")
 	flag.BoolVar(&PREWARM_REALM, "prewarm_realm", false, "Pre-warm realm, starting a BE and an LC uprocd on every machine in the cluster.")
 	flag.BoolVar(&SKIPSTATS, "skipstats", false, "Skip printing stats.")
@@ -282,7 +284,12 @@ const (
 )
 
 func TestCRIUGeo(t *testing.T) {
-	ts, err := test.NewTstateAll(t)
+	rootts, err := test.NewTstateWithRealms(t)
+	if !assert.Nil(t, err, "Error New Tstate: %v", err) {
+		return
+	}
+
+	ts, err := test.NewRealmTstate(rootts, REALM1)
 	assert.Nil(t, err)
 
 	pid := sp.GenPid(GEO)
@@ -326,22 +333,25 @@ func TestCRIUGeo(t *testing.T) {
 	db.DPrintf(db.TEST, "Started %v", pid)
 
 	time.Sleep(1000 * time.Millisecond)
-	db.DPrintf(db.TEST, "Spawn from checkpoint")
-	pid = sp.GenPid(GEO + "-copy2")
-	restProc2 := proc.NewProcFromCheckpoint(pid, GEO+"-copy2", pn)
-	err = ts.Spawn(restProc2)
-	assert.Nil(t, err)
-
-	db.DPrintf(db.TEST, "Wait until start again %v", pid)
-
 	status, err = ts.WaitExit(restProc.GetPid())
 	assert.Nil(t, err)
 	db.DPrintf(db.TEST, "exited %v", status)
-	err = ts.WaitStart(restProc2.GetPid())
+
+	db.DPrintf(db.TEST, "Spawn from checkpoint nprocs: %v", N_TRIALS)
+	ps := make([]*proc.Proc, 0, N_TRIALS)
+	for i := 0; i < N_TRIALS; i++ {
+
+		pid = sp.GenPid(GEO + "-copy")
+		restProcCopy := proc.NewProcFromCheckpoint(pid, GEO+"-copy2", pn)
+		err = ts.Spawn(restProcCopy)
+		assert.Nil(t, err)
+		ps = append(ps, restProcCopy)
+	}
+	db.DPrintf(db.TEST, "Wait until start again %v", pid)
+	waitStartProcs(ts, ps)
 	db.DPrintf(db.TEST, "Started %v", pid)
-	time.Sleep(2000 * time.Millisecond)
 	assert.Nil(t, err)
-	ts.Shutdown()
+	rootts.Shutdown()
 }
 
 // Test how long it takes to cold Spawn and run the first instruction of

@@ -9,6 +9,21 @@ import (
 	"sigmaos/proc"
 )
 
+func GetCRIUGeoCmd(bcfg *BenchConfig, ccfg *ClusterConfig) string {
+	const (
+		debugSelectors string = "\"BENCH;TEST;CKPT\""
+	)
+
+	return fmt.Sprintf("export SIGMADEBUG=%s; go clean -testcache; "+
+		"go test -v sigmaos/benchmarks -timeout 0 --no-shutdown --etcdIP %s --tag %s "+
+		"--run CRIUGeo"+
+		"> /tmp/bench.out 2>&1",
+		debugSelectors,
+		ccfg.LeaderNodeIP,
+		bcfg.Tag,
+	)
+}
+
 // Constructors for commands used to start benchmarks
 func GetCkptGeoCmd(bcfg *BenchConfig, ccfg *ClusterConfig) string {
 	const (

@@ -23,6 +23,7 @@ import (
 
 	//"github.com/pierrec/lz4/v4"
 
+	criu "github.com/checkpoint-restore/go-criu/v7"
 	"github.com/klauspost/compress/flate"
 	"github.com/klauspost/compress/zip"
 	"github.com/pierrec/lz4/v4"
@@ -390,8 +391,10 @@ func (ps *ProcSrv) writeCheckpoint2(chkptLocalDir string, chkptSimgaDir string, 
 	db.DPrintf(db.PROCD, "writeCheckpoint: copied %d files %s", len(files), filepath.Join(pn, "dump.zip"))
 	return nil
 }
-func (ps *ProcSrv) getRestoredPid(proc *proc.Proc, fifoDir string) error {
-	fifo := filepath.Join(fifoDir, "pid.fifo")
+
+// formate is <lazypagesid>pid.fio
+func (ps *ProcSrv) getRestoredPid(proc *proc.Proc, fifoDir string, lazypagesid int) error {
+	fifo := filepath.Join(fifoDir, strconv.Itoa(lazypagesid)+"pid.fifo")
 
 	// Clean up any stale FIFO from prior runs (ignore errors).
 	_ = os.Remove(fifo)
@@ -455,11 +458,11 @@ func (ps *ProcSrv) restoreProc(proc *proc.Proc) error {
 	//	}
 	//	db.DPrintf(db.CKPT, "restoreProc: Registered %d %v", pid, pages)
 	//	}()
-	go ps.getRestoredPid(proc, ps.lpc.WorkDir())
-	// criuclient := criu.MakeCriu()
-	// criuclient.SetCriuPath("/criu/criu/criu")
+	go ps.getRestoredPid(proc, ps.lpc.WorkDir(), lazypagesid)
+	criuclnt := criu.MakeCriu()
+	criuclnt.SetCriuPath("/criu/criu/criu")
 	// XXX delete dst dir when done
-	if err := scontainer.RestoreProc(ps.criuclnt, proc, filepath.Join(dst, CKPTLAZY), ps.lpc.WorkDir(), lazypagesid); err != nil {
+	if err := scontainer.RestoreProc(criuclnt, proc, filepath.Join(dst, CKPTLAZY), ps.lpc.WorkDir(), lazypagesid); err != nil {
 		return err
 	}
 	return nil

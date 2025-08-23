@@ -324,7 +324,7 @@ func TestCRIUGeo(t *testing.T) {
 
 	db.DPrintf(db.TEST, "Spawn from checkpoint %v", pid)
 
-	restProc := proc.NewProcFromCheckpoint(pid, GEO+"-copy", pn)
+	restProc := proc.NewProcFromCheckpoint(pid, GEO, pn)
 	err = ts.Spawn(restProc)
 	assert.Nil(t, err)
 
@@ -344,7 +344,7 @@ func TestCRIUGeo(t *testing.T) {
 	for i := 0; i < N_TRIALS; i++ {
 
 		pid = sp.GenPid(GEO + "-copy")
-		restProcCopy := proc.NewProcFromCheckpoint(pid, GEO+"-copy2", pn)
+		restProcCopy := proc.NewProcFromCheckpoint(pid, GEO, pn)
 		err = ts.Spawn(restProcCopy)
 		assert.Nil(t, err)
 		ps = append(ps, restProcCopy)

@@ -284,14 +284,14 @@ const (
 )
 
 func TestCRIUGeo(t *testing.T) {
-	// rootts, err := test.NewTstateWithRealms(t)
-	// if !assert.Nil(t, err, "Error New Tstate: %v", err) {
-	// 	return
-	// }
+	rootts, err := test.NewTstateWithRealms(t)
+	if !assert.Nil(t, err, "Error New Tstate: %v", err) {
+		return
+	}
 
-	// ts, err := test.NewRealmTstate(rootts, REALM1)
+	ts, err := test.NewRealmTstate(rootts, REALM1)
 
-	ts, err := test.NewTstateAll(t)
+	//	ts, err := test.NewTstateAll(t)
 	assert.Nil(t, err)
 
 	pid := sp.GenPid(GEO)
@@ -356,7 +356,7 @@ func TestCRIUGeo(t *testing.T) {
 	}
 	db.DPrintf(db.TEST, "Started %v", pid)
 	assert.Nil(t, err)
-	ts.Shutdown()
+	rootts.Shutdown()
 
 }
 

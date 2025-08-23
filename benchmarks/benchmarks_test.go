@@ -350,9 +350,10 @@ func TestCRIUGeo(t *testing.T) {
 		ps = append(ps, restProcCopy)
 	}
 	db.DPrintf(db.TEST, "Wait until start again")
-	for _, p := range ps {
+	for i, p := range ps {
 		err := ts.WaitStart(p.GetPid())
-		assert.Nil(t, err, "WaitStart: %v", err)
+
+		assert.Nil(t, err, "WaitStart: %v", i)
 	}
 	db.DPrintf(db.TEST, "Started %v", pid)
 	assert.Nil(t, err)

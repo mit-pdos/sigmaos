@@ -113,14 +113,14 @@ var K8S_ADDR string
 var K8S_LEADER_NODE_IP string
 var K8S_JOB_NAME string
 var S3_RES_DIR string
-var CKPT bool
+var SKIP_CKPT bool
 
 // Read & set the proc version.
 func init() {
 	db.DPrintf(db.ALWAYS, "Benchmark Args: %v", os.Args)
 	flag.IntVar(&N_REALM, "nrealm", 2, "Number of realms (relevant to BE balance benchmarks).")
 	flag.IntVar(&N_TRIALS, "ntrials", 1, "Number of trials.")
-	flag.BoolVar(&CKPT, "ckpt", true, "If we should use checkpoint")
+	flag.BoolVar(&SKIP_CKPT, "skip_ckpt", false, "If we should skip checkpoint")
 	flag.IntVar(&N_THREADS, "nthreads", 1, "Number of threads.")
 	flag.BoolVar(&PREWARM_REALM, "prewarm_realm", false, "Pre-warm realm, starting a BE and an LC uprocd on every machine in the cluster.")
 	flag.BoolVar(&SKIPSTATS, "skipstats", false, "Skip printing stats.")
@@ -318,6 +318,12 @@ func TestCRIUGeo(t *testing.T) {
 	status, err := ts.WaitExit(ckptProc.GetPid())
 	assert.Nil(t, err)
 	assert.True(t, status.IsStatusErr())
+	if SKIP_CKPT {
+
+		db.DPrintf(db.TEST, "reached checkpoint %v", pid)
+		ts.Shutdown()
+		return
+	}
 	//time.Sleep(100 * time.Millisecond)
 
 	pid = sp.GenPid(GEO + "-copy")

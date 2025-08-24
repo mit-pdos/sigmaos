@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"sync"
 
+	"sigmaos/apps/cache"
 	"sigmaos/apps/cache/cachegrp"
 	"sigmaos/apps/epcache"
 	epsrv "sigmaos/apps/epcache/srv"
@@ -24,18 +25,19 @@ import (
 type CachedSvc struct {
 	sync.Mutex
 	*sigmaclnt.SigmaClnt
-	EPCacheJob    *epsrv.EPCacheJob
-	epcsrvEP      *sp.Tendpoint
-	useEPCache    bool
-	bin           string
-	servers       []sp.Tpid
-	backupServers []sp.Tpid
-	bootScript    []byte
-	nserver       int
-	mcpu          proc.Tmcpu
-	pn            string
-	job           string
-	gc            bool
+	EPCacheJob       *epsrv.EPCacheJob
+	epcsrvEP         *sp.Tendpoint
+	useEPCache       bool
+	bin              string
+	servers          []sp.Tpid
+	backupServers    []sp.Tpid
+	backupBootScript []byte
+	scalerBootScript []byte
+	nserver          int
+	mcpu             proc.Tmcpu
+	pn               string
+	job              string
+	gc               bool
 }
 
 // Currently, only backup servers advertise themselves via the EP cache
@@ -86,7 +88,7 @@ func (cs *CachedSvc) addBackupServerWithSigmaPath(sigmaPath string, srvID int, e
 	}
 	if delegatedInit {
 		bootScriptInput := inputBuf.Bytes()
-		p.SetBootScript(cs.bootScript, bootScriptInput)
+		p.SetBootScript(cs.backupBootScript, bootScriptInput)
 		p.SetRunBootScript(delegatedInit)
 	}
 	err := cs.Spawn(p)
@@ -113,6 +115,72 @@ func (cs *CachedSvc) addBackupServerWithSigmaPath(sigmaPath string, srvID int, e
 	return nil
 }
 
+func (cs *CachedSvc) addScalerServerWithSigmaPath(sigmaPath string, cachedEPs []*sp.Tendpoint, delegatedInit bool) error {
+	oldNSrv := len(cs.servers)
+	newNSrv := oldNSrv + 1
+	srvID := len(cs.servers)
+	p := proc.NewProc(cs.bin+"-scaler", []string{cs.pn, cs.job, cachegrp.SRVDIR + strconv.Itoa(srvID), strconv.FormatBool(cs.useEPCache), strconv.Itoa(oldNSrv), strconv.Itoa(newNSrv)})
+	if !cs.gc {
+		p.AppendEnv("GOGC", "off")
+	}
+	if sigmaPath != sp.NOT_SET {
+		p.PrependSigmaPath(sigmaPath)
+	}
+	if cs.useEPCache {
+		// Cache the primary server's endpoint in the scaler proc struct
+		p.SetCachedEndpoint(epcache.EPCACHE, cs.epcsrvEP)
+	}
+	for i := 0; i < srvID; i++ {
+		// Cache the primary server's endpoint in the scaler proc struct
+		p.SetCachedEndpoint(cs.Server(strconv.Itoa(srvID)), cachedEPs[i])
+	}
+	p.SetMcpu(cs.mcpu)
+	// Have scaler server use spproxy
+	p.GetProcEnv().UseSPProxy = true
+	p.GetProcEnv().UseSPProxyProcClnt = true
+	// Write the input arguments to the boot script
+	inputBuf := bytes.NewBuffer(make([]byte, 0, 4))
+	if err := binary.Write(inputBuf, binary.LittleEndian, uint32(srvID)); err != nil {
+		return err
+	}
+	if err := binary.Write(inputBuf, binary.LittleEndian, uint32(oldNSrv)); err != nil {
+		return err
+	}
+	if err := binary.Write(inputBuf, binary.LittleEndian, uint32(newNSrv)); err != nil {
+		return err
+	}
+	if err := binary.Write(inputBuf, binary.LittleEndian, uint32(cache.NSHARD)); err != nil {
+		return err
+	}
+	if delegatedInit {
+		bootScriptInput := inputBuf.Bytes()
+		p.SetBootScript(cs.scalerBootScript, bootScriptInput)
+		p.SetRunBootScript(delegatedInit)
+	}
+	err := cs.Spawn(p)
+	if err != nil {
+		return err
+	}
+	if err := cs.WaitStart(p.GetPid()); err != nil {
+		return err
+	}
+	if cs.useEPCache {
+		srvPN := cs.Server(strconv.Itoa(srvID))
+		// Get EP from epcachesrv
+		instances, _, err := cs.EPCacheJob.Clnt.GetEndpoints(srvPN, epcache.NO_VERSION)
+		if err != nil {
+			return err
+		}
+		// Manually mount cached-scaler so it will resolve later
+		ep := sp.NewEndpointFromProto(instances[0].EndpointProto)
+		if err := cs.MountTree(ep, rpc.RPC, filepath.Join(srvPN, rpc.RPC)); err != nil {
+			return err
+		}
+	}
+	cs.servers = append(cs.servers, p.GetPid())
+	return nil
+}
+
 // XXX use job
 func NewCachedSvc(sc *sigmaclnt.SigmaClnt, nsrv int, mcpu proc.Tmcpu, job, bin, pn string, gc bool) (*CachedSvc, error) {
 	return NewCachedSvcEPCache(sc, nil, nsrv, mcpu, job, bin, pn, gc)
@@ -130,9 +198,14 @@ func NewCachedSvcEPCache(sc *sigmaclnt.SigmaClnt, epCacheJob *epsrv.EPCacheJob, 
 			return nil, err
 		}
 	}
-	bootScript, err := wasmer.ReadBootScript(sc, "cached_backup_hot_shard_boot")
+	backupBootScript, err := wasmer.ReadBootScript(sc, "cached_backup_hot_shard_boot")
 	if err != nil {
-		db.DPrintf(db.ERROR, "Err read WASM boot script: %v", err)
+		db.DPrintf(db.ERROR, "Err read WASM backup boot script: %v", err)
+		return nil, err
+	}
+	scalerBootScript, err := wasmer.ReadBootScript(sc, "cached_scaler_boot")
+	if err != nil {
+		db.DPrintf(db.ERROR, "Err read WASM scaler boot script: %v", err)
 		return nil, err
 	}
 	var epcsrvEP *sp.Tendpoint
@@ -145,19 +218,20 @@ func NewCachedSvcEPCache(sc *sigmaclnt.SigmaClnt, epCacheJob *epsrv.EPCacheJob, 
 		}
 	}
 	cs := &CachedSvc{
-		SigmaClnt:     sc,
-		EPCacheJob:    epCacheJob,
-		epcsrvEP:      epcsrvEP,
-		useEPCache:    epCacheJob != nil,
-		bin:           bin,
-		servers:       make([]sp.Tpid, 0),
-		backupServers: make([]sp.Tpid, 0),
-		nserver:       nsrv,
-		mcpu:          mcpu,
-		pn:            pn,
-		gc:            gc,
-		job:           job,
-		bootScript:    bootScript,
+		SigmaClnt:        sc,
+		EPCacheJob:       epCacheJob,
+		epcsrvEP:         epcsrvEP,
+		useEPCache:       epCacheJob != nil,
+		bin:              bin,
+		servers:          make([]sp.Tpid, 0),
+		backupServers:    make([]sp.Tpid, 0),
+		nserver:          nsrv,
+		mcpu:             mcpu,
+		pn:               pn,
+		gc:               gc,
+		job:              job,
+		scalerBootScript: scalerBootScript,
+		backupBootScript: backupBootScript,
 	}
 	for i := 0; i < cs.nserver; i++ {
 		if err := cs.addServer(i); err != nil {
@@ -173,6 +247,13 @@ func (cs *CachedSvc) AddServer() error {
 
 	n := len(cs.servers)
 	return cs.addServer(n)
+}
+
+func (cs *CachedSvc) AddScalerServerWithSigmaPath(sigmaPath string, srvEPs []*sp.Tendpoint, delegatedInit bool) error {
+	cs.Lock()
+	defer cs.Unlock()
+
+	return cs.addScalerServerWithSigmaPath(sigmaPath, srvEPs, delegatedInit)
 }
 
 func (cs *CachedSvc) AddBackupServerWithSigmaPath(sigmaPath string, i int, ep *sp.Tendpoint, delegatedInit bool, topN int) error {

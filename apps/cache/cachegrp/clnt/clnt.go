@@ -84,7 +84,7 @@ func (csc *CachedSvcClnt) monitorServers() {
 		// Get EPs
 		instances, v, err := csc.epcc.GetEndpoints(csc.dir, csc.lastEPV)
 		if err != nil {
-			db.DPrintf(db.ALWAYS, "Err GetEndpoints: %v", err)
+			db.DPrintf(db.CACHEDSVCCLNT, "Err GetEndpoints: %v", err)
 			time.Sleep(1 * time.Second)
 			continue
 		}

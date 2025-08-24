@@ -4,7 +4,6 @@ import (
 	"path/filepath"
 	"time"
 
-	"sigmaos/apps/cache/cachegrp"
 	cacheclnt "sigmaos/apps/cache/clnt"
 	db "sigmaos/debug"
 	"sigmaos/proc"
@@ -26,8 +25,8 @@ func RunCacheSrvBackup(cachedir, jobname, shardpn string, nshard int, useEPCache
 	}
 	perf.LogSpawnLatency("Backup.NewCacheSrv", pe.GetPID(), pe.GetSpawnTime(), start)
 	// Get peer name
-	peer := filepath.Base(shardpn)
-	peerpn := cachedir + cachegrp.Server(peer)
+	peer := shardpn
+	peerpn := filepath.Join(cachedir, peer)
 	db.DPrintf(db.CACHESRV, "Peer name: %v", peer)
 	start = time.Now()
 	cc := cacheclnt.NewCacheClnt(s.ssrv.SigmaClnt().FsLib, jobname, nshard, true)

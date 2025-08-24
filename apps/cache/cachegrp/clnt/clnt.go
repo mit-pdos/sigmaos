@@ -5,8 +5,10 @@ package clnt
 
 import (
 	"hash/fnv"
+	"path/filepath"
 	"strconv"
 	"sync"
+	"time"
 
 	"google.golang.org/protobuf/proto"
 
@@ -14,6 +16,7 @@ import (
 	"sigmaos/apps/cache/cachegrp"
 	cacheclnt "sigmaos/apps/cache/clnt"
 	cacheproto "sigmaos/apps/cache/proto"
+	"sigmaos/apps/epcache"
 	epcacheclnt "sigmaos/apps/epcache/clnt"
 	db "sigmaos/debug"
 	"sigmaos/rpc"
@@ -34,10 +37,15 @@ type CachedSvcClnt struct {
 	sync.Mutex
 	fsl            *fslib.FsLib
 	epcc           *epcacheclnt.EndpointCacheClnt
+	lastEPV        epcache.Tversion
 	useEPCacheClnt bool
 	cc             *cacheclnt.CacheClnt
 	pn             string
+	dir            string
 	dd             *dircache.DirCache[struct{}]
+	eps            []*sp.Tendpoint
+	nsrv           int
+	done           bool
 }
 
 func NewCachedSvcClnt(fsl *fslib.FsLib, job string) *CachedSvcClnt {
@@ -51,9 +59,14 @@ func NewCachedSvcClntEPCache(fsl *fslib.FsLib, epcc *epcacheclnt.EndpointCacheCl
 		useEPCacheClnt: epcc != nil,
 		pn:             cache.CACHE,
 		cc:             cacheclnt.NewCacheClnt(fsl, job, cache.NSHARD, false),
+		eps:            make([]*sp.Tendpoint, 0, 1),
+		lastEPV:        epcache.NO_VERSION,
 	}
-	dir := csc.pn + cachegrp.SRVDIR
-	csc.dd = dircache.NewDirCache[struct{}](fsl, dir, csc.newEntry, nil, db.CACHEDSVCCLNT, db.CACHEDSVCCLNT)
+	csc.dir = filepath.Join(csc.pn, cachegrp.SRVDIR)
+	csc.dd = dircache.NewDirCache[struct{}](fsl, csc.dir, csc.newEntry, nil, db.CACHEDSVCCLNT, db.CACHEDSVCCLNT)
+	if csc.useEPCacheClnt {
+		go csc.monitorServers()
+	}
 	return csc
 }
 
@@ -69,8 +82,41 @@ func (csc *CachedSvcClnt) BackupServer(i int) string {
 	return csc.pn + cachegrp.BackupServer(strconv.Itoa(i))
 }
 
-func (csc *CachedSvcClnt) StatsSrvs() ([]*rpc.RPCStatsSnapshot, error) {
+func (csc *CachedSvcClnt) monitorServers() {
+	for !csc.done {
+		// Get EPs
+		instances, v, err := csc.epcc.GetEndpoints(csc.dir, csc.lastEPV)
+		if err != nil {
+			db.DPrintf(db.ALWAYS, "Err GetEndpoints: %v", err)
+			time.Sleep(1 * time.Second)
+			continue
+		}
+		csc.nsrv = len(instances)
+		// Update last endpoint version
+		csc.lastEPV = v
+	}
+}
+
+func (csc *CachedSvcClnt) getNServers() (int, error) {
+	if csc.useEPCacheClnt {
+		if csc.nsrv == 0 {
+			instances, _, err := csc.epcc.GetEndpoints(csc.dir, epcache.NO_VERSION)
+			if err != nil {
+				return 0, err
+			}
+			return len(instances), nil
+		}
+		return csc.nsrv, nil
+	}
 	n, err := csc.dd.WaitEntriesN(1, true)
+	if err != nil {
+		return 0, err
+	}
+	return n, nil
+}
+
+func (csc *CachedSvcClnt) StatsSrvs() ([]*rpc.RPCStatsSnapshot, error) {
+	n, err := csc.getNServers()
 	if err != nil {
 		return nil, err
 	}
@@ -86,6 +132,15 @@ func (csc *CachedSvcClnt) StatsSrvs() ([]*rpc.RPCStatsSnapshot, error) {
 }
 
 func (csc *CachedSvcClnt) GetEndpoint(i int) (*sp.Tendpoint, error) {
+	if csc.useEPCacheClnt {
+		instances, _, err := csc.epcc.GetEndpoints(csc.dir, epcache.NO_VERSION)
+		if err != nil {
+			return nil, err
+		}
+		// Manually mount cached-backup so it will resolve later
+		ep := sp.NewEndpointFromProto(instances[i].EndpointProto)
+		return ep, nil
+	}
 	// Read the endpoint of the endpoint cache server
 	srvEPB, err := csc.fsl.GetFile(csc.Server(i))
 	if err != nil {
@@ -99,7 +154,7 @@ func (csc *CachedSvcClnt) GetEndpoint(i int) (*sp.Tendpoint, error) {
 }
 
 func (csc *CachedSvcClnt) GetEndpoints() (map[string]*sp.Tendpoint, error) {
-	n, err := csc.dd.WaitEntriesN(1, true)
+	n, err := csc.getNServers()
 	if err != nil {
 		return nil, err
 	}
@@ -176,7 +231,7 @@ func (csc *CachedSvcClnt) GetTraced(sctx *tproto.SpanContextConfig, key string, 
 }
 
 func (csc *CachedSvcClnt) getTraced(sctx *tproto.SpanContextConfig, key string, val proto.Message, backup bool) error {
-	n, err := csc.dd.WaitEntriesN(1, true)
+	n, err := csc.getNServers()
 	if err != nil {
 		return err
 	}
@@ -190,7 +245,7 @@ func (csc *CachedSvcClnt) getTraced(sctx *tproto.SpanContextConfig, key string, 
 }
 
 func (csc *CachedSvcClnt) PutBytesTraced(sctx *tproto.SpanContextConfig, key string, b []byte) error {
-	n, err := csc.dd.WaitEntriesN(1, true)
+	n, err := csc.getNServers()
 	if err != nil {
 		return err
 	}
@@ -199,7 +254,7 @@ func (csc *CachedSvcClnt) PutBytesTraced(sctx *tproto.SpanContextConfig, key str
 }
 
 func (csc *CachedSvcClnt) PutTraced(sctx *tproto.SpanContextConfig, key string, val proto.Message) error {
-	n, err := csc.dd.WaitEntriesN(1, true)
+	n, err := csc.getNServers()
 	if err != nil {
 		return err
 	}
@@ -226,5 +281,6 @@ func (csc *CachedSvcClnt) Dump(g int) (map[string]string, error) {
 }
 
 func (csc *CachedSvcClnt) Close() {
+	csc.done = true
 	csc.dd.StopWatching()
 }

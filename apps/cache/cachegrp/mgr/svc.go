@@ -30,6 +30,7 @@ type CachedSvc struct {
 	useEPCache       bool
 	bin              string
 	servers          []sp.Tpid
+	serverEPs        []*sp.Tendpoint
 	backupServers    []sp.Tpid
 	backupBootScript []byte
 	scalerBootScript []byte
@@ -43,7 +44,7 @@ type CachedSvc struct {
 // Currently, only backup servers advertise themselves via the EP cache
 func (cs *CachedSvc) addServer(i int) error {
 	// SpawnBurst to spread servers across procds.
-	p := proc.NewProc(cs.bin, []string{cs.pn, cachegrp.SRVDIR + strconv.Itoa(int(i)), strconv.FormatBool(false)})
+	p := proc.NewProc(cs.bin, []string{filepath.Join(cs.pn, cachegrp.SRVDIR), strconv.Itoa(int(i)), strconv.FormatBool(cs.useEPCache)})
 	if !cs.gc {
 		p.AppendEnv("GOGC", "off")
 	}
@@ -56,12 +57,29 @@ func (cs *CachedSvc) addServer(i int) error {
 		return err
 	}
 	cs.servers = append(cs.servers, p.GetPid())
+	if cs.useEPCache {
+		// Get EP from epcachesrv
+		pn := cs.Server(strconv.Itoa(i))
+		svcName := filepath.Dir(pn)
+		instances, _, err := cs.EPCacheJob.Clnt.GetEndpoints(svcName, epcache.NO_VERSION)
+		if err != nil {
+			db.DPrintf(db.ALWAYS, "Err get endpoints after adding cached server: %v", err)
+			return err
+		}
+		// Store the server EP for later use
+		ep := sp.NewEndpointFromProto(instances[i].EndpointProto)
+		cs.serverEPs = append(cs.serverEPs, ep)
+		// Manually mount cached so it will resolve later
+		if err := cs.MountTree(ep, rpc.RPC, filepath.Join(pn, rpc.RPC)); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
 func (cs *CachedSvc) addBackupServerWithSigmaPath(sigmaPath string, srvID int, ep *sp.Tendpoint, delegatedInit bool, topN int) error {
 	// SpawnBurst to spread servers across procds.
-	p := proc.NewProc(cs.bin+"-backup", []string{cs.pn, cs.job, cachegrp.BACKUP + strconv.Itoa(int(srvID)), strconv.FormatBool(cs.useEPCache), strconv.Itoa(topN)})
+	p := proc.NewProc(cs.bin+"-backup", []string{filepath.Join(cs.pn, cachegrp.BACKUP), cs.job, strconv.Itoa(int(srvID)), strconv.FormatBool(cs.useEPCache), strconv.Itoa(topN)})
 	if !cs.gc {
 		p.AppendEnv("GOGC", "off")
 	}
@@ -101,12 +119,13 @@ func (cs *CachedSvc) addBackupServerWithSigmaPath(sigmaPath string, srvID int, e
 	if cs.useEPCache {
 		backupPN := cs.BackupServer(strconv.Itoa(srvID))
 		// Get EP from epcachesrv
-		instances, _, err := cs.EPCacheJob.Clnt.GetEndpoints(backupPN, epcache.NO_VERSION)
+		svcName := filepath.Dir(backupPN)
+		instances, _, err := cs.EPCacheJob.Clnt.GetEndpoints(svcName, epcache.NO_VERSION)
 		if err != nil {
 			return err
 		}
 		// Manually mount cached-backup so it will resolve later
-		ep := sp.NewEndpointFromProto(instances[0].EndpointProto)
+		ep := sp.NewEndpointFromProto(instances[srvID].EndpointProto)
 		if err := cs.MountTree(ep, rpc.RPC, filepath.Join(backupPN, rpc.RPC)); err != nil {
 			return err
 		}
@@ -115,11 +134,11 @@ func (cs *CachedSvc) addBackupServerWithSigmaPath(sigmaPath string, srvID int, e
 	return nil
 }
 
-func (cs *CachedSvc) addScalerServerWithSigmaPath(sigmaPath string, cachedEPs []*sp.Tendpoint, delegatedInit bool) error {
+func (cs *CachedSvc) addScalerServerWithSigmaPath(sigmaPath string, delegatedInit bool) error {
 	oldNSrv := len(cs.servers)
 	newNSrv := oldNSrv + 1
 	srvID := len(cs.servers)
-	p := proc.NewProc(cs.bin+"-scaler", []string{cs.pn, cs.job, cachegrp.SRVDIR + strconv.Itoa(srvID), strconv.FormatBool(cs.useEPCache), strconv.Itoa(oldNSrv), strconv.Itoa(newNSrv)})
+	p := proc.NewProc(cs.bin+"-scaler", []string{filepath.Join(cs.pn, cachegrp.SRVDIR), cs.job, strconv.Itoa(srvID), strconv.FormatBool(cs.useEPCache), strconv.Itoa(oldNSrv), strconv.Itoa(newNSrv)})
 	if !cs.gc {
 		p.AppendEnv("GOGC", "off")
 	}
@@ -131,8 +150,8 @@ func (cs *CachedSvc) addScalerServerWithSigmaPath(sigmaPath string, cachedEPs []
 		p.SetCachedEndpoint(epcache.EPCACHE, cs.epcsrvEP)
 	}
 	for i := 0; i < srvID; i++ {
-		// Cache the primary server's endpoint in the scaler proc struct
-		p.SetCachedEndpoint(cs.Server(strconv.Itoa(srvID)), cachedEPs[i])
+		// Cache the other cache servers' endpoint in the scaler proc struct
+		p.SetCachedEndpoint(cs.Server(strconv.Itoa(srvID)), cs.serverEPs[i])
 	}
 	p.SetMcpu(cs.mcpu)
 	// Have scaler server use spproxy
@@ -166,16 +185,18 @@ func (cs *CachedSvc) addScalerServerWithSigmaPath(sigmaPath string, cachedEPs []
 	}
 	if cs.useEPCache {
 		srvPN := cs.Server(strconv.Itoa(srvID))
+		svcName := filepath.Dir(srvPN)
 		// Get EP from epcachesrv
-		instances, _, err := cs.EPCacheJob.Clnt.GetEndpoints(srvPN, epcache.NO_VERSION)
+		instances, _, err := cs.EPCacheJob.Clnt.GetEndpoints(svcName, epcache.NO_VERSION)
 		if err != nil {
 			return err
 		}
 		// Manually mount cached-scaler so it will resolve later
-		ep := sp.NewEndpointFromProto(instances[0].EndpointProto)
+		ep := sp.NewEndpointFromProto(instances[srvID].EndpointProto)
 		if err := cs.MountTree(ep, rpc.RPC, filepath.Join(srvPN, rpc.RPC)); err != nil {
 			return err
 		}
+		cs.serverEPs = append(cs.serverEPs, ep)
 	}
 	cs.servers = append(cs.servers, p.GetPid())
 	return nil
@@ -224,6 +245,7 @@ func NewCachedSvcEPCache(sc *sigmaclnt.SigmaClnt, epCacheJob *epsrv.EPCacheJob, 
 		useEPCache:       epCacheJob != nil,
 		bin:              bin,
 		servers:          make([]sp.Tpid, 0),
+		serverEPs:        make([]*sp.Tendpoint, 0),
 		backupServers:    make([]sp.Tpid, 0),
 		nserver:          nsrv,
 		mcpu:             mcpu,
@@ -249,11 +271,11 @@ func (cs *CachedSvc) AddServer() error {
 	return cs.addServer(n)
 }
 
-func (cs *CachedSvc) AddScalerServerWithSigmaPath(sigmaPath string, srvEPs []*sp.Tendpoint, delegatedInit bool) error {
+func (cs *CachedSvc) AddScalerServerWithSigmaPath(sigmaPath string, delegatedInit bool) error {
 	cs.Lock()
 	defer cs.Unlock()
 
-	return cs.addScalerServerWithSigmaPath(sigmaPath, srvEPs, delegatedInit)
+	return cs.addScalerServerWithSigmaPath(sigmaPath, delegatedInit)
 }
 
 func (cs *CachedSvc) AddBackupServerWithSigmaPath(sigmaPath string, i int, ep *sp.Tendpoint, delegatedInit bool, topN int) error {

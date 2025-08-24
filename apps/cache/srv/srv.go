@@ -132,7 +132,7 @@ func NewCacheSrv(pe *proc.ProcEnv, dirname string, pn string, nshard int, useEPC
 		perf.LogSpawnLatency("cachesrv.NewEPCacheClnt", pe.GetPID(), pe.GetSpawnTime(), start)
 		start = time.Now()
 		ep := ssrv.MemFs.GetSigmaPSrvEndpoint()
-		if err := epcc.RegisterEndpoint(svcInstanceName, pe.GetPID().String(), ep); err != nil {
+		if err := epcc.RegisterEndpoint(dirname, pe.GetPID().String(), ep); err != nil {
 			db.DFatalf("Err RegisterEP: %v", err)
 		}
 		perf.LogSpawnLatency("EPCacheSrv.RegisterEP", pe.GetPID(), pe.GetSpawnTime(), start)

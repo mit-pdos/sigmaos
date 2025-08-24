@@ -24,7 +24,7 @@ func RunCacheSrvScaler(cachedir, jobname, srvpn string, nshard int, oldNSrv int,
 	}
 	perf.LogSpawnLatency("Scaler.NewCacheSrv", pe.GetPID(), pe.GetSpawnTime(), start)
 	// Get peer name
-	srvIDStr := filepath.Base(srvpn)
+	srvIDStr := srvpn
 	srvID, err := strconv.Atoi(srvIDStr)
 	if err != nil {
 		db.DFatalf("Err convert srv ID to int: %v", err)
@@ -56,8 +56,11 @@ func RunCacheSrvScaler(cachedir, jobname, srvpn string, nshard int, oldNSrv int,
 	if !pe.GetRunBootScript() {
 		start = time.Now()
 		for _, srcSrv := range srcSrvs {
-			peerpn := cachedir + cachegrp.Server(strconv.Itoa(srcSrv))
-			ep, _ := pe.GetCachedEndpoint(peerpn)
+			peerpn := filepath.Join(cachedir, strconv.Itoa(srcSrv))
+			ep, ok := pe.GetCachedEndpoint(peerpn)
+			if !ok {
+				db.DFatalf("Missing cached EP for peer %v:\n%v", peerpn, pe)
+			}
 			// First, mount the peers
 			if err := s.ssrv.SigmaClnt().MountTree(ep, rpc.RPC, filepath.Join(peerpn, rpc.RPC)); err != nil {
 				db.DFatalf("Err mount peer: %v", err)

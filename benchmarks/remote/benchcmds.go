@@ -9,6 +9,26 @@ import (
 	"sigmaos/proc"
 )
 
+func CRIUCmdConstructor(skip_ckpt bool) GetBenchCmdFn {
+	return func(bcfg *BenchConfig, ccfg *ClusterConfig) string {
+		const (
+			debugSelectors string = "\"BENCH;TEST;CKPT\""
+		)
+		skip_ckpt_str := ""
+		if skip_ckpt {
+			skip_ckpt_str = "-skip_ckpt"
+		}
+		return fmt.Sprintf("export SIGMADEBUG=%s; go clean -testcache; "+
+			"go test -v sigmaos/benchmarks -timeout 0 --no-shutdown --etcdIP %s --tag %s "+
+			"--run CRIUGeo -ntrials=1 %s"+
+			"> /tmp/bench.out 2>&1",
+			debugSelectors,
+			ccfg.LeaderNodeIP,
+			bcfg.Tag,
+			skip_ckpt_str,
+		)
+	}
+}
 func GetCRIUGeoCmd(bcfg *BenchConfig, ccfg *ClusterConfig) string {
 	const (
 		debugSelectors string = "\"BENCH;TEST;CKPT\""
@@ -16,7 +36,7 @@ func GetCRIUGeoCmd(bcfg *BenchConfig, ccfg *ClusterConfig) string {
 
 	return fmt.Sprintf("export SIGMADEBUG=%s; go clean -testcache; "+
 		"go test -v sigmaos/benchmarks -timeout 0 --no-shutdown --etcdIP %s --tag %s "+
-		"--run CRIUGeo -ntrials=10"+
+		"--run CRIUGeo -ntrials=1"+
 		"> /tmp/bench.out 2>&1",
 		debugSelectors,
 		ccfg.LeaderNodeIP,

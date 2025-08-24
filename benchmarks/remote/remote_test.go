@@ -91,6 +91,30 @@ func TestCkptGeo(t *testing.T) {
 	ts.RunStandardBenchmark(benchName, driverVM, GetCkptGeoCmd, numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost)
 
 }
+func TestGeoCKPT(t *testing.T) {
+	var (
+		benchName string = "GeoCKPT"
+	)
+	// Cluster configuration parameters
+	const (
+		driverVM          int  = 0
+		numNodes          int  = 4
+		numCoresPerNode   uint = 4
+		numFullNodes      int  = numNodes
+		numProcqOnlyNodes int  = 0
+		turboBoost        bool = false
+	)
+	ts, err := NewTstate(t)
+	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {
+		return
+	}
+	if !assert.False(ts.t, ts.BCfg.K8s, "K8s version of benchmark does not exist") {
+		return
+	}
+	db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
+	ts.RunStandardBenchmark(benchName, driverVM, CRIUCmdConstructor(true), numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost)
+
+}
 func TestCRIUGeo(t *testing.T) {
 	var (
 		benchName string = "CRIUGeo"
@@ -98,8 +122,8 @@ func TestCRIUGeo(t *testing.T) {
 	// Cluster configuration parameters
 	const (
 		driverVM          int  = 0
-		numNodes          int  = 4
-		numCoresPerNode   uint = 4
+		numNodes          int  = 8
+		numCoresPerNode   uint = 8
 		numFullNodes      int  = numNodes
 		numProcqOnlyNodes int  = 0
 		turboBoost        bool = false

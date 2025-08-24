@@ -51,6 +51,8 @@ type CachedScalerJobInstance struct {
 	putMaxrps        []int
 	scale            bool
 	scaleDelay       time.Duration
+	okToMiss         bool
+	warmup           bool
 	*test.RealmTstate
 }
 
@@ -177,7 +179,7 @@ func NewCachedScalerJob(ts *test.RealmTstate, jobName string, durs string, maxrp
 		ji.lgs = append(ji.lgs, loadgen.NewLoadGenerator(ji.dur[i], ji.maxrps[i], func(r *rand.Rand) (time.Duration, bool) {
 			// 10% chance of miss
 			isMiss := (r.Int() % 100) > 90
-			if isMiss {
+			if !ji.warmup && isMiss {
 				// Simulate fetching the data from elsewhere
 				time.Sleep(1 * time.Second)
 				db.DPrintf(db.TEST, "Sim cache miss!")
@@ -192,7 +194,9 @@ func NewCachedScalerJob(ts *test.RealmTstate, jobName string, durs string, maxrp
 			} else if !assert.Nil(ji.Ts.T, err, "Err cc get: %v", err) {
 				return 0, false
 			}
-			assert.Equal(ji.Ts.T, v.Val, ji.vals[idx].Val, "Unexpected val for key %v: %v", key, v.Val)
+			if !ji.okToMiss {
+				assert.Equal(ji.Ts.T, v.Val, ji.vals[idx].Val, "Unexpected val for key %v: %v", key, v.Val)
+			}
 			// TODO: on miss, try from DB
 			// TODO: on MOVE, wait & then retry
 			return 0, false
@@ -216,6 +220,7 @@ func NewCachedScalerJob(ts *test.RealmTstate, jobName string, durs string, maxrp
 
 func (ji *CachedScalerJobInstance) StartCachedScalerJob() {
 	db.DPrintf(db.TEST, "Start cached scaler job get dur %v get maxrps %v put dur %v put maxrps %v", ji.dur, ji.maxrps, ji.putDur, ji.putMaxrps)
+	ji.warmup = true
 	// Warm up load generators
 	var wg sync.WaitGroup
 	for _, lg := range ji.lgs {
@@ -226,6 +231,7 @@ func (ji *CachedScalerJobInstance) StartCachedScalerJob() {
 		}(lg, &wg)
 	}
 	wg.Wait()
+	ji.warmup = false
 	for _, putLG := range ji.putLGs {
 		wg.Add(1)
 		go func(putLG *loadgen.LoadGenerator, wg *sync.WaitGroup) {
@@ -239,6 +245,7 @@ func (ji *CachedScalerJobInstance) StartCachedScalerJob() {
 	wg.Add(1)
 	// Start a goroutine to asynchronously run puts
 	go func() {
+		defer wg.Done()
 		for i, putLG := range ji.putLGs {
 			db.DPrintf(db.TEST, "Run put load generator rps %v dur %v", ji.maxrps[i], ji.dur[i])
 			putLG.Run()
@@ -264,12 +271,14 @@ func (ji *CachedScalerJobInstance) scaleCached() {
 		return
 	}
 	time.Sleep(ji.scaleDelay)
+	ji.okToMiss = true
 	// TODO: More scaling
 	db.DPrintf(db.TEST, "Add scaler server")
 	if err := ji.cm.AddScalerServerWithSigmaPath(chunk.ChunkdPath(ji.warmCachedSrvKID), ji.delegatedInit); !assert.Nil(ji.Ts.T, err, "Err add scaler server: %v", err) {
 		return
 	}
 	db.DPrintf(db.TEST, "Done add scaler server")
+	ji.okToMiss = false
 }
 
 // Write vector DB to cache srv

@@ -209,7 +209,7 @@ func TestSpawnCkptGeo(t *testing.T) {
 
 	db.DPrintf(db.TEST, "Spawn from checkpoint %v", pid)
 
-	restProc := proc.NewProcFromCheckpoint(pid, GEO+"-copy", pn)
+	restProc := proc.NewProcFromCheckpoint(pid, GEO, pn)
 	err = ts.Spawn(restProc)
 	assert.Nil(t, err)
 

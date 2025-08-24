@@ -74,7 +74,7 @@ func TestCkptGeo(t *testing.T) {
 	// Cluster configuration parameters
 	const (
 		driverVM          int  = 0
-		numNodes          int  = 1
+		numNodes          int  = 4
 		numCoresPerNode   uint = 4
 		numFullNodes      int  = numNodes
 		numProcqOnlyNodes int  = 0

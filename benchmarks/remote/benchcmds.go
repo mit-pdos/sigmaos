@@ -16,7 +16,7 @@ func GetCRIUGeoCmd(bcfg *BenchConfig, ccfg *ClusterConfig) string {
 
 	return fmt.Sprintf("export SIGMADEBUG=%s; go clean -testcache; "+
 		"go test -v sigmaos/benchmarks -timeout 0 --no-shutdown --etcdIP %s --tag %s "+
-		"--run CRIUGeo"+
+		"--run CRIUGeo -ntrials=10"+
 		"> /tmp/bench.out 2>&1",
 		debugSelectors,
 		ccfg.LeaderNodeIP,

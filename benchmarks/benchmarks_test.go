@@ -298,7 +298,9 @@ func TestCRIUGeo(t *testing.T) {
 
 	pid := sp.GenPid(GEO)
 	pn := sp.UX + "~any/" + pid.String() + "/"
-
+	if SKIP_CKPT {
+		pn = ""
+	}
 	job := rd.String(8)
 	err = hotel.InitHotelFs(ts.FsLib, job)
 	//ts.MkDir(filepath.Join("name/hotel/geo", job), 0777)
@@ -310,7 +312,7 @@ func TestCRIUGeo(t *testing.T) {
 	//ckptProc := proc.NewProcPid(pid, GEO, []string{job, pn, "1000", "10", "20"})
 	strIdx := strconv.Itoa(N_GEO_IDX)
 	ckptProc := proc.NewProcPid(pid, GEO, []string{job, pn, strIdx, "10", "20"})
-	db.DPrintf(db.TEST, "Spawn proc %v %v", job, pn)
+	db.DPrintf(db.TEST, "Spawn proc %v %v %v", job, pn, strIdx)
 	err = ts.Spawn(ckptProc)
 	assert.Nil(t, err)
 	err = ts.WaitStart(ckptProc.GetPid())

@@ -63,7 +63,7 @@ func (cs *CachedSvc) addServer(i int) error {
 		svcName := filepath.Dir(pn)
 		instances, _, err := cs.EPCacheJob.Clnt.GetEndpoints(svcName, epcache.NO_VERSION)
 		if err != nil {
-			db.DPrintf(db.ALWAYS, "Err get endpoints after adding cached server: %v", err)
+			db.DPrintf(db.CACHEDSVCCLNT, "Err get endpoints after adding cached server: %v", err)
 			return err
 		}
 		// Store the server EP for later use

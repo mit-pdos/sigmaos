@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"sigmaos/apps/cache"
-	"sigmaos/apps/cache/cachegrp"
 	cacheclnt "sigmaos/apps/cache/clnt"
 	db "sigmaos/debug"
 	"sigmaos/proc"
@@ -75,12 +74,12 @@ func RunCacheSrvScaler(cachedir, jobname, srvpn string, nshard int, oldNSrv int,
 	if !pe.GetRunBootScript() {
 		// For each source server, dump shards to be stolen
 		for _, srcSrv := range srcSrvs {
-			peerpn := cachedir + cachegrp.Server(strconv.Itoa(srcSrv))
+			peerpn := filepath.Join(cachedir, strconv.Itoa(srcSrv))
 			// Dump shards from source server via direct RPC
 			for _, shard := range shardsToSteal[srcSrv] {
 				vals, err := cc.DumpShard(peerpn, cache.Tshard(shard), sp.NullFence(), true)
 				if err != nil {
-					db.DFatalf("Err DumpShard(%v) from server %v: %v", shard, srcSrv, err)
+					db.DFatalf("Err DumpShard(%v) from server %v: %v", shard, peerpn, err)
 				}
 				if err := s.loadShard(cache.Tshard(shard), vals); err != nil {
 					db.DFatalf("Err LoadShard(%v) from server %v: %v", shard, srcSrv, err)
@@ -89,13 +88,13 @@ func RunCacheSrvScaler(cachedir, jobname, srvpn string, nshard int, oldNSrv int,
 		}
 	} else {
 		for _, srcSrv := range srcSrvs {
-			peerpn := cachedir + cachegrp.Server(strconv.Itoa(srcSrv))
+			peerpn := filepath.Join(cachedir, strconv.Itoa(srcSrv))
 			// Dump shards from source server via delegated RPC
 			for i, shard := range shardsToSteal[srcSrv] {
 				rpcIdx := i
 				vals, err := cc.DelegatedDumpShard(peerpn, rpcIdx)
 				if err != nil {
-					db.DFatalf("Err DumpShard(%v) from server %v: %v", rpcIdx, srcSrv, err)
+					db.DFatalf("Err DumpShard(%v) from server %v: %v", rpcIdx, peerpn, err)
 				}
 				if err := s.loadShard(cache.Tshard(shard), vals); err != nil {
 					db.DFatalf("Err LoadShard(%v) from server %v: %v", rpcIdx, srcSrv, err)

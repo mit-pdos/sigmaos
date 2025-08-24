@@ -149,9 +149,9 @@ func (cs *CachedSvc) addScalerServerWithSigmaPath(sigmaPath string, delegatedIni
 		// Cache the primary server's endpoint in the scaler proc struct
 		p.SetCachedEndpoint(epcache.EPCACHE, cs.epcsrvEP)
 	}
-	for i := 0; i < srvID; i++ {
+	for i := 0; i < oldNSrv; i++ {
 		// Cache the other cache servers' endpoint in the scaler proc struct
-		p.SetCachedEndpoint(cs.Server(strconv.Itoa(srvID)), cs.serverEPs[i])
+		p.SetCachedEndpoint(cs.Server(strconv.Itoa(i)), cs.serverEPs[i])
 	}
 	p.SetMcpu(cs.mcpu)
 	// Have scaler server use spproxy

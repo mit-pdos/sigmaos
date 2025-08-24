@@ -33,13 +33,13 @@ func NewKey(k uint64) string {
 type CacheClnt struct {
 	*rpcclntcache.ClntCache
 	fsl    *fslib.FsLib
-	nshard int
+	nshard uint32
 }
 
 func NewCacheClnt(fsl *fslib.FsLib, job string, nshard int, lazyInit bool) *CacheClnt {
 	return &CacheClnt{
 		fsl:       fsl,
-		nshard:    nshard,
+		nshard:    uint32(nshard),
 		ClntCache: rpcclntcache.NewRPCClntCache(sprpcclnt.WithSPChannel(fsl, lazyInit), sprpcclnt.WithDelegatedSPProxyChannel(fsl)),
 	}
 }
@@ -51,19 +51,12 @@ func Key2shard(key string, nshard uint32) uint32 {
 	return shard
 }
 
-func (cc *CacheClnt) Key2shard(key string) uint32 {
-	h := fnv.New32a()
-	h.Write([]byte(key))
-	shard := h.Sum32() % uint32(cc.nshard)
-	return shard
-}
-
 func (cc *CacheClnt) NewPutBytes(sctx *tproto.SpanContextConfig, key string, b []byte, f *sp.Tfence) (*cacheproto.CacheReq, error) {
 	return &cacheproto.CacheReq{
 		SpanContextConfig: sctx,
 		Fence:             f.FenceProto(),
 		Key:               key,
-		Shard:             cc.Key2shard(key),
+		Shard:             Key2shard(key, cc.nshard),
 		Value:             b,
 	}, nil
 }
@@ -125,7 +118,7 @@ func (cc *CacheClnt) NewAppend(key string, val proto.Message, f *sp.Tfence) (*ca
 	wr.Flush()
 	return &cacheproto.CacheReq{
 		Key:   key,
-		Shard: cc.Key2shard(key),
+		Shard: Key2shard(key, cc.nshard),
 		Mode:  uint32(sp.OAPPEND),
 		Value: buf.Bytes(),
 		Fence: f.FenceProto(),
@@ -148,7 +141,7 @@ func (cc *CacheClnt) NewGet(sctx *tproto.SpanContextConfig, key string, f *sp.Tf
 	return &cacheproto.CacheReq{
 		SpanContextConfig: sctx,
 		Key:               key,
-		Shard:             cc.Key2shard(key),
+		Shard:             Key2shard(key, cc.nshard),
 		Fence:             f.FenceProto(),
 	}
 }
@@ -242,7 +235,7 @@ func (cc *CacheClnt) DeleteTracedFenced(sctx *tproto.SpanContextConfig, srv, key
 		SpanContextConfig: sctx,
 		Fence:             f.FenceProto(),
 		Key:               key,
-		Shard:             cc.Key2shard(key),
+		Shard:             Key2shard(key, cc.nshard),
 	}
 	var res cacheproto.CacheRep
 	if err := cc.RPC(srv, "CacheSrv.Delete", req, &res); err != nil {

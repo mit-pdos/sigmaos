@@ -4,7 +4,6 @@
 package clnt
 
 import (
-	"hash/fnv"
 	"path/filepath"
 	"strconv"
 	"sync"
@@ -27,10 +26,8 @@ import (
 )
 
 func Key2server(key string, nserver int) int {
-	h := fnv.New32a()
-	h.Write([]byte(key))
-	server := int(h.Sum32()) % nserver
-	return server
+	shard := cacheclnt.Key2shard(key, cache.NSHARD)
+	return int(shard % uint32(nserver))
 }
 
 type CachedSvcClnt struct {
@@ -199,7 +196,7 @@ func (cs *CachedSvcClnt) NewDumpReq(shard cache.Tshard) *cacheproto.ShardReq {
 }
 
 func (csc *CachedSvcClnt) Key2shard(key string) uint32 {
-	return csc.cc.Key2shard(key)
+	return cacheclnt.Key2shard(key, cache.NSHARD)
 }
 
 func (csc *CachedSvcClnt) Put(key string, val proto.Message) error {

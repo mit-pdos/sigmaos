@@ -114,12 +114,14 @@ var K8S_LEADER_NODE_IP string
 var K8S_JOB_NAME string
 var S3_RES_DIR string
 var SKIP_CKPT bool
+var N_GEO_IDX int
 
 // Read & set the proc version.
 func init() {
 	db.DPrintf(db.ALWAYS, "Benchmark Args: %v", os.Args)
 	flag.IntVar(&N_REALM, "nrealm", 2, "Number of realms (relevant to BE balance benchmarks).")
 	flag.IntVar(&N_TRIALS, "ntrials", 1, "Number of trials.")
+	flag.IntVar(&N_GEO_IDX, "n_geo_idx", 1000, "Number of indexes in geo")
 	flag.BoolVar(&SKIP_CKPT, "skip_ckpt", false, "If we should skip checkpoint")
 	flag.IntVar(&N_THREADS, "nthreads", 1, "Number of threads.")
 	flag.BoolVar(&PREWARM_REALM, "prewarm_realm", false, "Pre-warm realm, starting a BE and an LC uprocd on every machine in the cluster.")
@@ -306,7 +308,8 @@ func TestCRIUGeo(t *testing.T) {
 	//db.DPrintf(db.TEST, "Spawn proc %v %v", job, pn)
 
 	//ckptProc := proc.NewProcPid(pid, GEO, []string{job, pn, "1000", "10", "20"})
-	ckptProc := proc.NewProcPid(pid, GEO, []string{job, pn, "1000", "10", "20"})
+	strIdx := strconv.Itoa(N_GEO_IDX)
+	ckptProc := proc.NewProcPid(pid, GEO, []string{job, pn, strIdx, "10", "20"})
 	db.DPrintf(db.TEST, "Spawn proc %v %v", job, pn)
 	err = ts.Spawn(ckptProc)
 	assert.Nil(t, err)
@@ -318,8 +321,24 @@ func TestCRIUGeo(t *testing.T) {
 	status, err := ts.WaitExit(ckptProc.GetPid())
 	assert.Nil(t, err)
 	assert.True(t, status.IsStatusErr())
-	if SKIP_CKPT {
 
+	ps := make([]*proc.Proc, 0, N_TRIALS)
+	if SKIP_CKPT {
+		db.DPrintf(db.TEST, "Spawn procs again %v %v", job, pn)
+		for i := 0; i < N_TRIALS; i++ {
+
+			pid = sp.GenPid(GEO + "-copy")
+			restProcCopy := proc.NewProcPid(pid, GEO, []string{job, pn, strIdx, "10", "20"})
+			err = ts.Spawn(restProcCopy)
+			assert.Nil(t, err)
+			ps = append(ps, restProcCopy)
+		}
+		db.DPrintf(db.TEST, "Wait until start again")
+		for i, p := range ps {
+			err := ts.WaitStart(p.GetPid())
+			db.DPrintf(db.TEST, "Wait until start again %v", i)
+			assert.Nil(t, err, "WaitStart: %v", err)
+		}
 		db.DPrintf(db.TEST, "reached checkpoint %v", pid)
 		ts.Shutdown()
 		return
@@ -346,7 +365,6 @@ func TestCRIUGeo(t *testing.T) {
 	db.DPrintf(db.TEST, "exited %v", status)
 
 	db.DPrintf(db.TEST, "Spawn from checkpoint nprocs: %v", N_TRIALS)
-	ps := make([]*proc.Proc, 0, N_TRIALS)
 	for i := 0; i < N_TRIALS; i++ {
 
 		pid = sp.GenPid(GEO + "-copy")

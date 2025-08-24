@@ -103,6 +103,18 @@ var BACKUP_CACHED_PUT_DURS string
 var BACKUP_CACHED_PUT_MAX_RPS string
 var SCALE_BACKUP_CACHED_DELAY time.Duration
 var MANUALLY_SCALE_BACKUP_CACHED bool
+var SCALER_CACHED_NCACHE int
+var SCALER_CACHED_CACHE_MCPU int
+var SCALER_CACHED_USE_EPCACHE bool
+var SCALER_CACHED_DELEGATE_INIT bool
+var SCALER_CACHED_NKEYS int
+var SCALER_CACHED_TOP_N_SHARDS int
+var SCALER_CACHED_DURS string
+var SCALER_CACHED_MAX_RPS string
+var SCALER_CACHED_PUT_DURS string
+var SCALER_CACHED_PUT_MAX_RPS string
+var SCALE_SCALER_CACHED_DELAY time.Duration
+var MANUALLY_SCALE_SCALER_CACHED bool
 var MANUALLY_SCALE_COSSIM bool
 var N_COSSIM_TO_ADD int
 var SCALE_COSSIM_DELAY time.Duration
@@ -206,6 +218,17 @@ func init() {
 	flag.StringVar(&BACKUP_CACHED_PUT_MAX_RPS, "backup_cached_put_max_rps", "100", "Backup cached benchmark load generation duration (comma-separated for multiple phases).")
 	flag.BoolVar(&MANUALLY_SCALE_BACKUP_CACHED, "manually_scale_backup_cached", false, "Manually scale backup cached")
 	flag.DurationVar(&SCALE_BACKUP_CACHED_DELAY, "scale_backup_cached_delay", 0*time.Second, "Delay to wait before scaling number of backup cacheds.")
+	flag.IntVar(&SCALER_CACHED_NCACHE, "scaler_cached_ncache", 1, "Scaler ncache")
+	flag.IntVar(&SCALER_CACHED_CACHE_MCPU, "scaler_cached_mcpu", 1000, "Scaler cached mcpu")
+	flag.IntVar(&SCALER_CACHED_NKEYS, "scaler_cached_nkeys", 5000, "Scaler cached nkeys")
+	flag.BoolVar(&SCALER_CACHED_USE_EPCACHE, "scaler_cached_use_epcache", false, "Scaler cached use epcache")
+	flag.BoolVar(&SCALER_CACHED_DELEGATE_INIT, "scaler_cached_delegated_init", false, "Scaler cached delegate init")
+	flag.StringVar(&SCALER_CACHED_DURS, "scaler_cached_dur", "10s", "Scaler cached benchmark load generation duration (comma-separated for multiple phases).")
+	flag.StringVar(&SCALER_CACHED_MAX_RPS, "scaler_cached_max_rps", "100", "Scaler cached benchmark load generation duration (comma-separated for multiple phases).")
+	flag.StringVar(&SCALER_CACHED_PUT_DURS, "scaler_cached_put_dur", "10s", "Scaler cached benchmark load generation duration (comma-separated for multiple phases).")
+	flag.StringVar(&SCALER_CACHED_PUT_MAX_RPS, "scaler_cached_put_max_rps", "100", "Scaler cached benchmark load generation duration (comma-separated for multiple phases).")
+	flag.BoolVar(&MANUALLY_SCALE_SCALER_CACHED, "manually_scale_scaler_cached", false, "Manually scale scaler cached")
+	flag.DurationVar(&SCALE_SCALER_CACHED_DELAY, "scale_scaler_cached_delay", 0*time.Second, "Delay to wait before scaling number of scaler cacheds.")
 	flag.BoolVar(&MANUALLY_SCALE_GEO, "manually_scale_geo", false, "Manually scale geos")
 	flag.DurationVar(&SCALE_GEO_DELAY, "scale_geo_delay", 0*time.Second, "Delay to wait before scaling up number of geos.")
 	flag.IntVar(&N_GEO_TO_ADD, "n_geo_to_add", 0, "Number of geo to add.")
@@ -1901,6 +1924,57 @@ func TestCachedBackup(t *testing.T) {
 	db.DPrintf(db.TEST, "Run cached backup job")
 	runOps(ts1, ji, runCachedBackup, rs)
 	db.DPrintf(db.TEST, "Done run cached backup job")
+	//	printResultSummary(rs)
+	if sigmaos {
+		mrts.Shutdown()
+	}
+}
+
+func TestCachedScaler(t *testing.T) {
+	const (
+		sigmaos = true
+		jobName = "cached-job"
+	)
+
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{REALM1})
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	defer mrts.Shutdown()
+
+	if PREWARM_REALM {
+		benchmarks.WarmupRealm(mrts.GetRealm(REALM1), []string{"cached-scaler"})
+	}
+
+	ts1 := mrts.GetRealm(REALM1)
+
+	p := newRealmPerf(mrts.GetRealm(REALM1))
+	defer p.Done()
+
+	rs := benchmarks.NewResults(1, benchmarks.E2E)
+	jobs, ji := newCachedScalerJobs(mrts.GetRealm(REALM1), jobName, SCALER_CACHED_DURS, SCALER_CACHED_MAX_RPS, SCALER_CACHED_PUT_DURS, SCALER_CACHED_PUT_MAX_RPS, SCALER_CACHED_NCACHE, proc.Tmcpu(SCALER_CACHED_CACHE_MCPU), true, SCALER_CACHED_USE_EPCACHE, SCALER_CACHED_NKEYS, SCALER_CACHED_DELEGATE_INIT, SCALER_CACHED_TOP_N_SHARDS, MANUALLY_SCALE_SCALER_CACHED, SCALE_SCALER_CACHED_DELAY)
+	go func() {
+		for _, j := range jobs {
+			// Wait until ready
+			<-j.ready
+			if N_CLNT > 1 {
+				// Wait for clients to start up on other machines.
+				db.DPrintf(db.ALWAYS, "Leader waiting for clnts")
+				waitForClnts(mrts.GetRoot(), N_CLNT)
+				db.DPrintf(db.ALWAYS, "Leader done waiting for clnts")
+			}
+			// Ack to allow the job to proceed.
+			j.ready <- true
+		}
+	}()
+	if sigmaos {
+		p := newRealmPerf(ts1)
+		defer p.Done()
+		monitorCPUUtil(ts1, p)
+	}
+	db.DPrintf(db.TEST, "Run cached scaler job")
+	runOps(ts1, ji, runCachedScaler, rs)
+	db.DPrintf(db.TEST, "Done run cached scaler job")
 	//	printResultSummary(rs)
 	if sigmaos {
 		mrts.Shutdown()

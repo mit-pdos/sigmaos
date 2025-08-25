@@ -38,7 +38,6 @@ func RunCacheSrvScaler(cachedir, jobname, srvpn string, nshard int, oldNSrv int,
 		shardsToSteal[i] = []int{}
 	}
 	for i := 0; i < nshard; i++ {
-		// TODO: map shards to servers more sensibly
 		if i%newNSrv == srvID {
 			// If this server should host the shard in the new configuration, try to
 			// steal it

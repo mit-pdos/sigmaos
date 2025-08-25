@@ -410,6 +410,7 @@ func (cs *CacheSrv) GetHotShards(ctx fs.CtxI, req cacheproto.HotShardsReq, rep *
 }
 
 func (cs *CacheSrv) Get(ctx fs.CtxI, req cacheproto.CacheReq, rep *cacheproto.CacheRep) error {
+	cs.perf.TptTick(1.0)
 	if req.Fence.HasFence() {
 		return cs.GetFence(ctx, req, rep)
 	}

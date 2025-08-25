@@ -43,6 +43,7 @@ type CachedScalerJobInstance struct {
 	primaryEPs       []*sp.Tendpoint
 	lgs              []*loadgen.LoadGenerator
 	putLGs           []*loadgen.LoadGenerator
+	doPuts           bool
 	keys             []string
 	vals             []*cacheproto.CacheString
 	dur              []time.Duration
@@ -102,6 +103,7 @@ func NewCachedScalerJob(ts *test.RealmTstate, jobName string, durs string, maxrp
 		ji.putDur = append(ji.putDur, d)
 		ji.putMaxrps = append(ji.putMaxrps, n)
 	}
+	ji.doPuts = !(len(ji.putMaxrps) == 1 && ji.putMaxrps[0] == 0)
 
 	var err error
 	if ji.useEPCache {
@@ -205,19 +207,21 @@ func NewCachedScalerJob(ts *test.RealmTstate, jobName string, durs string, maxrp
 			return 0, false
 		}))
 	}
-	ji.putLGs = make([]*loadgen.LoadGenerator, 0, len(ji.putDur))
-	for i := range ji.putDur {
-		ji.putLGs = append(ji.putLGs, loadgen.NewLoadGenerator(ji.putDur[i], ji.putMaxrps[i], func(r *rand.Rand) (time.Duration, bool) {
-			idx := r.Int() % len(ji.keys)
-			// Select a key to request
-			key := ji.keys[idx]
-			val := ji.vals[idx]
-			missExpected := ji.okToMiss
-			if err := ji.cc.Put(key, val); !missExpected && !assert.Nil(ji.Ts.T, err, "Err cc put: %v", err) {
+	if ji.doPuts {
+		ji.putLGs = make([]*loadgen.LoadGenerator, 0, len(ji.putDur))
+		for i := range ji.putDur {
+			ji.putLGs = append(ji.putLGs, loadgen.NewLoadGenerator(ji.putDur[i], ji.putMaxrps[i], func(r *rand.Rand) (time.Duration, bool) {
+				idx := r.Int() % len(ji.keys)
+				// Select a key to request
+				key := ji.keys[idx]
+				val := ji.vals[idx]
+				missExpected := ji.okToMiss
+				if err := ji.cc.Put(key, val); !missExpected && !assert.Nil(ji.Ts.T, err, "Err cc put: %v", err) {
+					return 0, false
+				}
 				return 0, false
-			}
-			return 0, false
-		}))
+			}))
+		}
 	}
 	return ji
 }

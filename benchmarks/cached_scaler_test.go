@@ -177,21 +177,21 @@ func NewCachedScalerJob(ts *test.RealmTstate, jobName string, durs string, maxrp
 	ji.lgs = make([]*loadgen.LoadGenerator, 0, len(ji.dur))
 	for i := range ji.dur {
 		ji.lgs = append(ji.lgs, loadgen.NewLoadGenerator(ji.dur[i], ji.maxrps[i], func(r *rand.Rand) (time.Duration, bool) {
-			// 10% chance of miss
-			isMiss := (r.Int() % 100) > 90
-			if !ji.warmup && isMiss {
-				// Simulate fetching the data from elsewhere
-				time.Sleep(1 * time.Second)
-				db.DPrintf(db.TEST, "Sim cache miss!")
-			}
 			idx := r.Int() % len(ji.keys)
 			// Select a key to request
 			key := ji.keys[idx]
 			v := &cacheproto.CacheString{}
+			// Record whether or not a miss is acceptable (due to scaling)
 			missExpected := ji.okToMiss
+			// TODO: have cache do LRU eviction instead of simulating this
+			// Make 10% of the key space unavailable during a scaling event to
+			// simulate the effect of LRU evictions.
+			forceMiss := missExpected && (idx < len(ji.keys)/10)
 			err := ji.cc.Get(key, v)
-			if err != nil && cache.IsMiss(err) {
-				db.DPrintf(db.TEST, "True cache miss!")
+			if forceMiss || (err != nil && cache.IsMiss(err)) {
+				db.DPrintf(db.TEST, "Cache miss!")
+				// Simulate fetching the data from elsewhere
+				time.Sleep(50 * time.Millisecond)
 			} else if !missExpected && !assert.Nil(ji.Ts.T, err, "Err cc get: %v", err) {
 				// OK to have errors while misses are expected, because server may be
 				// registered & picked up by EPCC before it is mounted

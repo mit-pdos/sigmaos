@@ -298,9 +298,6 @@ func TestCRIUGeo(t *testing.T) {
 
 	pid := sp.GenPid(GEO)
 	pn := sp.UX + "~any/" + pid.String() + "/"
-	if SKIP_CKPT {
-		pn = ""
-	}
 	job := rd.String(8)
 	err = hotel.InitHotelFs(ts.FsLib, job)
 	//ts.MkDir(filepath.Join("name/hotel/geo", job), 0777)
@@ -312,6 +309,10 @@ func TestCRIUGeo(t *testing.T) {
 	//ckptProc := proc.NewProcPid(pid, GEO, []string{job, pn, "1000", "10", "20"})
 	strIdx := strconv.Itoa(N_GEO_IDX)
 	ckptProc := proc.NewProcPid(pid, GEO, []string{job, pn, strIdx, "10", "20"})
+	if SKIP_CKPT {
+		pn = ""
+	}
+
 	db.DPrintf(db.TEST, "Spawn proc %v %v %v", job, pn, strIdx)
 	err = ts.Spawn(ckptProc)
 	assert.Nil(t, err)
@@ -337,8 +338,8 @@ func TestCRIUGeo(t *testing.T) {
 		}
 		db.DPrintf(db.TEST, "Wait until start again")
 		for i, p := range ps {
-			err := ts.WaitStart(p.GetPid())
-			db.DPrintf(db.TEST, "Wait until start again %v", i)
+			_, err := ts.WaitExit(p.GetPid())
+			db.DPrintf(db.TEST, "Wait until exit %v", i)
 			assert.Nil(t, err, "WaitStart: %v", err)
 		}
 		db.DPrintf(db.TEST, "reached checkpoint %v", pid)

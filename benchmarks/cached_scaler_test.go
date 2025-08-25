@@ -161,8 +161,8 @@ func NewCachedScalerJob(ts *test.RealmTstate, jobName string, durs string, maxrp
 		}
 		if !foundCached {
 			db.DPrintf(db.TEST, "Didn't find cached")
-			time.Sleep(5 * time.Second)
 		}
+		time.Sleep(1 * time.Second)
 	}
 	if !assert.True(ts.Ts.T, foundCached, "Err didn't find cached srv") {
 		return ji

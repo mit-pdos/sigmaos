@@ -212,7 +212,8 @@ func NewCachedScalerJob(ts *test.RealmTstate, jobName string, durs string, maxrp
 			// Select a key to request
 			key := ji.keys[idx]
 			val := ji.vals[idx]
-			if err := ji.cc.Put(key, val); !assert.Nil(ji.Ts.T, err, "Err cc put: %v", err) {
+			missExpected := ji.okToMiss
+			if err := ji.cc.Put(key, val); !missExpected && !assert.Nil(ji.Ts.T, err, "Err cc put: %v", err) {
 				return 0, false
 			}
 			return 0, false

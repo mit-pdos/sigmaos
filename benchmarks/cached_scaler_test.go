@@ -189,7 +189,7 @@ func NewCachedScalerJob(ts *test.RealmTstate, jobName string, durs string, maxrp
 			key := ji.keys[idx]
 			v := &cacheproto.CacheString{}
 			err := ji.cc.Get(key, v)
-			if err != nil && !cache.IsMiss(err) {
+			if err != nil && cache.IsMiss(err) {
 				db.DPrintf(db.TEST, "True cache miss!")
 			} else if !assert.Nil(ji.Ts.T, err, "Err cc get: %v", err) {
 				return 0, false

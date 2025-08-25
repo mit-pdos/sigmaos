@@ -940,8 +940,10 @@ func TestScaleCachedBackup(t *testing.T) {
 	)
 	// Cached benchmark configuration parameters
 	var (
-		rps             []int           = []int{300, 500, 1000}
-		dur             []time.Duration = []time.Duration{5 * time.Second, 30 * time.Second, 30 * time.Second}
+		rps             []int           = []int{100, 200, 100}
+		dur             []time.Duration = []time.Duration{5 * time.Second, 5 * time.Second, 5 * time.Second}
+		putRps          []int           = []int{100, 200, 100}
+		putDur          []time.Duration = []time.Duration{5 * time.Second, 5 * time.Second, 5 * time.Second}
 		numCachedBackup int             = 1
 		clientDelay     time.Duration   = 0 * time.Second
 		sleep           time.Duration   = 0 * time.Second
@@ -950,6 +952,8 @@ func TestScaleCachedBackup(t *testing.T) {
 		useEPCache      bool            = true
 		nkeys           int             = 5000
 		topN            int             = 100
+		scale           bool            = true
+		scaleDelay                      = 5 * time.Second
 	)
 	ts, err := NewTstate(t)
 	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {
@@ -965,8 +969,8 @@ func TestScaleCachedBackup(t *testing.T) {
 			if prewarm {
 				benchName += "_prewarm"
 			}
-			getLeaderCmd := GetCachedBackupClientCmdConstructor(true, len(driverVMs), rps, dur, sleep, numCachedBackup, nkeys, topN, delegate, useEPCache, prewarm)
-			getFollowerCmd := GetCachedBackupClientCmdConstructor(false, len(driverVMs), rps, dur, sleep, numCachedBackup, nkeys, topN, delegate, useEPCache, prewarm)
+			getLeaderCmd := GetCachedBackupClientCmdConstructor(true, len(driverVMs), scale, scaleDelay, rps, dur, putRps, putDur, sleep, numCachedBackup, nkeys, topN, delegate, useEPCache, prewarm)
+			getFollowerCmd := GetCachedBackupClientCmdConstructor(false, len(driverVMs), scale, scaleDelay, rps, dur, putRps, putDur, sleep, numCachedBackup, nkeys, topN, delegate, useEPCache, prewarm)
 			ran := ts.RunParallelClientBenchmark(benchName, driverVMs, getLeaderCmd, getFollowerCmd, startK8sHotelApp, stopK8sHotelApp, clientDelay, numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost)
 			if oneByOne && ran {
 				return

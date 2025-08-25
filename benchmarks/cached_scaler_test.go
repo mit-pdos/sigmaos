@@ -188,13 +188,16 @@ func NewCachedScalerJob(ts *test.RealmTstate, jobName string, durs string, maxrp
 			// Select a key to request
 			key := ji.keys[idx]
 			v := &cacheproto.CacheString{}
+			missExpected := ji.okToMiss
 			err := ji.cc.Get(key, v)
 			if err != nil && cache.IsMiss(err) {
 				db.DPrintf(db.TEST, "True cache miss!")
-			} else if !assert.Nil(ji.Ts.T, err, "Err cc get: %v", err) {
+			} else if !missExpected && !assert.Nil(ji.Ts.T, err, "Err cc get: %v", err) {
+				// OK to have errors while misses are expected, because server may be
+				// registered & picked up by EPCC before it is mounted
 				return 0, false
 			}
-			if !ji.okToMiss {
+			if !missExpected {
 				assert.Equal(ji.Ts.T, v.Val, ji.vals[idx].Val, "Unexpected val for key %v: %v", key, v.Val)
 			}
 			// TODO: on miss, try from DB

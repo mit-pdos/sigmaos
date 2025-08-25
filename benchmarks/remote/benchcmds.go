@@ -722,10 +722,10 @@ func GetCosSimClientCmdConstructor(cossimReqName string, leader bool, numClients
 	}
 }
 
-func GetCachedBackupClientCmdConstructor(leader bool, numClients int, rps []int, dur []time.Duration, clientDelay time.Duration, numCachedBackup int, nkeys int, topN int, delegateInit, useEPCache, prewarm bool) GetBenchCmdFn {
+func GetCachedBackupClientCmdConstructor(leader bool, numClients int, manuallyScaleBackupCached bool, scaleBackupCachedDelay time.Duration, rps []int, dur []time.Duration, putRps []int, putDur []time.Duration, clientDelay time.Duration, numCachedBackup int, nkeys int, topN int, delegateInit, useEPCache, prewarm bool) GetBenchCmdFn {
 	return func(bcfg *BenchConfig, ccfg *ClusterConfig) string {
 		const (
-			debugSelectors    string = "\"TEST;THROUGHPUT;CPU_UTIL;SPAWN_LAT;PROXY_LAT;\""
+			debugSelectors    string = "\"TEST;BENCH;LOADGEN;THROUGHPUT;CPU_UTIL;SPAWN_LAT;PROXY_LAT;\""
 			valgrindSelectors string = ""
 			perfSelectors     string = "\"CACHED_TPT;TEST_TPT;BENCH_TPT;\""
 		)
@@ -738,6 +738,10 @@ func GetCachedBackupClientCmdConstructor(leader bool, numClients int, rps []int,
 		dialproxy := ""
 		if bcfg.NoNetproxy {
 			dialproxy = "--nodialproxy"
+		}
+		scaleBackupCachedStr := ""
+		if manuallyScaleBackupCached {
+			scaleBackupCachedStr = "--manually_scale_backup_cached"
 		}
 		cachedBackupUseEPCacheStr := ""
 		if useEPCache {
@@ -761,9 +765,13 @@ func GetCachedBackupClientCmdConstructor(leader bool, numClients int, rps []int,
 			"--backup_cached_mcpu 3000 "+
 			"--backup_cached_dur %s "+
 			"--backup_cached_max_rps %s "+
+			"--backup_cached_put_dur %s "+
+			"--backup_cached_put_max_rps %s "+
 			"--sleep %s "+
 			"--backup_cached_nkeys %s "+
 			"--backup_cached_top_n %s "+
+			"--scale_backup_cached_delay %s "+
+			"%s "+ // manually_scale_backup_cached
 			"%s "+ // backup_cached_delegated_init
 			"%s "+ // cached_backup_use_epcache
 			"%s "+ // prewarm
@@ -779,9 +787,13 @@ func GetCachedBackupClientCmdConstructor(leader bool, numClients int, rps []int,
 			strconv.Itoa(numCachedBackup),
 			dursToString(dur),
 			rpsToString(rps),
+			dursToString(putDur),
+			rpsToString(putRps),
 			clientDelay.String(),
 			strconv.Itoa(nkeys),
 			strconv.Itoa(topN),
+			scaleBackupCachedDelay.String(),
+			scaleBackupCachedStr,
 			delegateInitStr,
 			cachedBackupUseEPCacheStr,
 			prewarmStr,

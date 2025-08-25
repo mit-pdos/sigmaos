@@ -141,6 +141,7 @@ func NewCachedScalerJob(ts *test.RealmTstate, jobName string, durs string, maxrp
 	if !assert.Nil(ts.Ts.T, err, "Err GetNMSched: %v", err) {
 		return ji
 	}
+	time.Sleep(10 * time.Second)
 	foundCached := false
 	for i := 0; i < 5; i++ {
 		runningProcs, err := ji.msc.GetRunningProcs(nMSched)
@@ -159,6 +160,7 @@ func NewCachedScalerJob(ts *test.RealmTstate, jobName string, durs string, maxrp
 			}
 		}
 		if !foundCached {
+			db.DPrintf(db.TEST, "Didn't find cached")
 			time.Sleep(5 * time.Second)
 		}
 	}

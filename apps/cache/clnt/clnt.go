@@ -290,12 +290,13 @@ func (c *CacheClnt) FreezeShard(srv string, shard cache.Tshard, f *sp.Tfence) er
 }
 
 func (c *CacheClnt) DelegatedDumpShard(srv string, rpcIdx int) (cache.Tcache, error) {
+	perf.LogSpawnLatency("CacheClnt.DelegatedDumpShard start %d", sp.NOT_SET, perf.TIME_NOT_SET, perf.TIME_NOT_SET, rpcIdx)
 	start := time.Now()
 	var res cacheproto.ShardData
 	if err := c.DelegatedRPC(srv, uint64(rpcIdx), &res); err != nil {
 		return nil, err
 	}
-	perf.LogSpawnLatency("CacheClnt.DelegatedDumpShard %d", sp.NOT_SET, perf.TIME_NOT_SET, start, rpcIdx)
+	perf.LogSpawnLatency("CacheClnt.DelegatedDumpShard done %d", sp.NOT_SET, perf.TIME_NOT_SET, start, rpcIdx)
 	return res.Vals, nil
 }
 

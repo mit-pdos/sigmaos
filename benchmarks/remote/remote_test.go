@@ -978,3 +978,59 @@ func TestScaleCachedBackup(t *testing.T) {
 		}
 	}
 }
+
+// Test Cached scaler's application tail latency.
+func TestScaleCachedScaler(t *testing.T) {
+	var (
+		benchNameBase string = "cached_scaler_tail_latency"
+		driverVMs     []int  = []int{5}
+	)
+	// Cluster configuration parameters
+	const (
+		numNodes          int  = 4
+		numCoresPerNode   uint = 4
+		numFullNodes      int  = numNodes
+		numProcqOnlyNodes int  = 0
+		turboBoost        bool = false
+	)
+	// Cached benchmark configuration parameters
+	var (
+		rps []int           = []int{2000}
+		dur []time.Duration = []time.Duration{20 * time.Second}
+		//		putRps          []int           = []int{100, 200, 100}
+		//		putDur          []time.Duration = []time.Duration{5 * time.Second, 5 * time.Second, 5 * time.Second}
+		putRps          []int           = []int{0}
+		putDur          []time.Duration = []time.Duration{0 * time.Second}
+		numCachedScaler int             = 1
+		clientDelay     time.Duration   = 0 * time.Second
+		sleep           time.Duration   = 0 * time.Second
+		delegateInit    []bool          = []bool{true, false}
+		prewarmRealm    []bool          = []bool{true, false}
+		useEPCache      bool            = true
+		nkeys           int             = 5000
+		scale           bool            = true
+		scaleDelay                      = 5 * time.Second
+	)
+	ts, err := NewTstate(t)
+	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {
+		return
+	}
+	for _, prewarm := range prewarmRealm {
+		for _, delegate := range delegateInit {
+			db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
+			benchName := benchNameBase
+			if delegate {
+				benchName += "_delegate"
+			}
+			if prewarm {
+				benchName += "_prewarm"
+			}
+			getLeaderCmd := GetCachedScalerClientCmdConstructor(true, len(driverVMs), scale, scaleDelay, rps, dur, putRps, putDur, sleep, numCachedScaler, nkeys, delegate, useEPCache, prewarm)
+			getFollowerCmd := GetCachedScalerClientCmdConstructor(false, len(driverVMs), scale, scaleDelay, rps, dur, putRps, putDur, sleep, numCachedScaler, nkeys, delegate, useEPCache, prewarm)
+			ran := ts.RunParallelClientBenchmark(benchName, driverVMs, getLeaderCmd, getFollowerCmd, startK8sHotelApp, stopK8sHotelApp, clientDelay, numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost)
+			if oneByOne && ran {
+				return
+			}
+		}
+	}
+}

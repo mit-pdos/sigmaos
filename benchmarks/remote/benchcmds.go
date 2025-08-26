@@ -800,3 +800,80 @@ func GetCachedBackupClientCmdConstructor(leader bool, numClients int, manuallySc
 		)
 	}
 }
+
+func GetCachedScalerClientCmdConstructor(leader bool, numClients int, manuallyScaleScalerCached bool, scaleScalerCachedDelay time.Duration, rps []int, dur []time.Duration, putRps []int, putDur []time.Duration, clientDelay time.Duration, numCachedScaler int, nkeys int, delegateInit, useEPCache, prewarm bool) GetBenchCmdFn {
+	return func(bcfg *BenchConfig, ccfg *ClusterConfig) string {
+		const (
+			debugSelectors    string = "\"TEST;BENCH;LOADGEN;THROUGHPUT;CPU_UTIL;SPAWN_LAT;PROXY_LAT;\""
+			valgrindSelectors string = ""
+			perfSelectors     string = "\"CACHESRV_TPT;TEST_TPT;BENCH_TPT;\""
+		)
+		testName := ""
+		if leader {
+			testName = fmt.Sprintf("CachedScaler")
+		} else {
+			testName = fmt.Sprintf("CachedScalerJustCli")
+		}
+		dialproxy := ""
+		if bcfg.NoNetproxy {
+			dialproxy = "--nodialproxy"
+		}
+		scaleScalerCachedStr := ""
+		if manuallyScaleScalerCached {
+			scaleScalerCachedStr = "--manually_scale_scaler_cached"
+		}
+		cachedScalerUseEPCacheStr := ""
+		if useEPCache {
+			cachedScalerUseEPCacheStr = "--scaler_cached_use_epcache"
+		}
+		delegateInitStr := ""
+		if delegateInit {
+			delegateInitStr = "--scaler_cached_delegated_init"
+		}
+		prewarmStr := ""
+		if prewarm {
+			prewarmStr = "--prewarm_realm"
+		}
+		return fmt.Sprintf("export SIGMADEBUG=%s; export SIGMAVALGRIND=%s; export SIGMAPERF=%s; go clean -testcache; "+
+			"ulimit -n 100000; "+
+			"./set-cores.sh --set 1 --start 2 --end 39 > /dev/null 2>&1 ; "+
+			"go test -v sigmaos/benchmarks -timeout 0 --no-shutdown %s --etcdIP %s --tag %s "+
+			"--run %s "+
+			"--nclnt %s "+
+			"--scaler_cached_ncache %s "+
+			"--scaler_cached_mcpu 3000 "+
+			"--scaler_cached_dur %s "+
+			"--scaler_cached_max_rps %s "+
+			"--scaler_cached_put_dur %s "+
+			"--scaler_cached_put_max_rps %s "+
+			"--sleep %s "+
+			"--scaler_cached_nkeys %s "+
+			"--scale_scaler_cached_delay %s "+
+			"%s "+ // manually_scale_scaler_cached
+			"%s "+ // scaler_cached_delegated_init
+			"%s "+ // cached_scaler_use_epcache
+			"%s "+ // prewarm
+			"> /tmp/bench.out 2>&1 ;",
+			debugSelectors,
+			valgrindSelectors,
+			perfSelectors,
+			dialproxy,
+			ccfg.LeaderNodeIP,
+			bcfg.Tag,
+			testName,
+			strconv.Itoa(numClients),
+			strconv.Itoa(numCachedScaler),
+			dursToString(dur),
+			rpsToString(rps),
+			dursToString(putDur),
+			rpsToString(putRps),
+			clientDelay.String(),
+			strconv.Itoa(nkeys),
+			scaleScalerCachedDelay.String(),
+			scaleScalerCachedStr,
+			delegateInitStr,
+			cachedScalerUseEPCacheStr,
+			prewarmStr,
+		)
+	}
+}

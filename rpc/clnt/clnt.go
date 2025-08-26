@@ -20,6 +20,7 @@ import (
 	"sigmaos/serr"
 	sessp "sigmaos/session/proto"
 	sp "sigmaos/sigmap"
+	"sigmaos/util/perf"
 )
 
 type RPCcall struct {
@@ -177,12 +178,18 @@ func (rpcc *RPCClnt) DelegatedRPC(rpcIdx uint64, res proto.Message) error {
 			Iov: outiov,
 		},
 	}
+	start := time.Now()
 	if err := rpcc.rpc(true, "SPProxySrvAPI.GetDelegatedRPCReply", req, rep); err != nil {
 		return err
 	}
+	perf.LogSpawnLatency("DelegatedRPC.RunRPC %d", sp.NOT_SET, perf.TIME_NOT_SET, start, rpcIdx)
 	if rep.Err.ErrCode != 0 {
 		return sp.NewErr(rep.Err)
 	}
+	start = time.Now()
+	defer func(start time.Time) {
+		perf.LogSpawnLatency("DelegatedRPC.Unmarshal %d", sp.NOT_SET, perf.TIME_NOT_SET, start, rpcIdx)
+	}(start)
 	return processWrappedRPCRep(rep.Blob.Iov, res, outblob)
 }
 

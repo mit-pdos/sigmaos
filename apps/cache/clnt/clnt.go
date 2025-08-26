@@ -9,7 +9,6 @@ import (
 	"path/filepath"
 	"reflect"
 	"strconv"
-
 	"time"
 
 	"google.golang.org/protobuf/proto"
@@ -23,6 +22,7 @@ import (
 	rpcdev "sigmaos/rpc/dev"
 	"sigmaos/sigmaclnt/fslib"
 	sp "sigmaos/sigmap"
+	"sigmaos/util/perf"
 	tproto "sigmaos/util/tracing/proto"
 )
 
@@ -290,10 +290,12 @@ func (c *CacheClnt) FreezeShard(srv string, shard cache.Tshard, f *sp.Tfence) er
 }
 
 func (c *CacheClnt) DelegatedDumpShard(srv string, rpcIdx int) (cache.Tcache, error) {
+	start := time.Now()
 	var res cacheproto.ShardData
 	if err := c.DelegatedRPC(srv, uint64(rpcIdx), &res); err != nil {
 		return nil, err
 	}
+	perf.LogSpawnLatency("CacheClnt.DelegatedDumpShard %d", sp.NOT_SET, perf.TIME_NOT_SET, start, rpcIdx)
 	return res.Vals, nil
 }
 

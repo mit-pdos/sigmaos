@@ -107,6 +107,14 @@ func (cc *ClntCache) DelegatedRPC(pn string, rpcIdx uint64, res protobuf.Message
 	return rpcc.DelegatedRPC(rpcIdx, res)
 }
 
+func (cc *ClntCache) BatchFetchDelegatedRPCs(pn string, idxs []uint64) error {
+	rpcc, err := cc.Lookup(pn)
+	if err != nil {
+		return err
+	}
+	return rpcc.BatchFetchDelegatedRPCs(idxs)
+}
+
 func (cc *ClntCache) RPC(pn string, method string, arg protobuf.Message, res protobuf.Message) error {
 	return cc.RPCRetry(pn, method, arg, res)
 }

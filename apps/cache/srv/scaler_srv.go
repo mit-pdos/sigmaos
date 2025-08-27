@@ -33,10 +33,12 @@ func RunCacheSrvScaler(cachedir, jobname, srvpn string, nshard int, oldNSrv int,
 	// each server
 	shardsToSteal := make(map[int][]int)
 	srcSrvs := make([]int, 0, oldNSrv)
+	rpcIdxs := []uint64{}
 	for i := 0; i < oldNSrv; i++ {
 		srcSrvs = append(srcSrvs, i)
 		shardsToSteal[i] = []int{}
 	}
+	nrpc := uint64(0)
 	for i := 0; i < nshard; i++ {
 		if i%newNSrv == srvID {
 			// If this server should host the shard in the new configuration, try to
@@ -44,6 +46,8 @@ func RunCacheSrvScaler(cachedir, jobname, srvpn string, nshard int, oldNSrv int,
 			srcSrv := i % oldNSrv
 			// Add this shard to the list of shards to steal from the source server
 			shardsToSteal[srcSrv] = append(shardsToSteal[srcSrv], i)
+			rpcIdxs = append(rpcIdxs, nrpc)
+			nrpc++
 		}
 	}
 	start = time.Now()
@@ -86,11 +90,14 @@ func RunCacheSrvScaler(cachedir, jobname, srvpn string, nshard int, oldNSrv int,
 			}
 		}
 	} else {
+		if err := cc.BatchFetchDelegatedRPCs(filepath.Join(cachedir, strconv.Itoa(0)), rpcIdxs); err != nil {
+			db.DFatalf("Err batch-fetching delegated RPCs: %v", err)
+		}
+		rpcIdx := 0
 		for _, srcSrv := range srcSrvs {
 			peerpn := filepath.Join(cachedir, strconv.Itoa(srcSrv))
 			// Dump shards from source server via delegated RPC
-			for i, shard := range shardsToSteal[srcSrv] {
-				rpcIdx := i
+			for _, shard := range shardsToSteal[srcSrv] {
 				vals, err := cc.DelegatedDumpShard(peerpn, rpcIdx)
 				if err != nil {
 					db.DFatalf("Err DumpShard(%v) from server %v: %v", rpcIdx, peerpn, err)
@@ -98,6 +105,7 @@ func RunCacheSrvScaler(cachedir, jobname, srvpn string, nshard int, oldNSrv int,
 				if err := s.loadShard(cache.Tshard(shard), vals); err != nil {
 					db.DFatalf("Err LoadShard(%v) from server %v: %v", rpcIdx, srcSrv, err)
 				}
+				rpcIdx++
 			}
 		}
 	}

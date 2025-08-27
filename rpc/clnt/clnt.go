@@ -15,6 +15,7 @@ import (
 	spproxyproto "sigmaos/proxy/sigmap/proto"
 	"sigmaos/rpc"
 	"sigmaos/rpc/clnt/channel"
+	"sigmaos/rpc/clnt/delegation"
 	rpcclntopts "sigmaos/rpc/clnt/opts"
 	rpcproto "sigmaos/rpc/proto"
 	"sigmaos/serr"
@@ -32,6 +33,7 @@ type RPCClnt struct {
 	si             *rpc.StatInfo
 	ch             channel.RPCChannel
 	delegatedRPCCh channel.RPCChannel
+	rc             *delegation.ReplyCache
 }
 
 // XXX TODO Shouldn't take pn here
@@ -58,6 +60,7 @@ func NewRPCClnt(pn string, opts ...*rpcclntopts.RPCClntOption) (*RPCClnt, error)
 		si:             rpc.NewStatInfo(),
 		ch:             ch,
 		delegatedRPCCh: delCh,
+		rc:             delegation.NewReplyCache(),
 	}, nil
 }
 
@@ -179,7 +182,19 @@ func (rpcc *RPCClnt) DelegatedRPC(rpcIdx uint64, res proto.Message) error {
 		},
 	}
 	start := time.Now()
-	if err := rpcc.rpc(true, "SPProxySrvAPI.GetDelegatedRPCReply", req, rep); err != nil {
+	// Check if the reply has already been cached client-side
+	err, ok := rpcc.rc.Get(rpcIdx, rep)
+	if !ok {
+		rpcc.rc.Register(rpcIdx)
+		// If delegated RPC reply wasn't cached on the client-side, request it from
+		// the SPProxy
+		err = rpcc.rpc(true, "SPProxySrvAPI.GetDelegatedRPCReply", req, rep)
+		rpcc.rc.Put(rpcIdx, rep, err)
+	} else {
+		// If delegated RPC reply was cached on the client-side
+		db.DPrintf(db.RPCCLNT, "Get DelegatedRPC(%v) cached", rpcIdx)
+	}
+	if err != nil {
 		return err
 	}
 	perf.LogSpawnLatency("DelegatedRPC.RunRPC %d", sp.NOT_SET, perf.TIME_NOT_SET, start, rpcIdx)
@@ -191,6 +206,34 @@ func (rpcc *RPCClnt) DelegatedRPC(rpcIdx uint64, res proto.Message) error {
 		perf.LogSpawnLatency("DelegatedRPC.Unmarshal %d", sp.NOT_SET, perf.TIME_NOT_SET, start, rpcIdx)
 	}(start)
 	return processWrappedRPCRep(rep.Blob.Iov, res, outblob)
+}
+
+// Fetch a batch of delegated RPC results
+func (rpcc *RPCClnt) BatchFetchDelegatedRPCs(idxs []uint64) error {
+	// TODO: fetch in a single RPC
+	req := &spproxyproto.SigmaMultiDelegatedRPCReq{
+		RPCIdxs: idxs,
+	}
+	multiRep := &spproxyproto.SigmaMultiDelegatedRPCRep{
+		Blob: &rpcproto.Blob{
+			Iov: make(sessp.IoVec, 2*len(idxs)),
+		},
+	}
+	err := rpcc.rpc(true, "SPProxySrvAPI.GetMultiDelegatedRPCReplies", req, multiRep)
+	if err != nil {
+		return err
+	}
+	for i, rpcIdx := range idxs {
+		rpcc.rc.Register(rpcIdx)
+		rep := &spproxyproto.SigmaDelegatedRPCRep{
+			Blob: &rpcproto.Blob{
+				Iov: multiRep.Blob.Iov[i*2 : i*2+2],
+			},
+			Err: multiRep.Errs[i],
+		}
+		rpcc.rc.Put(rpcIdx, rep, err)
+	}
+	return nil
 }
 
 func (rpcc *RPCClnt) StatsClnt() map[string]*rpc.MethodStatSnapshot {

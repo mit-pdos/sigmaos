@@ -150,3 +150,12 @@ message SigmaDelegatedRPCRep {
         Blob blob = 1;
         Rerror err = 2;
 }
+
+message SigmaMultiDelegatedRPCReq {
+        repeated uint64 rPCIdxs = 1;
+}
+
+message SigmaMultiDelegatedRPCRep {
+        Blob blob = 1;
+        repeated Rerror errs = 2;
+}

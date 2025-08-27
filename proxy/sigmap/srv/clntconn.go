@@ -468,6 +468,7 @@ func (sca *SPProxySrvAPI) GetMultiDelegatedRPCReplies(ctx fs.CtxI, req scproto.S
 		iov, err := sca.spps.psm.GetReply(sca.sc.ProcEnv().GetPID(), rpcIdx)
 		iovs = append(iovs, iov)
 		rep.Blob.Iov = append(rep.Blob.Iov, iov...)
+		rep.NIOVs = append(rep.NIOVs, uint64(len(iov)))
 		rep.Errs = append(rep.Errs, sca.setErr(err))
 	}
 	//	lens := make([]int, len(iov)+1)

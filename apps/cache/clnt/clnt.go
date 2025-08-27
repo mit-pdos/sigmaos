@@ -289,10 +289,10 @@ func (c *CacheClnt) FreezeShard(srv string, shard cache.Tshard, f *sp.Tfence) er
 	return nil
 }
 
-func (c *CacheClnt) BatchFetchDelegatedRPCs(srv string, idxs []uint64) error {
+func (c *CacheClnt) BatchFetchDelegatedRPCs(srv string, idxs []uint64, nIOV int) error {
 	perf.LogSpawnLatency("CacheClnt.BatchFetchDelegatedRPCs start %d", sp.NOT_SET, perf.TIME_NOT_SET, perf.TIME_NOT_SET, len(idxs))
 	start := time.Now()
-	if err := c.ClntCache.BatchFetchDelegatedRPCs(srv, idxs); err != nil {
+	if err := c.ClntCache.BatchFetchDelegatedRPCs(srv, idxs, nIOV); err != nil {
 		return err
 	}
 	perf.LogSpawnLatency("CacheClnt.BatchFetchDelegatedRPCs done %d", sp.NOT_SET, perf.TIME_NOT_SET, start, len(idxs))

@@ -209,29 +209,31 @@ func (rpcc *RPCClnt) DelegatedRPC(rpcIdx uint64, res proto.Message) error {
 }
 
 // Fetch a batch of delegated RPC results
-func (rpcc *RPCClnt) BatchFetchDelegatedRPCs(idxs []uint64) error {
-	// TODO: fetch in a single RPC
+func (rpcc *RPCClnt) BatchFetchDelegatedRPCs(idxs []uint64, nIOV int) error {
 	req := &spproxyproto.SigmaMultiDelegatedRPCReq{
 		RPCIdxs: idxs,
 	}
 	multiRep := &spproxyproto.SigmaMultiDelegatedRPCRep{
 		Blob: &rpcproto.Blob{
-			Iov: make(sessp.IoVec, 2*len(idxs)),
+			Iov: make(sessp.IoVec, nIOV),
 		},
 	}
 	err := rpcc.rpc(true, "SPProxySrvAPI.GetMultiDelegatedRPCReplies", req, multiRep)
 	if err != nil {
 		return err
 	}
+	start := 0
 	for i, rpcIdx := range idxs {
 		rpcc.rc.Register(rpcIdx)
+		end := start + int(multiRep.NIOVs[i])
 		rep := &spproxyproto.SigmaDelegatedRPCRep{
 			Blob: &rpcproto.Blob{
-				Iov: multiRep.Blob.Iov[i*2 : i*2+2],
+				Iov: multiRep.Blob.Iov[start:end],
 			},
 			Err: multiRep.Errs[i],
 		}
 		rpcc.rc.Put(rpcIdx, rep, err)
+		start = end
 	}
 	return nil
 }

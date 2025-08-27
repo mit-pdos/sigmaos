@@ -89,7 +89,7 @@ func RunCacheSrvScaler(cachedir, jobname, srvpn string, nshard int, oldNSrv int,
 			}
 		}
 	} else {
-		if err := cc.BatchFetchDelegatedRPCs(filepath.Join(cachedir, strconv.Itoa(0)), rpcIdxs); err != nil {
+		if err := cc.BatchFetchDelegatedRPCs(filepath.Join(cachedir, strconv.Itoa(0)), rpcIdxs, 2*len(rpcIdxs)); err != nil {
 			db.DFatalf("Err batch-fetching delegated RPCs: %v", err)
 		}
 		rpcIdx := 0

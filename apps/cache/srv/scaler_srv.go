@@ -72,7 +72,6 @@ func RunCacheSrvScaler(cachedir, jobname, srvpn string, nshard int, oldNSrv int,
 		perf.LogSpawnLatency("Scaler.MountSrcSrvs", pe.GetPID(), pe.GetSpawnTime(), start)
 	}
 	start = time.Now()
-
 	// If not doing delegated initialization, fetch directly from peer
 	if !pe.GetRunBootScript() {
 		// For each source server, dump shards to be stolen

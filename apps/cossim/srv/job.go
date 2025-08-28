@@ -107,15 +107,19 @@ type CosSimJob struct {
 }
 
 func NewCosSimJob(sc *sigmaclnt.SigmaClnt, job string, nvec int, vecDim int, eagerInit bool, srvMcpu proc.Tmcpu, ncache int, cacheMcpu proc.Tmcpu, cacheGC bool, delegateInitRPCs bool) (*CosSimJob, error) {
-	// Init fs
-	if err := initFS(sc, job); err != nil {
-		db.DPrintf(db.COSSIMSRV_ERR, "Err initfs: %v", err)
-		return nil, err
-	}
 	// Create epcache job
 	epcj, err := epsrv.NewEPCacheJob(sc)
 	if err != nil {
 		db.DPrintf(db.COSSIMSRV_ERR, "Err epcache: %v", err)
+		return nil, err
+	}
+	return NewCosSimJobEPCache(sc, epcj, job, nvec, vecDim, eagerInit, srvMcpu, ncache, cacheMcpu, cacheGC, delegateInitRPCs)
+}
+
+func NewCosSimJobEPCache(sc *sigmaclnt.SigmaClnt, epcj *epsrv.EPCacheJob, job string, nvec int, vecDim int, eagerInit bool, srvMcpu proc.Tmcpu, ncache int, cacheMcpu proc.Tmcpu, cacheGC bool, delegateInitRPCs bool) (*CosSimJob, error) {
+	// Init fs
+	if err := initFS(sc, job); err != nil {
+		db.DPrintf(db.COSSIMSRV_ERR, "Err initfs: %v", err)
 		return nil, err
 	}
 	epcsrvEP, err := epcj.GetSrvEP()

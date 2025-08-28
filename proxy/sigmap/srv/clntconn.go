@@ -460,24 +460,19 @@ func (sca *SPProxySrvAPI) GetDelegatedRPCReply(ctx fs.CtxI, req scproto.SigmaDel
 
 func (sca *SPProxySrvAPI) GetMultiDelegatedRPCReplies(ctx fs.CtxI, req scproto.SigmaMultiDelegatedRPCReq, rep *scproto.SigmaMultiDelegatedRPCRep) error {
 	db.DPrintf(db.SPPROXYSRV, "%v: GetMultiDelegatedRPCReply %v", sca.sc.ClntId(), req)
-	iovs := make([]sessp.IoVec, 0, len(req.RPCIdxs))
 	rep.Blob = &rpcproto.Blob{
 		Iov: make(sessp.IoVec, 0),
 	}
+	totalLen := 0
 	for _, rpcIdx := range req.RPCIdxs {
 		iov, err := sca.spps.psm.GetReply(sca.sc.ProcEnv().GetPID(), rpcIdx)
-		iovs = append(iovs, iov)
+		for _, b := range iov {
+			totalLen += len(b)
+		}
 		rep.Blob.Iov = append(rep.Blob.Iov, iov...)
 		rep.NIOVs = append(rep.NIOVs, uint64(len(iov)))
 		rep.Errs = append(rep.Errs, sca.setErr(err))
 	}
-	//	lens := make([]int, len(iov)+1)
-	//	if db.WillBePrinted(db.SPPROXYSRV) {
-	//		lens[0] = len(iov)
-	//		for i := range iov {
-	//			lens[i+1] = len(iov[i])
-	//		}
-	//	}
-	db.DPrintf(db.SPPROXYSRV, "%v: GetMultiDelegatedRPCReply done %v", sca.sc.ClntId(), req)
+	db.DPrintf(db.SPPROXYSRV, "%v: GetMultiDelegatedRPCReply done totalLen %v req %v", sca.sc.ClntId(), totalLen, req)
 	return nil
 }

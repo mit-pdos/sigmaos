@@ -113,10 +113,17 @@ func NewCosSimJob(sc *sigmaclnt.SigmaClnt, job string, nvec int, vecDim int, eag
 		db.DPrintf(db.COSSIMSRV_ERR, "Err epcache: %v", err)
 		return nil, err
 	}
-	return NewCosSimJobEPCache(sc, epcj, job, nvec, vecDim, eagerInit, srvMcpu, ncache, cacheMcpu, cacheGC, delegateInitRPCs)
+	// Start the cachegrp job
+	cm, err := cachegrpmgr.NewCacheMgr(sc, job, ncache, cacheMcpu, cacheGC)
+	if err != nil {
+		db.DPrintf(db.COSSIMSRV_ERR, "Err newCacheMgr: %v", err)
+		return nil, err
+	}
+	cc := cachegrpclnt.NewCachedSvcClnt(sc.FsLib, job)
+	return NewCosSimJobOnly(sc, epcj, cm, cc, job, nvec, vecDim, eagerInit, srvMcpu, ncache, cacheMcpu, cacheGC, delegateInitRPCs)
 }
 
-func NewCosSimJobEPCache(sc *sigmaclnt.SigmaClnt, epcj *epsrv.EPCacheJob, job string, nvec int, vecDim int, eagerInit bool, srvMcpu proc.Tmcpu, ncache int, cacheMcpu proc.Tmcpu, cacheGC bool, delegateInitRPCs bool) (*CosSimJob, error) {
+func NewCosSimJobOnly(sc *sigmaclnt.SigmaClnt, epcj *epsrv.EPCacheJob, cm *cachegrpmgr.CacheMgr, cc *cachegrpclnt.CachedSvcClnt, job string, nvec int, vecDim int, eagerInit bool, srvMcpu proc.Tmcpu, ncache int, cacheMcpu proc.Tmcpu, cacheGC bool, delegateInitRPCs bool) (*CosSimJob, error) {
 	// Init fs
 	if err := initFS(sc, job); err != nil {
 		db.DPrintf(db.COSSIMSRV_ERR, "Err initfs: %v", err)
@@ -127,13 +134,6 @@ func NewCosSimJobEPCache(sc *sigmaclnt.SigmaClnt, epcj *epsrv.EPCacheJob, job st
 		db.DPrintf(db.COSSIMSRV_ERR, "Err getSrvEP: %v", err)
 		return nil, err
 	}
-	// Start the cachegrp job
-	cm, err := cachegrpmgr.NewCacheMgr(sc, job, ncache, cacheMcpu, cacheGC)
-	if err != nil {
-		db.DPrintf(db.COSSIMSRV_ERR, "Err newCacheMgr: %v", err)
-		return nil, err
-	}
-	cc := cachegrpclnt.NewCachedSvcClnt(sc.FsLib, job)
 	vecs := cossim.NewVectors(nvec, vecDim)
 	vecKeys, err := writeVectorsToCache(cc, vecs)
 	if err != nil {

@@ -13,6 +13,7 @@ import (
 	cachegrpclnt "sigmaos/apps/cache/cachegrp/clnt"
 	cachegrpmgr "sigmaos/apps/cache/cachegrp/mgr"
 	cacheproto "sigmaos/apps/cache/proto"
+	cossimsrv "sigmaos/apps/cossim/srv"
 	epsrv "sigmaos/apps/epcache/srv"
 	"sigmaos/benchmarks/loadgen"
 	db "sigmaos/debug"
@@ -54,26 +55,38 @@ type CachedScalerJobInstance struct {
 	scaleDelay       time.Duration
 	okToMiss         bool
 	warmup           bool
+	// CosSim params
+	cossimBackend       bool
+	cossimNVec          int
+	cossimVecDim        int
+	cossimMCPU          proc.Tmcpu
+	cossimDelegatedInit bool
+	cossimJ             *cossimsrv.CosSimJob
 	*test.RealmTstate
 }
 
-func NewCachedScalerJob(ts *test.RealmTstate, jobName string, durs string, maxrpss string, putDurs string, putMaxrpss string, ncache int, cacheMCPU proc.Tmcpu, cacheGC bool, useEPCache bool, nKV int, delegatedInit bool, topN int, scale bool, scaleDelay time.Duration) *CachedScalerJobInstance {
+func NewCachedScalerJob(ts *test.RealmTstate, jobName string, durs string, maxrpss string, putDurs string, putMaxrpss string, ncache int, cacheMCPU proc.Tmcpu, cacheGC bool, useEPCache bool, nKV int, delegatedInit bool, topN int, scale bool, scaleDelay time.Duration, cossimBackend bool, cossimNVec int, cossimVecDim int, cossimMCPU proc.Tmcpu, cossimDelegatedInit bool) *CachedScalerJobInstance {
 	ji := &CachedScalerJobInstance{
-		RealmTstate:   ts,
-		sigmaos:       true,
-		jobName:       jobName,
-		ncache:        ncache,
-		cacheMCPU:     cacheMCPU,
-		cacheGC:       cacheGC,
-		useEPCache:    useEPCache,
-		cacheKIDs:     make(map[string]bool),
-		msc:           mschedclnt.NewMSchedClnt(ts.SigmaClnt.FsLib, sp.NOT_SET),
-		nKV:           nKV,
-		delegatedInit: delegatedInit,
-		topN:          topN,
-		scale:         scale,
-		scaleDelay:    scaleDelay,
-		ready:         make(chan bool),
+		RealmTstate:         ts,
+		sigmaos:             true,
+		jobName:             jobName,
+		ncache:              ncache,
+		cacheMCPU:           cacheMCPU,
+		cacheGC:             cacheGC,
+		useEPCache:          useEPCache,
+		cacheKIDs:           make(map[string]bool),
+		msc:                 mschedclnt.NewMSchedClnt(ts.SigmaClnt.FsLib, sp.NOT_SET),
+		nKV:                 nKV,
+		delegatedInit:       delegatedInit,
+		topN:                topN,
+		scale:               scale,
+		scaleDelay:          scaleDelay,
+		cossimBackend:       cossimBackend,
+		cossimNVec:          cossimNVec,
+		cossimVecDim:        cossimVecDim,
+		cossimMCPU:          cossimMCPU,
+		cossimDelegatedInit: cossimDelegatedInit,
+		ready:               make(chan bool),
 	}
 
 	durslice := strings.Split(durs, ",")
@@ -223,6 +236,13 @@ func NewCachedScalerJob(ts *test.RealmTstate, jobName string, durs string, maxrp
 				}
 				return 0, false
 			}))
+		}
+	}
+	if ji.cossimBackend {
+		eagerInit := true
+		ji.cossimJ, err = cossimsrv.NewCosSimJob(ts.SigmaClnt, ji.epcj, ji.cm, ji.cc, ji.jobName, ji.cossimNVec, ji.cossimVecDim, eagerInit, ji.cossimMCPU, ji.ncache, ji.cacheMCPU, cacheGC, ji.cossimDelegatedInit)
+		if !assert.Nil(ts.Ts.T, err, "Error NewCosSimJob: %v", err) {
+			return ji
 		}
 	}
 	return ji

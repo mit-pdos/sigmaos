@@ -105,6 +105,7 @@ var SCALE_BACKUP_CACHED_DELAY time.Duration
 var MANUALLY_SCALE_BACKUP_CACHED bool
 var SCALER_CACHED_NCACHE int
 var SCALER_CACHED_CACHE_MCPU int
+var SCALER_CACHED_COSSIM_BACKEND bool
 var SCALER_CACHED_USE_EPCACHE bool
 var SCALER_CACHED_DELEGATE_INIT bool
 var SCALER_CACHED_NKEYS int
@@ -221,6 +222,7 @@ func init() {
 	flag.IntVar(&SCALER_CACHED_NCACHE, "scaler_cached_ncache", 1, "Scaler ncache")
 	flag.IntVar(&SCALER_CACHED_CACHE_MCPU, "scaler_cached_mcpu", 1000, "Scaler cached mcpu")
 	flag.IntVar(&SCALER_CACHED_NKEYS, "scaler_cached_nkeys", 5000, "Scaler cached nkeys")
+	flag.BoolVar(&SCALER_CACHED_COSSIM_BACKEND, "scaler_cached_cossim_backend", false, "Scaler cached use cossim as backend")
 	flag.BoolVar(&SCALER_CACHED_USE_EPCACHE, "scaler_cached_use_epcache", false, "Scaler cached use epcache")
 	flag.BoolVar(&SCALER_CACHED_DELEGATE_INIT, "scaler_cached_delegated_init", false, "Scaler cached delegate init")
 	flag.StringVar(&SCALER_CACHED_DURS, "scaler_cached_dur", "10s", "Scaler cached benchmark load generation duration (comma-separated for multiple phases).")
@@ -1847,7 +1849,7 @@ func TestCosSim(t *testing.T) {
 	}
 
 	rs := benchmarks.NewResults(1, benchmarks.E2E)
-	jobs, ji := newCosSimJobs(ts1, p, sigmaos, COSSIM_DURS, COSSIM_MAX_RPS, COSSIM_NCACHE, COSSIM_CACHE_GC, proc.Tmcpu(COSSIM_CACHE_MCPU), MANUALLY_SCALE_CACHES, SCALE_CACHE_DELAY, N_CACHES_TO_ADD, NCOSSIM, proc.Tmcpu(COSSIM_SRV_MCPU), MANUALLY_SCALE_COSSIM, SCALE_COSSIM_DELAY, N_COSSIM_TO_ADD, COSSIM_NVEC, COSSIM_VEC_DIM, COSSIM_EAGER_INIT, COSSIM_DELEGATE_INIT, func(j *cossimsrv.CosSimJob, r *rand.Rand) {
+	jobs, ji := newCosSimJobs(ts1, p, nil, nil, nil, sigmaos, COSSIM_DURS, COSSIM_MAX_RPS, COSSIM_NCACHE, COSSIM_CACHE_GC, proc.Tmcpu(COSSIM_CACHE_MCPU), MANUALLY_SCALE_CACHES, SCALE_CACHE_DELAY, N_CACHES_TO_ADD, NCOSSIM, proc.Tmcpu(COSSIM_SRV_MCPU), MANUALLY_SCALE_COSSIM, SCALE_COSSIM_DELAY, N_COSSIM_TO_ADD, COSSIM_NVEC, COSSIM_VEC_DIM, COSSIM_EAGER_INIT, COSSIM_DELEGATE_INIT, func(j *cossimsrv.CosSimJob, r *rand.Rand) {
 		_, _, err := j.Clnt.CosSimLeastLoaded(v, ranges)
 		assert.Nil(t, err, "CosSim req: %v", err)
 	})
@@ -1952,7 +1954,7 @@ func TestCachedScaler(t *testing.T) {
 	defer p.Done()
 
 	rs := benchmarks.NewResults(1, benchmarks.E2E)
-	jobs, ji := newCachedScalerJobs(mrts.GetRealm(REALM1), jobName, SCALER_CACHED_DURS, SCALER_CACHED_MAX_RPS, SCALER_CACHED_PUT_DURS, SCALER_CACHED_PUT_MAX_RPS, SCALER_CACHED_NCACHE, proc.Tmcpu(SCALER_CACHED_CACHE_MCPU), true, SCALER_CACHED_USE_EPCACHE, SCALER_CACHED_NKEYS, SCALER_CACHED_DELEGATE_INIT, SCALER_CACHED_TOP_N_SHARDS, MANUALLY_SCALE_SCALER_CACHED, SCALE_SCALER_CACHED_DELAY)
+	jobs, ji := newCachedScalerJobs(mrts.GetRealm(REALM1), jobName, SCALER_CACHED_DURS, SCALER_CACHED_MAX_RPS, SCALER_CACHED_PUT_DURS, SCALER_CACHED_PUT_MAX_RPS, SCALER_CACHED_NCACHE, proc.Tmcpu(SCALER_CACHED_CACHE_MCPU), true, SCALER_CACHED_USE_EPCACHE, SCALER_CACHED_NKEYS, SCALER_CACHED_DELEGATE_INIT, SCALER_CACHED_TOP_N_SHARDS, MANUALLY_SCALE_SCALER_CACHED, SCALE_SCALER_CACHED_DELAY, SCALER_CACHED_COSSIM_BACKEND, COSSIM_NVEC, COSSIM_VEC_DIM, proc.Tmcpu(COSSIM_SRV_MCPU), COSSIM_DELEGATE_INIT)
 	go func() {
 		for _, j := range jobs {
 			// Wait until ready

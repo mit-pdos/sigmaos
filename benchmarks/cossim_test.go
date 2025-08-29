@@ -9,7 +9,10 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	cachegrpclnt "sigmaos/apps/cache/cachegrp/clnt"
+	cachegrpmgr "sigmaos/apps/cache/cachegrp/mgr"
 	cossimsrv "sigmaos/apps/cossim/srv"
+	epsrv "sigmaos/apps/epcache/srv"
 	"sigmaos/benchmarks/loadgen"
 	db "sigmaos/debug"
 	"sigmaos/proc"
@@ -53,7 +56,7 @@ type CosSimJobInstance struct {
 	*test.RealmTstate
 }
 
-func NewCosSimJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, durs string, maxrpss string, fn cosSimFn, justCli bool, ncache int, cacheGC bool, cacheMcpu proc.Tmcpu, manuallyScaleCaches bool, scaleCacheDelay time.Duration, nCachesToAdd int, nCosSim int, cosSimNVec int, cosSimVecDim int, eagerInit bool, delegateInit bool, mcpuPerSrv proc.Tmcpu, manuallyScaleCosSim bool, scaleCosSimDelay time.Duration, nCosSimToAdd int) *CosSimJobInstance {
+func NewCosSimJob(ts *test.RealmTstate, p *perf.Perf, epcj *epsrv.EPCacheJob, cm *cachegrpmgr.CacheMgr, cc *cachegrpclnt.CachedSvcClnt, sigmaos bool, durs string, maxrpss string, fn cosSimFn, justCli bool, ncache int, cacheGC bool, cacheMcpu proc.Tmcpu, manuallyScaleCaches bool, scaleCacheDelay time.Duration, nCachesToAdd int, nCosSim int, cosSimNVec int, cosSimVecDim int, eagerInit bool, delegateInit bool, mcpuPerSrv proc.Tmcpu, manuallyScaleCosSim bool, scaleCosSimDelay time.Duration, nCosSimToAdd int) *CosSimJobInstance {
 	ji := &CosSimJobInstance{}
 	ji.sigmaos = true
 	ji.job = "cossim-job"
@@ -99,7 +102,7 @@ func NewCosSimJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, durs string,
 	if !ji.justCli {
 		db.DPrintf(db.TEST, "Create new CosSim job")
 		// Only start one cache if autoscaling.
-		ji.j, err = cossimsrv.NewCosSimJob(ts.SigmaClnt, ji.job, ji.cosSimNVec, ji.cosSimVecDim, ji.eagerInit, ji.mcpuPerSrv, ji.ncache, cacheMcpu, cacheGC, ji.delegateInit)
+		ji.j, err = cossimsrv.NewCosSimJob(ts.SigmaClnt, epcj, cm, cc, ji.job, ji.cosSimNVec, ji.cosSimVecDim, ji.eagerInit, ji.mcpuPerSrv, ji.ncache, cacheMcpu, cacheGC, ji.delegateInit)
 		assert.Nil(ts.Ts.T, err, "Error NewCosSimJob: %v", err)
 		db.DPrintf(db.TEST, "New CosSim job created")
 		for i := 0; i < ji.nCosSim; i++ {

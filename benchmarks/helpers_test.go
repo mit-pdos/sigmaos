@@ -10,6 +10,9 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	cachegrpclnt "sigmaos/apps/cache/cachegrp/clnt"
+	cachegrpmgr "sigmaos/apps/cache/cachegrp/mgr"
+	epsrv "sigmaos/apps/epcache/srv"
 	db "sigmaos/debug"
 	"sigmaos/proc"
 	mschedclnt "sigmaos/sched/msched/clnt"
@@ -280,13 +283,13 @@ func newCachedBackupJobs(ts *test.RealmTstate, jobName string, durs string, maxr
 	return ws, is
 }
 
-func newCachedScalerJobs(ts *test.RealmTstate, jobName string, durs string, maxrpss string, putDurs string, putMaxrpss string, ncache int, cacheMCPU proc.Tmcpu, cacheGC bool, useEPCache bool, nKV int, delegatedInit bool, topN int, scale bool, scaleDelay time.Duration) ([]*CachedScalerJobInstance, []interface{}) {
+func newCachedScalerJobs(ts *test.RealmTstate, jobName string, durs string, maxrpss string, putDurs string, putMaxrpss string, ncache int, cacheMCPU proc.Tmcpu, cacheGC bool, useEPCache bool, nKV int, delegatedInit bool, topN int, scale bool, scaleDelay time.Duration, cossimBackend bool, cossimNVec int, cossimVecDim int, cossimMCPU proc.Tmcpu, cossimDelegatedInit bool) ([]*CachedScalerJobInstance, []interface{}) {
 	// n is ntrials, which is always 1.
 	n := 1
 	ws := make([]*CachedScalerJobInstance, 0, n)
 	is := make([]interface{}, 0, n)
 	for i := 0; i < n; i++ {
-		i := NewCachedScalerJob(ts, jobName, durs, maxrpss, putDurs, putMaxrpss, ncache, cacheMCPU, cacheGC, useEPCache, nKV, delegatedInit, topN, scale, scaleDelay)
+		i := NewCachedScalerJob(ts, jobName, durs, maxrpss, putDurs, putMaxrpss, ncache, cacheMCPU, cacheGC, useEPCache, nKV, delegatedInit, topN, scale, scaleDelay, cossimBackend, cossimNVec, cossimVecDim, cossimMCPU, cossimDelegatedInit)
 		ws = append(ws, i)
 		is = append(is, i)
 	}
@@ -382,13 +385,13 @@ func newSocialNetworkJobs(
 }
 
 // ========== CosSim Helpers ==========
-func newCosSimJobs(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, dur string, maxrps string, ncache int, cacheGC bool, cacheMcpu proc.Tmcpu, manuallyScaleCaches bool, scaleCacheDelay time.Duration, nCachesToAdd int, nCosSim int, cosSimMcpu proc.Tmcpu, manuallyScaleCosSim bool, scaleCosSimDelay time.Duration, nCosSimToAdd int, cosSimNVec int, cosSimVecDim int, eagerInit bool, delegateInit bool, fn cosSimFn) ([]*CosSimJobInstance, []interface{}) {
+func newCosSimJobs(ts *test.RealmTstate, p *perf.Perf, epcj *epsrv.EPCacheJob, cm *cachegrpmgr.CacheMgr, cc *cachegrpclnt.CachedSvcClnt, sigmaos bool, dur string, maxrps string, ncache int, cacheGC bool, cacheMcpu proc.Tmcpu, manuallyScaleCaches bool, scaleCacheDelay time.Duration, nCachesToAdd int, nCosSim int, cosSimMcpu proc.Tmcpu, manuallyScaleCosSim bool, scaleCosSimDelay time.Duration, nCosSimToAdd int, cosSimNVec int, cosSimVecDim int, eagerInit bool, delegateInit bool, fn cosSimFn) ([]*CosSimJobInstance, []interface{}) {
 	// n is ntrials, which is always 1.
 	n := 1
 	ws := make([]*CosSimJobInstance, 0, n)
 	is := make([]interface{}, 0, n)
 	for i := 0; i < n; i++ {
-		i := NewCosSimJob(ts, p, sigmaos, dur, maxrps, fn, false, ncache, cacheGC, cacheMcpu, manuallyScaleCaches, scaleCacheDelay, nCachesToAdd, nCosSim, cosSimNVec, cosSimVecDim, eagerInit, delegateInit, cosSimMcpu, manuallyScaleCosSim, scaleCosSimDelay, nCosSimToAdd)
+		i := NewCosSimJob(ts, p, epcj, cm, cc, sigmaos, dur, maxrps, fn, false, ncache, cacheGC, cacheMcpu, manuallyScaleCaches, scaleCacheDelay, nCachesToAdd, nCosSim, cosSimNVec, cosSimVecDim, eagerInit, delegateInit, cosSimMcpu, manuallyScaleCosSim, scaleCosSimDelay, nCosSimToAdd)
 		ws = append(ws, i)
 		is = append(is, i)
 	}

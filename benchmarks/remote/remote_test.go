@@ -999,17 +999,22 @@ func TestScaleCachedScaler(t *testing.T) {
 		dur []time.Duration = []time.Duration{20 * time.Second}
 		//		putRps          []int           = []int{100, 200, 100}
 		//		putDur          []time.Duration = []time.Duration{5 * time.Second, 5 * time.Second, 5 * time.Second}
-		putRps          []int           = []int{0}
-		putDur          []time.Duration = []time.Duration{0 * time.Second}
-		numCachedScaler int             = 1
-		clientDelay     time.Duration   = 0 * time.Second
-		sleep           time.Duration   = 0 * time.Second
-		delegateInit    []bool          = []bool{true, false}
-		prewarmRealm    []bool          = []bool{true, false}
-		useEPCache      bool            = true
-		nkeys           int             = 5000
-		scale           bool            = true
-		scaleDelay                      = 5 * time.Second
+		putRps              []int           = []int{0}
+		putDur              []time.Duration = []time.Duration{0 * time.Second}
+		numCachedScaler     int             = 1
+		clientDelay         time.Duration   = 0 * time.Second
+		sleep               time.Duration   = 0 * time.Second
+		delegateInit        []bool          = []bool{true, false}
+		prewarmRealm        []bool          = []bool{false} //[]bool{true, false}
+		useEPCache          bool            = true
+		nkeys               int             = 5000
+		scale               bool            = true
+		scaleDelay                          = 5 * time.Second
+		useCossimBackend    []bool          = []bool{true, false}
+		nvec                int             = 10000
+		nvecToQuery         int             = 5000
+		vecDim              int             = 100
+		cossimDelegatedInit bool            = false
 	)
 	ts, err := NewTstate(t)
 	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {
@@ -1017,19 +1022,24 @@ func TestScaleCachedScaler(t *testing.T) {
 	}
 	for _, prewarm := range prewarmRealm {
 		for _, delegate := range delegateInit {
-			db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
-			benchName := benchNameBase
-			if delegate {
-				benchName += "_delegate"
-			}
-			if prewarm {
-				benchName += "_prewarm"
-			}
-			getLeaderCmd := GetCachedScalerClientCmdConstructor(true, len(driverVMs), scale, scaleDelay, rps, dur, putRps, putDur, sleep, numCachedScaler, nkeys, delegate, useEPCache, prewarm)
-			getFollowerCmd := GetCachedScalerClientCmdConstructor(false, len(driverVMs), scale, scaleDelay, rps, dur, putRps, putDur, sleep, numCachedScaler, nkeys, delegate, useEPCache, prewarm)
-			ran := ts.RunParallelClientBenchmark(benchName, driverVMs, getLeaderCmd, getFollowerCmd, startK8sHotelApp, stopK8sHotelApp, clientDelay, numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost)
-			if oneByOne && ran {
-				return
+			for _, cossimBackend := range useCossimBackend {
+				db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
+				benchName := benchNameBase
+				if delegate {
+					benchName += "_delegate"
+				}
+				if prewarm {
+					benchName += "_prewarm"
+				}
+				if cossimBackend {
+					benchName += "_cossim_backend"
+				}
+				getLeaderCmd := GetCachedScalerClientCmdConstructor(true, len(driverVMs), scale, scaleDelay, rps, dur, putRps, putDur, sleep, numCachedScaler, nkeys, delegate, useEPCache, prewarm, cossimBackend, nvec, nvecToQuery, vecDim, cossimDelegatedInit)
+				getFollowerCmd := GetCachedScalerClientCmdConstructor(false, len(driverVMs), scale, scaleDelay, rps, dur, putRps, putDur, sleep, numCachedScaler, nkeys, delegate, useEPCache, prewarm, cossimBackend, nvec, nvecToQuery, vecDim, cossimDelegatedInit)
+				ran := ts.RunParallelClientBenchmark(benchName, driverVMs, getLeaderCmd, getFollowerCmd, startK8sHotelApp, stopK8sHotelApp, clientDelay, numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost)
+				if oneByOne && ran {
+					return
+				}
 			}
 		}
 	}

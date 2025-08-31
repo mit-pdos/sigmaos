@@ -801,7 +801,7 @@ func GetCachedBackupClientCmdConstructor(leader bool, numClients int, manuallySc
 	}
 }
 
-func GetCachedScalerClientCmdConstructor(leader bool, numClients int, manuallyScaleScalerCached bool, scaleScalerCachedDelay time.Duration, rps []int, dur []time.Duration, putRps []int, putDur []time.Duration, clientDelay time.Duration, numCachedScaler int, nkeys int, delegateInit, useEPCache, prewarm bool) GetBenchCmdFn {
+func GetCachedScalerClientCmdConstructor(leader bool, numClients int, manuallyScaleScalerCached bool, scaleScalerCachedDelay time.Duration, rps []int, dur []time.Duration, putRps []int, putDur []time.Duration, clientDelay time.Duration, numCachedScaler int, nkeys int, delegateInit, useEPCache, prewarm bool, cossimBackend bool, nvec int, nvecToQuery int, vecDim int, cossimDelegatedInit bool) GetBenchCmdFn {
 	return func(bcfg *BenchConfig, ccfg *ClusterConfig) string {
 		const (
 			debugSelectors    string = "\"TEST;BENCH;LOADGEN;THROUGHPUT;CPU_UTIL;SPAWN_LAT;PROXY_LAT;\""
@@ -834,6 +834,14 @@ func GetCachedScalerClientCmdConstructor(leader bool, numClients int, manuallySc
 		if prewarm {
 			prewarmStr = "--prewarm_realm"
 		}
+		cossimBackendStr := ""
+		if cossimBackend {
+			cossimBackendStr = "--scaler_cached_cossim_backend"
+		}
+		cossimDelegatedInitStr := ""
+		if cossimDelegatedInit {
+			cossimDelegatedInitStr = "--cossim_delegated_init"
+		}
 		return fmt.Sprintf("export SIGMADEBUG=%s; export SIGMAVALGRIND=%s; export SIGMAPERF=%s; go clean -testcache; "+
 			"ulimit -n 100000; "+
 			"./set-cores.sh --set 1 --start 2 --end 39 > /dev/null 2>&1 ; "+
@@ -853,6 +861,12 @@ func GetCachedScalerClientCmdConstructor(leader bool, numClients int, manuallySc
 			"%s "+ // scaler_cached_delegated_init
 			"%s "+ // cached_scaler_use_epcache
 			"%s "+ // prewarm
+			"%s "+ // scaler_cached_cossim_backend
+			"%s "+ // cossim_delegated_init
+			"--cossim_nvec %s "+
+			"--cossim_nvec_to_query %s "+
+			"--cossim_vec_dim %s "+
+			"--cossim_srv_mcpu 4000 "+
 			"> /tmp/bench.out 2>&1 ;",
 			debugSelectors,
 			valgrindSelectors,
@@ -874,6 +888,11 @@ func GetCachedScalerClientCmdConstructor(leader bool, numClients int, manuallySc
 			delegateInitStr,
 			cachedScalerUseEPCacheStr,
 			prewarmStr,
+			cossimBackendStr,
+			cossimDelegatedInitStr,
+			strconv.Itoa(nvec),
+			strconv.Itoa(nvecToQuery),
+			strconv.Itoa(vecDim),
 		)
 	}
 }

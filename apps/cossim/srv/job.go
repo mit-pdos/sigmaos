@@ -104,12 +104,17 @@ type CosSimJob struct {
 	delegateInitRPCs bool
 	bootScript       []byte
 	bootScriptInput  []byte
+	stopEPCJ         bool
+	stopCaches       bool
 }
 
 func NewCosSimJob(sc *sigmaclnt.SigmaClnt, epcj *epsrv.EPCacheJob, cm *cachegrpmgr.CacheMgr, cc *cachegrpclnt.CachedSvcClnt, job string, nvec int, vecDim int, eagerInit bool, srvMcpu proc.Tmcpu, ncache int, cacheMcpu proc.Tmcpu, cacheGC bool, delegateInitRPCs bool) (*CosSimJob, error) {
+	stopEPCJ := false
+	stopCaches := false
 	var err error
 	// If not supplied, create epcache job
 	if epcj == nil {
+		stopEPCJ = true
 		// Create epcache job
 		epcj, err = epsrv.NewEPCacheJob(sc)
 		if err != nil {
@@ -119,6 +124,7 @@ func NewCosSimJob(sc *sigmaclnt.SigmaClnt, epcj *epsrv.EPCacheJob, cm *cachegrpm
 	}
 	// If not supplied, create cache manager
 	if cm == nil {
+		stopCaches = true
 		// Start the cachegrp job
 		cm, err = cachegrpmgr.NewCacheMgr(sc, job, ncache, cacheMcpu, cacheGC)
 		if err != nil {
@@ -130,10 +136,10 @@ func NewCosSimJob(sc *sigmaclnt.SigmaClnt, epcj *epsrv.EPCacheJob, cm *cachegrpm
 	if cc == nil {
 		cc = cachegrpclnt.NewCachedSvcClnt(sc.FsLib, job)
 	}
-	return newCosSimJob(sc, epcj, cm, cc, job, nvec, vecDim, eagerInit, srvMcpu, ncache, cacheMcpu, cacheGC, delegateInitRPCs)
+	return newCosSimJob(sc, epcj, cm, cc, job, nvec, vecDim, eagerInit, srvMcpu, ncache, cacheMcpu, cacheGC, delegateInitRPCs, stopEPCJ, stopCaches)
 }
 
-func newCosSimJob(sc *sigmaclnt.SigmaClnt, epcj *epsrv.EPCacheJob, cm *cachegrpmgr.CacheMgr, cc *cachegrpclnt.CachedSvcClnt, job string, nvec int, vecDim int, eagerInit bool, srvMcpu proc.Tmcpu, ncache int, cacheMcpu proc.Tmcpu, cacheGC bool, delegateInitRPCs bool) (*CosSimJob, error) {
+func newCosSimJob(sc *sigmaclnt.SigmaClnt, epcj *epsrv.EPCacheJob, cm *cachegrpmgr.CacheMgr, cc *cachegrpclnt.CachedSvcClnt, job string, nvec int, vecDim int, eagerInit bool, srvMcpu proc.Tmcpu, ncache int, cacheMcpu proc.Tmcpu, cacheGC bool, delegateInitRPCs bool, stopEPCJ bool, stopCaches bool) (*CosSimJob, error) {
 	// Init fs
 	if err := initFS(sc, job); err != nil {
 		db.DPrintf(db.COSSIMSRV_ERR, "Err initfs: %v", err)
@@ -195,6 +201,8 @@ func newCosSimJob(sc *sigmaclnt.SigmaClnt, epcj *epsrv.EPCacheJob, cm *cachegrpm
 		delegateInitRPCs: delegateInitRPCs,
 		bootScript:       bootScript,
 		bootScriptInput:  bootScriptInput,
+		stopEPCJ:         stopEPCJ,
+		stopCaches:       stopCaches,
 	}, nil
 }
 
@@ -263,7 +271,11 @@ func (j *CosSimJob) Stop() error {
 			return err
 		}
 	}
-	j.cacheMgr.Stop()
-	j.EPCacheJob.Stop()
+	if j.stopCaches {
+		j.cacheMgr.Stop()
+	}
+	if j.stopEPCJ {
+		j.EPCacheJob.Stop()
+	}
 	return nil
 }

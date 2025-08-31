@@ -13,6 +13,8 @@ import (
 	cachegrpclnt "sigmaos/apps/cache/cachegrp/clnt"
 	cachegrpmgr "sigmaos/apps/cache/cachegrp/mgr"
 	cacheproto "sigmaos/apps/cache/proto"
+	"sigmaos/apps/cossim"
+	cossimproto "sigmaos/apps/cossim/proto"
 	cossimsrv "sigmaos/apps/cossim/srv"
 	epsrv "sigmaos/apps/epcache/srv"
 	"sigmaos/benchmarks/loadgen"
@@ -61,11 +63,12 @@ type CachedScalerJobInstance struct {
 	cossimVecDim        int
 	cossimMCPU          proc.Tmcpu
 	cossimDelegatedInit bool
+	cossimNVecToQuery   int
 	cossimJ             *cossimsrv.CosSimJob
 	*test.RealmTstate
 }
 
-func NewCachedScalerJob(ts *test.RealmTstate, jobName string, durs string, maxrpss string, putDurs string, putMaxrpss string, ncache int, cacheMCPU proc.Tmcpu, cacheGC bool, useEPCache bool, nKV int, delegatedInit bool, topN int, scale bool, scaleDelay time.Duration, cossimBackend bool, cossimNVec int, cossimVecDim int, cossimMCPU proc.Tmcpu, cossimDelegatedInit bool) *CachedScalerJobInstance {
+func NewCachedScalerJob(ts *test.RealmTstate, jobName string, durs string, maxrpss string, putDurs string, putMaxrpss string, ncache int, cacheMCPU proc.Tmcpu, cacheGC bool, useEPCache bool, nKV int, delegatedInit bool, topN int, scale bool, scaleDelay time.Duration, cossimBackend bool, cossimNVec int, cossimVecDim int, cossimMCPU proc.Tmcpu, cossimDelegatedInit bool, cossimNVecToQuery int) *CachedScalerJobInstance {
 	ji := &CachedScalerJobInstance{
 		RealmTstate:         ts,
 		sigmaos:             true,
@@ -86,6 +89,7 @@ func NewCachedScalerJob(ts *test.RealmTstate, jobName string, durs string, maxrp
 		cossimVecDim:        cossimVecDim,
 		cossimMCPU:          cossimMCPU,
 		cossimDelegatedInit: cossimDelegatedInit,
+		cossimNVecToQuery:   cossimNVecToQuery,
 		ready:               make(chan bool),
 	}
 
@@ -180,6 +184,16 @@ func NewCachedScalerJob(ts *test.RealmTstate, jobName string, durs string, maxrp
 	if !assert.True(ts.Ts.T, foundCached, "Err didn't find cached srv") {
 		return ji
 	}
+
+	// Construct CosSim request input
+	cossimInputVec := cossim.VectorToSlice(cossim.NewVectors(1, ji.cossimVecDim)[0])
+	ranges := []*cossimproto.VecRange{
+		&cossimproto.VecRange{
+			StartID: 0,
+			EndID:   uint64(ji.cossimNVecToQuery - 1),
+		},
+	}
+
 	// Warm up an msched currently running a cached shard with the cached-scaler
 	// bin. No cached-scaler server will be able to run on this machine (the
 	// CPU reservation conflicts with that of the cached server), so we can be
@@ -207,8 +221,14 @@ func NewCachedScalerJob(ts *test.RealmTstate, jobName string, durs string, maxrp
 			err := ji.cc.Get(key, v)
 			if forceMiss || (err != nil && cache.IsMiss(err)) {
 				db.DPrintf(db.TEST, "Cache miss!")
-				// Simulate fetching the data from elsewhere
-				time.Sleep(50 * time.Millisecond)
+				// Fetch from cossim server
+				if ji.cossimBackend {
+					_, _, err := ji.cossimJ.Clnt.CosSimLeastLoaded(cossimInputVec, ranges)
+					assert.Nil(ji.Ts.T, err, "CosSim req: %v", err)
+				} else {
+					// Simulate fetching the data with a fixed delay
+					time.Sleep(50 * time.Millisecond)
+				}
 			} else if !missExpected && !assert.Nil(ji.Ts.T, err, "Err cc get: %v", err) {
 				// OK to have errors while misses are expected, because server may be
 				// registered & picked up by EPCC before it is mounted
@@ -239,11 +259,17 @@ func NewCachedScalerJob(ts *test.RealmTstate, jobName string, durs string, maxrp
 		}
 	}
 	if ji.cossimBackend {
+		db.DPrintf(db.TEST, "Start cossimsrv")
 		eagerInit := true
 		ji.cossimJ, err = cossimsrv.NewCosSimJob(ts.SigmaClnt, ji.epcj, ji.cm, ji.cc, ji.jobName, ji.cossimNVec, ji.cossimVecDim, eagerInit, ji.cossimMCPU, ji.ncache, ji.cacheMCPU, cacheGC, ji.cossimDelegatedInit)
 		if !assert.Nil(ts.Ts.T, err, "Error NewCosSimJob: %v", err) {
 			return ji
 		}
+		_, _, err := ji.cossimJ.AddSrv()
+		if !assert.Nil(ts.Ts.T, err, "Err Cossim AddSrv: %v", err) {
+			return ji
+		}
+		db.DPrintf(db.TEST, "Done start cossimsrv")
 	}
 	return ji
 }

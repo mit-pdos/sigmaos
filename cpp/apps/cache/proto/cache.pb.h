@@ -1374,6 +1374,7 @@ class ShardReq final :
     kValsFieldNumber = 3,
     kFenceFieldNumber = 2,
     kShardFieldNumber = 1,
+    kEmptyFieldNumber = 4,
   };
   // map<string, bytes> vals = 3;
   int vals_size() const;
@@ -1419,6 +1420,15 @@ class ShardReq final :
   void _internal_set_shard(uint32_t value);
   public:
 
+  // bool empty = 4;
+  void clear_empty();
+  bool empty() const;
+  void set_empty(bool value);
+  private:
+  bool _internal_empty() const;
+  void _internal_set_empty(bool value);
+  public:
+
   // @@protoc_insertion_point(class_scope:ShardReq)
  private:
   class _Internal;
@@ -1434,6 +1444,7 @@ class ShardReq final :
         ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::TYPE_BYTES> vals_;
     ::TfenceProto* fence_;
     uint32_t shard_;
+    bool empty_;
     mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   };
   union { Impl_ _impl_; };
@@ -3205,6 +3216,26 @@ inline ::PROTOBUF_NAMESPACE_ID::Map< std::string, std::string >*
 ShardReq::mutable_vals() {
   // @@protoc_insertion_point(field_mutable_map:ShardReq.vals)
   return _internal_mutable_vals();
+}
+
+// bool empty = 4;
+inline void ShardReq::clear_empty() {
+  _impl_.empty_ = false;
+}
+inline bool ShardReq::_internal_empty() const {
+  return _impl_.empty_;
+}
+inline bool ShardReq::empty() const {
+  // @@protoc_insertion_point(field_get:ShardReq.empty)
+  return _internal_empty();
+}
+inline void ShardReq::_internal_set_empty(bool value) {
+  
+  _impl_.empty_ = value;
+}
+inline void ShardReq::set_empty(bool value) {
+  _internal_set_empty(value);
+  // @@protoc_insertion_point(field_set:ShardReq.empty)
 }
 
 // -------------------------------------------------------------------

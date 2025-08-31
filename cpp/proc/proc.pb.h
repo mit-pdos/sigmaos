@@ -35,6 +35,7 @@
 #include <google/protobuf/unknown_field_set.h>
 #include <google/protobuf/timestamp.pb.h>
 #include "sigmap/sigmap.pb.h"
+#include "rpc/proto/rpc.pb.h"
 // @@protoc_insertion_point(includes)
 #include <google/protobuf/port_def.inc>
 #define PROTOBUF_INTERNAL_EXPORT_proc_2fproc_2eproto
@@ -1160,9 +1161,9 @@ class ProcProto final :
   enum : int {
     kArgsFieldNumber = 2,
     kEnvFieldNumber = 3,
-    kBootScriptFieldNumber = 4,
     kBootScriptInputFieldNumber = 5,
     kProcEnvProtoFieldNumber = 1,
+    kBlobFieldNumber = 4,
     kTypeIntFieldNumber = 6,
     kMcpuIntFieldNumber = 7,
     kMemIntFieldNumber = 8,
@@ -1208,20 +1209,6 @@ class ProcProto final :
   ::PROTOBUF_NAMESPACE_ID::Map< std::string, std::string >*
       mutable_env();
 
-  // bytes bootScript = 4;
-  void clear_bootscript();
-  const std::string& bootscript() const;
-  template <typename ArgT0 = const std::string&, typename... ArgT>
-  void set_bootscript(ArgT0&& arg0, ArgT... args);
-  std::string* mutable_bootscript();
-  PROTOBUF_NODISCARD std::string* release_bootscript();
-  void set_allocated_bootscript(std::string* bootscript);
-  private:
-  const std::string& _internal_bootscript() const;
-  inline PROTOBUF_ALWAYS_INLINE void _internal_set_bootscript(const std::string& value);
-  std::string* _internal_mutable_bootscript();
-  public:
-
   // bytes bootScriptInput = 5;
   void clear_bootscriptinput();
   const std::string& bootscriptinput() const;
@@ -1253,6 +1240,24 @@ class ProcProto final :
   void unsafe_arena_set_allocated_procenvproto(
       ::ProcEnvProto* procenvproto);
   ::ProcEnvProto* unsafe_arena_release_procenvproto();
+
+  // .Blob blob = 4;
+  bool has_blob() const;
+  private:
+  bool _internal_has_blob() const;
+  public:
+  void clear_blob();
+  const ::Blob& blob() const;
+  PROTOBUF_NODISCARD ::Blob* release_blob();
+  ::Blob* mutable_blob();
+  void set_allocated_blob(::Blob* blob);
+  private:
+  const ::Blob& _internal_blob() const;
+  ::Blob* _internal_mutable_blob();
+  public:
+  void unsafe_arena_set_allocated_blob(
+      ::Blob* blob);
+  ::Blob* unsafe_arena_release_blob();
 
   // uint32 typeInt = 6;
   void clear_typeint();
@@ -1295,9 +1300,9 @@ class ProcProto final :
         std::string, std::string,
         ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::TYPE_STRING,
         ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::TYPE_STRING> env_;
-    ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr bootscript_;
     ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr bootscriptinput_;
     ::ProcEnvProto* procenvproto_;
+    ::Blob* blob_;
     uint32_t typeint_;
     uint32_t mcpuint_;
     uint32_t memint_;
@@ -3085,54 +3090,89 @@ ProcProto::mutable_env() {
   return _internal_mutable_env();
 }
 
-// bytes bootScript = 4;
-inline void ProcProto::clear_bootscript() {
-  _impl_.bootscript_.ClearToEmpty();
+// .Blob blob = 4;
+inline bool ProcProto::_internal_has_blob() const {
+  return this != internal_default_instance() && _impl_.blob_ != nullptr;
 }
-inline const std::string& ProcProto::bootscript() const {
-  // @@protoc_insertion_point(field_get:ProcProto.bootScript)
-  return _internal_bootscript();
+inline bool ProcProto::has_blob() const {
+  return _internal_has_blob();
 }
-template <typename ArgT0, typename... ArgT>
-inline PROTOBUF_ALWAYS_INLINE
-void ProcProto::set_bootscript(ArgT0&& arg0, ArgT... args) {
- 
- _impl_.bootscript_.SetBytes(static_cast<ArgT0 &&>(arg0), args..., GetArenaForAllocation());
-  // @@protoc_insertion_point(field_set:ProcProto.bootScript)
+inline const ::Blob& ProcProto::_internal_blob() const {
+  const ::Blob* p = _impl_.blob_;
+  return p != nullptr ? *p : reinterpret_cast<const ::Blob&>(
+      ::_Blob_default_instance_);
 }
-inline std::string* ProcProto::mutable_bootscript() {
-  std::string* _s = _internal_mutable_bootscript();
-  // @@protoc_insertion_point(field_mutable:ProcProto.bootScript)
-  return _s;
+inline const ::Blob& ProcProto::blob() const {
+  // @@protoc_insertion_point(field_get:ProcProto.blob)
+  return _internal_blob();
 }
-inline const std::string& ProcProto::_internal_bootscript() const {
-  return _impl_.bootscript_.Get();
-}
-inline void ProcProto::_internal_set_bootscript(const std::string& value) {
-  
-  _impl_.bootscript_.Set(value, GetArenaForAllocation());
-}
-inline std::string* ProcProto::_internal_mutable_bootscript() {
-  
-  return _impl_.bootscript_.Mutable(GetArenaForAllocation());
-}
-inline std::string* ProcProto::release_bootscript() {
-  // @@protoc_insertion_point(field_release:ProcProto.bootScript)
-  return _impl_.bootscript_.Release();
-}
-inline void ProcProto::set_allocated_bootscript(std::string* bootscript) {
-  if (bootscript != nullptr) {
+inline void ProcProto::unsafe_arena_set_allocated_blob(
+    ::Blob* blob) {
+  if (GetArenaForAllocation() == nullptr) {
+    delete reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(_impl_.blob_);
+  }
+  _impl_.blob_ = blob;
+  if (blob) {
     
   } else {
     
   }
-  _impl_.bootscript_.SetAllocated(bootscript, GetArenaForAllocation());
-#ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
-  if (_impl_.bootscript_.IsDefault()) {
-    _impl_.bootscript_.Set("", GetArenaForAllocation());
+  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:ProcProto.blob)
+}
+inline ::Blob* ProcProto::release_blob() {
+  
+  ::Blob* temp = _impl_.blob_;
+  _impl_.blob_ = nullptr;
+#ifdef PROTOBUF_FORCE_COPY_IN_RELEASE
+  auto* old =  reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(temp);
+  temp = ::PROTOBUF_NAMESPACE_ID::internal::DuplicateIfNonNull(temp);
+  if (GetArenaForAllocation() == nullptr) { delete old; }
+#else  // PROTOBUF_FORCE_COPY_IN_RELEASE
+  if (GetArenaForAllocation() != nullptr) {
+    temp = ::PROTOBUF_NAMESPACE_ID::internal::DuplicateIfNonNull(temp);
   }
-#endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
-  // @@protoc_insertion_point(field_set_allocated:ProcProto.bootScript)
+#endif  // !PROTOBUF_FORCE_COPY_IN_RELEASE
+  return temp;
+}
+inline ::Blob* ProcProto::unsafe_arena_release_blob() {
+  // @@protoc_insertion_point(field_release:ProcProto.blob)
+  
+  ::Blob* temp = _impl_.blob_;
+  _impl_.blob_ = nullptr;
+  return temp;
+}
+inline ::Blob* ProcProto::_internal_mutable_blob() {
+  
+  if (_impl_.blob_ == nullptr) {
+    auto* p = CreateMaybeMessage<::Blob>(GetArenaForAllocation());
+    _impl_.blob_ = p;
+  }
+  return _impl_.blob_;
+}
+inline ::Blob* ProcProto::mutable_blob() {
+  ::Blob* _msg = _internal_mutable_blob();
+  // @@protoc_insertion_point(field_mutable:ProcProto.blob)
+  return _msg;
+}
+inline void ProcProto::set_allocated_blob(::Blob* blob) {
+  ::PROTOBUF_NAMESPACE_ID::Arena* message_arena = GetArenaForAllocation();
+  if (message_arena == nullptr) {
+    delete reinterpret_cast< ::PROTOBUF_NAMESPACE_ID::MessageLite*>(_impl_.blob_);
+  }
+  if (blob) {
+    ::PROTOBUF_NAMESPACE_ID::Arena* submessage_arena =
+        ::PROTOBUF_NAMESPACE_ID::Arena::InternalGetOwningArena(
+                reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(blob));
+    if (message_arena != submessage_arena) {
+      blob = ::PROTOBUF_NAMESPACE_ID::internal::GetOwnedMessage(
+          message_arena, blob, submessage_arena);
+    }
+    
+  } else {
+    
+  }
+  _impl_.blob_ = blob;
+  // @@protoc_insertion_point(field_set_allocated:ProcProto.blob)
 }
 
 // bytes bootScriptInput = 5;

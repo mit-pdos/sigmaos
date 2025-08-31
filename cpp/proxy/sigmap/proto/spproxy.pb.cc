@@ -416,7 +416,37 @@ struct SigmaDelegatedRPCRepDefaultTypeInternal {
   };
 };
 PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 SigmaDelegatedRPCRepDefaultTypeInternal _SigmaDelegatedRPCRep_default_instance_;
-static ::_pb::Metadata file_level_metadata_proxy_2fsigmap_2fproto_2fspproxy_2eproto[28];
+PROTOBUF_CONSTEXPR SigmaMultiDelegatedRPCReq::SigmaMultiDelegatedRPCReq(
+    ::_pbi::ConstantInitialized): _impl_{
+    /*decltype(_impl_.rpcidxs_)*/{}
+  , /*decltype(_impl_._rpcidxs_cached_byte_size_)*/{0}
+  , /*decltype(_impl_._cached_size_)*/{}} {}
+struct SigmaMultiDelegatedRPCReqDefaultTypeInternal {
+  PROTOBUF_CONSTEXPR SigmaMultiDelegatedRPCReqDefaultTypeInternal()
+      : _instance(::_pbi::ConstantInitialized{}) {}
+  ~SigmaMultiDelegatedRPCReqDefaultTypeInternal() {}
+  union {
+    SigmaMultiDelegatedRPCReq _instance;
+  };
+};
+PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 SigmaMultiDelegatedRPCReqDefaultTypeInternal _SigmaMultiDelegatedRPCReq_default_instance_;
+PROTOBUF_CONSTEXPR SigmaMultiDelegatedRPCRep::SigmaMultiDelegatedRPCRep(
+    ::_pbi::ConstantInitialized): _impl_{
+    /*decltype(_impl_.niovs_)*/{}
+  , /*decltype(_impl_._niovs_cached_byte_size_)*/{0}
+  , /*decltype(_impl_.errs_)*/{}
+  , /*decltype(_impl_.blob_)*/nullptr
+  , /*decltype(_impl_._cached_size_)*/{}} {}
+struct SigmaMultiDelegatedRPCRepDefaultTypeInternal {
+  PROTOBUF_CONSTEXPR SigmaMultiDelegatedRPCRepDefaultTypeInternal()
+      : _instance(::_pbi::ConstantInitialized{}) {}
+  ~SigmaMultiDelegatedRPCRepDefaultTypeInternal() {}
+  union {
+    SigmaMultiDelegatedRPCRep _instance;
+  };
+};
+PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 SigmaMultiDelegatedRPCRepDefaultTypeInternal _SigmaMultiDelegatedRPCRep_default_instance_;
+static ::_pb::Metadata file_level_metadata_proxy_2fsigmap_2fproto_2fspproxy_2eproto[30];
 static constexpr ::_pb::EnumDescriptor const** file_level_enum_descriptors_proxy_2fsigmap_2fproto_2fspproxy_2eproto = nullptr;
 static constexpr ::_pb::ServiceDescriptor const** file_level_service_descriptors_proxy_2fsigmap_2fproto_2fspproxy_2eproto = nullptr;
 
@@ -650,6 +680,22 @@ const uint32_t TableStruct_proxy_2fsigmap_2fproto_2fspproxy_2eproto::offsets[] P
   ~0u,  // no _inlined_string_donated_
   PROTOBUF_FIELD_OFFSET(::SigmaDelegatedRPCRep, _impl_.blob_),
   PROTOBUF_FIELD_OFFSET(::SigmaDelegatedRPCRep, _impl_.err_),
+  ~0u,  // no _has_bits_
+  PROTOBUF_FIELD_OFFSET(::SigmaMultiDelegatedRPCReq, _internal_metadata_),
+  ~0u,  // no _extensions_
+  ~0u,  // no _oneof_case_
+  ~0u,  // no _weak_field_map_
+  ~0u,  // no _inlined_string_donated_
+  PROTOBUF_FIELD_OFFSET(::SigmaMultiDelegatedRPCReq, _impl_.rpcidxs_),
+  ~0u,  // no _has_bits_
+  PROTOBUF_FIELD_OFFSET(::SigmaMultiDelegatedRPCRep, _internal_metadata_),
+  ~0u,  // no _extensions_
+  ~0u,  // no _oneof_case_
+  ~0u,  // no _weak_field_map_
+  ~0u,  // no _inlined_string_donated_
+  PROTOBUF_FIELD_OFFSET(::SigmaMultiDelegatedRPCRep, _impl_.blob_),
+  PROTOBUF_FIELD_OFFSET(::SigmaMultiDelegatedRPCRep, _impl_.niovs_),
+  PROTOBUF_FIELD_OFFSET(::SigmaMultiDelegatedRPCRep, _impl_.errs_),
 };
 static const ::_pbi::MigrationSchema schemas[] PROTOBUF_SECTION_VARIABLE(protodesc_cold) = {
   { 0, -1, -1, sizeof(::SigmaInformProcReq)},
@@ -680,6 +726,8 @@ static const ::_pbi::MigrationSchema schemas[] PROTOBUF_SECTION_VARIABLE(protode
   { 206, -1, -1, sizeof(::SigmaExitedReq)},
   { 214, -1, -1, sizeof(::SigmaDelegatedRPCReq)},
   { 221, -1, -1, sizeof(::SigmaDelegatedRPCRep)},
+  { 229, -1, -1, sizeof(::SigmaMultiDelegatedRPCReq)},
+  { 236, -1, -1, sizeof(::SigmaMultiDelegatedRPCRep)},
 };
 
 static const ::_pb::Message* const file_default_instances[] = {
@@ -711,6 +759,8 @@ static const ::_pb::Message* const file_default_instances[] = {
   &::_SigmaExitedReq_default_instance_._instance,
   &::_SigmaDelegatedRPCReq_default_instance_._instance,
   &::_SigmaDelegatedRPCRep_default_instance_._instance,
+  &::_SigmaMultiDelegatedRPCReq_default_instance_._instance,
+  &::_SigmaMultiDelegatedRPCRep_default_instance_._instance,
 };
 
 const char descriptor_table_protodef_proxy_2fsigmap_2fproto_2fspproxy_2eproto[] PROTOBUF_SECTION_VARIABLE(protodesc_cold) =
@@ -758,7 +808,11 @@ const char descriptor_table_protodef_proxy_2fsigmap_2fproto_2fspproxy_2eproto[] 
   "\r\022\013\n\003msg\030\002 \001(\t\"&\n\024SigmaDelegatedRPCReq\022\016"
   "\n\006rPCIdx\030\001 \001(\004\"A\n\024SigmaDelegatedRPCRep\022\023"
   "\n\004blob\030\001 \001(\0132\005.Blob\022\024\n\003err\030\002 \001(\0132\007.Rerro"
-  "rB\034Z\032sigmaos/proxy/sigmap/protob\006proto3"
+  "r\",\n\031SigmaMultiDelegatedRPCReq\022\017\n\007rPCIdx"
+  "s\030\001 \003(\004\"V\n\031SigmaMultiDelegatedRPCRep\022\023\n\004"
+  "blob\030\001 \001(\0132\005.Blob\022\r\n\005nIOVs\030\002 \003(\004\022\025\n\004errs"
+  "\030\003 \003(\0132\007.RerrorB\034Z\032sigmaos/proxy/sigmap/"
+  "protob\006proto3"
   ;
 static const ::_pbi::DescriptorTable* const descriptor_table_proxy_2fsigmap_2fproto_2fspproxy_2eproto_deps[3] = {
   &::descriptor_table_proc_2fproc_2eproto,
@@ -767,9 +821,9 @@ static const ::_pbi::DescriptorTable* const descriptor_table_proxy_2fsigmap_2fpr
 };
 static ::_pbi::once_flag descriptor_table_proxy_2fsigmap_2fproto_2fspproxy_2eproto_once;
 const ::_pbi::DescriptorTable descriptor_table_proxy_2fsigmap_2fproto_2fspproxy_2eproto = {
-    false, false, 1799, descriptor_table_protodef_proxy_2fsigmap_2fproto_2fspproxy_2eproto,
+    false, false, 1933, descriptor_table_protodef_proxy_2fsigmap_2fproto_2fspproxy_2eproto,
     "proxy/sigmap/proto/spproxy.proto",
-    &descriptor_table_proxy_2fsigmap_2fproto_2fspproxy_2eproto_once, descriptor_table_proxy_2fsigmap_2fproto_2fspproxy_2eproto_deps, 3, 28,
+    &descriptor_table_proxy_2fsigmap_2fproto_2fspproxy_2eproto_once, descriptor_table_proxy_2fsigmap_2fproto_2fspproxy_2eproto_deps, 3, 30,
     schemas, file_default_instances, TableStruct_proxy_2fsigmap_2fproto_2fspproxy_2eproto::offsets,
     file_level_metadata_proxy_2fsigmap_2fproto_2fspproxy_2eproto, file_level_enum_descriptors_proxy_2fsigmap_2fproto_2fspproxy_2eproto,
     file_level_service_descriptors_proxy_2fsigmap_2fproto_2fspproxy_2eproto,
@@ -7419,6 +7473,477 @@ void SigmaDelegatedRPCRep::InternalSwap(SigmaDelegatedRPCRep* other) {
       file_level_metadata_proxy_2fsigmap_2fproto_2fspproxy_2eproto[27]);
 }
 
+// ===================================================================
+
+class SigmaMultiDelegatedRPCReq::_Internal {
+ public:
+};
+
+SigmaMultiDelegatedRPCReq::SigmaMultiDelegatedRPCReq(::PROTOBUF_NAMESPACE_ID::Arena* arena,
+                         bool is_message_owned)
+  : ::PROTOBUF_NAMESPACE_ID::Message(arena, is_message_owned) {
+  SharedCtor(arena, is_message_owned);
+  // @@protoc_insertion_point(arena_constructor:SigmaMultiDelegatedRPCReq)
+}
+SigmaMultiDelegatedRPCReq::SigmaMultiDelegatedRPCReq(const SigmaMultiDelegatedRPCReq& from)
+  : ::PROTOBUF_NAMESPACE_ID::Message() {
+  SigmaMultiDelegatedRPCReq* const _this = this; (void)_this;
+  new (&_impl_) Impl_{
+      decltype(_impl_.rpcidxs_){from._impl_.rpcidxs_}
+    , /*decltype(_impl_._rpcidxs_cached_byte_size_)*/{0}
+    , /*decltype(_impl_._cached_size_)*/{}};
+
+  _internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
+  // @@protoc_insertion_point(copy_constructor:SigmaMultiDelegatedRPCReq)
+}
+
+inline void SigmaMultiDelegatedRPCReq::SharedCtor(
+    ::_pb::Arena* arena, bool is_message_owned) {
+  (void)arena;
+  (void)is_message_owned;
+  new (&_impl_) Impl_{
+      decltype(_impl_.rpcidxs_){arena}
+    , /*decltype(_impl_._rpcidxs_cached_byte_size_)*/{0}
+    , /*decltype(_impl_._cached_size_)*/{}
+  };
+}
+
+SigmaMultiDelegatedRPCReq::~SigmaMultiDelegatedRPCReq() {
+  // @@protoc_insertion_point(destructor:SigmaMultiDelegatedRPCReq)
+  if (auto *arena = _internal_metadata_.DeleteReturnArena<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>()) {
+  (void)arena;
+    return;
+  }
+  SharedDtor();
+}
+
+inline void SigmaMultiDelegatedRPCReq::SharedDtor() {
+  GOOGLE_DCHECK(GetArenaForAllocation() == nullptr);
+  _impl_.rpcidxs_.~RepeatedField();
+}
+
+void SigmaMultiDelegatedRPCReq::SetCachedSize(int size) const {
+  _impl_._cached_size_.Set(size);
+}
+
+void SigmaMultiDelegatedRPCReq::Clear() {
+// @@protoc_insertion_point(message_clear_start:SigmaMultiDelegatedRPCReq)
+  uint32_t cached_has_bits = 0;
+  // Prevent compiler warnings about cached_has_bits being unused
+  (void) cached_has_bits;
+
+  _impl_.rpcidxs_.Clear();
+  _internal_metadata_.Clear<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>();
+}
+
+const char* SigmaMultiDelegatedRPCReq::_InternalParse(const char* ptr, ::_pbi::ParseContext* ctx) {
+#define CHK_(x) if (PROTOBUF_PREDICT_FALSE(!(x))) goto failure
+  while (!ctx->Done(&ptr)) {
+    uint32_t tag;
+    ptr = ::_pbi::ReadTag(ptr, &tag);
+    switch (tag >> 3) {
+      // repeated uint64 rPCIdxs = 1;
+      case 1:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 10)) {
+          ptr = ::PROTOBUF_NAMESPACE_ID::internal::PackedUInt64Parser(_internal_mutable_rpcidxs(), ptr, ctx);
+          CHK_(ptr);
+        } else if (static_cast<uint8_t>(tag) == 8) {
+          _internal_add_rpcidxs(::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr));
+          CHK_(ptr);
+        } else
+          goto handle_unusual;
+        continue;
+      default:
+        goto handle_unusual;
+    }  // switch
+  handle_unusual:
+    if ((tag == 0) || ((tag & 7) == 4)) {
+      CHK_(ptr);
+      ctx->SetLastTag(tag);
+      goto message_done;
+    }
+    ptr = UnknownFieldParse(
+        tag,
+        _internal_metadata_.mutable_unknown_fields<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(),
+        ptr, ctx);
+    CHK_(ptr != nullptr);
+  }  // while
+message_done:
+  return ptr;
+failure:
+  ptr = nullptr;
+  goto message_done;
+#undef CHK_
+}
+
+uint8_t* SigmaMultiDelegatedRPCReq::_InternalSerialize(
+    uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
+  // @@protoc_insertion_point(serialize_to_array_start:SigmaMultiDelegatedRPCReq)
+  uint32_t cached_has_bits = 0;
+  (void) cached_has_bits;
+
+  // repeated uint64 rPCIdxs = 1;
+  {
+    int byte_size = _impl_._rpcidxs_cached_byte_size_.load(std::memory_order_relaxed);
+    if (byte_size > 0) {
+      target = stream->WriteUInt64Packed(
+          1, _internal_rpcidxs(), byte_size, target);
+    }
+  }
+
+  if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
+    target = ::_pbi::WireFormat::InternalSerializeUnknownFieldsToArray(
+        _internal_metadata_.unknown_fields<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(::PROTOBUF_NAMESPACE_ID::UnknownFieldSet::default_instance), target, stream);
+  }
+  // @@protoc_insertion_point(serialize_to_array_end:SigmaMultiDelegatedRPCReq)
+  return target;
+}
+
+size_t SigmaMultiDelegatedRPCReq::ByteSizeLong() const {
+// @@protoc_insertion_point(message_byte_size_start:SigmaMultiDelegatedRPCReq)
+  size_t total_size = 0;
+
+  uint32_t cached_has_bits = 0;
+  // Prevent compiler warnings about cached_has_bits being unused
+  (void) cached_has_bits;
+
+  // repeated uint64 rPCIdxs = 1;
+  {
+    size_t data_size = ::_pbi::WireFormatLite::
+      UInt64Size(this->_impl_.rpcidxs_);
+    if (data_size > 0) {
+      total_size += 1 +
+        ::_pbi::WireFormatLite::Int32Size(static_cast<int32_t>(data_size));
+    }
+    int cached_size = ::_pbi::ToCachedSize(data_size);
+    _impl_._rpcidxs_cached_byte_size_.store(cached_size,
+                                    std::memory_order_relaxed);
+    total_size += data_size;
+  }
+
+  return MaybeComputeUnknownFieldsSize(total_size, &_impl_._cached_size_);
+}
+
+const ::PROTOBUF_NAMESPACE_ID::Message::ClassData SigmaMultiDelegatedRPCReq::_class_data_ = {
+    ::PROTOBUF_NAMESPACE_ID::Message::CopyWithSourceCheck,
+    SigmaMultiDelegatedRPCReq::MergeImpl
+};
+const ::PROTOBUF_NAMESPACE_ID::Message::ClassData*SigmaMultiDelegatedRPCReq::GetClassData() const { return &_class_data_; }
+
+
+void SigmaMultiDelegatedRPCReq::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PROTOBUF_NAMESPACE_ID::Message& from_msg) {
+  auto* const _this = static_cast<SigmaMultiDelegatedRPCReq*>(&to_msg);
+  auto& from = static_cast<const SigmaMultiDelegatedRPCReq&>(from_msg);
+  // @@protoc_insertion_point(class_specific_merge_from_start:SigmaMultiDelegatedRPCReq)
+  GOOGLE_DCHECK_NE(&from, _this);
+  uint32_t cached_has_bits = 0;
+  (void) cached_has_bits;
+
+  _this->_impl_.rpcidxs_.MergeFrom(from._impl_.rpcidxs_);
+  _this->_internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
+}
+
+void SigmaMultiDelegatedRPCReq::CopyFrom(const SigmaMultiDelegatedRPCReq& from) {
+// @@protoc_insertion_point(class_specific_copy_from_start:SigmaMultiDelegatedRPCReq)
+  if (&from == this) return;
+  Clear();
+  MergeFrom(from);
+}
+
+bool SigmaMultiDelegatedRPCReq::IsInitialized() const {
+  return true;
+}
+
+void SigmaMultiDelegatedRPCReq::InternalSwap(SigmaMultiDelegatedRPCReq* other) {
+  using std::swap;
+  _internal_metadata_.InternalSwap(&other->_internal_metadata_);
+  _impl_.rpcidxs_.InternalSwap(&other->_impl_.rpcidxs_);
+}
+
+::PROTOBUF_NAMESPACE_ID::Metadata SigmaMultiDelegatedRPCReq::GetMetadata() const {
+  return ::_pbi::AssignDescriptors(
+      &descriptor_table_proxy_2fsigmap_2fproto_2fspproxy_2eproto_getter, &descriptor_table_proxy_2fsigmap_2fproto_2fspproxy_2eproto_once,
+      file_level_metadata_proxy_2fsigmap_2fproto_2fspproxy_2eproto[28]);
+}
+
+// ===================================================================
+
+class SigmaMultiDelegatedRPCRep::_Internal {
+ public:
+  static const ::Blob& blob(const SigmaMultiDelegatedRPCRep* msg);
+};
+
+const ::Blob&
+SigmaMultiDelegatedRPCRep::_Internal::blob(const SigmaMultiDelegatedRPCRep* msg) {
+  return *msg->_impl_.blob_;
+}
+void SigmaMultiDelegatedRPCRep::clear_blob() {
+  if (GetArenaForAllocation() == nullptr && _impl_.blob_ != nullptr) {
+    delete _impl_.blob_;
+  }
+  _impl_.blob_ = nullptr;
+}
+void SigmaMultiDelegatedRPCRep::clear_errs() {
+  _impl_.errs_.Clear();
+}
+SigmaMultiDelegatedRPCRep::SigmaMultiDelegatedRPCRep(::PROTOBUF_NAMESPACE_ID::Arena* arena,
+                         bool is_message_owned)
+  : ::PROTOBUF_NAMESPACE_ID::Message(arena, is_message_owned) {
+  SharedCtor(arena, is_message_owned);
+  // @@protoc_insertion_point(arena_constructor:SigmaMultiDelegatedRPCRep)
+}
+SigmaMultiDelegatedRPCRep::SigmaMultiDelegatedRPCRep(const SigmaMultiDelegatedRPCRep& from)
+  : ::PROTOBUF_NAMESPACE_ID::Message() {
+  SigmaMultiDelegatedRPCRep* const _this = this; (void)_this;
+  new (&_impl_) Impl_{
+      decltype(_impl_.niovs_){from._impl_.niovs_}
+    , /*decltype(_impl_._niovs_cached_byte_size_)*/{0}
+    , decltype(_impl_.errs_){from._impl_.errs_}
+    , decltype(_impl_.blob_){nullptr}
+    , /*decltype(_impl_._cached_size_)*/{}};
+
+  _internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
+  if (from._internal_has_blob()) {
+    _this->_impl_.blob_ = new ::Blob(*from._impl_.blob_);
+  }
+  // @@protoc_insertion_point(copy_constructor:SigmaMultiDelegatedRPCRep)
+}
+
+inline void SigmaMultiDelegatedRPCRep::SharedCtor(
+    ::_pb::Arena* arena, bool is_message_owned) {
+  (void)arena;
+  (void)is_message_owned;
+  new (&_impl_) Impl_{
+      decltype(_impl_.niovs_){arena}
+    , /*decltype(_impl_._niovs_cached_byte_size_)*/{0}
+    , decltype(_impl_.errs_){arena}
+    , decltype(_impl_.blob_){nullptr}
+    , /*decltype(_impl_._cached_size_)*/{}
+  };
+}
+
+SigmaMultiDelegatedRPCRep::~SigmaMultiDelegatedRPCRep() {
+  // @@protoc_insertion_point(destructor:SigmaMultiDelegatedRPCRep)
+  if (auto *arena = _internal_metadata_.DeleteReturnArena<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>()) {
+  (void)arena;
+    return;
+  }
+  SharedDtor();
+}
+
+inline void SigmaMultiDelegatedRPCRep::SharedDtor() {
+  GOOGLE_DCHECK(GetArenaForAllocation() == nullptr);
+  _impl_.niovs_.~RepeatedField();
+  _impl_.errs_.~RepeatedPtrField();
+  if (this != internal_default_instance()) delete _impl_.blob_;
+}
+
+void SigmaMultiDelegatedRPCRep::SetCachedSize(int size) const {
+  _impl_._cached_size_.Set(size);
+}
+
+void SigmaMultiDelegatedRPCRep::Clear() {
+// @@protoc_insertion_point(message_clear_start:SigmaMultiDelegatedRPCRep)
+  uint32_t cached_has_bits = 0;
+  // Prevent compiler warnings about cached_has_bits being unused
+  (void) cached_has_bits;
+
+  _impl_.niovs_.Clear();
+  _impl_.errs_.Clear();
+  if (GetArenaForAllocation() == nullptr && _impl_.blob_ != nullptr) {
+    delete _impl_.blob_;
+  }
+  _impl_.blob_ = nullptr;
+  _internal_metadata_.Clear<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>();
+}
+
+const char* SigmaMultiDelegatedRPCRep::_InternalParse(const char* ptr, ::_pbi::ParseContext* ctx) {
+#define CHK_(x) if (PROTOBUF_PREDICT_FALSE(!(x))) goto failure
+  while (!ctx->Done(&ptr)) {
+    uint32_t tag;
+    ptr = ::_pbi::ReadTag(ptr, &tag);
+    switch (tag >> 3) {
+      // .Blob blob = 1;
+      case 1:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 10)) {
+          ptr = ctx->ParseMessage(_internal_mutable_blob(), ptr);
+          CHK_(ptr);
+        } else
+          goto handle_unusual;
+        continue;
+      // repeated uint64 nIOVs = 2;
+      case 2:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 18)) {
+          ptr = ::PROTOBUF_NAMESPACE_ID::internal::PackedUInt64Parser(_internal_mutable_niovs(), ptr, ctx);
+          CHK_(ptr);
+        } else if (static_cast<uint8_t>(tag) == 16) {
+          _internal_add_niovs(::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr));
+          CHK_(ptr);
+        } else
+          goto handle_unusual;
+        continue;
+      // repeated .Rerror errs = 3;
+      case 3:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 26)) {
+          ptr -= 1;
+          do {
+            ptr += 1;
+            ptr = ctx->ParseMessage(_internal_add_errs(), ptr);
+            CHK_(ptr);
+            if (!ctx->DataAvailable(ptr)) break;
+          } while (::PROTOBUF_NAMESPACE_ID::internal::ExpectTag<26>(ptr));
+        } else
+          goto handle_unusual;
+        continue;
+      default:
+        goto handle_unusual;
+    }  // switch
+  handle_unusual:
+    if ((tag == 0) || ((tag & 7) == 4)) {
+      CHK_(ptr);
+      ctx->SetLastTag(tag);
+      goto message_done;
+    }
+    ptr = UnknownFieldParse(
+        tag,
+        _internal_metadata_.mutable_unknown_fields<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(),
+        ptr, ctx);
+    CHK_(ptr != nullptr);
+  }  // while
+message_done:
+  return ptr;
+failure:
+  ptr = nullptr;
+  goto message_done;
+#undef CHK_
+}
+
+uint8_t* SigmaMultiDelegatedRPCRep::_InternalSerialize(
+    uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
+  // @@protoc_insertion_point(serialize_to_array_start:SigmaMultiDelegatedRPCRep)
+  uint32_t cached_has_bits = 0;
+  (void) cached_has_bits;
+
+  // .Blob blob = 1;
+  if (this->_internal_has_blob()) {
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::
+      InternalWriteMessage(1, _Internal::blob(this),
+        _Internal::blob(this).GetCachedSize(), target, stream);
+  }
+
+  // repeated uint64 nIOVs = 2;
+  {
+    int byte_size = _impl_._niovs_cached_byte_size_.load(std::memory_order_relaxed);
+    if (byte_size > 0) {
+      target = stream->WriteUInt64Packed(
+          2, _internal_niovs(), byte_size, target);
+    }
+  }
+
+  // repeated .Rerror errs = 3;
+  for (unsigned i = 0,
+      n = static_cast<unsigned>(this->_internal_errs_size()); i < n; i++) {
+    const auto& repfield = this->_internal_errs(i);
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::
+        InternalWriteMessage(3, repfield, repfield.GetCachedSize(), target, stream);
+  }
+
+  if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
+    target = ::_pbi::WireFormat::InternalSerializeUnknownFieldsToArray(
+        _internal_metadata_.unknown_fields<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(::PROTOBUF_NAMESPACE_ID::UnknownFieldSet::default_instance), target, stream);
+  }
+  // @@protoc_insertion_point(serialize_to_array_end:SigmaMultiDelegatedRPCRep)
+  return target;
+}
+
+size_t SigmaMultiDelegatedRPCRep::ByteSizeLong() const {
+// @@protoc_insertion_point(message_byte_size_start:SigmaMultiDelegatedRPCRep)
+  size_t total_size = 0;
+
+  uint32_t cached_has_bits = 0;
+  // Prevent compiler warnings about cached_has_bits being unused
+  (void) cached_has_bits;
+
+  // repeated uint64 nIOVs = 2;
+  {
+    size_t data_size = ::_pbi::WireFormatLite::
+      UInt64Size(this->_impl_.niovs_);
+    if (data_size > 0) {
+      total_size += 1 +
+        ::_pbi::WireFormatLite::Int32Size(static_cast<int32_t>(data_size));
+    }
+    int cached_size = ::_pbi::ToCachedSize(data_size);
+    _impl_._niovs_cached_byte_size_.store(cached_size,
+                                    std::memory_order_relaxed);
+    total_size += data_size;
+  }
+
+  // repeated .Rerror errs = 3;
+  total_size += 1UL * this->_internal_errs_size();
+  for (const auto& msg : this->_impl_.errs_) {
+    total_size +=
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::MessageSize(msg);
+  }
+
+  // .Blob blob = 1;
+  if (this->_internal_has_blob()) {
+    total_size += 1 +
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::MessageSize(
+        *_impl_.blob_);
+  }
+
+  return MaybeComputeUnknownFieldsSize(total_size, &_impl_._cached_size_);
+}
+
+const ::PROTOBUF_NAMESPACE_ID::Message::ClassData SigmaMultiDelegatedRPCRep::_class_data_ = {
+    ::PROTOBUF_NAMESPACE_ID::Message::CopyWithSourceCheck,
+    SigmaMultiDelegatedRPCRep::MergeImpl
+};
+const ::PROTOBUF_NAMESPACE_ID::Message::ClassData*SigmaMultiDelegatedRPCRep::GetClassData() const { return &_class_data_; }
+
+
+void SigmaMultiDelegatedRPCRep::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PROTOBUF_NAMESPACE_ID::Message& from_msg) {
+  auto* const _this = static_cast<SigmaMultiDelegatedRPCRep*>(&to_msg);
+  auto& from = static_cast<const SigmaMultiDelegatedRPCRep&>(from_msg);
+  // @@protoc_insertion_point(class_specific_merge_from_start:SigmaMultiDelegatedRPCRep)
+  GOOGLE_DCHECK_NE(&from, _this);
+  uint32_t cached_has_bits = 0;
+  (void) cached_has_bits;
+
+  _this->_impl_.niovs_.MergeFrom(from._impl_.niovs_);
+  _this->_impl_.errs_.MergeFrom(from._impl_.errs_);
+  if (from._internal_has_blob()) {
+    _this->_internal_mutable_blob()->::Blob::MergeFrom(
+        from._internal_blob());
+  }
+  _this->_internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
+}
+
+void SigmaMultiDelegatedRPCRep::CopyFrom(const SigmaMultiDelegatedRPCRep& from) {
+// @@protoc_insertion_point(class_specific_copy_from_start:SigmaMultiDelegatedRPCRep)
+  if (&from == this) return;
+  Clear();
+  MergeFrom(from);
+}
+
+bool SigmaMultiDelegatedRPCRep::IsInitialized() const {
+  return true;
+}
+
+void SigmaMultiDelegatedRPCRep::InternalSwap(SigmaMultiDelegatedRPCRep* other) {
+  using std::swap;
+  _internal_metadata_.InternalSwap(&other->_internal_metadata_);
+  _impl_.niovs_.InternalSwap(&other->_impl_.niovs_);
+  _impl_.errs_.InternalSwap(&other->_impl_.errs_);
+  swap(_impl_.blob_, other->_impl_.blob_);
+}
+
+::PROTOBUF_NAMESPACE_ID::Metadata SigmaMultiDelegatedRPCRep::GetMetadata() const {
+  return ::_pbi::AssignDescriptors(
+      &descriptor_table_proxy_2fsigmap_2fproto_2fspproxy_2eproto_getter, &descriptor_table_proxy_2fsigmap_2fproto_2fspproxy_2eproto_once,
+      file_level_metadata_proxy_2fsigmap_2fproto_2fspproxy_2eproto[29]);
+}
+
 // @@protoc_insertion_point(namespace_scope)
 PROTOBUF_NAMESPACE_OPEN
 template<> PROTOBUF_NOINLINE ::SigmaInformProcReq*
@@ -7532,6 +8057,14 @@ Arena::CreateMaybeMessage< ::SigmaDelegatedRPCReq >(Arena* arena) {
 template<> PROTOBUF_NOINLINE ::SigmaDelegatedRPCRep*
 Arena::CreateMaybeMessage< ::SigmaDelegatedRPCRep >(Arena* arena) {
   return Arena::CreateMessageInternal< ::SigmaDelegatedRPCRep >(arena);
+}
+template<> PROTOBUF_NOINLINE ::SigmaMultiDelegatedRPCReq*
+Arena::CreateMaybeMessage< ::SigmaMultiDelegatedRPCReq >(Arena* arena) {
+  return Arena::CreateMessageInternal< ::SigmaMultiDelegatedRPCReq >(arena);
+}
+template<> PROTOBUF_NOINLINE ::SigmaMultiDelegatedRPCRep*
+Arena::CreateMaybeMessage< ::SigmaMultiDelegatedRPCRep >(Arena* arena) {
+  return Arena::CreateMessageInternal< ::SigmaMultiDelegatedRPCRep >(arena);
 }
 PROTOBUF_NAMESPACE_CLOSE
 

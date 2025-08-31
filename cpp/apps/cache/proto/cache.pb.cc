@@ -127,6 +127,7 @@ PROTOBUF_CONSTEXPR ShardReq::ShardReq(
     /*decltype(_impl_.vals_)*/{::_pbi::ConstantInitialized()}
   , /*decltype(_impl_.fence_)*/nullptr
   , /*decltype(_impl_.shard_)*/0u
+  , /*decltype(_impl_.empty_)*/false
   , /*decltype(_impl_._cached_size_)*/{}} {}
 struct ShardReqDefaultTypeInternal {
   PROTOBUF_CONSTEXPR ShardReqDefaultTypeInternal()
@@ -287,6 +288,7 @@ const uint32_t TableStruct_cache_2eproto::offsets[] PROTOBUF_SECTION_VARIABLE(pr
   PROTOBUF_FIELD_OFFSET(::ShardReq, _impl_.shard_),
   PROTOBUF_FIELD_OFFSET(::ShardReq, _impl_.fence_),
   PROTOBUF_FIELD_OFFSET(::ShardReq, _impl_.vals_),
+  PROTOBUF_FIELD_OFFSET(::ShardReq, _impl_.empty_),
   ~0u,  // no _has_bits_
   PROTOBUF_FIELD_OFFSET(::CacheOK, _internal_metadata_),
   ~0u,  // no _extensions_
@@ -341,12 +343,12 @@ static const ::_pbi::MigrationSchema schemas[] PROTOBUF_SECTION_VARIABLE(protode
   { 44, -1, -1, sizeof(::CacheMultiGetRep)},
   { 52, 60, -1, sizeof(::ShardReq_ValsEntry_DoNotUse)},
   { 62, -1, -1, sizeof(::ShardReq)},
-  { 71, -1, -1, sizeof(::CacheOK)},
-  { 77, -1, -1, sizeof(::CacheRep)},
-  { 84, 92, -1, sizeof(::ShardData_ValsEntry_DoNotUse)},
-  { 94, -1, -1, sizeof(::ShardData)},
-  { 101, -1, -1, sizeof(::CacheString)},
-  { 108, -1, -1, sizeof(::CacheInt)},
+  { 72, -1, -1, sizeof(::CacheOK)},
+  { 78, -1, -1, sizeof(::CacheRep)},
+  { 85, 93, -1, sizeof(::ShardData_ValsEntry_DoNotUse)},
+  { 95, -1, -1, sizeof(::ShardData)},
+  { 102, -1, -1, sizeof(::CacheString)},
+  { 109, -1, -1, sizeof(::CacheInt)},
 };
 
 static const ::_pb::Message* const file_default_instances[] = {
@@ -380,16 +382,17 @@ const char descriptor_table_protodef_cache_2eproto[] PROTOBUF_SECTION_VARIABLE(p
   "\0132\023.CacheGetDescriptor\022-\n\021spanContextCon"
   "fig\030\002 \001(\0132\022.SpanContextConfig\022\033\n\005fence\030\003"
   " \001(\0132\014.TfenceProto\"8\n\020CacheMultiGetRep\022\017"
-  "\n\007lengths\030\001 \003(\004\022\023\n\004blob\030\002 \001(\0132\005.Blob\"\206\001\n"
+  "\n\007lengths\030\001 \003(\004\022\023\n\004blob\030\002 \001(\0132\005.Blob\"\225\001\n"
   "\010ShardReq\022\r\n\005shard\030\001 \001(\r\022\033\n\005fence\030\002 \001(\0132"
   "\014.TfenceProto\022!\n\004vals\030\003 \003(\0132\023.ShardReq.V"
-  "alsEntry\032+\n\tValsEntry\022\013\n\003key\030\001 \001(\t\022\r\n\005va"
-  "lue\030\002 \001(\014:\0028\001\"\t\n\007CacheOK\"\031\n\010CacheRep\022\r\n\005"
-  "value\030\001 \001(\014\"\\\n\tShardData\022\"\n\004vals\030\001 \003(\0132\024"
-  ".ShardData.ValsEntry\032+\n\tValsEntry\022\013\n\003key"
-  "\030\001 \001(\t\022\r\n\005value\030\002 \001(\014:\0028\001\"\032\n\013CacheString"
-  "\022\013\n\003val\030\001 \001(\t\"\027\n\010CacheInt\022\013\n\003val\030\001 \001(\003B\032"
-  "Z\030sigmaos/apps/cache/protob\006proto3"
+  "alsEntry\022\r\n\005empty\030\004 \001(\010\032+\n\tValsEntry\022\013\n\003"
+  "key\030\001 \001(\t\022\r\n\005value\030\002 \001(\014:\0028\001\"\t\n\007CacheOK\""
+  "\031\n\010CacheRep\022\r\n\005value\030\001 \001(\014\"\\\n\tShardData\022"
+  "\"\n\004vals\030\001 \003(\0132\024.ShardData.ValsEntry\032+\n\tV"
+  "alsEntry\022\013\n\003key\030\001 \001(\t\022\r\n\005value\030\002 \001(\014:\0028\001"
+  "\"\032\n\013CacheString\022\013\n\003val\030\001 \001(\t\"\027\n\010CacheInt"
+  "\022\013\n\003val\030\001 \001(\003B\032Z\030sigmaos/apps/cache/prot"
+  "ob\006proto3"
   ;
 static const ::_pbi::DescriptorTable* const descriptor_table_cache_2eproto_deps[3] = {
   &::descriptor_table_rpc_2fproto_2frpc_2eproto,
@@ -398,7 +401,7 @@ static const ::_pbi::DescriptorTable* const descriptor_table_cache_2eproto_deps[
 };
 static ::_pbi::once_flag descriptor_table_cache_2eproto_once;
 const ::_pbi::DescriptorTable descriptor_table_cache_2eproto = {
-    false, false, 914, descriptor_table_protodef_cache_2eproto,
+    false, false, 929, descriptor_table_protodef_cache_2eproto,
     "cache.proto",
     &descriptor_table_cache_2eproto_once, descriptor_table_cache_2eproto_deps, 3, 14,
     schemas, file_default_instances, TableStruct_cache_2eproto::offsets,
@@ -2030,6 +2033,7 @@ ShardReq::ShardReq(const ShardReq& from)
       /*decltype(_impl_.vals_)*/{}
     , decltype(_impl_.fence_){nullptr}
     , decltype(_impl_.shard_){}
+    , decltype(_impl_.empty_){}
     , /*decltype(_impl_._cached_size_)*/{}};
 
   _internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
@@ -2037,7 +2041,9 @@ ShardReq::ShardReq(const ShardReq& from)
   if (from._internal_has_fence()) {
     _this->_impl_.fence_ = new ::TfenceProto(*from._impl_.fence_);
   }
-  _this->_impl_.shard_ = from._impl_.shard_;
+  ::memcpy(&_impl_.shard_, &from._impl_.shard_,
+    static_cast<size_t>(reinterpret_cast<char*>(&_impl_.empty_) -
+    reinterpret_cast<char*>(&_impl_.shard_)) + sizeof(_impl_.empty_));
   // @@protoc_insertion_point(copy_constructor:ShardReq)
 }
 
@@ -2049,6 +2055,7 @@ inline void ShardReq::SharedCtor(
       /*decltype(_impl_.vals_)*/{::_pbi::ArenaInitialized(), arena}
     , decltype(_impl_.fence_){nullptr}
     , decltype(_impl_.shard_){0u}
+    , decltype(_impl_.empty_){false}
     , /*decltype(_impl_._cached_size_)*/{}
   };
 }
@@ -2089,7 +2096,9 @@ void ShardReq::Clear() {
     delete _impl_.fence_;
   }
   _impl_.fence_ = nullptr;
-  _impl_.shard_ = 0u;
+  ::memset(&_impl_.shard_, 0, static_cast<size_t>(
+      reinterpret_cast<char*>(&_impl_.empty_) -
+      reinterpret_cast<char*>(&_impl_.shard_)) + sizeof(_impl_.empty_));
   _internal_metadata_.Clear<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>();
 }
 
@@ -2125,6 +2134,14 @@ const char* ShardReq::_InternalParse(const char* ptr, ::_pbi::ParseContext* ctx)
             CHK_(ptr);
             if (!ctx->DataAvailable(ptr)) break;
           } while (::PROTOBUF_NAMESPACE_ID::internal::ExpectTag<26>(ptr));
+        } else
+          goto handle_unusual;
+        continue;
+      // bool empty = 4;
+      case 4:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 32)) {
+          _impl_.empty_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
+          CHK_(ptr);
         } else
           goto handle_unusual;
         continue;
@@ -2196,6 +2213,12 @@ uint8_t* ShardReq::_InternalSerialize(
     }
   }
 
+  // bool empty = 4;
+  if (this->_internal_empty() != 0) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteBoolToArray(4, this->_internal_empty(), target);
+  }
+
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
     target = ::_pbi::WireFormat::InternalSerializeUnknownFieldsToArray(
         _internal_metadata_.unknown_fields<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(::PROTOBUF_NAMESPACE_ID::UnknownFieldSet::default_instance), target, stream);
@@ -2233,6 +2256,11 @@ size_t ShardReq::ByteSizeLong() const {
     total_size += ::_pbi::WireFormatLite::UInt32SizePlusOne(this->_internal_shard());
   }
 
+  // bool empty = 4;
+  if (this->_internal_empty() != 0) {
+    total_size += 1 + 1;
+  }
+
   return MaybeComputeUnknownFieldsSize(total_size, &_impl_._cached_size_);
 }
 
@@ -2259,6 +2287,9 @@ void ShardReq::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PROTO
   if (from._internal_shard() != 0) {
     _this->_internal_set_shard(from._internal_shard());
   }
+  if (from._internal_empty() != 0) {
+    _this->_internal_set_empty(from._internal_empty());
+  }
   _this->_internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
 }
 
@@ -2278,8 +2309,8 @@ void ShardReq::InternalSwap(ShardReq* other) {
   _internal_metadata_.InternalSwap(&other->_internal_metadata_);
   _impl_.vals_.InternalSwap(&other->_impl_.vals_);
   ::PROTOBUF_NAMESPACE_ID::internal::memswap<
-      PROTOBUF_FIELD_OFFSET(ShardReq, _impl_.shard_)
-      + sizeof(ShardReq::_impl_.shard_)
+      PROTOBUF_FIELD_OFFSET(ShardReq, _impl_.empty_)
+      + sizeof(ShardReq::_impl_.empty_)
       - PROTOBUF_FIELD_OFFSET(ShardReq, _impl_.fence_)>(
           reinterpret_cast<char*>(&_impl_.fence_),
           reinterpret_cast<char*>(&other->_impl_.fence_));

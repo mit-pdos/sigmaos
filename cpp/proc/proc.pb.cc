@@ -127,9 +127,9 @@ PROTOBUF_CONSTEXPR ProcProto::ProcProto(
     ::_pbi::ConstantInitialized): _impl_{
     /*decltype(_impl_.args_)*/{}
   , /*decltype(_impl_.env_)*/{::_pbi::ConstantInitialized()}
-  , /*decltype(_impl_.bootscript_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}
   , /*decltype(_impl_.bootscriptinput_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}
   , /*decltype(_impl_.procenvproto_)*/nullptr
+  , /*decltype(_impl_.blob_)*/nullptr
   , /*decltype(_impl_.typeint_)*/0u
   , /*decltype(_impl_.mcpuint_)*/0u
   , /*decltype(_impl_.memint_)*/0u
@@ -244,7 +244,7 @@ const uint32_t TableStruct_proc_2fproc_2eproto::offsets[] PROTOBUF_SECTION_VARIA
   PROTOBUF_FIELD_OFFSET(::ProcProto, _impl_.procenvproto_),
   PROTOBUF_FIELD_OFFSET(::ProcProto, _impl_.args_),
   PROTOBUF_FIELD_OFFSET(::ProcProto, _impl_.env_),
-  PROTOBUF_FIELD_OFFSET(::ProcProto, _impl_.bootscript_),
+  PROTOBUF_FIELD_OFFSET(::ProcProto, _impl_.blob_),
   PROTOBUF_FIELD_OFFSET(::ProcProto, _impl_.bootscriptinput_),
   PROTOBUF_FIELD_OFFSET(::ProcProto, _impl_.typeint_),
   PROTOBUF_FIELD_OFFSET(::ProcProto, _impl_.mcpuint_),
@@ -272,50 +272,52 @@ static const ::_pb::Message* const file_default_instances[] = {
 
 const char descriptor_table_protodef_proc_2fproc_2eproto[] PROTOBUF_SECTION_VARIABLE(protodesc_cold) =
   "\n\017proc/proc.proto\032\037google/protobuf/times"
-  "tamp.proto\032\023sigmap/sigmap.proto\"L\n\tProcS"
-  "eqno\022\r\n\005epoch\030\001 \001(\004\022\r\n\005seqno\030\002 \001(\004\022\017\n\007pr"
-  "ocqID\030\003 \001(\t\022\020\n\010mSchedID\030\004 \001(\t\"\326\007\n\014ProcEn"
-  "vProto\022\016\n\006pidStr\030\001 \001(\t\022\017\n\007program\030\002 \001(\t\022"
-  "\020\n\010realmStr\030\003 \001(\t\022\036\n\tprincipal\030\004 \001(\0132\013.T"
-  "principal\022\017\n\007procDir\030\005 \001(\t\022\021\n\tparentDir\030"
-  "\006 \001(\t\0227\n\retcdEndpoints\030\007 \003(\0132 .ProcEnvPr"
-  "oto.EtcdEndpointsEntry\022\033\n\023outerContainer"
-  "IPStr\030\010 \001(\t\022\033\n\023innerContainerIPStr\030\t \001(\t"
-  "\022\020\n\010kernelID\030\n \001(\t\022\020\n\010buildTag\030\013 \001(\t\022\014\n\004"
-  "perf\030\014 \001(\t\022\r\n\005debug\030\r \001(\t\022\023\n\013procdPIDStr"
-  "\030\016 \001(\t\022\022\n\nprivileged\030\017 \001(\010\022\016\n\006howInt\030\020 \001"
-  "(\005\022/\n\013spawnTimePB\030\021 \001(\0132\032.google.protobu"
-  "f.Timestamp\022\016\n\006strace\030\022 \001(\t\022\022\n\nuseSPProx"
-  "y\030\023 \001(\010\022\024\n\014useDialProxy\030\024 \001(\010\0221\n\nsecrets"
-  "Map\030\025 \003(\0132\035.ProcEnvProto.SecretsMapEntry"
-  "\022\021\n\tsigmaPath\030\026 \003(\t\022\017\n\007kernels\030\027 \003(\t\022\026\n\016"
-  "realmSwitchStr\030\030 \001(\t\022\017\n\007version\030\031 \001(\t\022\014\n"
-  "\004fail\030\032 \001(\t\022;\n\017cachedEndpoints\030\033 \003(\0132\".P"
-  "rocEnvProto.CachedEndpointsEntry\022\020\n\010valg"
-  "rind\030\034 \001(\t\022\031\n\021runBootScriptFlag\030\035 \001(\010\022\032\n"
-  "\022useSPProxyProcClnt\030\036 \001(\010\022\022\n\ndebugProcs\030"
-  "\037 \001(\t\032E\n\022EtcdEndpointsEntry\022\013\n\003key\030\001 \001(\t"
-  "\022\036\n\005value\030\002 \001(\0132\017.TendpointProto:\0028\001\032\?\n\017"
-  "SecretsMapEntry\022\013\n\003key\030\001 \001(\t\022\033\n\005value\030\002 "
-  "\001(\0132\014.SecretProto:\0028\001\032G\n\024CachedEndpoints"
-  "Entry\022\013\n\003key\030\001 \001(\t\022\036\n\005value\030\002 \001(\0132\017.Tend"
-  "pointProto:\0028\001\"\353\001\n\tProcProto\022#\n\014procEnvP"
-  "roto\030\001 \001(\0132\r.ProcEnvProto\022\014\n\004args\030\002 \003(\t\022"
-  " \n\003env\030\003 \003(\0132\023.ProcProto.EnvEntry\022\022\n\nboo"
-  "tScript\030\004 \001(\014\022\027\n\017bootScriptInput\030\005 \001(\014\022\017"
-  "\n\007typeInt\030\006 \001(\r\022\017\n\007mcpuInt\030\007 \001(\r\022\016\n\006memI"
-  "nt\030\010 \001(\r\032*\n\010EnvEntry\022\013\n\003key\030\001 \001(\t\022\r\n\005val"
-  "ue\030\002 \001(\t:\0028\001B\016Z\014sigmaos/procb\006proto3"
+  "tamp.proto\032\023sigmap/sigmap.proto\032\023rpc/pro"
+  "to/rpc.proto\"L\n\tProcSeqno\022\r\n\005epoch\030\001 \001(\004"
+  "\022\r\n\005seqno\030\002 \001(\004\022\017\n\007procqID\030\003 \001(\t\022\020\n\010mSch"
+  "edID\030\004 \001(\t\"\326\007\n\014ProcEnvProto\022\016\n\006pidStr\030\001 "
+  "\001(\t\022\017\n\007program\030\002 \001(\t\022\020\n\010realmStr\030\003 \001(\t\022\036"
+  "\n\tprincipal\030\004 \001(\0132\013.Tprincipal\022\017\n\007procDi"
+  "r\030\005 \001(\t\022\021\n\tparentDir\030\006 \001(\t\0227\n\retcdEndpoi"
+  "nts\030\007 \003(\0132 .ProcEnvProto.EtcdEndpointsEn"
+  "try\022\033\n\023outerContainerIPStr\030\010 \001(\t\022\033\n\023inne"
+  "rContainerIPStr\030\t \001(\t\022\020\n\010kernelID\030\n \001(\t\022"
+  "\020\n\010buildTag\030\013 \001(\t\022\014\n\004perf\030\014 \001(\t\022\r\n\005debug"
+  "\030\r \001(\t\022\023\n\013procdPIDStr\030\016 \001(\t\022\022\n\nprivilege"
+  "d\030\017 \001(\010\022\016\n\006howInt\030\020 \001(\005\022/\n\013spawnTimePB\030\021"
+  " \001(\0132\032.google.protobuf.Timestamp\022\016\n\006stra"
+  "ce\030\022 \001(\t\022\022\n\nuseSPProxy\030\023 \001(\010\022\024\n\014useDialP"
+  "roxy\030\024 \001(\010\0221\n\nsecretsMap\030\025 \003(\0132\035.ProcEnv"
+  "Proto.SecretsMapEntry\022\021\n\tsigmaPath\030\026 \003(\t"
+  "\022\017\n\007kernels\030\027 \003(\t\022\026\n\016realmSwitchStr\030\030 \001("
+  "\t\022\017\n\007version\030\031 \001(\t\022\014\n\004fail\030\032 \001(\t\022;\n\017cach"
+  "edEndpoints\030\033 \003(\0132\".ProcEnvProto.CachedE"
+  "ndpointsEntry\022\020\n\010valgrind\030\034 \001(\t\022\031\n\021runBo"
+  "otScriptFlag\030\035 \001(\010\022\032\n\022useSPProxyProcClnt"
+  "\030\036 \001(\010\022\022\n\ndebugProcs\030\037 \001(\t\032E\n\022EtcdEndpoi"
+  "ntsEntry\022\013\n\003key\030\001 \001(\t\022\036\n\005value\030\002 \001(\0132\017.T"
+  "endpointProto:\0028\001\032\?\n\017SecretsMapEntry\022\013\n\003"
+  "key\030\001 \001(\t\022\033\n\005value\030\002 \001(\0132\014.SecretProto:\002"
+  "8\001\032G\n\024CachedEndpointsEntry\022\013\n\003key\030\001 \001(\t\022"
+  "\036\n\005value\030\002 \001(\0132\017.TendpointProto:\0028\001\"\354\001\n\t"
+  "ProcProto\022#\n\014procEnvProto\030\001 \001(\0132\r.ProcEn"
+  "vProto\022\014\n\004args\030\002 \003(\t\022 \n\003env\030\003 \003(\0132\023.Proc"
+  "Proto.EnvEntry\022\023\n\004blob\030\004 \001(\0132\005.Blob\022\027\n\017b"
+  "ootScriptInput\030\005 \001(\014\022\017\n\007typeInt\030\006 \001(\r\022\017\n"
+  "\007mcpuInt\030\007 \001(\r\022\016\n\006memInt\030\010 \001(\r\032*\n\010EnvEnt"
+  "ry\022\013\n\003key\030\001 \001(\t\022\r\n\005value\030\002 \001(\t:\0028\001B\016Z\014si"
+  "gmaos/procb\006proto3"
   ;
-static const ::_pbi::DescriptorTable* const descriptor_table_proc_2fproc_2eproto_deps[2] = {
+static const ::_pbi::DescriptorTable* const descriptor_table_proc_2fproc_2eproto_deps[3] = {
   &::descriptor_table_google_2fprotobuf_2ftimestamp_2eproto,
+  &::descriptor_table_rpc_2fproto_2frpc_2eproto,
   &::descriptor_table_sigmap_2fsigmap_2eproto,
 };
 static ::_pbi::once_flag descriptor_table_proc_2fproc_2eproto_once;
 const ::_pbi::DescriptorTable descriptor_table_proc_2fproc_2eproto = {
-    false, false, 1396, descriptor_table_protodef_proc_2fproc_2eproto,
+    false, false, 1418, descriptor_table_protodef_proc_2fproc_2eproto,
     "proc/proc.proto",
-    &descriptor_table_proc_2fproc_2eproto_once, descriptor_table_proc_2fproc_2eproto_deps, 2, 7,
+    &descriptor_table_proc_2fproc_2eproto_once, descriptor_table_proc_2fproc_2eproto_deps, 3, 7,
     schemas, file_default_instances, TableStruct_proc_2fproc_2eproto::offsets,
     file_level_metadata_proc_2fproc_2eproto, file_level_enum_descriptors_proc_2fproc_2eproto,
     file_level_service_descriptors_proc_2fproc_2eproto,
@@ -2271,11 +2273,22 @@ void ProcProto_EnvEntry_DoNotUse::MergeFrom(const ProcProto_EnvEntry_DoNotUse& o
 class ProcProto::_Internal {
  public:
   static const ::ProcEnvProto& procenvproto(const ProcProto* msg);
+  static const ::Blob& blob(const ProcProto* msg);
 };
 
 const ::ProcEnvProto&
 ProcProto::_Internal::procenvproto(const ProcProto* msg) {
   return *msg->_impl_.procenvproto_;
+}
+const ::Blob&
+ProcProto::_Internal::blob(const ProcProto* msg) {
+  return *msg->_impl_.blob_;
+}
+void ProcProto::clear_blob() {
+  if (GetArenaForAllocation() == nullptr && _impl_.blob_ != nullptr) {
+    delete _impl_.blob_;
+  }
+  _impl_.blob_ = nullptr;
 }
 ProcProto::ProcProto(::PROTOBUF_NAMESPACE_ID::Arena* arena,
                          bool is_message_owned)
@@ -2292,9 +2305,9 @@ ProcProto::ProcProto(const ProcProto& from)
   new (&_impl_) Impl_{
       decltype(_impl_.args_){from._impl_.args_}
     , /*decltype(_impl_.env_)*/{}
-    , decltype(_impl_.bootscript_){}
     , decltype(_impl_.bootscriptinput_){}
     , decltype(_impl_.procenvproto_){nullptr}
+    , decltype(_impl_.blob_){nullptr}
     , decltype(_impl_.typeint_){}
     , decltype(_impl_.mcpuint_){}
     , decltype(_impl_.memint_){}
@@ -2302,14 +2315,6 @@ ProcProto::ProcProto(const ProcProto& from)
 
   _internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
   _this->_impl_.env_.MergeFrom(from._impl_.env_);
-  _impl_.bootscript_.InitDefault();
-  #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
-    _impl_.bootscript_.Set("", GetArenaForAllocation());
-  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
-  if (!from._internal_bootscript().empty()) {
-    _this->_impl_.bootscript_.Set(from._internal_bootscript(), 
-      _this->GetArenaForAllocation());
-  }
   _impl_.bootscriptinput_.InitDefault();
   #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
     _impl_.bootscriptinput_.Set("", GetArenaForAllocation());
@@ -2320,6 +2325,9 @@ ProcProto::ProcProto(const ProcProto& from)
   }
   if (from._internal_has_procenvproto()) {
     _this->_impl_.procenvproto_ = new ::ProcEnvProto(*from._impl_.procenvproto_);
+  }
+  if (from._internal_has_blob()) {
+    _this->_impl_.blob_ = new ::Blob(*from._impl_.blob_);
   }
   ::memcpy(&_impl_.typeint_, &from._impl_.typeint_,
     static_cast<size_t>(reinterpret_cast<char*>(&_impl_.memint_) -
@@ -2334,18 +2342,14 @@ inline void ProcProto::SharedCtor(
   new (&_impl_) Impl_{
       decltype(_impl_.args_){arena}
     , /*decltype(_impl_.env_)*/{::_pbi::ArenaInitialized(), arena}
-    , decltype(_impl_.bootscript_){}
     , decltype(_impl_.bootscriptinput_){}
     , decltype(_impl_.procenvproto_){nullptr}
+    , decltype(_impl_.blob_){nullptr}
     , decltype(_impl_.typeint_){0u}
     , decltype(_impl_.mcpuint_){0u}
     , decltype(_impl_.memint_){0u}
     , /*decltype(_impl_._cached_size_)*/{}
   };
-  _impl_.bootscript_.InitDefault();
-  #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
-    _impl_.bootscript_.Set("", GetArenaForAllocation());
-  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
   _impl_.bootscriptinput_.InitDefault();
   #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
     _impl_.bootscriptinput_.Set("", GetArenaForAllocation());
@@ -2367,9 +2371,9 @@ inline void ProcProto::SharedDtor() {
   _impl_.args_.~RepeatedPtrField();
   _impl_.env_.Destruct();
   _impl_.env_.~MapField();
-  _impl_.bootscript_.Destroy();
   _impl_.bootscriptinput_.Destroy();
   if (this != internal_default_instance()) delete _impl_.procenvproto_;
+  if (this != internal_default_instance()) delete _impl_.blob_;
 }
 
 void ProcProto::ArenaDtor(void* object) {
@@ -2388,12 +2392,15 @@ void ProcProto::Clear() {
 
   _impl_.args_.Clear();
   _impl_.env_.Clear();
-  _impl_.bootscript_.ClearToEmpty();
   _impl_.bootscriptinput_.ClearToEmpty();
   if (GetArenaForAllocation() == nullptr && _impl_.procenvproto_ != nullptr) {
     delete _impl_.procenvproto_;
   }
   _impl_.procenvproto_ = nullptr;
+  if (GetArenaForAllocation() == nullptr && _impl_.blob_ != nullptr) {
+    delete _impl_.blob_;
+  }
+  _impl_.blob_ = nullptr;
   ::memset(&_impl_.typeint_, 0, static_cast<size_t>(
       reinterpret_cast<char*>(&_impl_.memint_) -
       reinterpret_cast<char*>(&_impl_.typeint_)) + sizeof(_impl_.memint_));
@@ -2442,11 +2449,10 @@ const char* ProcProto::_InternalParse(const char* ptr, ::_pbi::ParseContext* ctx
         } else
           goto handle_unusual;
         continue;
-      // bytes bootScript = 4;
+      // .Blob blob = 4;
       case 4:
         if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 34)) {
-          auto str = _internal_mutable_bootscript();
-          ptr = ::_pbi::InlineGreedyStringParser(str, ptr, ctx);
+          ptr = ctx->ParseMessage(_internal_mutable_blob(), ptr);
           CHK_(ptr);
         } else
           goto handle_unusual;
@@ -2560,10 +2566,11 @@ uint8_t* ProcProto::_InternalSerialize(
     }
   }
 
-  // bytes bootScript = 4;
-  if (!this->_internal_bootscript().empty()) {
-    target = stream->WriteBytesMaybeAliased(
-        4, this->_internal_bootscript(), target);
+  // .Blob blob = 4;
+  if (this->_internal_has_blob()) {
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::
+      InternalWriteMessage(4, _Internal::blob(this),
+        _Internal::blob(this).GetCachedSize(), target, stream);
   }
 
   // bytes bootScriptInput = 5;
@@ -2623,13 +2630,6 @@ size_t ProcProto::ByteSizeLong() const {
     total_size += ProcProto_EnvEntry_DoNotUse::Funcs::ByteSizeLong(it->first, it->second);
   }
 
-  // bytes bootScript = 4;
-  if (!this->_internal_bootscript().empty()) {
-    total_size += 1 +
-      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::BytesSize(
-        this->_internal_bootscript());
-  }
-
   // bytes bootScriptInput = 5;
   if (!this->_internal_bootscriptinput().empty()) {
     total_size += 1 +
@@ -2642,6 +2642,13 @@ size_t ProcProto::ByteSizeLong() const {
     total_size += 1 +
       ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::MessageSize(
         *_impl_.procenvproto_);
+  }
+
+  // .Blob blob = 4;
+  if (this->_internal_has_blob()) {
+    total_size += 1 +
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::MessageSize(
+        *_impl_.blob_);
   }
 
   // uint32 typeInt = 6;
@@ -2679,15 +2686,16 @@ void ProcProto::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PROT
 
   _this->_impl_.args_.MergeFrom(from._impl_.args_);
   _this->_impl_.env_.MergeFrom(from._impl_.env_);
-  if (!from._internal_bootscript().empty()) {
-    _this->_internal_set_bootscript(from._internal_bootscript());
-  }
   if (!from._internal_bootscriptinput().empty()) {
     _this->_internal_set_bootscriptinput(from._internal_bootscriptinput());
   }
   if (from._internal_has_procenvproto()) {
     _this->_internal_mutable_procenvproto()->::ProcEnvProto::MergeFrom(
         from._internal_procenvproto());
+  }
+  if (from._internal_has_blob()) {
+    _this->_internal_mutable_blob()->::Blob::MergeFrom(
+        from._internal_blob());
   }
   if (from._internal_typeint() != 0) {
     _this->_internal_set_typeint(from._internal_typeint());
@@ -2719,10 +2727,6 @@ void ProcProto::InternalSwap(ProcProto* other) {
   _internal_metadata_.InternalSwap(&other->_internal_metadata_);
   _impl_.args_.InternalSwap(&other->_impl_.args_);
   _impl_.env_.InternalSwap(&other->_impl_.env_);
-  ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr::InternalSwap(
-      &_impl_.bootscript_, lhs_arena,
-      &other->_impl_.bootscript_, rhs_arena
-  );
   ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr::InternalSwap(
       &_impl_.bootscriptinput_, lhs_arena,
       &other->_impl_.bootscriptinput_, rhs_arena

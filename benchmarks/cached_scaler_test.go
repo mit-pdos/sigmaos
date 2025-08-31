@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/stretchr/testify/assert"
@@ -204,10 +205,12 @@ func NewCachedScalerJob(ts *test.RealmTstate, jobName string, durs string, maxrp
 	if !assert.Nil(ts.Ts.T, err, "Err warming with cached-scaler bin: %v", err) {
 		return ji
 	}
+	var reqidx atomic.Int32
 	db.DPrintf(db.TEST, "Warmed kid %v with CachedScaler bin", ji.warmCachedSrvKID)
 	ji.lgs = make([]*loadgen.LoadGenerator, 0, len(ji.dur))
 	for i := range ji.dur {
 		ji.lgs = append(ji.lgs, loadgen.NewLoadGenerator(ji.dur[i], ji.maxrps[i], func(r *rand.Rand) (time.Duration, bool) {
+			x := int(reqidx.Add(1))
 			idx := r.Int() % len(ji.keys)
 			// Select a key to request
 			key := ji.keys[idx]
@@ -217,7 +220,7 @@ func NewCachedScalerJob(ts *test.RealmTstate, jobName string, durs string, maxrp
 			// TODO: have cache do LRU eviction instead of simulating this
 			// Make 10% of the key space unavailable during a scaling event to
 			// simulate the effect of LRU evictions.
-			forceMiss := missExpected && (idx < len(ji.keys)/10)
+			forceMiss := missExpected && x%10 == 0 // (idx < len(ji.keys)/10)
 			err := ji.cc.Get(key, v)
 			if forceMiss || (err != nil && cache.IsMiss(err)) {
 				db.DPrintf(db.TEST, "Cache miss!")

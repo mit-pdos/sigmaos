@@ -240,8 +240,6 @@ func NewCachedScalerJob(ts *test.RealmTstate, jobName string, durs string, maxrp
 			if !missExpected {
 				assert.Equal(ji.Ts.T, v.Val, ji.vals[idx].Val, "Unexpected val for key %v: %v", key, v.Val)
 			}
-			// TODO: on miss, try from DB
-			// TODO: on MOVE, wait & then retry
 			return 0, false
 		}))
 	}
@@ -333,7 +331,7 @@ func (ji *CachedScalerJobInstance) scaleCached() {
 	ji.okToMiss = true
 	// TODO: More scaling
 	db.DPrintf(db.TEST, "Add scaler server")
-	if err := ji.cm.AddScalerServerWithSigmaPath(chunk.ChunkdPath(ji.warmCachedSrvKID), ji.delegatedInit); !assert.Nil(ji.Ts.T, err, "Err add scaler server: %v", err) {
+	if err := ji.cm.AddScalerServerWithSigmaPath(chunk.ChunkdPath(ji.warmCachedSrvKID), false /*ji.delegatedInit*/); !assert.Nil(ji.Ts.T, err, "Err add scaler server: %v", err) {
 		return
 	}
 	db.DPrintf(db.TEST, "Done add scaler server")

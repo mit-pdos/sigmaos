@@ -205,6 +205,7 @@ func NewCachedScalerJob(ts *test.RealmTstate, jobName string, durs string, maxrp
 	if !assert.Nil(ts.Ts.T, err, "Err warming with cached-scaler bin: %v", err) {
 		return ji
 	}
+	var misscnt atomic.Int32
 	var reqidx atomic.Int32
 	db.DPrintf(db.TEST, "Warmed kid %v with CachedScaler bin", ji.warmCachedSrvKID)
 	ji.lgs = make([]*loadgen.LoadGenerator, 0, len(ji.dur))
@@ -223,7 +224,7 @@ func NewCachedScalerJob(ts *test.RealmTstate, jobName string, durs string, maxrp
 			forceMiss := missExpected && x%10 == 0 // (idx < len(ji.keys)/10)
 			err := ji.cc.Get(key, v)
 			if forceMiss || (err != nil && cache.IsMiss(err)) {
-				db.DPrintf(db.TEST, "Cache miss!")
+				db.DPrintf(db.TEST, "Cache miss! force %v genuine %v cnt %v", forceMiss, (err != nil && cache.IsMiss(err)), misscnt.Add(1))
 				// Fetch from cossim server
 				if ji.cossimBackend {
 					_, _, err := ji.cossimJ.Clnt.CosSimLeastLoaded(cossimInputVec, ranges)

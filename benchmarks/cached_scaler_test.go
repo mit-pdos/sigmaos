@@ -337,6 +337,7 @@ func (ji *CachedScalerJobInstance) scaleCached() {
 		return
 	}
 	db.DPrintf(db.TEST, "Done add scaler server")
+	time.Sleep(2 * time.Second)
 	ji.okToMiss = false
 }
 

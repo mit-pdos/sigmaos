@@ -89,6 +89,7 @@ func (csc *CachedSvcClnt) monitorServers() {
 			continue
 		}
 		csc.nsrv = len(instances)
+		db.DPrintf(db.CACHEDSVCCLNT, "GetEndpoints new nsrv: %v", csc.nsrv)
 		// Update last endpoint version
 		csc.lastEPV = v
 	}
@@ -238,6 +239,7 @@ func (csc *CachedSvcClnt) getTraced(sctx *tproto.SpanContextConfig, key string, 
 	} else {
 		srv = csc.Server(Key2server(key, n))
 	}
+	db.DPrintf(db.CACHEDSVCCLNT, "Get key %v from srv %v", key, srv)
 	return csc.cc.GetTracedFenced(sctx, srv, key, val, sp.NullFence())
 }
 

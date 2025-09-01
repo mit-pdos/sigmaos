@@ -223,6 +223,14 @@ func NewCachedScalerJob(ts *test.RealmTstate, jobName string, durs string, maxrp
 			// simulate the effect of LRU evictions.
 			forceMiss := missExpected && x%10 == 0 // (idx < len(ji.keys)/10)
 			err := ji.cc.Get(key, v)
+			if !missExpected && !assert.Nil(ji.Ts.T, err, "Err cc get: %v", err) {
+				// OK to have errors while misses are expected, because server may be
+				// registered & picked up by EPCC before it is mounted
+				return 0, false
+			}
+			if !missExpected {
+				assert.Equal(ji.Ts.T, v.Val, ji.vals[idx].Val, "Unexpected val for key %v: %v", key, v.Val)
+			}
 			if forceMiss || (err != nil && cache.IsMiss(err)) {
 				db.DPrintf(db.TEST, "Cache miss (key=%v)! force %v genuine %v cnt %v err %v", key, forceMiss, (err != nil && cache.IsMiss(err)), misscnt.Add(1), err)
 				// Fetch from cossim server
@@ -233,13 +241,6 @@ func NewCachedScalerJob(ts *test.RealmTstate, jobName string, durs string, maxrp
 					// Simulate fetching the data with a fixed delay
 					time.Sleep(50 * time.Millisecond)
 				}
-			} else if !missExpected && !assert.Nil(ji.Ts.T, err, "Err cc get: %v", err) {
-				// OK to have errors while misses are expected, because server may be
-				// registered & picked up by EPCC before it is mounted
-				return 0, false
-			}
-			if !missExpected {
-				assert.Equal(ji.Ts.T, v.Val, ji.vals[idx].Val, "Unexpected val for key %v: %v", key, v.Val)
 			}
 			return 0, false
 		}))

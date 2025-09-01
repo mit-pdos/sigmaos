@@ -15,7 +15,7 @@ std::expected<int, sigmaos::serr::Error> Srv::CosSim(std::shared_ptr<google::pro
   auto input_vec = std::make_shared<sigmaos::apps::cossim::Vector>(req->mutable_inputvec(), _vec_dim);
   auto input = req->inputvec().vals();
   auto const &v_ranges = req->vecranges();
-  log(COSSIMSRV, "CosSim req({}) invec={}", req->id(), input.size());
+  log(COSSIMSRV, "CosSim req({}) invec_sz={} n_ranges={} range[0].start_id={} range[0].end_id={}", req->id(), input.size(), v_ranges.size(), v_ranges[0].startid(), v_ranges[0].endid());
   double max = 0.0;
   uint64_t max_id = 0;
   for (auto const &vr : v_ranges) {
@@ -39,7 +39,7 @@ std::expected<int, sigmaos::serr::Error> Srv::CosSim(std::shared_ptr<google::pro
   }
   rep->set_id(max_id);
   rep->set_val(max);
-  log(COSSIMSRV, "CosSim rep({}) invec={} max_id={} max={} latency={:0.3f}ms", req->id(), input.size(), max_id, max, LatencyMS(start));
+  log(COSSIMSRV, "CosSim rep({}) invec_sz={} max_id={} max={} latency={:0.3f}ms", req->id(), input.size(), max_id, max, LatencyMS(start));
   return 0;
 }
 

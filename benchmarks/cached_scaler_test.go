@@ -56,7 +56,8 @@ type CachedScalerJobInstance struct {
 	putMaxrps        []int
 	scale            bool
 	scaleDelay       time.Duration
-	okToMiss         bool
+	scaling          bool
+	lastScaled       time.Time
 	warmup           bool
 	// CosSim params
 	cossimBackend       bool
@@ -207,6 +208,7 @@ func NewCachedScalerJob(ts *test.RealmTstate, jobName string, durs string, maxrp
 	}
 	var misscnt atomic.Int32
 	var reqidx atomic.Int32
+	const SCALE_MISS_BUFFER_PERIOD = 2 * time.Second
 	db.DPrintf(db.TEST, "Warmed kid %v with CachedScaler bin", ji.warmCachedSrvKID)
 	ji.lgs = make([]*loadgen.LoadGenerator, 0, len(ji.dur))
 	for i := range ji.dur {
@@ -216,17 +218,19 @@ func NewCachedScalerJob(ts *test.RealmTstate, jobName string, durs string, maxrp
 			// Select a key to request
 			key := ji.keys[idx]
 			v := &cacheproto.CacheString{}
-			// Record whether or not a miss is acceptable (due to scaling)
-			missExpected := ji.okToMiss
+			// Record whether or not a miss is acceptable. A miss is acceptable if
+			// scaling is currently happening, or finished recently
+			// (within the SCALE_MISS_BUFFER_PERIOD)
+			missOK := ji.scaling || time.Since(ji.lastScaled) < SCALE_MISS_BUFFER_PERIOD
 			// TODO: have cache do LRU eviction instead of simulating this
 			// Make 10% of the key space unavailable during a scaling event to
 			// simulate the effect of LRU evictions.
-			forceMiss := missExpected && x%10 == 0 // (idx < len(ji.keys)/10)
+			forceMiss := ji.scaling && x%10 == 0 // (idx < len(ji.keys)/10)
 			err := ji.cc.Get(key, v)
 			if forceMiss || err != nil {
 				// OK to have errors while misses are expected, because server may be
 				// registered & picked up by EPCC before it is mounted
-				if !missExpected && !assert.Nil(ji.Ts.T, err, "Err cc get: %v", err) {
+				if !missOK && !assert.Nil(ji.Ts.T, err, "Err cc get: %v", err) {
 					return 0, false
 				}
 				db.DPrintf(db.TEST, "Cache miss (key=%v)! force %v genuine %v cnt %v err %v", key, forceMiss, (err != nil && cache.IsMiss(err)), misscnt.Add(1), err)
@@ -239,7 +243,7 @@ func NewCachedScalerJob(ts *test.RealmTstate, jobName string, durs string, maxrp
 					time.Sleep(50 * time.Millisecond)
 				}
 			}
-			if !missExpected {
+			if !missOK {
 				assert.Equal(ji.Ts.T, v.Val, ji.vals[idx].Val, "Unexpected val for key %v: %v", key, v.Val)
 			}
 			return 0, false
@@ -253,8 +257,8 @@ func NewCachedScalerJob(ts *test.RealmTstate, jobName string, durs string, maxrp
 				// Select a key to request
 				key := ji.keys[idx]
 				val := ji.vals[idx]
-				missExpected := ji.okToMiss
-				if err := ji.cc.Put(key, val); !missExpected && !assert.Nil(ji.Ts.T, err, "Err cc put: %v", err) {
+				missOK := ji.scaling || time.Since(ji.lastScaled) < SCALE_MISS_BUFFER_PERIOD
+				if err := ji.cc.Put(key, val); !missOK && !assert.Nil(ji.Ts.T, err, "Err cc put: %v", err) {
 					return 0, false
 				}
 				return 0, false
@@ -330,15 +334,15 @@ func (ji *CachedScalerJobInstance) scaleCached() {
 		return
 	}
 	time.Sleep(ji.scaleDelay)
-	ji.okToMiss = true
+	ji.scaling = true
 	// TODO: More scaling
 	db.DPrintf(db.TEST, "Add scaler server")
 	if err := ji.cm.AddScalerServerWithSigmaPath(chunk.ChunkdPath(ji.warmCachedSrvKID), ji.delegatedInit); !assert.Nil(ji.Ts.T, err, "Err add scaler server: %v", err) {
 		return
 	}
+	ji.scaling = false
+	ji.lastScaled = time.Now()
 	db.DPrintf(db.TEST, "Done add scaler server")
-	time.Sleep(2 * time.Second)
-	ji.okToMiss = false
 }
 
 // Write vector DB to cache srv

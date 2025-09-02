@@ -223,9 +223,6 @@ func NewCachedScalerJob(ts *test.RealmTstate, jobName string, durs string, maxrp
 			// simulate the effect of LRU evictions.
 			forceMiss := missExpected && x%10 == 0 // (idx < len(ji.keys)/10)
 			err := ji.cc.Get(key, v)
-			if !forceMiss && err == nil {
-				db.DPrintf(db.TEST, "Cache hit (key=%v)!", key)
-			}
 			if forceMiss || err != nil {
 				// OK to have errors while misses are expected, because server may be
 				// registered & picked up by EPCC before it is mounted

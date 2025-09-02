@@ -10,7 +10,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"sigmaos/apps/cache"
 	cachegrpclnt "sigmaos/apps/cache/cachegrp/clnt"
 	cachegrpmgr "sigmaos/apps/cache/cachegrp/mgr"
 	cacheproto "sigmaos/apps/cache/proto"

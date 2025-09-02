@@ -31,7 +31,7 @@ pub fn boot(b: *mut c_char, buf_sz: usize) {
             let mut shard_req = cache::ShardReq::new();
             shard_req.shard = *shard;
             shard_req.fence = MessageField::some(sigmap::TfenceProto::new());
-            shard_req.empty = true;
+            shard_req.empty = false;
             let rpc_bytes = shard_req.write_to_bytes().unwrap();
             sigmaos::send_rpc(
                 buf,

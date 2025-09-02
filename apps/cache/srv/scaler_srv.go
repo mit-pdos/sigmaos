@@ -79,7 +79,7 @@ func RunCacheSrvScaler(cachedir, jobname, srvpn string, nshard int, oldNSrv int,
 			peerpn := filepath.Join(cachedir, strconv.Itoa(srcSrv))
 			// Dump shards from source server via direct RPC
 			for _, shard := range shardsToSteal[srcSrv] {
-				vals, err := cc.DumpShard(peerpn, cache.Tshard(shard), sp.NullFence(), true)
+				vals, err := cc.DumpShard(peerpn, cache.Tshard(shard), sp.NullFence(), false)
 				if err != nil {
 					db.DFatalf("Err DumpShard(%v) from server %v: %v", shard, peerpn, err)
 				}

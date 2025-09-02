@@ -233,7 +233,7 @@ func NewCachedScalerJob(ts *test.RealmTstate, jobName string, durs string, maxrp
 				if !missOK && !assert.Nil(ji.Ts.T, err, "Err cc get: %v", err) {
 					return 0, false
 				}
-				db.DPrintf(db.TEST, "Cache miss (key=%v)! force %v genuine %v cnt %v err %v", key, forceMiss, (err != nil && cache.IsMiss(err)), misscnt.Add(1), err)
+				db.DPrintf(db.TEST, "Cache miss (key=%v)! force %v genuine %v cnt %v err %v", key, forceMiss, err != nil, misscnt.Add(1), err)
 				// Fetch from cossim server
 				if ji.cossimBackend {
 					_, _, err := ji.cossimJ.Clnt.CosSimLeastLoaded(cossimInputVec, ranges)

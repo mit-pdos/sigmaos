@@ -62,43 +62,36 @@ std::expected<int, sigmaos::serr::Error> Srv::Put(std::shared_ptr<google::protob
   return 0;
 }
 
-std::expected<int, sigmaos::serr::Error> Srv::Init() {
+std::expected<int, sigmaos::serr::Error> Srv::Init(int old_n_srv, int new_n_srv) {
+  auto start = GetCurrentTime();
+  // Create shards
+	for (uint64_t i = 0; i < NSHARD; i++) {
+    _cache[i] = std::make_shared<Shard>();
+	}
+  LogSpawnLatency(_sp_clnt->ProcEnv()->GetPID(), _sp_clnt->ProcEnv()->GetSpawnTime(), start, "CacheSrv make shards");
+	// List of servers to steal shards from, and the map of shards to steal from
+	// each server
+  std::map<int, std::vector<uint32_t>> shards_to_steal;
+  std::vector<int> src_srvs;
+  for (int i = 0; i < old_n_srv; i++) {
+    src_srvs.push_back(i);
+    shards_to_steal[i] = std::vector<uint32_t>();
+  }
+  uint64_t nrpc;
+  std::vector<uint64_t> rpc_idxs;
+  for (uint32_t i = 0; i < NSHARD; i++) {
+    if (i % new_n_srv == _srv_id) {
+ 			// If this server should host the shard in the new configuration, try to
+			// steal it
+			int src_srv = (int) i % old_n_srv;
+			// Add this shard to the list of shards to steal from the source server
+			shards_to_steal[src_srv].push_back(i);
+			rpc_idxs.push_back(nrpc++);
+    }
+  }
   fatal("Unimplemented");
+  LogSpawnLatency(_sp_clnt->ProcEnv()->GetPID(), _sp_clnt->ProcEnv()->GetSpawnTime(), start, "CacheSrv.Init");
   return 0;
-//  std::map<uint32_t, std::shared_ptr<std::vector<std::string>>> key_vecs;
-//  std::map<uint32_t, std::shared_ptr<std::vector<int>>> key_vecs_int;
-//  for (uint32_t i = 0; i < _nvec; i++) {
-//    std::string i_str = std::to_string(i);
-//    uint32_t server_id = sigmaos::apps::cache::key2server(i_str, _ncache);
-//    if (!key_vecs.contains(server_id)) {
-//      key_vecs[server_id] = std::make_shared<std::vector<std::string>>();
-//      key_vecs_int[server_id] = std::make_shared<std::vector<int>>();
-//    }
-//    key_vecs[server_id]->push_back(i_str);
-//    key_vecs_int[server_id]->push_back(i);
-//  }
-//  int nbyte = 0;
-//  auto start = GetCurrentTime();
-//  std::vector<std::thread> fetch_threads;
-//  std::vector<std::shared_ptr<std::promise<std::expected<int, sigmaos::serr::Error>>>> fetch_promises;
-//  std::vector<std::future<std::expected<int, sigmaos::serr::Error>>> fetch_results;
-//  // Start fetches in multiple threads
-//  for (int srv_id = 0; srv_id < _ncache; srv_id++) {
-//    fetch_promises.push_back(std::make_shared<std::promise<std::expected<int, sigmaos::serr::Error>>>());
-//    fetch_results.push_back(fetch_promises.at(srv_id)->get_future());
-//    fetch_threads.push_back(std::thread(&Srv::fetch_init_vectors_from_cache, this, fetch_promises.at(srv_id), srv_id, key_vecs.at(srv_id), key_vecs_int.at(srv_id)));
-//  }
-//  for (int i = 0; i < fetch_threads.size(); i++) {
-//    fetch_threads.at(i).join();
-//    auto res = fetch_results.at(i).get();
-//    if (!res.has_value()) {
-//      log(COSSIMSRV_ERR, "Error fetch_init_vectors_from_cache {}", res.error().String());
-//      return std::unexpected(res.error());
-//    }
-//    nbyte += res.value();
-//  }
-//  LogSpawnLatency(_sp_clnt->ProcEnv()->GetPID(), _sp_clnt->ProcEnv()->GetSpawnTime(), start, std::format("Initialize soft state vector DB: {}B", (int) nbyte));
-//  return 0;
 }
 
 [[noreturn]] void Srv::Run() {

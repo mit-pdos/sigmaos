@@ -35,7 +35,7 @@ const int INIT_NTHREAD = 100;
 
 class Srv {
   public:
-  Srv(std::shared_ptr<sigmaos::proxy::sigmap::Clnt> sp_clnt, std::string cache_dir, std::string job_name, std::string srv_pn, bool use_ep_cache, int old_n_srv, int new_n_srv) : _mu(),
+  Srv(std::shared_ptr<sigmaos::proxy::sigmap::Clnt> sp_clnt, std::string cache_dir, std::string job_name, std::string srv_pn, bool use_ep_cache, int old_n_srv, int new_n_srv, int srv_id) : _mu(), _srv_id(srv_id),
     _req_cnt(0),
     _cache(),
     _sp_clnt(sp_clnt),
@@ -51,7 +51,7 @@ class Srv {
     _srv->ExposeRPCHandler(put_ep);
     log(CACHESRV, "Exposed cachesrv RPC handlers");
     {
-      auto res = Init();
+      auto res = Init(old_n_srv, new_n_srv);
       if (!res.has_value()) {
         log(CACHESRV_ERR, "Error Init: {}", res.error());
         fatal("Error Init: {}", res.error().String());
@@ -78,11 +78,12 @@ class Srv {
     fatal("Unimplemented");
   }
   ~Srv() {}
-  std::expected<int, sigmaos::serr::Error> Init();
+  std::expected<int, sigmaos::serr::Error> Init(int old_n_srv, int new_n_srv);
   [[noreturn]] void Run();
 
   private:
   std::mutex _mu;
+  int _srv_id;
   std::atomic<uint64_t> _req_cnt;
   std::map<uint32_t, std::shared_ptr<Shard>> _cache;
   std::shared_ptr<sigmaos::apps::cache::Clnt> _cache_clnt;
@@ -96,7 +97,6 @@ class Srv {
   std::expected<int, sigmaos::serr::Error> Get(std::shared_ptr<google::protobuf::Message> preq, std::shared_ptr<google::protobuf::Message> prep);
   std::expected<int, sigmaos::serr::Error> Put(std::shared_ptr<google::protobuf::Message> preq, std::shared_ptr<google::protobuf::Message> prep);
 };
-
 
 };
 };

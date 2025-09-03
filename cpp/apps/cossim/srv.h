@@ -44,7 +44,8 @@ class Srv {
     log(COSSIMSRV, "Starting RPC srv nvec:{} vec_dim:{} eager:{}", nvec, vec_dim, eager_init);
     auto start = GetCurrentTime();
     _srv = std::make_shared<sigmaos::rpc::srv::Srv>(sp_clnt, INIT_NTHREAD);
-    LogSpawnLatency(_sp_clnt->ProcEnv()->GetPID(), _sp_clnt->ProcEnv()->GetSpawnTime(), start, "Make RPCSrv"); log(COSSIMSRV, "Started RPC srv");
+    LogSpawnLatency(_sp_clnt->ProcEnv()->GetPID(), _sp_clnt->ProcEnv()->GetSpawnTime(), start, "Make RPCSrv");
+    log(COSSIMSRV, "Started RPC srv");
     auto cossim_ep = std::make_shared<sigmaos::rpc::srv::RPCEndpoint>("CosSimSrv.CosSim", std::make_shared<CosSimReq>(), std::make_shared<CosSimRep>(), std::bind(&Srv::CosSim, this, std::placeholders::_1, std::placeholders::_2));
     _srv->ExposeRPCHandler(cossim_ep);
     log(COSSIMSRV, "Exposed cossim RPC handler");

@@ -4,7 +4,9 @@ add_subdirectory(proto)
 
 add_library(app_cache STATIC
   clnt.cc
+  srv.cc
   cache.cc
+  shard.cc
 )
 
 target_link_libraries(app_cache PUBLIC

@@ -39,8 +39,8 @@ class Srv {
     _req_cnt(0),
     _cache(),
     _sp_clnt(sp_clnt),
-    _perf(std::make_shared<sigmaos::util::perf::Perf>(sp_clnt->ProcEnv(), CACHESRV)) {
-    //_cache_clnt(std::make_shared<sigmaos::apps::cache::Clnt>(sp_clnt, cache_clnt_pn, (uint32_t) ncache)) {
+    _perf(std::make_shared<sigmaos::util::perf::Perf>(sp_clnt->ProcEnv(), CACHESRV)),
+    _cache_clnt(std::make_shared<sigmaos::apps::cache::Clnt>(sp_clnt, cache_dir, (uint32_t) old_n_srv)) {
     log(CACHESRV, "Starting RPC srv cachedir:{} jobname:{} srvpn:{} useEPCache:{} oldNSrv:{} newNSrv:{}", cache_dir, job_name, srv_pn, use_ep_cache, old_n_srv, new_n_srv);
     auto start = GetCurrentTime();
     _srv = std::make_shared<sigmaos::rpc::srv::Srv>(sp_clnt, INIT_NTHREAD);
@@ -84,9 +84,8 @@ class Srv {
   private:
   std::mutex _mu;
   std::atomic<uint64_t> _req_cnt;
-  // TODO: shards & structs
   std::map<uint32_t, std::shared_ptr<Shard>> _cache;
-//  std::shared_ptr<sigmaos::apps::cache::Clnt> _cache_clnt;
+  std::shared_ptr<sigmaos::apps::cache::Clnt> _cache_clnt;
   std::shared_ptr<sigmaos::proxy::sigmap::Clnt> _sp_clnt;
   std::shared_ptr<sigmaos::util::perf::Perf> _perf;
   std::shared_ptr<sigmaos::rpc::srv::Srv> _srv;

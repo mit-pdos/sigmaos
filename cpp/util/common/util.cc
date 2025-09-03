@@ -15,7 +15,8 @@ bool ContainsLabel(std::string env_var, std::string label) {
     if (!(pos == 0 || env_var[pos - 1] == ';')) {
       continue;
     }
-    if (!(pos + label.length() == env_var.length() || env_var[pos + label.length()] == ';')) {
+    if (!(pos + label.length() == env_var.length() ||
+          env_var[pos + label.length()] == ';')) {
       continue;
     }
     contains_label = true;
@@ -24,5 +25,5 @@ bool ContainsLabel(std::string env_var, std::string label) {
   return contains_label;
 }
 
-};
-};
+};  // namespace util::common
+};  // namespace sigmaos

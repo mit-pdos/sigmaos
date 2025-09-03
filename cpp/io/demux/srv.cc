@@ -36,12 +36,14 @@ void Srv::handle_request(std::shared_ptr<sigmaos::io::transport::Call> req) {
     auto start = GetCurrentTime();
     auto res = _serve_request(req);
     if (!res.has_value()) {
-      log(DEMUXSRV_ERR, "demuxsrv serve_request({}) error: {}", req->GetSeqno(), res.error().String());
+      log(DEMUXSRV_ERR, "demuxsrv serve_request({}) error: {}", req->GetSeqno(),
+          res.error().String());
       fatal("demuxsrv serve_request unimplemented: {}", res.error().String());
       // TODO: should we return here?
       return;
     }
-    log(DEMUXSRV, "serve_request({}) latency={:0.3f}ms", req->GetSeqno(), LatencyMS(start));
+    log(DEMUXSRV, "serve_request({}) latency={:0.3f}ms", req->GetSeqno(),
+        LatencyMS(start));
     rep = res.value();
   }
   {
@@ -55,7 +57,8 @@ void Srv::handle_request(std::shared_ptr<sigmaos::io::transport::Call> req) {
     if (!res.has_value()) {
       log(DEMUXSRV_ERR, "demuxsrv WriteCall error: {}", res.error().String());
     }
-    log(DEMUXSRV, "WriteReply({}) latency={:0.3f}ms", req->GetSeqno(), LatencyMS(start));
+    log(DEMUXSRV, "WriteReply({}) latency={:0.3f}ms", req->GetSeqno(),
+        LatencyMS(start));
   }
 }
 
@@ -71,5 +74,5 @@ bool Srv::IsClosed() {
   return _closed;
 }
 
-};
-};
+};  // namespace io::demux
+};  // namespace sigmaos

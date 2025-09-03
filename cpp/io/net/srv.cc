@@ -10,12 +10,13 @@ void Srv::handle_connection(std::shared_ptr<sigmaos::io::conn::Conn> conn) {
   log(NETSRV, "Handling connection!");
   auto trans = std::make_shared<sigmaos::io::transport::Transport>(conn);
   log(NETSRV, "Made transport");
-  _demux_srvs.push_back(std::make_shared<sigmaos::io::demux::Srv>(trans, _serve_request, _demux_init_nthread));
+  _demux_srvs.push_back(std::make_shared<sigmaos::io::demux::Srv>(
+      trans, _serve_request, _demux_init_nthread));
   log(NETSRV, "Made demuxsrv");
 }
 
 void Srv::handle_connections() {
-  while(!_done) {
+  while (!_done) {
     auto res = _lis->Accept();
     if (!res.has_value()) {
       fatal("Error accept TCP connection: {}", res.error().String());
@@ -27,5 +28,5 @@ void Srv::handle_connections() {
   }
 }
 
-};
-};
+};  // namespace io::net
+};  // namespace sigmaos

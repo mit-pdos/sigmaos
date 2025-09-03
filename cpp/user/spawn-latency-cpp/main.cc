@@ -1,19 +1,21 @@
-#include <iostream>
-
 #include <google/protobuf/util/time_util.h>
-
-#include <util/log/log.h>
-#include <util/perf/perf.h>
+#include <proc/proc.h>
 #include <proxy/sigmap/sigmap.h>
 #include <serr/serr.h>
-#include <proc/proc.h>
+#include <util/log/log.h>
+#include <util/perf/perf.h>
+
+#include <iostream>
 
 const std::string CPP_USER_PROC = "CPP_USER_PROC";
 
 int main(int argc, char *argv[]) {
   auto pe = sigmaos::proc::GetProcEnv();
-  LogSpawnLatency(pe->GetPID(), pe->GetSpawnTime(), google::protobuf::util::TimeUtil::GetEpoch(), "E2e spawn time since spawn until main");
-  LogSpawnLatency(pe->GetPID(), google::protobuf::util::TimeUtil::GetEpoch(), sigmaos::proc::GetExecTime(), "proc.exec_proc");
+  LogSpawnLatency(pe->GetPID(), pe->GetSpawnTime(),
+                  google::protobuf::util::TimeUtil::GetEpoch(),
+                  "E2e spawn time since spawn until main");
+  LogSpawnLatency(pe->GetPID(), google::protobuf::util::TimeUtil::GetEpoch(),
+                  sigmaos::proc::GetExecTime(), "proc.exec_proc");
   sigmaos::util::log::init_logger(CPP_USER_PROC);
   log(CPP_USER_PROC, "Running");
   auto sp_clnt = std::make_shared<sigmaos::proxy::sigmap::Clnt>();

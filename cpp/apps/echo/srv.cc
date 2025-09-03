@@ -6,7 +6,9 @@ namespace apps::echo {
 bool Srv::_l = sigmaos::util::log::init_logger(ECHOSRV);
 bool Srv::_l_e = sigmaos::util::log::init_logger(ECHOSRV_ERR);
 
-std::expected<int, sigmaos::serr::Error> Srv::Echo(std::shared_ptr<google::protobuf::Message> preq, std::shared_ptr<google::protobuf::Message> prep) {
+std::expected<int, sigmaos::serr::Error> Srv::Echo(
+    std::shared_ptr<google::protobuf::Message> preq,
+    std::shared_ptr<google::protobuf::Message> prep) {
   auto req = dynamic_pointer_cast<EchoReq>(preq);
   auto rep = dynamic_pointer_cast<EchoRep>(prep);
   log(ECHOSRV, "Echo msg {}", req->text());
@@ -15,9 +17,7 @@ std::expected<int, sigmaos::serr::Error> Srv::Echo(std::shared_ptr<google::proto
   return 0;
 }
 
-[[noreturn]] void Srv::Run() {
-  _srv->Run();
-}
+[[noreturn]] void Srv::Run() { _srv->Run(); }
 
-};
-};
+};  // namespace apps::echo
+};  // namespace sigmaos

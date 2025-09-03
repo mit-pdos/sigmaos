@@ -9,5 +9,5 @@ namespace util::common {
 // label.
 bool ContainsLabel(std::string env_var, std::string label);
 
-};
-};
+};  // namespace util::common
+};  // namespace sigmaos

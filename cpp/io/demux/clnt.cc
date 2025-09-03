@@ -6,9 +6,12 @@ namespace io::demux {
 bool Clnt::_l = sigmaos::util::log::init_logger(DEMUXCLNT);
 bool Clnt::_l_e = sigmaos::util::log::init_logger(DEMUXCLNT_ERR);
 
-std::expected<std::shared_ptr<sigmaos::io::transport::Call>, sigmaos::serr::Error> Clnt::SendReceive(std::shared_ptr<sigmaos::io::transport::Call> call) {
+std::expected<std::shared_ptr<sigmaos::io::transport::Call>,
+              sigmaos::serr::Error>
+Clnt::SendReceive(std::shared_ptr<sigmaos::io::transport::Call> call) {
   // Create a promise
-  auto p = std::make_unique<std::promise<std::expected<std::shared_ptr<sigmaos::io::transport::Call>, sigmaos::serr::Error>>>();
+  auto p = std::make_unique<std::promise<std::expected<
+      std::shared_ptr<sigmaos::io::transport::Call>, sigmaos::serr::Error>>>();
   // Get the corresponding future
   auto f = p->get_future();
   {
@@ -21,7 +24,7 @@ std::expected<std::shared_ptr<sigmaos::io::transport::Call>, sigmaos::serr::Erro
   {
     // Take a lock so that writes are atomic
     std::lock_guard<std::mutex> guard(_mu);
-  	auto res = _trans->WriteCall(call);
+    auto res = _trans->WriteCall(call);
     if (!res.has_value()) {
       return std::unexpected(res.error());
     }
@@ -35,10 +38,10 @@ std::expected<std::shared_ptr<sigmaos::io::transport::Call>, sigmaos::serr::Erro
 
 std::expected<int, sigmaos::serr::Error> Clnt::Close() {
   log(DEMUXCLNT, "Close");
-	if (_callmap.IsClosed()) {
+  if (_callmap.IsClosed()) {
     log(DEMUXCLNT, "Close: already closed");
     return 0;
-	}
+  }
   {
     auto res = _trans->Close();
     if (!res.has_value()) {
@@ -60,13 +63,10 @@ std::expected<int, sigmaos::serr::Error> Clnt::Close() {
   return 0;
 }
 
-
-bool Clnt::IsClosed() {
-  return _callmap.IsClosed();
-}
+bool Clnt::IsClosed() { return _callmap.IsClosed(); }
 
 void Clnt::read_responses() {
-  while(true) {
+  while (true) {
     // Read a response
     auto res = _trans->ReadCall();
     if (!res.has_value()) {
@@ -87,5 +87,5 @@ void Clnt::read_responses() {
   }
 }
 
-};
-};
+};  // namespace io::demux
+};  // namespace sigmaos

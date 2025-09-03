@@ -32,7 +32,8 @@ std::pair<Blob *, bool> extract_blob(google::protobuf::Message &msg) {
   return std::make_pair(blob, has_blob);
 }
 
-void extract_blob_iov(google::protobuf::Message &msg, std::shared_ptr<sigmaos::io::iovec::IOVec> dst) {
+void extract_blob_iov(google::protobuf::Message &msg,
+                      std::shared_ptr<sigmaos::io::iovec::IOVec> dst) {
   auto p = extract_blob(msg);
   Blob *blob = p.first;
   bool has_blob = p.second;
@@ -47,15 +48,18 @@ void extract_blob_iov(google::protobuf::Message &msg, std::shared_ptr<sigmaos::i
   int prevsz = dst->Size();
   dst->Resize(prevsz + extracted_bufs.size());
   for (int i = 0; i < extracted_bufs.size(); i++) {
-    log(RPCCLNT, "Extracting buf starting at 0x{:x}", (uint64_t) &(extracted_bufs.at(i)->front()));
-    dst->SetBuffer(prevsz + i, std::make_shared<sigmaos::io::iovec::Buffer>(extracted_bufs.at(i)));
+    log(RPCCLNT, "Extracting buf starting at 0x{:x}",
+        (uint64_t)&(extracted_bufs.at(i)->front()));
+    dst->SetBuffer(prevsz + i, std::make_shared<sigmaos::io::iovec::Buffer>(
+                                   extracted_bufs.at(i)));
   }
   // Clear the extracted buffer vector so that it doesn't free the underlying
   // buffer memory when it is deleted. The memory is now owned by dst.
   extracted_bufs.clear();
 }
 
-void set_blob_iov(std::shared_ptr<sigmaos::io::iovec::IOVec> src, google::protobuf::Message &msg) {
+void set_blob_iov(std::shared_ptr<sigmaos::io::iovec::IOVec> src,
+                  google::protobuf::Message &msg) {
   auto p = extract_blob(msg);
   Blob *blob = p.first;
   bool has_blob = p.second;
@@ -76,5 +80,5 @@ void set_blob_iov(std::shared_ptr<sigmaos::io::iovec::IOVec> src, google::protob
   }
 }
 
-};
-};
+};  // namespace rpc
+};  // namespace sigmaos

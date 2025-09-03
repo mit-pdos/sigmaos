@@ -1,13 +1,12 @@
-#include <iostream>
-
-#include <util/log/log.h>
-#include <proxy/sigmap/sigmap.h>
-#include <serr/serr.h>
-#include <proc/proc.h>
-#include <rpc/srv.h>
-#include <sigmap/const.h>
-
 #include <apps/echo/srv.h>
+#include <proc/proc.h>
+#include <proxy/sigmap/sigmap.h>
+#include <rpc/srv.h>
+#include <serr/serr.h>
+#include <sigmap/const.h>
+#include <util/log/log.h>
+
+#include <iostream>
 
 int main(int argc, char *argv[]) {
   sigmaos::util::log::init_logger(sigmaos::apps::echo::ECHOSRV);

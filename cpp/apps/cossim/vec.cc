@@ -27,5 +27,5 @@ double Vector::CosineSimilarity(std::shared_ptr<Vector> other) const {
   return cos_sim;
 }
 
-};
-};
+};  // namespace apps::cossim
+};  // namespace sigmaos

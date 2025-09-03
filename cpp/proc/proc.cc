@@ -19,12 +19,13 @@ std::shared_ptr<ProcEnv> GetProcEnv() {
 
 google::protobuf::Timestamp GetExecTime() {
   google::protobuf::Timestamp exec_time;
-  google::protobuf::util::TimeUtil::FromString(std::getenv("SIGMA_EXEC_TIME_PB"), &exec_time);
+  google::protobuf::util::TimeUtil::FromString(
+      std::getenv("SIGMA_EXEC_TIME_PB"), &exec_time);
   return exec_time;
 }
 
-
-std::pair<std::shared_ptr<TendpointProto>, bool> ProcEnv::GetCachedEndpoint(std::string &pn) {
+std::pair<std::shared_ptr<TendpointProto>, bool> ProcEnv::GetCachedEndpoint(
+    std::string &pn) {
   if (!_proto.cachedendpoints().contains(pn)) {
     return std::make_pair(nullptr, false);
   }
@@ -32,5 +33,5 @@ std::pair<std::shared_ptr<TendpointProto>, bool> ProcEnv::GetCachedEndpoint(std:
   return std::make_pair(std::make_shared<TendpointProto>(ep), true);
 }
 
-};
-};
+};  // namespace proc
+};  // namespace sigmaos

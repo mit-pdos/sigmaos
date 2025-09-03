@@ -21,5 +21,5 @@ uint64_t bytes_to_uint64(char *b);
 // https://cs.opensource.google/go/go/+/master:src/encoding/binary/binary.go;l=122;drc=fca5832607d7c1afa20b82ca00ba4a27e28c0d0a;bpv=0;bpt=1
 void uint64_to_bytes(char *b, uint64_t i);
 
-};
-};
+};  // namespace util::codec
+};  // namespace sigmaos

@@ -1,7 +1,6 @@
-#include <proxy/sigmap/sigmap.h>
-
 #include <io/frame/frame.h>
 #include <proxy/sigmap/proto/spproxy.pb.h>
+#include <proxy/sigmap/sigmap.h>
 
 namespace sigmaos {
 namespace proxy::sigmap {
@@ -38,7 +37,8 @@ std::expected<int, sigmaos::serr::Error> Clnt::Test() {
     log(TEST, "ClntID successful");
   }
   {
-    std::string msg = std::format("Hello world! I'm a CPP proc! pid:{}", _env->GetPID());
+    std::string msg =
+        std::format("Hello world! I'm a CPP proc! pid:{}", _env->GetPID());
     log(TEST, "PutFile message \"{}\" length {}", msg, msg.size());
     auto res = PutFile("name/s3/~local/9ps3/hello-cpp-1", 0777, 0, &msg, 0, 0);
     if (!res.has_value()) {
@@ -73,13 +73,15 @@ std::expected<int, sigmaos::serr::Error> Clnt::CloseFD(int fd) {
     return std::unexpected(res.error());
   }
   if (rep.err().errcode() != sigmaos::serr::Terror::TErrNoError) {
-    return std::unexpected(sigmaos::serr::Error((sigmaos::serr::Terror) rep.err().errcode(), rep.err().obj()));
+    return std::unexpected(sigmaos::serr::Error(
+        (sigmaos::serr::Terror)rep.err().errcode(), rep.err().obj()));
   }
   log(SPPROXYCLNT, "CloseFD done: {}", fd);
   return 0;
 }
 
-std::expected<std::shared_ptr<TstatProto>, sigmaos::serr::Error> Clnt::Stat(std::string pn) {
+std::expected<std::shared_ptr<TstatProto>, sigmaos::serr::Error> Clnt::Stat(
+    std::string pn) {
   log(SPPROXYCLNT, "Stat: {}", pn);
   SigmaPathReq req;
   SigmaStatRep rep;
@@ -90,13 +92,16 @@ std::expected<std::shared_ptr<TstatProto>, sigmaos::serr::Error> Clnt::Stat(std:
     return std::unexpected(res.error());
   }
   if (rep.err().errcode() != sigmaos::serr::Terror::TErrNoError) {
-    return std::unexpected(sigmaos::serr::Error((sigmaos::serr::Terror) rep.err().errcode(), rep.err().obj()));
+    return std::unexpected(sigmaos::serr::Error(
+        (sigmaos::serr::Terror)rep.err().errcode(), rep.err().obj()));
   }
   log(SPPROXYCLNT, "Stat done: {}", pn);
   return std::make_shared<TstatProto>(rep.stat());
 }
 
-std::expected<int, sigmaos::serr::Error> Clnt::Create(std::string pn, sigmaos::sigmap::types::Tperm perm, sigmaos::sigmap::types::Tmode mode) {
+std::expected<int, sigmaos::serr::Error> Clnt::Create(
+    std::string pn, sigmaos::sigmap::types::Tperm perm,
+    sigmaos::sigmap::types::Tmode mode) {
   log(SPPROXYCLNT, "Create: {} {} {}", pn, perm, mode);
   SigmaCreateReq req;
   SigmaFdRep rep;
@@ -109,13 +114,15 @@ std::expected<int, sigmaos::serr::Error> Clnt::Create(std::string pn, sigmaos::s
     return std::unexpected(res.error());
   }
   if (rep.err().errcode() != sigmaos::serr::Terror::TErrNoError) {
-    return std::unexpected(sigmaos::serr::Error((sigmaos::serr::Terror) rep.err().errcode(), rep.err().obj()));
+    return std::unexpected(sigmaos::serr::Error(
+        (sigmaos::serr::Terror)rep.err().errcode(), rep.err().obj()));
   }
   log(SPPROXYCLNT, "Create done: {} {} {}", pn, perm, mode);
   return rep.fd();
 }
 
-std::expected<int, sigmaos::serr::Error> Clnt::Open(std::string pn, sigmaos::sigmap::types::Tmode mode, bool wait) {
+std::expected<int, sigmaos::serr::Error> Clnt::Open(
+    std::string pn, sigmaos::sigmap::types::Tmode mode, bool wait) {
   log(SPPROXYCLNT, "Open: {} {} {}", pn, mode, wait);
   SigmaCreateReq req;
   SigmaFdRep rep;
@@ -128,13 +135,15 @@ std::expected<int, sigmaos::serr::Error> Clnt::Open(std::string pn, sigmaos::sig
     return std::unexpected(res.error());
   }
   if (rep.err().errcode() != sigmaos::serr::Terror::TErrNoError) {
-    return std::unexpected(sigmaos::serr::Error((sigmaos::serr::Terror) rep.err().errcode(), rep.err().obj()));
+    return std::unexpected(sigmaos::serr::Error(
+        (sigmaos::serr::Terror)rep.err().errcode(), rep.err().obj()));
   }
   log(SPPROXYCLNT, "Open done: {} {} {}", pn, mode, wait);
   return rep.fd();
 }
 
-std::expected<int, sigmaos::serr::Error> Clnt::Rename(std::string src, std::string dst) {
+std::expected<int, sigmaos::serr::Error> Clnt::Rename(std::string src,
+                                                      std::string dst) {
   log(SPPROXYCLNT, "Rename: {} {}", src, dst);
   SigmaRenameReq req;
   SigmaErrRep rep;
@@ -146,7 +155,8 @@ std::expected<int, sigmaos::serr::Error> Clnt::Rename(std::string src, std::stri
     return std::unexpected(res.error());
   }
   if (rep.err().errcode() != sigmaos::serr::Terror::TErrNoError) {
-    return std::unexpected(sigmaos::serr::Error((sigmaos::serr::Terror) rep.err().errcode(), rep.err().obj()));
+    return std::unexpected(sigmaos::serr::Error(
+        (sigmaos::serr::Terror)rep.err().errcode(), rep.err().obj()));
   }
   log(SPPROXYCLNT, "Rename done: {} {}", src, dst);
   return 0;
@@ -163,13 +173,15 @@ std::expected<int, sigmaos::serr::Error> Clnt::Remove(std::string pn) {
     return std::unexpected(res.error());
   }
   if (rep.err().errcode() != sigmaos::serr::Terror::TErrNoError) {
-    return std::unexpected(sigmaos::serr::Error((sigmaos::serr::Terror) rep.err().errcode(), rep.err().obj()));
+    return std::unexpected(sigmaos::serr::Error(
+        (sigmaos::serr::Terror)rep.err().errcode(), rep.err().obj()));
   }
   log(SPPROXYCLNT, "Remove done: {}", pn);
   return 0;
 }
 
-std::expected<std::shared_ptr<std::string>, sigmaos::serr::Error> Clnt::GetFile(std::string pn) {
+std::expected<std::shared_ptr<std::string>, sigmaos::serr::Error> Clnt::GetFile(
+    std::string pn) {
   log(SPPROXYCLNT, "GetFile: {}", pn);
   SigmaPathReq req;
   SigmaDataRep rep;
@@ -185,14 +197,20 @@ std::expected<std::shared_ptr<std::string>, sigmaos::serr::Error> Clnt::GetFile(
     return std::unexpected(res.error());
   }
   if (rep.err().errcode() != sigmaos::serr::Terror::TErrNoError) {
-    return std::unexpected(sigmaos::serr::Error((sigmaos::serr::Terror) rep.err().errcode(), rep.err().obj()));
+    return std::unexpected(sigmaos::serr::Error(
+        (sigmaos::serr::Terror)rep.err().errcode(), rep.err().obj()));
   }
   log(SPPROXYCLNT, "GetFile done: {}", pn);
   return s;
 }
 
-std::expected<uint32_t, sigmaos::serr::Error> Clnt::PutFile(std::string pn, sigmaos::sigmap::types::Tperm perm, sigmaos::sigmap::types::Tmode mode, std::string *data, sigmaos::sigmap::types::Toffset offset, sigmaos::sigmap::types::TleaseID leaseID) {
-  log(SPPROXYCLNT, "PutFile: {} {} {} {} {} {}", pn, perm, mode, data->size(), offset, leaseID);
+std::expected<uint32_t, sigmaos::serr::Error> Clnt::PutFile(
+    std::string pn, sigmaos::sigmap::types::Tperm perm,
+    sigmaos::sigmap::types::Tmode mode, std::string *data,
+    sigmaos::sigmap::types::Toffset offset,
+    sigmaos::sigmap::types::TleaseID leaseID) {
+  log(SPPROXYCLNT, "PutFile: {} {} {} {} {} {}", pn, perm, mode, data->size(),
+      offset, leaseID);
   Blob blob;
   auto iov = blob.mutable_iov();
   iov->AddAllocated(data);
@@ -210,13 +228,16 @@ std::expected<uint32_t, sigmaos::serr::Error> Clnt::PutFile(std::string pn, sigm
     return std::unexpected(res.error());
   }
   if (rep.err().errcode() != sigmaos::serr::Terror::TErrNoError) {
-    return std::unexpected(sigmaos::serr::Error((sigmaos::serr::Terror) rep.err().errcode(), rep.err().obj()));
+    return std::unexpected(sigmaos::serr::Error(
+        (sigmaos::serr::Terror)rep.err().errcode(), rep.err().obj()));
   }
-  log(SPPROXYCLNT, "PutFile done: {} {} {} {} {} {}", pn, perm, mode, data->size(), offset, leaseID);
+  log(SPPROXYCLNT, "PutFile done: {} {} {} {} {} {}", pn, perm, mode,
+      data->size(), offset, leaseID);
   return rep.size();
 }
 
-std::expected<uint32_t, sigmaos::serr::Error> Clnt::Read(int fd, std::string *b) {
+std::expected<uint32_t, sigmaos::serr::Error> Clnt::Read(int fd,
+                                                         std::string *b) {
   log(SPPROXYCLNT, "Read: {} {}", fd, b->size());
   SigmaReadReq req;
   SigmaDataRep rep;
@@ -233,13 +254,15 @@ std::expected<uint32_t, sigmaos::serr::Error> Clnt::Read(int fd, std::string *b)
     return std::unexpected(res.error());
   }
   if (rep.err().errcode() != sigmaos::serr::Terror::TErrNoError) {
-    return std::unexpected(sigmaos::serr::Error((sigmaos::serr::Terror) rep.err().errcode(), rep.err().obj()));
+    return std::unexpected(sigmaos::serr::Error(
+        (sigmaos::serr::Terror)rep.err().errcode(), rep.err().obj()));
   }
   log(SPPROXYCLNT, "Read done: {} {}", fd, b->size());
   return b->size();
 }
 
-std::expected<uint32_t, sigmaos::serr::Error> Clnt::Pread(int fd, std::string *b, sigmaos::sigmap::types::Toffset offset) {
+std::expected<uint32_t, sigmaos::serr::Error> Clnt::Pread(
+    int fd, std::string *b, sigmaos::sigmap::types::Toffset offset) {
   log(SPPROXYCLNT, "Pread: {} {} {}", fd, b->size(), offset);
   SigmaReadReq req;
   SigmaDataRep rep;
@@ -256,13 +279,15 @@ std::expected<uint32_t, sigmaos::serr::Error> Clnt::Pread(int fd, std::string *b
     return std::unexpected(res.error());
   }
   if (rep.err().errcode() != sigmaos::serr::Terror::TErrNoError) {
-    return std::unexpected(sigmaos::serr::Error((sigmaos::serr::Terror) rep.err().errcode(), rep.err().obj()));
+    return std::unexpected(sigmaos::serr::Error(
+        (sigmaos::serr::Terror)rep.err().errcode(), rep.err().obj()));
   }
   log(SPPROXYCLNT, "Pread done: {} {} {}", fd, b->size(), offset);
   return b->size();
 }
 
-std::expected<uint32_t, sigmaos::serr::Error> Clnt::Write(int fd, std::string *b) {
+std::expected<uint32_t, sigmaos::serr::Error> Clnt::Write(int fd,
+                                                          std::string *b) {
   log(SPPROXYCLNT, "Write: {} {}", fd, b->size());
   Blob blob;
   auto iov = blob.mutable_iov();
@@ -277,13 +302,15 @@ std::expected<uint32_t, sigmaos::serr::Error> Clnt::Write(int fd, std::string *b
     return std::unexpected(res.error());
   }
   if (rep.err().errcode() != sigmaos::serr::Terror::TErrNoError) {
-    return std::unexpected(sigmaos::serr::Error((sigmaos::serr::Terror) rep.err().errcode(), rep.err().obj()));
+    return std::unexpected(sigmaos::serr::Error(
+        (sigmaos::serr::Terror)rep.err().errcode(), rep.err().obj()));
   }
   log(SPPROXYCLNT, "Write done: {} {}", fd, b->size());
   return rep.size();
 }
 
-std::expected<int, sigmaos::serr::Error> Clnt::Seek(int fd, sigmaos::sigmap::types::Toffset offset) {
+std::expected<int, sigmaos::serr::Error> Clnt::Seek(
+    int fd, sigmaos::sigmap::types::Toffset offset) {
   log(SPPROXYCLNT, "Seek: {} {}", fd, offset);
   SigmaSeekReq req;
   SigmaErrRep rep;
@@ -295,14 +322,18 @@ std::expected<int, sigmaos::serr::Error> Clnt::Seek(int fd, sigmaos::sigmap::typ
     return std::unexpected(res.error());
   }
   if (rep.err().errcode() != sigmaos::serr::Terror::TErrNoError) {
-    return std::unexpected(sigmaos::serr::Error((sigmaos::serr::Terror) rep.err().errcode(), rep.err().obj()));
+    return std::unexpected(sigmaos::serr::Error(
+        (sigmaos::serr::Terror)rep.err().errcode(), rep.err().obj()));
   }
   log(SPPROXYCLNT, "Seek done: {} {}", fd, offset);
   return 0;
 }
 
 // TODO: fence type in CreateLeased?
-std::expected<int, sigmaos::serr::Error> Clnt::CreateLeased(std::string pn, sigmaos::sigmap::types::Tperm perm, sigmaos::sigmap::types::Tmode mode, sigmaos::sigmap::types::TleaseID leaseID/*, f sp.Tfence*/) {
+std::expected<int, sigmaos::serr::Error> Clnt::CreateLeased(
+    std::string pn, sigmaos::sigmap::types::Tperm perm,
+    sigmaos::sigmap::types::Tmode mode,
+    sigmaos::sigmap::types::TleaseID leaseID /*, f sp.Tfence*/) {
   fatal("unimplemented: tfence");
   log(SPPROXYCLNT, "CreateLeased: {} {} {} {}", pn, perm, mode, leaseID);
   SigmaCreateReq req;
@@ -318,13 +349,15 @@ std::expected<int, sigmaos::serr::Error> Clnt::CreateLeased(std::string pn, sigm
     return std::unexpected(res.error());
   }
   if (rep.err().errcode() != sigmaos::serr::Terror::TErrNoError) {
-    return std::unexpected(sigmaos::serr::Error((sigmaos::serr::Terror) rep.err().errcode(), rep.err().obj()));
+    return std::unexpected(sigmaos::serr::Error(
+        (sigmaos::serr::Terror)rep.err().errcode(), rep.err().obj()));
   }
   log(SPPROXYCLNT, "CreateLeased done: {} {} {} {}", pn, perm, mode, leaseID);
   return 0;
 }
 
-std::expected<sigmaos::sigmap::types::TclntID, sigmaos::serr::Error> Clnt::ClntID() {
+std::expected<sigmaos::sigmap::types::TclntID, sigmaos::serr::Error>
+Clnt::ClntID() {
   log(SPPROXYCLNT, "ClntID");
   SigmaNullReq req;
   SigmaClntIdRep rep;
@@ -338,7 +371,8 @@ std::expected<sigmaos::sigmap::types::TclntID, sigmaos::serr::Error> Clnt::ClntI
 }
 
 // TODO: fence type in FenceDir?
-std::expected<int, sigmaos::serr::Error> Clnt::FenceDir(std::string pn/*, f sp.Tfence*/) {
+std::expected<int, sigmaos::serr::Error> Clnt::FenceDir(
+    std::string pn /*, f sp.Tfence*/) {
   fatal("unimplemented: tfence");
   log(SPPROXYCLNT, "FenceDir: {}", pn);
   SigmaFenceReq req;
@@ -350,17 +384,22 @@ std::expected<int, sigmaos::serr::Error> Clnt::FenceDir(std::string pn/*, f sp.T
     return std::unexpected(res.error());
   }
   if (rep.err().errcode() != sigmaos::serr::Terror::TErrNoError) {
-    return std::unexpected(sigmaos::serr::Error((sigmaos::serr::Terror) rep.err().errcode(), rep.err().obj()));
+    return std::unexpected(sigmaos::serr::Error(
+        (sigmaos::serr::Terror)rep.err().errcode(), rep.err().obj()));
   }
   log(SPPROXYCLNT, "FenceDir done: {}", pn);
   return 0;
 }
 
 // TODO: support WriteFence?
-//func (scc *SPProxyClnt) WriteFence(fd int, d []byte, f sp.Tfence) (sp.Tsize, error) {
+// func (scc *SPProxyClnt) WriteFence(fd int, d []byte, f sp.Tfence) (sp.Tsize,
+// error) {
 
-std::expected<int, sigmaos::serr::Error> Clnt::WriteRead(int fd, std::shared_ptr<sigmaos::io::iovec::IOVec> in_iov, std::shared_ptr<sigmaos::io::iovec::IOVec> out_iov) {
-  log(SPPROXYCLNT, "WriteRead: {} in_iov({}) out_iov({})", fd, in_iov->Size(), out_iov->Size());
+std::expected<int, sigmaos::serr::Error> Clnt::WriteRead(
+    int fd, std::shared_ptr<sigmaos::io::iovec::IOVec> in_iov,
+    std::shared_ptr<sigmaos::io::iovec::IOVec> out_iov) {
+  log(SPPROXYCLNT, "WriteRead: {} in_iov({}) out_iov({})", fd, in_iov->Size(),
+      out_iov->Size());
   Blob in_blob;
   auto req_iov = in_blob.mutable_iov();
   // Iterate input IOVec and add each vector to the request blob's IOV
@@ -386,7 +425,8 @@ std::expected<int, sigmaos::serr::Error> Clnt::WriteRead(int fd, std::shared_ptr
     return std::unexpected(res.error());
   }
   if (rep.err().errcode() != sigmaos::serr::Terror::TErrNoError) {
-    return std::unexpected(sigmaos::serr::Error((sigmaos::serr::Terror) rep.err().errcode(), rep.err().obj()));
+    return std::unexpected(sigmaos::serr::Error(
+        (sigmaos::serr::Terror)rep.err().errcode(), rep.err().obj()));
   }
   log(SPPROXYCLNT, "WriteRead done: {}", fd);
   return 0;
@@ -403,13 +443,15 @@ std::expected<int, sigmaos::serr::Error> Clnt::DirWatch(int fd) {
     return std::unexpected(res.error());
   }
   if (rep.err().errcode() != sigmaos::serr::Terror::TErrNoError) {
-    return std::unexpected(sigmaos::serr::Error((sigmaos::serr::Terror) rep.err().errcode(), rep.err().obj()));
+    return std::unexpected(sigmaos::serr::Error(
+        (sigmaos::serr::Terror)rep.err().errcode(), rep.err().obj()));
   }
   log(SPPROXYCLNT, "DirWatch done: {}", fd);
   return 0;
 }
 
-std::expected<int, sigmaos::serr::Error> Clnt::MountTree(std::shared_ptr<TendpointProto> ep, std::string tree, std::string mount) {
+std::expected<int, sigmaos::serr::Error> Clnt::MountTree(
+    std::shared_ptr<TendpointProto> ep, std::string tree, std::string mount) {
   log(SPPROXYCLNT, "MountTree: {} {} {}", ep->ShortDebugString(), tree, mount);
   SigmaMountTreeReq req;
   SigmaErrRep rep;
@@ -423,13 +465,16 @@ std::expected<int, sigmaos::serr::Error> Clnt::MountTree(std::shared_ptr<Tendpoi
     return std::unexpected(res.error());
   }
   if (rep.err().errcode() != sigmaos::serr::Terror::TErrNoError) {
-    return std::unexpected(sigmaos::serr::Error((sigmaos::serr::Terror) rep.err().errcode(), rep.err().obj()));
+    return std::unexpected(sigmaos::serr::Error(
+        (sigmaos::serr::Terror)rep.err().errcode(), rep.err().obj()));
   }
-  log(SPPROXYCLNT, "MountTree done: {} {} {}", ep->ShortDebugString(), tree, mount);
+  log(SPPROXYCLNT, "MountTree done: {} {} {}", ep->ShortDebugString(), tree,
+      mount);
   return 0;
 }
 
-std::expected<bool, sigmaos::serr::Error> Clnt::IsLocalMount(std::shared_ptr<TendpointProto> ep) {
+std::expected<bool, sigmaos::serr::Error> Clnt::IsLocalMount(
+    std::shared_ptr<TendpointProto> ep) {
   log(SPPROXYCLNT, "IsLocalMount: {}", ep->ShortDebugString());
   SigmaMountReq req;
   SigmaMountRep rep;
@@ -441,13 +486,16 @@ std::expected<bool, sigmaos::serr::Error> Clnt::IsLocalMount(std::shared_ptr<Ten
     return std::unexpected(res.error());
   }
   if (rep.err().errcode() != sigmaos::serr::Terror::TErrNoError) {
-    return std::unexpected(sigmaos::serr::Error((sigmaos::serr::Terror) rep.err().errcode(), rep.err().obj()));
+    return std::unexpected(sigmaos::serr::Error(
+        (sigmaos::serr::Terror)rep.err().errcode(), rep.err().obj()));
   }
   log(SPPROXYCLNT, "IsLocalMount done: {}", ep->ShortDebugString());
   return rep.local();
 }
 
-std::expected<std::pair<std::vector<std::string>, std::vector<std::string>>, sigmaos::serr::Error> Clnt::PathLastMount(std::string pn) {
+std::expected<std::pair<std::vector<std::string>, std::vector<std::string>>,
+              sigmaos::serr::Error>
+Clnt::PathLastMount(std::string pn) {
   log(SPPROXYCLNT, "PathLastMount: {}", pn);
   SigmaPathReq req;
   SigmaLastMountRep rep;
@@ -458,7 +506,8 @@ std::expected<std::pair<std::vector<std::string>, std::vector<std::string>>, sig
     return std::unexpected(res.error());
   }
   if (rep.err().errcode() != sigmaos::serr::Terror::TErrNoError) {
-    return std::unexpected(sigmaos::serr::Error((sigmaos::serr::Terror) rep.err().errcode(), rep.err().obj()));
+    return std::unexpected(sigmaos::serr::Error(
+        (sigmaos::serr::Terror)rep.err().errcode(), rep.err().obj()));
   }
   log(SPPROXYCLNT, "PathLastMount done: {}", pn);
   std::vector<std::string> p1(rep.path1().size());
@@ -472,28 +521,34 @@ std::expected<std::pair<std::vector<std::string>, std::vector<std::string>>, sig
   return std::make_pair(p1, p2);
 }
 
-std::expected<std::shared_ptr<TendpointProto>, sigmaos::serr::Error> Clnt::GetNamedEndpoint() {
+std::expected<std::shared_ptr<TendpointProto>, sigmaos::serr::Error>
+Clnt::GetNamedEndpoint() {
   return GetNamedEndpointRealm(_env->GetRealm());
 }
 
-std::expected<int, sigmaos::serr::Error> Clnt::InvalidateNamedEndpointCacheEntryRealm(sigmaos::sigmap::types::Trealm realm) {
+std::expected<int, sigmaos::serr::Error>
+Clnt::InvalidateNamedEndpointCacheEntryRealm(
+    sigmaos::sigmap::types::Trealm realm) {
   log(SPPROXYCLNT, "InvalidateNamedEndpointCacheEntryRealm: {}", realm);
   SigmaRealmReq req;
   SigmaMountRep rep;
   req.set_realmstr(realm);
-  auto res = _rpcc->RPC("SPProxySrvAPI.InvalidateNamedEndpointCacheEntryRealm", req, rep);
+  auto res = _rpcc->RPC("SPProxySrvAPI.InvalidateNamedEndpointCacheEntryRealm",
+                        req, rep);
   if (!res.has_value()) {
     log(SPPROXYCLNT_ERR, "Err RPC: {}", res.error());
     return std::unexpected(res.error());
   }
   if (rep.err().errcode() != sigmaos::serr::Terror::TErrNoError) {
-    return std::unexpected(sigmaos::serr::Error((sigmaos::serr::Terror) rep.err().errcode(), rep.err().obj()));
+    return std::unexpected(sigmaos::serr::Error(
+        (sigmaos::serr::Terror)rep.err().errcode(), rep.err().obj()));
   }
   log(SPPROXYCLNT, "InvalidateNamedEndpointCacheEntryRealm done: {}", realm);
   return 0;
 }
 
-std::expected<std::shared_ptr<TendpointProto>, sigmaos::serr::Error> Clnt::GetNamedEndpointRealm(sigmaos::sigmap::types::Trealm realm) {
+std::expected<std::shared_ptr<TendpointProto>, sigmaos::serr::Error>
+Clnt::GetNamedEndpointRealm(sigmaos::sigmap::types::Trealm realm) {
   log(SPPROXYCLNT, "GetNamedEndpointRealm: {}", realm);
   SigmaRealmReq req;
   SigmaMountRep rep;
@@ -504,13 +559,15 @@ std::expected<std::shared_ptr<TendpointProto>, sigmaos::serr::Error> Clnt::GetNa
     return std::unexpected(res.error());
   }
   if (rep.err().errcode() != sigmaos::serr::Terror::TErrNoError) {
-    return std::unexpected(sigmaos::serr::Error((sigmaos::serr::Terror) rep.err().errcode(), rep.err().obj()));
+    return std::unexpected(sigmaos::serr::Error(
+        (sigmaos::serr::Terror)rep.err().errcode(), rep.err().obj()));
   }
   log(SPPROXYCLNT, "GetNamedEndpointRealm done: {}", realm);
   return std::make_shared<TendpointProto>(rep.endpoint());
 }
 
-std::expected<int, sigmaos::serr::Error> Clnt::NewRootMount(std::string pn, std::string mntname) {
+std::expected<int, sigmaos::serr::Error> Clnt::NewRootMount(
+    std::string pn, std::string mntname) {
   log(SPPROXYCLNT, "NewRootMount: {} {}", pn, mntname);
   SigmaMountTreeReq req;
   SigmaErrRep rep;
@@ -522,7 +579,8 @@ std::expected<int, sigmaos::serr::Error> Clnt::NewRootMount(std::string pn, std:
     return std::unexpected(res.error());
   }
   if (rep.err().errcode() != sigmaos::serr::Terror::TErrNoError) {
-    return std::unexpected(sigmaos::serr::Error((sigmaos::serr::Terror) rep.err().errcode(), rep.err().obj()));
+    return std::unexpected(sigmaos::serr::Error(
+        (sigmaos::serr::Terror)rep.err().errcode(), rep.err().obj()));
   }
   log(SPPROXYCLNT, "NewRootMount done: {} {}", pn, mntname);
   return 0;
@@ -538,7 +596,8 @@ std::expected<std::vector<std::string>, sigmaos::serr::Error> Clnt::Mounts() {
     return std::unexpected(res.error());
   }
   if (rep.err().errcode() != sigmaos::serr::Terror::TErrNoError) {
-    return std::unexpected(sigmaos::serr::Error((sigmaos::serr::Terror) rep.err().errcode(), rep.err().obj()));
+    return std::unexpected(sigmaos::serr::Error(
+        (sigmaos::serr::Terror)rep.err().errcode(), rep.err().obj()));
   }
   log(SPPROXYCLNT, "Mounts done");
   std::vector<std::string> mounts(rep.endpoints().size());
@@ -548,12 +607,14 @@ std::expected<std::vector<std::string>, sigmaos::serr::Error> Clnt::Mounts() {
   return mounts;
 }
 
-std::expected<int, sigmaos::serr::Error> Clnt::SetLocalMount(std::shared_ptr<TendpointProto>, sigmaos::sigmap::types::Tport port) {
+std::expected<int, sigmaos::serr::Error> Clnt::SetLocalMount(
+    std::shared_ptr<TendpointProto>, sigmaos::sigmap::types::Tport port) {
   fatal("unimplemented (in go version too)");
 }
 
 // TODO: support MountPathClnt?
-//func (scc *SPProxyClnt) MountPathClnt(path string, clnt sos.PathClntAPI) error {
+// func (scc *SPProxyClnt) MountPathClnt(path string, clnt sos.PathClntAPI)
+// error {
 std::expected<int, sigmaos::serr::Error> Clnt::Detach(std::string pn) {
   log(SPPROXYCLNT, "Detach {}", pn);
   SigmaPathReq req;
@@ -565,7 +626,8 @@ std::expected<int, sigmaos::serr::Error> Clnt::Detach(std::string pn) {
     return std::unexpected(res.error());
   }
   if (rep.err().errcode() != sigmaos::serr::Terror::TErrNoError) {
-    return std::unexpected(sigmaos::serr::Error((sigmaos::serr::Terror) rep.err().errcode(), rep.err().obj()));
+    return std::unexpected(sigmaos::serr::Error(
+        (sigmaos::serr::Terror)rep.err().errcode(), rep.err().obj()));
   }
   log(SPPROXYCLNT, "Detach done");
   return 0;
@@ -587,13 +649,15 @@ std::expected<int, sigmaos::serr::Error> Clnt::Disconnect(std::string pn) {
     return std::unexpected(res.error());
   }
   if (rep.err().errcode() != sigmaos::serr::Terror::TErrNoError) {
-    return std::unexpected(sigmaos::serr::Error((sigmaos::serr::Terror) rep.err().errcode(), rep.err().obj()));
+    return std::unexpected(sigmaos::serr::Error(
+        (sigmaos::serr::Terror)rep.err().errcode(), rep.err().obj()));
   }
   log(SPPROXYCLNT, "Disconnect done {}", pn);
   return 0;
 }
 
-std::expected<int, sigmaos::serr::Error> Clnt::RegisterEP(std::string pn, std::shared_ptr<TendpointProto> ep) {
+std::expected<int, sigmaos::serr::Error> Clnt::RegisterEP(
+    std::string pn, std::shared_ptr<TendpointProto> ep) {
   log(SPPROXYCLNT, "RegisterEP: {} -> {}", pn, ep->ShortDebugString());
   SigmaRegisterEPReq req;
   SigmaErrRep rep;
@@ -606,7 +670,8 @@ std::expected<int, sigmaos::serr::Error> Clnt::RegisterEP(std::string pn, std::s
     return std::unexpected(res.error());
   }
   if (rep.err().errcode() != sigmaos::serr::Terror::TErrNoError) {
-    return std::unexpected(sigmaos::serr::Error((sigmaos::serr::Terror) rep.err().errcode(), rep.err().obj()));
+    return std::unexpected(sigmaos::serr::Error(
+        (sigmaos::serr::Terror)rep.err().errcode(), rep.err().obj()));
   }
   log(SPPROXYCLNT, "RegisterEP done: {} -> {}", pn, ep->ShortDebugString());
   return 0;
@@ -625,7 +690,8 @@ std::expected<int, sigmaos::serr::Error> Clnt::Started() {
   return 0;
 }
 
-std::expected<int, sigmaos::serr::Error> Clnt::Exited(sigmaos::proc::Tstatus status, std::string &msg) {
+std::expected<int, sigmaos::serr::Error> Clnt::Exited(
+    sigmaos::proc::Tstatus status, std::string &msg) {
   log(SPPROXYCLNT, "Exited");
   SigmaExitedReq req;
   SigmaErrRep rep;
@@ -666,5 +732,5 @@ std::thread Clnt::StartWaitEvictThread() {
   return std::thread(std::bind(&Clnt::wait_for_eviction, this));
 }
 
-};
-};
+};  // namespace proxy::sigmap
+};  // namespace sigmaos

@@ -3,11 +3,13 @@
 namespace sigmaos {
 namespace apps::cache {
 
-std::expected<std::shared_ptr<std::string>, sigmaos::serr::Error> Shard::Get(std::string &key) {
+std::expected<std::shared_ptr<std::string>, sigmaos::serr::Error> Shard::Get(
+    std::string &key) {
   std::lock_guard<std::mutex> guard(_mu);
 
   if (!_map.contains(key)) {
-    return std::unexpected(sigmaos::serr::Error(sigmaos::serr::Terror::TErrNotfound, std::format("key {}", key)));
+    return std::unexpected(sigmaos::serr::Error(
+        sigmaos::serr::Terror::TErrNotfound, std::format("key {}", key)));
   }
   return _map.at(key);
 }
@@ -26,10 +28,10 @@ bool Shard::Delete(std::string &key) {
 
 void Shard::Fill(std::map<std::string, std::string> kvs) {
   std::lock_guard<std::mutex> guard(_mu);
-  for (auto &[k, v]: kvs) {
+  for (auto &[k, v] : kvs) {
     _map.at(k) = std::make_shared<std::string>(v);
   }
 }
 
-};
-};
+};  // namespace apps::cache
+};  // namespace sigmaos

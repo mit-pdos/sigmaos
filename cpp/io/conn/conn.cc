@@ -1,7 +1,5 @@
 #include <io/conn/conn.h>
-
 #include <util/codec/codec.h>
-
 #include <util/perf/perf.h>
 
 namespace sigmaos {
@@ -73,11 +71,12 @@ std::expected<int, sigmaos::serr::Error> Conn::Close() {
   return 0;
 }
 
-std::expected<int, sigmaos::serr::Error> Conn::read_bytes(char *b, size_t size) {
+std::expected<int, sigmaos::serr::Error> Conn::read_bytes(char *b,
+                                                          size_t size) {
   auto start = GetCurrentTime();
   bool looped = false;
   int total = 0;
-  for (size_t left = size; left > 0; ) {
+  for (size_t left = size; left > 0;) {
     if (total != 0 && !looped) {
       looped = true;
     }
@@ -89,7 +88,8 @@ std::expected<int, sigmaos::serr::Error> Conn::read_bytes(char *b, size_t size) 
     // Error
     if (n == -1) {
       log(CONN_ERR, "Err read_bytes fd {}", _sockfd);
-      return std::unexpected(sigmaos::serr::Error(sigmaos::serr::Terror::TErrUnreachable, "read error"));
+      return std::unexpected(sigmaos::serr::Error(
+          sigmaos::serr::Terror::TErrUnreachable, "read error"));
     }
     // Success
     // Move the pointer into the buffer forward
@@ -100,8 +100,11 @@ std::expected<int, sigmaos::serr::Error> Conn::read_bytes(char *b, size_t size) 
     left -= n;
   }
   if (total != size) {
-    log(CONN_ERR, "Err read_bytes fd {} n({:d}) != size({:d})", _sockfd, (int) total, (int) size);
-    return std::unexpected(sigmaos::serr::Error(sigmaos::serr::Terror::TErrUnreachable, std::format("read wrong num bytes: {} != {}", (int) total, (int) size)));
+    log(CONN_ERR, "Err read_bytes fd {} n({:d}) != size({:d})", _sockfd,
+        (int)total, (int)size);
+    return std::unexpected(sigmaos::serr::Error(
+        sigmaos::serr::Terror::TErrUnreachable,
+        std::format("read wrong num bytes: {} != {}", (int)total, (int)size)));
   }
   if (looped) {
     log(PROXY_RPC_LAT, "read_bytes looped lat:{}ms", LatencyMS(start));
@@ -109,9 +112,10 @@ std::expected<int, sigmaos::serr::Error> Conn::read_bytes(char *b, size_t size) 
   return total;
 }
 
-std::expected<int, sigmaos::serr::Error> Conn::write_bytes(const char *b, size_t size) {
+std::expected<int, sigmaos::serr::Error> Conn::write_bytes(const char *b,
+                                                           size_t size) {
   int total = 0;
-  for (size_t left = size; left > 0; ) {
+  for (size_t left = size; left > 0;) {
     int n = write(_sockfd, b, size);
     // EOF
     if (n == 0) {
@@ -120,22 +124,25 @@ std::expected<int, sigmaos::serr::Error> Conn::write_bytes(const char *b, size_t
     // Error
     if (n == -1) {
       log(CONN_ERR, "Err write_bytes fd {}", _sockfd);
-      return std::unexpected(sigmaos::serr::Error(sigmaos::serr::Terror::TErrUnreachable, "write error"));
+      return std::unexpected(sigmaos::serr::Error(
+          sigmaos::serr::Terror::TErrUnreachable, "write error"));
     }
     // Success
     // Move the pointer into the buffer forward
     b += n;
-    // Increment the total number of byteswrite 
+    // Increment the total number of byteswrite
     total += n;
     // Decrement the number of bytes left to write
     left -= n;
   }
   if (total != size) {
     log(CONN_ERR, "Err write_bytes fd {}", _sockfd);
-    return std::unexpected(sigmaos::serr::Error(sigmaos::serr::Terror::TErrUnreachable, std::format("wrote wrong num bytes: {} != {}", (int) total, (int) size)));
+    return std::unexpected(sigmaos::serr::Error(
+        sigmaos::serr::Terror::TErrUnreachable,
+        std::format("wrote wrong num bytes: {} != {}", (int)total, (int)size)));
   }
   return total;
 }
 
-};
-};
+};  // namespace io::conn
+};  // namespace sigmaos

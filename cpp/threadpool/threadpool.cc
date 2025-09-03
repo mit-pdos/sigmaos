@@ -27,7 +27,7 @@ void Threadpool::work() {
     {
       // Wait until there is work in the queue
       std::unique_lock lk(_mu);
-      _cond.wait(lk, [this]{ return _work_q.size() > 0; });
+      _cond.wait(lk, [this] { return _work_q.size() > 0; });
       _n_idle--;
       // Claim the next work queue item
       f = _work_q.front();
@@ -59,5 +59,5 @@ void Threadpool::add_thread() {
   _n_idle++;
 }
 
-};
-};
+};  // namespace threadpool
+};  // namespace sigmaos

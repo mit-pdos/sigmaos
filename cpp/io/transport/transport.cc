@@ -1,6 +1,5 @@
-#include <io/transport/transport.h>
-
 #include <io/frame/frame.h>
+#include <io/transport/transport.h>
 
 namespace sigmaos {
 namespace io::transport {
@@ -8,12 +7,13 @@ namespace io::transport {
 bool Transport::_l = sigmaos::util::log::init_logger(TRANSPORT);
 bool Transport::_l_e = sigmaos::util::log::init_logger(TRANSPORT_ERR);
 
-std::expected<int, sigmaos::serr::Error> Transport::WriteCall(std::shared_ptr<Call> call) {
+std::expected<int, sigmaos::serr::Error> Transport::WriteCall(
+    std::shared_ptr<Call> call) {
   auto res = _calls.Put(call->GetSeqno(), call);
   if (!res.has_value()) {
     return res;
   }
-  log(TRANSPORT, "WriteCall seqno {}", (int) call->GetSeqno());
+  log(TRANSPORT, "WriteCall seqno {}", (int)call->GetSeqno());
   res = sigmaos::io::frame::WriteSeqno(_conn, call->GetSeqno());
   if (!res.has_value()) {
     return res;
@@ -26,7 +26,8 @@ std::expected<int, sigmaos::serr::Error> Transport::WriteCall(std::shared_ptr<Ca
   return 0;
 }
 
-std::expected<std::shared_ptr<Call>, sigmaos::serr::Error> Transport::ReadCall() {
+std::expected<std::shared_ptr<Call>, sigmaos::serr::Error>
+Transport::ReadCall() {
   uint64_t seqno;
   uint32_t nframes;
   {
@@ -62,8 +63,11 @@ std::expected<std::shared_ptr<Call>, sigmaos::serr::Error> Transport::ReadCall()
   }
   auto out_iov = call->GetOutIOVec();
   if (out_iov->Size() != nframes) {
-    log(TRANSPORT_ERR, "Size of out_iov ({}) doesn't match number of frames to be read ({})", out_iov->Size(), nframes);
-    fatal("Size of out_iov ({}) doesn't match number of frames to be read ({})", out_iov->Size(), nframes);
+    log(TRANSPORT_ERR,
+        "Size of out_iov ({}) doesn't match number of frames to be read ({})",
+        out_iov->Size(), nframes);
+    fatal("Size of out_iov ({}) doesn't match number of frames to be read ({})",
+          out_iov->Size(), nframes);
   }
   auto res = sigmaos::io::frame::ReadFramesIntoIOVec(_conn, out_iov);
   if (!res.has_value()) {
@@ -72,14 +76,13 @@ std::expected<std::shared_ptr<Call>, sigmaos::serr::Error> Transport::ReadCall()
   return call;
 }
 
-
 std::expected<int, sigmaos::serr::Error> Transport::Close() {
-//  _calls.Close(); // XXX never called in the go implementation
+  //  _calls.Close(); // XXX never called in the go implementation
   log(TRANSPORT, "Close");
   auto res = _conn->Close();
   log(TRANSPORT, "Done close");
   return res;
 }
 
-};
-};
+};  // namespace io::transport
+};  // namespace sigmaos

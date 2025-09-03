@@ -31,5 +31,5 @@ typedef std::string Tplatform;
 
 typedef uint32_t TTendpoint;
 
-};
-};
+};  // namespace sigmap::types
+};  // namespace sigmaos

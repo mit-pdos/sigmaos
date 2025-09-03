@@ -1,21 +1,20 @@
 #pragma once
 
-#include <sys/socket.h>
+#include <arpa/inet.h>
+#include <io/conn/conn.h>
+#include <netinet/in.h>
 #include <netinet/tcp.h>
+#include <serr/serr.h>
+#include <sys/socket.h>
 #include <sys/un.h>
 #include <unistd.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
+#include <util/log/log.h>
 
+#include <expected>
+#include <format>
 #include <iostream>
 #include <memory>
 #include <vector>
-#include <expected>
-#include <format>
-
-#include <util/log/log.h>
-#include <io/conn/conn.h>
-#include <serr/serr.h>
 
 namespace sigmaos {
 namespace io::conn::tcpconn {
@@ -28,31 +27,33 @@ const std::string TCPCONN_ERR = TCPCONN + sigmaos::util::log::ERR;
 void set_tcp_nodelay(int sockfd);
 
 class Conn : public sigmaos::io::conn::Conn {
-  public:
+ public:
   // Create a tcp connection
   Conn(std::string id) : sigmaos::io::conn::Conn(id), _addr({0}) {}
-  Conn(std::string id, int sockfd, struct sockaddr_in addr) : sigmaos::io::conn::Conn(id, sockfd), _addr(addr) {}
+  Conn(std::string id, int sockfd, struct sockaddr_in addr)
+      : sigmaos::io::conn::Conn(id, sockfd), _addr(addr) {}
   ~Conn() {}
 
-  protected:
+ protected:
   void init(int sockfd, sockaddr_in addr) {
     _addr = addr;
     sigmaos::io::conn::Conn::init(sockfd);
     set_tcp_nodelay(sockfd);
   }
 
-  private:
+ private:
   sockaddr_in _addr;
   // Used for logger initialization
   static bool _l;
   static bool _l_e;
 
   std::expected<int, sigmaos::serr::Error> read_bytes(char *b, size_t size);
-  std::expected<int, sigmaos::serr::Error> write_bytes(const char *b, size_t size);
+  std::expected<int, sigmaos::serr::Error> write_bytes(const char *b,
+                                                       size_t size);
 };
 
 class ClntConn : public Conn {
-  public:
+ public:
   ClntConn(std::string id, std::string srv_addr, int port) : Conn(id) {
     int sockfd;
     sockaddr_in addr;
@@ -65,7 +66,7 @@ class ClntConn : public Conn {
     addr.sin_family = AF_INET;
     addr.sin_addr.s_addr = inet_addr(srv_addr.c_str());
     addr.sin_port = htons(port);
-    if (connect(sockfd, (struct sockaddr *) &addr, sizeof(addr)) == -1) {
+    if (connect(sockfd, (struct sockaddr *)&addr, sizeof(addr)) == -1) {
       close(sockfd);
       log(TCPCONN_ERR, "Failed to connect client TCP socket", srv_addr, port);
       fatal("Failed to connect client TCP socket");
@@ -74,11 +75,11 @@ class ClntConn : public Conn {
   }
   ~ClntConn();
 
-  private:
+ private:
 };
 
 class Listener {
-  public:
+ public:
   Listener(std::string id) : _id(id) {
     log(TCPCONN, "New TCP listener");
     _sockfd = socket(AF_INET, SOCK_STREAM, 0);
@@ -88,7 +89,7 @@ class Listener {
     _addr.sin_family = AF_INET;
     _addr.sin_addr.s_addr = htonl(INADDR_ANY);
     _addr.sin_port = 0;
-    if (bind(_sockfd, (struct sockaddr *) &_addr, sizeof(_addr))) {
+    if (bind(_sockfd, (struct sockaddr *)&_addr, sizeof(_addr))) {
       fatal("bind failed");
     }
     log(TCPCONN, "Bound socket addr");
@@ -96,10 +97,11 @@ class Listener {
       fatal("listen failed");
     }
     socklen_t addr_len = sizeof(_addr);
-    if (getsockname(_sockfd, (struct sockaddr *) &_addr, &addr_len)) {
+    if (getsockname(_sockfd, (struct sockaddr *)&_addr, &addr_len)) {
       fatal("getsockname failed");
     }
-    log(TCPCONN, "Listener addr: {}:{}", _addr.sin_addr.s_addr, htons(_addr.sin_port));
+    log(TCPCONN, "Listener addr: {}:{}", _addr.sin_addr.s_addr,
+        htons(_addr.sin_port));
   }
   ~Listener() { Close(); }
 
@@ -107,11 +109,11 @@ class Listener {
   std::expected<int, sigmaos::serr::Error> Close();
   int GetPort() { return htons(_addr.sin_port); }
 
-  private:
+ private:
   std::string _id;
   int _sockfd;
   struct sockaddr_in _addr;
 };
 
-};
-};
+};  // namespace io::conn::tcpconn
+};  // namespace sigmaos

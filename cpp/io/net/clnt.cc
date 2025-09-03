@@ -1,7 +1,5 @@
 #include <io/net/clnt.h>
 
 namespace sigmaos {
-namespace io::net {
-
-};
-};
+namespace io::net {};
+};  // namespace sigmaos

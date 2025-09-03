@@ -1,19 +1,19 @@
 #pragma once
 
-#include <memory>
-#include <mutex>
+#include <proxy/sigmap/sigmap.h>
+#include <serr/serr.h>
+#include <sigmap/const.h>
+#include <sigmap/sigmap.pb.h>
+#include <util/log/log.h>
+
 #include <condition_variable>
-#include <thread>
-#include <vector>
-#include <queue>
 #include <expected>
 #include <format>
-
-#include <util/log/log.h>
-#include <serr/serr.h>
-#include <sigmap/sigmap.pb.h>
-#include <sigmap/const.h>
-#include <proxy/sigmap/sigmap.h>
+#include <memory>
+#include <mutex>
+#include <queue>
+#include <thread>
+#include <vector>
 
 namespace sigmaos {
 namespace threadpool {
@@ -22,9 +22,10 @@ const std::string THREADPOOL = "THREADPOOL";
 const std::string THREADPOOL_ERR = THREADPOOL + sigmaos::util::log::ERR;
 
 class Threadpool {
-  public:
+ public:
   Threadpool(std::string name) : Threadpool(name, 0) {}
-  Threadpool(std::string name, int n_initial_threads) : _mu(), _cond(), _name(name), _n_idle(0), _threads(), _work_q() {
+  Threadpool(std::string name, int n_initial_threads)
+      : _mu(), _cond(), _name(name), _n_idle(0), _threads(), _work_q() {
     for (int i = 0; i < n_initial_threads; i++) {
       add_thread();
     }
@@ -34,7 +35,7 @@ class Threadpool {
   // Run a function in the threadpool
   void Run(std::function<void(void)> f);
 
-  private:
+ private:
   std::mutex _mu;
   std::condition_variable _cond;
   std::string _name;
@@ -51,5 +52,5 @@ class Threadpool {
   void work();
 };
 
-};
-};
+};  // namespace threadpool
+};  // namespace sigmaos

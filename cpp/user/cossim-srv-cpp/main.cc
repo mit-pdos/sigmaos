@@ -1,26 +1,28 @@
-#include <string>
-
-#include <google/protobuf/util/time_util.h>
-
-#include <util/log/log.h>
-#include <proxy/sigmap/sigmap.h>
-#include <serr/serr.h>
-#include <proc/proc.h>
-#include <util/perf/perf.h>
-#include <rpc/srv.h>
-#include <rpc/spchannel/spchannel.h>
-#include <sigmap/const.h>
-
 #include <apps/cossim/srv.h>
+#include <google/protobuf/util/time_util.h>
+#include <proc/proc.h>
+#include <proxy/sigmap/sigmap.h>
+#include <rpc/spchannel/spchannel.h>
+#include <rpc/srv.h>
+#include <serr/serr.h>
+#include <sigmap/const.h>
+#include <util/log/log.h>
+#include <util/perf/perf.h>
+
+#include <string>
 
 int main(int argc, char *argv[]) {
   auto pe = sigmaos::proc::GetProcEnv();
-  LogSpawnLatency(pe->GetPID(), pe->GetSpawnTime(), google::protobuf::util::TimeUtil::GetEpoch(), "E2e spawn time since spawn until main");
-  LogSpawnLatency(pe->GetPID(), google::protobuf::util::TimeUtil::GetEpoch(), sigmaos::proc::GetExecTime(), "proc.exec_proc");
+  LogSpawnLatency(pe->GetPID(), pe->GetSpawnTime(),
+                  google::protobuf::util::TimeUtil::GetEpoch(),
+                  "E2e spawn time since spawn until main");
+  LogSpawnLatency(pe->GetPID(), google::protobuf::util::TimeUtil::GetEpoch(),
+                  sigmaos::proc::GetExecTime(), "proc.exec_proc");
   sigmaos::util::log::init_logger(sigmaos::apps::cossim::COSSIMSRV);
   auto start = GetCurrentTime();
   auto sp_clnt = std::make_shared<sigmaos::proxy::sigmap::Clnt>();
-  LogSpawnLatency(pe->GetPID(), pe->GetSpawnTime(), start, "Create spproxyclnt");
+  LogSpawnLatency(pe->GetPID(), pe->GetSpawnTime(), start,
+                  "Create spproxyclnt");
 
   if (argc < 6) {
     fatal("Usage: {} CACHE_PN N_CACHE N_VEC VEC_LEN EAGER_INIT", argv[0]);
@@ -42,7 +44,8 @@ int main(int argc, char *argv[]) {
 
   // Create the echo server
   start = GetCurrentTime();
-  auto srv = std::make_shared<sigmaos::apps::cossim::Srv>(sp_clnt, nvec, vec_dim, cache_pn, ncache, eager_init);
+  auto srv = std::make_shared<sigmaos::apps::cossim::Srv>(
+      sp_clnt, nvec, vec_dim, cache_pn, ncache, eager_init);
   LogSpawnLatency(pe->GetPID(), pe->GetSpawnTime(), start, "Make CosSim");
   // Run the server
   srv->Run();

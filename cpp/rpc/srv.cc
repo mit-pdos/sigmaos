@@ -1,6 +1,5 @@
-#include <rpc/srv.h>
-
 #include <rpc/blob.h>
+#include <rpc/srv.h>
 
 namespace sigmaos {
 namespace rpc::srv {
@@ -8,7 +7,9 @@ namespace rpc::srv {
 bool Srv::_l = sigmaos::util::log::init_logger(RPCSRV);
 bool Srv::_l_e = sigmaos::util::log::init_logger(RPCSRV_ERR);
 
-std::expected<std::shared_ptr<sigmaos::io::transport::Call>, sigmaos::serr::Error> Srv::serve_request(std::shared_ptr<sigmaos::io::transport::Call> req) {
+std::expected<std::shared_ptr<sigmaos::io::transport::Call>,
+              sigmaos::serr::Error>
+Srv::serve_request(std::shared_ptr<sigmaos::io::transport::Call> req) {
   log(RPCSRV, "rpc::Srv::serve_request");
   Rerror err;
   std::shared_ptr<sigmaos::io::transport::Call> rep;
@@ -37,7 +38,9 @@ std::expected<std::shared_ptr<sigmaos::io::transport::Call>, sigmaos::serr::Erro
   return rep;
 }
 
-std::expected<std::shared_ptr<sigmaos::io::transport::Call>, sigmaos::serr::Error> Srv::unwrap_and_run_rpc(std::shared_ptr<sigmaos::io::transport::Call> req) {
+std::expected<std::shared_ptr<sigmaos::io::transport::Call>,
+              sigmaos::serr::Error>
+Srv::unwrap_and_run_rpc(std::shared_ptr<sigmaos::io::transport::Call> req) {
   auto err = new Rerror();
   auto in_iov = req->GetInIOVec();
   Req wrapper_req;
@@ -48,7 +51,9 @@ std::expected<std::shared_ptr<sigmaos::io::transport::Call>, sigmaos::serr::Erro
   in_iov->RemoveBuffer(0);
   if (!_rpc_endpoints.contains(wrapper_req.method())) {
     log(RPCSRV_ERR, "rpc::Srv unknown endpoint: {}", wrapper_req.method());
-    return std::unexpected(sigmaos::serr::Error(sigmaos::serr::Terror::TErrError, std::format("Invalid method %v", wrapper_req.method())));
+    return std::unexpected(sigmaos::serr::Error(
+        sigmaos::serr::Terror::TErrError,
+        std::format("Invalid method %v", wrapper_req.method())));
   }
   auto rpce = _rpc_endpoints.at(wrapper_req.method());
   // Parse the RPC input protobuf
@@ -60,16 +65,18 @@ std::expected<std::shared_ptr<sigmaos::io::transport::Call>, sigmaos::serr::Erro
   auto start = GetCurrentTime();
   auto res = rpce->GetFunction()(req_proto, rep_proto);
   if (!res.has_value()) {
-    log(RPCSRV_ERR, "rpc::Srv unwrap_and_run_req Run function: {}", res.error());
+    log(RPCSRV_ERR, "rpc::Srv unwrap_and_run_req Run function: {}",
+        res.error());
     return std::unexpected(res.error());
   }
-  log(RPCSRV, "External RPC stub {} latency={:0.3f}ms", wrapper_req.method(), LatencyMS(start));
+  log(RPCSRV, "External RPC stub {} latency={:0.3f}ms", wrapper_req.method(),
+      LatencyMS(start));
   auto out_iov = req->GetOutIOVec();
   // Extract any input IOVecs from the reply RPC
   extract_blob_iov(*rep_proto, out_iov);
   out_iov->AddBuffers(2);
   auto serialized_rep_buf = out_iov->GetBuffer(1);
-  // Serialize the reply 
+  // Serialize the reply
   rep_proto->SerializeToString(serialized_rep_buf->Get());
   return req;
 }
@@ -99,9 +106,11 @@ std::expected<int, sigmaos::serr::Error> Srv::RegisterEP(std::string pn) {
       log(RPCSRV_ERR, "Error RegisterEP: {}", res.error());
       return std::unexpected(res.error());
     }
-    log(RPCSRV, "Registered sigmaEP {} in realm at pn {}", ep->ShortDebugString(), pn);
+    log(RPCSRV, "Registered sigmaEP {} in realm at pn {}",
+        ep->ShortDebugString(), pn);
   }
-  LogSpawnLatency(_sp_clnt->ProcEnv()->GetPID(), _sp_clnt->ProcEnv()->GetSpawnTime(), start, "RegisterEP");
+  LogSpawnLatency(_sp_clnt->ProcEnv()->GetPID(),
+                  _sp_clnt->ProcEnv()->GetSpawnTime(), start, "RegisterEP");
   return 0;
 }
 
@@ -113,7 +122,9 @@ std::expected<int, sigmaos::serr::Error> Srv::RegisterEP(std::string pn) {
     if (!res.has_value()) {
       log(RPCSRV, "Error Started: {}", res.error());
     }
-    LogSpawnLatency(_sp_clnt->ProcEnv()->GetPID(), _sp_clnt->ProcEnv()->GetSpawnTime(), start, "spproxyclnt.Started");
+    LogSpawnLatency(_sp_clnt->ProcEnv()->GetPID(),
+                    _sp_clnt->ProcEnv()->GetSpawnTime(), start,
+                    "spproxyclnt.Started");
   }
   log(RPCSRV, "Started");
   // Start a new thread to wait for the eviction signal
@@ -137,5 +148,5 @@ std::expected<int, sigmaos::serr::Error> Srv::RegisterEP(std::string pn) {
   std::exit(0);
 }
 
-};
-};
+};  // namespace rpc::srv
+};  // namespace sigmaos

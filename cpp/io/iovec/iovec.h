@@ -1,7 +1,7 @@
 #pragma once
 
-#include <vector>
 #include <memory>
+#include <vector>
 
 namespace sigmaos {
 namespace io::iovec {
@@ -11,9 +11,11 @@ namespace io::iovec {
 // don't reference count the buffer (to avoid early/unwanted deletion).
 // Otherwise, reference count it.
 class Buffer {
-  public:
-  Buffer(std::string * ptr) : _ref_counted(false), _non_rc_ptr(ptr), _rc_ptr(nullptr) {}
-  Buffer(std::shared_ptr<std::string> ptr) : _ref_counted(true), _non_rc_ptr(nullptr), _rc_ptr(ptr) {}
+ public:
+  Buffer(std::string *ptr)
+      : _ref_counted(false), _non_rc_ptr(ptr), _rc_ptr(nullptr) {}
+  Buffer(std::shared_ptr<std::string> ptr)
+      : _ref_counted(true), _non_rc_ptr(nullptr), _rc_ptr(ptr) {}
   ~Buffer() {}
 
   std::string *Get() {
@@ -32,17 +34,16 @@ class Buffer {
     }
   }
 
-  bool IsRefCounted() {
-    return _ref_counted;
-  }
-  private:
+  bool IsRefCounted() { return _ref_counted; }
+
+ private:
   bool _ref_counted;
   std::string *_non_rc_ptr;
   std::shared_ptr<std::string> _rc_ptr;
 };
 
 class IOVec {
-  public:
+ public:
   IOVec() : _bufs() {}
   IOVec(int n) : _bufs(n) {}
   ~IOVec() {}
@@ -57,15 +58,15 @@ class IOVec {
   }
   std::shared_ptr<Buffer> RemoveBuffer(int idx) {
     auto buf = GetBuffer(idx);
-    _bufs.erase(_bufs.begin() + idx); 
+    _bufs.erase(_bufs.begin() + idx);
     return buf;
   }
   int Size() { return _bufs.size(); }
   void Resize(int newsz) { _bufs.resize(newsz); }
 
-  private:
+ private:
   std::vector<std::shared_ptr<Buffer>> _bufs;
 };
 
-};
-};
+};  // namespace io::iovec
+};  // namespace sigmaos

@@ -14,9 +14,7 @@ std::expected<int, sigmaos::serr::Error> Srv::Get(std::shared_ptr<google::protob
   auto rep = dynamic_pointer_cast<CacheRep>(prep);
   auto req_cnt = _req_cnt++;
   auto key = req->key();
-
   log(CACHESRV, "CacheSrv.Get req({}) key={}", req_cnt, key);
-
   // Take the lock
   std::lock_guard<std::mutex> guard(_mu);
   // If the shard isn't present, return an error
@@ -25,6 +23,7 @@ std::expected<int, sigmaos::serr::Error> Srv::Get(std::shared_ptr<google::protob
     return std::unexpected(sigmaos::serr::Error(sigmaos::serr::Terror::TErrNotfound, std::format("shard {}", req->shard())));
   }
   std::shared_ptr<std::string> val;
+  // Get the shard
   auto s = _cache.at(req->shard());
   {
     auto res = s->Get(key);
@@ -48,14 +47,18 @@ std::expected<int, sigmaos::serr::Error> Srv::Put(std::shared_ptr<google::protob
   auto req_cnt = _req_cnt++;
   auto key = req->key();
   auto val = req->value();
-//  auto input_vec = std::make_shared<sigmaos::apps::cossim::Vector>(req->mutable_inputvec(), _vec_dim);
-//  auto input = req->inputvec().vals();
-//  auto const &v_ranges = req->vecranges();
   log(CACHESRV, "CacheSrv.Put req({}) key={}", req_cnt, key);
-  // TODO: put into map
-  // TODO: handle misses
+  // Take the lock
+  std::lock_guard<std::mutex> guard(_mu);
+  // If the shard isn't present, return an error
+  if (!_cache.contains(req->shard())) {
+    log(CACHESRV_ERR, "CacheSrv.Put rep({}) shard {} not found", req_cnt, req->shard());
+    return std::unexpected(sigmaos::serr::Error(sigmaos::serr::Terror::TErrNotfound, std::format("shard {}", req->shard())));
+  }
+  // Get the shard
+  auto s = _cache.at(req->shard());
+  s->Put(key, std::make_shared<std::string>(req->value()));
   log(CACHESRV, "CacheSrv.Put rep({}) latency={:0.3f}ms", req_cnt, LatencyMS(start));
-  fatal("unimplemented");
   return 0;
 }
 

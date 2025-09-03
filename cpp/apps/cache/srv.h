@@ -44,21 +44,29 @@ class Srv {
     auto start = GetCurrentTime();
     _srv = std::make_shared<sigmaos::rpc::srv::Srv>(sp_clnt, INIT_NTHREAD);
     LogSpawnLatency(_sp_clnt->ProcEnv()->GetPID(), _sp_clnt->ProcEnv()->GetSpawnTime(), start, "Make RPCSrv"); 
-    // TODO: register EPs
-//    auto cached_ep = std::make_shared<sigmaos::rpc::srv::RPCEndpoint>("CacheSrv.CosSim", std::make_shared<CosSimReq>(), std::make_shared<CosSimRep>(), std::bind(&Srv::CosSim, this, std::placeholders::_1, std::placeholders::_2));
-//    _srv->ExposeRPCHandler(cossim_ep);
+    auto get_ep = std::make_shared<sigmaos::rpc::srv::RPCEndpoint>("CacheSrv.Get", std::make_shared<CacheReq>(), std::make_shared<CacheRep>(), std::bind(&Srv::Get, this, std::placeholders::_1, std::placeholders::_2));
+    _srv->ExposeRPCHandler(get_ep);
+    auto put_ep = std::make_shared<sigmaos::rpc::srv::RPCEndpoint>("CacheSrv.Put", std::make_shared<CacheReq>(), std::make_shared<CacheRep>(), std::bind(&Srv::Put, this, std::placeholders::_1, std::placeholders::_2));
+    _srv->ExposeRPCHandler(put_ep);
     log(CACHESRV, "Exposed cachesrv RPC handlers");
-    // TODO: Register EP
-//    {
-//      auto start = GetCurrentTime();
-//      auto res = _srv->RegisterEP(pn);
-//      if (!res.has_value()) {
-//        log(CACHESRV_ERR, "Error RegisterEP: {}", res.error());
-//        fatal("Error RegisterEP: {}", res.error().String());
-//      }
-//      LogSpawnLatency(_sp_clnt->ProcEnv()->GetPID(), _sp_clnt->ProcEnv()->GetSpawnTime(), start, "RegisterEP");
-//      log(CACHESRV, "Registered sigmaEP");
-//    }
+    {
+      auto res = Init();
+      if (!res.has_value()) {
+        log(CACHESRV_ERR, "Error Init: {}", res.error());
+        fatal("Error Init: {}", res.error().String());
+      }
+    }
+    {
+      std::string pn = cache_dir + "/" + srv_pn;
+      auto start = GetCurrentTime();
+      auto res = _srv->RegisterEP(pn);
+      if (!res.has_value()) {
+        log(CACHESRV_ERR, "Error RegisterEP: {}", res.error());
+        fatal("Error RegisterEP: {}", res.error().String());
+      }
+      LogSpawnLatency(_sp_clnt->ProcEnv()->GetPID(), _sp_clnt->ProcEnv()->GetSpawnTime(), start, "RegisterEP");
+      log(CACHESRV, "Registered sigmaEP");
+    }
     // Register performance tracker with RPCSrv infrastructure
     _srv->RegisterPerfTracker(_perf);
     fatal("Unimplemented");

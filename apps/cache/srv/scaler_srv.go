@@ -29,7 +29,7 @@ func RunCacheSrvScaler(cachedir, jobname, srvpn string, nshard int, oldNSrv int,
 		db.DFatalf("Err convert srv ID to int: %v", err)
 		return err
 	}
-	// Map of servers to steal shards from, and the list of shards to steal from
+	// Slice of servers to steal shards from, and the map of shards to steal from
 	// each server
 	shardsToSteal := make(map[int][]int)
 	srcSrvs := make([]int, 0, oldNSrv)

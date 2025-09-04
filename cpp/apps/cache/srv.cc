@@ -120,6 +120,7 @@ std::expected<int, sigmaos::serr::Error> Srv::Init(int old_n_srv,
       }
     }
   } else {
+    // TODO: batch delegated RPC fetching
     uint64_t rpc_idx = 0;
     // For each source server, dump shards to be stolen
     for (int src_srv : src_srvs) {

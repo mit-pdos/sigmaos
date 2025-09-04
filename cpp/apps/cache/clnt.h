@@ -47,6 +47,8 @@ class Clnt {
   std::expected<std::map<std::string, std::shared_ptr<std::string>>,
                 sigmaos::serr::Error>
   DumpShard(uint32_t shard, bool empty);
+  std::expected<std::map<std::string, std::shared_ptr<std::string>>,
+                sigmaos::serr::Error>
   DelegatedDumpShard(uint64_t rpc_idx);
 
  private:

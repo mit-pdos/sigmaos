@@ -253,11 +253,10 @@ Clnt::DumpShard(uint32_t shard, bool empty) {
 std::expected<std::map<std::string, std::shared_ptr<std::string>>,
               sigmaos::serr::Error>
 Clnt::DelegatedDumpShard(uint64_t rpc_idx) {
-  log(CACHECLNT, "DelegatedDumpShard: {}", shard);
+  log(CACHECLNT, "DelegatedDumpShard: {}", rpc_idx);
   std::shared_ptr<sigmaos::rpc::Clnt> rpcc;
   {
-    uint32_t srv = shard % _nsrv;
-    auto res = get_clnt(srv, true);
+    auto res = get_clnt(0, false);
     if (!res.has_value()) {
       log(CACHECLNT_ERR, "Error get_clnt: {}", res.error().String());
       return std::unexpected(res.error());
@@ -268,9 +267,6 @@ Clnt::DelegatedDumpShard(uint64_t rpc_idx) {
   std::map<std::string, std::shared_ptr<std::string>> kvs;
   {
     auto res = rpcc->DelegatedRPC(rpc_idx, rep);
-    {
-      auto _ = req.release_fence();
-    }
     if (!res.has_value()) {
       log(CACHECLNT_ERR, "Error Get: {}", res.error().String());
       return std::unexpected(res.error());
@@ -279,7 +275,7 @@ Clnt::DelegatedDumpShard(uint64_t rpc_idx) {
       kvs[k] = std::make_shared<std::string>(v);
     }
   }
-  log(CACHECLNT, "DelegatedDumpShard ok: {}", shard);
+  log(CACHECLNT, "DelegatedDumpShard ok: {}", rpc_idx);
   return kvs;
 }
 

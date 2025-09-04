@@ -212,6 +212,77 @@ std::expected<int, sigmaos::serr::Error> Clnt::Delete(std::string key) {
   return 0;
 }
 
+std::expected<std::map<std::string, std::shared_ptr<std::string>>,
+              sigmaos::serr::Error>
+Clnt::DumpShard(uint32_t shard, bool empty) {
+  log(CACHECLNT, "DumpShard: {}", shard);
+  std::shared_ptr<sigmaos::rpc::Clnt> rpcc;
+  {
+    uint32_t srv = shard % _nsrv;
+    auto res = get_clnt(srv, true);
+    if (!res.has_value()) {
+      log(CACHECLNT_ERR, "Error get_clnt: {}", res.error().String());
+      return std::unexpected(res.error());
+    }
+    rpcc = res.value();
+  }
+  TfenceProto fence;
+  ShardData rep;
+  ShardReq req;
+  req.set_allocated_fence(&fence);
+  req.set_shard(shard);
+  req.set_empty(empty);
+  std::map<std::string, std::shared_ptr<std::string>> kvs;
+  {
+    auto res = rpcc->RPC("CacheSrv.DumpShard", req, rep);
+    {
+      auto _ = req.release_fence();
+    }
+    if (!res.has_value()) {
+      log(CACHECLNT_ERR, "Error Get: {}", res.error().String());
+      return std::unexpected(res.error());
+    }
+    for (const auto &[k, v] : rep.vals()) {
+      kvs[k] = std::make_shared<std::string>(v);
+    }
+  }
+  log(CACHECLNT, "DumpShard ok: {}", shard);
+  return kvs;
+}
+
+std::expected<std::map<std::string, std::shared_ptr<std::string>>,
+              sigmaos::serr::Error>
+Clnt::DelegatedDumpShard(uint64_t rpc_idx) {
+  log(CACHECLNT, "DelegatedDumpShard: {}", shard);
+  std::shared_ptr<sigmaos::rpc::Clnt> rpcc;
+  {
+    uint32_t srv = shard % _nsrv;
+    auto res = get_clnt(srv, true);
+    if (!res.has_value()) {
+      log(CACHECLNT_ERR, "Error get_clnt: {}", res.error().String());
+      return std::unexpected(res.error());
+    }
+    rpcc = res.value();
+  }
+  ShardData rep;
+  std::map<std::string, std::shared_ptr<std::string>> kvs;
+  {
+    auto res = rpcc->DelegatedRPC(rpc_idx, rep);
+    {
+      auto _ = req.release_fence();
+    }
+    if (!res.has_value()) {
+      log(CACHECLNT_ERR, "Error Get: {}", res.error().String());
+      return std::unexpected(res.error());
+    }
+    for (const auto &[k, v] : rep.vals()) {
+      kvs[k] = std::make_shared<std::string>(v);
+    }
+  }
+  log(CACHECLNT, "DelegatedDumpShard ok: {}", shard);
+  return kvs;
+}
+
 std::expected<std::pair<std::vector<uint64_t>, std::shared_ptr<std::string>>,
               sigmaos::serr::Error>
 Clnt::DelegatedMultiGet(uint64_t rpc_idx) {

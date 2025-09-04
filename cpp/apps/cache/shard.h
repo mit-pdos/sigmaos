@@ -35,7 +35,7 @@ class Shard {
       std::string &key);
   void Put(std::string &key, std::shared_ptr<std::string> val);
   bool Delete(std::string &key);
-  void Fill(std::map<std::string, std::string> kvs);
+  void Fill(std::map<std::string, std::shared_ptr<std::string>> kvs);
 
  private:
   std::mutex _mu;

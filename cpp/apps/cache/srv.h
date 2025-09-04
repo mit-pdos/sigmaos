@@ -40,6 +40,7 @@ class Srv {
       bool use_ep_cache, int old_n_srv, int new_n_srv, int srv_id)
       : _mu(),
         _srv_id(srv_id),
+        _cache_dir(cache_dir),
         _req_cnt(0),
         _cache(),
         _sp_clnt(sp_clnt),
@@ -103,6 +104,7 @@ class Srv {
  private:
   std::mutex _mu;
   int _srv_id;
+  std::string _cache_dir;
   std::atomic<uint64_t> _req_cnt;
   std::map<uint32_t, std::shared_ptr<Shard>> _cache;
   std::shared_ptr<sigmaos::apps::cache::Clnt> _cache_clnt;

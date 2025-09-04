@@ -104,7 +104,39 @@ std::expected<int, sigmaos::serr::Error> Srv::Init(int old_n_srv,
       rpc_idxs.push_back(nrpc++);
     }
   }
-  fatal("Unimplemented");
+  if (!_sp_clnt->ProcEnv()->GetRunBootScript()) {
+    // For each source server, dump shards to be stolen
+    for (int src_srv : src_srvs) {
+      for (uint32_t shard : shards_to_steal[src_srv]) {
+        auto res = _cache_clnt->DumpShard(shard, false);
+        if (!res.has_value()) {
+          log(CACHESRV_ERR, "Error DumpShard: {}", res.error());
+          fatal("Error DumpShard: {}", res.error().String());
+          return std::unexpected(res.error());
+        }
+        // Fill the local copy of the shard with the dumped values
+        auto kvs = res.value();
+        _cache.at(shard)->Fill(kvs);
+      }
+    }
+  } else {
+    uint64_t rpc_idx = 0;
+    // For each source server, dump shards to be stolen
+    for (int src_srv : src_srvs) {
+      for (uint32_t shard : shards_to_steal[src_srv]) {
+        auto res = _cache_clnt->DelegatedDumpShard(rpc_idx);
+        if (!res.has_value()) {
+          log(CACHESRV_ERR, "Error DelegatedDumpShard: {}", res.error());
+          fatal("Error DelegatedDumpShard: {}", res.error().String());
+          return std::unexpected(res.error());
+        }
+        // Fill the local copy of the shard with the dumped values
+        auto kvs = res.value();
+        _cache.at(shard)->Fill(kvs);
+        rpc_idx++;
+      }
+    }
+  }
   LogSpawnLatency(_sp_clnt->ProcEnv()->GetPID(),
                   _sp_clnt->ProcEnv()->GetSpawnTime(), start, "CacheSrv.Init");
   return 0;

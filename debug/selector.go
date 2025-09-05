@@ -134,37 +134,37 @@ const (
 // Kernel
 const (
 	KERNEL         Tselector = "KERNEL"
-	KERNELCLNT               = "KERNELCLNT"
-	KERNELCLNT_ERR           = "KERNELCLNT_ERR"
+	KERNELCLNT     Tselector = "KERNELCLNT"
+	KERNELCLNT_ERR Tselector = "KERNELCLNT_ERR"
 )
 
 // Boot
 const (
 	BOOTCLNT  Tselector = "BOOTCLNT"
-	BOOT                = "BOOT"
-	CONTAINER           = "CONTAINER"
+	BOOT      Tselector = "BOOT"
+	CONTAINER Tselector = "CONTAINER"
 )
 
 // Named
 const (
 	NAMED     Tselector = "NAMED"
-	NAMED_LDR           = "NAMED_LDR"
-	FSETCD              = "FSETCD"
+	NAMED_LDR Tselector = "NAMED_LDR"
+	FSETCD    Tselector = "FSETCD"
 )
 
 // MSched
 const (
 	PROCDMGR       Tselector = "PROCDMGR"
-	PROCDMGR_ERR             = "PROCDMGR" + ERR
-	PROCD                    = "PROCD"
-	PROCD_ERR                = "PROCD" + ERR
-	MSCHED                   = "MSCHED"
-	MSCHED_ERR               = "MSCHED" + ERR
-	MSCHEDCLNT               = "MSCHEDCLNT"
-	MSCHEDCLNT_ERR           = "MSCHEDCLNT" + ERR
-	MSCHED_PERF              = "MSCHED_PERF"
-	CGROUP                   = "CGROUP"
-	CGROUP_ERR               = "CGROUP" + ERR
+	PROCDMGR_ERR   Tselector = "PROCDMGR" + ERR
+	PROCD          Tselector = "PROCD"
+	PROCD_ERR      Tselector = "PROCD" + ERR
+	MSCHED         Tselector = "MSCHED"
+	MSCHED_ERR     Tselector = "MSCHED" + ERR
+	MSCHEDCLNT     Tselector = "MSCHEDCLNT"
+	MSCHEDCLNT_ERR Tselector = "MSCHEDCLNT" + ERR
+	MSCHED_PERF    Tselector = "MSCHED_PERF"
+	CGROUP         Tselector = "CGROUP"
+	CGROUP_ERR     Tselector = "CGROUP" + ERR
 )
 
 // LCSched

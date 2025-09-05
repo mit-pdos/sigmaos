@@ -509,7 +509,7 @@ func TestFileRenamePerf(t *testing.T) {
 	ts.Shutdown()
 }
 
-func lookuper(ts *test.Tstate, nclerk int, n int, dir string, nfile int, lip sp.Tip) {
+func lookuper(ts *test.Tstate, nclerk int, dir string, nfile int, lip sp.Tip) {
 	const NITER = 100 // 10000
 	ch := make(chan bool)
 	for c := 0; c < nclerk; c++ {
@@ -533,7 +533,6 @@ func lookuper(ts *test.Tstate, nclerk int, n int, dir string, nfile int, lip sp.
 }
 
 func TestDirReadPerf(t *testing.T) {
-	const N = 10000
 	const NFILE = 10
 	ts, err1 := test.NewTstatePath(t, pathname)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
@@ -550,7 +549,7 @@ func TestDirReadPerf(t *testing.T) {
 		})
 		return n
 	})
-	lookuper(ts, 1, N, dir, NFILE, ts.ProcEnv().GetInnerContainerIP())
+	lookuper(ts, 1, dir, NFILE, ts.ProcEnv().GetInnerContainerIP())
 	//lookuper(t, NCLERK, N, dir, NFILE)
 	err := ts.RmDir(dir)
 	assert.Nil(t, err)

@@ -273,7 +273,7 @@ func (s *FrontEnd) timelineHandlerInner(w http.ResponseWriter, r *http.Request, 
 	dbg.DPrintf(dbg.SOCIAL_NETWORK_FRONTEND, "%s: %v\n", debugInfo, urlQuery)
 	useridstr, startstr, stopstr :=
 		urlQuery.Get("userid"), urlQuery.Get("start"), urlQuery.Get("stop")
-	var err, err1, err2, err3 error
+	var err, err1, err2 error
 	var start, stop int64
 	userid, err1 := strconv.ParseInt(useridstr, 10, 64)
 	if startstr == "" {
@@ -286,7 +286,7 @@ func (s *FrontEnd) timelineHandlerInner(w http.ResponseWriter, r *http.Request, 
 	} else {
 		stop, err2 = strconv.ParseInt(stopstr, 10, 32)
 	}
-	if err1 != nil || err2 != nil || err3 != nil {
+	if err1 != nil || err2 != nil {
 		http.Error(w, "bad number format in request", http.StatusBadRequest)
 		return
 	}

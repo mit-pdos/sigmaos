@@ -3,19 +3,19 @@ package srv_test
 import (
 	"context"
 	"fmt"
+	"sigmaos/test"
+	"strconv"
+	"testing"
+	"time"
+
+	dbg "sigmaos/debug"
+	sp "sigmaos/sigmap"
+
 	"github.com/stretchr/testify/assert"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	bson2 "gopkg.in/mgo.v2/bson"
-	"sigmaos/proxy/dbclnt"
-	dbg "sigmaos/debug"
-	"sigmaos/proxy/mongoclnt"
-	sp "sigmaos/sigmap"
-	"sigmaos/test"
-	"strconv"
-	"testing"
-	"time"
 )
 
 type MyObj struct {

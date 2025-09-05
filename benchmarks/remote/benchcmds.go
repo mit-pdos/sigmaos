@@ -633,9 +633,9 @@ func GetCosSimClientCmdConstructor(cossimReqName string, leader bool, numClients
 		)
 		testName := ""
 		if leader {
-			testName = fmt.Sprintf("CosSim")
+			testName = "CosSim"
 		} else {
-			testName = fmt.Sprintf("CosSimJustCli")
+			testName = "CosSimJustCli"
 		}
 		autoscaleCache := ""
 		if scaleCache {
@@ -731,9 +731,9 @@ func GetCachedBackupClientCmdConstructor(leader bool, numClients int, manuallySc
 		)
 		testName := ""
 		if leader {
-			testName = fmt.Sprintf("CachedBackup")
+			testName = "CachedBackup"
 		} else {
-			testName = fmt.Sprintf("CachedBackupJustCli")
+			testName = "CachedBackupJustCli"
 		}
 		dialproxy := ""
 		if bcfg.NoNetproxy {
@@ -810,9 +810,9 @@ func GetCachedScalerClientCmdConstructor(leader bool, numClients int, manuallySc
 		)
 		testName := ""
 		if leader {
-			testName = fmt.Sprintf("CachedScaler")
+			testName = "CachedScaler"
 		} else {
-			testName = fmt.Sprintf("CachedScalerJustCli")
+			testName = "CachedScalerJustCli"
 		}
 		dialproxy := ""
 		if bcfg.NoNetproxy {

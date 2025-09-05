@@ -61,7 +61,7 @@ func (ccfg *ClusterConfig) StartSigmaOSCluster() error {
 	args = append(args, "--numbeschednode", strconv.Itoa(ccfg.NumProcqOnlyNodes))
 	err := ccfg.lcfg.RunScriptRedirectOutputFile("./start-sigmaos.sh", CLUSTER_INIT_LOG, args...)
 	if err != nil {
-		return fmt.Errorf("Err StopSigmaOSCluster: %v", err)
+		return fmt.Errorf("err StopSigmaOSCluster: %v", err)
 	}
 	return nil
 }
@@ -74,7 +74,7 @@ func (ccfg *ClusterConfig) RunBenchmark(driverVM int, benchCmd string) error {
 		"--vm", strconv.Itoa(driverVM),
 	}
 	if err := ccfg.lcfg.RunScriptRedirectOutputStdout("./run-benchmark.sh", args...); err != nil {
-		return fmt.Errorf("Err RunBenchmark: %v", err)
+		return fmt.Errorf("err RunBenchmark: %v", err)
 	}
 	return nil
 }
@@ -88,10 +88,10 @@ func (ccfg *ClusterConfig) CollectResults(benchName string, leaderBenchCmd, foll
 	}
 	// Write the cluster/benchmark config to the output directory
 	if err := ccfg.lcfg.WriteBenchmarkConfig(outDirPath, ccfg.bcfg, ccfg, leaderBenchCmd, followerBenchCmd); err != nil {
-		return fmt.Errorf("Err WriteBenchmarkConfig: %v", err)
+		return fmt.Errorf("err WriteBenchmarkConfig: %v", err)
 	}
 	if err := ccfg.lcfg.RunScriptRedirectOutputFile("./collect-results.sh", CLUSTER_INIT_LOG, args...); err != nil {
-		return fmt.Errorf("Err CollectResults: %v", err)
+		return fmt.Errorf("err CollectResults: %v", err)
 	}
 	return nil
 }
@@ -103,7 +103,7 @@ func (ccfg *ClusterConfig) getLeaderNodeIP() (string, error) {
 	}
 	ip, err := ccfg.lcfg.RunScriptGetOutput("./leader-ip.sh", args...)
 	if err != nil {
-		return "", fmt.Errorf("Err GetLeaderIP: %v", err)
+		return "", fmt.Errorf("err GetLeaderIP: %v", err)
 	}
 	return ip, nil
 }

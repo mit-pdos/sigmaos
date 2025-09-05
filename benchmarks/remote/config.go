@@ -80,10 +80,10 @@ func NewBenchConfig() (*BenchConfig, error) {
 		return nil, fmt.Errorf("k8s is only supported on cloudlab")
 	}
 	if cfg.Overlays && !cfg.NoNetproxy {
-		return nil, fmt.Errorf("Should not run with overlays AND dialproxy!")
+		return nil, fmt.Errorf("should not run with overlays and dialproxy!")
 	}
 	if !cfg.Overlays && cfg.NoNetproxy {
-		return nil, fmt.Errorf("Should not run without overlays AND without dialproxy!")
+		return nil, fmt.Errorf("should not run without overlays and without dialproxy!")
 	}
 	return cfg, nil
 }

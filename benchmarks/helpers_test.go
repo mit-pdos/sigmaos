@@ -102,6 +102,7 @@ func evictProcs(ts *test.RealmTstate, ps []*proc.Proc) {
 		err := ts.Evict(p.GetPid())
 		assert.Nil(ts.Ts.T, err, "Evict: %v", err)
 		status, err := ts.WaitExit(p.GetPid())
+		assert.Nil(ts.Ts.T, err, "WaitExit: %v", err)
 		assert.True(ts.Ts.T, status.IsStatusEvicted(), "Bad status evict: %v", status)
 	}
 }
@@ -475,8 +476,10 @@ func downloadS3ResultsRealm(ts *test.Tstate, src string, dst string, realm sp.Tr
 	os.MkdirAll(dst, 0777)
 	_, err := ts.ProcessDir(src, func(st *sp.Tstat) (bool, error) {
 		rdr, err := ts.OpenReader(filepath.Join(src, st.Name))
+		if !assert.Nil(ts.T, err, "Error open reader %v", err) {
+			return false, err
+		}
 		defer rdr.Close()
-		assert.Nil(ts.T, err, "Error open reader %v", err)
 		b, err := io.ReadAll(rdr)
 		assert.Nil(ts.T, err, "Error read all %v", err)
 		name := st.Name

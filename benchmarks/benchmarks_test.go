@@ -438,6 +438,7 @@ func TestMicroSpawnWaitStartNode(t *testing.T) {
 	defer mrts.Shutdown()
 
 	sts, err := mrts.GetRoot().GetDir(sp.MSCHED)
+	assert.Nil(t, err, "GetDir msched: %v", err)
 	kernels := sp.Names(sts)
 	kernel0 := kernels[0]
 
@@ -446,6 +447,7 @@ func TestMicroSpawnWaitStartNode(t *testing.T) {
 	db.DPrintf(db.TEST, "Done boot node %d", N)
 
 	sts, err = mrts.GetRoot().GetDir(sp.MSCHED)
+	assert.Nil(t, err, "GetDir msched: %v", err)
 	kernels = sp.Names(sts)
 	kernel1 := ""
 	for _, n := range kernels {
@@ -1488,6 +1490,7 @@ func TestK8sMRMulti(t *testing.T) {
 	// Start up the stat scraper procs.
 	sdc := mschedclnt.NewMSchedClnt(mrts.GetRealm(realms[0]).SigmaClnt.FsLib, sp.NOT_SET)
 	nMSched, err := sdc.NMSched()
+	assert.Nil(t, err, "GetNMsched: %v", err)
 	ps2, _ := newNProcs(nMSched, "k8s-stat-scraper", []string{}, nil, proc.Tmcpu(1000*(linuxsched.GetNCores()-1)))
 	spawnBurstProcs(mrts.GetRealm(realms[0]), ps2)
 	waitStartProcs(mrts.GetRealm(realms[0]), ps2)

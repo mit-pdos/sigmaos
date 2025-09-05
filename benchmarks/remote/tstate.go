@@ -172,7 +172,7 @@ func (ts *Tstate) StopSigmaOSCluster() error {
 	}
 	err := ts.LCfg.RunScriptRedirectOutputFile("./stop-sigmaos.sh", CLUSTER_INIT_LOG, args...)
 	if err != nil {
-		return fmt.Errorf("Err StopSigmaOSCluster: %v", err)
+		return fmt.Errorf("err StopSigmaOSCluster: %v", err)
 	}
 	return nil
 }

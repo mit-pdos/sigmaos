@@ -29,7 +29,7 @@ type LocalFSConfig struct {
 func NewLocalFSConfig(platform sp.Tplatform, version string, parallel bool) (*LocalFSConfig, error) {
 	pkgpath, err := os.Getwd()
 	if err != nil {
-		return nil, fmt.Errorf("Err os.Executable: %v", err)
+		return nil, fmt.Errorf("err os.Executable: %v", err)
 	}
 	root := filepath.Dir(filepath.Dir(pkgpath))
 	var scriptDir string
@@ -79,26 +79,26 @@ func (lcfg *LocalFSConfig) WriteBenchmarkConfig(outputDirPath string, bcfg *Benc
 func (lcfg *LocalFSConfig) setupFS() error {
 	// Check that script directories exist
 	if fi, err := os.Stat(lcfg.RootDir); err != nil {
-		return fmt.Errorf("Can't stat RootDir: %v", err)
+		return fmt.Errorf("can't stat RootDir: %v", err)
 	} else if !fi.Mode().IsDir() {
 		return fmt.Errorf("RootDir isn't dir")
 	}
 	if fi, err := os.Stat(lcfg.ScriptDir); err != nil {
-		return fmt.Errorf("Can't stat ScriptDir: %v", err)
+		return fmt.Errorf("can't stat ScriptDir: %v", err)
 	} else if !fi.Mode().IsDir() {
 		return fmt.Errorf("ScriptDir isn't dir")
 	}
 	if fi, err := os.Stat(lcfg.GraphScriptDir); err != nil {
-		return fmt.Errorf("Can't stat GraphScriptDir: %v", err)
+		return fmt.Errorf("can't stat GraphScriptDir: %v", err)
 	} else if !fi.Mode().IsDir() {
 		return fmt.Errorf("GraphScriptDir isn't dir")
 	}
 	// Make output directories, if necessary
 	if err := os.MkdirAll(lcfg.OutputDir, 0777); err != nil {
-		return fmt.Errorf("Can't make OutputDir: %v", err)
+		return fmt.Errorf("can't make OutputDir: %v", err)
 	}
 	if err := os.MkdirAll(lcfg.GraphOutputDir, 0777); err != nil {
-		return fmt.Errorf("Can't make OutputDir: %v", err)
+		return fmt.Errorf("can't make OutputDir: %v", err)
 	}
 	// Clear the cluster init log
 	os.Remove(CLUSTER_INIT_LOG)
@@ -132,7 +132,7 @@ func (lcfg *LocalFSConfig) getScriptCmd(scriptName string, wr io.Writer, args ..
 func (lcfg *LocalFSConfig) runScriptRedirectOutput(scriptName string, wr io.Writer, args ...string) error {
 	cmd := lcfg.getScriptCmd(scriptName, wr, args...)
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("Err runScriptRedirectOutput %v:\n%v:\n%s", filepath.Join(lcfg.ScriptDir, scriptName), err, err.(*exec.ExitError).Stderr)
+		return fmt.Errorf("err runScriptRedirectOutput %v:\n%v:\n%s", filepath.Join(lcfg.ScriptDir, scriptName), err, err.(*exec.ExitError).Stderr)
 	}
 	return nil
 }
@@ -143,7 +143,7 @@ func (lcfg *LocalFSConfig) RunScriptGetOutput(scriptName string, args ...string)
 	b, err := cmd.Output()
 	out := strings.TrimSpace(string(b))
 	if err != nil {
-		return out, fmt.Errorf("Err runScript %v:\n%v:\n%s", filepath.Join(lcfg.ScriptDir, scriptName), err, err.(*exec.ExitError).Stderr)
+		return out, fmt.Errorf("err runScript %v:\n%v:\n%s", filepath.Join(lcfg.ScriptDir, scriptName), err, err.(*exec.ExitError).Stderr)
 	}
 	return out, nil
 }
@@ -158,7 +158,7 @@ func (lcfg *LocalFSConfig) RunScriptRedirectOutputFile(scriptName, outFilePath s
 	// Create the output file, or append to it if it exists already
 	outFile, err := os.OpenFile(outFilePath, os.O_APPEND|os.O_CREATE|os.O_RDWR, 0644)
 	if err != nil {
-		fmt.Errorf("Err open outFile [%v]: %v", outFilePath, err)
+		return fmt.Errorf("err open outFile [%v]: %v", outFilePath, err)
 	}
 	defer outFile.Close()
 	return lcfg.runScriptRedirectOutput(scriptName, outFile, args...)

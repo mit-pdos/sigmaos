@@ -13,14 +13,14 @@ const (
 // Script directories, relative to project root directory
 const (
 	AWS_DIR_REL          string = "aws"
-	CLOUDLAB_DIR_REL            = "cloudlab"
-	GRAPH_SCRIPT_DIR_REL        = "benchmarks/scripts/graph"
+	CLOUDLAB_DIR_REL     string = "cloudlab"
+	GRAPH_SCRIPT_DIR_REL string = "benchmarks/scripts/graph"
 )
 
 // Output directories, relative to project root directory
 const (
 	OUTPUT_PARENT_DIR_REL string = "benchmarks/results"
-	GRAPH_OUTPUT_DIR_REL         = OUTPUT_PARENT_DIR_REL + "/graphs"
+	GRAPH_OUTPUT_DIR_REL  string = OUTPUT_PARENT_DIR_REL + "/graphs"
 )
 
 // Log files

@@ -59,7 +59,7 @@ func TestBasic(t *testing.T) {
 	}
 	defer ts.j.Stop()
 	db.DPrintf(db.TEST, "Started srv")
-	ep1 := sp.NewEndpoint(sp.INTERNAL_EP, []*sp.Taddr{sp.NewTaddr(IP1, sp.OUTER_CONTAINER_IP, PORT1)})
+	ep1 := sp.NewEndpoint(sp.INTERNAL_EP, []*sp.Taddr{sp.NewTaddr(IP1, PORT1)})
 	err = ts.j.Clnt.RegisterEndpoint(SVC1, INSTANCE_1, ep1)
 	if !assert.Nil(ts.T, err, "Err RegisterEndpoint: %v", err) {
 		return
@@ -93,7 +93,7 @@ func TestBasic(t *testing.T) {
 	}(nextV, ch, ch2)
 
 	// Add an EP to a different service
-	ep2 := sp.NewEndpoint(sp.INTERNAL_EP, []*sp.Taddr{sp.NewTaddr(IP2, sp.OUTER_CONTAINER_IP, PORT2)})
+	ep2 := sp.NewEndpoint(sp.INTERNAL_EP, []*sp.Taddr{sp.NewTaddr(IP2, PORT2)})
 	err = ts.j.Clnt.RegisterEndpoint(SVC2, INSTANCE_2, ep2)
 	if !assert.Nil(ts.T, err, "Err RegisterEndpoint: %v", err) {
 		return
@@ -109,7 +109,7 @@ func TestBasic(t *testing.T) {
 	db.DPrintf(db.TEST, "Wait didn't return early 1")
 
 	// Add another EP to the existing service
-	ep3 := sp.NewEndpoint(sp.INTERNAL_EP, []*sp.Taddr{sp.NewTaddr(IP3, sp.OUTER_CONTAINER_IP, PORT3)})
+	ep3 := sp.NewEndpoint(sp.INTERNAL_EP, []*sp.Taddr{sp.NewTaddr(IP3, PORT3)})
 	err = ts.j.Clnt.RegisterEndpoint(SVC1, INSTANCE_3, ep3)
 	if !assert.Nil(ts.T, err, "Err RegisterEndpoint: %v", err) {
 		return

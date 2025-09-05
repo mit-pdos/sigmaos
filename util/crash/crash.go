@@ -35,7 +35,7 @@ type Tevent struct {
 	MaxInterval int64 `json:"maxinterval"`
 
 	// probability of generating event in this interval
-	Prob float64 `json:"prob`
+	Prob float64 `json:"prob"`
 
 	// delay in ms (interpretable by event creator)
 	Delay int64 `json:"delay"`
@@ -245,7 +245,7 @@ func failLabel(fsl *fslib.FsLib, label Tselector, e Tevent, f Teventf) {
 		db.DPrintf(db.CRASH, "Downed %v", e.Path)
 	}
 	time.Sleep(time.Duration(e.Start) * time.Millisecond)
-	for true {
+	for {
 		t := e.MaxInterval
 		if e.MaxInterval < 0 {
 			t = -t

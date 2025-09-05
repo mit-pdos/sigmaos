@@ -12,9 +12,9 @@ type Tstatus uint8
 
 const (
 	StatusOK      Tstatus = 1
-	StatusEvicted         = 2 // killed
-	StatusErr             = 3
-	StatusFatal           = 4 // to indicate to groupmgr that a proc shouldn't be restarted
+	StatusEvicted Tstatus = 2 // killed
+	StatusErr     Tstatus = 3
+	StatusFatal   Tstatus = 4 // to indicate to groupmgr that a proc shouldn't be restarted
 
 	// for testing purposes, meaning sigma doesn't know what happened
 	// to proc; machine might have crashed.

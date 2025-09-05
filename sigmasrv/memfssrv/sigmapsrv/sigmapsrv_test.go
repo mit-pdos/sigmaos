@@ -178,7 +178,7 @@ func TestWriteFilePerfMultiClient(t *testing.T) {
 		}(i)
 	}
 	n := sp.Tlength(0)
-	for _ = range fns {
+	for range fns {
 		n += <-done
 	}
 	ms := time.Since(start).Milliseconds()
@@ -199,7 +199,7 @@ func TestWriteFilePerfMultiClient(t *testing.T) {
 		}(i)
 	}
 	n = 0
-	for _ = range fns {
+	for range fns {
 		n += <-done
 	}
 	ms = time.Since(start).Milliseconds()
@@ -259,6 +259,7 @@ func TestReadFilePerfSingle(t *testing.T) {
 			pn = pn0
 		}
 		r, err := ts.OpenBufReader(pn)
+		assert.Nil(t, err)
 		n, err := test.Reader(t, r, buf, sz)
 		assert.Nil(t, err)
 		r.Close()
@@ -388,7 +389,7 @@ func TestReadFilePerfMultiClient(t *testing.T) {
 		}(i)
 	}
 	n := sp.Tlength(0)
-	for _ = range fns {
+	for range fns {
 		n += <-done
 	}
 	ms := time.Since(start).Milliseconds()
@@ -423,7 +424,7 @@ func TestReadFilePerfMultiClient(t *testing.T) {
 	}
 	n = 0
 
-	for _ = range fns {
+	for range fns {
 		n += <-done
 	}
 
@@ -534,7 +535,6 @@ func lookuper(ts *test.Tstate, nclerk int, n int, dir string, nfile int, lip sp.
 func TestDirReadPerf(t *testing.T) {
 	const N = 10000
 	const NFILE = 10
-	const NCLERK = 1
 	ts, err1 := test.NewTstatePath(t, pathname)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
@@ -715,7 +715,7 @@ func TestLookupConcurPerf(t *testing.T) {
 		}(i)
 	}
 
-	for _ = range fsls {
+	for range fsls {
 		<-done
 	}
 

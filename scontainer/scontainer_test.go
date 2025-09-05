@@ -24,6 +24,7 @@ func TestSyscallBlock(t *testing.T) {
 	}
 	p := proc.NewProc("test-syscall", []string{})
 	err := ts.Spawn(p)
+	assert.Nil(t, err)
 	st, err := ts.WaitExit(p.GetPid())
 	assert.Nil(t, err)
 	assert.True(t, st.IsStatusOK(), st)
@@ -53,9 +54,9 @@ func runMemBlock(ts *test.Tstate, mem string) *proc.Proc {
 	db.DPrintf(db.TEST, "Spawning memblock for %v of memory", mem)
 	p := proc.NewProc("memblock", []string{mem})
 	p.SetType(proc.T_LC)
-	_, errs := ts.SpawnBurst([]*proc.Proc{p}, 1)
-	assert.True(ts.T, len(errs) == 0, "Error spawn: %v", errs)
-	err := ts.WaitStart(p.GetPid())
+	err := ts.Spawn(p)
+	assert.Nil(ts.T, err, "Error spawn: %v", err)
+	err = ts.WaitStart(p.GetPid())
 	assert.Nil(ts.T, err, "Error waitstart: %v", err)
 	return p
 }

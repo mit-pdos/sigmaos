@@ -346,7 +346,7 @@ func newImgResizeJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, input str
 	ws := make([]*ImgResizeJobInstance, 0, n)
 	is := make([]interface{}, 0, n)
 	for i := 0; i < n; i++ {
-		i := NewImgResizeJob(ts, p, sigmaos, input, ntasks, ninputs, mcpu, mem, nrounds, imgdmcpu)
+		i := NewImgResizeJob(ts, p, sigmaos, input, ntasks, ninputs, 0, time.Second, mcpu, mem, nrounds, imgdmcpu)
 		ws = append(ws, i)
 		is = append(is, i)
 	}
@@ -354,13 +354,13 @@ func newImgResizeJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, input str
 }
 
 // ========== ImgResizeRPC Helpers ==========
-func newImgResizeRPCJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, input string, tasksPerSec int, dur time.Duration, mcpu proc.Tmcpu, mem proc.Tmem, nrounds int, imgdmcpu proc.Tmcpu) ([]*ImgResizeRPCJobInstance, []interface{}) {
+func newImgResizeRPCJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, input string, tasksPerSec int, dur time.Duration, mcpu proc.Tmcpu, mem proc.Tmem, nrounds int, imgdmcpu proc.Tmcpu) ([]*ImgResizeJobInstance, []interface{}) {
 	// n is ntrials, which is always 1.
 	n := 1
-	ws := make([]*ImgResizeRPCJobInstance, 0, n)
+	ws := make([]*ImgResizeJobInstance, 0, n)
 	is := make([]interface{}, 0, n)
 	for i := 0; i < n; i++ {
-		i := NewImgResizeRPCJob(ts, p, sigmaos, input, tasksPerSec, dur, mcpu, mem, nrounds, imgdmcpu)
+		i := NewImgResizeJob(ts, p, sigmaos, input, 0, 0, tasksPerSec, dur, mcpu, mem, nrounds, imgdmcpu)
 		ws = append(ws, i)
 		is = append(is, i)
 	}

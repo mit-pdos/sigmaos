@@ -287,7 +287,7 @@ func runImgResize(ts *test.RealmTstate, i interface{}) (time.Duration, float64) 
 }
 
 func runImgResizeRPC(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
-	ji := i.(*ImgResizeRPCJobInstance)
+	ji := i.(*ImgResizeJobInstance)
 	ji.ready <- true
 	<-ji.ready
 	// Start a procd clnt, and monitor procds
@@ -298,7 +298,7 @@ func runImgResizeRPC(ts *test.RealmTstate, i interface{}) (time.Duration, float6
 	}
 	//	ji.Cleanup()
 	start := time.Now()
-	ji.StartImgResizeRPCJob()
+	ji.StartImgResizeJob()
 	ji.Wait()
 	t := time.Since(start)
 	time.Sleep(2 * time.Second)

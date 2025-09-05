@@ -25,6 +25,7 @@ import (
 	"sigmaos/util/crash"
 	"sigmaos/util/perf"
 	"sigmaos/util/retry"
+	"sigmaos/util/spstats"
 )
 
 type ProcClnt struct {
@@ -220,7 +221,7 @@ func (clnt *ProcClnt) spawnRetry(kernelId string, p *proc.Proc) (*proc.ProcSeqno
 		if err != nil {
 			// If unreachable, retry.
 			if serr.IsErrorSession(err) {
-				db.DPrintf(db.PROCCLNT_ERR, "Err spawnRetry unreachable %v", err)
+				db.DPrintf(db.PROCCLNT_ERR, "Err spawnRetry unreachable %v proc %v", err, p)
 			} else {
 				db.DPrintf(db.PROCCLNT_ERR, "spawnRetry failed err %v proc %v", err, p)
 			}
@@ -436,4 +437,11 @@ func (clnt *ProcClnt) setExited(pid sp.Tpid) sp.Tpid {
 	r := clnt.isExited
 	clnt.isExited = pid
 	return r
+}
+
+// ========== Stats ==========
+
+func (clnt *ProcClnt) Stats() *spstats.TcounterSnapshot {
+	stro := clnt.beschedclnt.Stats()
+	return stro
 }

@@ -336,7 +336,7 @@ func (fsc *FsClient) Stats() (*sos.ClntStats, error) {
 func (fsc *FsClient) mntLookup(pn sp.Tsigmapath) (sos.PathClntAPI, error) {
 	p := path.Split(pn)
 	if len(p) == 0 {
-		return nil, serr.NewErr(serr.TErrInval, pn[0])
+		return nil, serr.NewErr(serr.TErrInval, p)
 	}
 	pc, ok := fsc.mnts.Lookup(p[0])
 	if !ok {

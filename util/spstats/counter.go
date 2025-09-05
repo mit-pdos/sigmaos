@@ -80,13 +80,17 @@ func (cnts *TcounterSnapshot) MergeCounters(st *TcounterSnapshot) {
 }
 
 func (cnts *TcounterSnapshot) FillCounters(st any) {
+	cnts.FillCountersPrefix(st, "")
+}
+
+func (cnts *TcounterSnapshot) FillCountersPrefix(st any, prefix string) {
 	v := reflect.ValueOf(st).Elem()
 	for i := 0; i < v.NumField(); i++ {
 		t := v.Field(i).Type().String()
 		n := v.Type().Field(i).Name
 		if strings.HasSuffix(t, "atomic.Int64") {
 			p := v.Field(i).Addr().Interface().(*atomic.Int64)
-			cnts.Counters[n] = p.Load()
+			cnts.Counters[prefix+n] = p.Load()
 		}
 	}
 }

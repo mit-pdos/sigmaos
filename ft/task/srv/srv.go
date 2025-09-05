@@ -90,6 +90,7 @@ func RunTaskSrv(args []string) error {
 	mu := &sync.Mutex{}
 	s := &TaskSrv{
 		mu:       mu,
+		fence:    sp.NullFence(),
 		data:     make(map[int32][]byte),
 		output:   make(map[int32][]byte),
 		status:   make(map[int32]proto.TaskStatus),
@@ -306,12 +307,12 @@ func (s *TaskSrv) readEtcd() error {
 		} else if key == s.root()+ETCD_SRV_FENCE {
 			// ignore
 		} else if key == s.root()+ETCD_CLNT_FENCE {
-			epoch, err := strconv.ParseInt(val, 10, 64)
-			if err != nil {
+			a := &sp.TfenceProto{}
+			if err := gproto.Unmarshal([]byte(val), a); err != nil {
 				return err
 			}
-
-			s.fence = &sp.Tfence{Epoch: sp.Tepoch(epoch)}
+			f := a.Tfence()
+			s.fence = &f
 		} else if key == s.root()+ETCD_LASTTASKHASBEENSUBMITTED {
 			s.hasLastTaskBeenSubmitted = true
 		} else {
@@ -496,12 +497,20 @@ func (s *TaskSrv) get(status proto.TaskStatus) []int32 {
 }
 
 // must hold lock
-func (s *TaskSrv) checkFence(fence *sp.TfenceProto) error {
-	if s.fence == nil {
+func (s *TaskSrv) checkFence(fence sp.Tfence) error {
+	f := &fence
+
+	db.DPrintf(db.FTTASKSRV, "checkFence %v against %v", f, s.fence)
+
+	if !s.fence.HasFence() {
 		return nil
 	}
 
-	if fence == nil || s.fence.Epoch > fence.Tfence().Epoch {
+	if !fence.HasFence() {
+		return nil
+	}
+
+	if f.LessThan(s.fence) {
 		db.DPrintf(db.FTTASKSRV, "checkFence: failed curr: %v req: %v", s.fence, fence)
 		return serr.NewErr(serr.TErrInval, fmt.Sprintf("fence %v is not after %v", fence, s.fence))
 	}
@@ -513,7 +522,7 @@ func (s *TaskSrv) SubmitTasks(ctx fs.CtxI, req proto.SubmitTasksReq, rep *proto.
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if err := s.checkFence(req.Fence); err != nil {
+	if err := s.checkFence(req.Fence.Tfence()); err != nil {
 		return err
 	}
 
@@ -551,7 +560,7 @@ func (s *TaskSrv) EditTasks(ctx fs.CtxI, req proto.EditTasksReq, rep *proto.Edit
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if err := s.checkFence(req.Fence); err != nil {
+	if err := s.checkFence(req.Fence.Tfence()); err != nil {
 		return err
 	}
 
@@ -584,7 +593,7 @@ func (s *TaskSrv) GetTasksByStatus(ctx fs.CtxI, req proto.GetTasksByStatusReq, r
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if err := s.checkFence(req.Fence); err != nil {
+	if err := s.checkFence(req.Fence.Tfence()); err != nil {
 		return err
 	}
 
@@ -615,7 +624,7 @@ func (s *TaskSrv) ReadTasks(ctx fs.CtxI, req proto.ReadTasksReq, rep *proto.Read
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if err := s.checkFence(req.Fence); err != nil {
+	if err := s.checkFence(req.Fence.Tfence()); err != nil {
 		return err
 	}
 
@@ -640,7 +649,7 @@ func (s *TaskSrv) MoveTasks(ctx fs.CtxI, req proto.MoveTasksReq, rep *proto.Move
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if err := s.checkFence(req.Fence); err != nil {
+	if err := s.checkFence(req.Fence.Tfence()); err != nil {
 		return err
 	}
 
@@ -662,7 +671,7 @@ func (s *TaskSrv) MoveTasksByStatus(ctx fs.CtxI, req proto.MoveTasksByStatusReq,
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if err := s.checkFence(req.Fence); err != nil {
+	if err := s.checkFence(req.Fence.Tfence()); err != nil {
 		return err
 	}
 
@@ -688,7 +697,7 @@ func (s *TaskSrv) MoveTasksByStatus(ctx fs.CtxI, req proto.MoveTasksByStatusReq,
 
 	rep.NumMoved = int32(n)
 
-	db.DPrintf(db.FTTASKSRV, "MoveTasksByStatus: n: %d, from: %v, to: %v", n, req.From, req.To)
+	db.DPrintf(db.FTTASKSRV, "MoveTasksByStatus: %v n: %d, from: %v, to: %v", s.fence, n, req.From, req.To)
 
 	return nil
 }
@@ -697,7 +706,7 @@ func (s *TaskSrv) GetTaskOutputs(ctx fs.CtxI, req proto.GetTaskOutputsReq, rep *
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if err := s.checkFence(req.Fence); err != nil {
+	if err := s.checkFence(req.Fence.Tfence()); err != nil {
 		return err
 	}
 
@@ -718,7 +727,7 @@ func (s *TaskSrv) AddTaskOutputs(ctx fs.CtxI, req proto.AddTaskOutputsReq, rep *
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if err := s.checkFence(req.Fence); err != nil {
+	if err := s.checkFence(req.Fence.Tfence()); err != nil {
 		return err
 	}
 
@@ -751,21 +760,21 @@ func (s *TaskSrv) AcquireTasks(ctx fs.CtxI, req proto.AcquireTasksReq, rep *prot
 	defer s.mu.Unlock()
 
 	aid := req.AcquireId.Tfence()
-	db.DPrintf(db.TEST, "acquireid: %v", &aid)
+	db.DPrintf(db.FTTASKSRV, "acquireid: %v", &aid)
 
-	if err := s.checkFence(req.Fence); err != nil {
+	if err := s.checkFence(req.Fence.Tfence()); err != nil {
 		return err
 	}
 
-	fence := s.fence
+	fence := req.Fence.Tfence()
 	ids := s.get(proto.TaskStatus_TODO)
-	for req.Wait && len(ids) == 0 && !s.allTasksDone() && fence == s.fence {
+	for req.Wait && len(ids) == 0 && !s.allTasksDone() && s.fence.Eq(&fence) {
 		db.DPrintf(db.FTTASKSRV, "AcquireTasks: waiting for tasks...")
 		s.todoCond.Wait()
 		ids = s.get(proto.TaskStatus_TODO)
 	}
 
-	if fence != s.fence {
+	if !s.fence.Eq(&fence) {
 		return serr.NewErr(serr.TErrInval, fmt.Sprintf("fence changed from %v to %v", fence, s.fence))
 	}
 
@@ -788,7 +797,7 @@ func (s *TaskSrv) AcquireTasks(ctx fs.CtxI, req proto.AcquireTasksReq, rep *prot
 		}
 	}
 
-	db.DPrintf(db.FTTASKSRV, "AcquireTasks: n: %d stopped: %t", len(rep.Ids), rep.Stopped)
+	db.DPrintf(db.FTTASKSRV, "AcquireTasks: %v n: %d stopped: %t", fence, len(rep.Ids), rep.Stopped)
 
 	return nil
 }
@@ -813,7 +822,7 @@ func (s *TaskSrv) SubmittedLastTask(ctx fs.CtxI, req proto.SubmittedLastTaskReq,
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if err := s.checkFence(req.Fence); err != nil {
+	if err := s.checkFence(req.Fence.Tfence()); err != nil {
 		return err
 	}
 
@@ -846,14 +855,21 @@ func (s *TaskSrv) Fence(ctx fs.CtxI, req proto.FenceReq, rep *proto.FenceRep) er
 	defer s.mu.Unlock()
 
 	fence := req.Fence.Tfence()
-	if s.fence != nil && s.fence.Epoch >= fence.Epoch {
+	db.DPrintf(db.FTTASKSRV, "Set fence %v", fence)
+	f := &fence
+	if f.LessThan(s.fence) {
 		return serr.NewErr(serr.TErrInval, fmt.Sprintf("fence already set with epoch %v, attempted to set with %v", fence.Epoch, s.fence.Epoch))
+	}
+
+	ab, err := gproto.Marshal(f.FenceProto())
+	if err != nil {
+		return serr.NewErr(serr.TErrInval, err)
 	}
 
 	resp, err := s.etcdClient.Txn(context.TODO()).If(
 		clientv3.Compare(clientv3.Value(s.root()+ETCD_SRV_FENCE), "=", strconv.FormatUint(uint64(s.electclnt.Fence().Epoch), 10)),
 	).Then(
-		clientv3.OpPut(s.root()+ETCD_CLNT_FENCE, strconv.FormatUint(req.Fence.Epoch, 10)),
+		clientv3.OpPut(s.root()+ETCD_CLNT_FENCE, string(ab)),
 	).Commit()
 
 	if err != nil {
@@ -866,9 +882,9 @@ func (s *TaskSrv) Fence(ctx fs.CtxI, req proto.FenceReq, rep *proto.FenceRep) er
 		return serr.NewErr(serr.TErrError, "etcd txn failed")
 	}
 
-	s.fence = &fence
+	db.DPrintf(db.FTTASKSRV, "fence: upgrade fence %v to %v", s.fence, f)
 
-	db.DPrintf(db.FTTASKSRV, "fence: added fence %v to replace %v", fence, s.fence)
+	s.fence = f
 
 	return nil
 }

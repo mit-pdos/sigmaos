@@ -538,7 +538,7 @@ func TestServerFence(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, 0, int(n))
 
-	fence := &sigmap.Tfence{PathName: "test", Epoch: 1, Seqno: 0}
+	fence := &sigmap.Tfence{PathName: "test", Epoch: 2, Seqno: 0}
 	ts.clnt.SetFence(fence)
 	n, err = ts.clnt.MoveTasksByStatus(fttask_clnt.WIP, fttask_clnt.TODO)
 	assert.Nil(t, err)
@@ -549,9 +549,15 @@ func TestServerFence(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, 0, int(n))
 
-	ts.clnt.SetFence(sigmap.NullFence())
+	fence = &sigmap.Tfence{PathName: "test", Epoch: 1, Seqno: 0}
+	ts.clnt.SetFence(fence)
 	_, err = ts.clnt.MoveTasksByStatus(fttask_clnt.WIP, fttask_clnt.TODO)
 	assert.NotNil(t, err)
+
+	ts.clnt.SetFence(sp.NullFence())
+	n, err = ts.clnt.MoveTasksByStatus(fttask_clnt.WIP, fttask_clnt.TODO)
+	assert.Nil(t, err)
+	assert.Equal(t, 0, int(n))
 
 	ts.shutdown()
 }

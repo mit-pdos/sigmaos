@@ -12,7 +12,6 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/ft/procgroupmgr"
-	"sigmaos/namesrv/fsetcd"
 	"sigmaos/proc"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
@@ -868,8 +867,7 @@ func TestSpawnCrashLCSched(t *testing.T) {
 	db.DPrintf(db.TEST, "WaitExit done")
 }
 
-// Make sure this test is still meaningful
-func TestMaintainReplicationLevelCrashMSched(t *testing.T) {
+func TestCrashMSched(t *testing.T) {
 	const T = 1000
 	fn0 := sp.NAMED + "crashms0.sem"
 	e0 := crash.NewEventPath(crash.MSCHED_CRASH, T, float64(1.0), fn0)
@@ -910,7 +908,7 @@ func TestMaintainReplicationLevelCrashMSched(t *testing.T) {
 
 	// Start a bunch of replicated spinner procs.
 	cfg := procgroupmgr.NewProcGroupConfig(N_REPL, "spinner", []string{}, 0, OUTDIR)
-	sm := cfg.StartGrpMgr(mrts.GetRealm(test.REALM1).SigmaClnt)
+	pgm := cfg.StartGrpMgr(mrts.GetRealm(test.REALM1).SigmaClnt)
 	db.DPrintf(db.TEST, "GrpMgr started")
 
 	// Wait for them to spawn.
@@ -927,10 +925,10 @@ func TestMaintainReplicationLevelCrashMSched(t *testing.T) {
 		err = crash.SignalFailer(mrts.GetRoot().FsLib, fn)
 		assert.Nil(t, err, "crash msched")
 
-		// Wait for them to respawn.
 		success := false
 		for i := 0; i < 10; i++ {
-			time.Sleep(fsetcd.LeaseTTL * time.Second)
+			// Wait for them to respawn.
+			time.Sleep(sp.EtcdSessionExpired * time.Second)
 			// Check if the spinners are still up
 			st, err := mrts.GetRealm(test.REALM1).GetDir(OUTDIR)
 			if err != nil {
@@ -944,11 +942,17 @@ func TestMaintainReplicationLevelCrashMSched(t *testing.T) {
 			success = true
 			break
 		}
-
 		assert.True(t, success, "Spinners never respawned check #%v", j)
+		ns := pgm.Nstart()
+		n := 0
+		for _, m := range ns {
+			n += m
+		}
+		db.DPrintf(db.TEST, "ns %v %d", ns, n)
+		assert.True(t, n > (j+1)*N_REPL)
 	}
 
-	sm.StopGroup()
+	pgm.StopGroup()
 	db.DPrintf(db.TEST, "Stopped GroupMgr")
 
 	// don't check for errors because between seeing the spinner file

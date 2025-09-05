@@ -1,17 +1,15 @@
 package benchmarks_test
 
 import (
-	"fmt"
 	"path/filepath"
+
 	"time"
 
 	"github.com/stretchr/testify/assert"
 
 	"sigmaos/apps/imgresize"
 	db "sigmaos/debug"
-	"sigmaos/ft/procgroupmgr"
 	fttask_clnt "sigmaos/ft/task/clnt"
-	fttask_srv "sigmaos/ft/task/srv"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
@@ -30,14 +28,19 @@ type ImgResizeJobInstance struct {
 	nrounds  int
 	input    string
 	ready    chan bool
-	imgd     *procgroupmgr.ProcGroupMgr
-	p        *perf.Perf
-	ftmgr    *fttask_srv.FtTaskSrvMgr
-	ftclnt   fttask_clnt.FtTaskClnt[imgresize.Ttask, any]
+
+	runningTasks      chan bool
+	sleepBetweenTasks time.Duration
+	tasksPerSecond    int
+	dur               time.Duration
+
+	imgd   *imgresize.ImgdMgr[imgresize.Ttask]
+	p      *perf.Perf
+	ftclnt *imgresize.ImgdClnt[imgresize.Ttask]
 	*test.RealmTstate
 }
 
-func NewImgResizeJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, input string, ntasks int, ninputs int, mcpu proc.Tmcpu, mem proc.Tmem, nrounds int, imgdmcpu proc.Tmcpu) *ImgResizeJobInstance {
+func NewImgResizeJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, input string, ntasks int, ninputs int, tasksPerSecond int, dur time.Duration, mcpu proc.Tmcpu, mem proc.Tmem, nrounds int, imgdmcpu proc.Tmcpu) *ImgResizeJobInstance {
 	ji := &ImgResizeJobInstance{}
 	ji.sigmaos = sigmaos
 	ji.job = "imgresize-" + ts.GetRealm().String() + "-" + rd.String(4)
@@ -52,14 +55,20 @@ func NewImgResizeJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, input str
 	ji.mem = mem
 	ji.nrounds = nrounds
 
+	ji.tasksPerSecond = tasksPerSecond
+	ji.dur = dur
+	ji.sleepBetweenTasks = time.Second / time.Duration(ji.tasksPerSecond)
+	ji.tasksPerSecond = tasksPerSecond
+	ji.runningTasks = make(chan bool)
+
 	ts.RmDir(sp.IMG)
 
-	ftid := fmt.Sprintf("imgresize-%s", ji.job)
-	ftmgr, err := fttask_srv.NewFtTaskSrvMgr(ji.SigmaClnt, ftid, false)
-	assert.Nil(ts.Ts.T, err, "Error new fttasksrvmgr: %v", err)
+	imgd, err := imgresize.NewImgdMgr[imgresize.Ttask](ji.SigmaClnt, imgresize.ImgSvcId(ji.job), ji.mcpu, ji.mem, false, ji.nrounds, ji.imgdmcpu, nil)
+	assert.Nil(ji.Ts.T, err)
+	ji.imgd = imgd
 
-	ji.ftmgr = ftmgr
-	//	ji.ftclnt = fttask_clnt.NewFtTaskClnt[imgresize.Ttask, any](ji.SigmaClnt.FsLib, ftmgr.Id)
+	ji.ftclnt, err = imgd.NewImgdClnt(ji.SigmaClnt)
+	assert.Nil(ji.Ts.T, err)
 
 	fn := ji.input
 	fns := make([]string, 0, ji.ninputs)
@@ -75,9 +84,8 @@ func NewImgResizeJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, input str
 				Data: *imgresize.NewTask(fn),
 			})
 		}
-		//		existing, err := ji.ftclnt.SubmitTasks(tasks)
-		//		assert.Empty(ji.Ts.T, existing)
-		//		assert.Nil(ji.Ts.T, err, "Error SubmitTask: %v", err)
+		err := ji.ftclnt.SubmitTasks(tasks)
+		assert.Nil(ji.Ts.T, err, "Error SubmitTask: %v", err)
 	}
 	// Sanity check
 	n, err := ji.ftclnt.GetNTasks(fttask_clnt.TODO)
@@ -89,8 +97,6 @@ func NewImgResizeJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, input str
 
 func (ji *ImgResizeJobInstance) StartImgResizeJob() {
 	db.DPrintf(db.ALWAYS, "StartImgResizeJob input %v ntasks %v mcpu %v job %v", ji.input, ji.ntasks, ji.mcpu, ji.job)
-	//ji.imgd = imgresize.StartImgd(ji.SigmaClnt, imgresize.ImgSvcId(ji.job), ji.ftclnt.ServiceId().String(), ji.mcpu, ji.mem, false, ji.nrounds, ji.imgdmcpu, nil)
-	db.DPrintf(db.ALWAYS, "Done starting ImgResizeJob")
 }
 
 func (ji *ImgResizeJobInstance) Wait() {
@@ -105,7 +111,7 @@ func (ji *ImgResizeJobInstance) Wait() {
 		time.Sleep(1 * time.Second)
 	}
 	db.DPrintf(db.TEST, "[%v] Done waiting for ImgResizeJob to finish", ji.GetRealm())
-	ji.imgd.StopGroup()
+	ji.imgd.StopImgd(true)
 	db.DPrintf(db.TEST, "[%v] Imgd shutdown", ji.GetRealm())
 }
 

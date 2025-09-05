@@ -28,25 +28,54 @@ var crashfile Tcrashfile
 type Tevent struct {
 	Label string `json:"label"` // see selector.go
 
-	// wait for start ms to start generating events
-	Start int64 `json:"start"`
-
 	// max length of event interval in ms (if <= 0, only once)
 	MaxInterval int64 `json:"maxinterval"`
 
 	// probability of generating event in this interval
 	Prob float64 `json:"prob"`
 
-	// delay in ms (interpretable by event creator)
-	Delay int64 `json:"delay"`
+	// wait for start ms to start generating events
+	Start int64 `json:"start"`
 
 	// pathname for, for example, a semaphore to delay event
 	// generation until semaphore has been upped.
 	Path string
+
+	// delay in ms (for event creator)
+	Delay int64 `json:"delay"`
+
+	// number of times to raise the event (for event creator)
+	N int
 }
 
-func NewEvent(l string, mi int64, p float64) Tevent {
-	return Tevent{Label: l, MaxInterval: mi, Prob: p}
+type EventOpt func(*Tevent)
+
+func WithStart(n int64) EventOpt {
+	return func(e *Tevent) { e.Start = n }
+}
+
+func WithN(n int) EventOpt {
+	return func(e *Tevent) { e.N = n }
+}
+
+func WithPath(p string) EventOpt {
+	return func(e *Tevent) { e.Path = p }
+}
+
+func WithDelay(d int64) EventOpt {
+	return func(e *Tevent) { e.Delay = d }
+}
+
+func NewEvent(l string, mi int64, p float64, opts ...EventOpt) Tevent {
+	e := Tevent{Label: l, MaxInterval: mi, Prob: p}
+	e.applyOpts(opts)
+	return e
+}
+
+func (e *Tevent) applyOpts(opts []EventOpt) {
+	for _, opt := range opts {
+		opt(e)
+	}
 }
 
 func NewEventPath(l string, mi int64, p float64, pn string) Tevent {
@@ -71,62 +100,6 @@ type Tcrashfile struct {
 }
 
 type Teventf func(e Tevent)
-
-type TeventMap struct {
-	Evs map[Tselector]Tevent `json:"evs"`
-}
-
-func NewTeventMap() *TeventMap {
-	return &TeventMap{Evs: make(map[Tselector]Tevent)}
-}
-
-func NewTeventMapOne(e Tevent) *TeventMap {
-	em := NewTeventMap()
-	em.Evs[Tselector(e.Label)] = e
-	return em
-}
-
-func (em *TeventMap) Events2String() (string, error) {
-	b, err := json.Marshal(em)
-	if err != nil {
-		return "", err
-	}
-	return string(b), nil
-}
-
-func (em *TeventMap) Insert(e Tevent) {
-	em.Evs[Tselector(e.Label)] = e
-}
-
-func (em *TeventMap) Lookup(l Tselector) (Tevent, bool) {
-	e, ok := em.Evs[l]
-	return e, ok
-}
-
-func (em *TeventMap) Merge(em0 *TeventMap) {
-	for k, v := range em0.Evs {
-		em.Evs[k] = v
-	}
-}
-
-func (em0 *TeventMap) Filter(l Tselector) *TeventMap {
-	em1 := NewTeventMap()
-	for k, v := range em0.Evs {
-		if k == l {
-			em1.Evs[k] = v
-		}
-	}
-	return em1
-}
-
-func (em *TeventMap) AppendEnv(p *proc.Proc) error {
-	s, err := em.Events2String()
-	if err != nil {
-		return err
-	}
-	p.AppendEnv(proc.SIGMAFAIL, s)
-	return nil
-}
 
 func unmarshalTevents(s string) (*TeventMap, error) {
 	if s == "" {

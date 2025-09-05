@@ -431,7 +431,7 @@ func TestAtMostOnce(t *testing.T) {
 	_, err = sc.GetDir(sp.NAMED)
 	assert.Nil(t, err)
 
-	st, err := sc.Stats()
+	st, err := sc.FsLib.Stats()
 	assert.Nil(t, err)
 
 	d := []byte("hello")
@@ -449,7 +449,7 @@ func TestAtMostOnce(t *testing.T) {
 	assert.True(t, ok)
 	assert.Equal(t, d, d1, d1)
 
-	st1, err := sc.Stats()
+	st1, err := sc.FsLib.Stats()
 	assert.Nil(t, err)
 
 	assert.True(t, st1.Path.Counters["NgetNamedOK"] > st.Path.Counters["NgetNamed"])

@@ -12,6 +12,7 @@ import (
 	"sigmaos/sigmaclnt/fslib"
 	sp "sigmaos/sigmap"
 	"sigmaos/util/perf"
+	"sigmaos/util/spstats"
 )
 
 const (
@@ -36,6 +37,10 @@ func NewBESchedClntMSched(fsl *fslib.FsLib, nextEpoch shardedsvcrpcclnt.AllocFn,
 		rpcdc:     shardedsvcrpcclnt.NewShardedSvcRPCClntAllocFn(fsl, sp.BESCHED, db.BESCHEDCLNT, db.BESCHEDCLNT_ERR, nextEpoch),
 		nextSeqno: nextSeqno,
 	}
+}
+
+func (besc *BESchedClnt) Stats() *spstats.TcounterSnapshot {
+	return besc.rpcdc.Stats("BEsched_")
 }
 
 func (besc *BESchedClnt) chooseBESched(p *proc.Proc) (string, error) {

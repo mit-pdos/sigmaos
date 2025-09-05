@@ -1034,7 +1034,7 @@ func TestRealmBalanceImgResizeRPCImgResizeRPC(t *testing.T) {
 	defer mrts.Shutdown()
 	rses := make([]*benchmarks.Results, N_REALM)
 	ps := make([]*perf.Perf, N_REALM)
-	imgjobs := make([][]*ImgResizeRPCJobInstance, N_REALM)
+	imgjobs := make([][]*ImgResizeJobInstance, N_REALM)
 	imgapps := make([][]interface{}, N_REALM)
 	// Create structures for imgresize jobs.
 	for i := range realms {

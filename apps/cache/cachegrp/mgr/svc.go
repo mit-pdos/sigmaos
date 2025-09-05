@@ -134,11 +134,15 @@ func (cs *CachedSvc) addBackupServerWithSigmaPath(sigmaPath string, srvID int, e
 	return nil
 }
 
-func (cs *CachedSvc) addScalerServerWithSigmaPath(sigmaPath string, delegatedInit bool) error {
+func (cs *CachedSvc) addScalerServerWithSigmaPath(sigmaPath string, delegatedInit bool, cpp bool) error {
 	oldNSrv := len(cs.servers)
 	newNSrv := oldNSrv + 1
 	srvID := len(cs.servers)
-	p := proc.NewProc(cs.bin+"-scaler", []string{filepath.Join(cs.pn, cachegrp.SRVDIR), cs.job, strconv.Itoa(srvID), strconv.FormatBool(cs.useEPCache), strconv.Itoa(oldNSrv), strconv.Itoa(newNSrv)})
+	bin := cs.bin + "-scaler"
+	if cpp {
+		bin = "cached-srv-cpp"
+	}
+	p := proc.NewProc(bin, []string{filepath.Join(cs.pn, cachegrp.SRVDIR), cs.job, strconv.Itoa(srvID), strconv.FormatBool(cs.useEPCache), strconv.Itoa(oldNSrv), strconv.Itoa(newNSrv)})
 	if !cs.gc {
 		p.AppendEnv("GOGC", "off")
 	}
@@ -271,11 +275,11 @@ func (cs *CachedSvc) AddServer() error {
 	return cs.addServer(n)
 }
 
-func (cs *CachedSvc) AddScalerServerWithSigmaPath(sigmaPath string, delegatedInit bool) error {
+func (cs *CachedSvc) AddScalerServerWithSigmaPath(sigmaPath string, delegatedInit bool, cpp bool) error {
 	cs.Lock()
 	defer cs.Unlock()
 
-	return cs.addScalerServerWithSigmaPath(sigmaPath, delegatedInit)
+	return cs.addScalerServerWithSigmaPath(sigmaPath, delegatedInit, cpp)
 }
 
 func (cs *CachedSvc) AddBackupServerWithSigmaPath(sigmaPath string, i int, ep *sp.Tendpoint, delegatedInit bool, topN int) error {

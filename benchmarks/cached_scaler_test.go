@@ -33,6 +33,7 @@ type CachedScalerJobInstance struct {
 	cacheMCPU        proc.Tmcpu
 	cacheGC          bool
 	useEPCache       bool
+	useCPP           bool
 	nKV              int
 	delegatedInit    bool
 	topN             int
@@ -69,7 +70,7 @@ type CachedScalerJobInstance struct {
 	*test.RealmTstate
 }
 
-func NewCachedScalerJob(ts *test.RealmTstate, jobName string, durs string, maxrpss string, putDurs string, putMaxrpss string, ncache int, cacheMCPU proc.Tmcpu, cacheGC bool, useEPCache bool, nKV int, delegatedInit bool, topN int, scale bool, scaleDelay time.Duration, cossimBackend bool, cossimNVec int, cossimVecDim int, cossimMCPU proc.Tmcpu, cossimDelegatedInit bool, cossimNVecToQuery int) *CachedScalerJobInstance {
+func NewCachedScalerJob(ts *test.RealmTstate, jobName string, durs string, maxrpss string, putDurs string, putMaxrpss string, ncache int, cacheMCPU proc.Tmcpu, cacheGC bool, useEPCache bool, nKV int, delegatedInit bool, topN int, scale bool, scaleDelay time.Duration, scalerCachedCPP bool, cossimBackend bool, cossimNVec int, cossimVecDim int, cossimMCPU proc.Tmcpu, cossimDelegatedInit bool, cossimNVecToQuery int) *CachedScalerJobInstance {
 	ji := &CachedScalerJobInstance{
 		RealmTstate:         ts,
 		sigmaos:             true,
@@ -78,6 +79,7 @@ func NewCachedScalerJob(ts *test.RealmTstate, jobName string, durs string, maxrp
 		cacheMCPU:           cacheMCPU,
 		cacheGC:             cacheGC,
 		useEPCache:          useEPCache,
+		useCPP:              scalerCachedCPP,
 		cacheKIDs:           make(map[string]bool),
 		msc:                 mschedclnt.NewMSchedClnt(ts.SigmaClnt.FsLib, sp.NOT_SET),
 		nKV:                 nKV,
@@ -334,7 +336,7 @@ func (ji *CachedScalerJobInstance) scaleCached() {
 	ji.scaling = true
 	// TODO: More scaling
 	db.DPrintf(db.TEST, "Add scaler server")
-	if err := ji.cm.AddScalerServerWithSigmaPath(chunk.ChunkdPath(ji.warmCachedSrvKID), ji.delegatedInit); !assert.Nil(ji.Ts.T, err, "Err add scaler server: %v", err) {
+	if err := ji.cm.AddScalerServerWithSigmaPath(chunk.ChunkdPath(ji.warmCachedSrvKID), ji.delegatedInit, ji.useCPP); !assert.Nil(ji.Ts.T, err, "Err add scaler server: %v", err) {
 		return
 	}
 	ji.scaling = false

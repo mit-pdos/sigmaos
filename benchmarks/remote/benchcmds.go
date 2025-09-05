@@ -685,8 +685,8 @@ func GetCosSimClientCmdConstructor(cossimReqName string, leader bool, numClients
 			"--cossim_nvec %s "+
 			"--cossim_nvec_to_query %s "+
 			"--cossim_vec_dim %s "+
-			"%s "+ //cossim_eager_init
-			"%s "+ //cossim_delegated_init
+			"%s "+ // cossim_eager_init
+			"%s "+ // cossim_delegated_init
 			"%s "+ // manually_scale_cossim
 			"--scale_cossim_delay %s "+
 			"--n_cossim_to_add %s "+
@@ -804,7 +804,7 @@ func GetCachedBackupClientCmdConstructor(leader bool, numClients int, manuallySc
 func GetCachedScalerClientCmdConstructor(leader bool, numClients int, manuallyScaleScalerCached bool, scaleScalerCachedDelay time.Duration, rps []int, dur []time.Duration, putRps []int, putDur []time.Duration, clientDelay time.Duration, numCachedScaler int, nkeys int, delegateInit, useEPCache, prewarm bool, cossimBackend bool, nvec int, nvecToQuery int, vecDim int, cossimDelegatedInit bool) GetBenchCmdFn {
 	return func(bcfg *BenchConfig, ccfg *ClusterConfig) string {
 		const (
-			debugSelectors    string = "\"TEST;BENCH;LOADGEN;THROUGHPUT;CPU_UTIL;SPAWN_LAT;PROXY_LAT;\""
+			debugSelectors    string = "\"TEST;BENCH;LOADGEN;THROUGHPUT;CPU_UTIL;SPAWN_LAT;PROXY_LAT;COSSIMSRV;\""
 			valgrindSelectors string = ""
 			perfSelectors     string = "\"CACHESRV_TPT;TEST_TPT;BENCH_TPT;\""
 		)

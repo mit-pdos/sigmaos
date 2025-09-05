@@ -15,18 +15,6 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-var platformArg string
-var vpcArg string
-var tagArg string
-var branchArg string
-var versionArg string
-var noNetproxyArg bool
-var overlaysArg bool
-var parallelArg bool
-var noShutdownArg bool
-var k8sArg bool
-var oneByOne bool
-
 func init() {
 	flag.StringVar(&platformArg, "platform", sp.NOT_SET, "Platform on which to run. Currently, only [aws|cloudlab] are supported")
 	flag.StringVar(&vpcArg, "vpc", sp.NOT_SET, "VPC in which to run. Need not be specified for Cloudlab.")
@@ -996,7 +984,7 @@ func TestScaleCachedScaler(t *testing.T) {
 	// Cached benchmark configuration parameters
 	var (
 		rps []int           = []int{2000}
-		dur []time.Duration = []time.Duration{20 * time.Second}
+		dur []time.Duration = []time.Duration{30 * time.Second}
 		//		putRps          []int           = []int{100, 200, 100}
 		//		putDur          []time.Duration = []time.Duration{5 * time.Second, 5 * time.Second, 5 * time.Second}
 		putRps              []int           = []int{0}

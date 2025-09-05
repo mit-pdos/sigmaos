@@ -10,6 +10,18 @@ import (
 	sp "sigmaos/sigmap"
 )
 
+var platformArg string
+var vpcArg string
+var tagArg string
+var branchArg string
+var versionArg string
+var noNetproxyArg bool
+var overlaysArg bool
+var parallelArg bool
+var noShutdownArg bool
+var k8sArg bool
+var oneByOne bool
+
 type BenchConfig struct {
 	Platform   sp.Tplatform `json:"platform"`
 	VPC        string       `json:"vpc"`

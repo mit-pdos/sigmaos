@@ -15,7 +15,7 @@ import (
 
 var NAMES = []string{"a", "b.txt", "gutenberg", "ls.PDF", "wiki"}
 
-func TestCompile(t *Testing.T) {
+func TestCompile(t *testing.T) {
 	assert.NotNil(t, test.User)
 }
 

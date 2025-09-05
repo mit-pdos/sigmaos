@@ -130,7 +130,7 @@ const (
 // Endpoint consts
 const (
 	INTERNAL_EP TTendpoint = 1
-	EXTERNAL_EP            = 2
+	EXTERNAL_EP TTendpoint = 2
 )
 
 // Platform consts

@@ -2,19 +2,16 @@ package scontainer_test
 
 import (
 	"fmt"
-	"log"
 	"strconv"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/docker/go-connections/nat"
-
 	db "sigmaos/debug"
-	"sigmaos/util/linux/mem"
 	"sigmaos/proc"
 	"sigmaos/test"
+	"sigmaos/util/linux/mem"
 )
 
 func TestCompile(t *testing.T) {

@@ -104,6 +104,7 @@ std::expected<int, sigmaos::serr::Error> Srv::Init(int old_n_srv,
       rpc_idxs.push_back(nrpc++);
     }
   }
+  auto startLoad = GetCurrentTime();
   if (!_sp_clnt->ProcEnv()->GetRunBootScript()) {
     // For each source server, dump shards to be stolen
     for (int src_srv : src_srvs) {
@@ -138,6 +139,8 @@ std::expected<int, sigmaos::serr::Error> Srv::Init(int old_n_srv,
       }
     }
   }
+  LogSpawnLatency(_sp_clnt->ProcEnv()->GetPID(),
+                  _sp_clnt->ProcEnv()->GetSpawnTime(), startLoad, "Scaler.LoadCacheState");
   LogSpawnLatency(_sp_clnt->ProcEnv()->GetPID(),
                   _sp_clnt->ProcEnv()->GetSpawnTime(), start, "CacheSrv.Init");
   return 0;

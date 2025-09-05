@@ -321,7 +321,7 @@ func TestCosSimBoot(t *testing.T) {
 	if err := binary.Write(inputBuf, binary.LittleEndian, N_KEYS); !assert.Nil(t, err, "Err write input to boot script: %v", err) {
 		return
 	}
-	if err := wasmRT.RunModule(sp.Tpid("test-prog"), bootScriptCompiled, inputBuf.Bytes()); !assert.Nil(t, err, "Err run WASM boot module: %v", err) {
+	if err := wasmRT.RunModule(sp.Tpid("test-prog"), time.Now(), bootScriptCompiled, inputBuf.Bytes()); !assert.Nil(t, err, "Err run WASM boot module: %v", err) {
 		return
 	}
 }

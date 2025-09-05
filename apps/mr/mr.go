@@ -26,7 +26,7 @@ type Bin []mr.Split
 
 func (b Bin) String() string {
 	if len(b) == 0 {
-		return fmt.Sprintf("bins (0): []")
+		return "bins (0): []"
 	}
 	r := fmt.Sprintf("bins (%d): [ %v, ", len(b), b[0])
 	sum := sp.Tlength(b[0].Length)

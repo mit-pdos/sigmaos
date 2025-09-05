@@ -83,7 +83,7 @@ func (t TTendpoint) String() string {
 }
 
 func (ep *Tendpoint) Equal(ep1 *Tendpoint) bool {
-	for i, _ := range ep.Addr {
+	for i := range ep.Addr {
 		if i >= len(ep1.Addr) {
 			return false
 		}

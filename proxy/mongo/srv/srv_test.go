@@ -9,6 +9,8 @@ import (
 	"time"
 
 	dbg "sigmaos/debug"
+	dbclnt "sigmaos/proxy/db/clnt"
+	mongoclnt "sigmaos/proxy/mongo/clnt"
 	sp "sigmaos/sigmap"
 
 	"github.com/stretchr/testify/assert"

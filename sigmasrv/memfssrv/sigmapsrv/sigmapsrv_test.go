@@ -693,7 +693,7 @@ func TestLookupConcurPerf(t *testing.T) {
 		fsl2 := make([]*fslib.FsLib, 0, NTRIAL)
 		for j := 0; j < NTRIAL; j++ {
 			pe := proc.NewAddedProcEnv(ts.ProcEnv())
-			pe.NamedEndpointProto = ndMnt.TendpointProto
+			pe.SetCachedEndpoint(sp.NAMEDREL, ndMnt)
 			fsl, err := sigmaclnt.NewFsLib(pe, dialproxyclnt.NewDialProxyClnt(pe))
 			assert.Nil(t, err)
 			fsl2 = append(fsl2, fsl)
@@ -752,7 +752,7 @@ func TestLookupMultiMount(t *testing.T) {
 
 	db.DPrintf(db.TEST, "kernelid %v %v\n", kernelId, procdpid)
 
-	pe.NamedEndpointProto = nil
+	pe.ClearNamedEndpoint()
 	fsl, err := sigmaclnt.NewFsLib(pe, dialproxyclnt.NewDialProxyClnt(pe))
 	assert.Nil(t, err)
 

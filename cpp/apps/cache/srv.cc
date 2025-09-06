@@ -78,7 +78,7 @@ std::expected<int, sigmaos::serr::Error> Srv::Init(int old_n_srv,
                                                    int new_n_srv) {
   auto start = GetCurrentTime();
   // Create shards
-  for (uint64_t i = 0; i < NSHARD; i++) {
+  for (uint32_t i = 0; i < NSHARD; i++) {
     _cache[i] = std::make_shared<Shard>();
   }
   LogSpawnLatency(_sp_clnt->ProcEnv()->GetPID(),
@@ -92,7 +92,7 @@ std::expected<int, sigmaos::serr::Error> Srv::Init(int old_n_srv,
     src_srvs.push_back(i);
     shards_to_steal[i] = std::vector<uint32_t>();
   }
-  uint64_t nrpc;
+  int nrpc = 0;
   std::vector<uint64_t> rpc_idxs;
   for (uint32_t i = 0; i < NSHARD; i++) {
     if (i % new_n_srv == _srv_id) {
@@ -104,6 +104,7 @@ std::expected<int, sigmaos::serr::Error> Srv::Init(int old_n_srv,
       rpc_idxs.push_back(nrpc++);
     }
   }
+  log(CACHESRV, "Load shard dumps from old servers nshard: {}", nrpc);
   auto startLoad = GetCurrentTime();
   if (!_sp_clnt->ProcEnv()->GetRunBootScript()) {
     // For each source server, dump shards to be stolen
@@ -115,6 +116,7 @@ std::expected<int, sigmaos::serr::Error> Srv::Init(int old_n_srv,
           fatal("Error DumpShard: {}", res.error().String());
           return std::unexpected(res.error());
         }
+        log(CACHESRV, "Load shard {}", (int)shard);
         // Fill the local copy of the shard with the dumped values
         auto kvs = res.value();
         _cache.at(shard)->Fill(kvs);
@@ -132,6 +134,7 @@ std::expected<int, sigmaos::serr::Error> Srv::Init(int old_n_srv,
           fatal("Error DelegatedDumpShard: {}", res.error().String());
           return std::unexpected(res.error());
         }
+        log(CACHESRV, "Load shard delegated {}", (int)shard);
         // Fill the local copy of the shard with the dumped values
         auto kvs = res.value();
         _cache.at(shard)->Fill(kvs);

@@ -40,7 +40,7 @@ int main(int argc, char *argv[]) {
   start = GetCurrentTime();
   auto srv = std::make_shared<sigmaos::apps::cache::Srv>(
       sp_clnt, cache_dir, job_name, srv_pn, use_ep_cache, old_n_srv, new_n_srv,
-      new_n_srv);
+      new_n_srv - 1);
   LogSpawnLatency(pe->GetPID(), pe->GetSpawnTime(), start, "Make CacheSrv");
   srv->Run();
 }

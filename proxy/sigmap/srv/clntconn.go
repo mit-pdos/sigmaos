@@ -433,7 +433,7 @@ func (sca *SPProxySrvAPI) Exited(ctx fs.CtxI, req scproto.SigmaExitedReq, rep *s
 }
 
 func (sca *SPProxySrvAPI) WaitEvict(ctx fs.CtxI, req scproto.SigmaNullReq, rep *scproto.SigmaErrRep) error {
-	db.DPrintf(db.SPPROXYSRV, "%v: WaitEvict %v", sca.sc.ClntId())
+	db.DPrintf(db.SPPROXYSRV, "%v: WaitEvict", sca.sc.ClntId())
 	sca.sc.WaitEvict(sca.sc.ProcEnv().GetPID())
 	db.DPrintf(db.SPPROXYSRV, "%v: WaitEvict done %v %v", sca.sc.ClntId(), req, rep)
 	return nil

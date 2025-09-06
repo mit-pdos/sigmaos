@@ -5,6 +5,7 @@ package mgr
 import (
 	"bytes"
 	"encoding/binary"
+	"fmt"
 	"path/filepath"
 	"strconv"
 	"sync"
@@ -194,6 +195,9 @@ func (cs *CachedSvc) addScalerServerWithSigmaPath(sigmaPath string, delegatedIni
 		instances, _, err := cs.EPCacheJob.Clnt.GetEndpoints(svcName, epcache.NO_VERSION)
 		if err != nil {
 			return err
+		}
+		if len(instances) <= srvID {
+			return fmt.Errorf("not enough instances reported by epcache: %v <= %v", len(instances), srvID)
 		}
 		// Manually mount cached-scaler so it will resolve later
 		ep := sp.NewEndpointFromProto(instances[srvID].EndpointProto)

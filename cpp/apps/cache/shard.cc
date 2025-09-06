@@ -29,7 +29,7 @@ bool Shard::Delete(std::string &key) {
 void Shard::Fill(std::map<std::string, std::shared_ptr<std::string>> kvs) {
   std::lock_guard<std::mutex> guard(_mu);
   for (auto &[k, v] : kvs) {
-    _map.at(k) = v;
+    _map[k] = v;
   }
 }
 

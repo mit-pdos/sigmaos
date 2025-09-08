@@ -28,6 +28,7 @@ RUN rustup update
 RUN cargo install \
   wasm-pack \
   protobuf-codegen
+RUN rustup target add wasm32-unknown-unknown
 
 # Copy rust trampoline
 COPY rs rs 

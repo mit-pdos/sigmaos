@@ -143,7 +143,8 @@ std::expected<int, sigmaos::serr::Error> Srv::Init(int old_n_srv,
     }
   }
   LogSpawnLatency(_sp_clnt->ProcEnv()->GetPID(),
-                  _sp_clnt->ProcEnv()->GetSpawnTime(), startLoad, "Scaler.LoadCacheState");
+                  _sp_clnt->ProcEnv()->GetSpawnTime(), startLoad,
+                  "Scaler.LoadCacheState");
   LogSpawnLatency(_sp_clnt->ProcEnv()->GetPID(),
                   _sp_clnt->ProcEnv()->GetSpawnTime(), start, "CacheSrv.Init");
   return 0;

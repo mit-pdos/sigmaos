@@ -51,7 +51,8 @@ class Srv {
     log(CACHESRV,
         "Starting RPC srv id:{} cachedir:{} jobname:{} srvpn:{} useEPCache:{} "
         "oldNSrv:{} newNSrv:{}",
-        srv_id, cache_dir, job_name, srv_pn, use_ep_cache, old_n_srv, new_n_srv);
+        srv_id, cache_dir, job_name, srv_pn, use_ep_cache, old_n_srv,
+        new_n_srv);
     auto start = GetCurrentTime();
     _srv = std::make_shared<sigmaos::rpc::srv::Srv>(sp_clnt, INIT_NTHREAD);
     LogSpawnLatency(_sp_clnt->ProcEnv()->GetPID(),

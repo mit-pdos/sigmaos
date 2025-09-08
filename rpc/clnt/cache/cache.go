@@ -41,6 +41,13 @@ func (cc *ClntCache) Stats() Tstats {
 	return cc.stats
 }
 
+func (cc *ClntCache) Put(pn string, rpcc *rpcclnt.RPCClnt) {
+	cc.Lock()
+	defer cc.Unlock()
+
+	cc.rpccs[pn] = rpcc
+}
+
 // Note: several threads may call Lookup for same pn, overwriting the
 // rpcc of the last thread that called Lookup.
 func (cc *ClntCache) Lookup(pn string) (*rpcclnt.RPCClnt, error) {

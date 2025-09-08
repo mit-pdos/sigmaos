@@ -50,14 +50,16 @@ std::expected<bool, sigmaos::serr::Error> Cache::Get(
 
   // Delegated RPC retrieval is not in-progress, so bail out
   if (!_registered.contains(rpc_idx)) {
-    log(RPCCLNT_CACHE, "No cached DelegatedRPC registered RPC({})", (int)rpc_idx);
+    log(RPCCLNT_CACHE, "No cached DelegatedRPC registered RPC({})",
+        (int)rpc_idx);
     return false;
   }
 
   // Wait for the delegated RPC retrieval to complete
   _cond.wait(lock, [this, rpc_idx] { return _done.at(rpc_idx); });
 
-  log(RPCCLNT_CACHE, "Done waiting for cached DelegatedRPC RPC({})", (int)rpc_idx);
+  log(RPCCLNT_CACHE, "Done waiting for cached DelegatedRPC RPC({})",
+      (int)rpc_idx);
 
   // Sanity check that the RPC indeed completed
   if (!_done.at(rpc_idx)) {

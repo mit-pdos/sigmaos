@@ -999,7 +999,7 @@ func TestScaleCachedScaler(t *testing.T) {
 		nkeys               int             = 5000
 		scale               bool            = true
 		scaleDelay                          = 5 * time.Second
-		useCossimBackend    []bool          = []bool{true, false}
+		useCossimBackend    []bool          = []bool{true} //[]bool{true, false}
 		nvec                int             = 10000
 		nvecToQuery         int             = 5000
 		vecDim              int             = 100

@@ -75,6 +75,8 @@ func (t TTendpoint) String() string {
 	switch t {
 	case EXTERNAL_EP:
 		return "E"
+	case CPP_EP:
+		return "C"
 	case INTERNAL_EP:
 		return "I"
 	default:

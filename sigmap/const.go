@@ -131,6 +131,7 @@ const (
 const (
 	INTERNAL_EP TTendpoint = 1
 	EXTERNAL_EP TTendpoint = 2
+	CPP_EP      TTendpoint = 3
 )
 
 // Platform consts

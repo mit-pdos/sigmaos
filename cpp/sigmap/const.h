@@ -97,6 +97,7 @@ const sigmaos::sigmap::types::Tport NO_PORT = 0;
 // Endpoint consts
 const sigmaos::sigmap::types::TTendpoint INTERNAL_EP = 1;
 const sigmaos::sigmap::types::TTendpoint EXTERNAL_EP = 2;
+const sigmaos::sigmap::types::TTendpoint CPP_EP = 3;
 
 // Platform consts
 const sigmaos::sigmap::types::Tplatform PLATFORM_AWS = "aws";

@@ -203,7 +203,11 @@ func NewCachedScalerJob(ts *test.RealmTstate, jobName string, durs string, maxrp
 	// sure that future servers will try to download the cached-scaler binary
 	// from this msched.
 	db.DPrintf(db.TEST, "Target kernel to run prewarm with CachedScaler bin: %v", ji.warmCachedSrvKID)
-	err = ji.msc.WarmProcd(ji.warmCachedSrvKID, ts.Ts.ProcEnv().GetPID(), ts.GetRealm(), "cached-scaler-v"+sp.Version, ts.Ts.ProcEnv().GetSigmaPath(), proc.T_LC)
+	binBase := "cached-scaler-v"
+	if ji.useCPP {
+		binBase = "cached-srv-cpp-v"
+	}
+	err = ji.msc.WarmProcd(ji.warmCachedSrvKID, ts.Ts.ProcEnv().GetPID(), ts.GetRealm(), binBase+sp.Version, ts.Ts.ProcEnv().GetSigmaPath(), proc.T_LC)
 	if !assert.Nil(ts.Ts.T, err, "Err warming with cached-scaler bin: %v", err) {
 		return ji
 	}

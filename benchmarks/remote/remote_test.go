@@ -993,6 +993,7 @@ func TestScaleCachedScaler(t *testing.T) {
 		clientDelay         time.Duration   = 0 * time.Second
 		sleep               time.Duration   = 0 * time.Second
 		delegateInit        []bool          = []bool{true, false}
+		cppCached           []bool          = []bool{true, false}
 		prewarmRealm        []bool          = []bool{false} //[]bool{true, false}
 		useEPCache          bool            = true
 		nkeys               int             = 5000
@@ -1009,24 +1010,29 @@ func TestScaleCachedScaler(t *testing.T) {
 		return
 	}
 	for _, prewarm := range prewarmRealm {
-		for _, delegate := range delegateInit {
-			for _, cossimBackend := range useCossimBackend {
-				db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
-				benchName := benchNameBase
-				if delegate {
-					benchName += "_delegate"
-				}
-				if prewarm {
-					benchName += "_prewarm"
-				}
-				if cossimBackend {
-					benchName += "_cossim_backend"
-				}
-				getLeaderCmd := GetCachedScalerClientCmdConstructor(true, len(driverVMs), scale, scaleDelay, rps, dur, putRps, putDur, sleep, numCachedScaler, nkeys, delegate, useEPCache, prewarm, cossimBackend, nvec, nvecToQuery, vecDim, cossimDelegatedInit)
-				getFollowerCmd := GetCachedScalerClientCmdConstructor(false, len(driverVMs), scale, scaleDelay, rps, dur, putRps, putDur, sleep, numCachedScaler, nkeys, delegate, useEPCache, prewarm, cossimBackend, nvec, nvecToQuery, vecDim, cossimDelegatedInit)
-				ran := ts.RunParallelClientBenchmark(benchName, driverVMs, getLeaderCmd, getFollowerCmd, startK8sHotelApp, stopK8sHotelApp, clientDelay, numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost)
-				if oneByOne && ran {
-					return
+		for _, cpp := range cppCached {
+			for _, delegate := range delegateInit {
+				for _, cossimBackend := range useCossimBackend {
+					db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
+					benchName := benchNameBase
+					if cpp {
+						benchName += "_cpp"
+					}
+					if delegate {
+						benchName += "_delegate"
+					}
+					if prewarm {
+						benchName += "_prewarm"
+					}
+					if cossimBackend {
+						benchName += "_cossim_backend"
+					}
+					getLeaderCmd := GetCachedScalerClientCmdConstructor(true, len(driverVMs), scale, scaleDelay, rps, dur, putRps, putDur, sleep, numCachedScaler, nkeys, delegate, useEPCache, prewarm, cossimBackend, nvec, nvecToQuery, vecDim, cossimDelegatedInit, cpp)
+					getFollowerCmd := GetCachedScalerClientCmdConstructor(false, len(driverVMs), scale, scaleDelay, rps, dur, putRps, putDur, sleep, numCachedScaler, nkeys, delegate, useEPCache, prewarm, cossimBackend, nvec, nvecToQuery, vecDim, cossimDelegatedInit, cpp)
+					ran := ts.RunParallelClientBenchmark(benchName, driverVMs, getLeaderCmd, getFollowerCmd, startK8sHotelApp, stopK8sHotelApp, clientDelay, numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost)
+					if oneByOne && ran {
+						return
+					}
 				}
 			}
 		}

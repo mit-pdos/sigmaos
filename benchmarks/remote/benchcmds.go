@@ -801,7 +801,7 @@ func GetCachedBackupClientCmdConstructor(leader bool, numClients int, manuallySc
 	}
 }
 
-func GetCachedScalerClientCmdConstructor(leader bool, numClients int, manuallyScaleScalerCached bool, scaleScalerCachedDelay time.Duration, rps []int, dur []time.Duration, putRps []int, putDur []time.Duration, clientDelay time.Duration, numCachedScaler int, nkeys int, delegateInit, useEPCache, prewarm bool, cossimBackend bool, nvec int, nvecToQuery int, vecDim int, cossimDelegatedInit bool) GetBenchCmdFn {
+func GetCachedScalerClientCmdConstructor(leader bool, numClients int, manuallyScaleScalerCached bool, scaleScalerCachedDelay time.Duration, rps []int, dur []time.Duration, putRps []int, putDur []time.Duration, clientDelay time.Duration, numCachedScaler int, nkeys int, delegateInit, useEPCache, prewarm bool, cossimBackend bool, nvec int, nvecToQuery int, vecDim int, cossimDelegatedInit bool, cppCached bool) GetBenchCmdFn {
 	return func(bcfg *BenchConfig, ccfg *ClusterConfig) string {
 		const (
 			debugSelectors    string = "\"TEST;BENCH;LOADGEN;THROUGHPUT;CPU_UTIL;SPAWN_LAT;PROXY_LAT;COSSIMSRV;\""
@@ -842,6 +842,10 @@ func GetCachedScalerClientCmdConstructor(leader bool, numClients int, manuallySc
 		if cossimDelegatedInit {
 			cossimDelegatedInitStr = "--cossim_delegated_init"
 		}
+		cppCachedStr := ""
+		if cppCached {
+			cppCachedStr = "--scaler_cached_cpp"
+		}
 		return fmt.Sprintf("export SIGMADEBUG=%s; export SIGMAVALGRIND=%s; export SIGMAPERF=%s; go clean -testcache; "+
 			"ulimit -n 100000; "+
 			"./set-cores.sh --set 1 --start 2 --end 39 > /dev/null 2>&1 ; "+
@@ -861,6 +865,7 @@ func GetCachedScalerClientCmdConstructor(leader bool, numClients int, manuallySc
 			"%s "+ // scaler_cached_delegated_init
 			"%s "+ // cached_scaler_use_epcache
 			"%s "+ // prewarm
+			"%s "+ // scaler_cached_cpp
 			"%s "+ // scaler_cached_cossim_backend
 			"%s "+ // cossim_delegated_init
 			"--cossim_nvec %s "+
@@ -888,6 +893,7 @@ func GetCachedScalerClientCmdConstructor(leader bool, numClients int, manuallySc
 			delegateInitStr,
 			cachedScalerUseEPCacheStr,
 			prewarmStr,
+			cppCachedStr,
 			cossimBackendStr,
 			cossimDelegatedInitStr,
 			strconv.Itoa(nvec),

@@ -15,7 +15,7 @@ class Conn {
   ~Conn() {}
 
   // Get conn ID
-  std::string GetID() { return _id; }
+  std::string &GetID() { return _id; }
 
   // Read/Write a buffer
   std::expected<int, sigmaos::serr::Error> Read(std::string *b);

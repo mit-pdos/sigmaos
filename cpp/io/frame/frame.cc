@@ -65,7 +65,12 @@ std::expected<uint64_t, sigmaos::serr::Error> ReadSeqno(
     return res;
   }
   uint64_t seqno = res.value();
-  log(FRAME, "ReadSeqno {}", seqno);
+  // Suspiciously large seqno, so print more info
+  if (seqno > 10000000) {
+    log(FRAME, "ReadSeqno [{}] {}", conn->GetID(), seqno);
+  } else {
+    log(FRAME, "ReadSeqno {}", seqno);
+  }
   return seqno;
 }
 
@@ -77,6 +82,9 @@ std::expected<uint32_t, sigmaos::serr::Error> ReadNumFrames(
   }
   uint32_t nframes = res.value();
   log(FRAME, "ReadNumFrames {}", nframes);
+  if (nframes > 10000000) {
+    log(ALWAYS, "ReadNumFrames [{}] {}", conn->GetID(), (int)nframes);
+  }
   return nframes;
 }
 

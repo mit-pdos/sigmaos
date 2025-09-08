@@ -22,7 +22,7 @@ type CosSimClnt struct {
 }
 
 func NewCosSimClntFromEP(ep *sp.Tendpoint) (*CosSimClnt, error) {
-	rpcc, err := rpcncclnt.NewTCPRPCClnt("echosrv", ep)
+	rpcc, err := rpcncclnt.NewTCPRPCClnt("cossim", ep)
 	if err != nil {
 		db.DPrintf(db.COSSIMCLNT_ERR, "Err NewRPCClnt: %v", err)
 		return nil, err
@@ -47,7 +47,7 @@ func NewCosSimClnt(fsl *fslib.FsLib, epcc *epcacheclnt.EndpointCacheClnt, srvID 
 	}
 	if ep == nil {
 		db.DPrintf(db.COSSIMCLNT_ERR, "Err no EP for srv %v", srvID)
-		return nil, fmt.Errorf("No EP for srv %v", srvID)
+		return nil, fmt.Errorf("no EP for srv %v", srvID)
 	}
 	return NewCosSimClntFromEP(ep)
 }

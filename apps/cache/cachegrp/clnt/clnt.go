@@ -19,6 +19,7 @@ import (
 	epcacheclnt "sigmaos/apps/epcache/clnt"
 	db "sigmaos/debug"
 	"sigmaos/rpc"
+	rpcncclnt "sigmaos/rpc/clnt/netconn"
 	"sigmaos/sigmaclnt/fslib"
 	"sigmaos/sigmaclnt/fslib/dircache"
 	sp "sigmaos/sigmap"
@@ -87,6 +88,21 @@ func (csc *CachedSvcClnt) monitorServers() {
 			db.DPrintf(db.CACHEDSVCCLNT, "Err GetEndpoints: %v", err)
 			time.Sleep(1 * time.Second)
 			continue
+		}
+		db.DPrintf(db.CACHEDSVCCLNT, "Detected new number of instances: %v", len(instances))
+		// Create clients for each of the new instances, if any of them are CPP cache servers
+		for i := csc.nsrv; i < len(instances); i++ {
+			if sp.TTendpoint(instances[i].EndpointProto.Type) == sp.CPP_EP {
+				ep := sp.NewEndpointFromProto(instances[i].EndpointProto)
+				pn := csc.Server(i)
+				rpcc, err := rpcncclnt.NewTCPRPCClnt(pn, ep)
+				if err != nil {
+					db.DPrintf(db.ERROR, "Err NewRPCClnt cacheclnt: %v", err)
+				} else {
+					db.DPrintf(db.CACHEDSVCCLNT, "Create new cacheclnt for cache %v", pn)
+					csc.cc.ClntCache.Put(pn, rpcc)
+				}
+			}
 		}
 		csc.nsrv = len(instances)
 		db.DPrintf(db.CACHEDSVCCLNT, "GetEndpoints new nsrv: %v", csc.nsrv)

@@ -201,8 +201,11 @@ func (cs *CachedSvc) addScalerServerWithSigmaPath(sigmaPath string, delegatedIni
 		}
 		// Manually mount cached-scaler so it will resolve later
 		ep := sp.NewEndpointFromProto(instances[srvID].EndpointProto)
-		if err := cs.MountTree(ep, rpc.RPC, filepath.Join(srvPN, rpc.RPC)); err != nil {
-			return err
+		// Don't mount CPP cache servers (the clients will be created elsewhere, directly using the EP)
+		if ep.GetType() != sp.CPP_EP {
+			if err := cs.MountTree(ep, rpc.RPC, filepath.Join(srvPN, rpc.RPC)); err != nil {
+				return err
+			}
 		}
 		cs.serverEPs = append(cs.serverEPs, ep)
 	}

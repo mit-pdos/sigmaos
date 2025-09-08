@@ -11,6 +11,7 @@ RUN apt update && \
   parallel \
   time \
   cmake \
+  ccache \
   libprotobuf-dev \
   libseccomp-dev \
   libspdlog-dev \

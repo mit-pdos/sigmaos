@@ -1950,7 +1950,7 @@ func TestCachedScaler(t *testing.T) {
 	defer mrts.Shutdown()
 
 	if PREWARM_REALM {
-		benchmarks.WarmupRealm(mrts.GetRealm(REALM1), []string{"cached-scaler"})
+		benchmarks.WarmupRealm(mrts.GetRealm(REALM1), []string{"cached-scaler", "cached-srv-cpp"})
 	}
 
 	ts1 := mrts.GetRealm(REALM1)

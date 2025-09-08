@@ -21,17 +21,24 @@ std::expected<int, sigmaos::serr::Error> Clnt::DelegatedRPC(
   // Create the delegate request
   SigmaDelegatedRPCReq req;
   req.set_rpcidx(rpc_idx);
-  SigmaDelegatedRPCRep rep;
+  auto rep = std::make_shared<SigmaDelegatedRPCRep>();
   Blob blob;
   auto iov = blob.mutable_iov();
   // Add the delegated reply's blob output buffers to the RPC's blob
   for (int i = 0; i < out_iov->Size(); i++) {
     iov->AddAllocated(out_iov->GetBuffer(i)->Get());
   }
-  rep.set_allocated_blob(&blob);
+  rep->set_allocated_blob(&blob);
+  bool reply_cached = false;
   {
-    // Run the delegated RPC
-    auto res = rpc(true, "SPProxySrvAPI.GetDelegatedRPCReply", req, rep);
+    auto res = _cache.Get(rpc_idx, rep);
+    if (!res.has_value()) {
+      return res;
+    }
+  }
+  if (!reply_cached) {
+    // If there was no cached reply, run the delegated RPC
+    auto res = rpc(true, "SPProxySrvAPI.GetDelegatedRPCReply", req, *rep);
     if (!res.has_value()) {
       return res;
     }

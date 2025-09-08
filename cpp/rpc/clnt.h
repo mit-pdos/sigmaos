@@ -4,6 +4,7 @@
 #include <io/demux/clnt.h>
 #include <io/iovec/iovec.h>
 #include <proxy/sigmap/proto/spproxy.pb.h>
+#include <rpc/delegation/cache.h>
 #include <rpc/proto/rpc.pb.h>
 #include <serr/serr.h>
 #include <util/log/log.h>
@@ -20,9 +21,9 @@ const std::string RPCCLNT_ERR = "RPCCLNT" + sigmaos::util::log::ERR;
 class Clnt {
  public:
   Clnt(std::shared_ptr<Channel> chan)
-      : _seqno(1), _chan(chan), _delegate_chan(nullptr) {}
+      : _seqno(1), _chan(chan), _delegate_chan(nullptr), _cache() {}
   Clnt(std::shared_ptr<Channel> chan, std::shared_ptr<Channel> delegate_chan)
-      : _seqno(1), _chan(chan), _delegate_chan(delegate_chan) {}
+      : _seqno(1), _chan(chan), _delegate_chan(delegate_chan), _cache() {}
   ~Clnt() { Close(); }
 
   std::shared_ptr<Channel> GetChannel() { return _chan; }
@@ -42,6 +43,7 @@ class Clnt {
   std::atomic<uint64_t> _seqno;
   std::shared_ptr<Channel> _chan;
   std::shared_ptr<Channel> _delegate_chan;
+  sigmaos::rpc::delegation::Cache _cache;
   // Used for logger initialization
   static bool _l;
   static bool _l_e;

@@ -32,6 +32,8 @@ class Clnt {
                                                google::protobuf::Message &rep);
   std::expected<int, sigmaos::serr::Error> DelegatedRPC(
       uint64_t rpc_idx, google::protobuf::Message &delegated_rep);
+  std::expected<int, sigmaos::serr::Error> BatchFetchDelegatedRPCs(
+      std::vector<uint64_t> &rpc_idxs, int n_iov);
   void Close() {
     log(RPCCLNT, "Close");
     _chan->Close();

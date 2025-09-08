@@ -8,6 +8,46 @@ namespace rpc {
 bool Clnt::_l = sigmaos::util::log::init_logger(RPCCLNT);
 bool Clnt::_l_e = sigmaos::util::log::init_logger(RPCCLNT_ERR);
 
+std::expected<int, sigmaos::serr::Error> Clnt::BatchFetchDelegatedRPCs(
+    std::vector<uint64_t> &rpc_idxs, int n_iov) {
+  SigmaMultiDelegatedRPCReq req;
+  for (uint64_t rpc_idx : rpc_idxs) {
+    req.add_rpcidxs(rpc_idx);
+  }
+  SigmaMultiDelegatedRPCRep rep;
+  Blob blob;
+  for (int i = 0; i < n_iov; i++) {
+    blob.add_iov();
+  }
+  rep.set_allocated_blob(&blob);
+  {
+    // If there was no cached reply, run the delegated RPC
+    auto res = rpc(true, "SPProxySrvAPI.GetMultiDelegatedRPCReplies", req, rep);
+    if (!res.has_value()) {
+      return res;
+    }
+  }
+  int start = 0;
+  for (int i = 0; i < rpc_idxs.size(); i++) {
+    int end = start + rep.niovs(i);
+    uint64_t rpc_idx = rpc_idxs[i];
+    _cache.Register(rpc_idx);
+    auto delegated_rep = std::make_shared<SigmaDelegatedRPCRep>();
+    auto blob = new Blob();
+    auto iov = blob->mutable_iov();
+    for (int j = start; j < end; j++) {
+      auto vec = new std::string(rep.blob().iov(j));
+      iov->AddAllocated(vec);
+    }
+    delegated_rep->set_allocated_blob(blob);
+    *delegated_rep->mutable_err() = rep.errs(i);
+    // Cache the result
+    _cache.Put(rpc_idx, delegated_rep, nullptr);
+    start = end;
+  }
+  return 0;
+}
+
 // Retrieve the result of a delegated RPC
 std::expected<int, sigmaos::serr::Error> Clnt::DelegatedRPC(
     uint64_t rpc_idx, google::protobuf::Message &delegated_rep) {

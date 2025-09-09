@@ -66,13 +66,13 @@ std::expected<int, sigmaos::serr::Error> Clnt::DelegatedRPC(
   req.set_rpcidx(rpc_idx);
   auto rep = std::make_shared<SigmaDelegatedRPCRep>();
   // TODO: don't leak memory
-  Blob *blob = new Blob();
-  auto iov = blob->mutable_iov();
+  Blob blob;
+  auto iov = blob.mutable_iov();
   // Add the delegated reply's blob output buffers to the RPC's blob
   for (int i = 0; i < out_iov->Size(); i++) {
     iov->AddAllocated(out_iov->GetBuffer(i)->Get());
   }
-  rep->set_allocated_blob(blob);
+  rep->set_allocated_blob(&blob);
   bool reply_cached = false;
   {
     auto res = _cache.Get(rpc_idx, rep);
@@ -83,11 +83,6 @@ std::expected<int, sigmaos::serr::Error> Clnt::DelegatedRPC(
   }
   if (reply_cached) {
     log(RPCCLNT, "DelegatedRPC({}) reply cached", (int) rpc_idx);
-    for (int i = 0; i < rep->blob().iov().size(); i++) {
-      // TODO: don't leak memory
-      // TODO: just copy contents
-      out_iov->SetBuffer(i, std::make_shared<sigmaos::io::iovec::Buffer>(new std::string(rep->blob().iov(i))));
-    }
   } else {
     log(RPCCLNT, "DelegatedRPC({}) reply not cached", (int) rpc_idx);
     // If there was no cached reply, run the delegated RPC
@@ -99,8 +94,16 @@ std::expected<int, sigmaos::serr::Error> Clnt::DelegatedRPC(
   // Process the delegated, wrapped RPC reply
   auto res = process_wrapped_reply(rpc_idx, out_iov, delegated_rep);
   log(RPCCLNT, "DelegatedRPC done {}", (int)rpc_idx);
-  // TODO: don't leak memory
-  rep->release_blob();
+  {
+    // Release ownership of blob (which is a local stack variable declared
+    // above)
+    auto blob = rep->release_blob();
+    // Release ownership of buffers, which are owned by out_iov above
+    int n_buf = blob->iov().size();
+    for (int i = 0; i < n_buf; i++) {
+      auto _ = blob->mutable_iov()->ReleaseLast();
+    }
+  }
   return res;
 }
 

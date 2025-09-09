@@ -68,11 +68,10 @@ std::expected<bool, sigmaos::serr::Error> Cache::Get(
   // Copy reply to output
   auto cached_reply = _reps.at(rpc_idx);
   // Copy the blob data
+  // TODO: for i < 2, just set (don't copy)
   for (int i = 0; i < cached_reply->blob().iov().size(); i++) {
-    rep->mutable_blob()->set_iov(i, cached_reply->blob().iov(i));
+    *rep->mutable_blob()->mutable_iov(i) = cached_reply->blob().iov(i);
   }
-  // TODO: copy IOV contents for i >= 2
-//  rep->mutable_blob()->CopyFrom(cached_reply->blob());
   *rep->mutable_err() = cached_reply->err();
 
   auto err = _errors.at(rpc_idx);

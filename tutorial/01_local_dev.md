@@ -170,7 +170,7 @@ In order to make sure the build succeeded, run a simple test which starts
 SigmaOS up and exits immediately:
 
 ```
-$ go test -v sigmaos/sigmalclnt/fslib --run InitFs --start
+$ go test -v sigmaos/sigmaclnt/fslib --run InitFs --start
 ```
 
 The output should look something like:

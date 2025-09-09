@@ -123,7 +123,18 @@ std::expected<int, sigmaos::serr::Error> Srv::Init(int old_n_srv,
       }
     }
   } else {
-    // TODO: batch delegated RPC fetching
+    {
+      auto start = GetCurrentTime();
+      auto res = _cache_clnt->BatchFetchDelegatedRPCs(rpc_idxs, 2 * rpc_idxs.size());
+      if (!res.has_value()) {
+        log(CACHESRV_ERR, "Error BatchFetchDelegatedRPCs: {}", res.error());
+        fatal("Error BatchFetchDelegatedRPCs: {}", res.error().String());
+        return std::unexpected(res.error());
+      }
+      LogSpawnLatency(_sp_clnt->ProcEnv()->GetPID(),
+                      _sp_clnt->ProcEnv()->GetSpawnTime(), start,
+                      "Scaler.BatchFetchDelegatedRPCs");
+    }
     uint64_t rpc_idx = 0;
     // For each source server, dump shards to be stolen
     for (int src_srv : src_srvs) {

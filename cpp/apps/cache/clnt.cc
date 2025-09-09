@@ -250,6 +250,29 @@ Clnt::DumpShard(uint32_t shard, bool empty) {
   return kvs;
 }
 
+std::expected<int, sigmaos::serr::Error>
+Clnt::BatchFetchDelegatedRPCs(std::vector<uint64_t> &rpc_idxs, int n_iov) {
+  log(CACHECLNT, "BatchFetchDelegatedRPCs: {}", rpc_idxs.size());
+  std::shared_ptr<sigmaos::rpc::Clnt> rpcc;
+  {
+    auto res = get_clnt(0, false);
+    if (!res.has_value()) {
+      log(CACHECLNT_ERR, "Error get_clnt: {}", res.error().String());
+      return std::unexpected(res.error());
+    }
+    rpcc = res.value();
+  }
+  {
+    auto res = rpcc->BatchFetchDelegatedRPCs(rpc_idxs, n_iov);
+    if (!res.has_value()) {
+      log(CACHECLNT_ERR, "Error BatchFetchDelegatedRPCs: {}", res.error().String());
+      return std::unexpected(res.error());
+    }
+  }
+  log(CACHECLNT, "BatchFetchDelegatedRPCs ok: {}", rpc_idxs.size());
+  return 0;
+}
+
 std::expected<std::map<std::string, std::shared_ptr<std::string>>,
               sigmaos::serr::Error>
 Clnt::DelegatedDumpShard(uint64_t rpc_idx) {

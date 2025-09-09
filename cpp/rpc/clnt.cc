@@ -10,14 +10,18 @@ bool Clnt::_l_e = sigmaos::util::log::init_logger(RPCCLNT_ERR);
 
 std::expected<int, sigmaos::serr::Error> Clnt::BatchFetchDelegatedRPCs(
     std::vector<uint64_t> &rpc_idxs, int n_iov) {
+  log(RPCCLNT, "BatchFetchDelegatedRPCs {}", (int)rpc_idxs.size());
+  auto out_iov = new sigmaos::io::iovec::IOVec();
+  out_iov->AddBuffers(n_iov);
   SigmaMultiDelegatedRPCReq req;
   for (uint64_t rpc_idx : rpc_idxs) {
     req.add_rpcidxs(rpc_idx);
   }
   SigmaMultiDelegatedRPCRep rep;
   Blob blob;
+  auto iov = blob.mutable_iov();
   for (int i = 0; i < n_iov; i++) {
-    blob.add_iov();
+    iov->AddAllocated(out_iov->GetBuffer(i)->Get());
   }
   rep.set_allocated_blob(&blob);
   {
@@ -36,8 +40,7 @@ std::expected<int, sigmaos::serr::Error> Clnt::BatchFetchDelegatedRPCs(
     auto blob = new Blob();
     auto iov = blob->mutable_iov();
     for (int j = start; j < end; j++) {
-      auto vec = new std::string(rep.blob().iov(j));
-      iov->AddAllocated(vec);
+      iov->AddAllocated(out_iov->GetBuffer(j)->Get());
     }
     delegated_rep->set_allocated_blob(blob);
     *delegated_rep->mutable_err() = rep.errs(i);
@@ -58,25 +61,35 @@ std::expected<int, sigmaos::serr::Error> Clnt::DelegatedRPC(
   out_iov->AddBuffers(2);
   // Extract any output IOVecs from the delegated reply RPC
   extract_blob_iov(delegated_rep, out_iov);
-  // Create the delegate request
+  // Create the delegated request
   SigmaDelegatedRPCReq req;
   req.set_rpcidx(rpc_idx);
   auto rep = std::make_shared<SigmaDelegatedRPCRep>();
-  Blob blob;
-  auto iov = blob.mutable_iov();
+  // TODO: don't leak memory
+  Blob *blob = new Blob();
+  auto iov = blob->mutable_iov();
   // Add the delegated reply's blob output buffers to the RPC's blob
   for (int i = 0; i < out_iov->Size(); i++) {
     iov->AddAllocated(out_iov->GetBuffer(i)->Get());
   }
-  rep->set_allocated_blob(&blob);
+  rep->set_allocated_blob(blob);
   bool reply_cached = false;
   {
     auto res = _cache.Get(rpc_idx, rep);
     if (!res.has_value()) {
       return res;
     }
+    reply_cached = res.value();
   }
-  if (!reply_cached) {
+  if (reply_cached) {
+    log(RPCCLNT, "DelegatedRPC({}) reply cached", (int) rpc_idx);
+    for (int i = 0; i < rep->blob().iov().size(); i++) {
+      // TODO: don't leak memory
+      // TODO: just copy contents
+      out_iov->SetBuffer(i, std::make_shared<sigmaos::io::iovec::Buffer>(new std::string(rep->blob().iov(i))));
+    }
+  } else {
+    log(RPCCLNT, "DelegatedRPC({}) reply not cached", (int) rpc_idx);
     // If there was no cached reply, run the delegated RPC
     auto res = rpc(true, "SPProxySrvAPI.GetDelegatedRPCReply", req, *rep);
     if (!res.has_value()) {
@@ -86,6 +99,8 @@ std::expected<int, sigmaos::serr::Error> Clnt::DelegatedRPC(
   // Process the delegated, wrapped RPC reply
   auto res = process_wrapped_reply(rpc_idx, out_iov, delegated_rep);
   log(RPCCLNT, "DelegatedRPC done {}", (int)rpc_idx);
+  // TODO: don't leak memory
+  rep->release_blob();
   return res;
 }
 
@@ -227,7 +242,7 @@ std::expected<int, sigmaos::serr::Error> Clnt::process_wrapped_reply(
   // Remove the first element in iov, which contains the serialized reply
   // message
   out_iov->RemoveBuffer(0);
-  log(RPCCLNT, "Set blob IOV");
+  log(RPCCLNT, "Set blob IOV len {}", out_iov->Size());
   // Set the reply's blob's IOV to point to the returned data, if applicable.
   set_blob_iov(out_iov, rep);
   log(RPCCLNT, "Done set blob IOV");

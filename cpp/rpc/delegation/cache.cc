@@ -22,7 +22,7 @@ void Cache::Put(uint64_t rpc_idx, std::shared_ptr<SigmaDelegatedRPCRep> rep,
                 std::shared_ptr<sigmaos::serr::Error> err) {
   {
     log(RPCCLNT_CACHE, "Put cached DelegatedRPC RPC({}) err {}", (int)rpc_idx,
-        (err == nullptr));
+        (err != nullptr));
     std::lock_guard<std::mutex> lock(_mu);
     // Sanity check
     if (!_registered.contains(rpc_idx)) {
@@ -68,7 +68,11 @@ std::expected<bool, sigmaos::serr::Error> Cache::Get(
   // Copy reply to output
   auto cached_reply = _reps.at(rpc_idx);
   // Copy the blob data
-  rep->mutable_blob()->CopyFrom(cached_reply->blob());
+  for (int i = 0; i < cached_reply->blob().iov().size(); i++) {
+    rep->mutable_blob()->set_iov(i, cached_reply->blob().iov(i));
+  }
+  // TODO: copy IOV contents for i >= 2
+//  rep->mutable_blob()->CopyFrom(cached_reply->blob());
   *rep->mutable_err() = cached_reply->err();
 
   auto err = _errors.at(rpc_idx);

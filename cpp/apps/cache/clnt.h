@@ -50,6 +50,8 @@ class Clnt {
   std::expected<std::map<std::string, std::shared_ptr<std::string>>,
                 sigmaos::serr::Error>
   DelegatedDumpShard(uint64_t rpc_idx);
+  std::expected<int, sigmaos::serr::Error>
+  BatchFetchDelegatedRPCs(std::vector<uint64_t> &rpc_idxs, int n_iov);
 
  private:
   std::mutex _mu;

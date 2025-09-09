@@ -135,6 +135,7 @@ std::expected<int, sigmaos::serr::Error> Srv::Init(int old_n_srv,
                       _sp_clnt->ProcEnv()->GetSpawnTime(), start,
                       "Scaler.BatchFetchDelegatedRPCs");
     }
+    auto start = GetCurrentTime();
     uint64_t rpc_idx = 0;
     // For each source server, dump shards to be stolen
     for (int src_srv : src_srvs) {
@@ -152,6 +153,9 @@ std::expected<int, sigmaos::serr::Error> Srv::Init(int old_n_srv,
         rpc_idx++;
       }
     }
+    LogSpawnLatency(_sp_clnt->ProcEnv()->GetPID(),
+                    _sp_clnt->ProcEnv()->GetSpawnTime(), start,
+                    "Scaler.DelegatedDumpRPCs");
   }
   LogSpawnLatency(_sp_clnt->ProcEnv()->GetPID(),
                   _sp_clnt->ProcEnv()->GetSpawnTime(), startLoad,

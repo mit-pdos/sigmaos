@@ -299,13 +299,9 @@ Clnt::DelegatedDumpShard(uint64_t rpc_idx) {
       log(CACHECLNT_ERR, "Error Get: {}", res.error().String());
       return std::unexpected(res.error());
     }
-    auto start = GetCurrentTime();
     for (auto &[k, v] : *rep.mutable_vals()) {
       (*kvs)[k] = std::make_shared<std::string>(std::move(v));
     }
-    LogSpawnLatency(_sp_clnt->ProcEnv()->GetPID(),
-                    _sp_clnt->ProcEnv()->GetSpawnTime(), start,
-                    "CacheClnt.MakeMap");
   }
   log(CACHECLNT, "DelegatedDumpShard ok: {}", rpc_idx);
   return kvs;

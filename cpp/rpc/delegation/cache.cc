@@ -72,14 +72,15 @@ std::expected<bool, sigmaos::serr::Error> Cache::Get(
   // Set the wrapper & serialized RPC buffers since these two are prepended
   // by the RPC stack and aren't supplied by the caller
   for (int i = 0; i < 2; i++) {
-    out_iov->SetBuffer(i, std::make_shared<sigmaos::io::iovec::Buffer>(cached_reply->mutable_blob()->mutable_iov(i)));
+    out_iov->SetBuffer(i, std::make_shared<sigmaos::io::iovec::Buffer>(
+                              cached_reply->mutable_blob()->mutable_iov(i)));
   }
   // Copy into the remaining IOVs in the blob, since these are supplied by the
   // caller
   for (int i = 2; i < cached_reply->blob().iov().size(); i++) {
     *(out_iov->GetBuffer(i)->Get()) = cached_reply->blob().iov(i);
   }
-//  *rep->mutable_err() = cached_reply->err();
+  //  *rep->mutable_err() = cached_reply->err();
 
   auto err = _errors.at(rpc_idx);
   if (err) {

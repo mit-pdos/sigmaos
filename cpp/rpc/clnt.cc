@@ -81,9 +81,9 @@ std::expected<int, sigmaos::serr::Error> Clnt::DelegatedRPC(
     reply_cached = res.value();
   }
   if (reply_cached) {
-    log(RPCCLNT, "DelegatedRPC({}) reply cached", (int) rpc_idx);
+    log(RPCCLNT, "DelegatedRPC({}) reply cached", (int)rpc_idx);
   } else {
-    log(RPCCLNT, "DelegatedRPC({}) reply not cached", (int) rpc_idx);
+    log(RPCCLNT, "DelegatedRPC({}) reply not cached", (int)rpc_idx);
     // If there was no cached reply, run the delegated RPC
     auto res = rpc(true, "SPProxySrvAPI.GetDelegatedRPCReply", req, *rep);
     if (!res.has_value()) {

@@ -26,7 +26,8 @@ bool Shard::Delete(std::string &key) {
   return existed;
 }
 
-void Shard::Fill(std::shared_ptr<std::map<std::string, std::shared_ptr<std::string>>> kvs) {
+void Shard::Fill(
+    std::shared_ptr<std::map<std::string, std::shared_ptr<std::string>>> kvs) {
   std::lock_guard<std::mutex> guard(_mu);
   for (auto &[k, v] : *kvs) {
     _map[k] = v;

@@ -125,7 +125,8 @@ std::expected<int, sigmaos::serr::Error> Srv::Init(int old_n_srv,
   } else {
     {
       auto start = GetCurrentTime();
-      auto res = _cache_clnt->BatchFetchDelegatedRPCs(rpc_idxs, 2 * rpc_idxs.size());
+      auto res =
+          _cache_clnt->BatchFetchDelegatedRPCs(rpc_idxs, 2 * rpc_idxs.size());
       if (!res.has_value()) {
         log(CACHESRV_ERR, "Error BatchFetchDelegatedRPCs: {}", res.error());
         fatal("Error BatchFetchDelegatedRPCs: {}", res.error().String());

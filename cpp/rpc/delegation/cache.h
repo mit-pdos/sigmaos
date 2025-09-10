@@ -1,6 +1,7 @@
 #pragma once
 
 #include <proxy/sigmap/proto/spproxy.pb.h>
+#include <io/iovec/iovec.h>
 #include <serr/serr.h>
 #include <util/log/log.h>
 
@@ -29,7 +30,7 @@ class Cache {
 
   // Retrieve a delegated RPC reply by index
   std::expected<bool, sigmaos::serr::Error> Get(
-      uint64_t rpc_idx, std::shared_ptr<SigmaDelegatedRPCRep> rep);
+      uint64_t rpc_idx, std::shared_ptr<sigmaos::io::iovec::IOVec> out_iov);
 
  private:
   mutable std::mutex _mu;

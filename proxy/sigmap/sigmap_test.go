@@ -162,7 +162,7 @@ func TestCachedDelegatedReshard(t *testing.T) {
 	}
 }
 
-func TestCachedDelegatedReshardCPP(t *testing.T) {
+func TestCachedDelegatedReshardCPPScaler(t *testing.T) {
 	const (
 		JOB_NAME       = "scalecache-job"
 		ncache         = 1
@@ -170,7 +170,7 @@ func TestCachedDelegatedReshardCPP(t *testing.T) {
 		cacheGC        = true
 		useEPCache     = true
 		N_KV           = 5000
-		DELEGATED_INIT = false
+		DELEGATED_INIT = true
 		TOP_N          = cachesrv.GET_ALL_SHARDS
 	)
 

@@ -65,7 +65,6 @@ std::expected<int, sigmaos::serr::Error> Clnt::DelegatedRPC(
   SigmaDelegatedRPCReq req;
   req.set_rpcidx(rpc_idx);
   auto rep = std::make_shared<SigmaDelegatedRPCRep>();
-  // TODO: don't leak memory
   Blob blob;
   auto iov = blob.mutable_iov();
   // Add the delegated reply's blob output buffers to the RPC's blob
@@ -75,7 +74,7 @@ std::expected<int, sigmaos::serr::Error> Clnt::DelegatedRPC(
   rep->set_allocated_blob(&blob);
   bool reply_cached = false;
   {
-    auto res = _cache.Get(rpc_idx, rep);
+    auto res = _cache.Get(rpc_idx, out_iov);
     if (!res.has_value()) {
       return res;
     }

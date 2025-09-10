@@ -43,7 +43,7 @@ void Cache::Put(uint64_t rpc_idx, std::shared_ptr<SigmaDelegatedRPCRep> rep,
 }
 
 std::expected<bool, sigmaos::serr::Error> Cache::Get(
-    uint64_t rpc_idx, std::shared_ptr<SigmaDelegatedRPCRep> rep) {
+    uint64_t rpc_idx, std::shared_ptr<sigmaos::io::iovec::IOVec> out_iov) {
   log(RPCCLNT_CACHE, "Get cached DelegatedRPC RPC({})", (int)rpc_idx);
   // Acquire the lock
   std::unique_lock<std::mutex> lock(_mu);
@@ -69,10 +69,17 @@ std::expected<bool, sigmaos::serr::Error> Cache::Get(
   auto cached_reply = _reps.at(rpc_idx);
   // Copy the blob data
   // TODO: for i < 2, just set (don't copy)
-  for (int i = 0; i < cached_reply->blob().iov().size(); i++) {
-    *rep->mutable_blob()->mutable_iov(i) = cached_reply->blob().iov(i);
+  // Set the wrapper & serialized RPC buffers since these two are prepended
+  // by the RPC stack and aren't supplied by the caller
+  for (int i = 0; i < 2; i++) {
+    out_iov->SetBuffer(i, std::make_shared<sigmaos::io::iovec::Buffer>(cached_reply->mutable_blob()->mutable_iov(i)));
   }
-  *rep->mutable_err() = cached_reply->err();
+  // Copy into the remaining IOVs in the blob, since these are supplied by the
+  // caller
+  for (int i = 2; i < cached_reply->blob().iov().size(); i++) {
+    *(out_iov->GetBuffer(i)->Get()) = cached_reply->blob().iov(i);
+  }
+//  *rep->mutable_err() = cached_reply->err();
 
   auto err = _errors.at(rpc_idx);
   if (err) {

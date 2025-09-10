@@ -44,10 +44,10 @@ class Clnt {
   std::expected<int, sigmaos::serr::Error> Put(
       std::string key, std::shared_ptr<std::string> val);
   std::expected<int, sigmaos::serr::Error> Delete(std::string key);
-  std::expected<std::map<std::string, std::shared_ptr<std::string>>,
+  std::expected<std::shared_ptr<std::map<std::string, std::shared_ptr<std::string>>>,
                 sigmaos::serr::Error>
   DumpShard(uint32_t shard, bool empty);
-  std::expected<std::map<std::string, std::shared_ptr<std::string>>,
+  std::expected<std::shared_ptr<std::map<std::string, std::shared_ptr<std::string>>>,
                 sigmaos::serr::Error>
   DelegatedDumpShard(uint64_t rpc_idx);
   std::expected<int, sigmaos::serr::Error>

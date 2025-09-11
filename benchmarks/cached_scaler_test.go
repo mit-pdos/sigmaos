@@ -153,7 +153,29 @@ func NewCachedScalerJob(ts *test.RealmTstate, jobName string, durs string, maxrp
 		}
 		ji.primaryEPs[i] = ep
 	}
-	// Find machines were cached is running
+	// Construct CosSim request input
+	cossimInputVec := cossim.VectorToSlice(cossim.NewVectors(1, ji.cossimVecDim)[0])
+	ranges := []*cossimproto.VecRange{
+		&cossimproto.VecRange{
+			StartID: 0,
+			EndID:   uint64(ji.cossimNVecToQuery - 1),
+		},
+	}
+	if ji.cossimBackend {
+		db.DPrintf(db.TEST, "Start cossimsrv")
+		eagerInit := true
+		ji.cossimJ, err = cossimsrv.NewCosSimJob(ts.SigmaClnt, ji.epcj, ji.cm, ji.cc, ji.jobName, ji.cossimNVec, ji.cossimVecDim, eagerInit, ji.cossimMCPU, ji.ncache, ji.cossimMCPU, cacheGC, ji.cossimDelegatedInit)
+		if !assert.Nil(ts.Ts.T, err, "Error NewCosSimJob: %v", err) {
+			return ji
+		}
+		_, _, err := ji.cossimJ.AddSrv()
+		if !assert.Nil(ts.Ts.T, err, "Err Cossim AddSrv: %v", err) {
+			return ji
+		}
+		db.DPrintf(db.TEST, "Done start cossimsrv")
+	}
+
+	// Find machines were cached and cossim-srv-cpp are running
 	if _, err := ji.msc.GetMScheds(); !assert.Nil(ts.Ts.T, err, "Err GetMScheds: %v", err) {
 		return ji
 	}
@@ -171,13 +193,15 @@ func NewCachedScalerJob(ts *test.RealmTstate, jobName string, durs string, maxrp
 		for _, p := range runningProcs[ts.GetRealm()] {
 			// Record where relevant programs are running
 			switch p.GetProgram() {
-			case "named":
-				db.DPrintf(db.TEST, "named[%v] running on kernel %v", p.GetPid(), p.GetKernelID())
-				ji.warmCachedSrvKID = p.GetKernelID()
+			case "cossim-srv-cpp":
+				db.DPrintf(db.TEST, "cossim-srv-cpp[%v] running on kernel %v", p.GetPid(), p.GetKernelID())
 			case "cached":
 				ji.cacheKIDs[p.GetKernelID()] = true
 				db.DPrintf(db.TEST, "cached[%v] running on kernel %v", p.GetPid(), p.GetKernelID())
 				foundCached = true
+				if !ji.cossimBackend {
+					ji.warmCachedSrvKID = p.GetKernelID()
+				}
 			default:
 			}
 		}
@@ -188,15 +212,6 @@ func NewCachedScalerJob(ts *test.RealmTstate, jobName string, durs string, maxrp
 	}
 	if !assert.True(ts.Ts.T, foundCached, "Err didn't find cached srv") {
 		return ji
-	}
-
-	// Construct CosSim request input
-	cossimInputVec := cossim.VectorToSlice(cossim.NewVectors(1, ji.cossimVecDim)[0])
-	ranges := []*cossimproto.VecRange{
-		&cossimproto.VecRange{
-			StartID: 0,
-			EndID:   uint64(ji.cossimNVecToQuery - 1),
-		},
 	}
 
 	// Warm up an msched currently running a cached shard with the cached-scaler
@@ -269,19 +284,6 @@ func NewCachedScalerJob(ts *test.RealmTstate, jobName string, durs string, maxrp
 				return 0, false
 			}))
 		}
-	}
-	if ji.cossimBackend {
-		db.DPrintf(db.TEST, "Start cossimsrv")
-		eagerInit := true
-		ji.cossimJ, err = cossimsrv.NewCosSimJob(ts.SigmaClnt, ji.epcj, ji.cm, ji.cc, ji.jobName, ji.cossimNVec, ji.cossimVecDim, eagerInit, ji.cossimMCPU, ji.ncache, ji.cossimMCPU, cacheGC, ji.cossimDelegatedInit)
-		if !assert.Nil(ts.Ts.T, err, "Error NewCosSimJob: %v", err) {
-			return ji
-		}
-		_, _, err := ji.cossimJ.AddSrv()
-		if !assert.Nil(ts.Ts.T, err, "Err Cossim AddSrv: %v", err) {
-			return ji
-		}
-		db.DPrintf(db.TEST, "Done start cossimsrv")
 	}
 	return ji
 }

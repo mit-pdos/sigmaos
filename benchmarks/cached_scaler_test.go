@@ -44,6 +44,8 @@ type CachedScalerJobInstance struct {
 	msc              *mschedclnt.MSchedClnt
 	cm               *cachegrpmgr.CacheMgr
 	cc               *cachegrpclnt.CachedSvcClnt
+	useSleeper       bool
+	sleeperProc      *proc.Proc
 	primaryEPs       []*sp.Tendpoint
 	lgs              []*loadgen.LoadGenerator
 	putLGs           []*loadgen.LoadGenerator
@@ -70,7 +72,7 @@ type CachedScalerJobInstance struct {
 	*test.RealmTstate
 }
 
-func NewCachedScalerJob(ts *test.RealmTstate, jobName string, durs string, maxrpss string, putDurs string, putMaxrpss string, ncache int, cacheMCPU proc.Tmcpu, cacheGC bool, useEPCache bool, nKV int, delegatedInit bool, topN int, scale bool, scaleDelay time.Duration, scalerCachedCPP bool, cossimBackend bool, cossimNVec int, cossimVecDim int, cossimMCPU proc.Tmcpu, cossimDelegatedInit bool, cossimNVecToQuery int) *CachedScalerJobInstance {
+func NewCachedScalerJob(ts *test.RealmTstate, jobName string, durs string, maxrpss string, putDurs string, putMaxrpss string, ncache int, cacheMCPU proc.Tmcpu, cacheGC bool, useEPCache bool, nKV int, delegatedInit bool, topN int, scale bool, scaleDelay time.Duration, scalerCachedCPP bool, scalerCachedRunSleeper bool, cossimBackend bool, cossimNVec int, cossimVecDim int, cossimMCPU proc.Tmcpu, cossimDelegatedInit bool, cossimNVecToQuery int) *CachedScalerJobInstance {
 	ji := &CachedScalerJobInstance{
 		RealmTstate:         ts,
 		sigmaos:             true,
@@ -80,6 +82,7 @@ func NewCachedScalerJob(ts *test.RealmTstate, jobName string, durs string, maxrp
 		cacheGC:             cacheGC,
 		useEPCache:          useEPCache,
 		useCPP:              scalerCachedCPP,
+		useSleeper:          scalerCachedRunSleeper,
 		cacheKIDs:           make(map[string]bool),
 		msc:                 mschedclnt.NewMSchedClnt(ts.SigmaClnt.FsLib, sp.NOT_SET),
 		nKV:                 nKV,
@@ -161,8 +164,19 @@ func NewCachedScalerJob(ts *test.RealmTstate, jobName string, durs string, maxrp
 	if !assert.Nil(ts.Ts.T, err, "Err GetNMSched: %v", err) {
 		return ji
 	}
+	if ji.useSleeper {
+		ji.sleeperProc = proc.NewProc("sleeper", []string{"10000s", "name/"})
+		ji.sleeperProc.SetMcpu(4000)
+		if err := ji.Ts.Spawn(ji.sleeperProc); !assert.Nil(ts.Ts.T, err, "Err spawn sleeper proc: %v") {
+			return ji
+		}
+		if err := ji.Ts.WaitStart(ji.sleeperProc.GetPid()); !assert.Nil(ts.Ts.T, err, "Err WaitStart sleeper proc: %v") {
+			return ji
+		}
+	}
 	time.Sleep(10 * time.Second)
 	foundCached := false
+	foundSleeper := false
 	for i := 0; i < 5; i++ {
 		runningProcs, err := ji.msc.GetRunningProcs(nMSched)
 		if !assert.Nil(ts.Ts.T, err, "Err GetRunningProcs: %v", err) {
@@ -171,9 +185,15 @@ func NewCachedScalerJob(ts *test.RealmTstate, jobName string, durs string, maxrp
 		for _, p := range runningProcs[ts.GetRealm()] {
 			// Record where relevant programs are running
 			switch p.GetProgram() {
+			case "sleeper":
+				ji.warmCachedSrvKID = p.GetKernelID()
+				db.DPrintf(db.TEST, "sleeper[%v] running on kernel %v", p.GetPid(), p.GetKernelID())
+				foundCached = true
 			case "cached":
 				ji.cacheKIDs[p.GetKernelID()] = true
-				ji.warmCachedSrvKID = p.GetKernelID()
+				if !ji.useSleeper {
+					ji.warmCachedSrvKID = p.GetKernelID()
+				}
 				db.DPrintf(db.TEST, "cached[%v] running on kernel %v", p.GetPid(), p.GetKernelID())
 				foundCached = true
 			default:
@@ -182,9 +202,15 @@ func NewCachedScalerJob(ts *test.RealmTstate, jobName string, durs string, maxrp
 		if !foundCached {
 			db.DPrintf(db.TEST, "Didn't find cached")
 		}
+		if !foundSleeper && ji.useSleeper {
+			db.DPrintf(db.TEST, "Didn't find cached")
+		}
 		time.Sleep(5 * time.Second)
 	}
 	if !assert.True(ts.Ts.T, foundCached, "Err didn't find cached srv") {
+		return ji
+	}
+	if !assert.True(ts.Ts.T, !ji.useSleeper || foundSleeper, "Err didn't find sleeper srv") {
 		return ji
 	}
 
@@ -325,6 +351,12 @@ func (ji *CachedScalerJobInstance) StartCachedScalerJob() {
 }
 
 func (ji *CachedScalerJobInstance) Wait() {
+	if ji.useSleeper {
+		if err := ji.Ts.Evict(ji.sleeperProc.GetPid()); assert.Nil(ji.Ts.T, err, "Err evict sleeper proc: %v", err) {
+			_, err := ji.Ts.WaitExit(ji.sleeperProc.GetPid())
+			assert.Nil(ji.Ts.T, err, "Err WaitExit proc: %v", err)
+		}
+	}
 	for _, lg := range ji.lgs {
 		lg.Stats()
 	}

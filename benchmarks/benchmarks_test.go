@@ -104,6 +104,7 @@ var BACKUP_CACHED_PUT_MAX_RPS string
 var SCALE_BACKUP_CACHED_DELAY time.Duration
 var MANUALLY_SCALE_BACKUP_CACHED bool
 var SCALER_CACHED_CPP bool
+var SCALER_CACHED_RUN_SLEEPER bool
 var SCALER_CACHED_NCACHE int
 var SCALER_CACHED_CACHE_MCPU int
 var SCALER_CACHED_COSSIM_BACKEND bool
@@ -224,6 +225,7 @@ func init() {
 	flag.IntVar(&SCALER_CACHED_CACHE_MCPU, "scaler_cached_mcpu", 1000, "Scaler cached mcpu")
 	flag.IntVar(&SCALER_CACHED_NKEYS, "scaler_cached_nkeys", 5000, "Scaler cached nkeys")
 	flag.BoolVar(&SCALER_CACHED_CPP, "scaler_cached_cpp", false, "Scaler cached use CPP version")
+	flag.BoolVar(&SCALER_CACHED_RUN_SLEEPER, "scaler_cached_run_sleeper", false, "Run a sleeper to block a machine for scaler cached to cache its bin on")
 	flag.BoolVar(&SCALER_CACHED_COSSIM_BACKEND, "scaler_cached_cossim_backend", false, "Scaler cached use cossim as backend")
 	flag.BoolVar(&SCALER_CACHED_USE_EPCACHE, "scaler_cached_use_epcache", false, "Scaler cached use epcache")
 	flag.BoolVar(&SCALER_CACHED_DELEGATE_INIT, "scaler_cached_delegated_init", false, "Scaler cached delegate init")
@@ -1959,7 +1961,7 @@ func TestCachedScaler(t *testing.T) {
 	defer p.Done()
 
 	rs := benchmarks.NewResults(1, benchmarks.E2E)
-	jobs, ji := newCachedScalerJobs(mrts.GetRealm(REALM1), jobName, SCALER_CACHED_DURS, SCALER_CACHED_MAX_RPS, SCALER_CACHED_PUT_DURS, SCALER_CACHED_PUT_MAX_RPS, SCALER_CACHED_NCACHE, proc.Tmcpu(SCALER_CACHED_CACHE_MCPU), true, SCALER_CACHED_USE_EPCACHE, SCALER_CACHED_NKEYS, SCALER_CACHED_DELEGATE_INIT, SCALER_CACHED_TOP_N_SHARDS, MANUALLY_SCALE_SCALER_CACHED, SCALE_SCALER_CACHED_DELAY, SCALER_CACHED_CPP, SCALER_CACHED_COSSIM_BACKEND, COSSIM_NVEC, COSSIM_VEC_DIM, proc.Tmcpu(COSSIM_SRV_MCPU), COSSIM_DELEGATE_INIT, COSSIM_NVEC_TO_QUERY)
+	jobs, ji := newCachedScalerJobs(mrts.GetRealm(REALM1), jobName, SCALER_CACHED_DURS, SCALER_CACHED_MAX_RPS, SCALER_CACHED_PUT_DURS, SCALER_CACHED_PUT_MAX_RPS, SCALER_CACHED_NCACHE, proc.Tmcpu(SCALER_CACHED_CACHE_MCPU), true, SCALER_CACHED_USE_EPCACHE, SCALER_CACHED_NKEYS, SCALER_CACHED_DELEGATE_INIT, SCALER_CACHED_TOP_N_SHARDS, MANUALLY_SCALE_SCALER_CACHED, SCALE_SCALER_CACHED_DELAY, SCALER_CACHED_RUN_SLEEPER, SCALER_CACHED_CPP, SCALER_CACHED_COSSIM_BACKEND, COSSIM_NVEC, COSSIM_VEC_DIM, proc.Tmcpu(COSSIM_SRV_MCPU), COSSIM_DELEGATE_INIT, COSSIM_NVEC_TO_QUERY)
 	go func() {
 		for _, j := range jobs {
 			// Wait until ready

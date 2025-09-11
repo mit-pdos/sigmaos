@@ -172,10 +172,12 @@ func (ps *procState) createSigmaClnt(spps *SPProxySrv) {
 		db.DPrintf(db.SPPROXYSRV_ERR, "Error NewSigmaClnt proc %v", ps.pe.GetPID())
 	}
 	if ps.p != nil && ps.p.GetRunBootScript() {
+		start := time.Now()
 		// If the proc specified a boot script, create a WASM runtime and run the
 		// script
 		rpcAPI := NewWASMRPCProxy(spps, sc, ps.p)
 		ps.wrt = wasmrt.NewWasmerRuntime(rpcAPI)
+		perf.LogSpawnLatency("Create wasmRT", ps.pe.GetPID(), ps.pe.GetSpawnTime(), start)
 		go ps.wrt.RunModule(ps.p.GetPid(), ps.p.GetSpawnTime(), ps.p.GetBootScript(), ps.p.GetBootScriptInput())
 	}
 	var epcc *epcacheclnt.EndpointCacheClnt
@@ -189,12 +191,14 @@ func (ps *procState) createSigmaClnt(spps *SPProxySrv) {
 				db.DPrintf(db.SPPROXYSRV_ERR, "%v: Failed to create procclnt: %v", ps.pe.GetPID(), err)
 			} else {
 				// Initialize the procclnt's connection to msched, which will be needed to
-				// call, e.g., Started
-				err = sc.ProcAPI.(*procclnt.ProcClnt).InitMSchedClnt()
-				perf.LogSpawnLatency("SPProxySrv.createSigmaClnt initMSchedClnt", ps.pe.GetPID(), ps.pe.GetSpawnTime(), start)
-				if err != nil {
-					db.DPrintf(db.SPPROXYSRV_ERR, "%v: Failed to initialize msched clnt: %v", ps.pe.GetPID(), err)
-				}
+				// call, e.g., Started. This can be done asynchronously.
+				go func() {
+					err = sc.ProcAPI.(*procclnt.ProcClnt).InitMSchedClnt()
+					perf.LogSpawnLatency("SPProxySrv.createSigmaClnt initMSchedClnt", ps.pe.GetPID(), ps.pe.GetSpawnTime(), start)
+					if err != nil {
+						db.DPrintf(db.SPPROXYSRV_ERR, "%v: Failed to initialize msched clnt: %v", ps.pe.GetPID(), err)
+					}
+				}()
 			}
 		}
 		// If running with EPCache, pre-mount the epcache srv

@@ -3,6 +3,7 @@ package clnt
 import (
 	"fmt"
 	"path/filepath"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -18,6 +19,7 @@ import (
 )
 
 type MSchedClnt struct {
+	mu sync.Mutex
 	*fslib.FsLib
 	rpcdc *shardedsvcrpcclnt.ShardedSvcRPCClnt
 	done  int32
@@ -277,6 +279,9 @@ func (mc *MSchedClnt) StopWatching() {
 
 // Get the RPC client for my kernel's msched
 func (mc *MSchedClnt) getRPCClntMyMSched() (*rpcclnt.RPCClnt, error) {
+	mc.Lock()
+	defer mc.Unlock()
+
 	if mc.rpcc == nil {
 		start := time.Now()
 		pn := filepath.Join(sp.MSCHED, mc.kernelID)
@@ -284,7 +289,7 @@ func (mc *MSchedClnt) getRPCClntMyMSched() (*rpcclnt.RPCClnt, error) {
 		if err != nil {
 			return nil, err
 		}
-		perf.LogSpawnLatency("MSchedClnt.getRPCClntMyMSched", sp.NOT_SET, perf.TIME_NOT_SET, start)
+		perf.LogSpawnLatency("MSchedClnt.getRPCClntMyMSched", mc.ProcEnv().GetPID(), mc.ProcEnv().GetSpawnTime(), start)
 		mc.rpcc = rpcc
 	}
 	return mc.rpcc, nil

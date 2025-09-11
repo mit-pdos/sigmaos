@@ -34,7 +34,7 @@ func NewProcClnt(fsl *fslib.FsLib) (*ProcClnt, error) {
 				mschedC <- err
 				return
 			}
-			perf.LogSpawnLatency("Mount schedd RPC clnt", fsl.ProcEnv().GetPID(), fsl.ProcEnv().GetSpawnTime(), start)
+			perf.LogSpawnLatency("Mount MSched RPC clnt", fsl.ProcEnv().GetPID(), fsl.ProcEnv().GetSpawnTime(), start)
 		}
 		mschedC <- nil
 	}()

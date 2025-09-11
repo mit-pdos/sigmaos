@@ -188,7 +188,7 @@ func NewCachedScalerJob(ts *test.RealmTstate, jobName string, durs string, maxrp
 			case "sleeper":
 				ji.warmCachedSrvKID = p.GetKernelID()
 				db.DPrintf(db.TEST, "sleeper[%v] running on kernel %v", p.GetPid(), p.GetKernelID())
-				foundCached = true
+				foundSleeper = true
 			case "cached":
 				ji.cacheKIDs[p.GetKernelID()] = true
 				if !ji.useSleeper {
@@ -203,7 +203,7 @@ func NewCachedScalerJob(ts *test.RealmTstate, jobName string, durs string, maxrp
 			db.DPrintf(db.TEST, "Didn't find cached")
 		}
 		if !foundSleeper && ji.useSleeper {
-			db.DPrintf(db.TEST, "Didn't find cached")
+			db.DPrintf(db.TEST, "Didn't find sleeper")
 		}
 		time.Sleep(5 * time.Second)
 	}

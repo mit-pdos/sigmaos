@@ -171,9 +171,11 @@ func NewCachedScalerJob(ts *test.RealmTstate, jobName string, durs string, maxrp
 		for _, p := range runningProcs[ts.GetRealm()] {
 			// Record where relevant programs are running
 			switch p.GetProgram() {
+			case "named":
+				db.DPrintf(db.TEST, "named[%v] running on kernel %v", p.GetPid(), p.GetKernelID())
+				ji.warmCachedSrvKID = p.GetKernelID()
 			case "cached":
 				ji.cacheKIDs[p.GetKernelID()] = true
-				ji.warmCachedSrvKID = p.GetKernelID()
 				db.DPrintf(db.TEST, "cached[%v] running on kernel %v", p.GetPid(), p.GetKernelID())
 				foundCached = true
 			default:

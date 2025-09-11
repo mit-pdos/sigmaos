@@ -853,7 +853,7 @@ func GetCachedScalerClientCmdConstructor(leader bool, numClients int, manuallySc
 			"--run %s "+
 			"--nclnt %s "+
 			"--scaler_cached_ncache %s "+
-			"--scaler_cached_mcpu 3000 "+
+			"--scaler_cached_mcpu 4000 "+
 			"--scaler_cached_dur %s "+
 			"--scaler_cached_max_rps %s "+
 			"--scaler_cached_put_dur %s "+
@@ -868,6 +868,7 @@ func GetCachedScalerClientCmdConstructor(leader bool, numClients int, manuallySc
 			"%s "+ // scaler_cached_cpp
 			"%s "+ // scaler_cached_cossim_backend
 			"%s "+ // cossim_delegated_init
+			"--scaler_cached_run_sleeper "+
 			"--cossim_nvec %s "+
 			"--cossim_nvec_to_query %s "+
 			"--cossim_vec_dim %s "+

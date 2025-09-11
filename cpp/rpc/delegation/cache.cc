@@ -67,8 +67,6 @@ std::expected<bool, sigmaos::serr::Error> Cache::Get(
   }
   // Copy reply to output
   auto cached_reply = _reps.at(rpc_idx);
-  // Copy the blob data
-  // TODO: for i < 2, just set (don't copy)
   // Set the wrapper & serialized RPC buffers since these two are prepended
   // by the RPC stack and aren't supplied by the caller
   for (int i = 0; i < 2; i++) {

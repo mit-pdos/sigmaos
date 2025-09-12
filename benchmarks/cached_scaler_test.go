@@ -163,10 +163,10 @@ func NewCachedScalerJob(ts *test.RealmTstate, jobName string, durs string, maxrp
 	if ji.useSleeper {
 		ji.sleeperProc = proc.NewProc("sleeper", []string{"10000s", "name/"})
 		ji.sleeperProc.SetMcpu(4000)
-		if err := ji.Ts.Spawn(ji.sleeperProc); !assert.Nil(ts.Ts.T, err, "Err spawn sleeper proc: %v") {
+		if err := ji.Spawn(ji.sleeperProc); !assert.Nil(ts.Ts.T, err, "Err spawn sleeper proc: %v") {
 			return ji
 		}
-		if err := ji.Ts.WaitStart(ji.sleeperProc.GetPid()); !assert.Nil(ts.Ts.T, err, "Err WaitStart sleeper proc: %v") {
+		if err := ji.WaitStart(ji.sleeperProc.GetPid()); !assert.Nil(ts.Ts.T, err, "Err WaitStart sleeper proc: %v") {
 			return ji
 		}
 	}
@@ -180,7 +180,7 @@ func NewCachedScalerJob(ts *test.RealmTstate, jobName string, durs string, maxrp
 	for _, p := range runningProcs[ts.GetRealm()] {
 		pnames[p.GetPid().String()] = true
 	}
-	db.DPrintf(db.ALWAYS, "Running procs (%v): %v", len(pnames), pnames)
+	db.DPrintf(db.TEST, "Running procs (%v): %v", len(pnames), pnames)
 	for _, p := range runningProcs[ts.GetRealm()] {
 		// Record where relevant programs are running
 		switch p.GetProgram() {
@@ -349,8 +349,8 @@ func (ji *CachedScalerJobInstance) StartCachedScalerJob() {
 
 func (ji *CachedScalerJobInstance) Wait() {
 	if ji.useSleeper {
-		if err := ji.Ts.Evict(ji.sleeperProc.GetPid()); assert.Nil(ji.Ts.T, err, "Err evict sleeper proc: %v", err) {
-			_, err := ji.Ts.WaitExit(ji.sleeperProc.GetPid())
+		if err := ji.Evict(ji.sleeperProc.GetPid()); assert.Nil(ji.Ts.T, err, "Err evict sleeper proc: %v", err) {
+			_, err := ji.WaitExit(ji.sleeperProc.GetPid())
 			assert.Nil(ji.Ts.T, err, "Err WaitExit proc: %v", err)
 		}
 	}

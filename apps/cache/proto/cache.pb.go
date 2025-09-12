@@ -456,6 +456,61 @@ func (x *ShardReq) GetEmpty() bool {
 	return false
 }
 
+type MultiShardReq struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Shards []uint32            `protobuf:"varint,1,rep,packed,name=shards,proto3" json:"shards,omitempty"`
+	Fence  *sigmap.TfenceProto `protobuf:"bytes,2,opt,name=fence,proto3" json:"fence,omitempty"`
+}
+
+func (x *MultiShardReq) Reset() {
+	*x = MultiShardReq{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_apps_cache_proto_cache_proto_msgTypes[7]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *MultiShardReq) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MultiShardReq) ProtoMessage() {}
+
+func (x *MultiShardReq) ProtoReflect() protoreflect.Message {
+	mi := &file_apps_cache_proto_cache_proto_msgTypes[7]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MultiShardReq.ProtoReflect.Descriptor instead.
+func (*MultiShardReq) Descriptor() ([]byte, []int) {
+	return file_apps_cache_proto_cache_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *MultiShardReq) GetShards() []uint32 {
+	if x != nil {
+		return x.Shards
+	}
+	return nil
+}
+
+func (x *MultiShardReq) GetFence() *sigmap.TfenceProto {
+	if x != nil {
+		return x.Fence
+	}
+	return nil
+}
+
 type CacheOK struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -465,7 +520,7 @@ type CacheOK struct {
 func (x *CacheOK) Reset() {
 	*x = CacheOK{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_apps_cache_proto_cache_proto_msgTypes[7]
+		mi := &file_apps_cache_proto_cache_proto_msgTypes[8]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -478,7 +533,7 @@ func (x *CacheOK) String() string {
 func (*CacheOK) ProtoMessage() {}
 
 func (x *CacheOK) ProtoReflect() protoreflect.Message {
-	mi := &file_apps_cache_proto_cache_proto_msgTypes[7]
+	mi := &file_apps_cache_proto_cache_proto_msgTypes[8]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -491,7 +546,7 @@ func (x *CacheOK) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CacheOK.ProtoReflect.Descriptor instead.
 func (*CacheOK) Descriptor() ([]byte, []int) {
-	return file_apps_cache_proto_cache_proto_rawDescGZIP(), []int{7}
+	return file_apps_cache_proto_cache_proto_rawDescGZIP(), []int{8}
 }
 
 type CacheRep struct {
@@ -505,7 +560,7 @@ type CacheRep struct {
 func (x *CacheRep) Reset() {
 	*x = CacheRep{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_apps_cache_proto_cache_proto_msgTypes[8]
+		mi := &file_apps_cache_proto_cache_proto_msgTypes[9]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -518,7 +573,7 @@ func (x *CacheRep) String() string {
 func (*CacheRep) ProtoMessage() {}
 
 func (x *CacheRep) ProtoReflect() protoreflect.Message {
-	mi := &file_apps_cache_proto_cache_proto_msgTypes[8]
+	mi := &file_apps_cache_proto_cache_proto_msgTypes[9]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -531,7 +586,7 @@ func (x *CacheRep) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CacheRep.ProtoReflect.Descriptor instead.
 func (*CacheRep) Descriptor() ([]byte, []int) {
-	return file_apps_cache_proto_cache_proto_rawDescGZIP(), []int{8}
+	return file_apps_cache_proto_cache_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *CacheRep) GetValue() []byte {
@@ -552,7 +607,7 @@ type ShardData struct {
 func (x *ShardData) Reset() {
 	*x = ShardData{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_apps_cache_proto_cache_proto_msgTypes[9]
+		mi := &file_apps_cache_proto_cache_proto_msgTypes[10]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -565,7 +620,7 @@ func (x *ShardData) String() string {
 func (*ShardData) ProtoMessage() {}
 
 func (x *ShardData) ProtoReflect() protoreflect.Message {
-	mi := &file_apps_cache_proto_cache_proto_msgTypes[9]
+	mi := &file_apps_cache_proto_cache_proto_msgTypes[10]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -578,7 +633,7 @@ func (x *ShardData) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ShardData.ProtoReflect.Descriptor instead.
 func (*ShardData) Descriptor() ([]byte, []int) {
-	return file_apps_cache_proto_cache_proto_rawDescGZIP(), []int{9}
+	return file_apps_cache_proto_cache_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *ShardData) GetVals() map[string][]byte {
@@ -599,7 +654,7 @@ type CacheString struct {
 func (x *CacheString) Reset() {
 	*x = CacheString{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_apps_cache_proto_cache_proto_msgTypes[10]
+		mi := &file_apps_cache_proto_cache_proto_msgTypes[11]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -612,7 +667,7 @@ func (x *CacheString) String() string {
 func (*CacheString) ProtoMessage() {}
 
 func (x *CacheString) ProtoReflect() protoreflect.Message {
-	mi := &file_apps_cache_proto_cache_proto_msgTypes[10]
+	mi := &file_apps_cache_proto_cache_proto_msgTypes[11]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -625,7 +680,7 @@ func (x *CacheString) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CacheString.ProtoReflect.Descriptor instead.
 func (*CacheString) Descriptor() ([]byte, []int) {
-	return file_apps_cache_proto_cache_proto_rawDescGZIP(), []int{10}
+	return file_apps_cache_proto_cache_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *CacheString) GetVal() string {
@@ -646,7 +701,7 @@ type CacheInt struct {
 func (x *CacheInt) Reset() {
 	*x = CacheInt{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_apps_cache_proto_cache_proto_msgTypes[11]
+		mi := &file_apps_cache_proto_cache_proto_msgTypes[12]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -659,7 +714,7 @@ func (x *CacheInt) String() string {
 func (*CacheInt) ProtoMessage() {}
 
 func (x *CacheInt) ProtoReflect() protoreflect.Message {
-	mi := &file_apps_cache_proto_cache_proto_msgTypes[11]
+	mi := &file_apps_cache_proto_cache_proto_msgTypes[12]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -672,7 +727,7 @@ func (x *CacheInt) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CacheInt.ProtoReflect.Descriptor instead.
 func (*CacheInt) Descriptor() ([]byte, []int) {
-	return file_apps_cache_proto_cache_proto_rawDescGZIP(), []int{11}
+	return file_apps_cache_proto_cache_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *CacheInt) GetVal() int64 {
@@ -741,23 +796,27 @@ var file_apps_cache_proto_cache_proto_rawDesc = []byte{
 	0x6c, 0x73, 0x45, 0x6e, 0x74, 0x72, 0x79, 0x12, 0x10, 0x0a, 0x03, 0x6b, 0x65, 0x79, 0x18, 0x01,
 	0x20, 0x01, 0x28, 0x09, 0x52, 0x03, 0x6b, 0x65, 0x79, 0x12, 0x14, 0x0a, 0x05, 0x76, 0x61, 0x6c,
 	0x75, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x05, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x3a,
-	0x02, 0x38, 0x01, 0x22, 0x09, 0x0a, 0x07, 0x43, 0x61, 0x63, 0x68, 0x65, 0x4f, 0x4b, 0x22, 0x20,
-	0x0a, 0x08, 0x43, 0x61, 0x63, 0x68, 0x65, 0x52, 0x65, 0x70, 0x12, 0x14, 0x0a, 0x05, 0x76, 0x61,
-	0x6c, 0x75, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x05, 0x76, 0x61, 0x6c, 0x75, 0x65,
-	0x22, 0x6e, 0x0a, 0x09, 0x53, 0x68, 0x61, 0x72, 0x64, 0x44, 0x61, 0x74, 0x61, 0x12, 0x28, 0x0a,
-	0x04, 0x76, 0x61, 0x6c, 0x73, 0x18, 0x01, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x14, 0x2e, 0x53, 0x68,
-	0x61, 0x72, 0x64, 0x44, 0x61, 0x74, 0x61, 0x2e, 0x56, 0x61, 0x6c, 0x73, 0x45, 0x6e, 0x74, 0x72,
-	0x79, 0x52, 0x04, 0x76, 0x61, 0x6c, 0x73, 0x1a, 0x37, 0x0a, 0x09, 0x56, 0x61, 0x6c, 0x73, 0x45,
-	0x6e, 0x74, 0x72, 0x79, 0x12, 0x10, 0x0a, 0x03, 0x6b, 0x65, 0x79, 0x18, 0x01, 0x20, 0x01, 0x28,
-	0x09, 0x52, 0x03, 0x6b, 0x65, 0x79, 0x12, 0x14, 0x0a, 0x05, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x18,
-	0x02, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x05, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x3a, 0x02, 0x38, 0x01,
-	0x22, 0x1f, 0x0a, 0x0b, 0x43, 0x61, 0x63, 0x68, 0x65, 0x53, 0x74, 0x72, 0x69, 0x6e, 0x67, 0x12,
-	0x10, 0x0a, 0x03, 0x76, 0x61, 0x6c, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x03, 0x76, 0x61,
-	0x6c, 0x22, 0x1c, 0x0a, 0x08, 0x43, 0x61, 0x63, 0x68, 0x65, 0x49, 0x6e, 0x74, 0x12, 0x10, 0x0a,
-	0x03, 0x76, 0x61, 0x6c, 0x18, 0x01, 0x20, 0x01, 0x28, 0x03, 0x52, 0x03, 0x76, 0x61, 0x6c, 0x42,
-	0x1a, 0x5a, 0x18, 0x73, 0x69, 0x67, 0x6d, 0x61, 0x6f, 0x73, 0x2f, 0x61, 0x70, 0x70, 0x73, 0x2f,
-	0x63, 0x61, 0x63, 0x68, 0x65, 0x2f, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x06, 0x70, 0x72, 0x6f,
-	0x74, 0x6f, 0x33,
+	0x02, 0x38, 0x01, 0x22, 0x4b, 0x0a, 0x0d, 0x4d, 0x75, 0x6c, 0x74, 0x69, 0x53, 0x68, 0x61, 0x72,
+	0x64, 0x52, 0x65, 0x71, 0x12, 0x16, 0x0a, 0x06, 0x73, 0x68, 0x61, 0x72, 0x64, 0x73, 0x18, 0x01,
+	0x20, 0x03, 0x28, 0x0d, 0x52, 0x06, 0x73, 0x68, 0x61, 0x72, 0x64, 0x73, 0x12, 0x22, 0x0a, 0x05,
+	0x66, 0x65, 0x6e, 0x63, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x0c, 0x2e, 0x54, 0x66,
+	0x65, 0x6e, 0x63, 0x65, 0x50, 0x72, 0x6f, 0x74, 0x6f, 0x52, 0x05, 0x66, 0x65, 0x6e, 0x63, 0x65,
+	0x22, 0x09, 0x0a, 0x07, 0x43, 0x61, 0x63, 0x68, 0x65, 0x4f, 0x4b, 0x22, 0x20, 0x0a, 0x08, 0x43,
+	0x61, 0x63, 0x68, 0x65, 0x52, 0x65, 0x70, 0x12, 0x14, 0x0a, 0x05, 0x76, 0x61, 0x6c, 0x75, 0x65,
+	0x18, 0x01, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x05, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x22, 0x6e, 0x0a,
+	0x09, 0x53, 0x68, 0x61, 0x72, 0x64, 0x44, 0x61, 0x74, 0x61, 0x12, 0x28, 0x0a, 0x04, 0x76, 0x61,
+	0x6c, 0x73, 0x18, 0x01, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x14, 0x2e, 0x53, 0x68, 0x61, 0x72, 0x64,
+	0x44, 0x61, 0x74, 0x61, 0x2e, 0x56, 0x61, 0x6c, 0x73, 0x45, 0x6e, 0x74, 0x72, 0x79, 0x52, 0x04,
+	0x76, 0x61, 0x6c, 0x73, 0x1a, 0x37, 0x0a, 0x09, 0x56, 0x61, 0x6c, 0x73, 0x45, 0x6e, 0x74, 0x72,
+	0x79, 0x12, 0x10, 0x0a, 0x03, 0x6b, 0x65, 0x79, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x03,
+	0x6b, 0x65, 0x79, 0x12, 0x14, 0x0a, 0x05, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x18, 0x02, 0x20, 0x01,
+	0x28, 0x0c, 0x52, 0x05, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x3a, 0x02, 0x38, 0x01, 0x22, 0x1f, 0x0a,
+	0x0b, 0x43, 0x61, 0x63, 0x68, 0x65, 0x53, 0x74, 0x72, 0x69, 0x6e, 0x67, 0x12, 0x10, 0x0a, 0x03,
+	0x76, 0x61, 0x6c, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x03, 0x76, 0x61, 0x6c, 0x22, 0x1c,
+	0x0a, 0x08, 0x43, 0x61, 0x63, 0x68, 0x65, 0x49, 0x6e, 0x74, 0x12, 0x10, 0x0a, 0x03, 0x76, 0x61,
+	0x6c, 0x18, 0x01, 0x20, 0x01, 0x28, 0x03, 0x52, 0x03, 0x76, 0x61, 0x6c, 0x42, 0x1a, 0x5a, 0x18,
+	0x73, 0x69, 0x67, 0x6d, 0x61, 0x6f, 0x73, 0x2f, 0x61, 0x70, 0x70, 0x73, 0x2f, 0x63, 0x61, 0x63,
+	0x68, 0x65, 0x2f, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -772,7 +831,7 @@ func file_apps_cache_proto_cache_proto_rawDescGZIP() []byte {
 	return file_apps_cache_proto_cache_proto_rawDescData
 }
 
-var file_apps_cache_proto_cache_proto_msgTypes = make([]protoimpl.MessageInfo, 14)
+var file_apps_cache_proto_cache_proto_msgTypes = make([]protoimpl.MessageInfo, 15)
 var file_apps_cache_proto_cache_proto_goTypes = []interface{}{
 	(*HotShardsReq)(nil),            // 0: HotShardsReq
 	(*HotShardsRep)(nil),            // 1: HotShardsRep
@@ -781,32 +840,34 @@ var file_apps_cache_proto_cache_proto_goTypes = []interface{}{
 	(*CacheMultiGetReq)(nil),        // 4: CacheMultiGetReq
 	(*CacheMultiGetRep)(nil),        // 5: CacheMultiGetRep
 	(*ShardReq)(nil),                // 6: ShardReq
-	(*CacheOK)(nil),                 // 7: CacheOK
-	(*CacheRep)(nil),                // 8: CacheRep
-	(*ShardData)(nil),               // 9: ShardData
-	(*CacheString)(nil),             // 10: CacheString
-	(*CacheInt)(nil),                // 11: CacheInt
-	nil,                             // 12: ShardReq.ValsEntry
-	nil,                             // 13: ShardData.ValsEntry
-	(*proto.SpanContextConfig)(nil), // 14: SpanContextConfig
-	(*sigmap.TfenceProto)(nil),      // 15: TfenceProto
-	(*proto1.Blob)(nil),             // 16: Blob
+	(*MultiShardReq)(nil),           // 7: MultiShardReq
+	(*CacheOK)(nil),                 // 8: CacheOK
+	(*CacheRep)(nil),                // 9: CacheRep
+	(*ShardData)(nil),               // 10: ShardData
+	(*CacheString)(nil),             // 11: CacheString
+	(*CacheInt)(nil),                // 12: CacheInt
+	nil,                             // 13: ShardReq.ValsEntry
+	nil,                             // 14: ShardData.ValsEntry
+	(*proto.SpanContextConfig)(nil), // 15: SpanContextConfig
+	(*sigmap.TfenceProto)(nil),      // 16: TfenceProto
+	(*proto1.Blob)(nil),             // 17: Blob
 }
 var file_apps_cache_proto_cache_proto_depIdxs = []int32{
-	14, // 0: CacheReq.spanContextConfig:type_name -> SpanContextConfig
-	15, // 1: CacheReq.fence:type_name -> TfenceProto
+	15, // 0: CacheReq.spanContextConfig:type_name -> SpanContextConfig
+	16, // 1: CacheReq.fence:type_name -> TfenceProto
 	3,  // 2: CacheMultiGetReq.gets:type_name -> CacheGetDescriptor
-	14, // 3: CacheMultiGetReq.spanContextConfig:type_name -> SpanContextConfig
-	15, // 4: CacheMultiGetReq.fence:type_name -> TfenceProto
-	16, // 5: CacheMultiGetRep.blob:type_name -> Blob
-	15, // 6: ShardReq.fence:type_name -> TfenceProto
-	12, // 7: ShardReq.vals:type_name -> ShardReq.ValsEntry
-	13, // 8: ShardData.vals:type_name -> ShardData.ValsEntry
-	9,  // [9:9] is the sub-list for method output_type
-	9,  // [9:9] is the sub-list for method input_type
-	9,  // [9:9] is the sub-list for extension type_name
-	9,  // [9:9] is the sub-list for extension extendee
-	0,  // [0:9] is the sub-list for field type_name
+	15, // 3: CacheMultiGetReq.spanContextConfig:type_name -> SpanContextConfig
+	16, // 4: CacheMultiGetReq.fence:type_name -> TfenceProto
+	17, // 5: CacheMultiGetRep.blob:type_name -> Blob
+	16, // 6: ShardReq.fence:type_name -> TfenceProto
+	13, // 7: ShardReq.vals:type_name -> ShardReq.ValsEntry
+	16, // 8: MultiShardReq.fence:type_name -> TfenceProto
+	14, // 9: ShardData.vals:type_name -> ShardData.ValsEntry
+	10, // [10:10] is the sub-list for method output_type
+	10, // [10:10] is the sub-list for method input_type
+	10, // [10:10] is the sub-list for extension type_name
+	10, // [10:10] is the sub-list for extension extendee
+	0,  // [0:10] is the sub-list for field type_name
 }
 
 func init() { file_apps_cache_proto_cache_proto_init() }
@@ -900,7 +961,7 @@ func file_apps_cache_proto_cache_proto_init() {
 			}
 		}
 		file_apps_cache_proto_cache_proto_msgTypes[7].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*CacheOK); i {
+			switch v := v.(*MultiShardReq); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -912,7 +973,7 @@ func file_apps_cache_proto_cache_proto_init() {
 			}
 		}
 		file_apps_cache_proto_cache_proto_msgTypes[8].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*CacheRep); i {
+			switch v := v.(*CacheOK); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -924,7 +985,7 @@ func file_apps_cache_proto_cache_proto_init() {
 			}
 		}
 		file_apps_cache_proto_cache_proto_msgTypes[9].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ShardData); i {
+			switch v := v.(*CacheRep); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -936,7 +997,7 @@ func file_apps_cache_proto_cache_proto_init() {
 			}
 		}
 		file_apps_cache_proto_cache_proto_msgTypes[10].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*CacheString); i {
+			switch v := v.(*ShardData); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -948,6 +1009,18 @@ func file_apps_cache_proto_cache_proto_init() {
 			}
 		}
 		file_apps_cache_proto_cache_proto_msgTypes[11].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*CacheString); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_apps_cache_proto_cache_proto_msgTypes[12].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*CacheInt); i {
 			case 0:
 				return &v.state
@@ -966,7 +1039,7 @@ func file_apps_cache_proto_cache_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_apps_cache_proto_cache_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   14,
+			NumMessages:   15,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

@@ -281,6 +281,33 @@ func (cs *CacheSrv) FreezeShard(ctx fs.CtxI, req cacheproto.ShardReq, rep *cache
 	return nil
 }
 
+func (cs *CacheSrv) MultiDumpShard(ctx fs.CtxI, req cacheproto.MultiShardReq, rep *cacheproto.ShardData) error {
+	cs.mu.Lock()
+	defer cs.mu.Unlock()
+
+	db.DPrintf(db.CACHESRV, "MultiDumpShard %v", req)
+
+	if cmp := cs.cmpFence(req.Fence.Tfence()); cmp == sp.FENCE_GT {
+		db.DPrintf(db.CACHESRV_ERR, "MultiDumpShard err stale fence")
+		return serr.NewErr(serr.TErrStale, fmt.Sprintf("shards %v", req.GetShards()))
+	}
+	rep.Vals = make(map[string][]byte)
+	for _, s := range req.GetShards() {
+		shardID := cache.Tshard(s)
+		if si, ok := cs.shards[shardID]; !ok {
+			db.DPrintf(db.CACHESRV_ERR, "MultiDumpShard(%v) err not found", shardID)
+			return serr.NewErr(serr.TErrNotfound, shardID)
+		} else {
+			vals := si.s.dump(false)
+			for k, v := range vals {
+				rep.Vals[k] = v
+			}
+		}
+	}
+	db.DPrintf(db.CACHESRV, "MultiDumpShard done")
+	return nil
+}
+
 func (cs *CacheSrv) DumpShard(ctx fs.CtxI, req cacheproto.ShardReq, rep *cacheproto.ShardData) error {
 	cs.mu.Lock()
 	defer cs.mu.Unlock()

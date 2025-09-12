@@ -81,6 +81,9 @@ extern HotShardsRepDefaultTypeInternal _HotShardsRep_default_instance_;
 class HotShardsReq;
 struct HotShardsReqDefaultTypeInternal;
 extern HotShardsReqDefaultTypeInternal _HotShardsReq_default_instance_;
+class MultiShardReq;
+struct MultiShardReqDefaultTypeInternal;
+extern MultiShardReqDefaultTypeInternal _MultiShardReq_default_instance_;
 class ShardData;
 struct ShardDataDefaultTypeInternal;
 extern ShardDataDefaultTypeInternal _ShardData_default_instance_;
@@ -104,6 +107,7 @@ template<> ::CacheReq* Arena::CreateMaybeMessage<::CacheReq>(Arena*);
 template<> ::CacheString* Arena::CreateMaybeMessage<::CacheString>(Arena*);
 template<> ::HotShardsRep* Arena::CreateMaybeMessage<::HotShardsRep>(Arena*);
 template<> ::HotShardsReq* Arena::CreateMaybeMessage<::HotShardsReq>(Arena*);
+template<> ::MultiShardReq* Arena::CreateMaybeMessage<::MultiShardReq>(Arena*);
 template<> ::ShardData* Arena::CreateMaybeMessage<::ShardData>(Arena*);
 template<> ::ShardData_ValsEntry_DoNotUse* Arena::CreateMaybeMessage<::ShardData_ValsEntry_DoNotUse>(Arena*);
 template<> ::ShardReq* Arena::CreateMaybeMessage<::ShardReq>(Arena*);
@@ -1452,6 +1456,188 @@ class ShardReq final :
 };
 // -------------------------------------------------------------------
 
+class MultiShardReq final :
+    public ::PROTOBUF_NAMESPACE_ID::Message /* @@protoc_insertion_point(class_definition:MultiShardReq) */ {
+ public:
+  inline MultiShardReq() : MultiShardReq(nullptr) {}
+  ~MultiShardReq() override;
+  explicit PROTOBUF_CONSTEXPR MultiShardReq(::PROTOBUF_NAMESPACE_ID::internal::ConstantInitialized);
+
+  MultiShardReq(const MultiShardReq& from);
+  MultiShardReq(MultiShardReq&& from) noexcept
+    : MultiShardReq() {
+    *this = ::std::move(from);
+  }
+
+  inline MultiShardReq& operator=(const MultiShardReq& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  inline MultiShardReq& operator=(MultiShardReq&& from) noexcept {
+    if (this == &from) return *this;
+    if (GetOwningArena() == from.GetOwningArena()
+  #ifdef PROTOBUF_FORCE_COPY_IN_MOVE
+        && GetOwningArena() != nullptr
+  #endif  // !PROTOBUF_FORCE_COPY_IN_MOVE
+    ) {
+      InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+
+  static const ::PROTOBUF_NAMESPACE_ID::Descriptor* descriptor() {
+    return GetDescriptor();
+  }
+  static const ::PROTOBUF_NAMESPACE_ID::Descriptor* GetDescriptor() {
+    return default_instance().GetMetadata().descriptor;
+  }
+  static const ::PROTOBUF_NAMESPACE_ID::Reflection* GetReflection() {
+    return default_instance().GetMetadata().reflection;
+  }
+  static const MultiShardReq& default_instance() {
+    return *internal_default_instance();
+  }
+  static inline const MultiShardReq* internal_default_instance() {
+    return reinterpret_cast<const MultiShardReq*>(
+               &_MultiShardReq_default_instance_);
+  }
+  static constexpr int kIndexInFileMessages =
+    8;
+
+  friend void swap(MultiShardReq& a, MultiShardReq& b) {
+    a.Swap(&b);
+  }
+  inline void Swap(MultiShardReq* other) {
+    if (other == this) return;
+  #ifdef PROTOBUF_FORCE_COPY_IN_SWAP
+    if (GetOwningArena() != nullptr &&
+        GetOwningArena() == other->GetOwningArena()) {
+   #else  // PROTOBUF_FORCE_COPY_IN_SWAP
+    if (GetOwningArena() == other->GetOwningArena()) {
+  #endif  // !PROTOBUF_FORCE_COPY_IN_SWAP
+      InternalSwap(other);
+    } else {
+      ::PROTOBUF_NAMESPACE_ID::internal::GenericSwap(this, other);
+    }
+  }
+  void UnsafeArenaSwap(MultiShardReq* other) {
+    if (other == this) return;
+    GOOGLE_DCHECK(GetOwningArena() == other->GetOwningArena());
+    InternalSwap(other);
+  }
+
+  // implements Message ----------------------------------------------
+
+  MultiShardReq* New(::PROTOBUF_NAMESPACE_ID::Arena* arena = nullptr) const final {
+    return CreateMaybeMessage<MultiShardReq>(arena);
+  }
+  using ::PROTOBUF_NAMESPACE_ID::Message::CopyFrom;
+  void CopyFrom(const MultiShardReq& from);
+  using ::PROTOBUF_NAMESPACE_ID::Message::MergeFrom;
+  void MergeFrom( const MultiShardReq& from) {
+    MultiShardReq::MergeImpl(*this, from);
+  }
+  private:
+  static void MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PROTOBUF_NAMESPACE_ID::Message& from_msg);
+  public:
+  PROTOBUF_ATTRIBUTE_REINITIALIZES void Clear() final;
+  bool IsInitialized() const final;
+
+  size_t ByteSizeLong() const final;
+  const char* _InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::internal::ParseContext* ctx) final;
+  uint8_t* _InternalSerialize(
+      uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const final;
+  int GetCachedSize() const final { return _impl_._cached_size_.Get(); }
+
+  private:
+  void SharedCtor(::PROTOBUF_NAMESPACE_ID::Arena* arena, bool is_message_owned);
+  void SharedDtor();
+  void SetCachedSize(int size) const final;
+  void InternalSwap(MultiShardReq* other);
+
+  private:
+  friend class ::PROTOBUF_NAMESPACE_ID::internal::AnyMetadata;
+  static ::PROTOBUF_NAMESPACE_ID::StringPiece FullMessageName() {
+    return "MultiShardReq";
+  }
+  protected:
+  explicit MultiShardReq(::PROTOBUF_NAMESPACE_ID::Arena* arena,
+                       bool is_message_owned = false);
+  public:
+
+  static const ClassData _class_data_;
+  const ::PROTOBUF_NAMESPACE_ID::Message::ClassData*GetClassData() const final;
+
+  ::PROTOBUF_NAMESPACE_ID::Metadata GetMetadata() const final;
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  enum : int {
+    kShardsFieldNumber = 1,
+    kFenceFieldNumber = 2,
+  };
+  // repeated uint32 shards = 1;
+  int shards_size() const;
+  private:
+  int _internal_shards_size() const;
+  public:
+  void clear_shards();
+  private:
+  uint32_t _internal_shards(int index) const;
+  const ::PROTOBUF_NAMESPACE_ID::RepeatedField< uint32_t >&
+      _internal_shards() const;
+  void _internal_add_shards(uint32_t value);
+  ::PROTOBUF_NAMESPACE_ID::RepeatedField< uint32_t >*
+      _internal_mutable_shards();
+  public:
+  uint32_t shards(int index) const;
+  void set_shards(int index, uint32_t value);
+  void add_shards(uint32_t value);
+  const ::PROTOBUF_NAMESPACE_ID::RepeatedField< uint32_t >&
+      shards() const;
+  ::PROTOBUF_NAMESPACE_ID::RepeatedField< uint32_t >*
+      mutable_shards();
+
+  // .TfenceProto fence = 2;
+  bool has_fence() const;
+  private:
+  bool _internal_has_fence() const;
+  public:
+  void clear_fence();
+  const ::TfenceProto& fence() const;
+  PROTOBUF_NODISCARD ::TfenceProto* release_fence();
+  ::TfenceProto* mutable_fence();
+  void set_allocated_fence(::TfenceProto* fence);
+  private:
+  const ::TfenceProto& _internal_fence() const;
+  ::TfenceProto* _internal_mutable_fence();
+  public:
+  void unsafe_arena_set_allocated_fence(
+      ::TfenceProto* fence);
+  ::TfenceProto* unsafe_arena_release_fence();
+
+  // @@protoc_insertion_point(class_scope:MultiShardReq)
+ private:
+  class _Internal;
+
+  template <typename T> friend class ::PROTOBUF_NAMESPACE_ID::Arena::InternalHelper;
+  typedef void InternalArenaConstructable_;
+  typedef void DestructorSkippable_;
+  struct Impl_ {
+    ::PROTOBUF_NAMESPACE_ID::RepeatedField< uint32_t > shards_;
+    mutable std::atomic<int> _shards_cached_byte_size_;
+    ::TfenceProto* fence_;
+    mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
+  };
+  union { Impl_ _impl_; };
+  friend struct ::TableStruct_cache_2eproto;
+};
+// -------------------------------------------------------------------
+
 class CacheOK final :
     public ::PROTOBUF_NAMESPACE_ID::internal::ZeroFieldsBase /* @@protoc_insertion_point(class_definition:CacheOK) */ {
  public:
@@ -1499,7 +1685,7 @@ class CacheOK final :
                &_CacheOK_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    8;
+    9;
 
   friend void swap(CacheOK& a, CacheOK& b) {
     a.Swap(&b);
@@ -1618,7 +1804,7 @@ class CacheRep final :
                &_CacheRep_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    9;
+    10;
 
   friend void swap(CacheRep& a, CacheRep& b) {
     a.Swap(&b);
@@ -1797,7 +1983,7 @@ class ShardData final :
                &_ShardData_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    11;
+    12;
 
   friend void swap(ShardData& a, ShardData& b) {
     a.Swap(&b);
@@ -1960,7 +2146,7 @@ class CacheString final :
                &_CacheString_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    12;
+    13;
 
   friend void swap(CacheString& a, CacheString& b) {
     a.Swap(&b);
@@ -2113,7 +2299,7 @@ class CacheInt final :
                &_CacheInt_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    13;
+    14;
 
   friend void swap(CacheInt& a, CacheInt& b) {
     a.Swap(&b);
@@ -3240,6 +3426,142 @@ inline void ShardReq::set_empty(bool value) {
 
 // -------------------------------------------------------------------
 
+// MultiShardReq
+
+// repeated uint32 shards = 1;
+inline int MultiShardReq::_internal_shards_size() const {
+  return _impl_.shards_.size();
+}
+inline int MultiShardReq::shards_size() const {
+  return _internal_shards_size();
+}
+inline void MultiShardReq::clear_shards() {
+  _impl_.shards_.Clear();
+}
+inline uint32_t MultiShardReq::_internal_shards(int index) const {
+  return _impl_.shards_.Get(index);
+}
+inline uint32_t MultiShardReq::shards(int index) const {
+  // @@protoc_insertion_point(field_get:MultiShardReq.shards)
+  return _internal_shards(index);
+}
+inline void MultiShardReq::set_shards(int index, uint32_t value) {
+  _impl_.shards_.Set(index, value);
+  // @@protoc_insertion_point(field_set:MultiShardReq.shards)
+}
+inline void MultiShardReq::_internal_add_shards(uint32_t value) {
+  _impl_.shards_.Add(value);
+}
+inline void MultiShardReq::add_shards(uint32_t value) {
+  _internal_add_shards(value);
+  // @@protoc_insertion_point(field_add:MultiShardReq.shards)
+}
+inline const ::PROTOBUF_NAMESPACE_ID::RepeatedField< uint32_t >&
+MultiShardReq::_internal_shards() const {
+  return _impl_.shards_;
+}
+inline const ::PROTOBUF_NAMESPACE_ID::RepeatedField< uint32_t >&
+MultiShardReq::shards() const {
+  // @@protoc_insertion_point(field_list:MultiShardReq.shards)
+  return _internal_shards();
+}
+inline ::PROTOBUF_NAMESPACE_ID::RepeatedField< uint32_t >*
+MultiShardReq::_internal_mutable_shards() {
+  return &_impl_.shards_;
+}
+inline ::PROTOBUF_NAMESPACE_ID::RepeatedField< uint32_t >*
+MultiShardReq::mutable_shards() {
+  // @@protoc_insertion_point(field_mutable_list:MultiShardReq.shards)
+  return _internal_mutable_shards();
+}
+
+// .TfenceProto fence = 2;
+inline bool MultiShardReq::_internal_has_fence() const {
+  return this != internal_default_instance() && _impl_.fence_ != nullptr;
+}
+inline bool MultiShardReq::has_fence() const {
+  return _internal_has_fence();
+}
+inline const ::TfenceProto& MultiShardReq::_internal_fence() const {
+  const ::TfenceProto* p = _impl_.fence_;
+  return p != nullptr ? *p : reinterpret_cast<const ::TfenceProto&>(
+      ::_TfenceProto_default_instance_);
+}
+inline const ::TfenceProto& MultiShardReq::fence() const {
+  // @@protoc_insertion_point(field_get:MultiShardReq.fence)
+  return _internal_fence();
+}
+inline void MultiShardReq::unsafe_arena_set_allocated_fence(
+    ::TfenceProto* fence) {
+  if (GetArenaForAllocation() == nullptr) {
+    delete reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(_impl_.fence_);
+  }
+  _impl_.fence_ = fence;
+  if (fence) {
+    
+  } else {
+    
+  }
+  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:MultiShardReq.fence)
+}
+inline ::TfenceProto* MultiShardReq::release_fence() {
+  
+  ::TfenceProto* temp = _impl_.fence_;
+  _impl_.fence_ = nullptr;
+#ifdef PROTOBUF_FORCE_COPY_IN_RELEASE
+  auto* old =  reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(temp);
+  temp = ::PROTOBUF_NAMESPACE_ID::internal::DuplicateIfNonNull(temp);
+  if (GetArenaForAllocation() == nullptr) { delete old; }
+#else  // PROTOBUF_FORCE_COPY_IN_RELEASE
+  if (GetArenaForAllocation() != nullptr) {
+    temp = ::PROTOBUF_NAMESPACE_ID::internal::DuplicateIfNonNull(temp);
+  }
+#endif  // !PROTOBUF_FORCE_COPY_IN_RELEASE
+  return temp;
+}
+inline ::TfenceProto* MultiShardReq::unsafe_arena_release_fence() {
+  // @@protoc_insertion_point(field_release:MultiShardReq.fence)
+  
+  ::TfenceProto* temp = _impl_.fence_;
+  _impl_.fence_ = nullptr;
+  return temp;
+}
+inline ::TfenceProto* MultiShardReq::_internal_mutable_fence() {
+  
+  if (_impl_.fence_ == nullptr) {
+    auto* p = CreateMaybeMessage<::TfenceProto>(GetArenaForAllocation());
+    _impl_.fence_ = p;
+  }
+  return _impl_.fence_;
+}
+inline ::TfenceProto* MultiShardReq::mutable_fence() {
+  ::TfenceProto* _msg = _internal_mutable_fence();
+  // @@protoc_insertion_point(field_mutable:MultiShardReq.fence)
+  return _msg;
+}
+inline void MultiShardReq::set_allocated_fence(::TfenceProto* fence) {
+  ::PROTOBUF_NAMESPACE_ID::Arena* message_arena = GetArenaForAllocation();
+  if (message_arena == nullptr) {
+    delete reinterpret_cast< ::PROTOBUF_NAMESPACE_ID::MessageLite*>(_impl_.fence_);
+  }
+  if (fence) {
+    ::PROTOBUF_NAMESPACE_ID::Arena* submessage_arena =
+        ::PROTOBUF_NAMESPACE_ID::Arena::InternalGetOwningArena(
+                reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(fence));
+    if (message_arena != submessage_arena) {
+      fence = ::PROTOBUF_NAMESPACE_ID::internal::GetOwnedMessage(
+          message_arena, fence, submessage_arena);
+    }
+    
+  } else {
+    
+  }
+  _impl_.fence_ = fence;
+  // @@protoc_insertion_point(field_set_allocated:MultiShardReq.fence)
+}
+
+// -------------------------------------------------------------------
+
 // CacheOK
 
 // -------------------------------------------------------------------
@@ -3412,6 +3734,8 @@ inline void CacheInt::set_val(int64_t value) {
 #ifdef __GNUC__
   #pragma GCC diagnostic pop
 #endif  // __GNUC__
+// -------------------------------------------------------------------
+
 // -------------------------------------------------------------------
 
 // -------------------------------------------------------------------

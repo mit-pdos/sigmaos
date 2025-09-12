@@ -3,7 +3,7 @@
 namespace sigmaos {
 namespace apps::cache {
 
-uint32_t key2shard(std::string &key) {
+uint32_t key2shard(const std::string &key) {
   // fnv32a hash inspired by
   // https://cs.opensource.google/go/go/+/refs/tags/go1.24.3:src/hash/fnv/fnv.go;l=51
   uint32_t s = 2166136261;
@@ -15,7 +15,7 @@ uint32_t key2shard(std::string &key) {
   return s % NSHARD;
 }
 
-uint32_t key2server(std::string &key, uint32_t nserver) {
+uint32_t key2server(const std::string &key, uint32_t nserver) {
   uint32_t shard = key2shard(key);
   return shard % nserver;
 }

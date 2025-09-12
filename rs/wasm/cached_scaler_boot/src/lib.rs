@@ -27,22 +27,21 @@ pub fn boot(b: *mut c_char, buf_sz: usize) {
     let mut rpc_idx = 0;
     for (src_srv, shards) in src_srvs.iter().enumerate() {
         let pn = "name/cache/servers/".to_owned() + &src_srv.to_string();
+        let mut multi_shard_req = cache::MultiShardReq::new();
+        multi_shard_req.fence = MessageField::some(sigmap::TfenceProto::new());
         for shard in shards {
-            let mut shard_req = cache::ShardReq::new();
-            shard_req.shard = *shard;
-            shard_req.fence = MessageField::some(sigmap::TfenceProto::new());
-            shard_req.empty = false;
-            let rpc_bytes = shard_req.write_to_bytes().unwrap();
-            sigmaos::send_rpc(
-                buf,
-                rpc_idx.try_into().unwrap(),
-                &pn,
-                "CacheSrv.DumpShard",
-                &rpc_bytes,
-                1,
-            );
-            // Increment the RPC idx
-            rpc_idx += 1;
+            multi_shard_req.shards.push(*shard);
         }
+        let rpc_bytes = multi_shard_req.write_to_bytes().unwrap();
+        sigmaos::send_rpc(
+            buf,
+            rpc_idx.try_into().unwrap(),
+            &pn,
+            "CacheSrv.DumpShard",
+            &rpc_bytes,
+            1,
+        );
+        // Increment the RPC idx
+        rpc_idx += 1;
     }
 }

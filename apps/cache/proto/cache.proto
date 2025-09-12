@@ -47,6 +47,11 @@ message ShardReq {
   bool empty = 4; // Empty the shard, deleting all of its keys and values
 }
 
+message MultiShardReq {
+  repeated uint32 shards = 1;
+  TfenceProto fence = 2;
+}
+
 message CacheOK {}
 
 message CacheRep {

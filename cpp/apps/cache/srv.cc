@@ -99,9 +99,11 @@ std::expected<int, sigmaos::serr::Error> Srv::Init(int old_n_srv,
       // If this server should host the shard in the new configuration, try to
       // steal it
       int src_srv = (int)i % old_n_srv;
+      if (shards_to_steal[src_srv].size() == 0) {
+        rpc_idxs.push_back(nrpc++);
+      }
       // Add this shard to the list of shards to steal from the source server
       shards_to_steal[src_srv].push_back(i);
-      rpc_idxs.push_back(nrpc++);
     }
   }
   log(CACHESRV, "Load shard dumps from old servers nshard: {}", nrpc);
@@ -109,17 +111,17 @@ std::expected<int, sigmaos::serr::Error> Srv::Init(int old_n_srv,
   if (!_sp_clnt->ProcEnv()->GetRunBootScript()) {
     // For each source server, dump shards to be stolen
     for (int src_srv : src_srvs) {
+      auto res = _cache_clnt->MultiDumpShard(src_srv, shards_to_steal[src_srv]);
+      if (!res.has_value()) {
+        log(CACHESRV_ERR, "Error DumpShard: {}", res.error());
+        fatal("Error DumpShard: {}", res.error().String());
+        return std::unexpected(res.error());
+      }
+      // Fill the local copy of the shard with the dumped values
+      auto shard_map = res.value();
       for (uint32_t shard : shards_to_steal[src_srv]) {
-        auto res = _cache_clnt->DumpShard(shard, false);
-        if (!res.has_value()) {
-          log(CACHESRV_ERR, "Error DumpShard: {}", res.error());
-          fatal("Error DumpShard: {}", res.error().String());
-          return std::unexpected(res.error());
-        }
         log(CACHESRV, "Load shard {}", (int)shard);
-        // Fill the local copy of the shard with the dumped values
-        auto kvs = res.value();
-        _cache.at(shard)->Fill(kvs);
+        _cache.at(shard)->Fill(shard_map->at(shard));
       }
     }
   } else {

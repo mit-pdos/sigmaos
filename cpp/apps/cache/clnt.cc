@@ -252,6 +252,54 @@ Clnt::DumpShard(uint32_t shard, bool empty) {
   return kvs;
 }
 
+std::expected<
+    std::shared_ptr<std::map<
+        uint32_t,
+        std::shared_ptr<std::map<std::string, std::shared_ptr<std::string>>>>>,
+    sigmaos::serr::Error>
+Clnt::MultiDumpShard(uint32_t srv, std::vector<uint32_t> &shards) {
+  log(CACHECLNT, "MultiDumpShard");
+  std::shared_ptr<sigmaos::rpc::Clnt> rpcc;
+  {
+    auto res = get_clnt(srv, true);
+    if (!res.has_value()) {
+      log(CACHECLNT_ERR, "Error get_clnt: {}", res.error().String());
+      return std::unexpected(res.error());
+    }
+    rpcc = res.value();
+  }
+  TfenceProto fence;
+  ShardData rep;
+  MultiShardReq req;
+  req.set_allocated_fence(&fence);
+  for (auto &shard : shards) {
+    req.mutable_shards()->Add(shard);
+  }
+  auto shard_map = std::make_shared<std::map<
+      uint32_t,
+      std::shared_ptr<std::map<std::string, std::shared_ptr<std::string>>>>>();
+  {
+    auto res = rpcc->RPC("CacheSrv.MultiDumpShard", req, rep);
+    {
+      auto _ = req.release_fence();
+    }
+    if (!res.has_value()) {
+      log(CACHECLNT_ERR, "Error Get: {}", res.error().String());
+      return std::unexpected(res.error());
+    }
+    for (auto &shard : shards) {
+      (*shard_map)[shard] = std::make_shared<
+          std::map<std::string, std::shared_ptr<std::string>>>();
+    }
+    for (const auto &[k, v] : rep.vals()) {
+      auto shard = key2shard(k);
+      (*((*shard_map)[shard]))[k] = std::make_shared<std::string>(v);
+    }
+  }
+  log(CACHECLNT, "MultiDumpShard ok");
+  return shard_map;
+}
+
 std::expected<int, sigmaos::serr::Error> Clnt::BatchFetchDelegatedRPCs(
     std::vector<uint64_t> &rpc_idxs, int n_iov) {
   log(CACHECLNT, "BatchFetchDelegatedRPCs: {}", rpc_idxs.size());

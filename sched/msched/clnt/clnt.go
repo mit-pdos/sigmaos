@@ -176,6 +176,7 @@ func (mc *MSchedClnt) GetAllRunningProcs() (map[sp.Trealm][]*proc.Proc, error) {
 		}
 		for r, ps := range running {
 			procs[r] = append(procs[r], ps...)
+			db.DPrintf(db.ALWAYS, "Got running procs KID %v procs %v", ps)
 		}
 	}
 	return procs, nil

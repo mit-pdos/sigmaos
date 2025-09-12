@@ -113,7 +113,6 @@ func NewCosSimJob(ts *test.RealmTstate, p *perf.Perf, epcj *epsrv.EPCacheJob, cm
 			}
 			db.DPrintf(db.TEST, "Cossim server ready %v", i)
 		}
-		time.Sleep(2 * time.Second)
 		ji.msc = mschedclnt.NewMSchedClnt(ts.SigmaClnt.FsLib, sp.NOT_SET)
 		// Find machines were caches are running, and machines where the CosSim
 		// server is running
@@ -123,28 +122,23 @@ func NewCosSimJob(ts *test.RealmTstate, p *perf.Perf, epcj *epsrv.EPCacheJob, cm
 		}
 		foundCossim := false
 		foundCached := false
-		for i := 0; i < 5; i++ {
-			runningProcs, err := ji.msc.GetAllRunningProcs()
-			if !assert.Nil(ts.Ts.T, err, "Err GetRunningProcs: %v", err) {
-				return ji
-			}
-			for _, p := range runningProcs[ts.GetRealm()] {
-				// Record where relevant programs are running
-				switch p.GetProgram() {
-				case "cossim-srv-cpp":
-					ji.cossimKIDs[p.GetKernelID()] = true
-					db.DPrintf(db.TEST, "cossim-srv-cpp[%v] running on kernel %v", p.GetPid(), p.GetKernelID())
-					foundCossim = true
-				case "cached":
-					ji.cacheKIDs[p.GetKernelID()] = true
-					ji.warmCossimSrvKID = p.GetKernelID()
-					db.DPrintf(db.TEST, "cached[%v] running on kernel %v", p.GetPid(), p.GetKernelID())
-					foundCached = true
-				default:
-				}
-			}
-			if !foundCossim || !foundCached {
-				time.Sleep(5 * time.Second)
+		runningProcs, err := ji.msc.GetAllRunningProcs()
+		if !assert.Nil(ts.Ts.T, err, "Err GetRunningProcs: %v", err) {
+			return ji
+		}
+		for _, p := range runningProcs[ts.GetRealm()] {
+			// Record where relevant programs are running
+			switch p.GetProgram() {
+			case "cossim-srv-cpp":
+				ji.cossimKIDs[p.GetKernelID()] = true
+				db.DPrintf(db.TEST, "cossim-srv-cpp[%v] running on kernel %v", p.GetPid(), p.GetKernelID())
+				foundCossim = true
+			case "cached":
+				ji.cacheKIDs[p.GetKernelID()] = true
+				ji.warmCossimSrvKID = p.GetKernelID()
+				db.DPrintf(db.TEST, "cached[%v] running on kernel %v", p.GetPid(), p.GetKernelID())
+				foundCached = true
+			default:
 			}
 		}
 		if !assert.True(ts.Ts.T, foundCossim, "Err didn't find cossim srv") {

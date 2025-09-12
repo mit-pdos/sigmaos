@@ -170,43 +170,39 @@ func NewCachedScalerJob(ts *test.RealmTstate, jobName string, durs string, maxrp
 			return ji
 		}
 	}
-	time.Sleep(10 * time.Second)
 	foundCached := false
 	foundSleeper := false
-	for i := 0; i < 5; i++ {
-		runningProcs, err := ji.msc.GetAllRunningProcs()
-		if !assert.Nil(ts.Ts.T, err, "Err SampleRunningProcs: %v", err) {
-			return ji
-		}
-		pnames := map[string]bool{}
-		for _, p := range runningProcs[ts.GetRealm()] {
-			pnames[p.GetPid().String()] = true
-		}
-		db.DPrintf(db.ALWAYS, "Running procs (%v): %v", len(pnames), pnames)
-		for _, p := range runningProcs[ts.GetRealm()] {
-			// Record where relevant programs are running
-			switch p.GetProgram() {
-			case "sleeper":
+	runningProcs, err := ji.msc.GetAllRunningProcs()
+	if !assert.Nil(ts.Ts.T, err, "Err SampleRunningProcs: %v", err) {
+		return ji
+	}
+	pnames := map[string]bool{}
+	for _, p := range runningProcs[ts.GetRealm()] {
+		pnames[p.GetPid().String()] = true
+	}
+	db.DPrintf(db.ALWAYS, "Running procs (%v): %v", len(pnames), pnames)
+	for _, p := range runningProcs[ts.GetRealm()] {
+		// Record where relevant programs are running
+		switch p.GetProgram() {
+		case "sleeper":
+			ji.warmCachedSrvKID = p.GetKernelID()
+			db.DPrintf(db.TEST, "sleeper[%v] running on kernel %v", p.GetPid(), p.GetKernelID())
+			foundSleeper = true
+		case "cached":
+			ji.cacheKIDs[p.GetKernelID()] = true
+			if !ji.useSleeper {
 				ji.warmCachedSrvKID = p.GetKernelID()
-				db.DPrintf(db.TEST, "sleeper[%v] running on kernel %v", p.GetPid(), p.GetKernelID())
-				foundSleeper = true
-			case "cached":
-				ji.cacheKIDs[p.GetKernelID()] = true
-				if !ji.useSleeper {
-					ji.warmCachedSrvKID = p.GetKernelID()
-				}
-				db.DPrintf(db.TEST, "cached[%v] running on kernel %v", p.GetPid(), p.GetKernelID())
-				foundCached = true
-			default:
 			}
+			db.DPrintf(db.TEST, "cached[%v] running on kernel %v", p.GetPid(), p.GetKernelID())
+			foundCached = true
+		default:
 		}
-		if !foundCached {
-			db.DPrintf(db.TEST, "Didn't find cached")
-		}
-		if !foundSleeper && ji.useSleeper {
-			db.DPrintf(db.TEST, "Didn't find sleeper")
-		}
-		time.Sleep(5 * time.Second)
+	}
+	if !foundCached {
+		db.DPrintf(db.TEST, "Didn't find cached")
+	}
+	if !foundSleeper && ji.useSleeper {
+		db.DPrintf(db.TEST, "Didn't find sleeper")
 	}
 	if !assert.True(ts.Ts.T, foundCached, "Err didn't find cached srv") {
 		return ji

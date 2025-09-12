@@ -130,24 +130,19 @@ func NewCachedBackupJob(ts *test.RealmTstate, jobName string, durs string, maxrp
 		return ji
 	}
 	foundCached := false
-	for i := 0; i < 5; i++ {
-		runningProcs, err := ji.msc.GetAllRunningProcs()
-		if !assert.Nil(ts.Ts.T, err, "Err GetRunningProcs: %v", err) {
-			return ji
-		}
-		for _, p := range runningProcs[ts.GetRealm()] {
-			// Record where relevant programs are running
-			switch p.GetProgram() {
-			case "cached":
-				ji.cacheKIDs[p.GetKernelID()] = true
-				ji.warmCachedSrvKID = p.GetKernelID()
-				db.DPrintf(db.TEST, "cached[%v] running on kernel %v", p.GetPid(), p.GetKernelID())
-				foundCached = true
-			default:
-			}
-		}
-		if !foundCached {
-			time.Sleep(5 * time.Second)
+	runningProcs, err := ji.msc.GetAllRunningProcs()
+	if !assert.Nil(ts.Ts.T, err, "Err GetRunningProcs: %v", err) {
+		return ji
+	}
+	for _, p := range runningProcs[ts.GetRealm()] {
+		// Record where relevant programs are running
+		switch p.GetProgram() {
+		case "cached":
+			ji.cacheKIDs[p.GetKernelID()] = true
+			ji.warmCachedSrvKID = p.GetKernelID()
+			db.DPrintf(db.TEST, "cached[%v] running on kernel %v", p.GetPid(), p.GetKernelID())
+			foundCached = true
+		default:
 		}
 	}
 	if !assert.True(ts.Ts.T, foundCached, "Err didn't find cached srv") {

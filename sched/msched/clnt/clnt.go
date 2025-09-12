@@ -166,7 +166,6 @@ func (mc *MSchedClnt) GetAllRunningProcs() (map[sp.Trealm][]*proc.Proc, error) {
 		return nil, err
 	}
 	db.DPrintf(db.MSCHEDCLNT, "Get running procs on KIDs %v", mscheds)
-	db.DPrintf(db.ALWAYS, "Get running procs on KIDs %v", mscheds)
 	procs := make(map[sp.Trealm][]*proc.Proc, 0)
 	for _, kid := range mscheds {
 		running, err := mc.GetRunningProcs(kid)
@@ -176,7 +175,6 @@ func (mc *MSchedClnt) GetAllRunningProcs() (map[sp.Trealm][]*proc.Proc, error) {
 		}
 		for r, ps := range running {
 			procs[r] = append(procs[r], ps...)
-			db.DPrintf(db.ALWAYS, "Got running procs KID %v procs %v", ps)
 		}
 	}
 	return procs, nil

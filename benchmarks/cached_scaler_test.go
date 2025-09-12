@@ -161,7 +161,7 @@ func NewCachedScalerJob(ts *test.RealmTstate, jobName string, durs string, maxrp
 		return ji
 	}
 	if ji.useSleeper {
-		ji.sleeperProc = proc.NewProc("sleeper", []string{"10000s", "name/"})
+		ji.sleeperProc = proc.NewProc("sleeper", []string{"5000s", "name/"})
 		ji.sleeperProc.SetMcpu(4000)
 		if err := ji.Spawn(ji.sleeperProc); !assert.Nil(ts.Ts.T, err, "Err spawn sleeper proc: %v") {
 			return ji

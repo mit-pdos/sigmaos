@@ -325,6 +325,45 @@ std::expected<int, sigmaos::serr::Error> Clnt::BatchFetchDelegatedRPCs(
 }
 
 std::expected<
+    std::shared_ptr<std::map<
+        uint32_t,
+        std::shared_ptr<std::map<std::string, std::shared_ptr<std::string>>>>>,
+    sigmaos::serr::Error>
+Clnt::DelegatedMultiDumpShard(uint64_t rpc_idx, std::vector<uint32_t> &shards) {
+  log(CACHECLNT, "DelegatedMultiDumpShard({})", (int)rpc_idx);
+  std::shared_ptr<sigmaos::rpc::Clnt> rpcc;
+  {
+    auto res = get_clnt(0, false);
+    if (!res.has_value()) {
+      log(CACHECLNT_ERR, "Error get_clnt: {}", res.error().String());
+      return std::unexpected(res.error());
+    }
+    rpcc = res.value();
+  }
+  ShardData rep;
+  auto shard_map = std::make_shared<std::map<
+      uint32_t,
+      std::shared_ptr<std::map<std::string, std::shared_ptr<std::string>>>>>();
+  {
+    auto res = rpcc->DelegatedRPC(rpc_idx, rep);
+    if (!res.has_value()) {
+      log(CACHECLNT_ERR, "Error DelegatedRPC: {}", res.error().String());
+      return std::unexpected(res.error());
+    }
+    for (auto &shard : shards) {
+      (*shard_map)[shard] = std::make_shared<
+          std::map<std::string, std::shared_ptr<std::string>>>();
+    }
+    for (const auto &[k, v] : rep.vals()) {
+      auto shard = key2shard(k);
+      (*((*shard_map)[shard]))[k] = std::make_shared<std::string>(v);
+    }
+  }
+  log(CACHECLNT, "DelegatedMultiDumpShard({}) ok", (int)rpc_idx);
+  return shard_map;
+}
+
+std::expected<
     std::shared_ptr<std::map<std::string, std::shared_ptr<std::string>>>,
     sigmaos::serr::Error>
 Clnt::DelegatedDumpShard(uint64_t rpc_idx) {

@@ -142,27 +142,29 @@ std::expected<int, sigmaos::serr::Error> Srv::Init(int old_n_srv,
     uint64_t rpc_idx = 0;
     // For each source server, dump shards to be stolen
     for (int src_srv : src_srvs) {
-      for (uint32_t shard : shards_to_steal[src_srv]) {
-        auto start = GetCurrentTime();
-        auto res = _cache_clnt->DelegatedDumpShard(rpc_idx);
-        if (!res.has_value()) {
-          log(CACHESRV_ERR, "Error DelegatedDumpShard: {}", res.error());
-          fatal("Error DelegatedDumpShard: {}", res.error().String());
-          return std::unexpected(res.error());
-        }
-        LogSpawnLatency(_sp_clnt->ProcEnv()->GetPID(),
-                        _sp_clnt->ProcEnv()->GetSpawnTime(), start,
-                        "Scaler.DelegatedDumpRPC");
-        log(CACHESRV, "Load shard delegated {}", (int)shard);
-        start = GetCurrentTime();
-        // Fill the local copy of the shard with the dumped values
-        auto kvs = res.value();
-        _cache.at(shard)->Fill(kvs);
-        LogSpawnLatency(_sp_clnt->ProcEnv()->GetPID(),
-                        _sp_clnt->ProcEnv()->GetSpawnTime(), start,
-                        "Scaler.FillShard");
-        rpc_idx++;
+      auto start = GetCurrentTime();
+      auto res = _cache_clnt->DelegatedMultiDumpShard(rpc_idx,
+                                                      shards_to_steal[src_srv]);
+      if (!res.has_value()) {
+        log(CACHESRV_ERR, "Error DelegatedDumpShard: {}", res.error());
+        fatal("Error DelegatedDumpShard: {}", res.error().String());
+        return std::unexpected(res.error());
       }
+      LogSpawnLatency(_sp_clnt->ProcEnv()->GetPID(),
+                      _sp_clnt->ProcEnv()->GetSpawnTime(), start,
+                      "Scaler.DelegatedMultiDumpRPC");
+      log(CACHESRV, "Load shard delegated srvs {}", (int)src_srv);
+      start = GetCurrentTime();
+      // Fill the local copy of the shard with the dumped values
+      auto shard_map = res.value();
+      for (uint32_t shard : shards_to_steal[src_srv]) {
+        log(CACHESRV, "Load shard {}", (int)shard);
+        _cache.at(shard)->Fill(shard_map->at(shard));
+      }
+      LogSpawnLatency(_sp_clnt->ProcEnv()->GetPID(),
+                      _sp_clnt->ProcEnv()->GetSpawnTime(), start,
+                      "Scaler.FillShards");
+      rpc_idx++;
     }
     LogSpawnLatency(_sp_clnt->ProcEnv()->GetPID(),
                     _sp_clnt->ProcEnv()->GetSpawnTime(), start,

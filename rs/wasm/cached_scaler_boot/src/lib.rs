@@ -37,7 +37,7 @@ pub fn boot(b: *mut c_char, buf_sz: usize) {
             buf,
             rpc_idx.try_into().unwrap(),
             &pn,
-            "CacheSrv.DumpShard",
+            "CacheSrv.MultiDumpShard",
             &rpc_bytes,
             1,
         );

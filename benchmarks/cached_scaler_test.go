@@ -160,10 +160,6 @@ func NewCachedScalerJob(ts *test.RealmTstate, jobName string, durs string, maxrp
 	if _, err := ji.msc.GetMScheds(); !assert.Nil(ts.Ts.T, err, "Err GetMScheds: %v", err) {
 		return ji
 	}
-	nMSched, err := ji.msc.NMSched()
-	if !assert.Nil(ts.Ts.T, err, "Err GetNMSched: %v", err) {
-		return ji
-	}
 	if ji.useSleeper {
 		ji.sleeperProc = proc.NewProc("sleeper", []string{"10000s", "name/"})
 		ji.sleeperProc.SetMcpu(4000)
@@ -178,10 +174,15 @@ func NewCachedScalerJob(ts *test.RealmTstate, jobName string, durs string, maxrp
 	foundCached := false
 	foundSleeper := false
 	for i := 0; i < 5; i++ {
-		runningProcs, err := ji.msc.GetRunningProcs(nMSched)
-		if !assert.Nil(ts.Ts.T, err, "Err GetRunningProcs: %v", err) {
+		runningProcs, err := ji.msc.GetAllRunningProcs()
+		if !assert.Nil(ts.Ts.T, err, "Err SampleRunningProcs: %v", err) {
 			return ji
 		}
+		pnames := map[string]bool{}
+		for _, p := range runningProcs[ts.GetRealm()] {
+			pnames[p.GetPid().String()] = true
+		}
+		db.DPrintf(db.ALWAYS, "Running procs (%v): %v", len(pnames), pnames)
 		for _, p := range runningProcs[ts.GetRealm()] {
 			// Record where relevant programs are running
 			switch p.GetProgram() {

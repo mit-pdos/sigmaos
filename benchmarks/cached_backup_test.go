@@ -129,13 +129,9 @@ func NewCachedBackupJob(ts *test.RealmTstate, jobName string, durs string, maxrp
 	if _, err := ji.msc.GetMScheds(); !assert.Nil(ts.Ts.T, err, "Err GetMScheds: %v", err) {
 		return ji
 	}
-	nMSched, err := ji.msc.NMSched()
-	if !assert.Nil(ts.Ts.T, err, "Err GetNMSched: %v", err) {
-		return ji
-	}
 	foundCached := false
 	for i := 0; i < 5; i++ {
-		runningProcs, err := ji.msc.GetRunningProcs(nMSched)
+		runningProcs, err := ji.msc.GetAllRunningProcs()
 		if !assert.Nil(ts.Ts.T, err, "Err GetRunningProcs: %v", err) {
 			return ji
 		}

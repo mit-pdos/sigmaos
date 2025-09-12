@@ -204,7 +204,6 @@ func (cksrv *ChunkSrv) fetchOrigin(fetchCnt uint64, r sp.Trealm, prog string, pi
 	if err != nil {
 		return 0, "", err
 	}
-	// paths = replaceLocal(paths, cksrv.kernelId)
 	fd, path := be.getFd(paths)
 	if fd == -1 {
 		defer be.signalFdWaiters()

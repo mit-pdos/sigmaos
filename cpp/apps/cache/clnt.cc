@@ -371,7 +371,6 @@ Clnt::DelegatedMultiDumpShard(uint64_t rpc_idx, std::vector<uint32_t> &shards) {
     rpcc = res.value();
   }
   MultiShardRep rep;
-
   Blob blob;
   auto iov = blob.mutable_iov();
   // Add a buffer to hold the output

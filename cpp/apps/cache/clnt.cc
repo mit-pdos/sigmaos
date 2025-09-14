@@ -255,7 +255,8 @@ Clnt::DumpShard(uint32_t shard, bool empty) {
 std::expected<
     std::shared_ptr<std::map<
         uint32_t,
-        std::shared_ptr<std::map<std::string, std::shared_ptr<std::string>>>>>,
+        std::shared_ptr<std::map<
+            std::string, std::shared_ptr<sigmaos::apps::cache::Value>>>>>,
     sigmaos::serr::Error>
 Clnt::MultiDumpShard(uint32_t srv, std::vector<uint32_t> &shards) {
   log(CACHECLNT, "MultiDumpShard");
@@ -269,15 +270,25 @@ Clnt::MultiDumpShard(uint32_t srv, std::vector<uint32_t> &shards) {
     rpcc = res.value();
   }
   TfenceProto fence;
-  ShardData rep;
   MultiShardReq req;
   req.set_allocated_fence(&fence);
   for (auto &shard : shards) {
     req.mutable_shards()->Add(shard);
   }
+  MultiShardRep rep;
+  Blob blob;
+  auto iov = blob.mutable_iov();
+  // Add a buffer to hold the output
+  std::vector<std::shared_ptr<std::string>> shard_data;
+  for (int i = 0; i < shards.size(); i++) {
+    shard_data.push_back(std::make_shared<std::string>());
+    iov->AddAllocated(shard_data[i].get());
+  }
+  rep.set_allocated_blob(&blob);
   auto shard_map = std::make_shared<std::map<
       uint32_t,
-      std::shared_ptr<std::map<std::string, std::shared_ptr<std::string>>>>>();
+      std::shared_ptr<std::map<
+          std::string, std::shared_ptr<sigmaos::apps::cache::Value>>>>>();
   {
     auto res = rpcc->RPC("CacheSrv.MultiDumpShard", req, rep);
     {
@@ -288,12 +299,30 @@ Clnt::MultiDumpShard(uint32_t srv, std::vector<uint32_t> &shards) {
       return std::unexpected(res.error());
     }
     for (auto &shard : shards) {
-      (*shard_map)[shard] = std::make_shared<
-          std::map<std::string, std::shared_ptr<std::string>>>();
+      (*shard_map)[shard] = std::make_shared<std::map<
+          std::string, std::shared_ptr<sigmaos::apps::cache::Value>>>();
     }
-    for (const auto &[k, v] : rep.vals()) {
+    int shard_idx = 0;
+    int shard_off = 0;
+    std::shared_ptr<std::string> shard_buf = shard_data[shard_idx];
+    for (int i = 0; i < rep.keys().size(); i++) {
+      auto k = rep.keys(i);
+      auto v = std::make_shared<sigmaos::apps::cache::Value>(
+          shard_buf, shard_off, rep.lens(i));
       auto shard = key2shard(k);
-      (*((*shard_map)[shard]))[k] = std::make_shared<std::string>(v);
+      (*((*shard_map)[shard]))[k] = v;
+      shard_off += rep.lens(i);
+      if (shard_off >= shard_buf->size()) {
+        shard_off = 0;
+        shard_idx++;
+        while (shard_idx < shard_data.size() &&
+               shard_data[shard_idx]->size() == 0) {
+          shard_idx++;
+        }
+        if (shard_idx < shard_data.size()) {
+          shard_buf = shard_data[shard_idx];
+        }
+      }
     }
   }
   log(CACHECLNT, "MultiDumpShard ok");

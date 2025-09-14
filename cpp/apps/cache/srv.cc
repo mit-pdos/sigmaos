@@ -111,19 +111,18 @@ std::expected<int, sigmaos::serr::Error> Srv::Init(int old_n_srv,
   if (!_sp_clnt->ProcEnv()->GetRunBootScript()) {
     // For each source server, dump shards to be stolen
     for (int src_srv : src_srvs) {
-      // TODO: new API
-      //      auto res = _cache_clnt->MultiDumpShard(src_srv,
-      //      shards_to_steal[src_srv]); if (!res.has_value()) {
-      //        log(CACHESRV_ERR, "Error DumpShard: {}", res.error());
-      //        fatal("Error DumpShard: {}", res.error().String());
-      //        return std::unexpected(res.error());
-      //      }
-      //      // Fill the local copy of the shard with the dumped values
-      //      auto shard_map = res.value();
-      //      for (uint32_t shard : shards_to_steal[src_srv]) {
-      //        log(CACHESRV, "Load shard {}", (int)shard);
-      //        _cache.at(shard)->Fill(shard_map->at(shard));
-      //      }
+      auto res = _cache_clnt->MultiDumpShard(src_srv, shards_to_steal[src_srv]);
+      if (!res.has_value()) {
+        log(CACHESRV_ERR, "Error DumpShard: {}", res.error());
+        fatal("Error DumpShard: {}", res.error().String());
+        return std::unexpected(res.error());
+      }
+      // Fill the local copy of the shard with the dumped values
+      auto shard_map = res.value();
+      for (uint32_t shard : shards_to_steal[src_srv]) {
+        log(CACHESRV, "Load shard {}", (int)shard);
+        _cache.at(shard)->Fill(shard_map->at(shard));
+      }
     }
   } else {
     //    {

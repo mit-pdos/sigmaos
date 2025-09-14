@@ -1,6 +1,5 @@
 #pragma once
 
-#include <apps/cache/clnt.h>
 #include <io/conn/conn.h>
 #include <io/conn/tcp/tcp.h>
 #include <io/demux/srv.h>
@@ -26,6 +25,21 @@
 namespace sigmaos {
 namespace apps::cache {
 
+class Value {
+ public:
+ Value(std::shared_ptr<std::string> unique_buf) : _off(0), _len(unique_buf->size()), _unique_buf(unique_buf) {}
+ Value(std::shared_ptr<std::string> shared_buf, int off, int len) : _off(off), _len(len), _shared_buf(shared_buf) {}
+ ~Value() {}
+
+ std::shared_ptr<std::string> Get();
+
+ private:
+  int _off;
+  int _len;
+  std::shared_ptr<std::string> _unique_buf; // If constructed from a unique buffer (e.g., a Put), or copied from a shared buffer, store the unique buffer here
+  std::shared_ptr<std::string> _shared_buf; // If constructed from a shared buffer, store a reference to the shared buffer here
+};
+
 class Shard {
  public:
   Shard() : _mu(), _map(), _hit_cnt(0), _old_hit_cnt(0) {}
@@ -36,11 +50,11 @@ class Shard {
   void Put(std::string &key, std::shared_ptr<std::string> val);
   bool Delete(std::string &key);
   void Fill(
-      std::shared_ptr<std::map<std::string, std::shared_ptr<std::string>>> kvs);
+      std::shared_ptr<std::map<std::string, std::shared_ptr<Value>>> kvs);
 
  private:
   std::mutex _mu;
-  std::map<std::string, std::shared_ptr<std::string>> _map;
+  std::map<std::string, std::shared_ptr<Value>> _map;
   uint64_t _hit_cnt;
   uint64_t _old_hit_cnt;
 };

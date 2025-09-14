@@ -97,11 +97,11 @@ std::expected<int, sigmaos::serr::Error> Clnt::DelegatedRPC(
     // Release ownership of blob (which is a local stack variable declared
     // above)
     auto blob = rep->release_blob();
-    // Release ownership of buffers, which are owned by out_iov above
-    int n_buf = blob->iov().size();
-    for (int i = 0; i < n_buf; i++) {
-      auto _ = blob->mutable_iov()->ReleaseLast();
-    }
+//    // Release ownership of buffers, which are owned by out_iov above
+//    int n_buf = blob->iov().size();
+//    for (int i = 0; i < n_buf; i++) {
+//      auto _ = blob->mutable_iov()->ReleaseLast();
+//    }
   }
   return res;
 }

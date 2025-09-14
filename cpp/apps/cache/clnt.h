@@ -2,6 +2,7 @@
 
 #include <apps/cache/cache.h>
 #include <apps/cache/proto/cache.pb.h>
+#include <apps/cache/shard.h>
 #include <google/protobuf/message.h>
 #include <io/demux/clnt.h>
 #include <io/iovec/iovec.h>
@@ -55,7 +56,7 @@ class Clnt {
   MultiDumpShard(uint32_t srv, std::vector<uint32_t> &shards);
   std::expected<std::shared_ptr<std::map<
                     uint32_t, std::shared_ptr<std::map<
-                                  std::string, std::shared_ptr<std::string>>>>>,
+                                  std::string, std::shared_ptr<sigmaos::apps::cache::Value>>>>>,
                 sigmaos::serr::Error>
   DelegatedMultiDumpShard(uint64_t rpc_idx, std::vector<uint32_t> &shards);
   std::expected<

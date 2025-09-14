@@ -27,17 +27,23 @@ namespace apps::cache {
 
 class Value {
  public:
- Value(std::shared_ptr<std::string> unique_buf) : _off(0), _len(unique_buf->size()), _unique_buf(unique_buf) {}
- Value(std::shared_ptr<std::string> shared_buf, int off, int len) : _off(off), _len(len), _shared_buf(shared_buf) {}
- ~Value() {}
+  Value(std::shared_ptr<std::string> unique_buf)
+      : _off(0), _len(unique_buf->size()), _unique_buf(unique_buf) {}
+  Value(std::shared_ptr<std::string> shared_buf, int off, int len)
+      : _off(off), _len(len), _shared_buf(shared_buf) {}
+  ~Value() {}
 
- std::shared_ptr<std::string> Get();
+  std::shared_ptr<std::string> Get();
 
  private:
   int _off;
   int _len;
-  std::shared_ptr<std::string> _unique_buf; // If constructed from a unique buffer (e.g., a Put), or copied from a shared buffer, store the unique buffer here
-  std::shared_ptr<std::string> _shared_buf; // If constructed from a shared buffer, store a reference to the shared buffer here
+  std::shared_ptr<std::string>
+      _unique_buf;  // If constructed from a unique buffer (e.g., a Put), or
+                    // copied from a shared buffer, store the unique buffer here
+  std::shared_ptr<std::string>
+      _shared_buf;  // If constructed from a shared buffer, store a reference to
+                    // the shared buffer here
 };
 
 class Shard {
@@ -49,8 +55,7 @@ class Shard {
       std::string &key);
   void Put(std::string &key, std::shared_ptr<std::string> val);
   bool Delete(std::string &key);
-  void Fill(
-      std::shared_ptr<std::map<std::string, std::shared_ptr<Value>>> kvs);
+  void Fill(std::shared_ptr<std::map<std::string, std::shared_ptr<Value>>> kvs);
 
  private:
   std::mutex _mu;

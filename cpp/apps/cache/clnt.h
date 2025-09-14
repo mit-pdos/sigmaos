@@ -54,10 +54,12 @@ class Clnt {
                                   std::string, std::shared_ptr<std::string>>>>>,
                 sigmaos::serr::Error>
   MultiDumpShard(uint32_t srv, std::vector<uint32_t> &shards);
-  std::expected<std::shared_ptr<std::map<
-                    uint32_t, std::shared_ptr<std::map<
-                                  std::string, std::shared_ptr<sigmaos::apps::cache::Value>>>>>,
-                sigmaos::serr::Error>
+  std::expected<
+      std::shared_ptr<std::map<
+          uint32_t,
+          std::shared_ptr<std::map<
+              std::string, std::shared_ptr<sigmaos::apps::cache::Value>>>>>,
+      sigmaos::serr::Error>
   DelegatedMultiDumpShard(uint64_t rpc_idx, std::vector<uint32_t> &shards);
   std::expected<
       std::shared_ptr<std::map<std::string, std::shared_ptr<std::string>>>,

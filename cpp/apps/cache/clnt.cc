@@ -327,7 +327,8 @@ std::expected<int, sigmaos::serr::Error> Clnt::BatchFetchDelegatedRPCs(
 std::expected<
     std::shared_ptr<std::map<
         uint32_t,
-        std::shared_ptr<std::map<std::string, std::shared_ptr<sigmaos::apps::cache::Value>>>>>,
+        std::shared_ptr<std::map<
+            std::string, std::shared_ptr<sigmaos::apps::cache::Value>>>>>,
     sigmaos::serr::Error>
 Clnt::DelegatedMultiDumpShard(uint64_t rpc_idx, std::vector<uint32_t> &shards) {
   log(CACHECLNT, "DelegatedMultiDumpShard({})", (int)rpc_idx);
@@ -353,7 +354,8 @@ Clnt::DelegatedMultiDumpShard(uint64_t rpc_idx, std::vector<uint32_t> &shards) {
   rep.set_allocated_blob(&blob);
   auto shard_map = std::make_shared<std::map<
       uint32_t,
-      std::shared_ptr<std::map<std::string, std::shared_ptr<sigmaos::apps::cache::Value>>>>>();
+      std::shared_ptr<std::map<
+          std::string, std::shared_ptr<sigmaos::apps::cache::Value>>>>>();
   {
     auto res = rpcc->DelegatedRPC(rpc_idx, rep);
     if (!res.has_value()) {
@@ -361,8 +363,8 @@ Clnt::DelegatedMultiDumpShard(uint64_t rpc_idx, std::vector<uint32_t> &shards) {
       return std::unexpected(res.error());
     }
     for (auto &shard : shards) {
-      (*shard_map)[shard] = std::make_shared<
-          std::map<std::string, std::shared_ptr<sigmaos::apps::cache::Value>>>();
+      (*shard_map)[shard] = std::make_shared<std::map<
+          std::string, std::shared_ptr<sigmaos::apps::cache::Value>>>();
     }
     auto start = GetCurrentTime();
     int shard_idx = 0;
@@ -370,14 +372,16 @@ Clnt::DelegatedMultiDumpShard(uint64_t rpc_idx, std::vector<uint32_t> &shards) {
     std::shared_ptr<std::string> shard_buf = shard_data[shard_idx];
     for (int i = 0; i < rep.keys().size(); i++) {
       auto k = rep.keys(i);
-      auto v = std::make_shared<sigmaos::apps::cache::Value>(shard_buf, shard_off, rep.lens(i));
+      auto v = std::make_shared<sigmaos::apps::cache::Value>(
+          shard_buf, shard_off, rep.lens(i));
       auto shard = key2shard(k);
       (*((*shard_map)[shard]))[k] = v;
       shard_off += rep.lens(i);
       if (shard_off >= shard_buf->size()) {
         shard_off = 0;
         shard_idx++;
-        while (shard_idx < shard_data.size() && shard_data[shard_idx]->size() == 0) {
+        while (shard_idx < shard_data.size() &&
+               shard_data[shard_idx]->size() == 0) {
           shard_idx++;
         }
         if (shard_idx < shard_data.size()) {

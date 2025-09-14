@@ -39,7 +39,7 @@ pub fn boot(b: *mut c_char, buf_sz: usize) {
             &pn,
             "CacheSrv.MultiDumpShard",
             &rpc_bytes,
-            1,
+            (1 + shards.len()).try_into().unwrap(),
         );
         // Increment the RPC idx
         rpc_idx += 1;

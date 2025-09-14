@@ -281,7 +281,7 @@ func (cs *CacheSrv) FreezeShard(ctx fs.CtxI, req cacheproto.ShardReq, rep *cache
 	return nil
 }
 
-func (cs *CacheSrv) MultiDumpShard(ctx fs.CtxI, req cacheproto.MultiShardReq, rep *cacheproto.ShardData) error {
+func (cs *CacheSrv) MultiDumpShard(ctx fs.CtxI, req cacheproto.MultiShardReq, rep *cacheproto.MultiShardRep) error {
 	cs.mu.Lock()
 	defer cs.mu.Unlock()
 
@@ -291,16 +291,33 @@ func (cs *CacheSrv) MultiDumpShard(ctx fs.CtxI, req cacheproto.MultiShardReq, re
 		db.DPrintf(db.CACHESRV_ERR, "MultiDumpShard err stale fence")
 		return serr.NewErr(serr.TErrStale, fmt.Sprintf("shards %v", req.GetShards()))
 	}
-	rep.Vals = make(map[string][]byte)
-	for _, s := range req.GetShards() {
+	rep.Blob = &rpcproto.Blob{}
+	for shardIdx, s := range req.GetShards() {
 		shardID := cache.Tshard(s)
 		if si, ok := cs.shards[shardID]; !ok {
 			db.DPrintf(db.CACHESRV_ERR, "MultiDumpShard(%v) err not found", shardID)
 			return serr.NewErr(serr.TErrNotfound, shardID)
 		} else {
 			vals := si.s.dump(false)
+			shardNByte := 0
+			keys := make([]string, 0, len(vals))
+			// Count the number of bytes needed to serialize this shard, and store
+			// its keys
 			for k, v := range vals {
-				rep.Vals[k] = v
+				rep.Keys = append(rep.Keys, k)
+				keys = append(keys, k)
+				l := len(v)
+				rep.Lens = append(rep.Lens, uint32(l))
+				shardNByte += l
+			}
+			// Make room for the shard's values
+			rep.Blob.Iov = append(rep.Blob.Iov, make([]byte, shardNByte))
+			idx := 0
+			// Copy values to IOV
+			for _, k := range keys {
+				v := vals[k]
+				copy(rep.Blob.Iov[shardIdx][idx:], v)
+				idx += len(v)
 			}
 		}
 	}

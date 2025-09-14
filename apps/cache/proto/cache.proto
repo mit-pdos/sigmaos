@@ -52,6 +52,12 @@ message MultiShardReq {
   TfenceProto fence = 2;
 }
 
+message MultiShardRep {
+  repeated string keys = 1;
+  repeated uint32 lens = 2;
+  Blob blob = 3;
+}
+
 message CacheOK {}
 
 message CacheRep {

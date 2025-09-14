@@ -184,6 +184,7 @@ func (cc *CacheClnt) GetTracedFenced(sctx *tproto.SpanContextConfig, srv, key st
 		db.DPrintf(db.CACHE_LAT, "Long cache get: %v", time.Since(s))
 	}
 	if err := proto.Unmarshal(res.Value, val); err != nil {
+		db.DPrintf(db.ERROR, "Err unmarshal key %v val len=%v %v", key, len(res.Value), res.Value)
 		return err
 	}
 	return nil

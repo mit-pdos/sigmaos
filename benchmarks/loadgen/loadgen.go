@@ -87,6 +87,7 @@ func (lg *LoadGenerator) runReq(i int, r *rand.Rand, store bool) time.Duration {
 
 // Find the base latency on which to base future measurements.
 func (lg *LoadGenerator) Calibrate() {
+	db.DPrintf(db.TEST, "Calibrating load generator")
 	const N = 1000
 	//	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	r := rand.New(rand.NewSource(RAND_SEED))

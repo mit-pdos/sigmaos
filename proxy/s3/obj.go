@@ -71,7 +71,7 @@ func (o *Obj) readHead(ctx fs.CtxI, fss3 *Fss3) *serr.Err {
 		db.DPrintf(db.S3, "readHead: %v err %v\n", key, err)
 		return serr.NewErrError(err)
 	}
-	db.DPrintf(db.S3, "readHead: %v %v %v\n", key, result.ContentLength, err)
+	db.DPrintf(db.S3, "readHead: %v %v %v\n", key, *result.ContentLength, err)
 	o.sz = sp.Tlength(*result.ContentLength)
 	if result.LastModified != nil {
 		o.mtime = (*result.LastModified).Unix()
@@ -107,6 +107,10 @@ func (o *Obj) NewStat() (*sp.Tstat, *serr.Err) {
 func (o *Obj) Path() sp.Tpath {
 	p := path.Tpathname{o.bucket}
 	return newTpath(p.AppendPath(o.key))
+}
+
+func (o *Obj) Dev() sp.Tdev {
+	return sp.DEV_S3FS
 }
 
 func (o *Obj) Perm() sp.Tperm {

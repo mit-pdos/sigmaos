@@ -19,7 +19,15 @@ type dcEntry struct {
 }
 
 func (dce *dcEntry) String() string {
-	return fmt.Sprintf("{dir %v v %v st %v}", dce.dir, dce.v, dce.stat)
+	return fmt.Sprintf("&{dir %v v %v st %v}", dce.dir, dce.v, dce.stat)
+}
+
+func newDCEntry(dir *DirInfo, v sp.TQversion, stat Tstat) *dcEntry {
+	return &dcEntry{
+		dir:  dir,
+		v:    v,
+		stat: stat,
+	}
 }
 
 type Dcache struct {
@@ -69,7 +77,7 @@ func (dc *Dcache) remove(d sp.Tpath) {
 	}
 }
 
-// update assumes caller (protsrv) has write lock on dirctory d.
+// update assumes caller (protsrv) has write lock on directory d.
 func (dc *Dcache) update(d sp.Tpath, dir *DirInfo) bool {
 	de, ok := dc.c.Get(d)
 	if ok {

@@ -7,7 +7,7 @@ import (
 )
 
 type Tfcall uint8
-type Ttag uint32
+type Ttag uint64
 
 type Tsession uint64
 type Tseqno uint64
@@ -32,7 +32,7 @@ func (s Tsession) String() string {
 	return strconv.FormatUint(uint64(s), 16)
 }
 
-type Tframe []byte
+type Tframe = []byte
 type IoVec []Tframe
 
 func NewIoVec(fs [][]byte) IoVec {
@@ -50,6 +50,10 @@ func (iov IoVec) String() string {
 	}
 	s += fmt.Sprintf("]")
 	return s
+}
+
+func (iov IoVec) ToByteSlices() [][]byte {
+	return [][]byte(iov)
 }
 
 type Tmsg interface {

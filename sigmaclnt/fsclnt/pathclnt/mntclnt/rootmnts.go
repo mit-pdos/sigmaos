@@ -92,7 +92,9 @@ func (rootmt *RootMountTable) isRootMount(mntName sp.Tsigmapath) bool {
 	return false
 }
 
-// Resolve pn that names a server's root (e.g., name/ux, name)
+// Resolve pn that names a server's root (e.g., name/ux, name), and it
+// may mount the root.  If so, tell caller that it should walk
+// pathname again.
 func (mc *MntClnt) resolveRoot(pn path.Tpathname) (*serr.Err, bool) {
 	db.DPrintf(db.MOUNT, "resolveRoot %v", pn)
 	if len(pn) == 0 {
@@ -110,12 +112,17 @@ func (mc *MntClnt) resolveRoot(pn path.Tpathname) (*serr.Err, bool) {
 			return serr.NewErr(serr.TErrUnreachable, fmt.Sprintf("%v (closed root)", pn[0])), false
 		}
 		if pn[0] == sp.NAME {
+			sr := mc.mountNamed(mc.pe.GetRealm(), sp.NAME, "")
+			if sr == nil {
+				return sr, true
+			}
+			// Retry in the event that the cached named EP was bad
 			return mc.mountNamed(mc.pe.GetRealm(), sp.NAME, ""), true
 		} else {
 			db.DPrintf(db.MOUNT, "resolveRoot: remount %v at %v\n", sm, pn[0])
 			// this may remount the service that this root is relying on
 			// and repair this root mount
-			if _, err := mc.pathc.Stat(sm.svcpn.String()+"/", mc.pe.GetPrincipal()); err != nil {
+			if _, err := mc.pathc.Stat(path.MarkResolve(sm.svcpn.String()), mc.pe.GetPrincipal()); err != nil {
 				if sr, ok := serr.IsErr(err); ok {
 					return sr, false
 				} else {

@@ -9,7 +9,6 @@ import (
 	"path/filepath"
 	"reflect"
 	"strconv"
-
 	"time"
 
 	"google.golang.org/protobuf/proto"
@@ -18,11 +17,12 @@ import (
 	cacheproto "sigmaos/apps/cache/proto"
 	db "sigmaos/debug"
 	"sigmaos/rpc"
-	rpcclnt "sigmaos/rpc/clnt"
+	rpcclntcache "sigmaos/rpc/clnt/cache"
 	sprpcclnt "sigmaos/rpc/clnt/sigmap"
 	rpcdev "sigmaos/rpc/dev"
 	"sigmaos/sigmaclnt/fslib"
 	sp "sigmaos/sigmap"
+	"sigmaos/util/perf"
 	tproto "sigmaos/util/tracing/proto"
 )
 
@@ -31,25 +31,34 @@ func NewKey(k uint64) string {
 }
 
 type CacheClnt struct {
-	*rpcclnt.ClntCache
+	*rpcclntcache.ClntCache
 	fsl    *fslib.FsLib
-	nshard int
+	nshard uint32
 }
 
-func NewCacheClnt(fsl *fslib.FsLib, job string, nshard int) *CacheClnt {
-	cc := &CacheClnt{
+func NewCacheClnt(fsl *fslib.FsLib, job string, nshard int, lazyInit bool) *CacheClnt {
+	return &CacheClnt{
 		fsl:       fsl,
-		nshard:    nshard,
-		ClntCache: rpcclnt.NewRPCClntCache(sprpcclnt.WithSPChannel(fsl)),
+		nshard:    uint32(nshard),
+		ClntCache: rpcclntcache.NewRPCClntCache(sprpcclnt.WithSPChannel(fsl, lazyInit), sprpcclnt.WithDelegatedSPProxyChannel(fsl)),
 	}
-	return cc
 }
 
-func (cc *CacheClnt) key2shard(key string) uint32 {
+func Key2shard(key string, nshard uint32) uint32 {
 	h := fnv.New32a()
 	h.Write([]byte(key))
-	shard := h.Sum32() % uint32(cc.nshard)
+	shard := h.Sum32() % nshard
 	return shard
+}
+
+func (cc *CacheClnt) NewPutBytes(sctx *tproto.SpanContextConfig, key string, b []byte, f *sp.Tfence) (*cacheproto.CacheReq, error) {
+	return &cacheproto.CacheReq{
+		SpanContextConfig: sctx,
+		Fence:             f.FenceProto(),
+		Key:               key,
+		Shard:             Key2shard(key, cc.nshard),
+		Value:             b,
+	}, nil
 }
 
 func (cc *CacheClnt) NewPut(sctx *tproto.SpanContextConfig, key string, val proto.Message, f *sp.Tfence) (*cacheproto.CacheReq, error) {
@@ -57,17 +66,23 @@ func (cc *CacheClnt) NewPut(sctx *tproto.SpanContextConfig, key string, val prot
 	if err != nil {
 		return nil, err
 	}
-	return &cacheproto.CacheReq{
-		SpanContextConfig: sctx,
-		Fence:             f.FenceProto(),
-		Key:               key,
-		Shard:             cc.key2shard(key),
-		Value:             b,
-	}, nil
+	return cc.NewPutBytes(sctx, key, b, f)
 }
 
 func (cc *CacheClnt) PutTracedFenced(sctx *tproto.SpanContextConfig, srv, key string, val proto.Message, f *sp.Tfence) error {
 	req, err := cc.NewPut(sctx, key, val, f)
+	if err != nil {
+		return err
+	}
+	var res cacheproto.CacheRep
+	if err := cc.RPC(srv, "CacheSrv.Put", req, &res); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (cc *CacheClnt) PutBytesTracedFenced(sctx *tproto.SpanContextConfig, srv, key string, b []byte, f *sp.Tfence) error {
+	req, err := cc.NewPutBytes(sctx, key, b, f)
 	if err != nil {
 		return err
 	}
@@ -103,7 +118,7 @@ func (cc *CacheClnt) NewAppend(key string, val proto.Message, f *sp.Tfence) (*ca
 	wr.Flush()
 	return &cacheproto.CacheReq{
 		Key:   key,
-		Shard: cc.key2shard(key),
+		Shard: Key2shard(key, cc.nshard),
 		Mode:  uint32(sp.OAPPEND),
 		Value: buf.Bytes(),
 		Fence: f.FenceProto(),
@@ -126,9 +141,36 @@ func (cc *CacheClnt) NewGet(sctx *tproto.SpanContextConfig, key string, f *sp.Tf
 	return &cacheproto.CacheReq{
 		SpanContextConfig: sctx,
 		Key:               key,
-		Shard:             cc.key2shard(key),
+		Shard:             Key2shard(key, cc.nshard),
 		Fence:             f.FenceProto(),
 	}
+}
+
+func (c *CacheClnt) DelegatedGetHotShards(srv string, rpcIdx uint64) ([]cache.Tshard, []uint64, error) {
+	var res cacheproto.HotShardsRep
+	if err := c.DelegatedRPC(srv, uint64(rpcIdx), &res); err != nil {
+		return nil, nil, err
+	}
+	shardIDs := make([]cache.Tshard, 0, len(res.ShardIDs))
+	for _, sid := range res.ShardIDs {
+		shardIDs = append(shardIDs, cache.Tshard(sid))
+	}
+	return shardIDs, res.HitCnts, nil
+}
+
+func (cc *CacheClnt) GetHotShards(srv string, topN uint32) ([]cache.Tshard, []uint64, error) {
+	req := &cacheproto.HotShardsReq{
+		TopN: topN,
+	}
+	var res cacheproto.HotShardsRep
+	if err := cc.RPC(srv, "CacheSrv.GetHotShards", req, &res); err != nil {
+		return nil, nil, err
+	}
+	shardIDs := make([]cache.Tshard, 0, len(res.ShardIDs))
+	for _, sid := range res.ShardIDs {
+		shardIDs = append(shardIDs, cache.Tshard(sid))
+	}
+	return shardIDs, res.HitCnts, nil
 }
 
 func (cc *CacheClnt) GetTracedFenced(sctx *tproto.SpanContextConfig, srv, key string, val proto.Message, f *sp.Tfence) error {
@@ -142,6 +184,7 @@ func (cc *CacheClnt) GetTracedFenced(sctx *tproto.SpanContextConfig, srv, key st
 		db.DPrintf(db.CACHE_LAT, "Long cache get: %v", time.Since(s))
 	}
 	if err := proto.Unmarshal(res.Value, val); err != nil {
+		db.DPrintf(db.ERROR, "Err unmarshal key %v val len=%v %v", key, len(res.Value), res.Value)
 		return err
 	}
 	return nil
@@ -193,7 +236,7 @@ func (cc *CacheClnt) DeleteTracedFenced(sctx *tproto.SpanContextConfig, srv, key
 		SpanContextConfig: sctx,
 		Fence:             f.FenceProto(),
 		Key:               key,
-		Shard:             cc.key2shard(key),
+		Shard:             Key2shard(key, cc.nshard),
 	}
 	var res cacheproto.CacheRep
 	if err := cc.RPC(srv, "CacheSrv.Delete", req, &res); err != nil {
@@ -247,10 +290,32 @@ func (c *CacheClnt) FreezeShard(srv string, shard cache.Tshard, f *sp.Tfence) er
 	return nil
 }
 
-func (c *CacheClnt) DumpShard(srv string, shard cache.Tshard, f *sp.Tfence) (cache.Tcache, error) {
+func (c *CacheClnt) BatchFetchDelegatedRPCs(srv string, idxs []uint64, nIOV int) error {
+	perf.LogSpawnLatency("CacheClnt.BatchFetchDelegatedRPCs start %d", sp.NOT_SET, perf.TIME_NOT_SET, perf.TIME_NOT_SET, len(idxs))
+	start := time.Now()
+	if err := c.ClntCache.BatchFetchDelegatedRPCs(srv, idxs, nIOV); err != nil {
+		return err
+	}
+	perf.LogSpawnLatency("CacheClnt.BatchFetchDelegatedRPCs done %d", sp.NOT_SET, perf.TIME_NOT_SET, start, len(idxs))
+	return nil
+}
+
+func (c *CacheClnt) DelegatedDumpShard(srv string, rpcIdx int) (cache.Tcache, error) {
+	perf.LogSpawnLatency("CacheClnt.DelegatedDumpShard start %d", sp.NOT_SET, perf.TIME_NOT_SET, perf.TIME_NOT_SET, rpcIdx)
+	start := time.Now()
+	var res cacheproto.ShardData
+	if err := c.DelegatedRPC(srv, uint64(rpcIdx), &res); err != nil {
+		return nil, err
+	}
+	perf.LogSpawnLatency("CacheClnt.DelegatedDumpShard done %d", sp.NOT_SET, perf.TIME_NOT_SET, start, rpcIdx)
+	return res.Vals, nil
+}
+
+func (c *CacheClnt) DumpShard(srv string, shard cache.Tshard, f *sp.Tfence, empty bool) (cache.Tcache, error) {
 	req := &cacheproto.ShardReq{
 		Shard: uint32(shard),
 		Fence: f.FenceProto(),
+		Empty: empty,
 	}
 	var res cacheproto.ShardData
 	if err := c.RPC(srv, "CacheSrv.DumpShard", req, &res); err != nil {

@@ -12,13 +12,16 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	db "sigmaos/debug"
+	spproxyproto "sigmaos/proxy/sigmap/proto"
 	"sigmaos/rpc"
 	"sigmaos/rpc/clnt/channel"
+	"sigmaos/rpc/clnt/delegation"
 	rpcclntopts "sigmaos/rpc/clnt/opts"
 	rpcproto "sigmaos/rpc/proto"
 	"sigmaos/serr"
 	sessp "sigmaos/session/proto"
 	sp "sigmaos/sigmap"
+	"sigmaos/util/perf"
 )
 
 type RPCcall struct {
@@ -27,8 +30,10 @@ type RPCcall struct {
 }
 
 type RPCClnt struct {
-	si *rpc.StatInfo
-	ch channel.RPCChannel
+	si             *rpc.StatInfo
+	ch             channel.RPCChannel
+	delegatedRPCCh channel.RPCChannel
+	rc             *delegation.ReplyCache
 }
 
 // XXX TODO Shouldn't take pn here
@@ -47,61 +52,66 @@ func NewRPCClnt(pn string, opts ...*rpcclntopts.RPCClntOption) (*RPCClnt, error)
 	if err != nil {
 		return nil, err
 	}
-	return &RPCClnt{
-		si: rpc.NewStatInfo(),
-		ch: ch,
-	}, nil
-}
-
-func (rpcc *RPCClnt) rpc(method string, iniov sessp.IoVec, outiov sessp.IoVec) (*rpcproto.Rep, error) {
-	req := rpcproto.Req{Method: method}
-	b, err := proto.Marshal(&req)
-	if err != nil {
-		return nil, serr.NewErrError(err)
-	}
-
-	start := time.Now()
-	err = rpcc.ch.SendReceive(append(sessp.IoVec{b}, iniov...), outiov)
+	delCh, err := rpcOpts.NewDelegatedRPCChannel(sp.NOT_SET)
 	if err != nil {
 		return nil, err
 	}
-	// Record stats
-	rpcc.si.Stat(method, time.Since(start).Microseconds())
-
-	rep := &rpcproto.Rep{}
-	if err := proto.Unmarshal(outiov[0], rep); err != nil {
-		return nil, serr.NewErrError(err)
-	}
-	return rep, nil
+	return &RPCClnt{
+		si:             rpc.NewStatInfo(),
+		ch:             ch,
+		delegatedRPCCh: delCh,
+		rc:             delegation.NewReplyCache(),
+	}, nil
 }
 
-// RPC handles arg and res that contain a Blob specially: it removes
-// the blob from the message and pass it down in an IoVec to avoid
-// marshaling overhead of large blobs.
-func (rpcc *RPCClnt) RPC(method string, arg proto.Message, res proto.Message) error {
-	inblob := rpc.GetBlob(arg)
+func WrapRPCRequest(method string, arg proto.Message) (sessp.IoVec, error) {
 	var iniov sessp.IoVec
+	inblob := rpc.GetBlob(arg)
 	if inblob != nil {
 		iniov = inblob.GetIoVec()
 		inblob.SetIoVec(nil)
 	}
-	a, err := proto.Marshal(arg)
+	argBytes, err := proto.Marshal(arg)
+	if err != nil {
+		return nil, err
+	}
+	return WrapMarshaledRPCRequest(method, append(sessp.IoVec{argBytes}, iniov...))
+}
+
+func WrapMarshaledRPCRequest(method string, iniov sessp.IoVec) (sessp.IoVec, error) {
+	req := rpcproto.Req{Method: method}
+	wrapperBytes, err := proto.Marshal(&req)
+	if err != nil {
+		return nil, serr.NewErrError(err)
+	}
+	return append(sessp.IoVec{wrapperBytes}, iniov...), nil
+}
+
+func (rpcc *RPCClnt) runWrappedRPC(delegate bool, method string, iniov sessp.IoVec, outiov sessp.IoVec) error {
+	var err error
+	start := time.Now()
+	if delegate {
+		// Sanity check
+		if rpcc.delegatedRPCCh == nil {
+			db.DFatalf("Try to run delegated RPC with unset delegated RPC channel")
+		}
+		err = rpcc.delegatedRPCCh.SendReceive(iniov, outiov)
+	} else {
+		// TODO: lazily init ch
+		err = rpcc.ch.SendReceive(iniov, outiov)
+	}
 	if err != nil {
 		return err
 	}
-	// Prepend 2 empty slots to the out iovec: one for the rpcproto.Rep
-	// wrapper, and one for the marshaled res proto.Message
-	outiov := make(sessp.IoVec, 2)
-	outblob := rpc.GetBlob(res)
-	if outblob != nil { // handle blob
-		// Get the reply's blob, if it has one, so that data can be read directly
-		// into buffers in its IoVec
-		outiov = append(outiov, outblob.GetIoVec()...)
-	}
-	// Add an IoVec spot for the RPC wrappers
-	rep, err := rpcc.rpc(method, append(sessp.IoVec{a}, iniov...), outiov)
-	if err != nil {
-		return err
+	// Record stats
+	rpcc.si.Stat(method, time.Since(start).Microseconds())
+	return nil
+}
+
+func processWrappedRPCRep(outiov sessp.IoVec, res proto.Message, outblob *rpcproto.Blob) error {
+	rep := &rpcproto.Rep{}
+	if err := proto.Unmarshal(outiov[0], rep); err != nil {
+		return serr.NewErrError(err)
 	}
 	if rep.Err.ErrCode != 0 {
 		return sp.NewErr(rep.Err)
@@ -119,10 +129,123 @@ func (rpcc *RPCClnt) RPC(method string, arg proto.Message, res proto.Message) er
 	return nil
 }
 
+// RPC handles arg and res that contain a Blob specially: it removes
+// the blob from the message and pass it down in an IoVec to avoid
+// marshaling overhead of large blobs.
+func (rpcc *RPCClnt) RPC(method string, arg proto.Message, res proto.Message) error {
+	return rpcc.rpc(false, method, arg, res)
+}
+
+func (rpcc *RPCClnt) rpc(delegate bool, method string, arg proto.Message, res proto.Message) error {
+	iniov, err := WrapRPCRequest(method, arg)
+	if err != nil {
+		return err
+	}
+	// Prepend 2 empty slots to the out iovec: one for the rpcproto.Rep
+	// wrapper, and one for the marshaled res proto.Message
+	outiov := make(sessp.IoVec, 2)
+	outblob := rpc.GetBlob(res)
+	if outblob != nil { // handle blob
+		// Get the reply's blob, if it has one, so that data can be read directly
+		// into buffers in its IoVec
+		outiov = append(outiov, outblob.GetIoVec()...)
+	}
+	if err := rpcc.runWrappedRPC(delegate, method, iniov, outiov); err != nil {
+		return err
+	}
+	if err := processWrappedRPCRep(outiov, res, outblob); err != nil {
+		return err
+	}
+	return nil
+}
+
+// DelegatedRPC handles a delegated RPC (requesting the response from
+// SPProxySrv via the delegated RPC channel), retreiving a res that contains a
+// Blob specially: it removes the blob from the message and pass it down in an
+// IoVec to avoid marshaling overhead of large blobs.
+func (rpcc *RPCClnt) DelegatedRPC(rpcIdx uint64, res proto.Message) error {
+	// Prepend 2 empty slots to the out iovec: one for the rpcproto.Rep
+	// wrapper, and one for the marshaled res proto.Message
+	outiov := make(sessp.IoVec, 2)
+	outblob := rpc.GetBlob(res)
+	if outblob != nil { // handle blob
+		// Get the reply's blob, if it has one, so that data can be read directly
+		// into buffers in its IoVec
+		outiov = append(outiov, outblob.GetIoVec()...)
+	}
+	req := &spproxyproto.SigmaDelegatedRPCReq{
+		RPCIdx: rpcIdx,
+	}
+	rep := &spproxyproto.SigmaDelegatedRPCRep{
+		Blob: &rpcproto.Blob{
+			Iov: outiov,
+		},
+	}
+	start := time.Now()
+	// Check if the reply has already been cached client-side
+	err, ok := rpcc.rc.Get(rpcIdx, rep)
+	if !ok {
+		rpcc.rc.Register(rpcIdx)
+		// If delegated RPC reply wasn't cached on the client-side, request it from
+		// the SPProxy
+		err = rpcc.rpc(true, "SPProxySrvAPI.GetDelegatedRPCReply", req, rep)
+		rpcc.rc.Put(rpcIdx, rep, err)
+	} else {
+		// If delegated RPC reply was cached on the client-side
+		db.DPrintf(db.RPCCLNT, "Get DelegatedRPC(%v) cached", rpcIdx)
+	}
+	if err != nil {
+		return err
+	}
+	perf.LogSpawnLatency("DelegatedRPC.RunRPC %d", sp.NOT_SET, perf.TIME_NOT_SET, start, rpcIdx)
+	if rep.Err.ErrCode != 0 {
+		return sp.NewErr(rep.Err)
+	}
+	start = time.Now()
+	defer func(start time.Time) {
+		perf.LogSpawnLatency("DelegatedRPC.Unmarshal %d", sp.NOT_SET, perf.TIME_NOT_SET, start, rpcIdx)
+	}(start)
+	return processWrappedRPCRep(rep.Blob.Iov, res, outblob)
+}
+
+// Fetch a batch of delegated RPC results
+func (rpcc *RPCClnt) BatchFetchDelegatedRPCs(idxs []uint64, nIOV int) error {
+	req := &spproxyproto.SigmaMultiDelegatedRPCReq{
+		RPCIdxs: idxs,
+	}
+	multiRep := &spproxyproto.SigmaMultiDelegatedRPCRep{
+		Blob: &rpcproto.Blob{
+			Iov: make(sessp.IoVec, nIOV),
+		},
+	}
+	err := rpcc.rpc(true, "SPProxySrvAPI.GetMultiDelegatedRPCReplies", req, multiRep)
+	if err != nil {
+		return err
+	}
+	start := 0
+	for i, rpcIdx := range idxs {
+		rpcc.rc.Register(rpcIdx)
+		end := start + int(multiRep.NIOVs[i])
+		rep := &spproxyproto.SigmaDelegatedRPCRep{
+			Blob: &rpcproto.Blob{
+				Iov: multiRep.Blob.Iov[start:end],
+			},
+			Err: multiRep.Errs[i],
+		}
+		rpcc.rc.Put(rpcIdx, rep, err)
+		start = end
+	}
+	return nil
+}
+
 func (rpcc *RPCClnt) StatsClnt() map[string]*rpc.MethodStatSnapshot {
 	return rpcc.si.Stats()
 }
 
 func (rpcc *RPCClnt) StatsSrv() (*rpc.RPCStatsSnapshot, error) {
 	return rpcc.ch.StatsSrv()
+}
+
+func (rpcc *RPCClnt) Channel() channel.RPCChannel {
+	return rpcc.ch
 }

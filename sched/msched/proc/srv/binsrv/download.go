@@ -5,11 +5,13 @@ import (
 	"sync"
 	"time"
 
+	db "sigmaos/debug"
+	"sigmaos/proc"
+	schedproc "sigmaos/sched/msched/proc"
 	"sigmaos/sched/msched/proc/chunk"
 	chunksrv "sigmaos/sched/msched/proc/chunk/srv"
-	db "sigmaos/debug"
-	"sigmaos/sched/msched/proc"
 	sp "sigmaos/sigmap"
+	"sigmaos/util/perf"
 )
 
 const (
@@ -22,17 +24,19 @@ type downloader struct {
 	pn  string
 	sz  sp.Tsize
 	pid uint32
-	pds proc.ProcSrv
+	p   *proc.Proc
+	pds schedproc.ProcSrv
 	err error
 	tot time.Duration
 }
 
-func newDownloader(pn string, pds proc.ProcSrv, sz sp.Tsize, pid uint32) *downloader {
+func newDownloader(pn string, pds schedproc.ProcSrv, sz sp.Tsize, p *proc.Proc, pid uint32) *downloader {
 	dl := &downloader{
 		pn:  pn,
 		pds: pds,
 		sz:  sz,
 		pid: pid,
+		p:   p,
 	}
 	return dl
 }
@@ -67,6 +71,7 @@ func (dl *downloader) read(off int64, nbyte int) (int, error) {
 	j := chunk.Index(off+int64(nbyte)) + 1
 	n := int64(0)
 	db.DPrintf(db.BINSRV, "read %d %d: chunks [%d,%d)", off, nbyte, i, j)
+	start := time.Now()
 	for c := i; c < j; c++ {
 		pn := binCachePath(dl.pn)
 		sz, ok := chunksrv.IsPresent(pn, c, dl.sz)
@@ -81,11 +86,12 @@ func (dl *downloader) read(off int64, nbyte int) (int, error) {
 			}
 			d := time.Since(s)
 			dl.tot += d
-			db.DPrintf(db.SPAWN_LAT, "[%v] fetchChunk %d dur %v tot %v", dl.pn, c, d, dl.tot)
+			perf.LogSpawnLatencyVerbose("BinSrv.downloader.read.fetchChunk %d sz %v", dl.p.GetPid(), dl.p.GetSpawnTime(), s, c, sz)
 		}
 		n += sz
 		db.DPrintf(db.BINSRV, "read %q ck %d sz %d", pn, c, sz)
 	}
+	perf.LogSpawnLatencyVerbose("BinSrv.downloader.read nbyte %v", dl.p.GetPid(), dl.p.GetSpawnTime(), start, nbyte)
 	db.DPrintf(db.BINSRV, "read done %d %d: chunks [%d,%d)", off, nbyte, i, j)
 	return min(n-o, nbyte), nil
 }

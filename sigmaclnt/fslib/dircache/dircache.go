@@ -18,6 +18,7 @@ import (
 	sp "sigmaos/sigmap"
 	protsrv_proto "sigmaos/spproto/srv/proto"
 	"sigmaos/util/sortedmapv1"
+	"sigmaos/util/spstats"
 )
 
 type NewValF[E any] func(sp.Tsigmapath) (E, error)
@@ -29,6 +30,10 @@ const (
 	InProgress
 	Finished
 )
+
+type DirCacheStats struct {
+	Ninvalidate spstats.Tcounter
+}
 
 type DirCache[E any] struct {
 	*fslib.FsLib
@@ -46,6 +51,7 @@ type DirCache[E any] struct {
 	prefixFilters []sp.Tsigmapath
 	err           error
 	ch            chan string
+	stat          DirCacheStats
 }
 
 func NewDirCache[E any](fsl *fslib.FsLib, path sp.Tsigmapath, newVal NewValF[E], ch chan string, lSelector db.Tselector, ESelector db.Tselector) *DirCache[E] {
@@ -65,6 +71,7 @@ func NewDirCacheFilter[E any](fsl *fslib.FsLib, path sp.Tsigmapath, newVal NewVa
 		prefixFilters: prefixes,
 		ch:            ch,
 	}
+	db.DPrintf(dc.LSelector, "NewDirCacheFilter: dir %v", path)
 	dc.hasEntries = sync.NewCond(&dc.RWMutex)
 	return dc
 }
@@ -89,6 +96,12 @@ func (dc *DirCache[E]) Init() {
 	}
 }
 
+func (dc *DirCache[E]) Stats(prefix string) *spstats.TcounterSnapshot {
+	stro := spstats.NewTcounterSnapshot()
+	stro.FillCountersPrefix(&dc.stat, prefix)
+	return stro
+}
+
 func (dc *DirCache[E]) isKeyValid(k sp.Tsigmapath) bool {
 	for _, prefix := range dc.prefixFilters {
 		if strings.HasPrefix(k, prefix) {
@@ -106,7 +119,7 @@ func (dc *DirCache[E]) readDirAndWatch() *dirwatcher.DirWatcher {
 		var err error
 		initEnts, dw, err = dirwatcher.NewDirWatcherWithRead(dc.FsLib, dc.Path)
 		if err != nil {
-			if serr.IsErrorUnreachable(err) {
+			if serr.IsErrorSession(err) {
 				continue
 			} else {
 				dc.err = err
@@ -154,6 +167,7 @@ func (dc *DirCache[E]) watchDir(dw *dirwatcher.DirWatcher) {
 		var madeChange bool
 		switch event.Type {
 		case protsrv_proto.WatchEventType_CREATE:
+			db.DPrintf(dc.LSelector, "watchDir: create %v", event.File)
 			madeChange = dc.dir.InsertKey(event.File)
 			if madeChange && dc.ch != nil {
 				go func(ent string) {
@@ -161,6 +175,7 @@ func (dc *DirCache[E]) watchDir(dw *dirwatcher.DirWatcher) {
 				}(event.File)
 			}
 		case protsrv_proto.WatchEventType_REMOVE:
+			db.DPrintf(dc.LSelector, "watchDir: remove %v", event.File)
 			madeChange = dc.dir.Delete(event.File)
 		}
 		if madeChange {
@@ -252,6 +267,7 @@ func (dc *DirCache[E]) GetEntry(n sp.Tsigmapath) (E, error) {
 func (dc *DirCache[E]) InvalidateEntry(name sp.Tsigmapath) bool {
 	dc.Init()
 	db.DPrintf(dc.LSelector, "InvalidateEntry %v", name)
+	spstats.Inc(&dc.stat.Ninvalidate, 1)
 	ok := dc.dir.Delete(name)
 	db.DPrintf(dc.LSelector, "Done invalidate entry %v %v", ok, dc.dir)
 	return ok

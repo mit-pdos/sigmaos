@@ -2,7 +2,9 @@ package clnt
 
 import (
 	"gopkg.in/mgo.v2/bson"
+
 	dbg "sigmaos/debug"
+	"sigmaos/path"
 	proto "sigmaos/proxy/mongo/proto"
 	rpcclnt "sigmaos/rpc/clnt"
 	sprpcclnt "sigmaos/rpc/clnt/sigmap"
@@ -25,7 +27,16 @@ func NewMongoClntWithName(fsl *fslib.FsLib, pn string) (*MongoClnt, error) {
 }
 
 func NewMongoClnt(fsl *fslib.FsLib) (*MongoClnt, error) {
-	return NewMongoClntWithName(fsl, sp.MONGO+sp.ANY+"/")
+	return NewMongoClntWithName(fsl, path.MarkResolve(sp.MONGO+sp.ANY))
+}
+
+func (mongoc *MongoClnt) GetMongoURL() (string, error) {
+	req := &proto.MongoURLReq{}
+	res := &proto.MongoURLRep{}
+	if err := mongoc.rpcc.RPC("MongoSrv.GetURL", req, res); err != nil {
+		return "", err
+	}
+	return res.URL, nil
 }
 
 func (mongoc *MongoClnt) Insert(db, collection string, obj interface{}) error {

@@ -5,7 +5,8 @@ import (
 	"time"
 
 	db "sigmaos/debug"
-	"sigmaos/proc"
+	sp "sigmaos/sigmap"
+	"sigmaos/util/perf"
 )
 
 var cgroupsV2Checked bool
@@ -28,6 +29,6 @@ func checkCgroupsV2() {
 			err1, err2,
 		)
 	}
-	db.DPrintf(db.SPAWN_LAT, "[%v] cgroup check cgroupsv2: %v", proc.GetSigmaDebugPid(), time.Since(s))
+	perf.LogSpawnLatency("DContainter check cgroupsv2", sp.NOT_SET, perf.TIME_NOT_SET, s)
 	cgroupsV2Checked = true
 }

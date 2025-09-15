@@ -2,7 +2,7 @@
 
 if [ "$#" -ne 1 ]
 then
-  echo "Usage: ./install-sw.sh address"
+  echo "Usage: ./setup-instance.sh address"
   exit 1
 fi
 
@@ -12,7 +12,7 @@ source $DIR/env.sh
 SSHCMD=$LOGIN@$1
 
 # Set up a few directories, and prepare to scp the aws secrets.
-ssh -i $DIR/keys/cloudlab-sigmaos $SSHCMD <<ENDSSH
+ssh -o StrictHostKeyChecking=accept-new -i $DIR/keys/cloudlab-sigmaos $SSHCMD <<ENDSSH
 sudo mkdir -p /mnt/9p
 mkdir ~/.aws
 mkdir ~/.docker
@@ -34,6 +34,11 @@ do
     yes | gpg --output $F --decrypt ${F}.gpg || exit 1
   fi
 done
+
+# remove any old secrets on the server
+ssh -i $DIR/keys/cloudlab-sigmaos $SSHCMD <<ENDSSH
+rm -f ~/.aws/credentials ~/.aws/config ~/.docker/config.json
+ENDSSH
 
 # scp the aws and docker secrets to the server and remove them locally.
 scp -i $DIR/keys/cloudlab-sigmaos ../aws/.aws/config $SSHCMD:~/.aws/
@@ -97,6 +102,9 @@ ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQC4NF0v/XEFId9bJJ1KvzvIIfcFUPvvNJCWH35JJbpa
 EOF
 
 sudo mkdir -p /mnt/9p
+
+sudo apt update
+sudo apt install -y golang-go
 
 if [ -d "DeathStarBench" ] 
 then
@@ -162,12 +170,16 @@ then
   parallel \
   docker-buildx
 
+  curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+  unzip awscliv2.zip
+  sudo ./aws/install
+
   # For hadoop
 #  yes | sudo apt install openjdk-8-jdk \
 #  openjdk-8-jre-headless
 
-  wget 'https://golang.org/dl/go1.22.1.linux-amd64.tar.gz'
-  sudo rm -rf /usr/local/go && sudo tar -C /usr/local -xzf go1.22.1.linux-amd64.tar.gz
+  wget 'https://go.dev/dl/go1.24.5.linux-amd64.tar.gz'
+  sudo rm -rf /usr/local/go && sudo tar -C /usr/local -xzf go1.24.5.linux-amd64.tar.gz
   export PATH=/bin:/sbin:/usr/sbin:\$PATH:/usr/local/go/bin
   echo "PATH=\$PATH:/usr/local/go/bin" >> ~/.profile
   go version
@@ -187,11 +199,10 @@ echo "$LOGIN soft nofile 100000" | sudo tee -a /etc/security/limits.conf
 
 # Load apparmor profile
 cd sigmaos
-sudo apparmor_parser -r scontainer/sigmaos-uproc
+sudo ./load-apparmor.sh
 
 echo -n > ~/.hushlogin
 ENDSSH
 
 echo "== TO LOGIN TO VM INSTANCE USE: =="
-echo "ssh $SSHCMD"
-echo "============================="
+echo "ssh $SSHCMD" echo "============================="

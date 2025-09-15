@@ -4,10 +4,12 @@ import (
 	"fmt"
 	"path/filepath"
 	"sync"
+	"time"
 
 	"sigmaos/api/fs"
 	db "sigmaos/debug"
 	"sigmaos/proc"
+	"sigmaos/rpc"
 	beschedproto "sigmaos/sched/besched/proto"
 	"sigmaos/sched/lcsched/proto"
 	mschedclnt "sigmaos/sched/msched/clnt"
@@ -15,6 +17,7 @@ import (
 	chunkclnt "sigmaos/sched/msched/proc/chunk/clnt"
 	"sigmaos/sched/queue"
 	"sigmaos/sigmaclnt"
+	"sigmaos/sigmaclnt/fslib/dirwatcher"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
 	"sigmaos/util/crash"
@@ -44,14 +47,21 @@ func NewLCSched(sc *sigmaclnt.SigmaClnt) *LCSched {
 }
 
 func (lcs *LCSched) Enqueue(ctx fs.CtxI, req beschedproto.EnqueueReq, res *beschedproto.EnqueueRep) error {
+	start := time.Now()
 	p := proc.NewProcFromProto(req.ProcProto)
 	if p.GetRealm() != ctx.Principal().GetRealm() {
 		return fmt.Errorf("Proc realm %v doesn't match principal realm %v", p.GetRealm(), ctx.Principal().GetRealm())
 	}
+	perf.LogSpawnLatency("LCSched.Enqueue recvd proc", p.GetPid(), p.GetSpawnTime(), perf.TIME_NOT_SET)
+	defer func(start time.Time) {
+		perf.LogSpawnLatency("LCSched.Eneuque E2e", p.GetPid(), p.GetSpawnTime(), start)
+	}(start)
 	db.DPrintf(db.LCSCHED, "[%v] Enqueued %v", p.GetRealm(), p)
 
 	ch := make(chan string)
+	start = time.Now()
 	lcs.addProc(p, ch)
+	perf.LogSpawnLatency("LCSched.addProc", p.GetPid(), p.GetSpawnTime(), start)
 	res.MSchedID = <-ch
 	return nil
 }
@@ -67,7 +77,38 @@ func (lcs *LCSched) RegisterMSched(ctx fs.CtxI, req proto.RegisterMSchedReq, res
 	}
 	lcs.mscheds[req.KernelID] = newResources(req.McpuInt, req.MemInt)
 	lcs.cond.Broadcast()
+	// Immediately mount the msched RPC file
+	ep := sp.NewEndpointFromProto(req.EndpointProto)
+	pn := filepath.Join(sp.MSCHED, req.KernelID, rpc.RPC)
+	db.DPrintf(db.LCSCHED, "Mount[%v] %v as %v", ep, rpc.RPC, pn)
+	err := lcs.sc.FsLib.MountTree(ep, rpc.RPC, pn)
+	if err != nil {
+		db.DPrintf(db.ERROR, "Err MountTree: ep %v err %v", ep, err)
+		return err
+	}
+	if _, err := lcs.mschedclnt.GetRPCClnt(req.KernelID); err != nil {
+		db.DPrintf(db.ERROR, "Err Get RPCclnt kid %v err %v", req.KernelID, err)
+		return err
+	}
+
+	// Monitor the msched
+	go lcs.monitorMSched(req.KernelID)
 	return nil
+}
+
+func (lcs *LCSched) monitorMSched(kernelID string) {
+	// Wait for the msched to be removed
+	if err := dirwatcher.WaitRemove(lcs.sc.FsLib, filepath.Join(sp.MSCHED, kernelID)); err != nil {
+		db.DPrintf(db.ERROR, "WaitRemove msched %v", kernelID)
+	}
+
+	lcs.mu.Lock()
+	defer lcs.mu.Unlock()
+
+	db.DPrintf(db.LCSCHED, "Deregister MSched %v", kernelID)
+
+	// Deregister the msched
+	delete(lcs.mscheds, kernelID)
 }
 
 func (lcs *LCSched) schedule() {
@@ -80,11 +121,12 @@ func (lcs *LCSched) schedule() {
 		for realm, q := range lcs.qs {
 			db.DPrintf(db.LCSCHED, "Try to schedule realm %v", realm)
 			for kid, r := range lcs.mscheds {
-				p, ch, _, ok := q.Dequeue(func(p *proc.Proc) bool {
+				p, ch, enqueueT, ok := q.Dequeue(func(p *proc.Proc) bool {
 					return isEligible(p, r.mcpu, r.mem)
 				})
 				if ok {
 					db.DPrintf(db.LCSCHED, "Successfully schedule realm %v", realm)
+					perf.LogSpawnLatency("LCSched.Dequeue found eligible msched", p.GetPid(), p.GetSpawnTime(), enqueueT)
 					// Alloc resources for the proc
 					r.alloc(p)
 					go lcs.runProc(kid, p, ch, r)
@@ -114,12 +156,14 @@ func (lcs *LCSched) runProc(kernelID string, p *proc.Proc, ch chan string, r *Re
 	}
 	lcs.realmbins.SetBinKernelID(p.GetRealm(), p.GetProgram(), kernelID)
 	db.DPrintf(db.LCSCHED, "runProc kernelID %v p %v", kernelID, p)
+	start := time.Now()
 	if err := lcs.mschedclnt.ForceRun(kernelID, false, p); err != nil {
 		db.DPrintf(db.ALWAYS, "MSched.Run %v err %v", kernelID, err)
 		// Re-enqueue the proc
 		lcs.addProc(p, ch)
 		return
 	}
+	perf.LogSpawnLatency("LCSched.runProc ForceRun", p.GetPid(), p.GetSpawnTime(), start)
 	// Notify the spawner that a msched has been chosen.
 	ch <- kernelID
 	// Wait for the proc to exit.

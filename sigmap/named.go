@@ -10,7 +10,7 @@ const (
 	LOCAL = "~local"
 )
 
-// if name ends in "/", it is a directory with mount files for that service
+// if name ends in "/", it is a directory with link files for that service
 const (
 	KNAMED      = "knamed"
 	NAME        = "name"
@@ -24,7 +24,7 @@ const (
 	REALMDREL   = "realmd"
 	REALMD      = NAMED + REALMREL + "/" + REALMDREL
 	REALMSREL   = "realms"
-	REALMS      = REALMD + "/" + REALMSREL
+	REALMS      = NAMED + "/" + REALMSREL
 	BOOTREL     = "boot"
 	BOOT        = NAMED + BOOTREL + "/"
 	PROCDREL    = "procd"
@@ -49,6 +49,9 @@ const (
 
 	IMGREL = "img"
 	IMG    = NAMED + IMGREL + "/"
+
+	FTTASKREL = "fttask"
+	FTTASK = NAMED + FTTASKREL + "/"
 
 	MEMBLOCK = "name/memblock"
 
@@ -106,6 +109,7 @@ var RootNamedMountedDirs map[string]bool = map[string]bool{
 const (
 	SIGMAHOME              = "/home/sigmaos"
 	SIGMASOCKET            = "/tmp/spproxyd/spproxyd.sock"
+	SIGMASOCKET_CTRL       = "/tmp/spproxyd/spproxyd-ctrl.sock"
 	SIGMA_DIALPROXY_SOCKET = "/tmp/spproxyd/spproxyd-dialproxy.sock"
 )
 
@@ -125,4 +129,8 @@ func BESchedKernel(kid string) string {
 
 func ProxyPathname(srv, kid string) string {
 	return filepath.Join(srv, kid)
+}
+
+func NamedRootPathname(realm Trealm) string {
+	return filepath.Join(REALMS, realm.String())
 }

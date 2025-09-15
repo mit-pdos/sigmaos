@@ -16,10 +16,12 @@ import (
 	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/docker/go-connections/nat"
 
-	chunksrv "sigmaos/sched/msched/proc/chunk/srv"
+	units "github.com/docker/go-units"
+
 	"sigmaos/dcontainer/cgroup"
 	db "sigmaos/debug"
 	"sigmaos/proc"
+	chunksrv "sigmaos/sched/msched/proc/chunk/srv"
 	sp "sigmaos/sigmap"
 	"sigmaos/util/linux/mem"
 	"sigmaos/util/perf"
@@ -45,8 +47,15 @@ type cpustats struct {
 	util                float64
 }
 
-func StartDockerContainer(p *proc.Proc, kernelId string) (*DContainer, error) {
+func StartDockerContainer(p *proc.Proc, kernelId, user, netmode string) (*DContainer, error) {
 	image := "sigmauser"
+	tmpBase := "/tmp"
+	if user != sp.NOT_SET {
+		image += "-" + user
+		tmpBase = filepath.Join(tmpBase, user)
+	}
+	procdBin := filepath.Join(tmpBase, "sigmaos-procd-bin")
+	perfOutputPath := filepath.Join(tmpBase, perf.OUTPUT_DIR)
 	ctx := context.Background()
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {
@@ -60,7 +69,6 @@ func StartDockerContainer(p *proc.Proc, kernelId string) (*DContainer, error) {
 
 	pset := nat.PortSet{} // Ports to expose
 	pmap := nat.PortMap{} // NAT mappings for exposed ports
-	netmode := "host"
 	var endpoints map[string]*network.EndpointSettings
 	cmd := append([]string{p.GetProgram()}, p.Args...)
 	db.DPrintf(db.CONTAINER, "ContainerCreate %v %v s %v\n", cmd, p.GetEnv(), score)
@@ -72,14 +80,14 @@ func StartDockerContainer(p *proc.Proc, kernelId string) (*DContainer, error) {
 		// user bin dir.
 		mount.Mount{
 			Type:     mount.TypeBind,
-			Source:   chunksrv.PathHostKernel(kernelId),
+			Source:   chunksrv.PathHostKernel(user, kernelId),
 			Target:   chunksrv.ROOTBINCONTAINER,
 			ReadOnly: false,
 		},
 		// perf output dir
 		mount.Mount{
 			Type:     mount.TypeBind,
-			Source:   perf.OUTPUT_PATH,
+			Source:   perfOutputPath,
 			Target:   perf.OUTPUT_PATH,
 			ReadOnly: false,
 		},
@@ -93,11 +101,22 @@ func StartDockerContainer(p *proc.Proc, kernelId string) (*DContainer, error) {
 		mnts = append(mnts,
 			mount.Mount{
 				Type:     mount.TypeBind,
-				Source:   filepath.Join("/tmp/sigmaos-procd-bin"),
+				Source:   procdBin,
 				Target:   filepath.Join(sp.SIGMAHOME, "bin/kernel"),
 				ReadOnly: true,
 			},
 		)
+	}
+
+	ulimits := []*units.Ulimit{}
+	if p.GetProcEnv().GetValgrind() != "" {
+		// If running with valgrind, we have to set a limit on the number of open
+		// FDs (or else valgrind won't run).
+		ulimits = append(ulimits, &units.Ulimit{
+			"nofile",
+			1000000,
+			1000000,
+		})
 	}
 
 	resp, err := cli.ContainerCreate(ctx,
@@ -114,6 +133,9 @@ func StartDockerContainer(p *proc.Proc, kernelId string) (*DContainer, error) {
 			Privileged:   true,
 			PortBindings: pmap,
 			OomScoreAdj:  score,
+			Resources: container.Resources{
+				Ulimits: ulimits,
+			},
 		}, &network.NetworkingConfig{
 			EndpointsConfig: endpoints,
 		}, nil, kernelId+"-procd-"+p.GetPid().String())
@@ -164,7 +186,7 @@ func (c *DContainer) GetCPUUtil() (float64, error) {
 func (c *DContainer) SetCPUShares(cpu int64) error {
 	s := time.Now()
 	err := c.cmgr.SetCPUShares(c.cgroupPath, cpu)
-	db.DPrintf(db.SPAWN_LAT, "DContainer.SetCPUShares %v", time.Since(s))
+	perf.LogSpawnLatency("DContainter.SetCPUShares", sp.NOT_SET, perf.TIME_NOT_SET, s)
 	return err
 }
 

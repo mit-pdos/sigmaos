@@ -34,11 +34,15 @@ func newObjDi(fs *fsetcd.FsEtcd, pn path.Tpathname, di fsetcd.DirEntInfo) *Obj {
 }
 
 func (o *Obj) String() string {
-	return fmt.Sprintf("{pn %q di %v}", o.pn, o.di)
+	return fmt.Sprintf("{pn %q di %v (dev %d)}", o.pn, &o.di, o.Dev())
 }
 
 func (o *Obj) Path() sp.Tpath {
 	return o.di.Path
+}
+
+func (o *Obj) Dev() sp.Tdev {
+	return sp.DEV_ETCDFS
 }
 
 func (o *Obj) Perm() sp.Tperm {
@@ -52,14 +56,15 @@ func (o *Obj) IsLeased() bool {
 func (o *Obj) Stat(ctx fs.CtxI) (*sp.Tstat, *serr.Err) {
 	db.DPrintf(db.NAMED, "Stat: %v\n", o)
 
-	if o.di.Nf == nil {
-		nf, _, c, err := o.fs.GetFile(&o.di)
+	di := &o.di
+	if !di.IsNfLoaded() {
+		nf, _, c, err := o.fs.GetFile(di)
 		o.fs.PstatUpdate(o.pn, c)
 		if err != nil {
 			db.DPrintf(db.NAMED, "Stat: GetFile %v err %v\n", o, err)
 			return nil, serr.NewErr(serr.TErrNotfound, o.pn.Base())
 		} else {
-			o.di.Nf = nf
+			di.SetNf(nf)
 		}
 	}
 	st, err := o.NewStat()
@@ -75,7 +80,8 @@ func (o *Obj) NewStat() (*sp.Tstat, *serr.Err) {
 	qid := sp.NewQidPerm(o.di.Perm, 0, o.di.Path)
 	st.SetQid(&qid)
 	st.SetMode(o.di.Perm)
-	st.SetLengthInt(len(o.di.Nf.Data))
+	di := &o.di
+	st.SetLengthInt(len(di.GetNf().Data))
 	return st, nil
 }
 

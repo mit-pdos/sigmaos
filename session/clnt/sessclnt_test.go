@@ -27,6 +27,7 @@ import (
 	"sigmaos/test"
 	"sigmaos/util/io/demux"
 	"sigmaos/util/rand"
+	"sigmaos/util/spstats"
 )
 
 const (
@@ -45,7 +46,7 @@ type SessSrv struct {
 }
 
 func (ss *SessSrv) ReportError(err error) {
-	db.DPrintf(db.TEST, "Server ReportError sid %v err %v\n", ss, err)
+	db.DPrintf(db.CRASH, "Server ReportError sid %v err %v\n", ss, err)
 }
 
 func (ss *SessSrv) ServeRequest(req demux.CallI) (demux.CallI, *serr.Err) {
@@ -54,8 +55,6 @@ func (ss *SessSrv) ServeRequest(req demux.CallI) (demux.CallI, *serr.Err) {
 	if err := spcodec.UnmarshalMsg(fcm); err != nil {
 		return nil, err
 	}
-
-	//	db.DPrintf(db.TEST, "serve %v\n", fcm)
 
 	qid := sp.NewQidPerm(0777, 0, 0)
 	var rep *sessp.FcallMsg
@@ -97,7 +96,7 @@ type TstateSrv struct {
 
 func newTstateClntAddr(t *testing.T, addr *sp.Taddr, crash int) *TstateSrv {
 	ts := &TstateSrv{TstateMin: test.NewTstateMinAddr(t, addr), crash: crash}
-	ts.clnt = sessclnt.NewMgr(ts.PE, dialproxyclnt.NewDialProxyClnt(ts.PE))
+	ts.clnt = sessclnt.NewMgr(ts.PE, dialproxyclnt.NewDialProxyClnt(ts.PE), &spstats.PathClntStats{})
 	return ts
 }
 
@@ -146,6 +145,7 @@ func TestDisconnectSessSrv(t *testing.T) {
 	time.Sleep(1 * time.Second)
 	r := <-ch
 	assert.NotNil(t, r)
+	assert.Equal(t, serr.TErrIO, r.Code())
 	ts.srv.CloseListener()
 }
 
@@ -167,13 +167,13 @@ func testManyClients(t *testing.T, crash int) {
 				default:
 					req := sp.NewTattach(sp.Tfid(j), sp.NoFid, ts.PE.GetSecrets(), sp.TclntId(i), path.Tpathname{})
 					_, err := ts.clnt.RPC(ts.srv.GetEndpoint(), req, nil, nil)
-					if err != nil && crash > 0 && serr.IsErrCode(err, serr.TErrUnreachable) {
+					if err != nil && crash > 0 && err.IsErrSession() {
 						// wait for stop signal
 						<-stop
 						ch <- true
 						done = true
 					} else {
-						assert.True(t, err == nil)
+						assert.Nil(t, err)
 					}
 				}
 			}
@@ -456,9 +456,10 @@ type TstateSp struct {
 func newTstateSp(t *testing.T) *TstateSp {
 	ts := &TstateSp{}
 	ts.TstateMin = test.NewTstateMin(t)
-	root := dir.NewRootDir(ctx.NewCtxNull(), memfs.NewInode)
-	ts.srv = sigmapsrv.NewSigmaPSrv(ts.PE, dialproxyclnt.NewDialProxyClnt(ts.PE), root, ts.Addr, nil, spprotosrv.AttachAllowAllToAll)
-	ts.clnt = sessclnt.NewMgr(ts.PE, dialproxyclnt.NewDialProxyClnt(ts.PE))
+	root := dir.NewRootDir(ctx.NewCtxNull(), memfs.NewNewInode(sp.DEV_MEMFS))
+	ts.srv = sigmapsrv.NewSigmaPSrv(ts.PE, dialproxyclnt.NewDialProxyClnt(ts.PE), root, ts.Addr, nil, spprotosrv.AttachAllowAllToAll, nil)
+
+	ts.clnt = sessclnt.NewMgr(ts.PE, dialproxyclnt.NewDialProxyClnt(ts.PE), &spstats.PathClntStats{})
 	return ts
 }
 

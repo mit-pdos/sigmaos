@@ -5,8 +5,8 @@ type Tselector string
 // ALWAYS
 const (
 	ALWAYS Tselector = "ALWAYS"
-	ERROR            = "ERROR"
-	NEVER            = "NEVER"
+	ERROR  Tselector = "ERROR"
+	NEVER  Tselector = "NEVER"
 )
 
 // ERR
@@ -17,70 +17,83 @@ const (
 // Benchmarks
 const (
 	LOADGEN    Tselector = "LOADGEN"
-	BENCH                = "BENCH"
-	THROUGHPUT           = "THROUGHPUT"
-	CPU_UTIL             = "CPU_UTIL"
+	BENCH      Tselector = "BENCH"
+	THROUGHPUT Tselector = "THROUGHPUT"
+	CPU_UTIL   Tselector = "CPU_UTIL"
 )
 
 // Latency break-down.
 const (
-	SPAWN_LAT      Tselector = "SPAWN_LAT"
-	NET_LAT                  = "NET_LAT"
-	DIALPROXY_LAT            = "DIALPROXY_LAT"
-	REALM_GROW_LAT           = "REALM_GROW_LAT"
-	CACHE_LAT                = "CACHE_LAT"
-	WALK_LAT                 = "WALK_LAT"
-	FSETCD_LAT               = "FSETCD_LAT"
-	ATTACH_LAT               = "ATTACH_LAT"
-	RPC_LAT                  = "RPC_LAT"
+	SPAWN_LAT         Tselector = "SPAWN_LAT"
+	SPAWN_LAT_VERBOSE Tselector = "SPAWN_LAT_VERBOSE"
+	NET_LAT           Tselector = "NET_LAT"
+	DIALPROXY_LAT     Tselector = "DIALPROXY_LAT"
+	REALM_GROW_LAT    Tselector = "REALM_GROW_LAT"
+	CACHE_LAT         Tselector = "CACHE_LAT"
+	WALK_LAT          Tselector = "WALK_LAT"
+	CLUNK_LAT         Tselector = "CLUNK_LAT"
+	FSETCD_LAT        Tselector = "FSETCD_LAT"
+	ATTACH_LAT        Tselector = "ATTACH_LAT"
+	RPC_LAT           Tselector = "RPC_LAT"
+	PROXY_RPC_LAT     Tselector = "PROXY_RPC_LAT"
 )
 
 // Tests
 const (
 	TEST     Tselector = "TEST"
-	TEST1              = "TEST1"
-	STAT               = "STAT"
-	TEST_LAT           = "TEST_LAT"
-	DELAY              = "DELAY"
-	CRASH              = "CRASH"
-	PERF               = "PERF"
-)
-
-// WWW
-const (
-	WWW      Tselector = "WWW"
-	WWW_ERR            = WWW + ERR
-	WWW_CLNT           = WWW + "_CLNT"
-	MATMUL             = "MATMUL"
+	TEST1    Tselector = "TEST1"
+	STAT     Tselector = "STAT"
+	TEST_LAT Tselector = "TEST_LAT"
+	DELAY    Tselector = "DELAY"
+	CRASH    Tselector = "CRASH"
+	PERF     Tselector = "PERF"
 )
 
 // Cache
 const (
 	CACHESRV      Tselector = "CACHESRV"
-	CACHECLERK              = "CACHECLERK"
-	CACHEDSVCCLNT           = "CACHEDSVCCLNT"
+	CACHESRV_ERR  Tselector = CACHESRV + ERR
+	CACHECLERK    Tselector = "CACHECLERK"
+	CACHEDSVCCLNT Tselector = "CACHEDSVCCLNT"
+)
+
+// CosSim
+const (
+	COSSIMSRV      Tselector = "COSSIMSRV"
+	COSSIMSRV_ERR  Tselector = COSSIMSRV + ERR
+	COSSIMCLNT     Tselector = "COSSIMCLNT"
+	COSSIMCLNT_ERR Tselector = COSSIMCLNT + ERR
+)
+
+// EPCache
+const (
+	EPCACHE         Tselector = "EPCACHE"
+	EPCACHE_ERR     Tselector = EPCACHE + ERR
+	EPCACHECLNT     Tselector = "EPCACHECLNT"
+	EPCACHECLNT_ERR Tselector = EPCACHECLNT + ERR
 )
 
 // Hotel
 const (
 	HOTEL_CLNT      Tselector = "HOTEL_CLNT"
-	HOTEL_GEO                 = "HOTEL_GEO"
-	HOTEL_GEO_ERR             = "HOTEL_GEO" + ERR
-	HOTEL_PROF                = "HOTEL_PROF"
-	HOTEL_RATE                = "HOTEL_RATE"
-	HOTEL_RESERVE             = "HOTEL_RESERVE"
-	HOTEL_SEARCH              = "HOTEL_SEARCH"
-	HOTEL_WWW                 = "HOTEL_WWW"
-	HOTEL_WWW_ERR             = "HOTEL_WWW" + ERR
-	HOTEL_WWW_STATS           = "HOTEL_WWW_STATS"
+	HOTEL_GEO       Tselector = "HOTEL_GEO"
+	HOTEL_GEO_ERR   Tselector = "HOTEL_GEO" + ERR
+	HOTEL_PROF      Tselector = "HOTEL_PROF"
+	HOTEL_RATE      Tselector = "HOTEL_RATE"
+	HOTEL_RESERVE   Tselector = "HOTEL_RESERVE"
+	HOTEL_SEARCH    Tselector = "HOTEL_SEARCH"
+	HOTEL_WWW       Tselector = "HOTEL_WWW"
+	HOTEL_WWW_ERR   Tselector = "HOTEL_WWW" + ERR
+	HOTEL_WWW_STATS Tselector = "HOTEL_WWW_STATS"
 )
 
 // Test apps
 const (
 	SLEEPER        Tselector = "SLEEPER"
-	SPINNER                  = "SPINNER"
-	FSREADER                 = "FSREADER"
-	SLEEPER_TIMING           = "SLEEPER_TIMING"
+	SPINNER        Tselector = "SPINNER"
+	FSREADER       Tselector = "FSREADER"
+	SLEEPER_TIMING Tselector = "SLEEPER_TIMING"
+	MATMUL         Tselector = "MATMUL"
 )
 
 // Img
@@ -91,21 +104,9 @@ const (
 
 // MR
 const (
-	MR     Tselector = "MR"
-	MR_TPT           = "MR_TPT"
-)
-
-// KV
-const (
-	KVBAL       Tselector = "KVBAL"
-	KVBAL_ERR             = KVBAL + ERR
-	KVCLERK               = "KVCLERK"
-	KVCLERK_ERR           = KVCLERK + ERR
-	KVMON                 = "KVMON"
-	KVMV                  = "KVMV"
-	KVMV_ERR              = KVMV + ERR
-	KVGRP                 = "KVGRP"
-	KVGRP_ERR             = KVGRP + ERR
+	MR       Tselector = "MR"
+	MR_COORD Tselector = "MR_COORD"
+	MR_TPT             = "MR_TPT"
 )
 
 // Socialnet
@@ -130,44 +131,40 @@ const (
 	WATCH_PERF = "WATCH_PERF"
 )
 
-// System
-const (
-	SYSTEM Tselector = "SYSTEM"
-)
-
 // Kernel
 const (
 	KERNEL         Tselector = "KERNEL"
-	KERNELCLNT               = "KERNELCLNT"
-	KERNELCLNT_ERR           = "KERNELCLNT_ERR"
+	KERNELCLNT     Tselector = "KERNELCLNT"
+	KERNELCLNT_ERR Tselector = "KERNELCLNT_ERR"
 )
 
 // Boot
 const (
 	BOOTCLNT  Tselector = "BOOTCLNT"
-	BOOT                = "BOOT"
-	CONTAINER           = "CONTAINER"
+	BOOT      Tselector = "BOOT"
+	CONTAINER Tselector = "CONTAINER"
 )
 
 // Named
 const (
 	NAMED     Tselector = "NAMED"
-	NAMED_LDR           = "NAMED_LDR"
-	FSETCD              = "FSETCD"
+	NAMED_LDR Tselector = "NAMED_LDR"
+	FSETCD    Tselector = "FSETCD"
 )
 
 // MSched
 const (
 	PROCDMGR       Tselector = "PROCDMGR"
-	PROCDMGR_ERR             = "PROCDMGR" + ERR
-	PROCD                    = "PROCD"
-	PROCD_ERR                = "PROCD" + ERR
-	MSCHED                   = "MSCHED"
-	MSCHED_ERR               = "MSCHED" + ERR
-	MSCHEDCLNT               = "MSCHEDCLNT"
-	MSCHEDCLNT_ERR           = "MSCHEDCLNT" + ERR
-	CGROUP                   = "CGROUP"
-	CGROUP_ERR               = "CGROUP" + ERR
+	PROCDMGR_ERR   Tselector = "PROCDMGR" + ERR
+	PROCD          Tselector = "PROCD"
+	PROCD_ERR      Tselector = "PROCD" + ERR
+	MSCHED         Tselector = "MSCHED"
+	MSCHED_ERR     Tselector = "MSCHED" + ERR
+	MSCHEDCLNT     Tselector = "MSCHEDCLNT"
+	MSCHEDCLNT_ERR Tselector = "MSCHEDCLNT" + ERR
+	MSCHED_PERF    Tselector = "MSCHED_PERF"
+	CGROUP         Tselector = "CGROUP"
+	CGROUP_ERR     Tselector = "CGROUP" + ERR
 )
 
 // LCSched
@@ -182,6 +179,7 @@ const (
 const (
 	BESCHED         Tselector = "BESCHED"
 	BESCHED_ERR               = "BESCHED" + ERR
+	BESCHED_PERF              = "BESCHED_PERF"
 	BESCHEDCLNT               = "BESCHEDCLNT"
 	BESCHEDCLNT_ERR           = "BESCHEDCLNT" + ERR
 )
@@ -222,21 +220,21 @@ const (
 
 // Client Libraries
 const (
-	WRITER_ERR    Tselector = "WRITER" + ERR
-	SIGMACLNT               = "SIGMACLNT"
-	READER_ERR              = "READER" + ERR
-	AWRITER                 = "AWRITER"
-	PREADER                 = "PREADER"
-	FSLIB                   = "FSLIB"
-	FSLIB_ERR               = "FSLIB" + ERR
-	FIDCLNT                 = "FIDCLNT"
-	FIDCLNT_ERR             = FIDCLNT + ERR
-	FSCLNT                  = "FSCLNT"
-	SEMCLNT                 = "SEMCLNT"
-	SEMCLNT_ERR             = SEMCLNT + ERR
-	PROCCLNT                = "PROCCLNT"
-	PROCCLNT_ERR            = "PROCCLNT" + ERR
-	SIGMACLNTCLNT           = "SIGMACLNTCLNT"
+	WRITER_ERR   Tselector = "WRITER" + ERR
+	SIGMACLNT              = "SIGMACLNT"
+	READER_ERR             = "READER" + ERR
+	AWRITER                = "AWRITER"
+	PREADER                = "PREADER"
+	FSLIB                  = "FSLIB"
+	FSLIB_ERR              = "FSLIB" + ERR
+	FIDCLNT                = "FIDCLNT"
+	FIDCLNT_ERR            = FIDCLNT + ERR
+	FSCLNT                 = "FSCLNT"
+	SEMCLNT                = "SEMCLNT"
+	SEMCLNT_ERR            = SEMCLNT + ERR
+	PROCCLNT               = "PROCCLNT"
+	PROCCLNT_ERR           = "PROCCLNT" + ERR
+	SPPROXYCLNT            = "SPPROXYCLNT"
 )
 
 // Fault-tolerance
@@ -251,16 +249,19 @@ const (
 	ELECTCLNT               = "ELECTCLNT"
 	EPOCHCLNT               = "EPOCHCLNT"
 	EPOCHCLNT_ERR           = EPOCHCLNT + ERR
-	FTTASKS                 = "FTTASKS"
+	FTTASKSRV               = "FTTASKSRV"
+	FTTASKCLNT              = "FTTASKCLNT"
 	FTTASKMGR               = "FTTASKMGR"
 )
 
 // RPC Client Libraries
 const (
-	DEMUXCLNT     Tselector = "DEMUXCLNT"
-	DEMUXCLNT_ERR           = "DEMUXCLNT" + ERR
-	SESSDEVCLNT             = "SESSDEVCLNT"
-	RPCCLNT                 = "RPCCLNT"
+	DEMUXCLNT       Tselector = "DEMUXCLNT"
+	DEMUXCLNT_ERR             = "DEMUXCLNT" + ERR
+	SESSDEVCLNT               = "SESSDEVCLNT"
+	SESSDEVCLNT_ERR           = "SESSDEVCLNT" + ERR
+	RPCCLNT                   = "RPCCLNT"
+	RPCCHAN                   = "RPCCHAN"
 )
 
 // External service libraries
@@ -314,8 +315,7 @@ const (
 
 // Server-side Infrastructure
 const (
-	REPLSRV       Tselector = "REPLSRV"
-	NETSRV                  = "NETSRV"
+	NETSRV        Tselector = "NETSRV"
 	DEMUXSRV                = "DEMUXSRV"
 	DEMUXSRV_ERR            = "DEMUXSRV" + ERR
 	REPLRAFT                = "REPLRAFT"
@@ -337,6 +337,8 @@ const (
 	REFMAP_SUFFIX           = "_REFMAP"
 	VERSION                 = "VERSION"
 	CLNTCOND                = "CLNTCOND"
+	WASMRT                  = "WASMRT"
+	WASMRT_ERR              = WASMRT + ERR
 )
 
 // 9P
@@ -357,16 +359,16 @@ const (
 // Simulator
 const (
 	SIM_CLNT         Tselector = "SIM_CLNT"
-	SIM_TEST                   = "SIM_TEST"
-	SIM_SVC                    = "SIM_SVC"
-	SIM_QMGR                   = "SIM_QMGR"
-	SIM_QMGR_TIMEOUT           = "SIM_QMGR_TIMEOUT"
-	SIM_LB                     = "SIM_LB"
-	SIM_LB_SHARD               = "SIM_LB_SHARD"
-	SIM_LB_PROBE               = "SIM_LB_PROBE"
-	SIM_RAW_LAT                = "SIM_RAW_LAT"
-	SIM_LAT_STATS              = "SIM_LAT_STATS"
-	SIM_UTIL_STATS             = "SIM_UTIL_STATS"
-	SIM_RAW_UTIL               = "SIM_RAW_UTIL"
-	SIM_AUTOSCALE              = "SIM_AUTOSCALE"
+	SIM_TEST         Tselector = "SIM_TEST"
+	SIM_SVC          Tselector = "SIM_SVC"
+	SIM_QMGR         Tselector = "SIM_QMGR"
+	SIM_QMGR_TIMEOUT Tselector = "SIM_QMGR_TIMEOUT"
+	SIM_LB           Tselector = "SIM_LB"
+	SIM_LB_SHARD     Tselector = "SIM_LB_SHARD"
+	SIM_LB_PROBE     Tselector = "SIM_LB_PROBE"
+	SIM_RAW_LAT      Tselector = "SIM_RAW_LAT"
+	SIM_LAT_STATS    Tselector = "SIM_LAT_STATS"
+	SIM_UTIL_STATS   Tselector = "SIM_UTIL_STATS"
+	SIM_RAW_UTIL     Tselector = "SIM_RAW_UTIL"
+	SIM_AUTOSCALE    Tselector = "SIM_AUTOSCALE"
 )

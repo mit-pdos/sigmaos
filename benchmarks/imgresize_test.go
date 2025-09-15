@@ -2,14 +2,14 @@ package benchmarks_test
 
 import (
 	"path/filepath"
+
 	"time"
 
 	"github.com/stretchr/testify/assert"
 
 	"sigmaos/apps/imgresize"
 	db "sigmaos/debug"
-	fttask "sigmaos/ft/task"
-	"sigmaos/ft/procgroupmgr"
+	fttask_clnt "sigmaos/ft/task/clnt"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
@@ -28,13 +28,19 @@ type ImgResizeJobInstance struct {
 	nrounds  int
 	input    string
 	ready    chan bool
-	imgd     *procgroupmgr.ProcGroupMgr
-	p        *perf.Perf
-	ft       *fttask.FtTasks
+
+	runningTasks      chan bool
+	sleepBetweenTasks time.Duration
+	tasksPerSecond    int
+	dur               time.Duration
+
+	imgd   *imgresize.ImgdMgr[imgresize.Ttask]
+	p      *perf.Perf
+	ftclnt *imgresize.ImgdClnt[imgresize.Ttask]
 	*test.RealmTstate
 }
 
-func NewImgResizeJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, input string, ntasks int, ninputs int, mcpu proc.Tmcpu, mem proc.Tmem, nrounds int, imgdmcpu proc.Tmcpu) *ImgResizeJobInstance {
+func NewImgResizeJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, input string, ntasks int, ninputs int, tasksPerSecond int, dur time.Duration, mcpu proc.Tmcpu, mem proc.Tmem, nrounds int, imgdmcpu proc.Tmcpu) *ImgResizeJobInstance {
 	ji := &ImgResizeJobInstance{}
 	ji.sigmaos = sigmaos
 	ji.job = "imgresize-" + ts.GetRealm().String() + "-" + rd.String(4)
@@ -49,11 +55,20 @@ func NewImgResizeJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, input str
 	ji.mem = mem
 	ji.nrounds = nrounds
 
+	ji.tasksPerSecond = tasksPerSecond
+	ji.dur = dur
+	ji.sleepBetweenTasks = time.Second / time.Duration(ji.tasksPerSecond)
+	ji.tasksPerSecond = tasksPerSecond
+	ji.runningTasks = make(chan bool)
+
 	ts.RmDir(sp.IMG)
 
-	ft, err := fttask.MkFtTasks(ji.SigmaClnt.FsLib, sp.IMG, ji.job)
-	assert.Nil(ts.Ts.T, err, "Error MkDirs: %v", err)
-	ji.ft = ft
+	imgd, err := imgresize.NewImgdMgr[imgresize.Ttask](ji.SigmaClnt, imgresize.ImgSvcId(ji.job), ji.mcpu, ji.mem, false, ji.nrounds, ji.imgdmcpu, nil)
+	assert.Nil(ji.Ts.T, err)
+	ji.imgd = imgd
+
+	ji.ftclnt, err = imgd.NewImgdClnt(ji.SigmaClnt)
+	assert.Nil(ji.Ts.T, err)
 
 	fn := ji.input
 	fns := make([]string, 0, ji.ninputs)
@@ -63,15 +78,17 @@ func NewImgResizeJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, input str
 
 	db.DPrintf(db.ALWAYS, "Submit ImgResizeJob tasks")
 	for i := 0; i < ji.ntasks; i++ {
-		ts := make([]interface{}, 0, len(fns))
+		tasks := make([]*fttask_clnt.Task[imgresize.Ttask], 0, ji.ninputs)
 		for _, fn := range fns {
-			ts = append(ts, imgresize.NewTask(fn))
+			tasks = append(tasks, &fttask_clnt.Task[imgresize.Ttask]{
+				Data: *imgresize.NewTask(fn),
+			})
 		}
-		err := ft.SubmitTaskMulti(i, ts)
+		err := ji.ftclnt.SubmitTasks(tasks)
 		assert.Nil(ji.Ts.T, err, "Error SubmitTask: %v", err)
 	}
 	// Sanity check
-	n, err := ft.NTasksToDo()
+	n, err := ji.ftclnt.GetNTasks(fttask_clnt.TODO)
 	assert.Nil(ji.Ts.T, err, "Error NTasksTODO: %v", err)
 	assert.Equal(ji.Ts.T, n, ji.ntasks, "Num tasks TODO doesn't match ntasks")
 	db.DPrintf(db.ALWAYS, "Done submitting ImgResize tasks")
@@ -80,23 +97,21 @@ func NewImgResizeJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, input str
 
 func (ji *ImgResizeJobInstance) StartImgResizeJob() {
 	db.DPrintf(db.ALWAYS, "StartImgResizeJob input %v ntasks %v mcpu %v job %v", ji.input, ji.ntasks, ji.mcpu, ji.job)
-	ji.imgd = imgresize.StartImgd(ji.SigmaClnt, ji.job, ji.mcpu, ji.mem, false, ji.nrounds, ji.imgdmcpu, nil)
-	db.DPrintf(db.ALWAYS, "Done starting ImgResizeJob")
 }
 
 func (ji *ImgResizeJobInstance) Wait() {
-	db.DPrintf(db.TEST, "Waiting for ImgResizeJOb to finish")
+	db.DPrintf(db.TEST, "Waiting for ImgResizeJob to finish")
 	for {
-		n, err := ji.ft.NTaskDone()
+		n, err := ji.ftclnt.GetNTasks(fttask_clnt.TODO)
 		assert.Nil(ji.Ts.T, err, "Error NTaskDone: %v", err)
 		db.DPrintf(db.TEST, "[%v] ImgResizeJob NTaskDone: %v", ji.GetRealm(), n)
-		if n == ji.ntasks {
+		if n == int32(ji.ntasks) {
 			break
 		}
 		time.Sleep(1 * time.Second)
 	}
 	db.DPrintf(db.TEST, "[%v] Done waiting for ImgResizeJob to finish", ji.GetRealm())
-	ji.imgd.StopGroup()
+	ji.imgd.StopImgd(true)
 	db.DPrintf(db.TEST, "[%v] Imgd shutdown", ji.GetRealm())
 }
 

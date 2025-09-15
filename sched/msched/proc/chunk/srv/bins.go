@@ -57,10 +57,11 @@ func (be *bin) waitStat() *sp.Tstat {
 	return be.st
 }
 
-func (be *bin) signalStatWaiters() {
+func (be *bin) signalStatWaiters(st *sp.Tstat) {
 	be.Lock()
 	defer be.Unlock()
 
+	be.st = st
 	be.statInProgress = false
 	be.cond.Broadcast()
 }

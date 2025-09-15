@@ -3,6 +3,7 @@ package fsetcd
 import (
 	"fmt"
 	"log"
+	"sync"
 	"time"
 
 	"sigmaos/api/fs"
@@ -10,8 +11,8 @@ import (
 	"sigmaos/path"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
-	"sigmaos/sigmasrv/stats"
 	"sigmaos/util/sortedmapv1"
+	"sigmaos/util/spstats"
 )
 
 // This file implements directory operations on top of etcd.  It
@@ -26,6 +27,7 @@ const (
 )
 
 type DirEntInfo struct {
+	sync.Mutex
 	Nf      *EtcdFile
 	Path    sp.Tpath
 	Perm    sp.Tperm
@@ -34,7 +36,13 @@ type DirEntInfo struct {
 }
 
 func NewDirEntInfoNf(nf *EtcdFile, p sp.Tpath, perm sp.Tperm, cid sp.TclntId, lid sp.TleaseId) *DirEntInfo {
-	return &DirEntInfo{Nf: nf, Path: p, Perm: perm, ClntId: cid, LeaseId: lid}
+	return &DirEntInfo{
+		Nf:      nf,
+		Path:    p,
+		Perm:    perm,
+		ClntId:  cid,
+		LeaseId: lid,
+	}
 }
 
 func NewDirEntInfo(p sp.Tpath, perm sp.Tperm, cid sp.TclntId, lid sp.TleaseId) *DirEntInfo {
@@ -46,11 +54,31 @@ func NewDirEntInfoDir(p sp.Tpath) *DirEntInfo {
 }
 
 func (di *DirEntInfo) String() string {
+	di.Lock()
+	defer di.Unlock()
 	if di.Nf != nil {
-		return fmt.Sprintf("{p %v perm %v cid %v lid %v len %d}", di.Path, di.Perm, di.ClntId, di.LeaseId, len(di.Nf.Data))
+		return fmt.Sprintf("&{p %v perm %v cid %v lid %v len %d}", di.Path, di.Perm, di.ClntId, di.LeaseId, len(di.Nf.Data))
 	} else {
-		return fmt.Sprintf("{p %v perm %v cid %v lid %v}", di.Path, di.Perm, di.ClntId, di.LeaseId)
+		return fmt.Sprintf("&{p %v perm %v cid %v lid %v}", di.Path, di.Perm, di.ClntId, di.LeaseId)
 	}
+}
+
+func (di *DirEntInfo) IsNfLoaded() bool {
+	di.Lock()
+	defer di.Unlock()
+	return di.Nf != nil
+}
+
+func (di *DirEntInfo) SetNf(nf *EtcdFile) {
+	di.Lock()
+	defer di.Unlock()
+	di.Nf = nf
+}
+
+func (di *DirEntInfo) GetNf() *EtcdFile {
+	di.Lock()
+	defer di.Unlock()
+	return di.Nf
 }
 
 type DirInfo struct {
@@ -61,7 +89,7 @@ func (di *DirInfo) String() string {
 	return fmt.Sprintf("DI %p len %d", di, di.Ents.Len())
 }
 
-func (fse *FsEtcd) isEmpty(dei *DirEntInfo) (bool, stats.Tcounter, *serr.Err) {
+func (fse *FsEtcd) isEmpty(dei *DirEntInfo) (bool, spstats.Tcounter, *serr.Err) {
 	if dei.Perm.IsDir() {
 		dir, _, nops, err := fse.readDir(dei, TSTAT_NONE)
 		if err != nil {
@@ -73,7 +101,7 @@ func (fse *FsEtcd) isEmpty(dei *DirEntInfo) (bool, stats.Tcounter, *serr.Err) {
 			return false, nops, nil
 		}
 	} else {
-		return true, stats.NewCounter(0), nil
+		return true, spstats.NewCounter(0), nil
 	}
 }
 
@@ -92,7 +120,7 @@ func (fse *FsEtcd) NewRootDir() *serr.Err {
 	return nil
 }
 
-func (fse *FsEtcd) ReadRootDir() (*DirInfo, stats.Tcounter, *serr.Err) {
+func (fse *FsEtcd) ReadRootDir() (*DirInfo, spstats.Tcounter, *serr.Err) {
 	return fse.ReadDir(NewDirEntInfoDir(ROOT))
 }
 
@@ -104,23 +132,25 @@ func (fse *FsEtcd) Lookup(dei *DirEntInfo, pn path.Tpathname) (*DirEntInfo, *ser
 		fse.PstatUpdate(pn, nops)
 		return nil, err
 	}
-	db.DPrintf(db.FSETCD, "Lookup %q %v %v\n", name, dei.Path, dir)
+	db.DPrintf(db.FSETCD, "Lookup %q %v %v", name, dei.Path, dir)
 	e, ok := dir.Ents.Lookup(name)
 	if ok {
+		db.DPrintf(db.FSETCD, "Lookup ok %q %v %v", name, dei.Path, dir)
 		return e, nil
 	}
+	db.DPrintf(db.FSETCD, "Lookup Notfound %q %v %v", name, dei.Path, dir)
 	db.DPrintf(db.FSETCD_LAT, "Lookup %v %v lat %v", name, dei.Path, time.Since(start))
 	return nil, serr.NewErr(serr.TErrNotfound, name)
 }
 
 // OEXCL: should only succeed if file doesn't exist
-func (fse *FsEtcd) Create(dei *DirEntInfo, pn path.Tpathname, path sp.Tpath, nf *EtcdFile, perm sp.Tperm, f sp.Tfence, cid sp.TclntId, lid sp.TleaseId) (*DirEntInfo, stats.Tcounter, *serr.Err) {
+func (fse *FsEtcd) Create(dei *DirEntInfo, pn path.Tpathname, path sp.Tpath, nf *EtcdFile, perm sp.Tperm, f sp.Tfence, cid sp.TclntId, lid sp.TleaseId) (*DirEntInfo, spstats.Tcounter, *serr.Err) {
 	name := pn.Base()
 	start := time.Now()
 	db.DPrintf(db.FSETCD, "%v: Create start pn %v lid %v", cid, pn, lid)
 	dir, v, nops, err := fse.readDir(dei, TSTAT_NONE)
 	if err != nil {
-		return nil, stats.NewCounter(0), err
+		return nil, spstats.NewCounter(0), err
 	}
 	db.DPrintf(db.FSETCD, "%v: Create readDir pn %v lid %v lat %v", cid, pn, lid, time.Since(start))
 	start = time.Now()
@@ -138,7 +168,7 @@ func (fse *FsEtcd) Create(dei *DirEntInfo, pn path.Tpathname, path sp.Tpath, nf 
 	start = time.Now()
 	db.DPrintf(db.FSETCD, "Create %q(%v) di %v f %v\n", name, pn, di, f)
 	if nops1, err := fse.create(dei, dir, v, di, pn, f); err == nil {
-		stats.Add(&nops, nops1)
+		spstats.Add(&nops, nops1)
 		db.DPrintf(db.FSETCD, "%v: Create create pn %v lid %v lat %v", cid, pn, lid, time.Since(start))
 		start = time.Now()
 		fse.dc.update(dei.Path, dir)
@@ -146,13 +176,13 @@ func (fse *FsEtcd) Create(dei *DirEntInfo, pn path.Tpathname, path sp.Tpath, nf 
 		return di, nops, nil
 	} else {
 		db.DPrintf(db.FSETCD, "Create %q di %v err %v", name, di, err)
-		stats.Add(&nops, nops1)
+		spstats.Add(&nops, nops1)
 		dir.Ents.Delete(name)
 		return nil, nops, err
 	}
 }
 
-func (fse *FsEtcd) ReadDir(dei *DirEntInfo) (*DirInfo, stats.Tcounter, *serr.Err) {
+func (fse *FsEtcd) ReadDir(dei *DirEntInfo) (*DirInfo, spstats.Tcounter, *serr.Err) {
 	dir, _, nops, err := fse.readDir(dei, TSTAT_STAT)
 	if err != nil {
 		return nil, nops, err
@@ -162,7 +192,7 @@ func (fse *FsEtcd) ReadDir(dei *DirEntInfo) (*DirInfo, stats.Tcounter, *serr.Err
 
 // If fsetcd already deleted di because di is a leased file; update
 // the on-disk directory to remove the file's entry.
-func (fse *FsEtcd) updateLeased(dei *DirEntInfo, dir *DirInfo, v sp.TQversion) (stats.Tcounter, *serr.Err) {
+func (fse *FsEtcd) updateLeased(dei *DirEntInfo, dir *DirInfo, v sp.TQversion) (spstats.Tcounter, *serr.Err) {
 	if c, err := fse.updateDir(dei, dir, v); err != nil {
 		db.DPrintf(db.FSETCD, "updateLeased %v %v err %v\n", dei, dir, err)
 		return c, err
@@ -175,7 +205,7 @@ func (fse *FsEtcd) updateLeased(dei *DirEntInfo, dir *DirInfo, v sp.TQversion) (
 // Remove `name` and delete its directory entry.  To update only the
 // directory for a file that etcd already deleted (a leased file), set
 // del to false.
-func (fse *FsEtcd) Remove(dei *DirEntInfo, name string, f sp.Tfence, del fs.Tdel) (stats.Tcounter, *serr.Err) {
+func (fse *FsEtcd) Remove(dei *DirEntInfo, name string, f sp.Tfence, del fs.Tdel) (spstats.Tcounter, *serr.Err) {
 	dir, v, nops, err := fse.readDir(dei, TSTAT_NONE)
 	if err != nil {
 		return nops, err
@@ -188,7 +218,7 @@ func (fse *FsEtcd) Remove(dei *DirEntInfo, name string, f sp.Tfence, del fs.Tdel
 	db.DPrintf(db.FSETCD, "Remove in %v entry %v %v v %v\n", dir, name, di, v)
 
 	empty, nops1, err := fse.isEmpty(di)
-	stats.Add(&nops, nops1)
+	spstats.Add(&nops, nops1)
 	if err != nil {
 		return nops, err
 	}
@@ -198,12 +228,12 @@ func (fse *FsEtcd) Remove(dei *DirEntInfo, name string, f sp.Tfence, del fs.Tdel
 
 	dir.Ents.Delete(name)
 	nops1, err = fse.remove(dei, dir, v, di, f)
-	stats.Add(&nops, nops1)
+	spstats.Add(&nops, nops1)
 	if err != nil {
 		db.DPrintf(db.FSETCD, "Remove entry %v %v err %v\n", name, di, err)
 		if di.LeaseId.IsLeased() && err.IsErrNotfound() {
 			if nops1, r := fse.updateLeased(dei, dir, v); r == nil {
-				stats.Add(&nops, nops1)
+				spstats.Add(&nops, nops1)
 				if del == fs.DEL_EXIST {
 					return nops, err // return original err
 				} else {
@@ -221,12 +251,12 @@ func (fse *FsEtcd) Remove(dei *DirEntInfo, name string, f sp.Tfence, del fs.Tdel
 	return nops, nil
 }
 
-func (fse *FsEtcd) Rename(dei *DirEntInfo, from, to string, new path.Tpathname, f sp.Tfence) (stats.Tcounter, *serr.Err) {
+func (fse *FsEtcd) Rename(dei *DirEntInfo, from, to string, new path.Tpathname, f sp.Tfence) (spstats.Tcounter, *serr.Err) {
 	dir, v, nops, err := fse.readDir(dei, TSTAT_NONE)
 	if err != nil {
 		return nops, err
 	}
-	db.DPrintf(db.FSETCD, "Rename in %v from %v to %v\n", dir, from, to)
+	db.DPrintf(db.FSETCD, "Rename in %v from %v to %v (%v)", dir, from, to, f)
 	difrom, ok := dir.Ents.Lookup(from)
 	if !ok {
 		return nops, serr.NewErr(serr.TErrNotfound, from)
@@ -234,7 +264,7 @@ func (fse *FsEtcd) Rename(dei *DirEntInfo, from, to string, new path.Tpathname, 
 	dito, ok := dir.Ents.Lookup(to)
 	if ok {
 		empty, nops1, err := fse.isEmpty(dito)
-		stats.Add(&nops, nops1)
+		spstats.Add(&nops, nops1)
 		if err != nil {
 			return nops, err
 		}
@@ -249,17 +279,17 @@ func (fse *FsEtcd) Rename(dei *DirEntInfo, from, to string, new path.Tpathname, 
 	dir.Ents.Delete(from)
 	dir.Ents.Insert(to, difrom)
 	if nops1, err := fse.rename(dei, dir, v, dito, difrom, new, f); err == nil {
-		stats.Add(&nops, nops1)
+		spstats.Add(&nops, nops1)
 		fse.dc.update(dei.Path, dir)
 		return nops, nil
 	} else {
-		stats.Add(&nops, nops1)
+		spstats.Add(&nops, nops1)
 		if difrom.LeaseId.IsLeased() && err.IsErrNotfound() {
 			if nops1, r := fse.updateLeased(dei, dir, v); r == nil {
-				stats.Add(&nops, nops1)
+				spstats.Add(&nops, nops1)
 				return nops, err // return original err
 			} else {
-				stats.Add(&nops, nops1)
+				spstats.Add(&nops, nops1)
 				return nops, r
 			}
 		}
@@ -269,25 +299,26 @@ func (fse *FsEtcd) Rename(dei *DirEntInfo, from, to string, new path.Tpathname, 
 	}
 }
 
-func (fse *FsEtcd) Renameat(deif *DirEntInfo, from path.Tpathname, deit *DirEntInfo, to path.Tpathname, f sp.Tfence) (stats.Tcounter, *serr.Err) {
+func (fse *FsEtcd) Renameat(deif *DirEntInfo, from path.Tpathname, deit *DirEntInfo, to path.Tpathname, f sp.Tfence) (spstats.Tcounter, *serr.Err) {
 	dirf, vf, nops, err := fse.readDir(deif, TSTAT_NONE)
 	if err != nil {
 		return nops, err
 	}
 	dirt, vt, nops1, err := fse.readDir(deit, TSTAT_NONE)
-	stats.Add(&nops, nops1)
+	spstats.Add(&nops, nops1)
 	if err != nil {
 		return nops, err
 	}
-	db.DPrintf(db.FSETCD, "Renameat %v dir: %v %v %v %v\n", deif.Path, dirf, dirt, vt, vf)
+	db.DPrintf(db.FSETCD, "Renameat %v -> %v p %v dir: %v %v %v %v", from, to, deif.Path, dirf, dirt, vf, vt)
 	difrom, ok := dirf.Ents.Lookup(from.Base())
 	if !ok {
 		return nops, serr.NewErr(serr.TErrNotfound, from)
 	}
+	db.DPrintf(db.FSETCD, "Renameat %v dir: %v %v %v %v difrom %p difrom.Nf %v", deif.Path, dirf, dirt, vf, vt, difrom, difrom.Nf)
 	dito, ok := dirt.Ents.Lookup(to.Base())
 	if ok {
 		empty, nops1, err := fse.isEmpty(dito)
-		stats.Add(&nops, nops1)
+		spstats.Add(&nops, nops1)
 		if err != nil {
 			return nops, err
 		}
@@ -301,16 +332,27 @@ func (fse *FsEtcd) Renameat(deif *DirEntInfo, from path.Tpathname, deit *DirEntI
 	dirf.Ents.Delete(from.Base())
 	dirt.Ents.Insert(to.Base(), difrom)
 	nops1, err = fse.renameAt(deif, dirf, vf, deit, dirt, vt, dito, difrom, to)
-	stats.Add(&nops, nops1)
+	spstats.Add(&nops, nops1)
 	if err == nil {
 		fse.dc.update(deif.Path, dirf)
 		fse.dc.update(deit.Path, dirt)
+		// If the source directory was cached with TSTAT_NONE, note that the
+		// destination directory will have to be re-stat-ed now.
+		dcf, ok := fse.dc.lookup(deif.Path)
+		if ok {
+			dct, ok := fse.dc.lookup(deit.Path)
+			if ok {
+				if dcf.stat == TSTAT_NONE {
+					dct.stat = TSTAT_NONE
+				}
+			}
+		}
 		return nops, nil
 	} else {
 		if difrom.LeaseId.IsLeased() && err.IsErrNotfound() {
-			stats.Inc(&nops, 1)
+			spstats.Inc(&nops, 1)
 			nops1, r := fse.updateLeased(deif, dirf, vf)
-			stats.Add(&nops, nops1)
+			spstats.Add(&nops, nops1)
 			if r == nil {
 				return nops, err // return original err
 			} else {

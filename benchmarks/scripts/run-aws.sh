@@ -336,26 +336,6 @@ run_socialnet() {
   run_benchmark $vpc $n_cores "" 8 $perf_dir "$cmd" $cli_vm $driver $async "swapoff"
 }
 
-run_kv() {
-  if [ $# -ne 8 ]; then
-    echo "run_kv args: n_cores n_vm nkvd kvd_mcpu nclerk auto redisaddr perf_dir" 1>&2
-    exit 1
-  fi
-  n_cores=$1
-  n_vm=$2
-  nkvd=$3
-  nkvd_mcpu=$4
-  nclerk=$5
-  auto=$6
-  redisaddr=$7
-  perf_dir=$8
-  cmd="
-    go clean -testcache; \
-    go test -v sigmaos/benchmarks -timeout 0 $OVERLAYS -run AppKVUnrepl --nkvd $nkvd --kvd_mcpu $kvd_mcpu --nclerk $nclerk --kvauto $auto --redisaddr \"$redisaddr\" $NETPROXY > /tmp/bench.out 2>&1
-  "
-  run_benchmark $VPC $n_cores "" $n_vm $perf_dir "$cmd" 0 true false "swapoff"
-}
-
 run_cached() {
   if [ $# -ne 6 ]; then
     echo "run_cached args: n_cores n_vm nkvd kvd_mcpu nclerk perf_dir" 1>&2
@@ -500,7 +480,6 @@ hotel_tail_multi() {
   scale_cache="false"
 #  cache_type2="memcached"
   cache_type2="cached"
-#  cache_type="kvd"
   n_clnt_vms=4
   driver_vm=8
   clnt_vma=($(echo "$driver_vm 9 10 11 12"))
@@ -1397,30 +1376,6 @@ schedd_scalability_rs_without_kernel_pref() {
 #  run_kv $n_vm $nkvd $kvd_mcpu $nclerk $auto "$redisaddr" $perf_dir
 #}
 
-kv_vs_cached() {
-  # First, run against KVD.
-  auto="manual"
-  nkvd=1
-  nclerk=1
-  n_core=4
-  kvd_mcpu=4000
-  redisaddr=""
-  n_vm=8
-  run=${FUNCNAME[0]}/kvd/
-  echo "========== Running $run =========="
-  perf_dir=$OUT_DIR/$run
-  run_kv $n_core $n_vm $nkvd $kvd_mcpu $nclerk $auto "$redisaddr" $perf_dir
-
-  # Then, run against cached.
-  nkvd=1
-  redisaddr="10.0.134.192:6379"
-  n_vm=15
-  run=${FUNCNAME[0]}/cached
-  echo "========== Running $run =========="
-  perf_dir=$OUT_DIR/$run
-  run_cached $n_core $n_vm $nkvd $kvd_mcpu $nclerk $perf_dir
-}
-
 realm_burst() {
   n_vm=16
   run=${FUNCNAME[0]}
@@ -1707,7 +1662,6 @@ echo "Running benchmarks with version: $VERSION"
 #hotel_tail_reserve
 #mr_replicated_named
 #realm_burst
-#kv_vs_cached
 #rpcbench_tail_multi
 # XXX mr_scalability
 #mr_k8s

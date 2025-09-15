@@ -7,7 +7,8 @@ import (
 
 	cachegrpclnt "sigmaos/apps/cache/cachegrp/clnt"
 	cachegrpmgr "sigmaos/apps/cache/cachegrp/mgr"
-	"sigmaos/apps/kv"
+	"sigmaos/apps/epcache"
+	epsrv "sigmaos/apps/epcache/srv"
 	db "sigmaos/debug"
 	dialproxyclnt "sigmaos/dialproxy/clnt"
 	"sigmaos/proc"
@@ -141,13 +142,14 @@ func NewHotelSvc() []*Srv {
 
 type HotelJob struct {
 	*sigmaclnt.SigmaClnt
+	EPCacheJob      *epsrv.EPCacheJob
 	cacheClnt       *cachegrpclnt.CachedSvcClnt
 	cacheMgr        *cachegrpmgr.CacheMgr
 	CacheAutoscaler *cachegrpclnt.Autoscaler
 	pids            []sp.Tpid
 	cache           string
-	kvf             *kv.KVFleet
 	job             string
+	epcsrvEP        *sp.Tendpoint
 }
 
 func NewHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []*Srv, nhotel int, cache string, cacheMcpu proc.Tmcpu, ncache int, gc bool, imgSizeMB int, ngeo int, ngeoidx int, geoSearchRadius int, geoNResults int) (*HotelJob, error) {
@@ -160,10 +162,26 @@ func NewHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []*Srv, nhotel int, c
 	var cm *cachegrpmgr.CacheMgr
 	var ca *cachegrpclnt.Autoscaler
 	var err error
-	var kvf *kv.KVFleet
 
 	// Init fs.
 	if err := InitHotelFs(sc.FsLib, job); err != nil {
+		return nil, err
+	}
+
+	// Create epcache job
+	epcj, err := epsrv.NewEPCacheJob(sc)
+	if err != nil {
+		return nil, err
+	}
+
+	// Read the endpoint of the endpoint cache server
+	epcsrvEPB, err := sc.GetFile(epcache.EPCACHE)
+	if err != nil {
+		return nil, err
+	}
+
+	epcsrvEP, err := sp.NewEndpointFromBytes(epcsrvEPB)
+	if err != nil {
 		return nil, err
 	}
 
@@ -179,16 +197,6 @@ func NewHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []*Srv, nhotel int, c
 			}
 			cc = cachegrpclnt.NewCachedSvcClnt(sc.FsLib, job)
 			ca = cachegrpclnt.NewAutoscaler(cm, cc)
-		case "kvd":
-			db.DPrintf(db.ALWAYS, "Hotel running with kvd")
-			kvf, err = kv.NewKvdFleet(sc, job, ncache, 0, cacheMcpu, "manual")
-			if err != nil {
-				return nil, err
-			}
-			err = kvf.Start()
-			if err != nil {
-				return nil, err
-			}
 		// XXX Remove
 		case "memcached":
 			db.DPrintf(db.ALWAYS, "Hotel running with memcached")
@@ -202,6 +210,7 @@ func NewHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []*Srv, nhotel int, c
 	for _, srv := range srvs {
 		db.DPrintf(db.TEST, "Hotel spawn %v", srv.Name)
 		p := proc.NewProc(srv.Name, append([]string{job, cache}, srv.Args...))
+		p.SetCachedEndpoint(epcache.EPCACHE, epcsrvEP)
 		p.AppendEnv("NHOTEL", strconv.Itoa(nhotel))
 		p.AppendEnv("HOTEL_IMG_SZ_MB", strconv.Itoa(imgSizeMB))
 		p.SetMcpu(srv.Mcpu)
@@ -217,7 +226,17 @@ func NewHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []*Srv, nhotel int, c
 		db.DPrintf(db.TEST, "Hotel started %v", srv.Name)
 	}
 
-	hj := &HotelJob{sc, cc, cm, ca, pids, cache, kvf, job}
+	hj := &HotelJob{
+		SigmaClnt:       sc,
+		EPCacheJob:      epcj,
+		cacheClnt:       cc,
+		cacheMgr:        cm,
+		CacheAutoscaler: ca,
+		pids:            pids,
+		cache:           cache,
+		job:             job,
+		epcsrvEP:        epcsrvEP,
+	}
 
 	if ngeo > 1 {
 		for i := 0; i < ngeo-1; i++ {
@@ -232,6 +251,7 @@ func NewHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []*Srv, nhotel int, c
 
 func (hj *HotelJob) AddGeoSrv() error {
 	p := proc.NewProc(geo.Name, append([]string{hj.job, hj.cache}, geo.Args...))
+	p.SetCachedEndpoint(epcache.EPCACHE, hj.epcsrvEP)
 	p.AppendEnv("NHOTEL", strconv.Itoa(nhotel))
 	p.AppendEnv("HOTEL_IMG_SZ_MB", strconv.Itoa(imgSizeMB))
 	p.SetMcpu(geo.Mcpu)
@@ -265,9 +285,7 @@ func (hj *HotelJob) Stop() error {
 	if hj.cacheMgr != nil {
 		hj.cacheMgr.Stop()
 	}
-	if hj.kvf != nil {
-		hj.kvf.Stop()
-	}
+	hj.EPCacheJob.Stop()
 	return nil
 }
 

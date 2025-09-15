@@ -84,6 +84,10 @@ func (st *Tstat) SetMtime(t int64) {
 	st.TstatProto.Mtime = uint32(t)
 }
 
+func (st *Tstat) SetUid(uid string) {
+	st.TstatProto.Uid = uid
+}
+
 func (st *Tstat) SetQid(qid *Tqid) {
 	st.TstatProto.Qid = qid.Proto()
 }

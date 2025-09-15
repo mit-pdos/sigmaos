@@ -3,7 +3,6 @@ package hotel
 import (
 	"encoding/json"
 	"log"
-	"path/filepath"
 	"strconv"
 	"sync"
 	"time"
@@ -14,6 +13,8 @@ import (
 	"github.com/mit-pdos/go-geoindex"
 
 	"sigmaos/api/fs"
+	"sigmaos/apps/epcache"
+	epcacheclnt "sigmaos/apps/epcache/clnt"
 	"sigmaos/apps/hotel/proto"
 	db "sigmaos/debug"
 	"sigmaos/proc"
@@ -77,7 +78,7 @@ func RunGeoSrv(job string, nidxStr string, maxSearchRadiusStr string, maxSearchR
 	startRun := time.Now()
 	start := time.Now()
 	pe := proc.GetProcEnv()
-	db.DPrintf(db.SPAWN_LAT, "Geo.RunGeoSrv: sinceSpawn:%v op:%v", time.Since(pe.GetSpawnTime()), time.Since(start))
+	perf.LogSpawnLatency("Geo.RunGeoSrv start", pe.GetPID(), pe.GetSpawnTime(), perf.TIME_NOT_SET)
 	nidx, err := strconv.Atoi(nidxStr)
 	if err != nil {
 		db.DFatalf("Invalid nidx: %v", err)
@@ -94,26 +95,56 @@ func RunGeoSrv(job string, nidxStr string, maxSearchRadiusStr string, maxSearchR
 		maxSearchRadius: float64(maxSearchRadius),
 		maxSearchReps:   maxSearchReps,
 	}
+
 	start = time.Now()
 	geo.idxs = NewGeoIndexes(nidx, "data/geo.json")
-	db.DPrintf(db.SPAWN_LAT, "Geo.NewGeoIndexes: sinceSpawn:%v op:%v", time.Since(pe.GetSpawnTime()), time.Since(start))
+	perf.LogSpawnLatency("Geo.NewGeoIndexes", pe.GetPID(), pe.GetSpawnTime(), start)
 	db.DPrintf(db.ALWAYS, "Geo srv done building %v indexes, radius %v nresults %v,  after: %v", nidx, geo.maxSearchRadius, geo.maxSearchReps, time.Since(start))
+
 	start = time.Now()
-	ssrv, err := sigmasrv.NewSigmaSrv(filepath.Join(HOTELGEODIR, pe.GetPID().String()), geo, pe)
+	// Don't post the geo srv in the namespace
+	ssrv, err := sigmasrv.NewSigmaSrv("", geo, pe)
 	if err != nil {
 		return err
 	}
-	db.DPrintf(db.SPAWN_LAT, "Geo.NewSigmaSrv: sinceSpawn:%v op:%v", time.Since(pe.GetSpawnTime()), time.Since(start))
+	perf.LogSpawnLatency("Geo.NewSigmaSrv", pe.GetPID(), pe.GetSpawnTime(), start)
+
+	start = time.Now()
+	if epcsrvEP, ok := pe.GetCachedEndpoint(epcache.EPCACHE); ok {
+		if err := epcacheclnt.MountEPCacheSrv(ssrv.MemFs.SigmaClnt().FsLib, epcsrvEP); err != nil {
+			db.DFatalf("Err mount epcache srv: %v", err)
+		}
+	}
+	perf.LogSpawnLatency("Geo.MountEPCacheSrv", pe.GetPID(), pe.GetSpawnTime(), start)
+
+	start = time.Now()
+	epcc, err := epcacheclnt.NewEndpointCacheClnt(ssrv.MemFs.SigmaClnt().FsLib)
+	if err != nil {
+		db.DFatalf("Err EPCC: %v", err)
+	}
+
+	perf.LogSpawnLatency("Geo.NewEPCacheClnt", pe.GetPID(), pe.GetSpawnTime(), start)
+	start = time.Now()
+
+	ep := ssrv.MemFs.GetSigmaPSrvEndpoint()
+
+	if err := epcc.RegisterEndpoint(HOTELGEODIR, pe.GetPID().String(), ep); err != nil {
+		db.DFatalf("Err RegisterEP: %v", err)
+	}
+
+	perf.LogSpawnLatency("Geo.RegisterEP", pe.GetPID(), pe.GetSpawnTime(), start)
+	start = time.Now()
 
 	p, err := perf.NewPerf(ssrv.MemFs.SigmaClnt().ProcEnv(), perf.HOTEL_GEO)
 	if err != nil {
 		db.DFatalf("NewPerf err %v\n", err)
 	}
 	defer p.Done()
+	perf.LogSpawnLatency("Geo.NewPerf", pe.GetPID(), pe.GetSpawnTime(), start)
 	//	geo.tracer = tracing.Init("geo", proc.GetSigmaJaegerIP())
 	//	defer geo.tracer.Flush()
 
-	db.DPrintf(db.SPAWN_LAT, "Geo.Ready: sinceSpawn:%v op:%v", time.Since(pe.GetSpawnTime()), time.Since(startRun))
+	perf.LogSpawnLatency("Geo.Ready", pe.GetPID(), pe.GetSpawnTime(), startRun)
 	db.DPrintf(db.ALWAYS, "Geo srv ready to serve time since spawn: %v", time.Since(ssrv.ProcEnv().GetSpawnTime()))
 
 	return ssrv.RunServer()

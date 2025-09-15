@@ -6,8 +6,7 @@ package clnt
 import (
 	db "sigmaos/debug"
 	leaseproto "sigmaos/ft/lease/proto"
-	"sigmaos/namesrv/fsetcd"
-	rpcclnt "sigmaos/rpc/clnt"
+	rpcclntcache "sigmaos/rpc/clnt/cache"
 	sprpcclnt "sigmaos/rpc/clnt/sigmap"
 	"sigmaos/sigmaclnt/fslib"
 	sp "sigmaos/sigmap"
@@ -17,7 +16,7 @@ import (
 type LeaseClnt struct {
 	*fslib.FsLib
 	lm            *syncmap.SyncMap[string, *Lease]
-	cc            *rpcclnt.ClntCache
+	cc            *rpcclntcache.ClntCache
 	askedForLease bool // Used by test harness
 }
 
@@ -25,7 +24,7 @@ func NewLeaseClnt(fsl *fslib.FsLib) (*LeaseClnt, error) {
 	return &LeaseClnt{
 		FsLib: fsl,
 		lm:    syncmap.NewSyncMap[string, *Lease](),
-		cc:    rpcclnt.NewRPCClntCache(sprpcclnt.WithSPChannel(fsl)),
+		cc:    rpcclntcache.NewRPCClntCache(sprpcclnt.WithSPChannel(fsl, false)),
 	}, nil
 }
 
@@ -39,9 +38,12 @@ func (lmc *LeaseClnt) AskLease(pn string, ttl sp.Tttl) (*Lease, error) {
 		return li, nil
 	}
 	var res leaseproto.AskRep
-	if err := lmc.cc.RPC(srv.String(), "LeaseSrv.AskLease", &leaseproto.AskReq{
-		ClntId: uint64(lmc.ClntId()),
-		TTL:    fsetcd.LeaseTTL}, &res); err == nil {
+	if err := lmc.cc.RPC(srv.String(), "LeaseSrv.AskLease",
+		&leaseproto.AskReq{
+			ClntId: uint64(lmc.ClntId()),
+			TTL:    uint64(ttl),
+		},
+		&res); err == nil {
 		li := &Lease{
 			ch:  make(chan struct{}),
 			srv: srv.String(),

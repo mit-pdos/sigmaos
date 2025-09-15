@@ -74,6 +74,7 @@ func (ks *KernelSrv) Shutdown(ctx fs.CtxI, req proto.ShutdownReq, rep *proto.Shu
 		// time. Instead, shortcut this by killing spproxyd and just exiting.
 		db.DPrintf(db.KERNEL, "Shutdown spproxyd kernelsrv")
 	} else {
+		db.DPrintf(db.KERNEL, "Start cleaning up boot dir")
 		if err := ks.k.Remove(sp.BOOT + ks.k.Param.KernelID); err != nil {
 			db.DPrintf(db.KERNEL, "%v: kernelsrv shutdown remove err %v", ks.k.Param.KernelID, err)
 		}

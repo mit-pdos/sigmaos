@@ -6,12 +6,13 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"sigmaos/apps/mr"
+	"sigmaos/benchmarks"
 	db "sigmaos/debug"
 	"sigmaos/proc"
 	mschedclnt "sigmaos/sched/msched/clnt"
-	"sigmaos/util/coordination/semaphore"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
+	"sigmaos/util/coordination/semaphore"
 )
 
 //
@@ -46,8 +47,22 @@ func downSemaphore(ts *test.RealmTstate, i interface{}) (time.Duration, float64)
 
 func warmupRealmBench(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
 	prog := i.(string)
-	start, nDL := warmupRealm(ts, []string{prog})
+	start, nDL := benchmarks.WarmupRealm(ts, []string{prog})
 	return time.Since(start), float64(nDL)
+}
+
+func runExample(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
+	ji := i.(*ExampleJobInstance)
+	ji.ready <- true
+	<-ji.ready
+	// Start a procd clnt, and monitor procds
+	rpcc := mschedclnt.NewMSchedClnt(ts.SigmaClnt.FsLib, sp.NOT_SET)
+	rpcc.MonitorMSchedStats(ts.GetRealm(), SCHEDD_STAT_MONITOR_PERIOD)
+	defer rpcc.Done()
+	start := time.Now()
+	ji.StartExampleJob()
+	ji.Wait()
+	return time.Since(start), 1.0
 }
 
 // TODO for matmul, possibly only benchmark internal time
@@ -150,57 +165,12 @@ func runMR(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
 	return dur, 1.0
 }
 
-func runKV(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
-	ji := i.(*KVJobInstance)
-	rpcc := mschedclnt.NewMSchedClnt(ts.SigmaClnt.FsLib, sp.NOT_SET)
-	rpcc.MonitorMSchedStats(ts.GetRealm(), SCHEDD_STAT_MONITOR_PERIOD)
-	defer rpcc.Done()
-	// Start some balancers
-	start := time.Now()
-	ji.StartKVJob()
-
-	// If not running against redis.
-	if !ji.redis {
-		cnts := ji.GetKeyCountsPerGroup()
-		db.DPrintf(db.ALWAYS, "Key counts per group: %v", cnts)
-	}
-	// Note that we are prepared to run the job.
-	ji.ready <- true
-	// Wait for an ack.
-	<-ji.ready
-	db.DPrintf(db.TEST, "Added KV groups")
-
-	db.DPrintf(db.TEST, "Running clerks")
-	// Run through the job phases.
-	for !ji.IsDone() {
-		ji.NextPhase()
-	}
-	ji.Stop()
-	db.DPrintf(db.TEST, "Stopped KV")
-	return time.Since(start), 1.0
-}
-
 func runCached(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
 	ji := i.(*CachedJobInstance)
 	ji.ready <- true
 	<-ji.ready
 	start := time.Now()
 	ji.RunCachedJob()
-	return time.Since(start), 1.0
-}
-
-// XXX Should get job name in a tuple.
-func runWww(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
-	ji := i.(*WwwJobInstance)
-	ji.ready <- true
-	<-ji.ready
-	// Start a procd clnt, and monitor procds
-	rpcc := mschedclnt.NewMSchedClnt(ts.SigmaClnt.FsLib, sp.NOT_SET)
-	rpcc.MonitorMSchedStats(ts.GetRealm(), SCHEDD_STAT_MONITOR_PERIOD)
-	defer rpcc.Done()
-	start := time.Now()
-	ji.StartWwwJob()
-	ji.Wait()
 	return time.Since(start), 1.0
 }
 
@@ -246,6 +216,54 @@ func runSocialNetwork(ts *test.RealmTstate, i interface{}) (time.Duration, float
 	return time.Since(start), 1.0
 }
 
+func runCosSim(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
+	ji := i.(*CosSimJobInstance)
+	ji.ready <- true
+	<-ji.ready
+	// Start a procd clnt, and monitor procds
+	if ji.sigmaos {
+		rpcc := mschedclnt.NewMSchedClnt(ts.SigmaClnt.FsLib, sp.NOT_SET)
+		rpcc.MonitorMSchedStats(ts.GetRealm(), SCHEDD_STAT_MONITOR_PERIOD)
+		defer rpcc.Done()
+	}
+	start := time.Now()
+	ji.StartCosSimJob()
+	ji.Wait()
+	return time.Since(start), 1.0
+}
+
+func runCachedBackup(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
+	ji := i.(*CachedBackupJobInstance)
+	ji.ready <- true
+	<-ji.ready
+	// Start a procd clnt, and monitor procds
+	if ji.sigmaos {
+		rpcc := mschedclnt.NewMSchedClnt(ts.SigmaClnt.FsLib, sp.NOT_SET)
+		rpcc.MonitorMSchedStats(ts.GetRealm(), SCHEDD_STAT_MONITOR_PERIOD)
+		defer rpcc.Done()
+	}
+	start := time.Now()
+	ji.StartCachedBackupJob()
+	ji.Wait()
+	return time.Since(start), 1.0
+}
+
+func runCachedScaler(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
+	ji := i.(*CachedScalerJobInstance)
+	ji.ready <- true
+	<-ji.ready
+	// Start a procd clnt, and monitor procds
+	if ji.sigmaos {
+		rpcc := mschedclnt.NewMSchedClnt(ts.SigmaClnt.FsLib, sp.NOT_SET)
+		rpcc.MonitorMSchedStats(ts.GetRealm(), SCHEDD_STAT_MONITOR_PERIOD)
+		defer rpcc.Done()
+	}
+	start := time.Now()
+	ji.StartCachedScalerJob()
+	ji.Wait()
+	return time.Since(start), 1.0
+}
+
 func runImgResize(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
 	ji := i.(*ImgResizeJobInstance)
 	ji.ready <- true
@@ -269,7 +287,7 @@ func runImgResize(ts *test.RealmTstate, i interface{}) (time.Duration, float64) 
 }
 
 func runImgResizeRPC(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
-	ji := i.(*ImgResizeRPCJobInstance)
+	ji := i.(*ImgResizeJobInstance)
 	ji.ready <- true
 	<-ji.ready
 	// Start a procd clnt, and monitor procds
@@ -280,7 +298,7 @@ func runImgResizeRPC(ts *test.RealmTstate, i interface{}) (time.Duration, float6
 	}
 	//	ji.Cleanup()
 	start := time.Now()
-	ji.StartImgResizeRPCJob()
+	ji.StartImgResizeJob()
 	ji.Wait()
 	t := time.Since(start)
 	time.Sleep(2 * time.Second)

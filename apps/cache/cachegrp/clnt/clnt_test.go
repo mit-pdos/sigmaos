@@ -14,18 +14,20 @@ import (
 	"sigmaos/apps/cache/proto"
 	db "sigmaos/debug"
 	"sigmaos/proc"
-	"sigmaos/util/coordination/semaphore"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
+	"sigmaos/util/coordination/semaphore"
+	linuxsched "sigmaos/util/linux/sched"
 	rd "sigmaos/util/rand"
 )
 
 const (
-	CACHE_MCPU = 2000
+	NCPU       = 2
+	CACHE_MCPU = NCPU * 1000
 )
 
 type Tstate struct {
-	*test.Tstate
+	mrts  *test.MultiRealmTstate
 	cm    *cachegrpmgr.CacheMgr
 	clrks []sp.Tpid
 	job   string
@@ -33,34 +35,34 @@ type Tstate struct {
 	sem   *semaphore.Semaphore
 }
 
-func newTstate(t *test.Tstate, nsrv int) *Tstate {
+func newTstate(mrts *test.MultiRealmTstate, nsrv int) *Tstate {
 	ts := &Tstate{}
-	ts.Tstate = t
+	ts.mrts = mrts
 	ts.job = rd.String(16)
-	ts.Remove(cache.CACHE)
-	cm, err := cachegrpmgr.NewCacheMgr(ts.SigmaClnt, ts.job, nsrv, proc.Tmcpu(CACHE_MCPU), true)
-	assert.Nil(t.T, err)
+	ts.mrts.GetRealm(test.REALM1).Remove(cache.CACHE)
+	cm, err := cachegrpmgr.NewCacheMgr(ts.mrts.GetRealm(test.REALM1).SigmaClnt, ts.job, nsrv, proc.Tmcpu(CACHE_MCPU), true)
+	assert.Nil(mrts.T, err)
 	ts.cm = cm
 	ts.sempn = cm.SvcDir() + "-cacheclerk-sem"
-	ts.sem = semaphore.NewSemaphore(ts.FsLib, ts.sempn)
+	ts.sem = semaphore.NewSemaphore(ts.mrts.GetRealm(test.REALM1).FsLib, ts.sempn)
 	err = ts.sem.Init(0)
-	assert.Nil(t.T, err)
+	assert.Nil(mrts.T, err)
 	return ts
 }
 
 func (ts *Tstate) stop() {
 	db.DPrintf(db.ALWAYS, "wait for %d clerks to exit\n", len(ts.clrks))
 	for _, ck := range ts.clrks {
-		opTpt, err := cachegrpclnt.WaitClerk(ts.SigmaClnt, ck)
-		assert.Nil(ts.T, err, "StopClerk: %v", err)
+		opTpt, err := cachegrpclnt.WaitClerk(ts.mrts.GetRealm(test.REALM1).SigmaClnt, ck)
+		assert.Nil(ts.mrts.T, err, "StopClerk: %v", err)
 		db.DPrintf(db.ALWAYS, "clerk %v %v ops/sec", ck, opTpt)
 	}
 	ts.cm.Stop()
 }
 
 func (ts *Tstate) StartClerk(dur time.Duration, nkeys, keyOffset int, mcpu proc.Tmcpu) {
-	pid, err := cachegrpclnt.StartClerk(ts.SigmaClnt, ts.job, nkeys, dur, keyOffset, ts.sempn, mcpu)
-	assert.Nil(ts.T, err, "Error StartClerk: %v", err)
+	pid, err := cachegrpclnt.StartClerk(ts.mrts.GetRealm(test.REALM1).SigmaClnt, ts.job, nkeys, dur, keyOffset, ts.sempn, mcpu)
+	assert.Nil(ts.mrts.T, err, "Error StartClerk: %v", err)
 	ts.clrks = append(ts.clrks, pid)
 }
 
@@ -72,12 +74,13 @@ func TestCacheSingle(t *testing.T) {
 		N    = 10000
 		NSRV = 1
 	)
-	t1, err1 := test.NewTstateAll(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts := newTstate(t1, NSRV)
-	cc := cachegrpclnt.NewCachedSvcClnt(ts.FsLib, ts.job)
+	defer mrts.Shutdown()
+	ts := newTstate(mrts, NSRV)
+	cc := cachegrpclnt.NewCachedSvcClnt(ts.mrts.GetRealm(test.REALM1).FsLib, ts.job)
 
 	for k := 0; k < N; k++ {
 		key := strconv.Itoa(k)
@@ -115,19 +118,24 @@ func TestCacheSingle(t *testing.T) {
 	}
 
 	cc.Close()
-	ts.Shutdown()
 }
 
 func testCacheSharded(t *testing.T, nsrv int) {
 	const (
 		N = 10
 	)
-	t1, err1 := test.NewTstateAll(t)
+	nc := linuxsched.GetNCores()
+	if nc < uint(NCPU*nsrv) {
+		db.DPrintf(db.TEST, "testCacheSharded: too many servers")
+		return
+	}
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts := newTstate(t1, nsrv)
-	cc := cachegrpclnt.NewCachedSvcClnt(ts.FsLib, ts.job)
+	defer mrts.Shutdown()
+	ts := newTstate(mrts, nsrv)
+	cc := cachegrpclnt.NewCachedSvcClnt(ts.mrts.GetRealm(test.REALM1).FsLib, ts.job)
 
 	for k := 0; k < N; k++ {
 		key := strconv.Itoa(k)
@@ -162,7 +170,6 @@ func testCacheSharded(t *testing.T, nsrv int) {
 
 	cc.Close()
 	ts.stop()
-	ts.Shutdown()
 }
 
 func TestCacheShardedTwo(t *testing.T) {
@@ -178,13 +185,14 @@ func TestCacheConcur(t *testing.T) {
 		N    = 3
 		NSRV = 1
 	)
-	t1, err1 := test.NewTstateAll(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts := newTstate(t1, NSRV)
+	defer mrts.Shutdown()
+	ts := newTstate(mrts, NSRV)
 	v := "hello"
-	cc := cachegrpclnt.NewCachedSvcClnt(ts.FsLib, ts.job)
+	cc := cachegrpclnt.NewCachedSvcClnt(ts.mrts.GetRealm(test.REALM1).FsLib, ts.job)
 	err := cc.Put("x", &proto.CacheString{Val: v})
 	assert.Nil(t, err)
 
@@ -194,7 +202,8 @@ func TestCacheConcur(t *testing.T) {
 		go func() {
 			defer wg.Done()
 			res := &proto.CacheString{}
-			err = cc.Get("x", res)
+			err := cc.Get("x", res)
+			assert.Nil(t, err)
 			s := res.Val
 			assert.Equal(t, v, s)
 			db.DPrintf(db.TEST, "Done get")
@@ -204,7 +213,6 @@ func TestCacheConcur(t *testing.T) {
 
 	cc.Close()
 	ts.stop()
-	ts.Shutdown()
 }
 
 func TestCacheClerk(t *testing.T) {
@@ -214,12 +222,12 @@ func TestCacheClerk(t *testing.T) {
 		NKEYS = 100
 		DUR   = 10 * time.Second
 	)
-
-	t1, err1 := test.NewTstateAll(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts := newTstate(t1, NSRV)
+	defer mrts.Shutdown()
+	ts := newTstate(mrts, NSRV)
 
 	for i := 0; i < N; i++ {
 		ts.StartClerk(DUR, NKEYS, i*NKEYS, 0)
@@ -228,7 +236,6 @@ func TestCacheClerk(t *testing.T) {
 	ts.sem.Up()
 
 	ts.stop()
-	ts.Shutdown()
 }
 
 func TestElasticCache(t *testing.T) {
@@ -239,33 +246,37 @@ func TestElasticCache(t *testing.T) {
 		DUR   = 30 * time.Second
 	)
 
-	t1, err1 := test.NewTstateAll(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	ts := newTstate(t1, NSRV)
+	defer mrts.Shutdown()
+	ts := newTstate(mrts, NSRV)
 
 	for i := 0; i < N; i++ {
-		ts.StartClerk(DUR, NKEYS, i*NKEYS, 2*1000)
+		// set mcpu to 0 for tests, but for real benchmarks CACHE_MCPU
+		ts.StartClerk(DUR, NKEYS, i*NKEYS, 0)
 	}
 
 	ts.sem.Up()
 
-	cc := cachegrpclnt.NewCachedSvcClnt(ts.FsLib, ts.job)
+	cc := cachegrpclnt.NewCachedSvcClnt(ts.mrts.GetRealm(test.REALM1).FsLib, ts.job)
 
+	nc := linuxsched.GetNCores()
+	nsrv := NSRV
 	for i := 0; i < 5; i++ {
 		time.Sleep(5 * time.Second)
 		sts, err := cc.StatsSrvs()
 		assert.Nil(t, err)
-		qlen := sts[0].StatsSnapshot.AvgQlen
+		qlen := sts[0].SrvStatsSnapshot.AvgQlen
 		db.DPrintf(db.ALWAYS, "Qlen %v %v\n", qlen, sts)
-		if qlen > 1.1 && i < 1 {
+		if qlen > 1.1 && i < 1 && nc < uint(NCPU*nsrv) {
 			db.DPrintf(db.TEST, "Add server")
 			ts.cm.AddServer()
+			nsrv++
 		}
 	}
 
 	cc.Close()
 	ts.stop()
-	ts.Shutdown()
 }

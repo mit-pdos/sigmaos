@@ -1,0 +1,151 @@
+syntax = "proto3";
+
+option go_package = "sigmaos/ft/task/proto";
+
+import "sigmap/sigmap.proto";
+
+enum TaskStatus {
+  TODO = 0;
+  WIP = 1;
+  DONE = 2;
+  ERROR = 3;
+}
+
+message Task {
+  int32 id = 1;
+  bytes data = 2;
+}
+
+message SubmitTasksReq {
+  repeated Task tasks = 1;
+  TfenceProto fence = 2;
+}
+
+message SubmitTasksRep {
+  repeated int32 existing = 1;
+}
+
+message SubmittedLastTaskReq {
+  TfenceProto fence = 2;
+}
+
+message SubmittedLastTaskRep {
+}
+
+message EditTasksReq {
+  repeated Task tasks = 1;
+  TfenceProto fence = 2;
+}
+
+message EditTasksRep {
+  repeated int32 unknown = 1;
+}
+
+message GetTasksByStatusReq {
+  TaskStatus status = 1;
+  TfenceProto fence = 2;
+  TfenceProto acquireId = 3;
+}
+
+message GetTasksByStatusRep {
+  repeated int32 ids = 1;
+}
+
+message ReadTasksReq {
+  repeated int32 ids = 1;
+  TfenceProto fence = 2;
+}
+
+message ReadTasksRep {
+  repeated Task tasks = 1;
+}
+
+message MoveTasksReq {
+  repeated int32 ids = 1;
+  TaskStatus to = 2;
+  TfenceProto fence = 3;
+}
+
+message MoveTasksRep {
+  
+}
+
+message MoveTasksByStatusReq {
+  TaskStatus from = 1;
+  TaskStatus to = 2;
+  TfenceProto fence = 3;
+}
+
+message MoveTasksByStatusRep {
+  int32 numMoved = 1;
+}
+
+message AcquireTasksReq {
+  bool wait = 1;
+  TfenceProto fence = 2;
+  TfenceProto acquireId = 3;
+}
+
+message AcquireTasksRep {
+  repeated int32 ids = 1;
+  bool stopped = 2;
+}
+
+message AddTaskOutputsReq {
+  repeated int32 ids = 1;
+  repeated bytes outputs = 2;
+  bool markDone = 3;
+  TfenceProto fence = 4;
+}
+
+message AddTaskOutputsRep {
+  
+}
+
+message GetTaskOutputsReq {
+  repeated int32 ids = 1;
+  TfenceProto fence = 2;
+}
+
+message GetTaskOutputsRep {
+  repeated bytes outputs = 2;
+}
+
+message TaskStats {
+  int32 numTodo = 1;
+  int32 numWip = 2;
+  int32 numDone = 3;
+  int32 numError = 4;
+}
+
+message GetTaskStatsReq {
+  
+}
+
+message GetTaskStatsRep {
+  TaskStats stats = 1;
+}
+
+message FenceReq {
+  TfenceProto fence = 1;
+}
+
+message FenceRep {
+
+}
+
+message ClearEtcdReq {
+
+}
+
+message ClearEtcdRep {
+
+}
+
+message PingReq {
+
+}
+
+message PingRep {
+
+}

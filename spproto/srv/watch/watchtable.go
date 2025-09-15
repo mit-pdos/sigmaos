@@ -10,17 +10,17 @@ import (
 
 type WatchTable struct {
 	sync.Mutex
-	watches map[sp.Tpath]*Watch
+	watches map[sp.Tuid]*Watch
 }
 
 func NewWatchTable() *WatchTable {
 	wt := &WatchTable{}
-	wt.watches = make(map[sp.Tpath]*Watch)
+	wt.watches = make(map[sp.Tuid]*Watch)
 	return wt
 }
 
 // Allocate watch for dir. Caller should have acquire pathlock for dir
-func (wt *WatchTable) AllocWatch(dir sp.Tpath) *Watch {
+func (wt *WatchTable) AllocWatch(dir sp.Tuid) *Watch {
 	wt.Lock()
 	defer wt.Unlock()
 
@@ -35,7 +35,7 @@ func (wt *WatchTable) AllocWatch(dir sp.Tpath) *Watch {
 	return ws
 }
 
-func (wt *WatchTable) lookupWatch(dir sp.Tpath) (*Watch, bool) {
+func (wt *WatchTable) lookupWatch(dir sp.Tuid) (*Watch, bool) {
 	wt.Lock()
 	defer wt.Unlock()
 	ws, ok := wt.watches[dir]
@@ -54,7 +54,7 @@ func (wt *WatchTable) CloseWatcher(ws *Watch, fid *fid.Fid) {
 }
 
 // Caller should have acquire pathlock for ws.dir
-func (wt *WatchTable) AddRemoveEvent(dir sp.Tpath, filename string) {
+func (wt *WatchTable) AddRemoveEvent(dir sp.Tuid, filename string) {
 	if ws, ok := wt.lookupWatch(dir); ok {
 		ws.addEvent(&protsrv_proto.WatchEvent{
 			File: filename,
@@ -64,7 +64,7 @@ func (wt *WatchTable) AddRemoveEvent(dir sp.Tpath, filename string) {
 }
 
 // Caller should have acquire pathlock for ws.dir
-func (wt *WatchTable) AddCreateEvent(dir sp.Tpath, filename string) {
+func (wt *WatchTable) AddCreateEvent(dir sp.Tuid, filename string) {
 	if ws, ok := wt.lookupWatch(dir); ok {
 		ws.addEvent(&protsrv_proto.WatchEvent{
 			File: filename,

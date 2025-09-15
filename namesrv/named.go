@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	db "sigmaos/debug"
@@ -15,11 +16,11 @@ import (
 	"sigmaos/path"
 	"sigmaos/proc"
 	"sigmaos/rpc"
+	sesssrv "sigmaos/session/srv"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
 	spprotosrv "sigmaos/spproto/srv"
-	"sigmaos/util/coordination/semaphore"
 	"sigmaos/util/crash"
 	"sigmaos/util/perf"
 )
@@ -27,15 +28,16 @@ import (
 type Named struct {
 	*sigmaclnt.SigmaClnt
 	*sigmasrv.SigmaSrv
-	mu     sync.Mutex
-	fs     *fsetcd.FsEtcd
-	elect  *leaderetcd.Election
-	job    string
-	realm  sp.Trealm
-	delay  int64
-	sess   *fsetcd.Session
-	pstats *fsetcd.PstatInode
-	ephch  chan path.Tpathname
+	mu      sync.Mutex
+	fs      *fsetcd.FsEtcd
+	elect   *leaderetcd.Election
+	job     string
+	realm   sp.Trealm
+	delay   int64
+	sess    *fsetcd.Session
+	pstats  *fsetcd.PstatInode
+	ephch   chan path.Tpathname
+	expired atomic.Bool
 }
 
 func newNamed(realm sp.Trealm) *Named {
@@ -50,16 +52,16 @@ func toGiB(nbyte uint64) float64 {
 	return float64(nbyte) / float64(1<<30)
 }
 
-func Run(args []string) error {
-	//	go func() {
-	//		for {
-	//			time.Sleep(1000 * time.Millisecond)
-	//			var ms runtime.MemStats
-	//			runtime.ReadMemStats(&ms)
-	//			db.DPrintf(db.ALWAYS, "Num goroutines (%v) HeapLiveBytes:(%.3f) TotalHeapAllocCum:(%3f) MaxHeapSizeEver:(%.3f) HeapNotReleasedToSys:(%.3f) HeapReleasedToSys:(%.3f) StackInuse:(%.3f) StackReqeuestedFromSys:(%.3f) SysAllocated:(%.3f)", runtime.NumGoroutine(), toGiB(ms.HeapAlloc), toGiB(ms.TotalAlloc), toGiB(ms.HeapSys), toGiB(ms.HeapIdle), toGiB(ms.HeapReleased), toGiB(ms.StackInuse), toGiB(ms.StackSys), toGiB(ms.Sys))
-	//		}
-	//	}()
+//	go func() {
+//		for {
+//			time.Sleep(1000 * time.Millisecond)
+//			var ms runtime.MemStats
+//			runtime.ReadMemStats(&ms)
+//			db.DPrintf(db.ALWAYS, "Num goroutines (%v) HeapLiveBytes:(%.3f) TotalHeapAllocCum:(%3f) MaxHeapSizeEver:(%.3f) HeapNotReleasedToSys:(%.3f) HeapReleasedToSys:(%.3f) StackInuse:(%.3f) StackReqeuestedFromSys:(%.3f) SysAllocated:(%.3f)", runtime.NumGoroutine(), toGiB(ms.HeapAlloc), toGiB(ms.TotalAlloc), toGiB(ms.HeapSys), toGiB(ms.HeapIdle), toGiB(ms.HeapReleased), toGiB(ms.StackInuse), toGiB(ms.StackSys), toGiB(ms.Sys))
+//		}
+//	}()
 
+func Run(args []string) error {
 	pe := proc.GetProcEnv()
 	db.DPrintf(db.NAMED_LDR, "named start: %v cfg: %v", args, pe)
 	if len(args) != 2 {
@@ -93,6 +95,12 @@ func Run(args []string) error {
 		if err := sc.MountTree(rootEP, sp.REALMREL, sp.REALM); err != nil {
 			db.DFatalf("Err MountTree realm: ep %v err %v", rootEP, err)
 		}
+		if err := sc.MountTree(rootEP, sp.REALMSREL, sp.REALMS); err != nil {
+			db.DFatalf("Err MountTree realm: ep %v err %v", rootEP, err)
+		}
+		if err := sc.MountTree(rootEP, rpc.RPC, filepath.Join(sp.REALMS, rpc.RPC)); err != nil {
+			db.DFatalf("Err MountTree realm: ep %v err %v", rootEP, err)
+		}
 		// Must manually mount scheduler dirs, since they will be automatically
 		// scanned by msched-/procq-/lcsched- clnts as soon as the procclnt is
 		// created, but this named won't have posted its endpoint in the namespace
@@ -113,29 +121,12 @@ func Run(args []string) error {
 		db.DFatalf("Error make procclnt: %v", err)
 	}
 
-	pn := filepath.Join(sp.REALMS, nd.realm.String()) + ".sem"
-	sem := semaphore.NewSemaphore(nd.FsLib, pn)
-	if nd.realm != sp.ROOTREALM {
-		// create semaphore to signal realmd when we are the leader
-		// and ready to serve requests.  realmd downs this semaphore.
-		li, err := sc.LeaseClnt.AskLease(pn, fsetcd.LeaseTTL)
-		if err != nil {
-			db.DFatalf("Error AskLease: %v", err)
-			return err
-		}
-		li.KeepExtending()
-		if err := sem.InitLease(0777, li.Lease()); err != nil {
-			db.DFatalf("Error InitLease: %v", err)
-			return err
-		}
-	}
-
 	if err := nd.Started(); err != nil {
 		db.DFatalf("Error Started: %v", err)
 	}
 
-	ch := make(chan struct{})
-	go nd.waitExit(ch)
+	ch := make(chan error)
+	go nd.WaitExitChan(ch)
 
 	db.DPrintf(db.NAMED_LDR, "started %v %v", pe.GetPID(), nd.realm)
 
@@ -146,72 +137,78 @@ func Run(args []string) error {
 	defer nd.fs.Close()
 
 	go func() {
+		// We want to call nd.sess.Expired() but it doesn't exist; see Expire()
 		<-nd.sess.Done()
 		db.DPrintf(db.NAMED_LDR, "session expired delay %v", nd.delay)
-		time.Sleep(time.Duration(nd.delay) * time.Millisecond)
+		if nd.delay < 0 {
+			// mark lease has expired but keep running for a while to
+			// test if request are rejected in TestPartitionNamedExpire
+			nd.expired.Store(true)
+			time.Sleep(time.Duration(-nd.delay) * time.Millisecond)
+		} else if nd.delay >= 0 {
+			// if ndelay > 0, mimic bad case (see Expire())
+			time.Sleep(time.Duration(nd.delay) * time.Millisecond)
+			nd.expired.Store(true)
+		}
 		nd.resign()
 	}()
 
-	ep, err := nd.newSrv()
+	ep, err := nd.newSrv(nd)
 	if err != nil {
 		db.DFatalf("Error newSrv %v", err)
 	}
 
+	nd.pstats = fsetcd.NewPstatsDev(nd.SigmaSrv.MemFs.InodeAlloc())
 	nd.SigmaSrv.Mount(sp.PSTATSD, nd.pstats)
 
-	db.DPrintf(db.NAMED_LDR, "newSrv %v ep %v", nd.realm, ep)
-
-	pn = sp.NAMED
+	pn := sp.NAMED
 	if nd.realm == sp.ROOTREALM {
 		// Allow connections from all realms, so that realms can mount the kernel
 		// service union directories
 		nd.GetDialProxyClnt().AllowConnectionsFromAllRealms()
-		db.DPrintf(db.ALWAYS, "SetRootNamed %v ep %v", nd.realm, ep)
+		db.DPrintf(db.NAMED_LDR, "SetRootNamed %v ep %v", nd.realm, ep)
 		if err := nd.fs.SetRootNamed(ep); err != nil {
 			db.DFatalf("SetNamed: %v", err)
 		}
 	} else {
-		pn = filepath.Join(sp.REALMS, nd.realm.String())
-		db.DPrintf(db.ALWAYS, "NewEndpointSymlink %v %v lid %v", nd.realm, pn, nd.sess.Lease())
-		if err := nd.MkLeasedEndpoint(pn, ep, nd.sess.Lease()); err != nil {
-			db.DPrintf(db.NAMED, "MkEndpointFile %v at %v err %v", nd.realm, pn, err)
+		pn = sp.NamedRootPathname(nd.realm)
+		if err := nd.WriteEndpointFile(pn, ep); err != nil {
+			db.DPrintf(db.NAMED_LDR, "MkEndpointFile %v at %v err %v", nd.realm, pn, err)
+			db.DFatalf("MkEndpointFile %v at %v err %v", nd.realm, pn, err)
 			return err
 		}
-		db.DPrintf(db.NAMED, "[%v] named endpoint %v", nd.realm, ep)
-
-		// Signal realmd we are ready
-		if err := sem.Up(); err != nil {
-			db.DPrintf(db.NAMED, "%v sem up %v err %v", nd.realm, sem.String(), err)
-			return err
-		}
+		db.DPrintf(db.NAMED_LDR, "[%v] named %v endpoint %v", nd.realm, pn, ep)
 	}
 
-	nd.getRoot(pn + "/")
-
-	if err := nd.CreateLeaderFile(filepath.Join(sp.NAME, nd.elect.Key()), nil, sp.TleaseId(nd.sess.Lease()), nd.elect.Fence()); err != nil {
-		db.DPrintf(db.NAMED, "CreateElectionInfo %v err %v", nd.elect.Key(), err)
-	}
-
-	db.DPrintf(db.NAMED_LDR, "Created Leader file %v ", nd.elect.Key())
+	nd.getRoot(path.MarkResolve(pn))
 
 	if err := nd.warmCache(); err != nil {
 		db.DFatalf("warmCache err %v", err)
 	}
 
+	crash.SetCrashFile(nd.FsLib, crash.NAMED_CRASHFILE)
+
 	crash.Failer(nd.FsLib, crash.NAMED_CRASH, func(e crash.Tevent) {
 		crash.Crash()
 	})
 
-	crash.Failer(nd.FsLib, crash.NAMED_PARTITION, func(e crash.Tevent) {
-		if nd.delay == 0 {
-			nd.delay = e.Delay
-			nd.sess.Orphan()
-		}
+	crash.Failer(nd.FsLib, crash.NAMED_NETFAIL, func(e crash.Tevent) {
+		nd.SigmaSrv.PartitionClient(false)
 	})
 
-	<-ch
+	crash.Failer(nd.FsLib, crash.NAMED_NETDISCONNECT, func(e crash.Tevent) {
+		nd.SigmaSrv.PartitionClient(true)
+	})
 
-	db.DPrintf(db.ALWAYS, "named done %v %v", nd.realm, ep)
+	crash.Failer(nd.FsLib, crash.NAMED_PARTITION, func(e crash.Tevent) {
+		db.DPrintf(db.NAMED_LDR, "partition; delay %v", e.Delay)
+		nd.delay = e.Delay
+		nd.sess.Orphan()
+	})
+
+	err = <-ch
+
+	db.DPrintf(db.NAMED_LDR, "named done %v %v err %v", nd.realm, ep, err)
 
 	if err := nd.resign(); err != nil {
 		db.DPrintf(db.NAMED_LDR, "resign %v err %v", pe.GetPID(), err)
@@ -222,7 +219,21 @@ func Run(args []string) error {
 	return nil
 }
 
-func (nd *Named) newSrv() (*sp.Tendpoint, error) {
+// Note: maybe this should be called from named's dir.go and file.go
+// instead of sesssrv.
+func (nd *Named) Expired() bool {
+	// XXX: TODO This isn't quite right because there is a window
+	// between lease expiring and named being notified; we want the
+	// different interface in
+	// https://github.com/etcd-io/etcd/pull/19092/.
+	b := nd.expired.Load()
+	if b {
+		db.DPrintf(db.NAMED, "Reject request; lease expired")
+	}
+	return b
+}
+
+func (nd *Named) newSrv(exp sesssrv.ExpireI) (*sp.Tendpoint, error) {
 	ip := sp.NO_IP
 	root := RootDir(nd.fs, nd.realm)
 	var addr *sp.Taddr
@@ -232,7 +243,7 @@ func (nd *Named) newSrv() (*sp.Tendpoint, error) {
 	if nd.realm == sp.ROOTREALM {
 		addr = sp.NewTaddr(ip, sp.NO_PORT)
 		// Allow all realms to attach to dirs mounted from the root named, as well as RPC dir, since it is needed to take out leases
-		allowedDirs := []string{rpc.RPC}
+		allowedDirs := []string{rpc.RPC, sp.REALMSREL}
 		for s, _ := range sp.RootNamedMountedDirs {
 			allowedDirs = append(allowedDirs, s)
 		}
@@ -241,7 +252,7 @@ func (nd *Named) newSrv() (*sp.Tendpoint, error) {
 		addr = sp.NewTaddr(ip, sp.NO_PORT)
 		aaf = spprotosrv.AttachAllowAllToAll
 	}
-	ssrv, err := sigmasrv.NewSigmaSrvRootClntAuthFn(root, addr, "", nd.SigmaClnt, aaf)
+	ssrv, err := sigmasrv.NewSigmaSrvRootClntAuthOpt(root, addr, "", nd.SigmaClnt, aaf, sesssrv.WithExp(nd))
 	if err != nil {
 		return nil, fmt.Errorf("NewSigmaSrvRootClnt err: %v", err)
 	}
@@ -290,22 +301,9 @@ func (nd *Named) getRoot(pn string) error {
 	return nil
 }
 
-func (nd *Named) waitExit(ch chan struct{}) {
-	for {
-		err := nd.WaitEvict(nd.ProcEnv().GetPID())
-		if err == nil {
-			db.DPrintf(db.ALWAYS, "candidate %v %v evicted", nd.realm, nd.ProcEnv().GetPID().String())
-			ch <- struct{}{}
-			break
-		}
-		db.DPrintf(db.NAMED, "Error WaitEvict: %v", err)
-		time.Sleep(time.Second)
-		continue
-	}
-}
-
 func (nd *Named) watchLeased() {
 	for pn := range nd.ephch {
+		db.DPrintf(db.NAMED_LDR, "Expired pn %v", pn)
 		nd.SigmaSrv.Notify(pn)
 	}
 }

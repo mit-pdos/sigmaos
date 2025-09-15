@@ -25,9 +25,9 @@ if [ $# -gt 0 ]; then
 fi
 
 if [[ "$REALM" != "" ]] ; then
-    go clean -testcache && go test -v sigmaos/namesrv/fsetcd -run Dump --realm "$REALM"
+    ./test-in-docker.sh --pkg namesrv/fsetcd --run Dump --args "--realm $REALM"
 else
-    go clean -testcache && go test -v sigmaos/namesrv/fsetcd -run Dump
+    ./test-in-docker.sh --pkg namesrv/fsetcd --run Dump
 fi
 
 

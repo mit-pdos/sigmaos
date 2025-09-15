@@ -3,6 +3,7 @@ package mr
 import (
 	"fmt"
 	"hash/fnv"
+	"strings"
 
 	"github.com/dustin/go-humanize"
 	"github.com/mitchellh/mapstructure"
@@ -25,7 +26,7 @@ type Bin []mr.Split
 
 func (b Bin) String() string {
 	if len(b) == 0 {
-		return fmt.Sprintf("bins (0): []")
+		return "bins (0): []"
 	}
 	r := fmt.Sprintf("bins (%d): [ %v, ", len(b), b[0])
 	sum := sp.Tlength(b[0].Length)
@@ -61,24 +62,37 @@ func NewResult(data interface{}) (*Result, error) {
 
 // Each bin has a slice of splits.  Assign splits of files to a bin
 // until the bin is full
-func NewBins(fsl *fslib.FsLib, dir string, maxbinsz, splitsz sp.Tlength) ([]Bin, error) {
+func NewBins(fsl *fslib.FsLib, inputDir string, swapLocalForAny bool, maxbinsz, splitsz sp.Tlength) ([]Bin, error) {
 	bins := make([]Bin, 0)
 	binsz := uint64(0)
 	bin := Bin{}
 
+	dir := inputDir
+	if swapLocalForAny {
+		dir = strings.ReplaceAll(dir, sp.LOCAL, sp.ANY)
+	}
 	sts, err := fsl.GetDir(dir)
 	if err != nil {
 		return nil, err
 	}
+
 	for _, st := range sts {
 		for i := uint64(0); ; {
 			n := uint64(splitsz)
 			if i+n > st.LengthUint64() {
 				n = st.LengthUint64() - i
 			}
-			split := mr.Split{dir + "/" + st.Name, sp.Toffset(i), sp.Tlength(n)}
+			if n == 0 {
+				break
+			}
+			split := mr.Split{
+				File:   dir + "/" + st.Name,
+				Offset: sp.Toffset(i),
+				Length: sp.Tlength(n),
+			}
 			bin = append(bin, split)
 			binsz += n
+
 			if binsz+uint64(splitsz) > uint64(maxbinsz) { // bin full?
 				bins = append(bins, bin)
 				bin = Bin{}

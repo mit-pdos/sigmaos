@@ -12,6 +12,7 @@ import (
 	"sigmaos/serr"
 	"sigmaos/sigmaclnt/fslib"
 	sp "sigmaos/sigmap"
+	"sigmaos/util/perf"
 )
 
 // Called by a sigmaOS process after being spawned
@@ -20,26 +21,49 @@ func NewProcClnt(fsl *fslib.FsLib) (*ProcClnt, error) {
 		db.DPrintf(db.PROCCLNT, "Mount %v as %v", fsl.ProcEnv().ProcDir, proc.PROCDIR)
 		fsl.NewRootMount(fsl.ProcEnv().ProcDir, proc.PROCDIR)
 	}
-	// If a msched IP was specified for this proc, mount the RPC file directly.
-	if ep, ok := fsl.ProcEnv().GetMSchedEndpoint(); ok {
-		pn := filepath.Join(sp.MSCHED, fsl.ProcEnv().GetKernelID(), rpc.RPC)
-		db.DPrintf(db.PROCCLNT, "Mount[%v] %v as %v", ep, rpc.RPC, pn)
-		start := time.Now()
-		err := fsl.MountTree(ep, rpc.RPC, pn)
-		if err != nil {
-			db.DPrintf(db.ERROR, "Err MountTree: ep %v err %v", ep, err)
-			return nil, err
+	mschedC := make(chan error)
+	go func() {
+		// If a msched IP was specified for this proc, mount the RPC file directly.
+		if ep, ok := fsl.ProcEnv().GetMSchedEndpoint(); ok {
+			pn := filepath.Join(sp.MSCHED, fsl.ProcEnv().GetKernelID(), rpc.RPC)
+			db.DPrintf(db.PROCCLNT, "Mount[%v] %v as %v", ep, rpc.RPC, pn)
+			start := time.Now()
+			err := fsl.MountTree(ep, rpc.RPC, pn)
+			if err != nil {
+				db.DPrintf(db.ERROR, "Err MountTree: ep %v pn %v err %v", ep, pn, err)
+				mschedC <- err
+				return
+			}
+			perf.LogSpawnLatency("Mount MSched RPC clnt", fsl.ProcEnv().GetPID(), fsl.ProcEnv().GetSpawnTime(), start)
 		}
-		db.DPrintf(db.SPAWN_LAT, "[%v] MountTree latency: %v", fsl.ProcEnv().GetPID(), time.Since(start))
-	}
-	if ep, ok := fsl.ProcEnv().GetNamedEndpoint(); ok {
-		start := time.Now()
-		err := fsl.MountTree(ep, "", sp.NAMED)
-		if err != nil {
-			db.DPrintf(db.ERROR, "Err MountTree: ep %v err %v", ep, err)
-			return nil, err
+		mschedC <- nil
+	}()
+	namedC := make(chan error)
+	go func() {
+		if ep, ok := fsl.ProcEnv().GetNamedEndpoint(); ok {
+			start := time.Now()
+			err := fsl.MountTree(ep, "", sp.NAMED)
+			if err != nil {
+				db.DPrintf(db.ERROR, "Err MountTree: named ep %v err %v", ep, err)
+				namedC <- err
+				return
+			} else {
+				perf.LogSpawnLatency("Mount named", fsl.ProcEnv().GetPID(), fsl.ProcEnv().GetSpawnTime(), start)
+			}
 		}
-		db.DPrintf(db.SPAWN_LAT, "Mount named [%v] time %v", ep, time.Since(start))
+		namedC <- nil
+	}()
+	// Ignore MountTree errors for named; later usages of "named/"
+	// will umount the cached ep entry and retry and may find a new
+	// named.  Not ignoring the error causes mr's TestCrashMsched1 to
+	// fail.
+	//
+	<-namedC
+	// If MountTree fails for msched, bail out since this proc must
+	// notify its msched, and thus might as well exit now.
+	err := <-mschedC
+	if err != nil {
+		return nil, err
 	}
 	return newProcClnt(fsl, fsl.ProcEnv().GetPID(), fsl.ProcEnv().GetPrivileged(), fsl.ProcEnv().GetKernelID()), nil
 }

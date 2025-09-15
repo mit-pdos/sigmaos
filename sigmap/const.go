@@ -95,13 +95,13 @@ const (
 
 // FSETCD consts
 const (
-	EtcdSessionTTL = 5
+	EtcdSessionTTL     = 5
+	EtcdSessionExpired = EtcdSessionTTL + 1
 )
 
 // Realm consts
 const (
 	ROOTREALM Trealm = "rootrealm"
-	NOREALM   Trealm = "no-realm"
 )
 
 // PID consts
@@ -129,8 +129,9 @@ const (
 
 // Endpoint consts
 const (
-	INTERNAL_EP TTendpoint = iota + 1
-	EXTERNAL_EP
+	INTERNAL_EP TTendpoint = 1
+	EXTERNAL_EP TTendpoint = 2
+	CPP_EP      TTendpoint = 3
 )
 
 // Platform consts
@@ -151,3 +152,16 @@ func NoPrincipal() *Tprincipal {
 		RealmStr: NO_REALM.String(),
 	}
 }
+
+// File system devices
+const (
+	DEV_MEMFS Tdev = iota + 1
+	DEV_RPCFS
+	DEV_STATFS
+	DEV_PSTATFS
+	DEV_FENCEFS
+	DEV_S3FS
+	DEV_UXFS
+	DEV_ETCDFS
+	DEV_WATCHFS
+)

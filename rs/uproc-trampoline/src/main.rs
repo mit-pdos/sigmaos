@@ -15,19 +15,25 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use serde::{Deserialize, Serialize};
 
-const VERBOSE: bool = false;
+const VERBOSE: bool = true;
 
-fn print_elapsed_time(/*label: &str,*/ msg: &str, start: SystemTime, ignore_verbose: bool) {
+fn print_elapsed_time(debug_pid: &str, msg: &str, start: SystemTime, ignore_verbose: bool) {
     if ignore_verbose || VERBOSE {
         let elapsed = SystemTime::now()
             .duration_since(start)
             .expect("Time went backwards");
-        log::info!("SPAWN_LAT {}: {}us", msg, elapsed.as_micros());
+        log::info!(
+            "SPAWN_LAT [{}] {} {}us",
+            debug_pid,
+            msg,
+            elapsed.as_micros()
+        );
     }
 }
 
 fn main() {
     let debug_pid = env::var("SIGMADEBUGPID").unwrap();
+    let debug_pid_2 = env::var("SIGMADEBUGPID").unwrap();
     // Set log print formatting to match SigmaOS
     Builder::new()
         .format(move |buf, record| {
@@ -35,29 +41,28 @@ fn main() {
                 buf,
                 "{} {} {}",
                 Local::now().format("%H:%M:%S%.6f"),
-                debug_pid,
+                debug_pid_2,
                 record.args()
             )
         })
         .filter(None, LevelFilter::Info)
         .init();
-
     let exec_time = env::var("SIGMA_EXEC_TIME").unwrap_or("".to_string());
     let exec_time_micros: u64 = exec_time.parse().unwrap_or(0);
     let exec_time = UNIX_EPOCH + Duration::from_micros(exec_time_micros);
-    print_elapsed_time("trampoline.exec_trampoline", exec_time, false);
+    print_elapsed_time(&debug_pid, "trampoline.exec_trampoline", exec_time, false);
     let pid = env::args().nth(1).expect("no pid");
     let program = env::args().nth(2).expect("no program");
     let dialproxy = env::args().nth(3).expect("no dialproxy");
     let mut now = SystemTime::now();
     let aa = is_enabled_apparmor();
-    print_elapsed_time("Check apparmor enabled", now, false);
+    print_elapsed_time(&debug_pid, "trampoline.check_apparmor", now, false);
     now = SystemTime::now();
-    jail_proc(&pid).expect("jail failed");
-    print_elapsed_time("trampoline.fs_jail_proc", now, false);
+    jail_proc(&debug_pid, &pid).expect("jail failed");
+    print_elapsed_time(&debug_pid, "trampoline.fs_jail_proc", now, false);
     now = SystemTime::now();
     setcap_proc().expect("set caps failed");
-    print_elapsed_time("trampoline.setcap_proc", now, false);
+    print_elapsed_time(&debug_pid, "trampoline.setcap_proc", now, false);
     now = SystemTime::now();
     // Get principal ID from env
     let principal_id = env::var("SIGMAPRINCIPAL").unwrap_or("NO_PRINCIPAL_IN_ENV".to_string());
@@ -75,15 +80,15 @@ fn main() {
     fcntl::fcntl(dialproxy_conn_fd, FcntlArg::F_SETFD(FdFlag::empty())).unwrap();
     // Pass the dialproxy socket connection FD to the user proc
     env::set_var("SIGMA_DIALPROXY_FD", dialproxy_conn_fd.to_string());
-    print_elapsed_time("trampoline.connect_dialproxy", now, false);
+    print_elapsed_time(&debug_pid, "trampoline.connect_dialproxy", now, false);
     now = SystemTime::now();
-    seccomp_proc(dialproxy).expect("seccomp failed");
-    print_elapsed_time("trampoline.seccomp_proc", now, false);
+    //    seccomp_proc(dialproxy).expect("seccomp failed");
+    print_elapsed_time(&debug_pid, "trampoline.seccomp_proc", now, false);
     now = SystemTime::now();
 
     if aa {
         apply_apparmor("sigmaos-uproc").expect("apparmor failed");
-        print_elapsed_time("trampoline.apply_apparmor", now, false);
+        print_elapsed_time(&debug_pid, "trampoline.apply_apparmor", now, false);
     }
 
     let new_args: Vec<_> = std::env::args_os().skip(4).collect();
@@ -109,7 +114,7 @@ fn main() {
     std::process::exit(1);
 }
 
-fn jail_proc(pid: &str) -> Result<(), Box<dyn std::error::Error>> {
+fn jail_proc(debug_pid: &str, pid: &str) -> Result<(), Box<dyn std::error::Error>> {
     let mut now = SystemTime::now();
     extern crate sys_mount;
     use nix::unistd::pivot_root;
@@ -120,8 +125,8 @@ fn jail_proc(pid: &str) -> Result<(), Box<dyn std::error::Error>> {
         "",
         "oldroot",
         "lib",
-        "usr",
         "lib64",
+        "usr",
         "etc",
         "proc",
         "bin",
@@ -139,7 +144,12 @@ fn jail_proc(pid: &str) -> Result<(), Box<dyn std::error::Error>> {
         let path: String = newroot_pn.to_owned();
         fs::create_dir_all(path + d)?;
     }
-    print_elapsed_time("trampoline.fs_jail_proc create_dir_all", now, false);
+    print_elapsed_time(
+        debug_pid,
+        "trampoline.fs_jail_proc create_dir_all",
+        now,
+        false,
+    );
     now = SystemTime::now();
 
     if VERBOSE {
@@ -213,23 +223,23 @@ fn jail_proc(pid: &str) -> Result<(), Box<dyn std::error::Error>> {
             log::info!("PERF {}", "mounting perf dir");
         }
     }
-    print_elapsed_time("trampoline.fs_jail_proc mount dirs", now, false);
+    print_elapsed_time(&debug_pid, "trampoline.fs_jail_proc mount dirs", now, false);
     now = SystemTime::now();
     // ========== No more mounts beyond this point ==========
     pivot_root(".", old_root_mnt)?;
-    print_elapsed_time("trampoline.fs_jail_proc pivot_root", now, false);
+    print_elapsed_time(&debug_pid, "trampoline.fs_jail_proc pivot_root", now, false);
     now = SystemTime::now();
 
     env::set_current_dir("/")?;
-    print_elapsed_time("trampoline.fs_jail_proc chdir", now, false);
+    print_elapsed_time(&debug_pid, "trampoline.fs_jail_proc chdir", now, false);
     now = SystemTime::now();
 
     unmount(old_root_mnt, UnmountFlags::DETACH)?;
-    print_elapsed_time("trampoline.fs_jail_proc umount", now, false);
+    print_elapsed_time(&debug_pid, "trampoline.fs_jail_proc umount", now, false);
     now = SystemTime::now();
 
     fs::remove_dir(old_root_mnt)?;
-    print_elapsed_time("trampoline.fs_jail_proc rmdir", now, false);
+    print_elapsed_time(&debug_pid, "trampoline.fs_jail_proc rmdir", now, false);
 
     Ok(())
 }
@@ -246,7 +256,7 @@ struct Cond {
     op: String,
 }
 
-fn seccomp_proc(dialproxy: String) -> Result<(), Box<dyn std::error::Error>> {
+fn seccomp_proc(debug_pid: &str, dialproxy: String) -> Result<(), Box<dyn std::error::Error>> {
     use libseccomp::*;
 
     // XXX Should really be 64 syscalls. We can remove ioctl, poll, and lstat,
@@ -362,7 +372,7 @@ fn seccomp_proc(dialproxy: String) -> Result<(), Box<dyn std::error::Error>> {
     }
     let now = SystemTime::now();
     filter.load()?;
-    print_elapsed_time("trampoline.seccomp_proc load", now, false);
+    print_elapsed_time(&debug_pid, "trampoline.seccomp_proc load", now, false);
     Ok(())
 }
 

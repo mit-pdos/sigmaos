@@ -4,9 +4,6 @@ import (
 	"crypto/sha256"
 	"flag"
 	"fmt"
-	"github.com/stretchr/testify/assert"
-	"gopkg.in/mgo.v2"
-	"gopkg.in/mgo.v2/bson"
 	"math/rand"
 	"net"
 	"os"
@@ -23,6 +20,10 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+	"gopkg.in/mgo.v2"
+	"gopkg.in/mgo.v2/bson"
 )
 
 const (
@@ -37,15 +38,15 @@ var MONGO_URL string
 
 func getDefaultSrvs() []sn.Srv {
 	return []sn.Srv{
-		sn.Srv{"socialnetwork-user", nil, 2000},
-		sn.Srv{"socialnetwork-graph", nil, 2000},
-		sn.Srv{"socialnetwork-post", nil, 2000},
-		sn.Srv{"socialnetwork-timeline", nil, 2000},
-		sn.Srv{"socialnetwork-home", nil, 2000},
-		sn.Srv{"socialnetwork-url", nil, 2000},
-		sn.Srv{"socialnetwork-text", nil, 2000},
-		sn.Srv{"socialnetwork-compose", nil, 2000},
-		sn.Srv{"socialnetwork-frontend", nil, 2000}}
+		sn.Srv{Name: "socialnetwork-user", Args: nil, Mcpu: 2000},
+		sn.Srv{Name: "socialnetwork-graph", Args: nil, Mcpu: 2000},
+		sn.Srv{Name: "socialnetwork-post", Args: nil, Mcpu: 2000},
+		sn.Srv{Name: "socialnetwork-timeline", Args: nil, Mcpu: 2000},
+		sn.Srv{Name: "socialnetwork-home", Args: nil, Mcpu: 2000},
+		sn.Srv{Name: "socialnetwork-url", Args: nil, Mcpu: 2000},
+		sn.Srv{Name: "socialnetwork-text", Args: nil, Mcpu: 2000},
+		sn.Srv{Name: "socialnetwork-compose", Args: nil, Mcpu: 2000},
+		sn.Srv{Name: "socialnetwork-frontend", Args: nil, Mcpu: 2000}}
 }
 
 func init() {
@@ -105,6 +106,7 @@ func NewSocialNetworkJob(
 		assert.Nil(ts.Ts.T, err, "Error Make social network job: %v", err)
 	} else {
 		ji.snCfg, err = sn.NewConfig(ts.SigmaClnt, ji.job, nil, 0, false)
+		assert.Nil(ts.Ts.T, err, "New config: %v", err)
 		p := sn.JobHTTPAddrsPath(ji.job)
 		h, po, err := net.SplitHostPort(K8S_ADDR)
 		assert.Nil(ts.Ts.T, err, "Err split host port %v: %v", ji.k8ssrvaddr, err)

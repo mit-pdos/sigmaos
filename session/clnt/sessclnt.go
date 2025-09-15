@@ -21,6 +21,7 @@ import (
 	sp "sigmaos/sigmap"
 	"sigmaos/util/io/demux"
 	"sigmaos/util/rand"
+	"sigmaos/util/spstats"
 )
 
 type SessClnt struct {
@@ -30,21 +31,22 @@ type SessClnt struct {
 	closed  bool
 	ep      *sp.Tendpoint
 	npc     *dialproxyclnt.DialProxyClnt
-	nc      *netclnt.NetClnt
 	pe      *proc.ProcEnv
 	dmx     *demux.DemuxClnt
+	pcst    *spstats.PathClntStats
 }
 
-func newSessClnt(pe *proc.ProcEnv, npc *dialproxyclnt.DialProxyClnt, ep *sp.Tendpoint) (*SessClnt, *serr.Err) {
+func newSessClnt(pe *proc.ProcEnv, npc *dialproxyclnt.DialProxyClnt, ep *sp.Tendpoint, pcst *spstats.PathClntStats) (*SessClnt, *serr.Err) {
 	c := &SessClnt{
 		sid:     sessp.Tsession(rand.Uint64()),
 		npc:     npc,
 		pe:      pe,
 		ep:      ep,
+		pcst:    pcst,
 		seqcntr: new(sessp.Tseqcntr),
 	}
 	db.DPrintf(db.SESSCLNT, "Make session %v to srvs %v", c.sid, ep)
-	if _, err := c.getConn(); err != nil {
+	if _, err := c.getdmx(); err != nil {
 		return nil, err
 	}
 	return c, nil
@@ -54,59 +56,39 @@ func (c *SessClnt) SessId() sessp.Tsession {
 	return c.sid
 }
 
-func (c *SessClnt) netClnt() *netclnt.NetClnt {
+func (c *SessClnt) resetdmx(dmx *demux.DemuxClnt) {
 	c.Lock()
 	defer c.Unlock()
-	return c.nc
-}
-
-func (c *SessClnt) ownNetClnt() *netclnt.NetClnt {
-	c.Lock()
-	defer c.Unlock()
-	r := c.nc
-	c.nc = nil
-	return r
-}
-
-func (c *SessClnt) resetNetClnt(nc *netclnt.NetClnt) {
-	c.Lock()
-	defer c.Unlock()
-	if nc == c.nc {
-		c.nc = nil
+	if dmx == c.dmx {
+		c.dmx = nil
 	}
 }
 
 func (c *SessClnt) IsConnected() bool {
-	if nc := c.netClnt(); nc != nil {
-		return !c.dmx.IsClosed()
-	}
-	return false
+	return !c.dmx.IsClosed()
 }
 
 func (c *SessClnt) RPC(req sessp.Tmsg, iniov sessp.IoVec, outiov sessp.IoVec) (*sessp.FcallMsg, *serr.Err) {
 	s := time.Now()
 	fc := sessp.NewFcallMsg(req, iniov, c.sid, c.seqcntr)
 	pmfc := spcodec.NewPartMarshaledMsg(fc)
-	nc := c.netClnt()
-	if nc == nil {
-		if nc0, err := c.getConn(); err != nil {
-			return nil, err
-		} else {
-			nc = nc0
-		}
+	marshalLat := time.Since(s)
+	dmx, err := c.getdmx()
+	if err != nil {
+		return nil, err
 	}
 	if db.WillBePrinted(db.SESSCLNT) {
 		db.DPrintf(db.SESSCLNT, "sess %v RPC req %v", c.sid, fc)
 	}
-	rep, err := c.dmx.SendReceive(pmfc, outiov)
+	rep, err := dmx.SendReceive(pmfc, outiov)
 	if db.WillBePrinted(db.SESSCLNT) {
 		db.DPrintf(db.SESSCLNT, "sess %v RPC req %v rep %v err %v", c.sid, fc, rep, err)
 	}
 
 	if err != nil {
-		if err.IsErrUnreachable() {
-			db.DPrintf(db.CRASH, "Reset sess %v's nc %p", c.sid, nc)
-			c.resetNetClnt(nc)
+		if err.IsErrSession() {
+			db.DPrintf(db.SESSCLNT_ERR, "Reset sess %v's dmx %p err %v", c.sid, dmx, err)
+			c.resetdmx(dmx)
 		}
 		return nil, err
 	}
@@ -115,7 +97,7 @@ func (c *SessClnt) RPC(req sessp.Tmsg, iniov sessp.IoVec, outiov sessp.IoVec) (*
 	if err := spcodec.UnmarshalMsg(r); err != nil {
 		return nil, err
 	}
-	db.DPrintf(db.NET_LAT, "RPC req %v fm %v lat %v\n", fc, r.Fcm, time.Since(s))
+	db.DPrintf(db.NET_LAT, "RPC req %v fm %v marshalLat %v lat %v", fc, r.Fcm, marshalLat, time.Since(s))
 	return r.Fcm, nil
 }
 
@@ -128,7 +110,7 @@ func (c *SessClnt) sendHeartbeat() {
 }
 
 // Get a connection to the server and demux it with [demux]
-func (c *SessClnt) getConn() (*netclnt.NetClnt, *serr.Err) {
+func (c *SessClnt) getdmx() (*demux.DemuxClnt, *serr.Err) {
 	c.Lock()
 	defer c.Unlock()
 
@@ -136,19 +118,20 @@ func (c *SessClnt) getConn() (*netclnt.NetClnt, *serr.Err) {
 		return nil, serr.NewErr(serr.TErrUnreachable, c.ep)
 	}
 
-	if c.nc == nil {
-		db.DPrintf(db.SESSCLNT, "%v Connect to %v %v\n", c.sid, c.ep, c.closed)
-		nc, err := netclnt.NewNetClnt(c.pe, c.npc, c.ep)
+	if c.dmx == nil {
+		db.DPrintf(db.SESSCLNT, "%v Connect to %v %v", c.sid, c.ep, c.closed)
+		conn, err := netclnt.NewNetClnt(c.pe, c.npc, c.ep)
 		if err != nil {
-			db.DPrintf(db.SESSCLNT, "%v Error %v unable to reconnect to %v\n", c.sid, err, c.ep)
+			db.DPrintf(db.SESSCLNT, "%v Error %v unable to connect to %v", c.sid, err, c.ep)
+			spstats.Inc(&c.pcst.NnetclntErr, 1)
 			return nil, err
 		}
-		db.DPrintf(db.SESSCLNT, "%v connection to %v out of %v\n", c.sid, nc.Dst(), c.ep)
-		c.nc = nc
+		spstats.Inc(&c.pcst.NnetclntOK, 1)
+		db.DPrintf(db.SESSCLNT, "%v connection to %v", c.sid, c.ep)
 		iovm := demux.NewIoVecMap()
-		c.dmx = demux.NewDemuxClnt(spcodec.NewTransport(nc.Conn(), iovm), iovm)
+		c.dmx = demux.NewDemuxClnt(spcodec.NewTransport(conn, iovm), iovm)
 	}
-	return c.nc, nil
+	return c.dmx, nil
 }
 
 func (c *SessClnt) ownClosed() bool {
@@ -164,14 +147,12 @@ func (c *SessClnt) ownClosed() bool {
 
 // Close the session permanently
 func (c *SessClnt) Close() error {
-	db.DPrintf(db.SESSCLNT, "%v Close session to %v %v\n", c.sid, c.ep, c.closed)
+	db.DPrintf(db.SESSCLNT, "%v Close session to %v %v", c.sid, c.ep, c.closed)
 	if !c.ownClosed() {
 		return nil
 	}
-	nc := c.ownNetClnt()
-	if nc == nil {
+	if c.dmx == nil {
 		return nil
 	}
-	// Close connection. This also causes dmxclnt to be closed
-	return nc.Close()
+	return c.dmx.Close()
 }

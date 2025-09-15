@@ -8,12 +8,16 @@ import (
 	"net"
 	"os"
 	"os/exec"
+	"sync"
 	"syscall"
 
+	epcacheclnt "sigmaos/apps/epcache/clnt"
 	db "sigmaos/debug"
 	dialproxyclnt "sigmaos/dialproxy/clnt"
 	dialproxysrv "sigmaos/dialproxy/srv"
 	"sigmaos/proc"
+	"sigmaos/proxy/sigmap/clnt"
+	"sigmaos/sigmaclnt"
 	"sigmaos/sigmaclnt/fidclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/util/perf"
@@ -26,9 +30,11 @@ const (
 // SPProxySrv maintains the state of the spproxysrv. All
 // SigmaSrvClnt's share one fid table
 type SPProxySrv struct {
+	mu   sync.Mutex
 	pe   *proc.ProcEnv
 	nps  *dialproxysrv.DialProxySrv
 	fidc *fidclnt.FidClnt
+	psm  *ProcStateMgr
 }
 
 func newSPProxySrv() (*SPProxySrv, error) {
@@ -38,16 +44,36 @@ func newSPProxySrv() (*SPProxySrv, error) {
 		db.DPrintf(db.ERROR, "Error NewDialProxySrv: %v", err)
 		return nil, err
 	}
-	scs := &SPProxySrv{
+	spps := &SPProxySrv{
 		pe:   pe,
 		nps:  nps,
 		fidc: fidclnt.NewFidClnt(pe, dialproxyclnt.NewDialProxyClnt(pe)),
 	}
+	spps.psm = NewProcStateMgr(spps)
 	db.DPrintf(db.SPPROXYSRV, "newSPProxySrv ProcEnv:%v", pe)
-	return scs, nil
+	return spps, nil
 }
 
-func (scs *SPProxySrv) runServer() error {
+func (spps *SPProxySrv) runServer() error {
+	// Create a socket for uprocd to connect to & control spproxysrv
+	ctrlSocket, err := net.Listen("unix", sp.SIGMASOCKET_CTRL)
+	if err != nil {
+		return err
+	}
+	if err := os.Chmod(sp.SIGMASOCKET_CTRL, 0777); err != nil {
+		db.DFatalf("Err chmod sigmasocket_ctrl: %v", err)
+	}
+	// Serve uprocd control messages
+	go func() {
+		for {
+			conn, err := ctrlSocket.Accept()
+			if err != nil {
+				db.DPrintf(db.ERROR, "Error accept ctrl socket conn: %v", err)
+			}
+			newCtrlConn(conn, spps)
+		}
+	}()
+	// Create a socket for proxied procs to connect to
 	socket, err := net.Listen("unix", sp.SIGMASOCKET)
 	if err != nil {
 		return err
@@ -55,10 +81,12 @@ func (scs *SPProxySrv) runServer() error {
 	if err := os.Chmod(sp.SIGMASOCKET, 0777); err != nil {
 		db.DFatalf("Err chmod sigmasocket: %v", err)
 	}
-	db.DPrintf(db.TEST, "runServer: spproxyd listening on %v", sp.SIGMASOCKET)
+	db.DPrintf(db.SPPROXYSRV, "runServer: spproxyd listening on %v", sp.SIGMASOCKET)
 	if _, err := io.WriteString(os.Stdout, "r"); err != nil {
+		db.DFatalf("Err runServer: %v", err)
 		return err
 	}
+	db.DPrintf(db.SPPROXYSRV, "runServer: wrote ready signal")
 	if err := syscall.Dup2(1, GROW_FD); err != nil {
 		db.DFatalf("Error dup2: %v", err)
 	}
@@ -70,35 +98,64 @@ func (scs *SPProxySrv) runServer() error {
 		}
 		db.DPrintf(db.SPPROXYSRV, "exiting")
 		os.Remove(sp.SIGMASOCKET)
-		scs.fidc.Close()
-		scs.nps.Shutdown()
+		os.Remove(sp.SIGMASOCKET_CTRL)
+		spps.fidc.Close()
+		spps.nps.Shutdown()
 		os.Exit(0)
 	}()
 
+	// Serve proxied procs
 	for {
 		conn, err := socket.Accept()
 		if err != nil {
 			return err
 		}
-		newSigmaClntConn(conn, scs.pe, scs.fidc)
+		newSigmaClntConn(spps, conn, spps.pe, spps.fidc)
 	}
 }
 
-// The spproxyd process enter here
+// Allocate a sigmaclnt for a proxied proc, if one doesn't exist already.
+// Optionally, return the sigmaclnt (consuming it)
+func (spps *SPProxySrv) getSigmaClnt(pe *proc.ProcEnv, p *proc.Proc) (*sigmaclnt.SigmaClnt, *epcacheclnt.EndpointCacheClnt, error) {
+	db.DPrintf(db.SPPROXYSRV, "getSigmaClnt %v", pe.GetPID())
+	pe.UseSPProxy = false
+	pe.UseDialProxy = false
+
+	// Initiate sigmaclnt creation
+	ps := spps.psm.AllocProcState(pe, p)
+	return ps.GetSigmaClnt()
+}
+
+func (spps *SPProxySrv) IncomingProc(p *proc.Proc) {
+	db.DPrintf(db.SPPROXYSRV, "Informed of incoming proc %v", p.GetPid())
+	p.GetProcEnv().UseSPProxy = false
+	p.GetProcEnv().UseDialProxy = false
+	spps.psm.AllocProcState(p.GetProcEnv(), p)
+}
+
+func (spps *SPProxySrv) ProcDone(p *proc.Proc) {
+	db.DPrintf(db.SPPROXYSRV, "Informed proc done %v", p.GetPid())
+	spps.mu.Lock()
+	defer spps.mu.Unlock()
+
+	spps.psm.DelProcState(p)
+}
+
+// The spproxyd process enters here
 func RunSPProxySrv() error {
-	scs, err := newSPProxySrv()
+	spps, err := newSPProxySrv()
 	if err != nil {
 		db.DPrintf(db.SPPROXYSRV, "runServer err %v\n", err)
 		return err
 	}
 	// Perf monitoring
-	p, err := perf.NewPerf(scs.pe, perf.SPPROXYSRV)
+	p, err := perf.NewPerf(spps.pe, perf.SPPROXYSRV)
 	if err != nil {
 		db.DFatalf("Error NewPerf: %v", err)
 	}
 	defer p.Done()
 
-	if err := scs.runServer(); err != nil {
+	if err := spps.runServer(); err != nil {
 		db.DPrintf(db.SPPROXYSRV, "runServer err %v\n", err)
 		return err
 	}
@@ -109,41 +166,55 @@ type SPProxySrvCmd struct {
 	p   *proc.Proc
 	cmd *exec.Cmd
 	out io.WriteCloser
+	cc  *clnt.CtrlClnt
 }
 
-func (scsc *SPProxySrvCmd) GetProc() *proc.Proc {
-	return scsc.p
+// Inform spproxysrv that a new proc is incoming, and spproxysrv should start
+// to create a sigmaclnt for it.
+func (sppsc *SPProxySrvCmd) InformIncomingProc(p *proc.Proc) error {
+	return sppsc.cc.InformIncomingProc(p)
 }
 
-func (scsc *SPProxySrvCmd) GetCrashed() bool {
+func (sppsc *SPProxySrvCmd) InformProcDone(p *proc.Proc) error {
+	return sppsc.cc.InformProcDone(p)
+}
+
+func (sppsc *SPProxySrvCmd) GetProc() *proc.Proc {
+	return sppsc.p
+}
+
+func (sppsc *SPProxySrvCmd) GetCrashed() bool {
 	return false
 }
 
-func (scsc *SPProxySrvCmd) Evict() error {
+func (sppsc *SPProxySrvCmd) Evict() error {
 	// Do nothing
 	return nil
 }
 
-func (scsc *SPProxySrvCmd) Wait() error {
-	return scsc.Shutdown()
+func (sppsc *SPProxySrvCmd) Wait() error {
+	if err := sppsc.Shutdown(); err != nil {
+		return err
+	}
+	return sppsc.cmd.Wait()
 }
 
-func (scsc *SPProxySrvCmd) Kill() error {
+func (sppsc *SPProxySrvCmd) Kill() error {
 	db.DFatalf("Unimplemented")
 	return nil
 }
 
-func (scsc *SPProxySrvCmd) SetCPUShares(shares int64) error {
+func (sppsc *SPProxySrvCmd) SetCPUShares(shares int64) error {
 	db.DFatalf("Unimplemented")
 	return nil
 }
 
-func (scsc *SPProxySrvCmd) GetCPUUtil() (float64, error) {
+func (sppsc *SPProxySrvCmd) GetCPUUtil() (float64, error) {
 	db.DFatalf("Unimplemented")
 	return 0, nil
 }
 
-func (scsc *SPProxySrvCmd) Run(how proc.Thow, kernelId string, localIP sp.Tip) error {
+func (sppsc *SPProxySrvCmd) Run(how proc.Thow, kernelId string, localIP sp.Tip) error {
 	db.DFatalf("Unimplemented")
 	return nil
 }
@@ -172,15 +243,21 @@ func ExecSPProxySrv(p *proc.Proc, innerIP sp.Tip, outerIP sp.Tip, procdPid sp.Tp
 		db.DPrintf(db.SPPROXYSRV, "read pipe err %v\n", err)
 		return nil, err
 	}
+	cc, err := clnt.NewCtrlClnt()
+	if err != nil {
+		db.DFatalf("Err new spproxy ctrl clnt: %v", err)
+		return nil, err
+	}
 	return &SPProxySrvCmd{
 		p:   p,
 		cmd: cmd,
 		out: stdin,
+		cc:  cc,
 	}, nil
 }
 
-func (scsc *SPProxySrvCmd) Shutdown() error {
-	if _, err := io.WriteString(scsc.out, "e"); err != nil {
+func (sppsc *SPProxySrvCmd) Shutdown() error {
+	if _, err := io.WriteString(sppsc.out, "e"); err != nil {
 		return err
 	}
 	return nil

@@ -9,10 +9,12 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	db "sigmaos/debug"
+	"sigmaos/test"
 	"sigmaos/util/perf"
 )
 
 func TestCompile(t *testing.T) {
+	assert.NotNil(t, test.User)
 }
 
 func TestGetSamples(t *testing.T) {

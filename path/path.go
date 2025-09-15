@@ -15,6 +15,12 @@ func init() {
 	slash = regexp.MustCompile(`//+`)
 }
 
+// if pathname ends with "/", sigmaclnt will resolve a pathname whose
+// last component is a link file with an endpoint
+func MarkResolve(pn string) string {
+	return pn + "/"
+}
+
 func Split(p string) Tpathname {
 	if p == "" {
 		return Tpathname{}

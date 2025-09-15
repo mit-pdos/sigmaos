@@ -78,7 +78,7 @@ uprocsrv:
   pool_sz: 2
 
 chunk:
-  chunk_sz: 1048576
+  chunk_sz: 4194304
 
 fslib:
   max_retry: 100

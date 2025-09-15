@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
@@ -14,6 +15,7 @@ import (
 	"sigmaos/proc"
 	"sigmaos/sched/msched/proc/srv/binsrv"
 	sp "sigmaos/sigmap"
+	"sigmaos/util/perf"
 )
 
 type uprocCmd struct {
@@ -33,16 +35,31 @@ func StartSigmaContainer(uproc *proc.Proc, dialproxy bool) (*uprocCmd, error) {
 	db.DPrintf(db.CONTAINER, "RunUProc dialproxy %v %v env %v\n", dialproxy, uproc, os.Environ())
 	var cmd *exec.Cmd
 	straceProcs := proc.GetLabels(uproc.GetProcEnv().GetStrace())
+	valgrindProcs := proc.GetLabels(uproc.GetProcEnv().GetValgrind())
 
 	pn := binsrv.BinPath(uproc.GetVersionedProgram())
 	// Optionally strace the proc
 	if straceProcs[uproc.GetProgram()] {
-		cmd = exec.Command("strace", append([]string{"-D", "-f", "uproc-trampoline", uproc.GetPid().String(), pn, strconv.FormatBool(dialproxy)}, uproc.Args...)...)
+		args := []string{"--absolute-timestamps", "--absolute-timestamps=precision:us", "--syscall-times=us", "-D", "-f", "uproc-trampoline", uproc.GetPid().String(), pn, strconv.FormatBool(dialproxy)}
+		if strings.Contains(uproc.GetProgram(), "cpp") {
+			// Don't catch SIGSEGV for C++ programs, as this can lead to an infinite
+			// strace output loop.
+			args = append([]string{"--signal=!SIGSEGV"}, args...)
+		}
+		args = append(args, uproc.Args...)
+		cmd = exec.Command("strace", args...)
+	} else if valgrindProcs[uproc.GetProgram()] {
+		cmd = exec.Command("valgrind", append([]string{"--trace-children=yes", "uproc-trampoline", uproc.GetPid().String(), pn, strconv.FormatBool(dialproxy)}, uproc.Args...)...)
 	} else {
 		cmd = exec.Command("uproc-trampoline", append([]string{uproc.GetPid().String(), pn, strconv.FormatBool(dialproxy)}, uproc.Args...)...)
 	}
 	uproc.AppendEnv("PATH", "/bin:/bin2:/usr/bin:/home/sigmaos/bin/kernel")
 	uproc.AppendEnv("SIGMA_EXEC_TIME", strconv.FormatInt(time.Now().UnixMicro(), 10))
+	b, err := time.Now().MarshalText()
+	if err != nil {
+		db.DFatalf("Error marshal timestamp pb: %v", err)
+	}
+	uproc.AppendEnv("SIGMA_EXEC_TIME_PB", string(b))
 	uproc.AppendEnv("SIGMA_SPAWN_TIME", strconv.FormatInt(uproc.GetSpawnTime().UnixMicro(), 10))
 	uproc.AppendEnv(proc.SIGMAPERF, uproc.GetProcEnv().GetPerf())
 	// uproc.AppendEnv("RUST_BACKTRACE", "1")
@@ -66,7 +83,7 @@ func StartSigmaContainer(uproc *proc.Proc, dialproxy bool) (*uprocCmd, error) {
 		CleanupUProc(uproc.GetPid())
 		return nil, err
 	}
-	db.DPrintf(db.SPAWN_LAT, "[%v] UProc cmd.Start %v", uproc.GetPid(), time.Since(s))
+	perf.LogSpawnLatency("StartSigmaContainer cmd.Start", uproc.GetPid(), uproc.GetSpawnTime(), s)
 	return &uprocCmd{cmd: cmd}, nil
 }
 

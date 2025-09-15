@@ -7,10 +7,22 @@ import (
 	"sigmaos/sigmasrv/memfssrv/memfs/inode"
 )
 
-func NewInode(ctx fs.CtxI, p sp.Tperm, lid sp.TleaseId, m sp.Tmode, new fs.MkDirF) (fs.FsObj, *serr.Err) {
-	i := inode.NewInode(ctx, p, lid)
+type NewInode struct {
+	ia *inode.InodeAlloc
+}
+
+func NewNewInode(dev sp.Tdev) *NewInode {
+	return &NewInode{ia: inode.NewInodeAlloc(dev)}
+}
+
+func (ni *NewInode) InodeAlloc() *inode.InodeAlloc {
+	return ni.ia
+}
+
+func (ni *NewInode) NewFsObj(ctx fs.CtxI, p sp.Tperm, lid sp.TleaseId, m sp.Tmode, nd fs.MkDirF) (fs.FsObj, *serr.Err) {
+	i := ni.ia.NewInode(ctx, p, lid)
 	if p.IsDir() {
-		return new(i, NewInode), nil
+		return nd(i, ni), nil
 	} else if p.IsSymlink() {
 		return NewFile(i), nil
 	} else if p.IsPipe() {

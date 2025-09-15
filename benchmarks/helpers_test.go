@@ -10,6 +10,9 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	cachegrpclnt "sigmaos/apps/cache/cachegrp/clnt"
+	cachegrpmgr "sigmaos/apps/cache/cachegrp/mgr"
+	epsrv "sigmaos/apps/epcache/srv"
 	db "sigmaos/debug"
 	"sigmaos/proc"
 	mschedclnt "sigmaos/sched/msched/clnt"
@@ -27,6 +30,21 @@ import (
 //
 // A set of helper functions that we use across our benchmarks.
 //
+
+// ========== Example Helpers ==========
+
+func newExampleJobs(ts *test.RealmTstate, exampleFlag string) ([]*ExampleJobInstance, []interface{}) {
+	// n is ntrials, which is always 1.
+	n := 1
+	ws := make([]*ExampleJobInstance, 0, n)
+	is := make([]interface{}, 0, n)
+	for i := 0; i < n; i++ {
+		i := NewExampleJob(ts, exampleFlag)
+		ws = append(ws, i)
+		is = append(is, i)
+	}
+	return ws, is
+}
 
 // ========== Proc Helpers ==========
 
@@ -84,6 +102,7 @@ func evictProcs(ts *test.RealmTstate, ps []*proc.Proc) {
 		err := ts.Evict(p.GetPid())
 		assert.Nil(ts.Ts.T, err, "Evict: %v", err)
 		status, err := ts.WaitExit(p.GetPid())
+		assert.Nil(ts.Ts.T, err, "WaitExit: %v", err)
 		assert.True(ts.Ts.T, status.IsStatusEvicted(), "Bad status evict: %v", status)
 	}
 }
@@ -188,29 +207,6 @@ func evictMemBlockers(ts *test.Tstate, ps []*proc.Proc) {
 	}
 }
 
-// Warm up a realm, by starting uprocds for it on all machines in the cluster.
-func warmupRealm(ts *test.RealmTstate, progs []string) (time.Time, int) {
-	sdc := mschedclnt.NewMSchedClnt(ts.SigmaClnt.FsLib, sp.NOT_SET)
-	// Get the list of mscheds.
-	sds, err := sdc.GetMScheds()
-	assert.Nil(ts.Ts.T, err, "Get MScheds: %v", err)
-	db.DPrintf(db.TEST, "Warm up realm %v for progs %v mscheds %d %v", ts.GetRealm(), progs, len(sds), sds)
-	start := time.Now()
-	nDL := 0
-	for _, kid := range sds {
-		// Warm the cache for a binary
-		for _, ptype := range []proc.Ttype{proc.T_LC, proc.T_BE} {
-			for _, prog := range progs {
-				err := sdc.WarmProcd(kid, ts.Ts.ProcEnv().GetPID(), ts.GetRealm(), prog+"-v"+sp.Version, ts.Ts.ProcEnv().GetSigmaPath(), ptype)
-				nDL++
-				assert.Nil(ts.Ts.T, err, "WarmProcd: %v", err)
-			}
-		}
-	}
-	db.DPrintf(db.TEST, "Warmed up realm %v", ts.GetRealm())
-	return start, nDL
-}
-
 // ========== Dir Helpers ==========
 
 func newOutDir(ts *test.RealmTstate) {
@@ -262,21 +258,6 @@ func parseDurations(ts *test.RealmTstate, ss []string) []time.Duration {
 	return ds
 }
 
-func newNKVJobs(ts *test.RealmTstate, n, nkvd, kvdrepl int, nclerks []int, phases []time.Duration, ckdur string, kvdmcpu, ckmcpu proc.Tmcpu, auto string, redisaddr string) ([]*KVJobInstance, []interface{}) {
-	// If we're running with unbounded clerks...
-	if len(phases) > 0 {
-		assert.Equal(ts.Ts.T, len(nclerks), len(phases), "Phase and clerk lengths don't match: %v != %v", len(phases), len(nclerks))
-	}
-	js := make([]*KVJobInstance, 0, n)
-	is := make([]interface{}, 0, n)
-	for i := 0; i < n; i++ {
-		ji := NewKVJobInstance(ts, nkvd, kvdrepl, nclerks, phases, ckdur, kvdmcpu, ckmcpu, auto, redisaddr)
-		js = append(js, ji)
-		is = append(is, ji)
-	}
-	return js, is
-}
-
 // ========== Cached Helpers ==========
 func newNCachedJobs(ts *test.RealmTstate, n, nkeys, ncache, nclerks int, durstr string, ckmcpu, cachemcpu proc.Tmcpu) ([]*CachedJobInstance, []interface{}) {
 	js := make([]*CachedJobInstance, 0, n)
@@ -290,6 +271,32 @@ func newNCachedJobs(ts *test.RealmTstate, n, nkeys, ncache, nclerks int, durstr 
 	return js, is
 }
 
+func newCachedBackupJobs(ts *test.RealmTstate, jobName string, durs string, maxrpss string, putDurs string, putMaxrpss string, ncache int, cacheMCPU proc.Tmcpu, cacheGC bool, useEPCache bool, nKV int, delegatedInit bool, topN int, scale bool, scaleDelay time.Duration) ([]*CachedBackupJobInstance, []interface{}) {
+	// n is ntrials, which is always 1.
+	n := 1
+	ws := make([]*CachedBackupJobInstance, 0, n)
+	is := make([]interface{}, 0, n)
+	for i := 0; i < n; i++ {
+		i := NewCachedBackupJob(ts, jobName, durs, maxrpss, putDurs, putMaxrpss, ncache, cacheMCPU, cacheGC, useEPCache, nKV, delegatedInit, topN, scale, scaleDelay)
+		ws = append(ws, i)
+		is = append(is, i)
+	}
+	return ws, is
+}
+
+func newCachedScalerJobs(ts *test.RealmTstate, jobName string, durs string, maxrpss string, putDurs string, putMaxrpss string, ncache int, cacheMCPU proc.Tmcpu, cacheGC bool, useEPCache bool, nKV int, delegatedInit bool, topN int, scale bool, scaleDelay time.Duration, scalerCachedCPP bool, scalerCachedRunSleeper bool, cossimBackend bool, cossimNVec int, cossimVecDim int, cossimMCPU proc.Tmcpu, cossimDelegatedInit bool, cossimNVecToQuery int) ([]*CachedScalerJobInstance, []interface{}) {
+	// n is ntrials, which is always 1.
+	n := 1
+	ws := make([]*CachedScalerJobInstance, 0, n)
+	is := make([]interface{}, 0, n)
+	for i := 0; i < n; i++ {
+		i := NewCachedScalerJob(ts, jobName, durs, maxrpss, putDurs, putMaxrpss, ncache, cacheMCPU, cacheGC, useEPCache, nKV, delegatedInit, topN, scale, scaleDelay, scalerCachedCPP, scalerCachedRunSleeper, cossimBackend, cossimNVec, cossimVecDim, cossimMCPU, cossimDelegatedInit, cossimNVecToQuery)
+		ws = append(ws, i)
+		is = append(is, i)
+	}
+	return ws, is
+}
+
 // ========== MSched Helpers ==========
 
 func newMSchedJobs(ts *test.RealmTstate, nclnt int, dur string, maxrps string, progname string, sfn mschedFn, kernels []string, withKernelPref, skipstats bool) ([]*MSchedJobInstance, []interface{}) {
@@ -299,19 +306,6 @@ func newMSchedJobs(ts *test.RealmTstate, nclnt int, dur string, maxrps string, p
 	is := make([]interface{}, 0, n)
 	for i := 0; i < n; i++ {
 		i := NewMSchedJob(ts, nclnt, dur, maxrps, progname, sfn, kernels, withKernelPref, skipstats)
-		ws = append(ws, i)
-		is = append(is, i)
-	}
-	return ws, is
-}
-
-// ========== Www Helpers ========
-
-func newWwwJobs(ts *test.RealmTstate, sigmaos bool, n int, wwwmcpu proc.Tmcpu, reqtype string, ntrials, nclnt, nreq int, delay time.Duration) ([]*WwwJobInstance, []interface{}) {
-	ws := make([]*WwwJobInstance, 0, n)
-	is := make([]interface{}, 0, n)
-	for i := 0; i < n; i++ {
-		i := NewWwwJob(ts, sigmaos, wwwmcpu, reqtype, ntrials, nclnt, nreq, delay)
 		ws = append(ws, i)
 		is = append(is, i)
 	}
@@ -353,7 +347,7 @@ func newImgResizeJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, input str
 	ws := make([]*ImgResizeJobInstance, 0, n)
 	is := make([]interface{}, 0, n)
 	for i := 0; i < n; i++ {
-		i := NewImgResizeJob(ts, p, sigmaos, input, ntasks, ninputs, mcpu, mem, nrounds, imgdmcpu)
+		i := NewImgResizeJob(ts, p, sigmaos, input, ntasks, ninputs, 0, time.Second, mcpu, mem, nrounds, imgdmcpu)
 		ws = append(ws, i)
 		is = append(is, i)
 	}
@@ -361,13 +355,13 @@ func newImgResizeJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, input str
 }
 
 // ========== ImgResizeRPC Helpers ==========
-func newImgResizeRPCJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, input string, tasksPerSec int, dur time.Duration, mcpu proc.Tmcpu, mem proc.Tmem, nrounds int, imgdmcpu proc.Tmcpu) ([]*ImgResizeRPCJobInstance, []interface{}) {
+func newImgResizeRPCJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, input string, tasksPerSec int, dur time.Duration, mcpu proc.Tmcpu, mem proc.Tmem, nrounds int, imgdmcpu proc.Tmcpu) ([]*ImgResizeJobInstance, []interface{}) {
 	// n is ntrials, which is always 1.
 	n := 1
-	ws := make([]*ImgResizeRPCJobInstance, 0, n)
+	ws := make([]*ImgResizeJobInstance, 0, n)
 	is := make([]interface{}, 0, n)
 	for i := 0; i < n; i++ {
-		i := NewImgResizeRPCJob(ts, p, sigmaos, input, tasksPerSec, dur, mcpu, mem, nrounds, imgdmcpu)
+		i := NewImgResizeJob(ts, p, sigmaos, input, 0, 0, tasksPerSec, dur, mcpu, mem, nrounds, imgdmcpu)
 		ws = append(ws, i)
 		is = append(is, i)
 	}
@@ -391,6 +385,20 @@ func newSocialNetworkJobs(
 	return ws, is
 }
 
+// ========== CosSim Helpers ==========
+func newCosSimJobs(ts *test.RealmTstate, p *perf.Perf, epcj *epsrv.EPCacheJob, cm *cachegrpmgr.CacheMgr, cc *cachegrpclnt.CachedSvcClnt, sigmaos bool, dur string, maxrps string, ncache int, cacheGC bool, cacheMcpu proc.Tmcpu, manuallyScaleCaches bool, scaleCacheDelay time.Duration, nCachesToAdd int, nCosSim int, cosSimMcpu proc.Tmcpu, manuallyScaleCosSim bool, scaleCosSimDelay time.Duration, nCosSimToAdd int, cosSimNVec int, cosSimVecDim int, eagerInit bool, delegateInit bool, fn cosSimFn) ([]*CosSimJobInstance, []interface{}) {
+	// n is ntrials, which is always 1.
+	n := 1
+	ws := make([]*CosSimJobInstance, 0, n)
+	is := make([]interface{}, 0, n)
+	for i := 0; i < n; i++ {
+		i := NewCosSimJob(ts, p, epcj, cm, cc, sigmaos, dur, maxrps, fn, false, ncache, cacheGC, cacheMcpu, manuallyScaleCaches, scaleCacheDelay, nCachesToAdd, nCosSim, cosSimNVec, cosSimVecDim, eagerInit, delegateInit, cosSimMcpu, manuallyScaleCosSim, scaleCosSimDelay, nCosSimToAdd)
+		ws = append(ws, i)
+		is = append(is, i)
+	}
+	return ws, is
+}
+
 // ========== Client Helpers ==========
 
 var clidir string = filepath.Join("name/", "clnts")
@@ -404,7 +412,7 @@ func waitForRealmCreation(rootts *test.Tstate, realm sp.Trealm) error {
 		sp.UXREL,
 	}
 	for _, d := range dirs {
-		if err := dirwatcher.WaitCreate(rootts.FsLib, filepath.Join(sp.REALMS, realm.String(), d)); err != nil {
+		if err := dirwatcher.WaitCreate(rootts.FsLib, filepath.Join(sp.NamedRootPathname(realm), d)); err != nil {
 			return err
 		}
 	}
@@ -468,8 +476,10 @@ func downloadS3ResultsRealm(ts *test.Tstate, src string, dst string, realm sp.Tr
 	os.MkdirAll(dst, 0777)
 	_, err := ts.ProcessDir(src, func(st *sp.Tstat) (bool, error) {
 		rdr, err := ts.OpenReader(filepath.Join(src, st.Name))
+		if !assert.Nil(ts.T, err, "Error open reader %v", err) {
+			return false, err
+		}
 		defer rdr.Close()
-		assert.Nil(ts.T, err, "Error open reader %v", err)
 		b, err := io.ReadAll(rdr)
 		assert.Nil(ts.T, err, "Error read all %v", err)
 		name := st.Name

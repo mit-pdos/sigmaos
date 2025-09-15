@@ -6,6 +6,10 @@ import "rpc/proto/rpc.proto";
 
 option go_package = "sigmaos/proxy/sigmap/proto";
 
+message SigmaInformProcReq {
+        ProcProto procProto = 1;
+}
+
 message SigmaInitReq {
         ProcEnvProto procEnvProto = 1;
 }
@@ -126,4 +130,33 @@ message SigmaMountRep {
 message SigmaMountsRep {
         repeated string endpoints = 1;
         Rerror err = 2;
+}
+
+message SigmaRegisterEPReq {
+        string path = 1;
+        TendpointProto endpoint = 2;
+}
+
+message SigmaExitedReq {
+        uint32 status = 1;
+        string msg = 2;
+}
+
+message SigmaDelegatedRPCReq {
+        uint64 rPCIdx = 1;
+}
+
+message SigmaDelegatedRPCRep {
+        Blob blob = 1;
+        Rerror err = 2;
+}
+
+message SigmaMultiDelegatedRPCReq {
+        repeated uint64 rPCIdxs = 1;
+}
+
+message SigmaMultiDelegatedRPCRep {
+        Blob blob = 1;
+        repeated uint64 nIOVs = 2;
+        repeated Rerror errs = 3;
 }

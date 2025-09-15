@@ -77,7 +77,7 @@ func (k *Kernel) bootSubsystemPIDWithMcpu(pid sp.Tpid, program string, args, env
 }
 
 func (k *Kernel) bootSubsystem(program string, args, env []string, realm sp.Trealm, how proc.Thow, mcpu proc.Tmcpu) (Subsystem, error) {
-	pid := sp.GenPid(program)
+	pid := sp.GenPidKernelProc(program, k.Param.KernelID)
 	return k.bootSubsystemPIDWithMcpu(pid, program, args, env, realm, how, mcpu)
 }
 
@@ -99,7 +99,7 @@ func (s *KernelSubsystem) Run(how proc.Thow, kernelId string, localIP sp.Tip) er
 		h := sp.SIGMAHOME
 		s.p.AppendEnv("PATH", h+"/bin/user:"+h+"/bin/user/common:"+h+"/bin/kernel:/usr/sbin:/usr/bin:/bin")
 		s.p.FinalizeEnv(localIP, localIP, sp.Tpid(sp.NOT_SET))
-		c, err := dcontainer.StartDockerContainer(s.p, kernelId)
+		c, err := dcontainer.StartDockerContainer(s.p, kernelId, s.k.Param.User, s.k.Param.Net)
 		if err != nil {
 			return err
 		}

@@ -240,7 +240,7 @@ def setup_graph(nplots, units, total_ncore):
     ax.set_yticks([0, 16, 32])
   return fig, tptax, coresax
 
-def graph_data(input_dir_sigmaos, input_dir_k8s, title, out, hotel_realm, be_realm, prefix, units, total_ncore, percentile, k8s, xmin, xmax, legend_on_right):
+def graph_data(input_load_label, input_dir_sigmaos, input_dir_k8s, title, out, hotel_realm, be_realm, prefix, units, total_ncore, percentile, k8s, xmin, xmax, legend_on_right):
   if hotel_realm is None and be_realm is None:
     procd_tpts = read_tpts(input_dir_sigmaos, "test")
     assert(len(procd_tpts) <= 1)
@@ -252,7 +252,7 @@ def graph_data(input_dir_sigmaos, input_dir_k8s, title, out, hotel_realm, be_rea
   be_tpts = read_tpts(input_dir_sigmaos, prefix)#"mr")
   be_range = get_time_range(be_tpts)
   procd_range = get_time_range(procd_tpts)
-  hotel_tpts = read_tpts(input_dir_sigmaos, "hotel")
+  hotel_tpts = read_tpts(input_dir_sigmaos, input_load_label)
   hotel_range = get_time_range(hotel_tpts)
   hotel_lats = read_latencies(input_dir_sigmaos, "bench.out")
   hotel_lat_range = get_time_range(hotel_lats)
@@ -261,10 +261,10 @@ def graph_data(input_dir_sigmaos, input_dir_k8s, title, out, hotel_realm, be_rea
   # K8s measurements
   hotel_lats_k8s = read_latencies(input_dir_k8s, "bench.out")
   hotel_lat_k8s_range = get_time_range(hotel_lats_k8s)
-  hotel_tpts_k8s = read_tpts(input_dir_k8s, "hotel")
+  hotel_tpts_k8s = read_tpts(input_dir_k8s, input_load_label)
   hotel_range_k8s = get_time_range(hotel_tpts_k8s)
   time_range_k8s = get_overall_time_range([hotel_range_k8s, hotel_lat_k8s_range])
-  time_range_k8s = (time_range_k8s[0] + 370000, time_range_k8s[1] + 370000)
+  time_range_k8s = (time_range_k8s[0], time_range_k8s[1])
   extend_tpts_to_range(procd_tpts, time_range)
   procd_tpts = truncate_tpts_to_range(procd_tpts, time_range)
   be_tpts = fit_times_to_range(be_tpts, time_range)
@@ -272,7 +272,7 @@ def graph_data(input_dir_sigmaos, input_dir_k8s, title, out, hotel_realm, be_rea
   procd_tpts = fit_times_to_range(procd_tpts, time_range)
   hotel_lats = fit_times_to_range(hotel_lats, time_range)
   hotel_lats_k8s = fit_times_to_range(hotel_lats_k8s, time_range_k8s)
-  hotel_lats_k8s = truncate_to_min_max(hotel_lats_k8s, 354500, 390000)
+#  hotel_lats_k8s = truncate_to_min_max(hotel_lats_k8s, 354500, 390000)
   procd_tpts = truncate_to_min_max(procd_tpts, xmin, xmax)
   # Convert range ms -> sec
   time_range = ((time_range[0] - time_range[0]) / 1000.0, (time_range[1] - time_range[0]) / 1000.0)
@@ -293,7 +293,7 @@ def graph_data(input_dir_sigmaos, input_dir_k8s, title, out, hotel_realm, be_rea
   if len(hotel_lats) > 0:
     x1, y1 = buckets_to_lists(hotel_tail_lat_buckets)
     ymax = max(ymax, max(y1))
-    p_tail_lat = add_data_to_graph(tptax[tptax_idx + 1], x1, y1, str(int(percentile)) + "% tail latency", "red", "-", "")
+    p_tail_lat = add_data_to_graph(tptax[tptax_idx + 1], x1, y1, str(int(percentile)) + "% tail latency (ms)", "red", "-", "")
     plots.append(p_tail_lat)
     x2, y2 = buckets_to_lists(hotel_avg_lat_buckets)
 #    p_avg_lat = add_data_to_graph(tptax[tptax_idx + 1], x2, y2, "σOS-hotel avg lat", "purple", "-", "")
@@ -356,6 +356,7 @@ def graph_data(input_dir_sigmaos, input_dir_k8s, title, out, hotel_realm, be_rea
 
 if __name__ == "__main__":
   parser = argparse.ArgumentParser()
+  parser.add_argument("--input_load_label", type=str, default="hotel")
   parser.add_argument("--measurement_dir_sigmaos", type=str, required=True)
   parser.add_argument("--measurement_dir_k8s", type=str, required=True)
   parser.add_argument("--title", type=str, required=True)
@@ -372,4 +373,4 @@ if __name__ == "__main__":
   parser.add_argument("--legend_on_right", action="store_true", default=False)
 
   args = parser.parse_args()
-  graph_data(args.measurement_dir_sigmaos, args.measurement_dir_k8s, args.title, args.out, args.hotel_realm, args.be_realm, args.prefix, args.units, args.total_ncore, args.percentile, args.k8s, args.xmin, args.xmax, args.legend_on_right)
+  graph_data(args.input_load_label, args.measurement_dir_sigmaos, args.measurement_dir_k8s, args.title, args.out, args.hotel_realm, args.be_realm, args.prefix, args.units, args.total_ncore, args.percentile, args.k8s, args.xmin, args.xmax, args.legend_on_right)

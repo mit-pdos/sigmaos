@@ -164,7 +164,7 @@ func (s *Www) userHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var res proto.UserRep
+	var res proto.HotelUserRep
 
 	// Check username and password
 	err := s.userc.RPC("Users.CheckUser", &proto.UserReq{
@@ -435,7 +435,7 @@ func (s *Www) reservationHandler(w http.ResponseWriter, r *http.Request) {
 		numberOfRoom, _ = strconv.Atoi(num)
 	}
 
-	var res proto.UserRep
+	var res proto.HotelUserRep
 
 	// Check username and password
 	err := s.userc.RPC("Users.CheckUser", &proto.UserReq{

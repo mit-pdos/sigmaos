@@ -323,10 +323,20 @@ func (fsc *FsClient) Close() error {
 	return fsc.pc.Close()
 }
 
+func (fsc *FsClient) Stats() (*sos.ClntStats, error) {
+	spst := fsc.pc.FidClnt.PathClntStats().StatsSnapshot()
+	spst.Counters["Nfid"] = int64(fsc.pc.FidClnt.Len())
+	st := &sos.ClntStats{
+		Path: spst,
+		Sp:   fsc.pc.FidClnt.SpStats().StatsSnapshot(),
+	}
+	return st, nil
+}
+
 func (fsc *FsClient) mntLookup(pn sp.Tsigmapath) (sos.PathClntAPI, error) {
 	p := path.Split(pn)
 	if len(p) == 0 {
-		return nil, serr.NewErr(serr.TErrInval, pn[0])
+		return nil, serr.NewErr(serr.TErrInval, p)
 	}
 	pc, ok := fsc.mnts.Lookup(p[0])
 	if !ok {

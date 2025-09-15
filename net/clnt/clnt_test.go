@@ -7,6 +7,7 @@ import (
 	"io"
 	"net"
 	"os"
+	"sync"
 	"testing"
 	"time"
 
@@ -16,14 +17,16 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	db "sigmaos/debug"
-	"sigmaos/util/io/demux"
-	"sigmaos/netclnt"
-	"sigmaos/netsrv"
+	dialproxyclnt "sigmaos/dialproxy/clnt"
+	"sigmaos/net/clnt"
+	"sigmaos/net/srv"
 	"sigmaos/serr"
+	spcodec "sigmaos/session/codec"
 	sessp "sigmaos/session/proto"
 	sp "sigmaos/sigmap"
-	spcodec "sigmaos/session/codec"
 	"sigmaos/test"
+	"sigmaos/util/crash"
+	"sigmaos/util/io/demux"
 )
 
 var srvaddr string
@@ -34,15 +37,18 @@ func init() {
 
 const (
 	// For latency measurements
-	// REQBUFSZ = 100
 	// REPBUFSZ = 100
 	// TOTAL    = 10 * sp.MBYTE
 
 	// For tput measurements
-	REQBUFSZ = 1 * sp.MBYTE // 128 * sp.KBYTE
-	REPBUFSZ = 10
-	TOTAL    = 1000 * sp.MBYTE
+	REQBUFSZ      = 1 * sp.MBYTE // 128 * sp.KBYTE
+	REQSMALLBUFSZ = 100          // for latency
+	REPBUFSZ      = 10
+	TOTAL         = 1000 * sp.MBYTE
 )
+
+func TestCompile(t *testing.T) {
+}
 
 func measureProtobuf(t *testing.T, fc *sessp.FcallMsg) {
 	const N = 100000
@@ -123,6 +129,7 @@ type transport struct {
 	rdr  io.Reader
 	wrt  *bufio.Writer
 	iovm *demux.IoVecMap
+	conn net.Conn
 }
 
 func newTransport(conn net.Conn, iovm *demux.IoVecMap) demux.TransportI {
@@ -130,45 +137,56 @@ func newTransport(conn net.Conn, iovm *demux.IoVecMap) demux.TransportI {
 		rdr:  bufio.NewReaderSize(conn, sp.Conf.Conn.MSG_LEN),
 		wrt:  bufio.NewWriterSize(conn, sp.Conf.Conn.MSG_LEN),
 		iovm: iovm,
+		conn: conn,
 	}
 }
 
-func (t *transport) ReadCall() (demux.CallI, *serr.Err) {
+func (t *transport) ReadCall() (demux.CallI, error) {
 	var l uint32
 
 	if err := binary.Read(t.rdr, binary.LittleEndian, &l); err != nil {
-		return nil, serr.NewErr(serr.TErrUnreachable, err)
+		return nil, err
 	}
 	l = l - 4
 	if l < 0 {
-		return nil, serr.NewErr(serr.TErrUnreachable, "readMsg too short")
+		return nil, io.ErrShortBuffer
 	}
 	frame := make(sessp.Tframe, l)
 	n, e := io.ReadFull(t.rdr, frame)
 	if n != len(frame) {
-		return nil, serr.NewErr(serr.TErrUnreachable, e)
+		return nil, e
 	}
 	return &call{buf: frame}, nil
 }
 
-func (t *transport) WriteCall(c demux.CallI) *serr.Err {
+func (t *transport) WriteCall(c demux.CallI) error {
 	call := c.(*call)
 
 	l := uint32(len(call.buf) + 4) // +4 because that is how 9P wants it
 	if err := binary.Write(t.wrt, binary.LittleEndian, l); err != nil {
-		return serr.NewErr(serr.TErrUnreachable, err.Error())
+		return err
 	}
-	if n, err := t.wrt.Write(call.buf); err != nil || n != len(call.buf) {
-		return serr.NewErr(serr.TErrUnreachable, err.Error())
+	n, err := t.wrt.Write(call.buf)
+	if err != nil {
+		return err
+	}
+	if n != len(call.buf) {
+		return io.ErrShortWrite
 	}
 	if err := t.wrt.Flush(); err != nil {
-		return serr.NewErr(serr.TErrUnreachable, err.Error())
+		return err
 	}
+	return nil
+}
+
+func (t *transport) Close() error {
+	t.conn.Close()
 	return nil
 }
 
 type netConn struct {
 	conn net.Conn
+	dmx  *demux.DemuxSrv
 }
 
 func (nc *netConn) ServeRequest(req demux.CallI) (demux.CallI, *serr.Err) {
@@ -200,16 +218,32 @@ func (nc *netConn) ReportError(err error) {
 
 type TstateNet struct {
 	*test.TstateMin
-	srv     *netsrv.NetServer
-	clnt    *netclnt.NetClnt
-	dmx     *demux.DemuxClnt
+	srv     *srv.NetServer
+	clnt    *clnt.NetClnt
 	mktrans func(net.Conn, *demux.IoVecMap) demux.TransportI
+
+	mu sync.Mutex
+	nc *netConn // server-side of client connection
 }
 
-func (ts *TstateNet) NewConn(conn net.Conn) *demux.DemuxSrv {
-	nc := &netConn{conn}
+func (ts *TstateNet) getSrvDmx() *demux.DemuxSrv {
+	ts.mu.Lock()
+	defer ts.mu.Unlock()
+	return ts.nc.dmx
+}
+
+func (ts *TstateNet) setConn(nc *netConn) {
+	ts.mu.Lock()
+	defer ts.mu.Unlock()
+	ts.nc = nc
+}
+
+func (ts *TstateNet) NewConn(p *sp.Tprincipal, conn net.Conn) *demux.DemuxSrv {
+	nc := &netConn{conn: conn}
 	iovm := demux.NewIoVecMap()
-	return demux.NewDemuxSrv(nc, ts.mktrans(conn, iovm))
+	nc.dmx = demux.NewDemuxSrv(nc, ts.mktrans(conn, iovm))
+	ts.setConn(nc)
+	return nc.dmx
 }
 
 func newTstateNet(t *testing.T, mktrans func(net.Conn, *demux.IoVecMap) demux.TransportI) *TstateNet {
@@ -217,15 +251,66 @@ func newTstateNet(t *testing.T, mktrans func(net.Conn, *demux.IoVecMap) demux.Tr
 		TstateMin: test.NewTstateMin(t),
 		mktrans:   mktrans,
 	}
-	ts.srv = netsrv.NewNetServer(ts.PE, ts.Addr, ts)
-
-	db.DPrintf(db.TEST, "srv %v\n", ts.srv.MyAddr())
-
-	nc, err := netclnt.NewNetClnt(sp.ROOTREALM.String(), sp.Taddrs{ts.srv.MyAddr()})
-	assert.Nil(t, err)
-	iovm := demux.NewIoVecMap()
-	ts.dmx = demux.NewDemuxClnt(mktrans(nc.Conn(), iovm), iovm)
+	ts.srv = srv.NewNetServer(ts.PE, dialproxyclnt.NewDialProxyClnt(ts.PE), ts.Addr, ts)
+	db.DPrintf(db.TEST, "srv %v\n", ts.srv.GetEndpoint())
 	return ts
+}
+
+func (ts *TstateNet) connect() (*demux.DemuxClnt, error) {
+	conn, err := clnt.NewNetClnt(ts.PE, dialproxyclnt.NewDialProxyClnt(ts.PE), ts.srv.GetEndpoint())
+	if err != nil {
+		return nil, err
+	}
+	iovm := demux.NewIoVecMap()
+	return demux.NewDemuxClnt(ts.mktrans(conn, iovm), iovm), nil
+}
+
+func (ts *TstateNet) failer(ch chan struct{}) {
+	const NETFAIL = 200
+	for {
+		select {
+		case <-ch:
+			return
+		default:
+			r, _ := crash.RandSleep(NETFAIL)
+			if r < uint64(0.33*crash.ONE) {
+				if dmx := ts.getSrvDmx(); dmx != nil {
+					dmx.Close()
+				}
+			}
+		}
+	}
+}
+
+func TestNetFail(t *testing.T) {
+	const NSEC = 30
+
+	ts := newTstateNet(t, newTransport)
+	c := &call{buf: test.NewBuf(REQSMALLBUFSZ)}
+
+	ch := make(chan struct{})
+	go ts.failer(ch)
+
+	t0 := time.Now()
+	dmx, err := ts.connect()
+	assert.Nil(t, err)
+	for !time.Now().After(t0.Add(NSEC * time.Second)) {
+		//db.DPrintf(db.ALWAYS, "send c")
+		time.Sleep(10 * time.Millisecond)
+		d, err := dmx.SendReceive(c, nil)
+		if err == nil {
+			call := d.(*call)
+			assert.True(t, len(call.buf) == REPBUFSZ)
+		} else {
+			db.DPrintf(db.CRASH, "SendReceive err %v", err)
+			var err error
+			dmx.Close()
+			dmx, err = ts.connect()
+			assert.Nil(t, err)
+		}
+	}
+	ch <- struct{}{}
+	ts.srv.CloseListener()
 }
 
 func TestNetClntPerfFrame(t *testing.T) {
@@ -234,8 +319,10 @@ func TestNetClntPerfFrame(t *testing.T) {
 
 	t0 := time.Now()
 	n := TOTAL / REQBUFSZ
+	dmx, err := ts.connect()
+	assert.Nil(t, err)
 	for i := 0; i < n; i++ {
-		d, err := ts.dmx.SendReceive(c, nil)
+		d, err := dmx.SendReceive(c, nil)
 		assert.Nil(t, err)
 		call := d.(*call)
 		assert.True(t, len(call.buf) == REPBUFSZ)
@@ -255,8 +342,10 @@ func TestNetClntPerfFcall(t *testing.T) {
 	pfcm := spcodec.NewPartMarshaledMsg(fcm)
 	t0 := time.Now()
 	n := TOTAL / REQBUFSZ
+	dmx, err := ts.connect()
+	assert.Nil(t, err)
 	for i := 0; i < n; i++ {
-		c, err := ts.dmx.SendReceive(pfcm, nil)
+		c, err := dmx.SendReceive(pfcm, nil)
 		assert.Nil(t, err)
 		fcm := c.(*sessp.PartMarshaledMsg)
 		assert.True(t, len(fcm.Fcm.Iov[0]) == REPBUFSZ)

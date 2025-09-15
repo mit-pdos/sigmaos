@@ -15,18 +15,6 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-var platformArg string
-var vpcArg string
-var tagArg string
-var branchArg string
-var versionArg string
-var noNetproxyArg bool
-var overlaysArg bool
-var parallelArg bool
-var noShutdownArg bool
-var k8sArg bool
-var oneByOne bool
-
 func init() {
 	flag.StringVar(&platformArg, "platform", sp.NOT_SET, "Platform on which to run. Currently, only [aws|cloudlab] are supported")
 	flag.StringVar(&vpcArg, "vpc", sp.NOT_SET, "VPC in which to run. Need not be specified for Cloudlab.")
@@ -53,7 +41,7 @@ func TestInitFS(t *testing.T) {
 	// Cluster configuration parameters
 	const (
 		driverVM          int  = 0
-		numNodes          int  = 4
+		numNodes          int  = 10
 		numCoresPerNode   uint = 4
 		numFullNodes      int  = numNodes
 		numProcqOnlyNodes int  = 0
@@ -68,6 +56,34 @@ func TestInitFS(t *testing.T) {
 	}
 	db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
 	ts.RunStandardBenchmark(benchName, driverVM, GetInitFSCmd, numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost)
+}
+
+// Example remote benchmark runner stub
+func TestExample(t *testing.T) {
+	var (
+		benchName    string = "example"
+		exampleFlag  string = "example-bench-flag-val"
+		prewarmRealm bool   = false
+	)
+	// Cluster configuration parameters
+	const (
+		driverVM          int  = 0
+		numNodes          int  = 10
+		numCoresPerNode   uint = 4
+		numFullNodes      int  = numNodes
+		numProcqOnlyNodes int  = 0
+		turboBoost        bool = false
+	)
+	ts, err := NewTstate(t)
+	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {
+		return
+	}
+	if !assert.False(ts.t, ts.BCfg.K8s, "K8s version of benchmark does not exist") {
+		return
+	}
+	db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
+	getExampleCmd := GetExampleCmdConstructor(prewarmRealm, exampleFlag)
+	ts.RunStandardBenchmark(benchName, driverVM, getExampleCmd, numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost)
 }
 
 // Test SigmaOS cold-start.
@@ -111,9 +127,9 @@ func TestSingleMachineMaxTpt(t *testing.T) {
 	)
 	// Cluster configuration parameters
 	const (
-		driverVM          int  = 3
-		numNodes          int  = 2
-		numProcqOnlyNodes int  = 1
+		driverVM          int  = 0
+		numNodes          int  = 1
+		numProcqOnlyNodes int  = 0
 		numFullNodes      int  = numNodes - numProcqOnlyNodes
 		turboBoost        bool = true
 	)
@@ -130,8 +146,8 @@ func TestSingleMachineMaxTpt(t *testing.T) {
 		lcProc        bool          = false
 		prewarmRealm  bool          = true
 		skipStats     bool          = true
-		rps           []int         = []int{1600, 1200, 800, 400}
-		nCoresPerNode []uint        = []uint{40, 32, 16, 8, 4, 2}
+		rps           []int         = []int{400}
+		nCoresPerNode []uint        = []uint{2}
 		dur           time.Duration = 5 * time.Second
 	)
 	db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
@@ -262,7 +278,7 @@ func TestMR(t *testing.T) {
 	// Cluster configuration parameters
 	const (
 		driverVM          int  = 0
-		numProcqOnlyNodes int  = 2
+		numProcqOnlyNodes int  = 1
 		turboBoost        bool = true
 	)
 	type MRExperimentConfig struct {
@@ -274,11 +290,12 @@ func TestMR(t *testing.T) {
 	// Variable MR benchmark configuration parameters
 	var (
 		mrApps []*MRExperimentConfig = []*MRExperimentConfig{
-			&MRExperimentConfig{"mr-grep-wiki2G-bench-s3.yml", 10, 4, 7000},
-			&MRExperimentConfig{"mr-grep-wiki2G-granular-bench-s3.yml", 54, 4, 7000},
-			&MRExperimentConfig{"mr-wc-wiki2G-bench.yml", 10, 4, 7000},
-			&MRExperimentConfig{"mr-wc-wiki2G-bench-s3.yml", 10, 4, 7000},
+			{"mr-grep-wiki2G-bench-s3.yml", 10, 4, 7000},
+			{"mr-grep-wiki2G-granular-bench-s3.yml", 54, 4, 7000},
+			{"mr-wc-wiki2G-bench.yml", 10, 4, 7000},
+			{"mr-wc-wiki2G-bench-s3.yml", 10, 4, 7000},
 		}
+		perfs         []bool = []bool{false}
 		prewarmRealms []bool = []bool{true}
 		//		prewarmRealms []bool   = []bool{true, false}
 	)
@@ -294,16 +311,21 @@ func TestMR(t *testing.T) {
 		return
 	}
 	db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
-	for _, mrEP := range mrApps {
-		for _, prewarmRealm := range prewarmRealms {
-			benchName := filepath.Join(benchNameBase, mrEP.benchName)
-			if prewarmRealm {
-				benchName += "-warm"
-			} else {
-				benchName += "-cold"
+	for _, perf := range perfs {
+		for _, mrEP := range mrApps {
+			for _, prewarmRealm := range prewarmRealms {
+				benchName := filepath.Join(benchNameBase, mrEP.benchName)
+				if prewarmRealm {
+					benchName += "-warm"
+				} else {
+					benchName += "-cold"
+				}
+				if perf {
+					benchName += "-perf"
+				}
+				numFullNodes := mrEP.numNodes - numProcqOnlyNodes
+				ts.RunStandardBenchmark(benchName, driverVM, GetMRCmdConstructor(mrEP.benchName, mrEP.memReq, prewarmRealm, measureTpt, perf), mrEP.numNodes, mrEP.numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost)
 			}
-			numFullNodes := mrEP.numNodes - numProcqOnlyNodes
-			ts.RunStandardBenchmark(benchName, driverVM, GetMRCmdConstructor(mrEP.benchName, mrEP.memReq, prewarmRealm, measureTpt), mrEP.numNodes, mrEP.numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost)
 		}
 	}
 }
@@ -791,4 +813,228 @@ func TestLCBEHotelImgResizeRPCMultiplexing(t *testing.T) {
 	getLeaderCmd := GetLCBEHotelImgResizeRPCMultiplexingCmdConstructor(len(driverVMs), rps, dur, cacheType, scaleCache, sleep)
 	getFollowerCmd := GetHotelClientCmdConstructor("Search", false, len(driverVMs), rps, dur, numCaches, cacheType, scaleCache, sleep, manuallyScaleCaches, scaleCacheDelay, numCachesToAdd, numGeo, numGeoIdx, geoSearchRadius, geoNResults, manuallyScaleGeo, scaleGeoDelay, numGeoToAdd)
 	ts.RunParallelClientBenchmark(benchName, driverVMs, getLeaderCmd, getFollowerCmd, nil, nil, clientDelay, numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost)
+}
+
+// Test CosSim's application tail latency.
+func TestScaleCosSim(t *testing.T) {
+	var (
+		benchNameBase string = "cos_sim_tail_latency"
+		driverVMs     []int  = []int{9}
+	)
+	// Cluster configuration parameters
+	const (
+		numNodes          int  = 8
+		numCoresPerNode   uint = 4
+		numFullNodes      int  = numNodes
+		numProcqOnlyNodes int  = 0
+		turboBoost        bool = false
+	)
+	// CosSim benchmark configuration parameters
+	var (
+		//		rps                   []int           = []int{300, 600, 600}
+		//		dur                   []time.Duration = []time.Duration{5 * time.Second, 30 * time.Second, 30 * time.Second}
+		//		rps                   []int           = []int{600, 650, 1000} // works without additional debug statements
+		//		rps                   []int           = []int{550, 550, 1000} // works with additional debug statements
+		//		rps                   []int           = []int{500, 550, 575, 600, 625, 650, 1000}
+		//		dur                   []time.Duration = []time.Duration{5 * time.Second, 5 * time.Second, 5 * time.Second, 5 * time.Second, 5 * time.Second, 5 * time.Second, 30 * time.Second}
+		rps                   []int           = []int{300, 500, 1000}
+		dur                   []time.Duration = []time.Duration{5 * time.Second, 30 * time.Second, 30 * time.Second}
+		numCosSimBase         int             = 1
+		nCache                []int           = []int{1, 2, 4}
+		scaleCache            bool            = false
+		clientDelay           time.Duration   = 0 * time.Second
+		sleep                 time.Duration   = 0 * time.Second
+		nvec                  int             = 10000
+		nvecToQuery           int             = 5000
+		vecDim                int             = 100
+		eagerInit             []bool          = []bool{true} //, false}
+		delegateInit          []bool          = []bool{true, false}
+		manuallyScaleCosSim   []bool          = []bool{true, false}
+		scaleCosSimDelayBase  time.Duration   = 35 * time.Second
+		scaleCosSimExtraDelay []time.Duration = []time.Duration{0}
+		nAdditionalCosSim     []int           = []int{0, 1}
+	)
+	ts, err := NewTstate(t)
+	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {
+		return
+	}
+	for _, numCaches := range nCache {
+		for _, delegate := range delegateInit {
+			for _, eager := range eagerInit {
+				for _, scale := range manuallyScaleCosSim {
+					for _, numCosSimToAdd := range nAdditionalCosSim {
+						for _, extraDelay := range scaleCosSimExtraDelay {
+							// Don't add artificial delays for k8s
+							if ts.BCfg.K8s {
+								extraDelay = 0
+							}
+							db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
+							benchName := benchNameBase + "_ncache_" + strconv.Itoa(numCaches)
+							numCosSim := numCosSimBase
+							scaleCosSimDelay := scaleCosSimDelayBase
+							if eager {
+								benchName += "_eager"
+							}
+							if delegate {
+								benchName += "_delegate"
+							}
+							if scale {
+								if numCosSimToAdd == 0 {
+									continue
+								}
+								benchName += "_scale_cossim_add_" + strconv.Itoa(numCosSimToAdd)
+								if extraDelay > 0 && numCosSimToAdd > 0 {
+									scaleCosSimDelay += extraDelay
+									benchName += "_extra_scaling_delay_" + extraDelay.String()
+								}
+							} else {
+								if numCosSimToAdd == 0 {
+									continue
+								}
+								// RPC delegation not interesting without scaling happening
+								if delegate {
+									continue
+								}
+								numCosSim += numCosSimToAdd
+								benchName += "_no_scale_cossim_nsrv_" + strconv.Itoa(numCosSim)
+							}
+							getLeaderCmd := GetCosSimClientCmdConstructor("CosSim", true, len(driverVMs), rps, dur, numCaches, scaleCache, sleep, false, 0, 0, numCosSim, nvec, nvecToQuery, vecDim, eager, delegate, scale, scaleCosSimDelay, numCosSimToAdd)
+							getFollowerCmd := GetCosSimClientCmdConstructor("CosSim", false, len(driverVMs), rps, dur, numCaches, scaleCache, sleep, false, 0, 0, numCosSim, nvec, nvecToQuery, vecDim, eager, delegate, scale, scaleCosSimDelay, numCosSimToAdd)
+							ran := ts.RunParallelClientBenchmark(benchName, driverVMs, getLeaderCmd, getFollowerCmd, startK8sHotelApp, stopK8sHotelApp, clientDelay, numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost)
+							if oneByOne && ran {
+								return
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+// Test Cached backup's application tail latency.
+func TestScaleCachedBackup(t *testing.T) {
+	var (
+		benchNameBase string = "cached_backup_tail_latency"
+		driverVMs     []int  = []int{5}
+	)
+	// Cluster configuration parameters
+	const (
+		numNodes          int  = 4
+		numCoresPerNode   uint = 4
+		numFullNodes      int  = numNodes
+		numProcqOnlyNodes int  = 0
+		turboBoost        bool = false
+	)
+	// Cached benchmark configuration parameters
+	var (
+		rps             []int           = []int{100, 200, 100}
+		dur             []time.Duration = []time.Duration{5 * time.Second, 5 * time.Second, 5 * time.Second}
+		putRps          []int           = []int{100, 200, 100}
+		putDur          []time.Duration = []time.Duration{5 * time.Second, 5 * time.Second, 5 * time.Second}
+		numCachedBackup int             = 1
+		clientDelay     time.Duration   = 0 * time.Second
+		sleep           time.Duration   = 0 * time.Second
+		delegateInit    []bool          = []bool{true, false}
+		prewarmRealm    []bool          = []bool{true, false}
+		useEPCache      bool            = true
+		nkeys           int             = 5000
+		topN            int             = 100
+		scale           bool            = true
+		scaleDelay                      = 5 * time.Second
+	)
+	ts, err := NewTstate(t)
+	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {
+		return
+	}
+	for _, prewarm := range prewarmRealm {
+		for _, delegate := range delegateInit {
+			db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
+			benchName := benchNameBase
+			if delegate {
+				benchName += "_delegate"
+			}
+			if prewarm {
+				benchName += "_prewarm"
+			}
+			getLeaderCmd := GetCachedBackupClientCmdConstructor(true, len(driverVMs), scale, scaleDelay, rps, dur, putRps, putDur, sleep, numCachedBackup, nkeys, topN, delegate, useEPCache, prewarm)
+			getFollowerCmd := GetCachedBackupClientCmdConstructor(false, len(driverVMs), scale, scaleDelay, rps, dur, putRps, putDur, sleep, numCachedBackup, nkeys, topN, delegate, useEPCache, prewarm)
+			ran := ts.RunParallelClientBenchmark(benchName, driverVMs, getLeaderCmd, getFollowerCmd, startK8sHotelApp, stopK8sHotelApp, clientDelay, numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost)
+			if oneByOne && ran {
+				return
+			}
+		}
+	}
+}
+
+// Test Cached scaler's application tail latency.
+func TestScaleCachedScaler(t *testing.T) {
+	var (
+		benchNameBase string = "cached_scaler_tail_latency"
+		driverVMs     []int  = []int{5}
+	)
+	// Cluster configuration parameters
+	const (
+		numNodes          int  = 4
+		numCoresPerNode   uint = 4
+		numFullNodes      int  = numNodes
+		numProcqOnlyNodes int  = 0
+		turboBoost        bool = false
+	)
+	// Cached benchmark configuration parameters
+	var (
+		rps []int           = []int{2000}
+		dur []time.Duration = []time.Duration{30 * time.Second}
+		//		putRps          []int           = []int{100, 200, 100}
+		//		putDur          []time.Duration = []time.Duration{5 * time.Second, 5 * time.Second, 5 * time.Second}
+		putRps              []int           = []int{0}
+		putDur              []time.Duration = []time.Duration{0 * time.Second}
+		numCachedScaler     int             = 1
+		clientDelay         time.Duration   = 0 * time.Second
+		sleep               time.Duration   = 0 * time.Second
+		delegateInit        []bool          = []bool{true, false}
+		cppCached           []bool          = []bool{true, false}
+		prewarmRealm        []bool          = []bool{false} //[]bool{true, false}
+		useEPCache          bool            = true
+		nkeys               int             = 5000
+		scale               bool            = true
+		scaleDelay                          = 5 * time.Second
+		useCossimBackend    []bool          = []bool{true} //[]bool{true, false}
+		nvec                int             = 10000
+		nvecToQuery         int             = 5000
+		vecDim              int             = 100
+		cossimDelegatedInit bool            = false
+	)
+	ts, err := NewTstate(t)
+	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {
+		return
+	}
+	for _, prewarm := range prewarmRealm {
+		for _, cpp := range cppCached {
+			for _, delegate := range delegateInit {
+				for _, cossimBackend := range useCossimBackend {
+					db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
+					benchName := benchNameBase
+					if cpp {
+						benchName += "_cpp"
+					}
+					if delegate {
+						benchName += "_delegate"
+					}
+					if prewarm {
+						benchName += "_prewarm"
+					}
+					if cossimBackend {
+						benchName += "_cossim_backend"
+					}
+					getLeaderCmd := GetCachedScalerClientCmdConstructor(true, len(driverVMs), scale, scaleDelay, rps, dur, putRps, putDur, sleep, numCachedScaler, nkeys, delegate, useEPCache, prewarm, cossimBackend, nvec, nvecToQuery, vecDim, cossimDelegatedInit, cpp)
+					getFollowerCmd := GetCachedScalerClientCmdConstructor(false, len(driverVMs), scale, scaleDelay, rps, dur, putRps, putDur, sleep, numCachedScaler, nkeys, delegate, useEPCache, prewarm, cossimBackend, nvec, nvecToQuery, vecDim, cossimDelegatedInit, cpp)
+					ran := ts.RunParallelClientBenchmark(benchName, driverVMs, getLeaderCmd, getFollowerCmd, startK8sHotelApp, stopK8sHotelApp, clientDelay, numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost)
+					if oneByOne && ran {
+						return
+					}
+				}
+			}
+		}
+	}
 }

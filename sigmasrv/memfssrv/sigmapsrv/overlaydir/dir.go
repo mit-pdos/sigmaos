@@ -3,7 +3,7 @@
 // file systems in the overlay directory (e.g., statsd, fsfence,
 // etc.).  This allows a server to export information to clients
 // through sigmaP.
-package overlay
+package overlaydir
 
 import (
 	"sync"
@@ -13,11 +13,9 @@ import (
 	"sigmaos/path"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
-	"sigmaos/sigmasrv/memfssrv/memfs/inode"
 )
 
 type DirOverlay struct {
-	fs.Inode
 	underlay fs.Dir
 	mu       sync.Mutex
 	entries  map[string]fs.FsObj // XXX use sortedmap?
@@ -25,19 +23,53 @@ type DirOverlay struct {
 
 func MkDirOverlay(dir fs.Dir) *DirOverlay {
 	d := &DirOverlay{}
-	d.Inode = inode.NewInode(nil, sp.DMDIR, sp.NoLeaseId)
 	d.underlay = dir
 	d.entries = make(map[string]fs.FsObj)
 	return d
 }
 
-// XXX merge underlay Stat with overlay?
+func (dir *DirOverlay) String() string {
+	return dir.underlay.String()
+}
+
+func (dir *DirOverlay) Path() sp.Tpath {
+	return dir.underlay.Path()
+}
+
+func (dir *DirOverlay) Dev() sp.Tdev {
+	return dir.underlay.Dev()
+}
+
+func (dir *DirOverlay) Perm() sp.Tperm {
+	return dir.underlay.Perm()
+}
+
+func (dir *DirOverlay) IsLeased() bool {
+	return dir.underlay.IsLeased()
+}
+
+func (dir *DirOverlay) SetMtime(t int64) {
+	dir.underlay.SetMtime(t)
+}
+
+func (dir *DirOverlay) Mtime() int64 {
+	return dir.underlay.Mtime()
+}
+
+func (dir *DirOverlay) Unlink() {
+	dir.underlay.Unlink()
+}
+
+func (dir *DirOverlay) NewStat() (*sp.Tstat, *serr.Err) {
+	return dir.underlay.NewStat()
+}
+
 func (dir *DirOverlay) Stat(ctx fs.CtxI) (*sp.Tstat, *serr.Err) {
-	st, err := dir.Inode.NewStat()
+	st, err := dir.underlay.Stat(ctx)
 	if err != nil {
 		return nil, err
 	}
-	st.SetLengthInt(len(dir.entries))
+	st.SetLength(st.Tlength() + sp.Tlength(len(dir.entries)))
 	return st, nil
 }
 
@@ -47,6 +79,9 @@ func (dir *DirOverlay) Mount(name string, i fs.FsObj) {
 
 	db.DPrintf(db.OVERLAYDIR, "Mount i %v as %v\n", i, name)
 
+	if fs.Uid(dir) == fs.Uid(i) {
+		db.DFatalf("Mount: dir uid = i %v (uid %v) are equal", name, fs.Uid(i))
+	}
 	dir.entries[name] = i
 }
 

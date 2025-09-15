@@ -41,8 +41,6 @@ func (k *Kernel) BootSub(s string, args, env []string, p *Param, realm sp.Trealm
 	var err error
 	var ss Subsystem
 	switch s {
-	case sp.NAMEDREL:
-		ss, err = k.bootNamed(env)
 	case sp.SPPROXYDREL:
 		ss, err = k.bootSPProxyd()
 	case sp.S3REL:
@@ -52,8 +50,16 @@ func (k *Kernel) BootSub(s string, args, env []string, p *Param, realm sp.Trealm
 	case sp.UXREL:
 		ss, err = k.bootUxd(realm, env)
 	case sp.DBREL:
+		// Skip booting db proxy if db IP not set
+		if p.Dbip == "x.x.x.x" {
+			return sp.NO_PID, nil
+		}
 		ss, err = k.bootDbd(p.Dbip)
 	case sp.MONGOREL:
+		// Skip booting mongo proxy if db IP not set
+		if p.Mongoip == "x.x.x.x" {
+			return sp.NO_PID, nil
+		}
 		ss, err = k.bootMongod(p.Mongoip)
 	case sp.LCSCHEDREL:
 		ss, err = k.bootLCSched()
@@ -140,7 +146,7 @@ func (k *Kernel) bootKNamed(pe *proc.ProcEnv, init bool) error {
 }
 
 func (k *Kernel) bootRealmd() (Subsystem, error) {
-	return k.bootSubsystem("realmd", []string{strconv.FormatBool(k.Param.DialProxy)}, []string{}, sp.ROOTREALM, proc.HMSCHED, 0)
+	return k.bootSubsystem("realmd", []string{strconv.FormatBool(k.Param.DialProxy)}, []string{}, sp.ROOTREALM, proc.HLINUX, 0)
 }
 
 func (k *Kernel) bootUxd(realm sp.Trealm, env []string) (Subsystem, error) {
@@ -174,12 +180,8 @@ func (k *Kernel) bootMSched(env []string) (Subsystem, error) {
 	return k.bootSubsystem("msched", []string{k.Param.KernelID, k.Param.ReserveMcpu}, env, sp.ROOTREALM, proc.HLINUX, 0)
 }
 
-func (k *Kernel) bootNamed(env []string) (Subsystem, error) {
-	return k.bootSubsystem("named", []string{sp.ROOTREALM.String()}, env, sp.ROOTREALM, proc.HMSCHED, 0)
-}
-
 func (k *Kernel) bootSPProxyd() (Subsystem, error) {
-	pid := sp.GenPid("spproxy")
+	pid := sp.GenPidKernelProc("spproxy", k.Param.KernelID)
 	p := proc.NewPrivProcPid(pid, "spproxy", nil, true)
 	p.GetProcEnv().SetSecrets(k.ProcEnv().GetSecrets())
 	p.SetHow(proc.HLINUX)

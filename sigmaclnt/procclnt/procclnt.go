@@ -10,6 +10,7 @@ import (
 	"time"
 
 	db "sigmaos/debug"
+	"sigmaos/path"
 	"sigmaos/proc"
 	"sigmaos/proc/kproc"
 	beschedclnt "sigmaos/sched/besched/clnt"
@@ -22,6 +23,9 @@ import (
 	sp "sigmaos/sigmap"
 	"sigmaos/util/coordination/semaphore"
 	"sigmaos/util/crash"
+	"sigmaos/util/perf"
+	"sigmaos/util/retry"
+	"sigmaos/util/spstats"
 )
 
 type ProcClnt struct {
@@ -49,6 +53,12 @@ func newProcClnt(fsl *fslib.FsLib, pid sp.Tpid, procDirCreated bool, kernelID st
 		bins:           chunkclnt.NewBinPaths(),
 	}
 	return clnt
+}
+
+// Eagerly initialize the msched clnt
+func (clnt *ProcClnt) InitMSchedClnt() error {
+	_, err := clnt.mschedclnt.GetRPCClnt(clnt.ProcEnv().GetKernelID())
+	return err
 }
 
 // ========== SPAWN ==========
@@ -149,7 +159,7 @@ func (clnt *ProcClnt) forceRunViaMSched(kernelID string, p *proc.Proc) error {
 	err := clnt.mschedclnt.ForceRun(kernelID, false, p)
 	if err != nil {
 		db.DPrintf(db.PROCCLNT_ERR, "forceRunViaMSched: getMSchedClnt %v err %v\n", kernelID, err)
-		if serr.IsErrCode(err, serr.TErrUnreachable) {
+		if serr.IsErrorSession(err) {
 			db.DPrintf(db.PROCCLNT_ERR, "Unregister %v", kernelID)
 			clnt.mschedclnt.UnregisterSrv(kernelID)
 		}
@@ -161,7 +171,7 @@ func (clnt *ProcClnt) forceRunViaMSched(kernelID string, p *proc.Proc) error {
 func (clnt *ProcClnt) enqueueViaBESched(p *proc.Proc) (string, *proc.ProcSeqno, error) {
 	start := time.Now()
 	defer func(start time.Time) {
-		db.DPrintf(db.SPAWN_LAT, "[%v] time enqueueViaBESched: %v", p.GetPid(), time.Since(start))
+		perf.LogSpawnLatency("enqueueViaBESched", p.GetPid(), p.GetSpawnTime(), start)
 	}(start)
 	return clnt.beschedclnt.Enqueue(p)
 }
@@ -169,15 +179,15 @@ func (clnt *ProcClnt) enqueueViaBESched(p *proc.Proc) (string, *proc.ProcSeqno, 
 func (clnt *ProcClnt) enqueueViaLCSched(p *proc.Proc) (string, error) {
 	start := time.Now()
 	defer func(start time.Time) {
-		db.DPrintf(db.SPAWN_LAT, "[%v] time enqueueViaLCSched: %v", p.GetPid(), time.Since(start))
+		perf.LogSpawnLatency("enqueueViaLCSched", p.GetPid(), p.GetSpawnTime(), start)
 	}(start)
 	return clnt.lcschedclnt.Enqueue(p)
 }
 
 func (clnt *ProcClnt) spawnRetry(kernelId string, p *proc.Proc) (*proc.ProcSeqno, error) {
-	s := time.Now()
+	start := time.Now()
 	var pseqno *proc.ProcSeqno
-	for i := 0; i < sp.Conf.Path.MAX_RESOLVE_RETRY; i++ {
+	err, ok := retry.Retry(func() error {
 		var err error
 		if p.IsPrivileged() {
 			// Privileged procs are force-run on the msched specified by kernelID in
@@ -193,7 +203,7 @@ func (clnt *ProcClnt) spawnRetry(kernelId string, p *proc.Proc) (*proc.ProcSeqno
 					db.DPrintf(db.PROCCLNT, "spawn: SetBinKernelId proc %v seqno %v", p.GetProgram(), pseqno)
 					start := time.Now()
 					clnt.bins.SetBinKernelID(p.GetProgram(), pseqno.GetMSchedID())
-					db.DPrintf(db.SPAWN_LAT, "[%v] time SetBinKernelID: %v", p.GetPid(), time.Since(start))
+					perf.LogSpawnLatency("SetBinKernelID", p.GetPid(), p.GetSpawnTime(), start)
 					p.SetKernelID(pseqno.GetMSchedID(), false)
 				} else if serr.IsErrorUnavailable(err) {
 					clnt.bins.DelBinKernelID(p.GetProgram(), mschedID)
@@ -205,29 +215,38 @@ func (clnt *ProcClnt) spawnRetry(kernelId string, p *proc.Proc) (*proc.ProcSeqno
 				pseqno = proc.NewProcSeqno(sp.NOT_SET, spawnedMSchedID, 0, 0)
 			}
 		}
+
 		// If spawn attempt resulted in an error, check if it was due to the
 		// server becoming unreachable.
 		if err != nil {
 			// If unreachable, retry.
-			if serr.IsErrCode(err, serr.TErrUnreachable) {
-				db.DPrintf(db.PROCCLNT_ERR, "Err spawnRetry unreachable %v", err)
-				continue
+			if serr.IsErrorSession(err) {
+				db.DPrintf(db.PROCCLNT_ERR, "Err spawnRetry unreachable %v proc %v", err, p)
+			} else {
+				db.DPrintf(db.PROCCLNT_ERR, "spawnRetry failed err %v proc %v", err, p)
 			}
-			db.DPrintf(db.PROCCLNT_ERR, "spawnRetry failed err %v proc %v", err, p)
-			return nil, err
+			return err
 		}
-		db.DPrintf(db.SPAWN_LAT, "[%v] E2E Spawn RPC %v nretry %v", p.GetPid(), time.Since(s), i)
-		return pseqno, nil
+		perf.LogSpawnLatency("spawnRetry", p.GetPid(), p.GetSpawnTime(), start)
+		return nil
+	}, serr.IsErrorSession, 0)
+	if !ok {
+		db.DPrintf(db.PROCCLNT_ERR, "spawnRetry failed at kernelId %v err %v proc %v", kernelId, p, err)
+		return nil, serr.NewErr(serr.TErrUnreachable, kernelId)
 	}
-	db.DPrintf(db.PROCCLNT_ERR, "spawnRetry failed, too many retries (%v): %v", sp.Conf.Path.MAX_RESOLVE_RETRY, p)
-	return nil, serr.NewErr(serr.TErrUnreachable, kernelId)
+	if err != nil {
+		return nil, err
+	}
+	return pseqno, err
 }
 
 // ========== WAIT ==========
 
 func (clnt *ProcClnt) waitStart(pid sp.Tpid, how proc.Thow) error {
-	s := time.Now()
-	defer func() { db.DPrintf(db.SPAWN_LAT, "[%v] E2E WaitStart %v", pid, time.Since(s)) }()
+	start := time.Now()
+	defer func() {
+		perf.LogSpawnLatency("WaitStart", pid, perf.TIME_NOT_SET, start)
+	}()
 
 	pseqno, err := clnt.cs.GetProcSeqno(pid)
 	if err != nil {
@@ -301,7 +320,7 @@ func (clnt *ProcClnt) WaitEvict(pid sp.Tpid) error {
 
 // Proc pid marks itself as started.
 func (clnt *ProcClnt) Started() error {
-	db.DPrintf(db.SPAWN_LAT, "[%v] Proc calls procclnt.Started; time since spawn %v", clnt.ProcEnv().GetPID(), time.Since(clnt.ProcEnv().GetSpawnTime()))
+	perf.LogSpawnLatency("procclnt.Started called", clnt.ProcEnv().GetPID(), clnt.ProcEnv().GetSpawnTime(), perf.TIME_NOT_SET)
 	return clnt.notify(mschedclnt.START, clnt.ProcEnv().GetPID(), clnt.ProcEnv().GetKernelID(), proc.START_SEM, clnt.ProcEnv().GetHow(), nil, false)
 }
 
@@ -325,7 +344,7 @@ func (clnt *ProcClnt) exited(procdir, parentdir, kernelID string, pid sp.Tpid, s
 		db.DPrintf(db.PROCCLNT_ERR, "Error notify exited: %v", err)
 	}
 	// clean myself up
-	r := removeProc(clnt.FsLib, procdir+"/", clnt.procDirCreated)
+	r := removeProc(clnt.FsLib, path.MarkResolve(procdir), clnt.procDirCreated)
 	if r != nil {
 		return fmt.Errorf("Exited error [%v] %v", procdir, r)
 	}
@@ -418,4 +437,11 @@ func (clnt *ProcClnt) setExited(pid sp.Tpid) sp.Tpid {
 	r := clnt.isExited
 	clnt.isExited = pid
 	return r
+}
+
+// ========== Stats ==========
+
+func (clnt *ProcClnt) Stats() *spstats.TcounterSnapshot {
+	stro := clnt.beschedclnt.Stats()
+	return stro
 }

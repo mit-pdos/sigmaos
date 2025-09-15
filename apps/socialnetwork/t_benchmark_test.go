@@ -34,18 +34,19 @@ const (
 )
 
 var K8S_ADDR string
-var MONGO_URL string
+
 var BENCH_TEST bool
 
 func init() {
 	flag.StringVar(&K8S_ADDR, "k8saddr", "", "Addr of k8s frontend.")
-	flag.StringVar(&MONGO_URL, "mongourl", "127.0.0.1:4407", "Addr of mongo server.")
 	flag.BoolVar(&BENCH_TEST, "benchtest", false, "Is this a benchmark test?")
 }
 
 func initUserAndGraph(t *testing.T, mongoUrl string) {
 	session, err := mgo.Dial(mongoUrl)
-	assert.Nil(t, err, "Cannot connect to Mongo: %v", err)
+	if !assert.Nil(t, err, "Cannot connect to Mongo: %v", err) {
+		return
+	}
 	// insert users
 	session.DB(sn.SN_DB).C(sn.USER_COL).EnsureIndexKey("username")
 	dbg.DPrintf(dbg.TEST, "Inserting users")
@@ -81,8 +82,8 @@ func initUserAndGraph(t *testing.T, mongoUrl string) {
 	assert.Equal(t, 73, len(results[0].Edges))
 }
 
-func setupSigmaState(t1 *test.Tstate) (*TstateSN, error) {
-	tssn, err := newTstateSN(t1, []sn.Srv{
+func setupSigmaState(mrts *test.MultiRealmTstate) (*TstateSN, error) {
+	tssn, err := newTstateSN(mrts, []sn.Srv{
 		sn.Srv{"socialnetwork-user", nil, 1000},
 		sn.Srv{"socialnetwork-graph", nil, 1000},
 		sn.Srv{"socialnetwork-post", nil, 1000},
@@ -95,33 +96,37 @@ func setupSigmaState(t1 *test.Tstate) (*TstateSN, error) {
 	if err != nil {
 		return tssn, err
 	}
-	initUserAndGraph(t1.T, MONGO_URL)
+	mongourl, err := tssn.dbu.GetURL()
+	if !assert.Nil(mrts.T, err, "Err get url: %v", err) {
+		return tssn, err
+	}
+	initUserAndGraph(mrts.T, mongourl)
 	return tssn, nil
 }
 
-func setupK8sState(t1 *test.Tstate) (*TstateSN, error) {
+func setupK8sState(mrts *test.MultiRealmTstate) (*TstateSN, error) {
 	// Advertise server address
-	tssn, err := newTstateSN(t1, nil, 0)
+	tssn, err := newTstateSN(mrts, nil, 0)
 	if err != nil {
 		return tssn, err
 	}
 	p := sn.JobHTTPAddrsPath(tssn.jobname)
 	h, p, err := net.SplitHostPort(K8S_ADDR)
-	assert.Nil(tssn.T, err, "Err split host port %v: %v", K8S_ADDR, err)
+	assert.Nil(tssn.mrts.T, err, "Err split host port %v: %v", K8S_ADDR, err)
 	port, err := strconv.Atoi(p)
-	assert.Nil(tssn.T, err, "Err parse port %v: %v", p, err)
+	assert.Nil(tssn.mrts.T, err, "Err parse port %v: %v", p, err)
 	addr := sp.NewTaddr(sp.Tip(h), sp.Tport(port))
 	mnt := sp.NewEndpoint(sp.EXTERNAL_EP, []*sp.Taddr{addr})
-	assert.Nil(t1.T, tssn.MkEndpointFile(p, mnt))
+	assert.Nil(mrts.T, tssn.mrts.GetRealm(test.REALM1).MkEndpointFile(p, mnt))
 	// forward mongo port and init users and graphs.
 	cmd := exec.Command("kubectl", "port-forward", "svc/mongodb-sn", K8S_MONGO_FWD_PORT+":27017")
-	assert.Nil(t1.T, cmd.Start())
+	assert.Nil(mrts.T, cmd.Start())
 	defer cmd.Process.Kill()
-	initUserAndGraph(t1.T, "localhost:"+K8S_MONGO_FWD_PORT)
+	initUserAndGraph(mrts.T, "localhost:"+K8S_MONGO_FWD_PORT)
 	return tssn, nil
 }
 
-func testTemplate(t1 *test.Tstate, isBenchTest bool, testFunc func(*testing.T, *sn.WebClnt)) {
+func testTemplate(mrts *test.MultiRealmTstate, isBenchTest bool, testFunc func(*testing.T, *sn.WebClnt)) {
 	if isBenchTest && !BENCH_TEST {
 		dbg.DPrintf(dbg.ALWAYS, "Skipping benchmark test")
 		return
@@ -130,21 +135,21 @@ func testTemplate(t1 *test.Tstate, isBenchTest bool, testFunc func(*testing.T, *
 	var err error
 	if K8S_ADDR == "" {
 		dbg.DPrintf(dbg.ALWAYS, "No k8s addr. Running SigmaOS")
-		tssn, err = setupSigmaState(t1)
+		tssn, err = setupSigmaState(mrts)
 	} else {
 		dbg.DPrintf(dbg.ALWAYS, "Running K8s at %v", K8S_ADDR)
-		tssn, err = setupK8sState(t1)
+		tssn, err = setupK8sState(mrts)
 	}
 	defer func() {
-		assert.Nil(t1.T, tssn.Shutdown())
+		assert.Nil(mrts.T, tssn.Shutdown())
 	}()
 	if err != nil {
 		return
 	}
-	wc := sn.NewWebClnt(tssn.FsLib, tssn.jobname)
+	wc := sn.NewWebClnt(tssn.mrts.GetRealm(test.REALM1).FsLib, tssn.jobname)
 
 	// run tests
-	testFunc(t1.T, wc)
+	testFunc(mrts.T, wc)
 }
 
 func TestCompile(t *testing.T) {
@@ -155,11 +160,13 @@ func TestBenchmarkSeqCompose(t *testing.T) {
 	if !assert.False(t, linuxsched.GetNCores() > 10, "SpawnBurst test will fail because machine has >10 cores, which causes cgroups settings to fail") {
 		return
 	}
-	t1, err1 := test.NewTstateAll(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	testTemplate(t1, true, testSeqComposeInner)
+	defer mrts.Shutdown()
+
+	testTemplate(mrts, true, testSeqComposeInner)
 }
 
 func TestBenchmarkSeqMix(t *testing.T) {
@@ -167,11 +174,13 @@ func TestBenchmarkSeqMix(t *testing.T) {
 	if !assert.False(t, linuxsched.GetNCores() > 10, "SpawnBurst test will fail because machine has >10 cores, which causes cgroups settings to fail") {
 		return
 	}
-	t1, err1 := test.NewTstateAll(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	testTemplate(t1, true, testSeqMixInner)
+	defer mrts.Shutdown()
+
+	testTemplate(mrts, true, testSeqMixInner)
 }
 
 func TestFrontend(t *testing.T) {
@@ -179,11 +188,13 @@ func TestFrontend(t *testing.T) {
 	if !assert.False(t, linuxsched.GetNCores() > 10, "SpawnBurst test will fail because machine has >10 cores, which causes cgroups settings to fail") {
 		return
 	}
-	t1, err1 := test.NewTstateAll(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	testTemplate(t1, false, testFrontendInner)
+	defer mrts.Shutdown()
+
+	testTemplate(mrts, false, testFrontendInner)
 }
 
 func TestLoadgen(t *testing.T) {
@@ -191,11 +202,13 @@ func TestLoadgen(t *testing.T) {
 	if !assert.False(t, linuxsched.GetNCores() > 10, "SpawnBurst test will fail because machine has >10 cores, which causes cgroups settings to fail") {
 		return
 	}
-	t1, err1 := test.NewTstateAll(t)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
-	testTemplate(t1, true, testLoadgenInner)
+	defer mrts.Shutdown()
+
+	testTemplate(mrts, true, testLoadgenInner)
 }
 
 // Definition of benchmark functions

@@ -11,15 +11,15 @@ import (
 type Tstatus uint8
 
 const (
-	StatusOK      Tstatus = iota + 1
-	StatusEvicted         // killed
-	StatusErr
-	StatusFatal // to indicate to groupmgr that a proc shouldn't be restarted
+	StatusOK      Tstatus = 1
+	StatusEvicted Tstatus = 2 // killed
+	StatusErr     Tstatus = 3
+	StatusFatal   Tstatus = 4 // to indicate to groupmgr that a proc shouldn't be restarted
 
 	// for testing purposes, meaning sigma doesn't know what happened
 	// to proc; machine might have crashed.
-	CRASH       = 3
-	CRASHSTATUS = "exit status 3"
+	CRASH       = 5
+	CRASHSTATUS = "exit status 5"
 )
 
 func (status Tstatus) String() string {

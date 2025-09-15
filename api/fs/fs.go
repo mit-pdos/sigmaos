@@ -13,9 +13,6 @@ import (
 	"sigmaos/sigmasrv/clntcond"
 )
 
-type NewFsObjF func(CtxI, sp.Tperm, sp.TleaseId, sp.Tmode, MkDirF) (FsObj, *serr.Err)
-type MkDirF func(Inode, NewFsObjF) FsObj
-
 // Each request takes a Ctx with context for the request
 type CtxI interface {
 	Principal() *sp.Tprincipal
@@ -33,6 +30,7 @@ type FsObj interface {
 	Open(CtxI, sp.Tmode) (FsObj, *serr.Err)
 	Close(CtxI, sp.Tmode) *serr.Err // for pipes
 	Path() sp.Tpath
+	Dev() sp.Tdev
 	Perm() sp.Tperm
 	Unlink()
 	String() string
@@ -67,6 +65,7 @@ type Dir interface {
 
 type Inode interface {
 	Path() sp.Tpath
+	Dev() sp.Tdev
 	Perm() sp.Tperm
 	IsLeased() bool
 	SetMtime(int64)
@@ -76,6 +75,16 @@ type Inode interface {
 	Open(CtxI, sp.Tmode) (FsObj, *serr.Err)
 	Close(CtxI, sp.Tmode) *serr.Err // for pipes
 	String() string
+}
+
+func Uid(o FsObj) sp.Tuid {
+	return sp.Tuid{Dev: o.Dev(), Path: o.Path()}
+}
+
+type MkDirF func(Inode, NewInode) FsObj
+
+type NewInode interface {
+	NewFsObj(CtxI, sp.Tperm, sp.TleaseId, sp.Tmode, MkDirF) (FsObj, *serr.Err)
 }
 
 type RPC interface {
@@ -94,7 +103,7 @@ func Obj2File(o FsObj, fname string) (File, *serr.Err) {
 	return nil, nil
 }
 
-func MarshalDir[Dir *sp.Tstat | *np.Stat9P](cnt sp.Tsize, dir []Dir) ([]byte, int, *serr.Err) {
+func MarshalDir[Dir *sp.Tstat | *np.Stat9P](cnt sp.Tsize, dir []Dir) ([]byte, int, error) {
 	var buf []byte
 
 	if len(dir) == 0 {
@@ -103,7 +112,7 @@ func MarshalDir[Dir *sp.Tstat | *np.Stat9P](cnt sp.Tsize, dir []Dir) ([]byte, in
 	n := 0
 	for _, st := range dir {
 		var b []byte
-		var e *serr.Err
+		var e error
 		switch any(st).(type) {
 		case *np.Stat9P:
 			b, e = npcodec.MarshalDirEnt(any(st).(*np.Stat9P), uint64(cnt))

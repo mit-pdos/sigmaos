@@ -8,9 +8,11 @@ import (
 	"sigmaos/namesrv/leaderetcd"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
+	"sigmaos/sigmasrv/memfssrv/memfs/inode"
 )
 
-// XXX maybe in fsetd
+// named uses fsetcd's election package to elect a named.  named also supports
+// clients asking for leases on file stored in named; see [leasesrv.go].
 func Elect(fs *fsetcd.FsEtcd, pe *proc.ProcEnv, realm sp.Trealm) (*fsetcd.Session, *leaderetcd.Election, error) {
 	fn := fmt.Sprintf("named-election-%s", realm)
 	sess, err := fs.NewSession()
@@ -31,7 +33,8 @@ func Elect(fs *fsetcd.FsEtcd, pe *proc.ProcEnv, realm sp.Trealm) (*fsetcd.Sessio
 }
 
 func (nd *Named) startLeader() error {
-	nd.pstats = fsetcd.NewPstatsDev()
+	ia := inode.NewInodeAlloc(sp.DEV_PSTATFS)
+	nd.pstats = fsetcd.NewPstatsDev(ia)
 	fs, err := fsetcd.NewFsEtcd(nd.GetDialProxyClnt().Dial, nd.ProcEnv().GetEtcdEndpoints(), nd.realm, nd.pstats)
 	if err != nil {
 		return err
@@ -50,7 +53,7 @@ func (nd *Named) startLeader() error {
 
 	fs.Fence(nd.elect.Key(), nd.elect.Rev())
 
-	db.DPrintf(db.NAMED, "leader %v %v\n", nd.realm, nd.elect.Key())
+	db.DPrintf(db.NAMED_LDR, "leader %v %v\n", nd.realm, nd.elect.Key())
 
 	return nil
 }

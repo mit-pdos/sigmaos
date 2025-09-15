@@ -100,10 +100,11 @@ func (ps *ProcState) waitEvict(pid sp.Tpid) {
 
 // May be called multiple times by procmgr if, for example, the proc crashes
 // shortly after calling Exited().
-func (ps *ProcState) exited(pid sp.Tpid, status []byte) {
+func (ps *ProcState) exited(pid sp.Tpid, status []byte) bool {
 	ps.Lock()
 	defer ps.Unlock()
 
+	firstTimeCalled := false
 	if w, ok := ps.exitWaiter[pid]; ok {
 		ps.exitStatus[pid].SetStatus(status)
 		w.release()
@@ -111,12 +112,14 @@ func (ps *ProcState) exited(pid sp.Tpid, status []byte) {
 		ps.startWaiter[pid].release()
 		// Make sure to release evict waiters so we don't leak goroutines
 		ps.evictWaiter[pid].release()
+		firstTimeCalled = true
 	}
 	// Clean up state
 	delete(ps.spawned, pid)
 	delete(ps.startWaiter, pid)
 	delete(ps.evictWaiter, pid)
 	delete(ps.exitWaiter, pid)
+	return firstTimeCalled
 }
 
 func (ps *ProcState) waitExit(pid sp.Tpid) []byte {

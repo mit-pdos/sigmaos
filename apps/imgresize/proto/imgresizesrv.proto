@@ -1,5 +1,7 @@
 syntax = "proto3";
 
+import "sigmap/sigmap.proto";
+
 option go_package = "sigmaos/apps/imgresize/proto";
 
 message ImgResizeReq {
@@ -16,4 +18,11 @@ message StatusReq {
 
 message StatusRep {
   int64 nDone = 1;
+}
+
+message ImgFenceReq {
+}
+
+message ImgFenceRep {
+  TfenceProto imgdFence = 1;
 }

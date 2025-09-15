@@ -4,9 +4,9 @@ package electclnt
 
 import (
 	db "sigmaos/debug"
-	"sigmaos/sigmaclnt/fslib"
 	"sigmaos/namesrv/fsetcd"
 	"sigmaos/namesrv/leaderetcd"
+	"sigmaos/sigmaclnt/fslib"
 	sp "sigmaos/sigmap"
 )
 
@@ -51,6 +51,16 @@ func (ec *ElectClnt) AcquireLeadership(b []byte) error {
 func (ec *ElectClnt) ReleaseLeadership() error {
 	ec.Remove(ec.elect.Key())
 	return ec.elect.Resign()
+}
+
+// We want to call ec.sess.Expired() but it doesn't exist; see [namesrv/named.go]
+func (ec *ElectClnt) Done() <-chan struct{} {
+	return ec.sess.Done()
+}
+
+// for testing
+func (ec *ElectClnt) Orphan() {
+	ec.sess.Orphan()
 }
 
 func (ec *ElectClnt) Fence() sp.Tfence {

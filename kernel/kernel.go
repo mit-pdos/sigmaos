@@ -30,6 +30,8 @@ type Param struct {
 	Mongoip     string
 	DialProxy   bool
 	BuildTag    string
+	Net         string
+	User        string
 	ReserveMcpu string
 }
 
@@ -75,14 +77,6 @@ func NewKernel(p *Param, pe *proc.ProcEnv) (*Kernel, error) {
 		db.DPrintf(db.ALWAYS, "Error startSrvs %v", err)
 		return nil, err
 	}
-	if len(k.svcs.svcs[sp.KNAMED]) > 0 && len(k.svcs.svcs[sp.NAMEDREL]) > 0 {
-		// a kernel with knamed and named; stop knamed
-		if err := k.KillOne(sp.KNAMED); err != nil {
-			db.DPrintf(db.KERNEL, "NewKernel: stop knamed err %v\n", err)
-			return nil, err
-		}
-		db.DPrintf(db.KERNEL, "NewKernel: switch to named\n")
-	}
 	// Eagerly remove kernel's proc dir if this is just a spproxyd kernel
 	// since it isn't needed (and otherwise will slow down shutdown)
 	if k.IsPurelySPProxydKernel() {
@@ -108,6 +102,8 @@ func (k *Kernel) IsPurelyProcqKernel() bool {
 }
 
 func (k *Kernel) Shutdown() error {
+	db.DPrintf(db.KERNEL, "Shutdown lock %v", k.Param.KernelID)
+
 	k.Lock()
 	defer k.Unlock()
 
@@ -148,14 +144,6 @@ func startSrvs(k *Kernel) error {
 }
 
 func (k *Kernel) shutdown() {
-	// start knamed to shutdown kernel with named?
-	if len(k.svcs.svcs[sp.KNAMED]) == 0 && len(k.svcs.svcs[sp.NAMEDREL]) > 0 {
-		db.DPrintf(db.KERNEL, "Booting knamed for shutdown %v", k.ProcEnv().GetPID())
-		if err := k.bootKNamed(k.ProcEnv(), false); err != nil {
-			db.DFatalf("shutdown: bootKnamed err %v\n", err)
-		}
-		db.DPrintf(db.KERNEL, "Done booting knamed for shutdown %v", k.ProcEnv().GetPID())
-	}
 	if len(k.Param.Services) > 0 {
 		cpids := []sp.Tpid{}
 		for pid, _ := range k.svcs.svcMap {
@@ -175,7 +163,7 @@ func (k *Kernel) shutdown() {
 		for _, pid := range cpids {
 			for i := 0; i < MAX_EVICT_RETRIES; i++ {
 				err := k.svcs.svcMap[pid].Evict()
-				if err == nil || !serr.IsErrCode(err, serr.TErrUnreachable) {
+				if err == nil || !serr.IsErrorSession(err) {
 					db.DPrintf(db.KERNEL, "Evicted proc %v %T err %v", pid, k.svcs.svcMap[pid], err)
 					k.svcs.svcMap[pid].Wait()
 					break

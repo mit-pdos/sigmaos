@@ -3,6 +3,7 @@ package rooc
 import (
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
+	"sigmaos/util/spstats"
 )
 
 type ProcAPI interface {
@@ -16,4 +17,6 @@ type ProcAPI interface {
 	Started() error
 	Exited(status *proc.Status)
 	WaitEvict(pid sp.Tpid) error
+
+	Stats() *spstats.TcounterSnapshot
 }

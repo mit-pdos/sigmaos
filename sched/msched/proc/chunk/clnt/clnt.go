@@ -1,12 +1,15 @@
 package clnt
 
 import (
+	"time"
+
 	db "sigmaos/debug"
 	rpcproto "sigmaos/rpc/proto"
 	shardedsvcrpcclnt "sigmaos/rpc/shardedsvc/clnt"
 	proto "sigmaos/sched/msched/proc/chunk/proto"
 	"sigmaos/sigmaclnt/fslib"
 	sp "sigmaos/sigmap"
+	"sigmaos/util/perf"
 )
 
 type ChunkClnt struct {
@@ -25,6 +28,7 @@ func NewChunkClnt(fsl *fslib.FsLib, eager bool) *ChunkClnt {
 		ch:                ch,
 	}
 	if eager {
+		ckclnt.ShardedSvcRPCClnt.Init()
 		go ckclnt.readCh()
 	}
 	return ckclnt
@@ -43,7 +47,9 @@ func (ckclnt *ChunkClnt) UnregisterSrv(srv string) {
 }
 
 func (ckclnt *ChunkClnt) GetFileStat(srvid, pn string, pid sp.Tpid, realm sp.Trealm, s3secret *sp.SecretProto, paths []string, ep *sp.TendpointProto) (*sp.Tstat, string, error) {
+	start := time.Now()
 	rpcc, err := ckclnt.GetClnt(srvid)
+	perf.LogSpawnLatency("ChunkClnt.GetFileStat.GetClnt %v", pid, perf.TIME_NOT_SET, start, paths)
 	if err != nil {
 		return nil, "", err
 	}

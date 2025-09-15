@@ -3,30 +3,33 @@ package srv_test
 import (
 	"context"
 	"fmt"
+	"sigmaos/test"
+	"strconv"
+	"testing"
+	"time"
+
+	dbg "sigmaos/debug"
+	dbclnt "sigmaos/proxy/db/clnt"
+	mongoclnt "sigmaos/proxy/mongo/clnt"
+	sp "sigmaos/sigmap"
+
 	"github.com/stretchr/testify/assert"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	bson2 "gopkg.in/mgo.v2/bson"
-	"sigmaos/proxy/dbclnt"
-	dbg "sigmaos/debug"
-	"sigmaos/proxy/mongoclnt"
-	sp "sigmaos/sigmap"
-	"sigmaos/test"
-	"strconv"
-	"testing"
-	"time"
 )
 
 type MyObj struct {
-	Key string `bson:key`
-	Val string `bson:val`
+	Key string `bson:"key"`
+	Val string `bson:"val"`
 }
 
 func TestConnet(t *testing.T) {
 	// Connect to mongo
 	mongoUrl := "mongodb://172.17.0.3:27017"
-	ctx, _ := context.WithTimeout(context.Background(), 1*time.Second)
+	ctx, cancelFn := context.WithTimeout(context.Background(), 1*time.Second)
+	defer cancelFn()
 	client, err := mongo.Connect(ctx, options.Client().ApplyURI(mongoUrl).SetMaxPoolSize(1000))
 	assert.Nil(t, err)
 	assert.Nil(t, client.Ping(context.TODO(), nil))
@@ -35,7 +38,7 @@ func TestConnet(t *testing.T) {
 	col := client.Database("myDB").Collection("myTbl")
 	col.Drop(context.TODO())
 	indexModel := mongo.IndexModel{
-		Keys: bson.D{{"key", 1}},
+		Keys: bson.D{{Key: "key", Value: 1}},
 	}
 	_, err = col.Indexes().CreateOne(context.TODO(), indexModel)
 	assert.Nil(t, err)
@@ -61,7 +64,8 @@ func TestEncodeDecode(t *testing.T) {
 	// Connect to mongo
 	fmt.Printf("%v: Start\n", time.Now().String())
 	mongoUrl := "mongodb://172.17.0.3:27017"
-	ctx, _ := context.WithTimeout(context.Background(), 1*time.Second)
+	ctx, cancelFn := context.WithTimeout(context.Background(), 1*time.Second)
+	defer cancelFn()
 	client, err := mongo.Connect(ctx, options.Client().ApplyURI(mongoUrl))
 	assert.Nil(t, err)
 
@@ -70,7 +74,7 @@ func TestEncodeDecode(t *testing.T) {
 	col := client.Database("myDB").Collection("myTbl")
 	col.Drop(context.TODO())
 	indexModel := mongo.IndexModel{
-		Keys: bson.D{{"key", 1}},
+		Keys: bson.D{{Key: "key", Value: 1}},
 	}
 	_, err = col.Indexes().CreateOne(context.TODO(), indexModel)
 	assert.Nil(t, err)

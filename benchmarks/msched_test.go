@@ -21,7 +21,6 @@ type mschedFn func(sc *sigmaclnt.SigmaClnt, pid sp.Tpid, kernelpref []string) ti
 type kernelPrefFn func() []string
 
 type MSchedJobInstance struct {
-	justCli   bool
 	skipstats bool
 	dur       []time.Duration
 	maxrps    []int

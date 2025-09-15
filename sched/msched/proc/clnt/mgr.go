@@ -8,12 +8,14 @@ import (
 
 	db "sigmaos/debug"
 	kernelclnt "sigmaos/kernel/clnt"
+	"sigmaos/path"
 	"sigmaos/proc"
 	sprpcclnt "sigmaos/rpc/clnt/sigmap"
 	"sigmaos/serr"
 	"sigmaos/sigmaclnt/fslib"
 	"sigmaos/sigmaclnt/fslib/dirwatcher"
 	sp "sigmaos/sigmap"
+	"sigmaos/util/perf"
 )
 
 type startProcdFn func() (sp.Tpid, *ProcClnt)
@@ -48,7 +50,7 @@ func NewProcdMgr(fsl *fslib.FsLib, kernelId string) *ProcdMgr {
 		for {
 			err := dirwatcher.WaitCreate(pdm.fsl, filepath.Join(sp.BOOT, pdm.kernelId))
 			// Retry if unreachable
-			if serr.IsErrCode(err, serr.TErrUnreachable) || serr.IsErrCode(err, serr.TErrClosed) {
+			if serr.IsErrorSession(err) || serr.IsErrCode(err, serr.TErrClosed) {
 				db.DPrintf(db.PROCDMGR, "Boot dir unreachable")
 				continue
 			}
@@ -57,7 +59,7 @@ func NewProcdMgr(fsl *fslib.FsLib, kernelId string) *ProcdMgr {
 			}
 			break
 		}
-		kclnt, err := kernelclnt.NewKernelClnt(pdm.fsl, filepath.Join(sp.BOOT, pdm.kernelId)+"/")
+		kclnt, err := kernelclnt.NewKernelClnt(pdm.fsl, path.MarkResolve(filepath.Join(sp.BOOT, pdm.kernelId)))
 		if err != nil {
 			db.DFatalf("Err ProcdMgr Can't make kernelclnt: %v", err)
 		}
@@ -93,7 +95,7 @@ func (pdm *ProcdMgr) GetCPUShares() map[sp.Trealm]Tshare {
 	for r, pdcm := range pdm.upcs {
 		smap[r] = 0
 		for _, rpcc := range pdcm {
-			smap[r] += rpcc.share
+			smap[r] += rpcc.GetCPUShare()
 		}
 	}
 	return smap
@@ -131,7 +133,7 @@ func (pdm *ProcdMgr) GetCPUUtil(realm sp.Trealm) float64 {
 func (pdm *ProcdMgr) startProcd() (sp.Tpid, *ProcClnt) {
 	s := time.Now()
 	pid, err := pdm.kclnt.Boot("procd", []string{pdm.kernelId}, []string{})
-	db.DPrintf(db.SPAWN_LAT, "Boot procd latency: %v", time.Since(s))
+	perf.LogSpawnLatency("ProcdMgr.BootProcd", sp.NOT_SET, perf.TIME_NOT_SET, s)
 	if err != nil {
 		db.DFatalf("Error Boot Procd: %v", err)
 	}
@@ -140,7 +142,7 @@ func (pdm *ProcdMgr) startProcd() (sp.Tpid, *ProcClnt) {
 	if err != nil {
 		db.DPrintf(db.ERROR, "Error Make RPCClnt Procd: %v", err)
 	}
-	c := NewProcClnt(pid, rc)
+	c := NewProcClnt(pid, rc, pdm.kclnt)
 	return pid, c
 }
 
@@ -172,7 +174,7 @@ func (pdm *ProcdMgr) delProcClnt(realm sp.Trealm, ptype proc.Ttype) error {
 	pdcm, ok1 := pdm.upcs[realm]
 	rpcc, ok2 := pdcm[ptype]
 	if !ok1 || !ok2 {
-		db.DFatalf("delProcClnt %v %v", realm, ptype)
+		db.DPrintf(db.ERROR, "delProcClnt %v %v", realm, ptype)
 	}
 	delete(pdcm, ptype)
 	if ptype == proc.T_BE {
@@ -182,6 +184,9 @@ func (pdm *ProcdMgr) delProcClnt(realm sp.Trealm, ptype proc.Ttype) error {
 				break
 			}
 		}
+	}
+	if rpcc != nil {
+		rpcc.Stop()
 	}
 	return nil
 }
@@ -203,13 +208,15 @@ func (pdm *ProcdMgr) RunUProc(uproc *proc.Proc) (uprocErr error, childErr error)
 	}
 	// run and exit do resource accounting and share rebalancing for the
 	// procds.
+	start := time.Now()
 	if err := pdm.startBalanceShares(uproc); err != nil {
+		db.DPrintf(db.PROCDMGR, "[RunUProc.startBalanceShares %v] delProcClnt %v due to err: %v", uproc.GetRealm(), uproc, err)
 		pdm.delProcClnt(uproc.GetRealm(), uproc.GetType())
-		db.DPrintf(db.PROCDMGR, "[RunUProc %v] delProcClnt %v", uproc.GetRealm(), uproc)
 		return err, nil
 	}
-	db.DPrintf(db.SPAWN_LAT, "[%v] Balance Procd shares time since spawn %v", uproc.GetPid(), time.Since(uproc.GetSpawnTime()))
+	perf.LogSpawnLatency("ProcdMgr.startBalanceShares", uproc.GetPid(), uproc.GetSpawnTime(), start)
 	if err0, err1 := rpcc.RunProc(uproc); err0 != nil {
+		db.DPrintf(db.PROCDMGR, "[RunUProc.RunProc %v] delProcClnt %v due to err: %v", uproc.GetRealm(), uproc, err)
 		pdm.delProcClnt(uproc.GetRealm(), uproc.GetType())
 		return err0, err1
 	} else {

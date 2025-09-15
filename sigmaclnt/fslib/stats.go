@@ -9,8 +9,8 @@ import (
 	"sigmaos/sigmasrv/stats"
 )
 
-func (fsl *FsLib) ReadStats(pn sp.Tsigmapath) (*stats.StatsSnapshot, error) {
-	st := &stats.StatsSnapshot{}
+func (fsl *FsLib) ReadSrvStats(pn sp.Tsigmapath) (*stats.SrvStatsSnapshot, error) {
+	st := &stats.SrvStatsSnapshot{}
 	err := fsl.GetFileJson(filepath.Join(pn, sp.STATSD), &st)
 	if err != nil {
 		return nil, err

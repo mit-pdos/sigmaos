@@ -1,6 +1,8 @@
 package srv
 
 import (
+	"time"
+
 	"sigmaos/api/fs"
 	db "sigmaos/debug"
 	"sigmaos/path"
@@ -10,7 +12,18 @@ import (
 	"sigmaos/spproto/srv/namei"
 )
 
-func getParent(start fs.Dir, os []fs.FsObj) fs.Dir {
+func getParentFid(start *fid.Fid, os []fs.FsObj) fs.Dir {
+	if len(os) == 0 {
+		return start.Parent()
+	} else if len(os) == 1 {
+		return start.Obj().(fs.Dir)
+	} else {
+		d := os[len(os)-2]
+		return d.(fs.Dir)
+	}
+}
+
+func getParentDir(start fs.Dir, os []fs.FsObj) fs.Dir {
 	if len(os) <= 1 {
 		return start
 	} else {
@@ -25,16 +38,20 @@ func (ps *ProtSrv) lookupObj(ctx fs.CtxI, f *fid.Fid, target path.Tpathname, lty
 	db.DPrintf(db.NAMEI, "%v: lookupObj %v target '%v'", ctx.Principal(), f, target)
 	o := f.Obj()
 	name := f.Name()
-	lk := ps.plt.Acquire(ctx, f.Path(), ltype)
+	lk := ps.plt.Acquire(ctx, f.Uid(), ltype)
 	if len(target) == 0 {
 		return nil, o, lk, name, nil
 	}
 	if !o.Perm().IsDir() {
 		return nil, o, lk, "", serr.NewErr(serr.TErrNotDir, f.Name())
 	}
+	s := time.Now()
 	os, lo, lk, _, err := namei.Walk(ps.plt, ctx, o, lk, target, nil, ltype)
 	if err == nil {
 		name = target[len(os)-1]
+	}
+	if db.WillBePrinted(db.WALK_LAT) {
+		db.DPrintf(db.WALK_LAT, "ProtSrv lookupObj namei.Walk %v %v lat %v", f.Ctx().ClntId(), target, time.Since(s))
 	}
 	return os, lo, lk, name, err
 }

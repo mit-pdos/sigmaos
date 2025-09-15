@@ -1,0 +1,54 @@
+#pragma once
+
+#include <apps/epcache/epcache.h>
+#include <apps/epcache/proto/epcache.pb.h>
+#include <google/protobuf/message.h>
+#include <io/demux/clnt.h>
+#include <io/iovec/iovec.h>
+#include <proxy/sigmap/sigmap.h>
+#include <rpc/clnt.h>
+#include <rpc/spchannel/spchannel.h>
+#include <serr/serr.h>
+#include <util/log/log.h>
+
+#include <atomic>
+#include <expected>
+
+namespace sigmaos {
+namespace apps::epcache {
+
+const std::string EPCACHE_PN = "name/epcache";
+
+const std::string EPCACHECLNT = "EPCACHECLNT";
+const std::string EPCACHECLNT_ERR = EPCACHECLNT + sigmaos::util::log::ERR;
+
+// An RPC client for the EPCache service
+class Clnt {
+ public:
+  Clnt(std::shared_ptr<sigmaos::proxy::sigmap::Clnt> sp_clnt)
+      : _sp_clnt(sp_clnt) {}
+  ~Clnt() {}
+  // Initialize the channel
+  std::expected<int, sigmaos::serr::Error> Init();
+  // Register an endpoint
+  std::expected<int, sigmaos::serr::Error> RegisterEndpoint(
+      std::string svc_name, std::string instance_id,
+      std::shared_ptr<TendpointProto> ep);
+  // Deregister an endpoint
+  std::expected<int, sigmaos::serr::Error> DeregisterEndpoint(
+      std::string svc_name, std::string instance_id);
+  // Get a list of endpoints corresponding to a service
+  std::expected<std::pair<std::vector<std::shared_ptr<Instance>>, Tversion>,
+                sigmaos::serr::Error>
+  GetEndpoints(std::string svc_name, Tversion v1);
+
+ private:
+  std::shared_ptr<sigmaos::proxy::sigmap::Clnt> _sp_clnt;
+  std::shared_ptr<sigmaos::rpc::Clnt> _rpcc;
+  // Used for logger initialization
+  static bool _l;
+  static bool _l_e;
+};
+
+};  // namespace apps::epcache
+};  // namespace sigmaos

@@ -14,17 +14,17 @@ import (
 
 	db "sigmaos/debug"
 	dialproxyclnt "sigmaos/dialproxy/clnt"
-	"sigmaos/sigmaclnt/fslib"
 	"sigmaos/namesrv/fsetcd"
 	"sigmaos/proc"
 	"sigmaos/rpc"
 	"sigmaos/sigmaclnt"
+	"sigmaos/sigmaclnt/fslib"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 	"sigmaos/util/perf"
 )
 
-var pathname string // e.g., --path "name/ux/sp.LOCAL/"
+var pathname string // e.g., --path "name/ux/sp.ANY/"
 var withmarshal bool
 
 func init() {
@@ -178,7 +178,7 @@ func TestWriteFilePerfMultiClient(t *testing.T) {
 		}(i)
 	}
 	n := sp.Tlength(0)
-	for _ = range fns {
+	for range fns {
 		n += <-done
 	}
 	ms := time.Since(start).Milliseconds()
@@ -199,7 +199,7 @@ func TestWriteFilePerfMultiClient(t *testing.T) {
 		}(i)
 	}
 	n = 0
-	for _ = range fns {
+	for range fns {
 		n += <-done
 	}
 	ms = time.Since(start).Milliseconds()
@@ -259,6 +259,7 @@ func TestReadFilePerfSingle(t *testing.T) {
 			pn = pn0
 		}
 		r, err := ts.OpenBufReader(pn)
+		assert.Nil(t, err)
 		n, err := test.Reader(t, r, buf, sz)
 		assert.Nil(t, err)
 		r.Close()
@@ -388,7 +389,7 @@ func TestReadFilePerfMultiClient(t *testing.T) {
 		}(i)
 	}
 	n := sp.Tlength(0)
-	for _ = range fns {
+	for range fns {
 		n += <-done
 	}
 	ms := time.Since(start).Milliseconds()
@@ -423,7 +424,7 @@ func TestReadFilePerfMultiClient(t *testing.T) {
 	}
 	n = 0
 
-	for _ = range fns {
+	for range fns {
 		n += <-done
 	}
 
@@ -508,7 +509,7 @@ func TestFileRenamePerf(t *testing.T) {
 	ts.Shutdown()
 }
 
-func lookuper(ts *test.Tstate, nclerk int, n int, dir string, nfile int, lip sp.Tip) {
+func lookuper(ts *test.Tstate, nclerk int, dir string, nfile int) {
 	const NITER = 100 // 10000
 	ch := make(chan bool)
 	for c := 0; c < nclerk; c++ {
@@ -532,9 +533,7 @@ func lookuper(ts *test.Tstate, nclerk int, n int, dir string, nfile int, lip sp.
 }
 
 func TestDirReadPerf(t *testing.T) {
-	const N = 10000
 	const NFILE = 10
-	const NCLERK = 1
 	ts, err1 := test.NewTstatePath(t, pathname)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
@@ -550,7 +549,7 @@ func TestDirReadPerf(t *testing.T) {
 		})
 		return n
 	})
-	lookuper(ts, 1, N, dir, NFILE, ts.ProcEnv().GetInnerContainerIP())
+	lookuper(ts, 1, dir, NFILE)
 	//lookuper(t, NCLERK, N, dir, NFILE)
 	err := ts.RmDir(dir)
 	assert.Nil(t, err)
@@ -693,7 +692,7 @@ func TestLookupConcurPerf(t *testing.T) {
 		fsl2 := make([]*fslib.FsLib, 0, NTRIAL)
 		for j := 0; j < NTRIAL; j++ {
 			pe := proc.NewAddedProcEnv(ts.ProcEnv())
-			pe.NamedEndpointProto = ndMnt.TendpointProto
+			pe.SetCachedEndpoint(sp.NAMEDREL, ndMnt)
 			fsl, err := sigmaclnt.NewFsLib(pe, dialproxyclnt.NewDialProxyClnt(pe))
 			assert.Nil(t, err)
 			fsl2 = append(fsl2, fsl)
@@ -715,7 +714,7 @@ func TestLookupConcurPerf(t *testing.T) {
 		}(i)
 	}
 
-	for _ = range fsls {
+	for range fsls {
 		<-done
 	}
 
@@ -752,7 +751,7 @@ func TestLookupMultiMount(t *testing.T) {
 
 	db.DPrintf(db.TEST, "kernelid %v %v\n", kernelId, procdpid)
 
-	pe.NamedEndpointProto = nil
+	pe.ClearNamedEndpoint()
 	fsl, err := sigmaclnt.NewFsLib(pe, dialproxyclnt.NewDialProxyClnt(pe))
 	assert.Nil(t, err)
 
@@ -781,7 +780,7 @@ func TestColdPathMicro(t *testing.T) {
 	pe := proc.NewAddedProcEnv(ts.ProcEnv())
 	pe.KernelID = sts[0].Name
 
-	pn := filepath.Join(sp.UX, sp.LOCAL, "mr-intermediate")
+	pn := filepath.Join(sp.UX, sp.ANY, "mr-intermediate")
 
 	var max time.Duration
 	var tot time.Duration

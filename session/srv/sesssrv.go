@@ -8,19 +8,24 @@ import (
 
 	sps "sigmaos/api/spprotsrv"
 	db "sigmaos/debug"
-	"sigmaos/util/io/demux"
 	dialproxyclnt "sigmaos/dialproxy/clnt"
 	netsrv "sigmaos/net/srv"
 	"sigmaos/proc"
 	"sigmaos/serr"
+	spcodec "sigmaos/session/codec"
 	sessp "sigmaos/session/proto"
 	sp "sigmaos/sigmap"
-	spcodec "sigmaos/session/codec"
 	"sigmaos/sigmasrv/stats"
+	"sigmaos/util/io/demux"
+	"sigmaos/util/spstats"
 )
 
 type NewSessionI interface {
 	NewSession(*sp.Tprincipal, sessp.Tsession) sps.ProtSrv
+}
+
+type ExpireI interface {
+	Expired() bool
 }
 
 //
@@ -35,19 +40,33 @@ type SessSrv struct {
 	sm    *sessionMgr
 	srv   *netsrv.NetServer
 	stats *stats.StatInode
-	qlen  stats.Tcounter
+	qlen  spstats.Tcounter
+	exp   ExpireI
 }
 
-func NewSessSrv(pe *proc.ProcEnv, npc *dialproxyclnt.DialProxyClnt, addr *sp.Taddr, stats *stats.StatInode, newSess NewSessionI) *SessSrv {
+type SessSrvOpt func(*SessSrv)
+
+func WithExp(exp ExpireI) SessSrvOpt {
+	return func(srv *SessSrv) { srv.exp = exp }
+}
+
+func NewSessSrvOpts(pe *proc.ProcEnv, npc *dialproxyclnt.DialProxyClnt, addr *sp.Taddr, stats *stats.StatInode, newSess NewSessionI, opts []SessSrvOpt) *SessSrv {
 	ssrv := &SessSrv{
 		pe:    pe,
 		stats: stats,
 		st:    newSessionTable(newSess),
 	}
+	ssrv.applyOpts(opts)
 	ssrv.srv = netsrv.NewNetServer(pe, npc, addr, ssrv)
 	ssrv.sm = newSessionMgr(ssrv.st, ssrv.srvFcall)
-	db.DPrintf(db.SESSSRV, "Listen on address: %v", ssrv.srv.GetEndpoint())
+	db.DPrintf(db.SESSSRV, "Listen on address: %v exp %v", ssrv.srv.GetEndpoint(), ssrv.exp)
 	return ssrv
+}
+
+func (srv *SessSrv) applyOpts(opts []SessSrvOpt) {
+	for _, opt := range opts {
+		opt(srv)
+	}
 }
 
 func (ssrv *SessSrv) ProcEnv() *proc.ProcEnv {
@@ -89,13 +108,14 @@ func (ssrv *SessSrv) GetSessionTable() *sessionTable {
 func (ssrv *SessSrv) NewConn(p *sp.Tprincipal, conn net.Conn) *demux.DemuxSrv {
 	nc := &netConn{
 		p:      p,
-		conn:   conn,
 		ssrv:   ssrv,
 		sessid: sessp.NoSession,
 	}
+	db.DPrintf(db.SESSSRV, "NewConn %v %v", p, conn)
 	iovm := demux.NewIoVecMap()
-	nc.dmx = demux.NewDemuxSrv(nc, spcodec.NewTransport(conn, iovm))
-	return nc.dmx
+	dmx := demux.NewDemuxSrv(nc, spcodec.NewTransport(conn, iovm))
+	nc.setDmx(dmx)
+	return dmx
 }
 
 // Serve server-generated fcalls.
@@ -104,12 +124,19 @@ func (ssrv *SessSrv) srvFcall(sess *Session, fc *sessp.FcallMsg) *sessp.FcallMsg
 }
 
 func (ssrv *SessSrv) serve(sess *Session, fc *sessp.FcallMsg) *sessp.FcallMsg {
-	stats.Inc(&ssrv.qlen, 1)
-	defer stats.Dec(&ssrv.qlen)
+	spstats.Inc(&ssrv.qlen, 1)
+	defer spstats.Dec(&ssrv.qlen)
 
 	qlen := ssrv.QueueLen()
 	ssrv.stats.Stats().Inc(fc.Msg.Type(), qlen)
 
+	if ssrv.exp != nil {
+		if ssrv.exp.Expired() {
+			db.DPrintf(db.SESSSRV, "srv expired")
+			err := serr.NewErr(serr.TErrClosed, "srv expired")
+			return sessp.NewFcallMsgReply(fc, sp.NewRerrorSerr(err))
+		}
+	}
 	db.DPrintf(db.SESSSRV, "Dispatch request %v", fc)
 	msg, iov, rerror, op, clntid := sess.Dispatch(fc.Msg, fc.Iov)
 	db.DPrintf(db.SESSSRV, "Done dispatch request %v", fc)

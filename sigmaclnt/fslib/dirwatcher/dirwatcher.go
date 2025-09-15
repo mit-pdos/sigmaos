@@ -9,6 +9,7 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	db "sigmaos/debug"
+	"sigmaos/path"
 	"sigmaos/serr"
 	"sigmaos/sigmaclnt/fslib"
 	sp "sigmaos/sigmap"
@@ -124,7 +125,7 @@ func (dr *DirWatcher) isWatchClosed(err error) bool {
 		return false
 	}
 
-	return dr.closed.Load() || serr.IsErrCode(err, serr.TErrClosed) || serr.IsErrCode(err, serr.TErrUnreachable) || serr.IsErrCode(err, serr.TErrUnknownfid) || err == io.ErrUnexpectedEOF
+	return dr.closed.Load() || serr.IsErrCode(err, serr.TErrClosed) || serr.IsErrorSession(err) || serr.IsErrCode(err, serr.TErrUnknownfid) || err == io.ErrUnexpectedEOF
 }
 
 func (dr *DirWatcher) readUpdates() (*protsrv_proto.WatchEventList, error) {
@@ -134,7 +135,7 @@ func (dr *DirWatcher) readUpdates() (*protsrv_proto.WatchEventList, error) {
 	err := binary.Read(dr.reader, binary.LittleEndian, &length)
 	if dr.isWatchClosed(err) {
 		db.DPrintf(db.WATCH, "DirWatcher ReadUpdates: watch stream for %s closed %v", dr.pn, err)
-		return eventList, serr.NewErr(serr.TErrClosed, "")
+		return eventList, serr.NewErr(serr.TErrClosed, dr.pn)
 	}
 	if err != nil {
 		db.DFatalf("failed to read length %v", err)
@@ -143,7 +144,7 @@ func (dr *DirWatcher) readUpdates() (*protsrv_proto.WatchEventList, error) {
 	numRead, err := io.ReadFull(dr.reader, data)
 	if dr.isWatchClosed(err) {
 		db.DPrintf(db.WATCH, "DirWatcher ReadUpdates: watch stream for %s closed %v", dr.pn, err)
-		return eventList, serr.NewErr(serr.TErrClosed, "")
+		return eventList, serr.NewErr(serr.TErrClosed, dr.pn)
 	}
 	if err != nil {
 		db.DFatalf("watch stream produced err %v", err)
@@ -155,9 +156,10 @@ func (dr *DirWatcher) readUpdates() (*protsrv_proto.WatchEventList, error) {
 
 	err = proto.Unmarshal(data, eventList)
 	if err != nil {
-		db.DFatalf("DirWatcher: failed to unmarshal data %v", err)
+		db.DPrintf(db.ERROR, "DirWatcher %v failed to unmarshal data err %v", dr.pn, err)
+		return eventList, serr.NewErr(serr.TErrClosed, dr.pn)
 	}
-	db.DPrintf(db.WATCH, "DirWatcher ReadUpdates: received %d bytes with %d events", numRead, len(eventList.Events))
+	db.DPrintf(db.WATCH, "DirWatcher %v ReadUpdates: received %d bytes with %d events", dr.pn, numRead, len(eventList.Events))
 
 	return eventList, nil
 }
@@ -185,7 +187,7 @@ func WaitNEntries(fsl *fslib.FsLib, pn sp.Tsigmapath, n int) error {
 }
 
 func WaitCreate(fsl *fslib.FsLib, pn sp.Tsigmapath) error {
-	dir := filepath.Dir(pn) + "/"
+	dir := path.MarkResolve(filepath.Dir(pn))
 	f := filepath.Base(pn)
 
 	return waitCond(fsl, dir, func(ents map[sp.Tsigmapath]bool) bool {
@@ -194,7 +196,7 @@ func WaitCreate(fsl *fslib.FsLib, pn sp.Tsigmapath) error {
 }
 
 func WaitRemove(fsl *fslib.FsLib, pn sp.Tsigmapath) error {
-	dir := filepath.Dir(pn) + "/"
+	dir := path.MarkResolve(filepath.Dir(pn))
 	f := filepath.Base(pn)
 
 	return waitCond(fsl, dir, func(ents map[sp.Tsigmapath]bool) bool {

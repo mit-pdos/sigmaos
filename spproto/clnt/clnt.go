@@ -12,17 +12,20 @@ import (
 	sessclnt "sigmaos/session/clnt"
 	sessp "sigmaos/session/proto"
 	sp "sigmaos/sigmap"
+	"sigmaos/util/spstats"
 )
 
 type SPProtoClnt struct {
-	ep *sp.Tendpoint
-	sm *sessclnt.Mgr
+	ep   *sp.Tendpoint
+	sm   *sessclnt.Mgr
+	spst *spstats.SpStats
 }
 
-func NewSPProtoClnt(ep *sp.Tendpoint, sm *sessclnt.Mgr) *SPProtoClnt {
+func NewSPProtoClnt(ep *sp.Tendpoint, sm *sessclnt.Mgr, spst *spstats.SpStats) *SPProtoClnt {
 	return &SPProtoClnt{
-		ep: ep,
-		sm: sm,
+		ep:   ep,
+		sm:   sm,
+		spst: spst,
 	}
 }
 
@@ -31,6 +34,7 @@ func (pclnt *SPProtoClnt) Endpoint() *sp.Tendpoint {
 }
 
 func (pclnt *SPProtoClnt) callServer(args sessp.Tmsg, iniov sessp.IoVec, outiov sessp.IoVec) (*sessp.FcallMsg, *serr.Err) {
+	pclnt.spst.Inc(args.Type(), 1)
 	reply, err := pclnt.sm.RPC(pclnt.ep, args, iniov, outiov)
 	if err != nil {
 		return nil, err
@@ -51,6 +55,7 @@ func (pclnt *SPProtoClnt) CallIoVec(args sessp.Tmsg, iniov sessp.IoVec, outiov s
 }
 
 func (pclnt *SPProtoClnt) Attach(secrets map[string]*sp.SecretProto, cid sp.TclntId, fid sp.Tfid, path path.Tpathname) (*sp.Rattach, *serr.Err) {
+
 	args := sp.NewTattach(fid, sp.NoFid, secrets, cid, path)
 	reply, err := pclnt.callServer(args, nil, nil)
 	if err != nil {

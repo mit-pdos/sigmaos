@@ -11,6 +11,7 @@ import (
 	pc "sigmaos/sigmaclnt/procclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
+	"sigmaos/util/perf"
 )
 
 type ProcMgr struct {
@@ -39,7 +40,7 @@ func NewProcMgr(sc *sigmaclnt.SigmaClnt, kernelId string) *ProcMgr {
 
 // Proc has been spawned.
 func (mgr *ProcMgr) Spawn(p *proc.Proc) {
-	db.DPrintf(db.SPAWN_LAT, "[%v] MSched proc time since spawn %v", p.GetPid(), time.Since(p.GetSpawnTime()))
+	perf.LogSpawnLatency("MSched.ProcMgr.Spawn", p.GetPid(), p.GetSpawnTime(), perf.TIME_NOT_SET)
 	mgr.pstate.spawn(p)
 }
 
@@ -53,7 +54,7 @@ func (mgr *ProcMgr) RunProc(p *proc.Proc) {
 	p.SetKernelID(mgr.kernelId, true)
 	// Set the msched mount for the proc, so it can mount this msched in one RPC
 	// (without walking down to it).
-	p.SetMSchedEndpoint(mgr.ssrv.GetSigmaPSrvEndpoint())
+	p.SetMSchedEndpoint(mgr.ssrv.GetEndpoint())
 	mgr.setupProcState(p)
 	err := mgr.runProc(p)
 	if err != nil {
@@ -120,10 +121,16 @@ func (mgr *ProcMgr) WarmProcd(pid sp.Tpid, realm sp.Trealm, prog string, path []
 
 // Set up state to notify parent that a proc crashed.
 func (mgr *ProcMgr) procCrashed(p *proc.Proc, err error) {
-	// Mark the proc as exited due to a crash, and record the error exit status.
-	mgr.pstate.exited(p.GetPid(), proc.NewStatusErr(err.Error(), nil).Marshal())
 	db.DPrintf(db.PROCDMGR_ERR, "Proc %v finished with error: %v", p, err)
-	mgr.getSigmaClnt(p.GetRealm()).ExitedCrashed(p.GetPid(), p.GetProcDir(), p.GetParentDir(), proc.NewStatusErr(err.Error(), nil), p.GetHow())
+	// Mark the proc as exited due to a crash, and record the error exit status.
+	firstTimeCalled := mgr.pstate.exited(p.GetPid(), proc.NewStatusErr(err.Error(), nil).Marshal())
+	if firstTimeCalled && p.IsPrivileged() {
+		// Only write the exit status to the FS if the proc hadn't already called
+		// exited before. For example, UX/S3 may call Exited during shutdown, then
+		// crash because the named they were talking to is killed. MSched should
+		// not try to mark them as crashed in this case.
+		mgr.getSigmaClnt(p.GetRealm()).ExitedCrashed(p.GetPid(), p.GetProcDir(), p.GetParentDir(), proc.NewStatusErr(err.Error(), nil), p.GetHow())
+	}
 }
 
 func (mgr *ProcMgr) getSigmaClnt(realm sp.Trealm) *sigmaclnt.SigmaClntKernel {
@@ -143,11 +150,13 @@ func (mgr *ProcMgr) getSigmaClntL(realm sp.Trealm) *sigmaclnt.SigmaClntKernel {
 		} else {
 			pe := proc.NewDifferentRealmProcEnv(mgr.rootsc.ProcEnv(), realm)
 			if sc, err := sigmaclnt.NewSigmaClnt(pe); err != nil {
+				db.DPrintf(db.ERROR, "Err NewSigmaClntRealm: %v", err)
 				db.DFatalf("Err NewSigmaClntRealm: %v", err)
 			} else {
 				// Endpoint KPIDS.
 				clnt = sigmaclnt.NewSigmaClntKernel(sc)
 				if err := pc.MountPids(clnt.FsLib); err != nil {
+					db.DPrintf(db.ERROR, "Err MountPids: %v", err)
 					db.DFatalf("Error MountPids: %v", err)
 				}
 			}

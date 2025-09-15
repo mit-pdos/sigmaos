@@ -6,23 +6,29 @@ import (
 	"net"
 
 	db "sigmaos/debug"
-	"sigmaos/util/io/demux"
-	"sigmaos/util/io/frame"
 	"sigmaos/serr"
 	sessp "sigmaos/session/proto"
 	sp "sigmaos/sigmap"
+	"sigmaos/util/io/demux"
+	"sigmaos/util/io/frame"
 )
 
 type Transport struct {
-	rdr io.Reader
-	wrt *bufio.Writer
+	rdr  io.Reader
+	wrt  *bufio.Writer
+	conn net.Conn
 }
 
 func NewTransport(conn net.Conn) demux.TransportI {
 	return &Transport{
-		rdr: bufio.NewReaderSize(conn, sp.Conf.Conn.MSG_LEN),
-		wrt: bufio.NewWriterSize(conn, sp.Conf.Conn.MSG_LEN),
+		rdr:  bufio.NewReaderSize(conn, sp.Conf.Conn.MSG_LEN),
+		wrt:  bufio.NewWriterSize(conn, sp.Conf.Conn.MSG_LEN),
+		conn: conn,
 	}
+}
+
+func (t *Transport) Close() error {
+	return t.conn.Close()
 }
 
 func marshalFrame(fcm *sessp.FcallMsg) (sessp.Tframe, *serr.Err) {
@@ -47,16 +53,20 @@ func unmarshalFrame(f sessp.Tframe) (*sessp.FcallMsg, *serr.Err) {
 	return fc, nil
 }
 
-func (t *Transport) ReadCall() (demux.CallI, *serr.Err) {
+func (t *Transport) ReadCall() (demux.CallI, error) {
 	f, err := frame.ReadFrame(t.rdr)
 	if err != nil {
 		db.DPrintf(db.NPCODEC, "ReadFrame err %v\n", err)
 		return nil, err
 	}
-	return unmarshalFrame(f)
+	c, sr := unmarshalFrame(f)
+	if err != nil {
+		return nil, sr
+	}
+	return c, nil
 }
 
-func (t *Transport) WriteCall(c demux.CallI) *serr.Err {
+func (t *Transport) WriteCall(c demux.CallI) error {
 	fcm := c.(*sessp.FcallMsg)
 	b, err := marshalFrame(fcm)
 	if err != nil {

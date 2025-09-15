@@ -34,11 +34,21 @@ func (sm *sessionMgr) DisconnectClient() {
 	}
 }
 
+func (sm *sessionMgr) DisconnectAllClients() {
+	c, sess := sm.st.lastClnt()
+	// get all clients
+	for c != sp.NoClntId {
+		db.DPrintf(db.CRASH, "DisconnectClient %v %v", c, sess)
+		detach := sessp.NewFcallMsg(&sp.Tdetach{ClntId: uint64(c)}, nil, sess.Sid, nil)
+		sm.srvfcall(sess, detach)
+		c, sess = sm.st.lastClnt()
+	}
+}
+
 // Close last the conn associated with last sess for testing purposes
 func (sm *sessionMgr) CloseConn() {
 	sess := sm.st.lastSession()
 	if sess != nil {
-		db.DPrintf(db.CRASH, "%v: CloseConn", sess.Sid)
 		sess.CloseConn()
 	}
 }

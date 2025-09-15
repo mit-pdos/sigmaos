@@ -151,6 +151,8 @@ func (nps *DialProxySrvStubs) Dial(c fs.CtxI, req netproto.DialReq, res *netprot
 	if err != nil {
 		db.DFatalf("Error convert conn to FD: %v", err)
 	}
+	// Close proxyConn; ConnToFile() dupped the fd for proxyConn
+	proxyConn.Close()
 	db.DPrintf(db.DIALPROXY_LAT, "[%v] Dial ConnToFile latency: %v", ep, time.Since(start))
 	// Link conn FD to context so that it stays in scope and doesn't get GC-ed
 	// before it can be sent back to the client
@@ -236,6 +238,8 @@ func (nps *DialProxySrvStubs) Accept(c fs.CtxI, req netproto.AcceptReq, res *net
 	if err != nil {
 		db.DFatalf("Error convert conn to FD: %v", err)
 	}
+	// Close proxyConn; ConnToFile() dupped the fd for proxyConn
+	proxyConn.Close()
 	// Link conn FD to context so that it stays in scope and doesn't get GC-ed
 	// before it can be sent back to the client
 	ctx.SetConn(file)
@@ -267,12 +271,14 @@ func (nps *DialProxySrvStubs) Close(c fs.CtxI, req netproto.CloseReq, res *netpr
 // TODO: check if calling proc cannot invalidate `realm`'s endpoint
 func (nps *DialProxySrvStubs) InvalidateNamedEndpointCacheEntry(c fs.CtxI, req netproto.InvalidateNamedEndpointReq, res *netproto.InvalidateNamedEndpointRep) error {
 	db.DPrintf(db.DIALPROXYSRV, "InvalidateNamedEndpointCacheEntry %v", req)
+	db.DPrintf(db.NAMED_LDR, "InvalidateNamedEndpointCacheEntry %v", req)
 	res.Blob = &rpcproto.Blob{
 		Iov: [][]byte{nil},
 	}
 	realm := sp.Trealm(req.RealmStr)
 	if err := nps.sc.InvalidateNamedEndpointCacheEntryRealm(realm); err != nil {
 		db.DPrintf(db.DIALPROXYSRV_ERR, "InvalidateNamedEndpointCacheEntry [%v] err %v %T", realm, err, err)
+		db.DPrintf(db.NAMED_LDR, "InvalidateNamedEndpointCacheEntry [%v] err %v %T", realm, err, err)
 		if sr, ok := serr.IsErr(err); ok {
 			res.Err = sp.NewRerrorSerr(sr)
 		} else {
@@ -287,12 +293,14 @@ func (nps *DialProxySrvStubs) InvalidateNamedEndpointCacheEntry(c fs.CtxI, req n
 // TODO: check if calling proc cannot look up `realm`'s endpoint
 func (nps *DialProxySrvStubs) GetNamedEndpoint(c fs.CtxI, req netproto.NamedEndpointReq, res *netproto.NamedEndpointRep) error {
 	db.DPrintf(db.DIALPROXYSRV, "GetNamedEndpoint %v", req)
+	db.DPrintf(db.NAMED_LDR, "GetNamedEndpoint %v", req)
 	res.Blob = &rpcproto.Blob{
 		Iov: [][]byte{nil},
 	}
 	realm := sp.Trealm(req.RealmStr)
 	if ep, err := nps.sc.GetNamedEndpointRealm(realm); err != nil {
 		db.DPrintf(db.DIALPROXYSRV_ERR, "GetNamedEndpointRealm [%v] err %v %T", realm, err, err)
+		db.DPrintf(db.NAMED_LDR, "GetNamedEndpointRealm [%v] err %v %T", realm, err, err)
 		if sr, ok := serr.IsErr(err); ok {
 			res.Err = sp.NewRerrorSerr(sr)
 		} else {

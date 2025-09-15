@@ -17,6 +17,9 @@ import (
 	"sigmaos/sigmaclnt/fsclnt"
 	"sigmaos/sigmaclnt/fslib"
 	"sigmaos/sigmaclnt/procclnt"
+	sp "sigmaos/sigmap"
+	"sigmaos/util/perf"
+	//"sigmaos/util/spstats"
 )
 
 func init() {
@@ -27,7 +30,7 @@ func init() {
 			return
 		}
 		pe := proc.GetProcEnv()
-		db.DPrintf(db.SPAWN_LAT, "[%v] SigmaClnt pkg init. E2e spawn latency: %v", pe.GetPID(), time.Since(pe.GetSpawnTime()))
+		perf.LogSpawnLatency("sigmaclnt pkg init", pe.GetPID(), pe.GetSpawnTime(), perf.TIME_NOT_SET)
 	}
 }
 
@@ -114,10 +117,11 @@ func NewSigmaClnt(pe *proc.ProcEnv) (*SigmaClnt, error) {
 		db.DPrintf(db.ERROR, "NewSigmaClnt: %v", err)
 		return nil, err
 	}
-	db.DPrintf(db.SPAWN_LAT, "[%v] Make FsLib: %v", pe.GetPID(), time.Since(start))
+	perf.LogSpawnLatency("NewSigmaClnt.NewFsLib", pe.GetPID(), pe.GetSpawnTime(), start)
 	if err := sc.NewProcClnt(); err != nil {
 		return nil, err
 	}
+	perf.LogSpawnLatency("NewSigmaClnt", pe.GetPID(), pe.GetSpawnTime(), start)
 	return sc, nil
 }
 
@@ -144,7 +148,7 @@ func (sc *SigmaClnt) NewProcClnt() error {
 		return err
 	}
 	sc.ProcAPI = papi
-	db.DPrintf(db.SPAWN_LAT, "[%v] Make ProcClnt: %v", sc.ProcEnv().GetPID(), time.Since(start))
+	perf.LogSpawnLatency("NewSigmaClnt.NewProcClnt", sc.ProcEnv().GetPID(), sc.ProcEnv().GetSpawnTime(), start)
 	return nil
 }
 
@@ -165,4 +169,24 @@ func (sc *SigmaClnt) ClntExitOK() {
 
 func (sc *SigmaClnt) StopWatchingSrvs() {
 	sc.ProcAPI.(*procclnt.ProcClnt).StopWatchingSrvs()
+}
+
+// XXX maybe not even retry once
+func (sc *SigmaClnt) WaitExitChan(ch chan error) {
+	var r error
+	// retry := sp.Conf.Path.MAX_RESOLVE_RETRY
+	retry := 1
+	for i := 0; ; i++ {
+		err := sc.WaitEvict(sc.ProcEnv().GetPID())
+		if err == nil {
+			break
+		}
+		r = err
+		if i >= retry {
+			break
+		}
+		db.DPrintf(db.ERROR, "Error WaitEvict: err %v; retry", err)
+		time.Sleep(sp.Conf.Path.RESOLVE_TIMEOUT)
+	}
+	ch <- r
 }

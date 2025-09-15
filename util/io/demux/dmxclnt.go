@@ -37,8 +37,8 @@ func (dmx *DemuxClnt) reply(tag sessp.Ttag, rep CallI, err *serr.Err) {
 	if ch, ok := dmx.callmap.remove(tag); ok {
 		ch <- reply{rep, err}
 	} else {
-		db.DPrintf(db.ERROR, "reply %v no matching req %v", rep, tag)
-		db.DFatalf("reply %v no matching req %v", rep, tag)
+		db.DPrintf(db.ERROR, "reply %v no matching req %v (0x%x)", rep, tag, tag)
+		db.DFatalf("reply %v no matching req %v (0x%x)", rep, tag, tag)
 	}
 }
 
@@ -56,7 +56,7 @@ func (dmx *DemuxClnt) reader() {
 	db.DPrintf(db.DEMUXCLNT_ERR, "reader fail oustanding %v", outstanding)
 	for _, t := range outstanding {
 		db.DPrintf(db.DEMUXCLNT_ERR, "reader reply fail %v", t)
-		dmx.reply(t, nil, serr.NewErr(serr.TErrUnreachable, "reader"))
+		dmx.reply(t, nil, serr.NewErr(serr.TErrIO, "reader"))
 		db.DPrintf(db.DEMUXCLNT_ERR, "reader reply fail done %v", t)
 	}
 }
@@ -78,13 +78,19 @@ func (dmx *DemuxClnt) SendReceive(req CallI, outiov sessp.IoVec) (CallI, *serr.E
 		db.DPrintf(db.DEMUXCLNT_ERR, "WriteCall req %v error %v", req, err)
 	}
 	// Listen to the reply channel regardless of error status, so the reader
-	// thread doesn't block indefinitely trying to deliver the "TErrUnreachable"
+	// thread doesn't block indefinitely trying to deliver the "TErrIO"
 	// reply.
 	rep := <-ch
 	return rep.rep, rep.err
 }
 
 func (dmx *DemuxClnt) Close() error {
+	if dmx.callmap.isClosed() {
+		return nil
+	}
+	if err := dmx.trans.Close(); err != nil {
+		db.DPrintf(db.DEMUXCLNT_ERR, "Close trans err %v", err)
+	}
 	return dmx.callmap.close()
 }
 

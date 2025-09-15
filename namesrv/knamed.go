@@ -33,6 +33,10 @@ func RunKNamed(args []string) error {
 	}
 	nd.SigmaClnt = sc
 
+	// Allow connections from all realms, so that realms can mount the kernel
+	// service union directories
+	nd.GetDialProxyClnt().AllowConnectionsFromAllRealms()
+
 	init := args[2]
 
 	db.DPrintf(db.NAMED, "started %v %v", pe.GetPID(), nd.realm)
@@ -52,7 +56,7 @@ func RunKNamed(args []string) error {
 	}
 	defer nd.fs.Close()
 
-	ep, err := nd.newSrv()
+	ep, err := nd.newSrv(nil)
 	if err != nil {
 		db.DFatalf("Error newSrv %v\n", err)
 	}
@@ -76,7 +80,7 @@ func RunKNamed(args []string) error {
 		db.DPrintf(db.ALWAYS, "pipe read err %v", err)
 		return err
 	}
-	r.Close()
+	defer r.Close()
 
 	db.DPrintf(db.NAMED, "%v: knamed done %v %v %v\n", pe.GetPID(), nd.realm, ep, string(data))
 
@@ -85,7 +89,21 @@ func RunKNamed(args []string) error {
 	return nil
 }
 
-var InitRootDir = []string{sp.BOOT, sp.KPIDS, sp.MEMFS, sp.LCSCHED, sp.BESCHED, sp.MSCHED, sp.UX, sp.S3, sp.DB, sp.MONGO, sp.REALM, sp.CHUNKD}
+var InitRootDir = []string{
+	sp.BOOT,
+	sp.KPIDS,
+	sp.MEMFS,
+	sp.LCSCHED,
+	sp.BESCHED,
+	sp.MSCHED,
+	sp.UX,
+	sp.S3,
+	sp.DB,
+	sp.MONGO,
+	sp.REALM,
+	sp.CHUNKD,
+	sp.REALMS,
+}
 
 // If initial root dir doesn't exist, create it.
 func (nd *Named) initfs() error {

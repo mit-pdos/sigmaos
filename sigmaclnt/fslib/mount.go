@@ -38,7 +38,7 @@ func (fsl *FsLib) WriteEndpointFile(pn sp.Tsigmapath, ep *sp.Tendpoint) error {
 	if err != nil {
 		return err
 	}
-	if err := fsl.PutFileAtomic(pn, 0777|sp.DMSYMLINK, b); err != nil {
+	if _, err := fsl.PutFile(pn, 0777|sp.DMSYMLINK, sp.OWRITE, b); err != nil {
 		db.DPrintf(db.ALWAYS, "WriteEndpointFile %v err %v\n", pn, err)
 		return err
 	}
@@ -56,7 +56,7 @@ func (fsl *FsLib) ResolveMount(pn sp.Tsigmapath) (sp.Tsigmapath, bool, error) {
 			return "", false, err
 		}
 		left[0] = n
-		return d + "/" + left.String() + "/", ok, nil
+		return path.MarkResolve(filepath.Join(d, left.String())), ok, nil
 	}
 	return "", ok, nil
 }
@@ -131,7 +131,7 @@ func (fsl *FsLib) resolveMount0(d sp.Tsigmapath, q sp.Tsigmapath) (sp.Tsigmapath
 	var rep *sp.Tendpoint
 	rname := ""
 	// Make sure to resolve d in case it is a symlink or endpoint point.
-	_, err := fsl.ProcessDir(d+"/", func(st *sp.Tstat) (bool, error) {
+	_, err := fsl.ProcessDir(path.MarkResolve(d), func(st *sp.Tstat) (bool, error) {
 		ok, ep, err := fsl.isLocal(filepath.Join(d, st.Name))
 		if err != nil {
 			return false, err

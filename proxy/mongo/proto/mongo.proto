@@ -27,3 +27,9 @@ message MongoRep {
   repeated bytes objs = 2;
 }
 
+message MongoURLReq {
+}
+
+message MongoURLRep {
+  string uRL = 1;
+}

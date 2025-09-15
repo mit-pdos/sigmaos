@@ -41,7 +41,7 @@ func (s3r *s3Reader) s3Read(off, cnt uint64) (io.ReadCloser, sp.Tlength, *serr.E
 	if err != nil {
 		return nil, 0, serr.NewErrError(err)
 	}
-	// db.DPrintf(db.S3CLNT, "s3Read: %v %d %d res %v %v\n", s3r.key, off, cnt, region, result.ContentLength)
+	// db.DPrintf(db.S3CLNT, "s3Read: %v %d %d res %v %v\n", s3r.key, off, cnt, region, *result.ContentLength)
 	return result.Body, sp.Tlength(*result.ContentLength), nil
 }
 
@@ -71,6 +71,8 @@ func (s3r *s3Reader) read(off sp.Toffset, b []byte) (int, error) {
 			n, err := chunk.Read(b[i:l])
 			if err != nil && err != io.EOF {
 				return 0, err
+			} else if err == io.EOF {
+				break;
 			}
 			i += n
 		}

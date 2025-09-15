@@ -3,6 +3,7 @@ package clnt
 import (
 	"fmt"
 	"path/filepath"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -14,9 +15,11 @@ import (
 	"sigmaos/sched/msched/proto"
 	"sigmaos/sigmaclnt/fslib"
 	sp "sigmaos/sigmap"
+	"sigmaos/util/perf"
 )
 
 type MSchedClnt struct {
+	mu sync.Mutex
 	*fslib.FsLib
 	rpcdc *shardedsvcrpcclnt.ShardedSvcRPCClnt
 	done  int32
@@ -67,7 +70,7 @@ func (mc *MSchedClnt) Nprocs(procdir string) (int, error) {
 }
 
 func (mc *MSchedClnt) WarmProcd(kernelID string, pid sp.Tpid, realm sp.Trealm, prog string, path []string, ptype proc.Ttype) error {
-	rpcc, err := mc.getRPCClnt(kernelID)
+	rpcc, err := mc.GetRPCClnt(kernelID)
 	if err != nil {
 		return err
 	}
@@ -94,11 +97,11 @@ func (mc *MSchedClnt) WarmProcd(kernelID string, pid sp.Tpid, realm sp.Trealm, p
 // memory).
 func (mc *MSchedClnt) ForceRun(kernelID string, memAccountedFor bool, p *proc.Proc) error {
 	start := time.Now()
-	rpcc, err := mc.getRPCClnt(kernelID)
+	rpcc, err := mc.GetRPCClnt(kernelID)
 	if err != nil {
 		return err
 	}
-	db.DPrintf(db.SPAWN_LAT, "[%v] GetMSchedClnt time %v", p.GetPid(), time.Since(start))
+	perf.LogSpawnLatency("GetMSchedClnt", p.GetPid(), p.GetSpawnTime(), start)
 	req := &proto.ForceRunReq{
 		ProcProto:       p.GetProto(),
 		MemAccountedFor: memAccountedFor,
@@ -112,7 +115,7 @@ func (mc *MSchedClnt) ForceRun(kernelID string, memAccountedFor bool, p *proc.Pr
 
 func (mc *MSchedClnt) Wait(method Tmethod, mschedID string, seqno *proc.ProcSeqno, pid sp.Tpid) (*proc.Status, error) {
 	// RPC a msched to wait.
-	rpcc, err := mc.getRPCClnt(mschedID)
+	rpcc, err := mc.GetRPCClnt(mschedID)
 	if err != nil {
 		return nil, err
 	}
@@ -130,12 +133,12 @@ func (mc *MSchedClnt) Wait(method Tmethod, mschedID string, seqno *proc.ProcSeqn
 func (mc *MSchedClnt) Notify(method Tmethod, kernelID string, pid sp.Tpid, status *proc.Status) error {
 	start := time.Now()
 	// Get the RPC client for the local msched
-	rpcc, err := mc.getRPCClnt(kernelID)
+	rpcc, err := mc.GetRPCClnt(kernelID)
 	if err != nil {
 		return err
 	}
 	if method == START {
-		db.DPrintf(db.SPAWN_LAT, "[%v] mschedclnt.Notify Started rpcdc.GetClnt latency: %v", pid, time.Since(start))
+		perf.LogSpawnLatency("MSchedClnt.Notify started GetClnt", pid, perf.TIME_NOT_SET, start)
 	}
 	var b []byte
 	if status != nil {
@@ -151,12 +154,57 @@ func (mc *MSchedClnt) Notify(method Tmethod, kernelID string, pid sp.Tpid, statu
 		return err
 	}
 	if method == START {
-		db.DPrintf(db.SPAWN_LAT, "[%v] Notify RPC latency: %v", pid, time.Since(start))
+		perf.LogSpawnLatency("MSchedClnt.Notify started RPC", pid, perf.TIME_NOT_SET, start)
 	}
 	return nil
 }
 
-func (mc *MSchedClnt) GetRunningProcs(nsample int) (map[sp.Trealm][]*proc.Proc, error) {
+func (mc *MSchedClnt) GetAllRunningProcs() (map[sp.Trealm][]*proc.Proc, error) {
+	mscheds, err := mc.GetMScheds()
+	if err != nil {
+		db.DPrintf(db.ERROR, "Err GetMScheds: %v", err)
+		return nil, err
+	}
+	db.DPrintf(db.MSCHEDCLNT, "Get running procs on KIDs %v", mscheds)
+	procs := make(map[sp.Trealm][]*proc.Proc, 0)
+	for _, kid := range mscheds {
+		running, err := mc.GetRunningProcs(kid)
+		if err != nil {
+			db.DPrintf(db.ERROR, "Err GetAllRunningProcs GetRunningProcs: %v", err)
+			return nil, err
+		}
+		for r, ps := range running {
+			procs[r] = append(procs[r], ps...)
+		}
+	}
+	return procs, nil
+}
+
+func (mc *MSchedClnt) GetRunningProcs(kernelID string) (map[sp.Trealm][]*proc.Proc, error) {
+	procs := make(map[sp.Trealm][]*proc.Proc, 0)
+	req := &proto.GetRunningProcsReq{}
+	res := &proto.GetRunningProcsRep{}
+	rpcc, err := mc.GetRPCClnt(kernelID)
+	if err != nil {
+		db.DPrintf(db.ERROR, "Can't get clnt: %v", err)
+		return nil, err
+	}
+	if err := rpcc.RPC("MSched.GetRunningProcs", req, res); err != nil {
+		db.DPrintf(db.ERROR, "Err GetRunningProcs: %v", err)
+		return nil, err
+	}
+	for _, pp := range res.ProcProtos {
+		p := proc.NewProcFromProto(pp)
+		r := p.GetRealm()
+		if _, ok := procs[r]; !ok {
+			procs[r] = make([]*proc.Proc, 0, 1)
+		}
+		procs[r] = append(procs[r], p)
+	}
+	return procs, nil
+}
+
+func (mc *MSchedClnt) SampleRunningProcs(nsample int) (map[sp.Trealm][]*proc.Proc, error) {
 	// map of realm -> proc
 	procs := make(map[sp.Trealm][]*proc.Proc, 0)
 	sampled := make(map[string]bool)
@@ -171,26 +219,14 @@ func (mc *MSchedClnt) GetRunningProcs(nsample int) (map[sp.Trealm][]*proc.Proc, 
 			continue
 		}
 		sampled[kernelID] = true
-		req := &proto.GetRunningProcsReq{}
-		res := &proto.GetRunningProcsRep{}
-		rpcc, err := mc.getRPCClnt(kernelID)
+		running, err := mc.GetRunningProcs(kernelID)
 		if err != nil {
-			db.DPrintf(db.ERROR, "Can't get clnt: %v", err)
+			db.DPrintf(db.ERROR, "Err SampleRunningProcs GetRunningProcs: %v", err)
 			return nil, err
 		}
-		if err := rpcc.RPC("MSched.GetRunningProcs", req, res); err != nil {
-			db.DPrintf(db.ERROR, "Err GetRunningProcs: %v", err)
-			return nil, err
+		for r, ps := range running {
+			procs[r] = append(procs[r], ps...)
 		}
-		for _, pp := range res.ProcProtos {
-			p := proc.NewProcFromProto(pp)
-			r := p.GetRealm()
-			if _, ok := procs[r]; !ok {
-				procs[r] = make([]*proc.Proc, 0, 1)
-			}
-			procs[r] = append(procs[r], p)
-		}
-
 	}
 	return procs, nil
 }
@@ -204,7 +240,7 @@ func (mc *MSchedClnt) MSchedStats() (int, []map[string]*proto.RealmStats, error)
 	for _, sd := range sds {
 		req := &proto.GetMSchedStatsReq{}
 		res := &proto.GetMSchedStatsRep{}
-		rpcc, err := mc.getRPCClnt(sd)
+		rpcc, err := mc.GetRPCClnt(sd)
 		if err != nil {
 			return 0, nil, err
 		}
@@ -254,7 +290,7 @@ func (mc *MSchedClnt) GetCPUUtil(realm sp.Trealm) (float64, error) {
 		// Get the CPU shares on this msched.
 		req := &proto.GetCPUUtilReq{RealmStr: realm.String()}
 		res := &proto.GetCPUUtilRep{}
-		sclnt, err := mc.getRPCClnt(sd)
+		sclnt, err := mc.GetRPCClnt(sd)
 		if err != nil {
 			db.DPrintf(db.MSCHEDCLNT_ERR, "Error GetCPUUtil GetMSchedClnt: %v", err)
 			return 0, err
@@ -276,6 +312,9 @@ func (mc *MSchedClnt) StopWatching() {
 
 // Get the RPC client for my kernel's msched
 func (mc *MSchedClnt) getRPCClntMyMSched() (*rpcclnt.RPCClnt, error) {
+	mc.Lock()
+	defer mc.Unlock()
+
 	if mc.rpcc == nil {
 		start := time.Now()
 		pn := filepath.Join(sp.MSCHED, mc.kernelID)
@@ -283,13 +322,13 @@ func (mc *MSchedClnt) getRPCClntMyMSched() (*rpcclnt.RPCClnt, error) {
 		if err != nil {
 			return nil, err
 		}
-		db.DPrintf(db.TEST, "getRPCClntMyMSched %v time %v", mc.kernelID, time.Since(start))
+		perf.LogSpawnLatency("MSchedClnt.getRPCClntMyMSched", mc.ProcEnv().GetPID(), mc.ProcEnv().GetSpawnTime(), start)
 		mc.rpcc = rpcc
 	}
 	return mc.rpcc, nil
 }
 
-func (mc *MSchedClnt) getRPCClnt(kernelID string) (*rpcclnt.RPCClnt, error) {
+func (mc *MSchedClnt) GetRPCClnt(kernelID string) (*rpcclnt.RPCClnt, error) {
 	if kernelID == mc.kernelID {
 		return mc.getRPCClntMyMSched()
 	}

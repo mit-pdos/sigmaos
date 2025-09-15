@@ -7,16 +7,24 @@ import (
 
 type shard struct {
 	sync.Mutex
-	cache cache.Tcache
+	cache     cache.Tcache
+	hitCnt    uint64
+	oldHitCnt uint64
 }
 
 func newShard() *shard {
-	return &shard{cache: make(cache.Tcache)}
+	return &shard{
+		cache:     make(cache.Tcache),
+		hitCnt:    0,
+		oldHitCnt: 0,
+	}
 }
 
 func (s *shard) put(key string, val []byte) error {
 	s.Lock()
 	defer s.Unlock()
+
+	s.hitCnt++
 	s.cache[key] = val
 	return nil
 }
@@ -24,6 +32,8 @@ func (s *shard) put(key string, val []byte) error {
 func (s *shard) append(key string, val []byte) error {
 	s.Lock()
 	defer s.Unlock()
+
+	s.hitCnt++
 	if _, ok := s.cache[key]; !ok {
 		s.cache[key] = make([]byte, 0)
 	}
@@ -35,6 +45,7 @@ func (s *shard) get(key string) ([]byte, bool) {
 	s.Lock()
 	defer s.Unlock()
 
+	s.hitCnt++
 	v, ok := s.cache[key]
 	return v, ok
 }
@@ -61,7 +72,8 @@ func (s *shard) fill(vals cache.Tcache) bool {
 	return true
 }
 
-func (s *shard) dump() cache.Tcache {
+// If empty is true, clear the shard data
+func (s *shard) dump(empty bool) cache.Tcache {
 	s.Lock()
 	defer s.Unlock()
 
@@ -69,5 +81,24 @@ func (s *shard) dump() cache.Tcache {
 	for k, v := range s.cache {
 		m[k] = v
 	}
+	if empty {
+		s.cache = make(cache.Tcache)
+	}
 	return m
+}
+
+func (s *shard) getHitCnt() uint64 {
+	s.Lock()
+	defer s.Unlock()
+
+	return s.oldHitCnt
+}
+
+func (s *shard) resetHitCnt() uint64 {
+	s.Lock()
+	defer s.Unlock()
+
+	s.oldHitCnt = s.hitCnt
+	s.hitCnt = 0
+	return s.oldHitCnt
 }

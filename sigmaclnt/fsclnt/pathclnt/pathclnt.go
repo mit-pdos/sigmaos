@@ -11,6 +11,7 @@ package pathclnt
 import (
 	"fmt"
 	"path/filepath"
+	"time"
 
 	sos "sigmaos/api/sigmaos"
 	db "sigmaos/debug"
@@ -21,6 +22,8 @@ import (
 	"sigmaos/sigmaclnt/fsclnt/pathclnt/mntclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/util/rand"
+	"sigmaos/util/retry"
+	"sigmaos/util/spstats"
 )
 
 type PathClnt struct {
@@ -29,15 +32,18 @@ type PathClnt struct {
 	pe           *proc.ProcEnv
 	cid          sp.TclntId
 	disconnected bool // Used by test harness
+	pcstats      *spstats.PathClntStats
 }
 
 func NewPathClnt(pe *proc.ProcEnv, fidc *fidclnt.FidClnt) *PathClnt {
+	pcst := fidc.PathClntStats()
 	pathc := &PathClnt{
 		pe:      pe,
 		FidClnt: fidc,
 		cid:     sp.TclntId(rand.Uint64()),
+		pcstats: pcst,
 	}
-	pathc.mntclnt = mntclnt.NewMntClnt(pathc, fidc, pathc.cid, pe, fidc.GetDialProxyClnt())
+	pathc.mntclnt = mntclnt.NewMntClnt(pathc, fidc, pathc.cid, pe, pcst, fidc.GetDialProxyClnt())
 	db.DPrintf(db.TEST, "New cid %v %v\n", pathc.cid, pe.GetRealm())
 	return pathc
 }
@@ -92,7 +98,7 @@ func (pathc *PathClnt) Create(pn sp.Tsigmapath, principal *sp.Tprincipal, perm s
 	}
 	dir := path.Dir()
 	base := path.Base()
-	fid, err := pathc.walk(dir, principal, true, nil)
+	fid, err := pathc.open(dir, principal, true, nil)
 	if err != nil {
 		db.DPrintf(db.PATHCLNT_ERR, "%v: Walk failed: %v err %v", pathc.cid, pn, err)
 		return sp.NoFid, err
@@ -131,7 +137,7 @@ func (pathc *PathClnt) Rename(old, new sp.Tsigmapath, principal *sp.Tprincipal, 
 			return nil
 		}
 	}
-	fid, err := pathc.walk(opath, principal, path.EndSlash(old), nil)
+	fid, err := pathc.open(opath, principal, path.EndSlash(old), nil)
 	if err != nil {
 		return err
 	}
@@ -158,12 +164,12 @@ func (pathc *PathClnt) renameat(old, new sp.Tsigmapath, principal *sp.Tprincipal
 	}
 	o := opath[len(opath)-1]
 	n := npath[len(npath)-1]
-	fid, err := pathc.walk(opath[:len(opath)-1], principal, path.EndSlash(old), nil)
+	fid, err := pathc.open(opath[:len(opath)-1], principal, path.EndSlash(old), nil)
 	if err != nil {
 		return err
 	}
 	defer pathc.FidClnt.Clunk(fid)
-	fid1, err := pathc.walk(npath[:len(npath)-1], principal, path.EndSlash(old), nil)
+	fid1, err := pathc.open(npath[:len(npath)-1], principal, path.EndSlash(old), nil)
 	if err != nil {
 		return err
 	}
@@ -173,18 +179,19 @@ func (pathc *PathClnt) renameat(old, new sp.Tsigmapath, principal *sp.Tprincipal
 
 func (pathc *PathClnt) Remove(pn sp.Tsigmapath, principal *sp.Tprincipal, f *sp.Tfence) error {
 	db.DPrintf(db.PATHCLNT, "%v: Remove %v\n", pathc.cid, pn)
-
 	splitPN, err := serr.PathSplitErr(pn)
 	if err != nil {
 		return err
 	}
+	open := false
 	fid, rest, err := pathc.mntclnt.Resolve(splitPN, principal, path.EndSlash(pn))
-	if err != nil {
-		return err
+	if err == nil {
+		err = pathc.FidClnt.RemoveFile(fid, rest, path.EndSlash(pn), f)
+	} else {
+		open = true
 	}
-	err = pathc.FidClnt.RemoveFile(fid, rest, path.EndSlash(pn), f)
-	if serr.Retry(err) {
-		fid, err = pathc.walk(splitPN, principal, path.EndSlash(pn), nil)
+	if open || serr.IsErrorWalkOK(err) {
+		fid, err = pathc.open(splitPN, principal, path.EndSlash(pn), nil)
 		if err != nil {
 			return err
 		}
@@ -204,7 +211,7 @@ func (pathc *PathClnt) Stat(pn sp.Tsigmapath, principal *sp.Tprincipal) (*sp.Tst
 	}
 	target, rest, err := pathc.mntclnt.Resolve(splitPN, principal, true)
 	if err != nil {
-		db.DPrintf(db.ALWAYS, "%v: Stat resolve %v err %v\n", pathc.cid, splitPN, err)
+		db.DPrintf(db.PATHCLNT_ERR, "%v: Stat resolve %v err %v\n", pathc.cid, splitPN, err)
 	}
 	db.DPrintf(db.PATHCLNT, "%v: Stat resolve %v target %v rest %v\n", pathc.cid, splitPN, target, rest)
 	if len(rest) == 0 && !path.EndSlash(pn) {
@@ -212,7 +219,7 @@ func (pathc *PathClnt) Stat(pn sp.Tsigmapath, principal *sp.Tprincipal) (*sp.Tst
 		st.Name = pathc.FidClnt.Lookup(target).Endpoint().String()
 		return st, nil
 	} else {
-		fid, err := pathc.walk(splitPN, principal, path.EndSlash(pn), nil)
+		fid, err := pathc.open(splitPN, principal, path.EndSlash(pn), nil)
 		if err != nil {
 			return nil, err
 		}
@@ -225,13 +232,51 @@ func (pathc *PathClnt) Stat(pn sp.Tsigmapath, principal *sp.Tprincipal) (*sp.Tst
 	}
 }
 
+// open walks path and, on success, returns the fd walked to; it is
+// the caller's responsibility to clunk the fd.  If a server is
+// unreachable, it umounts the path it walked to, and starts over
+// again, perhaps switching to another replica or recovered server.
+func (pathc *PathClnt) open(path path.Tpathname, principal *sp.Tprincipal, resolve bool, w sos.Watch) (sp.Tfid, *serr.Err) {
+	fid := sp.NoFid
+	err, ok := retry.RetryDefDurCont(func() (error, bool) {
+		spstats.Inc(&pathc.pcstats.Nopen, 1)
+		if err, cont := pathc.mntclnt.ResolveRoot(path); err != nil {
+			db.DPrintf(db.PATHCLNT_ERR, "open: resolveRoot %v err %v cont %t", path, err, cont)
+			return err, cont
+		}
+		start := time.Now()
+		fid0, path1, left, err := pathc.walkPath(path, resolve, w)
+		db.DPrintf(db.WALK_LAT, "open %v %v -> (%v, %v  %v, %v) lat: %v", pathc.cid, path, fid, path1, left, err, time.Since(start))
+		if serr.IsErrorRetryOpenOK(err) {
+			done := len(path1) - len(left)
+			db.DPrintf(db.PATHCLNT_ERR, "walkPath retry pn '%v' pn1 '%v' left '%v' d %v err %v by umount %v", path, path1, left, done, err, path1[0:done])
+			if e := pathc.mntclnt.UmountPrefix(path1[0:done]); e != nil {
+				return e, true
+			}
+			db.DPrintf(db.PATHCLNT_ERR, "open: retry pn '%v' r %v", path, resolve)
+		}
+		if err != nil {
+			return err, true
+		}
+		fid = fid0
+		return nil, true
+	}, serr.IsErrorRetryOpenOK)
+	if !ok {
+		return sp.NoFid, serr.NewErr(serr.TErrUnreachable, path)
+	}
+	if err != nil {
+		return sp.NoFid, err.(*serr.Err)
+	}
+	return fid, nil
+}
+
 func (pathc *PathClnt) Open(pn sp.Tsigmapath, principal *sp.Tprincipal, mode sp.Tmode, w sos.Watch) (sp.Tfid, error) {
 	db.DPrintf(db.PATHCLNT, "%v: Open %v %v %v\n", pathc.cid, pn, mode, w)
 	p, err := serr.PathSplitErr(pn)
 	if err != nil {
 		return sp.NoFid, err
 	}
-	fid, err := pathc.walk(p, principal, path.EndSlash(pn), w)
+	fid, err := pathc.open(p, principal, path.EndSlash(pn), w)
 	if err != nil {
 		return sp.NoFid, err
 	}
@@ -254,18 +299,21 @@ func (pathc *PathClnt) SetDirWatch(fid sp.Tfid) (sp.Tfid, error) {
 }
 
 func (pathc *PathClnt) GetFile(pn sp.Tsigmapath, principal *sp.Tprincipal, mode sp.Tmode, off sp.Toffset, cnt sp.Tsize, f *sp.Tfence) ([]byte, error) {
-	db.DPrintf(db.PATHCLNT, "%v: GetFile %v %v\n", pathc.cid, pn, mode)
+	db.DPrintf(db.PATHCLNT, "%v: GetFile %v %v", pathc.cid, pn, mode)
 	p, err := serr.PathSplitErr(pn)
 	if err != nil {
 		return nil, err
 	}
+	open := false
+	var data []byte
 	fid, rest, err := pathc.mntclnt.Resolve(p, principal, path.EndSlash(pn))
-	if err != nil {
-		return nil, err
+	if err == nil {
+		data, err = pathc.FidClnt.GetFile(fid, rest, mode, off, cnt, path.EndSlash(pn), f)
+	} else {
+		open = true
 	}
-	data, err := pathc.FidClnt.GetFile(fid, rest, mode, off, cnt, path.EndSlash(pn), f)
-	if serr.Retry(err) {
-		fid, err = pathc.walk(p, principal, path.EndSlash(pn), nil)
+	if open || serr.IsErrorWalkOK(err) {
+		fid, err = pathc.open(p, principal, path.EndSlash(pn), nil)
 		if err != nil {
 			return nil, err
 		}
@@ -290,13 +338,15 @@ func (pathc *PathClnt) PutFile(pn sp.Tsigmapath, principal *sp.Tprincipal, mode 
 	if err != nil {
 		return 0, err
 	}
+	open := false
+	cnt := sp.Tsize(0)
 	fid, rest, err := pathc.mntclnt.Resolve(p, principal, path.EndSlash(pn))
-	if err != nil {
-		db.DPrintf(db.PATHCLNT_ERR, "%v: Error PutFile resolve %v %v %v: %v", pathc.cid, pn, mode, lid, err)
-		return 0, err
+	if err == nil {
+		cnt, err = pathc.FidClnt.PutFile(fid, rest, mode, perm, off, data, path.EndSlash(pn), lid, f)
+	} else {
+		open = true
 	}
-	cnt, err := pathc.FidClnt.PutFile(fid, rest, mode, perm, off, data, path.EndSlash(pn), lid, f)
-	if serr.Retry(err) {
+	if open || serr.IsErrorWalkOK(err) {
 		dir := p.Dir()
 		base := path.Tpathname{p.Base()}
 		resolve := true
@@ -305,7 +355,7 @@ func (pathc *PathClnt) PutFile(pn sp.Tsigmapath, principal *sp.Tprincipal, mode 
 			base = path.Tpathname{}
 			resolve = path.EndSlash(pn)
 		}
-		fid, err = pathc.walk(dir, principal, resolve, nil)
+		fid, err = pathc.open(dir, principal, resolve, nil)
 		if err != nil {
 			return 0, err
 		}
@@ -320,19 +370,19 @@ func (pathc *PathClnt) PutFile(pn sp.Tsigmapath, principal *sp.Tprincipal, mode 
 	return cnt, nil
 }
 
-// For npproxy
-func (pathc *PathClnt) Walk(fid sp.Tfid, path path.Tpathname, principal *sp.Tprincipal) (sp.Tfid, *serr.Err) {
-	ch := pathc.FidClnt.Lookup(fid)
-	if ch == nil {
-		return sp.NoFid, serr.NewErr(serr.TErrNotfound, fid)
+// For ninep proxy
+func (pathc *PathClnt) Walk(fid1 sp.Tfid, path path.Tpathname, principal *sp.Tprincipal) (sp.Tfid, *serr.Err) {
+	// Obtain a private copy of fid that this thread walks, which
+	// walkPathFid closes.
+	fid, err := pathc.FidClnt.Clone(fid1)
+	if err != nil {
+		return sp.NoFid, err
 	}
+	fid, left, retry, err := pathc.walkPathFid(fid, path, path, true, nil)
 
-	// XXX fix
-	// p := ch.Path().AppendPath(path)
-	// return pathc.walk(p, principal, true, nil)
+	db.DPrintf(db.NPPROXY, "Walk: walkPathFid %v path '%v'  fid %v left '%v' r %t err %v", fid1, path, fid, left, retry, err)
 
-	db.DPrintf(db.PATHCLNT, "Walk %v %v (ch %v)", fid, path, ch)
-	return pathc.walk(path, principal, true, nil)
+	return fid, err
 }
 
 func (pathc *PathClnt) Disconnected() bool {

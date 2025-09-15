@@ -8,13 +8,15 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/ft/leaderclnt"
+	"sigmaos/namesrv/ndclnt"
+	"sigmaos/path"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 	"sigmaos/util/crash"
 )
 
 const (
-	DIR = "outdir"
+	DIR string = "outdir"
 )
 
 func TestCompile(t *testing.T) {
@@ -26,7 +28,7 @@ func TestOldLeaderOK(t *testing.T) {
 		return
 	}
 
-	l := leaderclnt.OldleaderTest(ts, sp.NAMED+DIR, "")
+	l := leaderclnt.OldleaderTest(ts, sp.NAMED+DIR, nil, sp.ROOTREALM)
 
 	l.ReleaseLeadership()
 
@@ -35,9 +37,9 @@ func TestOldLeaderOK(t *testing.T) {
 
 func TestOldLeaderCrash(t *testing.T) {
 	const T = 1000
-	fn := sp.NAMED + "crashnd.sem"
+	crashpn := sp.NAMED + "crashnd.sem"
 
-	e := crash.NewEventPath(crash.NAMED_CRASH, T, float64(1.0), fn)
+	e := crash.NewEventPath(crash.NAMED_CRASH, T, float64(1.0), crashpn)
 	err := crash.SetSigmaFail(crash.NewTeventMapOne(e))
 	assert.Nil(t, err)
 
@@ -46,18 +48,32 @@ func TestOldLeaderCrash(t *testing.T) {
 		return
 	}
 
-	err = ts.BootEnv(sp.NAMEDREL, []string{"SIGMAFAIL="})
+	ndc, err := ndclnt.NewNdClnt(ts.SigmaClnt, test.REALM1)
 	assert.Nil(t, err)
+	nd1 := ndclnt.NewNamedProc(test.REALM1, ts.ProcEnv().UseDialProxy, true)
+	if err := ndc.ClearAndStartNamed(nd1); !assert.Nil(ts.T, err, "Err startNamed: %v", err) {
+		return
+	}
 
-	l := leaderclnt.OldleaderTest(ts, sp.NAMED+DIR, fn)
+	nd2 := ndclnt.NewNamedProc(test.REALM1, ts.ProcEnv().UseDialProxy, false)
+	db.DPrintf(db.TEST, "Starting a new named: %v", nd2.GetPid())
+	if err := ndc.StartNamed(nd2); !assert.Nil(ts.T, err, "Err startNamed 2: %v", err) {
+		return
+	}
+
+	l := leaderclnt.OldleaderTest(ts, sp.NAMED+DIR, &e, test.REALM1)
 
 	l.ReleaseLeadership()
+
+	if err := ndc.StopNamed(nd2); !assert.Nil(ts.T, err, "Err stop named: %v", err) {
+		return
+	}
 
 	ts.Shutdown()
 }
 
 func TestMemfs(t *testing.T) {
-	dir := sp.MEMFS + sp.LOCAL + "/"
+	dir := path.MarkResolve(filepath.Join(sp.MEMFS, sp.ANY))
 	fencedir := filepath.Join(dir, sp.FENCEDIR)
 
 	ts, err1 := test.NewTstatePath(t, dir)
@@ -65,7 +81,7 @@ func TestMemfs(t *testing.T) {
 		return
 	}
 
-	l := leaderclnt.OldleaderTest(ts, dir+DIR, "")
+	l := leaderclnt.OldleaderTest(ts, dir+DIR, nil, sp.ROOTREALM)
 
 	sts, err := l.GetFences(fencedir)
 	assert.Nil(ts.T, err, "GetFences")

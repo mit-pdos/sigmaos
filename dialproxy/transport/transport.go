@@ -12,12 +12,12 @@ import (
 	"golang.org/x/sys/unix"
 
 	db "sigmaos/debug"
-	"sigmaos/util/io/demux"
-	"sigmaos/util/io/frame"
 	"sigmaos/proc"
 	"sigmaos/serr"
 	sessp "sigmaos/session/proto"
 	sp "sigmaos/sigmap"
+	"sigmaos/util/io/demux"
+	"sigmaos/util/io/frame"
 )
 
 const (
@@ -93,7 +93,11 @@ func (trans *DialProxyTrans) Conn() *net.UnixConn {
 	return trans.conn
 }
 
-func (trans *DialProxyTrans) ReadCall() (demux.CallI, *serr.Err) {
+func (trans *DialProxyTrans) Close() error {
+	return trans.conn.Close()
+}
+
+func (trans *DialProxyTrans) ReadCall() (demux.CallI, error) {
 	db.DPrintf(db.DIALPROXYTRANS, "ReadCall trans conn [%p]", trans.conn)
 	seqno, err := frame.ReadSeqno(trans.conn)
 	if err != nil {
@@ -138,7 +142,7 @@ func (trans *DialProxyTrans) ReadCall() (demux.CallI, *serr.Err) {
 	return NewProxyCall(seqno, iov), nil
 }
 
-func (trans *DialProxyTrans) WriteCall(call demux.CallI) *serr.Err {
+func (trans *DialProxyTrans) WriteCall(call demux.CallI) error {
 	db.DPrintf(db.DIALPROXYTRANS, "[%p] WriteCall trans %v", trans.conn, call)
 	pc := call.(*ProxyCall)
 	if err := frame.WriteSeqno(pc.Seqno, trans.conn); err != nil {

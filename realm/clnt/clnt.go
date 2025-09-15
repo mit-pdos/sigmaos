@@ -37,9 +37,10 @@ func (rc *RealmClnt) NewRealm(realm sp.Trealm, net string, numS3 int64, numUX in
 	return nil
 }
 
-func (rc *RealmClnt) RemoveRealm(realm sp.Trealm) error {
+func (rc *RealmClnt) RemoveRealm(realm sp.Trealm, removeNamedState bool) error {
 	req := &proto.RemoveReq{
-		Realm: realm.String(),
+		Realm:            realm.String(),
+		RemoveNamedState: removeNamedState,
 	}
 	res := &proto.RemoveRep{}
 	if err := rc.rpcc.RPC("RealmSrv.Remove", req, res); err != nil {

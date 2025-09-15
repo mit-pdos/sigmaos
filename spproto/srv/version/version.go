@@ -30,12 +30,12 @@ func (v *version) String() string {
 
 type VersionTable struct {
 	sync.Mutex
-	*refmap.RefTable[sp.Tpath, version]
+	*refmap.RefTable[sp.Tuid, version]
 }
 
 func NewVersionTable() *VersionTable {
 	vt := &VersionTable{}
-	vt.RefTable = refmap.NewRefTable[sp.Tpath, version](N, db.VERSION)
+	vt.RefTable = refmap.NewRefTable[sp.Tuid, version](N, db.VERSION)
 	return vt
 }
 
@@ -45,34 +45,34 @@ func (vt *VersionTable) Len() (int, int) {
 	return vt.RefTable.Len()
 }
 
-func (vt *VersionTable) GetVersion(path sp.Tpath) sp.TQversion {
+func (vt *VersionTable) GetVersion(uid sp.Tuid) sp.TQversion {
 	vt.Lock()
 	defer vt.Unlock()
 
-	if e, ok := vt.Lookup(path); ok {
+	if e, ok := vt.Lookup(uid); ok {
 		return e.V
 	}
 	return 0
 }
 
-func (vt *VersionTable) Insert(path sp.Tpath) (sp.TQversion, bool) {
+func (vt *VersionTable) Insert(uid sp.Tuid) (sp.TQversion, bool) {
 	vt.Lock()
 	defer vt.Unlock()
-	e, ok := vt.RefTable.Insert(path, newVersion())
+	e, ok := vt.RefTable.Insert(uid, newVersion())
 	return e.V, ok
 }
 
-func (vt *VersionTable) Delete(p sp.Tpath) (bool, error) {
+func (vt *VersionTable) Delete(uid sp.Tuid) (bool, error) {
 	vt.Lock()
 	defer vt.Unlock()
-	return vt.RefTable.Delete(p)
+	return vt.RefTable.Delete(uid)
 }
 
-func (vt *VersionTable) IncVersion(path sp.Tpath) (sp.TQversion, bool) {
+func (vt *VersionTable) IncVersion(uid sp.Tuid) (sp.TQversion, bool) {
 	vt.Lock()
 	defer vt.Unlock()
 
-	if e, ok := vt.RefTable.Lookup(path); ok {
+	if e, ok := vt.RefTable.Lookup(uid); ok {
 		e.V += 1
 		return e.V, true
 	}

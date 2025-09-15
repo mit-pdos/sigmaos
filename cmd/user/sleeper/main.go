@@ -14,6 +14,7 @@ import (
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
+	"sigmaos/util/perf"
 )
 
 func main() {
@@ -48,9 +49,8 @@ func main() {
 		db.DFatalf("Error parsing exec time 2: %v", err)
 	}
 	execTime := time.UnixMicro(execTimeMicro)
-	db.DPrintf(db.SPAWN_LAT, "[%v] Proc exec latency: %v", proc.GetSigmaDebugPid(), time.Since(execTime))
 	pe := proc.GetProcEnv()
-	db.DPrintf(db.SPAWN_LAT, "[%v] E2e latency until main: time since spawn %v", pe.GetPID(), time.Since(pe.GetSpawnTime()))
+	perf.LogSpawnLatency("SpawnBench.Exec", pe.GetPID(), pe.GetSpawnTime(), execTime)
 	if len(os.Args) < 3 {
 		fmt.Fprintf(os.Stderr, "Usage: %v sleep_length outdir <native>\n", os.Args[0])
 		os.Exit(1)

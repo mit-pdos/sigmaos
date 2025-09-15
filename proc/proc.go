@@ -8,10 +8,12 @@ import (
 	"path/filepath"
 	"runtime/debug"
 	"strings"
+	"sync"
 	"time"
 
 	"google.golang.org/protobuf/proto"
 
+	rpcproto "sigmaos/rpc/proto"
 	sp "sigmaos/sigmap"
 )
 
@@ -49,6 +51,7 @@ func ParseTtype(tstr string) Ttype {
 }
 
 type Proc struct {
+	sync.Mutex
 	*ProcProto
 }
 
@@ -101,10 +104,12 @@ func NewProcPid(pid sp.Tpid, program string, args []string) *Proc {
 }
 
 func NewProcFromProto(p *ProcProto) *Proc {
-	return &Proc{p}
+	return &Proc{ProcProto: p}
 }
 
 func (p *Proc) GetProto() *ProcProto {
+	p.Lock()
+	defer p.Unlock()
 	return p.ProcProto
 }
 
@@ -133,7 +138,7 @@ func (p *Proc) InheritParentProcEnv(parentPE *ProcEnv) {
 	p.ProcEnvProto.Debug = parentPE.Debug
 	p.ProcEnvProto.BuildTag = parentPE.BuildTag
 	p.ProcEnvProto.Version = parentPE.Version
-	p.ProcEnvProto.UseSPProxy = parentPE.UseSPProxy
+	p.ProcEnvProto.UseSPProxy = p.ProcEnvProto.UseSPProxy || parentPE.UseSPProxy
 	// Don't override intentionally set net proxy settings
 	p.ProcEnvProto.UseDialProxy = parentPE.UseDialProxy || p.ProcEnvProto.UseDialProxy
 	p.ProcEnvProto.SigmaPath = append(p.ProcEnvProto.SigmaPath, parentPE.SigmaPath...)
@@ -148,6 +153,9 @@ func (p *Proc) GetPrincipal() *sp.Tprincipal {
 }
 
 func (p *Proc) SetKernelID(kernelID string, setProcDir bool) {
+	p.Lock()
+	defer p.Unlock()
+
 	p.ProcEnvProto.KernelID = kernelID
 	if setProcDir {
 		p.setProcDir(kernelID)
@@ -186,6 +194,9 @@ func (p *Proc) PrependSigmaPath(pn string) {
 // Finalize env details which can only be set once a physical machine and
 // procd container have been chosen.
 func (p *Proc) FinalizeEnv(innerIP sp.Tip, outerIP sp.Tip, procdPid sp.Tpid) {
+	p.Lock()
+	defer p.Unlock()
+
 	p.ProcEnvProto.InnerContainerIPStr = innerIP.String()
 	p.ProcEnvProto.OuterContainerIPStr = outerIP.String()
 	p.ProcEnvProto.SetProcdPID(procdPid)
@@ -233,7 +244,6 @@ func (p *Proc) String() string {
 		"InnerIP:%v "+
 		"OuterIP:%v "+
 		"Args:%v "+
-		"Env:%v "+
 		"Type:%v "+
 		"Mcpu:%v "+
 		"Mem:%v "+
@@ -253,7 +263,6 @@ func (p *Proc) String() string {
 		p.ProcEnvProto.GetInnerContainerIP(),
 		p.ProcEnvProto.GetOuterContainerIP(),
 		p.Args,
-		p.Env,
 		p.GetType(),
 		p.GetMcpu(),
 		p.GetMem(),
@@ -275,6 +284,7 @@ func (p *Proc) setBaseEnv() {
 	// Pass through debug/performance vars.
 	p.AppendEnv(SIGMAPERF, GetSigmaPerf())
 	p.AppendEnv(SIGMADEBUG, GetSigmaDebug())
+	p.AppendEnv(SIGMADEBUGPROCS, GetSigmaDebugProcs())
 	p.AppendEnv(SIGMAFAIL, GetSigmaFail())
 	p.AppendEnv(SIGMADEBUGPID, p.GetPid().String())
 	if p.IsPrivileged() {
@@ -369,15 +379,50 @@ func (p *Proc) GetHow() Thow {
 }
 
 func (p *Proc) SetMSchedEndpoint(ep *sp.Tendpoint) {
-	p.ProcEnvProto.MSchedEndpointProto = ep.GetProto()
+	p.Lock()
+	defer p.Unlock()
+
+	p.SetCachedEndpoint(sp.MSCHEDREL, ep)
 }
 
 func (p *Proc) SetNamedEndpoint(ep *sp.Tendpoint) {
-	p.ProcEnvProto.NamedEndpointProto = ep.TendpointProto
+	p.SetCachedEndpoint(sp.NAMEDREL, ep)
+}
+
+func (p *Proc) SetCachedEndpoint(pn string, ep *sp.Tendpoint) {
+	p.ProcEnvProto.SetCachedEndpoint(pn, ep)
+}
+
+func (p *Proc) ClearCachedEndpoint(pn string) {
+	p.ProcEnvProto.ClearCachedEndpoint(pn)
 }
 
 func (p *Proc) GetNamedEndpoint() *sp.TendpointProto {
-	return p.ProcEnvProto.NamedEndpointProto
+	ep, _ := p.ProcEnvProto.GetNamedEndpoint()
+	return ep.GetProto()
+}
+
+func (p *Proc) GetBootScript() []byte {
+	return p.Blob.Iov[0]
+}
+
+func (p *Proc) GetBootScriptInput() []byte {
+	return p.BootScriptInput
+}
+
+func (p *Proc) SetBootScript(b []byte, input []byte) {
+	p.Blob = &rpcproto.Blob{
+		Iov: [][]byte{b},
+	}
+	p.BootScriptInput = input
+}
+
+func (p *Proc) SetRunBootScript(run bool) {
+	p.ProcEnvProto.SetRunBootScript(run)
+}
+
+func (p *Proc) GetRunBootScript() bool {
+	return p.ProcEnvProto.GetRunBootScript()
 }
 
 // Return Env map as a []string

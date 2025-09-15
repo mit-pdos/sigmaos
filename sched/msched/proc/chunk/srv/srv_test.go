@@ -40,7 +40,7 @@ func newTstate(t *testing.T, n int) *Tstate {
 	assert.Nil(t, err, "Boot node: %v", err)
 
 	ckclnt := chunkclnt.NewChunkClnt(ts.FsLib, true)
-	srvs, err := ckclnt.WaitGetEntriesN(n + 1, true)
+	srvs, err := ckclnt.WaitGetEntriesN(n+1, true)
 	assert.Nil(t, err)
 
 	ts.srvs = srvs
@@ -49,7 +49,7 @@ func newTstate(t *testing.T, n int) *Tstate {
 	db.DPrintf(db.TEST, "Chunksrvs  %v", ts.srvs)
 
 	for _, srv := range srvs {
-		pn := chunksrv.PathHostKernelRealm(srv, sp.ROOTREALM)
+		pn := chunksrv.PathHostKernelRealm(test.User, srv, sp.ROOTREALM)
 		os.Mkdir(pn, 0700)
 	}
 	return ts
@@ -61,7 +61,7 @@ func (ts *Tstate) shutdown() {
 }
 
 func (ts *Tstate) check(srv string, st *sp.Tstat) {
-	pn := chunksrv.PathHostKernelRealm(srv, sp.ROOTREALM)
+	pn := chunksrv.PathHostKernelRealm(test.User, srv, sp.ROOTREALM)
 	pn = filepath.Join(pn, PROG)
 	fi, err := os.Stat(pn)
 	assert.Nil(ts.T, err)
@@ -101,7 +101,8 @@ func (ts *Tstate) fetch(srv string, paths []string, expect []string) int {
 			ck = h
 			h--
 		}
-		sz, path, err := ts.ckclnt.Fetch(srv, PROG, pid, sp.ROOTREALM, secrets, ck, st.Tsize(), paths, ts.ProcEnv().GetNamedEndpointProto())
+		ndEP, _ := ts.ProcEnv().GetNamedEndpoint()
+		sz, path, err := ts.ckclnt.Fetch(srv, PROG, pid, sp.ROOTREALM, secrets, ck, st.Tsize(), paths, ndEP.GetProto())
 		db.DPrintf(db.TEST, "ck %d(%d) srv %v path %v expect %v nlocal %d", ck, n, srv, path, expect, nlocal)
 		assert.Nil(ts.T, err, "err %v", err)
 		assert.True(ts.T, sz > 0 && sz <= sp.Tsize(sp.Conf.Chunk.CHUNK_SZ))

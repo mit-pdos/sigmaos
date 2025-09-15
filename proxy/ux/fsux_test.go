@@ -2,6 +2,7 @@ package fsux
 
 import (
 	"fmt"
+	"path/filepath"
 	"strconv"
 	"sync"
 	"testing"
@@ -11,6 +12,7 @@ import (
 
 	db "sigmaos/debug"
 	dialproxyclnt "sigmaos/dialproxy/clnt"
+	"sigmaos/path"
 	"sigmaos/proc"
 	"sigmaos/serr"
 	"sigmaos/sigmaclnt"
@@ -19,11 +21,16 @@ import (
 	"sigmaos/util/crash"
 )
 
+var fn string
+
 const (
-	fn      = sp.UX + "/" + sp.LOCAL + "/"
 	FILESZ  = 50 * sp.MBYTE
 	WRITESZ = 4096
 )
+
+func init() {
+	fn = path.MarkResolve(filepath.Join(sp.UX, sp.ANY))
+}
 
 func TestCompile(t *testing.T) {
 }
@@ -91,10 +98,10 @@ func TestDir(t *testing.T) {
 	ts.Shutdown()
 }
 
-func writer(t *testing.T, ch chan struct{}, pe *proc.ProcEnv, idx int) {
+func writer(t *testing.T, ch chan struct{}, ch2 chan struct{}, pe *proc.ProcEnv, idx int) {
 	fsl, err := sigmaclnt.NewFsLib(pe, dialproxyclnt.NewDialProxyClnt(pe))
 	assert.Nil(t, err)
-	fn := sp.UX + sp.LOCAL + "/file-" + string(pe.GetPrincipal().GetID()) + "-" + strconv.Itoa(idx)
+	fn := filepath.Join(sp.UX, sp.ANY, "file-"+string(pe.GetPrincipal().GetID())+"-"+strconv.Itoa(idx))
 	stop := false
 	ncrash := 0
 	for !stop {
@@ -102,13 +109,13 @@ func writer(t *testing.T, ch chan struct{}, pe *proc.ProcEnv, idx int) {
 		case <-ch:
 			stop = true
 		default:
-			if err := fsl.Remove(fn); serr.IsErrCode(err, serr.TErrUnreachable) {
+			if err := fsl.Remove(fn); serr.IsErrorSession(err) {
 				ncrash += 1
 				break
 			}
 			w, err := fsl.CreateBufWriter(fn, 0777)
 			if err != nil {
-				assert.True(t, serr.IsErrCode(err, serr.TErrUnreachable), "Err code %v", err)
+				assert.True(t, serr.IsErrorSession(err), "Err code %v", err)
 				ncrash += 1
 				break
 			}
@@ -119,7 +126,7 @@ func writer(t *testing.T, ch chan struct{}, pe *proc.ProcEnv, idx int) {
 				break
 			}
 			if err := w.Close(); err != nil {
-				assert.True(t, serr.IsErrCode(err, serr.TErrUnreachable))
+				assert.True(t, serr.IsErrorSession(err))
 				ncrash += 1
 				break
 			}
@@ -128,6 +135,7 @@ func writer(t *testing.T, ch chan struct{}, pe *proc.ProcEnv, idx int) {
 	assert.True(t, ncrash >= 1)
 	fsl.Remove(fn)
 	fsl.Close()
+	ch2 <- struct{}{}
 }
 
 func TestWriteCrash5x20(t *testing.T) {
@@ -149,9 +157,10 @@ func TestWriteCrash5x20(t *testing.T) {
 	}
 
 	ch := make(chan struct{})
+	ch2 := make(chan struct{})
 	for i := 0; i < N; i++ {
 		pe := proc.NewAddedProcEnv(ts.ProcEnv())
-		go writer(ts.T, ch, pe, i)
+		go writer(ts.T, ch, ch2, pe, i)
 	}
 
 	var wg sync.WaitGroup
@@ -161,6 +170,8 @@ func TestWriteCrash5x20(t *testing.T) {
 		for i := 0; i < NCRASH; i++ {
 			fn = sp.NAMED + fmt.Sprintf("crashux%d.sem", i+1)
 			e1 := crash.NewEventPath(crash.UX_CRASH, 0, float64(1.0), fn)
+			err := crash.SetSigmaFail(crash.NewTeventMapOne(e1))
+			assert.Nil(t, err)
 			ts.CrashServer(e0, e1, sp.UXREL)
 			e0 = e1
 			time.Sleep(T * time.Millisecond)
@@ -170,6 +181,10 @@ func TestWriteCrash5x20(t *testing.T) {
 
 	for i := 0; i < N; i++ {
 		ch <- struct{}{}
+	}
+
+	for i := 0; i < N; i++ {
+		<-ch2
 	}
 
 	ts.Shutdown()

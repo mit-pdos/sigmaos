@@ -59,6 +59,10 @@ func NewDBUtil(sc *sigmaclnt.SigmaClnt) (*DBUtil, error) {
 	return &DBUtil{mongoc}, nil
 }
 
+func (dbu *DBUtil) GetURL() (string, error) {
+	return dbu.mongoc.GetMongoURL()
+}
+
 func (dbu *DBUtil) Clear() error {
 	dbu.mongoc.RemoveAll(SN_DB, USER_COL)
 	dbu.mongoc.RemoveAll(SN_DB, GRAPH_FLWER_COL)

@@ -9,6 +9,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/namesrv/fsetcd"
+	"sigmaos/path"
 	"sigmaos/proc"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
@@ -30,7 +31,7 @@ func TestSymlink1(t *testing.T) {
 	}
 
 	// Make a target file
-	targetPath := sp.UX + "/" + sp.LOCAL + "/symlink-test-file"
+	targetPath := filepath.Join(sp.UX, sp.ANY, "symlink-test-file")
 	contents := "symlink test!"
 	ts.Remove(targetPath)
 	_, err := ts.PutFile(targetPath, 0777, sp.OWRITE, []byte(contents))
@@ -47,13 +48,13 @@ func TestSymlink1(t *testing.T) {
 	assert.Nil(t, err, "Creating link")
 
 	// Read symlink contents
-	b, err = ts.GetFile(linkPath + "/")
+	b, err = ts.GetFile(path.MarkResolve(linkPath))
 	assert.Nil(t, err, "Reading linked file")
 	assert.Equal(t, contents, string(b), "File contents don't match")
 
 	// Write symlink contents
 	w := []byte("overwritten!!")
-	_, err = ts.SetFile(linkPath+"/", w, sp.OWRITE, 0)
+	_, err = ts.SetFile(path.MarkResolve(linkPath), w, sp.OWRITE, 0)
 	assert.Nil(t, err, "Writing linked file")
 
 	// Read target file
@@ -62,7 +63,7 @@ func TestSymlink1(t *testing.T) {
 	assert.Equal(t, string(w), string(b), "File contents don't match after reading target")
 
 	// Remove the target of the symlink
-	err = ts.Remove(linkPath + "/")
+	err = ts.Remove(path.MarkResolve(linkPath))
 	assert.Nil(t, err, "remove linked file")
 
 	_, err = ts.GetFile(targetPath)
@@ -78,8 +79,8 @@ func TestSymlink2(t *testing.T) {
 	}
 
 	// Make a target file
-	targetDirPath := sp.UX + "/" + sp.LOCAL + "/dir1"
-	targetPath := targetDirPath + "/symlink-test-file"
+	targetDirPath := filepath.Join(sp.UX, sp.ANY, "dir1")
+	targetPath := filepath.Join(targetDirPath, "symlink-test-file")
 	contents := "symlink test!"
 	ts.Remove(targetPath)
 	ts.Remove(targetDirPath)
@@ -102,7 +103,7 @@ func TestSymlink2(t *testing.T) {
 	assert.Nil(t, err, "Creating link")
 
 	// Read symlink contents
-	b, err = ts.GetFile(linkPath + "/")
+	b, err = ts.GetFile(path.MarkResolve(linkPath))
 	assert.Nil(t, err, "Reading linked file")
 	assert.Equal(t, contents, string(b), "File contents don't match")
 
@@ -121,8 +122,8 @@ func TestSymlink3(t *testing.T) {
 	uxip := uxs[0].Name
 
 	// Make a target file
-	targetDirPath := sp.UX + "/" + uxip + "/tdir"
-	targetPath := targetDirPath + "/target"
+	targetDirPath := filepath.Join(sp.UX, uxip, "tdir")
+	targetPath := filepath.Join(targetDirPath, "target")
 	contents := "symlink test!"
 	ts.Remove(targetPath)
 	ts.Remove(targetDirPath)
@@ -149,10 +150,10 @@ func TestSymlink3(t *testing.T) {
 	assert.Nil(t, err)
 	sc.ProcessDir(linkDir, func(st *sp.Tstat) (bool, error) {
 		// Read symlink contents
-		fd, err := sc.Open(linkPath+"/", sp.OREAD)
+		fd, err := sc.Open(path.MarkResolve(linkPath), sp.OREAD)
 		assert.Nil(t, err, "Opening")
 		// Read symlink contents again
-		b, err = sc.GetFile(linkPath + "/")
+		b, err = sc.GetFile(path.MarkResolve(linkPath))
 		assert.Nil(t, err, "Reading linked file")
 		assert.Equal(t, contents, string(b), "File contents don't match")
 
@@ -186,9 +187,9 @@ func TestLeased(t *testing.T) {
 	_, error := sp.NewEndpointFromBytes(b)
 	assert.Nil(t, error, "NewEndpoint")
 
-	db.DPrintf(db.TEST, "Try GetDir on %v", name+"/")
-	sts, err := ts.GetDir(name + "/")
-	assert.Nil(t, err, name+"/")
+	db.DPrintf(db.TEST, "Try GetDir on %v", name)
+	sts, err := ts.GetDir(path.MarkResolve(name))
+	assert.Nil(t, err, name)
 
 	db.DPrintf(db.TEST, "entries %v\n", sp.Names(sts))
 	assert.Equal(t, 3, len(sts), "Unexpected len(sts) %v != %v:", sp.Names(sts), 3)

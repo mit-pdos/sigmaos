@@ -1,0 +1,14 @@
+benchmarks/results/
+.git/
+Dockerfile
+Dockerfile.*
+*.Dockerfile
+*.sh
+!make.sh
+!create-net.sh
+rs/*/target/
+cpp
+*/*_test.go
+bin/kernel/junction
+bin/kernel/junction_run
+bin/kernel/iokenreld

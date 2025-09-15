@@ -59,12 +59,12 @@ func run(cmd string) ([]byte, error) {
 	db.DPrintf(db.TEST, "cmd %v", cmd)
 	out, err := exec.Command("bash", "-c", cmd).CombinedOutput()
 	if err != nil {
-		db.DPrintf(db.ALWAYS, "stderr: %v", string(out))
+		db.DPrintf(db.ERROR, "stderr: %v", string(out))
 	}
 	return out, err
 }
 
-func TestProxy(t *testing.T) {
+func TestProxyBasic(t *testing.T) {
 	t1, err1 := test.NewTstatePath(t, sp.NAMED)
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
@@ -75,18 +75,26 @@ func TestProxy(t *testing.T) {
 		return
 	}
 
-	out, err := run("ls -a /mnt/9p/ | grep '.statsd'")
+	out, err := run("ls -ld /mnt/9p/")
+	assert.Nil(t, err)
+	db.DPrintf(db.TEST, "out %v", string(out))
+
+	out, err = run("ls -a /mnt/9p/ | grep '.statsd'")
 	if !assert.Nil(t, err, "Err run ls: %v", err) {
 		return
 	}
 	assert.Equal(t, ".pstatsd\n.statsd\n", string(out))
 
-	out, err = run("cat /mnt/9p/.statsd")
-	assert.Nil(t, err)
-	assert.True(t, strings.Contains(string(out), "Nwalk"))
-
 	out, err = run("echo hello > /mnt/9p/xxx")
 	assert.Nil(t, err)
+
+	out, err = run("cat /mnt/9p/xxx ")
+	assert.Nil(t, err)
+	assert.True(t, strings.Contains(string(out), "hello"))
+
+	out, err = run("ls -l /mnt/9p/xxx")
+	assert.Nil(t, err)
+	db.DPrintf(db.TEST, "out %v", string(out))
 
 	out, err = run("mv /mnt/9p/xxx /mnt/9p/yyy")
 	assert.Nil(t, err)
@@ -96,6 +104,10 @@ func TestProxy(t *testing.T) {
 
 	out, err = run("mkdir /mnt/9p/ddd")
 	assert.Nil(t, err)
+
+	out, err = run("ls -ld /mnt/9p/ddd")
+	assert.Nil(t, err)
+	assert.True(t, strings.Contains(string(out), "mnt/9p/ddd"))
 
 	out, err = run("echo hello > /mnt/9p/ddd/xxx")
 	assert.Nil(t, err)
@@ -107,7 +119,16 @@ func TestProxy(t *testing.T) {
 	out, err = run("rm /mnt/9p/ddd/xxx")
 	assert.Nil(t, err)
 
-	out, err = run("cp ../tutorial/01_local_dev.md /mnt/9p/ddd/yyy")
+	out, err = run("cat /mnt/9p/ddd/xxx ")
+	assert.NotNil(t, err)
+
+	out, err = run("rm /mnt/9p/ddd/xxx")
+	assert.NotNil(t, err)
+
+	out, err = run("ls /mnt/9p/xxx")
+	assert.NotNil(t, err)
+
+	out, err = run("cp ../../tutorial/01_local_dev.md /mnt/9p/ddd/yyy")
 	assert.Nil(t, err)
 
 	out, err = run("rm /mnt/9p/ddd/yyy")
@@ -115,9 +136,6 @@ func TestProxy(t *testing.T) {
 
 	out, err = run("rmdir /mnt/9p/ddd")
 	assert.Nil(t, err)
-
-	out, err = run("ls /mnt/9p/xxx")
-	assert.NotNil(t, err)
 }
 
 func TestStats(t *testing.T) {
@@ -134,7 +152,6 @@ func TestStats(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		out, err := run("cat /mnt/9p/.statsd")
 		assert.Nil(t, err)
-		db.DPrintf(db.TEST, "out: %s", string(out))
 		assert.True(t, strings.Contains(string(out), "Nwalk"))
 	}
 }
@@ -152,15 +169,9 @@ func TestUx(t *testing.T) {
 	ux := "/mnt/9p/ux"
 	out, err := run("ls " + ux)
 	assert.Nil(t, err)
-
-	db.DPrintf(db.TEST, "Ux: %v\n", string(out))
-
 	dn := filepath.Join(ux, string(out))
 	out, err = run("ls " + dn)
 	assert.Nil(t, err)
-
-	db.DPrintf(db.TEST, "Ux: %v\n", string(out))
-
 	assert.True(t, strings.Contains(string(out), "bin"))
 }
 
@@ -178,15 +189,14 @@ func TestBoot(t *testing.T) {
 	out, err := run("ls " + boot)
 	assert.Nil(t, err)
 
-	db.DPrintf(db.TEST, "boot srv: %v\n", string(out))
+	// db.DPrintf(db.TEST, "boot srv: %v\n", string(out))
 	e := strings.Fields(string(out))
 
 	dn := filepath.Join(boot, e[1])
-	db.DPrintf(db.TEST, "boot srv dn: %v\n", dn)
+	// db.DPrintf(db.TEST, "boot srv dn: %v\n", dn)
 	out, err = run("ls " + dn)
 	assert.Nil(t, err)
-
-	db.DPrintf(db.TEST, "boot: %v\n", string(out))
+	assert.True(t, strings.Contains(string(out), "rpc"))
 }
 
 func TestSelf(t *testing.T) {
@@ -215,7 +225,7 @@ func TestSelf(t *testing.T) {
 	out, err := run("ls -l /mnt/9p/namedself/d")
 	assert.Nil(t, err)
 
-	db.DPrintf(db.TEST, "Out: %v\n", string(out))
+	// db.DPrintf(db.TEST, "Out: %v\n", string(out))
 	assert.True(t, strings.Contains(string(out), "myfile"))
 
 	ts.Remove("name/namedself")

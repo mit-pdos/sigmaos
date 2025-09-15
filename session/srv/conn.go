@@ -1,13 +1,13 @@
 package srv
 
 import (
-	"net"
+	//"net"
 	"sync"
 
-	"sigmaos/util/io/demux"
 	"sigmaos/serr"
-	sessp "sigmaos/session/proto"
 	spcodec "sigmaos/session/codec"
+	sessp "sigmaos/session/proto"
+	"sigmaos/util/io/demux"
 
 	db "sigmaos/debug"
 	sp "sigmaos/sigmap"
@@ -18,7 +18,6 @@ type netConn struct {
 
 	p      *sp.Tprincipal
 	dmx    *demux.DemuxSrv
-	conn   net.Conn
 	ssrv   *SessSrv
 	sessid sessp.Tsession
 	sess   *Session
@@ -42,37 +41,29 @@ func (nc *netConn) setSess(sess *Session) {
 	nc.sess = sess
 }
 
+func (nc *netConn) setDmx(dmx *demux.DemuxSrv) {
+	nc.Lock()
+	defer nc.Unlock()
+	nc.dmx = dmx
+}
+
+func (nc *netConn) getDmx() *demux.DemuxSrv {
+	nc.Lock()
+	defer nc.Unlock()
+	return nc.dmx
+}
+
 func (nc *netConn) Close() error {
-	db.DPrintf(db.SESSSRV, "Close %v\n", nc)
-	if err := nc.conn.Close(); err != nil {
-		db.DPrintf(db.ALWAYS, "NetSrvConn.Close: err %v\n", err)
-	}
-	return nc.dmx.Close()
+	return nc.getDmx().Close()
 }
 
 func (nc *netConn) IsClosed() bool {
-	db.DPrintf(db.NETSRV, "IsClosed %v\n", nc.sessid)
-	return nc.dmx.IsClosed()
-}
-
-func (nc *netConn) CloseConnTest() error {
-	if nc.conn != nil {
-		db.DPrintf(db.CRASH, "CloseConnTest: close conn for sid %v\n", nc.sessid)
-		return nc.conn.Close()
-	}
-	return nil
-}
-
-func (nc *netConn) Src() string {
-	return nc.conn.RemoteAddr().String()
-}
-
-func (nc *netConn) Dst() string {
-	return nc.conn.LocalAddr().String()
+	db.DPrintf(db.SESSSRV, "IsClosed %v\n", nc.sessid)
+	return nc.getDmx().IsClosed()
 }
 
 func (nc *netConn) ReportError(err error) {
-	db.DPrintf(db.SESSSRV, "ReportError %v err %v\n", nc.conn, err)
+	db.DPrintf(db.SESSSRV, "ReportError %v err %v\n", nc, err)
 
 	// Disassociate a connection with a session, and let it close gracefully.
 	sid := nc.sessid

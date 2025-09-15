@@ -1,0 +1,28 @@
+syntax = "proto3";
+
+option go_package = "sigmaos/apps/cossim/proto";
+
+service CosSimService {
+  rpc CosSim(CosSimReq) returns (CosSimRep);
+}
+
+message Vector {
+  repeated double vals = 1; // TODO: blob
+}
+
+// Range of vectors for which to compute cosine similarit
+message VecRange {
+  uint64 startID = 1;
+  uint64 endID = 2;
+}
+
+message CosSimReq {
+  Vector inputVec = 1; // TODO: blob
+  repeated VecRange vecRanges = 2; // Ranges of vectors for which to compute cosine simmilarity
+  uint64 iD = 3; // Request ID
+}
+
+message CosSimRep {
+  uint64 iD = 1; // Closest vector ID
+  double val = 2; // Value of maximum cosine similarity
+}

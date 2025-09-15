@@ -52,13 +52,6 @@ func (sess *Session) QueueLen() int64 {
 	return 0
 }
 
-func (sess *Session) GetConn() *netConn {
-	sess.Lock()
-	defer sess.Unlock()
-
-	return sess.conn
-}
-
 // For testing. Invoking CloseConn() will eventually cause
 // sess.Close() to be called by Detach(). Client will retry & re-establish
 // connection.
@@ -70,7 +63,7 @@ func (sess *Session) CloseConn() {
 	}
 	sess.Unlock()
 	if conn != nil {
-		conn.CloseConnTest()
+		conn.Close()
 	}
 }
 
@@ -119,19 +112,6 @@ func (sess *Session) IsClosed() bool {
 	sess.Lock()
 	defer sess.Unlock()
 	return sess.closed
-}
-
-// Change conn associated with this session. This may occur if, for example, a
-// client starts client reconnects quickly.
-func (sess *Session) SetConn(conn *netConn) *serr.Err {
-	sess.Lock()
-	defer sess.Unlock()
-	if sess.closed {
-		return serr.NewErr(serr.TErrClosed, fmt.Sprintf("sess %v", sess.Sid))
-	}
-	db.DPrintf(db.SESSSRV, "%v SetConn new %v\n", sess.Sid, conn)
-	sess.conn = conn
-	return nil
 }
 
 func (sess *Session) UnsetConn(nc *netConn) {

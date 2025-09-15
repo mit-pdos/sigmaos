@@ -4779,6 +4779,7 @@ class SigmaDelegatedRPCReq final :
 
   enum : int {
     kRPCIdxFieldNumber = 1,
+    kUseShmemFieldNumber = 2,
   };
   // uint64 rPCIdx = 1;
   void clear_rpcidx();
@@ -4787,6 +4788,15 @@ class SigmaDelegatedRPCReq final :
   private:
   uint64_t _internal_rpcidx() const;
   void _internal_set_rpcidx(uint64_t value);
+  public:
+
+  // bool useShmem = 2;
+  void clear_useshmem();
+  bool useshmem() const;
+  void set_useshmem(bool value);
+  private:
+  bool _internal_useshmem() const;
+  void _internal_set_useshmem(bool value);
   public:
 
   // @@protoc_insertion_point(class_scope:SigmaDelegatedRPCReq)
@@ -4798,6 +4808,7 @@ class SigmaDelegatedRPCReq final :
   typedef void DestructorSkippable_;
   struct Impl_ {
     uint64_t rpcidx_;
+    bool useshmem_;
     mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   };
   union { Impl_ _impl_; };
@@ -4926,9 +4937,56 @@ class SigmaDelegatedRPCRep final :
   // accessors -------------------------------------------------------
 
   enum : int {
+    kShmOffsFieldNumber = 4,
+    kShmLensFieldNumber = 5,
     kBlobFieldNumber = 1,
     kErrFieldNumber = 2,
+    kUseShmemFieldNumber = 3,
   };
+  // repeated uint64 shmOffs = 4;
+  int shmoffs_size() const;
+  private:
+  int _internal_shmoffs_size() const;
+  public:
+  void clear_shmoffs();
+  private:
+  uint64_t _internal_shmoffs(int index) const;
+  const ::PROTOBUF_NAMESPACE_ID::RepeatedField< uint64_t >&
+      _internal_shmoffs() const;
+  void _internal_add_shmoffs(uint64_t value);
+  ::PROTOBUF_NAMESPACE_ID::RepeatedField< uint64_t >*
+      _internal_mutable_shmoffs();
+  public:
+  uint64_t shmoffs(int index) const;
+  void set_shmoffs(int index, uint64_t value);
+  void add_shmoffs(uint64_t value);
+  const ::PROTOBUF_NAMESPACE_ID::RepeatedField< uint64_t >&
+      shmoffs() const;
+  ::PROTOBUF_NAMESPACE_ID::RepeatedField< uint64_t >*
+      mutable_shmoffs();
+
+  // repeated uint64 shmLens = 5;
+  int shmlens_size() const;
+  private:
+  int _internal_shmlens_size() const;
+  public:
+  void clear_shmlens();
+  private:
+  uint64_t _internal_shmlens(int index) const;
+  const ::PROTOBUF_NAMESPACE_ID::RepeatedField< uint64_t >&
+      _internal_shmlens() const;
+  void _internal_add_shmlens(uint64_t value);
+  ::PROTOBUF_NAMESPACE_ID::RepeatedField< uint64_t >*
+      _internal_mutable_shmlens();
+  public:
+  uint64_t shmlens(int index) const;
+  void set_shmlens(int index, uint64_t value);
+  void add_shmlens(uint64_t value);
+  const ::PROTOBUF_NAMESPACE_ID::RepeatedField< uint64_t >&
+      shmlens() const;
+  ::PROTOBUF_NAMESPACE_ID::RepeatedField< uint64_t >*
+      mutable_shmlens();
+
   // .Blob blob = 1;
   bool has_blob() const;
   private:
@@ -4965,6 +5023,15 @@ class SigmaDelegatedRPCRep final :
       ::Rerror* err);
   ::Rerror* unsafe_arena_release_err();
 
+  // bool useShmem = 3;
+  void clear_useshmem();
+  bool useshmem() const;
+  void set_useshmem(bool value);
+  private:
+  bool _internal_useshmem() const;
+  void _internal_set_useshmem(bool value);
+  public:
+
   // @@protoc_insertion_point(class_scope:SigmaDelegatedRPCRep)
  private:
   class _Internal;
@@ -4973,8 +5040,13 @@ class SigmaDelegatedRPCRep final :
   typedef void InternalArenaConstructable_;
   typedef void DestructorSkippable_;
   struct Impl_ {
+    ::PROTOBUF_NAMESPACE_ID::RepeatedField< uint64_t > shmoffs_;
+    mutable std::atomic<int> _shmoffs_cached_byte_size_;
+    ::PROTOBUF_NAMESPACE_ID::RepeatedField< uint64_t > shmlens_;
+    mutable std::atomic<int> _shmlens_cached_byte_size_;
     ::Blob* blob_;
     ::Rerror* err_;
+    bool useshmem_;
     mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   };
   union { Impl_ _impl_; };
@@ -8594,6 +8666,26 @@ inline void SigmaDelegatedRPCReq::set_rpcidx(uint64_t value) {
   // @@protoc_insertion_point(field_set:SigmaDelegatedRPCReq.rPCIdx)
 }
 
+// bool useShmem = 2;
+inline void SigmaDelegatedRPCReq::clear_useshmem() {
+  _impl_.useshmem_ = false;
+}
+inline bool SigmaDelegatedRPCReq::_internal_useshmem() const {
+  return _impl_.useshmem_;
+}
+inline bool SigmaDelegatedRPCReq::useshmem() const {
+  // @@protoc_insertion_point(field_get:SigmaDelegatedRPCReq.useShmem)
+  return _internal_useshmem();
+}
+inline void SigmaDelegatedRPCReq::_internal_set_useshmem(bool value) {
+  
+  _impl_.useshmem_ = value;
+}
+inline void SigmaDelegatedRPCReq::set_useshmem(bool value) {
+  _internal_set_useshmem(value);
+  // @@protoc_insertion_point(field_set:SigmaDelegatedRPCReq.useShmem)
+}
+
 // -------------------------------------------------------------------
 
 // SigmaDelegatedRPCRep
@@ -8766,6 +8858,120 @@ inline void SigmaDelegatedRPCRep::set_allocated_err(::Rerror* err) {
   }
   _impl_.err_ = err;
   // @@protoc_insertion_point(field_set_allocated:SigmaDelegatedRPCRep.err)
+}
+
+// bool useShmem = 3;
+inline void SigmaDelegatedRPCRep::clear_useshmem() {
+  _impl_.useshmem_ = false;
+}
+inline bool SigmaDelegatedRPCRep::_internal_useshmem() const {
+  return _impl_.useshmem_;
+}
+inline bool SigmaDelegatedRPCRep::useshmem() const {
+  // @@protoc_insertion_point(field_get:SigmaDelegatedRPCRep.useShmem)
+  return _internal_useshmem();
+}
+inline void SigmaDelegatedRPCRep::_internal_set_useshmem(bool value) {
+  
+  _impl_.useshmem_ = value;
+}
+inline void SigmaDelegatedRPCRep::set_useshmem(bool value) {
+  _internal_set_useshmem(value);
+  // @@protoc_insertion_point(field_set:SigmaDelegatedRPCRep.useShmem)
+}
+
+// repeated uint64 shmOffs = 4;
+inline int SigmaDelegatedRPCRep::_internal_shmoffs_size() const {
+  return _impl_.shmoffs_.size();
+}
+inline int SigmaDelegatedRPCRep::shmoffs_size() const {
+  return _internal_shmoffs_size();
+}
+inline void SigmaDelegatedRPCRep::clear_shmoffs() {
+  _impl_.shmoffs_.Clear();
+}
+inline uint64_t SigmaDelegatedRPCRep::_internal_shmoffs(int index) const {
+  return _impl_.shmoffs_.Get(index);
+}
+inline uint64_t SigmaDelegatedRPCRep::shmoffs(int index) const {
+  // @@protoc_insertion_point(field_get:SigmaDelegatedRPCRep.shmOffs)
+  return _internal_shmoffs(index);
+}
+inline void SigmaDelegatedRPCRep::set_shmoffs(int index, uint64_t value) {
+  _impl_.shmoffs_.Set(index, value);
+  // @@protoc_insertion_point(field_set:SigmaDelegatedRPCRep.shmOffs)
+}
+inline void SigmaDelegatedRPCRep::_internal_add_shmoffs(uint64_t value) {
+  _impl_.shmoffs_.Add(value);
+}
+inline void SigmaDelegatedRPCRep::add_shmoffs(uint64_t value) {
+  _internal_add_shmoffs(value);
+  // @@protoc_insertion_point(field_add:SigmaDelegatedRPCRep.shmOffs)
+}
+inline const ::PROTOBUF_NAMESPACE_ID::RepeatedField< uint64_t >&
+SigmaDelegatedRPCRep::_internal_shmoffs() const {
+  return _impl_.shmoffs_;
+}
+inline const ::PROTOBUF_NAMESPACE_ID::RepeatedField< uint64_t >&
+SigmaDelegatedRPCRep::shmoffs() const {
+  // @@protoc_insertion_point(field_list:SigmaDelegatedRPCRep.shmOffs)
+  return _internal_shmoffs();
+}
+inline ::PROTOBUF_NAMESPACE_ID::RepeatedField< uint64_t >*
+SigmaDelegatedRPCRep::_internal_mutable_shmoffs() {
+  return &_impl_.shmoffs_;
+}
+inline ::PROTOBUF_NAMESPACE_ID::RepeatedField< uint64_t >*
+SigmaDelegatedRPCRep::mutable_shmoffs() {
+  // @@protoc_insertion_point(field_mutable_list:SigmaDelegatedRPCRep.shmOffs)
+  return _internal_mutable_shmoffs();
+}
+
+// repeated uint64 shmLens = 5;
+inline int SigmaDelegatedRPCRep::_internal_shmlens_size() const {
+  return _impl_.shmlens_.size();
+}
+inline int SigmaDelegatedRPCRep::shmlens_size() const {
+  return _internal_shmlens_size();
+}
+inline void SigmaDelegatedRPCRep::clear_shmlens() {
+  _impl_.shmlens_.Clear();
+}
+inline uint64_t SigmaDelegatedRPCRep::_internal_shmlens(int index) const {
+  return _impl_.shmlens_.Get(index);
+}
+inline uint64_t SigmaDelegatedRPCRep::shmlens(int index) const {
+  // @@protoc_insertion_point(field_get:SigmaDelegatedRPCRep.shmLens)
+  return _internal_shmlens(index);
+}
+inline void SigmaDelegatedRPCRep::set_shmlens(int index, uint64_t value) {
+  _impl_.shmlens_.Set(index, value);
+  // @@protoc_insertion_point(field_set:SigmaDelegatedRPCRep.shmLens)
+}
+inline void SigmaDelegatedRPCRep::_internal_add_shmlens(uint64_t value) {
+  _impl_.shmlens_.Add(value);
+}
+inline void SigmaDelegatedRPCRep::add_shmlens(uint64_t value) {
+  _internal_add_shmlens(value);
+  // @@protoc_insertion_point(field_add:SigmaDelegatedRPCRep.shmLens)
+}
+inline const ::PROTOBUF_NAMESPACE_ID::RepeatedField< uint64_t >&
+SigmaDelegatedRPCRep::_internal_shmlens() const {
+  return _impl_.shmlens_;
+}
+inline const ::PROTOBUF_NAMESPACE_ID::RepeatedField< uint64_t >&
+SigmaDelegatedRPCRep::shmlens() const {
+  // @@protoc_insertion_point(field_list:SigmaDelegatedRPCRep.shmLens)
+  return _internal_shmlens();
+}
+inline ::PROTOBUF_NAMESPACE_ID::RepeatedField< uint64_t >*
+SigmaDelegatedRPCRep::_internal_mutable_shmlens() {
+  return &_impl_.shmlens_;
+}
+inline ::PROTOBUF_NAMESPACE_ID::RepeatedField< uint64_t >*
+SigmaDelegatedRPCRep::mutable_shmlens() {
+  // @@protoc_insertion_point(field_mutable_list:SigmaDelegatedRPCRep.shmLens)
+  return _internal_mutable_shmlens();
 }
 
 // -------------------------------------------------------------------

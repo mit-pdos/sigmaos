@@ -282,6 +282,8 @@ const (
 	DIALPROXY_ERR              = "DIALPROXY" + ERR
 	DIALPROXYSRV               = "DIALPROXYSRV"
 	DIALPROXYSRV_ERR           = "DIALPROXYSRV" + ERR
+	SHMEM                      = "SHMEM"
+	SHMEM_ERR                  = "SHMEM" + ERR
 )
 
 // Networking

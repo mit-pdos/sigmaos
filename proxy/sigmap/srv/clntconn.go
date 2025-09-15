@@ -442,7 +442,9 @@ func (sca *SPProxySrvAPI) WaitEvict(ctx fs.CtxI, req scproto.SigmaNullReq, rep *
 // ========== Delegated RPCs ==========
 func (sca *SPProxySrvAPI) GetDelegatedRPCReply(ctx fs.CtxI, req scproto.SigmaDelegatedRPCReq, rep *scproto.SigmaDelegatedRPCRep) error {
 	db.DPrintf(db.SPPROXYSRV, "%v: GetDelegatedRPCReply %v", sca.sc.ClntId(), req)
+	start := time.Now()
 	iov, err := sca.spps.psm.GetReply(sca.sc.ProcEnv().GetPID(), req.RPCIdx)
+	perf.LogSpawnLatency("SPProxySrv.GetDelegatedRPCReply(%v) GetReply wait", sca.sc.ProcEnv().GetPID(), sca.sc.ProcEnv().GetSpawnTime(), start, req.RPCIdx)
 	rep.Blob = &rpcproto.Blob{
 		Iov: [][]byte(iov),
 	}
@@ -455,6 +457,31 @@ func (sca *SPProxySrvAPI) GetDelegatedRPCReply(ctx fs.CtxI, req scproto.SigmaDel
 		}
 	}
 	db.DPrintf(db.SPPROXYSRV, "%v: GetDelegatedRPCReply done %v lens %v", sca.sc.ClntId(), req, lens)
+	// TODO: use an allocator to make parallel/multiple GetDelegatedRPCReply
+	// operations safe
+	// TODO: check all the data fits
+	// TODO: don't send blob if using shmem
+	if req.GetUseShmem() && sca.sc.ProcEnv().GetUseShmem() {
+		b, err := sca.spps.psm.GetShmemBuf(sca.sc.ProcEnv().GetPID())
+		if err != nil {
+			db.DFatalf("Err get Shmem Buf: %v", err)
+		}
+		off := 0
+		for _, i := range iov {
+			// Sanity check
+			if len(i)+off >= len(b) {
+				db.DFatalf("Err shmem delegated RPC reply too long: %v >= %v", len(i)+off, len(b))
+			}
+			// Copy to shmem region
+			copy(b[off:], i)
+			// Record offset
+			rep.ShmOffs = append(rep.ShmOffs, uint64(off))
+			// Record length
+			rep.ShmLens = append(rep.ShmLens, uint64(len(i)))
+			off += len(i)
+		}
+		rep.UseShmem = true
+	}
 	return nil
 }
 

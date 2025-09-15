@@ -144,11 +144,15 @@ message SigmaExitedReq {
 
 message SigmaDelegatedRPCReq {
         uint64 rPCIdx = 1;
+        bool useShmem = 2;
 }
 
 message SigmaDelegatedRPCRep {
         Blob blob = 1;
         Rerror err = 2;
+        bool useShmem = 3;
+        repeated uint64 shmOffs = 4;
+        repeated uint64 shmLens = 5;
 }
 
 message SigmaMultiDelegatedRPCReq {

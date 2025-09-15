@@ -13,11 +13,16 @@ import (
 	wasmrt "sigmaos/proxy/wasm/rpc/wasmer"
 	rpcchan "sigmaos/rpc/clnt/channel"
 	sessp "sigmaos/session/proto"
+	"sigmaos/shmem"
 	"sigmaos/sigmaclnt"
 	"sigmaos/sigmaclnt/fidclnt"
 	"sigmaos/sigmaclnt/procclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/util/perf"
+)
+
+const (
+	SHMEM_SIZE = 10 * sp.MBYTE
 )
 
 // Manages sigmaclnts on behalf of procs
@@ -62,6 +67,12 @@ func (psm *ProcStateMgr) DelProcState(p *proc.Proc) {
 	psm.mu.Lock()
 	defer psm.mu.Unlock()
 
+	ps, ok := psm.ps[p.GetPid()]
+	if ok {
+		if err := ps.Destroy(); err != nil {
+			db.DFatalf("Err destroy proc state: %v", err)
+		}
+	}
 	delete(psm.ps, p.GetPid())
 }
 
@@ -106,6 +117,18 @@ func (psm *ProcStateMgr) GetReply(pid sp.Tpid, rpcIdx uint64) (sessp.IoVec, erro
 	return ps.rpcReps.GetReply(rpcIdx)
 }
 
+func (psm *ProcStateMgr) GetShmemBuf(pid sp.Tpid) ([]byte, error) {
+	db.DPrintf(db.SPPROXYSRV, "[%v] DelegatedRPC.GetShmemBuf", pid)
+	defer db.DPrintf(db.SPPROXYSRV, "[%v] DelegatedRPC.GetShmemBuf done", pid)
+
+	ps, ok := psm.getProcState(pid)
+	if !ok {
+		db.DPrintf(db.SPPROXYSRV_ERR, "Try to get shmem buf for unknown proc: %v", pid)
+		return nil, fmt.Errorf("Try to get shmem buf for unknown proc: %v", pid)
+	}
+	return ps.shm.GetBuf(), nil
+}
+
 func (psm *ProcStateMgr) GetRPCChannel(sc *sigmaclnt.SigmaClnt, pid sp.Tpid, rpcIdx uint64, pn string) (rpcchan.RPCChannel, error) {
 	ps, ok := psm.getProcState(pid)
 	if !ok {
@@ -125,6 +148,7 @@ type procState struct {
 	wrt     *wasmrt.WasmerRuntime
 	sc      *sigmaclnt.SigmaClnt
 	epcc    *epcacheclnt.EndpointCacheClnt
+	shm     *shmem.Segment
 	err     error // Creation result
 }
 
@@ -136,6 +160,15 @@ func newProcState(spps *SPProxySrv, pe *proc.ProcEnv, p *proc.Proc) *procState {
 		done:    false,
 	}
 	ps.cond = sync.NewCond(&ps.mu)
+	if pe.GetUseShmem() {
+		var err error
+		start := time.Now()
+		ps.shm, err = shmem.NewSegment(pe.GetPID().String(), SHMEM_SIZE)
+		if err != nil {
+			db.DFatalf("Err shmem NewSegment: %v", err)
+		}
+		perf.LogSpawnLatency("SPProxySrv.shmem.NewSegment", ps.pe.GetPID(), ps.pe.GetSpawnTime(), start)
+	}
 	go ps.createSigmaClnt(spps)
 	return ps
 }
@@ -161,6 +194,13 @@ func (ps *procState) setSigmaClnt(sc *sigmaclnt.SigmaClnt, epcc *epcacheclnt.End
 	ps.done = true
 
 	ps.cond.Broadcast()
+}
+
+func (ps *procState) Destroy() error {
+	if ps.shm != nil {
+		return ps.shm.Destroy()
+	}
+	return nil
 }
 
 func (ps *procState) createSigmaClnt(spps *SPProxySrv) {

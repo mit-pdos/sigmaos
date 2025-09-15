@@ -425,6 +425,14 @@ func (p *Proc) GetRunBootScript() bool {
 	return p.ProcEnvProto.GetRunBootScript()
 }
 
+func (p *Proc) SetUseShmem(use bool) {
+	p.ProcEnvProto.SetUseShmem(use)
+}
+
+func (p *Proc) GetUseShmem() bool {
+	return p.ProcEnvProto.GetUseShmem()
+}
+
 // Return Env map as a []string
 func (p *Proc) GetEnv() []string {
 	env := []string{}

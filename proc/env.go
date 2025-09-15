@@ -268,6 +268,10 @@ func (pe *ProcEnvProto) GetRunBootScript() bool {
 	return pe.RunBootScriptFlag
 }
 
+func (pe *ProcEnvProto) SetUseShmem(use bool) {
+	pe.UseShmem = use
+}
+
 func (pe *ProcEnvProto) SetSigmaPath(buildTag string) {
 	if buildTag == sp.LOCAL_BUILD {
 		pe.SigmaPath = append(pe.SigmaPath, filepath.Join(sp.UX, sp.LOCAL, "bin/user/common"))

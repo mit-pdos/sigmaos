@@ -101,6 +101,7 @@ PROTOBUF_CONSTEXPR ProcEnvProto::ProcEnvProto(
   , /*decltype(_impl_.usespproxy_)*/false
   , /*decltype(_impl_.usedialproxy_)*/false
   , /*decltype(_impl_.runbootscriptflag_)*/false
+  , /*decltype(_impl_.useshmem_)*/false
   , /*decltype(_impl_.usespproxyprocclnt_)*/false
   , /*decltype(_impl_._cached_size_)*/{}} {}
 struct ProcEnvProtoDefaultTypeInternal {
@@ -223,6 +224,7 @@ const uint32_t TableStruct_proc_2fproc_2eproto::offsets[] PROTOBUF_SECTION_VARIA
   PROTOBUF_FIELD_OFFSET(::ProcEnvProto, _impl_.cachedendpoints_),
   PROTOBUF_FIELD_OFFSET(::ProcEnvProto, _impl_.valgrind_),
   PROTOBUF_FIELD_OFFSET(::ProcEnvProto, _impl_.runbootscriptflag_),
+  PROTOBUF_FIELD_OFFSET(::ProcEnvProto, _impl_.useshmem_),
   PROTOBUF_FIELD_OFFSET(::ProcEnvProto, _impl_.usespproxyprocclnt_),
   PROTOBUF_FIELD_OFFSET(::ProcEnvProto, _impl_.debugprocs_),
   PROTOBUF_FIELD_OFFSET(::ProcProto_EnvEntry_DoNotUse, _has_bits_),
@@ -256,8 +258,8 @@ static const ::_pbi::MigrationSchema schemas[] PROTOBUF_SECTION_VARIABLE(protode
   { 20, 28, -1, sizeof(::ProcEnvProto_SecretsMapEntry_DoNotUse)},
   { 30, 38, -1, sizeof(::ProcEnvProto_CachedEndpointsEntry_DoNotUse)},
   { 40, -1, -1, sizeof(::ProcEnvProto)},
-  { 77, 85, -1, sizeof(::ProcProto_EnvEntry_DoNotUse)},
-  { 87, -1, -1, sizeof(::ProcProto)},
+  { 78, 86, -1, sizeof(::ProcProto_EnvEntry_DoNotUse)},
+  { 88, -1, -1, sizeof(::ProcProto)},
 };
 
 static const ::_pb::Message* const file_default_instances[] = {
@@ -275,7 +277,7 @@ const char descriptor_table_protodef_proc_2fproc_2eproto[] PROTOBUF_SECTION_VARI
   "tamp.proto\032\023sigmap/sigmap.proto\032\023rpc/pro"
   "to/rpc.proto\"L\n\tProcSeqno\022\r\n\005epoch\030\001 \001(\004"
   "\022\r\n\005seqno\030\002 \001(\004\022\017\n\007procqID\030\003 \001(\t\022\020\n\010mSch"
-  "edID\030\004 \001(\t\"\326\007\n\014ProcEnvProto\022\016\n\006pidStr\030\001 "
+  "edID\030\004 \001(\t\"\350\007\n\014ProcEnvProto\022\016\n\006pidStr\030\001 "
   "\001(\t\022\017\n\007program\030\002 \001(\t\022\020\n\010realmStr\030\003 \001(\t\022\036"
   "\n\tprincipal\030\004 \001(\0132\013.Tprincipal\022\017\n\007procDi"
   "r\030\005 \001(\t\022\021\n\tparentDir\030\006 \001(\t\0227\n\retcdEndpoi"
@@ -293,20 +295,20 @@ const char descriptor_table_protodef_proc_2fproc_2eproto[] PROTOBUF_SECTION_VARI
   "\t\022\017\n\007version\030\031 \001(\t\022\014\n\004fail\030\032 \001(\t\022;\n\017cach"
   "edEndpoints\030\033 \003(\0132\".ProcEnvProto.CachedE"
   "ndpointsEntry\022\020\n\010valgrind\030\034 \001(\t\022\031\n\021runBo"
-  "otScriptFlag\030\035 \001(\010\022\032\n\022useSPProxyProcClnt"
-  "\030\036 \001(\010\022\022\n\ndebugProcs\030\037 \001(\t\032E\n\022EtcdEndpoi"
-  "ntsEntry\022\013\n\003key\030\001 \001(\t\022\036\n\005value\030\002 \001(\0132\017.T"
-  "endpointProto:\0028\001\032\?\n\017SecretsMapEntry\022\013\n\003"
-  "key\030\001 \001(\t\022\033\n\005value\030\002 \001(\0132\014.SecretProto:\002"
-  "8\001\032G\n\024CachedEndpointsEntry\022\013\n\003key\030\001 \001(\t\022"
-  "\036\n\005value\030\002 \001(\0132\017.TendpointProto:\0028\001\"\354\001\n\t"
-  "ProcProto\022#\n\014procEnvProto\030\001 \001(\0132\r.ProcEn"
-  "vProto\022\014\n\004args\030\002 \003(\t\022 \n\003env\030\003 \003(\0132\023.Proc"
-  "Proto.EnvEntry\022\023\n\004blob\030\004 \001(\0132\005.Blob\022\027\n\017b"
-  "ootScriptInput\030\005 \001(\014\022\017\n\007typeInt\030\006 \001(\r\022\017\n"
-  "\007mcpuInt\030\007 \001(\r\022\016\n\006memInt\030\010 \001(\r\032*\n\010EnvEnt"
-  "ry\022\013\n\003key\030\001 \001(\t\022\r\n\005value\030\002 \001(\t:\0028\001B\016Z\014si"
-  "gmaos/procb\006proto3"
+  "otScriptFlag\030\035 \001(\010\022\020\n\010useShmem\030\036 \001(\010\022\032\n\022"
+  "useSPProxyProcClnt\030\037 \001(\010\022\022\n\ndebugProcs\030 "
+  " \001(\t\032E\n\022EtcdEndpointsEntry\022\013\n\003key\030\001 \001(\t\022"
+  "\036\n\005value\030\002 \001(\0132\017.TendpointProto:\0028\001\032\?\n\017S"
+  "ecretsMapEntry\022\013\n\003key\030\001 \001(\t\022\033\n\005value\030\002 \001"
+  "(\0132\014.SecretProto:\0028\001\032G\n\024CachedEndpointsE"
+  "ntry\022\013\n\003key\030\001 \001(\t\022\036\n\005value\030\002 \001(\0132\017.Tendp"
+  "ointProto:\0028\001\"\354\001\n\tProcProto\022#\n\014procEnvPr"
+  "oto\030\001 \001(\0132\r.ProcEnvProto\022\014\n\004args\030\002 \003(\t\022 "
+  "\n\003env\030\003 \003(\0132\023.ProcProto.EnvEntry\022\023\n\004blob"
+  "\030\004 \001(\0132\005.Blob\022\027\n\017bootScriptInput\030\005 \001(\014\022\017"
+  "\n\007typeInt\030\006 \001(\r\022\017\n\007mcpuInt\030\007 \001(\r\022\016\n\006memI"
+  "nt\030\010 \001(\r\032*\n\010EnvEntry\022\013\n\003key\030\001 \001(\t\022\r\n\005val"
+  "ue\030\002 \001(\t:\0028\001B\016Z\014sigmaos/procb\006proto3"
   ;
 static const ::_pbi::DescriptorTable* const descriptor_table_proc_2fproc_2eproto_deps[3] = {
   &::descriptor_table_google_2fprotobuf_2ftimestamp_2eproto,
@@ -315,7 +317,7 @@ static const ::_pbi::DescriptorTable* const descriptor_table_proc_2fproc_2eproto
 };
 static ::_pbi::once_flag descriptor_table_proc_2fproc_2eproto_once;
 const ::_pbi::DescriptorTable descriptor_table_proc_2fproc_2eproto = {
-    false, false, 1418, descriptor_table_protodef_proc_2fproc_2eproto,
+    false, false, 1436, descriptor_table_protodef_proc_2fproc_2eproto,
     "proc/proc.proto",
     &descriptor_table_proc_2fproc_2eproto_once, descriptor_table_proc_2fproc_2eproto_deps, 3, 7,
     schemas, file_default_instances, TableStruct_proc_2fproc_2eproto::offsets,
@@ -764,6 +766,7 @@ ProcEnvProto::ProcEnvProto(const ProcEnvProto& from)
     , decltype(_impl_.usespproxy_){}
     , decltype(_impl_.usedialproxy_){}
     , decltype(_impl_.runbootscriptflag_){}
+    , decltype(_impl_.useshmem_){}
     , decltype(_impl_.usespproxyprocclnt_){}
     , /*decltype(_impl_._cached_size_)*/{}};
 
@@ -962,6 +965,7 @@ inline void ProcEnvProto::SharedCtor(
     , decltype(_impl_.usespproxy_){false}
     , decltype(_impl_.usedialproxy_){false}
     , decltype(_impl_.runbootscriptflag_){false}
+    , decltype(_impl_.useshmem_){false}
     , decltype(_impl_.usespproxyprocclnt_){false}
     , /*decltype(_impl_._cached_size_)*/{}
   };
@@ -1435,17 +1439,25 @@ const char* ProcEnvProto::_InternalParse(const char* ptr, ::_pbi::ParseContext* 
         } else
           goto handle_unusual;
         continue;
-      // bool useSPProxyProcClnt = 30;
+      // bool useShmem = 30;
       case 30:
         if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 240)) {
+          _impl_.useshmem_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
+          CHK_(ptr);
+        } else
+          goto handle_unusual;
+        continue;
+      // bool useSPProxyProcClnt = 31;
+      case 31:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 248)) {
           _impl_.usespproxyprocclnt_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
           CHK_(ptr);
         } else
           goto handle_unusual;
         continue;
-      // string debugProcs = 31;
-      case 31:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 250)) {
+      // string debugProcs = 32;
+      case 32:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 2)) {
           auto str = _internal_mutable_debugprocs();
           ptr = ::_pbi::InlineGreedyStringParser(str, ptr, ctx);
           CHK_(ptr);
@@ -1794,20 +1806,26 @@ uint8_t* ProcEnvProto::_InternalSerialize(
     target = ::_pbi::WireFormatLite::WriteBoolToArray(29, this->_internal_runbootscriptflag(), target);
   }
 
-  // bool useSPProxyProcClnt = 30;
-  if (this->_internal_usespproxyprocclnt() != 0) {
+  // bool useShmem = 30;
+  if (this->_internal_useshmem() != 0) {
     target = stream->EnsureSpace(target);
-    target = ::_pbi::WireFormatLite::WriteBoolToArray(30, this->_internal_usespproxyprocclnt(), target);
+    target = ::_pbi::WireFormatLite::WriteBoolToArray(30, this->_internal_useshmem(), target);
   }
 
-  // string debugProcs = 31;
+  // bool useSPProxyProcClnt = 31;
+  if (this->_internal_usespproxyprocclnt() != 0) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteBoolToArray(31, this->_internal_usespproxyprocclnt(), target);
+  }
+
+  // string debugProcs = 32;
   if (!this->_internal_debugprocs().empty()) {
     ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::VerifyUtf8String(
       this->_internal_debugprocs().data(), static_cast<int>(this->_internal_debugprocs().length()),
       ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::SERIALIZE,
       "ProcEnvProto.debugProcs");
     target = stream->WriteStringMaybeAliased(
-        31, this->_internal_debugprocs(), target);
+        32, this->_internal_debugprocs(), target);
   }
 
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
@@ -1988,7 +2006,7 @@ size_t ProcEnvProto::ByteSizeLong() const {
         this->_internal_valgrind());
   }
 
-  // string debugProcs = 31;
+  // string debugProcs = 32;
   if (!this->_internal_debugprocs().empty()) {
     total_size += 2 +
       ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
@@ -2036,7 +2054,12 @@ size_t ProcEnvProto::ByteSizeLong() const {
     total_size += 2 + 1;
   }
 
-  // bool useSPProxyProcClnt = 30;
+  // bool useShmem = 30;
+  if (this->_internal_useshmem() != 0) {
+    total_size += 2 + 1;
+  }
+
+  // bool useSPProxyProcClnt = 31;
   if (this->_internal_usespproxyprocclnt() != 0) {
     total_size += 2 + 1;
   }
@@ -2140,6 +2163,9 @@ void ProcEnvProto::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::P
   }
   if (from._internal_runbootscriptflag() != 0) {
     _this->_internal_set_runbootscriptflag(from._internal_runbootscriptflag());
+  }
+  if (from._internal_useshmem() != 0) {
+    _this->_internal_set_useshmem(from._internal_useshmem());
   }
   if (from._internal_usespproxyprocclnt() != 0) {
     _this->_internal_set_usespproxyprocclnt(from._internal_usespproxyprocclnt());

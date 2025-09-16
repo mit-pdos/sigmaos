@@ -64,6 +64,7 @@ std::expected<int, sigmaos::serr::Error> Clnt::DelegatedRPC(
   // Create the delegated request
   SigmaDelegatedRPCReq req;
   req.set_rpcidx(rpc_idx);
+  req.set_useshmem(_shmem != nullptr);
   auto rep = std::make_shared<SigmaDelegatedRPCRep>();
   Blob blob;
   auto iov = blob.mutable_iov();
@@ -90,6 +91,26 @@ std::expected<int, sigmaos::serr::Error> Clnt::DelegatedRPC(
     auto res = rpc(true, "SPProxySrvAPI.GetDelegatedRPCReply", req, *rep);
     if (!res.has_value()) {
       return res;
+    }
+  }
+  // If using shared memory
+  if (_shmem) {
+    if (rep->useshmem()) {
+      log(RPCCLNT, "DelegatedRPC({}) using shared memory", (int)rpc_idx);
+      log(ALWAYS, "DelegatedRPC({}) using shared memory", (int)rpc_idx);
+      // TODO: don't just do a sanity check
+      for (int i = 0; i < rep->shmoffs().size(); i++) {
+        uint64_t off = rep->shmoffs(i);
+        uint64_t len = rep->shmlens(i);
+        // Sanity check: compare contents of shared memory to those of IOVs
+        std::string shm_data((char *)_shmem->GetBuf() + off, len);
+        if (out_iov->GetBuffer(i)->Size() > 0) {
+        if (shm_data.compare(*(out_iov->GetBuffer(i)->Get())) != 0) {
+          fatal("Error: shmem contents don't match returned IOV");
+        }
+        }
+      }
+      log(ALWAYS, "DelegatedRPC({}) using shared memory check successful", (int)rpc_idx);
     }
   }
   // Process the delegated, wrapped RPC reply

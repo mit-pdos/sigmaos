@@ -42,7 +42,6 @@ Clnt::get_clnt(int srv_id, bool initialize) {
       // Mount the cache server
       log(CACHECLNT, "Mount cached EP for cache server {}: {}", srv_id,
           ep->ShortDebugString());
-      //
       {
         auto res = _sp_clnt->MountTree(ep, sigmaos::rpc::RPC,
                                        srv_pn + "/" + sigmaos::rpc::RPC);
@@ -378,11 +377,21 @@ Clnt::DelegatedMultiDumpShard(uint64_t rpc_idx, std::vector<uint32_t> &shards) {
   MultiShardRep rep;
   Blob blob;
   auto iov = blob.mutable_iov();
-  // Add a buffer to hold the output
-  std::vector<std::shared_ptr<std::string>> shard_data;
-  for (int i = 0; i < shards.size(); i++) {
-    shard_data.push_back(std::make_shared<std::string>());
-    iov->AddAllocated(shard_data[i].get());
+  std::shared_ptr<std::vector<std::shared_ptr<std::string_view>>> shard_views;
+  std::vector<std::shared_ptr<std::string>> shard_bufs;
+  if (_sp_clnt->ProcEnv()->GetUseShmem()) {
+    shard_views =
+        std::make_shared<std::vector<std::shared_ptr<std::string_view>>>();
+    // Add buffer views to hold the output
+    for (int i = 0; i < shards.size(); i++) {
+      shard_views->push_back(std::make_shared<std::string_view>());
+    }
+  } else {
+    // Add buffers to hold the output
+    for (int i = 0; i < shards.size(); i++) {
+      shard_bufs.push_back(std::make_shared<std::string>());
+      iov->AddAllocated(shard_bufs[i].get());
+    }
   }
   rep.set_allocated_blob(&blob);
   auto shard_map = std::make_shared<std::map<
@@ -390,7 +399,7 @@ Clnt::DelegatedMultiDumpShard(uint64_t rpc_idx, std::vector<uint32_t> &shards) {
       std::shared_ptr<std::map<
           std::string, std::shared_ptr<sigmaos::apps::cache::Value>>>>>();
   {
-    auto res = rpcc->DelegatedRPC(rpc_idx, rep);
+    auto res = rpcc->DelegatedRPC(rpc_idx, rep, shard_views);
     if (!res.has_value()) {
       log(CACHECLNT_ERR, "Error DelegatedRPC: {}", res.error().String());
       return std::unexpected(res.error());
@@ -399,26 +408,40 @@ Clnt::DelegatedMultiDumpShard(uint64_t rpc_idx, std::vector<uint32_t> &shards) {
       (*shard_map)[shard] = std::make_shared<std::map<
           std::string, std::shared_ptr<sigmaos::apps::cache::Value>>>();
     }
+    if (!_sp_clnt->ProcEnv()->GetUseShmem()) {
+      shard_views =
+          std::make_shared<std::vector<std::shared_ptr<std::string_view>>>();
+      for (int i = 0; i < shard_bufs.size(); i++) {
+        shard_views->push_back(std::make_shared<std::string_view>(
+            shard_bufs.at(i)->data(), shard_bufs.at(i)->size()));
+      }
+    }
     auto start = GetCurrentTime();
     int shard_idx = 0;
     int shard_off = 0;
-    std::shared_ptr<std::string> shard_buf = shard_data[shard_idx];
+    auto shard_view = shard_views->at(0);
     for (int i = 0; i < rep.keys().size(); i++) {
       auto k = rep.keys(i);
-      auto v = std::make_shared<sigmaos::apps::cache::Value>(
-          shard_buf, shard_off, rep.lens(i));
+      std::shared_ptr<sigmaos::apps::cache::Value> v = nullptr;
+      if (_sp_clnt->ProcEnv()->GetUseShmem()) {
+        v = std::make_shared<sigmaos::apps::cache::Value>(shard_view, shard_off,
+                                                          rep.lens(i));
+      } else {
+        v = std::make_shared<sigmaos::apps::cache::Value>(
+            shard_bufs.at(shard_idx), shard_off, rep.lens(i));
+      }
       auto shard = key2shard(k);
       (*((*shard_map)[shard]))[k] = v;
       shard_off += rep.lens(i);
-      if (shard_off >= shard_buf->size()) {
+      if (shard_off >= shard_view->size()) {
         shard_off = 0;
         shard_idx++;
-        while (shard_idx < shard_data.size() &&
-               shard_data[shard_idx]->size() == 0) {
+        while (shard_idx < shard_views->size() &&
+               shard_views->at(shard_idx)->size() == 0) {
           shard_idx++;
         }
-        if (shard_idx < shard_data.size()) {
-          shard_buf = shard_data[shard_idx];
+        if (shard_idx < shard_views->size()) {
+          shard_view = shard_views->at(shard_idx);
         }
       }
     }

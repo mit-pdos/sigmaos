@@ -11,6 +11,7 @@
 #include <rpc/rpc.h>
 #include <rpc/spchannel/spchannel.h>
 #include <serr/serr.h>
+#include <shmem/shmem.h>
 #include <util/log/log.h>
 #include <util/tracing/proto/tracing.pb.h>
 

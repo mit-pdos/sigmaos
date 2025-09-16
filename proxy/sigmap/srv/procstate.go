@@ -22,7 +22,7 @@ import (
 )
 
 const (
-	SHMEM_SIZE = 10 * sp.MBYTE
+	SHMEM_SIZE = 40 * sp.MBYTE
 )
 
 // Manages sigmaclnts on behalf of procs

@@ -7,9 +7,9 @@
 #include <rpc/delegation/cache.h>
 #include <rpc/proto/rpc.pb.h>
 #include <serr/serr.h>
-#include <util/log/log.h>
-#include <shmem/shmem.h>
 #include <shmem/segment.h>
+#include <shmem/shmem.h>
+#include <util/log/log.h>
 
 #include <atomic>
 #include <expected>
@@ -23,10 +23,24 @@ const std::string RPCCLNT_ERR = "RPCCLNT" + sigmaos::util::log::ERR;
 class Clnt {
  public:
   Clnt(std::shared_ptr<Channel> chan)
-      : _seqno(1), _chan(chan), _delegate_chan(nullptr), _cache(), _shmem(nullptr) {}
+      : _seqno(1),
+        _chan(chan),
+        _delegate_chan(nullptr),
+        _cache(),
+        _shmem(nullptr) {}
   Clnt(std::shared_ptr<Channel> chan, std::shared_ptr<Channel> delegate_chan)
-      : _seqno(1), _chan(chan), _delegate_chan(delegate_chan), _cache(), _shmem(nullptr) {}
-  Clnt(std::shared_ptr<Channel> chan, std::shared_ptr<Channel> delegate_chan, std::shared_ptr<sigmaos::shmem::Segment> shmem) : _seqno(1), _chan(chan), _delegate_chan(delegate_chan), _cache(), _shmem(shmem) {}
+      : _seqno(1),
+        _chan(chan),
+        _delegate_chan(delegate_chan),
+        _cache(),
+        _shmem(nullptr) {}
+  Clnt(std::shared_ptr<Channel> chan, std::shared_ptr<Channel> delegate_chan,
+       std::shared_ptr<sigmaos::shmem::Segment> shmem)
+      : _seqno(1),
+        _chan(chan),
+        _delegate_chan(delegate_chan),
+        _cache(),
+        _shmem(shmem) {}
   ~Clnt() { Close(); }
 
   std::shared_ptr<Channel> GetChannel() { return _chan; }
@@ -34,7 +48,9 @@ class Clnt {
                                                google::protobuf::Message &req,
                                                google::protobuf::Message &rep);
   std::expected<int, sigmaos::serr::Error> DelegatedRPC(
-      uint64_t rpc_idx, google::protobuf::Message &delegated_rep);
+      uint64_t rpc_idx, google::protobuf::Message &delegated_rep,
+      std::shared_ptr<std::vector<std::shared_ptr<std::string_view>>> views =
+          nullptr);
   std::expected<int, sigmaos::serr::Error> BatchFetchDelegatedRPCs(
       std::vector<uint64_t> &rpc_idxs, int n_iov);
   void Close() {

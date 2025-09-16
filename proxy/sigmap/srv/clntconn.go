@@ -446,7 +446,10 @@ func (sca *SPProxySrvAPI) GetDelegatedRPCReply(ctx fs.CtxI, req scproto.SigmaDel
 	iov, err := sca.spps.psm.GetReply(sca.sc.ProcEnv().GetPID(), req.RPCIdx)
 	perf.LogSpawnLatency("SPProxySrv.GetDelegatedRPCReply(%v) GetReply wait", sca.sc.ProcEnv().GetPID(), sca.sc.ProcEnv().GetSpawnTime(), start, req.RPCIdx)
 	rep.Blob = &rpcproto.Blob{
-		Iov: [][]byte(iov),
+		Iov: iov[:2],
+	}
+	if !req.GetUseShmem() {
+		rep.Blob.Iov = [][]byte(iov)
 	}
 	rep.Err = sca.setErr(err)
 	lens := make([]int, len(iov)+1)

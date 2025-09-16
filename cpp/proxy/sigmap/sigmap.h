@@ -9,6 +9,8 @@
 #include <proc/status.h>
 #include <rpc/clnt.h>
 #include <serr/serr.h>
+#include <shmem/segment.h>
+#include <shmem/shmem.h>
 #include <sigmap/const.h>
 #include <sigmap/named.h>
 #include <sigmap/types.h>
@@ -17,8 +19,6 @@
 #include <unistd.h>
 #include <util/log/log.h>
 #include <util/perf/perf.h>
-#include <shmem/shmem.h>
-#include <shmem/segment.h>
 
 #include <expected>
 #include <iostream>
@@ -56,7 +56,8 @@ class Clnt {
                     "Create rpcclnt");
     if (_env->GetUseShmem()) {
       start = GetCurrentTime();
-      _shmem = std::make_shared<sigmaos::shmem::Segment>(_env->GetPID(), sigmaos::shmem::SEGMENT_SZ);
+      _shmem = std::make_shared<sigmaos::shmem::Segment>(
+          _env->GetPID(), sigmaos::shmem::SEGMENT_SZ);
       auto res = _shmem->Init();
       if (!res.has_value()) {
         fatal("Err init shmem: {}", res.error().String());

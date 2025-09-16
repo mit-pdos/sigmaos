@@ -4,11 +4,20 @@ namespace sigmaos {
 namespace apps::cache {
 
 std::shared_ptr<std::string> Value::Get() {
-  // If constructed from a shared buffer, but this is the first get, copy the
-  // data into a unique buffer, and release the underlying shared buffer.
-  if (_shared_buf && !_unique_buf) {
-    _unique_buf = std::make_shared<std::string>(*_shared_buf, _off, _len);
-    _shared_buf = nullptr;
+  // If constructed from an underlying buffer whose memory isn't owned by the
+  // C++ allocator (e.g., a shared memory segment), but this is the first get,
+  // copy the data into a unique buffer, and release the underlying shared
+  // buffer.
+  if (_view_buf && !_unique_buf) {
+    _unique_buf = std::make_shared<std::string>(*_view_buf, _off, _len);
+    _view_buf = nullptr;
+  } else {
+    // If constructed from a shared buffer, but this is the first get, copy the
+    // data into a unique buffer, and release the underlying shared buffer.
+    if (_shared_buf && !_unique_buf) {
+      _unique_buf = std::make_shared<std::string>(*_shared_buf, _off, _len);
+      _shared_buf = nullptr;
+    }
   }
   return _unique_buf;
 }

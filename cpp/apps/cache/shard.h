@@ -28,9 +28,23 @@ namespace apps::cache {
 class Value {
  public:
   Value(std::shared_ptr<std::string> unique_buf)
-      : _off(0), _len(unique_buf->size()), _unique_buf(unique_buf) {}
+      : _off(0),
+        _len(unique_buf->size()),
+        _view_buf(nullptr),
+        _unique_buf(unique_buf),
+        _shared_buf(nullptr) {}
+  Value(std::shared_ptr<std::string_view> view_buf, int off, int len)
+      : _off(off),
+        _len(len),
+        _view_buf(view_buf),
+        _unique_buf(nullptr),
+        _shared_buf(nullptr) {}
   Value(std::shared_ptr<std::string> shared_buf, int off, int len)
-      : _off(off), _len(len), _shared_buf(shared_buf) {}
+      : _off(off),
+        _len(len),
+        _view_buf(nullptr),
+        _unique_buf(nullptr),
+        _shared_buf(shared_buf) {}
   ~Value() {}
 
   std::shared_ptr<std::string> Get();
@@ -38,6 +52,9 @@ class Value {
  private:
   int _off;
   int _len;
+  std::shared_ptr<std::string_view>
+      _view_buf;  // If constructed from a buffer whose memory is not owned by
+                  // the C++ allocator (e.g., the buffer lives in shared memory)
   std::shared_ptr<std::string>
       _unique_buf;  // If constructed from a unique buffer (e.g., a Put), or
                     // copied from a shared buffer, store the unique buffer here

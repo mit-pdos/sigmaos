@@ -73,6 +73,8 @@ std::expected<int, sigmaos::serr::Error> Clnt::DelegatedRPC(
   }
   rep->set_allocated_blob(&blob);
   bool reply_cached = false;
+  // TODO: remove TS
+  auto start = GetCurrentTime();
   {
     auto res = _cache.Get(rpc_idx, out_iov);
     if (!res.has_value()) {
@@ -91,17 +93,15 @@ std::expected<int, sigmaos::serr::Error> Clnt::DelegatedRPC(
     }
   }
   // Process the delegated, wrapped RPC reply
+  start = GetCurrentTime();
   auto res = process_wrapped_reply(rpc_idx, out_iov, delegated_rep);
+  log(ALWAYS, "DelegatedRPC({}) process wrapped reply latency {}ms",
+      (int)rpc_idx, LatencyMS(start));
   log(RPCCLNT, "DelegatedRPC done {}", (int)rpc_idx);
   {
     // Release ownership of blob (which is a local stack variable declared
     // above)
     auto blob = rep->release_blob();
-//    // Release ownership of buffers, which are owned by out_iov above
-//    int n_buf = blob->iov().size();
-//    for (int i = 0; i < n_buf; i++) {
-//      auto _ = blob->mutable_iov()->ReleaseLast();
-//    }
   }
   return res;
 }

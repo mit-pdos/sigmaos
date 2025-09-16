@@ -8,6 +8,8 @@
 #include <rpc/proto/rpc.pb.h>
 #include <serr/serr.h>
 #include <util/log/log.h>
+#include <shmem/shmem.h>
+#include <shmem/segment.h>
 
 #include <atomic>
 #include <expected>
@@ -21,9 +23,10 @@ const std::string RPCCLNT_ERR = "RPCCLNT" + sigmaos::util::log::ERR;
 class Clnt {
  public:
   Clnt(std::shared_ptr<Channel> chan)
-      : _seqno(1), _chan(chan), _delegate_chan(nullptr), _cache() {}
+      : _seqno(1), _chan(chan), _delegate_chan(nullptr), _cache(), _shmem(nullptr) {}
   Clnt(std::shared_ptr<Channel> chan, std::shared_ptr<Channel> delegate_chan)
-      : _seqno(1), _chan(chan), _delegate_chan(delegate_chan), _cache() {}
+      : _seqno(1), _chan(chan), _delegate_chan(delegate_chan), _cache(), _shmem(nullptr) {}
+  Clnt(std::shared_ptr<Channel> chan, std::shared_ptr<Channel> delegate_chan, std::shared_ptr<sigmaos::shmem::Segment> shmem) : _seqno(1), _chan(chan), _delegate_chan(delegate_chan), _cache(), _shmem(shmem) {}
   ~Clnt() { Close(); }
 
   std::shared_ptr<Channel> GetChannel() { return _chan; }
@@ -45,6 +48,7 @@ class Clnt {
   std::atomic<uint64_t> _seqno;
   std::shared_ptr<Channel> _chan;
   std::shared_ptr<Channel> _delegate_chan;
+  std::shared_ptr<sigmaos::shmem::Segment> _shmem;
   sigmaos::rpc::delegation::Cache _cache;
   // Used for logger initialization
   static bool _l;

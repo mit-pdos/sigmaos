@@ -20,8 +20,13 @@ Clnt::get_clnt(int srv_id, bool initialize) {
           std::make_shared<sigmaos::rpc::spchannel::Channel>(srv_pn, _sp_clnt);
       log(CACHECLNT, "Create RPC client");
       // Create an RPC client from the channel
-      _clnts[srv_id] = std::make_shared<sigmaos::rpc::Clnt>(
-          chan, _sp_clnt->GetSPProxyChannel());
+      if (!_sp_clnt->ProcEnv()->GetUseShmem()) {
+        _clnts[srv_id] = std::make_shared<sigmaos::rpc::Clnt>(
+            chan, _sp_clnt->GetSPProxyChannel());
+      } else {
+        _clnts[srv_id] = std::make_shared<sigmaos::rpc::Clnt>(
+            chan, _sp_clnt->GetSPProxyChannel(), _sp_clnt->GetShmemSegment());
+      }
       log(CACHECLNT, "Successfully created client srv_id:{}", srv_id);
     }
   } else {

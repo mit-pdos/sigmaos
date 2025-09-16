@@ -8,6 +8,7 @@ add_library(sigmap_proxy STATIC
 
 target_link_libraries(sigmap_proxy PUBLIC
   serr
+  shmem
   util_log
   util_perf
   rpc 

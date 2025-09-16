@@ -39,6 +39,7 @@ class ProcEnv {
   google::protobuf::Timestamp GetSpawnTime() { return _proto.spawntimepb(); }
   std::string GetPerf() { return _proto.perf(); }
   bool GetRunBootScript() { return _proto.runbootscriptflag(); }
+  bool GetUseShmem() { return _proto.useshmem(); }
   std::pair<std::shared_ptr<TendpointProto>, bool> GetCachedEndpoint(
       std::string &pn);
 

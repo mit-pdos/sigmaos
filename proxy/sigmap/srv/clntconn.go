@@ -462,6 +462,7 @@ func (sca *SPProxySrvAPI) GetDelegatedRPCReply(ctx fs.CtxI, req scproto.SigmaDel
 	// TODO: check all the data fits
 	// TODO: don't send blob if using shmem
 	if req.GetUseShmem() && sca.sc.ProcEnv().GetUseShmem() {
+		db.DPrintf(db.SPPROXYSRV, "%v: GetDelegatedRPCReply(%v) write to shmem", sca.sc.ClntId(), req.RPCIdx)
 		b, err := sca.spps.psm.GetShmemBuf(sca.sc.ProcEnv().GetPID())
 		if err != nil {
 			db.DFatalf("Err get Shmem Buf: %v", err)
@@ -481,6 +482,7 @@ func (sca *SPProxySrvAPI) GetDelegatedRPCReply(ctx fs.CtxI, req scproto.SigmaDel
 			off += len(i)
 		}
 		rep.UseShmem = true
+		db.DPrintf(db.SPPROXYSRV, "%v: GetDelegatedRPCReply(%v) write to shmem done", sca.sc.ClntId(), req.RPCIdx)
 	}
 	return nil
 }

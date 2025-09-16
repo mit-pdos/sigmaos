@@ -71,7 +71,6 @@ func StartSigmaContainer(uproc *proc.Proc, dialproxy bool) (*uprocCmd, error) {
 	// Set up new namespaces
 	cmd.SysProcAttr = &syscall.SysProcAttr{
 		Cloneflags: syscall.CLONE_NEWUTS |
-			syscall.CLONE_NEWIPC |
 			syscall.CLONE_NEWPID |
 			syscall.CLONE_NEWNS,
 	}

@@ -57,6 +57,10 @@ class Clnt {
     if (_env->GetUseShmem()) {
       start = GetCurrentTime();
       _shmem = std::make_shared<sigmaos::shmem::Segment>(_env->GetPID(), sigmaos::shmem::SEGMENT_SZ);
+      auto res = _shmem->Init();
+      if (!res.has_value()) {
+        fatal("Err init shmem: {}", res.error().String());
+      }
       LogSpawnLatency(_env->GetPID(), _env->GetSpawnTime(), start,
                       "Create shmem segment");
     }

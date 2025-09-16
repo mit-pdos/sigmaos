@@ -369,7 +369,7 @@ func (ji *CachedScalerJobInstance) scaleCached() {
 	ji.scaling = true
 	// TODO: More scaling
 	db.DPrintf(db.TEST, "Add scaler server")
-	if err := ji.cm.AddScalerServerWithSigmaPath(chunk.ChunkdPath(ji.warmCachedSrvKID), ji.delegatedInit, ji.useCPP); !assert.Nil(ji.Ts.T, err, "Err add scaler server: %v", err) {
+	if err := ji.cm.AddScalerServerWithSigmaPath(chunk.ChunkdPath(ji.warmCachedSrvKID), ji.delegatedInit, ji.useCPP, true); !assert.Nil(ji.Ts.T, err, "Err add scaler server: %v", err) {
 		return
 	}
 	ji.scaling = false

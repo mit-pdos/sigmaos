@@ -8,7 +8,7 @@
 namespace sigmaos {
 namespace shmem {
 
-uint64_t id2key(const std::string &key);
+uint32_t id2key(const std::string &key);
 
 };  // namespace shmem
 };  // namespace sigmaos

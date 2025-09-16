@@ -14,10 +14,10 @@ bool Segment::_l_e = sigmaos::util::log::init_logger(SHMEM_ERR);
 
 std::expected<int, sigmaos::serr::Error> Segment::Init() {
   _id = shmget(_key, _size, 0);
-  if (_id < 0) {
+  if (_id == -1) {
     return std::unexpected(
         sigmaos::serr::Error(sigmaos::serr::Terror::TErrError,
-                             std::format("err shmget key {}", _key)));
+                             std::format("err shmget key {}", (uint64_t) _key)));
   }
   _buf = shmat(_id, nullptr, 0666);
   if (_buf == (void *)-1) {

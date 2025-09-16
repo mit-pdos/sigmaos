@@ -11,9 +11,9 @@ import (
 
 type Segment struct {
 	idStr    string
-	key      int // User-specified key
-	size     int // Segment size
-	id       int // ID returned by shmem creation
+	key      uint32 // User-specified key
+	size     int    // Segment size
+	id       int    // ID returned by shmem creation
 	attached bool
 	buf      []byte
 }
@@ -29,7 +29,7 @@ func NewSegment(idStr string, size int) (*Segment, error) {
 		db.DPrintf(db.ERROR, "Err IPC private idStr %v", idStr)
 		return nil, fmt.Errorf("err IPC private idStr %v", idStr)
 	}
-	id, err := unix.SysvShmGet(sms.key, size, unix.IPC_CREAT|unix.IPC_EXCL|0666)
+	id, err := unix.SysvShmGet(int(sms.key), size, unix.IPC_CREAT|unix.IPC_EXCL|0666)
 	if err != nil {
 		db.DPrintf(db.ERROR, "Err shmget: %v", err)
 		return nil, fmt.Errorf("err shmget: %v", err)
@@ -40,7 +40,7 @@ func NewSegment(idStr string, size int) (*Segment, error) {
 		db.DPrintf(db.ERROR, "Err shmat: %v", err)
 		return nil, fmt.Errorf("err shmat: %v", err)
 	}
-	db.DPrintf(db.SHMEM, "Create shmem buffer at 0x%p", &sms.buf[0])
+	db.DPrintf(db.SHMEM, "Create shmem buffer key [%v] -> [%v] at 0x%p", sms.idStr, sms.key, &sms.buf[0])
 	return sms, nil
 }
 
@@ -64,8 +64,8 @@ func (sms *Segment) Destroy() error {
 	return nil
 }
 
-func id2key(id string) int {
+func id2key(id string) uint32 {
 	h := fnv.New64a()
 	h.Write([]byte(id))
-	return int(h.Sum64())
+	return uint32(h.Sum64())
 }

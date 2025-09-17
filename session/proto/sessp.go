@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strconv"
 	"sync/atomic"
+
+	"sigmaos/malloc"
 )
 
 type Tfcall uint8
@@ -33,27 +35,41 @@ func (s Tsession) String() string {
 }
 
 type Tframe = []byte
-type IoVec []Tframe
+type IoVec struct {
+	frames []Tframe
+	alloc  malloc.Allocator
+}
 
-func NewIoVec(fs [][]byte) IoVec {
-	iov := make(IoVec, len(fs))
+func NewIoVec(fs [][]byte) *IoVec {
+	iov := &IoVec{
+		frames: make(IoVec, len(fs)),
+		alloc:  nil,
+	}
 	for i := 0; i < len(fs); i++ {
 		iov[i] = fs[i]
 	}
 	return iov
 }
 
-func (iov IoVec) String() string {
-	s := fmt.Sprintf("len %d [", len(iov))
-	for _, f := range iov {
+func (iov *IoVec) SetAllocator(alloc malloc.Allocator) {
+	iov.alloc = alloc
+}
+
+func (iov *IoVec) String() string {
+	s := fmt.Sprintf("len %d a:%v [", len(iov.frames), iov.alloc != nil)
+	for _, f := range iov.frames {
 		s += fmt.Sprintf("%d,", len(f))
 	}
 	s += fmt.Sprintf("]")
 	return s
 }
 
-func (iov IoVec) ToByteSlices() [][]byte {
-	return [][]byte(iov)
+func (iov *IoVec) ToByteSlices() [][]byte {
+	return [][]byte(iov.frames)
+}
+
+func (iov *IoVec) GetFrame(i int) Tframe {
+	return iov.frames[i]
 }
 
 type Tmsg interface {

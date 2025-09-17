@@ -31,6 +31,10 @@ var useSPProxy bool = false
 var noDialProxy bool = false
 var noBootDialProxy bool = false
 var Withs3pathclnt bool = false
+var User = sp.NOT_SET
+var projectRoot = ""
+var homeDir = ""
+var netname = "host"
 
 // flag.StringVar(&sp.Version, "version", sp.DEFAULT_VERSION, "Build version")
 
@@ -140,7 +144,7 @@ func newSysClnt(ntype bootclnt.Tboot) (*Tstate, error) {
 	var k *bootclnt.Kernel
 	if Start {
 		kernelid = bootclnt.GenKernelId()
-		_, err := bootclnt.Start(kernelid, sp.Tip(EtcdIP), pe, ntype, useDialProxy)
+		_, err := bootclnt.Start(kernelid, sp.Tip(EtcdIP), pe, ntype, useDialProxy, homeDir, projectRoot, User, netname)
 		if err != nil {
 			db.DPrintf(db.ALWAYS, "Error start kernel")
 			return nil, err
@@ -150,7 +154,7 @@ func newSysClnt(ntype bootclnt.Tboot) (*Tstate, error) {
 	if !noBootDialProxy && (useSPProxy || useDialProxy) {
 		db.DPrintf(db.BOOT, "Booting spproxyd: usespproxyd %v usedialproxy %v", useSPProxy, useDialProxy)
 		sckid := sp.SPProxydKernel(bootclnt.GenKernelId())
-		_, err := bootclnt.Start(sckid, sp.Tip(EtcdIP), pe, sp.SPPROXYDREL, useDialProxy)
+		_, err := bootclnt.Start(sckid, sp.Tip(EtcdIP), pe, sp.SPPROXYDREL, useDialProxy, homeDir, projectRoot, User, netname)
 		if err != nil {
 			db.DPrintf(db.ALWAYS, "Error start kernel for spproxyd")
 			return nil, err
@@ -199,9 +203,9 @@ func (ts *Tstate) Shutdown() error {
 		db.DPrintf(db.ALWAYS, "Skipping shutdown")
 		db.DPrintf(db.TEST, "Skipping shutdown")
 	} else {
-		db.DPrintf(db.SYSTEM, "Shutdown")
+		db.DPrintf(db.KERNEL, "Shutdown")
 		if ts.memfs != nil {
-			db.DPrintf(db.SYSTEM, "Shutdown memfs")
+			db.DPrintf(db.KERNEL, "Shutdown memfs")
 			err := ts.Evict(ts.memfs.GetPid())
 			assert.Nil(ts.T, err, "evict")
 			_, err = ts.WaitExit(ts.memfs.GetPid())
@@ -270,12 +274,4 @@ func newRealmTstateClnt(ts *Tstate, realm sp.Trealm, newrealm bool, numS3 int64,
 			Ts:        ts,
 		}, nil
 	}
-}
-
-func (rts *RealmTstate) GetRealm() sp.Trealm {
-	return rts.realm
-}
-
-func (rts *RealmTstate) Remove() error {
-	return rts.Ts.rc.RemoveRealm(rts.realm)
 }

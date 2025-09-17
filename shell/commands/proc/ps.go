@@ -32,7 +32,7 @@ func (c *PsCommand) Execute(ctx *shellctx.ShellContext, args []string, stdin io.
 
 	for _, k := range ctx.Tstate.Kclnts {
 		sdc := mschedclnt.NewMSchedClnt(ctx.Tstate.FsLib, k.KernelId())
-		runningProcsInKernel, err := sdc.GetRunningProcs(1)
+		runningProcsInKernel, err := sdc.GetRunningProcs(k.KernelId())
 		if err != nil {
 			fmt.Fprintf(stderr, "Error getting running procs for kernel:%v %v\n", err, k.KernelId())
 		}

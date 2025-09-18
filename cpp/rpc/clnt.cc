@@ -61,9 +61,11 @@ std::expected<int, sigmaos::serr::Error> Clnt::DelegatedRPC(
     fatal("Try delegated RPC with mismatching shmem & views");
   }
   auto out_iov = std::make_shared<sigmaos::io::iovec::IOVec>();
-  // Prepend empty slots to the out iovec for the marshaled delegated reply and
-  // its RPC wrapper
-  out_iov->AddBuffers(2);
+  if (!_shmem) {
+    // Prepend empty slots to the out iovec for the marshaled delegated reply and
+    // its RPC wrapper
+    out_iov->AddBuffers(2);
+  }
   // Extract any output IOVecs from the delegated reply RPC
   extract_blob_iov(delegated_rep, out_iov);
   // Create the delegated request
@@ -74,13 +76,10 @@ std::expected<int, sigmaos::serr::Error> Clnt::DelegatedRPC(
   Blob blob;
   // Set IOVec buffers if not using shared memory
   auto iov = blob.mutable_iov();
-  // Add the output buffers for the RPC wrapper & serialized RPC reply
-  for (int i = 0; i < 2; i++) {
-    iov->AddAllocated(out_iov->GetBuffer(i)->Get());
-  }
   if (!_shmem) {
-    // Add the delegated reply's blob output buffers to the RPC's blob
-    for (int i = 2; i < out_iov->Size(); i++) {
+  // Add the output buffers for the RPC wrapper & serialized RPC reply, as well
+  // as the delegated reply's blob output buffers to the RPC's blob
+    for (int i = 0; i < out_iov->Size(); i++) {
       iov->AddAllocated(out_iov->GetBuffer(i)->Get());
     }
   }
@@ -114,6 +113,13 @@ std::expected<int, sigmaos::serr::Error> Clnt::DelegatedRPC(
               views->size(), rep->shmoffs().size());
       }
       log(RPCCLNT, "DelegatedRPC({}) using shared memory", (int)rpc_idx);
+      // Set the output buffers for the RPC wrapper & serialized RPC reply
+      for (int i = 0; i < 2; i++) {
+        uint64_t off = rep->shmoffs(i);
+        size_t len = (size_t)rep->shmlens(i);
+        auto b = std::make_shared<std::string>((char *)_shmem->GetBuf() + off, len);
+        out_iov->AppendBuffer(std::make_shared<sigmaos::io::iovec::Buffer>(b));
+      }
       // Skip the first two IOVs since those are the RPC wrapper & RPC struct
       for (int i = 2; i < rep->shmoffs().size(); i++) {
         uint64_t off = rep->shmoffs(i);

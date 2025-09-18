@@ -1,8 +1,10 @@
 package srv
 
 import (
-	"sigmaos/apps/cache"
 	"sync"
+
+	"sigmaos/apps/cache"
+	cacheproto "sigmaos/apps/cache/proto"
 )
 
 type shard struct {
@@ -85,6 +87,32 @@ func (s *shard) dump(empty bool) cache.Tcache {
 		s.cache = make(cache.Tcache)
 	}
 	return m
+}
+
+// If empty is true, clear the shard data
+func (s *shard) dumpInto(rep *cacheproto.MultiShardRep, shardIdx int) {
+	s.Lock()
+	defer s.Unlock()
+
+	shardNByte := 0
+	vals := make([][]byte, 0, len(s.cache))
+	// Count the number of bytes needed to serialize this shard, and store
+	// its keys
+	for k, v := range s.cache {
+		rep.Keys = append(rep.Keys, k)
+		vals = append(vals, v)
+		l := len(v)
+		rep.Lens = append(rep.Lens, uint32(l))
+		shardNByte += l
+	}
+	// Make room for the shard's values
+	rep.Blob.Iov[shardIdx] = make([]byte, shardNByte)
+	off := 0
+	// Copy values to IOV
+	for _, v := range vals {
+		copy(rep.Blob.Iov[shardIdx][off:], v)
+		off += len(v)
+	}
 }
 
 func (s *shard) getHitCnt() uint64 {

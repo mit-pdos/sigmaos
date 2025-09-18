@@ -167,6 +167,9 @@ func newProcState(spps *SPProxySrv, pe *proc.ProcEnv, p *proc.Proc) *procState {
 		if err != nil {
 			db.DFatalf("Err shmem NewSegment: %v", err)
 		}
+		shmem.SEGMENT = ps.shm
+		shmem.SHMEM_BUF = ps.shm.GetBuf()
+		shmem.ALLOCATOR = shmem.NewAllocator(ps.shm)
 		perf.LogSpawnLatency("SPProxySrv.shmem.NewSegment", ps.pe.GetPID(), ps.pe.GetSpawnTime(), start)
 	}
 	go ps.createSigmaClnt(spps)

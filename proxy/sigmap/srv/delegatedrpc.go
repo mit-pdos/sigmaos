@@ -6,6 +6,7 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/proc"
 	sessp "sigmaos/session/proto"
+	"sigmaos/shmem"
 	sigmaclnt "sigmaos/sigmaclnt"
 )
 
@@ -19,6 +20,9 @@ func (spp *SPProxySrv) runDelegatedRPC(sc *sigmaclnt.SigmaClnt, p *proc.Proc, rp
 	// If we don't have a cached channel for this RPC target, create a new channel for it (and cache it)
 	db.DPrintf(db.SPPROXYSRV, "[%v] Run delegated init RPC(%v)", p.GetPid(), rpcIdx)
 	outiov := make(sessp.IoVec, outIOVSize)
+	for i := range outiov {
+		outiov[i] = shmem.SHMEM_BUF
+	}
 	start := time.Now()
 	if err := rpcchan.SendReceive(iniov, outiov); err != nil {
 		db.DPrintf(db.SPPROXYSRV_ERR, "Err execute delegated RPC (%v): %v", pn, err)

@@ -9,6 +9,9 @@ import (
 	db "sigmaos/debug"
 )
 
+var SHMEM_BUF []byte
+var SEGMENT *Segment
+
 type Segment struct {
 	idStr    string
 	key      uint32 // User-specified key

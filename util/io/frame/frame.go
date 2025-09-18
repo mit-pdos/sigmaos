@@ -8,6 +8,7 @@ import (
 
 	db "sigmaos/debug"
 	sessp "sigmaos/session/proto"
+	"sigmaos/shmem"
 	sp "sigmaos/sigmap"
 )
 
@@ -27,6 +28,10 @@ func ReadFrameInto(rd io.Reader, frame *sessp.Tframe) error {
 	if *frame == nil {
 		*frame = make(sessp.Tframe, nbyte)
 	} else {
+		// Alloc from shared memory pool
+		if (len(*frame) > 0 && len(shmem.SHMEM_BUF) > 0) && &((*frame)[0]) == &(shmem.SHMEM_BUF[0]) {
+			*frame = shmem.ALLOC_BUF(int(nbyte))
+		}
 	}
 	if nbyte > uint32(len(*frame)) {
 		db.DFatalf("Output buf too smal: %v < %v", len(*frame), nbyte)

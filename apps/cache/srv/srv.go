@@ -88,7 +88,7 @@ func (cs *CacheSrv) manageShardHitCnts() {
 		sort.Slice(cs.shardStats, func(i, j int) bool {
 			return cs.shardStats[i].hitCnt < cs.shardStats[j].hitCnt
 		})
-		db.DPrintf(db.CACHESRV, "Shard stats: %v", cs.shardStats)
+		//		db.DPrintf(db.CACHESRV, "Shard stats: %v", cs.shardStats)
 	}
 }
 
@@ -164,6 +164,7 @@ func (cs *CacheSrv) cmpFence(f sp.Tfence) sp.Tfencecmp {
 	if !f.HasFence() {
 		// cached runs without fence
 		db.DPrintf(db.FENCEFS, "no fence %v\n", f)
+		return sp.FENCE_EQ
 	}
 	if !cs.lastFence.IsInitialized() {
 		db.DPrintf(db.FENCEFS, "initialize fence %v\n", f)
@@ -286,42 +287,25 @@ func (cs *CacheSrv) MultiDumpShard(ctx fs.CtxI, req cacheproto.MultiShardReq, re
 	defer cs.mu.Unlock()
 
 	db.DPrintf(db.CACHESRV, "MultiDumpShard %v", req)
+	start := time.Now()
 
 	if cmp := cs.cmpFence(req.Fence.Tfence()); cmp == sp.FENCE_GT {
 		db.DPrintf(db.CACHESRV_ERR, "MultiDumpShard err stale fence")
 		return serr.NewErr(serr.TErrStale, fmt.Sprintf("shards %v", req.GetShards()))
 	}
 	rep.Blob = &rpcproto.Blob{}
+	rep.Blob.Iov = make([][]byte, len(req.GetShards()))
 	for shardIdx, s := range req.GetShards() {
 		shardID := cache.Tshard(s)
 		if si, ok := cs.shards[shardID]; !ok {
 			db.DPrintf(db.CACHESRV_ERR, "MultiDumpShard(%v) err not found", shardID)
 			return serr.NewErr(serr.TErrNotfound, shardID)
 		} else {
-			vals := si.s.dump(false)
-			shardNByte := 0
-			keys := make([]string, 0, len(vals))
-			// Count the number of bytes needed to serialize this shard, and store
-			// its keys
-			for k, v := range vals {
-				rep.Keys = append(rep.Keys, k)
-				keys = append(keys, k)
-				l := len(v)
-				rep.Lens = append(rep.Lens, uint32(l))
-				shardNByte += l
-			}
-			// Make room for the shard's values
-			rep.Blob.Iov = append(rep.Blob.Iov, make([]byte, shardNByte))
-			idx := 0
-			// Copy values to IOV
-			for _, k := range keys {
-				v := vals[k]
-				copy(rep.Blob.Iov[shardIdx][idx:], v)
-				idx += len(v)
-			}
+			si.s.dumpInto(rep, shardIdx)
 		}
 	}
-	db.DPrintf(db.CACHESRV, "MultiDumpShard done")
+	db.DPrintf(db.ALWAYS, "Total MultiDumpShard lat=%v", time.Since(start))
+	db.DPrintf(db.CACHESRV, "MultiDumpShard done lat=%v", time.Since(start))
 	return nil
 }
 

@@ -6,6 +6,7 @@ import (
 	"net"
 	"sync"
 	"time"
+	"unsafe"
 
 	"sigmaos/api/fs"
 	sos "sigmaos/api/sigmaos"
@@ -458,27 +459,19 @@ func (sca *SPProxySrvAPI) GetDelegatedRPCReply(ctx fs.CtxI, req scproto.SigmaDel
 		}
 	}
 	db.DPrintf(db.SPPROXYSRV, "%v: GetDelegatedRPCReply done %v lens %v", sca.sc.ClntId(), req, lens)
-	// TODO: use an allocator to make parallel/multiple GetDelegatedRPCReply
-	// operations safe
-	// TODO: check all the data fits
-	// TODO: don't send blob if using shmem
 	if req.GetUseShmem() && sca.sc.ProcEnv().GetUseShmem() {
 		db.DPrintf(db.SPPROXYSRV, "%v: GetDelegatedRPCReply(%v) calculate shmem offsets", sca.sc.ClntId(), req.RPCIdx)
-		b, err := sca.spps.psm.GetShmemBuf(sca.sc.ProcEnv().GetPID())
+		shmemBuf, err := sca.spps.psm.GetShmemBuf(sca.sc.ProcEnv().GetPID())
 		if err != nil {
 			db.DFatalf("Err get Shmem Buf: %v", err)
 		}
-		off := 0
+		shmemBufStartAddr := uintptr(unsafe.Pointer(unsafe.SliceData(shmemBuf)))
 		for _, f := range iov.GetFrames() {
-			// Sanity check
-			if f.Len()+off >= len(b) {
-				db.DFatalf("Err shmem delegated RPC reply too long: %v >= %v", f.Len()+off, len(b))
-			}
+			off := uint64(uintptr(unsafe.Pointer(unsafe.SliceData(f.GetBuf()))) - shmemBufStartAddr)
 			// Record offset in shmem region
 			rep.ShmOffs = append(rep.ShmOffs, uint64(off))
 			// Record length
 			rep.ShmLens = append(rep.ShmLens, uint64(f.Len()))
-			off += f.Len()
 		}
 		rep.UseShmem = true
 		db.DPrintf(db.SPPROXYSRV, "%v: GetDelegatedRPCReply(%v) calculate shmem offsets done", sca.sc.ClntId(), req.RPCIdx)

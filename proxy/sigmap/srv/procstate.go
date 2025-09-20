@@ -9,6 +9,7 @@ import (
 	epcacheclnt "sigmaos/apps/epcache/clnt"
 	db "sigmaos/debug"
 	dialproxyclnt "sigmaos/dialproxy/clnt"
+	"sigmaos/malloc"
 	"sigmaos/proc"
 	wasmrt "sigmaos/proxy/wasm/rpc/wasmer"
 	rpcchan "sigmaos/rpc/clnt/channel"
@@ -94,6 +95,15 @@ func (psm *ProcStateMgr) GetSigmaClnt(pid sp.Tpid) (*sigmaclnt.SigmaClnt, *epcac
 	return ps.GetSigmaClnt()
 }
 
+func (psm *ProcStateMgr) GetShmemAllocator(pid sp.Tpid) (malloc.Allocator, error) {
+	ps, ok := psm.getProcState(pid)
+	if !ok {
+		db.DPrintf(db.SPPROXYSRV_ERR, "Try to get shmalloc for unknown proc: %v", pid)
+		return nil, fmt.Errorf("Try to get shmalloc for unknown proc: %v", pid)
+	}
+	return ps.GetShmemAllocator(), nil
+}
+
 func (psm *ProcStateMgr) InsertReply(p *proc.Proc, rpcIdx uint64, iov *sessp.IoVec, err error, start time.Time) {
 	db.DPrintf(db.SPPROXYSRV, "[%v] DelegatedRPC.InsertReply(%v) lat=%v", p.GetPid(), rpcIdx, time.Since(start))
 	perf.LogSpawnLatency("DelegatedRPC(%v)", p.GetPid(), p.GetSpawnTime(), start, rpcIdx)
@@ -139,17 +149,18 @@ func (psm *ProcStateMgr) GetRPCChannel(sc *sigmaclnt.SigmaClnt, pid sp.Tpid, rpc
 }
 
 type procState struct {
-	mu      sync.Mutex
-	cond    *sync.Cond
-	done    bool // done creating the proc state?
-	pe      *proc.ProcEnv
-	p       *proc.Proc
-	rpcReps *RPCState
-	wrt     *wasmrt.WasmerRuntime
-	sc      *sigmaclnt.SigmaClnt
-	epcc    *epcacheclnt.EndpointCacheClnt
-	shm     *shmem.Segment
-	err     error // Creation result
+	mu       sync.Mutex
+	cond     *sync.Cond
+	done     bool // done creating the proc state?
+	pe       *proc.ProcEnv
+	p        *proc.Proc
+	rpcReps  *RPCState
+	wrt      *wasmrt.WasmerRuntime
+	sc       *sigmaclnt.SigmaClnt
+	epcc     *epcacheclnt.EndpointCacheClnt
+	shm      *shmem.Segment
+	shmAlloc malloc.Allocator
+	err      error // Creation result
 }
 
 func newProcState(spps *SPProxySrv, pe *proc.ProcEnv, p *proc.Proc) *procState {
@@ -167,10 +178,15 @@ func newProcState(spps *SPProxySrv, pe *proc.ProcEnv, p *proc.Proc) *procState {
 		if err != nil {
 			db.DFatalf("Err shmem NewSegment: %v", err)
 		}
+		ps.shmAlloc = shmem.NewAllocator(ps.shm)
 		perf.LogSpawnLatency("SPProxySrv.shmem.NewSegment", ps.pe.GetPID(), ps.pe.GetSpawnTime(), start)
 	}
 	go ps.createSigmaClnt(spps)
 	return ps
+}
+
+func (psm *procState) GetShmemAllocator() malloc.Allocator {
+	return psm.shmAlloc
 }
 
 func (ps *procState) GetSigmaClnt() (*sigmaclnt.SigmaClnt, *epcacheclnt.EndpointCacheClnt, error) {

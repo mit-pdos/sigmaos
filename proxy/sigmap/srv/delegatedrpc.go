@@ -18,7 +18,12 @@ func (spp *SPProxySrv) runDelegatedRPC(sc *sigmaclnt.SigmaClnt, p *proc.Proc, rp
 	}
 	// If we don't have a cached channel for this RPC target, create a new channel for it (and cache it)
 	db.DPrintf(db.SPPROXYSRV, "[%v] Run delegated init RPC(%v)", p.GetPid(), rpcIdx)
-	outiov := sessp.NewUnallocatedIoVec(int(outIOVSize), nil)
+	shmAlloc, err := spp.psm.GetShmemAllocator(p.GetPid())
+	if err != nil {
+		// TODO: handle error gracefully
+		db.DFatalf("[%v] Err make delegated RPC(%v) channel pn:%v err:%v", p.GetPid(), rpcIdx, pn, err)
+	}
+	outiov := sessp.NewUnallocatedIoVec(int(outIOVSize), shmAlloc)
 	start := time.Now()
 	if err := rpcchan.SendReceive(iniov, outiov); err != nil {
 		db.DPrintf(db.SPPROXYSRV_ERR, "Err execute delegated RPC (%v): %v", pn, err)

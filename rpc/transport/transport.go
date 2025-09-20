@@ -70,6 +70,11 @@ func (t *Transport) ReadCall() (demux.CallI, error) {
 		return nil, err
 	}
 	iov, _ := t.iovm.Get(sessp.Ttag(seqno))
+	if iov == nil {
+		// If there are outputs, but the caller didn't supply any IoVecs to write
+		// them to, create an IoVec to hold the outputs
+		iov = sessp.NewUnallocatedIoVec(0, nil)
+	}
 	if iov.Len() == 0 {
 		// Read frames, creating an IO vec
 		iov, err = frame.ReadFrames(t.rdr)

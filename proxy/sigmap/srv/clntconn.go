@@ -465,9 +465,9 @@ func (sca *SPProxySrvAPI) GetDelegatedRPCReply(ctx fs.CtxI, req scproto.SigmaDel
 		if err != nil {
 			db.DFatalf("Err get Shmem Buf: %v", err)
 		}
-		shmemBufStartAddr := uintptr(unsafe.Pointer(unsafe.SliceData(shmemBuf)))
+		shmemBufStartAddr := uint64(uintptr(unsafe.Pointer(unsafe.SliceData(shmemBuf))))
 		for _, f := range iov.GetFrames() {
-			off := uint64(uintptr(unsafe.Pointer(unsafe.SliceData(f.GetBuf()))) - shmemBufStartAddr)
+			off := uint64(uintptr(unsafe.Pointer(unsafe.SliceData(f.GetBuf())))) - shmemBufStartAddr
 			// Record offset in shmem region
 			rep.ShmOffs = append(rep.ShmOffs, uint64(off))
 			// Record length

@@ -62,8 +62,8 @@ std::expected<int, sigmaos::serr::Error> Clnt::DelegatedRPC(
   }
   auto out_iov = std::make_shared<sigmaos::io::iovec::IOVec>();
   if (!_shmem) {
-    // Prepend empty slots to the out iovec for the marshaled delegated reply and
-    // its RPC wrapper
+    // Prepend empty slots to the out iovec for the marshaled delegated reply
+    // and its RPC wrapper
     out_iov->AddBuffers(2);
   }
   // Extract any output IOVecs from the delegated reply RPC
@@ -77,8 +77,8 @@ std::expected<int, sigmaos::serr::Error> Clnt::DelegatedRPC(
   // Set IOVec buffers if not using shared memory
   auto iov = blob.mutable_iov();
   if (!_shmem) {
-  // Add the output buffers for the RPC wrapper & serialized RPC reply, as well
-  // as the delegated reply's blob output buffers to the RPC's blob
+    // Add the output buffers for the RPC wrapper & serialized RPC reply, as
+    // well as the delegated reply's blob output buffers to the RPC's blob
     for (int i = 0; i < out_iov->Size(); i++) {
       iov->AddAllocated(out_iov->GetBuffer(i)->Get());
     }
@@ -117,7 +117,8 @@ std::expected<int, sigmaos::serr::Error> Clnt::DelegatedRPC(
       for (int i = 0; i < 2; i++) {
         uint64_t off = rep->shmoffs(i);
         size_t len = (size_t)rep->shmlens(i);
-        auto b = std::make_shared<std::string>((char *)_shmem->GetBuf() + off, len);
+        auto b =
+            std::make_shared<std::string>((char *)_shmem->GetBuf() + off, len);
         out_iov->AppendBuffer(std::make_shared<sigmaos::io::iovec::Buffer>(b));
       }
       // Skip the first two IOVs since those are the RPC wrapper & RPC struct

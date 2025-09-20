@@ -37,12 +37,12 @@ func (pc *proxyConn) ReportError(err error) {
 func (pc *proxyConn) ServeRequest(fc demux.CallI) (demux.CallI, *serr.Err) {
 	fm := fc.(*sessp.FcallMsg)
 	db.DPrintf(db.NPPROXY, "ServeRequest %v", fm)
-	msg, iov, rerror, _, _ := spprotsrv.Dispatch(pc.sess, fm.Msg, fm.Iov)
+	msg, iov, rerror, _, _ := spprotsrv.Dispatch(pc.sess, fm.Msg, fm.GetIoVec())
 	if rerror != nil {
 		msg = rerror
 	}
 	reply := sessp.NewFcallMsg(msg, nil, sessp.Tsession(fm.Fc.Session), nil)
-	reply.Iov = iov
+	reply.SetIoVec(iov)
 	reply.Fc.Seqno = fm.Fc.Seqno
 	return reply, nil
 }
@@ -327,6 +327,6 @@ func (npc *NpSess) PutFile(args *sp.Tputfile, d []byte, rets *sp.Rwrite) *sp.Rer
 	return nil
 }
 
-func (npc *NpSess) WriteRead(args *sp.Twriteread, iov sessp.IoVec, rets *sp.Rread) (sessp.IoVec, *sp.Rerror) {
+func (npc *NpSess) WriteRead(args *sp.Twriteread, iov *sessp.IoVec, rets *sp.Rread) (*sessp.IoVec, *sp.Rerror) {
 	return nil, nil
 }

@@ -64,8 +64,8 @@ func NewRPCClnt(pn string, opts ...*rpcclntopts.RPCClntOption) (*RPCClnt, error)
 	}, nil
 }
 
-func WrapRPCRequest(method string, arg proto.Message) (sessp.IoVec, error) {
-	var iniov sessp.IoVec
+func WrapRPCRequest(method string, arg proto.Message) (*sessp.IoVec, error) {
+	iniov := sessp.NewUnallocatedIoVec(0, nil)
 	inblob := rpc.GetBlob(arg)
 	if inblob != nil {
 		iniov = inblob.GetIoVec()
@@ -75,19 +75,21 @@ func WrapRPCRequest(method string, arg proto.Message) (sessp.IoVec, error) {
 	if err != nil {
 		return nil, err
 	}
-	return WrapMarshaledRPCRequest(method, append(sessp.IoVec{argBytes}, iniov...))
+	iniov.InsertFrame(0, sessp.NewFrame(argBytes, nil))
+	return WrapMarshaledRPCRequest(method, iniov)
 }
 
-func WrapMarshaledRPCRequest(method string, iniov sessp.IoVec) (sessp.IoVec, error) {
+func WrapMarshaledRPCRequest(method string, iniov *sessp.IoVec) (*sessp.IoVec, error) {
 	req := rpcproto.Req{Method: method}
 	wrapperBytes, err := proto.Marshal(&req)
 	if err != nil {
 		return nil, serr.NewErrError(err)
 	}
-	return append(sessp.IoVec{wrapperBytes}, iniov...), nil
+	iniov.InsertFrame(0, sessp.NewFrame(wrapperBytes, nil))
+	return iniov, nil
 }
 
-func (rpcc *RPCClnt) runWrappedRPC(delegate bool, method string, iniov sessp.IoVec, outiov sessp.IoVec) error {
+func (rpcc *RPCClnt) runWrappedRPC(delegate bool, method string, iniov *sessp.IoVec, outiov *sessp.IoVec) error {
 	var err error
 	start := time.Now()
 	if delegate {
@@ -108,15 +110,15 @@ func (rpcc *RPCClnt) runWrappedRPC(delegate bool, method string, iniov sessp.IoV
 	return nil
 }
 
-func processWrappedRPCRep(outiov sessp.IoVec, res proto.Message, outblob *rpcproto.Blob) error {
+func processWrappedRPCRep(outiov *sessp.IoVec, res proto.Message, outblob *rpcproto.Blob) error {
 	rep := &rpcproto.Rep{}
-	if err := proto.Unmarshal(outiov[0], rep); err != nil {
+	if err := proto.Unmarshal(outiov.GetFrame(0).GetBuf(), rep); err != nil {
 		return serr.NewErrError(err)
 	}
 	if rep.Err.ErrCode != 0 {
 		return sp.NewErr(rep.Err)
 	}
-	if err := proto.Unmarshal(outiov[1], res); err != nil {
+	if err := proto.Unmarshal(outiov.GetFrame(1).GetBuf(), res); err != nil {
 		return err
 	}
 	if outblob != nil {
@@ -124,7 +126,7 @@ func processWrappedRPCRep(outiov sessp.IoVec, res proto.Message, outblob *rpcpro
 		// unmarshaling
 		outblob = rpc.GetBlob(res)
 		// Set the IoVec to handle replies with blobs
-		outblob.SetIoVec(outiov[2:])
+		outblob.SetIoVecBufs(outiov.ToByteSlices()[2:])
 	}
 	return nil
 }
@@ -143,12 +145,12 @@ func (rpcc *RPCClnt) rpc(delegate bool, method string, arg proto.Message, res pr
 	}
 	// Prepend 2 empty slots to the out iovec: one for the rpcproto.Rep
 	// wrapper, and one for the marshaled res proto.Message
-	outiov := make(sessp.IoVec, 2)
+	outiov := sessp.NewUnallocatedIoVec(2, nil)
 	outblob := rpc.GetBlob(res)
 	if outblob != nil { // handle blob
 		// Get the reply's blob, if it has one, so that data can be read directly
 		// into buffers in its IoVec
-		outiov = append(outiov, outblob.GetIoVec()...)
+		outiov.AppendFrames(outblob.GetIoVec().GetFrames())
 	}
 	if err := rpcc.runWrappedRPC(delegate, method, iniov, outiov); err != nil {
 		return err
@@ -166,19 +168,19 @@ func (rpcc *RPCClnt) rpc(delegate bool, method string, arg proto.Message, res pr
 func (rpcc *RPCClnt) DelegatedRPC(rpcIdx uint64, res proto.Message) error {
 	// Prepend 2 empty slots to the out iovec: one for the rpcproto.Rep
 	// wrapper, and one for the marshaled res proto.Message
-	outiov := make(sessp.IoVec, 2)
+	outiov := sessp.NewUnallocatedIoVec(2, nil)
 	outblob := rpc.GetBlob(res)
 	if outblob != nil { // handle blob
 		// Get the reply's blob, if it has one, so that data can be read directly
 		// into buffers in its IoVec
-		outiov = append(outiov, outblob.GetIoVec()...)
+		outiov.AppendFrames(outblob.GetIoVec().GetFrames())
 	}
 	req := &spproxyproto.SigmaDelegatedRPCReq{
 		RPCIdx: rpcIdx,
 	}
 	rep := &spproxyproto.SigmaDelegatedRPCRep{
 		Blob: &rpcproto.Blob{
-			Iov: outiov,
+			Iov: outiov.ToByteSlices(),
 		},
 	}
 	start := time.Now()
@@ -205,7 +207,7 @@ func (rpcc *RPCClnt) DelegatedRPC(rpcIdx uint64, res proto.Message) error {
 	defer func(start time.Time) {
 		perf.LogSpawnLatency("DelegatedRPC.Unmarshal %d", sp.NOT_SET, perf.TIME_NOT_SET, start, rpcIdx)
 	}(start)
-	return processWrappedRPCRep(rep.Blob.Iov, res, outblob)
+	return processWrappedRPCRep(rep.Blob.GetIoVec(), res, outblob)
 }
 
 // Fetch a batch of delegated RPC results
@@ -215,7 +217,7 @@ func (rpcc *RPCClnt) BatchFetchDelegatedRPCs(idxs []uint64, nIOV int) error {
 	}
 	multiRep := &spproxyproto.SigmaMultiDelegatedRPCRep{
 		Blob: &rpcproto.Blob{
-			Iov: make(sessp.IoVec, nIOV),
+			Iov: make([][]byte, nIOV),
 		},
 	}
 	err := rpcc.rpc(true, "SPProxySrvAPI.GetMultiDelegatedRPCReplies", req, multiRep)

@@ -6,8 +6,8 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	db "sigmaos/debug"
-	"sigmaos/util/io/frame"
 	sp "sigmaos/sigmap"
+	"sigmaos/util/io/frame"
 )
 
 func writeConnPreamble(c net.Conn, p *sp.Tprincipal) error {
@@ -19,7 +19,7 @@ func writeConnPreamble(c net.Conn, p *sp.Tprincipal) error {
 	}
 	// Write the principal ID to the server's dialproxyd, so that it
 	// knows the principal associated with this connection
-	if err := frame.WriteFrame(c, b); err != nil {
+	if err := frame.WriteFrameBuf(c, b); err != nil {
 		db.DPrintf(db.ERROR, "Error WriteFrame principal preamble: %v", err)
 		return err
 	}
@@ -34,7 +34,7 @@ func readConnPreamble(c net.Conn) (*sp.Tprincipal, error) {
 		return nil, err
 	}
 	p := sp.NoPrincipal()
-	if err := proto.Unmarshal(b, p); err != nil {
+	if err := proto.Unmarshal(b.GetBuf(), p); err != nil {
 		db.DPrintf(db.ERROR, "Error Unmarshal PrincipalID preamble: %v", err)
 		return nil, err
 	}

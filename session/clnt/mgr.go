@@ -74,7 +74,7 @@ func (sc *Mgr) LookupSessClnt(ep *sp.Tendpoint) (*SessClnt, *serr.Err) {
 	return nil, serr.NewErr(serr.TErrNotfound, ep)
 }
 
-func (sc *Mgr) RPC(ep *sp.Tendpoint, req sessp.Tmsg, iniov sessp.IoVec, outiov sessp.IoVec) (*sessp.FcallMsg, *serr.Err) {
+func (sc *Mgr) RPC(ep *sp.Tendpoint, req sessp.Tmsg, iniov *sessp.IoVec, outiov *sessp.IoVec) (*sessp.FcallMsg, *serr.Err) {
 	s := time.Now()
 	// Get or establish sessection
 	sess, err := sc.allocSessClnt(ep)

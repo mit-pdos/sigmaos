@@ -369,15 +369,15 @@ func (npc *DialProxyClnt) newListener(lid dialproxy.Tlid) net.Listener {
 	return nil
 }
 
-func (npc *DialProxyClnt) SendReceive(iniov sessp.IoVec, outiov sessp.IoVec) error {
+func (npc *DialProxyClnt) SendReceive(iniov *sessp.IoVec, outiov *sessp.IoVec) error {
 	c := dialproxytrans.NewProxyCall(sessp.NextSeqno(npc.seqcntr), iniov)
 	rep, err := npc.dmx.SendReceive(c, outiov)
 	if err != nil {
 		return err
 	} else {
 		c := rep.(*dialproxytrans.ProxyCall)
-		if len(outiov) != len(c.Iov) {
-			return fmt.Errorf("dialproxyclnt outiov len wrong: %v != %v", len(outiov), len(c.Iov))
+		if outiov.Len() != c.Iov.Len() {
+			return fmt.Errorf("dialproxyclnt outiov len wrong: %v != %v", outiov, c.Iov.Len())
 		}
 		return nil
 	}

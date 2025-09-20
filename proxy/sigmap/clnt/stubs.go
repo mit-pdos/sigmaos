@@ -39,7 +39,7 @@ func (scc *SPProxyClnt) rpcFd(method string, req proto.Message, rep *spproto.Sig
 	return int(rep.Fd), nil
 }
 
-func (scc *SPProxyClnt) rpcData(method string, req proto.Message, rep *spproto.SigmaDataRep) (sessp.IoVec, error) {
+func (scc *SPProxyClnt) rpcData(method string, req proto.Message, rep *spproto.SigmaDataRep) (*sessp.IoVec, error) {
 	err := scc.rpcc.RPC(method, req, rep)
 	if err != nil {
 		return nil, err
@@ -47,7 +47,7 @@ func (scc *SPProxyClnt) rpcData(method string, req proto.Message, rep *spproto.S
 	if rep.Err.TErrCode() != serr.TErrNoError {
 		return nil, sp.NewErr(rep.Err)
 	}
-	return sessp.NewIoVec(rep.Blob.Iov), nil
+	return sessp.NewIoVec(rep.Blob.Iov, nil), nil
 }
 
 func (scc *SPProxyClnt) rpcSize(method string, req proto.Message, rep *spproto.SigmaSizeRep) (sp.Tsize, error) {
@@ -133,7 +133,7 @@ func (scc *SPProxyClnt) GetFile(path string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	return d[0], nil
+	return d.GetFrame(0).GetBuf(), nil
 }
 
 func (scc *SPProxyClnt) PutFile(path string, p sp.Tperm, m sp.Tmode, data []byte, o sp.Toffset, l sp.TleaseId) (sp.Tsize, error) {
@@ -150,11 +150,11 @@ func (scc *SPProxyClnt) Read(fd int, b []byte) (sp.Tsize, error) {
 	rep := spproto.SigmaDataRep{}
 	rep.Blob = &rpcproto.Blob{Iov: [][]byte{b}}
 	d, err := scc.rpcData("SPProxySrvAPI.Read", &req, &rep)
-	db.DPrintf(db.SPPROXYCLNT, "Read %v size %v niov %v err %v", req, req.Size, len(d), err)
+	db.DPrintf(db.SPPROXYCLNT, "Read %v size %v niov %v err %v", req, req.Size, d.Len(), err)
 	if err != nil {
 		return 0, err
 	}
-	return sp.Tsize(len(d[0])), nil
+	return sp.Tsize(d.GetFrame(0).Len()), nil
 }
 
 func (scc *SPProxyClnt) Pread(fd int, b []byte, o sp.Toffset) (sp.Tsize, error) {
@@ -162,11 +162,11 @@ func (scc *SPProxyClnt) Pread(fd int, b []byte, o sp.Toffset) (sp.Tsize, error) 
 	rep := spproto.SigmaDataRep{}
 	rep.Blob = &rpcproto.Blob{Iov: [][]byte{b}}
 	d, err := scc.rpcData("SPProxySrvAPI.Read", &req, &rep)
-	db.DPrintf(db.SPPROXYCLNT, "Read %v size %v niov %v err %v", req, req.Size, len(d), err)
+	db.DPrintf(db.SPPROXYCLNT, "Read %v size %v niov %v err %v", req, req.Size, d.Len(), err)
 	if err != nil {
 		return 0, err
 	}
-	return sp.Tsize(len(d[0])), nil
+	return sp.Tsize(d.GetFrame(0).Len()), nil
 }
 
 func (scc *SPProxyClnt) PreadRdr(fd int, o sp.Toffset, sz sp.Tsize) (io.ReadCloser, error) {
@@ -231,17 +231,17 @@ func (scc *SPProxyClnt) WriteFence(fd int, d []byte, f sp.Tfence) (sp.Tsize, err
 	return sz, err
 }
 
-func (scc *SPProxyClnt) WriteRead(fd int, iniov sessp.IoVec, outiov sessp.IoVec) error {
+func (scc *SPProxyClnt) WriteRead(fd int, iniov *sessp.IoVec, outiov *sessp.IoVec) error {
 	inblob := rpcproto.NewBlob(iniov)
 	outblob := rpcproto.NewBlob(outiov)
-	req := spproto.SigmaWriteReq{Fd: uint32(fd), Blob: inblob, NOutVec: uint32(len(outiov))}
+	req := spproto.SigmaWriteReq{Fd: uint32(fd), Blob: inblob, NOutVec: uint32(outiov.Len())}
 	rep := spproto.SigmaDataRep{Blob: outblob}
 	d, err := scc.rpcData("SPProxySrvAPI.WriteRead", &req, &rep)
-	db.DPrintf(db.SPPROXYCLNT, "WriteRead %v %v %v %v", req.Fd, len(iniov), len(d), err)
-	if err == nil && len(outiov) != len(d) {
-		return fmt.Errorf("sigmaclntclnt outiov len wrong: supplied %v != %v returned", len(outiov), len(d))
+	db.DPrintf(db.SPPROXYCLNT, "WriteRead %v %v %v %v", req.Fd, iniov.Len(), d.Len(), err)
+	if err == nil && outiov.Len() != d.Len() {
+		return fmt.Errorf("sigmaclntclnt outiov len wrong: supplied %v != %v returned", outiov.Len(), d.Len())
 	}
-	copy(outiov, d)
+	outiov.CopyFrom(d)
 	return err
 }
 

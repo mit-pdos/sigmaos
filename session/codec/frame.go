@@ -43,10 +43,10 @@ func (t *Transport) ReadCall() (demux.CallI, error) {
 		return nil, err
 	}
 	fm := sessp.NewFcallMsgNull()
-	if err := proto.Unmarshal(f, fm.Fc); err != nil {
-		db.DFatalf("Decoding fcall err %v", err)
+	if err := proto.Unmarshal(f.GetBuf(), fm.Fc); err != nil {
+		db.DFatalf("Decoding fcall err %v\nbytes:%v", err, f.GetBuf())
 	}
-	b := make(sessp.Tframe, fm.Fc.Len)
+	b := make([]byte, fm.Fc.Len)
 	n, err := io.ReadFull(t.rdr, b)
 	if n != len(b) {
 		return nil, err
@@ -55,24 +55,23 @@ func (t *Transport) ReadCall() (demux.CallI, error) {
 	// Get any IoVecs which were supplied as destinations for the output of the
 	// RPC
 	iov, _ := t.iovm.Get(fm.Tag())
+	if iov == nil {
+		// If there are outputs, but the caller didn't supply any IoVecs to write
+		// them to, create an IoVec to hold the outputs
+		iov = sessp.NewUnallocatedIoVec(int(fm.Fc.Nvec), nil)
+	}
 
-	if len(iov) > 0 {
+	if iov.Len() > 0 {
 		// Sanity check: if the caller supplied IoVecs to write outputs to, ensure
 		// that they supplied at least the right number of them. In the event that
 		// the result of the RPC is an error, we may get the case that
 		// len(iov) < fm.Fc.Nvec
-		if len(iov) < int(fm.Fc.Nvec) {
-			db.DFatalf("mismatch between supplied destination nvec and reply nvec: %v != %v\nrep:%v reptype:%v\n%v", len(iov), fm.Fc.Nvec, fm.Fc, sessp.Tfcall(fm.Fc.Type), string(debug.Stack()))
+		if iov.Len() < int(fm.Fc.Nvec) {
+			db.DFatalf("mismatch between supplied destination nvec and reply nvec: %v != %v\nrep:%v reptype:%v\n%v", iov.Len(), fm.Fc.Nvec, fm.Fc, sessp.Tfcall(fm.Fc.Type), string(debug.Stack()))
 		}
 		// Trim the number of IOVecs if receiving fewer than expected
-		if len(iov) > int(fm.Fc.Nvec) {
-			iov = iov[:fm.Fc.Nvec]
-		}
-	} else {
-		// If there are outputs, but the caller didn't supply any IoVecs to write
-		// them to, create an IoVec to hold the outputs
-		if fm.Fc.Nvec > 0 {
-			iov = make(sessp.IoVec, fm.Fc.Nvec)
+		if iov.Len() > int(fm.Fc.Nvec) {
+			iov.TruncateFrames(int(fm.Fc.Nvec))
 		}
 	}
 
@@ -82,7 +81,7 @@ func (t *Transport) ReadCall() (demux.CallI, error) {
 		return nil, err
 	}
 
-	fm.Iov = iov
+	fm.SetIoVec(iov)
 
 	pmm := &sessp.PartMarshaledMsg{fm, b}
 
@@ -92,22 +91,25 @@ func (t *Transport) ReadCall() (demux.CallI, error) {
 func (t *Transport) WriteCall(c demux.CallI) error {
 	fcm := c.(*sessp.PartMarshaledMsg)
 	fcm.Fcm.Fc.Len = uint32(len(fcm.MarshaledFcm))
-	fcm.Fcm.Fc.Nvec = uint32(len(fcm.Fcm.Iov))
+	fcm.Fcm.Fc.Nvec = uint32(fcm.Fcm.GetIoVec().Len())
 
 	b, err := proto.Marshal(fcm.Fcm.Fc)
 	if err != nil {
 		db.DFatalf("Encoding fcall %v err %v", fcm.Fcm.Fc, err)
 	}
+	// TODO: use frame codec here
+	db.DPrintf(db.FRAME, "WriteCall fc %v nvec %v", len(b), fcm.Fcm.Fc.Nvec)
 	if err := binary.Write(t.wrt, binary.LittleEndian, uint32(len(b)+4)); err != nil {
 		return serr.NewErr(serr.TErrUnreachable, err)
 	}
 	if _, err := t.wrt.Write(b); err != nil {
 		return serr.NewErr(serr.TErrUnreachable, err)
 	}
+	db.DPrintf(db.FRAME, "WriteMarshaledFcm fc %v", len(fcm.MarshaledFcm))
 	if _, err := t.wrt.Write(fcm.MarshaledFcm); err != nil {
 		return serr.NewErr(serr.TErrUnreachable, err)
 	}
-	for _, f := range fcm.Fcm.Iov {
+	for _, f := range fcm.Fcm.GetIoVec().GetFrames() {
 		if err := frame.WriteFrame(t.wrt, f); err != nil {
 			return err
 		}

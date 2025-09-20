@@ -28,15 +28,15 @@ func NewRPCChannel(conn net.Conn) *RPCChannel {
 	return ch
 }
 
-func (ch *RPCChannel) SendReceive(iniov sessp.IoVec, outiov sessp.IoVec) error {
+func (ch *RPCChannel) SendReceive(iniov *sessp.IoVec, outiov *sessp.IoVec) error {
 	c := transport.NewCall(sessp.NextSeqno(ch.seqcntr), iniov)
 	rep, err := ch.dmx.SendReceive(c, outiov)
 	if err != nil {
 		return err
 	} else {
 		c := rep.(*transport.Call)
-		if len(outiov) != len(c.Iov) {
-			return fmt.Errorf("outiov len wrong: %v != %v", len(outiov), len(c.Iov))
+		if outiov.Len() != c.Iov.Len() {
+			return fmt.Errorf("outiov len wrong: %v != %v", outiov.Len(), c.Iov.Len())
 		}
 		return nil
 	}

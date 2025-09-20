@@ -252,10 +252,10 @@ func (sca *SPProxySrvAPI) Seek(ctx fs.CtxI, req scproto.SigmaSeekReq, rep *scpro
 }
 
 func (sca *SPProxySrvAPI) WriteRead(ctx fs.CtxI, req scproto.SigmaWriteReq, rep *scproto.SigmaDataRep) error {
-	bl := make(sessp.IoVec, req.NOutVec)
+	bl := sessp.NewUnallocatedIoVec(int(req.NOutVec), nil)
 	start := time.Now()
 	err := sca.sc.WriteRead(int(req.Fd), req.Blob.GetIoVec(), bl)
-	db.DPrintf(db.SPPROXYSRV, "%v: WriteRead (lat=%v) fd:%v nInIOV:%v nOutIOV:%v err:%v", sca.sc.ClntId(), time.Since(start), req.Fd, len(req.Blob.Iov), len(bl), err)
+	db.DPrintf(db.SPPROXYSRV, "%v: WriteRead (lat=%v) fd:%v nInIOV:%v nOutIOV:%v err:%v", sca.sc.ClntId(), time.Since(start), req.Fd, len(req.Blob.Iov), bl.Len(), err)
 	rep.Blob = rpcproto.NewBlob(bl)
 	rep.Err = sca.setErr(err)
 	return nil
@@ -447,14 +447,14 @@ func (sca *SPProxySrvAPI) GetDelegatedRPCReply(ctx fs.CtxI, req scproto.SigmaDel
 	perf.LogSpawnLatency("SPProxySrv.GetDelegatedRPCReply(%v) GetReply wait", sca.sc.ProcEnv().GetPID(), sca.sc.ProcEnv().GetSpawnTime(), start, req.RPCIdx)
 	rep.Blob = &rpcproto.Blob{}
 	if !req.GetUseShmem() {
-		rep.Blob.Iov = [][]byte(iov)
+		rep.Blob.SetIoVec(iov)
 	}
 	rep.Err = sca.setErr(err)
-	lens := make([]int, len(iov)+1)
+	lens := make([]int, iov.Len()+1)
 	if db.WillBePrinted(db.SPPROXYSRV) {
-		lens[0] = len(iov)
-		for i := range iov {
-			lens[i+1] = len(iov[i])
+		lens[0] = iov.Len()
+		for i := range iov.GetFrames() {
+			lens[i+1] = iov.GetFrame(i).Len()
 		}
 	}
 	db.DPrintf(db.SPPROXYSRV, "%v: GetDelegatedRPCReply done %v lens %v", sca.sc.ClntId(), req, lens)
@@ -469,16 +469,16 @@ func (sca *SPProxySrvAPI) GetDelegatedRPCReply(ctx fs.CtxI, req scproto.SigmaDel
 			db.DFatalf("Err get Shmem Buf: %v", err)
 		}
 		off := 0
-		for _, i := range iov {
+		for _, f := range iov.GetFrames() {
 			// Sanity check
-			if len(i)+off >= len(b) {
-				db.DFatalf("Err shmem delegated RPC reply too long: %v >= %v", len(i)+off, len(b))
+			if f.Len()+off >= len(b) {
+				db.DFatalf("Err shmem delegated RPC reply too long: %v >= %v", f.Len()+off, len(b))
 			}
 			// Record offset in shmem region
 			rep.ShmOffs = append(rep.ShmOffs, uint64(off))
 			// Record length
-			rep.ShmLens = append(rep.ShmLens, uint64(len(i)))
-			off += len(i)
+			rep.ShmLens = append(rep.ShmLens, uint64(f.Len()))
+			off += f.Len()
 		}
 		rep.UseShmem = true
 		db.DPrintf(db.SPPROXYSRV, "%v: GetDelegatedRPCReply(%v) calculate shmem offsets done", sca.sc.ClntId(), req.RPCIdx)
@@ -489,16 +489,16 @@ func (sca *SPProxySrvAPI) GetDelegatedRPCReply(ctx fs.CtxI, req scproto.SigmaDel
 func (sca *SPProxySrvAPI) GetMultiDelegatedRPCReplies(ctx fs.CtxI, req scproto.SigmaMultiDelegatedRPCReq, rep *scproto.SigmaMultiDelegatedRPCRep) error {
 	db.DPrintf(db.SPPROXYSRV, "%v: GetMultiDelegatedRPCReply %v", sca.sc.ClntId(), req)
 	rep.Blob = &rpcproto.Blob{
-		Iov: make(sessp.IoVec, 0),
+		Iov: make([][]byte, 0),
 	}
 	totalLen := 0
 	for _, rpcIdx := range req.RPCIdxs {
 		iov, err := sca.spps.psm.GetReply(sca.sc.ProcEnv().GetPID(), rpcIdx)
-		for _, b := range iov {
-			totalLen += len(b)
+		for _, f := range iov.GetFrames() {
+			totalLen += f.Len()
 		}
-		rep.Blob.Iov = append(rep.Blob.Iov, iov...)
-		rep.NIOVs = append(rep.NIOVs, uint64(len(iov)))
+		rep.Blob.Iov = append(rep.Blob.Iov, iov.ToByteSlices()...)
+		rep.NIOVs = append(rep.NIOVs, uint64(iov.Len()))
 		rep.Errs = append(rep.Errs, sca.setErr(err))
 	}
 	db.DPrintf(db.SPPROXYSRV, "%v: GetMultiDelegatedRPCReply done totalLen %v req %v", sca.sc.ClntId(), totalLen, req)

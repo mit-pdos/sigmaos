@@ -61,7 +61,7 @@ func (dmx *DemuxClnt) reader() {
 	}
 }
 
-func (dmx *DemuxClnt) SendReceive(req CallI, outiov sessp.IoVec) (CallI, *serr.Err) {
+func (dmx *DemuxClnt) SendReceive(req CallI, outiov *sessp.IoVec) (CallI, *serr.Err) {
 	ch := make(chan reply)
 	if err := dmx.callmap.put(req.Tag(), ch); err != nil {
 		db.DPrintf(db.DEMUXCLNT_ERR, "SendReceive: enqueue req %v err %v", req, err)

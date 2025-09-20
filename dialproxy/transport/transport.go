@@ -61,7 +61,7 @@ func GetDialProxydConn(pe *proc.ProcEnv) (*net.UnixConn, error) {
 		// Write the principal ID to the server, so that the server
 		// knows the principal associated with this connection. For non-test
 		// programs, this will be done by the trampoline.
-		if err := frame.WriteFrame(conn, b); err != nil {
+		if err := frame.WriteFrameBuf(conn, b); err != nil {
 			db.DPrintf(db.ERROR, "Error WriteFrame principal: %v", err)
 			return nil, err
 		}
@@ -105,7 +105,12 @@ func (trans *DialProxyTrans) ReadCall() (demux.CallI, error) {
 		return nil, err
 	}
 	iov, _ := trans.iovm.Get(sessp.Ttag(seqno))
-	if len(iov) == 0 {
+	if iov == nil {
+		// If there are outputs, but the caller didn't supply any IoVecs to write
+		// them to, create an IoVec to hold the outputs
+		iov = sessp.NewUnallocatedIoVec(0, nil)
+	}
+	if iov.Len() == 0 {
 		// Read frames, creating an IO vec
 		iov, err = frame.ReadFrames(trans.conn)
 		if err != nil {
@@ -118,18 +123,18 @@ func (trans *DialProxyTrans) ReadCall() (demux.CallI, error) {
 			db.DPrintf(db.DIALPROXYTRANS_ERR, "Error ReadNumOfFrames: %v", err)
 			return nil, err
 		}
-		if uint32(len(iov)) < n {
-			db.DFatalf("DialProxyTrans mismatch between supplied destination nvec and incoming nvec: %v != %v\n%s", len(iov), n, debug.Stack())
+		if uint32(iov.Len()) < n {
+			db.DFatalf("DialProxyTrans mismatch between supplied destination nvec and incoming nvec: %v != %v\n%s", iov.Len(), n, debug.Stack())
 		}
-		db.DPrintf(db.DIALPROXYTRANS, "[%p] Read n frames: %v", trans.conn, len(iov))
+		db.DPrintf(db.DIALPROXYTRANS, "[%p] Read n frames: %v", trans.conn, iov.Len())
 		if err := frame.ReadNFramesInto(trans.conn, iov); err != nil {
 			db.DPrintf(db.DIALPROXYTRANS_ERR, "Error ReadNFramesInto: %v", err)
 			return nil, err
 		}
 	}
-	db.DPrintf(db.DIALPROXYTRANS, "Read n done: %v", len(iov))
+	db.DPrintf(db.DIALPROXYTRANS, "Read n done: %v", iov.Len())
 	// Set the out blob IOV to the socket control message
-	ok, err1 := trans.RecvSocketControlMsg(iov[len(iov)-1])
+	ok, err1 := trans.RecvSocketControlMsg(iov.GetFrame(iov.Len() - 1).GetBuf())
 	if err1 != nil {
 		db.DPrintf(db.DIALPROXYTRANS_ERR, "Error RecvSocketControlMsg: %v", err1)
 		return nil, serr.NewErrError(err1)
@@ -137,7 +142,7 @@ func (trans *DialProxyTrans) ReadCall() (demux.CallI, error) {
 	db.DPrintf(db.DIALPROXYTRANS, "Recvd socket control msg ok %v", ok)
 	// If no control message was received, set the blob's Iov to nil
 	if !ok {
-		iov[len(iov)-1] = nil
+		iov.GetFrame(iov.Len() - 1).SetBuf(nil)
 	}
 	return NewProxyCall(seqno, iov), nil
 }
@@ -153,7 +158,7 @@ func (trans *DialProxyTrans) WriteCall(call demux.CallI) error {
 		db.DPrintf(db.DIALPROXYTRANS_ERR, "Error WriteFrames: %v", err)
 		return err
 	}
-	if err := trans.SendSocketControlMsg(pc.Iov[len(pc.Iov)-1]); err != nil {
+	if err := trans.SendSocketControlMsg(pc.Iov.GetFrame(pc.Iov.Len() - 1).GetBuf()); err != nil {
 		db.DPrintf(db.DIALPROXYTRANS_ERR, "Error SendSocketControlMsg: %v", err)
 		return serr.NewErrError(err)
 	}

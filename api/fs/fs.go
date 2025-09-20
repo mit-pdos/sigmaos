@@ -88,7 +88,7 @@ type NewInode interface {
 }
 
 type RPC interface {
-	WriteRead(CtxI, sessp.IoVec) (sessp.IoVec, *serr.Err)
+	WriteRead(CtxI, *sessp.IoVec) (*sessp.IoVec, *serr.Err)
 }
 
 func Obj2File(o FsObj, fname string) (File, *serr.Err) {

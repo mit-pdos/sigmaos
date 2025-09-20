@@ -93,7 +93,7 @@ func np2SpMsg(fcm *sessp.FcallMsg) {
 		m := fcm.Msg.(*np.Twrite)
 		r := sp.NewTwriteF(sp.Tfid(m.Fid), sp.Toffset(m.Offset), sp.NullFence())
 		fcm.Msg = r
-		fcm.Iov = sessp.IoVec{m.Data}
+		fcm.SetIoVec(sessp.NewIoVec([][]byte{m.Data}, nil))
 	case sessp.TTopen9P:
 		m := fcm.Msg.(*np.Topen9P)
 		r := sp.NewTopen(sp.Tfid(m.Fid), sp.Tmode(m.Mode))
@@ -117,8 +117,8 @@ func sp2NpMsg(fcm *sessp.FcallMsg) {
 	switch fcm.Type() {
 	case sessp.TRread:
 		fcm.Fc.Type = uint32(sessp.TRread9P)
-		fcm.Msg = np.Rread9P{Data: fcm.Iov[0]} // XXX concat iov's
-		fcm.Iov = nil
+		fcm.Msg = np.Rread9P{Data: fcm.GetIoVec().GetFrame(0).GetBuf()} // XXX concat iov's
+		fcm.SetIoVec(nil)
 	case sessp.TRerror:
 		fcm.Fc.Type = uint32(sessp.TRerror9P)
 		m := fcm.Msg.(*sp.Rerror)

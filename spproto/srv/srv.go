@@ -351,7 +351,7 @@ func (ps *ProtSrv) ReadF(args *sp.TreadF, rets *sp.Rread) ([]byte, *sp.Rerror) {
 	return data, nil
 }
 
-func (ps *ProtSrv) WriteRead(args *sp.Twriteread, iov sessp.IoVec, rets *sp.Rread) (sessp.IoVec, *sp.Rerror) {
+func (ps *ProtSrv) WriteRead(args *sp.Twriteread, iov *sessp.IoVec, rets *sp.Rread) (*sessp.IoVec, *sp.Rerror) {
 	f, err := ps.fm.Lookup(sp.Tfid(args.Fid))
 	if err != nil {
 		return nil, sp.NewRerrorSerr(err)

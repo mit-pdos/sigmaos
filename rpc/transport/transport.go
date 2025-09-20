@@ -17,10 +17,10 @@ import (
 
 type Call struct {
 	Seqno sessp.Tseqno
-	Iov   sessp.IoVec
+	Iov   *sessp.IoVec
 }
 
-func NewCall(s sessp.Tseqno, iov sessp.IoVec) *Call {
+func NewCall(s sessp.Tseqno, iov *sessp.IoVec) *Call {
 	return &Call{Seqno: s, Iov: iov}
 }
 
@@ -70,7 +70,7 @@ func (t *Transport) ReadCall() (demux.CallI, error) {
 		return nil, err
 	}
 	iov, _ := t.iovm.Get(sessp.Ttag(seqno))
-	if len(iov) == 0 {
+	if iov.Len() == 0 {
 		// Read frames, creating an IO vec
 		iov, err = frame.ReadFrames(t.rdr)
 	} else {
@@ -79,8 +79,8 @@ func (t *Transport) ReadCall() (demux.CallI, error) {
 		if err != nil {
 			return nil, err
 		}
-		if uint32(len(iov)) != n {
-			db.DFatalf("mismatch between supplied destination nvec and incoming nvec: %v != %v", len(iov), n)
+		if uint32(iov.Len()) != n {
+			db.DFatalf("mismatch between supplied destination nvec and incoming nvec: %v != %v", iov.Len(), n)
 		}
 		// Read frames into the IoVec
 		err = frame.ReadNFramesInto(t.rdr, iov)

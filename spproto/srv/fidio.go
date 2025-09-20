@@ -24,10 +24,10 @@ func FidWrite(f *fid.Fid, off sp.Toffset, b []byte, fence sp.Tfence) (sp.Tsize, 
 	return sz, err
 }
 
-func FidWriteRead(f *fid.Fid, req sessp.IoVec) (sessp.IoVec, *serr.Err) {
+func FidWriteRead(f *fid.Fid, req *sessp.IoVec) (*sessp.IoVec, *serr.Err) {
 	o := f.Obj()
 	var err *serr.Err
-	var iov sessp.IoVec
+	var iov *sessp.IoVec
 	switch i := o.(type) {
 	case fs.RPC:
 		iov, err = i.WriteRead(f.Ctx(), req)

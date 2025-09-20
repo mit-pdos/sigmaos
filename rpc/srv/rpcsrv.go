@@ -19,8 +19,8 @@ import (
 )
 
 type RPCSrv struct {
-	svc *svcMap
-	sti *rpc.StatInfo
+	svc         *svcMap
+	sti         *rpc.StatInfo
 	partitioned bool // testing
 }
 
@@ -34,7 +34,7 @@ func (rpcs *RPCSrv) RegisterService(svci any) {
 	rpcs.svc.RegisterService(svci)
 }
 
-func (rpcs *RPCSrv) WriteRead(ctx fs.CtxI, iov sessp.IoVec) (sessp.IoVec, *serr.Err) {
+func (rpcs *RPCSrv) WriteRead(ctx fs.CtxI, iniov *sessp.IoVec) (*sessp.IoVec, *serr.Err) {
 	if rpcs.partitioned {
 		return nil, serr.NewErr(serr.TErrUnreachable, "partitioned")
 	}
@@ -44,11 +44,12 @@ func (rpcs *RPCSrv) WriteRead(ctx fs.CtxI, iov sessp.IoVec) (sessp.IoVec, *serr.
 		start = time.Now()
 	}
 	req := rpcproto.Req{}
-	if err := proto.Unmarshal(iov[0], &req); err != nil {
+	if err := proto.Unmarshal(iniov.GetFrame(0).GetBuf(), &req); err != nil {
 		return nil, serr.NewErrError(err)
 	}
 	var rerr *sp.Rerror
-	iov, sr := rpcs.ServeRPC(ctx, req.Method, iov[1:])
+	iniov.RemoveFrame(0)
+	outiov, sr := rpcs.ServeRPC(ctx, req.Method, iniov)
 	if sr != nil {
 		rerr = sp.NewRerrorSerr(sr)
 	} else {
@@ -62,11 +63,11 @@ func (rpcs *RPCSrv) WriteRead(ctx fs.CtxI, iov sessp.IoVec) (sessp.IoVec, *serr.
 	if rpcs.sti != nil {
 		rpcs.sti.Stat(req.Method, time.Since(start).Microseconds())
 	}
-	iov = append(sessp.IoVec{b}, iov...)
-	return iov, nil
+	outiov.InsertFrame(0, sessp.NewFrame(b, nil))
+	return outiov, nil
 }
 
-func (rpcs *RPCSrv) ServeRPC(ctx fs.CtxI, m string, iov sessp.IoVec) (sessp.IoVec, *serr.Err) {
+func (rpcs *RPCSrv) ServeRPC(ctx fs.CtxI, m string, iov *sessp.IoVec) (*sessp.IoVec, *serr.Err) {
 	if rpcs.partitioned {
 		return nil, serr.NewErr(serr.TErrUnreachable, "partitioned")
 	}
@@ -86,7 +87,7 @@ func (rpcs *RPCSrv) ServeRPC(ctx fs.CtxI, m string, iov sessp.IoVec) (sessp.IoVe
 	if err != nil {
 		return nil, err
 	}
-	var iovrep sessp.IoVec
+	iovrep := sessp.NewUnallocatedIoVec(0, nil)
 	blob := rpc.GetBlob(repmsg)
 	if blob != nil {
 		iovrep = blob.GetIoVec()
@@ -96,14 +97,14 @@ func (rpcs *RPCSrv) ServeRPC(ctx fs.CtxI, m string, iov sessp.IoVec) (sessp.IoVe
 	if r != nil {
 		return nil, serr.NewErrError(r)
 	}
-	iovrep = append(sessp.IoVec{b}, iovrep...)
+	iovrep.InsertFrame(0, sessp.NewFrame(b, nil))
 	if db.WillBePrinted(db.PROXY_RPC_LAT) && m == "SPProxySrvAPI.WriteRead" {
 		db.DPrintf(db.PROXY_RPC_LAT, "reply to writeread")
 	}
 	return iovrep, nil
 }
 
-func (svc *service) dispatch(ctx fs.CtxI, methname string, iov sessp.IoVec) (proto.Message, *serr.Err) {
+func (svc *service) dispatch(ctx fs.CtxI, methname string, iov *sessp.IoVec) (proto.Message, *serr.Err) {
 	dot := strings.LastIndex(methname, ".")
 	name := methname[dot+1:]
 	if method, ok := svc.methods[name]; ok {
@@ -111,12 +112,12 @@ func (svc *service) dispatch(ctx fs.CtxI, methname string, iov sessp.IoVec) (pro
 		// the Value's type will be a pointer to req.argsType.
 		args := reflect.New(method.argType)
 		reqmsg := args.Interface().(proto.Message)
-		if err := proto.Unmarshal(iov[0], reqmsg); err != nil {
+		if err := proto.Unmarshal(iov.GetFrame(0).GetBuf(), reqmsg); err != nil {
 			return nil, serr.NewErrError(err)
 		}
 		blob := rpc.GetBlob(reqmsg)
 		if blob != nil {
-			blob.SetIoVec(iov[1:])
+			blob.SetIoVec(iov)
 		}
 		db.DPrintf(db.SIGMASRV, "dispatchproto %v %v %v\n", svc.svc, name, reqmsg)
 

@@ -17,7 +17,7 @@ type RPCState struct {
 	channelCreationInProgress map[string]bool
 	channelCreationErrors     map[string]error
 	done                      map[uint64]bool
-	results                   map[uint64]sessp.IoVec
+	results                   map[uint64]*sessp.IoVec
 	errors                    map[uint64]error
 }
 
@@ -27,7 +27,7 @@ func NewRPCState() *RPCState {
 		channelCreationInProgress: make(map[string]bool),
 		channelCreationErrors:     make(map[string]error),
 		done:                      make(map[uint64]bool),
-		results:                   make(map[uint64]sessp.IoVec),
+		results:                   make(map[uint64]*sessp.IoVec),
 		errors:                    make(map[uint64]error),
 	}
 	rpcst.cond = sync.NewCond(&rpcst.mu)
@@ -100,7 +100,7 @@ func (rpcs *RPCState) GetRPCChannel(sc *sigmaclnt.SigmaClnt, rpcIdx uint64, pn s
 }
 
 // Insert the reply for a delegated RPC. Unblocks any waiters on the reply
-func (rpcs *RPCState) InsertReply(idx uint64, iov sessp.IoVec, err error) {
+func (rpcs *RPCState) InsertReply(idx uint64, iov *sessp.IoVec, err error) {
 	rpcs.mu.Lock()
 	defer rpcs.mu.Unlock()
 
@@ -115,7 +115,7 @@ func (rpcs *RPCState) InsertReply(idx uint64, iov sessp.IoVec, err error) {
 }
 
 // Retrieve the reply for a delegated RPC. Blocks until the reply materializes
-func (rpcs *RPCState) GetReply(idx uint64) (sessp.IoVec, error) {
+func (rpcs *RPCState) GetReply(idx uint64) (*sessp.IoVec, error) {
 	rpcs.mu.Lock()
 	defer rpcs.mu.Unlock()
 

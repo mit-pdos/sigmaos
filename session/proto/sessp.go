@@ -2,6 +2,7 @@ package proto
 
 import (
 	"fmt"
+	"slices"
 	"strconv"
 	"sync/atomic"
 
@@ -34,42 +35,130 @@ func (s Tsession) String() string {
 	return strconv.FormatUint(uint64(s), 16)
 }
 
-type Tframe = []byte
+type Tframe struct {
+	b         []byte
+	allocated bool
+	alloc     malloc.Allocator
+}
+
+func NewFrame(b []byte, alloc malloc.Allocator) *Tframe {
+	return &Tframe{
+		b:         b,
+		allocated: len(b) != 0,
+		alloc:     alloc,
+	}
+}
+
+func NewUnallocatedFrame() *Tframe {
+	return NewFrame(nil, nil)
+}
+
+func (f *Tframe) IsAllocated() bool {
+	return f.allocated
+}
+
+func (f *Tframe) GetBuf() []byte {
+	return f.b
+}
+
+func (f *Tframe) SetBuf(b []byte) {
+	f.b = b
+}
+
+func (f *Tframe) Len() int {
+	return len(f.b)
+}
+
+func (f *Tframe) GrowBuf(nbyte int) {
+	if f.alloc != nil {
+		f.alloc.Alloc(&f.b, nbyte)
+	} else {
+		f.b = make([]byte, nbyte)
+	}
+}
+
+func (f *Tframe) TruncateBuf(nbyte int) {
+	f.b = f.b[:nbyte]
+}
+
 type IoVec struct {
-	frames []Tframe
+	frames []*Tframe
 	alloc  malloc.Allocator
 }
 
-func NewIoVec(fs [][]byte) *IoVec {
+func NewIoVec(fs [][]byte, alloc malloc.Allocator) *IoVec {
 	iov := &IoVec{
-		frames: make(IoVec, len(fs)),
-		alloc:  nil,
+		frames: make([]*Tframe, len(fs)),
+		alloc:  alloc,
 	}
 	for i := 0; i < len(fs); i++ {
-		iov[i] = fs[i]
+		iov.frames[i] = NewFrame(fs[i], alloc)
 	}
 	return iov
 }
 
-func (iov *IoVec) SetAllocator(alloc malloc.Allocator) {
-	iov.alloc = alloc
+func NewUnallocatedIoVec(nframe int, alloc malloc.Allocator) *IoVec {
+	iov := &IoVec{
+		frames: make([]*Tframe, nframe),
+		alloc:  alloc,
+	}
+	for i := 0; i < nframe; i++ {
+		iov.frames[i] = NewFrame(nil, alloc)
+	}
+	return iov
+}
+
+func (iov *IoVec) Len() int {
+	return len(iov.frames)
 }
 
 func (iov *IoVec) String() string {
 	s := fmt.Sprintf("len %d a:%v [", len(iov.frames), iov.alloc != nil)
 	for _, f := range iov.frames {
-		s += fmt.Sprintf("%d,", len(f))
+		s += fmt.Sprintf("%d,", len(f.GetBuf()))
 	}
 	s += fmt.Sprintf("]")
 	return s
 }
 
 func (iov *IoVec) ToByteSlices() [][]byte {
-	return [][]byte(iov.frames)
+	bufs := make([][]byte, len(iov.frames))
+	for i := range bufs {
+		bufs[i] = iov.frames[i].GetBuf()
+	}
+	return bufs
 }
 
-func (iov *IoVec) GetFrame(i int) Tframe {
+func (iov *IoVec) GetFrame(i int) *Tframe {
 	return iov.frames[i]
+}
+
+func (iov *IoVec) InsertFrame(i int, f *Tframe) {
+	iov.frames = slices.Insert(iov.frames, i, f)
+}
+
+func (iov *IoVec) AppendFrames(fs []*Tframe) {
+	iov.frames = append(iov.frames, fs...)
+}
+
+func (iov *IoVec) RemoveFrame(i int) {
+	iov.frames = slices.Delete(iov.frames, i, i+1)
+}
+
+func (iov *IoVec) GetFrames() []*Tframe {
+	return iov.frames
+}
+
+func (iov *IoVec) TruncateFrames(n int) {
+	iov.frames = iov.frames[:n]
+}
+
+func (iov *IoVec) CopyFrom(iov2 *IoVec) {
+	copy(iov.frames, iov2.frames)
+}
+
+func (iov *IoVec) Copy() *IoVec {
+	return NewIoVec(iov.ToByteSlices(), iov.alloc)
 }
 
 type Tmsg interface {
@@ -79,7 +168,20 @@ type Tmsg interface {
 type FcallMsg struct {
 	Fc  *Fcall
 	Msg Tmsg
-	Iov IoVec
+	iov *IoVec
+}
+
+func (fcm *FcallMsg) SetIoVec(iov *IoVec) {
+	// Make sure there aren't any uninitialized IOVecs which could cause panics
+	// later on (e.g., during length checks)
+	if iov == nil {
+		iov = NewUnallocatedIoVec(0, nil)
+	}
+	fcm.iov = iov
+}
+
+func (fcm *FcallMsg) GetIoVec() *IoVec {
+	return fcm.iov
 }
 
 func (fcm *FcallMsg) Session() Tsession {
@@ -105,16 +207,21 @@ func (fcm *FcallMsg) Tag() Ttag {
 
 func NewFcallMsgNull() *FcallMsg {
 	fc := &Fcall{}
-	return &FcallMsg{fc, nil, nil}
+	return &FcallMsg{fc, nil, NewUnallocatedIoVec(0, nil)}
 }
 
-func NewFcallMsg(msg Tmsg, iov IoVec, sess Tsession, seqcntr *Tseqcntr) *FcallMsg {
+func NewFcallMsg(msg Tmsg, iov *IoVec, sess Tsession, seqcntr *Tseqcntr) *FcallMsg {
 	fcall := &Fcall{
 		Type:    uint32(msg.Type()),
 		Session: uint64(sess),
 	}
 	if seqcntr != nil {
 		fcall.Seqno = uint64(NextSeqno(seqcntr))
+	}
+	// Make sure there aren't any uninitialized IOVecs which could cause panics
+	// later on (e.g., during length checks)
+	if iov == nil {
+		iov = NewUnallocatedIoVec(0, nil)
 	}
 	return &FcallMsg{fcall, msg, iov}
 }
@@ -142,7 +249,7 @@ func (fm *FcallMsg) String() string {
 		l = int(fm.Fc.Len)
 		nvec = int(fm.Fc.Nvec)
 	}
-	return fmt.Sprintf("{ %v seq %v sid %v len %d nvec %d msg %v iov %d }", typ, seqno, sess, l, nvec, msg, len(fm.Iov))
+	return fmt.Sprintf("{ %v seq %v sid %v len %d nvec %d msg %v iov %d }", typ, seqno, sess, l, nvec, msg, len(fm.iov.frames))
 }
 
 func (fm *FcallMsg) GetType() Tfcall {

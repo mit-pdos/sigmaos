@@ -25,7 +25,7 @@ type ProtSrv interface {
 	Renameat(*sp.Trenameat, *sp.Rrenameat) *sp.Rerror
 	GetFile(*sp.Tgetfile, *sp.Rread) ([]byte, *sp.Rerror)
 	PutFile(*sp.Tputfile, []byte, *sp.Rwrite) *sp.Rerror
-	WriteRead(*sp.Twriteread, sessp.IoVec, *sp.Rread) (sessp.IoVec, *sp.Rerror)
+	WriteRead(*sp.Twriteread, *sessp.IoVec, *sp.Rread) (*sessp.IoVec, *sp.Rerror)
 	Detach(*sp.Tdetach, *sp.Rdetach) *sp.Rerror
 }
 
@@ -39,7 +39,7 @@ const (
 	TSESS_DEL
 )
 
-func Dispatch(protsrv ProtSrv, msg sessp.Tmsg, iov sessp.IoVec) (sessp.Tmsg, sessp.IoVec, *sp.Rerror, Tsessop, sp.TclntId) {
+func Dispatch(protsrv ProtSrv, msg sessp.Tmsg, iov *sessp.IoVec) (sessp.Tmsg, *sessp.IoVec, *sp.Rerror, Tsessop, sp.TclntId) {
 	switch req := msg.(type) {
 	case *sp.Tversion:
 		reply := &sp.Rversion{}
@@ -77,10 +77,10 @@ func Dispatch(protsrv ProtSrv, msg sessp.Tmsg, iov sessp.IoVec) (sessp.Tmsg, ses
 	case *sp.TreadF:
 		reply := &sp.Rread{}
 		data, err := protsrv.ReadF(req, reply)
-		return reply, sessp.IoVec{data}, err, TSESS_NONE, sp.NoClntId
+		return reply, sessp.NewIoVec([][]byte{data}, nil), err, TSESS_NONE, sp.NoClntId
 	case *sp.TwriteF:
 		reply := &sp.Rwrite{}
-		err := protsrv.WriteF(req, iov[0], reply)
+		err := protsrv.WriteF(req, iov.GetFrame(0).GetBuf(), reply)
 		return reply, nil, err, TSESS_NONE, sp.NoClntId
 	case *sp.Tclunk:
 		reply := &sp.Rclunk{}
@@ -109,10 +109,10 @@ func Dispatch(protsrv ProtSrv, msg sessp.Tmsg, iov sessp.IoVec) (sessp.Tmsg, ses
 	case *sp.Tgetfile:
 		reply := &sp.Rread{}
 		data, err := protsrv.GetFile(req, reply)
-		return reply, sessp.IoVec{data}, err, TSESS_NONE, sp.NoClntId
+		return reply, sessp.NewIoVec([][]byte{data}, nil), err, TSESS_NONE, sp.NoClntId
 	case *sp.Tputfile:
 		reply := &sp.Rwrite{}
-		err := protsrv.PutFile(req, iov[0], reply)
+		err := protsrv.PutFile(req, iov.GetFrame(0).GetBuf(), reply)
 		return reply, nil, err, TSESS_NONE, sp.NoClntId
 	case *sp.Tdetach:
 		reply := &sp.Rdetach{}

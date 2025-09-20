@@ -36,7 +36,7 @@ func (wp *WASMRPCProxy) Send(rpcIdx uint64, pn string, method string, b []byte, 
 	reqBytes := make([]byte, len(b))
 	copy(reqBytes, b)
 	// Wrap the marshaled RPC byte slice in an RPC wrapper
-	iniov, err := rpcclnt.WrapMarshaledRPCRequest(method, sessp.IoVec{reqBytes})
+	iniov, err := rpcclnt.WrapMarshaledRPCRequest(method, sessp.NewIoVec([][]byte{reqBytes}, nil))
 	if err != nil {
 		db.DPrintf(db.SPPROXYSRV_ERR, "[%v] Error wrap & marshal WASM-proxied RPC request: %v", wp.p.GetPid(), err)
 		return err
@@ -55,7 +55,7 @@ func (wp *WASMRPCProxy) Recv(rpcIdx uint64) ([]byte, error) {
 	}
 	// Remove the RPC wrapper
 	rep := &rpcproto.Rep{}
-	if err := proto.Unmarshal(outiov[0], rep); err != nil {
+	if err := proto.Unmarshal(outiov.GetFrame(0).GetBuf(), rep); err != nil {
 		db.DPrintf(db.SPPROXYSRV_ERR, "[%v] Err Unmarshal(%v) in WasmRPCRecv: %v", wp.p.GetPid(), err)
 		return nil, serr.NewErrError(err)
 	}
@@ -64,9 +64,9 @@ func (wp *WASMRPCProxy) Recv(rpcIdx uint64) ([]byte, error) {
 		return nil, sp.NewErr(rep.Err)
 	}
 	// We don't handle blobs right now, so we only expect 2 out IOVecs
-	if len(outiov) != 2 {
-		db.DPrintf(db.SPPROXYSRV_ERR, "[%v] Err RPC(%v) unexpected outiov len: %v", wp.p.GetPid(), len(outiov))
-		return nil, serr.NewErrError(fmt.Errorf("Err unexpected outiov len: %v", len(outiov)))
+	if outiov.Len() != 2 {
+		db.DPrintf(db.SPPROXYSRV_ERR, "[%v] Err RPC(%v) unexpected outiov len: %v", wp.p.GetPid(), outiov.Len())
+		return nil, serr.NewErrError(fmt.Errorf("Err unexpected outiov len: %v", outiov.Len()))
 	}
-	return outiov[1], nil
+	return outiov.GetFrame(1).GetBuf(), nil
 }

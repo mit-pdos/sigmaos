@@ -94,7 +94,7 @@ func (psm *ProcStateMgr) GetSigmaClnt(pid sp.Tpid) (*sigmaclnt.SigmaClnt, *epcac
 	return ps.GetSigmaClnt()
 }
 
-func (psm *ProcStateMgr) InsertReply(p *proc.Proc, rpcIdx uint64, iov sessp.IoVec, err error, start time.Time) {
+func (psm *ProcStateMgr) InsertReply(p *proc.Proc, rpcIdx uint64, iov *sessp.IoVec, err error, start time.Time) {
 	db.DPrintf(db.SPPROXYSRV, "[%v] DelegatedRPC.InsertReply(%v) lat=%v", p.GetPid(), rpcIdx, time.Since(start))
 	perf.LogSpawnLatency("DelegatedRPC(%v)", p.GetPid(), p.GetSpawnTime(), start, rpcIdx)
 	ps, ok := psm.getProcState(p.GetPid())
@@ -105,7 +105,7 @@ func (psm *ProcStateMgr) InsertReply(p *proc.Proc, rpcIdx uint64, iov sessp.IoVe
 	ps.rpcReps.InsertReply(rpcIdx, iov, err)
 }
 
-func (psm *ProcStateMgr) GetReply(pid sp.Tpid, rpcIdx uint64) (sessp.IoVec, error) {
+func (psm *ProcStateMgr) GetReply(pid sp.Tpid, rpcIdx uint64) (*sessp.IoVec, error) {
 	db.DPrintf(db.SPPROXYSRV, "[%v] DelegatedRPC.GetReply(%v)", pid, rpcIdx)
 	defer db.DPrintf(db.SPPROXYSRV, "[%v] DelegatedRPC.GetReply(%v) done", pid, rpcIdx)
 

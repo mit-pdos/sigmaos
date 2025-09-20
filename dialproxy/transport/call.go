@@ -8,10 +8,10 @@ import (
 
 type ProxyCall struct {
 	Seqno sessp.Tseqno
-	Iov   sessp.IoVec
+	Iov   *sessp.IoVec
 }
 
-func NewProxyCall(seqno sessp.Tseqno, iov sessp.IoVec) *ProxyCall {
+func NewProxyCall(seqno sessp.Tseqno, iov *sessp.IoVec) *ProxyCall {
 	return &ProxyCall{
 		Seqno: seqno,
 		Iov:   iov,

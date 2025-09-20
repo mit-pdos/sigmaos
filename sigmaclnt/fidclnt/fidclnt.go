@@ -347,7 +347,7 @@ func (fidc *FidClnt) WriteF(fid sp.Tfid, off sp.Toffset, data []byte, f *sp.Tfen
 	return reply.Tcount(), nil
 }
 
-func (fidc *FidClnt) WriteRead(fid sp.Tfid, iniov sessp.IoVec, outiov sessp.IoVec) *serr.Err {
+func (fidc *FidClnt) WriteRead(fid sp.Tfid, iniov *sessp.IoVec, outiov *sessp.IoVec) *serr.Err {
 	ch := fidc.Lookup(fid)
 	if ch == nil {
 		return serr.NewErr(serr.TErrUnreachable, "WriteRead")

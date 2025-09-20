@@ -83,7 +83,7 @@ func (nps *DialProxySrv) handleNewConn(conn *net.UnixConn) {
 		return
 	}
 	p := sp.NoPrincipal()
-	if err := json.Unmarshal(b, p); err != nil {
+	if err := json.Unmarshal(b.GetBuf(), p); err != nil {
 		db.DPrintf(db.ERROR, "Error Unmarshal PrincipalID: %v", err)
 		return
 	}

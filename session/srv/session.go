@@ -163,7 +163,7 @@ func (sess *Session) GetDetachSess() sps.DetachSessF {
 	return sess.detachSess
 }
 
-func (s *Session) Dispatch(msg sessp.Tmsg, iov sessp.IoVec) (sessp.Tmsg, sessp.IoVec, *sp.Rerror, sps.Tsessop, sp.TclntId) {
+func (s *Session) Dispatch(msg sessp.Tmsg, iov *sessp.IoVec) (sessp.Tmsg, *sessp.IoVec, *sp.Rerror, sps.Tsessop, sp.TclntId) {
 	if s.IsClosed() {
 		db.DPrintf(db.SESSSRV, "Sess %v is closed; reject %v\n", s.Sid, msg.Type())
 		err := serr.NewErr(serr.TErrClosed, fmt.Sprintf("session %v", s.Sid))

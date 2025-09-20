@@ -220,7 +220,7 @@ func (fsc *FsClient) WriteFence(fd int, data []byte, f sp.Tfence) (sp.Tsize, err
 	return fsc.writeFid(fd, fsc.pc, fid, off, data, f)
 }
 
-func (fsc *FsClient) WriteRead(fd int, iniov sessp.IoVec, outiov sessp.IoVec) error {
+func (fsc *FsClient) WriteRead(fd int, iniov *sessp.IoVec, outiov *sessp.IoVec) error {
 	fid, _, _, err := fsc.fds.lookupOff(fd)
 	if err != nil {
 		return err

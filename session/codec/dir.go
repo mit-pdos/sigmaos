@@ -35,7 +35,7 @@ func MarshalDirEnt(st *sp.Tstat, cnt uint64) ([]byte, error) {
 	if cnt < uint64(len(b)+sz) {
 		return nil, nil
 	}
-	if err := frame.WriteFrame(&buf, b); err != nil {
+	if err := frame.WriteFrameBuf(&buf, b); err != nil {
 		return nil, err
 	}
 	return buf.Bytes(), nil
@@ -47,7 +47,7 @@ func UnmarshalDirEnt(rdr io.Reader) (*sp.Tstat, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := proto.Unmarshal(b, st); err != nil {
+	if err := proto.Unmarshal(b.GetBuf(), st); err != nil {
 		return nil, serr.NewErrError(err)
 	}
 	return st, nil

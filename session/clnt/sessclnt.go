@@ -68,7 +68,7 @@ func (c *SessClnt) IsConnected() bool {
 	return !c.dmx.IsClosed()
 }
 
-func (c *SessClnt) RPC(req sessp.Tmsg, iniov sessp.IoVec, outiov sessp.IoVec) (*sessp.FcallMsg, *serr.Err) {
+func (c *SessClnt) RPC(req sessp.Tmsg, iniov *sessp.IoVec, outiov *sessp.IoVec) (*sessp.FcallMsg, *serr.Err) {
 	s := time.Now()
 	fc := sessp.NewFcallMsg(req, iniov, c.sid, c.seqcntr)
 	pmfc := spcodec.NewPartMarshaledMsg(fc)

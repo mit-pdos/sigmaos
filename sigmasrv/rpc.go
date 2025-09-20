@@ -2,12 +2,12 @@ package sigmasrv
 
 import (
 	"sigmaos/api/fs"
-	"sigmaos/sigmasrv/memfssrv/memfs/inode"
-	"sigmaos/sigmasrv/memfssrv"
 	rpcsrv "sigmaos/rpc/srv"
 	"sigmaos/serr"
 	sessp "sigmaos/session/proto"
 	sp "sigmaos/sigmap"
+	"sigmaos/sigmasrv/memfssrv"
+	"sigmaos/sigmasrv/memfssrv/memfs/inode"
 )
 
 //
@@ -40,6 +40,6 @@ func (rpc *rpcSession) Stat(ctx fs.CtxI) (*sp.Tstat, *serr.Err) {
 	return st, nil
 }
 
-func (rpc *rpcSession) WriteRead(ctx fs.CtxI, iov sessp.IoVec) (sessp.IoVec, *serr.Err) {
+func (rpc *rpcSession) WriteRead(ctx fs.CtxI, iov *sessp.IoVec) (*sessp.IoVec, *serr.Err) {
 	return rpc.rpcs.WriteRead(ctx, iov)
 }

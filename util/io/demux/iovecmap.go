@@ -11,12 +11,12 @@ import (
 type IoVecMap struct {
 	sync.Mutex
 	closed bool
-	calls  map[sessp.Ttag]sessp.IoVec
+	calls  map[sessp.Ttag]*sessp.IoVec
 }
 
 func NewIoVecMap() *IoVecMap {
 	return &IoVecMap{
-		calls: make(map[sessp.Ttag]sessp.IoVec),
+		calls: make(map[sessp.Ttag]*sessp.IoVec),
 	}
 }
 
@@ -35,7 +35,7 @@ func (cm *IoVecMap) isClosed() bool {
 	return cm.closed
 }
 
-func (cm *IoVecMap) Put(tag sessp.Ttag, iov sessp.IoVec) *serr.Err {
+func (cm *IoVecMap) Put(tag sessp.Ttag, iov *sessp.IoVec) *serr.Err {
 	cm.Lock()
 	defer cm.Unlock()
 	if cm.closed {
@@ -45,7 +45,7 @@ func (cm *IoVecMap) Put(tag sessp.Ttag, iov sessp.IoVec) *serr.Err {
 	return nil
 }
 
-func (cm *IoVecMap) Get(tag sessp.Ttag) (sessp.IoVec, bool) {
+func (cm *IoVecMap) Get(tag sessp.Ttag) (*sessp.IoVec, bool) {
 	cm.Lock()
 	defer cm.Unlock()
 

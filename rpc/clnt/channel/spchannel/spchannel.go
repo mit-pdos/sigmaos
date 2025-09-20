@@ -101,7 +101,7 @@ func (ch *SPChannel) checkInit() error {
 	return ch.init()
 }
 
-func (ch *SPChannel) SendReceive(iniov sessp.IoVec, outiov sessp.IoVec) error {
+func (ch *SPChannel) SendReceive(iniov *sessp.IoVec, outiov *sessp.IoVec) error {
 	ch.checkInit()
 	return ch.fsl.WriteRead(ch.fd, iniov, outiov)
 }

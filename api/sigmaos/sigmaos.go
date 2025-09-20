@@ -49,7 +49,7 @@ type FileAPI interface {
 	WriteFence(fd int, d []byte, f sp.Tfence) (sp.Tsize, error)
 
 	// RPC
-	WriteRead(fd int, iniov sessp.IoVec, outiov sessp.IoVec) error
+	WriteRead(fd int, iniov *sessp.IoVec, outiov *sessp.IoVec) error
 
 	// Watch for directory changes
 	DirWatch(fd int) (int, error)

@@ -138,7 +138,7 @@ func (ssrv *SessSrv) serve(sess *Session, fc *sessp.FcallMsg) *sessp.FcallMsg {
 		}
 	}
 	db.DPrintf(db.SESSSRV, "Dispatch request %v", fc)
-	msg, iov, rerror, op, clntid := sess.Dispatch(fc.Msg, fc.Iov)
+	msg, iov, rerror, op, clntid := sess.Dispatch(fc.Msg, fc.GetIoVec())
 	db.DPrintf(db.SESSSRV, "Done dispatch request %v", fc)
 
 	if rerror != nil {
@@ -147,7 +147,7 @@ func (ssrv *SessSrv) serve(sess *Session, fc *sessp.FcallMsg) *sessp.FcallMsg {
 	}
 
 	reply := sessp.NewFcallMsgReply(fc, msg)
-	reply.Iov = iov
+	reply.SetIoVec(iov)
 
 	switch op {
 	case sps.TSESS_DEL:

@@ -99,7 +99,6 @@ func (rpcc *RPCClnt) runWrappedRPC(delegate bool, method string, iniov *sessp.Io
 		}
 		err = rpcc.delegatedRPCCh.SendReceive(iniov, outiov)
 	} else {
-		// TODO: lazily init ch
 		err = rpcc.ch.SendReceive(iniov, outiov)
 	}
 	if err != nil {

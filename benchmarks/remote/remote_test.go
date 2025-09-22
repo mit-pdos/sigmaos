@@ -26,8 +26,14 @@ var parallelArg bool
 var noShutdownArg bool
 var k8sArg bool
 var oneByOne bool
+var skip_ckpt bool
+var nprocs int
+var n_geo_idx int
 
 func init() {
+	flag.BoolVar(&skip_ckpt, "skip-ckpt", false, "VPC in which to run. Need not be specified for Cloudlab.")
+	flag.IntVar(&nprocs, "nprocs", 1, "number of procs to spawn.")
+	flag.IntVar(&n_geo_idx, "n_geo_idx", 1000, "Number of idx in hotel-geo test.")
 	flag.StringVar(&platformArg, "platform", sp.NOT_SET, "Platform on which to run. Currently, only [aws|cloudlab] are supported")
 	flag.StringVar(&vpcArg, "vpc", sp.NOT_SET, "VPC in which to run. Need not be specified for Cloudlab.")
 	flag.StringVar(&tagArg, "tag", sp.NOT_SET, "Build tag with which to run.")
@@ -67,7 +73,8 @@ func TestMicro(t *testing.T) {
 	ts.RunStandardBenchmark(benchName, driverVM, GetTestCmd, numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost)
 
 }
-func TestCkptGeo(t *testing.T) {
+func TestCriuGeo(t *testing.T) {
+
 	var (
 		benchName string = "ckptgeo"
 	)
@@ -91,6 +98,8 @@ func TestCkptGeo(t *testing.T) {
 	ts.RunStandardBenchmark(benchName, driverVM, GetCkptGeoCmd, numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost)
 
 }
+
+// used by timer.py to checkpoint
 func TestGeoCKPT(t *testing.T) {
 	var (
 		benchName string = "GeoCKPT"
@@ -98,7 +107,7 @@ func TestGeoCKPT(t *testing.T) {
 	// Cluster configuration parameters
 	const (
 		driverVM          int  = 0
-		numNodes          int  = 4
+		numNodes          int  = 8
 		numCoresPerNode   uint = 4
 		numFullNodes      int  = numNodes
 		numProcqOnlyNodes int  = 0
@@ -112,7 +121,7 @@ func TestGeoCKPT(t *testing.T) {
 		return
 	}
 	db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
-	ts.RunStandardBenchmark(benchName, driverVM, CRIUCmdConstructor(true), numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost)
+	ts.RunStandardBenchmark(benchName, driverVM, CKPTCmdConstructor(skip_ckpt, nprocs, n_geo_idx), numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost)
 
 }
 func TestCRIUGeo(t *testing.T) {

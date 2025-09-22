@@ -1,12 +1,14 @@
 package hotel
 
 import (
+	"bufio"
 	"encoding/json"
+	"fmt"
 	"log"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -76,17 +78,10 @@ type Geo struct {
 	maxSearchResults int
 }
 
-func printAllStacks() {
-	db.DPrintf(db.ALWAYS, "Printing Stacks")
-
-	buf := make([]byte, 1<<20) // 1 MB buffer to hold stack traces
-	n := runtime.Stack(buf, true)
-	db.DPrintf(db.ALWAYS, "%s", string(buf[:n]))
-}
-
 // Run starts the server
 func RunGeoSrv(job string, ckptpn string, nidxStr string, maxSearchRadiusStr string, maxSearchResultsStr string) error {
 	db.DPrintf(db.CKPT, "GeoSrv start %v %v\n", job, ckptpn)
+
 	nidx, err := strconv.Atoi(nidxStr)
 	if err != nil {
 		db.DFatalf("Invalid nidx: %v", err)
@@ -113,15 +108,8 @@ func RunGeoSrv(job string, ckptpn string, nidxStr string, maxSearchRadiusStr str
 	if err != nil {
 		db.DFatalf("NewSigmaClnt error %v\n", err)
 	}
-	db.DPrintf(db.ALWAYS, "I'm here")
-	//printAllStacks()
 	if ckptpn != "" {
-		//	sc := ssrv.MemFs.SigmaClnt()
-		// create a sigmaclnt for checkpointing
-		// sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
-		// if err != nil {
-		// 	db.DFatalf("NewSigmaClnt error %v\n", err)
-		// }
+
 		err = sc.Started()
 		if err != nil {
 			db.DFatalf("Started error %v\n", err)
@@ -135,7 +123,6 @@ func RunGeoSrv(job string, ckptpn string, nidxStr string, maxSearchRadiusStr str
 		if err != nil {
 			db.DFatalf("Started error %v\n", err)
 		}
-		//	sc.Close()
 	}
 	ssrv, err := sigmasrv.NewSigmaSrvClnt(filepath.Join(HOTELGEODIR, rd.String(8)), sc, geo)
 	//ssrv, err := sigmasrv.NewSigmaSrvClnt(filepath.Join(HOTELGEODIR, pe.GetPID().String()), sc, geo)
@@ -214,4 +201,70 @@ func newGeoIndex(path string) *geoindex.ClusteringIndex {
 		index.Add(p)
 	}
 	return index
+}
+
+// rssBytes tries to read resident memory (bytes) of the *current* process.
+// On Linux it reads /proc/self/status (VmRSS) or /proc/self/statm.
+// Returns (bytes, source, error).
+func rssBytes() (int64, string, error) {
+	// 1) Try /proc/self/status (VmRSS: <num> kB)
+	if b, err := rssFromProcStatus(); err == nil {
+		return b, "/proc/self/status:VmRSS", nil
+	}
+
+	// 2) Try /proc/self/statm (resident pages * page size)
+	if b, err := rssFromProcStatm(); err == nil {
+		return b, "/proc/self/statm", nil
+	}
+
+	// 3) As a last resort, return an error. (Portable getrusage has unit quirks.)
+	return 0, "", fmt.Errorf("could not read RSS from /proc (non-Linux or permission issue)")
+}
+
+func rssFromProcStatus() (int64, error) {
+	f, err := os.Open("/proc/self/status")
+	if err != nil {
+		return 0, err
+	}
+	defer f.Close()
+
+	sc := bufio.NewScanner(f)
+	for sc.Scan() {
+		line := sc.Text()
+		// Example: "VmRSS:	   123456 kB"
+		if strings.HasPrefix(line, "VmRSS:") {
+			fields := strings.Fields(line)
+			// fields like: ["VmRSS:", "123456", "kB"]
+			if len(fields) >= 2 {
+				kb, err := strconv.ParseInt(fields[1], 10, 64)
+				if err != nil {
+					return 0, err
+				}
+				return kb * 1024, nil
+			}
+		}
+	}
+	if err := sc.Err(); err != nil {
+		return 0, err
+	}
+	return 0, fmt.Errorf("VmRSS not found")
+}
+
+func rssFromProcStatm() (int64, error) {
+	data, err := os.ReadFile("/proc/self/statm")
+	if err != nil {
+		return 0, err
+	}
+	// statm format: size resident share text lib data dt
+	// We want the 2nd field (resident pages).
+	fields := strings.Fields(string(data))
+	if len(fields) < 2 {
+		return 0, fmt.Errorf("unexpected /proc/self/statm format")
+	}
+	resPages, err := strconv.ParseInt(fields[1], 10, 64)
+	if err != nil {
+		return 0, err
+	}
+	pageSize := int64(os.Getpagesize())
+	return resPages * pageSize, nil
 }

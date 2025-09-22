@@ -21,7 +21,7 @@ import (
 )
 
 const (
-	PREFETCH = 16 // number of pages to prefetch
+	PREFETCH = 10 // number of pages to prefetch
 )
 
 func nPages(start, end uint64, pagesz int) int {
@@ -132,19 +132,7 @@ func (pmi *TpagemapImg) findBinSearch(addr uint64) int {
 			return pmi.pagePrefix[mid] + (int)((addr-start)/uint64(pmi.pagesz))
 		}
 	}
-	// pi := 0
-	// for _, pme := range pmi.PagemapEntries {
-	// 	pm := pme.Message.(*pagemap.PagemapEntry)
-	// 	start := pm.GetVaddr()
-	// 	n := pm.GetNrPages()
-	// 	end := start + uint64(n*uint32(pmi.pagesz))
-	// 	if addr >= start && addr < end {
-	// 		m := (addr - start) / uint64(pmi.pagesz)
-	// 		pi = pi + int(m)
-	// 		return pi
-	// 	}
-	// 	pi += int(n)
-	// }
+
 	return -1
 }
 
@@ -262,7 +250,6 @@ func (iovs *Iovs) find(addr uint64) *Iov {
 }
 
 func (iovs *Iovs) findBinSearch(addr uint64) int {
-	//func (iovs *Iovs) findBinSearch(addr uint64) *Iov {
 	low := 0
 	high := len(iovs.iovs) - 1
 	for low <= high {
@@ -273,14 +260,9 @@ func (iovs *Iovs) findBinSearch(addr uint64) int {
 			low = mid + 1
 		} else {
 			return mid
-			//return iovs.iovs[mid]
 		}
 	}
-	// for _, iov := range iovs.iovs {
-	// 	if iov.start <= addr && addr < iov.end {
-	// 		return iov
-	// 	}
-	// }
+
 	return -1
 }
 
@@ -326,66 +308,6 @@ func (mm *Tmm) collectIovs(pmi *TpagemapImg) (*Iovs, int, int) {
 
 			if len > maxIovLen {
 				maxIovLen = len
-			}
-
-			if end < vend {
-				break
-			}
-			start = vend
-		}
-	}
-	db.DPrintf(db.TEST, "iovs %d\n", len(iovs.iovs))
-	return iovs, int(npages), int(maxIovLen)
-}
-
-func (mm *Tmm) collectIovsbad(pmi *TpagemapImg) (*Iovs, int, int) {
-	db.DPrintf(db.TEST, "mmInfo %d pmes %d\n", len(mm.Vmas), len(pmi.PagemapEntries))
-
-	iovs := newIovs()
-	//end := uint64(mm.pagesz)
-	start := uint64(0)
-	end := pmi.PagemapEntries[1].Message.(*pagemap.PagemapEntry).GetVaddr()
-	npages := uint32(0)
-	maxIovLen := start
-	nvma := 0
-
-	for i, pme := range pmi.PagemapEntries[1:] {
-		pm := pme.Message.(*pagemap.PagemapEntry)
-		if pm.GetVaddr() != end {
-			len := end - start
-			iov := newIov(mm.pagesz, start, start+len, start)
-			//db.DPrintf(db.ALWAYS, "iov start %x end %x vend %v", iov.start, iov.end, vend)
-			iovs.append(iov)
-
-			if len > maxIovLen {
-				maxIovLen = len
-			}
-			start = pm.GetVaddr()
-		}
-		end = pm.GetVaddr() + uint64(pm.GetNrPages()*uint32(mm.pagesz))
-		npages += pm.GetNrPages()
-		for ; nvma < len(mm.Vmas); nvma++ {
-			vma := mm.Vmas[nvma]
-			// if start >= vma.GetStart() {
-			// 	continue
-			// }
-			if start >= vma.GetEnd() {
-				continue
-			}
-			vend := vma.GetEnd()
-			length := end
-			if vend <= end {
-				length = vend
-			} else if i < int(len(pmi.PagemapEntries))-2 {
-				break
-			}
-			length = length - start
-			iov := newIov(mm.pagesz, start, start+length, start)
-			db.DPrintf(db.ALWAYS, "iov start %x end %x vend %v", iov.start, iov.end, vend)
-			iovs.append(iov)
-
-			if length > maxIovLen {
-				maxIovLen = length
 			}
 
 			if end < vend {

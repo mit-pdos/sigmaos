@@ -9,7 +9,7 @@ import (
 	"sigmaos/proc"
 )
 
-func CRIUCmdConstructor(skip_ckpt bool) GetBenchCmdFn {
+func CKPTCmdConstructor(skip_ckpt bool, nprocs int, nidx int) GetBenchCmdFn {
 	return func(bcfg *BenchConfig, ccfg *ClusterConfig) string {
 		const (
 			debugSelectors string = "\"BENCH;TEST;CKPT\""
@@ -20,11 +20,13 @@ func CRIUCmdConstructor(skip_ckpt bool) GetBenchCmdFn {
 		}
 		return fmt.Sprintf("export SIGMADEBUG=%s; go clean -testcache; "+
 			"go test -v sigmaos/benchmarks -timeout 0 --no-shutdown --etcdIP %s --tag %s "+
-			"--run CRIUGeo -ntrials=1 %s"+
+			"--run CRIUGeo -ntrials=%d -n_geo_idx=%d %s"+
 			"> /tmp/bench.out 2>&1",
 			debugSelectors,
 			ccfg.LeaderNodeIP,
 			bcfg.Tag,
+			nprocs,
+			nidx,
 			skip_ckpt_str,
 		)
 	}

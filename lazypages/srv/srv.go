@@ -138,10 +138,6 @@ func (lps *lazyPagesSrv) handleConn(conn net.Conn) {
 		_, _, _, _, err = unix.Recvmsg(connFd, nil, b, 0)
 		cnt += 1
 	}
-	// if err != nil {
-
-	// 	db.DFatalf("Recvmsg err %v", err)
-	// }
 	// parse socket control message
 	cmsgs, err := unix.ParseSocketControlMessage(b)
 	if err != nil {
@@ -158,26 +154,12 @@ func (lps *lazyPagesSrv) handleConn(conn net.Conn) {
 		db.DFatalf("newLazyPagesConn pid %v no registration", pid, err)
 	}
 
-	// fdpages, err := lps.Open(lpc.pages, sp.OREAD)
-	// //fullpages, err := os.Open(filepath.Join(lazypages.WorkDir(proc.GetProcEnv().GetPID()), "fullpages-"+strconv.Itoa(int(pid))+".img"))
-
-	// if err != nil {
-	// 	db.DPrintf(db.LAZYPAGESSRV, "Open %v err %v\n", lpc.pages, err)
-	// 	return
-	// }
-	// defer lps.CloseFd(fd)
-	// rp := func(off int64, pages []byte) error {
-	// 	return readBytesSigma(lps.SigmaClnt, fdpages, off, pages)
-	// 	//_, err := fullpages.ReadAt(pages, off)
-	// 	//return err
-	// }
 	lpc.fd = fd
 	//lpc.rp = rp
 	lps.pids.Delete(int(pid))
 	if err := lpc.handleReqs(); err != nil {
 		db.DFatalf("handle pid %v err %v", pid, err)
 	}
-	//lps.pids.Delete(int(pid))
 }
 
 func (lps *lazyPagesSrv) readPreloads(path string) [][]uint64 {
@@ -213,10 +195,6 @@ func (lps *lazyPagesSrv) readPreloads(path string) [][]uint64 {
 
 }
 func (lps *lazyPagesSrv) register(pid int, imgdir, pages string, ckptDir string, firstInstance bool) error {
-	// if err := lps.DownloadFile(pages, filepath.Join(lazypages.WorkDir(proc.GetProcEnv().GetPID()), "fullpages-"+strconv.Itoa(pid)+".img")); err != nil {
-	// 	db.DPrintf(db.PROCD, "DownloadFile pages err %v\n", err)
-	// 	return err
-	// }
 	fullpages := filepath.Join(lazypages.WorkDir(proc.GetProcEnv().GetPID()), "fullpages-"+strconv.Itoa(1)+".img")
 	histFD := -1
 	var err error
@@ -241,12 +219,11 @@ func (lps *lazyPagesSrv) register(pid int, imgdir, pages string, ckptDir string,
 		return err
 	}
 	ok := lps.pids.Insert(pid, lpc)
-	db.DPrintf(db.LAZYPAGESSRV, "registering %v", pid)
+	db.DPrintf(db.LAZYPAGESSRV, "registering %v %v", pid, len(preloads))
 	if !ok {
 		db.DFatalf("Insert: exists %d", pid)
 	}
 	fdpages, err := lps.Open(lpc.pages, sp.OREAD)
-	//fullpages, err := os.Open(filepath.Join(lazypages.WorkDir(proc.GetProcEnv().GetPID()), "fullpages-"+strconv.Itoa(int(pid))+".img"))
 
 	if err != nil {
 		db.DPrintf(db.LAZYPAGESSRV, "Open %v err %v\n", lpc.pages, err)
@@ -254,8 +231,6 @@ func (lps *lazyPagesSrv) register(pid int, imgdir, pages string, ckptDir string,
 	}
 	rp := func(off int64, pages []byte) error {
 		return readBytesSigma(lps.SigmaClnt, fdpages, off, pages)
-		//_, err := fullpages.ReadAt(pages, off)
-		//return err
 	}
 	lpc.rp = rp
 	go lpc.preFetch(preloads)

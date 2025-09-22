@@ -202,21 +202,6 @@ func restoreMounts(sigmaPid sp.Tpid) error {
 	}
 	// Mount perf dir
 	os.Mkdir(jailPath+"tmp", 0755)
-	// randNum := sigmaPid.String()
-	// dst := fmt.Sprintf("/tmp/sigmaos-perf/log-proc%s.txt", randNum)
-	// err := copyFile("/tmp/sigmaos-perf/log-proc.txt", dst)
-	// os.Remove("/tmp/myfile.txt")
-	// if err != nil {
-	// 	db.DPrintf(db.ERROR, "Copy failed: %v", err)
-	// } else {
-	// 	db.DPrintf(db.ALWAYS, "Copy Succeeded: %v", err)
-	// }
-	// os.Mkdir(jailPath+"/tmp/sigmaos-perf", 0755)
-
-	// if err := mkFileMount(dst, jailPath+"tmp/sigmaos-perf/log-proc.txt", "none", syscall.MS_BIND); err != nil {
-	// 	return err
-	// }
-	// _ = os.Truncate("/tmp/sigmaos-perf/log-proc.txt", 0)
 	if err := mkMount("/tmp/sigmaos-perf", jailPath+"tmp/sigmaos-perf", "none", syscall.MS_BIND); err != nil {
 		return err
 	}
@@ -226,15 +211,6 @@ func restoreMounts(sigmaPid sp.Tpid) error {
 		return err
 	}
 	defer f.Close()
-	// syscall.Unmount(jailPath+"/tmp/sigmaos-perf", 0)
-	// if err := mkMount(dst, jailPath+"tmp/sigmaos-perf", "none", syscall.MS_BIND); err != nil {
-	// 	return err
-	// }
-	// if err != nil {
-	// 	db.DPrintf(db.ERROR, "umount failed: %v", err)
-	// } else {
-	// 	db.DPrintf(db.ALWAYS, "umount Succeeded: %v", err)
-	// }
 	if err := mkMount("/mnt", jailPath+"mnt", "none", syscall.MS_BIND|syscall.MS_RDONLY); err != nil {
 		return err
 	}
@@ -326,7 +302,6 @@ func restoreProc(criuclnt *criu.Criu, proc *proc.Proc, imgDir, workDir, jailPath
 	}
 	// XXX 3 is SIGMA_DIALPROXY_FD
 	//3 is the rdr unix socket
-	//dstfd := criuDump.Entries[3].Message.(*fdinfo.FdinfoEntry)
 	var dstfd *fdinfo.FdinfoEntry
 	for _, entry := range criuDump.Entries {
 		entryinfo := entry.Message.(*fdinfo.FdinfoEntry)
@@ -369,7 +344,6 @@ func restoreProc(criuclnt *criu.Criu, proc *proc.Proc, imgDir, workDir, jailPath
 		MntnsCompatMode: proto.Bool(true),
 		External:        []string{"lazypagesid:" + strconv.Itoa(lazypagesid), "mnt[libMount]:/lib", "mnt[lib64Mount]:/lib64", "mnt[usrMount]:/usr", "mnt[etcMount]:/etc", "mnt[binMount]:/home/sigmaos/bin/user", "mnt[devMount]:/dev", "mnt[tmpMount]:/tmp", "mnt[perfMount]:/tmp/sigmaos-perf", "mnt[mntMount]:/mnt", "mnt[binfsMount]:/mnt/binfs"},
 
-		// External: []string{"mnt[libMount]:/lib", "mnt[lib64Mount]:/lib64", "mnt[usrMount]:/usr", "mnt[etcMount]:/etc", "mnt[binMount]:/home/sigmaos/bin/user", "mnt[devMount]:/dev", "mnt[tmpMount]:/tmp", "mnt[perfMount]:/tmp/sigmaos-perf" + proc.GetPid().String(), "mnt[mntMount]:/mnt", "mnt[binfsMount]:/mnt/binfs"},
 		Unprivileged: proto.Bool(false),
 		LazyPages:    proto.Bool(LAZY),
 		InheritFd:    ifds,
@@ -383,22 +357,17 @@ func restoreProc(criuclnt *criu.Criu, proc *proc.Proc, imgDir, workDir, jailPath
 
 	entries, _ := os.ReadDir(path)
 
-	// db.DPrintf(db.CKPT, "old entries in proc fd: %v", workDir)
 	for _, entry := range entries {
 		if entry.IsDir() {
-			// db.DPrintf(db.CKPT, "entry %s", entry)
 			dirs[entry.Name()] = true
 		}
 	}
 
-	//	go func() {
 	err = criuclnt.Restore(opts, nil)
 	db.DPrintf(db.CKPT, "restoreProc: Restore err %v", err)
 	if verbose {
 		dumpLog(workDir + "/restore.log")
 	}
-	//	}()
-	// wait for restored proc to check in
 	b = make([]byte, 1)
 	if _, err := wrt.Read(b); err != nil {
 		db.DFatalf("sendConn err %v\n", err)

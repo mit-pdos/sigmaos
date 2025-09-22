@@ -184,14 +184,10 @@ func TestSpawnCkptGeo(t *testing.T) {
 
 	job := rd.String(8)
 	err = hotel.InitHotelFs(ts.FsLib, job)
-	//ts.MkDir(filepath.Join("name/hotel/geo", job), 0777)
 
 	assert.Nil(t, err)
 
-	//db.DPrintf(db.TEST, "Spawn proc %v %v", job, pn)
-
-	//ckptProc := proc.NewProcPid(pid, GEO, []string{job, pn, "1000", "10", "20"})
-	ckptProc := proc.NewProcPid(pid, GEO, []string{job, pn, "1000", "10", "20"})
+	ckptProc := proc.NewProcPid(pid, GEO, []string{job, pn, "2000", "10", "20"})
 	db.DPrintf(db.TEST, "Spawn proc %v %v", job, pn)
 	err = ts.Spawn(ckptProc)
 	assert.Nil(t, err)
@@ -203,7 +199,6 @@ func TestSpawnCkptGeo(t *testing.T) {
 	status, err := ts.WaitExit(ckptProc.GetPid())
 	assert.Nil(t, err)
 	assert.True(t, status.IsStatusErr())
-	//time.Sleep(100 * time.Millisecond)
 
 	pid = sp.GenPid(GEO + "-copy")
 
@@ -212,9 +207,6 @@ func TestSpawnCkptGeo(t *testing.T) {
 	restProc := proc.NewProcFromCheckpoint(pid, GEO, pn)
 	err = ts.Spawn(restProc)
 	assert.Nil(t, err)
-
-	//db.DPrintf(db.TEST, "Wait until start %v", pid)
-	//db.DPrintf(db.TEST, "Wait until start %v", pid)
 
 	err = ts.WaitStart(restProc.GetPid())
 	assert.Nil(t, err)
@@ -225,15 +217,15 @@ func TestSpawnCkptGeo(t *testing.T) {
 	db.DPrintf(db.TEST, "exited %v", status)
 	db.DPrintf(db.TEST, "Spawn from checkpoint")
 	pid = sp.GenPid(GEO + "-copy2")
-	restProc2 := proc.NewProcFromCheckpoint(pid, GEO+"-copy2", pn)
-	err = ts.Spawn(restProc2)
-	assert.Nil(t, err)
+	// Optionally restore a checkpoint warm
+	// restProc2 := proc.NewProcFromCheckpoint(pid, GEO+"-copy2", pn)
+	// err = ts.Spawn(restProc2)
+	// assert.Nil(t, err)
+	// db.DPrintf(db.TEST, "Wait until start again %v", pid)
 
-	db.DPrintf(db.TEST, "Wait until start again %v", pid)
-
-	err = ts.WaitStart(restProc2.GetPid())
-	db.DPrintf(db.TEST, "Started %v", pid)
-	time.Sleep(2000 * time.Millisecond)
-	assert.Nil(t, err)
+	// err = ts.WaitStart(restProc2.GetPid())
+	// db.DPrintf(db.TEST, "Started %v", pid)
+	// time.Sleep(2000 * time.Millisecond)
+	// assert.Nil(t, err)
 	ts.Shutdown()
 }

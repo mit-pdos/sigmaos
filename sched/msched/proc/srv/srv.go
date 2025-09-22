@@ -429,7 +429,6 @@ func (ps *ProcSrv) Run(ctx fs.CtxI, req proto.RunRequest, res *proto.RunResult) 
 	uproc := proc.NewProcFromProto(req.ProcProto)
 	db.DPrintf(db.PROCD, "Run uproc %v", uproc)
 	// XXX for spawn lat bench
-	//	db.DPrintf(db.ALWAYS, "[%v] ProcSrv.Run recvd proc time since spawn %v", uproc.GetPid(), time.Since(uproc.GetSpawnTime()))
 	db.DPrintf(db.SPAWN_LAT, "[%v] ProcSrv.Run recvd proc time since spawn %v", uproc.GetPid(), time.Since(uproc.GetSpawnTime()))
 	// Spawn, but don't actually run the dummy proc
 	if uproc.GetProgram() == sp.DUMMY_PROG {
@@ -450,12 +449,6 @@ func (ps *ProcSrv) Run(ctx fs.CtxI, req proto.RunRequest, res *proto.RunResult) 
 	uproc.FinalizeEnv(ps.pe.GetInnerContainerIP(), ps.pe.GetOuterContainerIP(), ps.pe.GetPID())
 	db.DPrintf(db.SPAWN_LAT, "[%v] Proc Run: spawn time since spawn %v", uproc.GetPid(), time.Since(uproc.GetSpawnTime()))
 	if uproc.GetCheckpointLocation() != "" {
-
-		// db.DPrintf(db.PROCD, "Pid %v -> %d", uproc.GetPid(), pid)
-		// pe, alloc := ps.procs.Alloc(pid, newProcEntry(uproc))
-		// if !alloc { // it was already inserted
-		// 	pe.insertSignal(uproc)
-		// }
 
 		db.DPrintf(db.CKPT, "restoring proc")
 		if err := ps.restoreProc(uproc); err != nil {
@@ -494,7 +487,6 @@ func (ps *ProcSrv) Run(ctx fs.CtxI, req proto.RunRequest, res *proto.RunResult) 
 		scontainer.CleanupUProc(uproc.GetPid())
 		db.DPrintf(db.PROCD, "Removing Pid %v -> %d", uproc.GetPid(), pid)
 		ps.procs.Delete(pid)
-		// ps.sc.CloseFd(pe.fd)
 
 		return err
 	}

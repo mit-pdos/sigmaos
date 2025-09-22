@@ -285,6 +285,7 @@ const (
 	DEF_GEO_N_RESULTS     = 5
 )
 
+// CRIU benchmar
 func TestCRIUGeo(t *testing.T) {
 	// rootts, err := test.NewTstateWithRealms(t)
 	// if !assert.Nil(t, err, "Error New Tstate: %v", err) {

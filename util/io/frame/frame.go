@@ -79,13 +79,37 @@ func ReadFrames(rd io.Reader) (*sessp.IoVec, error) {
 
 // Write a single frame's buffer
 func WriteFrame(wr io.Writer, frame *sessp.Tframe) error {
-	return WriteFrameBuf(wr, frame.GetBuf())
+	if frame.IsMultiBuf() {
+		return writeFrameMultiBuf(wr, frame.GetMultiBuf())
+	} else {
+		return WriteFrameBuf(wr, frame.GetBuf())
+	}
+}
+
+// Write a single multi-buf frame
+func writeFrameMultiBuf(wr io.Writer, bs [][]byte) error {
+	totalNByte := 0
+	for _, b := range bs {
+		totalNByte += len(b)
+	}
+	nbyte := uint32(totalNByte + 4) // +4 because that is how 9P wants it
+	db.DPrintf(db.FRAME, "[%p] WriteFrameMultiBuf nbyte %v %v", wr, totalNByte, nbyte)
+	if err := binary.Write(wr, binary.LittleEndian, nbyte); err != nil {
+		return err
+	}
+	var err error = nil
+	for _, b := range bs {
+		if err = writeRawBuffer(wr, b); err != nil {
+			break
+		}
+	}
+	return err
 }
 
 // Write a single frame
 func WriteFrameBuf(wr io.Writer, b []byte) error {
 	nbyte := uint32(len(b) + 4) // +4 because that is how 9P wants it
-	db.DPrintf(db.FRAME, "[%p] WriteFrame nbyte %v %v", wr, len(b), nbyte)
+	db.DPrintf(db.FRAME, "[%p] WriteFrameBuf nbyte %v %v", wr, len(b), nbyte)
 	if err := binary.Write(wr, binary.LittleEndian, nbyte); err != nil {
 		return err
 	}

@@ -46,9 +46,23 @@ struct RepDefaultTypeInternal {
   };
 };
 PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 RepDefaultTypeInternal _Rep_default_instance_;
+PROTOBUF_CONSTEXPR SplitIoVec::SplitIoVec(
+    ::_pbi::ConstantInitialized): _impl_{
+    /*decltype(_impl_.iov_)*/{}
+  , /*decltype(_impl_._cached_size_)*/{}} {}
+struct SplitIoVecDefaultTypeInternal {
+  PROTOBUF_CONSTEXPR SplitIoVecDefaultTypeInternal()
+      : _instance(::_pbi::ConstantInitialized{}) {}
+  ~SplitIoVecDefaultTypeInternal() {}
+  union {
+    SplitIoVec _instance;
+  };
+};
+PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 SplitIoVecDefaultTypeInternal _SplitIoVec_default_instance_;
 PROTOBUF_CONSTEXPR Blob::Blob(
     ::_pbi::ConstantInitialized): _impl_{
     /*decltype(_impl_.iov_)*/{}
+  , /*decltype(_impl_.splitiov_)*/{}
   , /*decltype(_impl_._cached_size_)*/{}} {}
 struct BlobDefaultTypeInternal {
   PROTOBUF_CONSTEXPR BlobDefaultTypeInternal()
@@ -59,7 +73,7 @@ struct BlobDefaultTypeInternal {
   };
 };
 PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 BlobDefaultTypeInternal _Blob_default_instance_;
-static ::_pb::Metadata file_level_metadata_rpc_2fproto_2frpc_2eproto[3];
+static ::_pb::Metadata file_level_metadata_rpc_2fproto_2frpc_2eproto[4];
 static constexpr ::_pb::EnumDescriptor const** file_level_enum_descriptors_rpc_2fproto_2frpc_2eproto = nullptr;
 static constexpr ::_pb::ServiceDescriptor const** file_level_service_descriptors_rpc_2fproto_2frpc_2eproto = nullptr;
 
@@ -79,39 +93,51 @@ const uint32_t TableStruct_rpc_2fproto_2frpc_2eproto::offsets[] PROTOBUF_SECTION
   ~0u,  // no _inlined_string_donated_
   PROTOBUF_FIELD_OFFSET(::Rep, _impl_.err_),
   ~0u,  // no _has_bits_
+  PROTOBUF_FIELD_OFFSET(::SplitIoVec, _internal_metadata_),
+  ~0u,  // no _extensions_
+  ~0u,  // no _oneof_case_
+  ~0u,  // no _weak_field_map_
+  ~0u,  // no _inlined_string_donated_
+  PROTOBUF_FIELD_OFFSET(::SplitIoVec, _impl_.iov_),
+  ~0u,  // no _has_bits_
   PROTOBUF_FIELD_OFFSET(::Blob, _internal_metadata_),
   ~0u,  // no _extensions_
   ~0u,  // no _oneof_case_
   ~0u,  // no _weak_field_map_
   ~0u,  // no _inlined_string_donated_
   PROTOBUF_FIELD_OFFSET(::Blob, _impl_.iov_),
+  PROTOBUF_FIELD_OFFSET(::Blob, _impl_.splitiov_),
 };
 static const ::_pbi::MigrationSchema schemas[] PROTOBUF_SECTION_VARIABLE(protodesc_cold) = {
   { 0, -1, -1, sizeof(::Req)},
   { 7, -1, -1, sizeof(::Rep)},
-  { 14, -1, -1, sizeof(::Blob)},
+  { 14, -1, -1, sizeof(::SplitIoVec)},
+  { 21, -1, -1, sizeof(::Blob)},
 };
 
 static const ::_pb::Message* const file_default_instances[] = {
   &::_Req_default_instance_._instance,
   &::_Rep_default_instance_._instance,
+  &::_SplitIoVec_default_instance_._instance,
   &::_Blob_default_instance_._instance,
 };
 
 const char descriptor_table_protodef_rpc_2fproto_2frpc_2eproto[] PROTOBUF_SECTION_VARIABLE(protodesc_cold) =
   "\n\023rpc/proto/rpc.proto\032\023sigmap/sigmap.pro"
   "to\"\025\n\003Req\022\016\n\006method\030\001 \001(\t\"\033\n\003Rep\022\024\n\003err\030"
-  "\001 \001(\0132\007.Rerror\"\023\n\004Blob\022\013\n\003iov\030\001 \003(\014B\023Z\021s"
-  "igmaos/rpc/protob\006proto3"
+  "\001 \001(\0132\007.Rerror\"\031\n\nSplitIoVec\022\013\n\003iov\030\001 \003("
+  "\014\"2\n\004Blob\022\013\n\003iov\030\001 \003(\014\022\035\n\010splitIov\030\002 \003(\013"
+  "2\013.SplitIoVecB\023Z\021sigmaos/rpc/protob\006prot"
+  "o3"
   ;
 static const ::_pbi::DescriptorTable* const descriptor_table_rpc_2fproto_2frpc_2eproto_deps[1] = {
   &::descriptor_table_sigmap_2fsigmap_2eproto,
 };
 static ::_pbi::once_flag descriptor_table_rpc_2fproto_2frpc_2eproto_once;
 const ::_pbi::DescriptorTable descriptor_table_rpc_2fproto_2frpc_2eproto = {
-    false, false, 144, descriptor_table_protodef_rpc_2fproto_2frpc_2eproto,
+    false, false, 202, descriptor_table_protodef_rpc_2fproto_2frpc_2eproto,
     "rpc/proto/rpc.proto",
-    &descriptor_table_rpc_2fproto_2frpc_2eproto_once, descriptor_table_rpc_2fproto_2frpc_2eproto_deps, 1, 3,
+    &descriptor_table_rpc_2fproto_2frpc_2eproto_once, descriptor_table_rpc_2fproto_2frpc_2eproto_deps, 1, 4,
     schemas, file_default_instances, TableStruct_rpc_2fproto_2frpc_2eproto::offsets,
     file_level_metadata_rpc_2fproto_2frpc_2eproto, file_level_enum_descriptors_rpc_2fproto_2frpc_2eproto,
     file_level_service_descriptors_rpc_2fproto_2frpc_2eproto,
@@ -527,28 +553,28 @@ void Rep::InternalSwap(Rep* other) {
 
 // ===================================================================
 
-class Blob::_Internal {
+class SplitIoVec::_Internal {
  public:
 };
 
-Blob::Blob(::PROTOBUF_NAMESPACE_ID::Arena* arena,
+SplitIoVec::SplitIoVec(::PROTOBUF_NAMESPACE_ID::Arena* arena,
                          bool is_message_owned)
   : ::PROTOBUF_NAMESPACE_ID::Message(arena, is_message_owned) {
   SharedCtor(arena, is_message_owned);
-  // @@protoc_insertion_point(arena_constructor:Blob)
+  // @@protoc_insertion_point(arena_constructor:SplitIoVec)
 }
-Blob::Blob(const Blob& from)
+SplitIoVec::SplitIoVec(const SplitIoVec& from)
   : ::PROTOBUF_NAMESPACE_ID::Message() {
-  Blob* const _this = this; (void)_this;
+  SplitIoVec* const _this = this; (void)_this;
   new (&_impl_) Impl_{
       decltype(_impl_.iov_){from._impl_.iov_}
     , /*decltype(_impl_._cached_size_)*/{}};
 
   _internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
-  // @@protoc_insertion_point(copy_constructor:Blob)
+  // @@protoc_insertion_point(copy_constructor:SplitIoVec)
 }
 
-inline void Blob::SharedCtor(
+inline void SplitIoVec::SharedCtor(
     ::_pb::Arena* arena, bool is_message_owned) {
   (void)arena;
   (void)is_message_owned;
@@ -558,8 +584,8 @@ inline void Blob::SharedCtor(
   };
 }
 
-Blob::~Blob() {
-  // @@protoc_insertion_point(destructor:Blob)
+SplitIoVec::~SplitIoVec() {
+  // @@protoc_insertion_point(destructor:SplitIoVec)
   if (auto *arena = _internal_metadata_.DeleteReturnArena<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>()) {
   (void)arena;
     return;
@@ -567,17 +593,17 @@ Blob::~Blob() {
   SharedDtor();
 }
 
-inline void Blob::SharedDtor() {
+inline void SplitIoVec::SharedDtor() {
   GOOGLE_DCHECK(GetArenaForAllocation() == nullptr);
   _impl_.iov_.~RepeatedPtrField();
 }
 
-void Blob::SetCachedSize(int size) const {
+void SplitIoVec::SetCachedSize(int size) const {
   _impl_._cached_size_.Set(size);
 }
 
-void Blob::Clear() {
-// @@protoc_insertion_point(message_clear_start:Blob)
+void SplitIoVec::Clear() {
+// @@protoc_insertion_point(message_clear_start:SplitIoVec)
   uint32_t cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
@@ -586,7 +612,7 @@ void Blob::Clear() {
   _internal_metadata_.Clear<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>();
 }
 
-const char* Blob::_InternalParse(const char* ptr, ::_pbi::ParseContext* ctx) {
+const char* SplitIoVec::_InternalParse(const char* ptr, ::_pbi::ParseContext* ctx) {
 #define CHK_(x) if (PROTOBUF_PREDICT_FALSE(!(x))) goto failure
   while (!ctx->Done(&ptr)) {
     uint32_t tag;
@@ -629,6 +655,208 @@ failure:
 #undef CHK_
 }
 
+uint8_t* SplitIoVec::_InternalSerialize(
+    uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
+  // @@protoc_insertion_point(serialize_to_array_start:SplitIoVec)
+  uint32_t cached_has_bits = 0;
+  (void) cached_has_bits;
+
+  // repeated bytes iov = 1;
+  for (int i = 0, n = this->_internal_iov_size(); i < n; i++) {
+    const auto& s = this->_internal_iov(i);
+    target = stream->WriteBytes(1, s, target);
+  }
+
+  if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
+    target = ::_pbi::WireFormat::InternalSerializeUnknownFieldsToArray(
+        _internal_metadata_.unknown_fields<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(::PROTOBUF_NAMESPACE_ID::UnknownFieldSet::default_instance), target, stream);
+  }
+  // @@protoc_insertion_point(serialize_to_array_end:SplitIoVec)
+  return target;
+}
+
+size_t SplitIoVec::ByteSizeLong() const {
+// @@protoc_insertion_point(message_byte_size_start:SplitIoVec)
+  size_t total_size = 0;
+
+  uint32_t cached_has_bits = 0;
+  // Prevent compiler warnings about cached_has_bits being unused
+  (void) cached_has_bits;
+
+  // repeated bytes iov = 1;
+  total_size += 1 *
+      ::PROTOBUF_NAMESPACE_ID::internal::FromIntSize(_impl_.iov_.size());
+  for (int i = 0, n = _impl_.iov_.size(); i < n; i++) {
+    total_size += ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::BytesSize(
+      _impl_.iov_.Get(i));
+  }
+
+  return MaybeComputeUnknownFieldsSize(total_size, &_impl_._cached_size_);
+}
+
+const ::PROTOBUF_NAMESPACE_ID::Message::ClassData SplitIoVec::_class_data_ = {
+    ::PROTOBUF_NAMESPACE_ID::Message::CopyWithSourceCheck,
+    SplitIoVec::MergeImpl
+};
+const ::PROTOBUF_NAMESPACE_ID::Message::ClassData*SplitIoVec::GetClassData() const { return &_class_data_; }
+
+
+void SplitIoVec::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PROTOBUF_NAMESPACE_ID::Message& from_msg) {
+  auto* const _this = static_cast<SplitIoVec*>(&to_msg);
+  auto& from = static_cast<const SplitIoVec&>(from_msg);
+  // @@protoc_insertion_point(class_specific_merge_from_start:SplitIoVec)
+  GOOGLE_DCHECK_NE(&from, _this);
+  uint32_t cached_has_bits = 0;
+  (void) cached_has_bits;
+
+  _this->_impl_.iov_.MergeFrom(from._impl_.iov_);
+  _this->_internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
+}
+
+void SplitIoVec::CopyFrom(const SplitIoVec& from) {
+// @@protoc_insertion_point(class_specific_copy_from_start:SplitIoVec)
+  if (&from == this) return;
+  Clear();
+  MergeFrom(from);
+}
+
+bool SplitIoVec::IsInitialized() const {
+  return true;
+}
+
+void SplitIoVec::InternalSwap(SplitIoVec* other) {
+  using std::swap;
+  _internal_metadata_.InternalSwap(&other->_internal_metadata_);
+  _impl_.iov_.InternalSwap(&other->_impl_.iov_);
+}
+
+::PROTOBUF_NAMESPACE_ID::Metadata SplitIoVec::GetMetadata() const {
+  return ::_pbi::AssignDescriptors(
+      &descriptor_table_rpc_2fproto_2frpc_2eproto_getter, &descriptor_table_rpc_2fproto_2frpc_2eproto_once,
+      file_level_metadata_rpc_2fproto_2frpc_2eproto[2]);
+}
+
+// ===================================================================
+
+class Blob::_Internal {
+ public:
+};
+
+Blob::Blob(::PROTOBUF_NAMESPACE_ID::Arena* arena,
+                         bool is_message_owned)
+  : ::PROTOBUF_NAMESPACE_ID::Message(arena, is_message_owned) {
+  SharedCtor(arena, is_message_owned);
+  // @@protoc_insertion_point(arena_constructor:Blob)
+}
+Blob::Blob(const Blob& from)
+  : ::PROTOBUF_NAMESPACE_ID::Message() {
+  Blob* const _this = this; (void)_this;
+  new (&_impl_) Impl_{
+      decltype(_impl_.iov_){from._impl_.iov_}
+    , decltype(_impl_.splitiov_){from._impl_.splitiov_}
+    , /*decltype(_impl_._cached_size_)*/{}};
+
+  _internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
+  // @@protoc_insertion_point(copy_constructor:Blob)
+}
+
+inline void Blob::SharedCtor(
+    ::_pb::Arena* arena, bool is_message_owned) {
+  (void)arena;
+  (void)is_message_owned;
+  new (&_impl_) Impl_{
+      decltype(_impl_.iov_){arena}
+    , decltype(_impl_.splitiov_){arena}
+    , /*decltype(_impl_._cached_size_)*/{}
+  };
+}
+
+Blob::~Blob() {
+  // @@protoc_insertion_point(destructor:Blob)
+  if (auto *arena = _internal_metadata_.DeleteReturnArena<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>()) {
+  (void)arena;
+    return;
+  }
+  SharedDtor();
+}
+
+inline void Blob::SharedDtor() {
+  GOOGLE_DCHECK(GetArenaForAllocation() == nullptr);
+  _impl_.iov_.~RepeatedPtrField();
+  _impl_.splitiov_.~RepeatedPtrField();
+}
+
+void Blob::SetCachedSize(int size) const {
+  _impl_._cached_size_.Set(size);
+}
+
+void Blob::Clear() {
+// @@protoc_insertion_point(message_clear_start:Blob)
+  uint32_t cached_has_bits = 0;
+  // Prevent compiler warnings about cached_has_bits being unused
+  (void) cached_has_bits;
+
+  _impl_.iov_.Clear();
+  _impl_.splitiov_.Clear();
+  _internal_metadata_.Clear<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>();
+}
+
+const char* Blob::_InternalParse(const char* ptr, ::_pbi::ParseContext* ctx) {
+#define CHK_(x) if (PROTOBUF_PREDICT_FALSE(!(x))) goto failure
+  while (!ctx->Done(&ptr)) {
+    uint32_t tag;
+    ptr = ::_pbi::ReadTag(ptr, &tag);
+    switch (tag >> 3) {
+      // repeated bytes iov = 1;
+      case 1:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 10)) {
+          ptr -= 1;
+          do {
+            ptr += 1;
+            auto str = _internal_add_iov();
+            ptr = ::_pbi::InlineGreedyStringParser(str, ptr, ctx);
+            CHK_(ptr);
+            if (!ctx->DataAvailable(ptr)) break;
+          } while (::PROTOBUF_NAMESPACE_ID::internal::ExpectTag<10>(ptr));
+        } else
+          goto handle_unusual;
+        continue;
+      // repeated .SplitIoVec splitIov = 2;
+      case 2:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 18)) {
+          ptr -= 1;
+          do {
+            ptr += 1;
+            ptr = ctx->ParseMessage(_internal_add_splitiov(), ptr);
+            CHK_(ptr);
+            if (!ctx->DataAvailable(ptr)) break;
+          } while (::PROTOBUF_NAMESPACE_ID::internal::ExpectTag<18>(ptr));
+        } else
+          goto handle_unusual;
+        continue;
+      default:
+        goto handle_unusual;
+    }  // switch
+  handle_unusual:
+    if ((tag == 0) || ((tag & 7) == 4)) {
+      CHK_(ptr);
+      ctx->SetLastTag(tag);
+      goto message_done;
+    }
+    ptr = UnknownFieldParse(
+        tag,
+        _internal_metadata_.mutable_unknown_fields<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(),
+        ptr, ctx);
+    CHK_(ptr != nullptr);
+  }  // while
+message_done:
+  return ptr;
+failure:
+  ptr = nullptr;
+  goto message_done;
+#undef CHK_
+}
+
 uint8_t* Blob::_InternalSerialize(
     uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
   // @@protoc_insertion_point(serialize_to_array_start:Blob)
@@ -639,6 +867,14 @@ uint8_t* Blob::_InternalSerialize(
   for (int i = 0, n = this->_internal_iov_size(); i < n; i++) {
     const auto& s = this->_internal_iov(i);
     target = stream->WriteBytes(1, s, target);
+  }
+
+  // repeated .SplitIoVec splitIov = 2;
+  for (unsigned i = 0,
+      n = static_cast<unsigned>(this->_internal_splitiov_size()); i < n; i++) {
+    const auto& repfield = this->_internal_splitiov(i);
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::
+        InternalWriteMessage(2, repfield, repfield.GetCachedSize(), target, stream);
   }
 
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
@@ -665,6 +901,13 @@ size_t Blob::ByteSizeLong() const {
       _impl_.iov_.Get(i));
   }
 
+  // repeated .SplitIoVec splitIov = 2;
+  total_size += 1UL * this->_internal_splitiov_size();
+  for (const auto& msg : this->_impl_.splitiov_) {
+    total_size +=
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::MessageSize(msg);
+  }
+
   return MaybeComputeUnknownFieldsSize(total_size, &_impl_._cached_size_);
 }
 
@@ -684,6 +927,7 @@ void Blob::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PROTOBUF_
   (void) cached_has_bits;
 
   _this->_impl_.iov_.MergeFrom(from._impl_.iov_);
+  _this->_impl_.splitiov_.MergeFrom(from._impl_.splitiov_);
   _this->_internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
 }
 
@@ -702,12 +946,13 @@ void Blob::InternalSwap(Blob* other) {
   using std::swap;
   _internal_metadata_.InternalSwap(&other->_internal_metadata_);
   _impl_.iov_.InternalSwap(&other->_impl_.iov_);
+  _impl_.splitiov_.InternalSwap(&other->_impl_.splitiov_);
 }
 
 ::PROTOBUF_NAMESPACE_ID::Metadata Blob::GetMetadata() const {
   return ::_pbi::AssignDescriptors(
       &descriptor_table_rpc_2fproto_2frpc_2eproto_getter, &descriptor_table_rpc_2fproto_2frpc_2eproto_once,
-      file_level_metadata_rpc_2fproto_2frpc_2eproto[2]);
+      file_level_metadata_rpc_2fproto_2frpc_2eproto[3]);
 }
 
 // @@protoc_insertion_point(namespace_scope)
@@ -719,6 +964,10 @@ Arena::CreateMaybeMessage< ::Req >(Arena* arena) {
 template<> PROTOBUF_NOINLINE ::Rep*
 Arena::CreateMaybeMessage< ::Rep >(Arena* arena) {
   return Arena::CreateMessageInternal< ::Rep >(arena);
+}
+template<> PROTOBUF_NOINLINE ::SplitIoVec*
+Arena::CreateMaybeMessage< ::SplitIoVec >(Arena* arena) {
+  return Arena::CreateMessageInternal< ::SplitIoVec >(arena);
 }
 template<> PROTOBUF_NOINLINE ::Blob*
 Arena::CreateMaybeMessage< ::Blob >(Arena* arena) {

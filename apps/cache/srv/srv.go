@@ -6,10 +6,9 @@ import (
 	"sync"
 	"time"
 
-	cacheproto "sigmaos/apps/cache/proto"
-
 	"sigmaos/api/fs"
 	"sigmaos/apps/cache"
+	cacheproto "sigmaos/apps/cache/proto"
 	"sigmaos/apps/epcache"
 	epcacheclnt "sigmaos/apps/epcache/clnt"
 	db "sigmaos/debug"
@@ -294,7 +293,7 @@ func (cs *CacheSrv) MultiDumpShard(ctx fs.CtxI, req cacheproto.MultiShardReq, re
 		return serr.NewErr(serr.TErrStale, fmt.Sprintf("shards %v", req.GetShards()))
 	}
 	rep.Blob = &rpcproto.Blob{}
-	rep.Blob.Iov = make([][]byte, len(req.GetShards()))
+	rep.Blob.SplitIov = make([]*rpcproto.SplitIoVec, len(req.GetShards()))
 	for shardIdx, s := range req.GetShards() {
 		shardID := cache.Tshard(s)
 		if si, ok := cs.shards[shardID]; !ok {

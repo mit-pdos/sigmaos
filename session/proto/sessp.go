@@ -36,21 +36,37 @@ func (s Tsession) String() string {
 }
 
 type Tframe struct {
-	b         []byte
-	allocated bool
-	alloc     malloc.Allocator
+	b          []byte
+	multiBuf   [][]byte
+	allocated  bool
+	isMultiBuf bool
+	alloc      malloc.Allocator
+}
+
+func newFrame(b []byte, multiBuf [][]byte, allocated bool, isMultiBuf bool, alloc malloc.Allocator) *Tframe {
+	return &Tframe{
+		b:          b,
+		multiBuf:   multiBuf,
+		allocated:  allocated,
+		isMultiBuf: isMultiBuf,
+		alloc:      alloc,
+	}
 }
 
 func NewFrame(b []byte, alloc malloc.Allocator) *Tframe {
-	return &Tframe{
-		b:         b,
-		allocated: len(b) != 0,
-		alloc:     alloc,
-	}
+	return newFrame(b, nil, len(b) != 0, false, alloc)
+}
+
+func NewMultiBufFrame(nbuf int) *Tframe {
+	return newFrame(nil, make([][]byte, nbuf), true, true, nil)
 }
 
 func NewUnallocatedFrame() *Tframe {
 	return NewFrame(nil, nil)
+}
+
+func (f *Tframe) IsMultiBuf() bool {
+	return f.isMultiBuf
 }
 
 func (f *Tframe) IsAllocated() bool {
@@ -61,8 +77,16 @@ func (f *Tframe) GetBuf() []byte {
 	return f.b
 }
 
+func (f *Tframe) GetMultiBuf() [][]byte {
+	return f.multiBuf
+}
+
 func (f *Tframe) SetBuf(b []byte) {
 	f.b = b
+}
+
+func (f *Tframe) SetMultiBuf(idx int, b []byte) {
+	f.multiBuf[idx] = b
 }
 
 func (f *Tframe) Len() int {
@@ -82,17 +106,34 @@ func (f *Tframe) TruncateBuf(nbyte int) {
 }
 
 type IoVec struct {
-	frames []*Tframe
-	alloc  malloc.Allocator
+	frames     []*Tframe
+	alloc      malloc.Allocator
+	isMultiBuf bool
 }
 
 func NewIoVec(fs [][]byte, alloc malloc.Allocator) *IoVec {
 	iov := &IoVec{
-		frames: make([]*Tframe, len(fs)),
-		alloc:  alloc,
+		frames:     make([]*Tframe, len(fs)),
+		alloc:      alloc,
+		isMultiBuf: false,
 	}
 	for i := 0; i < len(fs); i++ {
 		iov.frames[i] = NewFrame(fs[i], alloc)
+	}
+	return iov
+}
+
+func NewMultiBufIoVec(fs [][][]byte) *IoVec {
+	iov := &IoVec{
+		frames:     make([]*Tframe, len(fs)),
+		alloc:      nil,
+		isMultiBuf: true,
+	}
+	for i := 0; i < len(fs); i++ {
+		iov.frames[i] = NewMultiBufFrame(len(fs[i]))
+		for j := 0; j < len(fs[i]); j++ {
+			iov.frames[i].SetMultiBuf(j, fs[i][j])
+		}
 	}
 	return iov
 }
@@ -127,6 +168,14 @@ func (iov *IoVec) ToByteSlices() [][]byte {
 		bufs[i] = iov.frames[i].GetBuf()
 	}
 	return bufs
+}
+
+func (iov *IoVec) SetIsMultiBuf(isMultiBuf bool) {
+	iov.isMultiBuf = isMultiBuf
+}
+
+func (iov *IoVec) GetIsMultiBuf() bool {
+	return iov.isMultiBuf
 }
 
 func (iov *IoVec) GetFrame(i int) *Tframe {

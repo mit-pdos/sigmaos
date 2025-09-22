@@ -54,10 +54,14 @@ extern RepDefaultTypeInternal _Rep_default_instance_;
 class Req;
 struct ReqDefaultTypeInternal;
 extern ReqDefaultTypeInternal _Req_default_instance_;
+class SplitIoVec;
+struct SplitIoVecDefaultTypeInternal;
+extern SplitIoVecDefaultTypeInternal _SplitIoVec_default_instance_;
 PROTOBUF_NAMESPACE_OPEN
 template<> ::Blob* Arena::CreateMaybeMessage<::Blob>(Arena*);
 template<> ::Rep* Arena::CreateMaybeMessage<::Rep>(Arena*);
 template<> ::Req* Arena::CreateMaybeMessage<::Req>(Arena*);
+template<> ::SplitIoVec* Arena::CreateMaybeMessage<::SplitIoVec>(Arena*);
 PROTOBUF_NAMESPACE_CLOSE
 
 // ===================================================================
@@ -372,6 +376,169 @@ class Rep final :
 };
 // -------------------------------------------------------------------
 
+class SplitIoVec final :
+    public ::PROTOBUF_NAMESPACE_ID::Message /* @@protoc_insertion_point(class_definition:SplitIoVec) */ {
+ public:
+  inline SplitIoVec() : SplitIoVec(nullptr) {}
+  ~SplitIoVec() override;
+  explicit PROTOBUF_CONSTEXPR SplitIoVec(::PROTOBUF_NAMESPACE_ID::internal::ConstantInitialized);
+
+  SplitIoVec(const SplitIoVec& from);
+  SplitIoVec(SplitIoVec&& from) noexcept
+    : SplitIoVec() {
+    *this = ::std::move(from);
+  }
+
+  inline SplitIoVec& operator=(const SplitIoVec& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  inline SplitIoVec& operator=(SplitIoVec&& from) noexcept {
+    if (this == &from) return *this;
+    if (GetOwningArena() == from.GetOwningArena()
+  #ifdef PROTOBUF_FORCE_COPY_IN_MOVE
+        && GetOwningArena() != nullptr
+  #endif  // !PROTOBUF_FORCE_COPY_IN_MOVE
+    ) {
+      InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+
+  static const ::PROTOBUF_NAMESPACE_ID::Descriptor* descriptor() {
+    return GetDescriptor();
+  }
+  static const ::PROTOBUF_NAMESPACE_ID::Descriptor* GetDescriptor() {
+    return default_instance().GetMetadata().descriptor;
+  }
+  static const ::PROTOBUF_NAMESPACE_ID::Reflection* GetReflection() {
+    return default_instance().GetMetadata().reflection;
+  }
+  static const SplitIoVec& default_instance() {
+    return *internal_default_instance();
+  }
+  static inline const SplitIoVec* internal_default_instance() {
+    return reinterpret_cast<const SplitIoVec*>(
+               &_SplitIoVec_default_instance_);
+  }
+  static constexpr int kIndexInFileMessages =
+    2;
+
+  friend void swap(SplitIoVec& a, SplitIoVec& b) {
+    a.Swap(&b);
+  }
+  inline void Swap(SplitIoVec* other) {
+    if (other == this) return;
+  #ifdef PROTOBUF_FORCE_COPY_IN_SWAP
+    if (GetOwningArena() != nullptr &&
+        GetOwningArena() == other->GetOwningArena()) {
+   #else  // PROTOBUF_FORCE_COPY_IN_SWAP
+    if (GetOwningArena() == other->GetOwningArena()) {
+  #endif  // !PROTOBUF_FORCE_COPY_IN_SWAP
+      InternalSwap(other);
+    } else {
+      ::PROTOBUF_NAMESPACE_ID::internal::GenericSwap(this, other);
+    }
+  }
+  void UnsafeArenaSwap(SplitIoVec* other) {
+    if (other == this) return;
+    GOOGLE_DCHECK(GetOwningArena() == other->GetOwningArena());
+    InternalSwap(other);
+  }
+
+  // implements Message ----------------------------------------------
+
+  SplitIoVec* New(::PROTOBUF_NAMESPACE_ID::Arena* arena = nullptr) const final {
+    return CreateMaybeMessage<SplitIoVec>(arena);
+  }
+  using ::PROTOBUF_NAMESPACE_ID::Message::CopyFrom;
+  void CopyFrom(const SplitIoVec& from);
+  using ::PROTOBUF_NAMESPACE_ID::Message::MergeFrom;
+  void MergeFrom( const SplitIoVec& from) {
+    SplitIoVec::MergeImpl(*this, from);
+  }
+  private:
+  static void MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PROTOBUF_NAMESPACE_ID::Message& from_msg);
+  public:
+  PROTOBUF_ATTRIBUTE_REINITIALIZES void Clear() final;
+  bool IsInitialized() const final;
+
+  size_t ByteSizeLong() const final;
+  const char* _InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::internal::ParseContext* ctx) final;
+  uint8_t* _InternalSerialize(
+      uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const final;
+  int GetCachedSize() const final { return _impl_._cached_size_.Get(); }
+
+  private:
+  void SharedCtor(::PROTOBUF_NAMESPACE_ID::Arena* arena, bool is_message_owned);
+  void SharedDtor();
+  void SetCachedSize(int size) const final;
+  void InternalSwap(SplitIoVec* other);
+
+  private:
+  friend class ::PROTOBUF_NAMESPACE_ID::internal::AnyMetadata;
+  static ::PROTOBUF_NAMESPACE_ID::StringPiece FullMessageName() {
+    return "SplitIoVec";
+  }
+  protected:
+  explicit SplitIoVec(::PROTOBUF_NAMESPACE_ID::Arena* arena,
+                       bool is_message_owned = false);
+  public:
+
+  static const ClassData _class_data_;
+  const ::PROTOBUF_NAMESPACE_ID::Message::ClassData*GetClassData() const final;
+
+  ::PROTOBUF_NAMESPACE_ID::Metadata GetMetadata() const final;
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  enum : int {
+    kIovFieldNumber = 1,
+  };
+  // repeated bytes iov = 1;
+  int iov_size() const;
+  private:
+  int _internal_iov_size() const;
+  public:
+  void clear_iov();
+  const std::string& iov(int index) const;
+  std::string* mutable_iov(int index);
+  void set_iov(int index, const std::string& value);
+  void set_iov(int index, std::string&& value);
+  void set_iov(int index, const char* value);
+  void set_iov(int index, const void* value, size_t size);
+  std::string* add_iov();
+  void add_iov(const std::string& value);
+  void add_iov(std::string&& value);
+  void add_iov(const char* value);
+  void add_iov(const void* value, size_t size);
+  const ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField<std::string>& iov() const;
+  ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField<std::string>* mutable_iov();
+  private:
+  const std::string& _internal_iov(int index) const;
+  std::string* _internal_add_iov();
+  public:
+
+  // @@protoc_insertion_point(class_scope:SplitIoVec)
+ private:
+  class _Internal;
+
+  template <typename T> friend class ::PROTOBUF_NAMESPACE_ID::Arena::InternalHelper;
+  typedef void InternalArenaConstructable_;
+  typedef void DestructorSkippable_;
+  struct Impl_ {
+    ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField<std::string> iov_;
+    mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
+  };
+  union { Impl_ _impl_; };
+  friend struct ::TableStruct_rpc_2fproto_2frpc_2eproto;
+};
+// -------------------------------------------------------------------
+
 class Blob final :
     public ::PROTOBUF_NAMESPACE_ID::Message /* @@protoc_insertion_point(class_definition:Blob) */ {
  public:
@@ -420,7 +587,7 @@ class Blob final :
                &_Blob_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    2;
+    3;
 
   friend void swap(Blob& a, Blob& b) {
     a.Swap(&b);
@@ -494,6 +661,7 @@ class Blob final :
 
   enum : int {
     kIovFieldNumber = 1,
+    kSplitIovFieldNumber = 2,
   };
   // repeated bytes iov = 1;
   int iov_size() const;
@@ -519,6 +687,24 @@ class Blob final :
   std::string* _internal_add_iov();
   public:
 
+  // repeated .SplitIoVec splitIov = 2;
+  int splitiov_size() const;
+  private:
+  int _internal_splitiov_size() const;
+  public:
+  void clear_splitiov();
+  ::SplitIoVec* mutable_splitiov(int index);
+  ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::SplitIoVec >*
+      mutable_splitiov();
+  private:
+  const ::SplitIoVec& _internal_splitiov(int index) const;
+  ::SplitIoVec* _internal_add_splitiov();
+  public:
+  const ::SplitIoVec& splitiov(int index) const;
+  ::SplitIoVec* add_splitiov();
+  const ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::SplitIoVec >&
+      splitiov() const;
+
   // @@protoc_insertion_point(class_scope:Blob)
  private:
   class _Internal;
@@ -528,6 +714,7 @@ class Blob final :
   typedef void DestructorSkippable_;
   struct Impl_ {
     ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField<std::string> iov_;
+    ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::SplitIoVec > splitiov_;
     mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   };
   union { Impl_ _impl_; };
@@ -685,6 +872,85 @@ inline void Rep::set_allocated_err(::Rerror* err) {
 
 // -------------------------------------------------------------------
 
+// SplitIoVec
+
+// repeated bytes iov = 1;
+inline int SplitIoVec::_internal_iov_size() const {
+  return _impl_.iov_.size();
+}
+inline int SplitIoVec::iov_size() const {
+  return _internal_iov_size();
+}
+inline void SplitIoVec::clear_iov() {
+  _impl_.iov_.Clear();
+}
+inline std::string* SplitIoVec::add_iov() {
+  std::string* _s = _internal_add_iov();
+  // @@protoc_insertion_point(field_add_mutable:SplitIoVec.iov)
+  return _s;
+}
+inline const std::string& SplitIoVec::_internal_iov(int index) const {
+  return _impl_.iov_.Get(index);
+}
+inline const std::string& SplitIoVec::iov(int index) const {
+  // @@protoc_insertion_point(field_get:SplitIoVec.iov)
+  return _internal_iov(index);
+}
+inline std::string* SplitIoVec::mutable_iov(int index) {
+  // @@protoc_insertion_point(field_mutable:SplitIoVec.iov)
+  return _impl_.iov_.Mutable(index);
+}
+inline void SplitIoVec::set_iov(int index, const std::string& value) {
+  _impl_.iov_.Mutable(index)->assign(value);
+  // @@protoc_insertion_point(field_set:SplitIoVec.iov)
+}
+inline void SplitIoVec::set_iov(int index, std::string&& value) {
+  _impl_.iov_.Mutable(index)->assign(std::move(value));
+  // @@protoc_insertion_point(field_set:SplitIoVec.iov)
+}
+inline void SplitIoVec::set_iov(int index, const char* value) {
+  GOOGLE_DCHECK(value != nullptr);
+  _impl_.iov_.Mutable(index)->assign(value);
+  // @@protoc_insertion_point(field_set_char:SplitIoVec.iov)
+}
+inline void SplitIoVec::set_iov(int index, const void* value, size_t size) {
+  _impl_.iov_.Mutable(index)->assign(
+    reinterpret_cast<const char*>(value), size);
+  // @@protoc_insertion_point(field_set_pointer:SplitIoVec.iov)
+}
+inline std::string* SplitIoVec::_internal_add_iov() {
+  return _impl_.iov_.Add();
+}
+inline void SplitIoVec::add_iov(const std::string& value) {
+  _impl_.iov_.Add()->assign(value);
+  // @@protoc_insertion_point(field_add:SplitIoVec.iov)
+}
+inline void SplitIoVec::add_iov(std::string&& value) {
+  _impl_.iov_.Add(std::move(value));
+  // @@protoc_insertion_point(field_add:SplitIoVec.iov)
+}
+inline void SplitIoVec::add_iov(const char* value) {
+  GOOGLE_DCHECK(value != nullptr);
+  _impl_.iov_.Add()->assign(value);
+  // @@protoc_insertion_point(field_add_char:SplitIoVec.iov)
+}
+inline void SplitIoVec::add_iov(const void* value, size_t size) {
+  _impl_.iov_.Add()->assign(reinterpret_cast<const char*>(value), size);
+  // @@protoc_insertion_point(field_add_pointer:SplitIoVec.iov)
+}
+inline const ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField<std::string>&
+SplitIoVec::iov() const {
+  // @@protoc_insertion_point(field_list:SplitIoVec.iov)
+  return _impl_.iov_;
+}
+inline ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField<std::string>*
+SplitIoVec::mutable_iov() {
+  // @@protoc_insertion_point(field_mutable_list:SplitIoVec.iov)
+  return &_impl_.iov_;
+}
+
+// -------------------------------------------------------------------
+
 // Blob
 
 // repeated bytes iov = 1;
@@ -762,9 +1028,51 @@ Blob::mutable_iov() {
   return &_impl_.iov_;
 }
 
+// repeated .SplitIoVec splitIov = 2;
+inline int Blob::_internal_splitiov_size() const {
+  return _impl_.splitiov_.size();
+}
+inline int Blob::splitiov_size() const {
+  return _internal_splitiov_size();
+}
+inline void Blob::clear_splitiov() {
+  _impl_.splitiov_.Clear();
+}
+inline ::SplitIoVec* Blob::mutable_splitiov(int index) {
+  // @@protoc_insertion_point(field_mutable:Blob.splitIov)
+  return _impl_.splitiov_.Mutable(index);
+}
+inline ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::SplitIoVec >*
+Blob::mutable_splitiov() {
+  // @@protoc_insertion_point(field_mutable_list:Blob.splitIov)
+  return &_impl_.splitiov_;
+}
+inline const ::SplitIoVec& Blob::_internal_splitiov(int index) const {
+  return _impl_.splitiov_.Get(index);
+}
+inline const ::SplitIoVec& Blob::splitiov(int index) const {
+  // @@protoc_insertion_point(field_get:Blob.splitIov)
+  return _internal_splitiov(index);
+}
+inline ::SplitIoVec* Blob::_internal_add_splitiov() {
+  return _impl_.splitiov_.Add();
+}
+inline ::SplitIoVec* Blob::add_splitiov() {
+  ::SplitIoVec* _add = _internal_add_splitiov();
+  // @@protoc_insertion_point(field_add:Blob.splitIov)
+  return _add;
+}
+inline const ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::SplitIoVec >&
+Blob::splitiov() const {
+  // @@protoc_insertion_point(field_list:Blob.splitIov)
+  return _impl_.splitiov_;
+}
+
 #ifdef __GNUC__
   #pragma GCC diagnostic pop
 #endif  // __GNUC__
+// -------------------------------------------------------------------
+
 // -------------------------------------------------------------------
 
 // -------------------------------------------------------------------

@@ -12,8 +12,13 @@ message Rep {
         Rerror err = 1;
 }
 
+message SplitIoVec {
+        repeated bytes iov = 1;
+}
+
 // Users of rpc package can use Blob to pass data directly through to
 // the transport without the rpc package marshaling it.
 message Blob {
         repeated bytes iov = 1;
+        repeated SplitIoVec splitIov = 2;
 }

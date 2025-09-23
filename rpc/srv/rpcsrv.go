@@ -63,6 +63,9 @@ func (rpcs *RPCSrv) WriteRead(ctx fs.CtxI, iniov *sessp.IoVec) (*sessp.IoVec, *s
 	if rpcs.sti != nil {
 		rpcs.sti.Stat(req.Method, time.Since(start).Microseconds())
 	}
+	if outiov == nil {
+		outiov = sessp.NewUnallocatedIoVec(0, nil)
+	}
 	outiov.InsertFrame(0, sessp.NewFrame(b, nil))
 	return outiov, nil
 }
@@ -117,7 +120,9 @@ func (svc *service) dispatch(ctx fs.CtxI, methname string, iov *sessp.IoVec) (pr
 		}
 		blob := rpc.GetBlob(reqmsg)
 		if blob != nil {
-			blob.SetIoVec(iov)
+			iov2 := iov.Copy()
+			iov2.RemoveFrame(0)
+			blob.SetIoVec(iov2)
 		}
 		db.DPrintf(db.SIGMASRV, "dispatchproto %v %v %v\n", svc.svc, name, reqmsg)
 

@@ -90,7 +90,6 @@ func (s *shard) dump(empty bool) cache.Tcache {
 	return m
 }
 
-// If empty is true, clear the shard data
 func (s *shard) dumpInto(rep *cacheproto.MultiShardRep, shardIdx int) {
 	s.Lock()
 	defer s.Unlock()

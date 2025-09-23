@@ -94,7 +94,7 @@ func (rpcs *RPCSrv) ServeRPC(ctx fs.CtxI, m string, iov *sessp.IoVec) (*sessp.Io
 	blob := rpc.GetBlob(repmsg)
 	if blob != nil {
 		iovrep = blob.GetIoVec()
-		blob.SetIoVec(nil)
+		blob.ClearIoVec()
 	}
 	b, r := proto.Marshal(repmsg)
 	if r != nil {
@@ -120,9 +120,7 @@ func (svc *service) dispatch(ctx fs.CtxI, methname string, iov *sessp.IoVec) (pr
 		}
 		blob := rpc.GetBlob(reqmsg)
 		if blob != nil {
-			iov2 := iov.Copy()
-			iov2.RemoveFrame(0)
-			blob.SetIoVec(iov2)
+			blob.SetIoVecBufs(iov.ToByteSlices()[1:])
 		}
 		db.DPrintf(db.SIGMASRV, "dispatchproto %v %v %v\n", svc.svc, name, reqmsg)
 

@@ -69,7 +69,7 @@ func WrapRPCRequest(method string, arg proto.Message) (*sessp.IoVec, error) {
 	inblob := rpc.GetBlob(arg)
 	if inblob != nil {
 		iniov = inblob.GetIoVec()
-		inblob.SetIoVec(nil)
+		inblob.ClearIoVec()
 	}
 	argBytes, err := proto.Marshal(arg)
 	if err != nil {

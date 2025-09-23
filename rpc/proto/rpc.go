@@ -25,6 +25,11 @@ func (bl *Blob) GetIoVec() *sessp.IoVec {
 	return sessp.NewIoVec(bs, nil)
 }
 
+func (bl *Blob) ClearIoVec() {
+	bl.Iov = nil
+	bl.SplitIov = nil
+}
+
 func (bl *Blob) SetIoVec(iov *sessp.IoVec) {
 	// Bail out early if no IoVec is set for this RPC
 	if iov == nil {

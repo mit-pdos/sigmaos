@@ -65,16 +65,16 @@ func (ss *SessSrv) ServeRequest(req demux.CallI) (demux.CallI, *serr.Err) {
 		msg := &sp.Ropen{Qid: qid.Proto()}
 		rep = sessp.NewFcallMsgReply(fcm.Fcm, msg)
 	case sessp.TTwrite:
-		msg := &sp.Rwrite{Count: uint32(len(fcm.Fcm.Iov[0]))}
+		msg := &sp.Rwrite{Count: uint32(fcm.Fcm.GetIoVec().GetFrame(0).Len())}
 		rep = sessp.NewFcallMsgReply(fcm.Fcm, msg)
 	case sessp.TTreadF:
 		msg := &sp.Rread{}
 		rep = sessp.NewFcallMsgReply(fcm.Fcm, msg)
-		rep.Iov = sessp.IoVec{[]byte(READ_TEST_STR)}
+		rep.SetIoVec(sessp.NewIoVec([][]byte{[]byte(READ_TEST_STR)}, nil))
 	case sessp.TTwriteread:
 		msg := &sp.Rread{}
 		rep = sessp.NewFcallMsgReply(fcm.Fcm, msg)
-		rep.Iov = sessp.IoVec{fcm.Fcm.Iov[0][0:REPBUFSZ]}
+		rep.SetIoVec(sessp.NewIoVec([][]byte{fcm.Fcm.GetIoVec().GetFrame(0).GetBuf()[0:REPBUFSZ]}, nil))
 	default:
 		msg := &sp.Rattach{Qid: qid.Proto()}
 		rep = sessp.NewFcallMsgReply(fcm.Fcm, msg)
@@ -220,14 +220,14 @@ type Awriter struct {
 	nthread int
 	clnt    *sessclnt.Mgr
 	ep      *sp.Tendpoint
-	req     chan sessp.IoVec
+	req     chan *sessp.IoVec
 	rep     chan error
 	err     error
 	wg      sync.WaitGroup
 }
 
 func NewAwriter(n int, clnt *sessclnt.Mgr, ep *sp.Tendpoint) *Awriter {
-	req := make(chan sessp.IoVec)
+	req := make(chan *sessp.IoVec)
 	rep := make(chan error)
 	awrt := &Awriter{
 		nthread: n,
@@ -274,7 +274,7 @@ func (awrt *Awriter) Collector() {
 	}
 }
 
-func (awrt *Awriter) Write(iov sessp.IoVec) chan error {
+func (awrt *Awriter) Write(iov *sessp.IoVec) chan error {
 	awrt.wg.Add(1)
 	awrt.req <- iov
 	return nil
@@ -292,7 +292,7 @@ func TestRead(t *testing.T) {
 	ts := newTstateSrv(t, 0)
 	buf := make([]byte, len(READ_TEST_STR))
 	req := sp.NewReadF(sp.NoFid, 0, sp.Tsize(len(buf)), sp.NullFence())
-	iov := sessp.IoVec{buf}
+	iov := sessp.NewIoVec([][]byte{buf}, nil)
 	_, err := ts.clnt.RPC(ts.srv.GetEndpoint(), req, nil, iov)
 	assert.Nil(t, err, "Err Read: %v", err)
 	assert.Equal(t, READ_TEST_STR, string(buf))
@@ -309,7 +309,7 @@ func TestPerfSessSrvAsync(t *testing.T) {
 
 	n := TOTAL / REQBUFSZ
 	for i := 0; i < n; i++ {
-		err := aw.Write(sessp.IoVec{buf})
+		err := aw.Write(sessp.NewIoVec([][]byte{buf}, nil))
 		assert.Nil(t, err)
 	}
 
@@ -361,7 +361,7 @@ func TestPerfSessSrvAsyncClnt(t *testing.T) {
 
 	n := TOTAL / REQBUFSZ
 	for i := 0; i < n; i++ {
-		err := aw.Write(sessp.IoVec{buf})
+		err := aw.Write(sessp.NewIoVec([][]byte{buf}, nil))
 		assert.Nil(t, err)
 	}
 
@@ -382,9 +382,9 @@ func TestPerfSessSrvSync(t *testing.T) {
 	n := TOTAL / REQBUFSZ
 	for i := 0; i < TOTAL/REQBUFSZ; i++ {
 		req := sp.NewTwriteread(sp.NoFid)
-		rep, err := ts.clnt.RPC(ts.srv.GetEndpoint(), req, sessp.IoVec{buf}, nil)
+		rep, err := ts.clnt.RPC(ts.srv.GetEndpoint(), req, sessp.NewIoVec([][]byte{buf}, nil), nil)
 		assert.Nil(t, err)
-		assert.True(t, REPBUFSZ == len(rep.Iov[0]))
+		assert.True(t, REPBUFSZ == rep.GetIoVec().GetFrame(0).Len())
 	}
 
 	tot := uint64(TOTAL)
@@ -433,9 +433,9 @@ func TestPerfSessSrvSyncClnt(t *testing.T) {
 	n := TOTAL / REQBUFSZ
 	for i := 0; i < TOTAL/REQBUFSZ; i++ {
 		req := sp.NewTwriteread(sp.NoFid)
-		rep, err := ts.clnt.RPC(ts.srv.GetEndpoint(), req, sessp.IoVec{buf}, nil)
+		rep, err := ts.clnt.RPC(ts.srv.GetEndpoint(), req, sessp.NewIoVec([][]byte{buf}, nil), nil)
 		assert.Nil(t, err)
-		assert.True(t, REPBUFSZ == len(rep.Iov[0]))
+		assert.True(t, REPBUFSZ == rep.GetIoVec().GetFrame(0).Len())
 	}
 
 	tot := uint64(TOTAL)
@@ -479,7 +479,7 @@ func TestConnectSigmaPSrv(t *testing.T) {
 	db.DPrintf(db.TEST, "fcall %v\n", rep)
 
 	req1 := sp.NewTwriteread(sp.NoFid)
-	iov := sessp.NewIoVec([][]byte{make([]byte, 10)})
+	iov := sessp.NewIoVec([][]byte{make([]byte, 10)}, nil)
 	rep, err = ts.clnt.RPC(ts.srv.GetEndpoint(), req1, iov, nil)
 	assert.Nil(t, err)
 	db.DPrintf(db.TEST, "fcall %v\n", rep)

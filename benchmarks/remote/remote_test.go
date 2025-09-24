@@ -971,11 +971,11 @@ func TestScaleCachedBackup(t *testing.T) {
 func TestScaleCachedScaler(t *testing.T) {
 	var (
 		benchNameBase string = "cached_scaler_tail_latency"
-		driverVMs     []int  = []int{5}
+		driverVMs     []int  = []int{6}
 	)
 	// Cluster configuration parameters
 	const (
-		numNodes          int  = 4
+		numNodes          int  = 5
 		numCoresPerNode   uint = 4
 		numFullNodes      int  = numNodes
 		numProcqOnlyNodes int  = 0

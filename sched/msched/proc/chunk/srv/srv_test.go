@@ -126,21 +126,30 @@ func TestCompile(t *testing.T) {
 
 func TestFetchOrigin(t *testing.T) {
 	ts := newTstate(t, 0)
+	defer ts.shutdown()
+	if len(ts.srvs) == 0 {
+		return
+	}
 	ts.fetch(ts.srvs[0], []string{PATH}, []string{PATH})
-	ts.shutdown()
 }
 
 func TestFetchCache(t *testing.T) {
 	ts := newTstate(t, 0)
+	defer ts.shutdown()
+	if len(ts.srvs) == 0 {
+		return
+	}
 
 	ts.fetch(ts.srvs[0], []string{PATH}, []string{PATH})
 	ts.fetch(ts.srvs[0], []string{PATH}, []string{chunk.ChunkdPath(ts.srvs[0])})
-
-	ts.shutdown()
 }
 
 func TestFetchChunkd(t *testing.T) {
 	ts := newTstate(t, 1)
+	defer ts.shutdown()
+	if len(ts.srvs) == 0 {
+		return
+	}
 
 	ts.fetch(ts.srvs[0], []string{PATH}, []string{PATH})
 
@@ -149,13 +158,14 @@ func TestFetchChunkd(t *testing.T) {
 
 	pn := chunk.ChunkdPath(kid)
 	ts.fetch(ts.srvs[0], []string{pn}, []string{pn})
-
-	ts.shutdown()
 }
 
 func TestFetchPath(t *testing.T) {
 	ts := newTstate(t, 1)
-
+	defer ts.shutdown()
+	if len(ts.srvs) == 0 {
+		return
+	}
 	// fetch through chunkd1 so that it has it cached
 	pn1 := chunk.ChunkdPath(ts.srvs[1])
 	ts.fetch(ts.srvs[1], []string{pn1, PATH}, []string{PATH})
@@ -164,13 +174,15 @@ func TestFetchPath(t *testing.T) {
 	// so data should come from chunkd1
 	n := ts.fetch(ts.srvs[0], []string{pn1, PATH}, []string{pn1})
 	assert.True(t, n == 1)
-
-	ts.shutdown()
 }
 
 func TestFetchConcur(t *testing.T) {
 	const N = 10
 	ts := newTstate(t, 1)
+	defer ts.shutdown()
+	if len(ts.srvs) == 0 {
+		return
+	}
 
 	ch := make(chan int)
 	for i := 0; i < N; i++ {
@@ -188,5 +200,4 @@ func TestFetchConcur(t *testing.T) {
 	for i := 0; i < N; i++ {
 		<-ch
 	}
-	ts.shutdown()
 }

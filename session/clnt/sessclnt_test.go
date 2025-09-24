@@ -145,7 +145,7 @@ func TestDisconnectSessSrv(t *testing.T) {
 	time.Sleep(1 * time.Second)
 	r := <-ch
 	assert.NotNil(t, r)
-	assert.Equal(t, serr.TErrIO, r.Code())
+	assert.Equal(t, int(serr.TErrIO), int(r.Code()))
 	ts.srv.CloseListener()
 }
 

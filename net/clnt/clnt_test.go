@@ -75,11 +75,11 @@ func measureProtobuf(t *testing.T, fc *sessp.FcallMsg) {
 func TestProtobuf(t *testing.T) {
 	seqcntr := new(sessp.Tseqcntr)
 	req := sp.NewTwriteread(sp.NoFid)
-	fc := sessp.NewFcallMsg(req, sessp.IoVec{test.NewBuf(REQBUFSZ)}, 1, seqcntr)
+	fc := sessp.NewFcallMsg(req, sessp.NewIoVec([][]byte{test.NewBuf(REQBUFSZ)}, nil), 1, seqcntr)
 	measureProtobuf(t, fc)
 	f := sp.NullFence()
 	req1 := sp.NewTwriteF(sp.NoFid, 0, f)
-	fc = sessp.NewFcallMsg(req1, sessp.IoVec{test.NewBuf(REQBUFSZ)}, 1, seqcntr)
+	fc = sessp.NewFcallMsg(req1, sessp.NewIoVec([][]byte{test.NewBuf(REQBUFSZ)}, nil), 1, seqcntr)
 	measureProtobuf(t, fc)
 }
 
@@ -151,7 +151,7 @@ func (t *transport) ReadCall() (demux.CallI, error) {
 	if l < 0 {
 		return nil, io.ErrShortBuffer
 	}
-	frame := make(sessp.Tframe, l)
+	frame := make([]byte, l)
 	n, e := io.ReadFull(t.rdr, frame)
 	if n != len(frame) {
 		return nil, e
@@ -201,8 +201,8 @@ func (nc *netConn) ServeRequest(req demux.CallI) (demux.CallI, *serr.Err) {
 		fcm := &sessp.FcallMsg{
 			Fc:  r.Fcm.Fc,
 			Msg: r.Fcm.Msg,
-			Iov: sessp.IoVec{r.Fcm.Iov[0][0:REPBUFSZ]},
 		}
+		fcm.SetIoVec(sessp.NewIoVec([][]byte{r.Fcm.GetIoVec().GetFrame(0).GetBuf()[0:REPBUFSZ]}, nil))
 		rep = &sessp.PartMarshaledMsg{
 			Fcm:          fcm,
 			MarshaledFcm: r.MarshaledFcm,
@@ -338,7 +338,7 @@ func TestNetClntPerfFcall(t *testing.T) {
 	ts := newTstateNet(t, spcodec.NewTransport)
 	req := sp.NewTwriteread(sp.NoFid)
 	seqcntr := new(sessp.Tseqcntr)
-	fcm := sessp.NewFcallMsg(req, sessp.IoVec{test.NewBuf(REQBUFSZ)}, 1, seqcntr)
+	fcm := sessp.NewFcallMsg(req, sessp.NewIoVec([][]byte{test.NewBuf(REQBUFSZ)}, nil), 1, seqcntr)
 	pfcm := spcodec.NewPartMarshaledMsg(fcm)
 	t0 := time.Now()
 	n := TOTAL / REQBUFSZ
@@ -348,7 +348,7 @@ func TestNetClntPerfFcall(t *testing.T) {
 		c, err := dmx.SendReceive(pfcm, nil)
 		assert.Nil(t, err)
 		fcm := c.(*sessp.PartMarshaledMsg)
-		assert.True(t, len(fcm.Fcm.Iov[0]) == REPBUFSZ)
+		assert.True(t, fcm.Fcm.GetIoVec().GetFrame(0).Len() == REPBUFSZ)
 	}
 	tot := uint64(TOTAL)
 	ms := time.Since(t0).Milliseconds()

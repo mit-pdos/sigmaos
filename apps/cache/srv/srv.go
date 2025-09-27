@@ -2,6 +2,7 @@ package srv
 
 import (
 	"fmt"
+	"path/filepath"
 	"sort"
 	"sync"
 	"time"
@@ -109,9 +110,10 @@ func NewCacheSrv(pe *proc.ProcEnv, dirname string, pn string, nshard int, useEPC
 	}
 	db.DPrintf(db.CACHESRV, "Run %v %v", dirname, cs.shrd)
 	var ssrv *sigmasrv.SigmaSrv
-	svcInstanceName := dirname + cs.shrd
+	svcInstanceName := filepath.Join(dirname, cs.shrd)
 	// If not using EPCache, post EP in the realm namespace
 	if !useEPCache {
+		db.DPrintf(db.CACHESRV, "Cachesrv no epcache %v", svcInstanceName)
 		ssrv, err = sigmasrv.NewSigmaSrv(svcInstanceName, cs, pe)
 	} else {
 		// Otherwise, don't post EP (and instead post EP in the EP cache service)

@@ -129,7 +129,7 @@ func TestCompile(t *testing.T) {
 }
 
 func TestErrStringCrashed(t *testing.T) {
-	msg := `"{Err: "Non-sigma error" Obj: "" (exit status 3)}`
+	msg := `"{Err: "Non-sigma error" Obj: "" (exit status 5)}`
 	err := serr.NewErrString(msg)
 	assert.True(t, err.ErrCode == serr.TErrError)
 	assert.Equal(t, err.Err.Error(), proc.CRASHSTATUS)

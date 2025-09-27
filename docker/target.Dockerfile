@@ -21,6 +21,11 @@ RUN mkdir t && \
   go mod init tmod && \
   go get github.com/wasmerio/wasmer-go/wasmer@latest
 
+# Install libwasmer
+RUN mkdir wasmer && \
+  curl https://get.wasmer.io -sSfL | WASMER_DIR=wasmer sh && \
+  cp wasmer/lib/* /lib/
+
 WORKDIR /home/sigmaos
 RUN mkdir bin && \
     mkdir all-realm-bin && \

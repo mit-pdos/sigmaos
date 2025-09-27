@@ -122,7 +122,7 @@ func TestCacheSingle(t *testing.T) {
 
 func testCacheSharded(t *testing.T, nsrv int) {
 	const (
-		N = 10
+		N = 50
 	)
 	nc := linuxsched.GetNCores()
 	if nc < uint(NCPU*nsrv) {
@@ -155,7 +155,7 @@ func testCacheSharded(t *testing.T, nsrv int) {
 	for g := 0; g < nsrv; g++ {
 		m, err := cc.Dump(g)
 		assert.Nil(t, err)
-		assert.True(t, len(m) >= 1)
+		assert.True(t, len(m) >= 1, "srv %v dump too short %v", g, len(m))
 	}
 
 	// Delete and get

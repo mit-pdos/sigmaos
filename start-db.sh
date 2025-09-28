@@ -51,17 +51,21 @@ fi
 
 echo "db net: $TESTER_NETWORK IP: $ip"
 
-until mariadb-show --skip-ssl -h $ip -u root -psigmadb 2> /dev/null; do
+until docker exec -it $DB_IMAGE_NAME /bin/bash -c "mariadb-show --skip-ssl -h 127.0.0.1 -u root -psigmadb 2> /dev/null" ; do
     echo -n "." 1>&2
     sleep 0.1;
-done;    
+done; 
 
-if ! mariadb-show --skip-ssl -h $ip -u root -psigmadb | grep -q sigmaos; then
+echo "db image up"
+
+if ! docker exec -it $DB_IMAGE_NAME /bin/bash -c "mariadb-show --skip-ssl -h 127.0.0.1 -u root -psigmadb | grep -q sigmaos"; then
+    echo "load db init script into container"
+    docker cp apps/hotel/init-db.sql $DB_IMAGE_NAME:/init-db.sql
     echo "initialize db"
-    mariadb --skip-ssl -h $ip -u root -psigmadb <<ENDOFSQL
+    docker exec -it $DB_IMAGE_NAME /bin/bash -c "mariadb --skip-ssl -h 127.0.0.1 -u root -psigmadb <<ENDOFSQL
 CREATE database sigmaos;
 USE sigmaos;
-source apps/hotel/init-db.sql;
+source /init-db.sql;
 CREATE USER 'sigma1'@'172.17.%.%' IDENTIFIED BY 'sigmaos1';
 GRANT ALL PRIVILEGES ON sigmaos.* TO 'sigma1'@'172.17.%.%';
 CREATE USER 'sigma1'@'192.168.%.%' IDENTIFIED BY 'sigmaos1';
@@ -74,16 +78,16 @@ CREATE USER 'sigma1'@'127.0.%.%' IDENTIFIED BY 'sigmaos1';
 GRANT ALL PRIVILEGES ON sigmaos.* TO 'sigma1'@'127.0.%.%';
 FLUSH PRIVILEGES;
 SET GLOBAL max_connections = 100000;
-ENDOFSQL
+ENDOFSQL"
 fi
 
-if [[ "$TESTER_NETWORK" != "host" ]]; then
-  docker network connect $TESTER_NETWORK $DB_IMAGE_NAME
-  docker network disconnect bridge $DB_IMAGE_NAME
-  ip=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $DB_IMAGE_NAME)
-fi
-
-echo "db IP post reconnect: $ip"
+#if [[ "$TESTER_NETWORK" != "host" ]]; then
+#  docker network connect $TESTER_NETWORK $DB_IMAGE_NAME
+#  docker network disconnect bridge $DB_IMAGE_NAME
+#  ip=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $DB_IMAGE_NAME)
+#fi
+#
+#echo "db IP post reconnect: $ip"
 
 docker pull mongo:4.4.6
 if ! docker ps | grep -q $MONGO_IMAGE_NAME; then

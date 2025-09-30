@@ -3,18 +3,21 @@ package hotel
 import (
 	"encoding/json"
 	"net/http"
+	"path/filepath"
 	"strconv"
 
 	//	"context"
 	//	"go.opentelemetry.io/otel/trace"
 	//	tproto "sigmaos/util/tracing/proto"
 
+	"sigmaos/apps/epcache"
+	epcacheclnt "sigmaos/apps/epcache/clnt"
 	"sigmaos/apps/hotel/proto"
 	db "sigmaos/debug"
 	"sigmaos/proc"
+	"sigmaos/rpc"
 	rpcclnt "sigmaos/rpc/clnt"
 	sprpcclnt "sigmaos/rpc/clnt/sigmap"
-	shardedsvcrpcclnt "sigmaos/rpc/shardedsvc/clnt"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/util/perf"
@@ -32,7 +35,7 @@ type Www struct {
 	reservec *rpcclnt.RPCClnt
 	profc    *rpcclnt.RPCClnt
 	recc     *rpcclnt.RPCClnt
-	geodc    *shardedsvcrpcclnt.ShardedSvcRPCClnt
+	geoc     *rpcclnt.RPCClnt
 }
 
 // Run starts the server
@@ -75,7 +78,24 @@ func RunWww(job string) error {
 		return err
 	}
 	www.recc = rpcc
-	www.geodc = shardedsvcrpcclnt.NewShardedSvcRPCClnt(fsl, HOTELGEODIR, db.HOTEL_WWW, db.HOTEL_WWW_ERR)
+
+	epcc, err := epcacheclnt.NewEndpointCacheClnt(fsl)
+	if err != nil {
+		return err
+	}
+	eps, _, err := epcc.GetEndpoints(HOTELGEODIR, epcache.NO_VERSION)
+	if err != nil {
+		return err
+	}
+	pn := "name/geosrv"
+	if err := fsl.MountTree(sp.NewEndpointFromProto(eps[0].EndpointProto), rpc.RPC, filepath.Join(pn, rpc.RPC)); err != nil {
+		return err
+	}
+	rpcc, err = sprpcclnt.NewRPCClnt(fsl, pn)
+	if err != nil {
+		return err
+	}
+	www.geoc = rpcc
 
 	//	www.tracer = tracing.Init("wwwd", proc.GetSigmaJaegerIP())
 	var mux *http.ServeMux
@@ -513,18 +533,7 @@ func (s *Www) geoHandler(w http.ResponseWriter, r *http.Request) {
 		Lon:               lon,
 		SpanContextConfig: nil, //sctx,
 	}
-	geoID, err := s.geodc.WaitTimedRandomEntry()
-	if err != nil {
-		db.DFatalf("choose srv error: %v", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	rpcc, err := s.geodc.GetClnt(geoID)
-	if err != nil {
-		db.DFatalf("geo getClnt error: %v", err)
-	}
-	err = rpcc.RPC("Geo.Nearby", &greq, &gres)
-	//	err := s.geoc.RPC("Geo.Nearby", greq, &gres)
+	err := s.geoc.RPC("Geo.Nearby", &greq, &gres)
 	if err != nil {
 		db.DFatalf("nearby error: %v", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)

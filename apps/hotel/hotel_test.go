@@ -23,7 +23,6 @@ import (
 	dbclnt "sigmaos/proxy/db/clnt"
 	"sigmaos/rpc"
 	sprpcclnt "sigmaos/rpc/clnt/sigmap"
-	shardedsvcrpcclnt "sigmaos/rpc/shardedsvc/clnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 	linuxsched "sigmaos/util/linux/sched"
@@ -128,12 +127,22 @@ func TestGeoSingle(t *testing.T) {
 	ts := newTstate(mrts, []*hotel.Srv{&hotel.Srv{Name: "hotel-geod", Args: []string{"1000", "10", "20"}}}, 0, DEF_GEO_N_IDX, DEF_GEO_SEARCH_RADIUS, DEF_GEO_N_RESULTS)
 	defer ts.stop()
 
-	rpcdc := shardedsvcrpcclnt.NewShardedSvcRPCClnt(ts.mrts.GetRealm(test.REALM1).FsLib, hotel.HOTELGEODIR, db.TEST, db.TEST)
-	geoID, err := rpcdc.WaitTimedRandomEntry()
-	if !assert.Nil(t, err, "Err get geo server ID: %v", err) {
+	eps, _, err := ts.hotel.EPCacheJob.Clnt.GetEndpoints(hotel.HOTELGEODIR, epcache.NO_VERSION)
+	if !assert.Nil(t, err, "Err getEndpoints: %v", err) {
 		return
 	}
-	rpcc, err := rpcdc.GetClnt(geoID)
+
+	if !assert.Equal(t, len(eps), 1, "Wrong num eps: %v", len(eps)) {
+		return
+	}
+
+	pn := "name/geosrv"
+	db.DPrintf(db.ALWAYS, "Mount start")
+	if err := mrts.GetRealm(test.REALM1).FsLib.MountTree(sp.NewEndpointFromProto(eps[0].EndpointProto), rpc.RPC, filepath.Join(pn, rpc.RPC)); !assert.Nil(t, err, "Err mount geo srv: %v", err) {
+		return
+	}
+
+	rpcc, err := sprpcclnt.NewRPCClnt(mrts.GetRealm(test.REALM1).FsLib, pn)
 	if !assert.Nil(t, err, "Err get geo clnt: %v", err) {
 		return
 	}

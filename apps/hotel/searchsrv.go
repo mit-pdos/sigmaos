@@ -1,18 +1,22 @@
 package hotel
 
 import (
+	"path/filepath"
 	//	"context"
 
 	//	"go.opentelemetry.io/otel/trace"
 	//	tproto "sigmaos/util/tracing/proto"
 
 	"sigmaos/api/fs"
+	"sigmaos/apps/epcache"
+	epcacheclnt "sigmaos/apps/epcache/clnt"
 	"sigmaos/apps/hotel/proto"
 	db "sigmaos/debug"
 	"sigmaos/proc"
+	"sigmaos/rpc"
 	rpcclnt "sigmaos/rpc/clnt"
 	sprpcclnt "sigmaos/rpc/clnt/sigmap"
-	shardedsvcrpcclnt "sigmaos/rpc/shardedsvc/clnt"
+	sp "sigmaos/sigmap"
 	"sigmaos/sigmasrv"
 	"sigmaos/util/perf"
 	"sigmaos/util/tracing"
@@ -20,7 +24,7 @@ import (
 
 type Search struct {
 	ratec  *rpcclnt.RPCClnt
-	geodc  *shardedsvcrpcclnt.ShardedSvcRPCClnt
+	geoc   *rpcclnt.RPCClnt
 	pds    *sigmasrv.SigmaSrv
 	tracer *tracing.Tracer
 }
@@ -43,7 +47,23 @@ func RunSearchSrv(n string) error {
 	}
 	s.ratec = rpcc
 
-	s.geodc = shardedsvcrpcclnt.NewShardedSvcRPCClnt(fsl, HOTELGEODIR, db.HOTEL_GEO, db.HOTEL_GEO_ERR)
+	epcc, err := epcacheclnt.NewEndpointCacheClnt(fsl)
+	if err != nil {
+		return err
+	}
+	eps, _, err := epcc.GetEndpoints(HOTELGEODIR, epcache.NO_VERSION)
+	if err != nil {
+		return err
+	}
+	pn := "name/geosrv"
+	if err := fsl.MountTree(sp.NewEndpointFromProto(eps[0].EndpointProto), rpc.RPC, filepath.Join(pn, rpc.RPC)); err != nil {
+		return err
+	}
+	rpcc, err = sprpcclnt.NewRPCClnt(fsl, pn)
+	if err != nil {
+		return err
+	}
+	s.geoc = rpcc
 
 	p, err := perf.NewPerf(ssrv.MemFs.SigmaClnt().ProcEnv(), perf.HOTEL_SEARCH)
 	if err != nil {
@@ -77,15 +97,8 @@ func (s *Search) Nearby(ctx fs.CtxI, req proto.SearchReq, res *proto.SearchRep) 
 		Lon:               req.Lon,
 		SpanContextConfig: nil, //sctx2,
 	}
-	geoID, err := s.geodc.WaitTimedRandomEntry()
-	if err != nil {
-		db.DFatalf("choose srv error: %v", err)
-	}
-	rpcc, err := s.geodc.GetClnt(geoID)
-	if err != nil {
-		db.DFatalf("geo getClnt error: %v", err)
-	}
-	err = rpcc.RPC("Geo.Nearby", greq, &gres)
+
+	err := s.geoc.RPC("Geo.Nearby", greq, &gres)
 	//	if TRACING {
 	//		span2.End()
 	//	}

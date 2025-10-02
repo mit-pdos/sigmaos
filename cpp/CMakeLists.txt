@@ -32,6 +32,7 @@ add_subdirectory(sigmap)
 add_subdirectory(rpc)
 add_subdirectory(apps)
 add_subdirectory(threadpool)
+add_subdirectory(wasm)
 
 # Procs
 add_subdirectory(user)

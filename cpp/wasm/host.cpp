@@ -1,12 +1,21 @@
 #include <wasmedge/wasmedge.h>
+#include <proxy/sigmap/sigmap.h>
 #include <iostream>
+
+std::shared_ptr<sigmaos::proxy::sigmap::Clnt> clnt;
 
 WasmEdge_Result Started(void *Data, 
     const WasmEdge_CallingFrameContext *CallFrameCxt, const WasmEdge_Value *In,
     WasmEdge_Value *Out) {
 
     std::cout << "Started() called from WASM" << std::endl;
-
+    auto res = clnt -> Started();
+    
+    if (res.has_value()) {
+        std::cout << "Successfully called sigmap Started()" << std::endl;
+    } else {
+        std::cerr << "Error calling sigmap Started(): " << res.error().String() << std::endl;
+    }
     Out[0] = WasmEdge_ValueGenI32(123);
     return WasmEdge_Result_Success;
 }
@@ -22,6 +31,9 @@ WasmEdge_Result Exited(void* Data,
 }
 
 int main(int argc, char** argv) {
+
+    clnt = std::make_shared<sigmaos::proxy::sigmap::Clnt>();
+
     WasmEdge_ConfigureContext* ConfCxt = WasmEdge_ConfigureCreate();
     WasmEdge_ConfigureAddHostRegistration(ConfCxt, WasmEdge_HostRegistration_Wasi);
 

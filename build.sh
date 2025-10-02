@@ -1,7 +1,7 @@
 #!/bin/bash
 
 usage() {
-  echo "Usage: $0 [--push TAG] [--target TARGET] [--version VERSION] [--userbin USERBIN] [--no_go] [--no_rs] [--no_docker] [--no_cpp] [--parallel] [--rebuildbuilder]" 1>&2
+  echo "Usage: $0 [--push TAG] [--target TARGET] [--version VERSION] [--userbin USERBIN] [--no_go] [--no_rs] [--no_docker] [--no_cpp] [--no_wasm] [--parallel] [--rebuildbuilder]" 1>&2
 }
 
 PARALLEL=""
@@ -13,6 +13,7 @@ USERBIN="all"
 NO_CPP="false"
 NO_RS="false"
 NO_GO="false"
+NO_WASM="false"
 NO_DOCKER="false"
 NORACE="--norace"
 while [[ "$#" -gt 0 ]]; do
@@ -40,6 +41,10 @@ while [[ "$#" -gt 0 ]]; do
   --no_cpp)
     shift
     NO_CPP="true"
+    ;;
+  --no_wasm)
+    shift
+    NO_WASM="true"
     ;;
   --push)
     shift
@@ -94,6 +99,7 @@ TMP_BASE="/tmp"
 BUILDER_NAME="sig-builder"
 RS_BUILDER_NAME="sig-rs-builder"
 CPP_BUILDER_NAME="sig-cpp-builder"
+WASM_BUILDER_NAME="sig-wasm-builder"
 USER_IMAGE_NAME="sigmauser"
 KERNEL_IMAGE_NAME="sigmaos"
 BUILD_TARGET_SUFFIX=""
@@ -102,6 +108,7 @@ if ! [ -z "$SIGMAUSER" ]; then
   BUILDER_NAME=$BUILDER_NAME-$SIGMAUSER
   RS_BUILDER_NAME=$RS_BUILDER_NAME-$SIGMAUSER
   CPP_BUILDER_NAME=$CPP_BUILDER_NAME-$SIGMAUSER
+  WASM_BUILDER_NAME=$WASM_BUILDER_NAME-$SIGMAUSER
   USER_IMAGE_NAME=$USER_IMAGE_NAME-$SIGMAUSER
   KERNEL_IMAGE_NAME=$KERNEL_IMAGE_NAME-$SIGMAUSER
   BUILD_TARGET_SUFFIX="-$SIGMAUSER"
@@ -135,6 +142,7 @@ fi
 buildercid=$(docker ps -a | grep -E " $BUILDER_NAME " | cut -d " " -f1)
 rsbuildercid=$(docker ps -a | grep -E " $RS_BUILDER_NAME " | cut -d " " -f1)
 cppbuildercid=$(docker ps -a | grep -E " $CPP_BUILDER_NAME " | cut -d " " -f1)
+wasmbuildercid=$(docker ps -a | grep -E " $WASM_BUILDER_NAME " | cut -d " " -f1)
 
 # Optionally stop any existing builder container, so it will be rebuilt and
 # restarted.
@@ -156,6 +164,12 @@ if [[ $REBUILD_BUILDER == "true" ]]; then
     docker stop $cppbuildercid
     # Reset builder container ID
     cppbuildercid=""
+  fi
+  if ! [ -z "$wasmbuildercid" ]; then
+    echo "========== Stopping old WASM builder container $wasmbuildercid =========="
+    docker stop $wasmbuildercid
+    # Reset builder container ID
+    wasmbuildercid=""
   fi
 fi
 
@@ -214,6 +228,25 @@ if [ -z "$cppbuildercid" ]; then
       sleep 0.1;
   done
   echo "========== Done starting CPP builder ========== "
+fi
+
+if [ -z "$wasmbuildercid" ]; then
+  # Build builder
+  echo "========== Build WASM builder image =========="
+  DOCKER_BUILDKIT=1 docker build --progress=plain -f docker/wasm-builder.Dockerfile -t $WASM_BUILDER_NAME . 2>&1 | tee $BUILD_LOG/sig-wasm-builder.out
+  echo "========== Done building WASM builder =========="
+  # Start builder
+  echo "========== Starting WASM builder container =========="
+  docker run --rm -d -it \
+    --name $WASM_BUILDER_NAME \
+    --mount type=bind,src=$ROOT,dst=/home/sigmaos/ \
+    $WASM_BUILDER_NAME
+  wasmbuildercid=$(docker ps -a | grep -E " $WASM_BUILDER_NAME " | cut -d " " -f1)
+  until [ "`docker inspect -f {{.State.Running}} $wasmbuildercid`"=="true" ]; do
+      echo -n "." 1>&2
+      sleep 0.1;
+  done
+  echo "========== Done starting WASM builder ========== "
 fi
 
 BUILD_ARGS="\
@@ -295,6 +328,24 @@ if [ "${NO_CPP}" != "true" ]; then
       exit 1
     fi
   echo "========== Done building CPP bins =========="
+fi
+
+if [ "${NO_WASM}" != "true" ]; then
+  echo "========== Building WASM bins =========="
+  BUILD_OUT_FILE=$BUILD_LOG/make-wasm.out
+  docker exec -it $wasmbuildercid \
+    /usr/bin/time -f "Build time: %e sec" \
+    ./make-wasm.sh --version $VERSION \
+    2>&1 | tee $BUILD_OUT_FILE && \
+    if [ ${PIPESTATUS[0]} -ne 0 ]; then
+      printf "\n!!!!!!!!!! BUILD ERROR !!!!!!!!!!\nLogs in: $BUILD_OUT_FILE\n" \
+        | tee -a $BUILD_OUT_FILE;
+    fi;
+    if [ $(grep -q "BUILD ERROR" $BUILD_OUT_FILE; echo $?) -eq 0 ]; then
+      echo "!!!!!!!!!! ABORTING BUILD !!!!!!!!!!"
+      exit 1
+    fi
+  echo "========== Done building WASM bins =========="
 fi
 
 if [ "${NO_DOCKER}" != "true" ]; then

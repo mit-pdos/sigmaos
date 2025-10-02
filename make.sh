@@ -1,7 +1,7 @@
 #!/bin/bash
 
 usage() {
-  echo "Usage: $0 [--norace] [--vet] [--parallel] [--gopath GO] [--target local|remote] [--version VERSION] [--userbin USERBIN] kernel|user|npproxy" 1>&2
+  echo "Usage: $0 [--norace] [--vet] [--parallel] [--gopath GO] [--target local|remote] [--version VERSION] [--userbin USERBIN] kernel|user|npproxy|shell" 1>&2
 }
 
 RACE="-race"
@@ -56,7 +56,7 @@ while [[ "$#" -gt 0 ]]; do
     usage
     exit 0
     ;;
-  kernel|user|linux|npproxy)
+  kernel|user|linux|npproxy|shell)
     WHAT=$1
     shift
     ;;
@@ -97,6 +97,17 @@ elif [[ $WHAT == "npproxy" ]]; then
     mkdir -p $OUTPATH/npproxy
     # Clear version string, which only applies to user procs
     VERSION=""
+elif [[ $WHAT == "shell" ]]; then
+    mkdir -p $OUTPATH/shell
+    # Special handling for shell - build directly from cmd/shell/main.go
+    build="$GO build -ldflags=\"$LDF\" $RACE -o $OUTPATH/shell/shell cmd/shell/main.go"
+    echo $build
+    eval "$build"
+    export EXIT_STATUS=$?
+    if [ $EXIT_STATUS  -ne 0 ]; then
+      exit $EXIT_STATUS
+    fi
+    exit 0
 else
     mkdir -p $OUTPATH/linux
     WHAT="linux"

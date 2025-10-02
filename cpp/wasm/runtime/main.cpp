@@ -43,16 +43,14 @@ int main(int argc, char** argv) {
     WasmEdge_ModuleInstanceContext *HostModContext = WasmEdge_ModuleInstanceCreate(ModuleName);
 
     // host functions
-    enum WasmEdge_ValType StartedParams[] = {};
-    enum WasmEdge_ValType StartedReturns[] = {WasmEdge_ValType_I32};
-    WasmEdge_FunctionTypeContext *StartedType = WasmEdge_FunctionTypeCreate(StartedParams, 0, StartedReturns, 1);
+    WasmEdge_ValType StartedReturns[] = {WasmEdge_ValTypeGenI32()};
+    WasmEdge_FunctionTypeContext *StartedType = WasmEdge_FunctionTypeCreate(nullptr, 0, StartedReturns, 1);
     WasmEdge_FunctionInstanceContext *StartedFunc = WasmEdge_FunctionInstanceCreate(StartedType, Started, NULL, 0);
     WasmEdge_String StartedName = WasmEdge_StringCreateByCString("Started");
     WasmEdge_ModuleInstanceAddFunction(HostModContext, StartedName, StartedFunc);
 
-    enum WasmEdge_ValType ExitedParams[] = {WasmEdge_ValType_I32};
-    enum WasmEdge_ValType ExitedReturns[] = {};
-    WasmEdge_FunctionTypeContext *ExitedType = WasmEdge_FunctionTypeCreate(ExitedParams, 1, ExitedReturns, 0);
+    WasmEdge_ValType ExitedParams[] = {WasmEdge_ValTypeGenI32()};
+    WasmEdge_FunctionTypeContext *ExitedType = WasmEdge_FunctionTypeCreate(ExitedParams, 1, nullptr, 0);
     WasmEdge_FunctionInstanceContext *ExitedFunc = WasmEdge_FunctionInstanceCreate(ExitedType, Exited, NULL, 0);
     WasmEdge_String ExitedName = WasmEdge_StringCreateByCString("Exited");
     WasmEdge_ModuleInstanceAddFunction(HostModContext, ExitedName, ExitedFunc);

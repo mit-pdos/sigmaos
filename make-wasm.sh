@@ -49,22 +49,16 @@ if [ $EXIT_STATUS  -ne 0 ]; then
   exit $EXIT_STATUS
 fi
 
-# Build only wasm targets
-make -j$(nproc) wasm-runtime hello-world-wasm
+# Build only .wasm module targets (wasm-runtime is built by cpp-builder)
+make -j$(nproc) hello-world-wasm
 export EXIT_STATUS=$?
 if [ $EXIT_STATUS  -ne 0 ]; then
   exit $EXIT_STATUS
 fi
 
-# Copy runtime host binary to bin/user (like other user procs)
+# Copy WASM modules to bin/wasm and bin/user (for binfs access)
 cd $ROOT
 WASMBUILD=$ROOT/cpp/build_wasm/wasm
-if [ -f $WASMBUILD/runtime/wasm-runtime ]; then
-  cp $WASMBUILD/runtime/wasm-runtime $USERBIN/wasm-runtime-v$VERSION
-  echo "Copied wasm-runtime to $USERBIN/wasm-runtime-v$VERSION"
-fi
-
-# Copy WASM modules to bin/wasm
 WASMUSER=$WASMBUILD/user
 for p in $WASMUSER/* ; do
   name=$(basename $p)
@@ -78,6 +72,9 @@ for p in $WASMUSER/* ; do
       wasm_name=$(basename $wasm_file)
       cp $wasm_file $WASMBIN/$wasm_name
       echo "Copied $wasm_name to $WASMBIN/$wasm_name"
+      # Also copy to bin/user so it's accessible via /mnt/binfs
+      cp $wasm_file $USERBIN/$wasm_name
+      echo "Copied $wasm_name to $USERBIN/$wasm_name (for binfs)"
     fi
   done
 done

@@ -31,8 +31,9 @@ WasmEdge_Result Exited(void* Data,
 }
 
 int main(int argc, char** argv) {
-
+    std::cout << "hello from runtime\n" << std::endl;
     clnt = std::make_shared<sigmaos::proxy::sigmap::Clnt>();
+    std::cout << "clnt created \n" << std::endl;
 
     WasmEdge_ConfigureContext* ConfCxt = WasmEdge_ConfigureCreate();
     WasmEdge_ConfigureAddHostRegistration(ConfCxt, WasmEdge_HostRegistration_Wasi);

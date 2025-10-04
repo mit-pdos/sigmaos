@@ -30,6 +30,6 @@ target_link_libraries(wasm-runtime PRIVATE
 
 # Set rpath for WasmEdge library
 set_target_properties(wasm-runtime PROPERTIES
-  INSTALL_RPATH "$ENV{HOME}/.wasmedge/lib"
+  INSTALL_RPATH "/usr/lib"
   BUILD_WITH_INSTALL_RPATH TRUE
 )

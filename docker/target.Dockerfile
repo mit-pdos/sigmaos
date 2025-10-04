@@ -13,7 +13,31 @@ RUN apt update && \
   libc6-dbg \
   libabsl-dev \
   curl \
-  golang
+  golang \
+  git \
+  wget \
+  gcc \
+  g++ \
+  pkg-config \
+  parallel \
+  time \
+  cmake \
+  ccache \
+  libprotoc-dev \
+  protobuf-compiler
+
+# Install WasmEdge
+RUN curl -sSf https://raw.githubusercontent.com/WasmEdge/WasmEdge/master/utils/install.sh | bash -s -- -v 0.14.1
+
+# Set up WasmEdge environment variables
+ENV WASMEDGE_DIR=/root/.wasmedge
+ENV PATH="$WASMEDGE_DIR/bin:$PATH"
+ENV LD_LIBRARY_PATH="$WASMEDGE_DIR/lib:$LD_LIBRARY_PATH"
+ENV C_INCLUDE_PATH="$WASMEDGE_DIR/include:$C_INCLUDE_PATH"
+ENV CPLUS_INCLUDE_PATH="$WASMEDGE_DIR/include:$CPLUS_INCLUDE_PATH"
+
+# Copy WasmEdge libraries to /usr/lib so they're accessible in the uproc jail
+RUN cp -a /root/.wasmedge/lib/* /usr/lib/
 
 # Install wasmer go pkg
 RUN mkdir t && \

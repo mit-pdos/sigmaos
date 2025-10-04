@@ -90,3 +90,9 @@ for p in $USERBUILD/* ; do
   # Copy to userbin
   cp $p/$name $USERBIN/$name-v$VERSION
 done
+
+# Copy wasm-runtime binary
+WASMRTBUILD=$ROOT/cpp/build/wasm/runtime
+if [ -f $WASMRTBUILD/wasm-runtime ]; then
+  cp $WASMRTBUILD/wasm-runtime $USERBIN/wasm-runtime-v$VERSION
+fi

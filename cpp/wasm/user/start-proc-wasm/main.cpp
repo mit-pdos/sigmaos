@@ -12,7 +12,7 @@ extern "C" {
     __attribute__((export_name("test")))
     int test(int i) {
         int started = Started();
-        Exited(started * 2);
+        Exited(1);
         return i + 2;
     }
 }

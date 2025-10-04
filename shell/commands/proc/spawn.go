@@ -34,6 +34,8 @@ func (c *SpawnCommand) Execute(ctx *shellctx.ShellContext, args []string, stdin 
 	procArgs := args[1:]
 
 	p := proc.NewProc(procName, procArgs)
+	// Enable ProcClnt for procs that need to call Started/Exited
+	p.GetProcEnv().UseSPProxyProcClnt = true
 	err := ctx.Tstate.Spawn(p)
 	if err != nil {
 		fmt.Fprintf(stderr, "Error spawning proc: %v\n", err)

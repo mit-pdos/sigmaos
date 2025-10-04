@@ -24,9 +24,16 @@ WasmEdge_Result Exited(void* Data,
     const WasmEdge_CallingFrameContext *CallFrameCtx,
     const WasmEdge_Value *In,
     WasmEdge_Value *Out){
-        
+
     int32_t status = WasmEdge_ValueGetI32(In[0]);
     std::cout << "Exited() called with status: " << status << std::endl;
+
+    std::string msg = "WASM module exited";
+    auto res = clnt->Exited(static_cast<sigmaos::proc::Tstatus>(status), msg);
+    if (!res.has_value()) {
+        std::cerr << "Error calling sigmap Exited(): " << res.error().String() << std::endl;
+    }
+
     return WasmEdge_Result_Success;
 }
 
@@ -74,5 +81,10 @@ int main(int argc, char** argv) {
     WasmEdge_VMDelete(VMCxt);
     WasmEdge_ConfigureDelete(ConfCxt);
     WasmEdge_StringDelete(func_name);
+
+    // Clean up the client before exit
+    clnt->Close();
+    clnt.reset();
+
     return 0;
 }

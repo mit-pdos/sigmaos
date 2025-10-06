@@ -51,7 +51,11 @@ func StartSigmaContainer(uproc *proc.Proc, dialproxy bool) (*uprocCmd, error) {
 	} else if valgrindProcs[uproc.GetProgram()] {
 		cmd = exec.Command("valgrind", append([]string{"--trace-children=yes", "uproc-trampoline", uproc.GetPid().String(), pn, strconv.FormatBool(dialproxy)}, uproc.Args...)...)
 	} else {
-		cmd = exec.Command("uproc-trampoline", append([]string{uproc.GetPid().String(), pn, strconv.FormatBool(dialproxy)}, uproc.Args...)...)
+		// CR nmassri: for later, the pn will be the wasm proc, if pn ends with .wasm start wasm-runtime
+		// 			   otherwise, start uproc-trampoline
+		// cmd = exec.Command("uproc-trampoline", append([]string{uproc.GetPid().String(), pn, strconv.FormatBool(dialproxy)}, uproc.Args...)...)
+		cmd = exec.Command("wasm-runtime", uproc.Args...)
+		db.DPrintf(db.ALWAYS, "executing kernel bin wasm-time")
 	}
 	uproc.AppendEnv("PATH", "/bin:/bin2:/usr/bin:/home/sigmaos/bin/kernel")
 	uproc.AppendEnv("SIGMA_EXEC_TIME", strconv.FormatInt(time.Now().UnixMicro(), 10))

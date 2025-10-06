@@ -71,7 +71,7 @@ if [ $EXIT_STATUS  -ne 0 ]; then
   exit $EXIT_STATUS
 fi
 
-# Run the build
+# Run the build (builds everything: user procs, wasm-runtime, and .wasm modules)
 make -j$(nproc)
 export EXIT_STATUS=$?
 if [ $EXIT_STATUS  -ne 0 ]; then
@@ -80,6 +80,19 @@ fi
 
 # Copy to bins
 cd $ROOT
+KERNELBIN=$ROOT/bin/kernel
+WASMBIN=$ROOT/bin/wasm
+mkdir -p $KERNELBIN
+mkdir -p $WASMBIN
+
+# Copy wasm-runtime to kernel bin 
+WASMRTBUILD=$ROOT/cpp/build/wasm-runtime
+if [ -f $WASMRTBUILD/wasm-runtime ]; then
+  cp $WASMRTBUILD/wasm-runtime $KERNELBIN/wasm-runtime
+  echo "Copied wasm-runtime to $KERNELBIN/wasm-runtime"
+fi
+
+# Copy user binaries
 USERBUILD=$ROOT/cpp/build/user
 for p in $USERBUILD/* ; do
   name=$(basename $p)
@@ -87,12 +100,28 @@ for p in $USERBUILD/* ; do
   if ! [ -d $p ] || [[ "$name" == "CMakeFiles" ]] ; then
     continue
   fi
-  # Copy to userbin
+  # Copy to userbin with version
   cp $p/$name $USERBIN/$name-v$VERSION
 done
 
-# Copy wasm-runtime binary
-WASMRTBUILD=$ROOT/cpp/build/wasm/runtime
-if [ -f $WASMRTBUILD/wasm-runtime ]; then
-  cp $WASMRTBUILD/wasm-runtime $USERBIN/wasm-runtime-v$VERSION
-fi
+# Copy WASM modules to bin/wasm and bin/user (for binfs access)
+WASMBUILD=$ROOT/cpp/build/wasm
+WASMUSER=$WASMBUILD/user
+for p in $WASMUSER/* ; do
+  name=$(basename $p)
+  # Skip non-directories and CMakeFiles directory
+  if ! [ -d $p ] || [[ "$name" == "CMakeFiles" ]] ; then
+    continue
+  fi
+  # Look for .wasm files in the directory
+  for wasm_file in $p/*.wasm ; do
+    if [ -f "$wasm_file" ]; then
+      wasm_name=$(basename $wasm_file)
+      cp $wasm_file $WASMBIN/$wasm_name
+      echo "Copied $wasm_name to $WASMBIN/$wasm_name"
+      # Also copy to bin/user so it's accessible via /mnt/binfs
+      cp $wasm_file $USERBIN/$wasm_name
+      echo "Copied $wasm_name to $USERBIN/$wasm_name (for binfs)"s
+    fi
+  done
+done

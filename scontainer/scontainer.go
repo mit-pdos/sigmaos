@@ -71,7 +71,6 @@ func StartSigmaContainer(uproc *proc.Proc, dialproxy bool, wasmrt *wasmruntime.R
 	uproc.AppendEnv(proc.SIGMAPERF, uproc.GetProcEnv().GetPerf())
 	// uproc.AppendEnv("RUST_BACKTRACE", "1")
 
-	// Check if this is a WASM module - if so, use in-process runtime
 	// CR nmassri: this is a sketchy way, we aren't running wasm-runtime I just need to escape /mnt/binfs
 	// spawn wasm-runtime /home/sigmaos/bin/wasm/hello-world-wasm.wasm
 	if pn == "/mnt/binfs/wasm-runtime-v1.0" {

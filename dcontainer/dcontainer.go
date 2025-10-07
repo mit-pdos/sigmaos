@@ -105,6 +105,13 @@ func StartDockerContainer(p *proc.Proc, kernelId, user, netmode string) (*DConta
 				Target:   filepath.Join(sp.SIGMAHOME, "bin/kernel"),
 				ReadOnly: true,
 			},
+			// Add wasm mount
+			mount.Mount{
+				Type:     mount.TypeBind,
+				Source:   filepath.Join("/home/nour/Documents/sigmaos/bin/wasm"),
+				Target:   filepath.Join(sp.SIGMAHOME, "bin/wasm"),
+				ReadOnly: true,
+			},
 		)
 	}
 

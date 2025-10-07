@@ -33,6 +33,7 @@ import (
 	linuxsched "sigmaos/util/linux/sched"
 	"sigmaos/util/perf"
 	"sigmaos/util/syncmap"
+	wasmruntime "sigmaos/wasmruntime"
 )
 
 // Lookup may try to read proc in a proc's procEntry before procsrv
@@ -80,6 +81,7 @@ type ProcSrv struct {
 	sc              *sigmaclnt.SigmaClnt
 	spc             *spproxysrv.SPProxySrvCmd
 	binsrv          *exec.Cmd
+	wasmrt          *wasmruntime.Runtime
 	kernelId        string
 	realm           sp.Trealm
 	prefetchedStats map[string]bool
@@ -105,6 +107,7 @@ func RunProcSrv(kernelId string, dialproxy bool, spproxydPID sp.Tpid) error {
 		realm:           sp.NO_REALM,
 		prefetchedStats: make(map[string]bool),
 		procs:           syncmap.NewSyncMap[int, *procEntry](),
+		wasmrt:          wasmruntime.NewRuntime(),
 	}
 
 	// Set inner container IP as soon as uprocsrv starts up
@@ -379,17 +382,17 @@ func (ps *ProcSrv) Run(ctx fs.CtxI, req proto.RunReq, res *proto.RunRep) error {
 		db.DFatalf("Err set sched policy: %v", err)
 	}
 	perf.LogSpawnLatency("ProcSrv.Run StartSigmaContainer", uproc.GetPid(), uproc.GetSpawnTime(), perf.TIME_NOT_SET)
-	cmd, err := scontainer.StartSigmaContainer(uproc, ps.dialproxy)
+	uprocRunner, err := scontainer.StartSigmaContainer(uproc, ps.dialproxy, ps.wasmrt)
 	if err != nil {
 		return err
 	}
-	pid := cmd.Pid()
+	pid := uprocRunner.Pid()
 	db.DPrintf(db.PROCD, "Pid %v -> %d", uproc.GetPid(), pid)
 	pe, alloc := ps.procs.Alloc(pid, newProcEntry(uproc))
 	if !alloc { // it was already inserted
 		pe.insertSignal(uproc)
 	}
-	err = cmd.Wait()
+	err = uprocRunner.Wait()
 	if err != nil {
 		db.DPrintf(db.PROCD, "[%v] Proc Run cmd.Wait err %v", uproc.GetPid(), err)
 	}

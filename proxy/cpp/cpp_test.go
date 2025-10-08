@@ -40,6 +40,7 @@ func runSpawnLatency(ts *test.RealmTstate, kernels []string, evict bool, ncore p
 	p := proc.NewProc("spawn-latency-cpp", args)
 	p.SetMcpu(ncore)
 	p.GetProcEnv().UseSPProxy = true
+	p.GetProcEnv().UseSPProxyProcClnt = true
 	start1 := time.Now()
 	err := ts.Spawn(p)
 	assert.Nil(ts.Ts.T, err, "Spawn")

@@ -19,14 +19,7 @@ fn key2shard(key: &String) -> u32 {
 }
 
 fn key2server(key: &String, nserver: u32) -> u32 {
-    // fnv32a hash inspired by https://cs.opensource.google/go/go/+/refs/tags/go1.24.3:src/hash/fnv/fnv.go;l=51
-    let mut s: u32 = 2166136261;
-    let prime32: u32 = 16777619;
-    for c in key.bytes() {
-        s ^= c as u32;
-        s *= prime32;
-    }
-    return s % nserver;
+    return key2shard(key) % nserver;
 }
 
 #[export_name = "boot"]

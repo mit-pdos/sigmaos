@@ -31,6 +31,7 @@ std::expected<int, sigmaos::serr::Error> ReadFrameIntoBuf(
     std::shared_ptr<sigmaos::io::iovec::Buffer> buf);
 std::expected<int, sigmaos::serr::Error> ReadFramesIntoIOVec(
     std::shared_ptr<sigmaos::io::conn::Conn> conn,
+    uint32_t nframes,
     std::shared_ptr<sigmaos::io::iovec::IOVec> iov);
 std::expected<uint64_t, sigmaos::serr::Error> ReadSeqno(
     std::shared_ptr<sigmaos::io::conn::Conn> conn);

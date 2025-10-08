@@ -62,14 +62,14 @@ Transport::ReadCall() {
     }
   }
   auto out_iov = call->GetOutIOVec();
-  if (out_iov->Size() != nframes) {
+  if (out_iov->Size() < nframes) {
     log(TRANSPORT_ERR,
-        "Size of out_iov ({}) doesn't match number of frames to be read ({})",
+        "Size of supplied out_iov ({}) less than number of frames to be read ({})",
         out_iov->Size(), nframes);
-    fatal("Size of out_iov ({}) doesn't match number of frames to be read ({})",
+    fatal("Size of supplied out_iov ({}) less than number of frames to be read ({})",
           out_iov->Size(), nframes);
   }
-  auto res = sigmaos::io::frame::ReadFramesIntoIOVec(_conn, out_iov);
+  auto res = sigmaos::io::frame::ReadFramesIntoIOVec(_conn, nframes, out_iov);
   if (!res.has_value()) {
     return std::unexpected(res.error());
   }

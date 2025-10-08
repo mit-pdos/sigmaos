@@ -494,7 +494,7 @@ func (cs *CacheSrv) MultiGet(ctx fs.CtxI, req cacheproto.CacheMultiGetReq, rep *
 	for _, getReq := range req.Gets {
 		s, err := cs.lookupShard(getReq.Tshard())
 		if err != nil {
-			db.DPrintf(db.CACHESRV, "lookupShard error %v", err)
+			db.DPrintf(db.CACHESRV_ERR, "lookupShard error %v", err)
 			return err
 		}
 		v, ok := s.get(getReq.Key)

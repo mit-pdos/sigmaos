@@ -73,7 +73,7 @@ class _log {
 
 // Write a log line given a selector
 template <typename... Args>
-void log(std::string selector, spdlog::format_string_t<Args...> fmt,
+void log(const std::string &selector, spdlog::format_string_t<Args...> fmt,
          Args &&...args) {
   auto logger = spdlog::get(selector);
   if (logger == nullptr) {

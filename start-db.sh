@@ -51,18 +51,18 @@ fi
 
 echo "db net: $TESTER_NETWORK IP: $ip"
 
-until docker exec -it $DB_IMAGE_NAME /bin/bash -c "mariadb-show --skip-ssl -h 127.0.0.1 -u root -psigmadb 2> /dev/null" ; do
+until docker exec $DB_IMAGE_NAME /bin/bash -c "mariadb-show --skip-ssl -h 127.0.0.1 -u root -psigmadb 2> /dev/null" ; do
     echo -n "." 1>&2
     sleep 0.1;
 done; 
 
 echo "db image up"
 
-if ! docker exec -it $DB_IMAGE_NAME /bin/bash -c "mariadb-show --skip-ssl -h 127.0.0.1 -u root -psigmadb | grep -q sigmaos"; then
+if ! docker exec $DB_IMAGE_NAME /bin/bash -c "mariadb-show --skip-ssl -h 127.0.0.1 -u root -psigmadb | grep -q sigmaos"; then
     echo "load db init script into container"
     docker cp apps/hotel/init-db.sql $DB_IMAGE_NAME:/init-db.sql
     echo "initialize db"
-    docker exec -it $DB_IMAGE_NAME /bin/bash -c "mariadb --skip-ssl -h 127.0.0.1 -u root -psigmadb <<ENDOFSQL
+    docker exec $DB_IMAGE_NAME /bin/bash -c "mariadb --skip-ssl -h 127.0.0.1 -u root -psigmadb <<ENDOFSQL
 CREATE database sigmaos;
 USE sigmaos;
 source /init-db.sql;

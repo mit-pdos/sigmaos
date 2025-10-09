@@ -27,13 +27,13 @@ if ! [ -z "$SIGMAUSER" ]; then
     --name $ETCD_CTR_NAME \
     --network $NETWORK \
     --env ALLOW_NONE_AUTHENTICATION=yes \
-    bitnami/etcd:latest
+    arielszekely/etcd:latest
 else
   docker run --rm -d \
     --name $ETCD_CTR_NAME \
     --env ALLOW_NONE_AUTHENTICATION=yes \
     --network host \
-    bitnami/etcd:latest
+    arielszekely/etcd:latest
 #    --publish 3379:2379 \
 #    --publish 3380:2380 \
 #    --publish 3381:2381 \

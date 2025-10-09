@@ -191,6 +191,7 @@ for vm in $vms; do
   if [ "${vm}" = "${MAIN}" ]; then
     echo "START DB: ${MAIN_PRIVADDR}"
     ./start-db.sh
+    echo "DB started"
     ./make.sh --norace linux
     echo "START NETWORK $MAIN_PRIVADDR"
     ./start-network.sh --addr $MAIN_PRIVADDR

@@ -30,6 +30,7 @@ type BESched struct {
 	realms      []sp.Trealm
 	rr          *RealmRR
 	qlen        int // Aggregate queue length, across all queues
+	nEnqueues   uint64
 	tot         atomic.Int64
 	ngetprocReq atomic.Int64
 	realmbins   *chunkclnt.RealmBinPaths
@@ -83,6 +84,8 @@ func (be *BESched) addProc(p *proc.Proc, ch chan *proc.ProcSeqno) {
 	q.Enqueue(p, ch)
 	// Note that the realm's queue is not empty
 	be.rr.RealmQueueNotEmpty(p.GetRealm())
+	// Increment the total number of wakeups
+	be.nEnqueues++
 	// Broadcast that a new proc may be runnable.
 	be.cond.Broadcast()
 }
@@ -172,7 +175,7 @@ func (be *BESched) GetProc(ctx fs.CtxI, req proto.GetProcReq, res *proto.GetProc
 		// If unable to schedule a proc from any realm, wait.
 		db.DPrintf(db.BESCHED, "GetProc No procs schedulable qs:%v", be.qs)
 		// Releases the lock, so we must re-acquire on the next loop iteration.
-		ok := be.waitOrTimeoutAndUnlock()
+		ok := be.waitOrTimeoutAndUnlock(be.nEnqueues)
 		// If timed out, respond to msched to have it try another besched.
 		if !ok {
 			db.DPrintf(db.BESCHED, "Timed out GetProc request from: %v", req.KernelID)
@@ -274,8 +277,10 @@ func Run() {
 	if err != nil {
 		db.DFatalf("Error NewPerf: %v", err)
 	}
+
 	defer p.Done()
 	go be.stats()
 	go be.getprocStats()
+	go be.wakeupWaiters()
 	ssrv.RunServer()
 }

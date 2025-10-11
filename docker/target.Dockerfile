@@ -19,12 +19,8 @@ RUN apt update && \
 RUN mkdir t && \
   cd t && \
   go mod init tmod && \
-  go get github.com/wasmerio/wasmer-go/wasmer@latest
-
-# Install libwasmer
-RUN mkdir wasmer && \
-  curl https://get.wasmer.io -sSfL | WASMER_DIR=wasmer sh && \
-  cp wasmer/lib/* /lib/
+  go get github.com/wasmerio/wasmer-go/wasmer@latest && \
+  cp /root/go/pkg/mod/github.com/wasmerio/wasmer-go\@v1.0.4/wasmer/packaged/lib/linux-amd64/libwasmer.so /lib/
 
 WORKDIR /home/sigmaos
 RUN mkdir bin && \

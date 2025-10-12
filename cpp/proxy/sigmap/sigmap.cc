@@ -13,8 +13,11 @@ void Clnt::init_conn() {
   SigmaErrRep rep;
   // Set the proc env proto
   req.set_allocated_procenvproto(_env->GetProto());
+  auto startInit = GetCurrentTime();
   // Execute the RPC
   auto res = _rpcc->RPC("SPProxySrvAPI.Init", req, rep);
+  LogSpawnLatency(ProcEnv()->GetPID(), ProcEnv()->GetSpawnTime(), startInit,
+                  "Initialization.InitSPProxyConn");
   // Make sure to release the proc env proto pointer so it isn't destroyed
   auto _ = req.release_procenvproto();
   if (!res.has_value()) {
@@ -659,11 +662,14 @@ std::expected<int, sigmaos::serr::Error> Clnt::Disconnect(std::string pn) {
 std::expected<int, sigmaos::serr::Error> Clnt::RegisterEP(
     std::string pn, std::shared_ptr<TendpointProto> ep) {
   log(SPPROXYCLNT, "RegisterEP: {} -> {}", pn, ep->ShortDebugString());
+  auto startServiceDiscovery = GetCurrentTime();
   SigmaRegisterEPReq req;
   SigmaErrRep rep;
   req.set_path(pn);
   req.set_allocated_endpoint(ep.get());
   auto res = _rpcc->RPC("SPProxySrvAPI.RegisterEP", req, rep);
+  LogSpawnLatency(ProcEnv()->GetPID(), ProcEnv()->GetSpawnTime(),
+                  startServiceDiscovery, "Initialization.ServiceDiscovery");
   auto _ = req.release_endpoint();
   if (!res.has_value()) {
     log(SPPROXYCLNT_ERR, "Err RPC: {}", res.error());

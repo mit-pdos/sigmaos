@@ -64,6 +64,18 @@ Clnt::get_clnt(int srv_id, bool initialize) {
   return clnt;
 }
 
+std::expected<int, sigmaos::serr::Error> Clnt::InitClnts(uint32_t last_srv_id) {
+  for (uint32_t srv_id = 0; srv_id < last_srv_id; srv_id++) {
+    auto res = get_clnt(srv_id, true);
+    if (!res.has_value()) {
+      log(CACHECLNT_ERR, "Error get_clnt ({}): {}", (int)srv_id,
+          res.error().String());
+      return std::unexpected(res.error());
+    }
+  }
+  return 0;
+}
+
 std::expected<int, sigmaos::serr::Error> Clnt::Get(
     std::string key, std::shared_ptr<std::string> val) {
   log(CACHECLNT, "Get: {}", key);

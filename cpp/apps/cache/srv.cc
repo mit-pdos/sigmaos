@@ -109,6 +109,19 @@ std::expected<int, sigmaos::serr::Error> Srv::Init(int old_n_srv,
   log(CACHESRV, "Load shard dumps from old servers nshard: {}", nrpc);
   auto startLoad = GetCurrentTime();
   if (!_sp_clnt->ProcEnv()->GetRunBootScript()) {
+    // Establish connections to other cached servers
+    auto startConnect = GetCurrentTime();
+    {
+      auto res = _cache_clnt->InitClnts(old_n_srv);
+      if (!res.has_value()) {
+        log(CACHESRV_ERR, "Error InitClnts: {}", res.error());
+        fatal("Error InitClnts: {}", res.error().String());
+        return std::unexpected(res.error());
+      }
+    }
+    LogSpawnLatency(_sp_clnt->ProcEnv()->GetPID(),
+                    _sp_clnt->ProcEnv()->GetSpawnTime(), startConnect,
+                    "Initialization.LoadState");
     // For each source server, dump shards to be stolen
     for (int src_srv : src_srvs) {
       auto res = _cache_clnt->MultiDumpShard(src_srv, shards_to_steal[src_srv]);
@@ -171,6 +184,9 @@ std::expected<int, sigmaos::serr::Error> Srv::Init(int old_n_srv,
                     _sp_clnt->ProcEnv()->GetSpawnTime(), start,
                     "Scaler.DelegatedDumpRPCs");
   }
+  LogSpawnLatency(_sp_clnt->ProcEnv()->GetPID(),
+                  _sp_clnt->ProcEnv()->GetSpawnTime(), startLoad,
+                  "Initialization.LoadState");
   LogSpawnLatency(_sp_clnt->ProcEnv()->GetPID(),
                   _sp_clnt->ProcEnv()->GetSpawnTime(), startLoad,
                   "Scaler.LoadCacheState");

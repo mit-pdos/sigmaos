@@ -85,7 +85,7 @@ func (cssc *CosSimShardClnt) GetLeastLoadedClnt() (string, *CosSimClnt, error) {
 	defer cssc.mu.Unlock()
 
 	if len(cssc.clnts) == 0 {
-		return sp.NOT_SET, nil, fmt.Errorf("No clients to speak of")
+		return sp.NOT_SET, nil, fmt.Errorf("No cossim clients available")
 	}
 
 	var minClnt *clnt

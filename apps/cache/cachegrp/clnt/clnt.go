@@ -4,6 +4,7 @@
 package clnt
 
 import (
+	"fmt"
 	"path/filepath"
 	"strconv"
 	"sync"
@@ -92,17 +93,20 @@ func (csc *CachedSvcClnt) monitorServers() {
 		db.DPrintf(db.CACHEDSVCCLNT, "Detected new number of instances: %v", len(instances))
 		// Create clients for each of the new instances, if any of them are CPP cache servers
 		for i := csc.nsrv; i < len(instances); i++ {
-			if sp.TTendpoint(instances[i].EndpointProto.Type) == sp.CPP_EP {
-				ep := sp.NewEndpointFromProto(instances[i].EndpointProto)
-				pn := csc.Server(i)
-				rpcc, err := rpcncclnt.NewTCPRPCClnt(pn, ep)
-				if err != nil {
-					db.DPrintf(db.ERROR, "Err NewRPCClnt cacheclnt: %v", err)
-				} else {
-					db.DPrintf(db.CACHEDSVCCLNT, "Create new cacheclnt for cache %v", pn)
-					csc.cc.ClntCache.Put(pn, rpcc)
+			istr := strconv.Itoa(i)
+			for _, is := range instances {
+				if is.ID == istr && sp.TTendpoint(is.EndpointProto.Type) == sp.CPP_EP {
+					ep := sp.NewEndpointFromProto(is.EndpointProto)
+					rpcc, err := rpcncclnt.NewTCPRPCClnt(is.ID, ep)
+					if err != nil {
+						db.DPrintf(db.ERROR, "Err NewRPCClnt cacheclnt: %v", err)
+					} else {
+						db.DPrintf(db.CACHEDSVCCLNT, "Create new cacheclnt for cache %v", is.ID)
+						csc.cc.ClntCache.Put(csc.Server(i), rpcc)
+					}
 				}
 			}
+
 		}
 		csc.nsrv = len(instances)
 		db.DPrintf(db.CACHEDSVCCLNT, "GetEndpoints new nsrv: %v", csc.nsrv)
@@ -151,8 +155,17 @@ func (csc *CachedSvcClnt) GetEndpoint(i int) (*sp.Tendpoint, error) {
 		if err != nil {
 			return nil, err
 		}
-		// Manually mount cached-backup so it will resolve later
-		ep := sp.NewEndpointFromProto(instances[i].EndpointProto)
+		istr := strconv.Itoa(i)
+		var ep *sp.Tendpoint
+		for _, is := range instances {
+			if is.ID == istr {
+				ep = sp.NewEndpointFromProto(is.EndpointProto)
+			}
+		}
+		if ep == nil {
+			db.DPrintf(db.ERROR, "No EP for cachesrv %v", i)
+			return nil, fmt.Errorf("No EP for cachesrv %v", i)
+		}
 		return ep, nil
 	}
 	// Read the endpoint of the endpoint cache server
@@ -228,6 +241,10 @@ func (csc *CachedSvcClnt) Get(key string, val proto.Message) error {
 	return csc.getTraced(nil, key, val, false)
 }
 
+func (csc *CachedSvcClnt) GetBytes(key string) ([]byte, error) {
+	return csc.GetBytesTraced(nil, key, false)
+}
+
 func (csc *CachedSvcClnt) BackupGet(key string, val proto.Message) error {
 	return csc.getTraced(nil, key, val, true)
 }
@@ -266,6 +283,21 @@ func (csc *CachedSvcClnt) PutBytesTraced(sctx *tproto.SpanContextConfig, key str
 	}
 	srv := csc.Server(Key2server(key, n))
 	return csc.cc.PutBytesTracedFenced(sctx, srv, key, b, sp.NullFence())
+}
+
+func (csc *CachedSvcClnt) GetBytesTraced(sctx *tproto.SpanContextConfig, key string, backup bool) ([]byte, error) {
+	n, err := csc.getNServers()
+	if err != nil {
+		return nil, err
+	}
+	var srv string
+	if backup {
+		srv = csc.BackupServer(Key2server(key, n))
+	} else {
+		srv = csc.Server(Key2server(key, n))
+	}
+	db.DPrintf(db.CACHEDSVCCLNT, "Get key %v from srv %v", key, srv)
+	return csc.cc.GetBytesTracedFenced(sctx, srv, key, sp.NullFence())
 }
 
 func (csc *CachedSvcClnt) PutTraced(sctx *tproto.SpanContextConfig, key string, val proto.Message) error {

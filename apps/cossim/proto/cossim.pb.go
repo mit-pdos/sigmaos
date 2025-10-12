@@ -67,7 +67,7 @@ func (x *Vector) GetVals() []float64 {
 	return nil
 }
 
-// Range of vectors for which to compute cosine similarit
+// Range of vectors for which to compute cosine similarity
 type VecRange struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache

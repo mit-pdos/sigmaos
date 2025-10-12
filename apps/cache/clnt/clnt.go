@@ -93,6 +93,19 @@ func (cc *CacheClnt) PutBytesTracedFenced(sctx *tproto.SpanContextConfig, srv, k
 	return nil
 }
 
+func (cc *CacheClnt) GetBytesTracedFenced(sctx *tproto.SpanContextConfig, srv, key string, f *sp.Tfence) ([]byte, error) {
+	req := cc.NewGet(sctx, key, f)
+	s := time.Now()
+	var res cacheproto.CacheRep
+	if err := cc.RPC(srv, "CacheSrv.Get", req, &res); err != nil {
+		return nil, err
+	}
+	if time.Since(s) > 150*time.Microsecond {
+		db.DPrintf(db.CACHE_LAT, "Long cache get: %v", time.Since(s))
+	}
+	return res.Value, nil
+}
+
 func (cc *CacheClnt) PutSrv(srv, key string, val proto.Message) error {
 	return cc.PutTracedFenced(nil, srv, key, val, sp.NullFence())
 }

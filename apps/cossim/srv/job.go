@@ -134,7 +134,11 @@ func NewCosSimJob(sc *sigmaclnt.SigmaClnt, epcj *epsrv.EPCacheJob, cm *cachegrpm
 	}
 	// If not supplied, create cache client
 	if cc == nil {
-		cc = cachegrpclnt.NewCachedSvcClnt(sc.FsLib, job)
+		if epcj == nil {
+			cc = cachegrpclnt.NewCachedSvcClnt(sc.FsLib, job)
+		} else {
+			cc = cachegrpclnt.NewCachedSvcClntEPCache(sc.FsLib, epcj.Clnt, job)
+		}
 	}
 	return newCosSimJob(sc, epcj, cm, cc, job, nvec, vecDim, eagerInit, srvMcpu, ncache, cacheMcpu, cacheGC, delegateInitRPCs, stopEPCJ, stopCaches)
 }

@@ -48,8 +48,8 @@ class Srv {
                                                           COSSIMSRV)),
         _cache_clnt(std::make_shared<sigmaos::apps::cache::Clnt>(
             sp_clnt, cache_clnt_pn, (uint32_t)ncache)) {
-    log(COSSIMSRV, "Starting RPC srv nvec:{} vec_dim:{} eager:{}", nvec,
-        vec_dim, eager_init);
+    log(COSSIMSRV, "Starting RPC srv ncache:{} nvec:{} vec_dim:{} eager:{}",
+        ncache, nvec, vec_dim, eager_init);
     auto start = GetCurrentTime();
     _srv = std::make_shared<sigmaos::rpc::srv::Srv>(sp_clnt, INIT_NTHREAD);
     LogSpawnLatency(_sp_clnt->ProcEnv()->GetPID(),
@@ -73,7 +73,7 @@ class Srv {
       log(COSSIMSRV, "Done init vector DB");
     }
     {
-      auto pn = COSSIM_SVC_NAME;
+      auto pn = COSSIM_SVC_NAME / _sp_clnt->ProcEnv()->GetPID();
       auto start = GetCurrentTime();
       auto res = _srv->RegisterEP(pn);
       if (!res.has_value()) {

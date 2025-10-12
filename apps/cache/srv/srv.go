@@ -117,7 +117,7 @@ func NewCacheSrv(pe *proc.ProcEnv, dirname string, pn string, nshard int, useEPC
 		ssrv, err = sigmasrv.NewSigmaSrv(svcInstanceName, cs, pe)
 	} else {
 		// Otherwise, don't post EP (and instead post EP in the EP cache service)
-		ssrv, err = sigmasrv.NewSigmaSrv("", cs, pe)
+		ssrv, err = sigmasrv.NewSigmaSrv(svcInstanceName, cs, pe)
 		start := time.Now()
 		if epcsrvEP, ok := pe.GetCachedEndpoint(epcache.EPCACHE); ok {
 			if err := epcacheclnt.MountEPCacheSrv(ssrv.MemFs.SigmaClnt().FsLib, epcsrvEP); err != nil {
@@ -133,7 +133,7 @@ func NewCacheSrv(pe *proc.ProcEnv, dirname string, pn string, nshard int, useEPC
 		perf.LogSpawnLatency("cachesrv.NewEPCacheClnt", pe.GetPID(), pe.GetSpawnTime(), start)
 		start = time.Now()
 		ep := ssrv.MemFs.GetSigmaPSrvEndpoint()
-		if err := epcc.RegisterEndpoint(dirname, pe.GetPID().String(), ep); err != nil {
+		if err := epcc.RegisterEndpoint(dirname, cs.shrd, ep); err != nil {
 			db.DFatalf("Err RegisterEP: %v", err)
 		}
 		perf.LogSpawnLatency("EPCacheSrv.RegisterEP", pe.GetPID(), pe.GetSpawnTime(), start)

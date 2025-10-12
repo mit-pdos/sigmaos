@@ -10,7 +10,7 @@ message Vector {
   repeated double vals = 1; // TODO: blob
 }
 
-// Range of vectors for which to compute cosine similarit
+// Range of vectors for which to compute cosine similarity
 message VecRange {
   uint64 startID = 1;
   uint64 endID = 2;

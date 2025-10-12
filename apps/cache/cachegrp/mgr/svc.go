@@ -67,8 +67,18 @@ func (cs *CachedSvc) addServer(i int) error {
 			db.DPrintf(db.CACHEDSVCCLNT, "Err get endpoints after adding cached server: %v", err)
 			return err
 		}
+		istr := strconv.Itoa(i)
+		var ep *sp.Tendpoint
+		for _, is := range instances {
+			if is.ID == istr {
+				ep = sp.NewEndpointFromProto(is.EndpointProto)
+			}
+		}
+		if ep == nil {
+			db.DPrintf(db.ERROR, "Err get EP")
+			return fmt.Errorf("Error get EP srv %v", i)
+		}
 		// Store the server EP for later use
-		ep := sp.NewEndpointFromProto(instances[i].EndpointProto)
 		cs.serverEPs = append(cs.serverEPs, ep)
 		// Manually mount cached so it will resolve later
 		if err := cs.MountTree(ep, rpc.RPC, filepath.Join(pn, rpc.RPC)); err != nil {
@@ -125,8 +135,18 @@ func (cs *CachedSvc) addBackupServerWithSigmaPath(sigmaPath string, srvID int, e
 		if err != nil {
 			return err
 		}
+		srvIDStr := strconv.Itoa(srvID)
+		var ep *sp.Tendpoint
+		for _, i := range instances {
+			if i.ID == srvIDStr {
+				ep = sp.NewEndpointFromProto(i.EndpointProto)
+			}
+		}
+		if ep == nil {
+			db.DPrintf(db.ERROR, "Err get EP")
+			return fmt.Errorf("Error get EP srv %v", srvID)
+		}
 		// Manually mount cached-backup so it will resolve later
-		ep := sp.NewEndpointFromProto(instances[srvID].EndpointProto)
 		if err := cs.MountTree(ep, rpc.RPC, filepath.Join(backupPN, rpc.RPC)); err != nil {
 			return err
 		}
@@ -203,8 +223,17 @@ func (cs *CachedSvc) addScalerServerWithSigmaPath(sigmaPath string, delegatedIni
 		if len(instances) <= srvID {
 			return fmt.Errorf("not enough instances reported by epcache: %v <= %v", len(instances), srvID)
 		}
-		// Manually mount cached-scaler so it will resolve later
-		ep := sp.NewEndpointFromProto(instances[srvID].EndpointProto)
+		srvIDStr := strconv.Itoa(srvID)
+		var ep *sp.Tendpoint
+		for _, i := range instances {
+			if i.ID == srvIDStr {
+				ep = sp.NewEndpointFromProto(i.EndpointProto)
+			}
+		}
+		if ep == nil {
+			db.DPrintf(db.ERROR, "Err get EP")
+			return fmt.Errorf("Error get EP srv %v", srvID)
+		}
 		// Don't mount CPP cache servers (the clients will be created elsewhere, directly using the EP)
 		if ep.GetType() != sp.CPP_EP {
 			if err := cs.MountTree(ep, rpc.RPC, filepath.Join(srvPN, rpc.RPC)); err != nil {

@@ -67,7 +67,7 @@ void Srv::fetch_init_vectors_from_cache(
     {
       auto res = _cache_clnt->DelegatedMultiGet(srv_id);
       if (!res.has_value()) {
-        log(COSSIMSRV_ERR, "Error DelegatedMultiVec {}", res.error().String());
+        log(COSSIMSRV_ERR, "Error DelegatedMultiGet {}", res.error().String());
         result->set_value(std::unexpected(res.error()));
         return;
       }

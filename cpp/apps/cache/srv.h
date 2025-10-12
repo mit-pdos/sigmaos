@@ -78,12 +78,7 @@ class Srv {
       }
     }
     {
-      std::string pn;
-      if (use_ep_cache) {
-        pn = cache_dir;
-      } else {
-        pn = cache_dir + "/" + srv_pn;
-      }
+      std::string pn = cache_dir + "/" + srv_pn;
       auto start = GetCurrentTime();
       auto res = _srv->RegisterEP(pn);
       if (!res.has_value()) {

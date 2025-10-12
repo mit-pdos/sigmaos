@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"path/filepath"
 	"sync"
 	"time"
 	"unsafe"
@@ -402,7 +403,7 @@ func (sca *SPProxySrvAPI) RegisterEP(ctx fs.CtxI, req scproto.SigmaRegisterEPReq
 			db.DPrintf(db.SPPROXYSRV_ERR, "%v: RegisterEP MkEndpointFile err: %v", sca.sc.ClntId(), err)
 		}
 	} else {
-		if err = sca.epcc.RegisterEndpoint(req.Path, sca.sc.ProcEnv().GetPID().String(), ep); err != nil {
+		if err = sca.epcc.RegisterEndpoint(filepath.Dir(req.Path), filepath.Base(req.Path), ep); err != nil {
 			db.DPrintf(db.SPPROXYSRV_ERR, "%v: RegisterEP EPCC err: %v", sca.sc.ClntId(), err)
 		}
 	}

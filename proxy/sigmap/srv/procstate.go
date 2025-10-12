@@ -149,18 +149,20 @@ func (psm *ProcStateMgr) GetRPCChannel(sc *sigmaclnt.SigmaClnt, pid sp.Tpid, rpc
 }
 
 type procState struct {
-	mu       sync.Mutex
-	cond     *sync.Cond
-	done     bool // done creating the proc state?
-	pe       *proc.ProcEnv
-	p        *proc.Proc
-	rpcReps  *RPCState
-	wrt      *wasmrt.WasmerRuntime
-	sc       *sigmaclnt.SigmaClnt
-	epcc     *epcacheclnt.EndpointCacheClnt
-	shm      *shmem.Segment
-	shmAlloc malloc.Allocator
-	err      error // Creation result
+	mu                       sync.Mutex
+	cond                     *sync.Cond
+	spps                     *SPProxySrv
+	sigmaClntCreationStarted bool
+	done                     bool // done creating the proc state?
+	pe                       *proc.ProcEnv
+	p                        *proc.Proc
+	rpcReps                  *RPCState
+	wrt                      *wasmrt.WasmerRuntime
+	sc                       *sigmaclnt.SigmaClnt
+	epcc                     *epcacheclnt.EndpointCacheClnt
+	shm                      *shmem.Segment
+	shmAlloc                 malloc.Allocator
+	err                      error // Creation result
 }
 
 func newProcState(spps *SPProxySrv, pe *proc.ProcEnv, p *proc.Proc) *procState {
@@ -169,6 +171,7 @@ func newProcState(spps *SPProxySrv, pe *proc.ProcEnv, p *proc.Proc) *procState {
 		p:       p,
 		rpcReps: NewRPCState(),
 		done:    false,
+		spps:    spps,
 	}
 	ps.cond = sync.NewCond(&ps.mu)
 	if pe.GetUseShmem() {
@@ -181,7 +184,10 @@ func newProcState(spps *SPProxySrv, pe *proc.ProcEnv, p *proc.Proc) *procState {
 		ps.shmAlloc = shmem.NewAllocator(ps.shm)
 		perf.LogSpawnLatency("SPProxySrv.shmem.NewSegment", ps.pe.GetPID(), ps.pe.GetSpawnTime(), start)
 	}
-	go ps.createSigmaClnt(spps)
+	if ps.p.GetRunBootScript() {
+		ps.sigmaClntCreationStarted = true
+		go ps.createSigmaClnt(spps)
+	}
 	return ps
 }
 
@@ -192,6 +198,12 @@ func (psm *procState) GetShmemAllocator() malloc.Allocator {
 func (ps *procState) GetSigmaClnt() (*sigmaclnt.SigmaClnt, *epcacheclnt.EndpointCacheClnt, error) {
 	ps.mu.Lock()
 	defer ps.mu.Unlock()
+
+	if !ps.sigmaClntCreationStarted {
+		ps.sigmaClntCreationStarted = true
+		// If the sigma clnt creation hasn't started yet, start it
+		go ps.createSigmaClnt(ps.spps)
+	}
 
 	for !ps.done {
 		ps.cond.Wait()

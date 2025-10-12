@@ -2,6 +2,7 @@ package hotel
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"path/filepath"
 	"strconv"
@@ -10,6 +11,7 @@ import (
 	//	"go.opentelemetry.io/otel/trace"
 	//	tproto "sigmaos/util/tracing/proto"
 
+	cossimproto "sigmaos/apps/cossim/proto"
 	"sigmaos/apps/epcache"
 	epcacheclnt "sigmaos/apps/epcache/clnt"
 	"sigmaos/apps/hotel/proto"
@@ -336,113 +338,67 @@ func (s *Www) searchHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(geoJSONResponse(profRes.Hotels))
 }
 
-//func (s *Www) matchHandler(w http.ResponseWriter, r *http.Request) {
-//	if s.record {
-//		defer s.p.TptTick(1.0)
-//	}
-//
-//	w.Header().Set("Access-Control-Allow-Origin", "*")
-//
-//	//	headerContentTtype := r.Header.Get("Content-Type")
-//	//	if headerContentTtype != "application/x-www-form-urlencoded" {
-//	//		db.DPrintf(db.ALWAYS, "format %v", headerContentTtype)
-//	//		http.Error(w, "not urlencoded", http.StatusUnsupportedMediaType)
-//	//		return
-//	//	}
-//
-//	inDate, outDate := r.URL.Query().Get("inDate"), r.URL.Query().Get("outDate")
-//	//	inDate := r.FormValue("inDate")
-//	//	outDate := r.FormValue("outDate")
-//	if inDate == "" || outDate == "" {
-//		http.Error(w, "Please specify inDate/outDate params", http.StatusBadRequest)
-//		return
-//	}
-//
-//	// lan/lon from query params
-//	sLat, sLon := r.URL.Query().Get("lat"), r.URL.Query().Get("lon")
-//	//	sLat := r.FormValue("lat")
-//	//	sLon := r.FormValue("lon")
-//	if sLat == "" || sLon == "" {
-//		http.Error(w, "Please specify location params", http.StatusBadRequest)
-//		return
-//	}
-//
-//	Lat, _ := strconv.ParseFloat(sLat, 64)
-//	lat := float32(Lat)
-//	Lon, _ := strconv.ParseFloat(sLon, 64)
-//	lon := float32(Lon)
-//
-//	var matchRes proto.MatchRep
-//	matchReq := &proto.MatchReq{
-//		Lat:               lat,
-//		Lon:               lon,
-//		InDate:            inDate,
-//		OutDate:           outDate,
-//		SpanContextConfig: nil, //sctx2,
-//	}
-//	// search for best hotels
-//	err := s.searchc.RPC("Search.Nearby", searchReq, &searchRes)
-//	//	if TRACING {
-//	//		span2.End()
-//	//	}
-//	if err != nil {
-//		http.Error(w, err.Error(), http.StatusInternalServerError)
-//		return
-//	}
-//
-//	db.DPrintf(db.HOTEL_WWW, "Searchres %v %v\n", searchReq, searchRes)
-//	// grab locale from query params or default to en
-//	locale := r.URL.Query().Get("locale")
-//	//	locale := r.FormValue("locale")
-//	if locale == "" {
-//		locale = "en"
-//	}
-//
-//	var reserveRes proto.ReserveRep
-//	//	var span3 trace.Span
-//	//	var sctx3 *tproto.SpanContextConfig
-//	//	if TRACING {
-//	//		_, span3 = s.tracer.StartContextSpan(sctx, "Reserve.CheckAvailability")
-//	//		sctx3 = tracing.SpanToContext(span3)
-//	//	}
-//	err = s.reservec.RPC("Reserve.CheckAvailability", &proto.ReserveReq{
-//		CustomerName:      "",
-//		HotelId:           searchRes.HotelIds,
-//		InDate:            inDate,
-//		OutDate:           outDate,
-//		Number:            1,
-//		SpanContextConfig: nil, //sctx3,
-//	}, &reserveRes)
-//	//	if TRACING {
-//	//		span3.End()
-//	//	}
-//	if err != nil {
-//		http.Error(w, err.Error(), http.StatusInternalServerError)
-//		return
-//	}
-//
-//	// hotel profiles
-//	var profRes proto.ProfRep
-//	//	var span4 trace.Span
-//	//	var sctx4 *tproto.SpanContextConfig
-//	//	if TRACING {
-//	//		_, span4 = s.tracer.StartContextSpan(sctx, "ProfSrv.GetProfiles")
-//	//		sctx4 = tracing.SpanToContext(span4)
-//	//	}
-//	err = s.profc.RPC("ProfSrv.GetProfiles", &proto.ProfReq{
-//		HotelIds:          reserveRes.HotelIds,
-//		Locale:            locale,
-//		SpanContextConfig: nil, //sctx4,
-//	}, &profRes)
-//	//	if TRACING {
-//	//		span4.End()
-//	//	}
-//	if err != nil {
-//		http.Error(w, err.Error(), http.StatusInternalServerError)
-//		return
-//	}
-//	json.NewEncoder(w).Encode(geoJSONResponse(profRes.Hotels))
-//}
+func (s *Www) matchHandler(w http.ResponseWriter, r *http.Request) {
+	if s.record {
+		defer s.p.TptTick(1.0)
+	}
+
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+
+	userIDStr, userVecIDStr, tryCacheStr, vecRangeStartStr, vecRangeEndStr := r.URL.Query().Get("userID"), r.URL.Query().Get("userVecID"), r.URL.Query().Get("tryCache"), r.URL.Query().Get("vecRangeStart"), r.URL.Query().Get("vecRangeEnd")
+
+	if userIDStr == "" || userVecIDStr == "" || tryCacheStr == "" || vecRangeStartStr == "" || vecRangeEndStr == "" {
+		http.Error(w, "Please specify userID, userVecID, tryCache, vecRangeStart, vecRangeEnd params", http.StatusBadRequest)
+		return
+	}
+
+	userID, err := strconv.ParseUint(userIDStr, 10, 64)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Can't parse userID: %v", err), http.StatusBadRequest)
+		return
+	}
+	userVecID, err := strconv.ParseUint(userVecIDStr, 10, 64)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Can't parse userID: %v", err), http.StatusBadRequest)
+		return
+	}
+	tryCache, err := strconv.ParseBool(tryCacheStr)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Can't parse userID: %v", err), http.StatusBadRequest)
+		return
+	}
+	vecRangeStart, err := strconv.ParseUint(vecRangeStartStr, 10, 64)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Can't parse userID: %v", err), http.StatusBadRequest)
+		return
+	}
+	vecRangeEnd, err := strconv.ParseUint(vecRangeEndStr, 10, 64)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Can't parse userID: %v", err), http.StatusBadRequest)
+		return
+	}
+
+	var matchRes proto.MatchRep
+	matchReq := &proto.MatchReq{
+		UserID:    userID,
+		UserVecID: userVecID,
+		TryCache:  tryCache,
+		VecRanges: []*cossimproto.VecRange{
+			&cossimproto.VecRange{
+				StartID: vecRangeStart,
+				EndID:   vecRangeEnd,
+			},
+		},
+	}
+
+	if err := s.matchc.RPC("Match.UserPreference", matchReq, &matchRes); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	db.DPrintf(db.HOTEL_WWW, "matchres %v %v", matchReq, matchRes)
+	json.NewEncoder(w).Encode(matchJSONResponse(&matchRes))
+}
 
 func (s *Www) recommendHandler(w http.ResponseWriter, r *http.Request) {
 	if s.record {
@@ -688,6 +644,21 @@ func (s *Www) startRecordingHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	json.NewEncoder(w).Encode(reply)
+}
+
+func matchJSONResponse(mr *proto.MatchRep) map[string]interface{} {
+	fs := []interface{}{}
+	fs = append(fs, map[string]interface{}{
+		"type":      "Feature",
+		"id":        mr.ID,
+		"val":       mr.Val,
+		"wasCached": mr.WasCached,
+	})
+
+	return map[string]interface{}{
+		"type":     "FeatureCollection",
+		"features": fs,
+	}
 }
 
 // return a geoJSON response that allows google map to plot points directly on map

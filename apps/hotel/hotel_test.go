@@ -12,6 +12,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	cossimproto "sigmaos/apps/cossim/proto"
 	"sigmaos/apps/epcache"
 	"sigmaos/apps/hotel"
 	"sigmaos/apps/hotel/proto"
@@ -78,7 +79,7 @@ func newTstate(mrts *test.MultiRealmTstate, srvs []*hotel.Srv, ncache int, geoNI
 	err = ts.mrts.GetRealm(test.REALM1).BootNode(n)
 	assert.Nil(ts.mrts.T, err)
 	ts.hotel, err = hotel.NewHotelJob(ts.mrts.GetRealm(test.REALM1).SigmaClnt, ts.job, srvs, 80, cache, CACHE_MCPU, ncache, true, 0, 1, geoNIndex, geoSearchRadius, geoNResults)
-	assert.Nil(ts.mrts.T, err)
+	assert.Nil(ts.mrts.T, err, "Err new hotel job: %v", err)
 	return ts
 }
 
@@ -396,6 +397,57 @@ func TestSingleSearch(t *testing.T) {
 	err = rpcc.RPC("Search.Nearby", arg, &res)
 	assert.Nil(t, err)
 	assert.Equal(t, 3, len(res.HotelIds))
+}
+
+func TestSingleMatch(t *testing.T) {
+	// Bail out early if machine has too many cores (which messes with the cgroups setting)
+	if !assert.False(t, linuxsched.GetNCores() > 10, "SpawnBurst test will fail because machine has >10 cores, which causes cgroups settings to fail") {
+		return
+	}
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	defer mrts.Shutdown()
+
+	ts := newTstate(mrts, []*hotel.Srv{&hotel.Srv{Name: "hotel-matchd"}}, NCACHESRV, DEF_GEO_N_IDX, DEF_GEO_SEARCH_RADIUS, DEF_GEO_N_RESULTS)
+	defer ts.stop()
+	rpcc, err := sprpcclnt.NewRPCClnt(ts.mrts.GetRealm(test.REALM1).FsLib, hotel.HOTELMATCH)
+	if !assert.Nil(t, err, "Err make rpcclnt: %v", err) {
+		return
+	}
+	ranges := []*cossimproto.VecRange{
+		&cossimproto.VecRange{
+			StartID: 0,
+			EndID:   uint64(100),
+		},
+	}
+	for i := 0; i < 5; i++ {
+		arg := &proto.MatchReq{
+			UserID:    12345,
+			UserVecID: 2,
+			TryCache:  false,
+			VecRanges: ranges,
+		}
+		var res proto.MatchRep
+		err = rpcc.RPC("Match.UserPreference", arg, &res)
+		assert.Nil(t, err, "Err: %v", err)
+		assert.False(t, res.WasCached)
+	}
+	arg := &proto.MatchReq{
+		UserID:    12345,
+		UserVecID: 2,
+		TryCache:  true,
+		VecRanges: ranges,
+	}
+	var res1 proto.MatchRep
+	err = rpcc.RPC("Match.UserPreference", arg, &res1)
+	assert.Nil(t, err, "Err: %v", err)
+	assert.False(t, res1.WasCached)
+	var res2 proto.MatchRep
+	err = rpcc.RPC("Match.UserPreference", arg, &res2)
+	assert.Nil(t, err, "Err: %v", err)
+	assert.True(t, res2.WasCached)
 }
 
 func TestWww(t *testing.T) {

@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+import "apps/cossim/proto/cossim.proto";
+
+option go_package = "sigmaos/apps/hotel/proto";
+
+service Match {
+  rpc Nearby(MatchReq) returns (MatchRep);
+}
+
+message MatchReq {
+  uint64 UserID = 1;
+  uint64 UserVecID = 2;
+  bool tryCache = 3;
+  repeated VecRange vecRanges = 4; // Ranges of vectors for which to compute cosine simmilarity
+}
+
+message MatchRep {
+  uint64 iD = 1; // Closest vector ID
+  double val = 2; // Value of maximum cosine similarity
+  bool wasCached = 3; // Result was cached
+}

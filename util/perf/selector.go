@@ -71,6 +71,7 @@ const (
 	HOTEL_GEO               = "HOTEL_GEO"
 	HOTEL_RESERVE           = "HOTEL_RESERVE"
 	HOTEL_SEARCH            = "HOTEL_SEARCH"
+	HOTEL_MATCH             = "HOTEL_MATCH"
 	HOTEL_RATE              = "HOTEL_RATE"
 )
 

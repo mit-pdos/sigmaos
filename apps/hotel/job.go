@@ -7,6 +7,7 @@ import (
 
 	cachegrpclnt "sigmaos/apps/cache/cachegrp/clnt"
 	cachegrpmgr "sigmaos/apps/cache/cachegrp/mgr"
+	cossimsrv "sigmaos/apps/cossim/srv"
 	"sigmaos/apps/epcache"
 	epsrv "sigmaos/apps/epcache/srv"
 	db "sigmaos/debug"
@@ -24,6 +25,7 @@ const (
 	HOTELGEODIR  = HOTELDIR + "geo/"
 	HOTELRATE    = HOTELDIR + "rate"
 	HOTELSEARCH  = HOTELDIR + "search"
+	HOTELMATCH   = HOTELDIR + "match"
 	HOTELREC     = HOTELDIR + "rec"
 	HOTELRESERVE = HOTELDIR + "reserve"
 	HOTELUSER    = HOTELDIR + "user"
@@ -39,6 +41,7 @@ var HOTELSVC = []string{
 	HOTELGEODIR + sp.ANY + "/",
 	HOTELRATE,
 	HOTELSEARCH,
+	HOTELMATCH,
 	HOTELREC,
 	HOTELRESERVE,
 	HOTELUSER,
@@ -134,6 +137,7 @@ func NewHotelSvc() []*Srv {
 		geo,
 		&Srv{"hotel-profd", nil, 2000},
 		&Srv{"hotel-searchd", nil, 3000},
+		&Srv{"hotel-matchd", nil, 3000},
 		&Srv{"hotel-reserved", nil, 3000},
 		&Srv{"hotel-recd", nil, 0},
 		&Srv{"hotel-wwwd", nil, 3000},
@@ -146,6 +150,7 @@ type HotelJob struct {
 	cacheClnt       *cachegrpclnt.CachedSvcClnt
 	cacheMgr        *cachegrpmgr.CacheMgr
 	CacheAutoscaler *cachegrpclnt.Autoscaler
+	CosSimJob       *cossimsrv.CosSimJob
 	pids            []sp.Tpid
 	cache           string
 	job             string
@@ -190,12 +195,12 @@ func NewHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []*Srv, nhotel int, c
 		switch cache {
 		case "cached":
 			db.DPrintf(db.ALWAYS, "Hotel running with cached")
-			cm, err = cachegrpmgr.NewCacheMgr(sc, job, ncache, cacheMcpu, gc)
+			cm, err = cachegrpmgr.NewCacheMgrEPCache(sc, epcj, job, ncache, cacheMcpu, gc)
 			if err != nil {
 				db.DPrintf(db.ERROR, "Error NewCacheMgr %v", err)
 				return nil, err
 			}
-			cc = cachegrpclnt.NewCachedSvcClnt(sc.FsLib, job)
+			cc = cachegrpclnt.NewCachedSvcClntEPCache(sc.FsLib, epcj.Clnt, job)
 			ca = cachegrpclnt.NewAutoscaler(cm, cc)
 		// XXX Remove
 		case "memcached":
@@ -204,6 +209,28 @@ func NewHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []*Srv, nhotel int, c
 			db.DPrintf(db.ERROR, "Unrecognized hotel cache type: %v", cache)
 		}
 	}
+
+	// Initialize CosSimJob after cache client is created
+	var cosSimJob *cossimsrv.CosSimJob
+	// CosSim parameters - adjust as needed
+	cossimNVec := 1000
+	cossimVecDim := 128
+	cossimEagerInit := true
+	cossimSrvMcpu := proc.Tmcpu(3000)
+	cossimDelegateInitRPCs := true
+
+	db.DPrintf(db.TEST, "Start cossimsrv")
+	cosSimJob, err = cossimsrv.NewCosSimJob(sc, epcj, cm, cc, job, cossimNVec, cossimVecDim, cossimEagerInit, cossimSrvMcpu, ncache, cacheMcpu, gc, cossimDelegateInitRPCs)
+	if err != nil {
+		db.DPrintf(db.ERROR, "Error NewCosSimJob %v", err)
+		return nil, err
+	}
+
+	if _, _, err := cosSimJob.AddSrv(); err != nil {
+		db.DPrintf(db.ERROR, "Error CosSimJob.AddSrv %v", err)
+		return nil, err
+	}
+	db.DPrintf(db.TEST, "Done start cossimsrv")
 
 	pids := make([]sp.Tpid, 0, len(srvs))
 
@@ -232,6 +259,7 @@ func NewHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []*Srv, nhotel int, c
 		cacheClnt:       cc,
 		cacheMgr:        cm,
 		CacheAutoscaler: ca,
+		CosSimJob:       cosSimJob,
 		pids:            pids,
 		cache:           cache,
 		job:             job,

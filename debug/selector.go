@@ -82,6 +82,8 @@ const (
 	HOTEL_RATE      Tselector = "HOTEL_RATE"
 	HOTEL_RESERVE   Tselector = "HOTEL_RESERVE"
 	HOTEL_SEARCH    Tselector = "HOTEL_SEARCH"
+	HOTEL_MATCH     Tselector = "HOTEL_MATCH"
+	HOTEL_MATCH_ERR Tselector = "HOTEL_MATCH" + ERR
 	HOTEL_WWW       Tselector = "HOTEL_WWW"
 	HOTEL_WWW_ERR   Tselector = "HOTEL_WWW" + ERR
 	HOTEL_WWW_STATS Tselector = "HOTEL_WWW_STATS"

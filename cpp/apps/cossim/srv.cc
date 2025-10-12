@@ -145,8 +145,24 @@ std::expected<int, sigmaos::serr::Error> Srv::Init() {
     key_vecs[server_id]->push_back(i_str);
     key_vecs_int[server_id]->push_back(i);
   }
+  // If not running boot script, pre-estables cached connections
+  if (!_sp_clnt->ProcEnv()->GetRunBootScript()) {
+    // Establish connections to cached servers
+    auto startConnect = GetCurrentTime();
+    {
+      auto res = _cache_clnt->InitClnts(_ncache);
+      if (!res.has_value()) {
+        log(COSSIMSRV_ERR, "Error InitClnts: {}", res.error());
+        fatal("Error InitClnts: {}", res.error().String());
+        return std::unexpected(res.error());
+      }
+    }
+    LogSpawnLatency(_sp_clnt->ProcEnv()->GetPID(),
+                    _sp_clnt->ProcEnv()->GetSpawnTime(), startConnect,
+                    "Initialization.ConnectionSetup");
+  }
   int nbyte = 0;
-  auto start = GetCurrentTime();
+  auto startLoad = GetCurrentTime();
   std::vector<std::thread> fetch_threads;
   std::vector<
       std::shared_ptr<std::promise<std::expected<int, sigmaos::serr::Error>>>>
@@ -173,8 +189,12 @@ std::expected<int, sigmaos::serr::Error> Srv::Init() {
     }
     nbyte += res.value();
   }
+  LogSpawnLatency(_sp_clnt->ProcEnv()->GetPID(),
+                  _sp_clnt->ProcEnv()->GetSpawnTime(), startLoad,
+                  "Initialization.LoadState");
   LogSpawnLatency(
-      _sp_clnt->ProcEnv()->GetPID(), _sp_clnt->ProcEnv()->GetSpawnTime(), start,
+      _sp_clnt->ProcEnv()->GetPID(), _sp_clnt->ProcEnv()->GetSpawnTime(),
+      startLoad,
       std::format("Initialize soft state vector DB: {}B", (int)nbyte));
   return 0;
 }

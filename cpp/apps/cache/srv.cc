@@ -121,7 +121,7 @@ std::expected<int, sigmaos::serr::Error> Srv::Init(int old_n_srv,
     }
     LogSpawnLatency(_sp_clnt->ProcEnv()->GetPID(),
                     _sp_clnt->ProcEnv()->GetSpawnTime(), startConnect,
-                    "Initialization.LoadState");
+                    "Initialization.ConnectionSetup");
     // For each source server, dump shards to be stolen
     for (int src_srv : src_srvs) {
       auto res = _cache_clnt->MultiDumpShard(src_srv, shards_to_steal[src_srv]);

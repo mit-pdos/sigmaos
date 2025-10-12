@@ -484,6 +484,16 @@ func TestWww(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, "Geo!", s)
 
+	s, err = wc.Geo(37.7749, -122.4194)
+	assert.Nil(t, err)
+	assert.Equal(t, "Geo!", s)
+
+	err = wc.Match(12345, 2, true, &cossimproto.VecRange{
+		StartID: 0,
+		EndID:   uint64(100),
+	})
+	assert.Nil(t, err)
+
 	ts.stop()
 }
 

@@ -119,6 +119,7 @@ func RunWww(job string) error {
 	mux = http.NewServeMux()
 	mux.HandleFunc("/user", www.userHandler)
 	mux.HandleFunc("/hotels", www.searchHandler)
+	mux.HandleFunc("/match", www.matchHandler)
 	mux.HandleFunc("/recommendations", www.recommendHandler)
 	mux.HandleFunc("/reservation", www.reservationHandler)
 	mux.HandleFunc("/geo", www.geoHandler)

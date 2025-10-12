@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"time"
 
+	cossimproto "sigmaos/apps/cossim/proto"
 	db "sigmaos/debug"
 	"sigmaos/sigmaclnt/fslib"
 	sp "sigmaos/sigmap"
@@ -90,6 +91,23 @@ func (wc *WebClnt) Search(inDate, outDate string, lat, lon float64) error {
 	vals.Set("lon", strconv.FormatFloat(lon, 'f', -1, 64))
 	db.DPrintf(db.HOTEL_CLNT, "Search vals %v\n", vals)
 	_, err := wc.request("/hotels", vals)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (wc *WebClnt) Match(userID, userVecID uint64, tryCache bool, vecRange *cossimproto.VecRange) error {
+	vals := url.Values{}
+
+	vals.Set("userID", strconv.FormatUint(userID, 10))
+	vals.Set("userVecID", strconv.FormatUint(userVecID, 10))
+	vals.Set("tryCache", strconv.FormatBool(tryCache))
+	vals.Set("vecRangeStart", strconv.FormatUint(vecRange.StartID, 10))
+	vals.Set("vecRangeEnd", strconv.FormatUint(vecRange.EndID, 10))
+
+	db.DPrintf(db.HOTEL_CLNT, "Match vals %v", vals)
+	_, err := wc.request("/match", vals)
 	if err != nil {
 		return err
 	}

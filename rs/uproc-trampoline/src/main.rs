@@ -108,6 +108,7 @@ fn main() {
         log::info!("exec: {} {:?}", program, new_args);
     }
 
+    print_elapsed_time(&debug_pid, "Initialization.Isolation", exec_time, true);
     let err = cmd.args(new_args).exec();
     // Exec should never return
     log::info!("err: {}", err);

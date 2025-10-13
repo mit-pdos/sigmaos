@@ -68,7 +68,7 @@ func RunWww(job string) error {
 	www.searchc = rpcc
 	rpcc, err = sprpcclnt.NewRPCClnt(fsl, HOTELMATCH)
 	if err != nil {
-		return err
+		db.DPrintf(db.ALWAYS, "Match server not found")
 	}
 	www.matchc = rpcc
 	rpcc, err = sprpcclnt.NewRPCClnt(fsl, HOTELPROF)

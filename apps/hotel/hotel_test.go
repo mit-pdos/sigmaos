@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	cossimproto "sigmaos/apps/cossim/proto"
+	cossimsrv "sigmaos/apps/cossim/srv"
 	"sigmaos/apps/epcache"
 	"sigmaos/apps/hotel"
 	"sigmaos/apps/hotel/proto"
@@ -78,7 +79,16 @@ func newTstate(mrts *test.MultiRealmTstate, srvs []*hotel.Srv, ncache int, geoNI
 	db.DPrintf(db.TEST, "linux %d ncore %d n %d", linuxsched.GetNCores(), ncore, n)
 	err = ts.mrts.GetRealm(test.REALM1).BootNode(n)
 	assert.Nil(ts.mrts.T, err)
-	ts.hotel, err = hotel.NewHotelJob(ts.mrts.GetRealm(test.REALM1).SigmaClnt, ts.job, srvs, 80, cache, CACHE_MCPU, ncache, true, 0, 1, geoNIndex, geoSearchRadius, geoNResults)
+	// CosSim parameters - adjust as needed
+	cossimNVec := 1000
+	cossimVecDim := 128
+	cossimEagerInit := true
+	cossimSrvMcpu := proc.Tmcpu(3000)
+	cossimDelegateInitRPCs := false
+
+	csjConf := cossimsrv.NewCosSimJobConfig(ts.job, cossimNVec, cossimVecDim, cossimEagerInit, cossimSrvMcpu, ncache, CACHE_MCPU, true, cossimDelegateInitRPCs)
+
+	ts.hotel, err = hotel.NewHotelJob(ts.mrts.GetRealm(test.REALM1).SigmaClnt, ts.job, srvs, 80, cache, CACHE_MCPU, ncache, true, 0, 1, geoNIndex, geoSearchRadius, geoNResults, csjConf)
 	assert.Nil(ts.mrts.T, err, "Err new hotel job: %v", err)
 	return ts
 }
@@ -461,7 +471,7 @@ func TestWww(t *testing.T) {
 	}
 	defer mrts.Shutdown()
 
-	ts := newTstate(mrts, hotel.NewHotelSvc(), NCACHESRV, DEF_GEO_N_IDX, DEF_GEO_SEARCH_RADIUS, DEF_GEO_N_RESULTS)
+	ts := newTstate(mrts, hotel.NewHotelSvcWithMatch(), NCACHESRV, DEF_GEO_N_IDX, DEF_GEO_SEARCH_RADIUS, DEF_GEO_N_RESULTS)
 
 	wc, err1 := hotel.NewWebClnt(ts.mrts.GetRealm(test.REALM1).FsLib, ts.job)
 	assert.Nil(t, err1, "Error NewWebClnt: %v", err1)

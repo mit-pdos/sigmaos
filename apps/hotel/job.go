@@ -137,6 +137,20 @@ func NewHotelSvc() []*Srv {
 		geo,
 		&Srv{"hotel-profd", nil, 2000},
 		&Srv{"hotel-searchd", nil, 3000},
+		&Srv{"hotel-reserved", nil, 3000},
+		&Srv{"hotel-recd", nil, 0},
+		&Srv{"hotel-wwwd", nil, 3000},
+	}
+}
+
+// XXX searchd only needs 2, but in order to make spawns work out we need to have it run with 3.
+func NewHotelSvcWithMatch() []*Srv {
+	return []*Srv{
+		&Srv{"hotel-userd", nil, 0},
+		&Srv{"hotel-rated", nil, 2000},
+		geo,
+		&Srv{"hotel-profd", nil, 2000},
+		&Srv{"hotel-searchd", nil, 3000},
 		&Srv{"hotel-matchd", nil, 3000},
 		&Srv{"hotel-reserved", nil, 3000},
 		&Srv{"hotel-recd", nil, 0},
@@ -157,7 +171,7 @@ type HotelJob struct {
 	epcsrvEP        *sp.Tendpoint
 }
 
-func NewHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []*Srv, nhotel int, cache string, cacheMcpu proc.Tmcpu, ncache int, gc bool, imgSizeMB int, ngeo int, ngeoidx int, geoSearchRadius int, geoNResults int) (*HotelJob, error) {
+func NewHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []*Srv, nhotel int, cache string, cacheMcpu proc.Tmcpu, ncache int, gc bool, imgSizeMB int, ngeo int, ngeoidx int, geoSearchRadius int, geoNResults int, csjConf *cossimsrv.CosSimJobConfig) (*HotelJob, error) {
 	// Set number of hotels before doing anything.
 	setNHotel(nhotel)
 	// Set the number of indexes to be used in each geo server
@@ -212,27 +226,20 @@ func NewHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []*Srv, nhotel int, c
 
 	// Initialize CosSimJob after cache client is created
 	var cosSimJob *cossimsrv.CosSimJob
-	// CosSim parameters - adjust as needed
-	cossimNVec := 1000
-	cossimVecDim := 128
-	cossimEagerInit := true
-	cossimSrvMcpu := proc.Tmcpu(3000)
-	cossimDelegateInitRPCs := false
+	if csjConf != nil {
+		db.DPrintf(db.TEST, "Start cossimsrv")
+		cosSimJob, err = cossimsrv.NewCosSimJob(csjConf, sc, epcj, cm, cc)
+		if err != nil {
+			db.DPrintf(db.ERROR, "Error NewCosSimJob %v", err)
+			return nil, err
+		}
 
-	csjConf := cossimsrv.NewCosSimJobConfig(job, cossimNVec, cossimVecDim, cossimEagerInit, cossimSrvMcpu, ncache, cacheMcpu, gc, cossimDelegateInitRPCs)
-
-	db.DPrintf(db.TEST, "Start cossimsrv")
-	cosSimJob, err = cossimsrv.NewCosSimJob(csjConf, sc, epcj, cm, cc)
-	if err != nil {
-		db.DPrintf(db.ERROR, "Error NewCosSimJob %v", err)
-		return nil, err
+		if _, _, err := cosSimJob.AddSrv(); err != nil {
+			db.DPrintf(db.ERROR, "Error CosSimJob.AddSrv %v", err)
+			return nil, err
+		}
+		db.DPrintf(db.TEST, "Done start cossimsrv")
 	}
-
-	if _, _, err := cosSimJob.AddSrv(); err != nil {
-		db.DPrintf(db.ERROR, "Error CosSimJob.AddSrv %v", err)
-		return nil, err
-	}
-	db.DPrintf(db.TEST, "Done start cossimsrv")
 
 	pids := make([]sp.Tpid, 0, len(srvs))
 
@@ -311,6 +318,9 @@ func (hj *HotelJob) Stop() error {
 		if _, err := hj.WaitExit(pid); err != nil {
 			return err
 		}
+	}
+	if hj.CosSimJob != nil {
+		hj.CosSimJob.Stop()
 	}
 	if hj.cacheMgr != nil {
 		hj.cacheMgr.Stop()

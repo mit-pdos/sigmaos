@@ -2,6 +2,8 @@ package perf
 
 import (
 	"fmt"
+	"os"
+	"strconv"
 	"time"
 
 	db "sigmaos/debug"
@@ -11,6 +13,16 @@ import (
 var (
 	TIME_NOT_SET time.Time = time.Unix(0, 0)
 )
+
+func LogRuntimeInitLatency(pid sp.Tpid, spawnTime time.Time) {
+	execTimeStr := os.Getenv("SIGMA_EXEC_TIME")
+	execTimeMicro, err := strconv.ParseInt(execTimeStr, 10, 64)
+	if err != nil {
+		db.DFatalf("Error parsing exec time 2: %v", err)
+	}
+	execTime := time.UnixMicro(execTimeMicro)
+	LogSpawnLatency("Initialization.RuntimeInit", pid, spawnTime, execTime)
+}
 
 // Some convenience functions for logging performance-related data
 func LogSpawnLatency(format string, pid sp.Tpid, spawnTime time.Time, opStart time.Time, v ...interface{}) {

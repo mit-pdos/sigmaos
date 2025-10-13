@@ -11,6 +11,9 @@
 
 extern google::protobuf::Timestamp epoch;
 
+void LogExecLatency(sigmaos::sigmap::types::Tpid pid,
+                    google::protobuf::Timestamp spawn_time, std::string msg);
+
 void LogSpawnLatency(sigmaos::sigmap::types::Tpid pid,
                      google::protobuf::Timestamp spawn_time,
                      google::protobuf::Timestamp op_start, std::string msg);

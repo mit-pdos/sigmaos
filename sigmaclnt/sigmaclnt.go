@@ -31,6 +31,7 @@ func init() {
 		}
 		pe := proc.GetProcEnv()
 		perf.LogSpawnLatency("sigmaclnt pkg init", pe.GetPID(), pe.GetSpawnTime(), perf.TIME_NOT_SET)
+		perf.LogRuntimeInitLatency(pe.GetPID(), pe.GetSpawnTime())
 	}
 }
 

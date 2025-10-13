@@ -23,6 +23,32 @@ import (
 	sp "sigmaos/sigmap"
 )
 
+type CosSimJobConfig struct {
+	job              string
+	nvec             int
+	vecDim           int
+	eagerInit        bool
+	srvMcpu          proc.Tmcpu
+	ncache           int
+	cacheMcpu        proc.Tmcpu
+	cacheGC          bool
+	delegateInitRPCs bool
+}
+
+func NewCosSimJobConfig(job string, nvec int, vecDim int, eagerInit bool, srvMcpu proc.Tmcpu, ncache int, cacheMcpu proc.Tmcpu, cacheGC bool, delegateInitRPCs bool) *CosSimJobConfig {
+	return &CosSimJobConfig{
+		job:              job,
+		nvec:             nvec,
+		vecDim:           vecDim,
+		eagerInit:        eagerInit,
+		srvMcpu:          srvMcpu,
+		ncache:           ncache,
+		cacheMcpu:        cacheMcpu,
+		cacheGC:          cacheGC,
+		delegateInitRPCs: delegateInitRPCs,
+	}
+}
+
 func JobDir(jobname string) string {
 	return filepath.Join(cossim.COSSIM, jobname)
 }
@@ -83,32 +109,26 @@ func writeVectorsToCache(cc *cachegrpclnt.CachedSvcClnt, vecs []*cossimproto.Vec
 }
 
 type CosSimJob struct {
-	mu  sync.Mutex
-	job string
+	mu   sync.Mutex
+	conf *CosSimJobConfig
 	*sigmaclnt.SigmaClnt
-	EPCacheJob       *epsrv.EPCacheJob
-	epcsrvEP         *sp.Tendpoint
-	cacheClnt        *cachegrpclnt.CachedSvcClnt
-	cacheMgr         *cachegrpmgr.CacheMgr
-	cachePNBase      string
-	cacheEPs         map[string]*sp.Tendpoint
-	ncache           int
-	nvec             int
-	vecDim           int
-	eagerInit        bool
-	vecs             []*cossimproto.Vector
-	vecKeys          []string
-	srvMcpu          proc.Tmcpu
-	srvs             []*proc.Proc
-	Clnt             *clnt.CosSimShardClnt
-	delegateInitRPCs bool
-	bootScript       []byte
-	bootScriptInput  []byte
-	stopEPCJ         bool
-	stopCaches       bool
+	EPCacheJob      *epsrv.EPCacheJob
+	epcsrvEP        *sp.Tendpoint
+	cacheClnt       *cachegrpclnt.CachedSvcClnt
+	cacheMgr        *cachegrpmgr.CacheMgr
+	cachePNBase     string
+	cacheEPs        map[string]*sp.Tendpoint
+	vecs            []*cossimproto.Vector
+	vecKeys         []string
+	srvs            []*proc.Proc
+	Clnt            *clnt.CosSimShardClnt
+	bootScript      []byte
+	bootScriptInput []byte
+	stopEPCJ        bool
+	stopCaches      bool
 }
 
-func NewCosSimJob(sc *sigmaclnt.SigmaClnt, epcj *epsrv.EPCacheJob, cm *cachegrpmgr.CacheMgr, cc *cachegrpclnt.CachedSvcClnt, job string, nvec int, vecDim int, eagerInit bool, srvMcpu proc.Tmcpu, ncache int, cacheMcpu proc.Tmcpu, cacheGC bool, delegateInitRPCs bool) (*CosSimJob, error) {
+func NewCosSimJob(conf *CosSimJobConfig, sc *sigmaclnt.SigmaClnt, epcj *epsrv.EPCacheJob, cm *cachegrpmgr.CacheMgr, cc *cachegrpclnt.CachedSvcClnt) (*CosSimJob, error) {
 	stopEPCJ := false
 	stopCaches := false
 	var err error
@@ -126,7 +146,7 @@ func NewCosSimJob(sc *sigmaclnt.SigmaClnt, epcj *epsrv.EPCacheJob, cm *cachegrpm
 	if cm == nil {
 		stopCaches = true
 		// Start the cachegrp job
-		cm, err = cachegrpmgr.NewCacheMgr(sc, job, ncache, cacheMcpu, cacheGC)
+		cm, err = cachegrpmgr.NewCacheMgr(sc, conf.job, conf.ncache, conf.cacheMcpu, conf.cacheGC)
 		if err != nil {
 			db.DPrintf(db.COSSIMSRV_ERR, "Err newCacheMgr: %v", err)
 			return nil, err
@@ -135,17 +155,17 @@ func NewCosSimJob(sc *sigmaclnt.SigmaClnt, epcj *epsrv.EPCacheJob, cm *cachegrpm
 	// If not supplied, create cache client
 	if cc == nil {
 		if epcj == nil {
-			cc = cachegrpclnt.NewCachedSvcClnt(sc.FsLib, job)
+			cc = cachegrpclnt.NewCachedSvcClnt(sc.FsLib, conf.job)
 		} else {
-			cc = cachegrpclnt.NewCachedSvcClntEPCache(sc.FsLib, epcj.Clnt, job)
+			cc = cachegrpclnt.NewCachedSvcClntEPCache(sc.FsLib, epcj.Clnt, conf.job)
 		}
 	}
-	return newCosSimJob(sc, epcj, cm, cc, job, nvec, vecDim, eagerInit, srvMcpu, ncache, cacheMcpu, cacheGC, delegateInitRPCs, stopEPCJ, stopCaches)
+	return newCosSimJob(conf, sc, epcj, cm, cc, stopEPCJ, stopCaches)
 }
 
-func newCosSimJob(sc *sigmaclnt.SigmaClnt, epcj *epsrv.EPCacheJob, cm *cachegrpmgr.CacheMgr, cc *cachegrpclnt.CachedSvcClnt, job string, nvec int, vecDim int, eagerInit bool, srvMcpu proc.Tmcpu, ncache int, cacheMcpu proc.Tmcpu, cacheGC bool, delegateInitRPCs bool, stopEPCJ bool, stopCaches bool) (*CosSimJob, error) {
+func newCosSimJob(conf *CosSimJobConfig, sc *sigmaclnt.SigmaClnt, epcj *epsrv.EPCacheJob, cm *cachegrpmgr.CacheMgr, cc *cachegrpclnt.CachedSvcClnt, stopEPCJ bool, stopCaches bool) (*CosSimJob, error) {
 	// Init fs
-	if err := initFS(sc, job); err != nil {
+	if err := initFS(sc, conf.job); err != nil {
 		db.DPrintf(db.COSSIMSRV_ERR, "Err initfs: %v", err)
 		return nil, err
 	}
@@ -154,7 +174,7 @@ func newCosSimJob(sc *sigmaclnt.SigmaClnt, epcj *epsrv.EPCacheJob, cm *cachegrpm
 		db.DPrintf(db.COSSIMSRV_ERR, "Err getSrvEP: %v", err)
 		return nil, err
 	}
-	vecs := cossim.NewVectors(nvec, vecDim)
+	vecs := cossim.NewVectors(conf.nvec, conf.vecDim)
 	vecKeys, err := writeVectorsToCache(cc, vecs)
 	if err != nil {
 		db.DPrintf(db.COSSIMSRV_ERR, "Err writeVectors: %v", err)
@@ -177,36 +197,30 @@ func newCosSimJob(sc *sigmaclnt.SigmaClnt, epcj *epsrv.EPCacheJob, cm *cachegrpm
 	}
 	// Write the input arguments to the boot script
 	inputBuf := bytes.NewBuffer(make([]byte, 0, 12))
-	if err := binary.Write(inputBuf, binary.LittleEndian, uint32(ncache)); err != nil {
+	if err := binary.Write(inputBuf, binary.LittleEndian, uint32(conf.ncache)); err != nil {
 		return nil, err
 	}
-	if err := binary.Write(inputBuf, binary.LittleEndian, uint64(nvec)); err != nil {
+	if err := binary.Write(inputBuf, binary.LittleEndian, uint64(conf.nvec)); err != nil {
 		return nil, err
 	}
 	bootScriptInput := inputBuf.Bytes()
 	return &CosSimJob{
-		job:              job,
-		SigmaClnt:        sc,
-		EPCacheJob:       epcj,
-		epcsrvEP:         epcsrvEP,
-		cacheClnt:        cc,
-		cachePNBase:      filepath.Dir(cc.Server(0)),
-		cacheEPs:         cacheEPs,
-		cacheMgr:         cm,
-		ncache:           ncache,
-		nvec:             nvec,
-		vecDim:           vecDim,
-		vecs:             vecs,
-		vecKeys:          vecKeys,
-		eagerInit:        eagerInit,
-		srvMcpu:          srvMcpu,
-		srvs:             []*proc.Proc{},
-		Clnt:             cscs,
-		delegateInitRPCs: delegateInitRPCs,
-		bootScript:       bootScript,
-		bootScriptInput:  bootScriptInput,
-		stopEPCJ:         stopEPCJ,
-		stopCaches:       stopCaches,
+		conf:            conf,
+		SigmaClnt:       sc,
+		EPCacheJob:      epcj,
+		epcsrvEP:        epcsrvEP,
+		cacheClnt:       cc,
+		cachePNBase:     filepath.Dir(cc.Server(0)),
+		cacheEPs:        cacheEPs,
+		cacheMgr:        cm,
+		vecs:            vecs,
+		vecKeys:         vecKeys,
+		srvs:            []*proc.Proc{},
+		Clnt:            cscs,
+		bootScript:      bootScript,
+		bootScriptInput: bootScriptInput,
+		stopEPCJ:        stopEPCJ,
+		stopCaches:      stopCaches,
 	}, nil
 }
 
@@ -224,19 +238,19 @@ func (j *CosSimJob) AddSrv() (*proc.Proc, time.Duration, error) {
 }
 
 func (j *CosSimJob) addSrv(sigmaPath string) (*proc.Proc, time.Duration, error) {
-	p := proc.NewProc("cossim-srv-cpp", []string{j.cachePNBase, strconv.Itoa(j.ncache), strconv.Itoa(j.nvec), strconv.Itoa(j.vecDim), strconv.FormatBool(j.eagerInit)})
+	p := proc.NewProc("cossim-srv-cpp", []string{j.cachePNBase, strconv.Itoa(j.conf.ncache), strconv.Itoa(j.conf.nvec), strconv.Itoa(j.conf.vecDim), strconv.FormatBool(j.conf.eagerInit)})
 	if sigmaPath != sp.NOT_SET {
 		p.PrependSigmaPath(sigmaPath)
 	}
 	p.GetProcEnv().UseSPProxy = true
 	p.GetProcEnv().UseSPProxyProcClnt = true
-	p.SetMcpu(j.srvMcpu)
+	p.SetMcpu(j.conf.srvMcpu)
 	p.SetCachedEndpoint(epcache.EPCACHE, j.epcsrvEP)
 	for pn, ep := range j.cacheEPs {
 		p.SetCachedEndpoint(pn, ep)
 	}
 	p.SetBootScript(j.bootScript, j.bootScriptInput)
-	p.SetRunBootScript(j.delegateInitRPCs)
+	p.SetRunBootScript(j.conf.delegateInitRPCs)
 	start := time.Now()
 	if err := j.Spawn(p); err != nil {
 		return nil, 0, err

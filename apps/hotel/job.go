@@ -217,10 +217,12 @@ func NewHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []*Srv, nhotel int, c
 	cossimVecDim := 128
 	cossimEagerInit := true
 	cossimSrvMcpu := proc.Tmcpu(3000)
-	cossimDelegateInitRPCs := true
+	cossimDelegateInitRPCs := false
+
+	csjConf := cossimsrv.NewCosSimJobConfig(job, cossimNVec, cossimVecDim, cossimEagerInit, cossimSrvMcpu, ncache, cacheMcpu, gc, cossimDelegateInitRPCs)
 
 	db.DPrintf(db.TEST, "Start cossimsrv")
-	cosSimJob, err = cossimsrv.NewCosSimJob(sc, epcj, cm, cc, job, cossimNVec, cossimVecDim, cossimEagerInit, cossimSrvMcpu, ncache, cacheMcpu, gc, cossimDelegateInitRPCs)
+	cosSimJob, err = cossimsrv.NewCosSimJob(csjConf, sc, epcj, cm, cc)
 	if err != nil {
 		db.DPrintf(db.ERROR, "Error NewCosSimJob %v", err)
 		return nil, err

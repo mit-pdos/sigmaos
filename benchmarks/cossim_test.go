@@ -102,7 +102,8 @@ func NewCosSimJob(ts *test.RealmTstate, p *perf.Perf, epcj *epsrv.EPCacheJob, cm
 	if !ji.justCli {
 		db.DPrintf(db.TEST, "Create new CosSim job")
 		// Only start one cache if autoscaling.
-		ji.j, err = cossimsrv.NewCosSimJob(ts.SigmaClnt, epcj, cm, cc, ji.job, ji.cosSimNVec, ji.cosSimVecDim, ji.eagerInit, ji.mcpuPerSrv, ji.ncache, cacheMcpu, cacheGC, ji.delegateInit)
+		conf := cossimsrv.NewCosSimJobConfig(ji.job, ji.cosSimNVec, ji.cosSimVecDim, ji.eagerInit, ji.mcpuPerSrv, ji.ncache, cacheMcpu, cacheGC, ji.delegateInit)
+		ji.j, err = cossimsrv.NewCosSimJob(conf, ts.SigmaClnt, epcj, cm, cc)
 		assert.Nil(ts.Ts.T, err, "Error NewCosSimJob: %v", err)
 		db.DPrintf(db.TEST, "New CosSim job created")
 		for i := 0; i < ji.nCosSim; i++ {

@@ -294,7 +294,8 @@ func NewCachedScalerJob(ts *test.RealmTstate, jobName string, durs string, maxrp
 	if ji.cossimBackend {
 		db.DPrintf(db.TEST, "Start cossimsrv")
 		eagerInit := true
-		ji.cossimJ, err = cossimsrv.NewCosSimJob(ts.SigmaClnt, ji.epcj, ji.cm, ji.cc, ji.jobName, ji.cossimNVec, ji.cossimVecDim, eagerInit, ji.cossimMCPU, ji.ncache, ji.cossimMCPU, cacheGC, ji.cossimDelegatedInit)
+		conf := cossimsrv.NewCosSimJobConfig(ji.jobName, ji.cossimNVec, ji.cossimVecDim, eagerInit, ji.cossimMCPU, ji.ncache, ji.cossimMCPU, cacheGC, ji.cossimDelegatedInit)
+		ji.cossimJ, err = cossimsrv.NewCosSimJob(conf, ts.SigmaClnt, ji.epcj, ji.cm, ji.cc)
 		if !assert.Nil(ts.Ts.T, err, "Error NewCosSimJob: %v", err) {
 			return ji
 		}

@@ -7,10 +7,9 @@ google::protobuf::Timestamp epoch =
     google::protobuf::util::TimeUtil::GetEpoch();
 
 void LogRuntimeInitLatency(sigmaos::sigmap::types::Tpid pid,
-                           google::protobuf::Timestamp spawn_time,
-                           std::string msg) {
+                           google::protobuf::Timestamp spawn_time) {
   auto exec_time = sigmaos::proc::GetExecTime();
-  LogSpawnLatency(pid, spawn_time, exec_time, "Initialization.RuntimeInit");
+  LogSpawnLatency(pid, spawn_time, exec_time, "Setup.RuntimeInit");
 }
 
 void LogSpawnLatency(sigmaos::sigmap::types::Tpid pid,

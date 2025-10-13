@@ -13,6 +13,7 @@
 
 int main(int argc, char *argv[]) {
   auto pe = sigmaos::proc::GetProcEnv();
+  LogRuntimeInitLatency(pe->GetPID(), pe->GetSpawnTime());
   LogSpawnLatency(pe->GetPID(), pe->GetSpawnTime(),
                   google::protobuf::util::TimeUtil::GetEpoch(),
                   "E2e spawn time since spawn until main");

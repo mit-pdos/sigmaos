@@ -233,7 +233,6 @@ func NewHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []*Srv, nhotel int, c
 			db.DPrintf(db.ERROR, "Error NewCosSimJob %v", err)
 			return nil, err
 		}
-
 		if _, _, err := cosSimJob.AddSrv(); err != nil {
 			db.DPrintf(db.ERROR, "Error CosSimJob.AddSrv %v", err)
 			return nil, err

@@ -64,12 +64,40 @@ Clnt::get_clnt(int srv_id, bool initialize) {
   return clnt;
 }
 
+void Clnt::init_clnt(
+    std::shared_ptr<std::promise<std::expected<int, sigmaos::serr::Error>>>
+        result,
+    uint32_t srv_id) {
+  auto res = get_clnt(srv_id, true);
+  if (!res.has_value()) {
+    log(CACHECLNT_ERR, "Error init_clnt get_clnt ({}): {}", (int)srv_id,
+        res.error().String());
+    result->set_value(std::unexpected(res.error()));
+  }
+  result->set_value(0);
+}
+
 std::expected<int, sigmaos::serr::Error> Clnt::InitClnts(uint32_t last_srv_id) {
+  std::vector<std::thread> init_threads;
+  std::vector<
+      std::shared_ptr<std::promise<std::expected<int, sigmaos::serr::Error>>>>
+      init_promises;
+  std::vector<std::future<std::expected<int, sigmaos::serr::Error>>>
+      init_results;
+  // Start client initializations in multiple threads
   for (uint32_t srv_id = 0; srv_id < last_srv_id; srv_id++) {
-    auto res = get_clnt(srv_id, true);
+    init_promises.push_back(
+        std::make_shared<
+            std::promise<std::expected<int, sigmaos::serr::Error>>>());
+    init_results.push_back(init_promises.at(srv_id)->get_future());
+    init_threads.push_back(
+        std::thread(&Clnt::init_clnt, this, init_promises.at(srv_id), srv_id));
+  }
+  for (int i = 0; i < init_threads.size(); i++) {
+    init_threads.at(i).join();
+    auto res = init_results.at(i).get();
     if (!res.has_value()) {
-      log(CACHECLNT_ERR, "Error get_clnt ({}): {}", (int)srv_id,
-          res.error().String());
+      log(CACHECLNT_ERR, "Error init_clnts {}", res.error().String());
       return std::unexpected(res.error());
     }
   }

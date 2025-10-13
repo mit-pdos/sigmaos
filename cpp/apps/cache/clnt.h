@@ -84,6 +84,10 @@ class Clnt {
 
   std::expected<std::shared_ptr<sigmaos::rpc::Clnt>, sigmaos::serr::Error>
   get_clnt(int srv_id, bool initialize);
+  void init_clnt(
+      std::shared_ptr<std::promise<std::expected<int, sigmaos::serr::Error>>>
+          result,
+      uint32_t srv_id);
 };
 
 };  // namespace apps::cache

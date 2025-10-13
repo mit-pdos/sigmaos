@@ -18,7 +18,8 @@ func LogRuntimeInitLatency(pid sp.Tpid, spawnTime time.Time) {
 	execTimeStr := os.Getenv("SIGMA_EXEC_TIME")
 	execTimeMicro, err := strconv.ParseInt(execTimeStr, 10, 64)
 	if err != nil {
-		db.DFatalf("Error parsing exec time 2: %v", err)
+		db.DPrintf(db.ALWAYS, "Error parsing exec time 2: %v", err)
+		return
 	}
 	execTime := time.UnixMicro(execTimeMicro)
 	LogSpawnLatency("Initialization.RuntimeInit", pid, spawnTime, execTime)

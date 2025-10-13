@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"strconv"
+	"sync"
 
 	"sigmaos/api/fs"
 	"sigmaos/apps/cache"
@@ -21,6 +22,8 @@ import (
 )
 
 type Match struct {
+	sync.Mutex
+	inputVecs  map[uint64][]float64
 	cossimClnt *cossimclnt.CosSimShardClnt
 	cc         *cachegrpclnt.CachedSvcClnt
 	pds        *sigmasrv.SigmaSrv
@@ -29,7 +32,9 @@ type Match struct {
 
 // Run starts the server
 func RunMatchSrv(job string) error {
-	s := &Match{}
+	s := &Match{
+		inputVecs: make(map[uint64][]float64),
+	}
 	ssrv, err := sigmasrv.NewSigmaSrv(HOTELMATCH, s, proc.GetProcEnv())
 	if err != nil {
 		return err
@@ -61,6 +66,12 @@ func RunMatchSrv(job string) error {
 }
 
 func (s *Match) getInputVec(userVecID uint64) ([]float64, error) {
+	s.Lock()
+	defer s.Unlock()
+	if vec, ok := s.inputVecs[userVecID]; ok {
+		return vec, nil
+	}
+
 	b, err := s.cc.GetBytes(strconv.FormatUint(userVecID, 10))
 	if err != nil {
 		return nil, err
@@ -74,6 +85,7 @@ func (s *Match) getInputVec(userVecID uint64) ([]float64, error) {
 			return nil, err
 		}
 	}
+	s.inputVecs[userVecID] = vecVals
 	return vecVals, nil
 }
 

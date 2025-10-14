@@ -11,6 +11,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	cossimsrv "sigmaos/apps/cossim/srv"
 	"sigmaos/apps/hotel"
 	"sigmaos/benchmarks/loadgen"
 	db "sigmaos/debug"
@@ -18,11 +19,11 @@ import (
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 	"sigmaos/util/perf"
-	rd "sigmaos/util/rand"
 )
 
 const (
 	RAND_INIT = 12345
+	HOTEL_JOB = "hotel-job"
 )
 
 type hotelFn func(wc *hotel.WebClnt, r *rand.Rand)
@@ -47,6 +48,7 @@ type HotelJobInstance struct {
 	geoSearchRadius     int
 	geoNResults         int
 	ready               chan bool
+	csjCfg              *cossimsrv.CosSimJobConfig
 	fn                  hotelFn
 	hj                  *hotel.HotelJob
 	lgs                 []*loadgen.LoadGenerator
@@ -55,10 +57,10 @@ type HotelJobInstance struct {
 	*test.RealmTstate
 }
 
-func NewHotelJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, durs string, maxrpss string, fn hotelFn, justCli bool, ncache int, cachetype string, cacheMcpu proc.Tmcpu, manuallyScaleCaches bool, scaleCacheDelay time.Duration, nCachesToAdd int, nGeo int, geoNIndex int, geoSearchRadius int, geoNResults int, manuallyScaleGeo bool, scaleGeoDelay time.Duration, nGeoToAdd int) *HotelJobInstance {
+func NewHotelJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, durs string, maxrpss string, fn hotelFn, justCli bool, ncache int, cachetype string, cacheMcpu proc.Tmcpu, manuallyScaleCaches bool, scaleCacheDelay time.Duration, nCachesToAdd int, nGeo int, geoNIndex int, geoSearchRadius int, geoNResults int, manuallyScaleGeo bool, scaleGeoDelay time.Duration, nGeoToAdd int, csjCfg *cossimsrv.CosSimJobConfig) *HotelJobInstance {
 	ji := &HotelJobInstance{}
 	ji.sigmaos = sigmaos
-	ji.job = rd.String(8)
+	ji.job = HOTEL_JOB
 	ji.ready = make(chan bool)
 	ji.fn = fn
 	ji.RealmTstate = ts
@@ -76,6 +78,7 @@ func NewHotelJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, durs string, 
 	ji.geoNIdx = geoNIndex
 	ji.geoSearchRadius = geoSearchRadius
 	ji.geoNResults = geoNResults
+	ji.csjCfg = csjCfg
 
 	durslice := strings.Split(durs, ",")
 	maxrpsslice := strings.Split(maxrpss, ",")
@@ -96,7 +99,11 @@ func NewHotelJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, durs string, 
 	var err error
 	var svcs []*hotel.Srv
 	if sigmaos {
-		svcs = hotel.NewHotelSvc()
+		if csjCfg == nil {
+			svcs = hotel.NewHotelSvc()
+		} else {
+			svcs = hotel.NewHotelSvcWithMatch()
+		}
 	}
 
 	if ji.justCli {
@@ -122,7 +129,7 @@ func NewHotelJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, durs string, 
 		if !sigmaos {
 			nc = 0
 		}
-		ji.hj, err = hotel.NewHotelJob(ts.SigmaClnt, ji.job, svcs, N_HOTEL, cachetype, cacheMcpu, nc, CACHE_GC, HOTEL_IMG_SZ_MB, nGeo, geoNIndex, geoSearchRadius, geoNResults, nil)
+		ji.hj, err = hotel.NewHotelJob(ts.SigmaClnt, ji.job, svcs, N_HOTEL, cachetype, cacheMcpu, nc, CACHE_GC, HOTEL_IMG_SZ_MB, nGeo, geoNIndex, geoSearchRadius, geoNResults, csjCfg)
 		assert.Nil(ts.Ts.T, err, "Error NewHotelJob: %v", err)
 	}
 

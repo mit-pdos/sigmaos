@@ -76,6 +76,7 @@ var HOTEL_CACHE_MCPU int
 var N_HOTEL int
 var HOTEL_IMG_SZ_MB int
 var HOTEL_CACHE_AUTOSCALE bool
+var HOTEL_USE_MATCH bool
 var MANUALLY_SCALE_GEO bool
 var MANUALLY_SCALE_CACHES bool
 var N_GEO_TO_ADD int
@@ -200,6 +201,7 @@ func init() {
 	flag.IntVar(&HOTEL_IMG_SZ_MB, "hotel_img_sz_mb", 0, "Hotel image data size in megabytes.")
 	flag.IntVar(&N_HOTEL, "nhotel", 80, "Number of hotels in the dataset.")
 	flag.BoolVar(&HOTEL_CACHE_AUTOSCALE, "hotel_cache_autoscale", false, "Autoscale hotel cache")
+	flag.BoolVar(&HOTEL_USE_MATCH, "hotel_use_match", false, "Use match service in hotel application")
 	flag.IntVar(&NCOSSIM, "ncossim", 1, "Cossim nsrv")
 	flag.IntVar(&COSSIM_NCACHE, "cossim_ncache", 1, "Cossim ncache")
 	flag.IntVar(&COSSIM_CACHE_MCPU, "cossim_cache_mcpu", 2000, "Cossim cache mcpu")
@@ -1139,7 +1141,10 @@ func TestRealmBalanceImgResizeImgResize(t *testing.T) {
 }
 
 func testHotel(rootts *test.Tstate, ts1 *test.RealmTstate, p *perf.Perf, sigmaos bool, fn hotelFn) {
-	csjCfg := cossimsrv.NewCosSimJobConfig(HOTEL_JOB, COSSIM_NVEC, COSSIM_VEC_DIM, COSSIM_EAGER_INIT, proc.Tmcpu(COSSIM_SRV_MCPU), HOTEL_NCACHE, proc.Tmcpu(HOTEL_CACHE_MCPU), true, COSSIM_DELEGATE_INIT)
+	var csjCfg *cossimsrv.CosSimJobConfig
+	if HOTEL_USE_MATCH {
+		csjCfg = cossimsrv.NewCosSimJobConfig(HOTEL_JOB, COSSIM_NVEC, COSSIM_VEC_DIM, COSSIM_EAGER_INIT, proc.Tmcpu(COSSIM_SRV_MCPU), HOTEL_NCACHE, proc.Tmcpu(HOTEL_CACHE_MCPU), true, COSSIM_DELEGATE_INIT)
+	}
 	rs := benchmarks.NewResults(1, benchmarks.E2E)
 	jobs, ji := newHotelJobs(ts1, p, sigmaos, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, CACHE_TYPE, proc.Tmcpu(HOTEL_CACHE_MCPU), MANUALLY_SCALE_CACHES, SCALE_CACHE_DELAY, N_CACHES_TO_ADD, HOTEL_NGEO, MANUALLY_SCALE_GEO, SCALE_GEO_DELAY, N_GEO_TO_ADD, HOTEL_NGEO_IDX, HOTEL_GEO_SEARCH_RADIUS, HOTEL_GEO_NRESULTS, csjCfg, fn)
 	go func() {
@@ -1334,7 +1339,9 @@ func TestHotelSigmaosJustCliSearch(t *testing.T) {
 }
 
 func TestHotelSigmaosMatch(t *testing.T) {
-	db.DPrintf(db.ALWAYS, "scaleCossim %v delay %v n2a %v", MANUALLY_SCALE_GEO, SCALE_GEO_DELAY, N_GEO_TO_ADD)
+	if !assert.True(t, HOTEL_USE_MATCH, "Run match bench without match service") {
+		return
+	}
 	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
@@ -1349,6 +1356,9 @@ func TestHotelSigmaosMatch(t *testing.T) {
 }
 
 func TestHotelSigmaosJustCliMatch(t *testing.T) {
+	if !assert.True(t, HOTEL_USE_MATCH, "Run match bench without match service") {
+		return
+	}
 	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return

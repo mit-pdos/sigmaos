@@ -285,6 +285,15 @@ func NewHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []*Srv, nhotel int, c
 	return hj, nil
 }
 
+func (hj *HotelJob) AddCossimSrv() error {
+	return hj.AddCossimSrvWithSigmaPath(sp.NOT_SET)
+}
+
+func (hj *HotelJob) AddCossimSrvWithSigmaPath(sigmaPath string) error {
+	_, _, err := hj.CosSimJob.AddSrvWithSigmaPath(sigmaPath)
+	return err
+}
+
 func (hj *HotelJob) AddGeoSrv() error {
 	p := proc.NewProc(geo.Name, append([]string{hj.job, hj.cache}, geo.Args...))
 	p.SetCachedEndpoint(epcache.EPCACHE, hj.epcsrvEP)

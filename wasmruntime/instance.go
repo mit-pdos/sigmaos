@@ -17,17 +17,18 @@ import (
 const SHARED_BUF_SZ = 655360
 
 type Instance struct {
-	pid        int
-	uproc      *proc.Proc
-	wasmPath   string
-	ctx        context.Context
-	cancel     context.CancelFunc
-	done       chan error
-	spClnt     *spproxyclnt.SPProxyClnt
-	rt         *Runtime
-	store      *wasmer.Store
-	instance   *wasmer.Instance
-	wasmBufPtr int32
+	pid             int
+	uproc           *proc.Proc
+	wasmPath        string
+	ctx             context.Context
+	cancel          context.CancelFunc
+	done            chan error
+	spClnt          *spproxyclnt.SPProxyClnt
+	rt              *Runtime
+	store           *wasmer.Store
+	instance        *wasmer.Instance
+	wasmBufPtr      int32
+	instantiateTime time.Time
 }
 
 func (inst *Instance) run() {
@@ -50,28 +51,35 @@ func (inst *Instance) run() {
 
 func (inst *Instance) executeWasm() error {
 	pid := inst.uproc.GetPid()
-	start := time.Now()
+	t_overall := time.Now()
 
+	t_read := time.Now()
 	db.DPrintf(db.WASMRT, "[%v] Reading WASM file: %s", pid, inst.wasmPath)
 	wasmBytes, err := os.ReadFile(inst.wasmPath)
 	if err != nil {
 		db.DPrintf(db.WASMRT_ERR, "[%v] File read failed: %v", pid, err)
 		return fmt.Errorf("read file: %w", err)
 	}
-	db.DPrintf(db.WASMRT, "[%v] File loaded: %d bytes", pid, len(wasmBytes))
+	perf.LogSpawnLatency("WASM file read", pid, perf.TIME_NOT_SET, t_read)
+	db.DPrintf(db.ALWAYS, "[%v] WASM file read: %d bytes in %v", pid, len(wasmBytes), time.Since(t_read))
 
+	t_engine := time.Now()
 	db.DPrintf(db.WASMRT, "[%v] Creating Wasmer engine", pid)
 	engine := wasmer.NewEngine()
 	inst.store = wasmer.NewStore(engine)
+	db.DPrintf(db.ALWAYS, "[%v] Engine creation: %v", pid, time.Since(t_engine))
 
+	t_compile := time.Now()
 	db.DPrintf(db.WASMRT, "[%v] Compiling module", pid)
 	module, err := wasmer.NewModule(inst.store, wasmBytes)
 	if err != nil {
 		db.DPrintf(db.WASMRT_ERR, "[%v] Compilation failed: %v", pid, err)
 		return fmt.Errorf("compile module: %w", err)
 	}
-	perf.LogSpawnLatency("WASM compilation", pid, perf.TIME_NOT_SET, start)
+	perf.LogSpawnLatency("WASM compilation", pid, inst.uproc.GetSpawnTime(), t_compile)
+	db.DPrintf(db.ALWAYS, "[%v] WASM compilation: %v", pid, time.Since(t_compile))
 
+	t_wasi := time.Now()
 	db.DPrintf(db.WASMRT, "[%v] Creating WASI environment", pid)
 	wasiEnv, err := wasmer.NewWasiStateBuilder("wasm-runtime").
 		CaptureStdout().
@@ -80,48 +88,58 @@ func (inst *Instance) executeWasm() error {
 		db.DPrintf(db.WASMRT_ERR, "[%v] WASI env creation failed: %v", pid, err)
 		return fmt.Errorf("create wasi env: %w", err)
 	}
+	db.DPrintf(db.ALWAYS, "[%v] WASI env creation: %v", pid, time.Since(t_wasi))
 
+	t_imports := time.Now()
 	db.DPrintf(db.WASMRT, "[%v] Generating WASI imports", pid)
 	wasiImports, err := wasiEnv.GenerateImportObject(inst.store, module)
 	if err != nil {
 		db.DPrintf(db.WASMRT_ERR, "[%v] WASI import generation failed: %v", pid, err)
 		return fmt.Errorf("generate wasi imports: %w", err)
 	}
+	db.DPrintf(db.ALWAYS, "[%v] WASI imports generation: %v", pid, time.Since(t_imports))
 
+	t_hostfuncs := time.Now()
 	db.DPrintf(db.WASMRT, "[%v] Creating host functions", pid)
 	importObject := inst.createHostFunctions(wasiImports)
+	db.DPrintf(db.ALWAYS, "[%v] Host functions creation: %v", pid, time.Since(t_hostfuncs))
 
+	t_instantiate := time.Now()
+	inst.instantiateTime = time.Now()
 	db.DPrintf(db.WASMRT, "[%v] Instantiating module", pid)
-	start = time.Now()
 	inst.instance, err = wasmer.NewInstance(module, importObject)
 	if err != nil {
 		db.DPrintf(db.WASMRT_ERR, "[%v] Instantiation failed: %v", pid, err)
 		return fmt.Errorf("instantiate: %w", err)
 	}
-	perf.LogSpawnLatency("WASM instantiation", pid, perf.TIME_NOT_SET, start)
+	perf.LogSpawnLatency("WASM instantiation", pid, inst.uproc.GetSpawnTime(), t_instantiate)
+	db.DPrintf(db.ALWAYS, "[%v] WASM instantiation: %v", pid, time.Since(t_instantiate))
 
-	if err := inst.allocateSharedBuffer(); err != nil {
-		return err
-	}
+	// t_alloc := time.Now()
+	// if err := inst.allocateSharedBuffer(); err != nil {
+	// 	return err
+	// }
+	// db.DPrintf(db.ALWAYS, "[%v] Buffer allocation: %v", pid, time.Since(t_alloc))
 
-	entryFn, err := inst.instance.Exports.GetFunction("test")
+	t_lookup := time.Now()
+	entryFn, err := inst.instance.Exports.GetFunction("entrypoint")
 	if err != nil {
-		entryFn, err = inst.instance.Exports.GetFunction("boot")
-		if err != nil {
-			db.DPrintf(db.WASMRT_ERR, "[%v] No entry function found", pid)
-			return fmt.Errorf("no entry function: %w", err)
-		}
+		db.DPrintf(db.WASMRT_ERR, "[%v] No entry function found", pid)
+		return fmt.Errorf("no entry function: %w", err)
 	}
+	db.DPrintf(db.ALWAYS, "[%v] Entry function lookup: %v", pid, time.Since(t_lookup))
 
+	t_execute := time.Now()
 	db.DPrintf(db.WASMRT, "[%v] Executing entry function", pid)
-	start = time.Now()
-	result, err := entryFn(2)
+	result, err := entryFn()
 	if err != nil {
 		db.DPrintf(db.WASMRT_ERR, "[%v] Execution error: %v", pid, err)
 		return fmt.Errorf("execute: %w", err)
 	}
-	perf.LogSpawnLatency("WASM execution", pid, inst.uproc.GetSpawnTime(), start)
+	perf.LogSpawnLatency("WASM execution", pid, inst.uproc.GetSpawnTime(), t_execute)
+	db.DPrintf(db.ALWAYS, "[%v] WASM execution: %v", pid, time.Since(t_execute))
 
+	db.DPrintf(db.ALWAYS, "[%v] Total WASM runtime: %v, result=%v", pid, time.Since(t_overall), result)
 	db.DPrintf(db.WASMRT, "[%v] Completed successfully, result=%v", pid, result)
 	return nil
 }

@@ -12,3 +12,5 @@ message(STATUS "Found wasi-sdk at ${WASI_CXX}")
 
 # Add subdirectories for each WASM user module
 add_subdirectory(start-proc-wasm)
+add_subdirectory(spawn-latency-wasm)
+add_subdirectory(imgresize)

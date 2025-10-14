@@ -1333,6 +1333,54 @@ func TestHotelSigmaosJustCliSearch(t *testing.T) {
 	//	jobs[0].requestK8sStats()
 }
 
+func TestHotelSigmaosMatch(t *testing.T) {
+	db.DPrintf(db.ALWAYS, "scaleCossim %v delay %v n2a %v", MANUALLY_SCALE_GEO, SCALE_GEO_DELAY, N_GEO_TO_ADD)
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{REALM1})
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	defer mrts.Shutdown()
+
+	testHotel(mrts.GetRoot(), mrts.GetRealm(REALM1), nil, true, func(wc *hotel.WebClnt, r *rand.Rand) {
+		// TODO: use caching
+		err := hotel.RandMatchReq(wc, r, false)
+		assert.Nil(t, err, "Error search req: %v", err)
+	})
+}
+
+func TestHotelSigmaosJustCliMatch(t *testing.T) {
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{})
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	if err1 := waitForRealmCreation(mrts.GetRoot(), REALM1); !assert.Nil(t, err1, "Error waitRealmCreation: %v") {
+		return
+	}
+	if err1 := mrts.AddRealmClnt(REALM1); !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	rs := benchmarks.NewResults(1, benchmarks.E2E)
+	clientReady(mrts.GetRoot())
+	// Sleep for a bit
+	time.Sleep(SLEEP)
+	jobs, ji := newHotelJobsCli(mrts.GetRealm(REALM1), true, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, CACHE_TYPE, proc.Tmcpu(HOTEL_CACHE_MCPU), MANUALLY_SCALE_CACHES, SCALE_CACHE_DELAY, N_CACHES_TO_ADD, HOTEL_NGEO, MANUALLY_SCALE_GEO, SCALE_GEO_DELAY, N_GEO_TO_ADD, HOTEL_NGEO_IDX, HOTEL_GEO_SEARCH_RADIUS, HOTEL_GEO_NRESULTS, func(wc *hotel.WebClnt, r *rand.Rand) {
+		// TODO: use caching
+		err := hotel.RandMatchReq(wc, r, false)
+		assert.Nil(t, err, "Error search req: %v", err)
+	})
+	go func() {
+		for _, j := range jobs {
+			// Wait until ready
+			<-j.ready
+			// Ack to allow the job to proceed.
+			j.ready <- true
+		}
+	}()
+	runOps(mrts.GetRealm(REALM1), ji, runHotel, rs)
+	//	printResultSummary(rs)
+	//	jobs[0].requestK8sStats()
+}
+
 func TestHotelK8sJustCliGeo(t *testing.T) {
 	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {

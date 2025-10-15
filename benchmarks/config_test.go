@@ -20,7 +20,7 @@ func init() {
 
 func TestMain(t *testing.M) {
 	flag.Parse()
-	if cossimBenchCfgStr != "" {
+	if cossimBenchCfgStr != sp.NOT_SET {
 		err := json.Unmarshal([]byte(cossimBenchCfgStr), &CosSimBenchConfig)
 		if err != nil {
 			db.DFatalf("Error unmarshaling cossim_bench_cfg: %v", err)

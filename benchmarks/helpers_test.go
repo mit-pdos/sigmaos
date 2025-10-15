@@ -387,13 +387,13 @@ func newSocialNetworkJobs(
 }
 
 // ========== CosSim Helpers ==========
-func newCosSimJobs(ts *test.RealmTstate, p *perf.Perf, epcj *epsrv.EPCacheJob, cm *cachegrpmgr.CacheMgr, cc *cachegrpclnt.CachedSvcClnt, sigmaos bool, dur string, maxrps string, ncache int, cacheGC bool, cacheMcpu proc.Tmcpu, scaleCached *ManualScalingConfig, nCosSim int, cosSimMcpu proc.Tmcpu, scaleCosSim *ManualScalingConfig, cosSimNVec int, cosSimVecDim int, eagerInit bool, delegateInit bool, fn cosSimFn) ([]*CosSimJobInstance, []interface{}) {
+func newCosSimJobs(ts *test.RealmTstate, p *perf.Perf, epcj *epsrv.EPCacheJob, cm *cachegrpmgr.CacheMgr, cc *cachegrpclnt.CachedSvcClnt, sigmaos bool, dur string, maxrps string, scaleCached *ManualScalingConfig, nCosSim int, csCfg *cossimsrv.CosSimJobConfig, scaleCosSim *ManualScalingConfig, fn cosSimFn) ([]*CosSimJobInstance, []interface{}) {
 	// n is ntrials, which is always 1.
 	n := 1
 	ws := make([]*CosSimJobInstance, 0, n)
 	is := make([]interface{}, 0, n)
 	for i := 0; i < n; i++ {
-		i := NewCosSimJob(ts, p, epcj, cm, cc, sigmaos, dur, maxrps, fn, false, ncache, cacheGC, cacheMcpu, scaleCached, nCosSim, cosSimNVec, cosSimVecDim, eagerInit, delegateInit, cosSimMcpu, scaleCosSim)
+		i := NewCosSimJob(ts, p, epcj, cm, cc, sigmaos, dur, maxrps, fn, false, scaleCached, nCosSim, csCfg, scaleCosSim)
 		ws = append(ws, i)
 		is = append(is, i)
 	}

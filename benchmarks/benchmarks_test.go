@@ -1918,10 +1918,11 @@ func TestCosSim(t *testing.T) {
 		},
 	}
 
+	csjConf := cossimsrv.NewCosSimJobConfig("cossim-job", COSSIM_NVEC, COSSIM_VEC_DIM, COSSIM_EAGER_INIT, proc.Tmcpu(COSSIM_SRV_MCPU), COSSIM_NCACHE, proc.Tmcpu(COSSIM_CACHE_MCPU), COSSIM_CACHE_GC, COSSIM_DELEGATE_INIT)
 	rs := benchmarks.NewResults(1, benchmarks.E2E)
 	scaleCached := NewManualScalingConfig("cached", MANUALLY_SCALE_CACHES, SCALE_CACHE_DELAY, N_CACHES_TO_ADD)
 	scaleCosSim := NewManualScalingConfig("cossim", MANUALLY_SCALE_COSSIM, SCALE_COSSIM_DELAY, N_COSSIM_TO_ADD)
-	jobs, ji := newCosSimJobs(ts1, p, nil, nil, nil, sigmaos, COSSIM_DURS, COSSIM_MAX_RPS, COSSIM_NCACHE, COSSIM_CACHE_GC, proc.Tmcpu(COSSIM_CACHE_MCPU), scaleCached, NCOSSIM, proc.Tmcpu(COSSIM_SRV_MCPU), scaleCosSim, COSSIM_NVEC, COSSIM_VEC_DIM, COSSIM_EAGER_INIT, COSSIM_DELEGATE_INIT, func(j *cossimsrv.CosSimJob, r *rand.Rand) {
+	jobs, ji := newCosSimJobs(ts1, p, nil, nil, nil, sigmaos, COSSIM_DURS, COSSIM_MAX_RPS, scaleCached, NCOSSIM, csjConf, scaleCosSim, func(j *cossimsrv.CosSimJob, r *rand.Rand) {
 		_, _, err := j.Clnt.CosSimLeastLoaded(v, ranges)
 		assert.Nil(t, err, "CosSim req: %v", err)
 	})

@@ -39,11 +39,7 @@ type CosSimJobInstance struct {
 	nCachesToAdd        int
 	scaleCosSim         *ManualScalingConfig
 	nCosSim             int
-	mcpuPerSrv          proc.Tmcpu
-	cosSimNVec          int
-	cosSimVecDim        int
-	eagerInit           bool
-	delegateInit        bool
+	csCfg               *cossimsrv.CosSimJobConfig
 	ready               chan bool
 	j                   *cossimsrv.CosSimJob
 	lgs                 []*loadgen.LoadGenerator
@@ -55,7 +51,7 @@ type CosSimJobInstance struct {
 	*test.RealmTstate
 }
 
-func NewCosSimJob(ts *test.RealmTstate, p *perf.Perf, epcj *epsrv.EPCacheJob, cm *cachegrpmgr.CacheMgr, cc *cachegrpclnt.CachedSvcClnt, sigmaos bool, durs string, maxrpss string, fn cosSimFn, justCli bool, ncache int, cacheGC bool, cacheMcpu proc.Tmcpu, scaleCached *ManualScalingConfig, nCosSim int, cosSimNVec int, cosSimVecDim int, eagerInit bool, delegateInit bool, mcpuPerSrv proc.Tmcpu, scaleCosSim *ManualScalingConfig) *CosSimJobInstance {
+func NewCosSimJob(ts *test.RealmTstate, p *perf.Perf, epcj *epsrv.EPCacheJob, cm *cachegrpmgr.CacheMgr, cc *cachegrpclnt.CachedSvcClnt, sigmaos bool, durs string, maxrpss string, fn cosSimFn, justCli bool, scaleCached *ManualScalingConfig, nCosSim int, csCfg *cossimsrv.CosSimJobConfig, scaleCosSim *ManualScalingConfig) *CosSimJobInstance {
 	ji := &CosSimJobInstance{}
 	ji.sigmaos = true
 	ji.job = "cossim-job"
@@ -64,15 +60,10 @@ func NewCosSimJob(ts *test.RealmTstate, p *perf.Perf, epcj *epsrv.EPCacheJob, cm
 	ji.RealmTstate = ts
 	ji.p = p
 	ji.justCli = justCli
-	ji.ncache = ncache
 	ji.scaleCached = scaleCached
 	ji.scaleCosSim = scaleCosSim
 	ji.nCosSim = nCosSim
-	ji.cosSimNVec = cosSimNVec
-	ji.cosSimVecDim = cosSimVecDim
-	ji.eagerInit = eagerInit
-	ji.delegateInit = delegateInit
-	ji.mcpuPerSrv = mcpuPerSrv
+	ji.csCfg = csCfg
 	ji.cossimKIDs = make(map[string]bool)
 	ji.cacheKIDs = make(map[string]bool)
 
@@ -97,8 +88,7 @@ func NewCosSimJob(ts *test.RealmTstate, p *perf.Perf, epcj *epsrv.EPCacheJob, cm
 	if !ji.justCli {
 		db.DPrintf(db.TEST, "Create new CosSim job")
 		// Only start one cache if autoscaling.
-		conf := cossimsrv.NewCosSimJobConfig(ji.job, ji.cosSimNVec, ji.cosSimVecDim, ji.eagerInit, ji.mcpuPerSrv, ji.ncache, cacheMcpu, cacheGC, ji.delegateInit)
-		ji.j, err = cossimsrv.NewCosSimJob(conf, ts.SigmaClnt, epcj, cm, cc)
+		ji.j, err = cossimsrv.NewCosSimJob(ji.csCfg, ts.SigmaClnt, epcj, cm, cc)
 		assert.Nil(ts.Ts.T, err, "Error NewCosSimJob: %v", err)
 		db.DPrintf(db.TEST, "New CosSim job created")
 		for i := 0; i < ji.nCosSim; i++ {
@@ -170,7 +160,7 @@ func NewCosSimJob(ts *test.RealmTstate, p *perf.Perf, epcj *epsrv.EPCacheJob, cm
 }
 
 func (ji *CosSimJobInstance) StartCosSimJob() {
-	db.DPrintf(db.ALWAYS, "StartCosSimJob dur %v ncache %v maxrps %v scaleCached:%v scaleCosSim:%v nCosSimInit %v nvec %v vecdim: %v eager: %v", ji.dur, ji.ncache, ji.maxrps, ji.scaleCached, ji.scaleCosSim, ji.nCosSim, ji.cosSimNVec, ji.cosSimVecDim, ji.eagerInit)
+	db.DPrintf(db.ALWAYS, "StartCosSimJob dur %v cossimCfg:%v maxrps %v scaleCached:%v scaleCosSim:%v nCosSimInit %v", ji.dur, ji.csCfg, ji.maxrps, ji.scaleCached, ji.scaleCosSim, ji.nCosSim)
 	var wg sync.WaitGroup
 	for _, lg := range ji.lgs {
 		wg.Add(1)

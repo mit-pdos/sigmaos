@@ -6,33 +6,33 @@ import (
 )
 
 type ManualScalingConfig struct {
-	svc        string
-	scale      bool
-	scaleDelay time.Duration
-	nToAdd     int
+	Svc        string        `json:"svc"`
+	Scale      bool          `json:"scale"`
+	ScaleDelay time.Duration `json:"scale_delay"`
+	NToAdd     int           `json:"n_to_add"`
 }
 
 func NewManualScalingConfig(svc string, scale bool, scaleDelay time.Duration, nToAdd int) *ManualScalingConfig {
 	return &ManualScalingConfig{
-		svc:        svc,
-		scale:      scale,
-		scaleDelay: scaleDelay,
-		nToAdd:     nToAdd,
+		Svc:        svc,
+		Scale:      scale,
+		ScaleDelay: scaleDelay,
+		NToAdd:     nToAdd,
 	}
 }
 
 func (cfg *ManualScalingConfig) GetShouldScale() bool {
-	return cfg.scale
+	return cfg.Scale
 }
 
 func (cfg *ManualScalingConfig) GetScalingDelay() time.Duration {
-	return cfg.scaleDelay
+	return cfg.ScaleDelay
 }
 
 func (cfg *ManualScalingConfig) GetNToAdd() int {
-	return cfg.nToAdd
+	return cfg.NToAdd
 }
 
 func (cfg *ManualScalingConfig) String() string {
-	return fmt.Sprintf("&{ svc:%v scale:%v delay:%v nToAdd:%v }", cfg.svc, cfg.scale, cfg.scaleDelay, cfg.nToAdd)
+	return fmt.Sprintf("&{ svc:%v scale:%v delay:%v nToAdd:%v }", cfg.Svc, cfg.Scale, cfg.ScaleDelay, cfg.NToAdd)
 }

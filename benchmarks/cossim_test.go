@@ -29,7 +29,6 @@ type CosSimJobInstance struct {
 	justCli          bool
 	job              string
 	fn               cosSimFn
-	scaleCached      *benchmarks.ManualScalingConfig
 	cfg              *benchmarks.CosSimBenchConfig
 	ready            chan bool
 	j                *cossimsrv.CosSimJob
@@ -42,7 +41,7 @@ type CosSimJobInstance struct {
 	*test.RealmTstate
 }
 
-func NewCosSimJob(ts *test.RealmTstate, p *perf.Perf, epcj *epsrv.EPCacheJob, cm *cachegrpmgr.CacheMgr, cc *cachegrpclnt.CachedSvcClnt, sigmaos bool, fn cosSimFn, justCli bool, scaleCached *benchmarks.ManualScalingConfig, cfg *benchmarks.CosSimBenchConfig) *CosSimJobInstance {
+func NewCosSimJob(ts *test.RealmTstate, p *perf.Perf, epcj *epsrv.EPCacheJob, cm *cachegrpmgr.CacheMgr, cc *cachegrpclnt.CachedSvcClnt, sigmaos bool, fn cosSimFn, justCli bool, cfg *benchmarks.CosSimBenchConfig) *CosSimJobInstance {
 	ji := &CosSimJobInstance{}
 	ji.sigmaos = true
 	ji.job = "cossim-job"
@@ -51,7 +50,6 @@ func NewCosSimJob(ts *test.RealmTstate, p *perf.Perf, epcj *epsrv.EPCacheJob, cm
 	ji.RealmTstate = ts
 	ji.p = p
 	ji.justCli = justCli
-	ji.scaleCached = scaleCached
 	ji.cfg = cfg
 	ji.cossimKIDs = make(map[string]bool)
 	ji.cacheKIDs = make(map[string]bool)
@@ -133,7 +131,7 @@ func NewCosSimJob(ts *test.RealmTstate, p *perf.Perf, epcj *epsrv.EPCacheJob, cm
 }
 
 func (ji *CosSimJobInstance) StartCosSimJob() {
-	db.DPrintf(db.ALWAYS, "StartCosSimJob CossimBenchCfg:%v cossimCfg:%v scaleCached:%v", ji.cfg, ji.cfg, ji.scaleCached)
+	db.DPrintf(db.ALWAYS, "StartCosSimJob CossimBenchCfg:%v", ji.cfg)
 	var wg sync.WaitGroup
 	for _, lg := range ji.lgs {
 		wg.Add(1)

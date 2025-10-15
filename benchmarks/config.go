@@ -1,6 +1,7 @@
 package benchmarks
 
 import (
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -44,6 +45,14 @@ func (cfg *CosSimBenchConfig) String() string {
 
 func (cfg *CosSimBenchConfig) GetJobConfig() *cossimsrv.CosSimJobConfig {
 	return cfg.JobCfg
+}
+
+func (cfg *CosSimBenchConfig) Marshal() (string, error) {
+	b, err := json.Marshal(cfg)
+	if err != nil {
+		return "", err
+	}
+	return string(b), nil
 }
 
 //type HotelBenchConfig struct {

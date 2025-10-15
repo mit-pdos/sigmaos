@@ -1933,8 +1933,7 @@ func TestCosSim(t *testing.T) {
 	}
 
 	rs := benchmarks.NewResults(1, benchmarks.E2E)
-	scaleCached := benchmarks.NewManualScalingConfig("cached", MANUALLY_SCALE_CACHES, SCALE_CACHE_DELAY, N_CACHES_TO_ADD)
-	jobs, ji := newCosSimJobs(ts1, p, nil, nil, nil, sigmaos, scaleCached, CosSimBenchConfig, func(j *cossimsrv.CosSimJob, r *rand.Rand) {
+	jobs, ji := newCosSimJobs(ts1, p, nil, nil, nil, sigmaos, CosSimBenchConfig, func(j *cossimsrv.CosSimJob, r *rand.Rand) {
 		_, _, err := j.Clnt.CosSimLeastLoaded(v, ranges)
 		assert.Nil(t, err, "CosSim req: %v", err)
 	})

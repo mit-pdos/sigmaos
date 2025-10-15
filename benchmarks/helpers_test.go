@@ -387,13 +387,13 @@ func newSocialNetworkJobs(
 }
 
 // ========== CosSim Helpers ==========
-func newCosSimJobs(ts *test.RealmTstate, p *perf.Perf, epcj *epsrv.EPCacheJob, cm *cachegrpmgr.CacheMgr, cc *cachegrpclnt.CachedSvcClnt, sigmaos bool, scaleCached *benchmarks.ManualScalingConfig, cfg *benchmarks.CosSimBenchConfig, fn cosSimFn) ([]*CosSimJobInstance, []interface{}) {
+func newCosSimJobs(ts *test.RealmTstate, p *perf.Perf, epcj *epsrv.EPCacheJob, cm *cachegrpmgr.CacheMgr, cc *cachegrpclnt.CachedSvcClnt, sigmaos bool, cfg *benchmarks.CosSimBenchConfig, fn cosSimFn) ([]*CosSimJobInstance, []interface{}) {
 	// n is ntrials, which is always 1.
 	n := 1
 	ws := make([]*CosSimJobInstance, 0, n)
 	is := make([]interface{}, 0, n)
 	for i := 0; i < n; i++ {
-		i := NewCosSimJob(ts, p, epcj, cm, cc, sigmaos, fn, false, scaleCached, cfg)
+		i := NewCosSimJob(ts, p, epcj, cm, cc, sigmaos, fn, false, cfg)
 		ws = append(ws, i)
 		is = append(is, i)
 	}

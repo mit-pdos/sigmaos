@@ -31,13 +31,11 @@ type CosSimJobConfig struct {
 	VecDim           int
 	EagerInit        bool
 	SrvMcpu          proc.Tmcpu
-	NCache           int
-	CacheMcpu        proc.Tmcpu
-	CacheGC          bool
+	CacheCfg         *cachegrpmgr.CacheJobConfig
 	DelegateInitRPCs bool
 }
 
-func NewCosSimJobConfig(job string, nsrv int, nvec int, vecDim int, eagerInit bool, srvMcpu proc.Tmcpu, ncache int, cacheMcpu proc.Tmcpu, cacheGC bool, delegateInitRPCs bool) *CosSimJobConfig {
+func NewCosSimJobConfig(job string, nsrv int, nvec int, vecDim int, eagerInit bool, srvMcpu proc.Tmcpu, cacheCfg *cachegrpmgr.CacheJobConfig, delegateInitRPCs bool) *CosSimJobConfig {
 	return &CosSimJobConfig{
 		Job:              job,
 		InitNSrv:         nsrv,
@@ -45,9 +43,7 @@ func NewCosSimJobConfig(job string, nsrv int, nvec int, vecDim int, eagerInit bo
 		VecDim:           vecDim,
 		EagerInit:        eagerInit,
 		SrvMcpu:          srvMcpu,
-		NCache:           ncache,
-		CacheMcpu:        cacheMcpu,
-		CacheGC:          cacheGC,
+		CacheCfg:         cacheCfg,
 		DelegateInitRPCs: delegateInitRPCs,
 	}
 }
@@ -149,7 +145,7 @@ func NewCosSimJob(conf *CosSimJobConfig, sc *sigmaclnt.SigmaClnt, epcj *epsrv.EP
 	if cm == nil {
 		stopCaches = true
 		// Start the cachegrp job
-		cm, err = cachegrpmgr.NewCacheMgr(sc, conf.Job, conf.NCache, conf.CacheMcpu, conf.CacheGC)
+		cm, err = cachegrpmgr.NewCacheMgr(sc, conf.Job, conf.CacheCfg.NSrv, conf.CacheCfg.MCPU, conf.CacheCfg.GC)
 		if err != nil {
 			db.DPrintf(db.COSSIMSRV_ERR, "Err newCacheMgr: %v", err)
 			return nil, err
@@ -200,7 +196,7 @@ func newCosSimJob(conf *CosSimJobConfig, sc *sigmaclnt.SigmaClnt, epcj *epsrv.EP
 	}
 	// Write the input arguments to the boot script
 	inputBuf := bytes.NewBuffer(make([]byte, 0, 12))
-	if err := binary.Write(inputBuf, binary.LittleEndian, uint32(conf.NCache)); err != nil {
+	if err := binary.Write(inputBuf, binary.LittleEndian, uint32(conf.CacheCfg.NSrv)); err != nil {
 		return nil, err
 	}
 	if err := binary.Write(inputBuf, binary.LittleEndian, uint64(conf.NVec)); err != nil {
@@ -241,7 +237,7 @@ func (j *CosSimJob) AddSrv() (*proc.Proc, time.Duration, error) {
 }
 
 func (j *CosSimJob) addSrv(sigmaPath string) (*proc.Proc, time.Duration, error) {
-	p := proc.NewProc("cossim-srv-cpp", []string{j.cachePNBase, strconv.Itoa(j.conf.NCache), strconv.Itoa(j.conf.NVec), strconv.Itoa(j.conf.VecDim), strconv.FormatBool(j.conf.EagerInit)})
+	p := proc.NewProc("cossim-srv-cpp", []string{j.cachePNBase, strconv.Itoa(j.conf.CacheCfg.NSrv), strconv.Itoa(j.conf.NVec), strconv.Itoa(j.conf.VecDim), strconv.FormatBool(j.conf.EagerInit)})
 	if sigmaPath != sp.NOT_SET {
 		p.PrependSigmaPath(sigmaPath)
 	}
@@ -302,5 +298,5 @@ func (j *CosSimJob) Stop() error {
 }
 
 func (cfg *CosSimJobConfig) String() string {
-	return fmt.Sprintf("&{ job:%v initNSrv:%v nvec:%v vecdim:%v eager:%v srvmcpu:%v ncache:%v cachemcpu:%v cachegc:%v delegatedinit:%v }", cfg.Job, cfg.InitNSrv, cfg.NVec, cfg.VecDim, cfg.EagerInit, cfg.SrvMcpu, cfg.NCache, cfg.CacheMcpu, cfg.CacheGC, cfg.DelegateInitRPCs)
+	return fmt.Sprintf("&{ job:%v initNSrv:%v nvec:%v vecdim:%v eager:%v srvmcpu:%v cacheCfg:%v delegatedinit:%v }", cfg.Job, cfg.InitNSrv, cfg.NVec, cfg.VecDim, cfg.EagerInit, cfg.SrvMcpu, cfg.CacheCfg, cfg.DelegateInitRPCs)
 }

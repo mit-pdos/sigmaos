@@ -17,6 +17,7 @@ import (
 	cossimproto "sigmaos/apps/cossim/proto"
 	cossimsrv "sigmaos/apps/cossim/srv"
 	epsrv "sigmaos/apps/epcache/srv"
+	"sigmaos/benchmarks"
 	"sigmaos/benchmarks/loadgen"
 	db "sigmaos/debug"
 	"sigmaos/proc"
@@ -56,7 +57,7 @@ type CachedScalerJobInstance struct {
 	maxrps           []int
 	putDur           []time.Duration
 	putMaxrps        []int
-	scaleCached      *ManualScalingConfig
+	scaleCached      *benchmarks.ManualScalingConfig
 	scaling          bool
 	lastScaled       time.Time
 	warmup           bool
@@ -68,7 +69,7 @@ type CachedScalerJobInstance struct {
 	*test.RealmTstate
 }
 
-func NewCachedScalerJob(ts *test.RealmTstate, jobName string, durs string, maxrpss string, putDurs string, putMaxrpss string, ncache int, cacheMCPU proc.Tmcpu, cacheGC bool, useEPCache bool, nKV int, delegatedInit bool, topN int, scaleCached *ManualScalingConfig, scalerCachedCPP bool, scalerCachedRunSleeper bool, cossimBackend bool, cossimNVecToQuery int, csCfg *cossimsrv.CosSimJobConfig) *CachedScalerJobInstance {
+func NewCachedScalerJob(ts *test.RealmTstate, jobName string, durs string, maxrpss string, putDurs string, putMaxrpss string, ncache int, cacheMCPU proc.Tmcpu, cacheGC bool, useEPCache bool, nKV int, delegatedInit bool, topN int, scaleCached *benchmarks.ManualScalingConfig, scalerCachedCPP bool, scalerCachedRunSleeper bool, cossimBackend bool, cossimNVecToQuery int, csCfg *cossimsrv.CosSimJobConfig) *CachedScalerJobInstance {
 	ji := &CachedScalerJobInstance{
 		RealmTstate:       ts,
 		sigmaos:           true,

@@ -13,6 +13,7 @@ import (
 
 	cossimsrv "sigmaos/apps/cossim/srv"
 	"sigmaos/apps/hotel"
+	"sigmaos/benchmarks"
 	"sigmaos/benchmarks/loadgen"
 	db "sigmaos/debug"
 	"sigmaos/proc"
@@ -39,16 +40,16 @@ type HotelJobInstance struct {
 	maxrps          []int
 	ncache          int
 	cachetype       string
-	scaleCache      *ManualScalingConfig
+	scaleCache      *benchmarks.ManualScalingConfig
 	nGeo            int
-	scaleGeo        *ManualScalingConfig
+	scaleGeo        *benchmarks.ManualScalingConfig
 	geoNIdx         int
 	geoSearchRadius int
 	geoNResults     int
 	ready           chan bool
 	msc             *mschedclnt.MSchedClnt
 	csCfg           *cossimsrv.CosSimJobConfig
-	scaleCosSim     *ManualScalingConfig
+	scaleCosSim     *benchmarks.ManualScalingConfig
 	fn              hotelFn
 	hj              *hotel.HotelJob
 	lgs             []*loadgen.LoadGenerator
@@ -62,7 +63,7 @@ type HotelJobInstance struct {
 	*test.RealmTstate
 }
 
-func NewHotelJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, durs string, maxrpss string, fn hotelFn, justCli bool, ncache int, cachetype string, cacheMcpu proc.Tmcpu, scaleCache *ManualScalingConfig, nGeo int, scaleGeo *ManualScalingConfig, geoNIndex int, geoSearchRadius int, geoNResults int, csCfg *cossimsrv.CosSimJobConfig, scaleCosSim *ManualScalingConfig) *HotelJobInstance {
+func NewHotelJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, durs string, maxrpss string, fn hotelFn, justCli bool, ncache int, cachetype string, cacheMcpu proc.Tmcpu, scaleCache *benchmarks.ManualScalingConfig, nGeo int, scaleGeo *benchmarks.ManualScalingConfig, geoNIndex int, geoSearchRadius int, geoNResults int, csCfg *cossimsrv.CosSimJobConfig, scaleCosSim *benchmarks.ManualScalingConfig) *HotelJobInstance {
 	ji := &HotelJobInstance{}
 	ji.sigmaos = sigmaos
 	ji.job = HOTEL_JOB

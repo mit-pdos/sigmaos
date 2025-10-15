@@ -13,6 +13,7 @@ import (
 	cachegrpmgr "sigmaos/apps/cache/cachegrp/mgr"
 	cossimsrv "sigmaos/apps/cossim/srv"
 	epsrv "sigmaos/apps/epcache/srv"
+	"sigmaos/benchmarks"
 	"sigmaos/benchmarks/loadgen"
 	db "sigmaos/debug"
 	"sigmaos/proc"
@@ -33,11 +34,11 @@ type CosSimJobInstance struct {
 	maxrps              []int
 	fn                  cosSimFn
 	ncache              int
-	scaleCached         *ManualScalingConfig
+	scaleCached         *benchmarks.ManualScalingConfig
 	scaleCacheDelay     time.Duration
 	manuallyScaleCaches bool
 	nCachesToAdd        int
-	scaleCosSim         *ManualScalingConfig
+	scaleCosSim         *benchmarks.ManualScalingConfig
 	nCosSim             int
 	csCfg               *cossimsrv.CosSimJobConfig
 	ready               chan bool
@@ -51,7 +52,7 @@ type CosSimJobInstance struct {
 	*test.RealmTstate
 }
 
-func NewCosSimJob(ts *test.RealmTstate, p *perf.Perf, epcj *epsrv.EPCacheJob, cm *cachegrpmgr.CacheMgr, cc *cachegrpclnt.CachedSvcClnt, sigmaos bool, durs string, maxrpss string, fn cosSimFn, justCli bool, scaleCached *ManualScalingConfig, nCosSim int, csCfg *cossimsrv.CosSimJobConfig, scaleCosSim *ManualScalingConfig) *CosSimJobInstance {
+func NewCosSimJob(ts *test.RealmTstate, p *perf.Perf, epcj *epsrv.EPCacheJob, cm *cachegrpmgr.CacheMgr, cc *cachegrpclnt.CachedSvcClnt, sigmaos bool, durs string, maxrpss string, fn cosSimFn, justCli bool, scaleCached *benchmarks.ManualScalingConfig, nCosSim int, csCfg *cossimsrv.CosSimJobConfig, scaleCosSim *benchmarks.ManualScalingConfig) *CosSimJobInstance {
 	ji := &CosSimJobInstance{}
 	ji.sigmaos = true
 	ji.job = "cossim-job"

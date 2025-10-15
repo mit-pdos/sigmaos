@@ -14,6 +14,7 @@ import (
 	cachegrpmgr "sigmaos/apps/cache/cachegrp/mgr"
 	cacheproto "sigmaos/apps/cache/proto"
 	epsrv "sigmaos/apps/epcache/srv"
+	"sigmaos/benchmarks"
 	"sigmaos/benchmarks/loadgen"
 	db "sigmaos/debug"
 	"sigmaos/proc"
@@ -49,11 +50,11 @@ type CachedBackupJobInstance struct {
 	maxrps            []int
 	putDur            []time.Duration
 	putMaxrps         []int
-	scaleCachedBackup *ManualScalingConfig
+	scaleCachedBackup *benchmarks.ManualScalingConfig
 	*test.RealmTstate
 }
 
-func NewCachedBackupJob(ts *test.RealmTstate, jobName string, durs string, maxrpss string, putDurs string, putMaxrpss string, ncache int, cacheMCPU proc.Tmcpu, cacheGC bool, useEPCache bool, nKV int, delegatedInit bool, topN int, scaleCachedBackup *ManualScalingConfig) *CachedBackupJobInstance {
+func NewCachedBackupJob(ts *test.RealmTstate, jobName string, durs string, maxrpss string, putDurs string, putMaxrpss string, ncache int, cacheMCPU proc.Tmcpu, cacheGC bool, useEPCache bool, nKV int, delegatedInit bool, topN int, scaleCachedBackup *benchmarks.ManualScalingConfig) *CachedBackupJobInstance {
 	ji := &CachedBackupJobInstance{
 		RealmTstate:       ts,
 		sigmaos:           true,

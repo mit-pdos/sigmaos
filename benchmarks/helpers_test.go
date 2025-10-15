@@ -14,6 +14,7 @@ import (
 	cachegrpmgr "sigmaos/apps/cache/cachegrp/mgr"
 	cossimsrv "sigmaos/apps/cossim/srv"
 	epsrv "sigmaos/apps/epcache/srv"
+	"sigmaos/benchmarks"
 	db "sigmaos/debug"
 	"sigmaos/proc"
 	mschedclnt "sigmaos/sched/msched/clnt"
@@ -272,7 +273,7 @@ func newNCachedJobs(ts *test.RealmTstate, n, nkeys, ncache, nclerks int, durstr 
 	return js, is
 }
 
-func newCachedBackupJobs(ts *test.RealmTstate, jobName string, durs string, maxrpss string, putDurs string, putMaxrpss string, ncache int, cacheMCPU proc.Tmcpu, cacheGC bool, useEPCache bool, nKV int, delegatedInit bool, topN int, scaleCachedBackup *ManualScalingConfig) ([]*CachedBackupJobInstance, []interface{}) {
+func newCachedBackupJobs(ts *test.RealmTstate, jobName string, durs string, maxrpss string, putDurs string, putMaxrpss string, ncache int, cacheMCPU proc.Tmcpu, cacheGC bool, useEPCache bool, nKV int, delegatedInit bool, topN int, scaleCachedBackup *benchmarks.ManualScalingConfig) ([]*CachedBackupJobInstance, []interface{}) {
 	// n is ntrials, which is always 1.
 	n := 1
 	ws := make([]*CachedBackupJobInstance, 0, n)
@@ -285,7 +286,7 @@ func newCachedBackupJobs(ts *test.RealmTstate, jobName string, durs string, maxr
 	return ws, is
 }
 
-func newCachedScalerJobs(ts *test.RealmTstate, jobName string, durs string, maxrpss string, putDurs string, putMaxrpss string, ncache int, cacheMCPU proc.Tmcpu, cacheGC bool, useEPCache bool, nKV int, delegatedInit bool, topN int, scaleCached *ManualScalingConfig, scalerCachedCPP bool, scalerCachedRunSleeper bool, cossimBackend bool, cossimNVecToQuery int, csCfg *cossimsrv.CosSimJobConfig) ([]*CachedScalerJobInstance, []interface{}) {
+func newCachedScalerJobs(ts *test.RealmTstate, jobName string, durs string, maxrpss string, putDurs string, putMaxrpss string, ncache int, cacheMCPU proc.Tmcpu, cacheGC bool, useEPCache bool, nKV int, delegatedInit bool, topN int, scaleCached *benchmarks.ManualScalingConfig, scalerCachedCPP bool, scalerCachedRunSleeper bool, cossimBackend bool, cossimNVecToQuery int, csCfg *cossimsrv.CosSimJobConfig) ([]*CachedScalerJobInstance, []interface{}) {
 	// n is ntrials, which is always 1.
 	n := 1
 	ws := make([]*CachedScalerJobInstance, 0, n)
@@ -315,7 +316,7 @@ func newMSchedJobs(ts *test.RealmTstate, nclnt int, dur string, maxrps string, p
 
 // ========== Hotel Helpers ==========
 
-func newHotelJobs(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, dur string, maxrps string, ncache int, cachetype string, cacheMcpu proc.Tmcpu, scaleCache *ManualScalingConfig, nGeo int, scaleGeo *ManualScalingConfig, geoNIndex int, geoSearchRadius int, geoNResults int, csjCfg *cossimsrv.CosSimJobConfig, scaleCosSim *ManualScalingConfig, fn hotelFn) ([]*HotelJobInstance, []interface{}) {
+func newHotelJobs(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, dur string, maxrps string, ncache int, cachetype string, cacheMcpu proc.Tmcpu, scaleCache *benchmarks.ManualScalingConfig, nGeo int, scaleGeo *benchmarks.ManualScalingConfig, geoNIndex int, geoSearchRadius int, geoNResults int, csjCfg *cossimsrv.CosSimJobConfig, scaleCosSim *benchmarks.ManualScalingConfig, fn hotelFn) ([]*HotelJobInstance, []interface{}) {
 	// n is ntrials, which is always 1.
 	n := 1
 	ws := make([]*HotelJobInstance, 0, n)
@@ -328,7 +329,7 @@ func newHotelJobs(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, dur string, 
 	return ws, is
 }
 
-func newHotelJobsCli(ts *test.RealmTstate, sigmaos bool, dur string, maxrps string, ncache int, cachetype string, cacheMcpu proc.Tmcpu, scaleCache *ManualScalingConfig, nGeo int, scaleGeo *ManualScalingConfig, geoNIndex int, geoSearchRadius int, geoNResults int, fn hotelFn) ([]*HotelJobInstance, []interface{}) {
+func newHotelJobsCli(ts *test.RealmTstate, sigmaos bool, dur string, maxrps string, ncache int, cachetype string, cacheMcpu proc.Tmcpu, scaleCache *benchmarks.ManualScalingConfig, nGeo int, scaleGeo *benchmarks.ManualScalingConfig, geoNIndex int, geoSearchRadius int, geoNResults int, fn hotelFn) ([]*HotelJobInstance, []interface{}) {
 	// n is ntrials, which is always 1.
 	n := 1
 	ws := make([]*HotelJobInstance, 0, n)
@@ -387,7 +388,7 @@ func newSocialNetworkJobs(
 }
 
 // ========== CosSim Helpers ==========
-func newCosSimJobs(ts *test.RealmTstate, p *perf.Perf, epcj *epsrv.EPCacheJob, cm *cachegrpmgr.CacheMgr, cc *cachegrpclnt.CachedSvcClnt, sigmaos bool, dur string, maxrps string, scaleCached *ManualScalingConfig, nCosSim int, csCfg *cossimsrv.CosSimJobConfig, scaleCosSim *ManualScalingConfig, fn cosSimFn) ([]*CosSimJobInstance, []interface{}) {
+func newCosSimJobs(ts *test.RealmTstate, p *perf.Perf, epcj *epsrv.EPCacheJob, cm *cachegrpmgr.CacheMgr, cc *cachegrpclnt.CachedSvcClnt, sigmaos bool, dur string, maxrps string, scaleCached *benchmarks.ManualScalingConfig, nCosSim int, csCfg *cossimsrv.CosSimJobConfig, scaleCosSim *benchmarks.ManualScalingConfig, fn cosSimFn) ([]*CosSimJobInstance, []interface{}) {
 	// n is ntrials, which is always 1.
 	n := 1
 	ws := make([]*CosSimJobInstance, 0, n)

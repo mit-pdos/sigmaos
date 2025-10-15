@@ -769,7 +769,7 @@ func TestRealmBalanceMRHotel(t *testing.T) {
 	// Prep Hotel job
 	scaleGeo := benchmarks.NewManualScalingConfig("hotel-geo", MANUALLY_SCALE_GEO, SCALE_GEO_DELAY, N_GEO_TO_ADD)
 	scaleCache := benchmarks.NewManualScalingConfig("cached", MANUALLY_SCALE_CACHES, SCALE_CACHE_DELAY, N_CACHES_TO_ADD)
-	hotelJobs, ji := newHotelJobs(mrts.GetRealm(REALM1), p2, true, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, CACHE_TYPE, proc.Tmcpu(HOTEL_CACHE_MCPU), scaleCache, HOTEL_NGEO, scaleGeo, HOTEL_NGEO_IDX, HOTEL_GEO_SEARCH_RADIUS, HOTEL_GEO_NRESULTS, nil, nil, func(wc *hotel.WebClnt, r *rand.Rand) {
+	hotelJobs, ji := newHotelJobs(mrts.GetRealm(REALM1), p2, true, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, CACHE_TYPE, proc.Tmcpu(HOTEL_CACHE_MCPU), scaleCache, HOTEL_NGEO, scaleGeo, HOTEL_NGEO_IDX, HOTEL_GEO_SEARCH_RADIUS, HOTEL_GEO_NRESULTS, CosSimBenchConfig, func(wc *hotel.WebClnt, r *rand.Rand) {
 		//		hotel.RunDSB(mrts.GetRealm(REALM1).T, 1, wc, r)
 		err := hotel.RandSearchReq(wc, r)
 		assert.Nil(t, err, "SearchReq %v", err)
@@ -852,7 +852,7 @@ func TestRealmBalanceHotelRPCImgResize(t *testing.T) {
 	// Prep Hotel job
 	scaleGeo := benchmarks.NewManualScalingConfig("hotel-geo", MANUALLY_SCALE_GEO, SCALE_GEO_DELAY, N_GEO_TO_ADD)
 	scaleCache := benchmarks.NewManualScalingConfig("cached", MANUALLY_SCALE_CACHES, SCALE_CACHE_DELAY, N_CACHES_TO_ADD)
-	hotelJobs, ji := newHotelJobs(mrts.GetRealm(REALM1), p2, true, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, CACHE_TYPE, proc.Tmcpu(HOTEL_CACHE_MCPU), scaleCache, HOTEL_NGEO, scaleGeo, HOTEL_NGEO_IDX, HOTEL_GEO_SEARCH_RADIUS, HOTEL_GEO_NRESULTS, nil, nil, func(wc *hotel.WebClnt, r *rand.Rand) {
+	hotelJobs, ji := newHotelJobs(mrts.GetRealm(REALM1), p2, true, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, CACHE_TYPE, proc.Tmcpu(HOTEL_CACHE_MCPU), scaleCache, HOTEL_NGEO, scaleGeo, HOTEL_NGEO_IDX, HOTEL_GEO_SEARCH_RADIUS, HOTEL_GEO_NRESULTS, CosSimBenchConfig, func(wc *hotel.WebClnt, r *rand.Rand) {
 		//		hotel.RunDSB(mrts.GetRealm(REALM1).T, 1, wc, r)
 		err := hotel.RandSearchReq(wc, r)
 		assert.Nil(t, err, "SearchReq %v", err)
@@ -927,7 +927,7 @@ func TestRealmBalanceHotelImgResize(t *testing.T) {
 	// Prep Hotel job
 	scaleGeo := benchmarks.NewManualScalingConfig("hotel-geo", MANUALLY_SCALE_GEO, SCALE_GEO_DELAY, N_GEO_TO_ADD)
 	scaleCache := benchmarks.NewManualScalingConfig("cached", MANUALLY_SCALE_CACHES, SCALE_CACHE_DELAY, N_CACHES_TO_ADD)
-	hotelJobs, ji := newHotelJobs(mrts.GetRealm(REALM1), p2, true, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, CACHE_TYPE, proc.Tmcpu(HOTEL_CACHE_MCPU), scaleCache, HOTEL_NGEO, scaleGeo, HOTEL_NGEO_IDX, HOTEL_GEO_SEARCH_RADIUS, HOTEL_GEO_NRESULTS, nil, nil, func(wc *hotel.WebClnt, r *rand.Rand) {
+	hotelJobs, ji := newHotelJobs(mrts.GetRealm(REALM1), p2, true, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, CACHE_TYPE, proc.Tmcpu(HOTEL_CACHE_MCPU), scaleCache, HOTEL_NGEO, scaleGeo, HOTEL_NGEO_IDX, HOTEL_GEO_SEARCH_RADIUS, HOTEL_GEO_NRESULTS, CosSimBenchConfig, func(wc *hotel.WebClnt, r *rand.Rand) {
 		//		hotel.RunDSB(mrts.GetRealm(REALM1).T, 1, wc, r)
 		err := hotel.RandSearchReq(wc, r)
 		assert.Nil(t, err, "SearchReq %v", err)
@@ -1147,15 +1147,10 @@ func TestRealmBalanceImgResizeImgResize(t *testing.T) {
 }
 
 func testHotel(rootts *test.Tstate, ts1 *test.RealmTstate, p *perf.Perf, sigmaos bool, fn hotelFn) {
-	var csjCfg *cossimsrv.CosSimJobConfig
-	if HOTEL_USE_MATCH {
-		csjCfg = cossimsrv.NewCosSimJobConfig(HOTEL_JOB, 1, COSSIM_NVEC, COSSIM_VEC_DIM, COSSIM_EAGER_INIT, proc.Tmcpu(COSSIM_SRV_MCPU), HOTEL_NCACHE, proc.Tmcpu(HOTEL_CACHE_MCPU), true, COSSIM_DELEGATE_INIT)
-	}
 	rs := benchmarks.NewResults(1, benchmarks.E2E)
 	scaleGeo := benchmarks.NewManualScalingConfig("hotel-geo", MANUALLY_SCALE_GEO, SCALE_GEO_DELAY, N_GEO_TO_ADD)
 	scaleCache := benchmarks.NewManualScalingConfig("cached", MANUALLY_SCALE_CACHES, SCALE_CACHE_DELAY, N_CACHES_TO_ADD)
-	scaleCosSim := benchmarks.NewManualScalingConfig("cossim", MANUALLY_SCALE_COSSIM, SCALE_COSSIM_DELAY, N_COSSIM_TO_ADD)
-	jobs, ji := newHotelJobs(ts1, p, sigmaos, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, CACHE_TYPE, proc.Tmcpu(HOTEL_CACHE_MCPU), scaleCache, HOTEL_NGEO, scaleGeo, HOTEL_NGEO_IDX, HOTEL_GEO_SEARCH_RADIUS, HOTEL_GEO_NRESULTS, csjCfg, scaleCosSim, fn)
+	jobs, ji := newHotelJobs(ts1, p, sigmaos, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, CACHE_TYPE, proc.Tmcpu(HOTEL_CACHE_MCPU), scaleCache, HOTEL_NGEO, scaleGeo, HOTEL_NGEO_IDX, HOTEL_GEO_SEARCH_RADIUS, HOTEL_GEO_NRESULTS, CosSimBenchConfig, fn)
 	go func() {
 		for _, j := range jobs {
 			// Wait until ready
@@ -1937,11 +1932,9 @@ func TestCosSim(t *testing.T) {
 		},
 	}
 
-	csjConf := cossimsrv.NewCosSimJobConfig("cossim-job", 1, COSSIM_NVEC, COSSIM_VEC_DIM, COSSIM_EAGER_INIT, proc.Tmcpu(COSSIM_SRV_MCPU), COSSIM_NCACHE, proc.Tmcpu(COSSIM_CACHE_MCPU), COSSIM_CACHE_GC, COSSIM_DELEGATE_INIT)
 	rs := benchmarks.NewResults(1, benchmarks.E2E)
 	scaleCached := benchmarks.NewManualScalingConfig("cached", MANUALLY_SCALE_CACHES, SCALE_CACHE_DELAY, N_CACHES_TO_ADD)
-	scaleCosSim := benchmarks.NewManualScalingConfig("cossim", MANUALLY_SCALE_COSSIM, SCALE_COSSIM_DELAY, N_COSSIM_TO_ADD)
-	jobs, ji := newCosSimJobs(ts1, p, nil, nil, nil, sigmaos, COSSIM_DURS, COSSIM_MAX_RPS, scaleCached, NCOSSIM, csjConf, scaleCosSim, func(j *cossimsrv.CosSimJob, r *rand.Rand) {
+	jobs, ji := newCosSimJobs(ts1, p, nil, nil, nil, sigmaos, scaleCached, CosSimBenchConfig, func(j *cossimsrv.CosSimJob, r *rand.Rand) {
 		_, _, err := j.Clnt.CosSimLeastLoaded(v, ranges)
 		assert.Nil(t, err, "CosSim req: %v", err)
 	})
@@ -2047,9 +2040,8 @@ func TestCachedScaler(t *testing.T) {
 	defer p.Done()
 
 	rs := benchmarks.NewResults(1, benchmarks.E2E)
-	csCfg := cossimsrv.NewCosSimJobConfig(jobName, 0, COSSIM_NVEC, COSSIM_VEC_DIM, COSSIM_EAGER_INIT, proc.Tmcpu(COSSIM_SRV_MCPU), SCALER_CACHED_NCACHE, proc.Tmcpu(SCALER_CACHED_CACHE_MCPU), true, COSSIM_DELEGATE_INIT)
 	scaleCached := benchmarks.NewManualScalingConfig("scaler-cached", MANUALLY_SCALE_SCALER_CACHED, SCALE_SCALER_CACHED_DELAY, 1)
-	jobs, ji := newCachedScalerJobs(mrts.GetRealm(REALM1), jobName, SCALER_CACHED_DURS, SCALER_CACHED_MAX_RPS, SCALER_CACHED_PUT_DURS, SCALER_CACHED_PUT_MAX_RPS, SCALER_CACHED_NCACHE, proc.Tmcpu(SCALER_CACHED_CACHE_MCPU), true, SCALER_CACHED_USE_EPCACHE, SCALER_CACHED_NKEYS, SCALER_CACHED_DELEGATE_INIT, SCALER_CACHED_TOP_N_SHARDS, scaleCached, SCALER_CACHED_CPP, SCALER_CACHED_RUN_SLEEPER, SCALER_CACHED_COSSIM_BACKEND, COSSIM_NVEC_TO_QUERY, csCfg)
+	jobs, ji := newCachedScalerJobs(mrts.GetRealm(REALM1), jobName, SCALER_CACHED_DURS, SCALER_CACHED_MAX_RPS, SCALER_CACHED_PUT_DURS, SCALER_CACHED_PUT_MAX_RPS, SCALER_CACHED_NCACHE, proc.Tmcpu(SCALER_CACHED_CACHE_MCPU), true, SCALER_CACHED_USE_EPCACHE, SCALER_CACHED_NKEYS, SCALER_CACHED_DELEGATE_INIT, SCALER_CACHED_TOP_N_SHARDS, scaleCached, SCALER_CACHED_CPP, SCALER_CACHED_RUN_SLEEPER, SCALER_CACHED_COSSIM_BACKEND, CosSimBenchConfig)
 	go func() {
 		for _, j := range jobs {
 			// Wait until ready

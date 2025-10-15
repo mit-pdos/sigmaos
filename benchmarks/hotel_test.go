@@ -11,7 +11,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	cossimsrv "sigmaos/apps/cossim/srv"
 	"sigmaos/apps/hotel"
 	"sigmaos/benchmarks"
 	"sigmaos/benchmarks/loadgen"
@@ -48,8 +47,7 @@ type HotelJobInstance struct {
 	geoNResults     int
 	ready           chan bool
 	msc             *mschedclnt.MSchedClnt
-	csCfg           *cossimsrv.CosSimJobConfig
-	scaleCosSim     *benchmarks.ManualScalingConfig
+	cosSimCfg       *benchmarks.CosSimBenchConfig
 	fn              hotelFn
 	hj              *hotel.HotelJob
 	lgs             []*loadgen.LoadGenerator
@@ -63,7 +61,7 @@ type HotelJobInstance struct {
 	*test.RealmTstate
 }
 
-func NewHotelJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, durs string, maxrpss string, fn hotelFn, justCli bool, ncache int, cachetype string, cacheMcpu proc.Tmcpu, scaleCache *benchmarks.ManualScalingConfig, nGeo int, scaleGeo *benchmarks.ManualScalingConfig, geoNIndex int, geoSearchRadius int, geoNResults int, csCfg *cossimsrv.CosSimJobConfig, scaleCosSim *benchmarks.ManualScalingConfig) *HotelJobInstance {
+func NewHotelJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, durs string, maxrpss string, fn hotelFn, justCli bool, ncache int, cachetype string, cacheMcpu proc.Tmcpu, scaleCache *benchmarks.ManualScalingConfig, nGeo int, scaleGeo *benchmarks.ManualScalingConfig, geoNIndex int, geoSearchRadius int, geoNResults int, cosSimCfg *benchmarks.CosSimBenchConfig) *HotelJobInstance {
 	ji := &HotelJobInstance{}
 	ji.sigmaos = sigmaos
 	ji.job = HOTEL_JOB
@@ -80,8 +78,7 @@ func NewHotelJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, durs string, 
 	ji.geoNIdx = geoNIndex
 	ji.geoSearchRadius = geoSearchRadius
 	ji.geoNResults = geoNResults
-	ji.csCfg = csCfg
-	ji.scaleCosSim = scaleCosSim
+	ji.cosSimCfg = cosSimCfg
 	ji.cossimKIDs = make(map[string]bool)
 	ji.cacheKIDs = make(map[string]bool)
 
@@ -104,7 +101,7 @@ func NewHotelJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, durs string, 
 	var err error
 	var svcs []*hotel.Srv
 	if sigmaos {
-		if csCfg == nil {
+		if cosSimCfg == nil {
 			svcs = hotel.NewHotelSvc()
 		} else {
 			svcs = hotel.NewHotelSvcWithMatch()
@@ -135,7 +132,7 @@ func NewHotelJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, durs string, 
 		if !sigmaos {
 			nc = 0
 		}
-		ji.hj, err = hotel.NewHotelJob(ts.SigmaClnt, ji.job, svcs, N_HOTEL, cachetype, cacheMcpu, nc, CACHE_GC, HOTEL_IMG_SZ_MB, nGeo, geoNIndex, geoSearchRadius, geoNResults, csCfg)
+		ji.hj, err = hotel.NewHotelJob(ts.SigmaClnt, ji.job, svcs, N_HOTEL, cachetype, cacheMcpu, nc, CACHE_GC, HOTEL_IMG_SZ_MB, nGeo, geoNIndex, geoSearchRadius, geoNResults, cosSimCfg.GetJobConfig())
 		assert.Nil(ts.Ts.T, err, "Error NewHotelJob: %v", err)
 		if ji.runningMatch {
 			ji.msc = mschedclnt.NewMSchedClnt(ts.SigmaClnt.FsLib, sp.NOT_SET)
@@ -266,21 +263,21 @@ func (ji *HotelJobInstance) scaleCosSimSrv() {
 	if !ji.runningMatch {
 		return
 	}
-	if ji.scaleCosSim.GetShouldScale() {
+	if ji.cosSimCfg.Scale.GetShouldScale() {
 		go func() {
-			time.Sleep(ji.scaleCosSim.GetScalingDelay())
-			for i := 0; i < ji.scaleCosSim.GetNToAdd(); i++ {
-				db.DPrintf(db.TEST, "Scale up cossim srvs to: %v", (i+1)+ji.csCfg.InitNSrv)
+			time.Sleep(ji.cosSimCfg.Scale.GetScalingDelay())
+			for i := 0; i < ji.cosSimCfg.Scale.GetNToAdd(); i++ {
+				db.DPrintf(db.TEST, "Scale up cossim srvs to: %v", (i+1)+ji.cosSimCfg.JobCfg.InitNSrv)
 				err := ji.hj.AddCosSimSrvWithSigmaPath(chunk.ChunkdPath(ji.warmCossimSrvKID))
 				assert.Nil(ji.Ts.T, err, "Add CosSim srv: %v", err)
-				db.DPrintf(db.TEST, "Done scale up cossim srvs to: %v", (i+1)+ji.csCfg.InitNSrv)
+				db.DPrintf(db.TEST, "Done scale up cossim srvs to: %v", (i+1)+ji.cosSimCfg.JobCfg.InitNSrv)
 			}
 		}()
 	}
 }
 
 func (ji *HotelJobInstance) StartHotelJob() {
-	db.DPrintf(db.ALWAYS, "StartHotelJob dur %v ncache %v maxrps %v kubernetes (%v,%v) scaleCache:%v scaleGeo:%v nGeoInit %v geoNIndex %v geoSearchRadius: %v geoNResults: %v cossim:%v scaleCossim:%v", ji.dur, ji.ncache, ji.maxrps, !ji.sigmaos, ji.k8ssrvaddr, ji.scaleCache, ji.scaleGeo, ji.nGeo, ji.geoNIdx, ji.geoSearchRadius, ji.geoNResults, ji.csCfg, ji.scaleCosSim)
+	db.DPrintf(db.ALWAYS, "StartHotelJob dur %v ncache %v maxrps %v kubernetes (%v,%v) scaleCache:%v scaleGeo:%v nGeoInit %v geoNIndex %v geoSearchRadius: %v geoNResults: %v cossim:%v", ji.dur, ji.ncache, ji.maxrps, !ji.sigmaos, ji.k8ssrvaddr, ji.scaleCache, ji.scaleGeo, ji.nGeo, ji.geoNIdx, ji.geoSearchRadius, ji.geoNResults, ji.cosSimCfg)
 	var wg sync.WaitGroup
 	for _, lg := range ji.lgs {
 		wg.Add(1)

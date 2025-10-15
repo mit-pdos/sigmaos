@@ -2,8 +2,6 @@ package benchmarks_test
 
 import (
 	"math/rand"
-	"strconv"
-	"strings"
 	"sync"
 	"time"
 
@@ -27,32 +25,24 @@ import (
 type cosSimFn func(j *cossimsrv.CosSimJob, r *rand.Rand)
 
 type CosSimJobInstance struct {
-	sigmaos             bool
-	justCli             bool
-	job                 string
-	dur                 []time.Duration
-	maxrps              []int
-	fn                  cosSimFn
-	ncache              int
-	scaleCached         *benchmarks.ManualScalingConfig
-	scaleCacheDelay     time.Duration
-	manuallyScaleCaches bool
-	nCachesToAdd        int
-	scaleCosSim         *benchmarks.ManualScalingConfig
-	nCosSim             int
-	csCfg               *cossimsrv.CosSimJobConfig
-	ready               chan bool
-	j                   *cossimsrv.CosSimJob
-	lgs                 []*loadgen.LoadGenerator
-	p                   *perf.Perf
-	msc                 *mschedclnt.MSchedClnt
-	cossimKIDs          map[string]bool
-	cacheKIDs           map[string]bool
-	warmCossimSrvKID    string
+	sigmaos          bool
+	justCli          bool
+	job              string
+	fn               cosSimFn
+	scaleCached      *benchmarks.ManualScalingConfig
+	cfg              *benchmarks.CosSimBenchConfig
+	ready            chan bool
+	j                *cossimsrv.CosSimJob
+	lgs              []*loadgen.LoadGenerator
+	p                *perf.Perf
+	msc              *mschedclnt.MSchedClnt
+	cossimKIDs       map[string]bool
+	cacheKIDs        map[string]bool
+	warmCossimSrvKID string
 	*test.RealmTstate
 }
 
-func NewCosSimJob(ts *test.RealmTstate, p *perf.Perf, epcj *epsrv.EPCacheJob, cm *cachegrpmgr.CacheMgr, cc *cachegrpclnt.CachedSvcClnt, sigmaos bool, durs string, maxrpss string, fn cosSimFn, justCli bool, scaleCached *benchmarks.ManualScalingConfig, nCosSim int, csCfg *cossimsrv.CosSimJobConfig, scaleCosSim *benchmarks.ManualScalingConfig) *CosSimJobInstance {
+func NewCosSimJob(ts *test.RealmTstate, p *perf.Perf, epcj *epsrv.EPCacheJob, cm *cachegrpmgr.CacheMgr, cc *cachegrpclnt.CachedSvcClnt, sigmaos bool, fn cosSimFn, justCli bool, scaleCached *benchmarks.ManualScalingConfig, cfg *benchmarks.CosSimBenchConfig) *CosSimJobInstance {
 	ji := &CosSimJobInstance{}
 	ji.sigmaos = true
 	ji.job = "cossim-job"
@@ -62,37 +52,19 @@ func NewCosSimJob(ts *test.RealmTstate, p *perf.Perf, epcj *epsrv.EPCacheJob, cm
 	ji.p = p
 	ji.justCli = justCli
 	ji.scaleCached = scaleCached
-	ji.scaleCosSim = scaleCosSim
-	ji.nCosSim = nCosSim
-	ji.csCfg = csCfg
+	ji.cfg = cfg
 	ji.cossimKIDs = make(map[string]bool)
 	ji.cacheKIDs = make(map[string]bool)
-
-	durslice := strings.Split(durs, ",")
-	maxrpsslice := strings.Split(maxrpss, ",")
-	assert.Equal(ts.Ts.T, len(durslice), len(maxrpsslice), "Non-matching lengths: %v %v", durs, maxrpss)
-
-	ji.dur = make([]time.Duration, 0, len(durslice))
-	ji.maxrps = make([]int, 0, len(durslice))
-
-	for i := range durslice {
-		d, err := time.ParseDuration(durslice[i])
-		assert.Nil(ts.Ts.T, err, "Bad duration %v", err)
-		n, err := strconv.Atoi(maxrpsslice[i])
-		assert.Nil(ts.Ts.T, err, "Bad duration %v", err)
-		ji.dur = append(ji.dur, d)
-		ji.maxrps = append(ji.maxrps, n)
-	}
 
 	var err error
 
 	if !ji.justCli {
 		db.DPrintf(db.TEST, "Create new CosSim job")
 		// Only start one cache if autoscaling.
-		ji.j, err = cossimsrv.NewCosSimJob(ji.csCfg, ts.SigmaClnt, epcj, cm, cc)
+		ji.j, err = cossimsrv.NewCosSimJob(ji.cfg.GetJobConfig(), ts.SigmaClnt, epcj, cm, cc)
 		assert.Nil(ts.Ts.T, err, "Error NewCosSimJob: %v", err)
 		db.DPrintf(db.TEST, "New CosSim job created")
-		for i := 0; i < ji.nCosSim; i++ {
+		for i := 0; i < ji.cfg.JobCfg.InitNSrv; i++ {
 			db.DPrintf(db.TEST, "Add initial cossim server %v", i)
 			_, _, err := ji.j.AddSrv()
 			if !assert.Nil(ts.Ts.T, err, "Err AddSrv: %v", err) {
@@ -149,9 +121,9 @@ func NewCosSimJob(ts *test.RealmTstate, p *perf.Perf, epcj *epsrv.EPCacheJob, cm
 	}
 
 	// Make a load generators.
-	ji.lgs = make([]*loadgen.LoadGenerator, 0, len(ji.dur))
-	for i := range ji.dur {
-		ji.lgs = append(ji.lgs, loadgen.NewLoadGenerator(ji.dur[i], ji.maxrps[i], func(r *rand.Rand) (time.Duration, bool) {
+	ji.lgs = make([]*loadgen.LoadGenerator, 0, len(ji.cfg.Durs))
+	for i := range ji.cfg.Durs {
+		ji.lgs = append(ji.lgs, loadgen.NewLoadGenerator(ji.cfg.Durs[i], ji.cfg.MaxRPS[i], func(r *rand.Rand) (time.Duration, bool) {
 			// Run a single request.
 			ji.fn(ji.j, r)
 			return 0, false
@@ -161,7 +133,7 @@ func NewCosSimJob(ts *test.RealmTstate, p *perf.Perf, epcj *epsrv.EPCacheJob, cm
 }
 
 func (ji *CosSimJobInstance) StartCosSimJob() {
-	db.DPrintf(db.ALWAYS, "StartCosSimJob dur %v cossimCfg:%v maxrps %v scaleCached:%v scaleCosSim:%v nCosSimInit %v", ji.dur, ji.csCfg, ji.maxrps, ji.scaleCached, ji.scaleCosSim, ji.nCosSim)
+	db.DPrintf(db.ALWAYS, "StartCosSimJob CossimBenchCfg:%v cossimCfg:%v scaleCached:%v", ji.cfg, ji.cfg, ji.scaleCached)
 	var wg sync.WaitGroup
 	for _, lg := range ji.lgs {
 		wg.Add(1)
@@ -171,20 +143,20 @@ func (ji *CosSimJobInstance) StartCosSimJob() {
 		}(lg, &wg)
 	}
 	wg.Wait()
-	if !ji.justCli && ji.scaleCosSim.GetShouldScale() {
+	if !ji.justCli && ji.cfg.Scale.GetShouldScale() {
 		go func() {
-			time.Sleep(ji.scaleCosSim.GetScalingDelay())
-			for i := 0; i < ji.scaleCosSim.GetNToAdd(); i++ {
-				db.DPrintf(db.TEST, "Scale up cossim srvs to: %v", (i+1)+ji.nCosSim)
+			time.Sleep(ji.cfg.Scale.GetScalingDelay())
+			for i := 0; i < ji.cfg.Scale.GetNToAdd(); i++ {
+				db.DPrintf(db.TEST, "Scale up cossim srvs to: %v", (i+1)+ji.cfg.JobCfg.InitNSrv)
 				_, _, err := ji.j.AddSrvWithSigmaPath(chunk.ChunkdPath(ji.warmCossimSrvKID))
 				assert.Nil(ji.Ts.T, err, "Add CosSim srv: %v", err)
-				db.DPrintf(db.TEST, "Done scale up cossim srvs to: %v", (i+1)+ji.nCosSim)
+				db.DPrintf(db.TEST, "Done scale up cossim srvs to: %v", (i+1)+ji.cfg.JobCfg.InitNSrv)
 			}
 		}()
 	}
 
 	for i, lg := range ji.lgs {
-		db.DPrintf(db.TEST, "Run load generator rps %v dur %v", ji.maxrps[i], ji.dur[i])
+		db.DPrintf(db.TEST, "Run load generator rps %v dur %v", ji.cfg.MaxRPS[i], ji.cfg.Durs[i])
 		lg.Run()
 		//    ji.printStats()
 	}

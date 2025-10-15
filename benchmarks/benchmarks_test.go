@@ -1348,6 +1348,10 @@ func TestHotelSigmaosMatch(t *testing.T) {
 	}
 	defer mrts.Shutdown()
 
+	const N = 5
+	err := mrts.GetRealm(REALM1).BootNode(N)
+	assert.Nil(t, err, "Boot node: %v", err)
+
 	testHotel(mrts.GetRoot(), mrts.GetRealm(REALM1), nil, true, func(wc *hotel.WebClnt, r *rand.Rand) {
 		// TODO: use caching
 		err := hotel.RandMatchReq(wc, r, false)
@@ -1915,7 +1919,9 @@ func TestCosSim(t *testing.T) {
 	}
 
 	rs := benchmarks.NewResults(1, benchmarks.E2E)
-	jobs, ji := newCosSimJobs(ts1, p, nil, nil, nil, sigmaos, COSSIM_DURS, COSSIM_MAX_RPS, COSSIM_NCACHE, COSSIM_CACHE_GC, proc.Tmcpu(COSSIM_CACHE_MCPU), MANUALLY_SCALE_CACHES, SCALE_CACHE_DELAY, N_CACHES_TO_ADD, NCOSSIM, proc.Tmcpu(COSSIM_SRV_MCPU), MANUALLY_SCALE_COSSIM, SCALE_COSSIM_DELAY, N_COSSIM_TO_ADD, COSSIM_NVEC, COSSIM_VEC_DIM, COSSIM_EAGER_INIT, COSSIM_DELEGATE_INIT, func(j *cossimsrv.CosSimJob, r *rand.Rand) {
+	scaleCached := NewManualScalingConfig("cached", MANUALLY_SCALE_CACHES, SCALE_CACHE_DELAY, N_CACHES_TO_ADD)
+	scaleCosSim := NewManualScalingConfig("cossim", MANUALLY_SCALE_COSSIM, SCALE_COSSIM_DELAY, N_COSSIM_TO_ADD)
+	jobs, ji := newCosSimJobs(ts1, p, nil, nil, nil, sigmaos, COSSIM_DURS, COSSIM_MAX_RPS, COSSIM_NCACHE, COSSIM_CACHE_GC, proc.Tmcpu(COSSIM_CACHE_MCPU), scaleCached, NCOSSIM, proc.Tmcpu(COSSIM_SRV_MCPU), scaleCosSim, COSSIM_NVEC, COSSIM_VEC_DIM, COSSIM_EAGER_INIT, COSSIM_DELEGATE_INIT, func(j *cossimsrv.CosSimJob, r *rand.Rand) {
 		_, _, err := j.Clnt.CosSimLeastLoaded(v, ranges)
 		assert.Nil(t, err, "CosSim req: %v", err)
 	})
@@ -1969,7 +1975,8 @@ func TestCachedBackup(t *testing.T) {
 	defer p.Done()
 
 	rs := benchmarks.NewResults(1, benchmarks.E2E)
-	jobs, ji := newCachedBackupJobs(mrts.GetRealm(REALM1), jobName, BACKUP_CACHED_DURS, BACKUP_CACHED_MAX_RPS, BACKUP_CACHED_PUT_DURS, BACKUP_CACHED_PUT_MAX_RPS, BACKUP_CACHED_NCACHE, proc.Tmcpu(BACKUP_CACHED_CACHE_MCPU), true, BACKUP_CACHED_USE_EPCACHE, BACKUP_CACHED_NKEYS, BACKUP_CACHED_DELEGATE_INIT, BACKUP_CACHED_TOP_N_SHARDS, MANUALLY_SCALE_BACKUP_CACHED, SCALE_BACKUP_CACHED_DELAY)
+	scaleBackupCached := NewManualScalingConfig("backup-cached", MANUALLY_SCALE_BACKUP_CACHED, SCALE_BACKUP_CACHED_DELAY, 1)
+	jobs, ji := newCachedBackupJobs(mrts.GetRealm(REALM1), jobName, BACKUP_CACHED_DURS, BACKUP_CACHED_MAX_RPS, BACKUP_CACHED_PUT_DURS, BACKUP_CACHED_PUT_MAX_RPS, BACKUP_CACHED_NCACHE, proc.Tmcpu(BACKUP_CACHED_CACHE_MCPU), true, BACKUP_CACHED_USE_EPCACHE, BACKUP_CACHED_NKEYS, BACKUP_CACHED_DELEGATE_INIT, BACKUP_CACHED_TOP_N_SHARDS, scaleBackupCached)
 	go func() {
 		for _, j := range jobs {
 			// Wait until ready
@@ -2020,7 +2027,8 @@ func TestCachedScaler(t *testing.T) {
 	defer p.Done()
 
 	rs := benchmarks.NewResults(1, benchmarks.E2E)
-	jobs, ji := newCachedScalerJobs(mrts.GetRealm(REALM1), jobName, SCALER_CACHED_DURS, SCALER_CACHED_MAX_RPS, SCALER_CACHED_PUT_DURS, SCALER_CACHED_PUT_MAX_RPS, SCALER_CACHED_NCACHE, proc.Tmcpu(SCALER_CACHED_CACHE_MCPU), true, SCALER_CACHED_USE_EPCACHE, SCALER_CACHED_NKEYS, SCALER_CACHED_DELEGATE_INIT, SCALER_CACHED_TOP_N_SHARDS, MANUALLY_SCALE_SCALER_CACHED, SCALE_SCALER_CACHED_DELAY, SCALER_CACHED_RUN_SLEEPER, SCALER_CACHED_CPP, SCALER_CACHED_COSSIM_BACKEND, COSSIM_NVEC, COSSIM_VEC_DIM, proc.Tmcpu(COSSIM_SRV_MCPU), COSSIM_DELEGATE_INIT, COSSIM_NVEC_TO_QUERY)
+	scaleCached := NewManualScalingConfig("scaler-cached", MANUALLY_SCALE_SCALER_CACHED, SCALE_SCALER_CACHED_DELAY, 1)
+	jobs, ji := newCachedScalerJobs(mrts.GetRealm(REALM1), jobName, SCALER_CACHED_DURS, SCALER_CACHED_MAX_RPS, SCALER_CACHED_PUT_DURS, SCALER_CACHED_PUT_MAX_RPS, SCALER_CACHED_NCACHE, proc.Tmcpu(SCALER_CACHED_CACHE_MCPU), true, SCALER_CACHED_USE_EPCACHE, SCALER_CACHED_NKEYS, SCALER_CACHED_DELEGATE_INIT, SCALER_CACHED_TOP_N_SHARDS, scaleCached, SCALER_CACHED_CPP, SCALER_CACHED_RUN_SLEEPER, SCALER_CACHED_COSSIM_BACKEND, COSSIM_NVEC, COSSIM_VEC_DIM, proc.Tmcpu(COSSIM_SRV_MCPU), COSSIM_DELEGATE_INIT, COSSIM_NVEC_TO_QUERY)
 	go func() {
 		for _, j := range jobs {
 			// Wait until ready

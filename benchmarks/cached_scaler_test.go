@@ -56,8 +56,7 @@ type CachedScalerJobInstance struct {
 	maxrps           []int
 	putDur           []time.Duration
 	putMaxrps        []int
-	scale            bool
-	scaleDelay       time.Duration
+	scaleCached      *ManualScalingConfig
 	scaling          bool
 	lastScaled       time.Time
 	warmup           bool
@@ -72,7 +71,7 @@ type CachedScalerJobInstance struct {
 	*test.RealmTstate
 }
 
-func NewCachedScalerJob(ts *test.RealmTstate, jobName string, durs string, maxrpss string, putDurs string, putMaxrpss string, ncache int, cacheMCPU proc.Tmcpu, cacheGC bool, useEPCache bool, nKV int, delegatedInit bool, topN int, scale bool, scaleDelay time.Duration, scalerCachedCPP bool, scalerCachedRunSleeper bool, cossimBackend bool, cossimNVec int, cossimVecDim int, cossimMCPU proc.Tmcpu, cossimDelegatedInit bool, cossimNVecToQuery int) *CachedScalerJobInstance {
+func NewCachedScalerJob(ts *test.RealmTstate, jobName string, durs string, maxrpss string, putDurs string, putMaxrpss string, ncache int, cacheMCPU proc.Tmcpu, cacheGC bool, useEPCache bool, nKV int, delegatedInit bool, topN int, scaleCached *ManualScalingConfig, scalerCachedCPP bool, scalerCachedRunSleeper bool, cossimBackend bool, cossimNVec int, cossimVecDim int, cossimMCPU proc.Tmcpu, cossimDelegatedInit bool, cossimNVecToQuery int) *CachedScalerJobInstance {
 	ji := &CachedScalerJobInstance{
 		RealmTstate:         ts,
 		sigmaos:             true,
@@ -88,8 +87,7 @@ func NewCachedScalerJob(ts *test.RealmTstate, jobName string, durs string, maxrp
 		nKV:                 nKV,
 		delegatedInit:       delegatedInit,
 		topN:                topN,
-		scale:               scale,
-		scaleDelay:          scaleDelay,
+		scaleCached:         scaleCached,
 		cossimBackend:       cossimBackend,
 		cossimNVec:          cossimNVec,
 		cossimVecDim:        cossimVecDim,
@@ -331,7 +329,7 @@ func (ji *CachedScalerJobInstance) StartCachedScalerJob() {
 	}
 	wg.Wait()
 	// Start a goroutine to asynchronously scale cached
-	go ji.scaleCached()
+	go ji.manuallyScaleCached()
 	wg.Add(1)
 	// Start a goroutine to asynchronously run puts
 	go func() {
@@ -361,12 +359,12 @@ func (ji *CachedScalerJobInstance) Wait() {
 	ji.cm.Stop()
 }
 
-func (ji *CachedScalerJobInstance) scaleCached() {
+func (ji *CachedScalerJobInstance) manuallyScaleCached() {
 	// If not scaling, bail out early
-	if !ji.scale {
+	if !ji.scaleCached.GetShouldScale() {
 		return
 	}
-	time.Sleep(ji.scaleDelay)
+	time.Sleep(ji.scaleCached.GetScalingDelay())
 	ji.scaling = true
 	// TODO: More scaling
 	db.DPrintf(db.TEST, "Add scaler server")

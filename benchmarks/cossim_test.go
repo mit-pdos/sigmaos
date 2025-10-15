@@ -33,12 +33,11 @@ type CosSimJobInstance struct {
 	maxrps              []int
 	fn                  cosSimFn
 	ncache              int
+	scaleCached         *ManualScalingConfig
 	scaleCacheDelay     time.Duration
 	manuallyScaleCaches bool
 	nCachesToAdd        int
-	scaleCosSimDelay    time.Duration
-	manuallyScaleCosSim bool
-	nCosSimToAdd        int
+	scaleCosSim         *ManualScalingConfig
 	nCosSim             int
 	mcpuPerSrv          proc.Tmcpu
 	cosSimNVec          int
@@ -56,7 +55,7 @@ type CosSimJobInstance struct {
 	*test.RealmTstate
 }
 
-func NewCosSimJob(ts *test.RealmTstate, p *perf.Perf, epcj *epsrv.EPCacheJob, cm *cachegrpmgr.CacheMgr, cc *cachegrpclnt.CachedSvcClnt, sigmaos bool, durs string, maxrpss string, fn cosSimFn, justCli bool, ncache int, cacheGC bool, cacheMcpu proc.Tmcpu, manuallyScaleCaches bool, scaleCacheDelay time.Duration, nCachesToAdd int, nCosSim int, cosSimNVec int, cosSimVecDim int, eagerInit bool, delegateInit bool, mcpuPerSrv proc.Tmcpu, manuallyScaleCosSim bool, scaleCosSimDelay time.Duration, nCosSimToAdd int) *CosSimJobInstance {
+func NewCosSimJob(ts *test.RealmTstate, p *perf.Perf, epcj *epsrv.EPCacheJob, cm *cachegrpmgr.CacheMgr, cc *cachegrpclnt.CachedSvcClnt, sigmaos bool, durs string, maxrpss string, fn cosSimFn, justCli bool, ncache int, cacheGC bool, cacheMcpu proc.Tmcpu, scaleCached *ManualScalingConfig, nCosSim int, cosSimNVec int, cosSimVecDim int, eagerInit bool, delegateInit bool, mcpuPerSrv proc.Tmcpu, scaleCosSim *ManualScalingConfig) *CosSimJobInstance {
 	ji := &CosSimJobInstance{}
 	ji.sigmaos = true
 	ji.job = "cossim-job"
@@ -66,12 +65,8 @@ func NewCosSimJob(ts *test.RealmTstate, p *perf.Perf, epcj *epsrv.EPCacheJob, cm
 	ji.p = p
 	ji.justCli = justCli
 	ji.ncache = ncache
-	ji.manuallyScaleCaches = manuallyScaleCaches
-	ji.scaleCacheDelay = scaleCacheDelay
-	ji.nCachesToAdd = nCachesToAdd
-	ji.manuallyScaleCosSim = manuallyScaleCosSim
-	ji.scaleCosSimDelay = scaleCosSimDelay
-	ji.nCosSimToAdd = nCosSimToAdd
+	ji.scaleCached = scaleCached
+	ji.scaleCosSim = scaleCosSim
 	ji.nCosSim = nCosSim
 	ji.cosSimNVec = cosSimNVec
 	ji.cosSimVecDim = cosSimVecDim
@@ -175,7 +170,7 @@ func NewCosSimJob(ts *test.RealmTstate, p *perf.Perf, epcj *epsrv.EPCacheJob, cm
 }
 
 func (ji *CosSimJobInstance) StartCosSimJob() {
-	db.DPrintf(db.ALWAYS, "StartCosSimJob dur %v ncache %v maxrps %v manuallyScaleCaches %v scaleCacheDelay %v nCachesToAdd %v manuallyScaleCosSim %v scaleCosSimDelay %v nCosSimToAdd %v nCosSimInit %v nvec %v vecdim: %v eager: %v", ji.dur, ji.ncache, ji.maxrps, ji.manuallyScaleCaches, ji.scaleCacheDelay, ji.nCachesToAdd, ji.manuallyScaleCosSim, ji.scaleCosSimDelay, ji.nCosSimToAdd, ji.nCosSim, ji.cosSimNVec, ji.cosSimVecDim, ji.eagerInit)
+	db.DPrintf(db.ALWAYS, "StartCosSimJob dur %v ncache %v maxrps %v scaleCached:%v scaleCosSim:%v nCosSimInit %v nvec %v vecdim: %v eager: %v", ji.dur, ji.ncache, ji.maxrps, ji.scaleCached, ji.scaleCosSim, ji.nCosSim, ji.cosSimNVec, ji.cosSimVecDim, ji.eagerInit)
 	var wg sync.WaitGroup
 	for _, lg := range ji.lgs {
 		wg.Add(1)
@@ -185,10 +180,10 @@ func (ji *CosSimJobInstance) StartCosSimJob() {
 		}(lg, &wg)
 	}
 	wg.Wait()
-	if !ji.justCli && ji.manuallyScaleCosSim {
+	if !ji.justCli && ji.scaleCosSim.GetShouldScale() {
 		go func() {
-			time.Sleep(ji.scaleCosSimDelay)
-			for i := 0; i < ji.nCosSimToAdd; i++ {
+			time.Sleep(ji.scaleCosSim.GetScalingDelay())
+			for i := 0; i < ji.scaleCosSim.GetNToAdd(); i++ {
 				db.DPrintf(db.TEST, "Scale up cossim srvs to: %v", (i+1)+ji.nCosSim)
 				_, _, err := ji.j.AddSrvWithSigmaPath(chunk.ChunkdPath(ji.warmCossimSrvKID))
 				assert.Nil(ji.Ts.T, err, "Add CosSim srv: %v", err)

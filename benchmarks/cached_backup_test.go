@@ -24,53 +24,51 @@ import (
 )
 
 type CachedBackupJobInstance struct {
-	jobName          string
-	sigmaos          bool
-	ncache           int
-	cacheMCPU        proc.Tmcpu
-	cacheGC          bool
-	useEPCache       bool
-	nKV              int
-	delegatedInit    bool
-	topN             int
-	ready            chan bool
-	warmCachedSrvKID string
-	cacheKIDs        map[string]bool
-	epcj             *epsrv.EPCacheJob
-	msc              *mschedclnt.MSchedClnt
-	cm               *cachegrpmgr.CacheMgr
-	cc               *cachegrpclnt.CachedSvcClnt
-	primaryEPs       []*sp.Tendpoint
-	lgs              []*loadgen.LoadGenerator
-	putLGs           []*loadgen.LoadGenerator
-	keys             []string
-	vals             []*cacheproto.CacheString
-	dur              []time.Duration
-	maxrps           []int
-	putDur           []time.Duration
-	putMaxrps        []int
-	scale            bool
-	scaleDelay       time.Duration
+	jobName           string
+	sigmaos           bool
+	ncache            int
+	cacheMCPU         proc.Tmcpu
+	cacheGC           bool
+	useEPCache        bool
+	nKV               int
+	delegatedInit     bool
+	topN              int
+	ready             chan bool
+	warmCachedSrvKID  string
+	cacheKIDs         map[string]bool
+	epcj              *epsrv.EPCacheJob
+	msc               *mschedclnt.MSchedClnt
+	cm                *cachegrpmgr.CacheMgr
+	cc                *cachegrpclnt.CachedSvcClnt
+	primaryEPs        []*sp.Tendpoint
+	lgs               []*loadgen.LoadGenerator
+	putLGs            []*loadgen.LoadGenerator
+	keys              []string
+	vals              []*cacheproto.CacheString
+	dur               []time.Duration
+	maxrps            []int
+	putDur            []time.Duration
+	putMaxrps         []int
+	scaleCachedBackup *ManualScalingConfig
 	*test.RealmTstate
 }
 
-func NewCachedBackupJob(ts *test.RealmTstate, jobName string, durs string, maxrpss string, putDurs string, putMaxrpss string, ncache int, cacheMCPU proc.Tmcpu, cacheGC bool, useEPCache bool, nKV int, delegatedInit bool, topN int, scale bool, scaleDelay time.Duration) *CachedBackupJobInstance {
+func NewCachedBackupJob(ts *test.RealmTstate, jobName string, durs string, maxrpss string, putDurs string, putMaxrpss string, ncache int, cacheMCPU proc.Tmcpu, cacheGC bool, useEPCache bool, nKV int, delegatedInit bool, topN int, scaleCachedBackup *ManualScalingConfig) *CachedBackupJobInstance {
 	ji := &CachedBackupJobInstance{
-		RealmTstate:   ts,
-		sigmaos:       true,
-		jobName:       jobName,
-		ncache:        ncache,
-		cacheMCPU:     cacheMCPU,
-		cacheGC:       cacheGC,
-		useEPCache:    useEPCache,
-		cacheKIDs:     make(map[string]bool),
-		msc:           mschedclnt.NewMSchedClnt(ts.SigmaClnt.FsLib, sp.NOT_SET),
-		nKV:           nKV,
-		delegatedInit: delegatedInit,
-		topN:          topN,
-		scale:         scale,
-		scaleDelay:    scaleDelay,
-		ready:         make(chan bool),
+		RealmTstate:       ts,
+		sigmaos:           true,
+		jobName:           jobName,
+		ncache:            ncache,
+		cacheMCPU:         cacheMCPU,
+		cacheGC:           cacheGC,
+		useEPCache:        useEPCache,
+		cacheKIDs:         make(map[string]bool),
+		msc:               mschedclnt.NewMSchedClnt(ts.SigmaClnt.FsLib, sp.NOT_SET),
+		nKV:               nKV,
+		delegatedInit:     delegatedInit,
+		topN:              topN,
+		scaleCachedBackup: scaleCachedBackup,
+		ready:             make(chan bool),
 	}
 
 	durslice := strings.Split(durs, ",")
@@ -247,10 +245,10 @@ func (ji *CachedBackupJobInstance) Wait() {
 
 func (ji *CachedBackupJobInstance) scaleCached() {
 	// If not scaling, bail out early
-	if !ji.scale {
+	if !ji.scaleCachedBackup.GetShouldScale() {
 		return
 	}
-	time.Sleep(ji.scaleDelay)
+	time.Sleep(ji.scaleCachedBackup.GetScalingDelay())
 	// TODO: More scaling
 	db.DPrintf(db.TEST, "Add backup server")
 	srvID := 0

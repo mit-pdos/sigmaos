@@ -82,7 +82,7 @@ func NewHotelJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, durs string, 
 	ji.csCfg = csCfg
 	ji.scaleCosSim = scaleCosSim
 	ji.cossimKIDs = make(map[string]bool)
-	ji.cachedKIDs = make(map[string]bool)
+	ji.cacheKIDs = make(map[string]bool)
 
 	durslice := strings.Split(durs, ",")
 	maxrpsslice := strings.Split(maxrpss, ",")

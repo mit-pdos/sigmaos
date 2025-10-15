@@ -1,11 +1,31 @@
 package mgr
 
 import (
+	"fmt"
+
 	"sigmaos/apps/cache"
 	epsrv "sigmaos/apps/epcache/srv"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
 )
+
+type CacheJobConfig struct {
+	NSrv int         `json:"n_srv"`
+	MCPU proc.Tmcpu `json:"mcpu"`
+	GC   bool        `json:"gc"`
+}
+
+func NewCacheJobConfig(nsrv int, mcpu proc.Tmcpu, gc bool) *CacheJobConfig {
+	return &CacheJobConfig{
+		NSrv: nsrv,
+		MCPU: mcpu,
+		GC:   gc,
+	}
+}
+
+func (cfg *CacheJobConfig) String() string {
+	return fmt.Sprintf("&{ NSrv:%v MCPU:%v GC:%v }", cfg.NSrv, cfg.MCPU, cfg.GC)
+}
 
 type CacheMgr struct {
 	*CachedSvc

@@ -25,14 +25,14 @@ import (
 )
 
 type CosSimJobConfig struct {
-	Job              string
-	InitNSrv         int
-	NVec             int
-	VecDim           int
-	EagerInit        bool
-	SrvMcpu          proc.Tmcpu
-	CacheCfg         *cachegrpmgr.CacheJobConfig
-	DelegateInitRPCs bool
+	Job              string                       `json:"job"`
+	InitNSrv         int                          `json:"init_n_srv"`
+	NVec             int                          `json:"n_vec"`
+	VecDim           int                          `json:"vec_dim"`
+	EagerInit        bool                         `json:"eager_init"`
+	SrvMcpu          proc.Tmcpu                   `json:"srv_mcpu"`
+	CacheCfg         *cachegrpmgr.CacheJobConfig `json:"cache_cfg"`
+	DelegateInitRPCs bool                         `json:"delegate_init_rpcs"`
 }
 
 func NewCosSimJobConfig(job string, nsrv int, nvec int, vecDim int, eagerInit bool, srvMcpu proc.Tmcpu, cacheCfg *cachegrpmgr.CacheJobConfig, delegateInitRPCs bool) *CosSimJobConfig {

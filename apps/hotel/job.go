@@ -285,11 +285,11 @@ func NewHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []*Srv, nhotel int, c
 	return hj, nil
 }
 
-func (hj *HotelJob) AddCossimSrv() error {
-	return hj.AddCossimSrvWithSigmaPath(sp.NOT_SET)
+func (hj *HotelJob) AddCosSimSrv() error {
+	return hj.AddCosSimSrvWithSigmaPath(sp.NOT_SET)
 }
 
-func (hj *HotelJob) AddCossimSrvWithSigmaPath(sigmaPath string) error {
+func (hj *HotelJob) AddCosSimSrvWithSigmaPath(sigmaPath string) error {
 	_, _, err := hj.CosSimJob.AddSrvWithSigmaPath(sigmaPath)
 	return err
 }

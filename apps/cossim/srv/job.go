@@ -26,6 +26,7 @@ import (
 
 type CosSimJobConfig struct {
 	Job              string
+	InitNSrv         int
 	NVec             int
 	VecDim           int
 	EagerInit        bool
@@ -36,9 +37,10 @@ type CosSimJobConfig struct {
 	DelegateInitRPCs bool
 }
 
-func NewCosSimJobConfig(job string, nvec int, vecDim int, eagerInit bool, srvMcpu proc.Tmcpu, ncache int, cacheMcpu proc.Tmcpu, cacheGC bool, delegateInitRPCs bool) *CosSimJobConfig {
+func NewCosSimJobConfig(job string, nsrv int, nvec int, vecDim int, eagerInit bool, srvMcpu proc.Tmcpu, ncache int, cacheMcpu proc.Tmcpu, cacheGC bool, delegateInitRPCs bool) *CosSimJobConfig {
 	return &CosSimJobConfig{
 		Job:              job,
+		InitNSrv:         nsrv,
 		NVec:             nvec,
 		VecDim:           vecDim,
 		EagerInit:        eagerInit,
@@ -300,5 +302,5 @@ func (j *CosSimJob) Stop() error {
 }
 
 func (cfg *CosSimJobConfig) String() string {
-	return fmt.Sprintf("&{ job:%v nvec:%v vecdim:%v eager:%v srvmcpu:%v ncache:%v cachemcpu:%v cachegc:%v delegatedinit:%v }", cfg.Job, cfg.NVec, cfg.VecDim, cfg.EagerInit, cfg.SrvMcpu, cfg.NCache, cfg.CacheMcpu, cfg.CacheGC, cfg.DelegateInitRPCs)
+	return fmt.Sprintf("&{ job:%v initNSrv:%v nvec:%v vecdim:%v eager:%v srvmcpu:%v ncache:%v cachemcpu:%v cachegc:%v delegatedinit:%v }", cfg.Job, cfg.InitNSrv, cfg.NVec, cfg.VecDim, cfg.EagerInit, cfg.SrvMcpu, cfg.NCache, cfg.CacheMcpu, cfg.CacheGC, cfg.DelegateInitRPCs)
 }

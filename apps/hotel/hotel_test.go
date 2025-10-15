@@ -86,7 +86,7 @@ func newTstate(mrts *test.MultiRealmTstate, srvs []*hotel.Srv, ncache int, geoNI
 	cossimSrvMcpu := proc.Tmcpu(3000)
 	cossimDelegateInitRPCs := false
 
-	csjConf := cossimsrv.NewCosSimJobConfig(ts.job, cossimNVec, cossimVecDim, cossimEagerInit, cossimSrvMcpu, ncache, CACHE_MCPU, true, cossimDelegateInitRPCs)
+	csjConf := cossimsrv.NewCosSimJobConfig(ts.job, 0, cossimNVec, cossimVecDim, cossimEagerInit, cossimSrvMcpu, ncache, CACHE_MCPU, true, cossimDelegateInitRPCs)
 
 	ts.hotel, err = hotel.NewHotelJob(ts.mrts.GetRealm(test.REALM1).SigmaClnt, ts.job, srvs, 80, cache, CACHE_MCPU, ncache, true, 0, 1, geoNIndex, geoSearchRadius, geoNResults, csjConf)
 	assert.Nil(ts.mrts.T, err, "Err new hotel job: %v", err)

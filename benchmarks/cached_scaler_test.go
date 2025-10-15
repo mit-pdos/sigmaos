@@ -61,40 +61,34 @@ type CachedScalerJobInstance struct {
 	lastScaled       time.Time
 	warmup           bool
 	// CosSim params
-	cossimBackend       bool
-	cossimNVec          int
-	cossimVecDim        int
-	cossimMCPU          proc.Tmcpu
-	cossimDelegatedInit bool
-	cossimNVecToQuery   int
-	cossimJ             *cossimsrv.CosSimJob
+	cossimBackend     bool
+	cossimNVecToQuery int
+	csCfg             *cossimsrv.CosSimJobConfig
+	cossimJ           *cossimsrv.CosSimJob
 	*test.RealmTstate
 }
 
-func NewCachedScalerJob(ts *test.RealmTstate, jobName string, durs string, maxrpss string, putDurs string, putMaxrpss string, ncache int, cacheMCPU proc.Tmcpu, cacheGC bool, useEPCache bool, nKV int, delegatedInit bool, topN int, scaleCached *ManualScalingConfig, scalerCachedCPP bool, scalerCachedRunSleeper bool, cossimBackend bool, cossimNVec int, cossimVecDim int, cossimMCPU proc.Tmcpu, cossimDelegatedInit bool, cossimNVecToQuery int) *CachedScalerJobInstance {
+func NewCachedScalerJob(ts *test.RealmTstate, jobName string, durs string, maxrpss string, putDurs string, putMaxrpss string, ncache int, cacheMCPU proc.Tmcpu, cacheGC bool, useEPCache bool, nKV int, delegatedInit bool, topN int, scaleCached *ManualScalingConfig, scalerCachedCPP bool, scalerCachedRunSleeper bool, cossimBackend bool, cossimNVecToQuery int, csCfg *cossimsrv.CosSimJobConfig) *CachedScalerJobInstance {
 	ji := &CachedScalerJobInstance{
-		RealmTstate:         ts,
-		sigmaos:             true,
-		jobName:             jobName,
-		ncache:              ncache,
-		cacheMCPU:           cacheMCPU,
-		cacheGC:             cacheGC,
-		useEPCache:          useEPCache,
-		useCPP:              scalerCachedCPP,
-		useSleeper:          scalerCachedRunSleeper,
-		cacheKIDs:           make(map[string]bool),
-		msc:                 mschedclnt.NewMSchedClnt(ts.SigmaClnt.FsLib, sp.NOT_SET),
-		nKV:                 nKV,
-		delegatedInit:       delegatedInit,
-		topN:                topN,
-		scaleCached:         scaleCached,
-		cossimBackend:       cossimBackend,
-		cossimNVec:          cossimNVec,
-		cossimVecDim:        cossimVecDim,
-		cossimMCPU:          cossimMCPU,
-		cossimDelegatedInit: cossimDelegatedInit,
-		cossimNVecToQuery:   cossimNVecToQuery,
-		ready:               make(chan bool),
+		RealmTstate:       ts,
+		sigmaos:           true,
+		jobName:           jobName,
+		ncache:            ncache,
+		cacheMCPU:         cacheMCPU,
+		cacheGC:           cacheGC,
+		useEPCache:        useEPCache,
+		useCPP:            scalerCachedCPP,
+		useSleeper:        scalerCachedRunSleeper,
+		cacheKIDs:         make(map[string]bool),
+		msc:               mschedclnt.NewMSchedClnt(ts.SigmaClnt.FsLib, sp.NOT_SET),
+		nKV:               nKV,
+		delegatedInit:     delegatedInit,
+		topN:              topN,
+		scaleCached:       scaleCached,
+		cossimBackend:     cossimBackend,
+		cossimNVecToQuery: cossimNVecToQuery,
+		csCfg:             csCfg,
+		ready:             make(chan bool),
 	}
 
 	durslice := strings.Split(durs, ",")
@@ -210,7 +204,7 @@ func NewCachedScalerJob(ts *test.RealmTstate, jobName string, durs string, maxrp
 	}
 
 	// Construct CosSim request input
-	cossimInputVec := cossim.VectorToSlice(cossim.NewVectors(1, ji.cossimVecDim)[0])
+	cossimInputVec := cossim.VectorToSlice(cossim.NewVectors(1, ji.csCfg.VecDim)[0])
 	ranges := []*cossimproto.VecRange{
 		&cossimproto.VecRange{
 			StartID: 0,
@@ -291,9 +285,7 @@ func NewCachedScalerJob(ts *test.RealmTstate, jobName string, durs string, maxrp
 	}
 	if ji.cossimBackend {
 		db.DPrintf(db.TEST, "Start cossimsrv")
-		eagerInit := true
-		conf := cossimsrv.NewCosSimJobConfig(ji.jobName, ji.cossimNVec, ji.cossimVecDim, eagerInit, ji.cossimMCPU, ji.ncache, ji.cossimMCPU, cacheGC, ji.cossimDelegatedInit)
-		ji.cossimJ, err = cossimsrv.NewCosSimJob(conf, ts.SigmaClnt, ji.epcj, ji.cm, ji.cc)
+		ji.cossimJ, err = cossimsrv.NewCosSimJob(ji.csCfg, ts.SigmaClnt, ji.epcj, ji.cm, ji.cc)
 		if !assert.Nil(ts.Ts.T, err, "Error NewCosSimJob: %v", err) {
 			return ji
 		}

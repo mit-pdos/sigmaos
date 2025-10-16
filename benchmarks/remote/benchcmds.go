@@ -646,7 +646,7 @@ func GetCosSimClientCmdConstructor(cossimReqName string, leader bool, numClients
 		if bcfg.Overlays {
 			overlays = "--overlays"
 		}
-		cfgStr, err := cosSimCfg.Marshal()
+		cfgJSON, err := cosSimCfg.Marshal()
 		if err != nil {
 			db.DFatalf("Err marshal cossim config: %v", err)
 		}
@@ -670,7 +670,7 @@ func GetCosSimClientCmdConstructor(cossimReqName string, leader bool, numClients
 			testName,
 			strconv.Itoa(numClients),
 			clientDelay.String(),
-			cfgStr,
+			cfgJSON,
 		)
 	}
 }

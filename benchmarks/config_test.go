@@ -3,6 +3,7 @@ package benchmarks_test
 import (
 	"encoding/json"
 	"flag"
+	"os"
 	"testing"
 
 	"sigmaos/benchmarks"
@@ -18,7 +19,7 @@ func init() {
 	flag.StringVar(&cossimBenchCfgStr, "cossim_bench_cfg", sp.NOT_SET, "JSON string for CosSimBenchConfig")
 }
 
-func TestMain(t *testing.M) {
+func TestMain(m *testing.M) {
 	flag.Parse()
 	if cossimBenchCfgStr != sp.NOT_SET {
 		err := json.Unmarshal([]byte(cossimBenchCfgStr), &CosSimBenchConfig)
@@ -27,4 +28,5 @@ func TestMain(t *testing.M) {
 		}
 		db.DPrintf(db.ALWAYS, "Loaded CosSimBenchConfig: %v", CosSimBenchConfig)
 	}
+	os.Exit(m.Run())
 }

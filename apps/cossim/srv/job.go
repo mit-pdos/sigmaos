@@ -25,14 +25,14 @@ import (
 )
 
 type CosSimJobConfig struct {
-	Job              string                       `json:"job"`
-	InitNSrv         int                          `json:"init_n_srv"`
-	NVec             int                          `json:"n_vec"`
-	VecDim           int                          `json:"vec_dim"`
-	EagerInit        bool                         `json:"eager_init"`
-	SrvMcpu          proc.Tmcpu                   `json:"srv_mcpu"`
+	Job              string                      `json:"job"`
+	InitNSrv         int                         `json:"init_n_srv"`
+	NVec             int                         `json:"n_vec"`
+	VecDim           int                         `json:"vec_dim"`
+	EagerInit        bool                        `json:"eager_init"`
+	SrvMcpu          proc.Tmcpu                  `json:"srv_mcpu"`
 	CacheCfg         *cachegrpmgr.CacheJobConfig `json:"cache_cfg"`
-	DelegateInitRPCs bool                         `json:"delegate_init_rpcs"`
+	DelegateInitRPCs bool                        `json:"delegate_init_rpcs"`
 }
 
 func NewCosSimJobConfig(job string, nsrv int, nvec int, vecDim int, eagerInit bool, srvMcpu proc.Tmcpu, cacheCfg *cachegrpmgr.CacheJobConfig, delegateInitRPCs bool) *CosSimJobConfig {
@@ -145,7 +145,7 @@ func NewCosSimJob(conf *CosSimJobConfig, sc *sigmaclnt.SigmaClnt, epcj *epsrv.EP
 	if cm == nil {
 		stopCaches = true
 		// Start the cachegrp job
-		cm, err = cachegrpmgr.NewCacheMgr(sc, conf.Job, conf.CacheCfg.NSrv, conf.CacheCfg.MCPU, conf.CacheCfg.GC)
+		cm, err = cachegrpmgr.NewCacheMgrEPCache(sc, epcj, conf.Job, conf.CacheCfg.NSrv, conf.CacheCfg.MCPU, conf.CacheCfg.GC)
 		if err != nil {
 			db.DPrintf(db.COSSIMSRV_ERR, "Err newCacheMgr: %v", err)
 			return nil, err

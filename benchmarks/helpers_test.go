@@ -272,13 +272,13 @@ func newNCachedJobs(ts *test.RealmTstate, n, nkeys, ncache, nclerks int, durstr 
 	return js, is
 }
 
-func newCachedScalerJobs(ts *test.RealmTstate, jobName string, durs string, maxrpss string, putDurs string, putMaxrpss string, ncache int, cacheMCPU proc.Tmcpu, cacheGC bool, useEPCache bool, nKV int, delegatedInit bool, topN int, scaleCached *benchmarks.ManualScalingConfig, scalerCachedCPP bool, scalerCachedRunSleeper bool, cossimBackend bool, cosSimCfg *benchmarks.CosSimBenchConfig) ([]*CachedScalerJobInstance, []interface{}) {
+func newCachedScalerJobs(ts *test.RealmTstate, jobName string, cacheCfg *benchmarks.CacheBenchConfig, cosSimCfg *benchmarks.CosSimBenchConfig) ([]*CachedScalerJobInstance, []interface{}) {
 	// n is ntrials, which is always 1.
 	n := 1
 	ws := make([]*CachedScalerJobInstance, 0, n)
 	is := make([]interface{}, 0, n)
 	for i := 0; i < n; i++ {
-		i := NewCachedScalerJob(ts, jobName, durs, maxrpss, putDurs, putMaxrpss, ncache, cacheMCPU, cacheGC, useEPCache, nKV, delegatedInit, topN, scaleCached, scalerCachedCPP, scalerCachedRunSleeper, cossimBackend, cosSimCfg)
+		i := NewCachedScalerJob(ts, jobName, cacheCfg, cosSimCfg)
 		ws = append(ws, i)
 		is = append(is, i)
 	}

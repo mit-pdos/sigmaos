@@ -1933,8 +1933,7 @@ func TestCachedScaler(t *testing.T) {
 	defer p.Done()
 
 	rs := benchmarks.NewResults(1, benchmarks.E2E)
-	scaleCached := benchmarks.NewManualScalingConfig("scaler-cached", MANUALLY_SCALE_SCALER_CACHED, SCALE_SCALER_CACHED_DELAY, 1)
-	jobs, ji := newCachedScalerJobs(mrts.GetRealm(REALM1), jobName, SCALER_CACHED_DURS, SCALER_CACHED_MAX_RPS, SCALER_CACHED_PUT_DURS, SCALER_CACHED_PUT_MAX_RPS, SCALER_CACHED_NCACHE, proc.Tmcpu(SCALER_CACHED_CACHE_MCPU), true, SCALER_CACHED_USE_EPCACHE, SCALER_CACHED_NKEYS, SCALER_CACHED_DELEGATE_INIT, SCALER_CACHED_TOP_N_SHARDS, scaleCached, SCALER_CACHED_CPP, SCALER_CACHED_RUN_SLEEPER, SCALER_CACHED_COSSIM_BACKEND, CosSimBenchConfig)
+	jobs, ji := newCachedScalerJobs(mrts.GetRealm(REALM1), jobName, CacheBenchConfig, CosSimBenchConfig)
 	go func() {
 		for _, j := range jobs {
 			// Wait until ready

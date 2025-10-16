@@ -60,7 +60,9 @@ func NewCosSimJob(ts *test.RealmTstate, p *perf.Perf, epcj *epsrv.EPCacheJob, cm
 		db.DPrintf(db.TEST, "Create new CosSim job")
 		// Only start one cache if autoscaling.
 		ji.j, err = cossimsrv.NewCosSimJob(ji.cfg.GetJobConfig(), ts.SigmaClnt, epcj, cm, cc)
-		assert.Nil(ts.Ts.T, err, "Error NewCosSimJob: %v", err)
+		if !assert.Nil(ts.Ts.T, err, "Error NewCosSimJob: %v", err) {
+			return ji
+		}
 		db.DPrintf(db.TEST, "New CosSim job created")
 		for i := 0; i < ji.cfg.JobCfg.InitNSrv; i++ {
 			db.DPrintf(db.TEST, "Add initial cossim server %v", i)

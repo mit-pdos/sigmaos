@@ -83,15 +83,6 @@ var N_GEO_TO_ADD int
 var SCALE_GEO_DELAY time.Duration
 var SCALE_CACHE_DELAY time.Duration
 var N_CACHES_TO_ADD int
-var COSSIM_DELEGATE_INIT bool
-var COSSIM_NCACHE int
-var COSSIM_CACHE_MCPU int
-var COSSIM_SRV_MCPU int
-var NCOSSIM int
-var COSSIM_NVEC int
-var COSSIM_NVEC_TO_QUERY int
-var COSSIM_VEC_DIM int
-var COSSIM_EAGER_INIT bool
 var BACKUP_CACHED_NCACHE int
 var BACKUP_CACHED_CACHE_MCPU int
 var BACKUP_CACHED_USE_EPCACHE bool
@@ -120,11 +111,8 @@ var SCALER_CACHED_PUT_MAX_RPS string
 var SCALE_SCALER_CACHED_DELAY time.Duration
 var MANUALLY_SCALE_SCALER_CACHED bool
 var MANUALLY_SCALE_COSSIM bool
-var N_COSSIM_TO_ADD int
-var SCALE_COSSIM_DELAY time.Duration
 var CACHE_TYPE string
 var CACHE_GC bool
-var COSSIM_CACHE_GC bool
 var BLOCK_MEM string
 var N_REALM int
 var ASYNCRW bool
@@ -135,8 +123,6 @@ var DURATION time.Duration
 var MAX_RPS int
 var HOTEL_DURS string
 var HOTEL_MAX_RPS string
-var COSSIM_DURS string
-var COSSIM_MAX_RPS string
 var SOCIAL_NETWORK_DURS string
 var SOCIAL_NETWORK_MAX_RPS string
 var SOCIAL_NETWORK_READ_ONLY bool
@@ -202,15 +188,6 @@ func init() {
 	flag.IntVar(&N_HOTEL, "nhotel", 80, "Number of hotels in the dataset.")
 	flag.BoolVar(&HOTEL_CACHE_AUTOSCALE, "hotel_cache_autoscale", false, "Autoscale hotel cache")
 	flag.BoolVar(&HOTEL_USE_MATCH, "hotel_use_match", false, "Use match service in hotel application")
-	flag.IntVar(&NCOSSIM, "ncossim", 1, "Cossim nsrv")
-	flag.IntVar(&COSSIM_NCACHE, "cossim_ncache", 1, "Cossim ncache")
-	flag.IntVar(&COSSIM_CACHE_MCPU, "cossim_cache_mcpu", 2000, "Cossim cache mcpu")
-	flag.IntVar(&COSSIM_SRV_MCPU, "cossim_srv_mcpu", 2000, "Cossim server mcpu")
-	flag.IntVar(&COSSIM_NVEC, "cossim_nvec", 101, "Number of vectors in the cossim DB")
-	flag.IntVar(&COSSIM_NVEC_TO_QUERY, "cossim_nvec_to_query", 101, "Number of vectors to query in the cossim DB")
-	flag.IntVar(&COSSIM_VEC_DIM, "cossim_vec_dim", 100, "Dimension of each vector in the cossim DB")
-	flag.BoolVar(&COSSIM_EAGER_INIT, "cossim_eager_init", false, "Initialize cossim server eagerly")
-	flag.BoolVar(&COSSIM_DELEGATE_INIT, "cossim_delegated_init", false, "Cossim")
 	flag.IntVar(&BACKUP_CACHED_NCACHE, "backup_cached_ncache", 1, "Backup ncache")
 	flag.IntVar(&BACKUP_CACHED_CACHE_MCPU, "backup_cached_mcpu", 1000, "Backup cached mcpu")
 	flag.IntVar(&BACKUP_CACHED_NKEYS, "backup_cached_nkeys", 5000, "Backup cached nkeys")
@@ -245,7 +222,6 @@ func init() {
 	flag.IntVar(&N_CACHES_TO_ADD, "n_caches_to_add", 0, "Number of caches to add.")
 	flag.StringVar(&CACHE_TYPE, "cache_type", "cached", "Hotel cache type (cached).")
 	flag.BoolVar(&CACHE_GC, "cache_gc", false, "Turn hotel cache GC on (true) or off (false).")
-	flag.BoolVar(&COSSIM_CACHE_GC, "cossim_cache_gc", true, "Turn hotel cache GC on (true) or off (false).")
 	flag.StringVar(&BLOCK_MEM, "block_mem", "0MB", "Amount of physical memory to block on every machine.")
 	flag.StringVar(&MEMCACHED_ADDRS, "memcached", "", "memcached server addresses (comma-separated).")
 	flag.StringVar(&HTTP_URL, "http_url", "http://x.x.x.x", "HTTP url.")
@@ -253,11 +229,6 @@ func init() {
 	flag.IntVar(&MAX_RPS, "max_rps", 1000, "Max requests per second.")
 	flag.StringVar(&HOTEL_DURS, "hotel_dur", "10s", "Hotel benchmark load generation duration (comma-separated for multiple phases).")
 	flag.StringVar(&HOTEL_MAX_RPS, "hotel_max_rps", "1000", "Max requests/second for hotel bench (comma-separated for multiple phases).")
-	flag.StringVar(&COSSIM_DURS, "cossim_dur", "10s", "Cossim benchmark load generation duration (comma-separated for multiple phases).")
-	flag.StringVar(&COSSIM_MAX_RPS, "cossim_max_rps", "1", "Max requests/second for cossim bench (comma-separated for multiple phases).")
-	flag.BoolVar(&MANUALLY_SCALE_COSSIM, "manually_scale_cossim", false, "Manually scale geos")
-	flag.DurationVar(&SCALE_COSSIM_DELAY, "scale_cossim_delay", 0*time.Second, "Delay to wait before scaling up number of geos.")
-	flag.IntVar(&N_COSSIM_TO_ADD, "n_cossim_to_add", 0, "Number of geo to add.")
 	flag.StringVar(&SOCIAL_NETWORK_DURS, "sn_dur", "10s", "Social network benchmark load generation duration (comma-separated for multiple phases).")
 	flag.StringVar(&SOCIAL_NETWORK_MAX_RPS, "sn_max_rps", "1000", "Max requests/second for social network bench (comma-separated for multiple phases).")
 	flag.BoolVar(&SOCIAL_NETWORK_READ_ONLY, "sn_read_only", false, "send read only cases in social network bench")
@@ -1924,11 +1895,11 @@ func TestCosSim(t *testing.T) {
 	defer p.Done()
 
 	// Construct input vec
-	v := cossim.VectorToSlice(cossim.NewVectors(1, COSSIM_VEC_DIM)[0])
+	v := cossim.VectorToSlice(cossim.NewVectors(1, CosSimBenchConfig.JobCfg.VecDim)[0])
 	ranges := []*cossimproto.VecRange{
 		&cossimproto.VecRange{
 			StartID: 0,
-			EndID:   uint64(COSSIM_NVEC_TO_QUERY - 1),
+			EndID:   uint64(CosSimBenchConfig.NVecToQuery - 1),
 		},
 	}
 

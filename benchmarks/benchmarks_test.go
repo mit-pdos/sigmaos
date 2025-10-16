@@ -82,21 +82,6 @@ var N_GEO_TO_ADD int
 var SCALE_GEO_DELAY time.Duration
 var SCALE_CACHE_DELAY time.Duration
 var N_CACHES_TO_ADD int
-var SCALER_CACHED_CPP bool
-var SCALER_CACHED_RUN_SLEEPER bool
-var SCALER_CACHED_NCACHE int
-var SCALER_CACHED_CACHE_MCPU int
-var SCALER_CACHED_COSSIM_BACKEND bool
-var SCALER_CACHED_USE_EPCACHE bool
-var SCALER_CACHED_DELEGATE_INIT bool
-var SCALER_CACHED_NKEYS int
-var SCALER_CACHED_TOP_N_SHARDS int
-var SCALER_CACHED_DURS string
-var SCALER_CACHED_MAX_RPS string
-var SCALER_CACHED_PUT_DURS string
-var SCALER_CACHED_PUT_MAX_RPS string
-var SCALE_SCALER_CACHED_DELAY time.Duration
-var MANUALLY_SCALE_SCALER_CACHED bool
 var MANUALLY_SCALE_COSSIM bool
 var CACHE_TYPE string
 var CACHE_GC bool
@@ -175,20 +160,6 @@ func init() {
 	flag.IntVar(&N_HOTEL, "nhotel", 80, "Number of hotels in the dataset.")
 	flag.BoolVar(&HOTEL_CACHE_AUTOSCALE, "hotel_cache_autoscale", false, "Autoscale hotel cache")
 	flag.BoolVar(&HOTEL_USE_MATCH, "hotel_use_match", false, "Use match service in hotel application")
-	flag.IntVar(&SCALER_CACHED_NCACHE, "scaler_cached_ncache", 1, "Scaler ncache")
-	flag.IntVar(&SCALER_CACHED_CACHE_MCPU, "scaler_cached_mcpu", 1000, "Scaler cached mcpu")
-	flag.IntVar(&SCALER_CACHED_NKEYS, "scaler_cached_nkeys", 5000, "Scaler cached nkeys")
-	flag.BoolVar(&SCALER_CACHED_CPP, "scaler_cached_cpp", false, "Scaler cached use CPP version")
-	flag.BoolVar(&SCALER_CACHED_RUN_SLEEPER, "scaler_cached_run_sleeper", false, "Run a sleeper to block a machine for scaler cached to cache its bin on")
-	flag.BoolVar(&SCALER_CACHED_COSSIM_BACKEND, "scaler_cached_cossim_backend", false, "Scaler cached use cossim as backend")
-	flag.BoolVar(&SCALER_CACHED_USE_EPCACHE, "scaler_cached_use_epcache", false, "Scaler cached use epcache")
-	flag.BoolVar(&SCALER_CACHED_DELEGATE_INIT, "scaler_cached_delegated_init", false, "Scaler cached delegate init")
-	flag.StringVar(&SCALER_CACHED_DURS, "scaler_cached_dur", "10s", "Scaler cached benchmark load generation duration (comma-separated for multiple phases).")
-	flag.StringVar(&SCALER_CACHED_MAX_RPS, "scaler_cached_max_rps", "100", "Scaler cached benchmark load generation duration (comma-separated for multiple phases).")
-	flag.StringVar(&SCALER_CACHED_PUT_DURS, "scaler_cached_put_dur", "10s", "Scaler cached benchmark load generation duration (comma-separated for multiple phases).")
-	flag.StringVar(&SCALER_CACHED_PUT_MAX_RPS, "scaler_cached_put_max_rps", "100", "Scaler cached benchmark load generation duration (comma-separated for multiple phases).")
-	flag.BoolVar(&MANUALLY_SCALE_SCALER_CACHED, "manually_scale_scaler_cached", false, "Manually scale scaler cached")
-	flag.DurationVar(&SCALE_SCALER_CACHED_DELAY, "scale_scaler_cached_delay", 0*time.Second, "Delay to wait before scaling number of scaler cacheds.")
 	flag.BoolVar(&MANUALLY_SCALE_GEO, "manually_scale_geo", false, "Manually scale geos")
 	flag.DurationVar(&SCALE_GEO_DELAY, "scale_geo_delay", 0*time.Second, "Delay to wait before scaling up number of geos.")
 	flag.IntVar(&N_GEO_TO_ADD, "n_geo_to_add", 0, "Number of geo to add.")

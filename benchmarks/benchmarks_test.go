@@ -10,7 +10,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	cachesrv "sigmaos/apps/cache/srv"
 	"sigmaos/apps/cossim"
 	cossimproto "sigmaos/apps/cossim/proto"
 	cossimsrv "sigmaos/apps/cossim/srv"
@@ -83,18 +82,6 @@ var N_GEO_TO_ADD int
 var SCALE_GEO_DELAY time.Duration
 var SCALE_CACHE_DELAY time.Duration
 var N_CACHES_TO_ADD int
-var BACKUP_CACHED_NCACHE int
-var BACKUP_CACHED_CACHE_MCPU int
-var BACKUP_CACHED_USE_EPCACHE bool
-var BACKUP_CACHED_DELEGATE_INIT bool
-var BACKUP_CACHED_NKEYS int
-var BACKUP_CACHED_TOP_N_SHARDS int
-var BACKUP_CACHED_DURS string
-var BACKUP_CACHED_MAX_RPS string
-var BACKUP_CACHED_PUT_DURS string
-var BACKUP_CACHED_PUT_MAX_RPS string
-var SCALE_BACKUP_CACHED_DELAY time.Duration
-var MANUALLY_SCALE_BACKUP_CACHED bool
 var SCALER_CACHED_CPP bool
 var SCALER_CACHED_RUN_SLEEPER bool
 var SCALER_CACHED_NCACHE int
@@ -188,18 +175,6 @@ func init() {
 	flag.IntVar(&N_HOTEL, "nhotel", 80, "Number of hotels in the dataset.")
 	flag.BoolVar(&HOTEL_CACHE_AUTOSCALE, "hotel_cache_autoscale", false, "Autoscale hotel cache")
 	flag.BoolVar(&HOTEL_USE_MATCH, "hotel_use_match", false, "Use match service in hotel application")
-	flag.IntVar(&BACKUP_CACHED_NCACHE, "backup_cached_ncache", 1, "Backup ncache")
-	flag.IntVar(&BACKUP_CACHED_CACHE_MCPU, "backup_cached_mcpu", 1000, "Backup cached mcpu")
-	flag.IntVar(&BACKUP_CACHED_NKEYS, "backup_cached_nkeys", 5000, "Backup cached nkeys")
-	flag.IntVar(&BACKUP_CACHED_TOP_N_SHARDS, "backup_cached_top_n", cachesrv.GET_ALL_SHARDS, "Backup cached top n shards")
-	flag.BoolVar(&BACKUP_CACHED_USE_EPCACHE, "backup_cached_use_epcache", false, "Backup cached use epcache")
-	flag.BoolVar(&BACKUP_CACHED_DELEGATE_INIT, "backup_cached_delegated_init", false, "Backup cached delegate init")
-	flag.StringVar(&BACKUP_CACHED_DURS, "backup_cached_dur", "10s", "Backup cached benchmark load generation duration (comma-separated for multiple phases).")
-	flag.StringVar(&BACKUP_CACHED_MAX_RPS, "backup_cached_max_rps", "100", "Backup cached benchmark load generation duration (comma-separated for multiple phases).")
-	flag.StringVar(&BACKUP_CACHED_PUT_DURS, "backup_cached_put_dur", "10s", "Backup cached benchmark load generation duration (comma-separated for multiple phases).")
-	flag.StringVar(&BACKUP_CACHED_PUT_MAX_RPS, "backup_cached_put_max_rps", "100", "Backup cached benchmark load generation duration (comma-separated for multiple phases).")
-	flag.BoolVar(&MANUALLY_SCALE_BACKUP_CACHED, "manually_scale_backup_cached", false, "Manually scale backup cached")
-	flag.DurationVar(&SCALE_BACKUP_CACHED_DELAY, "scale_backup_cached_delay", 0*time.Second, "Delay to wait before scaling number of backup cacheds.")
 	flag.IntVar(&SCALER_CACHED_NCACHE, "scaler_cached_ncache", 1, "Scaler ncache")
 	flag.IntVar(&SCALER_CACHED_CACHE_MCPU, "scaler_cached_mcpu", 1000, "Scaler cached mcpu")
 	flag.IntVar(&SCALER_CACHED_NKEYS, "scaler_cached_nkeys", 5000, "Scaler cached nkeys")
@@ -1930,58 +1905,6 @@ func TestCosSim(t *testing.T) {
 	db.DPrintf(db.TEST, "Run cossim")
 	runOps(ts1, ji, runCosSim, rs)
 	db.DPrintf(db.TEST, "Done run cossim")
-	//	printResultSummary(rs)
-	if sigmaos {
-		mrts.Shutdown()
-	}
-}
-
-func TestCachedBackup(t *testing.T) {
-	const (
-		sigmaos = true
-		jobName = "cached-job"
-	)
-
-	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{REALM1})
-	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
-		return
-	}
-	defer mrts.Shutdown()
-
-	if PREWARM_REALM {
-		benchmarks.WarmupRealm(mrts.GetRealm(REALM1), []string{"cached-backup"})
-	}
-
-	ts1 := mrts.GetRealm(REALM1)
-
-	p := newRealmPerf(mrts.GetRealm(REALM1))
-	defer p.Done()
-
-	rs := benchmarks.NewResults(1, benchmarks.E2E)
-	scaleBackupCached := benchmarks.NewManualScalingConfig("backup-cached", MANUALLY_SCALE_BACKUP_CACHED, SCALE_BACKUP_CACHED_DELAY, 1)
-	jobs, ji := newCachedBackupJobs(mrts.GetRealm(REALM1), jobName, BACKUP_CACHED_DURS, BACKUP_CACHED_MAX_RPS, BACKUP_CACHED_PUT_DURS, BACKUP_CACHED_PUT_MAX_RPS, BACKUP_CACHED_NCACHE, proc.Tmcpu(BACKUP_CACHED_CACHE_MCPU), true, BACKUP_CACHED_USE_EPCACHE, BACKUP_CACHED_NKEYS, BACKUP_CACHED_DELEGATE_INIT, BACKUP_CACHED_TOP_N_SHARDS, scaleBackupCached)
-	go func() {
-		for _, j := range jobs {
-			// Wait until ready
-			<-j.ready
-			if N_CLNT > 1 {
-				// Wait for clients to start up on other machines.
-				db.DPrintf(db.ALWAYS, "Leader waiting for clnts")
-				waitForClnts(mrts.GetRoot(), N_CLNT)
-				db.DPrintf(db.ALWAYS, "Leader done waiting for clnts")
-			}
-			// Ack to allow the job to proceed.
-			j.ready <- true
-		}
-	}()
-	if sigmaos {
-		p := newRealmPerf(ts1)
-		defer p.Done()
-		monitorCPUUtil(ts1, p)
-	}
-	db.DPrintf(db.TEST, "Run cached backup job")
-	runOps(ts1, ji, runCachedBackup, rs)
-	db.DPrintf(db.TEST, "Done run cached backup job")
 	//	printResultSummary(rs)
 	if sigmaos {
 		mrts.Shutdown()

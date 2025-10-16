@@ -33,3 +33,28 @@ var DefaultCosSimBenchConfig = &CosSimBenchConfig{
 		NToAdd:     0,
 	},
 }
+
+var DefaultCacheBenchConfig = &CacheBenchConfig{
+	JobCfg: &cachegrpmgr.CacheJobConfig{
+		NSrv: 1,
+		MCPU: proc.Tmcpu(1000),
+		GC:   true,
+	},
+	CPP:           false,
+	RunSleeper:    false,
+	CosSimBackend: false,
+	UseEPCache:    false,
+	DelegateInit:  false,
+	NKeys:         1000,
+	TopNShards:    1,
+	Durs:          []time.Duration{10 * time.Second},
+	MaxRPS:        []int{100},
+	PutDurs:       []time.Duration{5 * time.Second},
+	PutMaxRPS:     []int{50},
+	Scale: &ManualScalingConfig{
+		Svc:        "cached",
+		Scale:      false,
+		ScaleDelay: 0 * time.Second,
+		NToAdd:     0,
+	},
+}

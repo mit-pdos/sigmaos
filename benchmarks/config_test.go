@@ -26,6 +26,5 @@ func TestMain(t *testing.M) {
 			db.DFatalf("Error unmarshaling cossim_bench_cfg: %v", err)
 		}
 		db.DPrintf(db.ALWAYS, "Loaded CosSimBenchConfig: %v", CosSimBenchConfig)
-		db.DFatalf("Heh")
 	}
 }

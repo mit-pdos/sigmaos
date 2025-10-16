@@ -85,4 +85,10 @@ var DefaultHotelBenchConfig = &HotelBenchConfig{
 		ScaleDelay: 0 * time.Second,
 		NToAdd:     0,
 	},
+	ScaleCache: &ManualScalingConfig{
+		Svc:        "cached",
+		Scale:      false,
+		ScaleDelay: 0 * time.Second,
+		NToAdd:     0,
+	},
 }

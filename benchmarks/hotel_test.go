@@ -35,7 +35,6 @@ type HotelJobInstance struct {
 	justCli      bool
 	k8ssrvaddr   string
 	cfg          *benchmarks.HotelBenchConfig
-	scaleCache   *benchmarks.ManualScalingConfig
 	ready        chan bool
 	msc          *mschedclnt.MSchedClnt
 	cosSimCfg    *benchmarks.CosSimBenchConfig
@@ -52,7 +51,7 @@ type HotelJobInstance struct {
 	*test.RealmTstate
 }
 
-func NewHotelJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, fn hotelFn, justCli bool, cfg *benchmarks.HotelBenchConfig, scaleCache *benchmarks.ManualScalingConfig, cosSimCfg *benchmarks.CosSimBenchConfig) *HotelJobInstance {
+func NewHotelJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, fn hotelFn, justCli bool, cfg *benchmarks.HotelBenchConfig, cosSimCfg *benchmarks.CosSimBenchConfig) *HotelJobInstance {
 	ji := &HotelJobInstance{}
 	ji.sigmaos = sigmaos
 	ji.ready = make(chan bool)
@@ -61,7 +60,6 @@ func NewHotelJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, fn hotelFn, j
 	ji.p = p
 	ji.justCli = justCli
 	ji.cfg = cfg
-	ji.scaleCache = scaleCache
 	ji.cosSimCfg = cosSimCfg
 	ji.cossimKIDs = make(map[string]bool)
 	ji.cacheKIDs = make(map[string]bool)
@@ -200,10 +198,10 @@ func (ji *HotelJobInstance) scaleCaches() {
 	if ji.justCli {
 		return
 	}
-	if ji.scaleCache.GetShouldScale() {
+	if ji.cfg.ScaleCache.GetShouldScale() {
 		go func() {
-			time.Sleep(ji.scaleCache.GetScalingDelay())
-			ji.hj.CacheAutoscaler.AddServers(ji.scaleCache.GetNToAdd())
+			time.Sleep(ji.cfg.ScaleCache.GetScalingDelay())
+			ji.hj.CacheAutoscaler.AddServers(ji.cfg.ScaleCache.GetNToAdd())
 		}()
 	}
 }
@@ -231,7 +229,7 @@ func (ji *HotelJobInstance) scaleCosSimSrv() {
 }
 
 func (ji *HotelJobInstance) StartHotelJob() {
-	db.DPrintf(db.ALWAYS, "StartHotelJob kubernetes (%v,%v) scaleCache:%v cfg:%v cossim:%v", !ji.sigmaos, ji.k8ssrvaddr, ji.scaleCache, ji.cfg, ji.cosSimCfg)
+	db.DPrintf(db.ALWAYS, "StartHotelJob kubernetes (%v,%v) cfg:%v cossim:%v", !ji.sigmaos, ji.k8ssrvaddr, ji.cfg, ji.cosSimCfg)
 	var wg sync.WaitGroup
 	for _, lg := range ji.lgs {
 		wg.Add(1)

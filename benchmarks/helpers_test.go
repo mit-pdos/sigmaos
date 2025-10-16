@@ -302,26 +302,26 @@ func newMSchedJobs(ts *test.RealmTstate, nclnt int, dur string, maxrps string, p
 
 // ========== Hotel Helpers ==========
 
-func newHotelJobs(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, scaleCache *benchmarks.ManualScalingConfig, cfg *benchmarks.HotelBenchConfig, cosSimCfg *benchmarks.CosSimBenchConfig, fn hotelFn) ([]*HotelJobInstance, []interface{}) {
+func newHotelJobs(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, cfg *benchmarks.HotelBenchConfig, cosSimCfg *benchmarks.CosSimBenchConfig, fn hotelFn) ([]*HotelJobInstance, []interface{}) {
 	// n is ntrials, which is always 1.
 	n := 1
 	ws := make([]*HotelJobInstance, 0, n)
 	is := make([]interface{}, 0, n)
 	for i := 0; i < n; i++ {
-		i := NewHotelJob(ts, p, sigmaos, fn, false, cfg, scaleCache, cosSimCfg)
+		i := NewHotelJob(ts, p, sigmaos, fn, false, cfg, cosSimCfg)
 		ws = append(ws, i)
 		is = append(is, i)
 	}
 	return ws, is
 }
 
-func newHotelJobsCli(ts *test.RealmTstate, sigmaos bool, scaleCache *benchmarks.ManualScalingConfig, cfg *benchmarks.HotelBenchConfig, fn hotelFn) ([]*HotelJobInstance, []interface{}) {
+func newHotelJobsCli(ts *test.RealmTstate, sigmaos bool, cfg *benchmarks.HotelBenchConfig, fn hotelFn) ([]*HotelJobInstance, []interface{}) {
 	// n is ntrials, which is always 1.
 	n := 1
 	ws := make([]*HotelJobInstance, 0, n)
 	is := make([]interface{}, 0, n)
 	for i := 0; i < n; i++ {
-		i := NewHotelJob(ts, nil, sigmaos, fn, true, cfg, scaleCache, nil)
+		i := NewHotelJob(ts, nil, sigmaos, fn, true, cfg, nil)
 		ws = append(ws, i)
 		is = append(is, i)
 	}

@@ -10,6 +10,9 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	cachegrpmgr "sigmaos/apps/cache/cachegrp/mgr"
+	cossimsrv "sigmaos/apps/cossim/srv"
+	"sigmaos/benchmarks"
 	db "sigmaos/debug"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
@@ -18,14 +21,14 @@ import (
 func init() {
 	flag.StringVar(&platformArg, "platform", sp.NOT_SET, "Platform on which to run. Currently, only [aws|cloudlab] are supported")
 	flag.StringVar(&vpcArg, "vpc", sp.NOT_SET, "VPC in which to run. Need not be specified for Cloudlab.")
-	flag.StringVar(&tagArg, "tag", sp.NOT_SET, "Build tag with which to run.")
+	flag.StringVar(&tagArg, "build-tag", sp.NOT_SET, "Build tag with which to run.")
 	flag.StringVar(&branchArg, "branch", "master", "Branch on which to run.")
-	flag.StringVar(&versionArg, "version", sp.NOT_SET, "Output version string.")
-	flag.BoolVar(&noNetproxyArg, "nodialproxy", false, "Disable use of proxy for network dialing/listening.")
+	flag.StringVar(&versionArg, "bench-version", sp.NOT_SET, "Output version string.")
+	flag.BoolVar(&noNetproxyArg, "no-dialproxy", false, "Disable use of proxy for network dialing/listening.")
 	flag.BoolVar(&overlaysArg, "overlays", false, "Run with Docker swarm overlays enabled.")
 	flag.BoolVar(&parallelArg, "parallelize", false, "Run commands in parallel to speed up, e.g., cluster shutdown.")
 	flag.BoolVar(&oneByOne, "one-by-one", false, "Run one benchmark part, and then return")
-	flag.BoolVar(&noShutdownArg, "no-shutdown", false, "Avoid shutting down the cluster after running a benchmark (useful for debugging).")
+	flag.BoolVar(&noShutdownArg, "no-shutdown-after-test", false, "Avoid shutting down the cluster after running a benchmark (useful for debugging).")
 	flag.BoolVar(&k8sArg, "k8s", false, "Run the k8s version of the experiment.")
 	proc.SetSigmaDebugPid("remote-bench")
 }
@@ -841,7 +844,6 @@ func TestScaleCosSim(t *testing.T) {
 		dur                   []time.Duration = []time.Duration{5 * time.Second, 30 * time.Second, 30 * time.Second}
 		numCosSimBase         int             = 1
 		nCache                []int           = []int{1, 2, 4}
-		scaleCache            bool            = false
 		clientDelay           time.Duration   = 0 * time.Second
 		sleep                 time.Duration   = 0 * time.Second
 		nvec                  int             = 10000
@@ -853,6 +855,8 @@ func TestScaleCosSim(t *testing.T) {
 		scaleCosSimDelayBase  time.Duration   = 35 * time.Second
 		scaleCosSimExtraDelay []time.Duration = []time.Duration{0}
 		nAdditionalCosSim     []int           = []int{0, 1}
+		cossimMcpu            proc.Tmcpu      = 4000
+		cacheMcpu             proc.Tmcpu      = 2000
 	)
 	ts, err := NewTstate(t)
 	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {
@@ -898,8 +902,18 @@ func TestScaleCosSim(t *testing.T) {
 								numCosSim += numCosSimToAdd
 								benchName += "_no_scale_cossim_nsrv_" + strconv.Itoa(numCosSim)
 							}
-							getLeaderCmd := GetCosSimClientCmdConstructor("CosSim", true, len(driverVMs), rps, dur, numCaches, scaleCache, sleep, false, 0, 0, numCosSim, nvec, nvecToQuery, vecDim, eager, delegate, scale, scaleCosSimDelay, numCosSimToAdd)
-							getFollowerCmd := GetCosSimClientCmdConstructor("CosSim", false, len(driverVMs), rps, dur, numCaches, scaleCache, sleep, false, 0, 0, numCosSim, nvec, nvecToQuery, vecDim, eager, delegate, scale, scaleCosSimDelay, numCosSimToAdd)
+							cacheCfg := cachegrpmgr.NewCacheJobConfig(numCaches, cacheMcpu, true)
+							jobCfg := cossimsrv.NewCosSimJobConfig("cossim", numCosSim, nvec, vecDim, eager, cossimMcpu, cacheCfg, delegate)
+							scaleCosSim := benchmarks.NewManualScalingConfig("cossim", scale, scaleCosSimDelay, numCosSimToAdd)
+							cfg := &benchmarks.CosSimBenchConfig{
+								JobCfg:      jobCfg,
+								NVecToQuery: nvecToQuery,
+								Durs:        dur,
+								MaxRPS:      rps,
+								Scale:       scaleCosSim,
+							}
+							getLeaderCmd := GetCosSimClientCmdConstructor("CosSim", true, len(driverVMs), sleep, cfg)
+							getFollowerCmd := GetCosSimClientCmdConstructor("CosSim", false, len(driverVMs), sleep, cfg)
 							ran := ts.RunParallelClientBenchmark(benchName, driverVMs, getLeaderCmd, getFollowerCmd, startK8sHotelApp, stopK8sHotelApp, clientDelay, numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost)
 							if oneByOne && ran {
 								return

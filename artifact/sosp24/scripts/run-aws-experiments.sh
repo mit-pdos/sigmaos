@@ -62,7 +62,7 @@ if [ $EXP == "all" ] || [ $EXP == "fig_6" ]; then
     rm -rf benchmarks/results/$VERSION/cold_start
   fi
   echo "Generating Figure 6 data..."
-  go clean -testcache; go test -v -timeout 0 sigmaos/benchmarks/remote --run TestColdStart --parallelize --platform aws --vpc $AWS_VPC_SMALL --tag sosp24ae --no-shutdown --version $VERSION --branch sosp24ae 2>&1 | tee $LOG_DIR/fig6.out
+  go clean -testcache; go test -v -timeout 0 sigmaos/benchmarks/remote --run TestColdStart --parallelize --platform aws --vpc $AWS_VPC_SMALL --build-tag sosp24ae --no-shutdown-after-test --bench-version $VERSION --branch sosp24ae 2>&1 | tee $LOG_DIR/fig6.out
   echo "Done generating Figure 6 data..."
 fi
 
@@ -78,8 +78,8 @@ if [ $EXP == "all" ] || [ $EXP == "fig_10" ]; then
     rm -rf benchmarks/results/$VERSION/mr_vs_corral
   fi
   echo "Generating Figure 10 data..."
-  go clean -testcache; go test -v -timeout 0 sigmaos/benchmarks/remote --run TestMR --parallelize --platform aws --vpc $AWS_VPC_LARGE --tag sosp24ae --no-shutdown --version $VERSION --branch sosp24ae 2>&1 | tee $LOG_DIR/fig10-mr.out
-  go clean -testcache; go test -v -timeout 0 sigmaos/benchmarks/remote --run TestCorral --parallelize --platform aws --vpc $AWS_VPC_LARGE --tag sosp24ae --no-shutdown --version $VERSION --branch sosp24ae 2>&1 | tee $LOG_DIR/fig10-corral.out
+  go clean -testcache; go test -v -timeout 0 sigmaos/benchmarks/remote --run TestMR --parallelize --platform aws --vpc $AWS_VPC_LARGE --build-tag sosp24ae --no-shutdown-after-test --bench-version $VERSION --branch sosp24ae 2>&1 | tee $LOG_DIR/fig10-mr.out
+  go clean -testcache; go test -v -timeout 0 sigmaos/benchmarks/remote --run TestCorral --parallelize --platform aws --vpc $AWS_VPC_LARGE --build-tag sosp24ae --no-shutdown-after-test --bench-version $VERSION --branch sosp24ae 2>&1 | tee $LOG_DIR/fig10-corral.out
   echo "Done generating Figure 10 data..."
 fi
 
@@ -95,7 +95,7 @@ if [ $EXP == "all" ] || [ $EXP == "fig_12" ]; then
     rm -rf benchmarks/results/$VERSION/be_imgresize_multiplexing
   fi
   echo "Generating Figure 12 data..."
-  go clean -testcache; go test -v -timeout 0 sigmaos/benchmarks/remote --run TestBEImgresizeMultiplexing --parallelize --platform aws --vpc $AWS_VPC_LARGE --tag sosp24ae --no-shutdown --version $VERSION --branch sosp24ae 2>&1 | tee $LOG_DIR/fig12.out
+  go clean -testcache; go test -v -timeout 0 sigmaos/benchmarks/remote --run TestBEImgresizeMultiplexing --parallelize --platform aws --vpc $AWS_VPC_LARGE --build-tag sosp24ae --no-shutdown-after-test --bench-version $VERSION --branch sosp24ae 2>&1 | tee $LOG_DIR/fig12.out
   echo "Done generating Figure 12 data..."
 fi
 

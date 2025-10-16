@@ -62,7 +62,7 @@ if [ $EXP == "all" ] || [ $EXP == "fig_8" ]; then
     rm -rf benchmarks/results/$VERSION/sched_scalability
   fi
   echo "Generating Figure 8 data..."
-  go clean -testcache; go test -v -timeout 0 sigmaos/benchmarks/remote --run TestSchedScalability --parallelize --platform cloudlab --vpc none --tag sosp24ae --no-shutdown --version $VERSION --branch sosp24ae 2>&1 | tee $LOG_DIR/fig8.out
+  go clean -testcache; go test -v -timeout 0 sigmaos/benchmarks/remote --run TestSchedScalability --parallelize --platform cloudlab --vpc none --build-tag sosp24ae --no-shutdown-after-test --bench-version $VERSION --branch sosp24ae 2>&1 | tee $LOG_DIR/fig8.out
   echo "Done generating Figure 8 data..."
 fi
 
@@ -74,8 +74,8 @@ if [ $EXP == "all" ] || [ $EXP == "fig_11" ]; then
     rm -rf benchmarks/results/$VERSION/socialnet_tail_latency
   fi
   echo "Generating Figure 11 data..."
-  go clean -testcache; go test -v -timeout 0 sigmaos/benchmarks/remote --run TestHotelTailLatency --parallelize --platform cloudlab --vpc none --tag sosp24ae --no-shutdown --version $VERSION --branch sosp24ae 2>&1 | tee $LOG_DIR/fig11-hotel.out
-  go clean -testcache; go test -v -timeout 0 sigmaos/benchmarks/remote --run TestSocialnetTailLatency --parallelize --platform cloudlab --vpc none --tag sosp24ae --no-shutdown --version $VERSION --branch sosp24ae 2>&1 | tee $LOG_DIR/fig11-socialnet.out
+  go clean -testcache; go test -v -timeout 0 sigmaos/benchmarks/remote --run TestHotelTailLatency --parallelize --platform cloudlab --vpc none --build-tag sosp24ae --no-shutdown-after-test --bench-version $VERSION --branch sosp24ae 2>&1 | tee $LOG_DIR/fig11-hotel.out
+  go clean -testcache; go test -v -timeout 0 sigmaos/benchmarks/remote --run TestSocialnetTailLatency --parallelize --platform cloudlab --vpc none --build-tag sosp24ae --no-shutdown-after-test --bench-version $VERSION --branch sosp24ae 2>&1 | tee $LOG_DIR/fig11-socialnet.out
   echo "Done generating Figure 11 data..."
 fi
 
@@ -86,6 +86,6 @@ if [ $EXP == "all" ] || [ $EXP == "fig_13" ]; then
     rm -rf benchmarks/results/$VERSION/lc_be_hotel_imgresize_multiplexing
   fi
   echo "Generating Figure 13 data..."
-  go clean -testcache; go test -v -timeout 0 sigmaos/benchmarks/remote --run TestLCBEHotelImgresizeMultiplexing --parallelize --platform cloudlab --vpc none --tag sosp24ae --no-shutdown --version $VERSION --branch sosp24ae 2>&1 | tee $LOG_DIR/fig13.out
+  go clean -testcache; go test -v -timeout 0 sigmaos/benchmarks/remote --run TestLCBEHotelImgresizeMultiplexing --parallelize --platform cloudlab --vpc none --build-tag sosp24ae --no-shutdown-after-test --bench-version $VERSION --branch sosp24ae 2>&1 | tee $LOG_DIR/fig13.out
   echo "Done generating Figure 13 data..."
 fi

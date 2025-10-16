@@ -64,7 +64,7 @@ if [ $EXP == "all" ] || [ $EXP == "cossim" ]; then
 #    rm -rf benchmarks/results/$VERSION/cos_sim_tail_latency_*
 #  fi
   echo "Generating CosSim data..."
-  go clean -testcache; go test -v -timeout 0 sigmaos/benchmarks/remote --run TestScaleCosSim --parallelize --platform cloudlab --vpc none --tag $TAG --no-shutdown --version $VERSION --branch $BRANCH 2>&1 | tee $LOG_DIR/cossim.out
+  go clean -testcache; go test -v -timeout 0 sigmaos/benchmarks/remote --run TestScaleCosSim --parallelize --platform cloudlab --vpc none --build-tag $TAG --no-shutdown-after-test --bench-version $VERSION --branch $BRANCH 2>&1 | tee $LOG_DIR/cossim.out
   echo "Done generating CosSim data..."
 fi
 
@@ -74,6 +74,6 @@ if [ $EXP == "all" ] || [ $EXP == "cached" ]; then
 #    rm -rf benchmarks/results/$VERSION/cos_sim_tail_latency_*
 #  fi
   echo "Generating CachedScaler data..."
-  go clean -testcache; go test -v -timeout 0 sigmaos/benchmarks/remote --run TestScaleCachedScaler --parallelize --platform cloudlab --vpc none --tag $TAG --no-shutdown --version $VERSION --branch $BRANCH 2>&1 | tee $LOG_DIR/cache-scaler.out
+  go clean -testcache; go test -v -timeout 0 sigmaos/benchmarks/remote --run TestScaleCachedScaler --parallelize --platform cloudlab --vpc none --build-tag $TAG --no-shutdown-after-test --bench-version $VERSION --branch $BRANCH 2>&1 | tee $LOG_DIR/cache-scaler.out
   echo "Done generating CachedScaler data..."
 fi

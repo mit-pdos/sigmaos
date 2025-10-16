@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"time"
 
+	"sigmaos/benchmarks"
 	db "sigmaos/debug"
 	"sigmaos/proc"
 )
@@ -622,7 +623,7 @@ func GetLCBEHotelImgResizeRPCMultiplexingCmdConstructor(numClients int, rps []in
 //
 // - clientDelay specifies the delay for which the client should wait before
 // starting to send requests.
-func GetCosSimClientCmdConstructor(cossimReqName string, leader bool, numClients int, rps []int, dur []time.Duration, numCaches int, scaleCache bool, clientDelay time.Duration, manuallyScaleCaches bool, scaleCacheDelay time.Duration, numCachesToAdd int, numCosSim int, nvec int, nvecToQuery int, vecDim int, cossimEagerInit, delegateInit, manuallyScaleCosSim bool, scaleCosSimDelay time.Duration, numCosSimToAdd int) GetBenchCmdFn {
+func GetCosSimClientCmdConstructor(cossimReqName string, leader bool, numClients int, clientDelay time.Duration, cosSimCfg *benchmarks.CosSimBenchConfig) GetBenchCmdFn {
 	return func(bcfg *BenchConfig, ccfg *ClusterConfig) string {
 		const (
 			//			debugSelectors string = "\"TEST;THROUGHPUT;CPU_UTIL;SPAWN_LAT;\""
@@ -637,10 +638,6 @@ func GetCosSimClientCmdConstructor(cossimReqName string, leader bool, numClients
 		} else {
 			testName = "CosSimJustCli"
 		}
-		autoscaleCache := ""
-		if scaleCache {
-			autoscaleCache = "--cossim_cache_autoscale"
-		}
 		dialproxy := ""
 		if bcfg.NoNetproxy {
 			dialproxy = "--nodialproxy"
@@ -649,21 +646,9 @@ func GetCosSimClientCmdConstructor(cossimReqName string, leader bool, numClients
 		if bcfg.Overlays {
 			overlays = "--overlays"
 		}
-		scalecache := ""
-		if manuallyScaleCaches {
-			scalecache = "--manually_scale_caches"
-		}
-		scaleCosSim := ""
-		if manuallyScaleCosSim {
-			scaleCosSim = "--manually_scale_cossim"
-		}
-		cossimDelegateInitStr := ""
-		if delegateInit {
-			cossimDelegateInitStr = "--cossim_delegated_init"
-		}
-		cossimEagerInitStr := ""
-		if cossimEagerInit {
-			cossimEagerInitStr = "--cossim_eager_init"
+		cfgStr, err := cosSimCfg.Marshal()
+		if err != nil {
+			db.DFatalf("Err marshal cossim config: %v", err)
 		}
 		return fmt.Sprintf("export SIGMADEBUG=%s; export SIGMAVALGRIND=%s; export SIGMAPERF=%s; go clean -testcache; "+
 			"ulimit -n 100000; "+
@@ -671,25 +656,8 @@ func GetCosSimClientCmdConstructor(cossimReqName string, leader bool, numClients
 			"go test -v sigmaos/benchmarks -timeout 0 --no-shutdown %s %s --etcdIP %s --tag %s "+
 			"--run %s "+
 			"--nclnt %s "+
-			"--cossim_ncache %s "+
-			"--cossim_cache_mcpu 2000 "+
-			"--cossim_srv_mcpu 4000 "+
-			"%s "+ // scaleCache
-			"--cossim_dur %s "+
-			"--cossim_max_rps %s "+
 			"--sleep %s "+
-			"%s "+ // manually_scale_caches
-			"--scale_cache_delay %s "+
-			"--n_caches_to_add %s "+
-			"--ncossim %s "+
-			"--cossim_nvec %s "+
-			"--cossim_nvec_to_query %s "+
-			"--cossim_vec_dim %s "+
-			"%s "+ // cossim_eager_init
-			"%s "+ // cossim_delegated_init
-			"%s "+ // manually_scale_cossim
-			"--scale_cossim_delay %s "+
-			"--n_cossim_to_add %s "+
+			"--cossim_bench_cfg='%s' "+
 			"--prewarm_realm "+
 			"> /tmp/bench.out 2>&1 ;",
 			debugSelectors,
@@ -701,23 +669,8 @@ func GetCosSimClientCmdConstructor(cossimReqName string, leader bool, numClients
 			bcfg.Tag,
 			testName,
 			strconv.Itoa(numClients),
-			strconv.Itoa(numCaches),
-			autoscaleCache,
-			dursToString(dur),
-			rpsToString(rps),
 			clientDelay.String(),
-			scalecache,
-			scaleCacheDelay.String(),
-			strconv.Itoa(numCachesToAdd),
-			strconv.Itoa(numCosSim),
-			strconv.Itoa(nvec),
-			strconv.Itoa(nvecToQuery),
-			strconv.Itoa(vecDim),
-			cossimEagerInitStr,
-			cossimDelegateInitStr,
-			scaleCosSim,
-			scaleCosSimDelay.String(),
-			strconv.Itoa(numCosSimToAdd),
+			cfgStr,
 		)
 	}
 }

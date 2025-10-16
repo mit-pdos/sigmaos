@@ -754,7 +754,7 @@ func GetCachedBackupClientCmdConstructor(leader bool, numClients int, manuallySc
 	}
 }
 
-func GetCachedScalerClientCmdConstructor(leader bool, numClients int, manuallyScaleScalerCached bool, scaleScalerCachedDelay time.Duration, rps []int, dur []time.Duration, putRps []int, putDur []time.Duration, clientDelay time.Duration, numCachedScaler int, nkeys int, delegateInit, useEPCache, prewarm bool, cossimBackend bool, nvec int, nvecToQuery int, vecDim int, cossimDelegatedInit bool, cppCached bool) GetBenchCmdFn {
+func GetCachedScalerClientCmdConstructor(leader bool, numClients int, prewarm bool, clientDelay time.Duration, cacheCfg *benchmarks.CacheBenchConfig, cosSimCfg *benchmarks.CosSimBenchConfig) GetBenchCmdFn {
 	return func(bcfg *BenchConfig, ccfg *ClusterConfig) string {
 		const (
 			debugSelectors    string = "\"TEST;BENCH;LOADGEN;THROUGHPUT;CPU_UTIL;SPAWN_LAT;PROXY_RPC_LAT;COSSIMSRV;\""
@@ -771,33 +771,23 @@ func GetCachedScalerClientCmdConstructor(leader bool, numClients int, manuallySc
 		if bcfg.NoNetproxy {
 			dialproxy = "--nodialproxy"
 		}
-		scaleScalerCachedStr := ""
-		if manuallyScaleScalerCached {
-			scaleScalerCachedStr = "--manually_scale_scaler_cached"
-		}
-		cachedScalerUseEPCacheStr := ""
-		if useEPCache {
-			cachedScalerUseEPCacheStr = "--scaler_cached_use_epcache"
-		}
-		delegateInitStr := ""
-		if delegateInit {
-			delegateInitStr = "--scaler_cached_delegated_init"
-		}
 		prewarmStr := ""
 		if prewarm {
 			prewarmStr = "--prewarm_realm"
 		}
-		cossimBackendStr := ""
-		if cossimBackend {
-			cossimBackendStr = "--scaler_cached_cossim_backend"
+		// Marshal cache config
+		cacheCfgJSON, err := cacheCfg.Marshal()
+		if err != nil {
+			db.DFatalf("Error marshaling cache config: %v", err)
 		}
-		cossimDelegatedInitStr := ""
-		if cossimDelegatedInit {
-			cossimDelegatedInitStr = "--cossim_delegated_init"
-		}
-		cppCachedStr := ""
-		if cppCached {
-			cppCachedStr = "--scaler_cached_cpp"
+		// Marshal cossim config (may be nil)
+		cosSimCfgStr := ""
+		if cosSimCfg != nil {
+			cosSimCfgJSON, err := cosSimCfg.Marshal()
+			if err != nil {
+				db.DFatalf("Error marshaling cossim config: %v", err)
+			}
+			cosSimCfgStr = fmt.Sprintf("--cossim_bench_cfg '%s' ", cosSimCfgJSON)
 		}
 		return fmt.Sprintf("export SIGMADEBUG=%s; export SIGMAVALGRIND=%s; export SIGMAPERF=%s; go clean -testcache; "+
 			"ulimit -n 100000; "+
@@ -805,27 +795,10 @@ func GetCachedScalerClientCmdConstructor(leader bool, numClients int, manuallySc
 			"go test -v sigmaos/benchmarks -timeout 0 --no-shutdown %s --etcdIP %s --tag %s "+
 			"--run %s "+
 			"--nclnt %s "+
-			"--scaler_cached_ncache %s "+
-			"--scaler_cached_mcpu 4000 "+
-			"--scaler_cached_dur %s "+
-			"--scaler_cached_max_rps %s "+
-			"--scaler_cached_put_dur %s "+
-			"--scaler_cached_put_max_rps %s "+
 			"--sleep %s "+
-			"--scaler_cached_nkeys %s "+
-			"--scale_scaler_cached_delay %s "+
-			"%s "+ // manually_scale_scaler_cached
-			"%s "+ // scaler_cached_delegated_init
-			"%s "+ // cached_scaler_use_epcache
 			"%s "+ // prewarm
-			"%s "+ // scaler_cached_cpp
-			"%s "+ // scaler_cached_cossim_backend
-			"%s "+ // cossim_delegated_init
-			"--scaler_cached_run_sleeper "+
-			"--cossim_nvec %s "+
-			"--cossim_nvec_to_query %s "+
-			"--cossim_vec_dim %s "+
-			"--cossim_srv_mcpu 4000 "+
+			"--cache_bench_cfg '%s' "+
+			"%s"+ // cossim_bench_cfg
 			"> /tmp/bench.out 2>&1 ;",
 			debugSelectors,
 			valgrindSelectors,
@@ -835,24 +808,10 @@ func GetCachedScalerClientCmdConstructor(leader bool, numClients int, manuallySc
 			bcfg.Tag,
 			testName,
 			strconv.Itoa(numClients),
-			strconv.Itoa(numCachedScaler),
-			dursToString(dur),
-			rpsToString(rps),
-			dursToString(putDur),
-			rpsToString(putRps),
 			clientDelay.String(),
-			strconv.Itoa(nkeys),
-			scaleScalerCachedDelay.String(),
-			scaleScalerCachedStr,
-			delegateInitStr,
-			cachedScalerUseEPCacheStr,
 			prewarmStr,
-			cppCachedStr,
-			cossimBackendStr,
-			cossimDelegatedInitStr,
-			strconv.Itoa(nvec),
-			strconv.Itoa(nvecToQuery),
-			strconv.Itoa(vecDim),
+			cacheCfgJSON,
+			cosSimCfgStr,
 		)
 	}
 }

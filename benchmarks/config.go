@@ -55,6 +55,14 @@ func (cfg *CacheBenchConfig) String() string {
 		cfg.JobCfg, cfg.CPP, cfg.RunSleeper, cfg.CosSimBackend, cfg.UseEPCache, cfg.DelegateInit, cfg.NKeys, cfg.TopNShards, cfg.Durs, cfg.MaxRPS, cfg.PutDurs, cfg.PutMaxRPS, cfg.Scale)
 }
 
+func (cfg *CacheBenchConfig) Marshal() (string, error) {
+	b, err := json.Marshal(cfg)
+	if err != nil {
+		return "", err
+	}
+	return string(b), nil
+}
+
 //type HotelBenchConfig struct {
 //	NClients        int
 //	NCache          int

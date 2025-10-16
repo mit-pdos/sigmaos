@@ -997,27 +997,17 @@ func TestScaleCachedScaler(t *testing.T) {
 	)
 	// Cached benchmark configuration parameters
 	var (
-		rps []int           = []int{2000}
-		dur []time.Duration = []time.Duration{30 * time.Second}
-		//		putRps          []int           = []int{100, 200, 100}
-		//		putDur          []time.Duration = []time.Duration{5 * time.Second, 5 * time.Second, 5 * time.Second}
-		putRps              []int           = []int{0}
-		putDur              []time.Duration = []time.Duration{0 * time.Second}
-		numCachedScaler     int             = 1
-		clientDelay         time.Duration   = 0 * time.Second
-		sleep               time.Duration   = 0 * time.Second
-		delegateInit        []bool          = []bool{true, false}
-		cppCached           []bool          = []bool{true, false}
-		prewarmRealm        []bool          = []bool{false} //[]bool{true, false}
-		useEPCache          bool            = true
-		nkeys               int             = 5000
-		scale               bool            = true
-		scaleDelay                          = 5 * time.Second
-		useCossimBackend    []bool          = []bool{true} //[]bool{true, false}
-		nvec                int             = 10000
-		nvecToQuery         int             = 5000
-		vecDim              int             = 100
-		cossimDelegatedInit bool            = false
+		clientDelay      time.Duration = 0 * time.Second
+		sleep            time.Duration = 0 * time.Second
+		delegateInit     []bool        = []bool{true, false}
+		cppCached        []bool        = []bool{true, false}
+		prewarmRealm     []bool        = []bool{false} //[]bool{true, false}
+		useEPCache       bool          = true
+		scale            bool          = true
+		scaleDelay                     = 5 * time.Second
+		useCossimBackend []bool        = []bool{true} //[]bool{true, false}
+		cacheMcpu        proc.Tmcpu    = 4000
+		cossimMcpu       proc.Tmcpu    = 4000
 	)
 	ts, err := NewTstate(t)
 	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {
@@ -1041,8 +1031,39 @@ func TestScaleCachedScaler(t *testing.T) {
 					if cossimBackend {
 						benchName += "_cossim_backend"
 					}
-					getLeaderCmd := GetCachedScalerClientCmdConstructor(true, len(driverVMs), scale, scaleDelay, rps, dur, putRps, putDur, sleep, numCachedScaler, nkeys, delegate, useEPCache, prewarm, cossimBackend, nvec, nvecToQuery, vecDim, cossimDelegatedInit, cpp)
-					getFollowerCmd := GetCachedScalerClientCmdConstructor(false, len(driverVMs), scale, scaleDelay, rps, dur, putRps, putDur, sleep, numCachedScaler, nkeys, delegate, useEPCache, prewarm, cossimBackend, nvec, nvecToQuery, vecDim, cossimDelegatedInit, cpp)
+					// Create CacheBenchConfig
+					cacheCfg := cachegrpmgr.NewCacheJobConfig(1, cacheMcpu, true)
+					scaleCached := benchmarks.NewManualScalingConfig("cached", scale, scaleDelay, 1)
+					cacheBenchCfg := &benchmarks.CacheBenchConfig{
+						JobCfg:        cacheCfg,
+						CPP:           cpp,
+						RunSleeper:    true,
+						CosSimBackend: cossimBackend,
+						UseEPCache:    useEPCache,
+						DelegateInit:  delegate,
+						NKeys:         5000,
+						TopNShards:    1,
+						Durs:          []time.Duration{30 * time.Second},
+						MaxRPS:        []int{2000},
+						PutDurs:       []time.Duration{0 * time.Second},
+						PutMaxRPS:     []int{0},
+						Scale:         scaleCached,
+					}
+					// Create CosSimBenchConfig
+					var cosSimBenchCfg *benchmarks.CosSimBenchConfig
+					if cossimBackend {
+						cossimCacheCfg := cachegrpmgr.NewCacheJobConfig(1, cacheMcpu, true)
+						cossimJobCfg := cossimsrv.NewCosSimJobConfig("cossim", 1, 10000, 100, true, cossimMcpu, cossimCacheCfg, false)
+						cosSimBenchCfg = &benchmarks.CosSimBenchConfig{
+							JobCfg:      cossimJobCfg,
+							NVecToQuery: 5000,
+							Durs:        []time.Duration{30 * time.Second},
+							MaxRPS:      []int{2000},
+							Scale:       benchmarks.NewManualScalingConfig("cossim", false, 0, 0),
+						}
+					}
+					getLeaderCmd := GetCachedScalerClientCmdConstructor(true, len(driverVMs), prewarm, sleep, cacheBenchCfg, cosSimBenchCfg)
+					getFollowerCmd := GetCachedScalerClientCmdConstructor(false, len(driverVMs), prewarm, sleep, cacheBenchCfg, cosSimBenchCfg)
 					ran := ts.RunParallelClientBenchmark(benchName, driverVMs, getLeaderCmd, getFollowerCmd, startK8sHotelApp, stopK8sHotelApp, clientDelay, numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost)
 					if oneByOne && ran {
 						return

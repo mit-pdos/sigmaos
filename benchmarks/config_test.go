@@ -21,7 +21,10 @@ func init() {
 
 func TestMain(m *testing.M) {
 	flag.Parse()
-	if cossimBenchCfgStr != sp.NOT_SET {
+	if cossimBenchCfgStr == sp.NOT_SET {
+		CosSimBenchConfig = benchmarks.DefaultCosSimBenchConfig
+		db.DPrintf(db.ALWAYS, "Using default CosSimBenchConfig: %v", CosSimBenchConfig)
+	} else {
 		err := json.Unmarshal([]byte(cossimBenchCfgStr), &CosSimBenchConfig)
 		if err != nil {
 			db.DFatalf("Error unmarshaling cossim_bench_cfg: %v", err)

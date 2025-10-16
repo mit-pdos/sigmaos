@@ -11,7 +11,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	cachegrpmgr "sigmaos/apps/cache/cachegrp/mgr"
 	"sigmaos/apps/hotel"
 	"sigmaos/benchmarks"
 	"sigmaos/benchmarks/loadgen"
@@ -32,29 +31,20 @@ const (
 type hotelFn func(wc *hotel.WebClnt, r *rand.Rand)
 
 type HotelJobInstance struct {
-	sigmaos         bool
-	justCli         bool
-	k8ssrvaddr      string
-	job             string
-	dur             []time.Duration
-	maxrps          []int
-	ncache          int
-	cachetype       string
-	scaleCache      *benchmarks.ManualScalingConfig
-	nGeo            int
-	scaleGeo        *benchmarks.ManualScalingConfig
-	geoNIdx         int
-	geoSearchRadius int
-	geoNResults     int
-	ready           chan bool
-	msc             *mschedclnt.MSchedClnt
-	cosSimCfg       *benchmarks.CosSimBenchConfig
-	fn              hotelFn
-	hj              *hotel.HotelJob
-	lgs             []*loadgen.LoadGenerator
-	p               *perf.Perf
-	wc              *hotel.WebClnt
-	runningMatch    bool
+	sigmaos      bool
+	justCli      bool
+	k8ssrvaddr   string
+	cfg          *benchmarks.HotelBenchConfig
+	scaleCache   *benchmarks.ManualScalingConfig
+	ready        chan bool
+	msc          *mschedclnt.MSchedClnt
+	cosSimCfg    *benchmarks.CosSimBenchConfig
+	fn           hotelFn
+	hj           *hotel.HotelJob
+	lgs          []*loadgen.LoadGenerator
+	p            *perf.Perf
+	wc           *hotel.WebClnt
+	runningMatch bool
 	// Cluster pre-warming
 	warmCossimSrvKID string
 	cossimKIDs       map[string]bool
@@ -62,79 +52,41 @@ type HotelJobInstance struct {
 	*test.RealmTstate
 }
 
-func NewHotelJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, durs string, maxrpss string, fn hotelFn, justCli bool, ncache int, cachetype string, cacheMcpu proc.Tmcpu, scaleCache *benchmarks.ManualScalingConfig, nGeo int, scaleGeo *benchmarks.ManualScalingConfig, geoNIndex int, geoSearchRadius int, geoNResults int, cosSimCfg *benchmarks.CosSimBenchConfig) *HotelJobInstance {
+func NewHotelJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, fn hotelFn, justCli bool, cfg *benchmarks.HotelBenchConfig, scaleCache *benchmarks.ManualScalingConfig, cosSimCfg *benchmarks.CosSimBenchConfig) *HotelJobInstance {
 	ji := &HotelJobInstance{}
 	ji.sigmaos = sigmaos
-	ji.job = HOTEL_JOB
 	ji.ready = make(chan bool)
 	ji.fn = fn
 	ji.RealmTstate = ts
 	ji.p = p
 	ji.justCli = justCli
-	ji.ncache = ncache
-	ji.cachetype = cachetype
+	ji.cfg = cfg
 	ji.scaleCache = scaleCache
-	ji.scaleGeo = scaleGeo
-	ji.nGeo = nGeo
-	ji.geoNIdx = geoNIndex
-	ji.geoSearchRadius = geoSearchRadius
-	ji.geoNResults = geoNResults
 	ji.cosSimCfg = cosSimCfg
 	ji.cossimKIDs = make(map[string]bool)
 	ji.cacheKIDs = make(map[string]bool)
 
-	durslice := strings.Split(durs, ",")
-	maxrpsslice := strings.Split(maxrpss, ",")
-	assert.Equal(ts.Ts.T, len(durslice), len(maxrpsslice), "Non-matching lengths: %v %v", durs, maxrpss)
-
-	ji.dur = make([]time.Duration, 0, len(durslice))
-	ji.maxrps = make([]int, 0, len(durslice))
-
-	for i := range durslice {
-		d, err := time.ParseDuration(durslice[i])
-		assert.Nil(ts.Ts.T, err, "Bad duration %v", err)
-		n, err := strconv.Atoi(maxrpsslice[i])
-		assert.Nil(ts.Ts.T, err, "Bad duration %v", err)
-		ji.dur = append(ji.dur, d)
-		ji.maxrps = append(ji.maxrps, n)
-	}
-
 	var err error
-	var svcs []*hotel.Srv
-	if sigmaos {
-		if cosSimCfg == nil {
-			svcs = hotel.NewHotelSvc()
-		} else {
-			svcs = hotel.NewHotelSvcWithMatch()
-			ji.runningMatch = true
-		}
+	if cosSimCfg != nil {
+		ji.runningMatch = true
 	}
 
 	if ji.justCli {
-		// Read job name
+		// Read job name from filesystem and update the hotelCfg
 		sts, err := ji.GetDir("name/hotel/")
 		assert.Nil(ji.Ts.T, err, "Err Get hotel dir %v", err)
 		var l int
 		for _, st := range sts {
 			// Dumb heuristic, but will always be the longest name....
 			if len(st.Name) > l {
-				ji.job = st.Name
+				ji.cfg.JobCfg.Job = st.Name
 				l = len(st.Name)
 			}
 		}
 	}
 
 	if !ji.justCli {
-		var nc = ncache
-		// Only start one cache if autoscaling.
-		if sigmaos && CACHE_TYPE == "cached" && HOTEL_CACHE_AUTOSCALE {
-			nc = 1
-		}
-		if !sigmaos {
-			nc = 0
-		}
-		cacheCfg := cachegrpmgr.NewCacheJobConfig(nc, cacheMcpu, CACHE_GC)
-		ji.hj, err = hotel.NewHotelJob(ts.SigmaClnt, ji.job, svcs, N_HOTEL, cachetype, cacheCfg, HOTEL_IMG_SZ_MB, nGeo, geoNIndex, geoSearchRadius, geoNResults, cosSimCfg.GetJobConfig())
+		ji.hj, err = hotel.NewHotelJob(ts.SigmaClnt, ji.cfg.GetJobConfig(), cosSimCfg.GetJobConfig())
 		assert.Nil(ts.Ts.T, err, "Error NewHotelJob: %v", err)
 		if ji.runningMatch {
 			ji.msc = mschedclnt.NewMSchedClnt(ts.SigmaClnt.FsLib, sp.NOT_SET)
@@ -184,7 +136,7 @@ func NewHotelJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, durs string, 
 		ji.k8ssrvaddr = K8S_ADDR
 		// Write a file for clients to discover the server's address.
 		if !ji.justCli {
-			pn := hotel.JobHTTPAddrsPath(ji.job)
+			pn := hotel.JobHTTPAddrsPath(ji.cfg.JobCfg.Job)
 			h, p, err := net.SplitHostPort(K8S_ADDR)
 			assert.Nil(ts.Ts.T, err, "Err split host port %v: %v", ji.k8ssrvaddr, err)
 			port, err := strconv.Atoi(p)
@@ -198,18 +150,18 @@ func NewHotelJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, durs string, 
 	}
 
 	if sigmaos {
-		if HOTEL_CACHE_AUTOSCALE && cachetype == "cached" && !ji.justCli {
-			ji.hj.CacheAutoscaler.Run(1*time.Second, ncache)
+		if HOTEL_CACHE_AUTOSCALE && ji.cfg.JobCfg.Cache == "cached" && !ji.justCli {
+			ji.hj.CacheAutoscaler.Run(1*time.Second, ji.cfg.JobCfg.CacheCfg.NSrv)
 		}
 	}
 
-	wc, err := hotel.NewWebClnt(ts.FsLib, ji.job)
+	wc, err := hotel.NewWebClnt(ts.FsLib, ji.cfg.JobCfg.Job)
 	assert.Nil(ts.Ts.T, err, "Err NewWebClnt: %v", err)
 	ji.wc = wc
 	// Make a load generators.
-	ji.lgs = make([]*loadgen.LoadGenerator, 0, len(ji.dur))
-	for i := range ji.dur {
-		ji.lgs = append(ji.lgs, loadgen.NewLoadGenerator(ji.dur[i], ji.maxrps[i], func(r *rand.Rand) (time.Duration, bool) {
+	ji.lgs = make([]*loadgen.LoadGenerator, 0, len(ji.cfg.Durs))
+	for i := range ji.cfg.Durs {
+		ji.lgs = append(ji.lgs, loadgen.NewLoadGenerator(ji.cfg.Durs[i], ji.cfg.MaxRPS[i], func(r *rand.Rand) (time.Duration, bool) {
 			// Run a single request.
 			ji.fn(ji.wc, r)
 			return 0, false
@@ -223,16 +175,16 @@ func (ji *HotelJobInstance) scaleGeoSrv() {
 	if ji.justCli {
 		return
 	}
-	if ji.scaleGeo.GetShouldScale() {
+	if ji.cfg.ScaleGeo.GetShouldScale() {
 		go func() {
-			time.Sleep(ji.scaleGeo.GetScalingDelay())
+			time.Sleep(ji.cfg.ScaleGeo.GetScalingDelay())
 			if ji.sigmaos {
-				for i := 0; i < ji.scaleGeo.GetNToAdd(); i++ {
+				for i := 0; i < ji.cfg.ScaleGeo.GetNToAdd(); i++ {
 					err := ji.hj.AddGeoSrv()
 					assert.Nil(ji.Ts.T, err, "Add Geo srv: %v", err)
 				}
 			} else {
-				if ji.scaleGeo.GetNToAdd() > 0 {
+				if ji.cfg.ScaleGeo.GetNToAdd() > 0 {
 					err := k8sScaleUpGeo()
 					assert.Nil(ji.Ts.T, err, "K8s scale up Geo srv: %v", err)
 				} else {
@@ -279,7 +231,7 @@ func (ji *HotelJobInstance) scaleCosSimSrv() {
 }
 
 func (ji *HotelJobInstance) StartHotelJob() {
-	db.DPrintf(db.ALWAYS, "StartHotelJob dur %v ncache %v maxrps %v kubernetes (%v,%v) scaleCache:%v scaleGeo:%v nGeoInit %v geoNIndex %v geoSearchRadius: %v geoNResults: %v cossim:%v", ji.dur, ji.ncache, ji.maxrps, !ji.sigmaos, ji.k8ssrvaddr, ji.scaleCache, ji.scaleGeo, ji.nGeo, ji.geoNIdx, ji.geoSearchRadius, ji.geoNResults, ji.cosSimCfg)
+	db.DPrintf(db.ALWAYS, "StartHotelJob kubernetes (%v,%v) scaleCache:%v cfg:%v cossim:%v", !ji.sigmaos, ji.k8ssrvaddr, ji.scaleCache, ji.cfg, ji.cosSimCfg)
 	var wg sync.WaitGroup
 	for _, lg := range ji.lgs {
 		wg.Add(1)
@@ -297,7 +249,7 @@ func (ji *HotelJobInstance) StartHotelJob() {
 	go ji.scaleCaches()
 	go ji.scaleCosSimSrv()
 	for i, lg := range ji.lgs {
-		db.DPrintf(db.TEST, "Run load generator rps %v dur %v", ji.maxrps[i], ji.dur[i])
+		db.DPrintf(db.TEST, "Run load generator rps %v dur %v", ji.cfg.MaxRPS[i], ji.cfg.Durs[i])
 		lg.Run()
 		//    ji.printStats()
 	}

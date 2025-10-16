@@ -7,6 +7,7 @@ import (
 
 	cachegrpmgr "sigmaos/apps/cache/cachegrp/mgr"
 	cossimsrv "sigmaos/apps/cossim/srv"
+	"sigmaos/apps/hotel"
 )
 
 type CosSimBenchConfig struct {
@@ -63,21 +64,26 @@ func (cfg *CacheBenchConfig) Marshal() (string, error) {
 	return string(b), nil
 }
 
-//type HotelBenchConfig struct {
-//	NClients        int
-//	NCache          int
-//	NGeo            int
-//	NGeoIdx         int
-//	GeoSearchRadius int
-//	GeoNResults     int
-//	CacheMCPU       int
-//	ImgSzMB         int
-//	CacheAutoscale  bool
-//	UseMatch        bool
-//	Durs            string
-//	MaxRPS          string
-//	CacheType       string
-//	ScaleCache      *ManualScalingConfig
-//	ScaleGeo        *ManualScalingConfig
-//	ScaleCossim     *ManualScalingConfig
-//}
+type HotelBenchConfig struct {
+	JobCfg   *hotel.HotelJobConfig `json:"job_cfg"`
+	Durs     []time.Duration       `json:"durs"`
+	MaxRPS   []int                 `json:"max_rps"`
+	ScaleGeo *ManualScalingConfig  `json:"scale_geo"`
+}
+
+func (cfg *HotelBenchConfig) String() string {
+	return fmt.Sprintf("&{ JobCfg:%v Durs:%v MaxRPS:%v ScaleGeo:%v }",
+		cfg.JobCfg, cfg.Durs, cfg.MaxRPS, cfg.ScaleGeo)
+}
+
+func (cfg *HotelBenchConfig) GetJobConfig() *hotel.HotelJobConfig {
+	return cfg.JobCfg
+}
+
+func (cfg *HotelBenchConfig) Marshal() (string, error) {
+	b, err := json.Marshal(cfg)
+	if err != nil {
+		return "", err
+	}
+	return string(b), nil
+}

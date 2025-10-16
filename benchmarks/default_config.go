@@ -5,6 +5,7 @@ import (
 
 	cachegrpmgr "sigmaos/apps/cache/cachegrp/mgr"
 	cossimsrv "sigmaos/apps/cossim/srv"
+	"sigmaos/apps/hotel"
 	"sigmaos/proc"
 )
 
@@ -53,6 +54,33 @@ var DefaultCacheBenchConfig = &CacheBenchConfig{
 	PutMaxRPS:     []int{50},
 	Scale: &ManualScalingConfig{
 		Svc:        "cached",
+		Scale:      false,
+		ScaleDelay: 0 * time.Second,
+		NToAdd:     0,
+	},
+}
+
+var DefaultHotelBenchConfig = &HotelBenchConfig{
+	JobCfg: &hotel.HotelJobConfig{
+		Job:   "hotel-job",
+		Srvs:  hotel.NewHotelSvc(),
+		NHotel: 80,
+		Cache: "cached",
+		CacheCfg: &cachegrpmgr.CacheJobConfig{
+			NSrv: 1,
+			MCPU: proc.Tmcpu(1000),
+			GC:   true,
+		},
+		ImgSizeMB:       0,
+		NGeo:            1,
+		NGeoIdx:         4000,
+		GeoSearchRadius: 500,
+		GeoNResults:     5,
+	},
+	Durs:   []time.Duration{10 * time.Second},
+	MaxRPS: []int{100},
+	ScaleGeo: &ManualScalingConfig{
+		Svc:        "hotel-geo",
 		Scale:      false,
 		ScaleDelay: 0 * time.Second,
 		NToAdd:     0,

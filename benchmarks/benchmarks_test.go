@@ -684,9 +684,8 @@ func TestRealmBalanceMRHotel(t *testing.T) {
 	// Prep MR job
 	mrjobs, mrapps := newNMRJobs(mrts.GetRealm(REALM2), p1, 1, MR_APP, chooseMRJobRoot(mrts.GetRealm(REALM2)), proc.Tmem(MR_MEM_REQ))
 	// Prep Hotel job
-	scaleGeo := benchmarks.NewManualScalingConfig("hotel-geo", MANUALLY_SCALE_GEO, SCALE_GEO_DELAY, N_GEO_TO_ADD)
 	scaleCache := benchmarks.NewManualScalingConfig("cached", MANUALLY_SCALE_CACHES, SCALE_CACHE_DELAY, N_CACHES_TO_ADD)
-	hotelJobs, ji := newHotelJobs(mrts.GetRealm(REALM1), p2, true, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, CACHE_TYPE, proc.Tmcpu(HOTEL_CACHE_MCPU), scaleCache, HOTEL_NGEO, scaleGeo, HOTEL_NGEO_IDX, HOTEL_GEO_SEARCH_RADIUS, HOTEL_GEO_NRESULTS, CosSimBenchConfig, func(wc *hotel.WebClnt, r *rand.Rand) {
+	hotelJobs, ji := newHotelJobs(mrts.GetRealm(REALM1), p2, true, scaleCache, HotelBenchConfig, CosSimBenchConfig, func(wc *hotel.WebClnt, r *rand.Rand) {
 		//		hotel.RunDSB(mrts.GetRealm(REALM1).T, 1, wc, r)
 		err := hotel.RandSearchReq(wc, r)
 		assert.Nil(t, err, "SearchReq %v", err)
@@ -767,9 +766,8 @@ func TestRealmBalanceHotelRPCImgResize(t *testing.T) {
 	// Prep ImgResize job
 	imgJobs, imgApps := newImgResizeRPCJob(mrts.GetRealm(REALM2), p1, true, IMG_RESIZE_INPUT_PATH, N_IMG_RESIZE_TASKS_PER_SECOND, IMG_RESIZE_DUR, proc.Tmcpu(IMG_RESIZE_MCPU), proc.Tmem(IMG_RESIZE_MEM_MB), IMG_RESIZE_N_ROUNDS, proc.Tmcpu(1000))
 	// Prep Hotel job
-	scaleGeo := benchmarks.NewManualScalingConfig("hotel-geo", MANUALLY_SCALE_GEO, SCALE_GEO_DELAY, N_GEO_TO_ADD)
 	scaleCache := benchmarks.NewManualScalingConfig("cached", MANUALLY_SCALE_CACHES, SCALE_CACHE_DELAY, N_CACHES_TO_ADD)
-	hotelJobs, ji := newHotelJobs(mrts.GetRealm(REALM1), p2, true, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, CACHE_TYPE, proc.Tmcpu(HOTEL_CACHE_MCPU), scaleCache, HOTEL_NGEO, scaleGeo, HOTEL_NGEO_IDX, HOTEL_GEO_SEARCH_RADIUS, HOTEL_GEO_NRESULTS, CosSimBenchConfig, func(wc *hotel.WebClnt, r *rand.Rand) {
+	hotelJobs, ji := newHotelJobs(mrts.GetRealm(REALM1), p2, true, scaleCache, HotelBenchConfig, CosSimBenchConfig, func(wc *hotel.WebClnt, r *rand.Rand) {
 		//		hotel.RunDSB(mrts.GetRealm(REALM1).T, 1, wc, r)
 		err := hotel.RandSearchReq(wc, r)
 		assert.Nil(t, err, "SearchReq %v", err)
@@ -842,9 +840,8 @@ func TestRealmBalanceHotelImgResize(t *testing.T) {
 	// Prep ImgResize job
 	imgJobs, imgApps := newImgResizeJob(mrts.GetRealm(REALM2), p1, true, IMG_RESIZE_INPUT_PATH, N_IMG_RESIZE_TASKS, N_IMG_RESIZE_INPUTS_PER_TASK, proc.Tmcpu(IMG_RESIZE_MCPU), proc.Tmem(IMG_RESIZE_MEM_MB), IMG_RESIZE_N_ROUNDS, 0)
 	// Prep Hotel job
-	scaleGeo := benchmarks.NewManualScalingConfig("hotel-geo", MANUALLY_SCALE_GEO, SCALE_GEO_DELAY, N_GEO_TO_ADD)
 	scaleCache := benchmarks.NewManualScalingConfig("cached", MANUALLY_SCALE_CACHES, SCALE_CACHE_DELAY, N_CACHES_TO_ADD)
-	hotelJobs, ji := newHotelJobs(mrts.GetRealm(REALM1), p2, true, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, CACHE_TYPE, proc.Tmcpu(HOTEL_CACHE_MCPU), scaleCache, HOTEL_NGEO, scaleGeo, HOTEL_NGEO_IDX, HOTEL_GEO_SEARCH_RADIUS, HOTEL_GEO_NRESULTS, CosSimBenchConfig, func(wc *hotel.WebClnt, r *rand.Rand) {
+	hotelJobs, ji := newHotelJobs(mrts.GetRealm(REALM1), p2, true, scaleCache, HotelBenchConfig, CosSimBenchConfig, func(wc *hotel.WebClnt, r *rand.Rand) {
 		//		hotel.RunDSB(mrts.GetRealm(REALM1).T, 1, wc, r)
 		err := hotel.RandSearchReq(wc, r)
 		assert.Nil(t, err, "SearchReq %v", err)
@@ -1065,9 +1062,8 @@ func TestRealmBalanceImgResizeImgResize(t *testing.T) {
 
 func testHotel(rootts *test.Tstate, ts1 *test.RealmTstate, p *perf.Perf, sigmaos bool, fn hotelFn) {
 	rs := benchmarks.NewResults(1, benchmarks.E2E)
-	scaleGeo := benchmarks.NewManualScalingConfig("hotel-geo", MANUALLY_SCALE_GEO, SCALE_GEO_DELAY, N_GEO_TO_ADD)
 	scaleCache := benchmarks.NewManualScalingConfig("cached", MANUALLY_SCALE_CACHES, SCALE_CACHE_DELAY, N_CACHES_TO_ADD)
-	jobs, ji := newHotelJobs(ts1, p, sigmaos, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, CACHE_TYPE, proc.Tmcpu(HOTEL_CACHE_MCPU), scaleCache, HOTEL_NGEO, scaleGeo, HOTEL_NGEO_IDX, HOTEL_GEO_SEARCH_RADIUS, HOTEL_GEO_NRESULTS, CosSimBenchConfig, fn)
+	jobs, ji := newHotelJobs(ts1, p, sigmaos, scaleCache, HotelBenchConfig, CosSimBenchConfig, fn)
 	go func() {
 		for _, j := range jobs {
 			// Wait until ready
@@ -1210,9 +1206,8 @@ func TestHotelSigmaosJustCliGeo(t *testing.T) {
 	clientReady(mrts.GetRoot())
 	// Sleep for a bit
 	time.Sleep(SLEEP)
-	scaleGeo := benchmarks.NewManualScalingConfig("hotel-geo", MANUALLY_SCALE_GEO, SCALE_GEO_DELAY, N_GEO_TO_ADD)
 	scaleCache := benchmarks.NewManualScalingConfig("cached", MANUALLY_SCALE_CACHES, SCALE_CACHE_DELAY, N_CACHES_TO_ADD)
-	jobs, ji := newHotelJobsCli(mrts.GetRealm(REALM1), true, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, CACHE_TYPE, proc.Tmcpu(HOTEL_CACHE_MCPU), scaleCache, HOTEL_NGEO, scaleGeo, HOTEL_NGEO_IDX, HOTEL_GEO_SEARCH_RADIUS, HOTEL_GEO_NRESULTS, func(wc *hotel.WebClnt, r *rand.Rand) {
+	jobs, ji := newHotelJobsCli(mrts.GetRealm(REALM1), true, scaleCache, HotelBenchConfig, func(wc *hotel.WebClnt, r *rand.Rand) {
 		_, err := hotel.GeoReq(wc)
 		assert.Nil(t, err, "Error geo req: %v", err)
 	})
@@ -1244,9 +1239,8 @@ func TestHotelSigmaosJustCliSearch(t *testing.T) {
 	clientReady(mrts.GetRoot())
 	// Sleep for a bit
 	time.Sleep(SLEEP)
-	scaleGeo := benchmarks.NewManualScalingConfig("hotel-geo", MANUALLY_SCALE_GEO, SCALE_GEO_DELAY, N_GEO_TO_ADD)
 	scaleCache := benchmarks.NewManualScalingConfig("cached", MANUALLY_SCALE_CACHES, SCALE_CACHE_DELAY, N_CACHES_TO_ADD)
-	jobs, ji := newHotelJobsCli(mrts.GetRealm(REALM1), true, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, CACHE_TYPE, proc.Tmcpu(HOTEL_CACHE_MCPU), scaleCache, HOTEL_NGEO, scaleGeo, HOTEL_NGEO_IDX, HOTEL_GEO_SEARCH_RADIUS, HOTEL_GEO_NRESULTS, func(wc *hotel.WebClnt, r *rand.Rand) {
+	jobs, ji := newHotelJobsCli(mrts.GetRealm(REALM1), true, scaleCache, HotelBenchConfig, func(wc *hotel.WebClnt, r *rand.Rand) {
 		err := hotel.RandSearchReq(wc, r)
 		assert.Nil(t, err, "Error search req: %v", err)
 	})
@@ -1302,9 +1296,8 @@ func TestHotelSigmaosJustCliMatch(t *testing.T) {
 	clientReady(mrts.GetRoot())
 	// Sleep for a bit
 	time.Sleep(SLEEP)
-	scaleGeo := benchmarks.NewManualScalingConfig("hotel-geo", MANUALLY_SCALE_GEO, SCALE_GEO_DELAY, N_GEO_TO_ADD)
 	scaleCache := benchmarks.NewManualScalingConfig("cached", MANUALLY_SCALE_CACHES, SCALE_CACHE_DELAY, N_CACHES_TO_ADD)
-	jobs, ji := newHotelJobsCli(mrts.GetRealm(REALM1), true, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, CACHE_TYPE, proc.Tmcpu(HOTEL_CACHE_MCPU), scaleCache, HOTEL_NGEO, scaleGeo, HOTEL_NGEO_IDX, HOTEL_GEO_SEARCH_RADIUS, HOTEL_GEO_NRESULTS, func(wc *hotel.WebClnt, r *rand.Rand) {
+	jobs, ji := newHotelJobsCli(mrts.GetRealm(REALM1), true, scaleCache, HotelBenchConfig, func(wc *hotel.WebClnt, r *rand.Rand) {
 		// TODO: use caching
 		err := hotel.RandMatchReq(wc, r, false)
 		assert.Nil(t, err, "Error search req: %v", err)
@@ -1337,9 +1330,8 @@ func TestHotelK8sJustCliGeo(t *testing.T) {
 	db.DPrintf(db.ALWAYS, "Clnt ready")
 	clientReady(mrts.GetRoot())
 	db.DPrintf(db.ALWAYS, "Clnt done waiting")
-	scaleGeo := benchmarks.NewManualScalingConfig("hotel-geo", MANUALLY_SCALE_GEO, SCALE_GEO_DELAY, N_GEO_TO_ADD)
 	scaleCache := benchmarks.NewManualScalingConfig("cached", MANUALLY_SCALE_CACHES, SCALE_CACHE_DELAY, N_CACHES_TO_ADD)
-	jobs, ji := newHotelJobsCli(mrts.GetRealm(REALM1), false, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, CACHE_TYPE, proc.Tmcpu(HOTEL_CACHE_MCPU), scaleCache, HOTEL_NGEO, scaleGeo, HOTEL_NGEO_IDX, HOTEL_GEO_SEARCH_RADIUS, HOTEL_GEO_NRESULTS, func(wc *hotel.WebClnt, r *rand.Rand) {
+	jobs, ji := newHotelJobsCli(mrts.GetRealm(REALM1), false, scaleCache, HotelBenchConfig, func(wc *hotel.WebClnt, r *rand.Rand) {
 		_, err := hotel.GeoReq(wc)
 		assert.Nil(t, err, "Error geo req: %v", err)
 	})
@@ -1371,9 +1363,8 @@ func TestHotelK8sJustCliSearch(t *testing.T) {
 	db.DPrintf(db.ALWAYS, "Clnt ready")
 	clientReady(mrts.GetRoot())
 	db.DPrintf(db.ALWAYS, "Clnt done waiting")
-	scaleGeo := benchmarks.NewManualScalingConfig("hotel-geo", MANUALLY_SCALE_GEO, SCALE_GEO_DELAY, N_GEO_TO_ADD)
 	scaleCache := benchmarks.NewManualScalingConfig("cached", MANUALLY_SCALE_CACHES, SCALE_CACHE_DELAY, N_CACHES_TO_ADD)
-	jobs, ji := newHotelJobsCli(mrts.GetRealm(REALM1), false, HOTEL_DURS, HOTEL_MAX_RPS, HOTEL_NCACHE, CACHE_TYPE, proc.Tmcpu(HOTEL_CACHE_MCPU), scaleCache, HOTEL_NGEO, scaleGeo, HOTEL_NGEO_IDX, HOTEL_GEO_SEARCH_RADIUS, HOTEL_GEO_NRESULTS, func(wc *hotel.WebClnt, r *rand.Rand) {
+	jobs, ji := newHotelJobsCli(mrts.GetRealm(REALM1), false, scaleCache, HotelBenchConfig, func(wc *hotel.WebClnt, r *rand.Rand) {
 		err := hotel.RandSearchReq(wc, r)
 		assert.Nil(t, err, "Error search req: %v", err)
 	})

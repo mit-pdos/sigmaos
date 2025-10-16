@@ -145,7 +145,7 @@ func NewCosSimJob(conf *CosSimJobConfig, sc *sigmaclnt.SigmaClnt, epcj *epsrv.EP
 	if cm == nil {
 		stopCaches = true
 		// Start the cachegrp job
-		cm, err = cachegrpmgr.NewCacheMgrEPCache(sc, epcj, conf.Job, conf.CacheCfg.NSrv, conf.CacheCfg.MCPU, conf.CacheCfg.GC)
+		cm, err = cachegrpmgr.NewCacheMgrEPCache(sc, epcj, conf.Job, conf.CacheCfg)
 		if err != nil {
 			db.DPrintf(db.COSSIMSRV_ERR, "Err newCacheMgr: %v", err)
 			return nil, err

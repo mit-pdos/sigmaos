@@ -171,7 +171,7 @@ type HotelJob struct {
 	epcsrvEP        *sp.Tendpoint
 }
 
-func NewHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []*Srv, nhotel int, cache string, cacheMcpu proc.Tmcpu, ncache int, gc bool, imgSizeMB int, ngeo int, ngeoidx int, geoSearchRadius int, geoNResults int, csjConf *cossimsrv.CosSimJobConfig) (*HotelJob, error) {
+func NewHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []*Srv, nhotel int, cache string, cacheCfg *cachegrpmgr.CacheJobConfig, imgSizeMB int, ngeo int, ngeoidx int, geoSearchRadius int, geoNResults int, csjConf *cossimsrv.CosSimJobConfig) (*HotelJob, error) {
 	// Set number of hotels before doing anything.
 	setNHotel(nhotel)
 	// Set the number of indexes to be used in each geo server
@@ -205,11 +205,11 @@ func NewHotelJob(sc *sigmaclnt.SigmaClnt, job string, srvs []*Srv, nhotel int, c
 	}
 
 	// Create a cache clnt.
-	if ncache > 0 {
+	if cacheCfg.NSrv > 0 {
 		switch cache {
 		case "cached":
 			db.DPrintf(db.ALWAYS, "Hotel running with cached")
-			cm, err = cachegrpmgr.NewCacheMgrEPCache(sc, epcj, job, ncache, cacheMcpu, gc)
+			cm, err = cachegrpmgr.NewCacheMgrEPCache(sc, epcj, job, cacheCfg)
 			if err != nil {
 				db.DPrintf(db.ERROR, "Error NewCacheMgr %v", err)
 				return nil, err

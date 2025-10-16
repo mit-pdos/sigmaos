@@ -8,13 +8,6 @@ import (
 	"net"
 	"os"
 	"os/exec"
-	sn "sigmaos/apps/socialnetwork"
-	"sigmaos/benchmarks/loadgen"
-	dbg "sigmaos/debug"
-	sp "sigmaos/sigmap"
-	"sigmaos/test"
-	"sigmaos/util/perf"
-	rd "sigmaos/util/rand"
 	"strconv"
 	"strings"
 	"sync"
@@ -24,6 +17,15 @@ import (
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
+
+	cachegrpmgr "sigmaos/apps/cache/cachegrp/mgr"
+	sn "sigmaos/apps/socialnetwork"
+	"sigmaos/benchmarks/loadgen"
+	dbg "sigmaos/debug"
+	sp "sigmaos/sigmap"
+	"sigmaos/test"
+	"sigmaos/util/perf"
+	rd "sigmaos/util/rand"
 )
 
 const (
@@ -102,10 +104,10 @@ func NewSocialNetworkJob(
 	if sigmaos {
 		initUserAndGraph(ts.Ts.T, MONGO_URL)
 		ji.snCfg, err = sn.NewConfig(
-			ts.SigmaClnt, ji.job, getDefaultSrvs(), ncache, true)
+			ts.SigmaClnt, ji.job, getDefaultSrvs(), cachegrpmgr.NewCacheJobConfig(ncache, 2000, true))
 		assert.Nil(ts.Ts.T, err, "Error Make social network job: %v", err)
 	} else {
-		ji.snCfg, err = sn.NewConfig(ts.SigmaClnt, ji.job, nil, 0, false)
+		ji.snCfg, err = sn.NewConfig(ts.SigmaClnt, ji.job, nil, cachegrpmgr.NewCacheJobConfig(0, 2000, false))
 		assert.Nil(ts.Ts.T, err, "New config: %v", err)
 		p := sn.JobHTTPAddrsPath(ji.job)
 		h, po, err := net.SplitHostPort(K8S_ADDR)

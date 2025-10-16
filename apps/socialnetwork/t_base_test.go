@@ -2,8 +2,10 @@ package socialnetwork_test
 
 import (
 	"github.com/stretchr/testify/assert"
+	cachegrpmgr "sigmaos/apps/cache/cachegrp/mgr"
 	sn "sigmaos/apps/socialnetwork"
 	dbg "sigmaos/debug"
+	"sigmaos/proc"
 	"sigmaos/test"
 	linuxsched "sigmaos/util/linux/sched"
 	"sigmaos/util/rand"
@@ -34,7 +36,8 @@ func newTstateSN(mrts *test.MultiRealmTstate, srvs []sn.Srv, nsrv int) (*TstateS
 			assert.Nil(tssn.mrts.T, err)
 		}
 	}
-	tssn.snCfg, err = sn.NewConfig(tssn.mrts.GetRealm(test.REALM1).SigmaClnt, tssn.jobname, srvs, nsrv, false)
+	cacheCfg := cachegrpmgr.NewCacheJobConfig(nsrv, proc.Tmcpu(1000), false)
+	tssn.snCfg, err = sn.NewConfig(tssn.mrts.GetRealm(test.REALM1).SigmaClnt, tssn.jobname, srvs, cacheCfg)
 	assert.Nil(tssn.mrts.T, err, "config should initialize properly.")
 	tssn.dbu, err = sn.NewDBUtil(tssn.mrts.GetRealm(test.REALM1).SigmaClnt)
 	if !assert.Nil(tssn.mrts.T, err, "Err create mongoc: %v", err) {

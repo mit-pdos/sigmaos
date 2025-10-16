@@ -11,6 +11,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	cachegrpmgr "sigmaos/apps/cache/cachegrp/mgr"
 	"sigmaos/apps/hotel"
 	"sigmaos/benchmarks"
 	"sigmaos/benchmarks/loadgen"
@@ -132,7 +133,8 @@ func NewHotelJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, durs string, 
 		if !sigmaos {
 			nc = 0
 		}
-		ji.hj, err = hotel.NewHotelJob(ts.SigmaClnt, ji.job, svcs, N_HOTEL, cachetype, cacheMcpu, nc, CACHE_GC, HOTEL_IMG_SZ_MB, nGeo, geoNIndex, geoSearchRadius, geoNResults, cosSimCfg.GetJobConfig())
+		cacheCfg := cachegrpmgr.NewCacheJobConfig(nc, cacheMcpu, CACHE_GC)
+		ji.hj, err = hotel.NewHotelJob(ts.SigmaClnt, ji.job, svcs, N_HOTEL, cachetype, cacheCfg, HOTEL_IMG_SZ_MB, nGeo, geoNIndex, geoSearchRadius, geoNResults, cosSimCfg.GetJobConfig())
 		assert.Nil(ts.Ts.T, err, "Error NewHotelJob: %v", err)
 		if ji.runningMatch {
 			ji.msc = mschedclnt.NewMSchedClnt(ts.SigmaClnt.FsLib, sp.NOT_SET)

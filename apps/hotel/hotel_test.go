@@ -12,6 +12,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	cachegrpmgr "sigmaos/apps/cache/cachegrp/mgr"
 	cossimproto "sigmaos/apps/cossim/proto"
 	cossimsrv "sigmaos/apps/cossim/srv"
 	"sigmaos/apps/epcache"

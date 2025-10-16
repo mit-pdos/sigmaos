@@ -69,7 +69,7 @@ func JobDir(job string) string {
 	return filepath.Join(SOCIAL_NETWORK, job)
 }
 
-func NewConfig(sc *sigmaclnt.SigmaClnt, jobname string, srvs []Srv, nsrv int, gc bool) (*SocialNetworkConfig, error) {
+func NewConfig(sc *sigmaclnt.SigmaClnt, jobname string, srvs []Srv, cacheCfg *cachegrpmgr.CacheJobConfig) (*SocialNetworkConfig, error) {
 	var err error
 	fsl := sc.FsLib
 	fsl.MkDir(SOCIAL_NETWORK, 0777)
@@ -80,9 +80,9 @@ func NewConfig(sc *sigmaclnt.SigmaClnt, jobname string, srvs []Srv, nsrv int, gc
 	// Create a cache clnt.
 	var cc *cachegrpclnt.CachedSvcClnt
 	var cm *cachegrpmgr.CacheMgr
-	if nsrv > 0 {
-		db.DPrintf(db.SOCIAL_NETWORK, "social network running with cached: %v caches", nsrv)
-		cm, err = cachegrpmgr.NewCacheMgr(sc, jobname, nsrv, proc.Tmcpu(cacheMcpu), gc)
+	if cacheCfg.NSrv > 0 {
+		db.DPrintf(db.SOCIAL_NETWORK, "social network running with cached: %v caches", cacheCfg.NSrv)
+		cm, err = cachegrpmgr.NewCacheMgr(sc, jobname, cacheCfg)
 		if err != nil {
 			db.DPrintf(db.ERROR, "Error NewCacheMgr %v", err)
 			return nil, err
@@ -96,12 +96,12 @@ func NewConfig(sc *sigmaclnt.SigmaClnt, jobname string, srvs []Srv, nsrv int, gc
 		db.DPrintf(db.TEST, "Start %v", srv.Name)
 		p := proc.NewProc(srv.Name, append([]string{jobname}, srv.Args...))
 		p.SetMcpu(srv.Mcpu)
+		if !cacheCfg.GC {
+			p.AppendEnv("GOGC", "off")
+		}
 		if err := sc.Spawn(p); err != nil {
 			db.DPrintf(db.ERROR, "Error burst-spawnn proc %v: %v", p, err)
 			return nil, err
-		}
-		if !gc {
-			p.AppendEnv("GOGC", "off")
 		}
 		if err = sc.WaitStart(p.GetPid()); err != nil {
 			db.DPrintf(db.ERROR, "Error spawn proc %v: %v", p, err)

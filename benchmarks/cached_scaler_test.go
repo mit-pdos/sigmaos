@@ -74,7 +74,7 @@ func NewCachedScalerJob(ts *test.RealmTstate, jobName string, cacheCfg *benchmar
 			return ji
 		}
 	}
-	ji.cm, err = cachegrpmgr.NewCacheMgrEPCache(ts.SigmaClnt, ji.epcj, ji.jobName, ji.cacheCfg.JobCfg.NSrv, ji.cacheCfg.JobCfg.MCPU, ji.cacheCfg.JobCfg.GC)
+	ji.cm, err = cachegrpmgr.NewCacheMgrEPCache(ts.SigmaClnt, ji.epcj, ji.jobName, ji.cacheCfg.JobCfg)
 	if !assert.Nil(ts.Ts.T, err, "Err new cachemgr: %v", err) {
 		return ji
 	}

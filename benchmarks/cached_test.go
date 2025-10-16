@@ -48,7 +48,7 @@ func NewCachedJob(ts *test.RealmTstate, nkeys, ncache, nclerks int, dur time.Dur
 }
 
 func (ji *CachedJobInstance) RunCachedJob() {
-	cm, err := cachegrpmgr.NewCacheMgr(ji.SigmaClnt, ji.job, ji.ncache, ji.cachemcpu, CACHE_GC)
+	cm, err := cachegrpmgr.NewCacheMgr(ji.SigmaClnt, ji.job, cachegrpmgr.NewCacheJobConfig(ji.ncache, ji.cachemcpu, CACHE_GC))
 	assert.Nil(ji.Ts.T, err, "Error NewCacheMgr: %v", err)
 	ji.cm = cm
 	ji.sempn = ji.cm.SvcDir() + "-cacheclerk-sem"

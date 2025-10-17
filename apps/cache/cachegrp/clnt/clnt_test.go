@@ -40,7 +40,7 @@ func newTstate(mrts *test.MultiRealmTstate, nsrv int) *Tstate {
 	ts.mrts = mrts
 	ts.job = rd.String(16)
 	ts.mrts.GetRealm(test.REALM1).Remove(cache.CACHE)
-	cm, err := cachegrpmgr.NewCacheMgr(ts.mrts.GetRealm(test.REALM1).SigmaClnt, ts.job, nsrv, proc.Tmcpu(CACHE_MCPU), true)
+	cm, err := cachegrpmgr.NewCacheMgr(ts.mrts.GetRealm(test.REALM1).SigmaClnt, ts.job, cachegrpmgr.NewCacheJobConfig(nsrv, proc.Tmcpu(CACHE_MCPU), true))
 	assert.Nil(mrts.T, err)
 	ts.cm = cm
 	ts.sempn = cm.SvcDir() + "-cacheclerk-sem"

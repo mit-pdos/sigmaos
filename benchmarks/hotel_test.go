@@ -148,7 +148,7 @@ func NewHotelJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, fn hotelFn, j
 	}
 
 	if sigmaos {
-		if ji.cfg.CacheBenchCfg.Scale.GetShouldScale() && ji.cfg.JobCfg.Cache == "cached" && !ji.justCli {
+		if ji.cfg.CacheBenchCfg.Autoscale && ji.cfg.JobCfg.Cache == "cached" && !ji.justCli {
 			ji.hj.CacheAutoscaler.Run(1*time.Second, ji.cfg.JobCfg.CacheCfg.NSrv)
 		}
 	}

@@ -46,6 +46,7 @@ var DefaultCacheBenchConfig = &CacheBenchConfig{
 	CosSimBackend: false,
 	UseEPCache:    false,
 	DelegateInit:  false,
+	Autoscale:     false,
 	NKeys:         1000,
 	TopNShards:    1,
 	Durs:          []time.Duration{10 * time.Second},

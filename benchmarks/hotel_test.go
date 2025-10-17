@@ -31,19 +31,18 @@ const (
 type hotelFn func(wc *hotel.WebClnt, r *rand.Rand)
 
 type HotelJobInstance struct {
-	sigmaos      bool
-	justCli      bool
-	k8ssrvaddr   string
-	cfg          *benchmarks.HotelBenchConfig
-	ready        chan bool
-	msc          *mschedclnt.MSchedClnt
-	cosSimCfg    *benchmarks.CosSimBenchConfig
-	fn           hotelFn
-	hj           *hotel.HotelJob
-	lgs          []*loadgen.LoadGenerator
-	p            *perf.Perf
-	wc           *hotel.WebClnt
-	runningMatch bool
+	sigmaos    bool
+	justCli    bool
+	k8ssrvaddr string
+	cfg        *benchmarks.HotelBenchConfig
+	ready      chan bool
+	msc        *mschedclnt.MSchedClnt
+	cosSimCfg  *benchmarks.CosSimBenchConfig
+	fn         hotelFn
+	hj         *hotel.HotelJob
+	lgs        []*loadgen.LoadGenerator
+	p          *perf.Perf
+	wc         *hotel.WebClnt
 	// Cluster pre-warming
 	warmCossimSrvKID string
 	cossimKIDs       map[string]bool
@@ -65,9 +64,6 @@ func NewHotelJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, fn hotelFn, j
 	ji.cacheKIDs = make(map[string]bool)
 
 	var err error
-	if cosSimCfg != nil {
-		ji.runningMatch = true
-	}
 
 	if ji.justCli {
 		// Read job name from filesystem and update the hotelCfg
@@ -86,7 +82,7 @@ func NewHotelJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, fn hotelFn, j
 	if !ji.justCli {
 		ji.hj, err = hotel.NewHotelJob(ts.SigmaClnt, ji.cfg.GetJobConfig(), cosSimCfg.GetJobConfig())
 		assert.Nil(ts.Ts.T, err, "Error NewHotelJob: %v", err)
-		if ji.runningMatch {
+		if ji.cfg.JobCfg.UseMatch {
 			ji.msc = mschedclnt.NewMSchedClnt(ts.SigmaClnt.FsLib, sp.NOT_SET)
 			foundCossim := false
 			foundCached := false
@@ -148,7 +144,7 @@ func NewHotelJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, fn hotelFn, j
 	}
 
 	if sigmaos {
-		if HOTEL_CACHE_AUTOSCALE && ji.cfg.JobCfg.Cache == "cached" && !ji.justCli {
+		if ji.cfg.ScaleCache.GetShouldScale() && ji.cfg.JobCfg.Cache == "cached" && !ji.justCli {
 			ji.hj.CacheAutoscaler.Run(1*time.Second, ji.cfg.JobCfg.CacheCfg.NSrv)
 		}
 	}
@@ -212,7 +208,7 @@ func (ji *HotelJobInstance) scaleCosSimSrv() {
 		return
 	}
 	// If not running match server, bail out
-	if !ji.runningMatch {
+	if !ji.cfg.JobCfg.UseMatch {
 		return
 	}
 	if ji.cosSimCfg.Scale.GetShouldScale() {

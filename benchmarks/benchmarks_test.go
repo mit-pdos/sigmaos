@@ -66,16 +66,6 @@ var KVD_MCPU int
 var WWWD_MCPU int
 var WWWD_REQ_TYPE string
 var WWWD_REQ_DELAY time.Duration
-var HOTEL_NCACHE int
-var HOTEL_NGEO int
-var HOTEL_NGEO_IDX int
-var HOTEL_GEO_SEARCH_RADIUS int
-var HOTEL_GEO_NRESULTS int
-var HOTEL_CACHE_MCPU int
-var N_HOTEL int
-var HOTEL_IMG_SZ_MB int
-var HOTEL_CACHE_AUTOSCALE bool
-var HOTEL_USE_MATCH bool
 var MANUALLY_SCALE_GEO bool
 var MANUALLY_SCALE_CACHES bool
 var N_GEO_TO_ADD int
@@ -93,8 +83,6 @@ var MEMCACHED_ADDRS string
 var HTTP_URL string
 var DURATION time.Duration
 var MAX_RPS int
-var HOTEL_DURS string
-var HOTEL_MAX_RPS string
 var SOCIAL_NETWORK_DURS string
 var SOCIAL_NETWORK_MAX_RPS string
 var SOCIAL_NETWORK_READ_ONLY bool
@@ -150,19 +138,6 @@ func init() {
 	flag.StringVar(&WWWD_REQ_TYPE, "wwwd_req_type", "compute", "WWWD request type [compute, dummy, io].")
 	flag.DurationVar(&WWWD_REQ_DELAY, "wwwd_req_delay", 500*time.Millisecond, "Average request delay.")
 	flag.DurationVar(&SLEEP, "sleep", 0*time.Millisecond, "Sleep length.")
-	flag.IntVar(&HOTEL_NCACHE, "hotel_ncache", 1, "Hotel ncache")
-	flag.IntVar(&HOTEL_NGEO_IDX, "hotel_ngeo_idx", 1000, "Hotel num indexes per geo")
-	flag.IntVar(&HOTEL_GEO_SEARCH_RADIUS, "hotel_geo_search_radius", 10, "Hotel geo search radius")
-	flag.IntVar(&HOTEL_GEO_NRESULTS, "hotel_geo_nresults", 5, "Hotel num search results to return from geo")
-	flag.IntVar(&HOTEL_NGEO, "hotel_ngeo", 1, "Hotel ngeo")
-	flag.IntVar(&HOTEL_CACHE_MCPU, "hotel_cache_mcpu", 2000, "Hotel cache mcpu")
-	flag.IntVar(&HOTEL_IMG_SZ_MB, "hotel_img_sz_mb", 0, "Hotel image data size in megabytes.")
-	flag.IntVar(&N_HOTEL, "nhotel", 80, "Number of hotels in the dataset.")
-	flag.BoolVar(&HOTEL_CACHE_AUTOSCALE, "hotel_cache_autoscale", false, "Autoscale hotel cache")
-	flag.BoolVar(&HOTEL_USE_MATCH, "hotel_use_match", false, "Use match service in hotel application")
-	flag.BoolVar(&MANUALLY_SCALE_GEO, "manually_scale_geo", false, "Manually scale geos")
-	flag.DurationVar(&SCALE_GEO_DELAY, "scale_geo_delay", 0*time.Second, "Delay to wait before scaling up number of geos.")
-	flag.IntVar(&N_GEO_TO_ADD, "n_geo_to_add", 0, "Number of geo to add.")
 	flag.BoolVar(&MANUALLY_SCALE_CACHES, "manually_scale_caches", false, "Manually scale caches")
 	flag.DurationVar(&SCALE_CACHE_DELAY, "scale_cache_delay", 0*time.Second, "Delay to wait before scaling up number of caches.")
 	flag.IntVar(&N_CACHES_TO_ADD, "n_caches_to_add", 0, "Number of caches to add.")
@@ -173,8 +148,6 @@ func init() {
 	flag.StringVar(&HTTP_URL, "http_url", "http://x.x.x.x", "HTTP url.")
 	flag.DurationVar(&DURATION, "duration", 10*time.Second, "Duration.")
 	flag.IntVar(&MAX_RPS, "max_rps", 1000, "Max requests per second.")
-	flag.StringVar(&HOTEL_DURS, "hotel_dur", "10s", "Hotel benchmark load generation duration (comma-separated for multiple phases).")
-	flag.StringVar(&HOTEL_MAX_RPS, "hotel_max_rps", "1000", "Max requests/second for hotel bench (comma-separated for multiple phases).")
 	flag.StringVar(&SOCIAL_NETWORK_DURS, "sn_dur", "10s", "Social network benchmark load generation duration (comma-separated for multiple phases).")
 	flag.StringVar(&SOCIAL_NETWORK_MAX_RPS, "sn_max_rps", "1000", "Max requests/second for social network bench (comma-separated for multiple phases).")
 	flag.BoolVar(&SOCIAL_NETWORK_READ_ONLY, "sn_read_only", false, "send read only cases in social network bench")
@@ -1252,7 +1225,7 @@ func TestHotelSigmaosJustCliSearch(t *testing.T) {
 }
 
 func TestHotelSigmaosMatch(t *testing.T) {
-	if !assert.True(t, HOTEL_USE_MATCH, "Run match bench without match service") {
+	if !assert.True(t, HotelBenchConfig.JobCfg.UseMatch, "Run match bench without match service") {
 		return
 	}
 	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{REALM1})
@@ -1273,7 +1246,7 @@ func TestHotelSigmaosMatch(t *testing.T) {
 }
 
 func TestHotelSigmaosJustCliMatch(t *testing.T) {
-	if !assert.True(t, HOTEL_USE_MATCH, "Run match bench without match service") {
+	if !assert.True(t, HotelBenchConfig.JobCfg.UseMatch, "Run match bench without match service") {
 		return
 	}
 	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{})

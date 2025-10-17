@@ -51,19 +51,20 @@ var HOTELSVC = []string{
 }
 
 type HotelJobConfig struct {
-	Job             string                         `json:"job"`
-	Srvs            []*Srv                         `json:"srvs"`
-	NHotel          int                            `json:"n_hotel"`
-	Cache           string                         `json:"cache"`
-	CacheCfg        *cachegrpmgr.CacheJobConfig    `json:"cache_cfg"`
-	ImgSizeMB       int                            `json:"img_size_mb"`
-	NGeo            int                            `json:"n_geo"`
-	NGeoIdx         int                            `json:"n_geo_idx"`
-	GeoSearchRadius int                            `json:"geo_search_radius"`
-	GeoNResults     int                            `json:"geo_n_results"`
+	Job             string                      `json:"job"`
+	Srvs            []*Srv                      `json:"srvs"`
+	NHotel          int                         `json:"n_hotel"`
+	Cache           string                      `json:"cache"`
+	CacheCfg        *cachegrpmgr.CacheJobConfig `json:"cache_cfg"`
+	ImgSizeMB       int                         `json:"img_size_mb"`
+	NGeo            int                         `json:"n_geo"`
+	NGeoIdx         int                         `json:"n_geo_idx"`
+	GeoSearchRadius int                         `json:"geo_search_radius"`
+	GeoNResults     int                         `json:"geo_n_results"`
+	UseMatch        bool                        `json:"use_match"`
 }
 
-func NewHotelJobConfig(job string, srvs []*Srv, nhotel int, cache string, cacheCfg *cachegrpmgr.CacheJobConfig, imgSizeMB int, ngeo int, ngeoidx int, geoSearchRadius int, geoNResults int) *HotelJobConfig {
+func NewHotelJobConfig(job string, srvs []*Srv, nhotel int, cache string, cacheCfg *cachegrpmgr.CacheJobConfig, imgSizeMB int, ngeo int, ngeoidx int, geoSearchRadius int, geoNResults int, useMatch bool) *HotelJobConfig {
 	return &HotelJobConfig{
 		Job:             job,
 		Srvs:            srvs,
@@ -75,12 +76,13 @@ func NewHotelJobConfig(job string, srvs []*Srv, nhotel int, cache string, cacheC
 		NGeoIdx:         ngeoidx,
 		GeoSearchRadius: geoSearchRadius,
 		GeoNResults:     geoNResults,
+		UseMatch:        useMatch,
 	}
 }
 
 func (cfg *HotelJobConfig) String() string {
-	return fmt.Sprintf("&{ Job:%v Srvs:%v NHotel:%v Cache:%v CacheCfg:%v ImgSizeMB:%v NGeo:%v NGeoIdx:%v GeoSearchRadius:%v GeoNResults:%v }",
-		cfg.Job, cfg.Srvs, cfg.NHotel, cfg.Cache, cfg.CacheCfg, cfg.ImgSizeMB, cfg.NGeo, cfg.NGeoIdx, cfg.GeoSearchRadius, cfg.GeoNResults)
+	return fmt.Sprintf("&{ Job:%v Srvs:%v NHotel:%v Cache:%v CacheCfg:%v ImgSizeMB:%v NGeo:%v NGeoIdx:%v GeoSearchRadius:%v GeoNResults:%v UseMatch:%v }",
+		cfg.Job, cfg.Srvs, cfg.NHotel, cfg.Cache, cfg.CacheCfg, cfg.ImgSizeMB, cfg.NGeo, cfg.NGeoIdx, cfg.GeoSearchRadius, cfg.GeoNResults, cfg.UseMatch)
 }
 
 var (
@@ -260,7 +262,7 @@ func NewHotelJob(sc *sigmaclnt.SigmaClnt, cfg *HotelJobConfig, csjConf *cossimsr
 
 	// Initialize CosSimJob after cache client is created
 	var cosSimJob *cossimsrv.CosSimJob
-	if csjConf != nil {
+	if cfg.UseMatch {
 		db.DPrintf(db.TEST, "Start cossimsrv")
 		cosSimJob, err = cossimsrv.NewCosSimJob(csjConf, sc, epcj, cm, cc)
 		if err != nil {

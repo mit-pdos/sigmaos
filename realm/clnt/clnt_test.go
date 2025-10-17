@@ -497,7 +497,7 @@ func TestMultiRealmIsolationBasic(t *testing.T) {
 	defer mrts.Shutdown()
 
 	job := rd.String(16)
-	cm, err := cachegrpmgr.NewCacheMgr(mrts.GetRealm(test.REALM1).SigmaClnt, job, 1, 0, true)
+	cm, err := cachegrpmgr.NewCacheMgr(mrts.GetRealm(test.REALM1).SigmaClnt, job, cachegrpmgr.NewCacheJobConfig(1, 0, true))
 	assert.Nil(t, err)
 
 	cc1 := cachegrpclnt.NewCachedSvcClnt(mrts.GetRealm(test.REALM1).FsLib, job)
@@ -532,7 +532,7 @@ func TestMultiRealmIsolationEndpoint(t *testing.T) {
 	defer mrts.Shutdown()
 
 	job := rd.String(16)
-	cm, err := cachegrpmgr.NewCacheMgr(mrts.GetRealm(test.REALM1).SigmaClnt, job, 1, 0, true)
+	cm, err := cachegrpmgr.NewCacheMgr(mrts.GetRealm(test.REALM1).SigmaClnt, job, cachegrpmgr.NewCacheJobConfig(1, 0, true))
 	assert.Nil(t, err)
 
 	cc1 := cachegrpclnt.NewCachedSvcClnt(mrts.GetRealm(test.REALM1).FsLib, job)

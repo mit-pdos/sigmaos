@@ -12,6 +12,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	cachegrpmgr "sigmaos/apps/cache/cachegrp/mgr"
 	"sigmaos/apps/cossim"
 	cossimproto "sigmaos/apps/cossim/proto"
 	cossimsrv "sigmaos/apps/cossim/srv"
@@ -402,7 +403,7 @@ func TestCosSimInitLatency(t *testing.T) {
 	}
 
 	// Start a cossim job
-	conf := cossimsrv.NewCosSimJobConfig(JOB_NAME, 0, N_VEC, VEC_DIM, EAGER_INIT, MCPU_PER_SRV, N_CACHE, CACHE_MCPU, CACHE_GC, DELEGATE_RPC)
+	conf := cossimsrv.NewCosSimJobConfig(JOB_NAME, 0, N_VEC, VEC_DIM, EAGER_INIT, MCPU_PER_SRV, cachegrpmgr.NewCacheJobConfig(N_CACHE, CACHE_MCPU, CACHE_GC), DELEGATE_RPC)
 	j, err := cossimsrv.NewCosSimJob(conf, mrts.GetRealm(test.REALM1).SigmaClnt, nil, nil, nil)
 	if !assert.Nil(mrts.T, err, "Err NewCosSimJob: %v", err) {
 		return

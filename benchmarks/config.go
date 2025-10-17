@@ -65,16 +65,17 @@ func (cfg *CacheBenchConfig) Marshal() (string, error) {
 }
 
 type HotelBenchConfig struct {
-	JobCfg     *hotel.HotelJobConfig `json:"job_cfg"`
-	Durs       []time.Duration       `json:"durs"`
-	MaxRPS     []int                 `json:"max_rps"`
-	ScaleGeo   *ManualScalingConfig  `json:"scale_geo"`
-	ScaleCache *ManualScalingConfig  `json:"scale_cache"`
+	JobCfg          *hotel.HotelJobConfig `json:"job_cfg"`
+	Durs            []time.Duration       `json:"durs"`
+	MaxRPS          []int                 `json:"max_rps"`
+	ScaleGeo        *ManualScalingConfig  `json:"scale_geo"`
+	CacheBenchCfg   *CacheBenchConfig     `json:"cache_bench_cfg"`
+	CosSimBenchCfg  *CosSimBenchConfig    `json:"cossim_bench_cfg"`
 }
 
 func (cfg *HotelBenchConfig) String() string {
-	return fmt.Sprintf("&{ JobCfg:%v Durs:%v MaxRPS:%v ScaleGeo:%v ScaleCache:%v }",
-		cfg.JobCfg, cfg.Durs, cfg.MaxRPS, cfg.ScaleGeo, cfg.ScaleCache)
+	return fmt.Sprintf("&{ JobCfg:%v Durs:%v MaxRPS:%v ScaleGeo:%v CacheBenchCfg:%v CosSimBenchCfg:%v }",
+		cfg.JobCfg, cfg.Durs, cfg.MaxRPS, cfg.ScaleGeo, cfg.CacheBenchCfg, cfg.CosSimBenchCfg)
 }
 
 func (cfg *HotelBenchConfig) GetJobConfig() *hotel.HotelJobConfig {

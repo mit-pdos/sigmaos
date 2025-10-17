@@ -37,7 +37,6 @@ type HotelJobInstance struct {
 	cfg        *benchmarks.HotelBenchConfig
 	ready      chan bool
 	msc        *mschedclnt.MSchedClnt
-	cosSimCfg  *benchmarks.CosSimBenchConfig
 	fn         hotelFn
 	hj         *hotel.HotelJob
 	lgs        []*loadgen.LoadGenerator
@@ -50,7 +49,7 @@ type HotelJobInstance struct {
 	*test.RealmTstate
 }
 
-func NewHotelJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, fn hotelFn, justCli bool, cfg *benchmarks.HotelBenchConfig, cosSimCfg *benchmarks.CosSimBenchConfig) *HotelJobInstance {
+func NewHotelJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, fn hotelFn, justCli bool, cfg *benchmarks.HotelBenchConfig) *HotelJobInstance {
 	ji := &HotelJobInstance{}
 	ji.sigmaos = sigmaos
 	ji.ready = make(chan bool)
@@ -59,7 +58,6 @@ func NewHotelJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, fn hotelFn, j
 	ji.p = p
 	ji.justCli = justCli
 	ji.cfg = cfg
-	ji.cosSimCfg = cosSimCfg
 	ji.cossimKIDs = make(map[string]bool)
 	ji.cacheKIDs = make(map[string]bool)
 
@@ -86,7 +84,7 @@ func NewHotelJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, fn hotelFn, j
 	}
 
 	if !ji.justCli {
-		ji.hj, err = hotel.NewHotelJob(ts.SigmaClnt, ji.cfg.GetJobConfig(), cosSimCfg.GetJobConfig())
+		ji.hj, err = hotel.NewHotelJob(ts.SigmaClnt, ji.cfg.GetJobConfig(), ji.cfg.CosSimBenchCfg.GetJobConfig())
 		assert.Nil(ts.Ts.T, err, "Error NewHotelJob: %v", err)
 		if ji.cfg.JobCfg.UseMatch {
 			ji.msc = mschedclnt.NewMSchedClnt(ts.SigmaClnt.FsLib, sp.NOT_SET)
@@ -150,7 +148,7 @@ func NewHotelJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, fn hotelFn, j
 	}
 
 	if sigmaos {
-		if ji.cfg.ScaleCache.GetShouldScale() && ji.cfg.JobCfg.Cache == "cached" && !ji.justCli {
+		if ji.cfg.CacheBenchCfg.Scale.GetShouldScale() && ji.cfg.JobCfg.Cache == "cached" && !ji.justCli {
 			ji.hj.CacheAutoscaler.Run(1*time.Second, ji.cfg.JobCfg.CacheCfg.NSrv)
 		}
 	}
@@ -200,10 +198,10 @@ func (ji *HotelJobInstance) scaleCaches() {
 	if ji.justCli {
 		return
 	}
-	if ji.cfg.ScaleCache.GetShouldScale() {
+	if ji.cfg.CacheBenchCfg.Scale.GetShouldScale() {
 		go func() {
-			time.Sleep(ji.cfg.ScaleCache.GetScalingDelay())
-			ji.hj.CacheAutoscaler.AddServers(ji.cfg.ScaleCache.GetNToAdd())
+			time.Sleep(ji.cfg.CacheBenchCfg.Scale.GetScalingDelay())
+			ji.hj.CacheAutoscaler.AddServers(ji.cfg.CacheBenchCfg.Scale.GetNToAdd())
 		}()
 	}
 }
@@ -217,21 +215,21 @@ func (ji *HotelJobInstance) scaleCosSimSrv() {
 	if !ji.cfg.JobCfg.UseMatch {
 		return
 	}
-	if ji.cosSimCfg.Scale.GetShouldScale() {
+	if ji.cfg.CosSimBenchCfg.Scale.GetShouldScale() {
 		go func() {
-			time.Sleep(ji.cosSimCfg.Scale.GetScalingDelay())
-			for i := 0; i < ji.cosSimCfg.Scale.GetNToAdd(); i++ {
-				db.DPrintf(db.TEST, "Scale up cossim srvs to: %v", (i+1)+ji.cosSimCfg.JobCfg.InitNSrv)
+			time.Sleep(ji.cfg.CosSimBenchCfg.Scale.GetScalingDelay())
+			for i := 0; i < ji.cfg.CosSimBenchCfg.Scale.GetNToAdd(); i++ {
+				db.DPrintf(db.TEST, "Scale up cossim srvs to: %v", (i+1)+ji.cfg.CosSimBenchCfg.JobCfg.InitNSrv)
 				err := ji.hj.AddCosSimSrvWithSigmaPath(chunk.ChunkdPath(ji.warmCossimSrvKID))
 				assert.Nil(ji.Ts.T, err, "Add CosSim srv: %v", err)
-				db.DPrintf(db.TEST, "Done scale up cossim srvs to: %v", (i+1)+ji.cosSimCfg.JobCfg.InitNSrv)
+				db.DPrintf(db.TEST, "Done scale up cossim srvs to: %v", (i+1)+ji.cfg.CosSimBenchCfg.JobCfg.InitNSrv)
 			}
 		}()
 	}
 }
 
 func (ji *HotelJobInstance) StartHotelJob() {
-	db.DPrintf(db.ALWAYS, "StartHotelJob kubernetes (%v,%v) cfg:%v cossim:%v", !ji.sigmaos, ji.k8ssrvaddr, ji.cfg, ji.cosSimCfg)
+	db.DPrintf(db.ALWAYS, "StartHotelJob kubernetes (%v,%v) cfg:%v", !ji.sigmaos, ji.k8ssrvaddr, ji.cfg)
 	var wg sync.WaitGroup
 	for _, lg := range ji.lgs {
 		wg.Add(1)

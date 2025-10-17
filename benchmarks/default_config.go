@@ -62,10 +62,10 @@ var DefaultCacheBenchConfig = &CacheBenchConfig{
 
 var DefaultHotelBenchConfig = &HotelBenchConfig{
 	JobCfg: &hotel.HotelJobConfig{
-		Job:   "hotel-job",
-		Srvs:  hotel.NewHotelSvc(),
+		Job:    "hotel-job",
+		Srvs:   hotel.NewHotelSvc(),
 		NHotel: 80,
-		Cache: "cached",
+		Cache:  "cached",
 		CacheCfg: &cachegrpmgr.CacheJobConfig{
 			NSrv: 1,
 			MCPU: proc.Tmcpu(1000),
@@ -76,6 +76,7 @@ var DefaultHotelBenchConfig = &HotelBenchConfig{
 		NGeoIdx:         4000,
 		GeoSearchRadius: 500,
 		GeoNResults:     5,
+		UseMatch:        false,
 	},
 	Durs:   []time.Duration{10 * time.Second},
 	MaxRPS: []int{100},
@@ -85,10 +86,6 @@ var DefaultHotelBenchConfig = &HotelBenchConfig{
 		ScaleDelay: 0 * time.Second,
 		NToAdd:     0,
 	},
-	ScaleCache: &ManualScalingConfig{
-		Svc:        "cached",
-		Scale:      false,
-		ScaleDelay: 0 * time.Second,
-		NToAdd:     0,
-	},
+	CacheBenchCfg:  nil,
+	CosSimBenchCfg: nil,
 }

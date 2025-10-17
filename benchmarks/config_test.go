@@ -64,5 +64,8 @@ func TestMain(m *testing.M) {
 		db.DPrintf(db.ALWAYS, "Loaded HotelBenchConfig: %v", HotelBenchConfig)
 	}
 
+	HotelBenchConfig.CosSimBenchCfg = CosSimBenchConfig
+	HotelBenchConfig.CacheBenchCfg = CacheBenchConfig
+
 	os.Exit(m.Run())
 }

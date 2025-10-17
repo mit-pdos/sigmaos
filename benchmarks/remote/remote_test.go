@@ -12,6 +12,7 @@ import (
 
 	cachegrpmgr "sigmaos/apps/cache/cachegrp/mgr"
 	cossimsrv "sigmaos/apps/cossim/srv"
+	"sigmaos/apps/hotel"
 	"sigmaos/benchmarks"
 	db "sigmaos/debug"
 	"sigmaos/proc"
@@ -387,7 +388,7 @@ func TestHotelTailLatency(t *testing.T) {
 		dur                 []time.Duration = []time.Duration{10 * time.Second, 10 * time.Second, 10 * time.Second, 10 * time.Second, 10 * time.Second, 10 * time.Second}
 		numCaches           int             = 3
 		cacheType           string          = "cached"
-		scaleCache          bool            = false
+		autoscaleCache      bool            = false
 		clientDelay         time.Duration   = 0 * time.Second
 		sleep               time.Duration   = 0 * time.Second
 		manuallyScaleCaches bool            = false
@@ -413,8 +414,42 @@ func TestHotelTailLatency(t *testing.T) {
 		rps = rpsK8s
 	}
 	db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
-	getLeaderCmd := GetHotelClientCmdConstructor("Search", true, len(driverVMs), rps, dur, numCaches, cacheType, scaleCache, sleep, manuallyScaleCaches, scaleCacheDelay, numCachesToAdd, numGeo, numGeoIdx, geoSearchRadius, geoNResults, manuallyScaleGeo, scaleGeoDelay, numGeoToAdd)
-	getFollowerCmd := GetHotelClientCmdConstructor("Search", false, len(driverVMs), rps, dur, numCaches, cacheType, scaleCache, sleep, manuallyScaleCaches, scaleCacheDelay, numCachesToAdd, numGeo, numGeoIdx, geoSearchRadius, geoNResults, manuallyScaleGeo, scaleGeoDelay, numGeoToAdd)
+	hotelCfg := &benchmarks.HotelBenchConfig{
+		JobCfg: &hotel.HotelJobConfig{
+			Job:             "hotel-job",
+			Srvs:            hotel.NewHotelSvc(),
+			NHotel:          80,
+			Cache:           cacheType,
+			CacheCfg:        &cachegrpmgr.CacheJobConfig{NSrv: numCaches, MCPU: proc.Tmcpu(2000), GC: true},
+			ImgSizeMB:       0,
+			NGeo:            numGeo,
+			NGeoIdx:         numGeoIdx,
+			GeoSearchRadius: geoSearchRadius,
+			GeoNResults:     geoNResults,
+			UseMatch:        false,
+		},
+		Durs:   dur,
+		MaxRPS: rps,
+		ScaleGeo: &benchmarks.ManualScalingConfig{
+			Svc:        "hotel-geo",
+			Scale:      manuallyScaleGeo,
+			ScaleDelay: scaleGeoDelay,
+			NToAdd:     numGeoToAdd,
+		},
+		CacheBenchCfg: &benchmarks.CacheBenchConfig{
+			JobCfg:    &cachegrpmgr.CacheJobConfig{NSrv: numCaches, MCPU: proc.Tmcpu(2000), GC: true},
+			Autoscale: autoscaleCache,
+			Scale: &benchmarks.ManualScalingConfig{
+				Svc:        "cached",
+				Scale:      manuallyScaleCaches,
+				ScaleDelay: scaleCacheDelay,
+				NToAdd:     numCachesToAdd,
+			},
+		},
+		CosSimBenchCfg: nil,
+	}
+	getLeaderCmd := GetHotelClientCmdConstructor("Search", true, len(driverVMs), sleep, hotelCfg)
+	getFollowerCmd := GetHotelClientCmdConstructor("Search", false, len(driverVMs), sleep, hotelCfg)
 	ts.RunParallelClientBenchmark(benchName, driverVMs, getLeaderCmd, getFollowerCmd, startK8sHotelApp, stopK8sHotelApp, clientDelay, numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost)
 }
 
@@ -440,7 +475,7 @@ func TestHotelScaleGeo(t *testing.T) {
 		numGeoBase         int             = 1
 		numCaches          int             = 3
 		cacheType          string          = "cached"
-		scaleCache         bool            = false
+		autoscaleCache     bool            = false
 		clientDelay        time.Duration   = 0 * time.Second
 		sleep              time.Duration   = 0 * time.Second
 		numGeoIdx          int             = 1
@@ -483,8 +518,42 @@ func TestHotelScaleGeo(t *testing.T) {
 					numGeo += numGeoToAdd
 					benchName += "_no_scale_geo_ngeo_" + strconv.Itoa(numGeo)
 				}
-				getLeaderCmd := GetHotelClientCmdConstructor("Search", true, len(driverVMs), rps, dur, numCaches, cacheType, scaleCache, sleep, false, 0, 0, numGeo, numGeoIdx, geoSearchRadius, geoNResults, scale, scaleGeoDelay, numGeoToAdd)
-				getFollowerCmd := GetHotelClientCmdConstructor("Search", false, len(driverVMs), rps, dur, numCaches, cacheType, scaleCache, sleep, false, 0, 0, numGeo, numGeoIdx, geoSearchRadius, geoNResults, scale, scaleGeoDelay, numGeoToAdd)
+				hotelCfg := &benchmarks.HotelBenchConfig{
+					JobCfg: &hotel.HotelJobConfig{
+						Job:             "hotel-job",
+						Srvs:            hotel.NewHotelSvc(),
+						NHotel:          80,
+						Cache:           cacheType,
+						CacheCfg:        &cachegrpmgr.CacheJobConfig{NSrv: numCaches, MCPU: proc.Tmcpu(2000), GC: true},
+						ImgSizeMB:       0,
+						NGeo:            numGeo,
+						NGeoIdx:         numGeoIdx,
+						GeoSearchRadius: geoSearchRadius,
+						GeoNResults:     geoNResults,
+						UseMatch:        false,
+					},
+					Durs:   dur,
+					MaxRPS: rps,
+					ScaleGeo: &benchmarks.ManualScalingConfig{
+						Svc:        "hotel-geo",
+						Scale:      scale,
+						ScaleDelay: scaleGeoDelay,
+						NToAdd:     numGeoToAdd,
+					},
+					CacheBenchCfg: &benchmarks.CacheBenchConfig{
+						JobCfg:    &cachegrpmgr.CacheJobConfig{NSrv: numCaches, MCPU: proc.Tmcpu(2000), GC: true},
+						Autoscale: autoscaleCache,
+						Scale: &benchmarks.ManualScalingConfig{
+							Svc:        "cached",
+							Scale:      false,
+							ScaleDelay: 0,
+							NToAdd:     0,
+						},
+					},
+					CosSimBenchCfg: nil,
+				}
+				getLeaderCmd := GetHotelClientCmdConstructor("Search", true, len(driverVMs), sleep, hotelCfg)
+				getFollowerCmd := GetHotelClientCmdConstructor("Search", false, len(driverVMs), sleep, hotelCfg)
 				ts.RunParallelClientBenchmark(benchName, driverVMs, getLeaderCmd, getFollowerCmd, startK8sHotelApp, stopK8sHotelApp, clientDelay, numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost)
 			}
 		}
@@ -513,7 +582,7 @@ func TestHotelGeoReqScaleGeo(t *testing.T) {
 		numGeoBase         int             = 1
 		numCaches          int             = 3
 		cacheType          string          = "cached"
-		scaleCache         bool            = false
+		autoscaleCache     bool            = false
 		clientDelay        time.Duration   = 0 * time.Second
 		sleep              time.Duration   = 0 * time.Second
 		geoSearchRadius    int             = 20
@@ -559,8 +628,42 @@ func TestHotelGeoReqScaleGeo(t *testing.T) {
 					numGeo += numGeoToAdd
 					benchName += "_no_scale_geo_ngeo_" + strconv.Itoa(numGeo)
 				}
-				getLeaderCmd := GetHotelClientCmdConstructor("Geo", true, len(driverVMs), rps, dur, numCaches, cacheType, scaleCache, sleep, false, 0, 0, numGeo, numGeoIdx, geoSearchRadius, geoNResults, scale, scaleGeoDelay, numGeoToAdd)
-				getFollowerCmd := GetHotelClientCmdConstructor("Geo", false, len(driverVMs), rps, dur, numCaches, cacheType, scaleCache, sleep, false, 0, 0, numGeo, numGeoIdx, geoSearchRadius, geoNResults, scale, scaleGeoDelay, numGeoToAdd)
+				hotelCfg := &benchmarks.HotelBenchConfig{
+					JobCfg: &hotel.HotelJobConfig{
+						Job:             "hotel-job",
+						Srvs:            hotel.NewHotelSvc(),
+						NHotel:          80,
+						Cache:           cacheType,
+						CacheCfg:        &cachegrpmgr.CacheJobConfig{NSrv: numCaches, MCPU: proc.Tmcpu(2000), GC: true},
+						ImgSizeMB:       0,
+						NGeo:            numGeo,
+						NGeoIdx:         numGeoIdx,
+						GeoSearchRadius: geoSearchRadius,
+						GeoNResults:     geoNResults,
+						UseMatch:        false,
+					},
+					Durs:   dur,
+					MaxRPS: rps,
+					ScaleGeo: &benchmarks.ManualScalingConfig{
+						Svc:        "hotel-geo",
+						Scale:      scale,
+						ScaleDelay: scaleGeoDelay,
+						NToAdd:     numGeoToAdd,
+					},
+					CacheBenchCfg: &benchmarks.CacheBenchConfig{
+						JobCfg:    &cachegrpmgr.CacheJobConfig{NSrv: numCaches, MCPU: proc.Tmcpu(2000), GC: true},
+						Autoscale: autoscaleCache,
+						Scale: &benchmarks.ManualScalingConfig{
+							Svc:        "cached",
+							Scale:      false,
+							ScaleDelay: 0,
+							NToAdd:     0,
+						},
+					},
+					CosSimBenchCfg: nil,
+				}
+				getLeaderCmd := GetHotelClientCmdConstructor("Geo", true, len(driverVMs), sleep, hotelCfg)
+				getFollowerCmd := GetHotelClientCmdConstructor("Geo", false, len(driverVMs), sleep, hotelCfg)
 				ran := ts.RunParallelClientBenchmark(benchName, driverVMs, getLeaderCmd, getFollowerCmd, startK8sHotelApp, stopK8sHotelApp, clientDelay, numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost)
 				if oneByOne && ran {
 					return
@@ -590,7 +693,7 @@ func TestHotelScaleCache(t *testing.T) {
 		dur                  []time.Duration = []time.Duration{10 * time.Second, 10 * time.Second, 10 * time.Second}
 		numCachesBase        int             = 1
 		cacheType            string          = "cached"
-		scaleCache           bool            = false
+		autoscaleCache       bool            = false
 		clientDelay          time.Duration   = 0 * time.Second
 		sleep                time.Duration   = 0 * time.Second
 		manuallyScaleCaches  []bool          = []bool{true, false}
@@ -632,8 +735,42 @@ func TestHotelScaleCache(t *testing.T) {
 					numCaches += numCachesToAdd
 					benchName += "_no_scale_cache_ncache_" + strconv.Itoa(numCaches)
 				}
-				getLeaderCmd := GetHotelClientCmdConstructor("Search", true, len(driverVMs), rps, dur, numCaches, cacheType, scaleCache, sleep, scale, scaleCacheDelay, numCachesToAdd, numGeo, numGeoIdx, geoSearchRadius, geoNResults, manuallyScaleGeo, scaleGeoDelay, numGeoToAdd)
-				getFollowerCmd := GetHotelClientCmdConstructor("Search", false, len(driverVMs), rps, dur, numCaches, cacheType, scaleCache, sleep, scale, scaleCacheDelay, numCachesToAdd, numGeo, numGeoIdx, geoSearchRadius, geoNResults, manuallyScaleGeo, scaleGeoDelay, numGeoToAdd)
+				hotelCfg := &benchmarks.HotelBenchConfig{
+					JobCfg: &hotel.HotelJobConfig{
+						Job:             "hotel-job",
+						Srvs:            hotel.NewHotelSvc(),
+						NHotel:          80,
+						Cache:           cacheType,
+						CacheCfg:        &cachegrpmgr.CacheJobConfig{NSrv: numCaches, MCPU: proc.Tmcpu(2000), GC: true},
+						ImgSizeMB:       0,
+						NGeo:            numGeo,
+						NGeoIdx:         numGeoIdx,
+						GeoSearchRadius: geoSearchRadius,
+						GeoNResults:     geoNResults,
+						UseMatch:        false,
+					},
+					Durs:   dur,
+					MaxRPS: rps,
+					ScaleGeo: &benchmarks.ManualScalingConfig{
+						Svc:        "hotel-geo",
+						Scale:      manuallyScaleGeo,
+						ScaleDelay: scaleGeoDelay,
+						NToAdd:     numGeoToAdd,
+					},
+					CacheBenchCfg: &benchmarks.CacheBenchConfig{
+						JobCfg:    &cachegrpmgr.CacheJobConfig{NSrv: numCaches, MCPU: proc.Tmcpu(2000), GC: true},
+						Autoscale: autoscaleCache,
+						Scale: &benchmarks.ManualScalingConfig{
+							Svc:        "cached",
+							Scale:      scale,
+							ScaleDelay: scaleCacheDelay,
+							NToAdd:     numCachesToAdd,
+						},
+					},
+					CosSimBenchCfg: nil,
+				}
+				getLeaderCmd := GetHotelClientCmdConstructor("Search", true, len(driverVMs), sleep, hotelCfg)
+				getFollowerCmd := GetHotelClientCmdConstructor("Search", false, len(driverVMs), sleep, hotelCfg)
 				ts.RunParallelClientBenchmark(benchName, driverVMs, getLeaderCmd, getFollowerCmd, startK8sHotelApp, stopK8sHotelApp, clientDelay, numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost)
 			}
 		}
@@ -745,7 +882,7 @@ func TestLCBEHotelImgResizeMultiplexing(t *testing.T) {
 		dur                 []time.Duration = []time.Duration{5 * time.Second, 5 * time.Second, 10 * time.Second, 15 * time.Second, 20 * time.Second, 15 * time.Second}
 		numCaches           int             = 3
 		cacheType           string          = "cached"
-		scaleCache          bool            = false
+		autoscaleCache      bool            = false
 		clientDelay         time.Duration   = 60 * time.Second
 		sleep               time.Duration   = 10 * time.Second
 		manuallyScaleCaches bool            = false
@@ -767,8 +904,42 @@ func TestLCBEHotelImgResizeMultiplexing(t *testing.T) {
 		return
 	}
 	db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
-	getLeaderCmd := GetLCBEHotelImgResizeMultiplexingCmdConstructor(len(driverVMs), rps, dur, cacheType, scaleCache, sleep)
-	getFollowerCmd := GetHotelClientCmdConstructor("Search", false, len(driverVMs), rps, dur, numCaches, cacheType, scaleCache, sleep, manuallyScaleCaches, scaleCacheDelay, numCachesToAdd, numGeo, numGeoIdx, geoSearchRadius, geoNResults, manuallyScaleGeo, scaleGeoDelay, numGeoToAdd)
+	hotelCfg := &benchmarks.HotelBenchConfig{
+		JobCfg: &hotel.HotelJobConfig{
+			Job:             "hotel-job",
+			Srvs:            hotel.NewHotelSvc(),
+			NHotel:          80,
+			Cache:           cacheType,
+			CacheCfg:        &cachegrpmgr.CacheJobConfig{NSrv: numCaches, MCPU: proc.Tmcpu(2000), GC: true},
+			ImgSizeMB:       0,
+			NGeo:            numGeo,
+			NGeoIdx:         numGeoIdx,
+			GeoSearchRadius: geoSearchRadius,
+			GeoNResults:     geoNResults,
+			UseMatch:        false,
+		},
+		Durs:   dur,
+		MaxRPS: rps,
+		ScaleGeo: &benchmarks.ManualScalingConfig{
+			Svc:        "hotel-geo",
+			Scale:      manuallyScaleGeo,
+			ScaleDelay: scaleGeoDelay,
+			NToAdd:     numGeoToAdd,
+		},
+		CacheBenchCfg: &benchmarks.CacheBenchConfig{
+			JobCfg:    &cachegrpmgr.CacheJobConfig{NSrv: numCaches, MCPU: proc.Tmcpu(2000), GC: true},
+			Autoscale: autoscaleCache,
+			Scale: &benchmarks.ManualScalingConfig{
+				Svc:        "cached",
+				Scale:      manuallyScaleCaches,
+				ScaleDelay: scaleCacheDelay,
+				NToAdd:     numCachesToAdd,
+			},
+		},
+		CosSimBenchCfg: nil,
+	}
+	getLeaderCmd := GetLCBEHotelImgResizeMultiplexingCmdConstructor(len(driverVMs), rps, dur, cacheType, autoscaleCache, sleep)
+	getFollowerCmd := GetHotelClientCmdConstructor("Search", false, len(driverVMs), sleep, hotelCfg)
 	ts.RunParallelClientBenchmark(benchName, driverVMs, getLeaderCmd, getFollowerCmd, nil, nil, clientDelay, numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost)
 }
 
@@ -791,7 +962,7 @@ func TestLCBEHotelImgResizeRPCMultiplexing(t *testing.T) {
 		dur                 []time.Duration = []time.Duration{5 * time.Second, 5 * time.Second, 10 * time.Second, 15 * time.Second, 20 * time.Second, 15 * time.Second}
 		numCaches           int             = 3
 		cacheType           string          = "cached"
-		scaleCache          bool            = false
+		autoscaleCache      bool            = false
 		clientDelay         time.Duration   = 60 * time.Second
 		sleep               time.Duration   = 10 * time.Second
 		manuallyScaleCaches bool            = false
@@ -813,8 +984,42 @@ func TestLCBEHotelImgResizeRPCMultiplexing(t *testing.T) {
 		return
 	}
 	db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
-	getLeaderCmd := GetLCBEHotelImgResizeRPCMultiplexingCmdConstructor(len(driverVMs), rps, dur, cacheType, scaleCache, sleep)
-	getFollowerCmd := GetHotelClientCmdConstructor("Search", false, len(driverVMs), rps, dur, numCaches, cacheType, scaleCache, sleep, manuallyScaleCaches, scaleCacheDelay, numCachesToAdd, numGeo, numGeoIdx, geoSearchRadius, geoNResults, manuallyScaleGeo, scaleGeoDelay, numGeoToAdd)
+	hotelCfg := &benchmarks.HotelBenchConfig{
+		JobCfg: &hotel.HotelJobConfig{
+			Job:             "hotel-job",
+			Srvs:            hotel.NewHotelSvc(),
+			NHotel:          80,
+			Cache:           cacheType,
+			CacheCfg:        &cachegrpmgr.CacheJobConfig{NSrv: numCaches, MCPU: proc.Tmcpu(2000), GC: true},
+			ImgSizeMB:       0,
+			NGeo:            numGeo,
+			NGeoIdx:         numGeoIdx,
+			GeoSearchRadius: geoSearchRadius,
+			GeoNResults:     geoNResults,
+			UseMatch:        false,
+		},
+		Durs:   dur,
+		MaxRPS: rps,
+		ScaleGeo: &benchmarks.ManualScalingConfig{
+			Svc:        "hotel-geo",
+			Scale:      manuallyScaleGeo,
+			ScaleDelay: scaleGeoDelay,
+			NToAdd:     numGeoToAdd,
+		},
+		CacheBenchCfg: &benchmarks.CacheBenchConfig{
+			JobCfg:    &cachegrpmgr.CacheJobConfig{NSrv: numCaches, MCPU: proc.Tmcpu(2000), GC: true},
+			Autoscale: autoscaleCache,
+			Scale: &benchmarks.ManualScalingConfig{
+				Svc:        "cached",
+				Scale:      manuallyScaleCaches,
+				ScaleDelay: scaleCacheDelay,
+				NToAdd:     numCachesToAdd,
+			},
+		},
+		CosSimBenchCfg: nil,
+	}
+	getLeaderCmd := GetLCBEHotelImgResizeRPCMultiplexingCmdConstructor(len(driverVMs), rps, dur, cacheType, autoscaleCache, sleep)
+	getFollowerCmd := GetHotelClientCmdConstructor("Search", false, len(driverVMs), sleep, hotelCfg)
 	ts.RunParallelClientBenchmark(benchName, driverVMs, getLeaderCmd, getFollowerCmd, nil, nil, clientDelay, numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost)
 }
 
@@ -968,6 +1173,7 @@ func TestScaleCachedScaler(t *testing.T) {
 						CosSimBackend: cossimBackend,
 						UseEPCache:    useEPCache,
 						DelegateInit:  delegate,
+						Autoscale:     false,
 						NKeys:         5000,
 						TopNShards:    1,
 						Durs:          []time.Duration{30 * time.Second},
@@ -1024,7 +1230,7 @@ func TestScaleCachedScaler(t *testing.T) {
 //		dur                 []time.Duration = []time.Duration{10 * time.Second}
 //		numCaches           int             = 3
 //		cacheType           string          = "cached"
-//		scaleCache          bool            = false
+//		autoscaleCache          bool            = false
 //		clientDelay         time.Duration   = 0 * time.Second
 //		sleep               time.Duration   = 0 * time.Second
 //		manuallyScaleCaches bool            = false

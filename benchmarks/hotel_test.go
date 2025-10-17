@@ -79,6 +79,12 @@ func NewHotelJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, fn hotelFn, j
 		}
 	}
 
+	if ji.cfg.JobCfg.UseMatch {
+		ji.cfg.JobCfg.Srvs = hotel.NewHotelSvcWithMatch()
+	} else {
+		ji.cfg.JobCfg.Srvs = hotel.NewHotelSvc()
+	}
+
 	if !ji.justCli {
 		ji.hj, err = hotel.NewHotelJob(ts.SigmaClnt, ji.cfg.GetJobConfig(), cosSimCfg.GetJobConfig())
 		assert.Nil(ts.Ts.T, err, "Error NewHotelJob: %v", err)

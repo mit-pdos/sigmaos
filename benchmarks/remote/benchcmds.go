@@ -336,6 +336,19 @@ func GetHotelClientCmdConstructor(hotelReqName string, leader bool, numClients i
 		if err != nil {
 			db.DFatalf("Err marshal hotel config: %v", err)
 		}
+		cacheCfgJSON, err := hotelCfg.CacheBenchCfg.Marshal()
+		if err != nil {
+			db.DFatalf("Err marshal hotel config: %v", err)
+		}
+		// Marshal cossim config (may be nil)
+		cosSimCfgStr := ""
+		if hotelCfg.CosSimBenchCfg != nil {
+			cosSimCfgJSON, err := hotelCfg.CosSimBenchCfg.Marshal()
+			if err != nil {
+				db.DFatalf("Error marshaling cossim config: %v", err)
+			}
+			cosSimCfgStr = fmt.Sprintf("--cossim_bench_cfg '%s' ", cosSimCfgJSON)
+		}
 		return fmt.Sprintf("export SIGMADEBUG=%s; export SIGMAPERF=%s; go clean -testcache; "+
 			"aws s3 rm --profile sigmaos --recursive s3://9ps3/hotelperf/k8s > /dev/null; "+
 			"ulimit -n 100000; "+
@@ -345,7 +358,9 @@ func GetHotelClientCmdConstructor(hotelReqName string, leader bool, numClients i
 			"--nclnt %s "+
 			"%s "+ // k8sFrontendAddr
 			"--sleep %s "+
-			"--hotel_bench_cfg='%s' "+
+			"--hotel_bench_cfg '%s' "+
+			"--cache_bench_cfg '%s' "+
+			"%s "+ //cosSimCfg
 			"--prewarm_realm "+
 			"> /tmp/bench.out 2>&1 ; "+
 			"%s > /tmp/frontend-logs.out 2>&1 ;",
@@ -360,6 +375,8 @@ func GetHotelClientCmdConstructor(hotelReqName string, leader bool, numClients i
 			k8sFrontendAddr,
 			clientDelay.String(),
 			hotelCfgJSON,
+			cacheCfgJSON,
+			cosSimCfgStr,
 			k8sFrontendLogScrapeCmd,
 		)
 	}

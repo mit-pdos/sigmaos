@@ -389,7 +389,7 @@ func (cs *CacheSrv) Put(ctx fs.CtxI, req cacheproto.CacheReq, rep *cacheproto.Ca
 		defer span.End()
 	}
 
-	db.DPrintf(db.CACHESRV, "Put %v\n", req)
+	db.DPrintf(db.CACHESRV, "Put key:%v shard:%v", req.Key, req.Tshard())
 
 	start := time.Now()
 

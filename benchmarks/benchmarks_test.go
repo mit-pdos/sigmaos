@@ -1234,6 +1234,10 @@ func TestHotelSigmaosMatch(t *testing.T) {
 	}
 	defer mrts.Shutdown()
 
+	//	const N = 5
+	//	err := mrts.GetRealm(REALM1).BootNode(N)
+	//	assert.Nil(t, err, "Boot node: %v", err)
+
 	testHotel(mrts.GetRoot(), mrts.GetRealm(REALM1), nil, true, func(wc *hotel.WebClnt, r *rand.Rand) {
 		// TODO: use caching
 		err := hotel.RandMatchReq(wc, r, HotelBenchConfig.MatchUseCaching)

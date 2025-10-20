@@ -1211,7 +1211,7 @@ func TestScaleCachedScaler(t *testing.T) {
 func TestHotelMatchTailLatency(t *testing.T) {
 	var (
 		benchName string = "hotel_match_tail_latency"
-		driverVMs []int  = []int{8, 9, 10, 11}
+		driverVMs []int  = []int{8} //, 9, 10, 11}
 	)
 	// Cluster configuration parameters
 	var (
@@ -1268,7 +1268,7 @@ func TestHotelMatchTailLatency(t *testing.T) {
 			NGeoIdx:         numGeoIdx,
 			GeoSearchRadius: geoSearchRadius,
 			GeoNResults:     geoNResults,
-			UseMatch:        false,
+			UseMatch:        true,
 		},
 		Durs:   dur,
 		MaxRPS: rps,

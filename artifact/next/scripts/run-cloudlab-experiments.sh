@@ -77,3 +77,13 @@ if [ $EXP == "all" ] || [ $EXP == "cached" ]; then
   go clean -testcache; go test -v -timeout 0 sigmaos/benchmarks/remote --run TestScaleCachedScaler --parallelize --platform cloudlab --vpc none --build-tag $TAG --no-shutdown-after-test --bench-version $VERSION --branch $BRANCH 2>&1 | tee $LOG_DIR/cache-scaler.out
   echo "Done generating CachedScaler data..."
 fi
+
+if [ $EXP == "all" ] || [ $EXP == "match" ]; then
+#  if [ $RERUN == "true" ]; then
+#    echo "Clearing any cached CosSim data..."
+#    rm -rf benchmarks/results/$VERSION/cos_sim_tail_latency_*
+#  fi
+  echo "Generating CachedScaler data..."
+  go clean -testcache; go test -v -timeout 0 sigmaos/benchmarks/remote --run TestHotelMatchTailLatency --parallelize --platform cloudlab --vpc none --build-tag $TAG --no-shutdown-after-test --bench-version $VERSION --branch $BRANCH 2>&1 | tee $LOG_DIR/cache-scaler.out
+  echo "Done generating CachedScaler data..."
+fi

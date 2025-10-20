@@ -1240,7 +1240,7 @@ func TestHotelSigmaosMatch(t *testing.T) {
 
 	testHotel(mrts.GetRoot(), mrts.GetRealm(REALM1), nil, true, func(wc *hotel.WebClnt, r *rand.Rand) {
 		// TODO: use caching
-		err := hotel.RandMatchReq(wc, r, false)
+		err := hotel.RandMatchReq(wc, r, HotelBenchConfig.MatchUseCaching)
 		assert.Nil(t, err, "Error search req: %v", err)
 	})
 }
@@ -1265,7 +1265,7 @@ func TestHotelSigmaosJustCliMatch(t *testing.T) {
 	time.Sleep(SLEEP)
 	jobs, ji := newHotelJobsCli(mrts.GetRealm(REALM1), true, HotelBenchConfig, func(wc *hotel.WebClnt, r *rand.Rand) {
 		// TODO: use caching
-		err := hotel.RandMatchReq(wc, r, false)
+		err := hotel.RandMatchReq(wc, r, HotelBenchConfig.MatchUseCaching)
 		assert.Nil(t, err, "Error search req: %v", err)
 	})
 	go func() {

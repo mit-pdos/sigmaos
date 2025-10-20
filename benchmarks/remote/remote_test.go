@@ -1270,8 +1270,9 @@ func TestHotelMatchTailLatency(t *testing.T) {
 			GeoNResults:     geoNResults,
 			UseMatch:        true,
 		},
-		Durs:   dur,
-		MaxRPS: rps,
+		MatchUseCaching: false,
+		Durs:            dur,
+		MaxRPS:          rps,
 		ScaleGeo: &benchmarks.ManualScalingConfig{
 			Svc:        "hotel-geo",
 			Scale:      manuallyScaleGeo,

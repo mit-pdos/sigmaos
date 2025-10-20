@@ -79,8 +79,9 @@ var DefaultHotelBenchConfig = &HotelBenchConfig{
 		GeoNResults:     5,
 		UseMatch:        false,
 	},
-	Durs:   []time.Duration{10 * time.Second},
-	MaxRPS: []int{100},
+	MatchUseCaching: false,
+	Durs:            []time.Duration{10 * time.Second},
+	MaxRPS:          []int{100},
 	ScaleGeo: &ManualScalingConfig{
 		Svc:        "hotel-geo",
 		Scale:      false,

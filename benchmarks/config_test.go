@@ -31,41 +31,47 @@ func TestMain(m *testing.M) {
 	// Parse CosSimBenchConfig
 	if cossimBenchCfgStr == sp.NOT_SET {
 		CosSimBenchConfig = benchmarks.DefaultCosSimBenchConfig
-		db.DPrintf(db.ALWAYS, "Using default CosSimBenchConfig: %v", CosSimBenchConfig)
+		db.DPrintf(db.ALWAYS, "Using default CosSimBenchConfig")
 	} else {
 		err := json.Unmarshal([]byte(cossimBenchCfgStr), &CosSimBenchConfig)
 		if err != nil {
 			db.DFatalf("Error unmarshaling cossim_bench_cfg: %v", err)
 		}
-		db.DPrintf(db.ALWAYS, "Loaded CosSimBenchConfig: %v", CosSimBenchConfig)
+		db.DPrintf(db.ALWAYS, "Loaded CosSimBenchConfig")
 	}
 
 	// Parse CacheBenchConfig
 	if cacheBenchCfgStr == sp.NOT_SET {
 		CacheBenchConfig = benchmarks.DefaultCacheBenchConfig
-		db.DPrintf(db.ALWAYS, "Using default CacheBenchConfig: %v", CacheBenchConfig)
+		db.DPrintf(db.ALWAYS, "Using default CacheBenchConfig")
 	} else {
 		err := json.Unmarshal([]byte(cacheBenchCfgStr), &CacheBenchConfig)
 		if err != nil {
 			db.DFatalf("Error unmarshaling cache_bench_cfg: %v", err)
 		}
-		db.DPrintf(db.ALWAYS, "Loaded CacheBenchConfig: %v", CacheBenchConfig)
+		db.DPrintf(db.ALWAYS, "Loaded CacheBenchConfig")
 	}
 
 	// Parse HotelBenchConfig
 	if hotelBenchCfgStr == sp.NOT_SET {
 		HotelBenchConfig = benchmarks.DefaultHotelBenchConfig
-		db.DPrintf(db.ALWAYS, "Using default HotelBenchConfig: %v", HotelBenchConfig)
+		db.DPrintf(db.ALWAYS, "Using default HotelBenchConfig")
 	} else {
 		err := json.Unmarshal([]byte(hotelBenchCfgStr), &HotelBenchConfig)
 		if err != nil {
 			db.DFatalf("Error unmarshaling hotel_bench_cfg: %v", err)
 		}
-		db.DPrintf(db.ALWAYS, "Loaded HotelBenchConfig: %v", HotelBenchConfig)
+		db.DPrintf(db.ALWAYS, "Loaded HotelBenchConfig")
 	}
 
+	CosSimBenchConfig.JobCfg.CacheCfg = CacheBenchConfig.JobCfg
+	HotelBenchConfig.JobCfg.CacheCfg = CacheBenchConfig.JobCfg
 	HotelBenchConfig.CosSimBenchCfg = CosSimBenchConfig
 	HotelBenchConfig.CacheBenchCfg = CacheBenchConfig
+
+	db.DPrintf(db.ALWAYS, "CacheBenchConfig: %v", CacheBenchConfig)
+	db.DPrintf(db.ALWAYS, "CosSimBenchConfig: %v", CosSimBenchConfig)
+	db.DPrintf(db.ALWAYS, "HotelBenchConfig: %v", HotelBenchConfig)
 
 	os.Exit(m.Run())
 }

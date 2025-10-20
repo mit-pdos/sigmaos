@@ -1207,56 +1207,90 @@ func TestScaleCachedScaler(t *testing.T) {
 	}
 }
 
-// Test Hotel application's tail latency when running the Match service.
-//func TestHotelMatchTailLatency(t *testing.T) {
-//	var (
-//		benchName string = "hotel_match_tail_latency"
-//		driverVMs []int  = []int{8}
-//	)
-//	// Cluster configuration parameters
-//	var (
-//		numNodes     int = 8
-//		numFullNodes int = numNodes
-//	)
-//	const (
-//		numCoresPerNode   uint = 4
-//		numProcqOnlyNodes int  = 0
-//		turboBoost        bool = false
-//	)
-//	// Hotel benchmark configuration parameters
-//	var (
-//		rps                 []int           = []int{1}
-//		rpsK8s              []int           = nil
-//		dur                 []time.Duration = []time.Duration{10 * time.Second}
-//		numCaches           int             = 3
-//		cacheType           string          = "cached"
-//		autoscaleCache          bool            = false
-//		clientDelay         time.Duration   = 0 * time.Second
-//		sleep               time.Duration   = 0 * time.Second
-//		manuallyScaleCaches bool            = false
-//		scaleCacheDelay     time.Duration   = 0 * time.Second
-//		numCachesToAdd      int             = 0
-//		numGeo              int             = 1
-//		numGeoIdx           int             = 1000
-//		geoSearchRadius     int             = 10
-//		geoNResults         int             = 5
-//		manuallyScaleGeo    bool            = false
-//		scaleGeoDelay       time.Duration   = 0 * time.Second
-//		numGeoToAdd         int             = 0
-//	)
-//	ts, err := NewTstate(t)
-//	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {
-//		return
-//	}
-//	if ts.BCfg.Overlays {
-//		benchName += "_overlays"
-//	}
-//	if ts.BCfg.K8s {
-//		benchName += "_k8s"
-//		rps = rpsK8s
-//	}
-//	db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
-//	getLeaderCmd := GetHotelClientCmdConstructor("Search", true, len(driverVMs), rps, dur, numCaches, cacheType, scaleCache, sleep, manuallyScaleCaches, scaleCacheDelay, numCachesToAdd, numGeo, numGeoIdx, geoSearchRadius, geoNResults, manuallyScaleGeo, scaleGeoDelay, numGeoToAdd)
-//	getFollowerCmd := GetHotelClientCmdConstructor("Search", false, len(driverVMs), rps, dur, numCaches, cacheType, scaleCache, sleep, manuallyScaleCaches, scaleCacheDelay, numCachesToAdd, numGeo, numGeoIdx, geoSearchRadius, geoNResults, manuallyScaleGeo, scaleGeoDelay, numGeoToAdd)
-//	ts.RunParallelClientBenchmark(benchName, driverVMs, getLeaderCmd, getFollowerCmd, startK8sHotelApp, stopK8sHotelApp, clientDelay, numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost)
-//}
+// Test Hotel application's tail latency.
+func TestHotelMatchTailLatency(t *testing.T) {
+	var (
+		benchName string = "hotel_match_tail_latency"
+		driverVMs []int  = []int{8, 9, 10, 11}
+	)
+	// Cluster configuration parameters
+	var (
+		numNodes     int = 8
+		numFullNodes int = numNodes
+	)
+	const (
+		numCoresPerNode   uint = 4
+		numProcqOnlyNodes int  = 0
+		turboBoost        bool = false
+	)
+	// Hotel benchmark configuration parameters
+	var (
+		rps                 []int           = []int{250}                        //, 500, 1000, 1500, 2000, 2500}
+		rpsK8s              []int           = []int{250}                        //, 500, 1000, 1500, 1500, 1500} // K8s can't support as high max load
+		dur                 []time.Duration = []time.Duration{10 * time.Second} //, 10 * time.Second, 10 * time.Second, 10 * time.Second, 10 * time.Second, 10 * time.Second}
+		numCaches           int             = 3
+		cacheType           string          = "cached"
+		autoscaleCache      bool            = false
+		clientDelay         time.Duration   = 0 * time.Second
+		sleep               time.Duration   = 0 * time.Second
+		manuallyScaleCaches bool            = false
+		scaleCacheDelay     time.Duration   = 0 * time.Second
+		numCachesToAdd      int             = 0
+		numGeo              int             = 1
+		numGeoIdx           int             = 1000
+		geoSearchRadius     int             = 10
+		geoNResults         int             = 5
+		manuallyScaleGeo    bool            = false
+		scaleGeoDelay       time.Duration   = 0 * time.Second
+		numGeoToAdd         int             = 0
+	)
+	ts, err := NewTstate(t)
+	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {
+		return
+	}
+	if ts.BCfg.Overlays {
+		benchName += "_overlays"
+	}
+	if ts.BCfg.K8s {
+		benchName += "_k8s"
+		rps = rpsK8s
+	}
+	db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
+	hotelCfg := &benchmarks.HotelBenchConfig{
+		JobCfg: &hotel.HotelJobConfig{
+			Job:             "hotel-job",
+			Srvs:            hotel.NewHotelSvc(),
+			NHotel:          80,
+			Cache:           cacheType,
+			CacheCfg:        &cachegrpmgr.CacheJobConfig{NSrv: numCaches, MCPU: proc.Tmcpu(2000), GC: true},
+			ImgSizeMB:       0,
+			NGeo:            numGeo,
+			NGeoIdx:         numGeoIdx,
+			GeoSearchRadius: geoSearchRadius,
+			GeoNResults:     geoNResults,
+			UseMatch:        false,
+		},
+		Durs:   dur,
+		MaxRPS: rps,
+		ScaleGeo: &benchmarks.ManualScalingConfig{
+			Svc:        "hotel-geo",
+			Scale:      manuallyScaleGeo,
+			ScaleDelay: scaleGeoDelay,
+			NToAdd:     numGeoToAdd,
+		},
+		CacheBenchCfg: &benchmarks.CacheBenchConfig{
+			JobCfg:    &cachegrpmgr.CacheJobConfig{NSrv: numCaches, MCPU: proc.Tmcpu(2000), GC: true},
+			Autoscale: autoscaleCache,
+			Scale: &benchmarks.ManualScalingConfig{
+				Svc:        "cached",
+				Scale:      manuallyScaleCaches,
+				ScaleDelay: scaleCacheDelay,
+				NToAdd:     numCachesToAdd,
+			},
+		},
+		CosSimBenchCfg: nil,
+	}
+	getLeaderCmd := GetHotelClientCmdConstructor("Match", true, len(driverVMs), sleep, hotelCfg)
+	getFollowerCmd := GetHotelClientCmdConstructor("Match", false, len(driverVMs), sleep, hotelCfg)
+	ts.RunParallelClientBenchmark(benchName, driverVMs, getLeaderCmd, getFollowerCmd, startK8sHotelApp, stopK8sHotelApp, clientDelay, numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost)
+}

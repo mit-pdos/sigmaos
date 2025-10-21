@@ -82,7 +82,7 @@ $GRAPH_SCRIPTS_DIR/aggregate-tpt-talk.py \
   --measurement_dir_k8s     $RES_OUT_DIR/hotel_match_tail_latency \
   --out $GRAPH_OUT_DIR/hotel_match.pdf \
   --be_realm "" --hotel_realm benchrealm1 \
-  --units "Req/sec,2-srv,Scale 1→2 srv" \
+  --units "Req/sec,InitScript,No InitScript" \
   --title "x" --total_ncore 32 --prefix "imgresize-" #\
 #  --xmin 10000 --xmax 65000 #--legend_on_right 
 echo "Done generating hotel match graph..."

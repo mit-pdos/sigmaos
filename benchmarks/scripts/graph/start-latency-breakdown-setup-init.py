@@ -44,16 +44,17 @@ def find_proc_pid(dir_path, proc_name):
 
 def parse_timing_line(line):
     """
-    Parse a log line to extract operation name, sinceSpawn, and op timing.
+    Parse a log line to extract phase, operation name, sinceSpawn, and op timing.
     Expected format: [proc_pid] Setup.OperationName or Initialization.OperationName ... sinceSpawn:123ms ... op:456ms
-    Returns tuple of (op_name, since_spawn_ms, op_time_ms) or None if parsing fails
+    Returns tuple of (phase, op_name, since_spawn_ms, op_time_ms) or None if parsing fails
     """
-    # Extract the operation name (after Setup. or Initialization.)
-    op_match = re.search(r'\] (?:Setup|Initialization)\.(\S+)', line)
+    # Extract the phase (Setup or Initialization) and operation name
+    op_match = re.search(r'\] (Setup|Initialization)\.(\S+)', line)
     if not op_match:
         return None
 
-    op_name = op_match.group(1)
+    phase = op_match.group(1)
+    op_name = op_match.group(2)
 
     # Extract sinceSpawn timing
     spawn_match = re.search(r'sinceSpawn:(\d+(?:\.\d+)?)(ms|µs|us|s)', line)
@@ -83,15 +84,15 @@ def parse_timing_line(line):
         else:  # ms
             op_time_ms = timing_value
 
-    return (op_name, since_spawn_ms, op_time_ms)
+    return (phase, op_name, since_spawn_ms, op_time_ms)
 
 
 def find_setup_init_lines(dir_path, proc_pid):
     """
     Search all log files in dir_path/sigmaos-node-logs for lines matching
     "[proc_pid] Setup\\.*" or "[proc_pid] Initialization\\.*"
-    Returns a dict mapping operation names to (sinceSpawn, op_time) tuples.
-    If duplicates exist, keeps the last occurrence.
+    Returns two dicts: setup_timings and init_timings, each mapping operation names
+    to (sinceSpawn, op_time) tuples. If duplicates exist, keeps the last occurrence.
     """
     log_dir = os.path.join(dir_path, "sigmaos-node-logs")
 
@@ -109,8 +110,9 @@ def find_setup_init_lines(dir_path, proc_pid):
     setup_pattern = re.compile(rf"\[{re.escape(proc_pid)}\] Setup\..*")
     init_pattern = re.compile(rf"\[{re.escape(proc_pid)}\] Initialization\..*")
 
-    # Use a dict to store timings, which automatically handles duplicates by keeping last
-    timings = {}
+    # Use separate dicts for Setup and Initialization timings
+    setup_timings = {}
+    init_timings = {}
 
     for log_file in sorted(log_files):
         # Skip directories
@@ -124,12 +126,15 @@ def find_setup_init_lines(dir_path, proc_pid):
                     if setup_pattern.search(line) or init_pattern.search(line):
                         parsed = parse_timing_line(line)
                         if parsed:
-                            op_name, spawn_time_ms, op_time_ms = parsed
-                            timings[op_name] = (spawn_time_ms, op_time_ms)
+                            phase, op_name, since_spawn_ms, op_time_ms = parsed
+                            if phase == "Setup":
+                                setup_timings[op_name] = (since_spawn_ms, op_time_ms)
+                            else:  # Initialization
+                                init_timings[op_name] = (since_spawn_ms, op_time_ms)
         except Exception as e:
             print(f"Warning: Could not read {log_file}: {e}", file=sys.stderr)
 
-    return timings
+    return setup_timings, init_timings
 
 
 def main():
@@ -155,24 +160,38 @@ def main():
     print()
 
     # Find setup/initialization timings
-    timings = find_setup_init_lines(args.dir_path, proc_pid)
+    setup_timings, init_timings = find_setup_init_lines(args.dir_path, proc_pid)
 
-    if not timings:
+    if not setup_timings and not init_timings:
         print("No setup/initialization timings found")
         return
 
-    print(f"Found {len(timings)} operations:")
-    print()
+    # Print Setup section
+    if setup_timings:
+        print("=" * 80)
+        print("SETUP LATENCIES")
+        print("=" * 80)
+        print(f"{'Operation':<40} {'op (ms)':<20} {'sinceSpawn (ms)':<20}")
+        print("-" * 80)
 
-    # Print header
-    print(f"{'Operation':<40} {'op (ms)':<20} {'sinceSpawn (ms)':<20}")
-    print("-" * 80)
+        for op_name, (since_spawn_ms, op_time_ms) in sorted(setup_timings.items()):
+            spawn_str = f"{since_spawn_ms:.3f}" if since_spawn_ms is not None else "N/A"
+            op_str = f"{op_time_ms:.3f}" if op_time_ms is not None else "N/A"
+            print(f"{op_name:<40} {op_str:<20} {spawn_str:<20}")
+        print()
 
-    # Print each operation's timings
-    for op_name, (since_spawn_ms, op_time_ms) in sorted(timings.items()):
-        spawn_str = f"{since_spawn_ms:.3f}" if since_spawn_ms is not None else "N/A"
-        op_str = f"{op_time_ms:.3f}" if op_time_ms is not None else "N/A"
-        print(f"{op_name:<40} {op_str:<20} {spawn_str:<20}")
+    # Print Initialization section
+    if init_timings:
+        print("=" * 80)
+        print("INITIALIZATION LATENCIES")
+        print("=" * 80)
+        print(f"{'Operation':<40} {'op (ms)':<20} {'sinceSpawn (ms)':<20}")
+        print("-" * 80)
+
+        for op_name, (since_spawn_ms, op_time_ms) in sorted(init_timings.items()):
+            spawn_str = f"{since_spawn_ms:.3f}" if since_spawn_ms is not None else "N/A"
+            op_str = f"{op_time_ms:.3f}" if op_time_ms is not None else "N/A"
+            print(f"{op_name:<40} {op_str:<20} {spawn_str:<20}")
 
 
 if __name__ == "__main__":

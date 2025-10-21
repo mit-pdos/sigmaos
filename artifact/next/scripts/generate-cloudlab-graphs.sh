@@ -34,42 +34,55 @@ GRAPH_OUT_DIR=$ROOT_DIR/benchmarks/results/graphs
 #    --xmin 10000 --xmax 65000 #--legend_on_right 
 #  echo "Done generating eager cossim graph..."
 #done
+#
+## Cached scaling
+#echo "Generating cached scaling graphs..."
+#$GRAPH_SCRIPTS_DIR/aggregate-tpt-talk.py \
+#  --input_load_label "cached-" \
+#  --measurement_dir_sigmaos $RES_OUT_DIR/cached_scaler_tail_latency \
+#  --measurement_dir_k8s     $RES_OUT_DIR/cached_scaler_tail_latency_delegate \
+#  --out $GRAPH_OUT_DIR/cached_scale.pdf \
+#  --be_realm "" --hotel_realm benchrealm1 \
+#  --units "Req/sec,Direct RPC,Delegated RPC" \
+#  --title "x" --total_ncore 32 --prefix "imgresize-" \
+#  --xmin 40000 --xmax 45000 #--legend_on_right 
+#echo "Done generating cached scaling graphs..."
+#
+#echo "Generating cached scaling graphs..."
+#$GRAPH_SCRIPTS_DIR/aggregate-tpt-talk.py \
+#  --input_load_label "cached-" \
+#  --measurement_dir_sigmaos $RES_OUT_DIR/cached_scaler_tail_latency_cossim_backend \
+#  --measurement_dir_k8s     $RES_OUT_DIR/cached_scaler_tail_latency_delegate_cossim_backend \
+#  --out $GRAPH_OUT_DIR/cached_scale_cs.pdf \
+#  --be_realm "" --hotel_realm benchrealm1 \
+#  --units "Req/sec,Direct RPC,Delegated RPC" \
+#  --title "x" --total_ncore 32 --prefix "imgresize-" \
+#  --xmin 45000 --xmax 55000 #--legend_on_right 
+##  --xmin 45000 --xmax 50000 #--legend_on_right 
+#echo "Done generating cached scaling graphs..."
+#
+#echo "Generating cached scaling graphs..."
+#$GRAPH_SCRIPTS_DIR/aggregate-tpt-talk.py \
+#  --input_load_label "cached-" \
+#  --measurement_dir_sigmaos $RES_OUT_DIR/cached_scaler_tail_latency_cpp_cossim_backend \
+#  --measurement_dir_k8s     $RES_OUT_DIR/cached_scaler_tail_latency_cpp_delegate_cossim_backend \
+#  --out $GRAPH_OUT_DIR/cached_scale_cpp_cs.pdf \
+#  --be_realm "" --hotel_realm benchrealm1 \
+#  --units "Req/sec,Direct RPC,Delegated RPC" \
+#  --title "x" --total_ncore 32 --prefix "imgresize-" \
+#  --xmin 45000 --xmax 55000 #--legend_on_right 
+##  --xmin 45000 --xmax 50000 #--legend_on_right 
+#echo "Done generating cached scaling graphs..."
 
-# Cached scaling
-echo "Generating cached scaling graphs..."
+# CosSim scaling
+echo "Generating hotel match graph..."
 $GRAPH_SCRIPTS_DIR/aggregate-tpt-talk.py \
-  --input_load_label "cached-" \
-  --measurement_dir_sigmaos $RES_OUT_DIR/cached_scaler_tail_latency \
-  --measurement_dir_k8s     $RES_OUT_DIR/cached_scaler_tail_latency_delegate \
-  --out $GRAPH_OUT_DIR/cached_scale.pdf \
+  --input_load_label "hotel-wwwd" \
+  --measurement_dir_sigmaos $RES_OUT_DIR/hotel_match_tail_latency_csdi \
+  --measurement_dir_k8s     $RES_OUT_DIR/hotel_match_tail_latency \
+  --out $GRAPH_OUT_DIR/hotel_match.pdf \
   --be_realm "" --hotel_realm benchrealm1 \
-  --units "Req/sec,Direct RPC,Delegated RPC" \
-  --title "x" --total_ncore 32 --prefix "imgresize-" \
-  --xmin 40000 --xmax 45000 #--legend_on_right 
-echo "Done generating cached scaling graphs..."
-
-echo "Generating cached scaling graphs..."
-$GRAPH_SCRIPTS_DIR/aggregate-tpt-talk.py \
-  --input_load_label "cached-" \
-  --measurement_dir_sigmaos $RES_OUT_DIR/cached_scaler_tail_latency_cossim_backend \
-  --measurement_dir_k8s     $RES_OUT_DIR/cached_scaler_tail_latency_delegate_cossim_backend \
-  --out $GRAPH_OUT_DIR/cached_scale_cs.pdf \
-  --be_realm "" --hotel_realm benchrealm1 \
-  --units "Req/sec,Direct RPC,Delegated RPC" \
-  --title "x" --total_ncore 32 --prefix "imgresize-" \
-  --xmin 45000 --xmax 55000 #--legend_on_right 
-#  --xmin 45000 --xmax 50000 #--legend_on_right 
-echo "Done generating cached scaling graphs..."
-
-echo "Generating cached scaling graphs..."
-$GRAPH_SCRIPTS_DIR/aggregate-tpt-talk.py \
-  --input_load_label "cached-" \
-  --measurement_dir_sigmaos $RES_OUT_DIR/cached_scaler_tail_latency_cpp_cossim_backend \
-  --measurement_dir_k8s     $RES_OUT_DIR/cached_scaler_tail_latency_cpp_delegate_cossim_backend \
-  --out $GRAPH_OUT_DIR/cached_scale_cpp_cs.pdf \
-  --be_realm "" --hotel_realm benchrealm1 \
-  --units "Req/sec,Direct RPC,Delegated RPC" \
-  --title "x" --total_ncore 32 --prefix "imgresize-" \
-  --xmin 45000 --xmax 55000 #--legend_on_right 
-#  --xmin 45000 --xmax 50000 #--legend_on_right 
-echo "Done generating cached scaling graphs..."
+  --units "Req/sec,2-srv,Scale 1→2 srv" \
+  --title "x" --total_ncore 32 --prefix "imgresize-" #\
+#  --xmin 10000 --xmax 65000 #--legend_on_right 
+echo "Done generating hotel match graph..."

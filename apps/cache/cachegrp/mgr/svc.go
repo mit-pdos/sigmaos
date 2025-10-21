@@ -166,6 +166,7 @@ func (cs *CachedSvc) addScalerServerWithSigmaPath(sigmaPath string, delegatedIni
 	}
 	p := proc.NewProc(bin, []string{filepath.Join(cs.pn, cachegrp.SRVDIR), cs.job, strconv.Itoa(srvID), strconv.FormatBool(cs.useEPCache), strconv.Itoa(oldNSrv), strconv.Itoa(newNSrv)})
 	p.SetUseShmem(shmem)
+	db.DPrintf(db.TEST, "Scale %v", p.GetPid())
 	if !cs.cfg.GC {
 		p.AppendEnv("GOGC", "off")
 	}

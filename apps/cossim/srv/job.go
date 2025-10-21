@@ -238,6 +238,7 @@ func (j *CosSimJob) AddSrv() (*proc.Proc, time.Duration, error) {
 
 func (j *CosSimJob) addSrv(sigmaPath string) (*proc.Proc, time.Duration, error) {
 	p := proc.NewProc("cossim-srv-cpp", []string{j.cachePNBase, strconv.Itoa(j.conf.CacheCfg.NSrv), strconv.Itoa(j.conf.NVec), strconv.Itoa(j.conf.VecDim), strconv.FormatBool(j.conf.EagerInit)})
+	db.DPrintf(db.TEST, "Scale %v", p.GetPid())
 	if sigmaPath != sp.NOT_SET {
 		p.PrependSigmaPath(sigmaPath)
 	}

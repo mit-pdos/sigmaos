@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1-experimental
 
-FROM ubuntu:24.04 AS base
+FROM ubuntu:22.04 AS base
 
 RUN apt update && \
   apt install -y \
@@ -24,7 +24,13 @@ RUN apt update && \
   cmake \
   ccache \
   libprotoc-dev \
-  protobuf-compiler
+  protobuf-compiler \
+  build-essential \
+  libssl-dev \
+  python3 \
+  python3-pip \
+  clang \
+  lld
 
 # Install WasmEdge
 RUN curl -sSf https://raw.githubusercontent.com/WasmEdge/WasmEdge/master/utils/install.sh | bash -s -- -v 0.14.1
@@ -38,6 +44,49 @@ ENV CPLUS_INCLUDE_PATH="$WASMEDGE_DIR/include:$CPLUS_INCLUDE_PATH"
 
 # Copy WasmEdge libraries to /usr/lib so they're accessible in the uproc jail
 RUN cp -a /root/.wasmedge/lib/* /usr/lib/
+
+# Install LLVM 13
+RUN apt install -y \
+  llvm-13 \
+  llvm-13-dev \
+  llvm-13-runtime \
+  clang-13 \
+  libclang-13-dev \
+  liblld-13-dev
+
+# Set up LLVM environment variables
+ENV LLVM_SYS_130_PREFIX=/usr/lib/llvm-13
+ENV LLVM_DIR=/usr/lib/llvm-13
+ENV PATH=/usr/lib/llvm-13/bin:$PATH
+
+# Install Rust (required for building Wasmer)
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+ENV PATH="/root/.cargo/bin:$PATH"
+
+# Clone and build Wasmer 2.3.0 with LLVM support
+WORKDIR /tmp
+RUN git clone https://github.com/wasmerio/wasmer.git && \
+  cd wasmer && \
+  git checkout 2.3.0 && \
+  cargo build --release --features llvm,singlepass,cranelift
+
+# Build Wasmer C API with LLVM support
+WORKDIR /tmp/wasmer/lib/c-api
+RUN cargo build --release --features llvm,singlepass,cranelift 
+
+WORKDIR /tmp/wasmer
+RUN make package-capi
+
+# Install Wasmer C API system-wide
+RUN cd package && \
+  cp lib/* /usr/local/lib/ && \
+  cp include/* /usr/local/include/ && \
+  ldconfig
+
+# Set up Wasmer environment variables
+ENV LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
+ENV CGO_LDFLAGS="-L/usr/local/lib -lwasmer"
+ENV CGO_CFLAGS="-I/usr/local/include"
 
 # Install wasmer go pkg
 RUN mkdir t && \

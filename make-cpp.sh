@@ -89,7 +89,14 @@ mkdir -p $WASMBIN
 WASMRTBUILD=$ROOT/cpp/build/wasm-runtime
 if [ -f $WASMRTBUILD/wasm-runtime ]; then
   cp $WASMRTBUILD/wasm-runtime $KERNELBIN/wasm-runtime
+  cp $WASMRTBUILD/wasm-runtime $USERBIN/wasm-runtime-v$VERSION
+wasm_runtime_bin=$KERNELBIN/wasm-runtime
+imgresize_wasm_file=$WASMBIN/imgresize-wasm.wasm
+input_file=/home/sigmaos/images/input/1.jpg
+output_file=/home/sigmaos/images/output/1.jpg
+spawn $wasm_runtime_bin $imgresize_wasm_file name/s3/~any/mysigmaos/images/input/1.jpg name/s3/~local/mysigmaos/images/output/1.jpg 1
   echo "Copied wasm-runtime to $KERNELBIN/wasm-runtime"
+  echo "Copied wasm-runtime to $USERBIN/wasm-runtime-v$VERSION"
 fi
 
 # Copy user binaries

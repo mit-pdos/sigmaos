@@ -2,6 +2,7 @@ package wasmruntime
 
 import (
 	"context"
+	"os"
 	"sync"
 	"sync/atomic"
 
@@ -17,7 +18,8 @@ type Runtime struct {
 	mu           sync.RWMutex
 	instances    map[sp.Tpid]*Instance
 	nextMockPid  int32
-	precompStore *wasmer.Store
+	engine       *wasmer.Engine // Shared engine for all instances
+	precompStore *wasmer.Store  // For AOT compilation
 }
 
 type WasmThread struct {
@@ -27,15 +29,37 @@ type WasmThread struct {
 }
 
 func NewRuntime() *Runtime {
-	db.DPrintf(db.WASMRT, "Initializing WASM runtime")
-	cfg := wasmer.NewConfig().UseCraneliftCompiler()
+	db.DPrintf(db.WASMRT, "Initializing WASM runtime with LLVM compiler")
+	db.DPrintf(db.WASMRT, "LLVM library path: %s", os.Getenv("LD_LIBRARY_PATH"))
+
+	cfg := wasmer.NewConfig().UseLLVMCompiler()
+	if cfg == nil {
+		db.DPrintf(db.WASMRT_ERR, "Failed to create LLVM config")
+		panic("wasmer config creation failed")
+	}
+	db.DPrintf(db.WASMRT, "LLVM config created successfully")
+
 	engine := wasmer.NewEngineWithConfig(cfg)
+	if engine == nil {
+		db.DPrintf(db.WASMRT_ERR, "Failed to create engine with LLVM config")
+		db.DPrintf(db.WASMRT_ERR, "Check if LLVM libraries are installed and accessible")
+		panic("wasmer engine creation failed - check LLVM installation")
+	}
+	db.DPrintf(db.WASMRT, "LLVM engine created successfully, pointer: %p", engine)
+
+	precompStore := wasmer.NewStore(engine)
+	if precompStore == nil {
+		db.DPrintf(db.WASMRT_ERR, "Failed to create precomp store")
+		panic("precomp store creation failed")
+	}
+	db.DPrintf(db.WASMRT, "Precomp store created successfully")
 
 	return &Runtime{
 		instances: make(map[sp.Tpid]*Instance),
 		// CR nmassri: figure out how to do actual pid management
 		nextMockPid:  100000,
-		precompStore: wasmer.NewStore(engine),
+		engine:       engine,
+		precompStore: precompStore,
 	}
 }
 

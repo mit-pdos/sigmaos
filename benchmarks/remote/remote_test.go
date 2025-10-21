@@ -1211,11 +1211,11 @@ func TestScaleCachedScaler(t *testing.T) {
 func TestHotelMatchTailLatency(t *testing.T) {
 	var (
 		benchName string = "hotel_match_tail_latency"
-		driverVMs []int  = []int{8} //, 9, 10, 11}
+		driverVMs []int  = []int{12} //, 9, 10, 11}
 	)
 	// Cluster configuration parameters
 	var (
-		numNodes     int = 8
+		numNodes     int = 12
 		numFullNodes int = numNodes
 	)
 	const (

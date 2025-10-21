@@ -296,9 +296,9 @@ func GetHotelClientCmdConstructor(hotelReqName string, leader bool, numClients i
 	return func(bcfg *BenchConfig, ccfg *ClusterConfig) string {
 		const (
 			//			debugSelectors string = "\"TEST;THROUGHPUT;CPU_UTIL;\""
-			debugSelectors string = "\"TEST;THROUGHPUT;CPU_UTIL;SPAWN_LAT\"" // XXX REMOVE
+			//			debugSelectors string = "\"TEST;THROUGHPUT;CPU_UTIL;SPAWN_LAT;\""
+			debugSelectors string = "\"TEST;THROUGHPUT;CPU_UTIL;SPAWN_LAT;COSSIMSRV;COSSIMSRV_ERR;\""
 			perfSelectors  string = "\"HOTEL_WWW_TPT;TEST_TPT;BENCH_TPT;\""
-			//			perfSelectors  string = "\"HOTEL_WWW_TPT;\"" // XXX Used to be just HOTEL_WWW_TPT. Is adding the others problematic?
 		)
 		sys := ""
 		if bcfg.K8s {

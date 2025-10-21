@@ -21,12 +21,12 @@ fn print_elapsed_time(
     debug_pid: &str,
     msg: &str,
     spawn_time: SystemTime,
-    opStart: SystemTime,
+    op_start: SystemTime,
     ignore_verbose: bool,
 ) {
     if ignore_verbose || VERBOSE {
         let op_elapsed = SystemTime::now()
-            .duration_since(opStart)
+            .duration_since(op_start)
             .expect("Time went backwards");
         let spawn_elapsed = SystemTime::now()
             .duration_since(spawn_time)

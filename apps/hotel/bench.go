@@ -13,12 +13,10 @@ import (
 	rpcclnt "sigmaos/rpc/clnt"
 )
 
-func RandMatchReq(wc *WebClnt, r *rand.Rand, cache bool) error {
+func RandMatchReq(wc *WebClnt, r *rand.Rand, vecRangeStart uint64, vecRangeEnd uint64, cache bool) error {
 	// TODO: set randomly
 	userID := uint64(12345)
 	userVecID := uint64(2)
-	vecRangeStart := uint64(0)
-	vecRangeEnd := uint64(100)
 	return wc.Match(userID, userVecID, cache, &cossimproto.VecRange{
 		StartID: vecRangeStart,
 		EndID:   vecRangeEnd,

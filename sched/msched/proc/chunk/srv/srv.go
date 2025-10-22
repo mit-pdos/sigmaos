@@ -244,6 +244,7 @@ func (cksrv *ChunkSrv) fetchChunk(fetchCnt uint64, be *bin, r sp.Trealm, pid sp.
 		return 0, "", serr.NewErr(serr.TErrNotfound, be.prog)
 	}
 
+	chunkFetchStart := time.Now()
 	ok := false
 	srvpath := ""
 	for chunk.IsChunkSrvPath(paths[0]) {
@@ -282,6 +283,8 @@ func (cksrv *ChunkSrv) fetchChunk(fetchCnt uint64, be *bin, r sp.Trealm, pid sp.
 	}
 	perf.LogSpawnLatency("%v: ChunkSrv.fetchChunk.writeChunk(%v) ck %d", pid, perf.TIME_NOT_SET, start, cksrv.kernelId, fetchCnt, ck)
 	db.DPrintf(db.CHUNKSRV, "%v: fetchChunk(%v) done: writeChunk %v pid %v ckid %d sz %d", cksrv.kernelId, fetchCnt, pn, pid, ck, sz)
+	be.tot += time.Since(chunkFetchStart)
+	perf.LogSpawnLatency("Setup.BinaryDownload", pid, perf.TIME_NOT_SET, time.Now().Add(-1*be.tot))
 	return sz, srvpath, nil
 }
 

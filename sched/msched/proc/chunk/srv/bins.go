@@ -2,6 +2,7 @@ package srv
 
 import (
 	"sync"
+	"time"
 
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
@@ -15,6 +16,7 @@ type bin struct {
 	fd              int
 	prog            string
 	st              *sp.Tstat
+	tot             time.Duration
 	statInProgress  bool
 	openInProgress  bool
 	fetchInProgress map[int]bool

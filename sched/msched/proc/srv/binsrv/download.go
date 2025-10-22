@@ -86,7 +86,6 @@ func (dl *downloader) read(off int64, nbyte int) (int, error) {
 			}
 			d := time.Since(s)
 			dl.tot += d
-			perf.LogSpawnLatency("Setup.BinaryDownload totalTime %v", dl.p.GetPid(), dl.p.GetSpawnTime(), time.Now().Add(-1*dl.tot), dl.tot)
 			perf.LogSpawnLatencyVerbose("BinSrv.downloader.read.fetchChunk %d sz %v", dl.p.GetPid(), dl.p.GetSpawnTime(), s, c, sz)
 		}
 		n += sz

@@ -22,6 +22,19 @@ std::shared_ptr<std::string> Value::Get() {
   return _unique_buf;
 }
 
+std::shared_ptr<std::string_view> Value::GetStringView() {
+  if (!_view_buf) {
+    // Sanity check
+    if (!_shared_buf) {
+      fatal("Get String view from non-shared-buf-backed cache value");
+    }
+    // Create a string view from the underlying buffer
+    _view_buf =
+        std::make_shared<std::string_view>(_shared_buf->data() + _off, _len);
+  }
+  return _view_buf;
+}
+
 std::expected<std::shared_ptr<std::string>, sigmaos::serr::Error> Shard::Get(
     std::string &key) {
   std::lock_guard<std::mutex> guard(_mu);

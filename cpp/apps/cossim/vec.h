@@ -1,6 +1,7 @@
 #pragma once
 
 #include <apps/cache/clnt.h>
+#include <apps/cache/shard.h>
 #include <apps/cossim/proto/cossim.pb.h>
 #include <io/conn/conn.h>
 #include <io/conn/tcp/tcp.h>
@@ -38,6 +39,12 @@ class Vector {
         _underlying_buf(underlying_buf),
         _vals((double *)vals),
         _dim(dim) {}
+  Vector(std::shared_ptr<sigmaos::apps::cache::Value> underlying_val, int dim)
+      : _proto_vec(nullptr),
+        _underlying_buf(nullptr),
+        _underlying_val(underlying_val),
+        _vals((double *)underlying_val->GetStringView()->data()),
+        _dim(dim) {}
   ~Vector() {}
 
   double Get(int idx) const;
@@ -46,6 +53,7 @@ class Vector {
  private:
   ::Vector *_proto_vec;
   std::shared_ptr<std::string> _underlying_buf;
+  std::shared_ptr<sigmaos::apps::cache::Value> _underlying_val;
   double *_vals;
   int _dim;
 };

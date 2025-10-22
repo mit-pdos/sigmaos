@@ -139,8 +139,9 @@ std::expected<int, sigmaos::serr::Error> Clnt::Get(
   return 0;
 }
 
-std::expected<std::pair<std::vector<uint64_t>, std::shared_ptr<std::string>>,
-              sigmaos::serr::Error>
+std::expected<
+    std::shared_ptr<std::vector<std::shared_ptr<sigmaos::apps::cache::Value>>>,
+    sigmaos::serr::Error>
 Clnt::MultiGet(uint32_t srv_id, std::vector<std::string> &keys) {
   log(CACHECLNT, "MultiGet nkey {}", keys.size());
   std::shared_ptr<sigmaos::rpc::Clnt> rpcc;
@@ -178,12 +179,17 @@ Clnt::MultiGet(uint32_t srv_id, std::vector<std::string> &keys) {
       return std::unexpected(res.error());
     }
   }
-  std::vector<uint64_t> lengths(rep.lengths().size(), 0);
-  for (int i = 0; i < lengths.size(); i++) {
-    lengths[i] = rep.lengths().at(i);
+  auto vals = std::make_shared<
+      std::vector<std::shared_ptr<sigmaos::apps::cache::Value>>>(
+      rep.lengths().size(), nullptr);
+  uint64_t off = 0;
+  for (int i = 0; i < vals->size(); i++) {
+    uint64_t len = rep.lengths().at(i);
+    vals->at(i) = std::make_shared<sigmaos::apps::cache::Value>(buf, off, len);
+    off += len;
   }
   log(CACHECLNT, "MultiGet ok");
-  return std::make_pair(lengths, buf);
+  return vals;
 }
 
 std::expected<int, sigmaos::serr::Error> Clnt::Put(
@@ -522,8 +528,9 @@ Clnt::DelegatedDumpShard(uint64_t rpc_idx) {
   return kvs;
 }
 
-std::expected<std::pair<std::vector<uint64_t>, std::shared_ptr<std::string>>,
-              sigmaos::serr::Error>
+std::expected<
+    std::shared_ptr<std::vector<std::shared_ptr<sigmaos::apps::cache::Value>>>,
+    sigmaos::serr::Error>
 Clnt::DelegatedMultiGet(uint64_t rpc_idx) {
   log(CACHECLNT, "Delegated MultiGet rpc_idx {}", (int)rpc_idx);
   std::shared_ptr<sigmaos::rpc::Clnt> rpcc;
@@ -550,12 +557,17 @@ Clnt::DelegatedMultiGet(uint64_t rpc_idx) {
       return std::unexpected(res.error());
     }
   }
-  std::vector<uint64_t> lengths(rep.lengths().size(), 0);
-  for (int i = 0; i < lengths.size(); i++) {
-    lengths[i] = rep.lengths().at(i);
+  auto vals = std::make_shared<
+      std::vector<std::shared_ptr<sigmaos::apps::cache::Value>>>(
+      rep.lengths().size(), nullptr);
+  uint64_t off = 0;
+  for (int i = 0; i < vals->size(); i++) {
+    uint64_t len = rep.lengths().at(i);
+    vals->at(i) = std::make_shared<sigmaos::apps::cache::Value>(buf, off, len);
+    off += len;
   }
   log(CACHECLNT, "DelegatedMultiGet ok");
-  return std::make_pair(lengths, buf);
+  return vals;
 }
 
 };  // namespace apps::cache

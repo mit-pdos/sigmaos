@@ -48,6 +48,7 @@ class Value {
   ~Value() {}
 
   std::shared_ptr<std::string> Get();
+  std::shared_ptr<std::string_view> GetStringView();
 
  private:
   int _off;

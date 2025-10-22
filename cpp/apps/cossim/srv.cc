@@ -63,6 +63,8 @@ void Srv::fetch_init_vectors_from_cache(
   std::vector<uint64_t> lengths;
   // If retrieving delegated initialization RPCs
   if (_sp_clnt->ProcEnv()->GetRunBootScript()) {
+    std::shared_ptr<std::vector<std::shared_ptr<sigmaos::apps::cache::Value>>>
+        vals;
     // Get the serialized vector from cached
     {
       auto res = _cache_clnt->DelegatedMultiGet(srv_id);
@@ -71,17 +73,15 @@ void Srv::fetch_init_vectors_from_cache(
         result->set_value(std::unexpected(res.error()));
         return;
       }
-      auto res_pair = res.value();
-      lengths = res_pair.first;
-      buf = res_pair.second;
+      vals = res.value();
     }
     log(COSSIMSRV, "Got shards delegated RPC #{}", srv_id);
     LogSpawnLatency(_sp_clnt->ProcEnv()->GetPID(),
                     _sp_clnt->ProcEnv()->GetSpawnTime(), start, "GetShard RPC");
     // Sanity check
-    if (key_vec_int->size() != lengths.size()) {
-      fatal("Key vec and returned lengths ({}) don't match in size: {} != {}",
-            srv_id, (int)key_vec_int->size(), (int)lengths.size());
+    if (key_vec_int->size() != vals->size()) {
+      fatal("Key vec and returned vals ({}) don't match in size: {} != {}",
+            srv_id, (int)key_vec_int->size(), (int)vals->size());
     }
     // Take the lock while modifying the _vec_db map
     std::lock_guard<std::mutex> guard(_mu);
@@ -89,16 +89,17 @@ void Srv::fetch_init_vectors_from_cache(
     uint64_t off = 0;
     for (int j = 0; j < key_vec_int->size(); j++) {
       int id = key_vec_int->at(j);
-      _vec_db[id] = std::make_shared<sigmaos::apps::cossim::Vector>(
-          buf, buf->data() + off, _vec_dim);
-      off += lengths.at(j);
-      nbyte += lengths.at(j);
+      _vec_db[id] = std::make_shared<sigmaos::apps::cossim::Vector>(vals->at(j),
+                                                                    _vec_dim);
+      nbyte += vals->at(j)->GetStringView()->size();
     }
     log(COSSIMSRV, "Done parsing shard delegated RPC #{}", srv_id);
     LogSpawnLatency(_sp_clnt->ProcEnv()->GetPID(),
                     _sp_clnt->ProcEnv()->GetSpawnTime(), start,
                     "Parse vecs & construct DB delegated");
   } else {
+    std::shared_ptr<std::vector<std::shared_ptr<sigmaos::apps::cache::Value>>>
+        vals;
     // Get the serialized vector from cached
     {
       auto res = _cache_clnt->MultiGet(srv_id, *key_vec);
@@ -107,9 +108,7 @@ void Srv::fetch_init_vectors_from_cache(
         result->set_value(std::unexpected(res.error()));
         return;
       }
-      auto res_pair = res.value();
-      lengths = res_pair.first;
-      buf = res_pair.second;
+      vals = res.value();
     }
     log(COSSIMSRV, "Got shards direct RPC");
     LogSpawnLatency(_sp_clnt->ProcEnv()->GetPID(),
@@ -120,10 +119,9 @@ void Srv::fetch_init_vectors_from_cache(
     uint64_t off = 0;
     for (int j = 0; j < key_vec_int->size(); j++) {
       int id = key_vec_int->at(j);
-      _vec_db[id] = std::make_shared<sigmaos::apps::cossim::Vector>(
-          buf, buf->data() + off, _vec_dim);
-      off += lengths.at(j);
-      nbyte += lengths.at(j);
+      _vec_db[id] = std::make_shared<sigmaos::apps::cossim::Vector>(vals->at(j),
+                                                                    _vec_dim);
+      nbyte += vals->at(j)->GetStringView()->size();
     }
     LogSpawnLatency(_sp_clnt->ProcEnv()->GetPID(),
                     _sp_clnt->ProcEnv()->GetSpawnTime(), start,

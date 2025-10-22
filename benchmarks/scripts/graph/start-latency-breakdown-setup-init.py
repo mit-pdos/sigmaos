@@ -174,10 +174,21 @@ def main():
         print(f"{'Operation':<40} {'op (ms)':<20} {'sinceSpawn (ms)':<20}")
         print("-" * 80)
 
+        setup_op_sum = 0.0
+        setup_op_count = 0
+
         for op_name, (since_spawn_ms, op_time_ms) in sorted(setup_timings.items()):
             spawn_str = f"{since_spawn_ms:.3f}" if since_spawn_ms is not None else "N/A"
             op_str = f"{op_time_ms:.3f}" if op_time_ms is not None else "N/A"
             print(f"{op_name:<40} {op_str:<20} {spawn_str:<20}")
+
+            if op_time_ms is not None:
+                setup_op_sum += op_time_ms
+                setup_op_count += 1
+
+        print("-" * 80)
+        op_sum_str = f"{setup_op_sum:.3f}" if setup_op_count > 0 else "N/A"
+        print(f"{'TOTAL':<40} {op_sum_str:<20} {'':<20}")
         print()
 
     # Print Initialization section
@@ -188,10 +199,21 @@ def main():
         print(f"{'Operation':<40} {'op (ms)':<20} {'sinceSpawn (ms)':<20}")
         print("-" * 80)
 
+        init_op_sum = 0.0
+        init_op_count = 0
+
         for op_name, (since_spawn_ms, op_time_ms) in sorted(init_timings.items()):
             spawn_str = f"{since_spawn_ms:.3f}" if since_spawn_ms is not None else "N/A"
             op_str = f"{op_time_ms:.3f}" if op_time_ms is not None else "N/A"
             print(f"{op_name:<40} {op_str:<20} {spawn_str:<20}")
+
+            if op_time_ms is not None:
+                init_op_sum += op_time_ms
+                init_op_count += 1
+
+        print("-" * 80)
+        op_sum_str = f"{init_op_sum:.3f}" if init_op_count > 0 else "N/A"
+        print(f"{'TOTAL':<40} {op_sum_str:<20} {'':<20}")
 
 
 if __name__ == "__main__":

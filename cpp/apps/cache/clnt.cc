@@ -423,7 +423,8 @@ Clnt::DelegatedMultiDumpShard(uint64_t rpc_idx, std::vector<uint32_t> &shards) {
   MultiShardRep rep;
   Blob blob;
   auto iov = blob.mutable_iov();
-  std::shared_ptr<std::vector<std::shared_ptr<std::string_view>>> shard_views;
+  std::shared_ptr<std::vector<std::shared_ptr<std::string_view>>> shard_views =
+      nullptr;
   std::vector<std::shared_ptr<std::string>> shard_bufs;
   if (_sp_clnt->ProcEnv()->GetUseShmem()) {
     shard_views =
@@ -546,12 +547,21 @@ Clnt::DelegatedMultiGet(uint64_t rpc_idx) {
   CacheMultiGetRep rep;
   Blob blob;
   auto iov = blob.mutable_iov();
-  // Add a buffer to hold the output
-  auto buf = std::make_shared<std::string>();
-  iov->AddAllocated(buf.get());
+  std::shared_ptr<std::vector<std::shared_ptr<std::string_view>>> buf_views =
+      nullptr;
+  std::shared_ptr<std::string> buf;
+  // Add a buffer, or a string view if using shared mem, to hold the output
+  if (_sp_clnt->ProcEnv()->GetUseShmem()) {
+    buf_views =
+        std::make_shared<std::vector<std::shared_ptr<std::string_view>>>();
+    buf_views->push_back(std::make_shared<std::string_view>());
+  } else {
+    buf = std::make_shared<std::string>();
+    iov->AddAllocated(buf.get());
+  }
   rep.set_allocated_blob(&blob);
   {
-    auto res = rpcc->DelegatedRPC(rpc_idx, rep);
+    auto res = rpcc->DelegatedRPC(rpc_idx, rep, buf_views);
     if (!res.has_value()) {
       log(CACHECLNT_ERR, "Error Get: {}", res.error().String());
       return std::unexpected(res.error());
@@ -560,10 +570,20 @@ Clnt::DelegatedMultiGet(uint64_t rpc_idx) {
   auto vals = std::make_shared<
       std::vector<std::shared_ptr<sigmaos::apps::cache::Value>>>(
       rep.lengths().size(), nullptr);
+  std::shared_ptr<std::string_view> buf_view;
+  if (_sp_clnt->ProcEnv()->GetUseShmem()) {
+    buf_view = buf_views->at(0);
+  }
   uint64_t off = 0;
   for (int i = 0; i < vals->size(); i++) {
     uint64_t len = rep.lengths().at(i);
-    vals->at(i) = std::make_shared<sigmaos::apps::cache::Value>(buf, off, len);
+    if (_sp_clnt->ProcEnv()->GetUseShmem()) {
+      vals->at(i) =
+          std::make_shared<sigmaos::apps::cache::Value>(buf_view, off, len);
+    } else {
+      vals->at(i) =
+          std::make_shared<sigmaos::apps::cache::Value>(buf, off, len);
+    }
     off += len;
   }
   log(CACHECLNT, "DelegatedMultiGet ok");

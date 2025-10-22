@@ -488,7 +488,7 @@ func (cs *CacheSrv) MultiGet(ctx fs.CtxI, req cacheproto.CacheMultiGetReq, rep *
 	defer cs.mu.Unlock()
 
 	rep.Blob = &rpcproto.Blob{}
-
+	rep.Blob.SplitIov = make([]*rpcproto.SplitIoVec, 1)
 	bufs := make([][]byte, 0, len(req.Gets))
 	totalLength := 0
 	for _, getReq := range req.Gets {
@@ -509,18 +509,12 @@ func (cs *CacheSrv) MultiGet(ctx fs.CtxI, req cacheproto.CacheMultiGetReq, rep *
 		// Key not found, so bail out & fail all gets
 		return serr.NewErr(serr.TErrNotfound, fmt.Sprintf("key %s", getReq.Key))
 	}
-	// Concatenate buffers to speed up blob write
-	b := make([]byte, totalLength)
-	idx := 0
-	for _, buf := range bufs {
-		n := copy(b[idx:idx+len(buf)], buf)
-		if n != len(buf) {
-			db.DFatalf("Didn't copy whole buf: %v != %v", n, len(buf))
-		}
-		idx += len(buf)
+	rep.Blob.SplitIov = []*rpcproto.SplitIoVec{
+		&rpcproto.SplitIoVec{
+			Iov: bufs,
+		},
 	}
-	db.DPrintf(db.CACHESRV, "MultiGet reply total serialized length: %v", len(b))
-	rep.Blob.Iov = append(rep.Blob.Iov, b)
+	db.DPrintf(db.CACHESRV, "MultiGet reply total serialized length: %v", totalLength)
 	return nil
 }
 

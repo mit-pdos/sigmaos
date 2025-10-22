@@ -251,6 +251,9 @@ func (j *CosSimJob) addSrv(sigmaPath string) (*proc.Proc, time.Duration, error) 
 	}
 	p.SetBootScript(j.bootScript, j.bootScriptInput)
 	p.SetRunBootScript(j.conf.DelegateInitRPCs)
+	if j.conf.DelegateInitRPCs {
+		p.SetUseShmem(true)
+	}
 	start := time.Now()
 	if err := j.Spawn(p); err != nil {
 		return nil, 0, err

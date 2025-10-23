@@ -16,10 +16,12 @@ const (
 
 // Benchmarks
 const (
-	LOADGEN    Tselector = "LOADGEN"
-	BENCH      Tselector = "BENCH"
-	THROUGHPUT Tselector = "THROUGHPUT"
-	CPU_UTIL   Tselector = "CPU_UTIL"
+	LOADGEN        Tselector = "LOADGEN"
+	BENCH          Tselector = "BENCH"
+	THROUGHPUT     Tselector = "THROUGHPUT"
+	CPU_UTIL       Tselector = "CPU_UTIL"
+	AUTOSCALER     Tselector = "AUTOSCALER"
+	AUTOSCALER_ERR Tselector = AUTOSCALER + ERR
 )
 
 // Latency break-down.

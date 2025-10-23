@@ -297,7 +297,7 @@ func GetHotelClientCmdConstructor(hotelReqName string, leader bool, numClients i
 		const (
 			//			debugSelectors string = "\"TEST;THROUGHPUT;CPU_UTIL;\""
 			//			debugSelectors string = "\"TEST;THROUGHPUT;CPU_UTIL;SPAWN_LAT;\""
-			debugSelectors string = "\"TEST;THROUGHPUT;CPU_UTIL;SPAWN_LAT;COSSIMSRV;COSSIMSRV_ERR;\""
+			debugSelectors string = "\"TEST;THROUGHPUT;CPU_UTIL;SPAWN_LAT;COSSIMSRV;COSSIMSRV_ERR;AUTOSCALER;AUTOSCALER_ERR; \""
 			perfSelectors  string = "\"HOTEL_WWW_TPT;TEST_TPT;BENCH_TPT;\""
 		)
 		sys := ""

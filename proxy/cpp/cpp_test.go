@@ -163,7 +163,7 @@ func TestEchoServerProc(t *testing.T) {
 	assert.Nil(mrts.GetRealm(test.REALM1).Ts.T, err, "ReadEndpoint: %v", err)
 	db.DPrintf(db.TEST, "CPP Echo srv EP: %v", ep)
 
-	rpcc, err := rpcncclnt.NewTCPRPCClnt("echosrv", ep)
+	rpcc, err := rpcncclnt.NewTCPRPCClnt("echosrv", ep, 0)
 	if !assert.Nil(mrts.GetRealm(test.REALM1).Ts.T, err, "new rpc clnt: %v", err) {
 		return
 	}
@@ -235,7 +235,7 @@ func TestSpinServerProc(t *testing.T) {
 	}
 	db.DPrintf(db.TEST, "CPP spin srv EP: %v", ep)
 
-	rpcc, err := rpcncclnt.NewTCPRPCClnt("spinsrv", ep)
+	rpcc, err := rpcncclnt.NewTCPRPCClnt("spinsrv", ep, 0)
 	if !assert.Nil(mrts.GetRealm(test.REALM1).Ts.T, err, "new rpc clnt: %v", err) {
 		return
 	}

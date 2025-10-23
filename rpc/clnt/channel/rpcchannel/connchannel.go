@@ -6,8 +6,8 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-func NewTCPConnChannel(ep *sp.Tendpoint) (*RPCChannel, error) {
-	conn, err := net.Dial("tcp", ep.Addrs()[0].IPPort())
+func NewTCPConnChannel(ep *sp.Tendpoint, addrIdx int) (*RPCChannel, error) {
+	conn, err := net.Dial("tcp", ep.Addrs()[addrIdx].IPPort())
 	if err != nil {
 		return nil, err
 	}

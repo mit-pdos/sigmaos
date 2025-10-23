@@ -97,7 +97,7 @@ func (csc *CachedSvcClnt) monitorServers() {
 			for _, is := range instances {
 				if is.ID == istr && sp.TTendpoint(is.EndpointProto.Type) == sp.CPP_EP {
 					ep := sp.NewEndpointFromProto(is.EndpointProto)
-					rpcc, err := rpcncclnt.NewTCPRPCClnt(is.ID, ep)
+					rpcc, err := rpcncclnt.NewTCPRPCClnt(is.ID, ep, 0)
 					if err != nil {
 						db.DPrintf(db.ERROR, "Err NewRPCClnt cacheclnt: %v", err)
 					} else {

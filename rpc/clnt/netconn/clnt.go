@@ -7,8 +7,8 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-func NewTCPRPCClnt(name string, ep *sp.Tendpoint) (*clnt.RPCClnt, error) {
-	ch, err := rpcchannel.NewTCPConnChannel(ep)
+func NewTCPRPCClnt(name string, ep *sp.Tendpoint, addrIdx int) (*clnt.RPCClnt, error) {
+	ch, err := rpcchannel.NewTCPConnChannel(ep, addrIdx)
 	if err != nil {
 		return nil, err
 	}

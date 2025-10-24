@@ -92,6 +92,7 @@ class Srv {
         std::make_shared<MetricsRep>(),
         std::bind(&Srv::GetMetrics, this, std::placeholders::_1,
                   std::placeholders::_2));
+    ExposeRPCHandler(metrics_ep);
   }
   ~Srv() {}
 

@@ -22,6 +22,7 @@ type Autoscaler struct {
 	desiredReplicas    int
 	currentMetricValue float64
 	desiredMetricValue float64
+	tolerance          float64
 	freq               time.Duration
 	m                  Metric
 	addReplicas        AddReplicasFn
@@ -29,11 +30,12 @@ type Autoscaler struct {
 	done               bool
 }
 
-func NewAutoscaler(initialReplicas int, freq time.Duration, m Metric, addReplicas AddReplicasFn, removeReplicas RemoveReplicasFn) *Autoscaler {
+func NewAutoscaler(initialReplicas int, freq time.Duration, tolerance float64, m Metric, addReplicas AddReplicasFn, removeReplicas RemoveReplicasFn) *Autoscaler {
 	return &Autoscaler{
 		currentReplicas: initialReplicas,
 		desiredReplicas: initialReplicas,
 		freq:            freq,
+		tolerance:       tolerance,
 		m:               m,
 		addReplicas:     addReplicas,
 		removeReplicas:  removeReplicas,
@@ -41,7 +43,7 @@ func NewAutoscaler(initialReplicas int, freq time.Duration, m Metric, addReplica
 }
 
 func (a *Autoscaler) String() string {
-	return fmt.Sprintf("&{ currentReplicas:%v desiredReplicas:%v currentMetricValue:%v desiredMetricValue:%v freq:%v m:%v }", a.currentReplicas, a.desiredReplicas, a.currentMetricValue, a.desiredMetricValue, a.freq, a.m)
+	return fmt.Sprintf("&{ currentReplicas:%v desiredReplicas:%v currentMetricValue:%v desiredMetricValue:%v tolerance:%v freq:%v m:%v }", a.currentReplicas, a.desiredReplicas, a.currentMetricValue, a.desiredMetricValue, a.tolerance, a.freq, a.m)
 }
 
 func (a *Autoscaler) autoscalingRound() {
@@ -60,6 +62,13 @@ func (a *Autoscaler) autoscalingRound() {
 	if a.desiredMetricValue > 0 {
 		ratio := a.currentMetricValue / a.desiredMetricValue
 		db.DPrintf(db.AUTOSCALER, "ratio:%v", ratio)
+
+		// Check if ratio is within tolerance
+		if math.Abs(ratio-1.0) <= a.tolerance {
+			db.DPrintf(db.AUTOSCALER, "ratio %v within tolerance %v, not scaling", ratio, a.tolerance)
+			return
+		}
+
 		a.desiredReplicas = int(math.Ceil(float64(a.currentReplicas) * ratio))
 
 		// Ensure at least 1 replica

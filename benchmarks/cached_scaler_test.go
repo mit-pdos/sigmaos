@@ -300,10 +300,10 @@ func (ji *CachedScalerJobInstance) Wait() {
 
 func (ji *CachedScalerJobInstance) manuallyScaleCached() {
 	// If not scaling, bail out early
-	if !ji.cacheCfg.Scale.GetShouldScale() {
+	if !ji.cacheCfg.ManuallyScale.GetShouldScale() {
 		return
 	}
-	time.Sleep(ji.cacheCfg.Scale.GetScalingDelay())
+	time.Sleep(ji.cacheCfg.ManuallyScale.GetScalingDelay())
 	ji.scaling = true
 	// TODO: More scaling
 	db.DPrintf(db.TEST, "Add scaler server")

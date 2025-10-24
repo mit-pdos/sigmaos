@@ -143,10 +143,10 @@ func (ji *CosSimJobInstance) StartCosSimJob() {
 		}(lg, &wg)
 	}
 	wg.Wait()
-	if !ji.justCli && ji.cfg.Scale.GetShouldScale() {
+	if !ji.justCli && ji.cfg.ManuallyScale.GetShouldScale() {
 		go func() {
-			time.Sleep(ji.cfg.Scale.GetScalingDelay())
-			for i := 0; i < ji.cfg.Scale.GetNToAdd(); i++ {
+			time.Sleep(ji.cfg.ManuallyScale.GetScalingDelay())
+			for i := 0; i < ji.cfg.ManuallyScale.GetNToAdd(); i++ {
 				db.DPrintf(db.TEST, "Scale up cossim srvs to: %v", (i+1)+ji.cfg.JobCfg.InitNSrv)
 				_, _, err := ji.j.AddSrvWithSigmaPath(chunk.ChunkdPath(ji.warmCossimSrvKID))
 				assert.Nil(ji.Ts.T, err, "Add CosSim srv: %v", err)

@@ -27,7 +27,7 @@ var DefaultCosSimBenchConfig = &CosSimBenchConfig{
 	NVecToQuery: 100,
 	Durs:        []time.Duration{10 * time.Second},
 	MaxRPS:      []int{100},
-	Scale: &ManualScalingConfig{
+	ManuallyScale: &ManualScalingConfig{
 		Svc:        "cossim-srv",
 		Scale:      false,
 		ScaleDelay: 0 * time.Second,
@@ -60,7 +60,7 @@ var DefaultCacheBenchConfig = &CacheBenchConfig{
 	MaxRPS:        []int{100},
 	PutDurs:       []time.Duration{5 * time.Second},
 	PutMaxRPS:     []int{50},
-	Scale: &ManualScalingConfig{
+	ManuallyScale: &ManualScalingConfig{
 		Svc:        "cached",
 		Scale:      false,
 		ScaleDelay: 0 * time.Second,

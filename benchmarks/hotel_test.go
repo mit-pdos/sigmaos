@@ -201,10 +201,10 @@ func (ji *HotelJobInstance) scaleCaches() {
 	if ji.justCli {
 		return
 	}
-	if ji.cfg.CacheBenchCfg.Scale.GetShouldScale() {
+	if ji.cfg.CacheBenchCfg.ManuallyScale.GetShouldScale() {
 		go func() {
-			time.Sleep(ji.cfg.CacheBenchCfg.Scale.GetScalingDelay())
-			ji.hj.CacheAutoscaler.AddServers(ji.cfg.CacheBenchCfg.Scale.GetNToAdd())
+			time.Sleep(ji.cfg.CacheBenchCfg.ManuallyScale.GetScalingDelay())
+			ji.hj.CacheAutoscaler.AddServers(ji.cfg.CacheBenchCfg.ManuallyScale.GetNToAdd())
 		}()
 	}
 }
@@ -224,7 +224,7 @@ func (ji *HotelJobInstance) scaleCosSimSrv() {
 	if !ji.cfg.JobCfg.UseMatch {
 		return
 	}
-	if ji.cfg.CosSimBenchCfg.Scale.GetShouldScale() {
+	if ji.cfg.CosSimBenchCfg.ManuallyScale.GetShouldScale() {
 		go func() {
 			rifMetric := cossimsrv.NewRequestsInFlightMetric(ji.hj.CosSimJob.Clnt)
 			ticker := time.NewTicker(50 * time.Millisecond)
@@ -238,8 +238,8 @@ func (ji *HotelJobInstance) scaleCosSimSrv() {
 			}
 		}()
 		go func() {
-			time.Sleep(ji.cfg.CosSimBenchCfg.Scale.GetScalingDelay())
-			for i := 0; i < ji.cfg.CosSimBenchCfg.Scale.GetNToAdd(); i++ {
+			time.Sleep(ji.cfg.CosSimBenchCfg.ManuallyScale.GetScalingDelay())
+			for i := 0; i < ji.cfg.CosSimBenchCfg.ManuallyScale.GetNToAdd(); i++ {
 				db.DPrintf(db.TEST, "Scale up cossim srvs to: %v", (i+1)+ji.cfg.CosSimBenchCfg.JobCfg.InitNSrv)
 				err := ji.hj.AddCosSimSrvWithSigmaPath(chunk.ChunkdPath(ji.warmCossimSrvKID))
 				assert.Nil(ji.Ts.T, err, "Add CosSim srv: %v", err)

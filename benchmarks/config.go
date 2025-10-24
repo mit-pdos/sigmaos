@@ -11,17 +11,17 @@ import (
 )
 
 type CosSimBenchConfig struct {
-	JobCfg      *cossimsrv.CosSimJobConfig `json:"job_cfg"`
-	NVecToQuery int                        `json:"n_vec_to_query"`
-	Durs        []time.Duration            `json:"durs"`
-	MaxRPS      []int                      `json:"max_rps"`
-	Scale       *ManualScalingConfig       `json:"scale"`
-	Autoscale   *AutoscalingConfig         `json:"autoscale"`
+	JobCfg        *cossimsrv.CosSimJobConfig `json:"job_cfg"`
+	NVecToQuery   int                        `json:"n_vec_to_query"`
+	Durs          []time.Duration            `json:"durs"`
+	MaxRPS        []int                      `json:"max_rps"`
+	ManuallyScale *ManualScalingConfig       `json:"manually_scale"`
+	Autoscale     *AutoscalingConfig         `json:"autoscale"`
 }
 
 func (cfg *CosSimBenchConfig) String() string {
-	return fmt.Sprintf("&{ JobCfg:%v NVecToQuery:%v Durs:%v MaxRPS:%v Scale:%v Autoscale:%v }",
-		cfg.JobCfg, cfg.NVecToQuery, cfg.Durs, cfg.MaxRPS, cfg.Scale, cfg.Autoscale)
+	return fmt.Sprintf("&{ JobCfg:%v NVecToQuery:%v Durs:%v MaxRPS:%v ManuallyScale:%v Autoscale:%v }",
+		cfg.JobCfg, cfg.NVecToQuery, cfg.Durs, cfg.MaxRPS, cfg.ManuallyScale, cfg.Autoscale)
 }
 
 func (cfg *CosSimBenchConfig) GetJobConfig() *cossimsrv.CosSimJobConfig {
@@ -50,12 +50,12 @@ type CacheBenchConfig struct {
 	MaxRPS        []int                       `json:"max_rps"`
 	PutDurs       []time.Duration             `json:"put_durs"`
 	PutMaxRPS     []int                       `json:"put_max_rps"`
-	Scale         *ManualScalingConfig        `json:"scale"`
+	ManuallyScale *ManualScalingConfig        `json:"manually_scale"`
 }
 
 func (cfg *CacheBenchConfig) String() string {
-	return fmt.Sprintf("&{ JobCfg:%v CPP:%v RunSleeper:%v CosSimBackend:%v UseEPCache:%v DelegateInit:%v Autoscale:%v NKeys:%v TopNShards:%v Durs:%v MaxRPS:%v PutDurs:%v PutMaxRPS:%v Scale:%v }",
-		cfg.JobCfg, cfg.CPP, cfg.RunSleeper, cfg.CosSimBackend, cfg.UseEPCache, cfg.DelegateInit, cfg.Autoscale, cfg.NKeys, cfg.TopNShards, cfg.Durs, cfg.MaxRPS, cfg.PutDurs, cfg.PutMaxRPS, cfg.Scale)
+	return fmt.Sprintf("&{ JobCfg:%v CPP:%v RunSleeper:%v CosSimBackend:%v UseEPCache:%v DelegateInit:%v Autoscale:%v NKeys:%v TopNShards:%v Durs:%v MaxRPS:%v PutDurs:%v PutMaxRPS:%v ManuallyScale:%v }",
+		cfg.JobCfg, cfg.CPP, cfg.RunSleeper, cfg.CosSimBackend, cfg.UseEPCache, cfg.DelegateInit, cfg.Autoscale, cfg.NKeys, cfg.TopNShards, cfg.Durs, cfg.MaxRPS, cfg.PutDurs, cfg.PutMaxRPS, cfg.ManuallyScale)
 }
 
 func (cfg *CacheBenchConfig) Marshal() (string, error) {

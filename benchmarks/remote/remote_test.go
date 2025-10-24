@@ -439,7 +439,7 @@ func TestHotelTailLatency(t *testing.T) {
 		CacheBenchCfg: &benchmarks.CacheBenchConfig{
 			JobCfg:    &cachegrpmgr.CacheJobConfig{NSrv: numCaches, MCPU: proc.Tmcpu(2000), GC: true},
 			Autoscale: autoscaleCache,
-			Scale: &benchmarks.ManualScalingConfig{
+			ManuallyScale: &benchmarks.ManualScalingConfig{
 				Svc:        "cached",
 				Scale:      manuallyScaleCaches,
 				ScaleDelay: scaleCacheDelay,
@@ -543,7 +543,7 @@ func TestHotelScaleGeo(t *testing.T) {
 					CacheBenchCfg: &benchmarks.CacheBenchConfig{
 						JobCfg:    &cachegrpmgr.CacheJobConfig{NSrv: numCaches, MCPU: proc.Tmcpu(2000), GC: true},
 						Autoscale: autoscaleCache,
-						Scale: &benchmarks.ManualScalingConfig{
+						ManuallyScale: &benchmarks.ManualScalingConfig{
 							Svc:        "cached",
 							Scale:      false,
 							ScaleDelay: 0,
@@ -653,7 +653,7 @@ func TestHotelGeoReqScaleGeo(t *testing.T) {
 					CacheBenchCfg: &benchmarks.CacheBenchConfig{
 						JobCfg:    &cachegrpmgr.CacheJobConfig{NSrv: numCaches, MCPU: proc.Tmcpu(2000), GC: true},
 						Autoscale: autoscaleCache,
-						Scale: &benchmarks.ManualScalingConfig{
+						ManuallyScale: &benchmarks.ManualScalingConfig{
 							Svc:        "cached",
 							Scale:      false,
 							ScaleDelay: 0,
@@ -760,7 +760,7 @@ func TestHotelScaleCache(t *testing.T) {
 					CacheBenchCfg: &benchmarks.CacheBenchConfig{
 						JobCfg:    &cachegrpmgr.CacheJobConfig{NSrv: numCaches, MCPU: proc.Tmcpu(2000), GC: true},
 						Autoscale: autoscaleCache,
-						Scale: &benchmarks.ManualScalingConfig{
+						ManuallyScale: &benchmarks.ManualScalingConfig{
 							Svc:        "cached",
 							Scale:      scale,
 							ScaleDelay: scaleCacheDelay,
@@ -929,7 +929,7 @@ func TestLCBEHotelImgResizeMultiplexing(t *testing.T) {
 		CacheBenchCfg: &benchmarks.CacheBenchConfig{
 			JobCfg:    &cachegrpmgr.CacheJobConfig{NSrv: numCaches, MCPU: proc.Tmcpu(2000), GC: true},
 			Autoscale: autoscaleCache,
-			Scale: &benchmarks.ManualScalingConfig{
+			ManuallyScale: &benchmarks.ManualScalingConfig{
 				Svc:        "cached",
 				Scale:      manuallyScaleCaches,
 				ScaleDelay: scaleCacheDelay,
@@ -1009,7 +1009,7 @@ func TestLCBEHotelImgResizeRPCMultiplexing(t *testing.T) {
 		CacheBenchCfg: &benchmarks.CacheBenchConfig{
 			JobCfg:    &cachegrpmgr.CacheJobConfig{NSrv: numCaches, MCPU: proc.Tmcpu(2000), GC: true},
 			Autoscale: autoscaleCache,
-			Scale: &benchmarks.ManualScalingConfig{
+			ManuallyScale: &benchmarks.ManualScalingConfig{
 				Svc:        "cached",
 				Scale:      manuallyScaleCaches,
 				ScaleDelay: scaleCacheDelay,
@@ -1094,11 +1094,12 @@ func TestScaleCosSim(t *testing.T) {
 						jobCfg := cossimsrv.NewCosSimJobConfig("cossim", numCosSim, 10000, 100, true, 4000, cacheCfg, delegate)
 						scaleCosSim := benchmarks.NewManualScalingConfig("cossim", scale, scaleCosSimDelay, numCosSimToAdd)
 						cfg := &benchmarks.CosSimBenchConfig{
-							JobCfg:      jobCfg,
-							NVecToQuery: 5000,
-							Durs:        []time.Duration{5 * time.Second, 30 * time.Second, 30 * time.Second},
-							MaxRPS:      []int{300, 500, 1000},
-							Scale:       scaleCosSim,
+							JobCfg:        jobCfg,
+							NVecToQuery:   5000,
+							Durs:          []time.Duration{5 * time.Second, 30 * time.Second, 30 * time.Second},
+							MaxRPS:        []int{300, 500, 1000},
+							ManuallyScale: scaleCosSim,
+							Autoscale:     &benchmarks.AutoscalingConfig{Scale: false},
 						}
 						getLeaderCmd := GetCosSimClientCmdConstructor("CosSim", true, len(driverVMs), sleep, cfg)
 						getFollowerCmd := GetCosSimClientCmdConstructor("CosSim", false, len(driverVMs), sleep, cfg)
@@ -1180,7 +1181,7 @@ func TestScaleCachedScaler(t *testing.T) {
 						MaxRPS:        []int{2000},
 						PutDurs:       []time.Duration{0 * time.Second},
 						PutMaxRPS:     []int{0},
-						Scale:         scaleCached,
+						ManuallyScale: scaleCached,
 					}
 					// Create CosSimBenchConfig
 					var cosSimBenchCfg *benchmarks.CosSimBenchConfig
@@ -1188,11 +1189,12 @@ func TestScaleCachedScaler(t *testing.T) {
 						cossimCacheCfg := cachegrpmgr.NewCacheJobConfig(1, cacheMcpu, true)
 						cossimJobCfg := cossimsrv.NewCosSimJobConfig("cossim", 1, 10000, 100, true, cossimMcpu, cossimCacheCfg, false)
 						cosSimBenchCfg = &benchmarks.CosSimBenchConfig{
-							JobCfg:      cossimJobCfg,
-							NVecToQuery: 5000,
-							Durs:        []time.Duration{30 * time.Second},
-							MaxRPS:      []int{2000},
-							Scale:       benchmarks.NewManualScalingConfig("cossim", false, 0, 0),
+							JobCfg:        cossimJobCfg,
+							NVecToQuery:   5000,
+							Durs:          []time.Duration{30 * time.Second},
+							MaxRPS:        []int{2000},
+							ManuallyScale: benchmarks.NewManualScalingConfig("cossim", false, 0, 0),
+							Autoscale:     &benchmarks.AutoscalingConfig{Scale: false},
 						}
 					}
 					getLeaderCmd := GetCachedScalerClientCmdConstructor(true, len(driverVMs), prewarm, sleep, cacheBenchCfg, cosSimBenchCfg)
@@ -1289,7 +1291,7 @@ func TestHotelMatchTailLatency(t *testing.T) {
 			CacheBenchCfg: &benchmarks.CacheBenchConfig{
 				JobCfg:    &cachegrpmgr.CacheJobConfig{NSrv: numCaches, MCPU: proc.Tmcpu(4000), GC: true},
 				Autoscale: autoscaleCache,
-				Scale: &benchmarks.ManualScalingConfig{
+				ManuallyScale: &benchmarks.ManualScalingConfig{
 					Svc:        "cached",
 					Scale:      manuallyScaleCaches,
 					ScaleDelay: scaleCacheDelay,
@@ -1297,9 +1299,10 @@ func TestHotelMatchTailLatency(t *testing.T) {
 				},
 			},
 			CosSimBenchCfg: &benchmarks.CosSimBenchConfig{
-				JobCfg:      cossimsrv.NewCosSimJobConfig("hotel-job", 1, 10000, 100, true, 4000, nil, csDelInit),
-				NVecToQuery: 5000,
-				Scale:       benchmarks.NewManualScalingConfig("cossim", true, 10*time.Second, 1),
+				JobCfg:        cossimsrv.NewCosSimJobConfig("hotel-job", 1, 10000, 100, true, 4000, nil, csDelInit),
+				NVecToQuery:   5000,
+				ManuallyScale: benchmarks.NewManualScalingConfig("cossim", true, 10*time.Second, 1),
+				Autoscale:     &benchmarks.AutoscalingConfig{Scale: false},
 			},
 		}
 		getLeaderCmd := GetHotelClientCmdConstructor("Match", true, len(driverVMs), sleep, hotelCfg)

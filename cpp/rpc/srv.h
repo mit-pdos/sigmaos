@@ -7,6 +7,7 @@
 #include <io/net/srv.h>
 #include <io/transport/transport.h>
 #include <proxy/sigmap/sigmap.h>
+#include <rpc/proto/rpc.pb.h>
 #include <serr/serr.h>
 #include <sigmap/const.h>
 #include <sigmap/sigmap.pb.h>
@@ -86,6 +87,11 @@ class Srv {
                     "Make Metrics NetSrv");
     int metrics_port = _metrics_netsrv->GetPort();
     log(RPCSRV, "Metrics Net server started with port {}", metrics_port);
+    auto metrics_ep = std::make_shared<RPCEndpoint>(
+        "RPCSrv.GetMetrics", std::make_shared<MetricsReq>(),
+        std::make_shared<MetricsRep>(),
+        std::bind(&Srv::GetMetrics, this, std::placeholders::_1,
+                  std::placeholders::_2));
   }
   ~Srv() {}
 
@@ -117,6 +123,9 @@ class Srv {
   static bool _l;
   static bool _l_e;
 
+  std::expected<int, sigmaos::serr::Error> GetMetrics(
+      std::shared_ptr<google::protobuf::Message> preq,
+      std::shared_ptr<google::protobuf::Message> prep);
   std::expected<std::shared_ptr<sigmaos::io::transport::Call>,
                 sigmaos::serr::Error>
   serve_request(std::shared_ptr<sigmaos::io::transport::Call> req);

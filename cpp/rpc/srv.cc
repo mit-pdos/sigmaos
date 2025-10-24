@@ -7,6 +7,17 @@ namespace rpc::srv {
 bool Srv::_l = sigmaos::util::log::init_logger(RPCSRV);
 bool Srv::_l_e = sigmaos::util::log::init_logger(RPCSRV_ERR);
 
+std::expected<int, sigmaos::serr::Error> Srv::GetMetrics(
+    std::shared_ptr<google::protobuf::Message> preq,
+    std::shared_ptr<google::protobuf::Message> prep) {
+  auto req = dynamic_pointer_cast<MetricsReq>(preq);
+  auto rep = dynamic_pointer_cast<MetricsRep>(prep);
+  int rif = _metrics->GetNRequestsInFlight();
+  rep->set_rif((uint64_t)rif);
+  log(RPCSRV, "GetMetrics rif:{}", rif);
+  return 0;
+}
+
 std::expected<std::shared_ptr<sigmaos::io::transport::Call>,
               sigmaos::serr::Error>
 Srv::serve_request(std::shared_ptr<sigmaos::io::transport::Call> req) {

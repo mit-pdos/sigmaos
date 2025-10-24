@@ -245,6 +245,7 @@ func (ji *HotelJobInstance) scaleCosSimSrv() {
 			return nil
 		}
 		ji.cosSimAutoscaler = autoscale.NewAutoscaler(
+			ji.cfg.CosSimBenchCfg.Autoscale.Svc,
 			ji.cfg.CosSimBenchCfg.Autoscale.InitialNReplicas,
 			ji.cfg.CosSimBenchCfg.Autoscale.MaxReplicas,
 			ji.cfg.CosSimBenchCfg.Autoscale.TargetRIF,

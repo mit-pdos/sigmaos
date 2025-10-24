@@ -38,6 +38,7 @@ func (cfg *ManualScalingConfig) String() string {
 }
 
 type AutoscalingConfig struct {
+	Svc              string        `json:"svc"`
 	Scale            bool          `json:"scale"`
 	InitialNReplicas int           `json:"initial_n_replicas"`
 	MaxReplicas      int           `json:"max_replicas"`
@@ -46,8 +47,9 @@ type AutoscalingConfig struct {
 	Tolerance        float64       `json:"tolerance"`
 }
 
-func NewAutoscalingConfig(scale bool, initialNReplicas int, maxReplicas int, targetRIF float64, frequency time.Duration, tolerance float64) *AutoscalingConfig {
+func NewAutoscalingConfig(svc string, scale bool, initialNReplicas int, maxReplicas int, targetRIF float64, frequency time.Duration, tolerance float64) *AutoscalingConfig {
 	return &AutoscalingConfig{
+		Svc:              svc,
 		Scale:            scale,
 		InitialNReplicas: initialNReplicas,
 		MaxReplicas:      maxReplicas,
@@ -62,5 +64,5 @@ func (cfg *AutoscalingConfig) GetShouldScale() bool {
 }
 
 func (cfg *AutoscalingConfig) String() string {
-	return fmt.Sprintf("&{ scale:%v targetRIF:%v frequency:%v initialNReplicas:%v maxReplicas:%v tolerance:%v }", cfg.Scale, cfg.TargetRIF, cfg.Frequency, cfg.InitialNReplicas, cfg.MaxReplicas, cfg.Tolerance)
+	return fmt.Sprintf("&{ svc:%v scale:%v targetRIF:%v frequency:%v initialNReplicas:%v maxReplicas:%v tolerance:%v }", cfg.Svc, cfg.Scale, cfg.TargetRIF, cfg.Frequency, cfg.InitialNReplicas, cfg.MaxReplicas, cfg.Tolerance)
 }

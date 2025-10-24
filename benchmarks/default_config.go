@@ -34,6 +34,7 @@ var DefaultCosSimBenchConfig = &CosSimBenchConfig{
 		NToAdd:     0,
 	},
 	Autoscale: &AutoscalingConfig{
+		Svc:              "cossim-srv",
 		Scale:            false,
 		InitialNReplicas: 1,
 		MaxReplicas:      0,

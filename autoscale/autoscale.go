@@ -18,6 +18,7 @@ type RemoveReplicasFn func(n int) error
 
 type Autoscaler struct {
 	mu                 sync.Mutex
+	svc                string
 	currentReplicas    int
 	desiredReplicas    int
 	maxReplicas        int
@@ -31,8 +32,9 @@ type Autoscaler struct {
 	done               bool
 }
 
-func NewAutoscaler(initialReplicas int, maxReplicas int, desiredMetricValue float64, freq time.Duration, tolerance float64, m Metric, addReplicas AddReplicasFn, removeReplicas RemoveReplicasFn) *Autoscaler {
+func NewAutoscaler(svc string, initialReplicas int, maxReplicas int, desiredMetricValue float64, freq time.Duration, tolerance float64, m Metric, addReplicas AddReplicasFn, removeReplicas RemoveReplicasFn) *Autoscaler {
 	return &Autoscaler{
+		svc:                svc,
 		currentReplicas:    initialReplicas,
 		desiredReplicas:    initialReplicas,
 		maxReplicas:        maxReplicas,
@@ -53,19 +55,19 @@ func (a *Autoscaler) autoscalingRound() {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
-	db.DPrintf(db.AUTOSCALER, "autoscalingRound")
+	db.DPrintf(db.AUTOSCALER, "[%v] autoscalingRound", a.svc)
 	// Get current metric value
 	a.currentMetricValue = a.m.GetValue()
-	db.DPrintf(db.AUTOSCALER, "currentMetricValue:%v desiredMetricValue:%v", a.currentMetricValue, a.desiredMetricValue)
+	db.DPrintf(db.AUTOSCALER, "[%v] currentMetricValue:%v desiredMetricValue:%v", a.svc, a.currentMetricValue, a.desiredMetricValue)
 	// From: https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/
 	//
 	// Kubernetes HPA algorithm: desiredReplicas = ceil(currentReplicas * (currentMetricValue / desiredMetricValue))
 	if a.desiredMetricValue > 0 {
 		ratio := a.currentMetricValue / a.desiredMetricValue
-		db.DPrintf(db.AUTOSCALER, "ratio:%v", ratio)
+		db.DPrintf(db.AUTOSCALER, "[%v] ratio:%v", a.svc, ratio)
 		// Check if ratio is within tolerance
 		if math.Abs(ratio-1.0) <= a.tolerance {
-			db.DPrintf(db.AUTOSCALER, "ratio %v within tolerance %v, not scaling", ratio, a.tolerance)
+			db.DPrintf(db.AUTOSCALER, "[%v] ratio %v within tolerance %v, not scaling", a.svc, ratio, a.tolerance)
 			return
 		}
 		a.desiredReplicas = int(math.Ceil(float64(a.currentReplicas) * ratio))
@@ -79,24 +81,24 @@ func (a *Autoscaler) autoscalingRound() {
 		}
 		// Scale up or down
 		delta := a.desiredReplicas - a.currentReplicas
-		db.DPrintf(db.AUTOSCALER, "delta: %v", delta)
+		db.DPrintf(db.AUTOSCALER, "[%v] delta: %v", a.svc, delta)
 		if delta > 0 {
 			// Scale up
 			if err := a.addReplicas(delta); err != nil {
-				db.DPrintf(db.AUTOSCALER_ERR, "Err addReplicas: %v", err)
-				db.DPrintf(db.ERROR, "Err addReplicas: %v", err)
+				db.DPrintf(db.AUTOSCALER_ERR, "[%v] Err addReplicas: %v", a.svc, err)
+				db.DPrintf(db.ERROR, "[%v] Err addReplicas: %v", a.svc, err)
 			} else {
 				a.currentReplicas = a.desiredReplicas
-				db.DPrintf(db.AUTOSCALER, "added %v replicas currentReplicas:%v", delta, a.currentReplicas)
+				db.DPrintf(db.AUTOSCALER, "[%v] added %v replicas currentReplicas:%v", a.svc, delta, a.currentReplicas)
 			}
 		} else if delta < 0 {
 			// Scale down
 			if err := a.removeReplicas(-1 * delta); err != nil {
-				db.DPrintf(db.AUTOSCALER_ERR, "Err removeReplicas: %v", err)
-				db.DPrintf(db.ERROR, "Err removeReplicas: %v", err)
+				db.DPrintf(db.AUTOSCALER_ERR, "[%v] Err removeReplicas: %v", a.svc, err)
+				db.DPrintf(db.ERROR, "[%v] Err removeReplicas: %v", a.svc, err)
 			} else {
 				a.currentReplicas = a.desiredReplicas
-				db.DPrintf(db.AUTOSCALER, "removed %v replicas currentReplicas:%v", delta, a.currentReplicas)
+				db.DPrintf(db.AUTOSCALER, "[%v] removed %v replicas currentReplicas:%v", a.svc, delta, a.currentReplicas)
 			}
 		}
 	}

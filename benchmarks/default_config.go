@@ -36,6 +36,7 @@ var DefaultCosSimBenchConfig = &CosSimBenchConfig{
 	Autoscale: &AutoscalingConfig{
 		Scale:            false,
 		InitialNReplicas: 1,
+		MaxReplicas:      0,
 		TargetRIF:        10.0,
 		Frequency:        1 * time.Second,
 		Tolerance:        0.1,

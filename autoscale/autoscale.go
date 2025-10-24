@@ -20,6 +20,7 @@ type Autoscaler struct {
 	mu                 sync.Mutex
 	currentReplicas    int
 	desiredReplicas    int
+	maxReplicas        int
 	currentMetricValue float64
 	desiredMetricValue float64
 	tolerance          float64
@@ -30,20 +31,22 @@ type Autoscaler struct {
 	done               bool
 }
 
-func NewAutoscaler(initialReplicas int, freq time.Duration, tolerance float64, m Metric, addReplicas AddReplicasFn, removeReplicas RemoveReplicasFn) *Autoscaler {
+func NewAutoscaler(initialReplicas int, maxReplicas int, desiredMetricValue float64, freq time.Duration, tolerance float64, m Metric, addReplicas AddReplicasFn, removeReplicas RemoveReplicasFn) *Autoscaler {
 	return &Autoscaler{
-		currentReplicas: initialReplicas,
-		desiredReplicas: initialReplicas,
-		freq:            freq,
-		tolerance:       tolerance,
-		m:               m,
-		addReplicas:     addReplicas,
-		removeReplicas:  removeReplicas,
+		currentReplicas:    initialReplicas,
+		desiredReplicas:    initialReplicas,
+		maxReplicas:        maxReplicas,
+		desiredMetricValue: desiredMetricValue,
+		freq:               freq,
+		tolerance:          tolerance,
+		m:                  m,
+		addReplicas:        addReplicas,
+		removeReplicas:     removeReplicas,
 	}
 }
 
 func (a *Autoscaler) String() string {
-	return fmt.Sprintf("&{ currentReplicas:%v desiredReplicas:%v currentMetricValue:%v desiredMetricValue:%v tolerance:%v freq:%v m:%v }", a.currentReplicas, a.desiredReplicas, a.currentMetricValue, a.desiredMetricValue, a.tolerance, a.freq, a.m)
+	return fmt.Sprintf("&{ currentReplicas:%v desiredReplicas:%v maxReplicas:%v currentMetricValue:%v desiredMetricValue:%v tolerance:%v freq:%v m:%v }", a.currentReplicas, a.desiredReplicas, a.maxReplicas, a.currentMetricValue, a.desiredMetricValue, a.tolerance, a.freq, a.m)
 }
 
 func (a *Autoscaler) autoscalingRound() {
@@ -69,6 +72,10 @@ func (a *Autoscaler) autoscalingRound() {
 		// Ensure at least 1 replica
 		if a.desiredReplicas < 1 {
 			a.desiredReplicas = 1
+		}
+		// Enforce max replicas limit (if set)
+		if a.maxReplicas > 0 && a.desiredReplicas > a.maxReplicas {
+			a.desiredReplicas = a.maxReplicas
 		}
 		// Scale up or down
 		delta := a.desiredReplicas - a.currentReplicas

@@ -13,6 +13,7 @@ import (
 
 	cossimsrv "sigmaos/apps/cossim/srv"
 	"sigmaos/apps/hotel"
+	"sigmaos/autoscale"
 	"sigmaos/benchmarks"
 	"sigmaos/benchmarks/loadgen"
 	db "sigmaos/debug"
@@ -32,19 +33,20 @@ const (
 type hotelFn func(wc *hotel.WebClnt, r *rand.Rand)
 
 type HotelJobInstance struct {
-	mu         sync.Mutex
-	sigmaos    bool
-	justCli    bool
-	k8ssrvaddr string
-	cfg        *benchmarks.HotelBenchConfig
-	ready      chan bool
-	msc        *mschedclnt.MSchedClnt
-	fn         hotelFn
-	hj         *hotel.HotelJob
-	lgs        []*loadgen.LoadGenerator
-	p          *perf.Perf
-	wc         *hotel.WebClnt
-	done       bool
+	mu               sync.Mutex
+	sigmaos          bool
+	justCli          bool
+	k8ssrvaddr       string
+	cfg              *benchmarks.HotelBenchConfig
+	ready            chan bool
+	msc              *mschedclnt.MSchedClnt
+	fn               hotelFn
+	hj               *hotel.HotelJob
+	lgs              []*loadgen.LoadGenerator
+	p                *perf.Perf
+	wc               *hotel.WebClnt
+	done             bool
+	cosSimAutoscaler *autoscale.Autoscaler
 	// Cluster pre-warming
 	warmCossimSrvKID string
 	cossimKIDs       map[string]bool
@@ -224,19 +226,37 @@ func (ji *HotelJobInstance) scaleCosSimSrv() {
 	if !ji.cfg.JobCfg.UseMatch {
 		return
 	}
-	if ji.cfg.CosSimBenchCfg.ManuallyScale.GetShouldScale() {
-		go func() {
-			rifMetric := cossimsrv.NewRequestsInFlightMetric(ji.hj.CosSimJob.Clnt)
-			ticker := time.NewTicker(50 * time.Millisecond)
-			defer ticker.Stop()
-			for range ticker.C {
-				if ji.isDone() {
-					return
+	if ji.cfg.CosSimBenchCfg.Autoscale.GetShouldScale() {
+		rifMetric := cossimsrv.NewRequestsInFlightMetric(ji.hj.CosSimJob.Clnt)
+		addReplicas := func(n int) error {
+			for i := 0; i < n; i++ {
+				db.DPrintf(db.TEST, "Autoscaler: Scale up cossim srvs")
+				err := ji.hj.AddCosSimSrvWithSigmaPath(chunk.ChunkdPath(ji.warmCossimSrvKID))
+				if err != nil {
+					db.DPrintf(db.TEST, "Autoscaler: Err add CosSim srv: %v", err)
+					return err
 				}
-				rif := rifMetric.GetValue()
-				db.DPrintf(db.ALWAYS, "RIF Metric: %v", rif)
+				db.DPrintf(db.TEST, "Autoscaler: Done scale up cossim srv")
 			}
-		}()
+			return nil
+		}
+		removeReplicas := func(n int) error {
+			db.DPrintf(db.TEST, "Autoscaler: Scale down not implemented, requested to remove %v replicas", n)
+			return nil
+		}
+		ji.cosSimAutoscaler = autoscale.NewAutoscaler(
+			ji.cfg.CosSimBenchCfg.Autoscale.InitialNReplicas,
+			ji.cfg.CosSimBenchCfg.Autoscale.MaxReplicas,
+			ji.cfg.CosSimBenchCfg.Autoscale.TargetRIF,
+			ji.cfg.CosSimBenchCfg.Autoscale.Frequency,
+			ji.cfg.CosSimBenchCfg.Autoscale.Tolerance,
+			rifMetric,
+			addReplicas,
+			removeReplicas,
+		)
+		ji.cosSimAutoscaler.Run()
+	}
+	if ji.cfg.CosSimBenchCfg.ManuallyScale.GetShouldScale() {
 		go func() {
 			time.Sleep(ji.cfg.CosSimBenchCfg.ManuallyScale.GetScalingDelay())
 			for i := 0; i < ji.cfg.CosSimBenchCfg.ManuallyScale.GetNToAdd(); i++ {
@@ -303,6 +323,9 @@ func (ji *HotelJobInstance) Wait() {
 	ji.mu.Lock()
 	ji.done = true
 	ji.mu.Unlock()
+	if ji.cosSimAutoscaler != nil {
+		ji.cosSimAutoscaler.Stop()
+	}
 	db.DPrintf(db.TEST, "Evicting hotel procs")
 	if ji.sigmaos && !ji.justCli {
 		ji.printStats()

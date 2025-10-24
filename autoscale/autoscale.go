@@ -51,31 +51,25 @@ func (a *Autoscaler) autoscalingRound() {
 	defer a.mu.Unlock()
 
 	db.DPrintf(db.AUTOSCALER, "autoscalingRound")
-
 	// Get current metric value
 	a.currentMetricValue = a.m.GetValue()
 	db.DPrintf(db.AUTOSCALER, "currentMetricValue:%v desiredMetricValue:%v", a.currentMetricValue, a.desiredMetricValue)
-
 	// From: https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/
 	//
 	// Kubernetes HPA algorithm: desiredReplicas = ceil(currentReplicas * (currentMetricValue / desiredMetricValue))
 	if a.desiredMetricValue > 0 {
 		ratio := a.currentMetricValue / a.desiredMetricValue
 		db.DPrintf(db.AUTOSCALER, "ratio:%v", ratio)
-
 		// Check if ratio is within tolerance
 		if math.Abs(ratio-1.0) <= a.tolerance {
 			db.DPrintf(db.AUTOSCALER, "ratio %v within tolerance %v, not scaling", ratio, a.tolerance)
 			return
 		}
-
 		a.desiredReplicas = int(math.Ceil(float64(a.currentReplicas) * ratio))
-
 		// Ensure at least 1 replica
 		if a.desiredReplicas < 1 {
 			a.desiredReplicas = 1
 		}
-
 		// Scale up or down
 		delta := a.desiredReplicas - a.currentReplicas
 		db.DPrintf(db.AUTOSCALER, "delta: %v", delta)

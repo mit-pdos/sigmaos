@@ -4,6 +4,13 @@ import "sigmap/sigmap.proto";
 
 option go_package = "sigmaos/rpc/proto";
 
+message MetricsReq {
+}
+
+message MetricsRep {
+  uint64 RIF = 1;
+}
+
 message Req {
         string method = 1;
 }

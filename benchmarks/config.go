@@ -16,11 +16,12 @@ type CosSimBenchConfig struct {
 	Durs        []time.Duration            `json:"durs"`
 	MaxRPS      []int                      `json:"max_rps"`
 	Scale       *ManualScalingConfig       `json:"scale"`
+	Autoscale   *AutoscalingConfig         `json:"autoscale"`
 }
 
 func (cfg *CosSimBenchConfig) String() string {
-	return fmt.Sprintf("&{ JobCfg:%v NVecToQuery:%v Durs:%v MaxRPS:%v Scale:%v }",
-		cfg.JobCfg, cfg.NVecToQuery, cfg.Durs, cfg.MaxRPS, cfg.Scale)
+	return fmt.Sprintf("&{ JobCfg:%v NVecToQuery:%v Durs:%v MaxRPS:%v Scale:%v Autoscale:%v }",
+		cfg.JobCfg, cfg.NVecToQuery, cfg.Durs, cfg.MaxRPS, cfg.Scale, cfg.Autoscale)
 }
 
 func (cfg *CosSimBenchConfig) GetJobConfig() *cossimsrv.CosSimJobConfig {

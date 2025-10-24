@@ -33,6 +33,13 @@ var DefaultCosSimBenchConfig = &CosSimBenchConfig{
 		ScaleDelay: 0 * time.Second,
 		NToAdd:     0,
 	},
+	Autoscale: &AutoscalingConfig{
+		Scale:            false,
+		InitialNReplicas: 1,
+		TargetRIF:        10.0,
+		Frequency:        1 * time.Second,
+		Tolerance:        0.1,
+	},
 }
 
 var DefaultCacheBenchConfig = &CacheBenchConfig{

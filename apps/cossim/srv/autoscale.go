@@ -23,7 +23,7 @@ func NewRequestsInFlightMetric(cssc *clnt.CosSimShardClnt) autoscale.Metric {
 func (rif *RequestsInFlightMetric) update() {
 	metrics, err := rif.cssc.GetAllServerMetrics()
 	if err != nil {
-		db.DPrintf(db.AUTOSCALER_ERR, "Err GetAllServerMetrics: %v", err)
+		db.DPrintf(db.COSSIMCLNT_ERR, "Err GetAllServerMetrics: %v", err)
 		return
 	}
 	if len(metrics) == 0 {

@@ -18,6 +18,7 @@ void Srv::read_requests() {
       // TODO: report error
       break;
     }
+    _metrics->StartRequest();
     auto req = res.value();
     log(DEMUXSRV, "done reading call seqno:{}", req->GetSeqno());
     // Swap input/output IOV, because transport package is written from the
@@ -35,6 +36,7 @@ void Srv::handle_request(std::shared_ptr<sigmaos::io::transport::Call> req) {
     // Serve the request
     auto start = GetCurrentTime();
     auto res = _serve_request(req);
+    _metrics->EndRequest();
     if (!res.has_value()) {
       log(DEMUXSRV_ERR, "demuxsrv serve_request({}) error: {}", req->GetSeqno(),
           res.error().String());

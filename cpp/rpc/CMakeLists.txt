@@ -17,6 +17,7 @@ target_link_libraries(rpc PUBLIC
   io_demux
   io_iovec
   rpc_delegation
+  util_metrics
 )
 
 target_include_directories(rpc PUBLIC ${CMAKE_SOURCE_DIR})

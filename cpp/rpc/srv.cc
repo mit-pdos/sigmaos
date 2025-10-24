@@ -87,6 +87,9 @@ std::shared_ptr<TendpointProto> Srv::GetEndpoint() {
   addr->set_ipstr(_sp_clnt->ProcEnv()->GetOuterContainerIP());
   addr->set_portint(_netsrv->GetPort());
   ep->set_type(sigmaos::sigmap::constants::CPP_EP);
+  auto metrics_addr = ep->add_addr();
+  metrics_addr->set_ipstr(_sp_clnt->ProcEnv()->GetOuterContainerIP());
+  metrics_addr->set_portint(_metrics_netsrv->GetPort());
   return ep;
 }
 

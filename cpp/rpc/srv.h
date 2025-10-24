@@ -11,6 +11,7 @@
 #include <sigmap/const.h>
 #include <sigmap/sigmap.pb.h>
 #include <util/log/log.h>
+#include <util/metrics/server_metrics.h>
 #include <util/perf/perf.h>
 
 #include <expected>
@@ -23,6 +24,7 @@ namespace rpc::srv {
 
 const std::string RPCSRV = "RPCSRV";
 const std::string RPCSRV_ERR = RPCSRV + sigmaos::util::log::ERR;
+const int METRICS_INIT_NTHREAD = 1;
 
 typedef std::function<std::expected<int, sigmaos::serr::Error>(
     std::shared_ptr<google::protobuf::Message>,
@@ -61,16 +63,29 @@ class Srv {
       : Srv(sp_clnt, 0) {}
   Srv(std::shared_ptr<sigmaos::proxy::sigmap::Clnt> sp_clnt,
       int demux_init_nthread)
-      : _done(false), _sp_clnt(sp_clnt), _rpc_endpoints() {
+      : _done(false),
+        _sp_clnt(sp_clnt),
+        _metrics(std::make_shared<sigmaos::util::metrics::ServerMetrics>()),
+        _rpc_endpoints() {
     log(RPCSRV, "Starting net server");
     auto start = GetCurrentTime();
     _netsrv = std::make_shared<sigmaos::io::net::Srv>(
         "tcpsrv", std::bind(&Srv::serve_request, this, std::placeholders::_1),
-        demux_init_nthread);
+        _metrics, demux_init_nthread);
     LogSpawnLatency(_sp_clnt->ProcEnv()->GetPID(),
                     _sp_clnt->ProcEnv()->GetSpawnTime(), start, "Make NetSrv");
     int port = _netsrv->GetPort();
     log(RPCSRV, "Net server started with port {}", port);
+    start = GetCurrentTime();
+    _metrics_netsrv = std::make_shared<sigmaos::io::net::Srv>(
+        "metrics-tcpsrv",
+        std::bind(&Srv::serve_request, this, std::placeholders::_1), _metrics,
+        METRICS_INIT_NTHREAD);
+    LogSpawnLatency(_sp_clnt->ProcEnv()->GetPID(),
+                    _sp_clnt->ProcEnv()->GetSpawnTime(), start,
+                    "Make Metrics NetSrv");
+    int metrics_port = _metrics_netsrv->GetPort();
+    log(RPCSRV, "Metrics Net server started with port {}", metrics_port);
   }
   ~Srv() {}
 
@@ -94,6 +109,8 @@ class Srv {
   bool _done;
   std::shared_ptr<sigmaos::proxy::sigmap::Clnt> _sp_clnt;
   std::shared_ptr<sigmaos::io::net::Srv> _netsrv;
+  std::shared_ptr<sigmaos::io::net::Srv> _metrics_netsrv;
+  std::shared_ptr<sigmaos::util::metrics::ServerMetrics> _metrics;
   std::map<std::string, std::shared_ptr<RPCEndpoint>> _rpc_endpoints;
   std::shared_ptr<sigmaos::util::perf::Perf> _perf;
   // Used for logger initialization

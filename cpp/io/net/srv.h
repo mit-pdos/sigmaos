@@ -6,6 +6,7 @@
 #include <serr/serr.h>
 #include <threadpool/threadpool.h>
 #include <util/log/log.h>
+#include <util/metrics/server_metrics.h>
 
 #include <expected>
 #include <format>
@@ -20,15 +21,18 @@ const std::string NETSRV_ERR = NETSRV + sigmaos::util::log::ERR;
 
 class Srv {
  public:
-  Srv(std::string id, sigmaos::io::demux::RequestHandler serve_request)
-      : Srv(id, serve_request, 0) {}
   Srv(std::string id, sigmaos::io::demux::RequestHandler serve_request,
+      std::shared_ptr<sigmaos::util::metrics::ServerMetrics> metrics)
+      : Srv(id, serve_request, metrics, 0) {}
+  Srv(std::string id, sigmaos::io::demux::RequestHandler serve_request,
+      std::shared_ptr<sigmaos::util::metrics::ServerMetrics> metrics,
       int demux_init_nthread)
       : _id(id),
         _done(false),
         _serve_request(serve_request),
         _demux_srvs(),
-        _thread_pool("netsrv"),
+        _thread_pool(id + "-netsrv"),
+        _metrics(metrics),
         _demux_init_nthread(demux_init_nthread) {
     log(NETSRV, "Starting net server");
     _lis = std::make_shared<sigmaos::io::conn::tcpconn::Listener>(_id);
@@ -50,6 +54,7 @@ class Srv {
   sigmaos::io::demux::RequestHandler _serve_request;
   std::vector<std::shared_ptr<sigmaos::io::demux::Srv>> _demux_srvs;
   sigmaos::threadpool::Threadpool _thread_pool;
+  std::shared_ptr<sigmaos::util::metrics::ServerMetrics> _metrics;
   int _demux_init_nthread;
   std::shared_ptr<sigmaos::io::conn::tcpconn::Listener> _lis;
   std::thread connection_handler;

@@ -10,6 +10,7 @@ add_library(io_demux STATIC
 target_link_libraries(io_demux PUBLIC
   serr
   util_log
+  util_metrics
   io_demux_internal
   io_transport
   threadpool

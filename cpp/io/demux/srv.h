@@ -6,6 +6,7 @@
 #include <serr/serr.h>
 #include <threadpool/threadpool.h>
 #include <util/log/log.h>
+#include <util/metrics/server_metrics.h>
 
 #include <memory>
 
@@ -23,15 +24,19 @@ typedef std::function<std::expected<
 class Srv {
  public:
   Srv(std::shared_ptr<sigmaos::io::transport::Transport> trans,
-      RequestHandler serve_request)
-      : Srv(trans, serve_request, 0) {}
+      RequestHandler serve_request,
+      std::shared_ptr<sigmaos::util::metrics::ServerMetrics> server_metrics)
+      : Srv(trans, serve_request, server_metrics, 0) {}
 
   Srv(std::shared_ptr<sigmaos::io::transport::Transport> trans,
-      RequestHandler serve_request, int init_nthread)
+      RequestHandler serve_request,
+      std::shared_ptr<sigmaos::util::metrics::ServerMetrics> server_metrics,
+      int init_nthread)
       : _mu(),
         _closed(false),
         _trans(trans),
         _serve_request(serve_request),
+        _metrics(server_metrics),
         _callmap(),
         _reader_thread(std::thread(&Srv::read_requests, this)),
         _thread_pool("demuxsrv", init_nthread) {
@@ -48,6 +53,7 @@ class Srv {
   bool _closed;
   std::shared_ptr<sigmaos::io::transport::Transport> _trans;
   RequestHandler _serve_request;
+  std::shared_ptr<sigmaos::util::metrics::ServerMetrics> _metrics;
   sigmaos::io::demux::internal::CallMap _callmap;
   sigmaos::threadpool::Threadpool _thread_pool;
   std::thread _reader_thread;

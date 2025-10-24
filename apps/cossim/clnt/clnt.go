@@ -22,6 +22,7 @@ type CosSimClnt struct {
 }
 
 func NewCosSimClntFromEP(ep *sp.Tendpoint) (*CosSimClnt, error) {
+	db.DPrintf(db.COSSIMCLNT, "New CosSimClnt from EP: %v", ep)
 	rpcc, err := rpcncclnt.NewTCPRPCClnt("cossim", ep, 0)
 	if err != nil {
 		db.DPrintf(db.COSSIMCLNT_ERR, "Err NewRPCClnt: %v", err)

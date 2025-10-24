@@ -11,6 +11,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	cossimsrv "sigmaos/apps/cossim/srv"
 	"sigmaos/apps/hotel"
 	"sigmaos/benchmarks"
 	"sigmaos/benchmarks/loadgen"
@@ -31,6 +32,7 @@ const (
 type hotelFn func(wc *hotel.WebClnt, r *rand.Rand)
 
 type HotelJobInstance struct {
+	mu         sync.Mutex
 	sigmaos    bool
 	justCli    bool
 	k8ssrvaddr string
@@ -42,6 +44,7 @@ type HotelJobInstance struct {
 	lgs        []*loadgen.LoadGenerator
 	p          *perf.Perf
 	wc         *hotel.WebClnt
+	done       bool
 	// Cluster pre-warming
 	warmCossimSrvKID string
 	cossimKIDs       map[string]bool
@@ -206,6 +209,12 @@ func (ji *HotelJobInstance) scaleCaches() {
 	}
 }
 
+func (ji *HotelJobInstance) isDone() bool {
+	ji.mu.Lock()
+	defer ji.mu.Unlock()
+	return ji.done
+}
+
 func (ji *HotelJobInstance) scaleCosSimSrv() {
 	// If this isn't the main benchmark driver, bail out
 	if ji.justCli {
@@ -216,6 +225,18 @@ func (ji *HotelJobInstance) scaleCosSimSrv() {
 		return
 	}
 	if ji.cfg.CosSimBenchCfg.Scale.GetShouldScale() {
+		go func() {
+			rifMetric := cossimsrv.NewRequestsInFlightMetric(ji.hj.CosSimJob.Clnt)
+			ticker := time.NewTicker(50 * time.Millisecond)
+			defer ticker.Stop()
+			for range ticker.C {
+				if ji.isDone() {
+					return
+				}
+				rif := rifMetric.GetValue()
+				db.DPrintf(db.ALWAYS, "RIF Metric: %v", rif)
+			}
+		}()
 		go func() {
 			time.Sleep(ji.cfg.CosSimBenchCfg.Scale.GetScalingDelay())
 			for i := 0; i < ji.cfg.CosSimBenchCfg.Scale.GetNToAdd(); i++ {
@@ -279,6 +300,9 @@ func (ji *HotelJobInstance) Wait() {
 	if ji.p != nil {
 		ji.p.Done()
 	}
+	ji.mu.Lock()
+	ji.done = true
+	ji.mu.Unlock()
 	db.DPrintf(db.TEST, "Evicting hotel procs")
 	if ji.sigmaos && !ji.justCli {
 		ji.printStats()

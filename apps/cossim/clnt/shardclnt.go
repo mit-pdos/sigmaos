@@ -11,6 +11,7 @@ import (
 	epcacheclnt "sigmaos/apps/epcache/clnt"
 	epcacheproto "sigmaos/apps/epcache/proto"
 	db "sigmaos/debug"
+	rpcproto "sigmaos/rpc/proto"
 	"sigmaos/sigmaclnt/fslib"
 	sp "sigmaos/sigmap"
 )
@@ -158,6 +159,26 @@ func (cssc *CosSimShardClnt) addClnts(instances []*epcacheproto.Instance) {
 		cssc.clnts[i.ID] = newClnt(i.ID, clnt)
 		cssc.clntsSlice = append(cssc.clntsSlice, clnt)
 	}
+}
+
+func (cssc *CosSimShardClnt) GetAllServerMetrics() (map[string]*rpcproto.MetricsRep, error) {
+	cssc.mu.Lock()
+	clnts := make(map[string]*clnt)
+	for srvID, clnt := range cssc.clnts {
+		clnts[srvID] = clnt
+	}
+	cssc.mu.Unlock()
+
+	metrics := make(map[string]*rpcproto.MetricsRep)
+	for srvID, clnt := range clnts {
+		rep, err := clnt.c.GetMetrics()
+		if err != nil {
+			db.DPrintf(db.COSSIMCLNT_ERR, "Err GetMetrics for srv %v: %v", srvID, err)
+			return nil, err
+		}
+		metrics[srvID] = rep
+	}
+	return metrics, nil
 }
 
 func (cssc *CosSimShardClnt) Stop() {

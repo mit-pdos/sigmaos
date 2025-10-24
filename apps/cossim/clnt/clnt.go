@@ -11,14 +11,17 @@ import (
 	epcacheclnt "sigmaos/apps/epcache/clnt"
 	db "sigmaos/debug"
 	rpcclnt "sigmaos/rpc/clnt"
+	rpcmetricsclnt "sigmaos/rpc/clnt/metrics"
 	rpcncclnt "sigmaos/rpc/clnt/netconn"
+	rpcproto "sigmaos/rpc/proto"
 	"sigmaos/sigmaclnt/fslib"
 	sp "sigmaos/sigmap"
 )
 
 type CosSimClnt struct {
-	rpcc    *rpcclnt.RPCClnt
-	reqCntr atomic.Uint64
+	rpcc        *rpcclnt.RPCClnt
+	metricsClnt *rpcmetricsclnt.RPCMetricsClnt
+	reqCntr     atomic.Uint64
 }
 
 func NewCosSimClntFromEP(ep *sp.Tendpoint) (*CosSimClnt, error) {
@@ -28,8 +31,14 @@ func NewCosSimClntFromEP(ep *sp.Tendpoint) (*CosSimClnt, error) {
 		db.DPrintf(db.COSSIMCLNT_ERR, "Err NewRPCClnt: %v", err)
 		return nil, err
 	}
+	metricsRpcc, err := rpcncclnt.NewTCPRPCClnt("cossim", ep, 1)
+	if err != nil {
+		db.DPrintf(db.COSSIMCLNT_ERR, "Err NewRPCClnt: %v", err)
+		return nil, err
+	}
 	return &CosSimClnt{
-		rpcc: rpcc,
+		rpcc:        rpcc,
+		metricsClnt: rpcmetricsclnt.NewRPCMetricsClnt(metricsRpcc),
 	}, nil
 
 }
@@ -73,4 +82,13 @@ func (clnt *CosSimClnt) CosSim(v []float64, ranges []*proto.VecRange) (uint64, f
 	}
 	db.DPrintf(db.COSSIMCLNT, "CosSim(%v) ok: %v %v -> id:%v val:%v lat:%v", reqID, len(v), ranges, res.ID, res.Val, time.Since(start))
 	return res.ID, res.Val, nil
+}
+
+func (clnt *CosSimClnt) GetMetrics() (*rpcproto.MetricsRep, error) {
+	rep, err := clnt.metricsClnt.GetMetrics()
+	if err != nil {
+		db.DPrintf(db.COSSIMCLNT_ERR, "Err GetMetrics: %v", err)
+		return nil, err
+	}
+	return rep, nil
 }

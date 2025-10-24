@@ -78,6 +78,7 @@ func (a *Autoscaler) autoscalingRound() {
 		// Enforce max replicas limit (if set)
 		if a.maxReplicas > 0 && a.desiredReplicas > a.maxReplicas {
 			a.desiredReplicas = a.maxReplicas
+			db.DPrintf(db.AUTOSCALER, "[%v] desiredReplicas %v > maxReplicas %v, capping scaling", a.svc, a.desiredReplicas, a.maxReplicas)
 		}
 		// Scale up or down
 		delta := a.desiredReplicas - a.currentReplicas

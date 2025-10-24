@@ -23,6 +23,7 @@
 #include <google/protobuf/io/coded_stream.h>
 #include <google/protobuf/arena.h>
 #include <google/protobuf/arenastring.h>
+#include <google/protobuf/generated_message_bases.h>
 #include <google/protobuf/generated_message_util.h>
 #include <google/protobuf/metadata_lite.h>
 #include <google/protobuf/generated_message_reflection.h>
@@ -48,6 +49,12 @@ extern const ::PROTOBUF_NAMESPACE_ID::internal::DescriptorTable descriptor_table
 class Blob;
 struct BlobDefaultTypeInternal;
 extern BlobDefaultTypeInternal _Blob_default_instance_;
+class MetricsRep;
+struct MetricsRepDefaultTypeInternal;
+extern MetricsRepDefaultTypeInternal _MetricsRep_default_instance_;
+class MetricsReq;
+struct MetricsReqDefaultTypeInternal;
+extern MetricsReqDefaultTypeInternal _MetricsReq_default_instance_;
 class Rep;
 struct RepDefaultTypeInternal;
 extern RepDefaultTypeInternal _Rep_default_instance_;
@@ -59,12 +66,280 @@ struct SplitIoVecDefaultTypeInternal;
 extern SplitIoVecDefaultTypeInternal _SplitIoVec_default_instance_;
 PROTOBUF_NAMESPACE_OPEN
 template<> ::Blob* Arena::CreateMaybeMessage<::Blob>(Arena*);
+template<> ::MetricsRep* Arena::CreateMaybeMessage<::MetricsRep>(Arena*);
+template<> ::MetricsReq* Arena::CreateMaybeMessage<::MetricsReq>(Arena*);
 template<> ::Rep* Arena::CreateMaybeMessage<::Rep>(Arena*);
 template<> ::Req* Arena::CreateMaybeMessage<::Req>(Arena*);
 template<> ::SplitIoVec* Arena::CreateMaybeMessage<::SplitIoVec>(Arena*);
 PROTOBUF_NAMESPACE_CLOSE
 
 // ===================================================================
+
+class MetricsReq final :
+    public ::PROTOBUF_NAMESPACE_ID::internal::ZeroFieldsBase /* @@protoc_insertion_point(class_definition:MetricsReq) */ {
+ public:
+  inline MetricsReq() : MetricsReq(nullptr) {}
+  explicit PROTOBUF_CONSTEXPR MetricsReq(::PROTOBUF_NAMESPACE_ID::internal::ConstantInitialized);
+
+  MetricsReq(const MetricsReq& from);
+  MetricsReq(MetricsReq&& from) noexcept
+    : MetricsReq() {
+    *this = ::std::move(from);
+  }
+
+  inline MetricsReq& operator=(const MetricsReq& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  inline MetricsReq& operator=(MetricsReq&& from) noexcept {
+    if (this == &from) return *this;
+    if (GetOwningArena() == from.GetOwningArena()
+  #ifdef PROTOBUF_FORCE_COPY_IN_MOVE
+        && GetOwningArena() != nullptr
+  #endif  // !PROTOBUF_FORCE_COPY_IN_MOVE
+    ) {
+      InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+
+  static const ::PROTOBUF_NAMESPACE_ID::Descriptor* descriptor() {
+    return GetDescriptor();
+  }
+  static const ::PROTOBUF_NAMESPACE_ID::Descriptor* GetDescriptor() {
+    return default_instance().GetMetadata().descriptor;
+  }
+  static const ::PROTOBUF_NAMESPACE_ID::Reflection* GetReflection() {
+    return default_instance().GetMetadata().reflection;
+  }
+  static const MetricsReq& default_instance() {
+    return *internal_default_instance();
+  }
+  static inline const MetricsReq* internal_default_instance() {
+    return reinterpret_cast<const MetricsReq*>(
+               &_MetricsReq_default_instance_);
+  }
+  static constexpr int kIndexInFileMessages =
+    0;
+
+  friend void swap(MetricsReq& a, MetricsReq& b) {
+    a.Swap(&b);
+  }
+  inline void Swap(MetricsReq* other) {
+    if (other == this) return;
+  #ifdef PROTOBUF_FORCE_COPY_IN_SWAP
+    if (GetOwningArena() != nullptr &&
+        GetOwningArena() == other->GetOwningArena()) {
+   #else  // PROTOBUF_FORCE_COPY_IN_SWAP
+    if (GetOwningArena() == other->GetOwningArena()) {
+  #endif  // !PROTOBUF_FORCE_COPY_IN_SWAP
+      InternalSwap(other);
+    } else {
+      ::PROTOBUF_NAMESPACE_ID::internal::GenericSwap(this, other);
+    }
+  }
+  void UnsafeArenaSwap(MetricsReq* other) {
+    if (other == this) return;
+    GOOGLE_DCHECK(GetOwningArena() == other->GetOwningArena());
+    InternalSwap(other);
+  }
+
+  // implements Message ----------------------------------------------
+
+  MetricsReq* New(::PROTOBUF_NAMESPACE_ID::Arena* arena = nullptr) const final {
+    return CreateMaybeMessage<MetricsReq>(arena);
+  }
+  using ::PROTOBUF_NAMESPACE_ID::internal::ZeroFieldsBase::CopyFrom;
+  inline void CopyFrom(const MetricsReq& from) {
+    ::PROTOBUF_NAMESPACE_ID::internal::ZeroFieldsBase::CopyImpl(*this, from);
+  }
+  using ::PROTOBUF_NAMESPACE_ID::internal::ZeroFieldsBase::MergeFrom;
+  void MergeFrom(const MetricsReq& from) {
+    ::PROTOBUF_NAMESPACE_ID::internal::ZeroFieldsBase::MergeImpl(*this, from);
+  }
+  public:
+
+  private:
+  friend class ::PROTOBUF_NAMESPACE_ID::internal::AnyMetadata;
+  static ::PROTOBUF_NAMESPACE_ID::StringPiece FullMessageName() {
+    return "MetricsReq";
+  }
+  protected:
+  explicit MetricsReq(::PROTOBUF_NAMESPACE_ID::Arena* arena,
+                       bool is_message_owned = false);
+  public:
+
+  static const ClassData _class_data_;
+  const ::PROTOBUF_NAMESPACE_ID::Message::ClassData*GetClassData() const final;
+
+  ::PROTOBUF_NAMESPACE_ID::Metadata GetMetadata() const final;
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  // @@protoc_insertion_point(class_scope:MetricsReq)
+ private:
+  class _Internal;
+
+  template <typename T> friend class ::PROTOBUF_NAMESPACE_ID::Arena::InternalHelper;
+  typedef void InternalArenaConstructable_;
+  typedef void DestructorSkippable_;
+  struct Impl_ {
+  };
+  friend struct ::TableStruct_rpc_2fproto_2frpc_2eproto;
+};
+// -------------------------------------------------------------------
+
+class MetricsRep final :
+    public ::PROTOBUF_NAMESPACE_ID::Message /* @@protoc_insertion_point(class_definition:MetricsRep) */ {
+ public:
+  inline MetricsRep() : MetricsRep(nullptr) {}
+  ~MetricsRep() override;
+  explicit PROTOBUF_CONSTEXPR MetricsRep(::PROTOBUF_NAMESPACE_ID::internal::ConstantInitialized);
+
+  MetricsRep(const MetricsRep& from);
+  MetricsRep(MetricsRep&& from) noexcept
+    : MetricsRep() {
+    *this = ::std::move(from);
+  }
+
+  inline MetricsRep& operator=(const MetricsRep& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  inline MetricsRep& operator=(MetricsRep&& from) noexcept {
+    if (this == &from) return *this;
+    if (GetOwningArena() == from.GetOwningArena()
+  #ifdef PROTOBUF_FORCE_COPY_IN_MOVE
+        && GetOwningArena() != nullptr
+  #endif  // !PROTOBUF_FORCE_COPY_IN_MOVE
+    ) {
+      InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+
+  static const ::PROTOBUF_NAMESPACE_ID::Descriptor* descriptor() {
+    return GetDescriptor();
+  }
+  static const ::PROTOBUF_NAMESPACE_ID::Descriptor* GetDescriptor() {
+    return default_instance().GetMetadata().descriptor;
+  }
+  static const ::PROTOBUF_NAMESPACE_ID::Reflection* GetReflection() {
+    return default_instance().GetMetadata().reflection;
+  }
+  static const MetricsRep& default_instance() {
+    return *internal_default_instance();
+  }
+  static inline const MetricsRep* internal_default_instance() {
+    return reinterpret_cast<const MetricsRep*>(
+               &_MetricsRep_default_instance_);
+  }
+  static constexpr int kIndexInFileMessages =
+    1;
+
+  friend void swap(MetricsRep& a, MetricsRep& b) {
+    a.Swap(&b);
+  }
+  inline void Swap(MetricsRep* other) {
+    if (other == this) return;
+  #ifdef PROTOBUF_FORCE_COPY_IN_SWAP
+    if (GetOwningArena() != nullptr &&
+        GetOwningArena() == other->GetOwningArena()) {
+   #else  // PROTOBUF_FORCE_COPY_IN_SWAP
+    if (GetOwningArena() == other->GetOwningArena()) {
+  #endif  // !PROTOBUF_FORCE_COPY_IN_SWAP
+      InternalSwap(other);
+    } else {
+      ::PROTOBUF_NAMESPACE_ID::internal::GenericSwap(this, other);
+    }
+  }
+  void UnsafeArenaSwap(MetricsRep* other) {
+    if (other == this) return;
+    GOOGLE_DCHECK(GetOwningArena() == other->GetOwningArena());
+    InternalSwap(other);
+  }
+
+  // implements Message ----------------------------------------------
+
+  MetricsRep* New(::PROTOBUF_NAMESPACE_ID::Arena* arena = nullptr) const final {
+    return CreateMaybeMessage<MetricsRep>(arena);
+  }
+  using ::PROTOBUF_NAMESPACE_ID::Message::CopyFrom;
+  void CopyFrom(const MetricsRep& from);
+  using ::PROTOBUF_NAMESPACE_ID::Message::MergeFrom;
+  void MergeFrom( const MetricsRep& from) {
+    MetricsRep::MergeImpl(*this, from);
+  }
+  private:
+  static void MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PROTOBUF_NAMESPACE_ID::Message& from_msg);
+  public:
+  PROTOBUF_ATTRIBUTE_REINITIALIZES void Clear() final;
+  bool IsInitialized() const final;
+
+  size_t ByteSizeLong() const final;
+  const char* _InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::internal::ParseContext* ctx) final;
+  uint8_t* _InternalSerialize(
+      uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const final;
+  int GetCachedSize() const final { return _impl_._cached_size_.Get(); }
+
+  private:
+  void SharedCtor(::PROTOBUF_NAMESPACE_ID::Arena* arena, bool is_message_owned);
+  void SharedDtor();
+  void SetCachedSize(int size) const final;
+  void InternalSwap(MetricsRep* other);
+
+  private:
+  friend class ::PROTOBUF_NAMESPACE_ID::internal::AnyMetadata;
+  static ::PROTOBUF_NAMESPACE_ID::StringPiece FullMessageName() {
+    return "MetricsRep";
+  }
+  protected:
+  explicit MetricsRep(::PROTOBUF_NAMESPACE_ID::Arena* arena,
+                       bool is_message_owned = false);
+  public:
+
+  static const ClassData _class_data_;
+  const ::PROTOBUF_NAMESPACE_ID::Message::ClassData*GetClassData() const final;
+
+  ::PROTOBUF_NAMESPACE_ID::Metadata GetMetadata() const final;
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  enum : int {
+    kRIFFieldNumber = 1,
+  };
+  // uint64 RIF = 1;
+  void clear_rif();
+  uint64_t rif() const;
+  void set_rif(uint64_t value);
+  private:
+  uint64_t _internal_rif() const;
+  void _internal_set_rif(uint64_t value);
+  public:
+
+  // @@protoc_insertion_point(class_scope:MetricsRep)
+ private:
+  class _Internal;
+
+  template <typename T> friend class ::PROTOBUF_NAMESPACE_ID::Arena::InternalHelper;
+  typedef void InternalArenaConstructable_;
+  typedef void DestructorSkippable_;
+  struct Impl_ {
+    uint64_t rif_;
+    mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
+  };
+  union { Impl_ _impl_; };
+  friend struct ::TableStruct_rpc_2fproto_2frpc_2eproto;
+};
+// -------------------------------------------------------------------
 
 class Req final :
     public ::PROTOBUF_NAMESPACE_ID::Message /* @@protoc_insertion_point(class_definition:Req) */ {
@@ -114,7 +389,7 @@ class Req final :
                &_Req_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    0;
+    2;
 
   friend void swap(Req& a, Req& b) {
     a.Swap(&b);
@@ -267,7 +542,7 @@ class Rep final :
                &_Rep_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    1;
+    3;
 
   friend void swap(Rep& a, Rep& b) {
     a.Swap(&b);
@@ -424,7 +699,7 @@ class SplitIoVec final :
                &_SplitIoVec_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    2;
+    4;
 
   friend void swap(SplitIoVec& a, SplitIoVec& b) {
     a.Swap(&b);
@@ -587,7 +862,7 @@ class Blob final :
                &_Blob_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    3;
+    5;
 
   friend void swap(Blob& a, Blob& b) {
     a.Swap(&b);
@@ -729,6 +1004,34 @@ class Blob final :
   #pragma GCC diagnostic push
   #pragma GCC diagnostic ignored "-Wstrict-aliasing"
 #endif  // __GNUC__
+// MetricsReq
+
+// -------------------------------------------------------------------
+
+// MetricsRep
+
+// uint64 RIF = 1;
+inline void MetricsRep::clear_rif() {
+  _impl_.rif_ = uint64_t{0u};
+}
+inline uint64_t MetricsRep::_internal_rif() const {
+  return _impl_.rif_;
+}
+inline uint64_t MetricsRep::rif() const {
+  // @@protoc_insertion_point(field_get:MetricsRep.RIF)
+  return _internal_rif();
+}
+inline void MetricsRep::_internal_set_rif(uint64_t value) {
+  
+  _impl_.rif_ = value;
+}
+inline void MetricsRep::set_rif(uint64_t value) {
+  _internal_set_rif(value);
+  // @@protoc_insertion_point(field_set:MetricsRep.RIF)
+}
+
+// -------------------------------------------------------------------
+
 // Req
 
 // string method = 1;
@@ -1071,6 +1374,10 @@ Blob::splitiov() const {
 #ifdef __GNUC__
   #pragma GCC diagnostic pop
 #endif  // __GNUC__
+// -------------------------------------------------------------------
+
+// -------------------------------------------------------------------
+
 // -------------------------------------------------------------------
 
 // -------------------------------------------------------------------

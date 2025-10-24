@@ -20,6 +20,30 @@ PROTOBUF_PRAGMA_INIT_SEG
 namespace _pb = ::PROTOBUF_NAMESPACE_ID;
 namespace _pbi = _pb::internal;
 
+PROTOBUF_CONSTEXPR MetricsReq::MetricsReq(
+    ::_pbi::ConstantInitialized) {}
+struct MetricsReqDefaultTypeInternal {
+  PROTOBUF_CONSTEXPR MetricsReqDefaultTypeInternal()
+      : _instance(::_pbi::ConstantInitialized{}) {}
+  ~MetricsReqDefaultTypeInternal() {}
+  union {
+    MetricsReq _instance;
+  };
+};
+PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 MetricsReqDefaultTypeInternal _MetricsReq_default_instance_;
+PROTOBUF_CONSTEXPR MetricsRep::MetricsRep(
+    ::_pbi::ConstantInitialized): _impl_{
+    /*decltype(_impl_.rif_)*/uint64_t{0u}
+  , /*decltype(_impl_._cached_size_)*/{}} {}
+struct MetricsRepDefaultTypeInternal {
+  PROTOBUF_CONSTEXPR MetricsRepDefaultTypeInternal()
+      : _instance(::_pbi::ConstantInitialized{}) {}
+  ~MetricsRepDefaultTypeInternal() {}
+  union {
+    MetricsRep _instance;
+  };
+};
+PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 MetricsRepDefaultTypeInternal _MetricsRep_default_instance_;
 PROTOBUF_CONSTEXPR Req::Req(
     ::_pbi::ConstantInitialized): _impl_{
     /*decltype(_impl_.method_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}
@@ -73,11 +97,24 @@ struct BlobDefaultTypeInternal {
   };
 };
 PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 BlobDefaultTypeInternal _Blob_default_instance_;
-static ::_pb::Metadata file_level_metadata_rpc_2fproto_2frpc_2eproto[4];
+static ::_pb::Metadata file_level_metadata_rpc_2fproto_2frpc_2eproto[6];
 static constexpr ::_pb::EnumDescriptor const** file_level_enum_descriptors_rpc_2fproto_2frpc_2eproto = nullptr;
 static constexpr ::_pb::ServiceDescriptor const** file_level_service_descriptors_rpc_2fproto_2frpc_2eproto = nullptr;
 
 const uint32_t TableStruct_rpc_2fproto_2frpc_2eproto::offsets[] PROTOBUF_SECTION_VARIABLE(protodesc_cold) = {
+  ~0u,  // no _has_bits_
+  PROTOBUF_FIELD_OFFSET(::MetricsReq, _internal_metadata_),
+  ~0u,  // no _extensions_
+  ~0u,  // no _oneof_case_
+  ~0u,  // no _weak_field_map_
+  ~0u,  // no _inlined_string_donated_
+  ~0u,  // no _has_bits_
+  PROTOBUF_FIELD_OFFSET(::MetricsRep, _internal_metadata_),
+  ~0u,  // no _extensions_
+  ~0u,  // no _oneof_case_
+  ~0u,  // no _weak_field_map_
+  ~0u,  // no _inlined_string_donated_
+  PROTOBUF_FIELD_OFFSET(::MetricsRep, _impl_.rif_),
   ~0u,  // no _has_bits_
   PROTOBUF_FIELD_OFFSET(::Req, _internal_metadata_),
   ~0u,  // no _extensions_
@@ -109,13 +146,17 @@ const uint32_t TableStruct_rpc_2fproto_2frpc_2eproto::offsets[] PROTOBUF_SECTION
   PROTOBUF_FIELD_OFFSET(::Blob, _impl_.splitiov_),
 };
 static const ::_pbi::MigrationSchema schemas[] PROTOBUF_SECTION_VARIABLE(protodesc_cold) = {
-  { 0, -1, -1, sizeof(::Req)},
-  { 7, -1, -1, sizeof(::Rep)},
-  { 14, -1, -1, sizeof(::SplitIoVec)},
-  { 21, -1, -1, sizeof(::Blob)},
+  { 0, -1, -1, sizeof(::MetricsReq)},
+  { 6, -1, -1, sizeof(::MetricsRep)},
+  { 13, -1, -1, sizeof(::Req)},
+  { 20, -1, -1, sizeof(::Rep)},
+  { 27, -1, -1, sizeof(::SplitIoVec)},
+  { 34, -1, -1, sizeof(::Blob)},
 };
 
 static const ::_pb::Message* const file_default_instances[] = {
+  &::_MetricsReq_default_instance_._instance,
+  &::_MetricsRep_default_instance_._instance,
   &::_Req_default_instance_._instance,
   &::_Rep_default_instance_._instance,
   &::_SplitIoVec_default_instance_._instance,
@@ -124,20 +165,21 @@ static const ::_pb::Message* const file_default_instances[] = {
 
 const char descriptor_table_protodef_rpc_2fproto_2frpc_2eproto[] PROTOBUF_SECTION_VARIABLE(protodesc_cold) =
   "\n\023rpc/proto/rpc.proto\032\023sigmap/sigmap.pro"
-  "to\"\025\n\003Req\022\016\n\006method\030\001 \001(\t\"\033\n\003Rep\022\024\n\003err\030"
-  "\001 \001(\0132\007.Rerror\"\031\n\nSplitIoVec\022\013\n\003iov\030\001 \003("
-  "\014\"2\n\004Blob\022\013\n\003iov\030\001 \003(\014\022\035\n\010splitIov\030\002 \003(\013"
-  "2\013.SplitIoVecB\023Z\021sigmaos/rpc/protob\006prot"
-  "o3"
+  "to\"\014\n\nMetricsReq\"\031\n\nMetricsRep\022\013\n\003RIF\030\001 "
+  "\001(\004\"\025\n\003Req\022\016\n\006method\030\001 \001(\t\"\033\n\003Rep\022\024\n\003err"
+  "\030\001 \001(\0132\007.Rerror\"\031\n\nSplitIoVec\022\013\n\003iov\030\001 \003"
+  "(\014\"2\n\004Blob\022\013\n\003iov\030\001 \003(\014\022\035\n\010splitIov\030\002 \003("
+  "\0132\013.SplitIoVecB\023Z\021sigmaos/rpc/protob\006pro"
+  "to3"
   ;
 static const ::_pbi::DescriptorTable* const descriptor_table_rpc_2fproto_2frpc_2eproto_deps[1] = {
   &::descriptor_table_sigmap_2fsigmap_2eproto,
 };
 static ::_pbi::once_flag descriptor_table_rpc_2fproto_2frpc_2eproto_once;
 const ::_pbi::DescriptorTable descriptor_table_rpc_2fproto_2frpc_2eproto = {
-    false, false, 202, descriptor_table_protodef_rpc_2fproto_2frpc_2eproto,
+    false, false, 243, descriptor_table_protodef_rpc_2fproto_2frpc_2eproto,
     "rpc/proto/rpc.proto",
-    &descriptor_table_rpc_2fproto_2frpc_2eproto_once, descriptor_table_rpc_2fproto_2frpc_2eproto_deps, 1, 4,
+    &descriptor_table_rpc_2fproto_2frpc_2eproto_once, descriptor_table_rpc_2fproto_2frpc_2eproto_deps, 1, 6,
     schemas, file_default_instances, TableStruct_rpc_2fproto_2frpc_2eproto::offsets,
     file_level_metadata_rpc_2fproto_2frpc_2eproto, file_level_enum_descriptors_rpc_2fproto_2frpc_2eproto,
     file_level_service_descriptors_rpc_2fproto_2frpc_2eproto,
@@ -148,6 +190,224 @@ PROTOBUF_ATTRIBUTE_WEAK const ::_pbi::DescriptorTable* descriptor_table_rpc_2fpr
 
 // Force running AddDescriptors() at dynamic initialization time.
 PROTOBUF_ATTRIBUTE_INIT_PRIORITY2 static ::_pbi::AddDescriptorsRunner dynamic_init_dummy_rpc_2fproto_2frpc_2eproto(&descriptor_table_rpc_2fproto_2frpc_2eproto);
+
+// ===================================================================
+
+class MetricsReq::_Internal {
+ public:
+};
+
+MetricsReq::MetricsReq(::PROTOBUF_NAMESPACE_ID::Arena* arena,
+                         bool is_message_owned)
+  : ::PROTOBUF_NAMESPACE_ID::internal::ZeroFieldsBase(arena, is_message_owned) {
+  // @@protoc_insertion_point(arena_constructor:MetricsReq)
+}
+MetricsReq::MetricsReq(const MetricsReq& from)
+  : ::PROTOBUF_NAMESPACE_ID::internal::ZeroFieldsBase() {
+  MetricsReq* const _this = this; (void)_this;
+  _internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
+  // @@protoc_insertion_point(copy_constructor:MetricsReq)
+}
+
+
+
+
+
+const ::PROTOBUF_NAMESPACE_ID::Message::ClassData MetricsReq::_class_data_ = {
+    ::PROTOBUF_NAMESPACE_ID::internal::ZeroFieldsBase::CopyImpl,
+    ::PROTOBUF_NAMESPACE_ID::internal::ZeroFieldsBase::MergeImpl,
+};
+const ::PROTOBUF_NAMESPACE_ID::Message::ClassData*MetricsReq::GetClassData() const { return &_class_data_; }
+
+
+
+
+
+
+
+::PROTOBUF_NAMESPACE_ID::Metadata MetricsReq::GetMetadata() const {
+  return ::_pbi::AssignDescriptors(
+      &descriptor_table_rpc_2fproto_2frpc_2eproto_getter, &descriptor_table_rpc_2fproto_2frpc_2eproto_once,
+      file_level_metadata_rpc_2fproto_2frpc_2eproto[0]);
+}
+
+// ===================================================================
+
+class MetricsRep::_Internal {
+ public:
+};
+
+MetricsRep::MetricsRep(::PROTOBUF_NAMESPACE_ID::Arena* arena,
+                         bool is_message_owned)
+  : ::PROTOBUF_NAMESPACE_ID::Message(arena, is_message_owned) {
+  SharedCtor(arena, is_message_owned);
+  // @@protoc_insertion_point(arena_constructor:MetricsRep)
+}
+MetricsRep::MetricsRep(const MetricsRep& from)
+  : ::PROTOBUF_NAMESPACE_ID::Message() {
+  MetricsRep* const _this = this; (void)_this;
+  new (&_impl_) Impl_{
+      decltype(_impl_.rif_){}
+    , /*decltype(_impl_._cached_size_)*/{}};
+
+  _internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
+  _this->_impl_.rif_ = from._impl_.rif_;
+  // @@protoc_insertion_point(copy_constructor:MetricsRep)
+}
+
+inline void MetricsRep::SharedCtor(
+    ::_pb::Arena* arena, bool is_message_owned) {
+  (void)arena;
+  (void)is_message_owned;
+  new (&_impl_) Impl_{
+      decltype(_impl_.rif_){uint64_t{0u}}
+    , /*decltype(_impl_._cached_size_)*/{}
+  };
+}
+
+MetricsRep::~MetricsRep() {
+  // @@protoc_insertion_point(destructor:MetricsRep)
+  if (auto *arena = _internal_metadata_.DeleteReturnArena<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>()) {
+  (void)arena;
+    return;
+  }
+  SharedDtor();
+}
+
+inline void MetricsRep::SharedDtor() {
+  GOOGLE_DCHECK(GetArenaForAllocation() == nullptr);
+}
+
+void MetricsRep::SetCachedSize(int size) const {
+  _impl_._cached_size_.Set(size);
+}
+
+void MetricsRep::Clear() {
+// @@protoc_insertion_point(message_clear_start:MetricsRep)
+  uint32_t cached_has_bits = 0;
+  // Prevent compiler warnings about cached_has_bits being unused
+  (void) cached_has_bits;
+
+  _impl_.rif_ = uint64_t{0u};
+  _internal_metadata_.Clear<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>();
+}
+
+const char* MetricsRep::_InternalParse(const char* ptr, ::_pbi::ParseContext* ctx) {
+#define CHK_(x) if (PROTOBUF_PREDICT_FALSE(!(x))) goto failure
+  while (!ctx->Done(&ptr)) {
+    uint32_t tag;
+    ptr = ::_pbi::ReadTag(ptr, &tag);
+    switch (tag >> 3) {
+      // uint64 RIF = 1;
+      case 1:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 8)) {
+          _impl_.rif_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
+          CHK_(ptr);
+        } else
+          goto handle_unusual;
+        continue;
+      default:
+        goto handle_unusual;
+    }  // switch
+  handle_unusual:
+    if ((tag == 0) || ((tag & 7) == 4)) {
+      CHK_(ptr);
+      ctx->SetLastTag(tag);
+      goto message_done;
+    }
+    ptr = UnknownFieldParse(
+        tag,
+        _internal_metadata_.mutable_unknown_fields<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(),
+        ptr, ctx);
+    CHK_(ptr != nullptr);
+  }  // while
+message_done:
+  return ptr;
+failure:
+  ptr = nullptr;
+  goto message_done;
+#undef CHK_
+}
+
+uint8_t* MetricsRep::_InternalSerialize(
+    uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
+  // @@protoc_insertion_point(serialize_to_array_start:MetricsRep)
+  uint32_t cached_has_bits = 0;
+  (void) cached_has_bits;
+
+  // uint64 RIF = 1;
+  if (this->_internal_rif() != 0) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteUInt64ToArray(1, this->_internal_rif(), target);
+  }
+
+  if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
+    target = ::_pbi::WireFormat::InternalSerializeUnknownFieldsToArray(
+        _internal_metadata_.unknown_fields<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(::PROTOBUF_NAMESPACE_ID::UnknownFieldSet::default_instance), target, stream);
+  }
+  // @@protoc_insertion_point(serialize_to_array_end:MetricsRep)
+  return target;
+}
+
+size_t MetricsRep::ByteSizeLong() const {
+// @@protoc_insertion_point(message_byte_size_start:MetricsRep)
+  size_t total_size = 0;
+
+  uint32_t cached_has_bits = 0;
+  // Prevent compiler warnings about cached_has_bits being unused
+  (void) cached_has_bits;
+
+  // uint64 RIF = 1;
+  if (this->_internal_rif() != 0) {
+    total_size += ::_pbi::WireFormatLite::UInt64SizePlusOne(this->_internal_rif());
+  }
+
+  return MaybeComputeUnknownFieldsSize(total_size, &_impl_._cached_size_);
+}
+
+const ::PROTOBUF_NAMESPACE_ID::Message::ClassData MetricsRep::_class_data_ = {
+    ::PROTOBUF_NAMESPACE_ID::Message::CopyWithSourceCheck,
+    MetricsRep::MergeImpl
+};
+const ::PROTOBUF_NAMESPACE_ID::Message::ClassData*MetricsRep::GetClassData() const { return &_class_data_; }
+
+
+void MetricsRep::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PROTOBUF_NAMESPACE_ID::Message& from_msg) {
+  auto* const _this = static_cast<MetricsRep*>(&to_msg);
+  auto& from = static_cast<const MetricsRep&>(from_msg);
+  // @@protoc_insertion_point(class_specific_merge_from_start:MetricsRep)
+  GOOGLE_DCHECK_NE(&from, _this);
+  uint32_t cached_has_bits = 0;
+  (void) cached_has_bits;
+
+  if (from._internal_rif() != 0) {
+    _this->_internal_set_rif(from._internal_rif());
+  }
+  _this->_internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
+}
+
+void MetricsRep::CopyFrom(const MetricsRep& from) {
+// @@protoc_insertion_point(class_specific_copy_from_start:MetricsRep)
+  if (&from == this) return;
+  Clear();
+  MergeFrom(from);
+}
+
+bool MetricsRep::IsInitialized() const {
+  return true;
+}
+
+void MetricsRep::InternalSwap(MetricsRep* other) {
+  using std::swap;
+  _internal_metadata_.InternalSwap(&other->_internal_metadata_);
+  swap(_impl_.rif_, other->_impl_.rif_);
+}
+
+::PROTOBUF_NAMESPACE_ID::Metadata MetricsRep::GetMetadata() const {
+  return ::_pbi::AssignDescriptors(
+      &descriptor_table_rpc_2fproto_2frpc_2eproto_getter, &descriptor_table_rpc_2fproto_2frpc_2eproto_once,
+      file_level_metadata_rpc_2fproto_2frpc_2eproto[1]);
+}
 
 // ===================================================================
 
@@ -349,7 +609,7 @@ void Req::InternalSwap(Req* other) {
 ::PROTOBUF_NAMESPACE_ID::Metadata Req::GetMetadata() const {
   return ::_pbi::AssignDescriptors(
       &descriptor_table_rpc_2fproto_2frpc_2eproto_getter, &descriptor_table_rpc_2fproto_2frpc_2eproto_once,
-      file_level_metadata_rpc_2fproto_2frpc_2eproto[0]);
+      file_level_metadata_rpc_2fproto_2frpc_2eproto[2]);
 }
 
 // ===================================================================
@@ -548,7 +808,7 @@ void Rep::InternalSwap(Rep* other) {
 ::PROTOBUF_NAMESPACE_ID::Metadata Rep::GetMetadata() const {
   return ::_pbi::AssignDescriptors(
       &descriptor_table_rpc_2fproto_2frpc_2eproto_getter, &descriptor_table_rpc_2fproto_2frpc_2eproto_once,
-      file_level_metadata_rpc_2fproto_2frpc_2eproto[1]);
+      file_level_metadata_rpc_2fproto_2frpc_2eproto[3]);
 }
 
 // ===================================================================
@@ -733,7 +993,7 @@ void SplitIoVec::InternalSwap(SplitIoVec* other) {
 ::PROTOBUF_NAMESPACE_ID::Metadata SplitIoVec::GetMetadata() const {
   return ::_pbi::AssignDescriptors(
       &descriptor_table_rpc_2fproto_2frpc_2eproto_getter, &descriptor_table_rpc_2fproto_2frpc_2eproto_once,
-      file_level_metadata_rpc_2fproto_2frpc_2eproto[2]);
+      file_level_metadata_rpc_2fproto_2frpc_2eproto[4]);
 }
 
 // ===================================================================
@@ -952,11 +1212,19 @@ void Blob::InternalSwap(Blob* other) {
 ::PROTOBUF_NAMESPACE_ID::Metadata Blob::GetMetadata() const {
   return ::_pbi::AssignDescriptors(
       &descriptor_table_rpc_2fproto_2frpc_2eproto_getter, &descriptor_table_rpc_2fproto_2frpc_2eproto_once,
-      file_level_metadata_rpc_2fproto_2frpc_2eproto[3]);
+      file_level_metadata_rpc_2fproto_2frpc_2eproto[5]);
 }
 
 // @@protoc_insertion_point(namespace_scope)
 PROTOBUF_NAMESPACE_OPEN
+template<> PROTOBUF_NOINLINE ::MetricsReq*
+Arena::CreateMaybeMessage< ::MetricsReq >(Arena* arena) {
+  return Arena::CreateMessageInternal< ::MetricsReq >(arena);
+}
+template<> PROTOBUF_NOINLINE ::MetricsRep*
+Arena::CreateMaybeMessage< ::MetricsRep >(Arena* arena) {
+  return Arena::CreateMessageInternal< ::MetricsRep >(arena);
+}
 template<> PROTOBUF_NOINLINE ::Req*
 Arena::CreateMaybeMessage< ::Req >(Arena* arena) {
   return Arena::CreateMessageInternal< ::Req >(arena);

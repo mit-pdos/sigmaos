@@ -272,15 +272,9 @@ func (ji *HotelJobInstance) scaleCosSimSrv() {
 
 func (ji *HotelJobInstance) StartHotelJob() {
 	db.DPrintf(db.ALWAYS, "StartHotelJob kubernetes (%v,%v) cfg:%v", !ji.sigmaos, ji.k8ssrvaddr, ji.cfg)
-	var wg sync.WaitGroup
 	for _, lg := range ji.lgs {
-		wg.Add(1)
-		go func(lg *loadgen.LoadGenerator, wg *sync.WaitGroup) {
-			defer wg.Done()
-			lg.Calibrate()
-		}(lg, &wg)
+		lg.Calibrate()
 	}
-	wg.Wait()
 	_, err := ji.wc.StartRecording()
 	if err != nil {
 		db.DFatalf("Can't start recording: %v", err)

@@ -176,6 +176,7 @@ def finalize_graph(fig, ax, plots, title, out, maxval, ymax, legend_on_right):
   else:
     ax[0].legend(lns, labels, bbox_to_anchor=(.5, 1.02), loc="lower center", ncol=min(len(labels), 3))
   for idx in range(len(ax)):
+    ax[idx].grid()
     ax[idx].set_xlim(left=0)
     if idx != 0:
       ax[idx].set_ylim(bottom=0, top=ymax)
@@ -305,7 +306,7 @@ def graph_data(input_load_label, input_dir_sigmaos, input_dir_k8s, title, out, h
   if len(hotel_lats_k8s) > 0:
     x1, y1 = buckets_to_lists(hotel_tail_lat_k8s_buckets)
     ymax = max(ymax, max(y1))
-    p_tail_lat = add_data_to_graph(tptax[tptax_idx + 1], x1, y1, None, "red", "-", "")
+    p_tail_lat = add_data_to_graph(tptax[tptax_idx + 1], x1, y1, str(int(percentile)) + "% tail latency (ms)", "red", "-", "")
     plots.append(p_tail_lat)
     x2, y2 = buckets_to_lists(hotel_avg_lat_k8s_buckets)
 #    p_avg_lat = add_data_to_graph(tptax[tptax_idx + 1], x2, y2, "k8s-hotel avg lat", "purple", "-", "")

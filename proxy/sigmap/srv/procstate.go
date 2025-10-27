@@ -86,6 +86,27 @@ func (psm *ProcStateMgr) getProcState(pid sp.Tpid) (*procState, bool) {
 }
 
 // Expects ps to be allocated already
+func (psm *ProcStateMgr) GetRegisteredEPs(pid sp.Tpid) ([]*registeredEP, error) {
+	ps, ok := psm.getProcState(pid)
+	if !ok {
+		db.DPrintf(db.SPPROXYSRV_ERR, "Try to get registered EPs for unknown proc: %v", pid)
+		return nil, fmt.Errorf("Try to get registered EPs for unknown proc: %v", pid)
+	}
+	return ps.GetRegisteredEPs(), nil
+}
+
+// Expects ps to be allocated already
+func (psm *ProcStateMgr) AddRegisteredEP(pid sp.Tpid, svcName string, instanceID string, ep *sp.Tendpoint) error {
+	ps, ok := psm.getProcState(pid)
+	if !ok {
+		db.DPrintf(db.SPPROXYSRV_ERR, "Try to add registered EP for unknown proc: %v", pid)
+		return fmt.Errorf("Try to add registered EP for unknown proc: %v", pid)
+	}
+	ps.AddRegisteredEP(svcName, instanceID, ep)
+	return nil
+}
+
+// Expects ps to be allocated already
 func (psm *ProcStateMgr) GetSigmaClnt(pid sp.Tpid) (*sigmaclnt.SigmaClnt, *epcacheclnt.EndpointCacheClnt, error) {
 	ps, ok := psm.getProcState(pid)
 	if !ok {
@@ -148,6 +169,24 @@ func (psm *ProcStateMgr) GetRPCChannel(sc *sigmaclnt.SigmaClnt, pid sp.Tpid, rpc
 	return ps.rpcReps.GetRPCChannel(sc, rpcIdx, pn)
 }
 
+type registeredEP struct {
+	svcName      string
+	instanceName string
+	ep           *sp.Tendpoint
+}
+
+func newRegisteredEP(svcName string, instanceName string, ep *sp.Tendpoint) *registeredEP {
+	return &registeredEP{
+		svcName:      svcName,
+		instanceName: instanceName,
+		ep:           ep,
+	}
+}
+
+func (rep *registeredEP) String() string {
+	return fmt.Sprintf("&{ svcName:%v instanceName:%v ep:%v }", rep.svcName, rep.instanceName, rep.ep)
+}
+
 type procState struct {
 	mu                       sync.Mutex
 	cond                     *sync.Cond
@@ -157,6 +196,7 @@ type procState struct {
 	pe                       *proc.ProcEnv
 	p                        *proc.Proc
 	rpcReps                  *RPCState
+	eps                      []*registeredEP
 	wrt                      *wasmrt.WasmerRuntime
 	sc                       *sigmaclnt.SigmaClnt
 	epcc                     *epcacheclnt.EndpointCacheClnt
@@ -169,6 +209,7 @@ func newProcState(spps *SPProxySrv, pe *proc.ProcEnv, p *proc.Proc) *procState {
 	ps := &procState{
 		pe:      pe,
 		p:       p,
+		eps:     make([]*registeredEP, 0, 1),
 		rpcReps: NewRPCState(),
 		done:    false,
 		spps:    spps,
@@ -191,8 +232,26 @@ func newProcState(spps *SPProxySrv, pe *proc.ProcEnv, p *proc.Proc) *procState {
 	return ps
 }
 
-func (psm *procState) GetShmemAllocator() malloc.Allocator {
-	return psm.shmAlloc
+func (ps *procState) AddRegisteredEP(svcName string, instanceName string, ep *sp.Tendpoint) {
+	ps.mu.Lock()
+	defer ps.mu.Unlock()
+
+	ps.eps = append(ps.eps, newRegisteredEP(svcName, instanceName, ep))
+}
+
+func (ps *procState) GetRegisteredEPs() []*registeredEP {
+	ps.mu.Lock()
+	defer ps.mu.Unlock()
+
+	eps := make([]*registeredEP, len(ps.eps))
+	for i := range ps.eps {
+		eps[i] = ps.eps[i]
+	}
+	return eps
+}
+
+func (ps *procState) GetShmemAllocator() malloc.Allocator {
+	return ps.shmAlloc
 }
 
 func (ps *procState) GetSigmaClnt() (*sigmaclnt.SigmaClnt, *epcacheclnt.EndpointCacheClnt, error) {

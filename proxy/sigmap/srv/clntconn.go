@@ -407,6 +407,13 @@ func (sca *SPProxySrvAPI) RegisterEP(ctx fs.CtxI, req scproto.SigmaRegisterEPReq
 			db.DPrintf(db.SPPROXYSRV_ERR, "%v: RegisterEP EPCC err: %v", sca.sc.ClntId(), err)
 		}
 	}
+	if err == nil {
+		// Note that this proc has registered an EP
+		if err := sca.spps.psm.AddRegisteredEP(sca.sc.ProcEnv().GetPID(), filepath.Dir(req.Path), filepath.Base(req.Path), ep); err != nil {
+			db.DPrintf(db.SPPROXYSRV_ERR, "%v: AddRegisteredEP err: %v", sca.sc.ProcEnv().GetPID(), err)
+			db.DPrintf(db.ERROR, "%v: AddRegisteredEP err: %v", sca.sc.ProcEnv().GetPID(), err)
+		}
+	}
 	rep.Err = sca.setErr(err)
 	db.DPrintf(db.SPPROXYSRV, "%v: RegisterEP (useEPCC:%v) done %v %v", sca.sc.ClntId(), useEPCC, req, rep)
 	return nil
@@ -427,6 +434,28 @@ func (sca *SPProxySrvAPI) Started(ctx fs.CtxI, req scproto.SigmaNullReq, rep *sc
 }
 
 func (sca *SPProxySrvAPI) Exited(ctx fs.CtxI, req scproto.SigmaExitedReq, rep *scproto.SigmaErrRep) error {
+	// Unregister any endpoints registered byt his proc
+	eps, err := sca.spps.psm.GetRegisteredEPs(sca.sc.ProcEnv().GetPID())
+	if err != nil {
+		db.DPrintf(db.SPPROXYSRV_ERR, "%v: GetRegisteredEPs err: %v", sca.sc.ProcEnv().GetPID(), err)
+	} else {
+		db.DPrintf(db.SPPROXYSRV, "%v: Deregister EPs: %v", sca.sc.ProcEnv().GetPID(), eps)
+		for _, ep := range eps {
+			useEPCC := sca.epcc != nil
+			if useEPCC {
+				if err := sca.epcc.DeregisterEndpoint(ep.svcName, ep.instanceName); err != nil {
+					db.DPrintf(db.SPPROXYSRV_ERR, "%v: DeregisterEP EPCC err: %v", sca.sc.ProcEnv().GetPID(), err)
+					db.DPrintf(db.ERROR, "%v: DeregisterEP EPCC err: %v", sca.sc.ProcEnv().GetPID(), err)
+				}
+			} else {
+				if err := sca.sc.Remove(filepath.Join(ep.svcName, ep.instanceName)); err != nil {
+					db.DPrintf(db.SPPROXYSRV_ERR, "%v: DeregisterEP RmEndpointFile err: %v", sca.sc.ClntId(), err)
+					db.DPrintf(db.ERROR, "%v: DeregisterEP RmEndpointFile err: %v", sca.sc.ClntId(), err)
+				}
+			}
+		}
+		db.DPrintf(db.SPPROXYSRV, "%v: Done deregister EPs: %v", sca.sc.ProcEnv().GetPID(), eps)
+	}
 	status := proc.Tstatus(req.Status)
 	db.DPrintf(db.SPPROXYSRV, "%v: Exited status %v  msg %v", sca.sc.ClntId(), status, req.Msg)
 	sca.sc.Exited(proc.NewStatusInfo(proc.Tstatus(req.Status), req.Msg, nil))

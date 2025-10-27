@@ -55,7 +55,7 @@ func (a *Autoscaler) autoscalingRound() {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
-	db.DPrintf(db.AUTOSCALER, "[%v] autoscalingRound", a.svc)
+	db.DPrintf(db.AUTOSCALER, "[%v] autoscalingRound currentReplicas:%v", a.svc, a.currentReplicas)
 	// Get current metric value
 	a.currentMetricValue = a.m.GetValue()
 	db.DPrintf(db.AUTOSCALER, "[%v] currentMetricValue:%v desiredMetricValue:%v", a.svc, a.currentMetricValue, a.desiredMetricValue)

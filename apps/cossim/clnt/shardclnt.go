@@ -183,6 +183,7 @@ func (cssc *CosSimShardClnt) GetAllServerMetrics() (map[string]*rpcproto.Metrics
 		rep, err := clnt.c.GetMetrics()
 		if err != nil {
 			db.DPrintf(db.COSSIMCLNT_ERR, "Err GetMetrics for srv %v: %v", srvID, err)
+			continue
 		}
 		metrics[srvID] = rep
 	}

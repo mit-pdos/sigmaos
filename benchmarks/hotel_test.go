@@ -180,13 +180,11 @@ func (ji *HotelJobInstance) scaleGeoSrv() {
 	}
 	if ji.cfg.ScaleGeo.GetShouldScale() {
 		go func() {
-
 			delays := ji.cfg.ScaleGeo.GetScalingDelays()
 			deltas := ji.cfg.ScaleGeo.GetScalingDeltas()
 			for i := 0; i < len(delays) && i < len(deltas); i++ {
 				time.Sleep(delays[i])
 				if ji.sigmaos {
-
 					if deltas[i] > 0 {
 						db.DPrintf(db.TEST, "Manual scale: Scale up geo srvs by %v", deltas[i])
 						if ji.sigmaos {

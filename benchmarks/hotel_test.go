@@ -236,12 +236,12 @@ func (ji *HotelJobInstance) scaleCosSimSrv() {
 					db.DPrintf(db.TEST, "Autoscaler: Err add CosSim srv: %v", err)
 					return err
 				}
-				db.DPrintf(db.TEST, "Autoscaler: Done scale up cossim srv")
 			}
+			db.DPrintf(db.TEST, "Autoscaler: Done scale up cossim srv nreplicas:%v", n)
 			return nil
 		}
 		removeReplicas := func(n int) error {
-			db.DPrintf(db.TEST, "Autoscaler: Scale down down cossim srvs nreplicas:%v", n)
+			db.DPrintf(db.TEST, "Autoscaler: Scale down cossim srvs nreplicas:%v", n)
 			for i := 0; i < n; i++ {
 				err := ji.hj.RemoveCosSimSrv()
 				if err != nil {
@@ -249,6 +249,7 @@ func (ji *HotelJobInstance) scaleCosSimSrv() {
 					return err
 				}
 			}
+			db.DPrintf(db.TEST, "Autoscaler: Done scale down cossim srvs nreplicas:%v", n)
 			return nil
 		}
 		ji.cosSimAutoscaler = autoscale.NewAutoscaler(

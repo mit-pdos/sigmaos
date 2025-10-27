@@ -242,6 +242,11 @@ func (ji *HotelJobInstance) scaleCosSimSrv() {
 		}
 		removeReplicas := func(n int) error {
 			db.DPrintf(db.TEST, "Autoscaler: Scale down not implemented, requested to remove %v replicas", n)
+			err := ji.hj.RemoveCosSimSrv()
+			if err != nil {
+				db.DPrintf(db.TEST, "Autoscaler: Err add CosSim srv: %v", err)
+				return err
+			}
 			return nil
 		}
 		ji.cosSimAutoscaler = autoscale.NewAutoscaler(

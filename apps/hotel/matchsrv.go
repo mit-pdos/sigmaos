@@ -116,7 +116,7 @@ func (s *Match) UserPreference(ctx fs.CtxI, req proto.MatchReq, res *proto.Match
 		db.DPrintf(db.HOTEL_MATCH_ERR, "Err get input vec: %v", err)
 		return err
 	}
-	id, val, err := s.cossimClnt.CosSimLeastLoaded(inputVec, req.VecRanges)
+	id, val, err := s.cossimClnt.CosSimLeastLoaded(inputVec, req.VecRanges, true)
 	if err != nil {
 		db.DPrintf(db.HOTEL_MATCH_ERR, "Err CosSimLeastLoaded: %v", err)
 		return err

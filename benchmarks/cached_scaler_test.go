@@ -201,7 +201,7 @@ func NewCachedScalerJob(ts *test.RealmTstate, jobName string, cacheCfg *benchmar
 				db.DPrintf(db.TEST, "Cache miss (key=%v)! force %v genuine %v cnt %v err %v", key, forceMiss, err != nil, misscnt.Add(1), err)
 				// Fetch from cossim server
 				if ji.cacheCfg.CosSimBackend {
-					_, _, err := ji.cossimJ.Clnt.CosSimLeastLoaded(cossimInputVec, ranges)
+					_, _, err := ji.cossimJ.Clnt.CosSimLeastLoaded(cossimInputVec, ranges, true)
 					assert.Nil(ji.Ts.T, err, "CosSim req: %v", err)
 				} else {
 					// Simulate fetching the data with a fixed delay

@@ -1806,7 +1806,7 @@ func TestCosSim(t *testing.T) {
 
 	rs := benchmarks.NewResults(1, benchmarks.E2E)
 	jobs, ji := newCosSimJobs(ts1, p, nil, nil, nil, sigmaos, CosSimBenchConfig, func(j *cossimsrv.CosSimJob, r *rand.Rand) {
-		_, _, err := j.Clnt.CosSimLeastLoaded(v, ranges)
+		_, _, err := j.Clnt.CosSimLeastLoaded(v, ranges, true)
 		assert.Nil(t, err, "CosSim req: %v", err)
 	})
 	go func() {

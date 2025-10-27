@@ -144,7 +144,7 @@ func (cssc *CosSimShardClnt) PutClnt(srvID string) {
 
 	clnt, ok := cssc.clnts[srvID]
 	if !ok {
-		db.DPrintf(db.ERROR, "Err put clnt unknown clnt: %v", srvID)
+		db.DPrintf(db.COSSIMCLNT_ERR, "Err put clnt unknown clnt: %v", srvID)
 		return
 	}
 	clnt.Put()

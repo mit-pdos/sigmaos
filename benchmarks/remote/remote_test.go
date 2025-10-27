@@ -1301,8 +1301,8 @@ func TestHotelMatchTailLatency(t *testing.T) {
 			CosSimBenchCfg: &benchmarks.CosSimBenchConfig{
 				JobCfg:        cossimsrv.NewCosSimJobConfig("hotel-job", 1, 10000, 100, true, 4000, nil, csDelInit),
 				NVecToQuery:   5000,
-				ManuallyScale: benchmarks.NewManualScalingConfig("cossim", true, 10*time.Second, 1),
-				Autoscale:     &benchmarks.AutoscalingConfig{Scale: false},
+				ManuallyScale: benchmarks.NewManualScalingConfig("cossim", false, 10*time.Second, 1),
+				Autoscale:     &benchmarks.AutoscalingConfig{Svc: "cossim", InitialNReplicas: 1, Scale: true, MaxReplicas: 3, TargetRIF: 3, Tolerance: 0.75, Frequency: 10 * time.Millisecond},
 			},
 		}
 		getLeaderCmd := GetHotelClientCmdConstructor("Match", true, len(driverVMs), sleep, hotelCfg)

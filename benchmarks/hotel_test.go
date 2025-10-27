@@ -229,8 +229,8 @@ func (ji *HotelJobInstance) scaleCosSimSrv() {
 	if ji.cfg.CosSimBenchCfg.Autoscale.GetShouldScale() {
 		rifMetric := cossimsrv.NewRequestsInFlightMetric(ji.hj.CosSimJob.Clnt)
 		addReplicas := func(n int) error {
+			db.DPrintf(db.TEST, "Autoscaler: Scale up cossim srvs nreplicas:%v", n)
 			for i := 0; i < n; i++ {
-				db.DPrintf(db.TEST, "Autoscaler: Scale up cossim srvs")
 				err := ji.hj.AddCosSimSrvWithSigmaPath(chunk.ChunkdPath(ji.warmCossimSrvKID))
 				if err != nil {
 					db.DPrintf(db.TEST, "Autoscaler: Err add CosSim srv: %v", err)
@@ -241,11 +241,13 @@ func (ji *HotelJobInstance) scaleCosSimSrv() {
 			return nil
 		}
 		removeReplicas := func(n int) error {
-			db.DPrintf(db.TEST, "Autoscaler: Scale down not implemented, requested to remove %v replicas", n)
-			err := ji.hj.RemoveCosSimSrv()
-			if err != nil {
-				db.DPrintf(db.TEST, "Autoscaler: Err add CosSim srv: %v", err)
-				return err
+			db.DPrintf(db.TEST, "Autoscaler: Scale down down cossim srvs nreplicas:%v", n)
+			for i := 0; i < n; i++ {
+				err := ji.hj.RemoveCosSimSrv()
+				if err != nil {
+					db.DPrintf(db.TEST, "Autoscaler: Err remove CosSim srv: %v", err)
+					return err
+				}
 			}
 			return nil
 		}

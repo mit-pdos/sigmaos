@@ -236,6 +236,32 @@ func (j *CosSimJob) AddSrv() (*proc.Proc, time.Duration, error) {
 	return j.addSrv(sp.NOT_SET)
 }
 
+func (j *CosSimJob) RemoveSrv() error {
+	j.mu.Lock()
+	defer j.mu.Unlock()
+
+	return j.removeSrv()
+}
+
+func (j *CosSimJob) removeSrv() error {
+	var p *proc.Proc
+	p, j.srvs = j.srvs[len(j.srvs)-1], j.srvs[:len(j.srvs)-1]
+	if err := j.Evict(p.GetPid()); err != nil {
+		return err
+	}
+	status, err := j.WaitExit(p.GetPid())
+	if err != nil {
+		db.DPrintf(db.ERROR, "Err WaitExit: %v", err)
+		return err
+	}
+	db.DPrintf(db.TEST, "CPP proc exited, status: %v", status)
+	if !status.IsStatusEvicted() {
+		db.DPrintf(db.ERROR, "Proc wrong exit status: %v", status)
+		return err
+	}
+	return nil
+}
+
 func (j *CosSimJob) addSrv(sigmaPath string) (*proc.Proc, time.Duration, error) {
 	p := proc.NewProc("cossim-srv-cpp", []string{j.cachePNBase, strconv.Itoa(j.conf.CacheCfg.NSrv), strconv.Itoa(j.conf.NVec), strconv.Itoa(j.conf.VecDim), strconv.FormatBool(j.conf.EagerInit)})
 	db.DPrintf(db.TEST, "Scale %v", p.GetPid())

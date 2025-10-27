@@ -1227,30 +1227,44 @@ func TestHotelMatchTailLatency(t *testing.T) {
 	)
 	// Hotel benchmark configuration parameters
 	var (
-		rps []int = []int{
-			500,
-			1000,
+		rpsBase int   = 500 // 95% capacity for a single cossim server
+		rpsSlow []int = []int{
+			rpsBase,
+			rpsBase * 2,
 		}
-		dur []time.Duration = []time.Duration{
+		durSlow []time.Duration = []time.Duration{
 			10 * time.Second,
 			10 * time.Second,
 		}
-		numCaches           int           = 1
-		cacheType           string        = "cached"
-		autoscaleCache      bool          = false
-		clientDelay         time.Duration = 0 * time.Second
-		sleep               time.Duration = 0 * time.Second
-		manuallyScaleCaches bool          = false
-		scaleCacheDelay     time.Duration = 0 * time.Second
-		numCachesToAdd      int           = 0
-		numGeo              int           = 1
-		numGeoIdx           int           = 1000
-		geoSearchRadius     int           = 10
-		geoNResults         int           = 5
-		manuallyScaleGeo    bool          = false
-		scaleGeoDelay       time.Duration = 0 * time.Second
-		numGeoToAdd         int           = 0
-		cosSimDelegatedInit []bool        = []bool{true, false}
+		rpsFast []int = []int{
+			rpsBase,
+			rpsBase * 2,
+		}
+		durFast []time.Duration = []time.Duration{
+			100 * time.Millisecond,
+			100 * time.Millisecond,
+		}
+		numCaches                        int           = 1
+		cacheType                        string        = "cached"
+		autoscaleCache                   bool          = false
+		clientDelay                      time.Duration = 0 * time.Second
+		sleep                            time.Duration = 0 * time.Second
+		manuallyScaleCaches              bool          = false
+		scaleCacheDelay                  time.Duration = 0 * time.Second
+		numCachesToAdd                   int           = 0
+		numGeo                           int           = 1
+		numGeoIdx                        int           = 1000
+		geoSearchRadius                  int           = 10
+		geoNResults                      int           = 5
+		manuallyScaleGeo                 bool          = false
+		scaleGeoDelay                    time.Duration = 0 * time.Second
+		numGeoToAdd                      int           = 0
+		cosSimDelegatedInit              []bool        = []bool{true, false}
+		autoscaleCosSim                  bool          = false
+		fastLoadChange                   bool          = true
+		proactiveScaling                 bool          = true
+		cosSimNoDelegatedInitScalingTime time.Duration = 80 * time.Millisecond
+		cosSimDelegatedInitScalingTime   time.Duration = 50 * time.Millisecond
 	)
 	ts, err := NewTstate(t)
 	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {
@@ -1260,9 +1274,32 @@ func TestHotelMatchTailLatency(t *testing.T) {
 		benchNameBase += "_overlays"
 	}
 	for _, csDelInit := range cosSimDelegatedInit {
+		scalingTime := cosSimNoDelegatedInitScalingTime
 		benchName := benchNameBase
+		rps := rpsSlow
+		dur := durSlow
+		if fastLoadChange {
+			benchName += "_fast"
+			rps = rpsFast
+			dur = durFast
+		}
 		if csDelInit {
 			benchName += "_csdi"
+			scalingTime = cosSimDelegatedInitScalingTime
+		}
+		csScaleDurs := make([]time.Duration, len(dur))
+		csScaleDeltas := make([]int, len(dur))
+		for i := range dur {
+			csScaleDurs[i] = dur[i]
+			// Back-shift duration if scaling proactively
+			if i == 0 {
+				if proactiveScaling {
+					csScaleDurs[i] -= scalingTime
+				}
+				csScaleDeltas[i] = 0
+			} else {
+				csScaleDeltas[i] = rps[i]/rpsBase - csScaleDeltas[i-1]
+			}
 		}
 		db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
 		hotelCfg := &benchmarks.HotelBenchConfig{
@@ -1299,10 +1336,13 @@ func TestHotelMatchTailLatency(t *testing.T) {
 				},
 			},
 			CosSimBenchCfg: &benchmarks.CosSimBenchConfig{
-				JobCfg:        cossimsrv.NewCosSimJobConfig("hotel-job", 1, 10000, 100, true, 4000, nil, csDelInit),
-				NVecToQuery:   5000,
-				ManuallyScale: benchmarks.NewManualScalingConfig("cossim", false, []time.Duration{}, []int{}),
-				Autoscale:     &benchmarks.AutoscalingConfig{Svc: "cossim", InitialNReplicas: 1, Scale: true, MaxReplicas: 4, TargetRIF: 3, Tolerance: 0.5, Frequency: 10 * time.Millisecond},
+				JobCfg:      cossimsrv.NewCosSimJobConfig("hotel-job", 1, 10000, 100, true, 4000, nil, csDelInit),
+				NVecToQuery: 5000,
+				ManuallyScale: benchmarks.NewManualScalingConfig("cossim", !autoscaleCosSim,
+					csScaleDurs,
+					csScaleDeltas,
+				),
+				Autoscale: &benchmarks.AutoscalingConfig{Svc: "cossim", InitialNReplicas: 1, Scale: autoscaleCosSim, MaxReplicas: 4, TargetRIF: 3, Tolerance: 0.5, Frequency: 10 * time.Millisecond},
 			},
 		}
 		getLeaderCmd := GetHotelClientCmdConstructor("Match", true, len(driverVMs), sleep, hotelCfg)

@@ -325,6 +325,10 @@ func (hj *HotelJob) AddCosSimSrv() error {
 	return hj.AddCosSimSrvWithSigmaPath(sp.NOT_SET)
 }
 
+func (hj *HotelJob) RemoveCosSimSrv() error {
+	return hj.CosSimJob.RemoveSrv()
+}
+
 func (hj *HotelJob) AddCosSimSrvWithSigmaPath(sigmaPath string) error {
 	_, _, err := hj.CosSimJob.AddSrvWithSigmaPath(sigmaPath)
 	return err

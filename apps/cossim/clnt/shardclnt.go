@@ -68,31 +68,56 @@ func NewCosSimShardClnt(fsl *fslib.FsLib, epcc *epcacheclnt.EndpointCacheClnt) (
 	return cssc, nil
 }
 
-func (cssc *CosSimShardClnt) CosSimLeastLoaded(v []float64, ranges []*proto.VecRange) (uint64, float64, error) {
-	start := time.Now()
-	srvID, clnt, err := cssc.GetLeastLoadedClnt()
-	if err != nil {
-		db.DPrintf(db.COSSIMCLNT_ERR, "Err GetLeastLoadedClnt: %v", err)
-		return 0, 0.0, err
+func (cssc *CosSimShardClnt) CosSimLeastLoaded(v []float64, ranges []*proto.VecRange, retry bool) (uint64, float64, error) {
+	ignore := map[string]bool{}
+	// Keep retrying, ignoring clients which produced errors before
+	for {
+		start := time.Now()
+		srvID, clnt, err := cssc.getLeastLoadedClnt(ignore)
+		if err != nil {
+			db.DPrintf(db.COSSIMCLNT_ERR, "Err GetLeastLoadedClnt: %v", err)
+			return 0, 0.0, err
+		}
+		db.DPrintf(db.COSSIMCLNT, "Least loaded server: %v lat:%v", srvID, time.Since(start))
+		id, val, err := cssc.runReq(srvID, clnt, v, ranges)
+		// Optionally retry
+		if err != nil && retry {
+			ignore[srvID] = true
+			db.DPrintf(db.COSSIMCLNT_ERR, "Err runReq[%v] retry: %v", srvID, err)
+			continue
+		}
+		return id, val, err
 	}
-	db.DPrintf(db.COSSIMCLNT, "Least loaded server: %v lat:%v", srvID, time.Since(start))
+}
+
+func (cssc *CosSimShardClnt) runReq(srvID string, clnt *CosSimClnt, v []float64, ranges []*proto.VecRange) (uint64, float64, error) {
 	defer cssc.PutClnt(srvID)
 	return clnt.CosSim(v, ranges)
 }
 
 func (cssc *CosSimShardClnt) GetLeastLoadedClnt() (string, *CosSimClnt, error) {
+	return cssc.getLeastLoadedClnt(nil)
+}
+
+func (cssc *CosSimShardClnt) getLeastLoadedClnt(ignore map[string]bool) (string, *CosSimClnt, error) {
 	cssc.mu.Lock()
 	defer cssc.mu.Unlock()
 
 	if len(cssc.clnts) == 0 {
-		return sp.NOT_SET, nil, fmt.Errorf("No cossim clients available")
+		return sp.NOT_SET, nil, fmt.Errorf("No cossim clients available, ignoring %v", ignore)
 	}
 
 	var minClnt *clnt
 	for _, clnt := range cssc.clnts {
+		if ignore[clnt.GetSrvID()] {
+			continue
+		}
 		if minClnt == nil || clnt.GetNOutstanding() < minClnt.GetNOutstanding() {
 			minClnt = clnt
 		}
+	}
+	if minClnt == nil {
+		return sp.NOT_SET, nil, fmt.Errorf("No cossim clients available, ignoring %v", ignore)
 	}
 	return minClnt.GetSrvID(), minClnt.Get(), nil
 }

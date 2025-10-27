@@ -431,19 +431,19 @@ func TestHotelTailLatency(t *testing.T) {
 		Durs:   dur,
 		MaxRPS: rps,
 		ScaleGeo: &benchmarks.ManualScalingConfig{
-			Svc:        "hotel-geo",
-			Scale:      manuallyScaleGeo,
-			ScaleDelay: scaleGeoDelay,
-			NToAdd:     numGeoToAdd,
+			Svc:         "hotel-geo",
+			Scale:       manuallyScaleGeo,
+			ScaleDelays: []time.Duration{scaleGeoDelay},
+			ScaleDeltas: []int{numGeoToAdd},
 		},
 		CacheBenchCfg: &benchmarks.CacheBenchConfig{
 			JobCfg:    &cachegrpmgr.CacheJobConfig{NSrv: numCaches, MCPU: proc.Tmcpu(2000), GC: true},
 			Autoscale: autoscaleCache,
 			ManuallyScale: &benchmarks.ManualScalingConfig{
-				Svc:        "cached",
-				Scale:      manuallyScaleCaches,
-				ScaleDelay: scaleCacheDelay,
-				NToAdd:     numCachesToAdd,
+				Svc:         "cached",
+				Scale:       manuallyScaleCaches,
+				ScaleDelays: []time.Duration{scaleCacheDelay},
+				ScaleDeltas: []int{numCachesToAdd},
 			},
 		},
 		CosSimBenchCfg: nil,
@@ -535,19 +535,19 @@ func TestHotelScaleGeo(t *testing.T) {
 					Durs:   dur,
 					MaxRPS: rps,
 					ScaleGeo: &benchmarks.ManualScalingConfig{
-						Svc:        "hotel-geo",
-						Scale:      scale,
-						ScaleDelay: scaleGeoDelay,
-						NToAdd:     numGeoToAdd,
+						Svc:         "hotel-geo",
+						Scale:       scale,
+						ScaleDelays: []time.Duration{scaleGeoDelay},
+						ScaleDeltas: []int{numGeoToAdd},
 					},
 					CacheBenchCfg: &benchmarks.CacheBenchConfig{
 						JobCfg:    &cachegrpmgr.CacheJobConfig{NSrv: numCaches, MCPU: proc.Tmcpu(2000), GC: true},
 						Autoscale: autoscaleCache,
 						ManuallyScale: &benchmarks.ManualScalingConfig{
-							Svc:        "cached",
-							Scale:      false,
-							ScaleDelay: 0,
-							NToAdd:     0,
+							Svc:         "cached",
+							Scale:       false,
+							ScaleDelays: []time.Duration{},
+							ScaleDeltas: []int{},
 						},
 					},
 					CosSimBenchCfg: nil,
@@ -645,19 +645,19 @@ func TestHotelGeoReqScaleGeo(t *testing.T) {
 					Durs:   dur,
 					MaxRPS: rps,
 					ScaleGeo: &benchmarks.ManualScalingConfig{
-						Svc:        "hotel-geo",
-						Scale:      scale,
-						ScaleDelay: scaleGeoDelay,
-						NToAdd:     numGeoToAdd,
+						Svc:         "hotel-geo",
+						Scale:       scale,
+						ScaleDelays: []time.Duration{scaleGeoDelay},
+						ScaleDeltas: []int{numGeoToAdd},
 					},
 					CacheBenchCfg: &benchmarks.CacheBenchConfig{
 						JobCfg:    &cachegrpmgr.CacheJobConfig{NSrv: numCaches, MCPU: proc.Tmcpu(2000), GC: true},
 						Autoscale: autoscaleCache,
 						ManuallyScale: &benchmarks.ManualScalingConfig{
-							Svc:        "cached",
-							Scale:      false,
-							ScaleDelay: 0,
-							NToAdd:     0,
+							Svc:         "cached",
+							Scale:       false,
+							ScaleDelays: []time.Duration{},
+							ScaleDeltas: []int{},
 						},
 					},
 					CosSimBenchCfg: nil,
@@ -752,19 +752,19 @@ func TestHotelScaleCache(t *testing.T) {
 					Durs:   dur,
 					MaxRPS: rps,
 					ScaleGeo: &benchmarks.ManualScalingConfig{
-						Svc:        "hotel-geo",
-						Scale:      manuallyScaleGeo,
-						ScaleDelay: scaleGeoDelay,
-						NToAdd:     numGeoToAdd,
+						Svc:         "hotel-geo",
+						Scale:       manuallyScaleGeo,
+						ScaleDelays: []time.Duration{scaleGeoDelay},
+						ScaleDeltas: []int{numGeoToAdd},
 					},
 					CacheBenchCfg: &benchmarks.CacheBenchConfig{
 						JobCfg:    &cachegrpmgr.CacheJobConfig{NSrv: numCaches, MCPU: proc.Tmcpu(2000), GC: true},
 						Autoscale: autoscaleCache,
 						ManuallyScale: &benchmarks.ManualScalingConfig{
-							Svc:        "cached",
-							Scale:      scale,
-							ScaleDelay: scaleCacheDelay,
-							NToAdd:     numCachesToAdd,
+							Svc:         "cached",
+							Scale:       scale,
+							ScaleDelays: []time.Duration{scaleCacheDelay},
+							ScaleDeltas: []int{numCachesToAdd},
 						},
 					},
 					CosSimBenchCfg: nil,
@@ -921,19 +921,19 @@ func TestLCBEHotelImgResizeMultiplexing(t *testing.T) {
 		Durs:   dur,
 		MaxRPS: rps,
 		ScaleGeo: &benchmarks.ManualScalingConfig{
-			Svc:        "hotel-geo",
-			Scale:      manuallyScaleGeo,
-			ScaleDelay: scaleGeoDelay,
-			NToAdd:     numGeoToAdd,
+			Svc:         "hotel-geo",
+			Scale:       manuallyScaleGeo,
+			ScaleDelays: []time.Duration{scaleGeoDelay},
+			ScaleDeltas: []int{numGeoToAdd},
 		},
 		CacheBenchCfg: &benchmarks.CacheBenchConfig{
 			JobCfg:    &cachegrpmgr.CacheJobConfig{NSrv: numCaches, MCPU: proc.Tmcpu(2000), GC: true},
 			Autoscale: autoscaleCache,
 			ManuallyScale: &benchmarks.ManualScalingConfig{
-				Svc:        "cached",
-				Scale:      manuallyScaleCaches,
-				ScaleDelay: scaleCacheDelay,
-				NToAdd:     numCachesToAdd,
+				Svc:         "cached",
+				Scale:       manuallyScaleCaches,
+				ScaleDelays: []time.Duration{scaleCacheDelay},
+				ScaleDeltas: []int{numCachesToAdd},
 			},
 		},
 		CosSimBenchCfg: nil,
@@ -1001,19 +1001,19 @@ func TestLCBEHotelImgResizeRPCMultiplexing(t *testing.T) {
 		Durs:   dur,
 		MaxRPS: rps,
 		ScaleGeo: &benchmarks.ManualScalingConfig{
-			Svc:        "hotel-geo",
-			Scale:      manuallyScaleGeo,
-			ScaleDelay: scaleGeoDelay,
-			NToAdd:     numGeoToAdd,
+			Svc:         "hotel-geo",
+			Scale:       manuallyScaleGeo,
+			ScaleDelays: []time.Duration{scaleGeoDelay},
+			ScaleDeltas: []int{numGeoToAdd},
 		},
 		CacheBenchCfg: &benchmarks.CacheBenchConfig{
 			JobCfg:    &cachegrpmgr.CacheJobConfig{NSrv: numCaches, MCPU: proc.Tmcpu(2000), GC: true},
 			Autoscale: autoscaleCache,
 			ManuallyScale: &benchmarks.ManualScalingConfig{
-				Svc:        "cached",
-				Scale:      manuallyScaleCaches,
-				ScaleDelay: scaleCacheDelay,
-				NToAdd:     numCachesToAdd,
+				Svc:         "cached",
+				Scale:       manuallyScaleCaches,
+				ScaleDelays: []time.Duration{scaleCacheDelay},
+				ScaleDeltas: []int{numCachesToAdd},
 			},
 		},
 		CosSimBenchCfg: nil,
@@ -1092,7 +1092,7 @@ func TestScaleCosSim(t *testing.T) {
 						}
 						cacheCfg := cachegrpmgr.NewCacheJobConfig(numCaches, 2000, true)
 						jobCfg := cossimsrv.NewCosSimJobConfig("cossim", numCosSim, 10000, 100, true, 4000, cacheCfg, delegate)
-						scaleCosSim := benchmarks.NewManualScalingConfig("cossim", scale, scaleCosSimDelay, numCosSimToAdd)
+						scaleCosSim := benchmarks.NewManualScalingConfig("cossim", scale, []time.Duration{scaleCosSimDelay}, []int{numCosSimToAdd})
 						cfg := &benchmarks.CosSimBenchConfig{
 							JobCfg:        jobCfg,
 							NVecToQuery:   5000,
@@ -1166,7 +1166,7 @@ func TestScaleCachedScaler(t *testing.T) {
 					}
 					// Create CacheBenchConfig
 					cacheCfg := cachegrpmgr.NewCacheJobConfig(1, cacheMcpu, true)
-					scaleCached := benchmarks.NewManualScalingConfig("cached", scale, scaleDelay, 1)
+					scaleCached := benchmarks.NewManualScalingConfig("cached", scale, []time.Duration{scaleDelay}, []int{1})
 					cacheBenchCfg := &benchmarks.CacheBenchConfig{
 						JobCfg:        cacheCfg,
 						CPP:           cpp,
@@ -1193,7 +1193,7 @@ func TestScaleCachedScaler(t *testing.T) {
 							NVecToQuery:   5000,
 							Durs:          []time.Duration{30 * time.Second},
 							MaxRPS:        []int{2000},
-							ManuallyScale: benchmarks.NewManualScalingConfig("cossim", false, 0, 0),
+							ManuallyScale: benchmarks.NewManualScalingConfig("cossim", false, []time.Duration{}, []int{}),
 							Autoscale:     &benchmarks.AutoscalingConfig{Scale: false},
 						}
 					}
@@ -1283,26 +1283,26 @@ func TestHotelMatchTailLatency(t *testing.T) {
 			Durs:            dur,
 			MaxRPS:          rps,
 			ScaleGeo: &benchmarks.ManualScalingConfig{
-				Svc:        "hotel-geo",
-				Scale:      manuallyScaleGeo,
-				ScaleDelay: scaleGeoDelay,
-				NToAdd:     numGeoToAdd,
+				Svc:         "hotel-geo",
+				Scale:       manuallyScaleGeo,
+				ScaleDelays: []time.Duration{scaleGeoDelay},
+				ScaleDeltas: []int{numGeoToAdd},
 			},
 			CacheBenchCfg: &benchmarks.CacheBenchConfig{
 				JobCfg:    &cachegrpmgr.CacheJobConfig{NSrv: numCaches, MCPU: proc.Tmcpu(4000), GC: true},
 				Autoscale: autoscaleCache,
 				ManuallyScale: &benchmarks.ManualScalingConfig{
-					Svc:        "cached",
-					Scale:      manuallyScaleCaches,
-					ScaleDelay: scaleCacheDelay,
-					NToAdd:     numCachesToAdd,
+					Svc:         "cached",
+					Scale:       manuallyScaleCaches,
+					ScaleDelays: []time.Duration{scaleCacheDelay},
+					ScaleDeltas: []int{numCachesToAdd},
 				},
 			},
 			CosSimBenchCfg: &benchmarks.CosSimBenchConfig{
 				JobCfg:        cossimsrv.NewCosSimJobConfig("hotel-job", 1, 10000, 100, true, 4000, nil, csDelInit),
 				NVecToQuery:   5000,
-				ManuallyScale: benchmarks.NewManualScalingConfig("cossim", false, 10*time.Second, 1),
-				Autoscale:     &benchmarks.AutoscalingConfig{Svc: "cossim", InitialNReplicas: 1, Scale: true, MaxReplicas: 3, TargetRIF: 3, Tolerance: 0.75, Frequency: 10 * time.Millisecond},
+				ManuallyScale: benchmarks.NewManualScalingConfig("cossim", false, []time.Duration{}, []int{}),
+				Autoscale:     &benchmarks.AutoscalingConfig{Svc: "cossim", InitialNReplicas: 1, Scale: true, MaxReplicas: 4, TargetRIF: 3, Tolerance: 0.5, Frequency: 10 * time.Millisecond},
 			},
 		}
 		getLeaderCmd := GetHotelClientCmdConstructor("Match", true, len(driverVMs), sleep, hotelCfg)

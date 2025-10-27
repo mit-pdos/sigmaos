@@ -180,18 +180,35 @@ func (ji *HotelJobInstance) scaleGeoSrv() {
 	}
 	if ji.cfg.ScaleGeo.GetShouldScale() {
 		go func() {
-			time.Sleep(ji.cfg.ScaleGeo.GetScalingDelay())
-			if ji.sigmaos {
-				for i := 0; i < ji.cfg.ScaleGeo.GetNToAdd(); i++ {
-					err := ji.hj.AddGeoSrv()
-					assert.Nil(ji.Ts.T, err, "Add Geo srv: %v", err)
-				}
-			} else {
-				if ji.cfg.ScaleGeo.GetNToAdd() > 0 {
-					err := k8sScaleUpGeo()
-					assert.Nil(ji.Ts.T, err, "K8s scale up Geo srv: %v", err)
+
+			delays := ji.cfg.ScaleGeo.GetScalingDelays()
+			deltas := ji.cfg.ScaleGeo.GetScalingDeltas()
+			for i := 0; i < len(delays) && i < len(deltas); i++ {
+				time.Sleep(delays[i])
+				if ji.sigmaos {
+
+					if deltas[i] > 0 {
+						db.DPrintf(db.TEST, "Manual scale: Scale up geo srvs by %v", deltas[i])
+						if ji.sigmaos {
+							for j := 0; j < deltas[i]; j++ {
+								err := ji.hj.AddGeoSrv()
+								assert.Nil(ji.Ts.T, err, "Add Geo srv: %v", err)
+							}
+						} else {
+							err := k8sScaleUpGeo()
+							assert.Nil(ji.Ts.T, err, "K8s scale up Geo srv: %v", err)
+						}
+						db.DPrintf(db.TEST, "Manual scale: Done scale up geo srvs by %v", deltas[i])
+					} else if deltas[i] < 0 {
+						db.DPrintf(db.TEST, "Manual scale: Scale down geo srvs by %v not implemented", -deltas[i])
+					}
 				} else {
-					db.DPrintf(db.ALWAYS, "No geos meant to be added. Skip scaling up")
+					if deltas[i] > 0 {
+						err := k8sScaleUpGeo()
+						assert.Nil(ji.Ts.T, err, "K8s scale up Geo srv: %v", err)
+					} else {
+						db.DPrintf(db.ALWAYS, "No geos meant to be added. Skip scaling up")
+					}
 				}
 			}
 		}()
@@ -205,8 +222,18 @@ func (ji *HotelJobInstance) scaleCaches() {
 	}
 	if ji.cfg.CacheBenchCfg.ManuallyScale.GetShouldScale() {
 		go func() {
-			time.Sleep(ji.cfg.CacheBenchCfg.ManuallyScale.GetScalingDelay())
-			ji.hj.CacheAutoscaler.AddServers(ji.cfg.CacheBenchCfg.ManuallyScale.GetNToAdd())
+			delays := ji.cfg.CacheBenchCfg.ManuallyScale.GetScalingDelays()
+			deltas := ji.cfg.CacheBenchCfg.ManuallyScale.GetScalingDeltas()
+			for i := 0; i < len(delays) && i < len(deltas); i++ {
+				time.Sleep(delays[i])
+				if deltas[i] > 0 {
+					db.DPrintf(db.TEST, "Manual scale: Scale up caches by %v", deltas[i])
+					ji.hj.CacheAutoscaler.AddServers(deltas[i])
+					db.DPrintf(db.TEST, "Manual scale: Done scale up caches by %v", deltas[i])
+				} else if deltas[i] < 0 {
+					db.DPrintf(db.TEST, "Manual scale: Scale down caches by %v not implemented", -deltas[i])
+				}
+			}
 		}()
 	}
 }
@@ -267,12 +294,25 @@ func (ji *HotelJobInstance) scaleCosSimSrv() {
 	}
 	if ji.cfg.CosSimBenchCfg.ManuallyScale.GetShouldScale() {
 		go func() {
-			time.Sleep(ji.cfg.CosSimBenchCfg.ManuallyScale.GetScalingDelay())
-			for i := 0; i < ji.cfg.CosSimBenchCfg.ManuallyScale.GetNToAdd(); i++ {
-				db.DPrintf(db.TEST, "Scale up cossim srvs to: %v", (i+1)+ji.cfg.CosSimBenchCfg.JobCfg.InitNSrv)
-				err := ji.hj.AddCosSimSrvWithSigmaPath(chunk.ChunkdPath(ji.warmCossimSrvKID))
-				assert.Nil(ji.Ts.T, err, "Add CosSim srv: %v", err)
-				db.DPrintf(db.TEST, "Done scale up cossim srvs to: %v", (i+1)+ji.cfg.CosSimBenchCfg.JobCfg.InitNSrv)
+			delays := ji.cfg.CosSimBenchCfg.ManuallyScale.GetScalingDelays()
+			deltas := ji.cfg.CosSimBenchCfg.ManuallyScale.GetScalingDeltas()
+			for i := 0; i < len(delays) && i < len(deltas); i++ {
+				time.Sleep(delays[i])
+				if deltas[i] > 0 {
+					db.DPrintf(db.TEST, "Manual scale: Scale up cossim srvs by %v", deltas[i])
+					for j := 0; j < deltas[i]; j++ {
+						err := ji.hj.AddCosSimSrvWithSigmaPath(chunk.ChunkdPath(ji.warmCossimSrvKID))
+						assert.Nil(ji.Ts.T, err, "Add CosSim srv: %v", err)
+					}
+					db.DPrintf(db.TEST, "Manual scale: Done scale up cossim srvs by %v", deltas[i])
+				} else if deltas[i] < 0 {
+					db.DPrintf(db.TEST, "Manual scale: Scale down cossim srvs by %v", -deltas[i])
+					for j := 0; j < -deltas[i]; j++ {
+						err := ji.hj.RemoveCosSimSrv()
+						assert.Nil(ji.Ts.T, err, "Remove CosSim srv: %v", err)
+					}
+					db.DPrintf(db.TEST, "Manual scale: Done scale down cossim srvs by %v", -deltas[i])
+				}
 			}
 		}()
 	}

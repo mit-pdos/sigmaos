@@ -28,10 +28,10 @@ var DefaultCosSimBenchConfig = &CosSimBenchConfig{
 	Durs:        []time.Duration{10 * time.Second},
 	MaxRPS:      []int{100},
 	ManuallyScale: &ManualScalingConfig{
-		Svc:        "cossim-srv",
-		Scale:      false,
-		ScaleDelay: 0 * time.Second,
-		NToAdd:     0,
+		Svc:         "cossim-srv",
+		Scale:       false,
+		ScaleDelays: []time.Duration{},
+		ScaleDeltas: []int{},
 	},
 	Autoscale: &AutoscalingConfig{
 		Svc:              "cossim-srv",
@@ -63,10 +63,10 @@ var DefaultCacheBenchConfig = &CacheBenchConfig{
 	PutDurs:       []time.Duration{5 * time.Second},
 	PutMaxRPS:     []int{50},
 	ManuallyScale: &ManualScalingConfig{
-		Svc:        "cached",
-		Scale:      false,
-		ScaleDelay: 0 * time.Second,
-		NToAdd:     0,
+		Svc:         "cached",
+		Scale:       false,
+		ScaleDelays: []time.Duration{},
+		ScaleDeltas: []int{},
 	},
 }
 
@@ -92,10 +92,10 @@ var DefaultHotelBenchConfig = &HotelBenchConfig{
 	Durs:            []time.Duration{10 * time.Second},
 	MaxRPS:          []int{100},
 	ScaleGeo: &ManualScalingConfig{
-		Svc:        "hotel-geo",
-		Scale:      false,
-		ScaleDelay: 0 * time.Second,
-		NToAdd:     0,
+		Svc:         "hotel-geo",
+		Scale:       false,
+		ScaleDelays: []time.Duration{},
+		ScaleDeltas: []int{},
 	},
 	CacheBenchCfg:  nil,
 	CosSimBenchCfg: nil,

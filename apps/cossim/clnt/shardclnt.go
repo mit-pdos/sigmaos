@@ -48,13 +48,12 @@ func (c *clnt) GetSrvID() string {
 }
 
 type CosSimShardClnt struct {
-	mu         sync.Mutex
-	fsl        *fslib.FsLib
-	clnts      map[string]*clnt
-	clntsSlice []*CosSimClnt
-	epcc       *epcacheclnt.EndpointCacheClnt
-	lastEPV    epcache.Tversion
-	done       bool
+	mu      sync.Mutex
+	fsl     *fslib.FsLib
+	clnts   map[string]*clnt
+	epcc    *epcacheclnt.EndpointCacheClnt
+	lastEPV epcache.Tversion
+	done    bool
 }
 
 func NewCosSimShardClnt(fsl *fslib.FsLib, epcc *epcacheclnt.EndpointCacheClnt) (*CosSimShardClnt, error) {
@@ -136,17 +135,21 @@ func (cssc *CosSimShardClnt) monitorShards() {
 			continue
 		}
 		// Update set of available clients
-		cssc.addClnts(instances)
+		cssc.updateClnts(instances)
 		// Update last endpoint version
 		cssc.lastEPV = v
 	}
 }
 
-func (cssc *CosSimShardClnt) addClnts(instances []*epcacheproto.Instance) {
+func (cssc *CosSimShardClnt) updateClnts(instances []*epcacheproto.Instance) {
 	cssc.mu.Lock()
 	defer cssc.mu.Unlock()
 
+	// Note servers which are still registered as being up
+	stillUp := make(map[string]bool)
 	for _, i := range instances {
+		// Server is still up
+		stillUp[i.ID] = true
 		// If client already exists, move along
 		if _, ok := cssc.clnts[i.ID]; ok {
 			continue
@@ -157,7 +160,13 @@ func (cssc *CosSimShardClnt) addClnts(instances []*epcacheproto.Instance) {
 			db.DPrintf(db.COSSIMCLNT_ERR, "Err new cossim clnt: %v", err)
 		}
 		cssc.clnts[i.ID] = newClnt(i.ID, clnt)
-		cssc.clntsSlice = append(cssc.clntsSlice, clnt)
+	}
+	for id, _ := range cssc.clnts {
+		if !stillUp[id] {
+			// Server is down
+			db.DPrintf(db.COSSIMCLNT, "Server %v no longer up, removing clnt", id)
+			delete(cssc.clnts, id)
+		}
 	}
 }
 
@@ -174,7 +183,6 @@ func (cssc *CosSimShardClnt) GetAllServerMetrics() (map[string]*rpcproto.Metrics
 		rep, err := clnt.c.GetMetrics()
 		if err != nil {
 			db.DPrintf(db.COSSIMCLNT_ERR, "Err GetMetrics for srv %v: %v", srvID, err)
-			return nil, err
 		}
 		metrics[srvID] = rep
 	}

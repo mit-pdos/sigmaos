@@ -1227,8 +1227,9 @@ func TestHotelMatchTailLatency(t *testing.T) {
 	)
 	// Hotel benchmark configuration parameters
 	var (
-		rpsBase int   = 500 // 95% capacity for a single cossim server
-		rpsSlow []int = []int{
+		rpsBase     int   = 500 // 95% capacity for a single cossim server
+		maxMultiple int   = 2   // max multiple of rpsBase
+		rpsSlow     []int = []int{
 			rpsBase,
 			rpsBase * 2,
 		}
@@ -1237,10 +1238,66 @@ func TestHotelMatchTailLatency(t *testing.T) {
 			10 * time.Second,
 		}
 		rpsFast []int = []int{
+			// Block 1
 			rpsBase,
 			rpsBase * 2,
+			rpsBase * maxMultiple,
+			rpsBase,
+			rpsBase * maxMultiple,
+			// Block 2
+			rpsBase,
+			rpsBase * 2,
+			rpsBase * maxMultiple,
+			rpsBase,
+			rpsBase * maxMultiple,
+			// Block 3
+			rpsBase,
+			rpsBase * 2,
+			rpsBase * maxMultiple,
+			rpsBase,
+			rpsBase * maxMultiple,
+			// Block 4
+			rpsBase,
+			rpsBase * 2,
+			rpsBase * maxMultiple,
+			rpsBase,
+			rpsBase * maxMultiple,
+			// Block 5
+			rpsBase,
+			rpsBase * 2,
+			rpsBase * maxMultiple,
+			rpsBase,
+			rpsBase * maxMultiple,
 		}
 		durFast []time.Duration = []time.Duration{
+			// Block 1
+			100 * time.Millisecond,
+			100 * time.Millisecond,
+			100 * time.Millisecond,
+			100 * time.Millisecond,
+			100 * time.Millisecond,
+			// Block 2
+			100 * time.Millisecond,
+			100 * time.Millisecond,
+			100 * time.Millisecond,
+			100 * time.Millisecond,
+			100 * time.Millisecond,
+			// Block 3
+			100 * time.Millisecond,
+			100 * time.Millisecond,
+			100 * time.Millisecond,
+			100 * time.Millisecond,
+			100 * time.Millisecond,
+			// Block 4
+			100 * time.Millisecond,
+			100 * time.Millisecond,
+			100 * time.Millisecond,
+			100 * time.Millisecond,
+			100 * time.Millisecond,
+			// Block 5
+			100 * time.Millisecond,
+			100 * time.Millisecond,
+			100 * time.Millisecond,
 			100 * time.Millisecond,
 			100 * time.Millisecond,
 		}

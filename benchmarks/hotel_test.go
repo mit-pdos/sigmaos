@@ -298,6 +298,7 @@ func (ji *HotelJobInstance) scaleCosSimSrv() {
 			for i := 0; i < len(delays) && i < len(deltas); i++ {
 				db.DPrintf(db.TEST, "Manual scale: sleep %v", delays[i])
 				time.Sleep(delays[i])
+				db.DPrintf(db.TEST, "Manual scale: delta %v", deltas[i])
 				if deltas[i] > 0 {
 					db.DPrintf(db.TEST, "Manual scale: Scale up cossim srvs by %v", deltas[i])
 					for j := 0; j < deltas[i]; j++ {

@@ -102,7 +102,7 @@ def find_bucket(time, step_size):
 
 # XXX correct terminology is "window" not "bucket"
 # Fit into step_size ms buckets.
-def bucketize(tpts, time_range, xmin, xmax, step_size=1000):
+def bucketize(tpts, time_range, xmin, xmax, step_size=1000, scale=1.0):
   buckets = {}
   if xmin > -1 and xmax > -1:
     r = range(0, find_bucket(xmax - xmin, step_size) + step_size * 2, step_size)
@@ -116,7 +116,7 @@ def bucketize(tpts, time_range, xmin, xmax, step_size=1000):
       if xmin != -1 and xmax != -1:
         if t[0] < xmin or t[0] > xmax:
           continue
-      buckets[find_bucket(t[0] - sub, step_size)] += t[1]
+      buckets[find_bucket(t[0] - sub, step_size)] += t[1] * scale
   return buckets
 
 def bucketize_latency(tpts, time_range, xmin, xmax, step_size=1000):
@@ -241,7 +241,7 @@ def setup_graph(nplots, units, total_ncore):
     ax.set_yticks([0, 16, 32])
   return fig, tptax, coresax
 
-def graph_data(input_load_label, input_dir_sigmaos, input_dir_k8s, title, out, hotel_realm, be_realm, prefix, units, total_ncore, percentile, k8s, xmin, xmax, legend_on_right):
+def graph_data(input_load_label, input_dir_sigmaos, input_dir_k8s, title, out, hotel_realm, be_realm, prefix, units, total_ncore, percentile, k8s, xmin, xmax, legend_on_right, client_tpt_step_size, perf_step_size):
   if hotel_realm is None and be_realm is None:
     procd_tpts = read_tpts(input_dir_sigmaos, "test")
     assert(len(procd_tpts) <= 1)
@@ -277,7 +277,7 @@ def graph_data(input_load_label, input_dir_sigmaos, input_dir_k8s, title, out, h
   procd_tpts = truncate_to_min_max(procd_tpts, xmin, xmax)
   # Convert range ms -> sec
   time_range = ((time_range[0] - time_range[0]) / 1000.0, (time_range[1] - time_range[0]) / 1000.0)
-  hotel_buckets = bucketize(hotel_tpts, time_range, xmin, xmax, step_size=1000)
+  hotel_buckets = bucketize(hotel_tpts, time_range, xmin, xmax, step_size=client_tpt_step_size, scale=1000.0/client_tpt_step_size)
   if len(hotel_tpts) > 0 and len(be_tpts) > 0:
     fig, tptax, coresax = setup_graph(3, units, 0)#total_ncore)
   else:
@@ -287,7 +287,7 @@ def graph_data(input_load_label, input_dir_sigmaos, input_dir_k8s, title, out, h
       fig, tptax, coresax = setup_graph(1, units, 0)#total_ncore)
   tptax_idx = 0
   plots = []
-  hotel_lat_buckets = bucketize_latency(hotel_lats, time_range, xmin, xmax, step_size=50)
+  hotel_lat_buckets = bucketize_latency(hotel_lats, time_range, xmin, xmax, step_size=perf_step_size)
   hotel_tail_lat_buckets = buckets_to_percentile(hotel_lat_buckets, percentile)
   hotel_avg_lat_buckets = buckets_to_avg(hotel_lat_buckets)
   ymax = 0
@@ -300,7 +300,7 @@ def graph_data(input_load_label, input_dir_sigmaos, input_dir_k8s, title, out, h
 #    p_avg_lat = add_data_to_graph(tptax[tptax_idx + 1], x2, y2, "σOS-hotel avg lat", "purple", "-", "")
 #    plots.append(p_avg_lat)
     tptax_idx = tptax_idx + 1
-  hotel_lat_k8s_buckets = bucketize_latency(hotel_lats_k8s, time_range, xmin, xmax, step_size=50)
+  hotel_lat_k8s_buckets = bucketize_latency(hotel_lats_k8s, time_range, xmin, xmax, step_size=perf_step_size)
   hotel_tail_lat_k8s_buckets = buckets_to_percentile(hotel_lat_k8s_buckets, percentile)
   hotel_avg_lat_k8s_buckets = buckets_to_avg(hotel_lat_k8s_buckets)
   if len(hotel_lats_k8s) > 0:
@@ -372,6 +372,8 @@ if __name__ == "__main__":
   parser.add_argument("--xmin", type=int, default=-1)
   parser.add_argument("--xmax", type=int, default=-1)
   parser.add_argument("--legend_on_right", action="store_true", default=False)
+  parser.add_argument("--client_tpt_step_size", type=int, default=1000)
+  parser.add_argument("--perf_step_size", type=int, default=50)
 
   args = parser.parse_args()
-  graph_data(args.input_load_label, args.measurement_dir_sigmaos, args.measurement_dir_k8s, args.title, args.out, args.hotel_realm, args.be_realm, args.prefix, args.units, args.total_ncore, args.percentile, args.k8s, args.xmin, args.xmax, args.legend_on_right)
+  graph_data(args.input_load_label, args.measurement_dir_sigmaos, args.measurement_dir_k8s, args.title, args.out, args.hotel_realm, args.be_realm, args.prefix, args.units, args.total_ncore, args.percentile, args.k8s, args.xmin, args.xmax, args.legend_on_right, args.client_tpt_step_size, args.perf_step_size)

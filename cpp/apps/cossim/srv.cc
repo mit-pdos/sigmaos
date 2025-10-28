@@ -46,6 +46,9 @@ std::expected<int, sigmaos::serr::Error> Srv::CosSim(
   }
   rep->set_id(max_id);
   rep->set_val(max);
+  if (!_first_req_ran.exchange(true)) {
+    log(SPAWN_LAT, "First request ran");
+  }
   log(COSSIMSRV,
       "CosSim rep({}) invec_sz={} max_id={} max={} latency={:0.3f}ms",
       req->id(), input.size(), max_id, max, LatencyMS(start));

@@ -101,6 +101,7 @@ class Srv {
   std::shared_ptr<sigmaos::util::perf::Perf> _perf;
   std::shared_ptr<sigmaos::apps::cache::Clnt> _cache_clnt;
   std::shared_ptr<sigmaos::rpc::srv::Srv> _srv;
+  std::atomic<bool> _first_req_ran;
   // Used for logger initialization
   static bool _l;
   static bool _l_e;

@@ -1320,7 +1320,7 @@ func TestHotelMatchTailLatency(t *testing.T) {
 		autoscaleCosSim                  bool          = false
 		fastLoadChange                   bool          = true
 		proactiveScaling                 bool          = true
-		cosSimNoDelegatedInitScalingTime time.Duration = 80 * time.Millisecond
+		cosSimNoDelegatedInitScalingTime time.Duration = 85 * time.Millisecond
 		cosSimDelegatedInitScalingTime   time.Duration = 50 * time.Millisecond
 	)
 	ts, err := NewTstate(t)
@@ -1354,11 +1354,13 @@ func TestHotelMatchTailLatency(t *testing.T) {
 				if proactiveScaling {
 					csScaleDurs[i] -= scalingTime
 				}
-				csScaleDeltas[i] = 0
 				csNSrv[i] = 1
-			} else {
-				csScaleDeltas[i] = rps[i]/rpsBase - csNSrv[i-1]
-				csNSrv[i] = csScaleDeltas[i] + csNSrv[i-1]
+			}
+			if i < len(dur)-1 {
+				csScaleDeltas[i] = rps[i+1]/rpsBase - csNSrv[i]
+				if i > 0 {
+					csNSrv[i] = csScaleDeltas[i] + csNSrv[i-1]
+				}
 			}
 		}
 		db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)

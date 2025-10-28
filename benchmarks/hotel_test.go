@@ -323,6 +323,12 @@ func (ji *HotelJobInstance) scaleCosSimSrv() {
 					}
 					db.DPrintf(db.TEST, "Manual scale: Done scale down cossim srvs by %v", -deltas[i])
 				}
+				// TODO: cleanup
+				ji.mu.Lock()
+				for ji.loadPhase == i {
+					ji.cond.Wait()
+				}
+				ji.mu.Unlock()
 			}
 		}()
 	}

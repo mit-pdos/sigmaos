@@ -1357,10 +1357,10 @@ func TestHotelMatchTailLatency(t *testing.T) {
 				csNSrv[i] = 1
 			}
 			if i < len(dur)-1 {
-				csScaleDeltas[i] = rps[i+1]/rpsBase - csNSrv[i]
 				if i > 0 {
-					csNSrv[i] = csScaleDeltas[i] + csNSrv[i-1]
+					csNSrv[i] = csScaleDeltas[i-1] + csNSrv[i-1]
 				}
+				csScaleDeltas[i] = rps[i+1]/rpsBase - csNSrv[i]
 			}
 		}
 		db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)

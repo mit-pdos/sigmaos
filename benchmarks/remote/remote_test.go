@@ -1345,15 +1345,15 @@ func TestHotelMatchTailLatency(t *testing.T) {
 			scalingTime = cosSimDelegatedInitScalingTime
 		}
 		csScaleDurs := make([]time.Duration, len(dur))
-		csScaleDeltas := make([]int, len(dur))
-		csNSrv := make([]int, len(dur))
+		// Set the durations
 		for i := range dur {
 			csScaleDurs[i] = dur[i]
-			// Back-shift duration if scaling proactively
+		}
+		csScaleDeltas := make([]int, len(dur))
+		csNSrv := make([]int, len(dur))
+		// Calculate the deltas
+		for i := range dur {
 			if i == 0 {
-				if proactiveScaling {
-					csScaleDurs[i] -= scalingTime
-				}
 				csNSrv[i] = 1
 			}
 			if i < len(dur)-1 {
@@ -1361,6 +1361,20 @@ func TestHotelMatchTailLatency(t *testing.T) {
 					csNSrv[i] = csScaleDeltas[i-1] + csNSrv[i-1]
 				}
 				csScaleDeltas[i] = rps[i+1]/rpsBase - csNSrv[i]
+			}
+		}
+		// Scale up a bit in advance if scaling proactively
+		if proactiveScaling {
+			for i := range dur {
+				// Going to scale up during this period
+				if csScaleDeltas[i] > 0 {
+					// Scale a bit in advance, and add back the scaling time to the next
+					// period to stay in-sync with load shifts
+					csScaleDurs[i] -= scalingTime
+					if i < len(csScaleDurs)-1 {
+						csScaleDurs[i+1] += scalingTime
+					}
+				}
 			}
 		}
 		db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)

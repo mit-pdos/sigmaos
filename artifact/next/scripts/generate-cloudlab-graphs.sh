@@ -74,7 +74,7 @@ GRAPH_OUT_DIR=$ROOT_DIR/benchmarks/results/graphs
 ##  --xmin 45000 --xmax 50000 #--legend_on_right 
 #echo "Done generating cached scaling graphs..."
 
-# CosSim scaling
+# Hotel Match (slow load change)
 echo "Generating hotel match graph..."
 $GRAPH_SCRIPTS_DIR/aggregate-tpt-talk.py \
   --input_load_label "hotel-wwwd" \
@@ -86,3 +86,17 @@ $GRAPH_SCRIPTS_DIR/aggregate-tpt-talk.py \
   --title "x" --total_ncore 32 --prefix "imgresize-" #\
 #  --xmin 10000 --xmax 65000 #--legend_on_right 
 echo "Done generating hotel match graph..."
+
+# Hotel Match (fast load change)
+echo "Generating hotel match (fast) graph..."
+$GRAPH_SCRIPTS_DIR/aggregate-tpt-talk.py \
+  --input_load_label "hotel-wwwd" \
+  --measurement_dir_sigmaos $RES_OUT_DIR/hotel_match_tail_latency_fast_csdi \
+  --measurement_dir_k8s     $RES_OUT_DIR/hotel_match_tail_latency_fast \
+  --out $GRAPH_OUT_DIR/hotel_match_fast.pdf \
+  --be_realm "" --hotel_realm benchrealm1 \
+  --units "Req/sec,InitScript,No InitScript" \
+  --title "x" --total_ncore 32 --prefix "imgresize-" \
+  --client_tpt_step_size 10 --perf_step_size 10 \
+  --xmin 87000 --xmax 93000 #--legend_on_right 
+echo "Done generating hotel (fast) match graph..."

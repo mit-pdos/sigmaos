@@ -294,6 +294,7 @@ func (ji *HotelJobInstance) scaleCosSimSrv() {
 		go func() {
 			delays := ji.cfg.CosSimBenchCfg.ManuallyScale.GetScalingDelays()
 			deltas := ji.cfg.CosSimBenchCfg.ManuallyScale.GetScalingDeltas()
+			db.DPrintf(db.TEST, "Manual scale: start")
 			for i := 0; i < len(delays) && i < len(deltas); i++ {
 				time.Sleep(delays[i])
 				if deltas[i] > 0 {

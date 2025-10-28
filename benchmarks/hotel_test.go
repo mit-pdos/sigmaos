@@ -34,6 +34,8 @@ type hotelFn func(wc *hotel.WebClnt, r *rand.Rand)
 
 type HotelJobInstance struct {
 	mu               sync.Mutex
+	cond             *sync.Cond
+	loadPhase        int
 	sigmaos          bool
 	justCli          bool
 	k8ssrvaddr       string
@@ -56,6 +58,7 @@ type HotelJobInstance struct {
 
 func NewHotelJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, fn hotelFn, justCli bool, cfg *benchmarks.HotelBenchConfig) *HotelJobInstance {
 	ji := &HotelJobInstance{}
+	ji.cond = sync.NewCond(&ji.mu)
 	ji.sigmaos = sigmaos
 	ji.ready = make(chan bool)
 	ji.fn = fn
@@ -296,6 +299,12 @@ func (ji *HotelJobInstance) scaleCosSimSrv() {
 			deltas := ji.cfg.CosSimBenchCfg.ManuallyScale.GetScalingDeltas()
 			db.DPrintf(db.TEST, "Manual scale: start")
 			for i := 0; i < len(delays) && i < len(deltas); i++ {
+				// TODO: cleanup
+				ji.mu.Lock()
+				for ji.loadPhase < i {
+					ji.cond.Wait()
+				}
+				ji.mu.Unlock()
 				db.DPrintf(db.TEST, "Manual scale: sleep %v", delays[i])
 				time.Sleep(delays[i])
 				db.DPrintf(db.TEST, "Manual scale: delta %v", deltas[i])
@@ -333,6 +342,10 @@ func (ji *HotelJobInstance) StartHotelJob() {
 	go ji.scaleCosSimSrv()
 	for i, lg := range ji.lgs {
 		db.DPrintf(db.TEST, "Run load generator rps %v dur %v", ji.cfg.MaxRPS[i], ji.cfg.Durs[i])
+		ji.mu.Lock()
+		ji.loadPhase = i
+		ji.cond.Broadcast()
+		ji.mu.Unlock()
 		lg.Run()
 		//    ji.printStats()
 	}

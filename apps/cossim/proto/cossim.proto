@@ -2,10 +2,6 @@ syntax = "proto3";
 
 option go_package = "sigmaos/apps/cossim/proto";
 
-service CosSimService {
-  rpc CosSim(CosSimReq) returns (CosSimRep);
-}
-
 message Vector {
   repeated double vals = 1; // TODO: blob
 }

@@ -237,15 +237,15 @@ func (j *CosSimJob) AddSrv() (*proc.Proc, time.Duration, error) {
 }
 
 func (j *CosSimJob) RemoveSrv() error {
-	j.mu.Lock()
-	defer j.mu.Unlock()
-
 	return j.removeSrv()
 }
 
 func (j *CosSimJob) removeSrv() error {
 	var p *proc.Proc
+	// Select the proc to remove
+	j.mu.Lock()
 	p, j.srvs = j.srvs[len(j.srvs)-1], j.srvs[:len(j.srvs)-1]
+	j.mu.Unlock()
 	if err := j.Evict(p.GetPid()); err != nil {
 		return err
 	}

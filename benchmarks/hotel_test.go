@@ -310,17 +310,29 @@ func (ji *HotelJobInstance) scaleCosSimSrv() {
 				db.DPrintf(db.TEST, "Manual scale: delta %v", deltas[i])
 				if deltas[i] > 0 {
 					db.DPrintf(db.TEST, "Manual scale: Scale up cossim srvs by %v", deltas[i])
+					var wg sync.WaitGroup
+					wg.Add(deltas[i])
 					for j := 0; j < deltas[i]; j++ {
-						err := ji.hj.AddCosSimSrvWithSigmaPath(chunk.ChunkdPath(ji.warmCossimSrvKID))
-						assert.Nil(ji.Ts.T, err, "Add CosSim srv: %v", err)
+						go func() {
+							defer wg.Done()
+							err := ji.hj.AddCosSimSrvWithSigmaPath(chunk.ChunkdPath(ji.warmCossimSrvKID))
+							assert.Nil(ji.Ts.T, err, "Add CosSim srv: %v", err)
+						}()
 					}
+					wg.Wait()
 					db.DPrintf(db.TEST, "Manual scale: Done scale up cossim srvs by %v", deltas[i])
 				} else if deltas[i] < 0 {
+					var wg sync.WaitGroup
+					wg.Add(deltas[i])
 					db.DPrintf(db.TEST, "Manual scale: Scale down cossim srvs by %v", -deltas[i])
 					for j := 0; j < -deltas[i]; j++ {
-						err := ji.hj.RemoveCosSimSrv()
-						assert.Nil(ji.Ts.T, err, "Remove CosSim srv: %v", err)
+						go func() {
+							defer wg.Done()
+							err := ji.hj.RemoveCosSimSrv()
+							assert.Nil(ji.Ts.T, err, "Remove CosSim srv: %v", err)
+						}()
 					}
+					wg.Wait()
 					db.DPrintf(db.TEST, "Manual scale: Done scale down cossim srvs by %v", -deltas[i])
 				}
 				// TODO: cleanup

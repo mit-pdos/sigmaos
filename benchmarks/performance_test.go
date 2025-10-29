@@ -61,6 +61,12 @@ func newRealmPerf(ts *test.RealmTstate) *perf.Perf {
 	return p
 }
 
+func newRealmCostPerf(ts *test.RealmTstate) *perf.Perf {
+	p, err := perf.NewPerfMulti(ts.ProcEnv(), perf.COST, ts.GetRealm().String())
+	assert.Nil(ts.Ts.T, err)
+	return p
+}
+
 // Monitor how many cores have been assigned to a realm.
 func monitorCPUUtil(ts *test.RealmTstate, p *perf.Perf) {
 	sdc := mschedclnt.NewMSchedClnt(ts.SigmaClnt.FsLib, sp.NOT_SET)

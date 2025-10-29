@@ -1,10 +1,11 @@
-#include <iostream>
-#include <format>
-#include <string>
-#include <google/protobuf/util/time_util.h>
 #include <google/protobuf/message.h>
-//#include <rpc/proto/rpc.pb.h>
-//#include <sigmap/sigmap.pb.h>
+#include <google/protobuf/util/time_util.h>
+
+#include <format>
+#include <iostream>
+#include <string>
+// #include <rpc/proto/rpc.pb.h>
+// #include <sigmap/sigmap.pb.h>
 #include <apps/cossim/proto/cossim.pb.h>
 
 int main(int argc, char **argv) {
@@ -23,7 +24,7 @@ int main(int argc, char **argv) {
   r.set_allocated_inputvec(&v);
   google::protobuf::Message &m2 = r;
   m2.SerializeToString(&out);
-//  Taddr addr;
-//  Blob b;
+  //  Taddr addr;
+  //  Blob b;
   return 0;
 }

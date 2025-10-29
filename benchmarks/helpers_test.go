@@ -302,13 +302,13 @@ func newMSchedJobs(ts *test.RealmTstate, nclnt int, dur string, maxrps string, p
 
 // ========== Hotel Helpers ==========
 
-func newHotelJobs(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, cfg *benchmarks.HotelBenchConfig, fn hotelFn) ([]*HotelJobInstance, []interface{}) {
+func newHotelJobs(ts *test.RealmTstate, p *perf.Perf, dc *DeploymentCost, sigmaos bool, cfg *benchmarks.HotelBenchConfig, fn hotelFn) ([]*HotelJobInstance, []interface{}) {
 	// n is ntrials, which is always 1.
 	n := 1
 	ws := make([]*HotelJobInstance, 0, n)
 	is := make([]interface{}, 0, n)
 	for i := 0; i < n; i++ {
-		i := NewHotelJob(ts, p, sigmaos, fn, false, cfg)
+		i := NewHotelJob(ts, p, dc, sigmaos, fn, false, cfg)
 		ws = append(ws, i)
 		is = append(is, i)
 	}
@@ -321,7 +321,7 @@ func newHotelJobsCli(ts *test.RealmTstate, sigmaos bool, cfg *benchmarks.HotelBe
 	ws := make([]*HotelJobInstance, 0, n)
 	is := make([]interface{}, 0, n)
 	for i := 0; i < n; i++ {
-		i := NewHotelJob(ts, nil, sigmaos, fn, true, cfg)
+		i := NewHotelJob(ts, nil, nil, sigmaos, fn, true, cfg)
 		ws = append(ws, i)
 		is = append(is, i)
 	}

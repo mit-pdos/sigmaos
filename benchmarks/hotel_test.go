@@ -46,6 +46,7 @@ type HotelJobInstance struct {
 	hj               *hotel.HotelJob
 	lgs              []*loadgen.LoadGenerator
 	p                *perf.Perf
+	dc               *DeploymentCost
 	wc               *hotel.WebClnt
 	done             bool
 	cosSimAutoscaler *autoscale.Autoscaler
@@ -56,7 +57,7 @@ type HotelJobInstance struct {
 	*test.RealmTstate
 }
 
-func NewHotelJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, fn hotelFn, justCli bool, cfg *benchmarks.HotelBenchConfig) *HotelJobInstance {
+func NewHotelJob(ts *test.RealmTstate, p *perf.Perf, dc *DeploymentCost, sigmaos bool, fn hotelFn, justCli bool, cfg *benchmarks.HotelBenchConfig) *HotelJobInstance {
 	ji := &HotelJobInstance{}
 	ji.cond = sync.NewCond(&ji.mu)
 	ji.sigmaos = sigmaos
@@ -64,6 +65,7 @@ func NewHotelJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, fn hotelFn, j
 	ji.fn = fn
 	ji.RealmTstate = ts
 	ji.p = p
+	ji.dc = dc
 	ji.justCli = justCli
 	ji.cfg = cfg
 	ji.cossimKIDs = make(map[string]bool)
@@ -259,6 +261,7 @@ func (ji *HotelJobInstance) scaleCosSimSrv() {
 		addReplicas := func(n int) error {
 			db.DPrintf(db.TEST, "Autoscaler: Scale up cossim srvs nreplicas:%v", n)
 			for i := 0; i < n; i++ {
+				ji.dc.AddNCore(ji.cfg.CosSimBenchCfg.JobCfg.SrvMcpu)
 				err := ji.hj.AddCosSimSrvWithSigmaPath(chunk.ChunkdPath(ji.warmCossimSrvKID))
 				if err != nil {
 					db.DPrintf(db.TEST, "Autoscaler: Err add CosSim srv: %v", err)
@@ -271,6 +274,7 @@ func (ji *HotelJobInstance) scaleCosSimSrv() {
 		removeReplicas := func(n int) error {
 			db.DPrintf(db.TEST, "Autoscaler: Scale down cossim srvs nreplicas:%v", n)
 			for i := 0; i < n; i++ {
+				ji.dc.RemoveNCore(ji.cfg.CosSimBenchCfg.JobCfg.SrvMcpu)
 				err := ji.hj.RemoveCosSimSrv()
 				if err != nil {
 					db.DPrintf(db.TEST, "Autoscaler: Err remove CosSim srv: %v", err)
@@ -315,6 +319,7 @@ func (ji *HotelJobInstance) scaleCosSimSrv() {
 					for j := 0; j < deltas[i]; j++ {
 						go func() {
 							defer wg.Done()
+							ji.dc.AddNCore(ji.cfg.CosSimBenchCfg.JobCfg.SrvMcpu)
 							err := ji.hj.AddCosSimSrvWithSigmaPath(chunk.ChunkdPath(ji.warmCossimSrvKID))
 							assert.Nil(ji.Ts.T, err, "Add CosSim srv: %v", err)
 						}()
@@ -328,6 +333,7 @@ func (ji *HotelJobInstance) scaleCosSimSrv() {
 					for j := 0; j < -deltas[i]; j++ {
 						go func() {
 							defer wg.Done()
+							ji.dc.RemoveNCore(ji.cfg.CosSimBenchCfg.JobCfg.SrvMcpu)
 							err := ji.hj.RemoveCosSimSrv()
 							assert.Nil(ji.Ts.T, err, "Remove CosSim srv: %v", err)
 						}()
@@ -354,6 +360,9 @@ func (ji *HotelJobInstance) StartHotelJob() {
 	_, err := ji.wc.StartRecording()
 	if err != nil {
 		db.DFatalf("Can't start recording: %v", err)
+	}
+	if !ji.justCli {
+		ji.dc.Run()
 	}
 	go ji.scaleGeoSrv()
 	go ji.scaleCaches()
@@ -398,6 +407,9 @@ func (ji *HotelJobInstance) Wait() {
 	ji.mu.Lock()
 	ji.done = true
 	ji.mu.Unlock()
+	if !ji.justCli {
+		ji.dc.Stop()
+	}
 	if ji.cosSimAutoscaler != nil {
 		ji.cosSimAutoscaler.Stop()
 	}

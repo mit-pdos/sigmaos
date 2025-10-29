@@ -20,6 +20,7 @@ const (
 const (
 	TEST  Tselector = "TEST"
 	BENCH           = "BENCH"
+	COST            = "COST"
 )
 
 // kernel procs

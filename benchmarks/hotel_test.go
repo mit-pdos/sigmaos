@@ -323,7 +323,7 @@ func (ji *HotelJobInstance) scaleCosSimSrv() {
 					db.DPrintf(db.TEST, "Manual scale: Done scale up cossim srvs by %v", deltas[i])
 				} else if deltas[i] < 0 {
 					var wg sync.WaitGroup
-					wg.Add(deltas[i])
+					wg.Add(-deltas[i])
 					db.DPrintf(db.TEST, "Manual scale: Scale down cossim srvs by %v", -deltas[i])
 					for j := 0; j < -deltas[i]; j++ {
 						go func() {

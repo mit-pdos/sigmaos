@@ -223,6 +223,13 @@ func newCosSimJob(conf *CosSimJobConfig, sc *sigmaclnt.SigmaClnt, epcj *epsrv.EP
 	}, nil
 }
 
+func (j *CosSimJob) GetNSrv() int {
+	j.mu.Lock()
+	defer j.mu.Unlock()
+
+	return len(j.srvs)
+}
+
 func (j *CosSimJob) GetClnt(srvID string) (*clnt.CosSimClnt, error) {
 	return j.Clnt.GetClnt(srvID)
 }

@@ -134,13 +134,11 @@ const char descriptor_table_protodef_cossim_2eproto[] PROTOBUF_SECTION_VARIABLE(
   "(\004\"P\n\tCosSimReq\022\031\n\010inputVec\030\001 \001(\0132\007.Vect"
   "or\022\034\n\tvecRanges\030\002 \003(\0132\t.VecRange\022\n\n\002iD\030\003"
   " \001(\004\"$\n\tCosSimRep\022\n\n\002iD\030\001 \001(\004\022\013\n\003val\030\002 \001"
-  "(\00121\n\rCosSimService\022 \n\006CosSim\022\n.CosSimRe"
-  "q\032\n.CosSimRepB\033Z\031sigmaos/apps/cossim/pro"
-  "tob\006proto3"
+  "(\001B\033Z\031sigmaos/apps/cossim/protob\006proto3"
   ;
 static ::_pbi::once_flag descriptor_table_cossim_2eproto_once;
 const ::_pbi::DescriptorTable descriptor_table_cossim_2eproto = {
-    false, false, 290, descriptor_table_protodef_cossim_2eproto,
+    false, false, 239, descriptor_table_protodef_cossim_2eproto,
     "cossim.proto",
     &descriptor_table_cossim_2eproto_once, nullptr, 0, 4,
     schemas, file_default_instances, TableStruct_cossim_2eproto::offsets,

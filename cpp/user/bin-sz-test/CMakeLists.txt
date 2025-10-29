@@ -12,4 +12,8 @@ add_executable(bin-sz-test
 
 target_link_libraries(bin-sz-test PRIVATE 
   util_log
+  rpc_proto
+  sigmap_proto
+  cossim_proto
+  ${Protobuf_LIBRARIES}
 )

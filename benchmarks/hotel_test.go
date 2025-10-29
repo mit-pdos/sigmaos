@@ -409,6 +409,7 @@ func (ji *HotelJobInstance) Wait() {
 	ji.done = true
 	ji.mu.Unlock()
 	if !ji.justCli {
+		ji.dc.RemoveNCore(ji.cfg.CosSimBenchCfg.JobCfg.SrvMcpu)
 		ji.dc.Stop()
 	}
 	if ji.cosSimAutoscaler != nil {

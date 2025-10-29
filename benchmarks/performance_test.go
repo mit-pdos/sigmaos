@@ -62,7 +62,7 @@ func newRealmPerf(ts *test.RealmTstate) *perf.Perf {
 }
 
 func newRealmCostPerf(ts *test.RealmTstate) *perf.Perf {
-	p, err := perf.NewPerfMulti(ts.ProcEnv(), perf.COST, ts.GetRealm().String())
+	p, err := perf.NewPerfMulti(ts.ProcEnv(), perf.COST, ts.GetRealm().String()+"-cost")
 	assert.Nil(ts.Ts.T, err)
 	return p
 }

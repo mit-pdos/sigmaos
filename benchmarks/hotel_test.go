@@ -137,6 +137,7 @@ func NewHotelJob(ts *test.RealmTstate, p *perf.Perf, dc *DeploymentCost, sigmaos
 				return ji
 			}
 			db.DPrintf(db.TEST, "Warmed kid %v with CossimSrv bin", ji.warmCossimSrvKID)
+			ji.dc.AddNCore(ji.cfg.CosSimBenchCfg.JobCfg.SrvMcpu)
 		}
 	}
 

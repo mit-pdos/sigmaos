@@ -66,7 +66,7 @@ func (dc *DeploymentCost) isDone() bool {
 func (dc *DeploymentCost) monitorCost() {
 	for !dc.isDone() {
 		ncores := dc.GetNCores()
-		dc.p.TptTick(float64(ncores))
+		dc.p.ValTick(float64(ncores))
 		time.Sleep(MONITOR_COST_INTERVAL)
 	}
 }

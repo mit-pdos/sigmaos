@@ -104,6 +104,26 @@ def filter_data_by_time_range(times, values, xmin=None, xmax=None):
     return filtered_times, filtered_values
 
 
+def find_first_max_time(times, values):
+    """Find the time when the value first reaches its maximum.
+
+    Args:
+        times: List of time values in seconds
+        values: List of corresponding values
+
+    Returns:
+        float or None: Time when value first reaches max, or None if not found
+    """
+    if not times or not values:
+        return None
+
+    max_value = max(values)
+    for i, v in enumerate(values):
+        if v == max_value:
+            return times[i]
+    return None
+
+
 def calculate_area_under_curve(times, values):
     """Calculate the area under the curve between the first max value and last min non-zero value.
 
@@ -134,12 +154,22 @@ def calculate_area_under_curve(times, values):
             start_idx = i
             break
 
-    # Find the last time the value drops to min non-zero
-    end_idx = None
+    # Find the beginning of the last time the value is at min non-zero
+    # First, find the last occurrence
+    last_min_idx = None
     for i in range(len(values) - 1, -1, -1):
         if values[i] == min_nonzero_value:
-            end_idx = i
+            last_min_idx = i
             break
+
+    # Now walk backwards from last_min_idx to find where this plateau begins
+    end_idx = last_min_idx
+    if last_min_idx is not None:
+        for i in range(last_min_idx - 1, -1, -1):
+            if values[i] == min_nonzero_value:
+                end_idx = i
+            else:
+                break
 
     # If we couldn't find the bounds, return 0
     if start_idx is None or end_idx is None or start_idx >= end_idx:
@@ -291,13 +321,28 @@ def main():
         noinitscripts_val_file = noinitscripts_val_files[0]
         # Use noinitscripts start time so val data aligns with load data
         times_noinit_mcpu, values_noinit_mcpu, _ = parse_csv_file(noinitscripts_val_file, noinit_start_time)
-        # Filter by time range
-        times_noinit_mcpu, values_noinit_mcpu = filter_data_by_time_range(
-            times_noinit_mcpu, values_noinit_mcpu, args.xmin, args.xmax
-        )
     else:
         print(f"No -val.out file found in {args.measurement_dir_noinitscripts}")
         times_noinit_mcpu, values_noinit_mcpu = [], []
+
+    # Time-shift noinitscripts data to align the first max values (before filtering)
+    if times_init_mcpu and values_init_mcpu and times_noinit_mcpu and values_noinit_mcpu:
+        first_max_init = find_first_max_time(times_init_mcpu, values_init_mcpu)
+        first_max_noinit = find_first_max_time(times_noinit_mcpu, values_noinit_mcpu)
+
+        if first_max_init is not None and first_max_noinit is not None:
+            time_shift = first_max_init - first_max_noinit
+            times_noinit_mcpu = [t + time_shift for t in times_noinit_mcpu]
+            print(f"\nTime alignment:")
+            print(f"  Init scripts first max at: {first_max_init:.2f}s")
+            print(f"  No init scripts first max at: {first_max_noinit:.2f}s (before shift)")
+            print(f"  Applied time shift: {time_shift:.2f}s")
+
+    # Filter noinitscripts by time range after shifting
+    if times_noinit_mcpu and values_noinit_mcpu:
+        times_noinit_mcpu, values_noinit_mcpu = filter_data_by_time_range(
+            times_noinit_mcpu, values_noinit_mcpu, args.xmin, args.xmax
+        )
 
     # Create the figure with three subplots
     fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(6.4, 4.8), sharex=True)
@@ -321,6 +366,10 @@ def main():
     ax3.set_ylabel('mCPU', fontsize=12)
     ax3.grid(True, alpha=0.3)
     ax3.set_ylim(bottom=0)
+
+    # Set x-axis limits if specified
+    if args.xmin is not None or args.xmax is not None:
+        ax3.set_xlim(left=args.xmin, right=args.xmax)
 
     # Create a single horizontal legend above all subplots
     fig.legend(handles=[line1, line2, line3],

@@ -303,28 +303,32 @@ def main():
     fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(6.4, 4.8), sharex=True)
 
     # First subplot: Client Load (RPS)
-    ax1.plot(times_init, values_init, label='With Init Scripts', linewidth=1.5)
+    line1, = ax1.plot(times_init, values_init, label='Client Load', linewidth=1.5)
     # ax1.plot(times_noinit, values_noinit, label='Without Init Scripts', linewidth=1.5)
     ax1.set_ylabel('Client Load (RPS)', fontsize=12)
-    ax1.set_title(f'Deployment Cost Over Time: {args.input_load_label}', fontsize=14)
-    ax1.legend(fontsize=10)
     ax1.grid(True, alpha=0.3)
     ax1.set_ylim(bottom=0)
 
     # Second subplot: MCPU Reserved (With Init Scripts)
-    ax2.plot(times_init_mcpu, values_init_mcpu, label='With Init Scripts', linewidth=1.5, color='orange')
-    ax2.set_ylabel('MCPU Reserved', fontsize=12)
-    ax2.legend(fontsize=10)
+    line2, = ax2.plot(times_init_mcpu, values_init_mcpu, label='Initscripts', linewidth=1.5, color='orange')
+    ax2.set_ylabel('mCPU', fontsize=12)
     ax2.grid(True, alpha=0.3)
     ax2.set_ylim(bottom=0)
 
     # Third subplot: MCPU Reserved (Without Init Scripts)
-    ax3.plot(times_noinit_mcpu, values_noinit_mcpu, label='Without Init Scripts', linewidth=1.5, color='green')
+    line3, = ax3.plot(times_noinit_mcpu, values_noinit_mcpu, label='No Initscripts', linewidth=1.5, color='green')
     ax3.set_xlabel('Time (seconds)', fontsize=12)
-    ax3.set_ylabel('MCPU Reserved', fontsize=12)
-    ax3.legend(fontsize=10)
+    ax3.set_ylabel('mCPU', fontsize=12)
     ax3.grid(True, alpha=0.3)
     ax3.set_ylim(bottom=0)
+
+    # Create a single horizontal legend above all subplots
+    fig.legend(handles=[line1, line2, line3],
+               labels=['Client Load', 'Initscripts', 'No Initscripts'],
+               loc='lower center',
+               ncol=3,
+               fontsize=10,
+               bbox_to_anchor=(0.5, 1.0))
 
     # Calculate area under the curve for MCPU data
     print("\n=== Area Under Curve (MCPU Reserved) ===")
@@ -367,6 +371,7 @@ def main():
 
     # Save the plot
     plt.tight_layout()
+    # Adjust layout to make room for the legend above the top plot
     plt.savefig(args.output, dpi=300, bbox_inches='tight')
     print(f"\nGraph saved to: {args.output}")
 

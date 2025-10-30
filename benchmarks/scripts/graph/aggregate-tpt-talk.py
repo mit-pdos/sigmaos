@@ -250,7 +250,7 @@ def graph_data(input_load_label, input_dir_sigmaos, input_dir_k8s, title, out, h
     if be_realm != "":
       procd_tpts.append(read_tpts(input_dir_sigmaos, be_realm, ignore=prefix)[0])
       assert(len(procd_tpts) == 2)
-  be_tpts = read_tpts(input_dir_sigmaos, prefix)#"mr")
+  be_tpts = read_tpts(input_dir_sigmaos, "imgresize-")#prefix)#"mr")
   be_range = get_time_range(be_tpts)
   procd_range = get_time_range(procd_tpts)
   hotel_tpts = read_tpts(input_dir_sigmaos, input_load_label)
@@ -322,6 +322,8 @@ def graph_data(input_load_label, input_dir_sigmaos, input_dir_k8s, title, out, h
   if prefix == "mr-":
     tmod = "MR"
   elif prefix == "imgresize-":
+    tmod = "ImgProcess"
+  elif prefix == "val.out":
     tmod = "ImgProcess"
   else:
     assert(False)

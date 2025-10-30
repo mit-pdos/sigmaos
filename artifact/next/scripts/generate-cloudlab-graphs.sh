@@ -96,7 +96,20 @@ $GRAPH_SCRIPTS_DIR/aggregate-tpt-talk.py \
   --out $GRAPH_OUT_DIR/hotel_match_fast.pdf \
   --be_realm "" --hotel_realm benchrealm1 \
   --units "Req/sec,InitScript,No InitScript" \
-  --title "x" --total_ncore 32 --prefix "imgresize-" \
+  --title "x" --total_ncore 32 --prefix "val.out" \
   --client_tpt_step_size 10 --perf_step_size 10 \
   --xmin 87000 --xmax 93000 #--legend_on_right 
+#  --client_tpt_step_size 10 --perf_step_size 10
 echo "Done generating hotel (fast) match graph..."
+
+echo "Generating hotel match (fast) cost graph..."
+$GRAPH_SCRIPTS_DIR/deployment-cost.py \
+  --input_load_label "hotel-wwwd" \
+  --measurement_dir_initscripts $RES_OUT_DIR/hotel_match_tail_latency_fast_csdi \
+  --measurement_dir_noinitscripts     $RES_OUT_DIR/hotel_match_tail_latency_fast \
+  --out $GRAPH_OUT_DIR/hotel_match_depcost_fast.pdf \
+  --xmin 87 --xmax 93 #--legend_on_right 
+#  --units "Req/sec,InitScript,No InitScript" \
+#  --title "x" --total_ncore 32 --prefix "imgresize-" \
+#  --client_tpt_step_size 10 --perf_step_size 10 \
+echo "Done generating hotel (fast) match cost graph..."

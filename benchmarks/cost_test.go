@@ -39,6 +39,7 @@ func (dc *DeploymentCost) AddNCore(n proc.Tmcpu) {
 	dc.mu.Lock()
 	defer dc.mu.Unlock()
 
+	dc.p.ValTick(float64(dc.ncores))
 	dc.ncores += n
 	dc.p.ValTick(float64(dc.ncores))
 }
@@ -47,6 +48,7 @@ func (dc *DeploymentCost) RemoveNCore(n proc.Tmcpu) {
 	dc.mu.Lock()
 	defer dc.mu.Unlock()
 
+	dc.p.ValTick(float64(dc.ncores))
 	dc.ncores -= n
 	dc.p.ValTick(float64(dc.ncores))
 }

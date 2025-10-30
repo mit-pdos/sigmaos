@@ -374,9 +374,6 @@ func (ji *HotelJobInstance) StartHotelJob() {
 	if err != nil {
 		db.DFatalf("Can't start recording: %v", err)
 	}
-	if !ji.justCli {
-		ji.dc.Run()
-	}
 	go ji.scaleGeoSrv()
 	go ji.scaleCaches()
 	go ji.scaleCosSimSrv()
@@ -419,7 +416,6 @@ func (ji *HotelJobInstance) Wait() {
 	ji.mu.Unlock()
 	if !ji.justCli {
 		ji.dc.RemoveNCore(ji.cfg.CosSimBenchCfg.JobCfg.SrvMcpu)
-		ji.dc.Stop()
 	}
 	if ji.cosSimAutoscaler != nil {
 		ji.cosSimAutoscaler.Stop()

@@ -57,29 +57,3 @@ func (dc *DeploymentCost) GetNCores() proc.Tmcpu {
 
 	return dc.ncores
 }
-
-func (dc *DeploymentCost) isDone() bool {
-	dc.mu.Lock()
-	defer dc.mu.Unlock()
-
-	return dc.done
-}
-
-func (dc *DeploymentCost) monitorCost() {
-	for !dc.isDone() {
-		ncores := dc.GetNCores()
-		dc.p.ValTick(float64(ncores))
-		time.Sleep(MONITOR_COST_INTERVAL)
-	}
-}
-
-func (dc *DeploymentCost) Run() {
-	go dc.monitorCost()
-}
-
-func (dc *DeploymentCost) Stop() {
-	dc.mu.Lock()
-	defer dc.mu.Unlock()
-
-	dc.done = true
-}

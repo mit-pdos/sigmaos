@@ -225,10 +225,8 @@ def main():
     initscripts_val_files = glob.glob(initscripts_val_pattern)
     if initscripts_val_files:
         initscripts_val_file = initscripts_val_files[0]
-        print(f"Looking for initscripts MCPU data in: {initscripts_val_file}")
         # Use initscripts start time so val data aligns with load data
         times_init_mcpu, values_init_mcpu, _ = parse_csv_file(initscripts_val_file, init_start_time)
-        print(f"Initscripts MCPU data first 5 times: {times_init_mcpu[:5]}")
         # Filter by time range
         times_init_mcpu, values_init_mcpu = filter_data_by_time_range(
             times_init_mcpu, values_init_mcpu, args.xmin, args.xmax
@@ -241,7 +239,6 @@ def main():
     noinitscripts_val_files = glob.glob(noinitscripts_val_pattern)
     if noinitscripts_val_files:
         noinitscripts_val_file = noinitscripts_val_files[0]
-        print(f"Looking for noinitscripts MCPU data in: {noinitscripts_val_file}")
         # Use noinitscripts start time so val data aligns with load data
         times_noinit_mcpu, values_noinit_mcpu, _ = parse_csv_file(noinitscripts_val_file, noinit_start_time)
         # Filter by time range

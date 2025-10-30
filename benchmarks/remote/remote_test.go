@@ -1240,34 +1240,31 @@ func TestHotelMatchTailLatency(t *testing.T) {
 		rpsFast []int = []int{
 			// Block 1
 			rpsBase,
-			rpsBase * 2,
 			rpsBase * maxMultiple,
 			rpsBase,
 			rpsBase * maxMultiple,
 			// Block 2
 			rpsBase,
-			rpsBase * 2,
 			rpsBase * maxMultiple,
 			rpsBase,
 			rpsBase * maxMultiple,
 			// Block 3
 			rpsBase,
-			rpsBase * 2,
 			rpsBase * maxMultiple,
 			rpsBase,
 			rpsBase * maxMultiple,
 			// Block 4
 			rpsBase,
-			rpsBase * 2,
 			rpsBase * maxMultiple,
 			rpsBase,
 			rpsBase * maxMultiple,
 			// Block 5
 			rpsBase,
-			rpsBase * 2,
 			rpsBase * maxMultiple,
 			rpsBase,
 			rpsBase * maxMultiple,
+			// Finish
+			rpsBase,
 		}
 		durFast []time.Duration = []time.Duration{
 			// Block 1
@@ -1275,9 +1272,7 @@ func TestHotelMatchTailLatency(t *testing.T) {
 			100 * time.Millisecond,
 			100 * time.Millisecond,
 			100 * time.Millisecond,
-			100 * time.Millisecond,
 			// Block 2
-			100 * time.Millisecond,
 			100 * time.Millisecond,
 			100 * time.Millisecond,
 			100 * time.Millisecond,
@@ -1287,9 +1282,7 @@ func TestHotelMatchTailLatency(t *testing.T) {
 			100 * time.Millisecond,
 			100 * time.Millisecond,
 			100 * time.Millisecond,
-			100 * time.Millisecond,
 			// Block 4
-			100 * time.Millisecond,
 			100 * time.Millisecond,
 			100 * time.Millisecond,
 			100 * time.Millisecond,
@@ -1299,6 +1292,7 @@ func TestHotelMatchTailLatency(t *testing.T) {
 			100 * time.Millisecond,
 			100 * time.Millisecond,
 			100 * time.Millisecond,
+			// Finish
 			100 * time.Millisecond,
 		}
 		numCaches                        int           = 1
@@ -1345,10 +1339,6 @@ func TestHotelMatchTailLatency(t *testing.T) {
 			scalingTime = cosSimDelegatedInitScalingTime
 		}
 		csScaleDurs := make([]time.Duration, len(dur))
-		// Set the durations
-		for i := range dur {
-			csScaleDurs[i] = dur[i]
-		}
 		csScaleDeltas := make([]int, len(dur))
 		csNSrv := make([]int, len(dur))
 		// Calculate the deltas
@@ -1370,10 +1360,9 @@ func TestHotelMatchTailLatency(t *testing.T) {
 				if csScaleDeltas[i] > 0 {
 					// Scale a bit in advance, and add back the scaling time to the next
 					// period to stay in-sync with load shifts
-					csScaleDurs[i] -= scalingTime
-					if i < len(csScaleDurs)-1 {
-						csScaleDurs[i+1] += scalingTime
-					}
+					csScaleDurs[i] = dur[i] - scalingTime
+				} else {
+					csScaleDurs[i] = 0
 				}
 			}
 		}

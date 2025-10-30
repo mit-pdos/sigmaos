@@ -112,4 +112,4 @@ $GRAPH_SCRIPTS_DIR/deployment-cost.py \
 #  --units "Req/sec,InitScript,No InitScript" \
 #  --title "x" --total_ncore 32 --prefix "imgresize-" \
 #  --client_tpt_step_size 10 --perf_step_size 10 \
-echo "Done generating hotel (fast) match cost graph..."
+echo "Done generating hotel match (fast) cost graph..."

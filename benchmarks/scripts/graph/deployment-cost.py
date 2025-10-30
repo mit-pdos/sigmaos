@@ -104,6 +104,57 @@ def filter_data_by_time_range(times, values, xmin=None, xmax=None):
     return filtered_times, filtered_values
 
 
+def calculate_area_under_curve(times, values):
+    """Calculate the area under the curve between the first max value and last min non-zero value.
+
+    Args:
+        times: List of time values in seconds
+        values: List of corresponding values
+
+    Returns:
+        tuple: (area, start_time, end_time) where area is the integrated value,
+               start_time is when we start integrating, end_time is when we stop
+    """
+    if not times or not values or len(times) != len(values):
+        return 0.0, None, None
+
+    # Find the maximum value
+    max_value = max(values)
+
+    # Find the minimum non-zero value
+    non_zero_values = [v for v in values if v > 0]
+    if not non_zero_values:
+        return 0.0, None, None
+    min_nonzero_value = min(non_zero_values)
+
+    # Find the first time the value jumps to max
+    start_idx = None
+    for i in range(len(values)):
+        if values[i] == max_value:
+            start_idx = i
+            break
+
+    # Find the last time the value drops to min non-zero
+    end_idx = None
+    for i in range(len(values) - 1, -1, -1):
+        if values[i] == min_nonzero_value:
+            end_idx = i
+            break
+
+    # If we couldn't find the bounds, return 0
+    if start_idx is None or end_idx is None or start_idx >= end_idx:
+        return 0.0, None, None
+
+    # Calculate area using trapezoidal rule
+    area = 0.0
+    for i in range(start_idx, end_idx):
+        dt = times[i + 1] - times[i]
+        avg_value = (values[i] + values[i + 1]) / 2.0
+        area += avg_value * dt
+
+    return area, times[start_idx], times[end_idx]
+
+
 def aggregate_by_window(times, values, window_size=0.01):
     """Aggregate values by summing them within fixed time windows and scale to per-second rate.
 
@@ -200,7 +251,6 @@ def main():
     # Use initscripts start time as the reference
     # Both datasets will be relative to their own start (time 0), so they align at the beginning
     reference_start_time = init_start_time
-    print(f"Using initscripts start time as reference: {reference_start_time}")
 
     # Re-parse initscripts with its own start time (so it starts at 0)
     times_init, values_init, _ = parse_csv_file(initscripts_file, init_start_time)
@@ -276,24 +326,49 @@ def main():
     ax3.grid(True, alpha=0.3)
     ax3.set_ylim(bottom=0)
 
+    # Calculate area under the curve for MCPU data
+    print("\n=== Area Under Curve (MCPU Reserved) ===")
+
+    if times_init_mcpu and values_init_mcpu:
+        area_init, start_init, end_init = calculate_area_under_curve(times_init_mcpu, values_init_mcpu)
+        print(f"With Init Scripts:")
+        if start_init is not None and end_init is not None:
+            print(f"  Area: {area_init:.2f} MCPU·seconds")
+            print(f"  Integration window: {start_init:.2f}s to {end_init:.2f}s (duration: {end_init - start_init:.2f}s)")
+            print(f"  Max value: {max(values_init_mcpu):.2f} MCPU")
+            print(f"  Min non-zero value: {min([v for v in values_init_mcpu if v > 0]):.2f} MCPU")
+        else:
+            print(f"  Could not calculate area (no valid range found)")
+    else:
+        print(f"With Init Scripts: No MCPU data available")
+
+    if times_noinit_mcpu and values_noinit_mcpu:
+        area_noinit, start_noinit, end_noinit = calculate_area_under_curve(times_noinit_mcpu, values_noinit_mcpu)
+        print(f"\nWithout Init Scripts:")
+        if start_noinit is not None and end_noinit is not None:
+            print(f"  Area: {area_noinit:.2f} MCPU·seconds")
+            print(f"  Integration window: {start_noinit:.2f}s to {end_noinit:.2f}s (duration: {end_noinit - start_noinit:.2f}s)")
+            print(f"  Max value: {max(values_noinit_mcpu):.2f} MCPU")
+            print(f"  Min non-zero value: {min([v for v in values_noinit_mcpu if v > 0]):.2f} MCPU")
+        else:
+            print(f"  Could not calculate area (no valid range found)")
+    else:
+        print(f"Without Init Scripts: No MCPU data available")
+
+    # Compare the two
+    if times_init_mcpu and values_init_mcpu and times_noinit_mcpu and values_noinit_mcpu:
+        area_init, _, _ = calculate_area_under_curve(times_init_mcpu, values_init_mcpu)
+        area_noinit, _, _ = calculate_area_under_curve(times_noinit_mcpu, values_noinit_mcpu)
+        if area_init > 0 and area_noinit > 0:
+            diff = area_init - area_noinit
+            percent_diff = (diff / area_noinit) * 100
+            print(f"\nComparison:")
+            print(f"  Difference: {diff:.2f} MCPU·seconds ({percent_diff:+.1f}%)")
+
     # Save the plot
     plt.tight_layout()
     plt.savefig(args.output, dpi=300, bbox_inches='tight')
-    print(f"Graph saved to: {args.output}")
-
-    # Print summary statistics
-    print("\n=== Summary Statistics ===")
-    if times_init and values_init:
-        avg_init = sum(values_init) / len(values_init)
-        print(f"With Init Scripts:")
-        print(f"  Average cost: {avg_init:.2f} cores")
-        print(f"  Duration: {times_init[-1]:.2f} seconds")
-
-    if times_noinit and values_noinit:
-        avg_noinit = sum(values_noinit) / len(values_noinit)
-        print(f"Without Init Scripts:")
-        print(f"  Average cost: {avg_noinit:.2f} cores")
-        print(f"  Duration: {times_noinit[-1]:.2f} seconds")
+    print(f"\nGraph saved to: {args.output}")
 
     return 0
 

@@ -179,6 +179,24 @@ func NewHotelJob(ts *test.RealmTstate, p *perf.Perf, dc *DeploymentCost, sigmaos
 	return ji
 }
 
+func (ji *HotelJobInstance) updateLoadPhase(i int) {
+	ji.mu.Lock()
+	defer ji.mu.Unlock()
+
+	ji.loadPhase = i
+	ji.cond.Broadcast()
+}
+
+// Block until we reach a certain load phase
+func (ji *HotelJobInstance) waitForLoadPhase(i int) {
+	ji.mu.Lock()
+	defer ji.mu.Unlock()
+
+	for ji.loadPhase < i {
+		ji.cond.Wait()
+	}
+}
+
 func (ji *HotelJobInstance) scaleGeoSrv() {
 	// If this isn't the main benchmark driver, bail out
 	if ji.justCli {
@@ -304,12 +322,7 @@ func (ji *HotelJobInstance) scaleCosSimSrv() {
 			deltas := ji.cfg.CosSimBenchCfg.ManuallyScale.GetScalingDeltas()
 			db.DPrintf(db.TEST, "Manual scale: start")
 			for i := 0; i < len(delays) && i < len(deltas); i++ {
-				// TODO: cleanup
-				ji.mu.Lock()
-				for ji.loadPhase < i {
-					ji.cond.Wait()
-				}
-				ji.mu.Unlock()
+				ji.waitForLoadPhase(i)
 				db.DPrintf(db.TEST, "Manual scale: sleep %v", delays[i])
 				time.Sleep(delays[i])
 				db.DPrintf(db.TEST, "Manual scale: delta %v", deltas[i])
@@ -328,6 +341,11 @@ func (ji *HotelJobInstance) scaleCosSimSrv() {
 					wg.Wait()
 					db.DPrintf(db.TEST, "Manual scale: Done scale up cossim srvs by %v", deltas[i])
 				} else if deltas[i] < 0 {
+					if i < len(deltas)-1 {
+						// Only scale down at the beginning of the next load phase (don't
+						// scale down in the middle of the current load phase)
+						ji.waitForLoadPhase(i + 1)
+					}
 					var wg sync.WaitGroup
 					wg.Add(-deltas[i])
 					db.DPrintf(db.TEST, "Manual scale: Scale down cossim srvs by %v", -deltas[i])
@@ -342,12 +360,6 @@ func (ji *HotelJobInstance) scaleCosSimSrv() {
 					wg.Wait()
 					db.DPrintf(db.TEST, "Manual scale: Done scale down cossim srvs by %v", -deltas[i])
 				}
-				// TODO: cleanup
-				ji.mu.Lock()
-				for ji.loadPhase == i {
-					ji.cond.Wait()
-				}
-				ji.mu.Unlock()
 			}
 		}()
 	}
@@ -370,10 +382,7 @@ func (ji *HotelJobInstance) StartHotelJob() {
 	go ji.scaleCosSimSrv()
 	for i, lg := range ji.lgs {
 		db.DPrintf(db.TEST, "Run load generator rps %v dur %v", ji.cfg.MaxRPS[i], ji.cfg.Durs[i])
-		ji.mu.Lock()
-		ji.loadPhase = i
-		ji.cond.Broadcast()
-		ji.mu.Unlock()
+		ji.updateLoadPhase(i)
 		lg.Run()
 		//    ji.printStats()
 	}

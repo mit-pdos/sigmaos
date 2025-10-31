@@ -377,6 +377,7 @@ func (ji *HotelJobInstance) StartHotelJob() {
 	go ji.scaleGeoSrv()
 	go ji.scaleCaches()
 	go ji.scaleCosSimSrv()
+	db.DPrintf(db.TEST, "Benchmark start run")
 	for i, lg := range ji.lgs {
 		db.DPrintf(db.TEST, "Run load generator rps %v dur %v", ji.cfg.MaxRPS[i], ji.cfg.Durs[i])
 		ji.updateLoadPhase(i)

@@ -28,6 +28,8 @@ type Match struct {
 	cc         *cachegrpclnt.CachedSvcClnt
 	pds        *sigmasrv.SigmaSrv
 	tracer     *tracing.Tracer
+	pHit       *perf.Perf
+	pMiss      *perf.Perf
 }
 
 // Run starts the server
@@ -61,6 +63,20 @@ func RunMatchSrv(job string) error {
 		db.DFatalf("NewPerf err %v\n", err)
 	}
 	defer p.Done()
+
+	pMiss, err := perf.NewPerfMulti(ssrv.MemFs.SigmaClnt().ProcEnv(), perf.HOTEL_MATCH, "-miss")
+	if err != nil {
+		db.DFatalf("NewPerf err %v\n", err)
+	}
+	defer pMiss.Done()
+	s.pMiss = pMiss
+
+	pHit, err := perf.NewPerfMulti(ssrv.MemFs.SigmaClnt().ProcEnv(), perf.HOTEL_MATCH, "-hit")
+	if err != nil {
+		db.DFatalf("NewPerf err %v\n", err)
+	}
+	defer pHit.Done()
+	s.pHit = pHit
 
 	return ssrv.RunServer()
 }
@@ -99,11 +115,14 @@ func (s *Match) UserPreference(ctx fs.CtxI, req proto.MatchReq, res *proto.Match
 		v := &cossimproto.CosSimRep{}
 		err := s.cc.Get(cacheKey, v)
 		if err != nil {
-			if !cache.IsMiss(err) {
+			if cache.IsMiss(err) {
+				s.pMiss.TptTick(1.0)
+			} else {
 				db.DPrintf(db.HOTEL_MATCH_ERR, "Err cache get: %v", err)
 				return err
 			}
 		} else {
+			s.pHit.TptTick(1.0)
 			res.ID = v.ID
 			res.Val = v.Val
 			res.WasCached = true

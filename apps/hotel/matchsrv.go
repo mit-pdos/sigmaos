@@ -129,7 +129,6 @@ func (s *Match) UserPreference(ctx fs.CtxI, req proto.MatchReq, res *proto.Match
 			return nil
 		}
 	}
-	// TODO: cache input vecs locally
 	inputVec, err := s.getInputVec(req.UserVecID)
 	if err != nil {
 		db.DPrintf(db.HOTEL_MATCH_ERR, "Err get input vec: %v", err)

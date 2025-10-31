@@ -287,16 +287,8 @@ def main():
     # Parse noinitscripts with its own start time (so it also starts at 0)
     times_noinit, values_noinit, _ = parse_csv_file(noinitscripts_file, noinit_start_time)
 
-    # Filter data by time range if specified
-    times_init, values_init = filter_data_by_time_range(
-        times_init, values_init, args.xmin, args.xmax
-    )
-    times_noinit, values_noinit = filter_data_by_time_range(
-        times_noinit, values_noinit, args.xmin, args.xmax
-    )
-
-    # Aggregate values by 10ms windows (summing values within each window)
-    times_init, values_init = aggregate_by_window(times_init, values_init, window_size=0.01)
+    # Aggregate values by 10ms windows (summing values within each window) - do this before time shifting
+    times_init_load, values_init_load = aggregate_by_window(times_init, values_init, window_size=0.01)
     times_noinit, values_noinit = aggregate_by_window(times_noinit, values_noinit, window_size=0.01)
 
     # Find and parse the MCPU data files (with "-val.out" suffix)
@@ -307,10 +299,6 @@ def main():
         initscripts_val_file = initscripts_val_files[0]
         # Use initscripts start time so val data aligns with load data
         times_init_mcpu, values_init_mcpu, _ = parse_csv_file(initscripts_val_file, init_start_time)
-        # Filter by time range
-        times_init_mcpu, values_init_mcpu = filter_data_by_time_range(
-            times_init_mcpu, values_init_mcpu, args.xmin, args.xmax
-        )
     else:
         print(f"No -val.out file found in {args.measurement_dir_initscripts}")
         times_init_mcpu, values_init_mcpu = [], []
@@ -325,20 +313,67 @@ def main():
         print(f"No -val.out file found in {args.measurement_dir_noinitscripts}")
         times_noinit_mcpu, values_noinit_mcpu = [], []
 
-    # Time-shift noinitscripts data to align the first max values (before filtering)
-    if times_init_mcpu and values_init_mcpu and times_noinit_mcpu and values_noinit_mcpu:
+    # Time-shift data to align the first max values (before filtering)
+    # Find the earliest first max across all three datasets: client load, init mcpu, noinit mcpu
+    first_max_times = []
+    dataset_names = []
+
+    if times_init_load and values_init_load:
+        first_max_load = find_first_max_time(times_init_load, values_init_load)
+        if first_max_load is not None:
+            first_max_times.append(first_max_load)
+            dataset_names.append("client_load")
+
+    if times_init_mcpu and values_init_mcpu:
         first_max_init = find_first_max_time(times_init_mcpu, values_init_mcpu)
+        if first_max_init is not None:
+            first_max_times.append(first_max_init)
+            dataset_names.append("init_mcpu")
+
+    if times_noinit_mcpu and values_noinit_mcpu:
         first_max_noinit = find_first_max_time(times_noinit_mcpu, values_noinit_mcpu)
+        if first_max_noinit is not None:
+            first_max_times.append(first_max_noinit)
+            dataset_names.append("noinit_mcpu")
 
-        if first_max_init is not None and first_max_noinit is not None:
-            time_shift = first_max_init - first_max_noinit
-            times_noinit_mcpu = [t + time_shift for t in times_noinit_mcpu]
-            print(f"\nTime alignment:")
-            print(f"  Init scripts first max at: {first_max_init:.2f}s")
-            print(f"  No init scripts first max at: {first_max_noinit:.2f}s (before shift)")
-            print(f"  Applied time shift: {time_shift:.2f}s")
+    # Find the earliest first max time and use it as reference
+    if first_max_times:
+        earliest_time = min(first_max_times)
+        earliest_idx = first_max_times.index(earliest_time)
+        reference_dataset = dataset_names[earliest_idx]
 
-    # Filter noinitscripts by time range after shifting
+        print(f"\nTime alignment (reference: {reference_dataset} at {earliest_time:.2f}s):")
+
+        # Shift all datasets to align with the earliest
+        if times_init_load and values_init_load:
+            first_max_load = find_first_max_time(times_init_load, values_init_load)
+            if first_max_load is not None and first_max_load != earliest_time:
+                shift = earliest_time - first_max_load
+                times_init_load = [t + shift for t in times_init_load]
+                print(f"  Client load: shifted by {shift:.2f}s (was at {first_max_load:.2f}s)")
+
+        if times_init_mcpu and values_init_mcpu:
+            first_max_init = find_first_max_time(times_init_mcpu, values_init_mcpu)
+            if first_max_init is not None and first_max_init != earliest_time:
+                shift = earliest_time - first_max_init
+                times_init_mcpu = [t + shift for t in times_init_mcpu]
+                print(f"  Init scripts MCPU: shifted by {shift:.2f}s (was at {first_max_init:.2f}s)")
+
+        if times_noinit_mcpu and values_noinit_mcpu:
+            first_max_noinit = find_first_max_time(times_noinit_mcpu, values_noinit_mcpu)
+            if first_max_noinit is not None and first_max_noinit != earliest_time:
+                shift = earliest_time - first_max_noinit
+                times_noinit_mcpu = [t + shift for t in times_noinit_mcpu]
+                print(f"  No init scripts MCPU: shifted by {shift:.2f}s (was at {first_max_noinit:.2f}s)")
+
+    # Filter by time range after shifting
+    times_init, values_init = filter_data_by_time_range(
+        times_init_load, values_init_load, args.xmin, args.xmax
+    )
+    if times_init_mcpu and values_init_mcpu:
+        times_init_mcpu, values_init_mcpu = filter_data_by_time_range(
+            times_init_mcpu, values_init_mcpu, args.xmin, args.xmax
+        )
     if times_noinit_mcpu and values_noinit_mcpu:
         times_noinit_mcpu, values_noinit_mcpu = filter_data_by_time_range(
             times_noinit_mcpu, values_noinit_mcpu, args.xmin, args.xmax

@@ -37,9 +37,10 @@ class Srv {
  public:
   Srv(std::shared_ptr<sigmaos::proxy::sigmap::Clnt> sp_clnt,
       std::string cache_dir, std::string job_name, std::string srv_pn,
-      bool use_ep_cache, int old_n_srv, int new_n_srv, int srv_id)
+      bool use_ep_cache, int old_n_srv, int new_n_srv, int srv_id, bool migrated)
       : _mu(),
         _srv_id(srv_id),
+        _migrated(migrated),
         _cache_dir(cache_dir),
         _req_cnt(0),
         _cache(),
@@ -49,9 +50,9 @@ class Srv {
         _cache_clnt(std::make_shared<sigmaos::apps::cache::Clnt>(
             sp_clnt, cache_dir, (uint32_t)old_n_srv)) {
     log(CACHESRV,
-        "Starting RPC srv id:{} cachedir:{} jobname:{} srvpn:{} useEPCache:{} "
+        "Starting RPC srv id:{} migrated:{} cachedir:{} jobname:{} srvpn:{} useEPCache:{} "
         "oldNSrv:{} newNSrv:{}",
-        srv_id, cache_dir, job_name, srv_pn, use_ep_cache, old_n_srv,
+        srv_id, migrated, cache_dir, job_name, srv_pn, use_ep_cache, old_n_srv,
         new_n_srv);
     auto start = GetCurrentTime();
     _srv = std::make_shared<sigmaos::rpc::srv::Srv>(sp_clnt, INIT_NTHREAD);
@@ -99,6 +100,7 @@ class Srv {
  private:
   std::mutex _mu;
   int _srv_id;
+  bool _migrated;
   std::string _cache_dir;
   std::atomic<uint64_t> _req_cnt;
   std::map<uint32_t, std::shared_ptr<Shard>> _cache;

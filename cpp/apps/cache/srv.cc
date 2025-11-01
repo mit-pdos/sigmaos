@@ -89,7 +89,12 @@ std::expected<int, sigmaos::serr::Error> Srv::Init(int old_n_srv,
   std::map<int, std::vector<uint32_t>> shards_to_steal;
   std::vector<int> src_srvs;
   for (int i = 0; i < old_n_srv; i++) {
-    src_srvs.push_back(i);
+    // Only steal from this server if this is not a migrated cache server, or
+    // if this *is* a migrated cache server and the ID of the server to steal
+    // from matches this server's ID.
+    if (!_migrated || i == _srv_id) {
+      src_srvs.push_back(i);
+    }
     shards_to_steal[i] = std::vector<uint32_t>();
   }
   int nrpc = 0;

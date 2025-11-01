@@ -25,7 +25,7 @@ int main(int argc, char *argv[]) {
   LogSpawnLatency(pe->GetPID(), pe->GetSpawnTime(), start,
                   "Create spproxyclnt");
 
-  if (argc < 7) {
+  if (argc < 8) {
     fatal("Usage: {} cachedir jobname srvpn useEPCache oldNSrv newNSrv",
           argv[0]);
   }
@@ -37,11 +37,13 @@ int main(int argc, char *argv[]) {
   bool use_ep_cache = str_use_ep_cache == "true";
   int old_n_srv = std::stoi(argv[5]);
   int new_n_srv = std::stoi(argv[6]);
+  std::string str_migrate = argv[7];
+  bool migrate = str_migrate == "migrate";
 
   start = GetCurrentTime();
   auto srv = std::make_shared<sigmaos::apps::cache::Srv>(
       sp_clnt, cache_dir, job_name, srv_pn, use_ep_cache, old_n_srv, new_n_srv,
-      new_n_srv - 1);
+      new_n_srv - 1, migrate);
   LogSpawnLatency(pe->GetPID(), pe->GetSpawnTime(), start, "Make CacheSrv");
   srv->Run();
 }

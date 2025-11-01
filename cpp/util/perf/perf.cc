@@ -115,10 +115,10 @@ void Perf::TptTick(double tpt) {
 
   // If it has been long enough since we started incrementing this slot, seal
   // it and move to the next slot. In this way, we always expect
-  // _times.size() == _tpts.size() - 1
-  if (LatencyMS(_times.back()) > (1000.0 / _tpt_sample_hz)) {
+  // _tpt_times.size() == _tpts.size() - 1
+  if (LatencyMS(_tpt_times.back()) > (1000.0 / _tpt_sample_hz)) {
     _tpts.push_back(0.0);
-    _times.push_back(GetCurrentTime());
+    _tpt_times.push_back(GetCurrentTime());
   }
 
   // Increment the current tpt slot.
@@ -160,6 +160,7 @@ void Perf::monitor_cpu_util(int sample_hz) {
       _cpu_cycles_busy.push_back(total_delta);
       _cpu_cycles_total.push_back(total_delta);
       _cpu_util_pct.push_back(util);
+      _cpu_util_times.push_back(GetCurrentTime());
     }
 
     utime0 = utime1;
@@ -175,7 +176,7 @@ void Perf::setup_tpt(int sample_hz) {
   _tpt_sample_hz = (double)sample_hz;
   // Reserve capacity in the vectors to make sure resizing doesn't impact
   // performance.
-  _times.reserve(N_SECS_PREALLOC * sample_hz);
+  _tpt_times.reserve(N_SECS_PREALLOC * sample_hz);
   _tpts.reserve(N_SECS_PREALLOC * sample_hz);
 
   std::string pn = PERF_OUTPUT_BASE_PATH + _pe->GetPID() + "-tpt.out";
@@ -184,7 +185,7 @@ void Perf::setup_tpt(int sample_hz) {
   _tpt_file = std::ofstream(pn, ::std::ios::out | std::ios::app);
 
   // Append the initial entry to the times & throughputs vectors
-  _times.push_back(GetCurrentTime());
+  _tpt_times.push_back(GetCurrentTime());
   _tpts.push_back(0.0);
 }
 
@@ -194,8 +195,8 @@ void Perf::teardown_tpt() {
 
   if (_tpt) {
     _tpt = false;
-    for (int i = 0; i < _times.size(); i++) {
-      auto ts = _times.at(i);
+    for (int i = 0; i < _tpt_times.size(); i++) {
+      auto ts = _tpt_times.at(i);
       double tpt = _tpts.at(i);
       _tpt_file << ts.seconds() * 1000000 + ts.nanos() / 1000 << "us," << tpt
                 << std::endl;
@@ -218,6 +219,7 @@ void Perf::setup_cpu_util(int sample_hz) {
   _cpu_cycles_busy.reserve(N_SECS_PREALLOC * sample_hz);
   _cpu_cycles_total.reserve(N_SECS_PREALLOC * sample_hz);
   _cpu_util_pct.reserve(N_SECS_PREALLOC * sample_hz);
+  _cpu_util_times.reserve(N_SECS_PREALLOC * sample_hz);
 
   std::string pn = PERF_OUTPUT_BASE_PATH + _pe->GetPID() + "-cpu.out";
 
@@ -245,7 +247,8 @@ void Perf::teardown_cpu_util() {
 
     // Write all the collected data to the file
     for (size_t i = 0; i < _cpu_util_pct.size(); i++) {
-      _cpu_util_file << _cpu_util_pct[i] << "," << _cpu_cycles_busy[i] << ","
+      auto ts = _cpu_util_times.at(i);
+      _cpu_util_file << ts.seconds() * 1000000 + ts.nanos() / 1000 << "us," << _cpu_util_pct[i] << "," << _cpu_cycles_busy[i] << ","
                      << _cpu_cycles_total[i] << std::endl;
     }
     _cpu_util_file.close();

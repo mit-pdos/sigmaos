@@ -30,7 +30,7 @@ const std::string TPT = "_TPT";
 const std::string CPU = "_CPU";
 
 // Performance constants
-const int SAMPLE_HZ = 50;
+const int SAMPLE_HZ = 100;
 const int N_SECS_PREALLOC = 40;
 
 // Path constants
@@ -44,7 +44,8 @@ class Perf {
         _pid(getpid()),
         _tpt(false),
         _tpts(),
-        _times(),
+        _tpt_times(),
+        _cpu_util_times(),
         _cpu_util_active(false),
         _done(false) {
     if (sigmaos::util::common::ContainsLabel(_pe->GetPerf(), _selector + TPT)) {
@@ -68,7 +69,8 @@ class Perf {
   pid_t _pid;
   bool _tpt;
   std::vector<double> _tpts;
-  std::vector<google::protobuf::Timestamp> _times;
+  std::vector<google::protobuf::Timestamp> _tpt_times;
+  std::vector<google::protobuf::Timestamp> _cpu_util_times;
   std::ofstream _tpt_file;
   double _tpt_sample_hz;
 

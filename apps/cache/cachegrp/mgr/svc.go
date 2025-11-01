@@ -26,24 +26,25 @@ import (
 type CachedSvc struct {
 	sync.Mutex
 	*sigmaclnt.SigmaClnt
-	EPCacheJob       *epsrv.EPCacheJob
-	epcsrvEP         *sp.Tendpoint
-	useEPCache       bool
-	bin              string
-	servers          []sp.Tpid
-	serverEPs        []*sp.Tendpoint
-	backupServers    []sp.Tpid
-	backupBootScript []byte
-	scalerBootScript []byte
-	cfg              *CacheJobConfig
-	pn               string
-	job              string
+	EPCacheJob        *epsrv.EPCacheJob
+	epcsrvEP          *sp.Tendpoint
+	useEPCache        bool
+	bin               string
+	servers           []sp.Tpid
+	serverEPs         []*sp.Tendpoint
+	backupServers     []sp.Tpid
+	backupBootScript  []byte
+	scalerBootScript  []byte
+	migrateBootScript []byte
+	cfg               *CacheJobConfig
+	pn                string
+	job               string
 }
 
 // Currently, only backup servers advertise themselves via the EP cache
 func (cs *CachedSvc) addServer(i int) error {
 	// SpawnBurst to spread servers across procds.
-	p := proc.NewProc(cs.bin, []string{filepath.Join(cs.pn, cachegrp.SRVDIR), strconv.Itoa(int(i)), strconv.FormatBool(cs.useEPCache)})
+	p := proc.NewProc(cs.bin, []string{filepath.Join(cs.pn, cachegrp.SRVDIR), strconv.Itoa(int(i)), strconv.FormatBool(cs.useEPCache), "false"})
 	if !cs.cfg.GC {
 		p.AppendEnv("GOGC", "off")
 	}
@@ -88,7 +89,7 @@ func (cs *CachedSvc) addServer(i int) error {
 
 func (cs *CachedSvc) addBackupServerWithSigmaPath(sigmaPath string, srvID int, ep *sp.Tendpoint, delegatedInit bool, topN int) error {
 	// SpawnBurst to spread servers across procds.
-	p := proc.NewProc(cs.bin+"-backup", []string{filepath.Join(cs.pn, cachegrp.BACKUP), cs.job, strconv.Itoa(int(srvID)), strconv.FormatBool(cs.useEPCache), strconv.Itoa(topN)})
+	p := proc.NewProc(cs.bin+"-backup", []string{filepath.Join(cs.pn, cachegrp.BACKUP), cs.job, strconv.Itoa(int(srvID)), strconv.FormatBool(cs.useEPCache), strconv.Itoa(topN), "false"})
 	if !cs.cfg.GC {
 		p.AppendEnv("GOGC", "off")
 	}
@@ -164,7 +165,7 @@ func (cs *CachedSvc) addScalerServerWithSigmaPath(sigmaPath string, delegatedIni
 	if cpp {
 		bin = "cached-srv-cpp"
 	}
-	p := proc.NewProc(bin, []string{filepath.Join(cs.pn, cachegrp.SRVDIR), cs.job, strconv.Itoa(srvID), strconv.FormatBool(cs.useEPCache), strconv.Itoa(oldNSrv), strconv.Itoa(newNSrv)})
+	p := proc.NewProc(bin, []string{filepath.Join(cs.pn, cachegrp.SRVDIR), cs.job, strconv.Itoa(srvID), strconv.FormatBool(cs.useEPCache), strconv.Itoa(oldNSrv), strconv.Itoa(newNSrv), "false"})
 	p.SetUseShmem(shmem)
 	db.DPrintf(db.TEST, "Scale %v", p.GetPid())
 	if !cs.cfg.GC {
@@ -245,6 +246,88 @@ func (cs *CachedSvc) addScalerServerWithSigmaPath(sigmaPath string, delegatedIni
 	return nil
 }
 
+func (cs *CachedSvc) migrateServerWithSigmaPath(sigmaPath string, delegatedInit bool, srvID int) error {
+	shmem := true
+	nsrv := len(cs.servers)
+	bin := "cached-srv-cpp"
+	p := proc.NewProc(bin, []string{filepath.Join(cs.pn, cachegrp.SRVDIR), cs.job, strconv.Itoa(srvID), strconv.FormatBool(cs.useEPCache), strconv.Itoa(nsrv), strconv.Itoa(nsrv), "true"})
+	p.SetUseShmem(shmem)
+	db.DPrintf(db.TEST, "Migrate(%v) %v -> %v", srvID, cs.servers[srvID], p.GetPid())
+	if !cs.cfg.GC {
+		p.AppendEnv("GOGC", "off")
+	}
+	if sigmaPath != sp.NOT_SET {
+		p.PrependSigmaPath(sigmaPath)
+	}
+	if cs.useEPCache {
+		// Cache the primary server's endpoint in the scaler proc struct
+		p.SetCachedEndpoint(epcache.EPCACHE, cs.epcsrvEP)
+	}
+	for i := 0; i < nsrv; i++ {
+		// Cache the other cache servers' endpoint in the scaler proc struct
+		p.SetCachedEndpoint(cs.Server(strconv.Itoa(i)), cs.serverEPs[i])
+	}
+	p.SetMcpu(cs.cfg.MCPU)
+	// Have migrated server use spproxy
+	p.GetProcEnv().UseSPProxy = true
+	p.GetProcEnv().UseSPProxyProcClnt = true
+	// Write the input arguments to the boot script
+	inputBuf := bytes.NewBuffer(make([]byte, 0, 4))
+	if err := binary.Write(inputBuf, binary.LittleEndian, uint32(srvID)); err != nil {
+		return err
+	}
+	if err := binary.Write(inputBuf, binary.LittleEndian, uint32(nsrv)); err != nil {
+		return err
+	}
+	if err := binary.Write(inputBuf, binary.LittleEndian, uint32(cache.NSHARD)); err != nil {
+		return err
+	}
+	if delegatedInit {
+		bootScriptInput := inputBuf.Bytes()
+		p.SetBootScript(cs.migrateBootScript, bootScriptInput)
+		p.SetRunBootScript(delegatedInit)
+	}
+	err := cs.Spawn(p)
+	if err != nil {
+		return err
+	}
+	if err := cs.WaitStart(p.GetPid()); err != nil {
+		return err
+	}
+	if cs.useEPCache {
+		srvPN := cs.Server(strconv.Itoa(srvID))
+		svcName := filepath.Dir(srvPN)
+		// Get EP from epcachesrv
+		instances, _, err := cs.EPCacheJob.Clnt.GetEndpoints(svcName, epcache.NO_VERSION)
+		if err != nil {
+			return err
+		}
+		if len(instances) <= srvID {
+			return fmt.Errorf("not enough instances reported by epcache: %v <= %v", len(instances), srvID)
+		}
+		srvIDStr := strconv.Itoa(srvID)
+		var ep *sp.Tendpoint
+		for _, i := range instances {
+			if i.ID == srvIDStr {
+				ep = sp.NewEndpointFromProto(i.EndpointProto)
+			}
+		}
+		if ep == nil {
+			db.DPrintf(db.ERROR, "Err get EP")
+			return fmt.Errorf("Error get EP srv %v", srvID)
+		}
+		// Don't mount CPP cache servers (the clients will be created elsewhere, directly using the EP)
+		if ep.GetType() != sp.CPP_EP {
+			if err := cs.MountTree(ep, rpc.RPC, filepath.Join(srvPN, rpc.RPC)); err != nil {
+				return err
+			}
+		}
+		cs.serverEPs[srvID] = ep
+	}
+	cs.servers = append(cs.servers, p.GetPid())
+	return nil
+}
+
 // XXX use job
 func NewCachedSvc(sc *sigmaclnt.SigmaClnt, cfg *CacheJobConfig, job, bin, pn string) (*CachedSvc, error) {
 	return NewCachedSvcEPCache(sc, nil, cfg, job, bin, pn)
@@ -272,6 +355,11 @@ func NewCachedSvcEPCache(sc *sigmaclnt.SigmaClnt, epCacheJob *epsrv.EPCacheJob, 
 		db.DPrintf(db.ERROR, "Err read WASM scaler boot script: %v", err)
 		return nil, err
 	}
+	migrateBootScript, err := wasmer.ReadBootScript(sc, "cached_migrate_boot")
+	if err != nil {
+		db.DPrintf(db.ERROR, "Err read WASM migrate boot script: %v", err)
+		return nil, err
+	}
 	var epcsrvEP *sp.Tendpoint
 	if epCacheJob != nil {
 		// Cache the EPCache's endpoint in the proc stroct
@@ -282,19 +370,20 @@ func NewCachedSvcEPCache(sc *sigmaclnt.SigmaClnt, epCacheJob *epsrv.EPCacheJob, 
 		}
 	}
 	cs := &CachedSvc{
-		SigmaClnt:        sc,
-		EPCacheJob:       epCacheJob,
-		epcsrvEP:         epcsrvEP,
-		useEPCache:       epCacheJob != nil,
-		bin:              bin,
-		servers:          make([]sp.Tpid, 0),
-		serverEPs:        make([]*sp.Tendpoint, 0),
-		backupServers:    make([]sp.Tpid, 0),
-		cfg:              cfg,
-		pn:               pn,
-		job:              job,
-		scalerBootScript: scalerBootScript,
-		backupBootScript: backupBootScript,
+		SigmaClnt:         sc,
+		EPCacheJob:        epCacheJob,
+		epcsrvEP:          epcsrvEP,
+		useEPCache:        epCacheJob != nil,
+		bin:               bin,
+		servers:           make([]sp.Tpid, 0),
+		serverEPs:         make([]*sp.Tendpoint, 0),
+		backupServers:     make([]sp.Tpid, 0),
+		cfg:               cfg,
+		pn:                pn,
+		job:               job,
+		scalerBootScript:  scalerBootScript,
+		migrateBootScript: migrateBootScript,
+		backupBootScript:  backupBootScript,
 	}
 	for i := 0; i < cs.cfg.NSrv; i++ {
 		if err := cs.addServer(i); err != nil {
@@ -317,6 +406,13 @@ func (cs *CachedSvc) AddScalerServerWithSigmaPath(sigmaPath string, delegatedIni
 	defer cs.Unlock()
 
 	return cs.addScalerServerWithSigmaPath(sigmaPath, delegatedInit, cpp, shmem)
+}
+
+func (cs *CachedSvc) MigrateServerWithSigmaPath(sigmaPath string, delegatedInit bool, srvID int) error {
+	cs.Lock()
+	defer cs.Unlock()
+
+	return cs.migrateServerWithSigmaPath(sigmaPath, delegatedInit, srvID)
 }
 
 func (cs *CachedSvc) AddBackupServerWithSigmaPath(sigmaPath string, i int, ep *sp.Tendpoint, delegatedInit bool, topN int) error {

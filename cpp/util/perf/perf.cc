@@ -248,7 +248,8 @@ void Perf::teardown_cpu_util() {
     // Write all the collected data to the file
     for (size_t i = 0; i < _cpu_util_pct.size(); i++) {
       auto ts = _cpu_util_times.at(i);
-      _cpu_util_file << ts.seconds() * 1000000 + ts.nanos() / 1000 << "us," << _cpu_util_pct[i] << "," << _cpu_cycles_busy[i] << ","
+      _cpu_util_file << ts.seconds() * 1000000 + ts.nanos() / 1000 << "us,"
+                     << _cpu_util_pct[i] << "," << _cpu_cycles_busy[i] << ","
                      << _cpu_cycles_total[i] << std::endl;
     }
     _cpu_util_file.close();

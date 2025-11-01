@@ -61,6 +61,9 @@ std::expected<int, sigmaos::serr::Error> Srv::Put(
   log(CACHESRV, "CacheSrv.Put req({}) key={}", req_cnt, key);
   // Take the lock
   std::lock_guard<std::mutex> guard(_mu);
+  if (!_first_req_ran.exchange(true)) {
+    log(SPAWN_LAT, "First request ran");
+  }
   // If the shard isn't present, return an error
   if (!_cache.contains(req->shard())) {
     log(CACHESRV_ERR, "CacheSrv.Put rep({}) shard {} not found", req_cnt,

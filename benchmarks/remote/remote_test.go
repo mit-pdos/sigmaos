@@ -1312,7 +1312,7 @@ func TestHotelMatchTailLatency(t *testing.T) {
 		numGeoToAdd                      int           = 0
 		cosSimDelegatedInit              []bool        = []bool{true, false}
 		autoscaleCosSim                  bool          = false
-		fastLoadChange                   bool          = true
+		fastLoadChange                   []bool        = []bool{false, true}
 		proactiveScaling                 bool          = true
 		cosSimNoDelegatedInitScalingTime time.Duration = 85 * time.Millisecond
 		cosSimDelegatedInitScalingTime   time.Duration = 50 * time.Millisecond
@@ -1324,94 +1324,96 @@ func TestHotelMatchTailLatency(t *testing.T) {
 	if ts.BCfg.Overlays {
 		benchNameBase += "_overlays"
 	}
-	for _, csDelInit := range cosSimDelegatedInit {
-		scalingTime := cosSimNoDelegatedInitScalingTime
-		benchName := benchNameBase
-		rps := rpsSlow
-		dur := durSlow
-		if fastLoadChange {
-			benchName += "_fast"
-			rps = rpsFast
-			dur = durFast
-		}
-		if csDelInit {
-			benchName += "_csdi"
-			scalingTime = cosSimDelegatedInitScalingTime
-		}
-		csScaleDurs := make([]time.Duration, len(dur))
-		csScaleDeltas := make([]int, len(dur))
-		csNSrv := make([]int, len(dur))
-		// Calculate the deltas
-		for i := range dur {
-			if i == 0 {
-				csNSrv[i] = 1
+	for _, fast := range fastLoadChange {
+		for _, csDelInit := range cosSimDelegatedInit {
+			scalingTime := cosSimNoDelegatedInitScalingTime
+			benchName := benchNameBase
+			rps := rpsSlow
+			dur := durSlow
+			if fast {
+				benchName += "_fast"
+				rps = rpsFast
+				dur = durFast
 			}
-			if i < len(dur)-1 {
-				if i > 0 {
-					csNSrv[i] = csScaleDeltas[i-1] + csNSrv[i-1]
-				}
-				csScaleDeltas[i] = rps[i+1]/rpsBase - csNSrv[i]
+			if csDelInit {
+				benchName += "_csdi"
+				scalingTime = cosSimDelegatedInitScalingTime
 			}
-		}
-		// Scale up a bit in advance if scaling proactively
-		if proactiveScaling {
+			csScaleDurs := make([]time.Duration, len(dur))
+			csScaleDeltas := make([]int, len(dur))
+			csNSrv := make([]int, len(dur))
+			// Calculate the deltas
 			for i := range dur {
-				// Going to scale up during this period
-				if csScaleDeltas[i] > 0 {
-					// Scale a bit in advance, and add back the scaling time to the next
-					// period to stay in-sync with load shifts
-					csScaleDurs[i] = dur[i] - scalingTime
-				} else {
-					csScaleDurs[i] = 0
+				if i == 0 {
+					csNSrv[i] = 1
+				}
+				if i < len(dur)-1 {
+					if i > 0 {
+						csNSrv[i] = csScaleDeltas[i-1] + csNSrv[i-1]
+					}
+					csScaleDeltas[i] = rps[i+1]/rpsBase - csNSrv[i]
 				}
 			}
-		}
-		db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
-		hotelCfg := &benchmarks.HotelBenchConfig{
-			JobCfg: &hotel.HotelJobConfig{
-				Job:             "hotel-job",
-				Srvs:            hotel.NewHotelSvc(),
-				NHotel:          80,
-				Cache:           cacheType,
-				CacheCfg:        nil,
-				ImgSizeMB:       0,
-				NGeo:            numGeo,
-				NGeoIdx:         numGeoIdx,
-				GeoSearchRadius: geoSearchRadius,
-				GeoNResults:     geoNResults,
-				UseMatch:        true,
-			},
-			MatchUseCaching: false,
-			Durs:            dur,
-			MaxRPS:          rps,
-			ScaleGeo: &benchmarks.ManualScalingConfig{
-				Svc:         "hotel-geo",
-				Scale:       manuallyScaleGeo,
-				ScaleDelays: []time.Duration{scaleGeoDelay},
-				ScaleDeltas: []int{numGeoToAdd},
-			},
-			CacheBenchCfg: &benchmarks.CacheBenchConfig{
-				JobCfg:    &cachegrpmgr.CacheJobConfig{NSrv: numCaches, MCPU: proc.Tmcpu(4000), GC: true},
-				Autoscale: autoscaleCache,
-				ManuallyScale: &benchmarks.ManualScalingConfig{
-					Svc:         "cached",
-					Scale:       manuallyScaleCaches,
-					ScaleDelays: []time.Duration{scaleCacheDelay},
-					ScaleDeltas: []int{numCachesToAdd},
+			// Scale up a bit in advance if scaling proactively
+			if proactiveScaling {
+				for i := range dur {
+					// Going to scale up during this period
+					if csScaleDeltas[i] > 0 {
+						// Scale a bit in advance, and add back the scaling time to the next
+						// period to stay in-sync with load shifts
+						csScaleDurs[i] = dur[i] - scalingTime
+					} else {
+						csScaleDurs[i] = 0
+					}
+				}
+			}
+			db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
+			hotelCfg := &benchmarks.HotelBenchConfig{
+				JobCfg: &hotel.HotelJobConfig{
+					Job:             "hotel-job",
+					Srvs:            hotel.NewHotelSvc(),
+					NHotel:          80,
+					Cache:           cacheType,
+					CacheCfg:        nil,
+					ImgSizeMB:       0,
+					NGeo:            numGeo,
+					NGeoIdx:         numGeoIdx,
+					GeoSearchRadius: geoSearchRadius,
+					GeoNResults:     geoNResults,
+					UseMatch:        true,
 				},
-			},
-			CosSimBenchCfg: &benchmarks.CosSimBenchConfig{
-				JobCfg:      cossimsrv.NewCosSimJobConfig("hotel-job", 1, 10000, 100, true, 4000, nil, csDelInit),
-				NVecToQuery: 5000,
-				ManuallyScale: benchmarks.NewManualScalingConfig("cossim", !autoscaleCosSim,
-					csScaleDurs,
-					csScaleDeltas,
-				),
-				Autoscale: &benchmarks.AutoscalingConfig{Svc: "cossim", InitialNReplicas: 1, Scale: autoscaleCosSim, MaxReplicas: 4, TargetRIF: 3, Tolerance: 0.5, Frequency: 10 * time.Millisecond},
-			},
+				MatchUseCaching: false,
+				Durs:            dur,
+				MaxRPS:          rps,
+				ScaleGeo: &benchmarks.ManualScalingConfig{
+					Svc:         "hotel-geo",
+					Scale:       manuallyScaleGeo,
+					ScaleDelays: []time.Duration{scaleGeoDelay},
+					ScaleDeltas: []int{numGeoToAdd},
+				},
+				CacheBenchCfg: &benchmarks.CacheBenchConfig{
+					JobCfg:    &cachegrpmgr.CacheJobConfig{NSrv: numCaches, MCPU: proc.Tmcpu(4000), GC: true},
+					Autoscale: autoscaleCache,
+					ManuallyScale: &benchmarks.ManualScalingConfig{
+						Svc:         "cached",
+						Scale:       manuallyScaleCaches,
+						ScaleDelays: []time.Duration{scaleCacheDelay},
+						ScaleDeltas: []int{numCachesToAdd},
+					},
+				},
+				CosSimBenchCfg: &benchmarks.CosSimBenchConfig{
+					JobCfg:      cossimsrv.NewCosSimJobConfig("hotel-job", 1, 10000, 100, true, 4000, nil, csDelInit),
+					NVecToQuery: 5000,
+					ManuallyScale: benchmarks.NewManualScalingConfig("cossim", !autoscaleCosSim,
+						csScaleDurs,
+						csScaleDeltas,
+					),
+					Autoscale: &benchmarks.AutoscalingConfig{Svc: "cossim", InitialNReplicas: 1, Scale: autoscaleCosSim, MaxReplicas: 4, TargetRIF: 3, Tolerance: 0.5, Frequency: 10 * time.Millisecond},
+				},
+			}
+			getLeaderCmd := GetHotelClientCmdConstructor("Match", true, len(driverVMs), sleep, hotelCfg)
+			getFollowerCmd := GetHotelClientCmdConstructor("Match", false, len(driverVMs), sleep, hotelCfg)
+			ts.RunParallelClientBenchmark(benchName, driverVMs, getLeaderCmd, getFollowerCmd, startK8sHotelApp, stopK8sHotelApp, clientDelay, numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost)
 		}
-		getLeaderCmd := GetHotelClientCmdConstructor("Match", true, len(driverVMs), sleep, hotelCfg)
-		getFollowerCmd := GetHotelClientCmdConstructor("Match", false, len(driverVMs), sleep, hotelCfg)
-		ts.RunParallelClientBenchmark(benchName, driverVMs, getLeaderCmd, getFollowerCmd, startK8sHotelApp, stopK8sHotelApp, clientDelay, numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost)
 	}
 }

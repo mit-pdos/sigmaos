@@ -97,6 +97,8 @@ func (csc *CachedSvcClnt) monitorServers() {
 			for _, is := range instances {
 				if is.ID == istr && sp.TTendpoint(is.EndpointProto.Type) == sp.CPP_EP {
 					ep := sp.NewEndpointFromProto(is.EndpointProto)
+					// Append the new endpoint
+					csc.eps = append(csc.eps, ep)
 					rpcc, err := rpcncclnt.NewTCPRPCClnt(is.ID, ep, 0)
 					if err != nil {
 						db.DPrintf(db.ERROR, "Err NewRPCClnt cacheclnt: %v", err)
@@ -106,10 +108,31 @@ func (csc *CachedSvcClnt) monitorServers() {
 					}
 				}
 			}
-
 		}
 		csc.nsrv = len(instances)
-		db.DPrintf(db.CACHEDSVCCLNT, "GetEndpoints new nsrv: %v", csc.nsrv)
+		// If the endpoint for a server changed, create a new client for it.
+		for _, is := range instances {
+			id, err := strconv.Atoi(is.ID)
+			if err != nil {
+				db.DPrintf(db.ERROR, "Err NewRPCClnt cacheclnt cache ID: %v", err)
+			}
+			// EP has changed, so create a new cache clnt
+			if csc.eps[id].Addr[0].IPStr != is.EndpointProto.Addr[0].IPStr ||
+				csc.eps[id].Addr[0].PortInt != is.EndpointProto.Addr[0].PortInt ||
+				csc.eps[id].Type != is.EndpointProto.Type {
+				db.DPrintf(db.CACHEDSVCCLNT, "EP has changed for cache %v", is.ID)
+				ep := sp.NewEndpointFromProto(is.EndpointProto)
+				csc.eps[id] = ep
+				rpcc, err := rpcncclnt.NewTCPRPCClnt(is.ID, ep, 0)
+				if err != nil {
+					db.DPrintf(db.ERROR, "Err NewRPCClnt cacheclnt: %v", err)
+				} else {
+					db.DPrintf(db.CACHEDSVCCLNT, "Create new cacheclnt for cache %v", is.ID)
+					csc.cc.ClntCache.Put(csc.Server(id), rpcc)
+				}
+			}
+		}
+		db.DPrintf(db.CACHEDSVCCLNT, "GetEndpoints nsrv: %v", csc.nsrv)
 		// Update last endpoint version
 		csc.lastEPV = v
 	}

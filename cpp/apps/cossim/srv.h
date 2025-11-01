@@ -47,7 +47,8 @@ class Srv {
         _perf(std::make_shared<sigmaos::util::perf::Perf>(sp_clnt->ProcEnv(),
                                                           COSSIMSRV)),
         _cache_clnt(std::make_shared<sigmaos::apps::cache::Clnt>(
-            sp_clnt, cache_clnt_pn, (uint32_t)ncache)) {
+            sp_clnt, cache_clnt_pn, (uint32_t)ncache)),
+        _first_req_ran(false) {
     log(COSSIMSRV, "Starting RPC srv ncache:{} nvec:{} vec_dim:{} eager:{}",
         ncache, nvec, vec_dim, eager_init);
     auto start = GetCurrentTime();
@@ -100,8 +101,8 @@ class Srv {
   std::shared_ptr<sigmaos::proxy::sigmap::Clnt> _sp_clnt;
   std::shared_ptr<sigmaos::util::perf::Perf> _perf;
   std::shared_ptr<sigmaos::apps::cache::Clnt> _cache_clnt;
-  std::shared_ptr<sigmaos::rpc::srv::Srv> _srv;
   std::atomic<bool> _first_req_ran;
+  std::shared_ptr<sigmaos::rpc::srv::Srv> _srv;
   // Used for logger initialization
   static bool _l;
   static bool _l_e;

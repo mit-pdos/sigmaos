@@ -95,6 +95,7 @@ var DefaultHotelBenchConfig = &HotelBenchConfig{
 		UseMatch:        false,
 	},
 	MatchUseCaching: false,
+	CachedUserFrac:  100,
 	Durs:            []time.Duration{10 * time.Second},
 	MaxRPS:          []int{100},
 	ScaleGeo: &ManualScalingConfig{

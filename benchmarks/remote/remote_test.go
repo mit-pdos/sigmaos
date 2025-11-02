@@ -428,8 +428,9 @@ func TestHotelTailLatency(t *testing.T) {
 			GeoNResults:     geoNResults,
 			UseMatch:        false,
 		},
-		Durs:   dur,
-		MaxRPS: rps,
+		Durs:           dur,
+		MaxRPS:         rps,
+		CachedUserFrac: 100,
 		ScaleGeo: &benchmarks.ManualScalingConfig{
 			Svc:         "hotel-geo",
 			Scale:       manuallyScaleGeo,
@@ -538,8 +539,9 @@ func TestHotelScaleGeo(t *testing.T) {
 						GeoNResults:     geoNResults,
 						UseMatch:        false,
 					},
-					Durs:   dur,
-					MaxRPS: rps,
+					Durs:           dur,
+					MaxRPS:         rps,
+					CachedUserFrac: 100,
 					ScaleGeo: &benchmarks.ManualScalingConfig{
 						Svc:         "hotel-geo",
 						Scale:       scale,
@@ -648,8 +650,9 @@ func TestHotelGeoReqScaleGeo(t *testing.T) {
 						GeoNResults:     geoNResults,
 						UseMatch:        false,
 					},
-					Durs:   dur,
-					MaxRPS: rps,
+					Durs:           dur,
+					MaxRPS:         rps,
+					CachedUserFrac: 100,
 					ScaleGeo: &benchmarks.ManualScalingConfig{
 						Svc:         "hotel-geo",
 						Scale:       scale,
@@ -755,8 +758,9 @@ func TestHotelScaleCache(t *testing.T) {
 						GeoNResults:     geoNResults,
 						UseMatch:        false,
 					},
-					Durs:   dur,
-					MaxRPS: rps,
+					Durs:           dur,
+					MaxRPS:         rps,
+					CachedUserFrac: 100,
 					ScaleGeo: &benchmarks.ManualScalingConfig{
 						Svc:         "hotel-geo",
 						Scale:       manuallyScaleGeo,
@@ -924,8 +928,9 @@ func TestLCBEHotelImgResizeMultiplexing(t *testing.T) {
 			GeoNResults:     geoNResults,
 			UseMatch:        false,
 		},
-		Durs:   dur,
-		MaxRPS: rps,
+		Durs:           dur,
+		MaxRPS:         rps,
+		CachedUserFrac: 100,
 		ScaleGeo: &benchmarks.ManualScalingConfig{
 			Svc:         "hotel-geo",
 			Scale:       manuallyScaleGeo,
@@ -1010,8 +1015,9 @@ func TestLCBEHotelImgResizeRPCMultiplexing(t *testing.T) {
 			GeoNResults:     geoNResults,
 			UseMatch:        false,
 		},
-		Durs:   dur,
-		MaxRPS: rps,
+		Durs:           dur,
+		MaxRPS:         rps,
+		CachedUserFrac: 100,
 		ScaleGeo: &benchmarks.ManualScalingConfig{
 			Svc:         "hotel-geo",
 			Scale:       manuallyScaleGeo,
@@ -1253,7 +1259,13 @@ func TestHotelMatchTailLatency(t *testing.T) {
 	var (
 		rpsBase     int   = 500 // 95% capacity for a single cossim server
 		maxMultiple int   = 2   // max multiple of rpsBase
-		rpsSlow     []int = []int{
+		rpsMigrate  []int = []int{
+			rpsBase,
+		}
+		durMigrate []time.Duration = []time.Duration{
+			30 * time.Second,
+		}
+		rpsSlow []int = []int{
 			rpsBase,
 			rpsBase * 2,
 		}
@@ -1341,6 +1353,8 @@ func TestHotelMatchTailLatency(t *testing.T) {
 		cosSimNoDelegatedInitScalingTime time.Duration = 85 * time.Millisecond
 		cosSimDelegatedInitScalingTime   time.Duration = 50 * time.Millisecond
 		useMatchCaching                  bool          = true
+		migrate                          bool          = true
+		cachedUserFrac                   int64         = 70
 	)
 	ts, err := NewTstate(t)
 	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {
@@ -1359,6 +1373,11 @@ func TestHotelMatchTailLatency(t *testing.T) {
 				benchName += "_fast"
 				rps = rpsFast
 				dur = durFast
+			}
+			if migrate {
+				benchName += "_migrate"
+				rps = rpsMigrate
+				dur = durMigrate
 			}
 			if csDelInit {
 				benchName += "_csdi"
@@ -1408,6 +1427,7 @@ func TestHotelMatchTailLatency(t *testing.T) {
 					UseMatch:        true,
 				},
 				MatchUseCaching: useMatchCaching,
+				CachedUserFrac:  cachedUserFrac,
 				Durs:            dur,
 				MaxRPS:          rps,
 				ScaleGeo: &benchmarks.ManualScalingConfig{
@@ -1427,7 +1447,7 @@ func TestHotelMatchTailLatency(t *testing.T) {
 					},
 					Migrate: &benchmarks.MigrationConfig{
 						Svc:              "cached",
-						Migrate:          false,
+						Migrate:          migrate,
 						MigrationDelays:  []time.Duration{},
 						MigrationTargets: []int{},
 					},

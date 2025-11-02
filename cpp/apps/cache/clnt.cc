@@ -420,7 +420,8 @@ std::expected<
             std::string, std::shared_ptr<sigmaos::apps::cache::Value>>>>>,
     sigmaos::serr::Error>
 Clnt::DelegatedMultiDumpShard(uint64_t rpc_idx, std::vector<uint32_t> &shards) {
-  log(CACHECLNT, "DelegatedMultiDumpShard({})", (int)rpc_idx);
+  log(CACHECLNT, "DelegatedMultiDumpShard({}) nshard {}", (int)rpc_idx,
+      shards.size());
   std::shared_ptr<sigmaos::rpc::Clnt> rpcc;
   {
     auto res = get_clnt(0, false);

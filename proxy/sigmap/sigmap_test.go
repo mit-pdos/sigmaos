@@ -67,7 +67,7 @@ func TestCachedDelegatedReshard(t *testing.T) {
 	}
 
 	// Start the cachegrp job
-	cm, err := cachegrpmgr.NewCacheMgrEPCache(mrts.GetRealm(test.REALM1).SigmaClnt, epcj, JOB_NAME, ncache, cacheMcpu, cacheGC)
+	cm, err := cachegrpmgr.NewCacheMgrEPCache(mrts.GetRealm(test.REALM1).SigmaClnt, epcj, JOB_NAME, cachegrpmgr.NewCacheJobConfig(ncache, cacheMcpu, cacheGC))
 	if !assert.Nil(t, err, "Err new cachemgr: %v", err) {
 		return
 	}
@@ -192,7 +192,7 @@ func TestCachedDelegatedReshardCPPScaler(t *testing.T) {
 	}
 
 	// Start the cachegrp job
-	cm, err := cachegrpmgr.NewCacheMgrEPCache(mrts.GetRealm(test.REALM1).SigmaClnt, epcj, JOB_NAME, ncache, cacheMcpu, cacheGC)
+	cm, err := cachegrpmgr.NewCacheMgrEPCache(mrts.GetRealm(test.REALM1).SigmaClnt, epcj, JOB_NAME, cachegrpmgr.NewCacheJobConfig(ncache, cacheMcpu, cacheGC))
 	if !assert.Nil(t, err, "Err new cachemgr: %v", err) {
 		return
 	}
@@ -203,6 +203,67 @@ func TestCachedDelegatedReshardCPPScaler(t *testing.T) {
 	}
 	// Sleep for a bit, for the list of hot shards to populate
 	if err := cm.AddScalerServerWithSigmaPath(sp.NOT_SET, DELEGATED_INIT, CPP, SHMEM); !assert.Nil(t, err, "Err add scaler server(%v): %v", err) {
+		return
+	}
+	time.Sleep(2 * time.Second)
+	for i, key := range keys {
+		val := &cacheproto.CacheString{}
+		// Try getting from the backup server
+		if err := cc.Get(key, val); !assert.Nil(t, err, "Err get cachemgr: %v expected to be in shard: %v", err, cacheclnt.Key2shard(key, cache.NSHARD)) {
+			break
+		}
+		if !assert.Equal(t, val.Val, "val-"+strconv.Itoa(i), "Err vals don't match") {
+			break
+		}
+	}
+	time.Sleep(5 * time.Second)
+	if err := cm.Stop(); !assert.Nil(t, err, "Err stop cachemgr: %v", err) {
+		return
+	}
+}
+
+func TestCachedMigrate(t *testing.T) {
+	const (
+		JOB_NAME       = "scalecache-job"
+		ncache         = 3
+		cacheMcpu      = 1000
+		cacheGC        = true
+		useEPCache     = true
+		N_KV           = 5000
+		DELEGATED_INIT = true
+		TOP_N          = cachesrv.GET_ALL_SHARDS
+		CPP            = true
+		SHMEM          = true
+		MIGRATE_FROM   = 0
+	)
+
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	defer mrts.Shutdown()
+
+	var epcj *epsrv.EPCacheJob
+	var err error
+	if useEPCache {
+		epcj, err = epsrv.NewEPCacheJob(mrts.GetRealm(test.REALM1).SigmaClnt)
+		if !assert.Nil(t, err, "Err new epCacheJob: %v", err) {
+			return
+		}
+	}
+
+	// Start the cachegrp job
+	cm, err := cachegrpmgr.NewCacheMgrEPCache(mrts.GetRealm(test.REALM1).SigmaClnt, epcj, JOB_NAME, cachegrpmgr.NewCacheJobConfig(ncache, cacheMcpu, cacheGC))
+	if !assert.Nil(t, err, "Err new cachemgr: %v", err) {
+		return
+	}
+	cc := cachegrpclnt.NewCachedSvcClntEPCache(mrts.GetRealm(test.REALM1).FsLib, epcj.Clnt, JOB_NAME)
+	keys, err := writeKVsToCache(cc, N_KV)
+	if !assert.Nil(t, err, "Err write KVs to cache: %v", err) {
+		return
+	}
+	// Sleep for a bit, for the list of hot shards to populate
+	if err := cm.MigrateServerWithSigmaPath(sp.NOT_SET, DELEGATED_INIT, MIGRATE_FROM); !assert.Nil(t, err, "Err migrate server(%v): %v", err) {
 		return
 	}
 	time.Sleep(2 * time.Second)

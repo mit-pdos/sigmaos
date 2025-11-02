@@ -1448,8 +1448,8 @@ func TestHotelMatchTailLatency(t *testing.T) {
 					Migrate: &benchmarks.MigrationConfig{
 						Svc:              "cached",
 						Migrate:          migrate,
-						MigrationDelays:  []time.Duration{},
-						MigrationTargets: []int{},
+						MigrationDelays:  []time.Duration{10 * time.Second},
+						MigrationTargets: []int{0},
 					},
 				},
 				CosSimBenchCfg: &benchmarks.CosSimBenchConfig{

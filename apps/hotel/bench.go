@@ -13,13 +13,21 @@ import (
 	rpcclnt "sigmaos/rpc/clnt"
 )
 
+var cachedUserSet []uint64 = []uint64{12345}
+
+func SetCachedUserSet(nuser int) {
+	for i := 0; i < nuser-1; i++ {
+		cachedUserSet = append(cachedUserSet, uint64(rand.Uint64()))
+	}
+}
+
 func RandMatchReq(wc *WebClnt, r *rand.Rand, cachedUserFrac int64, vecRangeStart uint64, vecRangeEnd uint64, cache bool) error {
 	// Select a random user ID
-	userID := rand.Int63()
-	// With odds cachedUserFrac, set the user ID to a fixed value
-	if userID%100 < cachedUserFrac {
-		// TODO: set to something already cached
-		userID = 12345
+	userID := rand.Uint64()
+	// With odds cachedUserFrac, set the user ID to a cached value
+	if uint64(userID)%100 < uint64(cachedUserFrac) {
+		// Pick a user from the cached set
+		userID = cachedUserSet[int(userID)%len(cachedUserSet)]
 	}
 	userVecID := uint64(2)
 	return wc.Match(uint64(userID), userVecID, cache, &cossimproto.VecRange{

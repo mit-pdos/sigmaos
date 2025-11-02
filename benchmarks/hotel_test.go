@@ -26,8 +26,9 @@ import (
 )
 
 const (
-	RAND_INIT = 12345
-	HOTEL_JOB = "hotel-job"
+	RAND_INIT                  = 12345
+	HOTEL_CACHED_USER_SET_SIZE = 1000
+	HOTEL_JOB                  = "hotel-job"
 )
 
 type hotelFn func(wc *hotel.WebClnt, r *rand.Rand)
@@ -90,6 +91,7 @@ func NewHotelJob(ts *test.RealmTstate, p *perf.Perf, dc *DeploymentCost, sigmaos
 
 	if ji.cfg.JobCfg.UseMatch {
 		ji.cfg.JobCfg.Srvs = hotel.NewHotelSvcWithMatch()
+		hotel.SetCachedUserSet(HOTEL_CACHED_USER_SET_SIZE)
 	} else {
 		ji.cfg.JobCfg.Srvs = hotel.NewHotelSvc()
 	}

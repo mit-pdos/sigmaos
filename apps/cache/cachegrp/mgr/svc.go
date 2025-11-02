@@ -165,7 +165,7 @@ func (cs *CachedSvc) addScalerServerWithSigmaPath(sigmaPath string, delegatedIni
 	if cpp {
 		bin = "cached-srv-cpp"
 	}
-	p := proc.NewProc(bin, []string{filepath.Join(cs.pn, cachegrp.SRVDIR), cs.job, strconv.Itoa(srvID), strconv.FormatBool(cs.useEPCache), strconv.Itoa(oldNSrv), strconv.Itoa(newNSrv), "false"})
+	p := proc.NewProc(bin, []string{filepath.Join(cs.pn, cachegrp.SRVDIR), cs.job, strconv.Itoa(srvID), strconv.FormatBool(cs.useEPCache), strconv.Itoa(oldNSrv), strconv.Itoa(newNSrv), strconv.Itoa(newNSrv - 1), "false"})
 	p.SetUseShmem(shmem)
 	db.DPrintf(db.TEST, "Scale %v", p.GetPid())
 	if !cs.cfg.GC {
@@ -250,7 +250,7 @@ func (cs *CachedSvc) migrateServerWithSigmaPath(sigmaPath string, delegatedInit 
 	shmem := true
 	nsrv := len(cs.servers)
 	bin := "cached-srv-cpp"
-	p := proc.NewProc(bin, []string{filepath.Join(cs.pn, cachegrp.SRVDIR), cs.job, strconv.Itoa(srvID), strconv.FormatBool(cs.useEPCache), strconv.Itoa(nsrv), strconv.Itoa(nsrv), "true"})
+	p := proc.NewProc(bin, []string{filepath.Join(cs.pn, cachegrp.SRVDIR), cs.job, strconv.Itoa(srvID), strconv.FormatBool(cs.useEPCache), strconv.Itoa(nsrv), strconv.Itoa(nsrv), strconv.Itoa(srvID), "true"})
 	p.SetUseShmem(shmem)
 	db.DPrintf(db.TEST, "Migrate(%v) %v -> %v", srvID, cs.servers[srvID], p.GetPid())
 	if !cs.cfg.GC {
@@ -324,7 +324,14 @@ func (cs *CachedSvc) migrateServerWithSigmaPath(sigmaPath string, delegatedInit 
 		}
 		cs.serverEPs[srvID] = ep
 	}
-	cs.servers = append(cs.servers, p.GetPid())
+	// Evict the old server
+	if err := cs.Evict(cs.servers[srvID]); err != nil {
+		return err
+	}
+	if _, err := cs.WaitExit(cs.servers[srvID]); err != nil {
+		return err
+	}
+	cs.servers[srvID] = p.GetPid()
 	return nil
 }
 

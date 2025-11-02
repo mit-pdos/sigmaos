@@ -116,6 +116,12 @@ func (csc *CachedSvcClnt) monitorServers() {
 			if err != nil {
 				db.DPrintf(db.ERROR, "Err NewRPCClnt cacheclnt cache ID: %v", err)
 			}
+			// EP has been removed, so remove its cache clnt
+			if len(csc.eps[id].Addr) == 0 {
+				db.DPrintf(db.CACHEDSVCCLNT, "EP removed for cache %v", is.ID)
+				csc.cc.ClntCache.Delete(csc.Server(id))
+				continue
+			}
 			// EP has changed, so create a new cache clnt
 			if csc.eps[id].Addr[0].IPStr != is.EndpointProto.Addr[0].IPStr ||
 				csc.eps[id].Addr[0].PortInt != is.EndpointProto.Addr[0].PortInt ||

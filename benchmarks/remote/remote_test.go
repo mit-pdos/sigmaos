@@ -1340,6 +1340,7 @@ func TestHotelMatchTailLatency(t *testing.T) {
 		proactiveScaling                 bool          = true
 		cosSimNoDelegatedInitScalingTime time.Duration = 85 * time.Millisecond
 		cosSimDelegatedInitScalingTime   time.Duration = 50 * time.Millisecond
+		useMatchCaching                  bool          = true
 	)
 	ts, err := NewTstate(t)
 	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {
@@ -1406,7 +1407,7 @@ func TestHotelMatchTailLatency(t *testing.T) {
 					GeoNResults:     geoNResults,
 					UseMatch:        true,
 				},
-				MatchUseCaching: false,
+				MatchUseCaching: useMatchCaching,
 				Durs:            dur,
 				MaxRPS:          rps,
 				ScaleGeo: &benchmarks.ManualScalingConfig{

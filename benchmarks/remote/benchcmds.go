@@ -660,7 +660,7 @@ func GetCachedScalerClientCmdConstructor(leader bool, numClients int, prewarm bo
 		const (
 			debugSelectors    string = "\"TEST;BENCH;LOADGEN;THROUGHPUT;CPU_UTIL;SPAWN_LAT;PROXY_RPC_LAT;COSSIMSRV;\""
 			valgrindSelectors string = ""
-			perfSelectors     string = "\"CACHESRV_TPT;TEST_TPT;BENCH_TPT;\""
+			perfSelectors     string = "\"CACHESRV_TPT;TEST_TPT;BENCH_TPT;HOTEL_MATCH_TPT;\""
 		)
 		testName := ""
 		if leader {

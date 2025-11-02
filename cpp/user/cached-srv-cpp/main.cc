@@ -38,7 +38,7 @@ int main(int argc, char *argv[]) {
   int old_n_srv = std::stoi(argv[5]);
   int new_n_srv = std::stoi(argv[6]);
   std::string str_migrate = argv[7];
-  bool migrate = str_migrate == "migrate";
+  bool migrate = str_migrate == "true";
 
   start = GetCurrentTime();
   auto srv = std::make_shared<sigmaos::apps::cache::Srv>(

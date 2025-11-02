@@ -36,6 +36,7 @@ class Clnt {
         _clnts() {}
   ~Clnt() {}
   std::expected<int, sigmaos::serr::Error> InitClnts(uint32_t last_srv_id);
+  std::expected<int, sigmaos::serr::Error> InitClnt(uint32_t srv_id);
   std::expected<int, sigmaos::serr::Error> Get(
       std::string key, std::shared_ptr<std::string> val);
   std::expected<std::shared_ptr<

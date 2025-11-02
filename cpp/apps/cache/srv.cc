@@ -122,12 +122,19 @@ std::expected<int, sigmaos::serr::Error> Srv::Init(int old_n_srv,
   if (!_sp_clnt->ProcEnv()->GetRunBootScript()) {
     // Establish connections to other cached servers
     auto startConnect = GetCurrentTime();
-    {
+    if (!_migrated) {
       auto res = _cache_clnt->InitClnts(old_n_srv);
       if (!res.has_value()) {
         log(CACHESRV_ERR, "Error InitClnts: {}", res.error());
         fatal("Error InitClnts: {}", res.error().String());
         return std::unexpected(res.error());
+      } else {
+        auto res = _cache_clnt->InitClnt(_srv_id);
+        if (!res.has_value()) {
+          log(CACHESRV_ERR, "Error InitClnt: {}", res.error());
+          fatal("Error InitClnt: {}", res.error().String());
+          return std::unexpected(res.error());
+        }
       }
     }
     LogSpawnLatency(_sp_clnt->ProcEnv()->GetPID(),

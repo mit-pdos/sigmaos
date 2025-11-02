@@ -77,6 +77,16 @@ void Clnt::init_clnt(
   result->set_value(0);
 }
 
+std::expected<int, sigmaos::serr::Error> Clnt::InitClnt(uint32_t srv_id) {
+  auto res = get_clnt(srv_id, true);
+  if (!res.has_value()) {
+    log(CACHECLNT_ERR, "Error init_clnt get_clnt ({}): {}", (int)srv_id,
+        res.error().String());
+    return std::unexpected(res.error());
+  }
+  return 0;
+}
+
 std::expected<int, sigmaos::serr::Error> Clnt::InitClnts(uint32_t last_srv_id) {
   std::vector<std::thread> init_threads;
   std::vector<

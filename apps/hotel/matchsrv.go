@@ -64,14 +64,14 @@ func RunMatchSrv(job string) error {
 	}
 	defer p.Done()
 
-	pMiss, err := perf.NewPerfMulti(ssrv.MemFs.SigmaClnt().ProcEnv(), perf.HOTEL_MATCH, "-miss")
+	pMiss, err := perf.NewPerfMulti(ssrv.MemFs.SigmaClnt().ProcEnv(), perf.HOTEL_MATCH, "miss")
 	if err != nil {
 		db.DFatalf("NewPerf err %v\n", err)
 	}
 	defer pMiss.Done()
 	s.pMiss = pMiss
 
-	pHit, err := perf.NewPerfMulti(ssrv.MemFs.SigmaClnt().ProcEnv(), perf.HOTEL_MATCH, "-hit")
+	pHit, err := perf.NewPerfMulti(ssrv.MemFs.SigmaClnt().ProcEnv(), perf.HOTEL_MATCH, "hit")
 	if err != nil {
 		db.DFatalf("NewPerf err %v\n", err)
 	}

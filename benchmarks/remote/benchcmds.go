@@ -298,7 +298,7 @@ func GetHotelClientCmdConstructor(hotelReqName string, leader bool, numClients i
 			//			debugSelectors string = "\"TEST;THROUGHPUT;CPU_UTIL;\""
 			//			debugSelectors string = "\"TEST;THROUGHPUT;CPU_UTIL;SPAWN_LAT;\""
 			debugSelectors string = "\"TEST;THROUGHPUT;CPU_UTIL;SPAWN_LAT;COSSIMSRV;COSSIMSRV_ERR;AUTOSCALER;AUTOSCALER_ERR;COSSIMCLNT;COSSIMCLNT_ERR;\""
-			perfSelectors  string = "\"HOTEL_WWW_TPT;TEST_TPT;BENCH_TPT;COST_VAL;COSSIMSRV_CPU;\""
+			perfSelectors  string = "\"HOTEL_WWW_TPT;TEST_TPT;BENCH_TPT;COST_VAL;COSSIMSRV_CPU;HOTEL_MATCH_TPT;\""
 		)
 		sys := ""
 		if bcfg.K8s {
@@ -660,7 +660,7 @@ func GetCachedScalerClientCmdConstructor(leader bool, numClients int, prewarm bo
 		const (
 			debugSelectors    string = "\"TEST;BENCH;LOADGEN;THROUGHPUT;CPU_UTIL;SPAWN_LAT;PROXY_RPC_LAT;COSSIMSRV;\""
 			valgrindSelectors string = ""
-			perfSelectors     string = "\"CACHESRV_TPT;TEST_TPT;BENCH_TPT;HOTEL_MATCH_TPT;\""
+			perfSelectors     string = "\"CACHESRV_TPT;TEST_TPT;BENCH_TPT;\""
 		)
 		testName := ""
 		if leader {

@@ -95,16 +95,18 @@ func (csc *CachedSvcClnt) monitorServers() {
 		for i := csc.nsrv; i < len(instances); i++ {
 			istr := strconv.Itoa(i)
 			for _, is := range instances {
-				if is.ID == istr && sp.TTendpoint(is.EndpointProto.Type) == sp.CPP_EP {
+				if is.ID == istr {
 					ep := sp.NewEndpointFromProto(is.EndpointProto)
 					// Append the new endpoint
 					csc.eps = append(csc.eps, ep)
-					rpcc, err := rpcncclnt.NewTCPRPCClnt(is.ID, ep, 0)
-					if err != nil {
-						db.DPrintf(db.ERROR, "Err NewRPCClnt cacheclnt: %v", err)
-					} else {
-						db.DPrintf(db.CACHEDSVCCLNT, "Create new cacheclnt for cache %v", is.ID)
-						csc.cc.ClntCache.Put(csc.Server(i), rpcc)
+					if sp.TTendpoint(is.EndpointProto.Type) == sp.CPP_EP {
+						rpcc, err := rpcncclnt.NewTCPRPCClnt(is.ID, ep, 0)
+						if err != nil {
+							db.DPrintf(db.ERROR, "Err NewRPCClnt cacheclnt: %v", err)
+						} else {
+							db.DPrintf(db.CACHEDSVCCLNT, "Create new cacheclnt for cache %v", is.ID)
+							csc.cc.ClntCache.Put(csc.Server(i), rpcc)
+						}
 					}
 				}
 			}

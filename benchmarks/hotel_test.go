@@ -405,6 +405,7 @@ func (ji *HotelJobInstance) StartHotelJob() {
 	}
 	go ji.scaleGeoSrv()
 	go ji.scaleCaches()
+	go ji.migrateCaches()
 	go ji.scaleCosSimSrv()
 	db.DPrintf(db.TEST, "Benchmark start run")
 	for i, lg := range ji.lgs {

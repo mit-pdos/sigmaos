@@ -26,8 +26,12 @@ func RandMatchReq(wc *WebClnt, r *rand.Rand, cachedUserFrac int64, vecRangeStart
 	userID := rand.Uint64()
 	// With odds cachedUserFrac, set the user ID to a cached value
 	if uint64(userID)%100 < uint64(cachedUserFrac) {
+		idx := int(userID) % len(cachedUserSet)
+		if idx < 0 {
+			idx *= -1
+		}
 		// Pick a user from the cached set
-		userID = cachedUserSet[int(userID)%len(cachedUserSet)]
+		userID = cachedUserSet[idx]
 	}
 	userVecID := uint64(2)
 	return wc.Match(uint64(userID), userVecID, cache, &cossimproto.VecRange{

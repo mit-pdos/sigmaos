@@ -198,7 +198,7 @@ type HotelJob struct {
 	*sigmaclnt.SigmaClnt
 	EPCacheJob      *epsrv.EPCacheJob
 	cacheClnt       *cachegrpclnt.CachedSvcClnt
-	cacheMgr        *cachegrpmgr.CacheMgr
+	CacheMgr        *cachegrpmgr.CacheMgr
 	CacheAutoscaler *cachegrpclnt.Autoscaler
 	CosSimJob       *cossimsrv.CosSimJob
 	pids            []sp.Tpid
@@ -301,7 +301,7 @@ func NewHotelJob(sc *sigmaclnt.SigmaClnt, cfg *HotelJobConfig, csjConf *cossimsr
 		SigmaClnt:       sc,
 		EPCacheJob:      epcj,
 		cacheClnt:       cc,
-		cacheMgr:        cm,
+		CacheMgr:        cm,
 		CacheAutoscaler: ca,
 		CosSimJob:       cosSimJob,
 		pids:            pids,
@@ -370,8 +370,8 @@ func (hj *HotelJob) Stop() error {
 	if hj.CosSimJob != nil {
 		hj.CosSimJob.Stop()
 	}
-	if hj.cacheMgr != nil {
-		hj.cacheMgr.Stop()
+	if hj.CacheMgr != nil {
+		hj.CacheMgr.Stop()
 	}
 	hj.EPCacheJob.Stop()
 	return nil

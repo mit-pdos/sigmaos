@@ -111,6 +111,7 @@ func NewHotelJob(ts *test.RealmTstate, p *perf.Perf, dc *DeploymentCost, sigmaos
 				case "cossim-srv-cpp":
 					ji.cossimKIDs[p.GetKernelID()] = true
 					db.DPrintf(db.TEST, "cossim-srv-cpp[%v] running on kernel %v", p.GetPid(), p.GetKernelID())
+					ji.warmCachedSrvKID = p.GetKernelID()
 					foundCossim = true
 				case "cached":
 					ji.cacheKIDs[p.GetKernelID()] = true
@@ -138,6 +139,13 @@ func NewHotelJob(ts *test.RealmTstate, p *perf.Perf, dc *DeploymentCost, sigmaos
 				return ji
 			}
 			db.DPrintf(db.TEST, "Warmed kid %v with CossimSrv bin", ji.warmCossimSrvKID)
+			// Warm up an msched currently running cossim with the cached srv bin
+			db.DPrintf(db.TEST, "Target kernel to run prewarm with CossimSrv bin: %v", ji.warmCossimSrvKID)
+			err = ji.msc.WarmProcd(ji.warmCachedSrvKID, ts.Ts.ProcEnv().GetPID(), ts.GetRealm(), "cached-srv-cpp-v"+sp.Version, ts.Ts.ProcEnv().GetSigmaPath(), proc.T_LC)
+			if !assert.Nil(ts.Ts.T, err, "Err warming third msched with cached bin: %v", err) {
+				return ji
+			}
+			db.DPrintf(db.TEST, "Warmed kid %v with CachedSrv bin", ji.warmCachedSrvKID)
 		}
 	}
 
@@ -255,6 +263,27 @@ func (ji *HotelJobInstance) scaleCaches() {
 				} else if deltas[i] < 0 {
 					db.DPrintf(db.TEST, "Manual scale: Scale down caches by %v not implemented", -deltas[i])
 				}
+			}
+		}()
+	}
+}
+
+func (ji *HotelJobInstance) migrateCaches() {
+	// If this isn't the main benchmark driver, bail out
+	if ji.justCli {
+		return
+	}
+	if ji.cfg.CacheBenchCfg.Migrate.Migrate {
+		go func() {
+			delays := ji.cfg.CacheBenchCfg.Migrate.MigrationDelays
+			targets := ji.cfg.CacheBenchCfg.Migrate.MigrationTargets
+			for i := 0; i < len(delays) && i < len(targets); i++ {
+				time.Sleep(delays[i])
+				db.DPrintf(db.TEST, "Cache migration: Migrate cache target %v", targets[i])
+				if err := ji.hj.CacheMgr.MigrateServerWithSigmaPath(chunk.ChunkdPath(ji.warmCachedSrvKID), ji.cfg.CacheBenchCfg.DelegateInit, targets[i]); !assert.Nil(ji.Ts.T, err, "Err migrate cache server: %v", err) {
+					return
+				}
+				db.DPrintf(db.TEST, "Cache migration: Done migrating cache target %v", targets[i])
 			}
 		}()
 	}

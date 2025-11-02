@@ -68,6 +68,12 @@ var DefaultCacheBenchConfig = &CacheBenchConfig{
 		ScaleDelays: []time.Duration{},
 		ScaleDeltas: []int{},
 	},
+	Migrate: &MigrationConfig{
+		Svc:              "cached",
+		Migrate:          false,
+		MigrationDelays:  []time.Duration{},
+		MigrationTargets: []int{},
+	},
 }
 
 var DefaultHotelBenchConfig = &HotelBenchConfig{

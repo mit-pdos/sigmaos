@@ -445,6 +445,12 @@ func TestHotelTailLatency(t *testing.T) {
 				ScaleDelays: []time.Duration{scaleCacheDelay},
 				ScaleDeltas: []int{numCachesToAdd},
 			},
+			Migrate: &benchmarks.MigrationConfig{
+				Svc:              "cached",
+				Migrate:          false,
+				MigrationDelays:  []time.Duration{},
+				MigrationTargets: []int{},
+			},
 		},
 		CosSimBenchCfg: nil,
 	}
@@ -935,6 +941,12 @@ func TestLCBEHotelImgResizeMultiplexing(t *testing.T) {
 				ScaleDelays: []time.Duration{scaleCacheDelay},
 				ScaleDeltas: []int{numCachesToAdd},
 			},
+			Migrate: &benchmarks.MigrationConfig{
+				Svc:              "cached",
+				Migrate:          false,
+				MigrationDelays:  []time.Duration{},
+				MigrationTargets: []int{},
+			},
 		},
 		CosSimBenchCfg: nil,
 	}
@@ -1014,6 +1026,12 @@ func TestLCBEHotelImgResizeRPCMultiplexing(t *testing.T) {
 				Scale:       manuallyScaleCaches,
 				ScaleDelays: []time.Duration{scaleCacheDelay},
 				ScaleDeltas: []int{numCachesToAdd},
+			},
+			Migrate: &benchmarks.MigrationConfig{
+				Svc:              "cached",
+				Migrate:          false,
+				MigrationDelays:  []time.Duration{},
+				MigrationTargets: []int{},
 			},
 		},
 		CosSimBenchCfg: nil,
@@ -1182,6 +1200,12 @@ func TestScaleCachedScaler(t *testing.T) {
 						PutDurs:       []time.Duration{0 * time.Second},
 						PutMaxRPS:     []int{0},
 						ManuallyScale: scaleCached,
+						Migrate: &benchmarks.MigrationConfig{
+							Svc:              "cached",
+							Migrate:          false,
+							MigrationDelays:  []time.Duration{},
+							MigrationTargets: []int{},
+						},
 					}
 					// Create CosSimBenchConfig
 					var cosSimBenchCfg *benchmarks.CosSimBenchConfig
@@ -1399,6 +1423,12 @@ func TestHotelMatchTailLatency(t *testing.T) {
 						Scale:       manuallyScaleCaches,
 						ScaleDelays: []time.Duration{scaleCacheDelay},
 						ScaleDeltas: []int{numCachesToAdd},
+					},
+					Migrate: &benchmarks.MigrationConfig{
+						Svc:              "cached",
+						Migrate:          false,
+						MigrationDelays:  []time.Duration{},
+						MigrationTargets: []int{},
 					},
 				},
 				CosSimBenchCfg: &benchmarks.CosSimBenchConfig{

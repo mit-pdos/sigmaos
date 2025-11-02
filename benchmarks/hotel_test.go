@@ -52,6 +52,7 @@ type HotelJobInstance struct {
 	cosSimAutoscaler *autoscale.Autoscaler
 	// Cluster pre-warming
 	warmCossimSrvKID string
+	warmCachedSrvKID string
 	cossimKIDs       map[string]bool
 	cacheKIDs        map[string]bool
 	*test.RealmTstate

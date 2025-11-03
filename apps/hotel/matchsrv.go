@@ -22,7 +22,7 @@ import (
 )
 
 type Match struct {
-	sync.Mutex
+	mu         sync.Mutex
 	inputVecs  map[uint64][]float64
 	cossimClnt *cossimclnt.CosSimShardClnt
 	cc         *cachegrpclnt.CachedSvcClnt
@@ -82,8 +82,8 @@ func RunMatchSrv(job string) error {
 }
 
 func (s *Match) getInputVec(userVecID uint64) ([]float64, error) {
-	s.Lock()
-	defer s.Unlock()
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	if vec, ok := s.inputVecs[userVecID]; ok {
 		return vec, nil
 	}

@@ -8,6 +8,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	cachegrpclnt "sigmaos/apps/cache/cachegrp/clnt"
 	cossimproto "sigmaos/apps/cossim/proto"
 	"sigmaos/apps/hotel/proto"
 	rpcclnt "sigmaos/rpc/clnt"
@@ -19,6 +20,20 @@ func SetCachedUserSet(nuser int) {
 	for i := 0; i < nuser-1; i++ {
 		cachedUserSet = append(cachedUserSet, uint64(rand.Uint64()))
 	}
+}
+
+func WarmCachedUserSet(cc *cachegrpclnt.CachedSvcClnt) error {
+	for _, uid := range cachedUserSet {
+		cacheKey := fmt.Sprintf("user-preference-%v", uid)
+		err := cc.Put(cacheKey, &cossimproto.CosSimRep{
+			ID:  uid,
+			Val: 99.0,
+		})
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func RandMatchReq(wc *WebClnt, r *rand.Rand, cachedUserFrac int64, vecRangeStart uint64, vecRangeEnd uint64, cache bool) error {

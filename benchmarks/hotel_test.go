@@ -149,6 +149,10 @@ func NewHotelJob(ts *test.RealmTstate, p *perf.Perf, dc *DeploymentCost, sigmaos
 				return ji
 			}
 			db.DPrintf(db.TEST, "Warmed kid %v with CachedSrv bin", ji.warmCachedSrvKID)
+			err = hotel.WarmCachedUserSet(ji.hj.CacheClnt)
+			if !assert.Nil(ts.Ts.T, err, "Err warming cached user set: %v", err) {
+				return ji
+			}
 		}
 	}
 

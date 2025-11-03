@@ -63,3 +63,11 @@ func IsMissShard(err error) bool {
 	}
 	return false
 }
+
+func IsMigrating(err error) bool {
+	var sr *serr.Err
+	if errors.As(err, &sr) {
+		return sr.IsErrError() && strings.HasPrefix(sr.Obj, "migrating")
+	}
+	return false
+}

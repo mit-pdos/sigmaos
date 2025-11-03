@@ -104,7 +104,7 @@ func (csc *CachedSvcClnt) monitorServers() {
 						if err != nil {
 							db.DPrintf(db.ERROR, "Err NewRPCClnt cacheclnt: %v", err)
 						} else {
-							db.DPrintf(db.CACHEDSVCCLNT, "Create new cacheclnt for cache %v", is.ID)
+							db.DPrintf(db.CACHEDSVCCLNT, "Create new cacheclnt for cache %v: %p", is.ID, rpcc)
 							csc.cc.ClntCache.Put(csc.Server(i), rpcc)
 						}
 					}
@@ -131,12 +131,14 @@ func (csc *CachedSvcClnt) monitorServers() {
 				db.DPrintf(db.CACHEDSVCCLNT, "EP has changed for cache %v", is.ID)
 				ep := sp.NewEndpointFromProto(is.EndpointProto)
 				csc.eps[id] = ep
-				rpcc, err := rpcncclnt.NewTCPRPCClnt(is.ID, ep, 0)
-				if err != nil {
-					db.DPrintf(db.ERROR, "Err NewRPCClnt cacheclnt: %v", err)
-				} else {
-					db.DPrintf(db.CACHEDSVCCLNT, "Create new cacheclnt for cache %v", is.ID)
-					csc.cc.ClntCache.Put(csc.Server(id), rpcc)
+				if sp.TTendpoint(is.EndpointProto.Type) == sp.CPP_EP {
+					rpcc, err := rpcncclnt.NewTCPRPCClnt(is.ID, ep, 0)
+					if err != nil {
+						db.DPrintf(db.ERROR, "Err NewRPCClnt cacheclnt: %v", err)
+					} else {
+						db.DPrintf(db.CACHEDSVCCLNT, "Create new cacheclnt overwrite for cache %v: %p", is.ID, rpcc)
+						csc.cc.ClntCache.Put(csc.Server(id), rpcc)
+					}
 				}
 			}
 		}

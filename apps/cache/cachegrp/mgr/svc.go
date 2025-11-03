@@ -328,6 +328,7 @@ func (cs *CachedSvc) migrateServerWithSigmaPath(cc *cacheclnt.CacheClnt, sigmaPa
 		}
 		cs.serverEPs[srvID] = ep
 	}
+	db.DPrintf(db.CACHESRV, "Evict migrated server %v: %v", srvID, cs.servers[srvID])
 	// Evict the old server
 	if err := cs.Evict(cs.servers[srvID]); err != nil {
 		return err
@@ -335,6 +336,7 @@ func (cs *CachedSvc) migrateServerWithSigmaPath(cc *cacheclnt.CacheClnt, sigmaPa
 	if _, err := cs.WaitExit(cs.servers[srvID]); err != nil {
 		return err
 	}
+	db.DPrintf(db.CACHESRV, "New name for migrated server %v: %v", srvID, cs.servers[srvID])
 	cs.servers[srvID] = p.GetPid()
 	return nil
 }

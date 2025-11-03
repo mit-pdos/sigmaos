@@ -47,7 +47,7 @@ std::expected<std::shared_ptr<std::string>, sigmaos::serr::Error> Shard::Get(
 
 void Shard::Put(std::string &key, std::shared_ptr<std::string> val) {
   std::lock_guard<std::mutex> guard(_mu);
-  _map.at(key) = std::make_shared<Value>(val);
+  _map[key] = std::make_shared<Value>(val);
 }
 
 bool Shard::Delete(std::string &key) {

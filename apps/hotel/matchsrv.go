@@ -21,6 +21,10 @@ import (
 	"sigmaos/util/tracing"
 )
 
+const (
+	CACHE_MISS_SAMPLE_HZ = 500
+)
+
 type Match struct {
 	mu         sync.Mutex
 	inputVecs  map[uint64][]float64
@@ -64,14 +68,14 @@ func RunMatchSrv(job string) error {
 	}
 	defer p.Done()
 
-	pMiss, err := perf.NewPerfMulti(ssrv.MemFs.SigmaClnt().ProcEnv(), perf.HOTEL_MATCH, "miss")
+	pMiss, err := perf.NewPerfMultiTptSampleHz(ssrv.MemFs.SigmaClnt().ProcEnv(), perf.HOTEL_MATCH, "miss", 500)
 	if err != nil {
 		db.DFatalf("NewPerf err %v\n", err)
 	}
 	defer pMiss.Done()
 	s.pMiss = pMiss
 
-	pHit, err := perf.NewPerfMulti(ssrv.MemFs.SigmaClnt().ProcEnv(), perf.HOTEL_MATCH, "hit")
+	pHit, err := perf.NewPerfMultiTptSampleHz(ssrv.MemFs.SigmaClnt().ProcEnv(), perf.HOTEL_MATCH, "hit", 500)
 	if err != nil {
 		db.DFatalf("NewPerf err %v\n", err)
 	}

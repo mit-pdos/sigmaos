@@ -109,7 +109,7 @@ func (s *Match) getInputVec(userVecID uint64) ([]float64, error) {
 func (s *Match) UserPreference(ctx fs.CtxI, req proto.MatchReq, res *proto.MatchRep) error {
 	db.DPrintf(db.HOTEL_MATCH, "Match UserPreference: %v", req)
 
-	cacheKey := fmt.Sprintf("user-preference-%v", req.UserVecID)
+	cacheKey := fmt.Sprintf("user-preference-%v", req.UserID)
 
 	if req.TryCache {
 		v := &cossimproto.CosSimRep{}

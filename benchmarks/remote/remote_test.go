@@ -1378,6 +1378,9 @@ func TestHotelMatchTailLatency(t *testing.T) {
 				benchName += "_migrate"
 				rps = rpsMigrate
 				dur = durMigrate
+				if fast {
+					continue
+				}
 			}
 			if csDelInit {
 				benchName += "_csdi"

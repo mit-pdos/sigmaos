@@ -39,7 +39,7 @@ func (svc *svc) add(i *proto.Instance) {
 	svc.instances[i.GetID()] = i
 	// Bump version
 	svc.v++
-	db.DPrintf(db.EPCACHE, "Add svc %v %v i %v result:", svc.name, svc.v, i, svc.instances)
+	db.DPrintf(db.EPCACHE, "Add svc %v %v i %v result: %v", svc.name, svc.v, i, svc.instances)
 	// Wake up waiters
 	svc.cond.Broadcast()
 }

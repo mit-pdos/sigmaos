@@ -358,6 +358,10 @@ func (csc *CachedSvcClnt) Dump(g int) (map[string]string, error) {
 	return csc.cc.DumpSrv(srv)
 }
 
+func (csc *CachedSvcClnt) GetCacheClnt() *cacheclnt.CacheClnt {
+	return csc.cc
+}
+
 func (csc *CachedSvcClnt) Close() {
 	csc.done = true
 	csc.dd.StopWatching()

@@ -197,7 +197,7 @@ func NewHotelSvcWithMatch() []*Srv {
 type HotelJob struct {
 	*sigmaclnt.SigmaClnt
 	EPCacheJob      *epsrv.EPCacheJob
-	cacheClnt       *cachegrpclnt.CachedSvcClnt
+	CacheClnt       *cachegrpclnt.CachedSvcClnt
 	CacheMgr        *cachegrpmgr.CacheMgr
 	CacheAutoscaler *cachegrpclnt.Autoscaler
 	CosSimJob       *cossimsrv.CosSimJob
@@ -300,7 +300,7 @@ func NewHotelJob(sc *sigmaclnt.SigmaClnt, cfg *HotelJobConfig, csjConf *cossimsr
 	hj := &HotelJob{
 		SigmaClnt:       sc,
 		EPCacheJob:      epcj,
-		cacheClnt:       cc,
+		CacheClnt:       cc,
 		CacheMgr:        cm,
 		CacheAutoscaler: ca,
 		CosSimJob:       cosSimJob,
@@ -378,8 +378,8 @@ func (hj *HotelJob) Stop() error {
 }
 
 func (hj *HotelJob) StatsSrv() ([]*rpc.RPCStatsSnapshot, error) {
-	if hj.cacheClnt != nil {
-		return hj.cacheClnt.StatsSrvs()
+	if hj.CacheClnt != nil {
+		return hj.CacheClnt.StatsSrvs()
 	}
 	db.DPrintf(db.ALWAYS, "No cacheclnt")
 	return nil, nil

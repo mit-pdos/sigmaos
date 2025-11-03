@@ -263,7 +263,7 @@ func TestCachedMigrate(t *testing.T) {
 		return
 	}
 	// Sleep for a bit, for the list of hot shards to populate
-	if err := cm.MigrateServerWithSigmaPath(sp.NOT_SET, DELEGATED_INIT, MIGRATE_FROM); !assert.Nil(t, err, "Err migrate server(%v): %v", err) {
+	if err := cm.MigrateServerWithSigmaPath(cc, sp.NOT_SET, DELEGATED_INIT, MIGRATE_FROM); !assert.Nil(t, err, "Err migrate server(%v): %v", err) {
 		return
 	}
 	time.Sleep(2 * time.Second)

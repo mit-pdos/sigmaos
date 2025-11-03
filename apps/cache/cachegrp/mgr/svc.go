@@ -12,6 +12,7 @@ import (
 
 	"sigmaos/apps/cache"
 	"sigmaos/apps/cache/cachegrp"
+	cacheclnt "sigmaos/apps/cache/clnt"
 	"sigmaos/apps/epcache"
 	epsrv "sigmaos/apps/epcache/srv"
 	db "sigmaos/debug"
@@ -246,7 +247,7 @@ func (cs *CachedSvc) addScalerServerWithSigmaPath(sigmaPath string, delegatedIni
 	return nil
 }
 
-func (cs *CachedSvc) migrateServerWithSigmaPath(sigmaPath string, delegatedInit bool, srvID int) error {
+func (cs *CachedSvc) migrateServerWithSigmaPath(cc *cacheclnt.CacheClnt, sigmaPath string, delegatedInit bool, srvID int) error {
 	shmem := true
 	nsrv := len(cs.servers)
 	bin := "cached-srv-cpp"
@@ -286,6 +287,9 @@ func (cs *CachedSvc) migrateServerWithSigmaPath(sigmaPath string, delegatedInit 
 		bootScriptInput := inputBuf.Bytes()
 		p.SetBootScript(cs.migrateBootScript, bootScriptInput)
 		p.SetRunBootScript(delegatedInit)
+	}
+	if err := cc.PrepareToMigrate(cs.Server(strconv.Itoa(srvID))); err != nil {
+		db.DPrintf(db.ERROR, "Err prep to migrate %v: err", srvID, err)
 	}
 	err := cs.Spawn(p)
 	if err != nil {
@@ -415,11 +419,11 @@ func (cs *CachedSvc) AddScalerServerWithSigmaPath(sigmaPath string, delegatedIni
 	return cs.addScalerServerWithSigmaPath(sigmaPath, delegatedInit, cpp, shmem)
 }
 
-func (cs *CachedSvc) MigrateServerWithSigmaPath(sigmaPath string, delegatedInit bool, srvID int) error {
+func (cs *CachedSvc) MigrateServerWithSigmaPath(cc *cacheclnt.CacheClnt, sigmaPath string, delegatedInit bool, srvID int) error {
 	cs.Lock()
 	defer cs.Unlock()
 
-	return cs.migrateServerWithSigmaPath(sigmaPath, delegatedInit, srvID)
+	return cs.migrateServerWithSigmaPath(cc, sigmaPath, delegatedInit, srvID)
 }
 
 func (cs *CachedSvc) AddBackupServerWithSigmaPath(sigmaPath string, i int, ep *sp.Tendpoint, delegatedInit bool, topN int) error {

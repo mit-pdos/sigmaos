@@ -46,6 +46,7 @@ type CacheSrv struct {
 	lastFence  *sp.Tfence
 	ssrv       *sigmasrv.SigmaSrv
 	perf       *perf.Perf
+	migrating  bool
 	shardStats []shardStats
 }
 
@@ -261,6 +262,16 @@ func (cs *CacheSrv) DeleteShard(ctx fs.CtxI, req cacheproto.ShardReq, rep *cache
 	return nil
 }
 
+func (cs *CacheSrv) PrepareToMigrate(ctx fs.CtxI, req cacheproto.CacheString, rep *cacheproto.CacheOK) error {
+	cs.mu.Lock()
+	defer cs.mu.Unlock()
+
+	cs.migrating = true
+
+	db.DPrintf(db.CACHESRV, "PrepToMigrate %v", req)
+	return nil
+}
+
 func (cs *CacheSrv) FreezeShard(ctx fs.CtxI, req cacheproto.ShardReq, rep *cacheproto.CacheOK) error {
 	cs.mu.Lock()
 	defer cs.mu.Unlock()
@@ -331,6 +342,10 @@ func (cs *CacheSrv) DumpShard(ctx fs.CtxI, req cacheproto.ShardReq, rep *cachepr
 }
 
 func (cs *CacheSrv) PutFence(ctx fs.CtxI, req cacheproto.CacheReq, rep *cacheproto.CacheRep) error {
+	if cs.isMigrating() {
+		return serr.NewErr(serr.TErrError, fmt.Sprintf("migrating"))
+	}
+
 	cs.mu.Lock()
 	defer cs.mu.Unlock()
 
@@ -348,6 +363,10 @@ func (cs *CacheSrv) PutFence(ctx fs.CtxI, req cacheproto.CacheReq, rep *cachepro
 }
 
 func (cs *CacheSrv) GetFence(ctx fs.CtxI, req cacheproto.CacheReq, rep *cacheproto.CacheRep) error {
+	if cs.isMigrating() {
+		return serr.NewErr(serr.TErrError, fmt.Sprintf("migrating"))
+	}
+
 	cs.mu.Lock()
 	defer cs.mu.Unlock()
 
@@ -380,6 +399,10 @@ func (cs *CacheSrv) lookupShard(s cache.Tshard) (*shard, error) {
 }
 
 func (cs *CacheSrv) Put(ctx fs.CtxI, req cacheproto.CacheReq, rep *cacheproto.CacheRep) error {
+	if cs.isMigrating() {
+		return serr.NewErr(serr.TErrError, fmt.Sprintf("migrating"))
+	}
+
 	if req.Fence.HasFence() {
 		return cs.PutFence(ctx, req, rep)
 	}
@@ -412,6 +435,10 @@ func (cs *CacheSrv) Put(ctx fs.CtxI, req cacheproto.CacheReq, rep *cacheproto.Ca
 
 // Return the IDs of the topN hottest shards
 func (cs *CacheSrv) GetHotShards(ctx fs.CtxI, req cacheproto.HotShardsReq, rep *cacheproto.HotShardsRep) error {
+	if cs.isMigrating() {
+		return serr.NewErr(serr.TErrError, fmt.Sprintf("migrating"))
+	}
+
 	db.DPrintf(db.CACHESRV, "%v: GetHotShards: %v", ctx.Principal(), req)
 	nShards := int(req.TopN)
 	if nShards == GET_ALL_SHARDS {
@@ -438,10 +465,21 @@ func (cs *CacheSrv) GetHotShards(ctx fs.CtxI, req cacheproto.HotShardsReq, rep *
 	return nil
 }
 
+func (cs *CacheSrv) isMigrating() bool {
+	cs.mu.Lock()
+	defer cs.mu.Unlock()
+
+	return cs.migrating
+}
+
 func (cs *CacheSrv) Get(ctx fs.CtxI, req cacheproto.CacheReq, rep *cacheproto.CacheRep) error {
 	cs.perf.TptTick(1.0)
 	if req.Fence.HasFence() {
 		return cs.GetFence(ctx, req, rep)
+	}
+
+	if cs.isMigrating() {
+		return serr.NewErr(serr.TErrError, fmt.Sprintf("migrating"))
 	}
 
 	e2e := time.Now()
@@ -484,6 +522,10 @@ func (cs *CacheSrv) MultiGet(ctx fs.CtxI, req cacheproto.CacheMultiGetReq, rep *
 
 	db.DPrintf(db.CACHESRV, "MultiGet %v", req)
 
+	if cs.isMigrating() {
+		return serr.NewErr(serr.TErrError, fmt.Sprintf("migrating"))
+	}
+
 	cs.mu.Lock()
 	defer cs.mu.Unlock()
 
@@ -522,6 +564,10 @@ func (cs *CacheSrv) Delete(ctx fs.CtxI, req cacheproto.CacheReq, rep *cacheproto
 	if false {
 		_, span := cs.tracer.StartRPCSpan(&req, "Delete")
 		defer span.End()
+	}
+
+	if cs.isMigrating() {
+		return serr.NewErr(serr.TErrError, fmt.Sprintf("migrating"))
 	}
 
 	db.DPrintf(db.CACHESRV, "Delete %v", req)

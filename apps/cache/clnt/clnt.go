@@ -81,6 +81,17 @@ func (cc *CacheClnt) PutTracedFenced(sctx *tproto.SpanContextConfig, srv, key st
 	return nil
 }
 
+func (cc *CacheClnt) PrepareToMigrate(srv string) error {
+	req := &cacheproto.CacheString{
+		Val: "migrate",
+	}
+	var res cacheproto.CacheOK
+	if err := cc.RPC(srv, "CacheSrv.PrepareToMigrate", req, &res); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (cc *CacheClnt) PutBytesTracedFenced(sctx *tproto.SpanContextConfig, srv, key string, b []byte, f *sp.Tfence) error {
 	req, err := cc.NewPutBytes(sctx, key, b, f)
 	if err != nil {

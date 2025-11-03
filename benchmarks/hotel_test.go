@@ -283,7 +283,7 @@ func (ji *HotelJobInstance) migrateCaches() {
 			for i := 0; i < len(delays) && i < len(targets); i++ {
 				time.Sleep(delays[i])
 				db.DPrintf(db.TEST, "Cache migration: Migrate cache target %v", targets[i])
-				if err := ji.hj.CacheMgr.MigrateServerWithSigmaPath(chunk.ChunkdPath(ji.warmCachedSrvKID), ji.cfg.CacheBenchCfg.DelegateInit, targets[i]); !assert.Nil(ji.Ts.T, err, "Err migrate cache server: %v", err) {
+				if err := ji.hj.CacheMgr.MigrateServerWithSigmaPath(ji.hj.CacheClnt.GetCacheClnt(), chunk.ChunkdPath(ji.warmCachedSrvKID), ji.cfg.CacheBenchCfg.DelegateInit, targets[i]); !assert.Nil(ji.Ts.T, err, "Err migrate cache server: %v", err) {
 					return
 				}
 				db.DPrintf(db.TEST, "Cache migration: Done migrating cache target %v", targets[i])

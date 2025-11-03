@@ -76,8 +76,23 @@ func (cc *ClntCache) Lookup(pn string) (*rpcclnt.RPCClnt, error) {
 }
 
 func (cc *ClntCache) Delete(pn string) {
+	cc.deleteOldRPCC(pn, nil)
+}
+
+func (cc *ClntCache) deleteOldRPCC(pn string, rpcc *rpcclnt.RPCClnt) {
 	cc.Lock()
 	defer cc.Unlock()
+
+	oldRPCC, ok := cc.rpccs[pn]
+	// If already deleted, bail out
+	if !ok {
+		return
+	}
+	// If already switched to something new, bail out
+	if rpcc != oldRPCC {
+		return
+	}
+	// Otherwise, delete
 	delete(cc.rpccs, pn)
 }
 
@@ -100,7 +115,8 @@ func (cc *ClntCache) RPCRetry(pn string, method string, arg protobuf.Message, re
 			return err
 		}
 		db.DPrintf(db.RPCCLNT, "RPCRetry retry %v %v err %v", pn, method, err)
-		cc.Delete(pn)
+		cc.deleteOldRPCC(pn, rpcc)
+		db.DPrintf(db.RPCCLNT, "RPCRetry retry %v %v delete err %v", pn, method, err)
 		cc.stats.Nretry.Add(1)
 	}
 	return err

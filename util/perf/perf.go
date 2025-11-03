@@ -96,6 +96,7 @@ type Perf struct {
 	tpts           []float64
 	vals           []float64
 	times          []time.Time
+	tptSampleHz    int
 	tptFile        *os.File
 	valFile        *os.File
 	sigc           chan os.Signal
@@ -105,12 +106,17 @@ func NewPerf(pe *proc.ProcEnv, s Tselector) (*Perf, error) {
 	return NewPerfMulti(pe, s, "")
 }
 
+func NewPerfMulti(pe *proc.ProcEnv, s Tselector, s2 string) (*Perf, error) {
+	return NewPerfMultiTptSampleHz(pe, s, s2, sp.Conf.Perf.CPU_UTIL_SAMPLE_HZ)
+}
+
 // A slight hack for benchmarks which wish to have 2 perf structures (one for
 // each realm).
-func NewPerfMulti(pe *proc.ProcEnv, s Tselector, s2 string) (*Perf, error) {
+func NewPerfMultiTptSampleHz(pe *proc.ProcEnv, s Tselector, s2 string, tptSampleHz int) (*Perf, error) {
 	initLabels(pe)
 	db.DPrintf(db.PERF, "Perf tracking selector %v labels %v", s, labels)
 	p := &Perf{}
+	p.tptSampleHz = tptSampleHz
 	p.selector = s
 	p.utilChan = make(chan bool, 1)
 	sigc := make(chan os.Signal, 1)
@@ -161,7 +167,7 @@ func NewPerfMulti(pe *proc.ProcEnv, s Tselector, s2 string) (*Perf, error) {
 	// Set up throughput caputre
 	if ok := labels[s+TPT]; ok {
 		db.DPrintf(db.PERF, "Set up pprof tpt capture")
-		p.setupTpt(sp.Conf.Perf.CPU_UTIL_SAMPLE_HZ, basePath+"-tpt.out")
+		p.setupTpt(tptSampleHz, basePath+"-tpt.out")
 	}
 	// Set up value caputre
 	if ok := labels[s+VAL]; ok {
@@ -201,7 +207,7 @@ func (p *Perf) tptTickL(tpt float64) {
 	// If it has been long enough since we started incrementing this slot, seal
 	// it and move to the next slot. In this way, we always expect
 	// len(p.times) == len(p.tpts) - 1
-	if time.Since(p.times[len(p.times)-1]).Milliseconds() > int64(1000/sp.Conf.Perf.CPU_UTIL_SAMPLE_HZ) {
+	if time.Since(p.times[len(p.times)-1]).Milliseconds() > int64(1000/p.tptSampleHz) {
 		p.tpts = append(p.tpts, 0.0)
 		p.times = append(p.times, time.Now())
 	}

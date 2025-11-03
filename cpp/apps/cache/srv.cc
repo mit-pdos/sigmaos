@@ -16,7 +16,8 @@ std::expected<int, sigmaos::serr::Error> Srv::Get(
   auto rep = dynamic_pointer_cast<CacheRep>(prep);
   auto req_cnt = _req_cnt++;
   auto key = req->key();
-  log(CACHESRV, "CacheSrv.Get req({}) key={}", req_cnt, key);
+  log(CACHESRV, "CacheSrv.Get req({}) shard={} key={}", req_cnt,
+      (int)req->shard(), key);
   // Take the lock
   std::lock_guard<std::mutex> guard(_mu);
   if (!_first_req_ran.exchange(true)) {

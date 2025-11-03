@@ -74,6 +74,7 @@ GRAPH_OUT_DIR=$ROOT_DIR/benchmarks/results/graphs
 ##  --xmin 45000 --xmax 50000 #--legend_on_right 
 #echo "Done generating cached scaling graphs..."
 
+if [ "" ] ; then
 # Hotel Match (slow load change)
 echo "Generating hotel match graph..."
 $GRAPH_SCRIPTS_DIR/aggregate-tpt-talk.py \
@@ -108,8 +109,21 @@ $GRAPH_SCRIPTS_DIR/deployment-cost.py \
   --measurement_dir_initscripts $RES_OUT_DIR/hotel_match_tail_latency_fast_csdi \
   --measurement_dir_noinitscripts     $RES_OUT_DIR/hotel_match_tail_latency_fast \
   --out $GRAPH_OUT_DIR/hotel_match_depcost_fast.pdf \
-  --xmin 73 --xmax 79 #--legend_on_right 
+  --xmin 74 --xmax 77 #--legend_on_right 
 #  --units "Req/sec,InitScript,No InitScript" \
 #  --title "x" --total_ncore 32 --prefix "imgresize-" \
 #  --client_tpt_step_size 10 --perf_step_size 10 \
 echo "Done generating hotel match (fast) cost graph..."
+fi
+
+echo "Generating hotel match cached hit rate graph..."
+$GRAPH_SCRIPTS_DIR/match-cached-miss-rate.py \
+  --measurement_dir_initscripts $RES_OUT_DIR/hotel_match_tail_latency_migrate_csdi \
+  --measurement_dir_noinitscripts     $RES_OUT_DIR/hotel_match_tail_latency_migrate \
+  --window_size 100000 \
+  --output $GRAPH_OUT_DIR/hotel_match_migrate_cached_miss_rate.pdf #\
+#  --xmin 74 --xmax 77 #--legend_on_right 
+#  --units "Req/sec,InitScript,No InitScript" \
+#  --title "x" --total_ncore 32 --prefix "imgresize-" \
+#  --client_tpt_step_size 10 --perf_step_size 10 \
+echo "Done generating hotel match cached hit rate graph..."

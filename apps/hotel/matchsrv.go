@@ -108,15 +108,17 @@ func (s *Match) getInputVec(userVecID uint64) ([]float64, error) {
 // Nearby returns ids of nearby hotels order by results of ratesrv
 func (s *Match) UserPreference(ctx fs.CtxI, req proto.MatchReq, res *proto.MatchRep) error {
 	db.DPrintf(db.HOTEL_MATCH, "Match UserPreference: %v", req)
-
 	cacheKey := fmt.Sprintf("user-preference-%v", req.UserID)
-
 	if req.TryCache {
 		v := &cossimproto.CosSimRep{}
 		err := s.cc.Get(cacheKey, v)
 		if err != nil {
-			if cache.IsMiss(err) {
+			// Migration- and true-misses both count as a miss
+			if cache.IsMiss(err) || cache.IsMigrating(err) {
 				s.pMiss.TptTick(1.0)
+				if cache.IsMigrating(err) {
+					db.DPrintf(db.HOTEL_MATCH_ERR, "Try to get %v during migration", cacheKey)
+				}
 			} else {
 				db.DPrintf(db.HOTEL_MATCH_ERR, "Err cache get: %v", err)
 				return err
@@ -139,7 +141,6 @@ func (s *Match) UserPreference(ctx fs.CtxI, req proto.MatchReq, res *proto.Match
 		db.DPrintf(db.HOTEL_MATCH_ERR, "Err CosSimLeastLoaded: %v", err)
 		return err
 	}
-
 	// Cache must have missed. Insert result in the cache.
 	if req.TryCache {
 		err := s.cc.Put(cacheKey, &cossimproto.CosSimRep{
@@ -147,12 +148,15 @@ func (s *Match) UserPreference(ctx fs.CtxI, req proto.MatchReq, res *proto.Match
 			Val: val,
 		})
 		if err != nil {
+			// If put fails due to migration, move on
+			if cache.IsMigrating(err) {
+				db.DPrintf(db.HOTEL_MATCH_ERR, "Try to put %v during migration", cacheKey)
+				return nil
+			}
 			db.DPrintf(db.HOTEL_MATCH_ERR, "Err CachePut: %v", err)
 			return err
 		}
 	}
-
 	db.DPrintf(db.HOTEL_MATCH, "Match done: %v %v", req, res)
-
 	return nil
 }

@@ -195,6 +195,11 @@ func (err *Err) String() string {
 }
 
 // SigmaOS server couldn't find the requested file
+func (err *Err) IsErrError() bool {
+	return err.Code() == TErrError
+}
+
+// SigmaOS server couldn't find the requested file
 func (err *Err) IsErrNotfound() bool {
 	return err.Code() == TErrNotfound
 }

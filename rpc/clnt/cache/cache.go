@@ -45,7 +45,12 @@ func (cc *ClntCache) Put(pn string, rpcc *rpcclnt.RPCClnt) {
 	cc.Lock()
 	defer cc.Unlock()
 
+	cc.putL(pn, rpcc)
+}
+
+func (cc *ClntCache) putL(pn string, rpcc *rpcclnt.RPCClnt) {
 	cc.rpccs[pn] = rpcc
+	db.DPrintf(db.RPCCLNT, "RPCClntCache.Put pn %v %p", pn, rpcc)
 }
 
 // Note: several threads may call Lookup for same pn, overwriting the
@@ -71,7 +76,7 @@ func (cc *ClntCache) Lookup(pn string) (*rpcclnt.RPCClnt, error) {
 	if err != nil {
 		return nil, err
 	}
-	cc.rpccs[pn] = rpcc
+	cc.putL(pn, rpcc)
 	return rpcc, nil
 }
 
@@ -92,6 +97,7 @@ func (cc *ClntCache) deleteOldRPCC(pn string, rpcc *rpcclnt.RPCClnt) {
 	if rpcc != oldRPCC {
 		return
 	}
+	db.DPrintf(db.RPCCLNT, "RPCClntCache.Delete pn %v %p", pn, rpcc)
 	// Otherwise, delete
 	delete(cc.rpccs, pn)
 }
@@ -114,9 +120,8 @@ func (cc *ClntCache) RPCRetry(pn string, method string, arg protobuf.Message, re
 			db.DPrintf(db.RPCCLNT, "RPCRetry RPC %v %v err %v", pn, method, err)
 			return err
 		}
-		db.DPrintf(db.RPCCLNT, "RPCRetry retry %v %v err %v", pn, method, err)
-		cc.deleteOldRPCC(pn, rpcc)
 		db.DPrintf(db.RPCCLNT, "RPCRetry retry %v %v delete err %v", pn, method, err)
+		cc.deleteOldRPCC(pn, rpcc)
 		cc.stats.Nretry.Add(1)
 	}
 	return err

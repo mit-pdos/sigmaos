@@ -252,6 +252,7 @@ func (cs *CachedSvc) migrateServerWithSigmaPath(cc *cacheclnt.CacheClnt, sigmaPa
 	nsrv := len(cs.servers)
 	bin := "cached-srv-cpp"
 	p := proc.NewProc(bin, []string{filepath.Join(cs.pn, cachegrp.SRVDIR), cs.job, strconv.Itoa(srvID), strconv.FormatBool(cs.useEPCache), strconv.Itoa(nsrv), strconv.Itoa(nsrv), strconv.Itoa(srvID), "true"})
+	db.DPrintf(db.TEST, "Migrate %v", p.GetPid())
 	p.SetUseShmem(shmem)
 	db.DPrintf(db.TEST, "Migrate(%v) %v -> %v", srvID, cs.servers[srvID], p.GetPid())
 	if !cs.cfg.GC {

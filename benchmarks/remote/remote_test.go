@@ -1260,10 +1260,10 @@ func TestHotelMatchTailLatency(t *testing.T) {
 		rpsBase     int   = 500 // 95% capacity for a single cossim server
 		maxMultiple int   = 2   // max multiple of rpsBase
 		rpsMigrate  []int = []int{
-			rpsBase,
+			rpsBase * 15,
 		}
 		durMigrate []time.Duration = []time.Duration{
-			30 * time.Second,
+			5 * time.Second,
 		}
 		rpsSlow []int = []int{
 			rpsBase,
@@ -1346,7 +1346,7 @@ func TestHotelMatchTailLatency(t *testing.T) {
 		manuallyScaleGeo                 bool          = false
 		scaleGeoDelay                    time.Duration = 0 * time.Second
 		numGeoToAdd                      int           = 0
-		cosSimDelegatedInit              []bool        = []bool{true, false}
+		delegatedInit                    []bool        = []bool{true, false}
 		autoscaleCosSim                  bool          = false
 		fastLoadChange                   []bool        = []bool{false, true}
 		proactiveScaling                 bool          = true
@@ -1364,7 +1364,7 @@ func TestHotelMatchTailLatency(t *testing.T) {
 		benchNameBase += "_overlays"
 	}
 	for _, fast := range fastLoadChange {
-		for _, csDelInit := range cosSimDelegatedInit {
+		for _, delInit := range delegatedInit {
 			scalingTime := cosSimNoDelegatedInitScalingTime
 			benchName := benchNameBase
 			rps := rpsSlow
@@ -1374,15 +1374,17 @@ func TestHotelMatchTailLatency(t *testing.T) {
 				rps = rpsFast
 				dur = durFast
 			}
+			nVecToQuery := 5000
 			if migrate {
-				benchName += "_migrate"
-				rps = rpsMigrate
-				dur = durMigrate
 				if fast {
 					continue
 				}
+				benchName += "_migrate"
+				rps = rpsMigrate
+				dur = durMigrate
+				nVecToQuery = 10
 			}
-			if csDelInit {
+			if delInit {
 				benchName += "_csdi"
 				scalingTime = cosSimDelegatedInitScalingTime
 			}
@@ -1440,8 +1442,9 @@ func TestHotelMatchTailLatency(t *testing.T) {
 					ScaleDeltas: []int{numGeoToAdd},
 				},
 				CacheBenchCfg: &benchmarks.CacheBenchConfig{
-					JobCfg:    &cachegrpmgr.CacheJobConfig{NSrv: numCaches, MCPU: proc.Tmcpu(4000), GC: true},
-					Autoscale: autoscaleCache,
+					JobCfg:       &cachegrpmgr.CacheJobConfig{NSrv: numCaches, MCPU: proc.Tmcpu(4000), GC: true},
+					Autoscale:    autoscaleCache,
+					DelegateInit: delInit,
 					ManuallyScale: &benchmarks.ManualScalingConfig{
 						Svc:         "cached",
 						Scale:       manuallyScaleCaches,
@@ -1451,13 +1454,14 @@ func TestHotelMatchTailLatency(t *testing.T) {
 					Migrate: &benchmarks.MigrationConfig{
 						Svc:              "cached",
 						Migrate:          migrate,
-						MigrationDelays:  []time.Duration{10 * time.Second},
+						MigrationDelays:  []time.Duration{2 * time.Second},
 						MigrationTargets: []int{0},
 					},
 				},
 				CosSimBenchCfg: &benchmarks.CosSimBenchConfig{
-					JobCfg:      cossimsrv.NewCosSimJobConfig("hotel-job", 1, 10000, 100, true, 4000, nil, csDelInit),
-					NVecToQuery: 5000,
+					//					JobCfg:      cossimsrv.NewCosSimJobConfig("hotel-job", 1, 10000, 100, true, 4000, nil, csDelInit),
+					JobCfg:      cossimsrv.NewCosSimJobConfig("hotel-job", 1, 1000, 100, true, 4000, nil, delInit),
+					NVecToQuery: nVecToQuery,
 					ManuallyScale: benchmarks.NewManualScalingConfig("cossim", !autoscaleCosSim,
 						csScaleDurs,
 						csScaleDeltas,

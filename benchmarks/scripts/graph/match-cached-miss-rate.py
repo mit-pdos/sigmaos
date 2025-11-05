@@ -111,6 +111,10 @@ def main():
                         help='Output file path (default: match-cached-miss-rate.pdf)')
     parser.add_argument('--window_size', type=int, default=5000,
                         help='Time bucket size in microseconds (default: 5000us = 5ms)')
+    parser.add_argument('--xmin', type=float, default=None,
+                        help='Minimum x-axis value (seconds) to display')
+    parser.add_argument('--xmax', type=float, default=None,
+                        help='Maximum x-axis value (seconds) to display')
 
     args = parser.parse_args()
 
@@ -161,7 +165,10 @@ def main():
         ax1.plot(times_init, rates_init, label='With Init Scripts', linewidth=2, marker='o', markersize=3, color='tab:blue')
 
     ax1.grid(True, alpha=0.3)
-    ax1.set_xlim(left=0)
+    # Set x-axis limits based on arguments
+    xmin = args.xmin if args.xmin is not None else 0
+    xmax = args.xmax
+    ax1.set_xlim(left=xmin, right=xmax)
     ax1.set_ylim(0, 100)
 
     # Plot no init scripts data in bottom subplot
@@ -171,7 +178,7 @@ def main():
 
     ax2.set_xlabel('Time (seconds)', fontsize=14)
     ax2.grid(True, alpha=0.3)
-    ax2.set_xlim(left=0)
+    ax2.set_xlim(left=xmin, right=xmax)
     ax2.set_ylim(0, 100)
 
     # Create a single legend with both lines, with bottom anchored to top of topmost subplot

@@ -114,11 +114,11 @@ func NewHotelJob(ts *test.RealmTstate, p *perf.Perf, dc *DeploymentCost, sigmaos
 				case "cossim-srv-cpp":
 					ji.cossimKIDs[p.GetKernelID()] = true
 					db.DPrintf(db.TEST, "cossim-srv-cpp[%v] running on kernel %v", p.GetPid(), p.GetKernelID())
-					ji.warmCachedSrvKID = p.GetKernelID()
 					foundCossim = true
 				case "cached":
 					ji.cacheKIDs[p.GetKernelID()] = true
 					ji.warmCossimSrvKID = p.GetKernelID()
+					ji.warmCachedSrvKID = p.GetKernelID()
 					db.DPrintf(db.TEST, "cached[%v] running on kernel %v", p.GetPid(), p.GetKernelID())
 					foundCached = true
 				default:

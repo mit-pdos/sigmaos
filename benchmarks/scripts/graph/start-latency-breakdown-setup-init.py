@@ -7,12 +7,13 @@ import re
 import sys
 
 
-def find_proc_pid(dir_path, proc_name):
+def find_proc_pid(dir_path, proc_name, migrate=False):
     """
-    Search for log lines matching "Scale proc_name.*" in bench.out.* files
-    and extract the proc_pid from the second matching line.
+    Search for log lines matching "Scale proc_name.*" or "Migrate proc_name.*"
+    in bench.out.* files and extract the proc_pid from the second matching line.
     """
-    pattern = f"Scale {re.escape(proc_name)}.*"
+    action = "Migrate" if migrate else "Scale"
+    pattern = f"{action} {re.escape(proc_name)}.*"
     bench_files = glob.glob(os.path.join(dir_path, "bench.out.*"))
 
     if not bench_files:
@@ -30,14 +31,22 @@ def find_proc_pid(dir_path, proc_name):
         except Exception as e:
             print(f"Warning: Could not read {bench_file}: {e}", file=sys.stderr)
 
-    if len(matching_lines) < 2:
-        print(f"Error: Found {len(matching_lines)} matching lines, need at least 2", file=sys.stderr)
-        print(f"Pattern: {pattern}", file=sys.stderr)
-        sys.exit(1)
+    # For migrate mode, use first matching line; for scale mode, use second
+    if migrate:
+        if len(matching_lines) < 1:
+            print(f"Error: Found {len(matching_lines)} matching lines, need at least 1", file=sys.stderr)
+            print(f"Pattern: {pattern}", file=sys.stderr)
+            sys.exit(1)
+        target_line = matching_lines[0]
+    else:
+        if len(matching_lines) < 2:
+            print(f"Error: Found {len(matching_lines)} matching lines, need at least 2", file=sys.stderr)
+            print(f"Pattern: {pattern}", file=sys.stderr)
+            sys.exit(1)
+        target_line = matching_lines[1]
 
-    # Get the second matching line and extract the last word
-    second_line = matching_lines[1]
-    proc_pid = second_line.split()[-1]
+    # Extract the last word as proc_pid
+    proc_pid = target_line.split()[-1]
 
     return proc_pid
 
@@ -151,11 +160,16 @@ def main():
         required=True,
         help="Proc name for which to print breakdown"
     )
+    parser.add_argument(
+        "--migrate",
+        action="store_true",
+        help="Look for 'Migrate proc_name' instead of 'Scale proc_name'"
+    )
 
     args = parser.parse_args()
 
     # Find the proc_pid
-    proc_pid = find_proc_pid(args.dir_path, args.proc_name)
+    proc_pid = find_proc_pid(args.dir_path, args.proc_name, args.migrate)
     print(f"Found proc_pid: {proc_pid}")
     print()
 

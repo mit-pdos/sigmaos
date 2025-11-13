@@ -514,12 +514,6 @@ func (cs *CacheSrv) Get(ctx fs.CtxI, req cacheproto.CacheReq, rep *cacheproto.Ca
 }
 
 func (cs *CacheSrv) MultiGet(ctx fs.CtxI, req cacheproto.CacheMultiGetReq, rep *cacheproto.CacheMultiGetRep) error {
-	if req.Fence.HasFence() {
-		// TODO: implement fenced multi-get
-		db.DFatalf("Fenced multi-get unimplemented")
-		// return cs.MultiGetFence(ctx, req, rep)
-	}
-
 	db.DPrintf(db.CACHESRV, "MultiGet %v", req)
 
 	if cs.isMigrating() {

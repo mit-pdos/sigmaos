@@ -24,17 +24,6 @@ message CacheReq {
   TfenceProto fence = 6;
 }
 
-message CacheGetDescriptor {
-  string key = 1;
-  uint32 shard = 2;
-}
-
-message CacheMultiGetReq {
-  repeated CacheGetDescriptor gets = 1; // (key, shard) pairs of get requests
-  SpanContextConfig spanContextConfig = 2;
-  TfenceProto fence = 3;
-}
-
 message CacheMultiGetRep {
   repeated uint64 lengths = 1;
   Blob blob = 2;

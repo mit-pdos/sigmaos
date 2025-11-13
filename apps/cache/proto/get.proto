@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+option go_package = "sigmaos/apps/cache/proto";
+
+message CacheGetDescriptor {
+  string key = 1;
+  uint32 shard = 2;
+}
+
+message CacheMultiGetReq {
+  repeated CacheGetDescriptor gets = 1; // (key, shard) pairs of get requests
+}

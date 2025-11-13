@@ -163,10 +163,8 @@ Clnt::MultiGet(uint32_t srv_id, std::vector<std::string> &keys) {
     }
     rpcc = res.value();
   }
-  TfenceProto fence;
   CacheMultiGetRep rep;
   CacheMultiGetReq req;
-  req.set_allocated_fence(&fence);
   Blob blob;
   auto iov = blob.mutable_iov();
   // Add a buffer to hold the output
@@ -181,9 +179,6 @@ Clnt::MultiGet(uint32_t srv_id, std::vector<std::string> &keys) {
   rep.set_allocated_blob(&blob);
   {
     auto res = rpcc->RPC("CacheSrv.MultiGet", req, rep);
-    {
-      auto _ = req.release_fence();
-    }
     if (!res.has_value()) {
       log(CACHECLNT_ERR, "Error Get: {}", res.error().String());
       return std::unexpected(res.error());

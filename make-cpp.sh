@@ -56,6 +56,7 @@ protoc -I=. --cpp_out="./cpp/apps/spin/proto" --proto_path apps/spin/proto spin.
 protoc -I=. --cpp_out="./cpp/apps/cossim/proto" --proto_path apps/cossim/proto cossim.proto
 protoc -I=. --cpp_out="./cpp/apps/epcache/proto" --proto_path apps/epcache/proto epcache.proto
 protoc -I=. --cpp_out="./cpp/apps/cache/proto" --proto_path apps/cache/proto cache.proto
+protoc -I=. --cpp_out="./cpp/apps/cache/proto" --proto_path apps/cache/proto get.proto
 protoc -I=. --cpp_out=./cpp util/tracing/proto/tracing.proto
 
 cd cpp

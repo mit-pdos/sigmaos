@@ -235,9 +235,7 @@ func NewMultiGetReqs(keys []string, nserver int, nshard uint32) map[int]*cachepr
 		server := Key2server(key, nserver)
 		req, ok := reqs[server]
 		if !ok {
-			req = &cacheproto.CacheMultiGetReq{
-				Fence: sp.NullFence().FenceProto(),
-			}
+			req = &cacheproto.CacheMultiGetReq{}
 			reqs[server] = req
 		}
 		req.Gets = append(req.Gets, &cacheproto.CacheGetDescriptor{

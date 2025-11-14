@@ -35,11 +35,12 @@ func TaskSvcId(job string) string {
 }
 
 type Ttask struct {
-	FileName string `json:"File"`
+	FileName  string `json:"file"`
+	UseS3Clnt bool   `json:"use_s3_clnt"`
 }
 
-func NewTask(fn string) *Ttask {
-	return &Ttask{fn}
+func NewTask(fn string, useS3Clnt bool) *Ttask {
+	return &Ttask{fn, useS3Clnt}
 }
 
 type ImgdMgr[Data any] struct {
@@ -142,7 +143,7 @@ func GetMkProcFn(serverId task.FtTaskSvcId, nrounds int, workerMcpu proc.Tmcpu, 
 	return func(task fttask_clnt.Task[Ttask]) (*proc.Proc, error) {
 		db.DPrintf(db.IMGD, "mkProc %v", task)
 		fn := task.Data.FileName
-		p := proc.NewProcPid(sp.GenPid(string(serverId)), "imgresize", []string{fn, ThumbName(fn), strconv.Itoa(nrounds)})
+		p := proc.NewProcPid(sp.GenPid(string(serverId)), "imgresize", []string{fn, ThumbName(fn), strconv.Itoa(nrounds), strconv.FormatBool(task.Data.UseS3Clnt)})
 		p.SetMcpu(workerMcpu)
 		p.SetMem(workerMem)
 		return p, nil

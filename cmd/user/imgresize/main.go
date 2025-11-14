@@ -1,10 +1,13 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"image/jpeg"
+	"io"
 	"math/rand"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -14,6 +17,7 @@ import (
 	"sigmaos/api/fs"
 	db "sigmaos/debug"
 	"sigmaos/proc"
+	s3clnt "sigmaos/proxy/s3/clnt"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/util/crash"
@@ -37,7 +41,7 @@ func main() {
 	}
 	defer p.Done()
 
-	t, err := NewTrans(pe, os.Args, p)
+	ip, err := NewImgProcess(pe, os.Args, p)
 	if err != nil {
 		db.DFatalf("Error %v", err)
 	}
@@ -45,31 +49,33 @@ func main() {
 	rand.Seed(time.Now().UnixNano())
 
 	var s *proc.Status
-	for i := 0; i < len(t.inputs); i++ {
+	for i := 0; i < len(ip.inputs); i++ {
 		start := time.Now()
-		output := t.output
+		output := ip.output
 		// Create a new file name for iterations > 0
 		output += strconv.Itoa(rand.Int())
-		s = t.Work(i, output)
+		s = ip.Work(i, output)
 		db.DPrintf(db.ALWAYS, "Time %v e2e resize[%v]: %v", os.Args, i, time.Since(start))
 	}
-	t.ClntExit(s)
+	ip.ClntExit(s)
 }
 
-type Trans struct {
+type ImgProcess struct {
 	*sigmaclnt.SigmaClnt
-	inputs  []string
-	output  string
-	ctx     fs.CtxI
-	nrounds int
-	p       *perf.Perf
+	inputs    []string
+	output    string
+	ctx       fs.CtxI
+	nrounds   int
+	p         *perf.Perf
+	useS3Clnt bool
+	s3Clnt    *s3clnt.S3Clnt
 }
 
-func NewTrans(pe *proc.ProcEnv, args []string, p *perf.Perf) (*Trans, error) {
-	if len(args) != 4 {
-		return nil, fmt.Errorf("NewTrans: too few arguments: %v", args)
+func NewImgProcess(pe *proc.ProcEnv, args []string, p *perf.Perf) (*ImgProcess, error) {
+	if len(args) != 5 {
+		return nil, fmt.Errorf("NewImgProcess: wrong number of arguments: %v", args)
 	}
-	t := &Trans{
+	ip := &ImgProcess{
 		p: p,
 	}
 	db.DPrintf(db.ALWAYS, "E2e spawn time since spawn until main: %v", time.Since(pe.GetSpawnTime()))
@@ -77,33 +83,57 @@ func NewTrans(pe *proc.ProcEnv, args []string, p *perf.Perf) (*Trans, error) {
 	if err != nil {
 		return nil, err
 	}
-	t.SigmaClnt = sc
-	t.inputs = strings.Split(args[1], ",")
-	db.DPrintf(db.ALWAYS, "Args {%v} inputs {%v} fail {%v}", args[1], t.inputs, proc.GetSigmaFail())
-	t.output = t.inputs[0] + "-thumbnail"
-	t.nrounds, err = strconv.Atoi(args[3])
+	ip.SigmaClnt = sc
+	ip.inputs = strings.Split(args[1], ",")
+	db.DPrintf(db.ALWAYS, "Args {%v} inputs {%v} fail {%v}", args[1], ip.inputs, proc.GetSigmaFail())
+	ip.output = ip.inputs[0] + "-thumbnail"
+	ip.nrounds, err = strconv.Atoi(args[3])
 	if err != nil {
 		db.DFatalf("Err convert nrounds: %v", err)
 	}
-	t.Started()
+	ip.Started()
 	crash.FailersDefault(sc.FsLib, []crash.Tselector{crash.IMGRESIZE_CRASH})
-	return t, nil
+	useS3Clnt, err := strconv.ParseBool(args[4])
+	if err != nil {
+		db.DFatalf("Err parse useS3Clnt: %v", err)
+	}
+	ip.useS3Clnt = useS3Clnt
+	if useS3Clnt {
+		s3Clnt, err := s3clnt.NewS3Clnt(ip.FsLib, filepath.Join(sp.S3, pe.GetKernelID()))
+		if err != nil {
+			db.DFatalf("Err newS3Clnt: %v", err)
+		}
+		ip.s3Clnt = s3Clnt
+	}
+	return ip, nil
 }
 
-func (t *Trans) Work(i int, output string) *proc.Status {
+func (ip *ImgProcess) Work(i int, output string) *proc.Status {
+	db.DPrintf(db.ALWAYS, "Resize (%v/%v) %v", i, len(ip.inputs), ip.inputs[i])
 	do := time.Now()
-
-	db.DPrintf(db.ALWAYS, "Resize (%v/%v) %v", i, len(t.inputs), t.inputs[i])
-	rdr, err := t.OpenReader(t.inputs[i])
-	if err != nil {
-		return proc.NewStatusErr(fmt.Sprintf("File %v not found kid %v", t.inputs[i], t.ProcEnv().GetKernelID()), err)
+	var rdr io.ReadCloser
+	var err error
+	if ip.useS3Clnt {
+		pn := strings.Split(ip.inputs[i], "/")
+		bucket := pn[0]
+		key := pn[1]
+		b, err := ip.s3Clnt.GetObject(bucket, key)
+		if err != nil {
+			return proc.NewStatusErr(fmt.Sprintf("Err GetObject bucket:%v key:%v", bucket, key), err)
+		}
+		rdr = io.NopCloser(bytes.NewReader(b))
+	} else {
+		rdr, err = ip.OpenReader(ip.inputs[i])
+		if err != nil {
+			return proc.NewStatusErr(fmt.Sprintf("File %v not found kid %v", ip.inputs[i], ip.ProcEnv().GetKernelID()), err)
+		}
 	}
-	//	prdr := perf.NewPerfReader(rdr, t.p)
-	db.DPrintf(db.ALWAYS, "Time %v open: %v", t.inputs[i], time.Since(do))
+	//	prdr := perf.NewPerfReader(rdr, ip.p)
+	db.DPrintf(db.ALWAYS, "Time %v open: %v", ip.inputs[i], time.Since(do))
 	var dc time.Time
 	defer func() {
 		rdr.Close()
-		db.DPrintf(db.ALWAYS, "Time %v close reader: %v", t.inputs[i], time.Since(dc))
+		db.DPrintf(db.ALWAYS, "Time %v close reader: %v", ip.inputs[i], time.Since(dc))
 	}()
 
 	ds := time.Now()
@@ -114,27 +144,27 @@ func (t *Trans) Work(i int, output string) *proc.Status {
 	// img size in bytes:
 	bounds := img.Bounds()
 	var imgSizeB uint64 = 16 * uint64(bounds.Max.X-bounds.Min.X) * uint64(bounds.Max.Y-bounds.Min.Y)
-	db.DPrintf(db.ALWAYS, "Time %v read/decode: %v", t.inputs[i], time.Since(ds))
+	db.DPrintf(db.ALWAYS, "Time %v read/decode: %v", ip.inputs[i], time.Since(ds))
 	dr := time.Now()
-	for i := 0; i < t.nrounds-1; i++ {
+	for i := 0; i < ip.nrounds-1; i++ {
 		resize.Resize(IMG_DIM, IMG_DIM, img, resize.Lanczos3)
-		t.p.TptTick(float64(imgSizeB))
+		ip.p.TptTick(float64(imgSizeB))
 	}
 	img1 := resize.Resize(IMG_DIM, IMG_DIM, img, resize.Lanczos3)
-	t.p.TptTick(float64(imgSizeB))
-	db.DPrintf(db.ALWAYS, "Time %v resize: %v", t.inputs[i], time.Since(dr))
+	ip.p.TptTick(float64(imgSizeB))
+	db.DPrintf(db.ALWAYS, "Time %v resize: %v", ip.inputs[i], time.Since(dr))
 
 	dcw := time.Now()
-	wrt, err := t.CreateWriter(output, 0777, sp.OWRITE)
+	wrt, err := ip.CreateWriter(output, 0777, sp.OWRITE)
 	if err != nil {
 		return proc.NewStatusErr(fmt.Sprintf("Open output failed %v", output), err)
 	}
-	//	pwrt := perf.NewPerfWriter(wrt, t.p)
-	db.DPrintf(db.ALWAYS, "Time %v create writer: %v", t.inputs[i], time.Since(dcw))
+	//	pwrt := perf.NewPerfWriter(wrt, ip.p)
+	db.DPrintf(db.ALWAYS, "Time %v create writer: %v", ip.inputs[i], time.Since(dcw))
 	dw := time.Now()
 	defer func() {
 		wrt.Close()
-		db.DPrintf(db.ALWAYS, "Time %v write/encode: %v", t.inputs[i], time.Since(dw))
+		db.DPrintf(db.ALWAYS, "Time %v write/encode: %v", ip.inputs[i], time.Since(dw))
 		dc = time.Now()
 	}()
 

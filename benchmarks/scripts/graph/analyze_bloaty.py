@@ -97,6 +97,7 @@ def main():
         # Add mappings here, e.g.:
         'init_rpc': {
             '/home/sigmaos/cpp/apps/cache/proto/get.pb.cc',
+#            '/home/sigmaos/cpp/apps/cache/proto/dump.pb.cc',
         },
         'rpc_stack': {
             '/home/sigmaos/cpp/rpc/clnt.cc',

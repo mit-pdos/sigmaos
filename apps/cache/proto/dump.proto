@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+import "rpc/proto/rpc.proto";
+
+option go_package = "sigmaos/apps/cache/proto";
+
+message MultiShardReq {
+  repeated uint32 shards = 1;
+}
+
+message MultiShardRep {
+  repeated string keys = 1;
+  repeated uint32 lens = 2;
+  Blob blob = 3;
+}

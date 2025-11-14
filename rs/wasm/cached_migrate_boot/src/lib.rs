@@ -1,6 +1,5 @@
-use proto::cache;
-use proto::sigmap;
-use protobuf::{Message, MessageField};
+use proto::dump;
+use protobuf::Message;
 use sigmaos;
 use std::os::raw::c_char;
 use std::slice;
@@ -19,10 +18,9 @@ pub fn boot(b: *mut c_char, buf_sz: usize) {
             shards.push(shard);
         }
     }
-    let mut rpc_idx = 0;
+    let rpc_idx = 0;
     let pn = "name/cache/servers/".to_owned() + &srv_id.to_string();
-    let mut multi_shard_req = cache::MultiShardReq::new();
-    multi_shard_req.fence = MessageField::some(sigmap::TfenceProto::new());
+    let mut multi_shard_req = dump::MultiShardReq::new();
     for shard in &shards {
         multi_shard_req.shards.push(*shard);
     }

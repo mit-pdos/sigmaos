@@ -1,5 +1,5 @@
 use proto::get;
-use protobuf::{Message, MessageField};
+use protobuf::Message;
 use sigmaos;
 use std::os::raw::c_char;
 use std::slice;
@@ -30,7 +30,7 @@ pub fn boot(b: *mut c_char, buf_sz: usize) {
     let n_keys = u64::from_le_bytes(buf[4..12].try_into().unwrap());
     // Create a multi_get request for each server
     let mut multi_get_rpcs: Vec<get::CacheMultiGetReq> = Vec::new();
-    for srv_id in 0..n_srv {
+    for _ in 0..n_srv {
         multi_get_rpcs.push(get::CacheMultiGetReq::new());
     }
     for key in 0..n_keys {

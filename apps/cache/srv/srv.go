@@ -301,10 +301,6 @@ func (cs *CacheSrv) MultiDumpShard(ctx fs.CtxI, req cacheproto.MultiShardReq, re
 	db.DPrintf(db.CACHESRV, "MultiDumpShard %v", req)
 	start := time.Now()
 
-	if cmp := cs.cmpFence(req.Fence.Tfence()); cmp == sp.FENCE_GT {
-		db.DPrintf(db.CACHESRV_ERR, "MultiDumpShard err stale fence")
-		return serr.NewErr(serr.TErrStale, fmt.Sprintf("shards %v", req.GetShards()))
-	}
 	rep.Blob = &rpcproto.Blob{}
 	rep.Blob.SplitIov = make([]*rpcproto.SplitIoVec, len(req.GetShards()))
 	for shardIdx, s := range req.GetShards() {

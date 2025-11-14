@@ -109,37 +109,6 @@ struct ShardReqDefaultTypeInternal {
   };
 };
 PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 ShardReqDefaultTypeInternal _ShardReq_default_instance_;
-PROTOBUF_CONSTEXPR MultiShardReq::MultiShardReq(
-    ::_pbi::ConstantInitialized): _impl_{
-    /*decltype(_impl_.shards_)*/{}
-  , /*decltype(_impl_._shards_cached_byte_size_)*/{0}
-  , /*decltype(_impl_.fence_)*/nullptr
-  , /*decltype(_impl_._cached_size_)*/{}} {}
-struct MultiShardReqDefaultTypeInternal {
-  PROTOBUF_CONSTEXPR MultiShardReqDefaultTypeInternal()
-      : _instance(::_pbi::ConstantInitialized{}) {}
-  ~MultiShardReqDefaultTypeInternal() {}
-  union {
-    MultiShardReq _instance;
-  };
-};
-PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 MultiShardReqDefaultTypeInternal _MultiShardReq_default_instance_;
-PROTOBUF_CONSTEXPR MultiShardRep::MultiShardRep(
-    ::_pbi::ConstantInitialized): _impl_{
-    /*decltype(_impl_.keys_)*/{}
-  , /*decltype(_impl_.lens_)*/{}
-  , /*decltype(_impl_._lens_cached_byte_size_)*/{0}
-  , /*decltype(_impl_.blob_)*/nullptr
-  , /*decltype(_impl_._cached_size_)*/{}} {}
-struct MultiShardRepDefaultTypeInternal {
-  PROTOBUF_CONSTEXPR MultiShardRepDefaultTypeInternal()
-      : _instance(::_pbi::ConstantInitialized{}) {}
-  ~MultiShardRepDefaultTypeInternal() {}
-  union {
-    MultiShardRep _instance;
-  };
-};
-PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 MultiShardRepDefaultTypeInternal _MultiShardRep_default_instance_;
 PROTOBUF_CONSTEXPR CacheOK::CacheOK(
     ::_pbi::ConstantInitialized) {}
 struct CacheOKDefaultTypeInternal {
@@ -214,7 +183,7 @@ struct CacheIntDefaultTypeInternal {
   };
 };
 PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 CacheIntDefaultTypeInternal _CacheInt_default_instance_;
-static ::_pb::Metadata file_level_metadata_cache_2eproto[14];
+static ::_pb::Metadata file_level_metadata_cache_2eproto[12];
 static constexpr ::_pb::EnumDescriptor const** file_level_enum_descriptors_cache_2eproto = nullptr;
 static constexpr ::_pb::ServiceDescriptor const** file_level_service_descriptors_cache_2eproto = nullptr;
 
@@ -275,23 +244,6 @@ const uint32_t TableStruct_cache_2eproto::offsets[] PROTOBUF_SECTION_VARIABLE(pr
   PROTOBUF_FIELD_OFFSET(::ShardReq, _impl_.vals_),
   PROTOBUF_FIELD_OFFSET(::ShardReq, _impl_.empty_),
   ~0u,  // no _has_bits_
-  PROTOBUF_FIELD_OFFSET(::MultiShardReq, _internal_metadata_),
-  ~0u,  // no _extensions_
-  ~0u,  // no _oneof_case_
-  ~0u,  // no _weak_field_map_
-  ~0u,  // no _inlined_string_donated_
-  PROTOBUF_FIELD_OFFSET(::MultiShardReq, _impl_.shards_),
-  PROTOBUF_FIELD_OFFSET(::MultiShardReq, _impl_.fence_),
-  ~0u,  // no _has_bits_
-  PROTOBUF_FIELD_OFFSET(::MultiShardRep, _internal_metadata_),
-  ~0u,  // no _extensions_
-  ~0u,  // no _oneof_case_
-  ~0u,  // no _weak_field_map_
-  ~0u,  // no _inlined_string_donated_
-  PROTOBUF_FIELD_OFFSET(::MultiShardRep, _impl_.keys_),
-  PROTOBUF_FIELD_OFFSET(::MultiShardRep, _impl_.lens_),
-  PROTOBUF_FIELD_OFFSET(::MultiShardRep, _impl_.blob_),
-  ~0u,  // no _has_bits_
   PROTOBUF_FIELD_OFFSET(::CacheOK, _internal_metadata_),
   ~0u,  // no _extensions_
   ~0u,  // no _oneof_case_
@@ -343,14 +295,12 @@ static const ::_pbi::MigrationSchema schemas[] PROTOBUF_SECTION_VARIABLE(protode
   { 27, -1, -1, sizeof(::CacheMultiGetRep)},
   { 35, 43, -1, sizeof(::ShardReq_ValsEntry_DoNotUse)},
   { 45, -1, -1, sizeof(::ShardReq)},
-  { 55, -1, -1, sizeof(::MultiShardReq)},
-  { 63, -1, -1, sizeof(::MultiShardRep)},
-  { 72, -1, -1, sizeof(::CacheOK)},
-  { 78, -1, -1, sizeof(::CacheRep)},
-  { 85, 93, -1, sizeof(::ShardData_ValsEntry_DoNotUse)},
-  { 95, -1, -1, sizeof(::ShardData)},
-  { 102, -1, -1, sizeof(::CacheString)},
-  { 109, -1, -1, sizeof(::CacheInt)},
+  { 55, -1, -1, sizeof(::CacheOK)},
+  { 61, -1, -1, sizeof(::CacheRep)},
+  { 68, 76, -1, sizeof(::ShardData_ValsEntry_DoNotUse)},
+  { 78, -1, -1, sizeof(::ShardData)},
+  { 85, -1, -1, sizeof(::CacheString)},
+  { 92, -1, -1, sizeof(::CacheInt)},
 };
 
 static const ::_pb::Message* const file_default_instances[] = {
@@ -360,8 +310,6 @@ static const ::_pb::Message* const file_default_instances[] = {
   &::_CacheMultiGetRep_default_instance_._instance,
   &::_ShardReq_ValsEntry_DoNotUse_default_instance_._instance,
   &::_ShardReq_default_instance_._instance,
-  &::_MultiShardReq_default_instance_._instance,
-  &::_MultiShardRep_default_instance_._instance,
   &::_CacheOK_default_instance_._instance,
   &::_CacheRep_default_instance_._instance,
   &::_ShardData_ValsEntry_DoNotUse_default_instance_._instance,
@@ -384,15 +332,12 @@ const char descriptor_table_protodef_cache_2eproto[] PROTOBUF_SECTION_VARIABLE(p
   "(\r\022\033\n\005fence\030\002 \001(\0132\014.TfenceProto\022!\n\004vals\030"
   "\003 \003(\0132\023.ShardReq.ValsEntry\022\r\n\005empty\030\004 \001("
   "\010\032+\n\tValsEntry\022\013\n\003key\030\001 \001(\t\022\r\n\005value\030\002 \001"
-  "(\014:\0028\001\"<\n\rMultiShardReq\022\016\n\006shards\030\001 \003(\r\022"
-  "\033\n\005fence\030\002 \001(\0132\014.TfenceProto\"@\n\rMultiSha"
-  "rdRep\022\014\n\004keys\030\001 \003(\t\022\014\n\004lens\030\002 \003(\r\022\023\n\004blo"
-  "b\030\003 \001(\0132\005.Blob\"\t\n\007CacheOK\"\031\n\010CacheRep\022\r\n"
-  "\005value\030\001 \001(\014\"\\\n\tShardData\022\"\n\004vals\030\001 \003(\0132"
-  "\024.ShardData.ValsEntry\032+\n\tValsEntry\022\013\n\003ke"
-  "y\030\001 \001(\t\022\r\n\005value\030\002 \001(\014:\0028\001\"\032\n\013CacheStrin"
-  "g\022\013\n\003val\030\001 \001(\t\"\027\n\010CacheInt\022\013\n\003val\030\001 \001(\003B"
-  "\032Z\030sigmaos/apps/cache/protob\006proto3"
+  "(\014:\0028\001\"\t\n\007CacheOK\"\031\n\010CacheRep\022\r\n\005value\030\001"
+  " \001(\014\"\\\n\tShardData\022\"\n\004vals\030\001 \003(\0132\024.ShardD"
+  "ata.ValsEntry\032+\n\tValsEntry\022\013\n\003key\030\001 \001(\t\022"
+  "\r\n\005value\030\002 \001(\014:\0028\001\"\032\n\013CacheString\022\013\n\003val"
+  "\030\001 \001(\t\"\027\n\010CacheInt\022\013\n\003val\030\001 \001(\003B\032Z\030sigma"
+  "os/apps/cache/protob\006proto3"
   ;
 static const ::_pbi::DescriptorTable* const descriptor_table_cache_2eproto_deps[3] = {
   &::descriptor_table_rpc_2fproto_2frpc_2eproto,
@@ -401,9 +346,9 @@ static const ::_pbi::DescriptorTable* const descriptor_table_cache_2eproto_deps[
 };
 static ::_pbi::once_flag descriptor_table_cache_2eproto_once;
 const ::_pbi::DescriptorTable descriptor_table_cache_2eproto = {
-    false, false, 875, descriptor_table_protodef_cache_2eproto,
+    false, false, 747, descriptor_table_protodef_cache_2eproto,
     "cache.proto",
-    &descriptor_table_cache_2eproto_once, descriptor_table_cache_2eproto_deps, 3, 14,
+    &descriptor_table_cache_2eproto_once, descriptor_table_cache_2eproto_deps, 3, 12,
     schemas, file_default_instances, TableStruct_cache_2eproto::offsets,
     file_level_metadata_cache_2eproto, file_level_enum_descriptors_cache_2eproto,
     file_level_service_descriptors_cache_2eproto,
@@ -1809,527 +1754,6 @@ void ShardReq::InternalSwap(ShardReq* other) {
 
 // ===================================================================
 
-class MultiShardReq::_Internal {
- public:
-  static const ::TfenceProto& fence(const MultiShardReq* msg);
-};
-
-const ::TfenceProto&
-MultiShardReq::_Internal::fence(const MultiShardReq* msg) {
-  return *msg->_impl_.fence_;
-}
-void MultiShardReq::clear_fence() {
-  if (GetArenaForAllocation() == nullptr && _impl_.fence_ != nullptr) {
-    delete _impl_.fence_;
-  }
-  _impl_.fence_ = nullptr;
-}
-MultiShardReq::MultiShardReq(::PROTOBUF_NAMESPACE_ID::Arena* arena,
-                         bool is_message_owned)
-  : ::PROTOBUF_NAMESPACE_ID::Message(arena, is_message_owned) {
-  SharedCtor(arena, is_message_owned);
-  // @@protoc_insertion_point(arena_constructor:MultiShardReq)
-}
-MultiShardReq::MultiShardReq(const MultiShardReq& from)
-  : ::PROTOBUF_NAMESPACE_ID::Message() {
-  MultiShardReq* const _this = this; (void)_this;
-  new (&_impl_) Impl_{
-      decltype(_impl_.shards_){from._impl_.shards_}
-    , /*decltype(_impl_._shards_cached_byte_size_)*/{0}
-    , decltype(_impl_.fence_){nullptr}
-    , /*decltype(_impl_._cached_size_)*/{}};
-
-  _internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
-  if (from._internal_has_fence()) {
-    _this->_impl_.fence_ = new ::TfenceProto(*from._impl_.fence_);
-  }
-  // @@protoc_insertion_point(copy_constructor:MultiShardReq)
-}
-
-inline void MultiShardReq::SharedCtor(
-    ::_pb::Arena* arena, bool is_message_owned) {
-  (void)arena;
-  (void)is_message_owned;
-  new (&_impl_) Impl_{
-      decltype(_impl_.shards_){arena}
-    , /*decltype(_impl_._shards_cached_byte_size_)*/{0}
-    , decltype(_impl_.fence_){nullptr}
-    , /*decltype(_impl_._cached_size_)*/{}
-  };
-}
-
-MultiShardReq::~MultiShardReq() {
-  // @@protoc_insertion_point(destructor:MultiShardReq)
-  if (auto *arena = _internal_metadata_.DeleteReturnArena<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>()) {
-  (void)arena;
-    return;
-  }
-  SharedDtor();
-}
-
-inline void MultiShardReq::SharedDtor() {
-  GOOGLE_DCHECK(GetArenaForAllocation() == nullptr);
-  _impl_.shards_.~RepeatedField();
-  if (this != internal_default_instance()) delete _impl_.fence_;
-}
-
-void MultiShardReq::SetCachedSize(int size) const {
-  _impl_._cached_size_.Set(size);
-}
-
-void MultiShardReq::Clear() {
-// @@protoc_insertion_point(message_clear_start:MultiShardReq)
-  uint32_t cached_has_bits = 0;
-  // Prevent compiler warnings about cached_has_bits being unused
-  (void) cached_has_bits;
-
-  _impl_.shards_.Clear();
-  if (GetArenaForAllocation() == nullptr && _impl_.fence_ != nullptr) {
-    delete _impl_.fence_;
-  }
-  _impl_.fence_ = nullptr;
-  _internal_metadata_.Clear<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>();
-}
-
-const char* MultiShardReq::_InternalParse(const char* ptr, ::_pbi::ParseContext* ctx) {
-#define CHK_(x) if (PROTOBUF_PREDICT_FALSE(!(x))) goto failure
-  while (!ctx->Done(&ptr)) {
-    uint32_t tag;
-    ptr = ::_pbi::ReadTag(ptr, &tag);
-    switch (tag >> 3) {
-      // repeated uint32 shards = 1;
-      case 1:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 10)) {
-          ptr = ::PROTOBUF_NAMESPACE_ID::internal::PackedUInt32Parser(_internal_mutable_shards(), ptr, ctx);
-          CHK_(ptr);
-        } else if (static_cast<uint8_t>(tag) == 8) {
-          _internal_add_shards(::PROTOBUF_NAMESPACE_ID::internal::ReadVarint32(&ptr));
-          CHK_(ptr);
-        } else
-          goto handle_unusual;
-        continue;
-      // .TfenceProto fence = 2;
-      case 2:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 18)) {
-          ptr = ctx->ParseMessage(_internal_mutable_fence(), ptr);
-          CHK_(ptr);
-        } else
-          goto handle_unusual;
-        continue;
-      default:
-        goto handle_unusual;
-    }  // switch
-  handle_unusual:
-    if ((tag == 0) || ((tag & 7) == 4)) {
-      CHK_(ptr);
-      ctx->SetLastTag(tag);
-      goto message_done;
-    }
-    ptr = UnknownFieldParse(
-        tag,
-        _internal_metadata_.mutable_unknown_fields<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(),
-        ptr, ctx);
-    CHK_(ptr != nullptr);
-  }  // while
-message_done:
-  return ptr;
-failure:
-  ptr = nullptr;
-  goto message_done;
-#undef CHK_
-}
-
-uint8_t* MultiShardReq::_InternalSerialize(
-    uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
-  // @@protoc_insertion_point(serialize_to_array_start:MultiShardReq)
-  uint32_t cached_has_bits = 0;
-  (void) cached_has_bits;
-
-  // repeated uint32 shards = 1;
-  {
-    int byte_size = _impl_._shards_cached_byte_size_.load(std::memory_order_relaxed);
-    if (byte_size > 0) {
-      target = stream->WriteUInt32Packed(
-          1, _internal_shards(), byte_size, target);
-    }
-  }
-
-  // .TfenceProto fence = 2;
-  if (this->_internal_has_fence()) {
-    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::
-      InternalWriteMessage(2, _Internal::fence(this),
-        _Internal::fence(this).GetCachedSize(), target, stream);
-  }
-
-  if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
-    target = ::_pbi::WireFormat::InternalSerializeUnknownFieldsToArray(
-        _internal_metadata_.unknown_fields<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(::PROTOBUF_NAMESPACE_ID::UnknownFieldSet::default_instance), target, stream);
-  }
-  // @@protoc_insertion_point(serialize_to_array_end:MultiShardReq)
-  return target;
-}
-
-size_t MultiShardReq::ByteSizeLong() const {
-// @@protoc_insertion_point(message_byte_size_start:MultiShardReq)
-  size_t total_size = 0;
-
-  uint32_t cached_has_bits = 0;
-  // Prevent compiler warnings about cached_has_bits being unused
-  (void) cached_has_bits;
-
-  // repeated uint32 shards = 1;
-  {
-    size_t data_size = ::_pbi::WireFormatLite::
-      UInt32Size(this->_impl_.shards_);
-    if (data_size > 0) {
-      total_size += 1 +
-        ::_pbi::WireFormatLite::Int32Size(static_cast<int32_t>(data_size));
-    }
-    int cached_size = ::_pbi::ToCachedSize(data_size);
-    _impl_._shards_cached_byte_size_.store(cached_size,
-                                    std::memory_order_relaxed);
-    total_size += data_size;
-  }
-
-  // .TfenceProto fence = 2;
-  if (this->_internal_has_fence()) {
-    total_size += 1 +
-      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::MessageSize(
-        *_impl_.fence_);
-  }
-
-  return MaybeComputeUnknownFieldsSize(total_size, &_impl_._cached_size_);
-}
-
-const ::PROTOBUF_NAMESPACE_ID::Message::ClassData MultiShardReq::_class_data_ = {
-    ::PROTOBUF_NAMESPACE_ID::Message::CopyWithSourceCheck,
-    MultiShardReq::MergeImpl
-};
-const ::PROTOBUF_NAMESPACE_ID::Message::ClassData*MultiShardReq::GetClassData() const { return &_class_data_; }
-
-
-void MultiShardReq::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PROTOBUF_NAMESPACE_ID::Message& from_msg) {
-  auto* const _this = static_cast<MultiShardReq*>(&to_msg);
-  auto& from = static_cast<const MultiShardReq&>(from_msg);
-  // @@protoc_insertion_point(class_specific_merge_from_start:MultiShardReq)
-  GOOGLE_DCHECK_NE(&from, _this);
-  uint32_t cached_has_bits = 0;
-  (void) cached_has_bits;
-
-  _this->_impl_.shards_.MergeFrom(from._impl_.shards_);
-  if (from._internal_has_fence()) {
-    _this->_internal_mutable_fence()->::TfenceProto::MergeFrom(
-        from._internal_fence());
-  }
-  _this->_internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
-}
-
-void MultiShardReq::CopyFrom(const MultiShardReq& from) {
-// @@protoc_insertion_point(class_specific_copy_from_start:MultiShardReq)
-  if (&from == this) return;
-  Clear();
-  MergeFrom(from);
-}
-
-bool MultiShardReq::IsInitialized() const {
-  return true;
-}
-
-void MultiShardReq::InternalSwap(MultiShardReq* other) {
-  using std::swap;
-  _internal_metadata_.InternalSwap(&other->_internal_metadata_);
-  _impl_.shards_.InternalSwap(&other->_impl_.shards_);
-  swap(_impl_.fence_, other->_impl_.fence_);
-}
-
-::PROTOBUF_NAMESPACE_ID::Metadata MultiShardReq::GetMetadata() const {
-  return ::_pbi::AssignDescriptors(
-      &descriptor_table_cache_2eproto_getter, &descriptor_table_cache_2eproto_once,
-      file_level_metadata_cache_2eproto[6]);
-}
-
-// ===================================================================
-
-class MultiShardRep::_Internal {
- public:
-  static const ::Blob& blob(const MultiShardRep* msg);
-};
-
-const ::Blob&
-MultiShardRep::_Internal::blob(const MultiShardRep* msg) {
-  return *msg->_impl_.blob_;
-}
-void MultiShardRep::clear_blob() {
-  if (GetArenaForAllocation() == nullptr && _impl_.blob_ != nullptr) {
-    delete _impl_.blob_;
-  }
-  _impl_.blob_ = nullptr;
-}
-MultiShardRep::MultiShardRep(::PROTOBUF_NAMESPACE_ID::Arena* arena,
-                         bool is_message_owned)
-  : ::PROTOBUF_NAMESPACE_ID::Message(arena, is_message_owned) {
-  SharedCtor(arena, is_message_owned);
-  // @@protoc_insertion_point(arena_constructor:MultiShardRep)
-}
-MultiShardRep::MultiShardRep(const MultiShardRep& from)
-  : ::PROTOBUF_NAMESPACE_ID::Message() {
-  MultiShardRep* const _this = this; (void)_this;
-  new (&_impl_) Impl_{
-      decltype(_impl_.keys_){from._impl_.keys_}
-    , decltype(_impl_.lens_){from._impl_.lens_}
-    , /*decltype(_impl_._lens_cached_byte_size_)*/{0}
-    , decltype(_impl_.blob_){nullptr}
-    , /*decltype(_impl_._cached_size_)*/{}};
-
-  _internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
-  if (from._internal_has_blob()) {
-    _this->_impl_.blob_ = new ::Blob(*from._impl_.blob_);
-  }
-  // @@protoc_insertion_point(copy_constructor:MultiShardRep)
-}
-
-inline void MultiShardRep::SharedCtor(
-    ::_pb::Arena* arena, bool is_message_owned) {
-  (void)arena;
-  (void)is_message_owned;
-  new (&_impl_) Impl_{
-      decltype(_impl_.keys_){arena}
-    , decltype(_impl_.lens_){arena}
-    , /*decltype(_impl_._lens_cached_byte_size_)*/{0}
-    , decltype(_impl_.blob_){nullptr}
-    , /*decltype(_impl_._cached_size_)*/{}
-  };
-}
-
-MultiShardRep::~MultiShardRep() {
-  // @@protoc_insertion_point(destructor:MultiShardRep)
-  if (auto *arena = _internal_metadata_.DeleteReturnArena<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>()) {
-  (void)arena;
-    return;
-  }
-  SharedDtor();
-}
-
-inline void MultiShardRep::SharedDtor() {
-  GOOGLE_DCHECK(GetArenaForAllocation() == nullptr);
-  _impl_.keys_.~RepeatedPtrField();
-  _impl_.lens_.~RepeatedField();
-  if (this != internal_default_instance()) delete _impl_.blob_;
-}
-
-void MultiShardRep::SetCachedSize(int size) const {
-  _impl_._cached_size_.Set(size);
-}
-
-void MultiShardRep::Clear() {
-// @@protoc_insertion_point(message_clear_start:MultiShardRep)
-  uint32_t cached_has_bits = 0;
-  // Prevent compiler warnings about cached_has_bits being unused
-  (void) cached_has_bits;
-
-  _impl_.keys_.Clear();
-  _impl_.lens_.Clear();
-  if (GetArenaForAllocation() == nullptr && _impl_.blob_ != nullptr) {
-    delete _impl_.blob_;
-  }
-  _impl_.blob_ = nullptr;
-  _internal_metadata_.Clear<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>();
-}
-
-const char* MultiShardRep::_InternalParse(const char* ptr, ::_pbi::ParseContext* ctx) {
-#define CHK_(x) if (PROTOBUF_PREDICT_FALSE(!(x))) goto failure
-  while (!ctx->Done(&ptr)) {
-    uint32_t tag;
-    ptr = ::_pbi::ReadTag(ptr, &tag);
-    switch (tag >> 3) {
-      // repeated string keys = 1;
-      case 1:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 10)) {
-          ptr -= 1;
-          do {
-            ptr += 1;
-            auto str = _internal_add_keys();
-            ptr = ::_pbi::InlineGreedyStringParser(str, ptr, ctx);
-            CHK_(ptr);
-            CHK_(::_pbi::VerifyUTF8(str, "MultiShardRep.keys"));
-            if (!ctx->DataAvailable(ptr)) break;
-          } while (::PROTOBUF_NAMESPACE_ID::internal::ExpectTag<10>(ptr));
-        } else
-          goto handle_unusual;
-        continue;
-      // repeated uint32 lens = 2;
-      case 2:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 18)) {
-          ptr = ::PROTOBUF_NAMESPACE_ID::internal::PackedUInt32Parser(_internal_mutable_lens(), ptr, ctx);
-          CHK_(ptr);
-        } else if (static_cast<uint8_t>(tag) == 16) {
-          _internal_add_lens(::PROTOBUF_NAMESPACE_ID::internal::ReadVarint32(&ptr));
-          CHK_(ptr);
-        } else
-          goto handle_unusual;
-        continue;
-      // .Blob blob = 3;
-      case 3:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 26)) {
-          ptr = ctx->ParseMessage(_internal_mutable_blob(), ptr);
-          CHK_(ptr);
-        } else
-          goto handle_unusual;
-        continue;
-      default:
-        goto handle_unusual;
-    }  // switch
-  handle_unusual:
-    if ((tag == 0) || ((tag & 7) == 4)) {
-      CHK_(ptr);
-      ctx->SetLastTag(tag);
-      goto message_done;
-    }
-    ptr = UnknownFieldParse(
-        tag,
-        _internal_metadata_.mutable_unknown_fields<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(),
-        ptr, ctx);
-    CHK_(ptr != nullptr);
-  }  // while
-message_done:
-  return ptr;
-failure:
-  ptr = nullptr;
-  goto message_done;
-#undef CHK_
-}
-
-uint8_t* MultiShardRep::_InternalSerialize(
-    uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
-  // @@protoc_insertion_point(serialize_to_array_start:MultiShardRep)
-  uint32_t cached_has_bits = 0;
-  (void) cached_has_bits;
-
-  // repeated string keys = 1;
-  for (int i = 0, n = this->_internal_keys_size(); i < n; i++) {
-    const auto& s = this->_internal_keys(i);
-    ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::VerifyUtf8String(
-      s.data(), static_cast<int>(s.length()),
-      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::SERIALIZE,
-      "MultiShardRep.keys");
-    target = stream->WriteString(1, s, target);
-  }
-
-  // repeated uint32 lens = 2;
-  {
-    int byte_size = _impl_._lens_cached_byte_size_.load(std::memory_order_relaxed);
-    if (byte_size > 0) {
-      target = stream->WriteUInt32Packed(
-          2, _internal_lens(), byte_size, target);
-    }
-  }
-
-  // .Blob blob = 3;
-  if (this->_internal_has_blob()) {
-    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::
-      InternalWriteMessage(3, _Internal::blob(this),
-        _Internal::blob(this).GetCachedSize(), target, stream);
-  }
-
-  if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
-    target = ::_pbi::WireFormat::InternalSerializeUnknownFieldsToArray(
-        _internal_metadata_.unknown_fields<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(::PROTOBUF_NAMESPACE_ID::UnknownFieldSet::default_instance), target, stream);
-  }
-  // @@protoc_insertion_point(serialize_to_array_end:MultiShardRep)
-  return target;
-}
-
-size_t MultiShardRep::ByteSizeLong() const {
-// @@protoc_insertion_point(message_byte_size_start:MultiShardRep)
-  size_t total_size = 0;
-
-  uint32_t cached_has_bits = 0;
-  // Prevent compiler warnings about cached_has_bits being unused
-  (void) cached_has_bits;
-
-  // repeated string keys = 1;
-  total_size += 1 *
-      ::PROTOBUF_NAMESPACE_ID::internal::FromIntSize(_impl_.keys_.size());
-  for (int i = 0, n = _impl_.keys_.size(); i < n; i++) {
-    total_size += ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
-      _impl_.keys_.Get(i));
-  }
-
-  // repeated uint32 lens = 2;
-  {
-    size_t data_size = ::_pbi::WireFormatLite::
-      UInt32Size(this->_impl_.lens_);
-    if (data_size > 0) {
-      total_size += 1 +
-        ::_pbi::WireFormatLite::Int32Size(static_cast<int32_t>(data_size));
-    }
-    int cached_size = ::_pbi::ToCachedSize(data_size);
-    _impl_._lens_cached_byte_size_.store(cached_size,
-                                    std::memory_order_relaxed);
-    total_size += data_size;
-  }
-
-  // .Blob blob = 3;
-  if (this->_internal_has_blob()) {
-    total_size += 1 +
-      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::MessageSize(
-        *_impl_.blob_);
-  }
-
-  return MaybeComputeUnknownFieldsSize(total_size, &_impl_._cached_size_);
-}
-
-const ::PROTOBUF_NAMESPACE_ID::Message::ClassData MultiShardRep::_class_data_ = {
-    ::PROTOBUF_NAMESPACE_ID::Message::CopyWithSourceCheck,
-    MultiShardRep::MergeImpl
-};
-const ::PROTOBUF_NAMESPACE_ID::Message::ClassData*MultiShardRep::GetClassData() const { return &_class_data_; }
-
-
-void MultiShardRep::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PROTOBUF_NAMESPACE_ID::Message& from_msg) {
-  auto* const _this = static_cast<MultiShardRep*>(&to_msg);
-  auto& from = static_cast<const MultiShardRep&>(from_msg);
-  // @@protoc_insertion_point(class_specific_merge_from_start:MultiShardRep)
-  GOOGLE_DCHECK_NE(&from, _this);
-  uint32_t cached_has_bits = 0;
-  (void) cached_has_bits;
-
-  _this->_impl_.keys_.MergeFrom(from._impl_.keys_);
-  _this->_impl_.lens_.MergeFrom(from._impl_.lens_);
-  if (from._internal_has_blob()) {
-    _this->_internal_mutable_blob()->::Blob::MergeFrom(
-        from._internal_blob());
-  }
-  _this->_internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
-}
-
-void MultiShardRep::CopyFrom(const MultiShardRep& from) {
-// @@protoc_insertion_point(class_specific_copy_from_start:MultiShardRep)
-  if (&from == this) return;
-  Clear();
-  MergeFrom(from);
-}
-
-bool MultiShardRep::IsInitialized() const {
-  return true;
-}
-
-void MultiShardRep::InternalSwap(MultiShardRep* other) {
-  using std::swap;
-  _internal_metadata_.InternalSwap(&other->_internal_metadata_);
-  _impl_.keys_.InternalSwap(&other->_impl_.keys_);
-  _impl_.lens_.InternalSwap(&other->_impl_.lens_);
-  swap(_impl_.blob_, other->_impl_.blob_);
-}
-
-::PROTOBUF_NAMESPACE_ID::Metadata MultiShardRep::GetMetadata() const {
-  return ::_pbi::AssignDescriptors(
-      &descriptor_table_cache_2eproto_getter, &descriptor_table_cache_2eproto_once,
-      file_level_metadata_cache_2eproto[7]);
-}
-
-// ===================================================================
-
 class CacheOK::_Internal {
  public:
 };
@@ -2365,7 +1789,7 @@ const ::PROTOBUF_NAMESPACE_ID::Message::ClassData*CacheOK::GetClassData() const 
 ::PROTOBUF_NAMESPACE_ID::Metadata CacheOK::GetMetadata() const {
   return ::_pbi::AssignDescriptors(
       &descriptor_table_cache_2eproto_getter, &descriptor_table_cache_2eproto_once,
-      file_level_metadata_cache_2eproto[8]);
+      file_level_metadata_cache_2eproto[6]);
 }
 
 // ===================================================================
@@ -2563,7 +1987,7 @@ void CacheRep::InternalSwap(CacheRep* other) {
 ::PROTOBUF_NAMESPACE_ID::Metadata CacheRep::GetMetadata() const {
   return ::_pbi::AssignDescriptors(
       &descriptor_table_cache_2eproto_getter, &descriptor_table_cache_2eproto_once,
-      file_level_metadata_cache_2eproto[9]);
+      file_level_metadata_cache_2eproto[7]);
 }
 
 // ===================================================================
@@ -2577,7 +2001,7 @@ void ShardData_ValsEntry_DoNotUse::MergeFrom(const ShardData_ValsEntry_DoNotUse&
 ::PROTOBUF_NAMESPACE_ID::Metadata ShardData_ValsEntry_DoNotUse::GetMetadata() const {
   return ::_pbi::AssignDescriptors(
       &descriptor_table_cache_2eproto_getter, &descriptor_table_cache_2eproto_once,
-      file_level_metadata_cache_2eproto[10]);
+      file_level_metadata_cache_2eproto[8]);
 }
 
 // ===================================================================
@@ -2792,7 +2216,7 @@ void ShardData::InternalSwap(ShardData* other) {
 ::PROTOBUF_NAMESPACE_ID::Metadata ShardData::GetMetadata() const {
   return ::_pbi::AssignDescriptors(
       &descriptor_table_cache_2eproto_getter, &descriptor_table_cache_2eproto_once,
-      file_level_metadata_cache_2eproto[11]);
+      file_level_metadata_cache_2eproto[9]);
 }
 
 // ===================================================================
@@ -2995,7 +2419,7 @@ void CacheString::InternalSwap(CacheString* other) {
 ::PROTOBUF_NAMESPACE_ID::Metadata CacheString::GetMetadata() const {
   return ::_pbi::AssignDescriptors(
       &descriptor_table_cache_2eproto_getter, &descriptor_table_cache_2eproto_once,
-      file_level_metadata_cache_2eproto[12]);
+      file_level_metadata_cache_2eproto[10]);
 }
 
 // ===================================================================
@@ -3173,7 +2597,7 @@ void CacheInt::InternalSwap(CacheInt* other) {
 ::PROTOBUF_NAMESPACE_ID::Metadata CacheInt::GetMetadata() const {
   return ::_pbi::AssignDescriptors(
       &descriptor_table_cache_2eproto_getter, &descriptor_table_cache_2eproto_once,
-      file_level_metadata_cache_2eproto[13]);
+      file_level_metadata_cache_2eproto[11]);
 }
 
 // @@protoc_insertion_point(namespace_scope)
@@ -3201,14 +2625,6 @@ Arena::CreateMaybeMessage< ::ShardReq_ValsEntry_DoNotUse >(Arena* arena) {
 template<> PROTOBUF_NOINLINE ::ShardReq*
 Arena::CreateMaybeMessage< ::ShardReq >(Arena* arena) {
   return Arena::CreateMessageInternal< ::ShardReq >(arena);
-}
-template<> PROTOBUF_NOINLINE ::MultiShardReq*
-Arena::CreateMaybeMessage< ::MultiShardReq >(Arena* arena) {
-  return Arena::CreateMessageInternal< ::MultiShardReq >(arena);
-}
-template<> PROTOBUF_NOINLINE ::MultiShardRep*
-Arena::CreateMaybeMessage< ::MultiShardRep >(Arena* arena) {
-  return Arena::CreateMessageInternal< ::MultiShardRep >(arena);
 }
 template<> PROTOBUF_NOINLINE ::CacheOK*
 Arena::CreateMaybeMessage< ::CacheOK >(Arena* arena) {

@@ -324,9 +324,7 @@ Clnt::MultiDumpShard(uint32_t srv, std::vector<uint32_t> &shards) {
     }
     rpcc = res.value();
   }
-  TfenceProto fence;
   MultiShardReq req;
-  req.set_allocated_fence(&fence);
   for (auto &shard : shards) {
     req.mutable_shards()->Add(shard);
   }
@@ -346,9 +344,6 @@ Clnt::MultiDumpShard(uint32_t srv, std::vector<uint32_t> &shards) {
           std::string, std::shared_ptr<sigmaos::apps::cache::Value>>>>>();
   {
     auto res = rpcc->RPC("CacheSrv.MultiDumpShard", req, rep);
-    {
-      auto _ = req.release_fence();
-    }
     if (!res.has_value()) {
       log(CACHECLNT_ERR, "Error Get: {}", res.error().String());
       return std::unexpected(res.error());

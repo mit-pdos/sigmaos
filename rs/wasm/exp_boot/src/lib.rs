@@ -1,4 +1,5 @@
 use proto::cache;
+use proto::dump;
 use proto::get;
 use proto::sigmap;
 use proto::tracing;
@@ -33,7 +34,7 @@ pub fn boot(b: *mut c_char, buf_sz: usize) {
     let n_keys = u64::from_le_bytes(buf[4..12].try_into().unwrap());
     // Create a multi_get request for each server
     let mut multi_get_rpcs: Vec<get::CacheMultiGetReq> = Vec::new();
-    for srv_id in 0..n_srv {
+    for _ in 0..n_srv {
         multi_get_rpcs.push(get::CacheMultiGetReq::new());
     }
     for key in 0..n_keys {
@@ -44,8 +45,7 @@ pub fn boot(b: *mut c_char, buf_sz: usize) {
         multi_get_rpcs[srv_id as usize].gets.push(get_descriptor);
     }
     if buf[10] == b'a' {
-        let mut multi_shard_req = cache::MultiShardReq::new();
-        multi_shard_req.fence = MessageField::some(sigmap::TfenceProto::new());
+        let multi_shard_req = dump::MultiShardReq::new();
         let rpc_bytes = multi_shard_req.write_to_bytes().unwrap();
         sigmaos::send_rpc(buf, 0, "abcd", "CacheSrv.MultiGet", &rpc_bytes, 2);
         let mut shard_req = cache::ShardReq::new();

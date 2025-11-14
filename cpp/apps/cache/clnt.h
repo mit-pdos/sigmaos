@@ -3,6 +3,7 @@
 #include <apps/cache/cache.h>
 #include <apps/cache/proto/cache.pb.h>
 #include <apps/cache/proto/get.pb.h>
+#include <apps/cache/proto/dump.pb.h>
 #include <apps/cache/shard.h>
 #include <google/protobuf/message.h>
 #include <io/demux/clnt.h>

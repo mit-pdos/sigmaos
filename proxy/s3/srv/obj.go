@@ -1,4 +1,4 @@
-package fss3
+package srv
 
 import (
 	"context"

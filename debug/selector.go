@@ -200,6 +200,7 @@ const (
 // Proxies
 const (
 	S3             Tselector = "S3"
+	S3_ERR                   = S3 + ERR
 	UX                       = "UX"
 	DB                       = "DB"
 	MONGO                    = "MONGO"

@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+import "rpc/proto/rpc.proto";
+
+option go_package = "sigmaos/proxy/s3/proto";
+
+message GetReq {
+  string bucket = 1;
+  string key = 2;
+}
+
+message GetRep {
+  bool oK = 1; 
+  Blob blob = 2;
+}

@@ -292,7 +292,7 @@ func TestUnionFile(t *testing.T) {
 	err := ts.BootNode(1)
 	assert.Nil(t, err)
 
-	file, err := os.ReadFile("../../../../input/pg-being_ernest.txt")
+	file, err := os.ReadFile("../../../input/pg-being_ernest.txt")
 	if !assert.Nil(t, err, "ReadFile") {
 		return
 	}

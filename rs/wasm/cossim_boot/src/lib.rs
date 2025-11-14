@@ -1,5 +1,4 @@
-use proto::cache;
-use proto::sigmap;
+use proto::get;
 use protobuf::{Message, MessageField};
 use sigmaos;
 use std::os::raw::c_char;
@@ -30,13 +29,12 @@ pub fn boot(b: *mut c_char, buf_sz: usize) {
     let n_srv = u32::from_le_bytes(buf[0..4].try_into().unwrap());
     let n_keys = u64::from_le_bytes(buf[4..12].try_into().unwrap());
     // Create a multi_get request for each server
-    let mut multi_get_rpcs: Vec<cache::CacheMultiGetReq> = Vec::new();
+    let mut multi_get_rpcs: Vec<get::CacheMultiGetReq> = Vec::new();
     for srv_id in 0..n_srv {
-        multi_get_rpcs.push(cache::CacheMultiGetReq::new());
-        multi_get_rpcs[srv_id as usize].fence = MessageField::some(sigmap::TfenceProto::new());
+        multi_get_rpcs.push(get::CacheMultiGetReq::new());
     }
     for key in 0..n_keys {
-        let mut get_descriptor = cache::CacheGetDescriptor::new();
+        let mut get_descriptor = get::CacheGetDescriptor::new();
         get_descriptor.key = key.to_string();
         get_descriptor.shard = key2shard(&get_descriptor.key);
         let srv_id = key2server(&get_descriptor.key, n_srv);

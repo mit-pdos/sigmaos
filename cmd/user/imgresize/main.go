@@ -83,21 +83,24 @@ func NewImgProcess(pe *proc.ProcEnv, args []string, p *perf.Perf) (*ImgProcess, 
 	if err != nil {
 		return nil, err
 	}
+	useS3Clnt, err := strconv.ParseBool(args[4])
+	if err != nil {
+		db.DFatalf("Err parse useS3Clnt: %v", err)
+	}
+	ip.useS3Clnt = useS3Clnt
 	ip.SigmaClnt = sc
 	ip.inputs = strings.Split(args[1], ",")
 	db.DPrintf(db.ALWAYS, "Args {%v} inputs {%v} fail {%v}", args[1], ip.inputs, proc.GetSigmaFail())
 	ip.output = ip.inputs[0] + "-thumbnail"
+	if useS3Clnt {
+		ip.output = filepath.Join(sp.S3, sp.LOCAL, ip.output)
+	}
 	ip.nrounds, err = strconv.Atoi(args[3])
 	if err != nil {
 		db.DFatalf("Err convert nrounds: %v", err)
 	}
 	ip.Started()
 	crash.FailersDefault(sc.FsLib, []crash.Tselector{crash.IMGRESIZE_CRASH})
-	useS3Clnt, err := strconv.ParseBool(args[4])
-	if err != nil {
-		db.DFatalf("Err parse useS3Clnt: %v", err)
-	}
-	ip.useS3Clnt = useS3Clnt
 	if useS3Clnt {
 		s3Clnt, err := s3clnt.NewS3Clnt(ip.FsLib, filepath.Join(sp.S3, pe.GetKernelID()))
 		if err != nil {
@@ -116,7 +119,7 @@ func (ip *ImgProcess) Work(i int, output string) *proc.Status {
 	if ip.useS3Clnt {
 		pn := strings.Split(ip.inputs[i], "/")
 		bucket := pn[0]
-		key := pn[1]
+		key := filepath.Join(pn[1:]...)
 		b, err := ip.s3Clnt.GetObject(bucket, key)
 		if err != nil {
 			return proc.NewStatusErr(fmt.Sprintf("Err GetObject bucket:%v key:%v", bucket, key), err)

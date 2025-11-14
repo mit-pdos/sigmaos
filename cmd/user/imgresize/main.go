@@ -112,7 +112,7 @@ func NewImgProcess(pe *proc.ProcEnv, args []string, p *perf.Perf) (*ImgProcess, 
 }
 
 func (ip *ImgProcess) Work(i int, output string) *proc.Status {
-	db.DPrintf(db.ALWAYS, "Resize (%v/%v) %v", i, len(ip.inputs), ip.inputs[i])
+	db.DPrintf(db.ALWAYS, "Resize (%v/%v) %v s3rpc %v", i, len(ip.inputs), ip.inputs[i], ip.useS3Clnt)
 	do := time.Now()
 	var rdr io.ReadCloser
 	var err error

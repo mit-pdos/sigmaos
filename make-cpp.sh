@@ -67,6 +67,8 @@ mkdir -p build
 # Generate build files
 cd build
 cmake ..
+# Uncomment below to compile with debug symbols
+#ccache -c && cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo ..
 export EXIT_STATUS=$?
 if [ $EXIT_STATUS  -ne 0 ]; then
   exit $EXIT_STATUS

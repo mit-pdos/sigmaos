@@ -27,10 +27,11 @@ func NewImgResizeRPCClnt(fsl *fslib.FsLib, job string) (*ImgResizeRPCClnt, error
 	}, nil
 }
 
-func (clnt *ImgResizeRPCClnt) Resize(tname, ipath string) error {
+func (clnt *ImgResizeRPCClnt) Resize(tname, ipath string, useS3Clnt bool) error {
 	arg := proto.ImgResizeReq{
 		TaskName:  tname,
 		InputPath: ipath,
+		UseS3Clnt: useS3Clnt,
 	}
 	res := proto.ImgResizeRep{}
 	err := clnt.rpcclntc.RPCRetryNotFound(clnt.pn, clnt.job, "ImgSrvRPC.Resize", &arg, &res)

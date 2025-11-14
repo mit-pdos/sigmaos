@@ -41,8 +41,8 @@ func (clnt *ImgdClnt[Data]) GetNTasks(status fttask_clnt.TaskStatus) (int32, err
 	return clnt.ftclnt.GetNTasks(status)
 }
 
-func (clnt *ImgdClnt[Data]) Resize(tname, ipath string) error {
-	return clnt.rpcc.Resize(tname, ipath)
+func (clnt *ImgdClnt[Data]) Resize(tname, ipath string, useS3Clnt bool) error {
+	return clnt.rpcc.Resize(tname, ipath, useS3Clnt)
 }
 
 func (clnt *ImgdClnt[Data]) Status() (int64, error) {

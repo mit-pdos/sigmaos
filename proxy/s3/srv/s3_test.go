@@ -286,13 +286,16 @@ func TestUnionFile(t *testing.T) {
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
 	}
+	defer ts.Shutdown()
 
 	// Boot a kernel with a second s3 proxy
 	err := ts.BootNode(1)
 	assert.Nil(t, err)
 
-	file, err := os.ReadFile("../../input/pg-being_ernest.txt")
-	assert.Nil(t, err, "ReadFile")
+	file, err := os.ReadFile("../../../../input/pg-being_ernest.txt")
+	if !assert.Nil(t, err, "ReadFile") {
+		return
+	}
 
 	name := filepath.Join(sp.S3, sp.ANY, "9ps3/gutenberg/pg-being_ernest.txt")
 	st, err := ts.Stat(name)
@@ -318,6 +321,4 @@ func TestUnionFile(t *testing.T) {
 		}
 		assert.Equal(ts.T, int(st.Tlength()), n)
 	}
-
-	ts.Shutdown()
 }

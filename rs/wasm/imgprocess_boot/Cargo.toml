@@ -1,0 +1,18 @@
+[package]
+name = "imgprocess_boot"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+protobuf = "3.7.2"
+proto = { path = "../../proto" }
+sigmaos = { path = "../../sigmaos" }
+
+[lib]
+crate-type = ["cdylib"]
+
+[profile.release]
+lto = true
+opt-level = "s"
+panic = "abort"
+strip = "symbols"

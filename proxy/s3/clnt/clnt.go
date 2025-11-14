@@ -44,3 +44,20 @@ func (clnt *S3Clnt) GetObject(bucket, key string) ([]byte, error) {
 	db.DPrintf(db.S3CLNT2, "GetObject ok bucket:%v key:%v blob_len:%v", bucket, key, len(res.Blob.Iov))
 	return res.Blob.Iov[0], nil
 }
+
+func (clnt *S3Clnt) DelegatedGetObject(rpcIdx uint64) ([]byte, error) {
+	db.DPrintf(db.S3CLNT2, "DelegatedGetObject(%v)", rpcIdx)
+	b := []byte{}
+	var res proto.GetRep
+	res.Blob = &rpcproto.Blob{
+		Iov: [][]byte{b},
+	}
+	err := clnt.rpcc.DelegatedRPC(rpcIdx, &res)
+	if err != nil {
+		db.DPrintf(db.S3CLNT2_ERR, "Err DelegatedGetObject: %v", err)
+		db.DPrintf(db.ERROR, "Err DelegatedGetObject: %v", err)
+		return nil, err
+	}
+	db.DPrintf(db.S3CLNT2, "DelegatedGetObject(%v) ok blob_len:%v", rpcIdx, len(res.Blob.Iov))
+	return res.Blob.Iov[0], nil
+}

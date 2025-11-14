@@ -19,6 +19,7 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/path"
+	"sigmaos/proxy/s3/clnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 )
@@ -320,5 +321,33 @@ func TestUnionFile(t *testing.T) {
 			file = file[len(b):]
 		}
 		assert.Equal(ts.T, int(st.Tlength()), n)
+	}
+}
+
+func TestClnt(t *testing.T) {
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	defer ts.Shutdown()
+
+	dn := s3Name(ts)
+	db.DPrintf(db.TEST, "s3 proxy name: %v", dn)
+	s3clnt, err := clnt.NewS3Clnt(ts.FsLib, dn)
+	if !assert.Nil(ts.T, err, "Err NewS3Clnt: %v", err) {
+		return
+	}
+	file, err := os.ReadFile("../../../input/pg-being_ernest.txt")
+	if !assert.Nil(t, err, "ReadFile") {
+		return
+	}
+	key := "gutenberg/pg-being_ernest.txt"
+	bucket := "9ps3"
+	val, err := s3clnt.GetObject(bucket, key)
+	if !assert.Nil(t, err, "GetObject") {
+		return
+	}
+	if assert.Equal(t, len(file), len(val), "Len not equal") {
+		assert.Equal(t, file, val, "Not equal")
 	}
 }

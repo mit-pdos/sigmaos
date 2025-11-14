@@ -12,17 +12,17 @@ import (
 	rpcproto "sigmaos/rpc/proto"
 )
 
-type rpcAPI struct {
+type S3RpcAPI struct {
 	fss3 *Fss3
 }
 
-func newRPCAPI(fss3 *Fss3) *rpcAPI {
-	return &rpcAPI{
+func newRPCAPI(fss3 *Fss3) *S3RpcAPI {
+	return &S3RpcAPI{
 		fss3: fss3,
 	}
 }
 
-func (ra *rpcAPI) GetObject(ctx fs.CtxI, req proto.GetReq, rep *proto.GetRep) error {
+func (ra *S3RpcAPI) GetObject(ctx fs.CtxI, req proto.GetReq, rep *proto.GetRep) error {
 	clnt, err1 := ra.fss3.getClient(ctx)
 	if err1 != nil {
 		db.DPrintf(db.S3_ERR, "Err getClient: %v", err1)

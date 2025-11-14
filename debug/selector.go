@@ -201,6 +201,8 @@ const (
 const (
 	S3             Tselector = "S3"
 	S3_ERR                   = S3 + ERR
+	S3CLNT2                  = "S3CLNT2"
+	S3CLNT2_ERR              = S3CLNT2 + ERR
 	UX                       = "UX"
 	DB                       = "DB"
 	MONGO                    = "MONGO"

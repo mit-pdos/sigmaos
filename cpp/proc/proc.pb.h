@@ -71,9 +71,9 @@ extern ProcProto_EnvEntry_DoNotUseDefaultTypeInternal _ProcProto_EnvEntry_DoNotU
 class ProcSeqno;
 struct ProcSeqnoDefaultTypeInternal;
 extern ProcSeqnoDefaultTypeInternal _ProcSeqno_default_instance_;
-class ResourceReservation;
-struct ResourceReservationDefaultTypeInternal;
-extern ResourceReservationDefaultTypeInternal _ResourceReservation_default_instance_;
+class ResourceReservationProto;
+struct ResourceReservationProtoDefaultTypeInternal;
+extern ResourceReservationProtoDefaultTypeInternal _ResourceReservationProto_default_instance_;
 PROTOBUF_NAMESPACE_OPEN
 template<> ::ProcEnvProto* Arena::CreateMaybeMessage<::ProcEnvProto>(Arena*);
 template<> ::ProcEnvProto_CachedEndpointsEntry_DoNotUse* Arena::CreateMaybeMessage<::ProcEnvProto_CachedEndpointsEntry_DoNotUse>(Arena*);
@@ -82,7 +82,7 @@ template<> ::ProcEnvProto_SecretsMapEntry_DoNotUse* Arena::CreateMaybeMessage<::
 template<> ::ProcProto* Arena::CreateMaybeMessage<::ProcProto>(Arena*);
 template<> ::ProcProto_EnvEntry_DoNotUse* Arena::CreateMaybeMessage<::ProcProto_EnvEntry_DoNotUse>(Arena*);
 template<> ::ProcSeqno* Arena::CreateMaybeMessage<::ProcSeqno>(Arena*);
-template<> ::ResourceReservation* Arena::CreateMaybeMessage<::ResourceReservation>(Arena*);
+template<> ::ResourceReservationProto* Arena::CreateMaybeMessage<::ResourceReservationProto>(Arena*);
 PROTOBUF_NAMESPACE_CLOSE
 
 // ===================================================================
@@ -278,24 +278,24 @@ class ProcSeqno final :
 };
 // -------------------------------------------------------------------
 
-class ResourceReservation final :
-    public ::PROTOBUF_NAMESPACE_ID::Message /* @@protoc_insertion_point(class_definition:ResourceReservation) */ {
+class ResourceReservationProto final :
+    public ::PROTOBUF_NAMESPACE_ID::Message /* @@protoc_insertion_point(class_definition:ResourceReservationProto) */ {
  public:
-  inline ResourceReservation() : ResourceReservation(nullptr) {}
-  ~ResourceReservation() override;
-  explicit PROTOBUF_CONSTEXPR ResourceReservation(::PROTOBUF_NAMESPACE_ID::internal::ConstantInitialized);
+  inline ResourceReservationProto() : ResourceReservationProto(nullptr) {}
+  ~ResourceReservationProto() override;
+  explicit PROTOBUF_CONSTEXPR ResourceReservationProto(::PROTOBUF_NAMESPACE_ID::internal::ConstantInitialized);
 
-  ResourceReservation(const ResourceReservation& from);
-  ResourceReservation(ResourceReservation&& from) noexcept
-    : ResourceReservation() {
+  ResourceReservationProto(const ResourceReservationProto& from);
+  ResourceReservationProto(ResourceReservationProto&& from) noexcept
+    : ResourceReservationProto() {
     *this = ::std::move(from);
   }
 
-  inline ResourceReservation& operator=(const ResourceReservation& from) {
+  inline ResourceReservationProto& operator=(const ResourceReservationProto& from) {
     CopyFrom(from);
     return *this;
   }
-  inline ResourceReservation& operator=(ResourceReservation&& from) noexcept {
+  inline ResourceReservationProto& operator=(ResourceReservationProto&& from) noexcept {
     if (this == &from) return *this;
     if (GetOwningArena() == from.GetOwningArena()
   #ifdef PROTOBUF_FORCE_COPY_IN_MOVE
@@ -318,20 +318,20 @@ class ResourceReservation final :
   static const ::PROTOBUF_NAMESPACE_ID::Reflection* GetReflection() {
     return default_instance().GetMetadata().reflection;
   }
-  static const ResourceReservation& default_instance() {
+  static const ResourceReservationProto& default_instance() {
     return *internal_default_instance();
   }
-  static inline const ResourceReservation* internal_default_instance() {
-    return reinterpret_cast<const ResourceReservation*>(
-               &_ResourceReservation_default_instance_);
+  static inline const ResourceReservationProto* internal_default_instance() {
+    return reinterpret_cast<const ResourceReservationProto*>(
+               &_ResourceReservationProto_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
     1;
 
-  friend void swap(ResourceReservation& a, ResourceReservation& b) {
+  friend void swap(ResourceReservationProto& a, ResourceReservationProto& b) {
     a.Swap(&b);
   }
-  inline void Swap(ResourceReservation* other) {
+  inline void Swap(ResourceReservationProto* other) {
     if (other == this) return;
   #ifdef PROTOBUF_FORCE_COPY_IN_SWAP
     if (GetOwningArena() != nullptr &&
@@ -344,7 +344,7 @@ class ResourceReservation final :
       ::PROTOBUF_NAMESPACE_ID::internal::GenericSwap(this, other);
     }
   }
-  void UnsafeArenaSwap(ResourceReservation* other) {
+  void UnsafeArenaSwap(ResourceReservationProto* other) {
     if (other == this) return;
     GOOGLE_DCHECK(GetOwningArena() == other->GetOwningArena());
     InternalSwap(other);
@@ -352,14 +352,14 @@ class ResourceReservation final :
 
   // implements Message ----------------------------------------------
 
-  ResourceReservation* New(::PROTOBUF_NAMESPACE_ID::Arena* arena = nullptr) const final {
-    return CreateMaybeMessage<ResourceReservation>(arena);
+  ResourceReservationProto* New(::PROTOBUF_NAMESPACE_ID::Arena* arena = nullptr) const final {
+    return CreateMaybeMessage<ResourceReservationProto>(arena);
   }
   using ::PROTOBUF_NAMESPACE_ID::Message::CopyFrom;
-  void CopyFrom(const ResourceReservation& from);
+  void CopyFrom(const ResourceReservationProto& from);
   using ::PROTOBUF_NAMESPACE_ID::Message::MergeFrom;
-  void MergeFrom( const ResourceReservation& from) {
-    ResourceReservation::MergeImpl(*this, from);
+  void MergeFrom( const ResourceReservationProto& from) {
+    ResourceReservationProto::MergeImpl(*this, from);
   }
   private:
   static void MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PROTOBUF_NAMESPACE_ID::Message& from_msg);
@@ -377,15 +377,15 @@ class ResourceReservation final :
   void SharedCtor(::PROTOBUF_NAMESPACE_ID::Arena* arena, bool is_message_owned);
   void SharedDtor();
   void SetCachedSize(int size) const final;
-  void InternalSwap(ResourceReservation* other);
+  void InternalSwap(ResourceReservationProto* other);
 
   private:
   friend class ::PROTOBUF_NAMESPACE_ID::internal::AnyMetadata;
   static ::PROTOBUF_NAMESPACE_ID::StringPiece FullMessageName() {
-    return "ResourceReservation";
+    return "ResourceReservationProto";
   }
   protected:
-  explicit ResourceReservation(::PROTOBUF_NAMESPACE_ID::Arena* arena,
+  explicit ResourceReservationProto(::PROTOBUF_NAMESPACE_ID::Arena* arena,
                        bool is_message_owned = false);
   public:
 
@@ -420,7 +420,7 @@ class ResourceReservation final :
   void _internal_set_memint(uint32_t value);
   public:
 
-  // @@protoc_insertion_point(class_scope:ResourceReservation)
+  // @@protoc_insertion_point(class_scope:ResourceReservationProto)
  private:
   class _Internal;
 
@@ -1433,41 +1433,41 @@ class ProcProto final :
       ::Blob* blob);
   ::Blob* unsafe_arena_release_blob();
 
-  // .ResourceReservation resourceRes = 7;
+  // .ResourceReservationProto resourceRes = 7;
   bool has_resourceres() const;
   private:
   bool _internal_has_resourceres() const;
   public:
   void clear_resourceres();
-  const ::ResourceReservation& resourceres() const;
-  PROTOBUF_NODISCARD ::ResourceReservation* release_resourceres();
-  ::ResourceReservation* mutable_resourceres();
-  void set_allocated_resourceres(::ResourceReservation* resourceres);
+  const ::ResourceReservationProto& resourceres() const;
+  PROTOBUF_NODISCARD ::ResourceReservationProto* release_resourceres();
+  ::ResourceReservationProto* mutable_resourceres();
+  void set_allocated_resourceres(::ResourceReservationProto* resourceres);
   private:
-  const ::ResourceReservation& _internal_resourceres() const;
-  ::ResourceReservation* _internal_mutable_resourceres();
+  const ::ResourceReservationProto& _internal_resourceres() const;
+  ::ResourceReservationProto* _internal_mutable_resourceres();
   public:
   void unsafe_arena_set_allocated_resourceres(
-      ::ResourceReservation* resourceres);
-  ::ResourceReservation* unsafe_arena_release_resourceres();
+      ::ResourceReservationProto* resourceres);
+  ::ResourceReservationProto* unsafe_arena_release_resourceres();
 
-  // .ResourceReservation bootScriptResourceRes = 8;
+  // .ResourceReservationProto bootScriptResourceRes = 8;
   bool has_bootscriptresourceres() const;
   private:
   bool _internal_has_bootscriptresourceres() const;
   public:
   void clear_bootscriptresourceres();
-  const ::ResourceReservation& bootscriptresourceres() const;
-  PROTOBUF_NODISCARD ::ResourceReservation* release_bootscriptresourceres();
-  ::ResourceReservation* mutable_bootscriptresourceres();
-  void set_allocated_bootscriptresourceres(::ResourceReservation* bootscriptresourceres);
+  const ::ResourceReservationProto& bootscriptresourceres() const;
+  PROTOBUF_NODISCARD ::ResourceReservationProto* release_bootscriptresourceres();
+  ::ResourceReservationProto* mutable_bootscriptresourceres();
+  void set_allocated_bootscriptresourceres(::ResourceReservationProto* bootscriptresourceres);
   private:
-  const ::ResourceReservation& _internal_bootscriptresourceres() const;
-  ::ResourceReservation* _internal_mutable_bootscriptresourceres();
+  const ::ResourceReservationProto& _internal_bootscriptresourceres() const;
+  ::ResourceReservationProto* _internal_mutable_bootscriptresourceres();
   public:
   void unsafe_arena_set_allocated_bootscriptresourceres(
-      ::ResourceReservation* bootscriptresourceres);
-  ::ResourceReservation* unsafe_arena_release_bootscriptresourceres();
+      ::ResourceReservationProto* bootscriptresourceres);
+  ::ResourceReservationProto* unsafe_arena_release_bootscriptresourceres();
 
   // uint32 typeInt = 6;
   void clear_typeint();
@@ -1495,8 +1495,8 @@ class ProcProto final :
     ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr bootscriptinput_;
     ::ProcEnvProto* procenvproto_;
     ::Blob* blob_;
-    ::ResourceReservation* resourceres_;
-    ::ResourceReservation* bootscriptresourceres_;
+    ::ResourceReservationProto* resourceres_;
+    ::ResourceReservationProto* bootscriptresourceres_;
     uint32_t typeint_;
     mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   };
@@ -1656,46 +1656,46 @@ inline void ProcSeqno::set_allocated_mschedid(std::string* mschedid) {
 
 // -------------------------------------------------------------------
 
-// ResourceReservation
+// ResourceReservationProto
 
 // uint32 mcpuInt = 7;
-inline void ResourceReservation::clear_mcpuint() {
+inline void ResourceReservationProto::clear_mcpuint() {
   _impl_.mcpuint_ = 0u;
 }
-inline uint32_t ResourceReservation::_internal_mcpuint() const {
+inline uint32_t ResourceReservationProto::_internal_mcpuint() const {
   return _impl_.mcpuint_;
 }
-inline uint32_t ResourceReservation::mcpuint() const {
-  // @@protoc_insertion_point(field_get:ResourceReservation.mcpuInt)
+inline uint32_t ResourceReservationProto::mcpuint() const {
+  // @@protoc_insertion_point(field_get:ResourceReservationProto.mcpuInt)
   return _internal_mcpuint();
 }
-inline void ResourceReservation::_internal_set_mcpuint(uint32_t value) {
+inline void ResourceReservationProto::_internal_set_mcpuint(uint32_t value) {
   
   _impl_.mcpuint_ = value;
 }
-inline void ResourceReservation::set_mcpuint(uint32_t value) {
+inline void ResourceReservationProto::set_mcpuint(uint32_t value) {
   _internal_set_mcpuint(value);
-  // @@protoc_insertion_point(field_set:ResourceReservation.mcpuInt)
+  // @@protoc_insertion_point(field_set:ResourceReservationProto.mcpuInt)
 }
 
 // uint32 memInt = 8;
-inline void ResourceReservation::clear_memint() {
+inline void ResourceReservationProto::clear_memint() {
   _impl_.memint_ = 0u;
 }
-inline uint32_t ResourceReservation::_internal_memint() const {
+inline uint32_t ResourceReservationProto::_internal_memint() const {
   return _impl_.memint_;
 }
-inline uint32_t ResourceReservation::memint() const {
-  // @@protoc_insertion_point(field_get:ResourceReservation.memInt)
+inline uint32_t ResourceReservationProto::memint() const {
+  // @@protoc_insertion_point(field_get:ResourceReservationProto.memInt)
   return _internal_memint();
 }
-inline void ResourceReservation::_internal_set_memint(uint32_t value) {
+inline void ResourceReservationProto::_internal_set_memint(uint32_t value) {
   
   _impl_.memint_ = value;
 }
-inline void ResourceReservation::set_memint(uint32_t value) {
+inline void ResourceReservationProto::set_memint(uint32_t value) {
   _internal_set_memint(value);
-  // @@protoc_insertion_point(field_set:ResourceReservation.memInt)
+  // @@protoc_insertion_point(field_set:ResourceReservationProto.memInt)
 }
 
 // -------------------------------------------------------------------
@@ -3501,7 +3501,7 @@ inline void ProcProto::set_typeint(uint32_t value) {
   // @@protoc_insertion_point(field_set:ProcProto.typeInt)
 }
 
-// .ResourceReservation resourceRes = 7;
+// .ResourceReservationProto resourceRes = 7;
 inline bool ProcProto::_internal_has_resourceres() const {
   return this != internal_default_instance() && _impl_.resourceres_ != nullptr;
 }
@@ -3514,17 +3514,17 @@ inline void ProcProto::clear_resourceres() {
   }
   _impl_.resourceres_ = nullptr;
 }
-inline const ::ResourceReservation& ProcProto::_internal_resourceres() const {
-  const ::ResourceReservation* p = _impl_.resourceres_;
-  return p != nullptr ? *p : reinterpret_cast<const ::ResourceReservation&>(
-      ::_ResourceReservation_default_instance_);
+inline const ::ResourceReservationProto& ProcProto::_internal_resourceres() const {
+  const ::ResourceReservationProto* p = _impl_.resourceres_;
+  return p != nullptr ? *p : reinterpret_cast<const ::ResourceReservationProto&>(
+      ::_ResourceReservationProto_default_instance_);
 }
-inline const ::ResourceReservation& ProcProto::resourceres() const {
+inline const ::ResourceReservationProto& ProcProto::resourceres() const {
   // @@protoc_insertion_point(field_get:ProcProto.resourceRes)
   return _internal_resourceres();
 }
 inline void ProcProto::unsafe_arena_set_allocated_resourceres(
-    ::ResourceReservation* resourceres) {
+    ::ResourceReservationProto* resourceres) {
   if (GetArenaForAllocation() == nullptr) {
     delete reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(_impl_.resourceres_);
   }
@@ -3536,9 +3536,9 @@ inline void ProcProto::unsafe_arena_set_allocated_resourceres(
   }
   // @@protoc_insertion_point(field_unsafe_arena_set_allocated:ProcProto.resourceRes)
 }
-inline ::ResourceReservation* ProcProto::release_resourceres() {
+inline ::ResourceReservationProto* ProcProto::release_resourceres() {
   
-  ::ResourceReservation* temp = _impl_.resourceres_;
+  ::ResourceReservationProto* temp = _impl_.resourceres_;
   _impl_.resourceres_ = nullptr;
 #ifdef PROTOBUF_FORCE_COPY_IN_RELEASE
   auto* old =  reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(temp);
@@ -3551,27 +3551,27 @@ inline ::ResourceReservation* ProcProto::release_resourceres() {
 #endif  // !PROTOBUF_FORCE_COPY_IN_RELEASE
   return temp;
 }
-inline ::ResourceReservation* ProcProto::unsafe_arena_release_resourceres() {
+inline ::ResourceReservationProto* ProcProto::unsafe_arena_release_resourceres() {
   // @@protoc_insertion_point(field_release:ProcProto.resourceRes)
   
-  ::ResourceReservation* temp = _impl_.resourceres_;
+  ::ResourceReservationProto* temp = _impl_.resourceres_;
   _impl_.resourceres_ = nullptr;
   return temp;
 }
-inline ::ResourceReservation* ProcProto::_internal_mutable_resourceres() {
+inline ::ResourceReservationProto* ProcProto::_internal_mutable_resourceres() {
   
   if (_impl_.resourceres_ == nullptr) {
-    auto* p = CreateMaybeMessage<::ResourceReservation>(GetArenaForAllocation());
+    auto* p = CreateMaybeMessage<::ResourceReservationProto>(GetArenaForAllocation());
     _impl_.resourceres_ = p;
   }
   return _impl_.resourceres_;
 }
-inline ::ResourceReservation* ProcProto::mutable_resourceres() {
-  ::ResourceReservation* _msg = _internal_mutable_resourceres();
+inline ::ResourceReservationProto* ProcProto::mutable_resourceres() {
+  ::ResourceReservationProto* _msg = _internal_mutable_resourceres();
   // @@protoc_insertion_point(field_mutable:ProcProto.resourceRes)
   return _msg;
 }
-inline void ProcProto::set_allocated_resourceres(::ResourceReservation* resourceres) {
+inline void ProcProto::set_allocated_resourceres(::ResourceReservationProto* resourceres) {
   ::PROTOBUF_NAMESPACE_ID::Arena* message_arena = GetArenaForAllocation();
   if (message_arena == nullptr) {
     delete _impl_.resourceres_;
@@ -3591,7 +3591,7 @@ inline void ProcProto::set_allocated_resourceres(::ResourceReservation* resource
   // @@protoc_insertion_point(field_set_allocated:ProcProto.resourceRes)
 }
 
-// .ResourceReservation bootScriptResourceRes = 8;
+// .ResourceReservationProto bootScriptResourceRes = 8;
 inline bool ProcProto::_internal_has_bootscriptresourceres() const {
   return this != internal_default_instance() && _impl_.bootscriptresourceres_ != nullptr;
 }
@@ -3604,17 +3604,17 @@ inline void ProcProto::clear_bootscriptresourceres() {
   }
   _impl_.bootscriptresourceres_ = nullptr;
 }
-inline const ::ResourceReservation& ProcProto::_internal_bootscriptresourceres() const {
-  const ::ResourceReservation* p = _impl_.bootscriptresourceres_;
-  return p != nullptr ? *p : reinterpret_cast<const ::ResourceReservation&>(
-      ::_ResourceReservation_default_instance_);
+inline const ::ResourceReservationProto& ProcProto::_internal_bootscriptresourceres() const {
+  const ::ResourceReservationProto* p = _impl_.bootscriptresourceres_;
+  return p != nullptr ? *p : reinterpret_cast<const ::ResourceReservationProto&>(
+      ::_ResourceReservationProto_default_instance_);
 }
-inline const ::ResourceReservation& ProcProto::bootscriptresourceres() const {
+inline const ::ResourceReservationProto& ProcProto::bootscriptresourceres() const {
   // @@protoc_insertion_point(field_get:ProcProto.bootScriptResourceRes)
   return _internal_bootscriptresourceres();
 }
 inline void ProcProto::unsafe_arena_set_allocated_bootscriptresourceres(
-    ::ResourceReservation* bootscriptresourceres) {
+    ::ResourceReservationProto* bootscriptresourceres) {
   if (GetArenaForAllocation() == nullptr) {
     delete reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(_impl_.bootscriptresourceres_);
   }
@@ -3626,9 +3626,9 @@ inline void ProcProto::unsafe_arena_set_allocated_bootscriptresourceres(
   }
   // @@protoc_insertion_point(field_unsafe_arena_set_allocated:ProcProto.bootScriptResourceRes)
 }
-inline ::ResourceReservation* ProcProto::release_bootscriptresourceres() {
+inline ::ResourceReservationProto* ProcProto::release_bootscriptresourceres() {
   
-  ::ResourceReservation* temp = _impl_.bootscriptresourceres_;
+  ::ResourceReservationProto* temp = _impl_.bootscriptresourceres_;
   _impl_.bootscriptresourceres_ = nullptr;
 #ifdef PROTOBUF_FORCE_COPY_IN_RELEASE
   auto* old =  reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(temp);
@@ -3641,27 +3641,27 @@ inline ::ResourceReservation* ProcProto::release_bootscriptresourceres() {
 #endif  // !PROTOBUF_FORCE_COPY_IN_RELEASE
   return temp;
 }
-inline ::ResourceReservation* ProcProto::unsafe_arena_release_bootscriptresourceres() {
+inline ::ResourceReservationProto* ProcProto::unsafe_arena_release_bootscriptresourceres() {
   // @@protoc_insertion_point(field_release:ProcProto.bootScriptResourceRes)
   
-  ::ResourceReservation* temp = _impl_.bootscriptresourceres_;
+  ::ResourceReservationProto* temp = _impl_.bootscriptresourceres_;
   _impl_.bootscriptresourceres_ = nullptr;
   return temp;
 }
-inline ::ResourceReservation* ProcProto::_internal_mutable_bootscriptresourceres() {
+inline ::ResourceReservationProto* ProcProto::_internal_mutable_bootscriptresourceres() {
   
   if (_impl_.bootscriptresourceres_ == nullptr) {
-    auto* p = CreateMaybeMessage<::ResourceReservation>(GetArenaForAllocation());
+    auto* p = CreateMaybeMessage<::ResourceReservationProto>(GetArenaForAllocation());
     _impl_.bootscriptresourceres_ = p;
   }
   return _impl_.bootscriptresourceres_;
 }
-inline ::ResourceReservation* ProcProto::mutable_bootscriptresourceres() {
-  ::ResourceReservation* _msg = _internal_mutable_bootscriptresourceres();
+inline ::ResourceReservationProto* ProcProto::mutable_bootscriptresourceres() {
+  ::ResourceReservationProto* _msg = _internal_mutable_bootscriptresourceres();
   // @@protoc_insertion_point(field_mutable:ProcProto.bootScriptResourceRes)
   return _msg;
 }
-inline void ProcProto::set_allocated_bootscriptresourceres(::ResourceReservation* bootscriptresourceres) {
+inline void ProcProto::set_allocated_bootscriptresourceres(::ResourceReservationProto* bootscriptresourceres) {
   ::PROTOBUF_NAMESPACE_ID::Arena* message_arena = GetArenaForAllocation();
   if (message_arena == nullptr) {
     delete _impl_.bootscriptresourceres_;

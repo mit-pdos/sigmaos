@@ -36,20 +36,20 @@ struct ProcSeqnoDefaultTypeInternal {
   };
 };
 PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 ProcSeqnoDefaultTypeInternal _ProcSeqno_default_instance_;
-PROTOBUF_CONSTEXPR ResourceReservation::ResourceReservation(
+PROTOBUF_CONSTEXPR ResourceReservationProto::ResourceReservationProto(
     ::_pbi::ConstantInitialized): _impl_{
     /*decltype(_impl_.mcpuint_)*/0u
   , /*decltype(_impl_.memint_)*/0u
   , /*decltype(_impl_._cached_size_)*/{}} {}
-struct ResourceReservationDefaultTypeInternal {
-  PROTOBUF_CONSTEXPR ResourceReservationDefaultTypeInternal()
+struct ResourceReservationProtoDefaultTypeInternal {
+  PROTOBUF_CONSTEXPR ResourceReservationProtoDefaultTypeInternal()
       : _instance(::_pbi::ConstantInitialized{}) {}
-  ~ResourceReservationDefaultTypeInternal() {}
+  ~ResourceReservationProtoDefaultTypeInternal() {}
   union {
-    ResourceReservation _instance;
+    ResourceReservationProto _instance;
   };
 };
-PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 ResourceReservationDefaultTypeInternal _ResourceReservation_default_instance_;
+PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 ResourceReservationProtoDefaultTypeInternal _ResourceReservationProto_default_instance_;
 PROTOBUF_CONSTEXPR ProcEnvProto_EtcdEndpointsEntry_DoNotUse::ProcEnvProto_EtcdEndpointsEntry_DoNotUse(
     ::_pbi::ConstantInitialized) {}
 struct ProcEnvProto_EtcdEndpointsEntry_DoNotUseDefaultTypeInternal {
@@ -174,13 +174,13 @@ const uint32_t TableStruct_proc_2fproc_2eproto::offsets[] PROTOBUF_SECTION_VARIA
   PROTOBUF_FIELD_OFFSET(::ProcSeqno, _impl_.procqid_),
   PROTOBUF_FIELD_OFFSET(::ProcSeqno, _impl_.mschedid_),
   ~0u,  // no _has_bits_
-  PROTOBUF_FIELD_OFFSET(::ResourceReservation, _internal_metadata_),
+  PROTOBUF_FIELD_OFFSET(::ResourceReservationProto, _internal_metadata_),
   ~0u,  // no _extensions_
   ~0u,  // no _oneof_case_
   ~0u,  // no _weak_field_map_
   ~0u,  // no _inlined_string_donated_
-  PROTOBUF_FIELD_OFFSET(::ResourceReservation, _impl_.mcpuint_),
-  PROTOBUF_FIELD_OFFSET(::ResourceReservation, _impl_.memint_),
+  PROTOBUF_FIELD_OFFSET(::ResourceReservationProto, _impl_.mcpuint_),
+  PROTOBUF_FIELD_OFFSET(::ResourceReservationProto, _impl_.memint_),
   PROTOBUF_FIELD_OFFSET(::ProcEnvProto_EtcdEndpointsEntry_DoNotUse, _has_bits_),
   PROTOBUF_FIELD_OFFSET(::ProcEnvProto_EtcdEndpointsEntry_DoNotUse, _internal_metadata_),
   ~0u,  // no _extensions_
@@ -276,7 +276,7 @@ const uint32_t TableStruct_proc_2fproc_2eproto::offsets[] PROTOBUF_SECTION_VARIA
 };
 static const ::_pbi::MigrationSchema schemas[] PROTOBUF_SECTION_VARIABLE(protodesc_cold) = {
   { 0, -1, -1, sizeof(::ProcSeqno)},
-  { 10, -1, -1, sizeof(::ResourceReservation)},
+  { 10, -1, -1, sizeof(::ResourceReservationProto)},
   { 18, 26, -1, sizeof(::ProcEnvProto_EtcdEndpointsEntry_DoNotUse)},
   { 28, 36, -1, sizeof(::ProcEnvProto_SecretsMapEntry_DoNotUse)},
   { 38, 46, -1, sizeof(::ProcEnvProto_CachedEndpointsEntry_DoNotUse)},
@@ -287,7 +287,7 @@ static const ::_pbi::MigrationSchema schemas[] PROTOBUF_SECTION_VARIABLE(protode
 
 static const ::_pb::Message* const file_default_instances[] = {
   &::_ProcSeqno_default_instance_._instance,
-  &::_ResourceReservation_default_instance_._instance,
+  &::_ResourceReservationProto_default_instance_._instance,
   &::_ProcEnvProto_EtcdEndpointsEntry_DoNotUse_default_instance_._instance,
   &::_ProcEnvProto_SecretsMapEntry_DoNotUse_default_instance_._instance,
   &::_ProcEnvProto_CachedEndpointsEntry_DoNotUse_default_instance_._instance,
@@ -301,41 +301,42 @@ const char descriptor_table_protodef_proc_2fproc_2eproto[] PROTOBUF_SECTION_VARI
   "tamp.proto\032\023sigmap/sigmap.proto\032\023rpc/pro"
   "to/rpc.proto\"L\n\tProcSeqno\022\r\n\005epoch\030\001 \001(\004"
   "\022\r\n\005seqno\030\002 \001(\004\022\017\n\007procqID\030\003 \001(\t\022\020\n\010mSch"
-  "edID\030\004 \001(\t\"6\n\023ResourceReservation\022\017\n\007mcp"
-  "uInt\030\007 \001(\r\022\016\n\006memInt\030\010 \001(\r\"\350\007\n\014ProcEnvPr"
-  "oto\022\016\n\006pidStr\030\001 \001(\t\022\017\n\007program\030\002 \001(\t\022\020\n\010"
-  "realmStr\030\003 \001(\t\022\036\n\tprincipal\030\004 \001(\0132\013.Tpri"
-  "ncipal\022\017\n\007procDir\030\005 \001(\t\022\021\n\tparentDir\030\006 \001"
-  "(\t\0227\n\retcdEndpoints\030\007 \003(\0132 .ProcEnvProto"
-  ".EtcdEndpointsEntry\022\033\n\023outerContainerIPS"
-  "tr\030\010 \001(\t\022\033\n\023innerContainerIPStr\030\t \001(\t\022\020\n"
-  "\010kernelID\030\n \001(\t\022\020\n\010buildTag\030\013 \001(\t\022\014\n\004per"
-  "f\030\014 \001(\t\022\r\n\005debug\030\r \001(\t\022\023\n\013procdPIDStr\030\016 "
-  "\001(\t\022\022\n\nprivileged\030\017 \001(\010\022\016\n\006howInt\030\020 \001(\005\022"
-  "/\n\013spawnTimePB\030\021 \001(\0132\032.google.protobuf.T"
-  "imestamp\022\016\n\006strace\030\022 \001(\t\022\022\n\nuseSPProxy\030\023"
-  " \001(\010\022\024\n\014useDialProxy\030\024 \001(\010\0221\n\nsecretsMap"
-  "\030\025 \003(\0132\035.ProcEnvProto.SecretsMapEntry\022\021\n"
-  "\tsigmaPath\030\026 \003(\t\022\017\n\007kernels\030\027 \003(\t\022\026\n\016rea"
-  "lmSwitchStr\030\030 \001(\t\022\017\n\007version\030\031 \001(\t\022\014\n\004fa"
-  "il\030\032 \001(\t\022;\n\017cachedEndpoints\030\033 \003(\0132\".Proc"
-  "EnvProto.CachedEndpointsEntry\022\020\n\010valgrin"
-  "d\030\034 \001(\t\022\031\n\021runBootScriptFlag\030\035 \001(\010\022\020\n\010us"
-  "eShmem\030\036 \001(\010\022\032\n\022useSPProxyProcClnt\030\037 \001(\010"
-  "\022\022\n\ndebugProcs\030  \001(\t\032E\n\022EtcdEndpointsEnt"
-  "ry\022\013\n\003key\030\001 \001(\t\022\036\n\005value\030\002 \001(\0132\017.Tendpoi"
-  "ntProto:\0028\001\032\?\n\017SecretsMapEntry\022\013\n\003key\030\001 "
-  "\001(\t\022\033\n\005value\030\002 \001(\0132\014.SecretProto:\0028\001\032G\n\024"
-  "CachedEndpointsEntry\022\013\n\003key\030\001 \001(\t\022\036\n\005val"
-  "ue\030\002 \001(\0132\017.TendpointProto:\0028\001\"\253\002\n\tProcPr"
-  "oto\022#\n\014procEnvProto\030\001 \001(\0132\r.ProcEnvProto"
-  "\022\014\n\004args\030\002 \003(\t\022 \n\003env\030\003 \003(\0132\023.ProcProto."
-  "EnvEntry\022\023\n\004blob\030\004 \001(\0132\005.Blob\022\027\n\017bootScr"
-  "iptInput\030\005 \001(\014\022\017\n\007typeInt\030\006 \001(\r\022)\n\013resou"
-  "rceRes\030\007 \001(\0132\024.ResourceReservation\0223\n\025bo"
-  "otScriptResourceRes\030\010 \001(\0132\024.ResourceRese"
-  "rvation\032*\n\010EnvEntry\022\013\n\003key\030\001 \001(\t\022\r\n\005valu"
-  "e\030\002 \001(\t:\0028\001B\016Z\014sigmaos/procb\006proto3"
+  "edID\030\004 \001(\t\";\n\030ResourceReservationProto\022\017"
+  "\n\007mcpuInt\030\007 \001(\r\022\016\n\006memInt\030\010 \001(\r\"\350\007\n\014Proc"
+  "EnvProto\022\016\n\006pidStr\030\001 \001(\t\022\017\n\007program\030\002 \001("
+  "\t\022\020\n\010realmStr\030\003 \001(\t\022\036\n\tprincipal\030\004 \001(\0132\013"
+  ".Tprincipal\022\017\n\007procDir\030\005 \001(\t\022\021\n\tparentDi"
+  "r\030\006 \001(\t\0227\n\retcdEndpoints\030\007 \003(\0132 .ProcEnv"
+  "Proto.EtcdEndpointsEntry\022\033\n\023outerContain"
+  "erIPStr\030\010 \001(\t\022\033\n\023innerContainerIPStr\030\t \001"
+  "(\t\022\020\n\010kernelID\030\n \001(\t\022\020\n\010buildTag\030\013 \001(\t\022\014"
+  "\n\004perf\030\014 \001(\t\022\r\n\005debug\030\r \001(\t\022\023\n\013procdPIDS"
+  "tr\030\016 \001(\t\022\022\n\nprivileged\030\017 \001(\010\022\016\n\006howInt\030\020"
+  " \001(\005\022/\n\013spawnTimePB\030\021 \001(\0132\032.google.proto"
+  "buf.Timestamp\022\016\n\006strace\030\022 \001(\t\022\022\n\nuseSPPr"
+  "oxy\030\023 \001(\010\022\024\n\014useDialProxy\030\024 \001(\010\0221\n\nsecre"
+  "tsMap\030\025 \003(\0132\035.ProcEnvProto.SecretsMapEnt"
+  "ry\022\021\n\tsigmaPath\030\026 \003(\t\022\017\n\007kernels\030\027 \003(\t\022\026"
+  "\n\016realmSwitchStr\030\030 \001(\t\022\017\n\007version\030\031 \001(\t\022"
+  "\014\n\004fail\030\032 \001(\t\022;\n\017cachedEndpoints\030\033 \003(\0132\""
+  ".ProcEnvProto.CachedEndpointsEntry\022\020\n\010va"
+  "lgrind\030\034 \001(\t\022\031\n\021runBootScriptFlag\030\035 \001(\010\022"
+  "\020\n\010useShmem\030\036 \001(\010\022\032\n\022useSPProxyProcClnt\030"
+  "\037 \001(\010\022\022\n\ndebugProcs\030  \001(\t\032E\n\022EtcdEndpoin"
+  "tsEntry\022\013\n\003key\030\001 \001(\t\022\036\n\005value\030\002 \001(\0132\017.Te"
+  "ndpointProto:\0028\001\032\?\n\017SecretsMapEntry\022\013\n\003k"
+  "ey\030\001 \001(\t\022\033\n\005value\030\002 \001(\0132\014.SecretProto:\0028"
+  "\001\032G\n\024CachedEndpointsEntry\022\013\n\003key\030\001 \001(\t\022\036"
+  "\n\005value\030\002 \001(\0132\017.TendpointProto:\0028\001\"\265\002\n\tP"
+  "rocProto\022#\n\014procEnvProto\030\001 \001(\0132\r.ProcEnv"
+  "Proto\022\014\n\004args\030\002 \003(\t\022 \n\003env\030\003 \003(\0132\023.ProcP"
+  "roto.EnvEntry\022\023\n\004blob\030\004 \001(\0132\005.Blob\022\027\n\017bo"
+  "otScriptInput\030\005 \001(\014\022\017\n\007typeInt\030\006 \001(\r\022.\n\013"
+  "resourceRes\030\007 \001(\0132\031.ResourceReservationP"
+  "roto\0228\n\025bootScriptResourceRes\030\010 \001(\0132\031.Re"
+  "sourceReservationProto\032*\n\010EnvEntry\022\013\n\003ke"
+  "y\030\001 \001(\t\022\r\n\005value\030\002 \001(\t:\0028\001B\016Z\014sigmaos/pr"
+  "ocb\006proto3"
   ;
 static const ::_pbi::DescriptorTable* const descriptor_table_proc_2fproc_2eproto_deps[3] = {
   &::descriptor_table_google_2fprotobuf_2ftimestamp_2eproto,
@@ -344,7 +345,7 @@ static const ::_pbi::DescriptorTable* const descriptor_table_proc_2fproc_2eproto
 };
 static ::_pbi::once_flag descriptor_table_proc_2fproc_2eproto_once;
 const ::_pbi::DescriptorTable descriptor_table_proc_2fproc_2eproto = {
-    false, false, 1555, descriptor_table_protodef_proc_2fproc_2eproto,
+    false, false, 1570, descriptor_table_protodef_proc_2fproc_2eproto,
     "proc/proc.proto",
     &descriptor_table_proc_2fproc_2eproto_once, descriptor_table_proc_2fproc_2eproto_deps, 3, 8,
     schemas, file_default_instances, TableStruct_proc_2fproc_2eproto::offsets,
@@ -673,19 +674,19 @@ void ProcSeqno::InternalSwap(ProcSeqno* other) {
 
 // ===================================================================
 
-class ResourceReservation::_Internal {
+class ResourceReservationProto::_Internal {
  public:
 };
 
-ResourceReservation::ResourceReservation(::PROTOBUF_NAMESPACE_ID::Arena* arena,
+ResourceReservationProto::ResourceReservationProto(::PROTOBUF_NAMESPACE_ID::Arena* arena,
                          bool is_message_owned)
   : ::PROTOBUF_NAMESPACE_ID::Message(arena, is_message_owned) {
   SharedCtor(arena, is_message_owned);
-  // @@protoc_insertion_point(arena_constructor:ResourceReservation)
+  // @@protoc_insertion_point(arena_constructor:ResourceReservationProto)
 }
-ResourceReservation::ResourceReservation(const ResourceReservation& from)
+ResourceReservationProto::ResourceReservationProto(const ResourceReservationProto& from)
   : ::PROTOBUF_NAMESPACE_ID::Message() {
-  ResourceReservation* const _this = this; (void)_this;
+  ResourceReservationProto* const _this = this; (void)_this;
   new (&_impl_) Impl_{
       decltype(_impl_.mcpuint_){}
     , decltype(_impl_.memint_){}
@@ -695,10 +696,10 @@ ResourceReservation::ResourceReservation(const ResourceReservation& from)
   ::memcpy(&_impl_.mcpuint_, &from._impl_.mcpuint_,
     static_cast<size_t>(reinterpret_cast<char*>(&_impl_.memint_) -
     reinterpret_cast<char*>(&_impl_.mcpuint_)) + sizeof(_impl_.memint_));
-  // @@protoc_insertion_point(copy_constructor:ResourceReservation)
+  // @@protoc_insertion_point(copy_constructor:ResourceReservationProto)
 }
 
-inline void ResourceReservation::SharedCtor(
+inline void ResourceReservationProto::SharedCtor(
     ::_pb::Arena* arena, bool is_message_owned) {
   (void)arena;
   (void)is_message_owned;
@@ -709,8 +710,8 @@ inline void ResourceReservation::SharedCtor(
   };
 }
 
-ResourceReservation::~ResourceReservation() {
-  // @@protoc_insertion_point(destructor:ResourceReservation)
+ResourceReservationProto::~ResourceReservationProto() {
+  // @@protoc_insertion_point(destructor:ResourceReservationProto)
   if (auto *arena = _internal_metadata_.DeleteReturnArena<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>()) {
   (void)arena;
     return;
@@ -718,16 +719,16 @@ ResourceReservation::~ResourceReservation() {
   SharedDtor();
 }
 
-inline void ResourceReservation::SharedDtor() {
+inline void ResourceReservationProto::SharedDtor() {
   GOOGLE_DCHECK(GetArenaForAllocation() == nullptr);
 }
 
-void ResourceReservation::SetCachedSize(int size) const {
+void ResourceReservationProto::SetCachedSize(int size) const {
   _impl_._cached_size_.Set(size);
 }
 
-void ResourceReservation::Clear() {
-// @@protoc_insertion_point(message_clear_start:ResourceReservation)
+void ResourceReservationProto::Clear() {
+// @@protoc_insertion_point(message_clear_start:ResourceReservationProto)
   uint32_t cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
@@ -738,7 +739,7 @@ void ResourceReservation::Clear() {
   _internal_metadata_.Clear<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>();
 }
 
-const char* ResourceReservation::_InternalParse(const char* ptr, ::_pbi::ParseContext* ctx) {
+const char* ResourceReservationProto::_InternalParse(const char* ptr, ::_pbi::ParseContext* ctx) {
 #define CHK_(x) if (PROTOBUF_PREDICT_FALSE(!(x))) goto failure
   while (!ctx->Done(&ptr)) {
     uint32_t tag;
@@ -783,9 +784,9 @@ failure:
 #undef CHK_
 }
 
-uint8_t* ResourceReservation::_InternalSerialize(
+uint8_t* ResourceReservationProto::_InternalSerialize(
     uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
-  // @@protoc_insertion_point(serialize_to_array_start:ResourceReservation)
+  // @@protoc_insertion_point(serialize_to_array_start:ResourceReservationProto)
   uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
@@ -805,12 +806,12 @@ uint8_t* ResourceReservation::_InternalSerialize(
     target = ::_pbi::WireFormat::InternalSerializeUnknownFieldsToArray(
         _internal_metadata_.unknown_fields<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(::PROTOBUF_NAMESPACE_ID::UnknownFieldSet::default_instance), target, stream);
   }
-  // @@protoc_insertion_point(serialize_to_array_end:ResourceReservation)
+  // @@protoc_insertion_point(serialize_to_array_end:ResourceReservationProto)
   return target;
 }
 
-size_t ResourceReservation::ByteSizeLong() const {
-// @@protoc_insertion_point(message_byte_size_start:ResourceReservation)
+size_t ResourceReservationProto::ByteSizeLong() const {
+// @@protoc_insertion_point(message_byte_size_start:ResourceReservationProto)
   size_t total_size = 0;
 
   uint32_t cached_has_bits = 0;
@@ -830,17 +831,17 @@ size_t ResourceReservation::ByteSizeLong() const {
   return MaybeComputeUnknownFieldsSize(total_size, &_impl_._cached_size_);
 }
 
-const ::PROTOBUF_NAMESPACE_ID::Message::ClassData ResourceReservation::_class_data_ = {
+const ::PROTOBUF_NAMESPACE_ID::Message::ClassData ResourceReservationProto::_class_data_ = {
     ::PROTOBUF_NAMESPACE_ID::Message::CopyWithSourceCheck,
-    ResourceReservation::MergeImpl
+    ResourceReservationProto::MergeImpl
 };
-const ::PROTOBUF_NAMESPACE_ID::Message::ClassData*ResourceReservation::GetClassData() const { return &_class_data_; }
+const ::PROTOBUF_NAMESPACE_ID::Message::ClassData*ResourceReservationProto::GetClassData() const { return &_class_data_; }
 
 
-void ResourceReservation::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PROTOBUF_NAMESPACE_ID::Message& from_msg) {
-  auto* const _this = static_cast<ResourceReservation*>(&to_msg);
-  auto& from = static_cast<const ResourceReservation&>(from_msg);
-  // @@protoc_insertion_point(class_specific_merge_from_start:ResourceReservation)
+void ResourceReservationProto::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PROTOBUF_NAMESPACE_ID::Message& from_msg) {
+  auto* const _this = static_cast<ResourceReservationProto*>(&to_msg);
+  auto& from = static_cast<const ResourceReservationProto&>(from_msg);
+  // @@protoc_insertion_point(class_specific_merge_from_start:ResourceReservationProto)
   GOOGLE_DCHECK_NE(&from, _this);
   uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
@@ -854,29 +855,29 @@ void ResourceReservation::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, co
   _this->_internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
 }
 
-void ResourceReservation::CopyFrom(const ResourceReservation& from) {
-// @@protoc_insertion_point(class_specific_copy_from_start:ResourceReservation)
+void ResourceReservationProto::CopyFrom(const ResourceReservationProto& from) {
+// @@protoc_insertion_point(class_specific_copy_from_start:ResourceReservationProto)
   if (&from == this) return;
   Clear();
   MergeFrom(from);
 }
 
-bool ResourceReservation::IsInitialized() const {
+bool ResourceReservationProto::IsInitialized() const {
   return true;
 }
 
-void ResourceReservation::InternalSwap(ResourceReservation* other) {
+void ResourceReservationProto::InternalSwap(ResourceReservationProto* other) {
   using std::swap;
   _internal_metadata_.InternalSwap(&other->_internal_metadata_);
   ::PROTOBUF_NAMESPACE_ID::internal::memswap<
-      PROTOBUF_FIELD_OFFSET(ResourceReservation, _impl_.memint_)
-      + sizeof(ResourceReservation::_impl_.memint_)
-      - PROTOBUF_FIELD_OFFSET(ResourceReservation, _impl_.mcpuint_)>(
+      PROTOBUF_FIELD_OFFSET(ResourceReservationProto, _impl_.memint_)
+      + sizeof(ResourceReservationProto::_impl_.memint_)
+      - PROTOBUF_FIELD_OFFSET(ResourceReservationProto, _impl_.mcpuint_)>(
           reinterpret_cast<char*>(&_impl_.mcpuint_),
           reinterpret_cast<char*>(&other->_impl_.mcpuint_));
 }
 
-::PROTOBUF_NAMESPACE_ID::Metadata ResourceReservation::GetMetadata() const {
+::PROTOBUF_NAMESPACE_ID::Metadata ResourceReservationProto::GetMetadata() const {
   return ::_pbi::AssignDescriptors(
       &descriptor_table_proc_2fproc_2eproto_getter, &descriptor_table_proc_2fproc_2eproto_once,
       file_level_metadata_proc_2fproc_2eproto[1]);
@@ -2538,8 +2539,8 @@ class ProcProto::_Internal {
  public:
   static const ::ProcEnvProto& procenvproto(const ProcProto* msg);
   static const ::Blob& blob(const ProcProto* msg);
-  static const ::ResourceReservation& resourceres(const ProcProto* msg);
-  static const ::ResourceReservation& bootscriptresourceres(const ProcProto* msg);
+  static const ::ResourceReservationProto& resourceres(const ProcProto* msg);
+  static const ::ResourceReservationProto& bootscriptresourceres(const ProcProto* msg);
 };
 
 const ::ProcEnvProto&
@@ -2550,11 +2551,11 @@ const ::Blob&
 ProcProto::_Internal::blob(const ProcProto* msg) {
   return *msg->_impl_.blob_;
 }
-const ::ResourceReservation&
+const ::ResourceReservationProto&
 ProcProto::_Internal::resourceres(const ProcProto* msg) {
   return *msg->_impl_.resourceres_;
 }
-const ::ResourceReservation&
+const ::ResourceReservationProto&
 ProcProto::_Internal::bootscriptresourceres(const ProcProto* msg) {
   return *msg->_impl_.bootscriptresourceres_;
 }
@@ -2604,10 +2605,10 @@ ProcProto::ProcProto(const ProcProto& from)
     _this->_impl_.blob_ = new ::Blob(*from._impl_.blob_);
   }
   if (from._internal_has_resourceres()) {
-    _this->_impl_.resourceres_ = new ::ResourceReservation(*from._impl_.resourceres_);
+    _this->_impl_.resourceres_ = new ::ResourceReservationProto(*from._impl_.resourceres_);
   }
   if (from._internal_has_bootscriptresourceres()) {
-    _this->_impl_.bootscriptresourceres_ = new ::ResourceReservation(*from._impl_.bootscriptresourceres_);
+    _this->_impl_.bootscriptresourceres_ = new ::ResourceReservationProto(*from._impl_.bootscriptresourceres_);
   }
   _this->_impl_.typeint_ = from._impl_.typeint_;
   // @@protoc_insertion_point(copy_constructor:ProcProto)
@@ -2760,7 +2761,7 @@ const char* ProcProto::_InternalParse(const char* ptr, ::_pbi::ParseContext* ctx
         } else
           goto handle_unusual;
         continue;
-      // .ResourceReservation resourceRes = 7;
+      // .ResourceReservationProto resourceRes = 7;
       case 7:
         if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 58)) {
           ptr = ctx->ParseMessage(_internal_mutable_resourceres(), ptr);
@@ -2768,7 +2769,7 @@ const char* ProcProto::_InternalParse(const char* ptr, ::_pbi::ParseContext* ctx
         } else
           goto handle_unusual;
         continue;
-      // .ResourceReservation bootScriptResourceRes = 8;
+      // .ResourceReservationProto bootScriptResourceRes = 8;
       case 8:
         if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 66)) {
           ptr = ctx->ParseMessage(_internal_mutable_bootscriptresourceres(), ptr);
@@ -2871,14 +2872,14 @@ uint8_t* ProcProto::_InternalSerialize(
     target = ::_pbi::WireFormatLite::WriteUInt32ToArray(6, this->_internal_typeint(), target);
   }
 
-  // .ResourceReservation resourceRes = 7;
+  // .ResourceReservationProto resourceRes = 7;
   if (this->_internal_has_resourceres()) {
     target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::
       InternalWriteMessage(7, _Internal::resourceres(this),
         _Internal::resourceres(this).GetCachedSize(), target, stream);
   }
 
-  // .ResourceReservation bootScriptResourceRes = 8;
+  // .ResourceReservationProto bootScriptResourceRes = 8;
   if (this->_internal_has_bootscriptresourceres()) {
     target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::
       InternalWriteMessage(8, _Internal::bootscriptresourceres(this),
@@ -2939,14 +2940,14 @@ size_t ProcProto::ByteSizeLong() const {
         *_impl_.blob_);
   }
 
-  // .ResourceReservation resourceRes = 7;
+  // .ResourceReservationProto resourceRes = 7;
   if (this->_internal_has_resourceres()) {
     total_size += 1 +
       ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::MessageSize(
         *_impl_.resourceres_);
   }
 
-  // .ResourceReservation bootScriptResourceRes = 8;
+  // .ResourceReservationProto bootScriptResourceRes = 8;
   if (this->_internal_has_bootscriptresourceres()) {
     total_size += 1 +
       ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::MessageSize(
@@ -2990,11 +2991,11 @@ void ProcProto::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PROT
         from._internal_blob());
   }
   if (from._internal_has_resourceres()) {
-    _this->_internal_mutable_resourceres()->::ResourceReservation::MergeFrom(
+    _this->_internal_mutable_resourceres()->::ResourceReservationProto::MergeFrom(
         from._internal_resourceres());
   }
   if (from._internal_has_bootscriptresourceres()) {
-    _this->_internal_mutable_bootscriptresourceres()->::ResourceReservation::MergeFrom(
+    _this->_internal_mutable_bootscriptresourceres()->::ResourceReservationProto::MergeFrom(
         from._internal_bootscriptresourceres());
   }
   if (from._internal_typeint() != 0) {
@@ -3045,9 +3046,9 @@ template<> PROTOBUF_NOINLINE ::ProcSeqno*
 Arena::CreateMaybeMessage< ::ProcSeqno >(Arena* arena) {
   return Arena::CreateMessageInternal< ::ProcSeqno >(arena);
 }
-template<> PROTOBUF_NOINLINE ::ResourceReservation*
-Arena::CreateMaybeMessage< ::ResourceReservation >(Arena* arena) {
-  return Arena::CreateMessageInternal< ::ResourceReservation >(arena);
+template<> PROTOBUF_NOINLINE ::ResourceReservationProto*
+Arena::CreateMaybeMessage< ::ResourceReservationProto >(Arena* arena) {
+  return Arena::CreateMessageInternal< ::ResourceReservationProto >(arena);
 }
 template<> PROTOBUF_NOINLINE ::ProcEnvProto_EtcdEndpointsEntry_DoNotUse*
 Arena::CreateMaybeMessage< ::ProcEnvProto_EtcdEndpointsEntry_DoNotUse >(Arena* arena) {

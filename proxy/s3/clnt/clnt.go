@@ -15,7 +15,7 @@ type S3Clnt struct {
 
 func NewS3Clnt(fsl *fslib.FsLib, pn string) (*S3Clnt, error) {
 	db.DPrintf(db.S3CLNT2, "New S3Clnt: %v", pn)
-	rpcc, err := sprpcclnt.NewRPCClnt(fsl, pn)
+	rpcc, err := rpcclnt.NewRPCClnt(pn, sprpcclnt.WithSPChannel(fsl, true), sprpcclnt.WithDelegatedSPProxyChannel(fsl))
 	if err != nil {
 		return nil, err
 	}

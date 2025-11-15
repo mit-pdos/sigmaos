@@ -63,7 +63,7 @@ func NewImgResizeJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, input str
 
 	ts.RmDir(sp.IMG)
 
-	imgd, err := imgresize.NewImgdMgr[imgresize.Ttask](ji.SigmaClnt, imgresize.ImgSvcId(ji.job), ji.mcpu, ji.mem, false, ji.nrounds, ji.imgdmcpu, nil)
+	imgd, err := imgresize.NewImgdMgr[imgresize.Ttask](ji.SigmaClnt, imgresize.ImgSvcId(ji.job), ji.mcpu, ji.mem, false, ji.nrounds, ji.imgdmcpu, nil, false, false)
 	assert.Nil(ji.Ts.T, err)
 	ji.imgd = imgd
 

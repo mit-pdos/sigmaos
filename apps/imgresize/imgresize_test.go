@@ -15,6 +15,7 @@ import (
 	db "sigmaos/debug"
 	fttask_clnt "sigmaos/ft/task/clnt"
 	"sigmaos/proc"
+	"sigmaos/proxy/wasm/rpc/wasmer"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 	"sigmaos/util/crash"
@@ -73,6 +74,39 @@ func TestResizeProc(t *testing.T) {
 	assert.True(t, status.IsStatusOK(), "WaitExit status error: %v", status)
 }
 
+func TestResizeProcInitScript(t *testing.T) {
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	defer mrts.Shutdown()
+
+	inS3 := "9ps3/img-save/8.jpg"
+	outS3 := "9ps3/img/8-thumb-xxx.jpg"
+	out := filepath.Join(sp.S3, sp.LOCAL, outS3)
+	mrts.GetRealm(test.REALM1).Remove(out)
+
+	bootScript, err := imgresize.GetBootScript(mrts.GetRealm(test.REALM1).SigmaClnt)
+	if !assert.Nil(t, err, "Err read bootscript: %v", err) {
+		return
+	}
+	bootScriptInput, err := imgresize.GetBootScriptInput("9ps3", "img-save/8.jpg", sp.LOCAL)
+	if !assert.Nil(t, err, "Err construct bootscript input: %v", err) {
+		return
+	}
+	p := proc.NewProc("imgresize", []string{inS3, outS3, "1", "true"})
+	p.GetProcEnv().UseSPProxy = true
+	p.SetBootScript(bootScript, bootScriptInput)
+	p.SetRunBootScript(true)
+	err = mrts.GetRealm(test.REALM1).Spawn(p)
+	assert.Nil(t, err, "Spawn")
+	err = mrts.GetRealm(test.REALM1).WaitStart(p.GetPid())
+	assert.Nil(t, err, "WaitStart error")
+	status, err := mrts.GetRealm(test.REALM1).WaitExit(p.GetPid())
+	assert.Nil(t, err, "WaitExit error %v", err)
+	assert.True(t, status.IsStatusOK(), "WaitExit status error: %v", status)
+}
+
 type Tstate struct {
 	job  string
 	mrts *test.MultiRealmTstate
@@ -81,14 +115,21 @@ type Tstate struct {
 	clnt *imgresize.ImgdClnt[imgresize.Ttask]
 }
 
-func newTstate(mrts *test.MultiRealmTstate, persist bool, em *crash.TeventMap) (*Tstate, error) {
+func newTstate(mrts *test.MultiRealmTstate, persist bool, em *crash.TeventMap, useSPProxy, useBootScript bool) (*Tstate, error) {
 	ts := &Tstate{}
 	ts.mrts = mrts
 	ts.job = rd.String(4)
 	ts.ch = make(chan bool)
 	ts.cleanup()
 
-	imgd, err := imgresize.NewImgdMgr[imgresize.Ttask](ts.mrts.GetRealm(test.REALM1).SigmaClnt, ts.job, IMG_RESIZE_MCPU, IMG_RESIZE_MEM, persist, 1, 0, em)
+	if useBootScript {
+		err := wasmer.UploadBootScriptRemote(mrts.GetRealm(test.REALM1).SigmaClnt, "imgprocess_boot")
+		if !assert.Nil(mrts.T, err, "Err upload boot script: %v", err) {
+			return nil, err
+		}
+	}
+
+	imgd, err := imgresize.NewImgdMgr[imgresize.Ttask](ts.mrts.GetRealm(test.REALM1).SigmaClnt, ts.job, IMG_RESIZE_MCPU, IMG_RESIZE_MEM, persist, 1, 0, em, useSPProxy, useBootScript)
 	if err != nil {
 		return nil, err
 	}
@@ -164,7 +205,7 @@ func TestImgdResizeRPC(t *testing.T) {
 	}
 	defer mrts.Shutdown()
 
-	ts, err1 := newTstate(mrts, false, nil)
+	ts, err1 := newTstate(mrts, false, nil, false, false)
 	if !assert.Nil(t, err1, "Error New Tstate2: %v", err1) {
 		return
 	}
@@ -201,7 +242,49 @@ func TestImgdResizeRPCS3Clnt(t *testing.T) {
 	}
 	defer mrts.Shutdown()
 
-	ts, err1 := newTstate(mrts, false, nil)
+	ts, err1 := newTstate(mrts, false, nil, false, false)
+	if !assert.Nil(t, err1, "Error New Tstate2: %v", err1) {
+		return
+	}
+
+	err := ts.mrts.GetRealm(test.REALM1).BootNode(1)
+	assert.Nil(t, err, "BootProcd 1")
+
+	err = ts.mrts.GetRealm(test.REALM1).BootNode(1)
+	assert.Nil(t, err, "BootProcd 2")
+
+	go ts.progress()
+
+	in := filepath.Join("9ps3/img-save/8.jpg")
+	err = ts.clnt.Resize("resize-rpc-test", in, true)
+	assert.Nil(ts.mrts.T, err)
+
+	n, err := ts.clnt.Status()
+	assert.Nil(ts.mrts.T, err)
+	assert.Equal(ts.mrts.T, int64(1), n)
+
+	sts, err := ts.imgd.StopImgd(true)
+	assert.Nil(ts.mrts.T, err)
+	for _, st := range sts {
+		assert.True(ts.mrts.T, st.IsStatusEvicted())
+	}
+
+	ts.stopProgress()
+}
+
+func TestImgdResizeRPCS3ClntBootScript(t *testing.T) {
+	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	defer mrts.Shutdown()
+
+	if mrts.GetRealm(test.REALM1).ProcEnv().BuildTag == sp.LOCAL_BUILD {
+		db.DPrintf(db.TEST, "Skipping imgresized initscript test - can't run with local build")
+		return
+	}
+
+	ts, err1 := newTstate(mrts, false, nil, true, true)
 	if !assert.Nil(t, err1, "Error New Tstate2: %v", err1) {
 		return
 	}
@@ -234,7 +317,7 @@ func TestImgdResizeRPCS3Clnt(t *testing.T) {
 func (ts *Tstate) doJob(paths []string) *spstats.TcounterSnapshot {
 	tasks := make([]*fttask_clnt.Task[imgresize.Ttask], len(paths))
 	for i, pn := range paths {
-		tasks[i] = &fttask_clnt.Task[imgresize.Ttask]{Id: fttask_clnt.TaskId(i), Data: *imgresize.NewTask(pn, false)}
+		tasks[i] = &fttask_clnt.Task[imgresize.Ttask]{Id: fttask_clnt.TaskId(i), Data: *imgresize.NewTask(pn, false, false)}
 	}
 	err := ts.clnt.SubmitTasks(tasks)
 	assert.Nil(ts.mrts.T, err)
@@ -266,7 +349,7 @@ func TestImgdOneOK(t *testing.T) {
 	}
 	defer mrts.Shutdown()
 
-	ts, err1 := newTstate(mrts, false, nil)
+	ts, err1 := newTstate(mrts, false, nil, false, false)
 	if !assert.Nil(t, err1, "Error New Tstate2: %v", err1) {
 		return
 	}
@@ -282,7 +365,7 @@ func TestImgdFatalError(t *testing.T) {
 	}
 	defer mrts.Shutdown()
 
-	ts, err1 := newTstate(mrts, false, nil)
+	ts, err1 := newTstate(mrts, false, nil, false, false)
 	if !assert.Nil(t, err1, "Error New Tstate2: %v", err1) {
 		return
 	}
@@ -301,7 +384,7 @@ func TestImgdManyOK(t *testing.T) {
 	}
 	defer mrts.Shutdown()
 
-	ts, err1 := newTstate(mrts, false, nil)
+	ts, err1 := newTstate(mrts, false, nil, false, false)
 	if !assert.Nil(t, err1, "Error New Tstate2: %v", err1) {
 		return
 	}
@@ -332,7 +415,7 @@ func TestImgdProcCrash(t *testing.T) {
 	}
 	defer mrts.Shutdown()
 
-	ts, err1 := newTstate(mrts, false, crash.NewTeventMapOne(e0))
+	ts, err1 := newTstate(mrts, false, crash.NewTeventMapOne(e0), false, false)
 	if !assert.Nil(t, err1, "Error New Tstate2: %v", err1) {
 		return
 	}
@@ -348,14 +431,14 @@ func TestImgdRestart(t *testing.T) {
 		return
 	}
 
-	ts, err1 := newTstate(mrts, true, nil)
+	ts, err1 := newTstate(mrts, true, nil, false, false)
 	if !assert.Nil(t, err1, "Error New Tstate2: %v", err1) {
 		return
 	}
 
 	fn := filepath.Join(sp.S3, sp.LOCAL, "9ps3/img-save/8.jpg")
 
-	err := ts.clnt.SubmitTasks([]*fttask_clnt.Task[imgresize.Ttask]{{Id: 0, Data: *imgresize.NewTask(fn, false)}})
+	err := ts.clnt.SubmitTasks([]*fttask_clnt.Task[imgresize.Ttask]{{Id: 0, Data: *imgresize.NewTask(fn, false, false)}})
 	assert.Nil(ts.mrts.T, err)
 
 	err = ts.clnt.SubmittedLastTask()

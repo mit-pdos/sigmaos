@@ -120,9 +120,19 @@ func (ip *ImgProcess) Work(i int, output string) *proc.Status {
 		pn := strings.Split(ip.inputs[i], "/")
 		bucket := pn[0]
 		key := filepath.Join(pn[1:]...)
-		b, err := ip.s3Clnt.GetObject(bucket, key)
-		if err != nil {
-			return proc.NewStatusErr(fmt.Sprintf("Err GetObject bucket:%v key:%v", bucket, key), err)
+		var b []byte
+		var err error
+		if ip.ProcEnv().GetRunBootScript() {
+			b, err = ip.s3Clnt.DelegatedGetObject(0)
+			if err != nil {
+				return proc.NewStatusErr(fmt.Sprintf("Err GetObject bucket:%v key:%v", bucket, key), err)
+			}
+			db.DPrintf(db.ALWAYS, "Resize delegated get")
+		} else {
+			b, err = ip.s3Clnt.GetObject(bucket, key)
+			if err != nil {
+				return proc.NewStatusErr(fmt.Sprintf("Err GetObject bucket:%v key:%v", bucket, key), err)
+			}
 		}
 		rdr = io.NopCloser(bytes.NewReader(b))
 	} else {

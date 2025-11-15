@@ -26,20 +26,23 @@ type AStat struct {
 }
 
 type ImgSrv struct {
-	sc         *sigmaclnt.SigmaClnt
-	ftclnt     fttask_clnt.FtTaskClnt[imgresize.Ttask, any]
-	nrounds    int
-	workerMcpu proc.Tmcpu
-	workerMem  proc.Tmem
-	leaderclnt *leaderclnt.LeaderClnt
-	imgSvcId   string
-	taskSvcId  task.FtTaskSvcId
-	ch         chan error
+	sc            *sigmaclnt.SigmaClnt
+	ftclnt        fttask_clnt.FtTaskClnt[imgresize.Ttask, any]
+	nrounds       int
+	workerMcpu    proc.Tmcpu
+	workerMem     proc.Tmem
+	leaderclnt    *leaderclnt.LeaderClnt
+	imgSvcId      string
+	taskSvcId     task.FtTaskSvcId
+	ch            chan error
+	bootScript    []byte
+	useSPProxy    bool
+	useBootScript bool
 	AStat
 }
 
 func NewImgSrv(args []string) (*ImgSrv, error) {
-	if len(args) != 5 {
+	if len(args) != 7 {
 		return nil, fmt.Errorf("NewImgSrv: wrong number of arguments: %v", args)
 	}
 	imgd := &ImgSrv{}
@@ -67,6 +70,21 @@ func NewImgSrv(args []string) (*ImgSrv, error) {
 	if err != nil {
 		db.DFatalf("Error parse nrounds: %v", err)
 	}
+	useSPProxy, err := strconv.ParseBool(args[5])
+	if err != nil {
+		db.DFatalf("Error parse useSPProxy: %v", err)
+	}
+	imgd.useSPProxy = useSPProxy
+	useBootScript, err := strconv.ParseBool(args[6])
+	if err != nil {
+		db.DFatalf("Error parse useBootScript: %v", err)
+	}
+	imgd.useBootScript = useBootScript
+	bootScript, err := imgresize.GetBootScript(imgd.sc)
+	if err != nil {
+		db.DFatalf("Error GetBootScript: %v", err)
+	}
+	imgd.bootScript = bootScript
 
 	imgd.sc.Started()
 
@@ -128,7 +146,7 @@ func (imgd *ImgSrv) Work() {
 
 	go imgd.processResults(ch)
 
-	ftc.ExecuteTasks(imgresize.GetMkProcFn(imgd.ftclnt.ServiceId(), imgd.nrounds, imgd.workerMcpu, imgd.workerMem))
+	ftc.ExecuteTasks(imgresize.GetMkProcFn(imgd.ftclnt.ServiceId(), imgd.nrounds, imgd.workerMcpu, imgd.workerMem, imgd.bootScript, imgd.sc.ProcEnv().GetUseSPProxy()))
 	close(ch)
 
 	st := spstats.NewTcounterSnapshot()

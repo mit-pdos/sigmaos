@@ -333,6 +333,16 @@ func (p *Proc) GetType() Ttype {
 
 func (p *Proc) GetMcpu() Tmcpu {
 	mcpu := p.ProcProto.ResourceRes.GetMcpu()
+	// Sanity check
+	if mcpu > 0 && mcpu%10 != 0 {
+		log.Fatalf("%v FATAL: Error! Suspected missed MCPU conversion in GetMcpu: %v", GetSigmaDebugPid(), mcpu)
+	}
+	return mcpu
+}
+
+func (p *Proc) GetBootScriptMcpu() Tmcpu {
+	mcpu := p.ProcProto.BootScriptResourceRes.GetMcpu()
+	// Sanity check
 	if mcpu > 0 && mcpu%10 != 0 {
 		log.Fatalf("%v FATAL: Error! Suspected missed MCPU conversion in GetMcpu: %v", GetSigmaDebugPid(), mcpu)
 	}
@@ -341,6 +351,10 @@ func (p *Proc) GetMcpu() Tmcpu {
 
 func (p *Proc) GetMem() Tmem {
 	return p.ProcProto.ResourceRes.GetMem()
+}
+
+func (p *Proc) GetBootScriptMem() Tmem {
+	return p.ProcProto.BootScriptResourceRes.GetMem()
 }
 
 func (p *Proc) GetRealm() sp.Trealm {
@@ -464,9 +478,17 @@ func (p *Proc) SetMcpu(mcpu Tmcpu) {
 	}
 }
 
+func (p *Proc) SetBootScriptMcpu(mcpu Tmcpu) {
+	p.BootScriptResourceRes.SetMcpu(mcpu)
+}
+
 // Set the aendpoint of memory (in MB) required to run this proc.
 func (p *Proc) SetMem(mb Tmem) {
 	p.ResourceRes.SetMem(mb)
+}
+
+func (p *Proc) SetBootScriptMem(mb Tmem) {
+	p.BootScriptResourceRes.SetMem(mb)
 }
 
 func (p *Proc) Marshal() []byte {

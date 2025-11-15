@@ -13,8 +13,8 @@ message ProcSeqno {
 }
 
 message ResourceReservationProto {
-  uint32 mcpuInt = 7;
-  uint32 memInt = 8;
+  uint32 mcpuInt = 1;
+  uint32 memInt = 2; // memory reservation, in MB
 }
 
 message ProcEnvProto {

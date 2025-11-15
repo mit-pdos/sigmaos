@@ -88,8 +88,8 @@ func NewPrivProcPid(pid sp.Tpid, program string, args []string, priv bool) *Proc
 	).GetProto()
 	p.Args = args
 	p.TypeInt = uint32(T_BE)
-	p.ResourceRes = NewResourceReservation(0, 0)
-	p.BootScriptResourceRes = NewResourceReservation(0, 0)
+	p.ResourceRes = NewResourceReservationProto(0, 0)
+	p.BootScriptResourceRes = NewResourceReservationProto(0, 0)
 	if p.ProcEnvProto.Privileged {
 		p.TypeInt = uint32(T_LC)
 	}
@@ -244,8 +244,7 @@ func (p *Proc) String() string {
 		"OuterIP:%v "+
 		"Args:%v "+
 		"Type:%v "+
-		"Mcpu:%v "+
-		"Mem:%v "+
+		"ResourceRerervation:%v "+
 		"Kernels:%v "+
 		"}",
 		p.ProcEnvProto.Program,
@@ -263,8 +262,7 @@ func (p *Proc) String() string {
 		p.ProcEnvProto.GetOuterContainerIP(),
 		p.Args,
 		p.GetType(),
-		p.GetMcpu(),
-		p.GetMem(),
+		p.GetResourceReservation(),
 		p.ProcEnvProto.Kernels,
 	)
 }
@@ -334,15 +332,15 @@ func (p *Proc) GetType() Ttype {
 }
 
 func (p *Proc) GetMcpu() Tmcpu {
-	mcpu := p.ProcProto.ResourceRes.McpuInt
+	mcpu := p.ProcProto.ResourceRes.GetMcpu()
 	if mcpu > 0 && mcpu%10 != 0 {
 		log.Fatalf("%v FATAL: Error! Suspected missed MCPU conversion in GetMcpu: %v", GetSigmaDebugPid(), mcpu)
 	}
-	return Tmcpu(p.ProcProto.ResourceRes.McpuInt)
+	return mcpu
 }
 
 func (p *Proc) GetMem() Tmem {
-	return Tmem(p.ProcProto.ResourceRes.MemInt)
+	return p.ProcProto.ResourceRes.GetMem()
 }
 
 func (p *Proc) GetRealm() sp.Trealm {
@@ -432,6 +430,10 @@ func (p *Proc) GetUseShmem() bool {
 	return p.ProcEnvProto.GetUseShmem()
 }
 
+func (p *Proc) GetResourceReservation() *ResourceReservation {
+	return &ResourceReservation{p.ResourceRes}
+}
+
 // Return Env map as a []string
 func (p *Proc) GetEnv() []string {
 	env := []string{}
@@ -458,13 +460,13 @@ func (p *Proc) SetMcpu(mcpu Tmcpu) {
 			log.Fatalf("%v FATAL: Error! Suspected missed MCPU conversion in GetMcpu: %v", GetSigmaDebugPid(), mcpu)
 		}
 		p.TypeInt = uint32(T_LC)
-		p.ResourceRes.McpuInt = uint32(mcpu)
+		p.ResourceRes.SetMcpu(mcpu)
 	}
 }
 
 // Set the aendpoint of memory (in MB) required to run this proc.
 func (p *Proc) SetMem(mb Tmem) {
-	p.ResourceRes.MemInt = uint32(mb)
+	p.ResourceRes.SetMem(mb)
 }
 
 func (p *Proc) Marshal() []byte {

@@ -18,8 +18,6 @@ import (
 )
 
 type Ttype uint32 // If this type changes, make sure to change the typecasts below.
-type Tmcpu uint32 // If this type changes, make sure to change the typecasts below.
-type Tmem uint32  // If this type changes, make sure to change the typecasts below.
 
 const (
 	T_BE Ttype = 0
@@ -90,7 +88,8 @@ func NewPrivProcPid(pid sp.Tpid, program string, args []string, priv bool) *Proc
 	).GetProto()
 	p.Args = args
 	p.TypeInt = uint32(T_BE)
-	p.McpuInt = uint32(0)
+	p.ResourceRes = NewResourceReservation(0, 0)
+	p.BootScriptResourceRes = NewResourceReservation(0, 0)
 	if p.ProcEnvProto.Privileged {
 		p.TypeInt = uint32(T_LC)
 	}
@@ -335,15 +334,15 @@ func (p *Proc) GetType() Ttype {
 }
 
 func (p *Proc) GetMcpu() Tmcpu {
-	mcpu := p.ProcProto.McpuInt
+	mcpu := p.ProcProto.ResourceRes.McpuInt
 	if mcpu > 0 && mcpu%10 != 0 {
 		log.Fatalf("%v FATAL: Error! Suspected missed MCPU conversion in GetMcpu: %v", GetSigmaDebugPid(), mcpu)
 	}
-	return Tmcpu(p.ProcProto.McpuInt)
+	return Tmcpu(p.ProcProto.ResourceRes.McpuInt)
 }
 
 func (p *Proc) GetMem() Tmem {
-	return Tmem(p.ProcProto.MemInt)
+	return Tmem(p.ProcProto.ResourceRes.MemInt)
 }
 
 func (p *Proc) GetRealm() sp.Trealm {
@@ -459,13 +458,13 @@ func (p *Proc) SetMcpu(mcpu Tmcpu) {
 			log.Fatalf("%v FATAL: Error! Suspected missed MCPU conversion in GetMcpu: %v", GetSigmaDebugPid(), mcpu)
 		}
 		p.TypeInt = uint32(T_LC)
-		p.McpuInt = uint32(mcpu)
+		p.ResourceRes.McpuInt = uint32(mcpu)
 	}
 }
 
 // Set the aendpoint of memory (in MB) required to run this proc.
 func (p *Proc) SetMem(mb Tmem) {
-	p.MemInt = uint32(mb)
+	p.ResourceRes.MemInt = uint32(mb)
 }
 
 func (p *Proc) Marshal() []byte {

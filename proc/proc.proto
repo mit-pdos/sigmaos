@@ -12,6 +12,11 @@ message ProcSeqno {
   string mSchedID = 4;
 }
 
+message ResourceReservation {
+  uint32 mcpuInt = 7;
+  uint32 memInt = 8;
+}
+
 message ProcEnvProto {
   string pidStr = 1;
   string program = 2;
@@ -54,6 +59,6 @@ message ProcProto {
   Blob blob = 4; // boot script
   bytes bootScriptInput = 5;
   uint32 typeInt = 6;
-  uint32 mcpuInt = 7;
-  uint32 memInt = 8;
+  ResourceReservation resourceRes = 7;
+  ResourceReservation bootScriptResourceRes = 8;
 }

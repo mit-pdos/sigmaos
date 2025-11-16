@@ -313,8 +313,8 @@ func (ps *procState) bootScriptDone(err error) {
 	defer ps.mu.Unlock()
 
 	ps.bootScriptCompleted = true
-	ps.bsCond.Broadcast()
 	ps.bsErr = err
+	ps.bsCond.Broadcast()
 }
 
 func (ps *procState) Destroy() error {

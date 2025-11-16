@@ -344,7 +344,7 @@ func (p *Proc) GetBootScriptMcpu() Tmcpu {
 	mcpu := p.ProcProto.BootScriptResourceRes.GetMcpu()
 	// Sanity check
 	if mcpu > 0 && mcpu%10 != 0 {
-		log.Fatalf("%v FATAL: Error! Suspected missed MCPU conversion in GetMcpu: %v", GetSigmaDebugPid(), mcpu)
+		log.Fatalf("%v FATAL: Error! Suspected missed MCPU conversion in GetBootScriptMcpu: %v", GetSigmaDebugPid(), mcpu)
 	}
 	return mcpu
 }
@@ -387,6 +387,18 @@ func (p *Proc) SetHow(n Thow) {
 
 func (p *Proc) GetHow() Thow {
 	return p.ProcEnvProto.GetHow()
+}
+
+func (p *Proc) GetIsQueueable() bool {
+	return p.GetRunAfterBootScript()
+}
+
+func (p *Proc) GetRunAfterBootScript() bool {
+	return p.RunAfterBootScript
+}
+
+func (p *Proc) SetRunAfterBootScript(runAfter bool) {
+	p.RunAfterBootScript = runAfter
 }
 
 func (p *Proc) SetMSchedEndpoint(ep *sp.Tendpoint) {

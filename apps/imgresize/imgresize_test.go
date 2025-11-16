@@ -98,6 +98,9 @@ func TestResizeProcInitScript(t *testing.T) {
 	p.GetProcEnv().UseSPProxy = true
 	p.SetBootScript(bootScript, bootScriptInput)
 	p.SetRunBootScript(true)
+	// Run after boot script
+	p.SetRunAfterBootScript(true)
+	p.SetMcpu(1000)
 	err = mrts.GetRealm(test.REALM1).Spawn(p)
 	assert.Nil(t, err, "Spawn")
 	err = mrts.GetRealm(test.REALM1).WaitStart(p.GetPid())

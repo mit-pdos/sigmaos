@@ -59,6 +59,7 @@ message ProcProto {
   Blob blob = 4; // boot script
   bytes bootScriptInput = 5;
   uint32 typeInt = 6;
-  ResourceReservationProto resourceRes = 7;
-  ResourceReservationProto bootScriptResourceRes = 8;
+  bool runAfterBootScript = 7;
+  ResourceReservationProto resourceRes = 8;
+  ResourceReservationProto bootScriptResourceRes = 9;
 }

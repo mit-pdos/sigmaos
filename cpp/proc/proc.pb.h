@@ -399,10 +399,10 @@ class ResourceReservationProto final :
   // accessors -------------------------------------------------------
 
   enum : int {
-    kMcpuIntFieldNumber = 7,
-    kMemIntFieldNumber = 8,
+    kMcpuIntFieldNumber = 1,
+    kMemIntFieldNumber = 2,
   };
-  // uint32 mcpuInt = 7;
+  // uint32 mcpuInt = 1;
   void clear_mcpuint();
   uint32_t mcpuint() const;
   void set_mcpuint(uint32_t value);
@@ -411,7 +411,7 @@ class ResourceReservationProto final :
   void _internal_set_mcpuint(uint32_t value);
   public:
 
-  // uint32 memInt = 8;
+  // uint32 memInt = 2;
   void clear_memint();
   uint32_t memint() const;
   void set_memint(uint32_t value);
@@ -1338,9 +1338,10 @@ class ProcProto final :
     kBootScriptInputFieldNumber = 5,
     kProcEnvProtoFieldNumber = 1,
     kBlobFieldNumber = 4,
-    kResourceResFieldNumber = 7,
-    kBootScriptResourceResFieldNumber = 8,
+    kResourceResFieldNumber = 8,
+    kBootScriptResourceResFieldNumber = 9,
     kTypeIntFieldNumber = 6,
+    kRunAfterBootScriptFieldNumber = 7,
   };
   // repeated string args = 2;
   int args_size() const;
@@ -1433,7 +1434,7 @@ class ProcProto final :
       ::Blob* blob);
   ::Blob* unsafe_arena_release_blob();
 
-  // .ResourceReservationProto resourceRes = 7;
+  // .ResourceReservationProto resourceRes = 8;
   bool has_resourceres() const;
   private:
   bool _internal_has_resourceres() const;
@@ -1451,7 +1452,7 @@ class ProcProto final :
       ::ResourceReservationProto* resourceres);
   ::ResourceReservationProto* unsafe_arena_release_resourceres();
 
-  // .ResourceReservationProto bootScriptResourceRes = 8;
+  // .ResourceReservationProto bootScriptResourceRes = 9;
   bool has_bootscriptresourceres() const;
   private:
   bool _internal_has_bootscriptresourceres() const;
@@ -1478,6 +1479,15 @@ class ProcProto final :
   void _internal_set_typeint(uint32_t value);
   public:
 
+  // bool runAfterBootScript = 7;
+  void clear_runafterbootscript();
+  bool runafterbootscript() const;
+  void set_runafterbootscript(bool value);
+  private:
+  bool _internal_runafterbootscript() const;
+  void _internal_set_runafterbootscript(bool value);
+  public:
+
   // @@protoc_insertion_point(class_scope:ProcProto)
  private:
   class _Internal;
@@ -1498,6 +1508,7 @@ class ProcProto final :
     ::ResourceReservationProto* resourceres_;
     ::ResourceReservationProto* bootscriptresourceres_;
     uint32_t typeint_;
+    bool runafterbootscript_;
     mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   };
   union { Impl_ _impl_; };
@@ -1658,7 +1669,7 @@ inline void ProcSeqno::set_allocated_mschedid(std::string* mschedid) {
 
 // ResourceReservationProto
 
-// uint32 mcpuInt = 7;
+// uint32 mcpuInt = 1;
 inline void ResourceReservationProto::clear_mcpuint() {
   _impl_.mcpuint_ = 0u;
 }
@@ -1678,7 +1689,7 @@ inline void ResourceReservationProto::set_mcpuint(uint32_t value) {
   // @@protoc_insertion_point(field_set:ResourceReservationProto.mcpuInt)
 }
 
-// uint32 memInt = 8;
+// uint32 memInt = 2;
 inline void ResourceReservationProto::clear_memint() {
   _impl_.memint_ = 0u;
 }
@@ -3501,7 +3512,27 @@ inline void ProcProto::set_typeint(uint32_t value) {
   // @@protoc_insertion_point(field_set:ProcProto.typeInt)
 }
 
-// .ResourceReservationProto resourceRes = 7;
+// bool runAfterBootScript = 7;
+inline void ProcProto::clear_runafterbootscript() {
+  _impl_.runafterbootscript_ = false;
+}
+inline bool ProcProto::_internal_runafterbootscript() const {
+  return _impl_.runafterbootscript_;
+}
+inline bool ProcProto::runafterbootscript() const {
+  // @@protoc_insertion_point(field_get:ProcProto.runAfterBootScript)
+  return _internal_runafterbootscript();
+}
+inline void ProcProto::_internal_set_runafterbootscript(bool value) {
+  
+  _impl_.runafterbootscript_ = value;
+}
+inline void ProcProto::set_runafterbootscript(bool value) {
+  _internal_set_runafterbootscript(value);
+  // @@protoc_insertion_point(field_set:ProcProto.runAfterBootScript)
+}
+
+// .ResourceReservationProto resourceRes = 8;
 inline bool ProcProto::_internal_has_resourceres() const {
   return this != internal_default_instance() && _impl_.resourceres_ != nullptr;
 }
@@ -3591,7 +3622,7 @@ inline void ProcProto::set_allocated_resourceres(::ResourceReservationProto* res
   // @@protoc_insertion_point(field_set_allocated:ProcProto.resourceRes)
 }
 
-// .ResourceReservationProto bootScriptResourceRes = 8;
+// .ResourceReservationProto bootScriptResourceRes = 9;
 inline bool ProcProto::_internal_has_bootscriptresourceres() const {
   return this != internal_default_instance() && _impl_.bootscriptresourceres_ != nullptr;
 }

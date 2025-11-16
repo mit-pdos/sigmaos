@@ -36,7 +36,7 @@ func (pq *ProcQueue) QueueProc(p *proc.Proc) {
 	for len(pq.poolQueues[qid]) > 1 {
 		pq.cond.Wait()
 	}
-	db.DPrintf(db.PROCD, "[%v] Done queueing proc qlen[%v]", p.GetPid(), qid, len(pq.poolQueues[qid]))
+	db.DPrintf(db.PROCD, "[%v] Done queueing proc qlen[%v] %v", p.GetPid(), qid, len(pq.poolQueues[qid]))
 }
 
 func (pq *ProcQueue) ProcDone(p *proc.Proc) {

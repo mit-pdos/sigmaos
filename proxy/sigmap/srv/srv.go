@@ -133,6 +133,13 @@ func (spps *SPProxySrv) IncomingProc(p *proc.Proc) {
 	spps.psm.AllocProcState(p.GetProcEnv(), p)
 }
 
+func (spps *SPProxySrv) WaitBootScriptCompletion(pid sp.Tpid) error {
+	db.DPrintf(db.SPPROXYSRV, "[%v] Wait for completion of bootscript", pid)
+	err := spps.psm.WaitBootScriptCompletion(pid)
+	db.DPrintf(db.SPPROXYSRV, "[%v] Done waiting for completion of bootscript: %v", pid, err)
+	return err
+}
+
 func (spps *SPProxySrv) ProcDone(p *proc.Proc) {
 	db.DPrintf(db.SPPROXYSRV, "Informed proc done %v", p.GetPid())
 	spps.mu.Lock()

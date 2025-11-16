@@ -77,6 +77,15 @@ func (psm *ProcStateMgr) DelProcState(p *proc.Proc) {
 	delete(psm.ps, p.GetPid())
 }
 
+func (psm *ProcStateMgr) WaitBootScriptCompletion(pid sp.Tpid) error {
+	ps, ok := psm.getProcState(pid)
+	if !ok {
+		db.DPrintf(db.SPPROXYSRV_ERR, "Try to wait for bootscript completion for unknown proc: %v", pid)
+		return fmt.Errorf("Try to wait for bootscript completion for unknown proc: %v", pid)
+	}
+	return ps.WaitBootScriptCompletion()
+}
+
 func (psm *ProcStateMgr) getProcState(pid sp.Tpid) (*procState, bool) {
 	psm.mu.Lock()
 	defer psm.mu.Unlock()
@@ -190,9 +199,11 @@ func (rep *registeredEP) String() string {
 type procState struct {
 	mu                       sync.Mutex
 	cond                     *sync.Cond
+	bsCond                   *sync.Cond
 	spps                     *SPProxySrv
 	sigmaClntCreationStarted bool
 	done                     bool // done creating the proc state?
+	bootScriptCompleted      bool
 	pe                       *proc.ProcEnv
 	p                        *proc.Proc
 	rpcReps                  *RPCState
@@ -203,6 +214,7 @@ type procState struct {
 	shm                      *shmem.Segment
 	shmAlloc                 malloc.Allocator
 	err                      error // Creation result
+	bsErr                    error // BootScript result
 }
 
 func newProcState(spps *SPProxySrv, pe *proc.ProcEnv, p *proc.Proc) *procState {
@@ -215,6 +227,7 @@ func newProcState(spps *SPProxySrv, pe *proc.ProcEnv, p *proc.Proc) *procState {
 		spps:    spps,
 	}
 	ps.cond = sync.NewCond(&ps.mu)
+	ps.bsCond = sync.NewCond(&ps.mu)
 	if pe.GetUseShmem() {
 		var err error
 		start := time.Now()
@@ -228,6 +241,8 @@ func newProcState(spps *SPProxySrv, pe *proc.ProcEnv, p *proc.Proc) *procState {
 	if ps.p.GetRunBootScript() {
 		ps.sigmaClntCreationStarted = true
 		go ps.createSigmaClnt(spps)
+	} else {
+		ps.bootScriptCompleted = true
 	}
 	return ps
 }
@@ -283,6 +298,25 @@ func (ps *procState) setSigmaClnt(sc *sigmaclnt.SigmaClnt, epcc *epcacheclnt.End
 	ps.cond.Broadcast()
 }
 
+func (ps *procState) WaitBootScriptCompletion() error {
+	ps.mu.Lock()
+	defer ps.mu.Unlock()
+
+	for !ps.bootScriptCompleted {
+		ps.bsCond.Wait()
+	}
+	return ps.bsErr
+}
+
+func (ps *procState) bootScriptDone(err error) {
+	ps.mu.Lock()
+	defer ps.mu.Unlock()
+
+	ps.bootScriptCompleted = true
+	ps.bsCond.Broadcast()
+	ps.bsErr = err
+}
+
 func (ps *procState) Destroy() error {
 	if ps.shm != nil {
 		return ps.shm.Destroy()
@@ -305,7 +339,10 @@ func (ps *procState) createSigmaClnt(spps *SPProxySrv) {
 		rpcAPI := NewWASMRPCProxy(spps, sc, ps.p)
 		ps.wrt = wasmrt.NewWasmerRuntime(rpcAPI)
 		perf.LogSpawnLatency("Create wasmRT", ps.pe.GetPID(), ps.pe.GetSpawnTime(), start)
-		go ps.wrt.RunModule(ps.p.GetPid(), ps.p.GetSpawnTime(), ps.p.GetBootScript(), ps.p.GetBootScriptInput())
+		go func() {
+			err := ps.wrt.RunModule(ps.p.GetPid(), ps.p.GetSpawnTime(), ps.p.GetBootScript(), ps.p.GetBootScriptInput())
+			ps.bootScriptDone(err)
+		}()
 	}
 	var epcc *epcacheclnt.EndpointCacheClnt
 	// Initialize a procclnt too

@@ -6,6 +6,10 @@ import "rpc/proto/rpc.proto";
 
 option go_package = "sigmaos/proxy/sigmap/proto";
 
+message SigmaWaitBootScriptReq {
+        string pIDStr = 1;
+}
+
 message SigmaInformProcReq {
         ProcProto procProto = 1;
 }

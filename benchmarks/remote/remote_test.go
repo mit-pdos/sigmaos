@@ -13,6 +13,7 @@ import (
 	cachegrpmgr "sigmaos/apps/cache/cachegrp/mgr"
 	cossimsrv "sigmaos/apps/cossim/srv"
 	"sigmaos/apps/hotel"
+	"sigmaos/apps/imgresize"
 	"sigmaos/benchmarks"
 	db "sigmaos/debug"
 	"sigmaos/proc"
@@ -955,7 +956,25 @@ func TestLCBEHotelImgResizeMultiplexing(t *testing.T) {
 		},
 		CosSimBenchCfg: nil,
 	}
-	getLeaderCmd := GetLCBEHotelImgResizeMultiplexingCmdConstructor(len(driverVMs), rps, dur, cacheType, autoscaleCache, sleep)
+	imgCfg := &benchmarks.ImgBenchConfig{
+		JobCfg: &imgresize.ImgdJobConfig{
+			Job:           "img-job",
+			WorkerMcpu:    proc.Tmcpu(0),
+			WorkerMem:     proc.Tmem(1500),
+			Persist:       false,
+			NRounds:       1,
+			ImgdMcpu:      proc.Tmcpu(1000),
+			UseSPProxy:    false,
+			UseBootScript: false,
+		},
+		InputPath:      "name/ux/~local/8.jpg",
+		NTasks:         350,
+		NInputsPerTask: 1,
+		NRoundsPerTask: 500,
+		Durs:           nil,
+		MaxRPS:         nil,
+	}
+	getLeaderCmd := GetLCBEHotelImgResizeMultiplexingCmdConstructor(len(driverVMs), rps, dur, cacheType, autoscaleCache, sleep, imgCfg)
 	getFollowerCmd := GetHotelClientCmdConstructor("Search", false, len(driverVMs), sleep, hotelCfg)
 	ts.RunParallelClientBenchmark(benchName, driverVMs, getLeaderCmd, getFollowerCmd, nil, nil, clientDelay, numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost)
 }
@@ -1042,7 +1061,25 @@ func TestLCBEHotelImgResizeRPCMultiplexing(t *testing.T) {
 		},
 		CosSimBenchCfg: nil,
 	}
-	getLeaderCmd := GetLCBEHotelImgResizeRPCMultiplexingCmdConstructor(len(driverVMs), rps, dur, cacheType, autoscaleCache, sleep)
+	imgCfg := &benchmarks.ImgBenchConfig{
+		JobCfg: &imgresize.ImgdJobConfig{
+			Job:           "img-job",
+			WorkerMcpu:    proc.Tmcpu(0),
+			WorkerMem:     proc.Tmem(2500),
+			Persist:       false,
+			NRounds:       1,
+			ImgdMcpu:      proc.Tmcpu(1000),
+			UseSPProxy:    false,
+			UseBootScript: false,
+		},
+		InputPath:      "name/ux/~local/8.jpg",
+		NTasks:         0,
+		NInputsPerTask: 0,
+		NRoundsPerTask: 43,
+		Durs:           []time.Duration{50 * time.Second},
+		MaxRPS:         []int{150},
+	}
+	getLeaderCmd := GetLCBEHotelImgResizeRPCMultiplexingCmdConstructor(len(driverVMs), rps, dur, cacheType, autoscaleCache, sleep, imgCfg)
 	getFollowerCmd := GetHotelClientCmdConstructor("Search", false, len(driverVMs), sleep, hotelCfg)
 	ts.RunParallelClientBenchmark(benchName, driverVMs, getLeaderCmd, getFollowerCmd, nil, nil, clientDelay, numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost)
 }
@@ -1445,6 +1482,7 @@ func TestHotelMatchTailLatency(t *testing.T) {
 					JobCfg:       &cachegrpmgr.CacheJobConfig{NSrv: numCaches, MCPU: proc.Tmcpu(4000), GC: true},
 					Autoscale:    autoscaleCache,
 					DelegateInit: delInit,
+					UseEPCache:   true,
 					ManuallyScale: &benchmarks.ManualScalingConfig{
 						Svc:         "cached",
 						Scale:       manuallyScaleCaches,
@@ -1460,7 +1498,7 @@ func TestHotelMatchTailLatency(t *testing.T) {
 				},
 				CosSimBenchCfg: &benchmarks.CosSimBenchConfig{
 					//					JobCfg:      cossimsrv.NewCosSimJobConfig("hotel-job", 1, 10000, 100, true, 4000, nil, csDelInit),
-					JobCfg:      cossimsrv.NewCosSimJobConfig("hotel-job", 1, 1000, 100, true, 4000, nil, delInit),
+					JobCfg:      cossimsrv.NewCosSimJobConfig("hotel-job", 1, 4000, 100, true, 4000, nil, delInit),
 					NVecToQuery: nVecToQuery,
 					ManuallyScale: benchmarks.NewManualScalingConfig("cossim", !autoscaleCosSim,
 						csScaleDurs,

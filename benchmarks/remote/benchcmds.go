@@ -462,7 +462,7 @@ func GetSocialnetClientCmdConstructor(leader bool, numClients int, rps []int, du
 //
 // - sleep specifies the amount of time the hotel benchmark should sleep before
 // starting to run.
-func GetLCBEHotelImgResizeMultiplexingCmdConstructor(numClients int, rps []int, dur []time.Duration, cacheType string, scaleCache bool, sleep time.Duration) GetBenchCmdFn {
+func GetLCBEHotelImgResizeMultiplexingCmdConstructor(numClients int, rps []int, dur []time.Duration, cacheType string, scaleCache bool, sleep time.Duration, imgCfg *benchmarks.ImgBenchConfig) GetBenchCmdFn {
 	return func(bcfg *BenchConfig, ccfg *ClusterConfig) string {
 		const (
 			debugSelectors string = "\"TEST;BENCH;CPU_UTIL;IMGD;GROUPMGR;\""
@@ -480,6 +480,10 @@ func GetLCBEHotelImgResizeMultiplexingCmdConstructor(numClients int, rps []int, 
 		if bcfg.Overlays {
 			overlays = "--overlays"
 		}
+		cfgJSON, err := imgCfg.Marshal()
+		if err != nil {
+			db.DFatalf("Err marshal img config: %v", err)
+		}
 		return fmt.Sprintf("export SIGMADEBUG=%s; export SIGMAPERF=%s; go clean -testcache; "+
 			"ulimit -n 100000; "+
 			"./set-cores.sh --set 1 --start 2 --end 39 > /dev/null 2>&1 ; "+
@@ -493,12 +497,13 @@ func GetLCBEHotelImgResizeMultiplexingCmdConstructor(numClients int, rps []int, 
 			"--hotel_dur %s "+
 			"--hotel_max_rps %s "+
 			"--sleep %s "+
-			"--n_imgresize 350 "+
-			"--imgresize_nround 500 "+
-			"--n_imgresize_per 1 "+
-			"--imgresize_path name/ux/~local/8.jpg "+
-			"--imgresize_mcpu 0 "+
-			"--imgresize_mem 1500 "+
+			//"--n_imgresize 350 "+
+			//"--imgresize_nround 500 "+
+			//"--n_imgresize_per 1 "+
+			//"--imgresize_path name/ux/~local/8.jpg "+
+			//"--imgresize_mcpu 0 "+
+			//"--imgresize_mem 1500 "+
+			"--img_bench_cfg='%s' "+
 			"--prewarm_realm "+
 			"> /tmp/bench.out 2>&1",
 			debugSelectors,
@@ -513,6 +518,7 @@ func GetLCBEHotelImgResizeMultiplexingCmdConstructor(numClients int, rps []int, 
 			dursToString(dur),
 			rpsToString(rps),
 			sleep.String(),
+			cfgJSON,
 		)
 	}
 }
@@ -534,7 +540,7 @@ func GetLCBEHotelImgResizeMultiplexingCmdConstructor(numClients int, rps []int, 
 //
 // - sleep specifies the amount of time the hotel benchmark should sleep before
 // starting to run.
-func GetLCBEHotelImgResizeRPCMultiplexingCmdConstructor(numClients int, rps []int, dur []time.Duration, cacheType string, scaleCache bool, sleep time.Duration) GetBenchCmdFn {
+func GetLCBEHotelImgResizeRPCMultiplexingCmdConstructor(numClients int, rps []int, dur []time.Duration, cacheType string, scaleCache bool, sleep time.Duration, imgCfg *benchmarks.ImgBenchConfig) GetBenchCmdFn {
 	return func(bcfg *BenchConfig, ccfg *ClusterConfig) string {
 		const (
 			debugSelectors string = "\"TEST;BENCH;CPU_UTIL;IMGD;GROUPMGR;\""
@@ -552,6 +558,10 @@ func GetLCBEHotelImgResizeRPCMultiplexingCmdConstructor(numClients int, rps []in
 		if bcfg.Overlays {
 			overlays = "--overlays"
 		}
+		cfgJSON, err := imgCfg.Marshal()
+		if err != nil {
+			db.DFatalf("Err marshal img config: %v", err)
+		}
 		return fmt.Sprintf("export SIGMADEBUG=%s; export SIGMAPERF=%s; go clean -testcache; "+
 			"ulimit -n 100000; "+
 			"./set-cores.sh --set 1 --start 2 --end 39 > /dev/null 2>&1 ; "+
@@ -565,12 +575,13 @@ func GetLCBEHotelImgResizeRPCMultiplexingCmdConstructor(numClients int, rps []in
 			"--hotel_dur %s "+
 			"--hotel_max_rps %s "+
 			"--sleep %s "+
-			"--imgresize_tps 150 "+
-			"--imgresize_dur 50s "+
-			"--imgresize_nround 43 "+
-			"--imgresize_path name/ux/~local/8.jpg "+
-			"--imgresize_mcpu 0 "+
-			"--imgresize_mem 2500 "+
+			//"--imgresize_tps 150 "+
+			//"--imgresize_dur 50s "+
+			//"--imgresize_nround 43 "+
+			//"--imgresize_path name/ux/~local/8.jpg "+
+			//"--imgresize_mcpu 0 "+
+			//"--imgresize_mem 2500 "+
+			"--img_bench_cfg='%s' "+
 			"--prewarm_realm "+
 			"> /tmp/bench.out 2>&1",
 			debugSelectors,
@@ -585,6 +596,7 @@ func GetLCBEHotelImgResizeRPCMultiplexingCmdConstructor(numClients int, rps []in
 			dursToString(dur),
 			rpsToString(rps),
 			sleep.String(),
+			cfgJSON,
 		)
 	}
 }

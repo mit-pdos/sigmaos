@@ -739,7 +739,7 @@ func TestRealmBalanceHotelRPCImgResize(t *testing.T) {
 	p2 := newRealmPerf(mrts.GetRealm(REALM1))
 	defer p2.Done()
 	// Prep ImgResize job
-	imgJobs, imgApps := newImgResizeRPCJob(mrts.GetRealm(REALM2), p1, true, IMG_RESIZE_INPUT_PATH, N_IMG_RESIZE_TASKS_PER_SECOND, IMG_RESIZE_DUR, proc.Tmcpu(IMG_RESIZE_MCPU), proc.Tmem(IMG_RESIZE_MEM_MB), IMG_RESIZE_N_ROUNDS, proc.Tmcpu(1000))
+	imgJobs, imgApps := newImgResizeRPCJob(mrts.GetRealm(REALM2), p1, ImgBenchConfig, true)
 	// Prep Hotel job
 	pc2 := newRealmCostPerf(mrts.GetRealm(REALM1))
 	defer pc2.Done()
@@ -815,7 +815,7 @@ func TestRealmBalanceHotelImgResize(t *testing.T) {
 	p2 := newRealmPerf(mrts.GetRealm(REALM1))
 	defer p2.Done()
 	// Prep ImgResize job
-	imgJobs, imgApps := newImgResizeJob(mrts.GetRealm(REALM2), p1, true, IMG_RESIZE_INPUT_PATH, N_IMG_RESIZE_TASKS, N_IMG_RESIZE_INPUTS_PER_TASK, proc.Tmcpu(IMG_RESIZE_MCPU), proc.Tmem(IMG_RESIZE_MEM_MB), IMG_RESIZE_N_ROUNDS, 0)
+	imgJobs, imgApps := newImgResizeJob(mrts.GetRealm(REALM2), p1, ImgBenchConfig, true)
 	// Prep Hotel job
 	pc2 := newRealmCostPerf(mrts.GetRealm(REALM1))
 	defer pc2.Done()
@@ -948,7 +948,7 @@ func TestRealmBalanceImgResizeRPCImgResizeRPC(t *testing.T) {
 		rses[i] = benchmarks.NewResults(1, benchmarks.E2E)
 		ps[i] = newRealmPerf(mrts.GetRealm(realms[i]))
 		defer ps[i].Done()
-		imgjob, imgapp := newImgResizeRPCJob(mrts.GetRealm(realms[i]), ps[i], true, IMG_RESIZE_INPUT_PATH, N_IMG_RESIZE_TASKS_PER_SECOND, IMG_RESIZE_DUR, proc.Tmcpu(IMG_RESIZE_MCPU), proc.Tmem(IMG_RESIZE_MEM_MB), IMG_RESIZE_N_ROUNDS, proc.Tmcpu(1000))
+		imgjob, imgapp := newImgResizeRPCJob(mrts.GetRealm(realms[i]), ps[i], ImgBenchConfig, true)
 		imgjobs[i] = imgjob
 		imgapps[i] = imgapp
 	}
@@ -1005,7 +1005,7 @@ func TestRealmBalanceImgResizeImgResize(t *testing.T) {
 		rses[i] = benchmarks.NewResults(1, benchmarks.E2E)
 		ps[i] = newRealmPerf(mrts.GetRealm(realms[i]))
 		defer ps[i].Done()
-		imgjob, imgapp := newImgResizeJob(mrts.GetRealm(realms[i]), ps[i], true, IMG_RESIZE_INPUT_PATH, N_IMG_RESIZE_TASKS, N_IMG_RESIZE_INPUTS_PER_TASK, proc.Tmcpu(IMG_RESIZE_MCPU), proc.Tmem(IMG_RESIZE_MEM_MB), IMG_RESIZE_N_ROUNDS, proc.Tmcpu(1000))
+		imgjob, imgapp := newImgResizeJob(mrts.GetRealm(realms[i]), ps[i], ImgBenchConfig, true)
 		imgjobs[i] = imgjob
 		imgapps[i] = imgapp
 	}
@@ -1539,7 +1539,7 @@ func TestImgResize(t *testing.T) {
 	rs := benchmarks.NewResults(1, benchmarks.E2E)
 	p := newRealmPerf(mrts.GetRealm(REALM1))
 	defer p.Done()
-	jobs, apps := newImgResizeJob(mrts.GetRealm(REALM1), p, true, IMG_RESIZE_INPUT_PATH, N_IMG_RESIZE_TASKS, N_IMG_RESIZE_INPUTS_PER_TASK, proc.Tmcpu(IMG_RESIZE_MCPU), proc.Tmem(IMG_RESIZE_MEM_MB), IMG_RESIZE_N_ROUNDS, proc.Tmcpu(1000))
+	jobs, apps := newImgResizeJob(mrts.GetRealm(REALM1), p, ImgBenchConfig, true)
 	go func() {
 		for _, j := range jobs {
 			// Wait until ready
@@ -1608,9 +1608,9 @@ func TestRealmBalanceSimpleImgResize(t *testing.T) {
 	defer p2.Done()
 	// Prep resize jobs
 	imgJobsBE, imgAppsBE := newImgResizeJob(
-		mrts.GetRealm(REALM1), p1, true, IMG_RESIZE_INPUT_PATH, N_IMG_RESIZE_TASKS, N_IMG_RESIZE_INPUTS_PER_TASK, 0, proc.Tmem(IMG_RESIZE_MEM_MB), IMG_RESIZE_N_ROUNDS, proc.Tmcpu(1000))
+		mrts.GetRealm(REALM1), p1, ImgBenchConfig, true)
 	imgJobsLC, imgAppsLC := newImgResizeJob(
-		mrts.GetRealm(REALM2), p2, true, IMG_RESIZE_INPUT_PATH, N_IMG_RESIZE_TASKS, N_IMG_RESIZE_INPUTS_PER_TASK, proc.Tmcpu(IMG_RESIZE_MCPU), proc.Tmem(IMG_RESIZE_MEM_MB), IMG_RESIZE_N_ROUNDS, proc.Tmcpu(1000))
+		mrts.GetRealm(REALM2), p2, ImgBenchConfig, true)
 
 	// Run image resize jobs
 	go func() {
@@ -1666,7 +1666,7 @@ func TestRealmBalanceSocialNetworkImgResize(t *testing.T) {
 	defer p2.Done()
 	// Prep image resize job
 	imgJobs, imgApps := newImgResizeJob(
-		mrts.GetRealm(REALM1), p1, true, IMG_RESIZE_INPUT_PATH, N_IMG_RESIZE_TASKS, N_IMG_RESIZE_INPUTS_PER_TASK, 0, proc.Tmem(IMG_RESIZE_MEM_MB), IMG_RESIZE_N_ROUNDS, 0)
+		mrts.GetRealm(REALM1), p1, ImgBenchConfig, true)
 	// Prep social network job
 	snJobs, snApps := newSocialNetworkJobs(mrts.GetRealm(REALM2), p2, true, SOCIAL_NETWORK_READ_ONLY, SOCIAL_NETWORK_DURS, SOCIAL_NETWORK_MAX_RPS, 3)
 	// Run social network job

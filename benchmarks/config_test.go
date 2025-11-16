@@ -14,15 +14,18 @@ import (
 var CosSimBenchConfig *benchmarks.CosSimBenchConfig
 var CacheBenchConfig *benchmarks.CacheBenchConfig
 var HotelBenchConfig *benchmarks.HotelBenchConfig
+var ImgBenchConfig *benchmarks.ImgBenchConfig
 
 var cossimBenchCfgStr string
 var cacheBenchCfgStr string
 var hotelBenchCfgStr string
+var imgBenchCfgStr string
 
 func init() {
 	flag.StringVar(&cossimBenchCfgStr, "cossim_bench_cfg", sp.NOT_SET, "JSON string for CosSimBenchConfig")
 	flag.StringVar(&cacheBenchCfgStr, "cache_bench_cfg", sp.NOT_SET, "JSON string for CacheBenchConfig")
 	flag.StringVar(&hotelBenchCfgStr, "hotel_bench_cfg", sp.NOT_SET, "JSON string for HotelBenchConfig")
+	flag.StringVar(&imgBenchCfgStr, "img_bench_cfg", sp.NOT_SET, "JSON string for ImgBenchConfig")
 }
 
 func TestMain(m *testing.M) {
@@ -64,6 +67,18 @@ func TestMain(m *testing.M) {
 		db.DPrintf(db.ALWAYS, "Loaded HotelBenchConfig")
 	}
 
+	// Parse ImgBenchConfig
+	if imgBenchCfgStr == sp.NOT_SET {
+		ImgBenchConfig = benchmarks.DefaultImgBenchConfig
+		db.DPrintf(db.ALWAYS, "Using default ImgBenchConfig")
+	} else {
+		err := json.Unmarshal([]byte(imgBenchCfgStr), &ImgBenchConfig)
+		if err != nil {
+			db.DFatalf("Error unmarshaling img_bench_cfg: %v", err)
+		}
+		db.DPrintf(db.ALWAYS, "Loaded ImgBenchConfig")
+	}
+
 	CosSimBenchConfig.JobCfg.CacheCfg = CacheBenchConfig.JobCfg
 	HotelBenchConfig.JobCfg.CacheCfg = CacheBenchConfig.JobCfg
 	HotelBenchConfig.CosSimBenchCfg = CosSimBenchConfig
@@ -72,6 +87,7 @@ func TestMain(m *testing.M) {
 	db.DPrintf(db.ALWAYS, "CacheBenchConfig: %v", CacheBenchConfig)
 	db.DPrintf(db.ALWAYS, "CosSimBenchConfig: %v", CosSimBenchConfig)
 	db.DPrintf(db.ALWAYS, "HotelBenchConfig: %v", HotelBenchConfig)
+	db.DPrintf(db.ALWAYS, "ImgBenchConfig: %v", ImgBenchConfig)
 
 	os.Exit(m.Run())
 }

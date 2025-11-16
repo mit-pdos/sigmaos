@@ -329,13 +329,13 @@ func newHotelJobsCli(ts *test.RealmTstate, sigmaos bool, cfg *benchmarks.HotelBe
 }
 
 // ========== ImgResize Helpers ==========
-func newImgResizeJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, input string, ntasks int, ninputs int, mcpu proc.Tmcpu, mem proc.Tmem, nrounds int, imgdmcpu proc.Tmcpu) ([]*ImgResizeJobInstance, []interface{}) {
+func newImgResizeJob(ts *test.RealmTstate, p *perf.Perf, cfg *benchmarks.ImgBenchConfig, sigmaos bool) ([]*ImgResizeJobInstance, []interface{}) {
 	// n is ntrials, which is always 1.
 	n := 1
 	ws := make([]*ImgResizeJobInstance, 0, n)
 	is := make([]interface{}, 0, n)
 	for i := 0; i < n; i++ {
-		i := NewImgResizeJob(ts, p, sigmaos, input, ntasks, ninputs, 0, time.Second, mcpu, mem, nrounds, imgdmcpu)
+		i := NewImgResizeJob(ts, p, cfg, sigmaos)
 		ws = append(ws, i)
 		is = append(is, i)
 	}
@@ -343,13 +343,13 @@ func newImgResizeJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, input str
 }
 
 // ========== ImgResizeRPC Helpers ==========
-func newImgResizeRPCJob(ts *test.RealmTstate, p *perf.Perf, sigmaos bool, input string, tasksPerSec int, dur time.Duration, mcpu proc.Tmcpu, mem proc.Tmem, nrounds int, imgdmcpu proc.Tmcpu) ([]*ImgResizeJobInstance, []interface{}) {
+func newImgResizeRPCJob(ts *test.RealmTstate, p *perf.Perf, cfg *benchmarks.ImgBenchConfig, sigmaos bool) ([]*ImgResizeJobInstance, []interface{}) {
 	// n is ntrials, which is always 1.
 	n := 1
 	ws := make([]*ImgResizeJobInstance, 0, n)
 	is := make([]interface{}, 0, n)
 	for i := 0; i < n; i++ {
-		i := NewImgResizeJob(ts, p, sigmaos, input, 0, 0, tasksPerSec, dur, mcpu, mem, nrounds, imgdmcpu)
+		i := NewImgResizeJob(ts, p, cfg, sigmaos)
 		ws = append(ws, i)
 		is = append(is, i)
 	}

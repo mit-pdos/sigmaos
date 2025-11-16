@@ -1,12 +1,15 @@
 package benchmarks
 
 import (
+	"path/filepath"
 	"time"
 
 	cachegrpmgr "sigmaos/apps/cache/cachegrp/mgr"
 	cossimsrv "sigmaos/apps/cossim/srv"
 	"sigmaos/apps/hotel"
+	"sigmaos/apps/imgresize"
 	"sigmaos/proc"
+	sp "sigmaos/sigmap"
 )
 
 var DefaultCosSimBenchConfig = &CosSimBenchConfig{
@@ -106,4 +109,23 @@ var DefaultHotelBenchConfig = &HotelBenchConfig{
 	},
 	CacheBenchCfg:  nil,
 	CosSimBenchCfg: nil,
+}
+
+var DefaultImgBenchConfig = &ImgBenchConfig{
+	JobCfg: &imgresize.ImgdJobConfig{
+		Job:           "img-job",
+		WorkerMcpu:    proc.Tmcpu(0),
+		WorkerMem:     proc.Tmem(0),
+		Persist:       false,
+		NRounds:       1,
+		ImgdMcpu:      proc.Tmcpu(1000),
+		UseSPProxy:    false,
+		UseBootScript: false,
+	},
+	InputPath:      filepath.Join(sp.S3, sp.LOCAL, "9ps3/img/1.jpg"),
+	NTasks:         10,
+	NInputsPerTask: 1,
+	NRoundsPerTask: 1,
+	Durs:           []time.Duration{10 * time.Second},
+	MaxRPS:         []int{100},
 }

@@ -378,6 +378,14 @@ func (ps *ProcSrv) Run(ctx fs.CtxI, req proto.RunReq, res *proto.RunRep) error {
 	if err := ps.setSchedPolicy(uproc.GetPid(), uproc.GetType()); err != nil {
 		db.DFatalf("Err set sched policy: %v", err)
 	}
+	// If proc should only run after boot script completes, wait for it
+	if uproc.GetRunAfterBootScript() {
+		db.DPrintf(db.PROCD, "[%v] Wait for bootscript completion", uproc.GetPid())
+		start := time.Now()
+		ps.spc.WaitBootScriptCompletion(uproc.GetPid())
+		db.DPrintf(db.PROCD, "[%v] Done waiting for bootscript completion", uproc.GetPid())
+		perf.LogSpawnLatency("ProcSrv.Run WaitBootScriptCompletion", uproc.GetPid(), uproc.GetSpawnTime(), start)
+	}
 	perf.LogSpawnLatency("ProcSrv.Run StartSigmaContainer", uproc.GetPid(), uproc.GetSpawnTime(), perf.TIME_NOT_SET)
 	cmd, err := scontainer.StartSigmaContainer(uproc, ps.dialproxy)
 	if err != nil {

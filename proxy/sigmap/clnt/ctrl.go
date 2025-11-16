@@ -59,13 +59,13 @@ func (scc *CtrlClnt) InformIncomingProc(p *proc.Proc) error {
 }
 
 // Wait until a proc's bootscript has completed
-func (scc *CtrlClnt) WaitBootScript(pid sp.Tpid) error {
+func (scc *CtrlClnt) WaitBootScriptCompletion(pid sp.Tpid) error {
 	db.DPrintf(db.SPPROXYCLNT, "[%v] Wait for boot script completion", pid)
 	req := spproto.SigmaWaitBootScriptReq{
 		PIDStr: pid.String(),
 	}
 	rep := spproto.SigmaErrRep{}
-	err := scc.rpcc.RPC("CtrlAPI.WaitBootScript", &req, &rep)
+	err := scc.rpcc.RPC("CtrlAPI.WaitBootScriptCompletion", &req, &rep)
 	db.DPrintf(db.SPPROXYCLNT, "[%v] Done waiting for boot script completion", pid)
 	if err != nil {
 		return err

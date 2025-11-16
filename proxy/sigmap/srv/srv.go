@@ -186,6 +186,10 @@ func (sppsc *SPProxySrvCmd) InformProcDone(p *proc.Proc) error {
 	return sppsc.cc.InformProcDone(p)
 }
 
+func (sppsc *SPProxySrvCmd) WaitBootScriptCompletion(pid sp.Tpid) error {
+	return sppsc.cc.WaitBootScriptCompletion(pid)
+}
+
 func (sppsc *SPProxySrvCmd) GetProc() *proc.Proc {
 	return sppsc.p
 }

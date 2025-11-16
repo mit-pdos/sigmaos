@@ -60,6 +60,7 @@ message ProcProto {
   bytes bootScriptInput = 5;
   uint32 typeInt = 6;
   bool runAfterBootScript = 7;
-  ResourceReservationProto resourceRes = 8;
-  ResourceReservationProto bootScriptResourceRes = 9;
+  uint64 queueableResourcePoolID = 8;
+  ResourceReservationProto resourceRes = 9;
+  ResourceReservationProto bootScriptResourceRes = 10;
 }

@@ -393,6 +393,14 @@ func (p *Proc) GetIsQueueable() bool {
 	return p.GetRunAfterBootScript()
 }
 
+func (p *Proc) GetQueueableResourcePoolID() uint64 {
+	return p.QueueableResourcePoolID
+}
+
+func (p *Proc) SetQueueableResourcePoolID(id uint64) {
+	p.QueueableResourcePoolID = id
+}
+
 func (p *Proc) GetRunAfterBootScript() bool {
 	return p.RunAfterBootScript
 }

@@ -17,6 +17,7 @@ type Resources struct {
 	maxmem    proc.Tmem
 	mcpu      proc.Tmcpu
 	mem       proc.Tmem
+	qprpID    uint64
 	qprps     map[*QueueableProcResourcePool]bool    // Queueable proc resource pools
 	pidToPool map[sp.Tpid]*QueueableProcResourcePool // Mappings of procs to queueable resource pools
 }
@@ -27,6 +28,7 @@ func newResources(mcpuInt uint32, memInt uint32) *Resources {
 		maxmem:    proc.Tmem(memInt),
 		mcpu:      proc.Tmcpu(mcpuInt),
 		mem:       proc.Tmem(memInt),
+		qprpID:    0,
 		qprps:     make(map[*QueueableProcResourcePool]bool),
 		pidToPool: make(map[sp.Tpid]*QueueableProcResourcePool),
 	}
@@ -50,13 +52,14 @@ func (r *Resources) alloc(p *proc.Proc) {
 			r.mcpu -= newPoolMcpu
 			r.mem -= newPoolMem
 			// Create the pool
-			pool = newQueueableProcResourcePool(POOL_BOOT_SCRIPT_MCPU, POOL_BOOT_SCRIPT_MEM, p.GetMcpu(), p.GetMem())
-			db.DPrintf(db.LCSCHED, "New resource pool %p", pool)
+			r.qprpID++
+			pool = newQueueableProcResourcePool(r.qprpID, POOL_BOOT_SCRIPT_MCPU, POOL_BOOT_SCRIPT_MEM, p.GetMcpu(), p.GetMem())
+			db.DPrintf(db.LCSCHED, "New resource pool %v", pool.GetID())
 		}
-		db.DPrintf(db.LCSCHED, "[%v] Assign proc to resource pool %p", p.GetPid(), pool)
+		db.DPrintf(db.LCSCHED, "[%v] Assign proc to resource pool %v", p.GetPid(), pool.GetID())
 		// Assign this proc to the pool, and allocate resources in the pool
 		r.pidToPool[p.GetPid()] = pool
-		pool.alloc(p)
+		pool.Alloc(p)
 	} else {
 		r.mcpu -= p.GetMcpu()
 		r.mem -= p.GetMem()
@@ -69,8 +72,8 @@ func (r *Resources) free(p *proc.Proc) {
 
 	if p.GetIsQueueable() {
 		pool := r.pidToPool[p.GetPid()]
-		db.DPrintf(db.LCSCHED, "[%v] Remove proc from resource pool %p", p.GetPid(), pool)
-		isEmpty := pool.free(p)
+		db.DPrintf(db.LCSCHED, "[%v] Remove proc from resource pool %v", p.GetPid(), pool.GetID())
+		isEmpty := pool.Free(p)
 		if isEmpty {
 			// Pool is now empty, so delete it
 			delete(r.qprps, pool)
@@ -78,7 +81,7 @@ func (r *Resources) free(p *proc.Proc) {
 			mcpu, mem := pool.GetResources()
 			r.mcpu += mcpu
 			r.mem += mem
-			db.DPrintf(db.LCSCHED, "Resource pool %p empty, deleting", pool)
+			db.DPrintf(db.LCSCHED, "Resource pool %v empty, deleting", pool.GetID())
 		}
 	} else {
 		r.mcpu += p.GetMcpu()
@@ -123,7 +126,7 @@ func (r *Resources) isEligible(p *proc.Proc) bool {
 func (r *Resources) getQueueableResourcePool(p *proc.Proc) (*QueueableProcResourcePool, bool) {
 	for pool, _ := range r.qprps {
 		// If there is room for this proc in the pool, return the pool
-		if pool.isEligible(p) {
+		if pool.IsEligible(p) {
 			return pool, true
 		}
 	}
@@ -132,6 +135,7 @@ func (r *Resources) getQueueableResourcePool(p *proc.Proc) (*QueueableProcResour
 
 // Pool of resources allocated to run bootscripts & queueable procs
 type QueueableProcResourcePool struct {
+	id                uint64
 	maxBootScriptMcpu proc.Tmcpu // Max (initial) CPU resources for running queueable procs in this pool
 	maxBootScriptMem  proc.Tmem  // Max (initial) Mem resources for running queueable procs in this pool
 	bootScriptMcpu    proc.Tmcpu // CPU resources for running bootscripts
@@ -141,8 +145,9 @@ type QueueableProcResourcePool struct {
 	nproc             int        // Number of procs allocated to this pool
 }
 
-func newQueueableProcResourcePool(bootScriptMcpu proc.Tmcpu, bootScriptMem proc.Tmem, procMcpu proc.Tmcpu, procMem proc.Tmem) *QueueableProcResourcePool {
+func newQueueableProcResourcePool(id uint64, bootScriptMcpu proc.Tmcpu, bootScriptMem proc.Tmem, procMcpu proc.Tmcpu, procMem proc.Tmem) *QueueableProcResourcePool {
 	return &QueueableProcResourcePool{
+		id:                id,
 		maxBootScriptMcpu: bootScriptMcpu,
 		maxBootScriptMem:  bootScriptMem,
 		bootScriptMcpu:    bootScriptMcpu,
@@ -153,7 +158,7 @@ func newQueueableProcResourcePool(bootScriptMcpu proc.Tmcpu, bootScriptMem proc.
 	}
 }
 
-func (qprp *QueueableProcResourcePool) alloc(p *proc.Proc) {
+func (qprp *QueueableProcResourcePool) Alloc(p *proc.Proc) {
 	defer qprp.sanityCheck()
 
 	// Update resources available to run bootscripts in this resource pool
@@ -161,10 +166,11 @@ func (qprp *QueueableProcResourcePool) alloc(p *proc.Proc) {
 	qprp.bootScriptMem -= p.GetBootScriptMem()
 	// Update number of running procs assigned to this resource pool
 	qprp.nproc++
+	p.SetQueueableResourcePoolID(qprp.id)
 }
 
 // Return true if pool is now empty
-func (qprp *QueueableProcResourcePool) free(p *proc.Proc) bool {
+func (qprp *QueueableProcResourcePool) Free(p *proc.Proc) bool {
 	defer qprp.sanityCheck()
 
 	// Update resources available to run bootscripts in this resource pool
@@ -187,7 +193,7 @@ func (qprp *QueueableProcResourcePool) sanityCheck() {
 	}
 }
 
-func (qprp *QueueableProcResourcePool) isEligible(p *proc.Proc) bool {
+func (qprp *QueueableProcResourcePool) IsEligible(p *proc.Proc) bool {
 	// If there is room in the pool to run the boot script, and the proc component of the pool is large enough to run the queueable proc, then the proc is eligible to run on this pool
 	if p.GetBootScriptMcpu() <= qprp.bootScriptMcpu && p.GetBootScriptMem() <= qprp.bootScriptMem &&
 		p.GetMcpu() <= qprp.procMcpu && p.GetMem() <= qprp.procMem {
@@ -198,4 +204,8 @@ func (qprp *QueueableProcResourcePool) isEligible(p *proc.Proc) bool {
 
 func (qprp *QueueableProcResourcePool) GetResources() (proc.Tmcpu, proc.Tmem) {
 	return qprp.procMcpu + qprp.maxBootScriptMcpu, qprp.procMem + qprp.maxBootScriptMem
+}
+
+func (qprp *QueueableProcResourcePool) GetID() uint64 {
+	return qprp.id
 }

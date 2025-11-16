@@ -361,8 +361,11 @@ func (ps *ProcSrv) Run(ctx fs.CtxI, req proto.RunReq, res *proto.RunRep) error {
 	uproc.FinalizeEnv(ps.pe.GetInnerContainerIP(), ps.pe.GetOuterContainerIP(), ps.pe.GetPID())
 	// If this proc uses SPProxy, inform spproxy that there is a proc incoming so
 	// that it can pre-create the proc's sigmaclnt
+	var informedWG sync.WaitGroup
 	if uproc.GetProcEnv().UseSPProxy {
+		informedWG.Add(1)
 		go func() {
+			defer informedWG.Done()
 			start := time.Now()
 			if err := ps.spc.InformIncomingProc(uproc); err != nil {
 				db.DFatalf("Err inform spproxyclnt incoming proc: %v", err)
@@ -380,9 +383,14 @@ func (ps *ProcSrv) Run(ctx fs.CtxI, req proto.RunReq, res *proto.RunRep) error {
 	}
 	// If proc should only run after boot script completes, wait for it
 	if uproc.GetRunAfterBootScript() {
+		// Wait to make sure spproxy has heard about the proc we are going to wait
+		// for
+		informedWG.Wait()
 		db.DPrintf(db.PROCD, "[%v] Wait for bootscript completion", uproc.GetPid())
 		start := time.Now()
-		ps.spc.WaitBootScriptCompletion(uproc.GetPid())
+		if err := ps.spc.WaitBootScriptCompletion(uproc.GetPid()); err != nil {
+			db.DFatalf("[%v] Wait for boot script completion err: %v", uproc.GetPid(), err)
+		}
 		db.DPrintf(db.PROCD, "[%v] Done waiting for bootscript completion", uproc.GetPid())
 		perf.LogSpawnLatency("ProcSrv.Run WaitBootScriptCompletion", uproc.GetPid(), uproc.GetSpawnTime(), start)
 	}

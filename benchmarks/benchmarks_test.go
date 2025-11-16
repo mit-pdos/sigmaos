@@ -86,14 +86,6 @@ var MAX_RPS int
 var SOCIAL_NETWORK_DURS string
 var SOCIAL_NETWORK_MAX_RPS string
 var SOCIAL_NETWORK_READ_ONLY bool
-var IMG_RESIZE_INPUT_PATH string
-var N_IMG_RESIZE_TASKS int
-var IMG_RESIZE_DUR time.Duration
-var N_IMG_RESIZE_TASKS_PER_SECOND int
-var N_IMG_RESIZE_INPUTS_PER_TASK int
-var IMG_RESIZE_MCPU int
-var IMG_RESIZE_MEM_MB int
-var IMG_RESIZE_N_ROUNDS int
 var SLEEP time.Duration
 var REDIS_ADDR string
 var N_PROC int
@@ -162,14 +154,6 @@ func init() {
 	flag.Float64Var(&CONTENDERS_FRAC, "contenders", 4000, "Fraction of cores which should be taken up by contending procs.")
 	flag.IntVar(&GO_MAX_PROCS, "gomaxprocs", int(linuxsched.GetNCores()), "Go maxprocs setting for procs to be spawned.")
 	flag.IntVar(&MAX_PARALLEL, "max_parallel", 1, "Max amount of parallelism.")
-	flag.StringVar(&IMG_RESIZE_INPUT_PATH, "imgresize_path", "name/s3/"+sp.LOCAL+"/9ps3/img/1.jpg", "Path of img resize input file.")
-	flag.IntVar(&N_IMG_RESIZE_TASKS, "n_imgresize", 10, "Number of img resize tasks.")
-	flag.IntVar(&N_IMG_RESIZE_TASKS_PER_SECOND, "imgresize_tps", 1, "Number of img resize tasks/second.")
-	flag.DurationVar(&IMG_RESIZE_DUR, "imgresize_dur", 10*time.Second, "Duration of imgresize job")
-	flag.IntVar(&N_IMG_RESIZE_INPUTS_PER_TASK, "n_imgresize_per", 1, "Number of img resize inputs per job.")
-	flag.IntVar(&IMG_RESIZE_MCPU, "imgresize_mcpu", 100, "MCPU for img resize worker.")
-	flag.IntVar(&IMG_RESIZE_MEM_MB, "imgresize_mem", 0, "Mem for img resize worker.")
-	flag.IntVar(&IMG_RESIZE_N_ROUNDS, "imgresize_nround", 1, "Number of rounds of computation for each image")
 
 	db.DPrintf(db.ALWAYS, "ncore: %v", linuxsched.GetNCores())
 }

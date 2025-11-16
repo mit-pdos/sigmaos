@@ -135,6 +135,9 @@ extern SigmaSizeRepDefaultTypeInternal _SigmaSizeRep_default_instance_;
 class SigmaStatRep;
 struct SigmaStatRepDefaultTypeInternal;
 extern SigmaStatRepDefaultTypeInternal _SigmaStatRep_default_instance_;
+class SigmaWaitBootScriptReq;
+struct SigmaWaitBootScriptReqDefaultTypeInternal;
+extern SigmaWaitBootScriptReqDefaultTypeInternal _SigmaWaitBootScriptReq_default_instance_;
 class SigmaWriteReq;
 struct SigmaWriteReqDefaultTypeInternal;
 extern SigmaWriteReqDefaultTypeInternal _SigmaWriteReq_default_instance_;
@@ -168,10 +171,164 @@ template<> ::SigmaRenameReq* Arena::CreateMaybeMessage<::SigmaRenameReq>(Arena*)
 template<> ::SigmaSeekReq* Arena::CreateMaybeMessage<::SigmaSeekReq>(Arena*);
 template<> ::SigmaSizeRep* Arena::CreateMaybeMessage<::SigmaSizeRep>(Arena*);
 template<> ::SigmaStatRep* Arena::CreateMaybeMessage<::SigmaStatRep>(Arena*);
+template<> ::SigmaWaitBootScriptReq* Arena::CreateMaybeMessage<::SigmaWaitBootScriptReq>(Arena*);
 template<> ::SigmaWriteReq* Arena::CreateMaybeMessage<::SigmaWriteReq>(Arena*);
 PROTOBUF_NAMESPACE_CLOSE
 
 // ===================================================================
+
+class SigmaWaitBootScriptReq final :
+    public ::PROTOBUF_NAMESPACE_ID::Message /* @@protoc_insertion_point(class_definition:SigmaWaitBootScriptReq) */ {
+ public:
+  inline SigmaWaitBootScriptReq() : SigmaWaitBootScriptReq(nullptr) {}
+  ~SigmaWaitBootScriptReq() override;
+  explicit PROTOBUF_CONSTEXPR SigmaWaitBootScriptReq(::PROTOBUF_NAMESPACE_ID::internal::ConstantInitialized);
+
+  SigmaWaitBootScriptReq(const SigmaWaitBootScriptReq& from);
+  SigmaWaitBootScriptReq(SigmaWaitBootScriptReq&& from) noexcept
+    : SigmaWaitBootScriptReq() {
+    *this = ::std::move(from);
+  }
+
+  inline SigmaWaitBootScriptReq& operator=(const SigmaWaitBootScriptReq& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  inline SigmaWaitBootScriptReq& operator=(SigmaWaitBootScriptReq&& from) noexcept {
+    if (this == &from) return *this;
+    if (GetOwningArena() == from.GetOwningArena()
+  #ifdef PROTOBUF_FORCE_COPY_IN_MOVE
+        && GetOwningArena() != nullptr
+  #endif  // !PROTOBUF_FORCE_COPY_IN_MOVE
+    ) {
+      InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+
+  static const ::PROTOBUF_NAMESPACE_ID::Descriptor* descriptor() {
+    return GetDescriptor();
+  }
+  static const ::PROTOBUF_NAMESPACE_ID::Descriptor* GetDescriptor() {
+    return default_instance().GetMetadata().descriptor;
+  }
+  static const ::PROTOBUF_NAMESPACE_ID::Reflection* GetReflection() {
+    return default_instance().GetMetadata().reflection;
+  }
+  static const SigmaWaitBootScriptReq& default_instance() {
+    return *internal_default_instance();
+  }
+  static inline const SigmaWaitBootScriptReq* internal_default_instance() {
+    return reinterpret_cast<const SigmaWaitBootScriptReq*>(
+               &_SigmaWaitBootScriptReq_default_instance_);
+  }
+  static constexpr int kIndexInFileMessages =
+    0;
+
+  friend void swap(SigmaWaitBootScriptReq& a, SigmaWaitBootScriptReq& b) {
+    a.Swap(&b);
+  }
+  inline void Swap(SigmaWaitBootScriptReq* other) {
+    if (other == this) return;
+  #ifdef PROTOBUF_FORCE_COPY_IN_SWAP
+    if (GetOwningArena() != nullptr &&
+        GetOwningArena() == other->GetOwningArena()) {
+   #else  // PROTOBUF_FORCE_COPY_IN_SWAP
+    if (GetOwningArena() == other->GetOwningArena()) {
+  #endif  // !PROTOBUF_FORCE_COPY_IN_SWAP
+      InternalSwap(other);
+    } else {
+      ::PROTOBUF_NAMESPACE_ID::internal::GenericSwap(this, other);
+    }
+  }
+  void UnsafeArenaSwap(SigmaWaitBootScriptReq* other) {
+    if (other == this) return;
+    GOOGLE_DCHECK(GetOwningArena() == other->GetOwningArena());
+    InternalSwap(other);
+  }
+
+  // implements Message ----------------------------------------------
+
+  SigmaWaitBootScriptReq* New(::PROTOBUF_NAMESPACE_ID::Arena* arena = nullptr) const final {
+    return CreateMaybeMessage<SigmaWaitBootScriptReq>(arena);
+  }
+  using ::PROTOBUF_NAMESPACE_ID::Message::CopyFrom;
+  void CopyFrom(const SigmaWaitBootScriptReq& from);
+  using ::PROTOBUF_NAMESPACE_ID::Message::MergeFrom;
+  void MergeFrom( const SigmaWaitBootScriptReq& from) {
+    SigmaWaitBootScriptReq::MergeImpl(*this, from);
+  }
+  private:
+  static void MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PROTOBUF_NAMESPACE_ID::Message& from_msg);
+  public:
+  PROTOBUF_ATTRIBUTE_REINITIALIZES void Clear() final;
+  bool IsInitialized() const final;
+
+  size_t ByteSizeLong() const final;
+  const char* _InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::internal::ParseContext* ctx) final;
+  uint8_t* _InternalSerialize(
+      uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const final;
+  int GetCachedSize() const final { return _impl_._cached_size_.Get(); }
+
+  private:
+  void SharedCtor(::PROTOBUF_NAMESPACE_ID::Arena* arena, bool is_message_owned);
+  void SharedDtor();
+  void SetCachedSize(int size) const final;
+  void InternalSwap(SigmaWaitBootScriptReq* other);
+
+  private:
+  friend class ::PROTOBUF_NAMESPACE_ID::internal::AnyMetadata;
+  static ::PROTOBUF_NAMESPACE_ID::StringPiece FullMessageName() {
+    return "SigmaWaitBootScriptReq";
+  }
+  protected:
+  explicit SigmaWaitBootScriptReq(::PROTOBUF_NAMESPACE_ID::Arena* arena,
+                       bool is_message_owned = false);
+  public:
+
+  static const ClassData _class_data_;
+  const ::PROTOBUF_NAMESPACE_ID::Message::ClassData*GetClassData() const final;
+
+  ::PROTOBUF_NAMESPACE_ID::Metadata GetMetadata() const final;
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  enum : int {
+    kPIDStrFieldNumber = 1,
+  };
+  // string pIDStr = 1;
+  void clear_pidstr();
+  const std::string& pidstr() const;
+  template <typename ArgT0 = const std::string&, typename... ArgT>
+  void set_pidstr(ArgT0&& arg0, ArgT... args);
+  std::string* mutable_pidstr();
+  PROTOBUF_NODISCARD std::string* release_pidstr();
+  void set_allocated_pidstr(std::string* pidstr);
+  private:
+  const std::string& _internal_pidstr() const;
+  inline PROTOBUF_ALWAYS_INLINE void _internal_set_pidstr(const std::string& value);
+  std::string* _internal_mutable_pidstr();
+  public:
+
+  // @@protoc_insertion_point(class_scope:SigmaWaitBootScriptReq)
+ private:
+  class _Internal;
+
+  template <typename T> friend class ::PROTOBUF_NAMESPACE_ID::Arena::InternalHelper;
+  typedef void InternalArenaConstructable_;
+  typedef void DestructorSkippable_;
+  struct Impl_ {
+    ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr pidstr_;
+    mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
+  };
+  union { Impl_ _impl_; };
+  friend struct ::TableStruct_proxy_2fsigmap_2fproto_2fspproxy_2eproto;
+};
+// -------------------------------------------------------------------
 
 class SigmaInformProcReq final :
     public ::PROTOBUF_NAMESPACE_ID::Message /* @@protoc_insertion_point(class_definition:SigmaInformProcReq) */ {
@@ -221,7 +378,7 @@ class SigmaInformProcReq final :
                &_SigmaInformProcReq_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    0;
+    1;
 
   friend void swap(SigmaInformProcReq& a, SigmaInformProcReq& b) {
     a.Swap(&b);
@@ -378,7 +535,7 @@ class SigmaInitReq final :
                &_SigmaInitReq_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    1;
+    2;
 
   friend void swap(SigmaInitReq& a, SigmaInitReq& b) {
     a.Swap(&b);
@@ -534,7 +691,7 @@ class SigmaNullReq final :
                &_SigmaNullReq_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    2;
+    3;
 
   friend void swap(SigmaNullReq& a, SigmaNullReq& b) {
     a.Swap(&b);
@@ -653,7 +810,7 @@ class SigmaRealmReq final :
                &_SigmaRealmReq_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    3;
+    4;
 
   friend void swap(SigmaRealmReq& a, SigmaRealmReq& b) {
     a.Swap(&b);
@@ -806,7 +963,7 @@ class SigmaCloseReq final :
                &_SigmaCloseReq_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    4;
+    5;
 
   friend void swap(SigmaCloseReq& a, SigmaCloseReq& b) {
     a.Swap(&b);
@@ -954,7 +1111,7 @@ class SigmaErrRep final :
                &_SigmaErrRep_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    5;
+    6;
 
   friend void swap(SigmaErrRep& a, SigmaErrRep& b) {
     a.Swap(&b);
@@ -1111,7 +1268,7 @@ class SigmaPathReq final :
                &_SigmaPathReq_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    6;
+    7;
 
   friend void swap(SigmaPathReq& a, SigmaPathReq& b) {
     a.Swap(&b);
@@ -1264,7 +1421,7 @@ class SigmaStatRep final :
                &_SigmaStatRep_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    7;
+    8;
 
   friend void swap(SigmaStatRep& a, SigmaStatRep& b) {
     a.Swap(&b);
@@ -1441,7 +1598,7 @@ class SigmaCreateReq final :
                &_SigmaCreateReq_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    8;
+    9;
 
   friend void swap(SigmaCreateReq& a, SigmaCreateReq& b) {
     a.Swap(&b);
@@ -1658,7 +1815,7 @@ class SigmaFdRep final :
                &_SigmaFdRep_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    9;
+    10;
 
   friend void swap(SigmaFdRep& a, SigmaFdRep& b) {
     a.Swap(&b);
@@ -1826,7 +1983,7 @@ class SigmaRenameReq final :
                &_SigmaRenameReq_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    10;
+    11;
 
   friend void swap(SigmaRenameReq& a, SigmaRenameReq& b) {
     a.Swap(&b);
@@ -1995,7 +2152,7 @@ class SigmaDataRep final :
                &_SigmaDataRep_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    11;
+    12;
 
   friend void swap(SigmaDataRep& a, SigmaDataRep& b) {
     a.Swap(&b);
@@ -2172,7 +2329,7 @@ class SigmaPutFileReq final :
                &_SigmaPutFileReq_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    12;
+    13;
 
   friend void swap(SigmaPutFileReq& a, SigmaPutFileReq& b) {
     a.Swap(&b);
@@ -2389,7 +2546,7 @@ class SigmaSizeRep final :
                &_SigmaSizeRep_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    13;
+    14;
 
   friend void swap(SigmaSizeRep& a, SigmaSizeRep& b) {
     a.Swap(&b);
@@ -2557,7 +2714,7 @@ class SigmaReadReq final :
                &_SigmaReadReq_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    14;
+    15;
 
   friend void swap(SigmaReadReq& a, SigmaReadReq& b) {
     a.Swap(&b);
@@ -2727,7 +2884,7 @@ class SigmaWriteReq final :
                &_SigmaWriteReq_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    15;
+    16;
 
   friend void swap(SigmaWriteReq& a, SigmaWriteReq& b) {
     a.Swap(&b);
@@ -2926,7 +3083,7 @@ class SigmaSeekReq final :
                &_SigmaSeekReq_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    16;
+    17;
 
   friend void swap(SigmaSeekReq& a, SigmaSeekReq& b) {
     a.Swap(&b);
@@ -3085,7 +3242,7 @@ class SigmaClntIdRep final :
                &_SigmaClntIdRep_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    17;
+    18;
 
   friend void swap(SigmaClntIdRep& a, SigmaClntIdRep& b) {
     a.Swap(&b);
@@ -3253,7 +3410,7 @@ class SigmaFenceReq final :
                &_SigmaFenceReq_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    18;
+    19;
 
   friend void swap(SigmaFenceReq& a, SigmaFenceReq& b) {
     a.Swap(&b);
@@ -3426,7 +3583,7 @@ class SigmaMountTreeReq final :
                &_SigmaMountTreeReq_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    19;
+    20;
 
   friend void swap(SigmaMountTreeReq& a, SigmaMountTreeReq& b) {
     a.Swap(&b);
@@ -3615,7 +3772,7 @@ class SigmaLastMountRep final :
                &_SigmaLastMountRep_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    20;
+    21;
 
   friend void swap(SigmaLastMountRep& a, SigmaLastMountRep& b) {
     a.Swap(&b);
@@ -3824,7 +3981,7 @@ class SigmaMountReq final :
                &_SigmaMountReq_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    21;
+    22;
 
   friend void swap(SigmaMountReq& a, SigmaMountReq& b) {
     a.Swap(&b);
@@ -3997,7 +4154,7 @@ class SigmaMountRep final :
                &_SigmaMountRep_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    22;
+    23;
 
   friend void swap(SigmaMountRep& a, SigmaMountRep& b) {
     a.Swap(&b);
@@ -4185,7 +4342,7 @@ class SigmaMountsRep final :
                &_SigmaMountsRep_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    23;
+    24;
 
   friend void swap(SigmaMountsRep& a, SigmaMountsRep& b) {
     a.Swap(&b);
@@ -4368,7 +4525,7 @@ class SigmaRegisterEPReq final :
                &_SigmaRegisterEPReq_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    24;
+    25;
 
   friend void swap(SigmaRegisterEPReq& a, SigmaRegisterEPReq& b) {
     a.Swap(&b);
@@ -4541,7 +4698,7 @@ class SigmaExitedReq final :
                &_SigmaExitedReq_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    25;
+    26;
 
   friend void swap(SigmaExitedReq& a, SigmaExitedReq& b) {
     a.Swap(&b);
@@ -4705,7 +4862,7 @@ class SigmaDelegatedRPCReq final :
                &_SigmaDelegatedRPCReq_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    26;
+    27;
 
   friend void swap(SigmaDelegatedRPCReq& a, SigmaDelegatedRPCReq& b) {
     a.Swap(&b);
@@ -4864,7 +5021,7 @@ class SigmaDelegatedRPCRep final :
                &_SigmaDelegatedRPCRep_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    27;
+    28;
 
   friend void swap(SigmaDelegatedRPCRep& a, SigmaDelegatedRPCRep& b) {
     a.Swap(&b);
@@ -5102,7 +5259,7 @@ class SigmaMultiDelegatedRPCReq final :
                &_SigmaMultiDelegatedRPCReq_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    28;
+    29;
 
   friend void swap(SigmaMultiDelegatedRPCReq& a, SigmaMultiDelegatedRPCReq& b) {
     a.Swap(&b);
@@ -5264,7 +5421,7 @@ class SigmaMultiDelegatedRPCRep final :
                &_SigmaMultiDelegatedRPCRep_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    29;
+    30;
 
   friend void swap(SigmaMultiDelegatedRPCRep& a, SigmaMultiDelegatedRPCRep& b) {
     a.Swap(&b);
@@ -5425,6 +5582,60 @@ class SigmaMultiDelegatedRPCRep final :
   #pragma GCC diagnostic push
   #pragma GCC diagnostic ignored "-Wstrict-aliasing"
 #endif  // __GNUC__
+// SigmaWaitBootScriptReq
+
+// string pIDStr = 1;
+inline void SigmaWaitBootScriptReq::clear_pidstr() {
+  _impl_.pidstr_.ClearToEmpty();
+}
+inline const std::string& SigmaWaitBootScriptReq::pidstr() const {
+  // @@protoc_insertion_point(field_get:SigmaWaitBootScriptReq.pIDStr)
+  return _internal_pidstr();
+}
+template <typename ArgT0, typename... ArgT>
+inline PROTOBUF_ALWAYS_INLINE
+void SigmaWaitBootScriptReq::set_pidstr(ArgT0&& arg0, ArgT... args) {
+ 
+ _impl_.pidstr_.Set(static_cast<ArgT0 &&>(arg0), args..., GetArenaForAllocation());
+  // @@protoc_insertion_point(field_set:SigmaWaitBootScriptReq.pIDStr)
+}
+inline std::string* SigmaWaitBootScriptReq::mutable_pidstr() {
+  std::string* _s = _internal_mutable_pidstr();
+  // @@protoc_insertion_point(field_mutable:SigmaWaitBootScriptReq.pIDStr)
+  return _s;
+}
+inline const std::string& SigmaWaitBootScriptReq::_internal_pidstr() const {
+  return _impl_.pidstr_.Get();
+}
+inline void SigmaWaitBootScriptReq::_internal_set_pidstr(const std::string& value) {
+  
+  _impl_.pidstr_.Set(value, GetArenaForAllocation());
+}
+inline std::string* SigmaWaitBootScriptReq::_internal_mutable_pidstr() {
+  
+  return _impl_.pidstr_.Mutable(GetArenaForAllocation());
+}
+inline std::string* SigmaWaitBootScriptReq::release_pidstr() {
+  // @@protoc_insertion_point(field_release:SigmaWaitBootScriptReq.pIDStr)
+  return _impl_.pidstr_.Release();
+}
+inline void SigmaWaitBootScriptReq::set_allocated_pidstr(std::string* pidstr) {
+  if (pidstr != nullptr) {
+    
+  } else {
+    
+  }
+  _impl_.pidstr_.SetAllocated(pidstr, GetArenaForAllocation());
+#ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  if (_impl_.pidstr_.IsDefault()) {
+    _impl_.pidstr_.Set("", GetArenaForAllocation());
+  }
+#endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  // @@protoc_insertion_point(field_set_allocated:SigmaWaitBootScriptReq.pIDStr)
+}
+
+// -------------------------------------------------------------------
+
 // SigmaInformProcReq
 
 // .ProcProto procProto = 1;
@@ -9201,6 +9412,8 @@ SigmaMultiDelegatedRPCRep::errs() const {
 #ifdef __GNUC__
   #pragma GCC diagnostic pop
 #endif  // __GNUC__
+// -------------------------------------------------------------------
+
 // -------------------------------------------------------------------
 
 // -------------------------------------------------------------------

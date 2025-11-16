@@ -1338,10 +1338,11 @@ class ProcProto final :
     kBootScriptInputFieldNumber = 5,
     kProcEnvProtoFieldNumber = 1,
     kBlobFieldNumber = 4,
-    kResourceResFieldNumber = 8,
-    kBootScriptResourceResFieldNumber = 9,
+    kResourceResFieldNumber = 9,
+    kBootScriptResourceResFieldNumber = 10,
     kTypeIntFieldNumber = 6,
     kRunAfterBootScriptFieldNumber = 7,
+    kQueueableResourcePoolIDFieldNumber = 8,
   };
   // repeated string args = 2;
   int args_size() const;
@@ -1434,7 +1435,7 @@ class ProcProto final :
       ::Blob* blob);
   ::Blob* unsafe_arena_release_blob();
 
-  // .ResourceReservationProto resourceRes = 8;
+  // .ResourceReservationProto resourceRes = 9;
   bool has_resourceres() const;
   private:
   bool _internal_has_resourceres() const;
@@ -1452,7 +1453,7 @@ class ProcProto final :
       ::ResourceReservationProto* resourceres);
   ::ResourceReservationProto* unsafe_arena_release_resourceres();
 
-  // .ResourceReservationProto bootScriptResourceRes = 9;
+  // .ResourceReservationProto bootScriptResourceRes = 10;
   bool has_bootscriptresourceres() const;
   private:
   bool _internal_has_bootscriptresourceres() const;
@@ -1488,6 +1489,15 @@ class ProcProto final :
   void _internal_set_runafterbootscript(bool value);
   public:
 
+  // uint64 queueableResourcePoolID = 8;
+  void clear_queueableresourcepoolid();
+  uint64_t queueableresourcepoolid() const;
+  void set_queueableresourcepoolid(uint64_t value);
+  private:
+  uint64_t _internal_queueableresourcepoolid() const;
+  void _internal_set_queueableresourcepoolid(uint64_t value);
+  public:
+
   // @@protoc_insertion_point(class_scope:ProcProto)
  private:
   class _Internal;
@@ -1509,6 +1519,7 @@ class ProcProto final :
     ::ResourceReservationProto* bootscriptresourceres_;
     uint32_t typeint_;
     bool runafterbootscript_;
+    uint64_t queueableresourcepoolid_;
     mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   };
   union { Impl_ _impl_; };
@@ -3532,7 +3543,27 @@ inline void ProcProto::set_runafterbootscript(bool value) {
   // @@protoc_insertion_point(field_set:ProcProto.runAfterBootScript)
 }
 
-// .ResourceReservationProto resourceRes = 8;
+// uint64 queueableResourcePoolID = 8;
+inline void ProcProto::clear_queueableresourcepoolid() {
+  _impl_.queueableresourcepoolid_ = uint64_t{0u};
+}
+inline uint64_t ProcProto::_internal_queueableresourcepoolid() const {
+  return _impl_.queueableresourcepoolid_;
+}
+inline uint64_t ProcProto::queueableresourcepoolid() const {
+  // @@protoc_insertion_point(field_get:ProcProto.queueableResourcePoolID)
+  return _internal_queueableresourcepoolid();
+}
+inline void ProcProto::_internal_set_queueableresourcepoolid(uint64_t value) {
+  
+  _impl_.queueableresourcepoolid_ = value;
+}
+inline void ProcProto::set_queueableresourcepoolid(uint64_t value) {
+  _internal_set_queueableresourcepoolid(value);
+  // @@protoc_insertion_point(field_set:ProcProto.queueableResourcePoolID)
+}
+
+// .ResourceReservationProto resourceRes = 9;
 inline bool ProcProto::_internal_has_resourceres() const {
   return this != internal_default_instance() && _impl_.resourceres_ != nullptr;
 }
@@ -3622,7 +3653,7 @@ inline void ProcProto::set_allocated_resourceres(::ResourceReservationProto* res
   // @@protoc_insertion_point(field_set_allocated:ProcProto.resourceRes)
 }
 
-// .ResourceReservationProto bootScriptResourceRes = 9;
+// .ResourceReservationProto bootScriptResourceRes = 10;
 inline bool ProcProto::_internal_has_bootscriptresourceres() const {
   return this != internal_default_instance() && _impl_.bootscriptresourceres_ != nullptr;
 }

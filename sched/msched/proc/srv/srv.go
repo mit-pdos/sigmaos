@@ -88,6 +88,7 @@ type ProcSrv struct {
 	schedPolicySet  bool
 	procs           *syncmap.SyncMap[int, *procEntry]
 	ckclnt          *chunkclnt.ChunkClnt
+	pq              *ProcQueue
 }
 
 type ProcRPCSrv struct {
@@ -105,6 +106,7 @@ func RunProcSrv(kernelId string, dialproxy bool, spproxydPID sp.Tpid) error {
 		realm:           sp.NO_REALM,
 		prefetchedStats: make(map[string]bool),
 		procs:           syncmap.NewSyncMap[int, *procEntry](),
+		pq:              newProcQueue(),
 	}
 
 	// Set inner container IP as soon as uprocsrv starts up
@@ -393,6 +395,14 @@ func (ps *ProcSrv) Run(ctx fs.CtxI, req proto.RunReq, res *proto.RunRep) error {
 		}
 		db.DPrintf(db.PROCD, "[%v] Done waiting for bootscript completion", uproc.GetPid())
 		perf.LogSpawnLatency("ProcSrv.Run WaitBootScriptCompletion", uproc.GetPid(), uproc.GetSpawnTime(), start)
+	}
+	if uproc.GetIsQueueable() {
+		start := time.Now()
+		// If proc is queueable, queue it until there are enough resources available to run it
+		ps.pq.QueueProc(uproc)
+		perf.LogSpawnLatency("ProcSrv.Run QueueProc", uproc.GetPid(), uproc.GetSpawnTime(), start)
+		// Make srue to release resources after the proc terminates
+		defer ps.pq.ProcDone(uproc)
 	}
 	perf.LogSpawnLatency("ProcSrv.Run StartSigmaContainer", uproc.GetPid(), uproc.GetSpawnTime(), perf.TIME_NOT_SET)
 	cmd, err := scontainer.StartSigmaContainer(uproc, ps.dialproxy)

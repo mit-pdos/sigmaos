@@ -29,6 +29,34 @@ const (
 	IMGSVC  = "imgresize"
 )
 
+type ImgdJobConfig struct {
+	Job            string      `json:"job"`
+	WorkerMcpu     proc.Tmcpu  `json:"worker_mcpu"`
+	WorkerMem      proc.Tmem   `json:"worker_mem"`
+	Persist        bool        `json:"persist"`
+	NRounds        int         `json:"n_rounds"`
+	ImgdMcpu       proc.Tmcpu  `json:"imgd_mcpu"`
+	UseSPProxy     bool        `json:"use_sp_proxy"`
+	UseBootScript  bool        `json:"use_boot_script"`
+}
+
+func NewImgdJobConfig(job string, workerMcpu proc.Tmcpu, workerMem proc.Tmem, persist bool, nrounds int, imgdMcpu proc.Tmcpu, useSPProxy bool, useBootScript bool) *ImgdJobConfig {
+	return &ImgdJobConfig{
+		Job:           job,
+		WorkerMcpu:    workerMcpu,
+		WorkerMem:     workerMem,
+		Persist:       persist,
+		NRounds:       nrounds,
+		ImgdMcpu:      imgdMcpu,
+		UseSPProxy:    useSPProxy,
+		UseBootScript: useBootScript,
+	}
+}
+
+func (cfg *ImgdJobConfig) String() string {
+	return fmt.Sprintf("&{ job:%v workerMcpu:%v workerMem:%v persist:%v nrounds:%v imgdMcpu:%v useSPProxy:%v useBootScript:%v }", cfg.Job, cfg.WorkerMcpu, cfg.WorkerMem, cfg.Persist, cfg.NRounds, cfg.ImgdMcpu, cfg.UseSPProxy, cfg.UseBootScript)
+}
+
 func GetBootScript(sc *sigmaclnt.SigmaClnt) ([]byte, error) {
 	return wasmer.ReadBootScript(sc, "imgprocess_boot")
 }
@@ -84,13 +112,13 @@ type ImgdMgr[Data any] struct {
 	ftsrv *fttask_srv.FtTaskSrvMgr
 }
 
-func NewImgdMgr[Data any](sc *sigmaclnt.SigmaClnt, job string, workerMcpu proc.Tmcpu, workerMem proc.Tmem, persist bool, nrounds int, imgdMcpu proc.Tmcpu, em *crash.TeventMap, useSPProxy bool, useBootScript bool) (*ImgdMgr[Data], error) {
+func NewImgdMgr[Data any](sc *sigmaclnt.SigmaClnt, jobCfg *ImgdJobConfig, em *crash.TeventMap) (*ImgdMgr[Data], error) {
 	crash.SetSigmaFail(em)
 	imgd := &ImgdMgr[Data]{}
 
-	imgd.job = job
+	imgd.job = jobCfg.Job
 	var err error
-	imgd.ftsrv, err = fttask_srv.NewFtTaskSrvMgr(sc, TaskSvcId(job), false)
+	imgd.ftsrv, err = fttask_srv.NewFtTaskSrvMgr(sc, TaskSvcId(jobCfg.Job), false)
 	if err != nil {
 		return nil, err
 	}
@@ -99,9 +127,9 @@ func NewImgdMgr[Data any](sc *sigmaclnt.SigmaClnt, job string, workerMcpu proc.T
 		return nil, err
 	}
 
-	cfg := procgroupmgr.NewProcGroupConfig(1, "imgresized", []string{strconv.Itoa(int(workerMcpu)), strconv.Itoa(int(workerMem)), strconv.Itoa(nrounds), TaskSvcId(imgd.job), strconv.FormatBool(useSPProxy), strconv.FormatBool(useBootScript)}, imgdMcpu, ImgSvcId(job))
+	cfg := procgroupmgr.NewProcGroupConfig(1, "imgresized", []string{strconv.Itoa(int(jobCfg.WorkerMcpu)), strconv.Itoa(int(jobCfg.WorkerMem)), strconv.Itoa(jobCfg.NRounds), TaskSvcId(imgd.job), strconv.FormatBool(jobCfg.UseSPProxy), strconv.FormatBool(jobCfg.UseBootScript)}, jobCfg.ImgdMcpu, ImgSvcId(jobCfg.Job))
 
-	if persist {
+	if jobCfg.Persist {
 		cfg.Persist(sc.FsLib)
 	}
 	imgd.pgm = cfg.StartGrpMgr(sc)

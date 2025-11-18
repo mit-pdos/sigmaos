@@ -72,7 +72,7 @@ func NewImgResizeJob(ts *test.RealmTstate, p *perf.Perf, cfg *benchmarks.ImgBenc
 	// Sanity check
 	n, err := ji.ftclnt.GetNTasks(fttask_clnt.TODO)
 	assert.Nil(ji.Ts.T, err, "Error NTasksTODO: %v", err)
-	assert.Equal(ji.Ts.T, n, ji.cfg.NTasks, "Num tasks TODO doesn't match ntasks")
+	assert.Equal(ji.Ts.T, int(n), int(ji.cfg.NTasks), "Num tasks TODO doesn't match ntasks")
 	db.DPrintf(db.ALWAYS, "Done submitting ImgResize tasks")
 	return ji
 }

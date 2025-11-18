@@ -626,7 +626,7 @@ func GetImgProcessCmd(imgCfg *benchmarks.ImgBenchConfig) GetBenchCmdFn {
 			"ulimit -n 100000; "+
 			"./set-cores.sh --set 1 --start 2 --end 39 > /dev/null 2>&1 ; "+
 			"go test -v sigmaos/benchmarks -timeout 0 --no-shutdown %s %s --etcdIP %s --tag %s "+
-			"--run ImgResize "+
+			"--run TestImgResize "+
 			"--img_bench_cfg='%s' "+
 			"--prewarm_realm "+
 			"> /tmp/bench.out 2>&1 ;",

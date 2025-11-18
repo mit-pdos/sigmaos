@@ -962,7 +962,7 @@ func TestLCBEHotelImgResizeMultiplexing(t *testing.T) {
 			WorkerMcpu:    proc.Tmcpu(0),
 			WorkerMem:     proc.Tmem(1500),
 			Persist:       false,
-			NRounds:       1,
+			NRounds:       500,
 			ImgdMcpu:      proc.Tmcpu(1000),
 			UseSPProxy:    false,
 			UseBootScript: false,
@@ -970,7 +970,6 @@ func TestLCBEHotelImgResizeMultiplexing(t *testing.T) {
 		InputPath:      "name/ux/~local/8.jpg",
 		NTasks:         350,
 		NInputsPerTask: 1,
-		NRoundsPerTask: 500,
 		Durs:           nil,
 		MaxRPS:         nil,
 	}
@@ -1067,7 +1066,7 @@ func TestLCBEHotelImgResizeRPCMultiplexing(t *testing.T) {
 			WorkerMcpu:    proc.Tmcpu(0),
 			WorkerMem:     proc.Tmem(2500),
 			Persist:       false,
-			NRounds:       1,
+			NRounds:       43,
 			ImgdMcpu:      proc.Tmcpu(1000),
 			UseSPProxy:    false,
 			UseBootScript: false,
@@ -1075,7 +1074,6 @@ func TestLCBEHotelImgResizeRPCMultiplexing(t *testing.T) {
 		InputPath:      "name/ux/~local/8.jpg",
 		NTasks:         0,
 		NInputsPerTask: 0,
-		NRoundsPerTask: 43,
 		Durs:           []time.Duration{50 * time.Second},
 		MaxRPS:         []int{150},
 	}
@@ -1511,5 +1509,71 @@ func TestHotelMatchTailLatency(t *testing.T) {
 			getFollowerCmd := GetHotelClientCmdConstructor("Match", false, len(driverVMs), sleep, hotelCfg)
 			ts.RunParallelClientBenchmark(benchName, driverVMs, getLeaderCmd, getFollowerCmd, startK8sHotelApp, stopK8sHotelApp, clientDelay, numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost)
 		}
+	}
+}
+
+// Test ImgProcess.
+func TestImgProcess(t *testing.T) {
+	var (
+		benchNameBase string = "img_process"
+		driverVM      int    = 12
+	)
+	// Cluster configuration parameters
+	var (
+		numNodes     int = 12
+		numFullNodes int = numNodes
+	)
+	const (
+		numCoresPerNode   uint = 4
+		numProcqOnlyNodes int  = 0
+		turboBoost        bool = false
+	)
+	// Hotel benchmark configuration parameters
+	var (
+		rpsBase int   = 150
+		nrounds int   = 43
+		rps     []int = []int{
+			rpsBase,
+		}
+		dur []time.Duration = []time.Duration{
+			30 * time.Second,
+		}
+		withInitScript []bool = []bool{
+			false,
+			true,
+		}
+	)
+	ts, err := NewTstate(t)
+	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {
+		return
+	}
+	if ts.BCfg.Overlays {
+		benchNameBase += "_overlays"
+	}
+	for _, initscript := range withInitScript {
+		benchName := benchNameBase
+		if initscript {
+			benchName += "_initscript"
+		}
+		db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
+		imgCfg := &benchmarks.ImgBenchConfig{
+			JobCfg: &imgresize.ImgdJobConfig{
+				Job:           "img-job",
+				WorkerMcpu:    proc.Tmcpu(0),
+				WorkerMem:     proc.Tmem(2500),
+				Persist:       false,
+				NRounds:       nrounds,
+				ImgdMcpu:      proc.Tmcpu(1000),
+				UseSPProxy:    false,
+				UseBootScript: false,
+			},
+			InputPath:      "name/ux/~local/8.jpg",
+			NTasks:         0,
+			NInputsPerTask: 0,
+			Durs:           dur,
+			MaxRPS:         rps,
+		}
+
+		ts.RunStandardBenchmark(benchName, driverVM, GetImgProcessCmd(imgCfg), numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost)
 	}
 }

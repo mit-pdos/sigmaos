@@ -601,6 +601,46 @@ func GetLCBEHotelImgResizeRPCMultiplexingCmdConstructor(numClients int, rps []in
 	}
 }
 
+// Construct command string to run image processing benchmark
+//
+// - imgCfg specifies the image processing benchmark configuration
+func GetImgProcessCmd(imgCfg *benchmarks.ImgBenchConfig) GetBenchCmdFn {
+	return func(bcfg *BenchConfig, ccfg *ClusterConfig) string {
+		const (
+			debugSelectors string = "\"TEST;BENCH;IMGD;GROUPMGR;\""
+			perfSelectors  string = "\"THUMBNAIL_TPT;TEST_TPT;BENCH_TPT;\""
+		)
+		dialproxy := ""
+		if bcfg.NoNetproxy {
+			dialproxy = "--nodialproxy"
+		}
+		overlays := ""
+		if bcfg.Overlays {
+			overlays = "--overlays"
+		}
+		cfgJSON, err := imgCfg.Marshal()
+		if err != nil {
+			db.DFatalf("Err marshal img config: %v", err)
+		}
+		return fmt.Sprintf("export SIGMADEBUG=%s; export SIGMAPERF=%s; go clean -testcache; "+
+			"ulimit -n 100000; "+
+			"./set-cores.sh --set 1 --start 2 --end 39 > /dev/null 2>&1 ; "+
+			"go test -v sigmaos/benchmarks -timeout 0 --no-shutdown %s %s --etcdIP %s --tag %s "+
+			"--run ImgResize "+
+			"--img_bench_cfg='%s' "+
+			"--prewarm_realm "+
+			"> /tmp/bench.out 2>&1 ;",
+			debugSelectors,
+			perfSelectors,
+			dialproxy,
+			overlays,
+			ccfg.LeaderNodeIP,
+			bcfg.Tag,
+			cfgJSON,
+		)
+	}
+}
+
 // Construct command string to run cosine similarity benchmark's load-generating client
 //
 // - numClients specifies the total number of client machines which will make

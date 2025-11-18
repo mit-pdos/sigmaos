@@ -125,7 +125,6 @@ var DefaultImgBenchConfig = &ImgBenchConfig{
 	InputPath:      filepath.Join(sp.S3, sp.LOCAL, "9ps3/img/1.jpg"),
 	NTasks:         10,
 	NInputsPerTask: 1,
-	NRoundsPerTask: 1,
 	Durs:           []time.Duration{10 * time.Second},
 	MaxRPS:         []int{100},
 }

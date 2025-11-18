@@ -97,18 +97,17 @@ func (cfg *HotelBenchConfig) Marshal() (string, error) {
 }
 
 type ImgBenchConfig struct {
-	JobCfg          *imgresize.ImgdJobConfig `json:"job_cfg"`
-	InputPath       string                   `json:"input_path"`
-	NTasks          int                      `json:"n_tasks"`
-	NInputsPerTask  int                      `json:"n_inputs_per_task"`
-	NRoundsPerTask  int                      `json:"n_rounds_per_task"`
-	Durs            []time.Duration          `json:"durs"`
-	MaxRPS          []int                    `json:"max_rps"`
+	JobCfg         *imgresize.ImgdJobConfig `json:"job_cfg"`
+	InputPath      string                   `json:"input_path"`
+	NTasks         int                      `json:"n_tasks"`
+	NInputsPerTask int                      `json:"n_inputs_per_task"`
+	Durs           []time.Duration          `json:"durs"`
+	MaxRPS         []int                    `json:"max_rps"`
 }
 
 func (cfg *ImgBenchConfig) String() string {
-	return fmt.Sprintf("&{ JobCfg:%v InputPath:%v NTasks:%v NInputsPerTask:%v NRoundsPerTask:%v Durs:%v MaxRPS:%v }",
-		cfg.JobCfg, cfg.InputPath, cfg.NTasks, cfg.NInputsPerTask, cfg.NRoundsPerTask, cfg.Durs, cfg.MaxRPS)
+	return fmt.Sprintf("&{ JobCfg:%v InputPath:%v NTasks:%v NInputsPerTask:%v Durs:%v MaxRPS:%v }",
+		cfg.JobCfg, cfg.InputPath, cfg.NTasks, cfg.NInputsPerTask, cfg.Durs, cfg.MaxRPS)
 }
 
 func (cfg *ImgBenchConfig) GetJobConfig() *imgresize.ImgdJobConfig {

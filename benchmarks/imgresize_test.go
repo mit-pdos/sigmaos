@@ -63,7 +63,7 @@ func NewImgResizeJob(ts *test.RealmTstate, p *perf.Perf, cfg *benchmarks.ImgBenc
 		tasks := make([]*fttask_clnt.Task[imgresize.Ttask], 0, ji.cfg.NInputsPerTask)
 		for _, fn := range fns {
 			tasks = append(tasks, &fttask_clnt.Task[imgresize.Ttask]{
-				Data: *imgresize.NewTask(fn, false, false),
+				Data: *imgresize.NewTask(fn, ji.cfg.JobCfg.UseS3Clnt, ji.cfg.JobCfg.UseBootScript),
 			})
 		}
 		err := ji.ftclnt.SubmitTasks(tasks)

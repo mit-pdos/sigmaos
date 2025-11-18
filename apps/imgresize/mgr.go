@@ -38,9 +38,10 @@ type ImgdJobConfig struct {
 	ImgdMcpu       proc.Tmcpu  `json:"imgd_mcpu"`
 	UseSPProxy     bool        `json:"use_sp_proxy"`
 	UseBootScript  bool        `json:"use_boot_script"`
+	UseS3Clnt      bool        `json:"use_s3_clnt"`
 }
 
-func NewImgdJobConfig(job string, workerMcpu proc.Tmcpu, workerMem proc.Tmem, persist bool, nrounds int, imgdMcpu proc.Tmcpu, useSPProxy bool, useBootScript bool) *ImgdJobConfig {
+func NewImgdJobConfig(job string, workerMcpu proc.Tmcpu, workerMem proc.Tmem, persist bool, nrounds int, imgdMcpu proc.Tmcpu, useSPProxy bool, useBootScript bool, useS3Clnt bool) *ImgdJobConfig {
 	return &ImgdJobConfig{
 		Job:           job,
 		WorkerMcpu:    workerMcpu,
@@ -50,11 +51,12 @@ func NewImgdJobConfig(job string, workerMcpu proc.Tmcpu, workerMem proc.Tmem, pe
 		ImgdMcpu:      imgdMcpu,
 		UseSPProxy:    useSPProxy,
 		UseBootScript: useBootScript,
+		UseS3Clnt:     useS3Clnt,
 	}
 }
 
 func (cfg *ImgdJobConfig) String() string {
-	return fmt.Sprintf("&{ job:%v workerMcpu:%v workerMem:%v persist:%v nrounds:%v imgdMcpu:%v useSPProxy:%v useBootScript:%v }", cfg.Job, cfg.WorkerMcpu, cfg.WorkerMem, cfg.Persist, cfg.NRounds, cfg.ImgdMcpu, cfg.UseSPProxy, cfg.UseBootScript)
+	return fmt.Sprintf("&{ job:%v workerMcpu:%v workerMem:%v persist:%v nrounds:%v imgdMcpu:%v useSPProxy:%v useBootScript:%v useS3Clnt:%v }", cfg.Job, cfg.WorkerMcpu, cfg.WorkerMem, cfg.Persist, cfg.NRounds, cfg.ImgdMcpu, cfg.UseSPProxy, cfg.UseBootScript, cfg.UseS3Clnt)
 }
 
 func GetBootScript(sc *sigmaclnt.SigmaClnt) ([]byte, error) {

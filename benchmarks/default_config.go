@@ -121,6 +121,7 @@ var DefaultImgBenchConfig = &ImgBenchConfig{
 		ImgdMcpu:      proc.Tmcpu(1000),
 		UseSPProxy:    false,
 		UseBootScript: false,
+		UseS3Clnt:     false,
 	},
 	InputPath:      filepath.Join(sp.S3, sp.LOCAL, "9ps3/img/1.jpg"),
 	NTasks:         10,

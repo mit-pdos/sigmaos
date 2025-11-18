@@ -132,7 +132,7 @@ func newTstate(mrts *test.MultiRealmTstate, persist bool, em *crash.TeventMap, u
 		}
 	}
 
-	jobCfg := imgresize.NewImgdJobConfig(ts.job, IMG_RESIZE_MCPU, IMG_RESIZE_MEM, persist, 1, 0, useSPProxy, useBootScript)
+	jobCfg := imgresize.NewImgdJobConfig(ts.job, IMG_RESIZE_MCPU, IMG_RESIZE_MEM, persist, 1, 0, useSPProxy, useBootScript, useBootScript)
 	imgd, err := imgresize.NewImgdMgr[imgresize.Ttask](ts.mrts.GetRealm(test.REALM1).SigmaClnt, jobCfg, em)
 	if err != nil {
 		return nil, err

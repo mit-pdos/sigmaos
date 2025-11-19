@@ -25,7 +25,15 @@ func NewWasmerRuntime(rpcAPI wasmrpc.RPCAPI) *WasmerRuntime {
 	// binaries
 	// TODO: try this https://github.com/wasmerio/wasmer-go/issues/222
 	//	cfg := wasmer.NewConfig().UseLLVMCompiler()
-	cfg := wasmer.NewConfig().UseCraneliftCompiler()
+	var cfg *wasmer.Config
+	if !wasmer.IsCompilerAvailable(wasmer.LLVM) {
+		db.DPrintf(db.ERROR, "LLVM compiler not available, using Cranelift compiler instead")
+		db.DPrintf(db.WASMRT_ERR, "LLVM compiler not available, using Cranelift compiler instead")
+		cfg = wasmer.NewConfig().UseCraneliftCompiler()
+	} else {
+		db.DPrintf(db.WASMRT, "Using LLVM compiler")
+		cfg = wasmer.NewConfig().UseLLVMCompiler()
+	}
 	engine := wasmer.NewEngineWithConfig(cfg)
 	return &WasmerRuntime{
 		rpcAPI:       rpcAPI,

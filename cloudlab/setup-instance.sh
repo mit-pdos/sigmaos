@@ -30,7 +30,7 @@ do
   if [ -f $F.priv ]
   then
     cp $F.priv $F
-  else 
+  else
     yes | gpg --output $F --decrypt ${F}.gpg || exit 1
   fi
 done
@@ -106,23 +106,23 @@ sudo mkdir -p /mnt/9p
 sudo apt update
 sudo apt install -y golang-go
 
-if [ -d "DeathStarBench" ] 
+if [ -d "DeathStarBench" ]
 then
   (cd DeathStarBench; git pull;)
 else
   git clone https://github.com/mit-pdos/DeathStarBench.git
 fi
 
-if [ -d "sigmaos" ] 
+if [ -d "sigmaos" ]
 then
   ssh-agent bash -c 'ssh-add ~/.ssh/aws-sigmaos; (cd sigmaos; git pull;)'
 else
-  ssh-agent bash -c 'ssh-add ~/.ssh/aws-sigmaos; git clone git@g.csail.mit.edu:sigmaos; (cd sigmaos; go mod download;)'
+  ssh-agent bash -c 'ssh-add ~/.ssh/aws-sigmaos; git clone https://github.com/mit-pdos/sigmaos.git; (cd sigmaos; go mod download;)'
   # Indicate that sigma has not been build yet on this instance
   touch ~/.nobuild
 fi
 
-if [ -d "corral" ] 
+if [ -d "corral" ]
 then
   ssh-agent bash -c 'ssh-add ~/.ssh/aws-sigmaos; (cd corral; git pull;)'
 else

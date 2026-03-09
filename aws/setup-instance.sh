@@ -51,7 +51,7 @@ LOGIN=ubuntu
 if [ $REBOOT = "reboot" ]; then
   # try to deal with lag before instance is created and configured
   echo -n "wait until cloud-init is done "
-  
+
   while true; do
     done=`ssh -n -o ConnectionAttempts=1000 -i key-$VPC.pem $LOGIN@$VM cloud-init status`
     if [ "$done" = "status: done" ]; then
@@ -60,13 +60,13 @@ if [ $REBOOT = "reboot" ]; then
     echo -n "."
     sleep 1
   done
-  
+
   echo "done; reboot and wait"
-  
+
   ssh -n -i key-$VPC.pem $LOGIN@$VM sudo shutdown -r now
-  
+
   sleep 2
-  
+
   while true; do
     done=`ssh -n -i key-$VPC.pem $LOGIN@$VM echo "this is an ssh"`
     if [ ! -z "$done" ]; then
@@ -75,7 +75,7 @@ if [ $REBOOT = "reboot" ]; then
     echo -n "."
     sleep 1
   done
-  
+
   echo "done rebooting"
 fi
 
@@ -169,25 +169,25 @@ if ! [ -d "go1.22.2.linux-amd64.tar.gz" ]; then
     go version
 fi
 
-if [ -d "DeathStarBench" ] 
+if [ -d "DeathStarBench" ]
 then
   (cd DeathStarBench; git pull;)
 else
   git clone https://github.com/mit-pdos/DeathStarBench.git
 fi
 
-if [ -d "sigmaos" ] 
+if [ -d "sigmaos" ]
 then
   ssh-agent bash -c 'ssh-add ~/.ssh/aws-sigmaos; (cd sigmaos; git pull;)'
 else
-  ssh-agent bash -c 'ssh-add ~/.ssh/aws-sigmaos; git clone git@g.csail.mit.edu:sigmaos; (cd sigmaos; go mod download;)'
+  ssh-agent bash -c 'ssh-add ~/.ssh/aws-sigmaos; git clone https://github.com/mit-pdos/sigmaos.git; (cd sigmaos; go mod download;)'
   # Indicate that sigma has not been build yet on this instance
   touch ~/.nobuild
   # Load apparmor profile
   (cd sigmaos; sudo apparmor_parser -r scontainer/sigmaos-uproc)
 fi
 
-if [ -d "corral" ] 
+if [ -d "corral" ]
 then
   ssh-agent bash -c 'ssh-add ~/.ssh/aws-sigmaos; (cd corral; git pull;)'
 else

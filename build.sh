@@ -222,7 +222,7 @@ ensure_builder() {
   if [ -z "$cid" ] && [ "$REBUILD_BUILDER" != "true" ]; then
     if docker image inspect "$name" >/dev/null 2>&1; then
       echo "========== No ${name} running; starting from existing image =========="
-      if docker run --rm -d \
+      if docker run --rm -d -it \
         --name "$name" \
         --mount type=bind,src="$ROOT",dst=/home/sigmaos/ \
         "$name"; then
@@ -251,7 +251,7 @@ ensure_builder() {
       . 2>&1 | tee "$BUILD_LOG/${logbase}.out"
     echo "========== Done building ${name} =========="
     echo "========== Starting ${name} container =========="
-    docker run --rm -d \
+    docker run --rm -d -it \
       --name "$name" \
       --mount type=bind,src="$ROOT",dst=/home/sigmaos/ \
       "$name"

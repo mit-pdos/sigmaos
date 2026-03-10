@@ -1825,7 +1825,7 @@ func TestZygoteForkComparison(t *testing.T) {
 	)
 	// Benchmark configuration parameters
 	var (
-		workload  string        = "hello"
+		workload  string        = "numpy_pandas"
 		nprocs    []int         = []int{1, 2, 4, 8, 16, 32, 64, 128, 256}
 		ntrials   int           = 10
 		keepalive time.Duration = 1 * time.Second
@@ -1844,4 +1844,40 @@ func TestZygoteForkComparison(t *testing.T) {
 		cmdFn := GetZygoteForkComparisonCmdConstructor(workload, nprocs, ntrials, keepalive)
 		ts.RunStandardBenchmark(benchName, driverVM, cmdFn, numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost, useGVisor)
 	}
+}
+
+func TestZygoteForkMemoryScaling(t *testing.T) {
+	var (
+		benchNameBase string = "zygote_fork_memory_scaling"
+	)
+	// Cluster configuration parameters
+	const (
+		driverVM          int  = 0
+		numNodes          int  = 1
+		numCoresPerNode   uint = 20
+		numFullNodes      int  = numNodes
+		numProcqOnlyNodes int  = 0
+		turboBoost        bool = false
+		useGVisor         bool = false
+	)
+	// Benchmark configuration parameters
+	var (
+		workload  string        = "numpy_pandas"
+		levels    string        = "1,2,4,8,16,32,64,128,256"
+		memHold   time.Duration = 30 * time.Second
+		pssDelay  time.Duration = 20 * time.Second
+		keepalive time.Duration = 1 * time.Second
+	)
+	ts, err := NewTstate(t)
+	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {
+		return
+	}
+	if !assert.False(ts.t, ts.BCfg.K8s, "K8s version of benchmark does not exist") {
+		return
+	}
+
+	db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
+	benchName := filepath.Join(benchNameBase, fmt.Sprintf("%s-levels-%s-hold-%s-pss-%s-keepalive-%s", workload, levels, memHold.String(), pssDelay.String(), keepalive.String()))
+	cmdFn := GetZygoteForkMemoryScalingCmdConstructor(workload, levels, memHold, pssDelay, keepalive)
+	ts.RunStandardBenchmark(benchName, driverVM, cmdFn, numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost, useGVisor)
 }

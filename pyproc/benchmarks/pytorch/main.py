@@ -1,15 +1,23 @@
 #!/usr/bin/env python3
 
 import os
-import time
 
-import splib
-import torch
-import torch.nn as nn
 
 is_forking = os.environ.get("SIGMA_FORK_ZYGOTE_KEY") is not None
 if is_forking:
     from splib.fork import fork_point
+
+
+import time
+import torch
+import torch.nn as nn
+import splib
+
+
+def maybe_hold() -> None:
+    hold_s = os.environ.get("ZYGOTE_BENCH_HOLD_SECS")
+    if hold_s:
+        time.sleep(float(hold_s))
 
 
 MODEL = nn.Sequential(
@@ -23,20 +31,13 @@ MODEL.eval()
 INPUT = torch.randn(1, 512)
 
 
-def maybe_hold() -> None:
-    hold_s = os.environ.get("ZYGOTE_BENCH_HOLD_SECS")
-    if hold_s:
-        time.sleep(float(hold_s))
+if is_forking:
+    _ = fork_point()
 
-
-if __name__ == "__main__":
-    if is_forking:
-        _ = fork_point()
-
-    splib.started()
-    with torch.no_grad():
-        out = MODEL(INPUT)
-    print(float(out.sum().item()))
-    maybe_hold()
-    splib.exited(splib.Status.Ok, "ok")
-    os._exit(0)
+splib.started()
+with torch.no_grad():
+    out = MODEL(INPUT)
+print(float(out.sum().item()))
+maybe_hold()
+splib.exited(splib.Status.Ok, "ok")
+os._exit(0)

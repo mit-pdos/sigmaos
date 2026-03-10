@@ -1,5 +1,4 @@
 import os
-import sys
 
 
 is_forking = os.environ.get("SIGMA_FORK_ZYGOTE_KEY") is not None
@@ -7,15 +6,16 @@ if is_forking:
     from splib.fork import fork_point
 
 
+import sys
+import splib
+import time
+import random
+
+
 def maybe_hold() -> None:
     hold_s = os.environ.get("ZYGOTE_BENCH_HOLD_SECS")
     if hold_s:
         time.sleep(float(hold_s))
-
-
-import splib
-import time
-import random
 
 
 # Allocate 100 MB of memory BEFORE forking

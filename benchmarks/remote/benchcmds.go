@@ -832,7 +832,7 @@ func GetStartLatencyCmdConstructor(startLatencyCfg *benchmarks.StartLatencyBench
 func GetZygoteForkComparisonCmdConstructor(workload string, nprocs, ntrials int, keepalive time.Duration) GetBenchCmdFn {
 	return func(bcfg *BenchConfig, ccfg *ClusterConfig) string {
 		const (
-			debugSelectors string = "\"TEST;BENCH;PYPROXYSRV;PYPROXYSRV_ERR;SPPROXYCLNT;SPPROXYCLNT_ERR;CONTAINER;\""
+			debugSelectors string = "\"TEST;BENCH;\""
 		)
 		dialproxy := ""
 		if bcfg.NoNetproxy {
@@ -860,6 +860,44 @@ func GetZygoteForkComparisonCmdConstructor(workload string, nprocs, ntrials int,
 			workload,
 			nprocs,
 			ntrials,
+			keepalive.String(),
+		)
+	}
+}
+
+func GetZygoteForkMemoryScalingCmdConstructor(workload, memLevels string, memHold, pssDelay, keepalive time.Duration) GetBenchCmdFn {
+	return func(bcfg *BenchConfig, ccfg *ClusterConfig) string {
+		const (
+			debugSelectors string = "\"TEST;BENCH;PSS;PSS_ERR;\""
+		)
+		dialproxy := ""
+		if bcfg.NoNetproxy {
+			dialproxy = "--nodialproxy"
+		}
+		overlays := ""
+		if bcfg.Overlays {
+			overlays = "--overlays"
+		}
+		return fmt.Sprintf("export SIGMADEBUG=%s; go clean -testcache; "+
+			"ulimit -n 100000; "+
+			"./set-cores.sh --set 1 --start 2 --end 39 > /dev/null 2>&1 ; "+
+			"go test -v sigmaos/benchmarks -timeout 0 --no-shutdown %s %s --etcdIP %s --tag %s "+
+			"--run TestZygoteForkMemoryScaling "+
+			"--zygote_workload %s "+
+			"--zygote_mem_levels %s "+
+			"--zygote_mem_hold %s "+
+			"--zygote_pss_delay %s "+
+			"--zygote_keepalive %s "+
+			"> /tmp/bench.out 2>&1",
+			debugSelectors,
+			dialproxy,
+			overlays,
+			ccfg.LeaderNodeIP,
+			bcfg.Tag,
+			workload,
+			memLevels,
+			memHold.String(),
+			pssDelay.String(),
 			keepalive.String(),
 		)
 	}

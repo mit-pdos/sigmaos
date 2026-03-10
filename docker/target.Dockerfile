@@ -59,7 +59,9 @@ COPY bin/kernel/spproxyd bin/kernel/
 ## Copy rust trampoline to the user image.
 COPY bin/kernel/uproc-trampoline /home/sigmaos/bin/kernel/
 ## Copy python interpreters to the user image.
-COPY bin/kernel/cpython* /home/sigmaos/bin/kernel/
+COPY bin/kernel/cpython3.11 /home/sigmaos/bin/kernel/cpython3.11
+## Copy pyproc to the user image. In the future, this should be fetched from s3.
+COPY bin/kernel/pyproc /home/sigmaos/bin/kernel/pyproc
 
 # ========== local kernel image ==========
 FROM base AS sigmaos-local

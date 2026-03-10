@@ -15,6 +15,7 @@ import (
 	"unsafe"
 
 	"golang.org/x/sys/unix"
+	gproto "google.golang.org/protobuf/proto"
 
 	"sigmaos/api/fs"
 	"sigmaos/container"
@@ -420,14 +421,18 @@ func (ps *ProcSrv) Run(ctx fs.CtxI, req proto.RunReq, res *proto.RunRep) error {
 	// that it can pre-create the proc's sigmaclnt
 	var informedWG sync.WaitGroup
 	if uproc.GetProcEnv().UseSPProxy {
+		// Create a copy of the proc proto
+		// This is necessary, as other treads may modify the proc's proto (e.g. by setting the env)
+		// while we're marhalling it for the RPC call, which causes an exception.
+		incomingProc := proc.NewProcFromProto(gproto.CloneOf(uproc.GetProto()))
 		informedWG.Add(1)
 		go func() {
 			defer informedWG.Done()
 			start := time.Now()
-			if err := ps.spc.InformIncomingProc(uproc); err != nil {
+			if err := ps.spc.InformIncomingProc(incomingProc); err != nil {
 				db.DFatalf("Err inform spproxyclnt incoming proc: %v", err)
 			}
-			perf.LogSpawnLatency("ProcSrv.Run spproxy.InformIncomingProc", uproc.GetPid(), uproc.GetSpawnTime(), start)
+			perf.LogSpawnLatency("ProcSrv.Run spproxy.InformIncomingProc", incomingProc.GetPid(), incomingProc.GetSpawnTime(), start)
 		}()
 	}
 

@@ -828,3 +828,39 @@ func GetStartLatencyCmdConstructor(startLatencyCfg *benchmarks.StartLatencyBench
 		)
 	}
 }
+
+func GetZygoteForkComparisonCmdConstructor(workload string, nprocs, ntrials int, keepalive time.Duration) GetBenchCmdFn {
+	return func(bcfg *BenchConfig, ccfg *ClusterConfig) string {
+		const (
+			debugSelectors string = "\"TEST;BENCH;PYPROXYSRV;PYPROXYSRV_ERR;SPPROXYCLNT;SPPROXYCLNT_ERR;CONTAINER;\""
+		)
+		dialproxy := ""
+		if bcfg.NoNetproxy {
+			dialproxy = "--nodialproxy"
+		}
+		overlays := ""
+		if bcfg.Overlays {
+			overlays = "--overlays"
+		}
+		return fmt.Sprintf("export SIGMADEBUG=%s; go clean -testcache; "+
+			"ulimit -n 100000; "+
+			"./set-cores.sh --set 1 --start 2 --end 39 > /dev/null 2>&1 ; "+
+			"go test -v sigmaos/benchmarks -timeout 0 --no-shutdown %s %s --etcdIP %s --tag %s "+
+			"--run TestZygoteForkComparison "+
+			"--zygote_workload %s "+
+			"--zygote_nprocs %d "+
+			"--zygote_ntrials %d "+
+			"--zygote_keepalive %s "+
+			"> /tmp/bench.out 2>&1",
+			debugSelectors,
+			dialproxy,
+			overlays,
+			ccfg.LeaderNodeIP,
+			bcfg.Tag,
+			workload,
+			nprocs,
+			ntrials,
+			keepalive.String(),
+		)
+	}
+}

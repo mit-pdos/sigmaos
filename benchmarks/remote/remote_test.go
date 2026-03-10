@@ -1808,3 +1808,40 @@ func TestStartLatency(t *testing.T) {
 		}
 	}
 }
+
+func TestZygoteForkComparison(t *testing.T) {
+	var (
+		benchNameBase string = "zygote_fork_comparison"
+	)
+	// Cluster configuration parameters
+	const (
+		driverVM          int  = 0
+		numNodes          int  = 1
+		numCoresPerNode   uint = 20
+		numFullNodes      int  = numNodes
+		numProcqOnlyNodes int  = 0
+		turboBoost        bool = false
+		useGVisor         bool = false
+	)
+	// Benchmark configuration parameters
+	var (
+		workload  string        = "hello"
+		nprocs    []int         = []int{1, 2, 4, 8, 16, 32, 64, 128, 256}
+		ntrials   int           = 10
+		keepalive time.Duration = 1 * time.Second
+	)
+	ts, err := NewTstate(t)
+	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {
+		return
+	}
+	if !assert.False(ts.t, ts.BCfg.K8s, "K8s version of benchmark does not exist") {
+		return
+	}
+
+	for _, nprocs := range nprocs {
+		db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
+		benchName := filepath.Join(benchNameBase, fmt.Sprintf("%s-nprocs-%d-ntrials-%d-keepalive-%s", workload, nprocs, ntrials, keepalive.String()))
+		cmdFn := GetZygoteForkComparisonCmdConstructor(workload, nprocs, ntrials, keepalive)
+		ts.RunStandardBenchmark(benchName, driverVM, cmdFn, numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost, useGVisor)
+	}
+}

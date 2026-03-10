@@ -18,33 +18,6 @@ use serde::{Deserialize, Serialize};
 
 const VERBOSE: bool = true;
 
-fn with_ctx<T, E: std::fmt::Display>(res: Result<T, E>, ctx: String) -> Result<T, Box<dyn std::error::Error>> {
-    res.map_err(|e| std::io::Error::other(format!("{}: {}", ctx, e)).into())
-}
-
-fn log_path_state(path: &str) {
-    let p = Path::new(path);
-    let md = fs::metadata(p);
-    match md {
-        Ok(m) => {
-            log::info!(
-                "jail preflight path={} exists=true is_dir={} is_file={}",
-                path,
-                m.is_dir(),
-                m.is_file()
-            );
-        }
-        Err(e) => {
-            log::info!(
-                "jail preflight path={} exists=false err_kind={:?} err={}",
-                path,
-                e.kind(),
-                e
-            );
-        }
-    }
-}
-
 fn print_elapsed_time(
     debug_pid: &str,
     msg: &str,
@@ -237,40 +210,15 @@ fn jail_proc(
     let newroot = "/home/sigmaos/jail/";
     let newroot_pn: String = newroot.to_owned() + pid + "/";
 
-    log::info!("jail preflight pid={} newroot={}", pid, newroot_pn);
-    log_path_state("/home/sigmaos/jail");
-    log_path_state("/lib");
-    log_path_state("/lib64");
-    log_path_state("/usr");
-    log_path_state("/etc");
-    log_path_state("/proc");
-    log_path_state("/dev/shm");
-    log_path_state("/dev/random");
-    log_path_state("/dev/urandom");
-    log_path_state("/mnt");
-    log_path_state("/mnt/binfs");
-    log_path_state("/tmp/spproxyd");
-    if env::var("SIGMAPERF").is_ok() {
-        log_path_state("/tmp/sigmaos-perf");
-    }
-    let python_version = env::var("SIGMA_PYTHON_VERSION").unwrap_or("".to_string());
-    if python_version != "" {
-        log_path_state(&format!("/home/sigmaos/bin/kernel/{}", python_version));
-        log_path_state("/home/sigmaos/bin/kernel/pyproc");
-        log_path_state("/tmp/python/package-cache");
-    }
-
     // Create directories to use as mount points, as well as the new
     // root directory itself
     for d in DIRS.iter() {
         let path: String = newroot_pn.to_owned();
-        let full = path + d;
-        with_ctx(fs::create_dir_all(&full), format!("create_dir_all {}", full))?;
+        fs::create_dir_all(path + d)?;
     }
     for f in FILES.iter() {
         let path: String = newroot_pn.to_owned();
-        let full = path + f;
-        with_ctx(fs::File::create(&full), format!("create file {}", full))?;
+        fs::File::create(path + f)?;
     }
     print_elapsed_time(
         debug_pid,
@@ -289,123 +237,100 @@ fn jail_proc(
     Mount::builder()
         .fstype("")
         .flags(MountFlags::BIND | MountFlags::REC)
-        .mount(newroot_pn.clone(), newroot_pn.clone())
-        .map_err(|e| std::io::Error::other(format!("mount bind newroot {} -> {}: {}", newroot_pn, newroot_pn, e)))?;
+        .mount(newroot_pn.clone(), newroot_pn.clone())?;
 
     // Chdir to new root
-    with_ctx(
-        env::set_current_dir(newroot_pn.clone()),
-        format!("set_current_dir {}", newroot_pn),
-    )?;
+    env::set_current_dir(newroot_pn.clone())?;
 
     // E.g., execve /lib/ld-musl-x86_64.so.1
     Mount::builder()
         .fstype("none")
         .flags(MountFlags::BIND | MountFlags::RDONLY)
-        .mount("/lib", "lib")
-        .map_err(|e| std::io::Error::other(format!("mount /lib -> lib: {}", e)))?;
+        .mount("/lib", "lib")?;
 
     Mount::builder()
         .fstype("none")
         .flags(MountFlags::BIND | MountFlags::RDONLY)
-        .mount("/bin", "bin")
-        .map_err(|e| std::io::Error::other(format!("mount /bin -> bin: {}", e)))?;
+        .mount("/bin", "bin")?;
 
     // E.g., openat "/lib64/ld-musl-x86_64.so.1" (links to /lib/)
     Mount::builder()
         .fstype("none")
         .flags(MountFlags::BIND | MountFlags::RDONLY)
-        .mount("/lib64", "lib64")
-        .map_err(|e| std::io::Error::other(format!("mount /lib64 -> lib64: {}", e)))?;
+        .mount("/lib64", "lib64")?;
 
     // E.g., /usr/lib for shared libraries (e.g., /usr/lib/libseccomp.so.2)
     Mount::builder()
         .fstype("none")
         .flags(MountFlags::BIND | MountFlags::RDONLY)
-        .mount("/usr", "usr")
-        .map_err(|e| std::io::Error::other(format!("mount /usr -> usr: {}", e)))?;
+        .mount("/usr", "usr")?;
 
     // E.g., Open "/etc/localtime"
     Mount::builder()
         .fstype("none")
         .flags(MountFlags::BIND | MountFlags::RDONLY)
-        .mount("/etc", "etc")
-        .map_err(|e| std::io::Error::other(format!("mount /etc -> etc: {}", e)))?;
+        .mount("/etc", "etc")?;
 
     // Copy host /etc/resolv.conf into jailed etc/resolv.conf so DNS resolution works
-    with_ctx(
-        fs::copy("/etc/resolv.conf", "etc/resolv.conf"),
-        "copy /etc/resolv.conf -> etc/resolv.conf".to_string(),
-    )?;
+    fs::copy("/etc/resolv.conf", "etc/resolv.conf")?;
 
     // E.g., openat "/proc/meminfo", "/proc/self/exe", but further
     // restricted by apparmor sigmoas-uproc profile.
-    Mount::builder()
-        .fstype("proc")
-        .mount("proc", "proc")
-        .map_err(|e| std::io::Error::other(format!("mount proc -> proc: {}", e)))?;
+    Mount::builder().fstype("proc").mount("proc", "proc")?;
 
     // the binary passed to exec below has the path /mnt/binfs/<binary>
     Mount::builder()
         .fstype("none")
         .flags(MountFlags::BIND)
-        .mount("/dev/shm", "dev/shm")
-        .map_err(|e| std::io::Error::other(format!("mount /dev/shm -> dev/shm: {}", e)))?;
+        .mount("/dev/shm", "dev/shm")?;
 
     Mount::builder()
         .fstype("none")
         .flags(MountFlags::BIND)
-        .mount("/dev/random", "dev/random")
-        .map_err(|e| std::io::Error::other(format!("mount /dev/random -> dev/random: {}", e)))?;
+        .mount("/dev/random", "dev/random")?;
 
     Mount::builder()
         .fstype("none")
         .flags(MountFlags::BIND)
-        .mount("/dev/urandom", "dev/urandom")
-        .map_err(|e| std::io::Error::other(format!("mount /dev/urandom -> dev/urandom: {}", e)))?;
+        .mount("/dev/urandom", "dev/urandom")?;
 
     // the binary passed to exec below has the path /mnt/binfs/<binary>
     Mount::builder()
         .fstype("none")
         .flags(MountFlags::BIND | MountFlags::RDONLY)
-        .mount("/mnt/", "mnt")
-        .map_err(|e| std::io::Error::other(format!("mount /mnt -> mnt: {}", e)))?;
+        .mount("/mnt/", "mnt")?;
 
     Mount::builder()
         .fstype("none")
         .flags(MountFlags::BIND | MountFlags::RDONLY)
-        .mount("/mnt/binfs/", "mnt/binfs")
-        .map_err(|e| std::io::Error::other(format!("mount /mnt/binfs -> mnt/binfs: {}", e)))?;
+        .mount("/mnt/binfs/", "mnt/binfs")?;
 
     // Mount the correct python interpreter if this is a python proc
+    let python_version = env::var("SIGMA_PYTHON_VERSION").unwrap_or("".to_string());
     if python_version != "" {
         let python_path = format!("/home/sigmaos/bin/kernel/{}", python_version);
         Mount::builder()
             .fstype("none")
             .flags(MountFlags::BIND | MountFlags::RDONLY)
-            .mount(&python_path, "tmp/python/python")
-            .map_err(|e| std::io::Error::other(format!("mount {} -> tmp/python/python: {}", python_path, e)))?;
+            .mount(&python_path, "tmp/python/python")?;
 
         // TODO: Use binfs instead of directly mounting the pyproc dir.
         //       Unfortunately, binfs currently doesn't support directories.
         Mount::builder()
             .fstype("none")
             .flags(MountFlags::BIND | MountFlags::RDONLY)
-            .mount("/home/sigmaos/bin/kernel/pyproc", "tmp/python/pyproc")
-            .map_err(|e| std::io::Error::other(format!("mount /home/sigmaos/bin/kernel/pyproc -> tmp/python/pyproc: {}", e)))?;
+            .mount("/home/sigmaos/bin/kernel/pyproc", "tmp/python/pyproc")?;
 
         Mount::builder()
             .fstype("none")
             .flags(MountFlags::BIND | MountFlags::RDONLY)
-            .mount("/tmp/python/package-cache", "tmp/python/package-cache")
-            .map_err(|e| std::io::Error::other(format!("mount /tmp/python/package-cache -> tmp/python/package-cache: {}", e)))?;
+            .mount("/tmp/python/package-cache", "tmp/python/package-cache")?;
     }
 
     Mount::builder()
         .fstype("none")
         .flags(MountFlags::BIND | MountFlags::RDONLY)
-        .mount("/tmp/spproxyd", "tmp/spproxyd")
-        .map_err(|e| std::io::Error::other(format!("mount /tmp/spproxyd -> tmp/spproxyd: {}", e)))?;
+        .mount("/tmp/spproxyd", "tmp/spproxyd")?;
 
     // Only mount /tmp/sigmaos-perf directory if SIGMAPERF is set (meaning we are
     // benchmarking and want to extract the results)
@@ -414,8 +339,7 @@ fn jail_proc(
         Mount::builder()
             .fstype("none")
             .flags(MountFlags::BIND)
-            .mount("/tmp/sigmaos-perf", "tmp/sigmaos-perf")
-            .map_err(|e| std::io::Error::other(format!("mount /tmp/sigmaos-perf -> tmp/sigmaos-perf: {}", e)))?;
+            .mount("/tmp/sigmaos-perf", "tmp/sigmaos-perf")?;
         if VERBOSE {
             log::info!("PERF {}", "mounting perf dir");
         }
@@ -429,10 +353,7 @@ fn jail_proc(
     );
     now = SystemTime::now();
     // ========== No more mounts beyond this point ==========
-    with_ctx(
-        pivot_root(".", old_root_mnt),
-        format!("pivot_root . {}", old_root_mnt),
-    )?;
+    pivot_root(".", old_root_mnt)?;
     print_elapsed_time(
         &debug_pid,
         "trampoline.fs_jail_proc pivot_root",
@@ -442,7 +363,7 @@ fn jail_proc(
     );
     now = SystemTime::now();
 
-    with_ctx(env::set_current_dir("/"), "set_current_dir /".to_string())?;
+    env::set_current_dir("/")?;
     print_elapsed_time(
         &debug_pid,
         "trampoline.fs_jail_proc chdir",
@@ -452,10 +373,7 @@ fn jail_proc(
     );
     now = SystemTime::now();
 
-    with_ctx(
-        unmount(old_root_mnt, UnmountFlags::DETACH),
-        format!("unmount {}", old_root_mnt),
-    )?;
+    unmount(old_root_mnt, UnmountFlags::DETACH)?;
     print_elapsed_time(
         &debug_pid,
         "trampoline.fs_jail_proc umount",
@@ -465,10 +383,7 @@ fn jail_proc(
     );
     now = SystemTime::now();
 
-    with_ctx(
-        fs::remove_dir(old_root_mnt),
-        format!("remove_dir {}", old_root_mnt),
-    )?;
+    fs::remove_dir(old_root_mnt)?;
     print_elapsed_time(
         &debug_pid,
         "trampoline.fs_jail_proc rmdir",
@@ -481,8 +396,7 @@ fn jail_proc(
     Mount::builder()
         .fstype("")
         .flags(MountFlags::BIND | MountFlags::REMOUNT | MountFlags::RDONLY)
-        .mount("/", "/")
-        .map_err(|e| std::io::Error::other(format!("remount / read-only: {}", e)))?;
+        .mount("/", "/")?;
 
     Ok(())
 }

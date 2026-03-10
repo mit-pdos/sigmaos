@@ -832,7 +832,7 @@ func GetStartLatencyCmdConstructor(startLatencyCfg *benchmarks.StartLatencyBench
 func GetZygoteForkComparisonCmdConstructor(workload string, nprocs, ntrials int, keepalive time.Duration) GetBenchCmdFn {
 	return func(bcfg *BenchConfig, ccfg *ClusterConfig) string {
 		const (
-			debugSelectors string = "\"TEST;BENCH;\""
+			debugSelectors string = "\"TEST;BENCH;PROCDMGR;\""
 		)
 		dialproxy := ""
 		if bcfg.NoNetproxy {

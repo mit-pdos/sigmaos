@@ -218,7 +218,7 @@ func (pdm *ProcdMgr) RunUProc(uproc *proc.Proc) (uprocErr error, childErr error)
 	}
 	perf.LogSpawnLatency("ProcdMgr.startBalanceShares", uproc.GetPid(), uproc.GetSpawnTime(), start)
 	if err0, err1 := rpcc.RunProc(uproc); err0 != nil {
-		db.DPrintf(db.PROCDMGR, "[RunUProc.RunProc %v] delProcClnt %v due to err: %v", uproc.GetRealm(), uproc, err)
+		db.DPrintf(db.PROCDMGR, "[RunUProc.RunProc %v] delProcClnt %v due to err: %v", uproc.GetRealm(), uproc, err0)
 		pdm.delProcClnt(uproc.GetRealm(), uproc.GetType())
 		return err0, err1
 	} else {

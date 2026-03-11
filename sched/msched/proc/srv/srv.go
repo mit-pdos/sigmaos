@@ -452,32 +452,6 @@ func (ps *ProcSrv) Run(ctx fs.CtxI, req proto.RunReq, res *proto.RunRep) error {
 		db.DFatalf("Err set sched policy: %v", err)
 	}
 
-	// Fork procs are created by forking a warm zygote (managed by procd) instead
-	// of starting a new container from scratch.
-	if isForkProc {
-		forkProc, err := ps.forkmgr.forkChild(uproc)
-		if err != nil {
-			return err
-		}
-		db.DPrintf(db.PROCD, "Forked host pid %v -> %d", uproc.GetPid(), forkProc.Pid())
-		pe, alloc := ps.procs.Alloc(forkProc.Pid(), newProcEntry(uproc))
-		if !alloc {
-			pe.insertSignal(uproc)
-		}
-		if shouldRecordPSS {
-			go recordPSS(uproc, forkProc)
-		}
-		err = forkProc.Wait()
-
-		ps.forkmgr.childDone(forkProc.ZygotePid())
-		ps.procs.Delete(forkProc.Pid())
-		if uproc.GetProcEnv().UseSPProxy {
-			if e := ps.spc.InformProcDone(uproc); e != nil {
-				db.DFatalf("Err inform spproxyclnt proc done: %v", e)
-			}
-		}
-		return err
-	}
 	// If proc should only run after boot script completes, wait for it
 	if uproc.GetRunAfterBootScript() && uproc.GetProcEnv().UseSPProxy {
 		var pssPre proc.Tmem
@@ -534,47 +508,52 @@ func (ps *ProcSrv) Run(ctx fs.CtxI, req proto.RunReq, res *proto.RunRep) error {
 		if err != nil {
 			return err
 		}
-	} else {
-		if !ps.gvisor {
-			ctr, err = scontainer.StartSigmaContainer(uproc, ps.dialproxy, ps.sc, ps.pyenvClnt)
-			if err != nil {
-				return err
+	} else if ps.gvisor {
+		start := time.Now()
+		ch := make(chan error)
+		go func() {
+			// Pre-download the proc binary
+			if err := ps.downloadFullBinary(uproc.GetVersionedProgram(), uproc.GetPid(), uproc.GetRealm(), uproc.GetSecrets()["s3"], uproc.GetSigmaPath(), uproc.GetNamedEndpoint()); err != nil {
+				db.DPrintf(db.ERROR, "Error download full binary for gVisor container")
+				ch <- err
 			}
-		} else {
-			start := time.Now()
-			ch := make(chan error)
-			go func() {
-				// Pre-download the proc binary
-				if err := ps.downloadFullBinary(uproc.GetVersionedProgram(), uproc.GetPid(), uproc.GetRealm(), uproc.GetSecrets()["s3"], uproc.GetSigmaPath(), uproc.GetNamedEndpoint()); err != nil {
+			ch <- nil
+		}()
+		for _, prog := range uproc.GetAddedBins() {
+			go func(prog string) {
+				db.DPrintf(db.PROCD, "[%v] Downloading added bin %v", uproc.GetPid(), prog)
+				if err := ps.downloadFullBinary(prog, uproc.GetPid(), uproc.GetRealm(), uproc.GetSecrets()["s3"], uproc.GetSigmaPath(), uproc.GetNamedEndpoint()); err != nil {
 					db.DPrintf(db.ERROR, "Error download full binary for gVisor container")
 					ch <- err
 				}
 				ch <- nil
-			}()
-			for _, prog := range uproc.GetAddedBins() {
-				go func(prog string) {
-					db.DPrintf(db.PROCD, "[%v] Downloading added bin %v", uproc.GetPid(), prog)
-					if err := ps.downloadFullBinary(prog, uproc.GetPid(), uproc.GetRealm(), uproc.GetSecrets()["s3"], uproc.GetSigmaPath(), uproc.GetNamedEndpoint()); err != nil {
-						db.DPrintf(db.ERROR, "Error download full binary for gVisor container")
-						ch <- err
-					}
-					ch <- nil
-				}(prog)
-			}
-			for i := 0; i < 1+len(uproc.GetAddedBins()); i++ {
-				err := <-ch
-				if err != nil {
-					db.DPrintf(db.ERROR, "Err download bin: %v", err)
-					return err
-				}
-			}
-			perf.LogSpawnLatency("Setup.BinaryDownload", uproc.GetPid(), uproc.GetSpawnTime(), start)
-			perf.LogSpawnLatency("Paper.Setup.BinaryDownload", uproc.GetPid(), uproc.GetSpawnTime(), start)
-			ctrStart = time.Now()
-			ctr, err = gvisor.StartGVisorContainer(uproc, ps.dialproxy, gvisor.BASE_BUNDLE_PATH, true)
+			}(prog)
+		}
+		for i := 0; i < 1+len(uproc.GetAddedBins()); i++ {
+			err := <-ch
 			if err != nil {
+				db.DPrintf(db.ERROR, "Err download bin: %v", err)
 				return err
 			}
+		}
+		perf.LogSpawnLatency("Setup.BinaryDownload", uproc.GetPid(), uproc.GetSpawnTime(), start)
+		perf.LogSpawnLatency("Paper.Setup.BinaryDownload", uproc.GetPid(), uproc.GetSpawnTime(), start)
+		ctrStart = time.Now()
+		ctr, err = gvisor.StartGVisorContainer(uproc, ps.dialproxy, gvisor.BASE_BUNDLE_PATH, true)
+		if err != nil {
+			return err
+		}
+	} else if isForkProc {
+		// Fork procs are created by forking a warm zygote (managed by procd) instead
+		// of starting a new container from scratch.
+		ctr, err = ps.forkmgr.forkChild(uproc)
+		if err != nil {
+			return err
+		}
+	} else {
+		ctr, err = scontainer.StartSigmaContainer(uproc, ps.dialproxy, ps.sc, ps.pyenvClnt)
+		if err != nil {
+			return err
 		}
 	}
 	pid := ctr.Pid()

@@ -23,6 +23,7 @@ import (
 	"sigmaos/proc"
 	"sigmaos/scontainer"
 	sp "sigmaos/sigmap"
+	"sigmaos/util/ivar"
 	"sigmaos/util/linux/mem"
 )
 
@@ -37,6 +38,7 @@ type ForkProc struct {
 	hostPid     int
 	zygotePid   sp.Tpid
 	zygoteEntry *zygoteEntry
+	didExit     ivar.IVar[error]
 }
 
 func (fp *ForkProc) Pid() int {
@@ -61,7 +63,7 @@ func (fp *ForkProc) GetPSS() (proc.Tmem, error) {
 }
 
 func (fp *ForkProc) Wait() error {
-	return waitForHostPIDExit(fp.hostPid)
+	return fp.didExit.Read()
 }
 
 func (fp *ForkProc) ZygotePid() sp.Tpid {
@@ -623,11 +625,22 @@ func (fm *forkMgr) forkChild(uproc *proc.Proc) (*ForkProc, error) {
 		ze.wg.Add(1)
 		ze.children++
 		ze.childMu.Unlock()
-		return &ForkProc{
+
+		zygotePid := ze.zygProc.GetPid()
+		forkProc := ForkProc{
 			hostPid:     hostPid,
-			zygotePid:   ze.zygProc.GetPid(),
+			zygotePid:   zygotePid,
 			zygoteEntry: ze,
-		}, nil
+			didExit:     ivar.NewIVar[error](),
+		}
+
+		go func() {
+			err := waitForHostPIDExit(hostPid)
+			fm.childDone(zygotePid)
+			forkProc.didExit.Fill(err)
+		}()
+
+		return &forkProc, nil
 	case <-ze.ctx.Done():
 		return nil, fmt.Errorf("zygote exited while forking: %v", ze.exitErr)
 	case <-time.After(10 * time.Second):

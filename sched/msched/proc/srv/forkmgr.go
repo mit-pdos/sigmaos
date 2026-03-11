@@ -25,6 +25,7 @@ import (
 	sp "sigmaos/sigmap"
 	"sigmaos/util/ivar"
 	"sigmaos/util/linux/mem"
+	"sigmaos/util/perf"
 )
 
 const (
@@ -303,6 +304,7 @@ func (fm *forkMgr) ensureZygote(uproc *proc.Proc) (*zygoteEntry, error) {
 	zyg.SetType(uproc.GetType())
 	zyg.SetMcpu(uproc.GetMcpu())
 	zyg.SetMem(uproc.GetMem())
+	zyg.SetSpawnTime(time.Now())
 
 	// Set up supervisor socket
 	sockHost := fm.forkSockHostPath(zyg.GetPid())
@@ -449,6 +451,7 @@ func (fm *forkMgr) handleHello(ze *zygoteEntry, conn *net.UnixConn, m *forkMsg) 
 
 	ze.zygConn = conn
 	ze.setState(stateReady)
+	perf.LogSpawnLatency("Zygote ready", ze.zygProc.GetPid(), ze.zygProc.GetSpawnTime(), perf.TIME_NOT_SET)
 
 	ze.childMu.Lock()
 	ze.lastIdle = time.Now()

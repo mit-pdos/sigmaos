@@ -2,7 +2,7 @@ import _clntlib as splib
 import time
 
 results = []
-bucket_name = "sigmaos-ncam"
+bucket_name = "ncam"
 
 ms_start = time.time() * 1000.0
 splib.init_socket()

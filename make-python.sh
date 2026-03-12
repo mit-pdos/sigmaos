@@ -60,6 +60,10 @@ function py() {
   PYTHONPATH="$PY_OUTPATH/build/lib.linux-x86_64-3.11:$PY_OUTPATH/Lib:$PY_KERNEL_SITE_PACKAGES" $PY_OUTPATH/python $@
 }
 
+# Precompile libraries
+py -m compileall -q -j8 "$PY_KERNEL_SITE_PACKAGES"
+py -m compileall -q -j8 "$PY_USER_SITE_PACKAGES"
+
 # Generate sys_tags file, containing a list of all supported platform compatibility tags
 # https://packaging.python.org/en/latest/specifications/platform-compatibility-tags/
 py > "$PY_OUTPATH/sigmaos/sys_tags" <<EOF

@@ -753,7 +753,12 @@ func waitForHostPIDExit(hostPid int) error {
 		return nil // Already exited
 	}
 
-	_, err = unix.Poll([]unix.PollFd{{Fd: int32(fd), Events: unix.POLLIN}}, -1)
+	for {
+		_, err = unix.Poll([]unix.PollFd{{Fd: int32(fd), Events: unix.POLLIN}}, -1)
+		if err == nil || !errors.Is(err, syscall.EINTR) {
+			break
+		}
+	}
 	if err != nil {
 		return fmt.Errorf("pidfd poll(%d): %w", hostPid, err)
 	}

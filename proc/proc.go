@@ -124,6 +124,10 @@ func NewProcFromProto(p *ProcProto) *Proc {
 	return &Proc{ProcProto: p}
 }
 
+func (p *Proc) Clone() *Proc {
+	return NewProcFromProto(proto.CloneOf(p.GetProto()))
+}
+
 func (p *Proc) GetProto() *ProcProto {
 	p.Lock()
 	defer p.Unlock()

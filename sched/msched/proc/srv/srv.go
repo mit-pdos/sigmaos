@@ -15,7 +15,6 @@ import (
 	"unsafe"
 
 	"golang.org/x/sys/unix"
-	gproto "google.golang.org/protobuf/proto"
 
 	"sigmaos/api/fs"
 	"sigmaos/container"
@@ -424,7 +423,7 @@ func (ps *ProcSrv) Run(ctx fs.CtxI, req proto.RunReq, res *proto.RunRep) error {
 		// Create a copy of the proc proto
 		// This is necessary, as other treads may modify the proc's proto (e.g. by setting the env)
 		// while we're marhalling it for the RPC call, which causes an exception.
-		incomingProc := proc.NewProcFromProto(gproto.CloneOf(uproc.GetProto()))
+		incomingProc := uproc.Clone()
 		informedWG.Add(1)
 		go func() {
 			defer informedWG.Done()

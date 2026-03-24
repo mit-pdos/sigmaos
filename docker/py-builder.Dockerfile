@@ -37,7 +37,7 @@ RUN wget https://github.com/python/cpython/archive/refs/tags/v3.11.13.tar.gz -O 
     make -j
 
 # Precompile all Python libraries
-RUN /cpython3.11/python -m compileall -j8 -f /cpython3.11/Lib
+RUN /cpython3.11/python -m compileall -j8 -f /cpython3.11/Lib || true
 
 # Set up builder user
 ARG USER_ID=1000

@@ -157,10 +157,6 @@ def fork_point() -> list[str]:
 
         start = time.time_ns()
         gc.enable()
-        try:
-            gc.unfreeze()
-        except Exception:
-            pass
-        log_spawn_latency("splib.fork.fork_point gc unfreeze", pid=z_sig_pid, op_start=start, spawn_time=0)
+        log_spawn_latency("splib.fork.fork_point gc enable", pid=z_sig_pid, op_start=start, spawn_time=0)
 
         return [str(a) for a in args]

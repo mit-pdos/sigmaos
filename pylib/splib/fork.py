@@ -28,16 +28,47 @@ SIGMA_FORK_SOCK = "SIGMA_FORK_SOCK"
 SIGMA_FORK_ZYGOTE_KEY = "SIGMA_FORK_ZYGOTE_KEY"
 
 
-# Reduce memory overhead after forking.
-gc.disable()
-
-
-CLONE_NEWPID = 0x20000000
-
 _libc = ctypes.CDLL("libc.so.6", use_errno=True)
-_unshare = _libc.unshare
-_unshare.argtypes = [ctypes.c_int]
-_unshare.restype = ctypes.c_int
+_libc.syscall.restype = ctypes.c_long
+
+_PyOS_BeforeFork = ctypes.pythonapi.PyOS_BeforeFork
+_PyOS_BeforeFork.argtypes = []
+_PyOS_BeforeFork.restype = None
+
+_PyOS_AfterFork_Parent = ctypes.pythonapi.PyOS_AfterFork_Parent
+_PyOS_AfterFork_Parent.argtypes = []
+_PyOS_AfterFork_Parent.restype = None
+
+_PyOS_AfterFork_Child = ctypes.pythonapi.PyOS_AfterFork_Child
+_PyOS_AfterFork_Child.argtypes = []
+_PyOS_AfterFork_Child.restype = None
+
+_SYS_clone = 56
+
+_CLONE_NEWPID = 0x20000000
+_SIGCHLD = 17
+
+
+def _clone(flags: int) -> int:
+    """Acts exactly like os.fork(), but for the clone syscall."""
+    _PyOS_BeforeFork()
+
+    try:
+        pid = _libc.syscall(_SYS_clone, flags, 0, 0, 0, 0)
+    except Exception:
+        _PyOS_AfterFork_Parent()
+        raise
+
+    if pid == 0:
+        _PyOS_AfterFork_Child()
+    else:
+        _PyOS_AfterFork_Parent()
+
+    if pid < 0:
+        errno = ctypes.get_errno()
+        raise OSError(errno, os.strerror(errno))
+
+    return pid
 
 
 def _read_exact(sock: socket.socket, n: int) -> bytes:
@@ -90,7 +121,6 @@ def fork_point() -> list[str]:
     while True:
         try:
             msg = _read_frame(zsock)
-            start = time.time_ns()
         except EOFError:
             # Supervisor closed the connection -> shutdown zygote.
             exit(0)
@@ -98,15 +128,16 @@ def fork_point() -> list[str]:
         if msg.get("type") != "fork":
             continue
 
-        req_id = msg.get("req_id")
-        env = msg.get("env") or []
-        args = msg.get("args") or []
-
-        pid = os.fork()
+        start = time.time_ns()
+        pid = _clone(_CLONE_NEWPID | _SIGCHLD)
         if pid != 0:
             # Parent: continue servicing future fork requests.
             continue
-        log_spawn_latency("splib.fork.fork_point 1st fork", pid=z_sig_pid, op_start=start, spawn_time=0)
+        log_spawn_latency("splib.fork.fork_point clone", pid=z_sig_pid, op_start=start, spawn_time=0)
+
+        req_id = msg.get("req_id")
+        env = msg.get("env") or []
+        args = msg.get("args") or []
 
         # Child: detach from the zygote connection to avoid sharing it.
         try:
@@ -115,19 +146,6 @@ def fork_point() -> list[str]:
             log_spawn_latency("splib.fork.fork_point close zsock", pid=z_sig_pid, op_start=start, spawn_time=0)
         except Exception:
             pass
-
-        # Create a fresh PID namespace so the child looks like a normal proc.
-        start = time.time_ns()
-        if _unshare(CLONE_NEWPID) != 0:
-            errno = ctypes.get_errno()
-            raise OSError(errno, os.strerror(errno))
-        log_spawn_latency("splib.fork.fork_point unshare", pid=z_sig_pid, op_start=start, spawn_time=0)
-
-        start = time.time_ns()
-        pid2 = os.fork()
-        if pid2 != 0:
-            os._exit(0)
-        log_spawn_latency("splib.fork.fork_point 2nd fork", pid=z_sig_pid, op_start=start, spawn_time=0)
 
         # Notify supervisor that the child exists (peercred conveys host PID).
         # Can possibly be replaced by using SCM_CREDENTIALS
@@ -155,8 +173,9 @@ def fork_point() -> list[str]:
                 os.environ[k] = v
         log_spawn_latency("splib.fork.fork_point apply env", pid=z_sig_pid, op_start=start, spawn_time=0)
 
-        start = time.time_ns()
         gc.enable()
-        log_spawn_latency("splib.fork.fork_point gc enable", pid=z_sig_pid, op_start=start, spawn_time=0)
-
         return [str(a) for a in args]
+
+
+# Reduce memory overhead after forking.
+gc.disable()

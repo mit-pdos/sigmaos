@@ -64,6 +64,8 @@ func spawnAndWaitRound(ts *test.Tstate, w zygoteWorkload, n int, useFork bool, h
 		// Add a random environment variable to ensure that we don't reuse
 		// zygotes across trials.
 		uniqueId := fmt.Sprintf("%d", time.Now().UnixNano())
+
+		// TODO: Remove this experimental multi-zygote code...
 		for i := 0; i < nZygotes; i++ {
 			copy := proc.ForkConfig{
 				ZygoteProc: cfg.ZygoteProc.Clone(),
@@ -433,4 +435,116 @@ func TestZygoteForkMemoryScaling(t *testing.T) {
 			forkRatio,
 		)
 	}
+}
+
+func spawnAndWait(ts *test.Tstate, p *proc.Proc) error {
+	if err := ts.Spawn(p); err != nil {
+		return fmt.Errorf("spawn: %w", err)
+	}
+	if err := ts.WaitStart(p.GetPid()); err != nil {
+		return fmt.Errorf("waitstart: %w", err)
+	}
+	st, err := ts.WaitExit(p.GetPid())
+	if err != nil {
+		return fmt.Errorf("waitexit: %w", err)
+	}
+	if !st.IsStatusOK() {
+		return fmt.Errorf("bad status: %v", st)
+	}
+	return nil
+}
+
+func parseStartLatencies(logs string) ([]time.Duration, []time.Duration, error) {
+	var spawnLatencies []time.Duration
+	var forkLatencies []time.Duration
+
+	re := regexp.MustCompile(`sinceSpawn:(\d+)us`)
+
+	lines := strings.Split(logs, "\n")
+	for _, line := range lines {
+		if strings.Contains(line, "E2e spawn time since spawn until main") {
+			m := re.FindStringSubmatch(line)
+			if m == nil {
+				return nil, nil, fmt.Errorf("failed to parse spawn latency from line: %s", line)
+			}
+
+			val, err := strconv.Atoi(m[1])
+			if err != nil {
+				return nil, nil, fmt.Errorf("failed to parse spawn latency from line: %s", line)
+			}
+
+			spawnLatencies = append(spawnLatencies, time.Duration(val)*time.Microsecond)
+		} else if strings.Contains(line, "E2e spawn time since fork until main") {
+			m := re.FindStringSubmatch(line)
+			if m == nil {
+				return nil, nil, fmt.Errorf("failed to parse fork latency from line: %s", line)
+			}
+
+			val, err := strconv.Atoi(m[1])
+			if err != nil {
+				return nil, nil, fmt.Errorf("failed to parse fork latency from line: %s", line)
+			}
+
+			forkLatencies = append(forkLatencies, time.Duration(val)*time.Microsecond)
+		}
+	}
+
+	return spawnLatencies, forkLatencies, nil
+}
+
+func TestPythonStartLatency(t *testing.T) {
+	ts, _ := test.NewTstateAll(t)
+	defer ts.Shutdown()
+
+	const N = 100
+
+	// Without forking
+	createProc := func() *proc.Proc {
+		return proc.NewPythonProc(proc.Python311, []string{"benchmarks/startup_latency/main.py"})
+	}
+
+	for i := 0; i <= N; i++ {
+		spawnAndWait(ts, createProc())
+	}
+
+	// With forking
+	forkConfig := proc.ForkConfig{
+		ZygoteProc: createProc(),
+		KeepAlive:  10 * time.Second,
+	}
+
+	for i := 0; i <= N; i++ {
+		spawnAndWait(ts, proc.NewForkProc(forkConfig, []string{}))
+	}
+
+	// Collect logs and parse latencies
+	logs, err := runLogsScript()
+	if err != nil {
+		t.Fatalf("collect logs: %v", err)
+	}
+
+	spawnLatencies, forkLatencies, err := parseStartLatencies(logs)
+	if err != nil {
+		t.Fatalf("parse latencies: %v", err)
+	}
+
+	spawnLatencies = spawnLatencies[1:] // Skip the first spawn which is a warmup
+	forkLatencies = forkLatencies[1:]   // Skip the first fork which is a warmup
+
+	spawnResults := benchmarks.NewResults(N, benchmarks.OPS)
+	forkResults := benchmarks.NewResults(N, benchmarks.OPS)
+
+	for _, lat := range spawnLatencies {
+		spawnResults.Append(lat, 1)
+	}
+	for _, lat := range forkLatencies {
+		forkResults.Append(lat, 1)
+	}
+
+	latSpawn, _ := spawnResults.Summary()
+	latFork, _ := forkResults.Summary()
+
+	fmt.Printf("\n=== Python Start Latencies ===\n")
+	fmt.Printf("Spawn latencies (without fork):%v\n\n", latSpawn)
+	fmt.Printf("Fork latencies (with fork):%v\n", latFork)
 }

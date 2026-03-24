@@ -118,6 +118,9 @@ func (r *Results) Percentile(p float64) (time.Duration, float64) {
 	lat, tpt := r.toFloats()
 
 	l, err := stats.Percentile(lat, p)
+	if err != nil && p == 0 {
+		l, err = stats.Min(lat)
+	}
 	if err != nil {
 		db.DPrintf(db.ALWAYS, "Error calculating percentile %v: %v", p, err)
 		l = 0
@@ -125,6 +128,9 @@ func (r *Results) Percentile(p float64) (time.Duration, float64) {
 	plat = time.Duration(int64(l))
 
 	t, err := stats.Percentile(tpt, p)
+	if err != nil && p == 0 {
+		l, err = stats.Min(lat)
+	}
 	if err != nil {
 		db.DPrintf(db.ALWAYS, "Error calculating percentile %v: %v", p, err)
 		t = 0
@@ -161,7 +167,7 @@ func (r *Results) toFloats() ([]float64, []float64) {
 func (r *Results) Summary() (string, string) {
 	meanL, meanT := r.Mean()
 	stdL, stdT := r.StdDev()
-	p0L, p0T := r.Percentile(0.1)
+	p0L, p0T := r.Percentile(0)
 	medianL, medianT := r.Percentile(50)
 	p75L, p75T := r.Percentile(75)
 	p90L, p90T := r.Percentile(90)
@@ -169,7 +175,7 @@ func (r *Results) Summary() (string, string) {
 	p999L, p999T := r.Percentile(99.9)
 	p9999L, p9999T := r.Percentile(99.99)
 	p100L, p100T := r.Percentile(100)
-	fstring := "Stats:\n Mean: %v\n Std: %v\n 0.1: %v\n 50: %v\n 75: %v\n 90: %v\n 99: %v\n 99.9: %v\n 99.99: %v\n 100: %v"
+	fstring := "Stats:\n Mean: %v\n Std: %v\n 0: %v\n 50: %v\n 75: %v\n 90: %v\n 99: %v\n 99.9: %v\n 99.99: %v\n 100: %v"
 	lsum := fmt.Sprintf("\n= Latency "+fstring,
 		meanL, stdL, p0L, medianL, p75L, p90L, p99L, p999L, p9999L, p100L)
 	tsum := fmt.Sprintf("\n= Throughput "+fstring,

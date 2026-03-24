@@ -13,6 +13,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"strconv"
 	"sync"
 	"syscall"
 	"time"
@@ -304,7 +305,7 @@ func (fm *forkMgr) ensureZygote(uproc *proc.Proc) (*zygoteEntry, error) {
 	zyg.SetType(uproc.GetType())
 	zyg.SetMcpu(uproc.GetMcpu())
 	zyg.SetMem(uproc.GetMem())
-	zyg.SetSpawnTime(time.Now())
+	zyg.SetSpawnTime(uproc.GetSpawnTime())
 
 	// Set up supervisor socket
 	sockHost := fm.forkSockHostPath(zyg.GetPid())
@@ -554,6 +555,9 @@ func (fm *forkMgr) monitorZygote(ze *zygoteEntry) {
 // Ensures a matching zygote is running and requests it to fork a child proc.
 // Returns the host PID of the forked child, and a unique ID for the zygote.
 func (fm *forkMgr) forkChild(uproc *proc.Proc) (*ForkProc, error) {
+	start := time.Now()
+	perf.LogSpawnLatency("forkMgr.forkChild start", uproc.GetPid(), uproc.GetSpawnTime(), perf.TIME_NOT_SET)
+
 	fp := uproc.GetForkProc()
 	if fp == nil {
 		return nil, fmt.Errorf("forkChild called for non-fork proc")
@@ -606,6 +610,16 @@ func (fm *forkMgr) forkChild(uproc *proc.Proc) (*ForkProc, error) {
 		return nil, fmt.Errorf("zygote connection missing")
 	}
 
+	uproc.AppendEnv(proc.SIGMADEBUGPID, uproc.GetPid().String())
+	uproc.AppendEnv("SIGMA_EXEC_TIME", strconv.FormatInt(time.Now().UnixMicro(), 10))
+	b, err := time.Now().MarshalText()
+	if err != nil {
+		db.DFatalf("Error marshal timestamp pb: %v", err)
+	}
+	uproc.AppendEnv("SIGMA_EXEC_TIME_PB", string(b))
+	uproc.AppendEnv("SIGMA_SPAWN_TIME", strconv.FormatInt(uproc.GetSpawnTime().UnixMicro(), 10))
+
+	perf.LogSpawnLatency("forkMgr.forkChild send fork request", uproc.GetPid(), uproc.GetSpawnTime(), start)
 	ze.writeMu.Lock()
 	err = writeFrame(conn, forkMsg{
 		Type:  "fork",
@@ -642,6 +656,8 @@ func (fm *forkMgr) forkChild(uproc *proc.Proc) (*ForkProc, error) {
 			fm.childDone(zygotePid)
 			forkProc.didExit.Fill(err)
 		}()
+
+		perf.LogSpawnLatency("forkMgr.forkChild done", uproc.GetPid(), uproc.GetSpawnTime(), start)
 
 		return &forkProc, nil
 	case <-ze.ctx.Done():

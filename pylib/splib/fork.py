@@ -18,7 +18,10 @@ import json
 import os
 import socket
 import struct
+import time
 from typing import Any
+
+from splib.utils import log_spawn_latency
 
 
 SIGMA_FORK_SOCK = "SIGMA_FORK_SOCK"
@@ -82,9 +85,12 @@ def fork_point() -> list[str]:
     if resp.get("type") != "ok":
         raise RuntimeError(f"fork supervisor rejected hello: {resp}")
 
+    z_sig_pid = os.environ.get("SIGMADEBUGPID", "")
+
     while True:
         try:
             msg = _read_frame(zsock)
+            start = time.time_ns()
         except EOFError:
             # Supervisor closed the connection -> shutdown zygote.
             exit(0)
@@ -100,32 +106,43 @@ def fork_point() -> list[str]:
         if pid != 0:
             # Parent: continue servicing future fork requests.
             continue
+        log_spawn_latency("splib.fork.fork_point 1st fork", pid=z_sig_pid, op_start=start, spawn_time=0)
 
         # Child: detach from the zygote connection to avoid sharing it.
         try:
+            start = time.time_ns()
             zsock.close()
+            log_spawn_latency("splib.fork.fork_point close zsock", pid=z_sig_pid, op_start=start, spawn_time=0)
         except Exception:
             pass
 
         # Create a fresh PID namespace so the child looks like a normal proc.
+        start = time.time_ns()
         if _unshare(CLONE_NEWPID) != 0:
             errno = ctypes.get_errno()
             raise OSError(errno, os.strerror(errno))
+        log_spawn_latency("splib.fork.fork_point unshare", pid=z_sig_pid, op_start=start, spawn_time=0)
 
+        start = time.time_ns()
         pid2 = os.fork()
         if pid2 != 0:
             os._exit(0)
+        log_spawn_latency("splib.fork.fork_point 2nd fork", pid=z_sig_pid, op_start=start, spawn_time=0)
 
         # Notify supervisor that the child exists (peercred conveys host PID).
+        # Can possibly be replaced by using SCM_CREDENTIALS
+        start = time.time_ns()
         csock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         csock.connect(sock_path)
         _write_frame(csock, {"type": "child", "req_id": req_id})
         _ = _read_frame(csock)
         csock.close()
+        log_spawn_latency("splib.fork.fork_point notify supervisor", pid=z_sig_pid, op_start=start, spawn_time=0)
 
         # Apply env updates for this child proc.
         # The supervisor sends either a list of "K=V" entries (preferred)
         # or a dict.
+        start = time.time_ns()
         if isinstance(env, dict):
             for k, v in env.items():
                 os.environ[str(k)] = str(v)
@@ -136,11 +153,14 @@ def fork_point() -> list[str]:
                     continue
                 k, v = s.split("=", 1)
                 os.environ[k] = v
+        log_spawn_latency("splib.fork.fork_point apply env", pid=z_sig_pid, op_start=start, spawn_time=0)
 
+        start = time.time_ns()
         gc.enable()
         try:
             gc.unfreeze()
         except Exception:
             pass
+        log_spawn_latency("splib.fork.fork_point gc unfreeze", pid=z_sig_pid, op_start=start, spawn_time=0)
 
         return [str(a) for a in args]

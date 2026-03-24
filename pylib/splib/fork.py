@@ -71,39 +71,25 @@ def _clone(flags: int) -> int:
     return pid
 
 
-def _read_exact(sock: socket.socket, n: int) -> bytes:
-    buf = bytearray()
-    while len(buf) < n:
-        chunk = sock.recv(n - len(buf))
-        if not chunk:
-            raise EOFError("unexpected EOF")
-        buf.extend(chunk)
-    return bytes(buf)
+def _read_msg(sock: socket.socket) -> dict[str, Any]:
+    data = sock.recv(64 * 1024)
+    if not data:
+        raise EOFError("unexpected EOF")
+    return json.loads(data.decode("utf-8"))
 
 
-def _read_frame(sock: socket.socket) -> dict[str, Any]:
-    hdr = _read_exact(sock, 4)
-    (ln,) = struct.unpack(">I", hdr)
-    if ln <= 0 or ln > 16 * 1024 * 1024:
-        raise ValueError(f"invalid frame length {ln}")
-    payload = _read_exact(sock, ln)
-    return json.loads(payload.decode("utf-8"))
-
-
-def _write_frame(sock: socket.socket, msg: dict[str, Any]) -> None:
+def _write_msg(sock: socket.socket, msg: dict[str, Any]) -> None:
     b = json.dumps(msg).encode("utf-8")
-    frame = struct.pack(">I", len(b)) + b
-    sock.sendall(frame)
+    sock.sendall(b)
 
 
-def _write_frame_with_credentials(sock: socket.socket, msg: dict[str, Any]) -> None:
+def _write_msg_with_credentials(sock: socket.socket, msg: dict[str, Any]) -> None:
     b = json.dumps(msg).encode("utf-8")
-    frame = struct.pack(">I", len(b)) + b
 
     creds = struct.pack("iII", os.getpid(), os.getuid(), os.getgid())
     ancdata = [(socket.SOL_SOCKET, socket.SCM_CREDENTIALS, creds)]
 
-    sock.sendmsg([frame], ancdata)
+    sock.sendmsg([b], ancdata)
 
 
 
@@ -121,10 +107,10 @@ def fork_point() -> list[str]:
         raise RuntimeError(f"{SIGMA_FORK_ZYGOTE_KEY} is not set")
 
     # Persistent connection from the zygote to the supervisor.
-    zsock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    zsock = socket.socket(socket.AF_UNIX, socket.SOCK_SEQPACKET)
     zsock.connect(sock_path)
-    _write_frame(zsock, {"type": "hello", "zygote_key": zygote_key})
-    resp = _read_frame(zsock)
+    _write_msg(zsock, {"type": "hello", "zygote_key": zygote_key})
+    resp = _read_msg(zsock)
     if resp.get("type") != "ok":
         raise RuntimeError(f"fork supervisor rejected hello: {resp}")
 
@@ -132,7 +118,7 @@ def fork_point() -> list[str]:
 
     while True:
         try:
-            msg = _read_frame(zsock)
+            msg = _read_msg(zsock)
         except EOFError:
             # Supervisor closed the connection -> shutdown zygote.
             exit(0)
@@ -154,23 +140,17 @@ def fork_point() -> list[str]:
         # Notify supervisor that the child exists (peercred conveys host PID).
         # Can possibly be replaced by using SCM_CREDENTIALS
         start = time.time_ns()
-        _write_frame_with_credentials(zsock, {"type": "child", "req_id": req_id})
+        _write_msg_with_credentials(zsock, {"type": "child", "req_id": req_id})
         log_spawn_latency("splib.fork.fork_point notify supervisor", pid=z_sig_pid, op_start=start, spawn_time=0)
 
         # Apply env updates for this child proc.
-        # The supervisor sends either a list of "K=V" entries (preferred)
-        # or a dict.
         start = time.time_ns()
-        if isinstance(env, dict):
-            for k, v in env.items():
-                os.environ[str(k)] = str(v)
-        else:
-            for entry in env:
-                s = str(entry)
-                if "=" not in s:
-                    continue
-                k, v = s.split("=", 1)
-                os.environ[k] = v
+        for entry in env:
+            s = str(entry)
+            if "=" not in s:
+                continue
+            k, v = s.split("=", 1)
+            os.environ[k] = v
         log_spawn_latency("splib.fork.fork_point apply env", pid=z_sig_pid, op_start=start, spawn_time=0)
 
         gc.enable()

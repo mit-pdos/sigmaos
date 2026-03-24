@@ -1,15 +1,12 @@
 package srv
 
 import (
-	"bufio"
 	"context"
 	"crypto/rand"
-	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"net"
 	"os"
 	"path/filepath"
@@ -80,41 +77,22 @@ type forkMsg struct {
 	Args      []string `json:"args,omitempty"`
 }
 
-func writeFrame(w io.Writer, msg any) error {
+func writeMsg(conn *net.UnixConn, msg any) error {
 	b, err := json.Marshal(msg)
 	if err != nil {
 		return err
 	}
-	frame := make([]byte, 4+len(b))
-	binary.BigEndian.PutUint32(frame[:4], uint32(len(b)))
-	copy(frame[4:], b)
-	for len(frame) > 0 {
-		n, err := w.Write(frame)
-		if err != nil {
-			return err
-		}
-		if n <= 0 {
-			return io.ErrShortWrite
-		}
-		frame = frame[n:]
-	}
-	return nil
+	_, err = conn.Write(b)
+	return err
 }
 
-func readFrame(r io.Reader, out any) error {
-	var hdr [4]byte
-	if _, err := io.ReadFull(r, hdr[:]); err != nil {
+func readMsg(conn *net.UnixConn, out any) error {
+	buf := make([]byte, 64*1024)
+	n, err := conn.Read(buf)
+	if err != nil {
 		return err
 	}
-	n := binary.BigEndian.Uint32(hdr[:])
-	if n == 0 || n > 16*1024*1024 {
-		return fmt.Errorf("invalid frame length %d", n)
-	}
-	b := make([]byte, n)
-	if _, err := io.ReadFull(r, b); err != nil {
-		return err
-	}
-	return json.Unmarshal(b, out)
+	return json.Unmarshal(buf[:n], out)
 }
 
 func randID() (string, error) {
@@ -315,13 +293,13 @@ func (fm *forkMgr) ensureZygote(uproc *proc.Proc) (*zygoteEntry, error) {
 	}
 	_ = os.Remove(sockHost)
 
-	addr, err := net.ResolveUnixAddr("unix", sockHost)
+	addr, err := net.ResolveUnixAddr("unixpacket", sockHost)
 	if err != nil {
 		cancel()
 		return nil, err
 	}
 
-	listener, err := net.ListenUnix("unix", addr)
+	listener, err := net.ListenUnix("unixpacket", addr)
 	if err != nil {
 		cancel()
 		return nil, err
@@ -418,9 +396,8 @@ func (fm *forkMgr) acceptLoop(ze *zygoteEntry) {
 func (fm *forkMgr) handleConn(ze *zygoteEntry, conn *net.UnixConn) {
 	defer ze.wg.Done()
 
-	r := bufio.NewReader(conn)
 	var m forkMsg
-	if err := readFrame(r, &m); err != nil {
+	if err := readMsg(conn, &m); err != nil {
 		return
 	}
 
@@ -428,14 +405,14 @@ func (fm *forkMgr) handleConn(ze *zygoteEntry, conn *net.UnixConn) {
 	case "hello":
 		fm.handleHello(ze, conn, &m)
 	default:
-		_ = writeFrame(conn, forkMsg{Type: "err"})
+		_ = writeMsg(conn, forkMsg{Type: "err"})
 		conn.Close()
 	}
 }
 
 func (fm *forkMgr) handleHello(ze *zygoteEntry, conn *net.UnixConn, m *forkMsg) {
 	if m.ZygoteKey != ze.key {
-		_ = writeFrame(conn, forkMsg{Type: "err"})
+		_ = writeMsg(conn, forkMsg{Type: "err"})
 		return
 	}
 
@@ -473,7 +450,7 @@ func (fm *forkMgr) handleHello(ze *zygoteEntry, conn *net.UnixConn, m *forkMsg) 
 	ze.lastIdle = time.Now()
 	ze.childMu.Unlock()
 
-	_ = writeFrame(conn, forkMsg{Type: "ok"})
+	_ = writeMsg(conn, forkMsg{Type: "ok"})
 
 	// From here on out, we expect all incoming messages to be of type "child"
 	go fm.zygoteStreamReader(ze, conn)
@@ -484,28 +461,24 @@ func (fm *forkMgr) zygoteStreamReader(ze *zygoteEntry, conn *net.UnixConn) {
 	defer conn.Close()
 
 	for {
-		// 1. Read the 4-byte header and OOB data simultaneously
-		headerBuf := make([]byte, 4)
+		buf := make([]byte, 16*1024*1024)
 		oob := make([]byte, unix.CmsgSpace(unix.SizeofUcred))
 
-		n, oobn, _, _, err := conn.ReadMsgUnix(headerBuf, oob)
+		n, oobn, _, _, err := conn.ReadMsgUnix(buf, oob)
 		if err != nil {
 			if !errors.Is(err, net.ErrClosed) {
 				db.DPrintf(db.PROCD_ERR, "Zygote stream read error: %v", err)
 			}
 			return
 		}
-		if n < 4 {
-			return // Stream closed or corrupted
-		}
 
-		// 2. Parse PID from SCM_CREDENTIALS if present
 		var hostPid int
 		if oobn > 0 {
 			msgs, err := unix.ParseSocketControlMessage(oob[:oobn])
 			if err == nil {
 				for _, msg := range msgs {
-					if msg.Header.Level == unix.SOL_SOCKET && msg.Header.Type == unix.SCM_CREDENTIALS {
+					if msg.Header.Level == unix.SOL_SOCKET &&
+						msg.Header.Type == unix.SCM_CREDENTIALS {
 						ucred, err := unix.ParseUnixCredentials(&msg)
 						if err == nil {
 							hostPid = int(ucred.Pid)
@@ -515,19 +488,11 @@ func (fm *forkMgr) zygoteStreamReader(ze *zygoteEntry, conn *net.UnixConn) {
 			}
 		}
 
-		// 3. Read the JSON payload body
-		bodyLen := binary.BigEndian.Uint32(headerBuf)
-		body := make([]byte, bodyLen)
-		if _, err := io.ReadFull(conn, body); err != nil {
-			return
-		}
-
 		var m forkMsg
-		if err := json.Unmarshal(body, &m); err != nil {
+		if err := json.Unmarshal(buf[:n], &m); err != nil {
 			continue
 		}
 
-		// 4. Handle the message type
 		if m.Type == "child" {
 			ze.pendingMu.Lock()
 			ch := ze.pending[m.ReqID]
@@ -671,7 +636,7 @@ func (fm *forkMgr) forkChild(uproc *proc.Proc) (*ForkProc, error) {
 
 	perf.LogSpawnLatency("forkMgr.forkChild send fork request", uproc.GetPid(), uproc.GetSpawnTime(), start)
 	ze.writeMu.Lock()
-	err = writeFrame(conn, forkMsg{
+	err = writeMsg(conn, forkMsg{
 		Type:  "fork",
 		ReqID: reqID,
 		Env:   uproc.GetEnv(),

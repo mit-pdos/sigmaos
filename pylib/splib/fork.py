@@ -92,7 +92,19 @@ def _read_frame(sock: socket.socket) -> dict[str, Any]:
 
 def _write_frame(sock: socket.socket, msg: dict[str, Any]) -> None:
     b = json.dumps(msg).encode("utf-8")
-    sock.sendall(struct.pack(">I", len(b)) + b)
+    frame = struct.pack(">I", len(b)) + b
+    sock.sendall(frame)
+
+
+def _write_frame_with_credentials(sock: socket.socket, msg: dict[str, Any]) -> None:
+    b = json.dumps(msg).encode("utf-8")
+    frame = struct.pack(">I", len(b)) + b
+
+    creds = struct.pack("iII", os.getpid(), os.getuid(), os.getgid())
+    ancdata = [(socket.SOL_SOCKET, socket.SCM_CREDENTIALS, creds)]
+
+    sock.sendmsg([frame], ancdata)
+
 
 
 def fork_point() -> list[str]:
@@ -139,22 +151,10 @@ def fork_point() -> list[str]:
         env = msg.get("env") or []
         args = msg.get("args") or []
 
-        # Child: detach from the zygote connection to avoid sharing it.
-        try:
-            start = time.time_ns()
-            zsock.close()
-            log_spawn_latency("splib.fork.fork_point close zsock", pid=z_sig_pid, op_start=start, spawn_time=0)
-        except Exception:
-            pass
-
         # Notify supervisor that the child exists (peercred conveys host PID).
         # Can possibly be replaced by using SCM_CREDENTIALS
         start = time.time_ns()
-        csock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-        csock.connect(sock_path)
-        _write_frame(csock, {"type": "child", "req_id": req_id})
-        _ = _read_frame(csock)
-        csock.close()
+        _write_frame_with_credentials(zsock, {"type": "child", "req_id": req_id})
         log_spawn_latency("splib.fork.fork_point notify supervisor", pid=z_sig_pid, op_start=start, spawn_time=0)
 
         # Apply env updates for this child proc.

@@ -427,8 +427,6 @@ func (fm *forkMgr) handleConn(ze *zygoteEntry, conn *net.UnixConn) {
 	switch m.Type {
 	case "hello":
 		fm.handleHello(ze, conn, &m)
-	case "child":
-		fm.handleChild(ze, conn, &m)
 	default:
 		_ = writeFrame(conn, forkMsg{Type: "err"})
 		conn.Close()
@@ -450,6 +448,23 @@ func (fm *forkMgr) handleHello(ze *zygoteEntry, conn *net.UnixConn, m *forkMsg) 
 		return
 	}
 
+	// Set SO_PASSCRED on the accepted connection to get host PID of future messages
+	rawConn, err := conn.File()
+	if err != nil {
+		ze.connMu.Unlock()
+		conn.Close()
+		return
+	}
+	defer rawConn.Close()
+
+	err = unix.SetsockoptInt(int(rawConn.Fd()), unix.SOL_SOCKET, unix.SO_PASSCRED, 1)
+	if err != nil {
+		db.DPrintf(db.PROCD_ERR, "Failed to set SO_PASSCRED: %v", err)
+		ze.connMu.Unlock()
+		conn.Close()
+		return
+	}
+
 	ze.zygConn = conn
 	ze.setState(stateReady)
 	perf.LogSpawnLatency("Zygote ready", ze.zygProc.GetPid(), ze.zygProc.GetSpawnTime(), perf.TIME_NOT_SET)
@@ -459,42 +474,77 @@ func (fm *forkMgr) handleHello(ze *zygoteEntry, conn *net.UnixConn, m *forkMsg) 
 	ze.childMu.Unlock()
 
 	_ = writeFrame(conn, forkMsg{Type: "ok"})
+
+	// From here on out, we expect all incoming messages to be of type "child"
+	go fm.zygoteStreamReader(ze, conn)
 }
 
-func (fm *forkMgr) handleChild(ze *zygoteEntry, conn *net.UnixConn, m *forkMsg) {
+func (fm *forkMgr) zygoteStreamReader(ze *zygoteEntry, conn *net.UnixConn) {
+	defer ze.wg.Done()
 	defer conn.Close()
 
-	// Get host PID via SO_PEERCRED
-	f, err := conn.File()
-	if err != nil {
-		return
-	}
-	defer f.Close()
+	for {
+		// 1. Read the 4-byte header and OOB data simultaneously
+		headerBuf := make([]byte, 4)
+		oob := make([]byte, unix.CmsgSpace(unix.SizeofUcred))
 
-	ucred, err := syscall.GetsockoptUcred(int(f.Fd()), syscall.SOL_SOCKET, syscall.SO_PEERCRED)
-	if err != nil {
-		return
-	}
-
-	hostPid := int(ucred.Pid)
-
-	// Deliver the host PID to waiting fork request
-	ze.pendingMu.Lock()
-	ch := ze.pending[m.ReqID]
-	if ch != nil {
-		delete(ze.pending, m.ReqID)
-	}
-	ze.pendingMu.Unlock()
-
-	if ch != nil {
-		select {
-		case ch <- hostPid:
-		default:
+		n, oobn, _, _, err := conn.ReadMsgUnix(headerBuf, oob)
+		if err != nil {
+			if !errors.Is(err, net.ErrClosed) {
+				db.DPrintf(db.PROCD_ERR, "Zygote stream read error: %v", err)
+			}
+			return
 		}
-		close(ch)
-	}
+		if n < 4 {
+			return // Stream closed or corrupted
+		}
 
-	_ = writeFrame(conn, forkMsg{Type: "ok"})
+		// 2. Parse PID from SCM_CREDENTIALS if present
+		var hostPid int
+		if oobn > 0 {
+			msgs, err := unix.ParseSocketControlMessage(oob[:oobn])
+			if err == nil {
+				for _, msg := range msgs {
+					if msg.Header.Level == unix.SOL_SOCKET && msg.Header.Type == unix.SCM_CREDENTIALS {
+						ucred, err := unix.ParseUnixCredentials(&msg)
+						if err == nil {
+							hostPid = int(ucred.Pid)
+						}
+					}
+				}
+			}
+		}
+
+		// 3. Read the JSON payload body
+		bodyLen := binary.BigEndian.Uint32(headerBuf)
+		body := make([]byte, bodyLen)
+		if _, err := io.ReadFull(conn, body); err != nil {
+			return
+		}
+
+		var m forkMsg
+		if err := json.Unmarshal(body, &m); err != nil {
+			continue
+		}
+
+		// 4. Handle the message type
+		if m.Type == "child" {
+			ze.pendingMu.Lock()
+			ch := ze.pending[m.ReqID]
+			if ch != nil {
+				delete(ze.pending, m.ReqID)
+			}
+			ze.pendingMu.Unlock()
+
+			if ch != nil {
+				select {
+				case ch <- hostPid:
+				default:
+				}
+				close(ch)
+			}
+		}
+	}
 }
 
 // Monitor the zygote and trigger cleanup on exit

@@ -180,7 +180,6 @@ type zygoteEntry struct {
 	connMu   sync.Mutex
 	listener *net.UnixListener
 	zygConn  *net.UnixConn
-	writeMu  sync.Mutex
 
 	// Fork request tracking
 	pendingMu sync.RWMutex
@@ -460,10 +459,10 @@ func (fm *forkMgr) zygoteStreamReader(ze *zygoteEntry, conn *net.UnixConn) {
 	defer ze.wg.Done()
 	defer conn.Close()
 
-	for {
-		buf := make([]byte, 16*1024*1024)
-		oob := make([]byte, unix.CmsgSpace(unix.SizeofUcred))
+	buf := make([]byte, 16*1024)
+	oob := make([]byte, unix.CmsgSpace(unix.SizeofUcred))
 
+	for {
 		n, oobn, _, _, err := conn.ReadMsgUnix(buf, oob)
 		if err != nil {
 			if !errors.Is(err, net.ErrClosed) {
@@ -635,14 +634,12 @@ func (fm *forkMgr) forkChild(uproc *proc.Proc) (*ForkProc, error) {
 	uproc.AppendEnv("SIGMA_SPAWN_TIME", strconv.FormatInt(uproc.GetSpawnTime().UnixMicro(), 10))
 
 	perf.LogSpawnLatency("forkMgr.forkChild send fork request", uproc.GetPid(), uproc.GetSpawnTime(), start)
-	ze.writeMu.Lock()
 	err = writeMsg(conn, forkMsg{
 		Type:  "fork",
 		ReqID: reqID,
 		Env:   uproc.GetEnv(),
 		Args:  fp.GetChildArgs(),
 	})
-	ze.writeMu.Unlock()
 	if err != nil {
 		return nil, err
 	}

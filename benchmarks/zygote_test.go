@@ -343,13 +343,19 @@ func runMemoryScenario(ts *test.Tstate, w zygoteWorkload, n int, useFork bool, c
 			return 0, fmt.Errorf("failed to build proc")
 		}
 		p.SetMeasurePSS(true, pssDelayMS)
+		procs = append(procs, p)
+	}
+
+	for i, p := range procs {
 		if err := ts.Spawn(p); err != nil {
 			return 0, fmt.Errorf("spawn[%d]: %w", i, err)
 		}
+	}
+
+	for i, p := range procs {
 		if err := ts.WaitStart(p.GetPid()); err != nil {
 			return 0, fmt.Errorf("waitstart[%d]: %w", i, err)
 		}
-		procs = append(procs, p)
 	}
 
 	pids := make([]string, 0, len(procs))
@@ -367,8 +373,7 @@ func runMemoryScenario(ts *test.Tstate, w zygoteWorkload, n int, useFork bool, c
 		}
 	}
 
-	pssWait := 2*pssDelay + 5*time.Second
-	pssByPid, err := collectPSSForPids(pids, pssWait)
+	pssByPid, err := collectPSSForPids(pids, 2*time.Second)
 	if err != nil {
 		return 0, err
 	}

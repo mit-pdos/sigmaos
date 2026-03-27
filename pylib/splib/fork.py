@@ -11,9 +11,12 @@ returns the child args to user code.
 
 from __future__ import annotations
 
+# Disable GC as soon as possible to minimize memory fragmentation.
+import gc
+gc.disable()
+
 import ctypes
 import ctypes.util
-import gc
 import json
 import os
 import socket
@@ -155,7 +158,3 @@ def fork_point() -> list[str]:
 
         gc.enable()
         return [str(a) for a in args]
-
-
-# Reduce memory overhead after forking.
-gc.disable()

@@ -451,18 +451,57 @@ func (fm *forkMgr) handleHello(ze *zygoteEntry, conn *net.UnixConn, m *forkMsg) 
 
 	_ = writeMsg(conn, forkMsg{Type: "ok"})
 
-	// From here on out, we expect all incoming messages to be of type "child"
+	// From here on out, we expect all incoming messages to be of type "child".
+	ze.wg.Add(1)
 	go fm.zygoteStreamReader(ze, conn)
+
+	// Additionally, we may close the listener, as we've sucesfully established a connection.
+	go func() {
+		listener := ze.listener
+		if listener != nil {
+			_ = listener.Close()
+		}
+	}()
 }
 
 func (fm *forkMgr) zygoteStreamReader(ze *zygoteEntry, conn *net.UnixConn) {
 	defer ze.wg.Done()
 	defer conn.Close()
 
+	rawConn, _ := conn.File()
+	defer rawConn.Close()
+	sockFd := int(rawConn.Fd())
+
 	buf := make([]byte, 16*1024)
 	oob := make([]byte, unix.CmsgSpace(unix.SizeofUcred))
 
 	for {
+		// Use unix.Select to wait for data with a timeout.
+		// This is more expensive than I would like, but for now, it is the best solution
+		// that I could come up with, as otherwise, calling conn.Close() while we're still
+		// trying to conn.ReadMsgUnix, would block indefinitely.
+		rfds := &unix.FdSet{}
+		rfds.Set(sockFd)
+
+		_, err := unix.Select(sockFd+1, rfds, nil, nil, &unix.Timeval{Sec: 1})
+		if err != nil {
+			if errors.Is(err, syscall.EINTR) {
+				continue
+			}
+			return
+		}
+
+		select {
+		case <-ze.ctx.Done():
+			return
+		default:
+		}
+
+		if !rfds.IsSet(sockFd) {
+			continue
+		}
+
+		// Data available -> read
 		n, oobn, _, _, err := conn.ReadMsgUnix(buf, oob)
 		if err != nil {
 			if !errors.Is(err, net.ErrClosed) {
@@ -516,11 +555,9 @@ func (fm *forkMgr) monitorZygote(ze *zygoteEntry) {
 	err := ze.zygCmd.Wait()
 	ze.exitErr = err
 
-	ze.wg.Done()
+	db.DPrintf(db.PROCD, "Zygote %s (key: %s) exited (err: %v)\n", ze.zygProc.GetPid(), ze.key, err)
 
-	if err != nil {
-		db.DPrintf(db.PROCD_ERR, "zygote %s exited: %v", ze.key, err)
-	}
+	ze.wg.Done()
 
 	// CLEAN UP
 	fm.mu.Lock()
@@ -741,17 +778,24 @@ func (fm *forkMgr) tryEvict(ze *zygoteEntry) {
 	// Point of no return
 	ze.setState(stateEvicting)
 	fm.zygotes.makeInaccessible(ze)
+	ze.cancel()
 	fm.mu.Unlock()
 
-	// Close connections to trigger shutdown
-	ze.connMu.Lock()
-	if ze.listener != nil {
-		_ = ze.listener.Close()
-	}
-	if ze.zygConn != nil {
-		_ = ze.zygConn.Close()
-	}
-	ze.connMu.Unlock()
+	// Close connections to trigger shutdown.
+	// We do this in a separate goroutine to avoid blocking on the .Close call.
+	go func() {
+		ze.connMu.Lock()
+		defer ze.connMu.Unlock()
+
+		if ze.listener != nil {
+			_ = ze.listener.Close()
+			ze.listener = nil
+		}
+		if ze.zygConn != nil {
+			_ = ze.zygConn.Close()
+			ze.zygConn = nil
+		}
+	}()
 
 	// Wait for graceful shutdown with timeout
 	done := make(chan struct{})

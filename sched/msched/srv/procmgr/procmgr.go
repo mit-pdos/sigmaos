@@ -1,6 +1,7 @@
 package procmgr
 
 import (
+	"fmt"
 	"sync"
 	"time"
 
@@ -59,6 +60,8 @@ func (mgr *ProcMgr) RunProc(p *proc.Proc) {
 	err := mgr.runProc(p)
 	if err != nil {
 		mgr.procCrashed(p, err)
+	} else {
+		mgr.procExited(p)
 	}
 }
 
@@ -131,6 +134,16 @@ func (mgr *ProcMgr) procCrashed(p *proc.Proc, err error) {
 		// not try to mark them as crashed in this case.
 		mgr.getSigmaClnt(p.GetRealm()).ExitedCrashed(p.GetPid(), p.GetProcDir(), p.GetParentDir(), proc.NewStatusErr(err.Error(), nil), p.GetHow())
 	}
+}
+
+func (mgr *ProcMgr) procExited(p *proc.Proc) {
+	// Mark the proc as exited.
+	// If the proc already called Exited, this will be a no-op. Otherwise mark it as an error.
+
+	// QUESTION: Is there any guarantee that any sigma proxy RPCs will be processed before
+	// we call this method?
+	err := proc.NewStatusErr(fmt.Sprintf("Proc %v exited without calling Exited", p.GetPid()), nil)
+	_ = mgr.pstate.exited(p.GetPid(), err.Marshal())
 }
 
 func (mgr *ProcMgr) getSigmaClnt(realm sp.Trealm) *sigmaclnt.SigmaClntKernel {

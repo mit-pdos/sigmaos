@@ -17,6 +17,8 @@ import (
 	"sigmaos/benchmarks"
 	"sigmaos/proc"
 	"sigmaos/test"
+
+	"github.com/stretchr/testify/assert"
 )
 
 type zygoteWorkload struct {
@@ -552,4 +554,125 @@ func TestPythonStartLatency(t *testing.T) {
 	fmt.Printf("\n=== Python Start Latencies ===\n")
 	fmt.Printf("Spawn latencies (without fork):%v\n\n", latSpawn)
 	fmt.Printf("Fork latencies (with fork):%v\n", latFork)
+}
+
+const (
+	THROUGHPUT_BASELINE_SCRIPT = "benchmarks/throughput/baseline.py"
+	THROUGHPUT_FORK_SCRIPT     = "benchmarks/throughput/fork.py"
+)
+
+func spawnBurstWaitExitProcs(ts *test.Tstate, procs []*proc.Proc) time.Duration {
+	per := len(procs) / N_THREADS
+	start := time.Now()
+	done := make(chan bool)
+	for i := 0; i < N_THREADS; i++ {
+		go func(i int) {
+			chunk := procs[i*per : (i+1)*per]
+			for _, p := range chunk {
+				err := ts.Spawn(p)
+				assert.Nil(ts.T, err, "Error Spawn: %v", err)
+			}
+			for _, p := range chunk {
+				ts.WaitExit(p.GetPid())
+			}
+			done <- true
+		}(i)
+	}
+	for i := 0; i < N_THREADS; i++ {
+		<-done
+	}
+
+	return time.Since(start)
+}
+
+func runZygoteThroughputTrial(ts *test.Tstate, useFork bool, n int, forkCfg proc.ForkConfig) time.Duration {
+	procs := make([]*proc.Proc, n)
+
+	if useFork {
+		var forkCfgs []proc.ForkConfig
+
+		uniqueId := fmt.Sprintf("%d", time.Now().UnixNano())
+		for i := 0; i < N_THREADS; i++ {
+			copy := proc.ForkConfig{
+				ZygoteProc: forkCfg.ZygoteProc.Clone(),
+				KeepAlive:  forkCfg.KeepAlive,
+			}
+			copy.ZygoteProc.AppendEnv("__ZYGOTE_BENCHMARK", uniqueId+"-"+strconv.Itoa(i))
+			forkCfgs = append(forkCfgs, copy)
+		}
+
+		// Warm up zygotes
+		for i := 0; i < N_THREADS; i++ {
+			cfg := forkCfgs[i]
+			p := proc.NewForkProc(cfg, []string{})
+			ts.Spawn(p)
+			ts.WaitExit(p.GetPid())
+		}
+
+		// Spawn procs
+		i := 0
+		for j := 0; j < N_THREADS; j++ {
+			cfg := forkCfgs[j]
+			for k := 0; k < n/N_THREADS; k++ {
+				if i >= n {
+					break
+				}
+				procs[i] = proc.NewForkProc(cfg, []string{})
+				i++
+			}
+		}
+	} else {
+		for i := 0; i < n; i++ {
+			procs[i] = proc.NewPythonProc(proc.Python311, []string{THROUGHPUT_BASELINE_SCRIPT})
+		}
+	}
+
+	return spawnBurstWaitExitProcs(ts, procs)
+}
+
+func TestZygoteThroughput(t *testing.T) {
+	if N_PROC <= 0 {
+		t.Fatalf("nproc must be > 0")
+	}
+	if N_TRIALS <= 0 {
+		t.Fatalf("ntrials must be > 0")
+	}
+
+	ts, err := test.NewTstateAll(t)
+	if err != nil {
+		t.Fatalf("new tstate: %v", err)
+	}
+	defer ts.Shutdown()
+
+	forkCfg := proc.ForkConfig{
+		ZygoteProc: proc.NewPythonProc(proc.Python311, []string{THROUGHPUT_FORK_SCRIPT}),
+		KeepAlive:  5 * time.Second,
+	}
+
+	baselineResults := benchmarks.NewResults(N_TRIALS, benchmarks.OPS)
+	for i := 0; i < N_TRIALS; i++ {
+		d := runZygoteThroughputTrial(ts, false, N_PROC, forkCfg)
+		baselineResults.Append(d, float64(N_PROC))
+	}
+
+	forkResults := benchmarks.NewResults(N_TRIALS, benchmarks.OPS)
+	for i := 0; i < N_TRIALS; i++ {
+		d := runZygoteThroughputTrial(ts, true, N_PROC, forkCfg)
+		forkResults.Append(d, float64(N_PROC))
+	}
+
+	bMean, _ := baselineResults.Mean()
+	fMean, _ := forkResults.Mean()
+	bP99, _ := baselineResults.Percentile(99)
+	fP99, _ := forkResults.Percentile(99)
+
+	fmt.Printf("\n=== Zygote Throughput ===\n")
+	fmt.Printf("nproc=%d ntrials=%d nthreads=%d keepalive=%v\n", N_PROC, N_TRIALS, N_THREADS, ZYGOTE_KEEPALIVE)
+
+	bOpsPerSec := float64(N_PROC) / bMean.Seconds()
+	fOpsPerSec := float64(N_PROC) / fMean.Seconds()
+
+	fmt.Printf("baseline: %.2f ops/sec (p99 latency: %v)\n", bOpsPerSec, bP99)
+	fmt.Printf("fork:     %.2f ops/sec (p99 latency: %v)\n", fOpsPerSec, fP99)
+	fmt.Printf("speedup:  %.2fx\n", bOpsPerSec/fOpsPerSec)
 }

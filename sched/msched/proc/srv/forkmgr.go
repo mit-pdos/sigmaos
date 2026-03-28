@@ -2,8 +2,6 @@ package srv
 
 import (
 	"context"
-	"crypto/rand"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -12,6 +10,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"sync"
+	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -72,7 +71,7 @@ func (fp *ForkProc) ZygotePid() sp.Tpid {
 type forkMsg struct {
 	Type      string   `json:"type"`
 	ZygoteKey string   `json:"zygote_key,omitempty"`
-	ReqID     string   `json:"req_id,omitempty"`
+	ReqID     uint64   `json:"req_id,omitempty"`
 	Env       []string `json:"env,omitempty"`
 	Args      []string `json:"args,omitempty"`
 }
@@ -93,14 +92,6 @@ func readMsg(conn *net.UnixConn, out any) error {
 		return err
 	}
 	return json.Unmarshal(buf[:n], out)
-}
-
-func randID() (string, error) {
-	b := make([]byte, 16)
-	if _, err := rand.Read(b); err != nil {
-		return "", err
-	}
-	return hex.EncodeToString(b), nil
 }
 
 // --
@@ -183,7 +174,8 @@ type zygoteEntry struct {
 
 	// Fork request tracking
 	pendingMu sync.RWMutex
-	pending   map[string]chan int
+	reqIds    atomic.Uint64
+	pending   map[uint64]chan int
 
 	// Child process tracking
 	childMu  sync.Mutex
@@ -267,7 +259,8 @@ func (fm *forkMgr) ensureZygote(uproc *proc.Proc) (*zygoteEntry, error) {
 		cancel:    cancel,
 		state:     stateStarting,
 		readyCh:   make(chan struct{}),
-		pending:   make(map[string]chan int),
+		reqIds:    atomic.Uint64{},
+		pending:   make(map[uint64]chan int),
 	}
 
 	// Build the zygote proc
@@ -583,7 +576,7 @@ func (fm *forkMgr) monitorZygote(ze *zygoteEntry) {
 	for _, ch := range ze.pending {
 		close(ch)
 	}
-	ze.pending = make(map[string]chan int)
+	ze.pending = make(map[uint64]chan int)
 	ze.pendingMu.Unlock()
 
 	// Stop eviction timer
@@ -618,6 +611,9 @@ func (fm *forkMgr) forkChild(uproc *proc.Proc) (*ForkProc, error) {
 	if err != nil {
 		return nil, err
 	}
+	if ze.state == stateReady {
+		goto usable
+	}
 
 	// Wait for zygote to be ready
 	select {
@@ -634,11 +630,9 @@ func (fm *forkMgr) forkChild(uproc *proc.Proc) (*ForkProc, error) {
 		return nil, fmt.Errorf("zygote became unusable")
 	}
 
-	reqID, err := randID()
-	if err != nil {
-		return nil, err
-	}
+usable:
 
+	reqID := ze.reqIds.Add(1)
 	respCh := make(chan int, 1)
 
 	// Register pending request

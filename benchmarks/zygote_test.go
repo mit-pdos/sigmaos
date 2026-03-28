@@ -590,15 +590,23 @@ func runZygoteThroughputTrial(ts *test.Tstate, useFork bool, n int, forkCfg proc
 
 	if useFork {
 		var forkCfgs []proc.ForkConfig
-
-		uniqueId := fmt.Sprintf("%d", time.Now().UnixNano())
 		for i := 0; i < N_THREADS; i++ {
-			copy := proc.ForkConfig{
-				ZygoteProc: forkCfg.ZygoteProc.Clone(),
+			forkProc := proc.NewProc(forkCfg.ZygoteProc.GetProgram(), append([]string{}, forkCfg.ZygoteProc.Args...))
+			forkProc.GetProcEnv().UseSPProxy = forkCfg.ZygoteProc.GetProcEnv().UseSPProxy
+			forkProc.GetProcEnv().UseSPProxyProcClnt = forkCfg.ZygoteProc.GetProcEnv().UseSPProxyProcClnt
+
+			for k, v := range forkCfg.ZygoteProc.Env {
+				if _, ok := forkProc.Env[k]; ok {
+					continue
+				}
+				forkProc.Env[k] = v
+			}
+
+			forkCfgClone := proc.ForkConfig{
+				ZygoteProc: forkProc,
 				KeepAlive:  forkCfg.KeepAlive,
 			}
-			copy.ZygoteProc.AppendEnv("__ZYGOTE_BENCHMARK", uniqueId+"-"+strconv.Itoa(i))
-			forkCfgs = append(forkCfgs, copy)
+			forkCfgs = append(forkCfgs, forkCfgClone)
 		}
 
 		// Warm up zygotes

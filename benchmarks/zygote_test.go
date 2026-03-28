@@ -678,7 +678,7 @@ func TestZygoteThroughput(t *testing.T) {
 	bOpsPerSec := float64(N_PROC) / bMin.Seconds()
 	fOpsPerSec := float64(N_PROC) / fMin.Seconds()
 
-	fmt.Printf("baseline: %.2f ops/sec\n", bOpsPerSec, bMin)
-	fmt.Printf("fork:     %.2f ops/sec\n", fOpsPerSec, fMin)
+	fmt.Printf("baseline: %.2f ops/sec\n", bOpsPerSec)
+	fmt.Printf("fork:     %.2f ops/sec\n", fOpsPerSec)
 	fmt.Printf("speedup:  %.2fx\n", fOpsPerSec/bOpsPerSec)
 }

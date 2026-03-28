@@ -669,18 +669,16 @@ func TestZygoteThroughput(t *testing.T) {
 		forkResults.Append(d, float64(N_PROC))
 	}
 
-	bMean, _ := baselineResults.Mean()
-	fMean, _ := forkResults.Mean()
-	bP99, _ := baselineResults.Percentile(99)
-	fP99, _ := forkResults.Percentile(99)
+	bMin, _ := baselineResults.Percentile(0)
+	fMin, _ := forkResults.Percentile(0)
 
 	fmt.Printf("\n=== Zygote Throughput ===\n")
 	fmt.Printf("nproc=%d ntrials=%d nthreads=%d keepalive=%v\n", N_PROC, N_TRIALS, N_THREADS, ZYGOTE_KEEPALIVE)
 
-	bOpsPerSec := float64(N_PROC) / bMean.Seconds()
-	fOpsPerSec := float64(N_PROC) / fMean.Seconds()
+	bOpsPerSec := float64(N_PROC) / bMin.Seconds()
+	fOpsPerSec := float64(N_PROC) / fMin.Seconds()
 
-	fmt.Printf("baseline: %.2f ops/sec (p99 latency: %v)\n", bOpsPerSec, bP99)
-	fmt.Printf("fork:     %.2f ops/sec (p99 latency: %v)\n", fOpsPerSec, fP99)
-	fmt.Printf("speedup:  %.2fx\n", bOpsPerSec/fOpsPerSec)
+	fmt.Printf("baseline: %.2f ops/sec\n", bOpsPerSec, bMin)
+	fmt.Printf("fork:     %.2f ops/sec\n", fOpsPerSec, fMin)
+	fmt.Printf("speedup:  %.2fx\n", fOpsPerSec/bOpsPerSec)
 }

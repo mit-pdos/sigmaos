@@ -8,12 +8,16 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 
 	proto "sigmaos/pyenv/proto"
 	"sigmaos/pyenv/pylock"
+	"sigmaos/sigmap"
+	"sigmaos/util/perf"
 
 	"github.com/google/uuid"
 )
@@ -139,6 +143,7 @@ func loadEnvMarkers(path string) map[string]string {
 // DownloadWheel downloads a wheel from its URL and verifies its hash.
 // Returns the path to the downloaded wheel.
 func DownloadWheel(wheel *proto.Wheel) (string, error) {
+	start := time.Now()
 	sha256 := wheel.Hashes.Sha256
 	if sha256 == "" {
 		return "", fmt.Errorf("Wheel %q has no sha256 hash", wheel.Name)
@@ -179,6 +184,7 @@ func DownloadWheel(wheel *proto.Wheel) (string, error) {
 		_ = os.Remove(outPath)
 		return "", fmt.Errorf("downloaded wheel %q has invalid hash", wheel.Name)
 	}
+	perf.LogSpawnLatency("pyenv DownloadWheel (%s)", sigmap.NOT_SET, perf.TIME_NOT_SET, start, wheel.Name)
 	return outPath, nil
 }
 
@@ -232,6 +238,7 @@ func GetWheelInstallPath(wheel *proto.Wheel, pyVersion *PythonVersion) (string, 
 // InstallWheel installs a wheel to a temporary directory using the specified Python version.
 // Returns the path to the temporary installation directory.
 func InstallWheel(wheelPath string, pyVersion *PythonVersion) (string, error) {
+	start := time.Now()
 	// Install into temporary directory first, and then move to final location
 	// to avoid partially installed wheels if installation fails.
 	tmpInstallDir := filepath.Join(PYTHON_TMP_INSTALL_DIR, uuid.New().String())
@@ -245,6 +252,7 @@ func InstallWheel(wheelPath string, pyVersion *PythonVersion) (string, error) {
 		return "", fmt.Errorf("failed to install wheel %q: %w", wheelPath, err)
 	}
 
+	perf.LogSpawnLatency("pyenv InstallWheel (%s)", sigmap.NOT_SET, perf.TIME_NOT_SET, start, path.Base(wheelPath))
 	return tmpInstallDir, nil
 }
 

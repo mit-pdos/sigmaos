@@ -1,7 +1,11 @@
 package benchmarks_test
 
 import (
+	"bufio"
 	"fmt"
+	"regexp"
+	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -109,4 +113,107 @@ func TestPythonSitePackagesType(t *testing.T) {
 
 		printPythonSPStats(string(spType), results[spType])
 	}
+}
+
+func parsePyenvWheelLatencies(log string) map[string]time.Duration {
+	totals := map[string]time.Duration{}
+	opRe := regexp.MustCompile(`(DownloadWheel|InstallWheel).*op:([0-9]+(?:\.[0-9]+)?)(s|ms|us)`)
+
+	scanner := bufio.NewScanner(strings.NewReader(log))
+	for scanner.Scan() {
+		m := opRe.FindStringSubmatch(scanner.Text())
+		if m == nil {
+			continue
+		}
+
+		val, _ := strconv.ParseFloat(m[2], 64)
+
+		var us float64
+		switch m[3] {
+		case "s":
+			us = val * 1_000_000
+		case "ms":
+			us = val * 1_000
+		case "us":
+			us = val
+		}
+
+		totals[m[1]] += time.Duration(us) * time.Microsecond
+	}
+
+	return totals
+}
+
+func TestPythonPyenvDownloadInstallLatency(t *testing.T) {
+	benchmarks.EnsureSigmaDebugEnabled(t, "SPAWN_LAT")
+
+	w, err := getPythonWorkload("massive_import")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ts, err := test.NewTstateAll(t)
+	if err != nil {
+		t.Fatalf("new tstate: %v", err)
+	}
+	defer ts.Shutdown()
+
+	if _, err := spawnAndWaitPython(ts, w, ""); err != nil {
+		t.Fatalf("spawnAndWait: %v", err)
+	}
+
+	logs, err := runLogsScript()
+	if err != nil {
+		t.Fatalf("collect logs: %v", err)
+	}
+
+	latencies := parsePyenvWheelLatencies(logs)
+	for op, latency := range latencies {
+		fmt.Printf("%s latency: %v\n", op, latency)
+	}
+
+	ratio := float64(latencies["InstallWheel"].Milliseconds()) / float64(latencies["DownloadWheel"].Milliseconds())
+	fmt.Printf("Install/Download ratio: %.2f\n", ratio)
+}
+
+// func parseStartLatencies(logs string) ([]time.Duration, []time.Duration, error) {
+// 	var spawnLatencies []time.Duration
+// 	var forkLatencies []time.Duration
+
+// 	re := regexp.MustCompile(`sinceSpawn:(\d+)us`)
+
+// 	lines := strings.Split(logs, "\n")
+// 	for _, line := range lines {
+// 		if strings.Contains(line, "E2e spawn time since spawn until main") {
+// 			m := re.FindStringSubmatch(line)
+// 			if m == nil {
+// 				return nil, nil, fmt.Errorf("failed to parse spawn latency from line: %s", line)
+// 			}
+
+// 			val, err := strconv.Atoi(m[1])
+// 			if err != nil {
+// 				return nil, nil, fmt.Errorf("failed to parse spawn latency from line: %s", line)
+// 			}
+
+// 			spawnLatencies = append(spawnLatencies, time.Duration(val)*time.Microsecond)
+// 		} else if strings.Contains(line, "E2e spawn time since fork until main") {
+// 			m := re.FindStringSubmatch(line)
+// 			if m == nil {
+// 				return nil, nil, fmt.Errorf("failed to parse fork latency from line: %s", line)
+// 			}
+
+// 			val, err := strconv.Atoi(m[1])
+// 			if err != nil {
+// 				return nil, nil, fmt.Errorf("failed to parse fork latency from line: %s", line)
+// 			}
+
+// 			forkLatencies = append(forkLatencies, time.Duration(val)*time.Microsecond)
+// 		}
+// 	}
+
+// 	return spawnLatencies, forkLatencies, nil
+// }
+
+func TestPythonSitePackagesSpawnLat(t *testing.T) {
+
 }

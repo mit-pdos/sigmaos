@@ -206,11 +206,13 @@ func SetupSitePackages(
 		return "", 0, nil
 	}
 
-	totalSize := int64(0)
-	for _, wheel := range wheels {
-		totalSize += wheel.Size
+	if db.WillBePrinted(db.CONTAINER) {
+		totalSize := int64(0)
+		for _, wheel := range wheels {
+			totalSize += wheel.Size
+		}
+		db.DPrintf(db.CONTAINER, "Total size of required python wheels: %d bytes", totalSize)
 	}
-	db.DPrintf(db.CONTAINER, "Total size of required python wheels: %d bytes", totalSize)
 
 	// Install all wheels atomically and acquire locks
 	// This ensures all-or-nothing semantics

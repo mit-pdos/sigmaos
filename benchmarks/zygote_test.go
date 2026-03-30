@@ -3,7 +3,6 @@ package benchmarks_test
 import (
 	"bytes"
 	"fmt"
-	"os"
 	"os/exec"
 	"regexp"
 	"runtime"
@@ -222,46 +221,6 @@ func parseLevels(s string) ([]int, error) {
 	return levels, nil
 }
 
-func debugSelectorsSet(s string) map[string]bool {
-	out := make(map[string]bool)
-	for _, p := range strings.Split(s, ";") {
-		p = strings.TrimSpace(p)
-		if p == "" {
-			continue
-		}
-		out[p] = true
-	}
-	return out
-}
-
-func ensurePSSDebugEnabled(t *testing.T) func() {
-	t.Helper()
-	prev, hadPrev := os.LookupEnv("SIGMADEBUG")
-	sel := debugSelectorsSet(prev)
-	sel["PSS"] = true
-	sel["PSS_ERR"] = true
-
-	keys := make([]string, 0, len(sel))
-	for k := range sel {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	updated := strings.Join(keys, ";")
-	if updated != "" {
-		updated += ";"
-	}
-	if err := os.Setenv("SIGMADEBUG", updated); err != nil {
-		t.Fatalf("set SIGMADEBUG: %v", err)
-	}
-	return func() {
-		if hadPrev {
-			_ = os.Setenv("SIGMADEBUG", prev)
-		} else {
-			_ = os.Unsetenv("SIGMADEBUG")
-		}
-	}
-}
-
 var pssLineRE = regexp.MustCompile(`\[([^\]]+)\]\s+PSS:\s+([0-9]+)KB`)
 
 func runLogsScript() (string, error) {
@@ -388,8 +347,7 @@ func runMemoryScenario(ts *test.Tstate, w zygoteWorkload, n int, useFork bool, c
 }
 
 func TestZygoteForkMemoryScaling(t *testing.T) {
-	restoreDebug := ensurePSSDebugEnabled(t)
-	defer restoreDebug()
+	benchmarks.EnsureSigmaDebugEnabled(t, "PSS", "PSS_ERR")
 
 	levels, err := parseLevels(ZYGOTE_MEM_LEVELS)
 	if err != nil {

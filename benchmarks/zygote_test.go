@@ -575,7 +575,6 @@ func runZygoteThroughputTrial(ts *test.Tstate, useFork bool, n int, forkCfg proc
 			ts.WaitExit(p.GetPid())
 		}
 
-		// Spawn procs
 		i := 0
 		for j := 0; j < N_THREADS; j++ {
 			cfg := forkCfgs[j]
@@ -619,12 +618,14 @@ func TestZygoteThroughput(t *testing.T) {
 	for i := 0; i < N_TRIALS; i++ {
 		d := runZygoteThroughputTrial(ts, false, N_PROC, forkCfg)
 		baselineResults.Append(d, float64(N_PROC))
+		fmt.Printf("baseline trial %d: %v\n", i, d)
 	}
 
 	forkResults := benchmarks.NewResults(N_TRIALS, benchmarks.OPS)
 	for i := 0; i < N_TRIALS; i++ {
 		d := runZygoteThroughputTrial(ts, true, N_PROC, forkCfg)
 		forkResults.Append(d, float64(N_PROC))
+		fmt.Printf("    fork trial %d: %v\n", i, d)
 	}
 
 	bMin, _ := baselineResults.Percentile(0)

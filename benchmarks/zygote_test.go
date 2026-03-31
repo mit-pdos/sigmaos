@@ -578,7 +578,7 @@ func runZygoteThroughputTrial(ts *test.Tstate, useFork bool, n int, forkCfg proc
 		i := 0
 		for j := 0; j < N_THREADS; j++ {
 			cfg := forkCfgs[j]
-			for k := 0; k < n/N_THREADS; k++ {
+			for k := 0; k <= n/N_THREADS; k++ {
 				if i >= n {
 					break
 				}

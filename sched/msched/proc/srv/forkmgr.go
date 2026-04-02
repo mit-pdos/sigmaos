@@ -655,7 +655,6 @@ usable:
 		return nil, fmt.Errorf("zygote connection missing")
 	}
 
-	uproc.AppendEnv(proc.SIGMADEBUGPID, uproc.GetPid().String())
 	uproc.AppendEnv("SIGMA_EXEC_TIME", strconv.FormatInt(time.Now().UnixMicro(), 10))
 	b, err := time.Now().MarshalText()
 	if err != nil {

@@ -3,7 +3,6 @@ package proc
 import (
 	"crypto/sha256"
 	"encoding/hex"
-	"maps"
 	"time"
 
 	"google.golang.org/protobuf/proto"
@@ -37,7 +36,8 @@ func NewForkProc(cfg ForkConfig, childArgs []string) *Proc {
 	clone := NewProc(cfg.ZygoteProc.GetProgram(), append([]string{}, cfg.ZygoteProc.Args...))
 	clone.GetProcEnv().UseSPProxy = cfg.ZygoteProc.GetProcEnv().UseSPProxy
 	clone.GetProcEnv().UseSPProxyProcClnt = cfg.ZygoteProc.GetProcEnv().UseSPProxyProcClnt
-	clone.Env = maps.Clone(cfg.ZygoteProc.Env)
+	// Note that we don't clone the Zygote's env directly since the child proc will ihnerit
+	// the Zygote's env when forking.
 
 	// Compute a stable zygote key from the initialization procedure.
 	keyMsg := &ForkProcProto{

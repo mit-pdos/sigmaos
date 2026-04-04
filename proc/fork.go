@@ -3,6 +3,7 @@ package proc
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"maps"
 	"time"
 
 	"google.golang.org/protobuf/proto"
@@ -32,6 +33,8 @@ func NewForkProc(cfg ForkConfig, childArgs []string) *Proc {
 		return nil
 	}
 
+	zygoteEnv := maps.Clone(cfg.ZygoteProc.Env)
+
 	// Clone the Zygote proc definition but assign a fresh pid.
 	clone := NewProc(cfg.ZygoteProc.GetProgram(), append([]string{}, cfg.ZygoteProc.Args...))
 	clone.GetProcEnv().UseSPProxy = cfg.ZygoteProc.GetProcEnv().UseSPProxy
@@ -43,7 +46,7 @@ func NewForkProc(cfg ForkConfig, childArgs []string) *Proc {
 	keyMsg := &ForkProcProto{
 		ZygoteProgram: cfg.ZygoteProc.GetProgram(),
 		ZygoteArgs:    append([]string{}, cfg.ZygoteProc.Args...),
-		ZygoteEnv:     clone.Env,
+		ZygoteEnv:     zygoteEnv,
 	}
 	b, _ := (proto.MarshalOptions{Deterministic: true}).Marshal(keyMsg)
 	h := sha256.Sum256(b)
@@ -53,7 +56,7 @@ func NewForkProc(cfg ForkConfig, childArgs []string) *Proc {
 		ZygoteKey:     zygoteKey,
 		ZygoteProgram: cfg.ZygoteProc.GetProgram(),
 		ZygoteArgs:    append([]string{}, cfg.ZygoteProc.Args...),
-		ZygoteEnv:     clone.Env,
+		ZygoteEnv:     zygoteEnv,
 		KeepAliveNs:   uint64(cfg.KeepAlive),
 		ChildArgs:     append([]string{}, childArgs...),
 	}

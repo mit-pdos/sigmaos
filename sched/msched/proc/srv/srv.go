@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime/debug"
 	"sync"
 	"sync/atomic"
 	"syscall"
@@ -111,6 +112,7 @@ type ProcRPCSrv struct {
 }
 
 func RunProcSrv(kernelId string, dialproxy bool, gvisor bool, spproxydPID sp.Tpid) error {
+	debug.SetMaxThreads(100_000)
 	pe := proc.GetProcEnv()
 	ps := &ProcSrv{
 		kernelId:        kernelId,

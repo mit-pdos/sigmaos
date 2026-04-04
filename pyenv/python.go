@@ -86,7 +86,7 @@ func initPythonVersions() {
 		// Python 3.11 configuration
 		py311 := &PythonVersion{
 			version:        "cpython3.11",
-			pythonPath:     "/tmp/python/python/build/lib.linux-x86_64-3.11:/tmp/python/python/Lib:/tmp/python/python/sigmaos/user/site-packages",
+			pythonPath:     "/tmp/python/cpython3.11/build/lib.linux-x86_64-3.11:/tmp/python/cpython3.11/Lib:/tmp/python/cpython3.11/sigmaos/user/site-packages",
 			sysTags:        loadSysTags("/home/sigmaos/bin/kernel/cpython3.11/sigmaos/sys_tags"),
 			envMarkers:     loadEnvMarkers("/home/sigmaos/bin/kernel/cpython3.11/sigmaos/env_markers.json"),
 			dcontainerPath: "/home/sigmaos/bin/kernel/cpython3.11",

@@ -9,7 +9,6 @@ import os
 import time
 
 
-SIGMA_FORK_SOCK = "SIGMA_FORK_SOCK"
 SIGMA_FORK_ZYGOTE_KEY = "SIGMA_FORK_ZYGOTE_KEY"
 
 

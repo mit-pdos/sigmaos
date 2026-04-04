@@ -26,9 +26,8 @@ import (
 )
 
 const (
-	forkSockEnv                   = "SIGMA_FORK_SOCK"
 	forkZygoteEnv                 = "SIGMA_FORK_ZYGOTE_KEY"
-	defaultSockRel                = "/tmp/sigma_fork.sock"
+	forkSockPath                  = "/tmp/sigma_fork.sock"
 	zygoteGracefulShutdownTimeout = 5 * time.Second
 )
 
@@ -154,6 +153,8 @@ type forkMgr struct {
 	ps      *ProcSrv
 	mu      sync.RWMutex
 	zygotes zygoteMap
+
+	listener *net.UnixListener
 }
 
 type zygoteEntry struct {
@@ -167,10 +168,9 @@ type zygoteEntry struct {
 	state   zygoteState
 	readyCh chan struct{} // closed when state transitions to stateReady
 
-	// Connection management
-	connMu   sync.Mutex
-	listener *net.UnixListener
-	zygConn  *net.UnixConn
+	// Connection management (shared global socket)
+	connMu  sync.Mutex
+	zygConn *net.UnixConn
 
 	// Fork request tracking
 	pendingMu sync.RWMutex
@@ -193,14 +193,90 @@ type zygoteEntry struct {
 }
 
 func newForkMgr(ps *ProcSrv) *forkMgr {
-	return &forkMgr{
+	mgr := &forkMgr{
 		ps:      ps,
 		zygotes: newZygoteMap(),
 	}
+
+	if err := mgr.setupListener(); err != nil {
+		db.DFatalf("Failed to set up fork manager listener: %v", err)
+	}
+
+	return mgr
 }
 
-func (fm *forkMgr) forkSockHostPath(pid sp.Tpid) string {
-	return filepath.Join(scontainer.JailPath(pid), "tmp", filepath.Base(defaultSockRel))
+func (fm *forkMgr) setupListener() error {
+	if fm.listener != nil {
+		return nil
+	}
+
+	fm.mu.Lock()
+	defer fm.mu.Unlock()
+
+	if fm.listener != nil {
+		return nil
+	}
+
+	if err := os.MkdirAll(filepath.Dir(forkSockPath), 0777); err != nil {
+		return fmt.Errorf("mkdir fork sock dir: %w", err)
+	}
+	_ = os.Remove(forkSockPath)
+
+	addr, err := net.ResolveUnixAddr("unixpacket", forkSockPath)
+	if err != nil {
+		return err
+	}
+
+	listener, err := net.ListenUnix("unixpacket", addr)
+	if err != nil {
+		return err
+	}
+
+	fm.listener = listener
+	go fm.acceptLoop()
+
+	return nil
+}
+
+func (fm *forkMgr) acceptLoop() {
+	for {
+		listener := fm.listener
+		if listener == nil {
+			return
+		}
+
+		_ = listener.SetDeadline(time.Now().Add(1 * time.Second))
+		conn, err := listener.AcceptUnix()
+
+		if err != nil {
+			if errors.Is(err, net.ErrClosed) {
+				return
+			}
+			if opErr, ok := err.(*net.OpError); ok && opErr.Timeout() {
+				continue
+			}
+			db.DPrintf(db.PROCD_ERR, "forkmgr accept error: %v", err)
+			continue
+		}
+
+		go fm.handleConn(conn)
+	}
+}
+
+func (fm *forkMgr) handleConn(conn *net.UnixConn) {
+	var m forkMsg
+	if err := readMsg(conn, &m); err != nil {
+		conn.Close()
+		return
+	}
+
+	if m.Type != "hello" {
+		_ = writeMsg(conn, forkMsg{Type: "err"})
+		conn.Close()
+		return
+	}
+
+	fm.handleHello(conn, &m)
 }
 
 // getState returns the current state safely
@@ -227,6 +303,7 @@ func (ze *zygoteEntry) isUsable() bool {
 }
 
 func (fm *forkMgr) ensureZygote(uproc *proc.Proc) (*zygoteEntry, error) {
+	db.DPrintf(db.PROCD, "Ensuring zygote for proc %d (program: %s)\n", uproc.GetPid(), uproc.GetVersionedProgram())
 	fp := uproc.GetForkProc()
 	if fp == nil {
 		return nil, fmt.Errorf("ensureZygote called for non-fork proc")
@@ -277,30 +354,8 @@ func (fm *forkMgr) ensureZygote(uproc *proc.Proc) (*zygoteEntry, error) {
 	zyg.SetMem(uproc.GetMem())
 	zyg.SetSpawnTime(uproc.GetSpawnTime())
 
-	// Set up supervisor socket
-	sockHost := fm.forkSockHostPath(zyg.GetPid())
-	if err := os.MkdirAll(filepath.Dir(sockHost), 0777); err != nil {
-		cancel()
-		return nil, fmt.Errorf("mkdir fork sock dir: %w", err)
-	}
-	_ = os.Remove(sockHost)
-
-	addr, err := net.ResolveUnixAddr("unixpacket", sockHost)
-	if err != nil {
-		cancel()
-		return nil, err
-	}
-
-	listener, err := net.ListenUnix("unixpacket", addr)
-	if err != nil {
-		cancel()
-		return nil, err
-	}
-
-	ze.listener = listener
 	ze.zygProc = zyg
 
-	zyg.AppendEnv(forkSockEnv, defaultSockRel)
 	zyg.AppendEnv(forkZygoteEnv, key)
 
 	// Assign to realm
@@ -315,7 +370,6 @@ func (fm *forkMgr) ensureZygote(uproc *proc.Proc) (*zygoteEntry, error) {
 	if err := fm.ps.assignToRealm(zyg.GetRealm(), zyg.GetPid(), stringProg,
 		zyg.GetSigmaPath(), zyg.GetSecrets()["s3"], zyg.GetNamedEndpoint()); err != nil {
 		cancel()
-		_ = listener.Close()
 		return nil, err
 	}
 
@@ -326,7 +380,6 @@ func (fm *forkMgr) ensureZygote(uproc *proc.Proc) (*zygoteEntry, error) {
 	cmd, err := scontainer.StartSigmaContainer(zyg, fm.ps.dialproxy, fm.ps.sc, fm.ps.pyenvClnt)
 	if err != nil {
 		cancel()
-		_ = listener.Close()
 		return nil, err
 	}
 	ze.zygCmd = cmd
@@ -335,76 +388,20 @@ func (fm *forkMgr) ensureZygote(uproc *proc.Proc) (*zygoteEntry, error) {
 	fm.zygotes.add(ze)
 
 	// Start background goroutines
-	ze.wg.Add(2)
-	go fm.acceptLoop(ze)
+	ze.wg.Add(1)
 	go fm.monitorZygote(ze)
 
 	return ze, nil
 }
 
-func (fm *forkMgr) acceptLoop(ze *zygoteEntry) {
-	defer ze.wg.Done()
+func (fm *forkMgr) handleHello(conn *net.UnixConn, m *forkMsg) {
+	fm.mu.RLock()
+	ze, ok := fm.zygotes.getByKey(m.ZygoteKey)
+	fm.mu.RUnlock()
 
-	for {
-		select {
-		case <-ze.ctx.Done():
-			return
-		default:
-		}
-
-		// Set deadline to allow periodic context checks
-		ze.connMu.Lock()
-		listener := ze.listener
-		ze.connMu.Unlock()
-
-		if listener == nil {
-			return
-		}
-
-		_ = listener.SetDeadline(time.Now().Add(1 * time.Second))
-		conn, err := listener.AcceptUnix()
-
-		if err != nil {
-			if errors.Is(err, net.ErrClosed) {
-				return
-			}
-			if opErr, ok := err.(*net.OpError); ok && opErr.Timeout() {
-				continue
-			}
-			select {
-			case <-ze.ctx.Done():
-				return
-			default:
-				db.DPrintf(db.PROCD_ERR, "forkmgr accept error: %v", err)
-				continue
-			}
-		}
-
-		ze.wg.Add(1)
-		go fm.handleConn(ze, conn)
-	}
-}
-
-func (fm *forkMgr) handleConn(ze *zygoteEntry, conn *net.UnixConn) {
-	defer ze.wg.Done()
-
-	var m forkMsg
-	if err := readMsg(conn, &m); err != nil {
-		return
-	}
-
-	switch m.Type {
-	case "hello":
-		fm.handleHello(ze, conn, &m)
-	default:
+	if !ok || ze == nil {
 		_ = writeMsg(conn, forkMsg{Type: "err"})
 		conn.Close()
-	}
-}
-
-func (fm *forkMgr) handleHello(ze *zygoteEntry, conn *net.UnixConn, m *forkMsg) {
-	if m.ZygoteKey != ze.key {
-		_ = writeMsg(conn, forkMsg{Type: "err"})
 		return
 	}
 
@@ -447,14 +444,6 @@ func (fm *forkMgr) handleHello(ze *zygoteEntry, conn *net.UnixConn, m *forkMsg) 
 	// From here on out, we expect all incoming messages to be of type "child".
 	ze.wg.Add(1)
 	go fm.zygoteStreamReader(ze, conn)
-
-	// Additionally, we may close the listener, as we've sucesfully established a connection.
-	go func() {
-		listener := ze.listener
-		if listener != nil {
-			_ = listener.Close()
-		}
-	}()
 }
 
 func (fm *forkMgr) zygoteStreamReader(ze *zygoteEntry, conn *net.UnixConn) {
@@ -559,12 +548,8 @@ func (fm *forkMgr) monitorZygote(ze *zygoteEntry) {
 	ze.cancel()
 	fm.mu.Unlock()
 
-	// Close all connections
+	// Close zygote connection
 	ze.connMu.Lock()
-	if ze.listener != nil {
-		_ = ze.listener.Close()
-		ze.listener = nil
-	}
 	if ze.zygConn != nil {
 		_ = ze.zygConn.Close()
 		ze.zygConn = nil
@@ -774,16 +759,12 @@ func (fm *forkMgr) tryEvict(ze *zygoteEntry) {
 	ze.cancel()
 	fm.mu.Unlock()
 
-	// Close connections to trigger shutdown.
+	// Close zygote connection to trigger shutdown.
 	// We do this in a separate goroutine to avoid blocking on the .Close call.
 	go func() {
 		ze.connMu.Lock()
 		defer ze.connMu.Unlock()
 
-		if ze.listener != nil {
-			_ = ze.listener.Close()
-			ze.listener = nil
-		}
 		if ze.zygConn != nil {
 			_ = ze.zygConn.Close()
 			ze.zygConn = nil

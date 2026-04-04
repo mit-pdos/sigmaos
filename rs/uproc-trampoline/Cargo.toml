@@ -11,6 +11,6 @@ chrono = "0.4.31"
 env_logger = "0.10.0"
 libseccomp = { version = "0.3.0", features = ["const-syscall"] }
 log = "0.4.20"
-nix = { version = "0.27.1", features = ["fs"] }
+nix = { version = "0.27.1", features = ["fs", "sched"] }
 serde = { version = "1.0.188", features = ["derive"] }
 sys-mount = { version = "2.1.0", default-features = false}

@@ -3,11 +3,9 @@ package python
 import (
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"sync"
-	"syscall"
 	"time"
 
 	db "sigmaos/debug"
@@ -18,14 +16,6 @@ import (
 	"sigmaos/util/perf"
 
 	lru "github.com/hashicorp/golang-lru/v2"
-)
-
-type TPySitePackagesType string
-
-const (
-	OverlaySPType    TPySitePackagesType = "overlayfs"
-	SymlinkSPType    TPySitePackagesType = "symlink"
-	PythonPathSPType TPySitePackagesType = "pythonpath"
 )
 
 type cacheKey struct {
@@ -164,16 +154,14 @@ func getRequiredWheels(lock *pylock.Pylock, pyVersion *pyenv.PythonVersion) ([]*
 	return wheels, nil
 }
 
-// SetupSitePackages sets up the site-packages directory by installing all required wheels
-// and mounting an overlayFS. It atomically acquires locks on all wheels.
+// SetupSitePackages sets up the site-packages directory by installing all required wheels.
+// It atomically acquires locks on all wheels.
 // Returns the path to the site-packages directory and a lock handle.
 // The lock handle must be released when the process is done with the packages.
 func SetupSitePackages(
 	uproc *proc.Proc,
-	workingDir string,
 	pyVersion *pyenv.PythonVersion,
 	pylockPath string,
-	stType TPySitePackagesType,
 	pyenvClnt *clnt.PyEnvClnt,
 ) (string, clnt.LockHandle, error) {
 	initCache()
@@ -223,144 +211,10 @@ func SetupSitePackages(
 		return "", 0, fmt.Errorf("failed to install wheels: %w", err)
 	}
 
-	s = time.Now()
-	if stType == OverlaySPType {
-		overlayDir, err := mountOverlayFS(workingDir, installPaths)
-		perf.LogSpawnLatency("SetupSitePackages mountOverlayFS", uproc.GetPid(), uproc.GetSpawnTime(), s)
-		if err != nil {
-			// Release locks on failure
-			pyenvClnt.ReleaseLocks(handle)
-			return "", 0, err
-		}
-		return filepath.Join(overlayDir, "site-packages"), handle, nil
-	} else if stType == SymlinkSPType {
-		symlinkDir, err := symlinkSitePackages(workingDir, installPaths)
-		perf.LogSpawnLatency("SetupSitePackages symlinkSitePackages", uproc.GetPid(), uproc.GetSpawnTime(), s)
-		if err != nil {
-			// Release locks on failure
-			pyenvClnt.ReleaseLocks(handle)
-			return "", 0, fmt.Errorf("failed to set up site-packages symlinks: %w", err)
-		}
-		return filepath.Join(symlinkDir, "site-packages"), handle, nil
-	} else if stType == PythonPathSPType {
-		for i, path := range installPaths {
-			installPaths[i] = filepath.Join(path, "site-packages")
-		}
-		return strings.Join(installPaths, ":"), handle, nil
+	for i, path := range installPaths {
+		installPaths[i] = filepath.Join(path, "site-packages")
 	}
-
-	return "", 0, fmt.Errorf("unknown site-packages type: %v", stType)
-}
-
-func mountOverlayFS(workingDir string, lowerdirs []string) (string, error) {
-	upperdir := filepath.Join(workingDir, "upper")
-	workdir := filepath.Join(workingDir, "work")
-	target := filepath.Join(workingDir, "overlay")
-
-	for _, d := range append(lowerdirs, upperdir, workdir, target) {
-		if err := os.MkdirAll(d, 0755); err != nil {
-			return "", err
-		}
-	}
-
-	opts := fmt.Sprintf("lowerdir=%s,upperdir=%s,workdir=%s",
-		strings.Join(lowerdirs, ":"), upperdir, workdir)
-
-	// Use fuse-overlayfs to allow creating an overlayFS inside the docker overlayFS
-	cmd := exec.Command("fuse-overlayfs", "-o", opts, target)
-	if err := cmd.Run(); err != nil {
-		// fuse.overlayfs tends to return non-zero exit code even on success
-		// with error: "unknown argument ignored: lazytime"
-		// So we double-check with findmnt if the mount was successful.
-		findmntCmd := exec.Command("findmnt", "-n", "-t", "fuse.fuse-overlayfs", "-T", target)
-		if findmntCmd.Run() != nil {
-			return "", fmt.Errorf("setting up python site-packages overlayfs failed (%v): %w", cmd, err)
-		}
-	}
-
-	return target, nil
-}
-
-func symlinkSitePackages(workingDir string, lowerdirs []string) (string, error) {
-	if err := os.MkdirAll(workingDir, 0755); err != nil {
-		return "", err
-	}
-
-	err := symlinkMerge(workingDir, lowerdirs)
-	if err != nil {
-		return "", err
-	}
-
-	return workingDir, nil
-}
-
-// Merges multiple input directories into a single output directory using symlinks.
-// In case of filename collisions, creates subdirectories to resolve them.
-func symlinkMerge(outDir string, inputDirs []string) error {
-	// Map to group paths by their filename
-	// Key: Filename (e.g., "a", "b")
-	// Value: List of full paths where this file exists (e.g., ["/abs/foo/a", "/abs/bar/a"])
-	entries := make(map[string][]string)
-
-	for _, src := range inputDirs {
-		items, err := os.ReadDir(src)
-		if err != nil {
-			return fmt.Errorf("failed to read dir %s: %w", src, err)
-		}
-
-		for _, item := range items {
-			name := item.Name()
-			fullPath := filepath.Join(src, name)
-			entries[name] = append(entries[name], fullPath)
-		}
-	}
-
-	for name, paths := range entries {
-		targetOut := filepath.Join(outDir, name)
-		// CASE 1: Unique (Only exists in one source)
-		// We can just symlink the whole thing, whether it's a file or a folder.
-		// This handles the "out/b -> bar/b" requirement.
-		if len(paths) == 1 {
-			if err := os.Symlink(paths[0], targetOut); err != nil {
-				return err
-			}
-			continue
-		}
-
-		// CASE 2: Collision File
-		info, err := os.Stat(paths[0])
-		if err != nil {
-			return err
-		}
-		if !info.IsDir() {
-			// If it's a file, we create a symlink to the first path in the list.
-			if err := os.Symlink(paths[0], targetOut); err != nil {
-				return err
-			}
-			continue
-		}
-
-		// CASE 3: Collision Directory
-		if err := os.MkdirAll(targetOut, 0755); err != nil {
-			return fmt.Errorf("failed to create merge dir %s: %w", targetOut, err)
-		}
-		if err := symlinkMerge(targetOut, paths); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-// CleanSitePackages unmounts the site-packages overlayFS.
-// Note: Lock release is handled separately by the caller using the lock handle
-// returned from SetupSitePackages.
-func CleanSitePackages(workingDir string) error {
-	target := filepath.Join(workingDir, "overlay")
-	if err := syscall.Unmount(target, 0); err != nil {
-		return fmt.Errorf("failed to unmount overlayFS: %w", err)
-	}
-	return nil
+	return strings.Join(installPaths, ":"), handle, nil
 }
 
 func GetPythonFileArg(args []string) (string, int, error) {

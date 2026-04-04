@@ -3,12 +3,14 @@
 package scontainer
 
 import (
+	"bufio"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -22,6 +24,8 @@ import (
 	sp "sigmaos/sigmap"
 	"sigmaos/util/linux/mem"
 	"sigmaos/util/perf"
+
+	"golang.org/x/sys/unix"
 )
 
 // UProcCmd is a handle for a running user proc inside a sigma container.
@@ -29,7 +33,6 @@ import (
 type UProcCmd struct {
 	uproc      *proc.Proc
 	cmd        *exec.Cmd
-	jailPath   string
 	lockHandle pyenvclnt.LockHandle
 }
 
@@ -52,11 +55,21 @@ func (upc *UProcCmd) Kill() error {
 	return upc.cmd.Process.Kill()
 }
 
+var protoJailOnce sync.Once
+
 // Contain user procs using uproc-trampoline trampoline
 func StartSigmaContainer(uproc *proc.Proc, dialproxy bool, sc *sigmaclnt.SigmaClnt, pyenvClnt *pyenvclnt.PyEnvClnt) (*UProcCmd, error) {
+	protoJailOnce.Do(func() {
+		db.DPrintf(db.CONTAINER, "Setting up proto jail")
+		if _, err := SetupProtoJail(); err != nil {
+			db.DFatalf("Failed to set up proto jail: %v", err)
+		}
+		db.DPrintf(db.CONTAINER, "Did setup proto jail")
+	})
+
 	db.DPrintf(db.CONTAINER, "RunUProc scontainer dialproxy %v %v env %v\n", dialproxy, uproc, os.Environ())
 
-	uprocCmd := &UProcCmd{uproc: uproc, cmd: nil, jailPath: JailPath(uproc.GetPid()), lockHandle: 0}
+	uprocCmd := &UProcCmd{uproc: uproc, cmd: nil, lockHandle: 0}
 
 	straceProcs := proc.GetLabels(uproc.GetProcEnv().GetStrace())
 	valgrindProcs := proc.GetLabels(uproc.GetProcEnv().GetValgrind())
@@ -77,12 +90,9 @@ func StartSigmaContainer(uproc *proc.Proc, dialproxy bool, sc *sigmaclnt.SigmaCl
 		startPythonSetup := time.Now()
 		pythonPath := pythonVersion.PythonPath()
 
-		// uproc-trampoline will mount the correct python interpreter files
-		// from /home/sigmaos/bin/kernel/<python-version> to the sigma container
-		// python dir /tmp/python/python.
-		pn = "/tmp/python/python/python"
-
-		os.MkdirAll(filepath.Join(uprocCmd.jailPath, "tmp/python"), 0777)
+		// The scontainer proto jail has all python persions mounted at
+		// /tmp/python/<python-version>/python.
+		pn = "/tmp/python/" + pythonVersion.Version() + "/python"
 
 		if pythonFile, argIndex, err := python.GetPythonFileArg(uproc.Args); err == nil {
 			db.DPrintf(db.CONTAINER, "pythonFile %v\n", pythonFile)
@@ -95,17 +105,10 @@ func StartSigmaContainer(uproc *proc.Proc, dialproxy bool, sc *sigmaclnt.SigmaCl
 			if pylockPath, err := python.GetPylockPath("/home/sigmaos/bin/kernel/pyproc", pythonFile); err == nil {
 				db.DPrintf(db.CONTAINER, "setting up python site-packages from %v", pylockPath)
 
-				spType := python.PythonPathSPType
-				if spTypeStr, ok := uproc.Env["SIGMA_PYTHON_SITE_PACKAGES_TYPE"]; ok {
-					spType = python.TPySitePackagesType(spTypeStr)
-				}
-
-				sitePackagesDir, lockHandle, err := python.SetupSitePackages(
+				additionalPythonPath, lockHandle, err := python.SetupSitePackages(
 					uproc,
-					pyEnvPath(uproc.GetPid()),
 					pythonVersion,
 					pylockPath,
-					spType,
 					pyenvClnt,
 				)
 
@@ -115,11 +118,12 @@ func StartSigmaContainer(uproc *proc.Proc, dialproxy bool, sc *sigmaclnt.SigmaCl
 					return nil, err
 				}
 
+				if additionalPythonPath != "" {
+					pythonPath = pythonPath + ":" + additionalPythonPath
+				}
+
 				// Store the lock handle for cleanup
 				uprocCmd.lockHandle = lockHandle
-				if sitePackagesDir != "" {
-					pythonPath = pythonPath + ":" + strings.TrimPrefix(sitePackagesDir, uprocCmd.jailPath)
-				}
 			} else {
 				db.DPrintf(db.CONTAINER, "No pylock.toml file found\n")
 			}
@@ -164,9 +168,7 @@ func StartSigmaContainer(uproc *proc.Proc, dialproxy bool, sc *sigmaclnt.SigmaCl
 
 	// Set up new namespaces
 	uprocCmd.cmd.SysProcAttr = &syscall.SysProcAttr{
-		Cloneflags: syscall.CLONE_NEWUTS |
-			syscall.CLONE_NEWPID |
-			syscall.CLONE_NEWNS,
+		Cloneflags: syscall.CLONE_NEWUTS | syscall.CLONE_NEWPID,
 	}
 	db.DPrintf(db.CONTAINER, "exec cmd %v", uprocCmd.cmd)
 
@@ -180,28 +182,71 @@ func StartSigmaContainer(uproc *proc.Proc, dialproxy bool, sc *sigmaclnt.SigmaCl
 	return uprocCmd, nil
 }
 
-// CleanupUProc removes the proc's python env (if any) and its jail directory.
-// It also releases any Python package locks held by the process.
 func CleanupUProc(uprocCmd *UProcCmd, pyenvClnt *pyenvclnt.PyEnvClnt) {
-	// Release Python package locks and remove site-packages overlay
+	// Release Python package locks
 	if uprocCmd.lockHandle != 0 {
-		pid := uprocCmd.uproc.GetPid()
-		python.CleanSitePackages(pyEnvPath(pid))
-
 		if err := pyenvClnt.ReleaseLocks(uprocCmd.lockHandle); err != nil {
 			db.DPrintf(db.CONTAINER, "Error releasing Python package locks: %v", err)
 		}
 	}
+}
 
-	if err := os.RemoveAll(uprocCmd.jailPath); err != nil {
-		db.DPrintf(db.ALWAYS, "Error cleanupJail: %v", err)
+// Spawn the [cmd/kernel/scontainer] command to create a new mount namespace that
+// contains the scontainer jail structure. Returns a path to the mount namespace file
+// that can be used by the uproc-trampoline to join the jail.
+func SetupProtoJail() (string, error) {
+	jailPath := filepath.Join(sp.SIGMAHOME, "jail/proto")
+	jailMntNsPath := filepath.Join(sp.SIGMAHOME, "jail/mntns")
+	cmd := exec.Command("/home/sigmaos/bin/kernel/scontainer", jailPath)
+	cmd.Stderr = os.Stderr
+
+	// Capture stdout
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		return "", fmt.Errorf("Failed to capture stdout: %v", err)
 	}
-}
 
-func JailPath(pid sp.Tpid) string {
-	return filepath.Join(sp.SIGMAHOME, "jail", pid.String())
-}
+	if err := cmd.Start(); err != nil {
+		return "", fmt.Errorf("Failed to start scontainer proto jail binary: %v", err)
+	}
 
-func pyEnvPath(pid sp.Tpid) string {
-	return filepath.Join(JailPath(pid), "python", "env")
+	scanner := bufio.NewScanner(stdout)
+	for scanner.Scan() {
+		line := scanner.Text()
+		if strings.Contains(line, "ok") {
+			break
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		cmd.Process.Kill()
+		return "", fmt.Errorf("Error reading stdout: %v", err)
+	}
+
+	go func() {
+		if err := cmd.Wait(); err != nil {
+			db.DPrintf(db.ALWAYS, "Proto jail process exited with error: %v", err)
+		} else {
+			db.DPrintf(db.ALWAYS, "Proto jail process exited")
+		}
+	}()
+
+	// Capture mount namespace
+	f, err := os.OpenFile(jailMntNsPath, os.O_CREATE|os.O_RDWR, 0666)
+	if err != nil {
+		cmd.Process.Kill()
+		return "", fmt.Errorf("error creating file %v: %w", jailMntNsPath, err)
+	}
+	f.Close()
+
+	procMntNsPath := fmt.Sprintf("/proc/%d/ns/mnt", cmd.Process.Pid)
+	fmt.Printf("Mounting proto jail mount namespace from %v to %v\n", procMntNsPath, jailMntNsPath)
+
+	err = unix.Mount(procMntNsPath, jailMntNsPath, "", unix.MS_BIND, "")
+	if err != nil {
+		cmd.Process.Kill()
+		return "", fmt.Errorf("Failed to mount mount namespace: %v", err)
+	}
+
+	return jailMntNsPath, nil
 }

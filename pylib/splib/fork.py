@@ -27,7 +27,6 @@ from typing import Any
 from splib.utils import log_spawn_latency
 
 
-SIGMA_FORK_SOCK = "SIGMA_FORK_SOCK"
 SIGMA_FORK_ZYGOTE_KEY = "SIGMA_FORK_ZYGOTE_KEY"
 
 
@@ -101,17 +100,13 @@ def fork_point() -> list[str]:
 
     gc.freeze()
 
-    sock_path = os.environ.get(SIGMA_FORK_SOCK)
-    if not sock_path:
-        raise RuntimeError(f"{SIGMA_FORK_SOCK} is not set")
-
     zygote_key = os.environ.get(SIGMA_FORK_ZYGOTE_KEY)
     if not zygote_key:
         raise RuntimeError(f"{SIGMA_FORK_ZYGOTE_KEY} is not set")
 
     # Persistent connection from the zygote to the supervisor.
     zsock = socket.socket(socket.AF_UNIX, socket.SOCK_SEQPACKET)
-    zsock.connect(sock_path)
+    zsock.connect("/tmp/sigma_fork.sock")
     _write_msg(zsock, {"type": "hello", "zygote_key": zygote_key})
     resp = _read_msg(zsock)
     if resp.get("type") != "ok":

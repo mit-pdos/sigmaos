@@ -4,7 +4,6 @@ import (
 	"flag"
 	"fmt"
 	"sigmaos/proc"
-	"sigmaos/scontainer/python"
 	"sigmaos/test"
 	"sigmaos/util/linux/mem"
 	"sync"
@@ -100,22 +99,6 @@ func TestPythonNumpyImport(t *testing.T) {
 
 	p2 := proc.NewPythonProc(proc.Python311, []string{"numpy_import/main.py"})
 	runBasicPythonTest(ts, "warm", p2)
-}
-
-func TestPythonMassiveImport(t *testing.T) {
-	ts, _ := test.NewTstateAll(t)
-	defer ts.Shutdown()
-
-	p := proc.NewPythonProc(proc.Python311, []string{"massive_import/main.py"})
-	runBasicPythonTest(ts, "cold", p)
-
-	for _, t := range []python.TPySitePackagesType{python.OverlaySPType, python.SymlinkSPType, python.PythonPathSPType} {
-		for i := 0; i < 4; i++ {
-			p = proc.NewPythonProc(proc.Python311, []string{"massive_import/main.py"})
-			p.Env["SIGMA_PYTHON_SITE_PACKAGES_TYPE"] = string(t)
-			runBasicPythonTest(ts, string(t), p)
-		}
-	}
 }
 
 func TestImageProcessing(t *testing.T) {

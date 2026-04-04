@@ -339,6 +339,7 @@ if [ "${NO_DOCKER}" != "true" ]; then
     cp $KERNELBIN/procd $PROCD_BIN/
     cp $KERNELBIN/spproxyd $PROCD_BIN/
     cp $KERNELBIN/uproc-trampoline $PROCD_BIN/
+    cp $KERNELBIN/scontainer $PROCD_BIN/
 
     cp -r $KERNELBIN/cpython* $PROCD_BIN/
     cp -r $KERNELBIN/pyproc $PROCD_BIN/   # TODO: Use binfs instead of shipping pyproc with the kernel

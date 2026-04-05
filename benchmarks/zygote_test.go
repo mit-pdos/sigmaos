@@ -56,8 +56,9 @@ func buildForkProc(cfg proc.ForkConfig, childName string, hold time.Duration) *p
 	return p
 }
 
-func spawnAndWaitRound(ts *test.Tstate, w zygoteWorkload, n int, useFork bool, hold time.Duration, cfg proc.ForkConfig, nZygotes int) (time.Duration, error) {
+func spawnAndWaitRound(ts *test.Tstate, w zygoteWorkload, n int, useFork bool, hold time.Duration, cfg proc.ForkConfig, nZygotes int, concurrency int) (time.Duration, error) {
 	var wg sync.WaitGroup
+	sem := make(chan struct{}, concurrency)
 	errCh := make(chan error, n)
 
 	var forkCfgs []proc.ForkConfig
@@ -93,6 +94,13 @@ func spawnAndWaitRound(ts *test.Tstate, w zygoteWorkload, n int, useFork bool, h
 				errCh <- fmt.Errorf("failed to build proc")
 				return
 			}
+
+			if concurrency > 0 {
+				// Optionally limit concurrency to avoid overwhelming the system.
+				sem <- struct{}{}
+				defer func() { <-sem }()
+			}
+
 			if err := ts.Spawn(p); err != nil {
 				errCh <- fmt.Errorf("spawn[%d]: %w", i, err)
 				return
@@ -155,19 +163,20 @@ func TestZygoteForkComparison(t *testing.T) {
 	zygoteProc := buildPythonProc(w, 0)
 	forkCfg := proc.ForkConfig{ZygoteProc: zygoteProc, KeepAlive: ZYGOTE_KEEPALIVE}
 
-	if _, err := spawnAndWaitRound(ts, w, 1, false, 0, forkCfg, 1); err != nil {
+	if _, err := spawnAndWaitRound(ts, w, 1, false, 0, forkCfg, 1, 0); err != nil {
 		t.Fatalf("warmup: %v", err)
 	}
 
 	baselineRound := benchmarks.NewResults(ZYGOTE_NTRIALS, benchmarks.OPS)
 	baselinePerProc := benchmarks.NewResults(ZYGOTE_NTRIALS, benchmarks.OPS)
 	for i := 0; i < ZYGOTE_NTRIALS; i++ {
-		d, err := spawnAndWaitRound(ts, w, ZYGOTE_NPROCS, false, 0, forkCfg, 1)
+		d, err := spawnAndWaitRound(ts, w, ZYGOTE_NPROCS, false, 0, forkCfg, 1, 512)
 		if err != nil {
 			t.Fatalf("baseline trial %d: %v", i, err)
 		}
 		baselineRound.Append(d, float64(ZYGOTE_NPROCS))
 		baselinePerProc.Append(d/time.Duration(ZYGOTE_NPROCS), 1)
+		fmt.Printf("baseline trial %d: %v\n", i, d)
 	}
 
 	forkRound := benchmarks.NewResults(ZYGOTE_NTRIALS, benchmarks.OPS)
@@ -175,12 +184,13 @@ func TestZygoteForkComparison(t *testing.T) {
 	for i := 0; i < ZYGOTE_NTRIALS; i++ {
 		// TODO: In the future we should fork the root zygote to reduce memory overhead.
 		nZygotes := min(runtime.NumCPU(), ZYGOTE_NPROCS/32)
-		d, err := spawnAndWaitRound(ts, w, ZYGOTE_NPROCS, true, 0, forkCfg, nZygotes)
+		d, err := spawnAndWaitRound(ts, w, ZYGOTE_NPROCS, true, 0, forkCfg, nZygotes, 0)
 		if err != nil {
 			t.Fatalf("fork trial %d: %v", i, err)
 		}
 		forkRound.Append(d, float64(ZYGOTE_NPROCS))
 		forkPerProc.Append(d/time.Duration(ZYGOTE_NPROCS), 1)
+		fmt.Printf("    fork trial %d: %v\n", i, d)
 	}
 
 	bMean, _ := baselineRound.Mean()
@@ -368,7 +378,7 @@ func TestZygoteForkMemoryScaling(t *testing.T) {
 	zygoteProc := buildPythonProc(w, 0)
 	forkCfg := proc.ForkConfig{ZygoteProc: zygoteProc, KeepAlive: ZYGOTE_KEEPALIVE}
 
-	if _, err := spawnAndWaitRound(ts, w, 1, false, 0, forkCfg, 1); err != nil {
+	if _, err := spawnAndWaitRound(ts, w, 1, false, 0, forkCfg, 1, 0); err != nil {
 		t.Fatalf("warmup: %v", err)
 	}
 	if ZYGOTE_MEM_HOLD <= ZYGOTE_PSS_DELAY+500*time.Millisecond {

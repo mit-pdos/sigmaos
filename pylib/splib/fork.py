@@ -19,6 +19,7 @@ import ctypes
 import ctypes.util
 import json
 import os
+import signal
 import socket
 import struct
 import time
@@ -98,6 +99,9 @@ def _write_msg_with_credentials(sock: socket.socket, msg: dict[str, Any]) -> Non
 def fork_point() -> list[str]:
     """Block until fork supervisor requests a child, then fork and return args."""
 
+    # Ignore SIGCHLD so children are auto-reaped
+    signal.signal(signal.SIGCHLD, signal.SIG_IGN)
+
     gc.freeze()
 
     zygote_key = os.environ.get(SIGMA_FORK_ZYGOTE_KEY)
@@ -152,4 +156,6 @@ def fork_point() -> list[str]:
         log_spawn_latency("splib.fork.fork_point apply env", pid=z_sig_pid, op_start=start, spawn_time=0)
 
         gc.enable()
+        signal.signal(signal.SIGCHLD, signal.SIG_DFL)
+
         return [str(a) for a in args]

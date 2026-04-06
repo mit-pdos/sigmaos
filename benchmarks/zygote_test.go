@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os/exec"
 	"regexp"
-	"runtime"
 	"sort"
 	"strconv"
 	"strings"
@@ -60,6 +59,7 @@ func spawnAndWaitRound(ts *test.Tstate, w zygoteWorkload, n int, useFork bool, h
 	var wg sync.WaitGroup
 	sem := make(chan struct{}, concurrency)
 	errCh := make(chan error, n)
+	nZygotes = max(1, min(n, nZygotes))
 
 	var forkCfgs []proc.ForkConfig
 	if useFork {
@@ -121,13 +121,17 @@ func spawnAndWaitRound(ts *test.Tstate, w zygoteWorkload, n int, useFork bool, h
 		}(i)
 	}
 
-	wg.Wait()
-	close(errCh)
+	go func() {
+		wg.Wait()
+		close(errCh)
+	}()
+
 	for err := range errCh {
 		if err != nil {
 			return 0, err
 		}
 	}
+
 	return time.Since(start), nil
 }
 
@@ -183,7 +187,7 @@ func TestZygoteForkComparison(t *testing.T) {
 	forkPerProc := benchmarks.NewResults(ZYGOTE_NTRIALS, benchmarks.OPS)
 	for i := 0; i < ZYGOTE_NTRIALS; i++ {
 		// TODO: In the future we should fork the root zygote to reduce memory overhead.
-		nZygotes := min(runtime.NumCPU(), ZYGOTE_NPROCS/32)
+		nZygotes := min(4, ZYGOTE_NPROCS/64)
 		d, err := spawnAndWaitRound(ts, w, ZYGOTE_NPROCS, true, 0, forkCfg, nZygotes, 0)
 		if err != nil {
 			t.Fatalf("fork trial %d: %v", i, err)

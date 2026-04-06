@@ -1815,9 +1815,9 @@ func TestZygoteForkComparison(t *testing.T) {
 	)
 	// Cluster configuration parameters
 	const (
-		driverVM          int  = 0
-		numNodes          int  = 1
-		numCoresPerNode   uint = 20
+		driverVM          int  = 1
+		numNodes          int  = 2
+		numCoresPerNode   uint = 40
 		numFullNodes      int  = numNodes
 		numProcqOnlyNodes int  = 0
 		turboBoost        bool = false
@@ -1826,7 +1826,7 @@ func TestZygoteForkComparison(t *testing.T) {
 	// Benchmark configuration parameters
 	var (
 		workload  string        = "numpy_pandas"
-		nprocs    []int         = []int{1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024}
+		nprocs    []int         = []int{1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048}
 		ntrials   int           = 10
 		keepalive time.Duration = 1 * time.Second
 	)

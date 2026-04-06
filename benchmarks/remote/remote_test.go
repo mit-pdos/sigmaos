@@ -1816,7 +1816,7 @@ func TestZygoteForkComparison(t *testing.T) {
 	// Cluster configuration parameters
 	const (
 		driverVM          int  = 1
-		numNodes          int  = 2
+		numNodes          int  = 1
 		numCoresPerNode   uint = 40
 		numFullNodes      int  = numNodes
 		numProcqOnlyNodes int  = 0

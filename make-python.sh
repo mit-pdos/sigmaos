@@ -56,6 +56,18 @@ unzip -q -d "$PY_KERNEL_SITE_PACKAGES" "/tmp/installer.whl"
 wget -q -O "/tmp/packaging.whl" "https://files.pythonhosted.org/packages/20/12/38679034af332785aac8774540895e234f4d07f7545804097de4b666afd8/packaging-25.0-py3-none-any.whl"
 unzip -q -d "$PY_KERNEL_SITE_PACKAGES" "/tmp/packaging.whl"
 
+# Modify the site.py file to skip redundant work on startup.
+# site.py gets imported on every python interpreter startup, and takes about 15ms to run.
+# However, most of the work it does is redundant for sOS.
+perl -0777 -i.bak -pe 's/^def\s+main\s*\(.*?\):\n(?:^[ \t]+.*\n|.*\n*(?![^ \t]))*/def main():
+    orig_path = sys.path[:]
+    known_paths = removeduppaths()
+    if orig_path != sys.path:
+        abs_paths()
+    setquit()
+    setcopyright()
+    sethelper()\n/gm' "$PY_OUTPATH/Lib/site.py"
+
 function py() {
   PYTHONPATH="$PY_OUTPATH/build/lib.linux-x86_64-3.11:$PY_OUTPATH/Lib:$PY_KERNEL_SITE_PACKAGES" $PY_OUTPATH/python $@
 }

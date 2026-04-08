@@ -574,6 +574,7 @@ func runZygoteThroughputTrial(ts *test.Tstate, useFork bool, n int, forkCfg proc
 				forkProc.Env[k] = v
 			}
 
+			forkProc.AppendEnv("__ZYGOTE_BENCHMARK", fmt.Sprintf("throughput-%d", i))
 			forkCfgClone := proc.ForkConfig{
 				ZygoteProc: forkProc,
 				KeepAlive:  forkCfg.KeepAlive,

@@ -902,3 +902,37 @@ func GetZygoteForkMemoryScalingCmdConstructor(workload, memLevels string, memHol
 		)
 	}
 }
+
+func GetZygoteThroughputCmdConstructor(nproc, ntrials, nthreads int) GetBenchCmdFn {
+	return func(bcfg *BenchConfig, ccfg *ClusterConfig) string {
+		const (
+			debugSelectors string = "\"TEST;BENCH;PROCDMGR;\""
+		)
+		dialproxy := ""
+		if bcfg.NoNetproxy {
+			dialproxy = "--nodialproxy"
+		}
+		overlays := ""
+		if bcfg.Overlays {
+			overlays = "--overlays"
+		}
+		return fmt.Sprintf("export SIGMADEBUG=%s; go clean -testcache; "+
+			"ulimit -n 100000; "+
+			"./set-cores.sh --set 1 --start 2 --end 39 > /dev/null 2>&1 ; "+
+			"go test -v sigmaos/benchmarks -timeout 0 --no-shutdown %s %s --etcdIP %s --tag %s "+
+			"--run TestZygoteThroughput "+
+			"--nproc %d "+
+			"--ntrials %d "+
+			"--nthreads %d "+
+			"> /tmp/bench.out 2>&1",
+			debugSelectors,
+			dialproxy,
+			overlays,
+			ccfg.LeaderNodeIP,
+			bcfg.Tag,
+			nproc,
+			ntrials,
+			nthreads,
+		)
+	}
+}

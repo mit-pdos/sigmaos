@@ -34,6 +34,8 @@ func getZygoteWorkload(name string) (zygoteWorkload, error) {
 		return zygoteWorkload{name: name, script: "benchmarks/pytorch/main.py"}, nil
 	case "memory":
 		return zygoteWorkload{name: name, script: "benchmarks/memory/memory.py"}, nil
+	case "random_forest":
+		return zygoteWorkload{name: name, script: "benchmarks/random_forest/main.py"}, nil
 	default:
 		return zygoteWorkload{}, fmt.Errorf("unknown zygote workload %q", name)
 	}
@@ -187,7 +189,12 @@ func TestZygoteForkComparison(t *testing.T) {
 	forkPerProc := benchmarks.NewResults(ZYGOTE_NTRIALS, benchmarks.OPS)
 	for i := 0; i < ZYGOTE_NTRIALS; i++ {
 		// TODO: In the future we should fork the root zygote to reduce memory overhead.
-		nZygotes := min(4, ZYGOTE_NPROCS/64)
+		//       This can be done by simply calling os.fork() in the zygote.
+		var nZygotes = 1
+		if ZYGOTE_WORKLOAD == "numpy_pandas" || ZYGOTE_WORKLOAD == "hello" {
+			nZygotes = min(4, ZYGOTE_NPROCS/64)
+		}
+
 		d, err := spawnAndWaitRound(ts, w, ZYGOTE_NPROCS, true, 0, forkCfg, nZygotes, 0)
 		if err != nil {
 			t.Fatalf("fork trial %d: %v", i, err)

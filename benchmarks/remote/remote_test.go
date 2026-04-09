@@ -1825,7 +1825,7 @@ func TestZygoteForkComparison(t *testing.T) {
 	)
 	// Benchmark configuration parameters
 	var (
-		workload  string        = "numpy_pandas"
+		workload  string        = "random_forest"
 		nprocs    []int         = []int{1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048}
 		ntrials   int           = 10
 		keepalive time.Duration = 1 * time.Second

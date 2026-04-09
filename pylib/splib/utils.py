@@ -32,4 +32,4 @@ def log_spawn_latency(msg: str, *, pid: str = None, spawn_time: int = None, op_s
         since_op_start = now_us - (op_start // 1_000)
 
     ts = _format_time_us(now_us)
-    print(f"{ts} {pid} SPAWN_LAT {msg} op:{since_op_start}us sinceSpawn:{since_spawn}us", flush=True)
+    print(f"{ts} {pid} SPAWN_LAT [{pid}] {msg} op:{since_op_start}us sinceSpawn:{since_spawn}us", flush=True)

@@ -433,49 +433,112 @@ func spawnAndWait(ts *test.Tstate, p *proc.Proc) error {
 	return nil
 }
 
-func parseStartLatencies(logs string) ([]time.Duration, []time.Duration, error) {
-	var spawnLatencies []time.Duration
-	var forkLatencies []time.Duration
+type spawnLatencyLine struct {
+	pid        string
+	message    string
+	op         time.Duration
+	sinceSpawn time.Duration
+}
 
-	re := regexp.MustCompile(`sinceSpawn:(\d+)us`)
+var spawnLatRe = regexp.MustCompile(
+	`\[([^\]]+)\]\s+(.*?)\s+op:([^\s]+)\s+sinceSpawn:([^\s]+)`,
+)
+
+func parseLine(s string) (*spawnLatencyLine, error) {
+	m := spawnLatRe.FindStringSubmatch(s)
+	if m == nil {
+		return nil, fmt.Errorf("no match")
+	}
+
+	op, err := time.ParseDuration(m[3])
+	if err != nil {
+		return nil, fmt.Errorf("parse op: %w", err)
+	}
+
+	since, err := time.ParseDuration(m[4])
+	if err != nil {
+		return nil, fmt.Errorf("parse sinceSpawn: %w", err)
+	}
+
+	return &spawnLatencyLine{
+		pid:        m[1],
+		message:    m[2],
+		op:         op,
+		sinceSpawn: since,
+	}, nil
+}
+
+type spawnLatencyResult struct {
+	// A: All
+	// S: Spawn only
+	// F: Fork only
+
+	schedulingLat     spawnLatencyLine // A: Paper.Setup.GlobalScheduling
+	containerStartLat spawnLatencyLine // S: Paper.Setup.ContainerStart
+	fmRequestSentLat  spawnLatencyLine // F: forkMgr.forkChild send fork request
+	fpCloneLat        spawnLatencyLine // F: splib.fork.fork_point clone
+	fpNotifyLat       spawnLatencyLine // F: splib.fork.fork_point notify supervisor
+	fpApplyEnvLat     spawnLatencyLine // F: splib.fork.fork_point apply env
+	e2eLatency        spawnLatencyLine // S: E2e spawn time  |  F:  splib.fork.fork_point done
+}
+
+func parseStartLatencies(logs string, spawnPids map[string]*spawnLatencyResult, forkPids map[string]*spawnLatencyResult) {
 
 	lines := strings.Split(logs, "\n")
 	for _, line := range lines {
-		if strings.Contains(line, "E2e spawn time since spawn until main") {
-			m := re.FindStringSubmatch(line)
-			if m == nil {
-				return nil, nil, fmt.Errorf("failed to parse spawn latency from line: %s", line)
+		if !strings.Contains(line, " SPAWN_LAT ") {
+			continue
+		}
+
+		latLine, err := parseLine(line)
+		if err != nil {
+			continue
+		}
+
+		if _, exists := spawnPids[latLine.pid]; exists {
+			if spawnPids[latLine.pid] == nil {
+				spawnPids[latLine.pid] = &spawnLatencyResult{}
 			}
 
-			val, err := strconv.Atoi(m[1])
-			if err != nil {
-				return nil, nil, fmt.Errorf("failed to parse spawn latency from line: %s", line)
+			switch latLine.message {
+			case "Paper.Setup.GlobalScheduling":
+				spawnPids[latLine.pid].schedulingLat = *latLine
+			case "Paper.Setup.ContainerStart":
+				spawnPids[latLine.pid].containerStartLat = *latLine
+			case "E2e spawn time":
+				spawnPids[latLine.pid].e2eLatency = *latLine
+			}
+		} else if _, exists := forkPids[latLine.pid]; exists {
+			if forkPids[latLine.pid] == nil {
+				forkPids[latLine.pid] = &spawnLatencyResult{}
 			}
 
-			spawnLatencies = append(spawnLatencies, time.Duration(val)*time.Microsecond)
-		} else if strings.Contains(line, "E2e spawn time since fork until main") {
-			m := re.FindStringSubmatch(line)
-			if m == nil {
-				return nil, nil, fmt.Errorf("failed to parse fork latency from line: %s", line)
+			switch latLine.message {
+			case "Paper.Setup.GlobalScheduling":
+				forkPids[latLine.pid].schedulingLat = *latLine
+			case "forkMgr.forkChild send fork request":
+				forkPids[latLine.pid].fmRequestSentLat = *latLine
+			case "splib.fork.fork_point clone":
+				forkPids[latLine.pid].fpCloneLat = *latLine
+			case "splib.fork.fork_point notify supervisor":
+				forkPids[latLine.pid].fpNotifyLat = *latLine
+			case "splib.fork.fork_point apply env":
+				forkPids[latLine.pid].fpApplyEnvLat = *latLine
+			case "splib.fork.fork_point done":
+				forkPids[latLine.pid].e2eLatency = *latLine
 			}
-
-			val, err := strconv.Atoi(m[1])
-			if err != nil {
-				return nil, nil, fmt.Errorf("failed to parse fork latency from line: %s", line)
-			}
-
-			forkLatencies = append(forkLatencies, time.Duration(val)*time.Microsecond)
 		}
 	}
-
-	return spawnLatencies, forkLatencies, nil
 }
 
 func TestPythonStartLatency(t *testing.T) {
 	ts, _ := test.NewTstateAll(t)
 	defer ts.Shutdown()
 
-	const N = 100
+	const N = 1000
+
+	spawnLats := make(map[string]*spawnLatencyResult)
+	forkLats := make(map[string]*spawnLatencyResult)
 
 	// Without forking
 	createProc := func() *proc.Proc {
@@ -483,7 +546,11 @@ func TestPythonStartLatency(t *testing.T) {
 	}
 
 	for i := 0; i <= N; i++ {
-		spawnAndWait(ts, createProc())
+		p := createProc()
+		if i > 0 {
+			spawnLats[string(p.GetPid())] = nil
+		}
+		spawnAndWait(ts, p)
 	}
 
 	// With forking
@@ -493,7 +560,11 @@ func TestPythonStartLatency(t *testing.T) {
 	}
 
 	for i := 0; i <= N; i++ {
-		spawnAndWait(ts, proc.NewForkProc(forkConfig, []string{}))
+		p := proc.NewForkProc(forkConfig, []string{})
+		if i > 0 {
+			forkLats[string(p.GetPid())] = nil
+		}
+		spawnAndWait(ts, p)
 	}
 
 	// Collect logs and parse latencies
@@ -502,30 +573,59 @@ func TestPythonStartLatency(t *testing.T) {
 		t.Fatalf("collect logs: %v", err)
 	}
 
-	spawnLatencies, forkLatencies, err := parseStartLatencies(logs)
+	parseStartLatencies(logs, spawnLats, forkLats)
 	if err != nil {
 		t.Fatalf("parse latencies: %v", err)
 	}
 
-	spawnLatencies = spawnLatencies[1:] // Skip the first spawn which is a warmup
-	forkLatencies = forkLatencies[1:]   // Skip the first fork which is a warmup
+	for procType, lats := range map[string]map[string]*spawnLatencyResult{
+		"spawn": spawnLats,
+		"fork":  forkLats,
+	} {
+		fmt.Printf("\n=== %s latencies ===\n", procType)
 
-	spawnResults := benchmarks.NewResults(N, benchmarks.OPS)
-	forkResults := benchmarks.NewResults(N, benchmarks.OPS)
+		// For each field in spawnLatencyResult:
+		fields := []string{
+			"schedulingLat",
+			"containerStartLat",
+			"fmRequestSentLat",
+			"fpCloneLat",
+			"fpNotifyLat",
+			"fpApplyEnvLat",
+			"e2eLatency",
+		}
 
-	for _, lat := range spawnLatencies {
-		spawnResults.Append(lat, 1)
+		fieldGetters := map[string]func(*spawnLatencyResult) spawnLatencyLine{
+			"schedulingLat":     func(r *spawnLatencyResult) spawnLatencyLine { return r.schedulingLat },
+			"containerStartLat": func(r *spawnLatencyResult) spawnLatencyLine { return r.containerStartLat },
+			"fmRequestSentLat":  func(r *spawnLatencyResult) spawnLatencyLine { return r.fmRequestSentLat },
+			"fpCloneLat":        func(r *spawnLatencyResult) spawnLatencyLine { return r.fpCloneLat },
+			"fpNotifyLat":       func(r *spawnLatencyResult) spawnLatencyLine { return r.fpNotifyLat },
+			"fpApplyEnvLat":     func(r *spawnLatencyResult) spawnLatencyLine { return r.fpApplyEnvLat },
+			"e2eLatency":        func(r *spawnLatencyResult) spawnLatencyLine { return r.e2eLatency },
+		}
+
+		for _, fieldName := range fields {
+			getField := fieldGetters[fieldName]
+			opResults := benchmarks.NewResults(N, benchmarks.OPS)
+			sinceSpawnResults := benchmarks.NewResults(N, benchmarks.OPS)
+
+			for pid, res := range lats {
+				if res == nil {
+					fmt.Printf("  pid=%s missing data\n", pid)
+					continue
+				}
+				opResults.Append(getField(res).op, 1)
+				sinceSpawnResults.Append(getField(res).sinceSpawn, 1)
+			}
+
+			opMean, _ := opResults.Mean()
+			opStd, _ := opResults.StdDev()
+			sinceSpawnMean, _ := sinceSpawnResults.Mean()
+			sinceSpawnStd, _ := sinceSpawnResults.StdDev()
+			fmt.Printf("  %s: op_mean=%v (std %v) since_spawn_mean=%v (std %v)\n", fieldName, opMean, opStd, sinceSpawnMean, sinceSpawnStd)
+		}
 	}
-	for _, lat := range forkLatencies {
-		forkResults.Append(lat, 1)
-	}
-
-	latSpawn, _ := spawnResults.Summary()
-	latFork, _ := forkResults.Summary()
-
-	fmt.Printf("\n=== Python Start Latencies ===\n")
-	fmt.Printf("Spawn latencies (without fork):%v\n\n", latSpawn)
-	fmt.Printf("Fork latencies (with fork):%v\n", latFork)
 }
 
 const (

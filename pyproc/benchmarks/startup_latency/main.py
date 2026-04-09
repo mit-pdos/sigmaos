@@ -14,9 +14,9 @@ if is_forking:
 
 if is_forking:
     _ = fork_point()
-    log_spawn_latency("E2e spawn time since fork until main")
+    log_spawn_latency("E2e spawn time")
 else:
-    log_spawn_latency("E2e spawn time since spawn until main", now_ns=startup_time_ns)
+    log_spawn_latency("E2e spawn time", now_ns=startup_time_ns)
 
 splib.started()
 splib.exited(splib.Status.Ok, "ok")

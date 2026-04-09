@@ -7,9 +7,8 @@ import ctypes
 import ctypes.util
 import os
 import time
-
-
-SIGMA_FORK_ZYGOTE_KEY = "SIGMA_FORK_ZYGOTE_KEY"
+import signal
+import argparse
 
 
 _libc = ctypes.CDLL("libc.so.6", use_errno=True)
@@ -57,8 +56,18 @@ def _clone(flags: int) -> int:
 
 if __name__ == "__main__":
     gc.freeze()
-    ncpu = os.cpu_count()
-    per_cpu_procs = 1000
+
+    parser = argparse.ArgumentParser(description="Fork benchmark")
+    parser.add_argument("-n", "--ncpu", type=int, default=os.cpu_count(), help="Number of workers")
+    parser.add_argument("-r", "--rate", type=int, default=0, help="Total fork rate across all CPUs (procs/second)")
+    parser.add_argument("-p", "--per-cpu-procs", type=int, default=1000, help="Number of forks per CPU")
+    args = parser.parse_args()
+
+    ncpu = args.ncpu
+    rate = args.rate
+    per_cpu_procs = args.per_cpu_procs
+    per_cpu_rate = rate / ncpu
+    per_cpu_interval = 1 / per_cpu_rate if per_cpu_rate > 0 else 0
 
     pipes = [os.pipe() for _ in range(ncpu)]
 
@@ -81,10 +90,17 @@ if __name__ == "__main__":
                 os.close(w)
             os.close(r)
 
+        signal.signal(signal.SIGCHLD, signal.SIG_IGN)
+
         start = time.time_ns()
+        next_time = time.perf_counter() + per_cpu_interval
         for _ in range(per_cpu_procs):
             pid = _clone(_CLONE_NEWPID | _SIGCHLD)
             if pid != 0:
+                sleep_time = next_time - time.perf_counter()
+                if sleep_time > 0:
+                    time.sleep(sleep_time)
+                next_time += per_cpu_interval
                 continue
             exit(0)
         end = time.time_ns()
@@ -117,5 +133,4 @@ if __name__ == "__main__":
         avg_throughput = sum(throughputs)
         total_procs = ncpu * per_cpu_procs
         print(f"Created {total_procs} processes across {ncpu} CPUs")
-        # print(f"Per-worker throughputs: {[f'{t:.2f}' for t in throughputs]}")
         print(f"Average throughput: {avg_throughput:.2f} procs/second")

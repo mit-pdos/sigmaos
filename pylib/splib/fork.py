@@ -128,34 +128,45 @@ def fork_point() -> list[str]:
         if msg.get("type") != "fork":
             continue
 
-        start = time.time_ns()
+        clone_start = time.time_ns()
         pid = _clone(_CLONE_NEWPID | _SIGCHLD)
         if pid != 0:
             # Parent: continue servicing future fork requests.
             continue
-        log_spawn_latency("splib.fork.fork_point clone", pid=z_sig_pid, op_start=start, spawn_time=0)
+
+        # Notify supervisor that the child exists (peercred conveys host PID).
+        # Can possibly be replaced by using SCM_CREDENTIALS
+        notify_start = time.time_ns()
 
         req_id = msg.get("req_id")
         env = msg.get("env") or []
         args = msg.get("args") or []
 
-        # Notify supervisor that the child exists (peercred conveys host PID).
-        # Can possibly be replaced by using SCM_CREDENTIALS
-        start = time.time_ns()
         _write_msg_with_credentials(zsock, {"type": "child", "req_id": req_id})
-        log_spawn_latency("splib.fork.fork_point notify supervisor", pid=z_sig_pid, op_start=start, spawn_time=0)
 
         # Apply env updates for this child proc.
-        start = time.time_ns()
+        apply_env_start = time.time_ns()
         for entry in env:
             s = str(entry)
             if "=" not in s:
                 continue
             k, v = s.split("=", 1)
             os.environ[k] = v
-        log_spawn_latency("splib.fork.fork_point apply env", pid=z_sig_pid, op_start=start, spawn_time=0)
 
+        tail_start = time.time_ns()
         gc.enable()
         signal.signal(signal.SIGCHLD, signal.SIG_DFL)
+        args = [str(a) for a in args]
 
-        return [str(a) for a in args]
+        # Log spawn latencies
+        end = time.time_ns()
+
+        sig_pid = os.environ.get("SIGMADEBUGPID", "")
+        spawn_time = int(os.environ.get("SIGMA_SPAWN_TIME", "0"))
+
+        log_spawn_latency("splib.fork.fork_point clone", pid=sig_pid, op_start=clone_start, spawn_time=spawn_time, now_ns=notify_start)
+        log_spawn_latency("splib.fork.fork_point notify supervisor", pid=sig_pid, op_start=notify_start, spawn_time=spawn_time, now_ns=apply_env_start)
+        log_spawn_latency("splib.fork.fork_point apply env", pid=sig_pid, op_start=apply_env_start, spawn_time=spawn_time, now_ns=tail_start)
+        log_spawn_latency("splib.fork.fork_point done", pid=sig_pid, op_start=tail_start, spawn_time=spawn_time, now_ns=end)
+
+        return args

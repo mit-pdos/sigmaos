@@ -18,6 +18,12 @@ void check_clnt() {
   }
 }
 
+void init_clnt_if_needed() {
+  if (!clnt) {
+    clnt = std::make_unique<sigmaos::proxy::sigmap::Clnt>();
+  }
+}
+
 template <typename T>
 T unwrap(std::expected<T, sigmaos::serr::Error> result) {
   if (result.has_value()) {
@@ -79,7 +85,7 @@ PYBIND11_MODULE(_clntlib, m) {
   m.def(
       "started",
       []() {
-        check_clnt();
+        init_clnt_if_needed();
         unwrap(clnt->Started());
       },
       "Signal that the process has started.");
@@ -87,7 +93,7 @@ PYBIND11_MODULE(_clntlib, m) {
   m.def(
       "exited",
       [](const sigmaos::proc::Tstatus& status, const std::string& msg) {
-        check_clnt();
+        init_clnt_if_needed();
         std::string msg_copy = msg;
         unwrap(clnt->Exited(status, msg_copy));
       },
@@ -96,7 +102,7 @@ PYBIND11_MODULE(_clntlib, m) {
   m.def(
       "wait_evict",
       []() {
-        check_clnt();
+        init_clnt_if_needed();
         unwrap(clnt->WaitEvict());
       },
       "Wait for an eviction event.");
@@ -105,7 +111,7 @@ PYBIND11_MODULE(_clntlib, m) {
   m.def(
       "close",
       [](int fd) {
-        check_clnt();
+        init_clnt_if_needed();
         unwrap(clnt->CloseFD(fd));
       },
       "Close a file descriptor.", py::arg("fd"));
@@ -113,7 +119,7 @@ PYBIND11_MODULE(_clntlib, m) {
   m.def(
       "stat",
       [](const std::string& pn) {
-        check_clnt();
+        init_clnt_if_needed();
         auto stat = *unwrap(clnt->Stat(pn));
         return stat;
       },
@@ -122,7 +128,7 @@ PYBIND11_MODULE(_clntlib, m) {
   m.def(
       "create",
       [](const std::string& pn, uint32_t perm, uint32_t mode) {
-        check_clnt();
+        init_clnt_if_needed();
         auto fd = unwrap(clnt->Create(pn, perm, mode));
         return fd;
       },
@@ -132,7 +138,7 @@ PYBIND11_MODULE(_clntlib, m) {
   m.def(
       "open",
       [](const std::string& pn, uint32_t mode, bool wait) {
-        check_clnt();
+        init_clnt_if_needed();
         auto fd = unwrap(clnt->Open(pn, mode, wait));
         return fd;
       },
@@ -142,7 +148,7 @@ PYBIND11_MODULE(_clntlib, m) {
   m.def(
       "rename",
       [](const std::string& src, const std::string& dst) {
-        check_clnt();
+        init_clnt_if_needed();
         unwrap(clnt->Rename(src, dst));
       },
       "Rename a file from src to dst.", py::arg("src"), py::arg("dst"));
@@ -150,7 +156,7 @@ PYBIND11_MODULE(_clntlib, m) {
   m.def(
       "remove",
       [](const std::string& pn) {
-        check_clnt();
+        init_clnt_if_needed();
         unwrap(clnt->Remove(pn));
       },
       "Remove a file.", py::arg("path"));
@@ -158,7 +164,7 @@ PYBIND11_MODULE(_clntlib, m) {
   m.def(
       "get_file",
       [](const std::string& pn) {
-        check_clnt();
+        init_clnt_if_needed();
         auto contents = unwrap(clnt->GetFile(pn));
         return py::bytes(*contents);
       },
@@ -168,7 +174,7 @@ PYBIND11_MODULE(_clntlib, m) {
       "put_file",
       [](const std::string& pn, uint32_t perm, uint32_t mode,
          const std::string& data, uint64_t offset, uint64_t leaseID) {
-        check_clnt();
+        init_clnt_if_needed();
         std::string d = data;
         auto size = unwrap(clnt->PutFile(pn, perm, mode, &d, offset, leaseID));
         return size;
@@ -180,7 +186,7 @@ PYBIND11_MODULE(_clntlib, m) {
   m.def(
       "read",
       [](int fd, size_t len) {
-        check_clnt();
+        init_clnt_if_needed();
         std::string buffer(len, '\0');
         auto size = unwrap(clnt->Read(fd, &buffer));
         buffer.resize(size);
@@ -192,7 +198,7 @@ PYBIND11_MODULE(_clntlib, m) {
   m.def(
       "pread",
       [](int fd, size_t len, uint64_t offset) {
-        check_clnt();
+        init_clnt_if_needed();
         std::string buffer(len, '\0');
         sigmaos::sigmap::types::Toffset off = offset;
         auto size = unwrap(clnt->Pread(fd, &buffer, off));
@@ -206,7 +212,7 @@ PYBIND11_MODULE(_clntlib, m) {
   m.def(
       "write",
       [](int fd, const std::string& bytes) {
-        check_clnt();
+        init_clnt_if_needed();
         std::string b = bytes;
         auto written = unwrap(clnt->Write(fd, &b));
         return written;
@@ -217,7 +223,7 @@ PYBIND11_MODULE(_clntlib, m) {
   m.def(
       "seek",
       [](int fd, uint64_t offset) {
-        check_clnt();
+        init_clnt_if_needed();
         unwrap(clnt->Seek(fd, offset));
       },
       "Seek to a specific offset in a file descriptor.", py::arg("fd"),
@@ -226,7 +232,7 @@ PYBIND11_MODULE(_clntlib, m) {
   m.def(
       "clnt_id",
       []() {
-        check_clnt();
+        init_clnt_if_needed();
         return unwrap(clnt->ClntID());
       },
       "Get the client ID.");

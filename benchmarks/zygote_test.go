@@ -22,6 +22,7 @@ import (
 type zygoteWorkload struct {
 	name   string
 	script string
+	args   []string
 }
 
 func getZygoteWorkload(name string) (zygoteWorkload, error) {
@@ -36,13 +37,20 @@ func getZygoteWorkload(name string) (zygoteWorkload, error) {
 		return zygoteWorkload{name: name, script: "benchmarks/memory/memory.py"}, nil
 	case "random_forest":
 		return zygoteWorkload{name: name, script: "benchmarks/random_forest/main.py"}, nil
+	case "imgresize":
+		return zygoteWorkload{name: name, script: "benchmarks/imgresize/main.py", args: []string{"name/s3/~any/9ps3/img-save/1.jpg", "name/ux/~local/"}}, nil
 	default:
 		return zygoteWorkload{}, fmt.Errorf("unknown zygote workload %q", name)
 	}
 }
 
 func buildPythonProc(w zygoteWorkload, hold time.Duration) *proc.Proc {
-	p := proc.NewPythonProc(proc.Python311, []string{w.script})
+	args := []string{w.script}
+	if (w.args) != nil {
+		args = append(args, w.args...)
+	}
+
+	p := proc.NewPythonProc(proc.Python311, args)
 	if hold > 0 {
 		p.AppendEnv("ZYGOTE_BENCH_HOLD_SECS", strconv.FormatFloat(hold.Seconds(), 'f', 3, 64))
 	}

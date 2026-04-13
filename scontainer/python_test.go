@@ -318,3 +318,12 @@ func TestPythonForkMemory(t *testing.T) {
 	// measuring memory usage, we use a significantly looser bound.
 	assert.True(t, forkMem < nonForkMem/2, "Forked memory usage (%d MB) not less than half of non-forked (%d MB)", forkMem, nonForkMem)
 }
+
+func TestPythonImgResize(t *testing.T) {
+	ts, _ := test.NewTstateAll(t)
+	defer ts.Shutdown()
+
+	p := proc.NewPythonProc(proc.Python311, []string{"benchmarks/imgresize/main.py", "name/s3/~any/9ps3/img-save/1.jpg", "name/ux/~local/"})
+
+	runBasicPythonTest(ts, "cold", p)
+}

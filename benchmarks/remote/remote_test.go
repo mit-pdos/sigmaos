@@ -1828,7 +1828,7 @@ func TestZygoteForkComparison(t *testing.T) {
 		workload  string        = "random_forest"
 		nprocs    []int         = []int{1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048}
 		ntrials   int           = 10
-		keepalive time.Duration = 1 * time.Second
+		keepalive time.Duration = 5 * time.Second
 	)
 	ts, err := NewTstate(t)
 	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {

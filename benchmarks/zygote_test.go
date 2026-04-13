@@ -57,7 +57,7 @@ func buildForkProc(cfg proc.ForkConfig, childName string, hold time.Duration) *p
 	return p
 }
 
-func spawnAndWaitRound(ts *test.Tstate, w zygoteWorkload, n int, useFork bool, hold time.Duration, cfg proc.ForkConfig, nZygotes int, concurrency int) (time.Duration, error) {
+func spawnAndWaitRound(ts *test.Tstate, w zygoteWorkload, n int, useFork bool, hold time.Duration, cfg proc.ForkConfig, nZygotes int, concurrency int, warmZygotes bool) (time.Duration, error) {
 	var wg sync.WaitGroup
 	sem := make(chan struct{}, concurrency)
 	errCh := make(chan error, n)
@@ -78,6 +78,20 @@ func spawnAndWaitRound(ts *test.Tstate, w zygoteWorkload, n int, useFork bool, h
 			copy.ZygoteProc.AppendEnv("__ZYGOTE_BENCHMARK", uniqueId+"-"+strconv.Itoa(i))
 			forkCfgs = append(forkCfgs, copy)
 		}
+	}
+
+	if useFork && warmZygotes {
+		for i := 0; i < nZygotes; i++ {
+			wg.Add(1)
+			go func(i int) {
+				p := buildForkProc(forkCfgs[i], "warmup-child", hold)
+				if err := spawnAndWait(ts, p); err != nil {
+					panic(fmt.Errorf("warmup: %w", err))
+				}
+				wg.Done()
+			}(i)
+		}
+		wg.Wait()
 	}
 
 	start := time.Now()
@@ -169,14 +183,14 @@ func TestZygoteForkComparison(t *testing.T) {
 	zygoteProc := buildPythonProc(w, 0)
 	forkCfg := proc.ForkConfig{ZygoteProc: zygoteProc, KeepAlive: ZYGOTE_KEEPALIVE}
 
-	if _, err := spawnAndWaitRound(ts, w, 1, false, 0, forkCfg, 1, 0); err != nil {
+	if _, err := spawnAndWaitRound(ts, w, 1, false, 0, forkCfg, 1, 0, false); err != nil {
 		t.Fatalf("warmup: %v", err)
 	}
 
 	baselineRound := benchmarks.NewResults(ZYGOTE_NTRIALS, benchmarks.OPS)
 	baselinePerProc := benchmarks.NewResults(ZYGOTE_NTRIALS, benchmarks.OPS)
 	for i := 0; i < ZYGOTE_NTRIALS; i++ {
-		d, err := spawnAndWaitRound(ts, w, ZYGOTE_NPROCS, false, 0, forkCfg, 1, 512)
+		d, err := spawnAndWaitRound(ts, w, ZYGOTE_NPROCS, false, 0, forkCfg, 1, 512, false)
 		if err != nil {
 			t.Fatalf("baseline trial %d: %v", i, err)
 		}
@@ -195,13 +209,27 @@ func TestZygoteForkComparison(t *testing.T) {
 			nZygotes = min(4, ZYGOTE_NPROCS/64)
 		}
 
-		d, err := spawnAndWaitRound(ts, w, ZYGOTE_NPROCS, true, 0, forkCfg, nZygotes, 0)
+		d, err := spawnAndWaitRound(ts, w, ZYGOTE_NPROCS, true, 0, forkCfg, nZygotes, 0, false)
 		if err != nil {
 			t.Fatalf("fork trial %d: %v", i, err)
 		}
 		forkRound.Append(d, float64(ZYGOTE_NPROCS))
 		forkPerProc.Append(d/time.Duration(ZYGOTE_NPROCS), 1)
 		fmt.Printf("    fork trial %d: %v\n", i, d)
+	}
+
+	warmForkRound := benchmarks.NewResults(ZYGOTE_NTRIALS, benchmarks.OPS)
+	warmForkPerProc := benchmarks.NewResults(ZYGOTE_NTRIALS, benchmarks.OPS)
+	for i := 0; i < ZYGOTE_NTRIALS; i++ {
+		var nZygotes = min(4, ZYGOTE_NPROCS)
+
+		d, err := spawnAndWaitRound(ts, w, ZYGOTE_NPROCS, true, 0, forkCfg, nZygotes, 0, true)
+		if err != nil {
+			t.Fatalf("warm fork trial %d: %v", i, err)
+		}
+		warmForkRound.Append(d, float64(ZYGOTE_NPROCS))
+		warmForkPerProc.Append(d/time.Duration(ZYGOTE_NPROCS), 1)
+		fmt.Printf("wrm fork trial %d: %v\n", i, d)
 	}
 
 	bMean, _ := baselineRound.Mean()
@@ -213,8 +241,10 @@ func TestZygoteForkComparison(t *testing.T) {
 	fmt.Printf("trials=%d nprocs=%d keepalive=%v\n", ZYGOTE_NTRIALS, ZYGOTE_NPROCS, ZYGOTE_KEEPALIVE)
 	printZygoteStats("baseline_round", baselineRound)
 	printZygoteStats("fork_round", forkRound)
+	printZygoteStats("warm_fork_round", warmForkRound)
 	printZygoteStats("baseline_per_proc", baselinePerProc)
 	printZygoteStats("fork_per_proc", forkPerProc)
+	printZygoteStats("warm_fork_per_proc", warmForkPerProc)
 	fmt.Printf("speedup_mean=%.2fx speedup_p99=%.2fx\n", float64(bMean)/float64(fMean), float64(bP99)/float64(fP99))
 }
 
@@ -389,7 +419,7 @@ func TestZygoteForkMemoryScaling(t *testing.T) {
 	zygoteProc := buildPythonProc(w, 0)
 	forkCfg := proc.ForkConfig{ZygoteProc: zygoteProc, KeepAlive: ZYGOTE_KEEPALIVE}
 
-	if _, err := spawnAndWaitRound(ts, w, 1, false, 0, forkCfg, 1, 0); err != nil {
+	if _, err := spawnAndWaitRound(ts, w, 1, false, 0, forkCfg, 1, 0, false); err != nil {
 		t.Fatalf("warmup: %v", err)
 	}
 	if ZYGOTE_MEM_HOLD <= ZYGOTE_PSS_DELAY+500*time.Millisecond {

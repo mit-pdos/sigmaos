@@ -20,25 +20,51 @@ import (
 )
 
 type zygoteWorkload struct {
-	name   string
-	script string
-	args   []string
+	name        string
+	script      string
+	args        []string
+	concurrency int
 }
 
 func getZygoteWorkload(name string) (zygoteWorkload, error) {
 	switch name {
 	case "hello":
-		return zygoteWorkload{name: name, script: "benchmarks/hello/main.py"}, nil
+		return zygoteWorkload{
+			name:        name,
+			script:      "benchmarks/hello/main.py",
+			concurrency: 512,
+		}, nil
 	case "numpy_pandas":
-		return zygoteWorkload{name: name, script: "benchmarks/numpy_pandas/main.py"}, nil
+		return zygoteWorkload{
+			name:        name,
+			script:      "benchmarks/numpy_pandas/main.py",
+			concurrency: 512,
+		}, nil
 	case "pytorch":
-		return zygoteWorkload{name: name, script: "benchmarks/pytorch/main.py"}, nil
+		return zygoteWorkload{
+			name:        name,
+			script:      "benchmarks/pytorch/main.py",
+			concurrency: 512,
+		}, nil
 	case "memory":
-		return zygoteWorkload{name: name, script: "benchmarks/memory/memory.py"}, nil
+		return zygoteWorkload{
+			name:        name,
+			script:      "benchmarks/memory/memory.py",
+			concurrency: 512,
+		}, nil
 	case "random_forest":
-		return zygoteWorkload{name: name, script: "benchmarks/random_forest/main.py"}, nil
+		return zygoteWorkload{
+			name:        name,
+			script:      "benchmarks/random_forest/main.py",
+			concurrency: 512,
+		}, nil
 	case "imgresize":
-		return zygoteWorkload{name: name, script: "benchmarks/imgresize/main.py", args: []string{"name/s3/~any/9ps3/img-save/1.jpg", "name/ux/~local/"}}, nil
+		return zygoteWorkload{
+			name:        name,
+			script:      "benchmarks/imgresize/main.py",
+			args:        []string{"name/s3/~any/9ps3/img-save/1.jpg", "name/ux/~local/"},
+			concurrency: 256,
+		}, nil
 	default:
 		return zygoteWorkload{}, fmt.Errorf("unknown zygote workload %q", name)
 	}
@@ -198,7 +224,7 @@ func TestZygoteForkComparison(t *testing.T) {
 	baselineRound := benchmarks.NewResults(ZYGOTE_NTRIALS, benchmarks.OPS)
 	baselinePerProc := benchmarks.NewResults(ZYGOTE_NTRIALS, benchmarks.OPS)
 	for i := 0; i < ZYGOTE_NTRIALS; i++ {
-		d, err := spawnAndWaitRound(ts, w, ZYGOTE_NPROCS, false, 0, forkCfg, 1, 512, false)
+		d, err := spawnAndWaitRound(ts, w, ZYGOTE_NPROCS, false, 0, forkCfg, 1, w.concurrency, false)
 		if err != nil {
 			t.Fatalf("baseline trial %d: %v", i, err)
 		}
@@ -217,7 +243,7 @@ func TestZygoteForkComparison(t *testing.T) {
 			nZygotes = min(4, ZYGOTE_NPROCS/64)
 		}
 
-		d, err := spawnAndWaitRound(ts, w, ZYGOTE_NPROCS, true, 0, forkCfg, nZygotes, 0, false)
+		d, err := spawnAndWaitRound(ts, w, ZYGOTE_NPROCS, true, 0, forkCfg, nZygotes, w.concurrency, false)
 		if err != nil {
 			t.Fatalf("fork trial %d: %v", i, err)
 		}
@@ -231,7 +257,7 @@ func TestZygoteForkComparison(t *testing.T) {
 	for i := 0; i < ZYGOTE_NTRIALS; i++ {
 		var nZygotes = min(4, ZYGOTE_NPROCS)
 
-		d, err := spawnAndWaitRound(ts, w, ZYGOTE_NPROCS, true, 0, forkCfg, nZygotes, 0, true)
+		d, err := spawnAndWaitRound(ts, w, ZYGOTE_NPROCS, true, 0, forkCfg, nZygotes, w.concurrency, true)
 		if err != nil {
 			t.Fatalf("warm fork trial %d: %v", i, err)
 		}

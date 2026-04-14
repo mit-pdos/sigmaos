@@ -3,6 +3,7 @@ package benchmarks_test
 import (
 	"bytes"
 	"fmt"
+	"math/rand"
 	"os/exec"
 	"regexp"
 	"sort"
@@ -13,6 +14,8 @@ import (
 	"time"
 
 	"sigmaos/benchmarks"
+	"sigmaos/benchmarks/loadgen"
+	db "sigmaos/debug"
 	"sigmaos/proc"
 	"sigmaos/test"
 
@@ -795,35 +798,60 @@ func TestZygoteThroughput(t *testing.T) {
 	}
 	defer ts.Shutdown()
 
-	forkCfg := proc.ForkConfig{
-		ZygoteProc: proc.NewPythonProc(proc.Python311, []string{THROUGHPUT_FORK_SCRIPT}),
-		KeepAlive:  5 * time.Second,
+	// Define the request function for baseline throughput
+	baselineProcReq := func(r *rand.Rand) (time.Duration, bool) {
+		start := time.Now()
+		proc := proc.NewPythonProc(proc.Python311, []string{THROUGHPUT_BASELINE_SCRIPT})
+		err := ts.Spawn(proc)
+		if err != nil {
+			return 0, false
+		}
+		ts.WaitExit(proc.GetPid())
+		return time.Since(start), false
 	}
 
-	baselineResults := benchmarks.NewResults(N_TRIALS, benchmarks.OPS)
-	for i := 0; i < N_TRIALS; i++ {
-		d := runZygoteThroughputTrial(ts, false, N_PROC, forkCfg)
-		baselineResults.Append(d, float64(N_PROC))
-		fmt.Printf("baseline trial %d: %v\n", i, d)
+	// Measure baseline throughput
+	fmt.Println("=== Baseline Throughput ===")
+	for maxRPS := 500; maxRPS <= 2500; maxRPS += 100 {
+		db.DPrintf(db.ALWAYS, "Max RPS: %d", maxRPS)
+		lg := loadgen.NewLoadGenerator(10*time.Second, maxRPS, baselineProcReq)
+		lg.Calibrate()
+		lg.Run()
 	}
 
-	forkResults := benchmarks.NewResults(N_TRIALS, benchmarks.OPS)
-	for i := 0; i < N_TRIALS; i++ {
-		d := runZygoteThroughputTrial(ts, true, N_PROC, forkCfg)
-		forkResults.Append(d, float64(N_PROC))
-		fmt.Printf("    fork trial %d: %v\n", i, d)
+	// Define the request function for zygote forking throughput
+	var forkCfgs []proc.ForkConfig
+	for i := 0; i < 10; i++ {
+		zygoteProc := proc.NewPythonProc(proc.Python311, []string{THROUGHPUT_FORK_SCRIPT})
+		zygoteProc.AppendEnv("__ZYGOTE_BENCHMARK", fmt.Sprintf("throughput-%d", i))
+
+		forkCfg := proc.ForkConfig{
+			ZygoteProc: zygoteProc,
+			KeepAlive:  60 * time.Second,
+		}
+
+		forkCfgs = append(forkCfgs, forkCfg)
 	}
 
-	bMin, _ := baselineResults.Percentile(0)
-	fMin, _ := forkResults.Percentile(0)
+	forkProcReq := func(r *rand.Rand) (time.Duration, bool) {
+		start := time.Now()
+		forkCfg := forkCfgs[r.Intn(len(forkCfgs))]
+		proc := proc.NewForkProc(forkCfg, []string{})
+		err := ts.Spawn(proc)
+		if err != nil {
+			return 0, false
+		}
+		ts.WaitExit(proc.GetPid())
+		return time.Since(start), false
+	}
 
-	fmt.Printf("\n=== Zygote Throughput ===\n")
-	fmt.Printf("nproc=%d ntrials=%d nthreads=%d keepalive=%v\n", N_PROC, N_TRIALS, N_THREADS, ZYGOTE_KEEPALIVE)
+	// Measure zygote forking throughput
+	fmt.Println("=== Zygote Forking Throughput ===")
 
-	bOpsPerSec := float64(N_PROC) / bMin.Seconds()
-	fOpsPerSec := float64(N_PROC) / fMin.Seconds()
-
-	fmt.Printf("baseline: %.2f ops/sec\n", bOpsPerSec)
-	fmt.Printf("fork:     %.2f ops/sec\n", fOpsPerSec)
-	fmt.Printf("speedup:  %.2fx\n", fOpsPerSec/bOpsPerSec)
+	for maxRPS := 500; maxRPS <= 2500; maxRPS += 100 {
+		db.DPrintf(db.ALWAYS, "Max RPS: %d", maxRPS)
+		lg := loadgen.NewLoadGenerator(10*time.Second, maxRPS, forkProcReq)
+		lg.Calibrate()
+		lg.Run()
+	}
 }

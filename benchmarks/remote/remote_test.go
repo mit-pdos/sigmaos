@@ -1896,12 +1896,6 @@ func TestZygoteThroughput(t *testing.T) {
 		turboBoost        bool = false
 		useGVisor         bool = false
 	)
-	// Benchmark configuration parameters
-	var (
-		nprocs   int = 20000
-		ntrials  int = 10
-		nthreads int = 10
-	)
 	ts, err := NewTstate(t)
 	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {
 		return
@@ -1911,7 +1905,7 @@ func TestZygoteThroughput(t *testing.T) {
 	}
 
 	db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
-	benchName := filepath.Join(benchNameBase, fmt.Sprintf("nprocs-%d-ntrials-%d-nthreads-%d", nprocs, ntrials, nthreads))
-	cmdFn := GetZygoteThroughputCmdConstructor(nprocs, ntrials, nthreads)
+	benchName := benchNameBase
+	cmdFn := GetZygoteThroughputCmdConstructor()
 	ts.RunStandardBenchmark(benchName, driverVM, cmdFn, numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost, useGVisor)
 }

@@ -903,7 +903,7 @@ func GetZygoteForkMemoryScalingCmdConstructor(workload, memLevels string, memHol
 	}
 }
 
-func GetZygoteThroughputCmdConstructor(nproc, ntrials, nthreads int) GetBenchCmdFn {
+func GetZygoteThroughputCmdConstructor() GetBenchCmdFn {
 	return func(bcfg *BenchConfig, ccfg *ClusterConfig) string {
 		const (
 			debugSelectors string = "\"TEST;BENCH;PROCDMGR;\""
@@ -921,18 +921,12 @@ func GetZygoteThroughputCmdConstructor(nproc, ntrials, nthreads int) GetBenchCmd
 			"./set-cores.sh --set 1 --start 2 --end 39 > /dev/null 2>&1 ; "+
 			"go test -v sigmaos/benchmarks -timeout 0 --no-shutdown %s %s --etcdIP %s --tag %s "+
 			"--run TestZygoteThroughput "+
-			"--nproc %d "+
-			"--ntrials %d "+
-			"--nthreads %d "+
 			"> /tmp/bench.out 2>&1",
 			debugSelectors,
 			dialproxy,
 			overlays,
 			ccfg.LeaderNodeIP,
 			bcfg.Tag,
-			nproc,
-			ntrials,
-			nthreads,
 		)
 	}
 }

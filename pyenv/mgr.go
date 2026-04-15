@@ -316,8 +316,12 @@ func (pm *PyMgr) TryEvict(sha256 string, pyIdx int) bool {
 	// Remove from installed wheels
 	delete(pm.installedWheels[pyIdx], sha256)
 
-	// TODO: Also remove from disk
-	// os.RemoveAll(result.path)
+	// Remove from disk
+	err := os.RemoveAll(result.path)
+	if err != nil {
+		db.DPrintf(db.PYENV_ERR, "Failed to delete wheel at %s: %v", result.path, err)
+		return false
+	}
 
 	return true
 }
@@ -446,6 +450,14 @@ func (pm *PyMgr) installWheel(wheel *proto.Wheel, pyVersion *PythonVersion, whee
 	if err != nil {
 		os.RemoveAll(tmpInstallPath)
 		goto exitLocked
+	}
+
+	// Delete the downloaded wheel file after successful installation
+	if wheelPath != "" {
+		if removeErr := os.Remove(wheelPath); removeErr != nil {
+			db.DPrintf(db.PYENV_ERR, "Failed to delete downloaded wheel %s: %v", wheelPath, removeErr)
+		}
+		delete(pm.downloadedWheels, wheel.Url)
 	}
 
 	// Start pre-compiling in background

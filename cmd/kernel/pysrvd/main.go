@@ -8,8 +8,8 @@ import (
 )
 
 func main() {
-	if len(os.Args) != 2 {
-		db.DFatalf("Usage: %v kernelId", os.Args[0])
+	if len(os.Args) != 3 {
+		db.DFatalf("Usage: %v kernelId pyMgrMode", os.Args[0])
 	}
-	srv.Run(os.Args[1])
+	srv.Run(os.Args[1], os.Args[2])
 }

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"math/rand"
+	"os"
 	"os/exec"
 	"regexp"
 	"sort"
@@ -68,6 +69,33 @@ func getZygoteWorkload(name string) (zygoteWorkload, error) {
 			args:        []string{"name/s3/~any/9ps3/img-save/1.jpg", "name/ux/~local/"},
 			concurrency: 256,
 		}, nil
+
+	case "import_massive":
+		return zygoteWorkload{
+			name:   name,
+			script: "benchmarks/import/massive_import/main.py",
+		}, nil
+	case "import_numpy":
+		return zygoteWorkload{
+			name:   name,
+			script: "benchmarks/import/numpy/main.py",
+		}, nil
+	case "import_pandas":
+		return zygoteWorkload{
+			name:   name,
+			script: "benchmarks/import/pandas/main.py",
+		}, nil
+	case "import_django":
+		return zygoteWorkload{
+			name:   name,
+			script: "benchmarks/import/django/main.py",
+		}, nil
+	case "import_sklearn":
+		return zygoteWorkload{
+			name:   name,
+			script: "benchmarks/import/sklearn/main.py",
+		}, nil
+
 	default:
 		return zygoteWorkload{}, fmt.Errorf("unknown zygote workload %q", name)
 	}
@@ -554,10 +582,10 @@ type spawnLatencyResult struct {
 	fpNotifyLat       spawnLatencyLine // F: splib.fork.fork_point notify supervisor
 	fpApplyEnvLat     spawnLatencyLine // F: splib.fork.fork_point apply env
 	e2eLatency        spawnLatencyLine // S: E2e spawn time  |  F:  splib.fork.fork_point done
+	importLatency     spawnLatencyLine // A: Python ImportModules
 }
 
 func parseStartLatencies(logs string, spawnPids map[string]*spawnLatencyResult, forkPids map[string]*spawnLatencyResult) {
-
 	lines := strings.Split(logs, "\n")
 	for _, line := range lines {
 		if !strings.Contains(line, " SPAWN_LAT ") {
@@ -581,6 +609,8 @@ func parseStartLatencies(logs string, spawnPids map[string]*spawnLatencyResult, 
 				spawnPids[latLine.pid].containerStartLat = *latLine
 			case "E2e spawn time":
 				spawnPids[latLine.pid].e2eLatency = *latLine
+			case "Python ImportModules":
+				spawnPids[latLine.pid].importLatency = *latLine
 			}
 		} else if _, exists := forkPids[latLine.pid]; exists {
 			if forkPids[latLine.pid] == nil {
@@ -600,8 +630,58 @@ func parseStartLatencies(logs string, spawnPids map[string]*spawnLatencyResult, 
 				forkPids[latLine.pid].fpApplyEnvLat = *latLine
 			case "splib.fork.fork_point done":
 				forkPids[latLine.pid].e2eLatency = *latLine
+			case "Python ImportModules":
+				forkPids[latLine.pid].importLatency = *latLine
 			}
 		}
+	}
+}
+
+func printSpawnLatencyResults(label string, lats map[string]*spawnLatencyResult) {
+	fmt.Printf("\n=== %s latencies ===\n", label)
+
+	// For each field in spawnLatencyResult:
+	fields := []string{
+		"schedulingLat",
+		"containerStartLat",
+		"fmRequestSentLat",
+		"fpCloneLat",
+		"fpNotifyLat",
+		"fpApplyEnvLat",
+		"e2eLatency",
+		"importLatency",
+	}
+
+	fieldGetters := map[string]func(*spawnLatencyResult) spawnLatencyLine{
+		"schedulingLat":     func(r *spawnLatencyResult) spawnLatencyLine { return r.schedulingLat },
+		"containerStartLat": func(r *spawnLatencyResult) spawnLatencyLine { return r.containerStartLat },
+		"fmRequestSentLat":  func(r *spawnLatencyResult) spawnLatencyLine { return r.fmRequestSentLat },
+		"fpCloneLat":        func(r *spawnLatencyResult) spawnLatencyLine { return r.fpCloneLat },
+		"fpNotifyLat":       func(r *spawnLatencyResult) spawnLatencyLine { return r.fpNotifyLat },
+		"fpApplyEnvLat":     func(r *spawnLatencyResult) spawnLatencyLine { return r.fpApplyEnvLat },
+		"e2eLatency":        func(r *spawnLatencyResult) spawnLatencyLine { return r.e2eLatency },
+		"importLatency":     func(r *spawnLatencyResult) spawnLatencyLine { return r.importLatency },
+	}
+
+	for _, fieldName := range fields {
+		getField := fieldGetters[fieldName]
+		opResults := benchmarks.NewResults(len(lats), benchmarks.OPS)
+		sinceSpawnResults := benchmarks.NewResults(len(lats), benchmarks.OPS)
+
+		for pid, res := range lats {
+			if res == nil {
+				fmt.Printf("  pid=%s missing data\n", pid)
+				continue
+			}
+			opResults.Append(getField(res).op, 1)
+			sinceSpawnResults.Append(getField(res).sinceSpawn, 1)
+		}
+
+		opMean, _ := opResults.Mean()
+		opStd, _ := opResults.StdDev()
+		sinceSpawnMean, _ := sinceSpawnResults.Mean()
+		sinceSpawnStd, _ := sinceSpawnResults.StdDev()
+		fmt.Printf("  %s: op_mean=%v (std %v) since_spawn_mean=%v (std %v)\n", fieldName, opMean, opStd, sinceSpawnMean, sinceSpawnStd)
 	}
 }
 
@@ -652,54 +732,75 @@ func TestPythonStartLatency(t *testing.T) {
 		t.Fatalf("parse latencies: %v", err)
 	}
 
-	for procType, lats := range map[string]map[string]*spawnLatencyResult{
-		"spawn": spawnLats,
-		"fork":  forkLats,
-	} {
-		fmt.Printf("\n=== %s latencies ===\n", procType)
+	printSpawnLatencyResults("spawn", spawnLats)
+	printSpawnLatencyResults("fork", forkLats)
+}
 
-		// For each field in spawnLatencyResult:
-		fields := []string{
-			"schedulingLat",
-			"containerStartLat",
-			"fmRequestSentLat",
-			"fpCloneLat",
-			"fpNotifyLat",
-			"fpApplyEnvLat",
-			"e2eLatency",
-		}
+func TestPythonVenvStartLatency(t *testing.T) {
+	benchmarks.EnsureSigmaDebugEnabled(t, "SPAWN_LAT")
 
-		fieldGetters := map[string]func(*spawnLatencyResult) spawnLatencyLine{
-			"schedulingLat":     func(r *spawnLatencyResult) spawnLatencyLine { return r.schedulingLat },
-			"containerStartLat": func(r *spawnLatencyResult) spawnLatencyLine { return r.containerStartLat },
-			"fmRequestSentLat":  func(r *spawnLatencyResult) spawnLatencyLine { return r.fmRequestSentLat },
-			"fpCloneLat":        func(r *spawnLatencyResult) spawnLatencyLine { return r.fpCloneLat },
-			"fpNotifyLat":       func(r *spawnLatencyResult) spawnLatencyLine { return r.fpNotifyLat },
-			"fpApplyEnvLat":     func(r *spawnLatencyResult) spawnLatencyLine { return r.fpApplyEnvLat },
-			"e2eLatency":        func(r *spawnLatencyResult) spawnLatencyLine { return r.e2eLatency },
-		}
+	mode := os.Getenv("SIGMAPYMGRMODE")
+	if mode == "" {
+		t.Skip("SIGMAPYMGRMODE not set, skipping venv startup latency test")
+	}
 
-		for _, fieldName := range fields {
-			getField := fieldGetters[fieldName]
-			opResults := benchmarks.NewResults(N, benchmarks.OPS)
-			sinceSpawnResults := benchmarks.NewResults(N, benchmarks.OPS)
+	if ZYGOTE_NPROCS <= 0 {
+		t.Fatalf("zygote_nprocs must be > 0")
+	}
 
-			for pid, res := range lats {
-				if res == nil {
-					fmt.Printf("  pid=%s missing data\n", pid)
-					continue
-				}
-				opResults.Append(getField(res).op, 1)
-				sinceSpawnResults.Append(getField(res).sinceSpawn, 1)
-			}
+	w, err := getZygoteWorkload(ZYGOTE_WORKLOAD)
+	if err != nil {
+		t.Fatal(err)
+	}
 
-			opMean, _ := opResults.Mean()
-			opStd, _ := opResults.StdDev()
-			sinceSpawnMean, _ := sinceSpawnResults.Mean()
-			sinceSpawnStd, _ := sinceSpawnResults.StdDev()
-			fmt.Printf("  %s: op_mean=%v (std %v) since_spawn_mean=%v (std %v)\n", fieldName, opMean, opStd, sinceSpawnMean, sinceSpawnStd)
+	ts, err := test.NewTstateAll(t)
+	if err != nil {
+		t.Fatalf("new tstate: %v", err)
+	}
+	defer ts.Shutdown()
+
+	if mode != "private" {
+		// Warm up the venv
+		p := buildPythonProc(w, 0)
+		if err := spawnAndWait(ts, p); err != nil {
+			t.Fatalf("warmup: %v", err)
 		}
 	}
+
+	lats := make(map[string]*spawnLatencyResult)
+	for i := 0; i <= ZYGOTE_NPROCS; i++ {
+		p := buildPythonProc(w, 0)
+		if i > 0 {
+			lats[string(p.GetPid())] = nil
+		}
+		spawnAndWait(ts, p)
+
+		if mode == "private" {
+			// Give enough time for cleanup logic to happen
+			time.Sleep(10 * time.Second)
+		}
+	}
+
+	// Collect logs and parse latencies
+	logs, err := runLogsScript()
+	if err != nil {
+		t.Fatalf("collect logs: %v", err)
+	}
+
+	_forkLats := make(map[string]*spawnLatencyResult)
+	parseStartLatencies(logs, lats, _forkLats)
+	if err != nil {
+		t.Fatalf("parse latencies: %v", err)
+	}
+
+	fmt.Printf("mode=%v, workload=%v, n=%v", mode, ZYGOTE_WORKLOAD, ZYGOTE_NPROCS)
+	printSpawnLatencyResults("spawn", lats)
+}
+
+func TestPythonEnvStartLatency(t *testing.T) {
+	ts, _ := test.NewTstateAll(t)
+	defer ts.Shutdown()
+
 }
 
 const (

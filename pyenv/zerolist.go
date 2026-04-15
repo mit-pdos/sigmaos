@@ -77,17 +77,21 @@ func (it *zeroListItem) acquire(z *zeroList) error {
 	return nil
 }
 
-func (it *zeroListItem) release(z *zeroList) {
+// Return true if the refcount reached zero
+func (it *zeroListItem) release(z *zeroList) bool {
 	newv := it.rc.release()
 	if newv == 0 {
 		z.addIfZero(it)
 	}
+	return newv == 0
 }
 
 func (it *zeroListItem) tryClose(z *zeroList) bool {
 	if !it.rc.tryClose() {
 		return false
 	}
+
+	// If close succeeded, the refcount will be -1
 	z.removeIfNonZero(it)
 	return true
 }

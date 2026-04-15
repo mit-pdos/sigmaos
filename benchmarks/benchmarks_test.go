@@ -105,8 +105,6 @@ var ZYGOTE_KEEPALIVE time.Duration
 var ZYGOTE_MEM_LEVELS string
 var ZYGOTE_MEM_HOLD time.Duration
 var ZYGOTE_PSS_DELAY time.Duration
-var PYTHON_NTRIALS int
-var PYTHON_WORKLOAD string
 
 // Read & set the proc version.
 func init() {
@@ -170,8 +168,6 @@ func init() {
 	flag.StringVar(&ZYGOTE_MEM_LEVELS, "zygote_mem_levels", "1,2,4,8,16", "Comma-separated concurrency levels for zygote memory benchmark.")
 	flag.DurationVar(&ZYGOTE_MEM_HOLD, "zygote_mem_hold", 30*time.Second, "How long zygote memory benchmark children should stay alive.")
 	flag.DurationVar(&ZYGOTE_PSS_DELAY, "zygote_pss_delay", 1*time.Second, "Delay before MeasurePSS samples process memory.")
-	flag.IntVar(&PYTHON_NTRIALS, "python_ntrials", 10, "Number of trials in python site packages benchmark.")
-	flag.StringVar(&PYTHON_WORKLOAD, "python_workload", "massive_import", "Python site packages benchmark workload [hello, massive_import, numpy_import, basic_import, neighbor_import, imgprocessing, memory].")
 
 	db.DPrintf(db.ALWAYS, "ncore: %v", linuxsched.GetNCores())
 }

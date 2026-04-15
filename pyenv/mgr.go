@@ -23,6 +23,8 @@ type installResult struct {
 	path     string
 	err      error
 	refCount zeroListItem
+	sha256   string
+	pyIdx    int
 }
 
 // LockHandle uniquely identifies a set of acquired locks
@@ -58,15 +60,27 @@ type PyMgr struct {
 	// Handle counter for generating unique lock handles (starts at 1)
 	handleCounter atomic.Uint64
 
-	evictionList zeroList // List of wheels with refcount=0, ordered by recency of becoming unused
+	evictionList zeroList  // List of wheels with refcount=0, ordered by recency of becoming unused
+	mode         PyMgrMode // Used for benchmarking
 }
+
+// This is only used for benchmarking
+// Can be set using the SIGMAPYMGRMODE environment variable when booting the PySrvd
+
+type PyMgrMode string
+
+const (
+	DefaultMode = PyMgrMode("default") // Normal caching behaviour
+	PrivateMode = PyMgrMode("private") // Evict packages immediately to simulate unfilled cache on every install
+	NoPYCMode   = PyMgrMode("no_pyc")  // Don't precompile .pyc files
+)
 
 // generateHandleID returns a unique uint64 handle ID
 func (pm *PyMgr) generateHandleID() uint64 {
 	return pm.handleCounter.Add(1)
 }
 
-func NewPyMgr() *PyMgr {
+func NewPyMgr(mode PyMgrMode) *PyMgr {
 	numCPU := runtime.NumCPU()
 
 	// Initialize Python versions first to get the count
@@ -81,7 +95,7 @@ func NewPyMgr() *PyMgr {
 		pendingInstalls[i] = make(map[string]*sync.Cond)
 	}
 
-	db.DPrintf(db.PYENV, "Initialized PyMgr with numCPU=%d", numCPU)
+	db.DPrintf(db.PYENV, "Initialized PyMgr with numCPU=%d, mode=%s", numCPU, mode)
 
 	return &PyMgr{
 		installedWheels:  installedWheels,
@@ -96,6 +110,7 @@ func NewPyMgr() *PyMgr {
 		sessionLocks: make(map[sessp.Tsession]map[uint64]*LockHandle),
 
 		evictionList: newZeroList(),
+		mode:         mode,
 	}
 }
 
@@ -242,7 +257,11 @@ func (pm *PyMgr) ReleaseLocks(handle *LockHandle) error {
 	// Release all refs exactly once using sync.Once
 	handle.releaseOnce.Do(func() {
 		for _, ref := range handle.refs {
-			ref.refCount.release(&pm.evictionList)
+			isZero := ref.refCount.release(&pm.evictionList)
+
+			if isZero && pm.mode == PrivateMode {
+				pm.TryEvict(ref.sha256, ref.pyIdx)
+			}
 		}
 	})
 
@@ -280,7 +299,11 @@ func (pm *PyMgr) ReleaseAllSessionLocks(sessionID sessp.Tsession) {
 	for _, handle := range handles {
 		handle.releaseOnce.Do(func() {
 			for _, ref := range handle.refs {
-				ref.refCount.release(&pm.evictionList)
+				isZero := ref.refCount.release(&pm.evictionList)
+
+				if isZero && pm.mode == PrivateMode {
+					pm.TryEvict(ref.sha256, ref.pyIdx)
+				}
 			}
 		})
 	}
@@ -319,7 +342,7 @@ func (pm *PyMgr) TryEvict(sha256 string, pyIdx int) bool {
 	// Remove from disk
 	err := os.RemoveAll(result.path)
 	if err != nil {
-		db.DPrintf(db.PYENV_ERR, "Failed to delete wheel at %s: %v", result.path, err)
+		db.DPrintf(db.PYENV_ERR, "Failed to remove wheel at %s: %v", result.path, err)
 		return false
 	}
 
@@ -426,7 +449,6 @@ func (pm *PyMgr) installWheel(wheel *proto.Wheel, pyVersion *PythonVersion, whee
 	if err != nil {
 		goto exitUnlocked
 	}
-
 	tmpInstallPath, err = func() (string, error) {
 		pm.installSem <- struct{}{}
 		defer func() { <-pm.installSem }()
@@ -462,6 +484,10 @@ func (pm *PyMgr) installWheel(wheel *proto.Wheel, pyVersion *PythonVersion, whee
 
 	// Start pre-compiling in background
 	go func() {
+		if pm.mode != DefaultMode {
+			return
+		}
+
 		pm.compileSem <- struct{}{}
 		defer func() { <-pm.compileSem }()
 		pm.mu.RLock()
@@ -484,7 +510,10 @@ exitLocked:
 	if err != nil {
 		installPath = ""
 	}
-	result := &installResult{path: installPath, err: err}
+	result := &installResult{
+		path: installPath, err: err,
+		sha256: sha256, pyIdx: pyIdx,
+	}
 	pm.installedWheels[pyIdx][sha256] = result
 	delete(pm.pendingInstalls[pyIdx], sha256)
 	if err == nil {
@@ -505,8 +534,12 @@ func checkIfInstalled(wheel *proto.Wheel, pyVersion *PythonVersion) *installResu
 		return &installResult{path: "", err: err}
 	}
 
+	sha256 := wheel.Hashes.Sha256
 	if s, err := os.Stat(installPath); err == nil && s.IsDir() {
-		return &installResult{path: installPath, err: nil}
+		return &installResult{
+			path: installPath, err: nil,
+			sha256: sha256, pyIdx: pyVersion.Index(),
+		}
 	}
 
 	return nil

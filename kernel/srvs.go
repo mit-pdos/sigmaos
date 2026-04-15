@@ -2,6 +2,7 @@ package kernel
 
 import (
 	"fmt"
+	"os"
 	"strconv"
 
 	db "sigmaos/debug"
@@ -164,7 +165,12 @@ func (k *Kernel) bootChunkd(realm sp.Trealm) (Subsystem, error) {
 }
 
 func (k *Kernel) bootPySrvd(realm sp.Trealm) (Subsystem, error) {
-	return k.bootSubsystem("pysrvd", []string{k.Param.KernelID}, []string{}, realm, proc.HMSCHED, 0)
+	pyMgrMode := os.Getenv("SIGMAPYMGRMODE")
+	if pyMgrMode == "" {
+		pyMgrMode = "default"
+	}
+
+	return k.bootSubsystem("pysrvd", []string{k.Param.KernelID, pyMgrMode}, []string{}, realm, proc.HMSCHED, 0)
 }
 
 func (k *Kernel) bootDbd(hostip string) (Subsystem, error) {

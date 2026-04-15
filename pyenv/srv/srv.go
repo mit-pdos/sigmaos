@@ -21,10 +21,10 @@ type PyEnvSrv struct {
 	ssrv *sigmasrv.SigmaSrv
 }
 
-func newPyEnvSrv(sc *sigmaclnt.SigmaClnt) *PyEnvSrv {
+func newPyEnvSrv(sc *sigmaclnt.SigmaClnt, mode pyenv.PyMgrMode) *PyEnvSrv {
 	return &PyEnvSrv{
 		sc: sc,
-		pm: pyenv.NewPyMgr(),
+		pm: pyenv.NewPyMgr(mode),
 	}
 }
 
@@ -109,16 +109,26 @@ func (ps *PyEnvSrv) onSessionDetach(sid sessp.Tsession) {
 	ps.pm.ReleaseAllSessionLocks(sid)
 }
 
-func Run(kernelId string) {
+func Run(kernelId string, mode string) {
 	pe := proc.GetProcEnv()
-	db.DPrintf(db.ALWAYS, "pyenvd starting with kernelId: %v", kernelId)
+	db.DPrintf(db.ALWAYS, "pyenvd starting with kernelId: %v, mode: %v", kernelId, mode)
 
 	sc, err := sigmaclnt.NewSigmaClnt(pe)
 	if err != nil {
 		db.DFatalf("Error NewSigmaClnt: %v", err)
 	}
 
-	psrv := newPyEnvSrv(sc)
+	modeEnum := pyenv.DefaultMode
+	if mode != "" {
+		modeEnum = pyenv.PyMgrMode(mode)
+		switch modeEnum {
+		case pyenv.DefaultMode, pyenv.PrivateMode, pyenv.NoPYCMode:
+		default:
+			db.DFatalf("Invalid PyMgrMode: %v", mode)
+		}
+	}
+
+	psrv := newPyEnvSrv(sc, modeEnum)
 
 	ssrv, err := sigmasrv.NewSigmaSrvClnt(
 		filepath.Join(sp.PYENV, sc.ProcEnv().GetKernelID()),

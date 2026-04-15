@@ -70,11 +70,6 @@ func getZygoteWorkload(name string) (zygoteWorkload, error) {
 			concurrency: 256,
 		}, nil
 
-	case "import_massive":
-		return zygoteWorkload{
-			name:   name,
-			script: "benchmarks/import/massive_import/main.py",
-		}, nil
 	case "import_numpy":
 		return zygoteWorkload{
 			name:   name,
@@ -94,6 +89,16 @@ func getZygoteWorkload(name string) (zygoteWorkload, error) {
 		return zygoteWorkload{
 			name:   name,
 			script: "benchmarks/import/sklearn/main.py",
+		}, nil
+	case "import_tf_cuda":
+		return zygoteWorkload{
+			name:   name,
+			script: "benchmarks/import/tf_cuda/main.py",
+		}, nil
+	case "import_massive":
+		return zygoteWorkload{
+			name:   name,
+			script: "benchmarks/import/massive_import/main.py",
 		}, nil
 
 	default:

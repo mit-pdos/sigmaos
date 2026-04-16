@@ -90,10 +90,10 @@ func getZygoteWorkload(name string) (zygoteWorkload, error) {
 			name:   name,
 			script: "benchmarks/import/sklearn/main.py",
 		}, nil
-	case "import_tf_cuda":
+	case "import_torch":
 		return zygoteWorkload{
 			name:   name,
-			script: "benchmarks/import/tf_cuda/main.py",
+			script: "benchmarks/import/torch/main.py",
 		}, nil
 	case "import_massive":
 		return zygoteWorkload{

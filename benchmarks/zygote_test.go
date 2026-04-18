@@ -70,6 +70,11 @@ func getZygoteWorkload(name string) (zygoteWorkload, error) {
 			concurrency: 256,
 		}, nil
 
+	case "import_is_even":
+		return zygoteWorkload{
+			name:   name,
+			script: "benchmarks/import/is_even/main.py",
+		}, nil
 	case "import_numpy":
 		return zygoteWorkload{
 			name:   name,

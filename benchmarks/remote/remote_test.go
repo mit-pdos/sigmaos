@@ -1921,7 +1921,7 @@ func TestPythonE2eColdStartLatency(t *testing.T) {
 		numCoresPerNode   uint = 40
 		numFullNodes      int  = numNodes
 		numProcqOnlyNodes int  = 0
-		turboBoost        bool = false
+		turboBoost        bool = true
 		useGVisor         bool = false
 	)
 	// Benchmark configuration parameters

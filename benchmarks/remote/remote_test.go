@@ -1909,3 +1909,38 @@ func TestZygoteThroughput(t *testing.T) {
 	cmdFn := GetZygoteThroughputCmdConstructor()
 	ts.RunStandardBenchmark(benchName, driverVM, cmdFn, numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost, useGVisor)
 }
+
+func TestPythonE2eColdStartLatency(t *testing.T) {
+	var (
+		benchNameBase string = "python_e2e_cold_start_latency"
+	)
+	// Cluster configuration parameters
+	const (
+		driverVM          int  = 1
+		numNodes          int  = 1
+		numCoresPerNode   uint = 40
+		numFullNodes      int  = numNodes
+		numProcqOnlyNodes int  = 0
+		turboBoost        bool = false
+		useGVisor         bool = false
+	)
+	// Benchmark configuration parameters
+	var (
+		workloads []string = []string{"import_nothing", "import_fastapi_pydantic_httpx"}
+		nProcs    int      = 100
+	)
+	ts, err := NewTstate(t)
+	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {
+		return
+	}
+	if !assert.False(ts.t, ts.BCfg.K8s, "K8s version of benchmark does not exist") {
+		return
+	}
+
+	for _, workload := range workloads {
+		db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
+		benchName := filepath.Join(benchNameBase, fmt.Sprintf("%s-nprocs-%d", workload, nProcs))
+		cmdFn := GetPythonE2eColdStartLatencyCmdConstructor(workload, nProcs)
+		ts.RunStandardBenchmark(benchName, driverVM, cmdFn, numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost, useGVisor)
+	}
+}

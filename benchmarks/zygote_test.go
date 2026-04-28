@@ -70,10 +70,10 @@ func getZygoteWorkload(name string) (zygoteWorkload, error) {
 			concurrency: 256,
 		}, nil
 
-	case "import_is_even":
+	case "import_nothing":
 		return zygoteWorkload{
 			name:   name,
-			script: "benchmarks/import/is_even/main.py",
+			script: "benchmarks/import/nothing/main.py",
 		}, nil
 	case "import_numpy":
 		return zygoteWorkload{
@@ -100,10 +100,15 @@ func getZygoteWorkload(name string) (zygoteWorkload, error) {
 			name:   name,
 			script: "benchmarks/import/torch/main.py",
 		}, nil
+	case "import_fastapi_pydantic_httpx":
+		return zygoteWorkload{
+			name:   name,
+			script: "benchmarks/import/fastapi_pydantic_httpx/main.py",
+		}, nil
 	case "import_massive":
 		return zygoteWorkload{
 			name:   name,
-			script: "benchmarks/import/massive_import/main.py",
+			script: "benchmarks/import/massive/main.py",
 		}, nil
 
 	default:
@@ -807,12 +812,6 @@ func TestPythonVenvStartLatency(t *testing.T) {
 	printSpawnLatencyResults("spawn", lats)
 }
 
-func TestPythonEnvStartLatency(t *testing.T) {
-	ts, _ := test.NewTstateAll(t)
-	defer ts.Shutdown()
-
-}
-
 const (
 	THROUGHPUT_BASELINE_SCRIPT = "benchmarks/throughput/baseline.py"
 	THROUGHPUT_FORK_SCRIPT     = "benchmarks/throughput/fork.py"
@@ -965,4 +964,51 @@ func TestZygoteThroughput(t *testing.T) {
 		lg.Calibrate()
 		lg.Run()
 	}
+}
+
+func TestPythonE2eColdStartLatency(t *testing.T) {
+	if ZYGOTE_NPROCS <= 0 {
+		t.Fatalf("zygote_nprocs must be > 0")
+	}
+
+	w, err := getZygoteWorkload(ZYGOTE_WORKLOAD)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ts, err := test.NewTstateAll(t)
+	if err != nil {
+		t.Fatalf("new tstate: %v", err)
+	}
+	defer ts.Shutdown()
+
+	// Warm up the venv
+	p := buildPythonProc(w, 0)
+	if err := spawnAndWait(ts, p); err != nil {
+		t.Fatalf("warmup: %v", err)
+	}
+	time.Sleep(2 * time.Second)
+
+	results := benchmarks.NewResults(ZYGOTE_NPROCS, benchmarks.OPS)
+	for i := 0; i <= ZYGOTE_NPROCS; i++ {
+		p := buildPythonProc(w, 0)
+
+		start := time.Now()
+		if err := ts.Spawn(p); err != nil {
+			t.Fatalf("spawn: %v", err)
+		}
+		st, err := ts.WaitExit(p.GetPid())
+
+		latency := time.Since(start)
+		results.Append(latency, 1)
+
+		if err != nil {
+			t.Fatalf("waitexit: %v", err)
+		}
+		if !st.IsStatusOK() {
+			t.Fatalf("bad status: %v", st)
+		}
+	}
+
+	printZygoteStats("e2e-cold-start", results)
 }

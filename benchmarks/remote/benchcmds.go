@@ -930,3 +930,35 @@ func GetZygoteThroughputCmdConstructor() GetBenchCmdFn {
 		)
 	}
 }
+
+func GetPythonE2eColdStartLatencyCmdConstructor(workload string, nprocs int) GetBenchCmdFn {
+	return func(bcfg *BenchConfig, ccfg *ClusterConfig) string {
+		const (
+			debugSelectors string = "\"\""
+		)
+		dialproxy := ""
+		if bcfg.NoNetproxy {
+			dialproxy = "--nodialproxy"
+		}
+		overlays := ""
+		if bcfg.Overlays {
+			overlays = "--overlays"
+		}
+		return fmt.Sprintf("export SIGMADEBUG=%s; go clean -testcache; "+
+			"ulimit -n 100000; "+
+			"./set-cores.sh --set 1 --start 2 --end 39 > /dev/null 2>&1 ; "+
+			"go test -v sigmaos/benchmarks -timeout 0 --no-shutdown %s %s --etcdIP %s --tag %s "+
+			"--run TestPythonE2eColdStartLatency "+
+			"--zygote_workload %s "+
+			"--zygote_nprocs %d "+
+			"> /tmp/bench.out 2>&1",
+			debugSelectors,
+			dialproxy,
+			overlays,
+			ccfg.LeaderNodeIP,
+			bcfg.Tag,
+			workload,
+			nprocs,
+		)
+	}
+}

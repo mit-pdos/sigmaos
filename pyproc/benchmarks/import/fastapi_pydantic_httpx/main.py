@@ -1,7 +1,8 @@
+# https://cold.picheta.me/#packages
 import time
 
 start_import_ns = time.time_ns()
-import is_even
+import fastapi, pydantic, httpx
 end_import_ns = time.time_ns()
 
 import splib

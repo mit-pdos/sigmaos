@@ -94,6 +94,9 @@ func (api *BlinkSrvAPI) RunBlinkProc(ctx fs.CtxI, req blinkproto.RunBlinkProcReq
 	if err := exec.Command("sudo", "mount", "--bind", hostSpproxyd, chrootSpproxyd).Run(); err != nil {
 		return fmt.Errorf("mount spproxyd: %w", err)
 	}
+	if err := exec.Command("sudo", "chmod", "a+rwx", chrootSpproxyd).Run(); err != nil {
+		return fmt.Errorf("chmod spproxyd: %w", err)
+	}
 	defer exec.Command("sudo", "umount", chrootSpproxyd).Run()
 
 	program := strings.TrimSuffix(p.GetProgram(), ".py")

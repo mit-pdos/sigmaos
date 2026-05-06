@@ -16,16 +16,17 @@ import (
 // the lifetime of the server. StartBlinkContainer is a method so the caller
 // does not need to pass the client explicitly.
 type BlinkClnt struct {
-	clnt     *blinkclnt.BlinkClnt
-	kernelID string
+	clnt        *blinkclnt.BlinkClnt
+	kernelID    string
+	procSrvPID  string
 }
 
-func NewBlinkClnt(kernelID string) (*BlinkClnt, error) {
+func NewBlinkClnt(kernelID string, procSrvPID string) (*BlinkClnt, error) {
 	c, err := blinkclnt.NewBlinkClnt()
 	if err != nil {
 		return nil, err
 	}
-	return &BlinkClnt{clnt: c, kernelID: kernelID}, nil
+	return &BlinkClnt{clnt: c, kernelID: kernelID, procSrvPID: procSrvPID}, nil
 }
 
 // StartBlinkContainer dispatches a RunBlinkProc RPC to BlinkSrv and returns a
@@ -42,7 +43,7 @@ func (bc *BlinkClnt) StartBlinkContainer(uproc *proc.Proc) (*BlinkContainer, err
 	uproc.AppendEnv(proc.SIGMAPERF, uproc.GetProcEnv().GetPerf())
 	waitC := make(chan error, 1)
 	go func() {
-		waitC <- bc.clnt.RunBlinkProc(uproc, bc.kernelID)
+		waitC <- bc.clnt.RunBlinkProc(uproc, bc.kernelID, bc.procSrvPID)
 	}()
 	db.DPrintf(db.BLINKD, "StartBlinkContainer pid %v", uproc.GetPid())
 	// TODO: replace rand.Int() with PID communicated by BlinkSrv

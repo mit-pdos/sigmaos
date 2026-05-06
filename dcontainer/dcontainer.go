@@ -48,7 +48,7 @@ type cpustats struct {
 	util                float64
 }
 
-func StartDockerContainer(p *proc.Proc, kernelId, user, netmode string, useGVisor bool) (*DContainer, error) {
+func StartDockerContainer(p *proc.Proc, kernelId, user, netmode string, useGVisor bool, enableBlink bool) (*DContainer, error) {
 	image := "sigmauser"
 	tmpBase := "/tmp"
 	if user != sp.NOT_SET {
@@ -118,6 +118,19 @@ func StartDockerContainer(p *proc.Proc, kernelId, user, netmode string, useGViso
 				ReadOnly: true,
 			},
 		)
+	}
+
+	if enableBlink {
+		hostSpproxydPath := "/tmp/spproxyd-" + p.GetPid().String()
+		if err := os.MkdirAll(hostSpproxydPath, 0777); err != nil {
+			return nil, err
+		}
+		mnts = append(mnts, mount.Mount{
+			Type:     mount.TypeBind,
+			Source:   hostSpproxydPath,
+			Target:   "/tmp/spproxyd",
+			ReadOnly: false,
+		})
 	}
 
 	ulimits := []*units.Ulimit{}

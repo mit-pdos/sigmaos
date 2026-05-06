@@ -83,7 +83,18 @@ type BlinkSrvAPI struct {
 
 func (api *BlinkSrvAPI) RunBlinkProc(ctx fs.CtxI, req blinkproto.RunBlinkProcReq, rep *blinkproto.RunBlinkProcRep) error {
 	p := proc.NewProcFromProto(req.Proc)
-	db.DPrintf(db.BLINKD, "BlinkSrvAPI.RunBlinkProc %v kid %v", p, req.Kid)
+	db.DPrintf(db.BLINKD, "BlinkSrvAPI.RunBlinkProc %v kid %v procsrvPID %v", p, req.Kid, req.ProcsrvPid)
+
+	// Mount the procsrv's spproxyd socket dir into the chroot.
+	chrootSpproxyd := blink.JUNCTION_CHROOT + "/tmp/spproxyd"
+	hostSpproxyd := "/tmp/spproxyd-" + req.ProcsrvPid
+	if err := exec.Command("sudo", "mkdir", "-p", chrootSpproxyd).Run(); err != nil {
+		return fmt.Errorf("mkdir chroot spproxyd: %w", err)
+	}
+	if err := exec.Command("sudo", "mount", "--bind", hostSpproxyd, chrootSpproxyd).Run(); err != nil {
+		return fmt.Errorf("mount spproxyd: %w", err)
+	}
+	defer exec.Command("sudo", "umount", chrootSpproxyd).Run()
 
 	program := strings.TrimSuffix(p.GetProgram(), ".py")
 	functionName := "python_" + program

@@ -5,8 +5,9 @@ import "proc/proc.proto";
 option go_package = "sigmaos/blink/proto";
 
 message RunBlinkProcReq {
-  ProcProto proc = 1;
-  string    kid  = 2;
+  ProcProto proc        = 1;
+  string    kid         = 2;
+  string    procsrv_pid = 3;
 }
 
 message RunBlinkProcRep {

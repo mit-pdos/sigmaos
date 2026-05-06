@@ -222,7 +222,7 @@ func RunProcSrv(kernelId string, dialproxy bool, gvisor bool, spproxydPID sp.Tpi
 	ps.wdc = wdc
 
 	if ps.enableBlink {
-		bc, err := blinkcontainer.NewBlinkClnt(ps.kernelId)
+		bc, err := blinkcontainer.NewBlinkClnt(ps.kernelId, ps.pe.GetPID().String())
 		if err != nil {
 			db.DPrintf(db.PROCD_ERR, "NewBlinkClnt err: %v", err)
 			return err

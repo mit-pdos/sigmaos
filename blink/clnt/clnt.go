@@ -26,10 +26,11 @@ func NewBlinkClnt() (*BlinkClnt, error) {
 	return &BlinkClnt{rpcc: rpcc}, nil
 }
 
-func (bc *BlinkClnt) RunBlinkProc(p *proc.Proc, kid string) error {
+func (bc *BlinkClnt) RunBlinkProc(p *proc.Proc, kid string, procSrvPID string) error {
 	req := &blinkproto.RunBlinkProcReq{
-		Proc: p.GetProto(),
-		Kid:  kid,
+		Proc:       p.GetProto(),
+		Kid:        kid,
+		ProcsrvPid: procSrvPID,
 	}
 	rep := &blinkproto.RunBlinkProcRep{}
 	if err := bc.rpcc.RPC("BlinkSrvAPI.RunBlinkProc", req, rep); err != nil {

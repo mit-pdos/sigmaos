@@ -12,6 +12,5 @@ const (
 	CALADAN_SETUP_SCRIPT = "/home/arielck/blink-ae/junction/lib/caladan/scripts/setup_machine.sh"
 	IOKERNELD_BIN        = "/home/arielck/blink-ae/junction/lib/caladan/iokerneld"
 
-	BLINK_PYTHON        = "/home/arielck/blink-ae/bin/venv/bin/python3"
-	BLINK_PYTHON_RUNNER = "/home/arielck/blink-ae/functions/python/run.py"
+	SNAPSHOT_JIF_SUFFIX = "_itrees_ord_reorder.jif"
 )

@@ -115,20 +115,21 @@ func (api *BlinkSrvAPI) RunBlinkProc(ctx fs.CtxI, req blinkproto.RunBlinkProcReq
 		"--chroot="+blink.JUNCTION_CHROOT,
 		"--cache_linux_fs",
 		"--jif",
-		"--madv_remap",
-		"--snapshot-prefix", snapshotPrefix,
+		"-rk",
 		"--",
-		blink.BLINK_PYTHON, "-u", blink.BLINK_PYTHON_RUNNER, program,
+		snapshotPrefix+".jm",
+		snapshotPrefix+blink.SNAPSHOT_JIF_SUFFIX,
 	)
 
-	logFile, err := os.OpenFile(blink.BLINK_RESULTS+"/generate_images_snap_shelf", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	logFile, err := os.OpenFile(blink.BLINK_RESULTS+"/restore_images_itrees_jif_k", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
-		return fmt.Errorf("open snap shelf log: %w", err)
+		return fmt.Errorf("open restore log: %w", err)
 	}
 	defer logFile.Close()
 
 	cmd := exec.Command("sudo", args...)
 	cmd.Stdout = logFile
+	cmd.Stderr = logFile
 	db.DPrintf(db.BLINKD, "BlinkSrvAPI.RunBlinkProc exec %v", cmd)
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("junction_run: %w", err)

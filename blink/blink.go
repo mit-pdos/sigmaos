@@ -1,7 +1,8 @@
 package blink
 
 const (
-	BLINK_PORT = 50055
+	BLINK_PORT  = 50055
+	DTAP0_ADDR  = "192.168.120.1"
 
 	BLINK_RESULTS = "/home/arielck/blink-ae/results/blink.recent"
 

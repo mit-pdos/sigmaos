@@ -99,6 +99,20 @@ func (api *BlinkSrvAPI) RunBlinkProc(ctx fs.CtxI, req blinkproto.RunBlinkProcReq
 	}
 	defer exec.Command("sudo", "umount", chrootSpproxyd).Run()
 
+	// Forward TCP traffic from dtap0 (Caladan network) to the container running spproxyd.
+	// Caladan procs can only reach 192.168.120.1 (dtap0 host side), not the container's outer IP.
+	tcpPort := fmt.Sprintf("%d", req.SpproxyTcpPort)
+	dnatArgs := []string{"iptables", "-t", "nat", "-A", "PREROUTING", "-i", "dtap0", "-p", "tcp", "--dport", tcpPort, "-j", "DNAT", "--to-destination", req.SpproxyTcpHost + ":" + tcpPort}
+	if err := exec.Command("sudo", dnatArgs...).Run(); err != nil {
+		return fmt.Errorf("iptables DNAT: %w", err)
+	}
+	defer exec.Command("sudo", "iptables", "-t", "nat", "-D", "PREROUTING", "-i", "dtap0", "-p", "tcp", "--dport", tcpPort, "-j", "DNAT", "--to-destination", req.SpproxyTcpHost+":"+tcpPort).Run()
+	masqArgs := []string{"iptables", "-t", "nat", "-A", "POSTROUTING", "-d", req.SpproxyTcpHost, "-j", "MASQUERADE"}
+	if err := exec.Command("sudo", masqArgs...).Run(); err != nil {
+		return fmt.Errorf("iptables MASQUERADE: %w", err)
+	}
+	defer exec.Command("sudo", "iptables", "-t", "nat", "-D", "POSTROUTING", "-d", req.SpproxyTcpHost, "-j", "MASQUERADE").Run()
+
 	program := strings.TrimSuffix(p.GetProgram(), ".py")
 	functionName := "python_" + program
 	snapshotPrefix := "/tmp/python_" + program
@@ -112,7 +126,7 @@ func (api *BlinkSrvAPI) RunBlinkProc(ctx fs.CtxI, req blinkproto.RunBlinkProcReq
 		"model_key":         p.Args[3],
 		"kid":               p.Args[4],
 		"async_fetch":       p.Args[5],
-		"spproxy_tcp_host":  req.SpproxyTcpHost,
+		"spproxy_tcp_host":  blink.DTAP0_ADDR,
 		"spproxy_tcp_port":  fmt.Sprintf("%d", req.SpproxyTcpPort),
 	}
 	functionArgJSON, err := json.Marshal(functionArg)
@@ -184,6 +198,9 @@ func setupCaladan() error {
 	db.DPrintf(db.BLINKD, "iokerneld started (pid %d), logging to %s", cmd.Process.Pid, blink.BLINK_RESULTS+"/generate_images_iokernel.log")
 	if err := exec.Command("sudo", "sh", "-c", "ip addr add 192.168.120.1/16 dev dtap0 || true").Run(); err != nil {
 		return fmt.Errorf("ip addr add dtap0: %w", err)
+	}
+	if err := exec.Command("sudo", "sysctl", "-w", "net.ipv4.ip_forward=1").Run(); err != nil {
+		return fmt.Errorf("enable ip_forward: %w", err)
 	}
 	return nil
 }

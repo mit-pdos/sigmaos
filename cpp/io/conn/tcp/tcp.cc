@@ -16,6 +16,8 @@ void set_tcp_nodelay(int sockfd) {
   }
 }
 
+ClntConn::~ClntConn() {}
+
 std::expected<std::shared_ptr<Conn>, sigmaos::serr::Error> Listener::Accept() {
   struct sockaddr_in clnt_addr = {0};
   socklen_t addr_len = sizeof(_addr);

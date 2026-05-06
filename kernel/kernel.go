@@ -30,6 +30,7 @@ type Param struct {
 	Mongoip     string
 	DialProxy   bool
 	GVisor      bool
+	EnableBlink bool
 	BuildTag    string
 	Net         string
 	User        string

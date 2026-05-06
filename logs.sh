@@ -36,6 +36,11 @@ if [ -f /tmp/blinkd.out ]; then
   out="$(printf "%s\n" "$out" "========== Logs for blinkd ==========" "$blinkd_out")"
 fi
 
+if [ -f /tmp/blinkd-restore.out ]; then
+  blinkd_out="$(cat /tmp/blinkd-restore.out 2>&1)"
+  out="$(printf "%s\n" "$out" "========== Logs for blinkd-restore ==========" "$blinkd_out")"
+fi
+
 # Trim first line (which is blank)
 out="$(echo "$out" | tail -n +2 )"
 if [[ "$MERGE" == "merge" ]] ; then

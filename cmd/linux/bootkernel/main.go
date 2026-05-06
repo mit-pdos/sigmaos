@@ -29,16 +29,18 @@ func main() {
 	if err != nil {
 		db.DFatalf("Error parse gvisor: %v", err)
 	}
+	enableBlink, _ := strconv.ParseBool(os.Getenv("enableblink"))
 	param := kernel.Param{
-		KernelID:  os.Args[1],
-		Services:  srvs,
-		Dbip:      os.Args[4],
-		Mongoip:   os.Args[5],
-		DialProxy: dialproxy,
-		GVisor:    gvisor,
-		BuildTag:  os.Args[7],
-		Net:       os.Args[9],
-		User:      os.Args[10],
+		KernelID:    os.Args[1],
+		Services:    srvs,
+		Dbip:        os.Args[4],
+		Mongoip:     os.Args[5],
+		DialProxy:   dialproxy,
+		GVisor:      gvisor,
+		EnableBlink: enableBlink,
+		BuildTag:    os.Args[7],
+		Net:         os.Args[9],
+		User:        os.Args[10],
 	}
 	if len(os.Args) >= 7 {
 		param.ReserveMcpu = os.Args[6]

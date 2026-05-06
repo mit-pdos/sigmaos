@@ -30,6 +30,7 @@ var EtcdIP string
 var useSPProxy bool
 var noDialProxy bool
 var UseGVisor bool
+var EnableBlink bool
 var noBootDialProxy bool
 var Withs3pathclnt bool
 
@@ -49,6 +50,7 @@ func init() {
 	flag.BoolVar(&useSPProxy, "usespproxy", false, "Use spproxy?")
 	flag.BoolVar(&noDialProxy, "nodialproxy", false, "Disable use of proxy for network dialing/listening?")
 	flag.BoolVar(&UseGVisor, "usegvisor", false, "Isolate user procs with GVisor.")
+	flag.BoolVar(&EnableBlink, "blink", false, "Enable blink procs.")
 	flag.BoolVar(&noBootDialProxy, "no-boot-dialproxy", false, "Boot spproxy?")
 	flag.BoolVar(&Withs3pathclnt, "withs3pathclnt", false, "With s3clntpath?")
 	flag.StringVar(&projectRoot, "projectroot", "", "Path to project root")
@@ -204,7 +206,7 @@ func newSysClnt(t *testing.T, ntype bootclnt.Tboot) (*Tstate, error) {
 	var k *bootclnt.Kernel
 	if Start {
 		kernelid = bootclnt.GenKernelId()
-		_, err := bootclnt.Start(kernelid, sp.Tip(EtcdIP), pe, ntype, useDialProxy, UseGVisor, homeDir, projectRoot, User, netname)
+		_, err := bootclnt.Start(kernelid, sp.Tip(EtcdIP), pe, ntype, useDialProxy, UseGVisor, EnableBlink, homeDir, projectRoot, User, netname)
 		if err != nil {
 			db.DPrintf(db.ALWAYS, "Error start kernel: %v", err)
 			return nil, err
@@ -252,7 +254,7 @@ func (ts *Tstate) bootNode(n int, ntype bootclnt.Tboot) ([]string, error) {
 	// node
 	savedTstate = nil
 	for i := 0; i < n; i++ {
-		kclnt, err := bootclnt.NewKernelClntStart(sp.Tip(EtcdIP), ts.ProcEnv(), ntype, useDialProxy, UseGVisor, homeDir, projectRoot, User, netname)
+		kclnt, err := bootclnt.NewKernelClntStart(sp.Tip(EtcdIP), ts.ProcEnv(), ntype, useDialProxy, UseGVisor, EnableBlink, homeDir, projectRoot, User, netname)
 		if err != nil {
 			return nil, err
 		}

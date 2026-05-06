@@ -107,13 +107,14 @@ type ProcSrv struct {
 	k8s             bool
 	k8sClnt         *kubernetes.Clientset
 	blinkClnt       *blinkcontainer.BlinkClnt
+	enableBlink     bool
 }
 
 type ProcRPCSrv struct {
 	ps *ProcSrv
 }
 
-func RunProcSrv(kernelId string, dialproxy bool, gvisor bool, spproxydPID sp.Tpid, wasmdPID sp.Tpid) error {
+func RunProcSrv(kernelId string, dialproxy bool, gvisor bool, spproxydPID sp.Tpid, wasmdPID sp.Tpid, enableBlink bool) error {
 	pe := proc.GetProcEnv()
 	ps := &ProcSrv{
 		kernelId:        kernelId,
@@ -129,6 +130,7 @@ func RunProcSrv(kernelId string, dialproxy bool, gvisor bool, spproxydPID sp.Tpi
 		pq:              newProcQueue(),
 		gvisor:          gvisor,
 		k8s:             true, // TODO: set from above
+		enableBlink:     enableBlink,
 	}
 
 	if ps.k8s && false {
@@ -219,10 +221,12 @@ func RunProcSrv(kernelId string, dialproxy bool, gvisor bool, spproxydPID sp.Tpi
 	}
 	ps.wdc = wdc
 
-	bc, err := blinkcontainer.NewBlinkClnt(ps.kernelId)
-	if err != nil {
-		db.DPrintf(db.PROCD, "NewBlinkClnt err (blinkd not running?): %v", err)
-	} else {
+	if ps.enableBlink {
+		bc, err := blinkcontainer.NewBlinkClnt(ps.kernelId)
+		if err != nil {
+			db.DPrintf(db.PROCD_ERR, "NewBlinkClnt err: %v", err)
+			return err
+		}
 		ps.blinkClnt = bc
 	}
 
@@ -572,6 +576,9 @@ func (ps *ProcSrv) Run(ctx fs.CtxI, req proto.RunReq, res *proto.RunRep) error {
 					return err
 				}
 			} else if uproc.GetProcContainerType() == proc.ProcContainerType_PROC_CTR_BLINK {
+				if ps.blinkClnt == nil {
+					return fmt.Errorf("blink proc requested but blink is not enabled")
+				}
 				db.DPrintf(db.PROCD, "[%v] Run Blink proc", uproc.GetPid())
 				ctr, err = ps.blinkClnt.StartBlinkContainer(uproc)
 				if err != nil {

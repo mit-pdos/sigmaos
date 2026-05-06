@@ -27,7 +27,7 @@ func projectRootPath() string {
 	return filepath.Dir(filepath.Dir(b))
 }
 
-func Start(kernelId string, etcdIP sp.Tip, pe *proc.ProcEnv, ntype Tboot, dialproxy bool, gvisor bool, homeDir string, projectRoot string, user, net string) (string, error) {
+func Start(kernelId string, etcdIP sp.Tip, pe *proc.ProcEnv, ntype Tboot, dialproxy bool, gvisor bool, enableBlink bool, homeDir string, projectRoot string, user, net string) (string, error) {
 	args := []string{
 		"--pull", pe.BuildTag,
 		"--boot", ntype.String(),
@@ -48,6 +48,9 @@ func Start(kernelId string, etcdIP sp.Tip, pe *proc.ProcEnv, ntype Tboot, dialpr
 	}
 	if gvisor {
 		args = append(args, "--usegvisor")
+	}
+	if enableBlink {
+		args = append(args, "--enableblink")
 	}
 	args = append(args, kernelId)
 	// Ensure the kernel output directory has been created
@@ -98,9 +101,9 @@ type Kernel struct {
 	kclnt    *kernelclnt.KernelClnt
 }
 
-func NewKernelClntStart(etcdIP sp.Tip, pe *proc.ProcEnv, ntype Tboot, dialproxy bool, gvisor bool, homeDir string, projectRoot string, user, net string) (*Kernel, error) {
+func NewKernelClntStart(etcdIP sp.Tip, pe *proc.ProcEnv, ntype Tboot, dialproxy bool, gvisor bool, enableBlink bool, homeDir string, projectRoot string, user, net string) (*Kernel, error) {
 	kernelId := GenKernelId()
-	_, err := Start(kernelId, etcdIP, pe, ntype, dialproxy, gvisor, homeDir, projectRoot, user, net)
+	_, err := Start(kernelId, etcdIP, pe, ntype, dialproxy, gvisor, enableBlink, homeDir, projectRoot, user, net)
 	if err != nil {
 		return nil, err
 	}

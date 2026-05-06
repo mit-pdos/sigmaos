@@ -23,7 +23,7 @@ func NewDialProxyProvider(pe *proc.ProcEnv, useDialProxy, useGVisor, bootAsKerne
 	var spkc *bootclnt.Kernel
 	if bootAsKernel {
 		sckid := sp.SPProxydKernel(bootclnt.GenKernelId())
-		_, err := bootclnt.Start(sckid, sp.Tip(EtcdIP), pe, sp.SPPROXYDREL, useDialProxy, useGVisor, homeDir, projectRoot, User, netname)
+		_, err := bootclnt.Start(sckid, sp.Tip(EtcdIP), pe, sp.SPPROXYDREL, useDialProxy, useGVisor, false, homeDir, projectRoot, User, netname)
 		if err != nil {
 			db.DPrintf(db.ALWAYS, "Error start kernel for spproxyd")
 			return nil, err

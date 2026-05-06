@@ -31,7 +31,7 @@ def preprocess(img_bytes: bytes) -> np.ndarray:
 def function_handler(request_json):
     is_warmup = request_json["is_warmup"] == "true"
     if is_warmup:
-      return
+      return "ok"
 
     clnt = sigmaos.SigmaosClnt()
     clnt.started()
@@ -82,3 +82,4 @@ def function_handler(request_json):
     score     = float(scores[class_idx])
 
     clnt.exited(sigmaos.STATUS_OK, f"{class_idx},{score}")
+    return f"{class_idx},{score}"

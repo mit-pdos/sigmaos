@@ -18,6 +18,7 @@ NET="host"
 KERNELID=""
 DIALPROXY="false"
 GVISOR="false"
+ENABLEBLINK="false"
 RMCPU="0"
 HOMEDIR=$HOME
 PROJECT_ROOT=$(realpath $(dirname $0))
@@ -88,6 +89,10 @@ while [[ "$#" -gt 1 ]]; do
   --usegvisor)
     shift
     GVISOR="true"
+    ;;
+  --enableblink)
+    shift
+    ENABLEBLINK="true"
     ;;
   --named)
     shift
@@ -215,6 +220,7 @@ CID=$(docker run -dit \
              -e buildtag=${TAG} \
              -e dialproxy=${DIALPROXY} \
              -e gvisor=${GVISOR} \
+             -e enableblink=${ENABLEBLINK} \
              -e SIGMAPERF=${SIGMAPERF} \
              -e SIGMAFAIL=${SIGMAFAIL} \
              -e SIGMADEBUG=${SIGMADEBUG} \

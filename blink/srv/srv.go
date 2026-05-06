@@ -88,20 +88,20 @@ func (api *BlinkSrvAPI) RunBlinkProc(ctx fs.CtxI, req blinkproto.RunBlinkProcReq
 
 	// Mount the procsrv's spproxyd socket dir into the chroot.
 	chrootSpproxyd := blink.JUNCTION_CHROOT + "/tmp/spproxyd"
-	hostSpproxyd := blink.PROCD_SPPROXYD_BASE + "/spproxyd-" + req.ProcsrvPid
+	//hostSpproxyd := blink.PROCD_SPPROXYD_BASE + "/spproxyd-" + req.ProcsrvPid
 	if err := exec.Command("sudo", "mkdir", "-p", chrootSpproxyd).Run(); err != nil {
 		db.DPrintf(db.ERROR, "ERR RunBlinkProc mkdir chroot spproxyd: %v", err)
 		return fmt.Errorf("mkdir chroot spproxyd: %w", err)
 	}
-	if err := exec.Command("sudo", "mount", "--bind", hostSpproxyd, chrootSpproxyd).Run(); err != nil {
-		db.DPrintf(db.ERROR, "ERR RunBlinkProc mount spproxyd: %v", err)
-		return fmt.Errorf("mount spproxyd: %w", err)
-	}
-	if err := exec.Command("sudo", "chmod", "a+rwx", chrootSpproxyd).Run(); err != nil {
-		db.DPrintf(db.ERROR, "ERR RunBlinkProc chmod spproxyd: %v", err)
-		return fmt.Errorf("chmod spproxyd: %w", err)
-	}
-	defer exec.Command("sudo", "umount", chrootSpproxyd).Run()
+	//	if err := exec.Command("sudo", "mount", "--bind", hostSpproxyd, chrootSpproxyd).Run(); err != nil {
+	//		db.DPrintf(db.ERROR, "ERR RunBlinkProc mount spproxyd: %v", err)
+	//		return fmt.Errorf("mount spproxyd: %w", err)
+	//	}
+	//	if err := exec.Command("sudo", "chmod", "a+rwx", chrootSpproxyd).Run(); err != nil {
+	//		db.DPrintf(db.ERROR, "ERR RunBlinkProc chmod spproxyd: %v", err)
+	//		return fmt.Errorf("chmod spproxyd: %w", err)
+	//	}
+	//	defer exec.Command("sudo", "umount", chrootSpproxyd).Run()
 
 	program := strings.TrimSuffix(p.GetProgram(), ".py")
 	functionName := "python_" + program

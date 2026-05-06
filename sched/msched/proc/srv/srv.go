@@ -18,6 +18,7 @@ import (
 
 	"k8s.io/client-go/kubernetes"
 	"sigmaos/api/fs"
+	blinkcontainer "sigmaos/blink/container"
 	"sigmaos/container"
 	db "sigmaos/debug"
 	"sigmaos/gvisor"
@@ -28,7 +29,6 @@ import (
 	wasmclnt "sigmaos/proxy/wasm/clnt"
 	wasmrpc "sigmaos/proxy/wasm/rpc"
 	wasmsrv "sigmaos/proxy/wasm/srv"
-	blinkcontainer "sigmaos/blink"
 	pycontainer "sigmaos/python/container"
 	chunkclnt "sigmaos/sched/msched/proc/chunk/clnt"
 	chunksrv "sigmaos/sched/msched/proc/chunk/srv"

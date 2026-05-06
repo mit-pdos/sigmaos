@@ -122,6 +122,10 @@ func (api *BlinkSrvAPI) RunBlinkProc(ctx fs.CtxI, req blinkproto.RunBlinkProcReq
 	for _, envVar := range p.GetEnv() {
 		args = append(args, "--env", envVar)
 	}
+	straceProcs := proc.GetLabels(p.ProcEnvProto.GetStrace())
+	if straceProcs[program] {
+		args = append(args, "--strace")
+	}
 	args = append(args,
 		"--chroot="+blink.JUNCTION_CHROOT,
 		"--cache_linux_fs",

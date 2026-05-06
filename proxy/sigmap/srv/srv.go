@@ -12,6 +12,7 @@ import (
 	"syscall"
 
 	epcacheclnt "sigmaos/apps/epcache/clnt"
+	"sigmaos/blink"
 	db "sigmaos/debug"
 	dialproxyclnt "sigmaos/dialproxy/clnt"
 	dialproxysrv "sigmaos/dialproxy/srv"
@@ -87,7 +88,7 @@ func (spps *SPProxySrv) runServer(enableBlink bool) error {
 	db.DPrintf(db.SPPROXYSRV, "runServer: spproxyd listening on %v", sp.SIGMASOCKET)
 	// When blink is enabled, also listen on a dynamically assigned TCP socket
 	if enableBlink {
-		tcpSocket, err := net.Listen("tcp", "192.168.120.1:0")
+		tcpSocket, err := net.Listen("tcp", blink.DTAP0_ADDR+":0")
 		if err != nil {
 			return err
 		}

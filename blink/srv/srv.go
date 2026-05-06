@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"time"
 
 	"sigmaos/api/fs"
 	"sigmaos/blink"
@@ -182,7 +183,17 @@ func setupCaladan() error {
 		return fmt.Errorf("start iokerneld: %w", err)
 	}
 	db.DPrintf(db.BLINKD, "iokerneld started (pid %d), logging to %s", cmd.Process.Pid, blink.BLINK_RESULTS+"/generate_images_iokernel.log")
-	if err := exec.Command("sudo", "sh", "-c", "ip addr add 192.168.120.1/16 dev dtap0 || true").Run(); err != nil {
+	// Wait for iokerneld to create dtap0 before assigning the address.
+	for i := 0; ; i++ {
+		if exec.Command("ip", "link", "show", "dtap0").Run() == nil {
+			break
+		}
+		if i >= 50 {
+			return fmt.Errorf("dtap0 did not appear after iokerneld start")
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	if err := exec.Command("sudo", "ip", "addr", "add", blink.DTAP0_ADDR+"/16", "dev", "dtap0").Run(); err != nil {
 		return fmt.Errorf("ip addr add dtap0: %w", err)
 	}
 	if err := exec.Command("sudo", "sysctl", "-w", "net.ipv4.ip_forward=1").Run(); err != nil {

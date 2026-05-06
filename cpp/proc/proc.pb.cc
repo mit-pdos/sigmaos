@@ -129,6 +129,20 @@ struct ProcEnvProtoDefaultTypeInternal {
   };
 };
 PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 ProcEnvProtoDefaultTypeInternal _ProcEnvProto_default_instance_;
+PROTOBUF_CONSTEXPR AddedBinProto::AddedBinProto(
+    ::_pbi::ConstantInitialized): _impl_{
+    /*decltype(_impl_.program_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}
+  , /*decltype(_impl_.compressed_)*/false
+  , /*decltype(_impl_._cached_size_)*/{}} {}
+struct AddedBinProtoDefaultTypeInternal {
+  PROTOBUF_CONSTEXPR AddedBinProtoDefaultTypeInternal()
+      : _instance(::_pbi::ConstantInitialized{}) {}
+  ~AddedBinProtoDefaultTypeInternal() {}
+  union {
+    AddedBinProto _instance;
+  };
+};
+PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 AddedBinProtoDefaultTypeInternal _AddedBinProto_default_instance_;
 PROTOBUF_CONSTEXPR ProcProto_EnvEntry_DoNotUse::ProcProto_EnvEntry_DoNotUse(
     ::_pbi::ConstantInitialized) {}
 struct ProcProto_EnvEntry_DoNotUseDefaultTypeInternal {
@@ -167,7 +181,7 @@ struct ProcProtoDefaultTypeInternal {
   };
 };
 PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 ProcProtoDefaultTypeInternal _ProcProto_default_instance_;
-static ::_pb::Metadata file_level_metadata_proc_2fproc_2eproto[8];
+static ::_pb::Metadata file_level_metadata_proc_2fproc_2eproto[9];
 static const ::_pb::EnumDescriptor* file_level_enum_descriptors_proc_2fproc_2eproto[1];
 static constexpr ::_pb::ServiceDescriptor const** file_level_service_descriptors_proc_2fproc_2eproto = nullptr;
 
@@ -260,6 +274,14 @@ const uint32_t TableStruct_proc_2fproc_2eproto::offsets[] PROTOBUF_SECTION_VARIA
   PROTOBUF_FIELD_OFFSET(::ProcEnvProto, _impl_.usespproxyprocclnt_),
   PROTOBUF_FIELD_OFFSET(::ProcEnvProto, _impl_.debugprocs_),
   PROTOBUF_FIELD_OFFSET(::ProcEnvProto, _impl_.containertype_),
+  ~0u,  // no _has_bits_
+  PROTOBUF_FIELD_OFFSET(::AddedBinProto, _internal_metadata_),
+  ~0u,  // no _extensions_
+  ~0u,  // no _oneof_case_
+  ~0u,  // no _weak_field_map_
+  ~0u,  // no _inlined_string_donated_
+  PROTOBUF_FIELD_OFFSET(::AddedBinProto, _impl_.program_),
+  PROTOBUF_FIELD_OFFSET(::AddedBinProto, _impl_.compressed_),
   PROTOBUF_FIELD_OFFSET(::ProcProto_EnvEntry_DoNotUse, _has_bits_),
   PROTOBUF_FIELD_OFFSET(::ProcProto_EnvEntry_DoNotUse, _internal_metadata_),
   ~0u,  // no _extensions_
@@ -299,8 +321,9 @@ static const ::_pbi::MigrationSchema schemas[] PROTOBUF_SECTION_VARIABLE(protode
   { 28, 36, -1, sizeof(::ProcEnvProto_SecretsMapEntry_DoNotUse)},
   { 38, 46, -1, sizeof(::ProcEnvProto_CachedEndpointsEntry_DoNotUse)},
   { 48, -1, -1, sizeof(::ProcEnvProto)},
-  { 88, 96, -1, sizeof(::ProcProto_EnvEntry_DoNotUse)},
-  { 98, -1, -1, sizeof(::ProcProto)},
+  { 88, -1, -1, sizeof(::AddedBinProto)},
+  { 96, 104, -1, sizeof(::ProcProto_EnvEntry_DoNotUse)},
+  { 106, -1, -1, sizeof(::ProcProto)},
 };
 
 static const ::_pb::Message* const file_default_instances[] = {
@@ -310,6 +333,7 @@ static const ::_pb::Message* const file_default_instances[] = {
   &::_ProcEnvProto_SecretsMapEntry_DoNotUse_default_instance_._instance,
   &::_ProcEnvProto_CachedEndpointsEntry_DoNotUse_default_instance_._instance,
   &::_ProcEnvProto_default_instance_._instance,
+  &::_AddedBinProto_default_instance_._instance,
   &::_ProcProto_EnvEntry_DoNotUse_default_instance_._instance,
   &::_ProcProto_default_instance_._instance,
 };
@@ -347,22 +371,24 @@ const char descriptor_table_protodef_proc_2fproc_2eproto[] PROTOBUF_SECTION_VARI
   "\n\017SecretsMapEntry\022\013\n\003key\030\001 \001(\t\022\033\n\005value\030"
   "\002 \001(\0132\014.SecretProto:\0028\001\032G\n\024CachedEndpoin"
   "tsEntry\022\013\n\003key\030\001 \001(\t\022\036\n\005value\030\002 \001(\0132\017.Te"
-  "ndpointProto:\0028\001\"\342\003\n\tProcProto\022#\n\014procEn"
-  "vProto\030\001 \001(\0132\r.ProcEnvProto\022\014\n\004args\030\002 \003("
-  "\t\022\021\n\taddedBins\030\003 \003(\t\022 \n\003env\030\004 \003(\0132\023.Proc"
-  "Proto.EnvEntry\022\023\n\004blob\030\005 \001(\0132\005.Blob\022\026\n\016c"
-  "oSandboxInput\030\006 \001(\014\022\017\n\007typeInt\030\007 \001(\r\022\031\n\021"
-  "runAfterCoSandbox\030\010 \001(\010\022\037\n\027queueableReso"
-  "urcePoolID\030\t \001(\004\022.\n\013resourceRes\030\n \001(\0132\031."
-  "ResourceReservationProto\0227\n\024coSandboxRes"
-  "ourceRes\030\013 \001(\0132\031.ResourceReservationProt"
-  "o\022\022\n\nmeasurePSS\030\014 \001(\010\022\031\n\021measurePSSDelay"
-  "MS\030\r \001(\004\022\031\n\021cosandboxBufMBInt\030\016 \001(\004\022\024\n\014w"
-  "asmBufMBInt\030\017 \001(\004\032*\n\010EnvEntry\022\013\n\003key\030\001 \001"
-  "(\t\022\r\n\005value\030\002 \001(\t:\0028\001*P\n\021ProcContainerTy"
-  "pe\022\023\n\017PROC_CTR_NATIVE\020\000\022\021\n\rPROC_CTR_WASM"
-  "\020\001\022\023\n\017PROC_CTR_PYTHON\020\002B\016Z\014sigmaos/procb"
-  "\006proto3"
+  "ndpointProto:\0028\001\"4\n\rAddedBinProto\022\017\n\007pro"
+  "gram\030\001 \001(\t\022\022\n\ncompressed\030\002 \001(\010\"\362\003\n\tProcP"
+  "roto\022#\n\014procEnvProto\030\001 \001(\0132\r.ProcEnvProt"
+  "o\022\014\n\004args\030\002 \003(\t\022!\n\taddedBins\030\003 \003(\0132\016.Add"
+  "edBinProto\022 \n\003env\030\004 \003(\0132\023.ProcProto.EnvE"
+  "ntry\022\023\n\004blob\030\005 \001(\0132\005.Blob\022\026\n\016coSandboxIn"
+  "put\030\006 \001(\014\022\017\n\007typeInt\030\007 \001(\r\022\031\n\021runAfterCo"
+  "Sandbox\030\010 \001(\010\022\037\n\027queueableResourcePoolID"
+  "\030\t \001(\004\022.\n\013resourceRes\030\n \001(\0132\031.ResourceRe"
+  "servationProto\0227\n\024coSandboxResourceRes\030\013"
+  " \001(\0132\031.ResourceReservationProto\022\022\n\nmeasu"
+  "rePSS\030\014 \001(\010\022\031\n\021measurePSSDelayMS\030\r \001(\004\022\031"
+  "\n\021cosandboxBufMBInt\030\016 \001(\004\022\024\n\014wasmBufMBIn"
+  "t\030\017 \001(\004\032*\n\010EnvEntry\022\013\n\003key\030\001 \001(\t\022\r\n\005valu"
+  "e\030\002 \001(\t:\0028\001*d\n\021ProcContainerType\022\023\n\017PROC"
+  "_CTR_NATIVE\020\000\022\021\n\rPROC_CTR_WASM\020\001\022\023\n\017PROC"
+  "_CTR_PYTHON\020\002\022\022\n\016PROC_CTR_BLINK\020\003B\016Z\014sig"
+  "maos/procb\006proto3"
   ;
 static const ::_pbi::DescriptorTable* const descriptor_table_proc_2fproc_2eproto_deps[3] = {
   &::descriptor_table_google_2fprotobuf_2ftimestamp_2eproto,
@@ -371,9 +397,9 @@ static const ::_pbi::DescriptorTable* const descriptor_table_proc_2fproc_2eproto
 };
 static ::_pbi::once_flag descriptor_table_proc_2fproc_2eproto_once;
 const ::_pbi::DescriptorTable descriptor_table_proc_2fproc_2eproto = {
-    false, false, 1887, descriptor_table_protodef_proc_2fproc_2eproto,
+    false, false, 1977, descriptor_table_protodef_proc_2fproc_2eproto,
     "proc/proc.proto",
-    &descriptor_table_proc_2fproc_2eproto_once, descriptor_table_proc_2fproc_2eproto_deps, 3, 8,
+    &descriptor_table_proc_2fproc_2eproto_once, descriptor_table_proc_2fproc_2eproto_deps, 3, 9,
     schemas, file_default_instances, TableStruct_proc_2fproc_2eproto::offsets,
     file_level_metadata_proc_2fproc_2eproto, file_level_enum_descriptors_proc_2fproc_2eproto,
     file_level_service_descriptors_proc_2fproc_2eproto,
@@ -393,6 +419,7 @@ bool ProcContainerType_IsValid(int value) {
     case 0:
     case 1:
     case 2:
+    case 3:
       return true;
     default:
       return false;
@@ -2615,6 +2642,236 @@ void ProcEnvProto::InternalSwap(ProcEnvProto* other) {
 
 // ===================================================================
 
+class AddedBinProto::_Internal {
+ public:
+};
+
+AddedBinProto::AddedBinProto(::PROTOBUF_NAMESPACE_ID::Arena* arena,
+                         bool is_message_owned)
+  : ::PROTOBUF_NAMESPACE_ID::Message(arena, is_message_owned) {
+  SharedCtor(arena, is_message_owned);
+  // @@protoc_insertion_point(arena_constructor:AddedBinProto)
+}
+AddedBinProto::AddedBinProto(const AddedBinProto& from)
+  : ::PROTOBUF_NAMESPACE_ID::Message() {
+  AddedBinProto* const _this = this; (void)_this;
+  new (&_impl_) Impl_{
+      decltype(_impl_.program_){}
+    , decltype(_impl_.compressed_){}
+    , /*decltype(_impl_._cached_size_)*/{}};
+
+  _internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
+  _impl_.program_.InitDefault();
+  #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+    _impl_.program_.Set("", GetArenaForAllocation());
+  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  if (!from._internal_program().empty()) {
+    _this->_impl_.program_.Set(from._internal_program(), 
+      _this->GetArenaForAllocation());
+  }
+  _this->_impl_.compressed_ = from._impl_.compressed_;
+  // @@protoc_insertion_point(copy_constructor:AddedBinProto)
+}
+
+inline void AddedBinProto::SharedCtor(
+    ::_pb::Arena* arena, bool is_message_owned) {
+  (void)arena;
+  (void)is_message_owned;
+  new (&_impl_) Impl_{
+      decltype(_impl_.program_){}
+    , decltype(_impl_.compressed_){false}
+    , /*decltype(_impl_._cached_size_)*/{}
+  };
+  _impl_.program_.InitDefault();
+  #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+    _impl_.program_.Set("", GetArenaForAllocation());
+  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+}
+
+AddedBinProto::~AddedBinProto() {
+  // @@protoc_insertion_point(destructor:AddedBinProto)
+  if (auto *arena = _internal_metadata_.DeleteReturnArena<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>()) {
+  (void)arena;
+    return;
+  }
+  SharedDtor();
+}
+
+inline void AddedBinProto::SharedDtor() {
+  GOOGLE_DCHECK(GetArenaForAllocation() == nullptr);
+  _impl_.program_.Destroy();
+}
+
+void AddedBinProto::SetCachedSize(int size) const {
+  _impl_._cached_size_.Set(size);
+}
+
+void AddedBinProto::Clear() {
+// @@protoc_insertion_point(message_clear_start:AddedBinProto)
+  uint32_t cached_has_bits = 0;
+  // Prevent compiler warnings about cached_has_bits being unused
+  (void) cached_has_bits;
+
+  _impl_.program_.ClearToEmpty();
+  _impl_.compressed_ = false;
+  _internal_metadata_.Clear<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>();
+}
+
+const char* AddedBinProto::_InternalParse(const char* ptr, ::_pbi::ParseContext* ctx) {
+#define CHK_(x) if (PROTOBUF_PREDICT_FALSE(!(x))) goto failure
+  while (!ctx->Done(&ptr)) {
+    uint32_t tag;
+    ptr = ::_pbi::ReadTag(ptr, &tag);
+    switch (tag >> 3) {
+      // string program = 1;
+      case 1:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 10)) {
+          auto str = _internal_mutable_program();
+          ptr = ::_pbi::InlineGreedyStringParser(str, ptr, ctx);
+          CHK_(ptr);
+          CHK_(::_pbi::VerifyUTF8(str, "AddedBinProto.program"));
+        } else
+          goto handle_unusual;
+        continue;
+      // bool compressed = 2;
+      case 2:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 16)) {
+          _impl_.compressed_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
+          CHK_(ptr);
+        } else
+          goto handle_unusual;
+        continue;
+      default:
+        goto handle_unusual;
+    }  // switch
+  handle_unusual:
+    if ((tag == 0) || ((tag & 7) == 4)) {
+      CHK_(ptr);
+      ctx->SetLastTag(tag);
+      goto message_done;
+    }
+    ptr = UnknownFieldParse(
+        tag,
+        _internal_metadata_.mutable_unknown_fields<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(),
+        ptr, ctx);
+    CHK_(ptr != nullptr);
+  }  // while
+message_done:
+  return ptr;
+failure:
+  ptr = nullptr;
+  goto message_done;
+#undef CHK_
+}
+
+uint8_t* AddedBinProto::_InternalSerialize(
+    uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
+  // @@protoc_insertion_point(serialize_to_array_start:AddedBinProto)
+  uint32_t cached_has_bits = 0;
+  (void) cached_has_bits;
+
+  // string program = 1;
+  if (!this->_internal_program().empty()) {
+    ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::VerifyUtf8String(
+      this->_internal_program().data(), static_cast<int>(this->_internal_program().length()),
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::SERIALIZE,
+      "AddedBinProto.program");
+    target = stream->WriteStringMaybeAliased(
+        1, this->_internal_program(), target);
+  }
+
+  // bool compressed = 2;
+  if (this->_internal_compressed() != 0) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteBoolToArray(2, this->_internal_compressed(), target);
+  }
+
+  if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
+    target = ::_pbi::WireFormat::InternalSerializeUnknownFieldsToArray(
+        _internal_metadata_.unknown_fields<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(::PROTOBUF_NAMESPACE_ID::UnknownFieldSet::default_instance), target, stream);
+  }
+  // @@protoc_insertion_point(serialize_to_array_end:AddedBinProto)
+  return target;
+}
+
+size_t AddedBinProto::ByteSizeLong() const {
+// @@protoc_insertion_point(message_byte_size_start:AddedBinProto)
+  size_t total_size = 0;
+
+  uint32_t cached_has_bits = 0;
+  // Prevent compiler warnings about cached_has_bits being unused
+  (void) cached_has_bits;
+
+  // string program = 1;
+  if (!this->_internal_program().empty()) {
+    total_size += 1 +
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
+        this->_internal_program());
+  }
+
+  // bool compressed = 2;
+  if (this->_internal_compressed() != 0) {
+    total_size += 1 + 1;
+  }
+
+  return MaybeComputeUnknownFieldsSize(total_size, &_impl_._cached_size_);
+}
+
+const ::PROTOBUF_NAMESPACE_ID::Message::ClassData AddedBinProto::_class_data_ = {
+    ::PROTOBUF_NAMESPACE_ID::Message::CopyWithSourceCheck,
+    AddedBinProto::MergeImpl
+};
+const ::PROTOBUF_NAMESPACE_ID::Message::ClassData*AddedBinProto::GetClassData() const { return &_class_data_; }
+
+
+void AddedBinProto::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PROTOBUF_NAMESPACE_ID::Message& from_msg) {
+  auto* const _this = static_cast<AddedBinProto*>(&to_msg);
+  auto& from = static_cast<const AddedBinProto&>(from_msg);
+  // @@protoc_insertion_point(class_specific_merge_from_start:AddedBinProto)
+  GOOGLE_DCHECK_NE(&from, _this);
+  uint32_t cached_has_bits = 0;
+  (void) cached_has_bits;
+
+  if (!from._internal_program().empty()) {
+    _this->_internal_set_program(from._internal_program());
+  }
+  if (from._internal_compressed() != 0) {
+    _this->_internal_set_compressed(from._internal_compressed());
+  }
+  _this->_internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
+}
+
+void AddedBinProto::CopyFrom(const AddedBinProto& from) {
+// @@protoc_insertion_point(class_specific_copy_from_start:AddedBinProto)
+  if (&from == this) return;
+  Clear();
+  MergeFrom(from);
+}
+
+bool AddedBinProto::IsInitialized() const {
+  return true;
+}
+
+void AddedBinProto::InternalSwap(AddedBinProto* other) {
+  using std::swap;
+  auto* lhs_arena = GetArenaForAllocation();
+  auto* rhs_arena = other->GetArenaForAllocation();
+  _internal_metadata_.InternalSwap(&other->_internal_metadata_);
+  ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr::InternalSwap(
+      &_impl_.program_, lhs_arena,
+      &other->_impl_.program_, rhs_arena
+  );
+  swap(_impl_.compressed_, other->_impl_.compressed_);
+}
+
+::PROTOBUF_NAMESPACE_ID::Metadata AddedBinProto::GetMetadata() const {
+  return ::_pbi::AssignDescriptors(
+      &descriptor_table_proc_2fproc_2eproto_getter, &descriptor_table_proc_2fproc_2eproto_once,
+      file_level_metadata_proc_2fproc_2eproto[6]);
+}
+
+// ===================================================================
+
 ProcProto_EnvEntry_DoNotUse::ProcProto_EnvEntry_DoNotUse() {}
 ProcProto_EnvEntry_DoNotUse::ProcProto_EnvEntry_DoNotUse(::PROTOBUF_NAMESPACE_ID::Arena* arena)
     : SuperType(arena) {}
@@ -2624,7 +2881,7 @@ void ProcProto_EnvEntry_DoNotUse::MergeFrom(const ProcProto_EnvEntry_DoNotUse& o
 ::PROTOBUF_NAMESPACE_ID::Metadata ProcProto_EnvEntry_DoNotUse::GetMetadata() const {
   return ::_pbi::AssignDescriptors(
       &descriptor_table_proc_2fproc_2eproto_getter, &descriptor_table_proc_2fproc_2eproto_once,
-      file_level_metadata_proc_2fproc_2eproto[6]);
+      file_level_metadata_proc_2fproc_2eproto[7]);
 }
 
 // ===================================================================
@@ -2837,16 +3094,14 @@ const char* ProcProto::_InternalParse(const char* ptr, ::_pbi::ParseContext* ctx
         } else
           goto handle_unusual;
         continue;
-      // repeated string addedBins = 3;
+      // repeated .AddedBinProto addedBins = 3;
       case 3:
         if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 26)) {
           ptr -= 1;
           do {
             ptr += 1;
-            auto str = _internal_add_addedbins();
-            ptr = ::_pbi::InlineGreedyStringParser(str, ptr, ctx);
+            ptr = ctx->ParseMessage(_internal_add_addedbins(), ptr);
             CHK_(ptr);
-            CHK_(::_pbi::VerifyUTF8(str, "ProcProto.addedBins"));
             if (!ctx->DataAvailable(ptr)) break;
           } while (::PROTOBUF_NAMESPACE_ID::internal::ExpectTag<26>(ptr));
         } else
@@ -3000,14 +3255,12 @@ uint8_t* ProcProto::_InternalSerialize(
     target = stream->WriteString(2, s, target);
   }
 
-  // repeated string addedBins = 3;
-  for (int i = 0, n = this->_internal_addedbins_size(); i < n; i++) {
-    const auto& s = this->_internal_addedbins(i);
-    ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::VerifyUtf8String(
-      s.data(), static_cast<int>(s.length()),
-      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::SERIALIZE,
-      "ProcProto.addedBins");
-    target = stream->WriteString(3, s, target);
+  // repeated .AddedBinProto addedBins = 3;
+  for (unsigned i = 0,
+      n = static_cast<unsigned>(this->_internal_addedbins_size()); i < n; i++) {
+    const auto& repfield = this->_internal_addedbins(i);
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::
+        InternalWriteMessage(3, repfield, repfield.GetCachedSize(), target, stream);
   }
 
   // map<string, string> env = 4;
@@ -3133,12 +3386,11 @@ size_t ProcProto::ByteSizeLong() const {
       _impl_.args_.Get(i));
   }
 
-  // repeated string addedBins = 3;
-  total_size += 1 *
-      ::PROTOBUF_NAMESPACE_ID::internal::FromIntSize(_impl_.addedbins_.size());
-  for (int i = 0, n = _impl_.addedbins_.size(); i < n; i++) {
-    total_size += ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
-      _impl_.addedbins_.Get(i));
+  // repeated .AddedBinProto addedBins = 3;
+  total_size += 1UL * this->_internal_addedbins_size();
+  for (const auto& msg : this->_impl_.addedbins_) {
+    total_size +=
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::MessageSize(msg);
   }
 
   // map<string, string> env = 4;
@@ -3318,7 +3570,7 @@ void ProcProto::InternalSwap(ProcProto* other) {
 ::PROTOBUF_NAMESPACE_ID::Metadata ProcProto::GetMetadata() const {
   return ::_pbi::AssignDescriptors(
       &descriptor_table_proc_2fproc_2eproto_getter, &descriptor_table_proc_2fproc_2eproto_once,
-      file_level_metadata_proc_2fproc_2eproto[7]);
+      file_level_metadata_proc_2fproc_2eproto[8]);
 }
 
 // @@protoc_insertion_point(namespace_scope)
@@ -3346,6 +3598,10 @@ Arena::CreateMaybeMessage< ::ProcEnvProto_CachedEndpointsEntry_DoNotUse >(Arena*
 template<> PROTOBUF_NOINLINE ::ProcEnvProto*
 Arena::CreateMaybeMessage< ::ProcEnvProto >(Arena* arena) {
   return Arena::CreateMessageInternal< ::ProcEnvProto >(arena);
+}
+template<> PROTOBUF_NOINLINE ::AddedBinProto*
+Arena::CreateMaybeMessage< ::AddedBinProto >(Arena* arena) {
+  return Arena::CreateMessageInternal< ::AddedBinProto >(arena);
 }
 template<> PROTOBUF_NOINLINE ::ProcProto_EnvEntry_DoNotUse*
 Arena::CreateMaybeMessage< ::ProcProto_EnvEntry_DoNotUse >(Arena* arena) {

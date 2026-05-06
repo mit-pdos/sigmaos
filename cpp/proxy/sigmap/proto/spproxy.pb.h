@@ -139,6 +139,9 @@ extern SigmaSizeRepDefaultTypeInternal _SigmaSizeRep_default_instance_;
 class SigmaStatRep;
 struct SigmaStatRepDefaultTypeInternal;
 extern SigmaStatRepDefaultTypeInternal _SigmaStatRep_default_instance_;
+class SigmaTCPPortRep;
+struct SigmaTCPPortRepDefaultTypeInternal;
+extern SigmaTCPPortRepDefaultTypeInternal _SigmaTCPPortRep_default_instance_;
 class SigmaWaitCoSandboxRep;
 struct SigmaWaitCoSandboxRepDefaultTypeInternal;
 extern SigmaWaitCoSandboxRepDefaultTypeInternal _SigmaWaitCoSandboxRep_default_instance_;
@@ -179,6 +182,7 @@ template<> ::SigmaRenameReq* Arena::CreateMaybeMessage<::SigmaRenameReq>(Arena*)
 template<> ::SigmaSeekReq* Arena::CreateMaybeMessage<::SigmaSeekReq>(Arena*);
 template<> ::SigmaSizeRep* Arena::CreateMaybeMessage<::SigmaSizeRep>(Arena*);
 template<> ::SigmaStatRep* Arena::CreateMaybeMessage<::SigmaStatRep>(Arena*);
+template<> ::SigmaTCPPortRep* Arena::CreateMaybeMessage<::SigmaTCPPortRep>(Arena*);
 template<> ::SigmaWaitCoSandboxRep* Arena::CreateMaybeMessage<::SigmaWaitCoSandboxRep>(Arena*);
 template<> ::SigmaWaitCoSandboxReq* Arena::CreateMaybeMessage<::SigmaWaitCoSandboxReq>(Arena*);
 template<> ::SigmaWriteReq* Arena::CreateMaybeMessage<::SigmaWriteReq>(Arena*);
@@ -1413,6 +1417,174 @@ class SigmaErrRep final :
 };
 // -------------------------------------------------------------------
 
+class SigmaTCPPortRep final :
+    public ::PROTOBUF_NAMESPACE_ID::Message /* @@protoc_insertion_point(class_definition:SigmaTCPPortRep) */ {
+ public:
+  inline SigmaTCPPortRep() : SigmaTCPPortRep(nullptr) {}
+  ~SigmaTCPPortRep() override;
+  explicit PROTOBUF_CONSTEXPR SigmaTCPPortRep(::PROTOBUF_NAMESPACE_ID::internal::ConstantInitialized);
+
+  SigmaTCPPortRep(const SigmaTCPPortRep& from);
+  SigmaTCPPortRep(SigmaTCPPortRep&& from) noexcept
+    : SigmaTCPPortRep() {
+    *this = ::std::move(from);
+  }
+
+  inline SigmaTCPPortRep& operator=(const SigmaTCPPortRep& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  inline SigmaTCPPortRep& operator=(SigmaTCPPortRep&& from) noexcept {
+    if (this == &from) return *this;
+    if (GetOwningArena() == from.GetOwningArena()
+  #ifdef PROTOBUF_FORCE_COPY_IN_MOVE
+        && GetOwningArena() != nullptr
+  #endif  // !PROTOBUF_FORCE_COPY_IN_MOVE
+    ) {
+      InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+
+  static const ::PROTOBUF_NAMESPACE_ID::Descriptor* descriptor() {
+    return GetDescriptor();
+  }
+  static const ::PROTOBUF_NAMESPACE_ID::Descriptor* GetDescriptor() {
+    return default_instance().GetMetadata().descriptor;
+  }
+  static const ::PROTOBUF_NAMESPACE_ID::Reflection* GetReflection() {
+    return default_instance().GetMetadata().reflection;
+  }
+  static const SigmaTCPPortRep& default_instance() {
+    return *internal_default_instance();
+  }
+  static inline const SigmaTCPPortRep* internal_default_instance() {
+    return reinterpret_cast<const SigmaTCPPortRep*>(
+               &_SigmaTCPPortRep_default_instance_);
+  }
+  static constexpr int kIndexInFileMessages =
+    8;
+
+  friend void swap(SigmaTCPPortRep& a, SigmaTCPPortRep& b) {
+    a.Swap(&b);
+  }
+  inline void Swap(SigmaTCPPortRep* other) {
+    if (other == this) return;
+  #ifdef PROTOBUF_FORCE_COPY_IN_SWAP
+    if (GetOwningArena() != nullptr &&
+        GetOwningArena() == other->GetOwningArena()) {
+   #else  // PROTOBUF_FORCE_COPY_IN_SWAP
+    if (GetOwningArena() == other->GetOwningArena()) {
+  #endif  // !PROTOBUF_FORCE_COPY_IN_SWAP
+      InternalSwap(other);
+    } else {
+      ::PROTOBUF_NAMESPACE_ID::internal::GenericSwap(this, other);
+    }
+  }
+  void UnsafeArenaSwap(SigmaTCPPortRep* other) {
+    if (other == this) return;
+    GOOGLE_DCHECK(GetOwningArena() == other->GetOwningArena());
+    InternalSwap(other);
+  }
+
+  // implements Message ----------------------------------------------
+
+  SigmaTCPPortRep* New(::PROTOBUF_NAMESPACE_ID::Arena* arena = nullptr) const final {
+    return CreateMaybeMessage<SigmaTCPPortRep>(arena);
+  }
+  using ::PROTOBUF_NAMESPACE_ID::Message::CopyFrom;
+  void CopyFrom(const SigmaTCPPortRep& from);
+  using ::PROTOBUF_NAMESPACE_ID::Message::MergeFrom;
+  void MergeFrom( const SigmaTCPPortRep& from) {
+    SigmaTCPPortRep::MergeImpl(*this, from);
+  }
+  private:
+  static void MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PROTOBUF_NAMESPACE_ID::Message& from_msg);
+  public:
+  PROTOBUF_ATTRIBUTE_REINITIALIZES void Clear() final;
+  bool IsInitialized() const final;
+
+  size_t ByteSizeLong() const final;
+  const char* _InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::internal::ParseContext* ctx) final;
+  uint8_t* _InternalSerialize(
+      uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const final;
+  int GetCachedSize() const final { return _impl_._cached_size_.Get(); }
+
+  private:
+  void SharedCtor(::PROTOBUF_NAMESPACE_ID::Arena* arena, bool is_message_owned);
+  void SharedDtor();
+  void SetCachedSize(int size) const final;
+  void InternalSwap(SigmaTCPPortRep* other);
+
+  private:
+  friend class ::PROTOBUF_NAMESPACE_ID::internal::AnyMetadata;
+  static ::PROTOBUF_NAMESPACE_ID::StringPiece FullMessageName() {
+    return "SigmaTCPPortRep";
+  }
+  protected:
+  explicit SigmaTCPPortRep(::PROTOBUF_NAMESPACE_ID::Arena* arena,
+                       bool is_message_owned = false);
+  public:
+
+  static const ClassData _class_data_;
+  const ::PROTOBUF_NAMESPACE_ID::Message::ClassData*GetClassData() const final;
+
+  ::PROTOBUF_NAMESPACE_ID::Metadata GetMetadata() const final;
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  enum : int {
+    kErrFieldNumber = 2,
+    kPortFieldNumber = 1,
+  };
+  // .Rerror err = 2;
+  bool has_err() const;
+  private:
+  bool _internal_has_err() const;
+  public:
+  void clear_err();
+  const ::Rerror& err() const;
+  PROTOBUF_NODISCARD ::Rerror* release_err();
+  ::Rerror* mutable_err();
+  void set_allocated_err(::Rerror* err);
+  private:
+  const ::Rerror& _internal_err() const;
+  ::Rerror* _internal_mutable_err();
+  public:
+  void unsafe_arena_set_allocated_err(
+      ::Rerror* err);
+  ::Rerror* unsafe_arena_release_err();
+
+  // uint32 port = 1;
+  void clear_port();
+  uint32_t port() const;
+  void set_port(uint32_t value);
+  private:
+  uint32_t _internal_port() const;
+  void _internal_set_port(uint32_t value);
+  public:
+
+  // @@protoc_insertion_point(class_scope:SigmaTCPPortRep)
+ private:
+  class _Internal;
+
+  template <typename T> friend class ::PROTOBUF_NAMESPACE_ID::Arena::InternalHelper;
+  typedef void InternalArenaConstructable_;
+  typedef void DestructorSkippable_;
+  struct Impl_ {
+    ::Rerror* err_;
+    uint32_t port_;
+    mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
+  };
+  union { Impl_ _impl_; };
+  friend struct ::TableStruct_proxy_2fsigmap_2fproto_2fspproxy_2eproto;
+};
+// -------------------------------------------------------------------
+
 class SigmaPathReq final :
     public ::PROTOBUF_NAMESPACE_ID::Message /* @@protoc_insertion_point(class_definition:SigmaPathReq) */ {
  public:
@@ -1461,7 +1633,7 @@ class SigmaPathReq final :
                &_SigmaPathReq_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    8;
+    9;
 
   friend void swap(SigmaPathReq& a, SigmaPathReq& b) {
     a.Swap(&b);
@@ -1614,7 +1786,7 @@ class SigmaStatRep final :
                &_SigmaStatRep_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    9;
+    10;
 
   friend void swap(SigmaStatRep& a, SigmaStatRep& b) {
     a.Swap(&b);
@@ -1791,7 +1963,7 @@ class SigmaCreateReq final :
                &_SigmaCreateReq_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    10;
+    11;
 
   friend void swap(SigmaCreateReq& a, SigmaCreateReq& b) {
     a.Swap(&b);
@@ -2008,7 +2180,7 @@ class SigmaFdRep final :
                &_SigmaFdRep_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    11;
+    12;
 
   friend void swap(SigmaFdRep& a, SigmaFdRep& b) {
     a.Swap(&b);
@@ -2176,7 +2348,7 @@ class SigmaRenameReq final :
                &_SigmaRenameReq_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    12;
+    13;
 
   friend void swap(SigmaRenameReq& a, SigmaRenameReq& b) {
     a.Swap(&b);
@@ -2345,7 +2517,7 @@ class SigmaDataRep final :
                &_SigmaDataRep_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    13;
+    14;
 
   friend void swap(SigmaDataRep& a, SigmaDataRep& b) {
     a.Swap(&b);
@@ -2522,7 +2694,7 @@ class SigmaPutFileReq final :
                &_SigmaPutFileReq_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    14;
+    15;
 
   friend void swap(SigmaPutFileReq& a, SigmaPutFileReq& b) {
     a.Swap(&b);
@@ -2739,7 +2911,7 @@ class SigmaSizeRep final :
                &_SigmaSizeRep_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    15;
+    16;
 
   friend void swap(SigmaSizeRep& a, SigmaSizeRep& b) {
     a.Swap(&b);
@@ -2907,7 +3079,7 @@ class SigmaReadReq final :
                &_SigmaReadReq_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    16;
+    17;
 
   friend void swap(SigmaReadReq& a, SigmaReadReq& b) {
     a.Swap(&b);
@@ -3077,7 +3249,7 @@ class SigmaWriteReq final :
                &_SigmaWriteReq_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    17;
+    18;
 
   friend void swap(SigmaWriteReq& a, SigmaWriteReq& b) {
     a.Swap(&b);
@@ -3276,7 +3448,7 @@ class SigmaSeekReq final :
                &_SigmaSeekReq_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    18;
+    19;
 
   friend void swap(SigmaSeekReq& a, SigmaSeekReq& b) {
     a.Swap(&b);
@@ -3435,7 +3607,7 @@ class SigmaClntIdRep final :
                &_SigmaClntIdRep_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    19;
+    20;
 
   friend void swap(SigmaClntIdRep& a, SigmaClntIdRep& b) {
     a.Swap(&b);
@@ -3603,7 +3775,7 @@ class SigmaFenceReq final :
                &_SigmaFenceReq_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    20;
+    21;
 
   friend void swap(SigmaFenceReq& a, SigmaFenceReq& b) {
     a.Swap(&b);
@@ -3776,7 +3948,7 @@ class SigmaMountTreeReq final :
                &_SigmaMountTreeReq_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    21;
+    22;
 
   friend void swap(SigmaMountTreeReq& a, SigmaMountTreeReq& b) {
     a.Swap(&b);
@@ -3965,7 +4137,7 @@ class SigmaLastMountRep final :
                &_SigmaLastMountRep_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    22;
+    23;
 
   friend void swap(SigmaLastMountRep& a, SigmaLastMountRep& b) {
     a.Swap(&b);
@@ -4174,7 +4346,7 @@ class SigmaMountReq final :
                &_SigmaMountReq_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    23;
+    24;
 
   friend void swap(SigmaMountReq& a, SigmaMountReq& b) {
     a.Swap(&b);
@@ -4347,7 +4519,7 @@ class SigmaMountRep final :
                &_SigmaMountRep_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    24;
+    25;
 
   friend void swap(SigmaMountRep& a, SigmaMountRep& b) {
     a.Swap(&b);
@@ -4535,7 +4707,7 @@ class SigmaMountsRep final :
                &_SigmaMountsRep_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    25;
+    26;
 
   friend void swap(SigmaMountsRep& a, SigmaMountsRep& b) {
     a.Swap(&b);
@@ -4718,7 +4890,7 @@ class SigmaRegisterEPReq final :
                &_SigmaRegisterEPReq_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    26;
+    27;
 
   friend void swap(SigmaRegisterEPReq& a, SigmaRegisterEPReq& b) {
     a.Swap(&b);
@@ -4891,7 +5063,7 @@ class SigmaExitedReq final :
                &_SigmaExitedReq_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    27;
+    28;
 
   friend void swap(SigmaExitedReq& a, SigmaExitedReq& b) {
     a.Swap(&b);
@@ -5055,7 +5227,7 @@ class SigmaOutgoingDelegatedRPCReq final :
                &_SigmaOutgoingDelegatedRPCReq_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    28;
+    29;
 
   friend void swap(SigmaOutgoingDelegatedRPCReq& a, SigmaOutgoingDelegatedRPCReq& b) {
     a.Swap(&b);
@@ -5243,7 +5415,7 @@ class SigmaDelegatedRPCReq final :
                &_SigmaDelegatedRPCReq_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    29;
+    30;
 
   friend void swap(SigmaDelegatedRPCReq& a, SigmaDelegatedRPCReq& b) {
     a.Swap(&b);
@@ -5402,7 +5574,7 @@ class SigmaDelegatedRPCRep final :
                &_SigmaDelegatedRPCRep_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    30;
+    31;
 
   friend void swap(SigmaDelegatedRPCRep& a, SigmaDelegatedRPCRep& b) {
     a.Swap(&b);
@@ -5660,7 +5832,7 @@ class SigmaMultiDelegatedRPCReq final :
                &_SigmaMultiDelegatedRPCReq_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    31;
+    32;
 
   friend void swap(SigmaMultiDelegatedRPCReq& a, SigmaMultiDelegatedRPCReq& b) {
     a.Swap(&b);
@@ -5822,7 +5994,7 @@ class SigmaMultiDelegatedRPCRep final :
                &_SigmaMultiDelegatedRPCRep_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    32;
+    33;
 
   friend void swap(SigmaMultiDelegatedRPCRep& a, SigmaMultiDelegatedRPCRep& b) {
     a.Swap(&b);
@@ -6561,6 +6733,115 @@ inline void SigmaErrRep::set_allocated_err(::Rerror* err) {
   }
   _impl_.err_ = err;
   // @@protoc_insertion_point(field_set_allocated:SigmaErrRep.err)
+}
+
+// -------------------------------------------------------------------
+
+// SigmaTCPPortRep
+
+// uint32 port = 1;
+inline void SigmaTCPPortRep::clear_port() {
+  _impl_.port_ = 0u;
+}
+inline uint32_t SigmaTCPPortRep::_internal_port() const {
+  return _impl_.port_;
+}
+inline uint32_t SigmaTCPPortRep::port() const {
+  // @@protoc_insertion_point(field_get:SigmaTCPPortRep.port)
+  return _internal_port();
+}
+inline void SigmaTCPPortRep::_internal_set_port(uint32_t value) {
+  
+  _impl_.port_ = value;
+}
+inline void SigmaTCPPortRep::set_port(uint32_t value) {
+  _internal_set_port(value);
+  // @@protoc_insertion_point(field_set:SigmaTCPPortRep.port)
+}
+
+// .Rerror err = 2;
+inline bool SigmaTCPPortRep::_internal_has_err() const {
+  return this != internal_default_instance() && _impl_.err_ != nullptr;
+}
+inline bool SigmaTCPPortRep::has_err() const {
+  return _internal_has_err();
+}
+inline const ::Rerror& SigmaTCPPortRep::_internal_err() const {
+  const ::Rerror* p = _impl_.err_;
+  return p != nullptr ? *p : reinterpret_cast<const ::Rerror&>(
+      ::_Rerror_default_instance_);
+}
+inline const ::Rerror& SigmaTCPPortRep::err() const {
+  // @@protoc_insertion_point(field_get:SigmaTCPPortRep.err)
+  return _internal_err();
+}
+inline void SigmaTCPPortRep::unsafe_arena_set_allocated_err(
+    ::Rerror* err) {
+  if (GetArenaForAllocation() == nullptr) {
+    delete reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(_impl_.err_);
+  }
+  _impl_.err_ = err;
+  if (err) {
+    
+  } else {
+    
+  }
+  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:SigmaTCPPortRep.err)
+}
+inline ::Rerror* SigmaTCPPortRep::release_err() {
+  
+  ::Rerror* temp = _impl_.err_;
+  _impl_.err_ = nullptr;
+#ifdef PROTOBUF_FORCE_COPY_IN_RELEASE
+  auto* old =  reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(temp);
+  temp = ::PROTOBUF_NAMESPACE_ID::internal::DuplicateIfNonNull(temp);
+  if (GetArenaForAllocation() == nullptr) { delete old; }
+#else  // PROTOBUF_FORCE_COPY_IN_RELEASE
+  if (GetArenaForAllocation() != nullptr) {
+    temp = ::PROTOBUF_NAMESPACE_ID::internal::DuplicateIfNonNull(temp);
+  }
+#endif  // !PROTOBUF_FORCE_COPY_IN_RELEASE
+  return temp;
+}
+inline ::Rerror* SigmaTCPPortRep::unsafe_arena_release_err() {
+  // @@protoc_insertion_point(field_release:SigmaTCPPortRep.err)
+  
+  ::Rerror* temp = _impl_.err_;
+  _impl_.err_ = nullptr;
+  return temp;
+}
+inline ::Rerror* SigmaTCPPortRep::_internal_mutable_err() {
+  
+  if (_impl_.err_ == nullptr) {
+    auto* p = CreateMaybeMessage<::Rerror>(GetArenaForAllocation());
+    _impl_.err_ = p;
+  }
+  return _impl_.err_;
+}
+inline ::Rerror* SigmaTCPPortRep::mutable_err() {
+  ::Rerror* _msg = _internal_mutable_err();
+  // @@protoc_insertion_point(field_mutable:SigmaTCPPortRep.err)
+  return _msg;
+}
+inline void SigmaTCPPortRep::set_allocated_err(::Rerror* err) {
+  ::PROTOBUF_NAMESPACE_ID::Arena* message_arena = GetArenaForAllocation();
+  if (message_arena == nullptr) {
+    delete reinterpret_cast< ::PROTOBUF_NAMESPACE_ID::MessageLite*>(_impl_.err_);
+  }
+  if (err) {
+    ::PROTOBUF_NAMESPACE_ID::Arena* submessage_arena =
+        ::PROTOBUF_NAMESPACE_ID::Arena::InternalGetOwningArena(
+                reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(err));
+    if (message_arena != submessage_arena) {
+      err = ::PROTOBUF_NAMESPACE_ID::internal::GetOwnedMessage(
+          message_arena, err, submessage_arena);
+    }
+    
+  } else {
+    
+  }
+  _impl_.err_ = err;
+  // @@protoc_insertion_point(field_set_allocated:SigmaTCPPortRep.err)
 }
 
 // -------------------------------------------------------------------
@@ -10356,6 +10637,8 @@ inline void SigmaMultiDelegatedRPCRep::set_allocated_transferstartpb(::PROTOBUF_
 #ifdef __GNUC__
   #pragma GCC diagnostic pop
 #endif  // __GNUC__
+// -------------------------------------------------------------------
+
 // -------------------------------------------------------------------
 
 // -------------------------------------------------------------------

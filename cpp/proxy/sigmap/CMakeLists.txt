@@ -18,6 +18,7 @@ target_link_libraries(sigmap_proxy PUBLIC
   sigmap_proxy_proto
   io_conn
   io_conn_unix
+  io_conn_tcp
   io_frame
   io_transport
   io_demux

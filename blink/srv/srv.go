@@ -130,7 +130,16 @@ func (api *BlinkSrvAPI) RunBlinkProc(ctx fs.CtxI, req blinkproto.RunBlinkProcReq
 		"--function_name", functionName,
 	}
 	for _, envVar := range p.GetEnv() {
-		args = append(args, "--env", envVar)
+		key, val, found := strings.Cut(envVar, "=")
+		if found {
+			// Single-quote the value so junction_run's parser doesn't misinterpret
+			// double-quotes or other special chars (e.g. JSON in SIGMA_NAMED).
+			// Embedded single quotes are escaped as '\''.
+			quotedVal := "'" + strings.ReplaceAll(val, "'", `'\''`) + "'"
+			args = append(args, "--env", key+"="+quotedVal)
+		} else {
+			args = append(args, "--env", envVar)
+		}
 	}
 	straceProcs := proc.GetLabels(p.ProcEnvProto.GetStrace())
 	if straceProcs[program] {
@@ -156,7 +165,7 @@ func (api *BlinkSrvAPI) RunBlinkProc(ctx fs.CtxI, req blinkproto.RunBlinkProcReq
 	cmd := exec.Command("sudo", args...)
 	cmd.Stdout = logFile
 	cmd.Stderr = logFile
-	db.DPrintf(db.BLINKD, "BlinkSrvAPI.RunBlinkProc exec %v", cmd)
+	db.DPrintf(db.BLINKD, "BlinkSrvAPI.RunBlinkProc exec: %v", strings.Join(cmd.Args, " "))
 	if err := cmd.Run(); err != nil {
 		db.DPrintf(db.ERROR, "ERR junction_run: %v", err)
 		return fmt.Errorf("junction_run: %w", err)

@@ -105,15 +105,15 @@ func (api *BlinkSrvAPI) RunBlinkProc(ctx fs.CtxI, req blinkproto.RunBlinkProcReq
 
 	// Args: [ImgBucket, ImgKey, ModelBucket, ModelKey, Kid, AsyncFetch]
 	functionArg := map[string]string{
-		"is_warmup":         "false",
-		"img_bucket":        p.Args[0],
-		"img_key":           p.Args[1],
-		"model_bucket":      p.Args[2],
-		"model_key":         p.Args[3],
-		"kid":               p.Args[4],
-		"async_fetch":       p.Args[5],
-		"spproxy_tcp_host":  blink.DTAP0_ADDR,
-		"spproxy_tcp_port":  fmt.Sprintf("%d", req.SpproxyTcpPort),
+		"is_warmup":        "false",
+		"img_bucket":       p.Args[0],
+		"img_key":          p.Args[1],
+		"model_bucket":     p.Args[2],
+		"model_key":        p.Args[3],
+		"kid":              p.Args[4],
+		"async_fetch":      p.Args[5],
+		"spproxy_tcp_host": blink.DTAP0_ADDR,
+		"spproxy_tcp_port": fmt.Sprintf("%d", req.SpproxyTcpPort),
 	}
 	functionArgJSON, err := json.Marshal(functionArg)
 	if err != nil {
@@ -188,6 +188,7 @@ func setupCaladan() error {
 	if err := exec.Command("sudo", "sysctl", "-w", "net.ipv4.ip_forward=1").Run(); err != nil {
 		return fmt.Errorf("enable ip_forward: %w", err)
 	}
+	db.DPrintf(db.BLINK, "Caladan setup done")
 	return nil
 }
 

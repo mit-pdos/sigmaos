@@ -40,6 +40,11 @@ message SigmaErrRep {
         Rerror err = 1;
 }
 
+message SigmaTCPPortRep {
+        uint32 port = 1;
+        Rerror err = 2;
+}
+
 message SigmaPathReq {
         string path = 1;
 }

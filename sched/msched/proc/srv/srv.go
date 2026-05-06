@@ -206,7 +206,7 @@ func RunProcSrv(kernelId string, dialproxy bool, gvisor bool, spproxydPID sp.Tpi
 	scdp := proc.NewPrivProcPid(ps.spproxydPID, "spproxyd", nil, true)
 	scdp.InheritParentProcEnv(ps.pe)
 	scdp.SetHow(proc.HLINUX)
-	spc, err := spproxysrv.ExecSPProxySrv(scdp, ps.pe.GetInnerContainerIP(), ps.pe.GetOuterContainerIP(), sp.NOT_SET)
+	spc, err := spproxysrv.ExecSPProxySrv(scdp, ps.pe.GetInnerContainerIP(), ps.pe.GetOuterContainerIP(), sp.NOT_SET, ps.enableBlink)
 	if err != nil {
 		return err
 	}
@@ -580,7 +580,7 @@ func (ps *ProcSrv) Run(ctx fs.CtxI, req proto.RunReq, res *proto.RunRep) error {
 					return fmt.Errorf("blink proc requested but blink is not enabled")
 				}
 				db.DPrintf(db.PROCD, "[%v] Run Blink proc", uproc.GetPid())
-				ctr, err = ps.blinkClnt.StartBlinkContainer(uproc)
+				ctr, err = ps.blinkClnt.StartBlinkContainer(uproc, ps.spc.GetTCPPort())
 				if err != nil {
 					db.DPrintf(db.PROCD_ERR, "[%v] Run Blink proc err: %v", uproc.GetPid(), err)
 					return err

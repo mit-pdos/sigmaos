@@ -46,7 +46,7 @@ func NewDialProxyProvider(pe *proc.ProcEnv, useDialProxy, useGVisor, bootAsKerne
 		os.Setenv("PATH", path)
 		db.DPrintf(db.BOOT, "Exec spproxy")
 		var err error
-		spss, err = spproxysrv.ExecSPProxySrv(p, pe.GetInnerContainerIP(), pe.GetOuterContainerIP(), sp.Tpid("NO_PID"))
+		spss, err = spproxysrv.ExecSPProxySrv(p, pe.GetInnerContainerIP(), pe.GetOuterContainerIP(), sp.Tpid("NO_PID"), false)
 		if err != nil {
 			db.DPrintf(db.ALWAYS, "Error start spproxyd: %v", err)
 			return nil, err

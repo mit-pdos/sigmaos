@@ -33,7 +33,12 @@ def function_handler(request_json):
     if is_warmup:
       return "ok"
 
-    clnt = sigmaos.SigmaosClnt()
+    tcp_host = request_json.get("spproxy_tcp_host")
+    tcp_port = request_json.get("spproxy_tcp_port")
+    if tcp_host and tcp_port:
+        clnt = sigmaos.SigmaosClnt(tcp_host=tcp_host, tcp_port=int(tcp_port))
+    else:
+        clnt = sigmaos.SigmaosClnt()
     clnt.started()
 
     img_bucket   = request_json["img_bucket"]

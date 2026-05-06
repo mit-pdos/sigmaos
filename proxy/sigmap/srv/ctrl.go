@@ -69,6 +69,12 @@ func (capi *CtrlAPI) InformProcDone(ctx fs.CtxI, req scproto.SigmaInformProcReq,
 	return nil
 }
 
+func (capi *CtrlAPI) GetTCPPort(ctx fs.CtxI, req scproto.SigmaNullReq, rep *scproto.SigmaTCPPortRep) error {
+	rep.Port = uint32(capi.cc.spps.tcpPort)
+	rep.Err = sp.NewRerror()
+	return nil
+}
+
 func (cc *CtrlConn) close() {
 	db.DPrintf(db.SPPROXYSRV, "close ctrl conn")
 }

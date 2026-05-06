@@ -32,11 +32,12 @@ const (
 // SPProxySrv maintains the state of the spproxysrv. All
 // SigmaSrvClnt's share one fid table
 type SPProxySrv struct {
-	mu   sync.Mutex
-	pe   *proc.ProcEnv
-	nps  *dialproxysrv.DialProxySrv
-	fidc *fidclnt.FidClnt
-	psm  *ProcStateMgr
+	mu      sync.Mutex
+	pe      *proc.ProcEnv
+	nps     *dialproxysrv.DialProxySrv
+	fidc    *fidclnt.FidClnt
+	psm     *ProcStateMgr
+	tcpPort int // 0 if not listening on TCP
 }
 
 func newSPProxySrv() (*SPProxySrv, error) {
@@ -56,7 +57,7 @@ func newSPProxySrv() (*SPProxySrv, error) {
 	return spps, nil
 }
 
-func (spps *SPProxySrv) runServer() error {
+func (spps *SPProxySrv) runServer(enableBlink bool) error {
 	// Create a socket for uprocd to connect to & control spproxysrv
 	ctrlSocket, err := net.Listen("unix", sp.SIGMASOCKET_CTRL)
 	if err != nil {
@@ -84,6 +85,25 @@ func (spps *SPProxySrv) runServer() error {
 		db.DFatalf("Err chmod sigmasocket: %v", err)
 	}
 	db.DPrintf(db.SPPROXYSRV, "runServer: spproxyd listening on %v", sp.SIGMASOCKET)
+	// When blink is enabled, also listen on a dynamically assigned TCP socket
+	if enableBlink {
+		tcpSocket, err := net.Listen("tcp", ":0")
+		if err != nil {
+			return err
+		}
+		spps.tcpPort = tcpSocket.Addr().(*net.TCPAddr).Port
+		db.DPrintf(db.SPPROXYSRV, "runServer: spproxyd also listening on TCP port %d", spps.tcpPort)
+		go func() {
+			for {
+				conn, err := tcpSocket.Accept()
+				if err != nil {
+					db.DPrintf(db.ERROR, "Error accept TCP conn: %v", err)
+					return
+				}
+				newSigmaClntConn(spps, conn, spps.pe, spps.fidc)
+			}
+		}()
+	}
 	if _, err := io.WriteString(os.Stdout, "r"); err != nil {
 		db.DFatalf("Err runServer: %v", err)
 		return err
@@ -151,7 +171,7 @@ func (spps *SPProxySrv) ProcDone(p *proc.Proc) {
 }
 
 // The spproxyd process enters here
-func RunSPProxySrv() error {
+func RunSPProxySrv(enableBlink bool) error {
 	spps, err := newSPProxySrv()
 	if err != nil {
 		db.DPrintf(db.SPPROXYSRV, "runServer err %v\n", err)
@@ -164,7 +184,7 @@ func RunSPProxySrv() error {
 	}
 	defer p.Done()
 
-	if err := spps.runServer(); err != nil {
+	if err := spps.runServer(enableBlink); err != nil {
 		db.DPrintf(db.SPPROXYSRV, "runServer err %v\n", err)
 		return err
 	}
@@ -172,10 +192,11 @@ func RunSPProxySrv() error {
 }
 
 type SPProxySrvCmd struct {
-	p   *proc.Proc
-	cmd *exec.Cmd
-	out io.WriteCloser
-	cc  *clnt.CtrlClnt
+	p       *proc.Proc
+	cmd     *exec.Cmd
+	out     io.WriteCloser
+	cc      *clnt.CtrlClnt
+	tcpPort int // 0 if not listening on TCP (blink not enabled)
 }
 
 // Inform spproxysrv that a new proc is incoming, and spproxysrv should start
@@ -194,6 +215,10 @@ func (sppsc *SPProxySrvCmd) InformProcDone(p *proc.Proc) error {
 
 func (sppsc *SPProxySrvCmd) WaitCoSandboxCompletion(pid sp.Tpid) (wasmrpc.Tstatus, string, error) {
 	return sppsc.cc.WaitCoSandboxCompletion(pid)
+}
+
+func (sppsc *SPProxySrvCmd) GetTCPPort() int {
+	return sppsc.tcpPort
 }
 
 func (sppsc *SPProxySrvCmd) GetProc() *proc.Proc {
@@ -237,10 +262,14 @@ func (sppsc *SPProxySrvCmd) Run(how proc.Thow, kernelId string, localIP sp.Tip) 
 }
 
 // Start the spproxyd process
-func ExecSPProxySrv(p *proc.Proc, innerIP sp.Tip, outerIP sp.Tip, procdPid sp.Tpid) (*SPProxySrvCmd, error) {
+func ExecSPProxySrv(p *proc.Proc, innerIP sp.Tip, outerIP sp.Tip, procdPid sp.Tpid, enableBlink bool) (*SPProxySrvCmd, error) {
 	p.FinalizeEnv(innerIP, outerIP, procdPid)
 	db.DPrintf(db.SPPROXYSRV, "ExecSPProxySrv: %v", p)
-	cmd := exec.Command("spproxyd")
+	args := []string{}
+	if enableBlink {
+		args = append(args, "--blink")
+	}
+	cmd := exec.Command("spproxyd", args...)
 	cmd.Env = p.GetEnv()
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
@@ -265,12 +294,22 @@ func ExecSPProxySrv(p *proc.Proc, innerIP sp.Tip, outerIP sp.Tip, procdPid sp.Tp
 		db.DFatalf("Err new spproxy ctrl clnt: %v", err)
 		return nil, err
 	}
-	return &SPProxySrvCmd{
+	sppsc := &SPProxySrvCmd{
 		p:   p,
 		cmd: cmd,
 		out: stdin,
 		cc:  cc,
-	}, nil
+	}
+	if enableBlink {
+		port, err := cc.GetTCPPort()
+		if err != nil {
+			db.DFatalf("Err get spproxy TCP port: %v", err)
+			return nil, err
+		}
+		sppsc.tcpPort = port
+		db.DPrintf(db.SPPROXYSRV, "ExecSPProxySrv: TCP port %d", port)
+	}
+	return sppsc, nil
 }
 
 func (sppsc *SPProxySrvCmd) Shutdown() error {

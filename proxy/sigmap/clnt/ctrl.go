@@ -96,6 +96,20 @@ func (scc *CtrlClnt) InformProcDone(p *proc.Proc) error {
 	return nil
 }
 
+// Get the TCP port spproxyd is listening on (only valid when blink is enabled)
+func (scc *CtrlClnt) GetTCPPort() (int, error) {
+	req := spproto.SigmaNullReq{}
+	rep := spproto.SigmaTCPPortRep{}
+	err := scc.rpcc.RPC("CtrlAPI.GetTCPPort", &req, &rep)
+	if err != nil {
+		return 0, err
+	}
+	if rep.Err.TErrCode() != serr.TErrNoError {
+		return 0, sp.NewErr(rep.Err)
+	}
+	return int(rep.Port), nil
+}
+
 // Close the socket connection, which closes dmxclnt too.
 func (scc *CtrlClnt) close() error {
 	return scc.rpcc.Channel().(*rpcchan.RPCChannel).Conn().Close()

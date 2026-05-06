@@ -31,7 +31,9 @@ func NewBlinkClnt(kernelID string, procSrvPID string) (*BlinkClnt, error) {
 
 // StartBlinkContainer dispatches a RunBlinkProc RPC to BlinkSrv and returns a
 // BlinkContainer whose Wait blocks until the RPC returns (i.e. the proc exits).
-func (bc *BlinkClnt) StartBlinkContainer(uproc *proc.Proc) (*BlinkContainer, error) {
+// spproxyTCPPort is the TCP port that spproxyd is listening on; it is passed
+// to the proc so it can connect to spproxyd over TCP.
+func (bc *BlinkClnt) StartBlinkContainer(uproc *proc.Proc, spproxyTCPPort int) (*BlinkContainer, error) {
 	uproc.AppendEnv("PATH", "/bin:/bin2:/usr/bin:/home/sigmaos/bin/kernel")
 	uproc.AppendEnv("SIGMA_EXEC_TIME", strconv.FormatInt(time.Now().UnixMicro(), 10))
 	b, err := time.Now().MarshalText()
@@ -41,11 +43,12 @@ func (bc *BlinkClnt) StartBlinkContainer(uproc *proc.Proc) (*BlinkContainer, err
 	uproc.AppendEnv("SIGMA_EXEC_TIME_PB", string(b))
 	uproc.AppendEnv("SIGMA_SPAWN_TIME", strconv.FormatInt(uproc.GetSpawnTime().UnixMicro(), 10))
 	uproc.AppendEnv(proc.SIGMAPERF, uproc.GetProcEnv().GetPerf())
+	spproxyTCPHost := string(uproc.GetProcEnv().GetOuterContainerIP())
 	waitC := make(chan error, 1)
 	go func() {
-		waitC <- bc.clnt.RunBlinkProc(uproc, bc.kernelID, bc.procSrvPID)
+		waitC <- bc.clnt.RunBlinkProc(uproc, bc.kernelID, bc.procSrvPID, spproxyTCPHost, spproxyTCPPort)
 	}()
-	db.DPrintf(db.BLINKD, "StartBlinkContainer pid %v", uproc.GetPid())
+	db.DPrintf(db.BLINKD, "StartBlinkContainer pid %v spproxyTCP %v:%v", uproc.GetPid(), spproxyTCPHost, spproxyTCPPort)
 	// TODO: replace rand.Int() with PID communicated by BlinkSrv
 	return &BlinkContainer{pid: rand.Int(), waitC: waitC}, nil
 }

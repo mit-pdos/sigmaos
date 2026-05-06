@@ -186,7 +186,7 @@ func (k *Kernel) bootSPProxyd() (Subsystem, error) {
 	p.GetProcEnv().SetSecrets(k.ProcEnv().GetSecrets())
 	p.SetHow(proc.HLINUX)
 	p.InheritParentProcEnv(k.ProcEnv())
-	return spproxysrv.ExecSPProxySrv(p, k.ProcEnv().GetInnerContainerIP(), k.ProcEnv().GetOuterContainerIP(), sp.Tpid("NO_PID"))
+	return spproxysrv.ExecSPProxySrv(p, k.ProcEnv().GetInnerContainerIP(), k.ProcEnv().GetOuterContainerIP(), sp.Tpid("NO_PID"), false)
 }
 
 // Start procd in a sigmauser container and post the mount for

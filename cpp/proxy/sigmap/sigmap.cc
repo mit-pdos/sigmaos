@@ -8,6 +8,38 @@ namespace proxy::sigmap {
 bool Clnt::_l = sigmaos::util::log::init_logger(SPPROXYCLNT);
 bool Clnt::_l_e = sigmaos::util::log::init_logger(SPPROXYCLNT_ERR);
 
+void Clnt::init_stack() {
+  auto start = GetCurrentTime();
+  _trans = std::make_shared<sigmaos::io::transport::Transport>(_conn);
+  LogSpawnLatency(_env->GetPID(), _env->GetSpawnTime(), start,
+                  "Create transport");
+  start = GetCurrentTime();
+  _demux = std::make_shared<sigmaos::io::demux::Clnt>(_trans);
+  LogSpawnLatency(_env->GetPID(), _env->GetSpawnTime(), start,
+                  "Create demuxclnt");
+  start = GetCurrentTime();
+  _rpcc = std::make_shared<sigmaos::rpc::Clnt>(_demux);
+  LogSpawnLatency(_env->GetPID(), _env->GetSpawnTime(), start,
+                  "Create rpcclnt");
+  if (_env->GetUseShmem()) {
+    start = GetCurrentTime();
+    _shmem = std::make_shared<sigmaos::shmem::Segment>(
+        _env->GetPID(),
+        _env->GetShmemMB() * sigmaos::sigmap::constants::MBYTE);
+    auto res = _shmem->Init();
+    if (!res.has_value()) {
+      fatal("Err init shmem: {}", res.error().String());
+    }
+    LogSpawnLatency(_env->GetPID(), _env->GetSpawnTime(), start,
+                    "Create shmem segment");
+  }
+  start = GetCurrentTime();
+  log(SPPROXYCLNT, "Initializing proxy conn");
+  init_conn();
+  LogSpawnLatency(_env->GetPID(), _env->GetSpawnTime(), start,
+                  "Init spproxy conn");
+}
+
 void Clnt::init_conn() {
   SigmaInitReq req;
   SigmaErrRep rep;

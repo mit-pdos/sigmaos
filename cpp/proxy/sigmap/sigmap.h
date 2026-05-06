@@ -2,6 +2,7 @@
 
 #include <google/protobuf/util/time_util.h>
 #include <io/conn/conn.h>
+#include <io/conn/tcp/tcp.h>
 #include <io/conn/unix/unix.h>
 #include <io/demux/clnt.h>
 #include <io/transport/transport.h>
@@ -34,44 +35,29 @@ const std::string SPPROXYCLNT_ERR = "SPPROXYCLNT" + sigmaos::util::log::ERR;
 
 class Clnt {
  public:
+  // Connect over Unix socket (default)
   Clnt() : _disconnected(false) {
     _env = sigmaos::proc::GetProcEnv();
-    log(SPPROXYCLNT, "New clnt {}", _env->String());
+    log(SPPROXYCLNT, "New clnt (unix) {}", _env->String());
     auto start = GetCurrentTime();
     _conn = std::make_shared<sigmaos::io::conn::unixconn::ClntConn>(
         SPPROXY_SOCKET_PN);
     LogSpawnLatency(_env->GetPID(), _env->GetSpawnTime(), start,
                     "Connect ClntConn");
-    start = GetCurrentTime();
-    _trans = std::make_shared<sigmaos::io::transport::Transport>(_conn);
+    init_stack();
+  }
+
+  // Connect over TCP socket (used when blink is enabled)
+  Clnt(std::string tcp_host, int tcp_port) : _disconnected(false) {
+    _env = sigmaos::proc::GetProcEnv();
+    log(SPPROXYCLNT, "New clnt (tcp {}:{}) {}", tcp_host, tcp_port,
+        _env->String());
+    auto start = GetCurrentTime();
+    _conn = std::make_shared<sigmaos::io::conn::tcpconn::ClntConn>(
+        SPPROXYCLNT, tcp_host, tcp_port);
     LogSpawnLatency(_env->GetPID(), _env->GetSpawnTime(), start,
-                    "Create transport");
-    start = GetCurrentTime();
-    _demux = std::make_shared<sigmaos::io::demux::Clnt>(_trans);
-    LogSpawnLatency(_env->GetPID(), _env->GetSpawnTime(), start,
-                    "Create demuxclnt");
-    start = GetCurrentTime();
-    _rpcc = std::make_shared<sigmaos::rpc::Clnt>(_demux);
-    LogSpawnLatency(_env->GetPID(), _env->GetSpawnTime(), start,
-                    "Create rpcclnt");
-    if (_env->GetUseShmem()) {
-      start = GetCurrentTime();
-      _shmem = std::make_shared<sigmaos::shmem::Segment>(
-          _env->GetPID(),
-          _env->GetShmemMB() * sigmaos::sigmap::constants::MBYTE);
-      auto res = _shmem->Init();
-      if (!res.has_value()) {
-        fatal("Err init shmem: {}", res.error().String());
-      }
-      LogSpawnLatency(_env->GetPID(), _env->GetSpawnTime(), start,
-                      "Create shmem segment");
-    }
-    start = GetCurrentTime();
-    log(SPPROXYCLNT, "Initializing proxy conn");
-    // Initialize the sigmaproxyd connection
-    init_conn();
-    LogSpawnLatency(_env->GetPID(), _env->GetSpawnTime(), start,
-                    "Init spproxy conn");
+                    "Connect ClntConn");
+    init_stack();
   }
 
   ~Clnt() { Close(); }
@@ -178,6 +164,9 @@ class Clnt {
   static bool _l;
   static bool _l_e;
 
+  // Set up transport/demux/rpc stack on top of _conn, then call init_conn().
+  // Called by both constructors after _conn and _env are initialized.
+  void init_stack();
   void init_conn();
   void wait_for_eviction();
 };

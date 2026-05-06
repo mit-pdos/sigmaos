@@ -5,9 +5,12 @@ import os
 _lib = ctypes.CDLL("/usr/local/lib/libsigmaos_py.so")
 _executor = _cf.ThreadPoolExecutor()
 
-# sigmaos_new_clnt / sigmaos_free_clnt
+# sigmaos_new_clnt / sigmaos_new_clnt_tcp / sigmaos_free_clnt
 _lib.sigmaos_new_clnt.restype = ctypes.c_void_p
 _lib.sigmaos_new_clnt.argtypes = []
+
+_lib.sigmaos_new_clnt_tcp.restype = ctypes.c_void_p
+_lib.sigmaos_new_clnt_tcp.argtypes = [ctypes.c_char_p, ctypes.c_int]
 
 _lib.sigmaos_free_clnt.restype = None
 _lib.sigmaos_free_clnt.argtypes = [ctypes.c_void_p]
@@ -101,10 +104,17 @@ def _last_error():
 
 
 class SigmaosClnt:
-    def __init__(self):
-        self._clnt = _lib.sigmaos_new_clnt()
-        if not self._clnt:
-            raise RuntimeError(f"sigmaos_new_clnt failed: {_last_error()}")
+    def __init__(self, tcp_host: str = None, tcp_port: int = None):
+        if tcp_host is not None and tcp_port is not None:
+            self._clnt = _lib.sigmaos_new_clnt_tcp(
+                tcp_host.encode("utf-8"), tcp_port)
+            if not self._clnt:
+                raise RuntimeError(
+                    f"sigmaos_new_clnt_tcp failed: {_last_error()}")
+        else:
+            self._clnt = _lib.sigmaos_new_clnt()
+            if not self._clnt:
+                raise RuntimeError(f"sigmaos_new_clnt failed: {_last_error()}")
 
     def __del__(self):
         if self._clnt:

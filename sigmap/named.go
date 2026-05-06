@@ -51,7 +51,7 @@ const (
 	IMG    = NAMED + IMGREL + "/"
 
 	FTTASKREL = "fttask"
-	FTTASK = NAMED + FTTASKREL + "/"
+	FTTASK    = NAMED + FTTASKREL + "/"
 
 	MEMBLOCK = "name/memblock"
 

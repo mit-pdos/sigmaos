@@ -67,6 +67,19 @@ SigmaosClnt sigmaos_new_clnt() {
   }
 }
 
+SigmaosClnt sigmaos_new_clnt_tcp(const char* host, int port) {
+  clear_error();
+  try {
+    auto* st = new SigmaosClntState();
+    st->sp = std::make_shared<sigmaos::proxy::sigmap::Clnt>(std::string(host),
+                                                            port);
+    return st;
+  } catch (const std::exception& e) {
+    set_error(e.what());
+    return nullptr;
+  }
+}
+
 void sigmaos_free_clnt(SigmaosClnt clnt) { delete state(clnt); }
 
 int sigmaos_started(SigmaosClnt clnt) {

@@ -16,6 +16,7 @@ extern "C" {
 typedef void* SigmaosClnt;
 
 SigmaosClnt sigmaos_new_clnt();
+SigmaosClnt sigmaos_new_clnt_tcp(const char* host, int port);
 void sigmaos_free_clnt(SigmaosClnt clnt);
 
 // Returns 0 on success, -1 on error.

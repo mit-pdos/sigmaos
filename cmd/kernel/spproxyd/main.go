@@ -1,17 +1,16 @@
 package main
 
 import (
-	"os"
+	"flag"
 
 	db "sigmaos/debug"
 	"sigmaos/proxy/sigmap/srv"
 )
 
 func main() {
-	if len(os.Args) != 1 {
-		db.DFatalf("Usage: %v ", os.Args[0])
-	}
-	if err := srv.RunSPProxySrv(); err != nil {
-		db.DFatalf("Fatal start: %v %v\n", os.Args[0], err)
+	blink := flag.Bool("blink", false, "also listen on TCP socket for blink")
+	flag.Parse()
+	if err := srv.RunSPProxySrv(*blink); err != nil {
+		db.DFatalf("Fatal start: %v\n", err)
 	}
 }

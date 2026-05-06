@@ -28,6 +28,7 @@ import (
 	wasmclnt "sigmaos/proxy/wasm/clnt"
 	wasmrpc "sigmaos/proxy/wasm/rpc"
 	wasmsrv "sigmaos/proxy/wasm/srv"
+	blinkcontainer "sigmaos/blink"
 	pycontainer "sigmaos/python/container"
 	chunkclnt "sigmaos/sched/msched/proc/chunk/clnt"
 	chunksrv "sigmaos/sched/msched/proc/chunk/srv"
@@ -562,6 +563,13 @@ func (ps *ProcSrv) Run(ctx fs.CtxI, req proto.RunReq, res *proto.RunRep) error {
 					db.DPrintf(db.PROCD_ERR, "[%v] Run Python proc err: %v", uproc.GetPid(), err)
 					return err
 				}
+			} else if uproc.GetProcContainerType() == proc.ProcContainerType_PROC_CTR_BLINK {
+				db.DPrintf(db.PROCD, "[%v] Run Blink proc", uproc.GetPid())
+				ctr, err = blinkcontainer.StartBlinkContainer(uproc)
+				if err != nil {
+					db.DPrintf(db.PROCD_ERR, "[%v] Run Blink proc err: %v", uproc.GetPid(), err)
+					return err
+				}
 			} else {
 				ctr, err = scontainer.StartSigmaContainer(uproc, ps.dialproxy)
 				if err != nil {
@@ -608,6 +616,8 @@ func (ps *ProcSrv) Run(ctx fs.CtxI, req proto.RunReq, res *proto.RunRep) error {
 	db.DPrintf(db.PROCD, "[%v] nRunning after: %v", uproc.GetProgram(), nRunning)
 	if uproc.GetProcContainerType() == proc.ProcContainerType_PROC_CTR_PYTHON {
 		pycontainer.CleanupPythonProc(uproc.GetPid())
+	} else if uproc.GetProcContainerType() == proc.ProcContainerType_PROC_CTR_BLINK {
+		blinkcontainer.CleanupBlinkProc(uproc.GetPid())
 	} else {
 		scontainer.CleanupUProc(uproc.GetPid())
 	}

@@ -29,6 +29,7 @@ const (
 	ProcContainerType_PROC_CTR_NATIVE ProcContainerType = 0
 	ProcContainerType_PROC_CTR_WASM   ProcContainerType = 1
 	ProcContainerType_PROC_CTR_PYTHON ProcContainerType = 2
+	ProcContainerType_PROC_CTR_BLINK  ProcContainerType = 3
 )
 
 // Enum value maps for ProcContainerType.
@@ -37,11 +38,13 @@ var (
 		0: "PROC_CTR_NATIVE",
 		1: "PROC_CTR_WASM",
 		2: "PROC_CTR_PYTHON",
+		3: "PROC_CTR_BLINK",
 	}
 	ProcContainerType_value = map[string]int32{
 		"PROC_CTR_NATIVE": 0,
 		"PROC_CTR_WASM":   1,
 		"PROC_CTR_PYTHON": 2,
+		"PROC_CTR_BLINK":  3,
 	}
 )
 

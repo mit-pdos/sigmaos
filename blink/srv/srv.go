@@ -1,12 +1,16 @@
 package srv
 
 import (
+	"encoding/json"
 	"fmt"
 	"net"
+	"os"
+	"os/exec"
+	"strings"
 
 	"sigmaos/api/fs"
-	blinkproto "sigmaos/blink/proto"
 	"sigmaos/blink"
+	blinkproto "sigmaos/blink/proto"
 	"sigmaos/ctx"
 	db "sigmaos/debug"
 	"sigmaos/proc"
@@ -80,11 +84,83 @@ type BlinkSrvAPI struct {
 func (api *BlinkSrvAPI) RunBlinkProc(ctx fs.CtxI, req blinkproto.RunBlinkProcReq, rep *blinkproto.RunBlinkProcRep) error {
 	p := proc.NewProcFromProto(req.Proc)
 	db.DPrintf(db.BLINKD, "BlinkSrvAPI.RunBlinkProc %v kid %v", p, req.Kid)
-	// TODO: invoke junction_run to restore and run the proc
+
+	program := strings.TrimSuffix(p.GetProgram(), ".py")
+	functionName := "python_" + program
+	snapshotPrefix := "/tmp/python_" + program
+
+	// Args: [ImgBucket, ImgKey, ModelBucket, ModelKey, Kid, AsyncFetch]
+	functionArg := map[string]string{
+		"is_warmup":    "false",
+		"img_bucket":   p.Args[0],
+		"img_key":      p.Args[1],
+		"model_bucket": p.Args[2],
+		"model_key":    p.Args[3],
+		"kid":          p.Args[4],
+		"async_fetch":  p.Args[5],
+	}
+	functionArgJSON, err := json.Marshal(functionArg)
+	if err != nil {
+		return fmt.Errorf("marshal function_arg: %w", err)
+	}
+
+	args := []string{"-E", blink.JUNCTION_RUN, blink.JUNCTION_CONFIG,
+		"--function_arg", string(functionArgJSON),
+		"--function_name", functionName,
+	}
+	for _, envVar := range p.GetEnv() {
+		args = append(args, "--env", envVar)
+	}
+	args = append(args,
+		"--chroot="+blink.JUNCTION_CHROOT,
+		"--cache_linux_fs",
+		"--jif",
+		"--madv_remap",
+		"--snapshot-prefix", snapshotPrefix,
+		"--",
+		blink.BLINK_PYTHON, "-u", blink.BLINK_PYTHON_RUNNER, program,
+	)
+
+	logFile, err := os.OpenFile(blink.BLINK_RESULTS+"/generate_images_snap_shelf", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		return fmt.Errorf("open snap shelf log: %w", err)
+	}
+	defer logFile.Close()
+
+	cmd := exec.Command("sudo", args...)
+	cmd.Stdout = logFile
+	db.DPrintf(db.BLINKD, "BlinkSrvAPI.RunBlinkProc exec %v", cmd)
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("junction_run: %w", err)
+	}
+	return nil
+}
+
+func setupCaladan() error {
+	if err := exec.Command("sudo", "sh", "-c", "(pkill iokerneld && sleep 1) || true").Run(); err != nil {
+		return fmt.Errorf("pkill iokerneld: %w", err)
+	}
+	if err := exec.Command("sudo", blink.CALADAN_SETUP_SCRIPT, "nouintr").Run(); err != nil {
+		return fmt.Errorf("setup_machine.sh: %w", err)
+	}
+	logFile, err := os.Create(blink.BLINK_RESULTS + "/generate_images_iokernel.log")
+	if err != nil {
+		return fmt.Errorf("create iokerneld log: %w", err)
+	}
+	cmd := exec.Command("sudo", blink.IOKERNELD_BIN, "ias", "noht", "nobw", "no_hw_qdel", "numanode", "-1", "--", "--allow", "00:00.0", "--vdev=net_tap0", "1,4-28")
+	cmd.Stdout = logFile
+	cmd.Stderr = logFile
+	if err := cmd.Start(); err != nil {
+		return fmt.Errorf("start iokerneld: %w", err)
+	}
+	db.DPrintf(db.BLINKD, "iokerneld started (pid %d), logging to %s", cmd.Process.Pid, blink.BLINK_RESULTS+"/generate_images_iokernel.log")
 	return nil
 }
 
 func RunBlinkSrv(kernelId string) error {
+	if err := setupCaladan(); err != nil {
+		return err
+	}
 	bs := newBlinkSrv(kernelId)
 	return bs.runServer()
 }

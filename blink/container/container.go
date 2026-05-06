@@ -2,6 +2,8 @@ package blink
 
 import (
 	"math/rand"
+	"strconv"
+	"time"
 
 	blinkclnt "sigmaos/blink/clnt"
 	db "sigmaos/debug"
@@ -29,6 +31,15 @@ func NewBlinkClnt(kernelID string) (*BlinkClnt, error) {
 // StartBlinkContainer dispatches a RunBlinkProc RPC to BlinkSrv and returns a
 // BlinkContainer whose Wait blocks until the RPC returns (i.e. the proc exits).
 func (bc *BlinkClnt) StartBlinkContainer(uproc *proc.Proc) (*BlinkContainer, error) {
+	uproc.AppendEnv("PATH", "/bin:/bin2:/usr/bin:/home/sigmaos/bin/kernel")
+	uproc.AppendEnv("SIGMA_EXEC_TIME", strconv.FormatInt(time.Now().UnixMicro(), 10))
+	b, err := time.Now().MarshalText()
+	if err != nil {
+		return nil, err
+	}
+	uproc.AppendEnv("SIGMA_EXEC_TIME_PB", string(b))
+	uproc.AppendEnv("SIGMA_SPAWN_TIME", strconv.FormatInt(uproc.GetSpawnTime().UnixMicro(), 10))
+	uproc.AppendEnv(proc.SIGMAPERF, uproc.GetProcEnv().GetPerf())
 	waitC := make(chan error, 1)
 	go func() {
 		waitC <- bc.clnt.RunBlinkProc(uproc, bc.kernelID)

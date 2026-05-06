@@ -54,7 +54,8 @@ func TestImgrecBlink(t *testing.T) {
 	rts := mrts.GetRealm(test.REALM1)
 
 	conf := imgrec_py.NewImgrecPyJobConfig(imgBucket, imgKey, modelBucket, modelKey, kid, false, false, 0, 0)
-	job := imgrec_py.NewImgrecBlinkJob(conf, rts.SigmaClnt)
+	job, err := imgrec_py.NewImgrecBlinkJob(conf, rts.SigmaClnt)
+	assert.Nil(t, err, "NewImgrecBlinkJob: %v", err)
 
 	msg, err := job.Run(sp.NOT_SET)
 	assert.Nil(t, err, "Run: %v", err)

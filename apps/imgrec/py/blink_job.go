@@ -1,17 +1,31 @@
 package imgrec_py
 
 import (
+	db "sigmaos/debug"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
+	wasmrt "sigmaos/proxy/wasm/rpc/wasmer"
 )
 
 type ImgrecBlinkJob struct {
-	conf *ImgrecPyJobConfig
+	conf      *ImgrecPyJobConfig
+	coSandbox []byte
+	bootInput []byte
 	*sigmaclnt.SigmaClnt
 }
 
-func NewImgrecBlinkJob(conf *ImgrecPyJobConfig, sc *sigmaclnt.SigmaClnt) *ImgrecBlinkJob {
-	return &ImgrecBlinkJob{conf: conf, SigmaClnt: sc}
+func NewImgrecBlinkJob(conf *ImgrecPyJobConfig, sc *sigmaclnt.SigmaClnt) (*ImgrecBlinkJob, error) {
+	j := &ImgrecBlinkJob{conf: conf, SigmaClnt: sc}
+	if conf.UseCoSandbox {
+		b, err := wasmrt.ReadCoSandbox(sc, cosandboxName)
+		if err != nil {
+			db.DPrintf(db.ERROR, "ImgrecBlink ReadCoSandbox err: %v", err)
+			return nil, err
+		}
+		j.coSandbox = b
+		j.bootInput = wasmrt.EncodeArgs([]string{conf.ImgBucket, conf.ImgKey, conf.ModelBucket, conf.ModelKey, conf.Kid})
+	}
+	return j, nil
 }
 
 func (j *ImgrecBlinkJob) Run(sigmaPath string) (string, error) {
@@ -34,6 +48,9 @@ func (j *ImgrecBlinkJob) Run(sigmaPath string) (string, error) {
 	if j.conf.ShmemMB > 0 {
 		p.SetShmemMB(j.conf.ShmemMB)
 	}
+	if j.conf.UseCoSandbox {
+		p.SetCoSandbox(j.coSandbox, j.bootInput)
+		p.SetRunCoSandbox(true)
+	}
 	return spawnAndWait(j.SigmaClnt, p, sigmaPath)
 }
-

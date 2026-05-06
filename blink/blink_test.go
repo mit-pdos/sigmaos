@@ -1,6 +1,7 @@
 package blink_test
 
 import (
+	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
@@ -28,7 +29,14 @@ func TestImgrecBlink(t *testing.T) {
 	_, testFile, _, _ := runtime.Caller(0)
 	repoRoot := filepath.Join(filepath.Dir(testFile), "..")
 	blinkdBin := filepath.Join(repoRoot, "bin", "kernel", "blinkd")
+	logFile, err := os.Create("/tmp/blinkd.out")
+	if !assert.Nil(t, err, "blinkd log create: %v", err) {
+		return
+	}
+	defer logFile.Close()
 	cmd := exec.Command(blinkdBin, "test")
+	cmd.Stdout = logFile
+	cmd.Stderr = logFile
 	if err := cmd.Start(); err != nil {
 		assert.Nil(t, err, "blinkd Start: %v", err)
 		return

@@ -3,6 +3,7 @@ package blink_test
 import (
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"testing"
 	"time"
 
@@ -20,13 +21,14 @@ const (
 	imgKey      = "img-save/8.jpg"
 	modelBucket = "9ps3"
 	modelKey    = "mobilenetv2-12.onnx"
-	kid         = "~local"
-
-	blinkdBin = "/home/sigmaos/bin/kernel/blinkd"
+	kid = "~local"
 )
 
 func TestImgrecBlink(t *testing.T) {
-	cmd := exec.Command(filepath.Clean(blinkdBin), "test")
+	_, testFile, _, _ := runtime.Caller(0)
+	repoRoot := filepath.Join(filepath.Dir(testFile), "..")
+	blinkdBin := filepath.Join(repoRoot, "bin", "kernel", "blinkd")
+	cmd := exec.Command(blinkdBin, "test")
 	if err := cmd.Start(); err != nil {
 		assert.Nil(t, err, "blinkd Start: %v", err)
 		return

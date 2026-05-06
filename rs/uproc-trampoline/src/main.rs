@@ -179,7 +179,7 @@ fn jail_proc(
     let mut now = SystemTime::now();
     extern crate sys_mount;
     use nix::unistd::pivot_root;
-    use sys_mount::{unmount, Mount, MountFlags, UnmountFlags};
+    use sys_mount::{Mount, MountFlags, UnmountFlags, unmount};
 
     let old_root_mnt = "oldroot";
     const DIRS: &'static [&'static str] = &[
@@ -196,6 +196,7 @@ fn jail_proc(
         "dev/shm",
         "tmp",
         "tmp/sigmaos-perf",
+        "tmp/spproxyd",
     ];
 
     let newroot = "/home/sigmaos/jail/";
@@ -293,6 +294,11 @@ fn jail_proc(
             log::info!("PERF {}", "mounting perf dir");
         }
     }
+    // E.g., write pprof files to /tmp/spproxyd
+    Mount::builder()
+        .fstype("none")
+        .flags(MountFlags::BIND)
+        .mount("/tmp/spproxyd", "tmp/spproxyd")?;
     print_elapsed_time(
         &debug_pid,
         "trampoline.fs_jail_proc mount dirs",

@@ -87,7 +87,7 @@ func (spps *SPProxySrv) runServer(enableBlink bool) error {
 	db.DPrintf(db.SPPROXYSRV, "runServer: spproxyd listening on %v", sp.SIGMASOCKET)
 	// When blink is enabled, also listen on a dynamically assigned TCP socket
 	if enableBlink {
-		tcpSocket, err := net.Listen("tcp", ":0")
+		tcpSocket, err := net.Listen("tcp", "192.168.120.1:0")
 		if err != nil {
 			return err
 		}

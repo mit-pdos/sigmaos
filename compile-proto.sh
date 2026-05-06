@@ -36,7 +36,8 @@ for PP in \
   apps/cossim \
   spproto/srv \
   ft/task \
-  proxy/wasm; \
+  proxy/wasm \
+  blink; \
   do
     for P in $PP/proto/*.proto ; do
       echo "protoc (golang) $P"

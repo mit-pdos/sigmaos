@@ -237,6 +237,8 @@ const (
 	SPPROXYSRV_ERR           = "SPPROXYSRV" + ERR
 	WASMD                    = "WASMD"
 	WASMD_ERR                = "WASMD" + ERR
+	BLINKD                   = "BLINKD"
+	BLINKD_ERR               = "BLINKD" + ERR
 )
 
 // Realm

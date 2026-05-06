@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+import "proc/proc.proto";
+
+option go_package = "sigmaos/blink/proto";
+
+message RunBlinkProcReq {
+  ProcProto proc = 1;
+  string    kid  = 2;
+}
+
+message RunBlinkProcRep {
+  string err = 1;
+}

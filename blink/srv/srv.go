@@ -101,17 +101,35 @@ func (api *BlinkSrvAPI) RunBlinkProc(ctx fs.CtxI, req blinkproto.RunBlinkProcReq
 
 	// Forward TCP traffic from dtap0 (Caladan network) to the container running spproxyd.
 	// Caladan procs can only reach 192.168.120.1 (dtap0 host side), not the container's outer IP.
+	// DNAT rewrites the destination; FORWARD rules allow the kernel to pass traffic across interfaces;
+	// MASQUERADE ensures return packets are routed back through dtap0.
 	tcpPort := fmt.Sprintf("%d", req.SpproxyTcpPort)
-	dnatArgs := []string{"iptables", "-t", "nat", "-A", "PREROUTING", "-i", "dtap0", "-p", "tcp", "--dport", tcpPort, "-j", "DNAT", "--to-destination", req.SpproxyTcpHost + ":" + tcpPort}
-	if err := exec.Command("sudo", dnatArgs...).Run(); err != nil {
+	if err := exec.Command("sudo", "iptables", "-t", "nat", "-A", "PREROUTING",
+		"-i", "dtap0", "-p", "tcp", "--dport", tcpPort,
+		"-j", "DNAT", "--to-destination", req.SpproxyTcpHost+":"+tcpPort).Run(); err != nil {
 		return fmt.Errorf("iptables DNAT: %w", err)
 	}
-	defer exec.Command("sudo", "iptables", "-t", "nat", "-D", "PREROUTING", "-i", "dtap0", "-p", "tcp", "--dport", tcpPort, "-j", "DNAT", "--to-destination", req.SpproxyTcpHost+":"+tcpPort).Run()
-	masqArgs := []string{"iptables", "-t", "nat", "-A", "POSTROUTING", "-d", req.SpproxyTcpHost, "-j", "MASQUERADE"}
-	if err := exec.Command("sudo", masqArgs...).Run(); err != nil {
+	defer exec.Command("sudo", "iptables", "-t", "nat", "-D", "PREROUTING",
+		"-i", "dtap0", "-p", "tcp", "--dport", tcpPort,
+		"-j", "DNAT", "--to-destination", req.SpproxyTcpHost+":"+tcpPort).Run()
+	if err := exec.Command("sudo", "iptables", "-t", "nat", "-A", "POSTROUTING",
+		"-d", req.SpproxyTcpHost, "-j", "MASQUERADE").Run(); err != nil {
 		return fmt.Errorf("iptables MASQUERADE: %w", err)
 	}
-	defer exec.Command("sudo", "iptables", "-t", "nat", "-D", "POSTROUTING", "-d", req.SpproxyTcpHost, "-j", "MASQUERADE").Run()
+	defer exec.Command("sudo", "iptables", "-t", "nat", "-D", "POSTROUTING",
+		"-d", req.SpproxyTcpHost, "-j", "MASQUERADE").Run()
+	if err := exec.Command("sudo", "iptables", "-A", "FORWARD",
+		"-i", "dtap0", "-d", req.SpproxyTcpHost, "-p", "tcp", "--dport", tcpPort, "-j", "ACCEPT").Run(); err != nil {
+		return fmt.Errorf("iptables FORWARD in: %w", err)
+	}
+	defer exec.Command("sudo", "iptables", "-D", "FORWARD",
+		"-i", "dtap0", "-d", req.SpproxyTcpHost, "-p", "tcp", "--dport", tcpPort, "-j", "ACCEPT").Run()
+	if err := exec.Command("sudo", "iptables", "-A", "FORWARD",
+		"-o", "dtap0", "-s", req.SpproxyTcpHost, "-p", "tcp", "--sport", tcpPort, "-j", "ACCEPT").Run(); err != nil {
+		return fmt.Errorf("iptables FORWARD out: %w", err)
+	}
+	defer exec.Command("sudo", "iptables", "-D", "FORWARD",
+		"-o", "dtap0", "-s", req.SpproxyTcpHost, "-p", "tcp", "--sport", tcpPort, "-j", "ACCEPT").Run()
 
 	program := strings.TrimSuffix(p.GetProgram(), ".py")
 	functionName := "python_" + program

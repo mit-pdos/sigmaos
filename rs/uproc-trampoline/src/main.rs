@@ -294,6 +294,11 @@ fn jail_proc(
             log::info!("PERF {}", "mounting perf dir");
         }
     }
+    // E.g., write pprof files to /tmp/spproxyd
+    Mount::builder()
+        .fstype("none")
+        .flags(MountFlags::BIND)
+        .mount("/tmp/spproxyd", "tmp/spproxyd")?;
     print_elapsed_time(
         &debug_pid,
         "trampoline.fs_jail_proc mount dirs",

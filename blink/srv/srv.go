@@ -188,7 +188,7 @@ func setupCaladan() error {
 	if err := exec.Command("sudo", "sysctl", "-w", "net.ipv4.ip_forward=1").Run(); err != nil {
 		return fmt.Errorf("enable ip_forward: %w", err)
 	}
-	db.DPrintf(db.BLINK, "Caladan setup done")
+	db.DPrintf(db.BLINKD, "Caladan setup done")
 	return nil
 }
 

@@ -182,6 +182,9 @@ func setupCaladan() error {
 		return fmt.Errorf("start iokerneld: %w", err)
 	}
 	db.DPrintf(db.BLINKD, "iokerneld started (pid %d), logging to %s", cmd.Process.Pid, blink.BLINK_RESULTS+"/generate_images_iokernel.log")
+	if err := exec.Command("sudo", "sh", "-c", "ip addr add 192.168.120.1/16 dev dtap0 || true").Run(); err != nil {
+		return fmt.Errorf("ip addr add dtap0: %w", err)
+	}
 	return nil
 }
 

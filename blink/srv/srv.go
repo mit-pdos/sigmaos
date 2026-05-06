@@ -188,7 +188,7 @@ func setupCaladan() error {
 		if exec.Command("ip", "link", "show", "dtap0").Run() == nil {
 			break
 		}
-		if i >= 50 {
+		if i >= 5000 {
 			return fmt.Errorf("dtap0 did not appear after iokerneld start")
 		}
 		time.Sleep(10 * time.Millisecond)

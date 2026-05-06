@@ -17,6 +17,7 @@ func TestWriteProcEnv(t *testing.T) {
 	innerIP := sp.Tip("127.0.0.1")
 	outerIP := sp.Tip("10.0.0.1")
 	procdPid := sp.GenPid("procd")
+	uproc.SetHow(HMSCHED)
 	uproc.FinalizeEnv(innerIP, outerIP, procdPid)
 
 	// Append env vars as done in scontainer/scontainer.go

@@ -30,6 +30,12 @@ for containerid in $(docker ps -a --format "{{.Names}}"); do
   fi
 done
 
+# Scrape blinkd logs
+if [ -f /tmp/blinkd.out ]; then
+  blinkd_out="$(cat /tmp/blinkd.out 2>&1)"
+  out="$(printf "%s\n" "$out" "========== Logs for blinkd ==========" "$blinkd_out")"
+fi
+
 # Trim first line (which is blank)
 out="$(echo "$out" | tail -n +2 )"
 if [[ "$MERGE" == "merge" ]] ; then

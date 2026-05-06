@@ -135,6 +135,7 @@ func (api *BlinkSrvAPI) RunBlinkProc(ctx fs.CtxI, req blinkproto.RunBlinkProcReq
 	straceProcs := proc.GetLabels(p.ProcEnvProto.GetStrace())
 	if straceProcs[program] {
 		args = append(args, "--strace")
+		db.DPrintf(db.BLINKD, "Stracing %v", p.GetPid())
 	}
 	args = append(args,
 		"--chroot="+blink.JUNCTION_CHROOT,

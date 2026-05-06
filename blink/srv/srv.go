@@ -147,6 +147,7 @@ func (api *BlinkSrvAPI) RunBlinkProc(ctx fs.CtxI, req blinkproto.RunBlinkProcReq
 	cmd.Stderr = logFile
 	db.DPrintf(db.BLINKD, "BlinkSrvAPI.RunBlinkProc exec %v", cmd)
 	if err := cmd.Run(); err != nil {
+		db.DPrintf(db.ERROR, "ERR junction_run: %v", err)
 		return fmt.Errorf("junction_run: %w", err)
 	}
 	return nil

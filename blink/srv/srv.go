@@ -132,7 +132,7 @@ func (api *BlinkSrvAPI) RunBlinkProc(ctx fs.CtxI, req blinkproto.RunBlinkProcReq
 		snapshotPrefix+blink.SNAPSHOT_JIF_SUFFIX,
 	)
 
-	logFile, err := os.OpenFile("/tmp/blink-restore.txt", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	logFile, err := os.OpenFile("/tmp/blink-restore.out", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		return fmt.Errorf("open restore log: %w", err)
 	}

@@ -90,12 +90,15 @@ func (api *BlinkSrvAPI) RunBlinkProc(ctx fs.CtxI, req blinkproto.RunBlinkProcReq
 	chrootSpproxyd := blink.JUNCTION_CHROOT + "/tmp/spproxyd"
 	hostSpproxyd := blink.PROCD_SPPROXYD_BASE + "/spproxyd-" + req.ProcsrvPid
 	if err := exec.Command("sudo", "mkdir", "-p", chrootSpproxyd).Run(); err != nil {
+		db.DPrintf(db.ERROR, "ERR RunBlinkProc mkdir chroot spproxyd: %v", err)
 		return fmt.Errorf("mkdir chroot spproxyd: %w", err)
 	}
 	if err := exec.Command("sudo", "mount", "--bind", hostSpproxyd, chrootSpproxyd).Run(); err != nil {
+		db.DPrintf(db.ERROR, "ERR RunBlinkProc mount spproxyd: %v", err)
 		return fmt.Errorf("mount spproxyd: %w", err)
 	}
 	if err := exec.Command("sudo", "chmod", "a+rwx", chrootSpproxyd).Run(); err != nil {
+		db.DPrintf(db.ERROR, "ERR RunBlinkProc chmod spproxyd: %v", err)
 		return fmt.Errorf("chmod spproxyd: %w", err)
 	}
 	defer exec.Command("sudo", "umount", chrootSpproxyd).Run()
@@ -118,6 +121,7 @@ func (api *BlinkSrvAPI) RunBlinkProc(ctx fs.CtxI, req blinkproto.RunBlinkProcReq
 	}
 	functionArgJSON, err := json.Marshal(functionArg)
 	if err != nil {
+		db.DPrintf(db.ERROR, "ERR RunBlinkProc marshal function_arg: %v", err)
 		return fmt.Errorf("marshal function_arg: %w", err)
 	}
 
@@ -144,6 +148,7 @@ func (api *BlinkSrvAPI) RunBlinkProc(ctx fs.CtxI, req blinkproto.RunBlinkProcReq
 
 	logFile, err := os.OpenFile("/tmp/blinkd-restore.out", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
+		db.DPrintf(db.ERROR, "ERR RunBlinkProc open restore log: %v", err)
 		return fmt.Errorf("open restore log: %w", err)
 	}
 	defer logFile.Close()

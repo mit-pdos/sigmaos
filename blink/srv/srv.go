@@ -138,6 +138,12 @@ func (api *BlinkSrvAPI) RunBlinkProc(ctx fs.CtxI, req blinkproto.RunBlinkProcReq
 }
 
 func setupCaladan() error {
+	if err := exec.Command("sudo", "sh", "-c", blink.CHROOT_MOUNT_SCRIPT+" -u || true").Run(); err != nil {
+		return fmt.Errorf("chroot_mount unmount: %w", err)
+	}
+	if err := exec.Command("sudo", blink.CHROOT_MOUNT_SCRIPT).Run(); err != nil {
+		return fmt.Errorf("chroot_mount: %w", err)
+	}
 	if err := exec.Command("sudo", "sh", "-c", "(pkill iokerneld && sleep 1) || true").Run(); err != nil {
 		return fmt.Errorf("pkill iokerneld: %w", err)
 	}

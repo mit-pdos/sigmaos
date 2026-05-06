@@ -85,25 +85,29 @@ func (j *ImgrecPyJob) Run(sigmaPath string) (string, error) {
 	if j.conf.ShmemMB > 0 {
 		p.SetShmemMB(j.conf.ShmemMB)
 	}
+	db.DPrintf(db.TEST, "Scale %v", p.GetPid())
+	return spawnAndWait(j.SigmaClnt, p, sigmaPath)
+}
+
+func spawnAndWait(sc *sigmaclnt.SigmaClnt, p *proc.Proc, sigmaPath string) (string, error) {
 	if sigmaPath != sp.NOT_SET {
 		p.PrependSigmaPath(sigmaPath)
 	}
-	db.DPrintf(db.TEST, "Scale %v", p.GetPid())
-	if err := j.Spawn(p); err != nil {
-		db.DPrintf(db.ERROR, "ImgrecPy Spawn err: %v", err)
+	if err := sc.Spawn(p); err != nil {
+		db.DPrintf(db.ERROR, "Spawn err: %v", err)
 		return "", err
 	}
-	if err := j.WaitStart(p.GetPid()); err != nil {
-		db.DPrintf(db.ERROR, "ImgrecPy WaitStart err: %v", err)
+	if err := sc.WaitStart(p.GetPid()); err != nil {
+		db.DPrintf(db.ERROR, "WaitStart err: %v", err)
 		return "", err
 	}
-	status, err := j.WaitExit(p.GetPid())
+	status, err := sc.WaitExit(p.GetPid())
 	if err != nil {
-		db.DPrintf(db.ERROR, "ImgrecPy WaitExit err: %v", err)
+		db.DPrintf(db.ERROR, "WaitExit err: %v", err)
 		return "", err
 	}
 	if !status.IsStatusOK() {
-		return "", fmt.Errorf("imgrec.py exited with status: %v", status)
+		return "", fmt.Errorf("proc exited with status: %v", status)
 	}
 	return status.Msg(), nil
 }

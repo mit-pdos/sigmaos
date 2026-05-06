@@ -18,6 +18,7 @@ import (
 
 	units "github.com/docker/go-units"
 
+	blinkpkg "sigmaos/blink"
 	"sigmaos/dcontainer/cgroup"
 	db "sigmaos/debug"
 	"sigmaos/gvisor"
@@ -121,7 +122,7 @@ func StartDockerContainer(p *proc.Proc, kernelId, user, netmode string, useGViso
 	}
 
 	if enableBlink {
-		hostSpproxydPath := "/tmp/spproxyd-" + p.GetPid().String()
+		hostSpproxydPath := filepath.Join(blinkpkg.PROCD_SPPROXYD_BASE, "spproxyd-"+p.GetPid().String())
 		if err := os.MkdirAll(hostSpproxydPath, 0777); err != nil {
 			return nil, err
 		}

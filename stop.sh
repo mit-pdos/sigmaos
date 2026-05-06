@@ -71,7 +71,7 @@ pgrep -x blinkd > /dev/null && killall -9 blinkd
 sudo rm -f $TMP_BASE/blinkd.out
 sudo rm -f $TMP_BASE/blinkd-restore.out
 
-sudo rm -f $TMP_BASE/spproxyd-*
+sudo rm -f $TMP_BASE/procd-spproxyd
 
 sudo rm -f $TMP_BASE/spproxyd/spproxyd.sock
 sudo rm -f $TMP_BASE/spproxyd/spproxyd-ctrl.sock

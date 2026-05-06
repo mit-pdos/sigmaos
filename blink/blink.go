@@ -14,4 +14,8 @@ const (
 	IOKERNELD_BIN        = "/home/arielck/blink-ae/junction/lib/caladan/iokerneld"
 
 	SNAPSHOT_JIF_SUFFIX = "_itrees_ord_reorder.jif"
+
+	// Shared directory bind-mounted from host into the kernel container.
+	// Each procd instance gets a subdirectory named spproxyd-<pid> within it.
+	PROCD_SPPROXYD_BASE = "/tmp/procd-spproxyd"
 )

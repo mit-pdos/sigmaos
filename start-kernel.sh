@@ -158,8 +158,10 @@ DATA_DIR="${TMP_BASE}/sigmaos-data"
 PERF_DIR="${TMP_BASE}/sigmaos-perf"
 KERNEL_DIR="${TMP_BASE}/sigmaos"
 SPPROXY_DIR="${TMP_BASE}/spproxyd"
+PROCD_SPPROXY_DIR="/tmp/procd-spproxyd"
 
 mkdir -p $SPPROXY_DIR
+mkdir -p $PROCD_SPPROXY_DIR
 mkdir -p $HOST_BIN_CACHE
 mkdir -p $HOST_BIN_CACHE/$KERNELID
 mkdir -p $DATA_DIR
@@ -194,6 +196,7 @@ MOUNTS="--mount type=bind,src=/var/run/docker.sock,dst=/var/run/docker.sock \
   --mount type=bind,src=/sys/fs/cgroup,dst=/cgroup \
   --mount type=bind,src=$KERNEL_DIR,dst=/tmp/sigmaos \
   --mount type=bind,src=$SPPROXY_DIR,dst=/tmp/spproxyd \
+  --mount type=bind,src=$PROCD_SPPROXY_DIR,dst=/tmp/procd-spproxyd \
   --mount type=bind,src=$DATA_DIR,dst=/home/sigmaos/data \
   --mount type=bind,src=$HOST_BIN_CACHE/${KERNELID},dst=/home/sigmaos/bin/user/realms \
   --mount type=bind,src=$PERF_DIR,dst=/tmp/sigmaos-perf \

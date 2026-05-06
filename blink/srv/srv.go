@@ -87,7 +87,7 @@ func (api *BlinkSrvAPI) RunBlinkProc(ctx fs.CtxI, req blinkproto.RunBlinkProcReq
 
 	// Mount the procsrv's spproxyd socket dir into the chroot.
 	chrootSpproxyd := blink.JUNCTION_CHROOT + "/tmp/spproxyd"
-	hostSpproxyd := "/tmp/spproxyd-" + req.ProcsrvPid
+	hostSpproxyd := blink.PROCD_SPPROXYD_BASE + "/spproxyd-" + req.ProcsrvPid
 	if err := exec.Command("sudo", "mkdir", "-p", chrootSpproxyd).Run(); err != nil {
 		return fmt.Errorf("mkdir chroot spproxyd: %w", err)
 	}

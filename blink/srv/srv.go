@@ -172,17 +172,24 @@ func (api *BlinkSrvAPI) RunBlinkProc(ctx fs.CtxI, req blinkproto.RunBlinkProcReq
 	return nil
 }
 
+func runCmd(name string, args ...string) error {
+	cmd := exec.Command(name, args...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	return cmd.Run()
+}
+
 func setupCaladan() error {
-	if err := exec.Command("sudo", "sh", "-c", blink.CHROOT_MOUNT_SCRIPT+" -u || true").Run(); err != nil {
+	if err := runCmd("sudo", "sh", "-c", blink.CHROOT_MOUNT_SCRIPT+" -u || true"); err != nil {
 		return fmt.Errorf("chroot_mount unmount: %w", err)
 	}
-	if err := exec.Command("sudo", blink.CHROOT_MOUNT_SCRIPT).Run(); err != nil {
+	if err := runCmd("sudo", blink.CHROOT_MOUNT_SCRIPT); err != nil {
 		return fmt.Errorf("chroot_mount: %w", err)
 	}
-	if err := exec.Command("sudo", "sh", "-c", "(pkill iokerneld && sleep 1) || true").Run(); err != nil {
+	if err := runCmd("sudo", "sh", "-c", "(pkill iokerneld && sleep 1) || true"); err != nil {
 		return fmt.Errorf("pkill iokerneld: %w", err)
 	}
-	if err := exec.Command("sudo", blink.CALADAN_SETUP_SCRIPT, "nouintr").Run(); err != nil {
+	if err := runCmd("sudo", blink.CALADAN_SETUP_SCRIPT, "nouintr"); err != nil {
 		return fmt.Errorf("setup_machine.sh: %w", err)
 	}
 	logFile, err := os.Create(blink.BLINK_RESULTS + "/generate_images_iokernel.log")
@@ -206,10 +213,10 @@ func setupCaladan() error {
 		}
 		time.Sleep(10 * time.Millisecond)
 	}
-	if err := exec.Command("sudo", "ip", "addr", "add", blink.DTAP0_ADDR+"/16", "dev", "dtap0").Run(); err != nil {
+	if err := runCmd("sudo", "ip", "addr", "add", blink.DTAP0_ADDR+"/16", "dev", "dtap0"); err != nil {
 		return fmt.Errorf("ip addr add dtap0: %w", err)
 	}
-	if err := exec.Command("sudo", "sysctl", "-w", "net.ipv4.ip_forward=1").Run(); err != nil {
+	if err := runCmd("sudo", "sysctl", "-w", "net.ipv4.ip_forward=1"); err != nil {
 		return fmt.Errorf("enable ip_forward: %w", err)
 	}
 	db.DPrintf(db.BLINKD, "Caladan setup done")

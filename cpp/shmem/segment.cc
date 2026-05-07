@@ -13,13 +13,22 @@ bool Segment::_l = sigmaos::util::log::init_logger(SHMEM);
 bool Segment::_l_e = sigmaos::util::log::init_logger(SHMEM_ERR);
 
 std::expected<int, sigmaos::serr::Error> Segment::Init() {
-  // Create POSIX shared memory object with name based on _id_str
-  std::string name = "/" + _id_str;
-  _fd = shm_open(name.c_str(), O_RDWR, 0666);
-  if (_fd == -1) {
-    return std::unexpected(
-        sigmaos::serr::Error(sigmaos::serr::Terror::TErrError,
-                             std::format("err shm_open: {}", name)));
+  if (_is_blink) {
+    std::string path = "/shm/" + _id_str;
+    _fd = open(path.c_str(), O_RDWR, 0666);
+    if (_fd == -1) {
+      return std::unexpected(
+          sigmaos::serr::Error(sigmaos::serr::Terror::TErrError,
+                               std::format("err open: {}", path)));
+    }
+  } else {
+    std::string name = "/" + _id_str;
+    _fd = shm_open(name.c_str(), O_RDWR, 0666);
+    if (_fd == -1) {
+      return std::unexpected(
+          sigmaos::serr::Error(sigmaos::serr::Terror::TErrError,
+                               std::format("err shm_open: {}", name)));
+    }
   }
   // Map the shared memory object into the process address space
   _buf = mmap(nullptr, _size, PROT_READ | PROT_WRITE, MAP_SHARED, _fd, 0);
@@ -44,12 +53,20 @@ std::expected<int, sigmaos::serr::Error> Segment::Destroy() {
     return std::unexpected(sigmaos::serr::Error(
         sigmaos::serr::Terror::TErrError, std::format("err close")));
   }
-  // Unlink the shared memory object
-  std::string name = "/" + _id_str;
-  res = shm_unlink(name.c_str());
-  if (res != 0) {
-    return std::unexpected(sigmaos::serr::Error(
-        sigmaos::serr::Terror::TErrError, std::format("err shm_unlink")));
+  if (_is_blink) {
+    std::string path = "/shm/" + _id_str;
+    res = unlink(path.c_str());
+    if (res != 0) {
+      return std::unexpected(sigmaos::serr::Error(
+          sigmaos::serr::Terror::TErrError, std::format("err unlink")));
+    }
+  } else {
+    std::string name = "/" + _id_str;
+    res = shm_unlink(name.c_str());
+    if (res != 0) {
+      return std::unexpected(sigmaos::serr::Error(
+          sigmaos::serr::Terror::TErrError, std::format("err shm_unlink")));
+    }
   }
   return 0;
 }

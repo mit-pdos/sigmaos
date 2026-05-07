@@ -18,6 +18,7 @@ func TestWriteProcEnv(t *testing.T) {
 	outerIP := sp.Tip("10.0.0.1")
 	procdPid := sp.GenPid("procd")
 	uproc.SetHow(HMSCHED)
+	uproc.SetKernelID("~local", false)
 	uproc.GetProcEnv().UseSPProxy = true
 	uproc.GetProcEnv().UseSPProxyProcClnt = true
 	uproc.FinalizeEnv(innerIP, outerIP, procdPid)

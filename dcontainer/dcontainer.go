@@ -134,6 +134,11 @@ func StartDockerContainer(p *proc.Proc, kernelId, user, netmode string, useGViso
 		})
 	}
 
+	ipcMode := container.IpcMode("")
+	if enableBlink {
+		ipcMode = "host"
+	}
+
 	ulimits := []*units.Ulimit{}
 	if p.GetProcEnv().GetValgrind() != "" {
 		// If running with valgrind, we have to set a limit on the number of open
@@ -153,9 +158,9 @@ func StartDockerContainer(p *proc.Proc, kernelId, user, netmode string, useGViso
 			Env:          p.GetEnv(),
 			ExposedPorts: pset,
 		}, &container.HostConfig{
-			Runtime:      "runc",
-			IpcMode:      "host",
-			NetworkMode:  container.NetworkMode(netmode),
+			Runtime:     "runc",
+			IpcMode:     ipcMode,
+			NetworkMode: container.NetworkMode(netmode),
 			Mounts:       mnts,
 			Privileged:   true,
 			PortBindings: pmap,

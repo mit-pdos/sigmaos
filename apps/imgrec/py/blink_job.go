@@ -3,8 +3,8 @@ package imgrec_py
 import (
 	db "sigmaos/debug"
 	"sigmaos/proc"
-	"sigmaos/sigmaclnt"
 	wasmrt "sigmaos/proxy/wasm/rpc/wasmer"
+	"sigmaos/sigmaclnt"
 )
 
 type ImgrecBlinkJob struct {
@@ -33,7 +33,7 @@ func (j *ImgrecBlinkJob) Run(sigmaPath string) (string, error) {
 	if j.conf.AsyncFetch {
 		asyncFetchStr = "1"
 	}
-	p := proc.NewProc("imgrec-blink.py", []string{
+	p := proc.NewProcPid("imgrec-blink-1", "imgrec-blink.py", []string{
 		j.conf.ImgBucket, j.conf.ImgKey,
 		j.conf.ModelBucket, j.conf.ModelKey,
 		j.conf.Kid,

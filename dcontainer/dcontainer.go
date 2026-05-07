@@ -154,6 +154,7 @@ func StartDockerContainer(p *proc.Proc, kernelId, user, netmode string, useGViso
 			ExposedPorts: pset,
 		}, &container.HostConfig{
 			Runtime:      "runc",
+			IpcMode:      "host",
 			NetworkMode:  container.NetworkMode(netmode),
 			Mounts:       mnts,
 			Privileged:   true,

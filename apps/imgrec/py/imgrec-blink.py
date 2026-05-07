@@ -10,6 +10,7 @@ both image and model); otherwise fetches directly by bucket/key.
 """
 
 import io
+import os
 import time
 import numpy as np
 from PIL import Image
@@ -32,6 +33,9 @@ def function_handler(request_json):
     is_warmup = request_json["is_warmup"] == "true"
     if is_warmup:
       return "ok"
+
+    for k, v in request_json.get("env", {}).items():
+        os.environ[k] = v
 
     tcp_host = request_json.get("spproxy_tcp_host")
     tcp_port = request_json.get("spproxy_tcp_port")

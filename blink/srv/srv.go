@@ -107,8 +107,17 @@ func (api *BlinkSrvAPI) RunBlinkProc(ctx fs.CtxI, req blinkproto.RunBlinkProcReq
 	functionName := "python_" + program
 	snapshotPrefix := "/tmp/python_" + program
 
+	// Build env map from proc env vars to pass via functionArg.
+	envMap := make(map[string]string)
+	for _, envVar := range p.GetEnv() {
+		key, val, found := strings.Cut(envVar, "=")
+		if found {
+			envMap[key] = val
+		}
+	}
+
 	// Args: [ImgBucket, ImgKey, ModelBucket, ModelKey, Kid, AsyncFetch]
-	functionArg := map[string]string{
+	functionArg := map[string]interface{}{
 		"is_warmup":        "false",
 		"img_bucket":       p.Args[0],
 		"img_key":          p.Args[1],
@@ -118,6 +127,7 @@ func (api *BlinkSrvAPI) RunBlinkProc(ctx fs.CtxI, req blinkproto.RunBlinkProcReq
 		"async_fetch":      p.Args[5],
 		"spproxy_tcp_host": blink.DTAP0_ADDR,
 		"spproxy_tcp_port": fmt.Sprintf("%d", req.SpproxyTcpPort),
+		"env":              envMap,
 	}
 	functionArgJSON, err := json.Marshal(functionArg)
 	if err != nil {
@@ -128,18 +138,6 @@ func (api *BlinkSrvAPI) RunBlinkProc(ctx fs.CtxI, req blinkproto.RunBlinkProcReq
 	args := []string{"-E", blink.JUNCTION_RUN, blink.JUNCTION_CONFIG,
 		"--function_arg", string(functionArgJSON),
 		"--function_name", functionName,
-	}
-	for _, envVar := range p.GetEnv() {
-		key, val, found := strings.Cut(envVar, "=")
-		if found {
-			// Single-quote the value so junction_run's parser doesn't misinterpret
-			// double-quotes or other special chars (e.g. JSON in SIGMA_NAMED).
-			// Embedded single quotes are escaped as '\''.
-			quotedVal := "'" + strings.ReplaceAll(val, "'", `'\''`) + "'"
-			args = append(args, "--env", key+"="+quotedVal)
-		} else {
-			args = append(args, "--env", envVar)
-		}
 	}
 	straceProcs := proc.GetLabels(p.ProcEnvProto.GetStrace())
 	if straceProcs[program] {

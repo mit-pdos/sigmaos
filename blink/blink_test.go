@@ -26,32 +26,37 @@ const (
 	kid         = "~local"
 )
 
-func startBlinkd(t *testing.T) *exec.Cmd {
+// startBlinkd starts blinkd and registers a t.Cleanup to kill it when the test ends.
+// Returns false if startup failed.
+func startBlinkd(t *testing.T) bool {
 	_, testFile, _, _ := runtime.Caller(0)
 	repoRoot := filepath.Join(filepath.Dir(testFile), "..")
 	blinkdBin := filepath.Join(repoRoot, "bin", "kernel", "blinkd")
 	logFile, err := os.Create("/tmp/blinkd.out")
 	if !assert.Nil(t, err, "blinkd log create: %v", err) {
-		return nil
+		return false
 	}
 	cmd := exec.Command(blinkdBin, "test")
 	cmd.Stdout = logFile
 	cmd.Stderr = logFile
 	if err := cmd.Start(); err != nil {
 		assert.Nil(t, err, "blinkd Start: %v", err)
-		return nil
+		logFile.Close()
+		return false
 	}
+	t.Cleanup(func() {
+		cmd.Process.Kill()
+		logFile.Close()
+	})
 	// Give blinkd time to finish Caladan setup and start listening.
 	time.Sleep(2 * time.Second)
-	return cmd
+	return true
 }
 
 func TestImgrecBlink(t *testing.T) {
-	cmd := startBlinkd(t)
-	if cmd == nil {
+	if !startBlinkd(t) {
 		return
 	}
-	defer cmd.Process.Kill()
 
 	mrts, err := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
 	if !assert.Nil(t, err, "Error New Tstate: %v", err) {
@@ -75,11 +80,9 @@ func TestImgrecBlink(t *testing.T) {
 }
 
 func TestImgrecBlinkCoSandbox(t *testing.T) {
-	cmd := startBlinkd(t)
-	if cmd == nil {
+	if !startBlinkd(t) {
 		return
 	}
-	defer cmd.Process.Kill()
 
 	mrts, err := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
 	if !assert.Nil(t, err, "Error New Tstate: %v", err) {
@@ -103,11 +106,9 @@ func TestImgrecBlinkCoSandbox(t *testing.T) {
 }
 
 func TestImgrecBlinkShmem(t *testing.T) {
-	cmd := startBlinkd(t)
-	if cmd == nil {
+	if !startBlinkd(t) {
 		return
 	}
-	defer cmd.Process.Kill()
 
 	mrts, err := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
 	if !assert.Nil(t, err, "Error New Tstate: %v", err) {

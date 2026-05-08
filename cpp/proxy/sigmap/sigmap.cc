@@ -763,8 +763,9 @@ std::expected<int, sigmaos::serr::Error> Clnt::Exited(
     log(SPPROXYCLNT_ERR, "Err RPC: {}", res.error());
     return std::unexpected(res.error());
   }
+  log(SPPROXYCLNT, "Close conn");
+  _demux->Close();
   log(SPPROXYCLNT, "Exited done");
-  _conn->Close();
   return 0;
 }
 

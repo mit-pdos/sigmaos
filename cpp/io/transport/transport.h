@@ -29,6 +29,7 @@ class Transport {
   std::expected<int, sigmaos::serr::Error> WriteCall(
       std::shared_ptr<Call> call);
   std::expected<std::shared_ptr<Call>, sigmaos::serr::Error> ReadCall();
+  std::expected<int, sigmaos::serr::Error> Shutdown();
   std::expected<int, sigmaos::serr::Error> Close();
 
  private:

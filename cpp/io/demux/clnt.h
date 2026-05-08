@@ -14,6 +14,7 @@
 #include <future>
 #include <iostream>
 #include <memory>
+#include <mutex>
 
 namespace sigmaos {
 namespace io::demux {
@@ -43,6 +44,7 @@ class Clnt : public sigmaos::rpc::Channel {
 
  private:
   std::mutex _mu;
+  std::once_flag _close_once;
   std::shared_ptr<sigmaos::io::transport::Transport> _trans;
   sigmaos::io::demux::internal::CallMap _callmap;
   std::thread _reader_thread;

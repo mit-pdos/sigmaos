@@ -1,4 +1,5 @@
 #include <io/conn/conn.h>
+#include <sys/socket.h>
 #include <util/codec/codec.h>
 #include <util/perf/perf.h>
 
@@ -58,11 +59,18 @@ std::expected<int, sigmaos::serr::Error> Conn::WriteUint32(uint32_t i) {
   return size;
 }
 
+std::expected<int, sigmaos::serr::Error> Conn::Shutdown() {
+  log(CONN, "Shutdown conn fd {}", _sockfd);
+  int err = shutdown(_sockfd, SHUT_RDWR);
+  if (err && errno != ENOTCONN) {
+    return std::unexpected(sigmaos::serr::Error(
+        sigmaos::serr::Terror::TErrUnreachable, "shutdown error"));
+  }
+  return 0;
+}
+
 std::expected<int, sigmaos::serr::Error> Conn::Close() {
   log(CONN, "Closing unix conn");
-  // Close the socket FD
-  // TODO: have the reader actually close the FD, or else it may block
-  // indefinitely, since closing while reading is UB.
   int err = close(_sockfd);
   if (err) {
     fatal("Error close sockfd: {}", err);

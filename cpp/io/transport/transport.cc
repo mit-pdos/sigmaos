@@ -79,6 +79,11 @@ Transport::ReadCall() {
   return call;
 }
 
+std::expected<int, sigmaos::serr::Error> Transport::Shutdown() {
+  log(TRANSPORT, "Shutdown");
+  return _conn->Shutdown();
+}
+
 std::expected<int, sigmaos::serr::Error> Transport::Close() {
   //  _calls.Close(); // XXX never called in the go implementation
   log(TRANSPORT, "Close");

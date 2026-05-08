@@ -38,28 +38,28 @@ Clnt::SendReceive(std::shared_ptr<sigmaos::io::transport::Call> call) {
 
 std::expected<int, sigmaos::serr::Error> Clnt::Close() {
   log(DEMUXCLNT, "Close");
-  if (_callmap.IsClosed()) {
-    log(DEMUXCLNT, "Close: already closed");
-    return 0;
-  }
-  {
-    auto res = _trans->Close();
+  std::call_once(_close_once, [this]() {
+    // Shutdown the transport to unblock any read() call in the reader thread.
+    // shutdown() signals EOF without closing the FD, so there is no race.
+    auto res = _trans->Shutdown();
     if (!res.has_value()) {
-      log(DEMUXCLNT_ERR, "Err close trans: {}", res.error());
+      log(DEMUXCLNT_ERR, "Err shutdown trans: {}", res.error());
     }
-  }
-  log(DEMUXCLNT, "Close callmap");
-  _callmap.Close();
-  log(DEMUXCLNT, "Done closing callmap");
-  // Join the reader thread
-  log(DEMUXCLNT, "Join reader thread");
-  // TODO: join the reader thread. In order to do so, we need to switch the
-  // underlying connection's Read syscalls to polling, so that the reader
-  // thread can find out we are closing the connection and safely close the
-  // underlying connection FD.
-  // _reader_thread.join();
-  log(DEMUXCLNT, "Done join reader thread");
-  log(DEMUXCLNT, "Done Close");
+    // Join the reader thread. It will exit because shutdown causes read() to
+    // return EOF or an error. Only after the join is the FD safe to close.
+    log(DEMUXCLNT, "Join reader thread");
+    _reader_thread.join();
+    log(DEMUXCLNT, "Done join reader thread");
+    // Close the FD now that no thread is reading from it.
+    auto close_res = _trans->Close();
+    if (!close_res.has_value()) {
+      log(DEMUXCLNT_ERR, "Err close trans: {}", close_res.error());
+    }
+    log(DEMUXCLNT, "Close callmap");
+    _callmap.Close();
+    log(DEMUXCLNT, "Done closing callmap");
+    log(DEMUXCLNT, "Done Close");
+  });
   return 0;
 }
 

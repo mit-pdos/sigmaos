@@ -27,6 +27,9 @@ class Conn {
   std::expected<uint64_t, sigmaos::serr::Error> ReadUint64();
   std::expected<int, sigmaos::serr::Error> WriteUint64(uint64_t i);
 
+  // Shutdown a connection (unblocks any blocking reads/writes without closing
+  // the FD)
+  std::expected<int, sigmaos::serr::Error> Shutdown();
   // Close a connection
   std::expected<int, sigmaos::serr::Error> Close();
 

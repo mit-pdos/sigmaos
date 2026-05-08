@@ -196,6 +196,9 @@ func setupCaladan() error {
 	if err != nil {
 		return fmt.Errorf("create iokerneld log: %w", err)
 	}
+	if err := runCmd("sudo", "sh", "-c", "echo 3 | tee /proc/sys/vm/drop_caches"); err != nil {
+		return fmt.Errorf("drop caches: %w", err)
+	}
 	cmd := exec.Command("sudo", blink.IOKERNELD_BIN, "ias", "noht", "nobw", "no_hw_qdel", "numanode", "-1", "--", "--allow", "00:00.0", "--vdev=net_tap0", "1,4-28")
 	cmd.Stdout = logFile
 	cmd.Stderr = logFile

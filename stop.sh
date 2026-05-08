@@ -72,6 +72,7 @@ sudo rm -f $TMP_BASE/blinkd.out
 sudo rm -f $TMP_BASE/blinkd-restore.out
 
 sudo rm -rf $TMP_BASE/procd-spproxyd
+sudo rm -f /dev/shm/imgrec-blink-1
 
 sudo rm -f $TMP_BASE/spproxyd/spproxyd.sock
 sudo rm -f $TMP_BASE/spproxyd/spproxyd-ctrl.sock

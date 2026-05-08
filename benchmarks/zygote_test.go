@@ -894,6 +894,70 @@ func runZygoteThroughputTrial(ts *test.Tstate, useFork bool, n int, forkCfg proc
 	return spawnBurstWaitExitProcs(ts, procs)
 }
 
+func runThroughputBinarySweep(label string, dur time.Duration, minRPS int, maxRPS int, step int, req loadgen.Req) int {
+	if step <= 0 {
+		step = 1
+	}
+	if minRPS > maxRPS {
+		minRPS, maxRPS = maxRPS, minRPS
+	}
+
+	runAt := func(rps int, quick bool) (float64, float64, bool) {
+		db.DPrintf(db.ALWAYS, "%s max RPS: %d", label, rps)
+		d := dur
+		if quick {
+			d = 1 * time.Second
+		}
+		lg := loadgen.NewLoadGenerator(d, rps, req)
+		if quick {
+			lg.Calibrate2(100)
+		} else {
+			lg.Calibrate()
+		}
+		client, server := lg.Run2()
+		overloaded := client > server+200
+		return client, server, overloaded
+	}
+
+	low := minRPS
+	high := maxRPS
+	best := 0
+
+	for low <= high {
+		mid := (low + high) / 2
+		mid = (mid / step) * step
+		if mid < low {
+			mid = low
+		}
+		if mid > high {
+			mid = high
+		}
+
+		_, _, overloaded := runAt(mid, true)
+		if overloaded {
+			high = mid - step
+		} else {
+			best = mid
+			low = mid + step
+		}
+	}
+
+	if best > 0 {
+		below := best - step
+		if below >= minRPS {
+			runAt(below, false)
+		}
+		runAt(best, false)
+		above := best + step
+		if above <= maxRPS {
+			runAt(above, false)
+		}
+	}
+
+	fmt.Printf("%s best_max_rps=%d\n", label, best)
+	return best
+}
+
 func TestZygoteThroughput(t *testing.T) {
 	if N_PROC <= 0 {
 		t.Fatalf("nproc must be > 0")
@@ -922,16 +986,7 @@ func TestZygoteThroughput(t *testing.T) {
 
 	// Measure baseline throughput
 	fmt.Println("=== Baseline Throughput ===")
-	for maxRPS := 500; maxRPS <= 2500; maxRPS += 100 {
-		db.DPrintf(db.ALWAYS, "Max RPS: %d", maxRPS)
-		lg := loadgen.NewLoadGenerator(10*time.Second, maxRPS, baselineProcReq)
-		lg.Calibrate()
-		client, server := lg.Run2()
-
-		if client > server+200 {
-			break
-		}
-	}
+	runThroughputBinarySweep("baseline", 10*time.Second, 100, 5000, 100, baselineProcReq)
 
 	// Define the request function for zygote forking throughput
 	var forkCfgs []proc.ForkConfig
@@ -961,17 +1016,7 @@ func TestZygoteThroughput(t *testing.T) {
 
 	// Measure zygote forking throughput
 	fmt.Println("=== Zygote Forking Throughput ===")
-
-	for maxRPS := 500; maxRPS <= 2500; maxRPS += 100 {
-		db.DPrintf(db.ALWAYS, "Max RPS: %d", maxRPS)
-		lg := loadgen.NewLoadGenerator(10*time.Second, maxRPS, forkProcReq)
-		lg.Calibrate()
-		client, server := lg.Run2()
-
-		if client > server+200 {
-			break
-		}
-	}
+	runThroughputBinarySweep("fork", 10*time.Second, 100, 5000, 100, forkProcReq)
 }
 
 func TestPythonE2eColdStartLatency(t *testing.T) {

@@ -87,8 +87,12 @@ func (lg *LoadGenerator) runReq(i int, r *rand.Rand, store bool) time.Duration {
 
 // Find the base latency on which to base future measurements.
 func (lg *LoadGenerator) Calibrate() {
-	db.DPrintf(db.TEST, "Calibrating load generator")
 	const N = 1000
+	lg.Calibrate2(N)
+}
+
+func (lg *LoadGenerator) Calibrate2(N int) {
+	db.DPrintf(db.TEST, "Calibrating load generator")
 	//	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	r := rand.New(rand.NewSource(RAND_SEED))
 	totalDur := time.Duration(0)
@@ -96,7 +100,7 @@ func (lg *LoadGenerator) Calibrate() {
 		lg.wg.Add(1)
 		totalDur += lg.runReq(i, r, false)
 	}
-	lg.avgReqLat = totalDur / N
+	lg.avgReqLat = totalDur / time.Duration(N)
 	// Preallocate entries. Multiply by 2 to leave a slight buffer.
 	lg.res = benchmarks.NewResults(2*int(lg.maxrps*int64(lg.totaldur.Seconds()))+N, benchmarks.REQ)
 	db.DPrintf(db.TEST, "Done calibrating load generator, avg latency: %v", lg.avgReqLat)
@@ -158,9 +162,9 @@ func (lg *LoadGenerator) Run2() (float64, float64) {
 	}
 
 	client := float64(nreq) / time.Since(start).Seconds()
-	server := float64(nreq) / time.Since(start).Seconds()
 	db.DPrintf(db.ALWAYS, "Avg req/sec client-side: %v", client)
 	lg.wg.Wait()
+	server := float64(nreq) / time.Since(start).Seconds()
 	db.DPrintf(db.ALWAYS, "Avg req/sec server-side: %v", server)
 
 	return client, server

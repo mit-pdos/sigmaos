@@ -278,6 +278,7 @@ PROTOBUF_CONSTEXPR SigmaWriteReq::SigmaWriteReq(
   , /*decltype(_impl_.blob_)*/nullptr
   , /*decltype(_impl_.fd_)*/0u
   , /*decltype(_impl_.noutvec_)*/0u
+  , /*decltype(_impl_.replyviashmem_)*/false
   , /*decltype(_impl_._cached_size_)*/{}} {}
 struct SigmaWriteReqDefaultTypeInternal {
   PROTOBUF_CONSTEXPR SigmaWriteReqDefaultTypeInternal()
@@ -288,6 +289,25 @@ struct SigmaWriteReqDefaultTypeInternal {
   };
 };
 PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 SigmaWriteReqDefaultTypeInternal _SigmaWriteReq_default_instance_;
+PROTOBUF_CONSTEXPR SigmaWriteReadRep::SigmaWriteReadRep(
+    ::_pbi::ConstantInitialized): _impl_{
+    /*decltype(_impl_.shmoffs_)*/{}
+  , /*decltype(_impl_._shmoffs_cached_byte_size_)*/{0}
+  , /*decltype(_impl_.shmlens_)*/{}
+  , /*decltype(_impl_._shmlens_cached_byte_size_)*/{0}
+  , /*decltype(_impl_.blob_)*/nullptr
+  , /*decltype(_impl_.err_)*/nullptr
+  , /*decltype(_impl_.useshmem_)*/false
+  , /*decltype(_impl_._cached_size_)*/{}} {}
+struct SigmaWriteReadRepDefaultTypeInternal {
+  PROTOBUF_CONSTEXPR SigmaWriteReadRepDefaultTypeInternal()
+      : _instance(::_pbi::ConstantInitialized{}) {}
+  ~SigmaWriteReadRepDefaultTypeInternal() {}
+  union {
+    SigmaWriteReadRep _instance;
+  };
+};
+PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 SigmaWriteReadRepDefaultTypeInternal _SigmaWriteReadRep_default_instance_;
 PROTOBUF_CONSTEXPR SigmaSeekReq::SigmaSeekReq(
     ::_pbi::ConstantInitialized): _impl_{
     /*decltype(_impl_.offset_)*/uint64_t{0u}
@@ -511,7 +531,7 @@ struct SigmaMultiDelegatedRPCRepDefaultTypeInternal {
   };
 };
 PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 SigmaMultiDelegatedRPCRepDefaultTypeInternal _SigmaMultiDelegatedRPCRep_default_instance_;
-static ::_pb::Metadata file_level_metadata_proxy_2fsigmap_2fproto_2fspproxy_2eproto[34];
+static ::_pb::Metadata file_level_metadata_proxy_2fsigmap_2fproto_2fspproxy_2eproto[35];
 static constexpr ::_pb::EnumDescriptor const** file_level_enum_descriptors_proxy_2fsigmap_2fproto_2fspproxy_2eproto = nullptr;
 static constexpr ::_pb::ServiceDescriptor const** file_level_service_descriptors_proxy_2fsigmap_2fproto_2fspproxy_2eproto = nullptr;
 
@@ -671,6 +691,18 @@ const uint32_t TableStruct_proxy_2fsigmap_2fproto_2fspproxy_2eproto::offsets[] P
   PROTOBUF_FIELD_OFFSET(::SigmaWriteReq, _impl_.fence_),
   PROTOBUF_FIELD_OFFSET(::SigmaWriteReq, _impl_.blob_),
   PROTOBUF_FIELD_OFFSET(::SigmaWriteReq, _impl_.noutvec_),
+  PROTOBUF_FIELD_OFFSET(::SigmaWriteReq, _impl_.replyviashmem_),
+  ~0u,  // no _has_bits_
+  PROTOBUF_FIELD_OFFSET(::SigmaWriteReadRep, _internal_metadata_),
+  ~0u,  // no _extensions_
+  ~0u,  // no _oneof_case_
+  ~0u,  // no _weak_field_map_
+  ~0u,  // no _inlined_string_donated_
+  PROTOBUF_FIELD_OFFSET(::SigmaWriteReadRep, _impl_.blob_),
+  PROTOBUF_FIELD_OFFSET(::SigmaWriteReadRep, _impl_.err_),
+  PROTOBUF_FIELD_OFFSET(::SigmaWriteReadRep, _impl_.useshmem_),
+  PROTOBUF_FIELD_OFFSET(::SigmaWriteReadRep, _impl_.shmoffs_),
+  PROTOBUF_FIELD_OFFSET(::SigmaWriteReadRep, _impl_.shmlens_),
   ~0u,  // no _has_bits_
   PROTOBUF_FIELD_OFFSET(::SigmaSeekReq, _internal_metadata_),
   ~0u,  // no _extensions_
@@ -821,21 +853,22 @@ static const ::_pbi::MigrationSchema schemas[] PROTOBUF_SECTION_VARIABLE(protode
   { 128, -1, -1, sizeof(::SigmaSizeRep)},
   { 136, -1, -1, sizeof(::SigmaReadReq)},
   { 145, -1, -1, sizeof(::SigmaWriteReq)},
-  { 155, -1, -1, sizeof(::SigmaSeekReq)},
-  { 163, -1, -1, sizeof(::SigmaClntIdRep)},
-  { 171, -1, -1, sizeof(::SigmaFenceReq)},
-  { 179, -1, -1, sizeof(::SigmaMountTreeReq)},
-  { 188, -1, -1, sizeof(::SigmaLastMountRep)},
-  { 197, -1, -1, sizeof(::SigmaMountReq)},
-  { 205, -1, -1, sizeof(::SigmaMountRep)},
-  { 214, -1, -1, sizeof(::SigmaMountsRep)},
-  { 222, -1, -1, sizeof(::SigmaRegisterEPReq)},
-  { 230, -1, -1, sizeof(::SigmaExitedReq)},
-  { 238, -1, -1, sizeof(::SigmaOutgoingDelegatedRPCReq)},
-  { 247, -1, -1, sizeof(::SigmaDelegatedRPCReq)},
-  { 255, -1, -1, sizeof(::SigmaDelegatedRPCRep)},
-  { 267, -1, -1, sizeof(::SigmaMultiDelegatedRPCReq)},
-  { 274, -1, -1, sizeof(::SigmaMultiDelegatedRPCRep)},
+  { 156, -1, -1, sizeof(::SigmaWriteReadRep)},
+  { 167, -1, -1, sizeof(::SigmaSeekReq)},
+  { 175, -1, -1, sizeof(::SigmaClntIdRep)},
+  { 183, -1, -1, sizeof(::SigmaFenceReq)},
+  { 191, -1, -1, sizeof(::SigmaMountTreeReq)},
+  { 200, -1, -1, sizeof(::SigmaLastMountRep)},
+  { 209, -1, -1, sizeof(::SigmaMountReq)},
+  { 217, -1, -1, sizeof(::SigmaMountRep)},
+  { 226, -1, -1, sizeof(::SigmaMountsRep)},
+  { 234, -1, -1, sizeof(::SigmaRegisterEPReq)},
+  { 242, -1, -1, sizeof(::SigmaExitedReq)},
+  { 250, -1, -1, sizeof(::SigmaOutgoingDelegatedRPCReq)},
+  { 259, -1, -1, sizeof(::SigmaDelegatedRPCReq)},
+  { 267, -1, -1, sizeof(::SigmaDelegatedRPCRep)},
+  { 279, -1, -1, sizeof(::SigmaMultiDelegatedRPCReq)},
+  { 286, -1, -1, sizeof(::SigmaMultiDelegatedRPCRep)},
 };
 
 static const ::_pb::Message* const file_default_instances[] = {
@@ -858,6 +891,7 @@ static const ::_pb::Message* const file_default_instances[] = {
   &::_SigmaSizeRep_default_instance_._instance,
   &::_SigmaReadReq_default_instance_._instance,
   &::_SigmaWriteReq_default_instance_._instance,
+  &::_SigmaWriteReadRep_default_instance_._instance,
   &::_SigmaSeekReq_default_instance_._instance,
   &::_SigmaClntIdRep_default_instance_._instance,
   &::_SigmaFenceReq_default_instance_._instance,
@@ -903,40 +937,44 @@ const char descriptor_table_protodef_proxy_2fsigmap_2fproto_2fspproxy_2eproto[] 
   " \001(\004\022\017\n\007leaseId\030\005 \001(\004\022\023\n\004blob\030\006 \001(\0132\005.Bl"
   "ob\"2\n\014SigmaSizeRep\022\014\n\004size\030\001 \001(\004\022\024\n\003err\030"
   "\002 \001(\0132\007.Rerror\"5\n\014SigmaReadReq\022\n\n\002fd\030\001 \001"
-  "(\r\022\014\n\004size\030\002 \001(\004\022\013\n\003off\030\003 \001(\004\"^\n\rSigmaWr"
+  "(\r\022\014\n\004size\030\002 \001(\004\022\013\n\003off\030\003 \001(\004\"u\n\rSigmaWr"
   "iteReq\022\n\n\002fd\030\001 \001(\r\022\033\n\005fence\030\002 \001(\0132\014.Tfen"
   "ceProto\022\023\n\004blob\030\003 \001(\0132\005.Blob\022\017\n\007nOutVec\030"
-  "\004 \001(\r\"*\n\014SigmaSeekReq\022\n\n\002fd\030\001 \001(\r\022\016\n\006off"
-  "set\030\002 \001(\004\"6\n\016SigmaClntIdRep\022\016\n\006clntId\030\001 "
-  "\001(\004\022\024\n\003err\030\002 \001(\0132\007.Rerror\":\n\rSigmaFenceR"
-  "eq\022\014\n\004Path\030\001 \001(\t\022\033\n\005Fence\030\002 \001(\0132\014.Tfence"
-  "Proto\"W\n\021SigmaMountTreeReq\022!\n\010Endpoint\030\001"
-  " \001(\0132\017.TendpointProto\022\014\n\004tree\030\002 \001(\t\022\021\n\tm"
-  "ountName\030\003 \001(\t\"G\n\021SigmaLastMountRep\022\r\n\005p"
-  "ath1\030\001 \003(\t\022\r\n\005path2\030\002 \003(\t\022\024\n\003err\030\003 \001(\0132\007"
-  ".Rerror\"@\n\rSigmaMountReq\022!\n\010endpoint\030\001 \001"
-  "(\0132\017.TendpointProto\022\014\n\004port\030\002 \001(\t\"W\n\rSig"
-  "maMountRep\022!\n\010endpoint\030\001 \001(\0132\017.Tendpoint"
-  "Proto\022\r\n\005local\030\002 \001(\010\022\024\n\003err\030\003 \001(\0132\007.Rerr"
-  "or\"9\n\016SigmaMountsRep\022\021\n\tendpoints\030\001 \003(\t\022"
-  "\024\n\003err\030\002 \001(\0132\007.Rerror\"E\n\022SigmaRegisterEP"
-  "Req\022\014\n\004path\030\001 \001(\t\022!\n\010endpoint\030\002 \001(\0132\017.Te"
-  "ndpointProto\"-\n\016SigmaExitedReq\022\016\n\006status"
-  "\030\001 \001(\r\022\013\n\003msg\030\002 \001(\t\"x\n\034SigmaOutgoingDele"
-  "gatedRPCReq\022\016\n\006rPCIdx\030\001 \001(\004\022\023\n\004blob\030\002 \001("
-  "\0132\005.Blob\0223\n\017transferStartPB\030\003 \001(\0132\032.goog"
-  "le.protobuf.Timestamp\"8\n\024SigmaDelegatedR"
-  "PCReq\022\016\n\006rPCIdx\030\001 \001(\004\022\020\n\010useShmem\030\002 \001(\010\""
-  "\252\001\n\024SigmaDelegatedRPCRep\022\023\n\004blob\030\001 \001(\0132\005"
-  ".Blob\022\024\n\003err\030\002 \001(\0132\007.Rerror\022\020\n\010useShmem\030"
-  "\003 \001(\010\022\017\n\007shmOffs\030\004 \003(\004\022\017\n\007shmLens\030\005 \003(\004\022"
-  "3\n\017transferStartPB\030\006 \001(\0132\032.google.protob"
-  "uf.Timestamp\",\n\031SigmaMultiDelegatedRPCRe"
-  "q\022\017\n\007rPCIdxs\030\001 \003(\004\"\213\001\n\031SigmaMultiDelegat"
-  "edRPCRep\022\023\n\004blob\030\001 \001(\0132\005.Blob\022\r\n\005nIOVs\030\002"
-  " \003(\004\022\025\n\004errs\030\003 \003(\0132\007.Rerror\0223\n\017transferS"
-  "tartPB\030\004 \001(\0132\032.google.protobuf.Timestamp"
-  "B\034Z\032sigmaos/proxy/sigmap/protob\006proto3"
+  "\004 \001(\r\022\025\n\rreplyViaShmem\030\005 \001(\010\"r\n\021SigmaWri"
+  "teReadRep\022\023\n\004blob\030\001 \001(\0132\005.Blob\022\024\n\003err\030\002 "
+  "\001(\0132\007.Rerror\022\020\n\010useShmem\030\003 \001(\010\022\017\n\007shmOff"
+  "s\030\004 \003(\004\022\017\n\007shmLens\030\005 \003(\004\"*\n\014SigmaSeekReq"
+  "\022\n\n\002fd\030\001 \001(\r\022\016\n\006offset\030\002 \001(\004\"6\n\016SigmaCln"
+  "tIdRep\022\016\n\006clntId\030\001 \001(\004\022\024\n\003err\030\002 \001(\0132\007.Re"
+  "rror\":\n\rSigmaFenceReq\022\014\n\004Path\030\001 \001(\t\022\033\n\005F"
+  "ence\030\002 \001(\0132\014.TfenceProto\"W\n\021SigmaMountTr"
+  "eeReq\022!\n\010Endpoint\030\001 \001(\0132\017.TendpointProto"
+  "\022\014\n\004tree\030\002 \001(\t\022\021\n\tmountName\030\003 \001(\t\"G\n\021Sig"
+  "maLastMountRep\022\r\n\005path1\030\001 \003(\t\022\r\n\005path2\030\002"
+  " \003(\t\022\024\n\003err\030\003 \001(\0132\007.Rerror\"@\n\rSigmaMount"
+  "Req\022!\n\010endpoint\030\001 \001(\0132\017.TendpointProto\022\014"
+  "\n\004port\030\002 \001(\t\"W\n\rSigmaMountRep\022!\n\010endpoin"
+  "t\030\001 \001(\0132\017.TendpointProto\022\r\n\005local\030\002 \001(\010\022"
+  "\024\n\003err\030\003 \001(\0132\007.Rerror\"9\n\016SigmaMountsRep\022"
+  "\021\n\tendpoints\030\001 \003(\t\022\024\n\003err\030\002 \001(\0132\007.Rerror"
+  "\"E\n\022SigmaRegisterEPReq\022\014\n\004path\030\001 \001(\t\022!\n\010"
+  "endpoint\030\002 \001(\0132\017.TendpointProto\"-\n\016Sigma"
+  "ExitedReq\022\016\n\006status\030\001 \001(\r\022\013\n\003msg\030\002 \001(\t\"x"
+  "\n\034SigmaOutgoingDelegatedRPCReq\022\016\n\006rPCIdx"
+  "\030\001 \001(\004\022\023\n\004blob\030\002 \001(\0132\005.Blob\0223\n\017transferS"
+  "tartPB\030\003 \001(\0132\032.google.protobuf.Timestamp"
+  "\"8\n\024SigmaDelegatedRPCReq\022\016\n\006rPCIdx\030\001 \001(\004"
+  "\022\020\n\010useShmem\030\002 \001(\010\"\252\001\n\024SigmaDelegatedRPC"
+  "Rep\022\023\n\004blob\030\001 \001(\0132\005.Blob\022\024\n\003err\030\002 \001(\0132\007."
+  "Rerror\022\020\n\010useShmem\030\003 \001(\010\022\017\n\007shmOffs\030\004 \003("
+  "\004\022\017\n\007shmLens\030\005 \003(\004\0223\n\017transferStartPB\030\006 "
+  "\001(\0132\032.google.protobuf.Timestamp\",\n\031Sigma"
+  "MultiDelegatedRPCReq\022\017\n\007rPCIdxs\030\001 \003(\004\"\213\001"
+  "\n\031SigmaMultiDelegatedRPCRep\022\023\n\004blob\030\001 \001("
+  "\0132\005.Blob\022\r\n\005nIOVs\030\002 \003(\004\022\025\n\004errs\030\003 \003(\0132\007."
+  "Rerror\0223\n\017transferStartPB\030\004 \001(\0132\032.google"
+  ".protobuf.TimestampB\034Z\032sigmaos/proxy/sig"
+  "map/protob\006proto3"
   ;
 static const ::_pbi::DescriptorTable* const descriptor_table_proxy_2fsigmap_2fproto_2fspproxy_2eproto_deps[4] = {
   &::descriptor_table_google_2fprotobuf_2ftimestamp_2eproto,
@@ -946,9 +984,9 @@ static const ::_pbi::DescriptorTable* const descriptor_table_proxy_2fsigmap_2fpr
 };
 static ::_pbi::once_flag descriptor_table_proxy_2fsigmap_2fproto_2fspproxy_2eproto_once;
 const ::_pbi::DescriptorTable descriptor_table_proxy_2fsigmap_2fproto_2fspproxy_2eproto = {
-    false, false, 2438, descriptor_table_protodef_proxy_2fsigmap_2fproto_2fspproxy_2eproto,
+    false, false, 2577, descriptor_table_protodef_proxy_2fsigmap_2fproto_2fspproxy_2eproto,
     "proxy/sigmap/proto/spproxy.proto",
-    &descriptor_table_proxy_2fsigmap_2fproto_2fspproxy_2eproto_once, descriptor_table_proxy_2fsigmap_2fproto_2fspproxy_2eproto_deps, 4, 34,
+    &descriptor_table_proxy_2fsigmap_2fproto_2fspproxy_2eproto_once, descriptor_table_proxy_2fsigmap_2fproto_2fspproxy_2eproto_deps, 4, 35,
     schemas, file_default_instances, TableStruct_proxy_2fsigmap_2fproto_2fspproxy_2eproto::offsets,
     file_level_metadata_proxy_2fsigmap_2fproto_2fspproxy_2eproto, file_level_enum_descriptors_proxy_2fsigmap_2fproto_2fspproxy_2eproto,
     file_level_service_descriptors_proxy_2fsigmap_2fproto_2fspproxy_2eproto,
@@ -5104,6 +5142,7 @@ SigmaWriteReq::SigmaWriteReq(const SigmaWriteReq& from)
     , decltype(_impl_.blob_){nullptr}
     , decltype(_impl_.fd_){}
     , decltype(_impl_.noutvec_){}
+    , decltype(_impl_.replyviashmem_){}
     , /*decltype(_impl_._cached_size_)*/{}};
 
   _internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
@@ -5114,8 +5153,8 @@ SigmaWriteReq::SigmaWriteReq(const SigmaWriteReq& from)
     _this->_impl_.blob_ = new ::Blob(*from._impl_.blob_);
   }
   ::memcpy(&_impl_.fd_, &from._impl_.fd_,
-    static_cast<size_t>(reinterpret_cast<char*>(&_impl_.noutvec_) -
-    reinterpret_cast<char*>(&_impl_.fd_)) + sizeof(_impl_.noutvec_));
+    static_cast<size_t>(reinterpret_cast<char*>(&_impl_.replyviashmem_) -
+    reinterpret_cast<char*>(&_impl_.fd_)) + sizeof(_impl_.replyviashmem_));
   // @@protoc_insertion_point(copy_constructor:SigmaWriteReq)
 }
 
@@ -5128,6 +5167,7 @@ inline void SigmaWriteReq::SharedCtor(
     , decltype(_impl_.blob_){nullptr}
     , decltype(_impl_.fd_){0u}
     , decltype(_impl_.noutvec_){0u}
+    , decltype(_impl_.replyviashmem_){false}
     , /*decltype(_impl_._cached_size_)*/{}
   };
 }
@@ -5166,8 +5206,8 @@ void SigmaWriteReq::Clear() {
   }
   _impl_.blob_ = nullptr;
   ::memset(&_impl_.fd_, 0, static_cast<size_t>(
-      reinterpret_cast<char*>(&_impl_.noutvec_) -
-      reinterpret_cast<char*>(&_impl_.fd_)) + sizeof(_impl_.noutvec_));
+      reinterpret_cast<char*>(&_impl_.replyviashmem_) -
+      reinterpret_cast<char*>(&_impl_.fd_)) + sizeof(_impl_.replyviashmem_));
   _internal_metadata_.Clear<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>();
 }
 
@@ -5205,6 +5245,14 @@ const char* SigmaWriteReq::_InternalParse(const char* ptr, ::_pbi::ParseContext*
       case 4:
         if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 32)) {
           _impl_.noutvec_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint32(&ptr);
+          CHK_(ptr);
+        } else
+          goto handle_unusual;
+        continue;
+      // bool replyViaShmem = 5;
+      case 5:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 40)) {
+          _impl_.replyviashmem_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
           CHK_(ptr);
         } else
           goto handle_unusual;
@@ -5264,6 +5312,12 @@ uint8_t* SigmaWriteReq::_InternalSerialize(
     target = ::_pbi::WireFormatLite::WriteUInt32ToArray(4, this->_internal_noutvec(), target);
   }
 
+  // bool replyViaShmem = 5;
+  if (this->_internal_replyviashmem() != 0) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteBoolToArray(5, this->_internal_replyviashmem(), target);
+  }
+
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
     target = ::_pbi::WireFormat::InternalSerializeUnknownFieldsToArray(
         _internal_metadata_.unknown_fields<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(::PROTOBUF_NAMESPACE_ID::UnknownFieldSet::default_instance), target, stream);
@@ -5304,6 +5358,11 @@ size_t SigmaWriteReq::ByteSizeLong() const {
     total_size += ::_pbi::WireFormatLite::UInt32SizePlusOne(this->_internal_noutvec());
   }
 
+  // bool replyViaShmem = 5;
+  if (this->_internal_replyviashmem() != 0) {
+    total_size += 1 + 1;
+  }
+
   return MaybeComputeUnknownFieldsSize(total_size, &_impl_._cached_size_);
 }
 
@@ -5336,6 +5395,9 @@ void SigmaWriteReq::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::
   if (from._internal_noutvec() != 0) {
     _this->_internal_set_noutvec(from._internal_noutvec());
   }
+  if (from._internal_replyviashmem() != 0) {
+    _this->_internal_set_replyviashmem(from._internal_replyviashmem());
+  }
   _this->_internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
 }
 
@@ -5354,8 +5416,8 @@ void SigmaWriteReq::InternalSwap(SigmaWriteReq* other) {
   using std::swap;
   _internal_metadata_.InternalSwap(&other->_internal_metadata_);
   ::PROTOBUF_NAMESPACE_ID::internal::memswap<
-      PROTOBUF_FIELD_OFFSET(SigmaWriteReq, _impl_.noutvec_)
-      + sizeof(SigmaWriteReq::_impl_.noutvec_)
+      PROTOBUF_FIELD_OFFSET(SigmaWriteReq, _impl_.replyviashmem_)
+      + sizeof(SigmaWriteReq::_impl_.replyviashmem_)
       - PROTOBUF_FIELD_OFFSET(SigmaWriteReq, _impl_.fence_)>(
           reinterpret_cast<char*>(&_impl_.fence_),
           reinterpret_cast<char*>(&other->_impl_.fence_));
@@ -5365,6 +5427,367 @@ void SigmaWriteReq::InternalSwap(SigmaWriteReq* other) {
   return ::_pbi::AssignDescriptors(
       &descriptor_table_proxy_2fsigmap_2fproto_2fspproxy_2eproto_getter, &descriptor_table_proxy_2fsigmap_2fproto_2fspproxy_2eproto_once,
       file_level_metadata_proxy_2fsigmap_2fproto_2fspproxy_2eproto[18]);
+}
+
+// ===================================================================
+
+class SigmaWriteReadRep::_Internal {
+ public:
+  static const ::Blob& blob(const SigmaWriteReadRep* msg);
+  static const ::Rerror& err(const SigmaWriteReadRep* msg);
+};
+
+const ::Blob&
+SigmaWriteReadRep::_Internal::blob(const SigmaWriteReadRep* msg) {
+  return *msg->_impl_.blob_;
+}
+const ::Rerror&
+SigmaWriteReadRep::_Internal::err(const SigmaWriteReadRep* msg) {
+  return *msg->_impl_.err_;
+}
+void SigmaWriteReadRep::clear_blob() {
+  if (GetArenaForAllocation() == nullptr && _impl_.blob_ != nullptr) {
+    delete _impl_.blob_;
+  }
+  _impl_.blob_ = nullptr;
+}
+void SigmaWriteReadRep::clear_err() {
+  if (GetArenaForAllocation() == nullptr && _impl_.err_ != nullptr) {
+    delete _impl_.err_;
+  }
+  _impl_.err_ = nullptr;
+}
+SigmaWriteReadRep::SigmaWriteReadRep(::PROTOBUF_NAMESPACE_ID::Arena* arena,
+                         bool is_message_owned)
+  : ::PROTOBUF_NAMESPACE_ID::Message(arena, is_message_owned) {
+  SharedCtor(arena, is_message_owned);
+  // @@protoc_insertion_point(arena_constructor:SigmaWriteReadRep)
+}
+SigmaWriteReadRep::SigmaWriteReadRep(const SigmaWriteReadRep& from)
+  : ::PROTOBUF_NAMESPACE_ID::Message() {
+  SigmaWriteReadRep* const _this = this; (void)_this;
+  new (&_impl_) Impl_{
+      decltype(_impl_.shmoffs_){from._impl_.shmoffs_}
+    , /*decltype(_impl_._shmoffs_cached_byte_size_)*/{0}
+    , decltype(_impl_.shmlens_){from._impl_.shmlens_}
+    , /*decltype(_impl_._shmlens_cached_byte_size_)*/{0}
+    , decltype(_impl_.blob_){nullptr}
+    , decltype(_impl_.err_){nullptr}
+    , decltype(_impl_.useshmem_){}
+    , /*decltype(_impl_._cached_size_)*/{}};
+
+  _internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
+  if (from._internal_has_blob()) {
+    _this->_impl_.blob_ = new ::Blob(*from._impl_.blob_);
+  }
+  if (from._internal_has_err()) {
+    _this->_impl_.err_ = new ::Rerror(*from._impl_.err_);
+  }
+  _this->_impl_.useshmem_ = from._impl_.useshmem_;
+  // @@protoc_insertion_point(copy_constructor:SigmaWriteReadRep)
+}
+
+inline void SigmaWriteReadRep::SharedCtor(
+    ::_pb::Arena* arena, bool is_message_owned) {
+  (void)arena;
+  (void)is_message_owned;
+  new (&_impl_) Impl_{
+      decltype(_impl_.shmoffs_){arena}
+    , /*decltype(_impl_._shmoffs_cached_byte_size_)*/{0}
+    , decltype(_impl_.shmlens_){arena}
+    , /*decltype(_impl_._shmlens_cached_byte_size_)*/{0}
+    , decltype(_impl_.blob_){nullptr}
+    , decltype(_impl_.err_){nullptr}
+    , decltype(_impl_.useshmem_){false}
+    , /*decltype(_impl_._cached_size_)*/{}
+  };
+}
+
+SigmaWriteReadRep::~SigmaWriteReadRep() {
+  // @@protoc_insertion_point(destructor:SigmaWriteReadRep)
+  if (auto *arena = _internal_metadata_.DeleteReturnArena<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>()) {
+  (void)arena;
+    return;
+  }
+  SharedDtor();
+}
+
+inline void SigmaWriteReadRep::SharedDtor() {
+  GOOGLE_DCHECK(GetArenaForAllocation() == nullptr);
+  _impl_.shmoffs_.~RepeatedField();
+  _impl_.shmlens_.~RepeatedField();
+  if (this != internal_default_instance()) delete _impl_.blob_;
+  if (this != internal_default_instance()) delete _impl_.err_;
+}
+
+void SigmaWriteReadRep::SetCachedSize(int size) const {
+  _impl_._cached_size_.Set(size);
+}
+
+void SigmaWriteReadRep::Clear() {
+// @@protoc_insertion_point(message_clear_start:SigmaWriteReadRep)
+  uint32_t cached_has_bits = 0;
+  // Prevent compiler warnings about cached_has_bits being unused
+  (void) cached_has_bits;
+
+  _impl_.shmoffs_.Clear();
+  _impl_.shmlens_.Clear();
+  if (GetArenaForAllocation() == nullptr && _impl_.blob_ != nullptr) {
+    delete _impl_.blob_;
+  }
+  _impl_.blob_ = nullptr;
+  if (GetArenaForAllocation() == nullptr && _impl_.err_ != nullptr) {
+    delete _impl_.err_;
+  }
+  _impl_.err_ = nullptr;
+  _impl_.useshmem_ = false;
+  _internal_metadata_.Clear<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>();
+}
+
+const char* SigmaWriteReadRep::_InternalParse(const char* ptr, ::_pbi::ParseContext* ctx) {
+#define CHK_(x) if (PROTOBUF_PREDICT_FALSE(!(x))) goto failure
+  while (!ctx->Done(&ptr)) {
+    uint32_t tag;
+    ptr = ::_pbi::ReadTag(ptr, &tag);
+    switch (tag >> 3) {
+      // .Blob blob = 1;
+      case 1:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 10)) {
+          ptr = ctx->ParseMessage(_internal_mutable_blob(), ptr);
+          CHK_(ptr);
+        } else
+          goto handle_unusual;
+        continue;
+      // .Rerror err = 2;
+      case 2:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 18)) {
+          ptr = ctx->ParseMessage(_internal_mutable_err(), ptr);
+          CHK_(ptr);
+        } else
+          goto handle_unusual;
+        continue;
+      // bool useShmem = 3;
+      case 3:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 24)) {
+          _impl_.useshmem_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
+          CHK_(ptr);
+        } else
+          goto handle_unusual;
+        continue;
+      // repeated uint64 shmOffs = 4;
+      case 4:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 34)) {
+          ptr = ::PROTOBUF_NAMESPACE_ID::internal::PackedUInt64Parser(_internal_mutable_shmoffs(), ptr, ctx);
+          CHK_(ptr);
+        } else if (static_cast<uint8_t>(tag) == 32) {
+          _internal_add_shmoffs(::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr));
+          CHK_(ptr);
+        } else
+          goto handle_unusual;
+        continue;
+      // repeated uint64 shmLens = 5;
+      case 5:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 42)) {
+          ptr = ::PROTOBUF_NAMESPACE_ID::internal::PackedUInt64Parser(_internal_mutable_shmlens(), ptr, ctx);
+          CHK_(ptr);
+        } else if (static_cast<uint8_t>(tag) == 40) {
+          _internal_add_shmlens(::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr));
+          CHK_(ptr);
+        } else
+          goto handle_unusual;
+        continue;
+      default:
+        goto handle_unusual;
+    }  // switch
+  handle_unusual:
+    if ((tag == 0) || ((tag & 7) == 4)) {
+      CHK_(ptr);
+      ctx->SetLastTag(tag);
+      goto message_done;
+    }
+    ptr = UnknownFieldParse(
+        tag,
+        _internal_metadata_.mutable_unknown_fields<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(),
+        ptr, ctx);
+    CHK_(ptr != nullptr);
+  }  // while
+message_done:
+  return ptr;
+failure:
+  ptr = nullptr;
+  goto message_done;
+#undef CHK_
+}
+
+uint8_t* SigmaWriteReadRep::_InternalSerialize(
+    uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
+  // @@protoc_insertion_point(serialize_to_array_start:SigmaWriteReadRep)
+  uint32_t cached_has_bits = 0;
+  (void) cached_has_bits;
+
+  // .Blob blob = 1;
+  if (this->_internal_has_blob()) {
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::
+      InternalWriteMessage(1, _Internal::blob(this),
+        _Internal::blob(this).GetCachedSize(), target, stream);
+  }
+
+  // .Rerror err = 2;
+  if (this->_internal_has_err()) {
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::
+      InternalWriteMessage(2, _Internal::err(this),
+        _Internal::err(this).GetCachedSize(), target, stream);
+  }
+
+  // bool useShmem = 3;
+  if (this->_internal_useshmem() != 0) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteBoolToArray(3, this->_internal_useshmem(), target);
+  }
+
+  // repeated uint64 shmOffs = 4;
+  {
+    int byte_size = _impl_._shmoffs_cached_byte_size_.load(std::memory_order_relaxed);
+    if (byte_size > 0) {
+      target = stream->WriteUInt64Packed(
+          4, _internal_shmoffs(), byte_size, target);
+    }
+  }
+
+  // repeated uint64 shmLens = 5;
+  {
+    int byte_size = _impl_._shmlens_cached_byte_size_.load(std::memory_order_relaxed);
+    if (byte_size > 0) {
+      target = stream->WriteUInt64Packed(
+          5, _internal_shmlens(), byte_size, target);
+    }
+  }
+
+  if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
+    target = ::_pbi::WireFormat::InternalSerializeUnknownFieldsToArray(
+        _internal_metadata_.unknown_fields<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(::PROTOBUF_NAMESPACE_ID::UnknownFieldSet::default_instance), target, stream);
+  }
+  // @@protoc_insertion_point(serialize_to_array_end:SigmaWriteReadRep)
+  return target;
+}
+
+size_t SigmaWriteReadRep::ByteSizeLong() const {
+// @@protoc_insertion_point(message_byte_size_start:SigmaWriteReadRep)
+  size_t total_size = 0;
+
+  uint32_t cached_has_bits = 0;
+  // Prevent compiler warnings about cached_has_bits being unused
+  (void) cached_has_bits;
+
+  // repeated uint64 shmOffs = 4;
+  {
+    size_t data_size = ::_pbi::WireFormatLite::
+      UInt64Size(this->_impl_.shmoffs_);
+    if (data_size > 0) {
+      total_size += 1 +
+        ::_pbi::WireFormatLite::Int32Size(static_cast<int32_t>(data_size));
+    }
+    int cached_size = ::_pbi::ToCachedSize(data_size);
+    _impl_._shmoffs_cached_byte_size_.store(cached_size,
+                                    std::memory_order_relaxed);
+    total_size += data_size;
+  }
+
+  // repeated uint64 shmLens = 5;
+  {
+    size_t data_size = ::_pbi::WireFormatLite::
+      UInt64Size(this->_impl_.shmlens_);
+    if (data_size > 0) {
+      total_size += 1 +
+        ::_pbi::WireFormatLite::Int32Size(static_cast<int32_t>(data_size));
+    }
+    int cached_size = ::_pbi::ToCachedSize(data_size);
+    _impl_._shmlens_cached_byte_size_.store(cached_size,
+                                    std::memory_order_relaxed);
+    total_size += data_size;
+  }
+
+  // .Blob blob = 1;
+  if (this->_internal_has_blob()) {
+    total_size += 1 +
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::MessageSize(
+        *_impl_.blob_);
+  }
+
+  // .Rerror err = 2;
+  if (this->_internal_has_err()) {
+    total_size += 1 +
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::MessageSize(
+        *_impl_.err_);
+  }
+
+  // bool useShmem = 3;
+  if (this->_internal_useshmem() != 0) {
+    total_size += 1 + 1;
+  }
+
+  return MaybeComputeUnknownFieldsSize(total_size, &_impl_._cached_size_);
+}
+
+const ::PROTOBUF_NAMESPACE_ID::Message::ClassData SigmaWriteReadRep::_class_data_ = {
+    ::PROTOBUF_NAMESPACE_ID::Message::CopyWithSourceCheck,
+    SigmaWriteReadRep::MergeImpl
+};
+const ::PROTOBUF_NAMESPACE_ID::Message::ClassData*SigmaWriteReadRep::GetClassData() const { return &_class_data_; }
+
+
+void SigmaWriteReadRep::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PROTOBUF_NAMESPACE_ID::Message& from_msg) {
+  auto* const _this = static_cast<SigmaWriteReadRep*>(&to_msg);
+  auto& from = static_cast<const SigmaWriteReadRep&>(from_msg);
+  // @@protoc_insertion_point(class_specific_merge_from_start:SigmaWriteReadRep)
+  GOOGLE_DCHECK_NE(&from, _this);
+  uint32_t cached_has_bits = 0;
+  (void) cached_has_bits;
+
+  _this->_impl_.shmoffs_.MergeFrom(from._impl_.shmoffs_);
+  _this->_impl_.shmlens_.MergeFrom(from._impl_.shmlens_);
+  if (from._internal_has_blob()) {
+    _this->_internal_mutable_blob()->::Blob::MergeFrom(
+        from._internal_blob());
+  }
+  if (from._internal_has_err()) {
+    _this->_internal_mutable_err()->::Rerror::MergeFrom(
+        from._internal_err());
+  }
+  if (from._internal_useshmem() != 0) {
+    _this->_internal_set_useshmem(from._internal_useshmem());
+  }
+  _this->_internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
+}
+
+void SigmaWriteReadRep::CopyFrom(const SigmaWriteReadRep& from) {
+// @@protoc_insertion_point(class_specific_copy_from_start:SigmaWriteReadRep)
+  if (&from == this) return;
+  Clear();
+  MergeFrom(from);
+}
+
+bool SigmaWriteReadRep::IsInitialized() const {
+  return true;
+}
+
+void SigmaWriteReadRep::InternalSwap(SigmaWriteReadRep* other) {
+  using std::swap;
+  _internal_metadata_.InternalSwap(&other->_internal_metadata_);
+  _impl_.shmoffs_.InternalSwap(&other->_impl_.shmoffs_);
+  _impl_.shmlens_.InternalSwap(&other->_impl_.shmlens_);
+  ::PROTOBUF_NAMESPACE_ID::internal::memswap<
+      PROTOBUF_FIELD_OFFSET(SigmaWriteReadRep, _impl_.useshmem_)
+      + sizeof(SigmaWriteReadRep::_impl_.useshmem_)
+      - PROTOBUF_FIELD_OFFSET(SigmaWriteReadRep, _impl_.blob_)>(
+          reinterpret_cast<char*>(&_impl_.blob_),
+          reinterpret_cast<char*>(&other->_impl_.blob_));
+}
+
+::PROTOBUF_NAMESPACE_ID::Metadata SigmaWriteReadRep::GetMetadata() const {
+  return ::_pbi::AssignDescriptors(
+      &descriptor_table_proxy_2fsigmap_2fproto_2fspproxy_2eproto_getter, &descriptor_table_proxy_2fsigmap_2fproto_2fspproxy_2eproto_once,
+      file_level_metadata_proxy_2fsigmap_2fproto_2fspproxy_2eproto[19]);
 }
 
 // ===================================================================
@@ -5575,7 +5998,7 @@ void SigmaSeekReq::InternalSwap(SigmaSeekReq* other) {
 ::PROTOBUF_NAMESPACE_ID::Metadata SigmaSeekReq::GetMetadata() const {
   return ::_pbi::AssignDescriptors(
       &descriptor_table_proxy_2fsigmap_2fproto_2fspproxy_2eproto_getter, &descriptor_table_proxy_2fsigmap_2fproto_2fspproxy_2eproto_once,
-      file_level_metadata_proxy_2fsigmap_2fproto_2fspproxy_2eproto[19]);
+      file_level_metadata_proxy_2fsigmap_2fproto_2fspproxy_2eproto[20]);
 }
 
 // ===================================================================
@@ -5805,7 +6228,7 @@ void SigmaClntIdRep::InternalSwap(SigmaClntIdRep* other) {
 ::PROTOBUF_NAMESPACE_ID::Metadata SigmaClntIdRep::GetMetadata() const {
   return ::_pbi::AssignDescriptors(
       &descriptor_table_proxy_2fsigmap_2fproto_2fspproxy_2eproto_getter, &descriptor_table_proxy_2fsigmap_2fproto_2fspproxy_2eproto_once,
-      file_level_metadata_proxy_2fsigmap_2fproto_2fspproxy_2eproto[20]);
+      file_level_metadata_proxy_2fsigmap_2fproto_2fspproxy_2eproto[21]);
 }
 
 // ===================================================================
@@ -6056,7 +6479,7 @@ void SigmaFenceReq::InternalSwap(SigmaFenceReq* other) {
 ::PROTOBUF_NAMESPACE_ID::Metadata SigmaFenceReq::GetMetadata() const {
   return ::_pbi::AssignDescriptors(
       &descriptor_table_proxy_2fsigmap_2fproto_2fspproxy_2eproto_getter, &descriptor_table_proxy_2fsigmap_2fproto_2fspproxy_2eproto_once,
-      file_level_metadata_proxy_2fsigmap_2fproto_2fspproxy_2eproto[21]);
+      file_level_metadata_proxy_2fsigmap_2fproto_2fspproxy_2eproto[22]);
 }
 
 // ===================================================================
@@ -6357,7 +6780,7 @@ void SigmaMountTreeReq::InternalSwap(SigmaMountTreeReq* other) {
 ::PROTOBUF_NAMESPACE_ID::Metadata SigmaMountTreeReq::GetMetadata() const {
   return ::_pbi::AssignDescriptors(
       &descriptor_table_proxy_2fsigmap_2fproto_2fspproxy_2eproto_getter, &descriptor_table_proxy_2fsigmap_2fproto_2fspproxy_2eproto_once,
-      file_level_metadata_proxy_2fsigmap_2fproto_2fspproxy_2eproto[22]);
+      file_level_metadata_proxy_2fsigmap_2fproto_2fspproxy_2eproto[23]);
 }
 
 // ===================================================================
@@ -6634,7 +7057,7 @@ void SigmaLastMountRep::InternalSwap(SigmaLastMountRep* other) {
 ::PROTOBUF_NAMESPACE_ID::Metadata SigmaLastMountRep::GetMetadata() const {
   return ::_pbi::AssignDescriptors(
       &descriptor_table_proxy_2fsigmap_2fproto_2fspproxy_2eproto_getter, &descriptor_table_proxy_2fsigmap_2fproto_2fspproxy_2eproto_once,
-      file_level_metadata_proxy_2fsigmap_2fproto_2fspproxy_2eproto[23]);
+      file_level_metadata_proxy_2fsigmap_2fproto_2fspproxy_2eproto[24]);
 }
 
 // ===================================================================
@@ -6885,7 +7308,7 @@ void SigmaMountReq::InternalSwap(SigmaMountReq* other) {
 ::PROTOBUF_NAMESPACE_ID::Metadata SigmaMountReq::GetMetadata() const {
   return ::_pbi::AssignDescriptors(
       &descriptor_table_proxy_2fsigmap_2fproto_2fspproxy_2eproto_getter, &descriptor_table_proxy_2fsigmap_2fproto_2fspproxy_2eproto_once,
-      file_level_metadata_proxy_2fsigmap_2fproto_2fspproxy_2eproto[24]);
+      file_level_metadata_proxy_2fsigmap_2fproto_2fspproxy_2eproto[25]);
 }
 
 // ===================================================================
@@ -7162,7 +7585,7 @@ void SigmaMountRep::InternalSwap(SigmaMountRep* other) {
 ::PROTOBUF_NAMESPACE_ID::Metadata SigmaMountRep::GetMetadata() const {
   return ::_pbi::AssignDescriptors(
       &descriptor_table_proxy_2fsigmap_2fproto_2fspproxy_2eproto_getter, &descriptor_table_proxy_2fsigmap_2fproto_2fspproxy_2eproto_once,
-      file_level_metadata_proxy_2fsigmap_2fproto_2fspproxy_2eproto[25]);
+      file_level_metadata_proxy_2fsigmap_2fproto_2fspproxy_2eproto[26]);
 }
 
 // ===================================================================
@@ -7400,7 +7823,7 @@ void SigmaMountsRep::InternalSwap(SigmaMountsRep* other) {
 ::PROTOBUF_NAMESPACE_ID::Metadata SigmaMountsRep::GetMetadata() const {
   return ::_pbi::AssignDescriptors(
       &descriptor_table_proxy_2fsigmap_2fproto_2fspproxy_2eproto_getter, &descriptor_table_proxy_2fsigmap_2fproto_2fspproxy_2eproto_once,
-      file_level_metadata_proxy_2fsigmap_2fproto_2fspproxy_2eproto[26]);
+      file_level_metadata_proxy_2fsigmap_2fproto_2fspproxy_2eproto[27]);
 }
 
 // ===================================================================
@@ -7651,7 +8074,7 @@ void SigmaRegisterEPReq::InternalSwap(SigmaRegisterEPReq* other) {
 ::PROTOBUF_NAMESPACE_ID::Metadata SigmaRegisterEPReq::GetMetadata() const {
   return ::_pbi::AssignDescriptors(
       &descriptor_table_proxy_2fsigmap_2fproto_2fspproxy_2eproto_getter, &descriptor_table_proxy_2fsigmap_2fproto_2fspproxy_2eproto_once,
-      file_level_metadata_proxy_2fsigmap_2fproto_2fspproxy_2eproto[27]);
+      file_level_metadata_proxy_2fsigmap_2fproto_2fspproxy_2eproto[28]);
 }
 
 // ===================================================================
@@ -7881,7 +8304,7 @@ void SigmaExitedReq::InternalSwap(SigmaExitedReq* other) {
 ::PROTOBUF_NAMESPACE_ID::Metadata SigmaExitedReq::GetMetadata() const {
   return ::_pbi::AssignDescriptors(
       &descriptor_table_proxy_2fsigmap_2fproto_2fspproxy_2eproto_getter, &descriptor_table_proxy_2fsigmap_2fproto_2fspproxy_2eproto_once,
-      file_level_metadata_proxy_2fsigmap_2fproto_2fspproxy_2eproto[28]);
+      file_level_metadata_proxy_2fsigmap_2fproto_2fspproxy_2eproto[29]);
 }
 
 // ===================================================================
@@ -8158,7 +8581,7 @@ void SigmaOutgoingDelegatedRPCReq::InternalSwap(SigmaOutgoingDelegatedRPCReq* ot
 ::PROTOBUF_NAMESPACE_ID::Metadata SigmaOutgoingDelegatedRPCReq::GetMetadata() const {
   return ::_pbi::AssignDescriptors(
       &descriptor_table_proxy_2fsigmap_2fproto_2fspproxy_2eproto_getter, &descriptor_table_proxy_2fsigmap_2fproto_2fspproxy_2eproto_once,
-      file_level_metadata_proxy_2fsigmap_2fproto_2fspproxy_2eproto[29]);
+      file_level_metadata_proxy_2fsigmap_2fproto_2fspproxy_2eproto[30]);
 }
 
 // ===================================================================
@@ -8369,7 +8792,7 @@ void SigmaDelegatedRPCReq::InternalSwap(SigmaDelegatedRPCReq* other) {
 ::PROTOBUF_NAMESPACE_ID::Metadata SigmaDelegatedRPCReq::GetMetadata() const {
   return ::_pbi::AssignDescriptors(
       &descriptor_table_proxy_2fsigmap_2fproto_2fspproxy_2eproto_getter, &descriptor_table_proxy_2fsigmap_2fproto_2fspproxy_2eproto_once,
-      file_level_metadata_proxy_2fsigmap_2fproto_2fspproxy_2eproto[30]);
+      file_level_metadata_proxy_2fsigmap_2fproto_2fspproxy_2eproto[31]);
 }
 
 // ===================================================================
@@ -8777,7 +9200,7 @@ void SigmaDelegatedRPCRep::InternalSwap(SigmaDelegatedRPCRep* other) {
 ::PROTOBUF_NAMESPACE_ID::Metadata SigmaDelegatedRPCRep::GetMetadata() const {
   return ::_pbi::AssignDescriptors(
       &descriptor_table_proxy_2fsigmap_2fproto_2fspproxy_2eproto_getter, &descriptor_table_proxy_2fsigmap_2fproto_2fspproxy_2eproto_once,
-      file_level_metadata_proxy_2fsigmap_2fproto_2fspproxy_2eproto[31]);
+      file_level_metadata_proxy_2fsigmap_2fproto_2fspproxy_2eproto[32]);
 }
 
 // ===================================================================
@@ -8970,7 +9393,7 @@ void SigmaMultiDelegatedRPCReq::InternalSwap(SigmaMultiDelegatedRPCReq* other) {
 ::PROTOBUF_NAMESPACE_ID::Metadata SigmaMultiDelegatedRPCReq::GetMetadata() const {
   return ::_pbi::AssignDescriptors(
       &descriptor_table_proxy_2fsigmap_2fproto_2fspproxy_2eproto_getter, &descriptor_table_proxy_2fsigmap_2fproto_2fspproxy_2eproto_once,
-      file_level_metadata_proxy_2fsigmap_2fproto_2fspproxy_2eproto[32]);
+      file_level_metadata_proxy_2fsigmap_2fproto_2fspproxy_2eproto[33]);
 }
 
 // ===================================================================
@@ -9300,7 +9723,7 @@ void SigmaMultiDelegatedRPCRep::InternalSwap(SigmaMultiDelegatedRPCRep* other) {
 ::PROTOBUF_NAMESPACE_ID::Metadata SigmaMultiDelegatedRPCRep::GetMetadata() const {
   return ::_pbi::AssignDescriptors(
       &descriptor_table_proxy_2fsigmap_2fproto_2fspproxy_2eproto_getter, &descriptor_table_proxy_2fsigmap_2fproto_2fspproxy_2eproto_once,
-      file_level_metadata_proxy_2fsigmap_2fproto_2fspproxy_2eproto[33]);
+      file_level_metadata_proxy_2fsigmap_2fproto_2fspproxy_2eproto[34]);
 }
 
 // @@protoc_insertion_point(namespace_scope)
@@ -9380,6 +9803,10 @@ Arena::CreateMaybeMessage< ::SigmaReadReq >(Arena* arena) {
 template<> PROTOBUF_NOINLINE ::SigmaWriteReq*
 Arena::CreateMaybeMessage< ::SigmaWriteReq >(Arena* arena) {
   return Arena::CreateMessageInternal< ::SigmaWriteReq >(arena);
+}
+template<> PROTOBUF_NOINLINE ::SigmaWriteReadRep*
+Arena::CreateMaybeMessage< ::SigmaWriteReadRep >(Arena* arena) {
+  return Arena::CreateMessageInternal< ::SigmaWriteReadRep >(arena);
 }
 template<> PROTOBUF_NOINLINE ::SigmaSeekReq*
 Arena::CreateMaybeMessage< ::SigmaSeekReq >(Arena* arena) {

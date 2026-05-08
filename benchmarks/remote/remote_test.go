@@ -1807,10 +1807,7 @@ func TestStartLatency(t *testing.T) {
 					},
 					Cache: false,
 				}
-				imgrecPyShmemMB := proc.Tmem(0)
-				if cosandbox {
-					imgrecPyShmemMB = proc.Tmem(256)
-				}
+				imgrecPyShmemMB := proc.Tmem(256)
 				imgrecPyCfg := &benchmarks.ImgrecPyBenchConfig{
 					JobCfg: &imgrec_py.ImgrecPyJobConfig{
 						ImgBucket:    "9ps3",
@@ -1824,21 +1821,19 @@ func TestStartLatency(t *testing.T) {
 						Mcpu:         proc.Tmcpu(4000),
 					},
 				}
-				imgrecWASMShmemMB := proc.Tmem(0)
-				if cosandbox {
-					imgrecWASMShmemMB = proc.Tmem(32)
-				}
+				imgrecWASMShmemMB := proc.Tmem(256)
 				imgrecWASMCfg := &benchmarks.ImgrecWASMBenchConfig{
 					JobCfg: &imgrec_wasm.ImgrecWASMJobConfig{
-						ImgBucket:    "9ps3",
-						ImgKey:       "img-save/8.jpg",
-						ModelBucket:  "9ps3",
-						ModelKey:     "mobilenetv2-12.onnx",
-						Kid:          "~local",
-						UseDelegated: cosandbox,
-						UseCoSandbox: cosandbox,
-						ShmemMB:      imgrecWASMShmemMB,
-						Mcpu:         proc.Tmcpu(4000),
+						ImgBucket:         "9ps3",
+						ImgKey:            "img-save/8.jpg",
+						ModelBucket:       "9ps3",
+						ModelKey:          "mobilenetv2-12.onnx",
+						Kid:               "~local",
+						UseDelegated:      cosandbox,
+						UseCoSandbox:      cosandbox,
+						ShmemMB:           imgrecWASMShmemMB,
+						UseWriteReadShmem: cosandbox,
+						Mcpu:              proc.Tmcpu(4000),
 					},
 				}
 				cmdFn := GetStartLatencyCmdConstructor(startLatencyCfg, cacheBenchCfg, cossimCfg, etcdCfg, memcachedCfg, imgrecPyCfg, imgrecWASMCfg, cosandbox, useGVisor)

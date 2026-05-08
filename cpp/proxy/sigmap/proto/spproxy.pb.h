@@ -148,6 +148,9 @@ extern SigmaWaitCoSandboxRepDefaultTypeInternal _SigmaWaitCoSandboxRep_default_i
 class SigmaWaitCoSandboxReq;
 struct SigmaWaitCoSandboxReqDefaultTypeInternal;
 extern SigmaWaitCoSandboxReqDefaultTypeInternal _SigmaWaitCoSandboxReq_default_instance_;
+class SigmaWriteReadRep;
+struct SigmaWriteReadRepDefaultTypeInternal;
+extern SigmaWriteReadRepDefaultTypeInternal _SigmaWriteReadRep_default_instance_;
 class SigmaWriteReq;
 struct SigmaWriteReqDefaultTypeInternal;
 extern SigmaWriteReqDefaultTypeInternal _SigmaWriteReq_default_instance_;
@@ -185,6 +188,7 @@ template<> ::SigmaStatRep* Arena::CreateMaybeMessage<::SigmaStatRep>(Arena*);
 template<> ::SigmaTCPPortRep* Arena::CreateMaybeMessage<::SigmaTCPPortRep>(Arena*);
 template<> ::SigmaWaitCoSandboxRep* Arena::CreateMaybeMessage<::SigmaWaitCoSandboxRep>(Arena*);
 template<> ::SigmaWaitCoSandboxReq* Arena::CreateMaybeMessage<::SigmaWaitCoSandboxReq>(Arena*);
+template<> ::SigmaWriteReadRep* Arena::CreateMaybeMessage<::SigmaWriteReadRep>(Arena*);
 template<> ::SigmaWriteReq* Arena::CreateMaybeMessage<::SigmaWriteReq>(Arena*);
 PROTOBUF_NAMESPACE_CLOSE
 
@@ -3326,6 +3330,7 @@ class SigmaWriteReq final :
     kBlobFieldNumber = 3,
     kFdFieldNumber = 1,
     kNOutVecFieldNumber = 4,
+    kReplyViaShmemFieldNumber = 5,
   };
   // .TfenceProto fence = 2;
   bool has_fence() const;
@@ -3381,6 +3386,15 @@ class SigmaWriteReq final :
   void _internal_set_noutvec(uint32_t value);
   public:
 
+  // bool replyViaShmem = 5;
+  void clear_replyviashmem();
+  bool replyviashmem() const;
+  void set_replyviashmem(bool value);
+  private:
+  bool _internal_replyviashmem() const;
+  void _internal_set_replyviashmem(bool value);
+  public:
+
   // @@protoc_insertion_point(class_scope:SigmaWriteReq)
  private:
   class _Internal;
@@ -3393,6 +3407,245 @@ class SigmaWriteReq final :
     ::Blob* blob_;
     uint32_t fd_;
     uint32_t noutvec_;
+    bool replyviashmem_;
+    mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
+  };
+  union { Impl_ _impl_; };
+  friend struct ::TableStruct_proxy_2fsigmap_2fproto_2fspproxy_2eproto;
+};
+// -------------------------------------------------------------------
+
+class SigmaWriteReadRep final :
+    public ::PROTOBUF_NAMESPACE_ID::Message /* @@protoc_insertion_point(class_definition:SigmaWriteReadRep) */ {
+ public:
+  inline SigmaWriteReadRep() : SigmaWriteReadRep(nullptr) {}
+  ~SigmaWriteReadRep() override;
+  explicit PROTOBUF_CONSTEXPR SigmaWriteReadRep(::PROTOBUF_NAMESPACE_ID::internal::ConstantInitialized);
+
+  SigmaWriteReadRep(const SigmaWriteReadRep& from);
+  SigmaWriteReadRep(SigmaWriteReadRep&& from) noexcept
+    : SigmaWriteReadRep() {
+    *this = ::std::move(from);
+  }
+
+  inline SigmaWriteReadRep& operator=(const SigmaWriteReadRep& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  inline SigmaWriteReadRep& operator=(SigmaWriteReadRep&& from) noexcept {
+    if (this == &from) return *this;
+    if (GetOwningArena() == from.GetOwningArena()
+  #ifdef PROTOBUF_FORCE_COPY_IN_MOVE
+        && GetOwningArena() != nullptr
+  #endif  // !PROTOBUF_FORCE_COPY_IN_MOVE
+    ) {
+      InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+
+  static const ::PROTOBUF_NAMESPACE_ID::Descriptor* descriptor() {
+    return GetDescriptor();
+  }
+  static const ::PROTOBUF_NAMESPACE_ID::Descriptor* GetDescriptor() {
+    return default_instance().GetMetadata().descriptor;
+  }
+  static const ::PROTOBUF_NAMESPACE_ID::Reflection* GetReflection() {
+    return default_instance().GetMetadata().reflection;
+  }
+  static const SigmaWriteReadRep& default_instance() {
+    return *internal_default_instance();
+  }
+  static inline const SigmaWriteReadRep* internal_default_instance() {
+    return reinterpret_cast<const SigmaWriteReadRep*>(
+               &_SigmaWriteReadRep_default_instance_);
+  }
+  static constexpr int kIndexInFileMessages =
+    19;
+
+  friend void swap(SigmaWriteReadRep& a, SigmaWriteReadRep& b) {
+    a.Swap(&b);
+  }
+  inline void Swap(SigmaWriteReadRep* other) {
+    if (other == this) return;
+  #ifdef PROTOBUF_FORCE_COPY_IN_SWAP
+    if (GetOwningArena() != nullptr &&
+        GetOwningArena() == other->GetOwningArena()) {
+   #else  // PROTOBUF_FORCE_COPY_IN_SWAP
+    if (GetOwningArena() == other->GetOwningArena()) {
+  #endif  // !PROTOBUF_FORCE_COPY_IN_SWAP
+      InternalSwap(other);
+    } else {
+      ::PROTOBUF_NAMESPACE_ID::internal::GenericSwap(this, other);
+    }
+  }
+  void UnsafeArenaSwap(SigmaWriteReadRep* other) {
+    if (other == this) return;
+    GOOGLE_DCHECK(GetOwningArena() == other->GetOwningArena());
+    InternalSwap(other);
+  }
+
+  // implements Message ----------------------------------------------
+
+  SigmaWriteReadRep* New(::PROTOBUF_NAMESPACE_ID::Arena* arena = nullptr) const final {
+    return CreateMaybeMessage<SigmaWriteReadRep>(arena);
+  }
+  using ::PROTOBUF_NAMESPACE_ID::Message::CopyFrom;
+  void CopyFrom(const SigmaWriteReadRep& from);
+  using ::PROTOBUF_NAMESPACE_ID::Message::MergeFrom;
+  void MergeFrom( const SigmaWriteReadRep& from) {
+    SigmaWriteReadRep::MergeImpl(*this, from);
+  }
+  private:
+  static void MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PROTOBUF_NAMESPACE_ID::Message& from_msg);
+  public:
+  PROTOBUF_ATTRIBUTE_REINITIALIZES void Clear() final;
+  bool IsInitialized() const final;
+
+  size_t ByteSizeLong() const final;
+  const char* _InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::internal::ParseContext* ctx) final;
+  uint8_t* _InternalSerialize(
+      uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const final;
+  int GetCachedSize() const final { return _impl_._cached_size_.Get(); }
+
+  private:
+  void SharedCtor(::PROTOBUF_NAMESPACE_ID::Arena* arena, bool is_message_owned);
+  void SharedDtor();
+  void SetCachedSize(int size) const final;
+  void InternalSwap(SigmaWriteReadRep* other);
+
+  private:
+  friend class ::PROTOBUF_NAMESPACE_ID::internal::AnyMetadata;
+  static ::PROTOBUF_NAMESPACE_ID::StringPiece FullMessageName() {
+    return "SigmaWriteReadRep";
+  }
+  protected:
+  explicit SigmaWriteReadRep(::PROTOBUF_NAMESPACE_ID::Arena* arena,
+                       bool is_message_owned = false);
+  public:
+
+  static const ClassData _class_data_;
+  const ::PROTOBUF_NAMESPACE_ID::Message::ClassData*GetClassData() const final;
+
+  ::PROTOBUF_NAMESPACE_ID::Metadata GetMetadata() const final;
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  enum : int {
+    kShmOffsFieldNumber = 4,
+    kShmLensFieldNumber = 5,
+    kBlobFieldNumber = 1,
+    kErrFieldNumber = 2,
+    kUseShmemFieldNumber = 3,
+  };
+  // repeated uint64 shmOffs = 4;
+  int shmoffs_size() const;
+  private:
+  int _internal_shmoffs_size() const;
+  public:
+  void clear_shmoffs();
+  private:
+  uint64_t _internal_shmoffs(int index) const;
+  const ::PROTOBUF_NAMESPACE_ID::RepeatedField< uint64_t >&
+      _internal_shmoffs() const;
+  void _internal_add_shmoffs(uint64_t value);
+  ::PROTOBUF_NAMESPACE_ID::RepeatedField< uint64_t >*
+      _internal_mutable_shmoffs();
+  public:
+  uint64_t shmoffs(int index) const;
+  void set_shmoffs(int index, uint64_t value);
+  void add_shmoffs(uint64_t value);
+  const ::PROTOBUF_NAMESPACE_ID::RepeatedField< uint64_t >&
+      shmoffs() const;
+  ::PROTOBUF_NAMESPACE_ID::RepeatedField< uint64_t >*
+      mutable_shmoffs();
+
+  // repeated uint64 shmLens = 5;
+  int shmlens_size() const;
+  private:
+  int _internal_shmlens_size() const;
+  public:
+  void clear_shmlens();
+  private:
+  uint64_t _internal_shmlens(int index) const;
+  const ::PROTOBUF_NAMESPACE_ID::RepeatedField< uint64_t >&
+      _internal_shmlens() const;
+  void _internal_add_shmlens(uint64_t value);
+  ::PROTOBUF_NAMESPACE_ID::RepeatedField< uint64_t >*
+      _internal_mutable_shmlens();
+  public:
+  uint64_t shmlens(int index) const;
+  void set_shmlens(int index, uint64_t value);
+  void add_shmlens(uint64_t value);
+  const ::PROTOBUF_NAMESPACE_ID::RepeatedField< uint64_t >&
+      shmlens() const;
+  ::PROTOBUF_NAMESPACE_ID::RepeatedField< uint64_t >*
+      mutable_shmlens();
+
+  // .Blob blob = 1;
+  bool has_blob() const;
+  private:
+  bool _internal_has_blob() const;
+  public:
+  void clear_blob();
+  const ::Blob& blob() const;
+  PROTOBUF_NODISCARD ::Blob* release_blob();
+  ::Blob* mutable_blob();
+  void set_allocated_blob(::Blob* blob);
+  private:
+  const ::Blob& _internal_blob() const;
+  ::Blob* _internal_mutable_blob();
+  public:
+  void unsafe_arena_set_allocated_blob(
+      ::Blob* blob);
+  ::Blob* unsafe_arena_release_blob();
+
+  // .Rerror err = 2;
+  bool has_err() const;
+  private:
+  bool _internal_has_err() const;
+  public:
+  void clear_err();
+  const ::Rerror& err() const;
+  PROTOBUF_NODISCARD ::Rerror* release_err();
+  ::Rerror* mutable_err();
+  void set_allocated_err(::Rerror* err);
+  private:
+  const ::Rerror& _internal_err() const;
+  ::Rerror* _internal_mutable_err();
+  public:
+  void unsafe_arena_set_allocated_err(
+      ::Rerror* err);
+  ::Rerror* unsafe_arena_release_err();
+
+  // bool useShmem = 3;
+  void clear_useshmem();
+  bool useshmem() const;
+  void set_useshmem(bool value);
+  private:
+  bool _internal_useshmem() const;
+  void _internal_set_useshmem(bool value);
+  public:
+
+  // @@protoc_insertion_point(class_scope:SigmaWriteReadRep)
+ private:
+  class _Internal;
+
+  template <typename T> friend class ::PROTOBUF_NAMESPACE_ID::Arena::InternalHelper;
+  typedef void InternalArenaConstructable_;
+  typedef void DestructorSkippable_;
+  struct Impl_ {
+    ::PROTOBUF_NAMESPACE_ID::RepeatedField< uint64_t > shmoffs_;
+    mutable std::atomic<int> _shmoffs_cached_byte_size_;
+    ::PROTOBUF_NAMESPACE_ID::RepeatedField< uint64_t > shmlens_;
+    mutable std::atomic<int> _shmlens_cached_byte_size_;
+    ::Blob* blob_;
+    ::Rerror* err_;
+    bool useshmem_;
     mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   };
   union { Impl_ _impl_; };
@@ -3448,7 +3701,7 @@ class SigmaSeekReq final :
                &_SigmaSeekReq_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    19;
+    20;
 
   friend void swap(SigmaSeekReq& a, SigmaSeekReq& b) {
     a.Swap(&b);
@@ -3607,7 +3860,7 @@ class SigmaClntIdRep final :
                &_SigmaClntIdRep_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    20;
+    21;
 
   friend void swap(SigmaClntIdRep& a, SigmaClntIdRep& b) {
     a.Swap(&b);
@@ -3775,7 +4028,7 @@ class SigmaFenceReq final :
                &_SigmaFenceReq_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    21;
+    22;
 
   friend void swap(SigmaFenceReq& a, SigmaFenceReq& b) {
     a.Swap(&b);
@@ -3948,7 +4201,7 @@ class SigmaMountTreeReq final :
                &_SigmaMountTreeReq_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    22;
+    23;
 
   friend void swap(SigmaMountTreeReq& a, SigmaMountTreeReq& b) {
     a.Swap(&b);
@@ -4137,7 +4390,7 @@ class SigmaLastMountRep final :
                &_SigmaLastMountRep_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    23;
+    24;
 
   friend void swap(SigmaLastMountRep& a, SigmaLastMountRep& b) {
     a.Swap(&b);
@@ -4346,7 +4599,7 @@ class SigmaMountReq final :
                &_SigmaMountReq_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    24;
+    25;
 
   friend void swap(SigmaMountReq& a, SigmaMountReq& b) {
     a.Swap(&b);
@@ -4519,7 +4772,7 @@ class SigmaMountRep final :
                &_SigmaMountRep_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    25;
+    26;
 
   friend void swap(SigmaMountRep& a, SigmaMountRep& b) {
     a.Swap(&b);
@@ -4707,7 +4960,7 @@ class SigmaMountsRep final :
                &_SigmaMountsRep_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    26;
+    27;
 
   friend void swap(SigmaMountsRep& a, SigmaMountsRep& b) {
     a.Swap(&b);
@@ -4890,7 +5143,7 @@ class SigmaRegisterEPReq final :
                &_SigmaRegisterEPReq_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    27;
+    28;
 
   friend void swap(SigmaRegisterEPReq& a, SigmaRegisterEPReq& b) {
     a.Swap(&b);
@@ -5063,7 +5316,7 @@ class SigmaExitedReq final :
                &_SigmaExitedReq_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    28;
+    29;
 
   friend void swap(SigmaExitedReq& a, SigmaExitedReq& b) {
     a.Swap(&b);
@@ -5227,7 +5480,7 @@ class SigmaOutgoingDelegatedRPCReq final :
                &_SigmaOutgoingDelegatedRPCReq_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    29;
+    30;
 
   friend void swap(SigmaOutgoingDelegatedRPCReq& a, SigmaOutgoingDelegatedRPCReq& b) {
     a.Swap(&b);
@@ -5415,7 +5668,7 @@ class SigmaDelegatedRPCReq final :
                &_SigmaDelegatedRPCReq_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    30;
+    31;
 
   friend void swap(SigmaDelegatedRPCReq& a, SigmaDelegatedRPCReq& b) {
     a.Swap(&b);
@@ -5574,7 +5827,7 @@ class SigmaDelegatedRPCRep final :
                &_SigmaDelegatedRPCRep_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    31;
+    32;
 
   friend void swap(SigmaDelegatedRPCRep& a, SigmaDelegatedRPCRep& b) {
     a.Swap(&b);
@@ -5832,7 +6085,7 @@ class SigmaMultiDelegatedRPCReq final :
                &_SigmaMultiDelegatedRPCReq_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    32;
+    33;
 
   friend void swap(SigmaMultiDelegatedRPCReq& a, SigmaMultiDelegatedRPCReq& b) {
     a.Swap(&b);
@@ -5994,7 +6247,7 @@ class SigmaMultiDelegatedRPCRep final :
                &_SigmaMultiDelegatedRPCRep_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    33;
+    34;
 
   friend void swap(SigmaMultiDelegatedRPCRep& a, SigmaMultiDelegatedRPCRep& b) {
     a.Swap(&b);
@@ -8282,6 +8535,314 @@ inline void SigmaWriteReq::_internal_set_noutvec(uint32_t value) {
 inline void SigmaWriteReq::set_noutvec(uint32_t value) {
   _internal_set_noutvec(value);
   // @@protoc_insertion_point(field_set:SigmaWriteReq.nOutVec)
+}
+
+// bool replyViaShmem = 5;
+inline void SigmaWriteReq::clear_replyviashmem() {
+  _impl_.replyviashmem_ = false;
+}
+inline bool SigmaWriteReq::_internal_replyviashmem() const {
+  return _impl_.replyviashmem_;
+}
+inline bool SigmaWriteReq::replyviashmem() const {
+  // @@protoc_insertion_point(field_get:SigmaWriteReq.replyViaShmem)
+  return _internal_replyviashmem();
+}
+inline void SigmaWriteReq::_internal_set_replyviashmem(bool value) {
+  
+  _impl_.replyviashmem_ = value;
+}
+inline void SigmaWriteReq::set_replyviashmem(bool value) {
+  _internal_set_replyviashmem(value);
+  // @@protoc_insertion_point(field_set:SigmaWriteReq.replyViaShmem)
+}
+
+// -------------------------------------------------------------------
+
+// SigmaWriteReadRep
+
+// .Blob blob = 1;
+inline bool SigmaWriteReadRep::_internal_has_blob() const {
+  return this != internal_default_instance() && _impl_.blob_ != nullptr;
+}
+inline bool SigmaWriteReadRep::has_blob() const {
+  return _internal_has_blob();
+}
+inline const ::Blob& SigmaWriteReadRep::_internal_blob() const {
+  const ::Blob* p = _impl_.blob_;
+  return p != nullptr ? *p : reinterpret_cast<const ::Blob&>(
+      ::_Blob_default_instance_);
+}
+inline const ::Blob& SigmaWriteReadRep::blob() const {
+  // @@protoc_insertion_point(field_get:SigmaWriteReadRep.blob)
+  return _internal_blob();
+}
+inline void SigmaWriteReadRep::unsafe_arena_set_allocated_blob(
+    ::Blob* blob) {
+  if (GetArenaForAllocation() == nullptr) {
+    delete reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(_impl_.blob_);
+  }
+  _impl_.blob_ = blob;
+  if (blob) {
+    
+  } else {
+    
+  }
+  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:SigmaWriteReadRep.blob)
+}
+inline ::Blob* SigmaWriteReadRep::release_blob() {
+  
+  ::Blob* temp = _impl_.blob_;
+  _impl_.blob_ = nullptr;
+#ifdef PROTOBUF_FORCE_COPY_IN_RELEASE
+  auto* old =  reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(temp);
+  temp = ::PROTOBUF_NAMESPACE_ID::internal::DuplicateIfNonNull(temp);
+  if (GetArenaForAllocation() == nullptr) { delete old; }
+#else  // PROTOBUF_FORCE_COPY_IN_RELEASE
+  if (GetArenaForAllocation() != nullptr) {
+    temp = ::PROTOBUF_NAMESPACE_ID::internal::DuplicateIfNonNull(temp);
+  }
+#endif  // !PROTOBUF_FORCE_COPY_IN_RELEASE
+  return temp;
+}
+inline ::Blob* SigmaWriteReadRep::unsafe_arena_release_blob() {
+  // @@protoc_insertion_point(field_release:SigmaWriteReadRep.blob)
+  
+  ::Blob* temp = _impl_.blob_;
+  _impl_.blob_ = nullptr;
+  return temp;
+}
+inline ::Blob* SigmaWriteReadRep::_internal_mutable_blob() {
+  
+  if (_impl_.blob_ == nullptr) {
+    auto* p = CreateMaybeMessage<::Blob>(GetArenaForAllocation());
+    _impl_.blob_ = p;
+  }
+  return _impl_.blob_;
+}
+inline ::Blob* SigmaWriteReadRep::mutable_blob() {
+  ::Blob* _msg = _internal_mutable_blob();
+  // @@protoc_insertion_point(field_mutable:SigmaWriteReadRep.blob)
+  return _msg;
+}
+inline void SigmaWriteReadRep::set_allocated_blob(::Blob* blob) {
+  ::PROTOBUF_NAMESPACE_ID::Arena* message_arena = GetArenaForAllocation();
+  if (message_arena == nullptr) {
+    delete reinterpret_cast< ::PROTOBUF_NAMESPACE_ID::MessageLite*>(_impl_.blob_);
+  }
+  if (blob) {
+    ::PROTOBUF_NAMESPACE_ID::Arena* submessage_arena =
+        ::PROTOBUF_NAMESPACE_ID::Arena::InternalGetOwningArena(
+                reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(blob));
+    if (message_arena != submessage_arena) {
+      blob = ::PROTOBUF_NAMESPACE_ID::internal::GetOwnedMessage(
+          message_arena, blob, submessage_arena);
+    }
+    
+  } else {
+    
+  }
+  _impl_.blob_ = blob;
+  // @@protoc_insertion_point(field_set_allocated:SigmaWriteReadRep.blob)
+}
+
+// .Rerror err = 2;
+inline bool SigmaWriteReadRep::_internal_has_err() const {
+  return this != internal_default_instance() && _impl_.err_ != nullptr;
+}
+inline bool SigmaWriteReadRep::has_err() const {
+  return _internal_has_err();
+}
+inline const ::Rerror& SigmaWriteReadRep::_internal_err() const {
+  const ::Rerror* p = _impl_.err_;
+  return p != nullptr ? *p : reinterpret_cast<const ::Rerror&>(
+      ::_Rerror_default_instance_);
+}
+inline const ::Rerror& SigmaWriteReadRep::err() const {
+  // @@protoc_insertion_point(field_get:SigmaWriteReadRep.err)
+  return _internal_err();
+}
+inline void SigmaWriteReadRep::unsafe_arena_set_allocated_err(
+    ::Rerror* err) {
+  if (GetArenaForAllocation() == nullptr) {
+    delete reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(_impl_.err_);
+  }
+  _impl_.err_ = err;
+  if (err) {
+    
+  } else {
+    
+  }
+  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:SigmaWriteReadRep.err)
+}
+inline ::Rerror* SigmaWriteReadRep::release_err() {
+  
+  ::Rerror* temp = _impl_.err_;
+  _impl_.err_ = nullptr;
+#ifdef PROTOBUF_FORCE_COPY_IN_RELEASE
+  auto* old =  reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(temp);
+  temp = ::PROTOBUF_NAMESPACE_ID::internal::DuplicateIfNonNull(temp);
+  if (GetArenaForAllocation() == nullptr) { delete old; }
+#else  // PROTOBUF_FORCE_COPY_IN_RELEASE
+  if (GetArenaForAllocation() != nullptr) {
+    temp = ::PROTOBUF_NAMESPACE_ID::internal::DuplicateIfNonNull(temp);
+  }
+#endif  // !PROTOBUF_FORCE_COPY_IN_RELEASE
+  return temp;
+}
+inline ::Rerror* SigmaWriteReadRep::unsafe_arena_release_err() {
+  // @@protoc_insertion_point(field_release:SigmaWriteReadRep.err)
+  
+  ::Rerror* temp = _impl_.err_;
+  _impl_.err_ = nullptr;
+  return temp;
+}
+inline ::Rerror* SigmaWriteReadRep::_internal_mutable_err() {
+  
+  if (_impl_.err_ == nullptr) {
+    auto* p = CreateMaybeMessage<::Rerror>(GetArenaForAllocation());
+    _impl_.err_ = p;
+  }
+  return _impl_.err_;
+}
+inline ::Rerror* SigmaWriteReadRep::mutable_err() {
+  ::Rerror* _msg = _internal_mutable_err();
+  // @@protoc_insertion_point(field_mutable:SigmaWriteReadRep.err)
+  return _msg;
+}
+inline void SigmaWriteReadRep::set_allocated_err(::Rerror* err) {
+  ::PROTOBUF_NAMESPACE_ID::Arena* message_arena = GetArenaForAllocation();
+  if (message_arena == nullptr) {
+    delete reinterpret_cast< ::PROTOBUF_NAMESPACE_ID::MessageLite*>(_impl_.err_);
+  }
+  if (err) {
+    ::PROTOBUF_NAMESPACE_ID::Arena* submessage_arena =
+        ::PROTOBUF_NAMESPACE_ID::Arena::InternalGetOwningArena(
+                reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(err));
+    if (message_arena != submessage_arena) {
+      err = ::PROTOBUF_NAMESPACE_ID::internal::GetOwnedMessage(
+          message_arena, err, submessage_arena);
+    }
+    
+  } else {
+    
+  }
+  _impl_.err_ = err;
+  // @@protoc_insertion_point(field_set_allocated:SigmaWriteReadRep.err)
+}
+
+// bool useShmem = 3;
+inline void SigmaWriteReadRep::clear_useshmem() {
+  _impl_.useshmem_ = false;
+}
+inline bool SigmaWriteReadRep::_internal_useshmem() const {
+  return _impl_.useshmem_;
+}
+inline bool SigmaWriteReadRep::useshmem() const {
+  // @@protoc_insertion_point(field_get:SigmaWriteReadRep.useShmem)
+  return _internal_useshmem();
+}
+inline void SigmaWriteReadRep::_internal_set_useshmem(bool value) {
+  
+  _impl_.useshmem_ = value;
+}
+inline void SigmaWriteReadRep::set_useshmem(bool value) {
+  _internal_set_useshmem(value);
+  // @@protoc_insertion_point(field_set:SigmaWriteReadRep.useShmem)
+}
+
+// repeated uint64 shmOffs = 4;
+inline int SigmaWriteReadRep::_internal_shmoffs_size() const {
+  return _impl_.shmoffs_.size();
+}
+inline int SigmaWriteReadRep::shmoffs_size() const {
+  return _internal_shmoffs_size();
+}
+inline void SigmaWriteReadRep::clear_shmoffs() {
+  _impl_.shmoffs_.Clear();
+}
+inline uint64_t SigmaWriteReadRep::_internal_shmoffs(int index) const {
+  return _impl_.shmoffs_.Get(index);
+}
+inline uint64_t SigmaWriteReadRep::shmoffs(int index) const {
+  // @@protoc_insertion_point(field_get:SigmaWriteReadRep.shmOffs)
+  return _internal_shmoffs(index);
+}
+inline void SigmaWriteReadRep::set_shmoffs(int index, uint64_t value) {
+  _impl_.shmoffs_.Set(index, value);
+  // @@protoc_insertion_point(field_set:SigmaWriteReadRep.shmOffs)
+}
+inline void SigmaWriteReadRep::_internal_add_shmoffs(uint64_t value) {
+  _impl_.shmoffs_.Add(value);
+}
+inline void SigmaWriteReadRep::add_shmoffs(uint64_t value) {
+  _internal_add_shmoffs(value);
+  // @@protoc_insertion_point(field_add:SigmaWriteReadRep.shmOffs)
+}
+inline const ::PROTOBUF_NAMESPACE_ID::RepeatedField< uint64_t >&
+SigmaWriteReadRep::_internal_shmoffs() const {
+  return _impl_.shmoffs_;
+}
+inline const ::PROTOBUF_NAMESPACE_ID::RepeatedField< uint64_t >&
+SigmaWriteReadRep::shmoffs() const {
+  // @@protoc_insertion_point(field_list:SigmaWriteReadRep.shmOffs)
+  return _internal_shmoffs();
+}
+inline ::PROTOBUF_NAMESPACE_ID::RepeatedField< uint64_t >*
+SigmaWriteReadRep::_internal_mutable_shmoffs() {
+  return &_impl_.shmoffs_;
+}
+inline ::PROTOBUF_NAMESPACE_ID::RepeatedField< uint64_t >*
+SigmaWriteReadRep::mutable_shmoffs() {
+  // @@protoc_insertion_point(field_mutable_list:SigmaWriteReadRep.shmOffs)
+  return _internal_mutable_shmoffs();
+}
+
+// repeated uint64 shmLens = 5;
+inline int SigmaWriteReadRep::_internal_shmlens_size() const {
+  return _impl_.shmlens_.size();
+}
+inline int SigmaWriteReadRep::shmlens_size() const {
+  return _internal_shmlens_size();
+}
+inline void SigmaWriteReadRep::clear_shmlens() {
+  _impl_.shmlens_.Clear();
+}
+inline uint64_t SigmaWriteReadRep::_internal_shmlens(int index) const {
+  return _impl_.shmlens_.Get(index);
+}
+inline uint64_t SigmaWriteReadRep::shmlens(int index) const {
+  // @@protoc_insertion_point(field_get:SigmaWriteReadRep.shmLens)
+  return _internal_shmlens(index);
+}
+inline void SigmaWriteReadRep::set_shmlens(int index, uint64_t value) {
+  _impl_.shmlens_.Set(index, value);
+  // @@protoc_insertion_point(field_set:SigmaWriteReadRep.shmLens)
+}
+inline void SigmaWriteReadRep::_internal_add_shmlens(uint64_t value) {
+  _impl_.shmlens_.Add(value);
+}
+inline void SigmaWriteReadRep::add_shmlens(uint64_t value) {
+  _internal_add_shmlens(value);
+  // @@protoc_insertion_point(field_add:SigmaWriteReadRep.shmLens)
+}
+inline const ::PROTOBUF_NAMESPACE_ID::RepeatedField< uint64_t >&
+SigmaWriteReadRep::_internal_shmlens() const {
+  return _impl_.shmlens_;
+}
+inline const ::PROTOBUF_NAMESPACE_ID::RepeatedField< uint64_t >&
+SigmaWriteReadRep::shmlens() const {
+  // @@protoc_insertion_point(field_list:SigmaWriteReadRep.shmLens)
+  return _internal_shmlens();
+}
+inline ::PROTOBUF_NAMESPACE_ID::RepeatedField< uint64_t >*
+SigmaWriteReadRep::_internal_mutable_shmlens() {
+  return &_impl_.shmlens_;
+}
+inline ::PROTOBUF_NAMESPACE_ID::RepeatedField< uint64_t >*
+SigmaWriteReadRep::mutable_shmlens() {
+  // @@protoc_insertion_point(field_mutable_list:SigmaWriteReadRep.shmLens)
+  return _internal_mutable_shmlens();
 }
 
 // -------------------------------------------------------------------
@@ -10637,6 +11198,8 @@ inline void SigmaMultiDelegatedRPCRep::set_allocated_transferstartpb(::PROTOBUF_
 #ifdef __GNUC__
   #pragma GCC diagnostic pop
 #endif  // __GNUC__
+// -------------------------------------------------------------------
+
 // -------------------------------------------------------------------
 
 // -------------------------------------------------------------------

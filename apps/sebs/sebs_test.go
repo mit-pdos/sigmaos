@@ -16,6 +16,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	sebs "sigmaos/apps/sebs"
+	"sigmaos/proc"
 	s3clnt "sigmaos/proxy/s3/clnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
@@ -26,6 +27,7 @@ const (
 	SEBS_KID      = "~local"
 	INPUT_BASE    = "serverless-benchmarks-input"
 	SEBS_DATA_DIR = "/tmp/sebs-data"
+	SEBS_SHMEM_MB = proc.Tmem(256)
 )
 
 func sebsS3Clnt(t *testing.T, rts *test.RealmTstate) *s3clnt.S3Clnt {
@@ -47,7 +49,7 @@ func sebsRun(t *testing.T, benchmark, eventJSON string) map[string]any {
 	defer mrts.Shutdown()
 
 	rts := mrts.GetRealm(test.REALM1)
-	conf := sebs.NewSebsJobConfig(benchmark, eventJSON, false, false, false, 0, 0)
+	conf := sebs.NewSebsJobConfig(benchmark, eventJSON, false, false, false, SEBS_SHMEM_MB, 0)
 	job, err := sebs.NewSebsJob(conf, rts.SigmaClnt)
 	if !assert.Nil(t, err, "NewSebsJob: %v", err) {
 		return nil
@@ -122,7 +124,7 @@ func TestSebsUploader(t *testing.T) {
 	}
 	eventJSON, _ := json.Marshal(eventMap)
 
-	conf := sebs.NewSebsJobConfig("120.uploader", string(eventJSON), false, false, false, 0, 0)
+	conf := sebs.NewSebsJobConfig("120.uploader", string(eventJSON), false, false, false, SEBS_SHMEM_MB, 0)
 	job, err := sebs.NewSebsJob(conf, rts.SigmaClnt)
 	if !assert.Nil(t, err, "NewSebsJob: %v", err) {
 		return
@@ -171,7 +173,7 @@ func TestSebsThumbnailer(t *testing.T) {
 	}
 	eventJSON, _ := json.Marshal(eventMap)
 
-	conf := sebs.NewSebsJobConfig("210.thumbnailer", string(eventJSON), false, false, false, 0, 0)
+	conf := sebs.NewSebsJobConfig("210.thumbnailer", string(eventJSON), false, false, false, SEBS_SHMEM_MB, 0)
 	job, err := sebs.NewSebsJob(conf, rts.SigmaClnt)
 	if !assert.Nil(t, err, "NewSebsJob: %v", err) {
 		return
@@ -228,7 +230,7 @@ func TestSebsVideoProcessing(t *testing.T) {
 	}
 	eventJSON, _ := json.Marshal(eventMap)
 
-	conf := sebs.NewSebsJobConfig("220.video-processing", string(eventJSON), false, false, false, 0, 0)
+	conf := sebs.NewSebsJobConfig("220.video-processing", string(eventJSON), false, false, false, SEBS_SHMEM_MB, 0)
 	job, err := sebs.NewSebsJob(conf, rts.SigmaClnt)
 	if !assert.Nil(t, err, "NewSebsJob: %v", err) {
 		return
@@ -299,7 +301,7 @@ func TestSebsImageRecognition(t *testing.T) {
 	}
 	eventJSON, _ := json.Marshal(eventMap)
 
-	conf := sebs.NewSebsJobConfig("411.image-recognition", string(eventJSON), false, false, false, 0, 0)
+	conf := sebs.NewSebsJobConfig("411.image-recognition", string(eventJSON), false, false, false, SEBS_SHMEM_MB, 0)
 	job, err := sebs.NewSebsJob(conf, rts.SigmaClnt)
 	if !assert.Nil(t, err, "NewSebsJob: %v", err) {
 		return
@@ -374,7 +376,7 @@ func TestSebsDnaVisualisation(t *testing.T) {
 	}
 	eventJSON, _ := json.Marshal(eventMap)
 
-	conf := sebs.NewSebsJobConfig("504.dna-visualisation", string(eventJSON), false, false, false, 0, 0)
+	conf := sebs.NewSebsJobConfig("504.dna-visualisation", string(eventJSON), false, false, false, SEBS_SHMEM_MB, 0)
 	job, err := sebs.NewSebsJob(conf, rts.SigmaClnt)
 	if !assert.Nil(t, err, "NewSebsJob: %v", err) {
 		return

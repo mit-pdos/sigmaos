@@ -31,6 +31,8 @@ def preprocess(img_bytes: bytes) -> np.ndarray:
 
 def main():
     clnt = sigmaos.SigmaosClnt()
+    if clnt.get_use_shmem():
+        clnt.set_use_shmem(True)
     clnt.started()
 
     if len(sys.argv) != 7:
@@ -69,6 +71,7 @@ def main():
     sess = ort.InferenceSession(model_bytes)
     clnt.log_spawn_latency("Paper.Initialization.AppLoadState",
                            int((time.perf_counter() - load_state_start) * 1_000_000))
+    clnt.set_use_shmem(False)
 
     tensor = preprocess(img_bytes)
 

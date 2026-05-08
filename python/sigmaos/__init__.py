@@ -89,6 +89,14 @@ _lib.sigmaos_log_spawn_latency.restype = None
 _lib.sigmaos_log_spawn_latency.argtypes = [ctypes.c_void_p, ctypes.c_char_p,
                                             ctypes.c_uint64]
 
+# sigmaos_get_use_shmem
+_lib.sigmaos_get_use_shmem.restype = ctypes.c_int
+_lib.sigmaos_get_use_shmem.argtypes = [ctypes.c_void_p]
+
+# sigmaos_set_use_shmem
+_lib.sigmaos_set_use_shmem.restype = None
+_lib.sigmaos_set_use_shmem.argtypes = [ctypes.c_void_p, ctypes.c_int]
+
 # sigmaos_last_error
 _lib.sigmaos_last_error.restype = ctypes.c_char_p
 _lib.sigmaos_last_error.argtypes = []
@@ -123,6 +131,9 @@ class SigmaosClnt:
 
     def get_run_co_sandbox(self) -> bool:
         return bool(_lib.sigmaos_get_run_co_sandbox(self._clnt))
+
+    def get_use_shmem(self) -> bool:
+        return bool(_lib.sigmaos_get_use_shmem(self._clnt))
 
     def started(self):
         rc = _lib.sigmaos_started(self._clnt)
@@ -234,6 +245,9 @@ class SigmaosClnt:
                                        data, len(data))
         if rc != 0:
             raise RuntimeError(f"sigmaos_ux_put_file({path!r}) failed: {_last_error()}")
+
+    def set_use_shmem(self, enable: bool) -> None:
+        _lib.sigmaos_set_use_shmem(self._clnt, int(enable))
 
     def log_spawn_latency(self, label: str, elapsed_micros: int) -> None:
         _lib.sigmaos_log_spawn_latency(self._clnt, label.encode("utf-8"),

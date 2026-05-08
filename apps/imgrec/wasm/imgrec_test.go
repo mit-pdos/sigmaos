@@ -34,7 +34,7 @@ func TestImgrecNoCS(t *testing.T) {
 	rts := mrts.GetRealm(test.REALM1)
 	ref := imgrectestutil.GetReferenceOutput(t, rts.FsLib, IMG_BUCKET, IMG_KEY, MODEL_BUCKET, MODEL_KEY, KID)
 
-	conf := imgrec_wasm.NewImgrecWASMJobConfig(IMG_BUCKET, IMG_KEY, MODEL_BUCKET, MODEL_KEY, KID, false, false, 0, 0)
+	conf := imgrec_wasm.NewImgrecWASMJobConfig(IMG_BUCKET, IMG_KEY, MODEL_BUCKET, MODEL_KEY, KID, false, false, 0, false, 0)
 	job, err := imgrec_wasm.NewImgrecWASMJob(conf, rts.SigmaClnt)
 	if !assert.Nil(t, err, "NewImgrecWASMJob: %v", err) {
 		return
@@ -56,7 +56,7 @@ func TestImgrecWASMCoSandboxShmem(t *testing.T) {
 	rts := mrts.GetRealm(test.REALM1)
 	ref := imgrectestutil.GetReferenceOutput(t, rts.FsLib, IMG_BUCKET, IMG_KEY, MODEL_BUCKET, MODEL_KEY, KID)
 
-	conf := imgrec_wasm.NewImgrecWASMJobConfig(IMG_BUCKET, IMG_KEY, MODEL_BUCKET, MODEL_KEY, KID, true, true, proc.Tmem(32), 0)
+	conf := imgrec_wasm.NewImgrecWASMJobConfig(IMG_BUCKET, IMG_KEY, MODEL_BUCKET, MODEL_KEY, KID, true, true, proc.Tmem(32), true, 0)
 	job, err := imgrec_wasm.NewImgrecWASMJob(conf, rts.SigmaClnt)
 	if !assert.Nil(t, err, "NewImgrecWASMJob: %v", err) {
 		return
@@ -78,7 +78,7 @@ func TestImgrecWASMCoSandboxVanilla(t *testing.T) {
 	rts := mrts.GetRealm(test.REALM1)
 	ref := imgrectestutil.GetReferenceOutput(t, rts.FsLib, IMG_BUCKET, IMG_KEY, MODEL_BUCKET, MODEL_KEY, KID)
 
-	conf := imgrec_wasm.NewImgrecWASMJobConfig(IMG_BUCKET, IMG_KEY, MODEL_BUCKET, MODEL_KEY, KID, true, true, 0, 0)
+	conf := imgrec_wasm.NewImgrecWASMJobConfig(IMG_BUCKET, IMG_KEY, MODEL_BUCKET, MODEL_KEY, KID, true, true, 0, false, 0)
 	job, err := imgrec_wasm.NewImgrecWASMJob(conf, rts.SigmaClnt)
 	if !assert.Nil(t, err, "NewImgrecWASMJob: %v", err) {
 		return

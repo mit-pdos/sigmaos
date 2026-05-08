@@ -163,6 +163,9 @@ func (ws *WASMSrv) runWASMProc(p *proc.Proc) (uint64, string, error) {
 		return 0, err.Error(), err
 	}
 
+	if pe.GetUseShmem() {
+		sc.SetUseShmem(true)
+	}
 	rpcReps := NewRPCState()
 	procAPI := NewWASMProcAPIImpl(ws, sc, p, rpcReps)
 	wrt := wasmrt.NewWasmerRuntime(procAPI)

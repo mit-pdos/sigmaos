@@ -182,15 +182,16 @@ var DefaultImgrecPyBenchConfig = &ImgrecPyBenchConfig{
 
 var DefaultImgrecWASMBenchConfig = &ImgrecWASMBenchConfig{
 	JobCfg: &imgrec_wasm.ImgrecWASMJobConfig{
-		ImgBucket:    "9ps3",
-		ImgKey:       "img-save/8.jpg",
-		ModelBucket:  "9ps3",
-		ModelKey:     "mobilenetv2-12.onnx",
-		Kid:          "~local",
-		UseDelegated: false,
-		UseCoSandbox: false,
-		ShmemMB:      proc.Tmem(0),
-		Mcpu:         proc.Tmcpu(1000),
+		ImgBucket:         "9ps3",
+		ImgKey:            "img-save/8.jpg",
+		ModelBucket:       "9ps3",
+		ModelKey:          "mobilenetv2-12.onnx",
+		Kid:               "~local",
+		UseDelegated:      false,
+		UseCoSandbox:      false,
+		ShmemMB:           proc.Tmem(256),
+		UseWriteReadShmem: true,
+		Mcpu:              proc.Tmcpu(1000),
 	},
 }
 

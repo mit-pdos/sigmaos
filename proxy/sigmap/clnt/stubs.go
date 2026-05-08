@@ -1,7 +1,6 @@
 package clnt
 
 import (
-	"fmt"
 	"io"
 
 	"google.golang.org/protobuf/proto"
@@ -37,6 +36,17 @@ func (scc *SPProxyClnt) rpcFd(method string, req proto.Message, rep *spproto.Sig
 		return -1, sp.NewErr(rep.Err)
 	}
 	return int(rep.Fd), nil
+}
+
+func (scc *SPProxyClnt) rpcWriteRead(method string, req proto.Message, rep *spproto.SigmaWriteReadRep) (*sessp.IoVec, error) {
+	err := scc.rpcc.RPC(method, req, rep)
+	if err != nil {
+		return nil, err
+	}
+	if rep.Err.TErrCode() != serr.TErrNoError {
+		return nil, sp.NewErr(rep.Err)
+	}
+	return sessp.NewIoVec(rep.Blob.Iov, nil), nil
 }
 
 func (scc *SPProxyClnt) rpcData(method string, req proto.Message, rep *spproto.SigmaDataRep) (*sessp.IoVec, error) {
@@ -233,16 +243,32 @@ func (scc *SPProxyClnt) WriteFence(fd int, d []byte, f sp.Tfence) (sp.Tsize, err
 
 func (scc *SPProxyClnt) WriteRead(fd int, iniov *sessp.IoVec, outiov *sessp.IoVec) error {
 	inblob := rpcproto.NewBlob(iniov)
-	outblob := rpcproto.NewBlob(outiov)
-	req := spproto.SigmaWriteReq{Fd: uint32(fd), Blob: inblob, NOutVec: uint32(outiov.Len())}
-	rep := spproto.SigmaDataRep{Blob: outblob}
-	d, err := scc.rpcData("SPProxySrvAPI.WriteRead", &req, &rep)
-	db.DPrintf(db.SPPROXYCLNT, "WriteRead %v %v %v %v", req.Fd, iniov.Len(), d.Len(), err)
-	if err == nil && outiov.Len() != d.Len() {
-		return fmt.Errorf("sigmaclntclnt outiov len wrong: supplied %v != %v returned", outiov.Len(), d.Len())
+	req := spproto.SigmaWriteReq{Fd: uint32(fd), Blob: inblob, NOutVec: uint32(outiov.Len()), ReplyViaShmem: scc.useShmem && scc.shm != nil}
+	rep := spproto.SigmaWriteReadRep{}
+	if !req.ReplyViaShmem {
+		rep.Blob = rpcproto.NewBlob(outiov)
+	}
+	d, err := scc.rpcWriteRead("SPProxySrvAPI.WriteRead", &req, &rep)
+	db.DPrintf(db.SPPROXYCLNT, "WriteRead fd:%v nInIOV:%v shmem:%v err:%v", req.Fd, iniov.Len(), rep.UseShmem, err)
+	if err != nil {
+		return err
+	}
+	if rep.UseShmem && scc.shm != nil {
+		if len(rep.ShmOffs) != outiov.Len() {
+			db.DFatalf("WriteRead shmem: frame count mismatch: got %v want %v", len(rep.ShmOffs), outiov.Len())
+		}
+		buf := scc.shm.GetBuf()
+		for i, off := range rep.ShmOffs {
+			l := int(rep.ShmLens[i])
+			outiov.GetFrame(i).SetBuf(buf[off : off+uint64(l)])
+		}
+		return nil
+	}
+	if d.Len() != outiov.Len() {
+		db.DFatalf("WriteRead: frame count mismatch: got %v want %v", d.Len(), outiov.Len())
 	}
 	outiov.CopyFrom(d)
-	return err
+	return nil
 }
 
 func (scc *SPProxyClnt) DirWatch(fd int) (int, error) {

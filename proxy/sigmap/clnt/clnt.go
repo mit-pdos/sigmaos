@@ -17,6 +17,7 @@ import (
 	"sigmaos/serr"
 	sessp "sigmaos/session/proto"
 	sp "sigmaos/sigmap"
+	"sigmaos/shmem"
 	"sigmaos/util/io/demux"
 )
 
@@ -27,6 +28,8 @@ type SPProxyClnt struct {
 	npc          *dialproxyclnt.DialProxyClnt
 	seqcntr      *sessp.Tseqcntr
 	disconnected bool
+	useShmem     bool
+	shm          *shmem.Segment
 }
 
 func NewSPProxyClnt(pe *proc.ProcEnv, npc *dialproxyclnt.DialProxyClnt) (*SPProxyClnt, error) {
@@ -48,7 +51,22 @@ func NewSPProxyClnt(pe *proc.ProcEnv, npc *dialproxyclnt.DialProxyClnt) (*SPProx
 		db.DPrintf(db.ERROR, "Error init sigmaclnt: %v", err)
 		return nil, err
 	}
+	// Open the shmem segment created by the server during proc spawn.
+	if pe.GetUseShmem() {
+		scc.shm, err = shmem.NewSegment(pe.GetPID().String(), pe.GetShmemMB()*proc.Tmem(sp.MBYTE), false)
+		if err != nil {
+			return nil, err
+		}
+	}
 	return scc, nil
+}
+
+func (scc *SPProxyClnt) SetUseShmem(v bool) {
+	scc.useShmem = v
+}
+
+func (scc *SPProxyClnt) GetShmemSegment() *shmem.Segment {
+	return scc.shm
 }
 
 func (scc *SPProxyClnt) GetRPCChannel() channel.RPCChannel {

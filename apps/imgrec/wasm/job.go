@@ -21,28 +21,30 @@ const (
 )
 
 type ImgrecWASMJobConfig struct {
-	ImgBucket    string     `json:"img_bucket"`
-	ImgKey       string     `json:"img_key"`
-	ModelBucket  string     `json:"model_bucket"`
-	ModelKey     string     `json:"model_key"`
-	Kid          string     `json:"kid"`
-	UseDelegated bool       `json:"use_delegated"`
-	UseCoSandbox bool       `json:"use_co_sandbox"`
-	ShmemMB      proc.Tmem  `json:"shmem_mb"`
-	Mcpu         proc.Tmcpu `json:"mcpu"`
+	ImgBucket         string     `json:"img_bucket"`
+	ImgKey            string     `json:"img_key"`
+	ModelBucket       string     `json:"model_bucket"`
+	ModelKey          string     `json:"model_key"`
+	Kid               string     `json:"kid"`
+	UseDelegated      bool       `json:"use_delegated"`
+	UseCoSandbox      bool       `json:"use_co_sandbox"`
+	ShmemMB           proc.Tmem  `json:"shmem_mb"`
+	UseWriteReadShmem bool       `json:"use_write_read_shmem"`
+	Mcpu              proc.Tmcpu `json:"mcpu"`
 }
 
-func NewImgrecWASMJobConfig(imgBucket, imgKey, modelBucket, modelKey, kid string, useDelegated, useCoSandbox bool, shmemMB proc.Tmem, mcpu proc.Tmcpu) *ImgrecWASMJobConfig {
+func NewImgrecWASMJobConfig(imgBucket, imgKey, modelBucket, modelKey, kid string, useDelegated, useCoSandbox bool, shmemMB proc.Tmem, useWriteReadShmem bool, mcpu proc.Tmcpu) *ImgrecWASMJobConfig {
 	return &ImgrecWASMJobConfig{
-		ImgBucket:    imgBucket,
-		ImgKey:       imgKey,
-		ModelBucket:  modelBucket,
-		ModelKey:     modelKey,
-		Kid:          kid,
-		UseDelegated: useDelegated,
-		UseCoSandbox: useCoSandbox,
-		ShmemMB:      shmemMB,
-		Mcpu:         mcpu,
+		ImgBucket:         imgBucket,
+		ImgKey:            imgKey,
+		ModelBucket:       modelBucket,
+		ModelKey:          modelKey,
+		Kid:               kid,
+		UseDelegated:      useDelegated,
+		UseCoSandbox:      useCoSandbox,
+		ShmemMB:           shmemMB,
+		UseWriteReadShmem: useWriteReadShmem,
+		Mcpu:              mcpu,
 	}
 }
 
@@ -147,6 +149,9 @@ func (j *ImgrecWASMJob) Run(sigmaPath string) (string, error) {
 	p.SetWasmBufMB(200)
 	if j.conf.ShmemMB > 0 {
 		p.SetShmemMB(j.conf.ShmemMB)
+	} else if j.conf.UseWriteReadShmem {
+		// WriteRead shmem requires a shmem segment; allocate a default if none specified.
+		p.SetShmemMB(proc.Tmem(32))
 	}
 	if j.ProcEnv().BuildTag == sp.LOCAL_BUILD {
 		p.PrependSigmaPath(filepath.Dir(precompiledPath))

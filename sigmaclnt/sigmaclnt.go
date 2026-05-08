@@ -51,22 +51,16 @@ type SigmaClntKernel struct {
 
 // Create FsLib using either sigmacntclnt or fsclnt
 func newFsLibFidClnt(pe *proc.ProcEnv, fidc *fidclnt.FidClnt) (*fslib.FsLib, error) {
-	var err error
 	var s sos.FileAPI
 	var sm *shmem.Segment
 	if pe.UseSPProxy {
-		s, err = spproxyclnt.NewSPProxyClnt(pe, fidc.GetDialProxyClnt())
+		spc, err := spproxyclnt.NewSPProxyClnt(pe, fidc.GetDialProxyClnt())
 		if err != nil {
 			db.DPrintf(db.ALWAYS, "newSPProxyClnt err %v", err)
 			return nil, err
 		}
-		if pe.GetUseShmem() {
-			sm, err = shmem.NewSegment(pe.GetPID().String(), pe.GetShmemMB()*proc.Tmem(sp.MBYTE), false)
-			if err != nil {
-				db.DFatalf("shmem.NewSegment err %v", err)
-				return nil, err
-			}
-		}
+		s = spc
+		sm = spc.GetShmemSegment()
 	} else {
 		s = fsclnt.NewFsClient(pe, fidc)
 	}
@@ -199,4 +193,12 @@ func (sc *SigmaClnt) WaitExitChan(ch chan error) {
 		time.Sleep(sp.Conf.Path.RESOLVE_TIMEOUT)
 	}
 	ch <- r
+}
+
+// SetUseShmem enables or disables the WriteRead shmem reply path on the
+// underlying SPProxyClnt, if one is in use.
+func (sc *SigmaClnt) SetUseShmem(enable bool) {
+	if spc, ok := sc.FsLib.GetSigmaOS().(*spproxyclnt.SPProxyClnt); ok {
+		spc.SetUseShmem(enable)
+	}
 }

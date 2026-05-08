@@ -12,6 +12,8 @@ class storage:
 
     def __init__(self, clnt, use_delegation=False):
         self._clnt = clnt
+        if clnt.get_use_shmem():
+            clnt.set_use_shmem(True)
         self._delegated = use_delegation
         self._delegated_map = {}  # (bucket, key) -> rpc_idx
         if use_delegation:

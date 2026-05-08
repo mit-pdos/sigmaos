@@ -85,6 +85,12 @@ const char* sigmaos_ux_delegated_get_file_view(SigmaosClnt clnt,
 void sigmaos_log_spawn_latency(SigmaosClnt clnt, const char* label,
                                uint64_t elapsed_micros);
 
+// Returns 1 if the proc env has UseShmem set, 0 otherwise.
+int sigmaos_get_use_shmem(SigmaosClnt clnt);
+
+// Enables or disables shmem for WriteRead RPCs. Pass 1 to enable, 0 to disable.
+void sigmaos_set_use_shmem(SigmaosClnt clnt, int enable);
+
 // Returns a thread-local string describing the last error, or "" if none.
 const char* sigmaos_last_error();
 

@@ -261,13 +261,38 @@ func (sca *SPProxySrvAPI) Seek(ctx fs.CtxI, req scproto.SigmaSeekReq, rep *scpro
 	return nil
 }
 
-func (sca *SPProxySrvAPI) WriteRead(ctx fs.CtxI, req scproto.SigmaWriteReq, rep *scproto.SigmaDataRep) error {
-	bl := sessp.NewUnallocatedIoVec(int(req.NOutVec), nil)
+func (sca *SPProxySrvAPI) WriteRead(ctx fs.CtxI, req scproto.SigmaWriteReq, rep *scproto.SigmaWriteReadRep) error {
+	useShmem := req.GetReplyViaShmem() && sca.sc.ProcEnv().GetUseShmem()
+	var bl *sessp.IoVec
+	if useShmem {
+		shmAlloc, err := sca.spps.psm.GetShmemAllocator(sca.sc.ProcEnv().GetPID())
+		if err != nil {
+			db.DFatalf("%v: WriteRead GetShmemAllocator err: %v", sca.sc.ClntId(), err)
+		}
+		bl = sessp.NewUnallocatedIoVec(int(req.NOutVec), shmAlloc)
+	} else {
+		bl = sessp.NewUnallocatedIoVec(int(req.NOutVec), nil)
+	}
 	start := time.Now()
 	err := sca.sc.WriteRead(int(req.Fd), req.Blob.GetIoVec(), bl)
-	db.DPrintf(db.SPPROXYSRV, "%v: WriteRead (lat=%v) fd:%v nInIOV:%v nOutIOV:%v err:%v", sca.sc.ClntId(), time.Since(start), req.Fd, len(req.Blob.Iov), bl.Len(), err)
-	rep.Blob = rpcproto.NewBlob(bl)
+	db.DPrintf(db.SPPROXYSRV, "%v: WriteRead (lat=%v) fd:%v nInIOV:%v nOutIOV:%v useShmem:%v err:%v", sca.sc.ClntId(), time.Since(start), req.Fd, len(req.Blob.Iov), bl.Len(), useShmem, err)
 	rep.Err = sca.setErr(err)
+	if useShmem {
+		shmemBuf, err := sca.spps.psm.GetShmemBuf(sca.sc.ProcEnv().GetPID())
+		if err != nil {
+			db.DFatalf("%v: WriteRead GetShmemBuf err: %v", sca.sc.ClntId(), err)
+		}
+		shmemBufStartAddr := uint64(uintptr(unsafe.Pointer(unsafe.SliceData(shmemBuf))))
+		rep.Blob = &rpcproto.Blob{}
+		for _, f := range bl.GetFrames() {
+			off := uint64(uintptr(unsafe.Pointer(unsafe.SliceData(f.GetBuf())))) - shmemBufStartAddr
+			rep.ShmOffs = append(rep.ShmOffs, off)
+			rep.ShmLens = append(rep.ShmLens, uint64(f.Len()))
+		}
+		rep.UseShmem = true
+	} else {
+		rep.Blob = rpcproto.NewBlob(bl)
+	}
 	return nil
 }
 

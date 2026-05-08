@@ -287,6 +287,14 @@ void sigmaos_log_spawn_latency(SigmaosClnt clnt, const char* label,
                   op_start, std::string(label));
 }
 
+int sigmaos_get_use_shmem(SigmaosClnt clnt) {
+  return state(clnt)->sp->ProcEnv()->GetUseShmem() ? 1 : 0;
+}
+
+void sigmaos_set_use_shmem(SigmaosClnt clnt, int enable) {
+  state(clnt)->sp->SetUseShmem(enable != 0);
+}
+
 const char* sigmaos_last_error() { return tl_last_error.c_str(); }
 
 }  // extern "C"

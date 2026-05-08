@@ -103,6 +103,15 @@ message SigmaWriteReq {
         TfenceProto fence = 2;
         Blob blob = 3;
         uint32 nOutVec = 4;
+        bool replyViaShmem = 5;
+}
+
+message SigmaWriteReadRep {
+        Blob blob = 1;
+        Rerror err = 2;
+        bool useShmem = 3;
+        repeated uint64 shmOffs = 4;
+        repeated uint64 shmLens = 5;
 }
 
 message SigmaSeekReq {

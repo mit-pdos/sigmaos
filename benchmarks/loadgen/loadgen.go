@@ -140,6 +140,10 @@ func (lg *LoadGenerator) Stats() {
 }
 
 func (lg *LoadGenerator) Run() {
+	_, _ = lg.Run2()
+}
+
+func (lg *LoadGenerator) Run2() (float64, float64) {
 	db.DPrintf(db.TEST, "Start load generator")
 	lg.warmup()
 	// Start initiator threads.
@@ -152,7 +156,12 @@ func (lg *LoadGenerator) Run() {
 	for tid := 0; tid < len(lg.rpss); tid++ {
 		nreq += <-lg.initC
 	}
-	db.DPrintf(db.ALWAYS, "Avg req/sec client-side: %v", float64(nreq)/time.Since(start).Seconds())
+
+	client := float64(nreq) / time.Since(start).Seconds()
+	server := float64(nreq) / time.Since(start).Seconds()
+	db.DPrintf(db.ALWAYS, "Avg req/sec client-side: %v", client)
 	lg.wg.Wait()
-	db.DPrintf(db.ALWAYS, "Avg req/sec server-side: %v", float64(nreq)/time.Since(start).Seconds())
+	db.DPrintf(db.ALWAYS, "Avg req/sec server-side: %v", server)
+
+	return client, server
 }

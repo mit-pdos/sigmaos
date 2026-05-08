@@ -926,7 +926,11 @@ func TestZygoteThroughput(t *testing.T) {
 		db.DPrintf(db.ALWAYS, "Max RPS: %d", maxRPS)
 		lg := loadgen.NewLoadGenerator(10*time.Second, maxRPS, baselineProcReq)
 		lg.Calibrate()
-		lg.Run()
+		client, server := lg.Run2()
+
+		if client > server+200 {
+			break
+		}
 	}
 
 	// Define the request function for zygote forking throughput
@@ -962,7 +966,11 @@ func TestZygoteThroughput(t *testing.T) {
 		db.DPrintf(db.ALWAYS, "Max RPS: %d", maxRPS)
 		lg := loadgen.NewLoadGenerator(10*time.Second, maxRPS, forkProcReq)
 		lg.Calibrate()
-		lg.Run()
+		client, server := lg.Run2()
+
+		if client > server+200 {
+			break
+		}
 	}
 }
 

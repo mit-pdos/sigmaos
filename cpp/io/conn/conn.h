@@ -3,6 +3,7 @@
 #include <serr/serr.h>
 #include <util/log/log.h>
 
+#include <atomic>
 #include <expected>
 
 namespace sigmaos {
@@ -42,6 +43,7 @@ class Conn {
  private:
   std::string _id;
   int _sockfd;
+  std::atomic<bool> _closed{false};
   // Used for logger initialization
   static bool _l;
   static bool _l_e;

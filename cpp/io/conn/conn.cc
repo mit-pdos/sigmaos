@@ -70,6 +70,9 @@ std::expected<int, sigmaos::serr::Error> Conn::Shutdown() {
 }
 
 std::expected<int, sigmaos::serr::Error> Conn::Close() {
+  if (_closed.exchange(true)) {
+    return 0;
+  }
   log(CONN, "Closing unix conn");
   int err = close(_sockfd);
   if (err) {

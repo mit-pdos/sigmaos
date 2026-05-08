@@ -161,12 +161,6 @@ func (api *BlinkSrvAPI) RunBlinkProc(ctx fs.CtxI, req blinkproto.RunBlinkProcReq
 	}
 	defer logFile.Close()
 
-	shmPath := "/dev/shm/" + p.GetPid().String()
-	if err := exec.Command("sudo", "chmod", "0666", shmPath).Run(); err != nil {
-		db.DPrintf(db.ERROR, "ERR RunBlinkProc chmod shm %v: %v", shmPath, err)
-		return fmt.Errorf("chmod shm %v: %w", shmPath, err)
-	}
-
 	cmd := exec.Command("sudo", args...)
 	cmd.Stdout = logFile
 	cmd.Stderr = logFile

@@ -30,9 +30,11 @@ def preprocess(img_bytes: bytes) -> np.ndarray:
 
 
 def function_handler(request_json):
+    print("Start handle req")
     is_warmup = request_json["is_warmup"] == "true"
     if is_warmup:
       return "ok"
+
 
     for k, v in request_json.get("env", {}).items():
         os.environ[k] = v
@@ -91,4 +93,5 @@ def function_handler(request_json):
     score     = float(scores[class_idx])
 
     clnt.exited(sigmaos.STATUS_OK, f"{class_idx},{score}")
+    print("Exited!")
     return f"{class_idx},{score}"

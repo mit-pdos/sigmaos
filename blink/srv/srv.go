@@ -161,7 +161,13 @@ func (api *BlinkSrvAPI) RunBlinkProc(ctx fs.CtxI, req blinkproto.RunBlinkProcReq
 	}
 	defer logFile.Close()
 
-	shmPath := "/dev/shm/" + p.GetPid().String()
+	env := p.GetEnv()
+	if err := os.WriteFile("/tmp/proc-env.txt", []byte(strings.Join(env, "\n")+"\n"), 0644); err != nil {
+		db.DPrintf(db.ERROR, "ERR RunBlinkProc write proc env: %v", err)
+		return fmt.Errorf("write proc env: %w", err)
+	}
+
+	shmPath := "/dev/shm/" + string(p.GetPid())
 	if err := exec.Command("sudo", "chmod", "0666", shmPath).Run(); err != nil {
 		db.DPrintf(db.ERROR, "ERR RunBlinkProc chmod shm %v: %v", shmPath, err)
 		return fmt.Errorf("chmod shm %v: %w", shmPath, err)

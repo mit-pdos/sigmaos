@@ -65,7 +65,7 @@ func TestImgrecBlink(t *testing.T) {
 
 	rts := mrts.GetRealm(test.REALM1)
 
-	conf := imgrec_py.NewImgrecPyJobConfig(imgBucket, imgKey, modelBucket, modelKey, kid, false, false, 0, 0)
+	conf := imgrec_py.NewImgrecPyJobConfig(imgBucket, imgKey, modelBucket, modelKey, kid, false, false, proc.Tmem(256), 0)
 	job, err := imgrec_py.NewImgrecBlinkJob(conf, rts.SigmaClnt)
 	if !assert.Nil(t, err, "NewImgrecBlinkJob: %v", err) {
 		return
@@ -89,7 +89,7 @@ func TestImgrecBlinkCoSandbox(t *testing.T) {
 
 	rts := mrts.GetRealm(test.REALM1)
 
-	conf := imgrec_py.NewImgrecPyJobConfig(imgBucket, imgKey, modelBucket, modelKey, kid, true, false, 0, 0)
+	conf := imgrec_py.NewImgrecPyJobConfig(imgBucket, imgKey, modelBucket, modelKey, kid, true, false, proc.Tmem(256), 0)
 	job, err := imgrec_py.NewImgrecBlinkJob(conf, rts.SigmaClnt)
 	if !assert.Nil(t, err, "NewImgrecBlinkJob: %v", err) {
 		return

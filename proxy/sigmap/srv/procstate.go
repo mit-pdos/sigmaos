@@ -258,7 +258,7 @@ func newProcState(spps *SPProxySrv, pe *proc.ProcEnv, p *proc.Proc) *procState {
 		ps.shmAlloc = shmem.NewAllocator(ps.shm)
 		perf.LogSpawnLatency("SPProxySrv.shmem.NewSegment", ps.pe.GetPID(), ps.pe.GetSpawnTime(), start)
 	}
-	if ps.p.GetRunCoSandbox() {
+	if ps.p != nil && ps.p.GetRunCoSandbox() {
 		ps.sigmaClntCreationStarted = true
 		go ps.createSigmaClnt(spps)
 	} else {

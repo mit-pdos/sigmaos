@@ -154,7 +154,7 @@ func (api *BlinkSrvAPI) RunBlinkProc(ctx fs.CtxI, req blinkproto.RunBlinkProcReq
 		return nil
 	}
 
-	logFile, err := os.OpenFile("/tmp/blinkd-restore.out", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	logFile, err := os.OpenFile("/tmp/junction-ctl.out", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		db.DPrintf(db.ERROR, "ERR RunBlinkProc open restore log: %v", err)
 		rep.Err = sp.NewRerrorErr(fmt.Errorf("open restore log: %w", err))
@@ -164,11 +164,12 @@ func (api *BlinkSrvAPI) RunBlinkProc(ctx fs.CtxI, req blinkproto.RunBlinkProcReq
 
 	jmFile := snapshotPrefix + ".jm"
 	jifFile := snapshotPrefix + blink.SNAPSHOT_JIF_SUFFIX
-	ctlArgs := []string{"192.168.120.2", "restore", jmFile, jifFile, string(functionArgJSON)}
-	straceProcs := proc.GetLabels(p.ProcEnvProto.GetStrace())
-	if straceProcs[program] {
-		ctlArgs = append(ctlArgs, "--strace")
-		db.DPrintf(db.BLINKD, "Stracing %v", p.GetPid())
+	ctlArgs := []string{
+		"192.168.120.2",
+		"restore",
+		jmFile,
+		jifFile,
+		string(functionArgJSON),
 	}
 	cmd := exec.Command(blink.JUNCTION_CTL, ctlArgs...)
 	cmd.Stdout = logFile
@@ -238,7 +239,7 @@ func setupCaladan() error {
 	}
 	db.DPrintf(db.BLINKD, "Caladan setup done")
 
-	junctionLogFile, err := os.Create("/tmp/junction_run.log")
+	junctionLogFile, err := os.Create("/tmp/blinkd-restore.out")
 	if err != nil {
 		return fmt.Errorf("create junction_run log: %w", err)
 	}
@@ -253,7 +254,7 @@ func setupCaladan() error {
 	if err := junctionCmd.Start(); err != nil {
 		return fmt.Errorf("start junction_run: %w", err)
 	}
-	db.DPrintf(db.BLINKD, "junction_run started (pid %d), logging to %s", junctionCmd.Process.Pid, "/tmp/junction_run.log")
+	db.DPrintf(db.BLINKD, "junction_run started (pid %d), logging to %s", junctionCmd.Process.Pid, "/tmp/blinkd-restore.out")
 	return nil
 }
 

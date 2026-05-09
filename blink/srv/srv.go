@@ -164,7 +164,7 @@ func (api *BlinkSrvAPI) RunBlinkProc(ctx fs.CtxI, req blinkproto.RunBlinkProcReq
 
 	jmFile := snapshotPrefix + ".jm"
 	jifFile := snapshotPrefix + blink.SNAPSHOT_JIF_SUFFIX
-	ctlArgs := []string{"192.168.120.2", jmFile, jifFile, string(functionArgJSON)}
+	ctlArgs := []string{"192.168.120.2", "restore", jmFile, jifFile, string(functionArgJSON)}
 	straceProcs := proc.GetLabels(p.ProcEnvProto.GetStrace())
 	if straceProcs[program] {
 		ctlArgs = append(ctlArgs, "--strace")
@@ -203,7 +203,7 @@ func setupCaladan() error {
 	if err := runCmd("sudo", blink.CALADAN_SETUP_SCRIPT, "nouintr"); err != nil {
 		return fmt.Errorf("setup_machine.sh: %w", err)
 	}
-	logFile, err := os.Create(blink.BLINK_RESULTS + "/generate_images_iokernel.log")
+	logFile, err := os.Create("/tmp/generate_images_iokernel.log")
 	if err != nil {
 		return fmt.Errorf("create iokerneld log: %w", err)
 	}
@@ -216,7 +216,7 @@ func setupCaladan() error {
 	if err := cmd.Start(); err != nil {
 		return fmt.Errorf("start iokerneld: %w", err)
 	}
-	db.DPrintf(db.BLINKD, "iokerneld started (pid %d), logging to %s", cmd.Process.Pid, blink.BLINK_RESULTS+"/generate_images_iokernel.log")
+	db.DPrintf(db.BLINKD, "iokerneld started (pid %d), logging to %s", cmd.Process.Pid, "/tmp/generate_images_iokernel.log")
 	// Wait for iokerneld to create dtap0 before assigning the address.
 	for i := 0; ; i++ {
 		if exec.Command("ip", "link", "show", "dtap0").Run() == nil {
@@ -235,7 +235,7 @@ func setupCaladan() error {
 	}
 	db.DPrintf(db.BLINKD, "Caladan setup done")
 
-	junctionLogFile, err := os.Create(blink.BLINK_RESULTS + "/junction_run.log")
+	junctionLogFile, err := os.Create("/tmp/junction_run.log")
 	if err != nil {
 		return fmt.Errorf("create junction_run log: %w", err)
 	}
@@ -243,14 +243,14 @@ func setupCaladan() error {
 		"--chroot="+blink.JUNCTION_CHROOT,
 		"--cache_linux_fs",
 		"--jif",
-		"-rk",
+		"-k",
 	)
 	junctionCmd.Stdout = junctionLogFile
 	junctionCmd.Stderr = junctionLogFile
 	if err := junctionCmd.Start(); err != nil {
 		return fmt.Errorf("start junction_run: %w", err)
 	}
-	db.DPrintf(db.BLINKD, "junction_run started (pid %d), logging to %s", junctionCmd.Process.Pid, blink.BLINK_RESULTS+"/junction_run.log")
+	db.DPrintf(db.BLINKD, "junction_run started (pid %d), logging to %s", junctionCmd.Process.Pid, "/tmp/junction_run.log")
 	return nil
 }
 

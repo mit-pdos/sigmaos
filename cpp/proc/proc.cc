@@ -17,6 +17,8 @@ std::shared_ptr<ProcEnv> GetProcEnv() {
   return _env;
 }
 
+void ResetProcEnv() { _env = nullptr; }
+
 google::protobuf::Timestamp GetExecTime() {
   auto unix_micros_str = std::getenv("SIGMA_EXEC_TIME");
   int64_t unix_micros = std::stoll(unix_micros_str);

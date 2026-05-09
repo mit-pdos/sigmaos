@@ -97,6 +97,10 @@ _lib.sigmaos_get_use_shmem.argtypes = [ctypes.c_void_p]
 _lib.sigmaos_set_use_shmem.restype = None
 _lib.sigmaos_set_use_shmem.argtypes = [ctypes.c_void_p, ctypes.c_int]
 
+# sigmaos_reset_proc_env
+_lib.sigmaos_reset_proc_env.restype = None
+_lib.sigmaos_reset_proc_env.argtypes = []
+
 # sigmaos_last_error
 _lib.sigmaos_last_error.restype = ctypes.c_char_p
 _lib.sigmaos_last_error.argtypes = []
@@ -109,6 +113,10 @@ STATUS_FATAL   = 4
 
 def _last_error():
     return _lib.sigmaos_last_error().decode("utf-8")
+
+
+def reset_proc_env():
+    _lib.sigmaos_reset_proc_env()
 
 
 class SigmaosClnt:

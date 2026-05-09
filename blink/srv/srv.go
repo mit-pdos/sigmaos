@@ -106,7 +106,6 @@ func (api *BlinkSrvAPI) RunBlinkProc(ctx fs.CtxI, req blinkproto.RunBlinkProcReq
 	//	defer exec.Command("sudo", "umount", chrootSpproxyd).Run()
 
 	program := strings.TrimSuffix(p.GetProgram(), ".py")
-	functionName := "python_" + program
 	snapshotPrefix := "/tmp/python_" + program
 
 	// Build env map from proc env vars to pass via functionArg.
@@ -138,33 +137,6 @@ func (api *BlinkSrvAPI) RunBlinkProc(ctx fs.CtxI, req blinkproto.RunBlinkProcReq
 		return nil
 	}
 
-	args := []string{"-E", blink.JUNCTION_RUN, blink.JUNCTION_CONFIG,
-		"--function_arg", string(functionArgJSON),
-		"--function_name", functionName,
-	}
-	straceProcs := proc.GetLabels(p.ProcEnvProto.GetStrace())
-	if straceProcs[program] {
-		args = append(args, "--strace")
-		db.DPrintf(db.BLINKD, "Stracing %v", p.GetPid())
-	}
-	args = append(args,
-		"--chroot="+blink.JUNCTION_CHROOT,
-		"--cache_linux_fs",
-		"--jif",
-		"-rk",
-		"--",
-		snapshotPrefix+".jm",
-		snapshotPrefix+blink.SNAPSHOT_JIF_SUFFIX,
-	)
-
-	logFile, err := os.OpenFile("/tmp/blinkd-restore.out", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	if err != nil {
-		db.DPrintf(db.ERROR, "ERR RunBlinkProc open restore log: %v", err)
-		rep.Err = sp.NewRerrorErr(fmt.Errorf("open restore log: %w", err))
-		return nil
-	}
-	defer logFile.Close()
-
 	procArgs := []string{
 		"img_bucket=" + p.Args[0],
 		"img_key=" + p.Args[1],
@@ -181,13 +153,30 @@ func (api *BlinkSrvAPI) RunBlinkProc(ctx fs.CtxI, req blinkproto.RunBlinkProcReq
 		rep.Err = sp.NewRerrorErr(fmt.Errorf("write proc env: %w", err))
 		return nil
 	}
-	cmd := exec.Command("sudo", args...)
+
+	logFile, err := os.OpenFile("/tmp/blinkd-restore.out", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		db.DPrintf(db.ERROR, "ERR RunBlinkProc open restore log: %v", err)
+		rep.Err = sp.NewRerrorErr(fmt.Errorf("open restore log: %w", err))
+		return nil
+	}
+	defer logFile.Close()
+
+	jmFile := snapshotPrefix + ".jm"
+	jifFile := snapshotPrefix + blink.SNAPSHOT_JIF_SUFFIX
+	ctlArgs := []string{"192.168.120.2", jmFile, jifFile, string(functionArgJSON)}
+	straceProcs := proc.GetLabels(p.ProcEnvProto.GetStrace())
+	if straceProcs[program] {
+		ctlArgs = append(ctlArgs, "--strace")
+		db.DPrintf(db.BLINKD, "Stracing %v", p.GetPid())
+	}
+	cmd := exec.Command(blink.JUNCTION_CTL, ctlArgs...)
 	cmd.Stdout = logFile
 	cmd.Stderr = logFile
 	db.DPrintf(db.BLINKD, "BlinkSrvAPI.RunBlinkProc exec: %v", strings.Join(cmd.Args, " "))
 	if err := cmd.Run(); err != nil {
-		db.DPrintf(db.ERROR, "ERR junction_run: %v", err)
-		rep.Err = sp.NewRerrorErr(fmt.Errorf("junction_run: %w", err))
+		db.DPrintf(db.ERROR, "ERR junction-ctl: %v", err)
+		rep.Err = sp.NewRerrorErr(fmt.Errorf("junction-ctl: %w", err))
 		return nil
 	}
 	rep.Err = sp.NewRerror()
@@ -245,6 +234,23 @@ func setupCaladan() error {
 		return fmt.Errorf("enable ip_forward: %w", err)
 	}
 	db.DPrintf(db.BLINKD, "Caladan setup done")
+
+	junctionLogFile, err := os.Create(blink.BLINK_RESULTS + "/junction_run.log")
+	if err != nil {
+		return fmt.Errorf("create junction_run log: %w", err)
+	}
+	junctionCmd := exec.Command("sudo", "-E", blink.JUNCTION_RUN, blink.JUNCTION_CONFIG,
+		"--chroot="+blink.JUNCTION_CHROOT,
+		"--cache_linux_fs",
+		"--jif",
+		"-rk",
+	)
+	junctionCmd.Stdout = junctionLogFile
+	junctionCmd.Stderr = junctionLogFile
+	if err := junctionCmd.Start(); err != nil {
+		return fmt.Errorf("start junction_run: %w", err)
+	}
+	db.DPrintf(db.BLINKD, "junction_run started (pid %d), logging to %s", junctionCmd.Process.Pid, blink.BLINK_RESULTS+"/junction_run.log")
 	return nil
 }
 

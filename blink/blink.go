@@ -7,6 +7,7 @@ const (
 	BLINK_RESULTS = "/home/arielck/blink-ae/results/blink.recent"
 
 	JUNCTION_RUN    = "/home/arielck/blink-ae/junction/build/junction/junction_run"
+	JUNCTION_CTL    = "/home/arielck/blink-ae/junction/build/junction-ctl/junction-ctl"
 	JUNCTION_CONFIG = BLINK_RESULTS + "/junction.config"
 	JUNCTION_CHROOT = "/home/arielck/blink-ae/chroot"
 	//	JUNCTION_CHROOT = "/tmp/blink-nfs-mounts/chroot"

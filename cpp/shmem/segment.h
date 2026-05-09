@@ -24,7 +24,7 @@ class Segment {
   ~Segment() {
     auto res = Destroy();
     if (!res.has_value()) {
-      fatal("Err when Destroying shmem: {}", res.error().String());
+      log(SHMEM_ERR, "Err when Destroying shmem: {}", res.error().String());
     }
   }
 

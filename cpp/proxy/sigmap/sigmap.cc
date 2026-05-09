@@ -233,7 +233,7 @@ std::expected<std::shared_ptr<std::string>, sigmaos::serr::Error> Clnt::GetFile(
     // Release in_blob from rep and s from iov before they go out of scope (stack-allocated)
     {
       auto _ = rep.release_blob();
-      iov->ReleaseLast();
+//      iov->ReleaseLast();
     }
     log(SPPROXYCLNT_ERR, "Err RPC: {}", res.error());
     return std::unexpected(res.error());
@@ -242,7 +242,7 @@ std::expected<std::shared_ptr<std::string>, sigmaos::serr::Error> Clnt::GetFile(
     // Release in_blob from rep and s from iov before they go out of scope (stack-allocated)
     {
       auto _ = rep.release_blob();
-      iov->ReleaseLast();
+//      iov->ReleaseLast();
     }
     log(SPPROXYCLNT_ERR, "Err RPC rep: {}", rep.err().errcode());
     return std::unexpected(sigmaos::serr::Error(

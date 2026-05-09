@@ -91,6 +91,10 @@ int sigmaos_get_use_shmem(SigmaosClnt clnt);
 // Enables or disables shmem for WriteRead RPCs. Pass 1 to enable, 0 to disable.
 void sigmaos_set_use_shmem(SigmaosClnt clnt, int enable);
 
+// Resets the cached ProcEnv singleton so the next client construction
+// re-reads SIGMACONFIG from the environment.
+void sigmaos_reset_proc_env();
+
 // Returns a thread-local string describing the last error, or "" if none.
 const char* sigmaos_last_error();
 

@@ -1,3 +1,4 @@
+#include <proc/proc.h>
 #include <proc/status.h>
 #include <proxy/buf/buf.h>
 #include <proxy/s3/clnt.h>
@@ -294,6 +295,8 @@ int sigmaos_get_use_shmem(SigmaosClnt clnt) {
 void sigmaos_set_use_shmem(SigmaosClnt clnt, int enable) {
   state(clnt)->sp->SetUseShmem(enable != 0);
 }
+
+void sigmaos_reset_proc_env() { sigmaos::proc::ResetProcEnv(); }
 
 const char* sigmaos_last_error() { return tl_last_error.c_str(); }
 

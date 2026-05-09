@@ -16,6 +16,7 @@ namespace proc {
 class ProcEnv;
 
 std::shared_ptr<ProcEnv> GetProcEnv();
+void ResetProcEnv();
 google::protobuf::Timestamp GetExecTime();
 
 class ProcEnv {

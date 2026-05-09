@@ -36,8 +36,7 @@ def function_handler(request_json):
     random.seed(time.time())
     print("Start handle req")
     is_warmup = request_json["is_warmup"] == "true"
-    if is_warmup:
-        sigmaos.reset_proc_env()
+    sigmaos.reset_proc_env()
 
     env = dict(request_json.get("env", {}))
     if is_warmup:

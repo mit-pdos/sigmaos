@@ -232,7 +232,7 @@ std::expected<std::shared_ptr<std::string>, sigmaos::serr::Error> Clnt::GetFile(
   if (!res.has_value()) {
     // Release in_blob from req before req goes out of scope (stack-allocated)
     {
-      auto _ = req.release_blob();
+      auto _ = rep.release_blob();
     }
     log(SPPROXYCLNT_ERR, "Err RPC: {}", res.error());
     return std::unexpected(res.error());
@@ -240,7 +240,7 @@ std::expected<std::shared_ptr<std::string>, sigmaos::serr::Error> Clnt::GetFile(
   if (rep.err().errcode() != sigmaos::serr::Terror::TErrNoError) {
     // Release in_blob from req before req goes out of scope (stack-allocated)
     {
-      auto _ = req.release_blob();
+      auto _ = rep.release_blob();
     }
     log(SPPROXYCLNT_ERR, "Err RPC rep: {}", rep.err().errcode());
     return std::unexpected(sigmaos::serr::Error(

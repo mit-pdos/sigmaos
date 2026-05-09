@@ -1,6 +1,7 @@
 syntax = "proto3";
 
 import "proc/proc.proto";
+import "sigmap/sigmap.proto";
 
 option go_package = "sigmaos/blink/proto";
 
@@ -13,5 +14,5 @@ message RunBlinkProcReq {
 }
 
 message RunBlinkProcRep {
-  string err = 1;
+  Rerror err = 1;
 }

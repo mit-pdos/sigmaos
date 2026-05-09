@@ -18,6 +18,7 @@ import (
 	rpcsrv "sigmaos/rpc/srv"
 	"sigmaos/rpc/transport"
 	"sigmaos/serr"
+	sp "sigmaos/sigmap"
 	"sigmaos/util/io/demux"
 )
 
@@ -91,7 +92,8 @@ func (api *BlinkSrvAPI) RunBlinkProc(ctx fs.CtxI, req blinkproto.RunBlinkProcReq
 	//hostSpproxyd := blink.PROCD_SPPROXYD_BASE + "/spproxyd-" + req.ProcsrvPid
 	if err := exec.Command("sudo", "mkdir", "-p", chrootSpproxyd).Run(); err != nil {
 		db.DPrintf(db.ERROR, "ERR RunBlinkProc mkdir chroot spproxyd: %v", err)
-		return fmt.Errorf("mkdir chroot spproxyd: %w", err)
+		rep.Err = sp.NewRerrorErr(fmt.Errorf("mkdir chroot spproxyd: %w", err))
+		return nil
 	}
 	//	if err := exec.Command("sudo", "mount", "--bind", hostSpproxyd, chrootSpproxyd).Run(); err != nil {
 	//		db.DPrintf(db.ERROR, "ERR RunBlinkProc mount spproxyd: %v", err)
@@ -132,7 +134,8 @@ func (api *BlinkSrvAPI) RunBlinkProc(ctx fs.CtxI, req blinkproto.RunBlinkProcReq
 	functionArgJSON, err := json.Marshal(functionArg)
 	if err != nil {
 		db.DPrintf(db.ERROR, "ERR RunBlinkProc marshal function_arg: %v", err)
-		return fmt.Errorf("marshal function_arg: %w", err)
+		rep.Err = sp.NewRerrorErr(fmt.Errorf("marshal function_arg: %w", err))
+		return nil
 	}
 
 	args := []string{"-E", blink.JUNCTION_RUN, blink.JUNCTION_CONFIG,
@@ -157,7 +160,8 @@ func (api *BlinkSrvAPI) RunBlinkProc(ctx fs.CtxI, req blinkproto.RunBlinkProcReq
 	logFile, err := os.OpenFile("/tmp/blinkd-restore.out", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		db.DPrintf(db.ERROR, "ERR RunBlinkProc open restore log: %v", err)
-		return fmt.Errorf("open restore log: %w", err)
+		rep.Err = sp.NewRerrorErr(fmt.Errorf("open restore log: %w", err))
+		return nil
 	}
 	defer logFile.Close()
 
@@ -174,7 +178,8 @@ func (api *BlinkSrvAPI) RunBlinkProc(ctx fs.CtxI, req blinkproto.RunBlinkProcReq
 	allLines := append(p.GetEnv(), procArgs...)
 	if err := os.WriteFile("/tmp/proc-env.txt", []byte(strings.Join(allLines, "\n")+"\n"), 0644); err != nil {
 		db.DPrintf(db.ERROR, "ERR RunBlinkProc write proc env: %v", err)
-		return fmt.Errorf("write proc env: %w", err)
+		rep.Err = sp.NewRerrorErr(fmt.Errorf("write proc env: %w", err))
+		return nil
 	}
 	cmd := exec.Command("sudo", args...)
 	cmd.Stdout = logFile
@@ -182,8 +187,10 @@ func (api *BlinkSrvAPI) RunBlinkProc(ctx fs.CtxI, req blinkproto.RunBlinkProcReq
 	db.DPrintf(db.BLINKD, "BlinkSrvAPI.RunBlinkProc exec: %v", strings.Join(cmd.Args, " "))
 	if err := cmd.Run(); err != nil {
 		db.DPrintf(db.ERROR, "ERR junction_run: %v", err)
-		return fmt.Errorf("junction_run: %w", err)
+		rep.Err = sp.NewRerrorErr(fmt.Errorf("junction_run: %w", err))
+		return nil
 	}
+	rep.Err = sp.NewRerror()
 	return nil
 }
 

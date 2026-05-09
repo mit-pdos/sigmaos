@@ -1,14 +1,13 @@
 package clnt
 
 import (
-	"fmt"
-
 	"sigmaos/blink"
 	blinkproto "sigmaos/blink/proto"
 	db "sigmaos/debug"
 	"sigmaos/proc"
 	rpcclnt "sigmaos/rpc/clnt"
 	rpcnc "sigmaos/rpc/clnt/netconn"
+	"sigmaos/serr"
 	sp "sigmaos/sigmap"
 )
 
@@ -40,8 +39,8 @@ func (bc *BlinkClnt) RunBlinkProc(p *proc.Proc, kid string, procSrvPID string, s
 		return err
 	}
 	db.DPrintf(db.BLINKD, "BlinkClnt.RunBlinkProc done err=%v", rep.Err)
-	if rep.Err != "" {
-		return fmt.Errorf("%s", rep.Err)
+	if rep.Err.TErrCode() != serr.TErrNoError {
+		return sp.NewErr(rep.Err)
 	}
 	return nil
 }

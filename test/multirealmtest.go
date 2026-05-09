@@ -91,10 +91,14 @@ func (mrts *MultiRealmTstate) Shutdown() {
 }
 
 func (mrts *MultiRealmTstate) shutdown(willReboot bool) {
-	for r := range mrts.realms {
-		db.DPrintf(db.TEST, "Shut down realm %v namedState %v", r, !willReboot)
-		if err := mrts.DelRealm(r, !willReboot); err != nil {
-			db.DPrintf(db.ERROR, "Err remove realm[%v]: %v", r, err)
+	if noShutdown {
+		db.DPrintf(db.TEST, "Realms skipping shutdown")
+	} else {
+		for r := range mrts.realms {
+			db.DPrintf(db.TEST, "Shut down realm %v namedState %v", r, !willReboot)
+			if err := mrts.DelRealm(r, !willReboot); err != nil {
+				db.DPrintf(db.ERROR, "Err remove realm[%v]: %v", r, err)
+			}
 		}
 	}
 	if mrts.root != nil {

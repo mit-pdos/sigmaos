@@ -1,6 +1,7 @@
 package blink_test
 
 import (
+	"flag"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -24,6 +25,8 @@ const (
 	modelKey    = "mobilenetv2-12.onnx"
 	kid         = "~local"
 )
+
+var modelLocalPath = flag.String("model-local-path", "/mobilenetv2-12.onnx", "local filesystem path for model weights; empty string fetches from S3")
 
 // startBlinkd starts blinkd and registers a t.Cleanup to kill it when the test ends.
 // Returns false if startup failed.
@@ -65,7 +68,7 @@ func TestImgrecBlinkSnapshot(t *testing.T) {
 
 	rts := mrts.GetRealm(test.REALM1)
 
-	conf := imgrec_py.NewImgrecPyJobConfig(imgBucket, imgKey, modelBucket, modelKey, kid, false, false, 0, 0)
+	conf := imgrec_py.NewImgrecPyJobConfig(imgBucket, imgKey, modelBucket, modelKey, kid, false, false, 0, 0, *modelLocalPath)
 	job, err := imgrec_py.NewImgrecBlinkJob(conf, rts.SigmaClnt)
 	if !assert.Nil(t, err, "NewImgrecBlinkJob: %v", err) {
 		return
@@ -89,7 +92,7 @@ func TestImgrecBlinkShmemBench(t *testing.T) {
 
 	rts := mrts.GetRealm(test.REALM1)
 
-	conf := imgrec_py.NewImgrecPyJobConfig(imgBucket, imgKey, modelBucket, modelKey, kid, true, false, proc.Tmem(256), 0)
+	conf := imgrec_py.NewImgrecPyJobConfig(imgBucket, imgKey, modelBucket, modelKey, kid, true, false, proc.Tmem(256), 0, *modelLocalPath)
 	job, err := imgrec_py.NewImgrecBlinkJob(conf, rts.SigmaClnt)
 	if !assert.Nil(t, err, "NewImgrecBlinkJob: %v", err) {
 		return
@@ -113,7 +116,7 @@ func TestImgrecBlinkCoSandboxBench(t *testing.T) {
 
 	rts := mrts.GetRealm(test.REALM1)
 
-	conf := imgrec_py.NewImgrecPyJobConfig(imgBucket, imgKey, modelBucket, modelKey, kid, true, false, proc.Tmem(256), 0)
+	conf := imgrec_py.NewImgrecPyJobConfig(imgBucket, imgKey, modelBucket, modelKey, kid, true, false, proc.Tmem(256), 0, *modelLocalPath)
 	job, err := imgrec_py.NewImgrecBlinkJob(conf, rts.SigmaClnt)
 	if !assert.Nil(t, err, "NewImgrecBlinkJob: %v", err) {
 		return

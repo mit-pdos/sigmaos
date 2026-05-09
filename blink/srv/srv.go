@@ -117,18 +117,23 @@ func (api *BlinkSrvAPI) RunBlinkProc(ctx fs.CtxI, req blinkproto.RunBlinkProcReq
 		}
 	}
 
-	// Args: [ImgBucket, ImgKey, ModelBucket, ModelKey, Kid, AsyncFetch]
+	// Args: [ImgBucket, ImgKey, ModelBucket, ModelKey, Kid, AsyncFetch, ModelLocalPath]
+	modelLocalPath := ""
+	if len(p.Args) > 6 {
+		modelLocalPath = p.Args[6]
+	}
 	functionArg := map[string]interface{}{
-		"is_warmup":        "false",
-		"img_bucket":       p.Args[0],
-		"img_key":          p.Args[1],
-		"model_bucket":     p.Args[2],
-		"model_key":        p.Args[3],
-		"kid":              p.Args[4],
-		"async_fetch":      p.Args[5],
-		"spproxy_tcp_host": blink.DTAP0_ADDR,
-		"spproxy_tcp_port": fmt.Sprintf("%d", req.SpproxyTcpPort),
-		"env":              envMap,
+		"is_warmup":         "false",
+		"img_bucket":        p.Args[0],
+		"img_key":           p.Args[1],
+		"model_bucket":      p.Args[2],
+		"model_key":         p.Args[3],
+		"kid":               p.Args[4],
+		"async_fetch":       p.Args[5],
+		"model_local_path":  modelLocalPath,
+		"spproxy_tcp_host":  blink.DTAP0_ADDR,
+		"spproxy_tcp_port":  fmt.Sprintf("%d", req.SpproxyTcpPort),
+		"env":               envMap,
 	}
 	functionArgJSON, err := json.Marshal(functionArg)
 	if err != nil {
@@ -144,6 +149,7 @@ func (api *BlinkSrvAPI) RunBlinkProc(ctx fs.CtxI, req blinkproto.RunBlinkProcReq
 		"model_key=" + p.Args[3],
 		"kid=" + p.Args[4],
 		"async_fetch=" + p.Args[5],
+		"model_local_path=" + modelLocalPath,
 		"spproxy_tcp_host=" + blink.DTAP0_ADDR,
 		"spproxy_tcp_port=" + fmt.Sprintf("%d", req.SpproxyTcpPort),
 	}

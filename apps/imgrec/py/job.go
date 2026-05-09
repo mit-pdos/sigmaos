@@ -13,28 +13,30 @@ import (
 const cosandboxName = "imgrec_boot"
 
 type ImgrecPyJobConfig struct {
-	ImgBucket    string     `json:"img_bucket"`
-	ImgKey       string     `json:"img_key"`
-	ModelBucket  string     `json:"model_bucket"`
-	ModelKey     string     `json:"model_key"`
-	Kid          string     `json:"kid"`
-	UseCoSandbox bool       `json:"use_co_sandbox"`
-	AsyncFetch   bool       `json:"async_fetch"`
-	ShmemMB      proc.Tmem  `json:"shmem_mb"`
-	Mcpu         proc.Tmcpu `json:"mcpu"`
+	ImgBucket      string     `json:"img_bucket"`
+	ImgKey         string     `json:"img_key"`
+	ModelBucket    string     `json:"model_bucket"`
+	ModelKey       string     `json:"model_key"`
+	Kid            string     `json:"kid"`
+	UseCoSandbox   bool       `json:"use_co_sandbox"`
+	AsyncFetch     bool       `json:"async_fetch"`
+	ShmemMB        proc.Tmem  `json:"shmem_mb"`
+	Mcpu           proc.Tmcpu `json:"mcpu"`
+	ModelLocalPath string     `json:"model_local_path"`
 }
 
-func NewImgrecPyJobConfig(imgBucket, imgKey, modelBucket, modelKey, kid string, useCoSandbox bool, asyncFetch bool, shmemMB proc.Tmem, mcpu proc.Tmcpu) *ImgrecPyJobConfig {
+func NewImgrecPyJobConfig(imgBucket, imgKey, modelBucket, modelKey, kid string, useCoSandbox bool, asyncFetch bool, shmemMB proc.Tmem, mcpu proc.Tmcpu, modelLocalPath string) *ImgrecPyJobConfig {
 	return &ImgrecPyJobConfig{
-		ImgBucket:    imgBucket,
-		ImgKey:       imgKey,
-		ModelBucket:  modelBucket,
-		ModelKey:     modelKey,
-		Kid:          kid,
-		UseCoSandbox: useCoSandbox,
-		AsyncFetch:   asyncFetch,
-		ShmemMB:      shmemMB,
-		Mcpu:         mcpu,
+		ImgBucket:      imgBucket,
+		ImgKey:         imgKey,
+		ModelBucket:    modelBucket,
+		ModelKey:       modelKey,
+		Kid:            kid,
+		UseCoSandbox:   useCoSandbox,
+		AsyncFetch:     asyncFetch,
+		ShmemMB:        shmemMB,
+		Mcpu:           mcpu,
+		ModelLocalPath: modelLocalPath,
 	}
 }
 

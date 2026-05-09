@@ -77,35 +77,49 @@ def function_handler(request_json):
     if not is_warmup:
       clnt.started()
 
-    img_bucket   = request_json["img_bucket"]
-    img_key      = request_json["img_key"]
-    model_bucket = request_json["model_bucket"]
-    model_key    = request_json["model_key"]
-    use_async    = request_json.get("async_fetch", "0") == "1"
+    img_bucket       = request_json["img_bucket"]
+    img_key          = request_json["img_key"]
+    model_bucket     = request_json["model_bucket"]
+    model_key        = request_json["model_key"]
+    use_async        = request_json.get("async_fetch", "0") == "1"
+    model_local_path = request_json.get("model_local_path", "")
 
     transfer_start = time.perf_counter()
     if clnt.get_run_co_sandbox():
         # Zero-copy path: memoryviews backed by shmem, valid for proc lifetime.
         # PIL/BytesIO accept memoryview directly; ORT requires bytes (one copy).
-        if use_async:
+        if use_async and not model_local_path:
             fut_img   = clnt.s3_delegated_get_object_view(1, async_=True)
             fut_model = clnt.s3_delegated_get_object_view(0, async_=True)
             img_bytes   = fut_img.result()
             model_bytes = bytes(fut_model.result())
         else:
-            img_bytes   = clnt.s3_delegated_get_object_view(1)
-            model_bytes = bytes(clnt.s3_delegated_get_object_view(0))
+            img_bytes = clnt.s3_delegated_get_object_view(1)
+            if model_local_path:
+                with open(model_local_path, "rb") as f:
+                    model_bytes = f.read()
+            else:
+                model_bytes = bytes(clnt.s3_delegated_get_object_view(0))
         clnt.log_spawn_latency("Paper.Initialization.TransferState",
                                int((time.perf_counter() - transfer_start) * 1_000_000))
     else:
         if use_async:
-            fut_img   = clnt.s3_get_object(img_bucket, img_key,    async_=True)
-            fut_model = clnt.s3_get_object(model_bucket, model_key, async_=True)
-            img_bytes   = fut_img.result()
-            model_bytes = fut_model.result()
+            fut_img = clnt.s3_get_object(img_bucket, img_key, async_=True)
+            if not model_local_path:
+                fut_model = clnt.s3_get_object(model_bucket, model_key, async_=True)
+            img_bytes = fut_img.result()
+            if model_local_path:
+                with open(model_local_path, "rb") as f:
+                    model_bytes = f.read()
+            else:
+                model_bytes = fut_model.result()
         else:
-            img_bytes   = clnt.s3_get_object(img_bucket, img_key)
-            model_bytes = clnt.s3_get_object(model_bucket, model_key)
+            img_bytes = clnt.s3_get_object(img_bucket, img_key)
+            if model_local_path:
+                with open(model_local_path, "rb") as f:
+                    model_bytes = f.read()
+            else:
+                model_bytes = clnt.s3_get_object(model_bucket, model_key)
         clnt.log_spawn_latency("Paper.Initialization.DownloadState",
                                int((time.perf_counter() - transfer_start) * 1_000_000))
     load_state_start = time.perf_counter()

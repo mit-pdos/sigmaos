@@ -38,6 +38,7 @@ func (j *ImgrecBlinkJob) Run(sigmaPath string) (string, error) {
 		j.conf.ModelBucket, j.conf.ModelKey,
 		j.conf.Kid,
 		asyncFetchStr,
+		j.conf.ModelLocalPath,
 	})
 	p.GetProcEnv().UseSPProxy = true
 	p.GetProcEnv().UseSPProxyProcClnt = true

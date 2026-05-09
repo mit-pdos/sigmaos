@@ -31,7 +31,7 @@ func TestImgrecPy(t *testing.T) {
 	rts := mrts.GetRealm(test.REALM1)
 	ref := imgrectestutil.GetReferenceOutput(t, rts.FsLib, IMG_BUCKET, IMG_KEY, MODEL_BUCKET, MODEL_KEY, KID)
 
-	conf := imgrec_py.NewImgrecPyJobConfig(IMG_BUCKET, IMG_KEY, MODEL_BUCKET, MODEL_KEY, KID, false, false, 0, 0)
+	conf := imgrec_py.NewImgrecPyJobConfig(IMG_BUCKET, IMG_KEY, MODEL_BUCKET, MODEL_KEY, KID, false, false, 0, 0, "")
 	job, err := imgrec_py.NewImgrecPyJob(conf, rts.SigmaClnt)
 	if !assert.Nil(t, err, "NewImgrecPyJob: %v", err) {
 		return
@@ -53,7 +53,7 @@ func TestImgrecPyAsync(t *testing.T) {
 	rts := mrts.GetRealm(test.REALM1)
 	ref := imgrectestutil.GetReferenceOutput(t, rts.FsLib, IMG_BUCKET, IMG_KEY, MODEL_BUCKET, MODEL_KEY, KID)
 
-	conf := imgrec_py.NewImgrecPyJobConfig(IMG_BUCKET, IMG_KEY, MODEL_BUCKET, MODEL_KEY, KID, false, true, 0, 0)
+	conf := imgrec_py.NewImgrecPyJobConfig(IMG_BUCKET, IMG_KEY, MODEL_BUCKET, MODEL_KEY, KID, false, true, 0, 0, "")
 	job, err := imgrec_py.NewImgrecPyJob(conf, rts.SigmaClnt)
 	if !assert.Nil(t, err, "NewImgrecPyJob: %v", err) {
 		return
@@ -75,7 +75,7 @@ func TestImgrecPyCoSandbox(t *testing.T) {
 	rts := mrts.GetRealm(test.REALM1)
 	ref := imgrectestutil.GetReferenceOutput(t, rts.FsLib, IMG_BUCKET, IMG_KEY, MODEL_BUCKET, MODEL_KEY, KID)
 
-	conf := imgrec_py.NewImgrecPyJobConfig(IMG_BUCKET, IMG_KEY, MODEL_BUCKET, MODEL_KEY, KID, true, false, 0, 0)
+	conf := imgrec_py.NewImgrecPyJobConfig(IMG_BUCKET, IMG_KEY, MODEL_BUCKET, MODEL_KEY, KID, true, false, 0, 0, "")
 	job, err := imgrec_py.NewImgrecPyJob(conf, rts.SigmaClnt)
 	if !assert.Nil(t, err, "NewImgrecPyJob: %v", err) {
 		return
@@ -97,7 +97,7 @@ func TestImgrecPyShmem(t *testing.T) {
 	rts := mrts.GetRealm(test.REALM1)
 	ref := imgrectestutil.GetReferenceOutput(t, rts.FsLib, IMG_BUCKET, IMG_KEY, MODEL_BUCKET, MODEL_KEY, KID)
 
-	conf := imgrec_py.NewImgrecPyJobConfig(IMG_BUCKET, IMG_KEY, MODEL_BUCKET, MODEL_KEY, KID, true, false, proc.Tmem(256), 0)
+	conf := imgrec_py.NewImgrecPyJobConfig(IMG_BUCKET, IMG_KEY, MODEL_BUCKET, MODEL_KEY, KID, true, false, proc.Tmem(256), 0, "")
 	job, err := imgrec_py.NewImgrecPyJob(conf, rts.SigmaClnt)
 	if !assert.Nil(t, err, "NewImgrecPyJob: %v", err) {
 		return

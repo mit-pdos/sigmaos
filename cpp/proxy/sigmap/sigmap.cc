@@ -230,19 +230,23 @@ std::expected<std::shared_ptr<std::string>, sigmaos::serr::Error> Clnt::GetFile(
   rep.set_allocated_blob(&blob);
   auto res = _rpcc->RPC("SPProxySrvAPI.GetFile", req, rep);
   if (!res.has_value()) {
+    // Release in_blob from req before req goes out of scope (stack-allocated)
+    {
+      auto _ = req.release_blob();
+    }
     log(SPPROXYCLNT_ERR, "Err RPC: {}", res.error());
     return std::unexpected(res.error());
   }
   if (rep.err().errcode() != sigmaos::serr::Terror::TErrNoError) {
+    // Release in_blob from req before req goes out of scope (stack-allocated)
+    {
+      auto _ = req.release_blob();
+    }
     log(SPPROXYCLNT_ERR, "Err RPC rep: {}", rep.err().errcode());
     return std::unexpected(sigmaos::serr::Error(
         (sigmaos::serr::Terror)rep.err().errcode(), rep.err().obj()));
   }
   log(SPPROXYCLNT, "GetFile done: {}", pn);
-  //  // Release in_blob from req before req goes out of scope (stack-allocated)
-  //  {
-  //    auto _ = req.release_blob();
-  //  }
   return s;
 }
 

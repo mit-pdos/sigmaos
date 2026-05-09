@@ -100,7 +100,7 @@ func TestImgrecBlinkShmemBench(t *testing.T) {
 	db.DPrintf(db.TEST, "imgrec blink cosandbox pred: %v", msg)
 }
 
-func TestImgrecBlinkShmemCoSandboxBench(t *testing.T) {
+func TestImgrecBlinkCoSandboxBench(t *testing.T) {
 	if !startBlinkd(t) {
 		return
 	}

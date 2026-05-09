@@ -161,8 +161,18 @@ func (api *BlinkSrvAPI) RunBlinkProc(ctx fs.CtxI, req blinkproto.RunBlinkProcReq
 	}
 	defer logFile.Close()
 
-	env := p.GetEnv()
-	if err := os.WriteFile("/tmp/proc-env.txt", []byte(strings.Join(env, "\n")+"\n"), 0644); err != nil {
+	procArgs := []string{
+		"img_bucket=" + p.Args[0],
+		"img_key=" + p.Args[1],
+		"model_bucket=" + p.Args[2],
+		"model_key=" + p.Args[3],
+		"kid=" + p.Args[4],
+		"async_fetch=" + p.Args[5],
+		"spproxy_tcp_host=" + blink.DTAP0_ADDR,
+		"spproxy_tcp_port=" + fmt.Sprintf("%d", req.SpproxyTcpPort),
+	}
+	allLines := append(p.GetEnv(), procArgs...)
+	if err := os.WriteFile("/tmp/proc-env.txt", []byte(strings.Join(allLines, "\n")+"\n"), 0644); err != nil {
 		db.DPrintf(db.ERROR, "ERR RunBlinkProc write proc env: %v", err)
 		return fmt.Errorf("write proc env: %w", err)
 	}

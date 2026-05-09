@@ -197,6 +197,9 @@ func setupCaladan() error {
 	if err := runCmd("sudo", blink.CHROOT_MOUNT_SCRIPT); err != nil {
 		return fmt.Errorf("chroot_mount: %w", err)
 	}
+	if err := runCmd("sudo", "sh", "-c", "(pkill junction_run && sleep 1) || true"); err != nil {
+		return fmt.Errorf("pkill junction_run: %w", err)
+	}
 	if err := runCmd("sudo", "sh", "-c", "(pkill iokerneld && sleep 1) || true"); err != nil {
 		return fmt.Errorf("pkill iokerneld: %w", err)
 	}

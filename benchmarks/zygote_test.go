@@ -999,7 +999,12 @@ func TestZygoteThroughput(t *testing.T) {
 		}
 
 		forkCfgs = append(forkCfgs, forkCfg)
+
+		// Warm up
+		proc := proc.NewForkProc(forkCfg, []string{})
+		_ = ts.Spawn(proc)
 	}
+	time.Sleep(time.Second)
 
 	forkProcReq := func(r *rand.Rand) (time.Duration, bool) {
 		start := time.Now()

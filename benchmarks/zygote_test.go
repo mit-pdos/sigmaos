@@ -972,7 +972,7 @@ func TestZygoteThroughput(t *testing.T) {
 	}
 	defer ts.Shutdown()
 
-	// Define the request function for baseline throughput
+	// Measure baseline throughput
 	baselineProcReq := func(r *rand.Rand) (time.Duration, bool) {
 		start := time.Now()
 		proc := proc.NewPythonProc(proc.Python311, []string{THROUGHPUT_BASELINE_SCRIPT})
@@ -984,11 +984,10 @@ func TestZygoteThroughput(t *testing.T) {
 		return time.Since(start), false
 	}
 
-	// Measure baseline throughput
 	fmt.Println("=== Baseline Throughput ===")
 	runThroughputBinarySweep("baseline", 10*time.Second, 100, 5000, 100, baselineProcReq)
 
-	// Define the request function for zygote forking throughput
+	// Measure zygote forking throughput
 	var forkCfgs []proc.ForkConfig
 	for i := 0; i < 10; i++ {
 		zygoteProc := proc.NewPythonProc(proc.Python311, []string{THROUGHPUT_FORK_SCRIPT})
@@ -1014,9 +1013,23 @@ func TestZygoteThroughput(t *testing.T) {
 		return time.Since(start), false
 	}
 
-	// Measure zygote forking throughput
 	fmt.Println("=== Zygote Forking Throughput ===")
 	runThroughputBinarySweep("fork", 10*time.Second, 100, 5000, 100, forkProcReq)
+
+	// Measure rust hello-world throughput
+	rsHelloWorldProcReq := func(r *rand.Rand) (time.Duration, bool) {
+		start := time.Now()
+		proc := proc.NewProc("hello-world-rs", []string{})
+		err := ts.Spawn(proc)
+		if err != nil {
+			return 0, false
+		}
+		ts.WaitExit(proc.GetPid())
+		return time.Since(start), false
+	}
+
+	fmt.Println("=== Rust Hello World ===")
+	runThroughputBinarySweep("rust-hello-world", 10*time.Second, 100, 5000, 100, rsHelloWorldProcReq)
 }
 
 func TestPythonE2eColdStartLatency(t *testing.T) {

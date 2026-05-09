@@ -54,7 +54,7 @@ mkdir -p $WASMDIR
 
 LDF="-X sigmaos/sigmap.Target=$TARGET -s -w"
 
-TARGETS="uproc-trampoline spawn-latency"
+TARGETS="uproc-trampoline spawn-latency hello-world-rs"
 
 parallel --verbose --tag -j"$NJOBS" \
   --halt now,fail=1 \
@@ -70,6 +70,7 @@ fi
 # Copy rust bins
 cp rs/uproc-trampoline/target/release/uproc-trampoline bin/kernel
 cp rs/spawn-latency/target/release/spawn-latency bin/user/spawn-latency-v$VERSION
+cp rs/hello-world-rs/target/release/hello-world-rs bin/user/hello-world-rs-v$VERSION
 
 # Build wasm scripts
 TARGETS=$(ls rs/wasm)

@@ -10,7 +10,10 @@ both image and model); otherwise fetches directly by bucket/key.
 """
 
 import io
+import json
 import os
+import random
+import string
 import time
 import numpy as np
 from PIL import Image
@@ -30,13 +33,38 @@ def preprocess(img_bytes: bytes) -> np.ndarray:
 
 
 def function_handler(request_json):
+    random.seed(time.time())
     print("Start handle req")
     is_warmup = request_json["is_warmup"] == "true"
+
+    env = dict(request_json.get("env", {}))
     if is_warmup:
-      return "ok"
+        suffix = "".join(random.choices(string.ascii_lowercase + string.digits, k=4))
+
+    if is_warmup and "SIGMADEBUGPID" in env:
+        env["SIGMADEBUGPID"] = env["SIGMADEBUGPID"] + "-" + suffix
+
+    if is_warmup and "SIGMACONFIG" in env:
+        try:
+            cfg = json.loads(env["SIGMACONFIG"])
+            if "pidStr" in cfg:
+                cfg["pidStr"] = cfg["pidStr"] + "-" + suffix
+                print("Request with PID: " + cfg["pidStr"])
+            env["SIGMACONFIG"] = json.dumps(cfg)
+        except Exception:
+            pass
+
+    if is_warmup and "SIGMAPRINCIPAL" in env:
+        try:
+            prin = json.loads(env["SIGMAPRINCIPAL"])
+            if "iDStr" in prin:
+                prin["iDStr"] = prin["iDStr"] + "-" + suffix
+            env["SIGMAPRINCIPAL"] = json.dumps(prin)
+        except Exception:
+            pass
 
 
-    for k, v in request_json.get("env", {}).items():
+    for k, v in env.items():
         os.environ[k] = v
 
     tcp_host = request_json.get("spproxy_tcp_host")
@@ -45,7 +73,8 @@ def function_handler(request_json):
         clnt = sigmaos.SigmaosClnt(tcp_host=tcp_host, tcp_port=int(tcp_port))
     else:
         clnt = sigmaos.SigmaosClnt()
-    clnt.started()
+    if not is_warmup:
+      clnt.started()
 
     img_bucket   = request_json["img_bucket"]
     img_key      = request_json["img_key"]
@@ -92,6 +121,7 @@ def function_handler(request_json):
     class_idx = int(np.argmax(scores))
     score     = float(scores[class_idx])
 
-    clnt.exited(sigmaos.STATUS_OK, f"{class_idx},{score}")
+    if not is_warmup:
+      clnt.exited(sigmaos.STATUS_OK, f"{class_idx},{score}")
     print("Exited!")
     return f"{class_idx},{score}"

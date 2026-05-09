@@ -26,7 +26,7 @@ const (
 	kid         = "~local"
 )
 
-var modelLocalPath = flag.String("model-local-path", "/mobilenetv2-12.onnx", "local filesystem path for model weights; empty string fetches from S3")
+var modelLocalPath = flag.String("model-local-path", "/model-data/mobilenetv2-12.onnx", "local filesystem path for model weights; empty string fetches from S3")
 
 // startBlinkd starts blinkd and registers a t.Cleanup to kill it when the test ends.
 // Returns false if startup failed.

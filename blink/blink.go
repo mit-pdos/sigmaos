@@ -1,7 +1,7 @@
 package blink
 
 const (
-	USE_JUNCTION_CTL = true
+	USE_JUNCTION_CTL = false
 
 	BLINK_PORT = 50055
 	DTAP0_ADDR = "192.168.120.1"

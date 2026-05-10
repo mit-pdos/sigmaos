@@ -40,7 +40,7 @@ run_bench() {
 
     echo "Run benchmark..."
     # sr03: run benchmark
-    $SSH "$SR03" "cd ~/sigmaos && ./stop.sh --parallel ; go clean -testcache; go test -v sigmaos/blink --run $test_name --start --blink --no-shutdown --nfs $SR04_IP 2>&1 | tee /tmp/bench.out ; ./logs.sh > /tmp/logs.out 2>&1"
+    $SSH "$SR03" "cd ~/sigmaos && export SIGMADEBUG=\"TEST;BENCH;KERNEL;BOOT;SPAWN_LAT;BLINKD;SPPROXYSRV;SPPROXYSRV_ERR;\" && ./stop.sh --parallel ; go clean -testcache; go test -v sigmaos/blink --run $test_name --start --blink --no-shutdown --nfs $SR04_IP 2>&1 | tee /tmp/bench.out ; ./logs.sh > /tmp/logs.out 2>&1"
 
     echo "SCP results..."
     mkdir -p "$out_dir"

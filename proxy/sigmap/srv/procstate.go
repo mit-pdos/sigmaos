@@ -23,6 +23,8 @@ import (
 	"sigmaos/util/perf"
 )
 
+const JUNCTION_START_LATENCY = 1440 * time.Millisecond
+
 // Manages sigmaclnts on behalf of procs
 type ProcStateMgr struct {
 	mu   sync.Mutex
@@ -386,6 +388,7 @@ func (ps *procState) createSigmaClnt(spps *SPProxySrv) {
 		perf.LogSpawnLatency("Create wasmRT", ps.pe.GetPID(), ps.pe.GetSpawnTime(), start)
 		ps.wasmScriptStart = time.Now()
 		go func() {
+			time.Sleep(JUNCTION_START_LATENCY)
 			// Run the module
 			bufSz := wasmrt.DEFAULT_WASM_BUF_SZ
 			if mb := ps.p.GetCoSandboxBufMB(); mb > 0 {

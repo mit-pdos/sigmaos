@@ -38,11 +38,13 @@ pub fn boot(b: *mut c_char, buf_sz: usize) {
     let kid = str::from_utf8(&buf[off..off + kid_len]).unwrap().to_string();
     let pn = "name/s3/".to_owned() + &kid;
 
-    // Fetch model at rpcIdx=0.
-    let mut req = s3::GetReq::new();
-    req.bucket = model_bucket;
-    req.key = model_key;
-    sigmaos::send_rpc(buf, 0, &pn, "S3RpcAPI.GetObject", &req.write_to_bytes().unwrap(), 2);
+    // Fetch model at rpcIdx=0 (skip if bucket/key are empty — model comes from local FS).
+    if !model_bucket.is_empty() && !model_key.is_empty() {
+        let mut req = s3::GetReq::new();
+        req.bucket = model_bucket;
+        req.key = model_key;
+        sigmaos::send_rpc(buf, 0, &pn, "S3RpcAPI.GetObject", &req.write_to_bytes().unwrap(), 2);
+    }
 
     // Fetch image at rpcIdx=1.
     let mut req = s3::GetReq::new();

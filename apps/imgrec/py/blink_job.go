@@ -23,7 +23,13 @@ func NewImgrecBlinkJob(conf *ImgrecPyJobConfig, sc *sigmaclnt.SigmaClnt) (*Imgre
 			return nil, err
 		}
 		j.coSandbox = b
-		j.bootInput = wasmrt.EncodeArgs([]string{conf.ImgBucket, conf.ImgKey, conf.ModelBucket, conf.ModelKey, conf.Kid})
+		modelBucket := conf.ModelBucket
+		modelKey := conf.ModelKey
+		if conf.ModelLocalPath != "" {
+			modelBucket = ""
+			modelKey = ""
+		}
+		j.bootInput = wasmrt.EncodeArgs([]string{conf.ImgBucket, conf.ImgKey, modelBucket, modelKey, conf.Kid})
 	}
 	return j, nil
 }

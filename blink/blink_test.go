@@ -27,6 +27,7 @@ const (
 )
 
 var modelLocalPath = flag.String("model-local-path", "/model-data/mobilenetv2-12.onnx", "local filesystem path for model weights; empty string fetches from S3")
+var nfsAddr = flag.String("nfs", "", "NFS server IP address; if set, passed to blinkd for the chroot mount script")
 
 // startBlinkd starts blinkd and registers a t.Cleanup to kill it when the test ends.
 // Returns false if startup failed.
@@ -38,7 +39,12 @@ func startBlinkd(t *testing.T) bool {
 	if !assert.Nil(t, err, "blinkd log create: %v", err) {
 		return false
 	}
-	cmd := exec.Command(blinkdBin, "test")
+	args := []string{}
+	if *nfsAddr != "" {
+		args = append(args, "--nfs", *nfsAddr)
+	}
+	args = append(args, "test")
+	cmd := exec.Command(blinkdBin, args...)
 	cmd.Stdout = logFile
 	cmd.Stderr = logFile
 	if err := cmd.Start(); err != nil {

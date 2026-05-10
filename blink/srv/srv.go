@@ -223,11 +223,15 @@ func runCmd(name string, args ...string) error {
 	return cmd.Run()
 }
 
-func setupCaladan() error {
+func setupCaladan(nfsAddr string) error {
 	if err := runCmd("sudo", "sh", "-c", blink.CHROOT_MOUNT_SCRIPT+" -u || true"); err != nil {
 		return fmt.Errorf("chroot_mount unmount: %w", err)
 	}
-	if err := runCmd("sudo", blink.CHROOT_MOUNT_SCRIPT); err != nil {
+	mountArgs := []string{blink.CHROOT_MOUNT_SCRIPT}
+	if nfsAddr != "" {
+		mountArgs = append(mountArgs, "--nfs", nfsAddr)
+	}
+	if err := runCmd("sudo", mountArgs...); err != nil {
 		return fmt.Errorf("chroot_mount: %w", err)
 	}
 	if err := runCmd("sudo", "sh", "-c", "(pkill junction_run && sleep 1) || true"); err != nil {
@@ -292,8 +296,8 @@ func setupCaladan() error {
 	return nil
 }
 
-func RunBlinkSrv(kernelId string) error {
-	if err := setupCaladan(); err != nil {
+func RunBlinkSrv(kernelId string, nfsAddr string) error {
+	if err := setupCaladan(nfsAddr); err != nil {
 		return err
 	}
 	bs := newBlinkSrv(kernelId)

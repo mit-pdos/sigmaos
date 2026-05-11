@@ -90,6 +90,7 @@ func (api *BlinkSrvAPI) RunBlinkProc(ctx fs.CtxI, req blinkproto.RunBlinkProcReq
 	// Mount the procsrv's spproxyd socket dir into the chroot.
 	chrootSpproxyd := blink.JUNCTION_CHROOT + "/tmp/spproxyd"
 	//hostSpproxyd := blink.PROCD_SPPROXYD_BASE + "/spproxyd-" + req.ProcsrvPid
+	db.DPrintf(db.BLINKD, "exec: sudo mkdir -p %v", chrootSpproxyd)
 	if err := exec.Command("sudo", "mkdir", "-p", chrootSpproxyd).Run(); err != nil {
 		db.DPrintf(db.ERROR, "ERR RunBlinkProc mkdir chroot spproxyd: %v", err)
 		rep.Err = sp.NewRerrorErr(fmt.Errorf("mkdir chroot spproxyd: %w", err))
@@ -123,17 +124,17 @@ func (api *BlinkSrvAPI) RunBlinkProc(ctx fs.CtxI, req blinkproto.RunBlinkProcReq
 		modelLocalPath = p.Args[6]
 	}
 	functionArg := map[string]interface{}{
-		"is_warmup":         "false",
-		"img_bucket":        p.Args[0],
-		"img_key":           p.Args[1],
-		"model_bucket":      p.Args[2],
-		"model_key":         p.Args[3],
-		"kid":               p.Args[4],
-		"async_fetch":       p.Args[5],
-		"model_local_path":  modelLocalPath,
-		"spproxy_tcp_host":  blink.DTAP0_ADDR,
-		"spproxy_tcp_port":  fmt.Sprintf("%d", req.SpproxyTcpPort),
-		"env":               envMap,
+		"is_warmup":        "false",
+		"img_bucket":       p.Args[0],
+		"img_key":          p.Args[1],
+		"model_bucket":     p.Args[2],
+		"model_key":        p.Args[3],
+		"kid":              p.Args[4],
+		"async_fetch":      p.Args[5],
+		"model_local_path": modelLocalPath,
+		"spproxy_tcp_host": blink.DTAP0_ADDR,
+		"spproxy_tcp_port": fmt.Sprintf("%d", req.SpproxyTcpPort),
+		"env":              envMap,
 	}
 	functionArgJSON, err := json.Marshal(functionArg)
 	if err != nil {
@@ -220,6 +221,7 @@ func runCmd(name string, args ...string) error {
 	cmd := exec.Command(name, args...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
+	db.DPrintf(db.BLINKD, "runCmd: %v", strings.Join(cmd.Args, " "))
 	return cmd.Run()
 }
 
@@ -253,6 +255,7 @@ func setupCaladan(nfsAddr string) error {
 	cmd := exec.Command("sudo", blink.IOKERNELD_BIN, "ias", "noht", "nobw", "no_hw_qdel", "numanode", "-1", "--", "--allow", "00:00.0", "--vdev=net_tap0", "1,4-28")
 	cmd.Stdout = logFile
 	cmd.Stderr = logFile
+	db.DPrintf(db.BLINKD, "exec: %v", strings.Join(cmd.Args, " "))
 	if err := cmd.Start(); err != nil {
 		return fmt.Errorf("start iokerneld: %w", err)
 	}
@@ -288,6 +291,7 @@ func setupCaladan(nfsAddr string) error {
 		)
 		junctionCmd.Stdout = junctionLogFile
 		junctionCmd.Stderr = junctionLogFile
+		db.DPrintf(db.BLINKD, "exec: %v", strings.Join(junctionCmd.Args, " "))
 		if err := junctionCmd.Start(); err != nil {
 			return fmt.Errorf("start junction_run: %w", err)
 		}

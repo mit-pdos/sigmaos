@@ -9,14 +9,16 @@ SSH_KEY="$HOME/.ssh/aws_dev"
 SSH="ssh -i $SSH_KEY"
 
 COPY_SNAPSHOTS=false
+LOCAL=false
 for arg in "$@"; do
     case "$arg" in
         --copy-snapshots) COPY_SNAPSHOTS=true ;;
+        --local)          LOCAL=true ;;
     esac
 done
 
 if [ "$COPY_SNAPSHOTS" = true ]; then
-    echo "Copying snapshots to sr03..."
+    echo "Copying snapshots to sr04..."
     $SSH "$SR03" "cd ~/blink-ae && ./scripts/scp_imgrec_snapshots.sh"
 fi
 
@@ -34,13 +36,19 @@ run_bench() {
     # sr03: pull repo and stop NFS client
     $SSH "$SR03" "cd ~/blink-ae && git pull && ./scripts/stop_nfs.sh"
 
-    echo "Start NFS server..."
-    # sr04: pull repo, stop then start NFS server
-    $SSH "$SR04" "cd ~/blink-ae && git pull && ./scripts/stop_nfs.sh && ./scripts/start_nfs_srv.sh || true"
+    if [ "$LOCAL" = false ]; then
+        echo "Start NFS server..."
+        # sr04: pull repo, stop then start NFS server
+        $SSH "$SR04" "cd ~/blink-ae && git pull && ./scripts/stop_nfs.sh && ./scripts/start_nfs_srv.sh || true"
+    fi
 
     echo "Run benchmark..."
+    NFS_FLAG=""
+    if [ "$LOCAL" = false ]; then
+        NFS_FLAG="--nfs $SR04_IP"
+    fi
     # sr03: run benchmark
-    $SSH "$SR03" "cd ~/sigmaos && export SIGMADEBUG=\"TEST;BENCH;KERNEL;BOOT;SPAWN_LAT;BLINKD;SPPROXYSRV;SPPROXYSRV_ERR;\" && ./stop.sh --parallel ; go clean -testcache; go test -v sigmaos/blink --run $test_name --start --blink --no-shutdown --nfs $SR04_IP 2>&1 | tee /tmp/bench.out ; ./logs.sh > /tmp/logs.out 2>&1"
+    $SSH "$SR03" "cd ~/sigmaos && export SIGMADEBUG=\"TEST;BENCH;KERNEL;BOOT;SPAWN_LAT;BLINKD;SPPROXYSRV;SPPROXYSRV_ERR;\" && ./stop.sh --parallel ; go clean -testcache; go test -v sigmaos/blink --run $test_name --start --blink --no-shutdown $NFS_FLAG 2>&1 | tee /tmp/bench.out ; ./logs.sh > /tmp/logs.out 2>&1"
 
     echo "SCP results..."
     mkdir -p "$out_dir"

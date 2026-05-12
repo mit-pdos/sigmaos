@@ -25,7 +25,7 @@ const (
 	modelKey    = "mobilenetv2-12.onnx"
 	kid         = "~local"
 
-	uxImgPath   = "8.jpg"
+	uxImgPath   = "9.jpg"
 	uxModelPath = "mobilenetv2-12.onnx"
 )
 

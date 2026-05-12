@@ -43,9 +43,11 @@ func inputBucketKey() (string, string, string, string) {
 }
 
 // copyInputToUX copies the input image from S3 to UX. Returns false if the copy failed.
-func copyInputToUX(t *testing.T, sc interface{ CopyFile(sp.Tsigmapath, sp.Tsigmapath) error }) bool {
-	src := sp.Tsigmapath(sp.S3 + kid + "/" + uxImgPath)
-	dst := sp.Tsigmapath(sp.UX + kid + "/" + uxImgPath)
+func copyInputToUX(t *testing.T, sc interface {
+	CopyFile(sp.Tsigmapath, sp.Tsigmapath) error
+}) bool {
+	src := sp.Tsigmapath(filepath.Join(sp.S3, kid, "9ps3", "img-save", uxImgPath))
+	dst := sp.Tsigmapath(filepath.Join(sp.UX, kid, uxImgPath))
 	return assert.Nil(t, sc.CopyFile(src, dst), "CopyFile %v -> %v", src, dst)
 }
 

@@ -38,6 +38,8 @@ def function_handler(request_json):
     is_warmup = request_json["is_warmup"] == "true"
     sigmaos.reset_proc_env()
 
+#    print("/shm contents:", "\n\t".join(os.listdir("/shm")))
+
     env = dict(request_json.get("env", {}))
     if is_warmup:
         suffix = "".join(random.choices(string.ascii_lowercase + string.digits, k=4))
@@ -84,44 +86,64 @@ def function_handler(request_json):
     use_async        = request_json.get("async_fetch", "0") == "1"
     model_local_path = request_json.get("model_local_path", "")
 
-    transfer_start = time.perf_counter()
     if clnt.get_run_co_sandbox():
         # Zero-copy path: memoryviews backed by shmem, valid for proc lifetime.
         # PIL/BytesIO accept memoryview directly; ORT requires bytes (one copy).
         if use_async and not model_local_path:
+            fetch_start = time.perf_counter()
             fut_img   = clnt.s3_delegated_get_object_view(1, async_=True)
             fut_model = clnt.s3_delegated_get_object_view(0, async_=True)
-            img_bytes   = fut_img.result()
+            img_bytes = fut_img.result()
+            clnt.log_spawn_latency("Paper.Initialization.TransferImage",
+                                   int((time.perf_counter() - fetch_start) * 1_000_000))
             model_bytes = bytes(fut_model.result())
+            clnt.log_spawn_latency("Paper.Initialization.TransferModel",
+                                   int((time.perf_counter() - fetch_start) * 1_000_000))
         else:
+            img_start = time.perf_counter()
             img_bytes = clnt.s3_delegated_get_object_view(1)
+            clnt.log_spawn_latency("Paper.Initialization.TransferImage",
+                                   int((time.perf_counter() - img_start) * 1_000_000))
+            model_start = time.perf_counter()
             if model_local_path:
                 with open(model_local_path, "rb") as f:
                     model_bytes = f.read()
             else:
                 model_bytes = bytes(clnt.s3_delegated_get_object_view(0))
-        clnt.log_spawn_latency("Paper.Initialization.TransferState",
-                               int((time.perf_counter() - transfer_start) * 1_000_000))
+            clnt.log_spawn_latency("Paper.Initialization.TransferModel",
+                                   int((time.perf_counter() - model_start) * 1_000_000))
     else:
         if use_async:
+            fetch_start = time.perf_counter()
             fut_img = clnt.s3_get_object(img_bucket, img_key, async_=True)
             if not model_local_path:
                 fut_model = clnt.s3_get_object(model_bucket, model_key, async_=True)
             img_bytes = fut_img.result()
+            clnt.log_spawn_latency("Paper.Initialization.DownloadImage",
+                                   int((time.perf_counter() - fetch_start) * 1_000_000))
             if model_local_path:
+                model_start = time.perf_counter()
                 with open(model_local_path, "rb") as f:
                     model_bytes = f.read()
+                clnt.log_spawn_latency("Paper.Initialization.DownloadModel",
+                                       int((time.perf_counter() - model_start) * 1_000_000))
             else:
                 model_bytes = fut_model.result()
+                clnt.log_spawn_latency("Paper.Initialization.DownloadModel",
+                                       int((time.perf_counter() - fetch_start) * 1_000_000))
         else:
+            img_start = time.perf_counter()
             img_bytes = clnt.s3_get_object(img_bucket, img_key)
+            clnt.log_spawn_latency("Paper.Initialization.DownloadImage",
+                                   int((time.perf_counter() - img_start) * 1_000_000))
+            model_start = time.perf_counter()
             if model_local_path:
                 with open(model_local_path, "rb") as f:
                     model_bytes = f.read()
             else:
                 model_bytes = clnt.s3_get_object(model_bucket, model_key)
-        clnt.log_spawn_latency("Paper.Initialization.DownloadState",
-                               int((time.perf_counter() - transfer_start) * 1_000_000))
+            clnt.log_spawn_latency("Paper.Initialization.DownloadModel",
+                                   int((time.perf_counter() - model_start) * 1_000_000))
     load_state_start = time.perf_counter()
     sess = ort.InferenceSession(model_bytes)
     clnt.log_spawn_latency("Paper.Initialization.AppLoadState",

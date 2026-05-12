@@ -7,6 +7,8 @@ import (
 	"sigmaos/sigmaclnt"
 )
 
+const cosandboxUXName = "imgrec_ux_boot"
+
 type ImgrecBlinkJob struct {
 	conf      *ImgrecPyJobConfig
 	coSandbox []byte
@@ -17,19 +19,32 @@ type ImgrecBlinkJob struct {
 func NewImgrecBlinkJob(conf *ImgrecPyJobConfig, sc *sigmaclnt.SigmaClnt) (*ImgrecBlinkJob, error) {
 	j := &ImgrecBlinkJob{conf: conf, SigmaClnt: sc}
 	if conf.UseCoSandbox {
-		b, err := wasmrt.ReadCoSandbox(sc, cosandboxName)
+		var sandboxName string
+		var bootArgs []string
+		if conf.ImgBucket == "ux" {
+			sandboxName = cosandboxUXName
+			modelPath := conf.ModelKey
+			if conf.ModelLocalPath != "" {
+				modelPath = ""
+			}
+			bootArgs = []string{conf.ImgKey, modelPath, conf.Kid}
+		} else {
+			sandboxName = cosandboxName
+			modelBucket := conf.ModelBucket
+			modelKey := conf.ModelKey
+			if conf.ModelLocalPath != "" {
+				modelBucket = ""
+				modelKey = ""
+			}
+			bootArgs = []string{conf.ImgBucket, conf.ImgKey, modelBucket, modelKey, conf.Kid}
+		}
+		b, err := wasmrt.ReadCoSandbox(sc, sandboxName)
 		if err != nil {
 			db.DPrintf(db.ERROR, "ImgrecBlink ReadCoSandbox err: %v", err)
 			return nil, err
 		}
 		j.coSandbox = b
-		modelBucket := conf.ModelBucket
-		modelKey := conf.ModelKey
-		if conf.ModelLocalPath != "" {
-			modelBucket = ""
-			modelKey = ""
-		}
-		j.bootInput = wasmrt.EncodeArgs([]string{conf.ImgBucket, conf.ImgKey, modelBucket, modelKey, conf.Kid})
+		j.bootInput = wasmrt.EncodeArgs(bootArgs)
 	}
 	return j, nil
 }

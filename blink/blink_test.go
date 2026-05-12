@@ -24,10 +24,30 @@ const (
 	modelBucket = "9ps3"
 	modelKey    = "mobilenetv2-12.onnx"
 	kid         = "~local"
+
+	uxImgPath   = "8.jpg"
+	uxModelPath = "mobilenetv2-12.onnx"
 )
 
 var modelLocalPath = flag.String("model-local-path", "/model-data/mobilenetv2-12.onnx", "local filesystem path for model weights; empty string fetches from S3")
 var nfsAddr = flag.String("nfs", "", "NFS server IP address; if set, passed to blinkd for the chroot mount script")
+var useUX = flag.Bool("use-ux", false, "fetch image and model from UX filesystem instead of S3")
+
+// inputBucketKey returns the imgBucket, imgKey, modelBucket, modelKey to use
+// based on whether --use-ux is set.
+func inputBucketKey() (string, string, string, string) {
+	if *useUX {
+		return "ux", uxImgPath, "ux", uxModelPath
+	}
+	return imgBucket, imgKey, modelBucket, modelKey
+}
+
+// copyInputToUX copies the input image from S3 to UX. Returns false if the copy failed.
+func copyInputToUX(t *testing.T, sc interface{ CopyFile(sp.Tsigmapath, sp.Tsigmapath) error }) bool {
+	src := sp.Tsigmapath(sp.S3 + kid + "/" + uxImgPath)
+	dst := sp.Tsigmapath(sp.UX + kid + "/" + uxImgPath)
+	return assert.Nil(t, sc.CopyFile(src, dst), "CopyFile %v -> %v", src, dst)
+}
 
 // startBlinkd starts blinkd and registers a t.Cleanup to kill it when the test ends.
 // Returns false if startup failed.
@@ -74,7 +94,12 @@ func TestImgrecBlinkSnapshot(t *testing.T) {
 
 	rts := mrts.GetRealm(test.REALM1)
 
-	conf := imgrec_py.NewImgrecPyJobConfig(imgBucket, imgKey, modelBucket, modelKey, kid, false, false, 0, 0, *modelLocalPath)
+	if *useUX && !copyInputToUX(t, rts.SigmaClnt) {
+		return
+	}
+
+	ib, ik, mb, mk := inputBucketKey()
+	conf := imgrec_py.NewImgrecPyJobConfig(ib, ik, mb, mk, kid, false, false, 0, 0, *modelLocalPath)
 	job, err := imgrec_py.NewImgrecBlinkJob(conf, rts.SigmaClnt)
 	if !assert.Nil(t, err, "NewImgrecBlinkJob: %v", err) {
 		return
@@ -98,7 +123,12 @@ func TestImgrecBlinkShmemBench(t *testing.T) {
 
 	rts := mrts.GetRealm(test.REALM1)
 
-	conf := imgrec_py.NewImgrecPyJobConfig(imgBucket, imgKey, modelBucket, modelKey, kid, false, false, proc.Tmem(256), 0, *modelLocalPath)
+	if *useUX && !copyInputToUX(t, rts.SigmaClnt) {
+		return
+	}
+
+	ib, ik, mb, mk := inputBucketKey()
+	conf := imgrec_py.NewImgrecPyJobConfig(ib, ik, mb, mk, kid, false, false, proc.Tmem(256), 0, *modelLocalPath)
 	job, err := imgrec_py.NewImgrecBlinkJob(conf, rts.SigmaClnt)
 	if !assert.Nil(t, err, "NewImgrecBlinkJob: %v", err) {
 		return
@@ -122,7 +152,12 @@ func TestImgrecBlinkCoSandboxBench(t *testing.T) {
 
 	rts := mrts.GetRealm(test.REALM1)
 
-	conf := imgrec_py.NewImgrecPyJobConfig(imgBucket, imgKey, modelBucket, modelKey, kid, true, false, proc.Tmem(256), 0, *modelLocalPath)
+	if *useUX && !copyInputToUX(t, rts.SigmaClnt) {
+		return
+	}
+
+	ib, ik, mb, mk := inputBucketKey()
+	conf := imgrec_py.NewImgrecPyJobConfig(ib, ik, mb, mk, kid, true, false, proc.Tmem(256), 0, *modelLocalPath)
 	job, err := imgrec_py.NewImgrecBlinkJob(conf, rts.SigmaClnt)
 	if !assert.Nil(t, err, "NewImgrecBlinkJob: %v", err) {
 		return

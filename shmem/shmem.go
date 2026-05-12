@@ -127,6 +127,7 @@ func (sms *Segment) Destroy() error {
 	}
 	// Unlink the shared memory object
 	name := "/" + sms.idStr
+	db.DPrintf(db.SHMEM, "Unlink shm file %s", name)
 	if err := shmUnlink(name); err != nil && err != syscall.ENOENT {
 		db.DPrintf(db.ERROR, "Err shm_unlink: %v", err)
 		return fmt.Errorf("err shm_unlink: %v", err)

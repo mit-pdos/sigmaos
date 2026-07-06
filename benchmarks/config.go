@@ -103,6 +103,23 @@ func (cfg *HotelBenchConfig) Marshal() (string, error) {
 	return string(b), nil
 }
 
+type MRBenchConfig struct {
+	App    string    `json:"app"`     // Name of the MR job description yaml file
+	MemReq proc.Tmem `json:"mem_req"` // Amount of memory (in MB) required by each mapper/reducer
+}
+
+func (cfg *MRBenchConfig) String() string {
+	return fmt.Sprintf("&{ App:%v MemReq:%v }", cfg.App, cfg.MemReq)
+}
+
+func (cfg *MRBenchConfig) Marshal() (string, error) {
+	b, err := json.Marshal(cfg)
+	if err != nil {
+		return "", err
+	}
+	return string(b), nil
+}
+
 type ImgBenchConfig struct {
 	JobCfg         *imgresize.ImgdJobConfig `json:"job_cfg"`
 	InputPath      string                   `json:"input_path"`

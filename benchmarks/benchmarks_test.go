@@ -638,8 +638,11 @@ func TestRealmBalanceMRHotel(t *testing.T) {
 	rs2 := benchmarks.NewResults(1, benchmarks.E2E)
 	p2 := newRealmPerf(mrts.GetRealm(REALM1))
 	defer p2.Done()
+	if PREWARM_REALM {
+		benchmarks.WarmupRealm(mrts.GetRealm(REALM2), []string{"mr-coord", "mr-m-grep", "mr-r-grep", "mr-m-wc", "mr-r-wc"})
+	}
 	// Prep MR job
-	mrjobs, mrapps := newNMRJobs(mrts.GetRealm(REALM2), p1, 1, MR_APP, chooseMRJobRoot(mrts.GetRealm(REALM2)), proc.Tmem(MR_MEM_REQ))
+	mrjobs, mrapps := newNMRJobs(mrts.GetRealm(REALM2), p1, 1, MRBenchConfig.App, chooseMRJobRoot(mrts.GetRealm(REALM2)), MRBenchConfig.MemReq)
 	// Prep Hotel job
 	pc2 := newRealmCostPerf(mrts.GetRealm(REALM1))
 	defer pc2.Done()
@@ -872,10 +875,13 @@ func TestRealmBalanceMRMR(t *testing.T) {
 	mrapps := make([][]interface{}, N_REALM)
 	// Create structures for MR jobs.
 	for i := range realms {
+		if PREWARM_REALM {
+			benchmarks.WarmupRealm(mrts.GetRealm(realms[i]), []string{"mr-coord", "mr-m-grep", "mr-r-grep", "mr-m-wc", "mr-r-wc"})
+		}
 		rses[i] = benchmarks.NewResults(1, benchmarks.E2E)
 		ps[i] = newRealmPerf(mrts.GetRealm(realms[i]))
 		defer ps[i].Done()
-		mrjob, mrapp := newNMRJobs(mrts.GetRealm(realms[i]), ps[i], 1, MR_APP, chooseMRJobRoot(mrts.GetRealm(realms[i])), proc.Tmem(MR_MEM_REQ))
+		mrjob, mrapp := newNMRJobs(mrts.GetRealm(realms[i]), ps[i], 1, MRBenchConfig.App, chooseMRJobRoot(mrts.GetRealm(realms[i])), MRBenchConfig.MemReq)
 		mrjobs[i] = mrjob
 		mrapps[i] = mrapp
 	}

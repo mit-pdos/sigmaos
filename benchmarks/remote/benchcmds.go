@@ -203,6 +203,44 @@ func GetBEImgResizeRPCMultiplexingCmdConstructor(nRealm int, sleep time.Duration
 	}
 }
 
+// Construct command string to run BE MR multiplexing benchmark
+func GetBEMRMultiplexingCmdConstructor(nRealm int, sleep time.Duration, mrCfg *benchmarks.MRBenchConfig) GetBenchCmdFn {
+	return func(bcfg *BenchConfig, ccfg *ClusterConfig) string {
+		const (
+			debugSelectors string = "\"TEST;BENCH;MR_COORD;\""
+		)
+		dialproxy := ""
+		if bcfg.NoNetproxy {
+			dialproxy = "--nodialproxy"
+		}
+		overlays := ""
+		if bcfg.Overlays {
+			overlays = "--overlays"
+		}
+		cfgJSON, err := mrCfg.Marshal()
+		if err != nil {
+			db.DFatalf("Err marshal mr config: %v", err)
+		}
+		return fmt.Sprintf("export SIGMADEBUG=%s; go clean -testcache; "+
+			"aws s3 rm --profile sigmaos --recursive s3://9ps3/mr-intermediate > /dev/null; "+
+			"go test -v sigmaos/benchmarks -timeout 0 --no-shutdown %s %s --etcdIP %s --tag %s "+
+			"--run TestRealmBalanceMRMR "+
+			"--sleep %s "+
+			"--nrealm %d "+
+			"--mr_bench_cfg='%s' "+
+			"> /tmp/bench.out 2>&1",
+			debugSelectors,
+			dialproxy,
+			overlays,
+			ccfg.LeaderNodeIP,
+			bcfg.Tag,
+			sleep.String(),
+			nRealm,
+			cfgJSON,
+		)
+	}
+}
+
 // Construct command string to run MR benchmark.
 //
 // - mrApp specifies which MR app to run (WC or Grep), as well as the input,
@@ -605,6 +643,84 @@ func GetLCBEHotelImgResizeRPCMultiplexingCmdConstructor(numClients int, rps []in
 			rpsToString(rps),
 			sleep.String(),
 			cfgJSON,
+		)
+	}
+}
+
+// Construct command string to run the leader of the LC hotel/BE MR
+// multiplexing benchmark
+//
+// - numClients specifies the total number of client machines which will make
+// requests to the hotel application
+//
+// - sleep specifies the amount of time the benchmark should sleep between
+// kicking off the MR job and the hotel load generators.
+//
+// - hotelCfg specifies the hotel benchmark configuration, including the load
+// generation durations/RPS and the cache configuration.
+//
+// - mrCfg specifies the MR benchmark configuration.
+func GetLCBEHotelMRMultiplexingCmdConstructor(numClients int, sleep time.Duration, hotelCfg *benchmarks.HotelBenchConfig, mrCfg *benchmarks.MRBenchConfig) GetBenchCmdFn {
+	return func(bcfg *BenchConfig, ccfg *ClusterConfig) string {
+		const (
+			debugSelectors string = "\"TEST;BENCH;CPU_UTIL;MR_COORD;GROUPMGR;\""
+			perfSelectors  string = "\"TEST_TPT;BENCH_TPT;HOTEL_WWW_TPT;\""
+		)
+		dialproxy := ""
+		if bcfg.NoNetproxy {
+			dialproxy = "--nodialproxy"
+		}
+		overlays := ""
+		if bcfg.Overlays {
+			overlays = "--overlays"
+		}
+		hotelCfgJSON, err := hotelCfg.Marshal()
+		if err != nil {
+			db.DFatalf("Err marshal hotel config: %v", err)
+		}
+		cacheCfgJSON, err := hotelCfg.CacheBenchCfg.Marshal()
+		if err != nil {
+			db.DFatalf("Err marshal cache config: %v", err)
+		}
+		// Marshal cossim config (may be nil)
+		cosSimCfgStr := ""
+		if hotelCfg.CosSimBenchCfg != nil {
+			cosSimCfgJSON, err := hotelCfg.CosSimBenchCfg.Marshal()
+			if err != nil {
+				db.DFatalf("Error marshaling cossim config: %v", err)
+			}
+			cosSimCfgStr = fmt.Sprintf("--cossim_bench_cfg '%s' ", cosSimCfgJSON)
+		}
+		mrCfgJSON, err := mrCfg.Marshal()
+		if err != nil {
+			db.DFatalf("Err marshal mr config: %v", err)
+		}
+		return fmt.Sprintf("export SIGMADEBUG=%s; export SIGMAPERF=%s; go clean -testcache; "+
+			"aws s3 rm --profile sigmaos --recursive s3://9ps3/mr-intermediate > /dev/null; "+
+			"ulimit -n 100000; "+
+			"./set-cores.sh --set 1 --start 2 --end 39 > /dev/null 2>&1 ; "+
+			"go test -v sigmaos/benchmarks -timeout 0 --no-shutdown %s %s --etcdIP %s --tag %s "+
+			"--run RealmBalanceMRHotel "+
+			"--nclnt %s "+
+			"--sleep %s "+
+			"--hotel_bench_cfg '%s' "+
+			"--cache_bench_cfg '%s' "+
+			"%s"+ // cosSimCfg
+			"--mr_bench_cfg='%s' "+
+			"--prewarm_realm "+
+			"> /tmp/bench.out 2>&1",
+			debugSelectors,
+			perfSelectors,
+			dialproxy,
+			overlays,
+			ccfg.LeaderNodeIP,
+			bcfg.Tag,
+			strconv.Itoa(numClients),
+			sleep.String(),
+			hotelCfgJSON,
+			cacheCfgJSON,
+			cosSimCfgStr,
+			mrCfgJSON,
 		)
 	}
 }

@@ -14,6 +14,7 @@ import (
 var CosSimBenchConfig *benchmarks.CosSimBenchConfig
 var CacheBenchConfig *benchmarks.CacheBenchConfig
 var HotelBenchConfig *benchmarks.HotelBenchConfig
+var MRBenchConfig *benchmarks.MRBenchConfig
 var ImgBenchConfig *benchmarks.ImgBenchConfig
 var EtcdBenchConfig *benchmarks.EtcdBenchConfig
 var MemcachedBenchConfig *benchmarks.MemcachedBenchConfig
@@ -25,6 +26,7 @@ var SebsBenchConfig *benchmarks.SebsBenchConfig
 var cossimBenchCfgStr string
 var cacheBenchCfgStr string
 var hotelBenchCfgStr string
+var mrBenchCfgStr string
 var imgBenchCfgStr string
 var etcdBenchCfgStr string
 var memcachedBenchCfgStr string
@@ -37,6 +39,7 @@ func init() {
 	flag.StringVar(&cossimBenchCfgStr, "cossim_bench_cfg", sp.NOT_SET, "JSON string for CosSimBenchConfig")
 	flag.StringVar(&cacheBenchCfgStr, "cache_bench_cfg", sp.NOT_SET, "JSON string for CacheBenchConfig")
 	flag.StringVar(&hotelBenchCfgStr, "hotel_bench_cfg", sp.NOT_SET, "JSON string for HotelBenchConfig")
+	flag.StringVar(&mrBenchCfgStr, "mr_bench_cfg", sp.NOT_SET, "JSON string for MRBenchConfig")
 	flag.StringVar(&imgBenchCfgStr, "img_bench_cfg", sp.NOT_SET, "JSON string for ImgBenchConfig")
 	flag.StringVar(&etcdBenchCfgStr, "etcd_bench_cfg", sp.NOT_SET, "JSON string for EtcdBenchConfig")
 	flag.StringVar(&memcachedBenchCfgStr, "memcached_bench_cfg", sp.NOT_SET, "JSON string for MemcachedBenchConfig")
@@ -83,6 +86,18 @@ func TestMain(m *testing.M) {
 			db.DFatalf("Error unmarshaling hotel_bench_cfg: %v", err)
 		}
 		db.DPrintf(db.ALWAYS, "Loaded HotelBenchConfig")
+	}
+
+	// Parse MRBenchConfig
+	if mrBenchCfgStr == sp.NOT_SET {
+		MRBenchConfig = benchmarks.DefaultMRBenchConfig
+		db.DPrintf(db.ALWAYS, "Using default MRBenchConfig")
+	} else {
+		err := json.Unmarshal([]byte(mrBenchCfgStr), &MRBenchConfig)
+		if err != nil {
+			db.DFatalf("Error unmarshaling mr_bench_cfg: %v", err)
+		}
+		db.DPrintf(db.ALWAYS, "Loaded MRBenchConfig")
 	}
 
 	// Parse ImgBenchConfig
@@ -192,6 +207,12 @@ func TestMain(m *testing.M) {
 		db.DFatalf("Error marshaling HotelBenchConfig: %v", err)
 	}
 	db.DPrintf(db.ALWAYS, "HotelBenchConfig:\n%s", string(hotelJSON))
+
+	mrJSON, err := json.MarshalIndent(MRBenchConfig, "", "  ")
+	if err != nil {
+		db.DFatalf("Error marshaling MRBenchConfig: %v", err)
+	}
+	db.DPrintf(db.ALWAYS, "MRBenchConfig:\n%s", string(mrJSON))
 
 	imgJSON, err := json.MarshalIndent(ImgBenchConfig, "", "  ")
 	if err != nil {

@@ -945,6 +945,41 @@ func TestBEImgResizeRPCMultiplexing(t *testing.T) {
 	ts.RunStandardBenchmark(benchName, driverVM, GetBEImgResizeRPCMultiplexingCmdConstructor(nRealms, sleepBetweenRealms, imgCfg), numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost, useGVisor)
 }
 
+// Test multiplexing Best Effort MR jobs.
+func TestBEMRMultiplexing(t *testing.T) {
+	var (
+		benchName string = "be_mr_multiplexing"
+	)
+	// Cluster configuration parameters
+	const (
+		driverVM          int  = 12
+		numNodes          int  = 10
+		numCoresPerNode   uint = 4
+		numProcqOnlyNodes int  = 2
+		numFullNodes      int  = numNodes - numProcqOnlyNodes
+		turboBoost        bool = false
+		useGVisor         bool = false
+	)
+	// Bench params
+	const (
+		sleepBetweenRealms time.Duration = 5 * time.Second
+		nRealms            int           = 4
+	)
+	ts, err := NewTstate(t)
+	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {
+		return
+	}
+	if !assert.False(ts.t, ts.BCfg.K8s, "K8s version of benchmark does not exist") {
+		return
+	}
+	db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
+	mrCfg := &benchmarks.MRBenchConfig{
+		App:    "mr-grep-wiki2G-bench-s3.yml",
+		MemReq: proc.Tmem(7000),
+	}
+	ts.RunStandardBenchmark(benchName, driverVM, GetBEMRMultiplexingCmdConstructor(nRealms, sleepBetweenRealms, mrCfg), numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost, useGVisor)
+}
+
 func TestLCBEHotelImgResizeMultiplexing(t *testing.T) {
 	var (
 		benchName string = "lc_be_hotel_imgresize_multiplexing"
@@ -1161,6 +1196,100 @@ func TestLCBEHotelImgResizeRPCMultiplexing(t *testing.T) {
 		MaxRPS:         []int{150},
 	}
 	getLeaderCmd := GetLCBEHotelImgResizeRPCMultiplexingCmdConstructor(len(driverVMs), rps, dur, cacheType, autoscaleCache, sleep, imgCfg)
+	getFollowerCmd := GetHotelClientCmdConstructor("Search", false, len(driverVMs), sleep, hotelCfg)
+	ts.RunParallelClientBenchmark(benchName, driverVMs, getLeaderCmd, getFollowerCmd, nil, nil, clientDelay, numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost, useGVisor)
+}
+
+// Test multiplexing an LC hotel job with a BE MR job.
+func TestLCBEHotelMRMultiplexing(t *testing.T) {
+	var (
+		benchName string = "lc_be_hotel_mr_multiplexing"
+		driverVMs []int  = []int{8, 9, 10, 11}
+	)
+	// Cluster configuration parameters
+	const (
+		numNodes          int  = 8
+		numCoresPerNode   uint = 4
+		numProcqOnlyNodes int  = 0
+		numFullNodes      int  = numNodes - numProcqOnlyNodes
+		turboBoost        bool = false
+		useGVisor         bool = false
+	)
+	// Hotel benchmark configuration parameters
+	var (
+		rps                 []int           = []int{250, 500, 1000, 1500, 2000, 1000}
+		dur                 []time.Duration = []time.Duration{5 * time.Second, 5 * time.Second, 10 * time.Second, 15 * time.Second, 20 * time.Second, 15 * time.Second}
+		numCaches           int             = 3
+		cacheType           string          = "cached"
+		autoscaleCache      bool            = false
+		clientDelay         time.Duration   = 60 * time.Second
+		sleep               time.Duration   = 10 * time.Second
+		manuallyScaleCaches bool            = false
+		scaleCacheDelay     time.Duration   = 0 * time.Second
+		numCachesToAdd      int             = 0
+		numGeo              int             = 1
+		geoSearchRadius     int             = 10
+		geoNResults         int             = 5
+		numGeoIdx           int             = 1000
+		manuallyScaleGeo    bool            = false
+		scaleGeoDelay       time.Duration   = 0 * time.Second
+		numGeoToAdd         int             = 0
+	)
+	ts, err := NewTstate(t)
+	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {
+		return
+	}
+	if !assert.False(ts.t, ts.BCfg.K8s, "K8s version of benchmark does not exist") {
+		return
+	}
+	db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
+	hotelCfg := &benchmarks.HotelBenchConfig{
+		JobCfg: &hotel.HotelJobConfig{
+			Job:             "hotel-job",
+			Srvs:            hotel.NewHotelSvc(),
+			NHotel:          80,
+			Cache:           cacheType,
+			CacheCfg:        &cachegrpmgr.CacheJobConfig{NSrv: numCaches, MCPU: proc.Tmcpu(2000), GC: true},
+			ImgSizeMB:       0,
+			NGeo:            numGeo,
+			NGeoIdx:         numGeoIdx,
+			GeoSearchRadius: geoSearchRadius,
+			GeoNResults:     geoNResults,
+			UseMatch:        false,
+		},
+		Durs:           dur,
+		MaxRPS:         rps,
+		CachedUserFrac: 100,
+		ScaleGeo: &benchmarks.ManualScalingConfig{
+			Svc:         "hotel-geo",
+			Scale:       manuallyScaleGeo,
+			ScaleDelays: []time.Duration{scaleGeoDelay},
+			ScaleDeltas: []int{numGeoToAdd},
+		},
+		CacheBenchCfg: &benchmarks.CacheBenchConfig{
+			JobCfg:    &cachegrpmgr.CacheJobConfig{NSrv: numCaches, MCPU: proc.Tmcpu(2000), GC: true},
+			Shmem:     true,
+			Autoscale: autoscaleCache,
+			ManuallyScale: &benchmarks.ManualScalingConfig{
+				Svc:         "cached",
+				Scale:       manuallyScaleCaches,
+				ScaleDelays: []time.Duration{scaleCacheDelay},
+				ScaleDeltas: []int{numCachesToAdd},
+			},
+			Migrate: &benchmarks.MigrationConfig{
+				Svc:              "cached",
+				Migrate:          false,
+				MigrationDelays:  []time.Duration{},
+				MigrationTargets: []int{},
+			},
+		},
+		CosSimBenchCfg: nil,
+	}
+	mrCfg := &benchmarks.MRBenchConfig{
+		App:    "mr-grep-wiki2G-bench-s3.yml",
+		MemReq: proc.Tmem(7000),
+	}
+	getLeaderCmd := GetLCBEHotelMRMultiplexingCmdConstructor(len(driverVMs), sleep, hotelCfg, mrCfg)
 	getFollowerCmd := GetHotelClientCmdConstructor("Search", false, len(driverVMs), sleep, hotelCfg)
 	ts.RunParallelClientBenchmark(benchName, driverVMs, getLeaderCmd, getFollowerCmd, nil, nil, clientDelay, numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost, useGVisor)
 }

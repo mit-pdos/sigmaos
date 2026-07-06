@@ -117,6 +117,11 @@ var DefaultHotelBenchConfig = &HotelBenchConfig{
 	CosSimBenchCfg: nil,
 }
 
+var DefaultMRBenchConfig = &MRBenchConfig{
+	App:    "mr-grep-wiki2G-bench-s3.yml",
+	MemReq: proc.Tmem(7000),
+}
+
 var DefaultImgBenchConfig = &ImgBenchConfig{
 	JobCfg: &imgresize.ImgdJobConfig{
 		Job:                  "img-job",

@@ -86,7 +86,7 @@ func NewBins(fsl *fslib.FsLib, inputDir string, swapLocalForAny bool, maxbinsz, 
 				break
 			}
 			split := mr.Split{
-				File:   dir + "/" + st.Name,
+				File:   inputDir + "/" + st.Name,
 				Offset: sp.Toffset(i),
 				Length: sp.Tlength(n),
 			}

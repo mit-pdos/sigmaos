@@ -16,6 +16,40 @@ func Encode[T any](data T) ([]byte, error) {
 	return json.Marshal(data)
 }
 
+const (
+	maxBatchSize     = 900 * 1024 // 900 KB, to stay safely below the gRPC (2MB) and etcd (1MB) message size limits
+	taskSizeOverhead = 64         // Proto overhead estimate
+)
+
+// Submitting or editing many tasks in a single RPC may exceed the 2MB limit
+// per gRPC message and/or the 1MB limit for etcd values. BatchTasks splits
+// tasks into batches of at most ~900KB of (estimated) marshaled task data,
+// and applies op to each batch.
+func BatchTasks[Data any](tasks []*Task[Data], op func([]*Task[Data]) error) error {
+	batch := make([]*Task[Data], 0, len(tasks))
+	batchSize := 0
+	for _, t := range tasks {
+		b, err := json.Marshal(t)
+		if err != nil {
+			return err
+		}
+		estSize := len(b) + taskSizeOverhead
+		if batchSize+estSize > maxBatchSize && len(batch) > 0 {
+			if err := op(batch); err != nil {
+				return err
+			}
+			batch = make([]*Task[Data], 0, len(tasks))
+			batchSize = 0
+		}
+		batch = append(batch, t)
+		batchSize += estSize
+	}
+	if len(batch) > 0 {
+		return op(batch)
+	}
+	return nil
+}
+
 func Decode[T any](encoded []byte) (T, error) {
 	var data T
 	err := json.Unmarshal(encoded, &data)

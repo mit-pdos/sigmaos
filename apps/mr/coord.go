@@ -280,49 +280,23 @@ func (c *Coord) updateReducers(ids []ftclnt.TaskId, bins map[ftclnt.TaskId]Bin) 
 		}
 	}
 
-	// XXX should the batch update be moved into ft/task/clnt?
-
 	// if we have a lot of mappers and errored reducers, this can be a
-	// lot of data, which exceeds the 2MB limit per gRPC message
-	// and/or the 1MB limit for etcd, so we break it up into batches
-	// and use 900 KB messages to be safe
-	const (
-		maxBatchSize = 900 * 1024 // 900 KB
-		taskOverhead = 64         // Proto overhead estimate
-	)
-
-	batched := make([]*ftclnt.Task[TreduceTask], 0, len(rtaskData))
-	currentBatchSize := 0
-
-	start = time.Now()
+	// lot of data, which exceeds the RPC message size limits, so we
+	// break the update up into batches
+	tasks := make([]*ftclnt.Task[TreduceTask], len(rtaskData))
 	for i := range rtaskData {
-		task := &rtaskData[i]
-		b, err := json.Marshal(task)
-		if err != nil {
-			db.DFatalf("json.Marshal %v err %v", task, err)
-		}
-		estSize := len(b) + taskOverhead
-
-		if currentBatchSize+estSize > maxBatchSize && len(batched) > 0 {
-			if _, err = c.rftclnt.EditTasks(batched); err != nil {
-				db.DPrintf(db.MR_COORD, "EditTasks batch err %v", err)
-			}
-			db.DPrintf(db.MR_COORD, "updateReducers: EditTasks %v tasks %v", len(batched), time.Since(start))
-			start = time.Now()
-			batched = nil
-			currentBatchSize = 0
-		}
-
-		batched = append(batched, task)
-		currentBatchSize += estSize
+		tasks[i] = &rtaskData[i]
 	}
-
-	// Send remaining tasks
-	if len(batched) > 0 {
-		if _, err = c.rftclnt.EditTasks(batched); err != nil {
-			db.DPrintf(db.MR_COORD, "EditTasks final batch err %v", err)
+	start = time.Now()
+	if err := ftclnt.BatchTasks(tasks, func(batch []*ftclnt.Task[TreduceTask]) error {
+		if _, err := c.rftclnt.EditTasks(batch); err != nil {
+			db.DPrintf(db.MR_COORD, "EditTasks batch err %v", err)
 		}
-		db.DPrintf(db.MR_COORD, "updateReducers: EditTasks %v tasks %v", len(batched), time.Since(start))
+		db.DPrintf(db.MR_COORD, "updateReducers: EditTasks %v tasks %v", len(batch), time.Since(start))
+		start = time.Now()
+		return nil
+	}); err != nil {
+		return err
 	}
 
 	// now all mappers are done and reduce tasks updated, resurrect
@@ -342,14 +316,22 @@ func (c *Coord) createReducers(bins map[ftclnt.TaskId]Bin) error {
 		tasks[r] = &ftclnt.Task[TreduceTask]{Id: ftclnt.TaskId(r), Data: t}
 	}
 
-	// XXX maybe this will be too big for a single gRPC message, and should
-	// be batched like updateReducers?
-	start := time.Now()
-	if err := c.rftclnt.SubmitTasks(tasks); err != nil {
-		db.DPrintf(db.MR_COORD, "Err SubmitTasks: %v", err)
+	// submitting all reduce tasks at once may exceed the RPC message
+	// size limits, so we break the submission up into batches
+	totalStart := time.Now()
+	start := totalStart
+	if err := ftclnt.BatchTasks(tasks, func(batch []*ftclnt.Task[TreduceTask]) error {
+		if err := c.rftclnt.SubmitTasks(batch); err != nil {
+			db.DPrintf(db.MR_COORD, "Err SubmitTasks: %v", err)
+			return err
+		}
+		db.DPrintf(db.MR_COORD, "createReducers: SubmitTasks %v tasks %v", len(batch), time.Since(start))
+		start = time.Now()
+		return nil
+	}); err != nil {
 		return err
 	}
-	db.DPrintf(db.MR_COORD, "createReducers: %v took %v", c.nreducetask, time.Since(start))
+	db.DPrintf(db.MR_COORD, "createReducers: %v took %v", c.nreducetask, time.Since(totalStart))
 	return nil
 }
 

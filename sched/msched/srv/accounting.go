@@ -10,6 +10,7 @@ import (
 type realmStats struct {
 	running  atomic.Int64
 	totalRan atomic.Int64
+	totalErr atomic.Int64
 }
 
 func (msched *MSched) incRealmStats(p *proc.Proc) {
@@ -37,6 +38,16 @@ func (msched *MSched) decRealmStats(p *proc.Proc) {
 	}
 	st := msched.getRealmStats(p.GetRealm())
 	st.running.Add(-1)
+}
+
+// Count a proc which crashed or exited with an error status.
+func (msched *MSched) incRealmErrStats(p *proc.Proc) {
+	// Don't count privileged procs
+	if p.IsPrivileged() || p.GetRealm() == "" {
+		return
+	}
+	st := msched.getRealmStats(p.GetRealm())
+	st.totalErr.Add(1)
 }
 
 func (msched *MSched) getRealmStats(realm sp.Trealm) *realmStats {

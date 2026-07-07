@@ -268,7 +268,7 @@ func (mc *MSchedClnt) MonitorMSchedStats(realm sp.Trealm, period time.Duration) 
 			statsStr := ""
 			for _, st := range stats {
 				if rs, ok := st[r]; ok {
-					statsStr += fmt.Sprintf(" [ r:%v t:%v ]", rs.Running, rs.TotalRan)
+					statsStr += fmt.Sprintf(" [ r:%v t:%v e:%v ]", rs.Running, rs.TotalRan, rs.TotalErr)
 				}
 			}
 			db.DPrintf(db.ALWAYS, "[%v] msched stats = %d%v", r, n, statsStr)

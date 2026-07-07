@@ -27,6 +27,14 @@ func NewProcState() *ProcState {
 	}
 }
 
+func (ps *ProcState) getProc(pid sp.Tpid) (*proc.Proc, bool) {
+	ps.Lock()
+	defer ps.Unlock()
+
+	p, ok := ps.spawned[pid]
+	return p, ok
+}
+
 func (ps *ProcState) GetProcs() []*proc.Proc {
 	ps.Lock()
 	defer ps.Unlock()

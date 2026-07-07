@@ -65,7 +65,8 @@ message WarmCacheBinRep {
 
 message RealmStats {
   int64 running = 1;
-  int64 totalRan = 2; 
+  int64 totalRan = 2;
+  int64 totalErr = 3;
 }
 
 message GetMSchedStatsReq {

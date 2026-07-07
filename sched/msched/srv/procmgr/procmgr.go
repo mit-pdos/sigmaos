@@ -48,7 +48,9 @@ func (mgr *ProcMgr) SetSigmaSrv(ssrv *sigmasrv.SigmaSrv) {
 	mgr.ssrv = ssrv
 }
 
-func (mgr *ProcMgr) RunProc(p *proc.Proc) {
+// Run a proc. Returns a non-nil error if the proc crashed without exiting
+// cleanly.
+func (mgr *ProcMgr) RunProc(p *proc.Proc) error {
 	// Set the proc's kernel ID, now that a kernel has been selected to run the
 	// proc.
 	p.SetKernelID(mgr.kernelId, true)
@@ -60,6 +62,7 @@ func (mgr *ProcMgr) RunProc(p *proc.Proc) {
 	if err != nil {
 		mgr.procCrashed(p, err)
 	}
+	return err
 }
 
 func (mgr *ProcMgr) Started(pid sp.Tpid) {
@@ -96,6 +99,11 @@ func (mgr *ProcMgr) GetCPUUtil(realm sp.Trealm) float64 {
 
 func (mgr *ProcMgr) GetRunningProcs() []*proc.Proc {
 	return mgr.pstate.GetProcs()
+}
+
+// Get a proc which was spawned to this msched, and hasn't exited yet.
+func (mgr *ProcMgr) GetProc(pid sp.Tpid) (*proc.Proc, bool) {
+	return mgr.pstate.getProc(pid)
 }
 
 func (mgr *ProcMgr) WarmProcd(pid sp.Tpid, realm sp.Trealm, prog string, path []string, ptype proc.Ttype) error {

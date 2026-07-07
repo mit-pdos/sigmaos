@@ -159,6 +159,12 @@ func (msched *MSched) WaitExit(ctx fs.CtxI, req proto.WaitReq, res *proto.WaitRe
 // Wait for a proc to mark itself as exited.
 func (msched *MSched) Exited(ctx fs.CtxI, req proto.NotifyReq, res *proto.NotifyRep) error {
 	db.DPrintf(db.MSCHED, "Exited %v", req.PidStr)
+	// Count procs which exit with an error status
+	if status := proc.NewStatusFromBytes(req.Status); status != nil && (status.IsStatusErr() || status.IsStatusFatal()) {
+		if p, ok := msched.pmgr.GetProc(sp.Tpid(req.PidStr)); ok {
+			msched.incRealmErrStats(p)
+		}
+	}
 	msched.pmgr.Exited(sp.Tpid(req.PidStr), req.Status)
 	return nil
 }
@@ -200,6 +206,7 @@ func (msched *MSched) GetMSchedStats(ctx fs.CtxI, req proto.GetMSchedStatsReq, r
 		st := &proto.RealmStats{
 			Running:  s.running.Load(),
 			TotalRan: s.totalRan.Load(),
+			TotalErr: s.totalErr.Load(),
 		}
 		mschedStats[r.String()] = st
 	}
@@ -332,7 +339,10 @@ func (msched *MSched) spawnAndRunProc(p *proc.Proc, pseqno *proc.ProcSeqno) {
 func (msched *MSched) runProc(p *proc.Proc) {
 	defer msched.decRealmStats(p)
 	db.DPrintf(db.MSCHED, "[%v] %v runProc %v", p.GetRealm(), msched.kernelID, p)
-	msched.pmgr.RunProc(p)
+	if err := msched.pmgr.RunProc(p); err != nil {
+		// Count procs which crash without exiting cleanly
+		msched.incRealmErrStats(p)
+	}
 	msched.procDone(p)
 }
 

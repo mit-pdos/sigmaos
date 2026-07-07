@@ -346,6 +346,7 @@ func (c *Coord) createReducers(bins map[ftclnt.TaskId]Bin) error {
 	// be batched like updateReducers?
 	start := time.Now()
 	if err := c.rftclnt.SubmitTasks(tasks); err != nil {
+		db.DPrintf(db.MR_COORD, "Err SubmitTasks: %v", err)
 		return err
 	}
 	db.DPrintf(db.MR_COORD, "createReducers: %v took %v", c.nreducetask, time.Since(start))
@@ -358,10 +359,12 @@ func (c *Coord) createReducers(bins map[ftclnt.TaskId]Bin) error {
 func (c *Coord) makeReduceBins() error {
 	mns, err := c.mftclnt.GetTasksByStatus(ftclnt.DONE)
 	if err != nil {
+		db.DPrintf(db.MR_COORD, "Err GetTasksByStatus(DONE): %v", err)
 		return err
 	}
 	obins, err := c.mftclnt.GetTaskOutputs(mns)
 	if err != nil {
+		db.DPrintf(db.MR_COORD, "Err GetTaskOutputs: %v", err)
 		return err
 	}
 
@@ -383,6 +386,7 @@ func (c *Coord) makeReduceBins() error {
 
 	rnsError, err := c.rftclnt.GetTasksByStatus(ftclnt.ERROR)
 	if err != nil {
+		db.DPrintf(db.MR_COORD, "Err GetTasksByStatus(ERROR): %v", err)
 		return err
 	}
 

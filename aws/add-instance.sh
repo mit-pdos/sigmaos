@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -x
+
 # Adds a new instance to an existing VPC, combining mkvpc.py and
 # setup-instance.sh.
 

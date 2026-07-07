@@ -23,7 +23,7 @@ def ls_sg(vpc):
             print("Security group:", sg.id, sg.group_name)
 
 def cmp(vm):
-  if "sigma" not in name(vm[3]) and "k8s" not in name(vm[3]):
+  if "sigma" not in name(vm[3]) and "k8s" not in name(vm[3]) or "claude" in name(vm[3]):
     return 99999
   return int(name(vm[3]).replace("sigma", "").replace("k8s",""))
 

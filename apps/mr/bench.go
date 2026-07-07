@@ -13,17 +13,99 @@ import (
 	"sigmaos/test"
 )
 
-func PrintMRStats(fsl *fslib.FsLib, jobRoot, job string) error {
+// Summary statistics for a set of task runtimes (in ms).
+type RuntimeStats struct {
+	N        int
+	MinMs    int64
+	MaxMs    int64
+	MeanMs   float64
+	MedianMs int64
+	P90Ms    int64
+}
+
+func newRuntimeStats(ms []int64) *RuntimeStats {
+	st := &RuntimeStats{N: len(ms)}
+	if len(ms) == 0 {
+		return st
+	}
+	sorted := make([]int64, len(ms))
+	copy(sorted, ms)
+	sort.Slice(sorted, func(i, j int) bool { return sorted[i] < sorted[j] })
+	sum := int64(0)
+	for _, m := range sorted {
+		sum += m
+	}
+	st.MinMs = sorted[0]
+	st.MaxMs = sorted[len(sorted)-1]
+	st.MeanMs = float64(sum) / float64(len(sorted))
+	st.MedianMs = percentile(sorted, 50)
+	st.P90Ms = percentile(sorted, 90)
+	return st
+}
+
+// Compute the pth percentile of a sorted slice of runtimes
+func percentile(sorted []int64, p int) int64 {
+	idx := (p*len(sorted)+99)/100 - 1
+	if idx < 0 {
+		idx = 0
+	}
+	if idx >= len(sorted) {
+		idx = len(sorted) - 1
+	}
+	return sorted[idx]
+}
+
+func (st *RuntimeStats) String() string {
+	if st.N == 0 {
+		return "n 0"
+	}
+	return fmt.Sprintf("n %d min %vms mean %.1fms median %vms p90 %vms max %vms", st.N, st.MinMs, st.MeanMs, st.MedianMs, st.P90Ms, st.MaxMs)
+}
+
+// Runtime statistics for a job's mappers and reducers. Inner runtimes are
+// measured within the mapper/reducer procs themselves, and only include task
+// execution time. Outer runtimes are measured at the coordinator, and also
+// include proc spawn/queueing delays.
+type JobRuntimeStats struct {
+	MapInner    *RuntimeStats
+	MapOuter    *RuntimeStats
+	ReduceInner *RuntimeStats
+	ReduceOuter *RuntimeStats
+}
+
+func NewJobRuntimeStats(results []*Result) *JobRuntimeStats {
+	mInner := []int64{}
+	mOuter := []int64{}
+	rInner := []int64{}
+	rOuter := []int64{}
+	for _, r := range results {
+		if r.IsM {
+			mInner = append(mInner, r.MsInner)
+			mOuter = append(mOuter, r.MsOuter)
+		} else {
+			rInner = append(rInner, r.MsInner)
+			rOuter = append(rOuter, r.MsOuter)
+		}
+	}
+	return &JobRuntimeStats{
+		MapInner:    newRuntimeStats(mInner),
+		MapOuter:    newRuntimeStats(mOuter),
+		ReduceInner: newRuntimeStats(rInner),
+		ReduceOuter: newRuntimeStats(rOuter),
+	}
+}
+
+func (jst *JobRuntimeStats) String() string {
+	return fmt.Sprintf("mappers  inner: %v\nmappers  outer: %v\nreducers inner: %v\nreducers outer: %v", jst.MapInner, jst.MapOuter, jst.ReduceInner, jst.ReduceOuter)
+}
+
+// Read the per-task results the coordinator logged for a job.
+func ReadResults(fsl *fslib.FsLib, jobRoot, job string) ([]*Result, error) {
 	rdr, err := fsl.OpenReader(MRstats(jobRoot, job))
 	if err != nil {
-		return err
+		return nil, err
 	}
 	dec := json.NewDecoder(rdr)
-	fmt.Println("==== STATS:")
-	totIn := sp.Tlength(0)
-	totOut := sp.Tlength(0)
-	totWTmp := sp.Tlength(0)
-	totRTmp := sp.Tlength(0)
 	results := []*Result{}
 	for {
 		r := &Result{}
@@ -31,6 +113,21 @@ func PrintMRStats(fsl *fslib.FsLib, jobRoot, job string) error {
 			break
 		}
 		results = append(results, r)
+	}
+	return results, nil
+}
+
+func PrintMRStats(fsl *fslib.FsLib, jobRoot, job string) error {
+	results, err := ReadResults(fsl, jobRoot, job)
+	if err != nil {
+		return err
+	}
+	fmt.Println("==== STATS:")
+	totIn := sp.Tlength(0)
+	totOut := sp.Tlength(0)
+	totWTmp := sp.Tlength(0)
+	totRTmp := sp.Tlength(0)
+	for _, r := range results {
 		if r.IsM {
 			totIn += r.In
 			totWTmp += r.Out
@@ -51,6 +148,8 @@ func PrintMRStats(fsl *fslib.FsLib, jobRoot, job string) error {
 		humanize.Bytes(uint64(totWTmp)),
 		humanize.Bytes(uint64(totRTmp)),
 	)
+	fmt.Println("==== TASK RUNTIMES:")
+	fmt.Println(NewJobRuntimeStats(results))
 	return nil
 }
 

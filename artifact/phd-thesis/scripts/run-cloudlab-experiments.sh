@@ -35,7 +35,7 @@ if [ $# -gt 0 ]; then
     exit 1
 fi
 
-if [ $EXP != "all" ] && [ $EXP != "mr" ] && [ $EXP != "imgresize" ]; then
+if [ $EXP != "all" ] && [ $EXP != "mr" ] && [ $EXP != "imgresize" ] && [ $EXP != "mr_multi" ]; then
   echo "Unkown experiment $EXP"
   usage
   exit 1
@@ -61,4 +61,10 @@ if [ $EXP == "all" ] || [ $EXP == "imgresize" ]; then
   echo "Generating Imgresize data..."
   go clean -testcache; go test -v -timeout 0 sigmaos/benchmarks/remote --run TestBEImgResizeRPCMultiplexing --parallelize --platform cloudlab --vpc $AWS_VPC --build-tag $TAG --no-shutdown-after-test --bench-version $VERSION --branch $BRANCH 2>&1 | tee $LOG_DIR/imgresize.out
   echo "Done generating Imgresize data..."
+fi
+
+if [ $EXP == "all" ] || [ $EXP == "mr_multi" ]; then
+  echo "Generating MR data..."
+  go clean -testcache; go test -v -timeout 0 sigmaos/benchmarks/remote --run TestBEMRMultiplexing --parallelize --platform cloudlab --vpc $AWS_VPC --build-tag $TAG --no-shutdown-after-test --bench-version $VERSION --branch $BRANCH 2>&1 | tee $LOG_DIR/mr.out
+  echo "Done generating MR data..."
 fi

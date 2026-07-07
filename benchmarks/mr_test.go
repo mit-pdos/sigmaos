@@ -60,6 +60,7 @@ func (ji *MRJobInstance) PrepareMRJob() {
 	ji.nmap = nmap
 	assert.Nil(ji.Ts.T, err, "Error PrepareJob: %v", err)
 	assert.NotEqual(ji.Ts.T, 0, nmap, "Error PrepareJob nmap 0")
+	db.DPrintf(db.ALWAYS, "MR job %v expected stats: nmappers %d nreducers %d binsz %d memreq %vMB", ji.jobname, nmap, ji.job.Nreduce, ji.job.Binsz, ji.memreq)
 }
 
 func (ji *MRJobInstance) StartMRJob() {

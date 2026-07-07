@@ -75,6 +75,27 @@ echo "Generating start latency comparison..."
 echo "Done generating start latency comparison..."
   #--show_breakdown \
 
+echo "Generating sebs & etcd/memcached start latency comparison..."
+./benchmarks/scripts/graph/sebs-start-latency-cosandbox-bar-graph.py \
+  --figsize 8.0 2.4 \
+  --dir_path_thumbnailer                "$RES_OUT_DIR/sebs_start_latency_210.thumbnailer" \
+  --dir_path_thumbnailer_cosandbox      "$RES_OUT_DIR/sebs_start_latency_210.thumbnailer_cosandbox" \
+  --dir_path_video_processing           "$RES_OUT_DIR/sebs_start_latency_220.video-processing" \
+  --dir_path_video_processing_cosandbox "$RES_OUT_DIR/sebs_start_latency_220.video-processing_cosandbox" \
+  --dir_path_image_recognition           "$RES_OUT_DIR/sebs_start_latency_411.image-recognition" \
+  --dir_path_image_recognition_cosandbox "$RES_OUT_DIR/sebs_start_latency_411.image-recognition_cosandbox" \
+  --dir_path_dna_visualisation           "$RES_OUT_DIR/sebs_start_latency_504.dna-visualisation" \
+  --dir_path_dna_visualisation_cosandbox "$RES_OUT_DIR/sebs_start_latency_504.dna-visualisation_cosandbox" \
+  --dir_path_etcd                        "$RES_OUT_DIR/start_latency_etcd" \
+  --dir_path_etcd_cosandbox              "$RES_OUT_DIR/start_latency_etcd_cosandbox" \
+  --dir_path_memcached                   "$RES_OUT_DIR/start_latency_memcached" \
+  --dir_path_memcached_cosandbox         "$RES_OUT_DIR/start_latency_memcached_cosandbox" \
+  --output "$GRAPH_OUT_DIR/sebs-and-usvc-start-latency.pdf" \
+  --sys-name "$SYS_NAME"
+#  --dir_path_uploader                "$RES_OUT_DIR/sebs_start_latency_120.uploader" \
+#  --dir_path_uploader_cosandbox      "$RES_OUT_DIR/sebs_start_latency_120.uploader_cosandbox" \
+echo "Done generating sebs & etcd/memcached start latency comparison..."
+
 echo "Generating sebs start latency comparison..."
 ./benchmarks/scripts/graph/sebs-start-latency-cosandbox-bar-graph.py \
   --dir_path_thumbnailer                "$RES_OUT_DIR/sebs_start_latency_210.thumbnailer" \
@@ -100,6 +121,8 @@ echo "Generating sebs start latency comparison..."
 #  --dir_path_uploader                "$RES_OUT_DIR/sebs_start_latency_120.uploader" \
 #  --dir_path_uploader_cosandbox      "$RES_OUT_DIR/sebs_start_latency_120.uploader_cosandbox" \
 echo "Done generating sebs start latency comparison..."
+
+
 
 #echo "Generating sebs start latency comparison (with uncompressed)..."
 #./benchmarks/scripts/graph/sebs-start-latency-cosandbox-bar-graph.py \

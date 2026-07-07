@@ -207,7 +207,7 @@ func GetBEImgResizeRPCMultiplexingCmdConstructor(nRealm int, sleep time.Duration
 func GetBEMRMultiplexingCmdConstructor(nRealm int, sleep time.Duration, mrCfg *benchmarks.MRBenchConfig) GetBenchCmdFn {
 	return func(bcfg *BenchConfig, ccfg *ClusterConfig) string {
 		const (
-			debugSelectors string = "\"TEST;BENCH;MR_COORD;\""
+			debugSelectors string = "\"TEST;BENCH;MR_COORD;MR;\""
 		)
 		dialproxy := ""
 		if bcfg.NoNetproxy {

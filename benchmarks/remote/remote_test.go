@@ -974,7 +974,8 @@ func TestBEMRMultiplexing(t *testing.T) {
 	}
 	db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
 	mrCfg := &benchmarks.MRBenchConfig{
-		App:    "mr-grep-wiki2G-bench-s3.yml",
+		App: "mr-wc-wiki4G-granular-bench.yml",
+		//		App:    "mr-wc-wiki2G-bench.yml",
 		MemReq: proc.Tmem(7000),
 	}
 	ts.RunStandardBenchmark(benchName, driverVM, GetBEMRMultiplexingCmdConstructor(nRealms, sleepBetweenRealms, mrCfg), numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost, useGVisor)

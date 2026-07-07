@@ -57,16 +57,16 @@ func key2realmpath(key string) string {
 }
 
 func marshalDirInfo(dir *DirInfo) ([]byte, *serr.Err) {
-	d := &EtcdDirProto{Ents: make([]*EtcdDirEntProto, 0, dir.Ents.Len())}
+	d := &EtcdDirProto{Ents: make([]*EtcdDirEntProto, dir.Ents.Len())}
 	idx := 0
 	dir.Ents.Iter(func(name string, di *DirEntInfo) bool {
-		d.Ents = append(d.Ents, &EtcdDirEntProto{
+		d.Ents[idx] = &EtcdDirEntProto{
 			Name:     name,
 			Path:     uint64(di.Path),
 			Perm:     uint32(di.Perm),
 			ClientId: uint64(di.ClntId),
 			LeaseId:  int64(di.LeaseId),
-		})
+		}
 		idx += 1
 		return true
 	})

@@ -24,8 +24,8 @@ def scrape_times(dname, sigma):
 
 
 def get_e2e_times(input_dir, datasize):
-  sfnbase = os.path.join(input_dir, "mr-wc-wiki" + datasize + "-bench.yml")
-  sfns3base = os.path.join(input_dir, "mr-wc-wiki" + datasize + "-bench-s3.yml")
+  sfnbase = os.path.join(input_dir, "mr-wc-wiki" + datasize + "-bench.json")
+  sfns3base = os.path.join(input_dir, "mr-wc-wiki" + datasize + "-bench-s3.json")
   cfnbase = os.path.join(input_dir, "corral-" + datasize)
   sigma = [ scrape_times(sfnbase + "-cold", True), scrape_times(sfnbase + "-warm", True) ]
   sigmas3 = [ scrape_times(sfns3base + "-cold", True), scrape_times(sfns3base + "-warm", True) ]

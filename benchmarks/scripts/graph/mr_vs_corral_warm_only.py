@@ -30,12 +30,12 @@ def get_e2e_times(input_dir, app, datasize, granular, noux):
   gr = ""
   if granular:
     gr = "-granular"
-  sfns3base = os.path.join(input_dir, "mr-" + app + "-wiki" + datasize + gr + "-bench-s3.yml")
+  sfns3base = os.path.join(input_dir, "mr-" + app + "-wiki" + datasize + gr + "-bench-s3.json")
   cfnbase = os.path.join(input_dir, "corral-" + app + "-wiki" + datasize + gr)
   sigmas3 = [ scrape_times(sfns3base + "-warm", True) ]
   corral = [ scrape_times(cfnbase + "-warm", False) ]
   if not noux:
-    sfnbase = os.path.join(input_dir, "mr-" + app + "-wiki" + datasize + gr + "-bench.yml")
+    sfnbase = os.path.join(input_dir, "mr-" + app + "-wiki" + datasize + gr + "-bench.json")
     sigmaux = [ scrape_times(sfnbase + "-warm", True) ]
   else:
     sigmaux = sigmas3

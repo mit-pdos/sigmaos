@@ -160,7 +160,9 @@ func (pss *ProtSrvState) RemoveObj(ctx fs.CtxI, dir fs.Dir, o fs.FsObj, name str
 
 // Rename this fid.  Other fids for the same underlying fs obj are unchanged.
 func (pss *ProtSrvState) RenameObj(f *fid.Fid, name string, fence sp.Tfence) *serr.Err {
-	dlk := pss.plt.Acquire(f.Ctx(), f.Uid(), lockmap.WLOCK)
+	// Lock the parent dir, since Rename mutates it; dlk.Uid() is then
+	// also the right uid for the watch events below.
+	dlk := pss.plt.Acquire(f.Ctx(), fs.Uid(f.Parent()), lockmap.WLOCK)
 	defer pss.plt.Release(f.Ctx(), dlk, lockmap.WLOCK)
 
 	// pss.stats.IncPathString(po.Pathname().String())

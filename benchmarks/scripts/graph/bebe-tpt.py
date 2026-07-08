@@ -165,9 +165,9 @@ def finalize_graph(fig, ax, plots, title, out, maxval):
     ax[idx].set_ylim(bottom=0)
     if maxval > 0:
       ax[idx].set_xlim(right=maxval)
+    ax[idx].grid(which="major", linestyle="--", linewidth=0.5, alpha=0.7)
+    ax[idx].set_axisbelow(True)
   # plt.legend(lns, labels)
-#  plt.grid(which="minor")
-#  plt.grid(which="major")
   fig.align_ylabels(ax)
   fig.savefig(out, bbox_inches="tight")
 

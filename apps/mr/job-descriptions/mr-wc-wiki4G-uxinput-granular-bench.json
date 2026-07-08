@@ -2,7 +2,7 @@
   "app": "wc",
   "nreduce": 15,
   "binsz": 3407872,
-  "s3input": "name/s3/~local/9ps3/wiki-4G/",
+  "s3input": "name/s3/~any/9ps3/wiki-4G/",
   "input": "name/ux/~local/wiki-4G/",
   "intermediate": "name/ux/~local/mr-intermediate",
   "output": "name/s3/~local/9ps3/mr-out",

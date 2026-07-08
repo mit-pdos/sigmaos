@@ -208,11 +208,15 @@ func GetBEImgResizeRPCMultiplexingCmdConstructor(nRealm int, sleep time.Duration
 }
 
 // Construct command string to run BE MR multiplexing benchmark
-func GetBEMRMultiplexingCmdConstructor(nRealm int, sleep time.Duration, mrCfg *benchmarks.MRBenchConfig) GetBenchCmdFn {
+func GetBEMRMultiplexingCmdConstructor(nRealm int, sleep time.Duration, prewarmRealm bool, mrCfg *benchmarks.MRBenchConfig) GetBenchCmdFn {
 	return func(bcfg *BenchConfig, ccfg *ClusterConfig) string {
 		const (
 			debugSelectors string = "\"TEST;BENCH;MR_COORD;MR;\""
 		)
+		prewarm := ""
+		if prewarmRealm {
+			prewarm = "--prewarm_realm"
+		}
 		dialproxy := ""
 		if bcfg.NoNetproxy {
 			dialproxy = "--nodialproxy"
@@ -229,6 +233,7 @@ func GetBEMRMultiplexingCmdConstructor(nRealm int, sleep time.Duration, mrCfg *b
 			"aws s3 rm --profile sigmaos --recursive s3://9ps3/mr-intermediate > /dev/null; "+
 			"go test -v sigmaos/benchmarks -timeout 0 --no-shutdown %s %s --etcdIP %s --tag %s "+
 			"--run TestRealmBalanceMRMR "+
+			"%s "+ // prewarm
 			"--sleep %s "+
 			"--nrealm %d "+
 			"--mr_bench_cfg='%s' "+
@@ -238,6 +243,7 @@ func GetBEMRMultiplexingCmdConstructor(nRealm int, sleep time.Duration, mrCfg *b
 			overlays,
 			ccfg.LeaderNodeIP,
 			bcfg.Tag,
+			prewarm,
 			sleep.String(),
 			nRealm,
 			cfgJSON,

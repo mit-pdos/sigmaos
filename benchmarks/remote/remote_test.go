@@ -967,7 +967,10 @@ func TestBEMRMultiplexing(t *testing.T) {
 	// Bench params
 	const (
 		sleepBetweenRealms time.Duration = 5 * time.Second
-		nRealms            int           = 4
+		nRealms            int           = 1
+		memPerWorker       proc.Tmem     = 3500
+		prewarmRealm       bool          = true
+		benchConfig        string        = "mr-wc-wiki4G-uxinput-granular-bench.json"
 	)
 	ts, err := NewTstate(t)
 	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {
@@ -977,11 +980,11 @@ func TestBEMRMultiplexing(t *testing.T) {
 		return
 	}
 	db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
-	mrCfg, err := benchmarks.NewMRBenchConfig(mrJobDescriptionsDir, "mr-wc-wiki4G-granular-bench.json", proc.Tmem(3500))
+	mrCfg, err := benchmarks.NewMRBenchConfig(mrJobDescriptionsDir, benchConfig, memPerWorker)
 	if !assert.Nil(ts.t, err, "Reading MR job config: %v", err) {
 		return
 	}
-	ts.RunStandardBenchmark(benchName, driverVM, GetBEMRMultiplexingCmdConstructor(nRealms, sleepBetweenRealms, mrCfg), numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost, useGVisor)
+	ts.RunStandardBenchmark(benchName, driverVM, GetBEMRMultiplexingCmdConstructor(nRealms, sleepBetweenRealms, prewarmRealm, mrCfg), numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost, useGVisor)
 }
 
 func TestLCBEHotelImgResizeMultiplexing(t *testing.T) {

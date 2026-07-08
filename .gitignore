@@ -8,6 +8,7 @@ bin/
 measurements
 ec2_measurements
 mr/par-mr.out
+cloudlab/servers.txt
 perf/perf.test
 benchmarks/results/
 *.err

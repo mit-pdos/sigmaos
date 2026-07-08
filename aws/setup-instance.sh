@@ -89,18 +89,22 @@ echo > ~/.aws/credentials
 chmod 600 ~/.aws/credentials
 ENDSSH
 
-# decrypt the aws and docker secrets.
+# Decrypt the aws and docker secrets into a per-run tmpdir, so that
+# parallel runs of this script don't overwrite each other's decrypted
+# files.  The tmpdir (mode 700) is removed when the script exits.
+SECRETDIR=$(mktemp -d)
+trap 'rm -rf "$SECRETDIR"' EXIT
 SECRETS=".aws/credentials .docker/config.json"
 for F in $SECRETS
 do
-  yes | gpg --output $F --decrypt ${F}.gpg || exit 1
+  mkdir -p $SECRETDIR/$(dirname $F)
+  gpg --output $SECRETDIR/$F --decrypt ${F}.gpg || exit 1
 done
 
-# scp the aws and docker secrets to the server and remove them locally.
+# scp the aws and docker secrets to the server.
 scp -i key-$VPC.pem .aws/config $LOGIN@$VM:/home/$LOGIN/.aws/
-scp -i key-$VPC.pem .aws/credentials $LOGIN@$VM:/home/$LOGIN/.aws/
-scp -i key-$VPC.pem .docker/config.json $LOGIN@$VM:/home/$LOGIN/.docker/
-rm $SECRETS
+scp -i key-$VPC.pem $SECRETDIR/.aws/credentials $LOGIN@$VM:/home/$LOGIN/.aws/
+scp -i key-$VPC.pem $SECRETDIR/.docker/config.json $LOGIN@$VM:/home/$LOGIN/.docker/
 
 ssh -i key-$VPC.pem $LOGIN@$VM <<ENDSSH
 cat <<EOF > ~/.ssh/config

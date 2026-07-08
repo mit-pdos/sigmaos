@@ -21,17 +21,23 @@ echo > ~/.aws/credentials
 chmod 600 ~/.aws/credentials
 ENDSSH
 
-# decrypt the aws and docker secrets.
+# Decrypt the aws and docker secrets into a per-run tmpdir, so that
+# parallel runs of this script don't overwrite each other's decrypted
+# files.  The tmpdir (mode 700) is removed when the script exits.
+SECRETDIR=$(mktemp -d)
+trap 'rm -rf "$SECRETDIR"' EXIT
 SECRETS="../aws/.aws/credentials ../aws/.docker/config.json"
 for F in $SECRETS
 do
+  DST=$SECRETDIR/${F#../aws/}
+  mkdir -p $(dirname $DST)
   # If private version already exists, don't re-decrypt (used to make artifact
   # evaluation setup easier)
   if [ -f $F.priv ]
   then
-    cp $F.priv $F
-  else 
-    yes | gpg --output $F --decrypt ${F}.gpg || exit 1
+    cp $F.priv $DST
+  else
+    gpg --output $DST --decrypt ${F}.gpg || exit 1
   fi
 done
 
@@ -40,11 +46,10 @@ ssh -i $DIR/keys/cloudlab-sigmaos $SSHCMD <<ENDSSH
 rm -f ~/.aws/credentials ~/.aws/config ~/.docker/config.json
 ENDSSH
 
-# scp the aws and docker secrets to the server and remove them locally.
+# scp the aws and docker secrets to the server.
 scp -i $DIR/keys/cloudlab-sigmaos ../aws/.aws/config $SSHCMD:~/.aws/
-scp -i $DIR/keys/cloudlab-sigmaos ../aws/.aws/credentials $SSHCMD:~/.aws/
-scp -i $DIR/keys/cloudlab-sigmaos ../aws/.docker/config.json $SSHCMD:~/.docker/
-rm $SECRETS
+scp -i $DIR/keys/cloudlab-sigmaos $SECRETDIR/.aws/credentials $SSHCMD:~/.aws/
+scp -i $DIR/keys/cloudlab-sigmaos $SECRETDIR/.docker/config.json $SSHCMD:~/.docker/
 
 ssh -i $DIR/keys/cloudlab-sigmaos $SSHCMD <<ENDSSH
 cat <<EOF > ~/.ssh/config

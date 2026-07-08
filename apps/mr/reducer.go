@@ -298,6 +298,7 @@ func RunReducer(reducef mr.ReduceT, args []string) {
 	}
 	r, err := NewReducer(sc, reducef, args, p)
 	if err != nil {
+		db.DPrintf(db.ERROR, "Err reducer: %v", err)
 		r.ClntExit(proc.NewStatusErr("NewReducer err", err))
 	}
 	crash.Failer(sc.FsLib, crash.MRREDUCE_CRASH, func(e crash.Tevent) {

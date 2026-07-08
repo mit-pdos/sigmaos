@@ -104,6 +104,10 @@ type Job struct {
 	Linesz       int    `json:"linesz"`
 	Wordsz       int    `json:"wordsz"`
 	Local        string `json:"local,omitempty"`
+	// Optional S3 source for the job's input. If set (and the job's input is
+	// stored in UX), the input files are copied from the S3 source to the
+	// job's input directory on every UX server during job setup.
+	S3Input string `json:"s3input,omitempty"`
 }
 
 // Wait until the job is done
@@ -220,6 +224,75 @@ func JobLocalToAny(j *Job, input, intermediate, output bool) *Job {
 		job.Output = strings.ReplaceAll(job.Output, sp.LOCAL, sp.ANY)
 	}
 	return job
+}
+
+// If the job specifies an S3 input source, copy the job's input files from
+// S3 to the job's input directory on every UX server, so mappers can read
+// their input from UX. Files which already exist on a UX server (with the
+// expected length) are not copied again (e.g., if they were already copied
+// for another realm's job).
+func CopyS3InputToUx(fsl *fslib.FsLib, j *Job) error {
+	if j.S3Input == "" {
+		return nil
+	}
+	if !strings.HasPrefix(j.Input, sp.UX) {
+		return fmt.Errorf("job has S3 input source %v, but input %v is not stored in UX", j.S3Input, j.Input)
+	}
+	// Strip the UX mount prefix and server selector (e.g., ~local) off of the
+	// input path, to get the input path relative to each UX server's root
+	p := strings.SplitN(strings.TrimPrefix(j.Input, sp.UX), "/", 2)
+	if len(p) != 2 || p[1] == "" {
+		return fmt.Errorf("no input dir in UX input path %v", j.Input)
+	}
+	inputRelPath := p[1]
+	srvs, err := fsl.GetDir(sp.UX)
+	if err != nil {
+		db.DPrintf(db.ERROR, "GetDir %v err %v", sp.UX, err)
+		return err
+	}
+	inputs, err := fsl.GetDir(j.S3Input)
+	if err != nil {
+		db.DPrintf(db.ERROR, "GetDir %v err %v", j.S3Input, err)
+		return err
+	}
+	db.DPrintf(db.MR, "Copy S3 input %v to %v on %d UX srvs", j.S3Input, j.Input, len(srvs))
+	defer db.DPrintf(db.MR, "Done copy S3 input %v to %v on %d UX srvs", j.S3Input, j.Input, len(srvs))
+	errc := make(chan error, len(srvs))
+	for _, srv := range sp.Names(srvs) {
+		go func(srv string) {
+			errc <- copyS3InputToUxSrv(fsl, j.S3Input, inputs, filepath.Join(sp.UX, srv), inputRelPath)
+		}(srv)
+	}
+	var err1 error
+	for range srvs {
+		if err := <-errc; err != nil {
+			err1 = err
+		}
+	}
+	return err1
+}
+
+// Copy the job's input files from S3 to a UX server.
+func copyS3InputToUxSrv(fsl *fslib.FsLib, s3Input string, inputs []*sp.Tstat, uxSrv, inputRelPath string) error {
+	if err := fsl.MkDirPath(uxSrv, inputRelPath, 0777); err != nil && !serr.IsErrorExists(err) {
+		db.DPrintf(db.ERROR, "MkDirPath %v/%v err %v", uxSrv, inputRelPath, err)
+		return err
+	}
+	dstDir := filepath.Join(uxSrv, inputRelPath)
+	for _, st := range inputs {
+		src := filepath.Join(s3Input, st.Name)
+		dst := filepath.Join(dstDir, st.Name)
+		// Skip files which were already copied to this UX server
+		if dstSt, err := fsl.Stat(dst); err == nil && dstSt.Tlength() == st.Tlength() {
+			continue
+		}
+		db.DPrintf(db.MR, "Copy input %v -> %v", src, dst)
+		if err := fsl.CopyFile(src, dst); err != nil {
+			db.DPrintf(db.ERROR, "CopyFile %v -> %v err %v", src, dst, err)
+			return err
+		}
+	}
+	return nil
 }
 
 func PrepareJob(fsl *fslib.FsLib, ts *Tasks, jobRoot, jobName string, j *Job) (int, error) {

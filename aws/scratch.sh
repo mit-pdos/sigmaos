@@ -1,10 +1,11 @@
 #!/bin/bash
 
 usage() {
-  echo "Usage: $0 --vpc VPC [--n N] [--taint N:M]" 1>&2
+  echo "Usage: $0 --vpc VPC [--n N] [--taint N:M] [--parallel]" 1>&2
 }
 
 VPC=""
+PARALLEL=""
 while [[ $# -gt 0 ]]; do
   key="$1"
   case $key in
@@ -12,6 +13,10 @@ while [[ $# -gt 0 ]]; do
     shift
     VPC=$1
     shift
+    ;;
+  --parallel)
+    shift
+    PARALLEL="true"
     ;;
   -help)
     usage
@@ -38,7 +43,8 @@ vma_privaddr=($vms_privaddr)
 MAIN="${vma[0]}"
 MAIN_PRIVADDR="${vma_privaddr[0]}"
 
-for vm in $vms; do
+run_scratch() {
+  local vm=$1
   echo "VM: $vm"
   # No additional benchmarking setup needed for AWS.
   ssh -i key-$VPC.pem ubuntu@$vm /bin/bash <<ENDSSH
@@ -84,8 +90,18 @@ for vm in $vms; do
 cd sigmaos
 ./set-cores.sh --start 4 --end 16 --set 0
 nproc
+docker pull arielszekely/sigmauser:arielck
 ENDSSH
+}
+
+for vm in $vms; do
+  if [ -n "$PARALLEL" ]; then
+    run_scratch $vm &
+  else
+    run_scratch $vm
+  fi
 done
+wait
 
 #sudo kill -SIGTERM $(ps -fax | grep "argv0 /mnt/binfs/named" | cut -d " " -f3 | tail -n1)
 #sudo kill -SIGTERM $(ps -fax | grep "argv0 named" | cut -d " " -f3 | tail -n1)

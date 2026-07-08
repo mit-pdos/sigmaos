@@ -49,6 +49,6 @@ for vm in $vms; do
 
 #  docker ps -a && nproc
 #  cd sigmaos && git branch
-ls /tmp/sigmaos-perf
+#ls /tmp/sigmaos-perf
 ENDSSH
 done

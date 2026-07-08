@@ -43,7 +43,7 @@ import (
 
 const (
 	OUTPUT        = "/tmp/par-mr.out"
-	MALICIOUS_APP = "mr-wc-restricted.yml"
+	MALICIOUS_APP = "mr-wc-restricted.json"
 
 	// time interval (ms) for when a failure might happen. If too
 	// frequent and they don't finish ever. XXX determine
@@ -56,7 +56,7 @@ const (
 	MEM_REQ     = 1000
 )
 
-var app string // yaml app file
+var app string // json app file
 var nmap int
 var job *mr.Job
 var timeout time.Duration
@@ -66,7 +66,7 @@ var mapEv *crash.TeventMap
 var reduceEv *crash.TeventMap
 
 func init() {
-	flag.StringVar(&app, "app", "mr-wc-wiki2G-bench.yml", "application")
+	flag.StringVar(&app, "app", "mr-wc-wiki2G-bench.json", "application")
 	flag.IntVar(&nmap, "nmap", 1, "number of mapper threads")
 	flag.DurationVar(&timeout, "mr-timeout", 0, "timeout")
 
@@ -237,7 +237,7 @@ func TestMapperReducer(t *testing.T) {
 	}
 	defer mrts.Shutdown()
 
-	ts := newTstate(mrts, mr.MRDIRTOP, app) // or --app mr-wc-ux.yml or --app mr-ux-wiki1G.yml
+	ts := newTstate(mrts, mr.MRDIRTOP, app) // or --app mr-wc-ux.json or --app mr-ux-wiki1G.json
 
 	job = mr.JobLocalToAny(job, true, true, true)
 	if job.Local != "" {
@@ -328,7 +328,7 @@ func TestMapperReducer(t *testing.T) {
 		db.DPrintf(db.ALWAYS, "%s: reduce in %v out %v tot %v %vms (%s)\n", res.Task, humanize.Bytes(uint64(res.In)), humanize.Bytes(uint64(res.Out)), test.Mbyte(res.In+res.Out), res.MsInner, test.TputStr(res.In+res.Out, res.MsInner))
 	}
 
-	if app == "mr-wc.yml" || app == "mr-ux-wc.yml" {
+	if app == "mr-wc.json" || app == "mr-ux-wc.json" {
 		ts.checkJob(app)
 	}
 
@@ -399,7 +399,7 @@ func (ts *Tstate) checkJob(app string) bool {
 	if !assert.Nil(ts.mrts.T, err, "Merge output files: %v", err) {
 		return false
 	}
-	if app == "mr-wc.yml" || app == "mr-ux-wc.yml" || app == MALICIOUS_APP {
+	if app == "mr-wc.json" || app == "mr-ux-wc.json" || app == MALICIOUS_APP {
 		db.DPrintf(db.TEST, "checkJob %v", app)
 		return ts.compare()
 	}

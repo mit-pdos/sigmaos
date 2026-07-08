@@ -308,10 +308,10 @@ func TestMR(t *testing.T) {
 	// Variable MR benchmark configuration parameters
 	var (
 		mrApps []*MRExperimentConfig = []*MRExperimentConfig{
-			{"mr-grep-wiki2G-bench-s3.yml", 10, 4, 7000},
-			{"mr-grep-wiki2G-granular-bench-s3.yml", 54, 4, 7000},
-			{"mr-wc-wiki2G-bench.yml", 10, 4, 7000},
-			{"mr-wc-wiki2G-bench-s3.yml", 10, 4, 7000},
+			{"mr-grep-wiki2G-bench-s3.json", 10, 4, 7000},
+			{"mr-grep-wiki2G-granular-bench-s3.json", 54, 4, 7000},
+			{"mr-wc-wiki2G-bench.json", 10, 4, 7000},
+			{"mr-wc-wiki2G-bench-s3.json", 10, 4, 7000},
 		}
 		perfs         []bool = []bool{false}
 		prewarmRealms []bool = []bool{true}
@@ -341,8 +341,12 @@ func TestMR(t *testing.T) {
 				if perf {
 					benchName += "-perf"
 				}
+				mrCfg, err := benchmarks.NewMRBenchConfig(mrJobDescriptionsDir, mrEP.benchName, mrEP.memReq)
+				if !assert.Nil(ts.t, err, "Reading MR job config: %v", err) {
+					return
+				}
 				numFullNodes := mrEP.numNodes - numProcqOnlyNodes
-				ts.RunStandardBenchmark(benchName, driverVM, GetMRCmdConstructor(mrEP.benchName, mrEP.memReq, prewarmRealm, measureTpt, perf), mrEP.numNodes, mrEP.numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost, useGVisor)
+				ts.RunStandardBenchmark(benchName, driverVM, GetMRCmdConstructor(mrCfg, prewarmRealm, measureTpt, perf), mrEP.numNodes, mrEP.numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost, useGVisor)
 			}
 		}
 	}
@@ -973,10 +977,9 @@ func TestBEMRMultiplexing(t *testing.T) {
 		return
 	}
 	db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
-	mrCfg := &benchmarks.MRBenchConfig{
-		App: "mr-wc-wiki4G-granular-bench.yml",
-		//		App:    "mr-wc-wiki2G-bench.yml",
-		MemReq: proc.Tmem(7000),
+	mrCfg, err := benchmarks.NewMRBenchConfig(mrJobDescriptionsDir, "mr-wc-wiki4G-granular-bench.json", proc.Tmem(3500))
+	if !assert.Nil(ts.t, err, "Reading MR job config: %v", err) {
+		return
 	}
 	ts.RunStandardBenchmark(benchName, driverVM, GetBEMRMultiplexingCmdConstructor(nRealms, sleepBetweenRealms, mrCfg), numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost, useGVisor)
 }
@@ -1286,9 +1289,9 @@ func TestLCBEHotelMRMultiplexing(t *testing.T) {
 		},
 		CosSimBenchCfg: nil,
 	}
-	mrCfg := &benchmarks.MRBenchConfig{
-		App:    "mr-grep-wiki2G-bench-s3.yml",
-		MemReq: proc.Tmem(7000),
+	mrCfg, err := benchmarks.NewMRBenchConfig(mrJobDescriptionsDir, "mr-grep-wiki2G-bench-s3.json", proc.Tmem(7000))
+	if !assert.Nil(ts.t, err, "Reading MR job config: %v", err) {
+		return
 	}
 	getLeaderCmd := GetLCBEHotelMRMultiplexingCmdConstructor(len(driverVMs), sleep, hotelCfg, mrCfg)
 	getFollowerCmd := GetHotelClientCmdConstructor("Search", false, len(driverVMs), sleep, hotelCfg)

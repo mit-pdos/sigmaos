@@ -1,0 +1,10 @@
+{
+  "app": "wc",
+  "nreduce": 15,
+  "binsz": 13631488,
+  "input": "name/s3/~local/9ps3/wiki-10G/",
+  "intermediate": "name/s3/~local/9ps3/mr-intermediate",
+  "output": "name/s3/~local/9ps3/mr-out",
+  "linesz": 2097152,
+  "wordsz": 400
+}

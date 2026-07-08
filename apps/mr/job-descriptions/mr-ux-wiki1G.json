@@ -1,0 +1,11 @@
+{
+  "app": "grep",
+  "nreduce": 1,
+  "binsz": 134217728,
+  "input": "name/ux/~local/wiki-1G/",
+  "intermediate": "name/ux/~local/mr-intermediate",
+  "output": "name/ux/~local/mr-out",
+  "linesz": 2097152,
+  "wordsz": 400,
+  "local": "/tmp/wiki-1G/"
+}

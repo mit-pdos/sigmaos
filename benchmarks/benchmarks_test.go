@@ -45,8 +45,6 @@ var N_TRIALS int
 var N_THREADS int
 var PREWARM_REALM bool
 var SKIPSTATS bool
-var MR_APP string
-var MR_MEM_REQ int
 var KV_AUTO string
 var N_KVD int
 var N_CLERK int
@@ -108,8 +106,6 @@ func init() {
 	flag.IntVar(&N_THREADS, "nthreads", 1, "Number of threads.")
 	flag.BoolVar(&PREWARM_REALM, "prewarm_realm", false, "Pre-warm realm, starting a BE and an LC uprocd on every machine in the cluster.")
 	flag.BoolVar(&SKIPSTATS, "skipstats", false, "Skip printing stats.")
-	flag.StringVar(&MR_APP, "mrapp", "mr-wc-wiki1.8G.yml", "Name of mr yaml file.")
-	flag.IntVar(&MR_MEM_REQ, "mr_mem_req", 4000, "Amount of memory (in MB) required for each MR task.")
 	flag.StringVar(&KV_AUTO, "kvauto", "manual", "KV auto-growing/shrinking.")
 	flag.IntVar(&N_KVD, "nkvd", 1, "Number of kvds.")
 	flag.IntVar(&N_CLERK, "nclerk", 1, "Number of clerks.")
@@ -512,7 +508,7 @@ func TestAppMR(t *testing.T) {
 	rs := benchmarks.NewResults(1, benchmarks.E2E)
 	p := newRealmPerf(mrts.GetRealm(REALM1))
 	defer p.Done()
-	jobs, apps := newNMRJobs(mrts.GetRealm(REALM1), p, 1, MR_APP, chooseMRJobRoot(mrts.GetRealm(REALM1)), proc.Tmem(MR_MEM_REQ))
+	jobs, apps := newNMRJobs(mrts.GetRealm(REALM1), p, 1, MRBenchConfig.App, MRBenchConfig.JobCfg, chooseMRJobRoot(mrts.GetRealm(REALM1)), MRBenchConfig.MemReq)
 	go func() {
 		for _, j := range jobs {
 			// Wait until ready
@@ -642,7 +638,7 @@ func TestRealmBalanceMRHotel(t *testing.T) {
 		benchmarks.WarmupRealm(mrts.GetRealm(REALM2), []string{"mr-coord", "mr-m-grep", "mr-r-grep", "mr-m-wc", "mr-r-wc"})
 	}
 	// Prep MR job
-	mrjobs, mrapps := newNMRJobs(mrts.GetRealm(REALM2), p1, 1, MRBenchConfig.App, chooseMRJobRoot(mrts.GetRealm(REALM2)), MRBenchConfig.MemReq)
+	mrjobs, mrapps := newNMRJobs(mrts.GetRealm(REALM2), p1, 1, MRBenchConfig.App, MRBenchConfig.JobCfg, chooseMRJobRoot(mrts.GetRealm(REALM2)), MRBenchConfig.MemReq)
 	// Prep Hotel job
 	pc2 := newRealmCostPerf(mrts.GetRealm(REALM1))
 	defer pc2.Done()
@@ -881,7 +877,7 @@ func TestRealmBalanceMRMR(t *testing.T) {
 		rses[i] = benchmarks.NewResults(1, benchmarks.E2E)
 		ps[i] = newRealmPerf(mrts.GetRealm(realms[i]))
 		defer ps[i].Done()
-		mrjob, mrapp := newNMRJobs(mrts.GetRealm(realms[i]), ps[i], 1, MRBenchConfig.App, chooseMRJobRoot(mrts.GetRealm(realms[i])), MRBenchConfig.MemReq)
+		mrjob, mrapp := newNMRJobs(mrts.GetRealm(realms[i]), ps[i], 1, MRBenchConfig.App, MRBenchConfig.JobCfg, chooseMRJobRoot(mrts.GetRealm(realms[i])), MRBenchConfig.MemReq)
 		mrjobs[i] = mrjob
 		mrapps[i] = mrapp
 	}

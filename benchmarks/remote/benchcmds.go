@@ -7,8 +7,12 @@ import (
 
 	"sigmaos/benchmarks"
 	db "sigmaos/debug"
-	"sigmaos/proc"
 )
+
+// Directory holding the MR job descriptions, relative to this package (job
+// descriptions are read from the local file system and passed to the
+// benchmark as part of the MR bench config).
+const mrJobDescriptionsDir = "../../apps/mr/job-descriptions"
 
 // Constructors for commands used to start benchmarks
 
@@ -243,13 +247,11 @@ func GetBEMRMultiplexingCmdConstructor(nRealm int, sleep time.Duration, mrCfg *b
 
 // Construct command string to run MR benchmark.
 //
-// - mrApp specifies which MR app to run (WC or Grep), as well as the input,
-// intermediate, and output data sources/destinations.
-//
-// - memReq specifies the amount of memory requested by each mapper/reducer.
-//
-// - If asyncRW is true, use the SigmaOS asynchronous reader/writer
-// implementation for mappers and reducers.
+// - mrCfg specifies which MR app to run (WC or Grep), as well as the job
+// description (input, intermediate, and output data sources/destinations)
+// and the amount of memory requested by each mapper/reducer. The job
+// description is read from the local file system and passed to the benchmark
+// as part of the config.
 //
 // - If prewarm is true, warm up the realm by predownloading binaries to the
 // SigmaOS nodes.
@@ -258,7 +260,7 @@ func GetBEMRMultiplexingCmdConstructor(nRealm int, sleep time.Duration, mrCfg *b
 // instantaneous throughput. This is an optional parameter because it adds
 // non-insignificant overhead to the MR computation, which unfairly penalizes
 // the SigmaOS implementation when comparing to Corral.
-func GetMRCmdConstructor(mrApp string, memReq proc.Tmem, prewarmRealm, measureTpt bool, perf bool) GetBenchCmdFn {
+func GetMRCmdConstructor(mrCfg *benchmarks.MRBenchConfig, prewarmRealm, measureTpt bool, perf bool) GetBenchCmdFn {
 	return func(bcfg *BenchConfig, ccfg *ClusterConfig) string {
 		const (
 			debugSelectors        string = "\"TEST;BENCH;MR_COORD\""
@@ -284,13 +286,16 @@ func GetMRCmdConstructor(mrApp string, memReq proc.Tmem, prewarmRealm, measureTp
 		if bcfg.Overlays {
 			overlays = "--overlays"
 		}
+		cfgJSON, err := mrCfg.Marshal()
+		if err != nil {
+			db.DFatalf("Err marshal mr config: %v", err)
+		}
 		return fmt.Sprintf("export SIGMADEBUG=%s; export SIGMAPERF=%s; go clean -testcache; "+
 			"aws s3 rm --profile sigmaos --recursive s3://9ps3/mr-intermediate > /dev/null; "+
 			"go test -v sigmaos/benchmarks -timeout 0 --no-shutdown %s %s --etcdIP %s --tag %s "+
 			"--run AppMR "+
 			"%s "+ // prewarm
-			"--mr_mem_req %s "+
-			"--mrapp %s "+
+			"--mr_bench_cfg='%s' "+
 			"> /tmp/bench.out 2>&1",
 			debugSelectors,
 			perfSelectors,
@@ -299,8 +304,7 @@ func GetMRCmdConstructor(mrApp string, memReq proc.Tmem, prewarmRealm, measureTp
 			ccfg.LeaderNodeIP,
 			bcfg.Tag,
 			prewarm,
-			strconv.Itoa(int(memReq)),
-			mrApp,
+			cfgJSON,
 		)
 	}
 }

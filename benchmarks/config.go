@@ -3,6 +3,7 @@ package benchmarks
 import (
 	"encoding/json"
 	"fmt"
+	"path/filepath"
 	"time"
 
 	cachegrpmgr "sigmaos/apps/cache/cachegrp/mgr"
@@ -13,6 +14,7 @@ import (
 	imgrec_wasm "sigmaos/apps/imgrec/wasm"
 	"sigmaos/apps/imgresize"
 	"sigmaos/apps/memcached"
+	"sigmaos/apps/mr"
 	"sigmaos/proc"
 )
 
@@ -104,12 +106,31 @@ func (cfg *HotelBenchConfig) Marshal() (string, error) {
 }
 
 type MRBenchConfig struct {
-	App    string    `json:"app"`     // Name of the MR job description yaml file
+	App    string    `json:"app"`     // Name of the MR job description json file
 	MemReq proc.Tmem `json:"mem_req"` // Amount of memory (in MB) required by each mapper/reducer
+	JobCfg *mr.Job   `json:"job_cfg"` // MR job description
+}
+
+// NewMRBenchConfig creates an MR benchmark config, reading the MR job
+// description named app from jobDir on the local file system.
+func NewMRBenchConfig(jobDir, app string, memReq proc.Tmem) (*MRBenchConfig, error) {
+	jobCfg, err := mr.ReadJobConfig(filepath.Join(jobDir, app))
+	if err != nil {
+		return nil, err
+	}
+	return &MRBenchConfig{
+		App:    app,
+		MemReq: memReq,
+		JobCfg: jobCfg,
+	}, nil
 }
 
 func (cfg *MRBenchConfig) String() string {
-	return fmt.Sprintf("&{ App:%v MemReq:%v }", cfg.App, cfg.MemReq)
+	return fmt.Sprintf("&{ App:%v MemReq:%v JobCfg:%v }", cfg.App, cfg.MemReq, cfg.JobCfg)
+}
+
+func (cfg *MRBenchConfig) GetJobConfig() *mr.Job {
+	return cfg.JobCfg
 }
 
 func (cfg *MRBenchConfig) Marshal() (string, error) {

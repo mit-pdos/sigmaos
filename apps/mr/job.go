@@ -2,6 +2,7 @@ package mr
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -18,7 +19,6 @@ import (
 	"sigmaos/sigmaclnt/fslib"
 	sp "sigmaos/sigmap"
 	"sigmaos/util/coordination/semaphore"
-	"sigmaos/util/yaml"
 
 	fttask_clnt "sigmaos/ft/task/clnt"
 	fttask_srv "sigmaos/ft/task/srv"
@@ -95,15 +95,15 @@ func mshardfile(dir string, r int) string {
 }
 
 type Job struct {
-	App          string `yalm:"app"`
-	Nreduce      int    `yalm:"nreduce"`
-	Binsz        int    `yalm:"binsz"`
-	Input        string `yalm:"input"`
-	Intermediate string `yalm:"intermediate"`
-	Output       string `yalm:"output"`
-	Linesz       int    `yalm:"linesz"`
-	Wordsz       int    `yalm:"wordsz"`
-	Local        string `yalm:"input"`
+	App          string `json:"app"`
+	Nreduce      int    `json:"nreduce"`
+	Binsz        int    `json:"binsz"`
+	Input        string `json:"input"`
+	Intermediate string `json:"intermediate"`
+	Output       string `json:"output"`
+	Linesz       int    `json:"linesz"`
+	Wordsz       int    `json:"wordsz"`
+	Local        string `json:"local,omitempty"`
 }
 
 // Wait until the job is done
@@ -123,9 +123,14 @@ func JobDone(fsl *fslib.FsLib, jobRoot, job string) {
 }
 
 func ReadJobConfig(app string) (*Job, error) {
-	job := &Job{}
-	if err := yaml.ReadYaml(app, job); err != nil {
+	b, err := os.ReadFile(app)
+	if err != nil {
 		db.DPrintf(db.ERROR, "ReadConfig err %v\n", err)
+		return nil, err
+	}
+	job := &Job{}
+	if err := json.Unmarshal(b, job); err != nil {
+		db.DPrintf(db.ERROR, "ReadConfig unmarshal err %v\n", err)
 		return nil, err
 	}
 	return job, nil

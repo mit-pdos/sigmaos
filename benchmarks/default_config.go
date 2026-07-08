@@ -12,6 +12,7 @@ import (
 	imgrec_wasm "sigmaos/apps/imgrec/wasm"
 	"sigmaos/apps/imgresize"
 	"sigmaos/apps/memcached"
+	"sigmaos/apps/mr"
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 )
@@ -118,8 +119,19 @@ var DefaultHotelBenchConfig = &HotelBenchConfig{
 }
 
 var DefaultMRBenchConfig = &MRBenchConfig{
-	App:    "mr-grep-wiki2G-bench-s3.yml",
+	App:    "mr-grep-wiki2G-bench-s3.json",
 	MemReq: proc.Tmem(7000),
+	// Default job description, mirroring mr-grep-wiki2G-bench-s3.json
+	JobCfg: &mr.Job{
+		App:          "grep",
+		Nreduce:      1,
+		Binsz:        136314880,
+		Input:        "name/s3/~local/9ps3/wiki-2G/",
+		Intermediate: "name/s3/~local/9ps3/mr-intermediate",
+		Output:       "name/s3/~local/9ps3/mr-out",
+		Linesz:       2097152,
+		Wordsz:       400,
+	},
 }
 
 var DefaultImgBenchConfig = &ImgBenchConfig{

@@ -30,12 +30,13 @@ type MRJobInstance struct {
 	rftid   fttask.FtTaskSvcId
 }
 
-func NewMRJobInstance(ts *test.RealmTstate, p *perf.Perf, app, jobRoot, jobname string, memreq proc.Tmem) *MRJobInstance {
+func NewMRJobInstance(ts *test.RealmTstate, p *perf.Perf, app string, jobCfg *mr.Job, jobRoot, jobname string, memreq proc.Tmem) *MRJobInstance {
 	ji := &MRJobInstance{}
 	ji.RealmTstate = ts
 	ji.p = p
 	ji.ready = make(chan bool)
 	ji.app = app
+	ji.job = jobCfg
 	ji.jobRoot = jobRoot
 	ji.jobname = jobname
 	ji.memreq = memreq
@@ -43,9 +44,7 @@ func NewMRJobInstance(ts *test.RealmTstate, p *perf.Perf, app, jobRoot, jobname 
 }
 
 func (ji *MRJobInstance) PrepareMRJob() {
-	jobf, err := mr.ReadJobConfig(filepath.Join("..", "apps/mr/job-descriptions", ji.app))
-	assert.Nil(ji.Ts.T, err, "Error ReadJobConfig: %v", err)
-	ji.job = jobf
+	assert.NotNil(ji.Ts.T, ji.job, "No MR job description supplied for app %v", ji.app)
 	db.DPrintf(db.TEST, "MR job description: %v", ji.job)
 	db.DPrintf(db.TEST, "Prepare MR FS %v", ji.jobname)
 	tasks, err := mr.InitCoordFS(ji.SigmaClnt, ji.jobRoot, ji.jobname, ji.job.Nreduce)

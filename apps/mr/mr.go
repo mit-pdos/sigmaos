@@ -1,12 +1,15 @@
 package mr
 
 import (
+	"bytes"
+	"compress/gzip"
+	"encoding/json"
 	"fmt"
 	"hash/fnv"
+	"io"
 	"strings"
 
 	"github.com/dustin/go-humanize"
-	"github.com/mitchellh/mapstructure"
 
 	"sigmaos/apps/mr/mr"
 	db "sigmaos/debug"
@@ -23,6 +26,66 @@ func Khash(key []byte) int {
 }
 
 type Bin []mr.Split
+
+// A bin can be very large (e.g., a reduce task's input bin contains one
+// split per mapper task, so with tens of thousands of mappers a single bin's
+// JSON representation grows to several MiB), which exceeds the sigmap
+// max message size (sp.MAXGETSET, 1MiB) as well as etcd's max request size
+// when bins are passed around via fttask RPCs. Since split JSON is highly
+// repetitive (splits in a bin share most of their file path), marshal bins
+// as gzip-compressed JSON instead (base64-encoded, since JSON cannot hold
+// raw bytes).
+func (b Bin) MarshalJSON() ([]byte, error) {
+	d, err := json.Marshal([]mr.Split(b))
+	if err != nil {
+		return nil, err
+	}
+	var buf bytes.Buffer
+	w := gzip.NewWriter(&buf)
+	if _, err := w.Write(d); err != nil {
+		return nil, err
+	}
+	if err := w.Close(); err != nil {
+		return nil, err
+	}
+	return json.Marshal(buf.Bytes())
+}
+
+func (b *Bin) UnmarshalJSON(data []byte) error {
+	if bytes.Equal(data, []byte("null")) {
+		*b = nil
+		return nil
+	}
+	// Also accept the uncompressed representation (e.g., for hand-written
+	// bins)
+	if len(data) > 0 && data[0] == '[' {
+		var splits []mr.Split
+		if err := json.Unmarshal(data, &splits); err != nil {
+			return err
+		}
+		*b = Bin(splits)
+		return nil
+	}
+	var zd []byte
+	if err := json.Unmarshal(data, &zd); err != nil {
+		return err
+	}
+	r, err := gzip.NewReader(bytes.NewReader(zd))
+	if err != nil {
+		return err
+	}
+	defer r.Close()
+	d, err := io.ReadAll(r)
+	if err != nil {
+		return err
+	}
+	var splits []mr.Split
+	if err := json.Unmarshal(d, &splits); err != nil {
+		return err
+	}
+	*b = Bin(splits)
+	return nil
+}
 
 func (b Bin) String() string {
 	if len(b) == 0 {
@@ -54,10 +117,20 @@ type Result struct {
 	KernelID string     `json:"KernelID"`
 }
 
+// Decode a Result from generically-unmarshaled JSON (e.g., a proc exit
+// status' data). Round-trip through JSON (rather than using something like
+// mapstructure) so that Bin's custom JSON encoding is applied when decoding
+// OutBin.
 func NewResult(data interface{}) (*Result, error) {
 	r := &Result{}
-	err := mapstructure.Decode(data, r)
-	return r, err
+	b, err := json.Marshal(data)
+	if err != nil {
+		return nil, err
+	}
+	if err := json.Unmarshal(b, r); err != nil {
+		return nil, err
+	}
+	return r, nil
 }
 
 // Each bin has a slice of splits.  Assign splits of files to a bin

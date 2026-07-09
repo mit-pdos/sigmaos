@@ -1,8 +1,8 @@
 {
   "app": "wc",
   "nreduce": 15,
-  "binsz": 851968,
-  "splitsz": 10485760,
+  "binsz": 212992,
+  "splitsz": 212992,
   "input": "name/s3/~local/9ps3/wiki-4G/",
   "intermediate": "name/ux/~local/mr-intermediate",
   "output": "name/s3/~local/9ps3/mr-out",

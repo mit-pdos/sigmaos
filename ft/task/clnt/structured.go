@@ -4,6 +4,8 @@ package clnt
 import (
 	"bytes"
 	"encoding/json"
+
+	db "sigmaos/debug"
 	"sigmaos/ft/task"
 	"sigmaos/sigmaclnt/fslib"
 )
@@ -17,14 +19,20 @@ func Encode[T any](data T) ([]byte, error) {
 }
 
 const (
-	maxBatchSize     = 900 * 1024 // 900 KB, to stay safely below the gRPC (2MB) and etcd (1MB) message size limits
+	maxBatchSize     = 900 * 1024 // 900 KB, to stay safely below the sigmap (sp.MAXGETSET, 1MiB) and etcd (1.5MiB default) message size limits
 	taskSizeOverhead = 64         // Proto overhead estimate
 )
 
-// Submitting or editing many tasks in a single RPC may exceed the 2MB limit
-// per gRPC message and/or the 1MB limit for etcd values. BatchTasks splits
-// tasks into batches of at most ~900KB of (estimated) marshaled task data,
-// and applies op to each batch.
+// Submitting or editing many tasks in a single RPC may exceed the sigmap max
+// message size (sp.MAXGETSET, 1MiB) and/or etcd's max request size (1.5MiB
+// by default). BatchTasks splits tasks into batches of at most ~900KB of
+// (estimated) marshaled task data, and applies op to each batch.
+//
+// Note that batching cannot subdivide a single task: a task whose marshaled
+// data alone exceeds the max batch size is sent in its own batch, and the
+// resulting RPC will likely fail with a "too large" error. Task data must be
+// kept small enough for a task to fit in one RPC (e.g., MR compresses its
+// task bins; see mr.Bin.MarshalJSON).
 func BatchTasks[Data any](tasks []*Task[Data], op func([]*Task[Data]) error) error {
 	batch := make([]*Task[Data], 0, len(tasks))
 	batchSize := 0
@@ -34,6 +42,9 @@ func BatchTasks[Data any](tasks []*Task[Data], op func([]*Task[Data]) error) err
 			return err
 		}
 		estSize := len(b) + taskSizeOverhead
+		if estSize > maxBatchSize {
+			db.DPrintf(db.ALWAYS, "BatchTasks: single task %v marshaled size %d exceeds max batch size %d; sending it in its own batch, but the RPC may fail", t.Id, estSize, maxBatchSize)
+		}
 		if batchSize+estSize > maxBatchSize && len(batch) > 0 {
 			if err := op(batch); err != nil {
 				return err

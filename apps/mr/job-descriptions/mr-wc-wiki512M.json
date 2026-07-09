@@ -2,6 +2,7 @@
   "app": "wc",
   "nreduce": 3,
   "binsz": 134217728,
+  "splitsz": 10485760,
   "input": "name/s3/~local/9ps3/wiki-512M/",
   "intermediate": "name/ux/~local/mr-intermediate",
   "output": "name/s3/~local/9ps3/mr-out",

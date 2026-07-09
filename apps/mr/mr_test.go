@@ -207,7 +207,6 @@ func TestSeqWc(t *testing.T) {
 }
 
 func TestSplits(t *testing.T) {
-	const SPLITSZ = 10 * sp.MBYTE
 	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
 		return
@@ -216,7 +215,7 @@ func TestSplits(t *testing.T) {
 
 	job, err1 = mr.ReadJobConfig(filepath.Join("job-descriptions", app))
 	assert.Nil(t, err1, "Error ReadJobConfig: %v", err1)
-	bins, err := mr.NewBins(mrts.GetRealm(test.REALM1).FsLib, job.Input, true, sp.Tlength(job.Binsz), SPLITSZ)
+	bins, err := mr.NewBins(mrts.GetRealm(test.REALM1).FsLib, job.Input, true, sp.Tlength(job.Binsz), sp.Tlength(job.Splitsz))
 	assert.Nil(t, err)
 	sum := sp.Tlength(0)
 	for _, b := range bins {

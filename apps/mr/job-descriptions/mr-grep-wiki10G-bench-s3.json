@@ -2,6 +2,7 @@
   "app": "grep",
   "nreduce": 15,
   "binsz": 136314880,
+  "splitsz": 10485760,
   "input": "name/s3/~local/9ps3/wiki-10G/",
   "intermediate": "name/s3/~local/9ps3/mr-intermediate",
   "output": "name/s3/~local/9ps3/mr-out",

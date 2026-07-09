@@ -126,6 +126,7 @@ var DefaultMRBenchConfig = &MRBenchConfig{
 		App:          "grep",
 		Nreduce:      1,
 		Binsz:        136314880,
+		Splitsz:      mr.SPLITSZ,
 		Input:        "name/s3/~local/9ps3/wiki-2G/",
 		Intermediate: "name/s3/~local/9ps3/mr-intermediate",
 		Output:       "name/s3/~local/9ps3/mr-out",

@@ -98,6 +98,7 @@ type Job struct {
 	App          string `json:"app"`
 	Nreduce      int    `json:"nreduce"`
 	Binsz        int    `json:"binsz"`
+	Splitsz      int    `json:"splitsz"`
 	Input        string `json:"input"`
 	Intermediate string `json:"intermediate"`
 	Output       string `json:"output"`
@@ -136,6 +137,9 @@ func ReadJobConfig(app string) (*Job, error) {
 	if err := json.Unmarshal(b, job); err != nil {
 		db.DPrintf(db.ERROR, "ReadConfig unmarshal err %v\n", err)
 		return nil, err
+	}
+	if job.Splitsz == 0 {
+		return nil, fmt.Errorf("Err job %v has no splitsz", app)
 	}
 	return job, nil
 }
@@ -302,6 +306,9 @@ func PrepareJob(fsl *fslib.FsLib, ts *Tasks, jobRoot, jobName string, j *Job) (i
 	if job.Output == "" || job.Intermediate == "" {
 		return 0, fmt.Errorf("Err job output (\"%v\") or intermediate (\"%v\") not supplied", job.Output, job.Intermediate)
 	}
+	if job.Splitsz == 0 {
+		return 0, fmt.Errorf("Err job splitsz not supplied")
+	}
 	fsl.MkDir(job.Output, 0777)
 	outDir := JobOut(job.Output, jobName)
 	if err := fsl.MkDir(outDir, 0777); err != nil {
@@ -330,9 +337,7 @@ func PrepareJob(fsl *fslib.FsLib, ts *Tasks, jobRoot, jobName string, j *Job) (i
 		return 0, err
 	}
 
-	splitsz := sp.Tlength(SPLITSZ)
-
-	bins, err := NewBins(fsl, job.Input, true, sp.Tlength(job.Binsz), splitsz)
+	bins, err := NewBins(fsl, job.Input, true, sp.Tlength(job.Binsz), sp.Tlength(job.Splitsz))
 	if err != nil || len(bins) == 0 {
 		return len(bins), err
 	}

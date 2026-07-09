@@ -27,18 +27,26 @@ func Khash(key []byte) int {
 
 type Bin []mr.Split
 
-// A bin can be very large (e.g., a reduce task's input bin contains one
-// split per mapper task, so with tens of thousands of mappers a single bin's
-// JSON representation grows to several MiB), which exceeds the sigmap
-// max message size (sp.MAXGETSET, 1MiB) as well as etcd's max request size
-// when bins are passed around via fttask RPCs. Since split JSON is highly
-// repetitive (splits in a bin share most of their file path), marshal bins
-// as gzip-compressed JSON instead (base64-encoded, since JSON cannot hold
-// raw bytes).
+// Threshold (1.5MiB) above which a bin's JSON representation is compressed
+// when marshaled. Compression is only needed for very large bins (e.g., a
+// reduce task's input bin, which contains one split per mapper task, so with
+// tens of thousands of mappers its JSON representation grows to several
+// MiB), which would otherwise exceed etcd's max request size (1.5MiB by
+// default) when passed around via fttask RPCs. Smaller bins are left as
+// plain (human-readable) JSON.
+const COMPRESS_BINSZ = 1536 * sp.KBYTE
+
+// Marshal a bin as a plain JSON array of splits if it is small, and as
+// gzip-compressed JSON (base64-encoded, since JSON cannot hold raw bytes) if
+// it is large. Compression is effective because split JSON is highly
+// repetitive: splits in a bin share most of their file path.
 func (b Bin) MarshalJSON() ([]byte, error) {
 	d, err := json.Marshal([]mr.Split(b))
 	if err != nil {
 		return nil, err
+	}
+	if len(d) <= COMPRESS_BINSZ {
+		return d, nil
 	}
 	var buf bytes.Buffer
 	w := gzip.NewWriter(&buf)
@@ -56,8 +64,7 @@ func (b *Bin) UnmarshalJSON(data []byte) error {
 		*b = nil
 		return nil
 	}
-	// Also accept the uncompressed representation (e.g., for hand-written
-	// bins)
+	// Plain (uncompressed) representation
 	if len(data) > 0 && data[0] == '[' {
 		var splits []mr.Split
 		if err := json.Unmarshal(data, &splits); err != nil {

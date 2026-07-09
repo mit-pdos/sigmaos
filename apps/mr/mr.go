@@ -27,14 +27,15 @@ func Khash(key []byte) int {
 
 type Bin []mr.Split
 
-// Threshold (1.5MiB) above which a bin's JSON representation is compressed
-// when marshaled. Compression is only needed for very large bins (e.g., a
-// reduce task's input bin, which contains one split per mapper task, so with
-// tens of thousands of mappers its JSON representation grows to several
-// MiB), which would otherwise exceed etcd's max request size (1.5MiB by
-// default) when passed around via fttask RPCs. Smaller bins are left as
-// plain (human-readable) JSON.
-const COMPRESS_BINSZ = 1536 * sp.KBYTE
+// Threshold (the sigmap max message size) above which a bin's JSON
+// representation is compressed when marshaled. Compression is only needed
+// for very large bins (e.g., a reduce task's input bin, which contains one
+// split per mapper task, so with tens of thousands of mappers its JSON
+// representation grows to several MiB), which would otherwise exceed the
+// sigmap max message size (and etcd's max request size, 1.5MiB by default)
+// when passed around via fttask RPCs. Smaller bins are left as plain
+// (human-readable) JSON.
+const COMPRESS_BINSZ = int(sp.MAXGETSET)
 
 // Marshal a bin as a plain JSON array of splits if it is small, and as
 // gzip-compressed JSON (base64-encoded, since JSON cannot hold raw bytes) if

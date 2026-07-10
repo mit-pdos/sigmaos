@@ -174,7 +174,7 @@ func NewBins(fsl *fslib.FsLib, inputDir string, swapLocalForAny bool, maxbinsz, 
 			bin = append(bin, split)
 			binsz += n
 
-			if binsz+uint64(splitsz) > uint64(maxbinsz) { // bin full?
+			if binsz+uint64(splitsz) >= uint64(maxbinsz) { // bin full?
 				bins = append(bins, bin)
 				bin = Bin{}
 				binsz = uint64(0)

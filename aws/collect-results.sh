@@ -1,11 +1,12 @@
 #!/bin/bash
 
 usage() {
-  echo "Usage: $0 --vpc VPC [--perfdir PERFDIR] [--parallel]" 1>&2
+  echo "Usage: $0 --vpc VPC [--perfdir PERFDIR] [--parallel] [--logs]" 1>&2
 }
 
 VPC=""
 PARALLEL=""
+LOGS_ONLY=""
 PERF_DIR=../benchmarks/results/$(date +%s)
 while [[ $# -gt 0 ]]; do
   key="$1"
@@ -23,6 +24,10 @@ while [[ $# -gt 0 ]]; do
   --parallel)
     shift
     PARALLEL="--parallel"
+    ;;
+  --logs)
+    shift
+    LOGS_ONLY="true"
     ;;
   -help)
     usage
@@ -48,7 +53,9 @@ vm_id_a=($vm_ids)
 MAIN="${vma[0]}"
 
 LOG_DIR=/tmp/sigmaos-node-logs
-mkdir -p $PERF_DIR
+if [ -z "$LOGS_ONLY" ]; then
+  mkdir -p $PERF_DIR
+fi
 # Remove old logs
 rm $LOG_DIR/*.out
 mkdir -p $LOG_DIR
@@ -75,24 +82,29 @@ for vm in $vms; do
   idx=$((idx+1)) 
   if [ -z "$PARALLEL" ]; then
     eval "$cmd1"
-    eval "$cmd2"
-    eval "$cmd3"
-    eval "$cmd4"
-    eval "$cmd5"
-  else
-    (
-      eval "$cmd1"
+    if [ -z "$LOGS_ONLY" ]; then
       eval "$cmd2"
       eval "$cmd3"
       eval "$cmd4"
       eval "$cmd5"
+    fi
+  else
+    (
+      eval "$cmd1"
+      if [ -z "$LOGS_ONLY" ]; then
+        eval "$cmd2"
+        eval "$cmd3"
+        eval "$cmd4"
+        eval "$cmd5"
+      fi
     ) &
   fi
 done
 wait
 
-cp -r $LOG_DIR $PERF_DIR/
-
 echo -e "\n\n===================="
-echo "Perf results are in $PERF_DIR"
+if [ -z "$LOGS_ONLY" ]; then
+  cp -r $LOG_DIR $PERF_DIR/
+  echo "Perf results are in $PERF_DIR"
+fi
 echo "VM logs are in $LOG_DIR"

@@ -206,6 +206,114 @@ func TestSeqWc(t *testing.T) {
 	p.Done()
 }
 
+// TestSplitBoundaryCorrectness checks that running the mapper's chunked
+// split-reading machinery over a file cut into many splits emits exactly the
+// same multiset of words as scanning the file sequentially. It drives the
+// real chunkreader.DoChunk with the same read windows that Mapper.doSplit
+// (mapper.go:225-275) and ParallelFileReader.getChunk
+// (sigmaclnt/fslib/file.go:160-185) produce, but over a local file, so it
+// runs without a sigmaos deployment.
+//
+// This test currently FAILS: words at split boundaries are double-counted,
+// and words at chunk-quota boundaries are lost or emitted as fragments. See
+// claude-slop/MR_SPLIT_BUG.md.
+func TestSplitBoundaryCorrectness(t *testing.T) {
+	const (
+		INPUT   = "../../input/" + "pg-dorian_gray.txt"
+		SPLITSZ = 8192 // small, to force many split boundaries
+		LINESZ  = 4096 // must exceed the longest input line (73 bytes)
+		WORDSZ  = 20
+	)
+
+	data, err := os.ReadFile(INPUT)
+	assert.Nil(t, err)
+
+	p, err := perf.NewPerf(proc.NewTestProcEnv(sp.ROOTREALM, nil, nil, sp.NO_IP, sp.NO_IP, "", false, false), perf.SEQWC)
+	assert.Nil(t, err)
+	defer p.Done()
+
+	// Ground truth: sequential word count over the whole file, using the
+	// same word scanner as the mappers (as in TestSeqWc).
+	truth := make(Tdata)
+	sbc := mrscanner.NewScanByteCounter(p)
+	scanner := bufio.NewScanner(bytes.NewReader(data))
+	for scanner.Scan() {
+		if l := scanner.Text(); len(l) > 0 {
+			_, err := wcline(0, l, truth, sbc)
+			assert.Nil(t, err)
+		}
+	}
+	assert.Nil(t, scanner.Err())
+
+	// Mapper side: cut the file into SPLITSZ-sized splits and process each
+	// split with DoChunk, feeding it the exact window sequence doSplit +
+	// ParallelFileReader produce.
+	got := make(Tdata)
+	mapf := func(file string, scan *bufio.Scanner, emit api.EmitT) error {
+		for scan.Scan() {
+			got[scan.Text()] += 1
+		}
+		return scan.Err()
+	}
+	for start := sp.Toffset(0); start < sp.Toffset(len(data)); start += SPLITSZ {
+		length := sp.Tlength(SPLITSZ)
+		if rest := sp.Tlength(len(data)) - sp.Tlength(start); rest < length {
+			length = rest
+		}
+		s := &api.Split{File: INPUT, Offset: start, Length: length}
+		ckr := chunkreader.NewChunkReader(LINESZ, WORDSZ, wc.Reduce, p)
+		// Replicate Mapper.doSplit (mapper.go:231-242): start one byte
+		// early to detect a leading partial line, and extend the read
+		// region LINESZ past the split so the straddling last line can
+		// be completed.
+		off := s.Offset
+		if off != 0 {
+			off--
+		}
+		end := off + sp.Toffset(s.Length) + LINESZ
+		if end > sp.Toffset(len(data)) {
+			end = sp.Toffset(len(data))
+		}
+		// Replicate ParallelFileReader.getChunk (fslib/file.go:160-175):
+		// windows of LINESZ+WORDSZ bytes, advancing by LINESZ.
+		for o := off; o < end; o += LINESZ {
+			e := o + LINESZ + WORDSZ
+			if e > end {
+				e = end
+			}
+			_, err := ckr.DoChunk(bytes.NewReader(data[o:e]), o, s, mapf)
+			assert.Nil(t, err)
+		}
+	}
+
+	// Every word must be emitted exactly as many times as it appears.
+	ndup, nmissing, nfrag := 0, 0, 0
+	for w, n := range got {
+		if truth[w] == 0 {
+			nfrag++
+			if nfrag <= 10 {
+				t.Logf("fragment word (not in input): %q x%d", w, n)
+			}
+		} else if n > truth[w] {
+			ndup++
+			if ndup <= 10 {
+				t.Logf("overcounted word: %q got %d want %d", w, n, truth[w])
+			}
+		}
+	}
+	for w, n := range truth {
+		if got[w] < n {
+			nmissing++
+			if nmissing <= 10 {
+				t.Logf("undercounted word: %q got %d want %d", w, got[w], n)
+			}
+		}
+	}
+	assert.Equal(t, 0, ndup, "words counted more often than they appear in the input")
+	assert.Equal(t, 0, nmissing, "words counted less often than they appear in the input")
+	assert.Equal(t, 0, nfrag, "fragment words emitted that don't exist in the input")
+}
+
 func TestSplits(t *testing.T) {
 	mrts, err1 := test.NewMultiRealmTstate(t, []sp.Trealm{test.REALM1})
 	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {

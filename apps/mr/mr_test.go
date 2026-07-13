@@ -66,7 +66,7 @@ var mapEv *crash.TeventMap
 var reduceEv *crash.TeventMap
 
 func init() {
-	flag.StringVar(&app, "app", "mr-wc-wiki2G-bench.json", "application")
+	flag.StringVar(&app, "app", "mr-wc.json", "application")
 	flag.IntVar(&nmap, "nmap", 1, "number of mapper threads")
 	flag.DurationVar(&timeout, "mr-timeout", 0, "timeout")
 

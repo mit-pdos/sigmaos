@@ -1,7 +1,6 @@
 package scanner
 
 import (
-	"io"
 	"unicode"
 	"unicode/utf8"
 
@@ -28,6 +27,10 @@ func (sbc *ScanByteCounter) BytesRead() int {
 	return sbc.bytesRead
 }
 
+// ScanSeperator returns the index just after the first separator in data.
+// If data contains no separator, the separator is the line terminator that
+// bufio.Scanner stripped from the token, so the index just after it is
+// len(data) (i.e., the whole token is "before the separator").
 func ScanSeperator(data []byte) (int, error) {
 	start := 0
 	for width := 0; start < len(data); start += width {
@@ -37,7 +40,7 @@ func ScanSeperator(data []byte) (int, error) {
 			return start + width, nil // index of first char after separator
 		}
 	}
-	return 0, io.EOF
+	return len(data), nil
 }
 
 // Scan for words for mappers. Implement grep's definition of a word

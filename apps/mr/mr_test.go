@@ -210,20 +210,14 @@ func TestSeqWc(t *testing.T) {
 // split-reading machinery over a file cut into many splits emits exactly the
 // same multiset of words as scanning the file sequentially. It drives the
 // real chunkreader.DoChunk with the same read windows that Mapper.doSplit
-// (mapper.go:225-275) and ParallelFileReader.getChunk
-// (sigmaclnt/fslib/file.go:160-185) produce, but over a local file, so it
-// runs without a sigmaos deployment.
+// and ParallelFileReader.getChunk/tailChunkReader produce, but over a local
+// file, so it runs without a sigmaos deployment.
 //
-// This test currently FAILS: words at split boundaries are double-counted,
-// and words at chunk-quota boundaries are lost or emitted as fragments. See
-// claude-slop/MR_SPLIT_BUG.md.
+// This test failed before the split-boundary fixes (double-counted words at
+// split boundaries, lost words and fragments at chunk-quota boundaries); it
+// now guards against regressions. See claude-slop/MR_SPLIT_BUG.md.
 func TestSplitBoundaryCorrectness(t *testing.T) {
-	const (
-		INPUT   = "../../input/" + "pg-dorian_gray.txt"
-		SPLITSZ = 8192 // small, to force many split boundaries
-		LINESZ  = 4096 // must exceed the longest input line (73 bytes)
-		WORDSZ  = 20
-	)
+	const INPUT = "../../input/" + "pg-dorian_gray.txt"
 
 	data, err := os.ReadFile(INPUT)
 	assert.Nil(t, err)
@@ -245,73 +239,98 @@ func TestSplitBoundaryCorrectness(t *testing.T) {
 	}
 	assert.Nil(t, scanner.Err())
 
-	// Mapper side: cut the file into SPLITSZ-sized splits and process each
-	// split with DoChunk, feeding it the exact window sequence doSplit +
-	// ParallelFileReader produce.
-	got := make(Tdata)
-	mapf := func(file string, scan *bufio.Scanner, emit api.EmitT) error {
-		for scan.Scan() {
-			got[scan.Text()] += 1
-		}
-		return scan.Err()
-	}
-	for start := sp.Toffset(0); start < sp.Toffset(len(data)); start += SPLITSZ {
-		length := sp.Tlength(SPLITSZ)
-		if rest := sp.Tlength(len(data)) - sp.Tlength(start); rest < length {
-			length = rest
-		}
-		s := &api.Split{File: INPUT, Offset: start, Length: length}
-		ckr := chunkreader.NewChunkReader(LINESZ, WORDSZ, wc.Reduce, p)
-		// Replicate Mapper.doSplit (mapper.go:231-242): start one byte
-		// early to detect a leading partial line, and extend the read
-		// region LINESZ past the split so the straddling last line can
-		// be completed.
-		off := s.Offset
-		if off != 0 {
-			off--
-		}
-		end := off + sp.Toffset(s.Length) + LINESZ
-		if end > sp.Toffset(len(data)) {
-			end = sp.Toffset(len(data))
-		}
-		// Replicate ParallelFileReader.getChunk (fslib/file.go:160-175):
-		// windows of LINESZ+WORDSZ bytes, advancing by LINESZ.
-		for o := off; o < end; o += LINESZ {
-			e := o + LINESZ + WORDSZ
-			if e > end {
-				e = end
+	// splitsz forces many split boundaries; linesz (the chunk window size
+	// and tail-slack cap) must exceed the longest input line (73 bytes).
+	// linesz > splitsz exercises the single-window-per-split (fine-grained
+	// mapper) shape; odd sizes exercise unaligned boundaries.
+	for _, cfg := range []struct{ splitsz, linesz, wordsz int }{
+		{8192, 4096, 20},
+		{16384, 4096, 20},
+		{4096, 1024, 20},
+		{10000, 512, 30},
+		{16384, 65536, 20}, // one window per split
+		{65536, 8192, 10},
+	} {
+		got := make(Tdata)
+		mapf := func(file string, scan *bufio.Scanner, emit api.EmitT) error {
+			for scan.Scan() {
+				got[scan.Text()] += 1
 			}
-			_, err := ckr.DoChunk(bytes.NewReader(data[o:e]), o, s, mapf)
-			assert.Nil(t, err)
+			return scan.Err()
 		}
-	}
+		splitsz, linesz, wordsz := sp.Toffset(cfg.splitsz), sp.Toffset(cfg.linesz), sp.Toffset(cfg.wordsz)
+		for start := sp.Toffset(0); start < sp.Toffset(len(data)); start += splitsz {
+			length := sp.Tlength(splitsz)
+			if rest := sp.Tlength(len(data)) - sp.Tlength(start); rest < length {
+				length = rest
+			}
+			s := &api.Split{File: INPUT, Offset: start, Length: length}
+			ckr := chunkreader.NewChunkReader(cfg.linesz, cfg.wordsz, wc.Reduce, p)
+			// Replicate Mapper.doSplit: start one byte early to detect a
+			// leading partial line; chunks are generated within the split
+			// only, and the final chunk reads past the split end through
+			// the first newline (capped at linesz) so the straddling line
+			// can be completed.
+			off := s.Offset
+			if off != 0 {
+				off--
+			}
+			splitEnd := start + sp.Toffset(length)
+			readEnd := splitEnd + linesz
+			if readEnd > sp.Toffset(len(data)) {
+				readEnd = sp.Toffset(len(data))
+			}
+			// Replicate ParallelFileReader.getChunk/tailChunkReader:
+			// windows of linesz+wordsz bytes advancing by linesz; the
+			// final window contains the split's last byte and its reader
+			// delivers up through the first newline at or after
+			// splitEnd-1.
+			for o := off; o < splitEnd; o += linesz {
+				final := o+linesz >= splitEnd
+				var e sp.Toffset
+				if final {
+					e = readEnd
+					if idx := bytes.IndexByte(data[splitEnd-1:readEnd], '\n'); idx >= 0 {
+						e = splitEnd - 1 + sp.Toffset(idx) + 1
+					}
+				} else {
+					e = o + linesz + wordsz
+					if e > readEnd {
+						e = readEnd
+					}
+				}
+				_, err := ckr.DoChunk(bytes.NewReader(data[o:e]), o, final, s, mapf)
+				assert.Nil(t, err)
+			}
+		}
 
-	// Every word must be emitted exactly as many times as it appears.
-	ndup, nmissing, nfrag := 0, 0, 0
-	for w, n := range got {
-		if truth[w] == 0 {
-			nfrag++
-			if nfrag <= 10 {
-				t.Logf("fragment word (not in input): %q x%d", w, n)
-			}
-		} else if n > truth[w] {
-			ndup++
-			if ndup <= 10 {
-				t.Logf("overcounted word: %q got %d want %d", w, n, truth[w])
-			}
-		}
-	}
-	for w, n := range truth {
-		if got[w] < n {
-			nmissing++
-			if nmissing <= 10 {
-				t.Logf("undercounted word: %q got %d want %d", w, got[w], n)
+		// Every word must be emitted exactly as many times as it appears.
+		ndup, nmissing, nfrag := 0, 0, 0
+		for w, n := range got {
+			if truth[w] == 0 {
+				nfrag++
+				if nfrag <= 10 {
+					t.Logf("%v: fragment word (not in input): %q x%d", cfg, w, n)
+				}
+			} else if n > truth[w] {
+				ndup++
+				if ndup <= 10 {
+					t.Logf("%v: overcounted word: %q got %d want %d", cfg, w, n, truth[w])
+				}
 			}
 		}
+		for w, n := range truth {
+			if got[w] < n {
+				nmissing++
+				if nmissing <= 10 {
+					t.Logf("%v: undercounted word: %q got %d want %d", cfg, w, got[w], n)
+				}
+			}
+		}
+		assert.Equal(t, 0, ndup, "%v: words counted more often than they appear in the input", cfg)
+		assert.Equal(t, 0, nmissing, "%v: words counted less often than they appear in the input", cfg)
+		assert.Equal(t, 0, nfrag, "%v: fragment words emitted that don't exist in the input", cfg)
 	}
-	assert.Equal(t, 0, ndup, "words counted more often than they appear in the input")
-	assert.Equal(t, 0, nmissing, "words counted less often than they appear in the input")
-	assert.Equal(t, 0, nfrag, "fragment words emitted that don't exist in the input")
 }
 
 func TestSplits(t *testing.T) {

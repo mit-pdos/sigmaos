@@ -2,6 +2,7 @@ package fslib
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"io"
 	"sync"
@@ -133,9 +134,10 @@ func (fl *FsLib) OpenBufReader(pn sp.Tsigmapath) (*BufFileReader, error) {
 }
 
 type ParallelFileReader struct {
-	fd  int
-	sof sos.FileAPI
-	end sp.Toffset
+	fd    int
+	sof   sos.FileAPI
+	end   sp.Toffset // window generation stops here (e.g., the split end)
+	slack sp.Toffset // bytes past end the final chunk may read to finish its last line
 
 	mu  sync.Mutex
 	err error
@@ -143,49 +145,172 @@ type ParallelFileReader struct {
 }
 
 func (fl *FsLib) OpenParallelFileReader(pn sp.Tsigmapath, offset sp.Toffset, l sp.Tlength) (*ParallelFileReader, error) {
+	return fl.OpenParallelFileReaderSlack(pn, offset, l, 0)
+}
+
+// OpenParallelFileReaderSlack opens a parallel reader for the region
+// [offset, offset+l). Chunks are only generated within the region, but the
+// final chunk may read up to slack extra bytes past the region end — and
+// only up through the first newline at or after the region's last byte — so
+// that a line straddling the region end can be completed (see
+// tailChunkReader).
+func (fl *FsLib) OpenParallelFileReaderSlack(pn sp.Tsigmapath, offset sp.Toffset, l sp.Tlength, slack sp.Tlength) (*ParallelFileReader, error) {
 	fd, err := fl.Open(pn, sp.OREAD)
 	if err != nil {
 		return nil, err
 	}
 	r := &ParallelFileReader{
-		fd:  fd,
-		sof: fl.FileAPI,
-		end: offset + sp.Toffset(l),
-		off: offset,
+		fd:    fd,
+		sof:   fl.FileAPI,
+		end:   offset + sp.Toffset(l),
+		slack: sp.Toffset(slack),
+		off:   offset,
 	}
 	return r, nil
 }
 
 // caller can use offinc to arrange for some overlap between two chunks
-func (pfr *ParallelFileReader) getChunk(sz, offinc int) (sp.Toffset, sp.Toffset, error) {
+func (pfr *ParallelFileReader) getChunk(sz, offinc int) (sp.Toffset, sp.Toffset, bool, error) {
 	pfr.mu.Lock()
 	defer pfr.mu.Unlock()
 
 	if pfr.off >= pfr.end {
-		return pfr.end, pfr.end, io.EOF
+		return pfr.end, pfr.end, false, io.EOF
 	}
 
 	off := pfr.off
 	e := off + sp.Toffset(sz)
-	if pfr.end < e {
-		e = pfr.end
+	if re := pfr.end + pfr.slack; re < e {
+		e = re
 	}
+	// The final chunk is the one that contains the region's last byte
+	final := off+sp.Toffset(offinc) >= pfr.end
 	pfr.off += sp.Toffset(offinc)
-	return off, e, nil
+	return off, e, final, nil
 }
 
-func (pfr *ParallelFileReader) GetChunkReader(sz, offinc int) (io.ReadCloser, sp.Toffset, error) {
-	o, e, err := pfr.getChunk(sz, offinc)
+// GetChunkReader returns a reader for the next chunk, the chunk's offset,
+// and whether this is the region's final chunk. With a non-zero slack, the
+// final chunk's reader extends past the region end through the first newline
+// (lazily, in doubling probe reads), so the caller can finish the region's
+// last line.
+func (pfr *ParallelFileReader) GetChunkReader(sz, offinc int) (io.ReadCloser, sp.Toffset, bool, error) {
+	o, e, final, err := pfr.getChunk(sz, offinc)
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, false, err
 	}
-	db.DPrintf(db.PREADER, "GetChunkReader: %v %v", o, e)
+	db.DPrintf(db.PREADER, "GetChunkReader: %v %v final %t", o, e, final)
+	if final && pfr.slack > 0 {
+		r := newTailChunkReader(func(off sp.Toffset, sz sp.Tsize) (io.ReadCloser, error) {
+			return pfr.sof.PreadRdr(pfr.fd, off, sz)
+		}, o, pfr.end, pfr.end+pfr.slack)
+		return r, o, true, nil
+	}
 	r, err := pfr.sof.PreadRdr(pfr.fd, o, sp.Tsize(e-o))
-	return r, o, err
+	return r, o, final, err
 }
 
 func (pfr *ParallelFileReader) Close() error {
 	return pfr.sof.CloseFd(pfr.fd)
+}
+
+// Initial size of a tail probe read past the region end; doubles on each
+// subsequent probe.
+const tailProbeSz = 4 * sp.KBYTE
+
+// tailChunkReader reads the final chunk of a ParallelFileReader region: the
+// bytes [off, end), plus — past end — only up through the first newline at
+// or after end-1 (completing the line that contains the region's last byte),
+// fetched lazily in doubling probes and hard-capped at max. The first fetch
+// folds a small probe into the chunk read so the common case (the straddling
+// line ends within tailProbeSz) costs a single underlying read.
+type tailChunkReader struct {
+	pread func(sp.Toffset, sp.Tsize) (io.ReadCloser, error)
+	cur   io.ReadCloser
+	pos   sp.Toffset // absolute offset of the next byte to deliver
+	end   sp.Toffset // region end
+	max   sp.Toffset // end+slack: hard cap on the tail
+	probe sp.Toffset // next probe size
+	segn  int        // bytes delivered from the current segment
+	done  bool       // delivered the terminating newline, or hit file EOF
+}
+
+func newTailChunkReader(pread func(sp.Toffset, sp.Tsize) (io.ReadCloser, error), off, end, max sp.Toffset) *tailChunkReader {
+	probe := sp.Toffset(tailProbeSz)
+	if s := max - end; s < probe {
+		probe = s
+	}
+	return &tailChunkReader{
+		pread: pread,
+		pos:   off,
+		end:   end,
+		max:   max,
+		probe: probe,
+	}
+}
+
+func (tr *tailChunkReader) Read(p []byte) (int, error) {
+	for {
+		if tr.cur == nil {
+			if tr.done || tr.pos >= tr.max {
+				return 0, io.EOF
+			}
+			sz := tr.probe
+			if tr.pos < tr.end {
+				// First segment: the chunk body plus the initial probe
+				sz = tr.end - tr.pos + tr.probe
+			} else {
+				tr.probe *= 2
+			}
+			if rest := tr.max - tr.pos; sz > rest {
+				sz = rest
+			}
+			rdr, err := tr.pread(tr.pos, sp.Tsize(sz))
+			if err != nil {
+				return 0, err
+			}
+			tr.cur = rdr
+			tr.segn = 0
+		}
+		n, err := tr.cur.Read(p)
+		if n > 0 {
+			// Deliver bytes at or after end-1 only up through the first
+			// newline: it terminates the line containing the region's
+			// last byte.
+			scan := 0
+			if first := tr.end - 1; first > tr.pos {
+				scan = int(first - tr.pos)
+			}
+			if scan < n {
+				if idx := bytes.IndexByte(p[scan:n], '\n'); idx >= 0 {
+					n = scan + idx + 1
+					tr.done = true
+				}
+			}
+			tr.pos += sp.Toffset(n)
+			tr.segn += n
+			return n, nil
+		}
+		if err == nil {
+			continue
+		}
+		tr.cur.Close()
+		tr.cur = nil
+		if err != io.EOF {
+			return 0, err
+		}
+		if tr.segn == 0 {
+			// The fetch returned no bytes: file EOF
+			tr.done = true
+		}
+	}
+}
+
+func (tr *tailChunkReader) Close() error {
+	if tr.cur != nil {
+		return tr.cur.Close()
+	}
+	return nil
 }
 
 func (fl *FsLib) OpenWaitReader(pn sp.Tsigmapath) (int, error) {

@@ -239,7 +239,12 @@ func (m *Mapper) doSplit(s *mr.Split) (sp.Tlength, error) {
 		off--
 	}
 	start := time.Now()
-	pfr, err := m.OpenParallelFileReader(s.File, off, s.Length+sp.Tlength(m.linesz))
+	// Generate chunks over [off, splitEnd) only; the final chunk may read up
+	// to linesz past the split end — through the first newline — so the line
+	// straddling the split end can be completed (the next split's mapper
+	// skips it).
+	splitEnd := s.Offset + sp.Toffset(s.Length)
+	pfr, err := m.OpenParallelFileReaderSlack(s.File, off, sp.Tlength(splitEnd-off), sp.Tlength(m.linesz))
 	if err != nil {
 		db.DFatalf("read %v err %v", s.File, err)
 	}

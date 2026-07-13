@@ -269,7 +269,7 @@ func GetBEMRMultiplexingCmdConstructor(nRealm int, sleep time.Duration, prewarmR
 func GetMRCmdConstructor(mrCfg *benchmarks.MRBenchConfig, prewarmRealm, measureTpt bool, perf bool) GetBenchCmdFn {
 	return func(bcfg *BenchConfig, ccfg *ClusterConfig) string {
 		const (
-			debugSelectors        string = "\"TEST;BENCH;MR_COORD\""
+			debugSelectors        string = "\"TEST;BENCH;MR_COORD;MR;\""
 			optionalPerfSelectors string = "\"TEST_TPT;BENCH_TPT;\""
 		)
 		// If measuring throughput, set the perf selectors

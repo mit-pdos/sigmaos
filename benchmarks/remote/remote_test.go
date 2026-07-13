@@ -968,9 +968,9 @@ func TestBEMRMultiplexing(t *testing.T) {
 	const (
 		sleepBetweenRealms time.Duration = 5 * time.Second
 		nRealms            int           = 1
-		memPerWorker       proc.Tmem     = 3500
+		memPerWorker       proc.Tmem     = 2500
 		prewarmRealm       bool          = true
-		benchConfig        string        = "mr-wc-wiki4G-uxinput-granular-bench.json"
+		benchConfig        string        = "mr-grep-wiki1G-granular-bench.json"
 	)
 	ts, err := NewTstate(t)
 	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {

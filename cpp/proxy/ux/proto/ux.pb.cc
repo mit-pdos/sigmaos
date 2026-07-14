@@ -24,6 +24,8 @@ PROTOBUF_CONSTEXPR UXReq::UXReq(
     ::_pbi::ConstantInitialized): _impl_{
     /*decltype(_impl_.path_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}
   , /*decltype(_impl_.blob_)*/nullptr
+  , /*decltype(_impl_.offset_)*/uint64_t{0u}
+  , /*decltype(_impl_.count_)*/uint64_t{0u}
   , /*decltype(_impl_._cached_size_)*/{}} {}
 struct UXReqDefaultTypeInternal {
   PROTOBUF_CONSTEXPR UXReqDefaultTypeInternal()
@@ -61,6 +63,8 @@ const uint32_t TableStruct_ux_2eproto::offsets[] PROTOBUF_SECTION_VARIABLE(proto
   ~0u,  // no _inlined_string_donated_
   PROTOBUF_FIELD_OFFSET(::UXReq, _impl_.path_),
   PROTOBUF_FIELD_OFFSET(::UXReq, _impl_.blob_),
+  PROTOBUF_FIELD_OFFSET(::UXReq, _impl_.offset_),
+  PROTOBUF_FIELD_OFFSET(::UXReq, _impl_.count_),
   ~0u,  // no _has_bits_
   PROTOBUF_FIELD_OFFSET(::UXRep, _internal_metadata_),
   ~0u,  // no _extensions_
@@ -72,7 +76,7 @@ const uint32_t TableStruct_ux_2eproto::offsets[] PROTOBUF_SECTION_VARIABLE(proto
 };
 static const ::_pbi::MigrationSchema schemas[] PROTOBUF_SECTION_VARIABLE(protodesc_cold) = {
   { 0, -1, -1, sizeof(::UXReq)},
-  { 8, -1, -1, sizeof(::UXRep)},
+  { 10, -1, -1, sizeof(::UXRep)},
 };
 
 static const ::_pb::Message* const file_default_instances[] = {
@@ -81,17 +85,18 @@ static const ::_pb::Message* const file_default_instances[] = {
 };
 
 const char descriptor_table_protodef_ux_2eproto[] PROTOBUF_SECTION_VARIABLE(protodesc_cold) =
-  "\n\010ux.proto\032\023rpc/proto/rpc.proto\"*\n\005UXReq"
-  "\022\014\n\004path\030\001 \001(\t\022\023\n\004blob\030\002 \001(\0132\005.Blob\"(\n\005U"
-  "XRep\022\n\n\002oK\030\001 \001(\010\022\023\n\004blob\030\002 \001(\0132\005.BlobB\030Z"
-  "\026sigmaos/proxy/ux/protob\006proto3"
+  "\n\010ux.proto\032\023rpc/proto/rpc.proto\"I\n\005UXReq"
+  "\022\014\n\004path\030\001 \001(\t\022\023\n\004blob\030\002 \001(\0132\005.Blob\022\016\n\006o"
+  "ffset\030\003 \001(\004\022\r\n\005count\030\004 \001(\004\"(\n\005UXRep\022\n\n\002o"
+  "K\030\001 \001(\010\022\023\n\004blob\030\002 \001(\0132\005.BlobB\030Z\026sigmaos/"
+  "proxy/ux/protob\006proto3"
   ;
 static const ::_pbi::DescriptorTable* const descriptor_table_ux_2eproto_deps[1] = {
   &::descriptor_table_rpc_2fproto_2frpc_2eproto,
 };
 static ::_pbi::once_flag descriptor_table_ux_2eproto_once;
 const ::_pbi::DescriptorTable descriptor_table_ux_2eproto = {
-    false, false, 151, descriptor_table_protodef_ux_2eproto,
+    false, false, 182, descriptor_table_protodef_ux_2eproto,
     "ux.proto",
     &descriptor_table_ux_2eproto_once, descriptor_table_ux_2eproto_deps, 1, 2,
     schemas, file_default_instances, TableStruct_ux_2eproto::offsets,
@@ -134,6 +139,8 @@ UXReq::UXReq(const UXReq& from)
   new (&_impl_) Impl_{
       decltype(_impl_.path_){}
     , decltype(_impl_.blob_){nullptr}
+    , decltype(_impl_.offset_){}
+    , decltype(_impl_.count_){}
     , /*decltype(_impl_._cached_size_)*/{}};
 
   _internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
@@ -148,6 +155,9 @@ UXReq::UXReq(const UXReq& from)
   if (from._internal_has_blob()) {
     _this->_impl_.blob_ = new ::Blob(*from._impl_.blob_);
   }
+  ::memcpy(&_impl_.offset_, &from._impl_.offset_,
+    static_cast<size_t>(reinterpret_cast<char*>(&_impl_.count_) -
+    reinterpret_cast<char*>(&_impl_.offset_)) + sizeof(_impl_.count_));
   // @@protoc_insertion_point(copy_constructor:UXReq)
 }
 
@@ -158,6 +168,8 @@ inline void UXReq::SharedCtor(
   new (&_impl_) Impl_{
       decltype(_impl_.path_){}
     , decltype(_impl_.blob_){nullptr}
+    , decltype(_impl_.offset_){uint64_t{0u}}
+    , decltype(_impl_.count_){uint64_t{0u}}
     , /*decltype(_impl_._cached_size_)*/{}
   };
   _impl_.path_.InitDefault();
@@ -196,6 +208,9 @@ void UXReq::Clear() {
     delete _impl_.blob_;
   }
   _impl_.blob_ = nullptr;
+  ::memset(&_impl_.offset_, 0, static_cast<size_t>(
+      reinterpret_cast<char*>(&_impl_.count_) -
+      reinterpret_cast<char*>(&_impl_.offset_)) + sizeof(_impl_.count_));
   _internal_metadata_.Clear<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>();
 }
 
@@ -219,6 +234,22 @@ const char* UXReq::_InternalParse(const char* ptr, ::_pbi::ParseContext* ctx) {
       case 2:
         if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 18)) {
           ptr = ctx->ParseMessage(_internal_mutable_blob(), ptr);
+          CHK_(ptr);
+        } else
+          goto handle_unusual;
+        continue;
+      // uint64 offset = 3;
+      case 3:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 24)) {
+          _impl_.offset_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
+          CHK_(ptr);
+        } else
+          goto handle_unusual;
+        continue;
+      // uint64 count = 4;
+      case 4:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 32)) {
+          _impl_.count_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
           CHK_(ptr);
         } else
           goto handle_unusual;
@@ -269,6 +300,18 @@ uint8_t* UXReq::_InternalSerialize(
         _Internal::blob(this).GetCachedSize(), target, stream);
   }
 
+  // uint64 offset = 3;
+  if (this->_internal_offset() != 0) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteUInt64ToArray(3, this->_internal_offset(), target);
+  }
+
+  // uint64 count = 4;
+  if (this->_internal_count() != 0) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteUInt64ToArray(4, this->_internal_count(), target);
+  }
+
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
     target = ::_pbi::WireFormat::InternalSerializeUnknownFieldsToArray(
         _internal_metadata_.unknown_fields<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(::PROTOBUF_NAMESPACE_ID::UnknownFieldSet::default_instance), target, stream);
@@ -299,6 +342,16 @@ size_t UXReq::ByteSizeLong() const {
         *_impl_.blob_);
   }
 
+  // uint64 offset = 3;
+  if (this->_internal_offset() != 0) {
+    total_size += ::_pbi::WireFormatLite::UInt64SizePlusOne(this->_internal_offset());
+  }
+
+  // uint64 count = 4;
+  if (this->_internal_count() != 0) {
+    total_size += ::_pbi::WireFormatLite::UInt64SizePlusOne(this->_internal_count());
+  }
+
   return MaybeComputeUnknownFieldsSize(total_size, &_impl_._cached_size_);
 }
 
@@ -324,6 +377,12 @@ void UXReq::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PROTOBUF
     _this->_internal_mutable_blob()->::Blob::MergeFrom(
         from._internal_blob());
   }
+  if (from._internal_offset() != 0) {
+    _this->_internal_set_offset(from._internal_offset());
+  }
+  if (from._internal_count() != 0) {
+    _this->_internal_set_count(from._internal_count());
+  }
   _this->_internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
 }
 
@@ -347,7 +406,12 @@ void UXReq::InternalSwap(UXReq* other) {
       &_impl_.path_, lhs_arena,
       &other->_impl_.path_, rhs_arena
   );
-  swap(_impl_.blob_, other->_impl_.blob_);
+  ::PROTOBUF_NAMESPACE_ID::internal::memswap<
+      PROTOBUF_FIELD_OFFSET(UXReq, _impl_.count_)
+      + sizeof(UXReq::_impl_.count_)
+      - PROTOBUF_FIELD_OFFSET(UXReq, _impl_.blob_)>(
+          reinterpret_cast<char*>(&_impl_.blob_),
+          reinterpret_cast<char*>(&other->_impl_.blob_));
 }
 
 ::PROTOBUF_NAMESPACE_ID::Metadata UXReq::GetMetadata() const {

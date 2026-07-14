@@ -53,6 +53,32 @@ func (clnt *S3Clnt) GetObject(bucket, key string, cache bool) ([]byte, error) {
 	return res.Blob.Iov[0], nil
 }
 
+// GetObjectChunk reads cnt bytes starting at off. The returned buffer may be
+// shorter than cnt if the range extends past the object's end (empty if off
+// is at or past it). Ranged reads bypass the server's whole-object cache.
+func (clnt *S3Clnt) GetObjectChunk(bucket, key string, off, cnt uint64) ([]byte, error) {
+	db.DPrintf(db.S3CLNT2, "GetObjectChunk bucket:%v key:%v off:%v cnt:%v", bucket, key, off, cnt)
+	b := []byte{}
+	var res proto.S3Rep
+	res.Blob = &rpcproto.Blob{
+		Iov: [][]byte{b},
+	}
+	req := &proto.S3Req{
+		Bucket: bucket,
+		Key:    key,
+		Offset: off,
+		Count:  cnt,
+	}
+	err := clnt.rpcc.RPC("S3RpcAPI.GetObject", req, &res)
+	if err != nil {
+		db.DPrintf(db.S3CLNT2_ERR, "Err GetObjectChunk: %v", err)
+		db.DPrintf(db.ERROR, "Err GetObjectChunk: %v", err)
+		return nil, err
+	}
+	db.DPrintf(db.S3CLNT2, "GetObjectChunk ok bucket:%v key:%v off:%v len:%v", bucket, key, off, len(res.Blob.Iov[0]))
+	return res.Blob.Iov[0], nil
+}
+
 func (clnt *S3Clnt) DelegatedGetObject(rpcIdx uint64) ([]byte, time.Duration, error) {
 	db.DPrintf(db.S3CLNT2, "DelegatedGetObject(%v)", rpcIdx)
 	b := []byte{}

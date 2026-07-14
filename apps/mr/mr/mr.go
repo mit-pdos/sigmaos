@@ -37,3 +37,32 @@ type Split struct {
 func (s Split) String() string {
 	return fmt.Sprintf("{f %s o %v l %v}", s.File, humanize.Bytes(uint64(s.Offset)), humanize.Bytes(uint64(s.Length)))
 }
+
+// Default initial size of the tail probe read past a split's end (the
+// mr.Job "tailprobesz" knob overrides it).
+const DEFAULT_TAIL_PROBE_SZ = 4 * sp.KBYTE
+
+// SplitReadWindow returns the read window for a split: the region a mapper
+// must fetch to process exactly the split's lines. The window starts one
+// byte before the split (when Offset > 0) so the mapper can detect — and
+// skip — a leading partial line, and extends past the split end by a tail
+// probe so the line straddling the split end can (usually) be completed;
+// readers must lazily extend past the probe — with direct, non-delegated
+// RPCs — if that line doesn't terminate within it (capped at
+// body+linesz). The cosandbox manifest builder and getput.GetPutReader MUST
+// both use this helper: if their windows differ by even one byte, words at
+// split boundaries are silently lost or double-counted.
+func SplitReadWindow(s *Split, linesz, probesz int) (off sp.Toffset, body sp.Tlength, probe sp.Tlength) {
+	off = s.Offset
+	if off != 0 {
+		off--
+	}
+	splitEnd := s.Offset + sp.Toffset(s.Length)
+	if probesz <= 0 {
+		probesz = DEFAULT_TAIL_PROBE_SZ
+	}
+	if probesz > linesz {
+		probesz = linesz
+	}
+	return off, sp.Tlength(splitEnd - off), sp.Tlength(probesz)
+}

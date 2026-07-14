@@ -25,6 +25,8 @@ PROTOBUF_CONSTEXPR S3Req::S3Req(
     /*decltype(_impl_.bucket_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}
   , /*decltype(_impl_.key_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}
   , /*decltype(_impl_.blob_)*/nullptr
+  , /*decltype(_impl_.offset_)*/uint64_t{0u}
+  , /*decltype(_impl_.count_)*/uint64_t{0u}
   , /*decltype(_impl_.cache_)*/false
   , /*decltype(_impl_._cached_size_)*/{}} {}
 struct S3ReqDefaultTypeInternal {
@@ -65,6 +67,8 @@ const uint32_t TableStruct_s3_2eproto::offsets[] PROTOBUF_SECTION_VARIABLE(proto
   PROTOBUF_FIELD_OFFSET(::S3Req, _impl_.key_),
   PROTOBUF_FIELD_OFFSET(::S3Req, _impl_.cache_),
   PROTOBUF_FIELD_OFFSET(::S3Req, _impl_.blob_),
+  PROTOBUF_FIELD_OFFSET(::S3Req, _impl_.offset_),
+  PROTOBUF_FIELD_OFFSET(::S3Req, _impl_.count_),
   ~0u,  // no _has_bits_
   PROTOBUF_FIELD_OFFSET(::S3Rep, _internal_metadata_),
   ~0u,  // no _extensions_
@@ -76,7 +80,7 @@ const uint32_t TableStruct_s3_2eproto::offsets[] PROTOBUF_SECTION_VARIABLE(proto
 };
 static const ::_pbi::MigrationSchema schemas[] PROTOBUF_SECTION_VARIABLE(protodesc_cold) = {
   { 0, -1, -1, sizeof(::S3Req)},
-  { 10, -1, -1, sizeof(::S3Rep)},
+  { 12, -1, -1, sizeof(::S3Rep)},
 };
 
 static const ::_pb::Message* const file_default_instances[] = {
@@ -85,18 +89,19 @@ static const ::_pb::Message* const file_default_instances[] = {
 };
 
 const char descriptor_table_protodef_s3_2eproto[] PROTOBUF_SECTION_VARIABLE(protodesc_cold) =
-  "\n\010s3.proto\032\023rpc/proto/rpc.proto\"H\n\005S3Req"
+  "\n\010s3.proto\032\023rpc/proto/rpc.proto\"g\n\005S3Req"
   "\022\016\n\006bucket\030\001 \001(\t\022\013\n\003key\030\002 \001(\t\022\r\n\005cache\030\003"
-  " \001(\010\022\023\n\004blob\030\004 \001(\0132\005.Blob\"(\n\005S3Rep\022\n\n\002oK"
-  "\030\001 \001(\010\022\023\n\004blob\030\002 \001(\0132\005.BlobB\030Z\026sigmaos/p"
-  "roxy/s3/protob\006proto3"
+  " \001(\010\022\023\n\004blob\030\004 \001(\0132\005.Blob\022\016\n\006offset\030\005 \001("
+  "\004\022\r\n\005count\030\006 \001(\004\"(\n\005S3Rep\022\n\n\002oK\030\001 \001(\010\022\023\n"
+  "\004blob\030\002 \001(\0132\005.BlobB\030Z\026sigmaos/proxy/s3/p"
+  "rotob\006proto3"
   ;
 static const ::_pbi::DescriptorTable* const descriptor_table_s3_2eproto_deps[1] = {
   &::descriptor_table_rpc_2fproto_2frpc_2eproto,
 };
 static ::_pbi::once_flag descriptor_table_s3_2eproto_once;
 const ::_pbi::DescriptorTable descriptor_table_s3_2eproto = {
-    false, false, 181, descriptor_table_protodef_s3_2eproto,
+    false, false, 212, descriptor_table_protodef_s3_2eproto,
     "s3.proto",
     &descriptor_table_s3_2eproto_once, descriptor_table_s3_2eproto_deps, 1, 2,
     schemas, file_default_instances, TableStruct_s3_2eproto::offsets,
@@ -140,6 +145,8 @@ S3Req::S3Req(const S3Req& from)
       decltype(_impl_.bucket_){}
     , decltype(_impl_.key_){}
     , decltype(_impl_.blob_){nullptr}
+    , decltype(_impl_.offset_){}
+    , decltype(_impl_.count_){}
     , decltype(_impl_.cache_){}
     , /*decltype(_impl_._cached_size_)*/{}};
 
@@ -163,7 +170,9 @@ S3Req::S3Req(const S3Req& from)
   if (from._internal_has_blob()) {
     _this->_impl_.blob_ = new ::Blob(*from._impl_.blob_);
   }
-  _this->_impl_.cache_ = from._impl_.cache_;
+  ::memcpy(&_impl_.offset_, &from._impl_.offset_,
+    static_cast<size_t>(reinterpret_cast<char*>(&_impl_.cache_) -
+    reinterpret_cast<char*>(&_impl_.offset_)) + sizeof(_impl_.cache_));
   // @@protoc_insertion_point(copy_constructor:S3Req)
 }
 
@@ -175,6 +184,8 @@ inline void S3Req::SharedCtor(
       decltype(_impl_.bucket_){}
     , decltype(_impl_.key_){}
     , decltype(_impl_.blob_){nullptr}
+    , decltype(_impl_.offset_){uint64_t{0u}}
+    , decltype(_impl_.count_){uint64_t{0u}}
     , decltype(_impl_.cache_){false}
     , /*decltype(_impl_._cached_size_)*/{}
   };
@@ -220,7 +231,9 @@ void S3Req::Clear() {
     delete _impl_.blob_;
   }
   _impl_.blob_ = nullptr;
-  _impl_.cache_ = false;
+  ::memset(&_impl_.offset_, 0, static_cast<size_t>(
+      reinterpret_cast<char*>(&_impl_.cache_) -
+      reinterpret_cast<char*>(&_impl_.offset_)) + sizeof(_impl_.cache_));
   _internal_metadata_.Clear<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>();
 }
 
@@ -262,6 +275,22 @@ const char* S3Req::_InternalParse(const char* ptr, ::_pbi::ParseContext* ctx) {
       case 4:
         if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 34)) {
           ptr = ctx->ParseMessage(_internal_mutable_blob(), ptr);
+          CHK_(ptr);
+        } else
+          goto handle_unusual;
+        continue;
+      // uint64 offset = 5;
+      case 5:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 40)) {
+          _impl_.offset_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
+          CHK_(ptr);
+        } else
+          goto handle_unusual;
+        continue;
+      // uint64 count = 6;
+      case 6:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 48)) {
+          _impl_.count_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
           CHK_(ptr);
         } else
           goto handle_unusual;
@@ -328,6 +357,18 @@ uint8_t* S3Req::_InternalSerialize(
         _Internal::blob(this).GetCachedSize(), target, stream);
   }
 
+  // uint64 offset = 5;
+  if (this->_internal_offset() != 0) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteUInt64ToArray(5, this->_internal_offset(), target);
+  }
+
+  // uint64 count = 6;
+  if (this->_internal_count() != 0) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteUInt64ToArray(6, this->_internal_count(), target);
+  }
+
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
     target = ::_pbi::WireFormat::InternalSerializeUnknownFieldsToArray(
         _internal_metadata_.unknown_fields<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(::PROTOBUF_NAMESPACE_ID::UnknownFieldSet::default_instance), target, stream);
@@ -365,6 +406,16 @@ size_t S3Req::ByteSizeLong() const {
         *_impl_.blob_);
   }
 
+  // uint64 offset = 5;
+  if (this->_internal_offset() != 0) {
+    total_size += ::_pbi::WireFormatLite::UInt64SizePlusOne(this->_internal_offset());
+  }
+
+  // uint64 count = 6;
+  if (this->_internal_count() != 0) {
+    total_size += ::_pbi::WireFormatLite::UInt64SizePlusOne(this->_internal_count());
+  }
+
   // bool cache = 3;
   if (this->_internal_cache() != 0) {
     total_size += 1 + 1;
@@ -397,6 +448,12 @@ void S3Req::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PROTOBUF
   if (from._internal_has_blob()) {
     _this->_internal_mutable_blob()->::Blob::MergeFrom(
         from._internal_blob());
+  }
+  if (from._internal_offset() != 0) {
+    _this->_internal_set_offset(from._internal_offset());
+  }
+  if (from._internal_count() != 0) {
+    _this->_internal_set_count(from._internal_count());
   }
   if (from._internal_cache() != 0) {
     _this->_internal_set_cache(from._internal_cache());

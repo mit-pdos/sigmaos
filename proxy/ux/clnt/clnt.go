@@ -51,6 +51,31 @@ func (clnt *UXClnt) GetFile(path string) ([]byte, error) {
 	return res.Blob.Iov[0], nil
 }
 
+// GetFileChunk reads cnt bytes starting at off. The returned buffer may be
+// shorter than cnt if the range extends past EOF (empty if off is at or past
+// EOF).
+func (clnt *UXClnt) GetFileChunk(path string, off, cnt uint64) ([]byte, error) {
+	db.DPrintf(db.UXCLNT, "GetFileChunk path:%v off:%v cnt:%v", path, off, cnt)
+	b := []byte{}
+	var res proto.UXRep
+	res.Blob = &rpcproto.Blob{
+		Iov: [][]byte{b},
+	}
+	req := &proto.UXReq{
+		Path:   path,
+		Offset: off,
+		Count:  cnt,
+	}
+	err := clnt.rpcc.RPC("UXRpcAPI.GetFile", req, &res)
+	if err != nil {
+		db.DPrintf(db.UXCLNT_ERR, "Err GetFileChunk: %v", err)
+		db.DPrintf(db.ERROR, "Err GetFileChunk: %v", err)
+		return nil, err
+	}
+	db.DPrintf(db.UXCLNT, "GetFileChunk ok path:%v off:%v len:%v", path, off, len(res.Blob.Iov[0]))
+	return res.Blob.Iov[0], nil
+}
+
 func (clnt *UXClnt) DelegatedGetFile(rpcIdx uint64) ([]byte, time.Duration, error) {
 	db.DPrintf(db.UXCLNT, "DelegatedGetFile(%v)", rpcIdx)
 	b := []byte{}
@@ -84,6 +109,28 @@ func (clnt *UXClnt) PutFile(path string, b []byte) error {
 		return err
 	}
 	db.DPrintf(db.UXCLNT, "PutFile ok path:%v len:%v", path, len(b))
+	return nil
+}
+
+// PutFileChunk writes b at byte offset off. Chunked writers write
+// sequentially; the offset-0 chunk creates (and truncates) the file.
+func (clnt *UXClnt) PutFileChunk(path string, off uint64, b []byte) error {
+	db.DPrintf(db.UXCLNT, "PutFileChunk path:%v off:%v len:%v", path, off, len(b))
+	var res proto.UXRep
+	req := &proto.UXReq{
+		Path:   path,
+		Offset: off,
+		Blob: &rpcproto.Blob{
+			Iov: [][]byte{b},
+		},
+	}
+	err := clnt.rpcc.RPC("UXRpcAPI.PutFile", req, &res)
+	if err != nil {
+		db.DPrintf(db.UXCLNT_ERR, "Err PutFileChunk: %v", err)
+		db.DPrintf(db.ERROR, "Err PutFileChunk: %v", err)
+		return err
+	}
+	db.DPrintf(db.UXCLNT, "PutFileChunk ok path:%v off:%v len:%v", path, off, len(b))
 	return nil
 }
 

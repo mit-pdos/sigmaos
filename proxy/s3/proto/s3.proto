@@ -9,6 +9,8 @@ message S3Req {
   string key = 2;
   bool cache = 3;
   Blob blob = 4;
+  uint64 offset = 5; // chunked get: byte offset
+  uint64 count = 6;  // chunked get: bytes to read (0 = whole object)
 }
 
 message S3Rep {

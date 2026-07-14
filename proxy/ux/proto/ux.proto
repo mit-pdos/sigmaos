@@ -7,6 +7,8 @@ option go_package = "sigmaos/proxy/ux/proto";
 message UXReq {
   string path = 1;
   Blob blob = 2;
+  uint64 offset = 3; // chunked get/put: byte offset
+  uint64 count = 4;  // chunked get: bytes to read (0 = whole file)
 }
 
 message UXRep {

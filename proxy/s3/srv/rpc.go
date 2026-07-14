@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"strings"
 	"sync"
 	"time"
 
@@ -57,13 +58,53 @@ func (ra *S3RpcAPI) cacheGet(bucket, key string) ([]byte, error) {
 }
 
 func (ra *S3RpcAPI) GetObject(ctx fs.CtxI, req proto.S3Req, rep *proto.S3Rep) error {
-	db.DPrintf(db.S3, "GetObject RPC: bucket:%v key:%v cache:%v", req.Bucket, req.Key, req.Cache)
+	db.DPrintf(db.S3, "GetObject RPC: bucket:%v key:%v cache:%v off:%v cnt:%v", req.Bucket, req.Key, req.Cache, req.Offset, req.Count)
 	start := time.Now()
 	clnt, err1 := ra.fss3.getClient(ctx)
 	if err1 != nil {
 		db.DPrintf(db.S3_ERR, "Err getClient: %v", err1)
 		db.DPrintf(db.ERROR, "Err getClient: %v", err1)
 		return err1
+	}
+	if req.Count > 0 {
+		// Chunked read: [offset, offset+count). Bypasses the whole-object
+		// cache. AWS truncates the range at EOF; a range starting at or
+		// past EOF (InvalidRange) returns an empty blob, not an error.
+		region := fmt.Sprintf("bytes=%d-%d", req.Offset, req.Offset+req.Count-1)
+		input := &s3.GetObjectInput{
+			Bucket: &req.Bucket,
+			Key:    &req.Key,
+			Range:  &region,
+		}
+		result, err := clnt.GetObject(context.TODO(), input)
+		if err != nil {
+			if strings.Contains(err.Error(), "InvalidRange") {
+				rep.Blob = &rpcproto.Blob{Iov: [][]byte{{}}}
+				rep.OK = true
+				return nil
+			}
+			db.DPrintf(db.S3_ERR, "Err GetObject (ranged): %v", err)
+			db.DPrintf(db.ERROR, "Err GetObject (ranged): %v", err)
+			return err
+		}
+		nbyte := int(*result.ContentLength)
+		rep.Blob = &rpcproto.Blob{
+			Iov: [][]byte{make([]byte, nbyte)},
+		}
+		n, err := io.ReadAtLeast(result.Body, rep.Blob.Iov[0], nbyte)
+		if n != nbyte || err != nil {
+			db.DPrintf(db.S3_ERR, "Err Read (ranged): %v", err)
+			db.DPrintf(db.ERROR, "Err Read (ranged): %v", err)
+			return err
+		}
+		if err := result.Body.Close(); err != nil {
+			db.DPrintf(db.S3_ERR, "Err Close: %v", err)
+			db.DPrintf(db.ERROR, "Err Close: %v", err)
+			return err
+		}
+		db.DPrintf(db.S3, "GetObject RPC success: bucket:%v key:%v off:%v nbyte (%v)", req.Bucket, req.Key, req.Offset, len(rep.Blob.Iov[0]))
+		rep.OK = true
+		return nil
 	}
 	b, err := ra.cacheGet(req.Bucket, req.Key)
 	if err != nil {
@@ -114,6 +155,13 @@ func (ra *S3RpcAPI) GetObject(ctx fs.CtxI, req proto.S3Req, rep *proto.S3Rep) er
 	return nil
 }
 
+// PutObject writes a whole object; clients that produce output
+// incrementally (e.g. getput.GetPutWriter) buffer the full object and issue
+// one PutObject on close. If chunked S3 puts are ever needed, this is where
+// multipart-upload state would slot in: offset==0 starts a
+// CreateMultipartUpload, each chunk is an UploadPart, and a final flag
+// triggers CompleteMultipartUpload (S3 requires >=5MiB parts except the
+// last).
 func (ra *S3RpcAPI) PutObject(ctx fs.CtxI, req proto.S3Req, rep *proto.S3Rep) error {
 	db.DPrintf(db.S3, "PutObject RPC: bucket:%v key:%v len:%v", req.Bucket, req.Key, len(req.Blob.Iov[0]))
 	start := time.Now()

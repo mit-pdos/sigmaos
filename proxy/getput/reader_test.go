@@ -1,0 +1,162 @@
+package getput
+
+import (
+	"bufio"
+	"bytes"
+	"io"
+	"os"
+	"testing"
+
+	"sigmaos/apps/mr/chunkreader"
+	"sigmaos/apps/mr/mr"
+	sp "sigmaos/sigmap"
+	"sigmaos/util/perf"
+)
+
+const input = "../../input/pg-dorian_gray.txt"
+
+// TestReaderBoundaryCorrectness runs the mapper's chunk-processing machinery
+// (the real chunkreader.DoChunk via ReadChunks) over GetPutReaders — direct
+// and delegated — for a file cut into many splits, and checks that the
+// emitted word multiset matches a sequential scan exactly. The delegated
+// variant simulates the cosandbox: it prefetches exactly the
+// mr.SplitReadWindow ranges the coordinator's manifest would request, at
+// rpcIdx = split index, and the fake fails if any idx is fetched twice —
+// tail extensions must be direct RPCs.
+func TestReaderBoundaryCorrectness(t *testing.T) {
+	data, err := os.ReadFile(input)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Ground truth via a sequential scan with the mapper's word scanner
+	truth := map[string]int{}
+	p := &perf.Perf{}
+	ckr0 := chunkreader.NewChunkReader(len(data)+1024, 40, nil, p)
+	s0 := &mr.Split{File: "name/ux/~local/in", Offset: 0, Length: sp.Tlength(len(data))}
+	_, err = ckr0.DoChunk(bytes.NewReader(data), 0, true, s0, func(f string, scan *bufio.Scanner, emit mr.EmitT) error {
+		for scan.Scan() {
+			truth[scan.Text()]++
+		}
+		return scan.Err()
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, cfg := range []struct {
+		splitsz, linesz, probesz int
+		delegated                bool
+	}{
+		{8192, 4096, 0, false},   // default probe, direct
+		{8192, 4096, 0, true},    // default probe, delegated
+		{8192, 4096, 8, true},    // tiny probe: tail extension on nearly every split
+		{16384, 16384, 0, true},  // fine-grained shape: linesz = splitsz
+		{4096, 1024, 16, false},  // small everything
+		{10000, 4096, 100, true}, // unaligned boundaries
+	} {
+		f := newFakeClnt(data)
+		// Build the "cosandbox prefetch": one window per split, in bin
+		// order, exactly as the coordinator's manifest requests it.
+		splits := []*mr.Split{}
+		for start := sp.Toffset(0); start < sp.Toffset(len(data)); start += sp.Toffset(cfg.splitsz) {
+			length := sp.Tlength(cfg.splitsz)
+			if rest := sp.Tlength(len(data)) - sp.Tlength(start); rest < length {
+				length = rest
+			}
+			splits = append(splits, &mr.Split{File: "name/ux/~local/in", Offset: start, Length: length})
+		}
+		for i, s := range splits {
+			off, body, probe := mr.SplitReadWindow(s, cfg.linesz, cfg.probesz)
+			end := min(uint64(off)+uint64(body)+uint64(probe), uint64(len(data)))
+			f.delegated[uint64(i)] = data[off:end]
+		}
+
+		got := map[string]int{}
+		mapf := func(file string, scan *bufio.Scanner, emit mr.EmitT) error {
+			for scan.Scan() {
+				got[scan.Text()]++
+			}
+			return scan.Err()
+		}
+		for i, s := range splits {
+			off, body, probe := mr.SplitReadWindow(s, cfg.linesz, cfg.probesz)
+			r, err := newGetPutReader(f, s.File, off, body, sp.Tlength(cfg.linesz), probe, cfg.delegated, uint64(i))
+			if err != nil {
+				t.Fatalf("%+v: newGetPutReader: %v", cfg, err)
+			}
+			ckr := chunkreader.NewChunkReader(cfg.linesz, 40, nil, p)
+			if _, err := ckr.ReadChunks(r, s, mapf); err != nil {
+				t.Fatalf("%+v: ReadChunks: %v", cfg, err)
+			}
+		}
+
+		nbad := 0
+		for w, n := range got {
+			if n != truth[w] {
+				nbad++
+				if nbad <= 5 {
+					t.Errorf("%+v: %q got %d want %d", cfg, w, n, truth[w])
+				}
+			}
+		}
+		for w, n := range truth {
+			if _, ok := got[w]; !ok && n > 0 {
+				nbad++
+				if nbad <= 5 {
+					t.Errorf("%+v: %q got 0 want %d", cfg, w, n)
+				}
+			}
+		}
+		if nbad > 0 {
+			t.Errorf("%+v: %d words with wrong counts", cfg, nbad)
+		}
+		if cfg.delegated {
+			for i := range splits {
+				if f.ndeleg[uint64(i)] != 1 {
+					t.Errorf("%+v: rpcIdx %d fetched %d times, want exactly 1", cfg, i, f.ndeleg[uint64(i)])
+				}
+			}
+		}
+	}
+}
+
+// TestReaderSingleWindow checks the single-final-window contract and that
+// tail extension reads happen only when the probe misses the straddling
+// line's newline.
+func TestReaderSingleWindow(t *testing.T) {
+	data := []byte("aaaa bbbb\ncccc dddd eeee ffff\ngggg\n")
+	// Split ends mid-second-line; probe of 4 bytes misses its newline
+	s := &mr.Split{File: "name/ux/~local/in", Offset: 0, Length: 14}
+	f := newFakeClnt(data)
+	off, body, probe := mr.SplitReadWindow(s, 1024, 4)
+	r, err := newGetPutReader(f, s.File, off, body, 1024, probe, false, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if f.ngets < 2 {
+		t.Errorf("expected tail extension gets, got %d total gets", f.ngets)
+	}
+	rdr, o, final, err := r.GetChunkReader(64, 60)
+	if err != nil || !final || o != 0 {
+		t.Fatalf("first window: o %v final %v err %v", o, final, err)
+	}
+	b, _ := io.ReadAll(rdr)
+	// The buffer must reach through the straddling line's newline (byte 29)
+	if len(b) < 30 || b[29] != '\n' {
+		t.Errorf("window too short to finish straddling line: %d bytes %q", len(b), b)
+	}
+	if _, _, _, err := r.GetChunkReader(64, 60); err != io.EOF {
+		t.Errorf("second window: want io.EOF, got %v", err)
+	}
+
+	// A probe that covers the newline must need exactly one get
+	f2 := newFakeClnt(data)
+	_, body2, probe2 := mr.SplitReadWindow(s, 1024, 64)
+	if _, err := newGetPutReader(f2, s.File, 0, body2, 1024, probe2, false, 0); err != nil {
+		t.Fatal(err)
+	}
+	if f2.ngets != 1 {
+		t.Errorf("probe covers newline: want 1 get, got %d", f2.ngets)
+	}
+}

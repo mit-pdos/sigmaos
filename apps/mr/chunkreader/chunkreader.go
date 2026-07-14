@@ -9,7 +9,6 @@ import (
 	"sigmaos/apps/mr/mr"
 	mrscanner "sigmaos/apps/mr/scanner"
 	db "sigmaos/debug"
-	"sigmaos/sigmaclnt/fslib"
 	sp "sigmaos/sigmap"
 	"sigmaos/util/perf"
 )
@@ -148,7 +147,13 @@ func (ckr *ChunkReader) DoChunk(rdr io.Reader, o sp.Toffset, final bool, s *mr.S
 	return n, nil
 }
 
-func (ckr *ChunkReader) ReadChunks(pfr *fslib.ParallelFileReader, s *mr.Split, mapf mr.MapT) (sp.Tlength, error) {
+// SplitReader hands out chunk readers over a split's read window.
+// *fslib.ParallelFileReader and getput.GetPutReader satisfy it.
+type SplitReader interface {
+	GetChunkReader(sz, offinc int) (io.ReadCloser, sp.Toffset, bool, error)
+}
+
+func (ckr *ChunkReader) ReadChunks(pfr SplitReader, s *mr.Split, mapf mr.MapT) (sp.Tlength, error) {
 	t := sp.Tlength(0)
 	for {
 		rdr, o, final, err := pfr.GetChunkReader(cap(ckr.buf), cap(ckr.buf)-ckr.wsz)

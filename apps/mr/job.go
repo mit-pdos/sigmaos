@@ -109,6 +109,16 @@ type Job struct {
 	// stored in UX), the input files are copied from the S3 source to the
 	// job's input directory on every UX server during job setup.
 	S3Input string `json:"s3input,omitempty"`
+	// Mappers read input/write intermediate output through the UX/S3 proxy
+	// Get/Put client API (proxy/getput) instead of the fslib streaming
+	// reader/writer.
+	UseGetPut bool `json:"use_getput,omitempty"`
+	// A cosandbox pre-fetches each mapper's input splits before the mapper
+	// starts (requires UseGetPut).
+	UseCosandboxes bool `json:"use_cosandboxes,omitempty"`
+	// Initial size of the tail probe read past each split's end on the
+	// getput path (0 = mr.DEFAULT_TAIL_PROBE_SZ; capped at Linesz).
+	TailProbeSz int `json:"tailprobesz,omitempty"`
 }
 
 // Wait until the job is done
@@ -140,6 +150,9 @@ func ReadJobConfig(app string) (*Job, error) {
 	}
 	if job.Splitsz == 0 {
 		return nil, fmt.Errorf("Err job %v has no splitsz", app)
+	}
+	if job.UseCosandboxes && !job.UseGetPut {
+		return nil, fmt.Errorf("Err job %v: use_cosandboxes requires use_getput", app)
 	}
 	return job, nil
 }
@@ -385,6 +398,9 @@ func StartMRJob(sc *sigmaclnt.SigmaClnt, jobRoot, jobName string, job *Job, nmap
 			strconv.Itoa(maliciousMapper),
 			string(mftid),
 			string(rftid),
+			strconv.FormatBool(job.UseGetPut),
+			strconv.FormatBool(job.UseCosandboxes),
+			strconv.Itoa(job.TailProbeSz),
 		}, 1000, jobName)
 	return cfg.StartGrpMgr(sc)
 }

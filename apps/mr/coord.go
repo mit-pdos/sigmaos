@@ -3,7 +3,6 @@ package mr
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"strconv"
 	"sync"
@@ -16,6 +15,7 @@ import (
 	"sigmaos/ft/task/fttaskmgr"
 	ftmgr "sigmaos/ft/task/fttaskmgr"
 	"sigmaos/proc"
+	wasmer "sigmaos/proxy/wasm/rpc/wasmer"
 	"sigmaos/sigmaclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/util/crash"
@@ -65,6 +65,7 @@ type Coord struct {
 	nreducetask     int
 	maliciousMapper uint64
 	linesz          string
+	lineszInt       int
 	wordsz          string
 	mapperbin       string
 	reducerbin      string
@@ -74,6 +75,10 @@ type Coord struct {
 	memPerTask      proc.Tmem
 	stat            AStat
 	perf            *perf.Perf
+	useGetPut       bool
+	useCosandbox    bool
+	tailProbeSz     int
+	mrBootWASM      []byte
 }
 
 type AStat struct {
@@ -93,8 +98,8 @@ func (s *AStat) String() string {
 type NewProc func(ftclnt.Task[[]byte]) (*proc.Proc, error)
 
 func NewCoord(args []string) (*Coord, error) {
-	if len(args) != 12 {
-		return nil, errors.New("NewCoord: wrong number of arguments")
+	if len(args) != 15 {
+		return nil, fmt.Errorf("NewCoord: wrong number of arguments: got %d, want 15 (stale mr-coord binary?): %v", len(args), args)
 	}
 	c := &Coord{}
 	c.jobRoot = args[1]
@@ -158,6 +163,32 @@ func NewCoord(args []string) (*Coord, error) {
 	c.mftid = task.FtTaskSvcId(args[10])
 	c.rftid = task.FtTaskSvcId(args[11])
 
+	c.useGetPut, err = strconv.ParseBool(args[12])
+	if err != nil {
+		return nil, fmt.Errorf("NewCoord: useGetPut %v isn't bool", args[12])
+	}
+	c.useCosandbox, err = strconv.ParseBool(args[13])
+	if err != nil {
+		return nil, fmt.Errorf("NewCoord: useCosandbox %v isn't bool", args[13])
+	}
+	c.tailProbeSz, err = strconv.Atoi(args[14])
+	if err != nil {
+		return nil, fmt.Errorf("NewCoord: tailprobesz %v isn't int", args[14])
+	}
+	c.lineszInt, err = strconv.Atoi(c.linesz)
+	if err != nil {
+		return nil, fmt.Errorf("NewCoord: linesz %v isn't int", c.linesz)
+	}
+
+	if c.useCosandbox {
+		// Read and precompile the mapper boot script once; every mapper
+		// proc gets the same compiled WASM with a per-bin manifest.
+		c.mrBootWASM, err = wasmer.ReadCoSandbox(c.SigmaClnt, "mr_mapper_boot")
+		if err != nil {
+			return nil, fmt.Errorf("NewCoord: ReadCoSandbox mr_mapper_boot err %v", err)
+		}
+	}
+
 	return c, nil
 }
 
@@ -193,8 +224,24 @@ func (c *Coord) mapperProc(t ftclnt.Task[[]byte]) (*proc.Proc, error) {
 	if err != nil {
 		db.DFatalf("mapperProc: %v err %v", bin, err)
 	}
-	proc := c.newTask(mapperbin, []string{c.jobRoot, c.job, strconv.Itoa(c.nreducetask), string(b), c.intOutdir, c.linesz, c.wordsz}, c.memPerTask)
-	return proc, nil
+	p := c.newTask(mapperbin, []string{c.jobRoot, c.job, strconv.Itoa(c.nreducetask), string(b), c.intOutdir, c.linesz, c.wordsz, strconv.FormatBool(c.useGetPut), strconv.FormatBool(c.useCosandbox), strconv.Itoa(c.tailProbeSz)}, c.memPerTask)
+	if c.useGetPut {
+		// The UX/S3 proxy client RPC channels — and the delegated-RPC path
+		// in particular — are serviced by spproxy.
+		p.GetProcEnv().UseSPProxy = true
+	}
+	if c.useCosandbox {
+		input, err := mapperBootInput(bin, c.lineszInt, c.tailProbeSz)
+		if err != nil {
+			return nil, err
+		}
+		p.SetCoSandbox(c.mrBootWASM, input)
+		p.SetRunCoSandbox(true)
+		// Deliberately no SetRunAfterCoSandbox(true): DelegatedRPC blocks
+		// until the reply for each rpcIdx materializes, so the mapper
+		// starts immediately and pipelines against in-flight prefetches.
+	}
+	return p, nil
 }
 
 func (c *Coord) reducerProc(t ftclnt.Task[[]byte]) (*proc.Proc, error) {

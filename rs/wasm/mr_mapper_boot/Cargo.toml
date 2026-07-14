@@ -1,0 +1,16 @@
+[package]
+name = "mr_mapper_boot"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+sigmaos = { path = "../../sigmaos" }
+
+[lib]
+crate-type = ["cdylib"]
+
+[profile.release]
+lto = true
+opt-level = "s"
+panic = "abort"
+strip = "symbols"

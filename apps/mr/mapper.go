@@ -16,8 +16,8 @@ import (
 	"sigmaos/apps/mr/mr"
 	db "sigmaos/debug"
 	"sigmaos/proc"
+	"sigmaos/proxy/getput"
 	"sigmaos/sigmaclnt"
-	"sigmaos/sigmaclnt/fslib"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 	"sigmaos/util/crash"
@@ -31,44 +31,54 @@ const (
 
 type Mapper struct {
 	*sigmaclnt.SigmaClnt
-	mapf        mr.MapT
-	combinef    mr.ReduceT
-	jobRoot     string
-	job         string
-	nreducetask int
-	linesz      int
-	input       string
-	intOutput   string
-	wrts        []*fslib.FileWriter
-	pwrts       []*perf.PerfWriter
-	rand        string
-	perf        *perf.Perf
-	asyncrw     bool
-	init        bool
-	ckrs        []*chunkreader.ChunkReader
-	ch          chan error
+	mapf         mr.MapT
+	combinef     mr.ReduceT
+	jobRoot      string
+	job          string
+	nreducetask  int
+	linesz       int
+	input        string
+	intOutput    string
+	wrts         []getput.ShardWriter
+	pwrts        []*perf.PerfWriter
+	rand         string
+	perf         *perf.Perf
+	asyncrw      bool
+	init         bool
+	ckrs         []*chunkreader.ChunkReader
+	ch           chan error
+	useGetPut    bool
+	useCosandbox bool
+	tailProbeSz  int
+	clnts        *getput.Clnts
 }
 
-func NewMapper(sc *sigmaclnt.SigmaClnt, mapf mr.MapT, combinef mr.ReduceT, jobRoot, job string, p *perf.Perf, nr, lsz, wsz int, input string, intOutput string) (*Mapper, error) {
+func NewMapper(sc *sigmaclnt.SigmaClnt, mapf mr.MapT, combinef mr.ReduceT, jobRoot, job string, p *perf.Perf, nr, lsz, wsz int, input string, intOutput string, useGetPut, useCosandbox bool, tailprobesz int) (*Mapper, error) {
 	m := &Mapper{
-		SigmaClnt:   sc,
-		mapf:        mapf,
-		combinef:    combinef,
-		jobRoot:     jobRoot,
-		job:         job,
-		nreducetask: nr,
-		linesz:      lsz,
-		rand:        rand.Name(),
-		input:       input,
-		intOutput:   intOutput,
-		wrts:        make([]*fslib.FileWriter, nr),
-		pwrts:       make([]*perf.PerfWriter, nr),
-		perf:        p,
-		ch:          make(chan error),
-		ckrs:        make([]*chunkreader.ChunkReader, CONCURRENCY),
+		SigmaClnt:    sc,
+		mapf:         mapf,
+		combinef:     combinef,
+		jobRoot:      jobRoot,
+		job:          job,
+		nreducetask:  nr,
+		linesz:       lsz,
+		rand:         rand.Name(),
+		input:        input,
+		intOutput:    intOutput,
+		wrts:         make([]getput.ShardWriter, nr),
+		pwrts:        make([]*perf.PerfWriter, nr),
+		perf:         p,
+		ch:           make(chan error),
+		ckrs:         make([]*chunkreader.ChunkReader, CONCURRENCY),
+		useGetPut:    useGetPut,
+		useCosandbox: useCosandbox,
+		tailProbeSz:  tailprobesz,
 	}
 	for i := 0; i < CONCURRENCY; i++ {
 		m.ckrs[i] = chunkreader.NewChunkReader(lsz, wsz, combinef, p)
+	}
+	if m.useGetPut {
+		m.clnts = getput.NewClnts(sc.FsLib)
 	}
 	m.MountS3PathClnt()
 	go func() {
@@ -78,8 +88,8 @@ func NewMapper(sc *sigmaclnt.SigmaClnt, mapf mr.MapT, combinef mr.ReduceT, jobRo
 }
 
 func newMapper(mapf mr.MapT, reducef mr.ReduceT, args []string, p *perf.Perf) (*Mapper, error) {
-	if len(args) != 7 {
-		return nil, fmt.Errorf("NewMapper: too few arguments %v", args)
+	if len(args) != 10 {
+		return nil, fmt.Errorf("NewMapper: wrong number of arguments: got %d, want 10 (stale mr-m binary?): %v", len(args), args)
 	}
 	nr, err := strconv.Atoi(args[2])
 	if err != nil {
@@ -93,11 +103,23 @@ func newMapper(mapf mr.MapT, reducef mr.ReduceT, args []string, p *perf.Perf) (*
 	if err != nil {
 		return nil, fmt.Errorf("NewMapper: wordsz %v isn't int", args[6])
 	}
+	useGetPut, err := strconv.ParseBool(args[7])
+	if err != nil {
+		return nil, fmt.Errorf("NewMapper: useGetPut %v isn't bool", args[7])
+	}
+	useCosandbox, err := strconv.ParseBool(args[8])
+	if err != nil {
+		return nil, fmt.Errorf("NewMapper: useCosandbox %v isn't bool", args[8])
+	}
+	tailprobesz, err := strconv.Atoi(args[9])
+	if err != nil {
+		return nil, fmt.Errorf("NewMapper: tailprobesz %v isn't int", args[9])
+	}
 	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
 	if err != nil {
 		return nil, err
 	}
-	m, err := NewMapper(sc, mapf, reducef, args[0], args[1], p, nr, lsz, wsz, args[3], args[4])
+	m, err := NewMapper(sc, mapf, reducef, args[0], args[1], p, nr, lsz, wsz, args[3], args[4], useGetPut, useCosandbox, tailprobesz)
 	if err != nil {
 		return nil, fmt.Errorf("NewMapper failed %v", err)
 	}
@@ -119,6 +141,16 @@ func (m *Mapper) CloseWrt() (sp.Tlength, error) {
 }
 
 func (m *Mapper) initWrt(r int, name string) error {
+	if m.useGetPut {
+		db.DPrintf(db.MR, "InitWrt (getput) %v", name)
+		wrt, err := getput.NewGetPutWriter(m.clnts, name)
+		if err != nil {
+			return err
+		}
+		m.wrts[r] = wrt
+		m.pwrts[r] = perf.NewPerfWriter(wrt, m.perf)
+		return nil
+	}
 	pn, ok := sp.S3ClientPath(name)
 	if ok {
 		name = pn
@@ -222,29 +254,38 @@ func (m *Mapper) combineEmit() error {
 	return err
 }
 
-func (m *Mapper) doSplit(s *mr.Split) (sp.Tlength, error) {
-	pn, ok := sp.S3ClientPath(s.File)
-	if ok {
-		s.File = pn
-	}
-	db.DPrintf(db.MR, "Mapper doSplit %v\n", s)
-	off := s.Offset
-	if off != 0 {
-		// -1 to pick up last byte from prev split so that if s.Offset
-		// != 0 in doChunk works out correctly. if the last byte of
-		// previous split is a newline, this mapper should process the
-		// first line of the split.  if not, this mapper should ignore
-		// the first line of the split because it has been processed
-		// as part of the previous split.
-		off--
-	}
+// doSplit processes the idx'th split of the mapper's bin. idx doubles as
+// the delegated-RPC index when a cosandbox prefetched the bin: the
+// coordinator's manifest issues one ranged get per split, in bin order.
+func (m *Mapper) doSplit(s *mr.Split, idx int) (sp.Tlength, error) {
+	db.DPrintf(db.MR, "Mapper doSplit %v (idx %d)\n", s, idx)
 	start := time.Now()
-	// Generate chunks over [off, splitEnd) only; the final chunk may read up
-	// to linesz past the split end — through the first newline — so the line
-	// straddling the split end can be completed (the next split's mapper
-	// skips it).
-	splitEnd := s.Offset + sp.Toffset(s.Length)
-	pfr, err := m.OpenParallelFileReaderSlack(s.File, off, sp.Tlength(splitEnd-off), sp.Tlength(m.linesz))
+	var pfr getput.SplitReader
+	var err error
+	if m.useGetPut {
+		// The read window MUST match the coordinator's cosandbox manifest
+		// (mr.SplitReadWindow); the tail past the probe is fetched lazily
+		// with direct (non-delegated) RPCs.
+		off, body, probe := mr.SplitReadWindow(s, m.linesz, m.tailProbeSz)
+		pfr, err = getput.NewGetPutReader(m.clnts, s.File, off, body, sp.Tlength(m.linesz), probe, m.useCosandbox, uint64(idx))
+	} else {
+		if pn, ok := sp.S3ClientPath(s.File); ok {
+			s.File = pn
+		}
+		// The offset starts one byte early (when s.Offset != 0) to pick up
+		// the last byte of the previous split, so the first chunk can
+		// detect — and skip — a leading partial line (see
+		// chunkreader.DoChunk). Chunks are generated over [off, splitEnd)
+		// only; the final chunk may read up to linesz past the split end —
+		// through the first newline — so the line straddling the split end
+		// can be completed (the next split's mapper skips it).
+		off := s.Offset
+		if off != 0 {
+			off--
+		}
+		splitEnd := s.Offset + sp.Toffset(s.Length)
+		pfr, err = m.OpenParallelFileReaderSlack(s.File, off, sp.Tlength(splitEnd-off), sp.Tlength(m.linesz))
+	}
 	if err != nil {
 		db.DFatalf("read %v err %v", s.File, err)
 	}
@@ -290,8 +331,8 @@ func (m *Mapper) DoMap() (sp.Tlength, sp.Tlength, Bin, error) {
 	perf.LogSpawnLatency("Mapper.getInput", m.ProcEnv().GetPID(), m.ProcEnv().GetSpawnTime(), getInputStart)
 	ni := sp.Tlength(0)
 	getSplitStart := time.Now()
-	for _, s := range bin {
-		n, err := m.doSplit(&s)
+	for i, s := range bin {
+		n, err := m.doSplit(&s, i)
 		if err != nil {
 			db.DPrintf(db.MR, "doSplit %v err %v\n", s, err)
 			return 0, 0, nil, err

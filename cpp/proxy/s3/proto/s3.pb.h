@@ -182,6 +182,8 @@ class S3Req final :
     kBucketFieldNumber = 1,
     kKeyFieldNumber = 2,
     kBlobFieldNumber = 4,
+    kOffsetFieldNumber = 5,
+    kCountFieldNumber = 6,
     kCacheFieldNumber = 3,
   };
   // string bucket = 1;
@@ -230,6 +232,24 @@ class S3Req final :
       ::Blob* blob);
   ::Blob* unsafe_arena_release_blob();
 
+  // uint64 offset = 5;
+  void clear_offset();
+  uint64_t offset() const;
+  void set_offset(uint64_t value);
+  private:
+  uint64_t _internal_offset() const;
+  void _internal_set_offset(uint64_t value);
+  public:
+
+  // uint64 count = 6;
+  void clear_count();
+  uint64_t count() const;
+  void set_count(uint64_t value);
+  private:
+  uint64_t _internal_count() const;
+  void _internal_set_count(uint64_t value);
+  public:
+
   // bool cache = 3;
   void clear_cache();
   bool cache() const;
@@ -250,6 +270,8 @@ class S3Req final :
     ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr bucket_;
     ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr key_;
     ::Blob* blob_;
+    uint64_t offset_;
+    uint64_t count_;
     bool cache_;
     mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   };
@@ -638,6 +660,46 @@ inline void S3Req::set_allocated_blob(::Blob* blob) {
   }
   _impl_.blob_ = blob;
   // @@protoc_insertion_point(field_set_allocated:S3Req.blob)
+}
+
+// uint64 offset = 5;
+inline void S3Req::clear_offset() {
+  _impl_.offset_ = uint64_t{0u};
+}
+inline uint64_t S3Req::_internal_offset() const {
+  return _impl_.offset_;
+}
+inline uint64_t S3Req::offset() const {
+  // @@protoc_insertion_point(field_get:S3Req.offset)
+  return _internal_offset();
+}
+inline void S3Req::_internal_set_offset(uint64_t value) {
+  
+  _impl_.offset_ = value;
+}
+inline void S3Req::set_offset(uint64_t value) {
+  _internal_set_offset(value);
+  // @@protoc_insertion_point(field_set:S3Req.offset)
+}
+
+// uint64 count = 6;
+inline void S3Req::clear_count() {
+  _impl_.count_ = uint64_t{0u};
+}
+inline uint64_t S3Req::_internal_count() const {
+  return _impl_.count_;
+}
+inline uint64_t S3Req::count() const {
+  // @@protoc_insertion_point(field_get:S3Req.count)
+  return _internal_count();
+}
+inline void S3Req::_internal_set_count(uint64_t value) {
+  
+  _impl_.count_ = value;
+}
+inline void S3Req::set_count(uint64_t value) {
+  _internal_set_count(value);
+  // @@protoc_insertion_point(field_set:S3Req.count)
 }
 
 // -------------------------------------------------------------------

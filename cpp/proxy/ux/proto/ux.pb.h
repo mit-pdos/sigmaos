@@ -181,6 +181,8 @@ class UXReq final :
   enum : int {
     kPathFieldNumber = 1,
     kBlobFieldNumber = 2,
+    kOffsetFieldNumber = 3,
+    kCountFieldNumber = 4,
   };
   // string path = 1;
   void clear_path();
@@ -214,6 +216,24 @@ class UXReq final :
       ::Blob* blob);
   ::Blob* unsafe_arena_release_blob();
 
+  // uint64 offset = 3;
+  void clear_offset();
+  uint64_t offset() const;
+  void set_offset(uint64_t value);
+  private:
+  uint64_t _internal_offset() const;
+  void _internal_set_offset(uint64_t value);
+  public:
+
+  // uint64 count = 4;
+  void clear_count();
+  uint64_t count() const;
+  void set_count(uint64_t value);
+  private:
+  uint64_t _internal_count() const;
+  void _internal_set_count(uint64_t value);
+  public:
+
   // @@protoc_insertion_point(class_scope:UXReq)
  private:
   class _Internal;
@@ -224,6 +244,8 @@ class UXReq final :
   struct Impl_ {
     ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr path_;
     ::Blob* blob_;
+    uint64_t offset_;
+    uint64_t count_;
     mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   };
   union { Impl_ _impl_; };
@@ -541,6 +563,46 @@ inline void UXReq::set_allocated_blob(::Blob* blob) {
   }
   _impl_.blob_ = blob;
   // @@protoc_insertion_point(field_set_allocated:UXReq.blob)
+}
+
+// uint64 offset = 3;
+inline void UXReq::clear_offset() {
+  _impl_.offset_ = uint64_t{0u};
+}
+inline uint64_t UXReq::_internal_offset() const {
+  return _impl_.offset_;
+}
+inline uint64_t UXReq::offset() const {
+  // @@protoc_insertion_point(field_get:UXReq.offset)
+  return _internal_offset();
+}
+inline void UXReq::_internal_set_offset(uint64_t value) {
+  
+  _impl_.offset_ = value;
+}
+inline void UXReq::set_offset(uint64_t value) {
+  _internal_set_offset(value);
+  // @@protoc_insertion_point(field_set:UXReq.offset)
+}
+
+// uint64 count = 4;
+inline void UXReq::clear_count() {
+  _impl_.count_ = uint64_t{0u};
+}
+inline uint64_t UXReq::_internal_count() const {
+  return _impl_.count_;
+}
+inline uint64_t UXReq::count() const {
+  // @@protoc_insertion_point(field_get:UXReq.count)
+  return _internal_count();
+}
+inline void UXReq::_internal_set_count(uint64_t value) {
+  
+  _impl_.count_ = value;
+}
+inline void UXReq::set_count(uint64_t value) {
+  _internal_set_count(value);
+  // @@protoc_insertion_point(field_set:UXReq.count)
 }
 
 // -------------------------------------------------------------------

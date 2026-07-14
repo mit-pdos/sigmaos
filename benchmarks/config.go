@@ -106,22 +106,33 @@ func (cfg *HotelBenchConfig) Marshal() (string, error) {
 }
 
 type MRBenchConfig struct {
-	App    string    `json:"app"`     // Name of the MR job description json file
-	MemReq proc.Tmem `json:"mem_req"` // Amount of memory (in MB) required by each mapper/reducer
-	JobCfg *mr.Job   `json:"job_cfg"` // MR job description
+	App            string    `json:"app"`             // Name of the MR job description json file
+	MemReq         proc.Tmem `json:"mem_req"`         // Amount of memory (in MB) required by each mapper/reducer
+	UseGetPut      bool      `json:"use_getput"`      // Mappers use the UX/S3 proxy Get/Put client API
+	UseCosandboxes bool      `json:"use_cosandboxes"` // Cosandboxes pre-fetch mapper input splits (requires UseGetPut)
+	JobCfg         *mr.Job   `json:"job_cfg"`         // MR job description
 }
 
 // NewMRBenchConfig creates an MR benchmark config, reading the MR job
-// description named app from jobDir on the local file system.
-func NewMRBenchConfig(jobDir, app string, memReq proc.Tmem) (*MRBenchConfig, error) {
+// description named app from jobDir on the local file system. useGetPut and
+// useCosandboxes override the corresponding job-description fields, so one
+// job description serves all variants.
+func NewMRBenchConfig(jobDir, app string, memReq proc.Tmem, useGetPut, useCosandboxes bool) (*MRBenchConfig, error) {
 	jobCfg, err := mr.ReadJobConfig(filepath.Join(jobDir, app))
 	if err != nil {
 		return nil, err
 	}
+	if useCosandboxes && !useGetPut {
+		return nil, fmt.Errorf("MRBenchConfig %v: useCosandboxes requires useGetPut", app)
+	}
+	jobCfg.UseGetPut = useGetPut
+	jobCfg.UseCosandboxes = useCosandboxes
 	return &MRBenchConfig{
-		App:    app,
-		MemReq: memReq,
-		JobCfg: jobCfg,
+		App:            app,
+		MemReq:         memReq,
+		UseGetPut:      useGetPut,
+		UseCosandboxes: useCosandboxes,
+		JobCfg:         jobCfg,
 	}, nil
 }
 

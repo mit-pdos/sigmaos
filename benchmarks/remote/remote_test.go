@@ -304,14 +304,16 @@ func TestMR(t *testing.T) {
 		numNodes        int
 		numCoresPerNode uint
 		memReq          proc.Tmem
+		useGetPut       bool
+		useCosandboxes  bool
 	}
 	// Variable MR benchmark configuration parameters
 	var (
 		mrApps []*MRExperimentConfig = []*MRExperimentConfig{
-			{"mr-grep-wiki2G-bench-s3.json", 10, 4, 7000},
-			{"mr-grep-wiki2G-granular-bench-s3.json", 54, 4, 7000},
-			{"mr-wc-wiki2G-bench.json", 10, 4, 7000},
-			{"mr-wc-wiki2G-bench-s3.json", 10, 4, 7000},
+			{"mr-grep-wiki2G-bench-s3.json", 10, 4, 7000, false, false},
+			{"mr-grep-wiki2G-granular-bench-s3.json", 54, 4, 7000, false, false},
+			{"mr-wc-wiki2G-bench.json", 10, 4, 7000, false, false},
+			{"mr-wc-wiki2G-bench-s3.json", 10, 4, 7000, false, false},
 		}
 		perfs         []bool = []bool{false}
 		prewarmRealms []bool = []bool{true}
@@ -341,7 +343,12 @@ func TestMR(t *testing.T) {
 				if perf {
 					benchName += "-perf"
 				}
-				mrCfg, err := benchmarks.NewMRBenchConfig(mrJobDescriptionsDir, mrEP.benchName, mrEP.memReq)
+				if mrEP.useCosandboxes {
+					benchName += "-cosandbox"
+				} else if mrEP.useGetPut {
+					benchName += "-getput"
+				}
+				mrCfg, err := benchmarks.NewMRBenchConfig(mrJobDescriptionsDir, mrEP.benchName, mrEP.memReq, mrEP.useGetPut, mrEP.useCosandboxes)
 				if !assert.Nil(ts.t, err, "Reading MR job config: %v", err) {
 					return
 				}
@@ -970,6 +977,8 @@ func TestBEMRMultiplexing(t *testing.T) {
 		nRealms            int           = 1
 		memPerWorker       proc.Tmem     = 2500
 		prewarmRealm       bool          = true
+		useGetPut          bool          = false
+		useCosandboxes     bool          = false
 		benchConfig        string        = "mr-grep-wiki1G-granular-bench.json"
 	)
 	ts, err := NewTstate(t)
@@ -980,7 +989,7 @@ func TestBEMRMultiplexing(t *testing.T) {
 		return
 	}
 	db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
-	mrCfg, err := benchmarks.NewMRBenchConfig(mrJobDescriptionsDir, benchConfig, memPerWorker)
+	mrCfg, err := benchmarks.NewMRBenchConfig(mrJobDescriptionsDir, benchConfig, memPerWorker, useGetPut, useCosandboxes)
 	if !assert.Nil(ts.t, err, "Reading MR job config: %v", err) {
 		return
 	}
@@ -1292,7 +1301,7 @@ func TestLCBEHotelMRMultiplexing(t *testing.T) {
 		},
 		CosSimBenchCfg: nil,
 	}
-	mrCfg, err := benchmarks.NewMRBenchConfig(mrJobDescriptionsDir, "mr-grep-wiki2G-bench-s3.json", proc.Tmem(7000))
+	mrCfg, err := benchmarks.NewMRBenchConfig(mrJobDescriptionsDir, "mr-grep-wiki2G-bench-s3.json", proc.Tmem(7000), false, false)
 	if !assert.Nil(ts.t, err, "Reading MR job config: %v", err) {
 		return
 	}

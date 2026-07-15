@@ -223,6 +223,14 @@ SEBS_BENCHMARKS = [
     ("graph_bfs",         "Graph\nBFS"),
 ]
 
+# Non-SeBS benchmarks that can be mixed into the same graph.
+# Each entry: (arg_key, display_label, proc_name).
+# These do not support --show-uncompressed.
+EXTRA_BENCHMARKS = [
+    ("etcd",      "Etcd",      "etcd-shim"),
+    ("memcached", "Memcached", "memcached-shim"),
+]
+
 
 def main():
     parser = argparse.ArgumentParser(
@@ -252,6 +260,17 @@ def main():
             default=None,
             help=f"Path to {key} with co-sandbox benchmark output directory"
         )
+    for key, _, _ in EXTRA_BENCHMARKS:
+        parser.add_argument(
+            f"--dir_path_{key}",
+            default=None,
+            help=f"Path to {key} benchmark output directory"
+        )
+        parser.add_argument(
+            f"--dir_path_{key}_cosandbox",
+            default=None,
+            help=f"Path to {key} with co-sandbox benchmark output directory"
+        )
     parser.add_argument(
         "--show_breakdown",
         action="store_true",
@@ -267,12 +286,25 @@ def main():
         default="co-sandbox",
         help="Label to use in place of 'co-sandbox' in legend entries (default: co-sandbox)"
     )
+    parser.add_argument(
+        "--figsize",
+        nargs=2,
+        type=float,
+        metavar=("WIDTH", "HEIGHT"),
+        default=None,
+        help="Figure size in inches, e.g. --figsize 12.0 3.0 (defaults: 9.0x2.4 for uncompressed, 16.0x2.4 otherwise)"
+    )
 
     args = parser.parse_args()
 
     # Filter to benchmarks where both plain and cosandbox dirs are supplied.
+    # active_benchmarks is a list of (key, label, proc_name) triples.
     active_benchmarks = [
-        (key, label) for key, label in SEBS_BENCHMARKS
+        (key, label, SEBS_PROC_NAME) for key, label in SEBS_BENCHMARKS
+        if getattr(args, f"dir_path_{key}") is not None
+        and getattr(args, f"dir_path_{key}_cosandbox") is not None
+    ] + [
+        (key, label, proc_name) for key, label, proc_name in EXTRA_BENCHMARKS
         if getattr(args, f"dir_path_{key}") is not None
         and getattr(args, f"dir_path_{key}_cosandbox") is not None
     ]
@@ -280,42 +312,44 @@ def main():
     if not active_benchmarks:
         parser.error("No benchmarks specified. Provide at least one --dir_path_<benchmark> and --dir_path_<benchmark>_cosandbox pair.")
 
+    # SeBS-only keys (extras don't support --show-uncompressed)
+    active_sebs_keys = {key for key, _, _ in active_benchmarks if key in dict([(k, l) for k, l in SEBS_BENCHMARKS])}
     if args.show_uncompressed:
-        for key, _ in active_benchmarks:
+        for key in active_sebs_keys:
             if getattr(args, f"dir_path_{key}_uncompressed") is None:
                 parser.error(f"--dir_path_{key}_uncompressed is required when --show-uncompressed is set")
 
     # Collect timing data for each benchmark.
     data = {}
-    for key, label in active_benchmarks:
+    for key, label, proc_name in active_benchmarks:
         plain_dir = getattr(args, f"dir_path_{key}")
         cosandbox_dir = getattr(args, f"dir_path_{key}_cosandbox")
         entry = {
             'label': label,
-            'compressed':     get_last_init_time(plain_dir, SEBS_PROC_NAME),
-            'with_cosandbox': get_last_init_time(cosandbox_dir, SEBS_PROC_NAME),
+            'compressed':     get_last_init_time(plain_dir, proc_name),
+            'with_cosandbox': get_last_init_time(cosandbox_dir, proc_name),
         }
-        if args.show_uncompressed:
+        if args.show_uncompressed and key in active_sebs_keys:
             uncompressed_dir = getattr(args, f"dir_path_{key}_uncompressed")
-            entry['uncompressed'] = get_last_init_time(uncompressed_dir, SEBS_PROC_NAME)
+            entry['uncompressed'] = get_last_init_time(uncompressed_dir, proc_name)
         data[key] = entry
 
     if all(v['compressed'] is None and v['with_cosandbox'] is None for v in data.values()):
-        print("Error: No data found for any SeBS benchmark", file=sys.stderr)
+        print("Error: No data found for any benchmark", file=sys.stderr)
         sys.exit(1)
 
     breakdown = None
     if args.show_breakdown and not args.show_uncompressed:
         breakdown = {}
-        for key, _ in active_benchmarks:
+        for key, _, proc_name in active_benchmarks:
             plain_dir     = getattr(args, f"dir_path_{key}")
             cosandbox_dir = getattr(args, f"dir_path_{key}_cosandbox")
             breakdown[key] = {
-                'compressed':     get_setup_and_init_times(plain_dir,     SEBS_PROC_NAME),
-                'with_cosandbox': get_setup_and_init_times(cosandbox_dir, SEBS_PROC_NAME),
+                'compressed':     get_setup_and_init_times(plain_dir,     proc_name),
+                'with_cosandbox': get_setup_and_init_times(cosandbox_dir, proc_name),
             }
 
-    keys = [k for k, _ in active_benchmarks]
+    keys = [k for k, _, _ in active_benchmarks]
     proc_labels   = [data[k]['label']         for k in keys]
     compressed    = [data[k]['compressed']     or 0 for k in keys]
     with_cosandbox = [data[k]['with_cosandbox'] or 0 for k in keys]
@@ -327,7 +361,7 @@ def main():
     if args.show_uncompressed:
         uncompressed = [data[k]['uncompressed'] or 0 for k in keys]
         width = 0.08
-        fig, ax = plt.subplots(figsize=(9.0, 2.4))
+        fig, ax = plt.subplots(figsize=args.figsize or (9.0, 2.4))
         bars1 = ax.bar(x - width, compressed,     width, label='Compressed',      color='steelblue')
         bars2 = ax.bar(x,         uncompressed,   width, label='Uncompressed',    color='seagreen')
         bars3 = ax.bar(x + width, with_cosandbox, width, label=f'With {args.sys_name}', color='coral')
@@ -350,7 +384,7 @@ def main():
         ncol = 3
     else:
         width = 0.12
-        fig, ax = plt.subplots(figsize=(16.0, 2.4))
+        fig, ax = plt.subplots(figsize=args.figsize or (16.0, 2.4))
 
         if breakdown:
             sub_w  = (width - 0.01) / 2
@@ -411,7 +445,7 @@ def main():
 
     print("\nSummary:")
     print("=" * 100)
-    for key, label in active_benchmarks:
+    for key, label, _ in active_benchmarks:
         c  = data[key]['compressed']
         u  = data[key].get('uncompressed')
         cs = data[key]['with_cosandbox']

@@ -100,7 +100,7 @@ func RunTrainer(args []string) {
 	iterDur := time.Duration(iterMs) * time.Millisecond
 	for i := range scores {
 		time.Sleep(iterDur)
-		db.DPrintf(db.TEST, "hp-trainer config %d iter %d score %f", configId, i, scores[i])
+		db.DPrintf(db.HPSEARCH, "hp-trainer config %d iter %d score %f", configId, i, scores[i])
 	}
 
 	curve := Curve{ConfigId: configId, Seed: seed, Asymptote: asymptote, Scores: scores}

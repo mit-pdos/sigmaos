@@ -126,6 +126,11 @@ const (
 	MR_TPT             = "MR_TPT"
 )
 
+// HPSearch
+const (
+	HPSEARCH Tselector = "HPSEARCH"
+)
+
 // Socialnet
 const (
 	SOCIAL_NETWORK          Tselector = "SOCIAL_NETWORK"

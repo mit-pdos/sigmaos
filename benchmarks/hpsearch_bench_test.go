@@ -91,7 +91,7 @@ func TestHPSearchBaseline(t *testing.T) {
 	for ci, c := range curves {
 		actual += float64(len(c.Scores)) * iterSec
 		oracle += float64(pruneIters[ci]) * iterSec
-		db.DPrintf(db.TEST, "hpsearch config %d asymptote %f pruned-at %d/%d", c.ConfigId, c.Asymptote, pruneIters[ci], len(c.Scores))
+		db.DPrintf(db.HPSEARCH, "hpsearch config %d asymptote %f pruned-at %d/%d", c.ConfigId, c.Asymptote, pruneIters[ci], len(c.Scores))
 	}
 
 	res := &HPSearchResult{

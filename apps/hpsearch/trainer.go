@@ -5,6 +5,7 @@
 package hpsearch
 
 import (
+	"fmt"
 	"math"
 	"math/rand"
 	"strconv"
@@ -33,11 +34,15 @@ const (
 // configuration's trainer proc. It is returned to the caller via
 // proc.Status's StatusData field (the same mechanism apps/mr uses for its
 // Result struct), so proc/status.go needs no changes.
+// Pruned/PrunedAtIter are left at their zero values (false/0) by RunTrainer;
+// only RunPruningTrainer (pruner.go) ever sets them.
 type Curve struct {
-	ConfigId  int
-	Seed      int64
-	Asymptote float64
-	Scores    []float64
+	ConfigId     int
+	Seed         int64
+	Asymptote    float64
+	Scores       []float64
+	Pruned       bool
+	PrunedAtIter int
 }
 
 // NewCurve decodes a Curve back out of a proc.Status's StatusData, which
@@ -64,40 +69,62 @@ func syntheticCurve(seed int64, maxIters int) (asymptote float64, scores []float
 	return asymptote, scores
 }
 
+// parseTrainerArgs parses the four args common to every hpsearch trainer
+// variant (RunTrainer and RunPruningTrainer alike): configId, seed,
+// maxIters, iterDurMs.
+func parseTrainerArgs(args []string) (configId int, seed int64, maxIters int, iterDur time.Duration, err error) {
+	configId, err = strconv.Atoi(args[0])
+	if err != nil {
+		return 0, 0, 0, 0, fmt.Errorf("configId %v not an int: %w", args[0], err)
+	}
+	seed, err = strconv.ParseInt(args[1], 10, 64)
+	if err != nil {
+		return 0, 0, 0, 0, fmt.Errorf("seed %v not an int: %w", args[1], err)
+	}
+	maxIters, err = strconv.Atoi(args[2])
+	if err != nil {
+		return 0, 0, 0, 0, fmt.Errorf("maxIters %v not an int: %w", args[2], err)
+	}
+	iterMs, err := strconv.Atoi(args[3])
+	if err != nil {
+		return 0, 0, 0, 0, fmt.Errorf("iterDurMs %v not an int: %w", args[3], err)
+	}
+	return configId, seed, maxIters, time.Duration(iterMs) * time.Millisecond, nil
+}
+
+// newStartedSigmaClnt is the boilerplate shared by every hpsearch trainer
+// variant: connect, then signal to the scheduler that this proc has started.
+func newStartedSigmaClnt() (*sigmaclnt.SigmaClnt, error) {
+	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
+	if err != nil {
+		return nil, fmt.Errorf("NewSigmaClnt err %w", err)
+	}
+	if err := sc.Started(); err != nil {
+		return nil, fmt.Errorf("Started err %w", err)
+	}
+	return sc, nil
+}
+
 // RunTrainer is the entry point for the hp-trainer proc. Args are
 // [configId, seed, maxIters, iterDurMs]. It always runs all maxIters
-// iterations (no early stopping) — that is the point of this baseline.
+// iterations (no early stopping) — that is the point of this baseline. See
+// RunPruningTrainer (pruner.go) for the live-pruning variant, which shares
+// syntheticCurve/Curve/parseTrainerArgs/newStartedSigmaClnt with this one.
 func RunTrainer(args []string) {
 	if len(args) != 4 {
 		db.DFatalf("RunTrainer: wrong number of args %v", args)
 	}
-	configId, err := strconv.Atoi(args[0])
+	configId, seed, maxIters, iterDur, err := parseTrainerArgs(args)
 	if err != nil {
-		db.DFatalf("RunTrainer: configId %v not an int: %v", args[0], err)
-	}
-	seed, err := strconv.ParseInt(args[1], 10, 64)
-	if err != nil {
-		db.DFatalf("RunTrainer: seed %v not an int: %v", args[1], err)
-	}
-	maxIters, err := strconv.Atoi(args[2])
-	if err != nil {
-		db.DFatalf("RunTrainer: maxIters %v not an int: %v", args[2], err)
-	}
-	iterMs, err := strconv.Atoi(args[3])
-	if err != nil {
-		db.DFatalf("RunTrainer: iterDurMs %v not an int: %v", args[3], err)
+		db.DFatalf("RunTrainer: %v", err)
 	}
 
-	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
+	sc, err := newStartedSigmaClnt()
 	if err != nil {
-		db.DFatalf("RunTrainer: NewSigmaClnt err %v", err)
-	}
-	if err := sc.Started(); err != nil {
-		db.DFatalf("RunTrainer: Started err %v", err)
+		db.DFatalf("RunTrainer: %v", err)
 	}
 
 	asymptote, scores := syntheticCurve(seed, maxIters)
-	iterDur := time.Duration(iterMs) * time.Millisecond
 	for i := range scores {
 		time.Sleep(iterDur)
 		db.DPrintf(db.HPSEARCH, "hp-trainer config %d iter %d score %f", configId, i, scores[i])

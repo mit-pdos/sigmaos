@@ -49,6 +49,21 @@ func (ji *HPSearchJobInstance) StartHPSearchJob() error {
 	return nil
 }
 
+// StartHPSearchPruningJob starts the same NConfigs synthetic trainers as
+// StartHPSearchJob (same seeds, same synthetic curves), but using the
+// hp-trainer-pruned variant, which prunes itself online against its
+// siblings' live progress instead of always running to completion. Returns
+// the shared progress directory so the caller can clean it up afterwards.
+// WaitJobExit is reused unmodified for either job type.
+func (ji *HPSearchJobInstance) StartHPSearchPruningJob(margin float64) (string, error) {
+	procs, progressDir, err := hpsearch.StartPruningJob(ji.SigmaClnt, ji.cfg.NConfigs, ji.cfg.Seed, ji.cfg.MaxIters, ji.cfg.IterDur, ji.cfg.Mcpu, margin)
+	if err != nil {
+		return "", err
+	}
+	ji.procs = procs
+	return progressDir, nil
+}
+
 // WaitJobExit waits for every trainer proc to exit and returns each config's
 // resulting learning curve.
 func (ji *HPSearchJobInstance) WaitJobExit() ([]*hpsearch.Curve, error) {
